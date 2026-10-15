@@ -16,6 +16,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      # internal/bridge importe Wails, qui compile contre GTK 4 / WebKitGTK sous Linux.
+      - run: sudo apt-get update && sudo apt-get install -y build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev
       - run: go vet ./internal/...
       - run: go test ./internal/...
 
@@ -80,7 +82,11 @@ jobs:
       - run: go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
       - run: wails3 build
       - name: Mesure
+        # Le bac à sable de WebKitGTK (bubblewrap) a besoin des espaces de noms
+        # utilisateur, restreints par AppArmor sur les runners Ubuntu 24.04.
         run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          export GTK_A11Y=none
           export SLITABLE_BENCH="$PWD/bench-webkitgtk.json"
           timeout 600 xvfb-run -a -s "-screen 0 1280x800x24" ./bin/slitable
           cat "$SLITABLE_BENCH"
