@@ -5,12 +5,13 @@
 export interface Catalog {
 	functions: { name: string; other: string; arity: string }[];
 	tables: { name: string; columns: string[] | null }[];
+	names?: string[]; // cellules nommées
 }
 
 export interface Suggestion {
 	label: string;
 	insert: string; // texte qui remplace le préfixe
-	kind: 'function' | 'table' | 'column';
+	kind: 'function' | 'table' | 'column' | 'name';
 	detail: string;
 }
 
@@ -65,6 +66,9 @@ export function suggest(text: string, caret: number, cat: Catalog, currentTable?
 	}
 	for (const t of cat.tables) {
 		if (fold(t.name).startsWith(prefix)) items.push({ label: t.name, insert: t.name + '[', kind: 'table', detail: 'tableau' });
+	}
+	for (const n of cat.names ?? []) {
+		if (fold(n).startsWith(prefix)) items.push({ label: n, insert: n, kind: 'name', detail: 'cellule nommée' });
 	}
 	// Un nom déjà complet n'a pas besoin de suggestion.
 	const exact = items.length === 1 && fold(items[0].label) === prefix;

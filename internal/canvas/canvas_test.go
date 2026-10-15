@@ -472,3 +472,81 @@ func TestFormulas(t *testing.T) {
 		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
 	}
 }
+
+func TestNames(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Produit", "Prix"}, {"Clavier", "25,5"}, {"Souris", "10"}}); err != nil {
+		t.Fatal(err)
+	}
+	before := dump(t, d)
+	set := func(r, c int, raw string) {
+		t.Helper()
+		if _, err := d.SetCell(ctx, 1, r, c, raw); err != nil {
+			t.Fatal(err)
+		}
+	}
+	set(5, 0, "0,2")
+	if err := d.SetName(ctx, 1, 5, 0, "Taux"); err != nil {
+		t.Fatal(err)
+	}
+	for _, bad := range []string{"Feuille1", "SOMME", "VRAI", "2x", "avec espace"} {
+		if err := d.SetName(ctx, 1, 6, 0, bad); !errors.As(err, &ErrName{}) {
+			t.Errorf("nom %q accepté : %v", bad, err)
+		}
+	}
+	set(5, 2, "=Taux*100")
+	set(5, 4, "=Inconnu+1")
+	set(8, 0, "=B+1")
+	set(8, 2, "=A+1")
+	if err := d.SetName(ctx, 1, 8, 0, "A"); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.SetName(ctx, 1, 8, 2, "B"); err != nil {
+		t.Fatal(err)
+	}
+	// Colonne calculée qui utilise un nom.
+	set(0, 2, "TTC")
+	set(1, 2, "=[@Prix]*(1+Taux)")
+	l, err := d.Layout(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	vals := map[string]string{}
+	for _, c := range l.Cells {
+		vals[c.Raw] = c.Value
+	}
+	if vals["=Taux*100"] != "20" || vals["=Inconnu+1"] != "#NOM?" || vals["=B+1"] != "#REF!" {
+		t.Fatalf("valeurs : %v", vals)
+	}
+	exprs, args, _, err := d.ColumnExprs(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var v any
+	if err := d.db.Read().QueryRow(`SELECT `+exprs[2]+` FROM t_1 ORDER BY _pos LIMIT 1`, args...).Scan(&v); err != nil {
+		t.Fatal(err)
+	}
+	if got := formula.FromResult(v).String(); got != "30,6" {
+		t.Fatalf("TTC = %s", got)
+	}
+	// Deux lignes ajoutées au tableau poussent la cellule nommée : le nom suit.
+	for range 2 {
+		if err := d.InsertRow(ctx, "Feuille1", 0); err != nil {
+			t.Fatal(err)
+		}
+	}
+	l, _ = d.Layout(ctx, 1)
+	for _, n := range l.Names {
+		if n.Name == "Taux" && n.Row != 6 {
+			t.Fatalf("Taux est resté en ligne %d", n.Row)
+		}
+	}
+	check(t, d, "noms")
+	for range 12 {
+		d.bus.Undo(ctx)
+	}
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
+	}
+}

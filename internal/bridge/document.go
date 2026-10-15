@@ -443,3 +443,8 @@ func (s *DocumentService) FormulaHelp(ctx context.Context) (FormulaHelp, error) 
 	h.Tables, err = d.AllTables(ctx)
 	return h, err
 }
+
+// SetName nomme une cellule libre (vide : retire le nom).
+func (s *DocumentService) SetName(ctx context.Context, sheet int64, row, col int, name string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetName(ctx, sheet, row, col, name) })
+}

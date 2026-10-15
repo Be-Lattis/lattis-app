@@ -77,6 +77,17 @@ CREATE TABLE _slitable_col_widths (
 ALTER TABLE _slitable_columns ADD COLUMN formula TEXT;
 ALTER TABLE _slitable_tables ADD COLUMN key_col INTEGER;
 `,
+	// 3 → 4 : cellules nommées (pas d'adresse A1 : une cellule libre utilisée
+	// dans une formule porte un nom, comme les noms définis d'Excel).
+	`
+CREATE TABLE _slitable_names (
+	name  TEXT NOT NULL PRIMARY KEY COLLATE NOCASE,
+	sheet INTEGER NOT NULL REFERENCES _slitable_sheets(id),
+	row   INTEGER NOT NULL,
+	col   INTEGER NOT NULL
+) STRICT;
+CREATE UNIQUE INDEX _slitable_names_cell ON _slitable_names(sheet, row, col);
+`,
 }
 
 // Version est la version du format que ce programme écrit.

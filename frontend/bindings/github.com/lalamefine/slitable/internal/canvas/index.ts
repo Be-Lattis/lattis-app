@@ -7,6 +7,7 @@ export type {
     ColumnInfo,
     Event,
     Layout,
+    NameInfo,
     SheetInfo,
     TableInfo,
     TableNames

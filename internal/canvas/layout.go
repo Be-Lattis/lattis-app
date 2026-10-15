@@ -266,7 +266,10 @@ func (t *tx) moveCells(sheet int64, match func(cell) bool, dRow, dCol int) error
 		do = append(do, st(`INSERT INTO _slitable_cells (sheet, row, col, raw) VALUES (?, ?, ?, ?)`, sheet, c.Row+dRow, c.Col+dCol, c.Raw))
 		undo = append(undo, st(`INSERT INTO _slitable_cells (sheet, row, col, raw) VALUES (?, ?, ?, ?)`, sheet, c.Row, c.Col, c.Raw))
 	}
-	return t.apply(do, undo)
+	if err := t.apply(do, undo); err != nil {
+		return err
+	}
+	return t.moveNames(sheet, moved, dRow, dCol)
 }
 
 // island renvoie la zone de cellules libres contiguës (4-connexité) qui

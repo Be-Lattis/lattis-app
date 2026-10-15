@@ -89,6 +89,20 @@ export interface Layout {
      * largeurs choisies par l'utilisateur
      */
     "widths": ColWidth[] | null;
+
+    /**
+     * cellules nommées de la feuille
+     */
+    "names": NameInfo[] | null;
+}
+
+/**
+ * NameInfo est une cellule nommée de la feuille.
+ */
+export interface NameInfo {
+    "name": string;
+    "row": number;
+    "col": number;
 }
 
 /**

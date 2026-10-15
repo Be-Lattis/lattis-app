@@ -45,6 +45,13 @@ type CellInfo struct {
 	Error bool   `json:"error"`
 }
 
+// NameInfo est une cellule nommée de la feuille.
+type NameInfo struct {
+	Name string `json:"name"`
+	Row  int    `json:"row"`
+	Col  int    `json:"col"`
+}
+
 // Layout est la mise en page d'une feuille : ses tableaux et ses cellules
 // libres. Les valeurs des tableaux se lisent ensuite par fenêtres.
 type Layout struct {
@@ -53,6 +60,7 @@ type Layout struct {
 	Tables []TableInfo `json:"tables"`
 	Cells  []CellInfo  `json:"cells"`
 	Widths []ColWidth  `json:"widths"` // largeurs choisies par l'utilisateur
+	Names  []NameInfo  `json:"names"`  // cellules nommées de la feuille
 }
 
 // ColWidth est la largeur choisie pour une colonne de la feuille.
@@ -63,7 +71,7 @@ type ColWidth struct {
 
 // Layout lit la mise en page d'une feuille.
 func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
-	l := Layout{Sheet: sheet, Tables: []TableInfo{}, Cells: []CellInfo{}, Widths: []ColWidth{}}
+	l := Layout{Sheet: sheet, Tables: []TableInfo{}, Cells: []CellInfo{}, Widths: []ColWidth{}, Names: []NameInfo{}}
 	err := m.read(ctx, func(t *tx) error {
 		rs, err := t.query(`SELECT id, name FROM _slitable_sheets ORDER BY pos, id`)
 		if err != nil {
@@ -115,6 +123,19 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 				return err
 			}
 			l.Widths = append(l.Widths, w)
+		}
+		rs.Close()
+		rs, err = t.query(`SELECT name, row, col FROM _slitable_names WHERE sheet = ? ORDER BY name`, sheet)
+		if err != nil {
+			return err
+		}
+		for rs.Next() {
+			var n NameInfo
+			if err := rs.Scan(&n.Name, &n.Row, &n.Col); err != nil {
+				rs.Close()
+				return err
+			}
+			l.Names = append(l.Names, n)
 		}
 		rs.Close()
 		cells, err := t.cells(sheet)

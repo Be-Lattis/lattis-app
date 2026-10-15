@@ -157,6 +157,13 @@ export function SetColumnWidth(sheet: number, col: number, width: number): $Canc
 }
 
 /**
+ * SetName nomme une cellule libre (vide : retire le nom).
+ */
+export function SetName(sheet: number, row: number, col: number, name: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(319879748, sheet, row, col, name);
+}
+
+/**
  * SetType fixe le type d'une colonne (valeurs non convertibles marquées en erreur).
  */
 export function SetType(table: string, i: number, to: grid$0.Type): $CancellablePromise<$models.DocState> {

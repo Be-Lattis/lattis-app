@@ -185,7 +185,8 @@
 		deleteColumn: (t, i) => DocumentService.DeleteColumn(t.name, i).then(reload),
 		convertPreview: (t, i, to) => DocumentService.ConvertPreview(t.name, i, to as Type),
 		setType: (t, i, to) => DocumentService.SetType(t.name, i, to as Type).then(reload),
-		setColumnWidth: (col, width) => DocumentService.SetColumnWidth(sheetId, col, width).then(reload)
+		setColumnWidth: (col, width) => DocumentService.SetColumnWidth(sheetId, col, width).then(reload),
+		setName: (row, col, name) => DocumentService.SetName(sheetId, row, col, name).then(reload)
 	};
 
 	const demoSource: SheetSource = {
@@ -215,7 +216,8 @@
 						}))
 					})),
 					cells: layout.cells ?? [],
-					widths: layout.widths ?? []
+					widths: layout.widths ?? [],
+					names: layout.names ?? []
 				}
 			: null
 	);
@@ -308,7 +310,9 @@
 						bind:this={sheet}
 						{data}
 						source={mode === 'demo' ? demoSource : docSource}
-						catalog={mode === 'doc' && help ? { functions: help.functions ?? [], tables: help.tables ?? [] } : undefined}
+						catalog={mode === 'doc' && help
+							? { functions: help.functions ?? [], tables: help.tables ?? [], names: (layout?.names ?? []).map((n) => n.name) }
+							: undefined}
 						onstatus={(s) => (sheetStatus = s)}
 						autoBench={bench ? (r) => GridService.ReportBench(r) : undefined}
 					/>

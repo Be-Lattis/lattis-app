@@ -49,6 +49,8 @@
 		cells: { row: number; col: number; raw: string; value?: string; error?: boolean }[];
 		/** Largeurs choisies par l'utilisateur (sinon : selon le type). */
 		widths?: { col: number; width: number }[];
+		/** Cellules nommées de la feuille. */
+		names?: { name: string; row: number; col: number }[];
 	}
 
 	/** Cible d'une saisie, pour la source. */
@@ -78,6 +80,8 @@
 		convertPreview?(table: SheetTable, i: number, to: ColumnType): Promise<number>;
 		setType?(table: SheetTable, i: number, to: ColumnType): Promise<unknown>;
 		setColumnWidth?(col: number, width: number): Promise<unknown>;
+		/** Nomme une cellule libre (vide : retire le nom). */
+		setName?(row: number, col: number, name: string): Promise<unknown>;
 	}
 
 	export interface SheetStatus {
@@ -142,6 +146,7 @@
 
 	let entries: Entry[] = [];
 	let cells = new Map<string, string>();
+	let names = new Map<string, string>(); // position → nom
 	let shown = new Map<string, { text: string; error: boolean }>(); // formules des cellules libres
 	let colAxis = $state.raw(new Axis(SHEET_COLS, DEF_W));
 	const key = (r: number, c: number) => `${r},${c}`;
@@ -179,6 +184,7 @@
 		cells = new Map(d.cells.map((c) => [key(c.row, c.col), c.raw]));
 		shown = new Map(d.cells.filter((c) => c.raw.startsWith('=')).map((c) => [key(c.row, c.col), { text: c.value ?? '', error: !!c.error }]));
 		userWidths = new Map((d.widths ?? []).map((w) => [w.col, w.width]));
+		names = new Map((d.names ?? []).map((n) => [key(n.row, n.col), n.name]));
 		rebuildAxis();
 		refreshFx();
 		schedule();
@@ -584,6 +590,8 @@
 
 	/** Désignation de la cellule active (pas d'adresse A1). */
 	function cellName(r: number, c: number): string {
+		const named = names.get(key(r, c));
+		if (named) return named;
 		const e = tableAt(r, c);
 		if (!e) return cells.has(key(r, c)) ? 'Cellule libre' : '';
 		const k = e.t.columns[c - e.t.col];
@@ -973,6 +981,52 @@
 		e.preventDefault();
 	}
 
+	// --- Zone de nom ------------------------------------------------------------
+
+	function onNameKey(e: KeyboardEvent) {
+		e.stopPropagation();
+		const el = e.currentTarget as HTMLInputElement;
+		if (e.key === 'Escape') {
+			el.value = nameBox;
+			wrap.focus();
+			return;
+		}
+		if (e.key !== 'Enter') return;
+		e.preventDefault();
+		const text = el.value.trim();
+		// Le nom d'une cellule existante : y aller (comme Excel).
+		for (const [k, n] of names) {
+			if (n.toLowerCase() === text.toLowerCase()) {
+				const [r, c] = k.split(',').map(Number);
+				wrap.focus();
+				moveTo(r, c);
+				return;
+			}
+		}
+		const { row, col } = active;
+		if (tableAt(row, col)) {
+			say('Seule une cellule libre peut être nommée ; un tableau se référence par son nom : ' + tableAt(row, col)!.t.name);
+			wrap.focus();
+			return;
+		}
+		if (!source.setName || text === (names.get(key(row, col)) ?? '')) {
+			wrap.focus();
+			return;
+		}
+		const setName = source.setName;
+		writing = writing.then(async () => {
+			try {
+				await setName(row, col, text);
+				message = text ? `Cellule nommée « ${text} »` : 'Nom retiré';
+			} catch (err) {
+				message = String(err instanceof Error ? err.message : err);
+			}
+			refreshFx();
+			refreshStatus();
+		});
+		wrap.focus();
+	}
+
 	// --- Presse-papiers -----------------------------------------------------
 
 	function selection() {
@@ -1262,7 +1316,7 @@
 					if (el) completionKey(new KeyboardEvent('keydown', { key: 'Enter' }), el, (v) => (where === 'cell' ? (editValueText = v) : (fxText = v)));
 				}}
 			>
-				<span class="kind {s.kind}">{s.kind === 'function' ? 'fx' : s.kind === 'table' ? '▦' : '[ ]'}</span>
+				<span class="kind {s.kind}">{s.kind === 'function' ? 'fx' : s.kind === 'table' ? '▦' : s.kind === 'name' ? 'N' : '[ ]'}</span>
 				<span class="lab">{s.label}</span>
 				<span class="det">{s.detail}</span>
 			</div>
@@ -1272,7 +1326,15 @@
 
 <div class="sheet-root">
 	<div class="formula-bar">
-		<div class="name-box" title="Cellule active">{nameBox || '—'}</div>
+		<input
+			class="name-box"
+			title="Nom de la cellule : tapez un nom puis Entrée pour la nommer, ou le nom d'une cellule pour y aller"
+			value={nameBox}
+			placeholder="—"
+			onfocus={(e) => e.currentTarget.select()}
+			onkeydown={onNameKey}
+			spellcheck="false"
+		/>
 		<span class="fx">fx</span>
 		<input
 			class="fx-input"
@@ -1398,6 +1460,8 @@
 	}
 	.name-box {
 		width: 260px;
+		font: inherit;
+		outline: none;
 		padding: 3px 8px;
 		border: 1px solid #d4d7db;
 		border-radius: 3px;
