@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  WAILS_VERSION: v3.0.0-beta.30
+
+jobs:
+  go:
+    name: Go (vet + tests)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go vet ./internal/...
+      - run: go test ./internal/...
+
+  frontend:
+    name: Frontend (svelte-check + vitest)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+
+  build:
+    name: Build ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Dépendances Linux (GTK 4, WebKitGTK 6)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev
+      - run: go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
+      - run: wails3 build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: slitable-${{ runner.os }}
+          path: bin/
+
+  # Mesure de la grille sous WebKitGTK (le moteur le plus lent), dans un
+  # affichage virtuel : rendu logiciel, donc chiffres pessimistes, mais
+  # comparables d'un commit à l'autre. Voir docs/mesures/grille.md.
+  bench-linux:
+    name: Mesure grille (WebKitGTK)
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: sudo apt-get update && sudo apt-get install -y build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev xvfb
+      - run: go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
+      - run: wails3 build
+      - name: Mesure
+        run: |
+          export SLITABLE_BENCH="$PWD/bench-webkitgtk.json"
+          timeout 600 xvfb-run -a -s "-screen 0 1280x800x24" ./bin/slitable
+          cat "$SLITABLE_BENCH"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bench-webkitgtk
+          path: bench-webkitgtk.json
