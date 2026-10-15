@@ -1,5 +1,5 @@
-// Package archive est le prototype du cycle de vie d'un fichier .slitable
-// (spike 1.4).
+// Package archive gère le cycle de vie d'un fichier .slitable
+// (validé au spike 1.4, voir docs/decisions/0001-jalon-m1.md).
 //
 // L'archive .slitable est un ZIP qui contient database.sqlite et un
 // manifeste YAML minimal. À l'ouverture, elle est extraite dans un
