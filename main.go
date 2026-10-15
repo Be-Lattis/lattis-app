@@ -7,6 +7,7 @@ package main
 import (
 	"embed"
 	"log"
+	"runtime"
 
 	"github.com/lalamefine/slitable/internal/bridge"
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -35,8 +36,19 @@ func main() {
 		Title:            "Slitable",
 		Width:            1280,
 		Height:           800,
+		MinWidth:         640,
+		MinHeight:        400,
 		BackgroundColour: application.NewRGB(255, 255, 255),
 		URL:              "/",
+		// Barre de titre dessinée par la page (frontend/src/lib/shell/TitleBar.svelte).
+		// Windows garde l'ombre, les coins arrondis et le redimensionnement par les
+		// bords ; sous Linux, le runtime Wails gère les bords en JavaScript.
+		Frameless: runtime.GOOS != "darwin",
+		// macOS : barre native masquée, feux tricolores conservés.
+		Mac: application.MacWindow{
+			TitleBar:                application.MacTitleBarHidden,
+			InvisibleTitleBarHeight: 32,
+		},
 	})
 
 	if err := app.Run(); err != nil {

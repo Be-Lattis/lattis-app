@@ -8,6 +8,7 @@
 	import Ribbon, { type View } from '#lib/shell/Ribbon.svelte';
 	import SheetTabs from '#lib/shell/SheetTabs.svelte';
 	import SqlView from '#lib/shell/SqlView.svelte';
+	import TitleBar from '#lib/shell/TitleBar.svelte';
 	import type { ColumnType } from '#lib/grid/format.js';
 	import type { Fetched } from '#lib/grid/cache.js';
 
@@ -67,6 +68,14 @@
 </script>
 
 <div class="app">
+	<TitleBar
+		title={table?.name ?? 'Classeur'}
+		actions={[
+			{ label: 'Enregistrer (Ctrl+S)', icon: 'save' },
+			{ label: 'Annuler (Ctrl+Z)', icon: 'undo' },
+			{ label: 'Rétablir (Ctrl+Y)', icon: 'redo' }
+		]}
+	/>
 	<Ribbon {view} onview={(v) => (view = v)} onbench={() => sheet?.runBench()} />
 
 	<main>
