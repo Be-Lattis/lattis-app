@@ -87,6 +87,11 @@ export interface Window {
     "invalid": InvalidCell[] | null;
 
     /**
+     * mise en forme des cellules (Raw : style JSON)
+     */
+    "styles": InvalidCell[] | null;
+
+    /**
      * temps passé côté Go, pour les mesures
      */
     "micros": number;

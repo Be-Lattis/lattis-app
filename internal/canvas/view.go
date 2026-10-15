@@ -22,6 +22,9 @@ type ColumnInfo struct {
 	Fixed  bool      `json:"fixed"`
 	// Colonne calculée : formule telle que l'utilisateur la lit (français).
 	Formula string `json:"formula"`
+	// Mise en forme de toute la colonne et de son en-tête (JSON, voir Style).
+	Style       string `json:"style"`
+	HeaderStyle string `json:"headerStyle"`
 }
 
 // TableInfo décrit un tableau posé sur une feuille.
@@ -61,6 +64,14 @@ type Layout struct {
 	Cells  []CellInfo  `json:"cells"`
 	Widths []ColWidth  `json:"widths"` // largeurs choisies par l'utilisateur
 	Names  []NameInfo  `json:"names"`  // cellules nommées de la feuille
+	Styles []CellStyle `json:"styles"` // mise en forme hors tableaux
+}
+
+// CellStyle est la mise en forme d'une cellule hors tableau.
+type CellStyle struct {
+	Row   int    `json:"row"`
+	Col   int    `json:"col"`
+	Style string `json:"style"`
 }
 
 // ColWidth est la largeur choisie pour une colonne de la feuille.
@@ -71,7 +82,7 @@ type ColWidth struct {
 
 // Layout lit la mise en page d'une feuille.
 func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
-	l := Layout{Sheet: sheet, Tables: []TableInfo{}, Cells: []CellInfo{}, Widths: []ColWidth{}, Names: []NameInfo{}}
+	l := Layout{Sheet: sheet, Tables: []TableInfo{}, Cells: []CellInfo{}, Widths: []ColWidth{}, Names: []NameInfo{}, Styles: []CellStyle{}}
 	err := m.read(ctx, func(t *tx) error {
 		rs, err := t.query(`SELECT id, name FROM _slitable_sheets ORDER BY pos, id`)
 		if err != nil {
@@ -107,8 +118,24 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 				errs[col] = n
 			}
 			rs.Close()
+			colStyles := map[[2]int64]string{}
+			rs, err = t.query(`SELECT rid, col, style FROM _slitable_styles WHERE tbl = ? AND rid <= 0`, tb.ID)
+			if err != nil {
+				return err
+			}
+			for rs.Next() {
+				var rid, col int64
+				var style string
+				if err := rs.Scan(&rid, &col, &style); err != nil {
+					rs.Close()
+					return err
+				}
+				colStyles[[2]int64{rid, col}] = style
+			}
+			rs.Close()
 			for _, c := range tb.Cols {
-				ti.Columns = append(ti.Columns, ColumnInfo{ID: c.ID, Errors: errs[c.ID], Name: c.Name, SQL: colSQL(c.ID), Type: c.Type, Fixed: c.Fixed, Formula: displayFormula(c.Formula)})
+				ti.Columns = append(ti.Columns, ColumnInfo{ID: c.ID, Errors: errs[c.ID], Name: c.Name, SQL: colSQL(c.ID), Type: c.Type, Fixed: c.Fixed, Formula: displayFormula(c.Formula),
+					Style: colStyles[[2]int64{0, c.ID}], HeaderStyle: colStyles[[2]int64{-1, c.ID}]})
 			}
 			l.Tables = append(l.Tables, ti)
 		}
@@ -136,6 +163,19 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 				return err
 			}
 			l.Names = append(l.Names, n)
+		}
+		rs.Close()
+		rs, err = t.query(`SELECT row, col, style FROM _slitable_cell_styles WHERE sheet = ?`, sheet)
+		if err != nil {
+			return err
+		}
+		for rs.Next() {
+			var c CellStyle
+			if err := rs.Scan(&c.Row, &c.Col, &c.Style); err != nil {
+				rs.Close()
+				return err
+			}
+			l.Styles = append(l.Styles, c)
 		}
 		rs.Close()
 		cells, err := t.cells(sheet)

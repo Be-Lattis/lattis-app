@@ -13,6 +13,7 @@
 	import { VScroll, clamp } from './scroll';
 	import { Axis } from './axis';
 	import { parseTSV, toTSV } from './clipboard';
+	import { formatNumber, mergeStyles, parseStyle, type CellStyle } from './style';
 	import { apply as applySuggestion, signature, suggest, type Catalog, type Completion } from './autocomplete';
 	import {
 		isErrorValue,
@@ -32,6 +33,8 @@
 		fixed?: boolean; // type choisi par l'utilisateur (sinon inféré)
 		errors?: number; // saisies hors type
 		formula?: string; // colonne calculée : formule affichée
+		style?: string; // mise en forme de toute la colonne (JSON)
+		headerStyle?: string;
 	}
 
 	export interface SheetTable {
@@ -51,6 +54,8 @@
 		widths?: { col: number; width: number }[];
 		/** Cellules nommées de la feuille. */
 		names?: { name: string; row: number; col: number }[];
+		/** Mise en forme des cellules hors tableaux (JSON). */
+		styles?: { row: number; col: number; style: string }[];
 	}
 
 	/** Cible d'une saisie, pour la source. */
@@ -83,6 +88,8 @@
 		/** Nomme une cellule libre (vide : retire le nom). */
 		setName?(row: number, col: number, name: string): Promise<unknown>;
 		sortTable?(table: SheetTable, i: number, desc: boolean): Promise<unknown>;
+		/** Met en forme le rectangle sélectionné (une valeur vide retire la propriété). */
+		applyStyle?(r0: number, c0: number, r1: number, c1: number, patch: Record<string, unknown>): Promise<unknown>;
 	}
 
 	export interface SheetStatus {
@@ -150,6 +157,10 @@
 	let entries: Entry[] = [];
 	let cells = new Map<string, string>();
 	let names = new Map<string, string>(); // position → nom
+	let freeStyles = new Map<string, CellStyle>(); // position → style (hors tableaux)
+	// Styles de colonne et d'en-tête, par tableau puis colonne.
+	let colStyles = new Map<number, (CellStyle | undefined)[]>();
+	let headStyles = new Map<number, (CellStyle | undefined)[]>();
 	let shown = new Map<string, { text: string; error: boolean }>(); // formules des cellules libres
 	let colAxis = $state.raw(new Axis(SHEET_COLS, DEF_W));
 	const key = (r: number, c: number) => `${r},${c}`;
@@ -188,6 +199,9 @@
 		shown = new Map(d.cells.filter((c) => c.raw.startsWith('=')).map((c) => [key(c.row, c.col), { text: c.value ?? '', error: !!c.error }]));
 		userWidths = new Map((d.widths ?? []).map((w) => [w.col, w.width]));
 		names = new Map((d.names ?? []).map((n) => [key(n.row, n.col), n.name]));
+		freeStyles = new Map((d.styles ?? []).map((s) => [key(s.row, s.col), parseStyle(s.style) ?? {}]));
+		colStyles = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseStyle(c.style))]));
+		headStyles = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseStyle(c.headerStyle))]));
 		rebuildAxis();
 		refreshFx();
 		schedule();
@@ -388,6 +402,11 @@
 				for (let r = tr0; r <= tr1; r++) {
 					const y = ry(r);
 					if (r === e.t.row) {
+						const hs = headStyles.get(e.t.id)?.[i];
+						if (hs?.bg) {
+							ctx.fillStyle = hs.bg;
+							ctx.fillRect(x, y, cw, ROW_H);
+						}
 						ctx.font = FONT_SMALL;
 						ctx.fillStyle = C.icon;
 						ctx.textAlign = 'right';
@@ -402,8 +421,8 @@
 						ctx.beginPath();
 						ctx.rect(x, y, cw - ctx.measureText(icon).width - 10, ROW_H);
 						ctx.clip();
-						ctx.font = FONT_BOLD;
-						ctx.fillStyle = C.headText;
+						ctx.font = (hs?.i ? 'italic ' : '') + FONT_BOLD;
+						ctx.fillStyle = hs?.fg ?? C.headText;
 						ctx.textAlign = 'left';
 						ctx.fillText(col.name, x + 6, y + ROW_H / 2);
 						ctx.restore();
@@ -415,8 +434,14 @@
 						ctx.fillRect(x + 6, y + 7, cw * 0.6, ROW_H - 14);
 						continue;
 					}
-					const s = row.text[i];
+					const cs = mergeStyles(colStyles.get(e.t.id)?.[i], parseStyle(row.sty?.get(i)));
+					if (cs?.bg) {
+						ctx.fillStyle = cs.bg;
+						ctx.fillRect(x, y, cw, ROW_H);
+					}
+					let s = row.text[i];
 					if (!s) continue;
+					if (cs?.nf && typeof row.cells[i] === 'number' && !row.bad?.has(i)) s = formatNumber(cs.nf, row.cells[i] as number) ?? s;
 					if (row.bad?.has(i)) {
 						// Saisie hors type : valeur brute en rouge, coin rouge comme le
 						// triangle d'Excel.
@@ -433,11 +458,8 @@
 						continue;
 					}
 					const v = row.cells[i];
-					const align = col.type === 'formula' ? valueAlignment(v) : alignment(col.type);
-					ctx.font = FONT;
-					ctx.textAlign = align;
-					ctx.fillStyle = col.type === 'formula' && isErrorValue(v) ? C.error : C.text;
-					ctx.fillText(s, align === 'left' ? x + 6 : align === 'right' ? x + cw - 6 : x + cw / 2, y + ROW_H / 2);
+					const align = cs?.al ?? (col.type === 'formula' ? valueAlignment(v) : alignment(col.type));
+					drawText(s, x, y, cw, align, cs, col.type === 'formula' && isErrorValue(v) ? C.error : C.text);
 				}
 				ctx.restore();
 			}
@@ -446,14 +468,30 @@
 		// Cellules libres : texte à gauche, nombres à droite, comme Excel.
 		ctx.font = FONT;
 		ctx.fillStyle = C.text;
+		for (const [k, fs] of freeStyles) {
+			if (!fs.bg) continue;
+			const [r, c] = k.split(',').map(Number);
+			if (r < r0 || r > r1 || c < c0 || c > c1) continue;
+			ctx.fillStyle = fs.bg;
+			ctx.fillRect(cx(c), ry(r), colAxis.size(c), ROW_H);
+		}
 		for (const [k, rawText] of cells) {
 			const [r, c] = k.split(',').map(Number);
 			if (r < r0 || r > r1 || c < c0 || c > c1) continue;
+			const fstyle = freeStyles.get(k);
 			const x = cx(c);
 			const cw = colAxis.size(c);
 			const f = shown.get(k);
-			const raw = f ? f.text : rawText;
+			let raw = f ? f.text : rawText;
 			const num = isNumeric(raw);
+			if (num && fstyle?.nf) {
+				const n = Number(raw.replace(/[\s\u00a0\u202f]/g, '').replace(',', '.'));
+				if (Number.isFinite(n)) raw = formatNumber(fstyle.nf, n) ?? raw;
+			}
+			if (fstyle) {
+				drawText(raw, x, ry(r), cw, fstyle.al ?? (num ? 'right' : 'left'), fstyle, f?.error ? C.error : C.text, num ? cw : w);
+				continue;
+			}
 			ctx.fillStyle = f?.error ? C.error : C.text;
 			ctx.save();
 			ctx.beginPath();
@@ -562,6 +600,49 @@
 		pushStat(drawTimes, t1 - t0);
 		frameStamps.push(t1);
 		while (frameStamps.length && frameStamps[0] < t1 - 1000) frameStamps.shift();
+	}
+
+	/** Texte d'une cellule avec sa mise en forme (gras, italique, souligné, couleur). */
+	function drawText(s: string, x: number, y: number, cw: number, align: 'left' | 'center' | 'right', st: CellStyle | undefined, color: string, clipW = cw) {
+		ctx.save();
+		ctx.beginPath();
+		ctx.rect(Math.max(x, MARGIN), TOP_H, clipW, viewH - TOP_H);
+		ctx.clip();
+		ctx.font = (st?.i ? 'italic ' : '') + (st?.b ? FONT_BOLD : FONT);
+		ctx.textAlign = align;
+		ctx.textBaseline = 'middle';
+		ctx.fillStyle = st?.fg ?? color;
+		const tx = align === 'left' ? x + 6 : align === 'right' ? x + cw - 6 : x + cw / 2;
+		ctx.fillText(s, tx, y + ROW_H / 2);
+		if (st?.u) {
+			const w = ctx.measureText(s).width;
+			const lx = align === 'left' ? tx : align === 'right' ? tx - w : tx - w / 2;
+			ctx.fillRect(lx, y + ROW_H / 2 + 7, w, 1);
+		}
+		ctx.restore();
+	}
+
+	/** Style de la cellule active (pour basculer gras, italique…). */
+	function activeStyle(): CellStyle {
+		const { row, col } = active;
+		const e = tableAt(row, col);
+		if (!e) return freeStyles.get(key(row, col)) ?? {};
+		const i = col - e.t.col;
+		if (row === e.t.row) return headStyles.get(e.t.id)?.[i] ?? {};
+		return mergeStyles(colStyles.get(e.t.id)?.[i], parseStyle(e.cache.row(row - e.t.row - 1)?.sty?.get(i))) ?? {};
+	}
+
+	/** Met en forme la sélection ; une bascule (b, i, u) suit la cellule active. */
+	export function applyStyle(patch: Record<string, unknown>) {
+		if (!source.applyStyle) return;
+		const p = { ...patch };
+		for (const k of ['b', 'i', 'u'] as const) if (p[k] === 'toggle') p[k] = !activeStyle()[k];
+		const r0 = Math.min(active.row, anchor.row);
+		const r1 = Math.max(active.row, anchor.row);
+		const c0 = Math.min(active.col, anchor.col);
+		const c1 = Math.max(active.col, anchor.col);
+		const apply = source.applyStyle;
+		menuAction(() => apply(r0, c0, r1, c1, p));
 	}
 
 	function pushStat(a: number[], v: number) {
@@ -846,6 +927,11 @@
 		if (ctrl && (e.key === 'z' || e.key === 'Z') && source.undo) {
 			e.preventDefault();
 			source.undo().catch((err) => say(String(err?.message ?? err)));
+			return;
+		}
+		if (ctrl && ['b', 'i', 'u'].includes(e.key.toLowerCase()) && source.applyStyle) {
+			e.preventDefault();
+			applyStyle({ [e.key.toLowerCase()]: 'toggle' });
 			return;
 		}
 		if (ctrl && (e.key === 'y' || e.key === 'Y') && source.redo) {

@@ -453,3 +453,9 @@ func (s *DocumentService) SetName(ctx context.Context, sheet int64, row, col int
 func (s *DocumentService) SortTable(ctx context.Context, table string, i int, desc bool) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.SortTable(ctx, table, i, desc) })
 }
+
+// ApplyStyle met en forme un rectangle de la feuille (patch : propriétés à
+// poser, une valeur vide les retire).
+func (s *DocumentService) ApplyStyle(ctx context.Context, sheet int64, r0, c0, r1, c1 int, patch map[string]any) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.ApplyStyle(ctx, sheet, r0, c0, r1, c1, patch) })
+}

@@ -612,3 +612,59 @@ func TestSort(t *testing.T) {
 		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
 	}
 }
+
+func TestStyles(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Ville", "Pop"}, {"Lyon", "520"}, {"Paris", "2100"}, {"Nice", "340"}}); err != nil {
+		t.Fatal(err)
+	}
+	before := dump(t, d)
+	// Toute la colonne Pop (lignes 1 à 3) : style de colonne.
+	if err := d.ApplyStyle(ctx, 1, 1, 1, 3, 1, Style{"nf": "0,00", "al": "center"}); err != nil {
+		t.Fatal(err)
+	}
+	// Une cellule (Paris) en gras, l'en-tête en couleur, une cellule libre.
+	if err := d.ApplyStyle(ctx, 1, 2, 0, 2, 0, Style{"b": true}); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.ApplyStyle(ctx, 1, 0, 0, 0, 1, Style{"bg": "#ffcc00"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.ApplyStyle(ctx, 1, 6, 3, 6, 3, Style{"i": true}); err != nil {
+		t.Fatal(err)
+	}
+	l, err := d.Layout(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cols := l.Tables[0].Columns
+	if cols[1].Style != `{"al":"center","nf":"0,00"}` || cols[0].HeaderStyle != `{"bg":"#ffcc00"}` {
+		t.Fatalf("styles de colonne : %+v", cols)
+	}
+	if len(l.Styles) != 1 || l.Styles[0].Style != `{"i":true}` {
+		t.Fatalf("styles libres : %+v", l.Styles)
+	}
+	// Le gras suit Paris quand on trie.
+	if err := d.SortTable(ctx, "Feuille1", 0, false); err != nil {
+		t.Fatal(err)
+	}
+	var rid int64
+	d.db.Read().QueryRow(`SELECT rid FROM _slitable_styles WHERE rid > 0`).Scan(&rid)
+	var ville string
+	d.db.Read().QueryRow(`SELECT c_1 FROM t_1 WHERE id = ?`, rid).Scan(&ville)
+	if ville != "Paris" {
+		t.Fatalf("le gras est sur %q", ville)
+	}
+	// Retirer le gras.
+	if err := d.ApplyStyle(ctx, 1, 3, 0, 3, 0, Style{"b": false}); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "styles")
+	for range 6 {
+		d.bus.Undo(ctx)
+	}
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
+	}
+}

@@ -32,6 +32,14 @@ export function AddSheet(): $CancellablePromise<number> {
 }
 
 /**
+ * ApplyStyle met en forme un rectangle de la feuille (patch : propriétés à
+ * poser, une valeur vide les retire).
+ */
+export function ApplyStyle(sheet: number, r0: number, c0: number, r1: number, c1: number, patch: { [_ in string]?: any } | null): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(515323768, sheet, r0, c0, r1, c1, patch);
+}
+
+/**
  * ConvertPreview compte les valeurs qui ne se convertiraient pas au type to.
  */
 export function ConvertPreview(table: string, i: number, to: grid$0.Type): $CancellablePromise<number> {

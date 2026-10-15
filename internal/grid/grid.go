@@ -51,6 +51,7 @@ type Window struct {
 	IDs     []int64       `json:"ids"`
 	Cells   [][]any       `json:"cells"`
 	Invalid []InvalidCell `json:"invalid"` // saisies hors type de la fenêtre
+	Styles  []InvalidCell `json:"styles"`  // mise en forme des cellules (Raw : style JSON)
 	Micros  int64         `json:"micros"`  // temps passé côté Go, pour les mesures
 }
 
@@ -265,8 +266,15 @@ func (t *Table) invalid(ctx context.Context, w *Window) error {
 		index[id] = i
 		lo, hi = min(lo, id), max(hi, id)
 	}
-	rs, err := t.db.Read().QueryContext(ctx,
-		`SELECT rid, col, raw FROM _slitable_invalid WHERE tbl = ? AND rid BETWEEN ? AND ?`, t.tableID, lo, hi)
+	if err := t.cellsFrom(ctx, `SELECT rid, col, style FROM _slitable_styles WHERE tbl = ? AND rid BETWEEN ? AND ?`, lo, hi, index, &w.Styles); err != nil {
+		return err
+	}
+	return t.cellsFrom(ctx, `SELECT rid, col, raw FROM _slitable_invalid WHERE tbl = ? AND rid BETWEEN ? AND ?`, lo, hi, index, &w.Invalid)
+}
+
+// cellsFrom lit des valeurs par cellule (rid, col, texte) pour la fenêtre.
+func (t *Table) cellsFrom(ctx context.Context, q string, lo, hi int64, index map[int64]int, out *[]InvalidCell) error {
+	rs, err := t.db.Read().QueryContext(ctx, q, t.tableID, max(lo, 1), hi)
 	if err != nil {
 		return err
 	}
@@ -280,7 +288,7 @@ func (t *Table) invalid(ctx context.Context, w *Window) error {
 		r, ok1 := index[rid]
 		c, ok2 := t.colIDs[col]
 		if ok1 && ok2 {
-			w.Invalid = append(w.Invalid, InvalidCell{r, c, raw})
+			*out = append(*out, InvalidCell{r, c, raw})
 		}
 	}
 	return rs.Err()

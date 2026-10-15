@@ -96,6 +96,26 @@ CREATE TABLE _slitable_scripts (
 	source TEXT NOT NULL
 ) STRICT;
 `,
+	// 5 → 6 : mise en forme (JSON : gras, italique, couleurs, alignement,
+	// format de nombre). Une cellule de tableau est désignée par sa ligne
+	// (clé technique) et sa colonne, pour suivre les tris et insertions ;
+	// une colonne entière a son propre style ; une cellule libre sa position.
+	`
+CREATE TABLE _slitable_styles (
+	tbl   INTEGER NOT NULL,
+	rid   INTEGER NOT NULL,        -- 0 : toute la colonne
+	col   INTEGER NOT NULL,
+	style TEXT NOT NULL,
+	PRIMARY KEY (tbl, rid, col)
+) STRICT;
+CREATE TABLE _slitable_cell_styles (
+	sheet INTEGER NOT NULL,
+	row   INTEGER NOT NULL,
+	col   INTEGER NOT NULL,
+	style TEXT NOT NULL,
+	PRIMARY KEY (sheet, row, col)
+) STRICT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

@@ -14,6 +14,7 @@
 		icon: IconName;
 		run?: () => void;
 		hint?: string;
+		color?: 'fg' | 'bg'; // commande avec un choix de couleur
 	}
 	interface Group {
 		title: string;
@@ -34,9 +35,14 @@
 		onredo: () => void;
 		onbench?: () => void;
 		onsort?: (desc: boolean) => void;
+		/** Mise en forme de la sélection ('toggle' bascule gras, italique, souligné). */
+		onstyle?: (patch: Record<string, unknown>) => void;
 	}
 
-	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench, onsort }: Props = $props();
+	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench, onsort, onstyle }: Props = $props();
+	let fg = $state('#c00000');
+	let bg = $state('#fff2cc');
+	const st = (patch: Record<string, unknown>) => (onstyle ? () => onstyle(patch) : undefined);
 	let fileOpen = $state(false);
 
 	const tabs = ['Accueil', 'Insertion', 'Données', 'Formules', 'Affichage'] as const;
@@ -52,9 +58,34 @@
 				]
 			},
 			{ title: 'Presse-papiers', commands: [{ label: 'Coller', icon: 'paste' }, { label: 'Couper', icon: 'cut' }, { label: 'Copier', icon: 'copy' }] },
-			{ title: 'Police', commands: [{ label: 'Gras', icon: 'bold' }, { label: 'Italique', icon: 'italic' }, { label: 'Souligné', icon: 'underline' }, { label: 'Couleur', icon: 'font-color' }] },
-			{ title: 'Alignement', commands: [{ label: 'Gauche', icon: 'align-left' }, { label: 'Centrer', icon: 'align-center' }, { label: 'Droite', icon: 'align-right' }] },
-			{ title: 'Nombre', commands: [{ label: 'Format', icon: 'number-format' }, { label: 'Monétaire', icon: 'currency' }, { label: 'Pourcentage', icon: 'percent' }] },
+			{
+				title: 'Police',
+				commands: [
+					{ label: 'Gras', icon: 'bold', run: st({ b: 'toggle' }), hint: 'Gras (Ctrl+B)' },
+					{ label: 'Italique', icon: 'italic', run: st({ i: 'toggle' }), hint: 'Italique (Ctrl+I)' },
+					{ label: 'Souligné', icon: 'underline', run: st({ u: 'toggle' }), hint: 'Souligné (Ctrl+U)' },
+					{ label: 'Couleur', icon: 'font-color', run: st({ fg }), hint: 'Couleur du texte (choisir la teinte avec le carré à côté)', color: 'fg' },
+					{ label: 'Remplissage', icon: 'font-color', run: st({ bg }), hint: 'Couleur de remplissage', color: 'bg' },
+					{ label: 'Effacer', icon: 'remove-duplicates', run: st({ b: null, i: null, u: null, fg: null, bg: null, al: null, nf: null }), hint: 'Effacer la mise en forme' }
+				]
+			},
+			{
+				title: 'Alignement',
+				commands: [
+					{ label: 'Gauche', icon: 'align-left', run: st({ al: 'left' }) },
+					{ label: 'Centrer', icon: 'align-center', run: st({ al: 'center' }) },
+					{ label: 'Droite', icon: 'align-right', run: st({ al: 'right' }) }
+				]
+			},
+			{
+				title: 'Nombre',
+				commands: [
+					{ label: '0,00', icon: 'number-format', run: st({ nf: '0,00' }), hint: 'Deux décimales' },
+					{ label: 'Monétaire', icon: 'currency', run: st({ nf: '€' }) },
+					{ label: 'Pourcentage', icon: 'percent', run: st({ nf: '%' }) },
+					{ label: 'Standard', icon: 'number-format', run: st({ nf: null }), hint: 'Format Standard' }
+				]
+			},
 			{ title: 'Édition', commands: [{ label: 'Trier et filtrer', icon: 'sort' }, { label: 'Rechercher', icon: 'search' }] }
 		],
 		Insertion: [
@@ -123,6 +154,11 @@
 								<Icon name={c.icon} />
 								<span class="label">{c.label}</span>
 							</button>
+							{#if c.color === 'fg'}
+								<input class="swatch" type="color" bind:value={fg} title="Couleur du texte" />
+							{:else if c.color === 'bg'}
+								<input class="swatch" type="color" bind:value={bg} title="Couleur de remplissage" />
+							{/if}
 						{/each}
 					</div>
 					<div class="title">{g.title}</div>
@@ -220,6 +256,7 @@
 		height: 78px;
 		padding: 4px 6px;
 		overflow-x: auto;
+		scrollbar-width: none; /* défilement à la molette, sans barre */
 	}
 	.group {
 		display: flex;
@@ -262,6 +299,14 @@
 	.cmd:disabled {
 		/* Une commande désactivée perd sa couleur d'accent. */
 		--icon-accent: currentColor;
+	}
+	.swatch {
+		width: 16px;
+		height: 40px;
+		padding: 0;
+		border: none;
+		background: none;
+		cursor: pointer;
 	}
 	.title {
 		text-align: center;

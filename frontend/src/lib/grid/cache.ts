@@ -13,6 +13,8 @@ export interface Fetched {
 	cells: (unknown[] | null)[] | null;
 	/** Saisies hors type : la cellule est vide, la valeur brute est affichée. */
 	invalid?: { row: number; col: number; raw: string }[] | null;
+	/** Mise en forme des cellules (raw : style JSON). */
+	styles?: { row: number; col: number; raw: string }[] | null;
 	micros: number;
 }
 
@@ -23,6 +25,7 @@ export interface Block {
 	cells: unknown[][];
 	text: string[][];
 	bad: (Map<number, string> | undefined)[];
+	sty: (Map<number, string> | undefined)[];
 }
 
 export interface Stats {
@@ -53,14 +56,14 @@ export class RowCache {
 	) {}
 
 	/** Ligne `row` si son bloc est chargé. */
-	row(row: number): { id: number; cells: unknown[]; text: string[]; bad?: Map<number, string> } | undefined {
+	row(row: number): { id: number; cells: unknown[]; text: string[]; bad?: Map<number, string>; sty?: Map<number, string> } | undefined {
 		const k = Math.floor(row / BLOCK);
 		const b = this.blocks.get(k) ?? this.stale.get(k);
 		if (!b || row >= this.rows) return undefined;
 		const i = row % BLOCK;
 		// Un bloc d'avant une insertion peut être plus court que le tableau actuel.
 		if (i >= b.ids.length) return undefined;
-		return { id: b.ids[i], cells: b.cells[i], text: b.text[i], bad: b.bad[i] };
+		return { id: b.ids[i], cells: b.cells[i], text: b.text[i], bad: b.bad[i], sty: b.sty[i] };
 	}
 
 	has(first: number, last: number): boolean {
@@ -108,8 +111,10 @@ export class RowCache {
 				(bad[x.row] ??= new Map()).set(x.col, x.raw);
 				if (text[x.row]) text[x.row][x.col] = x.raw;
 			}
+			const sty: (Map<number, string> | undefined)[] = [];
+			for (const x of w.styles ?? []) (sty[x.row] ??= new Map()).set(x.col, x.raw);
 			this.stale.delete(b);
-			this.blocks.set(b, { ids: w.ids ?? [], cells, text, bad });
+			this.blocks.set(b, { ids: w.ids ?? [], cells, text, bad, sty });
 			this.evict(b);
 			this.error = null;
 		} catch (e) {
