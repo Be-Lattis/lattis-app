@@ -10,25 +10,43 @@
 		label: string;
 		icon: string;
 		run?: () => void;
+		hint?: string;
 	}
 	interface Group {
 		title: string;
 		commands: Command[];
 	}
 
+	export type FileAction = 'new' | 'open' | 'save' | 'saveAs' | 'demo';
+
 	interface Props {
 		view: View;
+		title: string;
+		dirty: boolean;
+		undo: string; // libellé de l'action à annuler (vide : rien)
+		redo: string;
 		onview: (v: View) => void;
-		onbench: () => void;
+		onfile: (a: FileAction) => void;
+		onundo: () => void;
+		onredo: () => void;
+		onbench?: () => void;
 	}
 
-	let { view, onview, onbench }: Props = $props();
+	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench }: Props = $props();
+	let fileOpen = $state(false);
 
 	const tabs = ['Accueil', 'Insertion', 'Données', 'Formules', 'Affichage'] as const;
 	let tab = $state<(typeof tabs)[number] | 'SQL' | 'SCRIPT'>('Accueil');
 
-	const ribbons: Record<string, Group[]> = {
+	const ribbons: Record<string, Group[]> = $derived({
 		Accueil: [
+			{
+				title: 'Annuler',
+				commands: [
+					{ label: 'Annuler', icon: '↶', run: undo ? onundo : undefined, hint: undo ? 'Annuler : ' + undo + ' (Ctrl+Z)' : 'Rien à annuler' },
+					{ label: 'Rétablir', icon: '↷', run: redo ? onredo : undefined, hint: redo ? 'Rétablir : ' + redo + ' (Ctrl+Y)' : 'Rien à rétablir' }
+				]
+			},
 			{ title: 'Presse-papiers', commands: [{ label: 'Coller', icon: '📋' }, { label: 'Couper', icon: '✂' }, { label: 'Copier', icon: '⧉' }] },
 			{ title: 'Police', commands: [{ label: 'Gras', icon: 'G' }, { label: 'Italique', icon: 'I' }, { label: 'Souligné', icon: 'S' }, { label: 'Couleur', icon: 'A' }] },
 			{ title: 'Alignement', commands: [{ label: 'Gauche', icon: '⯇' }, { label: 'Centrer', icon: '≡' }, { label: 'Droite', icon: '⯈' }] },
@@ -49,9 +67,9 @@
 		],
 		Affichage: [
 			{ title: 'Afficher', commands: [{ label: 'Figer les volets', icon: '❄' }, { label: 'Zoom', icon: '🔎' }] },
-			{ title: 'Mesures (prototype)', commands: [{ label: 'Mesurer la grille', icon: '⏱', run: () => onbench() }] }
+			...(onbench ? [{ title: 'Mesures (prototype)', commands: [{ label: 'Mesurer la grille', icon: '⏱', run: () => onbench() }] }] : [])
 		]
-	};
+	});
 
 	function select(t: typeof tab) {
 		tab = t;
@@ -67,11 +85,21 @@
 <header class="ribbon">
 	<nav class="tabs">
 		<span class="app">Slitable</span>
-		<button class="tab file" disabled title="À venir : nouveau, ouvrir, enregistrer (.slitable)">Fichier</button>
+		<div class="file-wrap">
+			<button class="tab file" onclick={() => (fileOpen = !fileOpen)}>Fichier</button>
+			{#if fileOpen}
+				<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
+				<div class="file-menu" onmouseleave={() => (fileOpen = false)}>
+					{#each [['new', 'Nouveau', 'Ctrl+N'], ['open', 'Ouvrir…', 'Ctrl+O'], ['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ['demo', 'Démo : 1 M de lignes', '']] as [a, label, keys] (a)}
+						<button onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keys}</span></button>
+					{/each}
+				</div>
+			{/if}
+		</div>
 		{#each tabs as t (t)}
 			<button class="tab" class:on={tab === t} onclick={() => select(t)}>{t}</button>
 		{/each}
-		<span class="sep"></span>
+		<span class="sep"><span class="doc-title">{title}{dirty ? ' •' : ''}</span></span>
 		<button class="tab special" class:on={tab === 'SQL'} onclick={() => select('SQL')}>SQL</button>
 		<button class="tab special" class:on={tab === 'SCRIPT'} onclick={() => select('SCRIPT')}>SCRIPT</button>
 	</nav>
@@ -81,7 +109,7 @@
 				<section class="group">
 					<div class="commands">
 						{#each g.commands as c (c.label)}
-							<button class="cmd" disabled={!c.run} onclick={c.run} title={c.run ? c.label : `${c.label} : à venir`}>
+							<button class="cmd" disabled={!c.run} onclick={c.run} title={c.hint ?? (c.run ? c.label : `${c.label} : à venir`)}>
 								<span class="icon">{c.icon}</span>
 								<span class="label">{c.label}</span>
 							</button>
@@ -134,6 +162,9 @@
 		color: #14532d;
 		font-weight: 600;
 	}
+	.tab.file {
+		color: #fff;
+	}
 	.tab:disabled {
 		opacity: 0.6;
 		cursor: default;
@@ -143,6 +174,45 @@
 	}
 	.sep {
 		flex: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.doc-title {
+		color: #e8f3ec;
+	}
+	.file-wrap {
+		position: relative;
+		display: flex;
+	}
+	.file-menu {
+		position: absolute;
+		top: 32px;
+		left: 0;
+		z-index: 10;
+		background: #fff;
+		border: 1px solid #d4d7db;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		min-width: 220px;
+		padding: 4px 0;
+	}
+	.file-menu button {
+		display: flex;
+		justify-content: space-between;
+		width: 100%;
+		padding: 6px 14px;
+		background: none;
+		border: none;
+		font: inherit;
+		cursor: pointer;
+		text-align: left;
+	}
+	.file-menu button:hover {
+		background: #e3efe7;
+	}
+	.keys {
+		color: #6b7280;
+		font-size: 12px;
 	}
 	.groups {
 		display: flex;

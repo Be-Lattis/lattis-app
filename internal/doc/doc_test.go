@@ -73,7 +73,7 @@ func TestM2(t *testing.T) {
 		t.Fatal(err)
 	}
 	if dirty, _ := d.Dirty(ctx); !dirty {
-		t.Fatal("classeur neuf vu comme enregistré")
+		t.Fatal("classeur saisi vu comme enregistré")
 	}
 	must(t, d.Save(ctx, path))
 	if dirty, _ := d.Dirty(ctx); dirty {

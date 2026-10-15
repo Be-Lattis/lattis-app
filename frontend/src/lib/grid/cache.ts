@@ -31,6 +31,10 @@ export interface Stats {
 
 export class RowCache {
 	private blocks = new Map<number, Block>();
+	// Blocs d'avant la dernière modification : affichés en attendant les
+	// nouveaux, pour éviter un clignotement après chaque saisie.
+	private stale = new Map<number, Block>();
+	private generation = 0;
 	private inflight = new Set<number>();
 	private queue: number[] = [];
 	readonly stats: Stats = { roundTrip: [], server: [] };
@@ -38,7 +42,7 @@ export class RowCache {
 
 	constructor(
 		private fetcher: Fetcher,
-		private rows: number,
+		public rows: number,
 		private format: (col: number, v: unknown) => string,
 		private onLoad: () => void,
 		private maxBlocks = 300,
@@ -47,9 +51,12 @@ export class RowCache {
 
 	/** Ligne `row` si son bloc est chargé. */
 	row(row: number): { id: number; cells: unknown[]; text: string[] } | undefined {
-		const b = this.blocks.get(Math.floor(row / BLOCK));
-		if (!b) return undefined;
+		const k = Math.floor(row / BLOCK);
+		const b = this.blocks.get(k) ?? this.stale.get(k);
+		if (!b || row >= this.rows) return undefined;
 		const i = row % BLOCK;
+		// Un bloc d'avant une insertion peut être plus court que le tableau actuel.
+		if (i >= b.ids.length) return undefined;
 		return { id: b.ids[i], cells: b.cells[i], text: b.text[i] };
 	}
 
@@ -83,13 +90,16 @@ export class RowCache {
 	}
 
 	private async load(b: number) {
+		const gen = this.generation;
 		this.inflight.add(b);
 		const t0 = performance.now();
 		try {
 			const w = await this.fetcher(b * BLOCK, BLOCK);
+			if (gen !== this.generation) return; // les données ont changé entre-temps
 			push(this.stats.roundTrip, performance.now() - t0);
 			push(this.stats.server, w.micros / 1000);
 			const cells = (w.cells ?? []).map((r) => r ?? []);
+			this.stale.delete(b);
 			this.blocks.set(b, {
 				ids: w.ids ?? [],
 				cells,
@@ -100,7 +110,7 @@ export class RowCache {
 		} catch (e) {
 			this.error = String(e);
 		} finally {
-			this.inflight.delete(b);
+			if (gen === this.generation) this.inflight.delete(b);
 		}
 		this.onLoad();
 		this.pump();
@@ -111,6 +121,16 @@ export class RowCache {
 		if (this.blocks.size <= this.maxBlocks) return;
 		const far = [...this.blocks.keys()].sort((a, b) => Math.abs(b - near) - Math.abs(a - near));
 		for (const b of far.slice(0, this.blocks.size - this.maxBlocks)) this.blocks.delete(b);
+	}
+
+	/** Les données ont changé : tout recharger, en affichant l'ancien contenu en attendant. */
+	invalidate(rows: number) {
+		this.generation++;
+		for (const [k, v] of this.blocks) this.stale.set(k, v);
+		this.blocks.clear();
+		this.inflight.clear();
+		this.queue = [];
+		this.rows = rows;
 	}
 
 	/** Met à jour une cellule déjà chargée (saisie ou retour du backend). */

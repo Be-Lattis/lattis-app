@@ -46,3 +46,43 @@ describe('RowCache', () => {
 		expect(cache.row(3)?.text[0]).toBe('<42>');
 	});
 });
+
+describe('RowCache.invalidate', () => {
+	it('affiche l’ancien contenu jusqu’au rechargement', async () => {
+		let version = 'v1';
+		const fetcher = async (first: number, count: number): Promise<Fetched> => ({
+			first,
+			ids: Array.from({ length: count }, (_, i) => first + i),
+			cells: Array.from({ length: count }, () => [version]),
+			micros: 0
+		});
+		const cache = new RowCache(fetcher, 10, (_, v) => String(v), () => {});
+		cache.want(0, 5);
+		for (let i = 0; i < 3; i++) await tick();
+		version = 'v2';
+		cache.invalidate(12);
+		expect(cache.row(0)?.text[0]).toBe('v1');
+		expect(cache.has(0, 5)).toBe(false);
+		cache.want(0, 5);
+		for (let i = 0; i < 3; i++) await tick();
+		expect(cache.row(0)?.text[0]).toBe('v2');
+		expect(cache.rows).toBe(12);
+	});
+});
+
+describe('RowCache après ajout de lignes', () => {
+	it('ne lit pas au-delà d’un ancien bloc plus court', async () => {
+		const fetcher = async (first: number, count: number): Promise<Fetched> => ({
+			first,
+			ids: [1],
+			cells: [['a']],
+			micros: 0
+		});
+		const cache = new RowCache(fetcher, 1, (_, v) => String(v), () => {});
+		cache.want(0, 0);
+		for (let i = 0; i < 3; i++) await tick();
+		cache.invalidate(2);
+		expect(cache.row(0)?.text[0]).toBe('a');
+		expect(cache.row(1)).toBeUndefined();
+	});
+});

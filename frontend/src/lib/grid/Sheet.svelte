@@ -1,13 +1,15 @@
 <script lang="ts">
 	// Feuille façon Excel : une grille infinie (1 048 576 lignes × 16 384
-	// colonnes, comme Excel) sur laquelle un tableau est posé à son ancre.
-	// Pas d'adressage A1 : les numéros de ligne et les noms de colonnes ne
-	// s'affichent que pour le tableau, et le bandeau du haut reprend les noms de
-	// colonnes du tableau quand son en-tête sort de l'écran (comme Excel).
-	// Rendu <canvas> de la zone visible, cache de blocs de lignes, éditeur DOM
-	// superposé à la cellule active, barre de formule.
-	import { onMount, untrack } from 'svelte';
-	import { RowCache, percentile, type Fetcher } from './cache';
+	// colonnes, comme Excel) sur laquelle sont posés des tableaux et des
+	// cellules libres. Pas d'adressage A1 : les numéros de ligne et les noms
+	// de colonnes ne s'affichent que pour les tableaux, et le bandeau du haut
+	// reprend les noms de colonnes d'un tableau quand son en-tête sort de
+	// l'écran (comme Excel). Saisir n'importe où passe par la source, qui
+	// décide (cellule libre, nouveau tableau, extension, élargissement).
+	// Rendu <canvas> de la zone visible, cache de blocs de lignes par tableau,
+	// éditeur DOM superposé à la cellule active, barre de formule.
+	import { flushSync, onMount, untrack } from 'svelte';
+	import { RowCache, percentile, type Fetched } from './cache';
 	import { VScroll, clamp } from './scroll';
 	import { Axis } from './axis';
 	import {
@@ -25,6 +27,39 @@
 		type: ColumnType;
 	}
 
+	export interface SheetTable {
+		id: number;
+		name: string;
+		row: number; // ancre : ligne d'en-tête
+		col: number;
+		rows: number; // lignes de données
+		columns: Column[];
+	}
+
+	export interface SheetData {
+		tables: SheetTable[];
+		cells: { row: number; col: number; raw: string }[];
+	}
+
+	/** Cible d'une saisie, pour la source. */
+	export interface Target {
+		table?: SheetTable;
+		index?: number; // ligne de données
+		column?: number; // colonne du tableau
+		rowId?: number; // clé technique de la ligne
+	}
+
+	export interface SheetSource {
+		window(table: SheetTable, first: number, count: number): Promise<Fetched>;
+		/**
+		 * Enregistre une saisie. Renvoie un message pour la barre d'état, ou la
+		 * valeur stockée quand la source ne relit pas sa mise en page.
+		 */
+		setCell(row: number, col: number, raw: string, target: Target): Promise<string | void | { value: unknown }>;
+		undo?(): Promise<unknown>;
+		redo?(): Promise<unknown>;
+	}
+
 	export interface SheetStatus {
 		cell: string;
 		message: string;
@@ -36,26 +71,21 @@
 	}
 
 	interface Props {
-		/** Tableau posé sur la feuille : nom, ancre (cellule d'en-tête), lignes de données. */
-		table: { name: string; row: number; col: number; rows: number; columns: Column[] };
-		fetcher: Fetcher;
-		save: (id: number, col: number, raw: string) => Promise<unknown>;
+		data: SheetData;
+		source: SheetSource;
 		onstatus?: (s: SheetStatus) => void;
 		/** Lance la mesure dès l'ouverture et transmet le résultat (mode SLITABLE_BENCH). */
 		autoBench?: (result: string) => void;
 	}
 
-	const props: Props = $props();
-	// Le tableau est fixé pour la durée de vie du composant (la page le recrée
-	// s'il change) : on lit les props une fois.
-	const { table: T, fetcher, save, onstatus, autoBench } = untrack(() => ({ ...props }));
-	const columns = T.columns;
+	let { data, source, onstatus, autoBench }: Props = $props();
 
 	export const SHEET_ROWS = 1_048_576;
 	export const SHEET_COLS = 16_384;
 	const ROW_H = 22;
 	const DEF_W = 88;
 	const TOP_H = 22;
+	const MARGIN = 52;
 	const FONT = '13px "Segoe UI", system-ui, -apple-system, sans-serif';
 	const FONT_BOLD = '600 13px "Segoe UI", system-ui, -apple-system, sans-serif';
 	const FONT_SMALL = '11px "Segoe UI", system-ui, -apple-system, sans-serif';
@@ -78,21 +108,64 @@
 		activeStrip: '#d3e7dc'
 	};
 
-	// Géométrie du tableau sur la feuille.
-	const headRow = T.row;
-	const lastRow = T.row + T.rows;
-	const firstCol = T.col;
-	const lastCol = T.col + columns.length - 1;
-	const inCols = (c: number) => c >= firstCol && c <= lastCol;
-	const inRows = (r: number) => r >= headRow && r <= lastRow;
-	const isData = (r: number, c: number) => inCols(c) && r > headRow && r <= lastRow;
+	// --- Tableaux posés sur la feuille ------------------------------------
 
-	const colAxis = new Axis(
-		SHEET_COLS,
-		DEF_W,
-		new Map(columns.map((c, i) => [firstCol + i, defaultWidth(c.type)]))
-	);
-	const margin = Math.max(44, String(T.rows).length * 8 + 18);
+	interface Entry {
+		t: SheetTable;
+		cache: RowCache;
+		last: number; // dernière ligne de la feuille occupée
+		lastCol: number;
+	}
+
+	let entries: Entry[] = [];
+	let cells = new Map<string, string>();
+	let colAxis = $state.raw(new Axis(SHEET_COLS, DEF_W));
+	const key = (r: number, c: number) => `${r},${c}`;
+
+	function makeEntry(t: SheetTable): Entry {
+		const e: Entry = {
+			t,
+			last: t.row + t.rows,
+			lastCol: t.col + t.columns.length - 1,
+			cache: new RowCache(
+				(first, count) => source.window(e.t, first, count),
+				t.rows,
+				(c, v) => formatValue(e.t.columns[c]?.type ?? 'text', v),
+				() => {
+					schedule();
+					refreshFx();
+				}
+			)
+		};
+		return e;
+	}
+
+	/** Recalcule la géométrie quand la mise en page change (après une saisie). */
+	function applyData(d: SheetData) {
+		const old = new Map(entries.map((e) => [e.t.id, e]));
+		entries = d.tables.map((t) => {
+			const e = old.get(t.id);
+			if (!e) return makeEntry(t);
+			e.t = t;
+			e.last = t.row + t.rows;
+			e.lastCol = t.col + t.columns.length - 1;
+			e.cache.invalidate(t.rows);
+			return e;
+		});
+		cells = new Map(d.cells.map((c) => [key(c.row, c.col), c.raw]));
+		const widths = new Map<number, number>();
+		for (const e of entries) {
+			e.t.columns.forEach((c, i) => {
+				if (!widths.has(e.t.col + i)) widths.set(e.t.col + i, defaultWidth(c.type));
+			});
+		}
+		colAxis = new Axis(SHEET_COLS, DEF_W, widths);
+		refreshFx();
+		schedule();
+	}
+
+	const inTable = (e: Entry, r: number, c: number) => r >= e.t.row && r <= e.last && c >= e.t.col && c <= e.lastCol;
+	const tableAt = (r: number, c: number) => entries.find((e) => inTable(e, r, c));
 
 	const vs = new VScroll(SHEET_ROWS * ROW_H, 0);
 	let viewW = 0;
@@ -102,22 +175,12 @@
 	let scroller: HTMLDivElement;
 	let canvas: HTMLCanvasElement;
 	let input = $state<HTMLInputElement>();
-	let fx: HTMLInputElement;
 	let ctx: CanvasRenderingContext2D;
-
-	const cache = new RowCache(
-		fetcher,
-		T.rows,
-		(c, v) => formatValue(columns[c].type, v),
-		() => {
-			schedule();
-			refreshFx();
-		}
-	);
+	let mounted = false;
 
 	// Sélection : cellule active + ancre de la plage (Maj + flèches / glisser).
-	let active = $state.raw({ row: T.row + 1, col: T.col });
-	let anchor = { row: T.row + 1, col: T.col };
+	let active = $state.raw({ row: 0, col: 0 });
+	let anchor = { row: 0, col: 0 };
 	let dragging = false;
 
 	// Édition (dans la cellule ou dans la barre de formule).
@@ -136,23 +199,31 @@
 	let lastEditMs = NaN;
 	let missingFrames = 0;
 
+	$effect(() => {
+		const d = data;
+		untrack(() => applyData(d));
+	});
+
 	let frame = 0;
 	function schedule() {
-		if (!frame) frame = requestAnimationFrame(draw);
+		if (mounted && !frame) frame = requestAnimationFrame(draw);
 	}
 
-	/** Lignes de la feuille visibles. */
 	function visibleRows() {
 		const first = Math.floor(vs.top / ROW_H);
 		const last = Math.min(SHEET_ROWS - 1, Math.floor((vs.top + vs.view - 1) / ROW_H));
 		return { first, last };
 	}
 
-	/** Lignes de données du tableau visibles (indices de données), ou null. */
-	function visibleData(first: number, last: number) {
-		const a = Math.max(first, headRow + 1);
-		const b = Math.min(last, lastRow);
-		return a <= b ? { first: a - headRow - 1, last: b - headRow - 1 } : null;
+	/** Lignes de données d'un tableau visibles (indices de données), ou null. */
+	function visibleData(e: Entry, first: number, last: number) {
+		const a = Math.max(first, e.t.row + 1);
+		const b = Math.min(last, e.last);
+		return a <= b ? { first: a - e.t.row - 1, last: b - e.t.row - 1 } : null;
+	}
+
+	function isNumeric(s: string) {
+		return /^[-+]?[\d\s  ]+([,.]\d+)?%?$/.test(s.trim());
 	}
 
 	function draw() {
@@ -167,29 +238,31 @@
 
 		const left = scroller.scrollLeft;
 		const { first: r0, last: r1 } = visibleRows();
-		const data = visibleData(r0, r1);
-		if (data) {
-			cache.want(data.first, data.last);
-			if (!cache.has(data.first, data.last)) missingFrames++;
-		}
 		const c0 = colAxis.indexAt(left);
-		const c1 = colAxis.indexAt(left + w - margin);
-		const cx = (c: number) => margin + colAxis.offset(c) - left;
+		const c1 = colAxis.indexAt(left + w - MARGIN);
+		const cx = (c: number) => MARGIN + colAxis.offset(c) - left;
 		const ry = (r: number) => TOP_H + r * ROW_H - vs.top;
 		const xEnd = Math.min(w, cx(c1 + 1));
+		const spanW = (a: number, b: number) => colAxis.offset(b + 1) - colAxis.offset(a);
 
-		// Zone grisée qui sépare le tableau du reste de la feuille.
-		ctx.fillStyle = C.gray;
-		if (r0 <= lastRow + 1 && r1 >= lastRow + 1) {
-			ctx.fillRect(cx(firstCol), ry(lastRow + 1), colAxis.offset(lastCol + 2) - colAxis.offset(firstCol), ROW_H);
+		const visible = entries.filter((e) => e.last + 1 >= r0 && e.t.row <= r1 && e.lastCol + 1 >= c0 && e.t.col <= c1);
+		let incomplete = false;
+		for (const e of visible) {
+			const d = visibleData(e, r0, r1);
+			if (d) {
+				e.cache.want(d.first, d.last);
+				if (!e.cache.has(d.first, d.last)) incomplete = true;
+			}
 		}
-		if (c0 <= lastCol + 1 && c1 >= lastCol + 1) {
-			ctx.fillRect(cx(lastCol + 1), ry(headRow), colAxis.size(lastCol + 1), (lastRow - headRow + 1) * ROW_H);
-		}
-		// En-tête du tableau.
-		if (headRow >= r0 && headRow <= r1) {
+		if (incomplete) missingFrames++;
+
+		// Zones grisées qui séparent chaque tableau du reste, puis en-têtes.
+		for (const e of visible) {
+			ctx.fillStyle = C.gray;
+			ctx.fillRect(cx(e.t.col), ry(e.last + 1), spanW(e.t.col, e.lastCol + 1), ROW_H);
+			ctx.fillRect(cx(e.lastCol + 1), ry(e.t.row), colAxis.size(e.lastCol + 1), (e.last - e.t.row + 1) * ROW_H);
 			ctx.fillStyle = C.head;
-			ctx.fillRect(cx(firstCol), ry(headRow), colAxis.offset(lastCol + 1) - colAxis.offset(firstCol), ROW_H);
+			ctx.fillRect(cx(e.t.col), ry(e.t.row), spanW(e.t.col, e.lastCol), ROW_H);
 		}
 
 		// Plage sélectionnée.
@@ -199,54 +272,75 @@
 		const k1 = Math.max(active.col, anchor.col);
 		if (s0 !== s1 || k0 !== k1) {
 			ctx.fillStyle = C.select;
-			ctx.fillRect(cx(k0), ry(s0), colAxis.offset(k1 + 1) - colAxis.offset(k0), (s1 - s0 + 1) * ROW_H);
+			ctx.fillRect(cx(k0), ry(s0), spanW(k0, k1), (s1 - s0 + 1) * ROW_H);
 		}
 
-		// Contenu du tableau, colonne par colonne (une découpe par colonne).
+		// Contenu des tableaux, colonne par colonne (une découpe par colonne).
 		ctx.textBaseline = 'middle';
-		const tr0 = Math.max(r0, headRow);
-		const tr1 = Math.min(r1, lastRow);
-		for (let c = Math.max(c0, firstCol); c <= Math.min(c1, lastCol) && tr0 <= tr1; c++) {
-			const i = c - firstCol;
+		for (const e of visible) {
+			const tr0 = Math.max(r0, e.t.row);
+			const tr1 = Math.min(r1, e.last);
+			for (let c = Math.max(c0, e.t.col); c <= Math.min(c1, e.lastCol) && tr0 <= tr1; c++) {
+				const i = c - e.t.col;
+				const col = e.t.columns[i];
+				const x = cx(c);
+				const cw = colAxis.size(c);
+				ctx.save();
+				ctx.beginPath();
+				ctx.rect(x, TOP_H, cw, h - TOP_H);
+				ctx.clip();
+				for (let r = tr0; r <= tr1; r++) {
+					const y = ry(r);
+					if (r === e.t.row) {
+						ctx.font = FONT_SMALL;
+						ctx.fillStyle = C.icon;
+						ctx.textAlign = 'right';
+						const icon = typeIcon(col.type);
+						ctx.fillText(icon, x + cw - 6, y + ROW_H / 2);
+						ctx.save();
+						ctx.beginPath();
+						ctx.rect(x, y, cw - ctx.measureText(icon).width - 10, ROW_H);
+						ctx.clip();
+						ctx.font = FONT_BOLD;
+						ctx.fillStyle = C.headText;
+						ctx.textAlign = 'left';
+						ctx.fillText(col.name, x + 6, y + ROW_H / 2);
+						ctx.restore();
+						continue;
+					}
+					const row = e.cache.row(r - e.t.row - 1);
+					if (!row) {
+						ctx.fillStyle = C.placeholder;
+						ctx.fillRect(x + 6, y + 7, cw * 0.6, ROW_H - 14);
+						continue;
+					}
+					const s = row.text[i];
+					if (!s) continue;
+					const align = alignment(col.type);
+					ctx.font = FONT;
+					ctx.textAlign = align;
+					ctx.fillStyle = C.text;
+					ctx.fillText(s, align === 'left' ? x + 6 : align === 'right' ? x + cw - 6 : x + cw / 2, y + ROW_H / 2);
+				}
+				ctx.restore();
+			}
+		}
+
+		// Cellules libres : texte à gauche, nombres à droite, comme Excel.
+		ctx.font = FONT;
+		ctx.fillStyle = C.text;
+		for (const [k, raw] of cells) {
+			const [r, c] = k.split(',').map(Number);
+			if (r < r0 || r > r1 || c < c0 || c > c1) continue;
 			const x = cx(c);
 			const cw = colAxis.size(c);
+			const num = isNumeric(raw);
 			ctx.save();
 			ctx.beginPath();
-			ctx.rect(x, TOP_H, cw, h - TOP_H);
+			ctx.rect(Math.max(x, MARGIN), TOP_H, num ? cw : w, h - TOP_H);
 			ctx.clip();
-			for (let r = tr0; r <= tr1; r++) {
-				const y = ry(r);
-				if (r === headRow) {
-					ctx.font = FONT_SMALL;
-					ctx.fillStyle = C.icon;
-					ctx.textAlign = 'right';
-					const icon = typeIcon(columns[i].type);
-					ctx.fillText(icon, x + cw - 6, y + ROW_H / 2);
-					ctx.save();
-					ctx.beginPath();
-					ctx.rect(x, y, cw - ctx.measureText(icon).width - 10, ROW_H);
-					ctx.clip();
-					ctx.font = FONT_BOLD;
-					ctx.fillStyle = C.headText;
-					ctx.textAlign = 'left';
-					ctx.fillText(columns[i].name, x + 6, y + ROW_H / 2);
-					ctx.restore();
-					continue;
-				}
-				const row = cache.row(r - headRow - 1);
-				if (!row) {
-					ctx.fillStyle = C.placeholder;
-					ctx.fillRect(x + 6, y + 7, cw * 0.6, ROW_H - 14);
-					continue;
-				}
-				const s = row.text[i];
-				if (!s) continue;
-				const align = alignment(columns[i].type);
-				ctx.font = FONT;
-				ctx.textAlign = align;
-				ctx.fillStyle = C.text;
-				ctx.fillText(s, align === 'left' ? x + 6 : align === 'right' ? x + cw - 6 : x + cw / 2, y + ROW_H / 2);
-			}
+			ctx.textAlign = num ? 'right' : 'left';
+			ctx.fillText(raw, num ? x + cw - 6 : x + 6, ry(r) + ROW_H / 2);
 			ctx.restore();
 		}
 
@@ -256,7 +350,7 @@
 		ctx.lineWidth = 1;
 		for (let r = r0; r <= r1 + 1; r++) {
 			const y = Math.round(ry(r)) - 0.5;
-			ctx.moveTo(margin, y);
+			ctx.moveTo(MARGIN, y);
 			ctx.lineTo(xEnd, y);
 		}
 		for (let c = c0; c <= c1 + 1; c++) {
@@ -266,23 +360,22 @@
 		}
 		ctx.stroke();
 
-		// Bordure discrète du tableau.
 		ctx.save();
 		ctx.beginPath();
-		ctx.rect(margin, TOP_H, w - margin, h - TOP_H);
+		ctx.rect(MARGIN, TOP_H, w - MARGIN, h - TOP_H);
 		ctx.clip();
+		// Bordure discrète de chaque tableau, trait sous l'en-tête.
 		ctx.strokeStyle = C.border;
-		ctx.strokeRect(
-			Math.round(cx(firstCol)) - 0.5,
-			Math.round(ry(headRow)) - 0.5,
-			colAxis.offset(lastCol + 1) - colAxis.offset(firstCol),
-			(lastRow - headRow + 1) * ROW_H
-		);
-		ctx.beginPath();
-		ctx.moveTo(cx(firstCol), Math.round(ry(headRow + 1)) - 0.5);
-		ctx.lineTo(cx(lastCol + 1), Math.round(ry(headRow + 1)) - 0.5);
-		ctx.stroke();
-
+		ctx.lineWidth = 1;
+		for (const e of visible) {
+			const x = Math.round(cx(e.t.col)) - 0.5;
+			const y = Math.round(ry(e.t.row)) - 0.5;
+			ctx.strokeRect(x, y, spanW(e.t.col, e.lastCol), (e.last - e.t.row + 1) * ROW_H);
+			ctx.beginPath();
+			ctx.moveTo(x, y + ROW_H);
+			ctx.lineTo(x + spanW(e.t.col, e.lastCol), y + ROW_H);
+			ctx.stroke();
+		}
 		// Cellule active.
 		if (active.row >= r0 - 1 && active.row <= r1 + 1) {
 			ctx.strokeStyle = C.active;
@@ -292,22 +385,23 @@
 		ctx.restore();
 
 		// Bandeau du haut : vide (pas de lettres de colonnes), sauf quand
-		// l'en-tête du tableau est sorti de l'écran : il reprend alors ses noms.
+		// l'en-tête d'un tableau visible est sorti de l'écran.
 		ctx.fillStyle = C.strip;
 		ctx.fillRect(0, 0, w, TOP_H);
-		if (headRow < r0 && lastRow >= r0) {
-			for (let c = Math.max(c0, firstCol); c <= Math.min(c1, lastCol); c++) {
+		for (const e of visible) {
+			if (e.t.row >= r0 || e.last < r0) continue;
+			for (let c = Math.max(c0, e.t.col); c <= Math.min(c1, e.lastCol); c++) {
 				const x = cx(c);
 				ctx.save();
 				ctx.beginPath();
-				ctx.rect(Math.max(x, margin), 0, colAxis.size(c), TOP_H);
+				ctx.rect(Math.max(x, MARGIN), 0, colAxis.size(c), TOP_H);
 				ctx.clip();
 				ctx.fillStyle = C.head;
 				ctx.fillRect(x, 0, colAxis.size(c), TOP_H);
 				ctx.font = FONT_BOLD;
 				ctx.fillStyle = C.headText;
 				ctx.textAlign = 'left';
-				ctx.fillText(columns[c - firstCol].name, x + 6, TOP_H / 2);
+				ctx.fillText(e.t.columns[c - e.t.col].name, x + 6, TOP_H / 2);
 				ctx.restore();
 			}
 		}
@@ -316,20 +410,21 @@
 			ctx.fillRect(cx(c), TOP_H - 2, colAxis.size(c), 2);
 		}
 
-		// Marge de gauche : numéros 1..n des lignes de données du tableau.
+		// Marge de gauche : numéros 1..n des lignes de données des tableaux.
 		ctx.fillStyle = C.strip;
-		ctx.fillRect(0, TOP_H, margin, h - TOP_H);
+		ctx.fillRect(0, TOP_H, MARGIN, h - TOP_H);
 		ctx.font = FONT_SMALL;
 		ctx.textAlign = 'right';
 		for (let r = r0; r <= r1; r++) {
 			const y = ry(r);
 			if (r >= s0 && r <= s1) {
 				ctx.fillStyle = C.activeStrip;
-				ctx.fillRect(0, y, margin, ROW_H);
+				ctx.fillRect(0, y, MARGIN, ROW_H);
 			}
-			if (r > headRow && r <= lastRow) {
+			const e = visible.find((e) => r > e.t.row && r <= e.last);
+			if (e) {
 				ctx.fillStyle = C.stripText;
-				ctx.fillText(String(r - headRow), margin - 8, y + ROW_H / 2);
+				ctx.fillText(String(r - e.t.row), MARGIN - 8, y + ROW_H / 2);
 			}
 		}
 		ctx.beginPath();
@@ -337,8 +432,8 @@
 		ctx.lineWidth = 1;
 		ctx.moveTo(0, TOP_H - 0.5);
 		ctx.lineTo(w, TOP_H - 0.5);
-		ctx.moveTo(margin - 0.5, 0);
-		ctx.lineTo(margin - 0.5, h);
+		ctx.moveTo(MARGIN - 0.5, 0);
+		ctx.lineTo(MARGIN - 0.5, h);
 		ctx.stroke();
 
 		if (editing) placeEditor();
@@ -356,37 +451,48 @@
 
 	const ms = (v: number) => (Number.isFinite(v) ? v.toFixed(v < 10 ? 1 : 0) + ' ms' : '–');
 
+	/** Ce que contient une cellule, pour l'édition et la barre de formule. */
+	function cellInfo(r: number, c: number) {
+		const e = tableAt(r, c);
+		if (!e) return { e, kind: 'free' as const, value: cells.get(key(r, c)) ?? '' };
+		const i = c - e.t.col;
+		if (r === e.t.row) return { e, i, kind: 'header' as const, value: e.t.columns[i].name };
+		const n = r - e.t.row - 1;
+		const row = e.cache.row(n);
+		return {
+			e,
+			i,
+			n,
+			row,
+			kind: 'data' as const,
+			value: row ? editValue(e.t.columns[i].type, row.cells[i]) : ''
+		};
+	}
+
 	/** Désignation de la cellule active (pas d'adresse A1). */
 	function cellName(r: number, c: number): string {
-		if (!inCols(c) || !inRows(r)) return 'Hors tableau';
-		const col = `${T.name}[${columns[c - firstCol].name}]`;
-		return r === headRow ? `${col} · en-tête` : `${col} · ${r - headRow}`;
+		const e = tableAt(r, c);
+		if (!e) return cells.has(key(r, c)) ? 'Cellule libre' : '';
+		const col = `${e.t.name}[${e.t.columns[c - e.t.col].name}]`;
+		return r === e.t.row ? `${col} · en-tête` : `${col} · ${r - e.t.row}`;
 	}
 
 	function refreshStatus() {
-		const s = cache.stats;
+		const stats = entries[0]?.cache.stats ?? { roundTrip: [], server: [] };
 		onstatus?.({
 			cell: cellName(active.row, active.col),
 			message,
-			fetch: `bloc p50 ${ms(percentile(s.roundTrip, 0.5))} / p95 ${ms(percentile(s.roundTrip, 0.95))}`,
+			fetch: `bloc p50 ${ms(percentile(stats.roundTrip, 0.5))}`,
 			draw: `rendu ${ms(percentile(drawTimes, 0.5))}`,
 			fps: `${frameStamps.length} img/s`,
 			edit: `saisie ${ms(lastEditMs)}`,
-			blocks: cache.size
+			blocks: entries.reduce((n, e) => n + e.cache.size, 0)
 		});
 	}
 
 	function refreshFx() {
 		if (fxEditing) return;
-		const { row, col } = active;
-		if (isData(row, col)) {
-			const r = cache.row(row - headRow - 1);
-			fxText = r ? editValue(columns[col - firstCol].type, r.cells[col - firstCol]) : '';
-		} else if (row === headRow && inCols(col)) {
-			fxText = columns[col - firstCol].name;
-		} else {
-			fxText = '';
-		}
+		fxText = cellInfo(active.row, active.col).value;
 	}
 
 	function say(m: string) {
@@ -426,7 +532,7 @@
 		if (top < vs.top) vs.to(top);
 		else if (top + ROW_H > vs.top + vs.view) vs.to(top + ROW_H - vs.view);
 		const left = scroller.scrollLeft;
-		const cw = viewW - margin;
+		const cw = viewW - MARGIN;
 		const x0 = colAxis.offset(col);
 		const x1 = x0 + colAxis.size(col);
 		if (x0 < left) scroller.scrollLeft = x0;
@@ -447,18 +553,33 @@
 
 	// Ctrl + flèche, comme Excel : saute au bord du bloc de données.
 	function jump(row: number, col: number, dr: number, dc: number): [number, number] {
-		if (dr > 0) return [inCols(col) && row < headRow ? headRow : inCols(col) && row < lastRow ? lastRow : SHEET_ROWS - 1, col];
-		if (dr < 0) return [inCols(col) && row > lastRow ? lastRow : inCols(col) && row > headRow ? headRow : 0, col];
-		if (dc > 0) return [row, inRows(row) && col < firstCol ? firstCol : inRows(row) && col < lastCol ? lastCol : SHEET_COLS - 1];
-		return [row, inRows(row) && col > lastCol ? lastCol : inRows(row) && col > firstCol ? firstCol : 0];
+		const filled = (r: number, c: number) => !!tableAt(r, c) || cells.has(key(r, c));
+		if (dr !== 0) {
+			const e = entries.find((e) => col >= e.t.col && col <= e.lastCol && (dr > 0 ? e.last > row : e.t.row < row));
+			const edges = entries
+				.filter((e) => col >= e.t.col && col <= e.lastCol)
+				.flatMap((e) => [e.t.row, e.last])
+				.filter((r) => (dr > 0 ? r > row : r < row))
+				.sort((a, b) => (dr > 0 ? a - b : b - a));
+			if (e || edges.length) return [edges[0] ?? row, col];
+			for (let r = row + dr; r >= 0 && r < Math.min(SHEET_ROWS, row + 10000) && r > row - 10000; r += dr) if (filled(r, col)) return [r, col];
+			return [dr > 0 ? SHEET_ROWS - 1 : 0, col];
+		}
+		const edges = entries
+			.filter((e) => row >= e.t.row && row <= e.last)
+			.flatMap((e) => [e.t.col, e.lastCol])
+			.filter((c) => (dc > 0 ? c > col : c < col))
+			.sort((a, b) => (dc > 0 ? a - b : b - a));
+		if (edges.length) return [row, edges[0]];
+		return [row, dc > 0 ? SHEET_COLS - 1 : 0];
 	}
 
 	function cellAt(e: MouseEvent): { row: number; col: number } | null {
 		const r = scroller.getBoundingClientRect();
 		const x = e.clientX - r.left;
 		const y = e.clientY - r.top;
-		if (x < margin || y < TOP_H || x >= scroller.clientWidth || y >= scroller.clientHeight) return null;
-		const col = colAxis.indexAt(x - margin + scroller.scrollLeft);
+		if (x < MARGIN || y < TOP_H || x >= scroller.clientWidth || y >= scroller.clientHeight) return null;
+		const col = colAxis.indexAt(x - MARGIN + scroller.scrollLeft);
 		const row = Math.min(SHEET_ROWS - 1, Math.floor((y - TOP_H + vs.top) / ROW_H));
 		return { row, col };
 	}
@@ -495,6 +616,16 @@
 			const [r, c] = ctrl ? jump(row, col, dr, dc) : [row + dr, col + dc];
 			moveTo(r, c, ext);
 		};
+		if (ctrl && (e.key === 'z' || e.key === 'Z') && source.undo) {
+			e.preventDefault();
+			source.undo().catch((err) => say(String(err?.message ?? err)));
+			return;
+		}
+		if (ctrl && (e.key === 'y' || e.key === 'Y') && source.redo) {
+			e.preventDefault();
+			source.redo().catch((err) => say(String(err?.message ?? err)));
+			return;
+		}
 		switch (e.key) {
 			case 'ArrowDown':
 				arrow(1, 0);
@@ -518,7 +649,11 @@
 				moveTo(ctrl ? 0 : row, 0, ext);
 				break;
 			case 'End':
-				if (ctrl) moveTo(lastRow, lastCol, ext);
+				if (ctrl) {
+					const last = entries.reduce((m, e) => Math.max(m, e.last), 0);
+					const lastCol = entries.reduce((m, e) => Math.max(m, e.lastCol), 0);
+					moveTo(last, lastCol, ext);
+				}
 				break;
 			case 'Tab':
 				moveTo(row, col + (e.shiftKey ? -1 : 1));
@@ -544,56 +679,58 @@
 
 	// --- Édition ------------------------------------------------------------
 
-	/** Vrai si la cellule active est modifiable dans ce prototype. */
-	function editable(): boolean {
-		const { row, col } = active;
-		if (isData(row, col)) return !!cache.row(row - headRow - 1);
-		say(
-			row === headRow && inCols(col)
-				? 'Renommer une colonne : à venir (phase 3)'
-				: 'Saisie hors tableau (nouvel îlot, cellule libre) : à venir (phase 3)'
-		);
-		return false;
-	}
-
 	function startEdit(byTyping: boolean, initial?: string) {
-		if (!editable()) return;
-		const row = cache.row(active.row - headRow - 1)!;
-		const i = active.col - firstCol;
+		const info = cellInfo(active.row, active.col);
+		// Ligne pas encore chargée (juste après une saisie qui l'a créée) : la
+		// frappe ne doit pas être perdue ; seule l'édition de la valeur (F2)
+		// attend les données.
+		if (info.kind === 'data' && !info.row && initial === undefined) return;
 		anchor = { ...active };
 		editByTyping = byTyping;
-		editValueText = initial ?? editValue(columns[i].type, row.cells[i]);
-		editing = true;
+		editValueText = initial ?? info.value;
+		// L'éditeur doit avoir le focus avant la frappe suivante : sinon une
+		// saisie rapide perdrait des caractères.
+		flushSync(() => (editing = true));
 		ensureVisible(active.row, active.col);
-		requestAnimationFrame(() => {
-			if (!input) return;
-			placeEditor();
-			input.focus();
-			const n = input.value.length;
-			input.setSelectionRange(n, n);
-		});
+		if (!input) return;
+		placeEditor();
+		input.focus();
+		const n = input.value.length;
+		input.setSelectionRange(n, n);
 	}
 
 	function placeEditor() {
 		if (!input) return;
-		const x = margin + colAxis.offset(active.col) - scroller.scrollLeft;
+		const x = MARGIN + colAxis.offset(active.col) - scroller.scrollLeft;
 		const y = TOP_H + active.row * ROW_H - vs.top;
 		input.style.transform = `translate(${x}px, ${y}px)`;
-		input.style.width = `${Math.max(colAxis.size(active.col), 60)}px`;
-		input.style.textAlign = alignment(columns[active.col - firstCol].type);
+		input.style.width = `${Math.max(colAxis.size(active.col), 80)}px`;
+		const e = tableAt(active.row, active.col);
+		input.style.textAlign = e && active.row > e.t.row ? alignment(e.t.columns[active.col - e.t.col].type) : 'left';
 	}
 
-	async function write(row: number, col: number, raw: string) {
-		const n = row - headRow - 1;
-		const i = col - firstCol;
-		const r = cache.row(n);
-		if (!r) return;
+	// Les saisies partent l'une après l'autre : la suivante peut dépendre de
+	// la précédente (une saisie fait naître un tableau, la suivante le remplit).
+	let writing: Promise<void> = Promise.resolve();
+	function write(row: number, col: number, raw: string): Promise<void> {
+		writing = writing.then(() => writeNow(row, col, raw));
+		return writing;
+	}
+
+	async function writeNow(row: number, col: number, raw: string) {
+		const info = cellInfo(row, col);
+		const target =
+			info.kind === 'free'
+				? {}
+				: { table: info.e!.t, column: info.i, index: info.kind === 'data' ? info.n : undefined, rowId: info.kind === 'data' ? info.row?.id : undefined };
 		const t0 = performance.now();
 		try {
-			const v = await save(r.id, i, raw);
+			const m = await source.setCell(row, col, raw, target);
 			lastEditMs = performance.now() - t0;
-			cache.set(n, i, v);
-			message = '';
+			if (m && typeof m === 'object') {
+				if (info.kind === 'data' && info.n !== undefined) info.e!.cache.set(info.n, info.i!, m.value);
+				message = '';
+			} else message = m ?? '';
 		} catch (e) {
 			message = String(e instanceof Error ? e.message : e);
 		}
@@ -606,9 +743,7 @@
 		if (!editing) return;
 		editing = false;
 		const { row, col } = active;
-		const r = cache.row(row - headRow - 1);
-		const before = r ? editValue(columns[col - firstCol].type, r.cells[col - firstCol]) : '';
-		if (editValueText !== before) write(row, col, editValueText);
+		if (editValueText !== cellInfo(row, col).value) write(row, col, editValueText);
 		wrap.focus();
 	}
 
@@ -618,17 +753,20 @@
 		schedule();
 	}
 
-	function clearSelection() {
-		const r0 = Math.max(Math.min(active.row, anchor.row), headRow + 1);
-		const r1 = Math.min(Math.max(active.row, anchor.row), lastRow);
-		const c0 = Math.max(Math.min(active.col, anchor.col), firstCol);
-		const c1 = Math.min(Math.max(active.col, anchor.col), lastCol);
-		if (r0 > r1 || c0 > c1) return;
+	async function clearSelection() {
+		const r0 = Math.min(active.row, anchor.row);
+		const r1 = Math.max(active.row, anchor.row);
+		const c0 = Math.min(active.col, anchor.col);
+		const c1 = Math.max(active.col, anchor.col);
 		if ((r1 - r0 + 1) * (c1 - c0 + 1) > 1000) {
-			say('Prototype : effacement limité à 1 000 cellules');
+			say('Effacement limité à 1 000 cellules pour l’instant');
 			return;
 		}
-		for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) write(r, c, '');
+		for (let r = r0; r <= r1; r++)
+			for (let c = c0; c <= c1; c++) {
+				const info = cellInfo(r, c);
+				if (info.kind !== 'header' && info.value !== '') await write(r, c, '');
+			}
 	}
 
 	function onEditorKey(e: KeyboardEvent) {
@@ -664,10 +802,6 @@
 	}
 
 	// Barre de formule : même chemin d'écriture que l'éditeur de cellule.
-	function onFxFocus() {
-		fxEditing = true;
-	}
-
 	function onFxKey(e: KeyboardEvent) {
 		e.stopPropagation();
 		if (e.key === 'Escape') {
@@ -677,24 +811,19 @@
 		} else if (e.key === 'Enter') {
 			fxEditing = false;
 			const { row, col } = active;
-			if (editable() && fxText !== '' + (cache.row(row - headRow - 1)?.cells[col - firstCol] ?? '')) {
-				write(row, col, fxText);
-			}
+			if (fxText !== cellInfo(row, col).value) write(row, col, fxText);
 			wrap.focus();
 			moveTo(row + 1, col);
 		} else return;
 		e.preventDefault();
 	}
 
-	function onFxBlur() {
-		fxEditing = false;
-		refreshFx();
-	}
-
 	// --- Mesures ------------------------------------------------------------
 
-	/** Défilement continu, sauts aléatoires et saisies, pour le critère du spike 1.1. */
+	/** Défilement continu, sauts aléatoires et saisies, sur le premier tableau. */
 	export async function runBench() {
+		const e = entries[0];
+		if (!e) return;
 		bench = 'Mesure en cours…';
 		const frames = (n: number) =>
 			new Promise<void>((res) => {
@@ -702,10 +831,9 @@
 				const step = () => (++k >= n ? res() : requestAnimationFrame(step));
 				requestAnimationFrame(step);
 			});
-		const tableTop = (headRow + 1) * ROW_H;
-		const tableSpan = T.rows * ROW_H - vs.view;
+		const tableTop = (e.t.row + 1) * ROW_H;
+		const tableSpan = Math.max(0, e.t.rows * ROW_H - vs.view);
 
-		// 1. Défilement continu dans le tableau : 10 lignes par image pendant 5 s.
 		vs.to(tableTop + Math.random() * tableSpan * 0.5);
 		syncNative();
 		await frames(30);
@@ -731,38 +859,42 @@
 		const scrollMissing = missingFrames;
 		const janky = intervals.filter((d) => d > 1000 / 30).length;
 
-		// 2. Sauts aléatoires dans le tableau : délai jusqu'aux données affichées.
 		const jumps: number[] = [];
 		for (let i = 0; i < 20; i++) {
 			vs.to(tableTop + Math.random() * tableSpan);
 			syncNative();
 			const t0 = performance.now();
 			const { first, last } = visibleRows();
-			const d = visibleData(first, last)!;
+			const d = visibleData(e, first, last)!;
 			await new Promise<void>((res) => {
-				const check = () => (cache.has(d.first, d.last) ? res() : requestAnimationFrame(check));
+				const check = () => (e.cache.has(d.first, d.last) ? res() : requestAnimationFrame(check));
 				check();
 			});
 			jumps.push(performance.now() - t0);
 			await frames(2);
 		}
 
-		// 3. Saisie : aller-retour d'une écriture (valeur réécrite à l'identique).
 		const edits: number[] = [];
 		const { first: f0, last: f1 } = visibleRows();
-		const d0 = visibleData(f0, f1)!;
+		const d0 = visibleData(e, f0, f1)!;
 		for (let i = 0; i < 20; i++) {
-			const row = cache.row(d0.first + i);
+			const n = d0.first + i;
+			const row = e.cache.row(n);
 			if (!row) continue;
 			const t0 = performance.now();
-			await save(row.id, 1, editValue(columns[1].type, row.cells[1]));
+			await source.setCell(e.t.row + 1 + n, e.t.col + 1, editValue(e.t.columns[1].type, row.cells[1]), {
+				table: e.t,
+				column: 1,
+				index: n,
+				rowId: row.id
+			});
 			edits.push(performance.now() - t0);
 		}
 
 		const result = {
 			date: new Date().toISOString(),
 			userAgent: navigator.userAgent,
-			rows: T.rows,
+			rows: e.t.rows,
 			scroll: {
 				frames: drawn,
 				fps: Math.round(drawn / 5),
@@ -777,9 +909,9 @@
 			editP95: +percentile(edits, 0.95).toFixed(2),
 			drawP50: +percentile(drawTimes, 0.5).toFixed(2),
 			drawP95: +percentile(drawTimes, 0.95).toFixed(2),
-			blockRoundTripP50: +percentile(cache.stats.roundTrip, 0.5).toFixed(2),
-			blockRoundTripP95: +percentile(cache.stats.roundTrip, 0.95).toFixed(2),
-			blockGoP50: +percentile(cache.stats.server, 0.5).toFixed(2)
+			blockRoundTripP50: +percentile(e.cache.stats.roundTrip, 0.5).toFixed(2),
+			blockRoundTripP95: +percentile(e.cache.stats.roundTrip, 0.95).toFixed(2),
+			blockGoP50: +percentile(e.cache.stats.server, 0.5).toFixed(2)
 		};
 		console.log('slitable-bench', JSON.stringify(result));
 		(window as unknown as { slitableBench: unknown }).slitableBench = result;
@@ -793,6 +925,7 @@
 
 	onMount(() => {
 		ctx = canvas.getContext('2d', { alpha: false })!;
+		mounted = true;
 		const resize = () => {
 			const dpr = window.devicePixelRatio || 1;
 			viewW = scroller.clientWidth;
@@ -823,19 +956,26 @@
 			cancelAnimationFrame(frame);
 		};
 	});
+
+	/** Redonne le focus clavier à la feuille (après un dialogue, un menu…). */
+	export function focus() {
+		wrap?.focus();
+	}
 </script>
 
 <div class="sheet-root">
 	<div class="formula-bar">
-		<div class="name-box" title="Cellule active">{cellName(active.row, active.col)}</div>
+		<div class="name-box" title="Cellule active">{cellName(active.row, active.col) || '—'}</div>
 		<span class="fx">fx</span>
 		<input
 			class="fx-input"
-			bind:this={fx}
 			bind:value={fxText}
-			onfocus={onFxFocus}
+			onfocus={() => (fxEditing = true)}
 			onkeydown={onFxKey}
-			onblur={onFxBlur}
+			onblur={() => {
+				fxEditing = false;
+				refreshFx();
+			}}
 			spellcheck="false"
 		/>
 	</div>
@@ -853,7 +993,7 @@
 			onmousemove={onMouseMove}
 			ondblclick={onDblClick}
 		>
-			<div style:width="{margin + colAxis.total}px" style:height="{TOP_H + vs.spacer}px"></div>
+			<div style:width="{MARGIN + colAxis.total}px" style:height="{TOP_H + vs.spacer}px"></div>
 		</div>
 		{#if editing}
 			<input
@@ -862,7 +1002,10 @@
 				bind:value={editValueText}
 				onkeydown={onEditorKey}
 				onblur={commit}
-				title={typeLabel(columns[active.col - firstCol].type)}
+				title={(() => {
+					const e = tableAt(active.row, active.col);
+					return e ? typeLabel(e.t.columns[active.col - e.t.col].type) : 'Cellule libre';
+				})()}
 			/>
 		{/if}
 	</div>

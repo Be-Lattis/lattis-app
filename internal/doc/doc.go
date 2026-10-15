@@ -49,8 +49,7 @@ func New(ctx context.Context) (*Document, error) {
 	if err != nil {
 		return nil, err
 	}
-	d.saved = -1 // jamais enregistré : toujours « modifié »
-	return d, nil
+	return d, nil // vide : rien à perdre tant qu'on n'a rien saisi
 }
 
 // Open ouvre un classeur. Si une session précédente de ce fichier a été
