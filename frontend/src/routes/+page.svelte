@@ -8,7 +8,7 @@
 	import { onMount } from 'svelte';
 	import { Events } from '@wailsio/runtime';
 	import { DocumentService, GridService } from '#bindings/internal/bridge/index.js';
-	import type { DocState } from '#bindings/internal/bridge/models.js';
+	import type { DocState, FormulaHelp } from '#bindings/internal/bridge/models.js';
 	import type { Layout } from '#bindings/internal/canvas/models.js';
 	import type { Type } from '#bindings/internal/grid/models.js';
 	import type { Orphan } from '#bindings/internal/archive/models.js';
@@ -35,6 +35,7 @@
 	let layout = $state<Layout | null>(null);
 	let sheetId = $state(1);
 	let orphans = $state<Orphan[]>([]);
+	let help = $state<FormulaHelp | null>(null);
 
 	// Démo.
 	let demo = $state<{ name: string; rows: number; columns: { name: string; type: ColumnType }[]; sqlName: string; sqlColumns: string[] } | null>(null);
@@ -45,6 +46,7 @@
 	async function reload() {
 		docState = await DocumentService.State();
 		layout = await DocumentService.Layout(sheetId);
+		help = await DocumentService.FormulaHelp();
 	}
 
 	async function startDoc() {
@@ -306,6 +308,7 @@
 						bind:this={sheet}
 						{data}
 						source={mode === 'demo' ? demoSource : docSource}
+						catalog={mode === 'doc' && help ? { functions: help.functions ?? [], tables: help.tables ?? [] } : undefined}
 						onstatus={(s) => (sheetStatus = s)}
 						autoBench={bench ? (r) => GridService.ReportBench(r) : undefined}
 					/>

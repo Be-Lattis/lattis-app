@@ -133,3 +133,43 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 	})
 	return l, err
 }
+
+// TableNames décrit un tableau pour l'aide à la saisie des formules.
+type TableNames struct {
+	Name    string   `json:"name"`
+	Columns []string `json:"columns"`
+}
+
+// AllTables liste les tableaux de toutes les feuilles et leurs colonnes.
+func (m *Model) AllTables(ctx context.Context) ([]TableNames, error) {
+	var out []TableNames
+	err := m.read(ctx, func(t *tx) error {
+		rs, err := t.query(`SELECT id FROM _slitable_tables ORDER BY name`)
+		if err != nil {
+			return err
+		}
+		var ids []int64
+		for rs.Next() {
+			var id int64
+			if err := rs.Scan(&id); err != nil {
+				rs.Close()
+				return err
+			}
+			ids = append(ids, id)
+		}
+		rs.Close()
+		for _, id := range ids {
+			tb, err := t.table(id)
+			if err != nil {
+				return err
+			}
+			tn := TableNames{Name: tb.Name}
+			for _, c := range tb.Cols {
+				tn.Columns = append(tn.Columns, c.Name)
+			}
+			out = append(out, tn)
+		}
+		return nil
+	})
+	return out, err
+}

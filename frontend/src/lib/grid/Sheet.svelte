@@ -13,6 +13,7 @@
 	import { VScroll, clamp } from './scroll';
 	import { Axis } from './axis';
 	import { parseTSV, toTSV } from './clipboard';
+	import { apply as applySuggestion, signature, suggest, type Catalog, type Completion } from './autocomplete';
 	import {
 		isErrorValue,
 		valueAlignment,
@@ -92,12 +93,14 @@
 	interface Props {
 		data: SheetData;
 		source: SheetSource;
+		/** Fonctions et tableaux du classeur, pour l'aide à la saisie des formules. */
+		catalog?: Catalog;
 		onstatus?: (s: SheetStatus) => void;
 		/** Lance la mesure dès l'ouverture et transmet le résultat (mode SLITABLE_BENCH). */
 		autoBench?: (result: string) => void;
 	}
 
-	let { data, source, onstatus, autoBench }: Props = $props();
+	let { data, source, catalog, onstatus, autoBench }: Props = $props();
 
 	export const SHEET_ROWS = 1_048_576;
 	export const SHEET_COLS = 16_384;
@@ -220,6 +223,57 @@
 	let editByTyping = false;
 	let editValueText = $state('');
 	let fxText = $state('');
+	let fxInput = $state<HTMLInputElement>();
+
+	// Aide à la saisie des formules (éditeur de cellule ou barre de formule).
+	let completion = $state<(Completion & { sel: number; where: 'cell' | 'fx' }) | null>(null);
+	let sig = $state<{ text: string; where: 'cell' | 'fx' } | null>(null);
+	let suggestPos = $state({ x: 0, y: 0 });
+
+	function onFormulaInput(el: HTMLInputElement, where: 'cell' | 'fx') {
+		if (!catalog) return;
+		suggestPos = { x: MARGIN + colAxis.offset(active.col) - scroller.scrollLeft, y: TOP_H + (active.row + 1) * ROW_H - vs.top + 2 };
+		const caret = el.selectionStart ?? el.value.length;
+		const e = tableAt(active.row, active.col);
+		const c = suggest(el.value, caret, catalog, e?.t.name);
+		completion = c ? { ...c, sel: 0, where } : null;
+		const s = signature(el.value, caret, catalog);
+		sig = s ? { text: s, where } : null;
+	}
+
+	/** Gère les touches de la liste de suggestions ; vrai si la touche est consommée. */
+	function completionKey(e: KeyboardEvent, el: HTMLInputElement, set: (v: string) => void): boolean {
+		if (!completion) return false;
+		const c = completion;
+		switch (e.key) {
+			case 'ArrowDown':
+				completion = { ...c, sel: (c.sel + 1) % c.items.length };
+				break;
+			case 'ArrowUp':
+				completion = { ...c, sel: (c.sel + c.items.length - 1) % c.items.length };
+				break;
+			case 'Tab':
+			case 'Enter': {
+				const caret = el.selectionStart ?? el.value.length;
+				const r = applySuggestion(el.value, caret, c.from, c.items[c.sel]);
+				set(r.text);
+				completion = null;
+				requestAnimationFrame(() => {
+					el.setSelectionRange(r.caret, r.caret);
+					onFormulaInput(el, c.where);
+				});
+				break;
+			}
+			case 'Escape':
+				completion = null;
+				break;
+			default:
+				return false;
+		}
+		e.preventDefault();
+		e.stopPropagation();
+		return true;
+	}
 	let nameBox = $state('');
 	let fxEditing = false;
 
@@ -869,6 +923,7 @@
 	}
 
 	function onEditorKey(e: KeyboardEvent) {
+		if (input && completionKey(e, input, (v) => (editValueText = v))) return;
 		e.stopPropagation();
 		const { row, col } = active;
 		switch (e.key) {
@@ -902,6 +957,7 @@
 
 	// Barre de formule : même chemin d'écriture que l'éditeur de cellule.
 	function onFxKey(e: KeyboardEvent) {
+		if (fxInput && completionKey(e, fxInput, (v) => (fxText = v))) return;
 		e.stopPropagation();
 		if (e.key === 'Escape') {
 			fxEditing = false;
@@ -1191,23 +1247,52 @@
 	}
 </script>
 
+{#snippet suggestions(where: 'cell' | 'fx')}
+	{#if sig?.where === where}<div class="sig">{sig.text}</div>{/if}
+	{#if completion?.where === where}
+		{#each completion.items as s, i (s.kind + s.label)}
+			<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
+			<div
+				class="sugg"
+				class:on={i === completion.sel}
+				onmousedown={(e) => {
+					e.preventDefault();
+					completion = { ...completion!, sel: i };
+					const el = where === 'cell' ? input : fxInput;
+					if (el) completionKey(new KeyboardEvent('keydown', { key: 'Enter' }), el, (v) => (where === 'cell' ? (editValueText = v) : (fxText = v)));
+				}}
+			>
+				<span class="kind {s.kind}">{s.kind === 'function' ? 'fx' : s.kind === 'table' ? '▦' : '[ ]'}</span>
+				<span class="lab">{s.label}</span>
+				<span class="det">{s.detail}</span>
+			</div>
+		{/each}
+	{/if}
+{/snippet}
+
 <div class="sheet-root">
 	<div class="formula-bar">
 		<div class="name-box" title="Cellule active">{nameBox || '—'}</div>
 		<span class="fx">fx</span>
 		<input
 			class="fx-input"
+			bind:this={fxInput}
 			bind:value={fxText}
+			oninput={(e) => onFormulaInput(e.currentTarget, 'fx')}
 			onfocus={() => (fxEditing = true)}
 			onkeydown={onFxKey}
 			onblur={() => {
 				fxEditing = false;
+				completion = sig = null;
 				refreshFx();
 			}}
 			spellcheck="false"
 		/>
 	</div>
 	{#if bench}<div class="bench">{bench}</div>{/if}
+	{#if completion?.where === 'fx' || sig?.where === 'fx'}
+		<div class="suggest fx-suggest">{@render suggestions('fx')}</div>
+	{/if}
 
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 	<div class="wrap" bind:this={wrap} tabindex="0" role="grid" onkeydown={onKeyDown}>
@@ -1264,13 +1349,26 @@
 				<button onclick={() => menuAction(source.deleteColumn && (() => source.deleteColumn!(m.e.t, m.i)))}>Supprimer la colonne « {m.e.t.columns[m.i]?.name} »</button>
 			</div>
 		{/if}
+		{#if editing && (completion?.where === 'cell' || sig?.where === 'cell')}
+			<div
+				class="suggest"
+				style:left="{suggestPos.x}px"
+				style:top="{suggestPos.y}px"
+			>
+				{@render suggestions('cell')}
+			</div>
+		{/if}
 		{#if editing}
 			<input
 				class="editor"
 				bind:this={input}
 				bind:value={editValueText}
+				oninput={(e) => onFormulaInput(e.currentTarget, 'cell')}
 				onkeydown={onEditorKey}
-				onblur={commit}
+				onblur={() => {
+					completion = sig = null;
+					commit();
+				}}
 				title={(() => {
 					const e = tableAt(active.row, active.col);
 					return e ? typeLabel(e.t.columns[active.col - e.t.col].type) : 'Cellule libre';
@@ -1345,6 +1443,51 @@
 		position: absolute;
 		inset: 0;
 		overflow: auto;
+	}
+	.sheet-root {
+		position: relative;
+	}
+	.suggest {
+		position: absolute;
+		z-index: 6;
+		background: #fff;
+		border: 1px solid #c9cdd2;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		min-width: 260px;
+		max-width: 420px;
+		font-size: 12px;
+	}
+	.fx-suggest {
+		left: 300px;
+		top: 30px;
+	}
+	.sig {
+		padding: 4px 10px;
+		background: #f7f8f9;
+		color: #374151;
+		border-bottom: 1px solid #e3e5e8;
+	}
+	.sugg {
+		display: flex;
+		gap: 8px;
+		align-items: center;
+		padding: 3px 10px;
+		cursor: pointer;
+	}
+	.sugg.on {
+		background: #e3efe7;
+	}
+	.kind {
+		width: 22px;
+		color: #217346;
+		font-weight: 600;
+		text-align: center;
+	}
+	.lab {
+		flex: 1;
+	}
+	.det {
+		color: #6b7280;
 	}
 	.menu {
 		position: absolute;

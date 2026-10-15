@@ -163,10 +163,10 @@ func TestWriteErrors(t *testing.T) {
 	f := commandes(t)
 	for src, want := range map[string]string{
 		`db.insert("Inconnu", {a = 1})`:                           "Inconnu",
-		`db.insert("Feuille1", {Prix = 1})`:                      `pas de colonne "Prix"`,
-		`db.update("Feuille1", 99, {Client = "x"})`:              "pas de ligne 99",
-		`db.update("Feuille1", 1, {Client = {}})`:                "non prise en charge",
-		`db.query("SELECT nimporte FROM \"Feuille1\"")`:          "nimporte",
+		`db.insert("Feuille1", {Prix = 1})`:                       `pas de colonne "Prix"`,
+		`db.update("Feuille1", 99, {Client = "x"})`:               "pas de ligne 99",
+		`db.update("Feuille1", 1, {Client = {}})`:                 "non prise en charge",
+		`db.query("SELECT nimporte FROM \"Feuille1\"")`:           "nimporte",
 		`db.query("SELECT 1 FROM t WHERE x = ?", function() end)`: "paramètre SQL",
 	} {
 		res := f.run(t, src)

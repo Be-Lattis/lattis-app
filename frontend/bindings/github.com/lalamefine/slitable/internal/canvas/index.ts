@@ -8,5 +8,6 @@ export type {
     Event,
     Layout,
     SheetInfo,
-    TableInfo
+    TableInfo,
+    TableNames
 } from "./models.js";

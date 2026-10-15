@@ -425,3 +425,21 @@ func displayValue(v formula.Value) any {
 	}
 	return nil
 }
+
+// FormulaHelp sert l'aide à la saisie des formules : fonctions (en
+// français) et tableaux du classeur avec leurs colonnes.
+type FormulaHelp struct {
+	Functions []formula.FunctionInfo `json:"functions"`
+	Tables    []canvas.TableNames    `json:"tables"`
+}
+
+// FormulaHelp renvoie le catalogue de l'aide à la saisie.
+func (s *DocumentService) FormulaHelp(ctx context.Context) (FormulaHelp, error) {
+	h := FormulaHelp{Functions: formula.Functions(formula.FR), Tables: []canvas.TableNames{}}
+	d, err := s.current()
+	if err != nil {
+		return h, nil
+	}
+	h.Tables, err = d.AllTables(ctx)
+	return h, err
+}

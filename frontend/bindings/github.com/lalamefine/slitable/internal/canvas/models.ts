@@ -119,3 +119,11 @@ export interface TableInfo {
     "rows": number;
     "columns": ColumnInfo[] | null;
 }
+
+/**
+ * TableNames décrit un tableau pour l'aide à la saisie des formules.
+ */
+export interface TableNames {
+    "name": string;
+    "columns": string[] | null;
+}

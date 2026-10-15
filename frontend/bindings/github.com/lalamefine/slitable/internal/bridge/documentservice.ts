@@ -57,6 +57,13 @@ export function Discard(dir: string): $CancellablePromise<void> {
     return $Call.ByID(3379363957, dir);
 }
 
+/**
+ * FormulaHelp renvoie le catalogue de l'aide à la saisie.
+ */
+export function FormulaHelp(): $CancellablePromise<$models.FormulaHelp> {
+    return $Call.ByID(1517433598);
+}
+
 export function InsertColumn(table: string, i: number, name: string): $CancellablePromise<$models.DocState> {
     return $Call.ByID(1903411822, table, i, name);
 }
