@@ -27,21 +27,21 @@ La CI exécute la même mesure sous WebKitGTK dans Xvfb (job `bench-linux`, arte
 
 ## Résultats
 
-| Mesure | Windows 10, WebView2 (Edge 155), écran 120 Hz | Linux WebKitGTK |
+| Mesure | Windows 10, WebView2 (Edge 155), écran 120 Hz | Linux WebKitGTK 6, CI Xvfb (rendu logiciel) |
 |---|---|---|
-| Défilement continu | 119 img/s, image p50 8,3 ms / p95 8,5 ms | à mesurer |
-| Images > 33 ms sur 5 s | 1 sur 593 | à mesurer |
-| Images avec lignes non chargées | 0 | à mesurer |
-| Saut aléatoire → données affichées | p50 17 ms / p95 25 ms | à mesurer |
-| Saisie d'une cellule (aller-retour) | p50 2,5 ms / p95 3,3 ms | à mesurer |
-| Dessin d'une image | p50 0,4 ms / p95 1,1 ms | à mesurer |
-| Bloc de 200 lignes : aller-retour / dont Go | p50 6,8 ms / 1,6 ms | à mesurer |
+| Défilement continu | 119 img/s, image p50 8,3 ms / p95 8,5 ms | 43 img/s, image p50 23 ms / p95 27 ms |
+| Images > 33 ms sur 5 s | 1 sur 593 | 0 sur 214 |
+| Images avec lignes non chargées | 0 | 0 |
+| Saut aléatoire → données affichées | p50 17 ms / p95 25 ms | p50 50 ms / p95 67 ms |
+| Saisie d'une cellule (aller-retour) | p50 2,5 ms / p95 3,3 ms | p50 1 ms / p95 14 ms |
+| Dessin d'une image | p50 0,4 ms / p95 1,1 ms | p50 2 ms / p95 5 ms |
+| Bloc de 200 lignes : aller-retour / dont Go | p50 6,8 ms / 1,6 ms | p50 25 ms / 1,6 ms |
 
-Mesuré le 15/10/2026 sur le poste de Louis.
+Windows : mesuré le 15/10/2026 sur le poste de Louis. Linux : job `bench-linux` de la CI (runner Ubuntu 24.04, sans GPU ; WebKit arrondit ses minuteries à la milliseconde).
 
 ## Lecture
 
 - Sous Windows, le critère de sortie du spike est atteint : défilement à la fréquence de l'écran, aucune ligne vide pendant un défilement rapide, saisie sans latence perceptible.
 - Le dessin ne coûte presque rien (0,4 ms) : le canvas laisse une grosse marge pour la mise en forme, les bordures de tableaux et la mise en forme conditionnelle.
 - Sur un bloc, l'IPC et le JSON coûtent environ 5 ms contre 1,6 ms pour SQLite : si un moteur web plus lent devient limitant, c'est le format d'échange qu'il faudra compacter (binaire), pas la requête.
-- Reste à vérifier sous **Linux (WebKitGTK)**, la plateforme la plus lente et le vrai critère de M1 : lancer la mesure sur une machine Linux réelle en plus du job CI.
+- Sous **Linux (WebKitGTK)**, même en rendu logiciel sur un runner CI, aucune image ne dépasse 33 ms et aucune ligne visible ne reste vide pendant le défilement. Le défilement y est moins fluide (43 img/s) et l'IPC plus coûteuse (25 ms par bloc contre 1,6 ms de SQLite). Une mesure sur un vrai poste Linux avec GPU reste à faire pour clore M1.
