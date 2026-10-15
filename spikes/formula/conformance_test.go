@@ -132,7 +132,7 @@ func TestConformite(t *testing.T) {
 	row, loc, line, cases := 0, FR, 0, 0
 	for sc.Scan() {
 		line++
-		text := sc.Text()
+		text := strings.TrimRight(sc.Text(), "") // fichier extrait en CRLF sous Windows
 		switch {
 		case strings.TrimSpace(text) == "" || strings.HasPrefix(text, "#"):
 			continue
