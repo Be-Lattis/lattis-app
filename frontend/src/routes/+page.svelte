@@ -16,6 +16,7 @@
 	import Ribbon, { type FileAction, type View } from '#lib/shell/Ribbon.svelte';
 	import SheetTabs from '#lib/shell/SheetTabs.svelte';
 	import SqlView from '#lib/shell/SqlView.svelte';
+	import TitleBar from '#lib/shell/TitleBar.svelte';
 	import { typeLabel, type ColumnType } from '#lib/grid/format.js';
 	import type { Fetched } from '#lib/grid/cache.js';
 
@@ -258,6 +259,15 @@
 </script>
 
 <div class="app">
+	<TitleBar
+		{title}
+		dirty={mode === 'doc' && docState.dirty}
+		actions={[
+			{ label: 'Enregistrer (Ctrl+S)', icon: 'save', run: mode === 'doc' ? () => file('save') : undefined },
+			{ label: docState.undo ? `Annuler : ${docState.undo} (Ctrl+Z)` : 'Annuler (Ctrl+Z)', icon: 'undo', run: mode === 'doc' && docState.undo ? () => DocumentService.Undo().then(reload).catch((e) => (notice = err(e))) : undefined },
+			{ label: docState.redo ? `Rétablir : ${docState.redo} (Ctrl+Y)` : 'Rétablir (Ctrl+Y)', icon: 'redo', run: mode === 'doc' && docState.redo ? () => DocumentService.Redo().then(reload).catch((e) => (notice = err(e))) : undefined }
+		]}
+	/>
 	<Ribbon
 		{view}
 		{title}
