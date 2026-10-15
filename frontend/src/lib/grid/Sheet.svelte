@@ -14,6 +14,8 @@
 	import { Axis } from './axis';
 	import { parseTSV, toTSV } from './clipboard';
 	import {
+		isErrorValue,
+		valueAlignment,
 		alignment,
 		defaultWidth,
 		editValue,
@@ -28,6 +30,7 @@
 		type: ColumnType;
 		fixed?: boolean; // type choisi par l'utilisateur (sinon inféré)
 		errors?: number; // saisies hors type
+		formula?: string; // colonne calculée : formule affichée
 	}
 
 	export interface SheetTable {
@@ -41,7 +44,8 @@
 
 	export interface SheetData {
 		tables: SheetTable[];
-		cells: { row: number; col: number; raw: string }[];
+		/** value : résultat d'une formule (sinon raw est affiché). */
+		cells: { row: number; col: number; raw: string; value?: string; error?: boolean }[];
 		/** Largeurs choisies par l'utilisateur (sinon : selon le type). */
 		widths?: { col: number; width: number }[];
 	}
@@ -135,6 +139,7 @@
 
 	let entries: Entry[] = [];
 	let cells = new Map<string, string>();
+	let shown = new Map<string, { text: string; error: boolean }>(); // formules des cellules libres
 	let colAxis = $state.raw(new Axis(SHEET_COLS, DEF_W));
 	const key = (r: number, c: number) => `${r},${c}`;
 
@@ -169,6 +174,7 @@
 			return e;
 		});
 		cells = new Map(d.cells.map((c) => [key(c.row, c.col), c.raw]));
+		shown = new Map(d.cells.filter((c) => c.raw.startsWith('=')).map((c) => [key(c.row, c.col), { text: c.value ?? '', error: !!c.error }]));
 		userWidths = new Map((d.widths ?? []).map((w) => [w.col, w.width]));
 		rebuildAxis();
 		refreshFx();
@@ -363,10 +369,11 @@
 						ctx.fill();
 						continue;
 					}
-					const align = alignment(col.type);
+					const v = row.cells[i];
+					const align = col.type === 'formula' ? valueAlignment(v) : alignment(col.type);
 					ctx.font = FONT;
 					ctx.textAlign = align;
-					ctx.fillStyle = C.text;
+					ctx.fillStyle = col.type === 'formula' && isErrorValue(v) ? C.error : C.text;
 					ctx.fillText(s, align === 'left' ? x + 6 : align === 'right' ? x + cw - 6 : x + cw / 2, y + ROW_H / 2);
 				}
 				ctx.restore();
@@ -376,12 +383,15 @@
 		// Cellules libres : texte à gauche, nombres à droite, comme Excel.
 		ctx.font = FONT;
 		ctx.fillStyle = C.text;
-		for (const [k, raw] of cells) {
+		for (const [k, rawText] of cells) {
 			const [r, c] = k.split(',').map(Number);
 			if (r < r0 || r > r1 || c < c0 || c > c1) continue;
 			const x = cx(c);
 			const cw = colAxis.size(c);
+			const f = shown.get(k);
+			const raw = f ? f.text : rawText;
 			const num = isNumeric(raw);
+			ctx.fillStyle = f?.error ? C.error : C.text;
 			ctx.save();
 			ctx.beginPath();
 			ctx.rect(Math.max(x, MARGIN), TOP_H, num ? cw : w, h - TOP_H);
@@ -513,7 +523,8 @@
 			row,
 			kind: 'data' as const,
 			// Une saisie hors type se corrige à partir de sa valeur brute.
-			value: row ? (row.bad?.get(i) ?? editValue(e.t.columns[i].type, row.cells[i])) : ''
+			// Colonne calculée : la barre de formule montre la formule, comme Excel.
+			value: e.t.columns[i].formula ?? (row ? (row.bad?.get(i) ?? editValue(e.t.columns[i].type, row.cells[i])) : '')
 		};
 	}
 
@@ -966,6 +977,7 @@
 	function openTypeMenu(ev: MouseEvent, cell: { row: number; col: number }): boolean {
 		const e = tableAt(cell.row, cell.col);
 		if (!e || cell.row !== e.t.row || !source.setType) return false;
+		if (e.t.columns[cell.col - e.t.col].formula) return false; // le type suit la formule
 		const r = scroller.getBoundingClientRect();
 		const right = MARGIN + colAxis.offset(cell.col + 1) - scroller.scrollLeft;
 		const mx = ev.clientX - r.left;

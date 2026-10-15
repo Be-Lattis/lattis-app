@@ -75,11 +75,23 @@ type Table struct {
 	rows    int
 
 	selectWindow string
+	args         []any                    // paramètres des expressions de colonnes (?1…)
+	decode       func(col int, v any) any // conversion des valeurs calculées
 
 	// Saisies hors type (tableaux du classeur) : identifiant du tableau et
 	// identifiant de chaque colonne affichée.
 	tableID int64
 	colIDs  map[int64]int
+}
+
+// WithExprs remplace les colonnes lues par des expressions SQL (colonnes
+// calculées), avec leurs paramètres numérotés ?1…?n, et une conversion des
+// valeurs lues pour l'interface.
+func (t *Table) WithExprs(exprs []string, args []any, decode func(col int, v any) any) *Table {
+	t.selectWindow = fmt.Sprintf(`SELECT id, %s FROM %s WHERE _pos >= ? ORDER BY _pos LIMIT ? OFFSET ?`,
+		strings.Join(exprs, ", "), t.sqlName)
+	t.args, t.decode = args, decode
+	return t
 }
 
 // WithInvalid fait lire les saisies hors type de _slitable_invalid avec les
@@ -171,7 +183,8 @@ func (t *Table) Window(ctx context.Context, first, count int) (Window, error) {
 	}
 	count = min(count, MaxWindow, rows-first)
 
-	rs, err := t.db.Read().QueryContext(ctx, t.selectWindow, anchor, count, first%AnchorEvery)
+	args := append(append([]any{}, t.args...), anchor, count, first%AnchorEvery)
+	rs, err := t.db.Read().QueryContext(ctx, t.selectWindow, args...)
 	if err != nil {
 		return Window{}, err
 	}
@@ -190,6 +203,10 @@ func (t *Table) Window(ctx context.Context, first, count int) (Window, error) {
 		id, _ := dest[0].(int64)
 		row := make([]any, len(t.cols))
 		for c := range row {
+			if t.decode != nil {
+				row[c] = t.decode(c, dest[c+1])
+				continue
+			}
 			row[c] = jsonValue(dest[c+1])
 		}
 		w.IDs = append(w.IDs, id)

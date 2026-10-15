@@ -203,7 +203,13 @@
 						row: t.row,
 						col: t.col,
 						rows: t.rows,
-						columns: (t.columns ?? []).map((c) => ({ name: c.name, type: c.type as ColumnType, fixed: c.fixed, errors: c.errors }))
+						columns: (t.columns ?? []).map((c) => ({
+							name: c.name,
+							type: (c.formula ? 'formula' : c.type) as ColumnType,
+							fixed: c.fixed,
+							errors: c.errors,
+							formula: c.formula || undefined
+						}))
 					})),
 					cells: layout.cells ?? [],
 					widths: layout.widths ?? []

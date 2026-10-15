@@ -10,6 +10,7 @@ import (
 	"github.com/lalamefine/slitable/internal/archive"
 	"github.com/lalamefine/slitable/internal/canvas"
 	"github.com/lalamefine/slitable/internal/doc"
+	"github.com/lalamefine/slitable/internal/formula"
 	"github.com/lalamefine/slitable/internal/grid"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -251,7 +252,20 @@ func (s *DocumentService) Window(ctx context.Context, sheet, table int64, first,
 			for i, c := range ti.Columns {
 				cols[i], sqlCols[i], ids[i] = grid.Column{Name: c.Name, Type: c.Type}, c.SQL, c.ID
 			}
-			t = grid.NewTable(d.DB(), ti.SQL, ti.Name, cols, sqlCols).WithInvalid(ti.ID, ids)
+			exprs, args, computed, err := d.ColumnExprs(ctx, ti.ID)
+			if err != nil {
+				return grid.Window{}, err
+			}
+			decode := func(c int, v any) any {
+				if c < len(computed) && computed[c] {
+					return displayValue(formula.FromResult(v))
+				}
+				if b, ok := v.([]byte); ok {
+					return string(b)
+				}
+				return v
+			}
+			t = grid.NewTable(d.DB(), ti.SQL, ti.Name, cols, sqlCols).WithInvalid(ti.ID, ids).WithExprs(exprs, args, decode)
 			if err := t.Load(ctx); err != nil {
 				return grid.Window{}, err
 			}
@@ -394,4 +408,20 @@ func (s *DocumentService) SetType(ctx context.Context, table string, i int, to g
 // SetColumnWidth fixe la largeur d'une colonne de la feuille.
 func (s *DocumentService) SetColumnWidth(ctx context.Context, sheet int64, col, width int) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.SetColumnWidth(ctx, sheet, col, width) })
+}
+
+// displayValue convertit une valeur calculée pour l'interface : nombre,
+// texte, booléen, ou le libellé d'une erreur (« #DIV/0! »).
+func displayValue(v formula.Value) any {
+	switch v.Kind {
+	case formula.Number:
+		return v.Num
+	case formula.Text:
+		return v.Str
+	case formula.Bool:
+		return v.Bool
+	case formula.Error:
+		return v.Err.String()
+	}
+	return nil
 }
