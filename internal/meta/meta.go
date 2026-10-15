@@ -71,6 +71,12 @@ CREATE TABLE _slitable_col_widths (
 	PRIMARY KEY (sheet, col)
 ) STRICT;
 `,
+	// 2 → 3 : colonnes calculées (formule de la colonne, en anglais canonique)
+	// et colonne clé de chaque tableau (pour REFERENCE).
+	`
+ALTER TABLE _slitable_columns ADD COLUMN formula TEXT;
+ALTER TABLE _slitable_tables ADD COLUMN key_col INTEGER;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

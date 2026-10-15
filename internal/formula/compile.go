@@ -28,11 +28,23 @@ type compiler struct {
 	// la ligne (SOMME(T[Col]) dans une colonne calculée) ; sa valeur est
 	// ensuite passée en paramètre au lieu d'être recalculée à chaque requête.
 	hoist func(Compiled) Value
+
+	// base décale la numérotation des paramètres (?base+1…), pour assembler
+	// plusieurs expressions compilées dans une même requête.
+	base int
 }
 
 // CompileHoisted est Compile avec des agrégats calculés à part (voir hoist).
 func CompileHoisted(n Node, s *Schema, names map[string]Value, table *Table, alias string, hoist func(Compiled) Value) Compiled {
 	c := &compiler{schema: s, names: names, visiting: map[*Column]bool{}, hoist: hoist}
+	sql := c.expr(n, scope{table, alias})
+	return Compiled{sql, c.args}
+}
+
+// CompileHoistedFrom est CompileHoisted avec des paramètres numérotés à
+// partir de base+1.
+func CompileHoistedFrom(n Node, s *Schema, names map[string]Value, table *Table, alias string, hoist func(Compiled) Value, base int) Compiled {
+	c := &compiler{schema: s, names: names, visiting: map[*Column]bool{}, hoist: hoist, base: base}
 	sql := c.expr(n, scope{table, alias})
 	return Compiled{sql, c.args}
 }
@@ -56,7 +68,7 @@ func errSQL(e ErrCode) string { return fmt.Sprintf("slt_err(%d)", e) }
 // plusieurs fois dans la requête sans décaler les paramètres.
 func (c *compiler) param(v any) string {
 	c.args = append(c.args, v)
-	return fmt.Sprintf("?%d", len(c.args))
+	return fmt.Sprintf("?%d", c.base+len(c.args))
 }
 
 func (c *compiler) expr(n Node, sc scope) string {

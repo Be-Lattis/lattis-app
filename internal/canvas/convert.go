@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/lalamefine/slitable/internal/command"
+	"github.com/lalamefine/slitable/internal/formula"
 	"github.com/lalamefine/slitable/internal/grid"
 	"github.com/ncruces/go-sqlite3"
 )
@@ -22,6 +23,10 @@ import (
 // Les conversions passent par les mêmes parseurs que la saisie (locale
 // française) : « 12,5 » devient 12.5, 12.5 redevient « 12,5 ».
 func Register(c *sqlite3.Conn) error {
+	// Les fonctions du moteur de formules (slt_add, slt_fn…) aussi.
+	if err := formula.Register(c); err != nil {
+		return err
+	}
 	if err := c.CreateFunction("slt_convert", 3, sqlite3.DETERMINISTIC, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		v, ok := convert(value(arg[0]), grid.Type(arg[1].Text()), grid.Type(arg[2].Text()))
 		if !ok {

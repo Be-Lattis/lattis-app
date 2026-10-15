@@ -155,6 +155,14 @@ func (m *Model) Check(ctx context.Context) ([]string, error) {
 		for _, tb := range all {
 			known[tb.sql()] = true
 			known[tb.sql()+"_pos"] = true
+			if tb.Key != 0 {
+				known[tb.sql()+"_key"] = true
+				var k int
+				t.row(`SELECT count(*) FROM sqlite_schema WHERE type = 'index' AND name = ?`, tb.sql()+"_key").Scan(&k)
+				if k != 1 {
+					bad("%s : index de la clé absent", tb.Name)
+				}
+			}
 			// Colonnes SQL = colonnes déclarées, avec le bon type de stockage.
 			rs, err := t.query(`SELECT name, type FROM pragma_table_info(?)`, tb.sql())
 			if err != nil {

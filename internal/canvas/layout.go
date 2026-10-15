@@ -12,10 +12,11 @@ func colSQL(id int64) string   { return fmt.Sprintf("c_%d", id) }
 
 // Column décrit une colonne de tableau, dans l'ordre d'affichage.
 type Column struct {
-	ID    int64
-	Name  string
-	Type  grid.Type
-	Fixed bool
+	ID      int64
+	Name    string
+	Type    grid.Type
+	Fixed   bool
+	Formula string // colonne calculée : formule (anglais canonique), sinon vide
 }
 
 // Table décrit un tableau posé sur une feuille.
@@ -25,7 +26,8 @@ type Table struct {
 	Name     string
 	Row, Col int // ancre (cellule d'en-tête en haut à gauche)
 	Cols     []Column
-	Rows     int // lignes de données
+	Rows     int   // lignes de données
+	Key      int64 // colonne clé (identifiant) pour REFERENCE, 0 si aucune
 }
 
 // Bottom est la dernière ligne occupée (l'en-tête si le tableau est vide).
@@ -41,14 +43,14 @@ func (t Table) spansCols(lo, hi int) bool { return t.Col <= hi && t.Right() >= l
 func (t Table) spansRows(lo, hi int) bool { return t.Row <= hi && t.Bottom() >= lo }
 
 func (t *tx) tables(sheet int64) ([]Table, error) {
-	rs, err := t.query(`SELECT id, name, row, col FROM _slitable_tables WHERE sheet = ? ORDER BY id`, sheet)
+	rs, err := t.query(`SELECT id, name, row, col, coalesce(key_col, 0) FROM _slitable_tables WHERE sheet = ? ORDER BY id`, sheet)
 	if err != nil {
 		return nil, err
 	}
 	var out []Table
 	for rs.Next() {
 		tb := Table{Sheet: sheet}
-		if err := rs.Scan(&tb.ID, &tb.Name, &tb.Row, &tb.Col); err != nil {
+		if err := rs.Scan(&tb.ID, &tb.Name, &tb.Row, &tb.Col, &tb.Key); err != nil {
 			rs.Close()
 			return nil, err
 		}
@@ -65,8 +67,8 @@ func (t *tx) tables(sheet int64) ([]Table, error) {
 
 func (t *tx) table(id int64) (Table, error) {
 	tb := Table{ID: id}
-	err := t.row(`SELECT sheet, name, row, col FROM _slitable_tables WHERE id = ?`, id).
-		Scan(&tb.Sheet, &tb.Name, &tb.Row, &tb.Col)
+	err := t.row(`SELECT sheet, name, row, col, coalesce(key_col, 0) FROM _slitable_tables WHERE id = ?`, id).
+		Scan(&tb.Sheet, &tb.Name, &tb.Row, &tb.Col, &tb.Key)
 	if err != nil {
 		return tb, err
 	}
@@ -83,7 +85,7 @@ func (t *tx) tableByName(name string) (Table, error) {
 
 // fill charge les colonnes et le nombre de lignes.
 func (t *tx) fill(tb *Table) error {
-	rs, err := t.query(`SELECT id, name, type, fixed FROM _slitable_columns WHERE tbl = ? ORDER BY pos`, tb.ID)
+	rs, err := t.query(`SELECT id, name, type, fixed, coalesce(formula, '') FROM _slitable_columns WHERE tbl = ? ORDER BY pos`, tb.ID)
 	if err != nil {
 		return err
 	}
@@ -91,7 +93,7 @@ func (t *tx) fill(tb *Table) error {
 	tb.Cols = nil
 	for rs.Next() {
 		var c Column
-		if err := rs.Scan(&c.ID, &c.Name, &c.Type, &c.Fixed); err != nil {
+		if err := rs.Scan(&c.ID, &c.Name, &c.Type, &c.Fixed, &c.Formula); err != nil {
 			return err
 		}
 		tb.Cols = append(tb.Cols, c)

@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode"
 
+	"github.com/lalamefine/slitable/internal/formula"
 	"github.com/lalamefine/slitable/internal/grid"
 	"github.com/lalamefine/slitable/internal/order"
 )
@@ -71,6 +73,16 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 				return t.setCell(tb, row-tb.Row-1, len(tb.Cols)-1, raw, ev)
 			}
 		}
+		if isFormula(raw) {
+			// Formule dans une cellule libre : enregistrée réécrite (RECHERCHEV
+			// devient REFERENCE), calculée à l'affichage. Elle ne fait pas
+			// naître de tableau.
+			n, err := t.prepareFormula(strings.TrimSpace(raw))
+			if err != nil {
+				return err
+			}
+			return t.setFreeCell(sheet, row, col, formula.Format(n, formula.FR))
+		}
 		if err := t.setFreeCell(sheet, row, col, raw); err != nil || empty {
 			return err
 		}
@@ -92,6 +104,15 @@ func (t *tx) setCell(tb Table, n, i int, raw string, ev *Event) error {
 		return err
 	}
 	c := tb.Cols[i]
+	if src := strings.TrimSpace(raw); strings.HasPrefix(src, "=") && len(src) > 1 {
+		return t.setFormula(tb, i, src)
+	}
+	if c.Formula != "" {
+		if strings.TrimSpace(raw) == "" {
+			return t.setFormula(tb, i, "") // effacer une cellule calculée retire la formule
+		}
+		return ErrComputed{c.Name}
+	}
 	if strings.TrimSpace(raw) == "" {
 		return t.setValue(tb, rid, c, nil, "")
 	}
@@ -199,7 +220,24 @@ func (t *tx) birth(sheet int64, row, col int) (string, error) {
 }
 
 // tableName : un tableau placé en haut à gauche de la feuille prend le nom de
-// la feuille, les autres « Tableau N ».
+// la feuille, les autres « TableauN ». Comme dans Excel, un nom de tableau
+// est un identifiant (sans espace), pour s'écrire tel quel dans une formule.
+
+// identifier rend un nom utilisable dans une formule (« Feuille 1 » →
+// « Feuille1 ») ; vide s'il ne reste rien.
+func identifier(s string) string {
+	var b strings.Builder
+	for i, r := range s {
+		switch {
+		case unicode.IsLetter(r) || r == '_':
+			b.WriteRune(r)
+		case unicode.IsDigit(r) && i > 0:
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
 func (t *tx) tableName(sheet int64, row, col int) (string, error) {
 	var sheetName string
 	if err := t.row(`SELECT name FROM _slitable_sheets WHERE id = ?`, sheet).Scan(&sheetName); err != nil {
@@ -211,12 +249,14 @@ func (t *tx) tableName(sheet int64, row, col int) (string, error) {
 		return k == 0, err
 	}
 	if row == 0 && col == 0 {
-		if ok, err := free(sheetName); ok || err != nil {
-			return sheetName, err
+		if name := identifier(sheetName); name != "" {
+			if ok, err := free(name); ok || err != nil {
+				return name, err
+			}
 		}
 	}
 	for n := 1; ; n++ {
-		name := fmt.Sprintf("Tableau %d", n)
+		name := fmt.Sprintf("Tableau%d", n)
 		if ok, err := free(name); ok || err != nil {
 			return name, err
 		}

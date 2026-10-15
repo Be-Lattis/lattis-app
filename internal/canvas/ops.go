@@ -135,14 +135,27 @@ func (t *tx) addColumn(tb Table, id int64, name string, typ grid.Type, pos int) 
 func (t *tx) dropColumn(tb Table, c Column, pos int) error {
 	trash := fmt.Sprintf("_slitable_trash_%d_%d_%d", tb.ID, c.ID, time.Now().UnixNano())
 	col := colSQL(c.ID)
-	return t.ApplyStep(command.Step{Do: []stmt{
+	// Supprimer la colonne clé retire d'abord la clé (SQLite refuse de
+	// supprimer une colonne indexée) ; l'annulation la rétablit.
+	var unkey, rekey []stmt
+	if c.ID == tb.Key {
+		unkey = []stmt{
+			st(`DROP INDEX ` + tb.sql() + `_key`),
+			st(`UPDATE _slitable_tables SET key_col = NULL WHERE id = ?`, tb.ID),
+		}
+		rekey = []stmt{
+			st(`CREATE UNIQUE INDEX ` + tb.sql() + `_key ON ` + tb.sql() + `(` + keyExpr(c.ID, c.Type) + `)`),
+			st(`UPDATE _slitable_tables SET key_col = ? WHERE id = ?`, c.ID, tb.ID),
+		}
+	}
+	return t.ApplyStep(command.Step{Do: append(unkey, []stmt{
 		st(`CREATE TABLE ` + trash + ` AS SELECT id, ` + col + ` AS v FROM ` + tb.sql()),
 		st(`CREATE TABLE `+trash+`_inv AS SELECT rid, raw FROM _slitable_invalid WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
 		st(`DELETE FROM _slitable_invalid WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
 		st(`ALTER TABLE ` + tb.sql() + ` DROP COLUMN ` + col),
 		st(`DELETE FROM _slitable_columns WHERE tbl = ? AND id = ?`, tb.ID, c.ID),
 		st(`UPDATE _slitable_columns SET pos = pos - 1 WHERE tbl = ? AND pos > ?`, tb.ID, pos),
-	}, Undo: []stmt{
+	}...), Undo: append([]stmt{
 		st(`UPDATE _slitable_columns SET pos = pos + 1 WHERE tbl = ? AND pos >= ?`, tb.ID, pos),
 		st(`INSERT INTO _slitable_columns (tbl, id, name, type, fixed, pos) VALUES (?, ?, ?, ?, ?, ?)`, tb.ID, c.ID, c.Name, string(c.Type), c.Fixed, pos),
 		st(`ALTER TABLE ` + tb.sql() + ` ADD COLUMN ` + col + ` ` + sqlType(c.Type)),
@@ -150,7 +163,7 @@ func (t *tx) dropColumn(tb Table, c Column, pos int) error {
 		st(`INSERT INTO _slitable_invalid (tbl, rid, col, raw) SELECT ?, rid, ?, raw FROM `+trash+`_inv`, tb.ID, c.ID),
 		st(`DROP TABLE ` + trash),
 		st(`DROP TABLE ` + trash + `_inv`),
-	}, Purge: []stmt{
+	}, rekey...), Purge: []stmt{
 		// La commande sort de l'historique : la corbeille ne servira plus.
 		st(`DROP TABLE IF EXISTS ` + trash),
 		st(`DROP TABLE IF EXISTS ` + trash + `_inv`),
@@ -185,14 +198,33 @@ func rebuildStmts(tb Table, physical []Column, colID int64, from, to grid.Type) 
 		cols = append(cols, colSQL(c.ID))
 		sel = append(sel, expr)
 	}
-	return []stmt{
+	out := []stmt{
 		st(`CREATE TABLE ` + tmp + ` (` + strings.Join(defs, ", ") + `) STRICT`),
 		st(`INSERT INTO ` + tmp + ` (` + strings.Join(cols, ", ") + `) SELECT ` + strings.Join(sel, ", ") + ` FROM ` + name),
 		st(`DROP TABLE ` + name),
 		st(`ALTER TABLE ` + tmp + ` RENAME TO ` + name),
 		st(`CREATE INDEX ` + name + `_pos ON ` + name + `(_pos)`),
-		st(`UPDATE _slitable_columns SET type = ? WHERE tbl = ? AND id = ?`, string(to), tb.ID, colID),
 	}
+	// La clé du tableau (REFERENCE) garde son index UNIQUE.
+	for _, c := range physical {
+		if c.ID == tb.Key {
+			typ := c.Type
+			if c.ID == colID {
+				typ = to
+			}
+			out = append(out, st(`CREATE UNIQUE INDEX `+name+`_key ON `+name+`(`+keyExpr(c.ID, typ)+`)`))
+		}
+	}
+	return append(out, st(`UPDATE _slitable_columns SET type = ? WHERE tbl = ? AND id = ?`, string(to), tb.ID, colID))
+}
+
+// keyExpr est l'expression de l'index de la clé : sans tenir compte de la
+// casse pour un texte, comme la recherche.
+func keyExpr(id int64, t grid.Type) string {
+	if t == grid.Text || t == grid.Date {
+		return colSQL(id) + " COLLATE NOCASE"
+	}
+	return colSQL(id)
 }
 
 // retype change le type de stockage d'une colonne (reconstruction).

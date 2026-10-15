@@ -20,6 +20,8 @@ type ColumnInfo struct {
 	SQL    string    `json:"sql"`
 	Type   grid.Type `json:"type"`
 	Fixed  bool      `json:"fixed"`
+	// Colonne calculée : formule telle que l'utilisateur la lit (français).
+	Formula string `json:"formula"`
 }
 
 // TableInfo décrit un tableau posé sur une feuille.
@@ -38,6 +40,9 @@ type CellInfo struct {
 	Row int    `json:"row"`
 	Col int    `json:"col"`
 	Raw string `json:"raw"`
+	// Cellule avec formule : valeur calculée, affichée à la place de Raw.
+	Value string `json:"value"`
+	Error bool   `json:"error"`
 }
 
 // Layout est la mise en page d'une feuille : ses tableaux et ses cellules
@@ -95,7 +100,7 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 			}
 			rs.Close()
 			for _, c := range tb.Cols {
-				ti.Columns = append(ti.Columns, ColumnInfo{ID: c.ID, Errors: errs[c.ID], Name: c.Name, SQL: colSQL(c.ID), Type: c.Type, Fixed: c.Fixed})
+				ti.Columns = append(ti.Columns, ColumnInfo{ID: c.ID, Errors: errs[c.ID], Name: c.Name, SQL: colSQL(c.ID), Type: c.Type, Fixed: c.Fixed, Formula: displayFormula(c.Formula)})
 			}
 			l.Tables = append(l.Tables, ti)
 		}
@@ -117,7 +122,12 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 			return err
 		}
 		for _, c := range cells {
-			l.Cells = append(l.Cells, CellInfo{c.Row, c.Col, c.Raw})
+			ci := CellInfo{Row: c.Row, Col: c.Col, Raw: c.Raw}
+			if isFormula(c.Raw) {
+				v := t.evalFree(c.Raw)
+				ci.Value, ci.Error = v.String(), v.IsErr()
+			}
+			l.Cells = append(l.Cells, ci)
 		}
 		return nil
 	})

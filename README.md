@@ -2,7 +2,7 @@
 
 Tableur relationnel local-first : la souplesse visuelle d'un tableur, la rigueur d'une base SQLite. Go + Wails v3 + SvelteKit.
 
-État : jalon M1 atteint (les quatre prototypes, voir [docs/decisions/0001-jalon-m1.md](docs/decisions/0001-jalon-m1.md)), phase 2 (fondations) en cours. Mesures de la grille : [docs/mesures/grille.md](docs/mesures/grille.md).
+État : jalons M1 (prototypes, voir [docs/decisions/0001-jalon-m1.md](docs/decisions/0001-jalon-m1.md)), M2 (fondations) et M3 (« tableur-base » : saisie libre, tableaux qui naissent, collage depuis Excel, types, annuler, enregistrer) atteints ; phase 4 (formules) en cours. Mesures de la grille : [docs/mesures/grille.md](docs/mesures/grille.md).
 
 ## Prérequis
 

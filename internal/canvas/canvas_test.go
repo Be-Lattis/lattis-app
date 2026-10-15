@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/lalamefine/slitable/internal/command"
+	"github.com/lalamefine/slitable/internal/formula"
 	"github.com/lalamefine/slitable/internal/grid"
 	"github.com/lalamefine/slitable/internal/meta"
 	"github.com/lalamefine/slitable/internal/store"
@@ -109,7 +110,7 @@ func TestScenario(t *testing.T) {
 			"[Ville]",
 			"Paris")},
 		{"insertion au milieu : le tableau du dessous descend", func(ctx context.Context, d *fixture) error {
-			return d.InsertRow(ctx, "Feuille 1", 1)
+			return d.InsertRow(ctx, "Feuille1", 1)
 		}, lines(
 			"[Produit]|[Prix]",
 			"Clavier|12.5",
@@ -132,7 +133,7 @@ func TestScenario(t *testing.T) {
 			"Paris")},
 		{"renommer une colonne", set(0, 0, "Article"), ""},
 		{"supprimer la colonne Prix", func(ctx context.Context, d *fixture) error {
-			return d.DeleteColumn(ctx, "Feuille 1", 1)
+			return d.DeleteColumn(ctx, "Feuille1", 1)
 		}, lines(
 			"[Article]|[Stock]",
 			"Clavier|3",
@@ -142,11 +143,11 @@ func TestScenario(t *testing.T) {
 			"[Ville]",
 			"Paris")},
 		{"insérer une colonne au milieu", func(ctx context.Context, d *fixture) error {
-			return d.InsertColumn(ctx, "Feuille 1", 1, "Date")
+			return d.InsertColumn(ctx, "Feuille1", 1, "Date")
 		}, ""},
 		{"date française", set(1, 1, "15/10/2026"), ""},
 		{"supprimer une ligne", func(ctx context.Context, d *fixture) error {
-			return d.DeleteRow(ctx, "Feuille 1", 1)
+			return d.DeleteRow(ctx, "Feuille1", 1)
 		}, lines(
 			"[Article]|[Date]|[Stock]",
 			"Clavier|2026-10-15|3",
@@ -155,7 +156,7 @@ func TestScenario(t *testing.T) {
 			"",
 			"[Ville]",
 			"Paris")},
-		{"fixer le type de Ville", func(ctx context.Context, d *fixture) error { return d.FixType(ctx, "Tableau 1", 0) }, ""},
+		{"fixer le type de Ville", func(ctx context.Context, d *fixture) error { return d.FixType(ctx, "Tableau1", 0) }, ""},
 		{"colonne grisée du deuxième tableau", set(6, 1, "75000"), ""},
 		{"ligne grisée du deuxième tableau", set(7, 0, "Lyon"), ""},
 		{"note libre isolée", set(10, 4, "note"), ""},
@@ -227,7 +228,7 @@ func TestFixedTypeMarksInvalid(t *testing.T) {
 		}
 	}
 	before := dump(t, d)
-	if err := d.FixType(ctx, "Feuille 1", 0); err != nil {
+	if err := d.FixType(ctx, "Feuille1", 0); err != nil {
 		t.Fatal(err)
 	}
 	ev, err := d.SetCell(ctx, 1, 2, 0, "deux")
@@ -251,7 +252,7 @@ func TestWideningEvent(t *testing.T) {
 	d.SetCell(ctx, 1, 0, 0, "Prix")
 	d.SetCell(ctx, 1, 1, 0, "3")
 	ev, err := d.SetCell(ctx, 1, 2, 0, "3,5")
-	if err != nil || ev.Widened != "Feuille 1.Prix" || ev.From != grid.Integer || ev.To != grid.Decimal {
+	if err != nil || ev.Widened != "Feuille1.Prix" || ev.From != grid.Integer || ev.To != grid.Decimal {
 		t.Fatalf("SetCell = %+v, %v", ev, err)
 	}
 	check(t, d, "élargissement")
@@ -301,7 +302,7 @@ func TestPaste(t *testing.T) {
 		{"Lyon", "520 000", "FAUX"},
 		{"Nice", "", "FAUX"},
 	})
-	if err != nil || ev.Created != "Tableau 1" {
+	if err != nil || ev.Created != "Tableau1" {
 		t.Fatalf("Paste = %+v, %v", ev, err)
 	}
 	check(t, d, "collage d'un bloc")
@@ -369,11 +370,11 @@ func TestSetType(t *testing.T) {
 		t.Fatal(err)
 	}
 	before := dump(t, d)
-	n, err := d.ConvertPreview(ctx, "Feuille 1", 1, grid.Integer)
+	n, err := d.ConvertPreview(ctx, "Feuille1", 1, grid.Integer)
 	if err != nil || n != 1 {
 		t.Fatalf("aperçu : %d, %v", n, err)
 	}
-	if err := d.SetType(ctx, "Feuille 1", 1, grid.Integer); err != nil {
+	if err := d.SetType(ctx, "Feuille1", 1, grid.Integer); err != nil {
 		t.Fatal(err)
 	}
 	check(t, d, "type fixé en entier")
@@ -384,7 +385,7 @@ func TestSetType(t *testing.T) {
 		t.Fatalf("12,5 non marqué en erreur :\n%s", dump(t, d))
 	}
 	// Vers le texte : les nombres s'écrivent à la française.
-	if err := d.SetType(ctx, "Feuille 1", 1, grid.Text); err != nil {
+	if err := d.SetType(ctx, "Feuille1", 1, grid.Text); err != nil {
 		t.Fatal(err)
 	}
 	check(t, d, "type fixé en texte")
@@ -393,10 +394,81 @@ func TestSetType(t *testing.T) {
 	if got := dump(t, d); got != before {
 		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
 	}
-	if err := d.SetType(ctx, "Feuille 1", 1, grid.Text); err != nil {
+	if err := d.SetType(ctx, "Feuille1", 1, grid.Text); err != nil {
 		t.Fatal(err)
 	}
 	if got := view(t, d); got != lines("[Article]|[Prix]", "a|12,5", "b|8", "c") {
 		t.Fatalf("feuille\n%s", got)
+	}
+}
+
+func TestFormulas(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Produit", "Prix", "Qté"}, {"Clavier", "25,5", "2"}, {"Souris", "10", "3"}}); err != nil {
+		t.Fatal(err)
+	}
+	before := dump(t, d)
+	// En-tête dans la colonne grisée, puis formule dans une cellule : toute la
+	// colonne est calculée.
+	if _, err := d.SetCell(ctx, 1, 0, 3, "Montant"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.SetCell(ctx, 1, 2, 3, "=[@Prix]*[@Qté]"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.SetCell(ctx, 1, 1, 3, "123"); !errors.As(err, &ErrComputed{}) {
+		t.Fatalf("valeur acceptée dans une colonne calculée : %v", err)
+	}
+	if _, err := d.SetCell(ctx, 1, 1, 3, "=[@Prix]*"); !errors.As(err, &ErrFormula{}) {
+		t.Fatalf("formule invalide acceptée : %v", err)
+	}
+	// Valeurs calculées par les expressions de la lecture par fenêtres.
+	exprs, args, computed, err := d.ColumnExprs(ctx, 1)
+	if err != nil || len(exprs) != 4 || !computed[3] {
+		t.Fatalf("ColumnExprs = %v, %v, %v", exprs, computed, err)
+	}
+	rows, err := d.db.Read().Query(`SELECT `+exprs[3]+` FROM t_1 ORDER BY _pos`, args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for rows.Next() {
+		var v any
+		rows.Scan(&v)
+		got = append(got, formula.FromResult(v).String())
+	}
+	rows.Close()
+	if strings.Join(got, ";") != "51;30" {
+		t.Fatalf("Montant = %v", got)
+	}
+	// Cellule libre avec formule : total et recherche (la colonne Produit
+	// devient la clé du tableau).
+	if _, err := d.SetCell(ctx, 1, 6, 0, "=SOMME(Feuille1[Montant])"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.SetCell(ctx, 1, 6, 2, "=RECHERCHEV(\"souris\";Feuille1;2;FAUX)"); err != nil {
+		t.Fatal(err)
+	}
+	l, err := d.Layout(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	vals := map[string]string{}
+	for _, c := range l.Cells {
+		vals[c.Raw] = c.Value
+	}
+	if vals["=SOMME(Feuille1[Montant])"] != "81" || vals["=REFERENCE(Feuille1; Prix; \"souris\")"] != "10" {
+		t.Fatalf("cellules libres : %v", vals)
+	}
+	if l.Tables[0].Columns[3].Formula != "=[@Prix]*[@Qté]" {
+		t.Fatalf("formule affichée : %q", l.Tables[0].Columns[3].Formula)
+	}
+	check(t, d, "formules")
+	for range 4 {
+		d.bus.Undo(ctx)
+	}
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
 	}
 }

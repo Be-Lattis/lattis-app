@@ -1,4 +1,5 @@
-// Package formula est le prototype du langage de formules (spike 1.3) :
+// Package formula est le langage de formules (validé au spike 1.3, voir
+// docs/decisions/0001-jalon-m1.md) :
 // un parseur FR/EN, un AST, et deux backends qui partagent la même
 // sémantique « à la Excel » : un évaluateur Go (cellules nommées) et une
 // compilation en SQL (colonnes calculées, agrégats), où les opérateurs sont
