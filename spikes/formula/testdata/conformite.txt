@@ -1,0 +1,133 @@
+# Suite de conformité : formule<TAB>résultat attendu (affichage en locale française).
+# Exécutée sur les deux backends (évaluateur Go et SQL compilé), qui doivent
+# tous deux donner le résultat attendu.
+# Directives : « @ Tableau n » évalue les lignes suivantes sur la ligne n du
+# tableau (colonnes calculées) ; « @ » revient hors tableau ; « locale EN » / « locale FR ».
+# Données : voir fixture() dans conformance_test.go.
+
+# Arithmétique et sémantique Excel
+=1/2	0,5
+=5/0	#DIV/0!
+=1+2*3	7
+=(1+2)*3	9
+=-2^2	4
+=2^3^2	64
+=10%	0,1
+=0,1+0,2	0,3
+="3"+1	4
+="abc"+1	#VALEUR!
+=VRAI+1	2
+=#N/A+1	#N/A
+
+# Texte et comparaisons
+="abc"="ABC"	VRAI
+="a"&1,5	a1,5
+=1&VRAI	1VRAI
+=1<"a"	VRAI
+="a"<VRAI	VRAI
+="b">"A"	VRAI
+=CONCAT("a";1;VRAI)	a1VRAI
+=NBCAR("élève")	5
+=MAJUSCULE("élève")	ÉLÈVE
+
+# Logique et erreurs
+=SI(1>2;"oui";"non")	non
+=SI(0;1)	FAUX
+=SI("x";1;2)	#VALEUR!
+=SIERREUR(1/0;"div")	div
+=SIERREUR(5;"x")	5
+=SI.NON.DISP(#N/A;0)	0
+=SI.NON.DISP(1/0;0)	#DIV/0!
+=ET(VRAI;1)	VRAI
+=OU(FAUX;0)	FAUX
+=NON(0)	VRAI
+=ESTERREUR(1/0)	VRAI
+=ESTVIDE(1)	FAUX
+=INCONNUE(1)	#NOM?
+=Inexistant	#NOM?
+
+# Mathématiques
+=ARRONDI(2,675;2)	2,68
+=ARRONDI(-2,5;0)	-3
+=ARRONDI(1234,5;-2)	1200
+=ABS(-3)	3
+
+# Agrégats sur valeurs directes
+=SOMME(1;"2";VRAI)	4
+=SOMME(1;"abc")	#VALEUR!
+=MOYENNE(1;2;3)	2
+=NB(1;"2";"abc";VRAI)	3
+=NBVAL(1;"";"abc")	3
+=MIN(3;1;2)	1
+=MAX(3;1;2)	3
+
+# Agrégats sur colonnes : texte, vides et booléens ignorés, erreurs propagées
+=SOMME(Ventes[Montant])	280,99
+=SOMME(Ventes[Prix])	235,49
+=MOYENNE(Ventes[Prix])	78,4966666666667
+=NB(Ventes[Prix])	3
+=NBVAL(Ventes[Note])	2
+=NB(Ventes[Note])	0
+=SOMME(Ventes[Note])	0
+=MAX(Ventes[Qté])	5
+=MIN(Ventes[Prix])	10
+=SOMME(Ventes[Montant];10)	290,99
+=SOMME(Ventes[NomClient])	#N/A
+=NB(Ventes[NomClient])	0
+=NBVAL(Ventes[NomClient])	4
+=NB(Ventes[Payé])	0
+=Ventes[Prix]	#VALEUR!
+=[@Prix]	#REF!
+
+# REFERENCE (clé : Clients[Id])
+=REFERENCE(Clients;Nom;2)	Martin
+=REFERENCE(Clients;Ville;"1")	#N/A
+=REFERENCE(Clients;Nom;9)	#N/A
+=REFERENCE(Clients;Nom;1/0)	#DIV/0!
+=REFERENCE(Inconnu;Nom;1)	#REF!
+=REFERENCE(Clients;Inconnue;1)	#REF!
+
+# Cellules nommées (graphe de dépendances)
+=TVA	0,2
+=CA	280,99
+=CA_TTC	337,188
+=Boucle1	#REF!
+=CA_TTC-CA	56,198
+
+@ Ventes 1
+=[@Montant]	51
+=[@Prix]*[@Qté]	51
+=Ventes[@Prix]	25,5
+=[@Payé]	VRAI
+=SI([@Payé];"payé";"à relancer")	payé
+=[@NomClient]	Dupont
+=REFERENCE(Clients;Ville;[@Client])	Paris
+=[@Note]+1	13
+=[@Montant]/SOMME(Ventes[Montant])	0,181501121036336
+=[@Montant]*(1+TVA)	61,2
+=[@Inconnue]	#REF!
+
+@ Ventes 2
+=[@Note]+1	#VALEUR!
+=[@Payé]	FAUX
+=ET([@Payé];VRAI)	FAUX
+=[@Produit]&" x"&[@Qté]	Souris x3
+
+@ Ventes 3
+=[@NomClient]	#N/A
+=SIERREUR([@NomClient];"inconnu")	inconnu
+=[@Montant]	199,99
+
+@ Ventes 4
+=[@Montant]	0
+=ESTVIDE([@Prix])	VRAI
+=[@Prix]=0	VRAI
+=[@Note]=""	VRAI
+=[@NomClient]	#N/A
+
+@
+locale EN
+=SUM(1,2.5)	3,5
+=IF(TRUE,"y","n")	y
+=IFERROR(1/0,"x")	x
+=VLOOKUP(1,Clients,2,FALSE)	#NOM?

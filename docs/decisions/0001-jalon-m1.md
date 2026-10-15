@@ -1,6 +1,6 @@
 # Décisions du jalon M1 (spikes de dérisquage)
 
-*Ouverte le 16/10/2026. Complétée au fil des spikes : 1.1 (grille) et 1.2 (modèle canevas ↔ tables) faits ; 1.3 (formules) et 1.4 (archive + Lua) à venir.*
+*Ouverte le 16/10/2026. Complétée au fil des spikes : 1.1 (grille), 1.2 (modèle canevas ↔ tables) et 1.3 (formules) faits ; 1.4 (archive + Lua) à venir. Décisions 1.1 et 1.2 validées par Louis le 15/10/2026.*
 
 | Sujet | Décision | Statut | Source |
 |---|---|---|---|
@@ -9,6 +9,7 @@
 | Stockage des colonnes | Tables `STRICT` + `_slitable_invalid` pour les saisies hors type | Retenu | ci-dessous, spike 1.2 |
 | Annulation | Journal de commandes : chaque opération enregistre ses instructions SQL inverses | Retenu | ci-dessous, spike 1.2 |
 | Modèle canevas ↔ tables | Identifiants internes, `_pos` fractionnaire, cellules libres en métadonnées, règles d'îlots | Retenu | ci-dessous, spike 1.2 |
+| Formules | Un parseur, un AST, deux backends (Go et SQL) qui partagent le même code de sémantique Excel ; agrégats indépendants de la ligne calculés une fois | Proposé | ci-dessous, spike 1.3 |
 
 ---
 
@@ -63,3 +64,38 @@ Chaque opération élémentaire (`setValue`, `insertRow`, `deleteRow`, `addColum
 - Les décalages relisent toute la mise en page de la feuille : suffisant pour des dizaines de tableaux, pas pour des milliers.
 - Pas de scission ni de fusion volontaire de tableaux, pas de déplacement de tableau à la souris, pas de collage : prévus en phase 3.
 - Élargir vers le texte convertit les nombres avec `CAST` (`12.5` et non `12,5`) : la conversion devra passer par le formateur de la locale.
+
+---
+
+## Spike 1.3 : formules
+
+Code : `spikes/formula` (≈ 2 200 lignes hors tests). Critère de sortie : `testdata/conformite.txt`, **100 formules** avec leur résultat attendu (arithmétique, texte, comparaisons, logique, erreurs typées, arrondis, agrégats, références structurées, colonnes calculées, `REFERENCE`, cellules nommées, saisie en anglais), exécutées sur **les deux backends** : chacune doit donner le résultat attendu en Go et en SQL, et son réaffichage en français et en anglais doit redonner le même AST. **Le critère est atteint** (et la suite détecte bien une valeur fausse). Une colonne calculée reste fluide sur 1 M de lignes une fois les agrégats sortis de la requête (mesures ci-dessous).
+
+### Architecture retenue
+
+- **Un parseur** FR/EN (`;` et virgule décimale, ou `,` et point), références structurées `[@Col]`, `Tableau[Col]`, `Tableau[@Col]`, noms, erreurs littérales. Les fonctions sont stockées sous leur nom anglais et réaffichées dans la langue de l'utilisateur. Une fonction inconnue reste dans l'AST et vaut `#NOM?`.
+- **Sémantique écrite une seule fois** (`value.go`, `funcs.go`) : division décimale, `#DIV/0!`, comparaison sans casse, `"3"+1` = 4 mais `"abc"+1` = `#VALEUR!`, vide = 0, ordre nombres < textes < booléens, arrondi au plus loin de zéro, agrégats qui ignorent texte et vides d'une colonne mais convertissent les valeurs directes, `NB` et `NBVAL` qui ne propagent pas les erreurs.
+- **Évaluateur Go** pour les cellules nommées, avec un graphe de dépendances : ordre de calcul, noms à recalculer quand un tableau ou un nom change, référence circulaire → `#REF!`.
+- **Compilation SQL** : chaque opérateur devient une fonction `slt_*` écrite en Go (`slt_add`, `slt_eq`, `slt_fn('IF', …)`…) qui appelle le même code que l'évaluateur. Booléens, erreurs typées et états d'agrégat voyagent en BLOB marqués. Les colonnes calculées sont recopiées en ligne (avec détection de cycle) ; chaque sous-requête a son alias, ce qui permet une recherche dans le tableau courant lui-même.
+- **`REFERENCE(Tableau; Colonne; clé)`** : deux sous-requêtes sur l'index de la colonne clé ; une clé d'un autre type ne trouve rien, comme dans Excel (`"1"` ne trouve pas 1, alors que SQLite convertirait).
+- **`RECHERCHEV(clé; plage; n; FAUX)`** est convertie en `REFERENCE` : la plage doit recouvrir un tableau, sa première colonne devient la clé (unicité vérifiée sans casse, index `UNIQUE` posé, doublons ensuite refusés), et la formule d'origine est gardée pour l'infobulle. La correspondance approchée est refusée avec un message qui oriente vers `REFERENCE.APPROCHEE`.
+
+### Mesures (1 M de lignes × 20 colonnes, Windows)
+
+| | Temps |
+|---|---|
+| Fenêtre de 200 lignes, 20 colonnes stockées | ≈ 1 ms |
+| Même fenêtre + 4 colonnes calculées (arithmétique, `SI`, `REFERENCE`, part du total) | ≈ 1 ms (p95 2 ms) |
+| … si l'agrégat `SOMME(Commandes[Montant HT])` reste dans la requête | 391 ms par fenêtre |
+| Cet agrégat calculé une fois, à part | 0,4 s |
+| `SOMME(Commandes[Calc HT])` compilée (fonctions `slt_*`) / en SQL natif | 0,8 s / 0,45 s |
+
+**Décision : un agrégat qui ne dépend pas de la ligne est sorti de la requête** (`CompileHoisted`), calculé une fois et passé en paramètre ; il sera invalidé quand son tableau change, grâce au graphe de dépendances. Sans cela, chaque fenêtre de la grille recalcule le total du tableau. Les fonctions `slt_*` coûtent environ deux fois le SQL natif sur un agrégat complet : acceptable, et optimisable plus tard en émettant du SQL natif quand les types sont garantis (colonne STRICT numérique sans erreur possible).
+
+### Limites connues du prototype
+
+- Dates : pas encore de type date dans les formules (lot 3 du catalogue) ; une date est lue comme du texte ISO.
+- La comparaison sans casse en SQL (`COLLATE NOCASE`) ne gère que l'ASCII : « é » et « É » diffèrent en SQL mais pas en Go. Il faudra une collation Unicode (extension `unicode` de ncruces).
+- Somme de flottants : la `SOMME` de 1 M de parts affiche 1,00000000000007 ; il faudra une somme compensée (Kahan) ou un arrondi d'affichage.
+- Le graphe ne suit pas encore les dépendances indirectes (un nom qui dépend d'un tableau dont une colonne calculée lit un autre tableau).
+- Une vingtaine de fonctions seulement ; les familles `.SI` et `.SI.ENS`, texte, dates et tableaux dynamiques suivent l'ordre de livraison du catalogue (phase 4).

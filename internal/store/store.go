@@ -34,9 +34,10 @@ type job struct {
 	res chan error
 }
 
-// Open ouvre (ou crée) la base au chemin donné, en mode WAL.
-func Open(path string) (*Store, error) {
-	write, err := driver.Open("file:"+path, setup(false))
+// Open ouvre (ou crée) la base au chemin donné, en mode WAL. extra est
+// appelé sur chaque nouvelle connexion (fonctions SQL personnalisées).
+func Open(path string, extra ...func(*sqlite3.Conn) error) (*Store, error) {
+	write, err := driver.Open("file:"+path, setup(false, extra))
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +48,7 @@ func Open(path string) (*Store, error) {
 		write.Close()
 		return nil, err
 	}
-	read, err := driver.Open("file:"+path, setup(true))
+	read, err := driver.Open("file:"+path, setup(true, extra))
 	if err != nil {
 		write.Close()
 		return nil, err
@@ -60,7 +61,7 @@ func Open(path string) (*Store, error) {
 }
 
 // setup configure chaque nouvelle connexion.
-func setup(readOnly bool) func(*sqlite3.Conn) error {
+func setup(readOnly bool, extra []func(*sqlite3.Conn) error) func(*sqlite3.Conn) error {
 	return func(c *sqlite3.Conn) error {
 		pragmas := []string{
 			"PRAGMA busy_timeout=5000",
@@ -72,6 +73,11 @@ func setup(readOnly bool) func(*sqlite3.Conn) error {
 		}
 		for _, p := range pragmas {
 			if err := c.Exec(p); err != nil {
+				return err
+			}
+		}
+		for _, f := range extra {
+			if err := f(c); err != nil {
 				return err
 			}
 		}
