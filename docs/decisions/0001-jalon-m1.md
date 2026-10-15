@@ -17,7 +17,7 @@
 
 ## Spike 1.2 : modèle canevas ↔ tables
 
-Code : `spikes/canvas` (≈ 1 500 lignes hors tests). Critère de sortie : `TestScenario`, une suite de 29 actions (naissance de tableaux, extension par la ligne et la colonne grisées, insertion au milieu avec décalage du tableau du dessous, ajout, insertion et suppression de colonnes, élargissement de type, type fixé et saisie invalide, renommage, suppression de ligne, effacements). Après **chaque** action, `Check` vérifie les invariants ; puis tout est **annulé pas à pas**, et l'état doit redevenir exactement l'état précédent (comparaison d'un dump complet : schéma, métadonnées, valeurs avec leur type SQLite) ; puis tout est **rétabli** jusqu'à l'état final identique. **Le critère est atteint.**
+Code : `spikes/canvas` (≈ 1 500 lignes hors tests), devenu `internal/canvas` en phase 2. Critère de sortie : `TestScenario`, une suite de 29 actions (naissance de tableaux, extension par la ligne et la colonne grisées, insertion au milieu avec décalage du tableau du dessous, ajout, insertion et suppression de colonnes, élargissement de type, type fixé et saisie invalide, renommage, suppression de ligne, effacements). Après **chaque** action, `Check` vérifie les invariants ; puis tout est **annulé pas à pas**, et l'état doit redevenir exactement l'état précédent (comparaison d'un dump complet : schéma, métadonnées, valeurs avec leur type SQLite) ; puis tout est **rétabli** jusqu'à l'état final identique. **Le critère est atteint.**
 
 ### Modèle retenu
 
@@ -106,7 +106,7 @@ Code : `spikes/formula` (≈ 2 200 lignes hors tests). Critère de sortie : `tes
 
 ## Spike 1.4 : archive .slitable et Lua
 
-Code : `spikes/archive` et `spikes/script`. Critères de sortie : un `while true do end` est interrompu sans geler la grille ; un processus tué puis relancé propose la récupération. **Les deux sont atteints** (`TestInfiniteLoopTimeout`, `TestCrashRecovery`).
+Code : `spikes/archive` (devenu `internal/archive` en phase 2) et `spikes/script`. Critères de sortie : un `while true do end` est interrompu sans geler la grille ; un processus tué puis relancé propose la récupération. **Les deux sont atteints** (`TestInfiniteLoopTimeout`, `TestCrashRecovery`).
 
 ### Archive
 

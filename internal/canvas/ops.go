@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/lalamefine/slitable/internal/command"
 	"github.com/lalamefine/slitable/internal/grid"
 	"github.com/lalamefine/slitable/internal/order"
 )
@@ -134,14 +135,14 @@ func (t *tx) addColumn(tb Table, id int64, name string, typ grid.Type, pos int) 
 func (t *tx) dropColumn(tb Table, c Column, pos int) error {
 	trash := fmt.Sprintf("_slitable_trash_%d_%d_%d", tb.ID, c.ID, time.Now().UnixNano())
 	col := colSQL(c.ID)
-	return t.apply([]stmt{
+	return t.ApplyStep(command.Step{Do: []stmt{
 		st(`CREATE TABLE ` + trash + ` AS SELECT id, ` + col + ` AS v FROM ` + tb.sql()),
 		st(`CREATE TABLE `+trash+`_inv AS SELECT rid, raw FROM _slitable_invalid WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
 		st(`DELETE FROM _slitable_invalid WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
 		st(`ALTER TABLE ` + tb.sql() + ` DROP COLUMN ` + col),
 		st(`DELETE FROM _slitable_columns WHERE tbl = ? AND id = ?`, tb.ID, c.ID),
 		st(`UPDATE _slitable_columns SET pos = pos - 1 WHERE tbl = ? AND pos > ?`, tb.ID, pos),
-	}, []stmt{
+	}, Undo: []stmt{
 		st(`UPDATE _slitable_columns SET pos = pos + 1 WHERE tbl = ? AND pos >= ?`, tb.ID, pos),
 		st(`INSERT INTO _slitable_columns (tbl, id, name, type, fixed, pos) VALUES (?, ?, ?, ?, ?, ?)`, tb.ID, c.ID, c.Name, string(c.Type), c.Fixed, pos),
 		st(`ALTER TABLE ` + tb.sql() + ` ADD COLUMN ` + col + ` ` + sqlType(c.Type)),
@@ -149,7 +150,11 @@ func (t *tx) dropColumn(tb Table, c Column, pos int) error {
 		st(`INSERT INTO _slitable_invalid (tbl, rid, col, raw) SELECT ?, rid, ?, raw FROM `+trash+`_inv`, tb.ID, c.ID),
 		st(`DROP TABLE ` + trash),
 		st(`DROP TABLE ` + trash + `_inv`),
-	})
+	}, Purge: []stmt{
+		// La commande sort de l'historique : la corbeille ne servira plus.
+		st(`DROP TABLE IF EXISTS ` + trash),
+		st(`DROP TABLE IF EXISTS ` + trash + `_inv`),
+	}})
 }
 
 // rename change le nom affiché d'une colonne.

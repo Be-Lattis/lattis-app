@@ -1,75 +1,11 @@
 package canvas
 
 import (
-	"context"
-	"database/sql"
 	"fmt"
 	"slices"
 
 	"github.com/lalamefine/slitable/internal/grid"
-	"github.com/lalamefine/slitable/internal/store"
 )
-
-// schema crée les tables de métadonnées. Les tables utilisateur s'appellent
-// t_<id> et leurs colonnes c_<id> : un nom affiché peut changer, contenir
-// des accents, des espaces ou un mot réservé sans toucher au schéma SQL.
-const schema = `
-CREATE TABLE IF NOT EXISTS _slitable_sheets (
-	id   INTEGER PRIMARY KEY,
-	name TEXT NOT NULL UNIQUE
-) STRICT;
-CREATE TABLE IF NOT EXISTS _slitable_tables (
-	id    INTEGER PRIMARY KEY,
-	sheet INTEGER NOT NULL REFERENCES _slitable_sheets(id),
-	name  TEXT NOT NULL UNIQUE,
-	row   INTEGER NOT NULL, -- ancre : ligne d'en-tête
-	col   INTEGER NOT NULL  -- ancre : première colonne
-) STRICT;
-CREATE TABLE IF NOT EXISTS _slitable_columns (
-	tbl   INTEGER NOT NULL REFERENCES _slitable_tables(id),
-	id    INTEGER NOT NULL,
-	name  TEXT NOT NULL,
-	type  TEXT NOT NULL,
-	fixed INTEGER NOT NULL DEFAULT 0, -- 0 : type inféré, élargi automatiquement
-	pos   INTEGER NOT NULL,           -- rang d'affichage, 0..n-1
-	PRIMARY KEY (tbl, id)
-) STRICT;
-CREATE TABLE IF NOT EXISTS _slitable_cells (
-	sheet INTEGER NOT NULL REFERENCES _slitable_sheets(id),
-	row   INTEGER NOT NULL,
-	col   INTEGER NOT NULL,
-	raw   TEXT NOT NULL,
-	PRIMARY KEY (sheet, row, col)
-) STRICT;
-CREATE TABLE IF NOT EXISTS _slitable_invalid (
-	tbl INTEGER NOT NULL,
-	rid INTEGER NOT NULL,
-	col INTEGER NOT NULL,
-	raw TEXT NOT NULL,
-	PRIMARY KEY (tbl, rid, col)
-) STRICT;
-INSERT OR IGNORE INTO _slitable_sheets (id, name) VALUES (1, 'Feuille 1');
-`
-
-// Open ouvre (ou crée) un document.
-func Open(path string) (*Doc, error) {
-	db, err := store.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	err = db.Write(context.Background(), func(tx *sql.Tx) error {
-		_, err := tx.Exec(schema)
-		return err
-	})
-	if err != nil {
-		db.Close()
-		return nil, err
-	}
-	return &Doc{db: db}, nil
-}
-
-// Close ferme le document.
-func (d *Doc) Close() error { return d.db.Close() }
 
 func tableSQL(id int64) string { return fmt.Sprintf("t_%d", id) }
 func colSQL(id int64) string   { return fmt.Sprintf("c_%d", id) }

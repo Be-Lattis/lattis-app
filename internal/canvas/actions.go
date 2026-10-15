@@ -25,9 +25,9 @@ type Event struct {
 // SetCell traite une saisie validée dans la cellule (row, col) d'une feuille,
 // comme le ferait la grille : dans un tableau, dans sa ligne ou sa colonne
 // grisée (extension), ou dans une cellule libre (avec détection d'îlot).
-func (d *Doc) SetCell(ctx context.Context, sheet int64, row, col int, raw string) (Event, error) {
+func (m *Model) SetCell(ctx context.Context, sheet int64, row, col int, raw string) (Event, error) {
 	var ev Event
-	err := d.Do(ctx, "Saisie", func(t *tx) error {
+	err := m.Do(ctx, "Saisie", func(t *tx) error {
 		tables, err := t.tables(sheet)
 		if err != nil {
 			return err
@@ -218,8 +218,8 @@ func (t *tx) tableName(sheet int64, row, col int) (string, error) {
 
 // InsertRow insère une ligne vide avant la ligne de données n (n = nombre de
 // lignes pour ajouter à la fin).
-func (d *Doc) InsertRow(ctx context.Context, table string, n int) error {
-	return d.Do(ctx, "Insérer une ligne", func(t *tx) error {
+func (m *Model) InsertRow(ctx context.Context, table string, n int) error {
+	return m.Do(ctx, "Insérer une ligne", func(t *tx) error {
 		tb, err := t.tableByName(table)
 		if err != nil {
 			return err
@@ -255,8 +255,8 @@ func (d *Doc) InsertRow(ctx context.Context, table string, n int) error {
 
 // DeleteRow supprime la ligne de données n. Le tableau rétrécit ; ce qui est
 // dessous ne remonte pas.
-func (d *Doc) DeleteRow(ctx context.Context, table string, n int) error {
-	return d.Do(ctx, "Supprimer une ligne", func(t *tx) error {
+func (m *Model) DeleteRow(ctx context.Context, table string, n int) error {
+	return m.Do(ctx, "Supprimer une ligne", func(t *tx) error {
 		tb, err := t.tableByName(table)
 		if err != nil {
 			return err
@@ -270,8 +270,8 @@ func (d *Doc) DeleteRow(ctx context.Context, table string, n int) error {
 }
 
 // InsertColumn insère une colonne avant la colonne i.
-func (d *Doc) InsertColumn(ctx context.Context, table string, i int, name string) error {
-	return d.Do(ctx, "Insérer une colonne", func(t *tx) error {
+func (m *Model) InsertColumn(ctx context.Context, table string, i int, name string) error {
+	return m.Do(ctx, "Insérer une colonne", func(t *tx) error {
 		tb, err := t.tableByName(table)
 		if err != nil {
 			return err
@@ -285,8 +285,8 @@ func (d *Doc) InsertColumn(ctx context.Context, table string, i int, name string
 }
 
 // DeleteColumn supprime la colonne i (un tableau garde au moins une colonne).
-func (d *Doc) DeleteColumn(ctx context.Context, table string, i int) error {
-	return d.Do(ctx, "Supprimer une colonne", func(t *tx) error {
+func (m *Model) DeleteColumn(ctx context.Context, table string, i int) error {
+	return m.Do(ctx, "Supprimer une colonne", func(t *tx) error {
 		tb, err := t.tableByName(table)
 		if err != nil {
 			return err
@@ -300,8 +300,8 @@ func (d *Doc) DeleteColumn(ctx context.Context, table string, i int) error {
 
 // FixType fixe le type de la colonne i : il ne sera plus élargi, les saisies
 // hors type seront marquées invalides.
-func (d *Doc) FixType(ctx context.Context, table string, i int) error {
-	return d.Do(ctx, "Fixer le type", func(t *tx) error {
+func (m *Model) FixType(ctx context.Context, table string, i int) error {
+	return m.Do(ctx, "Fixer le type", func(t *tx) error {
 		tb, err := t.tableByName(table)
 		if err != nil {
 			return err

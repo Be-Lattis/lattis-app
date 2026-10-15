@@ -6,20 +6,32 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/lalamefine/slitable/internal/command"
 	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/slitable/internal/meta"
+	"github.com/lalamefine/slitable/internal/store"
 )
 
-func open(t *testing.T) *Doc {
+type fixture struct {
+	*Model
+	bus *command.Bus
+}
+
+func open(t *testing.T) *fixture {
 	t.Helper()
-	d, err := Open(filepath.Join(t.TempDir(), "doc.sqlite"))
+	db, err := store.Open(filepath.Join(t.TempDir(), "doc.sqlite"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { d.Close() })
-	return d
+	t.Cleanup(func() { db.Close() })
+	if err := meta.Migrate(context.Background(), db); err != nil {
+		t.Fatal(err)
+	}
+	bus := command.New(db)
+	return &fixture{New(db, bus), bus}
 }
 
-func view(t *testing.T, d *Doc) string {
+func view(t *testing.T, d *fixture) string {
 	t.Helper()
 	v, err := d.View(context.Background(), 1)
 	if err != nil {
@@ -28,7 +40,7 @@ func view(t *testing.T, d *Doc) string {
 	return v
 }
 
-func dump(t *testing.T, d *Doc) string {
+func dump(t *testing.T, d *fixture) string {
 	t.Helper()
 	s, err := d.Dump(context.Background())
 	if err != nil {
@@ -37,7 +49,7 @@ func dump(t *testing.T, d *Doc) string {
 	return s
 }
 
-func check(t *testing.T, d *Doc, when string) {
+func check(t *testing.T, d *fixture, when string) {
 	t.Helper()
 	problems, err := d.Check(context.Background())
 	if err != nil {
@@ -54,12 +66,12 @@ func lines(s ...string) string { return strings.Join(s, "\n") + "\n" }
 // (vide = pas de vérification de l'affichage).
 type scenarioStep struct {
 	name string
-	do   func(context.Context, *Doc) error
+	do   func(context.Context, *fixture) error
 	want string
 }
 
-func set(row, col int, raw string) func(context.Context, *Doc) error {
-	return func(ctx context.Context, d *Doc) error {
+func set(row, col int, raw string) func(context.Context, *fixture) error {
+	return func(ctx context.Context, d *fixture) error {
 		_, err := d.SetCell(ctx, 1, row, col, raw)
 		return err
 	}
@@ -95,7 +107,7 @@ func TestScenario(t *testing.T) {
 			"",
 			"[Ville]",
 			"Paris")},
-		{"insertion au milieu : le tableau du dessous descend", func(ctx context.Context, d *Doc) error {
+		{"insertion au milieu : le tableau du dessous descend", func(ctx context.Context, d *fixture) error {
 			return d.InsertRow(ctx, "Feuille 1", 1)
 		}, lines(
 			"[Produit]|[Prix]",
@@ -118,7 +130,7 @@ func TestScenario(t *testing.T) {
 			"[Ville]",
 			"Paris")},
 		{"renommer une colonne", set(0, 0, "Article"), ""},
-		{"supprimer la colonne Prix", func(ctx context.Context, d *Doc) error {
+		{"supprimer la colonne Prix", func(ctx context.Context, d *fixture) error {
 			return d.DeleteColumn(ctx, "Feuille 1", 1)
 		}, lines(
 			"[Article]|[Stock]",
@@ -128,11 +140,11 @@ func TestScenario(t *testing.T) {
 			"",
 			"[Ville]",
 			"Paris")},
-		{"insérer une colonne au milieu", func(ctx context.Context, d *Doc) error {
+		{"insérer une colonne au milieu", func(ctx context.Context, d *fixture) error {
 			return d.InsertColumn(ctx, "Feuille 1", 1, "Date")
 		}, ""},
 		{"date française", set(1, 1, "15/10/2026"), ""},
-		{"supprimer une ligne", func(ctx context.Context, d *Doc) error {
+		{"supprimer une ligne", func(ctx context.Context, d *fixture) error {
 			return d.DeleteRow(ctx, "Feuille 1", 1)
 		}, lines(
 			"[Article]|[Date]|[Stock]",
@@ -142,7 +154,7 @@ func TestScenario(t *testing.T) {
 			"",
 			"[Ville]",
 			"Paris")},
-		{"fixer le type de Ville", func(ctx context.Context, d *Doc) error { return d.FixType(ctx, "Tableau 1", 0) }, ""},
+		{"fixer le type de Ville", func(ctx context.Context, d *fixture) error { return d.FixType(ctx, "Tableau 1", 0) }, ""},
 		{"colonne grisée du deuxième tableau", set(6, 1, "75000"), ""},
 		{"ligne grisée du deuxième tableau", set(7, 0, "Lyon"), ""},
 		{"note libre isolée", set(10, 4, "note"), ""},
@@ -180,7 +192,7 @@ func TestScenario(t *testing.T) {
 	}
 
 	for i := len(steps) - 1; i >= 0; i-- {
-		if _, err := d.Undo(ctx); err != nil {
+		if _, err := d.bus.Undo(ctx); err != nil {
 			t.Fatalf("annuler %q : %v", steps[i].name, err)
 		}
 		check(t, d, "après annulation de "+steps[i].name)
@@ -188,11 +200,11 @@ func TestScenario(t *testing.T) {
 			t.Fatalf("annuler %q ne restaure pas l'état précédent :\n%s", steps[i].name, diff(states[i], got))
 		}
 	}
-	if d.CanUndo() {
+	if st, _ := d.bus.State(ctx); st.Undo != "" {
 		t.Fatal("la pile d'annulation devrait être vide")
 	}
 	for i := range steps {
-		if _, err := d.Redo(ctx); err != nil {
+		if _, err := d.bus.Redo(ctx); err != nil {
 			t.Fatalf("rétablir %q : %v", steps[i].name, err)
 		}
 		if got := dump(t, d); got != states[i+1] {
@@ -225,8 +237,8 @@ func TestFixedTypeMarksInvalid(t *testing.T) {
 	if !strings.Contains(dump(t, d), "1 | 2 | 1 | deux") {
 		t.Fatalf("saisie invalide non enregistrée :\n%s", dump(t, d))
 	}
-	d.Undo(ctx)
-	d.Undo(ctx)
+	d.bus.Undo(ctx)
+	d.bus.Undo(ctx)
 	if got := dump(t, d); got != before {
 		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
 	}

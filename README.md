@@ -2,7 +2,7 @@
 
 Tableur relationnel local-first : la souplesse visuelle d'un tableur, la rigueur d'une base SQLite. Go + Wails v3 + SvelteKit.
 
-État : phase 0 (socle) et prototype de grille (spike 1.1). Voir [docs/mesures/grille.md](docs/mesures/grille.md).
+État : jalon M1 atteint (les quatre prototypes, voir [docs/decisions/0001-jalon-m1.md](docs/decisions/0001-jalon-m1.md)), phase 2 (fondations) en cours. Mesures de la grille : [docs/mesures/grille.md](docs/mesures/grille.md).
 
 ## Prérequis
 
@@ -25,11 +25,16 @@ SLITABLE_BENCH=resultat.json ./bin/slitable   # mesure automatique de la grille
 ```
 main.go               point d'entrée Wails (à la racine : les tâches Wails l'attendent ici)
 internal/bridge/      API exposée au frontend, seule couche qui dépend de Wails
+internal/doc/         un classeur ouvert : archive + base + journal + modèle
+internal/archive/     fichier .slitable : extraction, verrou, enregistrement atomique, récupération
+internal/meta/        schéma des tables _slitable_* et migrations
+internal/command/     bus de commandes réversibles, journal d'annulation persisté
+internal/canvas/      modèle canevas ↔ tables : îlots, lignes, colonnes, types
 internal/store/       SQLite : WAL, pool de lecture, file d'écriture unique
-internal/grid/        lecture par fenêtres (ancres + clé d'ordre), saisie, tableau de démo
+internal/grid/        lecture par fenêtres (ancres + clé d'ordre), tableau de démo
 internal/order/       clés d'ordre fractionnaires (_pos)
-frontend/             SvelteKit 3 en SPA (adapter-static) ; grille dans src/lib/grid
-spikes/               code de mesure jetable (comparatif des drivers SQLite)
+frontend/             SvelteKit 3 en SPA (adapter-static) ; feuille dans src/lib/grid, ruban et onglets dans src/lib/shell
+spikes/               prototypes encore à intégrer (formules, Lua) et comparatif des drivers SQLite
 ```
 
 Les bindings TypeScript (`frontend/bindings`) sont générés par `wails3 generate bindings` (fait par `wails3 build`) et importés via `#bindings/...`.

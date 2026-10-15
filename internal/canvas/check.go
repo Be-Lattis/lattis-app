@@ -2,7 +2,6 @@ package canvas
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"regexp"
 	"slices"
@@ -15,8 +14,8 @@ import (
 // métadonnées, contenu des tableaux (dans l'ordre d'affichage, avec le type
 // SQLite de chaque valeur), cellules libres et saisies invalides. Deux dumps
 // égaux = deux documents identiques.
-func (d *Doc) Dump(ctx context.Context) (string, error) {
-	db := d.db.Read()
+func (m *Model) Dump(ctx context.Context) (string, error) {
+	db := m.db.Read()
 	var b strings.Builder
 	dumpQuery := func(title, q string) error {
 		fmt.Fprintf(&b, "## %s\n", title)
@@ -58,7 +57,7 @@ func (d *Doc) Dump(ctx context.Context) (string, error) {
 			return "", err
 		}
 	}
-	tables, err := d.tableColumns(ctx)
+	tables, err := m.tableColumns(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -84,8 +83,8 @@ type tableCols struct {
 	cols []int64
 }
 
-func (d *Doc) tableColumns(ctx context.Context) ([]tableCols, error) {
-	rs, err := d.db.Read().QueryContext(ctx, `SELECT tbl, id FROM _slitable_columns ORDER BY tbl, pos`)
+func (m *Model) tableColumns(ctx context.Context) ([]tableCols, error) {
+	rs, err := m.db.Read().QueryContext(ctx, `SELECT tbl, id FROM _slitable_columns ORDER BY tbl, pos`)
 	if err != nil {
 		return nil, err
 	}
@@ -107,11 +106,11 @@ func (d *Doc) tableColumns(ctx context.Context) ([]tableCols, error) {
 var isoDate = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
 
 // Check vérifie les invariants du modèle et renvoie la liste des écarts.
-func (d *Doc) Check(ctx context.Context) ([]string, error) {
+func (m *Model) Check(ctx context.Context) ([]string, error) {
 	var problems []string
 	bad := func(format string, args ...any) { problems = append(problems, fmt.Sprintf(format, args...)) }
 
-	err := d.read(ctx, func(t *tx) error {
+	err := m.read(ctx, func(t *tx) error {
 
 		// Objets SQL : exactement les tables déclarées, plus les métadonnées.
 		known := map[string]bool{}
@@ -253,9 +252,9 @@ func (d *Doc) Check(ctx context.Context) ([]string, error) {
 
 // View rend une feuille en texte (une ligne par ligne de la feuille, cellules
 // séparées par « | »), pour les tests et le débogage.
-func (d *Doc) View(ctx context.Context, sheet int64) (string, error) {
+func (m *Model) View(ctx context.Context, sheet int64) (string, error) {
 	var out string
-	err := d.read(ctx, func(t *tx) error {
+	err := m.read(ctx, func(t *tx) error {
 		at := map[[2]int]string{}
 		rows, cols := 0, 0
 		put := func(r, c int, s string) {
@@ -315,14 +314,4 @@ func (d *Doc) View(ctx context.Context, sheet int64) (string, error) {
 		return nil
 	})
 	return out, err
-}
-
-// read exécute fn dans une transaction de lecture (rien n'est enregistré).
-func (d *Doc) read(ctx context.Context, fn func(*tx) error) error {
-	sqlTx, err := d.db.Read().BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
-	if err != nil {
-		return err
-	}
-	defer sqlTx.Rollback()
-	return fn(&tx{Tx: sqlTx, ctx: ctx, cmd: &Command{}})
 }
