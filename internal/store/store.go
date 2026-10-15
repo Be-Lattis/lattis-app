@@ -31,6 +31,7 @@ type Store struct {
 type job struct {
 	ctx context.Context
 	fn  func(*sql.Tx) error
+	raw func(*sql.DB) error // hors transaction (VACUUM, checkpoint)
 	res chan error
 }
 
@@ -92,13 +93,23 @@ func (s *Store) Read() *sql.DB { return s.read }
 // les écritures déjà en file. La transaction est validée si fn ne renvoie pas
 // d'erreur, annulée sinon.
 func (s *Store) Write(ctx context.Context, fn func(*sql.Tx) error) error {
-	j := job{ctx: ctx, fn: fn, res: make(chan error, 1)}
+	return s.submit(job{ctx: ctx, fn: fn, res: make(chan error, 1)})
+}
+
+// Exec exécute fn sur la connexion d'écriture, hors transaction, à son tour
+// dans la file : pour les instructions qui refusent une transaction (VACUUM
+// INTO, wal_checkpoint).
+func (s *Store) Exec(ctx context.Context, fn func(*sql.DB) error) error {
+	return s.submit(job{ctx: ctx, raw: fn, res: make(chan error, 1)})
+}
+
+func (s *Store) submit(j job) error {
 	select {
 	case s.jobs <- j:
 	case <-s.done:
 		return ErrClosed
-	case <-ctx.Done():
-		return ctx.Err()
+	case <-j.ctx.Done():
+		return j.ctx.Err()
 	}
 	return <-j.res
 }
@@ -117,6 +128,9 @@ func (s *Store) writer() {
 func (s *Store) run(j job) error {
 	if err := j.ctx.Err(); err != nil {
 		return err
+	}
+	if j.raw != nil {
+		return j.raw(s.write)
 	}
 	tx, err := s.write.BeginTx(j.ctx, nil)
 	if err != nil {

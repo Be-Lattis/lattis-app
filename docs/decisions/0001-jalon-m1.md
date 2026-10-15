@@ -1,6 +1,6 @@
 # Décisions du jalon M1 (spikes de dérisquage)
 
-*Ouverte le 16/10/2026. Complétée au fil des spikes : 1.1 (grille), 1.2 (modèle canevas ↔ tables) et 1.3 (formules) faits ; 1.4 (archive + Lua) à venir. Décisions 1.1 et 1.2 validées par Louis le 15/10/2026.*
+*Ouverte le 16/10/2026. Complétée au fil des spikes : les quatre spikes sont faits : 1.1 (grille), 1.2 (modèle canevas ↔ tables), 1.3 (formules), 1.4 (archive + Lua). Décisions 1.1 et 1.2 validées par Louis le 15/10/2026.*
 
 | Sujet | Décision | Statut | Source |
 |---|---|---|---|
@@ -9,6 +9,8 @@
 | Stockage des colonnes | Tables `STRICT` + `_slitable_invalid` pour les saisies hors type | Retenu | ci-dessous, spike 1.2 |
 | Annulation | Journal de commandes : chaque opération enregistre ses instructions SQL inverses | Retenu | ci-dessous, spike 1.2 |
 | Modèle canevas ↔ tables | Identifiants internes, `_pos` fractionnaire, cellules libres en métadonnées, règles d'îlots | Retenu | ci-dessous, spike 1.2 |
+| Archive | ZIP (manifeste + base) extrait dans le dossier cache, verrou du système, VACUUM INTO + renommage atomique, récupération des répertoires orphelins | Proposé | ci-dessous, spike 1.4 |
+| Lua | gopher-lua sans bibliothèques dangereuses, db.query en lecture seule, db.execute par courtes transactions, arrêt par contexte, chien de garde mémoire | Proposé | ci-dessous, spike 1.4 |
 | Formules | Un parseur, un AST, deux backends (Go et SQL) qui partagent le même code de sémantique Excel ; agrégats indépendants de la ligne calculés une fois | Proposé | ci-dessous, spike 1.3 |
 
 ---
@@ -99,3 +101,36 @@ Code : `spikes/formula` (≈ 2 200 lignes hors tests). Critère de sortie : `tes
 - Somme de flottants : la `SOMME` de 1 M de parts affiche 1,00000000000007 ; il faudra une somme compensée (Kahan) ou un arrondi d'affichage.
 - Le graphe ne suit pas encore les dépendances indirectes (un nom qui dépend d'un tableau dont une colonne calculée lit un autre tableau).
 - Une vingtaine de fonctions seulement ; les familles `.SI` et `.SI.ENS`, texte, dates et tableaux dynamiques suivent l'ordre de livraison du catalogue (phase 4).
+
+---
+
+## Spike 1.4 : archive .slitable et Lua
+
+Code : `spikes/archive` et `spikes/script`. Critères de sortie : un `while true do end` est interrompu sans geler la grille ; un processus tué puis relancé propose la récupération. **Les deux sont atteints** (`TestInfiniteLoopTimeout`, `TestCrashRecovery`).
+
+### Archive
+
+- **Ouverture** : extraction de `database.sqlite` dans un répertoire de travail sous le dossier cache de l'utilisateur (`os.UserCacheDir()/Slitable/work/<empreinte du chemin>`), base en WAL. Un manifeste d'une version plus récente est refusé.
+- **Verrou** : un verrou du système (`LockFileEx` sous Windows, `flock` ailleurs) sur un fichier du répertoire de travail, tenu tant que le document est ouvert. Il empêche d'ouvrir deux fois la même archive et **disparaît avec le processus**, même tué : pas de fichier de verrou périmé à nettoyer.
+- **Enregistrer** : `VACUUM INTO` (instantané cohérent des trois fichiers WAL, passé dans la file d'écriture), ZIP sans compression, écriture dans un fichier temporaire à côté de la cible puis renommage atomique. Manifeste minimal (`format_version`, `application`, `saved`), tout le reste dans SQLite.
+- **Récupération** : au démarrage, `Orphans()` liste les répertoires dont le verrou est libre ; rouvrir une archive dont la session a été interrompue renvoie `RecoverableError` au lieu d'écraser le travail. `Recover` rouvre la base telle quelle (SQLite rejoue son WAL) : le test tue un processus après 1 000 écritures non enregistrées et les retrouve toutes.
+
+| 1 M de lignes × 20 colonnes, Windows | Temps |
+|---|---|
+| Enregistrer (`VACUUM INTO` + ZIP) | 1,4 s, archive de 177 Mo |
+| Ouvrir (extraction) | 0,3 s |
+
+L'enregistrement occupe la file d'écriture pendant le `VACUUM INTO` (≈ 1 s par million de lignes) : les saisies attendent, la lecture de la grille non. Acceptable pour Ctrl+S ; une sauvegarde automatique devrait passer par l'API de backup incrémentale.
+
+### Lua
+
+- **Bac à sable** : gopher-lua ouvert sans bibliothèque (`SkipOpenLibs`), puis base, string, table et math seulement ; `dofile`, `loadfile`, `load`, `loadstring`, `require`, `module`, `setfenv`, `getfenv`, `collectgarbage` et `string.dump` retirés. `os`, `io` et `debug` n'existent pas.
+- **API** : `db.query(sql, ...)` en lecture seule (pool `query_only`, nombre de lignes borné, message qui propose un `LIMIT`) ; `db.execute(sql, ...)` passe par la file d'écriture, **une courte transaction par appel**, ce qui laisse les saisies de la grille s'intercaler (2 000 écritures d'un script en 126 ms, saisies de la grille servies en 1,7 ms au pire pendant ce temps) ; `print` capturé.
+- **Arrêt** : `SetContext` avec un délai (30 s par défaut) ou l'annulation du bouton Arrêter ; le même contexte est transmis aux requêtes SQL. Boucle infinie arrêtée au délai (500 ms dans le test), saisies de la grille servies en 36 µs au pire pendant la boucle ; bouton Arrêter effectif en 100 ms.
+- **Mémoire** : gopher-lua ne borne pas le tas ; un chien de garde arrête le script si le tas du processus grossit de plus de 512 Mo (64 Mo dans le test : arrêt en 81 ms).
+
+### À traiter en phase 2 et 5
+
+- Un script = une étape d'annulation : ses `db.execute` devront s'enregistrer dans le journal de commandes (spike 1.2) sous une seule commande, sans tenir une transaction ouverte pendant tout le script.
+- Le chien de garde mémoire surveille tout le processus : suffisant pour un script à la fois, à affiner si plusieurs scripts tournent ensemble.
+- Purger les répertoires de travail d'un document fermé proprement (fait) et proposer les orphelins dans l'interface au démarrage (à faire avec le menu Fichier).

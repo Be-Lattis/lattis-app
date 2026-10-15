@@ -5,6 +5,8 @@ go 1.26.0
 require (
 	github.com/ncruces/go-sqlite3 v0.35.6
 	github.com/wailsapp/wails/v3 v3.0.0-beta.30
+	github.com/yuin/gopher-lua v1.1.2
+	golang.org/x/sys v0.48.0
 )
 
 require (
@@ -16,5 +18,4 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/ncruces/go-sqlite3-wasm/v6 v6.3.35304 // indirect
 	github.com/ncruces/julianday v1.0.0 // indirect
-	golang.org/x/sys v0.48.0 // indirect
 )
