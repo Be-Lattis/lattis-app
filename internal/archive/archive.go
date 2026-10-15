@@ -328,9 +328,9 @@ func (d *Doc) Close() error {
 
 // Orphan est un répertoire de travail dont le processus a disparu.
 type Orphan struct {
-	Dir      string
-	Source   string // archive d'origine (vide : document jamais enregistré)
-	Modified time.Time
+	Dir      string    `json:"dir"`
+	Source   string    `json:"source"` // archive d'origine (vide : document jamais enregistré)
+	Modified time.Time `json:"modified"`
 }
 
 // RecoverableError est renvoyé par Open quand une session précédente de

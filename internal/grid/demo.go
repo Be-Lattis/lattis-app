@@ -130,7 +130,7 @@ func CreateDemo(ctx context.Context, db *store.Store, rows int, progress func(do
 
 // Demo relie le tableau de démonstration.
 func Demo(db *store.Store) *Table {
-	return NewTable(db, demoSQLName, "Commandes", DemoColumns)
+	return NewTable(db, demoSQLName, "Commandes", DemoColumns, nil)
 }
 
 func round2(f float64) float64 {

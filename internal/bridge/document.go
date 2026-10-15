@@ -1,0 +1,340 @@
+package bridge
+
+import (
+	"context"
+	"errors"
+	"path/filepath"
+	"strings"
+	"sync"
+
+	"github.com/lalamefine/slitable/internal/archive"
+	"github.com/lalamefine/slitable/internal/canvas"
+	"github.com/lalamefine/slitable/internal/doc"
+	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/wailsapp/wails/v3/pkg/application"
+)
+
+// ChangedEvent est émis après chaque modification du document : l'interface
+// relit la mise en page et vide son cache de lignes.
+const ChangedEvent = "doc:changed"
+
+func init() {
+	application.RegisterEvent[DocState](ChangedEvent)
+}
+
+// DocState décrit le classeur ouvert pour l'interface (titre, menus).
+type DocState struct {
+	Open  bool   `json:"open"`
+	Path  string `json:"path"`
+	Title string `json:"title"`
+	Dirty bool   `json:"dirty"`
+	Undo  string `json:"undo"` // libellé de l'action à annuler
+	Redo  string `json:"redo"`
+}
+
+// OpenResult est le résultat d'une ouverture : soit le classeur est ouvert,
+// soit une session précédente interrompue est proposée en récupération.
+type OpenResult struct {
+	State       DocState        `json:"state"`
+	Recoverable *archive.Orphan `json:"recoverable,omitempty"`
+	Cancelled   bool            `json:"cancelled"`
+}
+
+// DocumentService expose un classeur à l'interface (phase 2).
+type DocumentService struct {
+	mu     sync.Mutex
+	doc    *doc.Document
+	tables map[int64]*grid.Table // tableaux chargés pour la lecture par fenêtres
+}
+
+var errNoDoc = errors.New("aucun classeur ouvert")
+
+func (s *DocumentService) current() (*doc.Document, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.doc == nil {
+		return nil, errNoDoc
+	}
+	return s.doc, nil
+}
+
+// ServiceShutdown ferme le classeur. Les modifications non enregistrées
+// restent dans le répertoire de travail : elles seront proposées en
+// récupération au prochain lancement.
+func (s *DocumentService) ServiceShutdown() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.doc == nil {
+		return nil
+	}
+	if dirty, _ := s.doc.Dirty(context.Background()); dirty {
+		return nil // garder le répertoire de travail : récupération au prochain lancement
+	}
+	return s.doc.Close()
+}
+
+// Orphans liste les sessions interrompues à proposer au démarrage.
+func (s *DocumentService) Orphans() ([]archive.Orphan, error) { return archive.Orphans() }
+
+func (s *DocumentService) replace(d *doc.Document) {
+	s.mu.Lock()
+	old := s.doc
+	s.doc, s.tables = d, map[int64]*grid.Table{}
+	s.mu.Unlock()
+	if old != nil {
+		old.Close()
+	}
+}
+
+// New crée un classeur vide.
+func (s *DocumentService) New(ctx context.Context) (DocState, error) {
+	d, err := doc.New(ctx)
+	if err != nil {
+		return DocState{}, err
+	}
+	s.replace(d)
+	return s.State(ctx)
+}
+
+// Open ouvre un classeur (path vide : boîte de dialogue).
+func (s *DocumentService) Open(ctx context.Context, path string) (OpenResult, error) {
+	if path == "" {
+		p, err := application.Get().Dialog.OpenFile().
+			SetTitle("Ouvrir un classeur").
+			AddFilter("Classeur Slitable", "*.slitable").
+			PromptForSingleSelection()
+		if err != nil {
+			return OpenResult{}, err
+		}
+		if p == "" {
+			return OpenResult{Cancelled: true}, nil
+		}
+		path = p
+	}
+	d, err := doc.Open(ctx, path)
+	var rec *archive.RecoverableError
+	if errors.As(err, &rec) {
+		return OpenResult{Recoverable: &rec.Orphan}, nil
+	}
+	if err != nil {
+		return OpenResult{}, err
+	}
+	s.replace(d)
+	st, err := s.State(ctx)
+	return OpenResult{State: st}, err
+}
+
+// Recover rouvre une session interrompue (répertoire de travail dir).
+func (s *DocumentService) Recover(ctx context.Context, dir string) (DocState, error) {
+	orphans, err := archive.Orphans()
+	if err != nil {
+		return DocState{}, err
+	}
+	for _, o := range orphans {
+		if o.Dir == dir {
+			d, err := doc.Recover(ctx, o)
+			if err != nil {
+				return DocState{}, err
+			}
+			s.replace(d)
+			return s.State(ctx)
+		}
+	}
+	return DocState{}, errors.New("session introuvable")
+}
+
+// Discard abandonne une session interrompue.
+func (s *DocumentService) Discard(dir string) error {
+	orphans, err := archive.Orphans()
+	if err != nil {
+		return err
+	}
+	for _, o := range orphans {
+		if o.Dir == dir {
+			return archive.Discard(o)
+		}
+	}
+	return nil
+}
+
+// Save enregistre ; as (ou un classeur jamais enregistré) demande le fichier.
+func (s *DocumentService) Save(ctx context.Context, as bool) (DocState, error) {
+	d, err := s.current()
+	if err != nil {
+		return DocState{}, err
+	}
+	path := ""
+	if as || d.Path() == "" {
+		name := "Classeur.slitable"
+		if d.Path() != "" {
+			name = filepath.Base(d.Path())
+		}
+		p, err := application.Get().Dialog.SaveFile().
+			SetMessage("Enregistrer le classeur").
+			SetFilename(name).
+			AddFilter("Classeur Slitable", "*.slitable").
+			PromptForSingleSelection()
+		if err != nil || p == "" {
+			return s.State(ctx)
+		}
+		if !strings.HasSuffix(strings.ToLower(p), ".slitable") {
+			p += ".slitable"
+		}
+		path = p
+	}
+	if err := d.Save(ctx, path); err != nil {
+		return DocState{}, err
+	}
+	return s.changed(ctx)
+}
+
+// State décrit le classeur ouvert.
+func (s *DocumentService) State(ctx context.Context) (DocState, error) {
+	d, err := s.current()
+	if errors.Is(err, errNoDoc) {
+		return DocState{}, nil
+	}
+	st := DocState{Open: true, Path: d.Path(), Title: "Classeur sans titre"}
+	if st.Path != "" {
+		st.Title = strings.TrimSuffix(filepath.Base(st.Path), filepath.Ext(st.Path))
+	}
+	if st.Dirty, err = d.Dirty(ctx); err != nil {
+		return st, err
+	}
+	h, err := d.Bus.State(ctx)
+	st.Undo, st.Redo = h.Undo, h.Redo
+	return st, err
+}
+
+// changed invalide les tableaux chargés et prévient l'interface.
+func (s *DocumentService) changed(ctx context.Context) (DocState, error) {
+	s.mu.Lock()
+	s.tables = map[int64]*grid.Table{}
+	s.mu.Unlock()
+	st, err := s.State(ctx)
+	if app := application.Get(); app != nil && err == nil {
+		app.Event.Emit(ChangedEvent, st)
+	}
+	return st, err
+}
+
+// Layout donne la mise en page d'une feuille (tableaux et cellules libres).
+func (s *DocumentService) Layout(ctx context.Context, sheet int64) (canvas.Layout, error) {
+	d, err := s.current()
+	if err != nil {
+		return canvas.Layout{}, err
+	}
+	return d.Layout(ctx, sheet)
+}
+
+// Window lit des lignes d'un tableau (lecture par fenêtres).
+func (s *DocumentService) Window(ctx context.Context, sheet, table int64, first, count int) (grid.Window, error) {
+	d, err := s.current()
+	if err != nil {
+		return grid.Window{}, err
+	}
+	s.mu.Lock()
+	t := s.tables[table]
+	s.mu.Unlock()
+	if t == nil {
+		l, err := d.Layout(ctx, sheet)
+		if err != nil {
+			return grid.Window{}, err
+		}
+		for _, ti := range l.Tables {
+			if ti.ID != table {
+				continue
+			}
+			cols := make([]grid.Column, len(ti.Columns))
+			sqlCols := make([]string, len(ti.Columns))
+			for i, c := range ti.Columns {
+				cols[i], sqlCols[i] = grid.Column{Name: c.Name, Type: c.Type}, c.SQL
+			}
+			t = grid.NewTable(d.DB(), ti.SQL, ti.Name, cols, sqlCols)
+			if err := t.Load(ctx); err != nil {
+				return grid.Window{}, err
+			}
+			s.mu.Lock()
+			s.tables[table] = t
+			s.mu.Unlock()
+		}
+		if t == nil {
+			return grid.Window{}, grid.ErrRange
+		}
+	}
+	return t.Window(ctx, first, count)
+}
+
+// SetCell traite une saisie validée dans une cellule de la feuille.
+func (s *DocumentService) SetCell(ctx context.Context, sheet int64, row, col int, raw string) (canvas.Event, error) {
+	d, err := s.current()
+	if err != nil {
+		return canvas.Event{}, err
+	}
+	ev, err := d.SetCell(ctx, sheet, row, col, raw)
+	if err != nil {
+		return ev, err
+	}
+	_, err = s.changed(ctx)
+	return ev, err
+}
+
+// Undo et Redo annulent et rétablissent.
+func (s *DocumentService) Undo(ctx context.Context) (DocState, error) {
+	d, err := s.current()
+	if err != nil {
+		return DocState{}, err
+	}
+	if _, err := d.Bus.Undo(ctx); err != nil {
+		return DocState{}, err
+	}
+	return s.changed(ctx)
+}
+
+func (s *DocumentService) Redo(ctx context.Context) (DocState, error) {
+	d, err := s.current()
+	if err != nil {
+		return DocState{}, err
+	}
+	if _, err := d.Bus.Redo(ctx); err != nil {
+		return DocState{}, err
+	}
+	return s.changed(ctx)
+}
+
+// InsertRow, DeleteRow, InsertColumn et DeleteColumn agissent sur un tableau.
+func (s *DocumentService) InsertRow(ctx context.Context, table string, n int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.InsertRow(ctx, table, n) })
+}
+
+func (s *DocumentService) DeleteRow(ctx context.Context, table string, n int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.DeleteRow(ctx, table, n) })
+}
+
+func (s *DocumentService) InsertColumn(ctx context.Context, table string, i int, name string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.InsertColumn(ctx, table, i, name) })
+}
+
+func (s *DocumentService) DeleteColumn(ctx context.Context, table string, i int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.DeleteColumn(ctx, table, i) })
+}
+
+func (s *DocumentService) act(ctx context.Context, fn func(*doc.Document) error) (DocState, error) {
+	d, err := s.current()
+	if err != nil {
+		return DocState{}, err
+	}
+	if err := fn(d); err != nil {
+		return DocState{}, err
+	}
+	return s.changed(ctx)
+}
+
+// Query exécute une requête SQL en lecture seule sur le classeur (onglet SQL).
+func (s *DocumentService) Query(ctx context.Context, q string) (grid.QueryResult, error) {
+	d, err := s.current()
+	if err != nil {
+		return grid.QueryResult{}, err
+	}
+	return grid.Query(ctx, d.DB().Read(), q, QueryLimit)
+}

@@ -59,6 +59,7 @@ type Table struct {
 	sqlName string
 	name    string
 	cols    []Column
+	sqlCols []string // noms SQL des colonnes, dans l'ordre d'affichage
 
 	mu      sync.RWMutex
 	anchors []string
@@ -70,17 +71,22 @@ type Table struct {
 // ErrRange signale une fenêtre ou une colonne hors du tableau.
 var ErrRange = errors.New("grid: hors du tableau")
 
-// NewTable relie un tableau existant. Load doit être appelé avant les lectures.
-func NewTable(db *store.Store, sqlName, name string, cols []Column) *Table {
-	names := make([]string, len(cols))
-	for i := range cols {
-		names[i] = colName(i)
+// NewTable relie un tableau existant ; sqlCols donne le nom SQL de chaque
+// colonne (nil : c_0, c_1…). Load doit être appelé avant les lectures.
+func NewTable(db *store.Store, sqlName, name string, cols []Column, sqlCols []string) *Table {
+	names := sqlCols
+	if names == nil {
+		names = make([]string, len(cols))
+		for i := range cols {
+			names[i] = colName(i)
+		}
 	}
 	return &Table{
 		db:      db,
 		sqlName: sqlName,
 		name:    name,
 		cols:    cols,
+		sqlCols: names,
 		selectWindow: fmt.Sprintf(`SELECT id, %s FROM %s WHERE _pos >= ? ORDER BY _pos LIMIT ? OFFSET ?`,
 			strings.Join(names, ", "), sqlName),
 	}
@@ -122,11 +128,7 @@ func (t *Table) Load(ctx context.Context) error {
 func (t *Table) Info() Info {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	sqlCols := make([]string, len(t.cols))
-	for i := range sqlCols {
-		sqlCols[i] = colName(i)
-	}
-	return Info{Name: t.name, SQLName: t.sqlName, SQLColumns: sqlCols, Rows: t.rows, Columns: t.cols}
+	return Info{Name: t.name, SQLName: t.sqlName, SQLColumns: t.sqlCols, Rows: t.rows, Columns: t.cols}
 }
 
 // Window lit count lignes à partir de la ligne first.
@@ -194,7 +196,7 @@ func (t *Table) SetCell(ctx context.Context, id int64, col int, raw string) (any
 		return nil, err
 	}
 	err = t.db.Write(ctx, func(tx *sql.Tx) error {
-		res, err := tx.ExecContext(ctx, `UPDATE `+t.sqlName+` SET `+colName(col)+` = ? WHERE id = ?`, v, id)
+		res, err := tx.ExecContext(ctx, `UPDATE `+t.sqlName+` SET `+t.sqlCols[col]+` = ? WHERE id = ?`, v, id)
 		if err != nil {
 			return err
 		}

@@ -16,10 +16,11 @@ const MinRows = 2
 
 // Event décrit ce qu'une saisie a provoqué, pour l'afficher à l'utilisateur.
 type Event struct {
-	Created  string    // tableau créé
-	Widened  string    // colonne élargie ("Tableau.Colonne")
-	From, To grid.Type // élargissement
-	Invalid  bool      // saisie hors type dans une colonne au type fixé
+	Created string    `json:"created"` // tableau créé
+	Widened string    `json:"widened"` // colonne élargie ("Tableau.Colonne")
+	From    grid.Type `json:"from"`    // élargissement
+	To      grid.Type `json:"to"`
+	Invalid bool      `json:"invalid"` // saisie hors type dans une colonne au type fixé
 }
 
 // SetCell traite une saisie validée dans la cellule (row, col) d'une feuille,
@@ -90,6 +91,7 @@ func (t *tx) setCell(tb Table, n, i int, raw string, ev *Event) error {
 	v, perr := grid.Parse(c.Type, raw)
 	if c.Fixed {
 		if perr != nil {
+			ev.Invalid = true
 			return t.setValue(tb, rid, c, nil, raw)
 		}
 		return t.setValue(tb, rid, c, v, "")

@@ -21,6 +21,7 @@ func main() {
 		Description: "Tableur relationnel local-first",
 		Services: []application.Service{
 			application.NewService(&bridge.GridService{}),
+			application.NewService(&bridge.DocumentService{}),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),

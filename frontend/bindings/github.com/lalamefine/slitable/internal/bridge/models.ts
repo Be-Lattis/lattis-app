@@ -3,7 +3,26 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as archive$0 from "../archive/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as grid$0 from "../grid/models.js";
+
+/**
+ * DocState décrit le classeur ouvert pour l'interface (titre, menus).
+ */
+export interface DocState {
+    "open": boolean;
+    "path": string;
+    "title": string;
+    "dirty": boolean;
+
+    /**
+     * libellé de l'action à annuler
+     */
+    "undo": string;
+    "redo": string;
+}
 
 /**
  * GridStatus décrit l'état du tableau de démonstration.
@@ -22,4 +41,14 @@ export interface GridStatus {
     "error"?: string;
     "info": grid$0.Info;
     "path": string;
+}
+
+/**
+ * OpenResult est le résultat d'une ouverture : soit le classeur est ouvert,
+ * soit une session précédente interrompue est proposée en récupération.
+ */
+export interface OpenResult {
+    "state": DocState;
+    "recoverable"?: archive$0.Orphan | null;
+    "cancelled": boolean;
 }
