@@ -28,7 +28,13 @@ type Event struct {
 // grisée (extension), ou dans une cellule libre (avec détection d'îlot).
 func (m *Model) SetCell(ctx context.Context, sheet int64, row, col int, raw string) (Event, error) {
 	var ev Event
-	err := m.Do(ctx, "Saisie", func(t *tx) error {
+	err := m.Do(ctx, "Saisie", func(t *tx) error { return t.input(sheet, row, col, raw, &ev) })
+	return ev, err
+}
+
+// input applique une saisie dans la transaction en cours.
+func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
+	{
 		tables, err := t.tables(sheet)
 		if err != nil {
 			return err
@@ -46,13 +52,13 @@ func (m *Model) SetCell(ctx context.Context, sheet int64, row, col int, raw stri
 				}
 				return t.rename(tb, c, name)
 			case inCols && inRows:
-				return t.setCell(tb, row-tb.Row-1, col-tb.Col, raw, &ev)
+				return t.setCell(tb, row-tb.Row-1, col-tb.Col, raw, ev)
 			case inCols && row == tb.Bottom()+1 && !empty:
 				if err := t.appendRows(tb, 1); err != nil {
 					return err
 				}
 				tb.Rows++
-				return t.setCell(tb, tb.Rows-1, col-tb.Col, raw, &ev)
+				return t.setCell(tb, tb.Rows-1, col-tb.Col, raw, ev)
 			case inRows && col == tb.Right()+1 && !empty:
 				name := fmt.Sprintf("Colonne %d", len(tb.Cols)+1)
 				if row == tb.Row {
@@ -62,17 +68,18 @@ func (m *Model) SetCell(ctx context.Context, sheet int64, row, col int, raw stri
 				if err != nil || row == tb.Row {
 					return err
 				}
-				return t.setCell(tb, row-tb.Row-1, len(tb.Cols)-1, raw, &ev)
+				return t.setCell(tb, row-tb.Row-1, len(tb.Cols)-1, raw, ev)
 			}
 		}
 		if err := t.setFreeCell(sheet, row, col, raw); err != nil || empty {
 			return err
 		}
 		name, err := t.birth(sheet, row, col)
-		ev.Created = name
+		if name != "" {
+			ev.Created = name
+		}
 		return err
-	})
-	return ev, err
+	}
 }
 
 // setCell écrit une saisie dans la ligne de données n, colonne i. Une saisie

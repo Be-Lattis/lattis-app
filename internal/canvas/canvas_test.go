@@ -2,6 +2,7 @@ package canvas
 
 import (
 	"context"
+	"errors"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -287,4 +288,76 @@ func diff(want, got string) string {
 		}
 	}
 	return b.String()
+}
+
+func TestPaste(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	before := dump(t, d)
+	// Bloc collé depuis Excel dans une zone vide : un tableau, une étape.
+	ev, err := d.Paste(ctx, 1, 2, 1, [][]string{
+		{"Ville", "Habitants", "Capitale"},
+		{"Paris", "2 100 000", "VRAI"},
+		{"Lyon", "520 000", "FAUX"},
+		{"Nice", "", "FAUX"},
+	})
+	if err != nil || ev.Created != "Tableau 1" {
+		t.Fatalf("Paste = %+v, %v", ev, err)
+	}
+	check(t, d, "collage d'un bloc")
+	want := lines(
+		"", "",
+		"|[Ville]|[Habitants]|[Capitale]",
+		"|Paris|2100000|1",
+		"|Lyon|520000|0",
+		"|Nice||0")
+	if got := view(t, d); got != want {
+		t.Fatalf("feuille\n%s\nattendu\n%s", got, want)
+	}
+	// Collage sur le tableau : cellule par cellule (extension, élargissement).
+	if _, err := d.Paste(ctx, 1, 6, 1, [][]string{{"Lille", "inconnu"}, {"Brest", "140 000"}}); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "collage sur un tableau")
+	if got := view(t, d); !strings.Contains(got, "|Lille|inconnu\n") ||!strings.Contains(got, "|Nice||0") || !strings.Contains(got, "|Brest|140 000") {
+		t.Fatalf("feuille\n%s", got)
+	}
+	// Deux annulations défont les deux collages.
+	d.bus.Undo(ctx)
+	d.bus.Undo(ctx)
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
+	}
+}
+
+func TestSheets(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	before := dump(t, d)
+	id, err := d.AddSheet(ctx)
+	if err != nil || id != 2 {
+		t.Fatalf("AddSheet = %d, %v", id, err)
+	}
+	if err := d.RenameSheet(ctx, id, "Budget"); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.RenameSheet(ctx, 1, "Budget"); !errors.Is(err, ErrSheet) {
+		t.Fatalf("doublon de nom accepté : %v", err)
+	}
+	if _, err := d.SetCell(ctx, id, 3, 3, "note"); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.DeleteSheet(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.DeleteSheet(ctx, 1); !errors.Is(err, ErrSheet) {
+		t.Fatalf("dernière feuille supprimée : %v", err)
+	}
+	check(t, d, "feuilles")
+	for range 4 {
+		d.bus.Undo(ctx)
+	}
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
+	}
 }

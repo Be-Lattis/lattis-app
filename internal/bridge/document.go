@@ -338,3 +338,40 @@ func (s *DocumentService) Query(ctx context.Context, q string) (grid.QueryResult
 	}
 	return grid.Query(ctx, d.DB().Read(), q, QueryLimit)
 }
+
+// Paste colle un bloc (presse-papiers d'Excel) à partir d'une cellule.
+func (s *DocumentService) Paste(ctx context.Context, sheet int64, row, col int, block [][]string) (canvas.Event, error) {
+	d, err := s.current()
+	if err != nil {
+		return canvas.Event{}, err
+	}
+	ev, err := d.Paste(ctx, sheet, row, col, block)
+	if err != nil {
+		return ev, err
+	}
+	_, err = s.changed(ctx)
+	return ev, err
+}
+
+// AddSheet ajoute un onglet et renvoie son identifiant.
+func (s *DocumentService) AddSheet(ctx context.Context) (int64, error) {
+	d, err := s.current()
+	if err != nil {
+		return 0, err
+	}
+	id, err := d.AddSheet(ctx)
+	if err != nil {
+		return 0, err
+	}
+	_, err = s.changed(ctx)
+	return id, err
+}
+
+// RenameSheet et DeleteSheet agissent sur un onglet.
+func (s *DocumentService) RenameSheet(ctx context.Context, sheet int64, name string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.RenameSheet(ctx, sheet, name) })
+}
+
+func (s *DocumentService) DeleteSheet(ctx context.Context, sheet int64) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.DeleteSheet(ctx, sheet) })
+}

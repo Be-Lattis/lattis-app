@@ -24,12 +24,23 @@ import * as grid$0 from "../grid/models.js";
 // @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
+/**
+ * AddSheet ajoute un onglet et renvoie son identifiant.
+ */
+export function AddSheet(): $CancellablePromise<number> {
+    return $Call.ByID(1000932635);
+}
+
 export function DeleteColumn(table: string, i: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(472790092, table, i);
 }
 
 export function DeleteRow(table: string, n: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(3988464234, table, n);
+}
+
+export function DeleteSheet(sheet: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3962694849, sheet);
 }
 
 /**
@@ -79,6 +90,13 @@ export function Orphans(): $CancellablePromise<archive$0.Orphan[] | null> {
 }
 
 /**
+ * Paste colle un bloc (presse-papiers d'Excel) à partir d'une cellule.
+ */
+export function Paste(sheet: number, row: number, col: number, block: (string[] | null)[] | null): $CancellablePromise<canvas$0.Event> {
+    return $Call.ByID(4130142476, sheet, row, col, block);
+}
+
+/**
  * Query exécute une requête SQL en lecture seule sur le classeur (onglet SQL).
  */
 export function Query(q: string): $CancellablePromise<grid$0.QueryResult> {
@@ -94,6 +112,13 @@ export function Recover(dir: string): $CancellablePromise<$models.DocState> {
 
 export function Redo(): $CancellablePromise<$models.DocState> {
     return $Call.ByID(308727197);
+}
+
+/**
+ * RenameSheet et DeleteSheet agissent sur un onglet.
+ */
+export function RenameSheet(sheet: number, name: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(85727842, sheet, name);
 }
 
 /**

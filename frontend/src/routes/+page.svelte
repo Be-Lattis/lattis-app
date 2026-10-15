@@ -169,7 +169,16 @@
 			if (ev.invalid) return 'Valeur hors type : cellule marquée en erreur';
 		},
 		undo: () => DocumentService.Undo().then(reload),
-		redo: () => DocumentService.Redo().then(reload)
+		redo: () => DocumentService.Redo().then(reload),
+		async paste(row, col, block) {
+			const ev = await DocumentService.Paste(sheetId, row, col, block);
+			await reload();
+			if (ev.created) return `Tableau « ${ev.created} » créé (${block.length - 1} lignes)`;
+		},
+		insertRow: (t, n) => DocumentService.InsertRow(t.name, n).then(reload),
+		deleteRow: (t, n) => DocumentService.DeleteRow(t.name, n).then(reload),
+		insertColumn: (t, i) => DocumentService.InsertColumn(t.name, i, `Colonne ${t.columns.length + 1}`).then(reload),
+		deleteColumn: (t, i) => DocumentService.DeleteColumn(t.name, i).then(reload)
 	};
 
 	const demoSource: SheetSource = {
@@ -213,7 +222,28 @@
 	const query = (sql: string) => (mode === 'demo' ? GridService.Query(sql) : DocumentService.Query(sql));
 	const data = $derived(mode === 'demo' ? demoData : docData);
 	const title = $derived(mode === 'demo' ? 'Démo : 1 M de lignes' : docState.title);
-	const tabs = $derived(mode === 'demo' ? (demo ? [demo.name] : []) : (layout?.sheets ?? []).map((s) => s.name));
+	const tabs = $derived(mode === 'demo' ? (demo ? [{ id: 1, name: demo.name }] : []) : (layout?.sheets ?? []).map((s) => ({ id: s.id, name: s.name })));
+
+	async function selectSheet(id: number) {
+		view = 'grid';
+		if (mode !== 'doc' || id === sheetId) return;
+		sheetId = id;
+		await reload();
+		sheet?.focus();
+	}
+
+	async function sheetAction(fn: () => Promise<unknown>) {
+		try {
+			await fn();
+			await reload();
+			if (!(layout?.sheets ?? []).some((s) => s.id === sheetId)) {
+				sheetId = layout?.sheets?.[0]?.id ?? 1;
+				await reload();
+			}
+		} catch (e) {
+			notice = err(e);
+		}
+	}
 </script>
 
 <div class="app">
@@ -276,7 +306,14 @@
 		{/if}
 	</main>
 
-	<SheetTabs sheets={tabs} active={0} onselect={() => (view = 'grid')} />
+	<SheetTabs
+		sheets={tabs}
+		active={mode === 'demo' ? 1 : sheetId}
+		onselect={selectSheet}
+		onadd={mode === 'doc' ? () => sheetAction(async () => selectSheet(await DocumentService.AddSheet())) : undefined}
+		onrename={mode === 'doc' ? (id, name) => sheetAction(() => DocumentService.RenameSheet(id, name)) : undefined}
+		ondelete={mode === 'doc' ? (id) => sheetAction(() => DocumentService.DeleteSheet(id)) : undefined}
+	/>
 	<footer class="statusbar">
 		{#if sheetStatus}
 			<span class="cell">{sheetStatus.cell}</span>

@@ -12,6 +12,7 @@
 	import { RowCache, percentile, type Fetched } from './cache';
 	import { VScroll, clamp } from './scroll';
 	import { Axis } from './axis';
+	import { parseTSV, toTSV } from './clipboard';
 	import {
 		alignment,
 		defaultWidth,
@@ -58,6 +59,12 @@
 		setCell(row: number, col: number, raw: string, target: Target): Promise<string | void | { value: unknown }>;
 		undo?(): Promise<unknown>;
 		redo?(): Promise<unknown>;
+		/** Colle un bloc (une seule étape d'annulation). */
+		paste?(row: number, col: number, block: string[][]): Promise<string | void>;
+		insertRow?(table: SheetTable, n: number): Promise<unknown>;
+		deleteRow?(table: SheetTable, n: number): Promise<unknown>;
+		insertColumn?(table: SheetTable, i: number): Promise<unknown>;
+		deleteColumn?(table: SheetTable, i: number): Promise<unknown>;
 	}
 
 	export interface SheetStatus {
@@ -188,6 +195,7 @@
 	let editByTyping = false;
 	let editValueText = $state('');
 	let fxText = $state('');
+	let nameBox = $state('');
 	let fxEditing = false;
 
 	let message = '';
@@ -491,6 +499,7 @@
 	}
 
 	function refreshFx() {
+		nameBox = cellName(active.row, active.col);
 		if (fxEditing) return;
 		fxText = cellInfo(active.row, active.col).value;
 	}
@@ -818,6 +827,88 @@
 		e.preventDefault();
 	}
 
+	// --- Presse-papiers -----------------------------------------------------
+
+	function selection() {
+		return {
+			r0: Math.min(active.row, anchor.row),
+			r1: Math.max(active.row, anchor.row),
+			c0: Math.min(active.col, anchor.col),
+			c1: Math.max(active.col, anchor.col)
+		};
+	}
+
+	function onCopy(e: ClipboardEvent) {
+		if (document.activeElement !== wrap || editing) return;
+		const { r0, r1, c0, c1 } = selection();
+		if ((r1 - r0 + 1) * (c1 - c0 + 1) > 100_000) {
+			say('Copie limitée à 100 000 cellules pour l’instant');
+			return;
+		}
+		const rows: string[][] = [];
+		for (let r = r0; r <= r1; r++) {
+			const line: string[] = [];
+			for (let c = c0; c <= c1; c++) line.push(cellInfo(r, c).value);
+			rows.push(line);
+		}
+		e.clipboardData?.setData('text/plain', toTSV(rows));
+		e.preventDefault();
+		say(`${rows.length * (c1 - c0 + 1)} cellule(s) copiée(s)`);
+	}
+
+	function onPaste(e: ClipboardEvent) {
+		if (document.activeElement !== wrap || editing || !source.paste) return;
+		const text = e.clipboardData?.getData('text/plain') ?? '';
+		const block = parseTSV(text);
+		if (block.length === 0) return;
+		e.preventDefault();
+		const { row, col } = active;
+		const paste = source.paste;
+		writing = writing.then(async () => {
+			try {
+				const m = await paste(row, col, block);
+				message = m ?? `${block.length} ligne(s) collée(s)`;
+			} catch (err) {
+				message = String(err instanceof Error ? err.message : err);
+			}
+			anchor = { row: row + block.length - 1, col: col + Math.max(...block.map((r) => r.length)) - 1 };
+			refreshFx();
+			refreshStatus();
+			schedule();
+		});
+	}
+
+	// --- Menu contextuel ----------------------------------------------------
+
+	let menu = $state<{ x: number; y: number; e: Entry; n: number; i: number; header: boolean } | null>(null);
+
+	function onContextMenu(ev: MouseEvent) {
+		const cell = cellAt(ev);
+		ev.preventDefault();
+		menu = null;
+		if (!cell) return;
+		const e = tableAt(cell.row, cell.col);
+		if (!e) return;
+		if (cell.row !== active.row || cell.col !== active.col) moveTo(cell.row, cell.col);
+		const r = wrap.getBoundingClientRect();
+		menu = { x: ev.clientX - r.left, y: ev.clientY - r.top, e, n: cell.row - e.t.row - 1, i: cell.col - e.t.col, header: cell.row === e.t.row };
+	}
+
+	async function menuAction(fn: (() => Promise<unknown>) | undefined) {
+		menu = null;
+		wrap.focus();
+		if (!fn) return;
+		writing = writing.then(async () => {
+			try {
+				await fn();
+				message = '';
+			} catch (err) {
+				message = String(err instanceof Error ? err.message : err);
+			}
+			refreshStatus();
+		});
+	}
+
 	// --- Mesures ------------------------------------------------------------
 
 	/** Défilement continu, sauts aléatoires et saisies, sur le premier tableau. */
@@ -945,6 +1036,8 @@
 		const up = () => (dragging = false);
 		window.addEventListener('mouseup', up);
 		const timer = setInterval(refreshStatus, 250);
+		window.addEventListener('copy', onCopy);
+		window.addEventListener('paste', onPaste);
 		wrap.focus();
 		refreshStatus();
 		if (autoBench) setTimeout(async () => autoBench(JSON.stringify(await runBench())), 1500);
@@ -953,6 +1046,8 @@
 			scroller.removeEventListener('wheel', onWheel);
 			window.removeEventListener('mouseup', up);
 			clearInterval(timer);
+			window.removeEventListener('copy', onCopy);
+			window.removeEventListener('paste', onPaste);
 			cancelAnimationFrame(frame);
 		};
 	});
@@ -965,7 +1060,7 @@
 
 <div class="sheet-root">
 	<div class="formula-bar">
-		<div class="name-box" title="Cellule active">{cellName(active.row, active.col) || '—'}</div>
+		<div class="name-box" title="Cellule active">{nameBox || '—'}</div>
 		<span class="fx">fx</span>
 		<input
 			class="fx-input"
@@ -992,9 +1087,26 @@
 			onmousedown={onMouseDown}
 			onmousemove={onMouseMove}
 			ondblclick={onDblClick}
+			oncontextmenu={onContextMenu}
 		>
 			<div style:width="{MARGIN + colAxis.total}px" style:height="{TOP_H + vs.spacer}px"></div>
 		</div>
+		{#if menu}
+			{@const m = menu}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" onmouseleave={() => (menu = null)}>
+				<div class="menu-title">{m.e.t.name}</div>
+				{#if !m.header}
+					<button onclick={() => menuAction(source.insertRow && (() => source.insertRow!(m.e.t, m.n)))}>Insérer une ligne au-dessus</button>
+					<button onclick={() => menuAction(source.insertRow && (() => source.insertRow!(m.e.t, m.n + 1)))}>Insérer une ligne en dessous</button>
+					<button onclick={() => menuAction(source.deleteRow && (() => source.deleteRow!(m.e.t, m.n)))}>Supprimer la ligne</button>
+					<hr />
+				{/if}
+				<button onclick={() => menuAction(source.insertColumn && (() => source.insertColumn!(m.e.t, m.i)))}>Insérer une colonne à gauche</button>
+				<button onclick={() => menuAction(source.insertColumn && (() => source.insertColumn!(m.e.t, m.i + 1)))}>Insérer une colonne à droite</button>
+				<button onclick={() => menuAction(source.deleteColumn && (() => source.deleteColumn!(m.e.t, m.i)))}>Supprimer la colonne « {m.e.t.columns[m.i]?.name} »</button>
+			</div>
+		{/if}
 		{#if editing}
 			<input
 				class="editor"
@@ -1076,6 +1188,38 @@
 		position: absolute;
 		inset: 0;
 		overflow: auto;
+	}
+	.menu {
+		position: absolute;
+		z-index: 5;
+		background: #fff;
+		border: 1px solid #d4d7db;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		padding: 4px 0;
+		min-width: 240px;
+	}
+	.menu-title {
+		padding: 4px 14px;
+		font-size: 11px;
+		color: #6b7280;
+	}
+	.menu button {
+		display: block;
+		width: 100%;
+		text-align: left;
+		padding: 6px 14px;
+		background: none;
+		border: none;
+		font: inherit;
+		cursor: pointer;
+	}
+	.menu button:hover {
+		background: #e3efe7;
+	}
+	.menu hr {
+		border: none;
+		border-top: 1px solid #e3e5e8;
+		margin: 4px 0;
 	}
 	.editor {
 		position: absolute;
