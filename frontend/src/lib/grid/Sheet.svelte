@@ -1173,6 +1173,11 @@
 		};
 	});
 
+	/** Nom du tableau de la cellule active (pour l'export), s'il y en a un. */
+	export function activeTable(): string | undefined {
+		return tableAt(active.row, active.col)?.t.name;
+	}
+
 	/** Redonne le focus clavier à la feuille (après un dialogue, un menu…). */
 	export function focus() {
 		wrap?.focus();

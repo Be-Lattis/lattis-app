@@ -57,6 +57,23 @@ export function Discard(dir: string): $CancellablePromise<void> {
     return $Call.ByID(3379363957, dir);
 }
 
+/**
+ * ExportCSV écrit un tableau en CSV (séparateur ;, virgule décimale, UTF-8
+ * avec BOM : ce qu'Excel en français ouvre directement). Renvoie le fichier
+ * écrit, vide si l'utilisateur a annulé.
+ */
+export function ExportCSV(table: string): $CancellablePromise<string> {
+    return $Call.ByID(1530430769, table);
+}
+
+/**
+ * Import ajoute au classeur un fichier CSV ou un classeur Excel .xlsx
+ * (path vide : boîte de dialogue), en une seule étape d'annulation.
+ */
+export function Import(path: string): $CancellablePromise<$models.ImportResult> {
+    return $Call.ByID(545927768, path);
+}
+
 export function InsertColumn(table: string, i: number, name: string): $CancellablePromise<$models.DocState> {
     return $Call.ByID(1903411822, table, i, name);
 }

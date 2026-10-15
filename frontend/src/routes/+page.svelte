@@ -129,6 +129,29 @@
 					docState = await DocumentService.Save(a === 'saveAs');
 					if (!docState.dirty) notice = `Enregistré : ${docState.path}`;
 					break;
+				case 'import': {
+					if (mode !== 'doc') await startDoc();
+					const r = await DocumentService.Import('');
+					if (r.cancelled) break;
+					if (r.sheet) sheetId = r.sheet;
+					await reload();
+					const tables = r.tables ?? [];
+					const what = tables.length === 1 ? `Tableau « ${tables[0]} » importé` : `${tables.length} tableaux importés`;
+					const warnings = r.warnings ?? [];
+					notice = warnings.length ? `${what} ; ${warnings.length} point(s) à vérifier : ${warnings.join(' · ')}` : what;
+					break;
+				}
+				case 'export': {
+					if (mode !== 'doc') return;
+					const table = sheet?.activeTable() ?? layout?.tables?.[0]?.name;
+					if (!table) {
+						notice = 'Aucun tableau à exporter sur cette feuille';
+						break;
+					}
+					const p = await DocumentService.ExportCSV(table);
+					if (p) notice = `Tableau « ${table} » exporté : ${p}`;
+					break;
+				}
 				case 'demo':
 					await startDemo();
 					break;

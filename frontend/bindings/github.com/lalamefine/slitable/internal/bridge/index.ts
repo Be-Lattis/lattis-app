@@ -11,5 +11,6 @@ export {
 export type {
     DocState,
     GridStatus,
+    ImportResult,
     OpenResult
 } from "./models.js";

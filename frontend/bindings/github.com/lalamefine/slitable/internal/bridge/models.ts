@@ -44,6 +44,22 @@ export interface GridStatus {
 }
 
 /**
+ * ImportResult décrit un import : feuilles et tableaux créés, et ce qui n'a
+ * pas pu être repris tel quel (formules gardées en valeurs…).
+ */
+export interface ImportResult {
+    "cancelled": boolean;
+
+    /**
+     * première feuille importée
+     */
+    "sheet": number;
+    "tables": string[] | null;
+    "warnings": string[] | null;
+    "state": DocState;
+}
+
+/**
  * OpenResult est le résultat d'une ouverture : soit le classeur est ouvert,
  * soit une session précédente interrompue est proposée en récupération.
  */

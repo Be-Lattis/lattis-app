@@ -12,6 +12,12 @@ export interface CellInfo {
     "row": number;
     "col": number;
     "raw": string;
+
+    /**
+     * Cellule avec formule : valeur calculée, affichée à la place de Raw.
+     */
+    "value": string;
+    "error": boolean;
 }
 
 /**
@@ -36,6 +42,11 @@ export interface ColumnInfo {
     "sql": string;
     "type": grid$0.Type;
     "fixed": boolean;
+
+    /**
+     * Colonne calculée : formule telle que l'utilisateur la lit (français).
+     */
+    "formula": string;
 }
 
 /**
