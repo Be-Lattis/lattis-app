@@ -11,6 +11,8 @@ export interface Fetched {
 	first: number;
 	ids: number[] | null;
 	cells: (unknown[] | null)[] | null;
+	/** Saisies hors type : la cellule est vide, la valeur brute est affichée. */
+	invalid?: { row: number; col: number; raw: string }[] | null;
 	micros: number;
 }
 
@@ -20,6 +22,7 @@ export interface Block {
 	ids: number[];
 	cells: unknown[][];
 	text: string[][];
+	bad: (Map<number, string> | undefined)[];
 }
 
 export interface Stats {
@@ -50,14 +53,14 @@ export class RowCache {
 	) {}
 
 	/** Ligne `row` si son bloc est chargé. */
-	row(row: number): { id: number; cells: unknown[]; text: string[] } | undefined {
+	row(row: number): { id: number; cells: unknown[]; text: string[]; bad?: Map<number, string> } | undefined {
 		const k = Math.floor(row / BLOCK);
 		const b = this.blocks.get(k) ?? this.stale.get(k);
 		if (!b || row >= this.rows) return undefined;
 		const i = row % BLOCK;
 		// Un bloc d'avant une insertion peut être plus court que le tableau actuel.
 		if (i >= b.ids.length) return undefined;
-		return { id: b.ids[i], cells: b.cells[i], text: b.text[i] };
+		return { id: b.ids[i], cells: b.cells[i], text: b.text[i], bad: b.bad[i] };
 	}
 
 	has(first: number, last: number): boolean {
@@ -99,12 +102,14 @@ export class RowCache {
 			push(this.stats.roundTrip, performance.now() - t0);
 			push(this.stats.server, w.micros / 1000);
 			const cells = (w.cells ?? []).map((r) => r ?? []);
+			const text = cells.map((r) => r.map((v, c) => this.format(c, v)));
+			const bad: (Map<number, string> | undefined)[] = [];
+			for (const x of w.invalid ?? []) {
+				(bad[x.row] ??= new Map()).set(x.col, x.raw);
+				if (text[x.row]) text[x.row][x.col] = x.raw;
+			}
 			this.stale.delete(b);
-			this.blocks.set(b, {
-				ids: w.ids ?? [],
-				cells,
-				text: cells.map((r) => r.map((v, c) => this.format(c, v)))
-			});
+			this.blocks.set(b, { ids: w.ids ?? [], cells, text, bad });
 			this.evict(b);
 			this.error = null;
 		} catch (e) {

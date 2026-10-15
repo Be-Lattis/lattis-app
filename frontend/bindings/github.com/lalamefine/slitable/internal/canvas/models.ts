@@ -18,6 +18,12 @@ export interface CellInfo {
  * ColumnInfo décrit une colonne de tableau pour l'interface.
  */
 export interface ColumnInfo {
+    "id": number;
+
+    /**
+     * saisies hors type
+     */
+    "errors": number;
     "name": string;
     "sql": string;
     "type": grid$0.Type;

@@ -247,10 +247,11 @@ func (s *DocumentService) Window(ctx context.Context, sheet, table int64, first,
 			}
 			cols := make([]grid.Column, len(ti.Columns))
 			sqlCols := make([]string, len(ti.Columns))
+			ids := make([]int64, len(ti.Columns))
 			for i, c := range ti.Columns {
-				cols[i], sqlCols[i] = grid.Column{Name: c.Name, Type: c.Type}, c.SQL
+				cols[i], sqlCols[i], ids[i] = grid.Column{Name: c.Name, Type: c.Type}, c.SQL, c.ID
 			}
-			t = grid.NewTable(d.DB(), ti.SQL, ti.Name, cols, sqlCols)
+			t = grid.NewTable(d.DB(), ti.SQL, ti.Name, cols, sqlCols).WithInvalid(ti.ID, ids)
 			if err := t.Load(ctx); err != nil {
 				return grid.Window{}, err
 			}
@@ -374,4 +375,18 @@ func (s *DocumentService) RenameSheet(ctx context.Context, sheet int64, name str
 
 func (s *DocumentService) DeleteSheet(ctx context.Context, sheet int64) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.DeleteSheet(ctx, sheet) })
+}
+
+// ConvertPreview compte les valeurs qui ne se convertiraient pas au type to.
+func (s *DocumentService) ConvertPreview(ctx context.Context, table string, i int, to grid.Type) (int, error) {
+	d, err := s.current()
+	if err != nil {
+		return 0, err
+	}
+	return d.ConvertPreview(ctx, table, i, to)
+}
+
+// SetType fixe le type d'une colonne (valeurs non convertibles marquées en erreur).
+func (s *DocumentService) SetType(ctx context.Context, table string, i int, to grid.Type) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetType(ctx, table, i, to) })
 }

@@ -10,6 +10,7 @@
 	import { DocumentService, GridService } from '#bindings/internal/bridge/index.js';
 	import type { DocState } from '#bindings/internal/bridge/models.js';
 	import type { Layout } from '#bindings/internal/canvas/models.js';
+	import type { Type } from '#bindings/internal/grid/models.js';
 	import type { Orphan } from '#bindings/internal/archive/models.js';
 	import Sheet, { type SheetData, type SheetSource, type SheetStatus } from '#lib/grid/Sheet.svelte';
 	import Ribbon, { type FileAction, type View } from '#lib/shell/Ribbon.svelte';
@@ -178,7 +179,9 @@
 		insertRow: (t, n) => DocumentService.InsertRow(t.name, n).then(reload),
 		deleteRow: (t, n) => DocumentService.DeleteRow(t.name, n).then(reload),
 		insertColumn: (t, i) => DocumentService.InsertColumn(t.name, i, `Colonne ${t.columns.length + 1}`).then(reload),
-		deleteColumn: (t, i) => DocumentService.DeleteColumn(t.name, i).then(reload)
+		deleteColumn: (t, i) => DocumentService.DeleteColumn(t.name, i).then(reload),
+		convertPreview: (t, i, to) => DocumentService.ConvertPreview(t.name, i, to as Type),
+		setType: (t, i, to) => DocumentService.SetType(t.name, i, to as Type).then(reload)
 	};
 
 	const demoSource: SheetSource = {
@@ -199,7 +202,7 @@
 						row: t.row,
 						col: t.col,
 						rows: t.rows,
-						columns: (t.columns ?? []).map((c) => ({ name: c.name, type: c.type as ColumnType }))
+						columns: (t.columns ?? []).map((c) => ({ name: c.name, type: c.type as ColumnType, fixed: c.fixed, errors: c.errors }))
 					})),
 					cells: layout.cells ?? []
 				}

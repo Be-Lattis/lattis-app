@@ -41,7 +41,7 @@ func wrap(ctx context.Context, a *archive.Doc) (*Document, error) {
 
 // New crée un classeur vide, jamais enregistré.
 func New(ctx context.Context) (*Document, error) {
-	a, err := archive.New()
+	a, err := archive.New(canvas.Register)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func New(ctx context.Context) (*Document, error) {
 // interrompue, l'erreur est un *archive.RecoverableError : proposer Recover
 // ou archive.Discard.
 func Open(ctx context.Context, path string) (*Document, error) {
-	a, err := archive.Open(path)
+	a, err := archive.Open(path, canvas.Register)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func Open(ctx context.Context, path string) (*Document, error) {
 // Recover rouvre le répertoire de travail d'une session interrompue, avec
 // toutes ses modifications validées et son historique d'annulation.
 func Recover(ctx context.Context, o archive.Orphan) (*Document, error) {
-	a, err := archive.Recover(o)
+	a, err := archive.Recover(o, canvas.Register)
 	if err != nil {
 		return nil, err
 	}

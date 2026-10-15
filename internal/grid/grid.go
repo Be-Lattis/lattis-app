@@ -47,10 +47,19 @@ type Info struct {
 // (0 = première ligne dans l'ordre d'affichage). Cells est indexé
 // [ligne][colonne] ; IDs donne la clé technique de chaque ligne.
 type Window struct {
-	First  int     `json:"first"`
-	IDs    []int64 `json:"ids"`
-	Cells  [][]any `json:"cells"`
-	Micros int64   `json:"micros"` // temps passé côté Go, pour les mesures
+	First   int           `json:"first"`
+	IDs     []int64       `json:"ids"`
+	Cells   [][]any       `json:"cells"`
+	Invalid []InvalidCell `json:"invalid"` // saisies hors type de la fenêtre
+	Micros  int64         `json:"micros"`  // temps passé côté Go, pour les mesures
+}
+
+// InvalidCell est une saisie hors type : la cellule est vide, la valeur
+// brute est gardée pour l'affichage et la correction.
+type InvalidCell struct {
+	Row int    `json:"row"` // indice dans la fenêtre
+	Col int    `json:"col"` // colonne affichée
+	Raw string `json:"raw"`
 }
 
 // Table donne accès à un tableau stocké dans une table SQLite.
@@ -66,6 +75,22 @@ type Table struct {
 	rows    int
 
 	selectWindow string
+
+	// Saisies hors type (tableaux du classeur) : identifiant du tableau et
+	// identifiant de chaque colonne affichée.
+	tableID int64
+	colIDs  map[int64]int
+}
+
+// WithInvalid fait lire les saisies hors type de _slitable_invalid avec les
+// fenêtres.
+func (t *Table) WithInvalid(tableID int64, colIDs []int64) *Table {
+	t.tableID = tableID
+	t.colIDs = map[int64]int{}
+	for i, id := range colIDs {
+		t.colIDs[id] = i
+	}
+	return t
 }
 
 // ErrRange signale une fenêtre ou une colonne hors du tableau.
@@ -173,6 +198,11 @@ func (t *Table) Window(ctx context.Context, first, count int) (Window, error) {
 	if err := rs.Err(); err != nil {
 		return Window{}, err
 	}
+	if t.colIDs != nil && len(w.IDs) > 0 {
+		if err := t.invalid(ctx, &w); err != nil {
+			return Window{}, err
+		}
+	}
 	w.Micros = time.Since(start).Microseconds()
 	return w, nil
 }
@@ -209,4 +239,32 @@ func (t *Table) SetCell(ctx context.Context, id int64, col int, raw string) (any
 		return nil, err
 	}
 	return v, nil
+}
+
+func (t *Table) invalid(ctx context.Context, w *Window) error {
+	index := make(map[int64]int, len(w.IDs))
+	lo, hi := w.IDs[0], w.IDs[0]
+	for i, id := range w.IDs {
+		index[id] = i
+		lo, hi = min(lo, id), max(hi, id)
+	}
+	rs, err := t.db.Read().QueryContext(ctx,
+		`SELECT rid, col, raw FROM _slitable_invalid WHERE tbl = ? AND rid BETWEEN ? AND ?`, t.tableID, lo, hi)
+	if err != nil {
+		return err
+	}
+	defer rs.Close()
+	for rs.Next() {
+		var rid, col int64
+		var raw string
+		if err := rs.Scan(&rid, &col, &raw); err != nil {
+			return err
+		}
+		r, ok1 := index[rid]
+		c, ok2 := t.colIDs[col]
+		if ok1 && ok2 {
+			w.Invalid = append(w.Invalid, InvalidCell{r, c, raw})
+		}
+	}
+	return rs.Err()
 }

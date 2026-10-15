@@ -25,6 +25,23 @@ export interface Info {
 }
 
 /**
+ * InvalidCell est une saisie hors type : la cellule est vide, la valeur
+ * brute est gardée pour l'affichage et la correction.
+ */
+export interface InvalidCell {
+    /**
+     * indice dans la fenêtre
+     */
+    "row": number;
+
+    /**
+     * colonne affichée
+     */
+    "col": number;
+    "raw": string;
+}
+
+/**
  * QueryResult est le résultat d'une requête de l'onglet SQL.
  */
 export interface QueryResult {
@@ -63,6 +80,11 @@ export interface Window {
     "first": number;
     "ids": number[] | null;
     "cells": (any[] | null)[] | null;
+
+    /**
+     * saisies hors type de la fenêtre
+     */
+    "invalid": InvalidCell[] | null;
 
     /**
      * temps passé côté Go, pour les mesures

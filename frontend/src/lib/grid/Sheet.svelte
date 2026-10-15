@@ -26,6 +26,8 @@
 	export interface Column {
 		name: string;
 		type: ColumnType;
+		fixed?: boolean; // type choisi par l'utilisateur (sinon inféré)
+		errors?: number; // saisies hors type
 	}
 
 	export interface SheetTable {
@@ -65,6 +67,9 @@
 		deleteRow?(table: SheetTable, n: number): Promise<unknown>;
 		insertColumn?(table: SheetTable, i: number): Promise<unknown>;
 		deleteColumn?(table: SheetTable, i: number): Promise<unknown>;
+		/** Nombre de valeurs qui ne se convertiraient pas au type to. */
+		convertPreview?(table: SheetTable, i: number, to: ColumnType): Promise<number>;
+		setType?(table: SheetTable, i: number, to: ColumnType): Promise<unknown>;
 	}
 
 	export interface SheetStatus {
@@ -112,7 +117,8 @@
 		placeholder: '#eef0f3',
 		select: 'rgba(33, 115, 70, 0.10)',
 		active: '#217346',
-		activeStrip: '#d3e7dc'
+		activeStrip: '#d3e7dc',
+		error: '#c0392b'
 	};
 
 	// --- Tableaux posés sur la feuille ------------------------------------
@@ -303,7 +309,12 @@
 						ctx.font = FONT_SMALL;
 						ctx.fillStyle = C.icon;
 						ctx.textAlign = 'right';
-						const icon = typeIcon(col.type);
+						const icon = typeIcon(col.type) + ' ▾';
+						if (col.errors) {
+							ctx.fillStyle = C.error;
+							ctx.fillText('⚠ ' + col.errors, x + cw - 6 - ctx.measureText(icon + ' ').width, y + ROW_H / 2);
+							ctx.fillStyle = C.icon;
+						}
 						ctx.fillText(icon, x + cw - 6, y + ROW_H / 2);
 						ctx.save();
 						ctx.beginPath();
@@ -324,6 +335,21 @@
 					}
 					const s = row.text[i];
 					if (!s) continue;
+					if (row.bad?.has(i)) {
+						// Saisie hors type : valeur brute en rouge, coin rouge comme le
+						// triangle d'Excel.
+						ctx.font = FONT;
+						ctx.textAlign = 'left';
+						ctx.fillStyle = C.error;
+						ctx.fillText(s, x + 6, y + ROW_H / 2);
+						ctx.beginPath();
+						ctx.moveTo(x + cw - 7, y + 1);
+						ctx.lineTo(x + cw - 1, y + 1);
+						ctx.lineTo(x + cw - 1, y + 7);
+						ctx.closePath();
+						ctx.fill();
+						continue;
+					}
 					const align = alignment(col.type);
 					ctx.font = FONT;
 					ctx.textAlign = align;
@@ -473,7 +499,8 @@
 			n,
 			row,
 			kind: 'data' as const,
-			value: row ? editValue(e.t.columns[i].type, row.cells[i]) : ''
+			// Une saisie hors type se corrige à partir de sa valeur brute.
+			value: row ? (row.bad?.get(i) ?? editValue(e.t.columns[i].type, row.cells[i])) : ''
 		};
 	}
 
@@ -481,8 +508,14 @@
 	function cellName(r: number, c: number): string {
 		const e = tableAt(r, c);
 		if (!e) return cells.has(key(r, c)) ? 'Cellule libre' : '';
-		const col = `${e.t.name}[${e.t.columns[c - e.t.col].name}]`;
-		return r === e.t.row ? `${col} · en-tête` : `${col} · ${r - e.t.row}`;
+		const k = e.t.columns[c - e.t.col];
+		const col = `${e.t.name}[${k.name}]`;
+		if (r === e.t.row) {
+			const errs = k.errors ? ` · ${k.errors} erreur${k.errors > 1 ? 's' : ''}` : '';
+			return `${col} · ${typeLabel(k.type)} (${k.fixed ? 'fixé' : 'inféré'})${errs}`;
+		}
+		const bad = e.cache.row(r - e.t.row - 1)?.bad?.get(c - e.t.col);
+		return `${col} · ${r - e.t.row}` + (bad !== undefined ? ` · « ${bad} » n'est pas du type ${typeLabel(k.type)}` : '');
 	}
 
 	function refreshStatus() {
@@ -598,6 +631,7 @@
 		if (!cell) return;
 		if (editing) commit();
 		e.preventDefault();
+		if (e.button === 0 && openTypeMenu(e, cell)) return;
 		wrap.focus();
 		moveTo(cell.row, cell.col, e.shiftKey);
 		dragging = true;
@@ -878,6 +912,39 @@
 		});
 	}
 
+	// --- Menu de type (icône de l'en-tête) ------------------------------------
+
+	const TYPES: ColumnType[] = ['text', 'integer', 'decimal', 'date', 'boolean'];
+	let typeMenu = $state<{ x: number; y: number; e: Entry; i: number; pending?: { to: ColumnType; n: number } } | null>(null);
+
+	/** Un clic sur l'icône de type d'un en-tête ouvre le menu de type. */
+	function openTypeMenu(ev: MouseEvent, cell: { row: number; col: number }): boolean {
+		const e = tableAt(cell.row, cell.col);
+		if (!e || cell.row !== e.t.row || !source.setType) return false;
+		const r = scroller.getBoundingClientRect();
+		const right = MARGIN + colAxis.offset(cell.col + 1) - scroller.scrollLeft;
+		const mx = ev.clientX - r.left;
+		if (right - mx > 34) return false;
+		moveTo(cell.row, cell.col);
+		typeMenu = { x: mx, y: ev.clientY - r.top + 8, e, i: cell.col - e.t.col };
+		return true;
+	}
+
+	async function chooseType(to: ColumnType, confirmed = false) {
+		const m = typeMenu;
+		if (!m) return;
+		if (!confirmed && source.convertPreview && to !== m.e.t.columns[m.i].type) {
+			const n = await source.convertPreview(m.e.t, m.i, to);
+			if (n > 0) {
+				typeMenu = { ...m, pending: { to, n } };
+				return;
+			}
+		}
+		typeMenu = null;
+		const setType = source.setType!;
+		await menuAction(() => setType(m.e.t, m.i, to));
+	}
+
 	// --- Menu contextuel ----------------------------------------------------
 
 	let menu = $state<{ x: number; y: number; e: Entry; n: number; i: number; header: boolean } | null>(null);
@@ -1091,6 +1158,30 @@
 		>
 			<div style:width="{MARGIN + colAxis.total}px" style:height="{TOP_H + vs.spacer}px"></div>
 		</div>
+		{#if typeMenu}
+			{@const m = typeMenu}
+			{@const col = m.e.t.columns[m.i]}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" onmouseleave={() => (typeMenu = null)}>
+				<div class="menu-title">Type de « {col.name} » : {col.fixed ? 'fixé' : 'inféré automatiquement'}</div>
+				{#if m.pending}
+					<p class="menu-note">
+						{m.pending.n > 1
+							? `${m.pending.n} valeurs ne peuvent pas devenir « ${typeLabel(m.pending.to)} » : elles seront gardées et marquées en erreur.`
+							: `1 valeur ne peut pas devenir « ${typeLabel(m.pending.to)} » : elle sera gardée et marquée en erreur.`}
+					</p>
+					<button onclick={() => chooseType(m.pending!.to, true)}>Convertir quand même</button>
+					<button onclick={() => (typeMenu = { ...m, pending: undefined })}>Annuler</button>
+				{:else}
+					{#each TYPES as t (t)}
+						<button onclick={() => chooseType(t)}>
+							<span class="check">{t === col.type ? '✓' : ''}</span>{typeIcon(t)}&nbsp;&nbsp;{typeLabel(t)}
+						</button>
+					{/each}
+					{#if col.errors}<p class="menu-note error">{col.errors} saisie{col.errors > 1 ? 's' : ''} hors type dans la colonne</p>{/if}
+				{/if}
+			</div>
+		{/if}
 		{#if menu}
 			{@const m = menu}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -1215,6 +1306,20 @@
 	}
 	.menu button:hover {
 		background: #e3efe7;
+	}
+	.menu-note {
+		margin: 4px 14px;
+		max-width: 260px;
+		font-size: 12px;
+		color: #4b5563;
+	}
+	.menu-note.error {
+		color: #c0392b;
+	}
+	.check {
+		display: inline-block;
+		width: 16px;
+		color: #217346;
 	}
 	.menu hr {
 		border: none;

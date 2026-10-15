@@ -14,10 +14,12 @@ type SheetInfo struct {
 
 // ColumnInfo décrit une colonne de tableau pour l'interface.
 type ColumnInfo struct {
-	Name  string    `json:"name"`
-	SQL   string    `json:"sql"`
-	Type  grid.Type `json:"type"`
-	Fixed bool      `json:"fixed"`
+	ID     int64     `json:"id"`
+	Errors int       `json:"errors"` // saisies hors type
+	Name   string    `json:"name"`
+	SQL    string    `json:"sql"`
+	Type   grid.Type `json:"type"`
+	Fixed  bool      `json:"fixed"`
 }
 
 // TableInfo décrit un tableau posé sur une feuille.
@@ -70,8 +72,23 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 		}
 		for _, tb := range tables {
 			ti := TableInfo{ID: tb.ID, Name: tb.Name, SQL: tb.sql(), Row: tb.Row, Col: tb.Col, Rows: tb.Rows}
+			errs := map[int64]int{}
+			rs, err := t.query(`SELECT col, count(*) FROM _slitable_invalid WHERE tbl = ? GROUP BY col`, tb.ID)
+			if err != nil {
+				return err
+			}
+			for rs.Next() {
+				var col int64
+				var n int
+				if err := rs.Scan(&col, &n); err != nil {
+					rs.Close()
+					return err
+				}
+				errs[col] = n
+			}
+			rs.Close()
 			for _, c := range tb.Cols {
-				ti.Columns = append(ti.Columns, ColumnInfo{Name: c.Name, SQL: colSQL(c.ID), Type: c.Type, Fixed: c.Fixed})
+				ti.Columns = append(ti.Columns, ColumnInfo{ID: c.ID, Errors: errs[c.ID], Name: c.Name, SQL: colSQL(c.ID), Type: c.Type, Fixed: c.Fixed})
 			}
 			l.Tables = append(l.Tables, ti)
 		}

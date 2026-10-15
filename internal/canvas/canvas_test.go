@@ -20,7 +20,7 @@ type fixture struct {
 
 func open(t *testing.T) *fixture {
 	t.Helper()
-	db, err := store.Open(filepath.Join(t.TempDir(), "doc.sqlite"))
+	db, err := store.Open(filepath.Join(t.TempDir(), "doc.sqlite"), Register)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -319,7 +319,7 @@ func TestPaste(t *testing.T) {
 		t.Fatal(err)
 	}
 	check(t, d, "collage sur un tableau")
-	if got := view(t, d); !strings.Contains(got, "|Lille|inconnu\n") ||!strings.Contains(got, "|Nice||0") || !strings.Contains(got, "|Brest|140 000") {
+	if got := view(t, d); !strings.Contains(got, "|Lille|inconnu\n") || !strings.Contains(got, "|Nice||0") || !strings.Contains(got, "|Brest|140 000") {
 		t.Fatalf("feuille\n%s", got)
 	}
 	// Deux annulations défont les deux collages.
@@ -359,5 +359,44 @@ func TestSheets(t *testing.T) {
 	}
 	if got := dump(t, d); got != before {
 		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
+	}
+}
+
+func TestSetType(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Article", "Prix"}, {"a", "12,5"}, {"b", "8"}, {"c", ""}}); err != nil {
+		t.Fatal(err)
+	}
+	before := dump(t, d)
+	n, err := d.ConvertPreview(ctx, "Feuille 1", 1, grid.Integer)
+	if err != nil || n != 1 {
+		t.Fatalf("aperçu : %d, %v", n, err)
+	}
+	if err := d.SetType(ctx, "Feuille 1", 1, grid.Integer); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "type fixé en entier")
+	if got := view(t, d); got != lines("[Article]|[Prix]", "a", "b|8", "c") {
+		t.Fatalf("feuille\n%s", got)
+	}
+	if !strings.Contains(dump(t, d), "1 | 1 | 2 | 12,5") {
+		t.Fatalf("12,5 non marqué en erreur :\n%s", dump(t, d))
+	}
+	// Vers le texte : les nombres s'écrivent à la française.
+	if err := d.SetType(ctx, "Feuille 1", 1, grid.Text); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "type fixé en texte")
+	d.bus.Undo(ctx)
+	d.bus.Undo(ctx)
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
+	}
+	if err := d.SetType(ctx, "Feuille 1", 1, grid.Text); err != nil {
+		t.Fatal(err)
+	}
+	if got := view(t, d); got != lines("[Article]|[Prix]", "a|12,5", "b|8", "c") {
+		t.Fatalf("feuille\n%s", got)
 	}
 }

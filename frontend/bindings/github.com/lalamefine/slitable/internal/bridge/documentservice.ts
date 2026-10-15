@@ -31,6 +31,13 @@ export function AddSheet(): $CancellablePromise<number> {
     return $Call.ByID(1000932635);
 }
 
+/**
+ * ConvertPreview compte les valeurs qui ne se convertiraient pas au type to.
+ */
+export function ConvertPreview(table: string, i: number, to: grid$0.Type): $CancellablePromise<number> {
+    return $Call.ByID(521549168, table, i, to);
+}
+
 export function DeleteColumn(table: string, i: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(472790092, table, i);
 }
@@ -133,6 +140,13 @@ export function Save($as: boolean): $CancellablePromise<$models.DocState> {
  */
 export function SetCell(sheet: number, row: number, col: number, raw: string): $CancellablePromise<canvas$0.Event> {
     return $Call.ByID(1429016395, sheet, row, col, raw);
+}
+
+/**
+ * SetType fixe le type d'une colonne (valeurs non convertibles marquées en erreur).
+ */
+export function SetType(table: string, i: number, to: grid$0.Type): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1037606431, table, i, to);
 }
 
 /**

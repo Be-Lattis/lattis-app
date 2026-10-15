@@ -69,28 +69,6 @@ func InferAll(raws []string) grid.Type {
 	return t
 }
 
-// castExpr convertit la colonne col du type from vers le type to dans un
-// SELECT de reconstruction. Les conversions vers un type plus étroit ne
-// servent qu'à l'annulation, quand toutes les valeurs sont convertibles.
-func castExpr(col string, from, to grid.Type) string {
-	switch {
-	case from == to:
-		return col
-	case to == grid.Text && from == grid.Boolean:
-		return "CASE " + col + " WHEN 1 THEN 'VRAI' WHEN 0 THEN 'FAUX' END"
-	case to == grid.Boolean && from == grid.Text:
-		return "CASE " + col + " WHEN 'VRAI' THEN 1 WHEN 'FAUX' THEN 0 END"
-	case to == grid.Text:
-		return "CAST(" + col + " AS TEXT)"
-	case to == grid.Integer, to == grid.Boolean:
-		return "CAST(" + col + " AS INTEGER)"
-	case to == grid.Decimal:
-		return "CAST(" + col + " AS REAL)"
-	default: // date ← texte : même stockage
-		return col
-	}
-}
-
 // sqlType donne le type de stockage d'un type logique dans une table STRICT.
 func sqlType(t grid.Type) string {
 	switch t {

@@ -179,7 +179,7 @@ func rebuildStmts(tb Table, physical []Column, colID int64, from, to grid.Type) 
 	for _, c := range physical {
 		typ, expr := c.Type, colSQL(c.ID)
 		if c.ID == colID {
-			typ, expr = to, castExpr(colSQL(c.ID), from, to)
+			typ, expr = to, convertExpr(colSQL(c.ID), from, to)
 		}
 		defs = append(defs, colSQL(c.ID)+" "+sqlType(typ))
 		cols = append(cols, colSQL(c.ID))
