@@ -33,9 +33,10 @@
 		onundo: () => void;
 		onredo: () => void;
 		onbench?: () => void;
+		onsort?: (desc: boolean) => void;
 	}
 
-	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench }: Props = $props();
+	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench, onsort }: Props = $props();
 	let fileOpen = $state(false);
 
 	const tabs = ['Accueil', 'Insertion', 'Données', 'Formules', 'Affichage'] as const;
@@ -61,7 +62,14 @@
 			{ title: 'Graphiques', commands: [{ label: 'Barres', icon: 'chart-bar' }, { label: 'Courbes', icon: 'chart-line' }, { label: 'Secteurs', icon: 'chart-pie' }] }
 		],
 		Données: [
-			{ title: 'Trier et filtrer', commands: [{ label: 'Trier', icon: 'sort' }, { label: 'Filtrer', icon: 'filter' }] },
+			{
+				title: 'Trier et filtrer',
+				commands: [
+					{ label: 'Trier A → Z', icon: 'sort', run: onsort ? () => onsort(false) : undefined, hint: 'Trier le tableau par la colonne active, croissant' },
+					{ label: 'Trier Z → A', icon: 'sort', run: onsort ? () => onsort(true) : undefined, hint: 'Trier le tableau par la colonne active, décroissant' },
+					{ label: 'Filtrer', icon: 'filter' }
+				]
+			},
 			{ title: 'Outils de données', commands: [{ label: 'Supprimer les doublons', icon: 'remove-duplicates' }, { label: 'Convertir le type', icon: 'convert-type' }, { label: 'Erreurs seulement', icon: 'warning' }] }
 		],
 		Formules: [

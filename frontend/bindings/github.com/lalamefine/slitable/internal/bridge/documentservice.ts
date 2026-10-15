@@ -200,6 +200,13 @@ export function SetType(table: string, i: number, to: grid$0.Type): $Cancellable
 }
 
 /**
+ * SortTable trie un tableau selon la colonne i (desc : décroissant).
+ */
+export function SortTable(table: string, i: number, desc: boolean): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1605359047, table, i, desc);
+}
+
+/**
  * State décrit le classeur ouvert.
  */
 export function State(): $CancellablePromise<$models.DocState> {

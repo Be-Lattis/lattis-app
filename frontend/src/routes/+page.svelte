@@ -190,7 +190,8 @@
 		convertPreview: (t, i, to) => DocumentService.ConvertPreview(t.name, i, to as Type),
 		setType: (t, i, to) => DocumentService.SetType(t.name, i, to as Type).then(reload),
 		setColumnWidth: (col, width) => DocumentService.SetColumnWidth(sheetId, col, width).then(reload),
-		setName: (row, col, name) => DocumentService.SetName(sheetId, row, col, name).then(reload)
+		setName: (row, col, name) => DocumentService.SetName(sheetId, row, col, name).then(reload),
+		sortTable: (t, i, desc) => DocumentService.SortTable(t.name, i, desc).then(reload)
 	};
 
 	const demoSource: SheetSource = {
@@ -287,6 +288,7 @@
 		onundo={() => DocumentService.Undo().then(reload).catch((e) => (notice = err(e)))}
 		onredo={() => DocumentService.Redo().then(reload).catch((e) => (notice = err(e)))}
 		onbench={mode === 'demo' ? () => sheet?.runBench() : undefined}
+		onsort={mode === 'doc' ? (desc) => sheet?.sortActive(desc) : undefined}
 	/>
 
 	<main>
@@ -371,6 +373,7 @@
 		{#if notice || sheetStatus?.message}<span class="message">{sheetStatus?.message || notice}</span>{/if}
 		<span class="spacer"></span>
 		{#if sheetStatus}
+			{#if sheetStatus.stats}<span class="stats">{sheetStatus.stats}</span>{/if}
 			<span>{sheetStatus.fetch}</span>
 			<span>{sheetStatus.draw}</span>
 			<span>{sheetStatus.fps}</span>
@@ -434,6 +437,11 @@
 	}
 	.spacer {
 		flex: 1;
+	}
+	.stats {
+		color: #fff;
+		font-weight: 600;
+		margin-right: 12px;
 	}
 	.splash {
 		display: flex;

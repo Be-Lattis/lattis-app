@@ -579,3 +579,36 @@ func TestScriptsLibrary(t *testing.T) {
 		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
 	}
 }
+
+func TestSort(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Ville", "Pop"}, {"lyon", "520"}, {"Paris", "2100"}, {"nice", ""}, {"Brest", "140"}}); err != nil {
+		t.Fatal(err)
+	}
+	before := dump(t, d)
+	if err := d.SortTable(ctx, "Feuille1", 0, false); err != nil {
+		t.Fatal(err)
+	}
+	if got := view(t, d); got != lines("[Ville]|[Pop]", "Brest|140", "lyon|520", "nice", "Paris|2100") {
+		t.Fatalf("tri par ville :\n%s", got)
+	}
+	if err := d.SortTable(ctx, "Feuille1", 1, true); err != nil {
+		t.Fatal(err)
+	}
+	if got := view(t, d); got != lines("[Ville]|[Pop]", "Paris|2100", "lyon|520", "Brest|140", "nice") {
+		t.Fatalf("tri par population décroissante :\n%s", got)
+	}
+	check(t, d, "tri")
+	// On peut encore insérer entre deux lignes triées.
+	if err := d.InsertRow(ctx, "Feuille1", 1); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "insertion après tri")
+	for range 3 {
+		d.bus.Undo(ctx)
+	}
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
+	}
+}

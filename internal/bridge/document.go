@@ -448,3 +448,8 @@ func (s *DocumentService) FormulaHelp(ctx context.Context) (FormulaHelp, error) 
 func (s *DocumentService) SetName(ctx context.Context, sheet int64, row, col int, name string) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.SetName(ctx, sheet, row, col, name) })
 }
+
+// SortTable trie un tableau selon la colonne i (desc : décroissant).
+func (s *DocumentService) SortTable(ctx context.Context, table string, i int, desc bool) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SortTable(ctx, table, i, desc) })
+}

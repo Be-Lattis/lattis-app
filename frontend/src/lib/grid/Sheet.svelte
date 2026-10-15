@@ -82,6 +82,7 @@
 		setColumnWidth?(col: number, width: number): Promise<unknown>;
 		/** Nomme une cellule libre (vide : retire le nom). */
 		setName?(row: number, col: number, name: string): Promise<unknown>;
+		sortTable?(table: SheetTable, i: number, desc: boolean): Promise<unknown>;
 	}
 
 	export interface SheetStatus {
@@ -92,6 +93,8 @@
 		fps: string;
 		edit: string;
 		blocks: number;
+		/** Agrégats de la sélection, comme la barre d'état d'Excel. */
+		stats: string;
 	}
 
 	interface Props {
@@ -613,8 +616,71 @@
 			draw: `rendu ${ms(percentile(drawTimes, 0.5))}`,
 			fps: `${frameStamps.length} img/s`,
 			edit: `saisie ${ms(lastEditMs)}`,
-			blocks: entries.reduce((n, e) => n + e.cache.size, 0)
+			blocks: entries.reduce((n, e) => n + e.cache.size, 0),
+			stats: selectionStats()
 		});
+	}
+
+	const statFmt = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 10 });
+
+	/** « Moyenne · Nb · Somme » de la sélection (cellules chargées), si plusieurs cellules. */
+	function selectionStats(): string {
+		const r0 = Math.min(active.row, anchor.row);
+		const r1 = Math.max(active.row, anchor.row);
+		const c0 = Math.min(active.col, anchor.col);
+		const c1 = Math.max(active.col, anchor.col);
+		const n = (r1 - r0 + 1) * (c1 - c0 + 1);
+		if (n < 2) return '';
+		if (n > 50_000) return 'Sélection trop grande pour les totaux';
+		let count = 0;
+		let nums = 0;
+		let sum = 0;
+		let missing = false;
+		for (let r = r0; r <= r1; r++) {
+			for (let c = c0; c <= c1; c++) {
+				const e = tableAt(r, c);
+				let v: unknown;
+				if (e) {
+					if (r === e.t.row) {
+						count++;
+						continue;
+					}
+					const row = e.cache.row(r - e.t.row - 1);
+					if (!row) {
+						missing = true;
+						continue;
+					}
+					v = row.bad?.has(c - e.t.col) ? row.bad.get(c - e.t.col) : row.cells[c - e.t.col];
+				} else {
+					const f = shown.get(key(r, c));
+					v = f ? f.text : cells.get(key(r, c));
+					if (typeof v === 'string' && isNumeric(v)) v = Number(v.replace(/[\s\u00a0\u202f]/g, '').replace(',', '.'));
+				}
+				if (v === null || v === undefined || v === '') continue;
+				count++;
+				if (typeof v === 'number' && Number.isFinite(v)) {
+					nums++;
+					sum += v;
+				}
+			}
+		}
+		if (count === 0) return '';
+		const parts = [];
+		if (nums) parts.push(`Moyenne : ${statFmt.format(sum / nums)}`);
+		parts.push(`Nb : ${count.toLocaleString('fr-FR')}`);
+		if (nums) parts.push(`Somme : ${statFmt.format(sum)}`);
+		return parts.join('   ') + (missing ? ' (lignes en chargement)' : '');
+	}
+
+	/** Tri du tableau de la cellule active (ruban Données). */
+	export function sortActive(desc: boolean) {
+		const e = tableAt(active.row, active.col);
+		if (!e || !source.sortTable) {
+			say('Placez la cellule active dans la colonne d’un tableau pour trier');
+			return;
+		}
+		const sort = source.sortTable;
+		menuAction(() => sort(e.t, active.col - e.t.col, desc));
 	}
 
 	function refreshFx() {
@@ -1404,6 +1470,11 @@
 					<button onclick={() => menuAction(source.insertRow && (() => source.insertRow!(m.e.t, m.n)))}>Insérer une ligne au-dessus</button>
 					<button onclick={() => menuAction(source.insertRow && (() => source.insertRow!(m.e.t, m.n + 1)))}>Insérer une ligne en dessous</button>
 					<button onclick={() => menuAction(source.deleteRow && (() => source.deleteRow!(m.e.t, m.n)))}>Supprimer la ligne</button>
+					<hr />
+				{/if}
+				{#if source.sortTable && !m.e.t.columns[m.i]?.formula}
+					<button onclick={() => menuAction(() => source.sortTable!(m.e.t, m.i, false))}>Trier de A à Z (croissant)</button>
+					<button onclick={() => menuAction(() => source.sortTable!(m.e.t, m.i, true))}>Trier de Z à A (décroissant)</button>
 					<hr />
 				{/if}
 				<button onclick={() => menuAction(source.insertColumn && (() => source.insertColumn!(m.e.t, m.i)))}>Insérer une colonne à gauche</button>
