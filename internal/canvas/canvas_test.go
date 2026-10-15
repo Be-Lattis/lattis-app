@@ -550,3 +550,32 @@ func TestNames(t *testing.T) {
 		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
 	}
 }
+
+func TestScriptsLibrary(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	before := dump(t, d)
+	id, err := d.SaveScript(ctx, 0, "Bonjour", `print("bonjour")`)
+	if err != nil || id != 1 {
+		t.Fatalf("SaveScript = %d, %v", id, err)
+	}
+	if _, err := d.SaveScript(ctx, 0, "bonjour", "x"); err == nil {
+		t.Fatal("doublon de nom accepté")
+	}
+	if _, err := d.SaveScript(ctx, id, "Bonjour", `print("salut")`); err != nil {
+		t.Fatal(err)
+	}
+	list, _ := d.Scripts(ctx)
+	if len(list) != 1 || list[0].Source != `print("salut")` {
+		t.Fatalf("bibliothèque : %+v", list)
+	}
+	if err := d.DeleteScript(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	for range 3 {
+		d.bus.Undo(ctx)
+	}
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
+	}
+}

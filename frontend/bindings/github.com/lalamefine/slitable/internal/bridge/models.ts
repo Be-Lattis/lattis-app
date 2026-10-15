@@ -67,3 +67,13 @@ export interface OpenResult {
     "recoverable"?: archive$0.Orphan | null;
     "cancelled": boolean;
 }
+
+/**
+ * ScriptResult est l'issue d'un script pour l'interface.
+ */
+export interface ScriptResult {
+    "output": string[] | null;
+    "writes": number;
+    "durationMs": number;
+    "error": string;
+}

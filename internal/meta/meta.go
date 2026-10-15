@@ -88,6 +88,14 @@ CREATE TABLE _slitable_names (
 ) STRICT;
 CREATE UNIQUE INDEX _slitable_names_cell ON _slitable_names(sheet, row, col);
 `,
+	// 4 → 5 : bibliothèque de scripts Lua du classeur (onglet SCRIPT).
+	`
+CREATE TABLE _slitable_scripts (
+	id     INTEGER PRIMARY KEY,
+	name   TEXT NOT NULL UNIQUE COLLATE NOCASE,
+	source TEXT NOT NULL
+) STRICT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

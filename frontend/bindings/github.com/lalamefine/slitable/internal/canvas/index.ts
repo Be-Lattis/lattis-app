@@ -8,6 +8,7 @@ export type {
     Event,
     Layout,
     NameInfo,
+    ScriptInfo,
     SheetInfo,
     TableInfo,
     TableNames

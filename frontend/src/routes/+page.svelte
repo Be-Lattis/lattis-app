@@ -17,6 +17,7 @@
 	import SheetTabs from '#lib/shell/SheetTabs.svelte';
 	import SqlView from '#lib/shell/SqlView.svelte';
 	import TitleBar from '#lib/shell/TitleBar.svelte';
+	import ScriptView, { type Script } from '#lib/script/ScriptView.svelte';
 	import { typeLabel, type ColumnType } from '#lib/grid/format.js';
 	import type { Fetched } from '#lib/grid/cache.js';
 
@@ -36,6 +37,7 @@
 	let sheetId = $state(1);
 	let orphans = $state<Orphan[]>([]);
 	let help = $state<FormulaHelp | null>(null);
+	let scripts = $state<Script[]>([]);
 
 	// Démo.
 	let demo = $state<{ name: string; rows: number; columns: { name: string; type: ColumnType }[]; sqlName: string; sqlColumns: string[] } | null>(null);
@@ -47,6 +49,7 @@
 		docState = await DocumentService.State();
 		layout = await DocumentService.Layout(sheetId);
 		help = await DocumentService.FormulaHelp();
+		scripts = (await DocumentService.Scripts()) ?? [];
 	}
 
 	async function startDoc() {
@@ -93,6 +96,7 @@
 			}
 		})();
 		const keys = (e: KeyboardEvent) => {
+			if (e.defaultPrevented) return; // déjà traité (éditeur de script : Ctrl+S)
 			const ctrl = e.ctrlKey || e.metaKey;
 			const action: FileAction | null =
 				e.key === 'F12' ? 'saveAs' : ctrl && e.key.toLowerCase() === 's' ? 'save' : ctrl && e.key.toLowerCase() === 'o' ? 'open' : ctrl && e.key.toLowerCase() === 'n' ? 'new' : null;
@@ -321,9 +325,27 @@
 			{#if view === 'sql'}
 				<div class="pane"><SqlView {objects} run={query} ongoto={() => (view = 'grid')} /></div>
 			{:else if view === 'script'}
-				<div class="pane placeholder">
-					<h2>SCRIPT</h2>
-					<p>Éditeur Lua et bibliothèque de scripts : phase 5 du plan (sandbox gopher-lua, <code>db.query()</code>, <code>db.execute()</code>, bouton Arrêter).</p>
+				<div class="pane">
+					{#if mode === 'doc'}
+						<ScriptView
+							{scripts}
+							save={async (id, name, source) => {
+								const nid = await DocumentService.SaveScript(id, name, source);
+								await reload();
+								return nid;
+							}}
+							remove={(id) => DocumentService.DeleteScript(id).then(reload)}
+							run={async (name, source) => {
+								const r = await DocumentService.RunScript(name, source);
+								if (r.writes) await reload();
+								return r;
+							}}
+							stop={() => DocumentService.StopScript()}
+							subscribe={(fn) => Events.On('script:print', (e: { data: string }) => fn(e.data))}
+						/>
+					{:else}
+						<p class="placeholder">Les scripts s'exécutent sur un classeur : Fichier › Nouveau.</p>
+					{/if}
 				</div>
 			{/if}
 		{:else}

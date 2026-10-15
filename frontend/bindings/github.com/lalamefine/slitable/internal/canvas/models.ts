@@ -106,6 +106,15 @@ export interface NameInfo {
 }
 
 /**
+ * ScriptInfo est un script de la bibliothèque du classeur.
+ */
+export interface ScriptInfo {
+    "id": number;
+    "name": string;
+    "source": string;
+}
+
+/**
  * SheetInfo décrit un onglet.
  */
 export interface SheetInfo {

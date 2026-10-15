@@ -46,6 +46,13 @@ export function DeleteRow(table: string, n: number): $CancellablePromise<$models
     return $Call.ByID(3988464234, table, n);
 }
 
+/**
+ * DeleteScript supprime un script.
+ */
+export function DeleteScript(id: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3149349621, id);
+}
+
 export function DeleteSheet(sheet: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(3962694849, sheet);
 }
@@ -136,10 +143,32 @@ export function RenameSheet(sheet: number, name: string): $CancellablePromise<$m
 }
 
 /**
+ * RunScript exécute un script Lua sur le classeur ouvert. Ses écritures
+ * forment une seule étape d'annulation, nommée d'après le script.
+ */
+export function RunScript(name: string, src: string): $CancellablePromise<$models.ScriptResult> {
+    return $Call.ByID(3285996221, name, src);
+}
+
+/**
  * Save enregistre ; as (ou un classeur jamais enregistré) demande le fichier.
  */
 export function Save($as: boolean): $CancellablePromise<$models.DocState> {
     return $Call.ByID(3713623380, $as);
+}
+
+/**
+ * SaveScript enregistre un script (id 0 : nouveau) et renvoie son identifiant.
+ */
+export function SaveScript(id: number, name: string, source: string): $CancellablePromise<number> {
+    return $Call.ByID(3570047407, id, name, source);
+}
+
+/**
+ * Scripts liste la bibliothèque de scripts du classeur.
+ */
+export function Scripts(): $CancellablePromise<canvas$0.ScriptInfo[] | null> {
+    return $Call.ByID(285284199);
 }
 
 /**
@@ -175,6 +204,13 @@ export function SetType(table: string, i: number, to: grid$0.Type): $Cancellable
  */
 export function State(): $CancellablePromise<$models.DocState> {
     return $Call.ByID(1491925746);
+}
+
+/**
+ * StopScript arrête le script en cours (bouton Arrêter).
+ */
+export function StopScript(): $CancellablePromise<void> {
+    return $Call.ByID(2070863182);
 }
 
 /**
