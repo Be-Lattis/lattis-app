@@ -42,6 +42,8 @@
 	export interface SheetData {
 		tables: SheetTable[];
 		cells: { row: number; col: number; raw: string }[];
+		/** Largeurs choisies par l'utilisateur (sinon : selon le type). */
+		widths?: { col: number; width: number }[];
 	}
 
 	/** Cible d'une saisie, pour la source. */
@@ -70,6 +72,7 @@
 		/** Nombre de valeurs qui ne se convertiraient pas au type to. */
 		convertPreview?(table: SheetTable, i: number, to: ColumnType): Promise<number>;
 		setType?(table: SheetTable, i: number, to: ColumnType): Promise<unknown>;
+		setColumnWidth?(col: number, width: number): Promise<unknown>;
 	}
 
 	export interface SheetStatus {
@@ -166,15 +169,25 @@
 			return e;
 		});
 		cells = new Map(d.cells.map((c) => [key(c.row, c.col), c.raw]));
+		userWidths = new Map((d.widths ?? []).map((w) => [w.col, w.width]));
+		rebuildAxis();
+		refreshFx();
+		schedule();
+	}
+
+	// Largeurs : choisies par l'utilisateur, sinon selon le type de la colonne
+	// du premier tableau qui l'occupe, sinon la largeur par défaut.
+	let userWidths = new Map<number, number>();
+	function rebuildAxis(override?: { col: number; width: number }) {
 		const widths = new Map<number, number>();
 		for (const e of entries) {
 			e.t.columns.forEach((c, i) => {
 				if (!widths.has(e.t.col + i)) widths.set(e.t.col + i, defaultWidth(c.type));
 			});
 		}
+		for (const [c, w] of userWidths) widths.set(c, w);
+		if (override) widths.set(override.col, override.width);
 		colAxis = new Axis(SHEET_COLS, DEF_W, widths);
-		refreshFx();
-		schedule();
 	}
 
 	const inTable = (e: Entry, r: number, c: number) => r >= e.t.row && r <= e.last && c >= e.t.col && c <= e.lastCol;
@@ -626,7 +639,32 @@
 		return { row, col };
 	}
 
+	// --- Largeur des colonnes : glisser une séparation du bandeau du haut ----
+
+	let resizing: { col: number; startX: number; startW: number; width: number } | null = null;
+
+	/** Colonne dont le bord droit est sous la souris (bandeau du haut), ou null. */
+	function boundaryAt(e: MouseEvent): number | null {
+		const r = scroller.getBoundingClientRect();
+		const x = e.clientX - r.left;
+		const y = e.clientY - r.top;
+		if (y >= TOP_H || x <= MARGIN) return null;
+		const px = x - MARGIN + scroller.scrollLeft;
+		const c = colAxis.indexAt(px);
+		const right = colAxis.offset(c + 1);
+		const left = colAxis.offset(c);
+		if (right - px <= 4) return c;
+		if (px - left <= 4 && c > 0) return c - 1;
+		return null;
+	}
+
 	function onMouseDown(e: MouseEvent) {
+		const b = boundaryAt(e);
+		if (b !== null && source.setColumnWidth) {
+			e.preventDefault();
+			resizing = { col: b, startX: e.clientX, startW: colAxis.size(b), width: colAxis.size(b) };
+			return;
+		}
 		const cell = cellAt(e);
 		if (!cell) return;
 		if (editing) commit();
@@ -638,6 +676,13 @@
 	}
 
 	function onMouseMove(e: MouseEvent) {
+		if (resizing) {
+			resizing.width = Math.max(24, Math.round(resizing.startW + e.clientX - resizing.startX));
+			rebuildAxis({ col: resizing.col, width: resizing.width });
+			schedule();
+			return;
+		}
+		scroller.style.cursor = source.setColumnWidth && boundaryAt(e) !== null ? 'col-resize' : '';
 		if (!dragging) return;
 		const cell = cellAt(e);
 		if (!cell) return;
@@ -1100,7 +1145,16 @@
 		ro.observe(wrap);
 		resize();
 		scroller.addEventListener('wheel', onWheel, { passive: false });
-		const up = () => (dragging = false);
+		const up = () => {
+			dragging = false;
+			if (!resizing) return;
+			const { col, width, startW } = resizing;
+			resizing = null;
+			if (width === startW || !source.setColumnWidth) return;
+			userWidths.set(col, width);
+			const setWidth = source.setColumnWidth;
+			writing = writing.then(() => setWidth(col, width).then(() => undefined, (err) => say(String(err?.message ?? err))));
+		};
 		window.addEventListener('mouseup', up);
 		const timer = setInterval(refreshStatus, 250);
 		window.addEventListener('copy', onCopy);

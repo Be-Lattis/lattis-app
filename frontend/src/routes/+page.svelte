@@ -181,7 +181,8 @@
 		insertColumn: (t, i) => DocumentService.InsertColumn(t.name, i, `Colonne ${t.columns.length + 1}`).then(reload),
 		deleteColumn: (t, i) => DocumentService.DeleteColumn(t.name, i).then(reload),
 		convertPreview: (t, i, to) => DocumentService.ConvertPreview(t.name, i, to as Type),
-		setType: (t, i, to) => DocumentService.SetType(t.name, i, to as Type).then(reload)
+		setType: (t, i, to) => DocumentService.SetType(t.name, i, to as Type).then(reload),
+		setColumnWidth: (col, width) => DocumentService.SetColumnWidth(sheetId, col, width).then(reload)
 	};
 
 	const demoSource: SheetSource = {
@@ -204,7 +205,8 @@
 						rows: t.rows,
 						columns: (t.columns ?? []).map((c) => ({ name: c.name, type: c.type as ColumnType, fixed: c.fixed, errors: c.errors }))
 					})),
-					cells: layout.cells ?? []
+					cells: layout.cells ?? [],
+					widths: layout.widths ?? []
 				}
 			: null
 	);

@@ -61,6 +61,16 @@ CREATE TABLE _slitable_invalid (
 ) STRICT;
 INSERT INTO _slitable_sheets (id, name, pos) VALUES (1, 'Feuille 1', 0);
 ` + command.Schema,
+	// 1 → 2 : largeur des colonnes de chaque feuille (comme Excel, une largeur
+	// par colonne de la feuille, quel que soit le tableau qui s'y trouve).
+	`
+CREATE TABLE _slitable_col_widths (
+	sheet INTEGER NOT NULL REFERENCES _slitable_sheets(id),
+	col   INTEGER NOT NULL,
+	width INTEGER NOT NULL,
+	PRIMARY KEY (sheet, col)
+) STRICT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

@@ -143,6 +143,13 @@ export function SetCell(sheet: number, row: number, col: number, raw: string): $
 }
 
 /**
+ * SetColumnWidth fixe la largeur d'une colonne de la feuille.
+ */
+export function SetColumnWidth(sheet: number, col: number, width: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1916242223, sheet, col, width);
+}
+
+/**
  * SetType fixe le type d'une colonne (valeurs non convertibles marquées en erreur).
  */
 export function SetType(table: string, i: number, to: grid$0.Type): $CancellablePromise<$models.DocState> {

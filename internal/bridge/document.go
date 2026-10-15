@@ -390,3 +390,8 @@ func (s *DocumentService) ConvertPreview(ctx context.Context, table string, i in
 func (s *DocumentService) SetType(ctx context.Context, table string, i int, to grid.Type) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.SetType(ctx, table, i, to) })
 }
+
+// SetColumnWidth fixe la largeur d'une colonne de la feuille.
+func (s *DocumentService) SetColumnWidth(ctx context.Context, sheet int64, col, width int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetColumnWidth(ctx, sheet, col, width) })
+}

@@ -2,6 +2,7 @@ package canvas
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
@@ -98,5 +99,28 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 			[]stmt{st(`DELETE FROM _slitable_sheets WHERE id = ?`, sheet)},
 			[]stmt{st(`INSERT INTO _slitable_sheets (id, name, pos) VALUES (?, ?, ?)`, sheet, name, pos)},
 		)
+	})
+}
+
+// SetColumnWidth fixe la largeur (en pixels) d'une colonne de la feuille ;
+// 0 revient à la largeur par défaut.
+func (m *Model) SetColumnWidth(ctx context.Context, sheet int64, col, width int) error {
+	return m.Do(ctx, "Largeur de colonne", func(t *tx) error {
+		var old int
+		err := t.row(`SELECT width FROM _slitable_col_widths WHERE sheet = ? AND col = ?`, sheet, col).Scan(&old)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+		if old == width {
+			return nil
+		}
+		set := func(w int) []stmt {
+			s := []stmt{st(`DELETE FROM _slitable_col_widths WHERE sheet = ? AND col = ?`, sheet, col)}
+			if w > 0 {
+				s = append(s, st(`INSERT INTO _slitable_col_widths (sheet, col, width) VALUES (?, ?, ?)`, sheet, col, w))
+			}
+			return s
+		}
+		return t.apply(set(width), set(old))
 	})
 }

@@ -3,6 +3,7 @@
 
 export type {
     CellInfo,
+    ColWidth,
     ColumnInfo,
     Event,
     Layout,

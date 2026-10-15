@@ -15,6 +15,14 @@ export interface CellInfo {
 }
 
 /**
+ * ColWidth est la largeur choisie pour une colonne de la feuille.
+ */
+export interface ColWidth {
+    "col": number;
+    "width": number;
+}
+
+/**
  * ColumnInfo décrit une colonne de tableau pour l'interface.
  */
 export interface ColumnInfo {
@@ -65,6 +73,11 @@ export interface Layout {
     "sheet": number;
     "tables": TableInfo[] | null;
     "cells": CellInfo[] | null;
+
+    /**
+     * largeurs choisies par l'utilisateur
+     */
+    "widths": ColWidth[] | null;
 }
 
 /**
