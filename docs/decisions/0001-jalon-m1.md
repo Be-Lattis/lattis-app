@@ -1,0 +1,65 @@
+# Décisions du jalon M1 (spikes de dérisquage)
+
+*Ouverte le 16/10/2026. Complétée au fil des spikes : 1.1 (grille) et 1.2 (modèle canevas ↔ tables) faits ; 1.3 (formules) et 1.4 (archive + Lua) à venir.*
+
+| Sujet | Décision | Statut | Source |
+|---|---|---|---|
+| Driver SQLite | `ncruces/go-sqlite3` (sans CGO, fonctions Go 3 à 4× plus rapides qu'avec mattn) | Retenu | `spikes/sqlite-drivers/RESULTATS.md` |
+| Rendu de la grille | `<canvas>` + éditeur DOM superposé, défilement virtuel, cache de blocs de 200 lignes | Retenu sous Windows ; Linux à confirmer sur un vrai poste | `docs/mesures/grille.md` |
+| Stockage des colonnes | Tables `STRICT` + `_slitable_invalid` pour les saisies hors type | Retenu | ci-dessous, spike 1.2 |
+| Annulation | Journal de commandes : chaque opération enregistre ses instructions SQL inverses | Retenu | ci-dessous, spike 1.2 |
+| Modèle canevas ↔ tables | Identifiants internes, `_pos` fractionnaire, cellules libres en métadonnées, règles d'îlots | Retenu | ci-dessous, spike 1.2 |
+
+---
+
+## Spike 1.2 : modèle canevas ↔ tables
+
+Code : `spikes/canvas` (≈ 1 500 lignes hors tests). Critère de sortie : `TestScenario`, une suite de 29 actions (naissance de tableaux, extension par la ligne et la colonne grisées, insertion au milieu avec décalage du tableau du dessous, ajout, insertion et suppression de colonnes, élargissement de type, type fixé et saisie invalide, renommage, suppression de ligne, effacements). Après **chaque** action, `Check` vérifie les invariants ; puis tout est **annulé pas à pas**, et l'état doit redevenir exactement l'état précédent (comparaison d'un dump complet : schéma, métadonnées, valeurs avec leur type SQLite) ; puis tout est **rétabli** jusqu'à l'état final identique. **Le critère est atteint.**
+
+### Modèle retenu
+
+- **Tables utilisateur** `t_<id>` en `STRICT`, colonnes `c_<id>` ; noms affichés, types logiques et rang d'affichage dans `_slitable_columns`. Un renommage ne touche jamais au schéma SQL, et les mots réservés, accents ou doublons ne posent aucun problème.
+- **Ordre des lignes** : clé technique `id INTEGER PRIMARY KEY` + `_pos TEXT` indexé (clés fractionnaires de `internal/order`). Insérer au milieu ne renumérote rien.
+- **Ancre** du tableau (ligne d'en-tête, première colonne) dans `_slitable_tables` ; déplacer un tableau ne touche pas aux données.
+- **Cellules libres** dans `_slitable_cells`, en texte brut tel que saisi ; le type n'est inféré qu'à la naissance d'un tableau.
+- **Ordre physique des colonnes** : il ne fait pas partie du modèle (une colonne supprimée puis restaurée revient à la fin de la table SQL). Tout le code nomme les colonnes explicitement, jamais `SELECT *`.
+
+### Règles d'îlots (implémentées et testées)
+
+- Une zone de cellules libres contiguës (4-connexité) de **2 lignes ou plus** devient un tableau à la validation de la saisie ; la première ligne donne les en-têtes (vides → « Colonne N »). Un tableau posé en haut à gauche de la feuille prend le nom de la feuille, les autres « Tableau N ».
+- Saisie dans la **ligne grisée** sous un tableau (dans ses colonnes) : nouvelle ligne. Dans la **colonne grisée** à droite (dans ses lignes) : nouvelle colonne, nommée par la saisie si elle est faite sur la ligne d'en-tête.
+- **Jamais de fusion** : quand un tableau grandit et que sa ligne (ou colonne) grisée atteindrait un autre objet, tout ce qui est dessous (ou à droite) dans sa bande descend (ou se décale), et chaque tableau déplacé dégage à son tour sa propre bande.
+- Supprimer une ligne fait rétrécir le tableau ; ce qui est dessous ne remonte pas. Vider une ligne ne coupe pas le tableau.
+- Une colonne encore vide prend le type de sa première valeur. Une valeur hors type **élargit** une colonne au type inféré (treillis booléen → entier → décimal → texte, date → texte) et la saisie le signale (`Event.Widened`) pour la notification « Annuler / Garder et marquer en erreur ». Dans une colonne au type **fixé**, la cellule vaut `NULL` et la saisie brute part dans `_slitable_invalid`.
+
+### Stockage : STRICT ou ANY
+
+Mesuré par `TestMesureElargissement` (`SLITABLE_MESURE=1000000`), tableau de 1 M de lignes × 20 colonnes, Windows, poste de Louis :
+
+| | STRICT (reconstruction) | ANY (métadonnées seules) |
+|---|---|---|
+| Élargir une colonne entier → texte | 5,9 s | 1 ms |
+| Annuler cet élargissement | 5,8 s | 1 ms |
+| Lecture de la grille pendant la reconstruction | jamais bloquée : 1 889 fenêtres lues, pire 19 ms, 0 échec | — |
+| Fichier + WAL | 355 → 519 Mo pendant la reconstruction | inchangé |
+
+**Décision : STRICT.** Les requêtes SQL, TCD, graphiques et formules compilées voient des colonnes au type garanti ; avec `ANY`, `SUM`, les tris et les comparaisons rencontreraient des types mélangés (`'12' < 9`) et chaque requête devrait les filtrer. Le coût de la reconstruction est réel mais borné :
+- elle est rare (au plus trois élargissements par colonne), et quasi gratuite sur un tableau qui vient de naître ; les gros tableaux arrivent par collage ou import, où l'inférence a lieu **avant** la création ;
+- la lecture n'est jamais bloquée (WAL) : la grille reste fluide ;
+- en revanche **l'écriture** est occupée pendant la reconstruction (≈ 6 s par million de lignes) : les saisies attendent dans la file. À traiter en phase 2 : barre de progression, et au-delà d'un seuil (par exemple 100 000 lignes), proposer par défaut « garder le type et marquer en erreur » plutôt que d'élargir.
+
+### Annulation : journal d'instructions inverses
+
+Chaque opération élémentaire (`setValue`, `insertRow`, `deleteRow`, `addColumn`, `dropColumn`, `retype`, `createTable`, `moveTable`, `moveCells`, `rename`) exécute ses instructions et **enregistre en même temps les instructions inverses**, calculées sur l'état lu dans la même transaction. Une action de l'utilisateur forme une commande ; annuler joue les inverses en ordre inverse, rétablir rejoue les instructions d'origine (identifiants et clés d'ordre sont fixés à la construction, donc le rejeu est déterministe).
+
+- Couvre le DDL (création, reconstruction, ajout et suppression de colonnes), ce que des triggers de journal ne font pas, et l'extension *session* n'est exposée par aucun driver Go.
+- Une suppression de colonne range les valeurs dans une table de corbeille : l'inverse tient en quelques instructions, quelle que soit la taille du tableau. Ces corbeilles devront être purgées quand la commande sort de la pile (phase 2).
+- Les commandes sont des listes d'instructions SQL paramétrées : elles peuvent être **persistées** dans une table `_slitable_journal`, ce qui donnerait l'annulation après réouverture et un journal pour la récupération après crash.
+- Un script Lua pourra être une seule commande, ses écritures passant par les mêmes primitives.
+
+### Limites connues du prototype
+
+- Lecture de la n-ième ligne par `OFFSET` : à remplacer par les ancres de `internal/grid` pour les gros tableaux.
+- Les décalages relisent toute la mise en page de la feuille : suffisant pour des dizaines de tableaux, pas pour des milliers.
+- Pas de scission ni de fusion volontaire de tableaux, pas de déplacement de tableau à la souris, pas de collage : prévus en phase 3.
+- Élargir vers le texte convertit les nombres avec `CAST` (`12.5` et non `12,5`) : la conversion devra passer par le formateur de la locale.
