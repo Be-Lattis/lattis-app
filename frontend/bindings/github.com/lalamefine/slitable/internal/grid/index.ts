@@ -8,5 +8,6 @@ export {
 export type {
     Column,
     Info,
+    QueryResult,
     Window
 } from "./models.js";

@@ -177,3 +177,17 @@ func (s *GridService) ReportBench(result string) error {
 	}
 	return nil
 }
+
+// QueryLimit borne le nombre de lignes renvoyées à l'onglet SQL.
+const QueryLimit = 1000
+
+// Query exécute une requête SQL en lecture seule (onglet SQL).
+func (s *GridService) Query(ctx context.Context, q string) (grid.QueryResult, error) {
+	s.mu.Lock()
+	db := s.db
+	s.mu.Unlock()
+	if db == nil {
+		return grid.QueryResult{}, errNotReady
+	}
+	return grid.Query(ctx, db.Read(), q, QueryLimit)
+}

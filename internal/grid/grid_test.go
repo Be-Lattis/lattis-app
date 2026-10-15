@@ -77,3 +77,18 @@ func TestSetCell(t *testing.T) {
 		t.Fatalf("valeur relue %v", w.Cells[0][10])
 	}
 }
+
+func TestQueryReadOnly(t *testing.T) {
+	tbl := openDemo(t, 50)
+	ctx := context.Background()
+	res, err := Query(ctx, tbl.db.Read(), `SELECT c_0, c_1 FROM t_1 ORDER BY _pos`, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Rows) != 10 || !res.Truncated || res.Columns[1] != "c_1" || res.Rows[0][0] != int64(100_000) {
+		t.Fatalf("résultat inattendu : %+v", res)
+	}
+	if _, err := Query(ctx, tbl.db.Read(), `DELETE FROM t_1`, 10); err == nil {
+		t.Fatal("une écriture a été acceptée dans l'onglet SQL")
+	}
+}

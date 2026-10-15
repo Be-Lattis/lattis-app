@@ -36,9 +36,11 @@ type Column struct {
 
 // Info décrit le tableau.
 type Info struct {
-	Name    string   `json:"name"`
-	Rows    int      `json:"rows"`
-	Columns []Column `json:"columns"`
+	Name       string   `json:"name"`
+	SQLName    string   `json:"sqlName"` // nom de la table SQL (onglet SQL)
+	SQLColumns []string `json:"sqlColumns"`
+	Rows       int      `json:"rows"`
+	Columns    []Column `json:"columns"`
 }
 
 // Window est une fenêtre de lignes consécutives, à partir de la ligne First
@@ -120,7 +122,11 @@ func (t *Table) Load(ctx context.Context) error {
 func (t *Table) Info() Info {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	return Info{Name: t.name, Rows: t.rows, Columns: t.cols}
+	sqlCols := make([]string, len(t.cols))
+	for i := range sqlCols {
+		sqlCols[i] = colName(i)
+	}
+	return Info{Name: t.name, SQLName: t.sqlName, SQLColumns: sqlCols, Rows: t.rows, Columns: t.cols}
 }
 
 // Window lit count lignes à partir de la ligne first.

@@ -26,6 +26,13 @@ export function BenchRequested(): $CancellablePromise<boolean> {
 }
 
 /**
+ * Query exécute une requête SQL en lecture seule (onglet SQL).
+ */
+export function Query(q: string): $CancellablePromise<grid$0.QueryResult> {
+    return $Call.ByID(1800746624, q);
+}
+
+/**
  * ReportBench écrit le résultat de la mesure automatique et ferme l'application.
  */
 export function ReportBench(result: string): $CancellablePromise<void> {

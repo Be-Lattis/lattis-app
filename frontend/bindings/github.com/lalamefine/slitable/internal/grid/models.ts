@@ -14,8 +14,28 @@ export interface Column {
  */
 export interface Info {
     "name": string;
+
+    /**
+     * nom de la table SQL (onglet SQL)
+     */
+    "sqlName": string;
+    "sqlColumns": string[] | null;
     "rows": number;
     "columns": Column[] | null;
+}
+
+/**
+ * QueryResult est le résultat d'une requête de l'onglet SQL.
+ */
+export interface QueryResult {
+    "columns": string[] | null;
+    "rows": (any[] | null)[] | null;
+
+    /**
+     * plus de lignes que la limite
+     */
+    "truncated": boolean;
+    "micros": number;
 }
 
 /**
