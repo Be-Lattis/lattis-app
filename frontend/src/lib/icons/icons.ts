@@ -72,6 +72,7 @@ export const icons = {
 
 	// Affichage
 	'freeze-panes': '<rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><path class="a" stroke-width="2.2" d="M3.5 9h17M9 3.5v17"/>',
+	headings: '<rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><path d="M3.5 9h17M9 3.5v17"/><path class="a" stroke-width="1.6" d="M12.5 7.5l1.25-3 1.25 3M13 6.5h1.5M5.5 12.5l1-1v5"/>',
 	stopwatch: '<circle cx="12" cy="13.5" r="7.5"/><path class="a" d="M12 13.5v-4"/><path d="M10 2.5h4M12 2.5V6M18.5 6.5 20 5"/>',
 
 	// Onglets SQL et SCRIPT, structure des tableaux

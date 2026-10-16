@@ -277,9 +277,11 @@
 		autoBench?: (result: string) => void;
 		/** Quadrillage de la feuille (masqué : seules les lignes des tableaux restent). */
 		gridlines?: boolean;
+		/** Lettres de colonnes et numéros de lignes toujours affichés (sinon : pendant la saisie d'une formule). */
+		headings?: boolean;
 	}
 
-	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true }: Props = $props();
+	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false }: Props = $props();
 
 	export const SHEET_ROWS = 1_048_576;
 	export const SHEET_COLS = 16_384;
@@ -591,7 +593,7 @@
 	let nameBox = $state('');
 	// Cellule d'un tableau : nom du tableau (modifiable) et colonne[ligne].
 	let tableBox = $state<{ name: string; col: string } | null>(null);
-	let fxEditing = false;
+	let fxEditing = $state(false);
 
 	let message = '';
 	let bench = $state('');
@@ -607,8 +609,15 @@
 		untrack(() => applyData(d));
 	});
 
+	// Mode A1 : lettres et numéros dans les bandeaux pendant la saisie d'une
+	// formule (ou toujours, Affichage › En-têtes A1) ; un clic sur une
+	// cellule insère alors sa référence.
+	const formulaMode = $derived((editing && editValueText.trimStart().startsWith('=')) || (fxEditing && fxText.trimStart().startsWith('=')));
+	const a1 = $derived(headings || formulaMode);
+
 	$effect(() => {
 		void gridlines;
+		void a1;
 		untrack(() => schedule());
 	});
 
@@ -630,12 +639,25 @@
 		return a <= b ? { first: a - e.t.row - 1, last: b - e.t.row - 1 } : null;
 	}
 
+	/** Texte d'un nombre affiché (« 1 234,5 », « 12,5 % ») selon le format de nombre et les décimales du style. */
+	function styledNumber(text: string, st: CellStyle | undefined): string {
+		if (!st || (st.nf === undefined && st.dp === undefined) || !isNumeric(text)) return text;
+		let t = text.replace(/[\s  ]/g, '');
+		const pct = t.endsWith('%');
+		t = t.replace('%', '').replace(',', '.');
+		let n = Number(t);
+		if (!Number.isFinite(n)) return text;
+		if (pct) n /= 100;
+		return formatNumber(st.nf, n, st.dp) ?? text;
+	}
+
 	function isNumeric(s: string) {
 		return /^[-+]?[\d\s  ]+([,.]\d+)?%?$/.test(s.trim());
 	}
 
 	function draw() {
 		frame = 0;
+		pendingBorders = [];
 		if (viewPos.x !== scroller.scrollLeft || viewPos.y !== vs.top) viewPos = { x: scroller.scrollLeft, y: vs.top };
 		const t0 = performance.now();
 		const w = viewW;
@@ -800,7 +822,7 @@
 					const align = cs?.al ?? (col.type === 'formula' ? valueAlignment(v) : alignment(col.type));
 					drawText(s, x, y, cw, align, cs, col.type === 'formula' && isErrorValue(v) ? C.error : C.text);
 					if (col.type === 'formula' && isErrorValue(v)) errorCorner(x, y);
-					if (cs) borders(cs, x, y, cw);
+					if (cs) borders(cs, x, y, cw, rh(r));
 				}
 				ctx.restore();
 			}
@@ -816,7 +838,7 @@
 				ctx.fillStyle = fs.bg;
 				ctx.fillRect(cx(c), ry(r), colAxis.size(c), rh(r));
 			}
-			borders(fs, cx(c), ry(r), colAxis.size(c));
+			borders(fs, cx(c), ry(r), colAxis.size(c), rh(r));
 		}
 		// Valeurs déversées : comme des cellules, dans un cadre bleu.
 		for (const sp of spills) {
@@ -853,7 +875,10 @@
 					if (!v) return;
 					const c = p.col + j;
 					const bold = i === 0 || i === p.cells.length - 1;
-					drawText(v, cx(c), ry(p.row + i), colAxis.size(c), j > 0 && i > 0 ? 'right' : 'left', bold ? { b: true } : undefined, C.text);
+					// Mise en forme posée sur les cellules du TCD (format de nombre, décimales, police…).
+					const st = freeStyles.get(key(p.row + i, c));
+					const style = bold ? { ...st, b: st?.b ?? true } : st;
+					drawText(styledNumber(v, st), cx(c), ry(p.row + i), colAxis.size(c), st?.al ?? (j > 0 && i > 0 ? 'right' : 'left'), style, C.text);
 				});
 			ctx.save();
 			ctx.strokeStyle = C.border;
@@ -871,10 +896,7 @@
 			if (f?.error) errorCorner(x, ry(r));
 			let raw = f ? f.text : rawText;
 			const num = isNumeric(raw);
-			if (num && fstyle?.nf) {
-				const n = Number(raw.replace(/[\s\u00a0\u202f]/g, '').replace(',', '.'));
-				if (Number.isFinite(n)) raw = formatNumber(fstyle.nf, n, fstyle.dp) ?? raw;
-			}
+			if (num) raw = styledNumber(raw, fstyle);
 			if (fstyle) {
 				drawText(raw, x, ry(r), cw, fstyle.al ?? (num ? 'right' : 'left'), fstyle, f?.error ? C.error : C.text, num ? cw : w);
 				continue;
@@ -915,6 +937,7 @@
 		}
 		ctx.stroke();
 		ctx.restore();
+		strokeBorders();
 
 		ctx.save();
 		ctx.beginPath();
@@ -1020,7 +1043,17 @@
 		for (let c = Math.max(c0, k0); c <= Math.min(c1, k1); c++) {
 			ctx.fillRect(Math.max(cx(c), MARGIN), 0, cx(c + 1) - Math.max(cx(c), MARGIN), TOP_H);
 		}
-		for (const e of visible) {
+		if (a1) {
+			ctx.font = FONT_SMALL;
+			ctx.textAlign = 'center';
+			for (let c = c0; c <= c1; c++) {
+				const x = cx(c);
+				if (x + colAxis.size(c) <= MARGIN) continue;
+				ctx.fillStyle = c >= k0 && c <= k1 ? C.headText : C.stripText;
+				ctx.fillText(cellAddr(0, c).slice(5, -1), x + colAxis.size(c) / 2, TOP_H / 2);
+			}
+		}
+		for (const e of a1 ? [] : visible) {
 			if (e.t.row >= r0 || e.last < r0) continue;
 			for (let c = Math.max(c0, e.t.col); c <= Math.min(c1, e.lastCol); c++) {
 				const x = cx(c);
@@ -1081,6 +1114,11 @@
 				ctx.fillStyle = C.active;
 				ctx.fillRect(MARGIN - 2, y, 2, rh(r));
 			}
+			if (a1) {
+				ctx.fillStyle = r >= s0 && r <= s1 ? C.headText : C.stripText;
+				ctx.fillText(String(r + 1), MARGIN - 8, y + rh(r) / 2);
+				continue;
+			}
 			const mine = !!cur && r > cur.t.row && r <= curLast;
 			const e = mine ? cur : visible.find((e) => r > e.t.row && r <= e.last);
 			if (e) {
@@ -1130,23 +1168,41 @@
 		return lo > 0 ? text.slice(0, lo) + '…' : '…';
 	}
 
+	// Bordures des cellules : relevées pendant le dessin des cellules, tracées
+	// après le quadrillage, sur ses lignes (deux cellules voisines partagent
+	// le même trait), pour qu'il ne les recouvre pas.
+	let pendingBorders: number[] = [];
+
 	/** Bordures d'une cellule (style bt, bb, bl, br). */
-	function borders(st: CellStyle, x: number, y: number, w: number) {
+	function borders(st: CellStyle, x: number, y: number, w: number, h: number) {
 		if (!st.bt && !st.bb && !st.bl && !st.br) return;
+		const X0 = Math.round(x) - 0.5;
+		const X1 = Math.round(x + w) - 0.5;
+		const Y0 = Math.round(y) - 0.5;
+		const Y1 = Math.round(y + h) - 0.5;
+		if (st.bt) pendingBorders.push(X0 - 0.5, Y0, X1 + 0.5, Y0);
+		if (st.bb) pendingBorders.push(X0 - 0.5, Y1, X1 + 0.5, Y1);
+		if (st.bl) pendingBorders.push(X0, Y0 - 0.5, X0, Y1 + 0.5);
+		if (st.br) pendingBorders.push(X1, Y0 - 0.5, X1, Y1 + 0.5);
+	}
+
+	function strokeBorders() {
+		if (!pendingBorders.length) return;
 		ctx.save();
+		ctx.beginPath();
+		ctx.rect(MARGIN, TOP_H, viewW - MARGIN, viewH - TOP_H);
+		ctx.clip();
 		ctx.strokeStyle = C.text;
 		ctx.lineWidth = 1;
 		ctx.beginPath();
-		const X0 = Math.round(x) + 0.5;
-		const X1 = Math.round(x + w) - 0.5;
-		const Y0 = Math.round(y) + 0.5;
-		const Y1 = Math.round(y + rh(rowAxis.indexAt(y - TOP_H + vs.top + 1))) - 0.5;
-		if (st.bt) (ctx.moveTo(X0, Y0), ctx.lineTo(X1, Y0));
-		if (st.bb) (ctx.moveTo(X0, Y1), ctx.lineTo(X1, Y1));
-		if (st.bl) (ctx.moveTo(X0, Y0), ctx.lineTo(X0, Y1));
-		if (st.br) (ctx.moveTo(X1, Y0), ctx.lineTo(X1, Y1));
+		const b = pendingBorders;
+		for (let i = 0; i < b.length; i += 4) {
+			ctx.moveTo(b[i], b[i + 1]);
+			ctx.lineTo(b[i + 2], b[i + 3]);
+		}
 		ctx.stroke();
 		ctx.restore();
+		pendingBorders = [];
 	}
 
 	/** Petit triangle d'angle d'une cellule en erreur (le détail est dans la barre d'état). */
@@ -1281,7 +1337,8 @@
 		const named = names.get(key(r, c));
 		if (named) return named;
 		const e = tableAt(r, c);
-		if (!e) return cellAddr(r, c);
+		// Cellule libre : lettre et numéro seulement (A1) ; Cell_A1 dans une formule.
+		if (!e) return cellAddr(r, c).slice(5);
 		const k = e.t.columns[c - e.t.col];
 		const col = `${e.t.name}[${k.name}]`;
 		if (r === e.t.row) {
@@ -1295,7 +1352,8 @@
 	function refreshStatus() {
 		const stats = entries[0]?.cache.stats ?? { roundTrip: [], server: [] };
 		onstatus?.({
-			cell: cellName(active.row, active.col),
+			// Une cellule libre : son adresse est déjà dans la zone de nom.
+			cell: tableAt(active.row, active.col) || names.has(key(active.row, active.col)) ? cellName(active.row, active.col) : '',
 			message,
 			fetch: `bloc p50 ${ms(percentile(stats.roundTrip, 0.5))}`,
 			draw: `rendu ${ms(percentile(drawTimes, 0.5))}`,
@@ -2421,6 +2479,10 @@
 		}
 		const cell = cellAt(e);
 		if (!cell) return;
+		if (e.button === 0 && formulaMode && insertRef(cell)) {
+			e.preventDefault();
+			return;
+		}
 		if (editing) commit();
 		e.preventDefault();
 		// Clic droit dans la sélection : elle reste (le menu porte sur elle).
@@ -2429,6 +2491,41 @@
 		wrap.focus();
 		moveTo(cell.row, cell.col, e.shiftKey);
 		dragging = true;
+	}
+
+	// Dernière référence insérée au clic : un autre clic la remplace (comme Excel).
+	let lastRef: { el: HTMLInputElement; start: number; end: number; value: string } | null = null;
+
+	/** Référence d'une cellule dans une formule : Cell_A1, [@Col] (même ligne du tableau édité) ou Tableau[Col]. */
+	function refFor(r: number, c: number): string {
+		const e = tableAt(r, c);
+		if (!e) return cellAddr(r, c);
+		const name = e.t.columns[c - e.t.col].name;
+		const here = tableAt(active.row, active.col);
+		if (here === e && r === active.row && r > e.t.row) return `[@${name}]`;
+		return `${e.t.name}[${name}]`;
+	}
+
+	/** Pendant la saisie d'une formule, insère la référence de la cellule cliquée au curseur. */
+	function insertRef(cell: { row: number; col: number }): boolean {
+		const el = editing ? input : fxEditing ? fxInput : null;
+		if (!el) return false;
+		const v = el.value;
+		const pos = el.selectionStart ?? v.length;
+		let start = pos;
+		if (lastRef && lastRef.el === el && lastRef.end === pos && lastRef.value === v) start = lastRef.start;
+		else if (!/[=(;,+*/^&<>:-]$/.test(v.slice(0, pos).trimEnd())) return false;
+		if (editing && cell.row === active.row && cell.col === active.col) return false;
+		const ref = refFor(cell.row, cell.col);
+		const next = v.slice(0, start) + ref + v.slice(pos);
+		if (editing) editValueText = next;
+		else fxText = next;
+		el.value = next;
+		const end = start + ref.length;
+		el.setSelectionRange(end, end);
+		el.focus();
+		lastRef = { el, start, end, value: next };
+		return true;
 	}
 
 	function onMouseMove(e: MouseEvent) {
@@ -2855,15 +2952,6 @@
 		if (e.key !== 'Enter') return;
 		e.preventDefault();
 		const text = el.value.trim();
-		// Une adresse Cell_B3 : y aller.
-		const addr = /^cell_([a-z]{1,3})([1-9]d*)$/i.exec(text);
-		if (addr) {
-			let c = 0;
-			for (const ch of addr[1].toUpperCase()) c = c * 26 + ch.charCodeAt(0) - 64;
-			wrap.focus();
-			moveTo(Number(addr[2]) - 1, c - 1);
-			return;
-		}
 		// Le nom d'une cellule existante : y aller (comme Excel).
 		for (const [k, n] of names) {
 			if (n.toLowerCase() === text.toLowerCase()) {
@@ -2872,6 +2960,15 @@
 				moveTo(r, c);
 				return;
 			}
+		}
+		// Une adresse (B3 ou Cell_B3) : y aller.
+		const addr = /^(?:cell_)?([a-z]{1,3})([1-9][0-9]*)$/i.exec(text);
+		if (addr) {
+			let c = 0;
+			for (const ch of addr[1].toUpperCase()) c = c * 26 + ch.charCodeAt(0) - 64;
+			wrap.focus();
+			moveTo(Number(addr[2]) - 1, c - 1);
+			return;
 		}
 		const { row, col } = active;
 		if (tableAt(row, col)) {
@@ -3896,12 +3993,6 @@
 					}}>Coller un graphique à la cellule active</button
 				>
 				<hr />
-				<button
-					onclick={() => {
-						chartMenu = null;
-						selectChart(m.ch);
-					}}>Modifier le graphique…</button
-				>
 				<button onclick={() => removeChart(m.ch.id)}>Supprimer le graphique</button>
 			</div>
 		{/if}
@@ -4435,43 +4526,42 @@
 	.chart.selected {
 		outline: 2px solid #217346;
 	}
+	/* Poignée : un simple carré vert. */
 	.handle {
 		position: absolute;
-		width: 9px;
-		height: 9px;
+		width: 8px;
+		height: 8px;
 		background: #217346;
-		border: 1px solid #fff;
-		box-shadow: 0 0 0 1px #217346;
 	}
 	.handle.n,
 	.handle.s {
-		left: calc(50% - 5px);
+		left: calc(50% - 4px);
 		cursor: ns-resize;
 	}
 	.handle.e,
 	.handle.w {
-		top: calc(50% - 5px);
+		top: calc(50% - 4px);
 		cursor: ew-resize;
 	}
 	.handle.n,
 	.handle.ne,
 	.handle.nw {
-		top: -6px;
+		top: -5px;
 	}
 	.handle.s,
 	.handle.se,
 	.handle.sw {
-		bottom: -6px;
+		bottom: -5px;
 	}
 	.handle.e,
 	.handle.ne,
 	.handle.se {
-		right: -6px;
+		right: -5px;
 	}
 	.handle.w,
 	.handle.nw,
 	.handle.sw {
-		left: -6px;
+		left: -5px;
 	}
 	.handle.ne,
 	.handle.sw {

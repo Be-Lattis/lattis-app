@@ -484,6 +484,12 @@ export interface SheetInfo {
      * quadrillage masqué
      */
     "noGrid": boolean;
+
+    /**
+     * Headings : lettres de colonnes et numéros de lignes toujours affichés
+     * (sinon seulement pendant la saisie d'une formule).
+     */
+    "headings": boolean;
 }
 
 /**

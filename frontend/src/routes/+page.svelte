@@ -585,6 +585,8 @@
 		onrecalc={mode === 'doc' ? () => DocumentService.Recalc().then(reload).catch((e) => (notice = err(e))) : undefined}
 		gridlines={!layout?.sheets?.find((s) => s.id === sheetId)?.noGrid}
 		ongridlines={mode === 'doc' ? (show) => DocumentService.SetGridlines(sheetId, show).then(reload).catch((e) => (notice = err(e))) : undefined}
+		headings={!!layout?.sheets?.find((s) => s.id === sheetId)?.headings}
+		onheadings={mode === 'doc' ? (show) => DocumentService.SetHeadings(sheetId, show).then(reload).catch((e) => (notice = err(e))) : undefined}
 	/>
 
 	<main>
@@ -635,6 +637,7 @@
 							: undefined}
 						onstatus={(s) => (sheetStatus = s)}
 						gridlines={!layout?.sheets?.find((s) => s.id === sheetId)?.noGrid}
+						headings={!!layout?.sheets?.find((s) => s.id === sheetId)?.headings}
 						autoBench={bench ? (r) => GridService.ReportBench(r) : undefined}
 					/>
 				</div>

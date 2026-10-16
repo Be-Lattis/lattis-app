@@ -171,6 +171,10 @@ CREATE TABLE _slitable_buttons (
 	config TEXT NOT NULL
 ) STRICT;
 `,
+	// 13 → 14 : en-têtes A1 (lettres et numéros) toujours affichés.
+	`
+ALTER TABLE _slitable_sheets ADD COLUMN headings INTEGER NOT NULL DEFAULT 0;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

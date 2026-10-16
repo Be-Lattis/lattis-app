@@ -526,6 +526,14 @@ export function SetGridlines(sheet: number, show: boolean): $CancellablePromise<
 }
 
 /**
+ * SetHeadings affiche toujours, ou seulement pendant la saisie d'une
+ * formule, les lettres de colonnes et numéros de lignes de la feuille.
+ */
+export function SetHeadings(sheet: number, show: boolean): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(240468400, sheet, show);
+}
+
+/**
  * SetKey fait d'une colonne la clé du tableau.
  */
 export function SetKey(table: string, i: number): $CancellablePromise<$models.DocState> {

@@ -680,6 +680,12 @@ func (s *DocumentService) Dependencies(ctx context.Context, sheet int64, row, co
 	return d.Dependencies(ctx, sheet, row, col)
 }
 
+// SetHeadings affiche toujours, ou seulement pendant la saisie d'une
+// formule, les lettres de colonnes et numéros de lignes de la feuille.
+func (s *DocumentService) SetHeadings(ctx context.Context, sheet int64, show bool) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetHeadings(ctx, sheet, show) })
+}
+
 // SetGridlines affiche ou masque le quadrillage de la feuille.
 func (s *DocumentService) SetGridlines(ctx context.Context, sheet int64, show bool) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.SetGridlines(ctx, sheet, show) })
