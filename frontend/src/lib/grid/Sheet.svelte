@@ -26,7 +26,7 @@
 	import { describeRule, parseRules, ruleStyle, RULE_OPS, RULE_STYLES, type Rule, type RuleOp } from './rules';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { drawIcon } from '#lib/icons/canvas.js';
-	import { apply as applySuggestion, signature, suggest, type Catalog, type Completion } from './autocomplete';
+	import { apply as applySuggestion, signature, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
 	import {
 		isErrorValue,
 		valueAlignment,
@@ -558,7 +558,7 @@
 
 	// Aide à la saisie des formules (éditeur de cellule ou barre de formule).
 	let completion = $state<(Completion & { sel: number; where: 'cell' | 'fx' }) | null>(null);
-	let sig = $state<{ text: string; where: 'cell' | 'fx' } | null>(null);
+	let sig = $state<{ fn: FunctionDoc; index: number; where: 'cell' | 'fx' } | null>(null);
 	let suggestPos = $state({ x: 0, y: 0 });
 
 	function onFormulaInput(el: HTMLInputElement, where: 'cell' | 'fx') {
@@ -574,7 +574,15 @@
 		const c = suggest(el.value, caret, catalog, e?.t.name);
 		completion = c ? { ...c, sel: 0, where } : null;
 		const s = signature(el.value, caret, catalog);
-		sig = s ? { text: s, where } : null;
+		sig = s ? { ...s, where } : null;
+	}
+
+	/** Le curseur bouge sans saisie (flèches, clic) : l'argument en gras suit. */
+	function moveSig(e: Event, where: 'cell' | 'fx') {
+		if (!catalog || (e instanceof KeyboardEvent && !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key))) return;
+		const el = e.currentTarget as HTMLInputElement;
+		const s = signature(el.value, el.selectionStart ?? el.value.length, catalog);
+		sig = s ? { ...s, where } : null;
 	}
 
 	/** Gère les touches de la liste de suggestions ; vrai si la touche est consommée. */
@@ -1921,7 +1929,7 @@
 
 	// --- Ruban Formules ---------------------------------------------------------
 
-	let fnDlg = $state<{ search: string } | null>(null);
+	let fnDlg = $state<{ search: string; sel: string | null } | null>(null);
 
 	/** Commence une formule dans la cellule active (Insérer une fonction, REFERENCE). */
 	export function startFormula(text: string) {
@@ -1944,13 +1952,15 @@
 	}
 
 	export function openFunctions() {
-		fnDlg = { search: '' };
+		fnDlg = { search: '', sel: null };
 	}
 
+	/** Fonctions du dialogue : nom (français ou anglais), catégorie ou description. */
 	function shownFunctions() {
 		const q = fnDlg?.search.trim().toLowerCase() ?? '';
 		const all = catalog?.functions ?? [];
-		return (q ? all.filter((f) => f.name.toLowerCase().includes(q) || f.other.toLowerCase().includes(q)) : all).slice(0, 200);
+		const hit = (f: FunctionDoc) => [f.name, f.other, f.category ?? '', f.description ?? ''].some((s) => s.toLowerCase().includes(q));
+		return (q ? all.filter(hit) : all).slice(0, 200);
 	}
 
 	/** Tri du tableau de la cellule active (ruban Données). */
@@ -3775,7 +3785,15 @@
 {/snippet}
 
 {#snippet suggestions(where: 'cell' | 'fx')}
-	{#if sig?.where === where}<div class="sig">{sig.text}</div>{/if}
+	{#if sig?.where === where}
+		{@const sp = signatureParts(sig.fn, sig.index)}
+		<div class="sig">
+			<div class="sig-line">{#each sp.parts as p, i (i)}{#if p.on}<b>{p.text}</b>{:else}{p.text}{/if}{/each}</div>
+			{#if sig.fn.description}<div class="sig-desc">{sig.fn.description}</div>{/if}
+			{#if sp.arg}<div class="sig-arg"><b>{sp.arg.name}</b>{sp.arg.optional ? ' (facultatif)' : ''} : {sp.arg.desc}</div>{/if}
+			{#if sig.fn.example}<div class="sig-ex">Exemple : <code>{sig.fn.example}</code></div>{/if}
+		</div>
+	{/if}
 	{#if completion?.where === where}
 		{#each completion.items as s, i (s.kind + s.label)}
 			<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
@@ -3791,7 +3809,7 @@
 			>
 				<span class="kind {s.kind}">{s.kind === 'function' ? 'fx' : s.kind === 'table' ? '▦' : s.kind === 'name' ? 'N' : '[ ]'}</span>
 				<span class="lab">{s.label}</span>
-				<span class="det">{s.detail}</span>
+				<span class="det" title={s.detail}>{s.detail}</span>
 			</div>
 		{/each}
 	{/if}
@@ -3836,6 +3854,8 @@
 			bind:this={fxInput}
 			bind:value={fxText}
 			oninput={(e) => onFormulaInput(e.currentTarget, 'fx')}
+			onkeyup={(e) => moveSig(e, 'fx')}
+			onclick={(e) => moveSig(e, 'fx')}
 			onfocus={() => (fxEditing = true)}
 			onkeydown={onFxKey}
 			onblur={() => {
@@ -4274,6 +4294,8 @@
 		{/if}
 		{#if fnDlg}
 			{@const d = fnDlg}
+			{@const shownFns = shownFunctions()}
+			{@const cur = shownFns.find((f) => f.name === d.sel) ?? shownFns[0]}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				class="rules filter"
@@ -4287,15 +4309,38 @@
 			>
 				<div class="menu-title">Insérer une fonction ({catalog?.functions.length ?? 0} disponibles)</div>
 				<!-- svelte-ignore a11y_autofocus -->
-				<div class="add"><input class="search" bind:value={d.search} placeholder="Rechercher (SOMME, RECHERCHEV…)" autofocus /></div>
+				<div class="add"><input class="search" bind:value={d.search} placeholder="Rechercher (SOMME, RECHERCHEV, date, texte…)" autofocus /></div>
 				<div class="values">
-					{#each shownFunctions() as f (f.name)}
-						<button class="fn" onclick={() => startFormula(`=${f.name}(`)}>
+					{#each shownFns as f (f.name)}
+						<button
+							class="fn"
+							class:on={f.name === cur?.name}
+							onmouseenter={() => (d.sel = f.name)}
+							onfocus={() => (d.sel = f.name)}
+							onclick={() => startFormula(`=${f.name}(`)}
+						>
 							<strong>{f.name}</strong>
-							<span class="count">{f.arity}{f.other ? ` · ${f.other}` : ''}</span>
+							<span class="count fn-desc">{f.description ?? ''}</span>
 						</button>
 					{/each}
 				</div>
+				{#if cur}
+					<div class="fn-doc">
+						<div class="fn-sig">{cur.signature || cur.name + '()'}</div>
+						<div>{cur.description}</div>
+						{#if cur.args?.length}
+							<dl>
+								{#each cur.args as arg (arg.name)}
+									<dt>{arg.name}{arg.optional ? ' (facultatif)' : ''}</dt>
+									<dd>{arg.desc}</dd>
+								{/each}
+							</dl>
+							{#if cur.repeat}<div class="count">Les {cur.repeat > 1 ? `${cur.repeat} derniers arguments peuvent` : 'dernier argument peut'} se répéter.</div>{/if}
+						{/if}
+						{#if cur.example}<div>Exemple : <code>{cur.example}</code></div>{/if}
+						<div class="count">{cur.category}{cur.other && cur.other !== cur.name ? ` · en anglais : ${cur.other}` : ''}</div>
+					</div>
+				{/if}
 				<div class="foot">
 					<span class="sp"></span>
 					<button
@@ -4434,6 +4479,8 @@
 				bind:this={input}
 				bind:value={editValueText}
 				oninput={(e) => onFormulaInput(e.currentTarget, 'cell')}
+				onkeyup={(e) => moveSig(e, 'cell')}
+				onclick={(e) => moveSig(e, 'cell')}
 				onkeydown={onEditorKey}
 				onblur={() => {
 					completion = sig = null;
@@ -4636,7 +4683,7 @@
 		border: 1px solid #c9cdd2;
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 		min-width: 260px;
-		max-width: 420px;
+		max-width: 520px;
 		font-size: 12px;
 	}
 	.fx-suggest {
@@ -4644,10 +4691,33 @@
 		top: 30px;
 	}
 	.sig {
-		padding: 4px 10px;
+		padding: 5px 10px;
 		background: #f7f8f9;
 		color: #374151;
 		border-bottom: 1px solid #e3e5e8;
+		white-space: normal;
+		line-height: 1.4;
+	}
+	.sig-line {
+		font-family: Consolas, 'Courier New', monospace;
+		color: #111827;
+	}
+	.sig-line b {
+		color: #14532d;
+	}
+	.sig-desc {
+		margin-top: 2px;
+	}
+	.sig-arg,
+	.sig-ex {
+		margin-top: 3px;
+		color: #4b5563;
+	}
+	.sig code,
+	.fn-doc code {
+		font-family: Consolas, 'Courier New', monospace;
+		background: #eef0f2;
+		padding: 0 3px;
 	}
 	.sugg {
 		display: flex;
@@ -4670,6 +4740,10 @@
 	}
 	.det {
 		color: #6b7280;
+		max-width: 260px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 	.menu {
 		position: absolute;
@@ -4801,8 +4875,45 @@
 		padding: 3px 8px;
 		cursor: pointer;
 	}
-	.filter .fn:hover {
+	.filter .fn:hover,
+	.filter .fn.on {
 		background: #e3efe7;
+	}
+	.filter .fn strong {
+		flex: none;
+	}
+	.filter .fn-desc {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		text-align: right;
+	}
+	.fn-doc {
+		margin: 4px 14px;
+		max-width: 520px;
+		line-height: 1.45;
+	}
+	.fn-doc > div {
+		margin-top: 3px;
+	}
+	.fn-doc .fn-sig {
+		font-family: Consolas, 'Courier New', monospace;
+		font-weight: 600;
+		color: #14532d;
+	}
+	.fn-doc dl {
+		margin: 4px 0;
+		display: grid;
+		grid-template-columns: auto 1fr;
+		gap: 2px 10px;
+	}
+	.fn-doc dt {
+		font-family: Consolas, 'Courier New', monospace;
+		font-weight: 600;
+	}
+	.fn-doc dd {
+		margin: 0;
+		color: #4b5563;
 	}
 	.filter .search {
 		width: 100%;
