@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Column } from '#bindings/internal/query/models.js';
-import { OPS, defaultStep, insertStep, moveStep, otherKey, otherSource, typeName } from './steps';
+import { OPS, clickColumns, defaultStep, insertStep, moveStep, otherKey, otherSource, quickSteps, typeName, withColumns } from './steps';
 
 const cols = [
 	{ name: 'Ville', type: 'text' },
@@ -35,5 +35,31 @@ describe('étapes de requête', () => {
 	it('nomme les types', () => {
 		expect(typeName('decimal')).toBe('Décimal');
 		expect(typeName('')).toBe('Auto');
+	});
+});
+
+describe('menu des colonnes de l’aperçu', () => {
+	const names = ['A', 'B', 'C', 'D'];
+	it('clic, Ctrl et Maj choisissent les colonnes', () => {
+		expect(clickColumns(names, [], '', 'B', {})).toEqual({ selected: ['B'], anchor: 'B' });
+		expect(clickColumns(names, ['B'], 'B', 'B', {})).toEqual({ selected: [], anchor: '' });
+		expect(clickColumns(names, ['B'], 'B', 'D', { ctrl: true })).toEqual({ selected: ['B', 'D'], anchor: 'D' });
+		expect(clickColumns(names, ['B', 'D'], 'D', 'B', { ctrl: true })).toEqual({ selected: ['D'], anchor: 'B' });
+		expect(clickColumns(names, ['D'], 'D', 'B', { shift: true })).toEqual({ selected: ['B', 'C', 'D'], anchor: 'D' });
+		expect(clickColumns(names, ['A'], 'C', 'D', { shift: true, ctrl: true })).toEqual({ selected: ['A', 'C', 'D'], anchor: 'C' });
+	});
+	it('ajoute les étapes sans boîte, dans l’ordre des colonnes', () => {
+		const three = [...cols, { name: 'Date', type: 'date' }] as Column[];
+		expect(quickSteps('remove', three, ['Date', 'Ville'])).toEqual([{ op: 'remove', columns: ['Ville', 'Date'] }]);
+		expect(quickSteps('keep', three, ['Montant'])).toEqual([{ op: 'select', columns: ['Montant'] }]);
+		expect(quickSteps('unpivotOthers', three, ['Ville'])[0].columns).toEqual(['Montant', 'Date']);
+		expect(quickSteps('sortDesc', three, ['Montant'])).toEqual([{ op: 'sort', sort: [{ column: 'Montant', desc: true }] }]);
+		expect(quickSteps('type', three, ['Ville', 'Montant'], 'decimal')).toEqual([{ op: 'type', column: 'Ville', type: 'decimal' }]);
+		expect(quickSteps('transform', three, ['Ville'], 'upper')).toEqual([{ op: 'transform', column: 'Ville', fn: 'upper' }]);
+		expect(quickSteps('remove', three, [])).toEqual([]);
+	});
+	it('pré-remplit les boîtes avec les colonnes choisies', () => {
+		expect(withColumns(defaultStep('group', cols), ['Ville', 'Montant']).columns).toEqual(['Ville', 'Montant']);
+		expect(withColumns(defaultStep('rename', cols, 'Ville'), ['Ville', 'Montant']).column).toBe('Ville');
 	});
 });

@@ -102,6 +102,24 @@ export const icons = {
 	'type-boolean': '<path d="M5 3.5h14A1.5 1.5 0 0 1 20.5 5v14a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 19V5A1.5 1.5 0 0 1 5 3.5z"/><path class="a" stroke-width="2" d="m7.5 12.5 3 3 6-7"/>',
 	'column-type': '<rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><path class="a" d="M8 8h8M12 8v9"/>',
 
+	// Éditeur de requête (ruban et menu des colonnes, comme Power Query)
+	'close-load': '<rect x="2.5" y="4.5" width="12" height="15" rx="1.5"/><path d="M2.5 9h12M2.5 14h12M7 9v10.5"/><path class="a" d="M21.5 12H17M19.5 9.5 17 12l2.5 2.5"/>',
+	'choose-columns': '<rect x="3.5" y="3.5" width="5" height="17" rx="1"/><rect x="10" y="3.5" width="5" height="17" rx="1"/><path class="a" stroke-width="2" d="m16 14.5 2 2 3.5-4.5"/>',
+	'keep-rows': '<rect class="a" x="3.5" y="3.5" width="17" height="7" rx="1"/><path d="M3.5 7h17"/><path stroke-dasharray="1.5 2" d="M3.5 14.5h17M3.5 19h17"/>',
+	'sort-asc': '<path d="M7 4v16M4 17l3 3 3-3"/><path class="a" d="M13 6h3M13 12h5.5M13 18h8"/>',
+	'sort-desc': '<path d="M7 4v16M4 17l3 3 3-3"/><path class="a" d="M13 6h8M13 12h5.5M13 18h3"/>',
+	'merge-queries': '<rect x="2.5" y="3.5" width="8" height="10" rx="1"/><rect x="13.5" y="3.5" width="8" height="10" rx="1"/><path d="M2.5 7h8M13.5 7h8"/><path class="a" d="M6.5 13.5v4h11v-4M12 17.5V21"/>',
+	'append-queries': '<rect x="3" y="3" width="11.5" height="7.5" rx="1"/><rect class="a" x="3" y="13.5" width="11.5" height="7.5" rx="1"/><path d="M3 6.5h11.5M3 17h11.5"/><path class="a" d="M19.5 14v6M16.5 17h6"/>',
+	'group-by': '<path d="M3.5 5h6M3.5 9h6M3.5 15h6M3.5 19h6"/><path class="a" d="M12.5 4c1.5 0 2 .8 2 2v3c0 1.5.8 3 2.5 3-1.7 0-2.5 1.5-2.5 3v3c0 1.2-.5 2-2 2"/><path d="M18.5 12h3"/>',
+	rename: '<rect x="2.5" y="7" width="15" height="10" rx="1.5"/><path d="M5.5 12h5"/><path class="a" d="M18 4.5v15M16 4.5h4M16 19.5h4"/>',
+	replace: '<rect x="3" y="3" width="8" height="7" rx="1"/><rect class="a" x="13" y="14" width="8" height="7" rx="1"/><path d="M14.5 5H17a2.5 2.5 0 0 1 2.5 2.5V11M17.5 9l2 2 2-2M9.5 19H7a2.5 2.5 0 0 1-2.5-2.5V13M6.5 15l-2-2-2 2"/>',
+	unpivot: '<rect x="3.5" y="3.5" width="17" height="5.5" rx="1"/><path d="M9.2 3.5V9M14.8 3.5V9"/><path class="a" d="M12 11v4M10 13l2 2 2-2"/><path d="M3.5 17h17M3.5 20.5h17"/>',
+	'pivot-column': '<path d="M3.5 3.5h17M3.5 7h17"/><path class="a" d="M12 9v4M10 11l2 2 2-2"/><rect x="3.5" y="15" width="17" height="5.5" rx="1"/><path d="M9.2 15v5.5M14.8 15v5.5"/>',
+	'split-column': '<rect x="3.5" y="3.5" width="6" height="17" rx="1"/><path class="a" d="M11.5 12H14M14 12l2.5-5.5h4M14 12l2.5 5.5h4"/>',
+	'text-format': '<path d="M3 18.5 7.5 5.5l4.5 13M4.6 14h5.8"/><circle class="a" cx="17" cy="15.5" r="3"/><path class="a" d="M20 12v6.5"/>',
+	'custom-column': '<rect x="3.5" y="3.5" width="7" height="17" rx="1"/><path class="a" d="M17.5 6.5H17A1.5 1.5 0 0 0 15.5 8v11M13.5 11h4M17.5 14l3.5 5m0-5-3.5 5"/>',
+	'index-column': '<rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><path d="M10 3.5v17M13 8h4.5M13 12h4.5M13 16h4.5"/><path class="a" d="M5.5 7 7 6.2V10M5.5 13.5a1.2 1.2 0 1 1 2 1L5.5 17h2.5"/>',
+
 	// Fichier, historique
 	file: '<path d="M14 3.5H7A1.5 1.5 0 0 0 5.5 5v14A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5V8zM14 3.5V8h4.5"/>',
 	'new-file': '<path d="M14 3.5H7A1.5 1.5 0 0 0 5.5 5v14A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5V8zM14 3.5V8h4.5"/><path class="a" d="M12 11v6M9 14h6"/>',
