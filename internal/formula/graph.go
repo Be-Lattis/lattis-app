@@ -29,11 +29,27 @@ func Deps(n Node) (names, tables []string) {
 			walk(n.R)
 		case Call:
 			args := n.Args
-			if n.Fn == "REFERENCE" && len(args) == 3 {
+			switch {
+			case (n.Fn == "REFERENCE" || n.Fn == "REFERENCE.APPROX") && len(args) == 3:
 				if t, ok := nameOf(args[0]); ok {
 					add(&tables, t)
 				}
 				args = args[2:] // le 2e argument est un nom de colonne
+			case IsSpill(n) && len(args) > 0:
+				// FILTRE(Ventes; …) : la source nommée est un tableau ;
+				// GROUPER.PAR(…; …; SOMME) nomme une fonction.
+				if t, ok := args[0].(Name); ok {
+					add(&tables, t.Name)
+					args = args[1:]
+				}
+				if n.Fn == "GROUPBY" && len(args) == 3 {
+					args = args[:2]
+				}
+			case n.Fn == "EXISTS" && len(args) == 2:
+				if t, ok := nameOf(args[0]); ok {
+					add(&tables, t)
+				}
+				args = args[1:]
 			}
 			for _, a := range args {
 				walk(a)

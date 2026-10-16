@@ -21,6 +21,7 @@ const (
 	Text
 	Bool
 	Error
+	Date // nombre de jours depuis le 30/12/1899 (numéro de série d'Excel), heure en fraction
 )
 
 // ErrCode est une erreur typée, comme dans Excel.
@@ -58,18 +59,21 @@ type Value struct {
 	Err  ErrCode
 }
 
-func Num(f float64) Value     { return Value{Kind: Number, Num: f} }
-func Str(s string) Value      { return Value{Kind: Text, Str: s} }
-func Boolean(b bool) Value    { return Value{Kind: Bool, Bool: b} }
-func Err(e ErrCode) Value     { return Value{Kind: Error, Err: e} }
-func (v Value) IsErr() bool   { return v.Kind == Error }
-func (v Value) IsEmpty() bool { return v.Kind == Empty }
+func Num(f float64) Value        { return Value{Kind: Number, Num: f} }
+func Str(s string) Value         { return Value{Kind: Text, Str: s} }
+func Boolean(b bool) Value       { return Value{Kind: Bool, Bool: b} }
+func Err(e ErrCode) Value        { return Value{Kind: Error, Err: e} }
+func DateSerial(f float64) Value { return Value{Kind: Date, Num: f} }
+func (v Value) IsErr() bool      { return v.Kind == Error }
+func (v Value) IsEmpty() bool    { return v.Kind == Empty }
 
 // String affiche la valeur comme la grille (locale française).
 func (v Value) String() string {
 	switch v.Kind {
 	case Number:
 		return FormatNumber(v.Num)
+	case Date:
+		return FormatDate(v.Num)
 	case Text:
 		return v.Str
 	case Bool:
@@ -115,7 +119,7 @@ func parseNumber(s string) (float64, bool) {
 // numérique accepté, autre texte = #VALEUR!.
 func ToNumber(v Value) (float64, Value) {
 	switch v.Kind {
-	case Number:
+	case Number, Date:
 		return v.Num, Value{}
 	case Empty:
 		return 0, Value{}
@@ -146,7 +150,7 @@ func Truth(v Value) (bool, Value) {
 	switch v.Kind {
 	case Bool:
 		return v.Bool, Value{}
-	case Number:
+	case Number, Date:
 		return v.Num != 0, Value{}
 	case Empty:
 		return false, Value{}
@@ -179,10 +183,19 @@ func Arith(op byte, a, b Value) Value {
 	if e.IsErr() {
 		return e
 	}
+	// Arithmétique des dates, comme Excel : date ± jours donne une date, et
+	// date - date un nombre de jours.
+	date := a.Kind == Date && b.Kind != Date || op == '+' && b.Kind == Date && a.Kind != Date
 	switch op {
 	case '+':
+		if date {
+			return dateNumber(x + y)
+		}
 		return number(x + y)
 	case '-':
+		if date {
+			return dateNumber(x - y)
+		}
 		return number(x - y)
 	case '*':
 		return number(x * y)
@@ -230,7 +243,7 @@ func Concat(a, b Value) Value {
 // order classe les types comme Excel : nombres < textes < booléens.
 func order(k Kind) int {
 	switch k {
-	case Number:
+	case Number, Date:
 		return 0
 	case Text:
 		return 1
@@ -250,11 +263,11 @@ func cmp(a, b Value) int {
 	if b.Kind == Empty {
 		b = zeroLike(a)
 	}
-	if a.Kind != b.Kind {
+	if a.Kind != b.Kind && order(a.Kind) != order(b.Kind) {
 		return order(a.Kind) - order(b.Kind)
 	}
 	switch a.Kind {
-	case Number:
+	case Number, Date:
 		switch {
 		case a.Num < b.Num:
 			return -1

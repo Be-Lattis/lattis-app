@@ -159,4 +159,63 @@ func TestMesureColonnesCalculees(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Logf("SOMME(Commandes[Part]) (agrégat dans une colonne calculée, sous-requête non corrélée) : %v (= %s)", time.Since(start).Round(time.Millisecond), FromResult(v))
+
+	// Fonctions de la bibliothèque sur tout le tableau (agrégats sortis de la
+	// requête de la grille : calculés une fois, invalidés quand le tableau change).
+	for _, src := range []string{
+		`=SOMME.SI(Commandes[Catégorie];"Info*";Commandes[Montant HT])`,
+		`=NB.SI.ENS(Commandes[Payé];VRAI;Commandes[Quantité];">5")`,
+		`=SOMMEPROD(Commandes[Quantité];Commandes[Prix unitaire])`,
+		`=MEDIANE(Commandes[Montant HT])`,
+		`=MAX(Commandes[Date commande])`,
+		`=NB(FILTRE(Commandes[Montant HT];Commandes[Remise]>0))`,
+		`=EQUIV("Bruno";Commandes[Vendeur];0)`,
+	} {
+		start := time.Now()
+		agg := Compile(mustParse(t, src, FR), schema, nil, nil, "")
+		if err := db.Read().QueryRow(`SELECT `+agg.SQL, agg.Args...).Scan(&v); err != nil {
+			t.Fatalf("%s : %v", src, err)
+		}
+		t.Logf("%s : %v (= %s)", src, time.Since(start).Round(time.Millisecond), FromResult(v))
+	}
+	sp, e := CompileSpill(mustParse(t, `=GROUPER.PAR(Commandes[Vendeur];Commandes[Montant HT];SOMME)`, FR), schema, nil)
+	if e.IsErr() {
+		t.Fatal(e)
+	}
+	start = time.Now()
+	r, err := db.Read().Query(sp.SQL, sp.Args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	groups := 0
+	for r.Next() {
+		groups++
+	}
+	r.Close()
+	t.Logf("GROUPER.PAR(Commandes[Vendeur];Commandes[Montant HT];SOMME) : %v (%d groupes)", time.Since(start).Round(time.Millisecond), groups)
+
+	// Colonne calculée qui parcourt le tableau à chaque ligne (NB.SI sur la
+	// valeur de la ligne) : coût d'une fenêtre de 200 lignes.
+	for _, src := range []string{
+		`=NB.SI(Commandes[Vendeur];[@Vendeur])`,
+		`=NB.SI(Commandes[Client];[@Client])`,
+		`=SOMME.SI(Commandes[N° commande];[@N° commande];Commandes[Quantité])`,
+		`=NB.SI.ENS(Commandes[Vendeur];[@Vendeur];Commandes[Payé];VRAI)`,
+		`=RANG([@Montant HT])`,
+		`=CUMUL([@Quantité])`,
+	} {
+		start = time.Now()
+		c = &compiler{schema: schema, names: map[string]Value{}, visiting: map[*Column]bool{}, hoist: hoist}
+		perRow := c.expr(mustParse(t, src, FR), scope{table: cmd, alias: "o"})
+		t.Logf("%s : précalcul en %v", src, time.Since(start).Round(time.Millisecond))
+		start = time.Now()
+		r, err = db.Read().Query(`SELECT `+perRow+` FROM t_1 AS o ORDER BY o._pos LIMIT 200`, c.args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for r.Next() {
+		}
+		r.Close()
+		t.Logf("fenêtre de 200 lignes avec %s : %v", src, time.Since(start).Round(time.Millisecond))
+	}
 }

@@ -61,10 +61,24 @@ func Convert(n Node, s *Schema, r Resolver, original string) (Node, []KeyNeed, e
 				args[i] = x
 			}
 			m.Args = args
-			if m.Fn != "VLOOKUP" {
+			var out Node
+			var need KeyNeed
+			var err error
+			switch m.Fn {
+			case "VLOOKUP":
+				out, need, err = vlookup(m, s, r, original)
+			case "XLOOKUP":
+				out, need, err = xlookup(m, s, r, original)
+			case "INDEX":
+				var ok bool
+				if out, need, ok = indexMatch(m, s, r, original); !ok {
+					return m, nil
+				}
+			case "HLOOKUP":
+				return nil, &ErrConvert{"RECHERCHEH n'existe pas dans Slitable : les tableaux sont orientés lignes. Transposez les données, puis utilisez REFERENCE"}
+			default:
 				return m, nil
 			}
-			out, need, err := vlookup(m, s, r, original)
 			if err == nil {
 				keys = append(keys, need)
 			}
@@ -113,6 +127,120 @@ func vlookup(c Call, s *Schema, r Resolver, original string) (Node, KeyNeed, err
 	}
 	return Call{Fn: "REFERENCE", Args: []Node{Name{t.Name}, colArg, c.Args[0]}, Origin: original},
 		KeyNeed{t.Name, keyCol}, nil
+}
+
+// columnOf situe une colonne de tableau désignée par Tableau[Col] ou par une
+// plage A1 d'une seule colonne.
+func columnOf(n Node, s *Schema, r Resolver) (*Table, string, bool) {
+	switch c := n.(type) {
+	case Ref:
+		if c.Row || c.Table == "" {
+			return nil, "", false
+		}
+		t, ok := s.Table(c.Table)
+		if !ok {
+			return nil, "", false
+		}
+		i, ok := t.col(c.Col)
+		if !ok {
+			return nil, "", false
+		}
+		return t, t.Cols[i].Name, true
+	case Range:
+		if r == nil {
+			return nil, "", false
+		}
+		tn, first, ok := r.Resolve(c.Text)
+		if !ok {
+			return nil, "", false
+		}
+		t, ok := s.Table(tn)
+		if !ok || first < 0 || first >= len(t.Cols) {
+			return nil, "", false
+		}
+		return t, t.Cols[first].Name, true
+	}
+	return nil, "", false
+}
+
+// lookupCall construit REFERENCE(Tableau; Colonne; clé), la colonne clé étant
+// key : elle doit être la clé du tableau, ou le devenir.
+func lookupCall(t *Table, key, ret string, k Node, origin, fn string) (Node, KeyNeed, error) {
+	if t.Key != "" && !strings.EqualFold(t.Key, key) {
+		return nil, KeyNeed{}, &ErrConvert{fmt.Sprintf("%s : le tableau %s a déjà la clé %s, la recherche se fait sur %s", fn, t.Name, t.Key, key)}
+	}
+	var colArg Node = Name{ret}
+	if !ident.MatchString(ret) {
+		colArg = StrLit{ret}
+	}
+	return Call{Fn: "REFERENCE", Args: []Node{Name{t.Name}, colArg, k}, Origin: origin}, KeyNeed{t.Name, key}, nil
+}
+
+// xlookup : RECHERCHEX(clé; Tableau[Clé]; Tableau[Valeur]; [si_absent])
+// devient REFERENCE(Tableau; Valeur; clé), dans SI.NON.DISP si une valeur
+// par défaut est donnée.
+func xlookup(c Call, s *Schema, r Resolver, original string) (Node, KeyNeed, error) {
+	if len(c.Args) > 4 && c.Args[4] != nil && c.Args[4] != (NumLit{0}) {
+		return nil, KeyNeed{}, &ErrConvert{"RECHERCHEX : seule la correspondance exacte est prise en charge ; pour des tranches, utilisez REFERENCE.APPROCHEE"}
+	}
+	kt, key, ok1 := columnOf(c.Args[1], s, r)
+	rt, ret, ok2 := columnOf(c.Args[2], s, r)
+	if !ok1 || !ok2 {
+		return nil, KeyNeed{}, &ErrConvert{"RECHERCHEX : les 2e et 3e arguments doivent être des colonnes de tableau (Tableau[Colonne])"}
+	}
+	if kt != rt {
+		return nil, KeyNeed{}, &ErrConvert{"RECHERCHEX : les colonnes cherchée et renvoyée doivent appartenir au même tableau"}
+	}
+	out, need, err := lookupCall(kt, key, ret, c.Args[0], original, "RECHERCHEX")
+	if err != nil {
+		return nil, KeyNeed{}, err
+	}
+	if len(c.Args) > 3 && c.Args[3] != nil {
+		out = Call{Fn: "IFNA", Args: []Node{out, c.Args[3]}}
+	}
+	return out, need, nil
+}
+
+// indexMatch reconnaît INDEX(Tableau[Valeur]; EQUIV(clé; Tableau[Clé]; 0))
+// et le réécrit en REFERENCE. Les autres INDEX restent tels quels.
+func indexMatch(c Call, s *Schema, r Resolver, original string) (Node, KeyNeed, bool) {
+	if len(c.Args) != 2 {
+		return nil, KeyNeed{}, false
+	}
+	m, ok := c.Args[1].(Call)
+	if !ok || m.Fn != "MATCH" || len(m.Args) != 3 || (m.Args[2] != NumLit{0} && m.Args[2] != BoolLit{false}) {
+		return nil, KeyNeed{}, false
+	}
+	rt, ret, ok1 := columnOf(c.Args[0], s, r)
+	kt, key, ok2 := columnOf(m.Args[1], s, r)
+	if !ok1 || !ok2 || rt != kt {
+		return nil, KeyNeed{}, false
+	}
+	out, need, err := lookupCall(kt, key, ret, m.Args[0], original, "INDEX/EQUIV")
+	return out, need, err == nil
+}
+
+// suggestions : fonctions d'Excel absentes de Slitable, et ce qu'on propose.
+var suggestions = map[string]string{
+	"OFFSET":     "DECALER n'existe pas dans Slitable : essayez FILTRE ou PRENDRE",
+	"DECALER":    "DECALER n'existe pas dans Slitable : essayez FILTRE ou PRENDRE",
+	"INDIRECT":   "INDIRECT n'existe pas dans Slitable : essayez REFERENCE ou FILTRE",
+	"HLOOKUP":    "RECHERCHEH n'existe pas dans Slitable : transposez les données, puis utilisez REFERENCE",
+	"RECHERCHEH": "RECHERCHEH n'existe pas dans Slitable : transposez les données, puis utilisez REFERENCE",
+	"LOOKUP":     "RECHERCHE n'existe pas dans Slitable : utilisez REFERENCE ou REFERENCE.APPROCHEE",
+	"RECHERCHE":  "RECHERCHE n'existe pas dans Slitable : utilisez REFERENCE ou REFERENCE.APPROCHEE",
+	"LAMBDA":     "LAMBDA n'existe pas dans Slitable : utilisez un script Lua",
+	"LET":        "LET n'existe pas encore dans Slitable : décomposez la formule en colonnes calculées",
+	"CHOOSE":     "CHOISIR n'existe pas dans Slitable : utilisez SI.MULTIPLE",
+	"CHOISIR":    "CHOISIR n'existe pas dans Slitable : utilisez SI.MULTIPLE",
+	"VLOOKUP":    "RECHERCHEV est convertie en REFERENCE à la saisie (correspondance exacte seulement)",
+	"RECHERCHEV": "RECHERCHEV est convertie en REFERENCE à la saisie (correspondance exacte seulement)",
+}
+
+// Suggestion donne l'infobulle d'une fonction inconnue (#NOM?) quand Slitable
+// propose un équivalent, ou "".
+func Suggestion(fn string) string {
+	return suggestions[strings.ToUpper(fn)]
 }
 
 // ErrNotUnique signale une colonne qui ne peut pas servir de clé.

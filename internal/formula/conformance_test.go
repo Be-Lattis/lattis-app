@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/lalamefine/slitable/internal/grid"
 	"github.com/lalamefine/slitable/internal/store"
@@ -49,6 +50,7 @@ func fixture(t testing.TB) *fixtureDoc {
 		{Name: "Payé", SQL: "c_4", Type: grid.Boolean},
 		{Name: "Client", SQL: "c_5", Type: grid.Integer},
 		{Name: "Note", SQL: "c_6", Type: grid.Text},
+		{Name: "Date", SQL: "c_7", Type: grid.Date},
 		{Name: "Montant", Formula: mustParse(t, "=[@Prix]*[@Qté]", FR)},
 		{Name: "NomClient", Formula: mustParse(t, "=REFERENCE(Clients;Nom;[@Client])", FR)},
 	}}
@@ -57,18 +59,41 @@ func fixture(t testing.TB) *fixtureDoc {
 		{Name: "Nom", SQL: "c_2", Type: grid.Text},
 		{Name: "Ville", SQL: "c_3", Type: grid.Text},
 	}}
-	schema := &Schema{Tables: []*Table{ventes, clients}}
+	baremes := &Table{Name: "Baremes", SQL: "t_b", Cols: []Column{
+		{Name: "Seuil", SQL: "c_1", Type: grid.Integer},
+		{Name: "Taux", SQL: "c_2", Type: grid.Decimal},
+	}}
+	feries := &Table{Name: "Feries", SQL: "t_f", Cols: []Column{{Name: "Jour", SQL: "c_1", Type: grid.Date}}}
+	// Etapes : l'ordre d'affichage (_pos) n'est pas celui des identifiants.
+	etapes := &Table{Name: "Etapes", SQL: "t_e", Cols: []Column{
+		{Name: "Nom", SQL: "c_1", Type: grid.Text},
+		{Name: "Valeur", SQL: "c_2", Type: grid.Integer},
+	}}
+	schema := &Schema{
+		Tables: []*Table{ventes, clients, baremes, feries, etapes},
+		Now:    time.Date(2026, 10, 15, 14, 30, 0, 0, time.Local),
+		Seed:   42,
+	}
 	err = db.Write(ctx, func(tx *sql.Tx) error {
 		for _, q := range []string{
-			`CREATE TABLE t_v (id INTEGER PRIMARY KEY, _pos TEXT NOT NULL, c_1 TEXT, c_2 REAL, c_3 INTEGER, c_4 INTEGER, c_5 INTEGER, c_6 TEXT) STRICT`,
-			`INSERT INTO t_v VALUES (1, 'a', 'Clavier', 25.5, 2, 1, 1, '12'), (2, 'b', 'Souris', 10, 3, 0, 2, 'abc'),
-				(3, 'c', 'Écran', 199.99, 1, 1, 9, NULL), (4, 'd', 'Câble', NULL, 5, NULL, NULL, NULL)`,
+			`CREATE TABLE t_v (id INTEGER PRIMARY KEY, _pos TEXT NOT NULL, c_1 TEXT, c_2 REAL, c_3 INTEGER, c_4 INTEGER, c_5 INTEGER, c_6 TEXT, c_7 TEXT) STRICT`,
+			`INSERT INTO t_v VALUES (1, 'a', 'Clavier', 25.5, 2, 1, 1, '12', '2026-01-15'), (2, 'b', 'Souris', 10, 3, 0, 2, 'abc', '2026-02-28'),
+				(3, 'c', 'Écran', 199.99, 1, 1, 9, NULL, '2025-12-31'), (4, 'd', 'Câble', NULL, 5, NULL, NULL, NULL, NULL)`,
+			`CREATE TABLE t_b (id INTEGER PRIMARY KEY, _pos TEXT NOT NULL, c_1 INTEGER, c_2 REAL) STRICT`,
+			`INSERT INTO t_b VALUES (1, 'a', 0, 0), (2, 'b', 100, 0.05), (3, 'c', 500, 0.1)`,
+			`CREATE TABLE t_f (id INTEGER PRIMARY KEY, _pos TEXT NOT NULL, c_1 TEXT) STRICT`,
+			`INSERT INTO t_f VALUES (1, 'a', '2026-05-01'), (2, 'b', '2026-05-08'), (3, 'c', '2026-05-14')`,
+			`CREATE TABLE t_e (id INTEGER PRIMARY KEY, _pos TEXT NOT NULL, c_1 TEXT, c_2 INTEGER) STRICT`,
+			`INSERT INTO t_e VALUES (1, 'c', 'C', 30), (2, 'a', 'A', 10), (3, 'b', 'B', 20)`,
 			`CREATE TABLE t_c (id INTEGER PRIMARY KEY, _pos TEXT NOT NULL, c_1 INTEGER, c_2 TEXT, c_3 TEXT) STRICT`,
 			`INSERT INTO t_c VALUES (1, 'a', 1, 'Dupont', 'Paris'), (2, 'b', 2, 'Martin', 'Lyon'), (3, 'c', 3, 'Durand', 'Nice')`,
 		} {
 			if _, err := tx.Exec(q); err != nil {
 				return err
 			}
+		}
+		if err := EnsureKey(ctx, tx, schema, KeyNeed{"Baremes", "Seuil"}); err != nil {
+			return err
 		}
 		return EnsureKey(ctx, tx, schema, KeyNeed{"Clients", "Id"})
 	})
@@ -107,7 +132,8 @@ func (f *fixtureDoc) evalSQL(t testing.TB, n Node, row int) Value {
 	}
 	var v any
 	if err := f.db.Read().QueryRow(q, c.Args...).Scan(&v); err != nil {
-		t.Fatalf("%s : %v", q, err)
+		t.Errorf("%s : %v", q, err)
+		return Str("(erreur SQL)")
 	}
 	return FromResult(v)
 }

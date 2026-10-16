@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math"
 	"strings"
+	"time"
 
 	"github.com/lalamefine/slitable/internal/grid"
 )
@@ -38,6 +40,12 @@ func (t *Table) col(name string) (int, bool) {
 // Schema regroupe les tableaux d'un document.
 type Schema struct {
 	Tables []*Table
+
+	// Now fixe AUJOURDHUI et MAINTENANT (heure courante si zéro) et Seed les
+	// tirages d'ALEA : le document les renouvelle à l'ouverture et sur F9, pas
+	// à chaque lecture de la grille.
+	Now  time.Time
+	Seed uint64
 }
 
 func (s *Schema) Table(name string) (*Table, bool) {
@@ -108,6 +116,11 @@ func FromSQL(v any, t grid.Type) Value {
 	case float64:
 		return Num(v)
 	case string:
+		if t == grid.Date {
+			if f, ok := ParseDate(v); ok {
+				return DateSerial(f)
+			}
+		}
 		return Str(v)
 	case []byte:
 		if val, ok := decodeBlob(v); ok {
@@ -126,7 +139,21 @@ type Env struct {
 	Table  *Table           // tableau courant (colonne calculée), ou nil
 	Row    int              // ligne courante dans Table
 
+	// arr et arrRow : ligne parcourue par une expression sur colonnes
+	// (Ventes[Prix]*Ventes[Qté] dans SOMMEPROD) ; Ventes[Prix] y désigne la
+	// valeur de cette ligne.
+	arr    *Table
+	arrRow int
+
 	visiting map[[2]any]bool
+	rands    *int // rang du prochain appel à ALEA
+}
+
+// inArray donne le contexte d'une ligne d'un tableau parcouru.
+func (env *Env) inArray(t *Table, row int) *Env {
+	sub := *env
+	sub.arr, sub.arrRow = t, row
+	return &sub
 }
 
 // Eval évalue une formule.
@@ -155,6 +182,9 @@ func Eval(n Node, env *Env) Value {
 			return err
 		}
 		if !n.Row {
+			if t == env.arr {
+				return env.cell(t, env.arrRow, i)
+			}
 			return Err(ErrValue) // une colonne entière hors d'un agrégat
 		}
 		return env.cell(t, env.Row, i)
@@ -226,6 +256,7 @@ func (env *Env) cell(t *Table, row, i int) Value {
 	defer delete(env.visiting, key)
 	sub := *env
 	sub.Table, sub.Row = t, row
+	sub.arr = nil
 	return Eval(c.Formula, &sub)
 }
 
@@ -236,33 +267,186 @@ func (env *Env) call(n Call) Value {
 	}
 	switch fn.kind {
 	case aggregate:
-		acc := Agg{Fn: fn.EN}
-		for _, a := range n.Args {
-			if r, ok := a.(Ref); ok && !r.Row {
-				t, i, err := env.resolve(r)
-				if err.IsErr() {
-					acc.AddValue(err)
-					continue
-				}
-				for row := range env.Data[t] {
-					acc.AddRange(env.cell(t, row, i))
-				}
-				continue
-			}
-			acc.AddValue(Eval(a, env))
-		}
-		return acc.Result()
+		return env.aggregate(fn.EN, n.Args)
+	case scan:
+		return env.scan(scanOf(n, env.Schema, env.Table))
 	case special:
-		if fn.EN == "REFERENCE" {
-			return env.reference(n)
-		}
-		return Err(ErrName) // RECHERCHEV doit être convertie (voir Convert)
+		return env.special(fn.EN, n)
+	case spill:
+		return Err(ErrValue) // un tableau dynamique ne tient pas dans une cellule
 	}
 	args := make([]Value, len(n.Args))
 	for i, a := range n.Args {
 		args[i] = Eval(a, env)
 	}
 	return fn.impl(args)
+}
+
+// aggregate calcule un agrégat : une colonne entière ne compte que ses
+// nombres, une expression sur colonnes est évaluée ligne à ligne (même
+// règle), une autre valeur est convertie.
+func (env *Env) aggregate(fn string, args []Node) Value {
+	acc := Agg{Fn: fn}
+	lead := aggLead[fn]
+	var leadV []Value
+	for k, a := range args {
+		if k < lead {
+			leadV = append(leadV, Eval(a, env))
+			continue
+		}
+		if r, ok := a.(Ref); ok && !r.Row {
+			t, i, err := env.resolve(r)
+			if err.IsErr() {
+				acc.AddValue(err)
+				continue
+			}
+			for row := range env.Data[t] {
+				acc.AddRange(env.cell(t, row, i))
+			}
+			continue
+		}
+		if IsSpill(a) {
+			r, err := env.spill(a)
+			if err.IsErr() {
+				acc.AddValue(err)
+				continue
+			}
+			for _, vals := range r.values {
+				for _, v := range vals {
+					acc.AddRange(v)
+				}
+			}
+			continue
+		}
+		t, e := arrayTable([]Node{a}, env.Schema, env.Table)
+		switch {
+		case e != 0:
+			acc.AddValue(Err(e))
+		case t != nil:
+			for row := range env.Data[t] {
+				acc.AddRange(Eval(a, env.inArray(t, row)))
+			}
+		default:
+			acc.AddValue(Eval(a, env))
+		}
+	}
+	if fn == "TEXTJOIN" {
+		return acc.TextResult(leadV[0], leadV[1])
+	}
+	return acc.Result()
+}
+
+// scan exécute une fonction de parcours (voir scan.go).
+func (env *Env) scan(sc scanCall) Value {
+	if sc.err != 0 {
+		return Err(sc.err)
+	}
+	params := make([]Value, len(sc.params))
+	for i, p := range sc.params {
+		params[i] = Eval(p, env)
+	}
+	s := sc.def.make(params)
+	if len(sc.cols) == 0 {
+		return s.result()
+	}
+	t, e := arrayTable(sc.cols, env.Schema, env.Table)
+	if e != 0 {
+		return Err(e)
+	}
+	vals := make([]Value, len(sc.cols))
+	row := func(e *Env) {
+		for i, c := range sc.cols {
+			vals[i] = Eval(c, e)
+		}
+		s.add(vals)
+	}
+	if t == nil {
+		row(env) // valeurs simples : une seule « ligne »
+	} else {
+		for r := range env.Data[t] {
+			row(env.inArray(t, r))
+		}
+	}
+	return s.result()
+}
+
+// special évalue les fonctions propres à chaque backend.
+func (env *Env) special(fn string, n Call) Value {
+	switch fn {
+	case "REFERENCE":
+		return env.reference(n)
+	case "REFERENCE.APPROX":
+		return env.scan(scanOf(n, env.Schema, env.Table))
+	case "EXISTS":
+		t, k, err := existsTarget(env.Schema, n)
+		if err.IsErr() {
+			return err
+		}
+		key := Eval(n.Args[1], env)
+		if key.IsErr() {
+			return key
+		}
+		for row := range env.Data[t] {
+			if Equal(env.cell(t, row, k), key) {
+				return Boolean(true)
+			}
+		}
+		return Boolean(false)
+	case "SUBTOTAL":
+		agg, err := subtotalOf(n)
+		if err.IsErr() {
+			return err
+		}
+		return env.aggregate(agg, n.Args[1:])
+	case "PREVIOUS", "NEXT":
+		if env.Table == nil {
+			return Err(ErrRef)
+		}
+		r := env.Row - 1
+		if fn == "NEXT" {
+			r = env.Row + 1
+		}
+		if r < 0 || r >= len(env.Data[env.Table]) {
+			if len(n.Args) > 1 {
+				return Eval(n.Args[1], env)
+			}
+			return Value{}
+		}
+		sub := *env
+		sub.Row = r
+		return Eval(n.Args[0], &sub)
+	case "RUNNINGSUM":
+		if env.Table == nil {
+			return Err(ErrRef)
+		}
+		acc := Agg{Fn: "SUM"}
+		for r := 0; r <= env.Row && r < len(env.Data[env.Table]); r++ {
+			sub := *env
+			sub.Row = r
+			acc.AddRange(Eval(n.Args[0], &sub))
+		}
+		return acc.Result()
+	case "TODAY":
+		return DateSerial(math.Floor(env.Schema.nowSerial()))
+	case "NOW":
+		return DateSerial(env.Schema.nowSerial())
+	case "RAND", "RANDBETWEEN":
+		if env.rands == nil {
+			env.rands = new(int)
+		}
+		k := *env.rands
+		*env.rands++
+		var row int64
+		if env.Table != nil {
+			row = int64(env.Row + 1)
+		}
+		r := Num(randAt(env.Schema.seed(), row, k))
+		if fn == "RAND" {
+			return r
+		}
+		return fnRandBetween([]Value{Eval(n.Args[0], env), Eval(n.Args[1], env), r})
+	}
+	return Err(ErrName) // RECHERCHEV, RECHERCHEX, RECHERCHEH : à convertir (voir Convert)
 }
 
 // reference : REFERENCE(Tableau; Colonne; clé) cherche la ligne dont la
