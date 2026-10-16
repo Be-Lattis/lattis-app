@@ -122,9 +122,10 @@ func touches(r0, r1, c0, c1 int, b Table) bool {
 	return r0 <= b.Bottom()+1 && b.Row <= r1+1 && c0 <= b.Right()+1 && b.Col <= c1+1
 }
 
-// place vérifie qu'un tableau posé en (row, col) ne recouvre rien, ou le
-// fusionne avec un tableau voisin dont l'en-tête est sur la même ligne
-// (côte à côte). Renvoie le tableau obtenu.
+// place fusionne un tableau posé en (row, col) avec un tableau voisin dont
+// l'en-tête est sur la même ligne (côte à côte) ; les autres tableaux qu'il
+// touche s'écartent vers la droite (settle). Il ne recouvre jamais de
+// cellules remplies. Renvoie le tableau obtenu.
 func (t *tx) place(tb Table) (Table, error) {
 	tables, err := t.tables(tb.Sheet)
 	if err != nil {
@@ -141,8 +142,6 @@ func (t *tx) place(tb Table) (Table, error) {
 			left = &tables[i]
 		case o.Row == tb.Row && tb.Right()+1 == o.Col && right == nil:
 			right = &tables[i]
-		default:
-			return tb, fmt.Errorf("%w : la place touche le tableau « %s » ; laissez une ligne ou une colonne vide, ou alignez les en-têtes côte à côte pour fusionner", ErrTable, o.Name)
 		}
 	}
 	cells, err := t.cells(tb.Sheet)
@@ -164,7 +163,10 @@ func (t *tx) place(tb Table) (Table, error) {
 			return tb, err
 		}
 	}
-	return tb, nil
+	if err := t.settle(tb.Sheet, tb.ID); err != nil {
+		return tb, err
+	}
+	return t.table(tb.ID)
 }
 
 // MoveTable déplace un tableau, l'en-tête en (row, col). Posé côte à côte
