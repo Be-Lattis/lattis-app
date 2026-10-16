@@ -2,7 +2,9 @@ package canvas
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"strings"
 
 	"github.com/lalamefine/slitable/internal/grid"
@@ -66,6 +68,10 @@ type TableInfo struct {
 	Columns []ColumnInfo `json:"columns"`
 	// Rang de la colonne clé (identifiant des lignes), -1 sans clé.
 	Key int `json:"key"`
+	// Requête d'import qui charge le tableau (source externe ou autre
+	// tableau) : identifiant et nom, 0 et vide sinon.
+	QueryID   int64  `json:"queryId"`
+	QueryName string `json:"queryName"`
 }
 
 // CellInfo est une cellule libre.
@@ -163,6 +169,9 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 		}
 		for _, tb := range tables {
 			ti := TableInfo{ID: tb.ID, Name: tb.Name, SQL: tb.sql(), Row: tb.Row, Col: tb.Col, Rows: tb.Shown, Total: tb.Rows, Source: tb.view(), Key: -1}
+			if err := t.row(`SELECT id, name FROM _slitable_queries WHERE target = ? ORDER BY id LIMIT 1`, tb.ID).Scan(&ti.QueryID, &ti.QueryName); err != nil && !errors.Is(err, sql.ErrNoRows) {
+				return err
+			}
 			for i, c := range tb.Cols {
 				if c.ID == tb.Key {
 					ti.Key = i

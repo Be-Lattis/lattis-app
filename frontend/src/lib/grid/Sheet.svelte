@@ -166,6 +166,8 @@
 		hidden?: number;
 		/** Rang de la colonne clé (identifiant des lignes), absent sans clé. */
 		key?: number;
+		/** Requête d'import qui charge le tableau (source externe ou autre tableau). */
+		query?: { id: number; name: string };
 		columns: Column[];
 	}
 
@@ -256,6 +258,8 @@
 		/** Remplace partout ; renvoie le nombre de cellules modifiées. */
 		replace?(text: string, by: string): Promise<number>;
 		/** Remplace les règles de mise en forme conditionnelle d'une colonne. */
+		/** Actualise la requête d'import qui charge le tableau. */
+		refreshTable?(table: SheetTable): Promise<unknown>;
 		setRules?(table: SheetTable, i: number, rules: Rule[]): Promise<unknown>;
 		/** Valeurs distinctes d'une colonne (filtre). */
 		filterValues?(table: SheetTable, i: number): Promise<{ text: string; count: number }[]>;
@@ -362,6 +366,10 @@
 		stripLine: '#d4d7db',
 		stripText: '#5f6368',
 		head: '#e3efe7',
+		// Tableaux chargés par une requête (source externe) : bleu clair, même contraste que le vert.
+		linkHead: '#e3ecf7',
+		linkHeadText: '#14325a',
+		linkBorder: '#8fa9cc',
 		headText: '#14532d',
 		icon: '#6b8f78',
 		border: '#8fbc9f',
@@ -1017,7 +1025,7 @@
 		// En-têtes (agrandis à l'écran quand la cellule active les prolonge).
 		for (const e of visible) {
 			const g = grown(e);
-			ctx.fillStyle = C.head;
+			ctx.fillStyle = e.t.query ? C.linkHead : C.head;
 			ctx.fillRect(cx(e.t.col), ry(e.t.row), spanW(e.t.col, g.lastCol), rh(e.t.row));
 		}
 
@@ -1088,7 +1096,7 @@
 						ctx.rect(x, y, cw - iconW - 10, rh(r));
 						ctx.clip();
 						ctx.font = (hs?.i ? 'italic ' : '') + FONT_BOLD;
-						ctx.fillStyle = hs?.fg ?? C.headText;
+						ctx.fillStyle = hs?.fg ?? (e.t.query ? C.linkHeadText : C.headText);
 						ctx.textAlign = 'left';
 						const label = ellipsize(col.name, cw - iconW - 16);
 						ctx.fillText(label, x + 6, y + rh(r) / 2);
@@ -1275,7 +1283,7 @@
 			const g = grown(e);
 			const x = Math.round(cx(e.t.col)) - 0.5;
 			const y = Math.round(ry(e.t.row)) - 0.5;
-			ctx.strokeStyle = g.last !== e.last || g.lastCol !== e.lastCol ? C.active : C.border;
+			ctx.strokeStyle = g.last !== e.last || g.lastCol !== e.lastCol ? C.active : e.t.query ? C.linkBorder : C.border;
 			ctx.strokeRect(x, y, spanW(e.t.col, g.lastCol), rspan(e.t.row, g.last));
 			ctx.beginPath();
 			ctx.moveTo(x, y + rh(e.t.row));
@@ -1462,7 +1470,7 @@
 				ctx.beginPath();
 				ctx.rect(Math.max(x, MARGIN), 0, colAxis.size(c), TOP_H);
 				ctx.clip();
-				ctx.fillStyle = c >= k0 && c <= k1 ? C.activeStrip : C.head;
+				ctx.fillStyle = c >= k0 && c <= k1 ? C.activeStrip : e.t.query ? C.linkHead : C.head;
 				ctx.fillRect(x, 0, colAxis.size(c), TOP_H);
 				// Boutons ▾, type et entonnoir, cliquables comme dans l'en-tête.
 				const iw = headIcons(e, c - e.t.col, x, 0, colAxis.size(c), TOP_H);
@@ -1470,7 +1478,7 @@
 				ctx.rect(Math.max(x, MARGIN), 0, Math.max(0, colAxis.size(c) - iw - 10), TOP_H);
 				ctx.clip();
 				ctx.font = FONT_BOLD;
-				ctx.fillStyle = C.headText;
+				ctx.fillStyle = e.t.query ? C.linkHeadText : C.headText;
 				ctx.textAlign = 'left';
 				ctx.fillText(e.t.columns[c - e.t.col].name, x + 6, TOP_H / 2);
 				ctx.restore();
@@ -5550,6 +5558,11 @@
 					{/if}
 					{#if cols && source.promoteHeader && m.e.t.rows > 0}
 						<button onclick={() => menuAction(() => source.promoteHeader!(m.e.t))}>Utiliser la 1re ligne comme en-têtes</button>
+					{/if}
+					{#if m.e.t.query && source.refreshTable}
+						{@const t = m.e.t}
+						<hr />
+						<button onclick={() => menuAction(() => source.refreshTable!(t))}>Actualiser « {t.query?.name} »</button>
 					{/if}
 					{#if source.deleteTables}
 						<button

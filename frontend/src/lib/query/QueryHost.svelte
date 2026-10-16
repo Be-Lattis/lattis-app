@@ -111,6 +111,11 @@
 		}
 	}
 
+	/** Actualise la requête qui charge un tableau (menu du clic droit sur le tableau). */
+	export function refreshOne(id: number): Promise<string> {
+		return refresh(id);
+	}
+
 	/** Actualise une requête (id) ou toutes (null), mot de passe demandé au besoin. */
 	async function refresh(id: number | null): Promise<string> {
 		busy = id === null ? 'Actualisation de toutes les requêtes…' : 'Actualisation…';

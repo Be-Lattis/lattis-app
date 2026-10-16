@@ -435,6 +435,7 @@
 		setRowHeight: (row, height) => DocumentService.SetRowHeight(sheetId, row, height).then(reload),
 		setName: (row, col, name) => DocumentService.SetName(sheetId, row, col, name).then(reload),
 		sortTable: (t, i, desc) => DocumentService.SortTable(t.name, i, desc).then(reload),
+		refreshTable: (t) => queryHost?.refreshOne(t.query!.id) ?? Promise.resolve(),
 		setRules: (t, i, rules) => DocumentService.SetRules(t.name, i, rules).then(reload),
 		setLineRules: (rows, i0, i1, rules) => DocumentService.SetLineRules(sheetId, rows, i0, i1, rules).then(reload),
 		filterValues: async (t, i) => (await DocumentService.FilterValues(t.name, i)) ?? [],
@@ -524,6 +525,7 @@
 						rows: t.rows,
 						hidden: t.total - t.rows,
 						key: t.key >= 0 ? t.key : undefined,
+						query: t.queryId ? { id: t.queryId, name: t.queryName } : undefined,
 						columns: (t.columns ?? []).map((c) => ({
 							name: c.name,
 							type: (c.formula ? 'formula' : c.type) as ColumnType,

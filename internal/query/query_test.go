@@ -177,6 +177,10 @@ func TestRefreshLoadsAndReplaces(t *testing.T) {
 		t.Fatal(err)
 	}
 	ti := lay.Tables[0]
+	// Le tableau se sait chargé par la requête (fond bleu, « Actualiser »).
+	if ti.QueryID != id || ti.QueryName != "Ventes par ville" {
+		t.Fatalf("requête du tableau : %d %q", ti.QueryID, ti.QueryName)
+	}
 	if _, err := d.SetCell(ctx, l.Sheet, ti.Row, ti.Col+2, "Double"); err != nil {
 		t.Fatal(err)
 	}

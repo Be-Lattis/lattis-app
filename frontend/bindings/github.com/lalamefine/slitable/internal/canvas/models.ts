@@ -669,6 +669,13 @@ export interface TableInfo {
      * Rang de la colonne clé (identifiant des lignes), -1 sans clé.
      */
     "key": number;
+
+    /**
+     * Requête d'import qui charge le tableau (source externe ou autre
+     * tableau) : identifiant et nom, 0 et vide sinon.
+     */
+    "queryId": number;
+    "queryName": string;
 }
 
 /**
