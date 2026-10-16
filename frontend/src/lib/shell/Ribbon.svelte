@@ -9,6 +9,7 @@
 	import { dismiss } from '#lib/grid/dismiss.js';
 	import { clearPatch, type CellStyle } from '#lib/grid/style.js';
 	import { DEFAULT_PT, FONTS, SIZES } from '#lib/grid/textwrap.js';
+	import { ZOOM_LEVELS, zoomLabel } from '#lib/grid/zoom.js';
 	import Select from '#lib/ui/Select.svelte';
 	import { fit, groupWidth, type GroupShape, type Mode } from './fit';
 	import type { IconName } from '#lib/icons/icons.js';
@@ -108,9 +109,12 @@
 		/** Mise en forme de la cellule active (police, taille, boutons enfoncés) ; merged : c'est une fusion. */
 		cellStyle?: CellStyle;
 		merged?: boolean;
+		/** Zoom de la feuille active (1 : 100 %), et Affichage › Zoom. */
+		zoom?: number;
+		onzoom?: (z: number) => void;
 	}
 
-	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, onbutton, sheetProtected = false, workbookProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onnote, freeze, onfreeze, cellStyle, merged = false }: Props = $props();
+	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, onbutton, sheetProtected = false, workbookProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom }: Props = $props();
 	const fmt = (tab: FormatTab) => (onformat ? () => onformat(tab) : undefined);
 	const lines = (rows: boolean, hide: boolean) => (onlines ? () => onlines(rows, hide) : undefined);
 	const frz = (what: FreezeAction) => (onfreeze ? () => onfreeze(what) : undefined);
@@ -365,7 +369,14 @@
 							{ label: 'Figer la ligne supérieure', run: frz('row'), on: freeze?.rows === 1 && freeze.cols === 0 },
 							{ label: 'Figer la première colonne', run: frz('col'), on: freeze?.rows === 0 && freeze.cols === 1 }
 						]
-					}, { label: 'Zoom', icon: 'zoom', hint: 'Zoom : à venir (la grille est dessinée au pixel près ; un zoom demande de mettre à l’échelle le dessin, les clics et les éléments posés dessus)' }] },
+					}, {
+						label: 'Zoom',
+						icon: 'zoom',
+						run: onzoom ? openItems : undefined,
+						on: Math.abs(zoom - 1) > 0.001,
+						hint: `Zoom de la feuille : ${zoomLabel(zoom)} (Ctrl+molette, ou le curseur de la barre d’état)`,
+						items: ZOOM_LEVELS.map((z) => ({ label: zoomLabel(z), run: onzoom ? () => onzoom(z) : undefined, on: Math.abs(zoom - z) < 0.001 }))
+					}, { label: '100 %', icon: 'zoom', run: onzoom ? () => onzoom(1) : undefined, hint: 'Revenir au zoom 100 %' }] },
 			...(onbench ? [{ title: 'Mesures (prototype)', commands: [{ label: 'Mesurer la grille', icon: 'stopwatch' as IconName, run: () => onbench() }] }] : [])
 		]
 	});
@@ -373,7 +384,7 @@
 	// Sur une feuille protégée, seules les commandes qui ne la modifient pas
 	// restent actives (lecture, copie, filtres, affichage) ; un tableau croisé
 	// crée une feuille : refusé quand la structure du classeur est protégée.
-	const READ_ONLY = new Set(['Annuler', 'Rétablir', 'Copier', 'Rechercher', 'Filtrer', 'Erreurs seulement', 'Antécédents', 'Dépendants', 'Effacer les flèches', 'Calculer', 'Quadrillage', 'En-têtes A1', 'Figer les volets', 'Zoom', 'Mesurer la grille', 'Tableau croisé', 'Protéger la feuille', 'Protéger le classeur', 'Ôter la protection', 'Ôter la protection du classeur', 'Texte/CSV', 'Classeur Excel', 'PostgreSQL', 'À partir du tableau', 'Requêtes et connexions', 'Actualiser tout']);
+	const READ_ONLY = new Set(['Annuler', 'Rétablir', 'Copier', 'Rechercher', 'Filtrer', 'Erreurs seulement', 'Antécédents', 'Dépendants', 'Effacer les flèches', 'Calculer', 'Quadrillage', 'En-têtes A1', 'Figer les volets', 'Zoom', '100 %', 'Mesurer la grille', 'Tableau croisé', 'Protéger la feuille', 'Protéger le classeur', 'Ôter la protection', 'Ôter la protection du classeur', 'Texte/CSV', 'Classeur Excel', 'PostgreSQL', 'À partir du tableau', 'Requêtes et connexions', 'Actualiser tout']);
 	const ribbons: Record<string, Group[]> = $derived(
 		Object.fromEntries(
 			Object.entries(allRibbons).map(([k, gs]) => [

@@ -901,6 +901,14 @@ export function SetType(table: string, i: number, to: grid$0.Type): $Cancellable
 }
 
 /**
+ * SetZoom fixe le zoom de la feuille, en pour cent (10 à 400) ; hors du
+ * journal d'annulation.
+ */
+export function SetZoom(sheet: number, pct: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2433371080, sheet, pct);
+}
+
+/**
  * SortTable trie un tableau selon la colonne i (desc : décroissant).
  */
 export function SortTable(table: string, i: number, desc: boolean): $CancellablePromise<$models.DocState> {

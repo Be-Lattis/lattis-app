@@ -50,7 +50,8 @@ export class RowCache {
 		private fetcher: Fetcher,
 		public rows: number,
 		private format: (col: number, v: unknown) => string,
-		private onLoad: () => void,
+		/** Un bloc est arrivé (first, count : ses lignes), ou une erreur. */
+		private onLoad: (first?: number, count?: number) => void,
 		private maxBlocks = 300,
 		private maxInflight = 4
 	) {}
@@ -122,7 +123,7 @@ export class RowCache {
 		} finally {
 			if (gen === this.generation) this.inflight.delete(b);
 		}
-		this.onLoad();
+		this.onLoad(b * BLOCK, BLOCK);
 		this.pump();
 	}
 

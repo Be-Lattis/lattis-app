@@ -78,6 +78,9 @@ describe('renvoyer à la ligne', () => {
 		expect(autoHeight('court', 200, { wr: true }, measure, 22)).toBe(0);
 		expect(autoHeight('un deux trois quatre', 112, { wr: true }, measure, 22)).toBe(3 * 17 + 4);
 		expect(autoHeight('x', 100, { fs: 24 }, measure, 22)).toBeGreaterThan(22);
+		// Sauts de ligne (Alt+Entrée) : une ligne de texte chacun, même sans renvoi.
+		expect(autoHeight('a\nb\nc', 200, {}, measure, 22)).toBe(3 * 17 + 4);
+		expect(autoHeight('', 200, {}, measure, 22)).toBe(0);
 	});
 
 	it('police', () => {

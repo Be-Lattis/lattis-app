@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { dismiss, distance } from './dismiss';
+import { dismiss, dismissPanel, distance } from './dismiss';
 
 describe('distance au menu', () => {
 	const r = { left: 10, top: 10, right: 110, bottom: 60 };
@@ -12,7 +12,7 @@ describe('distance au menu', () => {
 });
 
 // Fenêtre factice (pas de DOM sous vitest) : un EventTarget suffit.
-function setup() {
+function setup(panel = false) {
 	vi.useFakeTimers();
 	const win = new EventTarget();
 	vi.stubGlobal('window', win);
@@ -22,7 +22,7 @@ function setup() {
 		contains: (t: unknown) => t === inside
 	} as unknown as HTMLElement;
 	const close = vi.fn();
-	const action = dismiss(node, close);
+	const action = (panel ? dismissPanel : dismiss)(node, close);
 	vi.runAllTimers();
 	const fire = (type: string, props: Record<string, unknown> = {}) => {
 		const e = new Event(type);
@@ -70,6 +70,28 @@ describe('fermeture des menus flottants', () => {
 		fire('keydown', { key: 'Escape' });
 		expect(close).not.toHaveBeenCalled();
 		fire('resize');
+		expect(close).not.toHaveBeenCalled();
+	});
+});
+
+describe('fermeture des panneaux ancrés (filtre, règles, note…)', () => {
+	afterEach(() => {
+		vi.useRealTimers();
+		vi.unstubAllGlobals();
+	});
+	it('un clic ailleurs ou Échap le ferme, pas un clic dedans', () => {
+		const { close, fire, inside } = setup(true);
+		fire('mousedown', { target: inside });
+		expect(close).not.toHaveBeenCalled();
+		fire('mousedown', { target: {} });
+		expect(close).toHaveBeenCalledTimes(1);
+		fire('keydown', { key: 'Escape' });
+		expect(close).toHaveBeenCalledTimes(2);
+	});
+	it('la souris qui s’éloigne ou la fenêtre qui perd le focus ne le ferment pas', () => {
+		const { close, fire } = setup(true);
+		fire('mousemove', { clientX: 900, clientY: 900, target: {} });
+		fire('blur');
 		expect(close).not.toHaveBeenCalled();
 	});
 });

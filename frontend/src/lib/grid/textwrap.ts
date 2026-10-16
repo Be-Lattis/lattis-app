@@ -62,12 +62,13 @@ export function lineHeight(px: number): number {
 
 /**
  * Hauteur de ligne automatique d'une cellule (comme Excel) : assez pour ses
- * lignes de texte quand elle renvoie à la ligne, ou pour une grande police ;
- * 0 si la hauteur par défaut suffit.
+ * lignes de texte quand elle renvoie à la ligne ou contient des sauts de
+ * ligne (Alt+Entrée), ou pour une grande police ; 0 si la hauteur par
+ * défaut suffit.
  */
 export function autoHeight(text: string, width: number, st: { wr?: boolean; fs?: number }, measure: (s: string) => number, def: number): number {
 	const lh = lineHeight(fontPx(st.fs));
-	const n = st.wr && text ? wrapLines(text, Math.max(8, width - 12), measure).length : 1;
+	const n = !text ? 1 : st.wr ? wrapLines(text, Math.max(8, width - 12), measure).length : text.split('\n').length;
 	const h = n * lh + 4;
 	return h > def ? h : 0;
 }
