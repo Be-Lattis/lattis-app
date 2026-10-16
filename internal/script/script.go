@@ -32,6 +32,9 @@ type Editor interface {
 	Insert(ctx context.Context, table string, vals map[string]string) (int64, error)
 	Update(ctx context.Context, table string, id int64, vals map[string]string) error
 	Delete(ctx context.Context, table string, id int64) error
+	// Exec exécute une requête d'écriture (INSERT, UPDATE, DELETE) avec les
+	// noms affichés, annulable, et renvoie le nombre de lignes touchées.
+	Exec(ctx context.Context, q string, args ...any) (int64, error)
 }
 
 // Env relie un script à son classeur.
@@ -137,13 +140,14 @@ func (r *runner) install(L *lua.LState) {
 	L.SetGlobal("print", L.NewFunction(r.print))
 	db := L.NewTable()
 	for name, fn := range map[string]lua.LGFunction{
-		"query":  r.query,
-		"rows":   r.rows,
-		"value":  r.value,
-		"tables": r.tables,
-		"insert": r.insert,
-		"update": r.update,
-		"delete": r.delete,
+		"query":   r.query,
+		"rows":    r.rows,
+		"value":   r.value,
+		"tables":  r.tables,
+		"insert":  r.insert,
+		"update":  r.update,
+		"delete":  r.delete,
+		"execute": r.execute,
 	} {
 		db.RawSetString(name, L.NewFunction(fn))
 	}
@@ -361,6 +365,19 @@ func (r *runner) delete(L *lua.LState) int {
 	}
 	r.written()
 	return 0
+}
+
+// db.execute(sql, ...) : requête d'écriture, renvoie le nombre de lignes touchées.
+func (r *runner) execute(L *lua.LState) int {
+	ed := r.editor(L, "execute")
+	n, err := ed.Exec(r.ctx, L.CheckString(1), args(L, 2)...)
+	if err != nil {
+		L.RaiseError("db.execute : %v", err)
+	}
+	r.writes += int(n)
+	r.cat = nil
+	L.Push(lua.LNumber(n))
+	return 1
 }
 
 // --- Conversions -------------------------------------------------------------

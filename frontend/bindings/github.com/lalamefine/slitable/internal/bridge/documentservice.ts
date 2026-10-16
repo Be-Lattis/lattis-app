@@ -80,6 +80,15 @@ export function Discard(dir: string): $CancellablePromise<void> {
 }
 
 /**
+ * Execute exécute une requête d'écriture (INSERT, UPDATE, DELETE) sur le
+ * classeur, avec les noms affichés des tableaux. Elle forme une étape
+ * d'annulation ; les changements de structure sont refusés.
+ */
+export function Execute(q: string): $CancellablePromise<$models.ExecResult> {
+    return $Call.ByID(2776577956, q);
+}
+
+/**
  * ExportCSV écrit un tableau en CSV (séparateur ;, virgule décimale, UTF-8
  * avec BOM : ce qu'Excel en français ouvre directement). Renvoie le fichier
  * écrit, vide si l'utilisateur a annulé.

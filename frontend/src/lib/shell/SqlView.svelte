@@ -1,11 +1,13 @@
 <script lang="ts">
 	// Onglet SQL : liste des objets, éditeur avec les noms affichés (traduits en
 	// noms internes t_1, c_0… avant l'exécution), historique des requêtes.
-	// Requêtes en lecture seule.
+	// Les requêtes d'écriture (INSERT, UPDATE, DELETE) partent telles quelles au
+	// backend, qui les rend annulables (Ctrl+Z).
 	import { formatValue, typeLabel } from '#lib/grid/format.js';
 	import SqlEditor from '#lib/sql/SqlEditor.svelte';
 	import { Catalog, displayHeaders, quote, translate, type SqlObject } from '#lib/sql/names.js';
 	import { load, record, save, search, when, type HistoryEntry } from '#lib/sql/history.js';
+	import { isWrite } from '#lib/sql/write.js';
 
 	interface Result {
 		columns: string[] | null;
@@ -16,10 +18,12 @@
 	interface Props {
 		objects: SqlObject[];
 		run: (sql: string) => Promise<Result>;
+		/** Requête d'écriture ; absent : lecture seule (classeur de démonstration). */
+		exec?: (sql: string) => Promise<{ changed: number; micros: number }>;
 		ongoto: (table: string) => void;
 	}
 
-	let { objects, run, ongoto }: Props = $props();
+	let { objects, run, exec, ongoto }: Props = $props();
 
 	const catalog = $derived(new Catalog(objects));
 	let panel = $state<'objects' | 'history'>('objects');
@@ -52,6 +56,15 @@
 		error = '';
 		const at = Date.now();
 		try {
+			if (exec && isWrite(text)) {
+				sent = text;
+				const r = await exec(text);
+				result = { columns: ['Lignes touchées'], rows: [[r.changed]], truncated: false, micros: r.micros };
+				headers = ['Lignes touchées (Ctrl+Z pour annuler)'];
+				remember({ sql: text, at, rows: r.changed, micros: r.micros });
+				running = false;
+				return;
+			}
 			const t = translate(text, catalog);
 			sent = t.sql;
 			const r = await run(t.sql);
