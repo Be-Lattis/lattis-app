@@ -25,6 +25,8 @@ type Event struct {
 	Invalid bool      `json:"invalid"` // saisie hors type dans une colonne au type fixé
 	// Headless : tableau collé sans ligne d'en-tête reconnue (« Colonne n »).
 	Headless bool `json:"headless"`
+	// Keyed : colonne devenue clé pour une formule (« Tableau.Colonne »).
+	Keyed string `json:"keyed"`
 }
 
 // SetCell traite une saisie validée dans la cellule (row, col) d'une feuille,
@@ -32,7 +34,11 @@ type Event struct {
 // grisée (extension), ou dans une cellule libre (avec détection d'îlot).
 func (m *Model) SetCell(ctx context.Context, sheet int64, row, col int, raw string) (Event, error) {
 	var ev Event
-	err := m.Do(ctx, "Saisie", func(t *tx) error { return t.input(sheet, row, col, raw, &ev) })
+	err := m.Do(ctx, "Saisie", func(t *tx) error {
+		err := t.input(sheet, row, col, raw, &ev)
+		ev.Keyed = t.keyed
+		return err
+	})
 	return ev, err
 }
 

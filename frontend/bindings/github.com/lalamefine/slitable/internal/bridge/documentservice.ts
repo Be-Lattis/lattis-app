@@ -445,6 +445,14 @@ export function StopScript(): $CancellablePromise<void> {
 }
 
 /**
+ * TypeMix donne le type majoritaire d'une colonne passée en texte par
+ * élargissement, et le nombre de valeurs qui n'en sont pas.
+ */
+export function TypeMix(table: string, i: number): $CancellablePromise<canvas$0.Mix> {
+    return $Call.ByID(913517829, table, i);
+}
+
+/**
  * Undo et Redo annulent et rétablissent.
  */
 export function Undo(): $CancellablePromise<$models.DocState> {

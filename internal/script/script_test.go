@@ -120,7 +120,7 @@ func TestTables(t *testing.T) {
 			for _, c in ipairs(t.columns) do cols[#cols+1] = c.name .. ":" .. c.type end
 			print(t.sheet, t.name, table.concat(cols, ","))
 		end`)
-	if got := strings.Join(out, "\n"); got != "Feuille 1\tFeuille1\tClient:text,Montant:decimal,Payé:boolean" {
+	if got := strings.Join(out, "\n"); got != "Feuille1\tFeuille1\tClient:text,Montant:decimal,Payé:boolean" {
 		t.Fatal(got)
 	}
 }

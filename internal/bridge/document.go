@@ -404,6 +404,16 @@ func (s *DocumentService) ConvertPreview(ctx context.Context, table string, i in
 	return d.ConvertPreview(ctx, table, i, to)
 }
 
+// TypeMix donne le type majoritaire d'une colonne passée en texte par
+// élargissement, et le nombre de valeurs qui n'en sont pas.
+func (s *DocumentService) TypeMix(ctx context.Context, table string, i int) (canvas.Mix, error) {
+	d, err := s.current()
+	if err != nil {
+		return canvas.Mix{}, err
+	}
+	return d.TypeMix(ctx, table, i)
+}
+
 // SetType fixe le type d'une colonne (valeurs non convertibles marquées en erreur).
 func (s *DocumentService) SetType(ctx context.Context, table string, i int, to grid.Type) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.SetType(ctx, table, i, to) })

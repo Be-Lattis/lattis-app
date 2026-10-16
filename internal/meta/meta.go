@@ -59,7 +59,7 @@ CREATE TABLE _slitable_invalid (
 	raw TEXT NOT NULL,
 	PRIMARY KEY (tbl, rid, col)
 ) STRICT;
-INSERT INTO _slitable_sheets (id, name, pos) VALUES (1, 'Feuille 1', 0);
+INSERT INTO _slitable_sheets (id, name, pos) VALUES (1, 'Feuille1', 0);
 ` + command.Schema,
 	// 1 → 2 : largeur des colonnes de chaque feuille (comme Excel, une largeur
 	// par colonne de la feuille, quel que soit le tableau qui s'y trouve).

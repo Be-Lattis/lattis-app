@@ -12,7 +12,7 @@
 	import type { Layout } from '#bindings/internal/canvas/models.js';
 	import type { Type } from '#bindings/internal/grid/models.js';
 	import type { Orphan } from '#bindings/internal/archive/models.js';
-	import Sheet, { type SheetData, type SheetSource, type SheetStatus, type ColumnFilter, type PivotConfig, type ChartConfig } from '#lib/grid/Sheet.svelte';
+	import Sheet, { type SheetData, type SheetSource, type SheetStatus, type ColumnFilter, type PivotConfig, type ChartConfig, type TypeMix } from '#lib/grid/Sheet.svelte';
 	import Ribbon, { type FileAction, type View } from '#lib/shell/Ribbon.svelte';
 	import SheetTabs from '#lib/shell/SheetTabs.svelte';
 	import SqlView from '#lib/shell/SqlView.svelte';
@@ -204,6 +204,7 @@
 			// Relire tout de suite (l'événement doc:changed sert aux changements venus
 			// d'ailleurs, et n'existe pas en mode serveur).
 			await reload();
+			if (ev.keyed) return `Clé posée sur « ${ev.keyed.slice(ev.keyed.indexOf('.') + 1)} » pour REFERENCE`;
 			if (ev.created) return `Tableau « ${ev.created} » créé`;
 			if (ev.widened) return `Colonne ${ev.widened} passée de ${typeLabel(ev.from as ColumnType)} à ${typeLabel(ev.to as ColumnType)} (Ctrl+Z pour annuler)`;
 			if (ev.invalid) return 'Valeur hors type : cellule marquée en erreur';
@@ -221,6 +222,7 @@
 		insertColumn: (t, i) => DocumentService.InsertColumn(t.name, i, `Colonne ${t.columns.length + 1}`).then(reload),
 		deleteColumn: (t, i) => DocumentService.DeleteColumn(t.name, i).then(reload),
 		convertPreview: (t, i, to) => DocumentService.ConvertPreview(t.name, i, to as Type),
+		typeMix: (t, i) => DocumentService.TypeMix(t.name, i) as Promise<TypeMix>,
 		setType: (t, i, to) => DocumentService.SetType(t.name, i, to as Type).then(reload),
 		setColumnWidth: (col, width) => DocumentService.SetColumnWidth(sheetId, col, width).then(reload),
 		setName: (row, col, name) => DocumentService.SetName(sheetId, row, col, name).then(reload),

@@ -175,6 +175,56 @@ func (m *Model) ConvertPreview(ctx context.Context, table string, i int, to grid
 	return n, err
 }
 
+// Mix décrit une colonne passée en texte par élargissement alors que la
+// plupart de ses valeurs sont d'un autre type (Type vide : pas de tel type).
+type Mix struct {
+	Type  grid.Type `json:"type"`  // type majoritaire
+	Off   int       `json:"off"`   // valeurs qui n'en sont pas
+	Total int       `json:"total"` // valeurs non vides
+}
+
+// TypeMix cherche, pour une colonne en texte au type inféré, le type que
+// plus de la moitié de ses valeurs accepteraient (le plus étroit à égalité),
+// pour signaler les valeurs qui ont provoqué l'élargissement.
+func (m *Model) TypeMix(ctx context.Context, table string, i int) (Mix, error) {
+	var mix Mix
+	err := m.read(ctx, func(t *tx) error {
+		tb, err := t.tableByName(table)
+		if err != nil {
+			return err
+		}
+		if i < 0 || i >= len(tb.Cols) {
+			return fmt.Errorf("colonne %d hors du tableau", i)
+		}
+		c := tb.Cols[i]
+		if c.Type != grid.Text || c.Fixed || c.Formula != "" {
+			return nil
+		}
+		col := colSQL(c.ID)
+		if err := t.row(`SELECT count(` + col + `) FROM ` + tb.sql()).Scan(&mix.Total); err != nil || mix.Total == 0 {
+			return err
+		}
+		best := mix.Total
+		for _, to := range []grid.Type{grid.Boolean, grid.Integer, grid.Decimal, grid.Date} {
+			var n int
+			if err := t.row(`SELECT count(*) FROM ` + tb.sql() + ` WHERE ` + col + ` IS NOT NULL AND ` + convertExpr(col, c.Type, to) + ` IS NULL`).Scan(&n); err != nil {
+				return err
+			}
+			if n < best {
+				best, mix.Type = n, to
+			}
+		}
+		if best == 0 || 2*best >= mix.Total {
+			mix.Type = ""
+		}
+		if mix.Type != "" {
+			mix.Off = best
+		}
+		return nil
+	})
+	return mix, err
+}
+
 // SetType fixe le type d'une colonne choisi par l'utilisateur. Les valeurs
 // qui ne se convertissent pas sont gardées telles quelles comme saisies en
 // erreur (cellule vide, valeur brute dans _slitable_invalid) ; l'annulation
