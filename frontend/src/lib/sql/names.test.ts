@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Catalog, analyze, displayHeaders, quote, statementAt, statements, tokenize, translate, type SqlObject } from './names';
+import { Catalog, analyze, displayHeaders, errorSpan, quote, statementAt, statements, tokenize, translate, type SqlObject } from './names';
 
 const objects: SqlObject[] = [
 	{
@@ -132,5 +132,16 @@ describe('statementAt', () => {
 		const s = "SELECT 1\nFROM t\n\n  \nSELECT 'a\n\nb'";
 		expect(statements(s).map((x) => x.text)).toEqual(['SELECT 1\nFROM t', "SELECT 'a\n\nb'"]);
 		expect(statementAt(s, s.length - 2).from).toBe(s.indexOf("SELECT 'a"));
+	});
+});
+
+describe('errorSpan', () => {
+	it('repère le mot cité par SQLite', () => {
+		expect(errorSpan('SELEC * FROM Ventes', 'near "SELEC": syntax error')).toEqual({ from: 0, to: 5 });
+		expect(errorSpan('SELECT Prixx FROM Ventes', 'no such column: Prixx')).toEqual({ from: 7, to: 12 });
+	});
+	it('rend null quand la position est inconnue', () => {
+		expect(errorSpan('SELECT 1', 'database is locked')).toBeNull();
+		expect(errorSpan('SELECT 1', 'near "t_1": syntax error')).toBeNull();
 	});
 });

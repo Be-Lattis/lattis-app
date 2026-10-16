@@ -258,7 +258,7 @@
 	const ROW_H = 22;
 	const DEF_W = 88;
 	const TOP_H = 22;
-	const MARGIN = 52;
+	const MIN_MARGIN = 52;
 	const FONT = '13px "Segoe UI", system-ui, -apple-system, sans-serif';
 	const FONT_BOLD = '600 13px "Segoe UI", system-ui, -apple-system, sans-serif';
 	const FONT_SMALL = '11px "Segoe UI", system-ui, -apple-system, sans-serif';
@@ -280,7 +280,8 @@
 		active: '#217346',
 		activeStrip: '#d3e7dc',
 		error: '#c0392b',
-		spill: '#5b9bd5'
+		spill: '#5b9bd5',
+		found: 'rgba(250, 204, 21, 0.30)'
 	};
 
 	// --- Tableaux posés sur la feuille ------------------------------------
@@ -367,11 +368,31 @@
 	// Largeurs : choisies par l'utilisateur, sinon selon le type de la colonne
 	// du premier tableau qui l'occupe, sinon la largeur par défaut.
 	let userWidths = new Map<number, number>();
+	const MAX_FIT = 400;
+	let measurer: CanvasRenderingContext2D | null = null;
+	/** Largeur du texte dans la police de la grille (normale ou grasse). */
+	function textWidth(s: string, bold = false): number {
+		if (!s) return 0;
+		measurer ??= document.createElement('canvas').getContext('2d');
+		if (!measurer) return 0;
+		measurer.font = bold ? FONT_BOLD : FONT;
+		return measurer.measureText(s).width;
+	}
 	function rebuildAxis(override?: { col: number; width: number }) {
 		const widths = new Map<number, number>();
 		for (const e of entries) {
 			e.t.columns.forEach((c, i) => {
 				if (!widths.has(e.t.col + i)) widths.set(e.t.col + i, defaultWidth(c.type));
+			});
+		}
+		// Tableaux croisés : largeur d'après le texte affiché (« Somme de Commande »).
+		for (const p of pivots) {
+			if (p.error) continue;
+			p.cells[0]?.forEach((_, j) => {
+				const c = p.col + j;
+				if (widths.has(c)) return;
+				const w = Math.max(...p.cells.map((r, i) => textWidth(r[j] ?? '', i === 0 || i === p.cells.length - 1)));
+				widths.set(c, clamp(Math.ceil(w) + 14, DEF_W, MAX_FIT));
 			});
 		}
 		for (const [c, w] of userWidths) widths.set(c, w);
@@ -407,6 +428,9 @@
 	const vs = new VScroll(100 * ROW_H, 0);
 	let spacer: HTMLDivElement;
 	let extentCols = 26;
+	// Largeur de la gouttière : élargie d'après le plus grand numéro de ligne
+	// visible, comme Excel (« 1000000 » ne doit pas être coupé).
+	let MARGIN = $state(MIN_MARGIN);
 
 	function updateExtent() {
 		if (!scroller) return;
@@ -571,6 +595,12 @@
 
 		const left = scroller.scrollLeft;
 		const { first: r0, last: r1 } = visibleRows();
+		ctx.font = FONT_SMALL;
+		const margin = Math.max(MIN_MARGIN, Math.ceil(ctx.measureText(String(r1)).width) + 14);
+		if (margin !== MARGIN) {
+			MARGIN = margin;
+			updateExtent();
+		}
 		const c0 = colAxis.indexAt(left);
 		const c1 = colAxis.indexAt(left + w - MARGIN);
 		const cx = (c: number) => MARGIN + colAxis.offset(c) - left;
@@ -604,6 +634,13 @@
 		if (s0 !== s1 || k0 !== k1) {
 			ctx.fillStyle = C.select;
 			ctx.fillRect(cx(k0), ry(s0), spanW(k0, k1), (s1 - s0 + 1) * ROW_H);
+		}
+
+		// Recherche : toutes les occurrences visibles, en léger (l'active reste encadrée).
+		if (finder && matches.length && matchText === finder.text) {
+			ctx.fillStyle = C.found;
+			for (const m of matches)
+				if (m.row >= r0 && m.row <= r1 && m.col >= c0 && m.col <= c1) ctx.fillRect(cx(m.col), ry(m.row), colAxis.size(m.col), ROW_H);
 		}
 
 		// Lignes masquées par un filtre : une note sous le tableau.
@@ -1243,6 +1280,21 @@
 		error: string;
 	} | null>(null);
 
+	/** Position d'un panneau ancré sous l'en-tête de la colonne i du tableau e,
+	 * gardé dans la grille (width : largeur du panneau). */
+	function anchorUnder(e: Entry, i: number, width: number) {
+		const x = MARGIN + colAxis.offset(e.t.col + i) - scroller.scrollLeft;
+		return {
+			x: Math.max(4, Math.min(x, scroller.clientWidth - width - 4)),
+			y: clamp(TOP_H + (e.t.row + 1) * ROW_H - vs.top, 4, Math.max(4, scroller.clientHeight - 200))
+		};
+	}
+
+	/** Met le focus sur le premier champ d'un panneau à son ouverture. */
+	function focusFirst(node: HTMLElement) {
+		requestAnimationFrame(() => (node.querySelector<HTMLElement>('.add input') ?? node.querySelector<HTMLElement>('.add button'))?.focus());
+	}
+
 	async function openFilter(e: Entry, i: number) {
 		menu = null;
 		if (!source.filterValues) return;
@@ -1253,8 +1305,7 @@
 			filterDlg = {
 				e,
 				i,
-				x: Math.max(4, MARGIN + colAxis.offset(e.t.col + i) - scroller.scrollLeft),
-				y: Math.max(4, TOP_H + (e.t.row + 1) * ROW_H - vs.top),
+				...anchorUnder(e, i, 310),
 				values: vals.map((v) => ({ ...v, on: !keep || keep.has(v.text) })),
 				search: '',
 				errors: !!f?.errors,
@@ -1316,12 +1367,12 @@
 	// --- Mise en forme conditionnelle -----------------------------------------
 
 	let rulesRev = $state(0); // relit les règles après enregistrement
-	let rulesDlg = $state<{ e: Entry; i: number; op: RuleOp; value: string; to: string; style: number; error: string } | null>(null);
+	let rulesDlg = $state<{ e: Entry; i: number; x: number; y: number; op: RuleOp; value: string; to: string; style: number; error: string } | null>(null);
 
 	/** Ouvre le dialogue des règles de la colonne i du tableau e. */
 	function openRules(e: Entry, i: number) {
 		menu = null;
-		rulesDlg = { e, i, op: '>', value: '', to: '', style: 0, error: '' };
+		rulesDlg = { e, i, ...anchorUnder(e, i, 470), op: '>', value: '', to: '', style: 0, error: '' };
 	}
 
 	/** Règles de la colonne de la cellule active (ruban Accueil). */
@@ -1935,6 +1986,48 @@
 		return null;
 	}
 
+	/** Largeur ajustée au contenu affiché de la colonne c (double-clic sur le
+	 * trait de droite de son en-tête, comme Excel) : en-têtes des tableaux,
+	 * lignes visibles, cellules libres et tableaux croisés. */
+	function fitWidth(c: number): number {
+		let w = 0;
+		const { first, last } = visibleRows();
+		for (const e of entries) {
+			if (c < e.t.col || c > e.lastCol) continue;
+			const i = c - e.t.col;
+			const col = e.t.columns[i];
+			const icon = (col.filter ? '⧩ ' : '') + (typeIconName(col.type) ? ' ▾' : typeIcon(col.type) + ' ▾') + (e.t.key === i ? '🔑 ' : '');
+			measurer ??= document.createElement('canvas').getContext('2d');
+			if (measurer) measurer.font = FONT_SMALL;
+			const iconW = (measurer?.measureText(icon).width ?? 0) + (typeIconName(col.type) ? 13 : 0);
+			w = Math.max(w, textWidth(col.name, true) + iconW + 4);
+			const d = visibleData(e, first, last);
+			if (d) for (let k = d.first; k <= d.last; k++) w = Math.max(w, textWidth(e.cache.row(k)?.text[i] ?? ''));
+		}
+		for (const [k, raw] of cells) {
+			const [r, cc] = k.split(',').map(Number);
+			if (cc === c) w = Math.max(w, textWidth(shown.get(k)?.text ?? raw, !!freeStyles.get(key(r, cc))?.b));
+		}
+		for (const p of pivots) {
+			const j = c - p.col;
+			if (p.error || j < 0 || j >= (p.cells[0]?.length ?? 0)) continue;
+			p.cells.forEach((r, i) => (w = Math.max(w, textWidth(r[j] ?? '', i === 0 || i === p.cells.length - 1))));
+		}
+		return w ? clamp(Math.ceil(w) + 14, 24, MAX_FIT) : DEF_W;
+	}
+
+	function autoFitColumn(c: number) {
+		const setWidth = source.setColumnWidth;
+		if (!setWidth) return;
+		const width = fitWidth(c);
+		if (width === colAxis.size(c)) return;
+		userWidths.set(c, width);
+		rebuildAxis();
+		updateExtent();
+		schedule();
+		writing = writing.then(() => setWidth(c, width).then(() => undefined, (err) => say(String(err?.message ?? err))));
+	}
+
 	/** La souris est-elle sur la bordure de la sélection (poignée de déplacement) ? */
 	function onSelectionEdge(e: MouseEvent): boolean {
 		if (!source.moveTable) return false;
@@ -2220,6 +2313,11 @@
 	}
 
 	function onDblClick(e: MouseEvent) {
+		const b = boundaryAt(e);
+		if (b !== null && source.setColumnWidth) {
+			autoFitColumn(b);
+			return;
+		}
 		const cell = cellAt(e);
 		if (cell && pivotAt(cell.row, cell.col)) {
 			pivotActive();
@@ -2616,6 +2714,11 @@
 	let findInput = $state<HTMLInputElement>();
 	let matches: { row: number; col: number }[] = [];
 	let matchText = '';
+	// Barre ouverte ou fermée : redessiner le surlignage des occurrences.
+	$effect(() => {
+		void finder;
+		schedule();
+	});
 
 	/** Ouvre la barre de recherche (replace : avec le champ Remplacer par). */
 	export function openFinder(replace: boolean) {
@@ -3158,27 +3261,6 @@
 		/>
 	</div>
 	{#if bench}<div class="bench">{bench}</div>{/if}
-	{#if finder}
-		<div class="finder">
-			<span>Rechercher</span>
-			<input bind:this={findInput} bind:value={finder.text} onkeydown={onFinderKey} spellcheck="false" />
-			<button onclick={() => findNext(true)} title="Précédent (Maj+Entrée)">◀</button>
-			<button onclick={() => findNext()} title="Suivant (Entrée)">▶</button>
-			{#if finder.replace}
-				<span>Remplacer par</span>
-				<input bind:value={finder.by} onkeydown={onFinderKey} spellcheck="false" />
-				<button onclick={replaceAll}>Remplacer tout</button>
-			{:else if source.replace}
-				<button class="link" onclick={() => finder && (finder.replace = true)}>Remplacer…</button>
-			{/if}
-			<span class="muted">{finder.info}</span>
-			<span class="sp"></span>
-			<button onclick={() => {
-				finder = null;
-				wrap.focus();
-			}} title="Fermer (Échap)">✕</button>
-		</div>
-	{/if}
 	{#if completion?.where === 'fx' || sig?.where === 'fx'}
 		<div class="suggest fx-suggest">{@render suggestions('fx')}</div>
 	{/if}
@@ -3187,6 +3269,27 @@
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 	<div class="wrap" bind:this={wrap} tabindex="0" role="grid" onkeydown={onKeyDown}>
 		<canvas bind:this={canvas}></canvas>
+		{#if finder}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div class="finder" onkeydown={(e) => e.stopPropagation()}>
+				<span>Rechercher</span>
+				<input bind:this={findInput} bind:value={finder.text} onkeydown={onFinderKey} spellcheck="false" />
+				<button onclick={() => findNext(true)} title="Précédent (Maj+Entrée)">◀</button>
+				<button onclick={() => findNext()} title="Suivant (Entrée)">▶</button>
+				{#if finder.replace}
+					<span>Remplacer par</span>
+					<input bind:value={finder.by} onkeydown={onFinderKey} spellcheck="false" />
+					<button onclick={replaceAll}>Remplacer tout</button>
+				{:else if source.replace}
+					<button class="link" onclick={() => finder && (finder.replace = true)}>Remplacer…</button>
+				{/if}
+				<span class="muted">{finder.info}</span>
+				<button onclick={() => {
+					finder = null;
+					wrap.focus();
+				}} title="Fermer (Échap)">✕</button>
+			</div>
+		{/if}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="scroller"
@@ -3553,6 +3656,7 @@
 				class="rules filter anchored"
 				style:left="{d.x}px"
 				style:top="{d.y}px"
+				use:focusFirst
 				onkeydown={(ev) => {
 					ev.stopPropagation();
 					if (ev.key === 'Escape') closeFilter();
@@ -3560,6 +3664,24 @@
 				}}
 			>
 				<div class="menu-title">Filtrer « {d.e.t.columns[d.i]?.name} »</div>
+				{#if source.sortTable}
+					<!-- Tri en haut du panneau, comme Excel. -->
+					<button
+						class="sort"
+						onclick={() => {
+							filterDlg = null;
+							menuAction(() => source.sortTable!(d.e.t, d.i, false));
+						}}>Trier de A à Z</button
+					>
+					<button
+						class="sort"
+						onclick={() => {
+							filterDlg = null;
+							menuAction(() => source.sortTable!(d.e.t, d.i, true));
+						}}>Trier de Z à A</button
+					>
+					<hr />
+				{/if}
 				<div class="add"><input class="search" bind:value={d.search} placeholder="Rechercher" /></div>
 				<div class="values">
 					<label class="all">
@@ -3602,7 +3724,10 @@
 			{@const args = RULE_OPS.find((o) => o.op === d.op)?.args ?? 0}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
-				class="rules"
+				class="rules anchored"
+				style:left="{d.x}px"
+				style:top="{d.y}px"
+				use:focusFirst
 				onkeydown={(ev) => {
 					ev.stopPropagation();
 					if (ev.key === 'Escape') closeRules();
@@ -3766,13 +3891,20 @@
 		outline: none;
 		padding: 4px 2px;
 	}
+	/* Barre de recherche en surimpression (la grille ne bouge pas). */
 	.finder {
+		position: absolute;
+		z-index: 7;
+		top: 26px;
+		right: 18px;
 		display: flex;
 		align-items: center;
 		gap: 6px;
-		padding: 4px 10px;
+		padding: 5px 8px 5px 10px;
 		background: #f7f8f9;
-		border-bottom: 1px solid #d4d7db;
+		border: 1px solid #d4d7db;
+		border-radius: 4px;
+		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
 	}
 	.finder input {
 		font: inherit;
@@ -3796,9 +3928,6 @@
 	}
 	.finder .muted {
 		color: #6b7280;
-	}
-	.finder .sp {
-		flex: 1;
 	}
 	.bench {
 		padding: 4px 10px;
@@ -3905,8 +4034,19 @@
 	.filter {
 		min-width: 300px;
 	}
-	.filter.anchored {
+	.rules.anchored {
 		transform: none;
+	}
+	.filter .sort {
+		display: block;
+		width: 100%;
+		text-align: left;
+		padding: 5px 14px;
+		border: none;
+		border-radius: 0;
+	}
+	.filter .sort:hover {
+		background: #e3efe7;
 	}
 	.charts {
 		position: absolute;

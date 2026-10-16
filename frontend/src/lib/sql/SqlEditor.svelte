@@ -6,10 +6,11 @@
 	import { EditorView, Decoration, ViewPlugin, keymap, lineNumbers, highlightActiveLine, drawSelection, placeholder, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 	import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 	import { syntaxHighlighting, HighlightStyle, bracketMatching, indentOnInput } from '@codemirror/language';
-	import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete';
+	import { autocompletion, closeCompletion, closeBrackets, closeBracketsKeymap, completionKeymap, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete';
 	import { sql, SQLite } from '@codemirror/lang-sql';
+	import { setDiagnostics } from '@codemirror/lint';
 	import { tags } from '@lezer/highlight';
-	import { analyze, statementAt, statements, type Catalog } from './names';
+	import { analyze, errorSpan, statementAt, statements, type Catalog } from './names';
 	import { complete } from './complete';
 
 	interface Props {
@@ -99,10 +100,25 @@
 	/** Exécute la sélection, sinon l'instruction sous le curseur. */
 	export function runCurrent(v: EditorView | undefined = view) {
 		if (!v) return false;
+		closeCompletion(v);
 		const s = v.state.selection.main;
 		const doc = v.state.doc.toString();
-		onrun(s.empty ? statementAt(doc, s.head).text : doc.slice(s.from, s.to));
+		const st = s.empty ? statementAt(doc, s.head) : { from: s.from, text: doc.slice(s.from, s.to) };
+		ran = { from: st.from, text: st.text };
+		onrun(st.text);
 		return true;
+	}
+
+	// Dernière requête exécutée et sa position, pour y souligner l'erreur.
+	let ran: { from: number; text: string } | null = null;
+
+	/** Souligne dans l'éditeur l'endroit désigné par l'erreur ('' efface). */
+	export function showError(message: string) {
+		if (!view) return;
+		const span = message && ran ? errorSpan(ran.text, message) : null;
+		const at = span && ran ? { from: ran.from + span.from, to: ran.from + span.to } : null;
+		const ok = !!at && at.to <= view.state.doc.length;
+		view.dispatch(setDiagnostics(view.state, at && ok ? [{ from: at.from, to: at.to, severity: 'error', message }] : []));
 	}
 	function step(dir: 1 | -1) {
 		return (v: EditorView) => {
