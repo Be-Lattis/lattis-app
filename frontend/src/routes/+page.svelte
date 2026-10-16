@@ -15,7 +15,7 @@
 	import Sheet, { type SheetData, type SheetSource, type SheetStatus, type ColumnFilter, type PivotConfig, type ChartConfig, type TypeMix } from '#lib/grid/Sheet.svelte';
 	import Ribbon, { type FileAction, type View } from '#lib/shell/Ribbon.svelte';
 	import SheetTabs from '#lib/shell/SheetTabs.svelte';
-	import SqlView from '#lib/shell/SqlView.svelte';
+	import SqlView, { type Favorite } from '#lib/shell/SqlView.svelte';
 	import TitleBar from '#lib/shell/TitleBar.svelte';
 	import ScriptView, { type Script } from '#lib/script/ScriptView.svelte';
 	import ScriptDialog, { type DialogSpec } from '#lib/script/ScriptDialog.svelte';
@@ -48,6 +48,8 @@
 	let orphans = $state<Orphan[]>([]);
 	let help = $state<FormulaHelp | null>(null);
 	let scripts = $state<Script[]>([]);
+	// Requêtes favorites de l'onglet SQL, enregistrées dans le classeur.
+	let favorites = $state<Favorite[]>([]);
 	let recent = $state<string[]>([]);
 	// Fermer un classeur modifié : enregistrer d'abord ?
 	let closing = $state(false);
@@ -66,6 +68,7 @@
 		layout = await DocumentService.Layout(sheetId);
 		help = await DocumentService.FormulaHelp();
 		scripts = (await DocumentService.Scripts()) ?? [];
+		favorites = (await DocumentService.Favorites()) ?? [];
 	}
 
 	const loadRecent = async () => (recent = (await DocumentService.Recent().catch(() => null)) ?? []);
@@ -510,6 +513,8 @@
 					name: t.name,
 					sqlName: t.sql,
 					rows: t.rows,
+					kind: t.kind === 'pivot' ? ('pivot' as const) : ('table' as const),
+					key: t.key >= 0 ? t.key : undefined,
 					columns: (t.columns ?? []).map((c, i) => ({ name: c, type: (t.types?.[i] ?? 'text') as ColumnType, sql: t.columnSql?.[i] ?? c }))
 				}))
 	);
@@ -662,7 +667,20 @@
 				</div>
 			{/key}
 			{#if view === 'sql'}
-				<div class="pane"><SqlView {objects} run={query} exec={mode === 'doc' ? (q) => DocumentService.Execute(q) : undefined} ongoto={gotoObject} /></div>
+				<div class="pane"><SqlView {objects} run={query} exec={mode === 'doc' ? (q) => DocumentService.Execute(q) : undefined} ongoto={gotoObject}
+						favorites={mode === 'doc'
+							? {
+									list: favorites,
+									add: async (name, q) => {
+										const id = await DocumentService.AddFavorite(name, q);
+										await reload();
+										return id;
+									},
+									rename: (id, name) => DocumentService.RenameFavorite(id, name).then(reload),
+									remove: (id) => DocumentService.DeleteFavorite(id).then(reload)
+								}
+							: undefined}
+					/></div>
 			{:else if view === 'script'}
 				<div class="pane">
 					{#if mode === 'doc'}

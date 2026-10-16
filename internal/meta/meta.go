@@ -208,6 +208,15 @@ CREATE TABLE _slitable_col_rules (
 	PRIMARY KEY (sheet, col)
 ) STRICT;
 `,
+	// 16 → 17 : requêtes favorites de l'onglet SQL (nom affiché et texte
+	// SQL tel que saisi, avec les noms affichés), dans l'ordre d'ajout.
+	`
+CREATE TABLE _slitable_favorites (
+	id   INTEGER PRIMARY KEY,
+	name TEXT NOT NULL,
+	sql  TEXT NOT NULL
+) STRICT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.
