@@ -272,6 +272,16 @@ export interface Event {
 }
 
 /**
+ * Favorite est une requête favorite de l'onglet SQL, enregistrée dans le
+ * classeur : son nom et son texte tel que saisi (noms affichés).
+ */
+export interface Favorite {
+    "id": number;
+    "name": string;
+    "sql": string;
+}
+
+/**
  * FilterValue est une valeur distincte d'une colonne, avec son nombre de lignes.
  */
 export interface FilterValue {
@@ -595,4 +605,9 @@ export interface TableNames {
      * Sheet : feuille où il est posé.
      */
     "sheet": number;
+
+    /**
+     * Key : rang de la colonne clé d'un tableau, -1 si aucune.
+     */
+    "key": number;
 }

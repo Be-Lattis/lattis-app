@@ -17,6 +17,10 @@ export interface SqlObject {
 	sqlName: string;
 	rows: number;
 	columns: SqlColumn[];
+	/** « table », ou « pivot » pour un tableau croisé (vue en lecture seule). */
+	kind?: 'table' | 'pivot';
+	/** Rang de la colonne clé, s'il y en a une. */
+	key?: number;
 }
 
 export type TokenKind = 'ws' | 'comment' | 'string' | 'number' | 'word' | 'quoted' | 'punct';

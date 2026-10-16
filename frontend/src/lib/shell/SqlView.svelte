@@ -1,3 +1,19 @@
+<script lang="ts" module>
+	/** Requête favorite, enregistrée dans le classeur. */
+	export interface Favorite {
+		id: number;
+		name: string;
+		sql: string;
+	}
+	export interface Favorites {
+		list: Favorite[];
+		/** Ajoute (nom vide : la première ligne) et renvoie l'identifiant, liste à jour. */
+		add: (name: string, sql: string) => Promise<number>;
+		rename: (id: number, name: string) => Promise<unknown>;
+		remove: (id: number) => Promise<unknown>;
+	}
+</script>
+
 <script lang="ts">
 	// Onglet SQL : liste des objets, éditeur avec les noms affichés (traduits en
 	// noms internes t_1, c_0… avant l'exécution), historique des requêtes.
@@ -8,7 +24,9 @@
 	import { Catalog, displayHeaders, quote, translate, type SqlObject } from '#lib/sql/names.js';
 	import { load, record, save, search, when, type HistoryEntry } from '#lib/sql/history.js';
 	import { isWrite } from '#lib/sql/write.js';
+	import { example, isReadOnly, type ExampleKind } from '#lib/sql/examples.js';
 	import { dismiss } from '#lib/grid/dismiss.js';
+	import { tick } from 'svelte';
 
 	interface Result {
 		columns: string[] | null;
@@ -22,12 +40,14 @@
 		/** Requête d'écriture ; absent : lecture seule (classeur de démonstration). */
 		exec?: (sql: string) => Promise<{ changed: number; micros: number }>;
 		ongoto: (table: string) => void;
+		/** Requêtes favorites, enregistrées dans le classeur ; absent : pas de favoris (démonstration). */
+		favorites?: Favorites;
 	}
 
-	let { objects, run, exec, ongoto }: Props = $props();
+	let { objects, run, exec, ongoto, favorites }: Props = $props();
 
 	const catalog = $derived(new Catalog(objects));
-	let panel = $state<'objects' | 'history'>('objects');
+	let panel = $state<'objects' | 'favorites' | 'history'>('objects');
 	let open = $state<string | null>(null);
 	let sql = $state('');
 	let result = $state<Result | null>(null);
@@ -116,6 +136,68 @@
 		save(entries);
 	}
 
+	/** Remplace le contenu de l'éditeur par un exemple détaillé pour l'objet. */
+	function showExample(o: SqlObject, kind: ExampleKind) {
+		objMenu = null;
+		cursor = -1;
+		editor?.load(example(o, kind));
+	}
+
+	// --- Favoris -------------------------------------------------------------
+
+	const favList = $derived(favorites?.list ?? []);
+	const same = (a: string, b: string) => a.trim().replace(/\s+/g, ' ') === b.trim().replace(/\s+/g, ' ');
+	const starred = $derived(favList.find((f) => same(f.sql, sql)));
+	// Favori en cours de renommage.
+	let renaming = $state<{ id: number; name: string } | null>(null);
+	let favError = $state('');
+
+	async function addFavorite(text: string) {
+		if (!favorites || !text.trim()) return;
+		favError = '';
+		try {
+			const id = await favorites.add('', text);
+			panel = 'favorites';
+			await tick();
+			const f = favorites.list.find((x) => x.id === id);
+			renaming = { id, name: f?.name ?? '' };
+		} catch (e) {
+			favError = String(e instanceof Error ? e.message : e);
+		}
+	}
+
+	async function commitRename() {
+		const r = renaming;
+		renaming = null;
+		if (!favorites || !r || !r.name.trim()) return;
+		const f = favorites.list.find((x) => x.id === r.id);
+		if (f && f.name === r.name.trim()) return;
+		try {
+			await favorites.rename(r.id, r.name);
+		} catch (e) {
+			favError = String(e instanceof Error ? e.message : e);
+		}
+	}
+
+	async function removeFavorite(f: Favorite) {
+		try {
+			await favorites?.remove(f.id);
+		} catch (e) {
+			favError = String(e instanceof Error ? e.message : e);
+		}
+	}
+
+	function useFavorite(f: Favorite, now: boolean) {
+		cursor = -1;
+		editor?.load(f.sql);
+		if (now) execute(f.sql);
+	}
+
+	const select = (node: HTMLInputElement) => {
+		node.focus();
+		node.select();
+	};
+
 	const cell = (v: unknown) => (v === null || v === undefined ? '' : typeof v === 'number' ? formatValue('decimal', v).replace(/,00$/, '') : String(v));
 </script>
 
@@ -123,6 +205,11 @@
 	<aside class="side">
 		<div class="tabs" role="tablist">
 			<button role="tab" aria-selected={panel === 'objects'} class:on={panel === 'objects'} onclick={() => (panel = 'objects')}>Objets</button>
+			{#if favorites}
+				<button role="tab" aria-selected={panel === 'favorites'} class:on={panel === 'favorites'} onclick={() => (panel = 'favorites')}>
+					Favoris{favList.length ? ` (${favList.length})` : ''}
+				</button>
+			{/if}
 			<button role="tab" aria-selected={panel === 'history'} class:on={panel === 'history'} onclick={() => (panel = 'history')}>
 				Historique{entries.length ? ` (${entries.length})` : ''}
 			</button>
@@ -138,11 +225,11 @@
 								e.preventDefault();
 								objMenu = { o, x: e.clientX, y: e.clientY };
 							}}
-							title="Clic droit : interroger, insérer le nom, afficher sur la feuille"
+							title="Clic droit : exemples SELECT, INSERT, UPDATE, DELETE, voir sur la feuille"
 						>
 							<span>{open === o.sqlName ? '▾' : '▸'}</span>
 							<strong>{o.name}</strong>
-							<span class="muted">{o.sqlName.startsWith('"') ? 'tableau croisé' : 'tableau'} · {o.rows.toLocaleString('fr-FR')} lignes</span>
+							<span class="muted">{isReadOnly(o) ? 'tableau croisé' : 'tableau'} · {o.rows.toLocaleString('fr-FR')} lignes</span>
 						</button>
 						{#if open === o.sqlName}
 							<ul>
@@ -159,27 +246,59 @@
 			</div>
 			{#if objMenu}
 				{@const m = objMenu}
-				<div class="ctx" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (objMenu = null)}>
+				<div class="ctx" role="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (objMenu = null)}>
+					<button role="menuitem" title="Remplace la requête par un exemple de lecture" onclick={() => showExample(m.o, 'select')}>SELECT</button>
+					{#if exec && !isReadOnly(m.o)}
+						<button role="menuitem" title="Remplace la requête par un exemple d'ajout de ligne" onclick={() => showExample(m.o, 'insert')}>INSERT</button>
+						<button role="menuitem" title="Remplace la requête par un exemple de modification" onclick={() => showExample(m.o, 'update')}>UPDATE</button>
+						<button role="menuitem" title="Remplace la requête par un exemple de suppression" onclick={() => showExample(m.o, 'delete')}>DELETE</button>
+					{/if}
+					<hr />
 					<button
+						role="menuitem"
 						onclick={() => {
+							// `m` suit objMenu : lire le nom avant de fermer le menu.
+							const name = m.o.name;
 							objMenu = null;
-							sql = `SELECT *\nFROM ${quote(m.o.name)}\nLIMIT 100`;
-						}}>Interroger</button
-					>
-					<button
-						onclick={() => {
-							objMenu = null;
-							editor?.insert(quote(m.o.name));
-						}}>Insérer le nom</button
-					>
-					<button
-						onclick={() => {
-							objMenu = null;
-							ongoto(m.o.name);
-						}}>Afficher sur la feuille</button
+							ongoto(name);
+						}}>Voir sur la feuille</button
 					>
 				</div>
 			{/if}
+		{:else if panel === 'favorites'}
+			{#if favError}<p class="error fav-error">{favError}</p>{/if}
+			<div class="list">
+				{#each favList as f (f.id)}
+					<div class="entry fav">
+						{#if renaming?.id === f.id}
+							<input
+								class="fav-name"
+								aria-label="Nom du favori"
+								bind:value={renaming.name}
+								use:select
+								onblur={commitRename}
+								onkeydown={(e) => {
+									if (e.key === 'Enter') commitRename();
+									else if (e.key === 'Escape') renaming = null;
+								}}
+							/>
+						{:else}
+							<button class="fav-title" title="Reprendre dans l'éditeur (double-clic : exécuter)" onclick={() => useFavorite(f, false)} ondblclick={() => useFavorite(f, true)}>★ {f.name}</button>
+						{/if}
+						<button class="entry-sql" title="Reprendre dans l'éditeur (double-clic : exécuter)" onclick={() => useFavorite(f, false)} ondblclick={() => useFavorite(f, true)}>{f.sql}</button>
+						<div class="entry-foot">
+							<span>
+								<button class="link" onclick={() => (renaming = { id: f.id, name: f.name })}>Renommer</button>
+								·
+								<button class="link" onclick={() => removeFavorite(f)}>Retirer</button>
+							</span>
+							<button class="link" title="Exécuter" onclick={() => useFavorite(f, true)}>▶</button>
+						</div>
+					</div>
+				{:else}
+					<p class="muted empty">Aucune requête favorite. ☆ dans la barre de l'éditeur ou dans l'historique pour en ajouter une ; elles sont enregistrées dans le classeur.</p>
+				{/each}
+			</div>
 		{:else}
 			<div class="hist-tools">
 				<input type="search" placeholder="Rechercher" bind:value={filter} />
@@ -191,7 +310,13 @@
 						<button class="entry-sql" title="Reprendre dans l'éditeur (double-clic : exécuter)" onclick={() => useEntry(e, false)} ondblclick={() => useEntry(e, true)}>{e.sql}</button>
 						<div class="entry-foot">
 							<span class="muted">{when(e.at)} · {e.error ? 'erreur' : `${(e.rows ?? 0).toLocaleString('fr-FR')} ligne(s)`}</span>
-							<button class="link" title="Exécuter" onclick={() => useEntry(e, true)}>▶</button>
+							<span>
+								{#if favorites}
+									{@const fav = favList.some((f) => same(f.sql, e.sql))}
+									<button class="link star" class:on={fav} title={fav ? 'Déjà dans les favoris' : 'Ajouter aux favoris'} disabled={fav} onclick={() => addFavorite(e.sql)}>{fav ? '★' : '☆'}</button>
+								{/if}
+								<button class="link" title="Exécuter" onclick={() => useEntry(e, true)}>▶</button>
+							</span>
 						</div>
 					</div>
 				{:else}
@@ -202,8 +327,16 @@
 	</aside>
 	<section class="main">
 		<div class="toolbar">
-			<button class="run" onclick={() => editor?.runCurrent()} disabled={running}>▶ Exécuter</button>
-			<span class="muted hint" title="Les instructions sont séparées par « ; » ou une ligne vide. Lecture seule, 1 000 lignes au plus.">Ctrl+Entrée : exécuter l'instruction sous le curseur · Ctrl+Espace : noms · Alt+↑↓ : historique</span>
+			<button class="run" onclick={() => editor?.runCurrent()} disabled={running} title="Exécute la sélection, sinon l'instruction sous le curseur (Ctrl+Entrée)">▶ Exécuter</button>
+			{#if favorites}
+				<button
+					class="fav-btn"
+					class:on={!!starred}
+					title={starred ? `Dans les favoris : « ${starred.name} » (cliquer pour le retirer)` : 'Ajouter la requête (ou la sélection) aux favoris du classeur'}
+					onclick={() => (starred ? removeFavorite(starred) : addFavorite(editor?.selectedOrAll() ?? sql))}>{starred ? '★' : '☆'} Favori</button
+				>
+			{/if}
+			<span class="muted hint" title="Les instructions sont séparées par « ; » ou une ligne vide. 1 000 lignes au plus.">Ctrl+Entrée : exécuter la sélection, sinon l'instruction sous le curseur · Ctrl+Espace : noms · Alt+↑↓ : historique</span>
 		</div>
 		<div class="code">
 			<SqlEditor bind:this={editor} bind:value={sql} {catalog} onrun={execute} onhistory={step} />
@@ -255,6 +388,68 @@
 	}
 	.ctx button:hover {
 		background: #e3efe7;
+	}
+	.ctx hr {
+		border: none;
+		border-top: 1px solid #e3e5e8;
+		margin: 4px 0;
+	}
+	.fav-btn {
+		font: inherit;
+		background: #fff;
+		color: #1f2328;
+		border: 1px solid #d4d7db;
+		border-radius: 3px;
+		padding: 3px 10px;
+		cursor: pointer;
+		white-space: nowrap;
+		flex-shrink: 0;
+	}
+	.fav-btn:hover {
+		background: #f5f9f6;
+	}
+	.fav-btn.on,
+	.star.on {
+		color: #b7791f;
+	}
+	.star {
+		font-size: 14px;
+		margin-right: 6px;
+	}
+	.star:disabled {
+		cursor: default;
+	}
+	.entry.fav {
+		border-left-color: #d4a017;
+	}
+	.fav-title {
+		display: block;
+		width: 100%;
+		text-align: left;
+		background: none;
+		border: none;
+		font: inherit;
+		font-weight: 600;
+		padding: 4px 6px 0;
+		cursor: pointer;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.fav-name {
+		display: block;
+		box-sizing: border-box;
+		width: calc(100% - 8px);
+		margin: 4px 4px 0;
+		font: inherit;
+		font-weight: 600;
+		border: 1px solid #217346;
+		border-radius: 3px;
+		padding: 2px 4px;
+	}
+	.fav-error {
+		margin: 8px 8px 0;
+		font-size: 12px;
 	}
 	.sql {
 		display: flex;

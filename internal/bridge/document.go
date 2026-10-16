@@ -726,3 +726,36 @@ func (s *DocumentService) SetGridlines(ctx context.Context, sheet int64, show bo
 func (s *DocumentService) SetRowHeight(ctx context.Context, sheet int64, row, height int) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.SetRowHeight(ctx, sheet, row, height) })
 }
+
+// Favorites liste les requêtes SQL favorites du classeur.
+func (s *DocumentService) Favorites(ctx context.Context) ([]canvas.Favorite, error) {
+	d, err := s.current()
+	if err != nil {
+		return []canvas.Favorite{}, nil
+	}
+	return d.Favorites(ctx)
+}
+
+// AddFavorite ajoute une requête SQL aux favoris (nom vide : sa première
+// ligne) et renvoie son identifiant.
+func (s *DocumentService) AddFavorite(ctx context.Context, name, sql string) (int64, error) {
+	d, err := s.current()
+	if err != nil {
+		return 0, err
+	}
+	id, err := d.AddFavorite(ctx, name, sql)
+	if err == nil {
+		s.changed(ctx)
+	}
+	return id, err
+}
+
+// RenameFavorite renomme une requête favorite.
+func (s *DocumentService) RenameFavorite(ctx context.Context, id int64, name string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.RenameFavorite(ctx, id, name) })
+}
+
+// DeleteFavorite retire une requête des favoris.
+func (s *DocumentService) DeleteFavorite(ctx context.Context, id int64) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.DeleteFavorite(ctx, id) })
+}

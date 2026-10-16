@@ -3,7 +3,7 @@
 	// colonnes reconnus mis en couleur, autocomplétion des noms affichés.
 	import { onMount } from 'svelte';
 	import { EditorState, StateEffect, RangeSetBuilder } from '@codemirror/state';
-	import { EditorView, Decoration, ViewPlugin, keymap, lineNumbers, highlightActiveLine, drawSelection, placeholder, type DecorationSet, type ViewUpdate } from '@codemirror/view';
+	import { EditorView, Decoration, ViewPlugin, keymap, lineNumbers, drawSelection, placeholder, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 	import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 	import { syntaxHighlighting, HighlightStyle, bracketMatching, indentOnInput } from '@codemirror/language';
 	import { autocompletion, closeCompletion, closeBrackets, closeBracketsKeymap, completionKeymap, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete';
@@ -70,6 +70,27 @@
 		{ decorations: (p) => p.decorations }
 	);
 
+	// Ligne active surlignée seulement sans sélection : la sélection est
+	// dessinée sous le texte, et le fond de la ligne active la masquerait.
+	const lineMark = Decoration.line({ class: 'cm-activeLine' });
+	function activeLine(v: EditorView): DecorationSet {
+		const s = v.state.selection;
+		if (s.ranges.some((r) => !r.empty)) return Decoration.none;
+		return Decoration.set([lineMark.range(v.state.doc.lineAt(s.main.head).from)]);
+	}
+	const highlightActiveLine = ViewPlugin.fromClass(
+		class {
+			decorations: DecorationSet;
+			constructor(v: EditorView) {
+				this.decorations = activeLine(v);
+			}
+			update(u: ViewUpdate) {
+				if (u.docChanged || u.selectionSet) this.decorations = activeLine(u.view);
+			}
+		},
+		{ decorations: (p) => p.decorations }
+	);
+
 	const style = HighlightStyle.define([
 		{ tag: tags.keyword, color: '#1d4ed8', fontWeight: '600' },
 		{ tag: [tags.string, tags.special(tags.string)], color: '#a31515' },
@@ -85,7 +106,8 @@
 		'.cm-scroller': { fontFamily: "Consolas, 'Cascadia Mono', monospace", lineHeight: '1.5' },
 		'.cm-gutters': { background: '#fafbfb', color: '#9ca3af', borderRight: '1px solid #e3e5e8' },
 		'.cm-activeLine': { background: '#f5f9f6' },
-		// Les noms reconnus l'emportent sur la coloration syntaxique (un nom entre
+		// Sélection bien visible, éditeur actif ou non.
+		'.cm-selectionBackground, &.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': { background: '#b9dcc5' },		// Les noms reconnus l'emportent sur la coloration syntaxique (un nom entre
 		// guillemets n'est pas une chaîne).
 		'.cm-slt-table, .cm-slt-table *': { color: '#217346', fontWeight: '600' },
 		'.cm-slt-alias, .cm-slt-alias *': { color: '#217346' },
@@ -103,7 +125,8 @@
 		closeCompletion(v);
 		const s = v.state.selection.main;
 		const doc = v.state.doc.toString();
-		const st = s.empty ? statementAt(doc, s.head) : { from: s.from, text: doc.slice(s.from, s.to) };
+		const picked = doc.slice(s.from, s.to);
+		const st = picked.trim() ? { from: s.from, text: picked } : statementAt(doc, s.head);
 		ran = { from: st.from, text: st.text };
 		onrun(st.text);
 		return true;
@@ -141,7 +164,7 @@
 					indentOnInput(),
 					bracketMatching(),
 					closeBrackets(),
-					highlightActiveLine(),
+					highlightActiveLine,
 					placeholder('SELECT … FROM Tableau — Ctrl+Espace pour les noms'),
 					sql({ dialect: SQLite, upperCaseKeywords: true }),
 					syntaxHighlighting(style),
@@ -185,6 +208,24 @@
 		const s = view.state.selection.main;
 		view.dispatch({ changes: { from: s.from, to: s.to, insert: text }, selection: { anchor: s.from + text.length } });
 		view.focus();
+	}
+
+	/** Remplace tout le contenu (exemple, favori) ; Ctrl+Z le rend. */
+	export function load(text: string) {
+		if (!view) {
+			value = text;
+			return;
+		}
+		view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text }, selection: { anchor: 0 }, scrollIntoView: true });
+		view.focus();
+	}
+
+	/** Texte sélectionné, sinon tout le contenu (pour les favoris). */
+	export function selectedOrAll(): string {
+		if (!view) return value;
+		const s = view.state.selection.main;
+		const picked = view.state.sliceDoc(s.from, s.to);
+		return picked.trim() ? picked : view.state.doc.toString();
 	}
 
 	export function focus() {

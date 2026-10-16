@@ -28,6 +28,14 @@ import * as grid$0 from "../grid/models.js";
 import * as $models from "./models.js";
 
 /**
+ * AddFavorite ajoute une requête SQL aux favoris (nom vide : sa première
+ * ligne) et renvoie son identifiant.
+ */
+export function AddFavorite(name: string, sql: string): $CancellablePromise<number> {
+    return $Call.ByID(2605473092, name, sql);
+}
+
+/**
  * AddSheet ajoute un onglet à la fin et renvoie son identifiant.
  */
 export function AddSheet(): $CancellablePromise<number> {
@@ -123,6 +131,13 @@ export function DeleteChart(id: number): $CancellablePromise<$models.DocState> {
 
 export function DeleteColumn(table: string, i: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(472790092, table, i);
+}
+
+/**
+ * DeleteFavorite retire une requête des favoris.
+ */
+export function DeleteFavorite(id: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(141410170, id);
 }
 
 /**
@@ -234,6 +249,13 @@ export function ExportCSV(table: string): $CancellablePromise<string> {
  */
 export function ExtractColumns(name: string, i0: number, i1: number, row: number, col: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(552666561, name, i0, i1, row, col);
+}
+
+/**
+ * Favorites liste les requêtes SQL favorites du classeur.
+ */
+export function Favorites(): $CancellablePromise<canvas$0.Favorite[] | null> {
+    return $Call.ByID(404363814);
 }
 
 /**
@@ -447,6 +469,13 @@ export function Redo(): $CancellablePromise<$models.DocState> {
  */
 export function RemoveDuplicates(table: string, cols: number[] | null): $CancellablePromise<number> {
     return $Call.ByID(1454030531, table, cols);
+}
+
+/**
+ * RenameFavorite renomme une requête favorite.
+ */
+export function RenameFavorite(id: number, name: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1239881375, id, name);
 }
 
 /**

@@ -15,6 +15,7 @@ export type {
     DepTarget,
     Dependencies,
     Event,
+    Favorite,
     FilterValue,
     Layout,
     LineStyle,
