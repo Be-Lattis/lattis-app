@@ -63,14 +63,16 @@
 	}
 
 	function onKey(e: KeyboardEvent) {
-		e.stopPropagation();
+		// Liste fermée : les autres touches (Échap…) remontent au panneau.
 		if (!open) {
 			if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) {
 				e.preventDefault();
+				e.stopPropagation();
 				show();
 			}
 			return;
 		}
+		e.stopPropagation();
 		switch (e.key) {
 			case 'ArrowDown':
 				step(1);

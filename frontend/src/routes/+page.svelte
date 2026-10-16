@@ -398,7 +398,10 @@
 		dirty={mode === 'doc' && docState.dirty}
 		undo={mode === 'doc' ? docState.undo : ''}
 		redo={mode === 'doc' ? docState.redo : ''}
-		onview={(v) => (view = v)}
+		onview={(v) => {
+			if (v !== view) sheet?.closeOverlays();
+			view = v;
+		}}
 		onfile={file}
 		onundo={() => DocumentService.Undo().then(reload).catch((e) => (notice = err(e)))}
 		onredo={() => DocumentService.Redo().then(reload).catch((e) => (notice = err(e)))}

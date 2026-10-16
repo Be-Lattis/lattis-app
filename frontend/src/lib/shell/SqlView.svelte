@@ -58,6 +58,7 @@
 		if (!text.trim() || running) return;
 		running = true;
 		error = '';
+		editor?.showError('');
 		const at = Date.now();
 		try {
 			if (exec && isWrite(text)) {
@@ -79,6 +80,7 @@
 			result = null;
 			// Sans le préfixe technique du moteur.
 			error = String(e instanceof Error ? e.message : e).replace(/^sqlite3:\s*(SQL logic error:\s*)?/i, '');
+			editor?.showError(error);
 			remember({ sql: text, at, error });
 		}
 		running = false;

@@ -393,3 +393,14 @@ function trimRange(src: string, from: number, to: number): Statement {
 	const trimmed = text.trim();
 	return { from: from + lead, to: from + lead + trimmed.length, text: trimmed };
 }
+
+/** Position dans la requête de l'erreur signalée par SQLite (« near "X" »,
+ * « no such column: X »…), pour la souligner dans l'éditeur ; null si le
+ * message ne la désigne pas ou si le mot n'est pas dans le texte. */
+export function errorSpan(text: string, message: string): { from: number; to: number } | null {
+	const m = /near "([^"]+)"/.exec(message) ?? /no such (?:column|table|function): ([^\s,]+)/i.exec(message);
+	if (!m) return null;
+	const word = m[1];
+	const at = text.toLowerCase().indexOf(word.toLowerCase());
+	return at < 0 ? null : { from: at, to: at + word.length };
+}
