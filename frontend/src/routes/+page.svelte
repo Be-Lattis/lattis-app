@@ -39,6 +39,10 @@
 	let docState = $state<DocState>({ open: false, path: '', title: '', dirty: false, undo: '', redo: '' });
 	let layout = $state<Layout | null>(null);
 	let sheetId = $state(1);
+	// Les adresses Cell_A1 de l'onglet SQL se lisent sur la feuille affichée.
+	$effect(() => {
+		if (mode === 'doc') DocumentService.SetActiveSheet(sheetId).catch(() => {});
+	});
 	let orphans = $state<Orphan[]>([]);
 	let help = $state<FormulaHelp | null>(null);
 	let scripts = $state<Script[]>([]);
@@ -823,6 +827,8 @@
 		background: #217346;
 		color: #fff;
 		border-color: #217346;
+		padding-left: 15px;
+		padding-right: 15px;
 	}
 	.muted {
 		color: #6b7280;

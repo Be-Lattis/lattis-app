@@ -239,7 +239,7 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 		for _, c := range cells {
 			ci := CellInfo{Row: c.Row, Col: c.Col, Raw: c.Raw}
 			if isFormula(c.Raw) {
-				if rows, ok, e := t.spillFree(c.Raw); ok {
+				if rows, ok, e := t.spillFree(sheet, c.Raw); ok {
 					switch {
 					case e.IsErr():
 						ci.Value, ci.Error = e.String(), true
@@ -251,7 +251,7 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 						ci.Value, ci.Spill = rows[0][0], rows
 					}
 				} else {
-					v := t.evalFree(c.Raw)
+					v := t.evalFree(sheet, c.Raw)
 					ci.Value, ci.Error = v.String(), v.IsErr()
 				}
 			}

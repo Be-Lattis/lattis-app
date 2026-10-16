@@ -195,6 +195,6 @@
 		background: #217346;
 		border-color: #217346;
 		color: #fff;
-		padding: 5px 16px;
+		padding: 5px 15px;
 	}
 </style>

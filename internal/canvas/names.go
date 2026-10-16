@@ -61,6 +61,9 @@ func (t *tx) checkName(name string, sheet int64, row, col int) error {
 	case "VRAI", "FAUX", "TRUE", "FALSE":
 		return ErrName{name, "mot réservé"}
 	}
+	if _, _, ok := formula.CellRef(name); ok {
+		return ErrName{name, "c'est une adresse de cellule"}
+	}
 	for _, f := range formula.Functions(formula.FR) {
 		if strings.EqualFold(f.Name, name) || strings.EqualFold(f.Other, name) {
 			return ErrName{name, "c'est le nom d'une fonction"}
@@ -117,25 +120,51 @@ func (t *tx) moveNames(sheet int64, moved []cell, dRow, dCol int) error {
 	return t.apply(do, undo)
 }
 
-// nameValues calcule la valeur de chaque cellule nommée : une saisie est
-// convertie selon son type inféré, une formule est calculée en SQL dans
-// l'ordre des dépendances ; une référence circulaire donne #REF!.
+// nameValues calcule la valeur de chaque cellule nommée et, si une formule
+// en cite, de chaque cellule libre (adresses Cell_A1, clés formula.CellKey,
+// alias « Feuille.Cell_A1 ») : une saisie est convertie selon son type
+// inféré, une formule est calculée en SQL dans l'ordre des dépendances (y
+// compris celles des colonnes calculées des tableaux cités) ; une référence
+// circulaire donne #REF!.
 func (t *tx) nameValues(schema *formula.Schema) (map[string]formula.Value, error) {
-	rs, err := t.query(`SELECT n.name, coalesce(c.raw, '') FROM _slitable_names n
+	return cached(t, "names", func() (map[string]formula.Value, error) { return t.nameValuesRaw(schema) })
+}
+
+func (t *tx) nameValuesRaw(schema *formula.Schema) (map[string]formula.Value, error) {
+	return t.nameValuesWith(schema, false)
+}
+
+// nameValuesWith : allCells charge les cellules libres même si aucune
+// formule enregistrée ne cite d'adresse (requêtes de l'onglet SQL).
+func (t *tx) nameValuesWith(schema *formula.Schema, allCells bool) (map[string]formula.Value, error) {
+	ns := &formula.Names{Formulas: map[string]formula.Node{}, Extra: map[string][]string{}}
+	rs, err := t.query(`SELECT n.name, n.sheet, coalesce(c.raw, '') FROM _slitable_names n
 		LEFT JOIN _slitable_cells c ON c.sheet = n.sheet AND c.row = n.row AND c.col = n.col`)
 	if err != nil {
 		return nil, err
 	}
-	ns := &formula.Names{Formulas: map[string]formula.Node{}}
 	for rs.Next() {
 		var name, raw string
-		if err := rs.Scan(&name, &raw); err != nil {
+		var sheet int64
+		if err := rs.Scan(&name, &sheet, &raw); err != nil {
 			rs.Close()
 			return nil, err
 		}
-		ns.Formulas[strings.ToLower(name)] = literal(raw)
+		ns.Formulas[strings.ToLower(name)] = formula.QualifyCells(literal(raw), sheet)
 	}
 	rs.Close()
+	cited := allCells
+	if !cited {
+		if err := t.row(`SELECT EXISTS (SELECT 1 FROM _slitable_cells WHERE raw LIKE '%cell\_%' ESCAPE '\')
+			OR EXISTS (SELECT 1 FROM _slitable_columns WHERE formula LIKE '%cell\_%' ESCAPE '\')`).Scan(&cited); err != nil {
+			return nil, err
+		}
+	}
+	if cited {
+		if err := t.cellFormulas(ns, schema); err != nil {
+			return nil, err
+		}
+	}
 	values := map[string]formula.Value{}
 	order, cyclic := ns.Order()
 	for _, n := range cyclic {
@@ -152,6 +181,79 @@ func (t *tx) nameValues(schema *formula.Schema) (map[string]formula.Value, error
 		values[n] = formula.FromResult(v)
 	}
 	return values, nil
+}
+
+// cellFormulas ajoute aux noms les cellules libres de toutes les feuilles,
+// et les dépendances qui passent par les colonnes calculées des tableaux.
+func (t *tx) cellFormulas(ns *formula.Names, schema *formula.Schema) error {
+	sheetNames := map[int64]string{}
+	rs, err := t.query(`SELECT id, name FROM _slitable_sheets`)
+	if err != nil {
+		return err
+	}
+	for rs.Next() {
+		var id int64
+		var name string
+		if err := rs.Scan(&id, &name); err != nil {
+			rs.Close()
+			return err
+		}
+		sheetNames[id] = strings.ToLower(name)
+	}
+	rs.Close()
+	rs, err = t.query(`SELECT sheet, row, col, raw FROM _slitable_cells`)
+	if err != nil {
+		return err
+	}
+	for rs.Next() {
+		var sheet int64
+		var row, col int
+		var raw string
+		if err := rs.Scan(&sheet, &row, &col, &raw); err != nil {
+			rs.Close()
+			return err
+		}
+		n := literal(raw)
+		if isFormula(raw) {
+			if c, _, err := formula.Convert(n, schema, noRanges{}, raw); err == nil {
+				n = c
+			}
+		}
+		key := formula.CellKey(sheet, row, col)
+		ns.Formulas[key] = formula.QualifyCells(n, sheet)
+		ns.Formulas[sheetNames[sheet]+"."+strings.ToLower(formula.CellName(row, col))] = formula.Name{Name: key}
+	}
+	rs.Close()
+	// Noms lus par les colonnes calculées de chaque tableau, et tableaux
+	// qu'elles citent (fermeture transitive ensuite).
+	reads := map[string][]string{}
+	cites := map[string][]string{}
+	for _, ft := range schema.Tables {
+		k := strings.ToLower(ft.Name)
+		for _, c := range ft.Cols {
+			if c.Formula == nil {
+				continue
+			}
+			names, tables := formula.Deps(formula.QualifyCells(c.Formula, ft.Sheet))
+			reads[k] = append(reads[k], names...)
+			cites[k] = append(cites[k], tables...)
+		}
+	}
+	for key, n := range ns.Formulas {
+		_, tables := formula.Deps(n)
+		seen := map[string]bool{}
+		for len(tables) > 0 {
+			tb := tables[0]
+			tables = tables[1:]
+			if seen[tb] {
+				continue
+			}
+			seen[tb] = true
+			ns.Extra[key] = append(ns.Extra[key], reads[tb]...)
+			tables = append(tables, cites[tb]...)
+		}
+	}
+	return nil
 }
 
 // literal donne le nœud d'une saisie : formule analysée, nombre, booléen ou

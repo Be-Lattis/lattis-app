@@ -506,8 +506,8 @@
 			spacer.style.width = `${MARGIN + colAxis.offset(extentCols)}px`;
 		}
 	}
-	let viewW = 0;
-	let viewH = 0;
+	let viewW = $state(0);
+	let viewH = $state(0);
 
 	let wrap: HTMLDivElement;
 	let scroller: HTMLDivElement;
@@ -1270,11 +1270,18 @@
 	}
 
 	/** Désignation de la cellule active (pas d'adresse A1). */
+	/** Adresse d'une cellule libre, telle qu'elle s'écrit dans une formule ou en SQL. */
+	function cellAddr(r: number, c: number): string {
+		let s = '';
+		for (let n = c + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s;
+		return `Cell_${s}${r + 1}`;
+	}
+
 	function cellName(r: number, c: number): string {
 		const named = names.get(key(r, c));
 		if (named) return named;
 		const e = tableAt(r, c);
-		if (!e) return cells.has(key(r, c)) ? 'Cellule libre' : '';
+		if (!e) return cellAddr(r, c);
 		const k = e.t.columns[c - e.t.col];
 		const col = `${e.t.name}[${k.name}]`;
 		if (r === e.t.row) {
@@ -2848,6 +2855,15 @@
 		if (e.key !== 'Enter') return;
 		e.preventDefault();
 		const text = el.value.trim();
+		// Une adresse Cell_B3 : y aller.
+		const addr = /^cell_([a-z]{1,3})([1-9]d*)$/i.exec(text);
+		if (addr) {
+			let c = 0;
+			for (const ch of addr[1].toUpperCase()) c = c * 26 + ch.charCodeAt(0) - 64;
+			wrap.focus();
+			moveTo(Number(addr[2]) - 1, c - 1);
+			return;
+		}
 		// Le nom d'une cellule existante : y aller (comme Excel).
 		for (const [k, n] of names) {
 			if (n.toLowerCase() === text.toLowerCase()) {
@@ -3375,15 +3391,24 @@
 		mounted = true;
 		const resize = () => {
 			const dpr = window.devicePixelRatio || 1;
-			viewW = scroller.clientWidth;
-			viewH = scroller.clientHeight;
-			canvas.width = Math.round(viewW * dpr);
-			canvas.height = Math.round(viewH * dpr);
+			const cw = scroller.clientWidth;
+			const ch = scroller.clientHeight;
+			const pw = Math.round(cw * dpr);
+			const ph = Math.round(ch * dpr);
+			if (cw === viewW && ch === viewH && canvas.width === pw && canvas.height === ph) return;
+			viewW = cw;
+			viewH = ch;
+			// Changer la taille du canevas l'efface (en noir, sans transparence) :
+			// on redessine aussitôt, sans attendre l'image suivante.
+			canvas.width = pw;
+			canvas.height = ph;
 			canvas.style.width = `${viewW}px`;
 			canvas.style.height = `${viewH}px`;
 			vs.view = viewH - TOP_H;
 			updateExtent();
 			syncNative();
+			if (frame) cancelAnimationFrame(frame);
+			draw();
 		};
 		const ro = new ResizeObserver(resize);
 		ro.observe(wrap);
@@ -3565,7 +3590,8 @@
 		>
 			<div bind:this={spacer}></div>
 		</div>
-		<div class="charts" style:left="{MARGIN}px" style:top="{TOP_H}px">
+		<!-- Calque découpé à la zone des cellules : les graphiques ne passent pas sur les barres de défilement. -->
+		<div class="charts" style:left="{MARGIN}px" style:top="{TOP_H}px" style:width="{Math.max(0, viewW - MARGIN)}px" style:height="{Math.max(0, viewH - TOP_H)}px">
 			{#each charts as ch (ch.id)}
 				{@const box = chartBox(ch)}
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -3928,7 +3954,7 @@
 				{#if d.error}<p class="menu-note error">{d.error}</p>{/if}
 				<div class="foot">
 					<span class="sp"></span>
-					<button disabled={!d.count} onclick={applyDedup}>Supprimer</button>
+					<button class="primary" disabled={!d.count} onclick={applyDedup}>Supprimer</button>
 					<button
 						onclick={() => {
 							dedupDlg = null;
@@ -4038,7 +4064,7 @@
 				<div class="foot">
 					{#if d.e.t.columns[d.i]?.filter}<button onclick={() => applyFilter(true)}>Effacer le filtre</button>{/if}
 					<span class="sp"></span>
-					<button onclick={() => applyFilter()}>OK</button>
+					<button class="primary" onclick={() => applyFilter()}>OK</button>
 					<button onclick={closeFilter}>Annuler</button>
 				</div>
 			</div>
@@ -4146,6 +4172,17 @@
 </div>
 
 <style>
+	/* Bouton de validation des boîtes de dialogue : vert, comme Excel. */
+	button.primary {
+		background: #217346;
+		border-color: #217346;
+		color: #fff;
+		padding-left: 15px;
+		padding-right: 15px;
+	}
+	button.primary:disabled {
+		opacity: 0.5;
+	}
 	.sheet-root {
 		display: flex;
 		flex-direction: column;
@@ -4375,8 +4412,6 @@
 	}
 	.charts {
 		position: absolute;
-		right: 0;
-		bottom: 0;
 		overflow: hidden;
 		pointer-events: none;
 	}

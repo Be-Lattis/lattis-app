@@ -266,5 +266,7 @@
 		background: #217346;
 		border-color: #217346;
 		color: #fff;
+		padding-left: 15px;
+		padding-right: 15px;
 	}
 </style>

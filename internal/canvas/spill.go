@@ -13,7 +13,7 @@ const ErrSpillText = "#DEVERSEMENT!"
 
 // spillFree calcule une cellule libre dont la formule est un tableau dynamique
 // (FILTRE, TRIER, UNIQUE…). ok est faux si la formule n'en est pas un.
-func (t *tx) spillFreeRaw(raw string) (rows [][]string, ok bool, errV formula.Value) {
+func (t *tx) spillFreeRaw(sheet int64, raw string) (rows [][]string, ok bool, errV formula.Value) {
 	n, err := formula.Parse(raw, formula.FR)
 	if err != nil || !formula.IsSpill(n) {
 		return nil, false, formula.Value{}
@@ -25,6 +25,7 @@ func (t *tx) spillFreeRaw(raw string) (rows [][]string, ok bool, errV formula.Va
 	if n, _, err = formula.Convert(n, schema, noRanges{}, raw); err != nil {
 		return nil, true, formula.Err(formula.ErrName)
 	}
+	n = formula.QualifyCells(n, sheet)
 	names, err := t.nameValues(schema)
 	if err != nil {
 		return nil, true, formula.Err(formula.ErrValue)

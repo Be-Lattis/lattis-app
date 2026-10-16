@@ -65,6 +65,9 @@ func Deps(n Node) (names, tables []string) {
 type Names struct {
 	Formulas map[string]Node
 	Values   map[string]Value
+	// Extra : dépendances en plus de celles de la formule (les noms lus par
+	// les colonnes calculées des tableaux qu'elle cite).
+	Extra map[string][]string
 }
 
 // order donne l'ordre de calcul des noms (dépendances d'abord) et la liste des
@@ -90,7 +93,7 @@ func (ns *Names) order() (order, cyclic []string) {
 		state[n] = active
 		ok := true
 		deps, _ := Deps(ns.Formulas[n])
-		for _, d := range deps {
+		for _, d := range append(deps, ns.Extra[n]...) {
 			if _, isName := ns.Formulas[d]; isName && !visit(d) {
 				ok = false
 			}

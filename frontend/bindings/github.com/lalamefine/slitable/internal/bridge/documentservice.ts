@@ -468,6 +468,14 @@ export function Scripts(): $CancellablePromise<canvas$0.ScriptInfo[] | null> {
 }
 
 /**
+ * SetActiveSheet indique la feuille affichée : les adresses Cell_A1 sans
+ * feuille de l'onglet SQL s'y lisent.
+ */
+export function SetActiveSheet(sheet: number): $CancellablePromise<void> {
+    return $Call.ByID(3870118268, sheet);
+}
+
+/**
  * SetButton change le libellé, le script ou la fonction d'un bouton.
  */
 export function SetButton(id: number, cfg: canvas$0.ButtonConfig): $CancellablePromise<$models.DocState> {

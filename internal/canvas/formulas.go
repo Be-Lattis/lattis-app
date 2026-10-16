@@ -174,7 +174,7 @@ func (t *tx) schema() (*formula.Schema, error) {
 		if err != nil {
 			return nil, err
 		}
-		ft := &formula.Table{Name: tb.Name, SQL: tb.sql(), Visible: tb.visibleSQL()}
+		ft := &formula.Table{Name: tb.Name, SQL: tb.sql(), Visible: tb.visibleSQL(), Sheet: tb.Sheet}
 		for _, c := range tb.Cols {
 			fc := formula.Column{Name: c.Name, SQL: colSQL(c.ID), Type: c.Type}
 			if c.Formula != "" {
@@ -194,7 +194,7 @@ func (t *tx) schema() (*formula.Schema, error) {
 
 // evalFree calcule une cellule libre avec formule (moteur SQL : agrégats et
 // REFERENCE sur les tableaux du classeur).
-func (t *tx) evalFreeRaw(raw string) formula.Value {
+func (t *tx) evalFreeRaw(sheet int64, raw string) formula.Value {
 	n, err := formula.Parse(raw, formula.FR)
 	if err != nil {
 		return formula.Err(formula.ErrName)
@@ -206,6 +206,7 @@ func (t *tx) evalFreeRaw(raw string) formula.Value {
 	if n, _, err = formula.Convert(n, schema, noRanges{}, raw); err != nil {
 		return formula.Err(formula.ErrName)
 	}
+	n = formula.QualifyCells(n, sheet)
 	names, err := t.nameValues(schema)
 	if err != nil {
 		return formula.Err(formula.ErrValue)

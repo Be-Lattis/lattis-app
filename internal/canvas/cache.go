@@ -2,6 +2,7 @@ package canvas
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/lalamefine/slitable/internal/formula"
 )
@@ -15,8 +16,8 @@ func keyOf(prefix string, v any) string {
 	return prefix + string(b)
 }
 
-func (t *tx) evalFree(raw string) formula.Value {
-	v, _ := cached(t, "free:"+raw, func() (formula.Value, error) { return t.evalFreeRaw(raw), nil })
+func (t *tx) evalFree(sheet int64, raw string) formula.Value {
+	v, _ := cached(t, fmt.Sprintf("free:%d:%s", sheet, raw), func() (formula.Value, error) { return t.evalFreeRaw(sheet, raw), nil })
 	return v
 }
 
@@ -26,9 +27,9 @@ type spillResult struct {
 	err  formula.Value
 }
 
-func (t *tx) spillFree(raw string) ([][]string, bool, formula.Value) {
-	r, _ := cached(t, "spill:"+raw, func() (spillResult, error) {
-		rows, ok, e := t.spillFreeRaw(raw)
+func (t *tx) spillFree(sheet int64, raw string) ([][]string, bool, formula.Value) {
+	r, _ := cached(t, fmt.Sprintf("spill:%d:%s", sheet, raw), func() (spillResult, error) {
+		rows, ok, e := t.spillFreeRaw(sheet, raw)
 		return spillResult{rows, ok, e}, nil
 	})
 	return r.rows, r.ok, r.err

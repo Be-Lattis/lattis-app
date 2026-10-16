@@ -96,7 +96,11 @@ func (c *compiler) expr(n Node, sc scope) string {
 	case ErrLit:
 		return errSQL(n.V)
 	case Name:
-		v, ok := c.names[strings.ToLower(n.Name)]
+		key := strings.ToLower(n.Name)
+		if r, col, ok := CellRef(key); ok && sc.table != nil && sc.table.Sheet != 0 {
+			key = CellKey(sc.table.Sheet, r, col) // colonne calculée : sa feuille
+		}
+		v, ok := c.names[key]
 		if !ok {
 			return errSQL(ErrName)
 		}

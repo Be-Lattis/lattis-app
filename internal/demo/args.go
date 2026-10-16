@@ -8,7 +8,7 @@ import (
 
 // ParseArgs lit les options de démonstration :
 //
-//	--demo [preset]   ouvre un classeur de fausses données (sml par défaut)
+//	--demo [preset]   ouvre un classeur de fausses données (med par défaut)
 //	--seed n          graine du générateur (1 par défaut)
 //
 // Les autres arguments sont ignorés (laissés à Wails).

@@ -4,6 +4,7 @@
 	// la grille (précédence sur GRID). Les commandes pas encore réalisées sont
 	// affichées désactivées, pour montrer l'organisation cible.
 
+	import { untrack } from 'svelte';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { dismiss } from '#lib/grid/dismiss.js';
 	import { fit, groupWidth, type Mode } from './fit';
@@ -217,15 +218,22 @@
 		]
 	});
 
+	type ShapesArr = { title: string; labels: (string | null)[] }[];
 	const shapes = $derived(
 		tab === 'SQL' || tab === 'SCRIPT' ? [] : ribbons[tab].map((g) => ({ title: g.title, labels: g.commands.map((c) => (c.color ? null : c.label)) }))
 	);
-	const modes: Mode[] = $derived(
-		tab === 'SQL' || tab === 'SCRIPT' ? [] : fit(shapes, (groupsW - 12) / ratio)
+	// Les formes ne changent qu'avec les libellés : un clic dans la grille
+	// (annulation, quadrillage…) recrée les commandes sans recompacter le
+	// ruban ni remesurer (sinon les boutons changent de taille).
+	const shapesKey = $derived(JSON.stringify(shapes));
+	const modesKey = $derived(
+		tab === 'SQL' || tab === 'SCRIPT' ? '' : fit(JSON.parse(shapesKey), (groupsW - 12) / ratio).join(',')
 	);
+	const modes: Mode[] = $derived(modesKey ? (modesKey.split(',') as Mode[]) : []);
 	$effect(() => {
 		const m = modes;
 		if (!groupsEl || !m.length) return;
+		const shapes = JSON.parse(untrack(() => shapesKey)) as ShapesArr;
 		requestAnimationFrame(() => {
 			const actual = [...groupsEl.children].reduce((s, c) => s + c.getBoundingClientRect().width, 0);
 			const est = shapes.reduce((s, g, i) => s + groupWidth(g, m[i] ?? 'large'), 0);

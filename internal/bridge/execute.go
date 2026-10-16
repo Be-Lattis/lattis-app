@@ -20,6 +20,9 @@ func (s *DocumentService) Execute(ctx context.Context, q string) (ExecResult, er
 	if err != nil {
 		return ExecResult{}, err
 	}
+	if q, err = d.CellSQL(ctx, q, s.activeSheet()); err != nil {
+		return ExecResult{}, err
+	}
 	start := time.Now()
 	n, err := d.ExecSQL(ctx, q)
 	if err != nil {

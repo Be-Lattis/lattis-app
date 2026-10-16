@@ -47,6 +47,7 @@ type DocumentService struct {
 	mu     sync.Mutex
 	doc    *doc.Document
 	tables map[int64]*grid.Table // tableaux chargés pour la lecture par fenêtres
+	sheet  int64                 // feuille affichée : Cell_A1 de l'onglet SQL s'y lit
 	ui     uiState
 	mcp    mcpState
 	demo   *demoRun // classeur de démonstration demandé au lancement
@@ -335,10 +336,30 @@ func (s *DocumentService) act(ctx context.Context, fn func(*doc.Document) error)
 	return s.changed(ctx)
 }
 
+// SetActiveSheet indique la feuille affichée : les adresses Cell_A1 sans
+// feuille de l'onglet SQL s'y lisent.
+func (s *DocumentService) SetActiveSheet(sheet int64) {
+	s.mu.Lock()
+	s.sheet = sheet
+	s.mu.Unlock()
+}
+
+func (s *DocumentService) activeSheet() int64 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.sheet == 0 {
+		return 1
+	}
+	return s.sheet
+}
+
 // Query exécute une requête SQL en lecture seule sur le classeur (onglet SQL).
 func (s *DocumentService) Query(ctx context.Context, q string) (grid.QueryResult, error) {
 	d, err := s.current()
 	if err != nil {
+		return grid.QueryResult{}, err
+	}
+	if q, err = d.CellSQL(ctx, q, s.activeSheet()); err != nil {
 		return grid.QueryResult{}, err
 	}
 	// Les tableaux croisés cités s'interrogent comme des vues.

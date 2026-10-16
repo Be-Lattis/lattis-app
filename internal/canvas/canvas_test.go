@@ -1511,3 +1511,74 @@ func TestMovePushesRight(t *testing.T) {
 		t.Fatalf("annulation :\n%s\nattendu\n%s", got, start)
 	}
 }
+
+func TestCellAddresses(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	set := func(row, col int, raw string) {
+		t.Helper()
+		if _, err := d.SetCell(ctx, 1, row, col, raw); err != nil {
+			t.Fatalf("%s : %v", raw, err)
+		}
+	}
+	values := func() map[string]string {
+		t.Helper()
+		l, err := d.Layout(ctx, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		out := map[string]string{}
+		for _, c := range l.Cells {
+			out[formula.CellName(c.Row, c.Col)] = c.Value
+		}
+		return out
+	}
+	// Tableau T en (4,0) : x = 1, 2, 3 ; colonne calculée y = [@x]*Cell_A1.
+	set(4, 0, "x")
+	set(5, 0, "1")
+	set(6, 0, "2")
+	set(7, 0, "3")
+	set(0, 0, "10")
+	set(0, 2, "=Cell_A1*2")
+	set(0, 4, "=Cell_E1+1")
+	set(4, 1, "y")
+	set(5, 1, "=[@x]*Cell_A1")
+	var table string
+	d.read(ctx, func(x *tx) error { return x.row(`SELECT name FROM _slitable_tables`).Scan(&table) })
+	set(2, 0, "=SOMME("+table+"[y])")
+	// Cycle à travers le tableau : la colonne lit Cell_G1, qui somme la colonne.
+	set(0, 6, "=SOMME("+table+"[z])")
+	set(4, 2, "z")
+	set(5, 2, "=[@x]+Cell_G1")
+	v := values()
+	if v["Cell_C1"] != "20" || v["Cell_A3"] != "60" || v["Cell_E1"] != "#REF!" || v["Cell_G1"] != "#REF!" {
+		t.Fatalf("valeurs : %v", v)
+	}
+	if _, err := d.ExecSQL(ctx, `SELECT 1`); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "adresses")
+}
+
+func TestCellSQL(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	for _, c := range []struct {
+		row, col int
+		raw      string
+	}{{0, 0, "10"}, {0, 2, "=Cell_A1*2"}, {0, 4, "Lyon"}, {0, 6, "=Cell_G1"}} {
+		if _, err := d.SetCell(ctx, 1, c.row, c.col, c.raw); err != nil {
+			t.Fatal(err)
+		}
+	}
+	q, err := d.CellSQL(ctx, `SELECT Cell_A1 + cell_c1, Cell_E1, 'Cell_A1', "Cell_A1", Feuille1.Cell_C1, Cell_Z9`, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `SELECT 10 + 20, 'Lyon', 'Cell_A1', "Cell_A1", 20, NULL`; q != want {
+		t.Fatalf("%s\nattendu\n%s", q, want)
+	}
+	if _, err := d.CellSQL(ctx, `SELECT Cell_G1`, 1); err == nil {
+		t.Fatal("référence circulaire acceptée")
+	}
+}

@@ -23,7 +23,7 @@ go run . --demo med [--seed 42]                 # ouvre un classeur de démonstr
 
 ### Données de démonstration
 
-`--demo [preset]` ouvre un classeur neuf rempli de fausses données plausibles (générateur déterministe : la même `--seed` donne le même classeur). Sans preset : `sml`. Un preset inconnu affiche la liste.
+`--demo [preset]` ouvre un classeur neuf rempli de fausses données plausibles (générateur déterministe : la même `--seed` donne le même classeur). Sans preset : `med`. Un preset inconnu affiche la liste.
 
 | Preset | Contenu |
 | --- | --- |

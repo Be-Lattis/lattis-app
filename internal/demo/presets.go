@@ -63,7 +63,7 @@ type Preset struct {
 }
 
 // DefaultPreset est le preset choisi quand --demo n'en nomme aucun.
-const DefaultPreset = "sml"
+const DefaultPreset = "med"
 
 // Presets donne les presets, dans l'ordre de l'aide.
 func Presets() []Preset {

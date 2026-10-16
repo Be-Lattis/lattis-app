@@ -241,7 +241,7 @@
 							{/each}
 						</div>
 						<div class="row">
-							<button onclick={applyFilter} disabled={!fo.values.some((v) => v.on)}>OK</button>
+							<button class="primary" onclick={applyFilter} disabled={!fo.values.some((v) => v.on)}>OK</button>
 							<button onclick={() => (filterOpen = null)}>Annuler</button>
 						</div>
 					</div>
@@ -257,6 +257,16 @@
 </aside>
 
 <style>
+	button.primary {
+		background: #217346;
+		border-color: #217346;
+		color: #fff;
+		padding-left: 15px;
+		padding-right: 15px;
+	}
+	button.primary:disabled {
+		opacity: 0.5;
+	}
 	.panel {
 		width: 300px;
 		flex: none;

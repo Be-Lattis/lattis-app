@@ -29,6 +29,9 @@ type Table struct {
 	Visible string
 	Cols    []Column
 	Key     string
+	// Sheet : feuille du tableau, où ses colonnes calculées lisent les
+	// adresses Cell_A1 (0 : inconnue).
+	Sheet int64
 }
 
 func (t *Table) col(name string) (int, bool) {
