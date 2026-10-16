@@ -1,8 +1,12 @@
 name: CI
 
+# Pas de CI sur les PR pour l'instant (choix de Louis : trop long sur chaque
+# plateforme). Les tests tournent sur la branche de développement ; les builds
+# multi-OS et la mesure se lancent à la demande (Actions → Run workflow).
 on:
   push:
-  pull_request:
+    branches: [claude/project-thread-0nnffb]
+  workflow_dispatch:
 
 env:
   WAILS_VERSION: v3.0.0-beta.30
@@ -40,6 +44,7 @@ jobs:
 
   build:
     name: Build ${{ matrix.os }}
+    if: github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false
       matrix:
@@ -68,6 +73,7 @@ jobs:
   # comparables d'un commit à l'autre. Voir docs/mesures/grille.md.
   bench-linux:
     name: Mesure grille (WebKitGTK)
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     continue-on-error: true
     steps:
