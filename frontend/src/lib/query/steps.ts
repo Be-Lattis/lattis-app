@@ -162,3 +162,67 @@ export function otherSource(key: string): Source {
 
 /** Copie profonde (les objets du pont Go ne passent pas structuredClone). */
 export const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
+
+/**
+ * Colonnes choisies après un clic sur un en-tête de l'aperçu : clic simple
+ * (seule cette colonne ; un second clic la désélectionne), Ctrl (ajoute ou
+ * retire), Maj (plage depuis l'ancre), comme dans Power Query.
+ */
+export function clickColumns(names: string[], selected: string[], anchor: string, target: string, mods: { ctrl?: boolean; shift?: boolean }): { selected: string[]; anchor: string } {
+	if (mods.shift && anchor && names.includes(anchor)) {
+		const a = names.indexOf(anchor);
+		const b = names.indexOf(target);
+		const range = names.slice(Math.min(a, b), Math.max(a, b) + 1);
+		const base = mods.ctrl ? selected.filter((n) => !range.includes(n)) : [];
+		return { selected: names.filter((n) => base.includes(n) || range.includes(n)), anchor };
+	}
+	if (mods.ctrl) {
+		const on = !selected.includes(target);
+		return { selected: names.filter((n) => (n === target ? on : selected.includes(n))), anchor: target };
+	}
+	if (selected.length === 1 && selected[0] === target) return { selected: [], anchor: '' };
+	return { selected: [target], anchor: target };
+}
+
+/** Actions du menu d'une colonne qui ajoutent leur étape sans boîte de dialogue. */
+export type QuickAction = 'remove' | 'keep' | 'distinct' | 'unpivot' | 'unpivotOthers' | 'sortAsc' | 'sortDesc' | 'type' | 'transform';
+
+/**
+ * Étapes ajoutées directement par le menu des colonnes sur les colonnes
+ * choisies (dans l'ordre de l'aperçu). arg : le type (type) ou la fonction
+ * (transform), qui donnent une étape par colonne.
+ */
+export function quickSteps(a: QuickAction, cols: Column[], selected: string[], arg = ''): Step[] {
+	const names = cols.map((c) => c.name);
+	const sel = names.filter((n) => selected.includes(n));
+	if (!sel.length) return [];
+	switch (a) {
+		case 'remove':
+			return [{ op: 'remove', columns: sel }];
+		case 'keep':
+			return [{ op: 'select', columns: sel }];
+		case 'distinct':
+			return [{ op: 'distinct', columns: sel }];
+		case 'unpivot':
+			return [{ op: 'unpivot', columns: sel, name: 'Attribut', valueName: 'Valeur' }];
+		case 'unpivotOthers': {
+			const rest = names.filter((n) => !sel.includes(n));
+			return rest.length ? [{ op: 'unpivot', columns: rest, name: 'Attribut', valueName: 'Valeur' }] : [];
+		}
+		case 'sortAsc':
+		case 'sortDesc':
+			return [{ op: 'sort', sort: sel.map((column) => (a === 'sortDesc' ? { column, desc: true } : { column })) }];
+		case 'type':
+			return sel.filter((n) => cols.find((c) => c.name === n)?.type !== arg).map((column) => ({ op: 'type', column, type: arg as Step['type'] }));
+		case 'transform':
+			return sel.map((column) => ({ op: 'transform', column, fn: arg }));
+	}
+}
+
+/** Pré-remplit une étape (boîte de dialogue) avec les colonnes choisies. */
+export function withColumns(s: Step, selected: string[]): Step {
+	if (!selected.length) return s;
+	if (s.op === 'remove' || s.op === 'unpivot' || s.op === 'group' || s.op === 'distinct') return { ...s, columns: [...selected] };
+	if (s.op === 'sort') return { ...s, sort: selected.map((column) => ({ column })) };
+	return s;
+}
