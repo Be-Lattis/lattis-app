@@ -56,6 +56,9 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 			case inCols && inRows:
 				return t.setCell(tb, row-tb.Row-1, col-tb.Col, raw, ev)
 			case inCols && row == tb.Bottom()+1 && !empty:
+				if tb.Filtered() {
+					return ErrFiltered{tb.Name}
+				}
 				if err := t.appendRows(tb, 1); err != nil {
 					return err
 				}
@@ -272,6 +275,9 @@ func (m *Model) InsertRow(ctx context.Context, table string, n int) error {
 		tb, err := t.tableByName(table)
 		if err != nil {
 			return err
+		}
+		if tb.Filtered() {
+			return ErrFiltered{tb.Name}
 		}
 		if n < 0 || n > tb.Rows {
 			return errors.New("canvas: ligne hors du tableau")

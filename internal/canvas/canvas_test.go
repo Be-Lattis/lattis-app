@@ -736,3 +736,123 @@ func TestRules(t *testing.T) {
 		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
 	}
 }
+
+func TestFilter(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Ville", "Pays"}, {"Lyon", "FR"}, {"Rome", "IT"}, {"Paris", "FR"}, {"Nice", ""}}); err != nil {
+		t.Fatal(err)
+	}
+	before := dump(t, d)
+	vals, err := d.FilterValues(ctx, "Feuille1", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fmt.Sprint(vals) != "[{ 1} {FR 2} {IT 1}]" {
+		t.Fatalf("valeurs : %v", vals)
+	}
+	if err := d.SetFilter(ctx, "Feuille1", 1, &ColumnFilter{Values: []string{"FR"}}); err != nil {
+		t.Fatal(err)
+	}
+	l, _ := d.Layout(ctx, 1)
+	tb := l.Tables[0]
+	if tb.Rows != 2 || tb.Total != 4 || tb.Filter == "" {
+		t.Fatalf("filtré : %d/%d %q", tb.Rows, tb.Total, tb.Filter)
+	}
+	// La 2e ligne affichée est Paris : la saisie y va.
+	if _, err := d.SetCell(ctx, 1, 2, 0, "Paris 2"); err != nil {
+		t.Fatal(err)
+	}
+	var got string
+	d.read(ctx, func(t *tx) error { return t.row(`SELECT c_1 FROM t_1 WHERE id = 3`).Scan(&got) })
+	if got != "Paris 2" {
+		t.Fatalf("saisie sur la ligne filtrée : %q", got)
+	}
+	// Pas d'ajout de ligne dans un tableau filtré, ni dans les lignes masquées.
+	if _, err := d.SetCell(ctx, 1, 3, 0, "Brest"); !errors.As(err, new(ErrFiltered)) {
+		t.Fatalf("saisie dans les lignes masquées : %v", err)
+	}
+	if err := d.InsertRow(ctx, "Feuille1", 0); !errors.As(err, new(ErrFiltered)) {
+		t.Fatalf("insertion : %v", err)
+	}
+	// Supprimer la ligne affichée 0 supprime Lyon.
+	if err := d.DeleteRow(ctx, "Feuille1", 0); err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	d.read(ctx, func(t *tx) error { return t.row(`SELECT count(*) FROM t_1 WHERE c_1 = 'Lyon'`).Scan(&n) })
+	if n != 0 {
+		t.Fatal("Lyon non supprimée")
+	}
+	d.bus.Undo(ctx)
+	// Les vides se filtrent par "".
+	if err := d.SetFilter(ctx, "Feuille1", 1, &ColumnFilter{Values: []string{""}}); err != nil {
+		t.Fatal(err)
+	}
+	l, _ = d.Layout(ctx, 1)
+	if l.Tables[0].Rows != 1 {
+		t.Fatalf("vides : %d", l.Tables[0].Rows)
+	}
+	if err := d.ClearFilters(ctx, "Feuille1"); err != nil {
+		t.Fatal(err)
+	}
+	l, _ = d.Layout(ctx, 1)
+	if l.Tables[0].Rows != 4 || l.Tables[0].Filter != "" {
+		t.Fatalf("sans filtre : %d %q", l.Tables[0].Rows, l.Tables[0].Filter)
+	}
+	for range 4 {
+		d.bus.Undo(ctx)
+	}
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
+	}
+}
+
+func TestFilterErrors(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"N"}, {"1"}, {"2"}, {"3"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.FixType(ctx, "Feuille1", 0); err != nil {
+		t.Skip("FixType :", err)
+	}
+	if _, err := d.SetCell(ctx, 1, 2, 0, "deux"); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.SetFilter(ctx, "Feuille1", 0, &ColumnFilter{Errors: true}); err != nil {
+		t.Fatal(err)
+	}
+	l, _ := d.Layout(ctx, 1)
+	if l.Tables[0].Rows != 1 {
+		t.Fatalf("erreurs seulement : %d", l.Tables[0].Rows)
+	}
+}
+
+// Les colonnes calculées se lisent aussi à travers la vue filtrée.
+func TestFilterComputed(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Qté", "Prix", "Total"}, {"2", "10", "x"}, {"3", "5", "y"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.SetCell(ctx, 1, 1, 2, "=[@Qté]*[@Prix]"); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.SetFilter(ctx, "Feuille1", 0, &ColumnFilter{Values: []string{"3"}}); err != nil {
+		t.Fatal(err)
+	}
+	l, _ := d.Layout(ctx, 1)
+	ti := l.Tables[0]
+	exprs, args, _, err := d.ColumnExprs(ctx, ti.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got any
+	err = d.read(ctx, func(t *tx) error {
+		return t.row(`SELECT `+exprs[2]+` FROM `+ti.Source, args...).Scan(&got)
+	})
+	if err != nil || fmt.Sprint(got) != "15" {
+		t.Fatalf("total filtré : %v (%v)", got, err)
+	}
+}

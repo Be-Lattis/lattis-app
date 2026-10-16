@@ -37,6 +37,12 @@
 		style?: string; // mise en forme de toute la colonne (JSON)
 		headerStyle?: string;
 		rules?: string; // mise en forme conditionnelle (JSON)
+		filter?: ColumnFilter; // filtre de la colonne
+	}
+
+	export interface ColumnFilter {
+		values?: string[]; // valeurs gardées (texte affiché, vide : cellules vides)
+		errors?: boolean; // saisies hors type seulement
 	}
 
 	export interface SheetTable {
@@ -44,7 +50,9 @@
 		name: string;
 		row: number; // ancre : ligne d'en-tête
 		col: number;
-		rows: number; // lignes de données
+		rows: number; // lignes de données affichées
+		/** Lignes masquées par le filtre (elles gardent leur place sur la feuille). */
+		hidden?: number;
 		columns: Column[];
 	}
 
@@ -97,6 +105,11 @@
 		replace?(text: string, by: string): Promise<number>;
 		/** Remplace les règles de mise en forme conditionnelle d'une colonne. */
 		setRules?(table: SheetTable, i: number, rules: Rule[]): Promise<unknown>;
+		/** Valeurs distinctes d'une colonne (filtre). */
+		filterValues?(table: SheetTable, i: number): Promise<{ text: string; count: number }[]>;
+		/** Filtre d'une colonne (null : retire le filtre de la colonne). */
+		setFilter?(table: SheetTable, i: number, f: ColumnFilter | null): Promise<unknown>;
+		clearFilters?(table: SheetTable): Promise<unknown>;
 	}
 
 	export interface SheetStatus {
@@ -394,6 +407,18 @@
 			ctx.fillRect(cx(k0), ry(s0), spanW(k0, k1), (s1 - s0 + 1) * ROW_H);
 		}
 
+		// Lignes masquées par un filtre : une note sous le tableau.
+		for (const e of visible) {
+			const n = e.t.hidden ?? 0;
+			const r = e.last + 1;
+			if (!n || r < r0 || r > r1) continue;
+			ctx.font = 'italic ' + FONT_SMALL;
+			ctx.fillStyle = C.icon;
+			ctx.textAlign = 'left';
+			ctx.textBaseline = 'middle';
+			ctx.fillText(`⧩ ${n} ligne${n > 1 ? 's' : ''} masquée${n > 1 ? 's' : ''} par le filtre`, cx(e.t.col) + 6, ry(r) + ROW_H / 2);
+		}
+
 		// Contenu des tableaux, colonne par colonne (une découpe par colonne).
 		ctx.textBaseline = 'middle';
 		for (const e of visible) {
@@ -419,7 +444,7 @@
 						ctx.font = FONT_SMALL;
 						ctx.fillStyle = C.icon;
 						ctx.textAlign = 'right';
-						const icon = typeIcon(col.type) + ' ▾';
+						const icon = (col.filter ? '⧩ ' : '') + typeIcon(col.type) + ' ▾';
 						if (col.errors) {
 							ctx.fillStyle = C.error;
 							ctx.fillText('⚠ ' + col.errors, x + cw - 6 - ctx.measureText(icon + ' ').width, y + ROW_H / 2);
@@ -761,6 +786,85 @@
 		parts.push(`Nb : ${count.toLocaleString('fr-FR')}`);
 		if (nums) parts.push(`Somme : ${statFmt.format(sum)}`);
 		return parts.join('   ') + (missing ? ' (lignes en chargement)' : '');
+	}
+
+	// --- Filtre -----------------------------------------------------------------
+
+	let filterDlg = $state<{
+		e: Entry;
+		i: number;
+		values: { text: string; count: number; on: boolean }[];
+		search: string;
+		errors: boolean;
+		error: string;
+	} | null>(null);
+
+	async function openFilter(e: Entry, i: number) {
+		menu = null;
+		if (!source.filterValues) return;
+		const f = e.t.columns[i]?.filter;
+		try {
+			const vals = await source.filterValues(e.t, i);
+			const keep = f?.values ? new Set(f.values) : null;
+			filterDlg = {
+				e,
+				i,
+				values: vals.map((v) => ({ ...v, on: !keep || keep.has(v.text) })),
+				search: '',
+				errors: !!f?.errors,
+				error: ''
+			};
+		} catch (err) {
+			say(String(err instanceof Error ? err.message : err));
+		}
+	}
+
+	/** Filtre de la colonne de la cellule active (ruban Données). */
+	export function filterActive(errorsOnly = false) {
+		const e = tableAt(active.row, active.col);
+		if (!e || !source.setFilter) {
+			say('Placez la cellule active dans la colonne d’un tableau pour filtrer');
+			return;
+		}
+		const i = active.col - e.t.col;
+		if (errorsOnly) {
+			const f = e.t.columns[i]?.filter;
+			const set = source.setFilter;
+			menuAction(() => set(e.t, i, f?.errors ? (f.values ? { values: f.values } : null) : { ...f, errors: true }));
+			return;
+		}
+		openFilter(e, i);
+	}
+
+	function filterShown() {
+		const d = filterDlg;
+		if (!d) return [];
+		const q = d.search.trim().toLocaleLowerCase('fr');
+		return q ? d.values.filter((v) => v.text.toLocaleLowerCase('fr').includes(q)) : d.values;
+	}
+
+	async function applyFilter(clear = false) {
+		const d = filterDlg;
+		if (!d || !source.setFilter) return;
+		let f: ColumnFilter | null = null;
+		if (!clear) {
+			const all = d.values.every((v) => v.on);
+			f = {};
+			if (!all) f.values = d.values.filter((v) => v.on).map((v) => v.text);
+			if (d.errors) f.errors = true;
+			if (!f.values && !f.errors) f = null;
+		}
+		try {
+			await source.setFilter(d.e.t, d.i, f);
+			closeFilter();
+		} catch (err) {
+			d.error = String(err instanceof Error ? err.message : err);
+		}
+	}
+
+	function closeFilter() {
+		filterDlg = null;
+		wrap.focus();
 	}
 
 	// --- Mise en forme conditionnelle -----------------------------------------
@@ -1724,6 +1828,12 @@
 					<button onclick={() => menuAction(() => source.sortTable!(m.e.t, m.i, true))}>Trier de Z à A (décroissant)</button>
 					<hr />
 				{/if}
+				{#if source.setFilter && !m.e.t.columns[m.i]?.formula}
+					<button onclick={() => openFilter(m.e, m.i)}>Filtrer par « {m.e.t.columns[m.i]?.name} »…</button>
+				{/if}
+				{#if source.clearFilters && m.e.t.columns.some((c) => c.filter)}
+					<button onclick={() => menuAction(() => source.clearFilters!(m.e.t))}>Effacer le filtre du tableau</button>
+				{/if}
 				{#if source.setRules}
 					<button onclick={() => openRules(m.e, m.i)}>Mise en forme conditionnelle…</button>
 					<hr />
@@ -1731,6 +1841,55 @@
 				<button onclick={() => menuAction(source.insertColumn && (() => source.insertColumn!(m.e.t, m.i)))}>Insérer une colonne à gauche</button>
 				<button onclick={() => menuAction(source.insertColumn && (() => source.insertColumn!(m.e.t, m.i + 1)))}>Insérer une colonne à droite</button>
 				<button onclick={() => menuAction(source.deleteColumn && (() => source.deleteColumn!(m.e.t, m.i)))}>Supprimer la colonne « {m.e.t.columns[m.i]?.name} »</button>
+			</div>
+		{/if}
+		{#if filterDlg}
+			{@const d = filterDlg}
+			{@const shown = filterShown()}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="rules filter"
+				onkeydown={(ev) => {
+					ev.stopPropagation();
+					if (ev.key === 'Escape') closeFilter();
+					if (ev.key === 'Enter') applyFilter();
+				}}
+			>
+				<div class="menu-title">Filtrer « {d.e.t.columns[d.i]?.name} »</div>
+				<div class="add"><input class="search" bind:value={d.search} placeholder="Rechercher" /></div>
+				<div class="values">
+					<label class="all">
+						<input
+							type="checkbox"
+							checked={shown.every((v) => v.on)}
+							onchange={(ev) => {
+								const on = (ev.currentTarget as HTMLInputElement).checked;
+								for (const v of shown) v.on = on;
+							}}
+						/>
+						(Sélectionner tout)
+					</label>
+					{#each shown as v (v.text)}
+						<label>
+							<input type="checkbox" bind:checked={v.on} />
+							<span class="what">{v.text === '' ? '(Vides)' : v.text}</span>
+							<span class="count">{v.count}</span>
+						</label>
+					{/each}
+					{#if d.values.length >= 1000}<p class="menu-note">Seules les 1 000 premières valeurs sont listées.</p>{/if}
+				</div>
+				{#if d.e.t.columns[d.i]?.errors}
+					<div class="add">
+						<label><input type="checkbox" bind:checked={d.errors} /> Saisies hors type seulement ({d.e.t.columns[d.i]?.errors})</label>
+					</div>
+				{/if}
+				{#if d.error}<p class="menu-note error">{d.error}</p>{/if}
+				<div class="foot">
+					{#if d.e.t.columns[d.i]?.filter}<button onclick={() => applyFilter(true)}>Effacer le filtre</button>{/if}
+					<span class="sp"></span>
+					<button onclick={() => applyFilter()}>OK</button>
+					<button onclick={closeFilter}>Annuler</button>
+				</div>
 			</div>
 		{/if}
 		{#if rulesDlg}
@@ -1983,6 +2142,32 @@
 	}
 	.rules .what {
 		flex: 1;
+	}
+	.filter {
+		min-width: 300px;
+	}
+	.filter .search {
+		width: 100%;
+	}
+	.filter .values {
+		max-height: 260px;
+		overflow: auto;
+		margin: 4px 14px;
+		border: 1px solid #e5e7eb;
+		padding: 4px 0;
+	}
+	.filter label {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 1px 8px;
+	}
+	.filter .values input {
+		width: auto;
+	}
+	.filter .count {
+		color: #6b7280;
+		font-size: 11px;
 	}
 	.rules .sample {
 		padding: 1px 8px;

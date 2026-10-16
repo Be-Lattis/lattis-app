@@ -265,7 +265,7 @@ func (s *DocumentService) Window(ctx context.Context, sheet, table int64, first,
 				}
 				return v
 			}
-			t = grid.NewTable(d.DB(), ti.SQL, ti.Name, cols, sqlCols).WithInvalid(ti.ID, ids).WithExprs(exprs, args, decode)
+			t = grid.NewTable(d.DB(), ti.Source, ti.Name, cols, sqlCols).WithInvalid(ti.ID, ids).WithExprs(exprs, args, decode)
 			if err := t.Load(ctx); err != nil {
 				return grid.Window{}, err
 			}
@@ -486,4 +486,23 @@ func (s *DocumentService) Replace(ctx context.Context, sheet int64, text, by str
 // SetRules remplace les règles de mise en forme conditionnelle d'une colonne.
 func (s *DocumentService) SetRules(ctx context.Context, table string, i int, rules []canvas.Rule) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.SetRules(ctx, table, i, rules) })
+}
+
+// SetFilter remplace le filtre d'une colonne (nil : retire le filtre).
+func (s *DocumentService) SetFilter(ctx context.Context, table string, i int, f *canvas.ColumnFilter) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetFilter(ctx, table, i, f) })
+}
+
+// ClearFilters retire tous les filtres d'un tableau.
+func (s *DocumentService) ClearFilters(ctx context.Context, table string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.ClearFilters(ctx, table) })
+}
+
+// FilterValues donne les valeurs distinctes d'une colonne pour le filtre.
+func (s *DocumentService) FilterValues(ctx context.Context, table string, i int) ([]canvas.FilterValue, error) {
+	d, err := s.current()
+	if err != nil {
+		return nil, err
+	}
+	return d.FilterValues(ctx, table, i)
 }

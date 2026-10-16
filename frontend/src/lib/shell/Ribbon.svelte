@@ -39,9 +39,10 @@
 		onstyle?: (patch: Record<string, unknown>) => void;
 		onfind?: (replace: boolean) => void;
 		onrules?: () => void;
+		onfilter?: (errorsOnly: boolean) => void;
 	}
 
-	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules }: Props = $props();
+	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter }: Props = $props();
 	let fg = $state('#c00000');
 	let bg = $state('#fff2cc');
 	const st = (patch: Record<string, unknown>) => (onstyle ? () => onstyle(patch) : undefined);
@@ -111,10 +112,10 @@
 				commands: [
 					{ label: 'Trier A → Z', icon: 'sort', run: onsort ? () => onsort(false) : undefined, hint: 'Trier le tableau par la colonne active, croissant' },
 					{ label: 'Trier Z → A', icon: 'sort', run: onsort ? () => onsort(true) : undefined, hint: 'Trier le tableau par la colonne active, décroissant' },
-					{ label: 'Filtrer', icon: 'filter' }
+					{ label: 'Filtrer', icon: 'filter', run: onfilter ? () => onfilter(false) : undefined, hint: 'Filtrer le tableau par la colonne active' }
 				]
 			},
-			{ title: 'Outils de données', commands: [{ label: 'Supprimer les doublons', icon: 'remove-duplicates' }, { label: 'Convertir le type', icon: 'convert-type' }, { label: 'Erreurs seulement', icon: 'warning' }] }
+			{ title: 'Outils de données', commands: [{ label: 'Supprimer les doublons', icon: 'remove-duplicates' }, { label: 'Convertir le type', icon: 'convert-type' }, { label: 'Erreurs seulement', icon: 'warning', run: onfilter ? () => onfilter(true) : undefined, hint: 'Afficher seulement les saisies hors type de la colonne active (bascule)' }] }
 		],
 		Formules: [
 			{ title: 'Bibliothèque', commands: [{ label: 'Insérer une fonction', icon: 'function' }, { label: 'Somme automatique', icon: 'autosum' }, { label: 'REFERENCE', icon: 'reference' }] },

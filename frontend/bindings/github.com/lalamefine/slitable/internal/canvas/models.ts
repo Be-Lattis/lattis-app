@@ -38,6 +38,16 @@ export interface ColWidth {
 }
 
 /**
+ * ColumnFilter est le filtre d'une colonne de tableau, comme le filtre
+ * automatique d'Excel : les lignes dont la valeur (texte affiché, vide pour
+ * une cellule vide) est dans Values, et/ou seulement les saisies hors type.
+ */
+export interface ColumnFilter {
+    "values"?: string[] | null;
+    "errors"?: boolean;
+}
+
+/**
  * ColumnInfo décrit une colonne de tableau pour l'interface.
  */
 export interface ColumnInfo {
@@ -93,6 +103,17 @@ export interface Event {
      * saisie hors type dans une colonne au type fixé
      */
     "invalid": boolean;
+}
+
+/**
+ * FilterValue est une valeur distincte d'une colonne, avec son nombre de lignes.
+ */
+export interface FilterValue {
+    /**
+     * vide : cellules vides
+     */
+    "text": string;
+    "count": number;
 }
 
 /**
@@ -195,9 +216,24 @@ export interface TableInfo {
     "col": number;
 
     /**
-     * lignes de données
+     * lignes de données affichées (filtre)
      */
     "rows": number;
+
+    /**
+     * lignes de données, masquées comprises
+     */
+    "total": number;
+
+    /**
+     * Filtre (JSON : identifiant de colonne → ColumnFilter), vide sans filtre.
+     */
+    "filter": string;
+
+    /**
+     * Source SQL des lignes affichées (la table, ou une requête filtrée).
+     */
+    "source": string;
     "columns": ColumnInfo[] | null;
 }
 

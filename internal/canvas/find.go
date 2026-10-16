@@ -46,7 +46,7 @@ func (m *Model) Find(ctx context.Context, sheet int64, text string) ([]Match, er
 					continue
 				}
 				col := colSQL(c.ID)
-				rs, err := t.query(`SELECT n FROM (SELECT `+col+` AS v, row_number() OVER (ORDER BY _pos) AS n FROM `+tb.sql()+
+				rs, err := t.query(`SELECT n FROM (SELECT `+col+` AS v, row_number() OVER (ORDER BY _pos) AS n FROM `+tb.view()+
 					`) WHERE slt_text(v, ?) LIKE ? ESCAPE '\' LIMIT ?`, string(c.Type), pattern, MaxMatches)
 				if err != nil {
 					return err
@@ -143,7 +143,7 @@ func (t *tx) rawAt(sheet int64, row, col int) (string, bool, error) {
 			return c.Name, true, nil
 		}
 		var s *string
-		err := t.row(`SELECT slt_text(`+colSQL(c.ID)+`, ?) FROM `+tb.sql()+` ORDER BY _pos LIMIT 1 OFFSET ?`, string(c.Type), row-tb.Row-1).Scan(&s)
+		err := t.row(`SELECT slt_text(`+colSQL(c.ID)+`, ?) FROM `+tb.view()+` ORDER BY _pos LIMIT 1 OFFSET ?`, string(c.Type), row-tb.Row-1).Scan(&s)
 		if err != nil || s == nil {
 			return "", false, err
 		}

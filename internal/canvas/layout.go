@@ -28,6 +28,12 @@ type Table struct {
 	Cols     []Column
 	Rows     int   // lignes de données
 	Key      int64 // colonne clé (identifiant) pour REFERENCE, 0 si aucune
+
+	// Filtre : les lignes masquées gardent leur place sur la feuille (Bottom
+	// ne change pas), les Shown premières lignes affichent les lignes gardées.
+	Filter map[string]ColumnFilter
+	Shown  int
+	where  string
 }
 
 // Bottom est la dernière ligne occupée (l'en-tête si le tableau est vide).
@@ -101,12 +107,19 @@ func (t *tx) fill(tb *Table) error {
 	if err := rs.Err(); err != nil {
 		return err
 	}
-	return t.row(`SELECT count(*) FROM ` + tb.sql()).Scan(&tb.Rows)
+	if err := t.row(`SELECT count(*) FROM ` + tb.sql()).Scan(&tb.Rows); err != nil {
+		return err
+	}
+	return t.loadFilter(tb)
 }
 
-// rowID donne la clé technique de la ligne de données n (0 = première).
+// rowID donne la clé technique de la ligne de données n (0 = première) parmi
+// les lignes affichées.
 func (t *tx) rowID(tb Table, n int) (id int64, pos string, err error) {
-	err = t.row(`SELECT id, _pos FROM `+tb.sql()+` ORDER BY _pos LIMIT 1 OFFSET ?`, n).Scan(&id, &pos)
+	if tb.Filtered() && n >= tb.Shown {
+		return 0, "", ErrFiltered{tb.Name}
+	}
+	err = t.row(`SELECT id, _pos FROM `+tb.view()+` ORDER BY _pos LIMIT 1 OFFSET ?`, n).Scan(&id, &pos)
 	return
 }
 

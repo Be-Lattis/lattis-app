@@ -121,6 +121,11 @@ CREATE TABLE _slitable_cell_styles (
 	`
 ALTER TABLE _slitable_columns ADD COLUMN rules TEXT;
 `,
+	// 7 → 8 : filtre automatique d'un tableau (JSON : identifiant de colonne →
+	// valeurs gardées, erreurs seulement).
+	`
+ALTER TABLE _slitable_tables ADD COLUMN filter TEXT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

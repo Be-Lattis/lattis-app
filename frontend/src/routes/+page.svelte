@@ -12,7 +12,7 @@
 	import type { Layout } from '#bindings/internal/canvas/models.js';
 	import type { Type } from '#bindings/internal/grid/models.js';
 	import type { Orphan } from '#bindings/internal/archive/models.js';
-	import Sheet, { type SheetData, type SheetSource, type SheetStatus } from '#lib/grid/Sheet.svelte';
+	import Sheet, { type SheetData, type SheetSource, type SheetStatus, type ColumnFilter } from '#lib/grid/Sheet.svelte';
 	import Ribbon, { type FileAction, type View } from '#lib/shell/Ribbon.svelte';
 	import SheetTabs from '#lib/shell/SheetTabs.svelte';
 	import SqlView from '#lib/shell/SqlView.svelte';
@@ -216,6 +216,9 @@
 		setName: (row, col, name) => DocumentService.SetName(sheetId, row, col, name).then(reload),
 		sortTable: (t, i, desc) => DocumentService.SortTable(t.name, i, desc).then(reload),
 		setRules: (t, i, rules) => DocumentService.SetRules(t.name, i, rules).then(reload),
+		filterValues: async (t, i) => (await DocumentService.FilterValues(t.name, i)) ?? [],
+		setFilter: (t, i, f) => DocumentService.SetFilter(t.name, i, f).then(reload),
+		clearFilters: (t) => DocumentService.ClearFilters(t.name).then(reload),
 		applyStyle: (r0, c0, r1, c1, patch) => DocumentService.ApplyStyle(sheetId, r0, c0, r1, c1, patch).then(reload),
 		find: async (text) => (await DocumentService.Find(sheetId, text)) ?? [],
 		replace: async (text, by) => {
@@ -237,12 +240,15 @@
 	const docData = $derived<SheetData | null>(
 		layout
 			? {
-					tables: (layout.tables ?? []).map((t) => ({
+					tables: (layout.tables ?? []).map((t) => {
+						const filter = t.filter ? (JSON.parse(t.filter) as Record<string, ColumnFilter>) : {};
+						return {
 						id: t.id,
 						name: t.name,
 						row: t.row,
 						col: t.col,
 						rows: t.rows,
+						hidden: t.total - t.rows,
 						columns: (t.columns ?? []).map((c) => ({
 							name: c.name,
 							type: (c.formula ? 'formula' : c.type) as ColumnType,
@@ -251,9 +257,11 @@
 							formula: c.formula || undefined,
 							style: c.style || undefined,
 							headerStyle: c.headerStyle || undefined,
-							rules: c.rules || undefined
+							rules: c.rules || undefined,
+							filter: filter[String(c.id)]
 						}))
-					})),
+					};
+					}),
 					cells: layout.cells ?? [],
 					widths: layout.widths ?? [],
 					names: layout.names ?? [],
@@ -327,6 +335,7 @@
 		onstyle={mode === 'doc' ? (patch) => sheet?.applyStyle(patch) : undefined}
 		onfind={mode === 'doc' ? (replace) => sheet?.openFinder(replace) : undefined}
 		onrules={mode === 'doc' ? () => sheet?.rulesActive() : undefined}
+		onfilter={mode === 'doc' ? (errorsOnly) => sheet?.filterActive(errorsOnly) : undefined}
 	/>
 
 	<main>

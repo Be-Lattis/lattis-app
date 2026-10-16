@@ -31,7 +31,61 @@ func Between(a, b string) (string, error) {
 	if !valid(a) || !valid(b) || (a != "" && b != "" && a >= b) {
 		return "", ErrOrder
 	}
+	switch {
+	case b == "" && a != "":
+		return after(a), nil
+	case a == "" && b != "":
+		return before(b), nil
+	}
 	return midpoint(a, b), nil
+}
+
+// after donne une clé juste après a, pour ajouter en fin : la clé s'allonge
+// d'un caractère seulement quand le préfixe de « z » s'allonge, et chaque
+// niveau offre 62^(k+1) places. Couper au milieu (midpoint) ajouterait un
+// caractère toutes les six insertions environ.
+func after(a string) string {
+	k := 0
+	for k < len(a) && a[k] == 'z' {
+		k++
+	}
+	rest := []byte(a[k:])
+	w := max(len(rest), k+1)
+	for len(rest) < w {
+		rest = append(rest, '0')
+	}
+	// Incrémente rest (w chiffres) : rest[0] != 'z', pas de débordement.
+	for i := w - 1; i >= 0; i-- {
+		if d := digit(rest[i]); d < base-1 {
+			rest[i] = Digits[d+1]
+			break
+		}
+		rest[i] = '0'
+	}
+	return strings.TrimRight(a[:k]+string(rest), "0")
+}
+
+// before donne une clé juste avant b, pour insérer en tête (symétrique de
+// after, sur le préfixe de « 0 »).
+func before(b string) string {
+	k := 0
+	for k < len(b) && b[k] == '0' {
+		k++
+	}
+	rest := []byte(b[k:])
+	w := max(len(rest), k+2)
+	for len(rest) < w {
+		rest = append(rest, '0')
+	}
+	// Décrémente rest (w chiffres) : rest[0] != '0', pas de débordement.
+	for i := w - 1; i >= 0; i-- {
+		if d := digit(rest[i]); d > 0 {
+			rest[i] = Digits[d-1]
+			break
+		}
+		rest[i] = Digits[base-1]
+	}
+	return strings.TrimRight(b[:k]+string(rest), "0")
 }
 
 // Spread renvoie n clés croissantes, régulièrement espacées et de longueur au

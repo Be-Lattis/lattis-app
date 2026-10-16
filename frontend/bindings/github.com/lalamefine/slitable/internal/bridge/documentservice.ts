@@ -40,6 +40,13 @@ export function ApplyStyle(sheet: number, r0: number, c0: number, r1: number, c1
 }
 
 /**
+ * ClearFilters retire tous les filtres d'un tableau.
+ */
+export function ClearFilters(table: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3821886489, table);
+}
+
+/**
  * ConvertPreview compte les valeurs qui ne se convertiraient pas au type to.
  */
 export function ConvertPreview(table: string, i: number, to: grid$0.Type): $CancellablePromise<number> {
@@ -79,6 +86,13 @@ export function Discard(dir: string): $CancellablePromise<void> {
  */
 export function ExportCSV(table: string): $CancellablePromise<string> {
     return $Call.ByID(1530430769, table);
+}
+
+/**
+ * FilterValues donne les valeurs distinctes d'une colonne pour le filtre.
+ */
+export function FilterValues(table: string, i: number): $CancellablePromise<canvas$0.FilterValue[] | null> {
+    return $Call.ByID(3461780889, table, i);
 }
 
 /**
@@ -223,6 +237,13 @@ export function SetCell(sheet: number, row: number, col: number, raw: string): $
  */
 export function SetColumnWidth(sheet: number, col: number, width: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(1916242223, sheet, col, width);
+}
+
+/**
+ * SetFilter remplace le filtre d'une colonne (nil : retire le filtre).
+ */
+export function SetFilter(table: string, i: number, f: canvas$0.ColumnFilter | null): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(541852321, table, i, f);
 }
 
 /**

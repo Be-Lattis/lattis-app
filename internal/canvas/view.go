@@ -2,6 +2,7 @@ package canvas
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/lalamefine/slitable/internal/grid"
 )
@@ -31,12 +32,17 @@ type ColumnInfo struct {
 
 // TableInfo décrit un tableau posé sur une feuille.
 type TableInfo struct {
-	ID      int64        `json:"id"`
-	Name    string       `json:"name"`
-	SQL     string       `json:"sql"`
-	Row     int          `json:"row"` // ancre : ligne d'en-tête
-	Col     int          `json:"col"`
-	Rows    int          `json:"rows"` // lignes de données
+	ID    int64  `json:"id"`
+	Name  string `json:"name"`
+	SQL   string `json:"sql"`
+	Row   int    `json:"row"` // ancre : ligne d'en-tête
+	Col   int    `json:"col"`
+	Rows  int    `json:"rows"`  // lignes de données affichées (filtre)
+	Total int    `json:"total"` // lignes de données, masquées comprises
+	// Filtre (JSON : identifiant de colonne → ColumnFilter), vide sans filtre.
+	Filter string `json:"filter"`
+	// Source SQL des lignes affichées (la table, ou une requête filtrée).
+	Source  string       `json:"source"`
 	Columns []ColumnInfo `json:"columns"`
 }
 
@@ -104,7 +110,14 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 			return err
 		}
 		for _, tb := range tables {
-			ti := TableInfo{ID: tb.ID, Name: tb.Name, SQL: tb.sql(), Row: tb.Row, Col: tb.Col, Rows: tb.Rows}
+			ti := TableInfo{ID: tb.ID, Name: tb.Name, SQL: tb.sql(), Row: tb.Row, Col: tb.Col, Rows: tb.Shown, Total: tb.Rows, Source: tb.view()}
+			if len(tb.Filter) > 0 {
+				b, err := json.Marshal(tb.Filter)
+				if err != nil {
+					return err
+				}
+				ti.Filter = string(b)
+			}
 			errs := map[int64]int{}
 			rs, err := t.query(`SELECT col, count(*) FROM _slitable_invalid WHERE tbl = ? GROUP BY col`, tb.ID)
 			if err != nil {

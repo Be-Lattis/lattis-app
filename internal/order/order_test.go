@@ -112,3 +112,26 @@ func TestSpread(t *testing.T) {
 		}
 	}
 }
+
+// Ajouter en fin (ou en tête) des milliers de fois garde des clés courtes.
+func TestAppendKeepsKeysShort(t *testing.T) {
+	for _, dir := range []string{"fin", "tête"} {
+		k, _ := Between("", "")
+		for i := range 1_000_000 {
+			var n string
+			var err error
+			if dir == "fin" {
+				n, err = Between(k, "")
+			} else {
+				n, err = Between("", k)
+			}
+			if err != nil || !valid(n) || (dir == "fin" && n <= k) || (dir == "tête" && n >= k) {
+				t.Fatalf("%s %d : %q puis %q (%v)", dir, i, k, n, err)
+			}
+			k = n
+		}
+		if len(k) > 12 {
+			t.Fatalf("%s : clé de %d caractères après 1 000 000 ajouts : %q", dir, len(k), k)
+		}
+	}
+}

@@ -114,7 +114,7 @@ func (m *Model) ApplyStyle(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 				}
 				continue
 			}
-			rs, err := t.query(`SELECT id FROM `+tb.sql()+` ORDER BY _pos LIMIT ? OFFSET ?`, last-first+1, first-tb.Row-1)
+			rs, err := t.query(`SELECT id FROM `+tb.view()+` ORDER BY _pos LIMIT ? OFFSET ?`, last-first+1, first-tb.Row-1)
 			if err != nil {
 				return err
 			}
