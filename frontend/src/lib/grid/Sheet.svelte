@@ -523,6 +523,28 @@
 	// visible, comme Excel (« 1000000 » ne doit pas être coupé).
 	let MARGIN = $state(MIN_MARGIN);
 
+	// Pendant qu'on tire une barre de défilement, la zone ne rétrécit pas (la
+	// barre ne « glisse » plus sous la souris) ; arrivée au bout, elle
+	// s'agrandit d'un écran, comme Excel.
+	let holdRows = 0;
+	let holdCols = 0;
+
+	/** Barre horizontale (ligne des onglets) tirée : figer la largeur, l'agrandir au bout. */
+	export function holdHScroll(on: boolean) {
+		holdCols = on ? extentCols : 0;
+		updateExtent();
+	}
+
+	function growAtEnd(rows: boolean) {
+		if (rows) {
+			const lastVisible = rowAxis.indexAt(vs.top + vs.view);
+			holdRows = Math.min(SHEET_ROWS, Math.max(holdRows, lastVisible + Math.max(10, Math.floor(vs.view / ROW_H))));
+		} else {
+			const cw = Math.max(0, viewW - MARGIN);
+			holdCols = Math.min(SHEET_COLS, Math.max(holdCols, colAxis.indexAt(scroller.scrollLeft + cw) + Math.max(3, Math.floor(cw / DEF_W))));
+		}
+	}
+
 	function updateExtent() {
 		if (!scroller) return;
 		let usedRow = Math.max(active.row, anchor.row);
@@ -539,10 +561,10 @@
 		const lastVisible = rowAxis.indexAt(vs.top + vs.view);
 		// Comme Excel : la barre s'arrête à la zone utilisée (ou à l'écran affiché) ;
 		// molette, flèches et sélection vont au-delà et l'agrandissent.
-		const rows = Math.min(SHEET_ROWS, Math.max(usedRow + 1, lastVisible + 1));
+		const rows = Math.min(SHEET_ROWS, Math.max(usedRow + 1, lastVisible + 1, holdRows));
 		const cw = Math.max(0, viewW - MARGIN);
 		const lastVisibleCol = colAxis.indexAt(scroller.scrollLeft + cw);
-		extentCols = Math.min(SHEET_COLS, Math.max(usedCol + 1, lastVisibleCol + 1));
+		extentCols = Math.min(SHEET_COLS, Math.max(usedCol + 1, lastVisibleCol + 1, holdCols));
 		vs.content = rowTop(rows);
 		vs.to(vs.top);
 		onhscroll?.({ content: MARGIN + colAxis.offset(extentCols), view: scroller.clientWidth, left: scroller.scrollLeft });
@@ -2251,11 +2273,27 @@
 	// --- Défilement -------------------------------------------------------
 
 	/** Défilement horizontal piloté par la barre de la ligne des onglets. */
-	export function scrollLeftTo(x: number) {
+	export function scrollLeftTo(x: number, atEnd = false) {
+		if (atEnd && holdCols) growAtEnd(false);
 		scroller.scrollLeft = x;
+		updateExtent();
+		schedule();
+	}
+
+	// Barre verticale (native) tirée : repérée au clic dans sa zone.
+	function onScrollbarDown(e: PointerEvent) {
+		if (e.offsetX < scroller.clientWidth) return;
+		holdRows = rowAxis.indexAt(vs.content);
+		const up = () => {
+			holdRows = 0;
+			window.removeEventListener('pointerup', up);
+			updateExtent();
+		};
+		window.addEventListener('pointerup', up);
 	}
 
 	function onScroll() {
+		if (holdRows && scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 2) growAtEnd(true);
 		if (!vs.inSync(scroller.scrollTop)) vs.fromNative(scroller.scrollTop);
 		updateExtent();
 		schedule();
@@ -3975,6 +4013,7 @@
 			class="scroller"
 			bind:this={scroller}
 			onscroll={onScroll}
+			onpointerdown={onScrollbarDown}
 			onmousedown={onMouseDown}
 			onmousemove={onMouseMove}
 			ondblclick={onDblClick}

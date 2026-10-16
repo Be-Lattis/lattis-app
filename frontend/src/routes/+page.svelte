@@ -723,7 +723,8 @@
 		onrename={mode === 'doc' ? (id, name) => sheetAction(() => DocumentService.RenameSheet(id, name)) : undefined}
 		ondelete={mode === 'doc' ? (id) => sheetAction(() => DocumentService.DeleteSheet(id)) : undefined}
 		hscroll={view === 'grid' ? hscroll : undefined}
-		onhscroll={(x) => sheet?.scrollLeftTo(x)}
+		onhscroll={(x, atEnd) => sheet?.scrollLeftTo(x, atEnd)}
+		onhhold={(on) => sheet?.holdHScroll(on)}
 	/>
 	{#each dialogs.slice(0, 1) as d (d.id)}
 		<ScriptDialog spec={d} onanswer={(v) => answerDialog(d, v)} />
