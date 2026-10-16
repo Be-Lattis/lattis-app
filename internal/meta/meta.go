@@ -227,6 +227,27 @@ CREATE TABLE _slitable_protection (
 	hash  TEXT NOT NULL
 ) STRICT;
 `,
+	// 18 → 19 : sources externes et requêtes d'import (équivalent de Power
+	// Query, voir docs/decisions/0003). config d'une connexion : JSON sans
+	// mot de passe (rangé dans le trousseau du système). source et steps d'une
+	// requête : JSON (internal/query) ; target : tableau chargé (pas « tbl » :
+	// la protection des feuilles empreinte les tables qui ont une colonne tbl).
+	`
+CREATE TABLE _slitable_connections (
+	id     INTEGER PRIMARY KEY,
+	name   TEXT NOT NULL UNIQUE COLLATE NOCASE,
+	kind   TEXT NOT NULL,
+	config TEXT NOT NULL
+) STRICT;
+CREATE TABLE _slitable_queries (
+	id        INTEGER PRIMARY KEY,
+	name      TEXT NOT NULL UNIQUE COLLATE NOCASE,
+	source    TEXT NOT NULL,
+	steps     TEXT NOT NULL,
+	target    INTEGER,
+	refreshed TEXT
+) STRICT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

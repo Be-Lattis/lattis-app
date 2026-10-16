@@ -55,7 +55,7 @@ CREATE TABLE _slitable_queries (
 	name      TEXT NOT NULL UNIQUE COLLATE NOCASE,
 	source    TEXT NOT NULL,          -- JSON : {kind, path, sheet, index, table, query, connection, sql, delimiter}
 	steps     TEXT NOT NULL,          -- JSON : liste d'étapes {op, ...}
-	tbl       INTEGER,                -- tableau chargé (_slitable_tables.id), NULL si pas encore chargé
+	target    INTEGER,                -- tableau chargé (_slitable_tables.id), NULL si pas encore chargé
 	refreshed TEXT                    -- date de la dernière actualisation (ISO)
 ) STRICT;
 ```

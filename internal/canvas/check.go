@@ -65,6 +65,8 @@ func (m *Model) Dump(ctx context.Context) (string, error) {
 		{"graphiques", `SELECT * FROM _slitable_charts ORDER BY id`},
 		{"boutons", `SELECT * FROM _slitable_buttons ORDER BY id`},
 		{"favoris", `SELECT * FROM _slitable_favorites ORDER BY id`},
+		{"connexions", `SELECT * FROM _slitable_connections ORDER BY id`},
+		{"requêtes", `SELECT id, name, source, steps, target FROM _slitable_queries ORDER BY id`},
 	}
 	for _, s := range steps {
 		if err := dumpQuery(s.title, s.q); err != nil {
