@@ -963,3 +963,57 @@ func TestTypeBetweenTablesMerges(t *testing.T) {
 		t.Fatalf("fusion par saisie : %+v", l.Tables)
 	}
 }
+
+// SOUS.TOTAL ne compte que les lignes que le filtre laisse affichées.
+func TestSubtotalFilter(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Pays", "Ventes"}, {"FR", "10"}, {"IT", "5"}, {"FR", "7"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.SetCell(ctx, 1, 0, 4, `=SOUS.TOTAL(9;Feuille1[Ventes])`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.SetCell(ctx, 1, 1, 4, `=SOMME(Feuille1[Ventes])`); err != nil {
+		t.Fatal(err)
+	}
+	value := func(row int) string {
+		l, _ := d.Layout(ctx, 1)
+		for _, c := range l.Cells {
+			if c.Row == row && c.Col == 4 {
+				return c.Value
+			}
+		}
+		return "?"
+	}
+	if value(0) != "22" {
+		t.Fatalf("sans filtre : %s", value(0))
+	}
+	if err := d.SetFilter(ctx, "Feuille1", 0, &ColumnFilter{Values: []string{"FR"}}); err != nil {
+		t.Fatal(err)
+	}
+	if value(0) != "17" || value(1) != "22" {
+		t.Fatalf("filtré : SOUS.TOTAL %s, SOMME %s", value(0), value(1))
+	}
+}
+
+// ALEA garde sa valeur d'une lecture à l'autre et change après Recalc (F9).
+func TestRecalc(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.SetCell(ctx, 1, 0, 0, "=ALEA()"); err != nil {
+		t.Fatal(err)
+	}
+	value := func() string {
+		l, _ := d.Layout(ctx, 1)
+		return l.Cells[0].Value
+	}
+	a := value()
+	if b := value(); a != b {
+		t.Fatalf("ALEA instable : %s puis %s", a, b)
+	}
+	d.Recalc()
+	if c := value(); c == a {
+		t.Fatalf("ALEA inchangé après F9 : %s", c)
+	}
+}

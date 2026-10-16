@@ -201,7 +201,7 @@ func (c *compiler) call(n Call, sc scope) string {
 	}
 	switch fn.kind {
 	case aggregate:
-		return c.aggregate(fn.EN, n.Args, sc)
+		return c.aggregate(fn.EN, n.Args, sc, false)
 	case scan:
 		return c.scan(scanOf(n, c.schema, sc.table), sc)
 	case special:
@@ -228,8 +228,9 @@ func hoistable(fn funcDef) bool {
 
 // aggregate compile un agrégat : chaque colonne ou expression sur colonnes
 // devient une sous-requête qui rend un état partiel (slt_part), combiné par
-// slt_final avec les valeurs directes.
-func (c *compiler) aggregate(fn string, args []Node, sc scope) string {
+// slt_final avec les valeurs directes. visible (SOUS.TOTAL) : seulement les
+// lignes qu'un filtre laisse affichées.
+func (c *compiler) aggregate(fn string, args []Node, sc scope, visible bool) string {
 	parts := []string{c.param(fn)}
 	lead := aggLead[fn]
 	order := ""
@@ -267,7 +268,11 @@ func (c *compiler) aggregate(fn string, args []Node, sc scope) string {
 			}
 			t, val = tt, c.expr(a, sc.inArray(tt, al))
 		}
-		parts = append(parts, fmt.Sprintf("(SELECT slt_part(%s, %s%s) FROM %s AS %s)", c.param(fn), val, order, t.SQL, al))
+		src := t.SQL
+		if visible && t.Visible != "" {
+			src = t.Visible
+		}
+		parts = append(parts, fmt.Sprintf("(SELECT slt_part(%s, %s%s) FROM %s AS %s)", c.param(fn), val, order, src, al))
 	}
 	return "slt_final(" + strings.Join(parts, ", ") + ")"
 }
@@ -339,7 +344,7 @@ func (c *compiler) special(fn string, n Call, sc scope) string {
 		if e.IsErr() {
 			return errSQL(e.Err)
 		}
-		return c.aggregate(agg, n.Args[1:], sc)
+		return c.aggregate(agg, n.Args[1:], sc, true)
 	case "PREVIOUS", "NEXT":
 		if sc.table == nil || sc.alias == "" {
 			return errSQL(ErrRef)

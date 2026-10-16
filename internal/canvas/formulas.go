@@ -165,12 +165,15 @@ func (t *tx) schema() (*formula.Schema, error) {
 	}
 	rs.Close()
 	s := &formula.Schema{}
+	if t.m != nil {
+		s.Now, s.Seed = t.m.volatile()
+	}
 	for _, id := range ids {
 		tb, err := t.table(id)
 		if err != nil {
 			return nil, err
 		}
-		ft := &formula.Table{Name: tb.Name, SQL: tb.sql()}
+		ft := &formula.Table{Name: tb.Name, SQL: tb.sql(), Visible: tb.visibleSQL()}
 		for _, c := range tb.Cols {
 			fc := formula.Column{Name: c.Name, SQL: colSQL(c.ID), Type: c.Type}
 			if c.Formula != "" {

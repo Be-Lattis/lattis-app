@@ -75,6 +75,15 @@ func (t Table) view() string {
 	return "(SELECT * FROM " + t.sql() + " WHERE " + t.where + ") AS " + t.sql()
 }
 
+// visibleSQL est la sous-requête des lignes affichées (sans alias), vide
+// sans filtre.
+func (t Table) visibleSQL() string {
+	if t.where == "" {
+		return ""
+	}
+	return "(SELECT * FROM " + t.sql() + " WHERE " + t.where + ")"
+}
+
 // Filtered indique si un filtre masque des lignes (ou pourrait en masquer).
 func (t Table) Filtered() bool { return t.where != "" }
 

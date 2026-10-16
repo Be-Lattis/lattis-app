@@ -201,6 +201,13 @@ export function Query(q: string): $CancellablePromise<grid$0.QueryResult> {
 }
 
 /**
+ * Recalc renouvelle AUJOURDHUI, MAINTENANT et ALEA (F9).
+ */
+export function Recalc(): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3502116793);
+}
+
+/**
  * Recover rouvre une session interrompue (répertoire de travail dir).
  */
 export function Recover(dir: string): $CancellablePromise<$models.DocState> {

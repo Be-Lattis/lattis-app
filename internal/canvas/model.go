@@ -14,6 +14,9 @@ package canvas
 import (
 	"context"
 	"database/sql"
+	"math/rand/v2"
+	"sync"
+	"time"
 
 	"github.com/lalamefine/slitable/internal/command"
 	"github.com/lalamefine/slitable/internal/store"
@@ -24,7 +27,10 @@ type stmt = command.Stmt
 var st = command.S
 
 // tx est la transaction d'une action en cours.
-type tx struct{ *command.Tx }
+type tx struct {
+	*command.Tx
+	m *Model
+}
 
 func (t *tx) apply(do, undo []stmt) error { return t.Apply(do, undo) }
 
@@ -36,14 +42,35 @@ func (t *tx) row(q string, args ...any) *sql.Row { return t.Row(q, args...) }
 type Model struct {
 	db  *store.Store
 	bus *command.Bus
+
+	// Instant et graine des fonctions volatiles (AUJOURDHUI, MAINTENANT,
+	// ALEA) : fixés à l'ouverture, renouvelés par Recalc (F9).
+	mu   sync.Mutex
+	now  time.Time
+	seed uint64
 }
 
 // New relie le modèle à la base (déjà migrée) et au bus de commandes.
-func New(db *store.Store, bus *command.Bus) *Model { return &Model{db: db, bus: bus} }
+func New(db *store.Store, bus *command.Bus) *Model {
+	return &Model{db: db, bus: bus, now: time.Now(), seed: rand.Uint64()}
+}
+
+// Recalc renouvelle l'instant et la graine des fonctions volatiles (F9).
+func (m *Model) Recalc() {
+	m.mu.Lock()
+	m.now, m.seed = time.Now(), rand.Uint64()
+	m.mu.Unlock()
+}
+
+func (m *Model) volatile() (time.Time, uint64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.now, m.seed
+}
 
 // Do exécute une action dans une transaction du bus de commandes.
 func (m *Model) Do(ctx context.Context, name string, fn func(*tx) error) error {
-	_, err := m.bus.Do(ctx, name, func(c *command.Tx) error { return fn(&tx{c}) })
+	_, err := m.bus.Do(ctx, name, func(c *command.Tx) error { return fn(&tx{c, m}) })
 	return err
 }
 
@@ -54,5 +81,5 @@ func (m *Model) read(ctx context.Context, fn func(*tx) error) error {
 		return err
 	}
 	defer sqlTx.Rollback()
-	return fn(&tx{&command.Tx{Tx: sqlTx, Ctx: ctx}})
+	return fn(&tx{&command.Tx{Tx: sqlTx, Ctx: ctx}, m})
 }

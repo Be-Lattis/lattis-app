@@ -24,6 +24,9 @@ type Column struct {
 type Table struct {
 	Name string
 	SQL  string
+	// Visible : source SQL des lignes affichées quand un filtre en masque
+	// (sous-requête), vide sinon. SOUS.TOTAL ne compte que celles-là.
+	Visible string
 	Cols []Column
 	Key  string
 }

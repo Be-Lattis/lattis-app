@@ -112,6 +112,8 @@
 		setFilter?(table: SheetTable, i: number, f: ColumnFilter | null): Promise<unknown>;
 		clearFilters?(table: SheetTable): Promise<unknown>;
 		renameTable?(table: SheetTable, name: string): Promise<unknown>;
+		/** Renouvelle AUJOURDHUI, MAINTENANT et ALEA (F9). */
+		recalc?(): Promise<unknown>;
 		deleteTables?(tables: SheetTable[]): Promise<unknown>;
 		/** Déplace un tableau, en-tête en (row, col) ; côte à côte d'un autre : fusion. */
 		moveTable?(table: SheetTable, row: number, col: number): Promise<unknown>;
@@ -1292,6 +1294,9 @@
 				break;
 			case 'F2':
 				startEdit(false);
+				break;
+			case 'F9':
+				if (source.recalc) source.recalc().then(() => say('Recalculé'), (err) => say(String(err?.message ?? err)));
 				break;
 			case 'Delete':
 				clearSelection();

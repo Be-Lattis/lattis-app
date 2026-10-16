@@ -526,3 +526,11 @@ func (s *DocumentService) MoveTable(ctx context.Context, name string, row, col i
 func (s *DocumentService) ExtractColumns(ctx context.Context, name string, i0, i1, row, col int) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.ExtractColumns(ctx, name, i0, i1, row, col) })
 }
+
+// Recalc renouvelle AUJOURDHUI, MAINTENANT et ALEA (F9).
+func (s *DocumentService) Recalc(ctx context.Context) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error {
+		d.Recalc()
+		return nil
+	})
+}
