@@ -2,6 +2,7 @@
 // mots réservés et fonctions SQLite. Indépendante de CodeMirror (testable).
 
 import { typeLabel } from '#lib/grid/format.js';
+import { count } from './result';
 import { analyze, quote, statementAt, tokenize, KEYWORDS, type Catalog } from './names';
 
 export interface Suggestion {
@@ -83,7 +84,7 @@ function completeIn(src: string, pos: number, catalog: Catalog, explicit: boolea
 
 	const tables = () => {
 		for (const o of catalog.objects)
-			options.push({ label: o.name, apply: write(o.name), kind: 'table', detail: `tableau · ${o.rows.toLocaleString('fr-FR')} lignes`, boost: 5 });
+			options.push({ label: o.name, apply: write(o.name), kind: 'table', detail: `tableau · ${count(o.rows)}`, boost: 5 });
 	};
 	if (prevSig && prevSig.kind === 'word' && tableWords.includes(prevSig.text.toUpperCase())) {
 		tables();
