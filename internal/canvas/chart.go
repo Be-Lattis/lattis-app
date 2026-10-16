@@ -15,10 +15,23 @@ import (
 // catégories (X) et une ou plusieurs séries de valeurs, par nom de colonne.
 type ChartConfig struct {
 	Source string   `json:"source"`
-	Kind   string   `json:"kind"` // bar, line, pie, scatter
+	Kind   string   `json:"kind"` // bar (barres verticales), column (horizontales), line, area, pie, doughnut, scatter
 	X      string   `json:"x"`
 	Series []string `json:"series"`
 	Title  string   `json:"title,omitempty"`
+
+	// Présentation (lue par l'interface seulement).
+	Width   int      `json:"width,omitempty"`  // px, 480 par défaut
+	Height  int      `json:"height,omitempty"` // px, 288 par défaut
+	Legend  string   `json:"legend,omitempty"` // bottom (défaut), top, right, none
+	XTitle  string   `json:"xTitle,omitempty"`
+	YTitle  string   `json:"yTitle,omitempty"`
+	Labels  bool     `json:"labels,omitempty"` // étiquettes de données
+	NoGrid  bool     `json:"noGrid,omitempty"`
+	Stacked bool     `json:"stacked,omitempty"`
+	YMin    *float64 `json:"yMin,omitempty"`
+	YMax    *float64 `json:"yMax,omitempty"`
+	Colors  []string `json:"colors,omitempty"` // couleur de chaque série
 }
 
 // ChartSeries est une série calculée (nil : valeur absente).
@@ -44,7 +57,7 @@ var ErrChart = errors.New("graphique")
 // MaxChartPoints borne les points d'un graphique.
 const MaxChartPoints = 2000
 
-var chartKinds = map[string]bool{"bar": true, "line": true, "pie": true, "scatter": true}
+var chartKinds = map[string]bool{"bar": true, "column": true, "line": true, "area": true, "pie": true, "doughnut": true, "scatter": true}
 
 // CreateChart pose un graphique sur une feuille, coin haut gauche en (row, col).
 func (m *Model) CreateChart(ctx context.Context, sheet int64, row, col int, cfg ChartConfig) (int64, error) {
@@ -134,6 +147,9 @@ func (t *tx) chartData(cfg ChartConfig) ([]string, []ChartSeries, error) {
 	}
 	tb, err := t.tableByName(cfg.Source)
 	if err != nil {
+		if pc, ok, perr := t.pivotByName(cfg.Source); perr == nil && ok {
+			return t.chartFromPivot(cfg, pc)
+		}
 		return nil, nil, fmt.Errorf("%w : tableau « %s » introuvable", ErrChart, cfg.Source)
 	}
 	exprs, args, _, err := t.columnSQL(tb)
@@ -260,4 +276,55 @@ func (t *tx) chartRows(sheet int64) ([]stmt, error) {
 		undo = append(undo, st(`INSERT INTO _slitable_charts (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, id, sheet, row, col, cfg))
 	}
 	return undo, rs.Err()
+}
+
+// chartFromPivot lit les données d'un graphique dans un tableau croisé : X
+// est une colonne de lignes, les séries des colonnes de mesures (en-têtes).
+func (t *tx) chartFromPivot(cfg ChartConfig, pc PivotConfig) ([]string, []ChartSeries, error) {
+	pc.NoGrandTotal = true
+	cells, err := t.pivotCells(pc)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w : %s", ErrChart, strings.TrimPrefix(err.Error(), ErrPivot.Error()+" : "))
+	}
+	header := cells[0]
+	find := func(name string) (int, error) {
+		for i, h := range header {
+			if strings.EqualFold(h, name) {
+				return i, nil
+			}
+		}
+		return 0, fmt.Errorf("%w : colonne « %s » introuvable dans %s", ErrChart, name, pc.Name)
+	}
+	xi, err := find(cfg.X)
+	if err != nil {
+		return nil, nil, err
+	}
+	series := make([]ChartSeries, len(cfg.Series))
+	idx := make([]int, len(cfg.Series))
+	for k, s := range cfg.Series {
+		if idx[k], err = find(s); err != nil {
+			return nil, nil, err
+		}
+		series[k].Name = header[idx[k]]
+	}
+	var labels []string
+	for _, r := range cells[1:] {
+		if len(labels) >= MaxChartPoints {
+			break
+		}
+		// X sur un champ de lignes : avec les champs suivants (« FR · Lyon »).
+		if nk := len(pc.normalized().RowFields); xi < nk {
+			labels = append(labels, strings.Join(r[xi:nk], " · "))
+		} else {
+			labels = append(labels, r[xi])
+		}
+		for k, i := range idx {
+			if f, ok := parseShown(r[i]); ok {
+				series[k].Values = append(series[k].Values, &f)
+			} else {
+				series[k].Values = append(series[k].Values, nil)
+			}
+		}
+	}
+	return labels, series, nil
 }

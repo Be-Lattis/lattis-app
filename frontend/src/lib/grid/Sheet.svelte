@@ -16,6 +16,8 @@
 	import { formatNumber, mergeStyles, parseStyle, type CellStyle } from './style';
 	import { dismiss } from './dismiss';
 	import Chart from '#lib/chart/Chart.svelte';
+	import ChartPanel from '#lib/chart/ChartPanel.svelte';
+	import PivotPanel from './PivotPanel.svelte';
 	import { describeRule, parseRules, ruleStyle, RULE_OPS, RULE_STYLES, type Rule, type RuleOp } from './rules';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { drawIcon } from '#lib/icons/canvas.js';
@@ -45,12 +47,20 @@
 		filter?: ColumnFilter; // filtre de la colonne
 	}
 
+	export interface PivotValue {
+		field?: string; // vide : nombre de lignes
+		agg: 'sum' | 'count' | 'countDistinct' | 'avg' | 'min' | 'max';
+		show?: string; // '', pctTotal, pctRow, pctCol
+	}
+
 	export interface PivotConfig {
+		name?: string; // « TCD1 » : vue SQL et source de graphique
 		source: string;
-		rows: string;
+		rowFields?: string[];
 		cols?: string;
-		value?: string;
-		agg: 'sum' | 'count' | 'avg' | 'min' | 'max';
+		values?: PivotValue[];
+		filters?: { field: string; values: string[] }[];
+		noGrandTotal?: boolean;
 	}
 
 	export interface SheetPivot {
@@ -64,10 +74,21 @@
 
 	export interface ChartConfig {
 		source: string;
-		kind: 'bar' | 'line' | 'pie' | 'scatter';
+		kind: 'bar' | 'column' | 'line' | 'area' | 'pie' | 'doughnut' | 'scatter';
 		x: string;
 		series: string[];
 		title?: string;
+		width?: number;
+		height?: number;
+		legend?: string;
+		xTitle?: string;
+		yTitle?: string;
+		labels?: boolean;
+		noGrid?: boolean;
+		stacked?: boolean;
+		yMin?: number;
+		yMax?: number;
+		colors?: string[];
 	}
 
 	export interface SheetChart {
@@ -164,6 +185,8 @@
 		/** Renouvelle AUJOURDHUI, MAINTENANT et ALEA (F9). */
 		recalc?(): Promise<unknown>;
 		createPivot?(cfg: PivotConfig): Promise<unknown>;
+		/** Valeurs distinctes d'une colonne d'un tableau (filtre d'un TCD). */
+		pivotFieldValues?(table: string, field: string): Promise<{ text: string; count: number }[]>;
 		createChart?(row: number, col: number, cfg: ChartConfig): Promise<unknown>;
 		setChart?(id: number, cfg: ChartConfig): Promise<unknown>;
 		moveChart?(id: number, row: number, col: number): Promise<unknown>;
@@ -198,12 +221,14 @@
 		source: SheetSource;
 		/** Fonctions et tableaux du classeur, pour l'aide à la saisie des formules. */
 		catalog?: Catalog;
+		/** Tableaux et tableaux croisés de toutes les feuilles (sources de graphiques et de TCD). */
+		sources?: { name: string; columns: string[]; types: string[] }[];
 		onstatus?: (s: SheetStatus) => void;
 		/** Lance la mesure dès l'ouverture et transmet le résultat (mode SLITABLE_BENCH). */
 		autoBench?: (result: string) => void;
 	}
 
-	let { data, source, catalog, onstatus, autoBench }: Props = $props();
+	let { data, source, catalog, sources = [], onstatus, autoBench }: Props = $props();
 
 	export const SHEET_ROWS = 1_048_576;
 	export const SHEET_COLS = 16_384;
@@ -255,7 +280,7 @@
 	let shown = new Map<string, { text: string; error: boolean }>(); // formules des cellules libres
 	// Tableaux dynamiques déversés depuis une cellule libre (FILTRE, TRIER…).
 	let spills: { row: number; col: number; rows: string[][] }[] = [];
-	let pivots: SheetPivot[] = [];
+	let pivots = $state.raw<SheetPivot[]>([]);
 	let charts = $state.raw<SheetChart[]>([]);
 	// Décalage de la vue, pour placer les graphiques au-dessus de la grille.
 	let viewPos = $state({ x: 0, y: 0 });
@@ -294,6 +319,13 @@
 		});
 		cells = new Map(d.cells.map((c) => [key(c.row, c.col), c.raw]));
 		pivots = d.pivots ?? [];
+		if (openPivotOnLoad && pivots.length) {
+			openPivotOnLoad = false;
+			const p = pivots[pivots.length - 1];
+			panel = { kind: 'pivot', id: p.id };
+			active = { row: p.row, col: p.col };
+			anchor = { ...active };
+		}
 		charts = d.charts ?? [];
 		spills = d.cells.filter((c) => c.spill?.length).map((c) => ({ row: c.row, col: c.col, rows: c.spill! }));
 		shown = new Map(d.cells.filter((c) => c.raw.startsWith('=')).map((c) => [key(c.row, c.col), { text: c.value ?? '', error: !!c.error }]));
@@ -1173,11 +1205,115 @@
 
 	const CHART_W = 480;
 	const CHART_H = 288;
-	let chartDlg = $state<{ id: number; columns: string[]; cfg: ChartConfig; error: string } | null>(null);
 	let chartDrag: { id: number; startX: number; startY: number; row: number; col: number; dx: number; dy: number } | null = $state(null);
+	// Graphique sélectionné (cadre, poignées, volet) et redimensionnement en cours.
+	let selChart = $state<number | null>(null);
+	let chartSize: { id: number; w: number; h: number } | null = $state(null);
+	let chartMenu = $state<{ ch: SheetChart; x: number; y: number } | null>(null);
+	const CHART_CLIP = '\u2063slitable-chart:';
+	const chartW = (ch: SheetChart) => (chartSize?.id === ch.id ? chartSize.w : (ch.config.width ?? CHART_W));
+	const chartH = (ch: SheetChart) => (chartSize?.id === ch.id ? chartSize.h : (ch.config.height ?? CHART_H));
+
+	function selectChart(ch: SheetChart) {
+		selChart = ch.id;
+		panel = { kind: 'chart', id: ch.id };
+		wrap.focus();
+	}
+
+	/** Colonnes du tableau source d'un graphique ou d'un TCD (autre feuille comprise). */
+	function sourceColumns(name: string): { name: string; numeric: boolean }[] {
+		const e = entries.find((x) => x.t.name.toLowerCase() === name.toLowerCase());
+		if (e) return e.t.columns.map((c) => ({ name: c.name, numeric: c.type === 'integer' || c.type === 'decimal' || c.type === 'formula' }));
+		const t = sources.find((x) => x.name.toLowerCase() === name.toLowerCase());
+		return (t?.columns ?? []).map((c, i) => ({ name: c, numeric: ['integer', 'decimal', 'formula'].includes(t!.types[i]) }));
+	}
+
+	function startChartResize(ev: MouseEvent, ch: SheetChart, dir: string) {
+		if (ev.button !== 0 || !source.setChart) return;
+		ev.preventDefault();
+		ev.stopPropagation();
+		const w0 = chartW(ch);
+		const h0 = chartH(ch);
+		const x0 = ev.clientX;
+		const y0 = ev.clientY;
+		chartSize = { id: ch.id, w: w0, h: h0 };
+		const move = (e: MouseEvent) => {
+			if (!chartSize) return;
+			if (dir.includes('e')) chartSize.w = Math.max(200, Math.round(w0 + e.clientX - x0));
+			if (dir.includes('s')) chartSize.h = Math.max(140, Math.round(h0 + e.clientY - y0));
+		};
+		const up = () => {
+			window.removeEventListener('mousemove', move);
+			window.removeEventListener('mouseup', up);
+			const sz = chartSize;
+			if (!sz || (sz.w === w0 && sz.h === h0)) {
+				chartSize = null;
+				return;
+			}
+			const set = source.setChart!;
+			writing = writing.then(() =>
+				set(ch.id, { ...ch.config, width: sz.w, height: sz.h }).then(
+					() => {
+						chartSize = null;
+					},
+					(err) => {
+						chartSize = null;
+						say(String(err?.message ?? err));
+					}
+				)
+			);
+		};
+		window.addEventListener('mousemove', move);
+		window.addEventListener('mouseup', up);
+	}
+
+	function onChartMenu(ev: MouseEvent, ch: SheetChart) {
+		ev.preventDefault();
+		ev.stopPropagation();
+		selectChart(ch);
+		const r = wrap.getBoundingClientRect();
+		chartMenu = { ch, x: ev.clientX - r.left, y: ev.clientY - r.top };
+	}
+
+	async function copyChart(ch: SheetChart, cut: boolean) {
+		chartMenu = null;
+		try {
+			await navigator.clipboard.writeText(CHART_CLIP + JSON.stringify(ch.config));
+		} catch {
+			chartClip = ch.config;
+		}
+		chartClip = ch.config;
+		if (cut) await removeChart(ch.id);
+		else say('Graphique copié : Ctrl+V pour le coller à la cellule active');
+	}
+	let chartClip = $state.raw<ChartConfig | null>(null);
+
+	function pasteChart(cfg: ChartConfig) {
+		if (!source.createChart) return;
+		const create = source.createChart;
+		const { row, col } = active;
+		writing = writing.then(() => create(row, col, cfg).then(() => say('Graphique collé'), (err) => say(String(err?.message ?? err))));
+	}
 
 	/** Insère un graphique du tableau actif à sa droite (ruban Insertion). */
 	export function chartActive(kind: ChartConfig['kind']) {
+		const pv = pivotAt(active.row, active.col);
+		if (pv && source.createChart) {
+			// Graphique d'un tableau croisé : X = premier champ de lignes, séries = mesures.
+			const head = pv.cells[0];
+			const nk = Math.max(1, pv.config.rowFields?.length ?? 0);
+			let series = head.slice(nk).filter((h) => !h.startsWith('Total'));
+			if (kind === 'pie') series = series.slice(0, 1);
+			const create = source.createChart;
+			const name = pv.config.name ?? '';
+			writing = writing.then(() =>
+				create(pv.row, pv.col + head.length + 1, { source: name, kind, x: head[0], series }).then(
+					() => say(`Graphique du tableau croisé « ${name} » inséré`),
+					(err) => say(String(err?.message ?? err))
+				)
+			);
+			return;
+		}
 		const e = tableAt(active.row, active.col);
 		if (!e || !source.createChart) {
 			say('Placez la cellule active dans un tableau pour insérer un graphique');
@@ -1203,25 +1339,12 @@
 	}
 
 	function editChart(ch: SheetChart) {
-		const src = entries.find((e) => e.t.name.toLowerCase() === ch.config.source.toLowerCase());
-		const columns = src?.t.columns.map((c) => c.name) ?? catalog?.tables.find((t) => t.name.toLowerCase() === ch.config.source.toLowerCase())?.columns ?? [];
-		chartDlg = { id: ch.id, columns, cfg: { ...ch.config, series: [...ch.config.series], title: ch.config.title ?? '' }, error: '' };
+		selectChart(ch);
 	}
-
-	async function saveChart() {
-		const d = chartDlg;
-		if (!d || !source.setChart) return;
-		try {
-			await source.setChart(d.id, { ...d.cfg, title: d.cfg.title || undefined });
-			chartDlg = null;
-			wrap.focus();
-		} catch (err) {
-			d.error = String(err instanceof Error ? err.message : err);
-		}
-	}
-
 	async function removeChart(id: number) {
-		chartDlg = null;
+		chartMenu = null;
+		if (selChart === id) selChart = null;
+		if (panel?.kind === 'chart' && panel.id === id) panel = null;
 		await source.deleteChart?.(id);
 		wrap.focus();
 	}
@@ -1229,6 +1352,7 @@
 	function startChartDrag(ev: MouseEvent, ch: SheetChart) {
 		if (ev.button !== 0 || !source.moveChart) return;
 		ev.preventDefault();
+		selectChart(ch);
 		chartDrag = { id: ch.id, startX: ev.clientX, startY: ev.clientY, row: ch.row, col: ch.col, dx: 0, dy: 0 };
 		const move = (e: MouseEvent) => {
 			if (!chartDrag) return;
@@ -1252,17 +1376,18 @@
 
 	// --- Tableau croisé dynamique ---------------------------------------------
 
-	let pivotDlg = $state<{ id?: number; source: string; columns: string[]; cfg: PivotConfig; error: string } | null>(null);
-
 	const pivotAt = (r: number, c: number) =>
 		pivots.find((p) => !p.error && r >= p.row && r < p.row + p.cells.length && c >= p.col && c < p.col + p.cells[0].length);
 
-	/** Crée un tableau croisé à partir du tableau actif, ou modifie celui sous la cellule active. */
+	// Volet latéral : champs du TCD ou mise en forme du graphique.
+	let panel = $state<{ kind: 'pivot' | 'chart'; id: number } | null>(null);
+	let openPivotOnLoad = false;
+
+	/** Crée un tableau croisé à partir du tableau actif, ou ouvre le volet de celui sous la cellule active. */
 	export function pivotActive() {
 		const p = pivotAt(active.row, active.col) ?? pivots.find((p) => p.row === active.row && p.col === active.col);
 		if (p) {
-			const src = entries.find((e) => e.t.name.toLowerCase() === p.config.source.toLowerCase());
-			pivotDlg = { id: p.id, source: p.config.source, columns: src?.t.columns.filter((c) => !c.formula).map((c) => c.name) ?? catalog?.tables.find((t) => t.name.toLowerCase() === p.config.source.toLowerCase())?.columns ?? [], cfg: { ...p.config }, error: '' };
+			panel = { kind: 'pivot', id: p.id };
 			return;
 		}
 		const e = tableAt(active.row, active.col);
@@ -1270,38 +1395,15 @@
 			say('Placez la cellule active dans un tableau pour créer un tableau croisé');
 			return;
 		}
-		const columns = e.t.columns.filter((c) => !c.formula).map((c) => c.name);
 		const k = e.t.columns[active.col - e.t.col];
-		// Valeur par défaut : la dernière colonne numérique (souvent un montant).
+		// Comme Excel : la colonne active en lignes, la dernière colonne de
+		// nombres en valeurs ; le volet s'ouvre pour la suite.
 		const num = e.t.columns.findLast((c) => !c.formula && (c.type === 'integer' || c.type === 'decimal') && c !== k);
-		pivotDlg = {
-			source: e.t.name,
-			columns,
-			cfg: { source: e.t.name, rows: k && !k.formula ? k.name : columns[0], cols: '', value: num?.name ?? '', agg: num ? 'sum' : 'count' },
-			error: ''
-		};
-	}
-
-	async function savePivot() {
-		const d = pivotDlg;
-		if (!d) return;
-		const cfg: PivotConfig = { ...d.cfg, cols: d.cfg.cols || undefined, value: d.cfg.value || undefined };
-		try {
-			if (d.id !== undefined) await source.setPivot?.(d.id, cfg);
-			else await source.createPivot?.(cfg);
-			pivotDlg = null;
-			wrap.focus();
-		} catch (err) {
-			d.error = String(err instanceof Error ? err.message : err);
-		}
-	}
-
-	async function removePivot() {
-		const d = pivotDlg;
-		if (!d || d.id === undefined || !source.deletePivot) return;
-		await source.deletePivot(d.id);
-		pivotDlg = null;
-		wrap.focus();
+		const first = k && !k.formula ? k.name : (e.t.columns.find((c) => !c.formula)?.name ?? '');
+		const cfg: PivotConfig = { source: e.t.name, rowFields: [first], values: [num ? { field: num.name, agg: 'sum' } : { agg: 'count' }] };
+		openPivotOnLoad = true;
+		const create = source.createPivot;
+		writing = writing.then(() => create(cfg).then(() => undefined, (err) => say(String(err?.message ?? err))));
 	}
 
 	/** Supprime les doublons du tableau de la cellule active (ruban Données). */
@@ -1396,8 +1498,24 @@
 		menuAction(() => sort(e.t, active.col - e.t.col, desc));
 	}
 
+	/** Ferme les menus, dialogues et volets (changement de feuille ou de vue). */
+	export function closeOverlays() {
+		menu = null;
+		typeMenu = null;
+		filterDlg = null;
+		rulesDlg = null;
+		dedupDlg = null;
+		fnDlg = null;
+		chartMenu = null;
+		selChart = null;
+		panel = null;
+	}
+
 	function refreshFx() {
 		nameBox = cellName(active.row, active.col);
+		const pv = pivotAt(active.row, active.col);
+		if (pv) panel = { kind: 'pivot', id: pv.id };
+		else if (panel?.kind === 'pivot' && !openPivotOnLoad) panel = null;
 		const e = tableAt(active.row, active.col);
 		if (e) {
 			const k = e.t.columns[active.col - e.t.col];
@@ -1619,6 +1737,10 @@
 	}
 
 	function onMouseDown(e: MouseEvent) {
+		if (selChart !== null) {
+			selChart = null;
+			if (panel?.kind === 'chart') panel = null;
+		}
 		const hd = boundaryAt(e) === null ? headerAt(e) : null;
 		if (hd && e.button !== 1) {
 			e.preventDefault();
@@ -1703,6 +1825,19 @@
 
 	function onKeyDown(e: KeyboardEvent) {
 		if (editing) return;
+		if (selChart !== null) {
+			const ch = charts.find((c) => c.id === selChart);
+			if (ch && (e.key === 'Delete' || e.key === 'Backspace')) {
+				e.preventDefault();
+				removeChart(ch.id);
+				return;
+			}
+			if (e.key === 'Escape') {
+				selChart = null;
+				if (panel?.kind === 'chart') panel = null;
+				return;
+			}
+		}
 		const page = Math.max(1, Math.floor(vs.view / ROW_H) - 1);
 		const { row, col } = active;
 		const ext = e.shiftKey;
@@ -2133,6 +2268,14 @@
 
 	function onCopy(e: ClipboardEvent) {
 		if (document.activeElement !== wrap || editing) return;
+		const sc = selChart !== null ? charts.find((c) => c.id === selChart) : undefined;
+		if (sc) {
+			e.clipboardData?.setData('text/plain', CHART_CLIP + JSON.stringify(sc.config));
+			e.preventDefault();
+			chartClip = sc.config;
+			say('Graphique copié : Ctrl+V pour le coller à la cellule active');
+			return;
+		}
 		const { r0, r1, c0, c1 } = selection();
 		if ((r1 - r0 + 1) * (c1 - c0 + 1) > 100_000) {
 			say('Copie limitée à 100 000 cellules pour l’instant');
@@ -2152,6 +2295,15 @@
 	function onPaste(e: ClipboardEvent) {
 		if (document.activeElement !== wrap || editing || !source.paste) return;
 		const text = e.clipboardData?.getData('text/plain') ?? '';
+		if (text.startsWith(CHART_CLIP)) {
+			e.preventDefault();
+			try {
+				pasteChart(JSON.parse(text.slice(CHART_CLIP.length)) as ChartConfig);
+			} catch {
+				say('Graphique illisible dans le presse-papiers');
+			}
+			return;
+		}
 		const block = parseTSV(text);
 		if (block.length === 0) return;
 		e.preventDefault();
@@ -2505,6 +2657,7 @@
 		<div class="suggest fx-suggest">{@render suggestions('fx')}</div>
 	{/if}
 
+	<div class="body">
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 	<div class="wrap" bind:this={wrap} tabindex="0" role="grid" onkeydown={onKeyDown}>
 		<canvas bind:this={canvas}></canvas>
@@ -2528,78 +2681,28 @@
 					class="chart"
 					style:left="{colAxis.offset(ch.col) - viewPos.x + (drag?.dx ?? 0)}px"
 					style:top="{ch.row * ROW_H - viewPos.y + (drag?.dy ?? 0)}px"
-					style:width="{CHART_W}px"
-					style:height="{CHART_H}px"
+					class:selected={selChart === ch.id}
+					style:width="{chartW(ch)}px"
+					style:height="{chartH(ch)}px"
 					ondblclick={() => editChart(ch)}
 					onmousedown={(ev) => startChartDrag(ev, ch)}
+					oncontextmenu={(ev) => onChartMenu(ev, ch)}
 					onwheel={(ev) => onWheel(ev)}
 				>
 					{#if ch.error}
 						<p class="chart-error">Graphique : {ch.error}</p>
 					{:else}
-						<Chart kind={ch.config.kind} title={ch.config.title} labels={ch.labels} series={ch.series} width={CHART_W} height={CHART_H} />
+						<Chart kind={ch.config.kind} labels={ch.labels} series={ch.series} width={chartW(ch)} height={chartH(ch)} style={ch.config} />
 					{/if}
-					<div class="chart-tools">
-						<button title="Modifier" onmousedown={(ev) => ev.stopPropagation()} onclick={() => editChart(ch)}>✎</button>
-						<button title="Supprimer le graphique" onmousedown={(ev) => ev.stopPropagation()} onclick={() => removeChart(ch.id)}>✕</button>
-					</div>
+					{#if selChart === ch.id}
+						{#each ['e', 's', 'se'] as dir (dir)}
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<div class="handle {dir}" onmousedown={(ev) => startChartResize(ev, ch, dir)}></div>
+						{/each}
+					{/if}
 				</div>
 			{/each}
 		</div>
-		{#if chartDlg}
-			{@const d = chartDlg}
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div
-				class="rules pivot"
-				onkeydown={(ev) => {
-					ev.stopPropagation();
-					if (ev.key === 'Escape') {
-						chartDlg = null;
-						wrap.focus();
-					}
-				}}
-			>
-				<div class="menu-title">Graphique de « {d.cfg.source} »</div>
-				<div class="add">
-					<span class="lab">Type</span>
-					<select bind:value={d.cfg.kind}>
-						<option value="bar">Barres</option>
-						<option value="line">Courbes</option>
-						<option value="pie">Secteurs</option>
-						<option value="scatter">Nuage de points</option>
-					</select>
-				</div>
-				<div class="add"><span class="lab">Titre</span><input bind:value={d.cfg.title} placeholder="(aucun)" /></div>
-				<div class="add"><span class="lab">Axe X</span><select bind:value={d.cfg.x}>{#each d.columns as c (c)}<option value={c}>{c}</option>{/each}</select></div>
-				<div class="add series">
-					<span class="lab">Séries</span>
-					{#each d.columns.filter((c) => c !== d.cfg.x) as c (c)}
-						<label>
-							<input
-								type="checkbox"
-								checked={d.cfg.series.includes(c)}
-								onchange={(ev) => {
-									const on = (ev.currentTarget as HTMLInputElement).checked;
-									d.cfg.series = on ? [...d.cfg.series, c] : d.cfg.series.filter((x) => x !== c);
-								}}
-							/>{c}
-						</label>
-					{/each}
-				</div>
-				{#if d.error}<p class="menu-note error">{d.error}</p>{/if}
-				<div class="foot">
-					<button onclick={() => removeChart(d.id)}>Supprimer</button>
-					<span class="sp"></span>
-					<button onclick={saveChart}>OK</button>
-					<button
-						onclick={() => {
-							chartDlg = null;
-							wrap.focus();
-						}}>Annuler</button
-					>
-				</div>
-			</div>
-		{/if}
 		{#if typeMenu}
 			{@const m = typeMenu}
 			{@const col = m.e.t.columns[m.i]}
@@ -2713,49 +2816,27 @@
 				{/if}
 			</div>
 		{/if}
-		{#if pivotDlg}
-			{@const d = pivotDlg}
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div
-				class="rules pivot"
-				onkeydown={(ev) => {
-					ev.stopPropagation();
-					if (ev.key === 'Escape') {
-						pivotDlg = null;
-						wrap.focus();
-					}
-				}}
-			>
-				<div class="menu-title">Tableau croisé dynamique de « {d.source} »</div>
-				<div class="add"><span class="lab">Lignes</span><select bind:value={d.cfg.rows}>{#each d.columns as c (c)}<option value={c}>{c}</option>{/each}</select></div>
-				<div class="add">
-					<span class="lab">Colonnes</span>
-					<select bind:value={d.cfg.cols}><option value="">(aucune)</option>{#each d.columns as c (c)}<option value={c}>{c}</option>{/each}</select>
-				</div>
-				<div class="add">
-					<span class="lab">Valeurs</span>
-					<select bind:value={d.cfg.agg}>
-						<option value="sum">Somme</option>
-						<option value="count">Nombre</option>
-						<option value="avg">Moyenne</option>
-						<option value="min">Min</option>
-						<option value="max">Max</option>
-					</select>
-					<span>de</span>
-					<select bind:value={d.cfg.value}><option value="">(lignes)</option>{#each d.columns as c (c)}<option value={c}>{c}</option>{/each}</select>
-				</div>
-				{#if d.error}<p class="menu-note error">{d.error}</p>{/if}
-				<div class="foot">
-					{#if d.id !== undefined}<button onclick={removePivot}>Supprimer</button>{/if}
-					<span class="sp"></span>
-					<button onclick={savePivot}>{d.id !== undefined ? 'OK' : 'Créer sur une nouvelle feuille'}</button>
-					<button
-						onclick={() => {
-							pivotDlg = null;
-							wrap.focus();
-						}}>Annuler</button
-					>
-				</div>
+		{#if chartMenu}
+			{@const m = chartMenu}
+			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (chartMenu = null)}>
+				<div class="menu-title">Graphique</div>
+				<button onclick={() => copyChart(m.ch, true)}>Couper</button>
+				<button onclick={() => copyChart(m.ch, false)}>Copier</button>
+				<button
+					disabled={!chartClip}
+					onclick={() => {
+						chartMenu = null;
+						if (chartClip) pasteChart(chartClip);
+					}}>Coller un graphique à la cellule active</button
+				>
+				<hr />
+				<button
+					onclick={() => {
+						chartMenu = null;
+						selectChart(m.ch);
+					}}>Modifier le graphique…</button
+				>
+				<button onclick={() => removeChart(m.ch.id)}>Supprimer le graphique</button>
 			</div>
 		{/if}
 		{#if dedupDlg}
@@ -2970,6 +3051,37 @@
 				})()}
 			/>
 		{/if}
+	</div>
+	{#if panel?.kind === 'pivot'}
+		{@const pv = pivots.find((p) => p.id === panel!.id)}
+		{#if pv}
+			<PivotPanel
+				config={pv.config}
+				fields={sourceColumns(pv.config.source)}
+				error={pv.error}
+				filterValues={source.pivotFieldValues ? (f) => source.pivotFieldValues!(pv.config.source, f) : undefined}
+				onchange={(cfg) => menuAction(source.setPivot && (() => source.setPivot!(pv.id, cfg)))}
+				ondelete={() => {
+					panel = null;
+					menuAction(source.deletePivot && (() => source.deletePivot!(pv.id)));
+				}}
+				onclose={() => (panel = null)}
+			/>
+		{/if}
+	{:else if panel?.kind === 'chart'}
+		{@const ch = charts.find((c) => c.id === panel!.id)}
+		{#if ch}
+			<ChartPanel
+				config={ch.config}
+				columns={sourceColumns(ch.config.source).map((c) => c.name)}
+				onchange={(cfg) => menuAction(source.setChart && (() => source.setChart!(ch.id, cfg)))}
+				onclose={() => {
+					panel = null;
+					selChart = null;
+				}}
+			/>
+		{/if}
+	{/if}
 	</div>
 </div>
 
@@ -3202,31 +3314,35 @@
 		margin: 12px;
 		color: #c0392b;
 	}
-	.chart-tools {
+	.body {
+		flex: 1;
+		display: flex;
+		min-height: 0;
+	}
+	.chart.selected {
+		outline: 2px solid #217346;
+	}
+	.handle {
 		position: absolute;
-		top: 4px;
-		right: 4px;
-		display: none;
-		gap: 4px;
-	}
-	.chart:hover .chart-tools {
-		display: flex;
-	}
-	.chart-tools button {
-		font: inherit;
-		border: 1px solid #c9cdd2;
+		width: 10px;
+		height: 10px;
 		background: #fff;
-		border-radius: 3px;
-		cursor: pointer;
-		padding: 0 6px;
+		border: 1px solid #217346;
 	}
-	.pivot .series {
-		flex-wrap: wrap;
+	.handle.e {
+		right: -6px;
+		top: calc(50% - 5px);
+		cursor: ew-resize;
 	}
-	.pivot .series label {
-		display: flex;
-		align-items: center;
-		gap: 4px;
+	.handle.s {
+		bottom: -6px;
+		left: calc(50% - 5px);
+		cursor: ns-resize;
+	}
+	.handle.se {
+		right: -6px;
+		bottom: -6px;
+		cursor: nwse-resize;
 	}
 	.filter .fn {
 		display: flex;
@@ -3241,10 +3357,6 @@
 	}
 	.filter .fn:hover {
 		background: #e3efe7;
-	}
-	.pivot .lab {
-		width: 70px;
-		color: #4b5563;
 	}
 	.filter .search {
 		width: 100%;

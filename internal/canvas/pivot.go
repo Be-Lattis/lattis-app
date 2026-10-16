@@ -7,20 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-
-	"github.com/lalamefine/slitable/internal/formula"
 )
-
-// PivotConfig décrit un tableau croisé dynamique : un tableau source, le
-// champ des lignes, celui des colonnes (facultatif) et la valeur agrégée.
-// Les champs sont désignés par le nom de leur colonne.
-type PivotConfig struct {
-	Source string `json:"source"`
-	Rows   string `json:"rows"`
-	Cols   string `json:"cols,omitempty"`
-	Value  string `json:"value,omitempty"` // vide : nombre de lignes
-	Agg    string `json:"agg"`             // sum, count, avg, min, max
-}
 
 // PivotInfo est un tableau croisé posé sur une feuille, avec son résultat.
 type PivotInfo struct {
@@ -42,20 +29,10 @@ const (
 	MaxPivotCols = 50
 )
 
-var pivotAggs = map[string]struct{ sql, label string }{
-	"sum":   {"sum", "Somme"},
-	"count": {"count", "Nombre"},
-	"avg":   {"avg", "Moyenne"},
-	"min":   {"min", "Min"},
-	"max":   {"max", "Max"},
-}
-
 // CreatePivot crée un tableau croisé sur une nouvelle feuille, comme Excel,
 // et renvoie l'identifiant de la feuille.
 func (m *Model) CreatePivot(ctx context.Context, cfg PivotConfig) (int64, error) {
-	if _, ok := pivotAggs[cfg.Agg]; !ok {
-		return 0, fmt.Errorf("%w : fonction %q inconnue", ErrPivot, cfg.Agg)
-	}
+	cfg = cfg.normalized()
 	var sheet int64
 	err := m.Do(ctx, "Tableau croisé dynamique", func(t *tx) error {
 		if _, err := t.pivotPlan(cfg); err != nil {
@@ -80,6 +57,13 @@ func (m *Model) CreatePivot(ctx context.Context, cfg PivotConfig) (int64, error)
 		if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _slitable_pivots`).Scan(&id); err != nil {
 			return err
 		}
+		if cfg.Name == "" {
+			name, err := t.pivotName()
+			if err != nil {
+				return err
+			}
+			cfg.Name = name
+		}
 		b, err := json.Marshal(cfg)
 		if err != nil {
 			return err
@@ -97,9 +81,7 @@ func (m *Model) CreatePivot(ctx context.Context, cfg PivotConfig) (int64, error)
 
 // SetPivot change la configuration d'un tableau croisé.
 func (m *Model) SetPivot(ctx context.Context, id int64, cfg PivotConfig) error {
-	if _, ok := pivotAggs[cfg.Agg]; !ok {
-		return fmt.Errorf("%w : fonction %q inconnue", ErrPivot, cfg.Agg)
-	}
+	cfg = cfg.normalized()
 	return m.Do(ctx, "Modifier le tableau croisé", func(t *tx) error {
 		if _, err := t.pivotPlan(cfg); err != nil {
 			return err
@@ -107,6 +89,12 @@ func (m *Model) SetPivot(ctx context.Context, id int64, cfg PivotConfig) error {
 		var old string
 		if err := t.row(`SELECT config FROM _slitable_pivots WHERE id = ?`, id).Scan(&old); err != nil {
 			return err
+		}
+		if cfg.Name == "" {
+			var prev PivotConfig
+			if json.Unmarshal([]byte(old), &prev) == nil {
+				cfg.Name = prev.Name
+			}
 		}
 		b, err := json.Marshal(cfg)
 		if err != nil {
@@ -133,158 +121,6 @@ func (m *Model) DeletePivot(ctx context.Context, id int64) error {
 	})
 }
 
-type pivotPlan struct {
-	tb             Table
-	rows, cols, vc *Column
-	agg            string
-}
-
-func (t *tx) pivotPlan(cfg PivotConfig) (pivotPlan, error) {
-	var p pivotPlan
-	tb, err := t.tableByName(cfg.Source)
-	if err != nil {
-		return p, fmt.Errorf("%w : tableau « %s » introuvable", ErrPivot, cfg.Source)
-	}
-	p.tb, p.agg = tb, cfg.Agg
-	find := func(name string) (*Column, error) {
-		for i := range tb.Cols {
-			if strings.EqualFold(tb.Cols[i].Name, name) {
-				if tb.Cols[i].Formula != "" {
-					return nil, fmt.Errorf("%w : la colonne calculée « %s » ne sert pas encore de champ", ErrPivot, name)
-				}
-				return &tb.Cols[i], nil
-			}
-		}
-		return nil, fmt.Errorf("%w : colonne « %s » introuvable dans %s", ErrPivot, name, tb.Name)
-	}
-	if p.rows, err = find(cfg.Rows); err != nil {
-		return p, err
-	}
-	if cfg.Cols != "" {
-		if p.cols, err = find(cfg.Cols); err != nil {
-			return p, err
-		}
-	}
-	if cfg.Value != "" {
-		if p.vc, err = find(cfg.Value); err != nil {
-			return p, err
-		}
-	} else if cfg.Agg != "count" {
-		return p, fmt.Errorf("%w : choisissez la colonne des valeurs", ErrPivot)
-	}
-	return p, nil
-}
-
-// pivotCells calcule le tableau croisé : deux passes, les valeurs distinctes
-// du champ des colonnes puis un agrégat par colonne (CASE WHEN).
-func (t *tx) pivotCells(cfg PivotConfig) ([][]string, error) {
-	p, err := t.pivotPlan(cfg)
-	if err != nil {
-		return nil, err
-	}
-	agg := pivotAggs[p.agg]
-	text := func(c *Column) string {
-		return fmt.Sprintf("coalesce(slt_text(%s, %s), '')", colSQL(c.ID), sqlLiteral(string(c.Type)))
-	}
-	val := "1"
-	label := "Nombre"
-	if p.vc != nil {
-		val = colSQL(p.vc.ID)
-		label = agg.label + " de " + p.vc.Name
-	}
-	measure := func(cond string) string {
-		v := val
-		if cond != "" {
-			v = "CASE WHEN " + cond + " THEN " + val + " END"
-		}
-		return agg.sql + "(" + v + ")"
-	}
-	header := []string{p.rows.Name}
-	var exprs []string
-	var args []any
-	if p.cols != nil {
-		rs, err := t.query(`SELECT `+text(p.cols)+` AS k FROM `+p.tb.sql()+` GROUP BY k ORDER BY min(`+colSQL(p.cols.ID)+`) IS NULL, min(`+colSQL(p.cols.ID)+`) LIMIT ?`, MaxPivotCols+1)
-		if err != nil {
-			return nil, err
-		}
-		var keys []string
-		for rs.Next() {
-			var k string
-			if err := rs.Scan(&k); err != nil {
-				rs.Close()
-				return nil, err
-			}
-			keys = append(keys, k)
-		}
-		rs.Close()
-		if len(keys) > MaxPivotCols {
-			return nil, fmt.Errorf("%w : plus de %d valeurs dans « %s »", ErrPivot, MaxPivotCols, p.cols.Name)
-		}
-		for _, k := range keys {
-			exprs = append(exprs, measure(text(p.cols)+" = ?"))
-			args = append(args, k)
-			if k == "" {
-				k = "(vide)"
-			}
-			header = append(header, k)
-		}
-	}
-	exprs = append(exprs, measure(""))
-	if p.cols != nil {
-		header = append(header, "Total")
-	} else {
-		header = append(header, label)
-	}
-	out := [][]string{header}
-	read := func(q string, args []any, withKey bool) error {
-		rs, err := t.query(q, args...)
-		if err != nil {
-			return err
-		}
-		defer rs.Close()
-		for rs.Next() {
-			n := len(exprs)
-			if withKey {
-				n++
-			}
-			vals := make([]any, n)
-			ptrs := make([]any, n)
-			for i := range vals {
-				ptrs[i] = &vals[i]
-			}
-			if err := rs.Scan(ptrs...); err != nil {
-				return err
-			}
-			row := []string{"Total"}
-			start := 0
-			if withKey {
-				row[0] = formula.FromResult(vals[0]).String()
-				if row[0] == "" {
-					row[0] = "(vide)"
-				}
-				start = 1
-			}
-			for _, v := range vals[start:] {
-				row = append(row, formula.FromResult(v).String())
-			}
-			out = append(out, row)
-		}
-		return rs.Err()
-	}
-	rowsArgs := append(append([]any{}, args...), MaxPivotRows+1)
-	if err := read(`SELECT `+text(p.rows)+` AS k, `+strings.Join(exprs, ", ")+` FROM `+p.tb.sql()+
-		` GROUP BY k ORDER BY min(`+colSQL(p.rows.ID)+`) IS NULL, min(`+colSQL(p.rows.ID)+`) LIMIT ?`, rowsArgs, true); err != nil {
-		return nil, err
-	}
-	if len(out) > MaxPivotRows+1 {
-		return nil, fmt.Errorf("%w : plus de %d valeurs dans « %s »", ErrPivot, MaxPivotRows, p.rows.Name)
-	}
-	if err := read(`SELECT `+strings.Join(exprs, ", ")+` FROM `+p.tb.sql(), args, false); err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // pivots donne les tableaux croisés d'une feuille, calculés.
 func (t *tx) pivots(sheet int64) ([]PivotInfo, error) {
 	rs, err := t.query(`SELECT id, row, col, config FROM _slitable_pivots WHERE sheet = ? ORDER BY id`, sheet)
@@ -301,6 +137,10 @@ func (t *tx) pivots(sheet int64) ([]PivotInfo, error) {
 		}
 		if err := json.Unmarshal([]byte(cfg), &p.Config); err != nil {
 			p.Error = "configuration illisible"
+		}
+		p.Config = p.Config.normalized()
+		if p.Config.Name == "" {
+			p.Config.Name = fmt.Sprintf("TCD%d", p.ID)
 		}
 		out = append(out, p)
 	}

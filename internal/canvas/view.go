@@ -3,6 +3,7 @@ package canvas
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	"github.com/lalamefine/slitable/internal/grid"
 )
@@ -247,6 +248,14 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 type TableNames struct {
 	Name    string   `json:"name"`
 	Columns []string `json:"columns"`
+	// Kind : « table », ou « pivot » pour un tableau croisé (vue SQL).
+	Kind string `json:"kind"`
+	// SQL : nom interne (t_1) d'un tableau, nom du TCD sinon ; ColumnSQL
+	// de même pour les colonnes ; Types et Rows pour l'onglet SQL.
+	SQL       string   `json:"sql"`
+	ColumnSQL []string `json:"columnSql"`
+	Types     []string `json:"types"`
+	Rows      int      `json:"rows"`
 }
 
 // AllTables liste les tableaux de toutes les feuilles et leurs colonnes.
@@ -272,9 +281,40 @@ func (m *Model) AllTables(ctx context.Context) ([]TableNames, error) {
 			if err != nil {
 				return err
 			}
-			tn := TableNames{Name: tb.Name}
+			tn := TableNames{Name: tb.Name, Kind: "table", SQL: tb.sql(), Rows: tb.Rows}
 			for _, c := range tb.Cols {
 				tn.Columns = append(tn.Columns, c.Name)
+				tn.ColumnSQL = append(tn.ColumnSQL, colSQL(c.ID))
+				typ := string(c.Type)
+				if c.Formula != "" {
+					typ = "formula"
+				}
+				tn.Types = append(tn.Types, typ)
+			}
+			out = append(out, tn)
+		}
+		ps, err := t.allPivots()
+		if err != nil {
+			return err
+		}
+		for _, p := range ps {
+			cells, err := t.pivotCells(p.Cfg)
+			if err != nil {
+				continue
+			}
+			_, cols, err := t.pivotQuery(p.Cfg)
+			if err != nil {
+				continue
+			}
+			tn := TableNames{Name: p.Cfg.Name, Kind: "pivot", SQL: `"` + p.Cfg.Name + `"`, Rows: len(cells) - 1}
+			for i, c := range cols {
+				tn.Columns = append(tn.Columns, c)
+				tn.ColumnSQL = append(tn.ColumnSQL, `"`+strings.ReplaceAll(c, `"`, `""`)+`"`)
+				typ := "text"
+				if i >= len(p.Cfg.RowFields) {
+					typ = "decimal"
+				}
+				tn.Types = append(tn.Types, typ)
 			}
 			out = append(out, tn)
 		}

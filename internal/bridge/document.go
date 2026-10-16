@@ -351,6 +351,10 @@ func (s *DocumentService) Query(ctx context.Context, q string) (grid.QueryResult
 	if err != nil {
 		return grid.QueryResult{}, err
 	}
+	// Les tableaux croisés cités s'interrogent comme des vues.
+	if q, err = d.PivotCTE(ctx, q); err != nil {
+		return grid.QueryResult{}, err
+	}
 	return grid.Query(ctx, d.DB().Read(), q, QueryLimit)
 }
 
@@ -622,4 +626,13 @@ func (s *DocumentService) DuplicatesPreview(ctx context.Context, table string, c
 		return 0, err
 	}
 	return d.DuplicatesPreview(ctx, table, cols)
+}
+
+// FieldValues donne les valeurs distinctes d'une colonne désignée par son nom.
+func (s *DocumentService) FieldValues(ctx context.Context, table, field string) ([]canvas.FilterValue, error) {
+	d, err := s.current()
+	if err != nil {
+		return nil, err
+	}
+	return d.FieldValues(ctx, table, field)
 }

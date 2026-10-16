@@ -43,12 +43,44 @@ export interface ChartConfig {
     "source": string;
 
     /**
-     * bar, line, pie, scatter
+     * bar (barres verticales), column (horizontales), line, area, pie, doughnut, scatter
      */
     "kind": string;
     "x": string;
     "series": string[] | null;
     "title"?: string;
+
+    /**
+     * Présentation (lue par l'interface seulement).
+     * px, 480 par défaut
+     */
+    "width"?: number;
+
+    /**
+     * px, 288 par défaut
+     */
+    "height"?: number;
+
+    /**
+     * bottom (défaut), top, right, none
+     */
+    "legend"?: string;
+    "xTitle"?: string;
+    "yTitle"?: string;
+
+    /**
+     * étiquettes de données
+     */
+    "labels"?: boolean;
+    "noGrid"?: boolean;
+    "stacked"?: boolean;
+    "yMin"?: number | null;
+    "yMax"?: number | null;
+
+    /**
+     * couleur de chaque série
+     */
+    "colors"?: string[] | null;
 }
 
 /**
@@ -213,24 +245,40 @@ export interface NameInfo {
 }
 
 /**
- * PivotConfig décrit un tableau croisé dynamique : un tableau source, le
- * champ des lignes, celui des colonnes (facultatif) et la valeur agrégée.
- * Les champs sont désignés par le nom de leur colonne.
+ * PivotConfig décrit un tableau croisé dynamique, comme le volet « Champs de
+ * tableau croisé » d'Excel : zones Lignes, Colonnes, Valeurs et Filtres. Les
+ * champs sont désignés par le nom de leur colonne dans le tableau source.
  */
 export interface PivotConfig {
+    /**
+     * Name nomme le TCD (vue SQL, source de graphique) : « TCD1 »…
+     */
+    "name"?: string;
     "source": string;
-    "rows": string;
+    "rowFields"?: string[] | null;
     "cols"?: string;
+    "values"?: PivotValue[] | null;
+    "filters"?: PivotFilter[] | null;
 
     /**
-     * vide : nombre de lignes
+     * NoGrandTotal masque la ligne et la colonne de total général.
      */
+    "noGrandTotal"?: boolean;
+
+    /**
+     * Ancien format (un champ de lignes, une valeur) : relu puis converti.
+     */
+    "rows"?: string;
     "value"?: string;
+    "agg"?: string;
+}
 
-    /**
-     * sum, count, avg, min, max
-     */
-    "agg": string;
+/**
+ * PivotFilter est un champ de la zone Filtres : les valeurs gardées.
+ */
+export interface PivotFilter {
+    "field": string;
+    "values": string[] | null;
 }
 
 /**
@@ -247,6 +295,24 @@ export interface PivotInfo {
      */
     "cells": (string[] | null)[] | null;
     "error": string;
+}
+
+/**
+ * PivotValue est un champ de la zone Valeurs : la colonne agrégée (vide :
+ * nombre de lignes), la fonction et l'affichage (valeur ou pourcentage).
+ */
+export interface PivotValue {
+    "field"?: string;
+
+    /**
+     * sum, count, countDistinct, avg, min, max
+     */
+    "agg": string;
+
+    /**
+     * "", pctTotal, pctRow, pctCol
+     */
+    "show"?: string;
 }
 
 /**
@@ -338,4 +404,18 @@ export interface TableInfo {
 export interface TableNames {
     "name": string;
     "columns": string[] | null;
+
+    /**
+     * Kind : « table », ou « pivot » pour un tableau croisé (vue SQL).
+     */
+    "kind": string;
+
+    /**
+     * SQL : nom interne (t_1) d'un tableau, nom du TCD sinon ; ColumnSQL
+     * de même pour les colonnes ; Types et Rows pour l'onglet SQL.
+     */
+    "sql": string;
+    "columnSql": string[] | null;
+    "types": string[] | null;
+    "rows": number;
 }

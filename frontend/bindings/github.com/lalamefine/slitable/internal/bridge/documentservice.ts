@@ -154,6 +154,13 @@ export function ExtractColumns(name: string, i0: number, i1: number, row: number
 }
 
 /**
+ * FieldValues donne les valeurs distinctes d'une colonne désignée par son nom.
+ */
+export function FieldValues(table: string, field: string): $CancellablePromise<canvas$0.FilterValue[] | null> {
+    return $Call.ByID(2964970657, table, field);
+}
+
+/**
  * FilterValues donne les valeurs distinctes d'une colonne pour le filtre.
  */
 export function FilterValues(table: string, i: number): $CancellablePromise<canvas$0.FilterValue[] | null> {

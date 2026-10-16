@@ -1158,3 +1158,130 @@ func TestSetKey(t *testing.T) {
 		t.Fatalf("annulation :\n%s", diff(before, got))
 	}
 }
+
+func TestPivotFields(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Pays", "Ville", "Ventes"}, {"FR", "Lyon", "10"}, {"FR", "Paris", "30"}, {"IT", "Rome", "20"}, {"FR", "Lyon", "40"}}); err != nil {
+		t.Fatal(err)
+	}
+	sheet, err := d.CreatePivot(ctx, PivotConfig{Source: "Feuille1", RowFields: []string{"Pays", "Ville"},
+		Values: []PivotValue{{Field: "Ventes", Agg: "sum"}, {Field: "Ventes", Agg: "sum", Show: "pctTotal"}, {Agg: "count"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cells := func() string {
+		l, _ := d.Layout(ctx, sheet)
+		if l.Pivots[0].Error != "" {
+			t.Fatal(l.Pivots[0].Error)
+		}
+		return fmt.Sprint(l.Pivots[0].Cells)
+	}
+	want := "[[Pays Ville Somme de Ventes Somme de Ventes (% du total) Nombre] [FR Lyon 50 50 % 2] [FR Paris 30 30 % 1] [IT Rome 20 20 % 1] [Total  100 100 % 4]]"
+	if got := cells(); got != want {
+		t.Fatalf("lignes et valeurs :\n%s\n%s", got, want)
+	}
+	l, _ := d.Layout(ctx, sheet)
+	id := l.Pivots[0].ID
+	if err := d.SetPivot(ctx, id, PivotConfig{Source: "Feuille1", RowFields: []string{"Ville"}, Cols: "Pays",
+		Values:  []PivotValue{{Field: "Ventes", Agg: "sum", Show: "pctRow"}},
+		Filters: []PivotFilter{{Field: "Ville", Values: []string{"Lyon", "Rome"}}}, NoGrandTotal: true}); err != nil {
+		t.Fatal(err)
+	}
+	if got := cells(); got != "[[Ville FR IT] [Lyon 100 % ] [Rome  100 %]]" {
+		t.Fatalf("colonnes, filtre, sans total : %s", got)
+	}
+}
+
+func TestChart(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Pays", "Ventes", "Coût"}, {"FR", "10", "4"}, {"IT", "5", "2"}, {"FR", "7", "1"}}); err != nil {
+		t.Fatal(err)
+	}
+	before := dump(t, d)
+	if _, err := d.CreateChart(ctx, 1, 0, 5, ChartConfig{Source: "Feuille1", Kind: "radar", X: "Pays", Series: []string{"Ventes"}}); err == nil {
+		t.Fatal("type inconnu accepté")
+	}
+	id, err := d.CreateChart(ctx, 1, 0, 5, ChartConfig{Source: "Feuille1", Kind: "bar", X: "Pays", Series: []string{"Ventes", "Coût"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	l, _ := d.Layout(ctx, 1)
+	c := l.Charts[0]
+	if fmt.Sprint(c.Labels) != "[FR IT]" || *c.Series[0].Values[0] != 17 || *c.Series[1].Values[1] != 2 {
+		t.Fatalf("graphique : %+v", c)
+	}
+	if _, err := d.SetCell(ctx, 1, 2, 1, "50"); err != nil {
+		t.Fatal(err)
+	}
+	l, _ = d.Layout(ctx, 1)
+	if *l.Charts[0].Series[0].Values[1] != 50 {
+		t.Fatal("le graphique ne suit pas la source")
+	}
+	if err := d.MoveChart(ctx, id, 8, 1); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.SetChart(ctx, id, ChartConfig{Source: "Feuille1", Kind: "area", X: "Ventes", Series: []string{"Coût"}, Width: 600, Stacked: true}); err != nil {
+		t.Fatal(err)
+	}
+	l, _ = d.Layout(ctx, 1)
+	if c := l.Charts[0]; c.Row != 8 || c.Config.Width != 600 || len(c.Labels) != 3 {
+		t.Fatalf("après modification : %+v", c)
+	}
+	if err := d.DeleteChart(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	for range 5 {
+		d.bus.Undo(ctx)
+	}
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation :\n%s", diff(before, got))
+	}
+}
+
+// Un TCD s'interroge comme une vue et alimente un graphique.
+func TestPivotAsView(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Pays", "Ventes"}, {"FR", "10"}, {"IT", "5"}, {"FR", "7"}}); err != nil {
+		t.Fatal(err)
+	}
+	sheet, err := d.CreatePivot(ctx, PivotConfig{Source: "Feuille1", RowFields: []string{"Pays"}, Values: []PivotValue{{Field: "Ventes", Agg: "sum"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	q, err := d.PivotCTE(ctx, `SELECT "Pays", "Somme de Ventes" FROM "TCD1" ORDER BY 2 DESC`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	d.read(ctx, func(tx *tx) error {
+		rs, err := tx.query(q)
+		if err != nil {
+			t.Fatalf("%s : %v", q, err)
+		}
+		defer rs.Close()
+		for rs.Next() {
+			var p string
+			var v float64
+			rs.Scan(&p, &v)
+			got = append(got, fmt.Sprint(p, v))
+		}
+		return nil
+	})
+	if fmt.Sprint(got) != "[FR17 IT5]" {
+		t.Fatalf("vue : %v", got)
+	}
+	if _, err := d.CreateChart(ctx, sheet, 0, 5, ChartConfig{Source: "TCD1", Kind: "bar", X: "Pays", Series: []string{"Somme de Ventes"}}); err != nil {
+		t.Fatal(err)
+	}
+	l, _ := d.Layout(ctx, sheet)
+	if c := l.Charts[0]; c.Error != "" || fmt.Sprint(c.Labels) != "[FR IT]" || *c.Series[0].Values[0] != 17 {
+		t.Fatalf("graphique du TCD : %+v", c)
+	}
+	all, _ := d.AllTables(ctx)
+	if len(all) != 2 || all[1].Kind != "pivot" || all[1].Name != "TCD1" {
+		t.Fatalf("objets : %+v", all)
+	}
+}

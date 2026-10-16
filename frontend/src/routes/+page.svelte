@@ -239,6 +239,7 @@
 			await selectSheet(id);
 		},
 		setPivot: (id, cfg) => DocumentService.SetPivot(id, cfg).then(reload),
+		pivotFieldValues: async (table, field) => (await DocumentService.FieldValues(table, field)) ?? [],
 		createChart: (row, col, cfg) => DocumentService.CreateChart(sheetId, row, col, cfg).then(reload),
 		setChart: (id, cfg) => DocumentService.SetChart(id, cfg).then(reload),
 		moveChart: (id, row, col) => DocumentService.MoveChart(id, row, col).then(reload),
@@ -317,11 +318,12 @@
 	const objects = $derived(
 		mode === 'demo' && demo
 			? [{ name: demo.name, sqlName: demo.sqlName, rows: demo.rows, columns: demo.columns.map((c, i) => ({ ...c, sql: demo!.sqlColumns[i] ?? '' })) }]
-			: (layout?.tables ?? []).map((t) => ({
+			: // Tableaux et tableaux croisés (vues) de toutes les feuilles.
+				(help?.tables ?? []).map((t) => ({
 					name: t.name,
 					sqlName: t.sql,
 					rows: t.rows,
-					columns: (t.columns ?? []).map((c) => ({ name: c.name, type: c.type as ColumnType, sql: c.sql }))
+					columns: (t.columns ?? []).map((c, i) => ({ name: c, type: (t.types?.[i] ?? 'text') as ColumnType, sql: t.columnSql?.[i] ?? c }))
 				}))
 	);
 
@@ -333,6 +335,7 @@
 	async function selectSheet(id: number) {
 		view = 'grid';
 		if (mode !== 'doc' || id === sheetId) return;
+		sheet?.closeOverlays();
 		sheetId = id;
 		await reload();
 		sheet?.focus();
@@ -412,8 +415,9 @@
 						bind:this={sheet}
 						{data}
 						source={mode === 'demo' ? demoSource : docSource}
+						sources={(help?.tables ?? []).map((t) => ({ name: t.name, columns: t.columns ?? [], types: t.types ?? [] }))}
 						catalog={mode === 'doc' && help
-							? { functions: help.functions ?? [], tables: help.tables ?? [], names: (layout?.names ?? []).map((n) => n.name) }
+							? { functions: help.functions ?? [], tables: (help.tables ?? []).filter((t) => t.kind !== 'pivot'), names: (layout?.names ?? []).map((n) => n.name) }
 							: undefined}
 						onstatus={(s) => (sheetStatus = s)}
 						autoBench={bench ? (r) => GridService.ReportBench(r) : undefined}

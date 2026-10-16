@@ -203,3 +203,24 @@ func (m *Model) FilterValues(ctx context.Context, table string, i int) ([]Filter
 	})
 	return out, err
 }
+
+// FieldValues est FilterValues avec la colonne désignée par son nom.
+func (m *Model) FieldValues(ctx context.Context, table, field string) ([]FilterValue, error) {
+	i := -1
+	err := m.read(ctx, func(t *tx) error {
+		tb, err := t.tableByName(table)
+		if err != nil {
+			return err
+		}
+		for k, c := range tb.Cols {
+			if strings.EqualFold(c.Name, field) {
+				i = k
+			}
+		}
+		return nil
+	})
+	if err != nil || i < 0 {
+		return []FilterValue{}, err
+	}
+	return m.FilterValues(ctx, table, i)
+}
