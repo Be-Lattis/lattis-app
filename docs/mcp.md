@@ -58,8 +58,8 @@ schéma de chaque outil (`tools/list`).
 |---|---|
 | Classeur | `doc_state`, `doc_undo`, `doc_redo`, `doc_new`, `doc_open`, `doc_save`, `doc_import`, `doc_export_csv`, `doc_recalc` |
 | SQL | `db_query` (lecture, noms affichés, 10 000 lignes au plus), `db_execute` (INSERT, UPDATE, DELETE annulables) |
-| Feuilles | `sheets_list`, `sheets_get`, `sheets_add`, `sheets_rename`, `sheets_move`, `sheets_copy`, `sheets_hide`, `sheets_color`, `sheets_delete`, `sheets_set_column_width`, `sheets_set_row_height`, `sheets_find`, `sheets_replace`, `sheets_protect`, `sheets_unprotect`, `sheets_protect_workbook`, `sheets_unprotect_workbook` |
-| Cellules | `cells_get`, `cells_set`, `cells_paste`, `cells_clear`, `cells_style`, `cells_style_lines`, `cells_name`, `cells_dependencies` |
+| Feuilles | `sheets_list`, `sheets_get`, `sheets_add`, `sheets_rename`, `sheets_move`, `sheets_copy`, `sheets_hide`, `sheets_color`, `sheets_delete`, `sheets_set_column_width`, `sheets_set_row_height`, `sheets_hide_lines`, `sheets_freeze`, `sheets_find`, `sheets_replace`, `sheets_protect`, `sheets_unprotect`, `sheets_protect_workbook`, `sheets_unprotect_workbook` |
+| Cellules | `cells_get`, `cells_set`, `cells_paste`, `cells_clear`, `cells_style`, `cells_style_lines`, `cells_merge`, `cells_unmerge`, `cells_note`, `cells_name`, `cells_dependencies` |
 | Tableaux | `tables_list`, `tables_get`, `tables_rows`, `tables_rename`, `tables_move`, `tables_delete`, `tables_sort`, `tables_insert_row`, `tables_delete_row`, `tables_clear_filters`, `tables_duplicates`, `tables_remove_duplicates`, `tables_promote_header`, `tables_key_check`, `tables_set_key`, `tables_clear_key`, `tables_extract_columns` |
 | Colonnes | `columns_insert`, `columns_rename`, `columns_delete`, `columns_set_type`, `columns_type_preview`, `columns_type_mix`, `columns_fix_type`, `columns_values`, `columns_set_filter`, `columns_set_rules` |
 | Interface | `ui_selection`, `ui_select`, `ui_select_object`, `ui_select_cells`, `ui_show_sheet`, `ui_show_view`, `ui_notify`, `ui_alert`, `ui_confirm`, `ui_prompt`, `ui_dialog` |

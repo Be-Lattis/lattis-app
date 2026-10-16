@@ -399,6 +399,68 @@ sheets.unprotect("Feuille1", "secret")`,
 			},
 		},
 		&Command{
+			Name:    "sheets.hide_lines",
+			Label:   "Masquer ou afficher",
+			Summary: "Masque (ou affiche) des lignes ou des colonnes entières de la feuille ; leur contenu reste en place et compte dans les formules.",
+			Params: []Param{{Name: "axis", Type: String, Desc: `"rows" (lignes) ou "cols" (colonnes)`},
+				{Name: "from", Type: Integer, Desc: "première ligne ou colonne, à partir de 1"},
+				{Name: "to", Type: Integer, Desc: "dernière ligne ou colonne (absente : from)", Optional: true},
+				{Name: "show", Type: Boolean, Desc: "vrai : afficher au lieu de masquer", Optional: true}, pSheet},
+			Write:   true,
+			Example: `sheets.hide_lines{axis = "cols", from = 3, to = 4}`,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				axis, err := c.Str("axis")
+				if err != nil {
+					return nil, err
+				}
+				if axis != "rows" && axis != "cols" {
+					return nil, fmt.Errorf(`axis : "rows" ou "cols" attendu`)
+				}
+				i0, err := c.Pos("from", 0)
+				if err != nil {
+					return nil, err
+				}
+				i1, err := c.Pos("to", i0)
+				if err != nil {
+					return nil, err
+				}
+				show, err := c.Bool("show")
+				if err != nil {
+					return nil, err
+				}
+				d, _ := c.Doc()
+				return nil, d.SetLinesHidden(c, s.ID, axis == "rows", i0, i1, !show)
+			},
+		},
+		&Command{
+			Name:    "sheets.freeze",
+			Label:   "Figer les volets",
+			Summary: "Fige les volets : les premières lignes et colonnes restent affichées pendant le défilement (0 et 0 : libère les volets).",
+			Params:  []Param{{Name: "rows", Type: Integer, Desc: "lignes figées en haut"}, {Name: "cols", Type: Integer, Desc: "colonnes figées à gauche", Optional: true}, pSheet},
+			Write:   true,
+			Example: `sheets.freeze{rows = 1}`,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				rows, err := c.Int("rows", 0)
+				if err != nil {
+					return nil, err
+				}
+				cols, err := c.Int("cols", 0)
+				if err != nil {
+					return nil, err
+				}
+				d, _ := c.Doc()
+				return nil, d.SetFreeze(c, s.ID, rows, cols)
+			},
+		},
+		&Command{
 			Name:    "sheets.find",
 			Summary: "Cherche un texte dans une feuille (sans tenir compte de la casse) et renvoie les cellules trouvées.",
 			Returns: "{ {row, col}, ... }",

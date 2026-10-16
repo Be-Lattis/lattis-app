@@ -485,6 +485,15 @@
 		extractColumns: (t, i0, i1, row, col) => DocumentService.ExtractColumns(t.name, i0, i1, row, col).then(reload),
 		applyStyle: (r0, c0, r1, c1, patch) => DocumentService.ApplyStyle(sheetId, r0, c0, r1, c1, patch).then(reload),
 		applyLineStyle: (rows, i0, i1, patch) => DocumentService.ApplyLineStyle(sheetId, rows, i0, i1, patch).then(reload),
+		setNote: (row, col, text) => DocumentService.SetNote(sheetId, row, col, text).then(reload),
+		mergeCells: async (r0, c0, r1, c1) => {
+			const n = await DocumentService.MergeCells(sheetId, r0, c0, r1, c1);
+			await reload();
+			return n;
+		},
+		unmergeCells: (r0, c0, r1, c1) => DocumentService.UnmergeCells(sheetId, r0, c0, r1, c1).then(reload),
+		setLinesHidden: (rows, i0, i1, hide) => DocumentService.SetLinesHidden(sheetId, rows, i0, i1, hide).then(reload),
+		setFreeze: (rows, cols) => DocumentService.SetFreeze(sheetId, rows, cols).then(reload),
 		find: async (text) => (await DocumentService.Find(sheetId, text)) ?? [],
 		replace: async (text, by) => {
 			const n = await DocumentService.Replace(sheetId, text, by);
@@ -715,6 +724,16 @@
 		workbookProtected={mode === 'doc' && !!layout?.workbookProtected}
 		onprotect={mode === 'doc' ? (what) => toggleProtect(what) : undefined}
 		ondata={mode === 'doc' ? (what) => queryHost?.data(what) : undefined}
+		onformat={mode === 'doc' ? (tab) => sheet?.openFormat(tab) : undefined}
+		onmerge={mode === 'doc' ? () => sheet?.mergeActive(true) : undefined}
+		onwrap={mode === 'doc' ? () => sheet?.toggleWrap() : undefined}
+		onlines={mode === 'doc' ? (rows, hide) => sheet?.hideLines(rows, hide) : undefined}
+		onvalidation={mode === 'doc' ? () => sheet?.openValidation() : undefined}
+		onnote={mode === 'doc' ? (what) => (what === 'edit' ? sheet?.editNote() : sheet?.deleteNote()) : undefined}
+		freeze={activeInfo ? { rows: activeInfo.freezeRows, cols: activeInfo.freezeCols } : undefined}
+		onfreeze={mode === 'doc' ? (what) => sheet?.freezeActive(what) : undefined}
+		cellStyle={sheetStatus?.style}
+		merged={!!sheetStatus?.merged}
 	/>
 
 	<main>
@@ -768,6 +787,7 @@
 						gridlines={!layout?.sheets?.find((s) => s.id === sheetId)?.noGrid}
 						headings={!!layout?.sheets?.find((s) => s.id === sheetId)?.headings}
 						locked={lockedMsg}
+						freeze={activeInfo ? { rows: activeInfo.freezeRows, cols: activeInfo.freezeCols } : undefined}
 						autoBench={bench ? (r) => GridService.ReportBench(r) : undefined}
 					/>
 				</div>

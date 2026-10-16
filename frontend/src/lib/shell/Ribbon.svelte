@@ -7,11 +7,15 @@
 	import { untrack } from 'svelte';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { dismiss } from '#lib/grid/dismiss.js';
-	import { clearPatch } from '#lib/grid/style.js';
-	import { fit, groupWidth, type Mode } from './fit';
+	import { clearPatch, type CellStyle } from '#lib/grid/style.js';
+	import { DEFAULT_PT, FONTS, SIZES } from '#lib/grid/textwrap.js';
+	import Select from '#lib/ui/Select.svelte';
+	import { fit, groupWidth, type GroupShape, type Mode } from './fit';
 	import type { IconName } from '#lib/icons/icons.js';
 
 	export type View = 'grid' | 'sql' | 'script';
+	export type FormatTab = 'number' | 'align' | 'font' | 'border' | 'fill';
+	export type FreezeAction = 'cell' | 'row' | 'col' | 'none';
 
 	interface Command {
 		label: string;
@@ -20,11 +24,21 @@
 		hint?: string;
 		color?: 'fg' | 'bg'; // commande avec un choix de couleur
 		on?: boolean; // commande à bascule, enfoncée
+		/** Commande à menu (▾) : ses choix. */
+		items?: { label: string; run?: () => void; on?: boolean }[];
 	}
 	interface Group {
 		title: string;
 		commands: Command[];
+		/** Lanceur de boîte de dialogue (coin du titre), comme Excel. */
+		launch?: () => void;
+		launchHint?: string;
+		/** Listes Police et Taille en tête du groupe. */
+		fonts?: boolean;
+		/** Icônes assez parlantes pour perdre leur libellé en premier quand la place manque. */
+		iconOk?: boolean;
 	}
+	const FONTS_W = 134; // largeur des listes Police et Taille (fit.ts)
 
 	export type FileAction = 'new' | 'open' | 'save' | 'saveAs' | 'import' | 'export' | 'exportXlsx' | 'print' | 'pdf' | 'close' | 'demo' | 'mcp';
 
@@ -77,9 +91,38 @@
 		onprotect?: (what: 'sheet' | 'workbook') => void;
 		/** Données › Obtenir des données : nouvelle requête d'import, volet des requêtes, tout actualiser. */
 		ondata?: (what: DataAction) => void;
+		/** Format de cellule (Ctrl+1) : lanceurs des groupes Police, Alignement et Nombre. */
+		onformat?: (tab: FormatTab) => void;
+		/** Fusionner et centrer (bascule), renvoyer à la ligne (bascule). */
+		onmerge?: () => void;
+		onwrap?: () => void;
+		/** Accueil › Cellules › Format : masquer ou afficher les lignes ou colonnes de la sélection. */
+		onlines?: (rows: boolean, hide: boolean) => void;
+		/** Données › Validation des données (liste déroulante). */
+		onvalidation?: () => void;
+		/** Révision › Notes. */
+		onnote?: (what: 'edit' | 'delete') => void;
+		/** Volets figés de la feuille active, et Affichage › Figer les volets. */
+		freeze?: { rows: number; cols: number };
+		onfreeze?: (what: FreezeAction) => void;
+		/** Mise en forme de la cellule active (police, taille, boutons enfoncés) ; merged : c'est une fusion. */
+		cellStyle?: CellStyle;
+		merged?: boolean;
 	}
 
-	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, onbutton, sheetProtected = false, workbookProtected = false, onprotect, ondata }: Props = $props();
+	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, onbutton, sheetProtected = false, workbookProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onnote, freeze, onfreeze, cellStyle, merged = false }: Props = $props();
+	const fmt = (tab: FormatTab) => (onformat ? () => onformat(tab) : undefined);
+	const lines = (rows: boolean, hide: boolean) => (onlines ? () => onlines(rows, hide) : undefined);
+	const frz = (what: FreezeAction) => (onfreeze ? () => onfreeze(what) : undefined);
+	const frozen = $derived(!!freeze && (freeze.rows > 0 || freeze.cols > 0));
+	// Menu d'une commande à choix (Figer les volets, Format) : son run ne sert
+	// qu'à dire qu'elle est active, le clic ouvre ses choix.
+	let dropMenu = $state<{ label: string; x: number; y: number } | null>(null);
+	const openItems = () => undefined;
+	function toggleDrop(c: Command, ev: MouseEvent) {
+		const r = (ev.currentTarget as HTMLElement).getBoundingClientRect();
+		dropMenu = dropMenu?.label === c.label ? null : { label: c.label, x: r.left, y: r.bottom + 2 };
+	}
 	let fg = $state('#c00000');
 	let bg = $state('#fff2cc');
 	const st = (patch: Record<string, unknown>) => (onstyle ? () => onstyle(patch) : undefined);
@@ -132,18 +175,23 @@
 		Accueil: [
 			{
 				title: 'Annuler',
+				iconOk: true,
 				commands: [
 					{ label: 'Annuler', icon: 'undo', run: undo ? onundo : undefined, hint: undo ? 'Annuler : ' + undo + ' (Ctrl+Z)' : 'Rien à annuler' },
 					{ label: 'Rétablir', icon: 'redo', run: redo ? onredo : undefined, hint: redo ? 'Rétablir : ' + redo + ' (Ctrl+Y)' : 'Rien à rétablir' }
 				]
 			},
-			{ title: 'Presse-papiers', commands: [{ label: 'Coller', icon: 'paste', run: onclip ? () => onclip('paste') : undefined, hint: 'Coller (Ctrl+V)' }, { label: 'Couper', icon: 'cut', run: onclip ? () => onclip('cut') : undefined, hint: 'Couper (Ctrl+X)' }, { label: 'Copier', icon: 'copy', run: onclip ? () => onclip('copy') : undefined, hint: 'Copier (Ctrl+C)' }, { label: 'Reproduire', icon: 'format-painter', run: onpainter, hint: 'Reproduire la mise en forme de la cellule active' }] },
+			{ title: 'Presse-papiers', iconOk: true, commands: [{ label: 'Coller', icon: 'paste', run: onclip ? () => onclip('paste') : undefined, hint: 'Coller (Ctrl+V)' }, { label: 'Couper', icon: 'cut', run: onclip ? () => onclip('cut') : undefined, hint: 'Couper (Ctrl+X)' }, { label: 'Copier', icon: 'copy', run: onclip ? () => onclip('copy') : undefined, hint: 'Copier (Ctrl+C)' }, { label: 'Reproduire', icon: 'format-painter', run: onpainter, hint: 'Reproduire la mise en forme de la cellule active' }] },
 			{
 				title: 'Police',
+				fonts: true,
+				iconOk: true,
+				launch: fmt('font'),
+				launchHint: 'Format de cellule : police (Ctrl+1)',
 				commands: [
-					{ label: 'Gras', icon: 'bold', run: st({ b: 'toggle' }), hint: 'Gras (Ctrl+B)' },
-					{ label: 'Italique', icon: 'italic', run: st({ i: 'toggle' }), hint: 'Italique (Ctrl+I)' },
-					{ label: 'Souligné', icon: 'underline', run: st({ u: 'toggle' }), hint: 'Souligné (Ctrl+U)' },
+					{ label: 'Gras', icon: 'bold', run: st({ b: 'toggle' }), hint: 'Gras (Ctrl+B)', on: !!cellStyle?.b },
+					{ label: 'Italique', icon: 'italic', run: st({ i: 'toggle' }), hint: 'Italique (Ctrl+I)', on: !!cellStyle?.i },
+					{ label: 'Souligné', icon: 'underline', run: st({ u: 'toggle' }), hint: 'Souligné (Ctrl+U)', on: !!cellStyle?.u },
 					{ label: 'Couleur', icon: 'font-color', run: st({ fg }), hint: 'Couleur du texte (▾ : choisir la teinte)', color: 'fg' },
 					{ label: 'Remplissage', icon: 'font-color', run: st({ bg }), hint: 'Couleur de remplissage (▾ : choisir la teinte)', color: 'bg' },
 					{ label: 'Effacer', icon: 'remove-duplicates', run: st(clearPatch()), hint: 'Effacer la mise en forme' }
@@ -151,6 +199,9 @@
 			},
 			{
 				title: 'Bordures',
+				iconOk: true,
+				launch: fmt('border'),
+				launchHint: 'Format de cellule : bordure (Ctrl+1)',
 				commands: [
 					{ label: 'Toutes', icon: 'border-all', run: st({ border: 'all' }), hint: 'Toutes les bordures' },
 					{ label: 'Contour', icon: 'border-outline', run: st({ border: 'outline' }), hint: 'Bordure extérieure de la sélection' },
@@ -159,19 +210,31 @@
 			},
 			{
 				title: 'Alignement',
+				iconOk: true,
+				launch: fmt('align'),
+				launchHint: 'Format de cellule : alignement (Ctrl+1)',
 				commands: [
-					{ label: 'Gauche', icon: 'align-left', run: st({ al: 'left' }) },
-					{ label: 'Centrer', icon: 'align-center', run: st({ al: 'center' }) },
-					{ label: 'Droite', icon: 'align-right', run: st({ al: 'right' }) }
+					{ label: 'Haut', icon: 'align-top', run: st({ va: 'top' }), hint: 'Aligner en haut', on: cellStyle?.va === 'top' },
+					{ label: 'Milieu', icon: 'align-middle', run: st({ va: null }), hint: 'Aligner au milieu', on: !!cellStyle && !cellStyle.va },
+					{ label: 'Bas', icon: 'align-bottom', run: st({ va: 'bottom' }), hint: 'Aligner en bas', on: cellStyle?.va === 'bottom' },
+					{ label: 'Gauche', icon: 'align-left', run: st({ al: 'left' }), on: cellStyle?.al === 'left' },
+					{ label: 'Centrer', icon: 'align-center', run: st({ al: 'center' }), on: cellStyle?.al === 'center' },
+					{ label: 'Droite', icon: 'align-right', run: st({ al: 'right' }), on: cellStyle?.al === 'right' },
+					{ label: 'Renvoyer à la ligne', icon: 'wrap-text', run: onwrap, hint: 'Afficher le texte sur plusieurs lignes dans la cellule', on: !!cellStyle?.wr },
+					{ label: 'Fusionner et centrer', icon: 'merge-cells', run: onmerge, hint: merged ? 'Annuler la fusion des cellules' : 'Fusionner les cellules libres sélectionnées en une seule, contenu centré', on: merged }
 				]
 			},
 			{
 				title: 'Nombre',
+				iconOk: true,
+				launch: fmt('number'),
+				launchHint: 'Format de cellule : nombre, date, heure… (Ctrl+1)',
 				commands: [
-					{ label: '0,00', icon: 'decimal-fixed', run: st({ nf: '0,00' }), hint: 'Deux décimales' },
-					{ label: 'Monétaire', icon: 'currency', run: st({ nf: '€' }) },
-					{ label: 'Pourcentage', icon: 'percent', run: st({ nf: '%' }) },
-					{ label: 'Standard', icon: 'number-format', run: st({ nf: null, dp: null }), hint: 'Format Standard' },
+					{ label: '0,00', icon: 'decimal-fixed', run: st({ nf: '0,00', dp: null, ng: null, df: null }), hint: 'Deux décimales' },
+					{ label: 'Monétaire', icon: 'currency', run: st({ nf: '€', ng: null, df: null }) },
+					{ label: 'Pourcentage', icon: 'percent', run: st({ nf: '%', ng: null, df: null }) },
+					{ label: 'Date', icon: 'type-date', run: st({ nf: 'date', df: 'jj/mm/aaaa', dp: null, ng: null }), hint: 'Date courte (jj/mm/aaaa) ; Ctrl+1 pour les autres formats de date et d’heure' },
+					{ label: 'Standard', icon: 'number-format', run: st({ nf: null, dp: null, ng: null, df: null }), hint: 'Format Standard' },
 					{ label: 'Ajouter une décimale', icon: 'decimal-more', run: st({ dp: 'more' }) },
 					{ label: 'Réduire les décimales', icon: 'decimal-less', run: st({ dp: 'less' }) }
 				]
@@ -182,11 +245,41 @@
 			},
 			{
 				title: 'Cellules',
+				// Comme Excel : Insérer, Supprimer et Format, chacun avec ses choix.
 				commands: [
-					{ label: 'Insérer une ligne', icon: 'insert-row', run: cells('insertRow'), hint: 'Insérer une ligne au-dessus de la cellule active' },
-					{ label: 'Supprimer la ligne', icon: 'delete-row', run: cells('deleteRow'), hint: 'Supprimer la ligne de la cellule active' },
-					{ label: 'Insérer une colonne', icon: 'insert-column', run: cells('insertColumn'), hint: 'Insérer une colonne à gauche de la cellule active' },
-					{ label: 'Supprimer la colonne', icon: 'delete-column', run: cells('deleteColumn'), hint: 'Supprimer la colonne de la cellule active' }
+					{
+						label: 'Insérer',
+						icon: 'insert-row',
+						run: oncells ? openItems : undefined,
+						hint: 'Insérer une ligne ou une colonne',
+						items: [
+							{ label: 'Insérer une ligne (au-dessus)', run: cells('insertRow') },
+							{ label: 'Insérer une colonne (à gauche)', run: cells('insertColumn') }
+						]
+					},
+					{
+						label: 'Supprimer',
+						icon: 'delete-row',
+						run: oncells ? openItems : undefined,
+						hint: 'Supprimer la ligne ou la colonne de la cellule active',
+						items: [
+							{ label: 'Supprimer la ligne', run: cells('deleteRow') },
+							{ label: 'Supprimer la colonne', run: cells('deleteColumn') }
+						]
+					},
+					{
+						label: 'Format',
+						icon: 'cell-format',
+						run: onformat ? openItems : undefined, // ouvre ses choix
+						hint: 'Format de cellule, masquer et afficher',
+						items: [
+							{ label: 'Format de cellule… (Ctrl+1)', run: fmt('number') },
+							{ label: 'Masquer les lignes', run: lines(true, true) },
+							{ label: 'Masquer les colonnes', run: lines(false, true) },
+							{ label: 'Afficher les lignes', run: lines(true, false) },
+							{ label: 'Afficher les colonnes', run: lines(false, false) }
+						]
+					}
 				]
 			},
 			{
@@ -236,7 +329,7 @@
 					{ label: 'Filtrer', icon: 'filter', run: onfilter ? () => onfilter(false) : undefined, hint: 'Filtrer le tableau par la colonne active' }
 				]
 			},
-			{ title: 'Outils de données', commands: [{ label: 'Supprimer les doublons', icon: 'remove-duplicates', run: ondedup, hint: 'Supprimer les lignes en double du tableau actif' }, { label: 'Convertir le type', icon: 'convert-type' }, { label: 'Erreurs seulement', icon: 'warning', run: onfilter ? () => onfilter(true) : undefined, hint: 'Afficher seulement les saisies hors type de la colonne active (bascule)' }] }
+			{ title: 'Outils de données', commands: [{ label: 'Supprimer les doublons', icon: 'remove-duplicates', run: ondedup, hint: 'Supprimer les lignes en double du tableau actif' }, { label: 'Convertir le type', icon: 'convert-type' }, { label: 'Erreurs seulement', icon: 'warning', run: onfilter ? () => onfilter(true) : undefined, hint: 'Afficher seulement les saisies hors type de la colonne active (bascule)' }, { label: 'Validation des données', icon: 'validation', run: onvalidation, hint: 'Liste déroulante : valeurs permises dans la sélection (ou toute une colonne de tableau), les autres saisies sont refusées' }] }
 		],
 		Formules: [
 			{ title: 'Bibliothèque', commands: [{ label: 'Insérer une fonction', icon: 'function', run: onformula ? () => onformula('insert') : undefined, hint: 'Choisir une fonction et commencer la formule dans la cellule active' }, { label: 'Somme automatique', icon: 'autosum', run: onformula ? () => onformula('sum') : undefined, hint: 'SOMME de la colonne du tableau au-dessus' }, { label: 'REFERENCE', icon: 'reference', run: onformula ? () => onformula('reference') : undefined, hint: 'REFERENCE(tableau; colonne; clé) : la RECHERCHEV de Slitable' }] },
@@ -244,6 +337,13 @@
 			{ title: 'Calcul', commands: [{ label: 'Calculer', icon: 'function', run: onrecalc, hint: 'Renouveler AUJOURDHUI, MAINTENANT et ALEA (F9)' }] }
 		],
 		Révision: [
+			{
+				title: 'Notes',
+				commands: [
+					{ label: 'Nouvelle note', icon: 'note', run: onnote ? () => onnote('edit') : undefined, hint: 'Note sur la cellule active (ou la modifier) : coin rouge, affichée au survol' },
+					{ label: 'Supprimer la note', icon: 'remove-duplicates', run: onnote ? () => onnote('delete') : undefined, hint: 'Supprimer la note de la cellule active' }
+				]
+			},
 			{
 				title: 'Protéger',
 				commands: [
@@ -253,7 +353,19 @@
 			}
 		],
 		Affichage: [
-			{ title: 'Afficher', commands: [{ label: 'Quadrillage', icon: 'border-all', on: gridlines, run: ongridlines ? () => ongridlines(!gridlines) : undefined, hint: gridlines ? 'Masquer le quadrillage de la feuille' : 'Afficher le quadrillage de la feuille' }, { label: 'En-têtes A1', icon: 'headings', on: headings, run: onheadings ? () => onheadings(!headings) : undefined, hint: headings ? 'Lettres et numéros seulement pendant la saisie d’une formule' : 'Toujours afficher les lettres de colonnes et numéros de lignes' }, { label: 'Figer les volets', icon: 'freeze-panes' }, { label: 'Zoom', icon: 'zoom' }] },
+			{ title: 'Afficher', commands: [{ label: 'Quadrillage', icon: 'border-all', on: gridlines, run: ongridlines ? () => ongridlines(!gridlines) : undefined, hint: gridlines ? 'Masquer le quadrillage de la feuille' : 'Afficher le quadrillage de la feuille' }, { label: 'En-têtes A1', icon: 'headings', on: headings, run: onheadings ? () => onheadings(!headings) : undefined, hint: headings ? 'Lettres et numéros seulement pendant la saisie d’une formule' : 'Toujours afficher les lettres de colonnes et numéros de lignes' }, {
+						label: 'Figer les volets',
+						icon: 'freeze-panes',
+						run: onfreeze ? openItems : undefined,
+						on: frozen,
+						hint: frozen ? `Volets figés : ${freeze!.rows} ligne(s), ${freeze!.cols} colonne(s)` : 'Garder des lignes et des colonnes affichées pendant le défilement',
+						items: [
+							...(frozen ? [{ label: 'Libérer les volets', run: frz('none') }] : []),
+							{ label: 'Figer les volets (à la cellule active)', run: frz('cell'), on: frozen && !(freeze!.rows === 1 && freeze!.cols === 0) && !(freeze!.rows === 0 && freeze!.cols === 1) },
+							{ label: 'Figer la ligne supérieure', run: frz('row'), on: freeze?.rows === 1 && freeze.cols === 0 },
+							{ label: 'Figer la première colonne', run: frz('col'), on: freeze?.rows === 0 && freeze.cols === 1 }
+						]
+					}, { label: 'Zoom', icon: 'zoom', hint: 'Zoom : à venir (la grille est dessinée au pixel près ; un zoom demande de mettre à l’échelle le dessin, les clics et les éléments posés dessus)' }] },
 			...(onbench ? [{ title: 'Mesures (prototype)', commands: [{ label: 'Mesurer la grille', icon: 'stopwatch' as IconName, run: () => onbench() }] }] : [])
 		]
 	});
@@ -280,9 +392,11 @@
 		)
 	);
 
-	type ShapesArr = { title: string; labels: (string | null)[] }[];
+	type ShapesArr = GroupShape[];
 	const shapes = $derived(
-		tab === 'SQL' || tab === 'SCRIPT' ? [] : ribbons[tab].map((g) => ({ title: g.title, labels: g.commands.map((c) => (c.color ? null : c.label)) }))
+		tab === 'SQL' || tab === 'SCRIPT'
+			? []
+			: ribbons[tab].map((g) => ({ title: g.title, iconOk: g.iconOk, labels: [...(g.fonts ? [FONTS_W] : []), ...g.commands.map((c) => (c.color ? null : c.label))] }))
 	);
 	// Les formes ne changent qu'avec les libellés : un clic dans la grille
 	// (annulation, quadrillage…) recrée les commandes sans recompacter le
@@ -403,9 +517,25 @@
 						{#if openGroup?.title === g.title}
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<div class="group-menu" style:left="{openGroup.x}px" style:top="{openGroup.y}px" use:dismiss={() => (openGroup = null)}>
+								{#if g.fonts}{@render fontCombos()}{/if}
 								{#each g.commands as c (c.label)}
 									{#if c.color}
 										{@render colorCmd(c)}
+									{:else if c.items}
+										{#each c.items as it (it.label)}
+											<button
+												class="cmd row-cmd"
+												class:pressed={it.on}
+												disabled={!c.run || !it.run}
+												onclick={() => {
+													openGroup = null;
+													it.run?.();
+												}}
+											>
+												<Icon name={c.icon} size={18} />
+												<span class="label">{it.label}</span>
+											</button>
+										{/each}
 									{:else}
 										<button
 											class="cmd row-cmd"
@@ -426,6 +556,7 @@
 						{/if}
 					{:else}
 						<div class="commands" class:stack={mode !== 'large'}>
+							{#if g.fonts}{@render fontCombos()}{/if}
 							{#each g.commands as c (c.label)}
 								{#if c.color}
 									{@render colorCmd(c)}
@@ -435,22 +566,69 @@
 										class:row-cmd={mode !== 'large'}
 										class:pressed={c.on}
 										disabled={!c.run}
-										onclick={c.run}
+										onclick={c.items ? (ev) => toggleDrop(c, ev) : c.run}
 										title={c.hint ?? (c.run ? c.label : `${c.label} : à venir`)}
 									>
 										<Icon name={c.icon} size={mode === 'large' ? 24 : 16} />
-										{#if mode !== 'icon'}<span class="label">{c.label}</span>{/if}
+										{#if mode !== 'icon'}<span class="label">{c.label}{c.items ? ' ▾' : ''}</span>{/if}
 									</button>
 								{/if}
 							{/each}
 						</div>
 					{/if}
-					<div class="title">{g.title}</div>
+					<div class="title">
+						{g.title}
+						{#if g.launch}
+							<button class="launch" onclick={g.launch} title={g.launchHint ?? g.title} aria-label={g.launchHint ?? g.title}>
+								<svg viewBox="0 0 10 10" width="9" height="9" aria-hidden="true"><path d="M1.5 1.5h4M1.5 1.5v4M3.5 3.5l5 5M8.5 4.5v4h-4" fill="none" stroke="currentColor" stroke-width="1.1" /></svg>
+							</button>
+						{/if}
+					</div>
 				</section>
 			{/each}
 		</div>
 	{/if}
+	{#if dropMenu}
+		{@const c = ribbons[tab]?.flatMap((g) => g.commands).find((x) => x.label === dropMenu!.label)}
+		{#if c?.items}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div class="drop-menu" style:left="{dropMenu.x}px" style:top="{dropMenu.y}px" use:dismiss={() => (dropMenu = null)}>
+				{#each c.items as it (it.label)}
+					<button
+						disabled={!it.run}
+						class:on={it.on}
+						onclick={() => {
+							dropMenu = null;
+							it.run?.();
+						}}><span class="check">{it.on ? '✓' : ''}</span>{it.label}</button
+					>
+				{/each}
+			</div>
+		{/if}
+	{/if}
 </header>
+
+{#snippet fontCombos()}
+	<!-- Police et taille de la cellule active, comme Excel. -->
+	<div class="fonts">
+		<Select
+			value={cellStyle?.ff ?? FONTS[0]}
+			width="{FONTS_W - 4}px"
+			title="Police"
+			disabled={!onstyle || sheetProtected}
+			options={FONTS.map((f) => ({ value: f, label: f }))}
+			onchange={(v) => onstyle?.({ ff: v === FONTS[0] ? null : v })}
+		/>
+		<Select
+			value={cellStyle?.fs ?? DEFAULT_PT}
+			width="64px"
+			title="Taille de police (points)"
+			disabled={!onstyle || sheetProtected}
+			options={SIZES.map((s) => ({ value: s, label: String(s) }))}
+			onchange={(v) => onstyle?.({ fs: v === DEFAULT_PT ? null : v })}
+		/>
+	</div>
+{/snippet}
 
 <style>
 	.ribbon {
@@ -745,8 +923,74 @@
 		border: none;
 	}
 	.title {
+		position: relative;
 		text-align: center;
 		font-size: 11px;
 		color: #6b7280;
+		padding: 0 12px;
+	}
+	/* Lanceur de boîte de dialogue, dans le coin du titre (comme Excel). */
+	.launch {
+		position: absolute;
+		right: -6px;
+		bottom: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 15px;
+		height: 15px;
+		padding: 0;
+		border: 1px solid transparent;
+		border-radius: 2px;
+		background: none;
+		color: #4b5563;
+		cursor: pointer;
+	}
+	.launch:hover {
+		background: #e2e8e4;
+		border-color: #c5d6cb;
+	}
+	.fonts {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		gap: 4px;
+		padding: 0 4px;
+	}
+	.commands.stack .fonts {
+		grid-row: span 3;
+	}
+	.group-menu .fonts {
+		padding: 2px 0 6px;
+	}
+	.drop-menu {
+		position: fixed;
+		z-index: 20;
+		background: #fff;
+		border: 1px solid #d4d7db;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		padding: 4px 0;
+		min-width: 220px;
+	}
+	.drop-menu button {
+		display: flex;
+		width: 100%;
+		padding: 6px 14px 6px 6px;
+		background: none;
+		border: none;
+		font: inherit;
+		cursor: pointer;
+		text-align: left;
+	}
+	.drop-menu button:hover:not(:disabled) {
+		background: #e3efe7;
+	}
+	.drop-menu button:disabled {
+		color: #9aa0a6;
+		cursor: default;
+	}
+	.drop-menu .check {
+		width: 18px;
+		color: #217346;
 	}
 </style>

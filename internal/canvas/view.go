@@ -24,6 +24,10 @@ type SheetInfo struct {
 	// feuille masquée (absente de la barre d'onglets).
 	Color  string `json:"color"`
 	Hidden bool   `json:"hidden"`
+	// FreezeRows, FreezeCols : volets figés (lignes et colonnes qui restent
+	// affichées pendant le défilement), 0 sans volet figé.
+	FreezeRows int `json:"freezeRows"`
+	FreezeCols int `json:"freezeCols"`
 }
 
 // ColumnInfo décrit une colonne de tableau pour l'interface.
@@ -132,13 +136,13 @@ type ColWidth struct {
 func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 	l := Layout{Sheet: sheet, Tables: []TableInfo{}, Cells: []CellInfo{}, Widths: []ColWidth{}, Heights: []RowHeight{}, Names: []NameInfo{}, Styles: []CellStyle{}}
 	err := m.read(ctx, func(t *tx) error {
-		rs, err := t.query(`SELECT id, name, gridlines = 0, headings <> 0, color, hidden <> 0 FROM _slitable_sheets ORDER BY pos, id`)
+		rs, err := t.query(`SELECT id, name, gridlines = 0, headings <> 0, color, hidden <> 0, freeze_rows, freeze_cols FROM _slitable_sheets ORDER BY pos, id`)
 		if err != nil {
 			return err
 		}
 		for rs.Next() {
 			var s SheetInfo
-			if err := rs.Scan(&s.ID, &s.Name, &s.NoGrid, &s.Headings, &s.Color, &s.Hidden); err != nil {
+			if err := rs.Scan(&s.ID, &s.Name, &s.NoGrid, &s.Headings, &s.Color, &s.Hidden, &s.FreezeRows, &s.FreezeCols); err != nil {
 				rs.Close()
 				return err
 			}

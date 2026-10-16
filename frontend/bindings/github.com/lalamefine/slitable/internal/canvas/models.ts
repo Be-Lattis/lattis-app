@@ -594,13 +594,24 @@ export interface SheetInfo {
      */
     "color": string;
     "hidden": boolean;
+
+    /**
+     * FreezeRows, FreezeCols : volets figés (lignes et colonnes qui restent
+     * affichées pendant le défilement), 0 sans volet figé.
+     */
+    "freezeRows": number;
+    "freezeCols": number;
 }
 
 /**
- * Style est la mise en forme d'une cellule (JSON compact) : b, i, u
- * (gras, italique, souligné), fg et bg (couleurs #rrggbb), al (left,
- * center, right), nf (format de nombre : "0", "0,00", "%", "€"), dp
- * (décimales), bt, bb, bl, br (bordures).
+ * Style est la mise en forme d'une cellule (JSON compact) : b, i, u, x
+ * (gras, italique, souligné, barré), ff et fs (police et taille en points),
+ * fg et bg (couleurs #rrggbb), al (left, center, right), va (top, middle,
+ * bottom), wr (renvoyer à la ligne), nf (format : "0", "0,00", "%", "€",
+ * "date", "time", "text"), dp (décimales), ng (sans séparateur de
+ * milliers), df (motif de date ou d'heure : "jj/mm/aaaa", "hh:mm"…), bt,
+ * bb, bl, br (bordures) et bc (leur couleur). Notes, fusions, masquage et
+ * validation sont aussi des propriétés de style : voir cellformat.go.
  * 
  * Un seul système de mise en forme, en couches, de la moins à la plus
  * précise (comme Excel : cellule > ligne > colonne) :

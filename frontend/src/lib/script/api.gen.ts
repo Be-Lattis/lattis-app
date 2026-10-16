@@ -72,11 +72,29 @@ export const apiReference: RefEntry[] = [
 		args: [1, 3]
 	},
 	{
+		name: "cells.merge",
+		category: "cells",
+		signature: "cells.merge(row, col, [row2], [col2], [sheet]) → nombre de valeurs effacées",
+		summary: "Fusionne des cellules libres en une seule, au contenu centré (refusé dans un tableau ou un tableau croisé). Comme Excel, seule la valeur en haut à gauche est gardée.",
+		details: "Paramètres — row : ligne de la feuille, à partir de 1 ; col : colonne de la feuille, à partir de 1 ; row2 : dernière ligne de la plage (absente : row) ; col2 : dernière colonne de la plage (absente : col) ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : cells.merge{row = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "cells.merge{row = 40, col = 12, col2 = 15}",
+		args: [1, 5]
+	},
+	{
 		name: "cells.name",
 		category: "cells",
 		signature: "cells.name(row, col, name, [sheet])",
 		summary: "Nomme une cellule libre, pour la citer dans les formules ; un nom vide retire le nom.",
 		details: "Paramètres — row : ligne de la feuille, à partir de 1 ; col : colonne de la feuille, à partir de 1 ; name : nom (vide : retirer) ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : cells.name{row = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		args: [1, 4]
+	},
+	{
+		name: "cells.note",
+		category: "cells",
+		signature: "cells.note(row, col, text, [sheet])",
+		summary: "Pose la note d'une cellule (coin rouge, affichée au survol) ; un texte vide la retire. Dans un tableau, la note suit sa ligne.",
+		details: "Paramètres — row : ligne de la feuille, à partir de 1 ; col : colonne de la feuille, à partir de 1 ; text : texte de la note (vide : la retirer) ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : cells.note{row = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "cells.note{row = 2, col = 3, text = \"Chiffre provisoire\"}",
 		args: [1, 4]
 	},
 	{
@@ -102,7 +120,7 @@ export const apiReference: RefEntry[] = [
 		category: "cells",
 		signature: "cells.style(row, col, [row2], [col2], style, [sheet])",
 		summary: "Met en forme une plage de cellules.",
-		details: "style : bold, italic, underline (booléens), color et fill (couleurs \"#rrggbb\"), align (\"left\", \"center\" ou \"right\"), format (\"0\", \"0,00\", \"%\" ou \"€\"), decimals (nombre de décimales), borders (les quatre bordures) ou border_top, border_bottom, border_left, border_right. false ou \"\" retire la propriété. Paramètres — row : ligne de la feuille, à partir de 1 ; col : colonne de la feuille, à partir de 1 ; row2 : dernière ligne de la plage (absente : row) ; col2 : dernière colonne de la plage (absente : col) ; style : propriétés à poser : {bold = true, fill = \"#fff2cc\"} ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : cells.style{row = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		details: "style : bold, italic, underline, strike (booléens), font (police) et size (taille en points), color et fill (couleurs \"#rrggbb\"), align (\"left\", \"center\" ou \"right\"), valign (\"top\", \"middle\" ou \"bottom\"), wrap (renvoyer à la ligne), format (\"0\", \"0,00\", \"%\", \"€\", \"date\", \"time\" ou \"text\"), decimals (nombre de décimales), no_grouping (sans séparateur de milliers), date_format (motif d'une date ou d'une heure : \"jj/mm/aaaa\", \"jj mmm aaaa\", \"aaaa-mm-jj\", \"hh:mm\"…), borders (les quatre bordures) ou border_top, border_bottom, border_left, border_right, border_color, et validation (liste des valeurs permises, liste déroulante). false ou \"\" retire la propriété. Paramètres — row : ligne de la feuille, à partir de 1 ; col : colonne de la feuille, à partir de 1 ; row2 : dernière ligne de la plage (absente : row) ; col2 : dernière colonne de la plage (absente : col) ; style : propriétés à poser : {bold = true, fill = \"#fff2cc\"} ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : cells.style{row = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		example: "cells.style{row = 1, col = 1, col2 = 4, style = {bold = true, fill = \"#fff2cc\"}}",
 		args: [1, 6]
 	},
@@ -111,8 +129,16 @@ export const apiReference: RefEntry[] = [
 		category: "cells",
 		signature: "cells.style_lines(axis, from, [to], style, [sheet])",
 		summary: "Met en forme des lignes ou des colonnes entières de la feuille (toutes leurs cellules, présentes et à venir, tableaux et tableaux croisés compris). Une cellule l'emporte sur sa ligne, une ligne sur sa colonne.",
-		details: "style : bold, italic, underline (booléens), color et fill (couleurs \"#rrggbb\"), align (\"left\", \"center\" ou \"right\"), format (\"0\", \"0,00\", \"%\" ou \"€\"), decimals (nombre de décimales), borders (les quatre bordures) ou border_top, border_bottom, border_left, border_right. false ou \"\" retire la propriété. Paramètres — axis : \"rows\" (lignes) ou \"cols\" (colonnes) ; from : première ligne ou colonne, à partir de 1 ; to : dernière ligne ou colonne (absente : from) ; style : propriétés à poser : {bold = true, fill = \"#fff2cc\"} ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : cells.style_lines{axis = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		details: "style : bold, italic, underline, strike (booléens), font (police) et size (taille en points), color et fill (couleurs \"#rrggbb\"), align (\"left\", \"center\" ou \"right\"), valign (\"top\", \"middle\" ou \"bottom\"), wrap (renvoyer à la ligne), format (\"0\", \"0,00\", \"%\", \"€\", \"date\", \"time\" ou \"text\"), decimals (nombre de décimales), no_grouping (sans séparateur de milliers), date_format (motif d'une date ou d'une heure : \"jj/mm/aaaa\", \"jj mmm aaaa\", \"aaaa-mm-jj\", \"hh:mm\"…), borders (les quatre bordures) ou border_top, border_bottom, border_left, border_right, border_color, et validation (liste des valeurs permises, liste déroulante). false ou \"\" retire la propriété. Paramètres — axis : \"rows\" (lignes) ou \"cols\" (colonnes) ; from : première ligne ou colonne, à partir de 1 ; to : dernière ligne ou colonne (absente : from) ; style : propriétés à poser : {bold = true, fill = \"#fff2cc\"} ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : cells.style_lines{axis = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		example: "cells.style_lines{axis = \"rows\", from = 1, style = {bold = true}}",
+		args: [1, 5]
+	},
+	{
+		name: "cells.unmerge",
+		category: "cells",
+		signature: "cells.unmerge(row, col, [row2], [col2], [sheet])",
+		summary: "Annule les fusions de cellules qui touchent la plage.",
+		details: "Paramètres — row : ligne de la feuille, à partir de 1 ; col : colonne de la feuille, à partir de 1 ; row2 : dernière ligne de la plage (absente : row) ; col2 : dernière colonne de la plage (absente : col) ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : cells.unmerge{row = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		args: [1, 5]
 	},
 	{
@@ -196,7 +222,7 @@ export const apiReference: RefEntry[] = [
 		category: "columns",
 		signature: "columns.set_rules(table, column, rules)",
 		summary: "Remplace les règles de mise en forme conditionnelle d'une colonne (liste vide : aucune) ; la première règle vérifiée l'emporte.",
-		details: "Chaque règle est {op, value, to, style}. op : \"\u003e\", \"\u003e=\", \"\u003c\", \"\u003c=\", \"=\", \"\u003c\u003e\", \"between\" (entre value et to), \"contains\", \"empty\", \"notempty\" ou \"error\". style : bold, italic, underline (booléens), color et fill (couleurs \"#rrggbb\"), align (\"left\", \"center\" ou \"right\"), format (\"0\", \"0,00\", \"%\" ou \"€\"), decimals (nombre de décimales), borders (les quatre bordures) ou border_top, border_bottom, border_left, border_right. false ou \"\" retire la propriété. Paramètres — table : nom du tableau ; column : colonne (nom ou rang à partir de 1) ; rules : règles : { {op = \"\u003e\", value = \"100\", style = {fill = \"#c6efce\"}}, ... }. Arguments dans l'ordre, ou une table d'arguments nommés : columns.set_rules{table = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		details: "Chaque règle est {op, value, to, style}. op : \"\u003e\", \"\u003e=\", \"\u003c\", \"\u003c=\", \"=\", \"\u003c\u003e\", \"between\" (entre value et to), \"contains\", \"empty\", \"notempty\" ou \"error\". style : bold, italic, underline, strike (booléens), font (police) et size (taille en points), color et fill (couleurs \"#rrggbb\"), align (\"left\", \"center\" ou \"right\"), valign (\"top\", \"middle\" ou \"bottom\"), wrap (renvoyer à la ligne), format (\"0\", \"0,00\", \"%\", \"€\", \"date\", \"time\" ou \"text\"), decimals (nombre de décimales), no_grouping (sans séparateur de milliers), date_format (motif d'une date ou d'une heure : \"jj/mm/aaaa\", \"jj mmm aaaa\", \"aaaa-mm-jj\", \"hh:mm\"…), borders (les quatre bordures) ou border_top, border_bottom, border_left, border_right, border_color, et validation (liste des valeurs permises, liste déroulante). false ou \"\" retire la propriété. Paramètres — table : nom du tableau ; column : colonne (nom ou rang à partir de 1) ; rules : règles : { {op = \"\u003e\", value = \"100\", style = {fill = \"#c6efce\"}}, ... }. Arguments dans l'ordre, ou une table d'arguments nommés : columns.set_rules{table = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		example: "columns.set_rules(\"Commandes\", \"Montant\", {\n  {op = \"\u003e\", value = \"100\", style = {fill = \"#c6efce\", bold = true}},\n  {op = \"\u003c\", value = \"0\", style = {color = \"#c00000\"}},\n})",
 		args: [1, 3]
 	},
@@ -410,6 +436,15 @@ export const apiReference: RefEntry[] = [
 		args: [1, 2]
 	},
 	{
+		name: "sheets.freeze",
+		category: "sheets",
+		signature: "sheets.freeze(rows, [cols], [sheet])",
+		summary: "Fige les volets : les premières lignes et colonnes restent affichées pendant le défilement (0 et 0 : libère les volets).",
+		details: "Paramètres — rows : lignes figées en haut ; cols : colonnes figées à gauche ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.freeze{rows = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "sheets.freeze{rows = 1}",
+		args: [1, 3]
+	},
+	{
 		name: "sheets.get",
 		category: "sheets",
 		signature: "sheets.get([sheet]) → {id, name, tables, cells, names, pivots, charts, buttons}",
@@ -426,6 +461,15 @@ export const apiReference: RefEntry[] = [
 		details: "Une feuille masquée n'apparaît plus dans les onglets mais garde son contenu ; le classeur garde au moins une feuille visible. Paramètres — sheet : feuille à masquer ou afficher ; hidden : true (défaut) : masquer ; false : afficher. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.hide{sheet = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		example: "sheets.add(\"Calculs\")\nsheets.hide(\"Calculs\")\nsheets.hide(\"Calculs\", false)",
 		args: [1, 2]
+	},
+	{
+		name: "sheets.hide_lines",
+		category: "sheets",
+		signature: "sheets.hide_lines(axis, from, [to], [show], [sheet])",
+		summary: "Masque (ou affiche) des lignes ou des colonnes entières de la feuille ; leur contenu reste en place et compte dans les formules.",
+		details: "Paramètres — axis : \"rows\" (lignes) ou \"cols\" (colonnes) ; from : première ligne ou colonne, à partir de 1 ; to : dernière ligne ou colonne (absente : from) ; show : vrai : afficher au lieu de masquer ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.hide_lines{axis = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "sheets.hide_lines{axis = \"cols\", from = 3, to = 4}",
+		args: [1, 5]
 	},
 	{
 		name: "sheets.list",

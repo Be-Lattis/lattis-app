@@ -582,6 +582,40 @@ func (s *DocumentService) ApplyLineStyle(ctx context.Context, sheet int64, rows 
 	return s.act(ctx, func(d *doc.Document) error { return d.ApplyLineStyle(ctx, sheet, rows, i0, i1, patch) })
 }
 
+// SetNote pose la note d'une cellule (texte vide : la retire).
+func (s *DocumentService) SetNote(ctx context.Context, sheet int64, row, col int, text string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetNote(ctx, sheet, row, col, text) })
+}
+
+// MergeCells fusionne et centre des cellules libres ; renvoie le nombre de
+// valeurs effacées (seule celle en haut à gauche est gardée).
+func (s *DocumentService) MergeCells(ctx context.Context, sheet int64, r0, c0, r1, c1 int) (int, error) {
+	d, err := s.current()
+	if err != nil {
+		return 0, err
+	}
+	n, err := d.MergeCells(ctx, sheet, r0, c0, r1, c1)
+	if err == nil {
+		s.changed(ctx)
+	}
+	return n, err
+}
+
+// UnmergeCells annule les fusions qui touchent un rectangle.
+func (s *DocumentService) UnmergeCells(ctx context.Context, sheet int64, r0, c0, r1, c1 int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.UnmergeCells(ctx, sheet, r0, c0, r1, c1) })
+}
+
+// SetLinesHidden masque ou affiche des lignes (rows) ou des colonnes [i0, i1].
+func (s *DocumentService) SetLinesHidden(ctx context.Context, sheet int64, rows bool, i0, i1 int, hide bool) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetLinesHidden(ctx, sheet, rows, i0, i1, hide) })
+}
+
+// SetFreeze fige les volets de la feuille (0, 0 : les libère).
+func (s *DocumentService) SetFreeze(ctx context.Context, sheet int64, rows, cols int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetFreeze(ctx, sheet, rows, cols) })
+}
+
 // Find cherche un texte dans une feuille (cellules dans l'ordre de lecture).
 func (s *DocumentService) Find(ctx context.Context, sheet int64, text string) ([]canvas.Match, error) {
 	d, err := s.current()
