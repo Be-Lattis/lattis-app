@@ -164,3 +164,28 @@ func TestAppendGroupsAndDepthPurges(t *testing.T) {
 		t.Fatalf("purge trop tôt : %v", v)
 	}
 }
+
+func TestGroup(t *testing.T) {
+	ctx := context.Background()
+	db, bus := open(t, filepath.Join(t.TempDir(), "g.sqlite"))
+	gctx := WithGroup(ctx, "Script")
+	for i := 1; i <= 3; i++ {
+		if _, err := bus.Do(gctx, "Action", func(tx *Tx) error {
+			return tx.Apply([]Stmt{S(`INSERT INTO t (v) VALUES (?)`, i)}, []Stmt{S(`DELETE FROM t WHERE v = ?`, i)})
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	st, err := bus.State(ctx)
+	if err != nil || st.Undo != "Script" {
+		t.Fatalf("état %+v, %v", st, err)
+	}
+	if _, err := bus.Undo(ctx); err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	db.Read().QueryRow(`SELECT count(*) FROM t`).Scan(&n)
+	if n != 0 {
+		t.Fatalf("%d lignes après une seule annulation", n)
+	}
+}

@@ -24,7 +24,7 @@
 		commands: Command[];
 	}
 
-	export type FileAction = 'new' | 'open' | 'save' | 'saveAs' | 'import' | 'export' | 'close' | 'demo';
+	export type FileAction = 'new' | 'open' | 'save' | 'saveAs' | 'import' | 'export' | 'close' | 'demo' | 'mcp';
 
 	interface Props {
 		view: View;
@@ -60,9 +60,11 @@
 		/** Quadrillage de la feuille active, et sa bascule. */
 		gridlines?: boolean;
 		ongridlines?: (show: boolean) => void;
+		/** Insertion › Bouton : bouton d'action lié à un script. */
+		onbutton?: () => void;
 	}
 
-	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines }: Props = $props();
+	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, onbutton }: Props = $props();
 	let fg = $state('#c00000');
 	let bg = $state('#fff2cc');
 	const st = (patch: Record<string, unknown>) => (onstyle ? () => onstyle(patch) : undefined);
@@ -190,7 +192,8 @@
 					{ label: 'Secteurs', icon: 'chart-pie', run: onchart ? () => onchart('pie') : undefined, hint: 'Graphique en secteurs du tableau actif' },
 					{ label: 'Nuage de points', icon: 'chart-scatter', run: onchart ? () => onchart('scatter') : undefined, hint: 'Nuage de points du tableau actif' }
 				]
-			}
+			},
+			{ title: 'Automatisation', commands: [{ label: 'Bouton', icon: 'button', run: onbutton, hint: 'Bouton d’action à la cellule active : un clic exécute un script de l’onglet SCRIPT' }] }
 		],
 		Données: [
 			{
@@ -295,8 +298,8 @@
 						{/if}
 					</div>
 					<hr />
-					{#each [['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ['import', 'Importer (CSV, Excel)…', ''], ['export', 'Exporter le tableau en CSV…', ''], ['close', 'Fermer', 'Ctrl+W'], ...(import.meta.env.DEV ? [['demo', 'Démo : 1 M de lignes', '']] : [])] as [a, label, keys] (a)}
-						<button disabled={disabled && a !== 'import' && a !== 'demo'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keys}</span></button>
+					{#each [['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ['import', 'Importer (CSV, Excel)…', ''], ['export', 'Exporter le tableau en CSV…', ''], ['close', 'Fermer', 'Ctrl+W'], ['mcp', 'Serveur MCP (assistants)…', ''], ...(import.meta.env.DEV ? [['demo', 'Démo : 1 M de lignes', '']] : [])] as [a, label, keys] (a)}
+						<button disabled={disabled && a !== 'import' && a !== 'demo' && a !== 'mcp'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keys}</span></button>
 					{/each}
 				</div>
 			{/if}

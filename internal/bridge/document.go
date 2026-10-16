@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/lalamefine/slitable/internal/api"
 	"github.com/lalamefine/slitable/internal/archive"
 	"github.com/lalamefine/slitable/internal/canvas"
 	"github.com/lalamefine/slitable/internal/doc"
@@ -46,6 +47,8 @@ type DocumentService struct {
 	mu     sync.Mutex
 	doc    *doc.Document
 	tables map[int64]*grid.Table // tableaux chargés pour la lecture par fenêtres
+	ui     uiState
+	mcp    mcpState
 }
 
 var errNoDoc = errors.New("aucun classeur ouvert")
@@ -63,6 +66,7 @@ func (s *DocumentService) current() (*doc.Document, error) {
 // restent dans le répertoire de travail : elles seront proposées en
 // récupération au prochain lancement.
 func (s *DocumentService) ServiceShutdown() error {
+	s.stopMCP()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.doc == nil {
@@ -248,27 +252,7 @@ func (s *DocumentService) Window(ctx context.Context, sheet, table int64, first,
 			if ti.ID != table {
 				continue
 			}
-			cols := make([]grid.Column, len(ti.Columns))
-			sqlCols := make([]string, len(ti.Columns))
-			ids := make([]int64, len(ti.Columns))
-			for i, c := range ti.Columns {
-				cols[i], sqlCols[i], ids[i] = grid.Column{Name: c.Name, Type: c.Type}, c.SQL, c.ID
-			}
-			exprs, args, computed, err := d.ColumnExprs(ctx, ti.ID)
-			if err != nil {
-				return grid.Window{}, err
-			}
-			decode := func(c int, v any) any {
-				if c < len(computed) && computed[c] {
-					return displayValue(formula.FromResult(v))
-				}
-				if b, ok := v.([]byte); ok {
-					return string(b)
-				}
-				return v
-			}
-			t = grid.NewTable(d.DB(), ti.Source, ti.Name, cols, sqlCols).WithInvalid(ti.ID, ids).WithExprs(exprs, args, decode)
-			if err := t.Load(ctx); err != nil {
+			if t, err = api.LoadGrid(ctx, d, ti); err != nil {
 				return grid.Window{}, err
 			}
 			s.mu.Lock()
@@ -443,22 +427,6 @@ func (s *DocumentService) SetType(ctx context.Context, table string, i int, to g
 // SetColumnWidth fixe la largeur d'une colonne de la feuille.
 func (s *DocumentService) SetColumnWidth(ctx context.Context, sheet int64, col, width int) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.SetColumnWidth(ctx, sheet, col, width) })
-}
-
-// displayValue convertit une valeur calculée pour l'interface : nombre,
-// texte, booléen, ou le libellé d'une erreur (« #DIV/0! »).
-func displayValue(v formula.Value) any {
-	switch v.Kind {
-	case formula.Number:
-		return v.Num
-	case formula.Text:
-		return v.Str
-	case formula.Bool:
-		return v.Bool
-	case formula.Error:
-		return v.Err.String()
-	}
-	return nil
 }
 
 // FormulaHelp sert l'aide à la saisie des formules : fonctions (en

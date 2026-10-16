@@ -471,12 +471,151 @@ destination dans la grille (en-têtes compris), puis remplissez-le par script.
 
 ---
 
-## 5. Annuler un script
+## 5. Piloter l'application
 
-**Tout ce qu'un script a écrit forme une seule étape d'annulation**, nommée d'après le script
-(`Script « Relances »`). Un Ctrl+Z après l'exécution efface d'un coup toutes ses écritures,
-qu'elles viennent de `db.insert`, `db.update`, `db.delete` ou `db.execute` ; Ctrl+Y les
-rétablit.
+Au-delà de `db`, un script dispose des **commandes de l'application** : les mêmes que
+celles du serveur MCP (voir [mcp.md](mcp.md)). La liste complète, avec un exemple pour
+chacune, est dans le panneau **Référence** de l'onglet SCRIPT.
+
+Conventions :
+
+- une **feuille** se désigne par son nom (`"Ventes"`) ; sans feuille, c'est la feuille affichée ;
+- un **tableau** par son nom, une **colonne** par son nom ou son rang dans le tableau ;
+- les **lignes et colonnes de la feuille se comptent à partir de 1** (`row`, `col`), comme
+  les lignes d'un tableau ;
+- chaque commande s'appelle avec ses arguments dans l'ordre, ou avec une **table
+  d'arguments nommés** : `sheets.rename("Feuille1", "Ventes")` ou
+  `sheets.rename{sheet = "Feuille1", name = "Ventes"}`.
+
+| Espace | Ce qu'il fait |
+|---|---|
+| `sheets` | lister, décrire (`sheets.get`), ajouter, renommer, déplacer, supprimer des feuilles ; largeurs, hauteurs ; rechercher, remplacer |
+| `cells` | lire (`cells.get`) et saisir (`cells.set`) une cellule comme au clavier, coller un bloc (`cells.paste`), effacer, mettre en forme, nommer |
+| `tables` | lister, lire des lignes (`tables.rows`), renommer, déplacer, supprimer, trier, insérer ou supprimer une ligne, doublons, clé |
+| `columns` | insérer, renommer, supprimer, changer le type, filtrer, mise en forme conditionnelle |
+| `ui` | sélection (`ui.selection`, `ui.select`, `ui.select_object`, `ui.select_cells`), feuille et vue affichées, boîtes de dialogue, messages |
+| `charts`, `pivots`, `buttons` | graphiques, tableaux croisés, boutons d'action |
+| `doc`, `scripts`, `formulas` | état du classeur, bibliothèque de scripts, catalogue des fonctions |
+
+```lua
+-- Une feuille de synthèse, un tableau, et la sélection dessus
+local f = sheets.add("Synthèse")
+cells.paste{sheet = f.name, row = 2, col = 2, values = {
+  {"Client", "Total"},
+  {"Durand", db.value([[SELECT sum(Montant) FROM Commandes WHERE Client = 'Durand']])},
+  {"Martin", db.value([[SELECT sum(Montant) FROM Commandes WHERE Client = 'Martin']])},
+}}
+local t = sheets.get(f.name).tables[1]
+tables.rename(t.name, "Totaux")
+cells.style{sheet = f.name, row = 2, col = 2, col2 = 3, style = {bold = true, fill = "#fff2cc"}}
+ui.select_object("Totaux")
+```
+
+```lua
+-- Agir sur la sélection de l'utilisateur
+local s = ui.selection()
+if not s.table then
+  ui.alert("Sélectionnez une cellule d'un tableau")
+else
+  tables.sort(s.table, s.column, true)
+  ui.notify("« " .. s.table .. " » trié par " .. s.column)
+end
+```
+
+Les positions renvoyées (`sheets.get`, `ui.selection`, `cells.get`) se comptent elles aussi
+à partir de 1.
+
+---
+
+## 6. Boîtes de dialogue
+
+Un script peut demander une saisie à l'utilisateur. Il attend sa réponse ; la durée
+maximale de 30 secondes ne court pas pendant que la boîte est ouverte.
+
+| Fonction | Renvoie |
+|---|---|
+| `ui.alert(message, [titre])` | rien : affiche un message, attend OK |
+| `ui.confirm(message, [titre])` | `true` (Oui) ou `false` (Non) |
+| `ui.prompt(message, [valeur], [titre])` | le texte saisi, ou `nil` si l'utilisateur annule |
+| `ui.dialog{title, fields, [message], [ok], [cancel]}` | `{ nom = valeur }`, ou `nil` si l'utilisateur annule |
+
+Chaque champ de `ui.dialog` est une table `{name, label, type, default, options, required,
+placeholder, min, max}`. Types :
+
+| `type` | Saisie | Valeur reçue |
+|---|---|---|
+| `text` (défaut), `password` | une ligne | texte |
+| `textarea` | plusieurs lignes | texte |
+| `number`, `integer` | nombre (virgule acceptée), bornes `min` / `max` | nombre |
+| `checkbox` | case à cocher | `true` / `false` |
+| `select`, `radio` | un choix parmi `options` | texte |
+| `date` | calendrier | texte `"aaaa-mm-jj"` |
+| `color` | nuancier | texte `"#rrggbb"` |
+
+Un champ laissé vide est absent de la table reçue (`nil`) ; `required = true` empêche de
+valider sans le remplir.
+
+```lua
+local r = ui.dialog{
+  title = "Nouvelle commande",
+  fields = {
+    {name = "client", label = "Client", required = true},
+    {name = "montant", label = "Montant", type = "number", min = 0},
+    {name = "paye", label = "Payée", type = "checkbox"},
+    {name = "echeance", label = "Échéance", type = "date"},
+  },
+}
+if r then
+  db.insert("Commandes", {Client = r.client, Montant = r.montant, ["Payé"] = r.paye, ["Échéance"] = r.echeance})
+end
+```
+
+---
+
+## 7. Boutons d'action
+
+Un **bouton** posé sur une feuille exécute un script de la bibliothèque, ou l'une de ses
+fonctions. Il se crée par **Insertion › Bouton** (à la cellule active) ou par script :
+
+```lua
+scripts.save("Relances", [==[
+function relancer()
+  local n = db.value([[SELECT count(*) FROM Commandes WHERE NOT "Payé"]])
+  ui.alert(n .. " commande(s) à relancer")
+end
+
+function archiver()
+  if ui.confirm("Supprimer les commandes payées ?") then
+    db.execute([[DELETE FROM Commandes WHERE "Payé"]])
+  end
+end
+]==])
+buttons.create(1, 6, "Relancer", "Relances", "relancer")
+buttons.create(3, 6, "Archiver", "Relances", "archiver")
+```
+
+- **Un clic** exécute l'action. Tout ce qu'elle modifie forme **une seule étape
+  d'annulation** (Ctrl+Z). L'erreur éventuelle et la dernière ligne de `print` s'affichent
+  dans la barre d'état.
+- Avec une fonction, le script est d'abord chargé de haut en bas (ses `local` et ses
+  fonctions sont définis), puis la fonction est appelée : un même script sert plusieurs
+  boutons.
+- **Glisser** le bouton le déplace ; **Ctrl+clic** le sélectionne pour le redimensionner
+  par ses poignées ; **clic droit** : Exécuter, Modifier, Couper, Copier, Supprimer. Un
+  bouton copié se colle par clic droit sur une cellule › Coller le bouton.
+- Un bouton se déplace, se modifie et se supprime aussi par script (`buttons.place`,
+  `buttons.set`, `buttons.delete`).
+
+---
+
+## 8. Annuler un script
+
+**Tout ce qu'un script a fait forme une seule étape d'annulation**, nommée d'après le script
+(`Script « Relances »`). Un Ctrl+Z après l'exécution efface d'un coup toutes ses
+modifications, qu'elles viennent de `db.insert`, `db.update`, `db.delete`, `db.execute` ou
+des commandes de l'application (feuilles créées, tableaux renommés, cellules saisies,
+boutons posés…) ; Ctrl+Y les rétablit. Un clic sur un bouton d'action s'annule de même.
+La sélection et la feuille affichée ne font pas partie de l'annulation.
 
 - Chaque écriture est une courte transaction : la grille reste utilisable pendant que le
   script tourne.
@@ -487,7 +626,7 @@ rétablit.
 
 ---
 
-## 6. Sécurité et limites
+## 9. Sécurité et limites
 
 Un script ne peut ni geler l'application, ni toucher à autre chose que le classeur ouvert.
 
@@ -511,7 +650,7 @@ s'annule par Ctrl+Z.
 
 ---
 
-## 7. Recettes
+## 10. Recettes
 
 ### Totaux par client dans la sortie
 
@@ -616,7 +755,7 @@ print(erreurs .. " erreur(s)")
 
 ---
 
-## 8. Messages d'erreur fréquents
+## 11. Messages d'erreur fréquents
 
 | Message | Cause | Solution |
 |---|---|---|
@@ -635,9 +774,11 @@ print(erreurs .. " erreur(s)")
 
 ---
 
-## 9. Ce qui n'existe pas encore
+## 12. Ce qui n'existe pas encore
 
-Pour éviter de chercher : il n'y a pas aujourd'hui de fonction pour créer, renommer ou
-supprimer un tableau ou une colonne, lire ou écrire une cellule hors d'un tableau, modifier
-une formule ou une mise en forme, lancer un script automatiquement (à l'ouverture, sur
-modification...), demander une saisie à l'utilisateur, ni importer un module Lua externe.
+Pour éviter de chercher : il n'y a pas aujourd'hui de fonction pour créer un tableau d'un
+coup (passez par `cells.paste` avec une ligne d'en-têtes), modifier la formule d'une colonne
+calculée autrement qu'en la saisissant (`cells.set` sur sa première cellule), lancer un script
+automatiquement (à l'ouverture, sur modification...), lancer un script depuis un autre
+script, ni importer un module Lua externe. Les fichiers (ouvrir, enregistrer, importer,
+exporter) restent hors de portée des scripts ; le serveur MCP, lui, y a accès.

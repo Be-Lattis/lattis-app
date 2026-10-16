@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/lalamefine/slitable/internal/store"
 )
@@ -104,6 +105,9 @@ func New(db *store.Store) *Bus { return &Bus{db: db, Depth: DefaultDepth} }
 // ne change rien n'entre pas dans l'historique. Renvoie le numéro de la
 // commande (0 si rien n'a changé).
 func (b *Bus) Do(ctx context.Context, name string, fn func(*Tx) error) (int64, error) {
+	if g := groupOf(ctx); g != nil {
+		return g.append(ctx, b, fn)
+	}
 	var seq int64
 	err := b.db.Write(ctx, func(sqlTx *sql.Tx) error {
 		t := &Tx{Tx: sqlTx, Ctx: ctx}
@@ -136,6 +140,47 @@ func (b *Bus) Do(ctx context.Context, name string, fn func(*Tx) error) (int64, e
 // une seule étape d'annulation. Si une autre action s'est intercalée, une
 // nouvelle commande est créée sous le même nom.
 func (b *Bus) Append(ctx context.Context, seq int64, name string, fn func(*Tx) error) (int64, error) {
+	if g := groupOf(ctx); g != nil {
+		return g.append(ctx, b, fn)
+	}
+	return b.appendTo(ctx, seq, name, fn)
+}
+
+// Group réunit en une seule étape d'annulation, nommée Name, toutes les
+// actions faites avec le contexte qui le porte (WithGroup) : un script ou un
+// bouton qui crée une feuille, renomme un tableau et écrit des lignes
+// s'annule d'un coup. Chaque action reste une courte transaction ; si une
+// action de l'utilisateur s'intercale, la suite forme une nouvelle étape du
+// même nom (voir Append).
+type Group struct {
+	Name string
+	mu   sync.Mutex
+	seq  int64
+}
+
+type groupKey struct{}
+
+// WithGroup ouvre un groupe d'actions nommé name.
+func WithGroup(ctx context.Context, name string) context.Context {
+	return context.WithValue(ctx, groupKey{}, &Group{Name: name})
+}
+
+func groupOf(ctx context.Context) *Group {
+	g, _ := ctx.Value(groupKey{}).(*Group)
+	return g
+}
+
+func (g *Group) append(ctx context.Context, b *Bus, fn func(*Tx) error) (int64, error) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	seq, err := b.appendTo(ctx, g.seq, g.Name, fn)
+	if err == nil && seq != 0 {
+		g.seq = seq
+	}
+	return seq, err
+}
+
+func (b *Bus) appendTo(ctx context.Context, seq int64, name string, fn func(*Tx) error) (int64, error) {
 	out := seq
 	err := b.db.Write(ctx, func(sqlTx *sql.Tx) error {
 		t := &Tx{Tx: sqlTx, Ctx: ctx}
@@ -419,3 +464,6 @@ func decodeSteps(data string) ([]Step, error) {
 	}
 	return out, nil
 }
+
+// InGroup dit si ctx porte un groupe d'actions.
+func InGroup(ctx context.Context) bool { return groupOf(ctx) != nil }

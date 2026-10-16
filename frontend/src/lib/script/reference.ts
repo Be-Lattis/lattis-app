@@ -6,8 +6,14 @@
 // pour signaler un nom inconnu ou un mauvais nombre d'arguments. Chaque
 // exemple est un script complet qui tourne sur le classeur d'exemple de
 // docs/scripting-lua.md (tableau Commandes : Client, Montant, Payé, Échéance).
+//
+// Les commandes de l'application (sheets, cells, tables, ui, buttons…) sont
+// générées depuis internal/api dans api.gen.ts, avec leurs exemples vérifiés
+// par les tests Go : les mêmes commandes servent le serveur MCP.
 
-export type Category = 'db' | 'base' | 'string' | 'table' | 'math' | 'os' | 'syntaxe';
+import { apiReference } from './api.gen';
+
+export type Category = 'db' | 'sheets' | 'cells' | 'tables' | 'columns' | 'ui' | 'objects' | 'workbook' | 'base' | 'string' | 'table' | 'math' | 'os' | 'syntaxe';
 
 export interface RefEntry {
 	/** Nom complet : "db.query", "string.format", "print", "for". */
@@ -28,7 +34,14 @@ export interface RefEntry {
 }
 
 export const categories: { id: Category; label: string }[] = [
-	{ id: 'db', label: 'Classeur (db)' },
+	{ id: 'db', label: 'Données SQL (db)' },
+	{ id: 'sheets', label: 'Feuilles (sheets)' },
+	{ id: 'cells', label: 'Cellules (cells)' },
+	{ id: 'tables', label: 'Tableaux (tables)' },
+	{ id: 'columns', label: 'Colonnes (columns)' },
+	{ id: 'ui', label: 'Sélection et boîtes de dialogue (ui)' },
+	{ id: 'objects', label: 'Graphiques, TCD et boutons' },
+	{ id: 'workbook', label: 'Classeur et scripts (doc, scripts)' },
 	{ id: 'base', label: 'Fonctions de base' },
 	{ id: 'string', label: 'Texte (string)' },
 	{ id: 'table', label: 'Tables (table)' },
@@ -608,6 +621,8 @@ print("Requête : " .. sql, #sql)`
 		summary: 'Commentaire sur une ligne, ou sur plusieurs lignes.'
 	}
 ];
+
+reference.splice(reference.findIndex((e) => e.category !== 'db'), 0, ...apiReference);
 
 /** Index par nom complet. */
 export const byName: Map<string, RefEntry> = new Map(reference.map((e) => [e.name, e]));

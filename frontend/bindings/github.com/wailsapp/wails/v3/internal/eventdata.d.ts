@@ -14,6 +14,7 @@ declare module "@wailsio/runtime" {
         interface CustomEvents {
             "doc:changed": bridge$0.DocState;
             "script:print": string;
+            "ui:command": bridge$0.UICommand;
         }
     }
 }

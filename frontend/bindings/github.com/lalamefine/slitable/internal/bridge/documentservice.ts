@@ -12,6 +12,9 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as api$0 from "../api/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as archive$0 from "../archive/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -37,6 +40,13 @@ export function AddSheet(): $CancellablePromise<number> {
  */
 export function ApplyStyle(sheet: number, r0: number, c0: number, r1: number, c1: number, patch: { [_ in string]?: any } | null): $CancellablePromise<$models.DocState> {
     return $Call.ByID(515323768, sheet, r0, c0, r1, c1, patch);
+}
+
+/**
+ * Call exécute une commande de l'API (internal/api) depuis l'interface.
+ */
+export function Call(name: string, args: { [_ in string]?: any } | null): $CancellablePromise<any> {
+    return $Call.ByID(1387604997, name, args);
 }
 
 /**
@@ -69,6 +79,13 @@ export function ConvertPreview(table: string, i: number, to: grid$0.Type): $Canc
 }
 
 /**
+ * CreateButton pose un bouton d'action sur une feuille.
+ */
+export function CreateButton(sheet: number, row: number, col: number, cfg: canvas$0.ButtonConfig): $CancellablePromise<number> {
+    return $Call.ByID(314900421, sheet, row, col, cfg);
+}
+
+/**
  * CreateChart pose un graphique sur une feuille.
  */
 export function CreateChart(sheet: number, row: number, col: number, cfg: canvas$0.ChartConfig): $CancellablePromise<$models.DocState> {
@@ -80,6 +97,13 @@ export function CreateChart(sheet: number, row: number, col: number, cfg: canvas
  */
 export function CreatePivot(cfg: canvas$0.PivotConfig): $CancellablePromise<number> {
     return $Call.ByID(1379190243, cfg);
+}
+
+/**
+ * DeleteButton supprime un bouton.
+ */
+export function DeleteButton(id: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(4222085142, id);
 }
 
 /**
@@ -127,6 +151,14 @@ export function DeleteTables(names: string[] | null): $CancellablePromise<$model
  */
 export function Dependencies(sheet: number, row: number, col: number): $CancellablePromise<canvas$0.Dependencies> {
     return $Call.ByID(1248047932, sheet, row, col);
+}
+
+/**
+ * DialogAnswer donne la réponse à une boîte de dialogue (ok faux : fermée
+ * sans valider).
+ */
+export function DialogAnswer(id: number, values: { [_ in string]?: any } | null, ok: boolean): $CancellablePromise<void> {
+    return $Call.ByID(489748287, id, values, ok);
 }
 
 /**
@@ -237,6 +269,13 @@ export function Layout(sheet: number): $CancellablePromise<canvas$0.Layout> {
 }
 
 /**
+ * MCPState décrit le serveur MCP.
+ */
+export function MCPState(): $CancellablePromise<$models.MCPStatus> {
+    return $Call.ByID(1846870912);
+}
+
+/**
  * MoveChart déplace un graphique.
  */
 export function MoveChart(id: number, row: number, col: number): $CancellablePromise<$models.DocState> {
@@ -283,6 +322,13 @@ export function Orphans(): $CancellablePromise<archive$0.Orphan[] | null> {
  */
 export function Paste(sheet: number, row: number, col: number, block: (string[] | null)[] | null): $CancellablePromise<canvas$0.Event> {
     return $Call.ByID(4130142476, sheet, row, col, block);
+}
+
+/**
+ * PlaceButton déplace et redimensionne un bouton.
+ */
+export function PlaceButton(id: number, row: number, col: number, offX: number, offY: number, width: number, height: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1043277412, id, row, col, offX, offY, width, height);
 }
 
 /**
@@ -362,8 +408,16 @@ export function Replace(sheet: number, text: string, by: string): $CancellablePr
 }
 
 /**
- * RunScript exécute un script Lua sur le classeur ouvert. Ses écritures
- * forment une seule étape d'annulation, nommée d'après le script.
+ * RunButton exécute l'action d'un bouton (clic dans la grille).
+ */
+export function RunButton(id: number): $CancellablePromise<$models.ScriptResult> {
+    return $Call.ByID(1928049966, id);
+}
+
+/**
+ * RunScript exécute un script Lua sur le classeur ouvert. Tout ce qu'il
+ * modifie (écritures, feuilles, tableaux…) forme une seule étape
+ * d'annulation, nommée d'après le script.
  */
 export function RunScript(name: string, src: string): $CancellablePromise<$models.ScriptResult> {
     return $Call.ByID(3285996221, name, src);
@@ -388,6 +442,13 @@ export function SaveScript(id: number, name: string, source: string): $Cancellab
  */
 export function Scripts(): $CancellablePromise<canvas$0.ScriptInfo[] | null> {
     return $Call.ByID(285284199);
+}
+
+/**
+ * SetButton change le libellé, le script ou la fonction d'un bouton.
+ */
+export function SetButton(id: number, cfg: canvas$0.ButtonConfig): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3335396311, id, cfg);
 }
 
 /**
@@ -433,6 +494,13 @@ export function SetKey(table: string, i: number): $CancellablePromise<$models.Do
 }
 
 /**
+ * SetMCPEnabled active ou désactive le serveur MCP (réglage gardé).
+ */
+export function SetMCPEnabled(on: boolean): $CancellablePromise<$models.MCPStatus> {
+    return $Call.ByID(1802628078, on);
+}
+
+/**
  * SetName nomme une cellule libre (vide : retire le nom).
  */
 export function SetName(sheet: number, row: number, col: number, name: string): $CancellablePromise<$models.DocState> {
@@ -458,6 +526,14 @@ export function SetRowHeight(sheet: number, row: number, height: number): $Cance
  */
 export function SetRules(table: string, i: number, rules: canvas$0.Rule[] | null): $CancellablePromise<$models.DocState> {
     return $Call.ByID(1836090686, table, i, rules);
+}
+
+/**
+ * SetSelection reçoit la feuille affichée, la sélection de la grille et la
+ * vue (l'interface l'appelle à chaque changement) : ui.selection la lit.
+ */
+export function SetSelection(sel: api$0.Selection): $CancellablePromise<void> {
+    return $Call.ByID(3429410115, sel);
 }
 
 /**

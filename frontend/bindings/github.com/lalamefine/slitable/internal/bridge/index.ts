@@ -9,11 +9,14 @@ export {
 };
 
 export type {
+    DialogRequest,
     DocState,
     ExecResult,
     FormulaHelp,
     GridStatus,
     ImportResult,
+    MCPStatus,
     OpenResult,
-    ScriptResult
+    ScriptResult,
+    UICommand
 } from "./models.js";
