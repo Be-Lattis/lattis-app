@@ -219,6 +219,10 @@
 		filterValues: async (t, i) => (await DocumentService.FilterValues(t.name, i)) ?? [],
 		setFilter: (t, i, f) => DocumentService.SetFilter(t.name, i, f).then(reload),
 		clearFilters: (t) => DocumentService.ClearFilters(t.name).then(reload),
+		renameTable: (t, name) => DocumentService.RenameTable(t.name, name).then(reload),
+		deleteTables: (ts) => DocumentService.DeleteTables(ts.map((t) => t.name)).then(reload),
+		moveTable: (t, row, col) => DocumentService.MoveTable(t.name, row, col).then(reload),
+		extractColumns: (t, i0, i1, row, col) => DocumentService.ExtractColumns(t.name, i0, i1, row, col).then(reload),
 		applyStyle: (r0, c0, r1, c1, patch) => DocumentService.ApplyStyle(sheetId, r0, c0, r1, c1, patch).then(reload),
 		find: async (text) => (await DocumentService.Find(sheetId, text)) ?? [],
 		replace: async (text, by) => {

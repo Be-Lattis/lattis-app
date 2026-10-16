@@ -111,6 +111,12 @@
 		/** Filtre d'une colonne (null : retire le filtre de la colonne). */
 		setFilter?(table: SheetTable, i: number, f: ColumnFilter | null): Promise<unknown>;
 		clearFilters?(table: SheetTable): Promise<unknown>;
+		renameTable?(table: SheetTable, name: string): Promise<unknown>;
+		deleteTables?(tables: SheetTable[]): Promise<unknown>;
+		/** Déplace un tableau, en-tête en (row, col) ; côte à côte d'un autre : fusion. */
+		moveTable?(table: SheetTable, row: number, col: number): Promise<unknown>;
+		/** Sort les colonnes i0..i1 vers un nouveau tableau en (row, col). */
+		extractColumns?(table: SheetTable, i0: number, i1: number, row: number, col: number): Promise<unknown>;
 	}
 
 	export interface SheetStatus {
@@ -245,6 +251,25 @@
 		colAxis = new Axis(SHEET_COLS, DEF_W, widths);
 	}
 
+	/** Étendue affichée d'un tableau : une ligne ou une colonne de plus quand la
+	 * cellule active est juste dessous ou juste à droite (la saisie l'étendra),
+	 * jusqu'au tableau voisin qu'elle rejoindrait (fusion). */
+	function grown(e: Entry): { last: number; lastCol: number } {
+		const { row, col } = active;
+		let last = e.last;
+		let lastCol = e.lastCol;
+		if (row === e.last + 1 && col >= e.t.col && col <= e.lastCol && !e.t.hidden) last++;
+		if (col === e.lastCol + 1 && row >= e.t.row && row <= e.last) {
+			lastCol++;
+			const next = entries.find((o) => o.t.row === e.t.row && o.t.col === col + 1);
+			if (next) {
+				lastCol = next.lastCol;
+				last = Math.max(last, next.last);
+			}
+		}
+		return { last, lastCol };
+	}
+
 	const inTable = (e: Entry, r: number, c: number) => r >= e.t.row && r <= e.last && c >= e.t.col && c <= e.lastCol;
 	const tableAt = (r: number, c: number) => entries.find((e) => inTable(e, r, c));
 
@@ -263,6 +288,12 @@
 	let active = $state.raw({ row: 0, col: 0 });
 	let anchor = { row: 0, col: 0 };
 	let dragging = false;
+	// Déplacement par la bordure de la sélection (comme Excel).
+	let moving = $state<{
+		sel: { r0: number; r1: number; c0: number; c1: number };
+		from: { row: number; col: number };
+		to?: { row: number; col: number };
+	} | null>(null);
 
 	// Édition (dans la cellule ou dans la barre de formule).
 	let editing = $state(false);
@@ -321,6 +352,8 @@
 		return true;
 	}
 	let nameBox = $state('');
+	// Cellule d'un tableau : nom du tableau (modifiable) et colonne[ligne].
+	let tableBox = $state<{ name: string; col: string } | null>(null);
 	let fxEditing = false;
 
 	let message = '';
@@ -389,13 +422,11 @@
 		}
 		if (incomplete) missingFrames++;
 
-		// Zones grisées qui séparent chaque tableau du reste, puis en-têtes.
+		// En-têtes (agrandis à l'écran quand la cellule active les prolonge).
 		for (const e of visible) {
-			ctx.fillStyle = C.gray;
-			ctx.fillRect(cx(e.t.col), ry(e.last + 1), spanW(e.t.col, e.lastCol + 1), ROW_H);
-			ctx.fillRect(cx(e.lastCol + 1), ry(e.t.row), colAxis.size(e.lastCol + 1), (e.last - e.t.row + 1) * ROW_H);
+			const g = grown(e);
 			ctx.fillStyle = C.head;
-			ctx.fillRect(cx(e.t.col), ry(e.t.row), spanW(e.t.col, e.lastCol), ROW_H);
+			ctx.fillRect(cx(e.t.col), ry(e.t.row), spanW(e.t.col, g.lastCol), ROW_H);
 		}
 
 		// Plage sélectionnée.
@@ -562,13 +593,27 @@
 		ctx.strokeStyle = C.border;
 		ctx.lineWidth = 1;
 		for (const e of visible) {
+			const g = grown(e);
 			const x = Math.round(cx(e.t.col)) - 0.5;
 			const y = Math.round(ry(e.t.row)) - 0.5;
-			ctx.strokeRect(x, y, spanW(e.t.col, e.lastCol), (e.last - e.t.row + 1) * ROW_H);
+			ctx.strokeStyle = g.last !== e.last || g.lastCol !== e.lastCol ? C.active : C.border;
+			ctx.strokeRect(x, y, spanW(e.t.col, g.lastCol), (g.last - e.t.row + 1) * ROW_H);
 			ctx.beginPath();
 			ctx.moveTo(x, y + ROW_H);
-			ctx.lineTo(x + spanW(e.t.col, e.lastCol), y + ROW_H);
+			ctx.lineTo(x + spanW(e.t.col, g.lastCol), y + ROW_H);
 			ctx.stroke();
+		}
+		// Déplacement en cours : contour de la destination.
+		if (moving?.to) {
+			const { r0, c0, r1, c1 } = moving.sel;
+			const dr = moving.to.row - moving.from.row;
+			const dc = moving.to.col - moving.from.col;
+			ctx.save();
+			ctx.setLineDash([5, 3]);
+			ctx.strokeStyle = C.active;
+			ctx.lineWidth = 2;
+			ctx.strokeRect(cx(c0 + dc) + 1, ry(r0 + dr) + 1, spanW(c0 + dc, c1 + dc) - 2, (r1 - r0 + 1) * ROW_H - 2);
+			ctx.restore();
 		}
 		// Cellule active.
 		if (active.row >= r0 - 1 && active.row <= r1 + 1) {
@@ -609,13 +654,14 @@
 		ctx.fillRect(0, TOP_H, MARGIN, h - TOP_H);
 		ctx.font = FONT_SMALL;
 		ctx.textAlign = 'right';
+		const cur = tableAt(active.row, active.col);
 		for (let r = r0; r <= r1; r++) {
 			const y = ry(r);
 			if (r >= s0 && r <= s1) {
 				ctx.fillStyle = C.activeStrip;
 				ctx.fillRect(0, y, MARGIN, ROW_H);
 			}
-			const e = visible.find((e) => r > e.t.row && r <= e.last);
+			const e = cur && r > cur.t.row && r <= cur.last ? cur : visible.find((e) => r > e.t.row && r <= e.last);
 			if (e) {
 				ctx.fillStyle = C.stripText;
 				ctx.fillText(String(r - e.t.row), MARGIN - 8, y + ROW_H / 2);
@@ -945,6 +991,11 @@
 
 	function refreshFx() {
 		nameBox = cellName(active.row, active.col);
+		const e = tableAt(active.row, active.col);
+		if (e) {
+			const k = e.t.columns[active.col - e.t.col];
+			tableBox = { name: e.t.name, col: active.row === e.t.row ? k.name : `${k.name}[${active.row - e.t.row}]` };
+		} else tableBox = null;
 		if (fxEditing) return;
 		fxText = cellInfo(active.row, active.col).value;
 	}
@@ -1057,7 +1108,68 @@
 		return null;
 	}
 
+	/** La souris est-elle sur la bordure de la sélection (poignée de déplacement) ? */
+	function onSelectionEdge(e: MouseEvent): boolean {
+		if (!source.moveTable) return false;
+		const r = scroller.getBoundingClientRect();
+		const x = e.clientX - r.left;
+		const y = e.clientY - r.top;
+		if (x < MARGIN || y < TOP_H) return false;
+		const { r0, r1, c0, c1 } = selection();
+		const cx = (c: number) => MARGIN + colAxis.offset(c) - scroller.scrollLeft;
+		const ry = (r: number) => TOP_H + r * ROW_H - vs.top;
+		const left = cx(c0);
+		const right = cx(c1) + colAxis.size(c1);
+		const top = ry(r0);
+		const bottom = ry(r1) + ROW_H;
+		const near = (v: number, edge: number) => Math.abs(v - edge) <= 3;
+		const inX = x >= left - 3 && x <= right + 3;
+		const inY = y >= top - 3 && y <= bottom + 3;
+		return (inY && (near(x, left) || near(x, right))) || (inX && (near(y, top) || near(y, bottom)));
+	}
+
+	async function dropMove() {
+		const m = moving;
+		moving = null;
+		schedule();
+		if (!m?.to) return;
+		const dr = m.to.row - m.from.row;
+		const dc = m.to.col - m.from.col;
+		if (!dr && !dc) return;
+		const { r0, r1, c0, c1 } = m.sel;
+		const e = entries.find((e) => e.t.row === r0 && e.last === r1 && c0 >= e.t.col && c1 <= e.lastCol);
+		if (!e) {
+			say('Pour déplacer, sélectionnez un tableau entier (Ctrl+A) ou des colonnes entières, en-tête compris (Ctrl+Espace)');
+			return;
+		}
+		const whole = c0 === e.t.col && c1 === e.lastCol;
+		const run = whole
+			? source.moveTable && (() => source.moveTable!(e.t, r0 + dr, c0 + dc))
+			: source.extractColumns && (() => source.extractColumns!(e.t, c0 - e.t.col, c1 - e.t.col, r0 + dr, c0 + dc));
+		if (!run) return;
+		writing = writing.then(async () => {
+			try {
+				await run();
+				moveTo(r0 + dr, c0 + dc);
+				anchor = { row: r1 + dr, col: c1 + dc };
+				message = whole ? `Tableau « ${e.t.name} » déplacé (Ctrl+Z pour annuler)` : 'Colonnes déplacées (Ctrl+Z pour annuler)';
+			} catch (err) {
+				message = String(err instanceof Error ? err.message : err);
+			}
+			refreshStatus();
+			schedule();
+		});
+	}
+
 	function onMouseDown(e: MouseEvent) {
+		if (e.button === 0 && !editing && onSelectionEdge(e)) {
+			const cell = cellAt(e);
+			if (cell) {
+				e.preventDefault();
+				moving = { sel: selection(), from: cell };
+				return;
+			}
+		}
 		const b = boundaryAt(e);
 		if (b !== null && source.setColumnWidth) {
 			e.preventDefault();
@@ -1081,7 +1193,15 @@
 			schedule();
 			return;
 		}
-		scroller.style.cursor = source.setColumnWidth && boundaryAt(e) !== null ? 'col-resize' : '';
+		if (moving) {
+			const cell = cellAt(e);
+			if (cell) {
+				moving.to = cell;
+				schedule();
+			}
+			return;
+		}
+		scroller.style.cursor = source.setColumnWidth && boundaryAt(e) !== null ? 'col-resize' : !dragging && onSelectionEdge(e) ? 'move' : '';
 		if (!dragging) return;
 		const cell = cellAt(e);
 		if (!cell) return;
@@ -1107,6 +1227,18 @@
 			e.preventDefault();
 			source.undo().catch((err) => say(String(err?.message ?? err)));
 			return;
+		}
+		if (ctrl && (e.key === 'a' || e.key === 'A' || e.key === ' ')) {
+			const t = tableAt(row, col);
+			if (t) {
+				e.preventDefault();
+				anchor = { row: t.t.row, col: e.key === ' ' ? col : t.t.col };
+				active = { row: t.last, col: e.key === ' ' ? col : t.lastCol };
+				refreshFx();
+				refreshStatus();
+				schedule();
+				return;
+			}
 		}
 		if (ctrl && (e.key.toLowerCase() === 'f' || e.key.toLowerCase() === 'h') && source.find) {
 			e.preventDefault();
@@ -1255,15 +1387,47 @@
 		const r1 = Math.max(active.row, anchor.row);
 		const c0 = Math.min(active.col, anchor.col);
 		const c1 = Math.max(active.col, anchor.col);
-		if ((r1 - r0 + 1) * (c1 - c0 + 1) > 1000) {
+		// Les tableaux entièrement compris dans la zone sont supprimés.
+		const whole = entries.filter((e) => e.t.row >= r0 && e.last <= r1 && e.t.col >= c0 && e.lastCol <= c1);
+		const rest = (r: number, c: number) => !whole.some((e) => inTable(e, r, c));
+		let n = 0;
+		for (const e of entries) {
+			if (whole.includes(e)) continue;
+			const rr = Math.max(0, Math.min(r1, e.last) - Math.max(r0, e.t.row) + 1);
+			const cc = Math.max(0, Math.min(c1, e.lastCol) - Math.max(c0, e.t.col) + 1);
+			n += rr * cc;
+		}
+		for (const k of cells.keys()) {
+			const [r, c] = k.split(',').map(Number);
+			if (r >= r0 && r <= r1 && c >= c0 && c <= c1) n++;
+		}
+		if (n > 1000) {
 			say('Effacement limité à 1 000 cellules pour l’instant');
 			return;
 		}
-		for (let r = r0; r <= r1; r++)
-			for (let c = c0; c <= c1; c++) {
-				const info = cellInfo(r, c);
-				if (info.kind !== 'header' && info.value !== '') await write(r, c, '');
-			}
+		if (whole.length && source.deleteTables) {
+			const del = source.deleteTables;
+			const tables = whole.map((e) => e.t);
+			writing = writing.then(() =>
+				del(tables).then(
+					() => say(tables.length > 1 ? `${tables.length} tableaux supprimés (Ctrl+Z pour annuler)` : `Tableau « ${tables[0].name} » supprimé (Ctrl+Z pour annuler)`),
+					(err) => say(String(err?.message ?? err))
+				)
+			);
+			await writing;
+		}
+		for (const e of entries) {
+			if (whole.includes(e)) continue;
+			for (let r = Math.max(r0, e.t.row); r <= Math.min(r1, e.last); r++)
+				for (let c = Math.max(c0, e.t.col); c <= Math.min(c1, e.lastCol); c++) {
+					const info = cellInfo(r, c);
+					if (info.kind !== 'header' && info.value !== '') await write(r, c, '');
+				}
+		}
+		for (const k of [...cells.keys()]) {
+			const [r, c] = k.split(',').map(Number);
+			if (r >= r0 && r <= r1 && c >= c0 && c <= c1 && rest(r, c)) await write(r, c, '');
+		}
 	}
 
 	function onEditorKey(e: KeyboardEvent) {
@@ -1318,6 +1482,52 @@
 	}
 
 	// --- Zone de nom ------------------------------------------------------------
+
+	/** Nom du tableau : Entrée le renomme. */
+	function onTableNameKey(e: KeyboardEvent) {
+		e.stopPropagation();
+		const el = e.currentTarget as HTMLInputElement;
+		const t = tableAt(active.row, active.col)?.t;
+		if (e.key === 'Escape' || !t) {
+			el.value = t?.name ?? '';
+			wrap.focus();
+			return;
+		}
+		if (e.key !== 'Enter') return;
+		e.preventDefault();
+		const name = el.value.trim();
+		wrap.focus();
+		if (!source.renameTable || name === t.name) return;
+		const rename = source.renameTable;
+		writing = writing.then(async () => {
+			try {
+				await rename(t, name);
+				message = `Tableau renommé « ${name} »`;
+			} catch (err) {
+				message = String(err instanceof Error ? err.message : err);
+			}
+			refreshFx();
+			refreshStatus();
+		});
+	}
+
+	/** Colonne[ligne] : Entrée renomme la colonne. */
+	function onColumnNameKey(e: KeyboardEvent) {
+		e.stopPropagation();
+		const el = e.currentTarget as HTMLInputElement;
+		const en = tableAt(active.row, active.col);
+		if (e.key === 'Escape' || !en) {
+			el.value = tableBox?.col ?? '';
+			wrap.focus();
+			return;
+		}
+		if (e.key !== 'Enter') return;
+		e.preventDefault();
+		const c = active.col;
+		const name = el.value.replace(/\[.*$/, '').trim();
+		wrap.focus();
+		if (name && name !== en.t.columns[c - en.t.col].name) write(en.t.row, c, name);
+	}
 
 	function onNameKey(e: KeyboardEvent) {
 		e.stopPropagation();
@@ -1661,6 +1871,7 @@
 		scroller.addEventListener('wheel', onWheel, { passive: false });
 		const up = () => {
 			dragging = false;
+			if (moving) dropMove();
 			if (!resizing) return;
 			const { col, width, startW } = resizing;
 			resizing = null;
@@ -1723,15 +1934,37 @@
 
 <div class="sheet-root">
 	<div class="formula-bar">
-		<input
-			class="name-box"
-			title="Nom de la cellule : tapez un nom puis Entrée pour la nommer, ou le nom d'une cellule pour y aller"
-			value={nameBox}
-			placeholder="—"
-			onfocus={(e) => e.currentTarget.select()}
-			onkeydown={onNameKey}
-			spellcheck="false"
-		/>
+		{#if tableBox}
+			<div class="name-box split">
+				<input
+					class="table-name"
+					title="Nom du tableau : modifiez puis Entrée pour le renommer"
+					value={tableBox.name}
+					onfocus={(e) => e.currentTarget.select()}
+					onkeydown={onTableNameKey}
+					spellcheck="false"
+				/>
+				<span class="slash">/</span>
+				<input
+					class="col-name"
+					title="Colonne[ligne] : modifiez le nom puis Entrée pour renommer la colonne"
+					value={tableBox.col}
+					onfocus={(e) => e.currentTarget.select()}
+					onkeydown={onColumnNameKey}
+					spellcheck="false"
+				/>
+			</div>
+		{:else}
+			<input
+				class="name-box"
+				title="Nom de la cellule : tapez un nom puis Entrée pour la nommer, ou le nom d'une cellule pour y aller"
+				value={nameBox}
+				placeholder="—"
+				onfocus={(e) => e.currentTarget.select()}
+				onkeydown={onNameKey}
+				spellcheck="false"
+			/>
+		{/if}
 		<span class="fx">fx</span>
 		<input
 			class="fx-input"
@@ -1994,6 +2227,34 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		color: #374151;
+	}
+	.name-box.split {
+		display: flex;
+		align-items: center;
+		padding: 0;
+		overflow: visible;
+	}
+	.name-box.split input {
+		font: inherit;
+		min-width: 0;
+		border: none;
+		outline: none;
+		padding: 3px 6px;
+		background: none;
+		color: #374151;
+	}
+	.name-box.split .table-name {
+		flex: 0 1 45%;
+		font-weight: 600;
+	}
+	.name-box.split .col-name {
+		flex: 1 1 55%;
+	}
+	.name-box.split input:focus {
+		background: #eef6f0;
+	}
+	.slash {
+		color: #9aa0a6;
 	}
 	.fx {
 		color: #6b7280;
