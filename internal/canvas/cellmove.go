@@ -18,6 +18,9 @@ func (m *Model) MoveCells(ctx context.Context, sheet int64, r0, c0, r1, c1, dr, 
 		return fmt.Errorf("%w : déplacement hors de la feuille", ErrTable)
 	}
 	return m.Do(ctx, "Déplacer les cellules", func(t *tx) error {
+		if err := t.guard(sheet); err != nil {
+			return err
+		}
 		tables, err := t.tables(sheet)
 		if err != nil {
 			return err

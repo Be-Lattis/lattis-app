@@ -96,6 +96,29 @@ func run(ctx context.Context, tx *sql.Tx, stmts []Stmt) error {
 type Bus struct {
 	db    *store.Store
 	Depth int
+	// Guard, s'il est fixé, encadre chaque annulation et rétablissement :
+	// appelé dans la transaction avant de rejouer les instructions, il rend
+	// une vérification appelée après ; une erreur de l'une ou l'autre défait
+	// tout (protection des feuilles : voir canvas.Model).
+	Guard func(ctx context.Context, tx *sql.Tx) (check func() error, err error)
+}
+
+// guarded rejoue fn entre les deux temps de Guard.
+func (b *Bus) guarded(ctx context.Context, tx *sql.Tx, verb, name string, fn func() error) error {
+	if b.Guard == nil {
+		return fn()
+	}
+	check, err := b.Guard(ctx, tx)
+	if err != nil {
+		return err
+	}
+	if err := fn(); err != nil {
+		return err
+	}
+	if err := check(); err != nil {
+		return fmt.Errorf("impossible %s « %s » : %w", verb, name, err)
+	}
+	return nil
 }
 
 // New crée le bus. Le schéma du journal doit exister (voir Schema).
@@ -279,10 +302,16 @@ func (b *Bus) Undo(ctx context.Context) (string, error) {
 		if err != nil {
 			return err
 		}
-		for i := len(steps) - 1; i >= 0; i-- {
-			if err := run(ctx, tx, steps[i].Undo); err != nil {
-				return err
+		err = b.guarded(ctx, tx, "d'annuler", name, func() error {
+			for i := len(steps) - 1; i >= 0; i-- {
+				if err := run(ctx, tx, steps[i].Undo); err != nil {
+					return err
+				}
 			}
+			return nil
+		})
+		if err != nil {
+			return err
 		}
 		_, err = tx.ExecContext(ctx, `UPDATE _slitable_journal SET undone = 1 WHERE seq = ?`, seq)
 		return err
@@ -307,10 +336,16 @@ func (b *Bus) Redo(ctx context.Context) (string, error) {
 		if err != nil {
 			return err
 		}
-		for _, s := range steps {
-			if err := run(ctx, tx, s.Do); err != nil {
-				return err
+		err = b.guarded(ctx, tx, "de rétablir", name, func() error {
+			for _, s := range steps {
+				if err := run(ctx, tx, s.Do); err != nil {
+					return err
+				}
 			}
+			return nil
+		})
+		if err != nil {
+			return err
 		}
 		_, err = tx.ExecContext(ctx, `UPDATE _slitable_journal SET undone = 0 WHERE seq = ?`, seq)
 		return err

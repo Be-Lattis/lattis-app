@@ -35,6 +35,9 @@ func (m *Model) CreatePivot(ctx context.Context, cfg PivotConfig) (int64, error)
 	cfg = cfg.normalized()
 	var sheet int64
 	err := m.Do(ctx, "Tableau croisé dynamique", func(t *tx) error {
+		if err := t.guardWorkbook(); err != nil {
+			return err
+		}
 		if _, err := t.pivotPlan(cfg); err != nil {
 			return err
 		}
@@ -83,6 +86,9 @@ func (m *Model) CreatePivot(ctx context.Context, cfg PivotConfig) (int64, error)
 func (m *Model) SetPivot(ctx context.Context, id int64, cfg PivotConfig) error {
 	cfg = cfg.normalized()
 	return m.Do(ctx, "Modifier le tableau croisé", func(t *tx) error {
+		if err := t.guardObject(`_slitable_pivots`, id); err != nil {
+			return err
+		}
 		if _, err := t.pivotPlan(cfg); err != nil {
 			return err
 		}
@@ -108,6 +114,9 @@ func (m *Model) SetPivot(ctx context.Context, id int64, cfg PivotConfig) error {
 // DeletePivot supprime un tableau croisé (sa feuille reste).
 func (m *Model) DeletePivot(ctx context.Context, id int64) error {
 	return m.Do(ctx, "Supprimer le tableau croisé", func(t *tx) error {
+		if err := t.guardObject(`_slitable_pivots`, id); err != nil {
+			return err
+		}
 		var sheet int64
 		var row, col int
 		var cfg string

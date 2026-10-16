@@ -61,6 +61,9 @@ func (m *Model) CreateButton(ctx context.Context, sheet int64, row, col int, cfg
 	}
 	var id int64
 	err := m.Do(ctx, "Insérer un bouton", func(t *tx) error {
+		if err := t.guard(sheet); err != nil {
+			return err
+		}
 		var n int
 		if err := t.row(`SELECT count(*) FROM _slitable_sheets WHERE id = ?`, sheet).Scan(&n); err != nil {
 			return err
@@ -90,6 +93,9 @@ func (m *Model) SetButton(ctx context.Context, id int64, cfg ButtonConfig) error
 		return err
 	}
 	return m.Do(ctx, "Modifier le bouton", func(t *tx) error {
+		if err := t.guardObject(`_slitable_buttons`, id); err != nil {
+			return err
+		}
 		old, err := t.button(id)
 		if err != nil {
 			return err
@@ -106,6 +112,9 @@ func (m *Model) PlaceButton(ctx context.Context, id int64, row, col, offX, offY,
 		return fmt.Errorf("%w : hors de la feuille", ErrButton)
 	}
 	return m.Do(ctx, "Déplacer le bouton", func(t *tx) error {
+		if err := t.guardObject(`_slitable_buttons`, id); err != nil {
+			return err
+		}
 		old, err := t.button(id)
 		if err != nil {
 			return err
@@ -122,6 +131,9 @@ func (m *Model) PlaceButton(ctx context.Context, id int64, row, col, offX, offY,
 // DeleteButton supprime un bouton.
 func (m *Model) DeleteButton(ctx context.Context, id int64) error {
 	return m.Do(ctx, "Supprimer le bouton", func(t *tx) error {
+		if err := t.guardObject(`_slitable_buttons`, id); err != nil {
+			return err
+		}
 		var sheet int64
 		var row, col int
 		var cfg string

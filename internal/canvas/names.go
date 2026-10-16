@@ -24,6 +24,9 @@ var nameRe = regexp.MustCompile(`^[\p{L}_][\p{L}\p{N}_.]*$`)
 func (m *Model) SetName(ctx context.Context, sheet int64, row, col int, name string) error {
 	name = strings.TrimSpace(name)
 	return m.Do(ctx, "Nommer la cellule", func(t *tx) error {
+		if err := t.guard(sheet); err != nil {
+			return err
+		}
 		var old string
 		err := t.row(`SELECT name FROM _slitable_names WHERE sheet = ? AND row = ? AND col = ?`, sheet, row, col).Scan(&old)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {

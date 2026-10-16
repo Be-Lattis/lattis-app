@@ -88,6 +88,9 @@ func (m *Model) TableNames(ctx context.Context) (map[string]bool, error) {
 func (m *Model) Import(ctx context.Context, action string, sheets []ImportSheet) (ImportResult, error) {
 	var res ImportResult
 	err := m.Do(ctx, action, func(t *tx) error {
+		if err := t.guardWorkbook(); err != nil {
+			return err
+		}
 		res = ImportResult{Sheets: []int64{}, Tables: []string{}, Warnings: []string{}}
 		if err := t.purgeImports(); err != nil {
 			return err

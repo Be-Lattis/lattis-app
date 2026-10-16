@@ -410,6 +410,21 @@ export function PromoteHeader(table: string): $CancellablePromise<$models.DocSta
 }
 
 /**
+ * ProtectSheet protège une feuille (password vide : sans mot de passe) ;
+ * hors de l'historique d'annulation, comme Excel.
+ */
+export function ProtectSheet(sheet: number, password: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(152349075, sheet, password);
+}
+
+/**
+ * ProtectWorkbook protège la structure du classeur (onglets).
+ */
+export function ProtectWorkbook(password: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(990396416, password);
+}
+
+/**
  * Query exécute une requête SQL en lecture seule sur le classeur (onglet SQL).
  */
 export function Query(q: string): $CancellablePromise<grid$0.QueryResult> {
@@ -665,6 +680,20 @@ export function TypeMix(table: string, i: number): $CancellablePromise<canvas$0.
  */
 export function Undo(): $CancellablePromise<$models.DocState> {
     return $Call.ByID(1702602619);
+}
+
+/**
+ * UnprotectSheet ôte la protection d'une feuille.
+ */
+export function UnprotectSheet(sheet: number, password: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2997544496, sheet, password);
+}
+
+/**
+ * UnprotectWorkbook ôte la protection de la structure du classeur.
+ */
+export function UnprotectWorkbook(password: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3983197373, password);
 }
 
 /**

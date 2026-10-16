@@ -50,6 +50,9 @@ func (m *Model) MoveSheet(ctx context.Context, sheet int64, to int) error {
 }
 
 func (t *tx) addSheet() (int64, error) {
+	if err := t.guardWorkbook(); err != nil {
+		return 0, err
+	}
 	var id int64
 	var pos int
 	if err := t.row(`SELECT coalesce(max(id), 0) + 1, coalesce(max(pos), -1) + 1 FROM _slitable_sheets`).Scan(&id, &pos); err != nil {
@@ -93,6 +96,9 @@ func (t *tx) sheetOrder() ([]int64, error) {
 // moveSheet renumérote les rangs pour placer sheet au rang to ; l'annulation
 // rend les rangs d'origine.
 func (t *tx) moveSheet(sheet int64, to int) error {
+	if err := t.guardWorkbook(); err != nil {
+		return err
+	}
 	ids, err := t.sheetOrder()
 	if err != nil {
 		return err
@@ -140,6 +146,9 @@ func (m *Model) RenameSheet(ctx context.Context, sheet int64, name string) error
 		return fmt.Errorf("%w : nom vide", ErrSheet)
 	}
 	return m.Do(ctx, "Renommer la feuille", func(t *tx) error {
+		if err := t.guardWorkbook(); err != nil {
+			return err
+		}
 		var old string
 		if err := t.row(`SELECT name FROM _slitable_sheets WHERE id = ?`, sheet).Scan(&old); err != nil {
 			return err
@@ -163,6 +172,9 @@ func (m *Model) RenameSheet(ctx context.Context, sheet int64, name string) error
 // avec lui ; l'annulation les rend). Le dernier onglet ne se supprime pas.
 func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 	return m.Do(ctx, "Supprimer la feuille", func(t *tx) error {
+		if err := t.guardWorkbook(); err != nil {
+			return err
+		}
 		var n, tables int
 		var name string
 		var pos, grid, heads int
@@ -205,6 +217,13 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 		pivots = append(append(pivots, charts...), buttons...)
 		// Mise en forme, largeurs et hauteurs de la feuille.
 		do := []stmt{st(`DELETE FROM _slitable_pivots WHERE sheet = ?`, sheet), st(`DELETE FROM _slitable_charts WHERE sheet = ?`, sheet), st(`DELETE FROM _slitable_buttons WHERE sheet = ?`, sheet)}
+		// Protection de la feuille : supprimée avec elle, rendue par l'annulation.
+		prot, err := t.snapshot(`_slitable_protection`, sheet)
+		if err != nil {
+			return err
+		}
+		do = append(do, st(`DELETE FROM _slitable_protection WHERE sheet = ?`, sheet))
+		pivots = append(pivots, prot...)
 		for _, tbl := range sheetPositioned {
 			rows, err := t.snapshot(tbl, sheet)
 			if err != nil {
@@ -255,6 +274,9 @@ func (m *Model) SetHeadings(ctx context.Context, sheet int64, show bool) error {
 // 0 revient à la largeur par défaut.
 func (m *Model) SetColumnWidth(ctx context.Context, sheet int64, col, width int) error {
 	return m.Do(ctx, "Largeur de colonne", func(t *tx) error {
+		if err := t.guard(sheet); err != nil {
+			return err
+		}
 		var old int
 		err := t.row(`SELECT width FROM _slitable_col_widths WHERE sheet = ? AND col = ?`, sheet, col).Scan(&old)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
@@ -278,6 +300,9 @@ func (m *Model) SetColumnWidth(ctx context.Context, sheet int64, col, width int)
 // revient à la hauteur par défaut.
 func (m *Model) SetRowHeight(ctx context.Context, sheet int64, row, height int) error {
 	return m.Do(ctx, "Hauteur de ligne", func(t *tx) error {
+		if err := t.guard(sheet); err != nil {
+			return err
+		}
 		var old int
 		err := t.row(`SELECT height FROM _slitable_row_heights WHERE sheet = ? AND row = ?`, sheet, row).Scan(&old)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {

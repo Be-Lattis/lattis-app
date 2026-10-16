@@ -16,6 +16,10 @@ type SheetInfo struct {
 	// Headings : lettres de colonnes et numéros de lignes toujours affichés
 	// (sinon seulement pendant la saisie d'une formule).
 	Headings bool `json:"headings"`
+	// Protected : feuille protégée (Révision › Protéger la feuille) ;
+	// Password : il faut un mot de passe pour ôter la protection.
+	Protected bool `json:"protected"`
+	Password  bool `json:"password"`
 }
 
 // ColumnInfo décrit une colonne de tableau pour l'interface.
@@ -90,6 +94,9 @@ type Layout struct {
 	Pivots    []PivotInfo  `json:"pivots"`  // tableaux croisés, calculés
 	Charts    []ChartInfo  `json:"charts"`  // graphiques, avec leurs données
 	Buttons   []ButtonInfo `json:"buttons"` // boutons d'action
+	// Structure du classeur protégée (onglets), avec ou sans mot de passe.
+	WorkbookProtected bool `json:"workbookProtected"`
+	WorkbookPassword  bool `json:"workbookPassword"`
 }
 
 // CellStyle est la mise en forme d'une cellule hors tableau.
@@ -128,6 +135,14 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 			l.Sheets = append(l.Sheets, s)
 		}
 		rs.Close()
+		prot, err := t.protection()
+		if err != nil {
+			return err
+		}
+		l.WorkbookProtected, l.WorkbookPassword = prot.Workbook, prot.WorkbookPassword
+		for i, s := range l.Sheets {
+			l.Sheets[i].Password, l.Sheets[i].Protected = prot.Sheets[s.ID]
+		}
 		tables, err := t.tables(sheet)
 		if err != nil {
 			return err

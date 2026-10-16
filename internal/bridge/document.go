@@ -726,3 +726,24 @@ func (s *DocumentService) SetGridlines(ctx context.Context, sheet int64, show bo
 func (s *DocumentService) SetRowHeight(ctx context.Context, sheet int64, row, height int) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.SetRowHeight(ctx, sheet, row, height) })
 }
+
+// ProtectSheet protège une feuille (password vide : sans mot de passe) ;
+// hors de l'historique d'annulation, comme Excel.
+func (s *DocumentService) ProtectSheet(ctx context.Context, sheet int64, password string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.ProtectSheet(ctx, sheet, password) })
+}
+
+// UnprotectSheet ôte la protection d'une feuille.
+func (s *DocumentService) UnprotectSheet(ctx context.Context, sheet int64, password string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.UnprotectSheet(ctx, sheet, password) })
+}
+
+// ProtectWorkbook protège la structure du classeur (onglets).
+func (s *DocumentService) ProtectWorkbook(ctx context.Context, password string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.ProtectWorkbook(ctx, password) })
+}
+
+// UnprotectWorkbook ôte la protection de la structure du classeur.
+func (s *DocumentService) UnprotectWorkbook(ctx context.Context, password string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.UnprotectWorkbook(ctx, password) })
+}

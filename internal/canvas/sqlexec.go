@@ -167,6 +167,23 @@ func (t *tx) execSQLOnce(q string, args []any) (int64, error) {
 	if err := t.exec(teardown); err != nil {
 		return 0, err
 	}
+	// Feuille protégée : une requête qui touche l'un de ses tableaux est
+	// refusée (la transaction est défaite).
+	for _, tb := range tables {
+		var touched int
+		if err := t.row(fmt.Sprintf(`SELECT count(*) FROM temp._slt_ids_%d`, tb.ID)).Scan(&touched); err != nil {
+			return 0, err
+		}
+		if touched == 0 {
+			continue
+		}
+		if err := t.guard(tb.Sheet); err != nil {
+			for _, tb := range tables {
+				t.exec([]string{fmt.Sprintf(`DROP TABLE IF EXISTS temp._slt_ids_%d`, tb.ID), fmt.Sprintf(`DROP TABLE IF EXISTS temp._slt_old_%d`, tb.ID)})
+			}
+			return 0, err
+		}
+	}
 
 	var total int64
 	for _, tb := range tables {

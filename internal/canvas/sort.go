@@ -16,7 +16,7 @@ import (
 // pas (pour l'instant) : son calcul dépend de l'ordre.
 func (m *Model) SortTable(ctx context.Context, table string, i int, desc bool) error {
 	return m.Do(ctx, "Trier", func(t *tx) error {
-		tb, err := t.tableByName(table)
+		tb, err := t.editTable(table)
 		if err != nil {
 			return err
 		}

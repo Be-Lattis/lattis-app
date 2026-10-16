@@ -1,10 +1,15 @@
 <script lang="ts">
 	// Onglets de feuilles en bas, comme Excel : clic pour changer de feuille,
 	// double-clic pour renommer, clic droit pour insérer, renommer ou supprimer,
-	// glisser pour réordonner, « + » pour ajouter à la fin.
+	// glisser pour réordonner, « + » pour ajouter à la fin. Une feuille
+	// protégée porte un cadenas ; la structure du classeur protégée fige les
+	// onglets (ni ajout, ni renommage, ni déplacement, ni suppression).
+	import Icon from '#lib/icons/Icon.svelte';
+
 	interface Sheet {
 		id: number;
 		name: string;
+		protected?: boolean;
 	}
 	interface Props {
 		sheets: Sheet[];
@@ -20,9 +25,21 @@
 		/** Défilement horizontal de la grille : barre en bout de ligne, comme Excel. */
 		hscroll?: { content: number; view: number; left: number };
 		onhscroll?: (left: number) => void;
+		/** Protéger la feuille, ou ôter sa protection (menu de l'onglet). */
+		onprotect?: (id: number) => void;
+		/** Structure du classeur protégée : onglets figés. */
+		locked?: boolean;
+		/** Action refusée (structure protégée) : message pour la barre d'état. */
+		onrefused?: (msg: string) => void;
 	}
 
-	let { sheets, active, onselect, onadd, oninsert, onmove, onrename, ondelete, hscroll, onhscroll }: Props = $props();
+	let { sheets, active, onselect, onadd: add, oninsert: insert, onmove: move, onrename: rename, ondelete: del, hscroll, onhscroll, onprotect, locked = false, onrefused }: Props = $props();
+	const LOCKED = 'La structure du classeur est protégée : ôtez la protection (Révision › Ôter la protection du classeur) pour ajouter, supprimer, renommer ou déplacer des feuilles';
+	const onadd = $derived(locked ? undefined : add);
+	const oninsert = $derived(locked ? undefined : insert);
+	const onmove = $derived(locked ? undefined : move);
+	const onrename = $derived(locked ? undefined : rename);
+	const ondelete = $derived(locked ? undefined : del);
 
 	// Barre de défilement horizontale : une zone qui défile au même rapport
 	// que la grille (contenu / largeur visible).
@@ -51,6 +68,7 @@
 	let menu = $state<{ id: number; x: number } | null>(null);
 
 	function startRename(s: Sheet) {
+		if (locked) onrefused?.(LOCKED);
 		if (!onrename) return;
 		renaming = s.id;
 		draft = s.name;
@@ -129,14 +147,15 @@
 				ondblclick={() => startRename(s)}
 				oncontextmenu={(e) => {
 					e.preventDefault();
-					if (ondelete || onrename || oninsert) menu = { id: s.id, x: (e.currentTarget as HTMLElement).offsetLeft };
+					if (del || rename || insert || onprotect) menu = { id: s.id, x: (e.currentTarget as HTMLElement).offsetLeft };
 				}}
-				title={onmove ? 'Double-clic pour renommer, glisser pour déplacer' : 'Double-clic pour renommer'}>{s.name}</button
+				title={(s.protected ? 'Feuille protégée. ' : '') + (locked ? 'Structure du classeur protégée' : onmove ? 'Double-clic pour renommer, glisser pour déplacer' : 'Double-clic pour renommer')}
+				>{#if s.protected}<span class="lock" aria-label="Feuille protégée"><Icon name="lock" size={12} /></span>{/if}{s.name}</button
 			>
 		{/if}
 	{/each}
 	{#if drag?.moved && drag.drop >= 0}<span class="drop-mark" style:left="{dropX - 1}px"></span>{/if}
-	<button class="add" disabled={!onadd} onclick={() => onadd?.()} title="Nouvelle feuille">+</button>
+	<button class="add" disabled={!onadd} onclick={() => onadd?.()} title={locked ? 'Structure du classeur protégée' : 'Nouvelle feuille'}>+</button>
 	{#if hscroll}
 		<div class="hbar" bind:this={bar} bind:clientWidth={barW} onscroll={onBarScroll}>
 			<div style:width="{hscroll.view ? (barW * Math.max(hscroll.content, hscroll.view)) / hscroll.view : 0}px" style:height="1px"></div>
@@ -155,6 +174,7 @@
 				}}>Insérer une feuille</button
 			>
 			<button
+				disabled={!onrename}
 				onclick={() => {
 					const s = sheets.find((x) => x.id === m.id);
 					menu = null;
@@ -162,12 +182,21 @@
 				}}>Renommer</button
 			>
 			<button
-				disabled={sheets.length <= 1}
+				disabled={sheets.length <= 1 || !ondelete}
 				onclick={() => {
 					const id = m.id;
 					menu = null;
 					ondelete?.(id);
 				}}>Supprimer</button
+			>
+			<hr />
+			<button
+				disabled={!onprotect}
+				onclick={() => {
+					const id = m.id;
+					menu = null;
+					onprotect?.(id);
+				}}>{sheets.find((x) => x.id === m.id)?.protected ? 'Ôter la protection de la feuille…' : 'Protéger la feuille…'}</button
 			>
 		</div>
 	{/if}
@@ -274,5 +303,17 @@
 	}
 	.menu button:disabled {
 		color: #9aa0a6;
+	}
+	.menu hr {
+		border: none;
+		border-top: 1px solid #e5e7eb;
+		margin: 4px 0;
+	}
+	.lock {
+		display: inline-flex;
+		vertical-align: -1px;
+		margin-right: 4px;
+		color: #6b7280;
+		--icon-accent: #b45309;
 	}
 </style>

@@ -61,7 +61,8 @@ func init() {
 		&Command{
 			Name:    "sheets.list",
 			Summary: "Liste les feuilles du classeur, dans l'ordre des onglets.",
-			Returns: "{ {id, name}, ... }",
+			Details: "protected vaut true pour une feuille protégée (Révision › Protéger la feuille).",
+			Returns: "{ {id, name, protected}, ... }",
 			Example: `for _, f in ipairs(sheets.list()) do
   print(f.id, f.name)
 end`,
@@ -195,6 +196,74 @@ ui.show_sheet(f.name)`,
 				}
 				d, _ := c.Doc()
 				return nil, d.MoveSheet(c, s.ID, to)
+			},
+		},
+		&Command{
+			Name:    "sheets.protect",
+			Label:   "Protéger la feuille",
+			Summary: "Protège une feuille, comme Révision › Protéger la feuille : toute modification de son contenu est ensuite refusée.",
+			Details: "Restent permis la lecture, la sélection, la copie, les filtres et les requêtes SQL de lecture. Le mot de passe est facultatif ; il n'est pas stocké (seulement une empreinte salée). Protéger ne s'annule pas.",
+			Params:  []Param{pSheet, {Name: "password", Type: String, Desc: "mot de passe pour ôter la protection", Optional: true}},
+			Write:   true,
+			Example: `sheets.protect("Feuille1", "secret")
+print(sheets.list()[1].protected) -- true`,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				pw, _ := c.Str("password")
+				d, _ := c.Doc()
+				return nil, d.ProtectSheet(c, s.ID, pw)
+			},
+		},
+		&Command{
+			Name:    "sheets.unprotect",
+			Label:   "Ôter la protection de la feuille",
+			Summary: "Ôte la protection d'une feuille (avec son mot de passe s'il y en a un).",
+			Params:  []Param{pSheet, {Name: "password", Type: String, Desc: "mot de passe donné en protégeant", Optional: true}},
+			Write:   true,
+			Example: `sheets.protect("Feuille1", "secret")
+sheets.unprotect("Feuille1", "secret")`,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				pw, _ := c.Str("password")
+				d, _ := c.Doc()
+				return nil, d.UnprotectSheet(c, s.ID, pw)
+			},
+		},
+		&Command{
+			Name:    "sheets.protect_workbook",
+			Label:   "Protéger le classeur",
+			Summary: "Protège la structure du classeur, comme Révision › Protéger le classeur : ajouter, supprimer, renommer ou déplacer des feuilles est ensuite refusé.",
+			Details: "Le contenu des feuilles reste modifiable (voir sheets.protect). Le mot de passe est facultatif. Protéger ne s'annule pas.",
+			Params:  []Param{{Name: "password", Type: String, Desc: "mot de passe pour ôter la protection", Optional: true}},
+			Write:   true,
+			Run: func(c *Call) (any, error) {
+				d, err := c.Doc()
+				if err != nil {
+					return nil, err
+				}
+				pw, _ := c.Str("password")
+				return nil, d.ProtectWorkbook(c, pw)
+			},
+		},
+		&Command{
+			Name:    "sheets.unprotect_workbook",
+			Label:   "Ôter la protection du classeur",
+			Summary: "Ôte la protection de la structure du classeur (avec son mot de passe s'il y en a un).",
+			Params:  []Param{{Name: "password", Type: String, Desc: "mot de passe donné en protégeant", Optional: true}},
+			Write:   true,
+			Run: func(c *Call) (any, error) {
+				d, err := c.Doc()
+				if err != nil {
+					return nil, err
+				}
+				pw, _ := c.Str("password")
+				return nil, d.UnprotectWorkbook(c, pw)
 			},
 		},
 		&Command{

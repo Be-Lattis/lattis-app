@@ -469,6 +469,24 @@ Refusés pour l'instant :
 Un script ne peut donc pas encore créer de tableau ni de colonne : préparez le tableau de
 destination dans la grille (en-têtes compris), puis remplissez-le par script.
 
+### Feuilles protégées
+
+Une feuille protégée (Révision › Protéger la feuille) refuse toute écriture du script :
+`db.insert`, `db.update`, `db.delete`, `db.execute` sur l'un de ses tableaux, `cells.set`,
+`cells.paste`, mise en forme, lignes et colonnes, objets... Le script s'arrête avec le
+message « La feuille « X » est protégée : ôtez la protection (Révision › Ôter la
+protection) pour la modifier ». Les lectures (`db.query`, `sheets.get`...) restent permises.
+Un script peut ôter la protection s'il connaît le mot de passe, puis la remettre :
+
+```lua
+sheets.unprotect("Synthèse", "secret")
+db.execute([[UPDATE Synthese SET Total = 0]])
+sheets.protect("Synthèse", "secret")
+```
+
+De même, la structure du classeur protégée (`sheets.protect_workbook`) refuse
+`sheets.add`, `sheets.rename`, `sheets.move` et `sheets.delete`.
+
 ---
 
 ## 5. Piloter l'application
@@ -770,6 +788,7 @@ print(erreurs .. " erreur(s)")
 | `db.execute : ... cannot store TEXT value in INTEGER column ...` | valeur du mauvais type dans `db.execute` | convertir la valeur, ou passer par `db.update` |
 | `db.update : tableau "X" : pas de ligne 99` | `_id` inexistant ou ligne déjà supprimée | relire `_id` dans le tableau |
 | `db.execute : les changements de structure ... ne sont pas encore pris en charge` | `CREATE`, `ALTER`, `DROP` | créer le tableau dans la grille |
+| `La feuille « X » est protégée : ôtez la protection ...` | écriture sur une feuille protégée | `sheets.unprotect("X", "mot de passe")`, ou Révision › Ôter la protection |
 | `script arrêté : durée maximale dépassée` | plus de 30 s (boucle infinie, traitement trop long) | corriger la boucle, ou passer par `db.execute` |
 
 ---

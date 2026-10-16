@@ -348,8 +348,9 @@ export const apiReference: RefEntry[] = [
 	{
 		name: "sheets.list",
 		category: "sheets",
-		signature: "sheets.list() → { {id, name}, ... }",
+		signature: "sheets.list() → { {id, name, protected}, ... }",
 		summary: "Liste les feuilles du classeur, dans l'ordre des onglets.",
+		details: "protected vaut true pour une feuille protégée (Révision › Protéger la feuille).",
 		example: "for _, f in ipairs(sheets.list()) do\n  print(f.id, f.name)\nend",
 		args: [0, 0]
 	},
@@ -360,6 +361,23 @@ export const apiReference: RefEntry[] = [
 		summary: "Place une feuille au rang position parmi les onglets (1 : premier).",
 		details: "Paramètres — sheet : feuille à déplacer ; position : rang, à partir de 1. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.move{sheet = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		args: [1, 2]
+	},
+	{
+		name: "sheets.protect",
+		category: "sheets",
+		signature: "sheets.protect([sheet], [password])",
+		summary: "Protège une feuille, comme Révision › Protéger la feuille : toute modification de son contenu est ensuite refusée.",
+		details: "Restent permis la lecture, la sélection, la copie, les filtres et les requêtes SQL de lecture. Le mot de passe est facultatif ; il n'est pas stocké (seulement une empreinte salée). Protéger ne s'annule pas. Paramètres — sheet : feuille (nom ou identifiant) ; absente : la feuille affichée ; password : mot de passe pour ôter la protection. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.protect{sheet = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "sheets.protect(\"Feuille1\", \"secret\")\nprint(sheets.list()[1].protected) -- true",
+		args: [0, 2]
+	},
+	{
+		name: "sheets.protect_workbook",
+		category: "sheets",
+		signature: "sheets.protect_workbook([password])",
+		summary: "Protège la structure du classeur, comme Révision › Protéger le classeur : ajouter, supprimer, renommer ou déplacer des feuilles est ensuite refusé.",
+		details: "Le contenu des feuilles reste modifiable (voir sheets.protect). Le mot de passe est facultatif. Protéger ne s'annule pas. Paramètres — password : mot de passe pour ôter la protection. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		args: [0, 1]
 	},
 	{
 		name: "sheets.rename",
@@ -393,6 +411,23 @@ export const apiReference: RefEntry[] = [
 		summary: "Fixe la hauteur (pixels) d'une ligne de la feuille ; 0 revient à la hauteur par défaut.",
 		details: "Paramètres — row : ligne de la feuille, à partir de 1 ; height : hauteur en pixels ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.set_row_height{row = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		args: [1, 3]
+	},
+	{
+		name: "sheets.unprotect",
+		category: "sheets",
+		signature: "sheets.unprotect([sheet], [password])",
+		summary: "Ôte la protection d'une feuille (avec son mot de passe s'il y en a un).",
+		details: "Paramètres — sheet : feuille (nom ou identifiant) ; absente : la feuille affichée ; password : mot de passe donné en protégeant. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.unprotect{sheet = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "sheets.protect(\"Feuille1\", \"secret\")\nsheets.unprotect(\"Feuille1\", \"secret\")",
+		args: [0, 2]
+	},
+	{
+		name: "sheets.unprotect_workbook",
+		category: "sheets",
+		signature: "sheets.unprotect_workbook([password])",
+		summary: "Ôte la protection de la structure du classeur (avec son mot de passe s'il y en a un).",
+		details: "Paramètres — password : mot de passe donné en protégeant. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		args: [0, 1]
 	},
 	{
 		name: "tables.clear_filters",

@@ -54,6 +54,12 @@
 	// Boîtes de dialogue ouvertes par un script ou un assistant (ui.dialog…), la plus ancienne d'abord.
 	let dialogs = $state<DialogSpec[]>([]);
 	let mcpOpen = $state(false);
+	// Révision › Protéger : boîte du mot de passe (protéger, ou ôter une
+	// protection qui en a un).
+	let protecting = $state<{ what: 'sheet' | 'workbook'; id: number; name: string; off: boolean } | null>(null);
+	let pw1 = $state('');
+	let pw2 = $state('');
+	let pwError = $state('');
 
 	// Démo.
 	let demo = $state<{ name: string; rows: number; columns: { name: string; type: ColumnType }[]; sqlName: string; sqlColumns: string[] } | null>(null);
@@ -514,7 +520,7 @@
 	const query = (sql: string) => (mode === 'demo' ? GridService.Query(sql) : DocumentService.Query(sql));
 	const data = $derived(mode === 'demo' ? demoData : docData);
 	const title = $derived(mode === 'demo' ? 'Démo : 1 M de lignes' : mode === 'recover' ? 'Récupération' : docState.title);
-	const tabs = $derived(mode === 'demo' ? (demo ? [{ id: 1, name: demo.name }] : []) : (layout?.sheets ?? []).map((s) => ({ id: s.id, name: s.name })));
+	const tabs = $derived(mode === 'demo' ? (demo ? [{ id: 1, name: demo.name }] : []) : (layout?.sheets ?? []).map((s) => ({ id: s.id, name: s.name, protected: s.protected })));
 
 	/** « Afficher sur la feuille » : va sur la feuille de l'objet et le sélectionne. */
 	async function gotoObject(name: string) {
@@ -538,6 +544,59 @@
 		sheetId = id;
 		await reload();
 		sheet?.focus();
+	}
+
+	// --- Protection (Révision) ----------------------------------------------
+
+	const activeInfo = $derived(layout?.sheets?.find((s) => s.id === sheetId));
+	const sheetLocked = $derived(mode === 'doc' && !!activeInfo?.protected);
+	const lockedMsg = $derived(
+		sheetLocked ? `La feuille « ${activeInfo?.name ?? ''} » est protégée : ôtez la protection (Révision › Ôter la protection) pour la modifier` : ''
+	);
+
+	/** Protège, ou ôte la protection (mot de passe demandé s'il y en a un). */
+	function toggleProtect(what: 'sheet' | 'workbook', id = sheetId) {
+		if (mode !== 'doc' || !layout) return;
+		const s = layout.sheets?.find((x) => x.id === id);
+		const on = what === 'sheet' ? !!s?.protected : !!layout.workbookProtected;
+		const hasPw = what === 'sheet' ? !!s?.password : !!layout.workbookPassword;
+		const name = what === 'sheet' ? (s?.name ?? '') : docState.title;
+		if (on && !hasPw) {
+			applyProtect(what, id, name, true, '');
+			return;
+		}
+		pw1 = pw2 = pwError = '';
+		protecting = { what, id, name, off: on };
+	}
+
+	async function applyProtect(what: 'sheet' | 'workbook', id: number, name: string, off: boolean, pw: string) {
+		try {
+			if (what === 'sheet') await (off ? DocumentService.UnprotectSheet(id, pw) : DocumentService.ProtectSheet(id, pw));
+			else await (off ? DocumentService.UnprotectWorkbook(pw) : DocumentService.ProtectWorkbook(pw));
+			protecting = null;
+			await reload();
+			notice =
+				what === 'sheet'
+					? off
+						? `Protection de la feuille « ${name} » ôtée`
+						: `Feuille « ${name} » protégée`
+					: off
+						? 'Protection du classeur ôtée'
+						: 'Structure du classeur protégée';
+		} catch (e) {
+			if (protecting) pwError = err(e);
+			else notice = err(e);
+		}
+	}
+
+	function confirmProtect() {
+		const p = protecting;
+		if (!p) return;
+		if (!p.off && pw1 !== pw2) {
+			pwError = 'Les deux mots de passe ne correspondent pas';
+			return;
+		}
+		applyProtect(p.what, p.id, p.name, p.off, pw1);
 	}
 
 	async function sheetAction(fn: () => Promise<unknown>) {
@@ -602,6 +661,9 @@
 		ongridlines={mode === 'doc' ? (show) => DocumentService.SetGridlines(sheetId, show).then(reload).catch((e) => (notice = err(e))) : undefined}
 		headings={!!layout?.sheets?.find((s) => s.id === sheetId)?.headings}
 		onheadings={mode === 'doc' ? (show) => DocumentService.SetHeadings(sheetId, show).then(reload).catch((e) => (notice = err(e))) : undefined}
+		sheetProtected={sheetLocked}
+		workbookProtected={mode === 'doc' && !!layout?.workbookProtected}
+		onprotect={mode === 'doc' ? (what) => toggleProtect(what) : undefined}
 	/>
 
 	<main>
@@ -654,6 +716,7 @@
 						onhscroll={(s) => (hscroll = s)}
 						gridlines={!layout?.sheets?.find((s) => s.id === sheetId)?.noGrid}
 						headings={!!layout?.sheets?.find((s) => s.id === sheetId)?.headings}
+						locked={lockedMsg}
 						autoBench={bench ? (r) => GridService.ReportBench(r) : undefined}
 					/>
 				</div>
@@ -703,12 +766,65 @@
 		ondelete={mode === 'doc' ? (id) => sheetAction(() => DocumentService.DeleteSheet(id)) : undefined}
 		hscroll={view === 'grid' ? hscroll : undefined}
 		onhscroll={(x) => sheet?.scrollLeftTo(x)}
+		onprotect={mode === 'doc' ? (id) => toggleProtect('sheet', id) : undefined}
+		locked={mode === 'doc' && !!layout?.workbookProtected}
+		onrefused={(m) => (notice = m)}
 	/>
 	{#each dialogs.slice(0, 1) as d (d.id)}
 		<ScriptDialog spec={d} onanswer={(v) => answerDialog(d, v)} />
 	{/each}
 	{#if mcpOpen}
 		<McpPanel onclose={() => (mcpOpen = false)} />
+	{/if}
+	{#if protecting}
+		{@const p = protecting}
+		<div class="modal-back">
+			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+			<form
+				class="modal protect"
+				aria-label="Protection"
+				onkeydown={(e) => {
+					e.stopPropagation();
+					if (e.key === 'Escape') protecting = null;
+				}}
+				onsubmit={(e) => {
+					e.preventDefault();
+					confirmProtect();
+				}}
+			>
+				<p>
+					{#if p.what === 'sheet'}
+						{p.off ? `Ôter la protection de la feuille « ${p.name} »` : `Protéger la feuille « ${p.name} »`}
+					{:else}
+						{p.off ? 'Ôter la protection du classeur' : 'Protéger la structure du classeur'}
+					{/if}
+				</p>
+				{#if !p.off}
+					<p class="muted">
+						{p.what === 'sheet'
+							? 'Saisie, collage, mise en forme, lignes et colonnes, tri, objets et requêtes SQL d’écriture seront refusés sur cette feuille. Lecture, copie et filtres restent permis.'
+							: 'Ajouter, supprimer, renommer ou déplacer des feuilles sera refusé.'}
+					</p>
+				{/if}
+				<label>
+					Mot de passe{p.off ? '' : ' (facultatif)'}
+					<!-- svelte-ignore a11y_autofocus -->
+					<input type="password" bind:value={pw1} autofocus autocomplete="off" />
+				</label>
+				{#if !p.off}
+					<label>
+						Confirmer le mot de passe
+						<input type="password" bind:value={pw2} autocomplete="off" />
+					</label>
+					<p class="muted">Sans le mot de passe, la protection ne pourra plus être ôtée : notez-le.</p>
+				{/if}
+				{#if pwError}<p class="error">{pwError}</p>{/if}
+				<div class="actions">
+					<button type="submit" class="primary">OK</button>
+					<button type="button" onclick={() => (protecting = null)}>Annuler</button>
+				</div>
+			</form>
+		</div>
 	{/if}
 	{#if closing}
 		<div class="modal-back">
@@ -901,6 +1017,28 @@
 	}
 	.modal .actions {
 		justify-content: flex-end;
+	}
+	.modal.protect {
+		min-width: 340px;
+	}
+	.modal.protect label {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		margin-bottom: 10px;
+	}
+	.modal.protect input {
+		font: inherit;
+		padding: 4px 6px;
+		border: 1px solid #c9cdd2;
+		border-radius: 3px;
+	}
+	.modal.protect input:focus {
+		outline: none;
+		border-color: #217346;
+	}
+	.modal.protect .muted {
+		margin-top: -6px;
 	}
 	.error {
 		color: #b42318;

@@ -33,7 +33,7 @@ func (m *Model) SetRules(ctx context.Context, table string, i int, rules []Rule)
 		}
 	}
 	return m.Do(ctx, "Mise en forme conditionnelle", func(t *tx) error {
-		tb, err := t.tableByName(table)
+		tb, err := t.editTable(table)
 		if err != nil {
 			return err
 		}

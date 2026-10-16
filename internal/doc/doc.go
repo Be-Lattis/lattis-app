@@ -21,6 +21,8 @@ type Document struct {
 	Bus   *command.Bus
 	arc   *archive.Doc
 	saved int64 // dernière commande appliquée au moment de l'enregistrement
+	// Changements de protection (hors journal) au moment de l'enregistrement.
+	savedProt int64
 }
 
 func wrap(ctx context.Context, a *archive.Doc) (*Document, error) {
@@ -96,7 +98,7 @@ func (d *Document) top(ctx context.Context) (int64, error) {
 // (annuler jusqu'à l'état enregistré le rend de nouveau « propre »).
 func (d *Document) Dirty(ctx context.Context) (bool, error) {
 	top, err := d.top(ctx)
-	return top != d.saved, err
+	return top != d.saved || d.ProtectionChanges() != d.savedProt, err
 }
 
 // Save enregistre dans path (vide : le fichier courant).
@@ -108,10 +110,11 @@ func (d *Document) Save(ctx context.Context, path string) error {
 	if err != nil {
 		return err
 	}
+	prot := d.ProtectionChanges()
 	if err := d.arc.Save(ctx, path); err != nil {
 		return err
 	}
-	d.saved = top
+	d.saved, d.savedProt = top, prot
 	return nil
 }
 
@@ -120,7 +123,7 @@ func (d *Document) Save(ctx context.Context, path string) error {
 func (d *Document) MarkSaved(ctx context.Context) error {
 	top, err := d.top(ctx)
 	if err == nil {
-		d.saved = top
+		d.saved, d.savedProt = top, d.ProtectionChanges()
 	}
 	return err
 }

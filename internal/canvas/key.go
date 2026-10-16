@@ -46,7 +46,7 @@ func (t *tx) keyCheck(tb Table, i int) (string, error) {
 // s'affichent dans la marge à la place des numéros.
 func (m *Model) SetKey(ctx context.Context, table string, i int) error {
 	return m.Do(ctx, "Définir la clé", func(t *tx) error {
-		tb, err := t.tableByName(table)
+		tb, err := t.editTable(table)
 		if err != nil {
 			return err
 		}
@@ -69,7 +69,7 @@ func (m *Model) SetKey(ctx context.Context, table string, i int) error {
 // ClearKey retire la clé du tableau (les lignes reprennent leurs numéros).
 func (m *Model) ClearKey(ctx context.Context, table string) error {
 	return m.Do(ctx, "Retirer la clé", func(t *tx) error {
-		tb, err := t.tableByName(table)
+		tb, err := t.editTable(table)
 		if err != nil || tb.Key == 0 {
 			return err
 		}

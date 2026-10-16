@@ -58,13 +58,20 @@ schéma de chaque outil (`tools/list`).
 |---|---|
 | Classeur | `doc_state`, `doc_undo`, `doc_redo`, `doc_new`, `doc_open`, `doc_save`, `doc_import`, `doc_export_csv`, `doc_recalc` |
 | SQL | `db_query` (lecture, noms affichés, 10 000 lignes au plus), `db_execute` (INSERT, UPDATE, DELETE annulables) |
-| Feuilles | `sheets_list`, `sheets_get`, `sheets_add`, `sheets_rename`, `sheets_move`, `sheets_delete`, `sheets_set_column_width`, `sheets_set_row_height`, `sheets_find`, `sheets_replace` |
+| Feuilles | `sheets_list`, `sheets_get`, `sheets_add`, `sheets_rename`, `sheets_move`, `sheets_delete`, `sheets_set_column_width`, `sheets_set_row_height`, `sheets_find`, `sheets_replace`, `sheets_protect`, `sheets_unprotect`, `sheets_protect_workbook`, `sheets_unprotect_workbook` |
 | Cellules | `cells_get`, `cells_set`, `cells_paste`, `cells_clear`, `cells_style`, `cells_style_lines`, `cells_name`, `cells_dependencies` |
 | Tableaux | `tables_list`, `tables_get`, `tables_rows`, `tables_rename`, `tables_move`, `tables_delete`, `tables_sort`, `tables_insert_row`, `tables_delete_row`, `tables_clear_filters`, `tables_duplicates`, `tables_remove_duplicates`, `tables_promote_header`, `tables_key_check`, `tables_set_key`, `tables_clear_key`, `tables_extract_columns` |
 | Colonnes | `columns_insert`, `columns_rename`, `columns_delete`, `columns_set_type`, `columns_type_preview`, `columns_type_mix`, `columns_fix_type`, `columns_values`, `columns_set_filter`, `columns_set_rules` |
 | Interface | `ui_selection`, `ui_select`, `ui_select_object`, `ui_select_cells`, `ui_show_sheet`, `ui_show_view`, `ui_notify`, `ui_alert`, `ui_confirm`, `ui_prompt`, `ui_dialog` |
 | Objets | `charts_create`, `charts_set`, `charts_place`, `charts_delete`, `pivots_create`, `pivots_set`, `pivots_delete`, `buttons_create`, `buttons_set`, `buttons_place`, `buttons_delete`, `buttons_list`, `buttons_run` |
 | Scripts | `scripts_list`, `scripts_save`, `scripts_delete`, `scripts_check`, `scripts_run`, `formulas_functions` |
+
+Une feuille protégée (Révision › Protéger la feuille, ou `sheets_protect`) refuse toute
+écriture, outils `cells_*`, `tables_*`, `columns_*`, objets et `db_execute` compris, avec
+le message « La feuille « X » est protégée : ôtez la protection (Révision › Ôter la
+protection) pour la modifier ». La structure du classeur protégée (`sheets_protect_workbook`)
+refuse d'ajouter, supprimer, renommer ou déplacer des feuilles. `doc_undo` et `doc_redo`
+refusent aussi une action qui toucherait une feuille protégée.
 
 `ui_dialog`, `ui_confirm` et `ui_prompt` ouvrent une boîte de dialogue dans la fenêtre et
 attendent la réponse de l'utilisateur : l'assistant peut ainsi lui demander une

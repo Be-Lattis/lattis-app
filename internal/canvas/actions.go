@@ -35,6 +35,9 @@ type Event struct {
 func (m *Model) SetCell(ctx context.Context, sheet int64, row, col int, raw string) (Event, error) {
 	var ev Event
 	err := m.Do(ctx, "Saisie", func(t *tx) error {
+		if err := t.guard(sheet); err != nil {
+			return err
+		}
 		err := t.input(sheet, row, col, raw, &ev)
 		ev.Keyed = t.keyed
 		return err
@@ -309,7 +312,7 @@ func (t *tx) tableName(sheet int64, row, col int) (string, error) {
 // lignes pour ajouter à la fin).
 func (m *Model) InsertRow(ctx context.Context, table string, n int) error {
 	return m.Do(ctx, "Insérer une ligne", func(t *tx) error {
-		tb, err := t.tableByName(table)
+		tb, err := t.editTable(table)
 		if err != nil {
 			return err
 		}
@@ -349,7 +352,7 @@ func (m *Model) InsertRow(ctx context.Context, table string, n int) error {
 // dessous ne remonte pas.
 func (m *Model) DeleteRow(ctx context.Context, table string, n int) error {
 	return m.Do(ctx, "Supprimer une ligne", func(t *tx) error {
-		tb, err := t.tableByName(table)
+		tb, err := t.editTable(table)
 		if err != nil {
 			return err
 		}
@@ -364,7 +367,7 @@ func (m *Model) DeleteRow(ctx context.Context, table string, n int) error {
 // InsertColumn insère une colonne avant la colonne i.
 func (m *Model) InsertColumn(ctx context.Context, table string, i int, name string) error {
 	return m.Do(ctx, "Insérer une colonne", func(t *tx) error {
-		tb, err := t.tableByName(table)
+		tb, err := t.editTable(table)
 		if err != nil {
 			return err
 		}
@@ -379,7 +382,7 @@ func (m *Model) InsertColumn(ctx context.Context, table string, i int, name stri
 // DeleteColumn supprime la colonne i (un tableau garde au moins une colonne).
 func (m *Model) DeleteColumn(ctx context.Context, table string, i int) error {
 	return m.Do(ctx, "Supprimer une colonne", func(t *tx) error {
-		tb, err := t.tableByName(table)
+		tb, err := t.editTable(table)
 		if err != nil {
 			return err
 		}
@@ -394,7 +397,7 @@ func (m *Model) DeleteColumn(ctx context.Context, table string, i int) error {
 // hors type seront marquées invalides.
 func (m *Model) FixType(ctx context.Context, table string, i int) error {
 	return m.Do(ctx, "Fixer le type", func(t *tx) error {
-		tb, err := t.tableByName(table)
+		tb, err := t.editTable(table)
 		if err != nil {
 			return err
 		}

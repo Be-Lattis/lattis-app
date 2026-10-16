@@ -135,6 +135,9 @@ func (m *Model) Replace(ctx context.Context, sheet int64, text, by string) (int,
 	re := regexp.MustCompile(`(?i)` + regexp.QuoteMeta(text))
 	n := 0
 	err = m.Do(ctx, "Remplacer", func(t *tx) error {
+		if err := t.guard(sheet); err != nil {
+			return err
+		}
 		for _, mt := range matches {
 			raw, ok, err := t.rawAt(sheet, mt.Row, mt.Col)
 			if err != nil {
