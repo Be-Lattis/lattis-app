@@ -27,6 +27,9 @@ L'onglet SCRIPT a trois zones :
   repart d'un exemple.
 - **Au centre, l'éditeur** (numéros de ligne, parenthèses appariées, Tab pour indenter).
   Le nom du script se modifie dans le champ en haut.
+- **À droite, la référence** (bouton *Référence* pour l'afficher ou la masquer) : toutes les
+  fonctions disponibles, par catégorie, avec une recherche. Un clic sur une fonction montre sa
+  signature, ses précisions et un exemple, que *Insérer l'exemple* place dans l'éditeur.
 - **En bas, la sortie** : ce que le script affiche avec `print`, au fil de l'exécution, puis
   une ligne d'état, par exemple `Terminé en 0.12 s · 3 ligne(s) écrite(s) (Ctrl+Z pour tout annuler)`.
   Une erreur s'affiche en rouge sous la sortie.
@@ -36,6 +39,18 @@ L'onglet SCRIPT a trois zones :
 | Exécuter le script | ▶ Exécuter | Ctrl+Entrée |
 | Arrêter le script en cours | ■ Arrêter | |
 | Enregistrer le script dans le classeur | Enregistrer (un `•` signale des modifications) | Ctrl+S |
+
+L'éditeur vérifie le script pendant la frappe :
+
+- une **erreur de syntaxe** est soulignée en rouge, avec un message qui dit quoi corriger
+  (`end` manquant, `!=` au lieu de `~=`, accent dans un nom...) ;
+- un **avertissement** jaune signale un nom jamais défini (`prnt`), une fonction qui n'existe
+  pas ou n'est pas disponible (`db.qury`, `io.open`), un mauvais nombre d'arguments, ou
+  `db:query` écrit avec deux-points ;
+- une **suggestion** conseille `local` pour une variable globale.
+
+Le survol d'un nom de fonction affiche sa signature. Le moteur revérifie la syntaxe avant
+d'exécuter : le linter montre les erreurs plus tôt, il ne garantit pas qu'un script tourne.
 
 Bon à savoir :
 
