@@ -1048,3 +1048,28 @@ func TestSpill(t *testing.T) {
 		t.Fatalf("déversement bloqué : %+v", c)
 	}
 }
+
+func TestRemoveDuplicates(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Ville", "Pays"}, {"Lyon", "FR"}, {"lyon", "FR"}, {"Rome", "IT"}, {"Lyon", "BE"}, {"Rome", "IT"}}); err != nil {
+		t.Fatal(err)
+	}
+	before := dump(t, d)
+	n, err := d.RemoveDuplicates(ctx, "Feuille1", nil)
+	if err != nil || n != 2 {
+		t.Fatalf("doublons : %d, %v", n, err)
+	}
+	check(t, d, "doublons")
+	if got := view(t, d); !strings.Contains(got, "Lyon|FR\nRome|IT\nLyon|BE\n") {
+		t.Fatalf("après :\n%s", got)
+	}
+	d.bus.Undo(ctx)
+	if n, _ := d.RemoveDuplicates(ctx, "Feuille1", []int{0}); n != 3 {
+		t.Fatalf("doublons sur Ville : %d", n)
+	}
+	d.bus.Undo(ctx)
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation :\n%s", diff(before, got))
+	}
+}

@@ -221,6 +221,11 @@
 		clearFilters: (t) => DocumentService.ClearFilters(t.name).then(reload),
 		renameTable: (t, name) => DocumentService.RenameTable(t.name, name).then(reload),
 		recalc: () => DocumentService.Recalc().then(reload),
+		removeDuplicates: async (t) => {
+			const n = await DocumentService.RemoveDuplicates(t.name, []);
+			await reload();
+			return n;
+		},
 		deleteTables: (ts) => DocumentService.DeleteTables(ts.map((t) => t.name)).then(reload),
 		moveTable: (t, row, col) => DocumentService.MoveTable(t.name, row, col).then(reload),
 		extractColumns: (t, i0, i1, row, col) => DocumentService.ExtractColumns(t.name, i0, i1, row, col).then(reload),
@@ -267,7 +272,7 @@
 						}))
 					};
 					}),
-					cells: layout.cells ?? [],
+					cells: (layout.cells ?? []).map((c) => ({ ...c, spill: c.spill?.map((r) => r ?? []) })),
 					widths: layout.widths ?? [],
 					names: layout.names ?? [],
 					styles: layout.styles ?? []
@@ -341,6 +346,7 @@
 		onfind={mode === 'doc' ? (replace) => sheet?.openFinder(replace) : undefined}
 		onrules={mode === 'doc' ? () => sheet?.rulesActive() : undefined}
 		onfilter={mode === 'doc' ? (errorsOnly) => sheet?.filterActive(errorsOnly) : undefined}
+		ondedup={mode === 'doc' ? () => sheet?.dedupActive() : undefined}
 		onrecalc={mode === 'doc' ? () => DocumentService.Recalc().then(reload).catch((e) => (notice = err(e))) : undefined}
 	/>
 

@@ -534,3 +534,17 @@ func (s *DocumentService) Recalc(ctx context.Context) (DocState, error) {
 		return nil
 	})
 }
+
+// RemoveDuplicates supprime les lignes en double d'un tableau ; renvoie leur nombre.
+func (s *DocumentService) RemoveDuplicates(ctx context.Context, table string, cols []int) (int, error) {
+	d, err := s.current()
+	if err != nil {
+		return 0, err
+	}
+	n, err := d.RemoveDuplicates(ctx, table, cols)
+	if err != nil {
+		return 0, err
+	}
+	_, err = s.changed(ctx)
+	return n, err
+}

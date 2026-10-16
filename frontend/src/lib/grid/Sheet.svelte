@@ -117,6 +117,8 @@
 		renameTable?(table: SheetTable, name: string): Promise<unknown>;
 		/** Renouvelle AUJOURDHUI, MAINTENANT et ALEA (F9). */
 		recalc?(): Promise<unknown>;
+		/** Supprime les lignes en double ; renvoie leur nombre. */
+		removeDuplicates?(table: SheetTable): Promise<number>;
 		deleteTables?(tables: SheetTable[]): Promise<unknown>;
 		/** Déplace un tableau, en-tête en (row, col) ; côte à côte d'un autre : fusion. */
 		moveTable?(table: SheetTable, row: number, col: number): Promise<unknown>;
@@ -1049,6 +1051,22 @@
 	function closeRules() {
 		rulesDlg = null;
 		wrap.focus();
+	}
+
+	/** Supprime les doublons du tableau de la cellule active (ruban Données). */
+	export function dedupActive() {
+		const e = tableAt(active.row, active.col);
+		if (!e || !source.removeDuplicates) {
+			say('Placez la cellule active dans un tableau');
+			return;
+		}
+		const dedup = source.removeDuplicates;
+		writing = writing.then(() =>
+			dedup(e.t).then(
+				(n) => say(n ? `${n} ligne${n > 1 ? 's' : ''} en double supprimée${n > 1 ? 's' : ''} (Ctrl+Z pour annuler)` : 'Aucun doublon'),
+				(err) => say(String(err?.message ?? err))
+			)
+		);
 	}
 
 	/** Tri du tableau de la cellule active (ruban Données). */

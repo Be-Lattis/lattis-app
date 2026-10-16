@@ -42,9 +42,10 @@
 		onrules?: () => void;
 		onfilter?: (errorsOnly: boolean) => void;
 		onrecalc?: () => void;
+		ondedup?: () => void;
 	}
 
-	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc }: Props = $props();
+	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup }: Props = $props();
 	let fg = $state('#c00000');
 	let bg = $state('#fff2cc');
 	const st = (patch: Record<string, unknown>) => (onstyle ? () => onstyle(patch) : undefined);
@@ -139,7 +140,7 @@
 					{ label: 'Filtrer', icon: 'filter', run: onfilter ? () => onfilter(false) : undefined, hint: 'Filtrer le tableau par la colonne active' }
 				]
 			},
-			{ title: 'Outils de données', commands: [{ label: 'Supprimer les doublons', icon: 'remove-duplicates' }, { label: 'Convertir le type', icon: 'convert-type' }, { label: 'Erreurs seulement', icon: 'warning', run: onfilter ? () => onfilter(true) : undefined, hint: 'Afficher seulement les saisies hors type de la colonne active (bascule)' }] }
+			{ title: 'Outils de données', commands: [{ label: 'Supprimer les doublons', icon: 'remove-duplicates', run: ondedup, hint: 'Supprimer les lignes en double du tableau actif' }, { label: 'Convertir le type', icon: 'convert-type' }, { label: 'Erreurs seulement', icon: 'warning', run: onfilter ? () => onfilter(true) : undefined, hint: 'Afficher seulement les saisies hors type de la colonne active (bascule)' }] }
 		],
 		Formules: [
 			{ title: 'Bibliothèque', commands: [{ label: 'Insérer une fonction', icon: 'function' }, { label: 'Somme automatique', icon: 'autosum' }, { label: 'REFERENCE', icon: 'reference' }] },

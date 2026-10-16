@@ -18,6 +18,12 @@ export interface CellInfo {
      */
     "value": string;
     "error": boolean;
+
+    /**
+     * Tableau dynamique (FILTRE, TRIER…) : valeurs déversées depuis la
+     * cellule, vers le bas et la droite (la première est Value).
+     */
+    "spill"?: (string[] | null)[] | null;
 }
 
 /**

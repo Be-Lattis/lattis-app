@@ -219,6 +219,13 @@ export function Redo(): $CancellablePromise<$models.DocState> {
 }
 
 /**
+ * RemoveDuplicates supprime les lignes en double d'un tableau ; renvoie leur nombre.
+ */
+export function RemoveDuplicates(table: string, cols: number[] | null): $CancellablePromise<number> {
+    return $Call.ByID(1454030531, table, cols);
+}
+
+/**
  * RenameSheet et DeleteSheet agissent sur un onglet.
  */
 export function RenameSheet(sheet: number, name: string): $CancellablePromise<$models.DocState> {
