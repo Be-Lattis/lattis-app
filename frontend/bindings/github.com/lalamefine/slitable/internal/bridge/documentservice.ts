@@ -25,7 +25,7 @@ import * as grid$0 from "../grid/models.js";
 import * as $models from "./models.js";
 
 /**
- * AddSheet ajoute un onglet et renvoie son identifiant.
+ * AddSheet ajoute un onglet à la fin et renvoie son identifiant.
  */
 export function AddSheet(): $CancellablePromise<number> {
     return $Call.ByID(1000932635);
@@ -51,6 +51,14 @@ export function ClearFilters(table: string): $CancellablePromise<$models.DocStat
  */
 export function ClearKey(table: string): $CancellablePromise<$models.DocState> {
     return $Call.ByID(3624858029, table);
+}
+
+/**
+ * CloseDocument ferme le classeur ouvert (les modifications non enregistrées sont
+ * perdues : l'interface demande d'abord).
+ */
+export function CloseDocument(): $CancellablePromise<void> {
+    return $Call.ByID(3667101050);
 }
 
 /**
@@ -208,6 +216,13 @@ export function InsertRow(table: string, n: number): $CancellablePromise<$models
 }
 
 /**
+ * InsertSheet ajoute un onglet avant l'onglet before et renvoie son identifiant.
+ */
+export function InsertSheet(before: number): $CancellablePromise<number> {
+    return $Call.ByID(2301526607, before);
+}
+
+/**
  * KeyCheck dit si une colonne peut devenir la clé du tableau (vide : oui).
  */
 export function KeyCheck(table: string, i: number): $CancellablePromise<string> {
@@ -226,6 +241,13 @@ export function Layout(sheet: number): $CancellablePromise<canvas$0.Layout> {
  */
 export function MoveChart(id: number, row: number, col: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(566740440, id, row, col);
+}
+
+/**
+ * MoveSheet place un onglet au rang to (0 : premier).
+ */
+export function MoveSheet(sheet: number, to: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(4221634211, sheet, to);
 }
 
 /**
@@ -289,6 +311,14 @@ export function Query(q: string): $CancellablePromise<grid$0.QueryResult> {
  */
 export function Recalc(): $CancellablePromise<$models.DocState> {
     return $Call.ByID(3502116793);
+}
+
+/**
+ * Recent liste les classeurs ouverts ou enregistrés récemment qui existent
+ * encore, du plus récent au plus ancien.
+ */
+export function Recent(): $CancellablePromise<string[] | null> {
+    return $Call.ByID(1134676474);
 }
 
 /**

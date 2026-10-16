@@ -36,7 +36,7 @@
 	let { scripts, save, remove, run, stop, subscribe }: Props = $props();
 
 	const EXAMPLE = `-- Exemple : la liste des tableaux du classeur et leurs colonnes.
--- db.query, db.rows, db.insert, db.execute… : voir le guide du scripting.
+-- db.query, db.rows, db.insert, db.execute… : voir le bouton « Référence ».
 for _, t in ipairs(db.tables()) do
   print(t.name, #t.columns .. " colonne(s)")
 end

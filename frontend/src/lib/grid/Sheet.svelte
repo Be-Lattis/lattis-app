@@ -1044,8 +1044,12 @@
 			const e = mine ? cur : visible.find((e) => r > e.t.row && r <= e.last);
 			if (e) {
 				ctx.fillStyle = mine || !cur ? C.stripText : C.stripLine;
-				// Toujours le numéro de ligne, même avec une clé (🔑 dans l'en-tête).
-				const label = String(r - e.t.row);
+				// Avec une clé, ses valeurs identifient les lignes dans la marge (choix de Louis).
+				let label = String(r - e.t.row);
+				if (e.t.key !== undefined && r <= e.last) {
+					const k = e.cache.row(r - e.t.row - 1)?.text[e.t.key];
+					if (k !== undefined) label = k;
+				}
 				ctx.save();
 				ctx.beginPath();
 				ctx.rect(0, y, MARGIN - 4, rh(r));
@@ -1618,7 +1622,8 @@
 		const cols = e.t.columns;
 		const num = (c: Column) => c.type === 'integer' || c.type === 'decimal' || (c.type === 'formula' && c.formula !== undefined);
 		const cur = cols[active.col - e.t.col];
-		const x = cur && !num(cur) ? cur : (cols.find((c) => !num(c)) ?? cols[0]);
+		// Nuage de points : X est une colonne de nombres (l'active, sinon la première).
+		const x = kind === 'scatter' ? (cur && num(cur) ? cur : (cols.find(num) ?? cols[0])) : cur && !num(cur) ? cur : (cols.find((c) => !num(c)) ?? cols[0]);
 		let series = cols.filter((c) => c !== x && num(c)).map((c) => c.name);
 		if (kind === 'pie') series = series.slice(-1);
 		if (!series.length) {
@@ -1768,6 +1773,28 @@
 		}
 		const sort = source.sortTable;
 		menuAction(() => sort(e.t, active.col - e.t.col, desc));
+	}
+
+	/** Insérer ou supprimer la ligne ou la colonne de la cellule active (ruban Accueil › Cellules). */
+	export function cellsActive(op: 'insertRow' | 'deleteRow' | 'insertColumn' | 'deleteColumn') {
+		const e = tableAt(active.row, active.col);
+		if (!e) {
+			say('Placez la cellule active dans un tableau');
+			return;
+		}
+		const n = active.row - e.t.row - 1; // -1 : ligne d'en-tête
+		const i = active.col - e.t.col;
+		if (op === 'deleteRow' && n < 0) {
+			say('La ligne d’en-tête ne se supprime pas : supprimez le tableau ou ses colonnes');
+			return;
+		}
+		const fn = {
+			insertRow: source.insertRow && (() => source.insertRow!(e.t, Math.max(0, n))),
+			deleteRow: source.deleteRow && (() => source.deleteRow!(e.t, n)),
+			insertColumn: source.insertColumn && (() => source.insertColumn!(e.t, i)),
+			deleteColumn: source.deleteColumn && (() => source.deleteColumn!(e.t, i))
+		}[op];
+		menuAction(fn);
 	}
 
 	/** Échap ferme le dialogue ouvert, où que soit le focus. */

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -14,28 +15,122 @@ var ErrSheet = errors.New("onglet")
 // AddSheet ajoute un onglet à la fin et renvoie son identifiant.
 func (m *Model) AddSheet(ctx context.Context) (int64, error) {
 	var id int64
-	err := m.Do(ctx, "Nouvelle feuille", func(t *tx) error {
-		var pos int
-		if err := t.row(`SELECT coalesce(max(id), 0) + 1, coalesce(max(pos), -1) + 1 FROM _slitable_sheets`).Scan(&id, &pos); err != nil {
-			return err
-		}
-		name := ""
-		for n := int(id); ; n++ {
-			name = fmt.Sprintf("Feuille%d", n)
-			var k int
-			if err := t.row(`SELECT count(*) FROM _slitable_sheets WHERE name = ?`, name).Scan(&k); err != nil {
-				return err
-			}
-			if k == 0 {
-				break
-			}
-		}
-		return t.apply(
-			[]stmt{st(`INSERT INTO _slitable_sheets (id, name, pos) VALUES (?, ?, ?)`, id, name, pos)},
-			[]stmt{st(`DELETE FROM _slitable_sheets WHERE id = ?`, id)},
-		)
+	err := m.Do(ctx, "Nouvelle feuille", func(t *tx) (err error) {
+		id, err = t.addSheet()
+		return err
 	})
 	return id, err
+}
+
+// InsertSheet ajoute un onglet juste avant l'onglet before (Insérer, dans le
+// menu d'un onglet) et renvoie son identifiant.
+func (m *Model) InsertSheet(ctx context.Context, before int64) (int64, error) {
+	var id int64
+	err := m.Do(ctx, "Insérer une feuille", func(t *tx) error {
+		ids, err := t.sheetOrder()
+		if err != nil {
+			return err
+		}
+		at := slices.Index(ids, before)
+		if at < 0 {
+			return fmt.Errorf("%w : feuille introuvable", ErrSheet)
+		}
+		if id, err = t.addSheet(); err != nil {
+			return err
+		}
+		return t.moveSheet(id, at)
+	})
+	return id, err
+}
+
+// MoveSheet place l'onglet sheet au rang to (0 : premier), les autres
+// onglets gardant leur ordre.
+func (m *Model) MoveSheet(ctx context.Context, sheet int64, to int) error {
+	return m.Do(ctx, "Déplacer la feuille", func(t *tx) error { return t.moveSheet(sheet, to) })
+}
+
+func (t *tx) addSheet() (int64, error) {
+	var id int64
+	var pos int
+	if err := t.row(`SELECT coalesce(max(id), 0) + 1, coalesce(max(pos), -1) + 1 FROM _slitable_sheets`).Scan(&id, &pos); err != nil {
+		return 0, err
+	}
+	name := ""
+	for n := int(id); ; n++ {
+		name = fmt.Sprintf("Feuille%d", n)
+		var k int
+		if err := t.row(`SELECT count(*) FROM _slitable_sheets WHERE name = ?`, name).Scan(&k); err != nil {
+			return 0, err
+		}
+		if k == 0 {
+			break
+		}
+	}
+	return id, t.apply(
+		[]stmt{st(`INSERT INTO _slitable_sheets (id, name, pos) VALUES (?, ?, ?)`, id, name, pos)},
+		[]stmt{st(`DELETE FROM _slitable_sheets WHERE id = ?`, id)},
+	)
+}
+
+// sheetOrder donne les onglets dans l'ordre affiché.
+func (t *tx) sheetOrder() ([]int64, error) {
+	rs, err := t.query(`SELECT id FROM _slitable_sheets ORDER BY pos, id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rs.Close()
+	var ids []int64
+	for rs.Next() {
+		var id int64
+		if err := rs.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rs.Err()
+}
+
+// moveSheet renumérote les rangs pour placer sheet au rang to ; l'annulation
+// rend les rangs d'origine.
+func (t *tx) moveSheet(sheet int64, to int) error {
+	ids, err := t.sheetOrder()
+	if err != nil {
+		return err
+	}
+	from := slices.Index(ids, sheet)
+	if from < 0 {
+		return fmt.Errorf("%w : feuille introuvable", ErrSheet)
+	}
+	to = max(0, min(to, len(ids)-1))
+	if from == to {
+		return nil
+	}
+	old := map[int64]int{}
+	rs, err := t.query(`SELECT id, pos FROM _slitable_sheets`)
+	if err != nil {
+		return err
+	}
+	for rs.Next() {
+		var id int64
+		var pos int
+		if err := rs.Scan(&id, &pos); err != nil {
+			rs.Close()
+			return err
+		}
+		old[id] = pos
+	}
+	rs.Close()
+	if err := rs.Err(); err != nil {
+		return err
+	}
+	q := `UPDATE _slitable_sheets SET pos = ? WHERE id = ?`
+	var do, undo []stmt
+	ids = slices.Insert(slices.Delete(ids, from, from+1), to, sheet)
+	for i, id := range ids {
+		do = append(do, st(q, i, id))
+		undo = append(undo, st(q, old[id], id))
+	}
+	return t.apply(do, undo)
 }
 
 // RenameSheet renomme un onglet.

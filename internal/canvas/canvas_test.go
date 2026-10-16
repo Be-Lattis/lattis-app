@@ -388,6 +388,44 @@ func TestSheets(t *testing.T) {
 	}
 }
 
+func TestSheetOrder(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	order := func() string {
+		var s string
+		if err := d.db.Read().QueryRowContext(ctx, `SELECT group_concat(id, ',') FROM (SELECT id FROM _slitable_sheets ORDER BY pos, id)`).Scan(&s); err != nil {
+			t.Fatal(err)
+		}
+		return s
+	}
+	before := dump(t, d)
+	if _, err := d.AddSheet(ctx); err != nil {
+		t.Fatal(err)
+	}
+	id, err := d.InsertSheet(ctx, 1)
+	if err != nil || id != 3 {
+		t.Fatalf("InsertSheet = %d, %v", id, err)
+	}
+	if got := order(); got != "3,1,2" {
+		t.Fatalf("après insertion : %s", got)
+	}
+	if err := d.MoveSheet(ctx, 3, 2); err != nil {
+		t.Fatal(err)
+	}
+	if got := order(); got != "1,2,3" {
+		t.Fatalf("après déplacement : %s", got)
+	}
+	d.bus.Undo(ctx)
+	if got := order(); got != "3,1,2" {
+		t.Fatalf("après annulation du déplacement : %s", got)
+	}
+	d.bus.Undo(ctx)
+	d.bus.Undo(ctx)
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
+	}
+}
+
 func TestSetType(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)

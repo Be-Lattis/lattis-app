@@ -23,7 +23,7 @@
 		commands: Command[];
 	}
 
-	export type FileAction = 'new' | 'open' | 'save' | 'saveAs' | 'import' | 'export' | 'demo';
+	export type FileAction = 'new' | 'open' | 'save' | 'saveAs' | 'import' | 'export' | 'close' | 'demo';
 
 	interface Props {
 		view: View;
@@ -31,6 +31,11 @@
 		dirty: boolean;
 		undo: string; // libellé de l'action à annuler (vide : rien)
 		redo: string;
+		/** Aucun classeur ouvert (récupération, classeur fermé) : ruban grisé. */
+		disabled?: boolean;
+		/** Classeurs récents (chemins), pour Fichier › Récents. */
+		recent?: string[];
+		onrecent?: (path: string) => void;
 		onview: (v: View) => void;
 		onfile: (a: FileAction) => void;
 		onundo: () => void;
@@ -50,13 +55,17 @@
 		onpainter?: () => void;
 		onaudit?: (kind: 'pre' | 'dep' | 'clear') => void;
 		onchart?: (kind: 'bar' | 'line' | 'pie' | 'scatter') => void;
+		oncells?: (op: 'insertRow' | 'deleteRow' | 'insertColumn' | 'deleteColumn') => void;
 	}
 
-	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip, onpainter, onaudit }: Props = $props();
+	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells }: Props = $props();
 	let fg = $state('#c00000');
 	let bg = $state('#fff2cc');
 	const st = (patch: Record<string, unknown>) => (onstyle ? () => onstyle(patch) : undefined);
 	let fileOpen = $state(false);
+	let recentOpen = $state(false);
+	const fileName = (p: string) => p.split(/[\\/]/).pop() ?? p;
+	const cells = (op: 'insertRow' | 'deleteRow' | 'insertColumn' | 'deleteColumn') => (oncells ? () => oncells(op) : undefined);
 	// Palette ouverte sous le bouton Couleur ou Remplissage, comme dans Excel.
 	let palette = $state<'fg' | 'bg' | null>(null);
 	let palettePos = $state({ x: 0, y: 0 });
@@ -137,7 +146,7 @@
 			{
 				title: 'Nombre',
 				commands: [
-					{ label: '0,00', icon: 'number-format', run: st({ nf: '0,00' }), hint: 'Deux décimales' },
+					{ label: '0,00', icon: 'decimal-fixed', run: st({ nf: '0,00' }), hint: 'Deux décimales' },
 					{ label: 'Monétaire', icon: 'currency', run: st({ nf: '€' }) },
 					{ label: 'Pourcentage', icon: 'percent', run: st({ nf: '%' }) },
 					{ label: 'Standard', icon: 'number-format', run: st({ nf: null }), hint: 'Format Standard' },
@@ -148,6 +157,15 @@
 			{
 				title: 'Styles',
 				commands: [{ label: 'Mise en forme conditionnelle', icon: 'warning', run: onrules, hint: 'Règles de mise en forme de la colonne active' }]
+			},
+			{
+				title: 'Cellules',
+				commands: [
+					{ label: 'Insérer une ligne', icon: 'insert-row', run: cells('insertRow'), hint: 'Insérer une ligne au-dessus de la cellule active' },
+					{ label: 'Supprimer la ligne', icon: 'delete-row', run: cells('deleteRow'), hint: 'Supprimer la ligne de la cellule active' },
+					{ label: 'Insérer une colonne', icon: 'insert-column', run: cells('insertColumn'), hint: 'Insérer une colonne à gauche de la cellule active' },
+					{ label: 'Supprimer la colonne', icon: 'delete-column', run: cells('deleteColumn'), hint: 'Supprimer la colonne de la cellule active' }
+				]
 			},
 			{
 				title: 'Édition',
@@ -165,7 +183,8 @@
 				commands: [
 					{ label: 'Barres', icon: 'chart-bar', run: onchart ? () => onchart('bar') : undefined, hint: 'Graphique en barres du tableau actif' },
 					{ label: 'Courbes', icon: 'chart-line', run: onchart ? () => onchart('line') : undefined, hint: 'Graphique en courbes du tableau actif' },
-					{ label: 'Secteurs', icon: 'chart-pie', run: onchart ? () => onchart('pie') : undefined, hint: 'Graphique en secteurs du tableau actif' }
+					{ label: 'Secteurs', icon: 'chart-pie', run: onchart ? () => onchart('pie') : undefined, hint: 'Graphique en secteurs du tableau actif' },
+					{ label: 'Nuage de points', icon: 'chart-scatter', run: onchart ? () => onchart('scatter') : undefined, hint: 'Nuage de points du tableau actif' }
 				]
 			}
 		],
@@ -258,21 +277,35 @@
 			{#if fileOpen}
 				<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 				<div class="file-menu" use:dismiss={() => (fileOpen = false)}>
-					{#each [['new', 'Nouveau', 'Ctrl+N'], ['open', 'Ouvrir…', 'Ctrl+O'], ['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ['import', 'Importer (CSV, Excel)…', ''], ['export', 'Exporter le tableau en CSV…', ''], ...(import.meta.env.DEV ? [['demo', 'Démo : 1 M de lignes', '']] : [])] as [a, label, keys] (a)}
+					{#each [['new', 'Nouveau', 'Ctrl+N'], ['open', 'Ouvrir…', 'Ctrl+O']] as [a, label, keys] (a)}
 						<button onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keys}</span></button>
+					{/each}
+					<div class="recent-wrap" role="presentation" onmouseenter={() => (recentOpen = true)} onmouseleave={() => (recentOpen = false)}>
+						<button disabled={!recent.length} onclick={() => (recentOpen = !recentOpen)}><span>Récents</span><span class="keys">▸</span></button>
+						{#if recentOpen && recent.length}
+							<div class="file-menu sub">
+								{#each recent as p (p)}
+									<button title={p} onclick={() => { fileOpen = recentOpen = false; onrecent?.(p); }}><span>{fileName(p)}</span></button>
+								{/each}
+							</div>
+						{/if}
+					</div>
+					<hr />
+					{#each [['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ['import', 'Importer (CSV, Excel)…', ''], ['export', 'Exporter le tableau en CSV…', ''], ['close', 'Fermer', 'Ctrl+W'], ...(import.meta.env.DEV ? [['demo', 'Démo : 1 M de lignes', '']] : [])] as [a, label, keys] (a)}
+						<button disabled={disabled && a !== 'import' && a !== 'demo'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keys}</span></button>
 					{/each}
 				</div>
 			{/if}
 		</div>
 		{#each tabs as t (t)}
-			<button class="tab" class:on={tab === t} onclick={() => select(t)}>{t}</button>
+			<button class="tab" class:on={tab === t} {disabled} onclick={() => select(t)}>{t}</button>
 		{/each}
 		<span class="sep"></span>
-		<button class="tab special" class:on={tab === 'SQL'} onclick={() => select('SQL')}>SQL</button>
-		<button class="tab special" class:on={tab === 'SCRIPT'} onclick={() => select('SCRIPT')}>SCRIPT</button>
+		<button class="tab special" class:on={tab === 'SQL'} {disabled} onclick={() => select('SQL')}>SQL</button>
+		<button class="tab special" class:on={tab === 'SCRIPT'} {disabled} onclick={() => select('SCRIPT')}>SCRIPT</button>
 	</nav>
 	{#if tab !== 'SQL' && tab !== 'SCRIPT'}
-		<div class="groups" use:observe>
+		<div class="groups" class:off={disabled} use:observe>
 			{#each ribbons[tab] as g, gi (g.title)}
 				{@const mode = modes[gi] ?? 'large'}
 				<section class="group">
@@ -304,7 +337,7 @@
 												openGroup = null;
 												c.run?.();
 											}}
-											title={c.hint ?? c.label}
+											title={c.hint ?? (c.run ? c.label : `${c.label} : à venir`)}
 										>
 											<Icon name={c.icon} size={18} />
 											<span class="label">{c.label}</span>
@@ -384,6 +417,10 @@
 		opacity: 0.6;
 		cursor: default;
 	}
+	.tab.on:disabled {
+		opacity: 1;
+		color: #6b7280;
+	}
 	.special {
 		letter-spacing: 0.04em;
 	}
@@ -419,8 +456,35 @@
 		cursor: pointer;
 		text-align: left;
 	}
-	.file-menu button:hover {
+	.file-menu button:hover:not(:disabled) {
 		background: #e3efe7;
+	}
+	.file-menu button:disabled {
+		color: #9aa0a6;
+		cursor: default;
+	}
+	.file-menu hr {
+		border: none;
+		border-top: 1px solid #e5e7eb;
+		margin: 4px 0;
+	}
+	.recent-wrap {
+		position: relative;
+	}
+	.file-menu.sub {
+		top: -5px;
+		left: 100%;
+		max-width: 420px;
+	}
+	.file-menu.sub span {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.groups.off {
+		/* Aucun classeur ouvert : rien à mettre en forme. */
+		opacity: 0.45;
+		pointer-events: none;
 	}
 	.keys {
 		color: #6b7280;
