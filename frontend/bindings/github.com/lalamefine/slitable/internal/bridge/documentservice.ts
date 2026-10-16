@@ -410,6 +410,13 @@ export function SetPivot(id: number, cfg: canvas$0.PivotConfig): $CancellablePro
 }
 
 /**
+ * SetRowHeight fixe la hauteur d'une ligne (0 : hauteur par défaut).
+ */
+export function SetRowHeight(sheet: number, row: number, height: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1962576274, sheet, row, height);
+}
+
+/**
  * SetRules remplace les règles de mise en forme conditionnelle d'une colonne.
  */
 export function SetRules(table: string, i: number, rules: canvas$0.Rule[] | null): $CancellablePromise<$models.DocState> {

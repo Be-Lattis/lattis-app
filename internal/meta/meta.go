@@ -147,6 +147,15 @@ CREATE TABLE _slitable_charts (
 	config TEXT NOT NULL
 ) STRICT;
 `,
+	// 10 → 11 : hauteur des lignes de chaque feuille (comme les largeurs).
+	`
+CREATE TABLE _slitable_row_heights (
+	sheet  INTEGER NOT NULL REFERENCES _slitable_sheets(id),
+	row    INTEGER NOT NULL,
+	height INTEGER NOT NULL,
+	PRIMARY KEY (sheet, row)
+) STRICT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

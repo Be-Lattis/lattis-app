@@ -223,6 +223,7 @@
 		convertPreview: (t, i, to) => DocumentService.ConvertPreview(t.name, i, to as Type),
 		setType: (t, i, to) => DocumentService.SetType(t.name, i, to as Type).then(reload),
 		setColumnWidth: (col, width) => DocumentService.SetColumnWidth(sheetId, col, width).then(reload),
+		setRowHeight: (row, height) => DocumentService.SetRowHeight(sheetId, row, height).then(reload),
 		setName: (row, col, name) => DocumentService.SetName(sheetId, row, col, name).then(reload),
 		sortTable: (t, i, desc) => DocumentService.SortTable(t.name, i, desc).then(reload),
 		setRules: (t, i, rules) => DocumentService.SetRules(t.name, i, rules).then(reload),
@@ -308,6 +309,7 @@
 					sheet: sheetId,
 					cells: (layout.cells ?? []).map((c) => ({ ...c, spill: c.spill?.map((r) => r ?? []) })),
 					widths: layout.widths ?? [],
+					heights: layout.heights ?? [],
 					names: layout.names ?? [],
 					styles: layout.styles ?? [],
 					charts: (layout.charts ?? []).map((c) => ({
