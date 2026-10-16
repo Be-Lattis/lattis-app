@@ -8,6 +8,7 @@
 	import { Catalog, displayHeaders, quote, translate, type SqlObject } from '#lib/sql/names.js';
 	import { load, record, save, search, when, type HistoryEntry } from '#lib/sql/history.js';
 	import { isWrite } from '#lib/sql/write.js';
+	import { dismiss } from '#lib/grid/dismiss.js';
 
 	interface Result {
 		columns: string[] | null;
@@ -79,6 +80,9 @@
 		running = false;
 	}
 
+	// Menu du clic droit sur un objet de la liste.
+	let objMenu = $state<{ o: SqlObject; x: number; y: number } | null>(null);
+
 	function remember(e: HistoryEntry) {
 		entries = record(entries, e);
 		save(entries);
@@ -121,7 +125,15 @@
 			<div class="list">
 				{#each objects as o (o.sqlName)}
 					<div class="obj">
-						<button class="obj-head" onclick={() => (open = open === o.sqlName ? null : o.sqlName)}>
+						<button
+							class="obj-head"
+							onclick={() => (open = open === o.sqlName ? null : o.sqlName)}
+							oncontextmenu={(e) => {
+								e.preventDefault();
+								objMenu = { o, x: e.clientX, y: e.clientY };
+							}}
+							title="Clic droit : interroger, insérer le nom, afficher sur la feuille"
+						>
 							<span>{open === o.sqlName ? '▾' : '▸'}</span>
 							<strong>{o.name}</strong>
 							<span class="muted">tableau · {o.sqlName} · {o.rows.toLocaleString('fr-FR')} lignes</span>
@@ -135,15 +147,33 @@
 									</li>
 								{/each}
 							</ul>
-							<div class="actions">
-								<button class="link" onclick={() => (sql = `SELECT *\nFROM ${quote(o.name)}\nLIMIT 100`)}>Interroger</button>
-								<button class="link" onclick={() => editor?.insert(quote(o.name))}>Insérer le nom</button>
-								<button class="link" onclick={() => ongoto(o.name)}>Afficher sur la feuille</button>
-							</div>
 						{/if}
 					</div>
 				{/each}
 			</div>
+			{#if objMenu}
+				{@const m = objMenu}
+				<div class="ctx" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (objMenu = null)}>
+					<button
+						onclick={() => {
+							objMenu = null;
+							sql = `SELECT *\nFROM ${quote(m.o.name)}\nLIMIT 100`;
+						}}>Interroger</button
+					>
+					<button
+						onclick={() => {
+							objMenu = null;
+							editor?.insert(quote(m.o.name));
+						}}>Insérer le nom</button
+					>
+					<button
+						onclick={() => {
+							objMenu = null;
+							ongoto(m.o.name);
+						}}>Afficher sur la feuille</button
+					>
+				</div>
+			{/if}
 		{:else}
 			<div class="hist-tools">
 				<input type="search" placeholder="Rechercher" bind:value={filter} />
@@ -198,6 +228,28 @@
 </div>
 
 <style>
+	.ctx {
+		position: fixed;
+		z-index: 30;
+		display: flex;
+		flex-direction: column;
+		min-width: 180px;
+		padding: 4px 0;
+		background: #fff;
+		border: 1px solid #d4d7db;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	}
+	.ctx button {
+		text-align: left;
+		background: none;
+		border: none;
+		font: inherit;
+		padding: 6px 14px;
+		cursor: pointer;
+	}
+	.ctx button:hover {
+		background: #e3efe7;
+	}
 	.sql {
 		display: flex;
 		height: 100%;
@@ -297,12 +349,6 @@
 	.col:hover {
 		color: #217346;
 		text-decoration: underline;
-	}
-	.actions {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0 12px;
-		margin-left: 22px;
 	}
 	.sent {
 		cursor: help;

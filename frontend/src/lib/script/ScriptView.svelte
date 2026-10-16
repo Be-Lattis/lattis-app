@@ -8,6 +8,7 @@
 	import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 	import { bracketMatching } from '@codemirror/language';
 	import { closeBrackets } from '@codemirror/autocomplete';
+	import { dismiss } from '#lib/grid/dismiss.js';
 
 	export interface Script {
 		id: number;
@@ -99,6 +100,49 @@ end
 		}
 	}
 
+	// Menu du clic droit sur un script : renommer, dupliquer, supprimer.
+	let menu = $state<{ s: Script; x: number; y: number } | null>(null);
+	let renaming = $state<number | null>(null);
+
+	function onItemMenu(ev: MouseEvent, s: Script) {
+		ev.preventDefault();
+		menu = { s, x: ev.clientX, y: ev.clientY };
+	}
+
+	async function renameTo(s: Script, name: string) {
+		renaming = null;
+		name = name.trim();
+		if (!name || name === s.name) return;
+		try {
+			await save(s.id, name, s.id === current.id ? (view?.state.doc.toString() ?? s.source) : s.source);
+			if (s.id === current.id) current.name = name;
+			status = `Script renommé « ${name} »`;
+			error = '';
+		} catch (e) {
+			error = String(e instanceof Error ? e.message : e);
+		}
+	}
+
+	async function duplicate(s: Script) {
+		menu = null;
+		const taken = new Set(scripts.map((x) => x.name.toLowerCase()));
+		let name = `${s.name} (copie)`;
+		for (let n = 2; taken.has(name.toLowerCase()); n++) name = `${s.name} (copie ${n})`;
+		try {
+			const id = await save(0, name, s.source);
+			open({ id, name, source: s.source });
+			status = `Script dupliqué : « ${name} »`;
+		} catch (e) {
+			error = String(e instanceof Error ? e.message : e);
+		}
+	}
+
+	async function removeScript(s: Script) {
+		menu = null;
+		await remove(s.id);
+		if (s.id === current.id) fresh();
+	}
+
 	async function doRemove() {
 		if (!current.id) return fresh();
 		await remove(current.id);
@@ -144,10 +188,39 @@ end
 		<h2>Scripts du classeur</h2>
 		<button class="new" onclick={fresh}>+ Nouveau script</button>
 		{#each scripts as s (s.id)}
-			<button class="item" class:on={s.id === current.id} onclick={() => open(s)}>{s.name}</button>
+			{#if renaming === s.id}
+				<!-- svelte-ignore a11y_autofocus -->
+				<input
+					class="rename"
+					value={s.name}
+					autofocus
+					onfocus={(e) => e.currentTarget.select()}
+					onkeydown={(e) => {
+						if (e.key === 'Enter') renameTo(s, e.currentTarget.value);
+						else if (e.key === 'Escape') renaming = null;
+					}}
+					onblur={(e) => renameTo(s, e.currentTarget.value)}
+					spellcheck="false"
+				/>
+			{:else}
+				<button class="item" class:on={s.id === current.id} onclick={() => open(s)} oncontextmenu={(e) => onItemMenu(e, s)}>{s.name}</button>
+			{/if}
 		{/each}
 		{#if scripts.length === 0}<p class="muted">Aucun script enregistré.</p>{/if}
 	</aside>
+	{#if menu}
+		{@const m = menu}
+		<div class="ctx" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (menu = null)}>
+			<button
+				onclick={() => {
+					menu = null;
+					renaming = m.s.id;
+				}}>Renommer</button
+			>
+			<button onclick={() => duplicate(m.s)}>Dupliquer</button>
+			<button onclick={() => removeScript(m.s)}>Supprimer</button>
+		</div>
+	{/if}
 	<section class="main">
 		<div class="toolbar">
 			<input class="name" bind:value={current.name} oninput={() => (dirty = true)} spellcheck="false" />
@@ -206,6 +279,35 @@ end
 		background: #e3efe7;
 		color: #14532d;
 		font-weight: 600;
+	}
+	.library .rename {
+		font: inherit;
+		padding: 4px 7px;
+		border: 1px solid #217346;
+		border-radius: 3px;
+		outline: none;
+	}
+	.ctx {
+		position: fixed;
+		z-index: 30;
+		display: flex;
+		flex-direction: column;
+		min-width: 160px;
+		padding: 4px 0;
+		background: #fff;
+		border: 1px solid #d4d7db;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	}
+	.ctx button {
+		text-align: left;
+		background: none;
+		border: none;
+		font: inherit;
+		padding: 6px 14px;
+		cursor: pointer;
+	}
+	.ctx button:hover {
+		background: #e3efe7;
 	}
 	.library .new {
 		color: #217346;

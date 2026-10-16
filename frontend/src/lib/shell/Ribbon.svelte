@@ -6,6 +6,7 @@
 
 	import Icon from '#lib/icons/Icon.svelte';
 	import { dismiss } from '#lib/grid/dismiss.js';
+	import { fit, groupWidth, type Mode } from './fit';
 	import type { IconName } from '#lib/icons/icons.js';
 
 	export type View = 'grid' | 'sql' | 'script';
@@ -77,6 +78,20 @@
 
 	const tabs = ['Accueil', 'Insertion', 'Données', 'Formules', 'Affichage'] as const;
 	let tab = $state<(typeof tabs)[number] | 'SQL' | 'SCRIPT'>('Accueil');
+	// Largeur disponible pour les groupes : ils se compactent pour y tenir.
+	let groupsW = $state(2000);
+	let openGroup = $state<{ title: string; x: number; y: number } | null>(null);
+	// Rapport entre largeur réelle et largeur estimée (polices, icônes) :
+	// mesuré après chaque rendu, il corrige l'estimation de fit.
+	let ratio = $state(1);
+	let groupsEl: HTMLElement;
+	function observe(node: HTMLElement) {
+		groupsEl = node;
+		const ro = new ResizeObserver(() => (groupsW = node.clientWidth));
+		ro.observe(node);
+		groupsW = node.clientWidth;
+		return { destroy: () => ro.disconnect() };
+	}
 
 	const ribbons: Record<string, Group[]> = $derived({
 		Accueil: [
@@ -162,6 +177,23 @@
 		]
 	});
 
+	const shapes = $derived(
+		tab === 'SQL' || tab === 'SCRIPT' ? [] : ribbons[tab].map((g) => ({ title: g.title, labels: g.commands.map((c) => (c.color ? null : c.label)) }))
+	);
+	const modes: Mode[] = $derived(
+		tab === 'SQL' || tab === 'SCRIPT' ? [] : fit(shapes, (groupsW - 12) / ratio)
+	);
+	$effect(() => {
+		const m = modes;
+		if (!groupsEl || !m.length) return;
+		requestAnimationFrame(() => {
+			const actual = [...groupsEl.children].reduce((s, c) => s + c.getBoundingClientRect().width, 0);
+			const est = shapes.reduce((s, g, i) => s + groupWidth(g, m[i] ?? 'large'), 0);
+			const r = actual && est ? actual / est : 1;
+			if (Math.abs(r - ratio) / ratio > 0.03) ratio = r;
+		});
+	});
+
 	function select(t: typeof tab) {
 		tab = t;
 		onview(t === 'SQL' ? 'sql' : t === 'SCRIPT' ? 'script' : 'grid');
@@ -172,6 +204,38 @@
 		if (view === 'grid' && (tab === 'SQL' || tab === 'SCRIPT')) tab = 'Accueil';
 	});
 </script>
+
+{#snippet colorCmd(c: Command)}
+	{@const kind = c.color!}
+		<div class="color-cmd">
+			<button class="cmd" disabled={!c.run} onclick={c.run} title={c.hint}>
+				<!-- La lettre montre l'effet : couleur du texte, ou fond rempli. -->
+				<span
+					class="swatch-icon"
+					style:color={kind === 'fg' ? fg : '#1f2328'}
+					style:background={kind === 'bg' ? bg : 'transparent'}
+					aria-label={c.label}>A</span
+				>
+			</button>
+			<button class="drop" disabled={!c.run} onclick={(ev) => openPalette(kind, ev)} title="Choisir la couleur">▾</button>
+			{#if palette === kind}
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div class="palette" style:left="{palettePos.x}px" style:top="{palettePos.y}px" use:dismiss={() => (palette = null)}>
+					<div class="grid">
+						{#each COLORS as col (col)}
+							<button class="chip" style:background={col} title={col} aria-label={col} onclick={() => pick(kind, col)}></button>
+						{/each}
+					</div>
+					{#if kind === 'bg'}<button class="row" onclick={() => pick('bg', null)}>Aucun remplissage</button>{/if}
+					{#if kind === 'fg'}<button class="row" onclick={() => pick('fg', null)}>Automatique</button>{/if}
+					<label class="row">
+						Autres couleurs…
+						<input type="color" value={kind === 'fg' ? fg : bg} onchange={(e) => pick(kind, (e.currentTarget as HTMLInputElement).value)} />
+					</label>
+				</div>
+			{/if}
+		</div>
+{/snippet}
 
 <header class="ribbon">
 	<nav class="tabs">
@@ -194,49 +258,67 @@
 		<button class="tab special" class:on={tab === 'SCRIPT'} onclick={() => select('SCRIPT')}>SCRIPT</button>
 	</nav>
 	{#if tab !== 'SQL' && tab !== 'SCRIPT'}
-		<div class="groups">
-			{#each ribbons[tab] as g (g.title)}
+		<div class="groups" use:observe>
+			{#each ribbons[tab] as g, gi (g.title)}
+				{@const mode = modes[gi] ?? 'large'}
 				<section class="group">
-					<div class="commands">
-						{#each g.commands as c (c.label)}
-							{#if c.color}
-								{@const kind = c.color}
-								<div class="color-cmd">
-									<button class="cmd" disabled={!c.run} onclick={c.run} title={c.hint}>
-										<!-- La lettre montre l'effet : couleur du texte, ou fond rempli. -->
-										<span
-											class="swatch-icon"
-											style:color={kind === 'fg' ? fg : '#1f2328'}
-											style:background={kind === 'bg' ? bg : 'transparent'}
-											aria-label={c.label}>A</span
+					{#if mode === 'collapsed'}
+						<div class="commands">
+							<button
+								class="cmd"
+								onclick={(ev) => {
+									const r = (ev.currentTarget as HTMLElement).getBoundingClientRect();
+									openGroup = openGroup?.title === g.title ? null : { title: g.title, x: r.left, y: r.bottom + 2 };
+								}}
+								title={g.title}
+							>
+								<Icon name={g.commands[0].icon} />
+								<span class="label">{g.title} ▾</span>
+							</button>
+						</div>
+						{#if openGroup?.title === g.title}
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<div class="group-menu" style:left="{openGroup.x}px" style:top="{openGroup.y}px" use:dismiss={() => (openGroup = null)}>
+								{#each g.commands as c (c.label)}
+									{#if c.color}
+										{@render colorCmd(c)}
+									{:else}
+										<button
+											class="cmd row-cmd"
+											disabled={!c.run}
+											onclick={() => {
+												openGroup = null;
+												c.run?.();
+											}}
+											title={c.hint ?? c.label}
 										>
-									</button>
-									<button class="drop" disabled={!c.run} onclick={(ev) => openPalette(kind, ev)} title="Choisir la couleur">▾</button>
-									{#if palette === kind}
-										<!-- svelte-ignore a11y_no_static_element_interactions -->
-										<div class="palette" style:left="{palettePos.x}px" style:top="{palettePos.y}px" use:dismiss={() => (palette = null)}>
-											<div class="grid">
-												{#each COLORS as col (col)}
-													<button class="chip" style:background={col} title={col} aria-label={col} onclick={() => pick(kind, col)}></button>
-												{/each}
-											</div>
-											{#if kind === 'bg'}<button class="row" onclick={() => pick('bg', null)}>Aucun remplissage</button>{/if}
-											{#if kind === 'fg'}<button class="row" onclick={() => pick('fg', null)}>Automatique</button>{/if}
-											<label class="row">
-												Autres couleurs…
-												<input type="color" value={kind === 'fg' ? fg : bg} onchange={(e) => pick(kind, (e.currentTarget as HTMLInputElement).value)} />
-											</label>
-										</div>
+											<Icon name={c.icon} size={18} />
+											<span class="label">{c.label}</span>
+										</button>
 									{/if}
-								</div>
-							{:else}
-								<button class="cmd" disabled={!c.run} onclick={c.run} title={c.hint ?? (c.run ? c.label : `${c.label} : à venir`)}>
-									<Icon name={c.icon} />
-									<span class="label">{c.label}</span>
-								</button>
-							{/if}
-						{/each}
-					</div>
+								{/each}
+							</div>
+						{/if}
+					{:else}
+						<div class="commands" class:stack={mode !== 'large'}>
+							{#each g.commands as c (c.label)}
+								{#if c.color}
+									{@render colorCmd(c)}
+								{:else}
+									<button
+										class="cmd"
+										class:row-cmd={mode !== 'large'}
+										disabled={!c.run}
+										onclick={c.run}
+										title={c.hint ?? (c.run ? c.label : `${c.label} : à venir`)}
+									>
+										<Icon name={c.icon} size={mode === 'large' ? 24 : 16} />
+										{#if mode !== 'icon'}<span class="label">{c.label}</span>{/if}
+									</button>
+								{/if}
+							{/each}
+						</div>
+					{/if}
 					<div class="title">{g.title}</div>
 				</section>
 			{/each}
@@ -375,6 +457,35 @@
 	.cmd:disabled {
 		/* Une commande désactivée perd sa couleur d'accent. */
 		--icon-accent: currentColor;
+	}
+	.commands.stack {
+		display: grid;
+		grid-template-rows: repeat(3, 1fr);
+		grid-auto-flow: column;
+		gap: 0 2px;
+	}
+	.cmd.row-cmd {
+		flex-direction: row;
+		justify-content: flex-start;
+		min-width: 0;
+		gap: 6px;
+		padding: 1px 6px;
+		font-size: 12px;
+	}
+	.commands.stack .color-cmd {
+		grid-row: span 3;
+	}
+	.group-menu {
+		position: fixed;
+		z-index: 20;
+		display: flex;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 2px;
+		padding: 6px;
+		background: #f3f4f6;
+		border: 1px solid #d4d7db;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 	}
 	.color-cmd {
 		position: relative;

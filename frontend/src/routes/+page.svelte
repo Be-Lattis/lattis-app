@@ -80,6 +80,15 @@
 		poll();
 	}
 
+	// Pas de menu natif du navigateur (Retour, Actualiser, Inspecter…) : les
+	// zones qui ont un menu ouvrent le leur ; les champs de saisie gardent le
+	// menu du système (couper, copier, coller).
+	function blockNativeMenu(e: MouseEvent) {
+		const t = e.target as HTMLElement | null;
+		if (t?.closest('input, textarea, [contenteditable="true"], .cm-editor')) return;
+		e.preventDefault();
+	}
+
 	onMount(() => {
 		const off = Events.On('doc:changed', () => {
 			if (mode === 'doc') reload();
@@ -338,6 +347,8 @@
 	}
 </script>
 
+<svelte:window oncontextmenu={blockNativeMenu} />
+
 <div class="app">
 	<TitleBar
 		{title}
@@ -453,10 +464,13 @@
 		<span class="spacer"></span>
 		{#if sheetStatus}
 			{#if sheetStatus.stats}<span class="stats">{sheetStatus.stats}</span>{/if}
-			<span>{sheetStatus.fetch}</span>
-			<span>{sheetStatus.draw}</span>
-			<span>{sheetStatus.fps}</span>
-			<span>{sheetStatus.edit}</span>
+			{#if import.meta.env.DEV}
+				<!-- Mesures de développement : absentes de la version livrée. -->
+				<span>{sheetStatus.fetch}</span>
+				<span>{sheetStatus.draw}</span>
+				<span>{sheetStatus.fps}</span>
+				<span>{sheetStatus.edit}</span>
+			{/if}
 		{:else}
 			<span>Prêt</span>
 		{/if}
