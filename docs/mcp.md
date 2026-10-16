@@ -65,6 +65,7 @@ schéma de chaque outil (`tools/list`).
 | Interface | `ui_selection`, `ui_select`, `ui_select_object`, `ui_select_cells`, `ui_show_sheet`, `ui_show_view`, `ui_notify`, `ui_alert`, `ui_confirm`, `ui_prompt`, `ui_dialog` |
 | Objets | `charts_create`, `charts_set`, `charts_place`, `charts_delete`, `pivots_create`, `pivots_set`, `pivots_delete`, `buttons_create`, `buttons_set`, `buttons_place`, `buttons_delete`, `buttons_list`, `buttons_run` |
 | Scripts | `scripts_list`, `scripts_save`, `scripts_delete`, `scripts_check`, `scripts_run`, `formulas_functions` |
+| Requêtes d'import | `queries_list`, `queries_save`, `queries_preview`, `queries_refresh`, `queries_refresh_all`, `queries_delete`, `connections_list` (sans mot de passe : une connexion PostgreSQL qui en demande un se déverrouille depuis l'interface) |
 
 Une feuille protégée (Révision › Protéger la feuille, ou `sheets_protect`) refuse toute
 écriture, outils `cells_*`, `tables_*`, `columns_*`, objets et `db_execute` compris, avec

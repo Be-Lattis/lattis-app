@@ -47,7 +47,9 @@ func parseText(raw string) value {
 	case "faux", "false":
 		return value{t: grid.Boolean, i: 0}
 	}
-	if keepsText(s) {
+	// Seulement pour ce qui s'écrit comme un nombre : « 01/02/2026 » reste
+	// une date.
+	if numeric(s) && keepsText(s) {
 		return textValue(raw)
 	}
 	// Les essais passent par strconv et time directement : les erreurs de

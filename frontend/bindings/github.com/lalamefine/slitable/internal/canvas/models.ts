@@ -482,6 +482,16 @@ export interface PivotValue {
 }
 
 /**
+ * QueryLoad décrit le chargement d'une requête dans une feuille.
+ */
+export interface QueryLoad {
+    "sheet": number;
+    "table": string;
+    "rows": number;
+    "warnings": string[] | null;
+}
+
+/**
  * ColWidth est la largeur choisie pour une colonne de la feuille.
  * RowHeight est la hauteur choisie pour une ligne de la feuille.
  */

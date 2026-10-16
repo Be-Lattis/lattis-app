@@ -22,6 +22,9 @@ import * as canvas$0 from "../canvas/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as grid$0 from "../grid/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as query$0 from "../query/models.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -88,6 +91,13 @@ export function CloseDocument(): $CancellablePromise<void> {
 }
 
 /**
+ * Connections liste les connexions du classeur.
+ */
+export function Connections(): $CancellablePromise<query$0.Connection[] | null> {
+    return $Call.ByID(263361706);
+}
+
+/**
  * ConvertPreview compte les valeurs qui ne se convertiraient pas au type to.
  */
 export function ConvertPreview(table: string, i: number, to: grid$0.Type): $CancellablePromise<number> {
@@ -134,6 +144,13 @@ export function DeleteColumn(table: string, i: number): $CancellablePromise<$mod
 }
 
 /**
+ * DeleteConnection supprime une connexion qu'aucune requête n'utilise.
+ */
+export function DeleteConnection(id: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1849251250, id);
+}
+
+/**
  * DeleteFavorite retire une requête des favoris.
  */
 export function DeleteFavorite(id: number): $CancellablePromise<$models.DocState> {
@@ -145,6 +162,13 @@ export function DeleteFavorite(id: number): $CancellablePromise<$models.DocState
  */
 export function DeletePivot(id: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(1561259534, id);
+}
+
+/**
+ * DeleteQuery supprime une requête (son tableau reste sur la feuille).
+ */
+export function DeleteQuery(id: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2675786682, id);
 }
 
 export function DeleteRow(table: string, n: number): $CancellablePromise<$models.DocState> {
@@ -227,6 +251,13 @@ export function DuplicatesPreview(table: string, cols: number[] | null): $Cancel
 }
 
 /**
+ * ExcelTables liste les tableaux d'un classeur .xlsx (navigateur).
+ */
+export function ExcelTables(path: string): $CancellablePromise<query$0.XLSXTable[] | null> {
+    return $Call.ByID(498273081, path);
+}
+
+/**
  * Execute exécute une requête d'écriture (INSERT, UPDATE, DELETE) sur le
  * classeur, avec les noms affichés des tableaux. Elle forme une étape
  * d'annulation ; les changements de structure sont refusés.
@@ -266,6 +297,14 @@ export function FieldValues(table: string, field: string): $CancellablePromise<c
 }
 
 /**
+ * FileBase donne le nom d'un fichier sans dossier ni extension (nom
+ * proposé pour une requête).
+ */
+export function FileBase(path: string): $CancellablePromise<string> {
+    return $Call.ByID(647236074, path);
+}
+
+/**
  * FilterValues donne les valeurs distinctes d'une colonne pour le filtre.
  */
 export function FilterValues(table: string, i: number): $CancellablePromise<canvas$0.FilterValue[] | null> {
@@ -277,6 +316,21 @@ export function FilterValues(table: string, i: number): $CancellablePromise<canv
  */
 export function Find(sheet: number, text: string): $CancellablePromise<canvas$0.Match[] | null> {
     return $Call.ByID(4206668974, sheet, text);
+}
+
+/**
+ * ForgetConnectionPassword oublie le mot de passe d'une connexion (session
+ * et trousseau).
+ */
+export function ForgetConnectionPassword(name: string): $CancellablePromise<void> {
+    return $Call.ByID(719773361, name);
+}
+
+/**
+ * ForgetQueryCache vide le cache des sources de l'aperçu.
+ */
+export function ForgetQueryCache(): $CancellablePromise<void> {
+    return $Call.ByID(3156251582);
 }
 
 /**
@@ -381,6 +435,13 @@ export function New(): $CancellablePromise<$models.DocState> {
 }
 
 /**
+ * NewQueryName propose un nom libre (« Requête1 », ou d'après base).
+ */
+export function NewQueryName(base: string): $CancellablePromise<string> {
+    return $Call.ByID(2397457360, base);
+}
+
+/**
  * Open ouvre un classeur (path vide : boîte de dialogue).
  */
 export function Open(path: string): $CancellablePromise<$models.OpenResult> {
@@ -411,6 +472,14 @@ export function Paste(sheet: number, row: number, col: number, block: (string[] 
 }
 
 /**
+ * PickDataFile demande un fichier source (kind : "csv" ou "xlsx") ; ""
+ * si l'utilisateur annule.
+ */
+export function PickDataFile(kind: string): $CancellablePromise<string> {
+    return $Call.ByID(2265459610, kind);
+}
+
+/**
  * PlaceButton déplace et redimensionne un bouton.
  */
 export function PlaceButton(id: number, row: number, col: number, offX: number, offY: number, width: number, height: number): $CancellablePromise<$models.DocState> {
@@ -422,6 +491,28 @@ export function PlaceButton(id: number, row: number, col: number, offX: number, 
  */
 export function PlaceChart(id: number, row: number, col: number, offX: number, offY: number, width: number, height: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(2193253128, id, row, col, offX, offY, width, height);
+}
+
+/**
+ * PostgresTableSQL écrit la requête qui lit une table entière.
+ */
+export function PostgresTableSQL(schema: string, table: string): $CancellablePromise<string> {
+    return $Call.ByID(1911167034, schema, table);
+}
+
+/**
+ * PostgresTables liste les tables d'une connexion du classeur.
+ */
+export function PostgresTables(name: string): $CancellablePromise<$models.PostgresTables> {
+    return $Call.ByID(689024343, name);
+}
+
+/**
+ * PreviewQuery calcule l'aperçu d'une requête (pas forcément enregistrée)
+ * après ses upto premières étapes (-1 : toutes). fresh relit les sources.
+ */
+export function PreviewQuery(q: query$0.Query, upto: number, fresh: boolean): $CancellablePromise<query$0.Preview> {
+    return $Call.ByID(2679934665, q, upto, fresh);
 }
 
 /**
@@ -444,6 +535,13 @@ export function ProtectSheet(sheet: number, password: string): $CancellablePromi
  */
 export function ProtectWorkbook(password: string): $CancellablePromise<$models.DocState> {
     return $Call.ByID(990396416, password);
+}
+
+/**
+ * Queries liste les requêtes du classeur.
+ */
+export function Queries(): $CancellablePromise<query$0.Query[] | null> {
+    return $Call.ByID(1155033519);
 }
 
 /**
@@ -477,6 +575,22 @@ export function Recover(dir: string): $CancellablePromise<$models.DocState> {
 
 export function Redo(): $CancellablePromise<$models.DocState> {
     return $Call.ByID(308727197);
+}
+
+/**
+ * RefreshAllQueries actualise toutes les requêtes chargées (Actualiser
+ * tout), en une étape d'annulation.
+ */
+export function RefreshAllQueries(): $CancellablePromise<$models.QueryRefresh> {
+    return $Call.ByID(2848501005);
+}
+
+/**
+ * RefreshQuery actualise une requête : source relue, étapes rejouées,
+ * tableau remplacé (une étape d'annulation).
+ */
+export function RefreshQuery(id: number): $CancellablePromise<$models.QueryRefresh> {
+    return $Call.ByID(155309716, id);
 }
 
 /**
@@ -539,6 +653,23 @@ export function Save($as: boolean): $CancellablePromise<$models.DocState> {
 }
 
 /**
+ * SaveConnection crée ou modifie une connexion ; password (facultatif) est
+ * gardé pour la session, et dans le trousseau du système si remember. Il
+ * n'est jamais écrit dans le classeur.
+ */
+export function SaveConnection(c: query$0.Connection, password: string, remember: boolean): $CancellablePromise<number> {
+    return $Call.ByID(2886245604, c, password, remember);
+}
+
+/**
+ * SaveQuery crée ou modifie une requête (sans l'actualiser) et renvoie son
+ * identifiant.
+ */
+export function SaveQuery(q: query$0.Query): $CancellablePromise<number> {
+    return $Call.ByID(2122420080, q);
+}
+
+/**
  * SaveScript enregistre un script (id 0 : nouveau) et renvoie son identifiant.
  */
 export function SaveScript(id: number, name: string, source: string): $CancellablePromise<number> {
@@ -586,6 +717,15 @@ export function SetChart(id: number, cfg: canvas$0.ChartConfig): $CancellablePro
  */
 export function SetColumnWidth(sheet: number, col: number, width: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(1916242223, sheet, col, width);
+}
+
+/**
+ * SetConnectionPassword essaie le mot de passe d'une connexion du classeur
+ * et le garde s'il est accepté (pour la session, et dans le trousseau si
+ * remember). Renvoie "" s'il est accepté, sinon le message d'erreur.
+ */
+export function SetConnectionPassword(name: string, password: string, remember: boolean): $CancellablePromise<string> {
+    return $Call.ByID(1709343094, name, password, remember);
 }
 
 /**
@@ -705,6 +845,14 @@ export function StopScript(): $CancellablePromise<void> {
 }
 
 /**
+ * TestConnection essaie une connexion (password vide : celui qui est
+ * connu). Renvoie "" si elle répond, sinon le message d'erreur.
+ */
+export function TestConnection(c: query$0.Connection, password: string, remember: boolean): $CancellablePromise<string> {
+    return $Call.ByID(3716934421, c, password, remember);
+}
+
+/**
  * TypeMix donne le type majoritaire d'une colonne passée en texte par
  * élargissement, et le nombre de valeurs qui n'en sont pas.
  */
@@ -738,4 +886,12 @@ export function UnprotectWorkbook(password: string): $CancellablePromise<$models
  */
 export function Window(sheet: number, table: number, first: number, count: number): $CancellablePromise<grid$0.Window> {
     return $Call.ByID(4033404289, sheet, table, first, count);
+}
+
+/**
+ * WorkbookTables liste les tableaux du classeur, par nom (sources et
+ * fusions).
+ */
+export function WorkbookTables(): $CancellablePromise<string[] | null> {
+    return $Call.ByID(2912537448);
 }

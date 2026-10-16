@@ -19,6 +19,8 @@ export type {
     ImportResult,
     MCPStatus,
     OpenResult,
+    PostgresTables,
+    QueryRefresh,
     ScriptResult,
     UICommand
 } from "./models.js";

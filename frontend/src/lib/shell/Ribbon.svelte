@@ -28,6 +28,8 @@
 
 	export type FileAction = 'new' | 'open' | 'save' | 'saveAs' | 'import' | 'export' | 'close' | 'demo' | 'mcp';
 
+	export type DataAction = 'csv' | 'xlsx' | 'postgres' | 'table' | 'queries' | 'refreshAll';
+
 	interface Props {
 		view: View;
 		title: string;
@@ -73,15 +75,18 @@
 		workbookProtected?: boolean;
 		/** Révision › Protéger (ou ôter la protection de) la feuille ou le classeur. */
 		onprotect?: (what: 'sheet' | 'workbook') => void;
+		/** Données › Obtenir des données : nouvelle requête d'import, volet des requêtes, tout actualiser. */
+		ondata?: (what: DataAction) => void;
 	}
 
-	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, onbutton, sheetProtected = false, workbookProtected = false, onprotect }: Props = $props();
+	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, onbutton, sheetProtected = false, workbookProtected = false, onprotect, ondata }: Props = $props();
 	let fg = $state('#c00000');
 	let bg = $state('#fff2cc');
 	const st = (patch: Record<string, unknown>) => (onstyle ? () => onstyle(patch) : undefined);
 	let fileOpen = $state(false);
 	let recentOpen = $state(false);
 	const fileName = (p: string) => p.split(/[\\/]/).pop() ?? p;
+	const data = (what: DataAction) => (ondata ? () => ondata(what) : undefined);
 	const cells = (op: 'insertRow' | 'deleteRow' | 'insertColumn' | 'deleteColumn') => (oncells ? () => oncells(op) : undefined);
 	// Palette ouverte sous le bouton Couleur ou Remplissage, comme dans Excel.
 	let palette = $state<'fg' | 'bg' | null>(null);
@@ -208,6 +213,22 @@
 		],
 		Données: [
 			{
+				title: 'Obtenir des données',
+				commands: [
+					{ label: 'Texte/CSV', icon: 'file', run: data('csv'), hint: 'Nouvelle requête à partir d’un fichier CSV (étapes de transformation, actualisable)' },
+					{ label: 'Classeur Excel', icon: 'table', run: data('xlsx'), hint: 'Nouvelle requête à partir d’un tableau d’un classeur .xlsx' },
+					{ label: 'PostgreSQL', icon: 'database', run: data('postgres'), hint: 'Nouvelle requête sur une base PostgreSQL (lecture seule)' },
+					{ label: 'À partir du tableau', icon: 'sheet', run: data('table'), hint: 'Nouvelle requête à partir d’un tableau du classeur' }
+				]
+			},
+			{
+				title: 'Requêtes et connexions',
+				commands: [
+					{ label: 'Requêtes et connexions', icon: 'query', run: data('queries'), hint: 'Volet des requêtes d’import et des connexions du classeur' },
+					{ label: 'Actualiser tout', icon: 'refresh', run: data('refreshAll'), hint: 'Relire les sources de toutes les requêtes chargées et remplacer leurs tableaux' }
+				]
+			},
+			{
 				title: 'Trier et filtrer',
 				commands: [
 					{ label: 'Trier A → Z', icon: 'sort', run: onsort ? () => onsort(false) : undefined, hint: 'Trier le tableau par la colonne active, croissant' },
@@ -240,7 +261,7 @@
 	// Sur une feuille protégée, seules les commandes qui ne la modifient pas
 	// restent actives (lecture, copie, filtres, affichage) ; un tableau croisé
 	// crée une feuille : refusé quand la structure du classeur est protégée.
-	const READ_ONLY = new Set(['Annuler', 'Rétablir', 'Copier', 'Rechercher', 'Filtrer', 'Erreurs seulement', 'Antécédents', 'Dépendants', 'Effacer les flèches', 'Calculer', 'Quadrillage', 'En-têtes A1', 'Figer les volets', 'Zoom', 'Mesurer la grille', 'Tableau croisé', 'Protéger la feuille', 'Protéger le classeur', 'Ôter la protection', 'Ôter la protection du classeur']);
+	const READ_ONLY = new Set(['Annuler', 'Rétablir', 'Copier', 'Rechercher', 'Filtrer', 'Erreurs seulement', 'Antécédents', 'Dépendants', 'Effacer les flèches', 'Calculer', 'Quadrillage', 'En-têtes A1', 'Figer les volets', 'Zoom', 'Mesurer la grille', 'Tableau croisé', 'Protéger la feuille', 'Protéger le classeur', 'Ôter la protection', 'Ôter la protection du classeur', 'Texte/CSV', 'Classeur Excel', 'PostgreSQL', 'À partir du tableau', 'Requêtes et connexions', 'Actualiser tout']);
 	const ribbons: Record<string, Group[]> = $derived(
 		Object.fromEntries(
 			Object.entries(allRibbons).map(([k, gs]) => [

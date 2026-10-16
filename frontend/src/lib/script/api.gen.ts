@@ -234,6 +234,13 @@ export const apiReference: RefEntry[] = [
 		args: [1, 2]
 	},
 	{
+		name: "connections.list",
+		category: "workbook",
+		signature: "connections.list() → { {id, name, kind, postgres = {host, port, database, user, sslmode}}, ... }",
+		summary: "Liste les connexions aux sources externes du classeur (sans mot de passe : il n'est jamais enregistré dans le classeur).",
+		args: [0, 0]
+	},
+	{
 		name: "doc.recalc",
 		category: "workbook",
 		signature: "doc.recalc()",
@@ -279,6 +286,54 @@ export const apiReference: RefEntry[] = [
 		summary: "Remplace la configuration d'un tableau croisé.",
 		details: "config : {source, rowFields, cols, values, filters, name, noGrandTotal}. source est un tableau, rowFields la liste des champs en lignes, cols le champ en colonnes, values une liste de {field, agg, show} (agg : \"sum\", \"count\", \"countDistinct\", \"avg\", \"min\" ou \"max\" ; show : \"\", \"pctTotal\", \"pctRow\" ou \"pctCol\"), filters une liste de {field, values}. Paramètres — pivot : tableau croisé (identifiant ou nom) ; config : nouvelle configuration. Arguments dans l'ordre, ou une table d'arguments nommés : pivots.set{pivot = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		args: [1, 2]
+	},
+	{
+		name: "queries.delete",
+		category: "workbook",
+		signature: "queries.delete(query)",
+		summary: "Supprime une requête d'import ; son tableau reste sur la feuille.",
+		details: "Paramètres — query : requête (nom ou identifiant). Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		args: [1, 1]
+	},
+	{
+		name: "queries.list",
+		category: "workbook",
+		signature: "queries.list() → { {id, name, source, steps, table, sheet, refreshed}, ... }",
+		summary: "Liste les requêtes d'import du classeur, avec leur source, leurs étapes et le tableau chargé.",
+		args: [0, 0]
+	},
+	{
+		name: "queries.preview",
+		category: "workbook",
+		signature: "queries.preview(query, [steps]) → {columns, rows, count, sample, error, errorStep}",
+		summary: "Calcule l'aperçu d'une requête (sur les 1 000 premières lignes de chaque source) après ses n premières étapes (toutes par défaut).",
+		details: "Paramètres — query : requête (nom ou identifiant) ; steps : nombre d'étapes appliquées. Arguments dans l'ordre, ou une table d'arguments nommés : queries.preview{query = …}.",
+		args: [1, 2]
+	},
+	{
+		name: "queries.refresh",
+		category: "workbook",
+		signature: "queries.refresh(query) → {sheet, table, rows, warnings}",
+		summary: "Actualise une requête : relit sa source, rejoue ses étapes et remplace son tableau (créé sur une nouvelle feuille la première fois).",
+		details: "Paramètres — query : requête (nom ou identifiant). Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		args: [1, 1]
+	},
+	{
+		name: "queries.refresh_all",
+		category: "workbook",
+		signature: "queries.refresh_all() → { {sheet, table, rows, warnings}, ... }",
+		summary: "Actualise toutes les requêtes déjà chargées dans une feuille.",
+		details: "Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		args: [0, 0]
+	},
+	{
+		name: "queries.save",
+		category: "workbook",
+		signature: "queries.save(name, source, [steps])",
+		summary: "Crée une requête d'import (ou remplace la source et les étapes de celle qui porte ce nom) et renvoie son identifiant. Elle n'est chargée dans une feuille qu'à l'actualisation.",
+		details: "source : {kind, ...} avec kind \"csv\" (path, delimiter), \"xlsx\" (path, sheet, index à partir de 0), \"table\" (table), \"query\" (query : autre requête) ou \"postgres\" (connection, sql). steps : liste d'étapes {op, ...} : filter {conditions = {{column, cmp, value}}, any}, rename {column, name}, type {column, type}, remove/select {columns}, split {column, delimiter, parts}, replace {column, value, with}, transform {column, fn = \"trim\"|\"upper\"|\"lower\"}, addcolumn {name, expr (SQLite, [Colonne]), type}, index {name, start}, merge {other = source, keys, otherKeys, join = \"left\"|\"inner\"|\"full\"|\"right\"|\"anti\", columns}, append {other}, group {columns, aggs = {{name, op, column}}}, sort {sort = {{column, desc}}}, distinct {columns}, top {count}, unpivot {columns, name, valueName}, pivot {column, valueColumn, agg}. cmp : \"=\", \"\u003c\u003e\", \"\u003c\", \"\u003c=\", \"\u003e\", \"\u003e=\", \"contains\", \"notcontains\", \"begins\", \"ends\", \"empty\", \"notempty\". Paramètres — name : nom de la requête ; source : source des données ; steps : étapes de transformation. Arguments dans l'ordre, ou une table d'arguments nommés : queries.save{name = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "queries.save(\"Grosses ventes\", {kind = \"table\", table = \"Ventes\"}, {{op = \"filter\", conditions = {{column = \"Montant\", cmp = \"\u003e\", value = \"100\"}}}})",
+		args: [1, 3]
 	},
 	{
 		name: "scripts.check",
