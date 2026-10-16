@@ -219,7 +219,7 @@ func refs() Plan {
 		c("Code", grid.Text, func(g *Gen, i int, _ []any) any { return refCategories[i].Code }),
 		c("Libellé", grid.Text, func(g *Gen, i int, _ []any) any { return refCategories[i].Libelle }),
 		c("Taux TVA", grid.Decimal, func(g *Gen, i int, _ []any) any { return refCategories[i].TVA }),
-		f("Nb produits", grid.Integer, "=NB.SI(Produits[Catégorie]; [@Code])"),
+		f("Nb produits", grid.Integer, "=NB.SI(Produits[Catégorie]; [Code])"),
 	}}
 	produitsT := TableSpec{Name: "Produits", Rows: nProduits, Col: len(categories.Cols) + 2, Cols: []Column{
 		c("Code", grid.Text, func(g *Gen, i int, _ []any) any { return fmt.Sprintf("P%03d", i+1) }),
@@ -227,10 +227,10 @@ func refs() Plan {
 		c("Catégorie", grid.Text, func(g *Gen, i int, _ []any) any { _, k, _ := refProduit(i); return k }),
 		c("Prix unitaire", grid.Decimal, func(g *Gen, i int, _ []any) any { _, _, p := refProduit(i); return p }),
 		c("Stock", grid.Integer, func(g *Gen, i int, _ []any) any { return int64(g.Skewed(200)) }),
-		f("Rayon", grid.Text, "=REFERENCE(Catégories; Libellé; [@Catégorie])"),
-		f("Taux TVA", grid.Decimal, `=REFERENCE(Catégories; "Taux TVA"; [@Catégorie])`),
-		f("Prix TTC", grid.Decimal, "=ARRONDI([@Prix unitaire]*(1+[@Taux TVA]); 2)"),
-		f("Quantité vendue", grid.Integer, "=SOMME.SI(Lignes[Produit]; [@Code]; Lignes[Quantité])"),
+		f("Rayon", grid.Text, "=REFERENCE(Catégories; Libellé; [Catégorie])"),
+		f("Taux TVA", grid.Decimal, `=REFERENCE(Catégories; "Taux TVA"; [Catégorie])`),
+		f("Prix TTC", grid.Decimal, "=ARRONDI([Prix unitaire]*(1+[Taux TVA]); 2)"),
+		f("Quantité vendue", grid.Integer, "=SOMME.SI(Lignes[Produit]; [Code]; Lignes[Quantité])"),
 	}}
 	clients := TableSpec{Name: "Clients", Rows: nClients, Cols: []Column{
 		c("Code client", grid.Text, func(g *Gen, i int, _ []any) any { return fmt.Sprintf("C%04d", i+1) }),
@@ -245,18 +245,18 @@ func refs() Plan {
 		c("Remise", grid.Decimal, func(g *Gen, i int, _ []any) any { return Pick(g, []float64{0, 0, 0, 0.02, 0.05, 0.1}) }),
 		c("Client depuis", grid.Date, func(g *Gen, i int, _ []any) any { return g.Date(-4*365, today-400) }),
 		c("Région", grid.Text, func(g *Gen, i int, r []any) any { return villes[villeOf[str(r[2])]].Region }),
-		f("Nb commandes", grid.Integer, "=NB.SI(Commandes[Client]; [@Code client])"),
+		f("Nb commandes", grid.Integer, "=NB.SI(Commandes[Client]; [Code client])"),
 		// SOMME.SI sur une colonne elle-même calculée par SOMME.SI.
-		f("CA HT", grid.Decimal, "=SOMME.SI(Commandes[Client]; [@Code client]; Commandes[Montant HT])"),
+		f("CA HT", grid.Decimal, "=SOMME.SI(Commandes[Client]; [Code client]; Commandes[Montant HT])"),
 	}}
 	commandes := TableSpec{Name: "Commandes", Rows: nCommandes, Cols: []Column{
 		c("N° commande", grid.Integer, func(g *Gen, i int, _ []any) any { return int64(i + 1) }),
 		c("Date", grid.Date, func(g *Gen, i int, _ []any) any { return Day(today - 400 + i*400/nCommandes) }),
 		c("Client", grid.Text, func(g *Gen, i int, _ []any) any { return fmt.Sprintf("C%04d", 1+g.Skewed(nClients)) }),
-		f("Nom client", grid.Text, "=REFERENCE(Clients; Nom; [@Client])"),
-		f("Ville", grid.Text, "=REFERENCE(Clients; Ville; [@Client])"),
-		f("Remise", grid.Decimal, "=REFERENCE(Clients; Remise; [@Client])"),
-		f("Montant HT", grid.Decimal, "=SOMME.SI(Lignes[Commande]; [@N° commande]; Lignes[Montant HT])"),
+		f("Nom client", grid.Text, "=REFERENCE(Clients; Nom; [Client])"),
+		f("Ville", grid.Text, "=REFERENCE(Clients; Ville; [Client])"),
+		f("Remise", grid.Decimal, "=REFERENCE(Clients; Remise; [Client])"),
+		f("Montant HT", grid.Decimal, "=SOMME.SI(Lignes[Commande]; [N° commande]; Lignes[Montant HT])"),
 	}}
 	lignes := TableSpec{Name: "Lignes", Rows: nLignes, Col: len(commandes.Cols) + 2, Cols: []Column{
 		c("N° ligne", grid.Integer, func(g *Gen, i int, _ []any) any { return int64(i + 1) }),
@@ -269,11 +269,11 @@ func refs() Plan {
 		}),
 		c("Produit", grid.Text, func(g *Gen, i int, _ []any) any { return fmt.Sprintf("P%03d", 1+g.Skewed(nProduits)) }),
 		c("Quantité", grid.Integer, func(g *Gen, i int, _ []any) any { return int64(1 + g.Skewed(8)) }),
-		f("Désignation", grid.Text, "=REFERENCE(Produits; Désignation; [@Produit])"),
-		f("Prix unitaire", grid.Decimal, `=REFERENCE(Produits; "Prix unitaire"; [@Produit])`),
-		f("Remise", grid.Decimal, "=REFERENCE(Commandes; Remise; [@Commande])"),
-		f("Montant HT", grid.Decimal, "=ARRONDI([@Quantité]*[@Prix unitaire]*(1-[@Remise]); 2)"),
-		f("TVA", grid.Decimal, `=ARRONDI([@Montant HT]*REFERENCE(Produits; "Taux TVA"; [@Produit]); 2)`),
+		f("Désignation", grid.Text, "=REFERENCE(Produits; Désignation; [Produit])"),
+		f("Prix unitaire", grid.Decimal, `=REFERENCE(Produits; "Prix unitaire"; [Produit])`),
+		f("Remise", grid.Decimal, "=REFERENCE(Commandes; Remise; [Commande])"),
+		f("Montant HT", grid.Decimal, "=ARRONDI([Quantité]*[Prix unitaire]*(1-[Remise]); 2)"),
+		f("TVA", grid.Decimal, `=ARRONDI([Montant HT]*REFERENCE(Produits; "Taux TVA"; [Produit]); 2)`),
 	}}
 	// Totaux en cellules libres, une ligne vide entre deux (deux lignes
 	// remplies l'une sous l'autre formeraient un tableau).

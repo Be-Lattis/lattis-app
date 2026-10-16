@@ -32,3 +32,28 @@ func TestCellRef(t *testing.T) {
 		t.Errorf("dépendances : %v", names)
 	}
 }
+
+func TestNomenclature(t *testing.T) {
+	for src, want := range map[string]string{
+		`=Cell[A1]*2`:                   `=Cell[A1]*2`,
+		`=cell_b3+Feuille2.Cell_C4`:     `=Cell[B3]+Feuille2!Cell[C4]`,
+		`=Feuille2!Cell[b3]`:            `=Feuille2!Cell[B3]`,
+		`='Ma feuille'!Cell[C4]`:        `='Ma feuille'!Cell[C4]`,
+		`=Ventes[Prix][2]+Ventes[Prix]`: `=Ventes[Prix][2]+Ventes[Prix]`,
+		`=Clients[Ville]["C001"]`:       `=Clients[Ville]["C001"]`,
+		`=[@Prix]*[Qté]`:                `=[Prix]*[Qté]`,
+		`=Ventes[Prix][Cell[A1]+1]`:     `=Ventes[Prix][Cell[A1]+1]`,
+	} {
+		n, err := Parse(src, FR)
+		if err != nil {
+			t.Errorf("%s : %v", src, err)
+			continue
+		}
+		if got := Format(n, FR); got != want {
+			t.Errorf("%s : %s, attendu %s", src, got, want)
+		}
+	}
+	if _, err := Parse(`=Cell[1A]`, FR); err == nil {
+		t.Error("adresse invalide acceptée")
+	}
+}

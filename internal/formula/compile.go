@@ -194,6 +194,13 @@ func (c *compiler) newAlias() string {
 }
 
 func (c *compiler) call(n Call, sc scope) string {
+	if n.Fn == "ITEM" {
+		it, ok := itemCall(n, c.schema, sc.table)
+		if !ok {
+			return errSQL(ErrRef)
+		}
+		n = it
+	}
 	fn, ok := lookupFunc(n.Fn)
 	if !ok {
 		return errSQL(ErrName)

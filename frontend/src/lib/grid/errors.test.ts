@@ -9,7 +9,7 @@ describe('explication des erreurs', () => {
 		expect(explainError('#NOM?', '=Ventes[Prix2]')).toContain('nom inconnu');
 	});
 	it('colonne entière au lieu de la ligne', () => {
-		expect(explainError('#VALEUR!', '=[Prix]*[Qte]')).toContain('[@Colonne]');
+		expect(explainError('#VALEUR!', '=Ventes[Prix]*2')).toContain('Tableau[Colonne][ligne ou clé]');
 		expect(explainError('#VALEUR!', '=SOMME([Prix])')).toContain('type de valeur');
 	});
 	it('autres codes', () => {

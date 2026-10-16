@@ -22,14 +22,14 @@ describe('autocomplétion des formules', () => {
 		expect(suggest('=SOMME(v', 8, cat)!.items[0]).toMatchObject({ label: 'Ventes', insert: 'Ventes[' });
 	});
 
-	it('propose les colonnes après « [ », avec @ pour la ligne courante', () => {
+	it('propose les colonnes après « [ » (le @ d’Excel reste accepté)', () => {
 		expect(suggest('=SOMME(Ventes[p', 15, cat)!.items.map((i) => i.insert)).toEqual(['Produit]', 'Prix]']);
-		expect(suggest('=[@q', 4, cat, 'Ventes')!.items[0].insert).toBe('@Qté]');
+		expect(suggest('=[@q', 4, cat, 'Ventes')!.items[0].insert).toBe('Qté]');
 		expect(suggest('=[@q', 4, cat)).toBeNull(); // pas de tableau courant
 	});
 
-	it('dans une ligne du tableau, [@Colonne] avant [Colonne]', () => {
-		expect(suggest('=[Prix]*[q', 10, cat, 'Ventes')!.items.map((i) => i.insert)).toEqual(['@Qté]', 'Qté]']);
+	it('dans une ligne du tableau, [Colonne] est la valeur de la ligne', () => {
+		expect(suggest('=[Prix]*[q', 10, cat, 'Ventes')!.items.map((i) => i.insert)).toEqual(['Qté]']);
 	});
 
 	it('ignore le texte hors formule et les chaînes', () => {

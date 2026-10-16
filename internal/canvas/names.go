@@ -155,8 +155,8 @@ func (t *tx) nameValuesWith(schema *formula.Schema, allCells bool) (map[string]f
 	rs.Close()
 	cited := allCells
 	if !cited {
-		if err := t.row(`SELECT EXISTS (SELECT 1 FROM _slitable_cells WHERE raw LIKE '%cell\_%' ESCAPE '\')
-			OR EXISTS (SELECT 1 FROM _slitable_columns WHERE formula LIKE '%cell\_%' ESCAPE '\')`).Scan(&cited); err != nil {
+		if err := t.row(`SELECT EXISTS (SELECT 1 FROM _slitable_cells WHERE raw LIKE '%cell%')
+			OR EXISTS (SELECT 1 FROM _slitable_columns WHERE formula LIKE '%cell%')`).Scan(&cited); err != nil {
 			return nil, err
 		}
 	}

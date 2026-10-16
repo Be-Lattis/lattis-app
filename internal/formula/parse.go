@@ -224,8 +224,26 @@ func lex(src string, loc Locale) ([]token, error) {
 			i += len([]rune(m))
 			continue
 		}
+		if c == '\'' {
+			// 'Ma feuille'!Cell[A1] : nom de feuille entre apostrophes.
+			j := i + 1
+			for j < len(rs) && rs[j] != '\'' {
+				j++
+			}
+			if j+1 < len(rs) && rs[j+1] == '!' {
+				name := string(rs[i+1 : j])
+				i = j + 2
+				k := i
+				for i < len(rs) && (unicode.IsLetter(rs[i]) || unicode.IsDigit(rs[i]) || rs[i] == '_') {
+					i++
+				}
+				toks = append(toks, token{kind: tIdent, text: name + "!" + string(rs[k:i]), pos: start})
+				continue
+			}
+		}
 		if unicode.IsLetter(c) || c == '_' {
-			for i < len(rs) && (unicode.IsLetter(rs[i]) || unicode.IsDigit(rs[i]) || rs[i] == '_' || rs[i] == '.') {
+			for i < len(rs) && (unicode.IsLetter(rs[i]) || unicode.IsDigit(rs[i]) || rs[i] == '_' || rs[i] == '.' ||
+				rs[i] == '!' && i+1 < len(rs) && unicode.IsLetter(rs[i+1])) {
 				i++
 			}
 			toks = append(toks, token{kind: tIdent, text: string(rs[start:i]), pos: start})
@@ -364,7 +382,17 @@ func (p *parser) primary() (Node, error) {
 	case tRange:
 		return Range{t.text}, nil
 	case tRef:
-		return parseRef("", t.text), nil
+		ref := parseRef("", t.text)
+		// [Col][ligne ou clé] : une autre ligne du tableau de la formule.
+		if p.peek().kind == tRef {
+			kt := p.next()
+			key, err := parseInner(kt.text, p.loc)
+			if err != nil {
+				return nil, &SyntaxError{kt.pos, err.Error()}
+			}
+			return Call{Fn: "ITEM", Args: []Node{ref, key}}, nil
+		}
+		return ref, nil
 	case tLParen:
 		n, err := p.comparison()
 		if err != nil {
@@ -379,7 +407,33 @@ func (p *parser) primary() (Node, error) {
 		case tLParen:
 			return p.call(t)
 		case tRef:
-			return parseRef(t.text, p.next().text), nil
+			inner := p.next().text
+			// Cell[A1], Feuille1!Cell[A1] : cellule libre par son adresse.
+			sheet, word := "", t.text
+			if k := strings.LastIndex(t.text, "!"); k >= 0 {
+				sheet, word = t.text[:k], t.text[k+1:]
+			}
+			if strings.EqualFold(word, "cell") {
+				if r, c, ok := CellRef("Cell_" + strings.TrimSpace(inner)); ok {
+					name := CellName(r, c)
+					if sheet != "" {
+						name = sheet + "." + name
+					}
+					return Name{name}, nil
+				}
+				return nil, &SyntaxError{t.pos, "adresse de cellule invalide : Cell[" + inner + "]"}
+			}
+			ref := parseRef(t.text, inner)
+			// Tableau[Colonne][ligne ou clé] : une valeur du tableau.
+			if p.peek().kind == tRef {
+				kt := p.next()
+				key, err := parseInner(kt.text, p.loc)
+				if err != nil {
+					return nil, &SyntaxError{kt.pos, err.Error()}
+				}
+				return Call{Fn: "ITEM", Args: []Node{ref, key}}, nil
+			}
+			return ref, nil
 		}
 		switch strings.ToUpper(t.text) {
 		case "VRAI", "TRUE":
@@ -392,15 +446,33 @@ func (p *parser) primary() (Node, error) {
 	return nil, &SyntaxError{t.pos, "valeur attendue"}
 }
 
-// parseRef lit le contenu des crochets : @Col, Col, [@Col], [Col]. Sans @,
-// la référence désigne toute la colonne, comme dans Excel.
+// parseRef lit le contenu des crochets. Nomenclature de Slitable (sans @) :
+// [Col] seul est la valeur de la ligne courante, Tableau[Col] toute la
+// colonne. [@Col] et Tableau[@Col] (forme Excel) restent acceptés.
 func parseRef(table, inner string) Ref {
 	s := strings.TrimSpace(inner)
 	s = strings.TrimPrefix(strings.TrimSuffix(s, "]"), "[")
-	row := strings.HasPrefix(s, "@")
+	row := strings.HasPrefix(s, "@") || table == ""
 	s = strings.TrimPrefix(s, "@")
 	s = strings.TrimPrefix(strings.TrimSuffix(s, "]"), "[")
 	return Ref{Table: table, Col: strings.TrimSpace(s), Row: row}
+}
+
+// parseInner analyse l'expression entre crochets de Tableau[Col][…].
+func parseInner(src string, loc Locale) (Node, error) {
+	toks, err := lex(src, loc)
+	if err != nil {
+		return nil, err
+	}
+	p := &parser{toks: toks, loc: loc}
+	n, err := p.comparison()
+	if err != nil {
+		return nil, err
+	}
+	if p.peek().kind != tEOF {
+		return nil, fmt.Errorf("ligne ou clé attendue entre crochets")
+	}
+	return n, nil
 }
 
 func (p *parser) call(name token) (Node, error) {
@@ -502,12 +574,12 @@ func format(b *strings.Builder, n Node, loc Locale) {
 		b.WriteString(n.V.String())
 	case Ref:
 		at := ""
-		if n.Row {
-			at = "@"
+		if n.Row && n.Table != "" {
+			at = "@" // forme Excel, sans équivalent dans la nomenclature de Slitable
 		}
 		b.WriteString(n.Table + "[" + at + n.Col + "]")
 	case Name:
-		b.WriteString(n.Name)
+		b.WriteString(CellText(n.Name))
 	case Range:
 		b.WriteString(n.Text)
 	case Unary:
@@ -524,6 +596,13 @@ func format(b *strings.Builder, n Node, loc Locale) {
 		b.WriteString(n.Op)
 		sub(n.R, p+1) // opérateurs associatifs à gauche
 	case Call:
+		if n.Fn == "ITEM" && len(n.Args) == 2 {
+			format(b, n.Args[0], loc)
+			b.WriteString("[")
+			format(b, n.Args[1], loc)
+			b.WriteString("]")
+			return
+		}
 		name := n.Fn
 		if fn, ok := lookupFunc(n.Fn); ok {
 			name = fn.name(loc)

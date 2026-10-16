@@ -267,6 +267,13 @@ func (env *Env) cell(t *Table, row, i int) Value {
 }
 
 func (env *Env) call(n Call) Value {
+	if n.Fn == "ITEM" {
+		it, ok := itemCall(n, env.Schema, env.Table)
+		if !ok {
+			return Err(ErrRef)
+		}
+		n = it
+	}
 	fn, ok := lookupFunc(n.Fn)
 	if !ok {
 		return Err(ErrName)

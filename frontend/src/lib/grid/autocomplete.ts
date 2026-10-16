@@ -33,7 +33,7 @@ function inString(before: string): boolean {
 
 /**
  * Suggestions pour le texte d'une formule et la position du curseur.
- * currentTable : tableau de la cellule éditée, pour [@Colonne].
+ * currentTable : tableau de la cellule éditée, pour [Colonne] (valeur de la ligne).
  */
 export function suggest(text: string, caret: number, cat: Catalog, currentTable?: string, max = 8): Completion | null {
 	if (!text.trimStart().startsWith('=')) return null;
@@ -48,18 +48,14 @@ export function suggest(text: string, caret: number, cat: Catalog, currentTable?
 		const t = cat.tables.find((x) => fold(x.name) === fold(table ?? ''));
 		if (!t) return null;
 		let prefix = before.slice(open + 1);
-		const at = prefix.startsWith('@');
-		if (at) prefix = prefix.slice(1);
+		if (prefix.startsWith('@')) prefix = prefix.slice(1); // forme Excel, acceptée
 		const cols = (t.columns ?? []).filter((c) => fold(c).startsWith(fold(prefix)));
-		// Dans une ligne du tableau, comme Excel : [@Colonne] (la valeur de la
-		// ligne) d'abord, [Colonne] (toute la colonne) ensuite.
-		const row = !explicit && !!currentTable && !at;
-		const items = row
-			? [
-					...cols.map((c) => ({ label: '@' + c, insert: '@' + c + ']', kind: 'column' as const, detail: 'valeur de la ligne' })),
-					...cols.map((c) => ({ label: c, insert: c + ']', kind: 'column' as const, detail: 'colonne entière' }))
-				].slice(0, max)
-			: cols.slice(0, max).map((c) => ({ label: c, insert: (at ? '@' : '') + c + ']', kind: 'column' as const, detail: t.name }));
+		// Nomenclature de Slitable : [Colonne] dans le tableau est la valeur de
+		// la ligne ; Tableau[Colonne] toute la colonne.
+		const row = !explicit && !!currentTable;
+		const items = cols
+			.slice(0, max)
+			.map((c) => ({ label: c, insert: c + ']', kind: 'column' as const, detail: row ? 'valeur de la ligne' : t.name }));
 		return items.length ? { from: open + 1, items } : null;
 	}
 

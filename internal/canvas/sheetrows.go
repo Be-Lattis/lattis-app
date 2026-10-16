@@ -3,7 +3,7 @@ package canvas
 import (
 	"context"
 	"fmt"
-	"regexp"
+
 	"strings"
 	"time"
 
@@ -359,10 +359,6 @@ func (t *tx) trashRows(tb Table, ids string) error {
 	})
 }
 
-// cellTokenRe trouve les adresses (Feuille.)Cell_A1 d'une formule, en
-// sautant les textes entre guillemets.
-var cellTokenRe = regexp.MustCompile(`(?i)"(?:[^"]|"")*"|\b(?:([\p{L}_][\p{L}\p{N}_]*)\.)?(cell_[a-z]{1,3}[1-9][0-9]*)\b`)
-
 // along applique un décalage d'une seule coordonnée (ligne ou colonne).
 func along(a axis, move func(int) (int, bool)) func(r, c int) (int, int, bool) {
 	return func(r, c int) (int, int, bool) {
@@ -375,52 +371,39 @@ func along(a axis, move func(int) (int, bool)) func(r, c int) (int, int, bool) {
 	}
 }
 
-// rewriteCellRefs met à jour les adresses Cell_A1 qui désignent la feuille
-// sheet après un déplacement : move donne la nouvelle position, ou faux si
-// la cellule a disparu (#REF!).
+// rewriteCellRefs met à jour les adresses de cellules (Cell[A1],
+// Feuille!Cell[A1], et les anciennes formes) qui désignent la feuille sheet
+// après un déplacement : move donne la nouvelle position, ou faux si la
+// cellule a disparu (#REF!). Les adresses réécrites suivent la nomenclature
+// Cell[A1] / Feuille!Cell[A1].
 func (t *tx) rewriteCellRefs(sheet int64, move func(r, c int) (int, int, bool)) error {
-	sheetIDs := map[string]int64{}
-	rs, err := t.query(`SELECT id, name FROM _slitable_sheets`)
+	sheetIDs, err := t.sheetIDs()
 	if err != nil {
 		return err
 	}
-	for rs.Next() {
-		var id int64
-		var name string
-		if err := rs.Scan(&id, &name); err != nil {
-			rs.Close()
-			return err
-		}
-		sheetIDs[strings.ToLower(name)] = id
-	}
-	rs.Close()
 	rewrite := func(text string, home int64) string {
-		return cellTokenRe.ReplaceAllStringFunc(text, func(m string) string {
-			sub := cellTokenRe.FindStringSubmatch(m)
-			if sub[2] == "" {
-				return m // texte entre guillemets
-			}
+		return cellRefs(text, func(name, addr, orig string) string {
 			on := home
-			if sub[1] != "" {
-				id, ok := sheetIDs[strings.ToLower(sub[1])]
+			if name != "" {
+				id, ok := sheetIDs[strings.ToLower(name)]
 				if !ok {
-					return m
+					return orig
 				}
 				on = id
 			}
 			if on != sheet {
-				return m
+				return orig
 			}
-			r, c, _ := formula.CellRef(sub[2])
+			r, c, _ := formula.CellRef("cell_" + addr)
 			r, c, ok := move(r, c)
 			if !ok {
 				return "#REF!"
 			}
-			name := formula.CellName(r, c)
-			if sub[1] != "" {
-				return sub[1] + "." + name
+			cell := formula.CellName(r, c)
+			if name != "" {
+				cell = name + "." + cell
 			}
-			return name
+			return formula.CellText(cell)
 		})
 	}
 	// Cellules libres (toutes feuilles : les adresses qualifiées).
@@ -430,7 +413,7 @@ func (t *tx) rewriteCellRefs(sheet int64, move func(r, c int) (int, int, bool)) 
 		raw      string
 	}
 	var cells []freeCell
-	rs, err = t.query(`SELECT sheet, row, col, raw FROM _slitable_cells WHERE raw LIKE '=%' AND raw LIKE '%cell\_%' ESCAPE '\'`)
+	rs, err := t.query(`SELECT sheet, row, col, raw FROM _slitable_cells WHERE raw LIKE '=%' AND raw LIKE '%cell%'`)
 	if err != nil {
 		return err
 	}
@@ -458,7 +441,7 @@ func (t *tx) rewriteCellRefs(sheet int64, move func(r, c int) (int, int, bool)) 
 	}
 	var cols []colFormula
 	rs, err = t.query(`SELECT c.tbl, c.id, t.sheet, c.formula FROM _slitable_columns c JOIN _slitable_tables t ON t.id = c.tbl
-		WHERE c.formula LIKE '%cell\_%' ESCAPE '\'`)
+		WHERE c.formula LIKE '%cell%'`)
 	if err != nil {
 		return err
 	}

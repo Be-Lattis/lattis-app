@@ -524,7 +524,7 @@ func TestFormulas(t *testing.T) {
 	if vals["=SOMME(Feuille1[Montant])"] != "81" || vals["=REFERENCE(Feuille1; Prix; \"souris\")"] != "10" {
 		t.Fatalf("cellules libres : %v", vals)
 	}
-	if l.Tables[0].Columns[3].Formula != "=[@Prix]*[@Qté]" {
+	if l.Tables[0].Columns[3].Formula != "=[Prix]*[Qté]" {
 		t.Fatalf("formule affichée : %q", l.Tables[0].Columns[3].Formula)
 	}
 	check(t, d, "formules")
@@ -1635,7 +1635,7 @@ func TestSheetRowsCols(t *testing.T) {
 	d.read(ctx, func(x *tx) error {
 		var raw string
 		x.row(`SELECT raw FROM _slitable_cells WHERE row = 0 AND col = 5`).Scan(&raw)
-		if raw != "=Cell_D1*2" {
+		if raw != "=Cell[D1]*2" {
 			t.Errorf("formule : %q", raw)
 		}
 		return nil
@@ -1696,7 +1696,7 @@ func TestMoveCells(t *testing.T) {
 		}
 		return nil
 	})
-	want := map[string]string{"5,5": "5", "5,6": "=Cell_F6*2", "3,0": "=Cell_F6+Cell_G6", "7,7": "=#REF!"}
+	want := map[string]string{"5,5": "5", "5,6": "=Cell[F6]*2", "3,0": "=Cell[F6]+Cell[G6]", "7,7": "=#REF!"}
 	for k, v := range want {
 		if got[k] != v {
 			t.Errorf("%s : %q, attendu %q (%v)", k, got[k], v, got)
@@ -1710,5 +1710,69 @@ func TestMoveCells(t *testing.T) {
 	}
 	if dump(t, d) != start {
 		t.Fatal("annulation du déplacement")
+	}
+}
+
+func TestItemReferences(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	for r, row := range [][]string{{"Produit", "Prix"}, {"a", "10"}, {"b", "20"}, {"c", "30"}} {
+		for c, v := range row {
+			if _, err := d.SetCell(ctx, 1, r, c, v); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	var table string
+	d.read(ctx, func(x *tx) error { return x.row(`SELECT name FROM _slitable_tables`).Scan(&table) })
+	// Sans clé : par le rang ; puis [Col][k] dans le tableau.
+	for _, c := range []struct {
+		row, col int
+		raw      string
+	}{{6, 0, "=" + table + "[Prix][2]"}, {1, 2, "Double"}, {2, 2, "=[Prix]*2+[Prix][1]"}} {
+		if _, err := d.SetCell(ctx, 1, c.row, c.col, c.raw); err != nil {
+			t.Fatal(err)
+		}
+	}
+	l, _ := d.Layout(ctx, 1)
+	for _, c := range l.Cells {
+		if c.Raw == "="+table+"[Prix][2]" && c.Value != "20" {
+			t.Errorf("par le rang : %s", c.Value)
+		}
+	}
+	var dbl []string
+	d.read(ctx, func(x *tx) error {
+		tb, _ := x.tableByName(table)
+		exprs, args, _, err := x.columnSQL(tb)
+		if err != nil {
+			return err
+		}
+		rs, err := x.query(`SELECT `+exprs[2]+` FROM `+tb.sql()+` ORDER BY _pos`, args...)
+		if err != nil {
+			return err
+		}
+		defer rs.Close()
+		for rs.Next() {
+			var v any
+			rs.Scan(&v)
+			dbl = append(dbl, formula.FromResult(v).String())
+		}
+		return nil
+	})
+	if strings.Join(dbl, ",") != "30,50,70" {
+		t.Errorf("[Prix]*2+[Prix][1] : %v", dbl)
+	}
+	// Avec une clé : par la valeur de la clé.
+	if err := d.SetKey(ctx, table, 0); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.SetCell(ctx, 1, 8, 0, `=`+table+`[Prix]["c"]`); err != nil {
+		t.Fatal(err)
+	}
+	l, _ = d.Layout(ctx, 1)
+	for _, c := range l.Cells {
+		if c.Row == 8 && c.Value != "30" {
+			t.Errorf("par la clé : %s", c.Value)
+		}
 	}
 }

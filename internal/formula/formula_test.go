@@ -33,7 +33,7 @@ func TestConvertVLOOKUP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := Format(out, FR), `=SIERREUR(REFERENCE(Clients; Ville; [@Client]); "?")`; got != want {
+	if got, want := Format(out, FR), `=SIERREUR(REFERENCE(Clients; Ville; [Client]); "?")`; got != want {
 		t.Fatalf("conversion : %s, attendu %s", got, want)
 	}
 	if origin := out.(Call).Args[0].(Call).Origin; origin != src {
@@ -113,10 +113,10 @@ func TestParseErrors(t *testing.T) {
 
 func TestFormatLocales(t *testing.T) {
 	n := mustParse(t, `=SI([@Prix]>1,5;SOMME(Ventes[Montant]);"a""b")`, FR)
-	if got, want := Format(n, EN), `=IF([@Prix]>1.5, SUM(Ventes[Montant]), "a""b")`; got != want {
+	if got, want := Format(n, EN), `=IF([Prix]>1.5, SUM(Ventes[Montant]), "a""b")`; got != want {
 		t.Fatalf("EN : %s, attendu %s", got, want)
 	}
-	if got, want := Format(n, FR), `=SI([@Prix]>1,5; SOMME(Ventes[Montant]); "a""b")`; got != want {
+	if got, want := Format(n, FR), `=SI([Prix]>1,5; SOMME(Ventes[Montant]); "a""b")`; got != want {
 		t.Fatalf("FR : %s, attendu %s", got, want)
 	}
 }
@@ -125,11 +125,11 @@ func TestConvertXLOOKUPAndIndexMatch(t *testing.T) {
 	f := fixture(t)
 	res := fakeResolver{"Clients!A2:A100": {"Clients", 0}, "Clients!C2:C100": {"Clients", 2}}
 	for src, want := range map[string]string{
-		`=RECHERCHEX([@Client];Clients[Id];Clients[Ville])`:           `=REFERENCE(Clients; Ville; [@Client])`,
-		`=RECHERCHEX([@Client];Clients[Id];Clients[Ville];"?")`:       `=SI.NON.DISP(REFERENCE(Clients; Ville; [@Client]); "?")`,
-		`=RECHERCHEX([@Client];Clients!A2:A100;Clients!C2:C100)`:      `=REFERENCE(Clients; Ville; [@Client])`,
-		`=INDEX(Clients[Nom];EQUIV([@Client];Clients[Id];0))`:         `=REFERENCE(Clients; Nom; [@Client])`,
-		`=INDEX(Clients[Nom];EQUIV([@Client];Clients[Id]))`:           `=INDEX(Clients[Nom]; EQUIV([@Client]; Clients[Id]))`,
+		`=RECHERCHEX([@Client];Clients[Id];Clients[Ville])`:           `=REFERENCE(Clients; Ville; [Client])`,
+		`=RECHERCHEX([@Client];Clients[Id];Clients[Ville];"?")`:       `=SI.NON.DISP(REFERENCE(Clients; Ville; [Client]); "?")`,
+		`=RECHERCHEX([@Client];Clients!A2:A100;Clients!C2:C100)`:      `=REFERENCE(Clients; Ville; [Client])`,
+		`=INDEX(Clients[Nom];EQUIV([@Client];Clients[Id];0))`:         `=REFERENCE(Clients; Nom; [Client])`,
+		`=INDEX(Clients[Nom];EQUIV([@Client];Clients[Id]))`:           `=INDEX(Clients[Nom]; EQUIV([Client]; Clients[Id]))`,
 		`=SIERREUR(INDEX(Clients[Nom];EQUIV(2;Clients[Id];FAUX));"")`: `=SIERREUR(REFERENCE(Clients; Nom; 2); "")`,
 	} {
 		out, keys, err := Convert(mustParse(t, src, FR), f.schema, res, src)
@@ -242,7 +242,7 @@ func TestHoistScans(t *testing.T) {
 		`=RANG([@Qté];1)`:                                          true,
 		`=CUMUL([@Montant])`:                                       true, // cumuls précalculés
 		`=PRECEDENT([@Qté];0)+[@Qté]`:                              false,
-		`=EQUIV(3;[Qté];0)`:                                        true,
+		`=EQUIV(3;Ventes[Qté];0)`:                                  true,
 		`=SOMME.SI(Ventes[Payé];[@Payé];Ventes[Qté])`:              true,
 		`=NB.SI.ENS(Ventes[Note];[@Note];Ventes[Payé];VRAI)`:       true,
 		`=NB.SI(Ventes[Note];[@Client]&"")`:                        true,

@@ -1078,7 +1078,7 @@
 				const x = cx(c);
 				if (x + colAxis.size(c) <= MARGIN) continue;
 				ctx.fillStyle = c >= k0 && c <= k1 ? C.headText : C.stripText;
-				ctx.fillText(cellAddr(0, c).slice(5, -1), x + colAxis.size(c) / 2, TOP_H / 2);
+				ctx.fillText(addrA1(0, c).slice(0, -1), x + colAxis.size(c) / 2, TOP_H / 2);
 			}
 		}
 		for (const e of a1 ? [] : visible) {
@@ -1354,11 +1354,16 @@
 	}
 
 	/** Désignation de la cellule active (pas d'adresse A1). */
-	/** Adresse d'une cellule libre, telle qu'elle s'écrit dans une formule ou en SQL. */
+	/** Adresse d'une cellule libre, telle qu'elle s'écrit dans une formule ou en SQL : Cell[A1]. */
 	function cellAddr(r: number, c: number): string {
+		return `Cell[${addrA1(r, c)}]`;
+	}
+
+	/** Lettre(s) de colonne et numéro de ligne : A1. */
+	function addrA1(r: number, c: number): string {
 		let s = '';
 		for (let n = c + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s;
-		return `Cell_${s}${r + 1}`;
+		return s + (r + 1);
 	}
 
 	function cellName(r: number, c: number): string {
@@ -1366,7 +1371,7 @@
 		if (named) return named;
 		const e = tableAt(r, c);
 		// Cellule libre : lettre et numéro seulement (A1) ; Cell_A1 dans une formule.
-		if (!e) return cellAddr(r, c).slice(5);
+		if (!e) return addrA1(r, c);
 		const k = e.t.columns[c - e.t.col];
 		const col = `${e.t.name}[${k.name}]`;
 		if (r === e.t.row) {
@@ -2591,24 +2596,30 @@
 	// Dernière référence insérée au clic : un autre clic la remplace (comme Excel).
 	let lastRef: { el: HTMLInputElement; start: number; end: number; value: string } | null = null;
 
-	/** Référence d'une cellule dans une formule : Cell_A1, [@Col] (même ligne du tableau édité) ou Tableau[Col]. */
+	/**
+	 * Référence d'une cellule dans une formule (nomenclature de Slitable) :
+	 * Cell[A1] pour une cellule libre ; dans le tableau de la formule, [Col]
+	 * pour sa ligne et [Col][k] pour une autre ; ailleurs Tableau[Col][k]
+	 * (k : la clé si le tableau en a une, sinon le rang) ; un en-tête donne
+	 * Tableau[Col], toute la colonne.
+	 */
 	function refFor(r: number, c: number): string {
 		const e = tableAt(r, c);
 		if (!e) return cellAddr(r, c);
-		const name = e.t.columns[c - e.t.col].name;
+		const col = e.t.columns[c - e.t.col].name;
 		const here = tableAt(active.row, active.col);
-		if (here === e && r === active.row && r > e.t.row) return `[@${name}]`;
-		if (r === e.t.row) return `${e.t.name}[${name}]`; // en-tête : toute la colonne
-		// Une cellule précise d'un autre tableau (ou d'une autre ligne) : par sa
-		// clé si le tableau en a une (stable au tri), sinon par son rang.
+		const same = here === e && active.row > e.t.row;
+		// En-tête : toute la colonne.
+		if (r === e.t.row) return `${e.t.name}[${col}]`;
+		// Même ligne du tableau de la formule : la valeur de la ligne.
+		if (same && r === active.row) return `[${col}]`;
+		// Une autre ligne : par sa clé si le tableau en a une (stable au tri),
+		// sinon par son rang (1 = première ligne de données).
 		const n = r - e.t.row - 1;
 		const k = e.t.key !== undefined ? e.cache.row(n)?.text[e.t.key] : undefined;
-		if (k !== undefined && k !== '') {
-			const col = /^[\p{L}_][\p{L}\p{N}_]*$/u.test(name) ? name : `"${name.replaceAll('"', '""')}"`;
-			const key = isNumeric(k) ? k.replace(/[\s\u00a0\u202f]/g, '') : `"${k.replaceAll('"', '""')}"`;
-			return `REFERENCE(${e.t.name}; ${col}; ${key})`;
-		}
-		return `INDEX(${e.t.name}[${name}]; ${n + 1})`;
+		let item = String(n + 1);
+		if (k !== undefined && k !== '') item = isNumeric(k) ? k.replace(/[\s\u00a0\u202f]/g, '') : `"${k.replaceAll('"', '""')}"`;
+		return same ? `[${col}][${item}]` : `${e.t.name}[${col}][${item}]`;
 	}
 
 	/** Pendant la saisie d'une formule, insère la référence de la cellule cliquée au curseur. */
@@ -3073,7 +3084,7 @@
 			}
 		}
 		// Une adresse (B3 ou Cell_B3) : y aller.
-		const addr = /^(?:cell_)?([a-z]{1,3})([1-9][0-9]*)$/i.exec(text);
+		const addr = /^(?:cell_|cell\[)?([a-z]{1,3})([1-9][0-9]*)\]?$/i.exec(text);
 		if (addr) {
 			let c = 0;
 			for (const ch of addr[1].toUpperCase()) c = c * 26 + ch.charCodeAt(0) - 64;

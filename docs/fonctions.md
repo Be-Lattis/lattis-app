@@ -6,6 +6,21 @@
 
 ✅ comme Excel · ⚠️ différence documentée · 🆕 propre à Slitable
 
+## Références (nomenclature)
+
+Décidée par Louis le 16/10/2026. Pas de `@`.
+
+| Écriture | Désigne |
+|---|---|
+| `[Colonne]` | Dans un tableau : la valeur de la colonne pour la ligne de la formule |
+| `[Colonne][ligne ou clé]` | Dans un tableau : la valeur de la colonne à une autre ligne du même tableau |
+| `Tableau[Colonne]` | Toute la colonne (hors du tableau, ou dans un agrégat) |
+| `Tableau[Colonne][ligne ou clé]` | Une valeur du tableau : par la valeur de la clé si le tableau en a une (stable au tri), sinon par le rang de la ligne (1 = première ligne de données) |
+| `Cell[A1]` | La cellule libre A1 de la feuille de la formule (pour une colonne calculée : la feuille du tableau) ; dans l'onglet SQL, de la feuille affichée |
+| `Feuille1!Cell[A1]`, `'Ma feuille'!Cell[A1]` | La cellule libre A1 d'une autre feuille |
+
+La ligne ou la clé entre crochets est une expression : `Ventes[Prix][Cell[B1]]`. Les formes d'Excel `[@Colonne]` et les anciennes `Cell_A1` / `Feuille1.Cell_A1` restent lues et s'affichent dans la nouvelle écriture. En mode formule, un clic sur une cellule insère sa référence dans cette nomenclature. Insérer, supprimer ou déplacer des lignes, colonnes ou cellules met à jour les `Cell[…]` ; une cellule supprimée devient `#REF!`.
+
 ## Logique
 
 | Français | Anglais | |
@@ -63,15 +78,15 @@ Une date est un **numéro de série** comme dans Excel (le 1er janvier 2026 vaut
 | DATEDIF | DATEDIF | ✅ unités `j`/`d`, `m`, `a`/`y`, `mj`, `am`, `aj` |
 | NB.JOURS.OUVRES, SERIE.JOUR.OUVRE | NETWORKDAYS, WORKDAY | ✅ jours fériés depuis une colonne |
 
-⚠️ Une date concaténée à du texte s'affiche en date (`"Le "&[@Date]` donne « Le 15/01/2026 »), là où Excel écrirait le numéro.
+⚠️ Une date concaténée à du texte s'affiche en date (`"Le "&[Date]` donne « Le 15/01/2026 »), là où Excel écrirait le numéro.
 
 ## Recherche
 
 | Français | Anglais | |
 |---|---|---|
-| REFERENCE | — | 🆕 `REFERENCE(Clients; Nom; [@IdClient])` sur la clé du tableau |
+| REFERENCE | — | 🆕 `REFERENCE(Clients; Nom; [IdClient])` sur la clé du tableau |
 | REFERENCE.APPROCHEE | REFERENCE.APPROX | 🆕 la plus grande clé inférieure ou égale (tranches, barèmes) |
-| EXISTE | EXISTS | 🆕 `EXISTE(Clients; [@IdClient])` |
+| EXISTE | EXISTS | 🆕 `EXISTE(Clients; [IdClient])` |
 | RECHERCHEV, RECHERCHEX | VLOOKUP, XLOOKUP | ⚠️ **convertis** en REFERENCE à la saisie (`Convert`), correspondance exacte seulement ; la valeur si absent de RECHERCHEX devient SI.NON.DISP |
 | INDEX, EQUIV | INDEX, MATCH | ⚠️ positions dans l'ordre affiché ; `INDEX(T[Valeur]; EQUIV(clé; T[Clé]; 0))` est converti en REFERENCE |
 | RECHERCHEH | HLOOKUP | ❌ refusée à la saisie avec un message |
@@ -82,11 +97,11 @@ Une date est un **numéro de série** comme dans Excel (le 1er janvier 2026 vaut
 
 | Français | Anglais | |
 |---|---|---|
-| PRECEDENT, SUIVANT | PREVIOUS, NEXT | 🆕 `PRECEDENT([@Solde]; 0)`, valeur par défaut au bord du tableau |
+| PRECEDENT, SUIVANT | PREVIOUS, NEXT | 🆕 `PRECEDENT([Solde]; 0)`, valeur par défaut au bord du tableau |
 | CUMUL | RUNNINGSUM | 🆕 somme cumulée dans l'ordre du tableau |
-| RANG | RANK | ✅ forme Excel `RANG(valeur; T[Col]; [ordre])`, et 🆕 `RANG([@Score])` |
+| RANG | RANK | ✅ forme Excel `RANG(valeur; T[Col]; [ordre])`, et 🆕 `RANG([Score])` |
 
-⚠️ Une colonne qui se lit elle-même par PRECEDENT (`[@Mvt]+PRECEDENT([@Solde])`) est circulaire (#REF!) : utilisez `CUMUL([@Mvt])`.
+⚠️ Une colonne qui se lit elle-même par PRECEDENT (`[Mvt]+PRECEDENT([Solde])`) est circulaire (#REF!) : utilisez `CUMUL([Mvt])`.
 
 ## Tableaux dynamiques
 
@@ -109,8 +124,8 @@ Mesures en conteneur Linux (`SLITABLE_MESURE=1000000`, tableau de démonstration
 |---|---|
 | Fonction sur tout le tableau (SOMME.SI avec joker, NB.SI.ENS, SOMMEPROD, MEDIANE, EQUIV, NB(FILTRE(…))) | 0,4 à 1,2 s, une fois |
 | GROUPER.PAR (6 groupes) | 1,8 s |
-| Fenêtre de 200 lignes avec `NB.SI(Commandes[Vendeur]; [@Vendeur])` | 1 ms, après un précalcul de 1,2 s |
-| Même chose avec `RANG([@Montant HT])` / `CUMUL([@Quantité])` | 1 ms, après 0,4 s / 1,5 s |
+| Fenêtre de 200 lignes avec `NB.SI(Commandes[Vendeur]; [Vendeur])` | 1 ms, après un précalcul de 1,2 s |
+| Même chose avec `RANG([Montant HT])` / `CUMUL([Quantité])` | 1 ms, après 0,4 s / 1,5 s |
 
 Une fonction qui parcourt tout un tableau à chaque ligne rendrait la grille inutilisable (2 minutes par fenêtre sur 1 M de lignes pour NB.SI par ligne). Quand le compilateur a un `hoist`, il précalcule une fois :
 

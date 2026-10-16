@@ -9,12 +9,12 @@ export function explainError(code: string, formula = ''): string {
 		case '#NOM?': {
 			const ref = A1.exec(formula)?.[1];
 			if (ref)
-				return `#NOM? : ${ref.toUpperCase()} n'existe pas. Slitable n'utilise pas d'adresses A1 : écrivez [@Colonne] dans un tableau, Tableau[Colonne] pour une colonne entière, ou nommez la cellule (zone de nom).`;
+				return `#NOM? : ${ref.toUpperCase()} n'existe pas. Écrivez Cell[${ref.toUpperCase().replaceAll('$', '')}] pour une cellule libre, [Colonne] pour la valeur de la ligne dans un tableau, Tableau[Colonne] pour une colonne entière, ou Tableau[Colonne][ligne ou clé] pour une valeur.`;
 			return "#NOM? : nom inconnu. Vérifiez le nom de la fonction, du tableau, de la colonne ou de la cellule nommée.";
 		}
 		case '#VALEUR!':
-			if (/\[(?!@)[^\]]+\]/.test(formula) && !/^=\s*[\p{L}.]+\(/u.test(formula))
-				return '#VALEUR! : une colonne entière [Colonne] est utilisée là où une seule valeur est attendue. Dans une ligne du tableau, écrivez [@Colonne].';
+			if (/[\p{L}\p{N}_]\[[^\]]+\](?!\[)/u.test(formula) && !/^=\s*[\p{L}.]+\(/u.test(formula))
+				return '#VALEUR! : une colonne entière Tableau[Colonne] est utilisée là où une seule valeur est attendue. Écrivez Tableau[Colonne][ligne ou clé], ou [Colonne] dans une ligne du tableau.';
 			return '#VALEUR! : type de valeur inattendu (texte là où un nombre est attendu, ou argument invalide).';
 		case '#DIV/0!':
 			return '#DIV/0! : division par zéro (ou par une cellule vide).';
