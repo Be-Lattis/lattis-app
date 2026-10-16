@@ -185,11 +185,11 @@ export const apiReference: RefEntry[] = [
 	{
 		name: "columns.set_filter",
 		category: "columns",
-		signature: "columns.set_filter(table, column, [values], [errors])",
+		signature: "columns.set_filter(table, column, [values], [errors], [conds], [any])",
 		summary: "Filtre un tableau sur une colonne : seules les lignes dont la valeur est dans values restent affichées.",
-		details: "values est une liste de textes tels qu'affichés (\"\" pour les cellules vides) ; errors = true ne garde que les saisies en erreur. Sans values ni errors, le filtre de la colonne est retiré. Paramètres — table : nom du tableau ; column : colonne (nom ou rang à partir de 1) ; values : valeurs gardées ; errors : ne garder que les erreurs. Arguments dans l'ordre, ou une table d'arguments nommés : columns.set_filter{table = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
-		example: "columns.set_filter(\"Commandes\", \"Client\", {\"Durand\", \"Petit\"})",
-		args: [1, 4]
+		details: "values est une liste de textes tels qu'affichés (\"\" pour les cellules vides) ; errors = true ne garde que les saisies en erreur. conds filtre par condition, comme les « Filtres textuels » et « Filtres numériques » d'Excel : chaque condition est {op, value, to} avec op parmi \"eq\", \"ne\" (jokers * et ?), \"begins\", \"ends\", \"contains\", \"notcontains\", \"gt\", \"ge\", \"lt\", \"le\", \"between\" (value et to compris), \"top\" et \"bottom\" (value : nombre d'éléments), \"above\" et \"below\" (moyenne). Les conditions doivent toutes être vérifiées, ou l'une d'elles avec any = true. Sans values, errors ni conds, le filtre de la colonne est retiré. Paramètres — table : nom du tableau ; column : colonne (nom ou rang à partir de 1) ; values : valeurs gardées ; errors : ne garder que les erreurs ; conds : conditions : { {op = \"\u003e\", value = \"100\"}, ... } ; any : une seule condition suffit. Arguments dans l'ordre, ou une table d'arguments nommés : columns.set_filter{table = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "columns.set_filter(\"Commandes\", \"Client\", {\"Durand\", \"Petit\"})\ncolumns.set_filter(\"Commandes\", \"Montant\", nil, false, {{op = \"between\", value = \"100\", to = \"500\"}})",
+		args: [1, 6]
 	},
 	{
 		name: "columns.set_rules",
