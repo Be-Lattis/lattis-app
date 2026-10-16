@@ -82,12 +82,10 @@ func (t *tx) pivotName() (string, error) {
 // pivotQuery donne une requête SQL autonome (valeurs en littéraux) qui rend
 // les lignes du tableau croisé, sans ligne de total : une colonne par champ
 // de lignes, puis une par mesure, nommées comme les en-têtes.
-func (t *tx) pivotQuery(raw PivotConfig) (string, []string, error) {
-	cfg := raw.normalized()
-	cfg.NoGrandTotal = true
-	cells, err := t.pivotCells(cfg)
+func (t *tx) pivotQuery(raw PivotConfig) (string, []string, int, error) {
+	cells, err := t.pivotBody(raw)
 	if err != nil {
-		return "", nil, err
+		return "", nil, 0, err
 	}
 	header := cells[0]
 	// Les valeurs déjà calculées deviennent des lignes VALUES : la vue reflète
@@ -110,7 +108,7 @@ func (t *tx) pivotQuery(raw PivotConfig) (string, []string, error) {
 		for i, c := range cols {
 			sel[i] = "NULL AS " + quote(c)
 		}
-		return "SELECT " + strings.Join(sel, ", ") + " WHERE 0", cols, nil
+		return "SELECT " + strings.Join(sel, ", ") + " WHERE 0", cols, 0, nil
 	}
 	var rows []string
 	for _, r := range cells[1:] {
@@ -124,7 +122,7 @@ func (t *tx) pivotQuery(raw PivotConfig) (string, []string, error) {
 	for i, c := range cols {
 		sel[i] = "column" + strconv.Itoa(i+1) + " AS " + quote(c)
 	}
-	return "SELECT " + strings.Join(sel, ", ") + " FROM (VALUES " + strings.Join(rows, ", ") + ")", cols, nil
+	return "SELECT " + strings.Join(sel, ", ") + " FROM (VALUES " + strings.Join(rows, ", ") + ")", cols, len(rows), nil
 }
 
 // sqlValue écrit une cellule de TCD en littéral : nombre si c'en est un
@@ -178,7 +176,7 @@ func (m *Model) PivotCTE(ctx context.Context, q string) (string, error) {
 			if !used[strings.ToLower(p.Cfg.Name)] {
 				continue
 			}
-			sql, _, err := t.pivotQuery(p.Cfg)
+			sql, _, _, err := t.pivotQuery(p.Cfg)
 			if err != nil {
 				return err
 			}
@@ -196,4 +194,18 @@ func (m *Model) PivotCTE(ctx context.Context, q string) (string, error) {
 		return nil
 	})
 	return out, err
+}
+
+// pivotBody donne les cellules du TCD affiché (même calcul, donc même cache)
+// sans la ligne de total général.
+func (t *tx) pivotBody(raw PivotConfig) ([][]string, error) {
+	cfg := raw.normalized()
+	cells, err := t.pivotCells(cfg)
+	if err != nil {
+		return nil, err
+	}
+	if !cfg.NoGrandTotal && len(cfg.RowFields) > 0 && len(cells) > 1 {
+		cells = cells[:len(cells)-1]
+	}
+	return cells, nil
 }

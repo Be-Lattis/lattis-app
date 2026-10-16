@@ -319,3 +319,72 @@ func island(cells []cell, row, col int) []cell {
 	})
 	return out
 }
+
+// settle écarte les tableaux de la feuille qui se chevauchent ou se touchent
+// (un tableau « rentre » s'il garde au moins une cellule libre de chaque
+// côté) : l'autre tableau part vers la droite jusqu'à rentrer, et pousse à
+// son tour ceux qu'il rencontre. keep (0 : aucun) ne bouge jamais ; entre
+// deux autres tableaux, c'est celui de droite (puis du bas) qui cède.
+func (t *tx) settle(sheet, keep int64) error {
+	tables, err := t.tables(sheet)
+	if err != nil || len(tables) < 2 {
+		return err
+	}
+	cells, err := t.cells(sheet)
+	if err != nil {
+		return err
+	}
+	orig := make([]int, len(tables))
+	for i, tb := range tables {
+		orig[i] = tb.Col
+	}
+	// cède : b s'écarte de a.
+	yields := func(a, b Table) bool {
+		switch {
+		case b.ID == keep:
+			return false
+		case a.ID == keep:
+			return true
+		case a.Col != b.Col:
+			return a.Col < b.Col
+		case a.Row != b.Row:
+			return a.Row < b.Row
+		}
+		return a.ID < b.ID
+	}
+	blocked := func(b Table) bool {
+		for _, c := range cells {
+			if c.Row >= b.Row-1 && c.Row <= b.Bottom()+1 && c.Col >= b.Col-1 && c.Col <= b.Right()+1 {
+				return true
+			}
+		}
+		return false
+	}
+	for changed, n := true, 0; changed; n++ {
+		if n > 10*len(tables) {
+			return fmt.Errorf("%w : impossible d'écarter les tableaux de la feuille", ErrTable)
+		}
+		changed = false
+		for i := range tables {
+			for j := range tables {
+				a, b := tables[i], tables[j]
+				if i == j || !touches(a.Row, a.Bottom(), a.Col, a.Right(), b) || !yields(a, b) {
+					continue
+				}
+				b.Col = a.Right() + 2
+				for blocked(b) {
+					b.Col++
+				}
+				tables[j], changed = b, true
+			}
+		}
+	}
+	for i, tb := range tables {
+		if d := tb.Col - orig[i]; d != 0 {
+			if err := t.moveTable(tb, 0, d); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}

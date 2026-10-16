@@ -48,11 +48,17 @@ func (m *Model) SortTable(ctx context.Context, table string, i int, desc bool) e
 				st(`CREATE TABLE ` + rank + ` (id INTEGER PRIMARY KEY, k TEXT NOT NULL)`),
 				st(`INSERT INTO ` + rank + ` SELECT id, printf('%012dV', row_number() OVER (ORDER BY ` +
 					colSQL(c.ID) + ` IS NULL, ` + col + ` ` + dir + `, _pos)) FROM ` + tb.sql()),
-				st(`UPDATE ` + tb.sql() + ` SET _pos = (SELECT k FROM ` + rank + ` WHERE ` + rank + `.id = ` + tb.sql() + `.id)`),
+				// Index de _pos retiré pendant la réécriture : le reconstruire d'un
+				// coup est bien plus rapide que de le tenir à jour ligne à ligne.
+				st(`DROP INDEX ` + tb.sql() + `_pos`),
+				st(`UPDATE ` + tb.sql() + ` SET _pos = r.k FROM ` + rank + ` AS r WHERE r.id = ` + tb.sql() + `.id`),
+				st(`CREATE INDEX ` + tb.sql() + `_pos ON ` + tb.sql() + `(_pos)`),
 				st(`DROP TABLE ` + rank),
 			},
 			Undo: []stmt{
-				st(`UPDATE ` + tb.sql() + ` SET _pos = (SELECT pos FROM ` + trash + ` WHERE ` + trash + `.id = ` + tb.sql() + `.id)`),
+				st(`DROP INDEX ` + tb.sql() + `_pos`),
+				st(`UPDATE ` + tb.sql() + ` SET _pos = o.pos FROM ` + trash + ` AS o WHERE o.id = ` + tb.sql() + `.id`),
+				st(`CREATE INDEX ` + tb.sql() + `_pos ON ` + tb.sql() + `(_pos)`),
 				st(`DROP TABLE ` + trash),
 			},
 			Purge: []stmt{st(`DROP TABLE IF EXISTS ` + trash)},

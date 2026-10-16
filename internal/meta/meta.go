@@ -156,7 +156,11 @@ CREATE TABLE _slitable_row_heights (
 	PRIMARY KEY (sheet, row)
 ) STRICT;
 `,
-	// 11 → 12 : boutons d'action (configuration JSON : libellé, script,
+	// 11 → 12 : quadrillage affiché ou masqué, feuille par feuille.
+	`
+ALTER TABLE _slitable_sheets ADD COLUMN gridlines INTEGER NOT NULL DEFAULT 1;
+`,
+	// 12 → 13 : boutons d'action (configuration JSON : libellé, script,
 	// fonction, taille), posés sur une feuille comme les graphiques.
 	`
 CREATE TABLE _slitable_buttons (

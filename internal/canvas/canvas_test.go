@@ -957,9 +957,18 @@ func TestTablesMoveMergeSplit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Déplacer sur l'autre tableau : refusé ; côte à côte : fusion.
-	if err := d.MoveTable(ctx, "Pays", 1, 1); !errors.Is(err, ErrTable) {
+	// Déplacer sur l'autre tableau : l'autre s'écarte vers la droite (une
+	// colonne libre entre les deux) ; côte à côte : fusion.
+	before := dump(t, d)
+	if err := d.MoveTable(ctx, "Pays", 1, 1); err != nil {
 		t.Fatalf("recouvrement : %v", err)
+	}
+	check(t, d, "tableau poussé")
+	if _, err := d.bus.Undo(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation de la poussée :\n%s\nattendu\n%s", got, before)
 	}
 	if err := d.MoveTable(ctx, "Pays", 0, 2); err != nil {
 		t.Fatal(err)
@@ -1433,5 +1442,72 @@ func TestRowHeight(t *testing.T) {
 	d.bus.Undo(ctx)
 	if got := dump(t, d); got != before {
 		t.Fatalf("annulation :\n%s", diff(before, got))
+	}
+}
+
+func TestGridlines(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	const sheet = 1
+	if err := d.SetGridlines(ctx, sheet, false); err != nil {
+		t.Fatal(err)
+	}
+	l, err := d.Layout(ctx, sheet)
+	if err != nil || !l.Sheets[0].NoGrid {
+		t.Fatalf("quadrillage non masqué : %+v %v", l.Sheets, err)
+	}
+	if _, err := d.bus.Undo(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if l, _ = d.Layout(ctx, sheet); l.Sheets[0].NoGrid {
+		t.Fatal("l'annulation n'a pas rétabli le quadrillage")
+	}
+}
+
+func TestMovePushesRight(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	// A en (0,0), B en (0,3), C en (0,6) : trois tableaux de deux colonnes,
+	// séparés d'une colonne libre.
+	for _, c := range []int{0, 3, 6} {
+		for r, row := range [][]string{{"x", "y"}, {"1", "2"}, {"3", "4"}} {
+			for k, v := range row {
+				if _, err := d.SetCell(ctx, 1, r, c+k, v); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+	}
+	start := dump(t, d)
+	var names []string
+	d.read(ctx, func(x *tx) error {
+		tbs, _ := x.tables(1)
+		for _, tb := range tbs {
+			names = append(names, tb.Name)
+		}
+		return nil
+	})
+	if len(names) != 3 {
+		t.Fatalf("tableaux : %v", names)
+	}
+	// A posé sur B, une ligne plus bas : B puis C s'écartent en cascade.
+	if err := d.MoveTable(ctx, names[0], 1, 3); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "cascade")
+	d.read(ctx, func(x *tx) error {
+		a, _ := x.tableByName(names[0])
+		b, _ := x.tableByName(names[1])
+		c, _ := x.tableByName(names[2])
+		if a.Col != 3 || b.Col != a.Right()+2 || c.Col != b.Right()+2 {
+			t.Errorf("colonnes : A %d, B %d, C %d", a.Col, b.Col, c.Col)
+		}
+		return nil
+	})
+	if _, err := d.bus.Undo(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if got := dump(t, d); got != start {
+		t.Fatalf("annulation :\n%s\nattendu\n%s", got, start)
 	}
 }

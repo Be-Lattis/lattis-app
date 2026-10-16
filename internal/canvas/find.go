@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/lalamefine/slitable/internal/grid"
 )
 
 // MaxMatches borne une recherche.
@@ -38,6 +40,11 @@ func (m *Model) Find(ctx context.Context, sheet int64, text string) ([]Match, er
 			return err
 		}
 		for _, tb := range tables {
+			// Un seul parcours du tableau : une condition par colonne saisie
+			// (le texte directement, les autres types par leur texte affiché).
+			var conds, sel []string
+			var args []any
+			var idx []int
 			for i, c := range tb.Cols {
 				if strings.Contains(strings.ToLower(c.Name), strings.ToLower(text)) {
 					out = append(out, Match{tb.Row, tb.Col + i})
@@ -46,21 +53,44 @@ func (m *Model) Find(ctx context.Context, sheet int64, text string) ([]Match, er
 					continue
 				}
 				col := colSQL(c.ID)
-				rs, err := t.query(`SELECT n FROM (SELECT `+col+` AS v, row_number() OVER (ORDER BY _pos) AS n FROM `+tb.view()+
-					`) WHERE slt_text(v, ?) LIKE ? ESCAPE '\' LIMIT ?`, string(c.Type), pattern, MaxMatches)
-				if err != nil {
+				sel = append(sel, col)
+				if c.Type == grid.Text {
+					conds = append(conds, col+` LIKE ? ESCAPE '\'`)
+					args = append(args, pattern)
+				} else {
+					conds = append(conds, `slt_text(`+col+`, ?) LIKE ? ESCAPE '\'`)
+					args = append(args, string(c.Type), pattern)
+				}
+				idx = append(idx, i)
+			}
+			if len(conds) == 0 {
+				continue
+			}
+			q := `SELECT n, ` + strings.Join(conds, ", ") + ` FROM (SELECT row_number() OVER (ORDER BY _pos) AS n, ` +
+				strings.Join(sel, ", ") + ` FROM ` + tb.view() + `) WHERE ` + strings.Join(conds, " OR ") + ` LIMIT ?`
+			all := append(append(append([]any{}, args...), args...), MaxMatches)
+			rs, err := t.query(q, all...)
+			if err != nil {
+				return err
+			}
+			for rs.Next() {
+				vals := make([]any, len(conds)+1)
+				ptrs := make([]any, len(vals))
+				for k := range vals {
+					ptrs[k] = &vals[k]
+				}
+				if err := rs.Scan(ptrs...); err != nil {
+					rs.Close()
 					return err
 				}
-				for rs.Next() {
-					var n int
-					if err := rs.Scan(&n); err != nil {
-						rs.Close()
-						return err
+				n := int(vals[0].(int64))
+				for k, v := range vals[1:] {
+					if b, ok := v.(int64); ok && b != 0 {
+						out = append(out, Match{tb.Row + n, tb.Col + idx[k]})
 					}
-					out = append(out, Match{tb.Row + n, tb.Col + i})
 				}
-				rs.Close()
 			}
+			rs.Close()
 		}
 		rs, err := t.query(`SELECT row, col FROM _slitable_cells WHERE sheet = ? AND raw LIKE ? ESCAPE '\' LIMIT ?`, sheet, pattern, MaxMatches)
 		if err != nil {

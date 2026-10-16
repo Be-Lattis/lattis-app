@@ -141,7 +141,7 @@ func (m *Model) DeleteChart(ctx context.Context, id int64) error {
 // booléens) regroupe les lignes par catégorie et additionne les séries,
 // comme un graphique tiré d'un tableau croisé ; un axe numérique ou de dates
 // prend les lignes dans l'ordre du tableau.
-func (t *tx) chartData(cfg ChartConfig) ([]string, []ChartSeries, error) {
+func (t *tx) chartDataRaw(cfg ChartConfig) ([]string, []ChartSeries, error) {
 	if !chartKinds[cfg.Kind] {
 		return nil, nil, fmt.Errorf("%w : type %q inconnu", ErrChart, cfg.Kind)
 	}
@@ -190,6 +190,9 @@ func (t *tx) chartData(cfg ChartConfig) ([]string, []ChartSeries, error) {
 			sums[k] = "sum(" + v + ")"
 		}
 		key := fmt.Sprintf("coalesce(slt_text(%s, %s), '')", x, sqlLiteral(string(xc.Type)))
+		if xc.Type == grid.Text {
+			key = "coalesce(" + x + ", '')"
+		}
 		q = `SELECT ` + key + ` AS k, ` + strings.Join(sums, ", ") + ` FROM ` + tb.sql() + ` GROUP BY k ORDER BY min(_pos) LIMIT ?`
 	} else {
 		q = `SELECT ` + x + `, ` + strings.Join(vals, ", ") + ` FROM ` + tb.sql() + ` ORDER BY _pos LIMIT ?`
@@ -284,8 +287,7 @@ func (t *tx) chartRows(sheet int64) ([]stmt, error) {
 // chartFromPivot lit les données d'un graphique dans un tableau croisé : X
 // est une colonne de lignes, les séries des colonnes de mesures (en-têtes).
 func (t *tx) chartFromPivot(cfg ChartConfig, pc PivotConfig) ([]string, []ChartSeries, error) {
-	pc.NoGrandTotal = true
-	cells, err := t.pivotCells(pc)
+	cells, err := t.pivotBody(pc)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%w : %s", ErrChart, strings.TrimPrefix(err.Error(), ErrPivot.Error()+" : "))
 	}

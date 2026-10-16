@@ -33,6 +33,10 @@ type tx struct {
 	// keyed : colonne devenue clé pendant la transaction ("Tableau.Colonne"),
 	// pour l'annoncer quand c'est une formule qui l'a posée.
 	keyed string
+	// ro : transaction de lecture ; gen : génération du Store relevée avant
+	// son ouverture (les résultats calculés peuvent être mis en cache).
+	ro  bool
+	gen int64
 }
 
 func (t *tx) apply(do, undo []stmt) error { return t.Apply(do, undo) }
@@ -51,6 +55,12 @@ type Model struct {
 	mu   sync.Mutex
 	now  time.Time
 	seed uint64
+
+	// Cache des calculs lourds en lecture (TCD, graphiques, formules libres,
+	// filtres), valable pour une génération du Store.
+	cacheMu  sync.Mutex
+	cache    map[string]any
+	cacheGen int64
 }
 
 // New relie le modèle à la base (déjà migrée) et au bus de commandes.
@@ -63,6 +73,36 @@ func (m *Model) Recalc() {
 	m.mu.Lock()
 	m.now, m.seed = time.Now(), rand.Uint64()
 	m.mu.Unlock()
+	m.cacheMu.Lock()
+	m.cache = nil
+	m.cacheMu.Unlock()
+}
+
+// cached rend le résultat de fn pour la clé, calculé une fois par génération
+// du Store (lectures seulement : dans une écriture, fn est toujours appelée).
+func cached[T any](t *tx, key string, fn func() (T, error)) (T, error) {
+	if !t.ro || t.m == nil {
+		return fn()
+	}
+	m := t.m
+	m.cacheMu.Lock()
+	if m.cache == nil || m.cacheGen != t.gen {
+		m.cache, m.cacheGen = map[string]any{}, t.gen
+	}
+	if v, ok := m.cache[key]; ok {
+		m.cacheMu.Unlock()
+		return v.(T), nil
+	}
+	m.cacheMu.Unlock()
+	v, err := fn()
+	if err == nil {
+		m.cacheMu.Lock()
+		if m.cache != nil && m.cacheGen == t.gen {
+			m.cache[key] = v
+		}
+		m.cacheMu.Unlock()
+	}
+	return v, err
 }
 
 func (m *Model) volatile() (time.Time, uint64) {
@@ -79,10 +119,11 @@ func (m *Model) Do(ctx context.Context, name string, fn func(*tx) error) error {
 
 // read exécute fn dans une transaction de lecture (rien n'est enregistré).
 func (m *Model) read(ctx context.Context, fn func(*tx) error) error {
+	gen := m.db.Generation()
 	sqlTx, err := m.db.Read().BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return err
 	}
 	defer sqlTx.Rollback()
-	return fn(&tx{Tx: &command.Tx{Tx: sqlTx, Ctx: ctx}, m: m})
+	return fn(&tx{Tx: &command.Tx{Tx: sqlTx, Ctx: ctx}, m: m, ro: true, gen: gen})
 }

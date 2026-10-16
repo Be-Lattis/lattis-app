@@ -12,6 +12,7 @@ import (
 	"database/sql"
 	"errors"
 	"runtime"
+	"sync/atomic"
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"
@@ -26,7 +27,13 @@ type Store struct {
 	write *sql.DB
 	jobs  chan job
 	done  chan struct{}
+	// gen compte les écritures : un résultat calculé à la génération g reste
+	// valable tant que Generation() vaut g (caches de lecture).
+	gen atomic.Int64
 }
+
+// Generation donne le nombre d'écritures passées par le Store.
+func (s *Store) Generation() int64 { return s.gen.Load() }
 
 type job struct {
 	ctx context.Context
@@ -68,6 +75,10 @@ func setup(readOnly bool, extra []func(*sqlite3.Conn) error) func(*sqlite3.Conn)
 			"PRAGMA busy_timeout=5000",
 			"PRAGMA synchronous=NORMAL",
 			"PRAGMA foreign_keys=ON",
+			// Tris et index temporaires en mémoire, cache de 64 Mo : un tri ou un
+			// regroupement sur 1 M de lignes reste en mémoire au lieu du disque.
+			"PRAGMA temp_store=MEMORY",
+			"PRAGMA cache_size=-65536",
 		}
 		if readOnly {
 			pragmas = append(pragmas, "PRAGMA query_only=ON")
@@ -118,7 +129,9 @@ func (s *Store) writer() {
 	for {
 		select {
 		case j := <-s.jobs:
-			j.res <- s.run(j)
+			err := s.run(j)
+			s.gen.Add(1)
+			j.res <- err
 		case <-s.done:
 			return
 		}

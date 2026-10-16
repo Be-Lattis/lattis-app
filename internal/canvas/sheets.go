@@ -165,7 +165,7 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 	return m.Do(ctx, "Supprimer la feuille", func(t *tx) error {
 		var n, tables int
 		var name string
-		var pos int
+		var pos, grid int
 		if err := t.row(`SELECT count(*) FROM _slitable_sheets`).Scan(&n); err != nil {
 			return err
 		}
@@ -178,7 +178,7 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 		if tables > 0 {
 			return fmt.Errorf("%w : la feuille contient des tableaux, supprimez-les d'abord", ErrSheet)
 		}
-		if err := t.row(`SELECT name, pos FROM _slitable_sheets WHERE id = ?`, sheet).Scan(&name, &pos); err != nil {
+		if err := t.row(`SELECT name, pos, gridlines FROM _slitable_sheets WHERE id = ?`, sheet).Scan(&name, &pos, &grid); err != nil {
 			return err
 		}
 		cells, err := t.cells(sheet)
@@ -205,8 +205,23 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 		pivots = append(append(pivots, charts...), buttons...)
 		return t.apply(
 			[]stmt{st(`DELETE FROM _slitable_pivots WHERE sheet = ?`, sheet), st(`DELETE FROM _slitable_charts WHERE sheet = ?`, sheet), st(`DELETE FROM _slitable_buttons WHERE sheet = ?`, sheet), st(`DELETE FROM _slitable_sheets WHERE id = ?`, sheet)},
-			append([]stmt{st(`INSERT INTO _slitable_sheets (id, name, pos) VALUES (?, ?, ?)`, sheet, name, pos)}, pivots...),
+			append([]stmt{st(`INSERT INTO _slitable_sheets (id, name, pos, gridlines) VALUES (?, ?, ?, ?)`, sheet, name, pos, grid)}, pivots...),
 		)
+	})
+}
+
+// SetGridlines affiche ou masque le quadrillage de la feuille.
+func (m *Model) SetGridlines(ctx context.Context, sheet int64, show bool) error {
+	return m.Do(ctx, "Quadrillage", func(t *tx) error {
+		var old bool
+		if err := t.row(`SELECT gridlines <> 0 FROM _slitable_sheets WHERE id = ?`, sheet).Scan(&old); err != nil {
+			return err
+		}
+		if old == show {
+			return nil
+		}
+		q := `UPDATE _slitable_sheets SET gridlines = ? WHERE id = ?`
+		return t.apply([]stmt{st(q, show, sheet)}, []stmt{st(q, old, sheet)})
 	})
 }
 
