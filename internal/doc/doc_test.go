@@ -159,3 +159,40 @@ func m2Child() {
 	}
 	os.Exit(3) // ni enregistrement ni fermeture
 }
+
+// La protection, hors de l'historique, marque le classeur modifié et se
+// retrouve à la réouverture (empreinte du mot de passe comprise).
+func TestProtectionSaved(t *testing.T) {
+	useRoot(t)
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "protege.slitable")
+	d, err := New(ctx)
+	must(t, err)
+	must(t, d.Save(ctx, path))
+	must(t, d.ProtectSheet(ctx, 1, "secret"))
+	must(t, d.ProtectWorkbook(ctx, ""))
+	if dirty, _ := d.Dirty(ctx); !dirty {
+		t.Fatal("protection posée mais classeur vu comme enregistré")
+	}
+	must(t, d.Save(ctx, path))
+	if dirty, _ := d.Dirty(ctx); dirty {
+		t.Fatal("modifié juste après l'enregistrement")
+	}
+	must(t, d.Close())
+
+	d, err = Open(ctx, path)
+	must(t, err)
+	defer d.Close()
+	p, err := d.Protection(ctx)
+	must(t, err)
+	if !p.Workbook || !p.Sheets[1] {
+		t.Fatalf("protection perdue à la réouverture : %+v", p)
+	}
+	if _, err := d.SetCell(ctx, 1, 0, 0, "x"); err == nil {
+		t.Fatal("feuille protégée modifiée après réouverture")
+	}
+	if err := d.UnprotectSheet(ctx, 1, "autre"); err == nil {
+		t.Fatal("mauvais mot de passe accepté après réouverture")
+	}
+	must(t, d.UnprotectSheet(ctx, 1, "secret"))
+}

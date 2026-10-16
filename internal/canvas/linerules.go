@@ -54,6 +54,9 @@ func (m *Model) SetLineRules(ctx context.Context, sheet int64, rows bool, i0, i1
 		neu = strings.TrimSpace(b.String())
 	}
 	return m.Do(ctx, "Mise en forme conditionnelle", func(t *tx) error {
+		if err := t.guard(sheet); err != nil {
+			return err
+		}
 		if err := t.deleteWhere(a.lineRules(), fmt.Sprintf(`sheet = ? AND %s BETWEEN ? AND ?`, a), sheet, i0, i1); err != nil {
 			return err
 		}

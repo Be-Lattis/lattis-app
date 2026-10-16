@@ -36,7 +36,7 @@ func (e *Editor) do(ctx context.Context, fn func(*tx) error) error {
 func (e *Editor) Insert(ctx context.Context, table string, vals map[string]string) (int64, error) {
 	var id int64
 	err := e.do(ctx, func(t *tx) error {
-		tb, err := t.tableByName(table)
+		tb, err := t.editTable(table)
 		if err != nil {
 			return err
 		}
@@ -58,7 +58,7 @@ func (e *Editor) Insert(ctx context.Context, table string, vals map[string]strin
 // Update modifie les colonnes données de la ligne de clé id.
 func (e *Editor) Update(ctx context.Context, table string, id int64, vals map[string]string) error {
 	return e.do(ctx, func(t *tx) error {
-		tb, err := t.tableByName(table)
+		tb, err := t.editTable(table)
 		if err != nil {
 			return err
 		}
@@ -77,7 +77,7 @@ func (e *Editor) Update(ctx context.Context, table string, id int64, vals map[st
 // Delete supprime la ligne de clé id (le tableau rétrécit, comme dans la grille).
 func (e *Editor) Delete(ctx context.Context, table string, id int64) error {
 	return e.do(ctx, func(t *tx) error {
-		tb, err := t.tableByName(table)
+		tb, err := t.editTable(table)
 		if err != nil {
 			return err
 		}

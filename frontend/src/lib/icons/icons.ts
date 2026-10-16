@@ -80,6 +80,10 @@ export const icons = {
 	script: '<path d="M8.5 7 3.5 12l5 5M15.5 7l5 5-5 5"/><path class="a" d="m13.5 4.5-3 15"/>',
 	play: '<path class="af" d="M7 4.5v15l12.5-7.5z"/>',
 	stop: '<rect class="af" x="5.5" y="5.5" width="13" height="13" rx="2"/>',
+	// Protection (Révision) : cadenas sur une feuille, et sur le classeur
+	lock: '<rect x="5" y="10.5" width="14" height="10" rx="1.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><path class="a" d="M12 14.5v2.5"/>',
+	'lock-sheet': '<rect x="3.5" y="3.5" width="13" height="15" rx="1.5"/><path d="M3.5 8h13M8 3.5v15"/><rect class="af" x="12.5" y="14" width="9" height="7" rx="1"/><path class="a" d="M14.5 14v-1.5a2.5 2.5 0 0 1 5 0V14"/>',
+	'lock-book': '<path d="M5 3.5h10A1.5 1.5 0 0 1 16.5 5v8M5 3.5A1.5 1.5 0 0 0 3.5 5v14A1.5 1.5 0 0 0 5 20.5h6M7 3.5v17"/><rect class="af" x="12.5" y="14" width="9" height="7" rx="1"/><path class="a" d="M14.5 14v-1.5a2.5 2.5 0 0 1 5 0V14"/>',
 	key: '<circle cx="8" cy="15.5" r="4.5"/><path d="M11.2 12.3 20 3.5"/><path class="a" d="m16.5 7 2.5 2.5M14 9.5l2 2"/>',
 	// Types de colonne (en-têtes de tableau, menu des types) : tracés <path>
 	// seulement, pour être dessinés aussi sur le <canvas> de la grille (canvas.ts).

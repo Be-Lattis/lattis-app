@@ -16,10 +16,13 @@ import (
 type sheetRef struct {
 	ID   int64  `json:"id"`
 	Name string `json:"name"`
+	// Protected : feuille protégée (ses modifications sont refusées).
+	Protected bool `json:"protected,omitempty"`
 }
 
 func sheetList(ctx context.Context, d *doc.Document) ([]sheetRef, error) {
-	rs, err := d.DB().Read().QueryContext(ctx, `SELECT id, name FROM _slitable_sheets ORDER BY pos, id`)
+	rs, err := d.DB().Read().QueryContext(ctx, `SELECT s.id, s.name, p.sheet IS NOT NULL FROM _slitable_sheets s
+		LEFT JOIN _slitable_protection p ON p.sheet = s.id ORDER BY s.pos, s.id`)
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +30,7 @@ func sheetList(ctx context.Context, d *doc.Document) ([]sheetRef, error) {
 	var out []sheetRef
 	for rs.Next() {
 		var s sheetRef
-		if err := rs.Scan(&s.ID, &s.Name); err != nil {
+		if err := rs.Scan(&s.ID, &s.Name, &s.Protected); err != nil {
 			return nil, err
 		}
 		out = append(out, s)

@@ -348,6 +348,12 @@ export interface Layout {
      * boutons d'action
      */
     "buttons": ButtonInfo[] | null;
+
+    /**
+     * Structure du classeur protégée (onglets), avec ou sans mot de passe.
+     */
+    "workbookProtected": boolean;
+    "workbookPassword": boolean;
 }
 
 /**
@@ -528,6 +534,13 @@ export interface SheetInfo {
      * (sinon seulement pendant la saisie d'une formule).
      */
     "headings": boolean;
+
+    /**
+     * Protected : feuille protégée (Révision › Protéger la feuille) ;
+     * Password : il faut un mot de passe pour ôter la protection.
+     */
+    "protected": boolean;
+    "password": boolean;
 }
 
 /**

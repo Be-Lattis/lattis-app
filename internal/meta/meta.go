@@ -217,6 +217,16 @@ CREATE TABLE _slitable_favorites (
 	sql  TEXT NOT NULL
 ) STRICT;
 `,
+	// 17 → 18 : protection des feuilles et de la structure du classeur
+	// (sheet = 0). hash : vide sans mot de passe, sinon empreinte salée
+	// PBKDF2-SHA256 (jamais le mot de passe en clair, voir canvas/protect.go).
+	// Hors du journal : protéger ou ôter la protection ne s'annule pas.
+	`
+CREATE TABLE _slitable_protection (
+	sheet INTEGER NOT NULL PRIMARY KEY,
+	hash  TEXT NOT NULL
+) STRICT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

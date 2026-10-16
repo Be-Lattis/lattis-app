@@ -297,9 +297,11 @@
 		headings?: boolean;
 		/** Défilement horizontal (largeur du contenu, largeur visible, position) : la barre est dans la ligne des onglets, comme Excel. */
 		onhscroll?: (s: { content: number; view: number; left: number }) => void;
+		/** Feuille protégée : message affiché au lieu d'ouvrir la saisie (vide : modifiable). */
+		locked?: string;
 	}
 
-	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll }: Props = $props();
+	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '' }: Props = $props();
 
 	export const SHEET_ROWS = 1_048_576;
 	export const SHEET_COLS = 16_384;
@@ -3028,6 +3030,10 @@
 	// --- Édition ------------------------------------------------------------
 
 	function startEdit(byTyping: boolean, initial?: string) {
+		if (locked) {
+			say(locked);
+			return;
+		}
 		const info = cellInfo(active.row, active.col);
 		// Ligne pas encore chargée (juste après une saisie qui l'a créée) : la
 		// frappe ne doit pas être perdue ; seule l'édition de la valeur (F2)
@@ -3968,7 +3974,11 @@
 			oninput={(e) => onFormulaInput(e.currentTarget, 'fx')}
 			onkeyup={(e) => moveSig(e, 'fx')}
 			onclick={(e) => moveSig(e, 'fx')}
-			onfocus={() => (fxEditing = true)}
+			readonly={!!locked}
+			onfocus={() => {
+				if (locked) say(locked);
+				else fxEditing = true;
+			}}
 			onkeydown={onFxKey}
 			onblur={() => {
 				fxEditing = false;

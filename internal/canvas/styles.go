@@ -216,6 +216,9 @@ func (m *Model) ApplyStyle(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 		return fmt.Errorf("mise en forme limitée à %d cellules", MaxStyleCells)
 	}
 	return m.Do(ctx, "Mise en forme", func(t *tx) error {
+		if err := t.guard(sheet); err != nil {
+			return err
+		}
 		tables, err := t.tables(sheet)
 		if err != nil {
 			return err
@@ -314,6 +317,9 @@ func (m *Model) ApplyLineStyle(ctx context.Context, sheet int64, rows bool, i0, 
 		label = "Mise en forme des lignes"
 	}
 	return m.Do(ctx, label, func(t *tx) error {
+		if err := t.guard(sheet); err != nil {
+			return err
+		}
 		tables, err := t.tables(sheet)
 		if err != nil {
 			return err

@@ -61,11 +61,21 @@ type Model struct {
 	cacheMu  sync.Mutex
 	cache    map[string]any
 	cacheGen int64
+
+	// Changements de protection (hors journal) depuis l'ouverture.
+	protMu  sync.Mutex
+	protGen int64
 }
 
-// New relie le modèle à la base (déjà migrée) et au bus de commandes.
+// New relie le modèle à la base (déjà migrée) et au bus de commandes (dont
+// il garde les annulations : voir protect.go).
 func New(db *store.Store, bus *command.Bus) *Model {
-	return &Model{db: db, bus: bus, now: time.Now(), seed: rand.Uint64()}
+	m := &Model{db: db, bus: bus, now: time.Now(), seed: rand.Uint64()}
+	if bus != nil {
+		// Une annulation ne doit pas modifier une feuille protégée.
+		bus.Guard = m.historyGuard
+	}
+	return m
 }
 
 // Recalc renouvelle l'instant et la graine des fonctions volatiles (F9).

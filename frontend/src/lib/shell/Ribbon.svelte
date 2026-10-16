@@ -67,9 +67,15 @@
 		onheadings?: (show: boolean) => void;
 		/** Insertion › Bouton : bouton d'action lié à un script. */
 		onbutton?: () => void;
+		/** Feuille active protégée : les commandes qui la modifient sont grisées. */
+		sheetProtected?: boolean;
+		/** Structure du classeur protégée (onglets). */
+		workbookProtected?: boolean;
+		/** Révision › Protéger (ou ôter la protection de) la feuille ou le classeur. */
+		onprotect?: (what: 'sheet' | 'workbook') => void;
 	}
 
-	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, onbutton }: Props = $props();
+	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, onbutton, sheetProtected = false, workbookProtected = false, onprotect }: Props = $props();
 	let fg = $state('#c00000');
 	let bg = $state('#fff2cc');
 	const st = (patch: Record<string, unknown>) => (onstyle ? () => onstyle(patch) : undefined);
@@ -100,7 +106,7 @@
 		onstyle?.({ [kind]: c });
 	}
 
-	const tabs = ['Accueil', 'Insertion', 'Données', 'Formules', 'Affichage'] as const;
+	const tabs = ['Accueil', 'Insertion', 'Données', 'Formules', 'Révision', 'Affichage'] as const;
 	let tab = $state<(typeof tabs)[number] | 'SQL' | 'SCRIPT'>('Accueil');
 	// Largeur disponible pour les groupes : ils se compactent pour y tenir.
 	let groupsW = $state(2000);
@@ -117,7 +123,7 @@
 		return { destroy: () => ro.disconnect() };
 	}
 
-	const ribbons: Record<string, Group[]> = $derived({
+	const allRibbons: Record<string, Group[]> = $derived({
 		Accueil: [
 			{
 				title: 'Annuler',
@@ -216,11 +222,42 @@
 			{ title: 'Audit', commands: [{ label: 'Antécédents', icon: 'precedents', run: onaudit ? () => onaudit('pre') : undefined, hint: 'Flèches depuis ce que lit la formule de la cellule active' }, { label: 'Dépendants', icon: 'dependents', run: onaudit ? () => onaudit('dep') : undefined, hint: 'Flèches vers les formules qui lisent la cellule active' }, { label: 'Effacer les flèches', icon: 'dependency-graph', run: onaudit ? () => onaudit('clear') : undefined, hint: 'Effacer les flèches (Échap)' }] },
 			{ title: 'Calcul', commands: [{ label: 'Calculer', icon: 'function', run: onrecalc, hint: 'Renouveler AUJOURDHUI, MAINTENANT et ALEA (F9)' }] }
 		],
+		Révision: [
+			{
+				title: 'Protéger',
+				commands: [
+					{ label: sheetProtected ? 'Ôter la protection' : 'Protéger la feuille', icon: 'lock-sheet', on: sheetProtected, run: onprotect ? () => onprotect('sheet') : undefined, hint: sheetProtected ? 'Ôter la protection de la feuille active' : 'Protéger la feuille active : plus aucune modification de son contenu (mot de passe facultatif)' },
+					{ label: workbookProtected ? 'Ôter la protection du classeur' : 'Protéger le classeur', icon: 'lock-book', on: workbookProtected, run: onprotect ? () => onprotect('workbook') : undefined, hint: workbookProtected ? 'Ôter la protection de la structure du classeur' : 'Protéger la structure du classeur : ajouter, supprimer, renommer ou déplacer des feuilles est refusé' }
+				]
+			}
+		],
 		Affichage: [
 			{ title: 'Afficher', commands: [{ label: 'Quadrillage', icon: 'border-all', on: gridlines, run: ongridlines ? () => ongridlines(!gridlines) : undefined, hint: gridlines ? 'Masquer le quadrillage de la feuille' : 'Afficher le quadrillage de la feuille' }, { label: 'En-têtes A1', icon: 'headings', on: headings, run: onheadings ? () => onheadings(!headings) : undefined, hint: headings ? 'Lettres et numéros seulement pendant la saisie d’une formule' : 'Toujours afficher les lettres de colonnes et numéros de lignes' }, { label: 'Figer les volets', icon: 'freeze-panes' }, { label: 'Zoom', icon: 'zoom' }] },
 			...(onbench ? [{ title: 'Mesures (prototype)', commands: [{ label: 'Mesurer la grille', icon: 'stopwatch' as IconName, run: () => onbench() }] }] : [])
 		]
 	});
+
+	// Sur une feuille protégée, seules les commandes qui ne la modifient pas
+	// restent actives (lecture, copie, filtres, affichage) ; un tableau croisé
+	// crée une feuille : refusé quand la structure du classeur est protégée.
+	const READ_ONLY = new Set(['Annuler', 'Rétablir', 'Copier', 'Rechercher', 'Filtrer', 'Erreurs seulement', 'Antécédents', 'Dépendants', 'Effacer les flèches', 'Calculer', 'Quadrillage', 'En-têtes A1', 'Figer les volets', 'Zoom', 'Mesurer la grille', 'Tableau croisé', 'Protéger la feuille', 'Protéger le classeur', 'Ôter la protection', 'Ôter la protection du classeur']);
+	const ribbons: Record<string, Group[]> = $derived(
+		Object.fromEntries(
+			Object.entries(allRibbons).map(([k, gs]) => [
+				k,
+				gs.map((g) => ({
+					...g,
+					commands: g.commands.map((c) =>
+						c.run && sheetProtected && !READ_ONLY.has(c.label)
+							? { ...c, run: undefined, hint: `${c.label} : feuille protégée (Révision › Ôter la protection)` }
+							: c.run && workbookProtected && c.label === 'Tableau croisé'
+								? { ...c, run: undefined, hint: 'Tableau croisé : la structure du classeur est protégée (il crée une feuille)' }
+								: c
+					)
+				}))
+			])
+		)
+	);
 
 	type ShapesArr = { title: string; labels: (string | null)[] }[];
 	const shapes = $derived(

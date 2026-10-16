@@ -23,7 +23,7 @@ func (m *Model) RenameTable(ctx context.Context, old, name string) error {
 		return fmt.Errorf("%w : « %s » n'est pas un nom de tableau (lettres, chiffres et _, sans espace)", ErrTable, name)
 	}
 	return m.Do(ctx, "Renommer le tableau", func(t *tx) error {
-		tb, err := t.tableByName(old)
+		tb, err := t.editTable(old)
 		if err != nil {
 			return err
 		}
@@ -50,7 +50,7 @@ func (m *Model) DeleteTables(ctx context.Context, names []string) error {
 	}
 	return m.Do(ctx, label, func(t *tx) error {
 		for _, n := range names {
-			tb, err := t.tableByName(n)
+			tb, err := t.editTable(n)
 			if err != nil {
 				return err
 			}
@@ -176,7 +176,7 @@ func (m *Model) MoveTable(ctx context.Context, name string, row, col int) error 
 		return fmt.Errorf("%w : hors de la feuille", ErrTable)
 	}
 	return m.Do(ctx, "Déplacer le tableau", func(t *tx) error {
-		tb, err := t.tableByName(name)
+		tb, err := t.editTable(name)
 		if err != nil {
 			return err
 		}
@@ -296,7 +296,7 @@ func (m *Model) ExtractColumns(ctx context.Context, name string, i0, i1, row, co
 		return m.MoveTable(ctx, name, row, col)
 	}
 	return m.Do(ctx, "Déplacer des colonnes", func(t *tx) error {
-		tb, err := t.tableByName(name)
+		tb, err := t.editTable(name)
 		if err != nil {
 			return err
 		}

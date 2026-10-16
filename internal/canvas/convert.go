@@ -231,7 +231,7 @@ func (m *Model) TypeMix(ctx context.Context, table string, i int) (Mix, error) {
 // les rend intactes.
 func (m *Model) SetType(ctx context.Context, table string, i int, to grid.Type) error {
 	return m.Do(ctx, "Changer le type", func(t *tx) error {
-		tb, err := t.tableByName(table)
+		tb, err := t.editTable(table)
 		if err != nil {
 			return err
 		}

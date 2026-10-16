@@ -58,6 +58,9 @@ func (m *Model) Paste(ctx context.Context, sheet int64, row, col int, block [][]
 		return ""
 	}
 	err := m.Do(ctx, "Coller", func(t *tx) error {
+		if err := t.guard(sheet); err != nil {
+			return err
+		}
 		free, err := t.areaFree(sheet, row-1, col-1, row+h, col+w)
 		if err != nil {
 			return err
@@ -163,7 +166,7 @@ func hasHeader(block [][]string, w int) bool {
 // colonnes) puis la supprime : « Utiliser la 1re ligne comme en-têtes ».
 func (m *Model) PromoteHeader(ctx context.Context, table string) error {
 	return m.Do(ctx, "Utiliser la 1re ligne comme en-têtes", func(t *tx) error {
-		tb, err := t.tableByName(table)
+		tb, err := t.editTable(table)
 		if err != nil {
 			return err
 		}

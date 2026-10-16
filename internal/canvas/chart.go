@@ -66,6 +66,9 @@ var chartKinds = map[string]bool{"bar": true, "column": true, "line": true, "are
 func (m *Model) CreateChart(ctx context.Context, sheet int64, row, col int, cfg ChartConfig) (int64, error) {
 	var id int64
 	err := m.Do(ctx, "Insérer un graphique", func(t *tx) error {
+		if err := t.guard(sheet); err != nil {
+			return err
+		}
 		if _, _, err := t.chartData(cfg); err != nil {
 			return err
 		}
@@ -87,6 +90,9 @@ func (m *Model) CreateChart(ctx context.Context, sheet int64, row, col int, cfg 
 // SetChart change la configuration d'un graphique.
 func (m *Model) SetChart(ctx context.Context, id int64, cfg ChartConfig) error {
 	return m.Do(ctx, "Modifier le graphique", func(t *tx) error {
+		if err := t.guardObject(`_slitable_charts`, id); err != nil {
+			return err
+		}
 		if _, _, err := t.chartData(cfg); err != nil {
 			return err
 		}
@@ -109,6 +115,9 @@ func (m *Model) MoveChart(ctx context.Context, id int64, row, col int) error {
 		return fmt.Errorf("%w : hors de la feuille", ErrChart)
 	}
 	return m.Do(ctx, "Déplacer le graphique", func(t *tx) error {
+		if err := t.guardObject(`_slitable_charts`, id); err != nil {
+			return err
+		}
 		var r, c int
 		if err := t.row(`SELECT row, col FROM _slitable_charts WHERE id = ?`, id).Scan(&r, &c); err != nil {
 			return err
@@ -124,6 +133,9 @@ func (m *Model) MoveChart(ctx context.Context, id int64, row, col int) error {
 // DeleteChart supprime un graphique.
 func (m *Model) DeleteChart(ctx context.Context, id int64) error {
 	return m.Do(ctx, "Supprimer le graphique", func(t *tx) error {
+		if err := t.guardObject(`_slitable_charts`, id); err != nil {
+			return err
+		}
 		var sheet int64
 		var row, col int
 		var cfg string
@@ -342,6 +354,9 @@ func (m *Model) PlaceChart(ctx context.Context, id int64, row, col, offX, offY, 
 		return fmt.Errorf("%w : position ou taille invalide", ErrChart)
 	}
 	return m.Do(ctx, "Déplacer le graphique", func(t *tx) error {
+		if err := t.guardObject(`_slitable_charts`, id); err != nil {
+			return err
+		}
 		var r, c int
 		var old string
 		if err := t.row(`SELECT row, col, config FROM _slitable_charts WHERE id = ?`, id).Scan(&r, &c, &old); err != nil {
