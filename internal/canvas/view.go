@@ -32,6 +32,9 @@ type ColumnInfo struct {
 	Fixed  bool      `json:"fixed"`
 	// Colonne calculée : formule telle que l'utilisateur la lit (français).
 	Formula string `json:"formula"`
+	// Colonne calculée : type numérique deviné du résultat (« decimal » :
+	// affichée comme une colonne Décimal), vide sinon.
+	Result grid.Type `json:"result"`
 	// Mise en forme de toute la colonne et de son en-tête (JSON, voir Style).
 	Style       string `json:"style"`
 	HeaderStyle string `json:"headerStyle"`
@@ -199,8 +202,12 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 				if err != nil {
 					return err
 				}
-				ti.Columns = append(ti.Columns, ColumnInfo{ID: c.ID, Errors: errs[c.ID], Name: c.Name, SQL: colSQL(c.ID), Type: c.Type, Fixed: c.Fixed, Formula: displayFormula(c.Formula),
-					Style: colStyles[[2]int64{0, c.ID}], HeaderStyle: colStyles[[2]int64{-1, c.ID}], Rules: rules})
+				ci := ColumnInfo{ID: c.ID, Errors: errs[c.ID], Name: c.Name, SQL: colSQL(c.ID), Type: c.Type, Fixed: c.Fixed, Formula: displayFormula(c.Formula),
+					Style: colStyles[[2]int64{0, c.ID}], HeaderStyle: colStyles[[2]int64{-1, c.ID}], Rules: rules}
+				if c.Formula != "" {
+					ci.Result = t.computedResult(tb, c)
+				}
+				ti.Columns = append(ti.Columns, ci)
 			}
 			l.Tables = append(l.Tables, ti)
 		}

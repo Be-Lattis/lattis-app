@@ -16,6 +16,9 @@
 	import { formatNumber, isNumericText, painterPatch, parseStyle, resolveStyle, styledNumber, type CellStyle, type StyleLayer } from './style';
 	import { dismiss } from './dismiss';
 	import { explainError } from './errors';
+	import { freeDisplay } from './freecell';
+	import { bandAt, bandLabel, bandRefusal, hiddenBand } from './hidden';
+	import { pivotLayer } from './pivotformat';
 	import { fillSeries } from './fill';
 	import Select from '#lib/ui/Select.svelte';
 	import Chart from '#lib/chart/Chart.svelte';
@@ -33,7 +36,7 @@
 		alignment,
 		defaultWidth,
 		editValue,
-		formatValue,
+		formatColumnValue,
 		typeIcon,
 		typeIconName,
 		typeLabel,
@@ -46,6 +49,7 @@
 		fixed?: boolean; // type choisi par l'utilisateur (sinon inféré)
 		errors?: number; // saisies hors type
 		formula?: string; // colonne calculée : formule affichée
+		result?: string; // colonne calculée : type deviné du résultat (« decimal »…)
 		style?: string; // mise en forme de toute la colonne (JSON)
 		headerStyle?: string;
 		rules?: string; // mise en forme conditionnelle (JSON)
@@ -81,6 +85,8 @@
 		col: number;
 		config: PivotConfig;
 		cells: string[][]; // en-tête, groupes, total
+		/** Format de nombre par défaut de chaque colonne (style JSON, voir pivotformat.ts). */
+		formats?: string[] | null;
 		error: string;
 	}
 
@@ -391,7 +397,7 @@
 			cache: new RowCache(
 				(first, count) => source.window(e.t, first, count),
 				t.rows,
-				(c, v) => formatValue(e.t.columns[c]?.type ?? 'text', v),
+				(c, v) => formatColumnValue(e.t.columns[c], v),
 				() => {
 					schedule();
 					refreshFx();
@@ -754,7 +760,7 @@
 	function styleAt(r: number, c: number, e = tableAt(r, c)): CellStyle | undefined {
 		const col = sheetColStyles.get(c);
 		const row = sheetRowStyles.get(r);
-		if (!e) return resolveStyle(col, row, freeStyles.get(key(r, c)));
+		if (!e) return resolveStyle(pivotLayer(pivots, r, c), col, row, freeStyles.get(key(r, c)));
 		const i = c - e.t.col;
 		if (r === e.t.row) return resolveStyle(col, row, headStyles.get(e.t.id)?.[i]);
 		return resolveStyle(col, row, colStyles.get(e.t.id)?.[i], parseStyle(e.cache.row(r - e.t.row - 1)?.sty?.get(i)));
@@ -822,16 +828,26 @@
 				if (m.row >= r0 && m.row <= r1 && m.col >= c0 && m.col <= c1) ctx.fillRect(cx(m.col), ry(m.row), colAxis.size(m.col), rh(m.row));
 		}
 
-		// Lignes masquées par un filtre : une note sous le tableau.
-		for (const e of visible) {
-			const n = e.t.hidden ?? 0;
-			const r = e.last + 1;
-			if (!n || r < r0 || r > r1) continue;
+		// Lignes masquées par un filtre : elles gardent leur place (les cellules
+		// libres dessous ne bougent pas) ; une bande grisée les représente, avec
+		// son libellé sur sa première ligne visible.
+		for (const e of entries) {
+			const b = hiddenBand(e.t);
+			if (!b || b.last < r0 || b.first > r1 || e.lastCol < c0 || e.t.col > c1) continue;
+			const top = Math.max(b.first, r0);
+			const bottom = Math.min(b.last, r1);
+			ctx.fillStyle = C.gray;
+			ctx.fillRect(cx(e.t.col), ry(top), spanW(e.t.col, e.lastCol), rspan(top, bottom));
+			ctx.save();
+			ctx.beginPath();
+			ctx.rect(cx(e.t.col), ry(top), spanW(e.t.col, e.lastCol), rspan(top, bottom));
+			ctx.clip();
 			ctx.font = 'italic ' + FONT_SMALL;
 			ctx.fillStyle = C.icon;
 			ctx.textAlign = 'left';
 			ctx.textBaseline = 'middle';
-			ctx.fillText(`⧩ ${n} ligne${n > 1 ? 's' : ''} masquée${n > 1 ? 's' : ''} par le filtre`, cx(e.t.col) + 6, ry(r) + rh(r) / 2);
+			ctx.fillText(bandLabel(e.t.hidden ?? 0), cx(e.t.col) + 6, ry(top) + rh(top) / 2);
+			ctx.restore();
 		}
 
 		// Contenu des tableaux, colonne par colonne (une découpe par colonne).
@@ -967,9 +983,8 @@
 				sp.rows[i].forEach((v, j) => {
 					if ((i === 0 && j === 0) || !v) return;
 					const c = sp.col + j;
-					const num = isNumeric(v);
 					const st = styleAt(sp.row + i, c, undefined);
-					drawText(styledNumber(v, st), cx(c), ry(sp.row + i), colAxis.size(c), st?.al ?? (num ? 'right' : 'left'), st, isErrorValue(v) ? C.error : C.text);
+					drawText(styledNumber(v, st), cx(c), ry(sp.row + i), colAxis.size(c), st?.al ?? freeDisplay('', v).align, st, isErrorValue(v) ? C.error : C.text);
 				});
 			ctx.save();
 			ctx.strokeStyle = C.spill;
@@ -1014,20 +1029,21 @@
 			const cw = colAxis.size(c);
 			const f = shown.get(k);
 			if (f?.error) errorCorner(x, ry(r));
-			let raw = f ? f.text : rawText;
-			const num = isNumeric(raw);
-			if (num) raw = styledNumber(raw, fstyle);
+			// Nombres, dates et heures à droite, booléens centrés, apostrophe de tête masquée.
+			const fd = freeDisplay(rawText, f?.text);
+			const raw = fd.kind === 'number' ? styledNumber(fd.text, fstyle) : fd.text;
+			const boxed = fd.align !== 'left';
 			if (fstyle) {
-				drawText(raw, x, ry(r), cw, fstyle.al ?? (num ? 'right' : 'left'), fstyle, f?.error ? C.error : C.text, num ? cw : w);
+				drawText(raw, x, ry(r), cw, fstyle.al ?? fd.align, fstyle, f?.error ? C.error : C.text, boxed ? cw : w);
 				continue;
 			}
 			ctx.fillStyle = f?.error ? C.error : C.text;
 			ctx.save();
 			ctx.beginPath();
-			ctx.rect(Math.max(x, MARGIN), TOP_H, num ? cw : w, h - TOP_H);
+			ctx.rect(Math.max(x, MARGIN), TOP_H, boxed ? cw : w, h - TOP_H);
 			ctx.clip();
-			ctx.textAlign = num ? 'right' : 'left';
-			ctx.fillText(raw, num ? x + cw - 6 : x + 6, ry(r) + rh(r) / 2);
+			ctx.textAlign = fd.align;
+			ctx.fillText(raw, fd.align === 'right' ? x + cw - 6 : fd.align === 'center' ? x + cw / 2 : x + 6, ry(r) + rh(r) / 2);
 			ctx.restore();
 		}
 
@@ -2266,7 +2282,7 @@
 	function refreshFx() {
 		nameBox = cellName(active.row, active.col);
 		const err = errorAt(active.row, active.col);
-		if (err) message = explainError(err.code, err.formula) || message;
+		if (err) message = explainError(err.code, err.formula, (r, c) => shown.get(key(r, c))?.text ?? cells.get(key(r, c))) || message;
 		const pv = pivotAt(active.row, active.col);
 		if (pv) panel = { kind: 'pivot', id: pv.id };
 		else if (panel?.kind === 'pivot' && !openPivotOnLoad) panel = null;
@@ -3055,6 +3071,15 @@
 			say(locked);
 			return;
 		}
+		const band = bandAt(
+			entries.map((x) => x.t),
+			active.row,
+			active.col
+		);
+		if (band) {
+			say(bandRefusal(band.name));
+			return;
+		}
 		const info = cellInfo(active.row, active.col);
 		// Ligne pas encore chargée (juste après une saisie qui l'a créée) : la
 		// frappe ne doit pas être perdue ; seule l'édition de la valeur (F2)
@@ -3087,12 +3112,14 @@
 	// Les saisies partent l'une après l'autre : la suivante peut dépendre de
 	// la précédente (une saisie fait naître un tableau, la suivante le remplit).
 	let writing: Promise<void> = Promise.resolve();
-	function write(row: number, col: number, raw: string): Promise<void> {
-		writing = writing.then(() => writeNow(row, col, raw));
+	// keep : saisie au clavier ; refusée, son texte revient dans l'éditeur
+	// (sur sa cellule) au lieu d'être perdu.
+	function write(row: number, col: number, raw: string, keep = false): Promise<void> {
+		writing = writing.then(() => writeNow(row, col, raw, keep));
 		return writing;
 	}
 
-	async function writeNow(row: number, col: number, raw: string) {
+	async function writeNow(row: number, col: number, raw: string, keep = false) {
 		const info = cellInfo(row, col);
 		const target =
 			info.kind === 'free'
@@ -3108,6 +3135,13 @@
 			} else message = m ?? '';
 		} catch (e) {
 			message = String(e instanceof Error ? e.message : e);
+			if (keep && !editing) {
+				const why = message;
+				active = { row, col };
+				anchor = { ...active };
+				startEdit(true, raw);
+				message = why;
+			}
 		}
 		refreshFx();
 		refreshStatus();
@@ -3118,7 +3152,7 @@
 		if (!editing) return;
 		editing = false;
 		const { row, col } = active;
-		if (editValueText !== cellInfo(row, col).value) write(row, col, editValueText);
+		if (editValueText !== cellInfo(row, col).value) write(row, col, editValueText, true);
 		wrap.focus();
 	}
 

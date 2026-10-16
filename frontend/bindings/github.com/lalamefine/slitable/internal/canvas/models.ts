@@ -192,6 +192,12 @@ export interface ColumnInfo {
     "formula": string;
 
     /**
+     * Colonne calculée : type numérique deviné du résultat (« decimal » :
+     * affichée comme une colonne Décimal), vide sinon.
+     */
+    "result": grid$0.Type;
+
+    /**
      * Mise en forme de toute la colonne et de son en-tête (JSON, voir Style).
      */
     "style": string;
@@ -460,6 +466,13 @@ export interface PivotInfo {
      * Cells : en-tête (1 ligne), groupes, puis la ligne de total.
      */
     "cells": (string[] | null)[] | null;
+
+    /**
+     * Formats : format de nombre par défaut de chaque colonne (style JSON,
+     * vide : aucun) : celui de la colonne source, ou deux décimales pour une
+     * moyenne ou des décimaux. La mise en forme des cellules l'emporte.
+     */
+    "formats": string[] | null;
     "error": string;
 }
 
