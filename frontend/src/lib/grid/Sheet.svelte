@@ -3842,7 +3842,10 @@
 		if (!e) return cellAddr(r, c);
 		const col = e.t.columns[c - e.t.col].name;
 		const here = tableAt(active.row, active.col);
-		const same = here === e && active.row > e.t.row;
+		// La formule est dans le tableau, ou juste à sa droite sur une de ses
+		// lignes (elle y devient une colonne calculée, comme dans Excel).
+		const beside = !here && active.col === e.lastCol + 1 && active.row > e.t.row && active.row <= e.last;
+		const same = (here === e || beside) && active.row > e.t.row;
 		// En-tête : toute la colonne.
 		if (r === e.t.row) return `${e.t.name}[${col}]`;
 		// Même ligne du tableau de la formule : la valeur de la ligne.
