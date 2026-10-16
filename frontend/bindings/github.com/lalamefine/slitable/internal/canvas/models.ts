@@ -178,6 +178,11 @@ export interface Event {
      * saisie hors type dans une colonne au type fixé
      */
     "invalid": boolean;
+
+    /**
+     * Headless : tableau collé sans ligne d'en-tête reconnue (« Colonne n »).
+     */
+    "headless": boolean;
 }
 
 /**

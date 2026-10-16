@@ -23,6 +23,8 @@ type Event struct {
 	From    grid.Type `json:"from"`    // élargissement
 	To      grid.Type `json:"to"`
 	Invalid bool      `json:"invalid"` // saisie hors type dans une colonne au type fixé
+	// Headless : tableau collé sans ligne d'en-tête reconnue (« Colonne n »).
+	Headless bool `json:"headless"`
 }
 
 // SetCell traite une saisie validée dans la cellule (row, col) d'une feuille,

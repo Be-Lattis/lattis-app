@@ -46,10 +46,11 @@
 		ondedup?: () => void;
 		onpivot?: () => void;
 		onformula?: (what: 'insert' | 'sum' | 'reference') => void;
+		onclip?: (what: 'cut' | 'copy' | 'paste') => void;
 		onchart?: (kind: 'bar' | 'line' | 'pie' | 'scatter') => void;
 	}
 
-	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula }: Props = $props();
+	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip }: Props = $props();
 	let fg = $state('#c00000');
 	let bg = $state('#fff2cc');
 	const st = (patch: Record<string, unknown>) => (onstyle ? () => onstyle(patch) : undefined);
@@ -103,7 +104,7 @@
 					{ label: 'Rétablir', icon: 'redo', run: redo ? onredo : undefined, hint: redo ? 'Rétablir : ' + redo + ' (Ctrl+Y)' : 'Rien à rétablir' }
 				]
 			},
-			{ title: 'Presse-papiers', commands: [{ label: 'Coller', icon: 'paste' }, { label: 'Couper', icon: 'cut' }, { label: 'Copier', icon: 'copy' }] },
+			{ title: 'Presse-papiers', commands: [{ label: 'Coller', icon: 'paste', run: onclip ? () => onclip('paste') : undefined, hint: 'Coller (Ctrl+V)' }, { label: 'Couper', icon: 'cut', run: onclip ? () => onclip('cut') : undefined, hint: 'Couper (Ctrl+X)' }, { label: 'Copier', icon: 'copy', run: onclip ? () => onclip('copy') : undefined, hint: 'Copier (Ctrl+C)' }] },
 			{
 				title: 'Police',
 				commands: [

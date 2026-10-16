@@ -636,3 +636,8 @@ func (s *DocumentService) FieldValues(ctx context.Context, table, field string) 
 	}
 	return d.FieldValues(ctx, table, field)
 }
+
+// PromoteHeader prend la première ligne d'un tableau comme en-têtes.
+func (s *DocumentService) PromoteHeader(ctx context.Context, table string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.PromoteHeader(ctx, table) })
+}

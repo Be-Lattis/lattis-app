@@ -3,6 +3,8 @@ package canvas
 import (
 	"context"
 	"strings"
+
+	"github.com/lalamefine/slitable/internal/grid"
 )
 
 // MaxPasteCells borne un collage cellule par cellule (le collage d'un bloc
@@ -61,15 +63,30 @@ func (m *Model) Paste(ctx context.Context, sheet int64, row, col int, block [][]
 			return err
 		}
 		if free && h >= MinRows {
+			// La première ligne n'est un en-tête que si elle en a l'air (voir
+			// hasHeader) ; sinon les colonnes s'appellent « Colonne n » et
+			// l'en-tête se place au-dessus du bloc collé, qui ne bouge pas.
+			first := 0
 			headers := make([]string, w)
-			for c := range w {
-				headers[c] = strings.TrimSpace(cell(0, c))
+			if hasHeader(block, w) {
+				for c := range w {
+					headers[c] = strings.TrimSpace(cell(0, c))
+				}
+				first = 1
+			} else {
+				for c := range w {
+					headers[c] = "Colonne " + itoa(c+1)
+				}
+				if row > 0 {
+					row--
+				}
+				ev.Headless = true
 			}
-			data := make([][]string, h-1)
+			data := make([][]string, h-first)
 			for r := range data {
 				data[r] = make([]string, w)
 				for c := range w {
-					data[r][c] = cell(r+1, c)
+					data[r][c] = cell(r+first, c)
 				}
 			}
 			name, err := t.tableName(sheet, row, col)
@@ -113,4 +130,68 @@ func (t *tx) areaFree(sheet int64, r0, c0, r1, c1 int) (bool, error) {
 	err = t.row(`SELECT count(*) FROM _slitable_cells WHERE sheet = ? AND row BETWEEN ? AND ? AND col BETWEEN ? AND ?`,
 		sheet, r0, r1, c0, c1).Scan(&n)
 	return n == 0, err
+}
+
+// hasHeader : comme Excel, la première ligne d'un bloc collé est un en-tête si
+// elle n'a que des textes, tous remplis, et qu'au moins une colonne a dessous
+// des valeurs d'un autre type (nombres, dates, booléens). Un bloc entièrement
+// textuel est pris comme des données.
+func hasHeader(block [][]string, w int) bool {
+	if len(block) < 2 {
+		return false
+	}
+	for c := range w {
+		if c >= len(block[0]) || strings.TrimSpace(block[0][c]) == "" || Infer(block[0][c]) != grid.Text {
+			return false
+		}
+	}
+	for c := range w {
+		var below []string
+		for _, r := range block[1:] {
+			if c < len(r) {
+				below = append(below, r[c])
+			}
+		}
+		if InferAll(below) != grid.Text {
+			return true
+		}
+	}
+	return false
+}
+
+// PromoteHeader prend la première ligne de données comme en-têtes (noms des
+// colonnes) puis la supprime : « Utiliser la 1re ligne comme en-têtes ».
+func (m *Model) PromoteHeader(ctx context.Context, table string) error {
+	return m.Do(ctx, "Utiliser la 1re ligne comme en-têtes", func(t *tx) error {
+		tb, err := t.tableByName(table)
+		if err != nil {
+			return err
+		}
+		if tb.Rows < 1 || tb.Filtered() {
+			return nil
+		}
+		rid, _, err := t.rowID(tb, 0)
+		if err != nil {
+			return err
+		}
+		used := map[string]bool{}
+		for i, c := range tb.Cols {
+			raw, _, err := t.rawAt(tb.Sheet, tb.Row+1, tb.Col+i)
+			if err != nil {
+				return err
+			}
+			name := strings.TrimSpace(raw)
+			if name == "" {
+				name = c.Name
+			}
+			for n := 2; used[strings.ToLower(name)]; n++ {
+				name = strings.TrimSpace(raw) + " " + itoa(n)
+			}
+			used[strings.ToLower(name)] = true
+			if err := t.rename(tb, c, name); err != nil {
+				return err
+			}
+		}
+		return t.deleteRow(tb, rid)
+	})
 }

@@ -213,6 +213,7 @@
 		async paste(row, col, block) {
 			const ev = await DocumentService.Paste(sheetId, row, col, block);
 			await reload();
+			if (ev.created && ev.headless) return `Tableau « ${ev.created} » créé sans en-têtes : clic droit › « Utiliser la 1re ligne comme en-têtes » si besoin`;
 			if (ev.created) return `Tableau « ${ev.created} » créé (${block.length - 1} lignes)`;
 		},
 		insertRow: (t, n) => DocumentService.InsertRow(t.name, n).then(reload),
@@ -229,6 +230,7 @@
 		setFilter: (t, i, f) => DocumentService.SetFilter(t.name, i, f).then(reload),
 		clearFilters: (t) => DocumentService.ClearFilters(t.name).then(reload),
 		renameTable: (t, name) => DocumentService.RenameTable(t.name, name).then(reload),
+		promoteHeader: (t) => DocumentService.PromoteHeader(t.name).then(reload),
 		keyCheck: (t, i) => DocumentService.KeyCheck(t.name, i),
 		setKey: (t, i) => DocumentService.SetKey(t.name, i).then(reload),
 		clearKey: (t) => DocumentService.ClearKey(t.name).then(reload),
@@ -383,6 +385,7 @@
 		onfind={mode === 'doc' ? (replace) => sheet?.openFinder(replace) : undefined}
 		onrules={mode === 'doc' ? () => sheet?.rulesActive() : undefined}
 		onfilter={mode === 'doc' ? (errorsOnly) => sheet?.filterActive(errorsOnly) : undefined}
+		onclip={mode === 'doc' ? (what) => (what === 'paste' ? sheet?.pasteClipboard() : sheet?.copySelection(what === 'cut')) : undefined}
 		onchart={mode === 'doc' ? (kind) => sheet?.chartActive(kind) : undefined}
 		onformula={mode === 'doc' ? (what) => (what === 'insert' ? sheet?.openFunctions() : what === 'sum' ? sheet?.autoSum() : sheet?.startFormula('=REFERENCE(')) : undefined}
 		onpivot={mode === 'doc' ? () => sheet?.pivotActive() : undefined}

@@ -674,7 +674,10 @@ func TestStyles(t *testing.T) {
 func TestFindReplace(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
-	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Ville", "Note"}, {"Paris", "paris centre"}, {"Lyon", "1"}, {"PARIS", ""}}); err != nil {
+	if _, err := d.Paste(ctx, 1, 1, 0, [][]string{{"Ville", "Note"}, {"Paris", "paris centre"}, {"Lyon", "1"}, {"PARIS", ""}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.PromoteHeader(ctx, "Feuille1"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := d.SetCell(ctx, 1, 6, 0, "voir Paris"); err != nil {
@@ -741,7 +744,10 @@ func TestRules(t *testing.T) {
 func TestFilter(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
-	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Ville", "Pays"}, {"Lyon", "FR"}, {"Rome", "IT"}, {"Paris", "FR"}, {"Nice", ""}}); err != nil {
+	if _, err := d.Paste(ctx, 1, 1, 0, [][]string{{"Ville", "Pays"}, {"Lyon", "FR"}, {"Rome", "IT"}, {"Paris", "FR"}, {"Nice", ""}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.PromoteHeader(ctx, "Feuille1"); err != nil {
 		t.Fatal(err)
 	}
 	before := dump(t, d)
@@ -765,7 +771,7 @@ func TestFilter(t *testing.T) {
 		t.Fatal(err)
 	}
 	var got string
-	d.read(ctx, func(t *tx) error { return t.row(`SELECT c_1 FROM t_1 WHERE id = 3`).Scan(&got) })
+	d.read(ctx, func(t *tx) error { return t.row(`SELECT c_1 FROM t_1 WHERE id = 4`).Scan(&got) })
 	if got != "Paris 2" {
 		t.Fatalf("saisie sur la ligne filtrée : %q", got)
 	}
@@ -864,7 +870,10 @@ func TestTablesMoveMergeSplit(t *testing.T) {
 	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Ville", "Pop"}, {"Lyon", "520"}, {"Paris", "2100"}}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := d.Paste(ctx, 1, 0, 5, [][]string{{"Pays", "Note"}, {"FR", "x"}, {"IT", "y"}, {"DE", "z"}}); err != nil {
+	if _, err := d.Paste(ctx, 1, 1, 5, [][]string{{"Pays", "Note"}, {"FR", "x"}, {"IT", "y"}, {"DE", "z"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.PromoteHeader(ctx, "Tableau1"); err != nil {
 		t.Fatal(err)
 	}
 	if err := d.SetFilter(ctx, "Tableau1", 0, nil); err != nil {
@@ -951,7 +960,7 @@ func TestTypeBetweenTablesMerges(t *testing.T) {
 	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"A"}, {"1"}, {"2"}}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := d.Paste(ctx, 1, 0, 2, [][]string{{"C"}, {"x"}, {"y"}}); err != nil {
+	if _, err := d.Paste(ctx, 1, 0, 2, [][]string{{"C"}, {"7"}, {"8"}}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := d.SetCell(ctx, 1, 0, 1, "B"); err != nil {
@@ -1052,7 +1061,10 @@ func TestSpill(t *testing.T) {
 func TestRemoveDuplicates(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
-	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Ville", "Pays"}, {"Lyon", "FR"}, {"lyon", "FR"}, {"Rome", "IT"}, {"Lyon", "BE"}, {"Rome", "IT"}}); err != nil {
+	if _, err := d.Paste(ctx, 1, 1, 0, [][]string{{"Ville", "Pays"}, {"Lyon", "FR"}, {"lyon", "FR"}, {"Rome", "IT"}, {"Lyon", "BE"}, {"Rome", "IT"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.PromoteHeader(ctx, "Feuille1"); err != nil {
 		t.Fatal(err)
 	}
 	before := dump(t, d)
@@ -1124,7 +1136,10 @@ func TestPivot(t *testing.T) {
 func TestSetKey(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
-	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Code", "Ville", "Pays"}, {"LY", "Lyon", "FR"}, {"PA", "Paris", "FR"}, {"RO", "Rome", ""}}); err != nil {
+	if _, err := d.Paste(ctx, 1, 1, 0, [][]string{{"Code", "Ville", "Pays"}, {"LY", "Lyon", "FR"}, {"PA", "Paris", "FR"}, {"RO", "Rome", ""}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.PromoteHeader(ctx, "Feuille1"); err != nil {
 		t.Fatal(err)
 	}
 	before := dump(t, d)
@@ -1284,4 +1299,33 @@ func TestPivotAsView(t *testing.T) {
 	if len(all) != 2 || all[1].Kind != "pivot" || all[1].Name != "TCD1" {
 		t.Fatalf("objets : %+v", all)
 	}
+}
+
+// Un bloc entièrement textuel collé dans le vide : données, en-têtes « Colonne n » au-dessus.
+func TestPasteWithoutHeader(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 3, 0, [][]string{{"Alice", "Paris"}, {"Bob", "Lyon"}}); err != nil {
+		t.Fatal(err)
+	}
+	l, _ := d.Layout(ctx, 1)
+	tb := l.Tables[0]
+	if tb.Row != 2 || tb.Rows != 2 || tb.Columns[0].Name != "Colonne 1" {
+		t.Fatalf("collage sans en-tête : %+v", tb)
+	}
+	if _, err := d.Paste(ctx, 1, 10, 0, [][]string{{"Nom", "Âge"}, {"Alice", "31"}}); err != nil {
+		t.Fatal(err)
+	}
+	l, _ = d.Layout(ctx, 1)
+	if tb := l.Tables[1]; tb.Row != 10 || tb.Rows != 1 || tb.Columns[1].Name != "Âge" {
+		t.Fatalf("collage avec en-tête : %+v", tb)
+	}
+	if err := d.PromoteHeader(ctx, l.Tables[0].Name); err != nil {
+		t.Fatal(err)
+	}
+	l, _ = d.Layout(ctx, 1)
+	if tb := l.Tables[0]; tb.Rows != 1 || tb.Columns[0].Name != "Alice" {
+		t.Fatalf("1re ligne en en-têtes : %+v", tb)
+	}
+	check(t, d, "en-têtes")
 }

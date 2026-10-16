@@ -257,6 +257,13 @@ export function Paste(sheet: number, row: number, col: number, block: (string[] 
 }
 
 /**
+ * PromoteHeader prend la première ligne d'un tableau comme en-têtes.
+ */
+export function PromoteHeader(table: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(532047070, table);
+}
+
+/**
  * Query exécute une requête SQL en lecture seule sur le classeur (onglet SQL).
  */
 export function Query(q: string): $CancellablePromise<grid$0.QueryResult> {

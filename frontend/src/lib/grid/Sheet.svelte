@@ -15,6 +15,8 @@
 	import { parseTSV, toTSV } from './clipboard';
 	import { formatNumber, mergeStyles, parseStyle, type CellStyle } from './style';
 	import { dismiss } from './dismiss';
+	import { explainError } from './errors';
+	import { fillSeries } from './fill';
 	import Chart from '#lib/chart/Chart.svelte';
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
 	import PivotPanel from './PivotPanel.svelte';
@@ -184,6 +186,8 @@
 		clearKey?(table: SheetTable): Promise<unknown>;
 		/** Renouvelle AUJOURDHUI, MAINTENANT et ALEA (F9). */
 		recalc?(): Promise<unknown>;
+		/** La 1re ligne de données devient les en-têtes. */
+		promoteHeader?(table: SheetTable): Promise<unknown>;
 		createPivot?(cfg: PivotConfig): Promise<unknown>;
 		/** Valeurs distinctes d'une colonne d'un tableau (filtre d'un TCD). */
 		pivotFieldValues?(table: string, field: string): Promise<{ text: string; count: number }[]>;
@@ -682,6 +686,7 @@
 					}
 					const align = cs?.al ?? (col.type === 'formula' ? valueAlignment(v) : alignment(col.type));
 					drawText(s, x, y, cw, align, cs, col.type === 'formula' && isErrorValue(v) ? C.error : C.text);
+					if (col.type === 'formula' && isErrorValue(v)) errorCorner(x, y);
 				}
 				ctx.restore();
 			}
@@ -747,6 +752,7 @@
 			const x = cx(c);
 			const cw = colAxis.size(c);
 			const f = shown.get(k);
+			if (f?.error) errorCorner(x, ry(r));
 			let raw = f ? f.text : rawText;
 			const num = isNumeric(raw);
 			if (num && fstyle?.nf) {
@@ -801,7 +807,17 @@
 			ctx.lineTo(x + spanW(e.t.col, g.lastCol), y + ROW_H);
 			ctx.stroke();
 		}
-		// Déplacement en cours : contour de la destination.
+		// Zone copiée ou coupée : cadre pointillé, comme Excel.
+		if (clipRange) {
+			const k = clipRange;
+			ctx.save();
+			ctx.setLineDash([4, 3]);
+			ctx.strokeStyle = C.active;
+			ctx.lineWidth = 1.5;
+			ctx.strokeRect(cx(k.c0) + 1, ry(k.r0) + 1, spanW(k.c0, k.c1) - 2, (k.r1 - k.r0 + 1) * ROW_H - 2);
+			ctx.restore();
+		}
+				// Déplacement en cours : contour de la destination.
 		if (moving?.to) {
 			const { r0, c0, r1, c1 } = moving.sel;
 			const dr = moving.to.row - moving.from.row;
@@ -818,6 +834,24 @@
 			ctx.strokeStyle = C.active;
 			ctx.lineWidth = 2;
 			ctx.strokeRect(cx(active.col) + 0.5, ry(active.row) + 0.5, colAxis.size(active.col) - 1, ROW_H - 1);
+		}
+		// Poignée de recopie (coin bas droit de la sélection) et aperçu.
+		if (!editing && selChart === null) {
+			const h = fillHandle();
+			ctx.fillStyle = C.active;
+			ctx.fillRect(h.x - 3, h.y - 3, 6, 6);
+			ctx.fillStyle = C.bg;
+			ctx.fillRect(h.x - 3, h.y + 3, 6, 1);
+			ctx.fillRect(h.x + 3, h.y - 3, 1, 7);
+		}
+		if (filling?.to) {
+			const t = filling.to;
+			ctx.save();
+			ctx.setLineDash([3, 2]);
+			ctx.strokeStyle = C.active;
+			ctx.lineWidth = 1.5;
+			ctx.strokeRect(cx(t.c0) + 1, ry(t.r0) + 1, spanW(t.c0, t.c1) - 2, (t.r1 - t.r0 + 1) * ROW_H - 2);
+			ctx.restore();
 		}
 		ctx.restore();
 
@@ -908,6 +942,17 @@
 	}
 
 	/** Texte d'une cellule avec sa mise en forme (gras, italique, souligné, couleur). */
+	/** Petit triangle d'angle d'une cellule en erreur (le détail est dans la barre d'état). */
+	function errorCorner(x: number, y: number) {
+		ctx.fillStyle = C.error;
+		ctx.beginPath();
+		ctx.moveTo(x + 1, y + 1);
+		ctx.lineTo(x + 7, y + 1);
+		ctx.lineTo(x + 1, y + 7);
+		ctx.closePath();
+		ctx.fill();
+	}
+
 	function drawText(s: string, x: number, y: number, cw: number, align: 'left' | 'center' | 'right', st: CellStyle | undefined, color: string, clipW = cw) {
 		ctx.save();
 		ctx.beginPath();
@@ -1501,6 +1546,7 @@
 	/** Ferme les menus, dialogues et volets (changement de feuille ou de vue). */
 	export function closeOverlays() {
 		menu = null;
+		freeMenu = null;
 		typeMenu = null;
 		filterDlg = null;
 		rulesDlg = null;
@@ -1511,8 +1557,24 @@
 		panel = null;
 	}
 
+	/** Erreur de formule de la cellule (code et formule), ou null. */
+	function errorAt(r: number, c: number): { code: string; formula: string } | null {
+		const e = tableAt(r, c);
+		if (e) {
+			const i = c - e.t.col;
+			const col = e.t.columns[i];
+			if (r === e.t.row || !col.formula) return null;
+			const v = e.cache.row(r - e.t.row - 1)?.cells[i];
+			return isErrorValue(v) ? { code: v as string, formula: col.formula } : null;
+		}
+		const f = shown.get(key(r, c));
+		return f?.error ? { code: f.text, formula: cells.get(key(r, c)) ?? '' } : null;
+	}
+
 	function refreshFx() {
 		nameBox = cellName(active.row, active.col);
+		const err = errorAt(active.row, active.col);
+		if (err) message = explainError(err.code, err.formula) || message;
 		const pv = pivotAt(active.row, active.col);
 		if (pv) panel = { kind: 'pivot', id: pv.id };
 		else if (panel?.kind === 'pivot' && !openPivotOnLoad) panel = null;
@@ -1580,7 +1642,20 @@
 
 	// --- Sélection et clavier ---------------------------------------------
 
+	// Saisie d'une ligne avec Tab : Entrée revient sous la cellule de départ, comme Excel.
+	let tabStart: number | null = null;
+	function tabMove(back: boolean) {
+		const start = tabStart ?? active.col;
+		moveTo(active.row, active.col + (back ? -1 : 1));
+		tabStart = start;
+	}
+	function enterMove(back: boolean) {
+		const col = tabStart ?? active.col;
+		moveTo(active.row + (back ? -1 : 1), col);
+	}
+
 	function moveTo(row: number, col: number, extend = false) {
+		tabStart = null;
 		active = { row: clamp(row, 0, SHEET_ROWS - 1), col: clamp(col, 0, SHEET_COLS - 1) };
 		if (!extend) anchor = { ...active };
 		message = '';
@@ -1694,6 +1769,92 @@
 		});
 	}
 
+	// --- Poignée de recopie ------------------------------------------------------
+
+	type Range = { r0: number; r1: number; c0: number; c1: number };
+	let filling = $state<{ sel: Range; to?: Range } | null>(null);
+
+	/** Position (écran) du coin bas droit de la sélection. */
+	function fillHandle() {
+		const { r1, c1 } = selection();
+		return { x: MARGIN + colAxis.offset(c1 + 1) - scroller.scrollLeft, y: TOP_H + (r1 + 1) * ROW_H - vs.top };
+	}
+
+	function onFillHandle(e: MouseEvent): boolean {
+		if (editing || !source.paste) return false;
+		const r = scroller.getBoundingClientRect();
+		const h = fillHandle();
+		return Math.abs(e.clientX - r.left - h.x) <= 5 && Math.abs(e.clientY - r.top - h.y) <= 5;
+	}
+
+	/** Zone étendue par la poignée jusqu'à la cellule visée (une seule direction). */
+	function fillTarget(sel: Range, cell: { row: number; col: number }): Range | undefined {
+		const down = cell.row - sel.r1;
+		const up = sel.r0 - cell.row;
+		const right = cell.col - sel.c1;
+		const left = sel.c0 - cell.col;
+		const best = Math.max(down, up, right, left);
+		if (best <= 0) return undefined;
+		if (best === down) return { ...sel, r1: cell.row };
+		if (best === up) return { ...sel, r0: cell.row };
+		if (best === right) return { ...sel, c1: cell.col };
+		return { ...sel, c0: cell.col };
+	}
+
+	/** Remplit to à partir de sel (séries, dates, mois… voir fill.ts). */
+	function doFill(sel: Range, to: Range) {
+		if (!source.paste) return;
+		const val = (r: number, c: number) => cellInfo(r, c).value;
+		let row = 0;
+		let col = 0;
+		let block: string[][] = [];
+		if (to.r1 > sel.r1 || to.r0 < sel.r0) {
+			const down = to.r1 > sel.r1;
+			const n = down ? to.r1 - sel.r1 : sel.r0 - to.r0;
+			const cols: string[][] = [];
+			for (let c = sel.c0; c <= sel.c1; c++) {
+				const src: string[] = [];
+				for (let r = sel.r0; r <= sel.r1; r++) src.push(val(r, c));
+				cols.push(down ? fillSeries(src, n) : fillSeries([...src].reverse(), n).reverse());
+			}
+			block = Array.from({ length: n }, (_, k) => cols.map((x) => x[k]));
+			row = down ? sel.r1 + 1 : to.r0;
+			col = sel.c0;
+		} else {
+			const right = to.c1 > sel.c1;
+			const n = right ? to.c1 - sel.c1 : sel.c0 - to.c0;
+			for (let r = sel.r0; r <= sel.r1; r++) {
+				const src: string[] = [];
+				for (let c = sel.c0; c <= sel.c1; c++) src.push(val(r, c));
+				block.push(right ? fillSeries(src, n) : fillSeries([...src].reverse(), n).reverse());
+			}
+			row = sel.r0;
+			col = right ? sel.c1 + 1 : to.c0;
+		}
+		const paste = source.paste;
+		writing = writing.then(async () => {
+			try {
+				await paste(row, col, block);
+				message = 'Recopie incrémentée (Ctrl+Z pour annuler)';
+			} catch (err) {
+				message = String(err instanceof Error ? err.message : err);
+			}
+			anchor = { row: to.r0, col: to.c0 };
+			active = { row: to.r1, col: to.c1 };
+			refreshFx();
+			refreshStatus();
+			schedule();
+		});
+	}
+
+	/** Double-clic sur la poignée : recopie jusqu'en bas du tableau voisin. */
+	function fillDown() {
+		const sel = selection();
+		const near = entries.find((e) => e.t.col <= sel.c1 + 1 && e.lastCol >= sel.c0 - 1 && e.t.row <= sel.r1 && e.last > sel.r1);
+		if (!near) return;
+		doFill(sel, { ...sel, r1: near.last });
+	}
+
 	// Sélection de lignes ou de colonnes entières par la marge ou le bandeau.
 	let headerDrag: 'rows' | 'cols' | null = null;
 
@@ -1737,6 +1898,15 @@
 	}
 
 	function onMouseDown(e: MouseEvent) {
+		if (e.button === 0 && onFillHandle(e)) {
+			e.preventDefault();
+			if (e.detail === 2) {
+				fillDown();
+				return;
+			}
+			filling = { sel: selection() };
+			return;
+		}
 		if (selChart !== null) {
 			selChart = null;
 			if (panel?.kind === 'chart') panel = null;
@@ -1786,6 +1956,14 @@
 			schedule();
 			return;
 		}
+		if (filling) {
+			const cell = cellAt(e);
+			if (cell) {
+				filling.to = fillTarget(filling.sel, cell);
+				schedule();
+			}
+			return;
+		}
 		if (moving) {
 			const cell = cellAt(e);
 			if (cell) {
@@ -1806,7 +1984,15 @@
 			return;
 		}
 		scroller.style.cursor =
-			source.setColumnWidth && boundaryAt(e) !== null ? 'col-resize' : !dragging && onSelectionEdge(e) ? 'move' : headerAt(e) ? 'pointer' : '';
+			source.setColumnWidth && boundaryAt(e) !== null
+				? 'col-resize'
+				: !dragging && onFillHandle(e)
+					? 'crosshair'
+					: !dragging && onSelectionEdge(e)
+						? 'move'
+						: headerAt(e)
+							? 'pointer'
+							: '';
 		if (!dragging) return;
 		const cell = cellAt(e);
 		if (!cell) return;
@@ -1825,6 +2011,10 @@
 
 	function onKeyDown(e: KeyboardEvent) {
 		if (editing) return;
+		if (e.key === 'Escape' && clipRange) {
+			clipRange = null;
+			schedule();
+		}
 		if (selChart !== null) {
 			const ch = charts.find((c) => c.id === selChart);
 			if (ch && (e.key === 'Delete' || e.key === 'Backspace')) {
@@ -1908,10 +2098,10 @@
 				}
 				break;
 			case 'Tab':
-				moveTo(row, col + (e.shiftKey ? -1 : 1));
+				tabMove(e.shiftKey);
 				break;
 			case 'Enter':
-				moveTo(row + (e.shiftKey ? -1 : 1), col);
+				enterMove(e.shiftKey);
 				break;
 			case 'F2':
 				startEdit(false);
@@ -2008,11 +2198,8 @@
 		schedule();
 	}
 
-	async function clearSelection() {
-		const r0 = Math.min(active.row, anchor.row);
-		const r1 = Math.max(active.row, anchor.row);
-		const c0 = Math.min(active.col, anchor.col);
-		const c1 = Math.max(active.col, anchor.col);
+	async function clearSelection(range = selection()) {
+		const { r0, r1, c0, c1 } = range;
 		// Les tableaux entièrement compris dans la zone sont supprimés.
 		const whole = entries.filter((e) => e.t.row >= r0 && e.last <= r1 && e.t.col >= c0 && e.lastCol <= c1);
 		const rest = (r: number, c: number) => !whole.some((e) => inTable(e, r, c));
@@ -2063,11 +2250,11 @@
 		switch (e.key) {
 			case 'Enter':
 				commit();
-				moveTo(row + (e.shiftKey ? -1 : 1), col);
+				enterMove(e.shiftKey);
 				break;
 			case 'Tab':
 				commit();
-				moveTo(row, col + (e.shiftKey ? -1 : 1));
+				tabMove(e.shiftKey);
 				break;
 			case 'Escape':
 				cancel();
@@ -2266,6 +2453,76 @@
 		};
 	}
 
+	// Zone copiée ou coupée : cadre pointillé ; une zone coupée s'efface au collage.
+	let clipRange = $state<{ r0: number; r1: number; c0: number; c1: number; cut: boolean; text: string } | null>(null);
+
+	/** Texte TSV de la sélection (null si trop grande). */
+	function selectionText(): string | null {
+		const { r0, r1, c0, c1 } = selection();
+		if ((r1 - r0 + 1) * (c1 - c0 + 1) > 100_000) {
+			say('Copie limitée à 100 000 cellules pour l’instant');
+			return null;
+		}
+		const rows: string[][] = [];
+		for (let r = r0; r <= r1; r++) {
+			const line: string[] = [];
+			for (let c = c0; c <= c1; c++) line.push(cellInfo(r, c).value);
+			rows.push(line);
+		}
+		return toTSV(rows);
+	}
+
+	/** Copier ou couper la sélection (ruban, clic droit). */
+	export async function copySelection(cut = false) {
+		wrap.focus();
+		const sc = selChart !== null ? charts.find((c) => c.id === selChart) : undefined;
+		if (sc) return copyChart(sc, cut);
+		const text = selectionText();
+		if (text === null) return;
+		try {
+			await navigator.clipboard.writeText(text);
+		} catch {
+			say('Le presse-papiers est inaccessible : utilisez Ctrl+C');
+			return;
+		}
+		clipRange = { ...selection(), cut, text };
+		const n = text.split('\n').length;
+		say(cut ? 'Sélection coupée : collez-la avec Ctrl+V' : `${n} ligne(s) copiée(s)`);
+		schedule();
+	}
+
+	/** Coller à la cellule active (ruban, clic droit). */
+	export async function pasteClipboard() {
+		wrap.focus();
+		let text = '';
+		try {
+			text = await navigator.clipboard.readText();
+		} catch {
+			say('Le presse-papiers est inaccessible : utilisez Ctrl+V');
+			return;
+		}
+		pasteText(text);
+	}
+
+	function onCut(e: ClipboardEvent) {
+		if (document.activeElement !== wrap || editing) return;
+		const sc = selChart !== null ? charts.find((c) => c.id === selChart) : undefined;
+		if (sc) {
+			e.preventDefault();
+			e.clipboardData?.setData('text/plain', CHART_CLIP + JSON.stringify(sc.config));
+			chartClip = sc.config;
+			removeChart(sc.id);
+			return;
+		}
+		const text = selectionText();
+		if (text === null) return;
+		e.clipboardData?.setData('text/plain', text);
+		e.preventDefault();
+		clipRange = { ...selection(), cut: true, text };
+		say('Sélection coupée : collez-la avec Ctrl+V');
+		schedule();
+	}
+
 	function onCopy(e: ClipboardEvent) {
 		if (document.activeElement !== wrap || editing) return;
 		const sc = selChart !== null ? charts.find((c) => c.id === selChart) : undefined;
@@ -2289,25 +2546,33 @@
 		}
 		e.clipboardData?.setData('text/plain', toTSV(rows));
 		e.preventDefault();
+		clipRange = { r0, r1, c0, c1, cut: false, text: toTSV(rows) };
+		schedule();
 		say(`${rows.length * (c1 - c0 + 1)} cellule(s) copiée(s)`);
 	}
 
 	function onPaste(e: ClipboardEvent) {
 		if (document.activeElement !== wrap || editing || !source.paste) return;
 		const text = e.clipboardData?.getData('text/plain') ?? '';
+		if (pasteText(text)) e.preventDefault();
+	}
+
+	/** Colle un texte (TSV ou graphique) à la cellule active ; faux si rien à coller. */
+	function pasteText(text: string): boolean {
+		if (!source.paste) return false;
 		if (text.startsWith(CHART_CLIP)) {
-			e.preventDefault();
 			try {
 				pasteChart(JSON.parse(text.slice(CHART_CLIP.length)) as ChartConfig);
 			} catch {
 				say('Graphique illisible dans le presse-papiers');
 			}
-			return;
+			return true;
 		}
 		const block = parseTSV(text);
-		if (block.length === 0) return;
-		e.preventDefault();
+		if (block.length === 0) return false;
 		const { row, col } = active;
+		// Collage d'une zone coupée : la source s'efface ensuite (hors cible).
+		const cut = clipRange?.cut && clipRange.text === text ? clipRange : null;
 		const paste = source.paste;
 		writing = writing.then(async () => {
 			try {
@@ -2321,6 +2586,14 @@
 			refreshStatus();
 			schedule();
 		});
+		if (cut) {
+			const r1 = row + block.length - 1;
+			const c1 = col + Math.max(...block.map((r) => r.length)) - 1;
+			const overlap = cut.r0 <= r1 && cut.r1 >= row && cut.c0 <= c1 && cut.c1 >= col;
+			clipRange = null;
+			if (!overlap) writing = writing.then(() => clearSelection(cut));
+		}
+		return true;
 	}
 
 	// --- Menu de type (icône de l'en-tête) ------------------------------------
@@ -2373,14 +2646,21 @@
 		menu = null;
 		if (!cell) return;
 		const e = tableAt(cell.row, cell.col);
-		if (!e) return;
 		if (!inSelection(cell.row, cell.col)) moveTo(cell.row, cell.col);
 		const r = wrap.getBoundingClientRect();
+		if (!e) {
+			freeMenu = { x: ev.clientX - r.left, y: ev.clientY - r.top };
+			return;
+		}
 		menu = { x: ev.clientX - r.left, y: ev.clientY - r.top, e, n: cell.row - e.t.row - 1, i: cell.col - e.t.col, header: cell.row === e.t.row };
 	}
 
+	// Menu du clic droit hors tableau : presse-papiers et effacement.
+	let freeMenu = $state<{ x: number; y: number } | null>(null);
+
 	async function menuAction(fn: (() => Promise<unknown>) | undefined) {
 		menu = null;
+		freeMenu = null;
 		wrap.focus();
 		if (!fn) return;
 		writing = writing.then(async () => {
@@ -2521,6 +2801,12 @@
 		const up = () => {
 			dragging = false;
 			headerDrag = null;
+			if (filling) {
+				const f = filling;
+				filling = null;
+				if (f.to) doFill(f.sel, f.to);
+				schedule();
+			}
 			if (moving) dropMove();
 			if (!resizing) return;
 			const { col, width, startW } = resizing;
@@ -2533,6 +2819,7 @@
 		window.addEventListener('mouseup', up);
 		const timer = setInterval(refreshStatus, 250);
 		window.addEventListener('copy', onCopy);
+		window.addEventListener('cut', onCut);
 		window.addEventListener('paste', onPaste);
 		wrap.focus();
 		refreshStatus();
@@ -2543,6 +2830,7 @@
 			window.removeEventListener('mouseup', up);
 			clearInterval(timer);
 			window.removeEventListener('copy', onCopy);
+			window.removeEventListener('cut', onCut);
 			window.removeEventListener('paste', onPaste);
 			cancelAnimationFrame(frame);
 		};
@@ -2722,29 +3010,33 @@
 					{#if source.sortTable}
 						<button
 							onclick={() => {
+								const mm = { e: m.e, i: m.i };
 								typeMenu = null;
-								menuAction(() => source.sortTable!(m.e.t, m.i, false));
+								menuAction(() => source.sortTable!(mm.e.t, mm.i, false));
 							}}>Trier de A à Z</button
 						>
 						<button
 							onclick={() => {
+								const mm = { e: m.e, i: m.i };
 								typeMenu = null;
-								menuAction(() => source.sortTable!(m.e.t, m.i, true));
+								menuAction(() => source.sortTable!(mm.e.t, mm.i, true));
 							}}>Trier de Z à A</button
 						>
 					{/if}
 					{#if source.setFilter}
 						<button
 							onclick={() => {
+								const mm = { e: m.e, i: m.i };
 								typeMenu = null;
-								openFilter(m.e, m.i);
+								openFilter(mm.e, mm.i);
 							}}>Filtrer…</button
 						>
 						{#if col.filter}
 							<button
 								onclick={() => {
+									const mm = { e: m.e, i: m.i };
 									typeMenu = null;
-									menuAction(() => source.setFilter!(m.e.t, m.i, null));
+									menuAction(() => source.setFilter!(mm.e.t, mm.i, null));
 								}}>Effacer le filtre de « {col.name} »</button
 							>
 						{/if}
@@ -2763,15 +3055,17 @@
 							<p class="menu-note">🔑 Clé du tableau : ses valeurs identifient les lignes.</p>
 							<button
 								onclick={() => {
+									const mm = { e: m.e, i: m.i };
 									typeMenu = null;
-									menuAction(() => source.clearKey!(m.e.t));
+									menuAction(() => source.clearKey!(mm.e.t));
 								}}>Retirer la clé</button
 							>
 						{:else if m.keyWhy === ''}
 							<button
 								onclick={() => {
+									const mm = { e: m.e, i: m.i };
 									typeMenu = null;
-									menuAction(() => source.setKey!(m.e.t, m.i));
+									menuAction(() => source.setKey!(mm.e.t, mm.i));
 								}}>🔑 Définir comme clé (identifiant des lignes){m.e.t.key !== undefined ? ', à la place de l’actuelle' : ''}</button
 							>
 						{:else if m.keyWhy}
@@ -2786,6 +3080,31 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (menu = null)}>
 				<div class="menu-title">{m.e.t.name}</div>
+				<button
+					onclick={() => {
+						menu = null;
+						copySelection(true);
+					}}>Couper</button
+				>
+				<button
+					onclick={() => {
+						menu = null;
+						copySelection();
+					}}>Copier</button
+				>
+				<button
+					onclick={() => {
+						menu = null;
+						pasteClipboard();
+					}}>Coller</button
+				>
+				<button
+					onclick={() => {
+						menu = null;
+						clearSelection();
+					}}>Effacer le contenu</button
+				>
+				<hr />
 				{#if !m.header}
 					<button onclick={() => menuAction(source.insertRow && (() => source.insertRow!(m.e.t, m.n)))}>Insérer une ligne au-dessus</button>
 					<button onclick={() => menuAction(source.insertRow && (() => source.insertRow!(m.e.t, m.n + 1)))}>Insérer une ligne en dessous</button>
@@ -2810,10 +3129,56 @@
 				<button onclick={() => menuAction(source.insertColumn && (() => source.insertColumn!(m.e.t, m.i)))}>Insérer une colonne à gauche</button>
 				<button onclick={() => menuAction(source.insertColumn && (() => source.insertColumn!(m.e.t, m.i + 1)))}>Insérer une colonne à droite</button>
 				<button onclick={() => menuAction(source.deleteColumn && (() => source.deleteColumn!(m.e.t, m.i)))}>Supprimer la colonne « {m.e.t.columns[m.i]?.name} »</button>
+				{#if source.promoteHeader && m.e.t.rows > 0}
+					<button onclick={() => menuAction(() => source.promoteHeader!(m.e.t))}>Utiliser la 1re ligne comme en-têtes</button>
+				{/if}
 				{#if source.deleteTables}
 					<hr />
-					<button onclick={() => menuAction(() => source.deleteTables!([m.e.t]))}>Supprimer le tableau « {m.e.t.name} »</button>
+					<button
+						onclick={() => {
+							const t = m.e.t;
+							menuAction(() => source.deleteTables!([t]).then(() => say(`Tableau « ${t.name} » supprimé (Ctrl+Z pour annuler)`)));
+						}}>Supprimer le tableau « {m.e.t.name} »</button
+					>
 				{/if}
+			</div>
+		{/if}
+		{#if freeMenu}
+			{@const m = freeMenu}
+			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (freeMenu = null)}>
+				<button
+					onclick={() => {
+						freeMenu = null;
+						copySelection(true);
+					}}>Couper</button
+				>
+				<button
+					onclick={() => {
+						freeMenu = null;
+						copySelection();
+					}}>Copier</button
+				>
+				<button
+					onclick={() => {
+						freeMenu = null;
+						pasteClipboard();
+					}}>Coller</button
+				>
+				{#if chartClip}
+					<button
+						onclick={() => {
+							freeMenu = null;
+							pasteChart(chartClip!);
+						}}>Coller le graphique</button
+					>
+				{/if}
+				<hr />
+				<button
+					onclick={() => {
+						freeMenu = null;
+						clearSelection();
+					}}>Effacer le contenu</button
+				>
 			</div>
 		{/if}
 		{#if chartMenu}

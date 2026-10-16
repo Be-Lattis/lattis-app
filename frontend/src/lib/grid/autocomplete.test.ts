@@ -28,6 +28,10 @@ describe('autocomplétion des formules', () => {
 		expect(suggest('=[@q', 4, cat)).toBeNull(); // pas de tableau courant
 	});
 
+	it('dans une ligne du tableau, [@Colonne] avant [Colonne]', () => {
+		expect(suggest('=[Prix]*[q', 10, cat, 'Ventes')!.items.map((i) => i.insert)).toEqual(['@Qté]', 'Qté]']);
+	});
+
 	it('ignore le texte hors formule et les chaînes', () => {
 		expect(suggest('so', 2, cat)).toBeNull();
 		expect(suggest('="so', 4, cat)).toBeNull();

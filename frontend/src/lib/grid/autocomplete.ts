@@ -43,16 +43,23 @@ export function suggest(text: string, caret: number, cat: Catalog, currentTable?
 	// Colonne : après « [ » non refermé, éventuellement précédé d'un tableau.
 	const open = before.lastIndexOf('[');
 	if (open >= 0 && before.indexOf(']', open) < 0) {
-		const table = /[\p{L}_][\p{L}\p{N}_.]*$/u.exec(before.slice(0, open))?.[0] ?? currentTable;
+		const explicit = /[\p{L}_][\p{L}\p{N}_.]*$/u.exec(before.slice(0, open))?.[0];
+		const table = explicit ?? currentTable;
 		const t = cat.tables.find((x) => fold(x.name) === fold(table ?? ''));
 		if (!t) return null;
 		let prefix = before.slice(open + 1);
 		const at = prefix.startsWith('@');
 		if (at) prefix = prefix.slice(1);
-		const items = (t.columns ?? [])
-			.filter((c) => fold(c).startsWith(fold(prefix)))
-			.slice(0, max)
-			.map((c) => ({ label: c, insert: (at ? '@' : '') + c + ']', kind: 'column' as const, detail: t.name }));
+		const cols = (t.columns ?? []).filter((c) => fold(c).startsWith(fold(prefix)));
+		// Dans une ligne du tableau, comme Excel : [@Colonne] (la valeur de la
+		// ligne) d'abord, [Colonne] (toute la colonne) ensuite.
+		const row = !explicit && !!currentTable && !at;
+		const items = row
+			? [
+					...cols.map((c) => ({ label: '@' + c, insert: '@' + c + ']', kind: 'column' as const, detail: 'valeur de la ligne' })),
+					...cols.map((c) => ({ label: c, insert: c + ']', kind: 'column' as const, detail: 'colonne entière' }))
+				].slice(0, max)
+			: cols.slice(0, max).map((c) => ({ label: c, insert: (at ? '@' : '') + c + ']', kind: 'column' as const, detail: t.name }));
 		return items.length ? { from: open + 1, items } : null;
 	}
 
