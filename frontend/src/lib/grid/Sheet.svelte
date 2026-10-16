@@ -14,6 +14,7 @@
 	import { Axis } from './axis';
 	import { parseTSV, toTSV } from './clipboard';
 	import { formatNumber, mergeStyles, parseStyle, type CellStyle } from './style';
+	import { dismiss } from './dismiss';
 	import { describeRule, parseRules, ruleStyle, RULE_OPS, RULE_STYLES, type Rule, type RuleOp } from './rules';
 	import { apply as applySuggestion, signature, suggest, type Catalog, type Completion } from './autocomplete';
 	import {
@@ -1792,7 +1793,7 @@
 			{@const m = typeMenu}
 			{@const col = m.e.t.columns[m.i]}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" onmouseleave={() => (typeMenu = null)}>
+			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (typeMenu = null)}>
 				<div class="menu-title">Type de « {col.name} » : {col.fixed ? 'fixé' : 'inféré automatiquement'}</div>
 				{#if m.pending}
 					<p class="menu-note">
@@ -1815,7 +1816,7 @@
 		{#if menu}
 			{@const m = menu}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" onmouseleave={() => (menu = null)}>
+			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (menu = null)}>
 				<div class="menu-title">{m.e.t.name}</div>
 				{#if !m.header}
 					<button onclick={() => menuAction(source.insertRow && (() => source.insertRow!(m.e.t, m.n)))}>Insérer une ligne au-dessus</button>

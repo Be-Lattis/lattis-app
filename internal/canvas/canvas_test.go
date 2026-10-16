@@ -296,14 +296,15 @@ func TestPaste(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
 	before := dump(t, d)
-	// Bloc collé depuis Excel dans une zone vide : un tableau, une étape.
+	// Bloc collé depuis Excel dans une zone vide : un tableau, une étape ; seul
+	// tableau de la feuille, il prend le nom de l'onglet.
 	ev, err := d.Paste(ctx, 1, 2, 1, [][]string{
 		{"Ville", "Habitants", "Capitale"},
 		{"Paris", "2 100 000", "VRAI"},
 		{"Lyon", "520 000", "FAUX"},
 		{"Nice", "", "FAUX"},
 	})
-	if err != nil || ev.Created != "Tableau1" {
+	if err != nil || ev.Created != "Feuille1" {
 		t.Fatalf("Paste = %+v, %v", ev, err)
 	}
 	check(t, d, "collage d'un bloc")
@@ -854,5 +855,111 @@ func TestFilterComputed(t *testing.T) {
 	})
 	if err != nil || fmt.Sprint(got) != "15" {
 		t.Fatalf("total filtré : %v (%v)", got, err)
+	}
+}
+
+func TestTablesMoveMergeSplit(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Ville", "Pop"}, {"Lyon", "520"}, {"Paris", "2100"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.Paste(ctx, 1, 0, 5, [][]string{{"Pays", "Note"}, {"FR", "x"}, {"IT", "y"}, {"DE", "z"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.SetFilter(ctx, "Tableau1", 0, nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.SetCell(ctx, 1, 2, 6, "zz"); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "deux tableaux")
+	start := dump(t, d)
+
+	// Renommer : identifiant unique.
+	if err := d.RenameTable(ctx, "Tableau1", "Pays Note"); !errors.Is(err, ErrTable) {
+		t.Fatalf("nom avec espace : %v", err)
+	}
+	if err := d.RenameTable(ctx, "Tableau1", "feuille1"); !errors.Is(err, ErrTable) {
+		t.Fatalf("nom pris : %v", err)
+	}
+	if err := d.RenameTable(ctx, "Tableau1", "Pays"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Déplacer sur l'autre tableau : refusé ; côte à côte : fusion.
+	if err := d.MoveTable(ctx, "Pays", 1, 1); !errors.Is(err, ErrTable) {
+		t.Fatalf("recouvrement : %v", err)
+	}
+	if err := d.MoveTable(ctx, "Pays", 0, 2); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "fusion")
+	want := lines(
+		"[Ville]|[Pop]|[Pays]|[Note]",
+		"Lyon|520|FR|x",
+		"Paris|2100|IT|zz",
+		"||DE|z")
+	if got := view(t, d); !strings.Contains(got, "[Ville]|[Pop]|[Pays]|[Note]") || !strings.Contains(got, "Paris|2100|IT|zz") || !strings.Contains(got, "\n||DE|z") {
+		t.Fatalf("fusion :\n%s\nattendu à peu près\n%s", got, want)
+	}
+
+	// Scinder : Pays et Note repartent en dessous.
+	if err := d.ExtractColumns(ctx, "Feuille1", 2, 3, 6, 0); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "scission")
+	l, _ := d.Layout(ctx, 1)
+	if len(l.Tables) != 2 || len(l.Tables[0].Columns) != 2 || l.Tables[1].Row != 6 || l.Tables[1].Rows != 3 {
+		t.Fatalf("scission : %+v", l.Tables)
+	}
+
+	// Supprimer les deux tableaux puis tout annuler.
+	if err := d.DeleteTables(ctx, []string{"Feuille1", l.Tables[1].Name}); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "suppression")
+	if l, _ := d.Layout(ctx, 1); len(l.Tables) != 0 {
+		t.Fatalf("tableaux restants : %d", len(l.Tables))
+	}
+	// Un nouveau tableau peut reprendre un identifiant libéré.
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"A"}, {"1"}}); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "nouveau tableau")
+	for range 5 {
+		if _, err := d.bus.Undo(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	check(t, d, "annulation")
+	if got := dump(t, d); got != start {
+		t.Fatalf("annulation incomplète :\n%s", diff(start, got))
+	}
+	for range 5 {
+		if _, err := d.bus.Redo(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	check(t, d, "rétablissement")
+}
+
+// Saisir dans la colonne qui sépare deux tableaux côte à côte les fusionne.
+func TestTypeBetweenTablesMerges(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"A"}, {"1"}, {"2"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.Paste(ctx, 1, 0, 2, [][]string{{"C"}, {"x"}, {"y"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.SetCell(ctx, 1, 0, 1, "B"); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "fusion par saisie")
+	l, _ := d.Layout(ctx, 1)
+	if len(l.Tables) != 1 || len(l.Tables[0].Columns) != 3 || l.Tables[0].Columns[2].Name != "C" {
+		t.Fatalf("fusion par saisie : %+v", l.Tables)
 	}
 }

@@ -506,3 +506,23 @@ func (s *DocumentService) FilterValues(ctx context.Context, table string, i int)
 	}
 	return d.FilterValues(ctx, table, i)
 }
+
+// RenameTable renomme un tableau.
+func (s *DocumentService) RenameTable(ctx context.Context, old, name string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.RenameTable(ctx, old, name) })
+}
+
+// DeleteTables supprime des tableaux entiers.
+func (s *DocumentService) DeleteTables(ctx context.Context, names []string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.DeleteTables(ctx, names) })
+}
+
+// MoveTable déplace un tableau (fusion s'il est posé côte à côte d'un autre).
+func (s *DocumentService) MoveTable(ctx context.Context, name string, row, col int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.MoveTable(ctx, name, row, col) })
+}
+
+// ExtractColumns sort des colonnes d'un tableau vers un nouveau tableau.
+func (s *DocumentService) ExtractColumns(ctx context.Context, name string, i0, i1, row, col int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.ExtractColumns(ctx, name, i0, i1, row, col) })
+}

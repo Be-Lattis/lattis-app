@@ -5,6 +5,7 @@
 	// affichées désactivées, pour montrer l'organisation cible.
 
 	import Icon from '#lib/icons/Icon.svelte';
+	import { dismiss } from '#lib/grid/dismiss.js';
 	import type { IconName } from '#lib/icons/icons.js';
 
 	export type View = 'grid' | 'sql' | 'script';
@@ -47,6 +48,28 @@
 	let bg = $state('#fff2cc');
 	const st = (patch: Record<string, unknown>) => (onstyle ? () => onstyle(patch) : undefined);
 	let fileOpen = $state(false);
+	// Palette ouverte sous le bouton Couleur ou Remplissage, comme dans Excel.
+	let palette = $state<'fg' | 'bg' | null>(null);
+	let palettePos = $state({ x: 0, y: 0 });
+	function openPalette(kind: 'fg' | 'bg', ev: MouseEvent) {
+		const r = (ev.currentTarget as HTMLElement).closest('.color-cmd')!.getBoundingClientRect();
+		palettePos = { x: r.left, y: r.bottom + 2 };
+		palette = palette === kind ? null : kind;
+	}
+	const COLORS = [
+		'#000000', '#404040', '#7f7f7f', '#bfbfbf', '#ffffff',
+		'#c00000', '#ff0000', '#ffc000', '#ffff00', '#92d050',
+		'#00b050', '#00b0f0', '#0070c0', '#002060', '#7030a0',
+		'#ffc7ce', '#fff2cc', '#c6efce', '#ddebf7', '#e4dfec'
+	];
+	function pick(kind: 'fg' | 'bg', c: string | null) {
+		palette = null;
+		if (c) {
+			if (kind === 'fg') fg = c;
+			else bg = c;
+		}
+		onstyle?.({ [kind]: c });
+	}
 
 	const tabs = ['Accueil', 'Insertion', 'Données', 'Formules', 'Affichage'] as const;
 	let tab = $state<(typeof tabs)[number] | 'SQL' | 'SCRIPT'>('Accueil');
@@ -67,8 +90,8 @@
 					{ label: 'Gras', icon: 'bold', run: st({ b: 'toggle' }), hint: 'Gras (Ctrl+B)' },
 					{ label: 'Italique', icon: 'italic', run: st({ i: 'toggle' }), hint: 'Italique (Ctrl+I)' },
 					{ label: 'Souligné', icon: 'underline', run: st({ u: 'toggle' }), hint: 'Souligné (Ctrl+U)' },
-					{ label: 'Couleur', icon: 'font-color', run: st({ fg }), hint: 'Couleur du texte (choisir la teinte avec le carré à côté)', color: 'fg' },
-					{ label: 'Remplissage', icon: 'font-color', run: st({ bg }), hint: 'Couleur de remplissage', color: 'bg' },
+					{ label: 'Couleur', icon: 'font-color', run: st({ fg }), hint: 'Couleur du texte (▾ : choisir la teinte)', color: 'fg' },
+					{ label: 'Remplissage', icon: 'font-color', run: st({ bg }), hint: 'Couleur de remplissage (▾ : choisir la teinte)', color: 'bg' },
 					{ label: 'Effacer', icon: 'remove-duplicates', run: st({ b: null, i: null, u: null, fg: null, bg: null, al: null, nf: null }), hint: 'Effacer la mise en forme' }
 				]
 			},
@@ -144,7 +167,7 @@
 			<button class="tab file" onclick={() => (fileOpen = !fileOpen)}>Fichier</button>
 			{#if fileOpen}
 				<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
-				<div class="file-menu" onmouseleave={() => (fileOpen = false)}>
+				<div class="file-menu" use:dismiss={() => (fileOpen = false)}>
 					{#each [['new', 'Nouveau', 'Ctrl+N'], ['open', 'Ouvrir…', 'Ctrl+O'], ['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ['import', 'Importer (CSV, Excel)…', ''], ['export', 'Exporter le tableau en CSV…', ''], ['demo', 'Démo : 1 M de lignes', '']] as [a, label, keys] (a)}
 						<button onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keys}</span></button>
 					{/each}
@@ -164,14 +187,37 @@
 				<section class="group">
 					<div class="commands">
 						{#each g.commands as c (c.label)}
-							<button class="cmd" disabled={!c.run} onclick={c.run} title={c.hint ?? (c.run ? c.label : `${c.label} : à venir`)}>
-								<Icon name={c.icon} />
-								<span class="label">{c.label}</span>
-							</button>
-							{#if c.color === 'fg'}
-								<input class="swatch" type="color" bind:value={fg} title="Couleur du texte" />
-							{:else if c.color === 'bg'}
-								<input class="swatch" type="color" bind:value={bg} title="Couleur de remplissage" />
+							{#if c.color}
+								{@const kind = c.color}
+								<div class="color-cmd">
+									<button class="cmd" disabled={!c.run} onclick={c.run} title={c.hint}>
+										<Icon name={c.icon} />
+										<span class="bar" style:background={kind === 'fg' ? fg : bg}></span>
+										<span class="label">{c.label}</span>
+									</button>
+									<button class="drop" disabled={!c.run} onclick={(ev) => openPalette(kind, ev)} title="Choisir la couleur">▾</button>
+									{#if palette === kind}
+										<!-- svelte-ignore a11y_no_static_element_interactions -->
+										<div class="palette" style:left="{palettePos.x}px" style:top="{palettePos.y}px" use:dismiss={() => (palette = null)}>
+											<div class="grid">
+												{#each COLORS as col (col)}
+													<button class="chip" style:background={col} title={col} aria-label={col} onclick={() => pick(kind, col)}></button>
+												{/each}
+											</div>
+											{#if kind === 'bg'}<button class="row" onclick={() => pick('bg', null)}>Aucun remplissage</button>{/if}
+											{#if kind === 'fg'}<button class="row" onclick={() => pick('fg', null)}>Automatique</button>{/if}
+											<label class="row">
+												Autres couleurs…
+												<input type="color" value={kind === 'fg' ? fg : bg} onchange={(e) => pick(kind, (e.currentTarget as HTMLInputElement).value)} />
+											</label>
+										</div>
+									{/if}
+								</div>
+							{:else}
+								<button class="cmd" disabled={!c.run} onclick={c.run} title={c.hint ?? (c.run ? c.label : `${c.label} : à venir`)}>
+									<Icon name={c.icon} />
+									<span class="label">{c.label}</span>
+								</button>
 							{/if}
 						{/each}
 					</div>
@@ -314,13 +360,84 @@
 		/* Une commande désactivée perd sa couleur d'accent. */
 		--icon-accent: currentColor;
 	}
-	.swatch {
-		width: 16px;
-		height: 40px;
+	.color-cmd {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+	}
+	.color-cmd .cmd {
+		flex: 1;
+	}
+	.bar {
+		width: 18px;
+		height: 4px;
+		margin-top: -3px;
+		border: 1px solid rgba(0, 0, 0, 0.15);
+	}
+	.drop {
+		font: inherit;
+		font-size: 9px;
+		line-height: 10px;
+		padding: 0;
+		background: none;
+		border: 1px solid transparent;
+		border-radius: 3px;
+		cursor: pointer;
+		color: #4b5563;
+	}
+	.drop:hover:not(:disabled) {
+		background: #e2e8e4;
+		border-color: #c5d6cb;
+	}
+	.palette {
+		position: fixed;
+		z-index: 20;
+		background: #fff;
+		border: 1px solid #d4d7db;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		padding: 8px;
+		/* Marge invisible : la palette ne se ferme pas au moindre écart. */
+		outline: 14px solid transparent;
+	}
+	.palette .grid {
+		display: grid;
+		grid-template-columns: repeat(5, 18px);
+		gap: 4px;
+		margin-bottom: 6px;
+	}
+	.chip {
+		width: 18px;
+		height: 18px;
+		padding: 0;
+		border: 1px solid #c9cdd2;
+		cursor: pointer;
+	}
+	.chip:hover {
+		outline: 2px solid #217346;
+	}
+	.palette .row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+		width: 100%;
+		padding: 4px 2px;
+		font: inherit;
+		font-size: 12px;
+		background: none;
+		border: none;
+		cursor: pointer;
+		white-space: nowrap;
+		text-align: left;
+	}
+	.palette .row:hover {
+		background: #e3efe7;
+	}
+	.palette input[type='color'] {
+		width: 24px;
+		height: 18px;
 		padding: 0;
 		border: none;
-		background: none;
-		cursor: pointer;
 	}
 	.title {
 		text-align: center;

@@ -65,15 +65,39 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 				tb.Rows++
 				return t.setCell(tb, tb.Rows-1, col-tb.Col, raw, ev)
 			case inRows && col == tb.Right()+1 && !empty:
+				// Un tableau juste après, en-tête sur la même ligne : la saisie
+				// comble l'écart et les deux tableaux fusionnent.
+				var next *Table
+				for i := range tables {
+					if o := tables[i]; o.Row == tb.Row && o.Col == col+1 {
+						next = &tables[i]
+					}
+				}
 				name := fmt.Sprintf("Colonne %d", len(tb.Cols)+1)
 				if row == tb.Row {
 					name = strings.TrimSpace(raw)
 				}
 				tb, err = t.newColumn(tb, len(tb.Cols), name)
-				if err != nil || row == tb.Row {
+				if err != nil {
 					return err
 				}
-				return t.setCell(tb, row-tb.Row-1, len(tb.Cols)-1, raw, ev)
+				if row != tb.Row {
+					if err := t.setCell(tb, row-tb.Row-1, len(tb.Cols)-1, raw, ev); err != nil {
+						return err
+					}
+				}
+				if next == nil {
+					return nil
+				}
+				o, err := t.table(next.ID)
+				if err != nil {
+					return err
+				}
+				if tb, err = t.table(tb.ID); err != nil {
+					return err
+				}
+				_, err = t.mergeRight(tb, o)
+				return err
 			}
 		}
 		if isFormula(raw) {
@@ -222,8 +246,8 @@ func (t *tx) birth(sheet int64, row, col int) (string, error) {
 	return name, err
 }
 
-// tableName : un tableau placé en haut à gauche de la feuille prend le nom de
-// la feuille, les autres « TableauN ». Comme dans Excel, un nom de tableau
+// tableName : le seul tableau d'une feuille prend le nom de la feuille, les
+// autres « TableauN ». Comme dans Excel, un nom de tableau
 // est un identifiant (sans espace), pour s'écrire tel quel dans une formule.
 
 // identifier rend un nom utilisable dans une formule (« Feuille 1 » →
@@ -251,7 +275,12 @@ func (t *tx) tableName(sheet int64, row, col int) (string, error) {
 		err := t.row(`SELECT count(*) FROM _slitable_tables WHERE name = ?`, n).Scan(&k)
 		return k == 0, err
 	}
-	if row == 0 && col == 0 {
+	// Le nom de l'onglet va au premier tableau de la feuille, seul tableau.
+	var others int
+	if err := t.row(`SELECT count(*) FROM _slitable_tables WHERE sheet = ?`, sheet).Scan(&others); err != nil {
+		return "", err
+	}
+	if others == 0 {
 		if name := identifier(sheetName); name != "" {
 			if ok, err := free(name); ok || err != nil {
 				return name, err

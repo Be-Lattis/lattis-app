@@ -73,6 +73,13 @@ export function DeleteSheet(sheet: number): $CancellablePromise<$models.DocState
 }
 
 /**
+ * DeleteTables supprime des tableaux entiers.
+ */
+export function DeleteTables(names: string[] | null): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2205181947, names);
+}
+
+/**
  * Discard abandonne une session interrompue.
  */
 export function Discard(dir: string): $CancellablePromise<void> {
@@ -95,6 +102,13 @@ export function Execute(q: string): $CancellablePromise<$models.ExecResult> {
  */
 export function ExportCSV(table: string): $CancellablePromise<string> {
     return $Call.ByID(1530430769, table);
+}
+
+/**
+ * ExtractColumns sort des colonnes d'un tableau vers un nouveau tableau.
+ */
+export function ExtractColumns(name: string, i0: number, i1: number, row: number, col: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(552666561, name, i0, i1, row, col);
 }
 
 /**
@@ -142,6 +156,13 @@ export function InsertRow(table: string, n: number): $CancellablePromise<$models
  */
 export function Layout(sheet: number): $CancellablePromise<canvas$0.Layout> {
     return $Call.ByID(424945563, sheet);
+}
+
+/**
+ * MoveTable déplace un tableau (fusion s'il est posé côte à côte d'un autre).
+ */
+export function MoveTable(name: string, row: number, col: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(905164132, name, row, col);
 }
 
 /**
@@ -195,6 +216,13 @@ export function Redo(): $CancellablePromise<$models.DocState> {
  */
 export function RenameSheet(sheet: number, name: string): $CancellablePromise<$models.DocState> {
     return $Call.ByID(85727842, sheet, name);
+}
+
+/**
+ * RenameTable renomme un tableau.
+ */
+export function RenameTable(old: string, name: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3362494641, old, name);
 }
 
 /**
