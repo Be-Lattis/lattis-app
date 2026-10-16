@@ -54,10 +54,24 @@ export function ConvertPreview(table: string, i: number, to: grid$0.Type): $Canc
 }
 
 /**
+ * CreateChart pose un graphique sur une feuille.
+ */
+export function CreateChart(sheet: number, row: number, col: number, cfg: canvas$0.ChartConfig): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2729239783, sheet, row, col, cfg);
+}
+
+/**
  * CreatePivot crée un tableau croisé sur une nouvelle feuille ; renvoie la feuille.
  */
 export function CreatePivot(cfg: canvas$0.PivotConfig): $CancellablePromise<number> {
     return $Call.ByID(1379190243, cfg);
+}
+
+/**
+ * DeleteChart supprime un graphique.
+ */
+export function DeleteChart(id: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2539134122, id);
 }
 
 export function DeleteColumn(table: string, i: number): $CancellablePromise<$models.DocState> {
@@ -170,6 +184,13 @@ export function InsertRow(table: string, n: number): $CancellablePromise<$models
  */
 export function Layout(sheet: number): $CancellablePromise<canvas$0.Layout> {
     return $Call.ByID(424945563, sheet);
+}
+
+/**
+ * MoveChart déplace un graphique.
+ */
+export function MoveChart(id: number, row: number, col: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(566740440, id, row, col);
 }
 
 /**
@@ -295,6 +316,13 @@ export function Scripts(): $CancellablePromise<canvas$0.ScriptInfo[] | null> {
  */
 export function SetCell(sheet: number, row: number, col: number, raw: string): $CancellablePromise<canvas$0.Event> {
     return $Call.ByID(1429016395, sheet, row, col, raw);
+}
+
+/**
+ * SetChart change la configuration d'un graphique.
+ */
+export function SetChart(id: number, cfg: canvas$0.ChartConfig): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2137167057, id, cfg);
 }
 
 /**

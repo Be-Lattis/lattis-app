@@ -77,6 +77,7 @@ type Layout struct {
 	Names  []NameInfo  `json:"names"`  // cellules nommées de la feuille
 	Styles []CellStyle `json:"styles"` // mise en forme hors tableaux
 	Pivots []PivotInfo `json:"pivots"` // tableaux croisés, calculés
+	Charts []ChartInfo `json:"charts"` // graphiques, avec leurs données
 }
 
 // CellStyle est la mise en forme d'une cellule hors tableau.
@@ -226,7 +227,10 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 			}
 			l.Cells = append(l.Cells, ci)
 		}
-		l.Pivots, err = t.pivots(sheet)
+		if l.Pivots, err = t.pivots(sheet); err != nil {
+			return err
+		}
+		l.Charts, err = t.charts(sheet)
 		return err
 	})
 	return l, err

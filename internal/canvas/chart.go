@@ -1,0 +1,263 @@
+package canvas
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"strings"
+
+	"github.com/lalamefine/slitable/internal/formula"
+	"github.com/lalamefine/slitable/internal/grid"
+)
+
+// ChartConfig décrit un graphique alimenté par un tableau : l'axe des
+// catégories (X) et une ou plusieurs séries de valeurs, par nom de colonne.
+type ChartConfig struct {
+	Source string   `json:"source"`
+	Kind   string   `json:"kind"` // bar, line, pie, scatter
+	X      string   `json:"x"`
+	Series []string `json:"series"`
+	Title  string   `json:"title,omitempty"`
+}
+
+// ChartSeries est une série calculée (nil : valeur absente).
+type ChartSeries struct {
+	Name   string     `json:"name"`
+	Values []*float64 `json:"values"`
+}
+
+// ChartInfo est un graphique posé sur une feuille, avec ses données.
+type ChartInfo struct {
+	ID     int64         `json:"id"`
+	Row    int           `json:"row"`
+	Col    int           `json:"col"`
+	Config ChartConfig   `json:"config"`
+	Labels []string      `json:"labels"`
+	Series []ChartSeries `json:"series"`
+	Error  string        `json:"error"`
+}
+
+// ErrChart signale un graphique impossible.
+var ErrChart = errors.New("graphique")
+
+// MaxChartPoints borne les points d'un graphique.
+const MaxChartPoints = 2000
+
+var chartKinds = map[string]bool{"bar": true, "line": true, "pie": true, "scatter": true}
+
+// CreateChart pose un graphique sur une feuille, coin haut gauche en (row, col).
+func (m *Model) CreateChart(ctx context.Context, sheet int64, row, col int, cfg ChartConfig) (int64, error) {
+	var id int64
+	err := m.Do(ctx, "Insérer un graphique", func(t *tx) error {
+		if _, _, err := t.chartData(cfg); err != nil {
+			return err
+		}
+		if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _slitable_charts`).Scan(&id); err != nil {
+			return err
+		}
+		b, err := json.Marshal(cfg)
+		if err != nil {
+			return err
+		}
+		return t.apply(
+			[]stmt{st(`INSERT INTO _slitable_charts (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, id, sheet, row, col, string(b))},
+			[]stmt{st(`DELETE FROM _slitable_charts WHERE id = ?`, id)},
+		)
+	})
+	return id, err
+}
+
+// SetChart change la configuration d'un graphique.
+func (m *Model) SetChart(ctx context.Context, id int64, cfg ChartConfig) error {
+	return m.Do(ctx, "Modifier le graphique", func(t *tx) error {
+		if _, _, err := t.chartData(cfg); err != nil {
+			return err
+		}
+		var old string
+		if err := t.row(`SELECT config FROM _slitable_charts WHERE id = ?`, id).Scan(&old); err != nil {
+			return err
+		}
+		b, err := json.Marshal(cfg)
+		if err != nil {
+			return err
+		}
+		q := `UPDATE _slitable_charts SET config = ? WHERE id = ?`
+		return t.apply([]stmt{st(q, string(b), id)}, []stmt{st(q, old, id)})
+	})
+}
+
+// MoveChart déplace un graphique.
+func (m *Model) MoveChart(ctx context.Context, id int64, row, col int) error {
+	if row < 0 || col < 0 {
+		return fmt.Errorf("%w : hors de la feuille", ErrChart)
+	}
+	return m.Do(ctx, "Déplacer le graphique", func(t *tx) error {
+		var r, c int
+		if err := t.row(`SELECT row, col FROM _slitable_charts WHERE id = ?`, id).Scan(&r, &c); err != nil {
+			return err
+		}
+		if r == row && c == col {
+			return nil
+		}
+		q := `UPDATE _slitable_charts SET row = ?, col = ? WHERE id = ?`
+		return t.apply([]stmt{st(q, row, col, id)}, []stmt{st(q, r, c, id)})
+	})
+}
+
+// DeleteChart supprime un graphique.
+func (m *Model) DeleteChart(ctx context.Context, id int64) error {
+	return m.Do(ctx, "Supprimer le graphique", func(t *tx) error {
+		var sheet int64
+		var row, col int
+		var cfg string
+		if err := t.row(`SELECT sheet, row, col, config FROM _slitable_charts WHERE id = ?`, id).Scan(&sheet, &row, &col, &cfg); err != nil {
+			return err
+		}
+		return t.apply(
+			[]stmt{st(`DELETE FROM _slitable_charts WHERE id = ?`, id)},
+			[]stmt{st(`INSERT INTO _slitable_charts (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, id, sheet, row, col, cfg)},
+		)
+	})
+}
+
+// chartData lit les données d'un graphique. Un axe X de texte (ou de
+// booléens) regroupe les lignes par catégorie et additionne les séries,
+// comme un graphique tiré d'un tableau croisé ; un axe numérique ou de dates
+// prend les lignes dans l'ordre du tableau.
+func (t *tx) chartData(cfg ChartConfig) ([]string, []ChartSeries, error) {
+	if !chartKinds[cfg.Kind] {
+		return nil, nil, fmt.Errorf("%w : type %q inconnu", ErrChart, cfg.Kind)
+	}
+	if len(cfg.Series) == 0 {
+		return nil, nil, fmt.Errorf("%w : choisissez au moins une série", ErrChart)
+	}
+	tb, err := t.tableByName(cfg.Source)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w : tableau « %s » introuvable", ErrChart, cfg.Source)
+	}
+	exprs, args, _, err := t.columnSQL(tb)
+	if err != nil {
+		return nil, nil, err
+	}
+	find := func(name string) (int, error) {
+		for i, c := range tb.Cols {
+			if strings.EqualFold(c.Name, name) {
+				return i, nil
+			}
+		}
+		return 0, fmt.Errorf("%w : colonne « %s » introuvable dans %s", ErrChart, name, tb.Name)
+	}
+	xi, err := find(cfg.X)
+	if err != nil {
+		return nil, nil, err
+	}
+	var vals []string
+	series := make([]ChartSeries, len(cfg.Series))
+	for k, s := range cfg.Series {
+		i, err := find(s)
+		if err != nil {
+			return nil, nil, err
+		}
+		series[k].Name = tb.Cols[i].Name
+		vals = append(vals, exprs[i])
+	}
+	xc := tb.Cols[xi]
+	x := exprs[xi]
+	var q string
+	if xc.Formula == "" && (xc.Type == grid.Text || xc.Type == grid.Boolean) {
+		sums := make([]string, len(vals))
+		for k, v := range vals {
+			sums[k] = "sum(" + v + ")"
+		}
+		key := fmt.Sprintf("coalesce(slt_text(%s, %s), '')", x, sqlLiteral(string(xc.Type)))
+		q = `SELECT ` + key + ` AS k, ` + strings.Join(sums, ", ") + ` FROM ` + tb.sql() + ` GROUP BY k ORDER BY min(_pos) LIMIT ?`
+	} else {
+		q = `SELECT ` + x + `, ` + strings.Join(vals, ", ") + ` FROM ` + tb.sql() + ` ORDER BY _pos LIMIT ?`
+	}
+	rs, err := t.query(q, append(args, MaxChartPoints)...)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rs.Close()
+	var labels []string
+	for rs.Next() {
+		row := make([]any, len(vals)+1)
+		ptrs := make([]any, len(row))
+		for i := range row {
+			ptrs[i] = &row[i]
+		}
+		if err := rs.Scan(ptrs...); err != nil {
+			return nil, nil, err
+		}
+		lv := formula.FromResult(row[0])
+		if xc.Formula == "" && xc.Type == grid.Date && lv.Kind == formula.Number {
+			lv = formula.DateSerial(lv.Num)
+		}
+		labels = append(labels, lv.String())
+		for k := range vals {
+			v := formula.FromResult(row[k+1])
+			if v.Kind == formula.Number {
+				f := v.Num
+				series[k].Values = append(series[k].Values, &f)
+			} else {
+				series[k].Values = append(series[k].Values, nil)
+			}
+		}
+	}
+	return labels, series, rs.Err()
+}
+
+// charts donne les graphiques d'une feuille, avec leurs données.
+func (t *tx) charts(sheet int64) ([]ChartInfo, error) {
+	rs, err := t.query(`SELECT id, row, col, config FROM _slitable_charts WHERE sheet = ? ORDER BY id`, sheet)
+	if err != nil {
+		return nil, err
+	}
+	var out []ChartInfo
+	for rs.Next() {
+		var c ChartInfo
+		var cfg string
+		if err := rs.Scan(&c.ID, &c.Row, &c.Col, &cfg); err != nil {
+			rs.Close()
+			return nil, err
+		}
+		if err := json.Unmarshal([]byte(cfg), &c.Config); err != nil {
+			c.Error = "configuration illisible"
+		}
+		out = append(out, c)
+	}
+	rs.Close()
+	for i := range out {
+		if out[i].Error != "" {
+			continue
+		}
+		labels, series, err := t.chartData(out[i].Config)
+		if err != nil {
+			out[i].Error = strings.TrimPrefix(err.Error(), ErrChart.Error()+" : ")
+			continue
+		}
+		out[i].Labels, out[i].Series = labels, series
+	}
+	return out, nil
+}
+
+// chartRows donne l'inverse de la suppression des graphiques d'une feuille.
+func (t *tx) chartRows(sheet int64) ([]stmt, error) {
+	rs, err := t.query(`SELECT id, row, col, config FROM _slitable_charts WHERE sheet = ?`, sheet)
+	if err != nil {
+		return nil, err
+	}
+	defer rs.Close()
+	var undo []stmt
+	for rs.Next() {
+		var id int64
+		var row, col int
+		var cfg string
+		if err := rs.Scan(&id, &row, &col, &cfg); err != nil {
+			return nil, err
+		}
+		undo = append(undo, st(`INSERT INTO _slitable_charts (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, id, sheet, row, col, cfg))
+	}
+	return undo, rs.Err()
+}

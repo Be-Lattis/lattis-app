@@ -44,9 +44,10 @@
 		onrecalc?: () => void;
 		ondedup?: () => void;
 		onpivot?: () => void;
+		onchart?: (kind: 'bar' | 'line' | 'pie' | 'scatter') => void;
 	}
 
-	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot }: Props = $props();
+	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart }: Props = $props();
 	let fg = $state('#c00000');
 	let bg = $state('#fff2cc');
 	const st = (patch: Record<string, unknown>) => (onstyle ? () => onstyle(patch) : undefined);
@@ -130,7 +131,14 @@
 		],
 		Insertion: [
 			{ title: 'Tableaux', commands: [{ label: 'Tableau', icon: 'table' }, { label: 'Tableau croisé', icon: 'pivot-table', run: onpivot, hint: 'Tableau croisé dynamique du tableau actif (double-clic sur un TCD pour le modifier)' }] },
-			{ title: 'Graphiques', commands: [{ label: 'Barres', icon: 'chart-bar' }, { label: 'Courbes', icon: 'chart-line' }, { label: 'Secteurs', icon: 'chart-pie' }] }
+			{
+				title: 'Graphiques',
+				commands: [
+					{ label: 'Barres', icon: 'chart-bar', run: onchart ? () => onchart('bar') : undefined, hint: 'Graphique en barres du tableau actif' },
+					{ label: 'Courbes', icon: 'chart-line', run: onchart ? () => onchart('line') : undefined, hint: 'Graphique en courbes du tableau actif' },
+					{ label: 'Secteurs', icon: 'chart-pie', run: onchart ? () => onchart('pie') : undefined, hint: 'Graphique en secteurs du tableau actif' }
+				]
+			}
 		],
 		Données: [
 			{

@@ -572,3 +572,26 @@ func (s *DocumentService) SetPivot(ctx context.Context, id int64, cfg canvas.Piv
 func (s *DocumentService) DeletePivot(ctx context.Context, id int64) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.DeletePivot(ctx, id) })
 }
+
+// CreateChart pose un graphique sur une feuille.
+func (s *DocumentService) CreateChart(ctx context.Context, sheet int64, row, col int, cfg canvas.ChartConfig) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error {
+		_, err := d.CreateChart(ctx, sheet, row, col, cfg)
+		return err
+	})
+}
+
+// SetChart change la configuration d'un graphique.
+func (s *DocumentService) SetChart(ctx context.Context, id int64, cfg canvas.ChartConfig) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetChart(ctx, id, cfg) })
+}
+
+// MoveChart déplace un graphique.
+func (s *DocumentService) MoveChart(ctx context.Context, id int64, row, col int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.MoveChart(ctx, id, row, col) })
+}
+
+// DeleteChart supprime un graphique.
+func (s *DocumentService) DeleteChart(ctx context.Context, id int64) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.DeleteChart(ctx, id) })
+}

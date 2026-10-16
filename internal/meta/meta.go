@@ -137,6 +137,16 @@ CREATE TABLE _slitable_pivots (
 	config TEXT NOT NULL
 ) STRICT;
 `,
+	// 9 → 10 : graphiques (configuration JSON), posés sur une feuille.
+	`
+CREATE TABLE _slitable_charts (
+	id     INTEGER PRIMARY KEY,
+	sheet  INTEGER NOT NULL REFERENCES _slitable_sheets(id),
+	row    INTEGER NOT NULL,
+	col    INTEGER NOT NULL,
+	config TEXT NOT NULL
+) STRICT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

@@ -12,7 +12,7 @@
 	import type { Layout } from '#bindings/internal/canvas/models.js';
 	import type { Type } from '#bindings/internal/grid/models.js';
 	import type { Orphan } from '#bindings/internal/archive/models.js';
-	import Sheet, { type SheetData, type SheetSource, type SheetStatus, type ColumnFilter, type PivotConfig } from '#lib/grid/Sheet.svelte';
+	import Sheet, { type SheetData, type SheetSource, type SheetStatus, type ColumnFilter, type PivotConfig, type ChartConfig } from '#lib/grid/Sheet.svelte';
 	import Ribbon, { type FileAction, type View } from '#lib/shell/Ribbon.svelte';
 	import SheetTabs from '#lib/shell/SheetTabs.svelte';
 	import SqlView from '#lib/shell/SqlView.svelte';
@@ -227,6 +227,10 @@
 			await selectSheet(id);
 		},
 		setPivot: (id, cfg) => DocumentService.SetPivot(id, cfg).then(reload),
+		createChart: (row, col, cfg) => DocumentService.CreateChart(sheetId, row, col, cfg).then(reload),
+		setChart: (id, cfg) => DocumentService.SetChart(id, cfg).then(reload),
+		moveChart: (id, row, col) => DocumentService.MoveChart(id, row, col).then(reload),
+		deleteChart: (id) => DocumentService.DeleteChart(id).then(reload),
 		deletePivot: (id) => DocumentService.DeletePivot(id).then(reload),
 		removeDuplicates: async (t) => {
 			const n = await DocumentService.RemoveDuplicates(t.name, []);
@@ -283,6 +287,12 @@
 					widths: layout.widths ?? [],
 					names: layout.names ?? [],
 					styles: layout.styles ?? [],
+					charts: (layout.charts ?? []).map((c) => ({
+						...c,
+						config: c.config as ChartConfig,
+						labels: c.labels ?? [],
+						series: (c.series ?? []).map((s) => ({ name: s.name, values: (s.values ?? []).map((v) => v ?? null) }))
+					})),
 					pivots: (layout.pivots ?? []).map((p) => ({ ...p, config: p.config as PivotConfig, cells: (p.cells ?? []).map((r) => r ?? []) }))
 				}
 			: null
@@ -354,6 +364,7 @@
 		onfind={mode === 'doc' ? (replace) => sheet?.openFinder(replace) : undefined}
 		onrules={mode === 'doc' ? () => sheet?.rulesActive() : undefined}
 		onfilter={mode === 'doc' ? (errorsOnly) => sheet?.filterActive(errorsOnly) : undefined}
+		onchart={mode === 'doc' ? (kind) => sheet?.chartActive(kind) : undefined}
 		onpivot={mode === 'doc' ? () => sheet?.pivotActive() : undefined}
 		ondedup={mode === 'doc' ? () => sheet?.dedupActive() : undefined}
 		onrecalc={mode === 'doc' ? () => DocumentService.Recalc().then(reload).catch((e) => (notice = err(e))) : undefined}

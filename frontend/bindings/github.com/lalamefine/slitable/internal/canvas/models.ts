@@ -36,6 +36,43 @@ export interface CellStyle {
 }
 
 /**
+ * ChartConfig décrit un graphique alimenté par un tableau : l'axe des
+ * catégories (X) et une ou plusieurs séries de valeurs, par nom de colonne.
+ */
+export interface ChartConfig {
+    "source": string;
+
+    /**
+     * bar, line, pie, scatter
+     */
+    "kind": string;
+    "x": string;
+    "series": string[] | null;
+    "title"?: string;
+}
+
+/**
+ * ChartInfo est un graphique posé sur une feuille, avec ses données.
+ */
+export interface ChartInfo {
+    "id": number;
+    "row": number;
+    "col": number;
+    "config": ChartConfig;
+    "labels": string[] | null;
+    "series": ChartSeries[] | null;
+    "error": string;
+}
+
+/**
+ * ChartSeries est une série calculée (nil : valeur absente).
+ */
+export interface ChartSeries {
+    "name": string;
+    "values": (number | null)[] | null;
+}
+
+/**
  * ColWidth est la largeur choisie pour une colonne de la feuille.
  */
 export interface ColWidth {
@@ -151,6 +188,11 @@ export interface Layout {
      * tableaux croisés, calculés
      */
     "pivots": PivotInfo[] | null;
+
+    /**
+     * graphiques, avec leurs données
+     */
+    "charts": ChartInfo[] | null;
 }
 
 /**

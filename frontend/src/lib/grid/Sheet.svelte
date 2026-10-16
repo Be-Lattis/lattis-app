@@ -15,6 +15,7 @@
 	import { parseTSV, toTSV } from './clipboard';
 	import { formatNumber, mergeStyles, parseStyle, type CellStyle } from './style';
 	import { dismiss } from './dismiss';
+	import Chart from '#lib/chart/Chart.svelte';
 	import { describeRule, parseRules, ruleStyle, RULE_OPS, RULE_STYLES, type Rule, type RuleOp } from './rules';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { drawIcon } from '#lib/icons/canvas.js';
@@ -61,6 +62,24 @@
 		error: string;
 	}
 
+	export interface ChartConfig {
+		source: string;
+		kind: 'bar' | 'line' | 'pie' | 'scatter';
+		x: string;
+		series: string[];
+		title?: string;
+	}
+
+	export interface SheetChart {
+		id: number;
+		row: number;
+		col: number;
+		config: ChartConfig;
+		labels: string[];
+		series: { name: string; values: (number | null)[] }[];
+		error: string;
+	}
+
 	export interface ColumnFilter {
 		values?: string[]; // valeurs gardées (texte affiché, vide : cellules vides)
 		errors?: boolean; // saisies hors type seulement
@@ -89,6 +108,8 @@
 		styles?: { row: number; col: number; style: string }[];
 		/** Tableaux croisés dynamiques de la feuille, calculés. */
 		pivots?: SheetPivot[];
+		/** Graphiques de la feuille, avec leurs données. */
+		charts?: SheetChart[];
 	}
 
 	/** Cible d'une saisie, pour la source. */
@@ -137,6 +158,10 @@
 		/** Renouvelle AUJOURDHUI, MAINTENANT et ALEA (F9). */
 		recalc?(): Promise<unknown>;
 		createPivot?(cfg: PivotConfig): Promise<unknown>;
+		createChart?(row: number, col: number, cfg: ChartConfig): Promise<unknown>;
+		setChart?(id: number, cfg: ChartConfig): Promise<unknown>;
+		moveChart?(id: number, row: number, col: number): Promise<unknown>;
+		deleteChart?(id: number): Promise<unknown>;
 		setPivot?(id: number, cfg: PivotConfig): Promise<unknown>;
 		deletePivot?(id: number): Promise<unknown>;
 		/** Supprime les lignes en double ; renvoie leur nombre. */
@@ -223,6 +248,9 @@
 	// Tableaux dynamiques déversés depuis une cellule libre (FILTRE, TRIER…).
 	let spills: { row: number; col: number; rows: string[][] }[] = [];
 	let pivots: SheetPivot[] = [];
+	let charts = $state.raw<SheetChart[]>([]);
+	// Décalage de la vue, pour placer les graphiques au-dessus de la grille.
+	let viewPos = $state({ x: 0, y: 0 });
 	let colAxis = $state.raw(new Axis(SHEET_COLS, DEF_W));
 	const key = (r: number, c: number) => `${r},${c}`;
 
@@ -258,6 +286,7 @@
 		});
 		cells = new Map(d.cells.map((c) => [key(c.row, c.col), c.raw]));
 		pivots = d.pivots ?? [];
+		charts = d.charts ?? [];
 		spills = d.cells.filter((c) => c.spill?.length).map((c) => ({ row: c.row, col: c.col, rows: c.spill! }));
 		shown = new Map(d.cells.filter((c) => c.raw.startsWith('=')).map((c) => [key(c.row, c.col), { text: c.value ?? '', error: !!c.error }]));
 		userWidths = new Map((d.widths ?? []).map((w) => [w.col, w.width]));
@@ -463,6 +492,7 @@
 
 	function draw() {
 		frame = 0;
+		if (viewPos.x !== scroller.scrollLeft || viewPos.y !== vs.top) viewPos = { x: scroller.scrollLeft, y: vs.top };
 		const t0 = performance.now();
 		const w = viewW;
 		const h = viewH;
@@ -1100,6 +1130,87 @@
 	function closeRules() {
 		rulesDlg = null;
 		wrap.focus();
+	}
+
+	// --- Graphiques -------------------------------------------------------------
+
+	const CHART_W = 480;
+	const CHART_H = 288;
+	let chartDlg = $state<{ id: number; columns: string[]; cfg: ChartConfig; error: string } | null>(null);
+	let chartDrag: { id: number; startX: number; startY: number; row: number; col: number; dx: number; dy: number } | null = $state(null);
+
+	/** Insère un graphique du tableau actif à sa droite (ruban Insertion). */
+	export function chartActive(kind: ChartConfig['kind']) {
+		const e = tableAt(active.row, active.col);
+		if (!e || !source.createChart) {
+			say('Placez la cellule active dans un tableau pour insérer un graphique');
+			return;
+		}
+		const cols = e.t.columns;
+		const num = (c: Column) => c.type === 'integer' || c.type === 'decimal' || (c.type === 'formula' && c.formula !== undefined);
+		const cur = cols[active.col - e.t.col];
+		const x = cur && !num(cur) ? cur : (cols.find((c) => !num(c)) ?? cols[0]);
+		let series = cols.filter((c) => c !== x && num(c)).map((c) => c.name);
+		if (kind === 'pie') series = series.slice(-1);
+		if (!series.length) {
+			say('Le tableau n’a pas de colonne de nombres à représenter');
+			return;
+		}
+		const create = source.createChart;
+		writing = writing.then(() =>
+			create(e.t.row, e.lastCol + 2, { source: e.t.name, kind, x: x.name, series }).then(
+				() => say('Graphique inséré : double-clic pour le modifier, glissez-le pour le déplacer'),
+				(err) => say(String(err?.message ?? err))
+			)
+		);
+	}
+
+	function editChart(ch: SheetChart) {
+		const src = entries.find((e) => e.t.name.toLowerCase() === ch.config.source.toLowerCase());
+		const columns = src?.t.columns.map((c) => c.name) ?? catalog?.tables.find((t) => t.name.toLowerCase() === ch.config.source.toLowerCase())?.columns ?? [];
+		chartDlg = { id: ch.id, columns, cfg: { ...ch.config, series: [...ch.config.series], title: ch.config.title ?? '' }, error: '' };
+	}
+
+	async function saveChart() {
+		const d = chartDlg;
+		if (!d || !source.setChart) return;
+		try {
+			await source.setChart(d.id, { ...d.cfg, title: d.cfg.title || undefined });
+			chartDlg = null;
+			wrap.focus();
+		} catch (err) {
+			d.error = String(err instanceof Error ? err.message : err);
+		}
+	}
+
+	async function removeChart(id: number) {
+		chartDlg = null;
+		await source.deleteChart?.(id);
+		wrap.focus();
+	}
+
+	function startChartDrag(ev: MouseEvent, ch: SheetChart) {
+		if (ev.button !== 0 || !source.moveChart) return;
+		ev.preventDefault();
+		chartDrag = { id: ch.id, startX: ev.clientX, startY: ev.clientY, row: ch.row, col: ch.col, dx: 0, dy: 0 };
+		const move = (e: MouseEvent) => {
+			if (!chartDrag) return;
+			chartDrag.dx = e.clientX - chartDrag.startX;
+			chartDrag.dy = e.clientY - chartDrag.startY;
+		};
+		const up = () => {
+			window.removeEventListener('mousemove', move);
+			window.removeEventListener('mouseup', up);
+			const d = chartDrag;
+			chartDrag = null;
+			if (!d || (Math.abs(d.dx) < 4 && Math.abs(d.dy) < 4)) return;
+			const row = Math.max(0, d.row + Math.round(d.dy / ROW_H));
+			const col = Math.max(0, colAxis.indexAt(colAxis.offset(d.col) + d.dx + 2));
+			const mv = source.moveChart!;
+			writing = writing.then(() => mv(d.id, row, col).then(() => undefined, (err) => say(String(err?.message ?? err))));
+		};
+		window.addEventListener('mousemove', move);
+		window.addEventListener('mouseup', up);
 	}
 
 	// --- Tableau croisé dynamique ---------------------------------------------
@@ -2232,6 +2343,86 @@
 		>
 			<div bind:this={spacer}></div>
 		</div>
+		<div class="charts" style:left="{MARGIN}px" style:top="{TOP_H}px">
+			{#each charts as ch (ch.id)}
+				{@const drag = chartDrag?.id === ch.id ? chartDrag : null}
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div
+					class="chart"
+					style:left="{colAxis.offset(ch.col) - viewPos.x + (drag?.dx ?? 0)}px"
+					style:top="{ch.row * ROW_H - viewPos.y + (drag?.dy ?? 0)}px"
+					style:width="{CHART_W}px"
+					style:height="{CHART_H}px"
+					ondblclick={() => editChart(ch)}
+					onmousedown={(ev) => startChartDrag(ev, ch)}
+					onwheel={(ev) => onWheel(ev)}
+				>
+					{#if ch.error}
+						<p class="chart-error">Graphique : {ch.error}</p>
+					{:else}
+						<Chart kind={ch.config.kind} title={ch.config.title} labels={ch.labels} series={ch.series} width={CHART_W} height={CHART_H} />
+					{/if}
+					<div class="chart-tools">
+						<button title="Modifier" onmousedown={(ev) => ev.stopPropagation()} onclick={() => editChart(ch)}>✎</button>
+						<button title="Supprimer le graphique" onmousedown={(ev) => ev.stopPropagation()} onclick={() => removeChart(ch.id)}>✕</button>
+					</div>
+				</div>
+			{/each}
+		</div>
+		{#if chartDlg}
+			{@const d = chartDlg}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="rules pivot"
+				onkeydown={(ev) => {
+					ev.stopPropagation();
+					if (ev.key === 'Escape') {
+						chartDlg = null;
+						wrap.focus();
+					}
+				}}
+			>
+				<div class="menu-title">Graphique de « {d.cfg.source} »</div>
+				<div class="add">
+					<span class="lab">Type</span>
+					<select bind:value={d.cfg.kind}>
+						<option value="bar">Barres</option>
+						<option value="line">Courbes</option>
+						<option value="pie">Secteurs</option>
+						<option value="scatter">Nuage de points</option>
+					</select>
+				</div>
+				<div class="add"><span class="lab">Titre</span><input bind:value={d.cfg.title} placeholder="(aucun)" /></div>
+				<div class="add"><span class="lab">Axe X</span><select bind:value={d.cfg.x}>{#each d.columns as c (c)}<option value={c}>{c}</option>{/each}</select></div>
+				<div class="add series">
+					<span class="lab">Séries</span>
+					{#each d.columns.filter((c) => c !== d.cfg.x) as c (c)}
+						<label>
+							<input
+								type="checkbox"
+								checked={d.cfg.series.includes(c)}
+								onchange={(ev) => {
+									const on = (ev.currentTarget as HTMLInputElement).checked;
+									d.cfg.series = on ? [...d.cfg.series, c] : d.cfg.series.filter((x) => x !== c);
+								}}
+							/>{c}
+						</label>
+					{/each}
+				</div>
+				{#if d.error}<p class="menu-note error">{d.error}</p>{/if}
+				<div class="foot">
+					<button onclick={() => removeChart(d.id)}>Supprimer</button>
+					<span class="sp"></span>
+					<button onclick={saveChart}>OK</button>
+					<button
+						onclick={() => {
+							chartDlg = null;
+							wrap.focus();
+						}}>Annuler</button
+					>
+				</div>
+			</div>
+		{/if}
 		{#if typeMenu}
 			{@const m = typeMenu}
 			{@const col = m.e.t.columns[m.i]}
@@ -2662,6 +2853,51 @@
 	}
 	.filter {
 		min-width: 300px;
+	}
+	.charts {
+		position: absolute;
+		right: 0;
+		bottom: 0;
+		overflow: hidden;
+		pointer-events: none;
+	}
+	.chart {
+		position: absolute;
+		pointer-events: auto;
+		border: 1px solid #d4d7db;
+		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+		background: #fff;
+		cursor: move;
+	}
+	.chart-error {
+		margin: 12px;
+		color: #c0392b;
+	}
+	.chart-tools {
+		position: absolute;
+		top: 4px;
+		right: 4px;
+		display: none;
+		gap: 4px;
+	}
+	.chart:hover .chart-tools {
+		display: flex;
+	}
+	.chart-tools button {
+		font: inherit;
+		border: 1px solid #c9cdd2;
+		background: #fff;
+		border-radius: 3px;
+		cursor: pointer;
+		padding: 0 6px;
+	}
+	.pivot .series {
+		flex-wrap: wrap;
+	}
+	.pivot .series label {
+		display: flex;
+		align-items: center;
+		gap: 4px;
 	}
 	.pivot .lab {
 		width: 70px;

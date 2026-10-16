@@ -227,6 +227,15 @@ func (m *Model) ColumnExprs(ctx context.Context, table int64) (exprs []string, a
 		if err != nil {
 			return err
 		}
+		exprs, args, computed, err = t.columnSQL(tb)
+		return err
+	})
+	return exprs, args, computed, err
+}
+
+// columnSQL : voir ColumnExprs.
+func (t *tx) columnSQL(tb Table) (exprs []string, args []any, computed []bool, err error) {
+	err = func() error {
 		schema, err := t.schema()
 		if err != nil {
 			return err
@@ -263,6 +272,6 @@ func (m *Model) ColumnExprs(ctx context.Context, table int64) (exprs []string, a
 			computed = append(computed, true)
 		}
 		return hoistErr
-	})
+	}()
 	return exprs, args, computed, err
 }

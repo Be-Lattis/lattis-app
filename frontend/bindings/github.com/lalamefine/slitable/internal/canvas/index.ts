@@ -4,6 +4,9 @@
 export type {
     CellInfo,
     CellStyle,
+    ChartConfig,
+    ChartInfo,
+    ChartSeries,
     ColWidth,
     ColumnFilter,
     ColumnInfo,
