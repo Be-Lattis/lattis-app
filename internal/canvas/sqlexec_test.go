@@ -118,7 +118,6 @@ func TestExecSQLRefused(t *testing.T) {
 		`CREATE TABLE x (a)`:                              "structure",
 		`DROP TABLE t_1`:                                  "structure",
 		`DELETE FROM _slitable_tables`:                    "internes",
-		`UPDATE Feuille1 SET Montant = 'beaucoup'`:        "",
 		`UPDATE Feuille1 SET Inconnue = 1`:                "Inconnue",
 		`UPDATE Feuille1 SET Montant = 1; DROP TABLE t_2`: "structure",
 	} {
@@ -184,5 +183,38 @@ func TestExecSQLClearsInvalid(t *testing.T) {
 	var n int
 	if err := d.db.Read().QueryRow(`SELECT count(*) FROM _slitable_invalid`).Scan(&n); err != nil || n != 0 {
 		t.Fatalf("%d saisies invalides restantes (%v)", n, err)
+	}
+}
+
+// Une valeur hors type dans une requête élargit la colonne, comme une saisie.
+func TestExecSQLWidens(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Nom", "Qté"}, {"a", "1"}, {"b", "2"}}); err != nil {
+		t.Fatal(err)
+	}
+	before := dumpData(t, d)
+	if _, err := d.ExecSQL(ctx, `INSERT INTO "Feuille1"("Nom", "Qté") VALUES ('c', 2.5)`); err != nil {
+		t.Fatal(err)
+	}
+	l, _ := d.Layout(ctx, 1)
+	if typ := l.Tables[0].Columns[1].Type; typ != "decimal" || l.Tables[0].Rows != 3 {
+		t.Fatalf("élargissement : %s, %d lignes", typ, l.Tables[0].Rows)
+	}
+	if _, err := d.ExecSQL(ctx, `UPDATE "Feuille1" SET "Qté" = 'beaucoup' WHERE "Nom" = 'a'`); err != nil {
+		t.Fatal(err)
+	}
+	l, _ = d.Layout(ctx, 1)
+	if typ := l.Tables[0].Columns[1].Type; typ != "text" {
+		t.Fatalf("texte : %s", typ)
+	}
+	check(t, d, "élargissement SQL")
+	d.bus.Undo(ctx)
+	d.bus.Undo(ctx)
+	if got := dumpData(t, d); got != before {
+		t.Fatalf("annulation :\n%s", diff(before, got))
+	}
+	if _, err := d.Editor("x").Insert(ctx, "Inconnu", map[string]string{"a": "1"}); err == nil || !strings.Contains(err.Error(), "introuvable") {
+		t.Fatalf("tableau inconnu : %v", err)
 	}
 }

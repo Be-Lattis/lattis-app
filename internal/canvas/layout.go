@@ -1,6 +1,8 @@
 package canvas
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"slices"
 
@@ -84,6 +86,9 @@ func (t *tx) table(id int64) (Table, error) {
 func (t *tx) tableByName(name string) (Table, error) {
 	var id int64
 	if err := t.row(`SELECT id FROM _slitable_tables WHERE name = ?`, name).Scan(&id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Table{}, fmt.Errorf("tableau « %s » introuvable", name)
+		}
 		return Table{}, fmt.Errorf("tableau %q : %w", name, err)
 	}
 	return t.table(id)

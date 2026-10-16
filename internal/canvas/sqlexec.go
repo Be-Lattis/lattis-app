@@ -4,8 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/lalamefine/slitable/internal/grid"
 
 	"github.com/lalamefine/slitable/internal/command"
 	"github.com/lalamefine/slitable/internal/order"
@@ -63,7 +67,63 @@ type captured struct {
 	cols []string // colonnes physiques : id, _pos, c_...
 }
 
+// execSQL exécute la requête ; une valeur refusée par le type d'une colonne
+// (décimal dans une colonne d'entiers, texte dans une colonne de nombres)
+// élargit la colonne, comme une saisie au clavier, puis la requête repart.
 func (t *tx) execSQL(q string, args []any) (int64, error) {
+	for attempt := 0; ; attempt++ {
+		n, err := t.execSQLOnce(q, args)
+		if err == nil || attempt >= 8 {
+			return n, err
+		}
+		widened, werr := t.widenFor(err)
+		if werr != nil {
+			return 0, werr
+		}
+		if !widened {
+			return n, err
+		}
+	}
+}
+
+var strictErr = regexp.MustCompile(`cannot store (\w+) value in \w+ column t_(\d+)\.c_(\d+)`)
+
+// widenFor élargit la colonne nommée par une erreur de type STRICT.
+func (t *tx) widenFor(err error) (bool, error) {
+	m := strictErr.FindStringSubmatch(err.Error())
+	if m == nil {
+		return false, nil
+	}
+	tid, _ := strconv.ParseInt(m[2], 10, 64)
+	cid, _ := strconv.ParseInt(m[3], 10, 64)
+	tb, terr := t.table(tid)
+	if terr != nil {
+		return false, nil
+	}
+	var vt grid.Type
+	switch m[1] {
+	case "REAL":
+		vt = grid.Decimal
+	case "INTEGER":
+		vt = grid.Integer
+	default:
+		vt = grid.Text
+	}
+	for i, c := range tb.Cols {
+		if c.ID != cid {
+			continue
+		}
+		to := Join(c.Type, vt)
+		if to == c.Type {
+			return false, nil
+		}
+		_, rerr := t.retype(tb, i, to)
+		return rerr == nil, rerr
+	}
+	return false, nil
+}
+
+func (t *tx) execSQLOnce(q string, args []any) (int64, error) {
 	if strings.TrimSpace(q) == "" {
 		return 0, errors.New("requête vide")
 	}
@@ -86,6 +146,11 @@ func (t *tx) execSQL(q string, args []any) (int64, error) {
 		return 0, err
 	}
 	if _, err := t.ExecContext(t.Ctx, q, args...); err != nil {
+		// La requête n'a rien écrit (instruction atomique) : on défait la capture.
+		t.exec(teardown)
+		for _, tb := range tables {
+			t.exec([]string{fmt.Sprintf(`DROP TABLE IF EXISTS temp._slt_ids_%d`, tb.ID), fmt.Sprintf(`DROP TABLE IF EXISTS temp._slt_old_%d`, tb.ID)})
+		}
 		return 0, err
 	}
 	if err := t.row(`PRAGMA main.schema_version`).Scan(&after); err != nil {
