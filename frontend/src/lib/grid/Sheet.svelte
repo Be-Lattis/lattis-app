@@ -262,9 +262,11 @@
 		onstatus?: (s: SheetStatus) => void;
 		/** Lance la mesure dès l'ouverture et transmet le résultat (mode SLITABLE_BENCH). */
 		autoBench?: (result: string) => void;
+		/** Quadrillage de la feuille (masqué : seules les lignes des tableaux restent). */
+		gridlines?: boolean;
 	}
 
-	let { data, source, catalog, sources = [], onstatus, autoBench }: Props = $props();
+	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true }: Props = $props();
 
 	export const SHEET_ROWS = 1_048_576;
 	export const SHEET_COLS = 16_384;
@@ -589,6 +591,11 @@
 		untrack(() => applyData(d));
 	});
 
+	$effect(() => {
+		void gridlines;
+		untrack(() => schedule());
+	});
+
 	let frame = 0;
 	function schedule() {
 		if (mounted && !frame) frame = requestAnimationFrame(draw);
@@ -866,7 +873,17 @@
 			ctx.restore();
 		}
 
-		// Quadrillage de toute la feuille.
+		// Quadrillage de toute la feuille ; masqué, il ne reste qu'à
+		// l'intérieur des tableaux.
+		ctx.save();
+		if (!gridlines) {
+			ctx.beginPath();
+			for (const e of visible) {
+				const g = grown(e);
+				ctx.rect(cx(e.t.col), ry(e.t.row), spanW(e.t.col, g.lastCol), rspan(e.t.row, g.last));
+			}
+			ctx.clip();
+		}
 		ctx.beginPath();
 		ctx.strokeStyle = C.grid;
 		ctx.lineWidth = 1;
@@ -881,6 +898,7 @@
 			ctx.lineTo(x, h);
 		}
 		ctx.stroke();
+		ctx.restore();
 
 		ctx.save();
 		ctx.beginPath();
@@ -981,6 +999,11 @@
 		// l'en-tête d'un tableau visible est sorti de l'écran.
 		ctx.fillStyle = C.strip;
 		ctx.fillRect(0, 0, w, TOP_H);
+		// Colonnes de la sélection : même surbrillance que les lignes dans la marge.
+		ctx.fillStyle = C.activeStrip;
+		for (let c = Math.max(c0, k0); c <= Math.min(c1, k1); c++) {
+			ctx.fillRect(Math.max(cx(c), MARGIN), 0, cx(c + 1) - Math.max(cx(c), MARGIN), TOP_H);
+		}
 		for (const e of visible) {
 			if (e.t.row >= r0 || e.last < r0) continue;
 			for (let c = Math.max(c0, e.t.col); c <= Math.min(c1, e.lastCol); c++) {
@@ -989,7 +1012,7 @@
 				ctx.beginPath();
 				ctx.rect(Math.max(x, MARGIN), 0, colAxis.size(c), TOP_H);
 				ctx.clip();
-				ctx.fillStyle = C.head;
+				ctx.fillStyle = c >= k0 && c <= k1 ? C.activeStrip : C.head;
 				ctx.fillRect(x, 0, colAxis.size(c), TOP_H);
 				ctx.font = FONT_BOLD;
 				ctx.fillStyle = C.headText;
@@ -1039,6 +1062,8 @@
 			if (r >= s0 && r <= s1) {
 				ctx.fillStyle = C.activeStrip;
 				ctx.fillRect(0, y, MARGIN, rh(r));
+				ctx.fillStyle = C.active;
+				ctx.fillRect(MARGIN - 2, y, 2, rh(r));
 			}
 			const mine = !!cur && r > cur.t.row && r <= curLast;
 			const e = mine ? cur : visible.find((e) => r > e.t.row && r <= e.last);

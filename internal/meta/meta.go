@@ -156,6 +156,10 @@ CREATE TABLE _slitable_row_heights (
 	PRIMARY KEY (sheet, row)
 ) STRICT;
 `,
+	// 11 → 12 : quadrillage affiché ou masqué, feuille par feuille.
+	`
+ALTER TABLE _slitable_sheets ADD COLUMN gridlines INTEGER NOT NULL DEFAULT 1;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

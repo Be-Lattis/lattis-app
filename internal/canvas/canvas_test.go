@@ -1435,3 +1435,22 @@ func TestRowHeight(t *testing.T) {
 		t.Fatalf("annulation :\n%s", diff(before, got))
 	}
 }
+
+func TestGridlines(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	const sheet = 1
+	if err := d.SetGridlines(ctx, sheet, false); err != nil {
+		t.Fatal(err)
+	}
+	l, err := d.Layout(ctx, sheet)
+	if err != nil || !l.Sheets[0].NoGrid {
+		t.Fatalf("quadrillage non masqué : %+v %v", l.Sheets, err)
+	}
+	if _, err := d.bus.Undo(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if l, _ = d.Layout(ctx, sheet); l.Sheets[0].NoGrid {
+		t.Fatal("l'annulation n'a pas rétabli le quadrillage")
+	}
+}

@@ -10,8 +10,9 @@ import (
 
 // SheetInfo décrit un onglet.
 type SheetInfo struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID     int64  `json:"id"`
+	Name   string `json:"name"`
+	NoGrid bool   `json:"noGrid"` // quadrillage masqué
 }
 
 // ColumnInfo décrit une colonne de tableau pour l'interface.
@@ -107,13 +108,13 @@ type ColWidth struct {
 func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 	l := Layout{Sheet: sheet, Tables: []TableInfo{}, Cells: []CellInfo{}, Widths: []ColWidth{}, Heights: []RowHeight{}, Names: []NameInfo{}, Styles: []CellStyle{}}
 	err := m.read(ctx, func(t *tx) error {
-		rs, err := t.query(`SELECT id, name FROM _slitable_sheets ORDER BY pos, id`)
+		rs, err := t.query(`SELECT id, name, gridlines = 0 FROM _slitable_sheets ORDER BY pos, id`)
 		if err != nil {
 			return err
 		}
 		for rs.Next() {
 			var s SheetInfo
-			if err := rs.Scan(&s.ID, &s.Name); err != nil {
+			if err := rs.Scan(&s.ID, &s.Name, &s.NoGrid); err != nil {
 				rs.Close()
 				return err
 			}

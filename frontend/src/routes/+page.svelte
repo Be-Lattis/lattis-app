@@ -464,6 +464,8 @@
 		onpivot={mode === 'doc' ? () => sheet?.pivotActive() : undefined}
 		ondedup={mode === 'doc' ? () => sheet?.dedupActive() : undefined}
 		onrecalc={mode === 'doc' ? () => DocumentService.Recalc().then(reload).catch((e) => (notice = err(e))) : undefined}
+		gridlines={!layout?.sheets?.find((s) => s.id === sheetId)?.noGrid}
+		ongridlines={mode === 'doc' ? (show) => DocumentService.SetGridlines(sheetId, show).then(reload).catch((e) => (notice = err(e))) : undefined}
 	/>
 
 	<main>
@@ -513,6 +515,7 @@
 							? { functions: help.functions ?? [], tables: (help.tables ?? []).filter((t) => t.kind !== 'pivot'), names: (layout?.names ?? []).map((n) => n.name) }
 							: undefined}
 						onstatus={(s) => (sheetStatus = s)}
+						gridlines={!layout?.sheets?.find((s) => s.id === sheetId)?.noGrid}
 						autoBench={bench ? (r) => GridService.ReportBench(r) : undefined}
 					/>
 				</div>

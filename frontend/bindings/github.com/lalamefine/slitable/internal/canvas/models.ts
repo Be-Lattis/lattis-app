@@ -428,6 +428,11 @@ export interface ScriptInfo {
 export interface SheetInfo {
     "id": number;
     "name": string;
+
+    /**
+     * quadrillage masqué
+     */
+    "noGrid": boolean;
 }
 
 /**

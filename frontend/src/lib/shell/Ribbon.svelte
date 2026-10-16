@@ -17,6 +17,7 @@
 		run?: () => void;
 		hint?: string;
 		color?: 'fg' | 'bg'; // commande avec un choix de couleur
+		on?: boolean; // commande à bascule, enfoncée
 	}
 	interface Group {
 		title: string;
@@ -56,9 +57,12 @@
 		onaudit?: (kind: 'pre' | 'dep' | 'clear') => void;
 		onchart?: (kind: 'bar' | 'line' | 'pie' | 'scatter') => void;
 		oncells?: (op: 'insertRow' | 'deleteRow' | 'insertColumn' | 'deleteColumn') => void;
+		/** Quadrillage de la feuille active, et sa bascule. */
+		gridlines?: boolean;
+		ongridlines?: (show: boolean) => void;
 	}
 
-	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells }: Props = $props();
+	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines }: Props = $props();
 	let fg = $state('#c00000');
 	let bg = $state('#fff2cc');
 	const st = (patch: Record<string, unknown>) => (onstyle ? () => onstyle(patch) : undefined);
@@ -205,7 +209,7 @@
 			{ title: 'Calcul', commands: [{ label: 'Calculer', icon: 'function', run: onrecalc, hint: 'Renouveler AUJOURDHUI, MAINTENANT et ALEA (F9)' }] }
 		],
 		Affichage: [
-			{ title: 'Afficher', commands: [{ label: 'Figer les volets', icon: 'freeze-panes' }, { label: 'Zoom', icon: 'zoom' }] },
+			{ title: 'Afficher', commands: [{ label: 'Quadrillage', icon: 'border-all', on: gridlines, run: ongridlines ? () => ongridlines(!gridlines) : undefined, hint: gridlines ? 'Masquer le quadrillage de la feuille' : 'Afficher le quadrillage de la feuille' }, { label: 'Figer les volets', icon: 'freeze-panes' }, { label: 'Zoom', icon: 'zoom' }] },
 			...(onbench ? [{ title: 'Mesures (prototype)', commands: [{ label: 'Mesurer la grille', icon: 'stopwatch' as IconName, run: () => onbench() }] }] : [])
 		]
 	});
@@ -332,6 +336,7 @@
 									{:else}
 										<button
 											class="cmd row-cmd"
+											class:pressed={c.on}
 											disabled={!c.run}
 											onclick={() => {
 												openGroup = null;
@@ -355,6 +360,7 @@
 									<button
 										class="cmd"
 										class:row-cmd={mode !== 'large'}
+										class:pressed={c.on}
 										disabled={!c.run}
 										onclick={c.run}
 										title={c.hint ?? (c.run ? c.label : `${c.label} : à venir`)}
@@ -527,6 +533,10 @@
 	.cmd:hover:not(:disabled) {
 		background: #e2e8e4;
 		border-color: #c5d6cb;
+	}
+	.cmd.pressed {
+		background: #d3e7dc;
+		box-shadow: inset 0 0 0 1px #8fbc9f;
 	}
 	.cmd:disabled {
 		color: #9aa0a6;

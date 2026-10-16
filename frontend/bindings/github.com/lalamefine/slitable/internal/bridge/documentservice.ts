@@ -419,6 +419,13 @@ export function SetFilter(table: string, i: number, f: canvas$0.ColumnFilter | n
 }
 
 /**
+ * SetGridlines affiche ou masque le quadrillage de la feuille.
+ */
+export function SetGridlines(sheet: number, show: boolean): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1278244054, sheet, show);
+}
+
+/**
  * SetKey fait d'une colonne la clé du tableau.
  */
 export function SetKey(table: string, i: number): $CancellablePromise<$models.DocState> {
