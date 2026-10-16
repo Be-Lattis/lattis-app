@@ -80,6 +80,9 @@ export const icons = {
 	script: '<path d="M8.5 7 3.5 12l5 5M15.5 7l5 5-5 5"/><path class="a" d="m13.5 4.5-3 15"/>',
 	play: '<path class="af" d="M7 4.5v15l12.5-7.5z"/>',
 	stop: '<rect class="af" x="5.5" y="5.5" width="13" height="13" rx="2"/>',
+	// Données › Obtenir des données : requêtes d'import, actualisation
+	query: '<rect x="3.5" y="3.5" width="11" height="13" rx="1.5"/><path d="M3.5 8h11M7.5 8v8.5"/><path class="a" d="M13 13.5h7.5l-3 3.75V21l-1.5-.75v-3z"/>',
+	refresh: '<path d="M19.5 9.5A8 8 0 0 0 5 8.5M4.5 14.5A8 8 0 0 0 19 15.5"/><path class="a" d="M19.5 4v5.5H14M4.5 20v-5.5H10"/>',
 	// Protection (Révision) : cadenas sur une feuille, et sur le classeur
 	lock: '<rect x="5" y="10.5" width="14" height="10" rx="1.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><path class="a" d="M12 14.5v2.5"/>',
 	'lock-sheet': '<rect x="3.5" y="3.5" width="13" height="15" rx="1.5"/><path d="M3.5 8h13M8 3.5v15"/><rect class="af" x="12.5" y="14" width="9" height="7" rx="1"/><path class="a" d="M14.5 14v-1.5a2.5 2.5 0 0 1 5 0V14"/>',

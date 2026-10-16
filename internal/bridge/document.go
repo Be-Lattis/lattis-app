@@ -51,6 +51,7 @@ type DocumentService struct {
 	ui     uiState
 	mcp    mcpState
 	demo   *demoRun // classeur de démonstration demandé au lancement
+	pq     pqState  // base de travail des requêtes d'import (query.go)
 }
 
 var (
@@ -72,6 +73,7 @@ func (s *DocumentService) current() (*doc.Document, error) {
 // récupération au prochain lancement.
 func (s *DocumentService) ServiceShutdown() error {
 	s.stopMCP()
+	s.closeQuerySession()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.doc == nil {

@@ -254,4 +254,3 @@ func (r *run) load(src Source) (loaded, error) {
 	}
 	return l, nil
 }
-

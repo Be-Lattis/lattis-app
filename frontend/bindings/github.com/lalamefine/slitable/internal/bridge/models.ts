@@ -16,6 +16,9 @@ import * as formula$0 from "../formula/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as grid$0 from "../grid/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as query$0 from "../query/models.js";
 
 /**
  * DemoProgress est l'avancement de la fabrication du classeur de démonstration.
@@ -160,6 +163,26 @@ export interface OpenResult {
     "state": DocState;
     "recoverable"?: archive$0.Orphan | null;
     "cancelled": boolean;
+}
+
+/**
+ * PostgresTables liste les tables et vues d'une connexion (navigateur).
+ * needPassword est rempli si le serveur demande un mot de passe.
+ */
+export interface PostgresTables {
+    "tables": query$0.PGTable[] | null;
+    "needPassword": query$0.PasswordNeed | null;
+}
+
+/**
+ * QueryRefresh est le résultat d'une actualisation : tableaux chargés, ou
+ * mot de passe à demander.
+ */
+export interface QueryRefresh {
+    "loads": canvas$0.QueryLoad[] | null;
+    "needPassword": query$0.PasswordNeed | null;
+    "errors": string[] | null;
+    "state": DocState;
 }
 
 /**

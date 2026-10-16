@@ -1,0 +1,380 @@
+package bridge
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"path/filepath"
+	"sort"
+	"strings"
+	"sync"
+
+	"github.com/lalamefine/slitable/internal/canvas"
+	"github.com/lalamefine/slitable/internal/doc"
+	"github.com/lalamefine/slitable/internal/query"
+	"github.com/wailsapp/wails/v3/pkg/application"
+)
+
+// Requêtes d'import (Données › Obtenir des données) et connexions aux
+// sources externes : voir docs/decisions/0003.
+
+// pqState garde la base de travail des requêtes du classeur ouvert (cache
+// des sources lues pour l'aperçu).
+type pqState struct {
+	mu   sync.Mutex
+	doc  *doc.Document
+	sess *query.Session
+}
+
+// querySession donne la base de travail du classeur ouvert, recréée quand
+// le classeur change.
+func (s *DocumentService) querySession() (*doc.Document, *query.Session, error) {
+	d, err := s.current()
+	if err != nil {
+		return nil, nil, err
+	}
+	s.pq.mu.Lock()
+	defer s.pq.mu.Unlock()
+	if s.pq.doc != d || s.pq.sess == nil {
+		if s.pq.sess != nil {
+			s.pq.sess.Close()
+			s.pq.sess = nil
+		}
+		sess, err := query.NewSession()
+		if err != nil {
+			return nil, nil, err
+		}
+		s.pq.doc, s.pq.sess = d, sess
+	}
+	return d, s.pq.sess, nil
+}
+
+func (s *DocumentService) closeQuerySession() {
+	s.pq.mu.Lock()
+	defer s.pq.mu.Unlock()
+	if s.pq.sess != nil {
+		s.pq.sess.Close()
+		s.pq.doc, s.pq.sess = nil, nil
+	}
+}
+
+func queryEnv(d *doc.Document) query.Env {
+	return query.Env{Model: d.Model, Secrets: query.DefaultSecrets}
+}
+
+// Queries liste les requêtes du classeur.
+func (s *DocumentService) Queries(ctx context.Context) ([]query.Query, error) {
+	d, err := s.current()
+	if err != nil {
+		return nil, err
+	}
+	defs, err := d.Queries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := []query.Query{}
+	for _, def := range defs {
+		q, err := query.Decode(def)
+		if err != nil {
+			// Une définition illisible reste listée, pour pouvoir la supprimer.
+			q = query.Query{ID: def.ID, Name: def.Name, Steps: []query.Step{}, Table: def.Table, Sheet: def.Sheet}
+		}
+		out = append(out, q)
+	}
+	return out, nil
+}
+
+// SaveQuery crée ou modifie une requête (sans l'actualiser) et renvoie son
+// identifiant.
+func (s *DocumentService) SaveQuery(ctx context.Context, q query.Query) (int64, error) {
+	d, err := s.current()
+	if err != nil {
+		return 0, err
+	}
+	def, err := query.Encode(q)
+	if err != nil {
+		return 0, err
+	}
+	id, err := d.SaveQuery(ctx, def)
+	if err != nil {
+		return 0, err
+	}
+	_, err = s.changed(ctx)
+	return id, err
+}
+
+// DeleteQuery supprime une requête (son tableau reste sur la feuille).
+func (s *DocumentService) DeleteQuery(ctx context.Context, id int64) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.DeleteQuery(ctx, id) })
+}
+
+// NewQueryName propose un nom libre (« Requête1 », ou d'après base).
+func (s *DocumentService) NewQueryName(ctx context.Context, base string) (string, error) {
+	d, err := s.current()
+	if err != nil {
+		return "", err
+	}
+	defs, err := d.Queries(ctx)
+	if err != nil {
+		return "", err
+	}
+	taken := map[string]bool{}
+	for _, q := range defs {
+		taken[strings.ToLower(q.Name)] = true
+	}
+	base = strings.TrimSpace(base)
+	if base != "" && !taken[strings.ToLower(base)] {
+		return base, nil
+	}
+	if base == "" {
+		base = "Requête"
+	}
+	for n := 1; ; n++ {
+		name := fmt.Sprintf("%s%d", base, n)
+		if !taken[strings.ToLower(name)] {
+			return name, nil
+		}
+	}
+}
+
+// PreviewQuery calcule l'aperçu d'une requête (pas forcément enregistrée)
+// après ses upto premières étapes (-1 : toutes). fresh relit les sources.
+func (s *DocumentService) PreviewQuery(ctx context.Context, q query.Query, upto int, fresh bool) (query.Preview, error) {
+	d, sess, err := s.querySession()
+	if err != nil {
+		return query.Preview{}, err
+	}
+	return sess.Preview(ctx, queryEnv(d), q, upto, fresh), nil
+}
+
+// QueryRefresh est le résultat d'une actualisation : tableaux chargés, ou
+// mot de passe à demander.
+type QueryRefresh struct {
+	Loads        []canvas.QueryLoad  `json:"loads"`
+	NeedPassword *query.PasswordNeed `json:"needPassword"`
+	Errors       []string            `json:"errors"`
+	State        DocState            `json:"state"`
+}
+
+func (s *DocumentService) refreshed(ctx context.Context, out QueryRefresh, err error) (QueryRefresh, error) {
+	var pe *query.ErrPassword
+	switch {
+	case errors.As(err, &pe):
+		out.NeedPassword = &query.PasswordNeed{Connection: pe.Connection, Account: pe.Account, Message: pe.Message}
+	case err != nil:
+		for _, e := range strings.Split(err.Error(), "\n") {
+			out.Errors = append(out.Errors, e)
+		}
+	}
+	if out.Loads == nil {
+		out.Loads = []canvas.QueryLoad{}
+	}
+	if out.Errors == nil {
+		out.Errors = []string{}
+	}
+	st, serr := s.changed(ctx)
+	out.State = st
+	return out, serr
+}
+
+// RefreshQuery actualise une requête : source relue, étapes rejouées,
+// tableau remplacé (une étape d'annulation).
+func (s *DocumentService) RefreshQuery(ctx context.Context, id int64) (QueryRefresh, error) {
+	d, sess, err := s.querySession()
+	if err != nil {
+		return QueryRefresh{}, err
+	}
+	l, err := sess.Refresh(ctx, queryEnv(d), id)
+	out := QueryRefresh{}
+	if err == nil {
+		out.Loads = []canvas.QueryLoad{l}
+	}
+	return s.refreshed(ctx, out, err)
+}
+
+// RefreshAllQueries actualise toutes les requêtes chargées (Actualiser
+// tout), en une étape d'annulation.
+func (s *DocumentService) RefreshAllQueries(ctx context.Context) (QueryRefresh, error) {
+	d, sess, err := s.querySession()
+	if err != nil {
+		return QueryRefresh{}, err
+	}
+	ls, err := sess.RefreshAll(ctx, queryEnv(d))
+	return s.refreshed(ctx, QueryRefresh{Loads: ls}, err)
+}
+
+// ForgetQueryCache vide le cache des sources de l'aperçu.
+func (s *DocumentService) ForgetQueryCache() {
+	s.pq.mu.Lock()
+	sess := s.pq.sess
+	s.pq.mu.Unlock()
+	if sess != nil {
+		sess.Forget()
+	}
+}
+
+// Connections liste les connexions du classeur.
+func (s *DocumentService) Connections(ctx context.Context) ([]query.Connection, error) {
+	d, err := s.current()
+	if err != nil {
+		return nil, err
+	}
+	defs, err := d.Connections(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := []query.Connection{}
+	for _, def := range defs {
+		c, err := query.DecodeConnection(def)
+		if err != nil {
+			continue
+		}
+		c.Remembered = query.DefaultSecrets.Remembered(c.Postgres.Account())
+		out = append(out, c)
+	}
+	return out, nil
+}
+
+func (s *DocumentService) connection(ctx context.Context, name string) (query.Connection, error) {
+	cs, err := s.Connections(ctx)
+	if err != nil {
+		return query.Connection{}, err
+	}
+	for _, c := range cs {
+		if strings.EqualFold(c.Name, name) {
+			return c, nil
+		}
+	}
+	return query.Connection{}, fmt.Errorf("connexion « %s » introuvable", name)
+}
+
+// SaveConnection crée ou modifie une connexion ; password (facultatif) est
+// gardé pour la session, et dans le trousseau du système si remember. Il
+// n'est jamais écrit dans le classeur.
+func (s *DocumentService) SaveConnection(ctx context.Context, c query.Connection, password string, remember bool) (int64, error) {
+	d, err := s.current()
+	if err != nil {
+		return 0, err
+	}
+	def, err := query.EncodeConnection(c)
+	if err != nil {
+		return 0, err
+	}
+	id, err := d.SaveConnection(ctx, def)
+	if err != nil {
+		return 0, err
+	}
+	if password != "" {
+		if err := query.DefaultSecrets.Set(c.Postgres.Account(), password, remember); err != nil {
+			return id, fmt.Errorf("connexion enregistrée, mais le trousseau du système a refusé le mot de passe (gardé pour cette session) : %w", err)
+		}
+	}
+	_, err = s.changed(ctx)
+	return id, err
+}
+
+// DeleteConnection supprime une connexion qu'aucune requête n'utilise.
+func (s *DocumentService) DeleteConnection(ctx context.Context, id int64) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.DeleteConnection(ctx, id) })
+}
+
+// TestConnection essaie une connexion (password vide : celui qui est
+// connu). Renvoie "" si elle répond, sinon le message d'erreur.
+func (s *DocumentService) TestConnection(ctx context.Context, c query.Connection, password string, remember bool) (string, error) {
+	if c.Kind == "" {
+		c.Kind = query.KindPostgres
+	}
+	if err := query.TestConnection(ctx, query.DefaultSecrets, c, password, remember); err != nil {
+		return err.Error(), nil
+	}
+	return "", nil
+}
+
+// SetConnectionPassword essaie le mot de passe d'une connexion du classeur
+// et le garde s'il est accepté (pour la session, et dans le trousseau si
+// remember). Renvoie "" s'il est accepté, sinon le message d'erreur.
+func (s *DocumentService) SetConnectionPassword(ctx context.Context, name, password string, remember bool) (string, error) {
+	c, err := s.connection(ctx, name)
+	if err != nil {
+		return "", err
+	}
+	return s.TestConnection(ctx, c, password, remember)
+}
+
+// ForgetConnectionPassword oublie le mot de passe d'une connexion (session
+// et trousseau).
+func (s *DocumentService) ForgetConnectionPassword(ctx context.Context, name string) error {
+	c, err := s.connection(ctx, name)
+	if err != nil {
+		return err
+	}
+	return query.DefaultSecrets.Forget(c.Postgres.Account())
+}
+
+// PostgresTables liste les tables et vues d'une connexion (navigateur).
+// needPassword est rempli si le serveur demande un mot de passe.
+type PostgresTables struct {
+	Tables       []query.PGTable     `json:"tables"`
+	NeedPassword *query.PasswordNeed `json:"needPassword"`
+}
+
+// PostgresTables liste les tables d'une connexion du classeur.
+func (s *DocumentService) PostgresTables(ctx context.Context, name string) (PostgresTables, error) {
+	c, err := s.connection(ctx, name)
+	if err != nil {
+		return PostgresTables{}, err
+	}
+	ts, err := query.PGTables(ctx, query.DefaultSecrets, c)
+	var pe *query.ErrPassword
+	if errors.As(err, &pe) {
+		return PostgresTables{Tables: []query.PGTable{}, NeedPassword: &query.PasswordNeed{Connection: pe.Connection, Account: pe.Account, Message: pe.Message}}, nil
+	}
+	return PostgresTables{Tables: ts}, err
+}
+
+// PostgresTableSQL écrit la requête qui lit une table entière.
+func (s *DocumentService) PostgresTableSQL(schema, table string) string {
+	return "SELECT * FROM " + query.PGIdent(schema) + "." + query.PGIdent(table)
+}
+
+// PickDataFile demande un fichier source (kind : "csv" ou "xlsx") ; ""
+// si l'utilisateur annule.
+func (s *DocumentService) PickDataFile(kind string) (string, error) {
+	dlg := application.Get().Dialog.OpenFile().SetTitle("Obtenir des données")
+	if kind == "xlsx" {
+		dlg = dlg.AddFilter("Classeur Excel", "*.xlsx;*.xlsm")
+	} else {
+		dlg = dlg.AddFilter("Texte ou CSV", "*.csv;*.tsv;*.txt")
+	}
+	return dlg.PromptForSingleSelection()
+}
+
+// ExcelTables liste les tableaux d'un classeur .xlsx (navigateur).
+func (s *DocumentService) ExcelTables(ctx context.Context, path string) ([]query.XLSXTable, error) {
+	return query.XLSXTables(ctx, path)
+}
+
+// WorkbookTables liste les tableaux du classeur, par nom (sources et
+// fusions).
+func (s *DocumentService) WorkbookTables(ctx context.Context) ([]string, error) {
+	d, err := s.current()
+	if err != nil {
+		return nil, err
+	}
+	names, err := d.TableNames(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]string, 0, len(names))
+	for n := range names {
+		out = append(out, n)
+	}
+	sort.Strings(out)
+	return out, nil
+}
+
+// FileBase donne le nom d'un fichier sans dossier ni extension (nom
+// proposé pour une requête).
+func (s *DocumentService) FileBase(path string) string {
+	return strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+}

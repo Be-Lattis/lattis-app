@@ -20,6 +20,7 @@
 	import ScriptView, { type Script } from '#lib/script/ScriptView.svelte';
 	import ScriptDialog, { type DialogSpec } from '#lib/script/ScriptDialog.svelte';
 	import McpPanel from '#lib/shell/McpPanel.svelte';
+	import QueryHost from '#lib/query/QueryHost.svelte';
 	import type { ButtonConfig } from '#lib/grid/buttons.js';
 	import type { UICommand } from '#bindings/internal/bridge/models.js';
 	import { typeLabel, type ColumnType } from '#lib/grid/format.js';
@@ -56,6 +57,8 @@
 	// Boîtes de dialogue ouvertes par un script ou un assistant (ui.dialog…), la plus ancienne d'abord.
 	let dialogs = $state<DialogSpec[]>([]);
 	let mcpOpen = $state(false);
+	// Données › Obtenir des données : requêtes d'import (lib/query).
+	let queryHost = $state<ReturnType<typeof QueryHost>>();
 	// Révision › Protéger : boîte du mot de passe (protéger, ou ôter une
 	// protection qui en a un).
 	let protecting = $state<{ what: 'sheet' | 'workbook'; id: number; name: string; off: boolean } | null>(null);
@@ -672,6 +675,7 @@
 		sheetProtected={sheetLocked}
 		workbookProtected={mode === 'doc' && !!layout?.workbookProtected}
 		onprotect={mode === 'doc' ? (what) => toggleProtect(what) : undefined}
+		ondata={mode === 'doc' ? (what) => queryHost?.data(what) : undefined}
 	/>
 
 	<main>
@@ -773,6 +777,13 @@
 				<h1>Slitable</h1>
 				<p>{demoProgress || 'Ouverture…'}</p>
 			</div>
+		{/if}
+		{#if mode === 'doc'}
+			<QueryHost
+				bind:this={queryHost}
+				onchanged={(sh) => (sh && sh !== sheetId ? selectSheet(sh) : reload()).catch((e) => (notice = err(e)))}
+				onnotice={(m) => (notice = m)}
+			/>
 		{/if}
 	</main>
 
