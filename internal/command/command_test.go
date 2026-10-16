@@ -168,6 +168,7 @@ func TestAppendGroupsAndDepthPurges(t *testing.T) {
 func TestGroup(t *testing.T) {
 	ctx := context.Background()
 	db, bus := open(t, filepath.Join(t.TempDir(), "g.sqlite"))
+	defer db.Close()
 	gctx := WithGroup(ctx, "Script")
 	for i := 1; i <= 3; i++ {
 		if _, err := bus.Do(gctx, "Action", func(tx *Tx) error {

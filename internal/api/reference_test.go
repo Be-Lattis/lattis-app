@@ -22,7 +22,8 @@ func TestReferenceUpToDate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(got) != want {
+	// Extraction Windows (autocrlf) : les fins de ligne ne comptent pas.
+	if strings.ReplaceAll(string(got), "\r\n", "\n") != want {
 		t.Fatal("api.gen.ts n'est plus à jour : go test ./internal/api -run TestReference -update")
 	}
 }

@@ -259,7 +259,7 @@ func TestGuideExamplesRun(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	doc := string(b)
+	doc := strings.ReplaceAll(string(b), "\r\n", "\n")
 	doc = doc[strings.Index(doc, "## 5. Piloter"):strings.Index(doc, "## 8. Annuler")]
 	blocks := regexp.MustCompile("(?s)```lua\n(.*?)```").FindAllStringSubmatch(doc, -1)
 	if len(blocks) < 4 {
