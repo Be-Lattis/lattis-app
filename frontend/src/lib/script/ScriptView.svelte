@@ -33,8 +33,8 @@
 
 	let { scripts, save, remove, run, stop, subscribe }: Props = $props();
 
-	const EXAMPLE = `-- Exemple : total par client, écrit dans la sortie.
--- Référence de l'API : docs/scripting.md (db.query, db.rows, db.insert…)
+	const EXAMPLE = `-- Exemple : la liste des tableaux du classeur et leurs colonnes.
+-- db.query, db.rows, db.insert, db.execute… : voir le guide du scripting.
 for _, t in ipairs(db.tables()) do
   print(t.name, #t.columns .. " colonne(s)")
 end
@@ -90,7 +90,7 @@ end
 			const r = await run(current.name, view?.state.doc.toString() ?? '');
 			output = r.output ?? output;
 			error = r.error;
-			status = `${r.error ? 'Arrêté' : 'Terminé'} en ${(r.durationMs / 1000).toFixed(2)} s · ${r.writes} ligne(s) écrite(s)${r.writes ? ' (Ctrl+Z pour tout annuler)' : ''}`;
+			status = `${r.error ? 'Arrêté' : 'Terminé'} en ${(r.durationMs / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} s · ${r.writes} ligne(s) écrite(s)${r.writes ? ' (Ctrl+Z pour tout annuler)' : ''}`;
 		} catch (e) {
 			error = String(e instanceof Error ? e.message : e);
 			status = '';

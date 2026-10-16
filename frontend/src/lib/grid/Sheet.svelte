@@ -450,6 +450,11 @@
 	let suggestPos = $state({ x: 0, y: 0 });
 
 	function onFormulaInput(el: HTMLInputElement, where: 'cell' | 'fx') {
+		if (where === 'cell') {
+			fxText = el.value;
+			// Une formule se lit de gauche à droite, quelle que soit la colonne.
+			if (el.value.startsWith('=')) el.style.textAlign = 'left';
+		}
 		if (!catalog) return;
 		suggestPos = { x: MARGIN + colAxis.offset(active.col) - scroller.scrollLeft, y: TOP_H + (active.row + 1) * ROW_H - vs.top + 2 };
 		const caret = el.selectionStart ?? el.value.length;
@@ -649,7 +654,7 @@
 						ctx.font = (hs?.i ? 'italic ' : '') + FONT_BOLD;
 						ctx.fillStyle = hs?.fg ?? C.headText;
 						ctx.textAlign = 'left';
-						ctx.fillText(col.name, x + 6, y + ROW_H / 2);
+						ctx.fillText(ellipsize(col.name, cw - iconW - 16), x + 6, y + ROW_H / 2);
 						ctx.restore();
 						continue;
 					}
@@ -942,6 +947,19 @@
 	}
 
 	/** Texte d'une cellule avec sa mise en forme (gras, italique, souligné, couleur). */
+	/** Texte raccourci avec « … » pour tenir dans width (police courante). */
+	function ellipsize(text: string, width: number): string {
+		if (ctx.measureText(text).width <= width) return text;
+		let lo = 0;
+		let hi = text.length;
+		while (lo < hi) {
+			const mid = (lo + hi + 1) >> 1;
+			if (ctx.measureText(text.slice(0, mid) + '…').width <= width) lo = mid;
+			else hi = mid - 1;
+		}
+		return lo > 0 ? text.slice(0, lo) + '…' : '…';
+	}
+
 	/** Petit triangle d'angle d'une cellule en erreur (le détail est dans la barre d'état). */
 	function errorCorner(x: number, y: number) {
 		ctx.fillStyle = C.error;
@@ -1108,6 +1126,8 @@
 	let filterDlg = $state<{
 		e: Entry;
 		i: number;
+		x: number;
+		y: number;
 		values: { text: string; count: number; on: boolean }[];
 		search: string;
 		errors: boolean;
@@ -1124,6 +1144,8 @@
 			filterDlg = {
 				e,
 				i,
+				x: Math.max(4, MARGIN + colAxis.offset(e.t.col + i) - scroller.scrollLeft),
+				y: Math.max(4, TOP_H + (e.t.row + 1) * ROW_H - vs.top),
 				values: vals.map((v) => ({ ...v, on: !keep || keep.has(v.text) })),
 				search: '',
 				errors: !!f?.errors,
@@ -1543,6 +1565,16 @@
 		menuAction(() => sort(e.t, active.col - e.t.col, desc));
 	}
 
+	/** Échap ferme le dialogue ouvert, où que soit le focus. */
+	function onGlobalKey(e: KeyboardEvent) {
+		if (e.key !== 'Escape') return;
+		const open = filterDlg || rulesDlg || dedupDlg || fnDlg || menu || freeMenu || typeMenu || chartMenu;
+		if (!open) return;
+		filterDlg = rulesDlg = dedupDlg = fnDlg = null;
+		menu = freeMenu = typeMenu = chartMenu = null;
+		wrap.focus();
+	}
+
 	/** Ferme les menus, dialogues et volets (changement de feuille ou de vue). */
 	export function closeOverlays() {
 		menu = null;
@@ -1579,10 +1611,17 @@
 		if (pv) panel = { kind: 'pivot', id: pv.id };
 		else if (panel?.kind === 'pivot' && !openPivotOnLoad) panel = null;
 		const e = tableAt(active.row, active.col);
+		const label = (r: number, c: number) => {
+			const k = e!.t.columns[c - e!.t.col];
+			return r === e!.t.row ? k.name : `${k.name}[${r - e!.t.row}]`;
+		};
+		const sel = selection();
+		const multi = sel.r0 !== sel.r1 || sel.c0 !== sel.c1;
 		if (e) {
-			const k = e.t.columns[active.col - e.t.col];
-			tableBox = { name: e.t.name, col: active.row === e.t.row ? k.name : `${k.name}[${active.row - e.t.row}]` };
+			const inside = multi && inTable(e, sel.r0, sel.c0) && inTable(e, sel.r1, sel.c1);
+			tableBox = { name: e.t.name, col: inside ? `${label(sel.r0, sel.c0)}:${label(sel.r1, sel.c1)}` : label(active.row, active.col) };
 		} else tableBox = null;
+		if (multi && !e) nameBox = `${sel.r1 - sel.r0 + 1}L × ${sel.c1 - sel.c0 + 1}C`;
 		if (fxEditing) return;
 		fxText = cellInfo(active.row, active.col).value;
 	}
@@ -2644,7 +2683,18 @@
 		const cell = cellAt(ev);
 		ev.preventDefault();
 		menu = null;
-		if (!cell) return;
+		if (!cell) {
+			// Clic droit sur un numéro de ligne : menu de la ligne du tableau.
+			const hd = headerAt(ev);
+			if (hd?.kind === 'rows') {
+				const te = entries.find((x) => hd.row > x.t.row && hd.row <= x.last);
+				if (te) {
+					const r = wrap.getBoundingClientRect();
+					menu = { x: ev.clientX - r.left, y: ev.clientY - r.top, e: te, n: hd.row - te.t.row - 1, i: 0, header: false };
+				}
+			}
+			return;
+		}
 		const e = tableAt(cell.row, cell.col);
 		if (!inSelection(cell.row, cell.col)) moveTo(cell.row, cell.col);
 		const r = wrap.getBoundingClientRect();
@@ -2819,6 +2869,7 @@
 		window.addEventListener('mouseup', up);
 		const timer = setInterval(refreshStatus, 250);
 		window.addEventListener('copy', onCopy);
+		window.addEventListener('keydown', onGlobalKey);
 		window.addEventListener('cut', onCut);
 		window.addEventListener('paste', onPaste);
 		wrap.focus();
@@ -2830,6 +2881,7 @@
 			window.removeEventListener('mouseup', up);
 			clearInterval(timer);
 			window.removeEventListener('copy', onCopy);
+			window.removeEventListener('keydown', onGlobalKey);
 			window.removeEventListener('cut', onCut);
 			window.removeEventListener('paste', onPaste);
 			cancelAnimationFrame(frame);
@@ -3122,6 +3174,15 @@
 				{#if source.clearFilters && m.e.t.columns.some((c) => c.filter)}
 					<button onclick={() => menuAction(() => source.clearFilters!(m.e.t))}>Effacer le filtre du tableau</button>
 				{/if}
+				<button
+					onclick={() => {
+						const t = m.e.t;
+						const c = t.col + m.i;
+						menu = null;
+						moveTo(t.row, c);
+						startEdit(false);
+					}}>Renommer la colonne « {m.e.t.columns[m.i]?.name} »</button
+				>
 				{#if source.setRules}
 					<button onclick={() => openRules(m.e, m.i)}>Mise en forme conditionnelle…</button>
 					<hr />
@@ -3303,7 +3364,9 @@
 			{@const shown = filterShown()}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
-				class="rules filter"
+				class="rules filter anchored"
+				style:left="{d.x}px"
+				style:top="{d.y}px"
 				onkeydown={(ev) => {
 					ev.stopPropagation();
 					if (ev.key === 'Escape') closeFilter();
@@ -3659,6 +3722,9 @@
 	}
 	.filter {
 		min-width: 300px;
+	}
+	.filter.anchored {
+		transform: none;
 	}
 	.charts {
 		position: absolute;

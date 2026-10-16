@@ -74,7 +74,8 @@
 			remember({ sql: text, at, rows: (r.rows ?? []).length, micros: r.micros });
 		} catch (e) {
 			result = null;
-			error = String(e instanceof Error ? e.message : e);
+			// Sans le préfixe technique du moteur.
+			error = String(e instanceof Error ? e.message : e).replace(/^sqlite3:\s*(SQL logic error:\s*)?/i, '');
 			remember({ sql: text, at, error });
 		}
 		running = false;
@@ -136,7 +137,7 @@
 						>
 							<span>{open === o.sqlName ? '▾' : '▸'}</span>
 							<strong>{o.name}</strong>
-							<span class="muted">tableau · {o.sqlName} · {o.rows.toLocaleString('fr-FR')} lignes</span>
+							<span class="muted">{o.sqlName.startsWith('"') ? 'tableau croisé' : 'tableau'} · {o.rows.toLocaleString('fr-FR')} lignes</span>
 						</button>
 						{#if open === o.sqlName}
 							<ul>
@@ -207,7 +208,7 @@
 				<p class="error">{error}</p>
 			{:else if result}
 				<p class="muted">
-					{(result.rows ?? []).length.toLocaleString('fr-FR')} ligne(s){result.truncated ? ' (tronqué)' : ''} · {(result.micros / 1000).toFixed(1)} ms
+					{(result.rows ?? []).length.toLocaleString('fr-FR')} ligne(s){result.truncated ? ' (tronqué)' : ''} · {(result.micros / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} ms
 					<span class="sent" title={sent}>· SQL exécuté</span>
 				</p>
 				<div class="table-wrap">

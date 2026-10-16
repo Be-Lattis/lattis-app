@@ -497,7 +497,14 @@
 		background: #fff;
 		overflow: hidden;
 	}
+	.app :global(input),
+	.app :global(textarea),
+	.app :global(.cm-editor),
+	.app :global(pre) {
+		user-select: text;
+	}
 	.app {
+		user-select: none;
 		display: flex;
 		flex-direction: column;
 		height: 100vh;

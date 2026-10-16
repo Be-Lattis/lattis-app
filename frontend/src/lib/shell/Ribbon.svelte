@@ -246,7 +246,7 @@
 			{#if fileOpen}
 				<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 				<div class="file-menu" use:dismiss={() => (fileOpen = false)}>
-					{#each [['new', 'Nouveau', 'Ctrl+N'], ['open', 'Ouvrir…', 'Ctrl+O'], ['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ['import', 'Importer (CSV, Excel)…', ''], ['export', 'Exporter le tableau en CSV…', ''], ['demo', 'Démo : 1 M de lignes', '']] as [a, label, keys] (a)}
+					{#each [['new', 'Nouveau', 'Ctrl+N'], ['open', 'Ouvrir…', 'Ctrl+O'], ['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ['import', 'Importer (CSV, Excel)…', ''], ['export', 'Exporter le tableau en CSV…', ''], ...(import.meta.env.DEV ? [['demo', 'Démo : 1 M de lignes', '']] : [])] as [a, label, keys] (a)}
 						<button onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keys}</span></button>
 					{/each}
 				</div>
@@ -356,6 +356,9 @@
 	}
 	.tab:hover:not(:disabled) {
 		background: rgba(255, 255, 255, 0.12);
+	}
+	.tab.on:hover {
+		background: #f3f4f6;
 	}
 	.tab.on {
 		background: #f3f4f6;

@@ -180,7 +180,7 @@ func (t *tx) pivotCells(raw PivotConfig) ([][]string, error) {
 	// Valeurs distinctes du champ des colonnes.
 	var keys []string
 	if p.cols != nil {
-		rs, err := t.query(`SELECT `+pivotText(p.cols)+` AS k FROM `+p.tb.sql()+where+` GROUP BY k ORDER BY min(`+colSQL(p.cols.ID)+`) IS NULL, min(`+colSQL(p.cols.ID)+`) LIMIT ?`, append(append([]any{}, p.args...), MaxPivotCols+1)...)
+		rs, err := t.query(`SELECT `+pivotText(p.cols)+` AS k FROM `+p.tb.sql()+where+` GROUP BY k ORDER BY min(_pos) LIMIT ?`, append(append([]any{}, p.args...), MaxPivotCols+1)...)
 		if err != nil {
 			return nil, err
 		}
@@ -300,12 +300,13 @@ func (t *tx) pivotCells(raw PivotConfig) ([][]string, error) {
 	if nk > 0 {
 		sel := make([]string, nk)
 		group := make([]string, nk)
-		order := make([]string, 0, 2*nk)
+		var order []string
 		for i, c := range p.rows {
 			sel[i] = pivotText(c) + " AS k" + strconv.Itoa(i)
 			group[i] = "k" + strconv.Itoa(i)
-			order = append(order, "min("+colSQL(c.ID)+") IS NULL", "min("+colSQL(c.ID)+")")
 		}
+		// Ordre de la source (première apparition), comme Excel par défaut.
+		order = append(order, "min(_pos)")
 		cols := append(sel, exprs...)
 		args := append(append(append([]any{}, margs...), p.args...), MaxPivotRows+1)
 		if err := scan(`SELECT `+strings.Join(cols, ", ")+` FROM `+p.tb.sql()+where+` GROUP BY `+strings.Join(group, ", ")+` ORDER BY `+strings.Join(order, ", ")+` LIMIT ?`, args, true); err != nil {
