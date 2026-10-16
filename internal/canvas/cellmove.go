@@ -62,3 +62,36 @@ func (m *Model) MoveCells(ctx context.Context, sheet int64, r0, c0, r1, c1, dr, 
 		})
 	})
 }
+
+// ClearCells vide les cellules libres du rectangle [r0, r1] × [c0, c1]
+// (Supprimer, sur des cellules libres) : valeurs et formules, mise en forme,
+// fusions, notes et validations, en une seule étape d'annulation. Une fusion
+// qui déborde du rectangle est défaite. Les tableaux ne sont pas touchés.
+func (m *Model) ClearCells(ctx context.Context, sheet int64, r0, c0, r1, c1 int) error {
+	if r0 > r1 || c0 > c1 {
+		return nil
+	}
+	return m.Do(ctx, "Supprimer", func(t *tx) error {
+		if err := t.guard(sheet); err != nil {
+			return err
+		}
+		merges, err := t.merges(sheet)
+		if err != nil {
+			return err
+		}
+		for _, g := range merges {
+			inside := g.Row >= r0 && g.bottom() <= r1 && g.Col >= c0 && g.right() <= c1
+			if !inside && g.overlaps(r0, c0, r1, c1) {
+				if err := t.styleFree(sheet, g.Row, g.Col, Style{"mr": nil, "mc": nil}, nil); err != nil {
+					return err
+				}
+			}
+		}
+		for _, tbl := range []string{"_slitable_cells", "_slitable_cell_styles"} {
+			if err := t.deleteWhere(tbl, `sheet = ? AND row BETWEEN ? AND ? AND col BETWEEN ? AND ?`, sheet, r0, r1, c0, c1); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}

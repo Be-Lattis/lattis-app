@@ -229,6 +229,8 @@
 		setLineRules?(rows: boolean, i0: number, i1: number, rules: Rule[]): Promise<unknown>;
 		/** Déplace les cellules libres d'une plage (glisser la bordure de la sélection). */
 		moveCells?(r0: number, c0: number, r1: number, c1: number, dr: number, dc: number): Promise<unknown>;
+		/** Vide entièrement les cellules libres d'une plage : valeurs, mise en forme, fusions, notes, validations. */
+		clearCells?(r0: number, c0: number, r1: number, c1: number): Promise<unknown>;
 		insertRow?(table: SheetTable, n: number): Promise<unknown>;
 		deleteRow?(table: SheetTable, n: number): Promise<unknown>;
 		insertColumn?(table: SheetTable, i: number): Promise<unknown>;
@@ -4529,8 +4531,14 @@
 		sig = s ? { ...s, where: 'cell' } : null;
 	}
 
-	async function clearSelection(range = selection()) {
+	/**
+	 * Efface la sélection : tableaux entièrement compris supprimés, contenu des
+	 * autres cellules de tableau effacé. Cellules libres : contenu seul, ou
+	 * tout (all : Supprimer, avec mise en forme, fusions, notes, validations).
+	 */
+	async function clearSelection(range = selection(), all = false) {
 		const { r0, r1, c0, c1 } = range;
+		const wipe = all ? source.clearCells : undefined;
 		// Les tableaux entièrement compris dans la zone sont supprimés.
 		const whole = entries.filter((e) => e.t.row >= r0 && e.last <= r1 && e.t.col >= c0 && e.lastCol <= c1);
 		const rest = (r: number, c: number) => !whole.some((e) => inTable(e, r, c));
@@ -4541,10 +4549,11 @@
 			const cc = Math.max(0, Math.min(c1, e.lastCol) - Math.max(c0, e.t.col) + 1);
 			n += rr * cc;
 		}
-		for (const k of cells.keys()) {
-			const [r, c] = k.split(',').map(Number);
-			if (r >= r0 && r <= r1 && c >= c0 && c <= c1) n++;
-		}
+		if (!wipe)
+			for (const k of cells.keys()) {
+				const [r, c] = k.split(',').map(Number);
+				if (r >= r0 && r <= r1 && c >= c0 && c <= c1) n++;
+			}
 		if (n > 1000) {
 			say('Effacement limité à 1 000 cellules pour l’instant');
 			return;
@@ -4567,6 +4576,16 @@
 					const info = cellInfo(r, c);
 					if (info.kind !== 'header' && info.value !== '') await write(r, c, '');
 				}
+		}
+		if (wipe) {
+			writing = writing.then(() =>
+				wipe(r0, c0, r1, c1).then(
+					() => say('Cellules supprimées (Ctrl+Z pour annuler)'),
+					(err) => say(String(err?.message ?? err))
+				)
+			);
+			await writing;
+			return;
 		}
 		for (const k of [...cells.keys()]) {
 			const [r, c] = k.split(',').map(Number);
@@ -5397,7 +5416,7 @@
 			{/if}
 		{:else}
 			<button onclick={() => openLinesDialog(true, x, y)}>Insérer…</button>
-			<button onclick={() => { menu = freeMenu = null; clearSelection(); }}>Supprimer</button>
+			<button title="Vide les cellules : valeurs, mise en forme, fusions, notes et validations" onclick={() => { menu = freeMenu = null; clearSelection(selection(), true); }}>Supprimer</button>
 		{/if}
 	{/if}
 {/snippet}

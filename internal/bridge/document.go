@@ -889,3 +889,9 @@ func (s *DocumentService) ProtectWorkbook(ctx context.Context, password string) 
 func (s *DocumentService) UnprotectWorkbook(ctx context.Context, password string) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.UnprotectWorkbook(ctx, password) })
 }
+
+// ClearCells vide entièrement les cellules libres d'une plage (valeurs,
+// mise en forme, fusions, notes, validations).
+func (s *DocumentService) ClearCells(ctx context.Context, sheet int64, r0, c0, r1, c1 int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.ClearCells(ctx, sheet, r0, c0, r1, c1) })
+}

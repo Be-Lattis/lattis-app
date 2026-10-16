@@ -420,6 +420,7 @@
 			if (ev.created) return `Tableau « ${ev.created} » créé (${count(block.length - 1)})`;
 		},
 		moveCells: (r0, c0, r1, c1, dr, dc) => DocumentService.MoveCells(sheetId, r0, c0, r1, c1, dr, dc).then(reload),
+		clearCells: (r0, c0, r1, c1) => DocumentService.ClearCells(sheetId, r0, c0, r1, c1).then(reload),
 		sheetLines: (op, a, b) =>
 			(op === 'insertRows'
 				? DocumentService.InsertSheetRows(sheetId, a, b)

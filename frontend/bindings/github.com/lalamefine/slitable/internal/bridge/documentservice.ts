@@ -69,6 +69,14 @@ export function Call(name: string, args: { [_ in string]?: any } | null): $Cance
 }
 
 /**
+ * ClearCells vide entièrement les cellules libres d'une plage (valeurs,
+ * mise en forme, fusions, notes, validations).
+ */
+export function ClearCells(sheet: number, r0: number, c0: number, r1: number, c1: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3800788935, sheet, r0, c0, r1, c1);
+}
+
+/**
  * ClearFilters retire tous les filtres d'un tableau.
  */
 export function ClearFilters(table: string): $CancellablePromise<$models.DocState> {
