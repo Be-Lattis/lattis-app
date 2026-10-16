@@ -230,9 +230,6 @@ var suggestions = map[string]string{
 	"LOOKUP":     "RECHERCHE n'existe pas dans Slitable : utilisez REFERENCE ou REFERENCE.APPROCHEE",
 	"RECHERCHE":  "RECHERCHE n'existe pas dans Slitable : utilisez REFERENCE ou REFERENCE.APPROCHEE",
 	"LAMBDA":     "LAMBDA n'existe pas dans Slitable : utilisez un script Lua",
-	"LET":        "LET n'existe pas encore dans Slitable : décomposez la formule en colonnes calculées",
-	"CHOOSE":     "CHOISIR n'existe pas dans Slitable : utilisez SI.MULTIPLE",
-	"CHOISIR":    "CHOISIR n'existe pas dans Slitable : utilisez SI.MULTIPLE",
 	"VLOOKUP":    "RECHERCHEV est convertie en REFERENCE à la saisie (correspondance exacte seulement)",
 	"RECHERCHEV": "RECHERCHEV est convertie en REFERENCE à la saisie (correspondance exacte seulement)",
 }

@@ -346,6 +346,12 @@ func (c *compiler) scan(s scanCall, sc scope) string {
 // special compile les fonctions propres à chaque backend.
 func (c *compiler) special(fn string, n Call, sc scope) string {
 	switch fn {
+	case "LET":
+		body, ok := expandLet(n)
+		if !ok {
+			return errSQL(ErrValue)
+		}
+		return c.expr(body, sc)
 	case "REFERENCE":
 		return c.reference(n, sc)
 	case "REFERENCE.APPROX":

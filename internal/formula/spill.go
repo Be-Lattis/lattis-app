@@ -25,6 +25,10 @@ func IsSpill(n Node) bool {
 	if !ok {
 		return false
 	}
+	if c.Fn == "LET" {
+		body, ok := expandLet(c)
+		return ok && IsSpill(body)
+	}
 	fn, ok := lookupFunc(c.Fn)
 	return ok && fn.kind == spill
 }
@@ -206,8 +210,14 @@ func (env *Env) spill(n Node) (rel, Value) {
 		}
 		return Value{}
 	}
-	if c.Fn == "GROUPBY" {
+	switch c.Fn {
+	case "GROUPBY":
 		return env.groupBy(c)
+	case "SEQUENCE":
+		return env.sequence(c)
+	case "LET":
+		body, _ := expandLet(c)
+		return env.spill(body)
 	}
 	if c.Fn == "QUERY" {
 		return rel{}, Err(ErrValue) // SQL libre : seulement dans le moteur SQL
@@ -498,6 +508,11 @@ func (c *compiler) spill(n Node, sc scope) (sqlRel, ErrCode) {
 		return "NULL"
 	}
 	switch call.Fn {
+	case "SEQUENCE":
+		return c.sequence(call, sc)
+	case "LET":
+		body, _ := expandLet(call)
+		return c.spill(body, sc)
 	case "QUERY":
 		q, ok := call.Args[0].(StrLit)
 		if !ok {

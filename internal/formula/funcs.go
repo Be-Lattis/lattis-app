@@ -80,6 +80,8 @@ var funcs = []funcDef{
 	{"ISNUMBER", "ESTNUM", 1, 1, scalar, func(a []Value) Value { return Boolean(a[0].Kind == Number || a[0].Kind == Date) }},
 	{"ISTEXT", "ESTTEXTE", 1, 1, scalar, func(a []Value) Value { return Boolean(a[0].Kind == Text) }},
 	{"ISLOGICAL", "ESTLOGIQUE", 1, 1, scalar, func(a []Value) Value { return Boolean(a[0].Kind == Bool) }},
+	{"CHOOSE", "CHOISIR", 2, -1, scalar, fnChoose},
+	{"LET", "LET", 3, -1, special, nil},
 
 	// Mathématiques
 	{"ROUND", "ARRONDI", 2, 2, scalar, fnRound},
@@ -98,6 +100,8 @@ var funcs = []funcDef{
 		return 0
 	})},
 	{"MOD", "MOD", 2, 2, scalar, fnMod},
+	{"CEILING", "PLAFOND", 1, 2, scalar, fnCeiling},
+	{"FLOOR", "PLANCHER", 1, 2, scalar, fnFloor},
 	{"POWER", "PUISSANCE", 2, 2, scalar, func(a []Value) Value { return Arith('^', a[0], a[1]) }},
 	{"SQRT", "RACINE", 1, 1, scalar, math1(math.Sqrt)},
 	{"EXP", "EXP", 1, 1, scalar, math1(math.Exp)},
@@ -155,6 +159,9 @@ var funcs = []funcDef{
 	{"SECOND", "SECONDE", 1, 1, scalar, fnHourPart(1, 60)},
 	{"WEEKDAY", "JOURSEM", 1, 2, scalar, fnWeekday},
 	{"ISOWEEKNUM", "NO.SEMAINE.ISO", 1, 1, scalar, fnISOWeek},
+	{"WEEKNUM", "NO.SEMAINE", 1, 2, scalar, fnWeeknum},
+	{"DAYS", "JOURS", 2, 2, scalar, fnDays},
+	{"TIME", "TEMPS", 3, 3, scalar, fnTime},
 	{"EOMONTH", "FIN.MOIS", 2, 2, scalar, fnEOMonth},
 	{"EDATE", "MOIS.DECALER", 2, 2, scalar, fnEDate},
 	{"DATEDIF", "DATEDIF", 3, 3, scalar, fnDatedif},
@@ -170,6 +177,8 @@ var funcs = []funcDef{
 	{"MIN", "MIN", 1, -1, aggregate, nil},
 	{"MAX", "MAX", 1, -1, aggregate, nil},
 	{"MEDIAN", "MEDIANE", 1, -1, aggregate, nil},
+	{"LARGE", "GRANDE.VALEUR", 2, 2, scan, nil},
+	{"SMALL", "PETITE.VALEUR", 2, 2, scan, nil},
 	{"STDEV", "ECARTYPE", 1, -1, aggregate, nil},
 	{"PRODUCT", "PRODUIT", 1, -1, aggregate, nil},
 	{"TEXTJOIN", "JOINDRE.TEXTE", 3, -1, aggregate, nil},
@@ -209,6 +218,7 @@ var funcs = []funcDef{
 	{"DROP", "EXCLURE", 2, 3, spill, nil},
 	{"GROUPBY", "GROUPER.PAR", 3, 3, spill, nil},
 	{"QUERY", "REQUETE", 1, 1, spill, nil},
+	{"SEQUENCE", "SEQUENCE", 1, 4, spill, nil},
 }
 
 var funcIndex = func() map[string]funcDef {
