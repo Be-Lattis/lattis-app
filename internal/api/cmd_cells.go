@@ -266,6 +266,45 @@ cells.set(2, 2, 3.5)`,
 			},
 		},
 		&Command{
+			Name:    "cells.style_lines",
+			Label:   "Mise en forme des lignes ou colonnes",
+			Summary: "Met en forme des lignes ou des colonnes entières de la feuille (toutes leurs cellules, présentes et à venir, tableaux et tableaux croisés compris). Une cellule l'emporte sur sa ligne, une ligne sur sa colonne.",
+			Details: styleHelp,
+			Params: []Param{{Name: "axis", Type: String, Desc: `"rows" (lignes) ou "cols" (colonnes)`},
+				{Name: "from", Type: Integer, Desc: "première ligne ou colonne, à partir de 1"},
+				{Name: "to", Type: Integer, Desc: "dernière ligne ou colonne (absente : from)", Optional: true},
+				{Name: "style", Type: Object, Desc: "propriétés à poser : {bold = true, fill = \"#fff2cc\"}"}, pSheet},
+			Write:   true,
+			Example: `cells.style_lines{axis = "rows", from = 1, style = {bold = true}}`,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				axis, err := c.Str("axis")
+				if err != nil {
+					return nil, err
+				}
+				if axis != "rows" && axis != "cols" {
+					return nil, fmt.Errorf(`axis : "rows" ou "cols" attendu`)
+				}
+				i0, err := c.Pos("from", 0)
+				if err != nil {
+					return nil, err
+				}
+				i1, err := c.Pos("to", i0)
+				if err != nil {
+					return nil, err
+				}
+				st, err := c.style("style")
+				if err != nil {
+					return nil, err
+				}
+				d, _ := c.Doc()
+				return nil, d.ApplyLineStyle(c, s.ID, axis == "rows", i0, i1, st)
+			},
+		},
+		&Command{
 			Name:    "cells.name",
 			Label:   "Nommer la cellule",
 			Summary: "Nomme une cellule libre, pour la citer dans les formules ; un nom vide retire le nom.",

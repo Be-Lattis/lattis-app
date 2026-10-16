@@ -203,8 +203,18 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 			return err
 		}
 		pivots = append(append(pivots, charts...), buttons...)
+		// Mise en forme, largeurs et hauteurs de la feuille.
+		do := []stmt{st(`DELETE FROM _slitable_pivots WHERE sheet = ?`, sheet), st(`DELETE FROM _slitable_charts WHERE sheet = ?`, sheet), st(`DELETE FROM _slitable_buttons WHERE sheet = ?`, sheet)}
+		for _, tbl := range sheetPositioned {
+			rows, err := t.snapshot(tbl, sheet)
+			if err != nil {
+				return err
+			}
+			do = append(do, st(`DELETE FROM `+tbl+` WHERE sheet = ?`, sheet))
+			pivots = append(pivots, rows...)
+		}
 		return t.apply(
-			[]stmt{st(`DELETE FROM _slitable_pivots WHERE sheet = ?`, sheet), st(`DELETE FROM _slitable_charts WHERE sheet = ?`, sheet), st(`DELETE FROM _slitable_buttons WHERE sheet = ?`, sheet), st(`DELETE FROM _slitable_sheets WHERE id = ?`, sheet)},
+			append(do, st(`DELETE FROM _slitable_sheets WHERE id = ?`, sheet)),
 			append([]stmt{st(`INSERT INTO _slitable_sheets (id, name, pos, gridlines, headings) VALUES (?, ?, ?, ?, ?)`, sheet, name, pos, grid, heads)}, pivots...),
 		)
 	})
@@ -285,4 +295,41 @@ func (m *Model) SetRowHeight(ctx context.Context, sheet int64, row, height int) 
 		}
 		return t.apply(set(height), set(old))
 	})
+}
+
+// sheetPositioned sont les tables de métadonnées repérées par feuille et
+// position (sans identifiant propre), supprimées avec la feuille.
+var sheetPositioned = []string{`_slitable_cell_styles`, `_slitable_row_styles`, `_slitable_col_styles`, `_slitable_col_widths`, `_slitable_row_heights`}
+
+// snapshot renvoie les insertions qui recréent les lignes d'une feuille dans
+// une table de métadonnées (pour l'annulation).
+func (t *tx) snapshot(table string, sheet int64) ([]stmt, error) {
+	rs, err := t.query(`SELECT * FROM `+table+` WHERE sheet = ?`, sheet)
+	if err != nil {
+		return nil, err
+	}
+	defer rs.Close()
+	cols, err := rs.Columns()
+	if err != nil {
+		return nil, err
+	}
+	q := `INSERT INTO ` + table + ` (` + strings.Join(cols, ", ") + `) VALUES (?` + strings.Repeat(", ?", len(cols)-1) + `)`
+	var out []stmt
+	for rs.Next() {
+		vals := make([]any, len(cols))
+		ptrs := make([]any, len(cols))
+		for i := range vals {
+			ptrs[i] = &vals[i]
+		}
+		if err := rs.Scan(ptrs...); err != nil {
+			return nil, err
+		}
+		for i, v := range vals {
+			if b, ok := v.([]byte); ok {
+				vals[i] = string(b)
+			}
+		}
+		out = append(out, st(q, vals...))
+	}
+	return out, rs.Err()
 }

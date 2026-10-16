@@ -433,6 +433,7 @@
 		moveTable: (t, row, col) => DocumentService.MoveTable(t.name, row, col).then(reload),
 		extractColumns: (t, i0, i1, row, col) => DocumentService.ExtractColumns(t.name, i0, i1, row, col).then(reload),
 		applyStyle: (r0, c0, r1, c1, patch) => DocumentService.ApplyStyle(sheetId, r0, c0, r1, c1, patch).then(reload),
+		applyLineStyle: (rows, i0, i1, patch) => DocumentService.ApplyLineStyle(sheetId, rows, i0, i1, patch).then(reload),
 		find: async (text) => (await DocumentService.Find(sheetId, text)) ?? [],
 		replace: async (text, by) => {
 			const n = await DocumentService.Replace(sheetId, text, by);
@@ -482,6 +483,8 @@
 					heights: layout.heights ?? [],
 					names: layout.names ?? [],
 					styles: layout.styles ?? [],
+					rowStyles: layout.rowStyles ?? [],
+					colStyles: layout.colStyles ?? [],
 					charts: (layout.charts ?? []).map((c) => ({
 						...c,
 						config: c.config as ChartConfig,

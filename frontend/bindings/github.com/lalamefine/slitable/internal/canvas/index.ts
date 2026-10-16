@@ -17,6 +17,7 @@ export type {
     Event,
     FilterValue,
     Layout,
+    LineStyle,
     Match,
     Mix,
     NameInfo,

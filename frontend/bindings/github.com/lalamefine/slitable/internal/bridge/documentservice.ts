@@ -35,6 +35,14 @@ export function AddSheet(): $CancellablePromise<number> {
 }
 
 /**
+ * ApplyLineStyle met en forme des lignes (rows) ou des colonnes entières
+ * [i0, i1] de la feuille, comme Excel.
+ */
+export function ApplyLineStyle(sheet: number, rows: boolean, i0: number, i1: number, patch: { [_ in string]?: any } | null): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(166329190, sheet, rows, i0, i1, patch);
+}
+
+/**
  * ApplyStyle met en forme un rectangle de la feuille (patch : propriétés à
  * poser, une valeur vide les retire).
  */

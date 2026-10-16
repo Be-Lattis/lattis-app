@@ -7,6 +7,7 @@
 	import { untrack } from 'svelte';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { dismiss } from '#lib/grid/dismiss.js';
+	import { clearPatch } from '#lib/grid/style.js';
 	import { fit, groupWidth, type Mode } from './fit';
 	import type { IconName } from '#lib/icons/icons.js';
 
@@ -134,7 +135,7 @@
 					{ label: 'Souligné', icon: 'underline', run: st({ u: 'toggle' }), hint: 'Souligné (Ctrl+U)' },
 					{ label: 'Couleur', icon: 'font-color', run: st({ fg }), hint: 'Couleur du texte (▾ : choisir la teinte)', color: 'fg' },
 					{ label: 'Remplissage', icon: 'font-color', run: st({ bg }), hint: 'Couleur de remplissage (▾ : choisir la teinte)', color: 'bg' },
-					{ label: 'Effacer', icon: 'remove-duplicates', run: st({ b: null, i: null, u: null, fg: null, bg: null, al: null, nf: null }), hint: 'Effacer la mise en forme' }
+					{ label: 'Effacer', icon: 'remove-duplicates', run: st(clearPatch()), hint: 'Effacer la mise en forme' }
 				]
 			},
 			{
@@ -159,7 +160,7 @@
 					{ label: '0,00', icon: 'decimal-fixed', run: st({ nf: '0,00' }), hint: 'Deux décimales' },
 					{ label: 'Monétaire', icon: 'currency', run: st({ nf: '€' }) },
 					{ label: 'Pourcentage', icon: 'percent', run: st({ nf: '%' }) },
-					{ label: 'Standard', icon: 'number-format', run: st({ nf: null }), hint: 'Format Standard' },
+					{ label: 'Standard', icon: 'number-format', run: st({ nf: null, dp: null }), hint: 'Format Standard' },
 					{ label: 'Ajouter une décimale', icon: 'decimal-more', run: st({ dp: 'more' }) },
 					{ label: 'Réduire les décimales', icon: 'decimal-less', run: st({ dp: 'less' }) }
 				]

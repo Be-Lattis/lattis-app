@@ -53,6 +53,8 @@ func (m *Model) Dump(ctx context.Context) (string, error) {
 		{"invalides", `SELECT * FROM _slitable_invalid ORDER BY tbl, rid, col`},
 		{"styles", `SELECT * FROM _slitable_styles ORDER BY tbl, rid, col`},
 		{"styles libres", `SELECT * FROM _slitable_cell_styles ORDER BY sheet, row, col`},
+		{"styles de lignes", `SELECT * FROM _slitable_row_styles ORDER BY sheet, row`},
+		{"styles de colonnes", `SELECT * FROM _slitable_col_styles ORDER BY sheet, col`},
 		{"noms", `SELECT * FROM _slitable_names ORDER BY name`},
 		{"largeurs", `SELECT * FROM _slitable_col_widths ORDER BY sheet, col`},
 		{"hauteurs", `SELECT * FROM _slitable_row_heights ORDER BY sheet, row`},
