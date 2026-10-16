@@ -582,6 +582,14 @@ export function SetKey(table: string, i: number): $CancellablePromise<$models.Do
 }
 
 /**
+ * SetLineRules fixe la mise en forme conditionnelle de lignes (rows) ou de
+ * colonnes entières i0 à i1 de la feuille (aucune règle : la retire).
+ */
+export function SetLineRules(sheet: number, rows: boolean, i0: number, i1: number, rules: canvas$0.Rule[] | null): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1541007248, sheet, rows, i0, i1, rules);
+}
+
+/**
  * SetMCPEnabled active ou désactive le serveur MCP (réglage gardé).
  */
 export function SetMCPEnabled(on: boolean): $CancellablePromise<$models.MCPStatus> {

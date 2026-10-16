@@ -386,6 +386,7 @@
 		setName: (row, col, name) => DocumentService.SetName(sheetId, row, col, name).then(reload),
 		sortTable: (t, i, desc) => DocumentService.SortTable(t.name, i, desc).then(reload),
 		setRules: (t, i, rules) => DocumentService.SetRules(t.name, i, rules).then(reload),
+		setLineRules: (rows, i0, i1, rules) => DocumentService.SetLineRules(sheetId, rows, i0, i1, rules).then(reload),
 		filterValues: async (t, i) => (await DocumentService.FilterValues(t.name, i)) ?? [],
 		setFilter: (t, i, f) => DocumentService.SetFilter(t.name, i, f).then(reload),
 		clearFilters: (t) => DocumentService.ClearFilters(t.name).then(reload),
@@ -485,6 +486,8 @@
 					styles: layout.styles ?? [],
 					rowStyles: layout.rowStyles ?? [],
 					colStyles: layout.colStyles ?? [],
+					rowRules: layout.rowRules ?? [],
+					colRules: layout.colRules ?? [],
 					charts: (layout.charts ?? []).map((c) => ({
 						...c,
 						config: c.config as ChartConfig,

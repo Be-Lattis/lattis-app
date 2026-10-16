@@ -193,6 +193,21 @@ CREATE TABLE _slitable_col_styles (
 	PRIMARY KEY (sheet, col)
 ) STRICT;
 `,
+	// 15 → 16 : mise en forme conditionnelle des lignes et colonnes entières.
+	`
+CREATE TABLE _slitable_row_rules (
+	sheet INTEGER NOT NULL,
+	row   INTEGER NOT NULL,
+	rules TEXT NOT NULL,
+	PRIMARY KEY (sheet, row)
+) STRICT;
+CREATE TABLE _slitable_col_rules (
+	sheet INTEGER NOT NULL,
+	col   INTEGER NOT NULL,
+	rules TEXT NOT NULL,
+	PRIMARY KEY (sheet, col)
+) STRICT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

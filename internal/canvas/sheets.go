@@ -299,7 +299,7 @@ func (m *Model) SetRowHeight(ctx context.Context, sheet int64, row, height int) 
 
 // sheetPositioned sont les tables de métadonnées repérées par feuille et
 // position (sans identifiant propre), supprimées avec la feuille.
-var sheetPositioned = []string{`_slitable_cell_styles`, `_slitable_row_styles`, `_slitable_col_styles`, `_slitable_col_widths`, `_slitable_row_heights`}
+var sheetPositioned = []string{`_slitable_cell_styles`, `_slitable_row_styles`, `_slitable_col_styles`, `_slitable_row_rules`, `_slitable_col_rules`, `_slitable_col_widths`, `_slitable_row_heights`}
 
 // snapshot renvoie les insertions qui recréent les lignes d'une feuille dans
 // une table de métadonnées (pour l'annulation).

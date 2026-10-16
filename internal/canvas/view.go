@@ -85,11 +85,14 @@ type Layout struct {
 	Names   []NameInfo  `json:"names"`   // cellules nommées de la feuille
 	Styles  []CellStyle `json:"styles"`  // mise en forme hors tableaux
 	// Mise en forme des lignes et colonnes entières de la feuille.
-	RowStyles []LineStyle  `json:"rowStyles"`
-	ColStyles []LineStyle  `json:"colStyles"`
-	Pivots    []PivotInfo  `json:"pivots"`  // tableaux croisés, calculés
-	Charts    []ChartInfo  `json:"charts"`  // graphiques, avec leurs données
-	Buttons   []ButtonInfo `json:"buttons"` // boutons d'action
+	RowStyles []LineStyle `json:"rowStyles"`
+	ColStyles []LineStyle `json:"colStyles"`
+	// Mise en forme conditionnelle des lignes et colonnes entières.
+	RowRules []LineRules  `json:"rowRules"`
+	ColRules []LineRules  `json:"colRules"`
+	Pivots   []PivotInfo  `json:"pivots"`  // tableaux croisés, calculés
+	Charts   []ChartInfo  `json:"charts"`  // graphiques, avec leurs données
+	Buttons  []ButtonInfo `json:"buttons"` // boutons d'action
 }
 
 // CellStyle est la mise en forme d'une cellule hors tableau.
@@ -226,6 +229,9 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 		}
 		rs.Close()
 		if l.RowStyles, l.ColStyles, err = t.lineStyles(sheet); err != nil {
+			return err
+		}
+		if l.RowRules, l.ColRules, err = t.lineRulesOf(sheet); err != nil {
 			return err
 		}
 		rs, err = t.query(`SELECT row, col, style FROM _slitable_cell_styles WHERE sheet = ?`, sheet)

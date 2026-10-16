@@ -717,6 +717,12 @@ func (s *DocumentService) SetHeadings(ctx context.Context, sheet int64, show boo
 	return s.act(ctx, func(d *doc.Document) error { return d.SetHeadings(ctx, sheet, show) })
 }
 
+// SetLineRules fixe la mise en forme conditionnelle de lignes (rows) ou de
+// colonnes entières i0 à i1 de la feuille (aucune règle : la retire).
+func (s *DocumentService) SetLineRules(ctx context.Context, sheet int64, rows bool, i0, i1 int, rules []canvas.Rule) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetLineRules(ctx, sheet, rows, i0, i1, rules) })
+}
+
 // SetGridlines affiche ou masque le quadrillage de la feuille.
 func (s *DocumentService) SetGridlines(ctx context.Context, sheet int64, show bool) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.SetGridlines(ctx, sheet, show) })

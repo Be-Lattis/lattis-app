@@ -98,7 +98,7 @@ func (t *tx) insertLines(sheet int64, a axis, at, n int) error {
 			}
 		}
 	}
-	for _, tbl := range append(positioned, a.sizes(), a.lineStyles()) {
+	for _, tbl := range append(positioned, a.sizes(), a.lineStyles(), a.lineRules()) {
 		if err := t.shiftPos(tbl, a, sheet, at, n); err != nil {
 			return err
 		}
@@ -151,7 +151,7 @@ func (t *tx) deleteLines(sheet int64, a axis, lo, hi int) error {
 			}
 		}
 	}
-	for _, tbl := range []string{"_slitable_cells", "_slitable_cell_styles", "_slitable_names", a.sizes(), a.lineStyles()} {
+	for _, tbl := range []string{"_slitable_cells", "_slitable_cell_styles", "_slitable_names", a.sizes(), a.lineStyles(), a.lineRules()} {
 		if err := t.deleteIn(tbl, a, sheet, lo, hi); err != nil {
 			return err
 		}
@@ -161,7 +161,7 @@ func (t *tx) deleteLines(sheet int64, a axis, lo, hi int) error {
 			return err
 		}
 	}
-	for _, tbl := range append(positioned, a.sizes(), a.lineStyles()) {
+	for _, tbl := range append(positioned, a.sizes(), a.lineStyles(), a.lineRules()) {
 		if err := t.shiftPos(tbl, a, sheet, hi+1, -n); err != nil {
 			return err
 		}

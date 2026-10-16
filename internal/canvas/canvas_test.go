@@ -1776,3 +1776,33 @@ func TestItemReferences(t *testing.T) {
 		}
 	}
 }
+
+func TestLineRules(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	start := dump(t, d)
+	rules := []Rule{{Op: ">", Value: "10", Style: Style{"bg": "#ffc7ce"}}}
+	if err := d.SetLineRules(ctx, 1, false, 2, 3, rules); err != nil {
+		t.Fatal(err)
+	}
+	l, _ := d.Layout(ctx, 1)
+	if len(l.ColRules) != 2 || l.ColRules[0].Index != 2 {
+		t.Fatalf("règles de colonnes : %+v", l.ColRules)
+	}
+	// Insérer une colonne avant C décale les règles.
+	if err := d.InsertSheetColumns(ctx, 1, 0, 1); err != nil {
+		t.Fatal(err)
+	}
+	if l, _ = d.Layout(ctx, 1); l.ColRules[0].Index != 3 {
+		t.Fatalf("après insertion : %+v", l.ColRules)
+	}
+	check(t, d, "règles de colonnes")
+	for range 2 {
+		if _, err := d.bus.Undo(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if dump(t, d) != start {
+		t.Fatal("annulation des règles de colonnes")
+	}
+}

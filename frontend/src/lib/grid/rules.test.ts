@@ -35,3 +35,11 @@ describe('règles conditionnelles', () => {
 		expect(describeRule({ op: 'between', value: '1', to: '2', style: {} })).toBe('Entre 1 et 2');
 	});
 });
+
+describe('règles sur des colonnes mêlant textes et nombres', () => {
+	it('un seuil numérique ne s’applique pas au texte', () => {
+		expect(matches({ op: '>', value: '10', style: {} }, 'A', 'A', false)).toBe(false);
+		expect(matches({ op: '>', value: '10', style: {} }, 20, '20', false)).toBe(true);
+		expect(matches({ op: '<>', value: '10', style: {} }, 'A', 'A', false)).toBe(true);
+	});
+});

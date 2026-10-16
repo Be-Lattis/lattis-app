@@ -60,6 +60,9 @@ function cmp(v: unknown, w: string): number {
 	const a = num(v);
 	const b = num(w);
 	if (a !== null && b !== null) return a - b;
+	// Seuil numérique et valeur texte (colonne entière mêlant textes et
+	// nombres) : ni plus grand ni plus petit, seulement « différent ».
+	if (b !== null) return NaN;
 	return String(v ?? '').localeCompare(w, 'fr', { sensitivity: 'base' });
 }
 

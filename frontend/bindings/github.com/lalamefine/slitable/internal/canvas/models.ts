@@ -319,6 +319,12 @@ export interface Layout {
     "colStyles": LineStyle[] | null;
 
     /**
+     * Mise en forme conditionnelle des lignes et colonnes entières.
+     */
+    "rowRules": LineRules[] | null;
+    "colRules": LineRules[] | null;
+
+    /**
      * tableaux croisés, calculés
      */
     "pivots": PivotInfo[] | null;
@@ -332,6 +338,14 @@ export interface Layout {
      * boutons d'action
      */
     "buttons": ButtonInfo[] | null;
+}
+
+/**
+ * LineRules sont les règles d'une ligne ou d'une colonne entière (JSON).
+ */
+export interface LineRules {
+    "index": number;
+    "rules": string;
 }
 
 /**
