@@ -2268,6 +2268,21 @@
 		let dx = e.deltaX * unit;
 		if (e.shiftKey && dx === 0) [dx, dy] = [dy, 0];
 		e.preventDefault();
+		// Molette de souris (crans de ±100 px ou défilement par lignes) : trois
+		// lignes par cran, calées sur le haut des lignes, comme Excel. Le pavé
+		// tactile (petits pas) garde un défilement au pixel près.
+		const notch = e.deltaMode === 1 || (e.deltaMode === 0 && Math.abs(e.deltaY) >= 50 && e.deltaY % 1 === 0);
+		if (dy && notch) {
+			const steps = e.deltaMode === 1 ? Math.round(e.deltaY) : Math.sign(dy) * Math.max(1, Math.round(Math.abs(e.deltaY) / 100)) * 3;
+			const first = rowAxis.indexAt(vs.top);
+			const base = rowTop(first) < vs.top && steps < 0 ? first + 1 : first;
+			dy = rowTop(clamp(base + steps, 0, SHEET_ROWS - 1)) - vs.top;
+		}
+		if (dx && notch && e.shiftKey) {
+			const steps = Math.sign(dx) * 3;
+			const first = colAxis.indexAt(scroller.scrollLeft);
+			dx = colAxis.offset(clamp(first + steps, 0, SHEET_COLS - 1)) - scroller.scrollLeft;
+		}
 		if (dy) {
 			// Défiler vers le bas agrandit la feuille d'autant.
 			if (dy > 0) vs.content = Math.min(rowAxis.total, Math.max(vs.content, vs.top + dy + 2 * vs.view));
