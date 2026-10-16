@@ -46,9 +46,17 @@ func TestXLSXExport(t *testing.T) {
 	if err := d.SetSheetHidden(ctx, id, true); err != nil {
 		t.Fatal(err)
 	}
-	p := filepath.Join(t.TempDir(), "export.xlsx")
-	if err := ExportXLSXFile(ctx, d.Model, p); err != nil {
+	// Au-delà des limites d'Excel : la cellule n'est pas exportée, et comptée.
+	if _, err := d.SetCell(ctx, id, ExcelRows+5, 0, "trop bas"); err != nil {
 		t.Fatal(err)
+	}
+	p := filepath.Join(t.TempDir(), "export.xlsx")
+	clipped, err := ExportXLSXFile(ctx, d.Model, p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if clipped != 1 {
+		t.Fatalf("cellules coupées : %d", clipped)
 	}
 
 	// Le fichier contient les parties attendues.

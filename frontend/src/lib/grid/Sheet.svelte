@@ -354,8 +354,11 @@
 
 	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', freeze, zoom = 1, onzoom }: Props = $props();
 
-	export const SHEET_ROWS = 1_048_576;
-	export const SHEET_COLS = 16_384;
+	// Feuille sans fin pratique (choix de Louis) : au-delà des limites d'Excel,
+	// bornée par la nomenclature Cell[ZZZZ999999999] (4 lettres, 9 chiffres).
+	// L'export .xlsx coupe aux limites d'Excel, avec un message.
+	export const SHEET_ROWS = 999_999_999;
+	export const SHEET_COLS = 475_254;
 	const ROW_H = 22;
 	const DEF_W = 88;
 	const TOP_H = 22;
@@ -3417,16 +3420,30 @@
 				.filter((r) => (dr > 0 ? r > row : r < row))
 				.sort((a, b) => (dr > 0 ? a - b : b - a));
 			if (e || edges.length) return [edges[0] ?? row, col];
-			for (let r = row + dr; r >= 0 && r < Math.min(SHEET_ROWS, row + 10000) && r > row - 10000; r += dr) if (filled(r, col)) return [r, col];
-			return [dr > 0 ? SHEET_ROWS - 1 : 0, col];
+			// Cellule libre la plus proche dans la colonne.
+			let best: number | undefined;
+			for (const k of cells.keys()) {
+				const [r, c] = k.split(',').map(Number);
+				if (c === col && (dr > 0 ? r > row : r < row) && (best === undefined || Math.abs(r - row) < Math.abs(best - row))) best = r;
+			}
+			if (best !== undefined) return [best, col];
+			// Plus rien après : Ctrl+Bas ne bouge pas (la feuille est sans fin) ;
+			// Ctrl+Haut va en haut.
+			return [dr > 0 ? row : 0, col];
 		}
 		const edges = entries
 			.filter((e) => row >= e.t.row && row <= e.last)
 			.flatMap((e) => [e.t.col, e.lastCol])
 			.filter((c) => (dc > 0 ? c > col : c < col))
 			.sort((a, b) => (dc > 0 ? a - b : b - a));
-		if (edges.length) return [row, edges[0]];
-		return [row, dc > 0 ? SHEET_COLS - 1 : 0];
+		let best: number | undefined = edges[0];
+		for (const k of cells.keys()) {
+			const [r, c] = k.split(',').map(Number);
+			if (r === row && (dc > 0 ? c > col : c < col) && (best === undefined || Math.abs(c - col) < Math.abs(best - col))) best = c;
+		}
+		if (best !== undefined) return [row, best];
+		// Plus rien après : Ctrl+Droite ne bouge pas ; Ctrl+Gauche va en colonne A.
+		return [row, dc > 0 ? col : 0];
 	}
 
 	function cellAt(e: MouseEvent): { row: number; col: number } | null {

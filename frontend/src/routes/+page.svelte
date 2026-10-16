@@ -350,8 +350,11 @@
 				}
 				case 'exportXlsx': {
 					if (mode !== 'doc') return;
-					const p = await DocumentService.ExportXLSX();
-					if (p) notice = `Classeur exporté (valeurs des formules) : ${p}`;
+					const r = await DocumentService.ExportXLSX();
+					if (r.path)
+						notice =
+							`Classeur exporté (valeurs des formules) : ${r.path}` +
+							(r.clipped ? ` ; ${r.clipped.toLocaleString('fr-FR')} cellule(s) au-delà des limites d'Excel (1 048 576 lignes × 16 384 colonnes) non exportée(s)` : '');
 					break;
 				}
 				case 'print':

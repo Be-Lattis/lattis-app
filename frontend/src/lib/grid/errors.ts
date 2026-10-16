@@ -7,7 +7,7 @@ const A1 = /(?:^|[^\p{L}\p{N}_@[\]."])(\$?[A-Za-z]{1,3}\$?\d{1,7})(?![\p{L}\p{N}
 
 // Cellule libre de la feuille citée par la formule : Cell[C1] (pas
 // Feuille2!Cell[C1], dont le contenu n'est pas connu ici).
-const CELL = /(?<![\p{L}\p{N}_!'\]])cell\[\s*([a-z]{1,3})(\d+)\s*\]/giu;
+const CELL = /(?<![\p{L}\p{N}_!'\]])cell\[\s*([a-z]{1,4})(\d+)\s*\]/giu;
 
 function cellPos(letters: string, digits: string): [number, number] {
 	let col = 0;

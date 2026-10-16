@@ -88,13 +88,19 @@ func (s *DocumentService) PrintHTML(ctx context.Context, sheet int64) (string, e
 	return transfer.PrintHTML(ctx, d.Model, sheet)
 }
 
+// XLSXExport est le résultat d'un export .xlsx : le fichier écrit (vide si
+// l'utilisateur a annulé) et le nombre de cellules hors des limites d'Excel.
+type XLSXExport struct {
+	Path    string `json:"path"`
+	Clipped int    `json:"clipped"`
+}
+
 // ExportXLSX écrit tout le classeur au format Excel .xlsx (valeurs : les
-// formules sont exportées par leur résultat). Renvoie le fichier écrit, vide
-// si l'utilisateur a annulé.
-func (s *DocumentService) ExportXLSX(ctx context.Context) (string, error) {
+// formules sont exportées par leur résultat).
+func (s *DocumentService) ExportXLSX(ctx context.Context) (XLSXExport, error) {
 	d, err := s.current()
 	if err != nil {
-		return "", err
+		return XLSXExport{}, err
 	}
 	name := "Classeur.xlsx"
 	if d.Path() != "" {
@@ -110,10 +116,11 @@ func (s *DocumentService) ExportXLSX(ctx context.Context) (string, error) {
 	}
 	p, err := dlg.PromptForSingleSelection()
 	if err != nil || p == "" {
-		return "", err
+		return XLSXExport{}, err
 	}
 	if !strings.HasSuffix(strings.ToLower(p), ".xlsx") {
 		p += ".xlsx"
 	}
-	return p, transfer.ExportXLSXFile(ctx, d.Model, p)
+	n, err := transfer.ExportXLSXFile(ctx, d.Model, p)
+	return XLSXExport{Path: p, Clipped: n}, err
 }

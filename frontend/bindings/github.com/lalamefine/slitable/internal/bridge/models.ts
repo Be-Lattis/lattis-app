@@ -217,3 +217,12 @@ export interface UICommand {
     "id"?: number;
     "message"?: string;
 }
+
+/**
+ * XLSXExport est le résultat d'un export .xlsx : le fichier écrit (vide si
+ * l'utilisateur a annulé) et le nombre de cellules hors des limites d'Excel.
+ */
+export interface XLSXExport {
+    "path": string;
+    "clipped": number;
+}

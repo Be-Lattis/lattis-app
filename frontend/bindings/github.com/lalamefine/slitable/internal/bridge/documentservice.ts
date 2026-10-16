@@ -285,10 +285,9 @@ export function ExportCSV(table: string): $CancellablePromise<string> {
 
 /**
  * ExportXLSX écrit tout le classeur au format Excel .xlsx (valeurs : les
- * formules sont exportées par leur résultat). Renvoie le fichier écrit, vide
- * si l'utilisateur a annulé.
+ * formules sont exportées par leur résultat).
  */
-export function ExportXLSX(): $CancellablePromise<string> {
+export function ExportXLSX(): $CancellablePromise<$models.XLSXExport> {
     return $Call.ByID(1072062328);
 }
 

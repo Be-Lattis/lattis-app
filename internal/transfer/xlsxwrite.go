@@ -38,26 +38,37 @@ type xsheet struct {
 	hidden bool
 	cells  map[[2]int]xcell
 	widths []canvas.ColWidth
+	// clipped : cellules au-delà des limites d'Excel, non exportées.
+	clipped int
 }
 
-// ExportXLSX écrit tout le classeur au format .xlsx.
-func ExportXLSX(ctx context.Context, m *canvas.Model, w io.Writer) error {
+// Limites d'une feuille Excel : la feuille de Slitable va au-delà, l'export coupe.
+const (
+	ExcelRows = 1_048_576
+	ExcelCols = 16_384
+)
+
+// ExportXLSX écrit tout le classeur au format .xlsx ; clipped compte les
+// cellules hors des limites d'Excel (1 048 576 lignes × 16 384 colonnes),
+// qui ne sont pas exportées.
+func ExportXLSX(ctx context.Context, m *canvas.Model, w io.Writer) (clipped int, err error) {
 	first, err := m.Layout(ctx, 0)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	var sheets []xsheet
 	for _, s := range first.Sheets {
 		sh, err := collectSheet(ctx, m, s)
 		if err != nil {
-			return err
+			return 0, err
 		}
 		sheets = append(sheets, sh)
+		clipped += sh.clipped
 		if err := ctx.Err(); err != nil {
-			return err
+			return 0, err
 		}
 	}
-	return writeXLSX(w, sheets)
+	return clipped, writeXLSX(w, sheets)
 }
 
 // collectSheet lit le contenu d'une feuille, cellule par cellule.
@@ -68,6 +79,12 @@ func collectSheet(ctx context.Context, m *canvas.Model, s canvas.SheetInfo) (xsh
 	}
 	sh := xsheet{name: s.Name, hidden: s.Hidden, cells: map[[2]int]xcell{}, widths: l.Widths}
 	put := func(r, c int, x xcell) {
+		if r >= ExcelRows || c >= ExcelCols {
+			if x.kind != 0 {
+				sh.clipped++
+			}
+			return
+		}
 		if x.kind != 0 {
 			sh.cells[[2]int{r, c}] = x
 		}
@@ -125,8 +142,13 @@ func collectSheet(ctx context.Context, m *canvas.Model, s canvas.SheetInfo) (xsh
 }
 
 // ExportXLSXFile écrit le classeur dans un fichier (via un fichier temporaire).
-func ExportXLSXFile(ctx context.Context, m *canvas.Model, path string) error {
-	return writeAtomic(path, func(w io.Writer) error { return ExportXLSX(ctx, m, w) })
+func ExportXLSXFile(ctx context.Context, m *canvas.Model, path string) (clipped int, err error) {
+	err = writeAtomic(path, func(w io.Writer) error {
+		var e error
+		clipped, e = ExportXLSX(ctx, m, w)
+		return e
+	})
+	return clipped, err
 }
 
 // textCell type une valeur affichée (cellule libre, TCD, déversement) comme

@@ -176,7 +176,7 @@ function lex(src: string, base: number, sep: string): Tok[] {
 
 // --- Analyse syntaxique (vérification seule) -------------------------------------
 
-const CELL = /^\s*[A-Za-z]{1,3}[1-9][0-9]*\s*$/;
+const CELL = /^\s*[A-Za-z]{1,4}[1-9][0-9]{0,8}\s*$/;
 
 class Checker {
 	i = 0;

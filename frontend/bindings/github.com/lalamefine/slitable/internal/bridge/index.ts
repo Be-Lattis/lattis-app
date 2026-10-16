@@ -23,5 +23,6 @@ export type {
     QueryRefresh,
     QuerySheet,
     ScriptResult,
-    UICommand
+    UICommand,
+    XLSXExport
 } from "./models.js";

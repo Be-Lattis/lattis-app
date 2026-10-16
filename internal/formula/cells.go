@@ -121,7 +121,9 @@ func itemCall(n Call, s *Schema, cur *Table) (Call, bool) {
 	return Call{Fn: "INDEX", Args: []Node{Ref{Table: ref.Table, Col: ref.Col}, n.Args[1]}}, true
 }
 
-var cellRe = regexp.MustCompile(`(?i)^cell_([a-z]{1,3})([1-9][0-9]{0,6})$`)
+// Adresses Cell[…] : 4 lettres et 9 chiffres (feuille sans fin pratique) ;
+// les adresses tapées à la Excel restent à 3 lettres et 7 chiffres (a1Re).
+var cellRe = regexp.MustCompile(`(?i)^cell_([a-z]{1,4})([1-9][0-9]{0,8})$`)
 
 // CellRef lit une adresse « Cell_A1 » : ligne et colonne de la feuille
 // (0, 0 pour A1).
