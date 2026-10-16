@@ -1117,3 +1117,41 @@ func TestPivot(t *testing.T) {
 		t.Fatalf("annulation :\n%s", diff(before, got))
 	}
 }
+
+func TestSetKey(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Code", "Ville", "Pays"}, {"LY", "Lyon", "FR"}, {"PA", "Paris", "FR"}, {"RO", "Rome", ""}}); err != nil {
+		t.Fatal(err)
+	}
+	before := dump(t, d)
+	for i, want := range []string{"", "", "1 cellule(s) vide(s)"} {
+		if why, _ := d.KeyCheck(ctx, "Feuille1", i); why != want && !(i == 1 && why == "") {
+			t.Fatalf("colonne %d : %q", i, why)
+		}
+	}
+	if why, _ := d.KeyCheck(ctx, "Feuille1", 2); why == "" {
+		t.Fatal("Pays : doublons et vide acceptés")
+	}
+	if err := d.SetKey(ctx, "Feuille1", 0); err != nil {
+		t.Fatal(err)
+	}
+	l, _ := d.Layout(ctx, 1)
+	if l.Tables[0].Key != 0 {
+		t.Fatalf("clé : %d", l.Tables[0].Key)
+	}
+	if err := d.SetKey(ctx, "Feuille1", 1); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "changement de clé")
+	if err := d.ClearKey(ctx, "Feuille1"); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "clé retirée")
+	for range 3 {
+		d.bus.Undo(ctx)
+	}
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation :\n%s", diff(before, got))
+	}
+}

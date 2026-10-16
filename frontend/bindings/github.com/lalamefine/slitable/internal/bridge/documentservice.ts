@@ -47,6 +47,13 @@ export function ClearFilters(table: string): $CancellablePromise<$models.DocStat
 }
 
 /**
+ * ClearKey retire la clé d'un tableau.
+ */
+export function ClearKey(table: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3624858029, table);
+}
+
+/**
  * ConvertPreview compte les valeurs qui ne se convertiraient pas au type to.
  */
 export function ConvertPreview(table: string, i: number, to: grid$0.Type): $CancellablePromise<number> {
@@ -177,6 +184,13 @@ export function InsertColumn(table: string, i: number, name: string): $Cancellab
  */
 export function InsertRow(table: string, n: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(3318204728, table, n);
+}
+
+/**
+ * KeyCheck dit si une colonne peut devenir la clé du tableau (vide : oui).
+ */
+export function KeyCheck(table: string, i: number): $CancellablePromise<string> {
+    return $Call.ByID(3345463632, table, i);
 }
 
 /**
@@ -337,6 +351,13 @@ export function SetColumnWidth(sheet: number, col: number, width: number): $Canc
  */
 export function SetFilter(table: string, i: number, f: canvas$0.ColumnFilter | null): $CancellablePromise<$models.DocState> {
     return $Call.ByID(541852321, table, i, f);
+}
+
+/**
+ * SetKey fait d'une colonne la clé du tableau.
+ */
+export function SetKey(table: string, i: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3567461950, table, i);
 }
 
 /**

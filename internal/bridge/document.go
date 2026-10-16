@@ -595,3 +595,22 @@ func (s *DocumentService) MoveChart(ctx context.Context, id int64, row, col int)
 func (s *DocumentService) DeleteChart(ctx context.Context, id int64) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.DeleteChart(ctx, id) })
 }
+
+// KeyCheck dit si une colonne peut devenir la clé du tableau (vide : oui).
+func (s *DocumentService) KeyCheck(ctx context.Context, table string, i int) (string, error) {
+	d, err := s.current()
+	if err != nil {
+		return "", err
+	}
+	return d.KeyCheck(ctx, table, i)
+}
+
+// SetKey fait d'une colonne la clé du tableau.
+func (s *DocumentService) SetKey(ctx context.Context, table string, i int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetKey(ctx, table, i) })
+}
+
+// ClearKey retire la clé d'un tableau.
+func (s *DocumentService) ClearKey(ctx context.Context, table string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.ClearKey(ctx, table) })
+}

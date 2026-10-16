@@ -229,6 +229,9 @@
 		setFilter: (t, i, f) => DocumentService.SetFilter(t.name, i, f).then(reload),
 		clearFilters: (t) => DocumentService.ClearFilters(t.name).then(reload),
 		renameTable: (t, name) => DocumentService.RenameTable(t.name, name).then(reload),
+		keyCheck: (t, i) => DocumentService.KeyCheck(t.name, i),
+		setKey: (t, i) => DocumentService.SetKey(t.name, i).then(reload),
+		clearKey: (t) => DocumentService.ClearKey(t.name).then(reload),
 		recalc: () => DocumentService.Recalc().then(reload),
 		createPivot: async (cfg) => {
 			const id = await DocumentService.CreatePivot(cfg);
@@ -279,6 +282,7 @@
 						col: t.col,
 						rows: t.rows,
 						hidden: t.total - t.rows,
+						key: t.key >= 0 ? t.key : undefined,
 						columns: (t.columns ?? []).map((c) => ({
 							name: c.name,
 							type: (c.formula ? 'formula' : c.type) as ColumnType,

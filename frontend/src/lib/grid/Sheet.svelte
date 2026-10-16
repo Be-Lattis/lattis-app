@@ -93,6 +93,8 @@
 		rows: number; // lignes de données affichées
 		/** Lignes masquées par le filtre (elles gardent leur place sur la feuille). */
 		hidden?: number;
+		/** Rang de la colonne clé (identifiant des lignes), absent sans clé. */
+		key?: number;
 		columns: Column[];
 	}
 
@@ -155,6 +157,10 @@
 		setFilter?(table: SheetTable, i: number, f: ColumnFilter | null): Promise<unknown>;
 		clearFilters?(table: SheetTable): Promise<unknown>;
 		renameTable?(table: SheetTable, name: string): Promise<unknown>;
+		/** Vide si la colonne peut devenir la clé du tableau, sinon la raison. */
+		keyCheck?(table: SheetTable, i: number): Promise<string>;
+		setKey?(table: SheetTable, i: number): Promise<unknown>;
+		clearKey?(table: SheetTable): Promise<unknown>;
 		/** Renouvelle AUJOURDHUI, MAINTENANT et ALEA (F9). */
 		recalc?(): Promise<unknown>;
 		createPivot?(cfg: PivotConfig): Promise<unknown>;
@@ -589,6 +595,10 @@
 								iconW += ctx.measureText('⧩ ').width;
 							}
 						}
+						if (e.t.key === i) {
+							ctx.fillText('🔑 ', x + cw - 6 - iconW, y + ROW_H / 2);
+							iconW += ctx.measureText('🔑 ').width;
+						}
 						if (col.errors) {
 							ctx.fillStyle = C.error;
 							ctx.fillText('⚠ ' + col.errors, x + cw - 6 - iconW - ctx.measureText(' ').width, y + ROW_H / 2);
@@ -833,7 +843,17 @@
 			const e = mine ? cur : visible.find((e) => r > e.t.row && r <= e.last);
 			if (e) {
 				ctx.fillStyle = mine || !cur ? C.stripText : C.stripLine;
-				ctx.fillText(String(r - e.t.row), MARGIN - 8, y + ROW_H / 2);
+				let label = String(r - e.t.row);
+				if (e.t.key !== undefined && r <= e.last) {
+					const k = e.cache.row(r - e.t.row - 1)?.text[e.t.key];
+					if (k !== undefined) label = k;
+				}
+				ctx.save();
+				ctx.beginPath();
+				ctx.rect(0, y, MARGIN - 4, ROW_H);
+				ctx.clip();
+				ctx.fillText(label, MARGIN - 8, y + ROW_H / 2);
+				ctx.restore();
 			}
 		}
 		ctx.beginPath();
@@ -2087,7 +2107,7 @@
 	// --- Menu de type (icône de l'en-tête) ------------------------------------
 
 	const TYPES: ColumnType[] = ['text', 'integer', 'decimal', 'date', 'boolean'];
-	let typeMenu = $state<{ x: number; y: number; e: Entry; i: number; pending?: { to: ColumnType; n: number } } | null>(null);
+	let typeMenu = $state<{ x: number; y: number; e: Entry; i: number; pending?: { to: ColumnType; n: number }; keyWhy?: string | null } | null>(null);
 
 	/** Un clic sur l'icône de type d'un en-tête ouvre le menu de type. */
 	function openTypeMenu(ev: MouseEvent, cell: { row: number; col: number }): boolean {
@@ -2099,7 +2119,13 @@
 		const mx = ev.clientX - r.left;
 		if (right - mx > 34) return false;
 		moveTo(cell.row, cell.col);
-		typeMenu = { x: mx, y: ev.clientY - r.top + 8, e, i: cell.col - e.t.col };
+		const i = cell.col - e.t.col;
+		typeMenu = { x: mx, y: ev.clientY - r.top + 8, e, i, keyWhy: null };
+		if (source.keyCheck && e.t.key !== i)
+			source.keyCheck(e.t, i).then(
+				(why) => typeMenu && typeMenu.i === i && (typeMenu.keyWhy = why),
+				() => undefined
+			);
 		return true;
 	}
 
@@ -2512,7 +2538,7 @@
 			{@const col = m.e.t.columns[m.i]}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (typeMenu = null)}>
-				<div class="menu-title">Type de « {col.name} » : {col.fixed ? 'fixé' : 'inféré automatiquement'}</div>
+				<div class="menu-title">« {col.name} » · type {col.fixed ? 'fixé' : 'inféré automatiquement'}</div>
 				{#if m.pending}
 					<p class="menu-note">
 						{m.pending.n > 1
@@ -2522,12 +2548,66 @@
 					<button onclick={() => chooseType(m.pending!.to, true)}>Convertir quand même</button>
 					<button onclick={() => (typeMenu = { ...m, pending: undefined })}>Annuler</button>
 				{:else}
+					<!-- Tri et filtre de la colonne, comme le menu ▾ d'Excel. -->
+					{#if source.sortTable}
+						<button
+							onclick={() => {
+								typeMenu = null;
+								menuAction(() => source.sortTable!(m.e.t, m.i, false));
+							}}>Trier de A à Z</button
+						>
+						<button
+							onclick={() => {
+								typeMenu = null;
+								menuAction(() => source.sortTable!(m.e.t, m.i, true));
+							}}>Trier de Z à A</button
+						>
+					{/if}
+					{#if source.setFilter}
+						<button
+							onclick={() => {
+								typeMenu = null;
+								openFilter(m.e, m.i);
+							}}>Filtrer…</button
+						>
+						{#if col.filter}
+							<button
+								onclick={() => {
+									typeMenu = null;
+									menuAction(() => source.setFilter!(m.e.t, m.i, null));
+								}}>Effacer le filtre de « {col.name} »</button
+							>
+						{/if}
+					{/if}
+					<hr />
+					<div class="menu-title">Type de données</div>
 					{#each TYPES as t (t)}
 						<button onclick={() => chooseType(t)}>
 							<span class="check">{t === col.type ? '✓' : ''}</span>{#if typeIconName(t)}<span class="type-icon"><Icon name={typeIconName(t)!} size={14} /></span>{:else}{typeIcon(t)}{/if}&nbsp;&nbsp;{typeLabel(t)}
 						</button>
 					{/each}
 					{#if col.errors}<p class="menu-note error">{col.errors} saisie{col.errors > 1 ? 's' : ''} hors type dans la colonne</p>{/if}
+					{#if source.setKey}
+						<hr />
+						{#if m.e.t.key === m.i}
+							<p class="menu-note">🔑 Clé du tableau : ses valeurs identifient les lignes.</p>
+							<button
+								onclick={() => {
+									typeMenu = null;
+									menuAction(() => source.clearKey!(m.e.t));
+								}}>Retirer la clé</button
+							>
+						{:else if m.keyWhy === ''}
+							<button
+								onclick={() => {
+									typeMenu = null;
+									menuAction(() => source.setKey!(m.e.t, m.i));
+								}}>🔑 Définir comme clé (identifiant des lignes){m.e.t.key !== undefined ? ', à la place de l’actuelle' : ''}</button
+							>
+						{:else if m.keyWhy}
+							<p class="menu-note">Clé impossible : {m.keyWhy}</p>
+						{/if}
+					{/if}
 				{/if}
 			</div>
 		{/if}

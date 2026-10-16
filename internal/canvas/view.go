@@ -44,6 +44,8 @@ type TableInfo struct {
 	// Source SQL des lignes affichées (la table, ou une requête filtrée).
 	Source  string       `json:"source"`
 	Columns []ColumnInfo `json:"columns"`
+	// Rang de la colonne clé (identifiant des lignes), -1 sans clé.
+	Key int `json:"key"`
 }
 
 // CellInfo est une cellule libre.
@@ -115,7 +117,12 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 			return err
 		}
 		for _, tb := range tables {
-			ti := TableInfo{ID: tb.ID, Name: tb.Name, SQL: tb.sql(), Row: tb.Row, Col: tb.Col, Rows: tb.Shown, Total: tb.Rows, Source: tb.view()}
+			ti := TableInfo{ID: tb.ID, Name: tb.Name, SQL: tb.sql(), Row: tb.Row, Col: tb.Col, Rows: tb.Shown, Total: tb.Rows, Source: tb.view(), Key: -1}
+			for i, c := range tb.Cols {
+				if c.ID == tb.Key {
+					ti.Key = i
+				}
+			}
 			if len(tb.Filter) > 0 {
 				b, err := json.Marshal(tb.Filter)
 				if err != nil {

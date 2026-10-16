@@ -325,6 +325,11 @@ export interface TableInfo {
      */
     "source": string;
     "columns": ColumnInfo[] | null;
+
+    /**
+     * Rang de la colonne clé (identifiant des lignes), -1 sans clé.
+     */
+    "key": number;
 }
 
 /**
