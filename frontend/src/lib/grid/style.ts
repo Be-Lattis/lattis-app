@@ -11,19 +11,34 @@ export interface CellStyle {
 	b?: boolean; // gras
 	i?: boolean; // italique
 	u?: boolean; // souligné
+	x?: boolean; // barré
+	ff?: string; // police (famille)
+	fs?: number; // taille en points
 	fg?: string; // couleur du texte
 	bg?: string; // couleur de remplissage
 	al?: 'left' | 'center' | 'right';
-	nf?: '0' | '0,00' | '%' | '€';
+	va?: 'top' | 'middle' | 'bottom'; // alignement vertical (milieu par défaut)
+	wr?: boolean; // renvoyer à la ligne
+	/** Format : nombre ('0', '0,00'), €, %, date, heure ou texte (voir numfmt.ts). */
+	nf?: '0' | '0,00' | '%' | '€' | 'date' | 'time' | 'text';
 	dp?: number; // décimales imposées (Ajouter / Réduire les décimales)
+	ng?: boolean; // nombre sans séparateur de milliers
+	df?: string; // motif d'une date ou d'une heure (« jj/mm/aaaa », « hh:mm »)
 	bt?: boolean; // bordures haut, bas, gauche, droite
 	bb?: boolean;
 	bl?: boolean;
 	br?: boolean;
+	bc?: string; // couleur des bordures
+	// Hors mise en forme (ni effacées ni reproduites, voir internal/canvas/cellformat.go).
+	nt?: string; // note
+	dv?: string[]; // validation : valeurs permises (liste déroulante)
+	mr?: number; // fusion : lignes et colonnes couvertes (cellule en haut à gauche)
+	mc?: number;
+	hd?: boolean; // ligne ou colonne masquée (styles de lignes et de colonnes)
 }
 
 /** Propriétés de mise en forme (format de pinceau, effacement). */
-export const STYLE_KEYS = ['b', 'i', 'u', 'fg', 'bg', 'al', 'nf', 'dp', 'bt', 'bb', 'bl', 'br'] as const;
+export const STYLE_KEYS = ['b', 'i', 'u', 'x', 'ff', 'fs', 'fg', 'bg', 'al', 'va', 'wr', 'nf', 'dp', 'ng', 'df', 'bt', 'bb', 'bl', 'br', 'bc'] as const;
 
 /** Couche de style telle qu'enregistrée : null retire la propriété. */
 export type StyleLayer = { [K in keyof CellStyle]?: CellStyle[K] | null };
@@ -85,7 +100,7 @@ export function styledNumber(text: string, st: CellStyle | undefined): string {
 	let n = Number(t);
 	if (!Number.isFinite(n)) return text;
 	if (pct) n /= 100;
-	return formatNumber(st.nf, n, st.dp) ?? text;
+	return formatNumber(st.nf, n, st.dp, st.ng) ?? text;
 }
 
 const fixed0 = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
@@ -94,7 +109,13 @@ const percent = new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFracti
 const euro = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
 
 /** Texte d'un nombre selon le format choisi (null : pas de format). */
-export function formatNumber(nf: CellStyle['nf'], v: number, dp?: number): string | null {
+export function formatNumber(nf: CellStyle['nf'], v: number, dp?: number, ng = false): string | null {
+	if (nf === 'date' || nf === 'time' || nf === 'text') return null;
+	if (ng && nf !== '%' && nf !== '€') {
+		const d = dp ?? (nf === '0' ? 0 : nf === '0,00' ? 2 : undefined);
+		if (d === undefined) return null;
+		return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d, useGrouping: false }).format(v);
+	}
 	if (dp !== undefined) {
 		const opts: Intl.NumberFormatOptions = { minimumFractionDigits: dp, maximumFractionDigits: dp };
 		if (nf === '%') return new Intl.NumberFormat('fr-FR', { ...opts, style: 'percent' }).format(v);

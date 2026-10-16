@@ -25,6 +25,14 @@ export const icons = {
 	'align-left': '<path d="M4 6h16M4 10h10M4 14h16M4 18h10"/>',
 	'align-center': '<path d="M4 6h16M7 10h10M4 14h16M7 18h10"/>',
 	'align-right': '<path d="M4 6h16M10 10h10M4 14h16M10 18h10"/>',
+	'align-top': '<path class="a" d="M4 4h16"/><path d="M12 20V8M8 12l4-4 4 4"/>',
+	'align-middle': '<path class="a" d="M4 12h16"/><path d="M12 3v6M9 6l3 3 3-3M12 21v-6M9 18l3-3 3 3"/>',
+	'align-bottom': '<path class="a" d="M4 20h16"/><path d="M12 4v12M8 12l4 4 4-4"/>',
+	'wrap-text': '<path d="M4 6h16M4 12h13a3 3 0 0 1 0 6h-4M4 18h5"/><path class="a" d="M15 16l-2 2 2 2"/>',
+	'merge-cells': '<rect x="3" y="5" width="18" height="14" rx="1"/><path class="a" d="M7 12h10M9 10l-2 2 2 2M15 10l2 2-2 2"/>',
+	'cell-format': '<rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9h16M9 4v16"/><path class="a" d="M12.5 13h5M12.5 16.5h3.5"/>',
+	note: '<path d="M5 4h14v11l-5 5H5z"/><path class="a" d="M14 20v-5h5"/><path d="M8 9h8M8 12h5"/>',
+	validation: '<rect x="3.5" y="4" width="17" height="16" rx="1.5"/><path d="M14 4v16M6.5 9h5M6.5 13h5"/><path class="a" d="M15.5 10l1.5 1.5 1.5-1.5"/>',
 
 	// Bordures et mise en forme
 	'border-all': '<rect x="4" y="4" width="16" height="16"/><path d="M12 4v16M4 12h16"/>',

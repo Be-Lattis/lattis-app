@@ -13,7 +13,12 @@
 	import { VScroll, clamp } from './scroll';
 	import { Axis } from './axis';
 	import { parseTSV, toTSV } from './clipboard';
-	import { formatNumber, isNumericText, painterPatch, parseStyle, resolveStyle, styledNumber, type CellStyle, type StyleLayer } from './style';
+	import { isNumericText, painterPatch, parseStyle, resolveStyle, type CellStyle, type StyleLayer } from './style';
+	import { formatCell } from './numfmt';
+	import { autoHeight, cellFont, fontPx, lineHeight, wrapLines } from './textwrap';
+	import { panes, reveal, toGrid, type Pane } from './panes';
+	import { hiddenLines, mergeAt, mergeList, parseList, skipHidden, validate, type MergeRange } from './sheetfmt';
+	import FormatDialog, { type FormatTab } from './FormatDialog.svelte';
 	import { dismiss } from './dismiss';
 	import { explainError } from './errors';
 	import { fillSeries } from './fill';
@@ -217,6 +222,15 @@
 		applyStyle?(r0: number, c0: number, r1: number, c1: number, patch: Record<string, unknown>): Promise<unknown>;
 		/** Met en forme des lignes (rows) ou des colonnes entières de la feuille, comme Excel. */
 		applyLineStyle?(rows: boolean, i0: number, i1: number, patch: Record<string, unknown>): Promise<unknown>;
+		/** Note d'une cellule (texte vide : la retire). */
+		setNote?(row: number, col: number, text: string): Promise<unknown>;
+		/** Fusionne et centre des cellules libres ; renvoie le nombre de valeurs effacées. */
+		mergeCells?(r0: number, c0: number, r1: number, c1: number): Promise<number>;
+		unmergeCells?(r0: number, c0: number, r1: number, c1: number): Promise<unknown>;
+		/** Masque (ou affiche) des lignes (rows) ou des colonnes i0 à i1. */
+		setLinesHidden?(rows: boolean, i0: number, i1: number, hide: boolean): Promise<unknown>;
+		/** Fige les volets (0, 0 : les libère). */
+		setFreeze?(rows: number, cols: number): Promise<unknown>;
 		find?(text: string): Promise<{ row: number; col: number }[]>;
 		/** Remplace partout ; renvoie le nombre de cellules modifiées. */
 		replace?(text: string, by: string): Promise<number>;
@@ -279,6 +293,10 @@
 		stats: string;
 		/** Sélection (à partir de 0, r0 ≤ r1, c0 ≤ c1). */
 		sel: { r0: number; c0: number; r1: number; c1: number };
+		/** Mise en forme de la cellule active (police et taille du ruban, boutons enfoncés). */
+		style?: CellStyle;
+		/** La cellule active est une fusion. */
+		merged?: boolean;
 	}
 
 	interface Props {
@@ -299,9 +317,11 @@
 		onhscroll?: (s: { content: number; view: number; left: number }) => void;
 		/** Feuille protégée : message affiché au lieu d'ouvrir la saisie (vide : modifiable). */
 		locked?: string;
+		/** Volets figés : lignes et colonnes qui restent affichées pendant le défilement. */
+		freeze?: { rows: number; cols: number };
 	}
 
-	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '' }: Props = $props();
+	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', freeze }: Props = $props();
 
 	export const SHEET_ROWS = 1_048_576;
 	export const SHEET_COLS = 16_384;
@@ -331,7 +351,9 @@
 		activeStrip: '#d3e7dc',
 		error: '#c0392b',
 		spill: '#5b9bd5',
-		found: 'rgba(250, 204, 21, 0.30)'
+		found: 'rgba(250, 204, 21, 0.30)',
+		frozen: '#9aa0a6',
+		note: '#c0392b'
 	};
 
 	// --- Tableaux posés sur la feuille ------------------------------------
@@ -430,17 +452,21 @@
 		shown = new Map(d.cells.filter((c) => c.raw.startsWith('=')).map((c) => [key(c.row, c.col), { text: c.value ?? '', error: !!c.error }]));
 		userWidths = new Map((d.widths ?? []).map((w) => [w.col, w.width]));
 		userHeights = new Map((d.heights ?? []).map((h) => [h.row, h.height]));
-		rebuildRows();
 		names = new Map((d.names ?? []).map((n) => [key(n.row, n.col), n.name]));
 		freeStyles = new Map((d.styles ?? []).map((s) => [key(s.row, s.col), parseStyle(s.style) ?? {}]));
 		sheetRowStyles = new Map((d.rowStyles ?? []).map((s) => [s.index, parseStyle(s.style) ?? {}]));
 		sheetColStyles = new Map((d.colStyles ?? []).map((s) => [s.index, parseStyle(s.style) ?? {}]));
+		merges = mergeList(freeStyles);
+		hiddenRows = hiddenLines(sheetRowStyles);
+		hiddenCols = hiddenLines(sheetColStyles);
 		sheetRowRules = new Map((d.rowRules ?? []).map((s) => [s.index, parseRules(s.rules) ?? []]));
 		sheetColRules = new Map((d.colRules ?? []).map((s) => [s.index, parseRules(s.rules) ?? []]));
 		colStyles = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseStyle(c.style))]));
 		headStyles = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseStyle(c.headerStyle))]));
 		colRules = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseRules(c.rules))]));
 		rebuildAxis();
+		autoHeights = measureHeights();
+		rebuildRows();
 		updateExtent();
 		refreshFx();
 		schedule();
@@ -478,8 +504,40 @@
 		}
 		for (const [c, w] of userWidths) widths.set(c, w);
 		if (override) widths.set(override.col, override.width);
+		for (const c of hiddenCols) widths.set(c, 0); // masquée : largeur nulle
 		colAxis = new Axis(SHEET_COLS, DEF_W, widths);
 	}
+
+	// Format de cellule : fusions, lignes et colonnes masquées (voir sheetfmt.ts)
+	// et hauteurs automatiques (renvoyer à la ligne, grande police).
+	let merges: MergeRange[] = [];
+	let hiddenRows = new Set<number>();
+	let hiddenCols = new Set<number>();
+	let autoHeights = new Map<number, number>();
+
+	/** Hauteurs automatiques des lignes, comme Excel : cellules libres qui renvoient à la ligne ou en grande police. */
+	function measureHeights(): Map<number, number> {
+		const out = new Map<number, number>();
+		const consider = (r: number, c: number, text: string, st: CellStyle | undefined) => {
+			if (!st || (!st.wr && !st.fs) || mergeAt(merges, r, c)) return;
+			measurer ??= document.createElement('canvas').getContext('2d');
+			if (!measurer) return;
+			measurer.font = cellFont(st);
+			const m = measurer;
+			const h = autoHeight(text, colAxis.size(c), st, (s) => m.measureText(s).width, ROW_H);
+			if (h > (out.get(r) ?? 0)) out.set(r, Math.min(h, 400));
+		};
+		for (const [k, raw] of cells) {
+			const [r, c] = k.split(',').map(Number);
+			consider(r, c, shown.get(k)?.text ?? raw, styleAt(r, c, undefined));
+		}
+		// Grande police posée sur des lignes entières ou des cellules vides.
+		for (const [r, st] of sheetRowStyles) if (st.fs) consider(r, -1, '', resolveStyle(st));
+		return out;
+	}
+
+	/** Fusion qui couvre une cellule (cellules libres seulement). */
+	const mergeOf = (r: number, c: number) => (merges.length ? mergeAt(merges, r, c) : undefined);
 
 	/** Étendue affichée d'un tableau : une ligne ou une colonne de plus quand la
 	 * cellule active est juste dessous ou juste à droite (la saisie l'étendra),
@@ -513,8 +571,11 @@
 	const rowTop = (r: number) => rowAxis.offset(r);
 	const rspan = (r0: number, r1: number) => rowAxis.offset(r1 + 1) - rowAxis.offset(r0);
 	function rebuildRows(override?: { row: number; height: number }) {
-		const hs = new Map(userHeights);
+		// Hauteur automatique (renvoyer à la ligne), sauf hauteur choisie ; masquée : nulle.
+		const hs = new Map(autoHeights);
+		for (const [r, h] of userHeights) hs.set(r, h);
 		if (override) hs.set(override.row, override.height);
+		for (const r of hiddenRows) hs.set(r, 0);
 		rowAxis = new Axis(SHEET_ROWS, ROW_H, hs);
 	}
 
@@ -634,7 +695,7 @@
 			if (el.value.startsWith('=')) el.style.textAlign = 'left';
 		}
 		if (!catalog) return;
-		suggestPos = { x: MARGIN + colAxis.offset(active.col) - scroller.scrollLeft, y: TOP_H + rowTop(active.row + 1) - vs.top + 2 };
+		suggestPos = { x: screenX(active.col), y: screenY(active.row) + rh(active.row) + 2 };
 		const caret = el.selectionStart ?? el.value.length;
 		const e = tableAt(active.row, active.col);
 		const c = suggest(el.value, caret, catalog, e?.t.name);
@@ -760,6 +821,29 @@
 		return resolveStyle(col, row, colStyles.get(e.t.id)?.[i], parseStyle(e.cache.row(r - e.t.row - 1)?.sty?.get(i)));
 	}
 
+	// --- Volets figés (voir panes.ts) ---------------------------------------
+	// La grille se dessine par volets : les lignes et colonnes figées ne
+	// défilent pas. Toutes les positions à l'écran et tous les clics passent
+	// par screenX / screenY et colAtX / rowAtY.
+
+	const fRows = () => freeze?.rows ?? 0;
+	const fCols = () => freeze?.cols ?? 0;
+	/** Position à l'écran du début d'une colonne ou d'une ligne. */
+	const screenX = (c: number) => MARGIN + colAxis.offset(c) - (c < fCols() ? 0 : scroller.scrollLeft);
+	const screenY = (r: number) => TOP_H + rowTop(r) - (r < fRows() ? 0 : vs.top);
+	/** Colonne ou ligne sous un point de la vue. */
+	const colAtX = (x: number) => colAxis.indexAt(toGrid(x, MARGIN, colAxis.offset(fCols()), scroller.scrollLeft));
+	const rowAtY = (y: number) => Math.min(SHEET_ROWS - 1, rowAxis.indexAt(toGrid(y, TOP_H, rowTop(fRows()), vs.top)));
+
+	$effect(() => {
+		void freeze?.rows;
+		void freeze?.cols;
+		untrack(() => schedule());
+	});
+
+	// Défilement vertical du volet en cours de dessin (drawText).
+	let paneTop = 0;
+
 	function draw() {
 		frame = 0;
 		pendingBorders = [];
@@ -772,22 +856,104 @@
 		ctx.fillStyle = C.bg;
 		ctx.fillRect(0, 0, w, h);
 
-		const left = scroller.scrollLeft;
-		const { first: r0, last: r1 } = visibleRows();
+		const { last } = visibleRows();
 		ctx.font = FONT_SMALL;
-		const margin = Math.max(MIN_MARGIN, Math.ceil(ctx.measureText(String(r1)).width) + 14);
+		const margin = Math.max(MIN_MARGIN, Math.ceil(ctx.measureText(String(last)).width) + 14);
 		if (margin !== MARGIN) {
 			MARGIN = margin;
 			updateExtent();
 		}
-		const c0 = colAxis.indexAt(left);
-		const c1 = colAxis.indexAt(left + w - MARGIN);
+		const fw = colAxis.offset(fCols());
+		const fh = rowTop(fRows());
+		const all = panes(fw, fh, MARGIN, TOP_H, w, h, scroller.scrollLeft, vs.top);
+		const main = all[all.length - 1] ?? { left: scroller.scrollLeft, top: vs.top, x0: MARGIN, x1: w, y0: TOP_H, y1: h };
+		let incomplete = false;
+		for (const p of all) {
+			ctx.save();
+			ctx.beginPath();
+			ctx.rect(p.x0, p.y0, p.x1 - p.x0, p.y1 - p.y0);
+			ctx.clip();
+			if (drawCells(layer(p))) incomplete = true;
+			ctx.restore();
+		}
+		if (incomplete) missingFrames++;
+		// Bandeau du haut (par volet de colonnes) et marge de gauche (par volet de lignes).
+		for (const p of all.filter((p) => p.y0 === main.y0)) {
+			ctx.save();
+			ctx.beginPath();
+			ctx.rect(p.x0, 0, p.x1 - p.x0, TOP_H);
+			ctx.clip();
+			drawTopStrip(layer({ ...p, top: main.top, y0: main.y0, y1: main.y1 }));
+			ctx.restore();
+		}
+		for (const p of all.filter((p) => p.x0 === main.x0)) {
+			ctx.save();
+			ctx.beginPath();
+			ctx.rect(0, p.y0, MARGIN, p.y1 - p.y0);
+			ctx.clip();
+			drawMargin(layer({ ...p, left: main.left, x0: main.x0, x1: main.x1 }));
+			ctx.restore();
+		}
+		ctx.fillStyle = C.strip;
+		ctx.fillRect(0, 0, MARGIN, TOP_H);
+		ctx.beginPath();
+		ctx.strokeStyle = C.stripLine;
+		ctx.lineWidth = 1;
+		ctx.moveTo(0, TOP_H - 0.5);
+		ctx.lineTo(w, TOP_H - 0.5);
+		ctx.moveTo(MARGIN - 0.5, 0);
+		ctx.lineTo(MARGIN - 0.5, h);
+		ctx.stroke();
+		// Séparations des volets figés : un trait plus marqué, comme Excel.
+		if (fh || fw) {
+			ctx.beginPath();
+			ctx.strokeStyle = C.frozen;
+			if (fh) {
+				ctx.moveTo(0, Math.round(TOP_H + fh) - 0.5);
+				ctx.lineTo(w, Math.round(TOP_H + fh) - 0.5);
+			}
+			if (fw) {
+				ctx.moveTo(Math.round(MARGIN + fw) - 0.5, 0);
+				ctx.lineTo(Math.round(MARGIN + fw) - 0.5, h);
+			}
+			ctx.stroke();
+		}
+
+		if (editing) placeEditor();
+
+		const t1 = performance.now();
+		pushStat(drawTimes, t1 - t0);
+		frameStamps.push(t1);
+		while (frameStamps.length && frameStamps[0] < t1 - 1000) frameStamps.shift();
+	}
+
+	/** Ce qu'un volet affiche : lignes et colonnes visibles, positions à l'écran. */
+	function layer(p: Pane) {
+		const w = viewW;
+		const h = viewH;
+		const { left, top } = p;
+		const r0 = rowAxis.indexAt(p.y0 - TOP_H + top);
+		const r1 = Math.min(SHEET_ROWS - 1, rowAxis.indexAt(Math.max(p.y0, p.y1 - 1) - TOP_H + top));
+		const c0 = colAxis.indexAt(p.x0 - MARGIN + left);
+		const c1 = colAxis.indexAt(Math.max(p.x0, p.x1 - 1) - MARGIN + left);
 		const cx = (c: number) => MARGIN + colAxis.offset(c) - left;
-		const ry = (r: number) => TOP_H + rowTop(r) - vs.top;
+		const ry = (r: number) => TOP_H + rowTop(r) - top;
 		const xEnd = Math.min(w, cx(c1 + 1));
 		const spanW = (a: number, b: number) => colAxis.offset(b + 1) - colAxis.offset(a);
-
 		const visible = entries.filter((e) => e.last + 1 >= r0 && e.t.row <= r1 && e.lastCol + 1 >= c0 && e.t.col <= c1);
+		// Plage sélectionnée.
+		const s0 = Math.min(active.row, anchor.row);
+		const s1 = Math.max(active.row, anchor.row);
+		const k0 = Math.min(active.col, anchor.col);
+		const k1 = Math.max(active.col, anchor.col);
+		return { w, h, top, r0, r1, c0, c1, cx, ry, xEnd, spanW, visible, s0, s1, k0, k1 };
+	}
+	type Layer = ReturnType<typeof layer>;
+
+	/** Cellules d'un volet (dans sa découpe) ; vrai s'il manque des lignes pas encore chargées. */
+	function drawCells(L: Layer): boolean {
+		const { w, h, r0, r1, c0, c1, cx, ry, xEnd, spanW, visible, s0, s1, k0, k1 } = L;
+		paneTop = L.top;
 		let incomplete = false;
 		for (const e of visible) {
 			const d = visibleData(e, r0, r1);
@@ -796,7 +962,6 @@
 				if (!e.cache.has(d.first, d.last)) incomplete = true;
 			}
 		}
-		if (incomplete) missingFrames++;
 
 		// En-têtes (agrandis à l'écran quand la cellule active les prolonge).
 		for (const e of visible) {
@@ -806,10 +971,6 @@
 		}
 
 		// Plage sélectionnée.
-		const s0 = Math.min(active.row, anchor.row);
-		const s1 = Math.max(active.row, anchor.row);
-		const k0 = Math.min(active.col, anchor.col);
-		const k1 = Math.max(active.col, anchor.col);
 		if (s0 !== s1 || k0 !== k1) {
 			ctx.fillStyle = C.select;
 			ctx.fillRect(cx(k0), ry(s0), spanW(k0, k1), rspan(s0, s1));
@@ -844,12 +1005,14 @@
 				const col = e.t.columns[i];
 				const x = cx(c);
 				const cw = colAxis.size(c);
+				if (!cw) continue; // colonne masquée
 				ctx.save();
 				ctx.beginPath();
 				ctx.rect(x, TOP_H, cw, h - TOP_H);
 				ctx.clip();
 				for (let r = tr0; r <= tr1; r++) {
 					const y = ry(r);
+					if (!rh(r)) continue; // ligne masquée
 					if (r === e.t.row) {
 						const hs = styleAt(r, c, e);
 						if (hs) borders(hs, x, y, cw, rh(r));
@@ -857,6 +1020,7 @@
 							ctx.fillStyle = hs.bg;
 							ctx.fillRect(x, y, cw, rh(r));
 						}
+						if (hs?.nt) noteCorner(x + cw, y);
 						ctx.font = FONT_SMALL;
 						ctx.fillStyle = C.icon;
 						ctx.textAlign = 'right';
@@ -910,10 +1074,10 @@
 						ctx.fillRect(x, y, cw, rh(r));
 					}
 					if (cs) borders(cs, x, y, cw, rh(r));
+					if (cs?.nt) noteCorner(x + cw, y);
 					let s = row.text[i];
 					if (!s) continue;
-					if ((cs?.nf || cs?.dp !== undefined) && !row.bad?.has(i))
-						s = typeof row.cells[i] === 'number' ? (formatNumber(cs!.nf, row.cells[i] as number, cs!.dp) ?? s) : styledNumber(s, cs);
+					if (cs && !row.bad?.has(i)) s = formatCell(s, row.cells[i], cs);
 					if (row.bad?.has(i)) {
 						// Saisie hors type : valeur brute en rouge, coin rouge comme le
 						// triangle d'Excel.
@@ -942,7 +1106,7 @@
 		ctx.font = FONT;
 		ctx.fillStyle = C.text;
 		const paint = (r: number, c: number) => {
-			if (tableAt(r, c)) return;
+			if (tableAt(r, c) || !rh(r) || !colAxis.size(c) || mergeOf(r, c)) return;
 			const fs = resolveStyle(styleAt(r, c, undefined), freeRule(r, c));
 			if (!fs) return;
 			if (fs.bg) {
@@ -950,8 +1114,11 @@
 				ctx.fillRect(cx(c), ry(r), colAxis.size(c), rh(r));
 			}
 			borders(fs, cx(c), ry(r), colAxis.size(c), rh(r));
+			if (fs.nt) noteCorner(cx(c + 1), ry(r));
 		};
-		if (sheetRowStyles.size || sheetColStyles.size || sheetRowRules.size || sheetColRules.size) {
+		// Lignes ou colonnes mises en forme (hors masquage seul) : toutes les cellules visibles.
+		const lineFormats = [...sheetRowStyles.values(), ...sheetColStyles.values()].some((s) => Object.keys(s).some((k) => k !== 'hd'));
+		if (lineFormats || sheetRowRules.size || sheetColRules.size) {
 			for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) paint(r, c);
 		} else
 			for (const k of freeStyles.keys()) {
@@ -969,7 +1136,7 @@
 					const c = sp.col + j;
 					const num = isNumeric(v);
 					const st = styleAt(sp.row + i, c, undefined);
-					drawText(styledNumber(v, st), cx(c), ry(sp.row + i), colAxis.size(c), st?.al ?? (num ? 'right' : 'left'), st, isErrorValue(v) ? C.error : C.text);
+					drawText(formatCell(v, undefined, st), cx(c), ry(sp.row + i), colAxis.size(c), st?.al ?? (num ? 'right' : 'left'), st, isErrorValue(v) ? C.error : C.text);
 				});
 			ctx.save();
 			ctx.strokeStyle = C.spill;
@@ -998,7 +1165,7 @@
 					// Mise en forme posée sur les cellules du TCD, leurs lignes ou colonnes (format de nombre, décimales, police…).
 					const st = resolveStyle(styleAt(p.row + i, c, undefined), lineRule(p.row + i, c, ruleValue(v), v));
 					const style = bold ? { ...st, b: st?.b ?? true } : st;
-					drawText(styledNumber(v, st), cx(c), ry(p.row + i), colAxis.size(c), st?.al ?? (j > 0 && i > 0 ? 'right' : 'left'), style, C.text);
+					drawText(formatCell(v, undefined, st), cx(c), ry(p.row + i), colAxis.size(c), st?.al ?? (j > 0 && i > 0 ? 'right' : 'left'), style, C.text);
 				});
 			ctx.save();
 			ctx.strokeStyle = C.border;
@@ -1008,7 +1175,7 @@
 		}
 		for (const [k, rawText] of cells) {
 			const [r, c] = k.split(',').map(Number);
-			if (r < r0 || r > r1 || c < c0 || c > c1) continue;
+			if (r < r0 || r > r1 || c < c0 || c > c1 || !rh(r) || !colAxis.size(c) || mergeOf(r, c)) continue;
 			const fstyle = resolveStyle(styleAt(r, c, undefined), freeRule(r, c));
 			const x = cx(c);
 			const cw = colAxis.size(c);
@@ -1016,7 +1183,7 @@
 			if (f?.error) errorCorner(x, ry(r));
 			let raw = f ? f.text : rawText;
 			const num = isNumeric(raw);
-			if (num) raw = styledNumber(raw, fstyle);
+			raw = formatCell(raw, undefined, fstyle);
 			if (fstyle) {
 				drawText(raw, x, ry(r), cw, fstyle.al ?? (num ? 'right' : 'left'), fstyle, f?.error ? C.error : C.text, num ? cw : w);
 				continue;
@@ -1057,6 +1224,7 @@
 		}
 		ctx.stroke();
 		ctx.restore();
+		drawMerges(L);
 		strokeBorders();
 
 		ctx.save();
@@ -1099,11 +1267,30 @@
 			ctx.strokeRect(cx(c0 + dc) + 1, ry(r0 + dr) + 1, spanW(c0 + dc, c1 + dc) - 2, rspan(r0 + dr, r1 + dr) - 2);
 			ctx.restore();
 		}
-		// Cellule active.
+		// Cellule active (toute la fusion quand elle en est une), et la flèche de
+		// sa liste déroulante (validation).
 		if (active.row >= r0 - 1 && active.row <= r1 + 1) {
+			const g = mergeOf(active.row, active.col);
+			const aw = g ? spanW(g.col, g.col + g.cols - 1) : colAxis.size(active.col);
+			const ah = g ? rspan(g.row, g.row + g.rows - 1) : rh(active.row);
 			ctx.strokeStyle = C.active;
 			ctx.lineWidth = 2;
-			ctx.strokeRect(cx(active.col) + 0.5, ry(active.row) + 0.5, colAxis.size(active.col) - 1, rh(active.row) - 1);
+			ctx.strokeRect(cx(active.col) + 0.5, ry(active.row) + 0.5, aw - 1, ah - 1);
+			if (!editing && listOf(active.row, active.col)) {
+				const b = dropButton();
+				ctx.fillStyle = C.strip;
+				ctx.fillRect(b.x, b.y, b.w, b.h);
+				ctx.strokeStyle = C.stripLine;
+				ctx.lineWidth = 1;
+				ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
+				ctx.fillStyle = C.stripText;
+				ctx.beginPath();
+				ctx.moveTo(b.x + 5, b.y + b.h / 2 - 2);
+				ctx.lineTo(b.x + b.w - 5, b.y + b.h / 2 - 2);
+				ctx.lineTo(b.x + b.w / 2, b.y + b.h / 2 + 3);
+				ctx.closePath();
+				ctx.fill();
+			}
 		}
 		// Flèches d'audit : bleues vers la cellule (antécédents), rouges depuis
 		// elle (dépendants), comme Excel.
@@ -1162,7 +1349,12 @@
 			ctx.restore();
 		}
 		ctx.restore();
+		return incomplete;
+	}
 
+	/** Bandeau du haut d'un volet de colonnes. */
+	function drawTopStrip(L: Layer) {
+		const { w, r0, r1, c0, c1, cx, ry, visible, k0, k1 } = L;
 		// Bandeau du haut : vide (pas de lettres de colonnes), sauf quand
 		// l'en-tête d'un tableau visible est sorti de l'écran.
 		ctx.fillStyle = C.strip;
@@ -1177,13 +1369,14 @@
 			ctx.textAlign = 'center';
 			for (let c = c0; c <= c1; c++) {
 				const x = cx(c);
-				if (x + colAxis.size(c) <= MARGIN) continue;
+				if (x + colAxis.size(c) <= MARGIN || !colAxis.size(c)) continue;
 				ctx.fillStyle = c >= k0 && c <= k1 ? C.headText : C.stripText;
 				ctx.fillText(addrA1(0, c).slice(0, -1), x + colAxis.size(c) / 2, TOP_H / 2);
 			}
 		}
 		for (const e of a1 ? [] : visible) {
-			if (e.t.row >= r0 || e.last < r0) continue;
+			// En-tête encore visible (ou dans les lignes figées) : pas de rappel.
+			if (e.t.row >= r0 || e.last < r0 || e.t.row < fRows()) continue;
 			for (let c = Math.max(c0, e.t.col); c <= Math.min(c1, e.lastCol); c++) {
 				const x = cx(c);
 				ctx.save();
@@ -1225,7 +1418,11 @@
 			ctx.fillStyle = C.active;
 			ctx.fillRect(cx(c), TOP_H - 2, colAxis.size(c), 2);
 		}
+	}
 
+	/** Marge de gauche d'un volet de lignes. */
+	function drawMargin(L: Layer) {
+		const { h, r0, r1, ry, visible, s0, s1 } = L;
 		// Marge de gauche : numéros 1..n des lignes de données des tableaux.
 		ctx.fillStyle = C.strip;
 		ctx.fillRect(0, TOP_H, MARGIN, h - TOP_H);
@@ -1237,6 +1434,7 @@
 		const curLast = cur ? grown(cur).last : -1;
 		for (let r = r0; r <= r1; r++) {
 			const y = ry(r);
+			if (!rh(r)) continue; // ligne masquée
 			if (r >= s0 && r <= s1) {
 				ctx.fillStyle = C.activeStrip;
 				ctx.fillRect(0, y, MARGIN, rh(r));
@@ -1266,24 +1464,52 @@
 				ctx.restore();
 			}
 		}
-		ctx.beginPath();
-		ctx.strokeStyle = C.stripLine;
-		ctx.lineWidth = 1;
-		ctx.moveTo(0, TOP_H - 0.5);
-		ctx.lineTo(w, TOP_H - 0.5);
-		ctx.moveTo(MARGIN - 0.5, 0);
-		ctx.lineTo(MARGIN - 0.5, h);
-		ctx.stroke();
-
-		if (editing) placeEditor();
-
-		const t1 = performance.now();
-		pushStat(drawTimes, t1 - t0);
-		frameStamps.push(t1);
-		while (frameStamps.length && frameStamps[0] < t1 - 1000) frameStamps.shift();
+		// Lignes masquées : un double trait à leur place, comme Excel.
+		ctx.fillStyle = C.frozen;
+		for (const r of hiddenRows) if (r >= r0 - 1 && r <= r1 + 1) ctx.fillRect(0, Math.round(ry(r)) - 1.5, MARGIN, 1);
 	}
 
-	/** Texte d'une cellule avec sa mise en forme (gras, italique, souligné, couleur). */
+	/**
+	 * Cellules fusionnées d'un volet, par-dessus le quadrillage : remplissage,
+	 * texte sur toute la fusion, bordures et note.
+	 */
+	function drawMerges(L: Layer) {
+		const { r0, r1, c0, c1, cx, ry, spanW } = L;
+		for (const g of merges) {
+			const gr1 = g.row + g.rows - 1;
+			const gc1 = g.col + g.cols - 1;
+			if (gr1 < r0 || g.row > r1 || gc1 < c0 || g.col > c1) continue;
+			const k = key(g.row, g.col);
+			const st = resolveStyle(styleAt(g.row, g.col, undefined), freeRule(g.row, g.col));
+			const x = cx(g.col);
+			const y = ry(g.row);
+			const gw = spanW(g.col, gc1);
+			const gh = rspan(g.row, gr1);
+			if (gw <= 0 || gh <= 0) continue;
+			ctx.fillStyle = st?.bg ?? C.bg;
+			ctx.fillRect(Math.round(x), Math.round(y), gw - 1, gh - 1);
+			const f = shown.get(k);
+			const raw = f ? f.text : cells.get(k);
+			if (raw) {
+				const num = isNumeric(raw);
+				drawText(formatCell(raw, undefined, st), x, y, gw, st?.al ?? (num ? 'right' : 'left'), st, f?.error ? C.error : C.text, gw, gh);
+			}
+			if (st) borders(st, x, y, gw, gh);
+			if (st?.nt) noteCorner(x + gw, y);
+		}
+	}
+
+	/** Coin rouge d'une cellule qui a une note (en haut à droite, comme Excel). */
+	function noteCorner(xr: number, y: number) {
+		ctx.fillStyle = C.note;
+		ctx.beginPath();
+		ctx.moveTo(xr - 7, y + 1);
+		ctx.lineTo(xr - 1, y + 1);
+		ctx.lineTo(xr - 1, y + 7);
+		ctx.closePath();
+		ctx.fill();
+	}
+
 	/** Texte raccourci avec « … » pour tenir dans width (police courante). */
 	function ellipsize(text: string, width: number): string {
 		if (ctx.measureText(text).width <= width) return text;
@@ -1303,35 +1529,47 @@
 	let pendingBorders: number[] = [];
 
 	/** Bordures d'une cellule (style bt, bb, bl, br). */
+	// Bordures de couleur (bc) : une liste de traits par couleur.
+	let colorBorders = new Map<string, number[]>();
+
 	function borders(st: CellStyle, x: number, y: number, w: number, h: number) {
 		if (!st.bt && !st.bb && !st.bl && !st.br) return;
+		if (w <= 0 || h <= 0) return; // ligne ou colonne masquée
 		const X0 = Math.round(x) - 0.5;
 		const X1 = Math.round(x + w) - 0.5;
 		const Y0 = Math.round(y) - 0.5;
 		const Y1 = Math.round(y + h) - 0.5;
-		if (st.bt) pendingBorders.push(X0 - 0.5, Y0, X1 + 0.5, Y0);
-		if (st.bb) pendingBorders.push(X0 - 0.5, Y1, X1 + 0.5, Y1);
-		if (st.bl) pendingBorders.push(X0, Y0 - 0.5, X0, Y1 + 0.5);
-		if (st.br) pendingBorders.push(X1, Y0 - 0.5, X1, Y1 + 0.5);
+		let list = pendingBorders;
+		if (st.bc) {
+			list = colorBorders.get(st.bc) ?? [];
+			colorBorders.set(st.bc, list);
+		}
+		if (st.bt) list.push(X0 - 0.5, Y0, X1 + 0.5, Y0);
+		if (st.bb) list.push(X0 - 0.5, Y1, X1 + 0.5, Y1);
+		if (st.bl) list.push(X0, Y0 - 0.5, X0, Y1 + 0.5);
+		if (st.br) list.push(X1, Y0 - 0.5, X1, Y1 + 0.5);
 	}
 
 	function strokeBorders() {
-		if (!pendingBorders.length) return;
+		if (!pendingBorders.length && !colorBorders.size) return;
 		ctx.save();
 		ctx.beginPath();
 		ctx.rect(MARGIN, TOP_H, viewW - MARGIN, viewH - TOP_H);
 		ctx.clip();
-		ctx.strokeStyle = C.text;
 		ctx.lineWidth = 1;
-		ctx.beginPath();
-		const b = pendingBorders;
-		for (let i = 0; i < b.length; i += 4) {
-			ctx.moveTo(b[i], b[i + 1]);
-			ctx.lineTo(b[i + 2], b[i + 3]);
+		for (const [color, b] of [[C.text, pendingBorders] as const, ...colorBorders]) {
+			if (!b.length) continue;
+			ctx.strokeStyle = color;
+			ctx.beginPath();
+			for (let i = 0; i < b.length; i += 4) {
+				ctx.moveTo(b[i], b[i + 1]);
+				ctx.lineTo(b[i + 2], b[i + 3]);
+			}
+			ctx.stroke();
 		}
-		ctx.stroke();
 		ctx.restore();
 		pendingBorders = [];
+		colorBorders = new Map();
 	}
 
 	/** Petit triangle d'angle d'une cellule en erreur (le détail est dans la barre d'état). */
@@ -1345,23 +1583,43 @@
 		ctx.fill();
 	}
 
-	function drawText(s: string, x: number, y: number, cw: number, align: 'left' | 'center' | 'right', st: CellStyle | undefined, color: string, clipW = cw) {
+	/**
+	 * Texte d'une cellule avec sa mise en forme : police, taille, gras,
+	 * italique, souligné, barré, couleur, alignements horizontal et vertical,
+	 * renvoi à la ligne. hh : hauteur de la cellule (par défaut celle de la
+	 * ligne en y ; une fusion couvre plusieurs lignes).
+	 */
+	function drawText(s: string, x: number, y: number, cw: number, align: 'left' | 'center' | 'right', st: CellStyle | undefined, color: string, clipW = cw, hh?: number) {
+		const h = hh ?? rh(rowAxis.indexAt(y - TOP_H + paneTop + 1));
+		if (h <= 0 || cw <= 0) return;
 		ctx.save();
 		ctx.beginPath();
-		ctx.rect(Math.max(x, MARGIN), TOP_H, clipW, viewH - TOP_H);
+		// Renvoyé à la ligne : le texte reste dans sa cellule.
+		if (st?.wr) ctx.rect(Math.max(x, MARGIN), Math.max(y, TOP_H), cw, h);
+		else ctx.rect(Math.max(x, MARGIN), TOP_H, clipW, viewH - TOP_H);
 		ctx.clip();
-		ctx.font = (st?.i ? 'italic ' : '') + (st?.b ? FONT_BOLD : FONT);
+		const fancy = st && (st.ff || st.fs);
+		ctx.font = fancy ? cellFont(st) : (st?.i ? 'italic ' : '') + (st?.b ? FONT_BOLD : FONT);
 		ctx.textAlign = align;
 		ctx.textBaseline = 'middle';
 		ctx.fillStyle = st?.fg ?? color;
 		const tx = align === 'left' ? x + 6 : align === 'right' ? x + cw - 6 : x + cw / 2;
-		const h = rh(rowAxis.indexAt(y - TOP_H + vs.top + 1));
-		ctx.fillText(s, tx, y + h / 2);
-		if (st?.u) {
-			const w = ctx.measureText(s).width;
-			const lx = align === 'left' ? tx : align === 'right' ? tx - w : tx - w / 2;
-			ctx.fillRect(lx, y + h / 2 + 7, w, 1);
-		}
+		const px = fontPx(st?.fs);
+		const lh = lineHeight(px);
+		const lines = st?.wr ? wrapLines(s, Math.max(8, cw - 12), (t) => ctx.measureText(t).width) : [s];
+		const total = lines.length * lh;
+		// Alignement vertical : centré par défaut.
+		const top = st?.va === 'top' ? y + 2 : st?.va === 'bottom' ? y + h - 2 - total : y + (h - total) / 2;
+		lines.forEach((line, k) => {
+			const cy = top + lh * k + lh / 2;
+			ctx.fillText(line, tx, cy);
+			if (st?.u || st?.x) {
+				const w = ctx.measureText(line).width;
+				const lx = align === 'left' ? tx : align === 'right' ? tx - w : tx - w / 2;
+				if (st.u) ctx.fillRect(lx, cy + Math.round(px * 0.55), w, 1);
+				if (st.x) ctx.fillRect(lx, cy, w, 1);
+			}
+		});
 		ctx.restore();
 	}
 
@@ -1449,6 +1707,319 @@
 		applyStyle(p);
 	}
 
+	// --- Format de cellule (Ctrl+1) et commandes voisines ----------------------
+
+	let formatDlg = $state<{ tab: FormatTab; style: CellStyle; sample: { text: string; value: unknown }; canMerge: boolean; merged: boolean } | null>(null);
+
+	/** La sélection est-elle faite de cellules libres seulement (fusion possible) ? */
+	function freeSelection(): boolean {
+		const { r0, r1, c0, c1 } = selection();
+		if (entries.some((e) => e.t.row <= r1 && e.last >= r0 && e.t.col <= c1 && e.lastCol >= c0)) return false;
+		return !pivots.some((p) => !p.error && p.row <= r1 && p.row + p.cells.length - 1 >= r0 && p.col <= c1 && p.col + (p.cells[0]?.length ?? 1) - 1 >= c0);
+	}
+
+	/** Ouvre le dialogue Format de cellule (Ctrl+1, ruban, clic droit). */
+	export function openFormat(tab: FormatTab = 'number') {
+		if (!source.applyStyle) return;
+		if (locked) {
+			say(locked);
+			return;
+		}
+		menu = freeMenu = null;
+		const info = cellInfo(active.row, active.col);
+		const sel = selection();
+		const single = sel.r0 === sel.r1 && sel.c0 === sel.c1;
+		const value = info.kind === 'data' && info.row ? info.row.cells[info.i!] : undefined;
+		const text = info.kind === 'free' ? (shown.get(key(active.row, active.col))?.text ?? info.value) : info.kind === 'data' ? (info.row?.text[info.i!] ?? '') : info.value;
+		formatDlg = { tab, style: activeStyle(), sample: { text, value }, canMerge: !single && freeSelection() && !!source.mergeCells, merged: !!mergeOf(active.row, active.col) };
+	}
+
+	function applyFormat(patch: Record<string, unknown>, merge: boolean | null) {
+		formatDlg = null;
+		wrap.focus();
+		const { border, ...rest } = patch;
+		if (Object.keys(rest).length) applyStyle(rest);
+		if (border) applyStyle({ border });
+		if (merge === true) mergeActive();
+		else if (merge === false) unmergeActive();
+	}
+
+	/** Fusionner et centrer (bascule, comme le bouton d'Excel) : cellules libres seulement. */
+	export function mergeActive(toggle = false) {
+		if (toggle && mergeOf(active.row, active.col)) {
+			unmergeActive();
+			return;
+		}
+		const { r0, r1, c0, c1 } = selection();
+		const mergeCells = source.mergeCells;
+		if (!mergeCells) return;
+		if (r0 === r1 && c0 === c1) {
+			say('Sélectionnez plusieurs cellules libres pour les fusionner');
+			return;
+		}
+		if (!freeSelection()) {
+			say('Fusionner et centrer ne s’applique pas dans un tableau : un tableau garde une cellule par valeur. Fusionnez des cellules libres, hors des tableaux.');
+			return;
+		}
+		writing = writing.then(async () => {
+			try {
+				const n = await mergeCells(r0, c0, r1, c1);
+				moveTo(r0, c0);
+				message = n ? `Cellules fusionnées : seule la valeur en haut à gauche est gardée (${n} effacée${n > 1 ? 's' : ''}, Ctrl+Z pour annuler)` : 'Cellules fusionnées et centrées';
+			} catch (err) {
+				message = String(err instanceof Error ? err.message : err);
+			}
+			refreshStatus();
+			schedule();
+		});
+	}
+
+	export function unmergeActive() {
+		const { r0, r1, c0, c1 } = selection();
+		const unmerge = source.unmergeCells;
+		menuAction(unmerge && (() => unmerge(r0, c0, r1, c1)));
+	}
+
+	/** Renvoyer à la ligne (bascule) et alignement vertical (ruban Alignement). */
+	export function toggleWrap() {
+		applyStyle({ wr: !activeStyle().wr || null });
+	}
+
+	// Masquer / afficher des lignes ou colonnes entières.
+	function setHidden(rows: boolean, hide: boolean) {
+		const set = source.setLinesHidden;
+		if (!set) return;
+		const { r0, r1, c0, c1 } = selection();
+		const [i0, i1] = rows ? [r0, r1] : [c0, c1];
+		menuAction(async () => {
+			await set(rows, i0, i1, hide);
+			if (hide) {
+				// La cellule active quitte les lignes masquées.
+				if (rows) moveTo(i1 + 1, c0);
+				else moveTo(r0, i1 + 1);
+			}
+		});
+	}
+
+	/** Lignes ou colonnes masquées dans la sélection (pour proposer Afficher). */
+	function hiddenIn(rows: boolean): boolean {
+		const { r0, r1, c0, c1 } = selection();
+		const [i0, i1] = rows ? [r0, r1] : [c0, c1];
+		for (const i of rows ? hiddenRows : hiddenCols) if (i >= i0 - 1 && i <= i1 + 1) return true;
+		return false;
+	}
+
+	/** Ruban (Accueil › Cellules › Format) : masquer ou afficher les lignes ou les colonnes de la sélection. */
+	export function hideLines(rows: boolean, hide: boolean) {
+		if (hide) setHidden(rows, true);
+		else unhide(rows);
+	}
+
+	/** Afficher : les lignes (ou colonnes) masquées de la sélection et celles qui la bordent. */
+	function unhide(rows: boolean) {
+		const set = source.setLinesHidden;
+		if (!set) return;
+		const { r0, r1, c0, c1 } = selection();
+		let [i0, i1] = rows ? [r0, r1] : [c0, c1];
+		const hidden = rows ? hiddenRows : hiddenCols;
+		while (i0 > 0 && hidden.has(i0 - 1)) i0--;
+		while (hidden.has(i1 + 1)) i1++;
+		menuAction(() => set(rows, i0, i1, false));
+	}
+
+	// Hauteur de ligne / largeur de colonne (clic droit), comme Excel.
+	let sizeDlg = $state<{ rows: boolean; value: number; x: number; y: number } | null>(null);
+
+	function openSize(rows: boolean, x: number, y: number) {
+		menu = freeMenu = null;
+		sizeDlg = { rows, value: rows ? rh(active.row) || ROW_H : colAxis.size(active.col) || DEF_W, x, y };
+	}
+
+	function applySize() {
+		const d = sizeDlg;
+		sizeDlg = null;
+		wrap.focus();
+		if (!d) return;
+		const v = Math.round(Number(d.value));
+		if (!Number.isFinite(v) || v < 4 || v > 1000) {
+			say('Taille entre 4 et 1 000 pixels');
+			return;
+		}
+		const { r0, r1, c0, c1 } = selection();
+		const set = d.rows ? source.setRowHeight : source.setColumnWidth;
+		if (!set) return;
+		menuAction(async () => {
+			for (let i = d.rows ? r0 : c0; i <= (d.rows ? r1 : c1) && i - (d.rows ? r0 : c0) < 500; i++) await set(i, v);
+		});
+	}
+
+	// Volets figés.
+	/** Affichage › Figer les volets : à la cellule active, la ligne du haut, la première colonne, ou les libérer. */
+	export function freezeActive(what: 'cell' | 'row' | 'col' | 'none') {
+		const set = source.setFreeze;
+		if (!set) return;
+		let rows = 0;
+		let cols = 0;
+		if (what === 'row') rows = 1;
+		else if (what === 'col') cols = 1;
+		else if (what === 'cell') {
+			rows = active.row;
+			cols = active.col;
+			if (!rows && !cols) {
+				say('Placez la cellule active sous les lignes et à droite des colonnes à figer');
+				return;
+			}
+		}
+		// La partie figée part du haut de la feuille : elle doit tenir à l'écran.
+		if (rowTop(rows) > vs.view * 0.75 || colAxis.offset(cols) > (viewW - MARGIN) * 0.75) {
+			say('La partie à figer dépasse l’écran : faites défiler la feuille vers le haut, ou choisissez une cellule plus haute ou plus à gauche');
+			return;
+		}
+		if (rows || cols) {
+			vs.to(0);
+			scroller.scrollLeft = 0;
+			syncNative();
+		}
+		menuAction(() => set(rows, cols));
+	}
+
+	// --- Validation des données : liste déroulante ------------------------------
+
+	/** Valeurs permises de la cellule (validation par liste), ou undefined. */
+	function listOf(r: number, c: number): string[] | undefined {
+		const e = tableAt(r, c);
+		if (e && r === e.t.row) return undefined;
+		const dv = styleAt(r, c, e)?.dv;
+		return Array.isArray(dv) && dv.length ? dv : undefined;
+	}
+
+	/** Bouton ▾ de la liste, juste à droite de la cellule active (comme Excel). */
+	function dropButton() {
+		const g = mergeOf(active.row, active.col);
+		const right = g ? screenX(g.col) + colAxis.offset(g.col + g.cols) - colAxis.offset(g.col) : screenX(active.col) + colAxis.size(active.col);
+		const bottom = screenY(active.row) + (g ? rowTop(g.row + g.rows) - rowTop(g.row) : rh(active.row));
+		const h = Math.min(18, rh(active.row) - 2);
+		return { x: right + 1, y: bottom - h - 1, w: 16, h };
+	}
+
+	let listMenu = $state<{ x: number; y: number; values: string[]; row: number; col: number } | null>(null);
+
+	function openList() {
+		const values = listOf(active.row, active.col);
+		if (!values) return;
+		const b = dropButton();
+		listMenu = { x: screenX(active.col), y: b.y + b.h + 2, values, row: active.row, col: active.col };
+	}
+
+	function pickFromList(v: string) {
+		const m = listMenu;
+		listMenu = null;
+		wrap.focus();
+		if (!m || locked) {
+			if (locked) say(locked);
+			return;
+		}
+		if (v !== cellInfo(m.row, m.col).value) write(m.row, m.col, v);
+	}
+
+	let validDlg = $state<{ text: string; error: string } | null>(null);
+
+	/** Données › Validation des données : liste des valeurs permises de la sélection. */
+	export function openValidation() {
+		if (!source.applyStyle) return;
+		if (locked) {
+			say(locked);
+			return;
+		}
+		menu = freeMenu = null;
+		validDlg = { text: (listOf(active.row, active.col) ?? []).join('\n'), error: '' };
+	}
+
+	function applyValidation(clear = false) {
+		const d = validDlg;
+		if (!d) return;
+		const list = clear ? [] : parseList(d.text);
+		if (!clear && !list.length) {
+			d.error = 'Indiquez au moins une valeur (une par ligne, ou séparées par « ; »)';
+			return;
+		}
+		validDlg = null;
+		wrap.focus();
+		applyStyle({ dv: list.length ? list : null });
+		say(list.length ? `Liste déroulante : ${list.length} valeur${list.length > 1 ? 's' : ''} permise${list.length > 1 ? 's' : ''} (Alt+↓ pour l’ouvrir)` : 'Validation retirée');
+	}
+
+	/** Saisie refusée par la validation de la cellule : le message, sinon null (value : la valeur de la liste). */
+	function refusal(row: number, col: number, text: string): { message: string } | { value: string } {
+		if (text.trimStart().startsWith('=')) return { value: text }; // une formule n'est pas vérifiée
+		const r = validate(listOf(row, col), text);
+		return r.ok ? { value: r.value } : { message: r.message };
+	}
+
+	// --- Notes (Révision) ---------------------------------------------------------
+
+	let noteTip = $state<{ x: number; y: number; text: string; key: string } | null>(null);
+	let noteDlg = $state<{ row: number; col: number; text: string; had: boolean; x: number; y: number } | null>(null);
+
+	/** Note de la cellule, s'il y en a une. */
+	function noteOf(r: number, c: number): string | undefined {
+		const g = mergeOf(r, c);
+		if (g) return styleAt(g.row, g.col, undefined)?.nt;
+		return styleAt(r, c)?.nt;
+	}
+
+	/** Infobulle de la note sous la souris (comme Excel). */
+	function updateNoteTip(cell: { row: number; col: number } | null) {
+		const text = cell && !noteDlg ? noteOf(cell.row, cell.col) : undefined;
+		if (!cell || !text) {
+			if (noteTip) noteTip = null;
+			return;
+		}
+		const g = mergeOf(cell.row, cell.col);
+		const r = g?.row ?? cell.row;
+		const c = g?.col ?? cell.col;
+		const k = key(r, c);
+		if (noteTip?.key === k) return;
+		const right = screenX(c) + colAxis.offset(c + (g?.cols ?? 1)) - colAxis.offset(c);
+		noteTip = { x: Math.min(right + 8, viewW - 240), y: screenY(r), text, key: k };
+	}
+
+	/** Révision › Nouvelle note (ou Modifier la note) sur la cellule active. */
+	export function editNote() {
+		if (!source.setNote) return;
+		if (locked) {
+			say(locked);
+			return;
+		}
+		menu = freeMenu = null;
+		noteTip = null;
+		const text = noteOf(active.row, active.col) ?? '';
+		const right = screenX(active.col) + colAxis.size(active.col);
+		noteDlg = { row: active.row, col: active.col, text, had: !!text, x: Math.min(right + 8, Math.max(8, viewW - 270)), y: Math.max(4, screenY(active.row)) };
+	}
+
+	function saveNote(remove = false) {
+		const d = noteDlg;
+		noteDlg = null;
+		wrap.focus();
+		const set = source.setNote;
+		if (!d || !set) return;
+		const text = remove ? '' : d.text;
+		if (text.trim() === '' && !d.had) return;
+		menuAction(() => set(d.row, d.col, text));
+	}
+
+	/** Révision › Supprimer la note de la cellule active. */
+	export function deleteNote() {
+		const set = source.setNote;
+		if (!set || !noteOf(active.row, active.col)) {
+			say('La cellule active n’a pas de note');
+			return;
+		}
+		const { row, col } = active;
+		menuAction(() => set(row, col, ''));
+	}
+
 	function pushStat(a: number[], v: number) {
 		a.push(v);
 		if (a.length > 300) a.shift();
@@ -1517,7 +2088,9 @@
 			edit: `saisie ${ms(lastEditMs)}`,
 			blocks: entries.reduce((n, e) => n + e.cache.size, 0),
 			stats: selectionStats(),
-			sel: selection()
+			sel: selection(),
+			style: activeStyle(),
+			merged: !!mergeOf(active.row, active.col)
 		});
 	}
 
@@ -1588,16 +2161,16 @@
 	/** Position d'un panneau ancré sous l'en-tête de la colonne i du tableau e,
 	 * gardé dans la grille (width : largeur du panneau). */
 	function anchorUnder(e: Entry, i: number, width: number) {
-		const x = MARGIN + colAxis.offset(e.t.col + i) - scroller.scrollLeft;
+		const x = screenX(e.t.col + i);
 		return {
 			x: Math.max(4, Math.min(x, scroller.clientWidth - width - 4)),
-			y: clamp(TOP_H + rowTop(e.t.row + 1) - vs.top, 4, Math.max(4, scroller.clientHeight - 200))
+			y: clamp(screenY(e.t.row) + rh(e.t.row), 4, Math.max(4, scroller.clientHeight - 200))
 		};
 	}
 
 	/** Met le focus sur le premier champ d'un panneau à son ouverture. */
 	function focusFirst(node: HTMLElement) {
-		requestAnimationFrame(() => (node.querySelector<HTMLElement>('.add input') ?? node.querySelector<HTMLElement>('.add button'))?.focus());
+		requestAnimationFrame(() => (node.querySelector<HTMLElement>('.add input, .add textarea') ?? node.querySelector<HTMLElement>('.add button'))?.focus());
 	}
 
 	async function openFilter(e: Entry, i: number) {
@@ -1689,8 +2262,8 @@
 	function openLineRules(rows: boolean) {
 		const { r0, r1, c0, c1 } = selection();
 		menu = freeMenu = null;
-		const x = rows ? MARGIN + 8 : Math.max(MARGIN, MARGIN + colAxis.offset(c0) - scroller.scrollLeft);
-		const y = rows ? TOP_H + rowTop(r1 + 1) - vs.top + 4 : TOP_H + 4;
+		const x = rows ? MARGIN + 8 : Math.max(MARGIN, screenX(c0));
+		const y = rows ? screenY(r1) + rh(r1) + 4 : TOP_H + 4;
 		rulesDlg = { i: rows ? r0 : c0, line: { rows, i0: rows ? r0 : c0, i1: rows ? r1 : c1 }, x, y, op: '>', value: '', to: '', style: 0, error: '' };
 	}
 
@@ -2104,8 +2677,8 @@
 			return;
 		}
 		menu = freeMenu = null;
-		const px = x ?? MARGIN + colAxis.offset(active.col) - scroller.scrollLeft + 20;
-		const py = y ?? TOP_H + rowTop(active.row + 1) - vs.top + 4;
+		const px = x ?? screenX(active.col) + 20;
+		const py = y ?? screenY(active.row) + rh(active.row) + 4;
 		linesDlg = { x: px, y: py, insert, choice: 'rows' };
 	}
 
@@ -2143,9 +2716,10 @@
 	/** Échap ferme le dialogue ouvert, où que soit le focus. */
 	function onGlobalKey(e: KeyboardEvent) {
 		if (e.key !== 'Escape') return;
-		const open = filterDlg || rulesDlg || dedupDlg || fnDlg || menu || freeMenu || typeMenu || chartMenu || linesDlg;
+		const open = filterDlg || rulesDlg || dedupDlg || fnDlg || menu || freeMenu || typeMenu || chartMenu || linesDlg || formatDlg || validDlg || noteDlg || listMenu || sizeDlg;
 		if (!open) return;
 		filterDlg = rulesDlg = dedupDlg = fnDlg = linesDlg = null;
+		formatDlg = validDlg = noteDlg = listMenu = sizeDlg = null;
 		menu = freeMenu = typeMenu = chartMenu = null;
 		wrap.focus();
 	}
@@ -2247,6 +2821,7 @@
 		chartMenu = null;
 		selChart = null;
 		panel = null;
+		formatDlg = validDlg = noteDlg = listMenu = sizeDlg = noteTip = null;
 	}
 
 	/** Erreur de formule de la cellule (code et formule), ou null. */
@@ -2315,6 +2890,7 @@
 
 	function onScroll() {
 		holdWhileScrolling();
+		noteTip = null;
 		if (holdRows && scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 2) growAtEnd(true);
 		if (!vs.inSync(scroller.scrollTop)) vs.fromNative(scroller.scrollTop);
 		updateExtent();
@@ -2324,6 +2900,7 @@
 	function onWheel(e: WheelEvent) {
 		if (e.ctrlKey) return;
 		holdWhileScrolling();
+		noteTip = null;
 		const unit = e.deltaMode === 1 ? ROW_H : e.deltaMode === 2 ? vs.view : 1;
 		let dy = e.deltaY * unit;
 		let dx = e.deltaX * unit;
@@ -2370,35 +2947,51 @@
 
 	function ensureVisible(row: number, col: number) {
 		updateExtent();
+		// Sous les volets figés : la case ne doit pas rester cachée dessous.
 		const top = rowTop(row);
-		if (top < vs.top) vs.to(top);
-		else if (top + rh(row) > vs.top + vs.view) vs.to(top + rh(row) - vs.view);
-		const left = scroller.scrollLeft;
-		const cw = viewW - MARGIN;
+		const t = reveal(top, top + rh(row), vs.top, vs.view, rowTop(fRows()));
+		if (t !== vs.top) vs.to(t);
 		const x0 = colAxis.offset(col);
-		const x1 = x0 + colAxis.size(col);
-		if (x0 < left) scroller.scrollLeft = x0;
-		else if (x1 > left + cw) scroller.scrollLeft = x1 - cw;
+		const l = reveal(x0, x0 + colAxis.size(col), scroller.scrollLeft, viewW - MARGIN, colAxis.offset(fCols()));
+		if (l !== scroller.scrollLeft) scroller.scrollLeft = l;
 		syncNative();
 	}
 
 	// --- Sélection et clavier ---------------------------------------------
 
+	/** Bord de la cellule active dans le sens du déplacement (au-delà de sa fusion). */
+	function mergeEdge(dr: number, dc: number) {
+		const g = mergeOf(active.row, active.col);
+		if (!g) return { row: active.row, col: active.col };
+		return { row: dr > 0 ? g.row + g.rows - 1 : active.row, col: dc > 0 ? g.col + g.cols - 1 : active.col };
+	}
+
 	// Saisie d'une ligne avec Tab : Entrée revient sous la cellule de départ, comme Excel.
 	let tabStart: number | null = null;
 	function tabMove(back: boolean) {
 		const start = tabStart ?? active.col;
-		moveTo(active.row, active.col + (back ? -1 : 1));
+		moveTo(active.row, mergeEdge(0, back ? -1 : 1).col + (back ? -1 : 1));
 		tabStart = start;
 	}
 	function enterMove(back: boolean) {
 		const col = tabStart ?? active.col;
-		moveTo(active.row + (back ? -1 : 1), col);
+		moveTo(mergeEdge(back ? -1 : 1, 0).row + (back ? -1 : 1), col);
 	}
 
 	function moveTo(row: number, col: number, extend = false) {
 		tabStart = null;
-		active = { row: clamp(row, 0, SHEET_ROWS - 1), col: clamp(col, 0, SHEET_COLS - 1) };
+		row = clamp(row, 0, SHEET_ROWS - 1);
+		col = clamp(col, 0, SHEET_COLS - 1);
+		// Lignes et colonnes masquées : on passe au-delà, dans le sens du déplacement.
+		row = skipHidden(row, Math.sign(row - active.row), hiddenRows, SHEET_ROWS);
+		col = skipHidden(col, Math.sign(col - active.col), hiddenCols, SHEET_COLS);
+		// Cellules fusionnées : la cellule en haut à gauche, comme Excel.
+		const g = extend ? undefined : mergeOf(row, col);
+		if (g) {
+			row = g.row;
+			col = g.col;
+		}
+		active = { row, col };
 		if (!extend) anchor = { ...active };
 		message = '';
 		ensureVisible(active.row, active.col);
@@ -2434,9 +3027,7 @@
 		const x = e.clientX - r.left;
 		const y = e.clientY - r.top;
 		if (x < MARGIN || y < TOP_H || x >= scroller.clientWidth || y >= scroller.clientHeight) return null;
-		const col = colAxis.indexAt(x - MARGIN + scroller.scrollLeft);
-		const row = Math.min(SHEET_ROWS - 1, rowAxis.indexAt(y - TOP_H + vs.top));
-		return { row, col };
+		return { row: rowAtY(y), col: colAtX(x) };
 	}
 
 	// --- Largeur des colonnes : glisser une séparation du bandeau du haut ----
@@ -2450,7 +3041,7 @@
 		const x = e.clientX - r.left;
 		const y = e.clientY - r.top;
 		if (x >= MARGIN || y <= TOP_H) return null;
-		const py = y - TOP_H + vs.top;
+		const py = toGrid(y, TOP_H, rowTop(fRows()), vs.top);
 		const row = rowAxis.indexAt(py);
 		if (rowTop(row + 1) - py <= 3) return row;
 		if (py - rowTop(row) <= 3 && row > 0) return row - 1;
@@ -2463,7 +3054,7 @@
 		const x = e.clientX - r.left;
 		const y = e.clientY - r.top;
 		if (y >= TOP_H || x <= MARGIN) return null;
-		const px = x - MARGIN + scroller.scrollLeft;
+		const px = toGrid(x, MARGIN, colAxis.offset(fCols()), scroller.scrollLeft);
 		const c = colAxis.indexAt(px);
 		const right = colAxis.offset(c + 1);
 		const left = colAxis.offset(c);
@@ -2522,12 +3113,10 @@
 		const y = e.clientY - r.top;
 		if (x < MARGIN || y < TOP_H) return false;
 		const { r0, r1, c0, c1 } = selection();
-		const cx = (c: number) => MARGIN + colAxis.offset(c) - scroller.scrollLeft;
-		const ry = (r: number) => TOP_H + rowTop(r) - vs.top;
-		const left = cx(c0);
-		const right = cx(c1) + colAxis.size(c1);
-		const top = ry(r0);
-		const bottom = ry(r1) + rh(r1);
+		const left = screenX(c0);
+		const right = screenX(c1) + colAxis.size(c1);
+		const top = screenY(r0);
+		const bottom = screenY(r1) + rh(r1);
 		const near = (v: number, edge: number) => Math.abs(v - edge) <= 3;
 		const inX = x >= left - 3 && x <= right + 3;
 		const inY = y >= top - 3 && y <= bottom + 3;
@@ -2592,8 +3181,13 @@
 
 	/** Position (écran) du coin bas droit de la sélection. */
 	function fillHandle() {
-		const { r1, c1 } = selection();
-		return { x: MARGIN + colAxis.offset(c1 + 1) - scroller.scrollLeft, y: TOP_H + rowTop(r1 + 1) - vs.top };
+		let { r1, c1 } = selection();
+		const g = mergeOf(r1, c1);
+		if (g) {
+			r1 = g.row + g.rows - 1;
+			c1 = g.col + g.cols - 1;
+		}
+		return { x: screenX(c1) + colAxis.size(c1), y: screenY(r1) + rh(r1) };
 	}
 
 	function onFillHandle(e: MouseEvent): boolean {
@@ -2679,8 +3273,8 @@
 		const r = scroller.getBoundingClientRect();
 		const x = e.clientX - r.left;
 		const y = e.clientY - r.top;
-		if (x < MARGIN && y >= TOP_H) return { kind: 'rows', row: clamp(rowAxis.indexAt(y - TOP_H + vs.top), 0, SHEET_ROWS - 1) };
-		if (y < TOP_H && x >= MARGIN) return { kind: 'cols', col: colAxis.indexAt(x - MARGIN + scroller.scrollLeft) };
+		if (x < MARGIN && y >= TOP_H) return { kind: 'rows', row: clamp(rowAtY(y), 0, SHEET_ROWS - 1) };
+		if (y < TOP_H && x >= MARGIN) return { kind: 'cols', col: colAtX(x) };
 		return null;
 	}
 
@@ -2736,6 +3330,19 @@
 			filling = { sel: selection() };
 			return;
 		}
+		// Flèche de la liste déroulante (validation) de la cellule active.
+		if (e.button === 0 && !editing && listOf(active.row, active.col)) {
+			const b = dropButton();
+			const r = scroller.getBoundingClientRect();
+			const x = e.clientX - r.left;
+			const y = e.clientY - r.top;
+			if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) {
+				e.preventDefault();
+				if (listMenu) listMenu = null;
+				else openList();
+				return;
+			}
+		}
 		if (selChart !== null) {
 			selChart = null;
 			if (panel?.kind === 'chart') panel = null;
@@ -2743,7 +3350,7 @@
 		const hd = boundaryAt(e) === null && rowBoundaryAt(e) === null ? headerAt(e) : null;
 		if (hd && e.button !== 1) {
 			e.preventDefault();
-			if (editing) commit();
+			if (editing && !commit()) return; // saisie refusée : l'éditeur reste ouvert
 			wrap.focus();
 			// Clic droit dans la sélection : on la garde.
 			if (e.button === 2 && (hd.kind === 'rows' ? inSelection(hd.row, active.col) : inSelection(active.row, hd.col))) return;
@@ -2788,8 +3395,8 @@
 			e.preventDefault();
 			return;
 		}
-		if (editing) commit();
 		e.preventDefault();
+		if (editing && !commit()) return; // saisie refusée : l'éditeur reste ouvert
 		// Clic droit dans la sélection : elle reste (le menu porte sur elle).
 		if (e.button === 2 && inSelection(cell.row, cell.col)) return;
 		if (e.button === 0 && openTypeMenu(e, cell)) return;
@@ -2882,10 +3489,10 @@
 		if (headerDrag) {
 			const r = scroller.getBoundingClientRect();
 			if (headerDrag === 'rows') {
-				const row = clamp(rowAxis.indexAt(e.clientY - r.top - TOP_H + vs.top), 0, SHEET_ROWS - 1);
+				const row = clamp(rowAtY(e.clientY - r.top), 0, SHEET_ROWS - 1);
 				selectRows(anchor.row, row);
 			} else {
-				const col = colAxis.indexAt(Math.max(0, e.clientX - r.left - MARGIN + scroller.scrollLeft));
+				const col = colAtX(Math.max(MARGIN, e.clientX - r.left));
 				selectCols(anchor.col, col);
 			}
 			return;
@@ -2903,6 +3510,7 @@
 							? 'pointer'
 							: '';
 		if (!dragging) updateHeaderTip(e);
+		updateNoteTip(dragging ? null : cellAt(e));
 		if (!dragging) return;
 		const cell = cellAt(e);
 		if (!cell) return;
@@ -2953,9 +3561,22 @@
 		const ext = e.shiftKey;
 		const ctrl = e.ctrlKey || e.metaKey;
 		const arrow = (dr: number, dc: number) => {
-			const [r, c] = ctrl ? jump(row, col, dr, dc) : [row + dr, col + dc];
+			const from = ext ? { row, col } : mergeEdge(dr, dc);
+			const [r, c] = ctrl ? jump(from.row, from.col, dr, dc) : [from.row + dr, from.col + dc];
 			moveTo(r, c, ext);
 		};
+		// Ctrl+1 : Format de cellule (comme Excel ; e.code pour les claviers AZERTY).
+		if (ctrl && (e.key === '1' || e.code === 'Digit1') && !e.shiftKey && !e.altKey) {
+			e.preventDefault();
+			openFormat();
+			return;
+		}
+		// Alt+↓ : liste déroulante de la cellule (validation).
+		if (e.altKey && e.key === 'ArrowDown' && listOf(row, col)) {
+			e.preventDefault();
+			openList();
+			return;
+		}
 		if (ctrl && (e.key === 'z' || e.key === 'Z') && source.undo) {
 			e.preventDefault();
 			source.undo().catch((err) => say(String(err?.message ?? err)));
@@ -3076,12 +3697,17 @@
 
 	function placeEditor() {
 		if (!input) return;
-		const x = MARGIN + colAxis.offset(active.col) - scroller.scrollLeft;
-		const y = TOP_H + rowTop(active.row) - vs.top;
+		const x = screenX(active.col);
+		const y = screenY(active.row);
 		input.style.transform = `translate(${x}px, ${y}px)`;
-		input.style.width = `${Math.max(colAxis.size(active.col), 80)}px`;
+		const g = mergeOf(active.row, active.col);
+		const w = g ? colAxis.offset(g.col + g.cols) - colAxis.offset(g.col) : colAxis.size(active.col);
+		input.style.width = `${Math.max(w, 80)}px`;
+		input.style.height = `${Math.max(22, g ? rowTop(g.row + g.rows) - rowTop(g.row) : rh(active.row))}px`;
 		const e = tableAt(active.row, active.col);
-		input.style.textAlign = e && active.row > e.t.row ? alignment(e.t.columns[active.col - e.t.col].type) : 'left';
+		const st = styleAt(active.row, active.col, e);
+		input.style.textAlign = st?.al ?? (e && active.row > e.t.row ? alignment(e.t.columns[active.col - e.t.col].type) : 'left');
+		input.style.font = st?.ff || st?.fs || st?.b || st?.i ? cellFont(st) : '';
 	}
 
 	// Les saisies partent l'une après l'autre : la suivante peut dépendre de
@@ -3114,16 +3740,28 @@
 		schedule();
 	}
 
-	function commit() {
-		if (!editing) return;
-		editing = false;
+	/** Valide la saisie ; faux si la validation de la cellule la refuse (l'éditeur reste ouvert). */
+	function commit(): boolean {
+		if (!editing) return true;
 		const { row, col } = active;
-		if (editValueText !== cellInfo(row, col).value) write(row, col, editValueText);
+		let text = editValueText;
+		if (text !== cellInfo(row, col).value) {
+			const r = refusal(row, col, text);
+			if ('message' in r) {
+				say(r.message);
+				return false;
+			}
+			text = r.value;
+		}
+		editing = false;
+		if (text !== cellInfo(row, col).value) write(row, col, text);
 		wrap.focus();
+		return true;
 	}
 
 	function cancel() {
 		editing = false;
+		refreshFx(); // la barre de formule reprend le contenu de la cellule
 		wrap.focus();
 		schedule();
 	}
@@ -3179,12 +3817,10 @@
 		const { row, col } = active;
 		switch (e.key) {
 			case 'Enter':
-				commit();
-				enterMove(e.shiftKey);
+				if (commit()) enterMove(e.shiftKey);
 				break;
 			case 'Tab':
-				commit();
-				tabMove(e.shiftKey);
+				if (commit()) tabMove(e.shiftKey);
 				break;
 			case 'Escape':
 				cancel();
@@ -3194,7 +3830,7 @@
 			case 'ArrowLeft':
 			case 'ArrowRight':
 				if (!editByTyping) return;
-				commit();
+				if (!commit()) break;
 				moveTo(
 					row + (e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0),
 					col + (e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0)
@@ -3215,9 +3851,19 @@
 			refreshFx();
 			wrap.focus();
 		} else if (e.key === 'Enter') {
-			fxEditing = false;
 			const { row, col } = active;
-			if (fxText !== cellInfo(row, col).value) write(row, col, fxText);
+			let text = fxText;
+			if (text !== cellInfo(row, col).value) {
+				const r = refusal(row, col, text);
+				if ('message' in r) {
+					say(r.message);
+					e.preventDefault();
+					return;
+				}
+				text = r.value;
+			}
+			fxEditing = false;
+			if (text !== cellInfo(row, col).value) write(row, col, text);
 			wrap.focus();
 			moveTo(row + 1, col);
 		} else return;
@@ -3609,7 +4255,7 @@
 		if (!e || cell.row !== e.t.row || !source.setType) return false;
 		if (e.t.columns[cell.col - e.t.col].formula) return false; // le type suit la formule
 		const r = scroller.getBoundingClientRect();
-		const right = MARGIN + colAxis.offset(cell.col + 1) - scroller.scrollLeft;
+		const right = screenX(cell.col) + colAxis.size(cell.col);
 		const mx = ev.clientX - r.left;
 		if (right - mx > 34) return false;
 		moveTo(cell.row, cell.col);
@@ -3911,15 +4557,41 @@
 		{#if kind === 'rows'}
 			<button onclick={() => sheetLines('insertRows')}>Insérer {r1 > r0 ? `${r1 - r0 + 1} lignes` : 'une ligne'}</button>
 			<button onclick={() => sheetLines('deleteRows')}>Supprimer {r1 > r0 ? 'les lignes' : 'la ligne'}</button>
+			{#if source.applyStyle}<button onclick={() => openFormat()}>Format de cellule…</button>{/if}
 			{#if source.setLineRules}<button onclick={() => openLineRules(true)}>Mise en forme conditionnelle…</button>{/if}
+			{#if source.setRowHeight}<button onclick={() => openSize(true, x, y)}>Hauteur de ligne…</button>{/if}
+			{#if source.setLinesHidden}
+				<button onclick={() => setHidden(true, true)}>Masquer</button>
+				{#if hiddenIn(true)}<button onclick={() => unhide(true)}>Afficher</button>{/if}
+			{/if}
 		{:else if kind === 'cols'}
 			<button onclick={() => sheetLines('insertCols')}>Insérer {c1 > c0 ? `${c1 - c0 + 1} colonnes` : 'une colonne'}</button>
 			<button onclick={() => sheetLines('deleteCols')}>Supprimer {c1 > c0 ? 'les colonnes' : 'la colonne'}</button>
+			{#if source.applyStyle}<button onclick={() => openFormat()}>Format de cellule…</button>{/if}
 			{#if source.setLineRules}<button onclick={() => openLineRules(false)}>Mise en forme conditionnelle…</button>{/if}
+			{#if source.setColumnWidth}<button onclick={() => openSize(false, x, y)}>Largeur de colonne…</button>{/if}
+			{#if source.setLinesHidden}
+				<button onclick={() => setHidden(false, true)}>Masquer</button>
+				{#if hiddenIn(false)}<button onclick={() => unhide(false)}>Afficher</button>{/if}
+			{/if}
 		{:else}
 			<button onclick={() => openLinesDialog(true, x, y)}>Insérer…</button>
 			<button onclick={() => { menu = freeMenu = null; clearSelection(); }}>Supprimer</button>
 		{/if}
+	{/if}
+{/snippet}
+
+{#snippet noteItems()}
+	{#if noteOf(active.row, active.col)}
+		<button onclick={editNote}>Modifier la note</button>
+		<button
+			onclick={() => {
+				menu = freeMenu = null;
+				deleteNote();
+			}}>Supprimer la note</button
+		>
+	{:else}
+		<button onclick={editNote}>Insérer une note</button>
 	{/if}
 {/snippet}
 
@@ -4047,6 +4719,7 @@
 			onpointerdown={onScrollbarDown}
 			onmousedown={onMouseDown}
 			onmousemove={onMouseMove}
+			onmouseleave={() => (noteTip = null)}
 			ondblclick={onDblClick}
 			oncontextmenu={onContextMenu}
 		>
@@ -4260,9 +4933,16 @@
 					{#if cols && source.clearFilters && m.e.t.columns.some((c) => c.filter)}
 						<button onclick={() => menuAction(() => source.clearFilters!(m.e.t))}>Effacer le filtre du tableau</button>
 					{/if}
-					{#if cols && source.setRules}
+					{#if !m.rowOnly && source.applyStyle}
 						<hr />
+						<button onclick={() => openFormat()}>Format de cellule… <span class="keys">Ctrl+1</span></button>
+					{/if}
+					{#if cols && source.setRules}
+						{#if !source.applyStyle}<hr />{/if}
 						<button onclick={() => openRules(m.e, m.i)}>Mise en forme conditionnelle…</button>
+					{/if}
+					{#if !m.rowOnly && source.setNote}
+						{@render noteItems()}
 					{/if}
 					<hr />
 					{#if cols && source.setType && !col?.formula}
@@ -4344,6 +5024,13 @@
 						clearSelection();
 					}}>Effacer le contenu</button
 				>
+				{#if !m.kind}
+					{#if source.applyStyle}
+						<hr />
+						<button onclick={() => openFormat()}>Format de cellule… <span class="keys">Ctrl+1</span></button>
+					{/if}
+					{#if source.setNote}{@render noteItems()}{/if}
+				{/if}
 			</div>
 		{/if}
 		{#if linesDlg}
@@ -4614,6 +5301,127 @@
 				</div>
 			</div>
 		{/if}
+		{#if formatDlg}
+			{@const d = formatDlg}
+			<FormatDialog
+				style={d.style}
+				sample={d.sample}
+				tab={d.tab}
+				canMerge={d.canMerge}
+				merged={d.merged}
+				onapply={applyFormat}
+				onclose={() => {
+					formatDlg = null;
+					wrap.focus();
+				}}
+			/>
+		{/if}
+		{#if validDlg}
+			{@const d = validDlg}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="rules valid-dlg"
+				use:focusFirst
+				onkeydown={(ev) => {
+					ev.stopPropagation();
+					if (ev.key === 'Escape') {
+						validDlg = null;
+						wrap.focus();
+					}
+				}}
+			>
+				<div class="menu-title">Validation des données : liste déroulante</div>
+				<p class="menu-note">
+					Valeurs permises dans la sélection, une par ligne (ou séparées par « ; »). Une flèche ▾ propose la liste dans la cellule (Alt+↓) ; toute autre saisie est
+					refusée. Sur toute une colonne de tableau, la liste vaut aussi pour les lignes ajoutées ensuite.
+				</p>
+				<div class="add"><textarea bind:value={d.text} rows="7" placeholder={'Oui\nNon'}></textarea></div>
+				{#if d.error}<p class="menu-note error">{d.error}</p>{/if}
+				<div class="foot">
+					{#if listOf(active.row, active.col)}<button onclick={() => applyValidation(true)}>Effacer la validation</button>{/if}
+					<span class="sp"></span>
+					<button class="primary" onclick={() => applyValidation()}>OK</button>
+					<button
+						onclick={() => {
+							validDlg = null;
+							wrap.focus();
+						}}>Annuler</button
+					>
+				</div>
+			</div>
+		{/if}
+		{#if noteDlg}
+			{@const d = noteDlg}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="note-dlg"
+				style:left="{d.x}px"
+				style:top="{d.y}px"
+				use:focusFirst
+				onkeydown={(ev) => {
+					ev.stopPropagation();
+					if (ev.key === 'Escape') {
+						noteDlg = null;
+						wrap.focus();
+					}
+					if (ev.key === 'Enter' && ev.ctrlKey) saveNote();
+				}}
+			>
+				<div class="add"><textarea bind:value={d.text} rows="5" placeholder="Note de la cellule"></textarea></div>
+				<div class="foot">
+					{#if d.had}<button onclick={() => saveNote(true)}>Supprimer</button>{/if}
+					<span class="sp"></span>
+					<button class="primary" title="Ctrl+Entrée" onclick={() => saveNote()}>OK</button>
+					<button
+						onclick={() => {
+							noteDlg = null;
+							wrap.focus();
+						}}>Annuler</button
+					>
+				</div>
+			</div>
+		{/if}
+		{#if noteTip && !noteDlg}
+			<div class="note-tip" style:left="{noteTip.x}px" style:top="{noteTip.y}px">{noteTip.text}</div>
+		{/if}
+		{#if listMenu}
+			{@const m = listMenu}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div class="menu list-menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (listMenu = null)}>
+				{#each m.values as v (v)}
+					<button class:on={cellInfo(m.row, m.col).value === v} onclick={() => pickFromList(v)}>{v}</button>
+				{/each}
+			</div>
+		{/if}
+		{#if sizeDlg}
+			{@const d = sizeDlg}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="rules lines-dlg"
+				use:focusFirst
+				onkeydown={(ev) => {
+					ev.stopPropagation();
+					if (ev.key === 'Enter') applySize();
+					if (ev.key === 'Escape') {
+						sizeDlg = null;
+						wrap.focus();
+					}
+				}}
+			>
+				<div class="menu-title">{d.rows ? 'Hauteur de ligne' : 'Largeur de colonne'} (pixels)</div>
+				<div class="add"><input type="number" min="4" max="1000" bind:value={d.value} /></div>
+				<div class="foot">
+					<span class="sp"></span>
+					<button class="primary" onclick={applySize}>OK</button>
+					<button
+						onclick={() => {
+							sizeDlg = null;
+							wrap.focus();
+						}}>Annuler</button
+					>
+				</div>
+			</div>
+		{/if}
 		{#if editing && (completion?.where === 'cell' || sig?.where === 'cell')}
 			<div
 				class="suggest"
@@ -4634,7 +5442,11 @@
 				onkeydown={onEditorKey}
 				onblur={() => {
 					completion = sig = null;
-					commit();
+					// Saisie refusée (liste déroulante) quand le focus part ailleurs : abandonnée, le message reste.
+					if (!commit()) {
+						editing = false;
+						schedule();
+					}
 				}}
 				title={(() => {
 					const e = tableAt(active.row, active.col);
@@ -5180,6 +5992,80 @@
 		border: none;
 		border-top: 1px solid #e3e5e8;
 		margin: 4px 0;
+	}
+	.menu .keys {
+		float: right;
+		color: #6b7280;
+		font-size: 12px;
+		margin-left: 16px;
+	}
+	.list-menu {
+		min-width: 140px;
+		max-height: 260px;
+		overflow: auto;
+	}
+	.list-menu button.on {
+		background: #d3e7dc;
+	}
+	.valid-dlg {
+		width: 420px;
+		min-width: 0;
+	}
+	.valid-dlg .menu-note {
+		max-width: none;
+	}
+	.valid-dlg textarea,
+	.note-dlg textarea {
+		flex: 1;
+		font: inherit;
+		padding: 4px 6px;
+		border: 1px solid #c9cdd2;
+		border-radius: 3px;
+		resize: vertical;
+	}
+	.note-dlg {
+		position: absolute;
+		z-index: 6;
+		width: 250px;
+		background: #fffbe6;
+		border: 1px solid #d6c27a;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+		padding: 6px 0;
+	}
+	.note-dlg .add,
+	.note-dlg .foot {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 3px 8px;
+	}
+	.note-dlg .sp {
+		flex: 1;
+	}
+	.note-dlg button {
+		font: inherit;
+		padding: 2px 8px;
+		border: 1px solid #c9cdd2;
+		background: #fff;
+		border-radius: 3px;
+		cursor: pointer;
+	}
+	.note-dlg button.primary {
+		background: #217346;
+		border-color: #217346;
+		color: #fff;
+	}
+	.note-tip {
+		position: absolute;
+		z-index: 6;
+		max-width: 240px;
+		padding: 5px 8px;
+		background: #fffbe6;
+		border: 1px solid #d6c27a;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+		white-space: pre-wrap;
+		pointer-events: none;
+		font-size: 12px;
 	}
 	.editor {
 		position: absolute;

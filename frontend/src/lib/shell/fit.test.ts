@@ -21,6 +21,30 @@ describe('ruban adaptatif', () => {
 	it('replie tout quand il ne reste presque rien', () => {
 		expect(fit(groups, 100)).toEqual(['collapsed', 'collapsed', 'collapsed', 'collapsed']);
 	});
+	it('Styles, Cellules et Édition gardent leurs libellés à 1280 px (ruban Accueil)', () => {
+		const accueil: GroupShape[] = [
+			{ title: 'Annuler', labels: ['Annuler', 'Rétablir'], iconOk: true },
+			{ title: 'Presse-papiers', labels: ['Coller', 'Couper', 'Copier', 'Reproduire'], iconOk: true },
+			{ title: 'Police', labels: [134, 'Gras', 'Italique', 'Souligné', null, null, 'Effacer'], iconOk: true },
+			{ title: 'Bordures', labels: ['Toutes', 'Contour', 'Aucune'], iconOk: true },
+			{ title: 'Alignement', labels: ['Haut', 'Milieu', 'Bas', 'Gauche', 'Centrer', 'Droite', 'Renvoyer à la ligne', 'Fusionner et centrer'], iconOk: true },
+			{ title: 'Nombre', labels: ['0,00', 'Monétaire', 'Pourcentage', 'Date', 'Standard', 'Ajouter une décimale', 'Réduire les décimales'], iconOk: true },
+			{ title: 'Styles', labels: ['Mise en forme conditionnelle'] },
+			{ title: 'Cellules', labels: ['Insérer', 'Supprimer', 'Format'] },
+			{ title: 'Édition', labels: ['Trier A → Z', 'Rechercher', 'Remplacer'] }
+		];
+		for (const width of [1256, 1180]) {
+			const m = fit(accueil, width);
+			expect(m.slice(6).every((x) => x === 'large' || x === 'small')).toBe(true);
+			expect(accueil.reduce((s, g, i) => s + groupWidth(g, m[i]), 0)).toBeLessThanOrEqual(width);
+		}
+	});
+
+	it('une liste de largeur fixe compte pour sa largeur', () => {
+		const g: GroupShape = { title: 'Police', labels: [134, 'Gras'] };
+		expect(groupWidth(g, 'icon')).toBe(134 + 2 + 28 + 2 + 17);
+	});
+
 	it('chaque mode est plus étroit que le précédent', () => {
 		for (const g of groups) {
 			expect(groupWidth(g, 'small')).toBeLessThanOrEqual(groupWidth(g, 'large'));
