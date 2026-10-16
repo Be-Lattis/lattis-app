@@ -27,6 +27,7 @@
 	import Icon from '#lib/icons/Icon.svelte';
 	import { drawIcon } from '#lib/icons/canvas.js';
 	import { apply as applySuggestion, signature, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
+	import { checkFormula, closeParens, editorWidth, formulaRefs, highlightParts, isFormula, rangeRef, refRect, serverErrorPos, type FormulaError, type RefTable } from './formulaEdit';
 	import {
 		isErrorValue,
 		valueAlignment,
@@ -600,7 +601,9 @@
 	let wrap: HTMLDivElement;
 	let scroller: HTMLDivElement;
 	let canvas: HTMLCanvasElement;
-	let input = $state<HTMLInputElement>();
+	let input = $state<HTMLTextAreaElement>();
+	// Champ de saisie : éditeur de cellule (zone de texte qui passe à la ligne) ou barre de formule.
+	type TextField = HTMLInputElement | HTMLTextAreaElement;
 	let ctx: CanvasRenderingContext2D;
 	let mounted = false;
 
@@ -621,20 +624,28 @@
 	let editValueText = $state('');
 	let fxText = $state('');
 	let fxInput = $state<HTMLInputElement>();
+	// Faute de syntaxe d'une formule refusée à la validation : l'éditeur reste
+	// ouvert, le caractère fautif est souligné.
+	let editErr = $state<FormulaError | null>(null);
+	// Hauteur de l'éditeur de cellule (il passe à la ligne quand il ne peut plus s'élargir).
+	let editorH = $state(22);
+	let fxScroll = $state(0);
 
 	// Aide à la saisie des formules (éditeur de cellule ou barre de formule).
 	let completion = $state<(Completion & { sel: number; where: 'cell' | 'fx' }) | null>(null);
 	let sig = $state<{ fn: FunctionDoc; index: number; where: 'cell' | 'fx' } | null>(null);
 	let suggestPos = $state({ x: 0, y: 0 });
 
-	function onFormulaInput(el: HTMLInputElement, where: 'cell' | 'fx') {
+	function onFormulaInput(el: TextField, where: 'cell' | 'fx') {
+		editErr = null;
 		if (where === 'cell') {
 			fxText = el.value;
+			placeEditor();
 			// Une formule se lit de gauche à droite, quelle que soit la colonne.
 			if (el.value.startsWith('=')) el.style.textAlign = 'left';
 		}
 		if (!catalog) return;
-		suggestPos = { x: MARGIN + colAxis.offset(active.col) - scroller.scrollLeft, y: TOP_H + rowTop(active.row + 1) - vs.top + 2 };
+		suggestPos = { x: MARGIN + colAxis.offset(active.col) - scroller.scrollLeft, y: TOP_H + rowTop(active.row) - vs.top + Math.max(editorH, rh(active.row)) + 2 };
 		const caret = el.selectionStart ?? el.value.length;
 		const e = tableAt(active.row, active.col);
 		const c = suggest(el.value, caret, catalog, e?.t.name);
@@ -646,13 +657,13 @@
 	/** Le curseur bouge sans saisie (flèches, clic) : l'argument en gras suit. */
 	function moveSig(e: Event, where: 'cell' | 'fx') {
 		if (!catalog || (e instanceof KeyboardEvent && !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key))) return;
-		const el = e.currentTarget as HTMLInputElement;
+		const el = e.currentTarget as TextField;
 		const s = signature(el.value, el.selectionStart ?? el.value.length, catalog);
 		sig = s ? { ...s, where } : null;
 	}
 
 	/** Gère les touches de la liste de suggestions ; vrai si la touche est consommée. */
-	function completionKey(e: KeyboardEvent, el: HTMLInputElement, set: (v: string) => void): boolean {
+	function completionKey(e: KeyboardEvent, el: TextField, set: (v: string) => void): boolean {
 		if (!completion) return false;
 		const c = completion;
 		switch (e.key) {
@@ -713,9 +724,12 @@
 	});
 	$effect(() => {
 		void fxText;
-		if (fxEditing) untrack(() => schedule());
+		// Pendant la saisie : aperçu dans la cellule, cadres des références.
+		if (fxEditing || editing) untrack(() => schedule());
 	});
 
+	// Barre de formule : une formule y est colorée comme dans l'éditeur.
+	const fxHl = $derived(isFormula(fxText));
 	const formulaMode = $derived((editing && editValueText.trimStart().startsWith('=')) || (fxEditing && fxText.trimStart().startsWith('=')));
 	const a1 = $derived(headings || formulaMode);
 
@@ -1097,6 +1111,26 @@
 			ctx.strokeStyle = C.active;
 			ctx.lineWidth = 2;
 			ctx.strokeRect(cx(c0 + dc) + 1, ry(r0 + dr) + 1, spanW(c0 + dc, c1 + dc) - 2, rspan(r0 + dr, r1 + dr) - 2);
+			ctx.restore();
+		}
+		// Saisie d'une formule : chaque référence encadrée de sa couleur, comme
+		// dans l'éditeur (Excel).
+		if (formulaMode) {
+			const here = tableAt(active.row, active.col);
+			const tables = refTables();
+			const at = here && active.row > here.t.row ? { table: tables[entries.indexOf(here)], row: active.row } : undefined;
+			ctx.save();
+			ctx.lineWidth = 2;
+			for (const f of formulaRefs(editing ? editValueText : fxText)) {
+				const k = refRect(f.text, tables, '', at);
+				if (!k || k.r1 < r0 - 1 || k.r0 > r1 + 1) continue;
+				ctx.strokeStyle = f.color;
+				ctx.fillStyle = f.color + '14';
+				const x = cx(k.c0) + 1;
+				const y = ry(k.r0) + 1;
+				ctx.fillRect(x, y, spanW(k.c0, k.c1) - 2, rspan(k.r0, k.r1) - 2);
+				ctx.strokeRect(x, y, spanW(k.c0, k.c1) - 2, rspan(k.r0, k.r1) - 2);
+			}
 			ctx.restore();
 		}
 		// Cellule active.
@@ -2743,7 +2777,7 @@
 		const hd = boundaryAt(e) === null && rowBoundaryAt(e) === null ? headerAt(e) : null;
 		if (hd && e.button !== 1) {
 			e.preventDefault();
-			if (editing) commit();
+			if (editing && !commit()) return;
 			wrap.focus();
 			// Clic droit dans la sélection : on la garde.
 			if (e.button === 2 && (hd.kind === 'rows' ? inSelection(hd.row, active.col) : inSelection(active.row, hd.col))) return;
@@ -2786,10 +2820,12 @@
 		if (!cell) return;
 		if (e.button === 0 && formulaMode && insertRef(cell)) {
 			e.preventDefault();
+			// Glisser ensuite insère une plage (Cell[A1:B3], Tableau[Col][1:3]…).
+			refDrag = { from: cell, to: cell };
 			return;
 		}
-		if (editing) commit();
 		e.preventDefault();
+		if (editing && !commit()) return;
 		// Clic droit dans la sélection : elle reste (le menu porte sur elle).
 		if (e.button === 2 && inSelection(cell.row, cell.col)) return;
 		if (e.button === 0 && openTypeMenu(e, cell)) return;
@@ -2799,7 +2835,7 @@
 	}
 
 	// Dernière référence insérée au clic : un autre clic la remplace (comme Excel).
-	let lastRef: { el: HTMLInputElement; start: number; end: number; value: string } | null = null;
+	let lastRef: { el: TextField; start: number; end: number; value: string } | null = null;
 
 	/**
 	 * Référence d'une cellule dans une formule (nomenclature de Slitable) :
@@ -2828,7 +2864,7 @@
 	}
 
 	/** Pendant la saisie d'une formule, insère la référence de la cellule cliquée au curseur. */
-	function insertRef(cell: { row: number; col: number }): boolean {
+	function insertRef(cell: { row: number; col: number }, text?: string): boolean {
 		const el = editing ? input : fxEditing ? fxInput : null;
 		if (!el) return false;
 		const v = el.value;
@@ -2836,8 +2872,8 @@
 		let start = pos;
 		if (lastRef && lastRef.el === el && lastRef.end === pos && lastRef.value === v) start = lastRef.start;
 		else if (!/[=(;,+*/^&<>:-]$/.test(v.slice(0, pos).trimEnd())) return false;
-		if (editing && cell.row === active.row && cell.col === active.col) return false;
-		const ref = refFor(cell.row, cell.col);
+		if (text === undefined && editing && cell.row === active.row && cell.col === active.col) return false;
+		const ref = text ?? refFor(cell.row, cell.col);
 		const next = v.slice(0, start) + ref + v.slice(pos);
 		if (editing) editValueText = next;
 		else fxText = next;
@@ -2849,7 +2885,55 @@
 		return true;
 	}
 
+	// Glissé en mode formule depuis une référence insérée : la plage couverte.
+	let refDrag: { from: { row: number; col: number }; to: { row: number; col: number } } | null = null;
+
+	/** Tableaux de la feuille, pour situer et écrire les références. */
+	function refTables(): RefTable[] {
+		return entries.map((e) => ({
+			name: e.t.name,
+			row: e.t.row,
+			col: e.t.col,
+			columns: e.t.columns.map((c) => c.name),
+			rows: e.t.rows,
+			keyed: e.t.key !== undefined,
+			keyRow: (k: string) => {
+				if (e.t.key === undefined) return undefined;
+				for (let n = 0; n < e.t.rows; n++) {
+					const v = e.cache.row(n)?.text[e.t.key];
+					if (v !== undefined && (v === k || v.replace(/\s/g, '') === k)) return n;
+				}
+				return undefined;
+			}
+		}));
+	}
+
+	/** Plage glissée en mode formule : sa référence remplace celle insérée au clic. */
+	function dragRef(cell: { row: number; col: number }) {
+		if (!refDrag || (cell.row === refDrag.to.row && cell.col === refDrag.to.col)) return;
+		refDrag.to = cell;
+		const { from } = refDrag;
+		const here = tableAt(active.row, active.col);
+		const tables = refTables();
+		const hereT = here && active.row > here.t.row ? tables[entries.indexOf(here)] : undefined;
+		const text =
+			from.row === cell.row && from.col === cell.col
+				? refFor(cell.row, cell.col)
+				: rangeRef({ r0: from.row, c0: from.col, r1: cell.row, c1: cell.col }, tables, hereT);
+		if (text === null) {
+			say('Une plage ne peut couvrir qu’une seule colonne d’un tableau : glissez dans une colonne, ou sur des cellules libres');
+			return;
+		}
+		insertRef(cell, text);
+		schedule();
+	}
+
 	function onMouseMove(e: MouseEvent) {
+		if (refDrag) {
+			const cell = cellAt(e);
+			if (cell) dragRef(cell);
+			return;
+		}
 		if (rowResizing) {
 			rowResizing.height = Math.max(12, Math.round(rowResizing.startH + e.clientY - rowResizing.startY));
 			rebuildRows({ row: rowResizing.row, height: rowResizing.height });
@@ -3078,10 +3162,26 @@
 		if (!input) return;
 		const x = MARGIN + colAxis.offset(active.col) - scroller.scrollLeft;
 		const y = TOP_H + rowTop(active.row) - vs.top;
-		input.style.transform = `translate(${x}px, ${y}px)`;
-		input.style.width = `${Math.max(colAxis.size(active.col), 80)}px`;
+		const box = input.parentElement!;
+		box.style.transform = `translate(${x}px, ${y}px)`;
+		// Comme Excel : l'éditeur s'élargit vers la droite tant que les cellules
+		// voisines sont vides, puis passe à la ligne.
+		const row = active.row;
+		const longest = Math.max(...input.value.split('\n').map((l) => textWidth(l)));
+		const width = editorWidth(
+			longest + 16,
+			active.col,
+			(c) => colAxis.size(c),
+			(c) => !tableAt(row, c) && !cells.has(key(row, c)),
+			Math.max(80, viewW - x - 4)
+		);
+		box.style.width = `${Math.max(width, 80)}px`;
+		input.style.height = '0px';
+		editorH = Math.max(rh(row), input.scrollHeight + 4);
+		input.style.height = '';
+		box.style.height = `${editorH}px`;
 		const e = tableAt(active.row, active.col);
-		input.style.textAlign = e && active.row > e.t.row ? alignment(e.t.columns[active.col - e.t.col].type) : 'left';
+		input.style.textAlign = !isFormula(input.value) && e && active.row > e.t.row ? alignment(e.t.columns[active.col - e.t.col].type) : 'left';
 	}
 
 	// Les saisies partent l'une après l'autre : la suivante peut dépendre de
@@ -3108,24 +3208,87 @@
 			} else message = m ?? '';
 		} catch (e) {
 			message = String(e instanceof Error ? e.message : e);
+			// Formule refusée : la saisie n'est pas perdue, l'éditeur se rouvre.
+			const k = message.indexOf('formule : ');
+			if (k >= 0) {
+				const msg = message.slice(k);
+				queueMicrotask(() => reopenFormula(row, col, raw, msg));
+			}
 		}
 		refreshFx();
 		refreshStatus();
 		schedule();
 	}
 
-	function commit() {
-		if (!editing) return;
+	/**
+	 * Valide la saisie ; faux si une formule a une faute de syntaxe : l'éditeur
+	 * reste alors ouvert sur le texte tapé, la faute soulignée et expliquée
+	 * (les parenthèses oubliées en fin de formule sont fermées d'office).
+	 */
+	function commit(): boolean {
+		if (!editing) return true;
+		if (isFormula(editValueText)) {
+			const text = closeParens(editValueText);
+			const err = checkFormula(text);
+			if (err) {
+				showFormulaError(err);
+				return false;
+			}
+			editValueText = text;
+		}
 		editing = false;
+		editErr = null;
 		const { row, col } = active;
 		if (editValueText !== cellInfo(row, col).value) write(row, col, editValueText);
 		wrap.focus();
+		return true;
+	}
+
+	/** Montre une faute de formule dans l'éditeur ouvert : message, caractère sélectionné. */
+	function showFormulaError(err: FormulaError) {
+		editErr = err;
+		say(`Formule : ${err.msg}`);
+		const el = input;
+		if (!el) return;
+		requestAnimationFrame(() => {
+			el.focus();
+			el.setSelectionRange(err.pos, Math.max(err.end, err.pos));
+		});
+	}
+
+	/**
+	 * Une formule refusée par le serveur (fonction mal employée, plage
+	 * impossible…) : l'éditeur se rouvre sur le texte tapé, si l'utilisateur
+	 * n'a pas commencé autre chose.
+	 */
+	function reopenFormula(row: number, col: number, raw: string, msg: string) {
+		if (editing || fxEditing || !isFormula(raw)) return;
+		moveTo(row, col);
+		startEdit(true, raw);
+		const pos = serverErrorPos(raw, msg);
+		const text = msg.replace(/^formule : (position \d+ : )?/, '');
+		if (pos !== null) showFormulaError({ pos, end: pos + 1, msg: text });
+		else say(`Formule : ${text}`);
 	}
 
 	function cancel() {
 		editing = false;
+		editErr = null;
+		refreshFx();
 		wrap.focus();
 		schedule();
+	}
+
+	/** ↑ / ↓ dans une formule : curseur au début ou à la fin du texte (Maj : sélection jusque-là). */
+	function caretToEdge(end: boolean, extend: boolean) {
+		const el = input;
+		if (!el) return;
+		const n = el.value.length;
+		if (!extend) el.setSelectionRange(end ? n : 0, end ? n : 0);
+		else if (end) el.setSelectionRange(el.selectionStart ?? 0, n, 'forward');
+		else el.setSelectionRange(0, el.selectionEnd ?? n, 'backward');
+		const s = catalog ? signature(el.value, el.selectionStart ?? n, catalog) : null;
+		sig = s ? { ...s, where: 'cell' } : null;
 	}
 
 	async function clearSelection(range = selection()) {
@@ -3179,12 +3342,10 @@
 		const { row, col } = active;
 		switch (e.key) {
 			case 'Enter':
-				commit();
-				enterMove(e.shiftKey);
+				if (commit()) enterMove(e.shiftKey);
 				break;
 			case 'Tab':
-				commit();
-				tabMove(e.shiftKey);
+				if (commit()) tabMove(e.shiftKey);
 				break;
 			case 'Escape':
 				cancel();
@@ -3193,6 +3354,14 @@
 			case 'ArrowUp':
 			case 'ArrowLeft':
 			case 'ArrowRight':
+				// Formule : les flèches déplacent le curseur dans le texte (← → d'un
+				// caractère, Ctrl d'un mot, ↑ ↓ au début et à la fin, Maj pour
+				// sélectionner) ; seuls Entrée, Tab et le clic ailleurs valident.
+				if (isFormula(editValueText) || editValueText.trimStart() === '=') {
+					if (e.key === 'ArrowUp' || e.key === 'ArrowDown') caretToEdge(e.key === 'ArrowDown', e.shiftKey);
+					else return;
+					break;
+				}
 				if (!editByTyping) return;
 				commit();
 				moveTo(
@@ -3212,9 +3381,23 @@
 		e.stopPropagation();
 		if (e.key === 'Escape') {
 			fxEditing = false;
+			editErr = null;
 			refreshFx();
 			wrap.focus();
 		} else if (e.key === 'Enter') {
+			if (isFormula(fxText)) {
+				const text = closeParens(fxText);
+				const err = checkFormula(text);
+				if (err) {
+					editErr = err;
+					say(`Formule : ${err.msg}`);
+					fxInput?.setSelectionRange(err.pos, Math.max(err.end, err.pos));
+					e.preventDefault();
+					return;
+				}
+				fxText = text;
+			}
+			editErr = null;
 			fxEditing = false;
 			const { row, col } = active;
 			if (fxText !== cellInfo(row, col).value) write(row, col, fxText);
@@ -3843,6 +4026,7 @@
 		resize();
 		scroller.addEventListener('wheel', onWheel, { passive: false });
 		const up = () => {
+			refDrag = null;
 			if (dragging && painter) applyPainter();
 			dragging = false;
 			headerDrag = null;
@@ -3923,6 +4107,9 @@
 	{/if}
 {/snippet}
 
+<!-- Formule colorée (références, faute soulignée), sur une seule ligne : le texte est affiché tel quel (pre-wrap). -->
+{#snippet coloured(text: string)}{#each highlightParts(text, formulaRefs(text), editErr) as p, i (i)}{#if p.err}<span class="hl-err">{p.text}</span>{:else if p.color}<span style:color={p.color}>{p.text}</span>{:else}{p.text}{/if}{/each}{'​'}{/snippet}
+
 {#snippet suggestions(where: 'cell' | 'fx')}
 	{#if sig?.where === where}
 		{@const sp = signatureParts(sig.fn, sig.index)}
@@ -3988,13 +4175,26 @@
 			/>
 		{/if}
 		<span class="fx">fx</span>
+		<div class="fx-wrap">
+		{#if fxHl}
+			<!-- Formule : références colorées sous la saisie (transparente), défilement suivi. -->
+			<div class="fx-hl" aria-hidden="true" style:transform="translateX({-fxScroll}px)">{@render coloured(fxText)}</div>
+		{/if}
 		<input
 			class="fx-input"
+			class:hl={fxHl}
 			bind:this={fxInput}
 			bind:value={fxText}
-			oninput={(e) => onFormulaInput(e.currentTarget, 'fx')}
-			onkeyup={(e) => moveSig(e, 'fx')}
+			oninput={(e) => {
+				onFormulaInput(e.currentTarget, 'fx');
+				fxScroll = e.currentTarget.scrollLeft;
+			}}
+			onkeyup={(e) => {
+				moveSig(e, 'fx');
+				fxScroll = e.currentTarget.scrollLeft;
+			}}
 			onclick={(e) => moveSig(e, 'fx')}
+			onscroll={(e) => (fxScroll = e.currentTarget.scrollLeft)}
 			readonly={!!locked}
 			onfocus={() => {
 				if (locked) say(locked);
@@ -4008,6 +4208,7 @@
 			}}
 			spellcheck="false"
 		/>
+		</div>
 	</div>
 	{#if bench}<div class="bench">{bench}</div>{/if}
 	{#if completion?.where === 'fx' || sig?.where === 'fx'}
@@ -4624,23 +4825,33 @@
 			</div>
 		{/if}
 		{#if editing}
-			<input
-				class="editor"
-				bind:this={input}
-				bind:value={editValueText}
-				oninput={(e) => onFormulaInput(e.currentTarget, 'cell')}
-				onkeyup={(e) => moveSig(e, 'cell')}
-				onclick={(e) => moveSig(e, 'cell')}
-				onkeydown={onEditorKey}
-				onblur={() => {
-					completion = sig = null;
-					commit();
-				}}
-				title={(() => {
-					const e = tableAt(active.row, active.col);
-					return e ? typeLabel(e.t.columns[active.col - e.t.col].type) : 'Cellule libre';
-				})()}
-			/>
+			{@const hl = isFormula(editValueText)}
+			<div class="editor-box">
+				{#if hl}
+					<!-- Formule : texte coloré sous la zone de saisie (transparente). -->
+					<div class="editor-hl" aria-hidden="true">{@render coloured(editValueText)}</div>
+				{/if}
+				<textarea
+					class="editor"
+					class:hl
+					rows="1"
+					spellcheck="false"
+					bind:this={input}
+					bind:value={editValueText}
+					oninput={(e) => onFormulaInput(e.currentTarget, 'cell')}
+					onkeyup={(e) => moveSig(e, 'cell')}
+					onclick={(e) => moveSig(e, 'cell')}
+					onkeydown={onEditorKey}
+					onblur={() => {
+						completion = sig = null;
+						commit();
+					}}
+					title={(() => {
+						const e = tableAt(active.row, active.col);
+						return e ? typeLabel(e.t.columns[active.col - e.t.col].type) : 'Cellule libre';
+					})()}
+				></textarea>
+			</div>
 		{/if}
 	</div>
 	{#if panel?.kind === 'pivot'}
@@ -5181,18 +5392,75 @@
 		border-top: 1px solid #e3e5e8;
 		margin: 4px 0;
 	}
-	.editor {
+	/* Éditeur de cellule : il s'élargit vers la droite sur les cellules vides,
+	   puis passe à la ligne (placeEditor) ; une formule y est colorée par un
+	   calque de texte sous la zone de saisie transparente. */
+	.editor-box {
 		position: absolute;
 		left: 0;
 		top: 0;
 		height: 22px;
 		box-sizing: border-box;
 		border: 2px solid #217346;
-		padding: 0 4px;
-		font: 13px 'Segoe UI', system-ui, -apple-system, sans-serif;
-		outline: none;
 		background: #fff;
 		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 		z-index: 2;
+	}
+	.editor,
+	.editor-hl {
+		position: absolute;
+		inset: 0;
+		box-sizing: border-box;
+		margin: 0;
+		border: 0;
+		padding: 0 4px;
+		font: 13px 'Segoe UI', system-ui, -apple-system, sans-serif;
+		line-height: 18px;
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+		overflow: hidden;
+	}
+	.editor {
+		width: 100%;
+		height: 100%;
+		resize: none;
+		outline: none;
+		background: transparent;
+		color: #1f2328;
+	}
+	.editor.hl,
+	.fx-input.hl {
+		color: transparent;
+		caret-color: #1f2328;
+	}
+	.editor-hl {
+		color: #1f2328;
+		pointer-events: none;
+	}
+	.hl-err {
+		text-decoration: underline wavy #c8302c;
+		text-decoration-skip-ink: none;
+		background: rgba(200, 48, 44, 0.12);
+	}
+	.fx-wrap {
+		position: relative;
+		flex: 1;
+		display: flex;
+		overflow: hidden;
+	}
+	.fx-hl {
+		position: absolute;
+		left: 0;
+		top: 0;
+		bottom: 0;
+		padding: 4px 2px;
+		white-space: pre;
+		font: inherit;
+		color: #1f2328;
+		pointer-events: none;
+	}
+	.fx-input.hl {
+		background: transparent;
+		position: relative;
 	}
 </style>
