@@ -176,9 +176,6 @@ func cellA1(l Locator, sheet string, row, col int) (Node, error) {
 		return ref, nil // en-tête : toute la colonne
 	}
 	k := row - t.Row
-	if key, ok := l.Key(t.Name, k); ok {
-		return Call{Fn: "ITEM", Args: []Node{ref, key}}, nil
-	}
 	return Call{Fn: "ITEM", Args: []Node{ref, NumLit{float64(k)}}}, nil
 }
 

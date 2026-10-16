@@ -100,8 +100,9 @@ func A1Address(text string) (sheet string, row, col int, ok bool) {
 	return sheet, row, col, ok
 }
 
-// itemCall traduit Tableau[Col][k] : par la clé si le tableau en a une
-// (stable au tri), sinon par le rang de la ligne (1 = première).
+// itemCall traduit Tableau[Col][k] : la k-ième ligne de données dans l'ordre
+// d'affichage (1 = première), même si le tableau a une clé (choix de Louis,
+// 17/10/2026 : tout par rang ; REFERENCE reste la recherche par la clé).
 // Sans nom de tableau ([Col][k]), c'est le tableau de la formule (cur).
 func itemCall(n Call, s *Schema, cur *Table) (Call, bool) {
 	if len(n.Args) != 2 {
@@ -116,9 +117,6 @@ func itemCall(n Call, s *Schema, cur *Table) (Call, bool) {
 			return Call{}, false
 		}
 		ref.Table = cur.Name
-	}
-	if t, ok := s.Table(ref.Table); ok && t.Key != "" {
-		return Call{Fn: "REFERENCE", Args: []Node{Name{t.Name}, StrLit{ref.Col}, n.Args[1]}}, true
 	}
 	return Call{Fn: "INDEX", Args: []Node{Ref{Table: ref.Table, Col: ref.Col}, n.Args[1]}}, true
 }

@@ -3640,12 +3640,9 @@
 		if (r === e.t.row) return `${e.t.name}[${col}]`;
 		// Même ligne du tableau de la formule : la valeur de la ligne.
 		if (same && r === active.row) return `[${col}]`;
-		// Une autre ligne : par sa clé si le tableau en a une (stable au tri),
-		// sinon par son rang (1 = première ligne de données).
-		const n = r - e.t.row - 1;
-		const k = e.t.key !== undefined ? e.cache.row(n)?.text[e.t.key] : undefined;
-		let item = String(n + 1);
-		if (k !== undefined && k !== '') item = isNumeric(k) ? k.replace(/[\s\u00a0\u202f]/g, '') : `"${k.replaceAll('"', '""')}"`;
+		// Une autre ligne : par son rang (1 = première ligne de données), même si
+		// le tableau a une clé (choix de Louis : tout par rang).
+		const item = String(r - e.t.row);
 		return same ? `[${col}][${item}]` : `${e.t.name}[${col}][${item}]`;
 	}
 
@@ -3682,7 +3679,7 @@
 			col: e.t.col,
 			columns: e.t.columns.map((c) => c.name),
 			rows: e.t.rows,
-			keyed: e.t.key !== undefined,
+			keyed: false, // [k] est toujours un rang
 			keyRow: (k: string) => {
 				if (e.t.key === undefined) return undefined;
 				for (let n = 0; n < e.t.rows; n++) {

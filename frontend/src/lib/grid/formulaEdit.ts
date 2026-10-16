@@ -262,7 +262,7 @@ class Checker {
 		throw this.missing(t);
 	}
 
-	/** [ligne ou clé] après une colonne : une expression, ou une plage de rangs 1:3. */
+	/** [ligne] après une colonne : une expression, ou une plage de rangs 1:3. */
 	item() {
 		if (this.peek().k !== 'ref') return;
 		const kt = this.next();
@@ -274,7 +274,7 @@ class Checker {
 		}
 		const sub = new Checker(lex(kt.text, kt.pos + 1, this.sep), this.sep);
 		sub.comparison();
-		if (sub.peek().k !== 'eof') throw new SyntaxErr(kt.pos, kt.end, 'ligne ou clé attendue entre crochets');
+		if (sub.peek().k !== 'eof') throw new SyntaxErr(kt.pos, kt.end, 'ligne attendue entre crochets');
 	}
 
 	call(name: Tok) {

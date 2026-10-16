@@ -15,15 +15,15 @@ Décidée par Louis le 16/10/2026. Pas de `@`.
 | Écriture | Désigne |
 |---|---|
 | `[Colonne]` | Dans un tableau : la valeur de la colonne pour la ligne de la formule |
-| `[Colonne][ligne ou clé]` | Dans un tableau : la valeur de la colonne à une autre ligne du même tableau |
+| `[Colonne][ligne]` | Dans un tableau : la valeur de la colonne à une autre ligne du même tableau, par rang |
 | `Tableau[Colonne]` | Toute la colonne (hors du tableau, ou dans un agrégat) |
-| `Tableau[Colonne][ligne ou clé]` | Une valeur du tableau : par la valeur de la clé si le tableau en a une (stable au tri), sinon par le rang de la ligne (1 = première ligne de données) |
+| `Tableau[Colonne][ligne]` | Une valeur du tableau, par le rang de la ligne dans l'ordre d'affichage (1 = première ligne de données), même si le tableau a une clé ; pour chercher par la clé : `REFERENCE(Tableau; Colonne; clé)` |
 | `Cell[A1]` | La cellule libre A1 de la feuille de la formule (pour une colonne calculée : la feuille du tableau) ; dans l'onglet SQL, de la feuille affichée |
 | `Feuille1!Cell[A1]`, `'Ma feuille'!Cell[A1]` | La cellule libre A1 d'une autre feuille |
 | `Tableau[Colonne][1:3]`, `[Colonne][1:3]` | Les lignes 1 à 3 d'une colonne, **par rang d'affichage** (1 = première ligne de données), que le tableau ait une clé ou non |
 | `Cell[C14:C16]`, `Feuille1!Cell[A1:B3]` | Une plage rectangulaire de cellules libres (10 000 cellules au plus) |
 
-La ligne ou la clé entre crochets est une expression : `Ventes[Prix][Cell[B1]]`. Les formes d'Excel `[@Colonne]` et les anciennes `Cell_A1` / `Feuille1.Cell_A1` restent lues et s'affichent dans la nouvelle écriture. En mode formule, un clic sur une cellule insère sa référence dans cette nomenclature ; un glissé insère une plage (`Cell[C14:C16]`, `Tableau[Colonne][1:3]`, ou `Tableau[Colonne]` s'il couvre toute la colonne). Insérer, supprimer ou déplacer des lignes, colonnes ou cellules met à jour les `Cell[…]` et les plages `Cell[…:…]` (une plage s'agrandit si l'on insère dedans, se réduit si l'on en supprime une partie) ; une cellule ou une plage entièrement supprimée devient `#REF!`. Les plages de lignes `Tableau[Colonne][1:3]` gardent leurs rangs.
+Tout se compte par rang (choix de Louis, 17/10/2026) : un tri change donc la ligne désignée, comme dans Excel. La ligne entre crochets est une expression : `Ventes[Prix][Cell[B1]]`. Les formes d'Excel `[@Colonne]` et les anciennes `Cell_A1` / `Feuille1.Cell_A1` restent lues et s'affichent dans la nouvelle écriture. En mode formule, un clic sur une cellule insère sa référence dans cette nomenclature ; un glissé insère une plage (`Cell[C14:C16]`, `Tableau[Colonne][1:3]`, ou `Tableau[Colonne]` s'il couvre toute la colonne). Insérer, supprimer ou déplacer des lignes, colonnes ou cellules met à jour les `Cell[…]` et les plages `Cell[…:…]` (une plage s'agrandit si l'on insère dedans, se réduit si l'on en supprime une partie) ; une cellule ou une plage entièrement supprimée devient `#REF!`. Les plages de lignes `Tableau[Colonne][1:3]` gardent leurs rangs.
 
 Les plages se lisent comme une colonne dans les agrégats (`SOMME`, `MOYENNE`, `NB`, `NBVAL`, `MAX`, `MIN`…) et dans les fonctions qui parcourent des plages (`SOMME.SI`, `NB.SI`, `SOMMEPROD`, `EQUIV`…), seules ou dans une expression (`SOMME(Cell[A1:A3]*Cell[B1:B3])`). Des plages lues ensemble doivent avoir la même forme, et une plage ne se mêle pas à une colonne entière (`#VALEUR!`). Hors d'un agrégat, une plage donne `#VALEUR!`.
 

@@ -1762,17 +1762,17 @@ func TestItemReferences(t *testing.T) {
 	if strings.Join(dbl, ",") != "30,50,70" {
 		t.Errorf("[Prix]*2+[Prix][1] : %v", dbl)
 	}
-	// Avec une clé : par la valeur de la clé.
+	// Avec une clé : toujours par le rang (REFERENCE cherche par la clé).
 	if err := d.SetKey(ctx, table, 0); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := d.SetCell(ctx, 1, 8, 0, `=`+table+`[Prix]["c"]`); err != nil {
+	if _, err := d.SetCell(ctx, 1, 8, 0, `=`+table+`[Prix][3]`); err != nil {
 		t.Fatal(err)
 	}
 	l, _ = d.Layout(ctx, 1)
 	for _, c := range l.Cells {
 		if c.Row == 8 && c.Value != "30" {
-			t.Errorf("par la clé : %s", c.Value)
+			t.Errorf("par le rang, tableau à clé : %s", c.Value)
 		}
 	}
 }

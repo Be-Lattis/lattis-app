@@ -38,7 +38,7 @@ func TestConvertA1(t *testing.T) {
 		`='Ma feuille'!C4`:              `='Ma feuille'!Cell[C4]`,
 		`=C3`:                           `=Ventes[Prix][1]`,
 		`=C2`:                           `=Ventes[Prix]`,
-		`=G4`:                           `=Clients[Nom]["C002"]`,
+		`=G4`:                           `=Clients[Nom][2]`,
 		`=TVA1*2`:                       `=TVA1*2`,
 		`=SOMME(A10:A12)`:               `=SOMME(Cell[A10:A12])`,
 		`=SOMME(A10:B10;C4:C5)`:         `=SOMME(Cell[A10:B10]; Ventes[Prix][2:3])`,

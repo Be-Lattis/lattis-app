@@ -25,7 +25,7 @@ export function explainError(code: string, formula = '', cellText?: (row: number
 		case '#NOM?': {
 			const ref = A1.exec(formula)?.[1];
 			if (ref)
-				return `#NOM? : ${ref.toUpperCase()} n'existe pas. Écrivez Cell[${ref.toUpperCase().replaceAll('$', '')}] pour une cellule libre, [Colonne] pour la valeur de la ligne dans un tableau, Tableau[Colonne] pour une colonne entière, ou Tableau[Colonne][ligne ou clé] pour une valeur.`;
+				return `#NOM? : ${ref.toUpperCase()} n'existe pas. Écrivez Cell[${ref.toUpperCase().replaceAll('$', '')}] pour une cellule libre, [Colonne] pour la valeur de la ligne dans un tableau, Tableau[Colonne] pour une colonne entière, ou Tableau[Colonne][ligne] pour une valeur.`;
 			return "#NOM? : nom inconnu. Vérifiez le nom de la fonction, du tableau, de la colonne ou de la cellule nommée.";
 		}
 		case '#VALEUR!': {
@@ -38,7 +38,7 @@ export function explainError(code: string, formula = '', cellText?: (row: number
 			// Les adresses Cell[A1] ne sont pas des colonnes de tableau.
 			const refs = formula.replace(/cell\[[^\]]*\]/giu, '0');
 			if (/[\p{L}\p{N}_]\[[^\]]+\](?!\[)/u.test(refs) && !/^=\s*[\p{L}.]+\(/u.test(refs))
-				return '#VALEUR! : une colonne entière Tableau[Colonne] est utilisée là où une seule valeur est attendue. Écrivez Tableau[Colonne][ligne ou clé], ou [Colonne] dans une ligne du tableau.';
+				return '#VALEUR! : une colonne entière Tableau[Colonne] est utilisée là où une seule valeur est attendue. Écrivez Tableau[Colonne][ligne], ou [Colonne] dans une ligne du tableau.';
 			return '#VALEUR! : type de valeur inattendu (texte là où un nombre est attendu, ou argument invalide).';
 		}
 		case '#DIV/0!':

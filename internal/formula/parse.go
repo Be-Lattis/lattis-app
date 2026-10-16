@@ -411,7 +411,7 @@ func (p *parser) primary() (Node, error) {
 		return Range{t.text}, nil
 	case tRef:
 		ref := parseRef("", t.text)
-		// [Col][ligne ou clé] : une autre ligne du tableau de la formule.
+		// [Col][ligne] : une autre ligne du tableau de la formule.
 		if p.peek().kind == tRef {
 			kt := p.next()
 			if rr, ok, err := rowRange(ref, kt); ok || err != nil {
@@ -462,7 +462,7 @@ func (p *parser) primary() (Node, error) {
 				return nil, &SyntaxError{t.pos, "adresse de cellule invalide : Cell[" + inner + "]"}
 			}
 			ref := parseRef(t.text, inner)
-			// Tableau[Colonne][ligne ou clé] : une valeur du tableau.
+			// Tableau[Colonne][ligne] : une valeur du tableau.
 			if p.peek().kind == tRef {
 				kt := p.next()
 				if rr, ok, err := rowRange(ref, kt); ok || err != nil {
@@ -613,7 +613,7 @@ func parseInner(src string, loc Locale) (Node, error) {
 		return nil, err
 	}
 	if p.peek().kind != tEOF {
-		return nil, fmt.Errorf("ligne ou clé attendue entre crochets")
+		return nil, fmt.Errorf("ligne attendue entre crochets")
 	}
 	return n, nil
 }
