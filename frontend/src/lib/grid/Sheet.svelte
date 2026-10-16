@@ -1489,7 +1489,61 @@
 		});
 	}
 
+	// Sélection de lignes ou de colonnes entières par la marge ou le bandeau.
+	let headerDrag: 'rows' | 'cols' | null = null;
+
+	/** Ligne (marge de gauche) ou colonne (bandeau du haut) sous la souris. */
+	function headerAt(e: MouseEvent): { kind: 'rows'; row: number } | { kind: 'cols'; col: number } | null {
+		const r = scroller.getBoundingClientRect();
+		const x = e.clientX - r.left;
+		const y = e.clientY - r.top;
+		if (x < MARGIN && y >= TOP_H) return { kind: 'rows', row: clamp(Math.floor((y - TOP_H + vs.top) / ROW_H), 0, SHEET_ROWS - 1) };
+		if (y < TOP_H && x >= MARGIN) return { kind: 'cols', col: colAxis.indexAt(x - MARGIN + scroller.scrollLeft) };
+		return null;
+	}
+
+	/** Dernière ligne et colonne de la zone affichée (la sélection entière s'y arrête). */
+	function lastRow() {
+		return Math.max(0, Math.floor(vs.content / ROW_H) - 1);
+	}
+	function lastCol() {
+		return Math.max(0, extentCols - 1);
+	}
+
+	function selectRows(r0: number, r1: number) {
+		anchor = { row: r0, col: 0 };
+		active = { row: r1, col: lastCol() };
+		refreshFx();
+		refreshStatus();
+		schedule();
+	}
+	function selectCols(c0: number, c1: number) {
+		anchor = { row: 0, col: c0 };
+		active = { row: lastRow(), col: c1 };
+		refreshFx();
+		refreshStatus();
+		schedule();
+	}
+
+	/** La cellule est-elle dans la sélection en cours ? */
+	function inSelection(row: number, col: number) {
+		const { r0, r1, c0, c1 } = selection();
+		return row >= r0 && row <= r1 && col >= c0 && col <= c1;
+	}
+
 	function onMouseDown(e: MouseEvent) {
+		const hd = boundaryAt(e) === null ? headerAt(e) : null;
+		if (hd && e.button !== 1) {
+			e.preventDefault();
+			if (editing) commit();
+			wrap.focus();
+			// Clic droit dans la sélection : on la garde.
+			if (e.button === 2 && (hd.kind === 'rows' ? inSelection(hd.row, active.col) : inSelection(active.row, hd.col))) return;
+			if (hd.kind === 'rows') selectRows(e.shiftKey ? anchor.row : hd.row, hd.row);
+			else selectCols(e.shiftKey ? anchor.col : hd.col, hd.col);
+			headerDrag = e.button === 0 ? hd.kind : null;
+			return;
+		}
 		if (e.button === 0 && !editing && onSelectionEdge(e)) {
 			const cell = cellAt(e);
 			if (cell) {
@@ -1508,6 +1562,8 @@
 		if (!cell) return;
 		if (editing) commit();
 		e.preventDefault();
+		// Clic droit dans la sélection : elle reste (le menu porte sur elle).
+		if (e.button === 2 && inSelection(cell.row, cell.col)) return;
 		if (e.button === 0 && openTypeMenu(e, cell)) return;
 		wrap.focus();
 		moveTo(cell.row, cell.col, e.shiftKey);
@@ -1529,7 +1585,19 @@
 			}
 			return;
 		}
-		scroller.style.cursor = source.setColumnWidth && boundaryAt(e) !== null ? 'col-resize' : !dragging && onSelectionEdge(e) ? 'move' : '';
+		if (headerDrag) {
+			const r = scroller.getBoundingClientRect();
+			if (headerDrag === 'rows') {
+				const row = clamp(Math.floor((e.clientY - r.top - TOP_H + vs.top) / ROW_H), 0, SHEET_ROWS - 1);
+				selectRows(anchor.row, row);
+			} else {
+				const col = colAxis.indexAt(Math.max(0, e.clientX - r.left - MARGIN + scroller.scrollLeft));
+				selectCols(anchor.col, col);
+			}
+			return;
+		}
+		scroller.style.cursor =
+			source.setColumnWidth && boundaryAt(e) !== null ? 'col-resize' : !dragging && onSelectionEdge(e) ? 'move' : headerAt(e) ? 'pointer' : '';
 		if (!dragging) return;
 		const cell = cellAt(e);
 		if (!cell) return;
@@ -2061,7 +2129,7 @@
 		if (!cell) return;
 		const e = tableAt(cell.row, cell.col);
 		if (!e) return;
-		if (cell.row !== active.row || cell.col !== active.col) moveTo(cell.row, cell.col);
+		if (!inSelection(cell.row, cell.col)) moveTo(cell.row, cell.col);
 		const r = wrap.getBoundingClientRect();
 		menu = { x: ev.clientX - r.left, y: ev.clientY - r.top, e, n: cell.row - e.t.row - 1, i: cell.col - e.t.col, header: cell.row === e.t.row };
 	}
@@ -2207,6 +2275,7 @@
 		scroller.addEventListener('wheel', onWheel, { passive: false });
 		const up = () => {
 			dragging = false;
+			headerDrag = null;
 			if (moving) dropMove();
 			if (!resizing) return;
 			const { col, width, startW } = resizing;
@@ -2491,6 +2560,10 @@
 				<button onclick={() => menuAction(source.insertColumn && (() => source.insertColumn!(m.e.t, m.i)))}>Insérer une colonne à gauche</button>
 				<button onclick={() => menuAction(source.insertColumn && (() => source.insertColumn!(m.e.t, m.i + 1)))}>Insérer une colonne à droite</button>
 				<button onclick={() => menuAction(source.deleteColumn && (() => source.deleteColumn!(m.e.t, m.i)))}>Supprimer la colonne « {m.e.t.columns[m.i]?.name} »</button>
+				{#if source.deleteTables}
+					<hr />
+					<button onclick={() => menuAction(() => source.deleteTables!([m.e.t]))}>Supprimer le tableau « {m.e.t.name} »</button>
+				{/if}
 			</div>
 		{/if}
 		{#if pivotDlg}
