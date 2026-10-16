@@ -203,9 +203,13 @@
 								{@const kind = c.color}
 								<div class="color-cmd">
 									<button class="cmd" disabled={!c.run} onclick={c.run} title={c.hint}>
-										<Icon name={c.icon} />
-										<span class="bar" style:background={kind === 'fg' ? fg : bg}></span>
-										<span class="label">{c.label}</span>
+										<!-- La lettre montre l'effet : couleur du texte, ou fond rempli. -->
+										<span
+											class="swatch-icon"
+											style:color={kind === 'fg' ? fg : '#1f2328'}
+											style:background={kind === 'bg' ? bg : 'transparent'}
+											aria-label={c.label}>A</span
+										>
 									</button>
 									<button class="drop" disabled={!c.run} onclick={(ev) => openPalette(kind, ev)} title="Choisir la couleur">▾</button>
 									{#if palette === kind}
@@ -380,11 +384,15 @@
 	.color-cmd .cmd {
 		flex: 1;
 	}
-	.bar {
-		width: 18px;
-		height: 4px;
-		margin-top: -3px;
-		border: 1px solid rgba(0, 0, 0, 0.15);
+	.swatch-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 28px;
+		height: 28px;
+		font: 700 18px/1 'Segoe UI', system-ui, sans-serif;
+		border: 1px solid #c9cdd2;
+		border-radius: 3px;
 	}
 	.drop {
 		font: inherit;
