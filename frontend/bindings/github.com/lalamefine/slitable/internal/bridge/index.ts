@@ -12,6 +12,7 @@ export type {
     DocState,
     FormulaHelp,
     GridStatus,
+    ImportResult,
     OpenResult,
     ScriptResult
 } from "./models.js";

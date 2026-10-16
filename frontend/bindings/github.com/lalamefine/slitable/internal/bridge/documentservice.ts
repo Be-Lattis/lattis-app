@@ -73,6 +73,15 @@ export function Discard(dir: string): $CancellablePromise<void> {
 }
 
 /**
+ * ExportCSV écrit un tableau en CSV (séparateur ;, virgule décimale, UTF-8
+ * avec BOM : ce qu'Excel en français ouvre directement). Renvoie le fichier
+ * écrit, vide si l'utilisateur a annulé.
+ */
+export function ExportCSV(table: string): $CancellablePromise<string> {
+    return $Call.ByID(1530430769, table);
+}
+
+/**
  * Find cherche un texte dans une feuille (cellules dans l'ordre de lecture).
  */
 export function Find(sheet: number, text: string): $CancellablePromise<canvas$0.Match[] | null> {
@@ -84,6 +93,14 @@ export function Find(sheet: number, text: string): $CancellablePromise<canvas$0.
  */
 export function FormulaHelp(): $CancellablePromise<$models.FormulaHelp> {
     return $Call.ByID(1517433598);
+}
+
+/**
+ * Import ajoute au classeur un fichier CSV ou un classeur Excel .xlsx
+ * (path vide : boîte de dialogue), en une seule étape d'annulation.
+ */
+export function Import(path: string): $CancellablePromise<$models.ImportResult> {
+    return $Call.ByID(545927768, path);
 }
 
 export function InsertColumn(table: string, i: number, name: string): $CancellablePromise<$models.DocState> {

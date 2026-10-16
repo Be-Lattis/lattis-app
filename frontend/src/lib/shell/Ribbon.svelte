@@ -21,7 +21,7 @@
 		commands: Command[];
 	}
 
-	export type FileAction = 'new' | 'open' | 'save' | 'saveAs' | 'demo';
+	export type FileAction = 'new' | 'open' | 'save' | 'saveAs' | 'import' | 'export' | 'demo';
 
 	interface Props {
 		view: View;
@@ -144,7 +144,7 @@
 			{#if fileOpen}
 				<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 				<div class="file-menu" onmouseleave={() => (fileOpen = false)}>
-					{#each [['new', 'Nouveau', 'Ctrl+N'], ['open', 'Ouvrir…', 'Ctrl+O'], ['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ['demo', 'Démo : 1 M de lignes', '']] as [a, label, keys] (a)}
+					{#each [['new', 'Nouveau', 'Ctrl+N'], ['open', 'Ouvrir…', 'Ctrl+O'], ['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ['import', 'Importer (CSV, Excel)…', ''], ['export', 'Exporter le tableau en CSV…', ''], ['demo', 'Démo : 1 M de lignes', '']] as [a, label, keys] (a)}
 						<button onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keys}</span></button>
 					{/each}
 				</div>
