@@ -14,6 +14,7 @@
 	import { Axis } from './axis';
 	import { parseTSV, toTSV } from './clipboard';
 	import { formatNumber, mergeStyles, parseStyle, type CellStyle } from './style';
+	import { describeRule, parseRules, ruleStyle, RULE_OPS, RULE_STYLES, type Rule, type RuleOp } from './rules';
 	import { apply as applySuggestion, signature, suggest, type Catalog, type Completion } from './autocomplete';
 	import {
 		isErrorValue,
@@ -35,6 +36,7 @@
 		formula?: string; // colonne calculée : formule affichée
 		style?: string; // mise en forme de toute la colonne (JSON)
 		headerStyle?: string;
+		rules?: string; // mise en forme conditionnelle (JSON)
 	}
 
 	export interface SheetTable {
@@ -93,6 +95,8 @@
 		find?(text: string): Promise<{ row: number; col: number }[]>;
 		/** Remplace partout ; renvoie le nombre de cellules modifiées. */
 		replace?(text: string, by: string): Promise<number>;
+		/** Remplace les règles de mise en forme conditionnelle d'une colonne. */
+		setRules?(table: SheetTable, i: number, rules: Rule[]): Promise<unknown>;
 	}
 
 	export interface SheetStatus {
@@ -164,6 +168,7 @@
 	// Styles de colonne et d'en-tête, par tableau puis colonne.
 	let colStyles = new Map<number, (CellStyle | undefined)[]>();
 	let headStyles = new Map<number, (CellStyle | undefined)[]>();
+	let colRules = new Map<number, (Rule[] | undefined)[]>();
 	let shown = new Map<string, { text: string; error: boolean }>(); // formules des cellules libres
 	let colAxis = $state.raw(new Axis(SHEET_COLS, DEF_W));
 	const key = (r: number, c: number) => `${r},${c}`;
@@ -205,6 +210,7 @@
 		freeStyles = new Map((d.styles ?? []).map((s) => [key(s.row, s.col), parseStyle(s.style) ?? {}]));
 		colStyles = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseStyle(c.style))]));
 		headStyles = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseStyle(c.headerStyle))]));
+		colRules = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseRules(c.rules))]));
 		rebuildAxis();
 		refreshFx();
 		schedule();
@@ -437,7 +443,9 @@
 						ctx.fillRect(x + 6, y + 7, cw * 0.6, ROW_H - 14);
 						continue;
 					}
-					const cs = mergeStyles(colStyles.get(e.t.id)?.[i], parseStyle(row.sty?.get(i)));
+					const v = row.cells[i];
+					const bad = row.bad?.has(i) || (col.type === 'formula' && isErrorValue(v));
+					const cs = mergeStyles(mergeStyles(colStyles.get(e.t.id)?.[i], parseStyle(row.sty?.get(i))), ruleStyle(colRules.get(e.t.id)?.[i], v, row.text[i] ?? '', !!bad));
 					if (cs?.bg) {
 						ctx.fillStyle = cs.bg;
 						ctx.fillRect(x, y, cw, ROW_H);
@@ -460,7 +468,6 @@
 						ctx.fill();
 						continue;
 					}
-					const v = row.cells[i];
 					const align = cs?.al ?? (col.type === 'formula' ? valueAlignment(v) : alignment(col.type));
 					drawText(s, x, y, cw, align, cs, col.type === 'formula' && isErrorValue(v) ? C.error : C.text);
 				}
@@ -754,6 +761,70 @@
 		parts.push(`Nb : ${count.toLocaleString('fr-FR')}`);
 		if (nums) parts.push(`Somme : ${statFmt.format(sum)}`);
 		return parts.join('   ') + (missing ? ' (lignes en chargement)' : '');
+	}
+
+	// --- Mise en forme conditionnelle -----------------------------------------
+
+	let rulesRev = $state(0); // relit les règles après enregistrement
+	let rulesDlg = $state<{ e: Entry; i: number; op: RuleOp; value: string; to: string; style: number; error: string } | null>(null);
+
+	/** Ouvre le dialogue des règles de la colonne i du tableau e. */
+	function openRules(e: Entry, i: number) {
+		menu = null;
+		rulesDlg = { e, i, op: '>', value: '', to: '', style: 0, error: '' };
+	}
+
+	/** Règles de la colonne de la cellule active (ruban Accueil). */
+	export function rulesActive() {
+		const e = tableAt(active.row, active.col);
+		if (!e || !source.setRules) {
+			say('Placez la cellule active dans la colonne d’un tableau');
+			return;
+		}
+		openRules(e, active.col - e.t.col);
+	}
+
+	async function saveRules(rules: Rule[]) {
+		const d = rulesDlg;
+		if (!d || !source.setRules) return;
+		try {
+			await source.setRules(d.e.t, d.i, rules);
+			rulesRev++;
+			d.error = '';
+		} catch (err) {
+			d.error = String(err instanceof Error ? err.message : err);
+		}
+	}
+
+	// rev : dépendance réactive (le tableau est relu après chaque enregistrement).
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	function currentRules(rev = 0): Rule[] {
+		const d = rulesDlg;
+		if (!d) return [];
+		// Le tableau a pu être rechargé : relire ses colonnes par identifiant.
+		const t = entries.find((x) => x.t.id === d.e.t.id)?.t ?? d.e.t;
+		return parseRules(t.columns[d.i]?.rules) ?? [];
+	}
+
+	function addRule() {
+		const d = rulesDlg;
+		if (!d) return;
+		const args = RULE_OPS.find((o) => o.op === d.op)?.args ?? 0;
+		if (args > 0 && d.value.trim() === '') {
+			d.error = 'Indiquez une valeur';
+			return;
+		}
+		const r: Rule = { op: d.op, style: RULE_STYLES[d.style].style };
+		if (args > 0) r.value = d.value.trim();
+		if (args > 1) r.to = d.to.trim();
+		saveRules([...currentRules(), r]);
+		d.value = '';
+		d.to = '';
+	}
+
+	function closeRules() {
+		rulesDlg = null;
+		wrap.focus();
 	}
 
 	/** Tri du tableau de la cellule active (ruban Données). */
@@ -1648,9 +1719,56 @@
 					<button onclick={() => menuAction(() => source.sortTable!(m.e.t, m.i, true))}>Trier de Z à A (décroissant)</button>
 					<hr />
 				{/if}
+				{#if source.setRules}
+					<button onclick={() => openRules(m.e, m.i)}>Mise en forme conditionnelle…</button>
+					<hr />
+				{/if}
 				<button onclick={() => menuAction(source.insertColumn && (() => source.insertColumn!(m.e.t, m.i)))}>Insérer une colonne à gauche</button>
 				<button onclick={() => menuAction(source.insertColumn && (() => source.insertColumn!(m.e.t, m.i + 1)))}>Insérer une colonne à droite</button>
 				<button onclick={() => menuAction(source.deleteColumn && (() => source.deleteColumn!(m.e.t, m.i)))}>Supprimer la colonne « {m.e.t.columns[m.i]?.name} »</button>
+			</div>
+		{/if}
+		{#if rulesDlg}
+			{@const d = rulesDlg}
+			{@const rules = currentRules(rulesRev)}
+			{@const args = RULE_OPS.find((o) => o.op === d.op)?.args ?? 0}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="rules"
+				onkeydown={(ev) => {
+					ev.stopPropagation();
+					if (ev.key === 'Escape') closeRules();
+				}}
+			>
+				<div class="menu-title">Mise en forme conditionnelle de « {d.e.t.columns[d.i]?.name} »</div>
+				{#if rules.length === 0}
+					<p class="menu-note">Aucune règle. La première règle vérifiée s’applique.</p>
+				{/if}
+				{#each rules as r, k (k)}
+					<div class="rule">
+						<span class="sample" style:background={r.style.bg ?? '#fff'} style:color={r.style.fg ?? '#1f2328'} style:font-weight={r.style.b ? 'bold' : 'normal'}>AaBb</span>
+						<span class="what">{describeRule(r)}</span>
+						<button title="Supprimer la règle" onclick={() => saveRules(rules.filter((_, j) => j !== k))}>✕</button>
+					</div>
+				{/each}
+				<hr />
+				<div class="add">
+					<select bind:value={d.op}>
+						{#each RULE_OPS as o (o.op)}<option value={o.op}>{o.label}</option>{/each}
+					</select>
+					{#if args > 0}<input bind:value={d.value} placeholder="valeur" onkeydown={(ev) => ev.key === 'Enter' && addRule()} />{/if}
+					{#if args > 1}<span>et</span><input bind:value={d.to} placeholder="valeur" onkeydown={(ev) => ev.key === 'Enter' && addRule()} />{/if}
+					<select bind:value={d.style}>
+						{#each RULE_STYLES as s, k (k)}<option value={k}>{s.label}</option>{/each}
+					</select>
+					<button onclick={addRule}>Ajouter</button>
+				</div>
+				{#if d.error}<p class="menu-note error">{d.error}</p>{/if}
+				<div class="foot">
+					{#if rules.length}<button onclick={() => saveRules([])}>Effacer les règles</button>{/if}
+					<span class="sp"></span>
+					<button onclick={closeRules}>Fermer</button>
+				</div>
 			</div>
 		{/if}
 		{#if editing && (completion?.where === 'cell' || sig?.where === 'cell')}
@@ -1837,6 +1955,57 @@
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 		padding: 4px 0;
 		min-width: 240px;
+	}
+	.rules {
+		position: absolute;
+		z-index: 6;
+		top: 60px;
+		left: 50%;
+		transform: translateX(-50%);
+		background: #fff;
+		border: 1px solid #d4d7db;
+		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+		padding: 6px 0 8px;
+		min-width: 460px;
+	}
+	.rules .rule,
+	.rules .add,
+	.rules .foot {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 3px 14px;
+	}
+	.rules .what {
+		flex: 1;
+	}
+	.rules .sample {
+		padding: 1px 8px;
+		border: 1px solid #d4d7db;
+	}
+	.rules input {
+		font: inherit;
+		width: 90px;
+		padding: 2px 6px;
+		border: 1px solid #c9cdd2;
+		border-radius: 3px;
+	}
+	.rules select,
+	.rules button {
+		font: inherit;
+		padding: 2px 6px;
+		border: 1px solid #c9cdd2;
+		background: #fff;
+		border-radius: 3px;
+		cursor: pointer;
+	}
+	.rules .sp {
+		flex: 1;
+	}
+	.rules hr {
+		border: none;
+		border-top: 1px solid #e5e7eb;
+		margin: 6px 0;
 	}
 	.menu-title {
 		padding: 4px 14px;

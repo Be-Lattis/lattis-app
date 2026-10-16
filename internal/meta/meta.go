@@ -116,6 +116,11 @@ CREATE TABLE _slitable_cell_styles (
 	PRIMARY KEY (sheet, row, col)
 ) STRICT;
 `,
+	// 6 → 7 : mise en forme conditionnelle d'une colonne (règles JSON,
+	// évaluées sur les lignes affichées).
+	`
+ALTER TABLE _slitable_columns ADD COLUMN rules TEXT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

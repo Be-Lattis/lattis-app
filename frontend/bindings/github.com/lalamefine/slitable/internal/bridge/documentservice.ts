@@ -216,6 +216,13 @@ export function SetName(sheet: number, row: number, col: number, name: string): 
 }
 
 /**
+ * SetRules remplace les règles de mise en forme conditionnelle d'une colonne.
+ */
+export function SetRules(table: string, i: number, rules: canvas$0.Rule[] | null): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1836090686, table, i, rules);
+}
+
+/**
  * SetType fixe le type d'une colonne (valeurs non convertibles marquées en erreur).
  */
 export function SetType(table: string, i: number, to: grid$0.Type): $CancellablePromise<$models.DocState> {

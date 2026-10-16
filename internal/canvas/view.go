@@ -25,6 +25,8 @@ type ColumnInfo struct {
 	// Mise en forme de toute la colonne et de son en-tête (JSON, voir Style).
 	Style       string `json:"style"`
 	HeaderStyle string `json:"headerStyle"`
+	// Mise en forme conditionnelle (JSON : liste de Rule).
+	Rules string `json:"rules"`
 }
 
 // TableInfo décrit un tableau posé sur une feuille.
@@ -134,8 +136,12 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 			}
 			rs.Close()
 			for _, c := range tb.Cols {
+				rules, err := t.columnRules(tb.ID, c.ID)
+				if err != nil {
+					return err
+				}
 				ti.Columns = append(ti.Columns, ColumnInfo{ID: c.ID, Errors: errs[c.ID], Name: c.Name, SQL: colSQL(c.ID), Type: c.Type, Fixed: c.Fixed, Formula: displayFormula(c.Formula),
-					Style: colStyles[[2]int64{0, c.ID}], HeaderStyle: colStyles[[2]int64{-1, c.ID}]})
+					Style: colStyles[[2]int64{0, c.ID}], HeaderStyle: colStyles[[2]int64{-1, c.ID}], Rules: rules})
 			}
 			l.Tables = append(l.Tables, ti)
 		}

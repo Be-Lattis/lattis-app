@@ -192,6 +192,7 @@
 		setColumnWidth: (col, width) => DocumentService.SetColumnWidth(sheetId, col, width).then(reload),
 		setName: (row, col, name) => DocumentService.SetName(sheetId, row, col, name).then(reload),
 		sortTable: (t, i, desc) => DocumentService.SortTable(t.name, i, desc).then(reload),
+		setRules: (t, i, rules) => DocumentService.SetRules(t.name, i, rules).then(reload),
 		applyStyle: (r0, c0, r1, c1, patch) => DocumentService.ApplyStyle(sheetId, r0, c0, r1, c1, patch).then(reload),
 		find: async (text) => (await DocumentService.Find(sheetId, text)) ?? [],
 		replace: async (text, by) => {
@@ -226,7 +227,8 @@
 							errors: c.errors,
 							formula: c.formula || undefined,
 							style: c.style || undefined,
-							headerStyle: c.headerStyle || undefined
+							headerStyle: c.headerStyle || undefined,
+							rules: c.rules || undefined
 						}))
 					})),
 					cells: layout.cells ?? [],
@@ -301,6 +303,7 @@
 		onsort={mode === 'doc' ? (desc) => sheet?.sortActive(desc) : undefined}
 		onstyle={mode === 'doc' ? (patch) => sheet?.applyStyle(patch) : undefined}
 		onfind={mode === 'doc' ? (replace) => sheet?.openFinder(replace) : undefined}
+		onrules={mode === 'doc' ? () => sheet?.rulesActive() : undefined}
 	/>
 
 	<main>

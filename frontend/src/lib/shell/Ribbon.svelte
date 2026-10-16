@@ -38,9 +38,10 @@
 		/** Mise en forme de la sélection ('toggle' bascule gras, italique, souligné). */
 		onstyle?: (patch: Record<string, unknown>) => void;
 		onfind?: (replace: boolean) => void;
+		onrules?: () => void;
 	}
 
-	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind }: Props = $props();
+	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules }: Props = $props();
 	let fg = $state('#c00000');
 	let bg = $state('#fff2cc');
 	const st = (patch: Record<string, unknown>) => (onstyle ? () => onstyle(patch) : undefined);
@@ -86,6 +87,10 @@
 					{ label: 'Pourcentage', icon: 'percent', run: st({ nf: '%' }) },
 					{ label: 'Standard', icon: 'number-format', run: st({ nf: null }), hint: 'Format Standard' }
 				]
+			},
+			{
+				title: 'Styles',
+				commands: [{ label: 'Mise en forme conditionnelle', icon: 'warning', run: onrules, hint: 'Règles de mise en forme de la colonne active' }]
 			},
 			{
 				title: 'Édition',

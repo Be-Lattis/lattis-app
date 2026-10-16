@@ -703,3 +703,36 @@ func TestFindReplace(t *testing.T) {
 		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
 	}
 }
+
+func TestRules(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Ville", "Pop"}, {"Lyon", "520"}, {"Paris", "2100"}}); err != nil {
+		t.Fatal(err)
+	}
+	before := dump(t, d)
+	rules := []Rule{{Op: ">", Value: "1000", Style: Style{"bg": "#ffc7ce", "fg": "#9c0006"}}, {Op: "empty", Style: Style{"bg": "#eeeeee"}}}
+	if err := d.SetRules(ctx, "Feuille1", 1, rules); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.SetRules(ctx, "Feuille1", 1, []Rule{{Op: "~"}}); err == nil {
+		t.Fatal("condition inconnue acceptée")
+	}
+	l, _ := d.Layout(ctx, 1)
+	if got := l.Tables[0].Columns[1].Rules; !strings.Contains(got, `"op":">"`) || !strings.Contains(got, `"#ffc7ce"`) {
+		t.Fatalf("règles : %s", got)
+	}
+	// Supprimer la colonne puis annuler rend ses règles.
+	if err := d.DeleteColumn(ctx, "Feuille1", 1); err != nil {
+		t.Fatal(err)
+	}
+	d.bus.Undo(ctx)
+	l, _ = d.Layout(ctx, 1)
+	if l.Tables[0].Columns[1].Rules == "" {
+		t.Fatal("règles perdues après annulation de la suppression")
+	}
+	d.bus.Undo(ctx)
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
+	}
+}

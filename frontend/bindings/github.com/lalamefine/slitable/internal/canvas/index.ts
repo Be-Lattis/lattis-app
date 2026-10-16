@@ -10,8 +10,10 @@ export type {
     Layout,
     Match,
     NameInfo,
+    Rule,
     ScriptInfo,
     SheetInfo,
+    Style,
     TableInfo,
     TableNames
 } from "./models.js";

@@ -482,3 +482,8 @@ func (s *DocumentService) Replace(ctx context.Context, sheet int64, text, by str
 	}
 	return n, err
 }
+
+// SetRules remplace les règles de mise en forme conditionnelle d'une colonne.
+func (s *DocumentService) SetRules(ctx context.Context, table string, i int, rules []canvas.Rule) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetRules(ctx, table, i, rules) })
+}

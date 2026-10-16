@@ -151,6 +151,10 @@ func (t *tx) addColumn(tb Table, id int64, name string, typ grid.Type, pos int) 
 func (t *tx) dropColumn(tb Table, c Column, pos int) error {
 	trash := fmt.Sprintf("_slitable_trash_%d_%d_%d", tb.ID, c.ID, time.Now().UnixNano())
 	col := colSQL(c.ID)
+	rules, err := t.columnRules(tb.ID, c.ID)
+	if err != nil {
+		return err
+	}
 	// Supprimer la colonne clé retire d'abord la clé (SQLite refuse de
 	// supprimer une colonne indexée) ; l'annulation la rétablit.
 	var unkey, rekey []stmt
@@ -175,8 +179,8 @@ func (t *tx) dropColumn(tb Table, c Column, pos int) error {
 		st(`UPDATE _slitable_columns SET pos = pos - 1 WHERE tbl = ? AND pos > ?`, tb.ID, pos),
 	}...), Undo: append([]stmt{
 		st(`UPDATE _slitable_columns SET pos = pos + 1 WHERE tbl = ? AND pos >= ?`, tb.ID, pos),
-		st(`INSERT INTO _slitable_columns (tbl, id, name, type, fixed, pos, formula) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-			tb.ID, c.ID, c.Name, string(c.Type), c.Fixed, pos, nullIfEmpty(c.Formula)),
+		st(`INSERT INTO _slitable_columns (tbl, id, name, type, fixed, pos, formula, rules) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			tb.ID, c.ID, c.Name, string(c.Type), c.Fixed, pos, nullIfEmpty(c.Formula), nullIfEmpty(rules)),
 		st(`ALTER TABLE ` + tb.sql() + ` ADD COLUMN ` + col + ` ` + sqlType(c.Type)),
 		st(`UPDATE ` + tb.sql() + ` SET ` + col + ` = (SELECT v FROM ` + trash + ` WHERE ` + trash + `.id = ` + tb.sql() + `.id)`),
 		st(`INSERT INTO _slitable_invalid (tbl, rid, col, raw) SELECT ?, rid, ?, raw FROM `+trash+`_inv`, tb.ID, c.ID),
