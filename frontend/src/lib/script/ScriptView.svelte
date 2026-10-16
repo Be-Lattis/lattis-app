@@ -9,6 +9,8 @@
 	import { bracketMatching } from '@codemirror/language';
 	import { closeBrackets } from '@codemirror/autocomplete';
 	import { dismiss } from '#lib/grid/dismiss.js';
+	import { luaTools } from './luaeditor';
+	import ScriptReference from './ScriptReference.svelte';
 
 	export interface Script {
 		id: number;
@@ -46,6 +48,7 @@ end
 	let error = $state('');
 	let running = $state(false);
 	let dirty = $state(false);
+	let showRef = $state(true);
 
 	let host: HTMLDivElement;
 	let view: EditorView | undefined;
@@ -98,6 +101,18 @@ end
 			unsub?.();
 			running = false;
 		}
+	}
+
+	// Insère un exemple de la référence sur ses propres lignes, au curseur.
+	function insertSnippet(text: string) {
+		if (!view) return;
+		const { from, to } = view.state.selection.main;
+		const line = view.state.doc.lineAt(from);
+		const before = from > line.from ? '\n' : '';
+		const after = text.endsWith('\n') ? '' : '\n';
+		const insert = before + text + after;
+		view.dispatch({ changes: { from, to, insert }, selection: { anchor: from + insert.length }, scrollIntoView: true });
+		view.focus();
 	}
 
 	// Menu du clic droit sur un script : renommer, dupliquer, supprimer.
@@ -161,6 +176,7 @@ end
 					history(),
 					bracketMatching(),
 					closeBrackets(),
+					luaTools(),
 					keymap.of([
 						{ key: 'Mod-Enter', run: () => (doRun(), true) },
 						{ key: 'Mod-s', run: () => (doSave(), true) },
@@ -228,6 +244,7 @@ end
 			<button onclick={() => stop()} disabled={!running}>■ Arrêter</button>
 			<button onclick={doSave}>Enregistrer{dirty ? ' •' : ''}</button>
 			<button onclick={doRemove} disabled={!current.id}>Supprimer</button>
+			<button onclick={() => (showRef = !showRef)} aria-pressed={showRef}>Référence</button>
 			<span class="muted">Ctrl+Entrée : exécuter · Ctrl+S : enregistrer le script</span>
 		</div>
 		<div class="editor" bind:this={host}></div>
@@ -239,6 +256,7 @@ end
 			<pre>{output.join('\n')}{#if error}<span class="error">{(output.length ? '\n' : '') + error}</span>{/if}</pre>
 		</div>
 	</section>
+	{#if showRef}<ScriptReference insert={insertSnippet} close={() => (showRef = false)} />{/if}
 </div>
 
 <style>
@@ -320,10 +338,15 @@ end
 	}
 	.toolbar {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		gap: 8px;
 		padding: 6px 10px;
 		border-bottom: 1px solid #e3e5e8;
+	}
+	.toolbar button,
+	.toolbar .muted {
+		white-space: nowrap;
 	}
 	.toolbar button {
 		font: inherit;
