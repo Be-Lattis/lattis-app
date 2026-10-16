@@ -798,6 +798,17 @@
 				ctx.restore();
 			}
 		}
+		// Petits traits aux séparations de colonnes : on voit où redimensionner.
+		ctx.beginPath();
+		ctx.strokeStyle = C.stripLine;
+		ctx.lineWidth = 1;
+		for (let c = c0; c <= c1; c++) {
+			const x = Math.round(cx(c + 1)) - 0.5;
+			if (x <= MARGIN) continue;
+			ctx.moveTo(x, TOP_H * 0.35);
+			ctx.lineTo(x, TOP_H);
+		}
+		ctx.stroke();
 		for (let c = Math.max(c0, k0); c <= Math.min(c1, k1); c++) {
 			ctx.fillStyle = C.active;
 			ctx.fillRect(cx(c), TOP_H - 2, colAxis.size(c), 2);
@@ -808,16 +819,20 @@
 		ctx.fillRect(0, TOP_H, MARGIN, h - TOP_H);
 		ctx.font = FONT_SMALL;
 		ctx.textAlign = 'right';
-		const cur = tableAt(active.row, active.col);
+		// Numéros : ceux du tableau de la sélection (ou de celui qu'elle
+		// prolonge) ; ceux des autres tableaux, plus discrets.
+		const cur = tableAt(active.row, active.col) ?? entries.find((e) => grown(e).last !== e.last);
+		const curLast = cur ? grown(cur).last : -1;
 		for (let r = r0; r <= r1; r++) {
 			const y = ry(r);
 			if (r >= s0 && r <= s1) {
 				ctx.fillStyle = C.activeStrip;
 				ctx.fillRect(0, y, MARGIN, ROW_H);
 			}
-			const e = cur && r > cur.t.row && r <= cur.last ? cur : visible.find((e) => r > e.t.row && r <= e.last);
+			const mine = !!cur && r > cur.t.row && r <= curLast;
+			const e = mine ? cur : visible.find((e) => r > e.t.row && r <= e.last);
 			if (e) {
-				ctx.fillStyle = C.stripText;
+				ctx.fillStyle = mine || !cur ? C.stripText : C.stripLine;
 				ctx.fillText(String(r - e.t.row), MARGIN - 8, y + ROW_H / 2);
 			}
 		}
