@@ -20,6 +20,7 @@
 	import { stepZoom } from './zoom';
 	import { panes, reveal, toGrid, type Pane } from './panes';
 	import { hiddenLines, mergeAt, mergeList, parseList, skipHidden, validate, type MergeRange } from './sheetfmt';
+	import { expandRange, extendCorner, isSingleCell, mergeRect, rangeOf, stepCell } from './mergesel';
 	import FormatDialog, { type FormatTab } from './FormatDialog.svelte';
 	import { dismiss, dismissPanel } from './dismiss';
 	import { explainError } from './errors';
@@ -649,6 +650,18 @@
 	/** Fusion qui couvre une cellule (cellules libres seulement). */
 	const mergeOf = (r: number, c: number) => (merges.length ? mergeAt(merges, r, c) : undefined);
 
+	/** Cellule (r, c), ou le haut à gauche de sa fusion. */
+	function snapMerge(r: number, c: number) {
+		const g = mergeOf(r, c);
+		return g ? { row: g.row, col: g.col } : { row: r, col: c };
+	}
+
+	/** Cellule active, ou toute sa fusion. */
+	function activeRect() {
+		const g = mergeOf(active.row, active.col);
+		return g ? mergeRect(g) : { r0: active.row, r1: active.row, c0: active.col, c1: active.col };
+	}
+
 	/** Étendue affichée d'un tableau : une ligne ou une colonne de plus quand la
 	 * cellule active est juste dessous ou juste à droite (la saisie l'étendra),
 	 * jusqu'au tableau voisin qu'elle rejoindrait (fusion). */
@@ -777,7 +790,10 @@
 	let ctx: CanvasRenderingContext2D;
 	let mounted = false;
 
-	// Sélection : cellule active + ancre de la plage (Maj + flèches / glisser).
+	// Sélection, comme Excel : la cellule active reste où la sélection a
+	// commencé ; « anchor » est le coin opposé, celui qui bouge (Maj + flèches,
+	// Maj + clic, glisser). La plage s'agrandit aux fusions qu'elle touche
+	// (selection(), mergesel.ts).
 	let active = $state.raw({ row: 0, col: 0 });
 	let anchor = { row: 0, col: 0 };
 	let dragging = false;
@@ -1100,10 +1116,7 @@
 		const spanW = (a: number, b: number) => colAxis.offset(b + 1) - colAxis.offset(a);
 		const visible = entries.filter((e) => e.last + 1 >= r0 && e.t.row <= r1 && e.lastCol + 1 >= c0 && e.t.col <= c1);
 		// Plage sélectionnée.
-		const s0 = Math.min(active.row, anchor.row);
-		const s1 = Math.max(active.row, anchor.row);
-		const k0 = Math.min(active.col, anchor.col);
-		const k1 = Math.max(active.col, anchor.col);
+		const { r0: s0, r1: s1, c0: k0, c1: k1 } = selection();
 		return { w, h, top, r0, r1, c0, c1, cx, ry, xEnd, spanW, visible, s0, s1, k0, k1 };
 	}
 	type Layer = ReturnType<typeof layer>;
@@ -1129,9 +1142,14 @@
 		}
 
 		// Plage sélectionnée.
-		if (s0 !== s1 || k0 !== k1) {
+		// Comme Excel, la cellule active (ou sa fusion) reste blanche.
+		if (!singleSelection()) {
+			const a = activeRect();
 			ctx.fillStyle = C.select;
-			ctx.fillRect(cx(k0), ry(s0), spanW(k0, k1), rspan(s0, s1));
+			ctx.beginPath();
+			ctx.rect(cx(k0), ry(s0), spanW(k0, k1), rspan(s0, s1));
+			ctx.rect(cx(a.c0), ry(a.r0), spanW(a.c0, a.c1), rspan(a.r0, a.r1));
+			ctx.fill('evenodd');
 		}
 
 		// Recherche : toutes les occurrences visibles, en léger (l'active reste encadrée).
@@ -1455,13 +1473,20 @@
 		}
 		// Cellule active (toute la fusion quand elle en est une), et la flèche de
 		// sa liste déroulante (validation).
-		if (active.row >= r0 - 1 && active.row <= r1 + 1) {
-			const g = mergeOf(active.row, active.col);
-			const aw = g ? spanW(g.col, g.col + g.cols - 1) : colAxis.size(active.col);
-			const ah = g ? rspan(g.row, g.row + g.rows - 1) : rh(active.row);
+		// Plage de plusieurs cellules : cadre épais autour d'elle, trait fin
+		// autour de la cellule active (Excel).
+		const ar = activeRect();
+		const many = !singleSelection();
+		if (many && L.s1 >= r0 - 1 && L.s0 <= r1 + 1) {
 			ctx.strokeStyle = C.active;
 			ctx.lineWidth = 2;
-			ctx.strokeRect(cx(active.col) + 0.5, ry(active.row) + 0.5, aw - 1, ah - 1);
+			ctx.strokeRect(cx(L.k0) + 0.5, ry(L.s0) + 0.5, spanW(L.k0, L.k1) - 1, rspan(L.s0, L.s1) - 1);
+		}
+		if (ar.r1 >= r0 - 1 && ar.r0 <= r1 + 1) {
+			ctx.strokeStyle = C.active;
+			ctx.lineWidth = many ? 1 : 2;
+			if (many) ctx.strokeRect(cx(ar.c0) + 1.5, ry(ar.r0) + 1.5, spanW(ar.c0, ar.c1) - 3, rspan(ar.r0, ar.r1) - 3);
+			else ctx.strokeRect(cx(ar.c0) + 0.5, ry(ar.r0) + 0.5, spanW(ar.c0, ar.c1) - 1, rspan(ar.r0, ar.r1) - 1);
 			if (!editing && listOf(active.row, active.col)) {
 				const b = dropButton();
 				ctx.fillStyle = C.strip;
@@ -1509,12 +1534,13 @@
 		}
 		// Saisie dans la barre de formule : la cellule active l'affiche en direct.
 		if (fxEditing && !editing) {
-			const x = cx(active.col);
-			const y = ry(active.row);
-			const cw = colAxis.size(active.col);
+			const x = cx(ar.c0);
+			const y = ry(ar.r0);
+			const cw = spanW(ar.c0, ar.c1);
+			const ch = rspan(ar.r0, ar.r1);
 			ctx.fillStyle = C.bg;
-			ctx.fillRect(x + 1, y + 1, cw - 2, rh(active.row) - 2);
-			drawText(fxText, x, y, cw, 'left', undefined, C.text, w);
+			ctx.fillRect(x + 1, y + 1, cw - 2, ch - 2);
+			drawText(fxText, x, y, cw, 'left', undefined, C.text, w, ch);
 		}
 		// Poignée de recopie (coin bas droit de la sélection) et aperçu.
 		if (!editing && selChart === null) {
@@ -1665,7 +1691,8 @@
 	 * texte sur toute la fusion, bordures et note.
 	 */
 	function drawMerges(L: Layer) {
-		const { r0, r1, c0, c1, cx, ry, spanW } = L;
+		const { r0, r1, c0, c1, cx, ry, spanW, s0, s1, k0, k1 } = L;
+		const many = !singleSelection();
 		for (const g of merges) {
 			const gr1 = g.row + g.rows - 1;
 			const gc1 = g.col + g.cols - 1;
@@ -1677,8 +1704,15 @@
 			const gw = spanW(g.col, gc1);
 			const gh = rspan(g.row, gr1);
 			if (gw <= 0 || gh <= 0) continue;
+			// Le fond couvre le quadrillage à l'intérieur de la fusion seulement.
 			ctx.fillStyle = st?.bg ?? C.bg;
 			ctx.fillRect(Math.round(x), Math.round(y), gw - 1, gh - 1);
+			// Dans la sélection (sauf la fusion active) : surlignée comme les autres cellules.
+			const isActive = active.row === g.row && active.col === g.col;
+			if (many && !isActive && g.row >= s0 && gr1 <= s1 && g.col >= k0 && gc1 <= k1) {
+				ctx.fillStyle = C.select;
+				ctx.fillRect(Math.round(x), Math.round(y), gw - 1, gh - 1);
+			}
 			const f = shown.get(k);
 			const raw = f ? f.text : cells.get(k);
 			if (raw) {
@@ -1831,9 +1865,14 @@
 		if (h <= 0 || cw <= 0) return;
 		ctx.save();
 		ctx.beginPath();
-		// Renvoyé à la ligne : le texte reste dans sa cellule.
-		if (st?.wr) ctx.rect(Math.max(x, MARGIN), Math.max(y, TOP_H), cw, h);
-		else ctx.rect(Math.max(x, MARGIN), TOP_H, clipW, viewH - TOP_H);
+		// Renvoyé à la ligne, ou fusion (hh) : le texte reste dans sa cellule.
+		// La découpe s'arrête au bord droit de la cellule même quand son début
+		// est caché sous la marge.
+		const left = Math.max(x, MARGIN);
+		if (st?.wr || hh !== undefined) {
+			const top = Math.max(y, TOP_H);
+			ctx.rect(left, top, x + (st?.wr ? cw : clipW) - left, y + h - top);
+		} else ctx.rect(left, TOP_H, x + clipW - left, viewH - TOP_H);
 		ctx.clip();
 		const fancy = st && (st.ff || st.fs);
 		ctx.font = fancy ? cellFont(st) : (st?.i ? 'italic ' : '') + (st?.b ? FONT_BOLD : FONT);
@@ -2372,12 +2411,9 @@
 
 	/** « Moyenne · Nb · Somme » de la sélection (cellules chargées), si plusieurs cellules. */
 	function selectionStats(): string {
-		const r0 = Math.min(active.row, anchor.row);
-		const r1 = Math.max(active.row, anchor.row);
-		const c0 = Math.min(active.col, anchor.col);
-		const c1 = Math.max(active.col, anchor.col);
+		const { r0, r1, c0, c1 } = selection();
 		const n = (r1 - r0 + 1) * (c1 - c0 + 1);
-		if (n < 2) return '';
+		if (n < 2 || singleSelection()) return '';
 		if (n > 50_000) return 'Sélection trop grande pour les totaux';
 		let count = 0;
 		let nums = 0;
@@ -3127,8 +3163,7 @@
 	/** Sélectionne une plage (scripts : ui.select ; à partir de 0). */
 	export function selectRange(r0: number, c0: number, r1: number, c1: number) {
 		moveTo(r0, c0);
-		anchor = { row: clamp(r0, 0, SHEET_ROWS - 1), col: clamp(c0, 0, SHEET_COLS - 1) };
-		active = { row: clamp(r1, 0, SHEET_ROWS - 1), col: clamp(c1, 0, SHEET_COLS - 1) };
+		anchor = { row: clamp(r1, 0, SHEET_ROWS - 1), col: clamp(c1, 0, SHEET_COLS - 1) };
 		ensureVisible(r0, c0);
 		refreshFx();
 		refreshStatus();
@@ -3156,8 +3191,7 @@
 		const e = entries.find((x) => x.t.name.toLowerCase() === lower);
 		if (e) {
 			moveTo(e.t.row, e.t.col);
-			anchor = { row: e.t.row, col: e.t.col };
-			active = { row: e.last, col: e.lastCol };
+			anchor = { row: e.last, col: e.lastCol };
 			ensureVisible(e.t.row, e.t.col);
 			refreshFx();
 			schedule();
@@ -3243,7 +3277,7 @@
 			return r === e!.t.row ? k.name : `${k.name}[${r - e!.t.row}]`;
 		};
 		const sel = selection();
-		const multi = sel.r0 !== sel.r1 || sel.c0 !== sel.c1;
+		const multi = !singleSelection();
 		if (e) {
 			const inside = multi && inTable(e, sel.r0, sel.c0) && inTable(e, sel.r1, sel.c1);
 			tableBox = { name: e.t.name, col: inside ? `${label(sel.r0, sel.c0)}:${label(sel.r1, sel.c1)}` : label(active.row, active.col) };
@@ -3378,33 +3412,44 @@
 
 	// Saisie d'une ligne avec Tab : Entrée revient sous la cellule de départ, comme Excel.
 	let tabStart: number | null = null;
+	/** Cellule voisine de la cellule active (une fusion compte pour une cellule). */
+	const step = (dr: number, dc: number) => stepCell(active.row, active.col, dr, dc, merges, SHEET_ROWS - 1, SHEET_COLS - 1);
 	function tabMove(back: boolean) {
 		const start = tabStart ?? active.col;
-		moveTo(active.row, mergeEdge(0, back ? -1 : 1).col + (back ? -1 : 1));
+		const n = step(0, back ? -1 : 1);
+		moveTo(n.row, n.col);
 		tabStart = start;
 	}
 	function enterMove(back: boolean) {
-		const col = tabStart ?? active.col;
-		moveTo(mergeEdge(back ? -1 : 1, 0).row + (back ? -1 : 1), col);
+		const n = step(back ? -1 : 1, 0);
+		moveTo(n.row, tabStart ?? n.col);
 	}
 
+	/**
+	 * Va à la cellule (row, col) ; extend (Maj) : y porte le coin mobile de la
+	 * sélection, la cellule active ne bouge pas (comme Excel).
+	 */
 	function moveTo(row: number, col: number, extend = false) {
 		tabStart = null;
 		row = clamp(row, 0, SHEET_ROWS - 1);
 		col = clamp(col, 0, SHEET_COLS - 1);
 		// Lignes et colonnes masquées : on passe au-delà, dans le sens du déplacement.
-		row = skipHidden(row, Math.sign(row - active.row), hiddenRows, SHEET_ROWS);
-		col = skipHidden(col, Math.sign(col - active.col), hiddenCols, SHEET_COLS);
-		// Cellules fusionnées : la cellule en haut à gauche, comme Excel.
-		const g = extend ? undefined : mergeOf(row, col);
-		if (g) {
-			row = g.row;
-			col = g.col;
+		const from = extend ? anchor : active;
+		row = skipHidden(row, Math.sign(row - from.row), hiddenRows, SHEET_ROWS);
+		col = skipHidden(col, Math.sign(col - from.col), hiddenCols, SHEET_COLS);
+		if (extend) anchor = { row, col };
+		else {
+			// Cellules fusionnées : la cellule en haut à gauche, comme Excel.
+			const g = mergeOf(row, col);
+			if (g) {
+				row = g.row;
+				col = g.col;
+			}
+			active = { row, col };
+			anchor = { ...active };
 		}
-		active = { row, col };
-		if (!extend) anchor = { ...active };
 		message = '';
-		ensureVisible(active.row, active.col);
+		ensureVisible(row, col);
 		refreshFx();
 		refreshStatus();
 	}
@@ -3665,8 +3710,8 @@
 			} catch (err) {
 				message = String(err instanceof Error ? err.message : err);
 			}
-			anchor = { row: to.r0, col: to.c0 };
-			active = { row: to.r1, col: to.c1 };
+			active = { row: to.r0, col: to.c0 };
+			anchor = { row: to.r1, col: to.c1 };
 			refreshFx();
 			refreshStatus();
 			schedule();
@@ -3711,17 +3756,18 @@
 		return same(w.anchor, anchor) && same(w.active, active) ? w.kind : null;
 	}
 
+	/** Lignes r0 à r1 entières ; la cellule active est au début de r0 (comme Excel). */
 	function selectRows(r0: number, r1: number) {
-		anchor = { row: r0, col: 0 };
-		active = { row: r1, col: lastCol() };
+		active = snapMerge(r0, 0);
+		anchor = { row: r1, col: lastCol() };
 		wholeSel = { kind: 'rows', anchor: { ...anchor }, active: { ...active } };
 		refreshFx();
 		refreshStatus();
 		schedule();
 	}
 	function selectCols(c0: number, c1: number) {
-		anchor = { row: 0, col: c0 };
-		active = { row: lastRow(), col: c1 };
+		active = snapMerge(0, c0);
+		anchor = { row: lastRow(), col: c1 };
 		wholeSel = { kind: 'cols', anchor: { ...anchor }, active: { ...active } };
 		refreshFx();
 		refreshStatus();
@@ -3774,8 +3820,8 @@
 			wrap.focus();
 			// Clic droit dans la sélection : on la garde.
 			if (e.button === 2 && (hd.kind === 'rows' ? inSelection(hd.row, active.col) : inSelection(active.row, hd.col))) return;
-			if (hd.kind === 'rows') selectRows(e.shiftKey ? anchor.row : hd.row, hd.row);
-			else selectCols(e.shiftKey ? anchor.col : hd.col, hd.col);
+			if (hd.kind === 'rows') selectRows(e.shiftKey ? active.row : hd.row, hd.row);
+			else selectCols(e.shiftKey ? active.col : hd.col, hd.col);
 			headerDrag = e.button === 0 ? hd.kind : null;
 			return;
 		}
@@ -3957,10 +4003,10 @@
 			const p = toLocal(e);
 			if (headerDrag === 'rows') {
 				const row = clamp(rowAtY(p.y), 0, SHEET_ROWS - 1);
-				selectRows(anchor.row, row);
+				selectRows(active.row, row);
 			} else {
 				const col = colAtX(Math.max(MARGIN, p.x));
-				selectCols(anchor.col, col);
+				selectCols(active.col, col);
 			}
 			return;
 		}
@@ -3981,9 +4027,10 @@
 		if (!dragging) return;
 		const cell = cellAt(e);
 		if (!cell) return;
-		active = cell;
+		// Glisser : le coin mobile suit la souris, la cellule active reste.
+		anchor = cell;
 		const sel = selection();
-		nameBox = sel.r0 !== sel.r1 || sel.c0 !== sel.c1 ? `${sel.r1 - sel.r0 + 1}L × ${sel.c1 - sel.c0 + 1}C` : cellName(active.row, active.col);
+		nameBox = !singleSelection() ? `${sel.r1 - sel.r0 + 1}L × ${sel.c1 - sel.c0 + 1}C` : cellName(active.row, active.col);
 		schedule();
 	}
 
@@ -4030,8 +4077,8 @@
 				const t = tableAt(active.row, active.col);
 				if (t && active.row > t.t.row) {
 					// Dans un tableau : sa ligne, comme Excel.
-					anchor = { row: active.row, col: t.t.col };
-					active = { row: active.row, col: t.lastCol };
+					active = { row: active.row, col: t.t.col };
+					anchor = { row: active.row, col: t.lastCol };
 					refreshFx();
 					refreshStatus();
 					schedule();
@@ -4118,10 +4165,21 @@
 		const { row, col } = active;
 		const ext = e.shiftKey;
 		const ctrl = e.ctrlKey || e.metaKey;
+		// Maj : le coin mobile de la sélection bouge, la cellule active reste.
+		const cur = ext ? anchor : active;
 		const arrow = (dr: number, dc: number) => {
-			const from = ext ? { row, col } : mergeEdge(dr, dc);
-			const [r, c] = ctrl || ended ? jump(from.row, from.col, dr, dc) : [from.row + dr, from.col + dc];
-			moveTo(r, c, ext);
+			if (ctrl || ended) {
+				const from = ext ? anchor : mergeEdge(dr, dc);
+				const [r, c] = jump(from.row, from.col, dr, dc);
+				moveTo(r, c, ext);
+			} else if (ext) {
+				// Le bord de la plage (agrandie aux fusions) avance d'une cellule.
+				const k = extendCorner(active, anchor, dr, dc, merges, SHEET_ROWS - 1, SHEET_COLS - 1);
+				moveTo(k.row, k.col, true);
+			} else {
+				const n = step(dr, dc);
+				moveTo(n.row, n.col);
+			}
 		};
 		// Alt+↓ : liste déroulante de la cellule (validation).
 		if (e.altKey && e.key === 'ArrowDown' && listOf(row, col)) {
@@ -4138,8 +4196,8 @@
 			const t = tableAt(row, col);
 			if (t) {
 				e.preventDefault();
-				anchor = { row: t.t.row, col: e.key === ' ' ? col : t.t.col };
-				active = { row: t.last, col: e.key === ' ' ? col : t.lastCol };
+				active = { row: t.t.row, col: e.key === ' ' ? col : t.t.col };
+				anchor = { row: t.last, col: e.key === ' ' ? col : t.lastCol };
 				refreshFx();
 				refreshStatus();
 				schedule();
@@ -4181,13 +4239,13 @@
 				arrow(0, -1);
 				break;
 			case 'PageDown':
-				moveTo(row + page, col, ext);
+				moveTo(cur.row + page, cur.col, ext);
 				break;
 			case 'PageUp':
-				moveTo(row - page, col, ext);
+				moveTo(cur.row - page, cur.col, ext);
 				break;
 			case 'Home':
-				moveTo(ctrl ? 0 : row, 0, ext);
+				moveTo(ctrl ? 0 : cur.row, 0, ext);
 				break;
 			case 'End':
 				if (ctrl) {
@@ -4379,7 +4437,7 @@
 	function commitAll() {
 		const r = editRange;
 		const sel = r?.sel;
-		if (!r || !sel || (sel.r0 === sel.r1 && sel.c0 === sel.c1) || !source.paste) {
+		if (!r || !sel || isSingleCell(sel, active, merges) || !source.paste) {
 			commit();
 			return;
 		}
@@ -4779,13 +4837,12 @@
 	// --- Presse-papiers -----------------------------------------------------
 
 	function selection() {
-		return {
-			r0: Math.min(active.row, anchor.row),
-			r1: Math.max(active.row, anchor.row),
-			c0: Math.min(active.col, anchor.col),
-			c1: Math.max(active.col, anchor.col)
-		};
+		// Agrandie aux fusions qu'elle touche, entières (comme Excel).
+		return expandRange(rangeOf(active, anchor), merges);
 	}
+
+	/** La sélection n'est-elle que la cellule active (ou sa fusion) ? */
+	const singleSelection = () => isSingleCell(selection(), active, merges);
 
 	// Zone copiée ou coupée : cadre pointillé ; une zone coupée s'efface au collage.
 	let clipRange = $state<{ r0: number; r1: number; c0: number; c1: number; cut: boolean; text: string } | null>(null);
