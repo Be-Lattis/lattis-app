@@ -399,6 +399,14 @@ export function MCPState(): $CancellablePromise<$models.MCPStatus> {
 }
 
 /**
+ * MergeCells fusionne et centre des cellules libres ; renvoie le nombre de
+ * valeurs effacées (seule celle en haut à gauche est gardée).
+ */
+export function MergeCells(sheet: number, r0: number, c0: number, r1: number, c1: number): $CancellablePromise<number> {
+    return $Call.ByID(350103724, sheet, r0, c0, r1, c1);
+}
+
+/**
  * InsertRow, DeleteRow, InsertColumn et DeleteColumn agissent sur un tableau.
  * MoveCells déplace les cellules libres d'une plage de (dr, dc).
  */
@@ -744,6 +752,13 @@ export function SetFilter(table: string, i: number, f: canvas$0.ColumnFilter | n
 }
 
 /**
+ * SetFreeze fige les volets de la feuille (0, 0 : les libère).
+ */
+export function SetFreeze(sheet: number, rows: number, cols: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3509348088, sheet, rows, cols);
+}
+
+/**
  * SetGridlines affiche ou masque le quadrillage de la feuille.
  */
 export function SetGridlines(sheet: number, show: boolean): $CancellablePromise<$models.DocState> {
@@ -774,6 +789,13 @@ export function SetLineRules(sheet: number, rows: boolean, i0: number, i1: numbe
 }
 
 /**
+ * SetLinesHidden masque ou affiche des lignes (rows) ou des colonnes [i0, i1].
+ */
+export function SetLinesHidden(sheet: number, rows: boolean, i0: number, i1: number, hide: boolean): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(4208018554, sheet, rows, i0, i1, hide);
+}
+
+/**
  * SetMCPEnabled active ou désactive le serveur MCP (réglage gardé).
  */
 export function SetMCPEnabled(on: boolean): $CancellablePromise<$models.MCPStatus> {
@@ -785,6 +807,13 @@ export function SetMCPEnabled(on: boolean): $CancellablePromise<$models.MCPStatu
  */
 export function SetName(sheet: number, row: number, col: number, name: string): $CancellablePromise<$models.DocState> {
     return $Call.ByID(319879748, sheet, row, col, name);
+}
+
+/**
+ * SetNote pose la note d'une cellule (texte vide : la retire).
+ */
+export function SetNote(sheet: number, row: number, col: number, text: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2235772631, sheet, row, col, text);
 }
 
 /**
@@ -865,6 +894,13 @@ export function TypeMix(table: string, i: number): $CancellablePromise<canvas$0.
  */
 export function Undo(): $CancellablePromise<$models.DocState> {
     return $Call.ByID(1702602619);
+}
+
+/**
+ * UnmergeCells annule les fusions qui touchent un rectangle.
+ */
+export function UnmergeCells(sheet: number, r0: number, c0: number, r1: number, c1: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1081996215, sheet, r0, c0, r1, c1);
 }
 
 /**

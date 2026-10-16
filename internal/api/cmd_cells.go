@@ -305,6 +305,71 @@ cells.set(2, 2, 3.5)`,
 			},
 		},
 		&Command{
+			Name:    "cells.merge",
+			Label:   "Fusionner et centrer",
+			Summary: "Fusionne des cellules libres en une seule, au contenu centré (refusé dans un tableau ou un tableau croisé). Comme Excel, seule la valeur en haut à gauche est gardée.",
+			Returns: "nombre de valeurs effacées",
+			Params:  []Param{pRow, pCol, pRow2, pCol2, pSheet},
+			Write:   true,
+			Example: `cells.merge{row = 40, col = 12, col2 = 15}`,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				r0, c0, r1, c1, err := c.rect()
+				if err != nil {
+					return nil, err
+				}
+				d, _ := c.Doc()
+				return d.MergeCells(c, s.ID, r0, c0, r1, c1)
+			},
+		},
+		&Command{
+			Name:    "cells.unmerge",
+			Label:   "Annuler la fusion",
+			Summary: "Annule les fusions de cellules qui touchent la plage.",
+			Params:  []Param{pRow, pCol, pRow2, pCol2, pSheet},
+			Write:   true,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				r0, c0, r1, c1, err := c.rect()
+				if err != nil {
+					return nil, err
+				}
+				d, _ := c.Doc()
+				return nil, d.UnmergeCells(c, s.ID, r0, c0, r1, c1)
+			},
+		},
+		&Command{
+			Name:    "cells.note",
+			Label:   "Note",
+			Summary: "Pose la note d'une cellule (coin rouge, affichée au survol) ; un texte vide la retire. Dans un tableau, la note suit sa ligne.",
+			Params:  []Param{pRow, pCol, {Name: "text", Type: String, Desc: "texte de la note (vide : la retirer)"}, pSheet},
+			Write:   true,
+			Example: `cells.note{row = 2, col = 3, text = "Chiffre provisoire"}`,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				row, err := c.Pos("row", 0)
+				if err != nil {
+					return nil, err
+				}
+				col, err := c.Pos("col", 0)
+				if err != nil {
+					return nil, err
+				}
+				text, _ := c.Str("text")
+				d, _ := c.Doc()
+				return nil, d.SetNote(c, s.ID, row, col, text)
+			},
+		},
+		&Command{
 			Name:    "cells.name",
 			Label:   "Nommer la cellule",
 			Summary: "Nomme une cellule libre, pour la citer dans les formules ; un nom vide retire le nom.",
@@ -360,7 +425,7 @@ cells.set(2, 2, 3.5)`,
 	)
 }
 
-const styleHelp = `style : bold, italic, underline (booléens), color et fill (couleurs "#rrggbb"), align ("left", "center" ou "right"), format ("0", "0,00", "%" ou "€"), decimals (nombre de décimales), borders (les quatre bordures) ou border_top, border_bottom, border_left, border_right. false ou "" retire la propriété.`
+const styleHelp = `style : bold, italic, underline, strike (booléens), font (police) et size (taille en points), color et fill (couleurs "#rrggbb"), align ("left", "center" ou "right"), valign ("top", "middle" ou "bottom"), wrap (renvoyer à la ligne), format ("0", "0,00", "%", "€", "date", "time" ou "text"), decimals (nombre de décimales), no_grouping (sans séparateur de milliers), date_format (motif d'une date ou d'une heure : "jj/mm/aaaa", "jj mmm aaaa", "aaaa-mm-jj", "hh:mm"…), borders (les quatre bordures) ou border_top, border_bottom, border_left, border_right, border_color, et validation (liste des valeurs permises, liste déroulante). false ou "" retire la propriété.`
 
 // styleKeys traduit les noms lisibles des propriétés de mise en forme vers
 // les clés du classeur (internal/canvas/styles.go).
@@ -368,9 +433,12 @@ var styleKeys = map[string]string{
 	"bold": "b", "italic": "i", "underline": "u", "color": "fg", "fill": "bg",
 	"align": "al", "format": "nf", "decimals": "dp",
 	"border_top": "bt", "border_bottom": "bb", "border_left": "bl", "border_right": "br",
+	"strike": "x", "font": "ff", "size": "fs", "valign": "va", "wrap": "wr", "no_grouping": "ng",
+	"date_format": "df", "border_color": "bc", "validation": "dv",
 }
 
-var styleRaw = map[string]bool{"b": true, "i": true, "u": true, "fg": true, "bg": true, "al": true, "nf": true, "dp": true, "bt": true, "bb": true, "bl": true, "br": true}
+var styleRaw = map[string]bool{"b": true, "i": true, "u": true, "x": true, "ff": true, "fs": true, "fg": true, "bg": true, "al": true, "va": true, "wr": true,
+	"nf": true, "dp": true, "ng": true, "df": true, "bt": true, "bb": true, "bl": true, "br": true, "bc": true, "dv": true}
 
 func toStyle(m map[string]any) (canvas.Style, error) {
 	st := canvas.Style{}

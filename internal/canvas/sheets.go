@@ -177,7 +177,7 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 		}
 		var n, tables int
 		var name string
-		var pos, grid, heads int
+		var pos, grid, heads, frows, fcols int
 		if err := t.row(`SELECT count(*) FROM _slitable_sheets`).Scan(&n); err != nil {
 			return err
 		}
@@ -190,7 +190,7 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 		if tables > 0 {
 			return fmt.Errorf("%w : la feuille contient des tableaux, supprimez-les d'abord", ErrSheet)
 		}
-		if err := t.row(`SELECT name, pos, gridlines, headings FROM _slitable_sheets WHERE id = ?`, sheet).Scan(&name, &pos, &grid, &heads); err != nil {
+		if err := t.row(`SELECT name, pos, gridlines, headings, freeze_rows, freeze_cols FROM _slitable_sheets WHERE id = ?`, sheet).Scan(&name, &pos, &grid, &heads, &frows, &fcols); err != nil {
 			return err
 		}
 		cells, err := t.cells(sheet)
@@ -234,7 +234,7 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 		}
 		return t.apply(
 			append(do, st(`DELETE FROM _slitable_sheets WHERE id = ?`, sheet)),
-			append([]stmt{st(`INSERT INTO _slitable_sheets (id, name, pos, gridlines, headings) VALUES (?, ?, ?, ?, ?)`, sheet, name, pos, grid, heads)}, pivots...),
+			append([]stmt{st(`INSERT INTO _slitable_sheets (id, name, pos, gridlines, headings, freeze_rows, freeze_cols) VALUES (?, ?, ?, ?, ?, ?, ?)`, sheet, name, pos, grid, heads, frows, fcols)}, pivots...),
 		)
 	})
 }

@@ -20,6 +20,10 @@ type SheetInfo struct {
 	// Password : il faut un mot de passe pour ôter la protection.
 	Protected bool `json:"protected"`
 	Password  bool `json:"password"`
+	// FreezeRows, FreezeCols : volets figés (lignes et colonnes qui restent
+	// affichées pendant le défilement), 0 sans volet figé.
+	FreezeRows int `json:"freezeRows"`
+	FreezeCols int `json:"freezeCols"`
 }
 
 // ColumnInfo décrit une colonne de tableau pour l'interface.
@@ -125,13 +129,13 @@ type ColWidth struct {
 func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 	l := Layout{Sheet: sheet, Tables: []TableInfo{}, Cells: []CellInfo{}, Widths: []ColWidth{}, Heights: []RowHeight{}, Names: []NameInfo{}, Styles: []CellStyle{}}
 	err := m.read(ctx, func(t *tx) error {
-		rs, err := t.query(`SELECT id, name, gridlines = 0, headings <> 0 FROM _slitable_sheets ORDER BY pos, id`)
+		rs, err := t.query(`SELECT id, name, gridlines = 0, headings <> 0, freeze_rows, freeze_cols FROM _slitable_sheets ORDER BY pos, id`)
 		if err != nil {
 			return err
 		}
 		for rs.Next() {
 			var s SheetInfo
-			if err := rs.Scan(&s.ID, &s.Name, &s.NoGrid, &s.Headings); err != nil {
+			if err := rs.Scan(&s.ID, &s.Name, &s.NoGrid, &s.Headings, &s.FreezeRows, &s.FreezeCols); err != nil {
 				rs.Close()
 				return err
 			}

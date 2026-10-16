@@ -248,6 +248,12 @@ CREATE TABLE _slitable_queries (
 	refreshed TEXT
 ) STRICT;
 `,
+	// 19 → 20 : volets figés (Affichage › Figer les volets) : nombre de
+	// lignes et de colonnes qui restent affichées pendant le défilement.
+	`
+ALTER TABLE _slitable_sheets ADD COLUMN freeze_rows INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE _slitable_sheets ADD COLUMN freeze_cols INTEGER NOT NULL DEFAULT 0;
+`,
 }
 
 // Version est la version du format que ce programme écrit.
