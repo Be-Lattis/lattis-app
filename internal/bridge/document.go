@@ -459,3 +459,26 @@ func (s *DocumentService) SortTable(ctx context.Context, table string, i int, de
 func (s *DocumentService) ApplyStyle(ctx context.Context, sheet int64, r0, c0, r1, c1 int, patch map[string]any) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.ApplyStyle(ctx, sheet, r0, c0, r1, c1, patch) })
 }
+
+// Find cherche un texte dans une feuille (cellules dans l'ordre de lecture).
+func (s *DocumentService) Find(ctx context.Context, sheet int64, text string) ([]canvas.Match, error) {
+	d, err := s.current()
+	if err != nil {
+		return nil, err
+	}
+	return d.Find(ctx, sheet, text)
+}
+
+// Replace remplace un texte dans toute la feuille et renvoie le nombre de
+// cellules modifiées.
+func (s *DocumentService) Replace(ctx context.Context, sheet int64, text, by string) (int, error) {
+	d, err := s.current()
+	if err != nil {
+		return 0, err
+	}
+	n, err := d.Replace(ctx, sheet, text, by)
+	if err == nil && n > 0 {
+		s.changed(ctx)
+	}
+	return n, err
+}

@@ -90,6 +90,9 @@
 		sortTable?(table: SheetTable, i: number, desc: boolean): Promise<unknown>;
 		/** Met en forme le rectangle sélectionné (une valeur vide retire la propriété). */
 		applyStyle?(r0: number, c0: number, r1: number, c1: number, patch: Record<string, unknown>): Promise<unknown>;
+		find?(text: string): Promise<{ row: number; col: number }[]>;
+		/** Remplace partout ; renvoie le nombre de cellules modifiées. */
+		replace?(text: string, by: string): Promise<number>;
 	}
 
 	export interface SheetStatus {
@@ -929,6 +932,11 @@
 			source.undo().catch((err) => say(String(err?.message ?? err)));
 			return;
 		}
+		if (ctrl && (e.key.toLowerCase() === 'f' || e.key.toLowerCase() === 'h') && source.find) {
+			e.preventDefault();
+			openFinder(e.key.toLowerCase() === 'h');
+			return;
+		}
 		if (ctrl && ['b', 'i', 'u'].includes(e.key.toLowerCase()) && source.applyStyle) {
 			e.preventDefault();
 			applyStyle({ [e.key.toLowerCase()]: 'toggle' });
@@ -1177,6 +1185,62 @@
 			refreshStatus();
 		});
 		wrap.focus();
+	}
+
+	// --- Rechercher / remplacer -------------------------------------------------
+
+	let finder = $state<{ replace: boolean; text: string; by: string; info: string } | null>(null);
+	let findInput = $state<HTMLInputElement>();
+	let matches: { row: number; col: number }[] = [];
+	let matchText = '';
+
+	/** Ouvre la barre de recherche (replace : avec le champ Remplacer par). */
+	export function openFinder(replace: boolean) {
+		if (!source.find) return;
+		finder = { replace, text: finder?.text ?? '', by: finder?.by ?? '', info: '' };
+		requestAnimationFrame(() => findInput?.select());
+	}
+
+	async function findNext(back = false) {
+		if (!finder || !source.find || !finder.text) return;
+		if (finder.text !== matchText) {
+			matches = await source.find(finder.text);
+			matchText = finder.text;
+		}
+		if (matches.length === 0) {
+			finder.info = 'Aucune cellule trouvée';
+			return;
+		}
+		const { row, col } = active;
+		const after = (m: { row: number; col: number }) => m.row > row || (m.row === row && m.col > col);
+		const before = (m: { row: number; col: number }) => m.row < row || (m.row === row && m.col < col);
+		const i = back ? matches.findLastIndex(before) : matches.findIndex(after);
+		const k = i >= 0 ? i : back ? matches.length - 1 : 0;
+		moveTo(matches[k].row, matches[k].col);
+		finder.info = `${k + 1} sur ${matches.length}${matches.length >= 5000 ? '+' : ''}`;
+	}
+
+	async function replaceAll() {
+		if (!finder || !source.replace || !finder.text) return;
+		const { text, by } = finder;
+		try {
+			const n = await source.replace(text, by);
+			finder.info = n ? `${n} cellule${n > 1 ? 's' : ''} remplacée${n > 1 ? 's' : ''} (Ctrl+Z pour annuler)` : 'Aucune cellule trouvée';
+			matchText = '';
+		} catch (e) {
+			finder.info = String(e instanceof Error ? e.message : e);
+		}
+	}
+
+	function onFinderKey(e: KeyboardEvent) {
+		e.stopPropagation();
+		if (e.key === 'Escape') {
+			finder = null;
+			wrap.focus();
+		} else if (e.key === 'Enter') {
+			e.preventDefault();
+			findNext(e.shiftKey);
+		}
 	}
 
 	// --- Presse-papiers -----------------------------------------------------
@@ -1504,6 +1568,27 @@
 		/>
 	</div>
 	{#if bench}<div class="bench">{bench}</div>{/if}
+	{#if finder}
+		<div class="finder">
+			<span>Rechercher</span>
+			<input bind:this={findInput} bind:value={finder.text} onkeydown={onFinderKey} spellcheck="false" />
+			<button onclick={() => findNext(true)} title="Précédent (Maj+Entrée)">◀</button>
+			<button onclick={() => findNext()} title="Suivant (Entrée)">▶</button>
+			{#if finder.replace}
+				<span>Remplacer par</span>
+				<input bind:value={finder.by} onkeydown={onFinderKey} spellcheck="false" />
+				<button onclick={replaceAll}>Remplacer tout</button>
+			{:else if source.replace}
+				<button class="link" onclick={() => finder && (finder.replace = true)}>Remplacer…</button>
+			{/if}
+			<span class="muted">{finder.info}</span>
+			<span class="sp"></span>
+			<button onclick={() => {
+				finder = null;
+				wrap.focus();
+			}} title="Fermer (Échap)">✕</button>
+		</div>
+	{/if}
 	{#if completion?.where === 'fx' || sig?.where === 'fx'}
 		<div class="suggest fx-suggest">{@render suggestions('fx')}</div>
 	{/if}
@@ -1639,6 +1724,40 @@
 		border: none;
 		outline: none;
 		padding: 4px 2px;
+	}
+	.finder {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 4px 10px;
+		background: #f7f8f9;
+		border-bottom: 1px solid #d4d7db;
+	}
+	.finder input {
+		font: inherit;
+		width: 200px;
+		padding: 2px 6px;
+		border: 1px solid #c9cdd2;
+		border-radius: 3px;
+	}
+	.finder button {
+		font: inherit;
+		padding: 2px 8px;
+		border: 1px solid #c9cdd2;
+		background: #fff;
+		border-radius: 3px;
+		cursor: pointer;
+	}
+	.finder .link {
+		border: none;
+		background: none;
+		color: #217346;
+	}
+	.finder .muted {
+		color: #6b7280;
+	}
+	.finder .sp {
+		flex: 1;
 	}
 	.bench {
 		padding: 4px 10px;

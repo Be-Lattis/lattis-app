@@ -117,6 +117,14 @@ export interface Layout {
 }
 
 /**
+ * Match est une cellule trouvée (coordonnées de la feuille).
+ */
+export interface Match {
+    "row": number;
+    "col": number;
+}
+
+/**
  * NameInfo est une cellule nommée de la feuille.
  */
 export interface NameInfo {

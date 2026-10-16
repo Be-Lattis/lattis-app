@@ -37,9 +37,10 @@
 		onsort?: (desc: boolean) => void;
 		/** Mise en forme de la sélection ('toggle' bascule gras, italique, souligné). */
 		onstyle?: (patch: Record<string, unknown>) => void;
+		onfind?: (replace: boolean) => void;
 	}
 
-	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench, onsort, onstyle }: Props = $props();
+	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind }: Props = $props();
 	let fg = $state('#c00000');
 	let bg = $state('#fff2cc');
 	const st = (patch: Record<string, unknown>) => (onstyle ? () => onstyle(patch) : undefined);
@@ -86,7 +87,14 @@
 					{ label: 'Standard', icon: 'number-format', run: st({ nf: null }), hint: 'Format Standard' }
 				]
 			},
-			{ title: 'Édition', commands: [{ label: 'Trier et filtrer', icon: 'sort' }, { label: 'Rechercher', icon: 'search' }] }
+			{
+				title: 'Édition',
+				commands: [
+					{ label: 'Trier A → Z', icon: 'sort', run: onsort ? () => onsort(false) : undefined },
+					{ label: 'Rechercher', icon: 'search', run: onfind ? () => onfind(false) : undefined, hint: 'Rechercher (Ctrl+F)' },
+					{ label: 'Remplacer', icon: 'search', run: onfind ? () => onfind(true) : undefined, hint: 'Remplacer (Ctrl+H)' }
+				]
+			}
 		],
 		Insertion: [
 			{ title: 'Tableaux', commands: [{ label: 'Tableau', icon: 'table' }, { label: 'Tableau croisé', icon: 'pivot-table' }] },

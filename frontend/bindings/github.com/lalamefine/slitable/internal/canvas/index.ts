@@ -8,6 +8,7 @@ export type {
     ColumnInfo,
     Event,
     Layout,
+    Match,
     NameInfo,
     ScriptInfo,
     SheetInfo,

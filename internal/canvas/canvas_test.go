@@ -3,6 +3,7 @@ package canvas
 import (
 	"context"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -664,6 +665,40 @@ func TestStyles(t *testing.T) {
 	for range 6 {
 		d.bus.Undo(ctx)
 	}
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
+	}
+}
+
+func TestFindReplace(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Ville", "Note"}, {"Paris", "paris centre"}, {"Lyon", "1"}, {"PARIS", ""}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.SetCell(ctx, 1, 6, 0, "voir Paris"); err != nil {
+		t.Fatal(err)
+	}
+	before := dump(t, d)
+	ms, err := d.Find(ctx, 1, "paris")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fmt.Sprint(ms) != "[{1 0} {1 1} {3 0} {6 0}]" {
+		t.Fatalf("Find = %v", ms)
+	}
+	if ms, _ := d.Find(ctx, 1, "100%"); len(ms) != 0 {
+		t.Fatalf("%% non protégé : %v", ms)
+	}
+	n, err := d.Replace(ctx, 1, "paris", "Marseille")
+	if err != nil || n != 4 {
+		t.Fatalf("Replace = %d, %v", n, err)
+	}
+	if got := view(t, d); !strings.Contains(got, "Marseille|Marseille centre") || !strings.Contains(got, "'voir Marseille") {
+		t.Fatalf("feuille :\n%s", got)
+	}
+	check(t, d, "remplacer")
+	d.bus.Undo(ctx)
 	if got := dump(t, d); got != before {
 		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
 	}

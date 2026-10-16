@@ -73,6 +73,13 @@ export function Discard(dir: string): $CancellablePromise<void> {
 }
 
 /**
+ * Find cherche un texte dans une feuille (cellules dans l'ordre de lecture).
+ */
+export function Find(sheet: number, text: string): $CancellablePromise<canvas$0.Match[] | null> {
+    return $Call.ByID(4206668974, sheet, text);
+}
+
+/**
  * FormulaHelp renvoie le catalogue de l'aide à la saisie.
  */
 export function FormulaHelp(): $CancellablePromise<$models.FormulaHelp> {
@@ -148,6 +155,14 @@ export function Redo(): $CancellablePromise<$models.DocState> {
  */
 export function RenameSheet(sheet: number, name: string): $CancellablePromise<$models.DocState> {
     return $Call.ByID(85727842, sheet, name);
+}
+
+/**
+ * Replace remplace un texte dans toute la feuille et renvoie le nombre de
+ * cellules modifiées.
+ */
+export function Replace(sheet: number, text: string, by: string): $CancellablePromise<number> {
+    return $Call.ByID(2849830015, sheet, text, by);
 }
 
 /**
