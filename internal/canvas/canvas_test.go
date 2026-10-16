@@ -1065,6 +1065,9 @@ func TestRemoveDuplicates(t *testing.T) {
 		t.Fatalf("après :\n%s", got)
 	}
 	d.bus.Undo(ctx)
+	if n, _ := d.DuplicatesPreview(ctx, "Feuille1", []int{0}); n != 3 {
+		t.Fatalf("aperçu sur Ville : %d", n)
+	}
 	if n, _ := d.RemoveDuplicates(ctx, "Feuille1", []int{0}); n != 3 {
 		t.Fatalf("doublons sur Ville : %d", n)
 	}

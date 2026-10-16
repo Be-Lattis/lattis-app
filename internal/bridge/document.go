@@ -614,3 +614,12 @@ func (s *DocumentService) SetKey(ctx context.Context, table string, i int) (DocS
 func (s *DocumentService) ClearKey(ctx context.Context, table string) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.ClearKey(ctx, table) })
 }
+
+// DuplicatesPreview compte les lignes en double selon des colonnes.
+func (s *DocumentService) DuplicatesPreview(ctx context.Context, table string, cols []int) (int, error) {
+	d, err := s.current()
+	if err != nil {
+		return 0, err
+	}
+	return d.DuplicatesPreview(ctx, table, cols)
+}

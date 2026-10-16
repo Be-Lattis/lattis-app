@@ -171,7 +171,9 @@
 		setPivot?(id: number, cfg: PivotConfig): Promise<unknown>;
 		deletePivot?(id: number): Promise<unknown>;
 		/** Supprime les lignes en double ; renvoie leur nombre. */
-		removeDuplicates?(table: SheetTable): Promise<number>;
+		removeDuplicates?(table: SheetTable, cols: number[]): Promise<number>;
+		/** Nombre de lignes que removeDuplicates retirerait. */
+		duplicatesPreview?(table: SheetTable, cols: number[]): Promise<number>;
 		deleteTables?(tables: SheetTable[]): Promise<unknown>;
 		/** Déplace un tableau, en-tête en (row, col) ; côte à côte d'un autre : fusion. */
 		moveTable?(table: SheetTable, row: number, col: number): Promise<unknown>;
@@ -1303,19 +1305,84 @@
 	}
 
 	/** Supprime les doublons du tableau de la cellule active (ruban Données). */
+	let dedupDlg = $state<{ e: Entry; on: boolean[]; count: number | null; error: string } | null>(null);
+
 	export function dedupActive() {
 		const e = tableAt(active.row, active.col);
 		if (!e || !source.removeDuplicates) {
 			say('Placez la cellule active dans un tableau');
 			return;
 		}
-		const dedup = source.removeDuplicates;
-		writing = writing.then(() =>
-			dedup(e.t).then(
-				(n) => say(n ? `${n} ligne${n > 1 ? 's' : ''} en double supprimée${n > 1 ? 's' : ''} (Ctrl+Z pour annuler)` : 'Aucun doublon'),
-				(err) => say(String(err?.message ?? err))
-			)
-		);
+		// Comme Excel : toutes les colonnes cochées au départ.
+		dedupDlg = { e, on: e.t.columns.map((c) => !c.formula), count: null, error: '' };
+		previewDedup();
+	}
+
+	let dedupSeq = 0;
+	async function previewDedup() {
+		const d = dedupDlg;
+		if (!d || !source.duplicatesPreview) return;
+		const cols = d.on.flatMap((on, i) => (on ? [i] : []));
+		const seq = ++dedupSeq;
+		d.count = null;
+		if (!cols.length) {
+			d.count = 0;
+			return;
+		}
+		try {
+			const n = await source.duplicatesPreview(d.e.t, cols);
+			if (seq === dedupSeq && dedupDlg === d) d.count = n;
+		} catch (err) {
+			d.error = String(err instanceof Error ? err.message : err);
+		}
+	}
+
+	async function applyDedup() {
+		const d = dedupDlg;
+		if (!d || !source.removeDuplicates) return;
+		const cols = d.on.flatMap((on, i) => (on ? [i] : []));
+		try {
+			const n = await source.removeDuplicates(d.e.t, cols);
+			dedupDlg = null;
+			wrap.focus();
+			say(n ? `${n} ligne${n > 1 ? 's' : ''} en double supprimée${n > 1 ? 's' : ''} (Ctrl+Z pour annuler)` : 'Aucun doublon');
+		} catch (err) {
+			d.error = String(err instanceof Error ? err.message : err);
+		}
+	}
+
+	// --- Ruban Formules ---------------------------------------------------------
+
+	let fnDlg = $state<{ search: string } | null>(null);
+
+	/** Commence une formule dans la cellule active (Insérer une fonction, REFERENCE). */
+	export function startFormula(text: string) {
+		fnDlg = null;
+		wrap.focus();
+		startEdit(true, text);
+		if (input) onFormulaInput(input, 'cell');
+	}
+
+	/** Somme automatique : SOMME de la colonne du tableau situé juste au-dessus. */
+	export function autoSum() {
+		const { row, col } = active;
+		const inTbl = tableAt(row, col);
+		const above = entries.filter((e) => col >= e.t.col && col <= e.lastCol && e.last < row).sort((a, b) => b.last - a.last)[0];
+		if (!inTbl && above) {
+			startFormula(`=SOMME(${above.t.name}[${above.t.columns[col - above.t.col].name}])`);
+			return;
+		}
+		startFormula('=SOMME(');
+	}
+
+	export function openFunctions() {
+		fnDlg = { search: '' };
+	}
+
+	function shownFunctions() {
+		const q = fnDlg?.search.trim().toLowerCase() ?? '';
+		const all = catalog?.functions ?? [];
+		return (q ? all.filter((f) => f.name.toLowerCase().includes(q) || f.other.toLowerCase().includes(q)) : all).slice(0, 200);
 	}
 
 	/** Tri du tableau de la cellule active (ruban Données). */
@@ -2691,6 +2758,100 @@
 				</div>
 			</div>
 		{/if}
+		{#if dedupDlg}
+			{@const d = dedupDlg}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="rules filter"
+				onkeydown={(ev) => {
+					ev.stopPropagation();
+					if (ev.key === 'Escape') {
+						dedupDlg = null;
+						wrap.focus();
+					}
+				}}
+			>
+				<div class="menu-title">Supprimer les doublons de « {d.e.t.name} »</div>
+				<p class="menu-note">Deux lignes sont en double quand les colonnes cochées ont les mêmes valeurs. La première est gardée.</p>
+				<div class="values">
+					<label class="all">
+						<input
+							type="checkbox"
+							checked={d.on.every((x, i) => x || !!d.e.t.columns[i].formula)}
+							onchange={(ev) => {
+								const on = (ev.currentTarget as HTMLInputElement).checked;
+								d.on = d.e.t.columns.map((c) => on && !c.formula);
+								previewDedup();
+							}}
+						/>
+						(Toutes les colonnes)
+					</label>
+					{#each d.e.t.columns as c, i (i)}
+						<label>
+							<input
+								type="checkbox"
+								disabled={!!c.formula}
+								checked={d.on[i]}
+								onchange={(ev) => {
+									d.on[i] = (ev.currentTarget as HTMLInputElement).checked;
+									previewDedup();
+								}}
+							/>
+							<span class="what">{c.name}</span>
+						</label>
+					{/each}
+				</div>
+				<p class="menu-note">
+					{d.count === null ? 'Calcul…' : d.count === 0 ? 'Aucune ligne en double avec ces colonnes.' : `${d.count} ligne${d.count > 1 ? 's' : ''} en double ser${d.count > 1 ? 'ont' : 'a'} supprimée${d.count > 1 ? 's' : ''}.`}
+				</p>
+				{#if d.error}<p class="menu-note error">{d.error}</p>{/if}
+				<div class="foot">
+					<span class="sp"></span>
+					<button disabled={!d.count} onclick={applyDedup}>Supprimer</button>
+					<button
+						onclick={() => {
+							dedupDlg = null;
+							wrap.focus();
+						}}>Annuler</button
+					>
+				</div>
+			</div>
+		{/if}
+		{#if fnDlg}
+			{@const d = fnDlg}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="rules filter"
+				onkeydown={(ev) => {
+					ev.stopPropagation();
+					if (ev.key === 'Escape') {
+						fnDlg = null;
+						wrap.focus();
+					}
+				}}
+			>
+				<div class="menu-title">Insérer une fonction ({catalog?.functions.length ?? 0} disponibles)</div>
+				<!-- svelte-ignore a11y_autofocus -->
+				<div class="add"><input class="search" bind:value={d.search} placeholder="Rechercher (SOMME, RECHERCHEV…)" autofocus /></div>
+				<div class="values">
+					{#each shownFunctions() as f (f.name)}
+						<button class="fn" onclick={() => startFormula(`=${f.name}(`)}>
+							<strong>{f.name}</strong>
+							<span class="count">{f.arity}{f.other ? ` · ${f.other}` : ''}</span>
+						</button>
+					{/each}
+				</div>
+				<div class="foot">
+					<span class="sp"></span>
+					<button
+						onclick={() => {
+							fnDlg = null;
+							wrap.focus();
+						}}>Fermer</button
+					>
+				</div>
+			</div>
+		{/if}
 		{#if filterDlg}
 			{@const d = filterDlg}
 			{@const shown = filterShown()}
@@ -3066,6 +3227,20 @@
 		display: flex;
 		align-items: center;
 		gap: 4px;
+	}
+	.filter .fn {
+		display: flex;
+		justify-content: space-between;
+		gap: 8px;
+		width: 100%;
+		text-align: left;
+		border: none;
+		background: none;
+		padding: 3px 8px;
+		cursor: pointer;
+	}
+	.filter .fn:hover {
+		background: #e3efe7;
 	}
 	.pivot .lab {
 		width: 70px;

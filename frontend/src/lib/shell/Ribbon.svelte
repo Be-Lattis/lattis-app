@@ -45,10 +45,11 @@
 		onrecalc?: () => void;
 		ondedup?: () => void;
 		onpivot?: () => void;
+		onformula?: (what: 'insert' | 'sum' | 'reference') => void;
 		onchart?: (kind: 'bar' | 'line' | 'pie' | 'scatter') => void;
 	}
 
-	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart }: Props = $props();
+	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula }: Props = $props();
 	let fg = $state('#c00000');
 	let bg = $state('#fff2cc');
 	const st = (patch: Record<string, unknown>) => (onstyle ? () => onstyle(patch) : undefined);
@@ -167,7 +168,7 @@
 			{ title: 'Outils de données', commands: [{ label: 'Supprimer les doublons', icon: 'remove-duplicates', run: ondedup, hint: 'Supprimer les lignes en double du tableau actif' }, { label: 'Convertir le type', icon: 'convert-type' }, { label: 'Erreurs seulement', icon: 'warning', run: onfilter ? () => onfilter(true) : undefined, hint: 'Afficher seulement les saisies hors type de la colonne active (bascule)' }] }
 		],
 		Formules: [
-			{ title: 'Bibliothèque', commands: [{ label: 'Insérer une fonction', icon: 'function' }, { label: 'Somme automatique', icon: 'autosum' }, { label: 'REFERENCE', icon: 'reference' }] },
+			{ title: 'Bibliothèque', commands: [{ label: 'Insérer une fonction', icon: 'function', run: onformula ? () => onformula('insert') : undefined, hint: 'Choisir une fonction et commencer la formule dans la cellule active' }, { label: 'Somme automatique', icon: 'autosum', run: onformula ? () => onformula('sum') : undefined, hint: 'SOMME de la colonne du tableau au-dessus' }, { label: 'REFERENCE', icon: 'reference', run: onformula ? () => onformula('reference') : undefined, hint: 'REFERENCE(tableau; colonne; clé) : la RECHERCHEV de Slitable' }] },
 			{ title: 'Audit', commands: [{ label: 'Antécédents', icon: 'precedents' }, { label: 'Dépendants', icon: 'dependents' }, { label: 'Graphe', icon: 'dependency-graph' }] },
 			{ title: 'Calcul', commands: [{ label: 'Calculer', icon: 'function', run: onrecalc, hint: 'Renouveler AUJOURDHUI, MAINTENANT et ALEA (F9)' }] }
 		],

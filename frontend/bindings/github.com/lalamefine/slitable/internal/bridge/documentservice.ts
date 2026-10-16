@@ -122,6 +122,13 @@ export function Discard(dir: string): $CancellablePromise<void> {
 }
 
 /**
+ * DuplicatesPreview compte les lignes en double selon des colonnes.
+ */
+export function DuplicatesPreview(table: string, cols: number[] | null): $CancellablePromise<number> {
+    return $Call.ByID(1565976229, table, cols);
+}
+
+/**
  * Execute exécute une requête d'écriture (INSERT, UPDATE, DELETE) sur le
  * classeur, avec les noms affichés des tableaux. Elle forme une étape
  * d'annulation ; les changements de structure sont refusés.

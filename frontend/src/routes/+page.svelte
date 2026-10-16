@@ -244,8 +244,9 @@
 		moveChart: (id, row, col) => DocumentService.MoveChart(id, row, col).then(reload),
 		deleteChart: (id) => DocumentService.DeleteChart(id).then(reload),
 		deletePivot: (id) => DocumentService.DeletePivot(id).then(reload),
-		removeDuplicates: async (t) => {
-			const n = await DocumentService.RemoveDuplicates(t.name, []);
+		duplicatesPreview: (t, cols) => DocumentService.DuplicatesPreview(t.name, cols),
+		removeDuplicates: async (t, cols) => {
+			const n = await DocumentService.RemoveDuplicates(t.name, cols);
 			await reload();
 			return n;
 		},
@@ -380,6 +381,7 @@
 		onrules={mode === 'doc' ? () => sheet?.rulesActive() : undefined}
 		onfilter={mode === 'doc' ? (errorsOnly) => sheet?.filterActive(errorsOnly) : undefined}
 		onchart={mode === 'doc' ? (kind) => sheet?.chartActive(kind) : undefined}
+		onformula={mode === 'doc' ? (what) => (what === 'insert' ? sheet?.openFunctions() : what === 'sum' ? sheet?.autoSum() : sheet?.startFormula('=REFERENCE(')) : undefined}
 		onpivot={mode === 'doc' ? () => sheet?.pivotActive() : undefined}
 		ondedup={mode === 'doc' ? () => sheet?.dedupActive() : undefined}
 		onrecalc={mode === 'doc' ? () => DocumentService.Recalc().then(reload).catch((e) => (notice = err(e))) : undefined}
