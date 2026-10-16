@@ -234,6 +234,7 @@
 		headStyles = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseStyle(c.headerStyle))]));
 		colRules = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseRules(c.rules))]));
 		rebuildAxis();
+		updateExtent();
 		refreshFx();
 		schedule();
 	}
@@ -275,7 +276,40 @@
 	const inTable = (e: Entry, r: number, c: number) => r >= e.t.row && r <= e.last && c >= e.t.col && c <= e.lastCol;
 	const tableAt = (r: number, c: number) => entries.find((e) => inTable(e, r, c));
 
-	const vs = new VScroll(SHEET_ROWS * ROW_H, 0);
+	// La zone de défilement suit le contenu, comme Excel : la partie utilisée
+	// de la feuille plus un écran, et elle grandit à mesure qu'on défile vers
+	// le bas ou la droite (au lieu de barres faites pour 1 M de lignes vides).
+	const vs = new VScroll(100 * ROW_H, 0);
+	let spacer: HTMLDivElement;
+	let extentCols = 26;
+
+	function updateExtent() {
+		if (!scroller) return;
+		const viewRows = Math.max(1, Math.ceil(vs.view / ROW_H));
+		let usedRow = Math.max(active.row, anchor.row);
+		let usedCol = Math.max(active.col, anchor.col);
+		for (const e of entries) {
+			usedRow = Math.max(usedRow, e.t.row + e.t.rows + (e.t.hidden ?? 0) + 1);
+			usedCol = Math.max(usedCol, e.lastCol + 1);
+		}
+		for (const k of cells.keys()) {
+			const [r, c] = k.split(',').map(Number);
+			usedRow = Math.max(usedRow, r);
+			usedCol = Math.max(usedCol, c);
+		}
+		const lastVisible = Math.floor((vs.top + vs.view) / ROW_H);
+		const rows = Math.min(SHEET_ROWS, Math.max(usedRow + 1, lastVisible + 1) + viewRows);
+		const cw = Math.max(0, viewW - MARGIN);
+		const lastVisibleCol = colAxis.indexAt(scroller.scrollLeft + cw);
+		const viewCols = Math.max(1, Math.ceil(cw / DEF_W));
+		extentCols = Math.min(SHEET_COLS, Math.max(usedCol + 1, lastVisibleCol + 1) + viewCols);
+		vs.content = rows * ROW_H;
+		vs.to(vs.top);
+		if (spacer) {
+			spacer.style.height = `${TOP_H + vs.spacer}px`;
+			spacer.style.width = `${MARGIN + colAxis.offset(extentCols)}px`;
+		}
+	}
 	let viewW = 0;
 	let viewH = 0;
 
@@ -1011,6 +1045,7 @@
 
 	function onScroll() {
 		if (!vs.inSync(scroller.scrollTop)) vs.fromNative(scroller.scrollTop);
+		updateExtent();
 		schedule();
 	}
 
@@ -1022,10 +1057,16 @@
 		if (e.shiftKey && dx === 0) [dx, dy] = [dy, 0];
 		e.preventDefault();
 		if (dy) {
+			// Défiler vers le bas agrandit la feuille d'autant.
+			if (dy > 0) vs.content = Math.min(SHEET_ROWS * ROW_H, Math.max(vs.content, vs.top + dy + 2 * vs.view));
 			vs.by(dy);
+			updateExtent();
 			scroller.scrollTop = vs.toNative();
 		}
-		if (dx) scroller.scrollLeft += dx;
+		if (dx) {
+			scroller.scrollLeft += dx;
+			updateExtent();
+		}
 		schedule();
 	}
 
@@ -1035,6 +1076,7 @@
 	}
 
 	function ensureVisible(row: number, col: number) {
+		updateExtent();
 		const top = row * ROW_H;
 		if (top < vs.top) vs.to(top);
 		else if (top + ROW_H > vs.top + vs.view) vs.to(top + ROW_H - vs.view);
@@ -1867,7 +1909,7 @@
 			canvas.style.width = `${viewW}px`;
 			canvas.style.height = `${viewH}px`;
 			vs.view = viewH - TOP_H;
-			vs.to(vs.top);
+			updateExtent();
 			syncNative();
 		};
 		const ro = new ResizeObserver(resize);
@@ -2025,7 +2067,7 @@
 			ondblclick={onDblClick}
 			oncontextmenu={onContextMenu}
 		>
-			<div style:width="{MARGIN + colAxis.total}px" style:height="{TOP_H + vs.spacer}px"></div>
+			<div bind:this={spacer}></div>
 		</div>
 		{#if typeMenu}
 			{@const m = typeMenu}
