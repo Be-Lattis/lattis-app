@@ -42,6 +42,14 @@ func (a axis) sizes() string {
 	return "_slitable_col_widths"
 }
 
+// lineStyles est la table des styles de lignes (ou de colonnes) entières.
+func (a axis) lineStyles() string {
+	if a == rowsAxis {
+		return "_slitable_row_styles"
+	}
+	return "_slitable_col_styles"
+}
+
 // InsertSheetRows insère n lignes vides avant la ligne at de la feuille.
 func (m *Model) InsertSheetRows(ctx context.Context, sheet int64, at, n int) error {
 	return m.Do(ctx, plural(n, "Insérer une ligne", "Insérer des lignes"), func(t *tx) error { return t.insertLines(sheet, rowsAxis, at, n) })
@@ -90,7 +98,7 @@ func (t *tx) insertLines(sheet int64, a axis, at, n int) error {
 			}
 		}
 	}
-	for _, tbl := range append(positioned, a.sizes()) {
+	for _, tbl := range append(positioned, a.sizes(), a.lineStyles()) {
 		if err := t.shiftPos(tbl, a, sheet, at, n); err != nil {
 			return err
 		}
@@ -143,7 +151,7 @@ func (t *tx) deleteLines(sheet int64, a axis, lo, hi int) error {
 			}
 		}
 	}
-	for _, tbl := range []string{"_slitable_cells", "_slitable_cell_styles", "_slitable_names", a.sizes()} {
+	for _, tbl := range []string{"_slitable_cells", "_slitable_cell_styles", "_slitable_names", a.sizes(), a.lineStyles()} {
 		if err := t.deleteIn(tbl, a, sheet, lo, hi); err != nil {
 			return err
 		}
@@ -153,7 +161,7 @@ func (t *tx) deleteLines(sheet int64, a axis, lo, hi int) error {
 			return err
 		}
 	}
-	for _, tbl := range append(positioned, a.sizes()) {
+	for _, tbl := range append(positioned, a.sizes(), a.lineStyles()) {
 		if err := t.shiftPos(tbl, a, sheet, hi+1, -n); err != nil {
 			return err
 		}
