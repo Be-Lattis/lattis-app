@@ -105,6 +105,14 @@ export function ConvertPreview(table: string, i: number, to: grid$0.Type): $Canc
 }
 
 /**
+ * CopySheet copie un onglet (tableaux, cellules, mise en forme, objets) et
+ * place la copie au rang to ; renvoie l'identifiant de la copie.
+ */
+export function CopySheet(sheet: number, to: number): $CancellablePromise<number> {
+    return $Call.ByID(3666121675, sheet, to);
+}
+
+/**
  * CreateButton pose un bouton d'action sur une feuille.
  */
 export function CreateButton(sheet: number, row: number, col: number, cfg: canvas$0.ButtonConfig): $CancellablePromise<number> {
@@ -273,6 +281,15 @@ export function Execute(q: string): $CancellablePromise<$models.ExecResult> {
  */
 export function ExportCSV(table: string): $CancellablePromise<string> {
     return $Call.ByID(1530430769, table);
+}
+
+/**
+ * ExportXLSX écrit tout le classeur au format Excel .xlsx (valeurs : les
+ * formules sont exportées par leur résultat). Renvoie le fichier écrit, vide
+ * si l'utilisateur a annulé.
+ */
+export function ExportXLSX(): $CancellablePromise<string> {
+    return $Call.ByID(1072062328);
 }
 
 /**
@@ -524,6 +541,14 @@ export function PreviewQuery(q: query$0.Query, upto: number, fresh: boolean): $C
 }
 
 /**
+ * PrintHTML rend la plage utilisée d'une feuille en HTML imprimable
+ * (Fichier › Imprimer / Exporter en PDF).
+ */
+export function PrintHTML(sheet: number): $CancellablePromise<string> {
+    return $Call.ByID(706296713, sheet);
+}
+
+/**
  * PromoteHeader prend la première ligne d'un tableau comme en-têtes.
  */
 export function PromoteHeader(table: string): $CancellablePromise<$models.DocState> {
@@ -557,6 +582,15 @@ export function Queries(): $CancellablePromise<query$0.Query[] | null> {
  */
 export function Query(q: string): $CancellablePromise<grid$0.QueryResult> {
     return $Call.ByID(2935912471, q);
+}
+
+/**
+ * QueryToSheet exécute une requête de lecture (onglet SQL) et pose tout son
+ * résultat dans un nouveau tableau, sur une nouvelle feuille nommée name
+ * (vide : « Requête1 »…) ; headers : en-têtes affichés. Annulable.
+ */
+export function QueryToSheet(q: string, name: string, headers: string[] | null): $CancellablePromise<$models.QuerySheet> {
+    return $Call.ByID(4222133085, q, name, headers);
 }
 
 /**
@@ -843,6 +877,20 @@ export function SetRules(table: string, i: number, rules: canvas$0.Rule[] | null
  */
 export function SetSelection(sel: api$0.Selection): $CancellablePromise<void> {
     return $Call.ByID(3429410115, sel);
+}
+
+/**
+ * SetSheetColor fixe la couleur d'un onglet (« #rrggbb », vide : aucune).
+ */
+export function SetSheetColor(sheet: number, color: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1595035837, sheet, color);
+}
+
+/**
+ * SetSheetHidden masque ou affiche un onglet.
+ */
+export function SetSheetHidden(sheet: number, hidden: boolean): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3244300706, sheet, hidden);
 }
 
 /**

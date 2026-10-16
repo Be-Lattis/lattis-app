@@ -115,13 +115,13 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 			// Formule dans une cellule libre : enregistrée réécrite (RECHERCHEV
 			// devient REFERENCE), calculée à l'affichage. Elle ne fait pas
 			// naître de tableau.
-			n, err := t.prepareFormula(strings.TrimSpace(raw))
+			n, err := t.prepareFormula(sheet, strings.TrimSpace(raw))
 			if err != nil {
 				return err
 			}
 			return t.setFreeCell(sheet, row, col, formula.Format(n, formula.FR))
 		}
-		if err := t.setFreeCell(sheet, row, col, raw); err != nil || empty {
+		if err := t.setFreeCell(sheet, row, col, freeRaw(raw)); err != nil || empty {
 			return err
 		}
 		name, err := t.birth(sheet, row, col)
@@ -244,17 +244,70 @@ func (t *tx) birth(sheet int64, row, col int) (string, error) {
 	for _, c := range cells {
 		if c.Row >= r0 && c.Row <= r1 && c.Col >= c0 && c.Col <= c1 {
 			grid2[c.Row-r0][c.Col-c0] = c.Raw
+		}
+	}
+	headers, data, top := grid2[0], grid2[1:], r0
+	if !typedHeader(grid2) {
+		// Une liste de valeurs (10, 20, 30) : la première ligne reste une
+		// donnée, les colonnes s'appellent « Colonne n » et l'en-tête se
+		// place au-dessus. Sans place libre au-dessus, les cellules restent
+		// libres (comme dans Excel, où une liste n'est pas un tableau).
+		if r0 == 0 {
+			return "", nil
+		}
+		free, err := t.areaFree(sheet, r0-1, c0-1, r0-1, c1+1)
+		if err != nil || !free {
+			return "", err
+		}
+		headers = make([]string, c1-c0+1)
+		for i := range headers {
+			headers[i] = "Colonne " + itoa(i+1)
+		}
+		data, top = grid2, r0-1
+	}
+	for _, c := range cells {
+		if c.Row >= r0 && c.Row <= r1 && c.Col >= c0 && c.Col <= c1 {
 			if err := t.setFreeCell(sheet, c.Row, c.Col, ""); err != nil {
 				return "", err
 			}
 		}
 	}
-	name, err := t.tableName(sheet, r0, c0)
+	name, err := t.tableName(sheet, top, c0)
 	if err != nil {
 		return "", err
 	}
-	_, err = t.createTable(sheet, name, r0, c0, grid2[0], grid2[1:])
+	_, err = t.createTable(sheet, name, top, c0, headers, data)
 	return name, err
+}
+
+// typedHeader : la première ligne d'un îlot saisi donne les en-têtes, sauf
+// si elle a le même type que les lignes suivantes (nombres, dates,
+// booléens) : 10 au-dessus de 20 et 30 est une donnée, pas un titre.
+func typedHeader(rows [][]string) bool {
+	if len(rows) < 2 {
+		return true
+	}
+	seen := false
+	for c, first := range rows[0] {
+		f := Infer(first)
+		if f == "" {
+			continue
+		}
+		if f == grid.Text {
+			return true
+		}
+		seen = true
+		var below []string
+		for _, r := range rows[1:] {
+			if strings.TrimSpace(r[c]) != "" {
+				below = append(below, r[c])
+			}
+		}
+		if len(below) > 0 && Join(f, InferAll(below)) == grid.Text {
+			return true
+		}
+	}
+	return !seen
 }
 
 // tableName : le seul tableau d'une feuille prend le nom de la feuille, les

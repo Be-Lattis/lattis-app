@@ -15,9 +15,34 @@ import (
 // ColumnFilter est le filtre d'une colonne de tableau, comme le filtre
 // automatique d'Excel : les lignes dont la valeur (texte affiché, vide pour
 // une cellule vide) est dans Values, et/ou seulement les saisies hors type.
+//
+// Conds sont les filtres par condition (« Filtres textuels », « Filtres
+// numériques », dates) : toutes vérifiées, ou l'une d'elles avec Or. Les
+// trois critères (valeurs, erreurs, conditions) se cumulent. Un filtre
+// enregistré avant les conditions se relit tel quel.
 type ColumnFilter struct {
-	Values []string `json:"values,omitempty"`
-	Errors bool     `json:"errors,omitempty"`
+	Values []string     `json:"values,omitempty"`
+	Errors bool         `json:"errors,omitempty"`
+	Conds  []FilterCond `json:"conds,omitempty"`
+	Or     bool         `json:"or,omitempty"`
+}
+
+// FilterCond est une condition de filtre, comme le filtre personnalisé
+// d'Excel :
+//
+//	texte    : "eq", "ne" (jokers * et ?), "begins", "ends", "contains", "notcontains"
+//	ordre    : "gt", "ge", "lt", "le", "between" (Value et To compris)
+//	nombres  : "top", "bottom" (Value : nombre d'éléments), "above", "below" (moyenne)
+//
+// Les valeurs se saisissent comme dans une cellule (1 234,5 ; 31/12/2026).
+type FilterCond struct {
+	Op    string `json:"op"`
+	Value string `json:"value,omitempty"`
+	To    string `json:"to,omitempty"`
+}
+
+func (f *ColumnFilter) empty() bool {
+	return f == nil || (f.Values == nil && !f.Errors && len(f.Conds) == 0)
 }
 
 // ErrFiltered refuse d'ajouter des lignes à un tableau filtré : les lignes
@@ -60,6 +85,11 @@ func (t *tx) loadFilter(tb *Table) error {
 				lits[i] = sqlLiteral(v)
 			}
 			conds = append(conds, fmt.Sprintf(`%s IN (%s)`, textExpr(c), strings.Join(lits, ", ")))
+		}
+		if len(f.Conds) > 0 && c.Formula == "" {
+			if w, err := condsSQL(*tb, c, f); err == nil && w != "" {
+				conds = append(conds, w)
+			}
 		}
 	}
 	if len(conds) == 0 {
@@ -110,12 +140,20 @@ func (m *Model) SetFilter(ctx context.Context, table string, i int, f *ColumnFil
 		if f != nil && f.Values != nil && c.Formula != "" {
 			return fmt.Errorf("la colonne calculée « %s » ne se filtre pas par valeurs", c.Name)
 		}
+		if f != nil && len(f.Conds) > 0 {
+			if c.Formula != "" {
+				return fmt.Errorf("la colonne calculée « %s » ne se filtre pas par condition", c.Name)
+			}
+			if _, err := condsSQL(tb, c, *f); err != nil {
+				return err
+			}
+		}
 		filter := map[string]ColumnFilter{}
 		for k, v := range tb.Filter {
 			filter[k] = v
 		}
 		key := strconv.FormatInt(c.ID, 10)
-		if f == nil || (f.Values == nil && !f.Errors) {
+		if f.empty() {
 			delete(filter, key)
 		} else {
 			filter[key] = *f

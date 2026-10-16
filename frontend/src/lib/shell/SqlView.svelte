@@ -26,6 +26,7 @@
 	import { isWrite } from '#lib/sql/write.js';
 	import { example, isReadOnly, type ExampleKind } from '#lib/sql/examples.js';
 	import { dismiss } from '#lib/grid/dismiss.js';
+	import { count, toTSV } from '#lib/sql/result.js';
 	import { tick } from 'svelte';
 
 	interface Result {
@@ -42,9 +43,15 @@
 		ongoto: (table: string) => void;
 		/** Requêtes favorites, enregistrées dans le classeur ; absent : pas de favoris (démonstration). */
 		favorites?: Favorites;
+		/**
+		 * Pose tout le résultat de la requête (SQL traduit) dans un nouveau
+		 * tableau sur une nouvelle feuille nommée name (vide : « Requête1 »…) ;
+		 * absent : pas d'envoi (démonstration).
+		 */
+		tosheet?: (sql: string, name: string, headers: string[]) => Promise<void>;
 	}
 
-	let { objects, run, exec, ongoto, favorites }: Props = $props();
+	let { objects, run, exec, ongoto, favorites, tosheet }: Props = $props();
 
 	const catalog = $derived(new Catalog(objects));
 	let panel = $state<'objects' | 'favorites' | 'history'>('objects');
@@ -56,6 +63,10 @@
 	let error = $state('');
 	let running = $state(false);
 	let editor = $state<ReturnType<typeof SqlEditor>>();
+	// Texte de la dernière requête de lecture exécutée (vide après une écriture).
+	let ran = $state('');
+	let copied = $state(false);
+	let sending = $state(false);
 
 	let entries = $state<HistoryEntry[]>(load());
 	let filter = $state('');
@@ -84,6 +95,7 @@
 			if (exec && isWrite(text)) {
 				sent = text;
 				const r = await exec(text);
+				ran = '';
 				result = { columns: ['Lignes touchées'], rows: [[r.changed]], truncated: false, micros: r.micros };
 				headers = ['Lignes touchées (Ctrl+Z pour annuler)'];
 				remember({ sql: text, at, rows: r.changed, micros: r.micros });
@@ -94,6 +106,8 @@
 			sent = t.sql;
 			const r = await run(t.sql);
 			result = r;
+			ran = text;
+			copied = false;
 			headers = displayHeaders(r.columns ?? [], t.scope);
 			remember({ sql: text, at, rows: (r.rows ?? []).length, micros: r.micros });
 		} catch (e) {
@@ -198,6 +212,31 @@
 		node.select();
 	};
 
+	/** Copie le résultat affiché, à coller dans Excel. */
+	async function copyResult() {
+		if (!result) return;
+		try {
+			await navigator.clipboard.writeText(toTSV(headers, result.rows ?? []));
+			copied = true;
+			setTimeout(() => (copied = false), 1500);
+		} catch (e) {
+			error = String(e instanceof Error ? e.message : e);
+		}
+	}
+
+	/** Envoie tout le résultat vers une nouvelle feuille, nommée comme le favori s'il y en a un. */
+	async function sendToSheet() {
+		if (!tosheet || !ran || sending) return;
+		sending = true;
+		try {
+			const fav = favList.find((f) => same(f.sql, ran));
+			await tosheet(sent, fav?.name ?? '', headers);
+		} catch (e) {
+			error = String(e instanceof Error ? e.message : e).replace(/^sqlite3:\s*(SQL logic error:\s*)?/i, '');
+		}
+		sending = false;
+	}
+
 	const cell = (v: unknown) => (v === null || v === undefined ? '' : typeof v === 'number' ? formatValue('decimal', v).replace(/,00$/, '') : String(v));
 </script>
 
@@ -229,7 +268,7 @@
 						>
 							<span>{open === o.sqlName ? '▾' : '▸'}</span>
 							<strong>{o.name}</strong>
-							<span class="muted">{isReadOnly(o) ? 'tableau croisé' : 'tableau'} · {o.rows.toLocaleString('fr-FR')} lignes</span>
+							<span class="muted">{isReadOnly(o) ? 'tableau croisé' : 'tableau'} · {count(o.rows)}</span>
 						</button>
 						{#if open === o.sqlName}
 							<ul>
@@ -309,7 +348,7 @@
 					<div class="entry" class:failed={!!e.error}>
 						<button class="entry-sql" title="Reprendre dans l'éditeur (double-clic : exécuter)" onclick={() => useEntry(e, false)} ondblclick={() => useEntry(e, true)}>{e.sql}</button>
 						<div class="entry-foot">
-							<span class="muted">{when(e.at)} · {e.error ? 'erreur' : `${(e.rows ?? 0).toLocaleString('fr-FR')} ligne(s)`}</span>
+							<span class="muted">{when(e.at)} · {e.error ? 'erreur' : count(e.rows ?? 0)}</span>
 							<span>
 								{#if favorites}
 									{@const fav = favList.some((f) => same(f.sql, e.sql))}
@@ -345,10 +384,22 @@
 			{#if error}
 				<p class="error">{error}</p>
 			{:else if result}
-				<p class="muted">
-					{(result.rows ?? []).length.toLocaleString('fr-FR')} ligne(s){result.truncated ? ' (tronqué)' : ''} · {(result.micros / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} ms
-					<span class="sent" title={sent}>· SQL exécuté</span>
-				</p>
+				<div class="result-bar">
+					<p class="muted">
+						{count((result.rows ?? []).length)}{result.truncated ? ' (tronqué)' : ''} · {(result.micros / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} ms
+						<span class="sent" title={sent}>· SQL exécuté</span>
+					</p>
+					{#if ran}
+						<button class="res-btn" onclick={copyResult} title={result.truncated ? 'Copie les lignes affichées (tronquées), à coller dans Excel' : 'Copie le résultat (en-têtes compris), à coller dans Excel'}
+							>{copied ? 'Copié ✓' : 'Copier'}</button
+						>
+						{#if tosheet}
+							<button class="res-btn" onclick={sendToSheet} disabled={sending} title="Pose tout le résultat dans un nouveau tableau, sur une nouvelle feuille (Ctrl+Z pour annuler)"
+								>Vers une feuille</button
+							>
+						{/if}
+					{/if}
+				</div>
 				<div class="table-wrap">
 					<table>
 						<thead>
@@ -367,6 +418,27 @@
 </div>
 
 <style>
+	.result-bar {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+	.result-bar p {
+		margin-right: auto;
+	}
+	.res-btn {
+		font: inherit;
+		background: #fff;
+		color: #1f2328;
+		border: 1px solid #d4d7db;
+		border-radius: 3px;
+		padding: 2px 10px;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+	.res-btn:hover:not(:disabled) {
+		background: #f5f9f6;
+	}
 	.ctx {
 		position: fixed;
 		z-index: 30;

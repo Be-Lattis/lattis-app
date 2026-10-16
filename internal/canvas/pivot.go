@@ -17,7 +17,11 @@ type PivotInfo struct {
 	Config PivotConfig `json:"config"`
 	// Cells : en-tête (1 ligne), groupes, puis la ligne de total.
 	Cells [][]string `json:"cells"`
-	Error string     `json:"error"`
+	// Formats : format de nombre par défaut de chaque colonne (style JSON,
+	// vide : aucun) : celui de la colonne source, ou deux décimales pour une
+	// moyenne ou des décimaux. La mise en forme des cellules l'emporte.
+	Formats []string `json:"formats"`
+	Error   string   `json:"error"`
 }
 
 // ErrPivot signale un tableau croisé impossible.
@@ -164,6 +168,9 @@ func (t *tx) pivots(sheet int64) ([]PivotInfo, error) {
 			continue
 		}
 		out[i].Cells = cells
+		if out[i].Formats, err = t.pivotFormats(out[i].Config, cells); err != nil {
+			return nil, err
+		}
 	}
 	return out, nil
 }

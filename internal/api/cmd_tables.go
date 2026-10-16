@@ -435,9 +435,16 @@ end`,
 				return d.FilterValues(c, t.Name, i)
 			}),
 		columnCmd(&Command{Name: "columns.set_filter", Label: "Filtrer", Summary: "Filtre un tableau sur une colonne : seules les lignes dont la valeur est dans values restent affichées.",
-			Details: "values est une liste de textes tels qu'affichés (\"\" pour les cellules vides) ; errors = true ne garde que les saisies en erreur. Sans values ni errors, le filtre de la colonne est retiré.",
-			Params:  []Param{{Name: "values", Type: Array, Items: String, Desc: "valeurs gardées", Optional: true}, {Name: "errors", Type: Boolean, Desc: "ne garder que les erreurs", Optional: true}},
-			Write:   true, Example: `columns.set_filter("Commandes", "Client", {"Durand", "Petit"})`},
+			Details: "values est une liste de textes tels qu'affichés (\"\" pour les cellules vides) ; errors = true ne garde que les saisies en erreur. " +
+				"conds filtre par condition, comme les « Filtres textuels » et « Filtres numériques » d'Excel : chaque condition est {op, value, to} avec op parmi " +
+				"\"eq\", \"ne\" (jokers * et ?), \"begins\", \"ends\", \"contains\", \"notcontains\", \"gt\", \"ge\", \"lt\", \"le\", \"between\" (value et to compris), " +
+				"\"top\" et \"bottom\" (value : nombre d'éléments), \"above\" et \"below\" (moyenne). Les conditions doivent toutes être vérifiées, ou l'une d'elles avec any = true. " +
+				"Sans values, errors ni conds, le filtre de la colonne est retiré.",
+			Params: []Param{{Name: "values", Type: Array, Items: String, Desc: "valeurs gardées", Optional: true}, {Name: "errors", Type: Boolean, Desc: "ne garder que les erreurs", Optional: true},
+				{Name: "conds", Type: Array, Items: Object, Desc: "conditions : { {op = \">\", value = \"100\"}, ... }", Optional: true},
+				{Name: "any", Type: Boolean, Desc: "une seule condition suffit", Optional: true}},
+			Write: true, Example: `columns.set_filter("Commandes", "Client", {"Durand", "Petit"})
+columns.set_filter("Commandes", "Montant", nil, false, {{op = "between", value = "100", to = "500"}})`},
 			func(c *Call, t tableRef, i int) (any, error) {
 				var f canvas.ColumnFilter
 				if c.Has("values") {
@@ -450,8 +457,22 @@ end`,
 					}
 				}
 				f.Errors, _ = c.Bool("errors")
+				if c.Has("conds") {
+					var raws []struct {
+						Op    string `json:"op"`
+						Value any    `json:"value"`
+						To    any    `json:"to"`
+					}
+					if err := c.Decode("conds", &raws); err != nil {
+						return nil, err
+					}
+					for _, r := range raws {
+						f.Conds = append(f.Conds, canvas.FilterCond{Op: r.Op, Value: raw(r.Value), To: raw(r.To)})
+					}
+				}
+				f.Or, _ = c.Bool("any")
 				d, _ := c.Doc()
-				if len(f.Values) == 0 && !f.Errors {
+				if len(f.Values) == 0 && !f.Errors && len(f.Conds) == 0 {
 					return nil, d.SetFilter(c, t.Name, i, nil)
 				}
 				return nil, d.SetFilter(c, t.Name, i, &f)

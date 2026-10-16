@@ -186,6 +186,15 @@ export interface QueryRefresh {
 }
 
 /**
+ * QuerySheet décrit un résultat SQL posé sur une nouvelle feuille.
+ */
+export interface QuerySheet {
+    "sheet": number;
+    "table": string;
+    "state": DocState;
+}
+
+/**
  * ScriptResult est l'issue d'un script pour l'interface.
  */
 export type ScriptResult = api$0.ScriptResult;

@@ -379,6 +379,46 @@ func along(a axis, move func(int) (int, bool)) func(r, c int) (int, int, bool) {
 	}
 }
 
+// moveRange déplace une plage Cell[a:b] comme Excel : une plage dont les
+// coins suivent le même déplacement est déplacée (lignes insérées dedans :
+// elle s'agrandit) ; une plage dont des lignes ou colonnes disparaissent se
+// réduit à ce qui reste (faux si plus rien) ; une plage dont une partie
+// seulement est déplacée (couper-coller) reste en place.
+func moveRange(a, b string, move func(r, c int) (int, int, bool)) (formula.CellRange, bool) {
+	r1, c1, _ := formula.CellRef("cell_" + a)
+	r2, c2, _ := formula.CellRef("cell_" + b)
+	r1, r2 = min(r1, r2), max(r1, r2)
+	c1, c2 = min(c1, c2), max(c1, c2)
+	orig := formula.CellRange{R1: r1, C1: c1, R2: r2, C2: c2}
+	tr, tc, ok1 := move(r1, c1)
+	br, bc, ok2 := move(r2, c2)
+	if ok1 && ok2 {
+		// Les deux autres coins doivent suivre (sinon déplacement partiel).
+		xr, xc, ok3 := move(r1, c2)
+		yr, yc, ok4 := move(r2, c1)
+		if ok3 && ok4 && xr == tr && xc == bc && yr == br && yc == tc {
+			return formula.CellRange{R1: tr, C1: tc, R2: br, C2: bc}, true
+		}
+		return orig, true
+	}
+	// Lignes ou colonnes supprimées : ce qui reste de la plage.
+	nr1, nc1, nr2, nc2, found := 0, 0, 0, 0, false
+	for r := r1; r <= r2; r++ {
+		for c := c1; c <= c2; c++ {
+			mr, mc, ok := move(r, c)
+			if !ok {
+				continue
+			}
+			if !found {
+				nr1, nc1, nr2, nc2, found = mr, mc, mr, mc, true
+				continue
+			}
+			nr1, nc1, nr2, nc2 = min(nr1, mr), min(nc1, mc), max(nr2, mr), max(nc2, mc)
+		}
+	}
+	return formula.CellRange{R1: nr1, C1: nc1, R2: nr2, C2: nc2}, found
+}
+
 // rewriteCellRefs met à jour les adresses de cellules (Cell[A1],
 // Feuille!Cell[A1], et les anciennes formes) qui désignent la feuille sheet
 // après un déplacement : move donne la nouvelle position, ou faux si la
@@ -401,6 +441,14 @@ func (t *tx) rewriteCellRefs(sheet int64, move func(r, c int) (int, int, bool)) 
 			}
 			if on != sheet {
 				return orig
+			}
+			if a, b, ok := strings.Cut(addr, ":"); ok {
+				rg, ok := moveRange(strings.TrimSpace(a), strings.TrimSpace(b), move)
+				if !ok {
+					return "#REF!"
+				}
+				rg.Sheet = name
+				return rg.String()
 			}
 			r, c, _ := formula.CellRef("cell_" + addr)
 			r, c, ok := move(r, c)

@@ -21,6 +21,7 @@ export type {
     OpenResult,
     PostgresTables,
     QueryRefresh,
+    QuerySheet,
     ScriptResult,
     UICommand
 } from "./models.js";

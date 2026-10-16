@@ -389,6 +389,24 @@ func Register(c *sqlite3.Conn) error {
 	}); err != nil {
 		return err
 	}
+	// slt_seqn(lignes, colonnes) : nombre de lignes de SEQUENCE, -1 s'il ne
+	// convient pas.
+	if err := c.CreateFunction("slt_seqn", 2, det, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
+		ctx.ResultInt(seqRows(fromArg(arg[0]), arg[1].Int()))
+	}); err != nil {
+		return err
+	}
+	// slt_seq(lignes, début, pas, i) : valeur n° i de SEQUENCE (#VALEUR! si
+	// le nombre de lignes ne convient pas).
+	if err := c.CreateFunction("slt_seq", 4, det, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
+		if arg[0].Int() < 0 {
+			result(ctx, Err(ErrValue))
+			return
+		}
+		result(ctx, seqValue(fromArg(arg[1]), fromArg(arg[2]), arg[3].Int()))
+	}); err != nil {
+		return err
+	}
 	// slt_take(rang, total, n, exclure) : lignes gardées par PRENDRE / EXCLURE.
 	if err := c.CreateFunction("slt_take", 4, det, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		n, e := spillCount(fromArg(arg[2]))

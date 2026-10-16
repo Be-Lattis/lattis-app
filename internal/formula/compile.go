@@ -67,6 +67,9 @@ type scope struct {
 	// (SOMMEPROD, agrégats, familles .SI) ; Tableau[Col] y lit la ligne arrAlias.
 	arr      *Table
 	arrAlias string
+
+	// ranges : plages Cell[A1:B3] parcourues (colonne v<i> de arrAlias).
+	ranges []CellRange
 }
 
 // inArray donne la portée d'une expression évaluée sur chaque ligne de t.
@@ -107,6 +110,20 @@ func (c *compiler) expr(n Node, sc scope) string {
 		return c.param(ToSQL(v))
 	case Range:
 		return errSQL(ErrRef)
+	case CellRange:
+		for i, r := range sc.ranges {
+			if r == n {
+				return fmt.Sprintf("%s.v%d", sc.arrAlias, i)
+			}
+		}
+		return errSQL(ErrValue) // une plage hors d'un agrégat
+	case RowRange:
+		if sc.arr != nil {
+			if t, col, e := c.resolve(n.Ref, sc); e == 0 && t == sc.arr {
+				return c.column(t, col, sc.arrAlias)
+			}
+		}
+		return c.rowValue(n, sc)
 	case Ref:
 		t, col, e := c.resolve(n, sc)
 		if e != 0 {
@@ -268,6 +285,15 @@ func (c *compiler) aggregate(fn string, args []Node, sc scope, visible bool) str
 		if fn == "TEXTJOIN" {
 			order = " ORDER BY " + al + "._pos"
 		}
+		if sp, ok, e := spanOf([]Node{a}, c.schema, sc.table); ok {
+			if e != 0 {
+				parts = append(parts, errSQL(e))
+				continue
+			}
+			val := c.expr(a, sc.inSpan(sp, al))
+			parts = append(parts, fmt.Sprintf("(SELECT slt_part(%s, %s%s) FROM %s AS %s)", c.param(fn), val, order, c.spanSource(sp, sc), al))
+			continue
+		}
 		if r, ok := a.(Ref); ok && !r.Row {
 			tt, col, e := c.resolve(r, sc)
 			if e != 0 {
@@ -303,7 +329,11 @@ func (c *compiler) scan(s scanCall, sc scope) string {
 	if s.err != 0 {
 		return errSQL(s.err)
 	}
-	t, e := arrayTable(s.cols, c.schema, sc.table)
+	sp, isSpan, e := spanOf(s.cols, c.schema, sc.table)
+	var t *Table
+	if !isSpan {
+		t, e = arrayTable(s.cols, c.schema, sc.table)
+	}
 	if e != 0 {
 		return errSQL(e)
 	}
@@ -314,6 +344,15 @@ func (c *compiler) scan(s scanCall, sc scope) string {
 	h := strings.Join(head, ", ")
 	if len(s.cols) == 0 {
 		return "slt_scanfin(" + h + ", NULL)"
+	}
+	if isSpan {
+		// Plages : parcours des positions, dans l'ordre.
+		al := c.newAlias()
+		var cols []string
+		for _, col := range s.cols {
+			cols = append(cols, c.expr(col, sc.inSpan(sp, al)))
+		}
+		return fmt.Sprintf("slt_scanfin(%s, (SELECT slt_scan(%s, %s ORDER BY %s._pos) FROM %s AS %s))", h, h, strings.Join(cols, ", "), al, c.spanSource(sp, sc), al)
 	}
 	var cols []string
 	if t == nil {
@@ -346,6 +385,12 @@ func (c *compiler) scan(s scanCall, sc scope) string {
 // special compile les fonctions propres à chaque backend.
 func (c *compiler) special(fn string, n Call, sc scope) string {
 	switch fn {
+	case "LET":
+		body, ok := expandLet(n)
+		if !ok {
+			return errSQL(ErrValue)
+		}
+		return c.expr(body, sc)
 	case "REFERENCE":
 		return c.reference(n, sc)
 	case "REFERENCE.APPROX":

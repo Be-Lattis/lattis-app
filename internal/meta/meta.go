@@ -248,7 +248,13 @@ CREATE TABLE _slitable_queries (
 	refreshed TEXT
 ) STRICT;
 `,
-	// 19 → 20 : volets figés (Affichage › Figer les volets) : nombre de
+	// 19 → 20 : couleur d'onglet (« #rrggbb », vide : aucune) et feuilles
+	// masquées (Masquer / Afficher…, au moins une feuille reste visible).
+	`
+ALTER TABLE _slitable_sheets ADD COLUMN color TEXT NOT NULL DEFAULT '';
+ALTER TABLE _slitable_sheets ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0;
+`,
+	// 20 → 21 : volets figés (Affichage › Figer les volets) : nombre de
 	// lignes et de colonnes qui restent affichées pendant le défilement.
 	`
 ALTER TABLE _slitable_sheets ADD COLUMN freeze_rows INTEGER NOT NULL DEFAULT 0;

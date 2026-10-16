@@ -165,10 +165,17 @@ export interface ColWidth {
  * ColumnFilter est le filtre d'une colonne de tableau, comme le filtre
  * automatique d'Excel : les lignes dont la valeur (texte affiché, vide pour
  * une cellule vide) est dans Values, et/ou seulement les saisies hors type.
+ * 
+ * Conds sont les filtres par condition (« Filtres textuels », « Filtres
+ * numériques », dates) : toutes vérifiées, ou l'une d'elles avec Or. Les
+ * trois critères (valeurs, erreurs, conditions) se cumulent. Un filtre
+ * enregistré avant les conditions se relit tel quel.
  */
 export interface ColumnFilter {
     "values"?: string[] | null;
     "errors"?: boolean;
+    "conds"?: FilterCond[] | null;
+    "or"?: boolean;
 }
 
 /**
@@ -190,6 +197,12 @@ export interface ColumnInfo {
      * Colonne calculée : formule telle que l'utilisateur la lit (français).
      */
     "formula": string;
+
+    /**
+     * Colonne calculée : type numérique deviné du résultat (« decimal » :
+     * affichée comme une colonne Décimal), vide sinon.
+     */
+    "result": grid$0.Type;
 
     /**
      * Mise en forme de toute la colonne et de son en-tête (JSON, voir Style).
@@ -279,6 +292,22 @@ export interface Favorite {
     "id": number;
     "name": string;
     "sql": string;
+}
+
+/**
+ * FilterCond est une condition de filtre, comme le filtre personnalisé
+ * d'Excel :
+ * 
+ * 	texte    : "eq", "ne" (jokers * et ?), "begins", "ends", "contains", "notcontains"
+ * 	ordre    : "gt", "ge", "lt", "le", "between" (Value et To compris)
+ * 	nombres  : "top", "bottom" (Value : nombre d'éléments), "above", "below" (moyenne)
+ * 
+ * Les valeurs se saisissent comme dans une cellule (1 234,5 ; 31/12/2026).
+ */
+export interface FilterCond {
+    "op": string;
+    "value"?: string;
+    "to"?: string;
 }
 
 /**
@@ -460,6 +489,13 @@ export interface PivotInfo {
      * Cells : en-tête (1 ligne), groupes, puis la ligne de total.
      */
     "cells": (string[] | null)[] | null;
+
+    /**
+     * Formats : format de nombre par défaut de chaque colonne (style JSON,
+     * vide : aucun) : celui de la colonne source, ou deux décimales pour une
+     * moyenne ou des décimaux. La mise en forme des cellules l'emporte.
+     */
+    "formats": string[] | null;
     "error": string;
 }
 
@@ -551,6 +587,13 @@ export interface SheetInfo {
      */
     "protected": boolean;
     "password": boolean;
+
+    /**
+     * Color : couleur de l'onglet (« #rrggbb », vide : aucune) ; Hidden :
+     * feuille masquée (absente de la barre d'onglets).
+     */
+    "color": string;
+    "hidden": boolean;
 
     /**
      * FreezeRows, FreezeCols : volets figés (lignes et colonnes qui restent

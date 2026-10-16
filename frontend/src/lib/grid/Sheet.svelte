@@ -21,7 +21,26 @@
 	import FormatDialog, { type FormatTab } from './FormatDialog.svelte';
 	import { dismiss } from './dismiss';
 	import { explainError } from './errors';
+	import { freeDisplay } from './freecell';
+	import { bandAt, bandLabel, bandRefusal, hiddenBand } from './hidden';
+	import { pivotLayer } from './pivotformat';
 	import { fillSeries } from './fill';
+	import {
+		condArgs,
+		condLabel,
+		condOps,
+		describeConds,
+		filterKind,
+		kindTitle,
+		searchValues,
+		valuesFilter,
+		type ColumnFilter as Filter,
+		type CondOp,
+		type PanelValue
+	} from './filtercond';
+	import { cellLines, copyFillBlock, copyFillPlan, fillBlock, insertAt, shortcutOf, timeText, todayText } from './shortcuts';
+	import { SheetViews } from './sheetview';
+	import { besideGutter, gutterOwner } from './gutter';
 	import Select from '#lib/ui/Select.svelte';
 	import Chart from '#lib/chart/Chart.svelte';
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
@@ -32,13 +51,14 @@
 	import Icon from '#lib/icons/Icon.svelte';
 	import { drawIcon } from '#lib/icons/canvas.js';
 	import { apply as applySuggestion, signature, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
+	import { checkFormula, closeParens, editorWidth, formulaRefs, highlightParts, isFormula, rangeRef, refRect, serverErrorPos, type FormulaError, type RefTable } from './formulaEdit';
 	import {
 		isErrorValue,
 		valueAlignment,
 		alignment,
 		defaultWidth,
 		editValue,
-		formatValue,
+		formatColumnValue,
 		typeIcon,
 		typeIconName,
 		typeLabel,
@@ -51,6 +71,7 @@
 		fixed?: boolean; // type choisi par l'utilisateur (sinon inféré)
 		errors?: number; // saisies hors type
 		formula?: string; // colonne calculée : formule affichée
+		result?: string; // colonne calculée : type deviné du résultat (« decimal »…)
 		style?: string; // mise en forme de toute la colonne (JSON)
 		headerStyle?: string;
 		rules?: string; // mise en forme conditionnelle (JSON)
@@ -86,6 +107,8 @@
 		col: number;
 		config: PivotConfig;
 		cells: string[][]; // en-tête, groupes, total
+		/** Format de nombre par défaut de chaque colonne (style JSON, voir pivotformat.ts). */
+		formats?: string[] | null;
 		error: string;
 	}
 
@@ -130,10 +153,8 @@
 		col: number;
 	}
 
-	export interface ColumnFilter {
-		values?: string[]; // valeurs gardées (texte affiché, vide : cellules vides)
-		errors?: boolean; // saisies hors type seulement
-	}
+	/** Filtre d'une colonne : valeurs, erreurs, conditions (voir filtercond.ts). */
+	export type ColumnFilter = Filter;
 
 	export interface SheetTable {
 		id: number;
@@ -332,6 +353,7 @@
 	const FONT = '13px "Segoe UI", system-ui, -apple-system, sans-serif';
 	const FONT_BOLD = '600 13px "Segoe UI", system-ui, -apple-system, sans-serif';
 	const FONT_SMALL = '11px "Segoe UI", system-ui, -apple-system, sans-serif';
+	const FONT_TINY = '9px "Segoe UI", system-ui, -apple-system, sans-serif';
 
 	const C = {
 		bg: '#ffffff',
@@ -413,7 +435,7 @@
 			cache: new RowCache(
 				(first, count) => source.window(e.t, first, count),
 				t.rows,
-				(c, v) => formatValue(e.t.columns[c]?.type ?? 'text', v),
+				(c, v) => formatColumnValue(e.t.columns[c], v),
 				() => {
 					schedule();
 					refreshFx();
@@ -425,6 +447,9 @@
 
 	/** Recalcule la géométrie quand la mise en page change (après une saisie). */
 	function applyData(d: SheetData) {
+		// Changement de feuille : garder la position de la feuille quittée,
+		// retrouver celle de la nouvelle (A1 si elle n'a pas été visitée).
+		const back = sheetViews.switchTo(d.sheet ?? 1, { active: { ...active }, anchor: { ...anchor }, top: vs.top, left: scroller?.scrollLeft ?? 0 });
 		const old = new Map(entries.map((e) => [e.t.id, e]));
 		entries = d.tables.map((t) => {
 			const e = old.get(t.id);
@@ -467,10 +492,23 @@
 		rebuildAxis();
 		autoHeights = measureHeights();
 		rebuildRows();
+		if (back) {
+			active = back.active;
+			anchor = back.anchor;
+			wholeSel = null;
+		}
 		updateExtent();
+		if (back && scroller) {
+			vs.to(back.top);
+			scroller.scrollLeft = back.left;
+			updateExtent();
+			syncNative();
+		}
 		refreshFx();
+		if (back) refreshStatus();
 		schedule();
 	}
+	const sheetViews = new SheetViews();
 
 	// Largeurs : choisies par l'utilisateur, sinon selon le type de la colonne
 	// du premier tableau qui l'occupe, sinon la largeur par défaut.
@@ -661,7 +699,9 @@
 	let wrap: HTMLDivElement;
 	let scroller: HTMLDivElement;
 	let canvas: HTMLCanvasElement;
-	let input = $state<HTMLInputElement>();
+	let input = $state<HTMLTextAreaElement>();
+	// Champ de saisie : éditeur de cellule (zone de texte qui passe à la ligne) ou barre de formule.
+	type TextField = HTMLInputElement | HTMLTextAreaElement;
 	let ctx: CanvasRenderingContext2D;
 	let mounted = false;
 
@@ -682,20 +722,28 @@
 	let editValueText = $state('');
 	let fxText = $state('');
 	let fxInput = $state<HTMLInputElement>();
+	// Faute de syntaxe d'une formule refusée à la validation : l'éditeur reste
+	// ouvert, le caractère fautif est souligné.
+	let editErr = $state<FormulaError | null>(null);
+	// Hauteur de l'éditeur de cellule (il passe à la ligne quand il ne peut plus s'élargir).
+	let editorH = $state(22);
+	let fxScroll = $state(0);
 
 	// Aide à la saisie des formules (éditeur de cellule ou barre de formule).
 	let completion = $state<(Completion & { sel: number; where: 'cell' | 'fx' }) | null>(null);
 	let sig = $state<{ fn: FunctionDoc; index: number; where: 'cell' | 'fx' } | null>(null);
 	let suggestPos = $state({ x: 0, y: 0 });
 
-	function onFormulaInput(el: HTMLInputElement, where: 'cell' | 'fx') {
+	function onFormulaInput(el: TextField, where: 'cell' | 'fx') {
+		editErr = null;
 		if (where === 'cell') {
 			fxText = el.value;
+			placeEditor();
 			// Une formule se lit de gauche à droite, quelle que soit la colonne.
 			if (el.value.startsWith('=')) el.style.textAlign = 'left';
 		}
 		if (!catalog) return;
-		suggestPos = { x: screenX(active.col), y: screenY(active.row) + rh(active.row) + 2 };
+		suggestPos = { x: screenX(active.col), y: screenY(active.row) + Math.max(editorH, rh(active.row)) + 2 };
 		const caret = el.selectionStart ?? el.value.length;
 		const e = tableAt(active.row, active.col);
 		const c = suggest(el.value, caret, catalog, e?.t.name);
@@ -707,13 +755,13 @@
 	/** Le curseur bouge sans saisie (flèches, clic) : l'argument en gras suit. */
 	function moveSig(e: Event, where: 'cell' | 'fx') {
 		if (!catalog || (e instanceof KeyboardEvent && !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key))) return;
-		const el = e.currentTarget as HTMLInputElement;
+		const el = e.currentTarget as TextField;
 		const s = signature(el.value, el.selectionStart ?? el.value.length, catalog);
 		sig = s ? { ...s, where } : null;
 	}
 
 	/** Gère les touches de la liste de suggestions ; vrai si la touche est consommée. */
-	function completionKey(e: KeyboardEvent, el: HTMLInputElement, set: (v: string) => void): boolean {
+	function completionKey(e: KeyboardEvent, el: TextField, set: (v: string) => void): boolean {
 		if (!completion) return false;
 		const c = completion;
 		switch (e.key) {
@@ -774,9 +822,12 @@
 	});
 	$effect(() => {
 		void fxText;
-		if (fxEditing) untrack(() => schedule());
+		// Pendant la saisie : aperçu dans la cellule, cadres des références.
+		if (fxEditing || editing) untrack(() => schedule());
 	});
 
+	// Barre de formule : une formule y est colorée comme dans l'éditeur.
+	const fxHl = $derived(isFormula(fxText));
 	const formulaMode = $derived((editing && editValueText.trimStart().startsWith('=')) || (fxEditing && fxText.trimStart().startsWith('=')));
 	const a1 = $derived(headings || formulaMode);
 
@@ -815,7 +866,7 @@
 	function styleAt(r: number, c: number, e = tableAt(r, c)): CellStyle | undefined {
 		const col = sheetColStyles.get(c);
 		const row = sheetRowStyles.get(r);
-		if (!e) return resolveStyle(col, row, freeStyles.get(key(r, c)));
+		if (!e) return resolveStyle(pivotLayer(pivots, r, c), col, row, freeStyles.get(key(r, c)));
 		const i = c - e.t.col;
 		if (r === e.t.row) return resolveStyle(col, row, headStyles.get(e.t.id)?.[i]);
 		return resolveStyle(col, row, colStyles.get(e.t.id)?.[i], parseStyle(e.cache.row(r - e.t.row - 1)?.sty?.get(i)));
@@ -983,16 +1034,26 @@
 				if (m.row >= r0 && m.row <= r1 && m.col >= c0 && m.col <= c1) ctx.fillRect(cx(m.col), ry(m.row), colAxis.size(m.col), rh(m.row));
 		}
 
-		// Lignes masquées par un filtre : une note sous le tableau.
-		for (const e of visible) {
-			const n = e.t.hidden ?? 0;
-			const r = e.last + 1;
-			if (!n || r < r0 || r > r1) continue;
+		// Lignes masquées par un filtre : elles gardent leur place (les cellules
+		// libres dessous ne bougent pas) ; une bande grisée les représente, avec
+		// son libellé sur sa première ligne visible.
+		for (const e of entries) {
+			const b = hiddenBand(e.t);
+			if (!b || b.last < r0 || b.first > r1 || e.lastCol < c0 || e.t.col > c1) continue;
+			const top = Math.max(b.first, r0);
+			const bottom = Math.min(b.last, r1);
+			ctx.fillStyle = C.gray;
+			ctx.fillRect(cx(e.t.col), ry(top), spanW(e.t.col, e.lastCol), rspan(top, bottom));
+			ctx.save();
+			ctx.beginPath();
+			ctx.rect(cx(e.t.col), ry(top), spanW(e.t.col, e.lastCol), rspan(top, bottom));
+			ctx.clip();
 			ctx.font = 'italic ' + FONT_SMALL;
 			ctx.fillStyle = C.icon;
 			ctx.textAlign = 'left';
 			ctx.textBaseline = 'middle';
-			ctx.fillText(`⧩ ${n} ligne${n > 1 ? 's' : ''} masquée${n > 1 ? 's' : ''} par le filtre`, cx(e.t.col) + 6, ry(r) + rh(r) / 2);
+			ctx.fillText(bandLabel(e.t.hidden ?? 0), cx(e.t.col) + 6, ry(top) + rh(top) / 2);
+			ctx.restore();
 		}
 
 		// Contenu des tableaux, colonne par colonne (une découpe par colonne).
@@ -1021,32 +1082,7 @@
 							ctx.fillRect(x, y, cw, rh(r));
 						}
 						if (hs?.nt) noteCorner(x + cw, y);
-						ctx.font = FONT_SMALL;
-						ctx.fillStyle = C.icon;
-						ctx.textAlign = 'right';
-						// Icône du type : SVG pour date et booléen, texte pour les autres.
-						const svg = typeIconName(col.type);
-						const ICON = 13;
-						const icon = svg ? ' ▾' : (col.filter ? '⧩ ' : '') + typeIcon(col.type) + ' ▾';
-						let iconW = ctx.measureText(icon).width;
-						ctx.fillText(icon, x + cw - 6, y + rh(r) / 2);
-						if (svg) {
-							drawIcon(ctx, svg, x + cw - 6 - iconW - ICON, y + (rh(r) - ICON) / 2, ICON, C.icon, C.active, 1.3);
-							iconW += ICON;
-							if (col.filter) {
-								ctx.fillText('⧩ ', x + cw - 6 - iconW, y + rh(r) / 2);
-								iconW += ctx.measureText('⧩ ').width;
-							}
-						}
-						if (e.t.key === i) {
-							ctx.fillText('🔑 ', x + cw - 6 - iconW, y + rh(r) / 2);
-							iconW += ctx.measureText('🔑 ').width;
-						}
-						if (col.errors) {
-							ctx.fillStyle = C.error;
-							ctx.fillText('⚠ ' + col.errors, x + cw - 6 - iconW - ctx.measureText(' ').width, y + rh(r) / 2);
-							ctx.fillStyle = C.icon;
-						}
+						const iconW = headIcons(e, i, x, y, cw, rh(r));
 						ctx.save();
 						ctx.beginPath();
 						ctx.rect(x, y, cw - iconW - 10, rh(r));
@@ -1134,9 +1170,8 @@
 				sp.rows[i].forEach((v, j) => {
 					if ((i === 0 && j === 0) || !v) return;
 					const c = sp.col + j;
-					const num = isNumeric(v);
 					const st = styleAt(sp.row + i, c, undefined);
-					drawText(formatCell(v, undefined, st), cx(c), ry(sp.row + i), colAxis.size(c), st?.al ?? (num ? 'right' : 'left'), st, isErrorValue(v) ? C.error : C.text);
+					drawText(formatCell(v, undefined, st), cx(c), ry(sp.row + i), colAxis.size(c), st?.al ?? freeDisplay('', v).align, st, isErrorValue(v) ? C.error : C.text);
 				});
 			ctx.save();
 			ctx.strokeStyle = C.spill;
@@ -1181,20 +1216,22 @@
 			const cw = colAxis.size(c);
 			const f = shown.get(k);
 			if (f?.error) errorCorner(x, ry(r));
-			let raw = f ? f.text : rawText;
-			const num = isNumeric(raw);
-			raw = formatCell(raw, undefined, fstyle);
-			if (fstyle) {
-				drawText(raw, x, ry(r), cw, fstyle.al ?? (num ? 'right' : 'left'), fstyle, f?.error ? C.error : C.text, num ? cw : w);
+			// Nombres, dates et heures à droite, booléens centrés, apostrophe de tête masquée ;
+			// format de la cellule (nombre, date, heure, texte : numfmt.ts).
+			const fd = freeDisplay(rawText, f?.text);
+			const raw = fd.kind === 'text' ? fd.text : formatCell(fd.text, undefined, fstyle);
+			const boxed = fd.align !== 'left';
+			if (fstyle || raw.includes('\n')) {
+				drawText(raw, x, ry(r), cw, fstyle?.al ?? fd.align, fstyle, f?.error ? C.error : C.text, boxed ? cw : w);
 				continue;
 			}
 			ctx.fillStyle = f?.error ? C.error : C.text;
 			ctx.save();
 			ctx.beginPath();
-			ctx.rect(Math.max(x, MARGIN), TOP_H, num ? cw : w, h - TOP_H);
+			ctx.rect(Math.max(x, MARGIN), TOP_H, boxed ? cw : w, h - TOP_H);
 			ctx.clip();
-			ctx.textAlign = num ? 'right' : 'left';
-			ctx.fillText(raw, num ? x + cw - 6 : x + 6, ry(r) + rh(r) / 2);
+			ctx.textAlign = fd.align;
+			ctx.fillText(raw, fd.align === 'right' ? x + cw - 6 : fd.align === 'center' ? x + cw / 2 : x + 6, ry(r) + rh(r) / 2);
 			ctx.restore();
 		}
 
@@ -1265,6 +1302,48 @@
 			ctx.strokeStyle = C.active;
 			ctx.lineWidth = 2;
 			ctx.strokeRect(cx(c0 + dc) + 1, ry(r0 + dr) + 1, spanW(c0 + dc, c1 + dc) - 2, rspan(r0 + dr, r1 + dr) - 2);
+			ctx.restore();
+		}
+		// Tableau actif qui ne touche pas la gouttière : ses numéros de ligne (ou
+		// sa clé) en petit, juste à gauche de sa première colonne, là où la
+		// cellule voisine est vide.
+		const act = a1 ? undefined : (tableAt(active.row, active.col) ?? entries.find((e) => grown(e).last !== e.last));
+		if (act && besideGutter({ row: act.t.row, last: act.last, col: act.t.col, lastCol: act.lastCol }, c0, c1)) {
+			const x = cx(act.t.col);
+			const gw = colAxis.size(act.t.col - 1);
+			ctx.save();
+			ctx.beginPath();
+			ctx.rect(Math.max(MARGIN, x - gw), TOP_H, Math.min(gw, x - MARGIN), h - TOP_H);
+			ctx.clip();
+			ctx.font = FONT_TINY;
+			ctx.fillStyle = C.stripText;
+			ctx.textAlign = 'right';
+			ctx.textBaseline = 'middle';
+			const last = grown(act).last;
+			for (let r = Math.max(r0, act.t.row + 1); r <= Math.min(r1, last); r++) {
+				if (tableAt(r, act.t.col - 1) || cells.has(key(r, act.t.col - 1))) continue;
+				ctx.fillText(rowLabel(act, r), x - 3, ry(r) + rh(r) / 2);
+			}
+			ctx.restore();
+		}
+		// Saisie d'une formule : chaque référence encadrée de sa couleur, comme
+		// dans l'éditeur (Excel).
+		if (formulaMode) {
+			const here = tableAt(active.row, active.col);
+			const tables = refTables();
+			const at = here && active.row > here.t.row ? { table: tables[entries.indexOf(here)], row: active.row } : undefined;
+			ctx.save();
+			ctx.lineWidth = 2;
+			for (const f of formulaRefs(editing ? editValueText : fxText)) {
+				const k = refRect(f.text, tables, '', at);
+				if (!k || k.r1 < r0 - 1 || k.r0 > r1 + 1) continue;
+				ctx.strokeStyle = f.color;
+				ctx.fillStyle = f.color + '14';
+				const x = cx(k.c0) + 1;
+				const y = ry(k.r0) + 1;
+				ctx.fillRect(x, y, spanW(k.c0, k.c1) - 2, rspan(k.r0, k.r1) - 2);
+				ctx.strokeRect(x, y, spanW(k.c0, k.c1) - 2, rspan(k.r0, k.r1) - 2);
+			}
 			ctx.restore();
 		}
 		// Cellule active (toute la fusion quand elle en est une), et la flèche de
@@ -1385,6 +1464,11 @@
 				ctx.clip();
 				ctx.fillStyle = c >= k0 && c <= k1 ? C.activeStrip : C.head;
 				ctx.fillRect(x, 0, colAxis.size(c), TOP_H);
+				// Boutons ▾, type et entonnoir, cliquables comme dans l'en-tête.
+				const iw = headIcons(e, c - e.t.col, x, 0, colAxis.size(c), TOP_H);
+				ctx.beginPath();
+				ctx.rect(Math.max(x, MARGIN), 0, Math.max(0, colAxis.size(c) - iw - 10), TOP_H);
+				ctx.clip();
 				ctx.font = FONT_BOLD;
 				ctx.fillStyle = C.headText;
 				ctx.textAlign = 'left';
@@ -1423,6 +1507,8 @@
 	/** Marge de gauche d'un volet de lignes. */
 	function drawMargin(L: Layer) {
 		const { h, r0, r1, ry, visible, s0, s1 } = L;
+		// Première colonne affichée (la gouttière) : la première figée s'il y en a.
+		const c0 = fCols() > 0 ? 0 : L.c0;
 		// Marge de gauche : numéros 1..n des lignes de données des tableaux.
 		ctx.fillStyle = C.strip;
 		ctx.fillRect(0, TOP_H, MARGIN, h - TOP_H);
@@ -1432,6 +1518,7 @@
 		// prolonge) ; ceux des autres tableaux, plus discrets.
 		const cur = tableAt(active.row, active.col) ?? entries.find((e) => grown(e).last !== e.last);
 		const curLast = cur ? grown(cur).last : -1;
+		const blocks = visible.map((e) => ({ row: e.t.row, last: e.last, col: e.t.col, lastCol: e.lastCol, e }));
 		for (let r = r0; r <= r1; r++) {
 			const y = ry(r);
 			if (!rh(r)) continue; // ligne masquée
@@ -1446,16 +1533,13 @@
 				ctx.fillText(String(r + 1), MARGIN - 8, y + rh(r) / 2);
 				continue;
 			}
-			const mine = !!cur && r > cur.t.row && r <= curLast;
-			const e = mine ? cur : visible.find((e) => r > e.t.row && r <= e.last);
+			// Seul le tableau qui touche la gouttière (première colonne affichée)
+			// y est numéroté : pas de numéros en face de lignes sans rapport.
+			const mine = !!cur && r > cur.t.row && r <= curLast && cur.t.col <= c0 && cur.lastCol >= c0;
+			const e = mine ? cur : gutterOwner(blocks, r, c0)?.e;
 			if (e) {
 				ctx.fillStyle = mine || !cur ? C.stripText : C.stripLine;
-				// Avec une clé, ses valeurs identifient les lignes dans la marge (choix de Louis).
-				let label = String(r - e.t.row);
-				if (e.t.key !== undefined && r <= e.last) {
-					const k = e.cache.row(r - e.t.row - 1)?.text[e.t.key];
-					if (k !== undefined) label = k;
-				}
+				const label = rowLabel(e, r);
 				ctx.save();
 				ctx.beginPath();
 				ctx.rect(0, y, MARGIN - 4, rh(r));
@@ -1508,6 +1592,52 @@
 		ctx.lineTo(xr - 1, y + 7);
 		ctx.closePath();
 		ctx.fill();
+	}
+
+	/**
+	 * Boutons d'un en-tête de colonne, alignés à droite : ▾ (filtre), type,
+	 * entonnoir d'un filtre actif, clé, erreurs. Dans la ligne d'en-tête du
+	 * tableau et dans le bandeau quand l'en-tête est figé. Renvoie leur largeur.
+	 */
+	function headIcons(e: Entry, i: number, x: number, y: number, cw: number, h: number): number {
+		const col = e.t.columns[i];
+		ctx.font = FONT_SMALL;
+		ctx.fillStyle = C.icon;
+		ctx.textAlign = 'right';
+		ctx.textBaseline = 'middle';
+		// Icône du type : SVG pour date et booléen, texte pour les autres.
+		const svg = typeIconName(col.type);
+		const ICON = 13;
+		const icon = svg ? ' ▾' : (col.filter ? '⧩ ' : '') + typeIcon(col.type) + ' ▾';
+		let iconW = ctx.measureText(icon).width;
+		ctx.fillText(icon, x + cw - 6, y + h / 2);
+		if (svg) {
+			drawIcon(ctx, svg, x + cw - 6 - iconW - ICON, y + (h - ICON) / 2, ICON, C.icon, C.active, 1.3);
+			iconW += ICON;
+			if (col.filter) {
+				ctx.fillText('⧩ ', x + cw - 6 - iconW, y + h / 2);
+				iconW += ctx.measureText('⧩ ').width;
+			}
+		}
+		if (e.t.key === i) {
+			ctx.fillText('🔑 ', x + cw - 6 - iconW, y + h / 2);
+			iconW += ctx.measureText('🔑 ').width;
+		}
+		if (col.errors) {
+			ctx.fillStyle = C.error;
+			ctx.fillText('⚠ ' + col.errors, x + cw - 6 - iconW - ctx.measureText(' ').width, y + h / 2);
+			ctx.fillStyle = C.icon;
+		}
+		return iconW;
+	}
+
+	/** Numéro d'une ligne de données du tableau (1 = première), ou sa clé : ses valeurs identifient les lignes (choix de Louis). */
+	function rowLabel(e: Entry, r: number): string {
+		if (e.t.key !== undefined && r <= e.last) {
+			const k = e.cache.row(r - e.t.row - 1)?.text[e.t.key];
+			if (k !== undefined) return k;
+		}
+		return String(r - e.t.row);
 	}
 
 	/** Texte raccourci avec « … » pour tenir dans width (police courante). */
@@ -1606,7 +1736,13 @@
 		const tx = align === 'left' ? x + 6 : align === 'right' ? x + cw - 6 : x + cw / 2;
 		const px = fontPx(st?.fs);
 		const lh = lineHeight(px);
-		const lines = st?.wr ? wrapLines(s, Math.max(8, cw - 12), (t) => ctx.measureText(t).width) : [s];
+		// Renvoi à la ligne (largeur de la cellule), ou sauts de ligne (Alt+Entrée) :
+		// les lignes qui tiennent dans la hauteur.
+		const lines = st?.wr
+			? wrapLines(s, Math.max(8, cw - 12), (t) => ctx.measureText(t).width)
+			: s.includes('\n')
+				? cellLines(s, Math.max(1, Math.floor((h - 4) / lh)))
+				: [s];
 		const total = lines.length * lh;
 		// Alignement vertical : centré par défaut.
 		const top = st?.va === 'top' ? y + 2 : st?.va === 'bottom' ? y + h - 2 - total : y + (h - total) / 2;
@@ -1638,6 +1774,7 @@
 	/** Met en forme la sélection ; une bascule (b, i, u) suit la cellule active. */
 	export function applyStyle(patch: Record<string, unknown>) {
 		if (!source.applyStyle) return;
+		lastRepeat = () => applyStyle(patch); // F4
 		const p = { ...patch };
 		for (const k of ['b', 'i', 'u'] as const) if (p[k] === 'toggle') p[k] = !activeStyle()[k];
 		if (p.dp === 'more' || p.dp === 'less') {
@@ -2152,19 +2289,24 @@
 		i: number;
 		x: number;
 		y: number;
-		values: { text: string; count: number; on: boolean }[];
+		values: PanelValue[];
 		search: string;
 		errors: boolean;
 		error: string;
+		touched: boolean; // liste ou recherche modifiée
+		sub: boolean; // sous-menu « Filtres textuels / numériques » ouvert
+		// Filtre personnalisé en cours (deux conditions au plus, comme Excel).
+		custom: { conds: { op: CondOp | ''; value: string; to: string }[]; or: boolean } | null;
 	} | null>(null);
 
-	/** Position d'un panneau ancré sous l'en-tête de la colonne i du tableau e,
-	 * gardé dans la grille (width : largeur du panneau). */
+	/** Position d'un panneau ancré sous l'en-tête de la colonne i du tableau e
+	 * (sous le bandeau quand l'en-tête est figé), gardé dans la grille (width :
+	 * largeur du panneau). */
 	function anchorUnder(e: Entry, i: number, width: number) {
 		const x = screenX(e.t.col + i);
 		return {
 			x: Math.max(4, Math.min(x, scroller.clientWidth - width - 4)),
-			y: clamp(screenY(e.t.row) + rh(e.t.row), 4, Math.max(4, scroller.clientHeight - 200))
+			y: clamp(screenY(e.t.row) + rh(e.t.row), TOP_H, Math.max(TOP_H, scroller.clientHeight - 200))
 		};
 	}
 
@@ -2176,9 +2318,10 @@
 	async function openFilter(e: Entry, i: number) {
 		menu = null;
 		if (!source.filterValues) return;
+		typeMenu = null;
 		const f = e.t.columns[i]?.filter;
 		try {
-			const vals = await source.filterValues(e.t, i);
+			const vals = e.t.columns[i]?.formula ? [] : await source.filterValues(e.t, i);
 			const keep = f?.values ? new Set(f.values) : null;
 			filterDlg = {
 				e,
@@ -2187,7 +2330,10 @@
 				values: vals.map((v) => ({ ...v, on: !keep || keep.has(v.text) })),
 				search: '',
 				errors: !!f?.errors,
-				error: ''
+				error: '',
+				touched: false,
+				sub: false,
+				custom: null
 			};
 		} catch (err) {
 			say(String(err instanceof Error ? err.message : err));
@@ -2205,29 +2351,78 @@
 		if (errorsOnly) {
 			const f = e.t.columns[i]?.filter;
 			const set = source.setFilter;
-			menuAction(() => set(e.t, i, f?.errors ? (f.values ? { values: f.values } : null) : { ...f, errors: true }));
+			const rest: ColumnFilter = { ...f };
+			delete rest.errors;
+			menuAction(() => set(e.t, i, f?.errors ? (rest.values || rest.conds?.length ? rest : null) : { ...f, errors: true }));
 			return;
 		}
 		openFilter(e, i);
 	}
 
+	/** Ctrl+Maj+L : efface les filtres du tableau actif, sinon ouvre celui de la colonne. */
+	function toggleFilters() {
+		const e = tableAt(active.row, active.col);
+		if (e && source.clearFilters && e.t.columns.some((c) => c.filter)) {
+			const clear = source.clearFilters;
+			menuAction(() => clear(e.t));
+			return;
+		}
+		filterActive();
+	}
+
 	function filterShown() {
 		const d = filterDlg;
-		if (!d) return [];
-		const q = d.search.trim().toLocaleLowerCase('fr');
-		return q ? d.values.filter((v) => v.text.toLocaleLowerCase('fr').includes(q)) : d.values;
+		return d ? searchValues(d.values, d.search) : [];
+	}
+
+	/** Filtre personnalisé : première condition op (sous-menu), ou les conditions du filtre actif. */
+	function startCustom(op?: CondOp) {
+		const d = filterDlg;
+		if (!d) return;
+		d.sub = false;
+		d.error = '';
+		const cur = d.e.t.columns[d.i]?.filter;
+		if (op && condArgs(op) === 0) {
+			d.custom = { conds: [{ op, value: '', to: '' }], or: false };
+			applyFilter();
+			return;
+		}
+		const conds = op
+			? [{ op, value: op === 'top' || op === 'bottom' ? '10' : '', to: '' }]
+			: (cur?.conds ?? []).map((c) => ({ op: c.op as CondOp | '', value: c.value ?? '', to: c.to ?? '' }));
+		while (conds.length < 2) conds.push({ op: conds.length ? '' : 'eq', value: '', to: '' });
+		d.custom = { conds, or: !op && !!cur?.or };
 	}
 
 	async function applyFilter(clear = false) {
 		const d = filterDlg;
 		if (!d || !source.setFilter) return;
 		let f: ColumnFilter | null = null;
-		if (!clear) {
-			const all = d.values.every((v) => v.on);
-			f = {};
-			if (!all) f.values = d.values.filter((v) => v.on).map((v) => v.text);
+		const cur = d.e.t.columns[d.i]?.filter;
+		if (clear) f = null;
+		else if (d.custom) {
+			const conds = d.custom.conds
+				.filter((c) => c.op && (condArgs(c.op) === 0 || c.value.trim() !== ''))
+				.map((c) => ({ op: c.op as CondOp, ...(condArgs(c.op as CondOp) ? { value: c.value } : {}), ...(condArgs(c.op as CondOp) === 2 ? { to: c.to } : {}) }));
+			if (!conds.length) {
+				d.error = 'Saisissez la valeur de la condition';
+				return;
+			}
+			f = { conds };
+			if (d.custom.or && conds.length > 1) f.or = true;
 			if (d.errors) f.errors = true;
-			if (!f.values && !f.errors) f = null;
+		} else if (!d.touched && cur?.conds?.length) {
+			// Liste pas touchée : le filtre par condition reste.
+			f = { ...cur };
+			if (d.errors) f.errors = true;
+			else delete f.errors;
+		} else {
+			const r = valuesFilter(d.values, d.search, d.errors);
+			if (r.error) {
+				d.error = r.error;
+				return;
+			}
+			f = r.filter;
 		}
 		try {
 			await source.setFilter(d.e.t, d.i, f);
@@ -2656,6 +2851,7 @@
 	/** Insère ou supprime des lignes ou colonnes entières pour la sélection. */
 	export function sheetLines(op: LinesOp) {
 		if (!source.sheetLines) return;
+		lastRepeat = () => sheetLines(op); // F4
 		const { r0, r1, c0, c1 } = selection();
 		const lines = source.sheetLines;
 		const args: Record<LinesOp, [number, number]> = {
@@ -2698,6 +2894,7 @@
 			sheetLines(({ insertRow: 'insertRows', deleteRow: 'deleteRows', insertColumn: 'insertCols', deleteColumn: 'deleteCols' } as const)[op]);
 			return;
 		}
+		lastRepeat = () => cellsActive(op); // F4
 		const n = active.row - e.t.row - 1; // -1 : ligne d'en-tête
 		const i = active.col - e.t.col;
 		if (op === 'deleteRow' && n < 0) {
@@ -2841,7 +3038,7 @@
 	function refreshFx() {
 		nameBox = cellName(active.row, active.col);
 		const err = errorAt(active.row, active.col);
-		if (err) message = explainError(err.code, err.formula) || message;
+		if (err) message = explainError(err.code, err.formula, (r, c) => shown.get(key(r, c))?.text ?? cells.get(key(r, c))) || message;
 		const pv = pivotAt(active.row, active.col);
 		if (pv) panel = { kind: 'pivot', id: pv.id };
 		else if (panel?.kind === 'pivot' && !openPivotOnLoad) panel = null;
@@ -2856,7 +3053,9 @@
 			const inside = multi && inTable(e, sel.r0, sel.c0) && inTable(e, sel.r1, sel.c1);
 			tableBox = { name: e.t.name, col: inside ? `${label(sel.r0, sel.c0)}:${label(sel.r1, sel.c1)}` : label(active.row, active.col) };
 		} else tableBox = null;
-		if (multi && !e) nameBox = `${sel.r1 - sel.r0 + 1}L × ${sel.c1 - sel.c0 + 1}C`;
+		// Taille de la plage pendant le glissé seulement, comme Excel ; ensuite
+		// l'adresse de la cellule active revient.
+		if (multi && (dragging || headerDrag)) nameBox = `${sel.r1 - sel.r0 + 1}L × ${sel.c1 - sel.c0 + 1}C`;
 		if (fxEditing) return;
 		fxText = cellInfo(active.row, active.col).value;
 	}
@@ -2952,7 +3151,13 @@
 		const t = reveal(top, top + rh(row), vs.top, vs.view, rowTop(fRows()));
 		if (t !== vs.top) vs.to(t);
 		const x0 = colAxis.offset(col);
-		const l = reveal(x0, x0 + colAxis.size(col), scroller.scrollLeft, viewW - MARGIN, colAxis.offset(fCols()));
+		const fw = colAxis.offset(fCols());
+		let l = reveal(x0, x0 + colAxis.size(col), scroller.scrollLeft, viewW - MARGIN, fw);
+		if (fw && l > scroller.scrollLeft) {
+			// Volets figés : pas de colonne coupée contre la partie figée.
+			const c = colAxis.indexAt(l + fw);
+			if (colAxis.offset(c) < l + fw && c < col) l = colAxis.offset(c + 1) - fw;
+		}
 		if (l !== scroller.scrollLeft) scroller.scrollLeft = l;
 		syncNative();
 	}
@@ -3347,6 +3552,14 @@
 			selChart = null;
 			if (panel?.kind === 'chart') panel = null;
 		}
+		const frozen = e.button === 0 && boundaryAt(e) === null ? frozenHeaderAt(e) : null;
+		if (frozen) {
+			if (editing) commit();
+			if (headerButton(e, frozen.e, frozen.col, true)) {
+				e.preventDefault();
+				return;
+			}
+		}
 		const hd = boundaryAt(e) === null && rowBoundaryAt(e) === null ? headerAt(e) : null;
 		if (hd && e.button !== 1) {
 			e.preventDefault();
@@ -3393,6 +3606,8 @@
 		if (!cell) return;
 		if (e.button === 0 && formulaMode && insertRef(cell)) {
 			e.preventDefault();
+			// Glisser ensuite insère une plage (Cell[A1:B3], Tableau[Col][1:3]…).
+			refDrag = { from: cell, to: cell };
 			return;
 		}
 		e.preventDefault();
@@ -3406,7 +3621,7 @@
 	}
 
 	// Dernière référence insérée au clic : un autre clic la remplace (comme Excel).
-	let lastRef: { el: HTMLInputElement; start: number; end: number; value: string } | null = null;
+	let lastRef: { el: TextField; start: number; end: number; value: string } | null = null;
 
 	/**
 	 * Référence d'une cellule dans une formule (nomenclature de Slitable) :
@@ -3435,7 +3650,7 @@
 	}
 
 	/** Pendant la saisie d'une formule, insère la référence de la cellule cliquée au curseur. */
-	function insertRef(cell: { row: number; col: number }): boolean {
+	function insertRef(cell: { row: number; col: number }, text?: string): boolean {
 		const el = editing ? input : fxEditing ? fxInput : null;
 		if (!el) return false;
 		const v = el.value;
@@ -3443,8 +3658,8 @@
 		let start = pos;
 		if (lastRef && lastRef.el === el && lastRef.end === pos && lastRef.value === v) start = lastRef.start;
 		else if (!/[=(;,+*/^&<>:-]$/.test(v.slice(0, pos).trimEnd())) return false;
-		if (editing && cell.row === active.row && cell.col === active.col) return false;
-		const ref = refFor(cell.row, cell.col);
+		if (text === undefined && editing && cell.row === active.row && cell.col === active.col) return false;
+		const ref = text ?? refFor(cell.row, cell.col);
 		const next = v.slice(0, start) + ref + v.slice(pos);
 		if (editing) editValueText = next;
 		else fxText = next;
@@ -3456,7 +3671,55 @@
 		return true;
 	}
 
+	// Glissé en mode formule depuis une référence insérée : la plage couverte.
+	let refDrag: { from: { row: number; col: number }; to: { row: number; col: number } } | null = null;
+
+	/** Tableaux de la feuille, pour situer et écrire les références. */
+	function refTables(): RefTable[] {
+		return entries.map((e) => ({
+			name: e.t.name,
+			row: e.t.row,
+			col: e.t.col,
+			columns: e.t.columns.map((c) => c.name),
+			rows: e.t.rows,
+			keyed: e.t.key !== undefined,
+			keyRow: (k: string) => {
+				if (e.t.key === undefined) return undefined;
+				for (let n = 0; n < e.t.rows; n++) {
+					const v = e.cache.row(n)?.text[e.t.key];
+					if (v !== undefined && (v === k || v.replace(/\s/g, '') === k)) return n;
+				}
+				return undefined;
+			}
+		}));
+	}
+
+	/** Plage glissée en mode formule : sa référence remplace celle insérée au clic. */
+	function dragRef(cell: { row: number; col: number }) {
+		if (!refDrag || (cell.row === refDrag.to.row && cell.col === refDrag.to.col)) return;
+		refDrag.to = cell;
+		const { from } = refDrag;
+		const here = tableAt(active.row, active.col);
+		const tables = refTables();
+		const hereT = here && active.row > here.t.row ? tables[entries.indexOf(here)] : undefined;
+		const text =
+			from.row === cell.row && from.col === cell.col
+				? refFor(cell.row, cell.col)
+				: rangeRef({ r0: from.row, c0: from.col, r1: cell.row, c1: cell.col }, tables, hereT);
+		if (text === null) {
+			say('Une plage ne peut couvrir qu’une seule colonne d’un tableau : glissez dans une colonne, ou sur des cellules libres');
+			return;
+		}
+		insertRef(cell, text);
+		schedule();
+	}
+
 	function onMouseMove(e: MouseEvent) {
+		if (refDrag) {
+			const cell = cellAt(e);
+			if (cell) dragRef(cell);
+			return;
+		}
 		if (rowResizing) {
 			rowResizing.height = Math.max(12, Math.round(rowResizing.startH + e.clientY - rowResizing.startY));
 			rebuildRows({ row: rowResizing.row, height: rowResizing.height });
@@ -3515,6 +3778,8 @@
 		const cell = cellAt(e);
 		if (!cell) return;
 		active = cell;
+		const sel = selection();
+		nameBox = sel.r0 !== sel.r1 || sel.c0 !== sel.c1 ? `${sel.r1 - sel.r0 + 1}L × ${sel.c1 - sel.c0 + 1}C` : cellName(active.row, active.col);
 		schedule();
 	}
 
@@ -3530,6 +3795,80 @@
 			return;
 		}
 		if (cell) startEdit(false);
+	}
+
+	// --- Raccourcis d'Excel -------------------------------------------------------
+
+	// Fin pressée : la flèche suivante va au bout de la zone.
+	let endArmed = false;
+	// Dernière action répétable (F4) : saisie, mise en forme, insertion…
+	let lastRepeat: (() => void) | null = null;
+
+	/** Exécute un raccourci de la grille ; faux s'il ne s'applique pas. */
+	function runShortcut(sc: string): boolean {
+		switch (sc) {
+			case 'fillDown':
+			case 'fillRight':
+				copyFill(sc === 'fillDown');
+				return true;
+			case 'today':
+			case 'now':
+				startEdit(true, sc === 'today' ? todayText() : timeText());
+				return true;
+			case 'autoSum':
+				autoSum();
+				return true;
+			case 'formatCells':
+				// Ctrl+1 (shortcuts.ts, claviers AZERTY compris).
+				openFormat();
+				return true;
+			case 'selectRow': {
+				const t = tableAt(active.row, active.col);
+				if (t && active.row > t.t.row) {
+					// Dans un tableau : sa ligne, comme Excel.
+					anchor = { row: active.row, col: t.t.col };
+					active = { row: active.row, col: t.lastCol };
+					refreshFx();
+					refreshStatus();
+					schedule();
+				} else selectRows(active.row, active.row);
+				return true;
+			}
+			case 'toggleFilter':
+				toggleFilters();
+				return true;
+			case 'repeat':
+				if (lastRepeat) lastRepeat();
+				else say('Rien à répéter');
+				return true;
+		}
+		return false;
+	}
+
+	/** Ctrl+D / Ctrl+R : recopie la première ligne (colonne) de la sélection, ou celle du dessus (de gauche). */
+	function copyFill(down: boolean) {
+		if (!source.paste) return;
+		const plan = copyFillPlan(selection(), down);
+		if (!plan) return;
+		const { dst } = plan;
+		if ((dst.r1 - dst.r0 + 1) * (dst.c1 - dst.c0 + 1) > 10000) {
+			say('Recopie limitée à 10 000 cellules');
+			return;
+		}
+		const block = copyFillBlock(plan, down, (r, c) => cellInfo(r, c).value);
+		const paste = source.paste;
+		lastRepeat = () => copyFill(down);
+		writing = writing.then(async () => {
+			try {
+				await paste(dst.r0, dst.c0, block);
+				message = `Recopié vers ${down ? 'le bas' : 'la droite'} (Ctrl+Z pour annuler)`;
+			} catch (err) {
+				message = String(err instanceof Error ? err.message : err);
+			}
+			refreshFx();
+			refreshStatus();
+			schedule();
+		});
 	}
 
 	function onKeyDown(e: KeyboardEvent) {
@@ -3556,21 +3895,30 @@
 				return;
 			}
 		}
+		// Raccourcis d'Excel (shortcuts.ts) ; Fin puis flèche saute comme Ctrl+flèche.
+		const ended = endArmed;
+		if (!['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) endArmed = false;
+		const sc = shortcutOf(e);
+		if (sc === 'nextSheet' || sc === 'prevSheet' || sc === 'insertSheet') return; // onglets : la page s'en charge
+		if (sc === 'endMode') {
+			endArmed = !ended;
+			say(endArmed ? 'Fin : une flèche va au bout de la zone' : '');
+			e.preventDefault();
+			return;
+		}
+		if (sc && runShortcut(sc)) {
+			e.preventDefault();
+			return;
+		}
 		const page = Math.max(1, Math.floor(vs.view / ROW_H) - 1);
 		const { row, col } = active;
 		const ext = e.shiftKey;
 		const ctrl = e.ctrlKey || e.metaKey;
 		const arrow = (dr: number, dc: number) => {
 			const from = ext ? { row, col } : mergeEdge(dr, dc);
-			const [r, c] = ctrl ? jump(from.row, from.col, dr, dc) : [from.row + dr, from.col + dc];
+			const [r, c] = ctrl || ended ? jump(from.row, from.col, dr, dc) : [from.row + dr, from.col + dc];
 			moveTo(r, c, ext);
 		};
-		// Ctrl+1 : Format de cellule (comme Excel ; e.code pour les claviers AZERTY).
-		if (ctrl && (e.key === '1' || e.code === 'Digit1') && !e.shiftKey && !e.altKey) {
-			e.preventDefault();
-			openFormat();
-			return;
-		}
 		// Alt+↓ : liste déroulante de la cellule (validation).
 		if (e.altKey && e.key === 'ArrowDown' && listOf(row, col)) {
 			e.preventDefault();
@@ -3658,6 +4006,7 @@
 				break;
 			case 'Delete':
 				clearSelection();
+				lastRepeat = () => clearSelection();
 				break;
 			case 'Backspace':
 				startEdit(true, '');
@@ -3676,11 +4025,22 @@
 			say(locked);
 			return;
 		}
+		const band = bandAt(
+			entries.map((x) => x.t),
+			active.row,
+			active.col
+		);
+		if (band) {
+			say(bandRefusal(band.name));
+			return;
+		}
 		const info = cellInfo(active.row, active.col);
 		// Ligne pas encore chargée (juste après une saisie qui l'a créée) : la
 		// frappe ne doit pas être perdue ; seule l'édition de la valeur (F2)
 		// attend les données.
 		if (info.kind === 'data' && !info.row && initial === undefined) return;
+		// Sélection d'avant la saisie : Ctrl+Entrée valide dans toute la plage.
+		editRange = { sel: selection(), anchor: { ...anchor } };
 		anchor = { ...active };
 		editByTyping = byTyping;
 		editValueText = initial ?? info.value;
@@ -3699,26 +4059,44 @@
 		if (!input) return;
 		const x = screenX(active.col);
 		const y = screenY(active.row);
-		input.style.transform = `translate(${x}px, ${y}px)`;
+		const box = input.parentElement!;
+		box.style.transform = `translate(${x}px, ${y}px)`;
+		// Comme Excel : l'éditeur s'élargit vers la droite tant que les cellules
+		// voisines sont vides, puis passe à la ligne ; une fusion le fait au moins
+		// aussi grand qu'elle.
+		const row = active.row;
 		const g = mergeOf(active.row, active.col);
-		const w = g ? colAxis.offset(g.col + g.cols) - colAxis.offset(g.col) : colAxis.size(active.col);
-		input.style.width = `${Math.max(w, 80)}px`;
-		input.style.height = `${Math.max(22, g ? rowTop(g.row + g.rows) - rowTop(g.row) : rh(active.row))}px`;
+		const longest = Math.max(...input.value.split('\n').map((l) => textWidth(l)));
+		const width = editorWidth(
+			longest + 16,
+			active.col,
+			(c) => colAxis.size(c),
+			(c) => !tableAt(row, c) && !cells.has(key(row, c)),
+			Math.max(80, viewW - x - 4)
+		);
+		const mergedW = g ? colAxis.offset(g.col + g.cols) - colAxis.offset(g.col) : 0;
+		box.style.width = `${Math.max(width, mergedW, 80)}px`;
+		input.style.height = '0px';
+		editorH = Math.max(g ? rspan(g.row, g.row + g.rows - 1) : rh(row), input.scrollHeight + 4);
+		input.style.height = '';
+		box.style.height = `${editorH}px`;
 		const e = tableAt(active.row, active.col);
 		const st = styleAt(active.row, active.col, e);
-		input.style.textAlign = st?.al ?? (e && active.row > e.t.row ? alignment(e.t.columns[active.col - e.t.col].type) : 'left');
+		input.style.textAlign = isFormula(input.value) ? 'left' : (st?.al ?? (e && active.row > e.t.row ? alignment(e.t.columns[active.col - e.t.col].type) : 'left'));
 		input.style.font = st?.ff || st?.fs || st?.b || st?.i ? cellFont(st) : '';
 	}
 
 	// Les saisies partent l'une après l'autre : la suivante peut dépendre de
 	// la précédente (une saisie fait naître un tableau, la suivante le remplit).
 	let writing: Promise<void> = Promise.resolve();
-	function write(row: number, col: number, raw: string): Promise<void> {
-		writing = writing.then(() => writeNow(row, col, raw));
+	// keep : saisie au clavier ; refusée, son texte revient dans l'éditeur
+	// (sur sa cellule) au lieu d'être perdu.
+	function write(row: number, col: number, raw: string, keep = false): Promise<void> {
+		writing = writing.then(() => writeNow(row, col, raw, keep));
 		return writing;
 	}
 
-	async function writeNow(row: number, col: number, raw: string) {
+	async function writeNow(row: number, col: number, raw: string, keep = false) {
 		const info = cellInfo(row, col);
 		const target =
 			info.kind === 'free'
@@ -3734,15 +4112,42 @@
 			} else message = m ?? '';
 		} catch (e) {
 			message = String(e instanceof Error ? e.message : e);
+			// Formule refusée : la saisie n'est pas perdue, l'éditeur se rouvre.
+			const k = message.indexOf('formule : ');
+			if (k >= 0) {
+				const msg = message.slice(k);
+				queueMicrotask(() => reopenFormula(row, col, raw, msg));
+			} else if (keep && !editing) {
+				// Saisie refusée : le texte tapé reste dans l'éditeur.
+				const why = message;
+				active = { row, col };
+				anchor = { ...active };
+				startEdit(true, raw);
+				message = why;
+			}
 		}
 		refreshFx();
 		refreshStatus();
 		schedule();
 	}
 
-	/** Valide la saisie ; faux si la validation de la cellule la refuse (l'éditeur reste ouvert). */
+	/**
+	 * Valide la saisie ; faux si une formule a une faute de syntaxe (l'éditeur
+	 * reste alors ouvert sur le texte tapé, la faute soulignée et expliquée ;
+	 * les parenthèses oubliées en fin de formule sont fermées d'office), ou si
+	 * la validation de la cellule (liste déroulante) refuse la valeur.
+	 */
 	function commit(): boolean {
 		if (!editing) return true;
+		if (isFormula(editValueText)) {
+			const text = closeParens(editValueText);
+			const err = checkFormula(text);
+			if (err) {
+				showFormulaError(err);
+				return false;
+			}
+			editValueText = text;
+		}
 		const { row, col } = active;
 		let text = editValueText;
 		if (text !== cellInfo(row, col).value) {
@@ -3754,16 +4159,109 @@
 			text = r.value;
 		}
 		editing = false;
-		if (text !== cellInfo(row, col).value) write(row, col, text);
+		editErr = null;
+		if (text !== cellInfo(row, col).value) {
+			write(row, col, text, true);
+			lastRepeat = () => write(active.row, active.col, text);
+		}
 		wrap.focus();
 		return true;
 	}
 
+	// Sélection au début de la saisie (startEdit ne garde que la cellule active).
+	let editRange: { sel: Range; anchor: { row: number; col: number } } | null = null;
+
+	/** Ctrl+Entrée : la saisie va dans toute la sélection (une seule étape d'annulation), qui reste sélectionnée. */
+	function commitAll() {
+		const r = editRange;
+		const sel = r?.sel;
+		if (!r || !sel || (sel.r0 === sel.r1 && sel.c0 === sel.c1) || !source.paste) {
+			commit();
+			return;
+		}
+		if ((sel.r1 - sel.r0 + 1) * (sel.c1 - sel.c0 + 1) > 10000) {
+			say('Ctrl+Entrée : sélection limitée à 10 000 cellules');
+			return;
+		}
+		editing = false;
+		const text = editValueText;
+		const paste = source.paste;
+		const fill = (s: Range) =>
+			(writing = writing.then(async () => {
+				try {
+					message = (await paste(s.r0, s.c0, fillBlock(s, text))) ?? '';
+				} catch (err) {
+					message = String(err instanceof Error ? err.message : err);
+				}
+				refreshFx();
+				refreshStatus();
+				schedule();
+			}));
+		fill(sel);
+		lastRepeat = () => fill(selection());
+		anchor = r.anchor;
+		wrap.focus();
+		refreshFx();
+		schedule();
+	}
+
+	/** Remplace le texte de l'éditeur de cellule et place le curseur. */
+	function setEditorText(value: string, caret: number) {
+		flushSync(() => (editValueText = value));
+		input?.setSelectionRange(caret, caret);
+		if (input) onFormulaInput(input, 'cell');
+	}
+
+	/** Hauteur de l'éditeur : une ligne de plus par saut de ligne (Alt+Entrée). */
+	function editorHeight(s: string): number {
+		return 18 * s.split('\n').length + 4;
+	}
+
+	/** Montre une faute de formule dans l'éditeur ouvert : message, caractère sélectionné. */
+	function showFormulaError(err: FormulaError) {
+		editErr = err;
+		say(`Formule : ${err.msg}`);
+		const el = input;
+		if (!el) return;
+		requestAnimationFrame(() => {
+			el.focus();
+			el.setSelectionRange(err.pos, Math.max(err.end, err.pos));
+		});
+	}
+
+	/**
+	 * Une formule refusée par le serveur (fonction mal employée, plage
+	 * impossible…) : l'éditeur se rouvre sur le texte tapé, si l'utilisateur
+	 * n'a pas commencé autre chose.
+	 */
+	function reopenFormula(row: number, col: number, raw: string, msg: string) {
+		if (editing || fxEditing || !isFormula(raw)) return;
+		moveTo(row, col);
+		startEdit(true, raw);
+		const pos = serverErrorPos(raw, msg);
+		const text = msg.replace(/^formule : (position \d+ : )?/, '');
+		if (pos !== null) showFormulaError({ pos, end: pos + 1, msg: text });
+		else say(`Formule : ${text}`);
+	}
+
 	function cancel() {
 		editing = false;
+		editErr = null;
 		refreshFx(); // la barre de formule reprend le contenu de la cellule
 		wrap.focus();
 		schedule();
+	}
+
+	/** ↑ / ↓ dans une formule : curseur au début ou à la fin du texte (Maj : sélection jusque-là). */
+	function caretToEdge(end: boolean, extend: boolean) {
+		const el = input;
+		if (!el) return;
+		const n = el.value.length;
+		if (!extend) el.setSelectionRange(end ? n : 0, end ? n : 0);
+		else if (end) el.setSelectionRange(el.selectionStart ?? 0, n, 'forward');
+		else el.setSelectionRange(0, el.selectionEnd ?? n, 'backward');
+		const s = catalog ? signature(el.value, el.selectionStart ?? n, catalog) : null;
+		sig = s ? { ...s, where: 'cell' } : null;
 	}
 
 	async function clearSelection(range = selection()) {
@@ -3815,8 +4313,28 @@
 		if (input && completionKey(e, input, (v) => (editValueText = v))) return;
 		e.stopPropagation();
 		const { row, col } = active;
+		const sc = shortcutOf(e);
+		if ((sc === 'today' || sc === 'now') && input) {
+			// Date ou heure du jour au curseur, comme Excel pendant la saisie.
+			const r = insertAt(input.value, input.selectionStart, input.selectionEnd, sc === 'today' ? todayText() : timeText());
+			setEditorText(r.value, r.caret);
+			e.preventDefault();
+			return;
+		}
 		switch (e.key) {
 			case 'Enter':
+				if (e.altKey && input) {
+					// Alt+Entrée : saut de ligne dans la cellule ; les flèches
+					// déplacent alors le curseur dans le texte.
+					const r = insertAt(input.value, input.selectionStart, input.selectionEnd, '\n');
+					setEditorText(r.value, r.caret);
+					editByTyping = false;
+					break;
+				}
+				if (e.ctrlKey || e.metaKey) {
+					commitAll();
+					break;
+				}
 				if (commit()) enterMove(e.shiftKey);
 				break;
 			case 'Tab':
@@ -3829,6 +4347,14 @@
 			case 'ArrowUp':
 			case 'ArrowLeft':
 			case 'ArrowRight':
+				// Formule : les flèches déplacent le curseur dans le texte (← → d'un
+				// caractère, Ctrl d'un mot, ↑ ↓ au début et à la fin, Maj pour
+				// sélectionner) ; seuls Entrée, Tab et le clic ailleurs valident.
+				if (isFormula(editValueText) || editValueText.trimStart() === '=') {
+					if (e.key === 'ArrowUp' || e.key === 'ArrowDown') caretToEdge(e.key === 'ArrowDown', e.shiftKey);
+					else return;
+					break;
+				}
 				if (!editByTyping) return;
 				if (!commit()) break;
 				moveTo(
@@ -3848,9 +4374,23 @@
 		e.stopPropagation();
 		if (e.key === 'Escape') {
 			fxEditing = false;
+			editErr = null;
 			refreshFx();
 			wrap.focus();
 		} else if (e.key === 'Enter') {
+			if (isFormula(fxText)) {
+				const text = closeParens(fxText);
+				const err = checkFormula(text);
+				if (err) {
+					editErr = err;
+					say(`Formule : ${err.msg}`);
+					fxInput?.setSelectionRange(err.pos, Math.max(err.end, err.pos));
+					e.preventDefault();
+					return;
+				}
+				fxText = text;
+			}
+			editErr = null;
 			const { row, col } = active;
 			let text = fxText;
 			if (text !== cellInfo(row, col).value) {
@@ -4249,18 +4789,45 @@
 		});
 	}
 
-	/** Un clic sur l'icône de type d'un en-tête ouvre le menu de type. */
+	/** Un clic sur les boutons d'un en-tête : ▾ ouvre le filtre, l'icône de type son menu. */
 	function openTypeMenu(ev: MouseEvent, cell: { row: number; col: number }): boolean {
 		const e = tableAt(cell.row, cell.col);
-		if (!e || cell.row !== e.t.row || !source.setType) return false;
-		if (e.t.columns[cell.col - e.t.col].formula) return false; // le type suit la formule
+		if (!e || cell.row !== e.t.row) return false;
+		return headerButton(ev, e, cell.col, false);
+	}
+
+	/**
+	 * Boutons d'en-tête de la colonne c du tableau e (frozen : en-tête figé
+	 * dans le bandeau du haut) : le ▾ ouvre directement la liste à cocher du
+	 * filtre, comme Excel ; l'icône de type, le menu de type et de clé.
+	 */
+	function headerButton(ev: MouseEvent, e: Entry, c: number, frozen: boolean): boolean {
+		const i = c - e.t.col;
+		const col = e.t.columns[i];
 		const r = scroller.getBoundingClientRect();
-		const right = screenX(cell.col) + colAxis.size(cell.col);
+		const right = screenX(c) + colAxis.size(c);
 		const mx = ev.clientX - r.left;
 		if (right - mx > 34) return false;
-		moveTo(cell.row, cell.col);
-		showTypeMenu(mx, ev.clientY - r.top + 8, e, cell.col - e.t.col);
+		const filter = !!source.filterValues && !!source.setFilter;
+		const typed = !!source.setType && !col.formula; // le type d'une colonne calculée suit la formule
+		if (!filter && !typed) return false;
+		if (!frozen) moveTo(e.t.row, c);
+		if (filter && (right - mx <= 18 || !typed)) openFilter(e, i);
+		else showTypeMenu(mx, frozen ? TOP_H : ev.clientY - r.top + 8, e, i);
 		return true;
+	}
+
+	/** Colonne d'un en-tête figé (bandeau du haut) sous la souris. */
+	function frozenHeaderAt(ev: MouseEvent): { e: Entry; col: number } | null {
+		if (a1) return null;
+		const r = scroller.getBoundingClientRect();
+		const x = ev.clientX - r.left;
+		if (ev.clientY - r.top >= TOP_H || x < MARGIN) return null;
+		const col = colAtX(x);
+		// Première ligne de la partie qui défile (sous les volets figés).
+		const r0 = rowAtY(TOP_H + rowTop(fRows()));
+		const e = entries.find((e) => e.t.row < r0 && e.t.row >= fRows() && e.last >= r0 && col >= e.t.col && col <= e.lastCol);
+		return e ? { e, col } : null;
 	}
 
 	/** Ouvre le menu de type et de clé de la colonne i (icône d'en-tête ou clic droit). */
@@ -4489,9 +5056,12 @@
 		resize();
 		scroller.addEventListener('wheel', onWheel, { passive: false });
 		const up = () => {
+			refDrag = null;
 			if (dragging && painter) applyPainter();
+			const dragged = dragging || headerDrag;
 			dragging = false;
 			headerDrag = null;
+			if (dragged) refreshFx(); // fin du glissé : l'adresse revient dans la zone de nom
 			if (filling) {
 				const f = filling;
 				filling = null;
@@ -4594,6 +5164,8 @@
 		<button onclick={editNote}>Insérer une note</button>
 	{/if}
 {/snippet}
+<!-- Formule colorée (références, faute soulignée), sur une seule ligne : le texte est affiché tel quel (pre-wrap). -->
+{#snippet coloured(text: string)}{#each highlightParts(text, formulaRefs(text), editErr) as p, i (i)}{#if p.err}<span class="hl-err">{p.text}</span>{:else if p.color}<span style:color={p.color}>{p.text}</span>{:else}{p.text}{/if}{/each}{'​'}{/snippet}
 
 {#snippet suggestions(where: 'cell' | 'fx')}
 	{#if sig?.where === where}
@@ -4660,13 +5232,26 @@
 			/>
 		{/if}
 		<span class="fx">fx</span>
+		<div class="fx-wrap">
+		{#if fxHl}
+			<!-- Formule : références colorées sous la saisie (transparente), défilement suivi. -->
+			<div class="fx-hl" aria-hidden="true" style:transform="translateX({-fxScroll}px)">{@render coloured(fxText)}</div>
+		{/if}
 		<input
 			class="fx-input"
+			class:hl={fxHl}
 			bind:this={fxInput}
 			bind:value={fxText}
-			oninput={(e) => onFormulaInput(e.currentTarget, 'fx')}
-			onkeyup={(e) => moveSig(e, 'fx')}
+			oninput={(e) => {
+				onFormulaInput(e.currentTarget, 'fx');
+				fxScroll = e.currentTarget.scrollLeft;
+			}}
+			onkeyup={(e) => {
+				moveSig(e, 'fx');
+				fxScroll = e.currentTarget.scrollLeft;
+			}}
 			onclick={(e) => moveSig(e, 'fx')}
+			onscroll={(e) => (fxScroll = e.currentTarget.scrollLeft)}
 			readonly={!!locked}
 			onfocus={() => {
 				if (locked) say(locked);
@@ -4680,6 +5265,7 @@
 			}}
 			spellcheck="false"
 		/>
+		</div>
 	</div>
 	{#if bench}<div class="bench">{bench}</div>{/if}
 	{#if completion?.where === 'fx' || sig?.where === 'fx'}
@@ -4781,7 +5367,7 @@
 				{#if m.pending}
 					<p class="menu-note">
 						{m.pending.n > 1
-							? `${m.pending.n} valeurs ne peuvent pas devenir « ${typeLabel(m.pending.to)} » : elles seront gardées et marquées en erreur.`
+							? `${m.pending.n} ${m.pending.n > 1 ? 'valeurs ne peuvent' : 'valeur ne peut'} pas devenir « ${typeLabel(m.pending.to)} » : ${m.pending.n > 1 ? 'elles seront gardées et marquées' : 'elle sera gardée et marquée'} en erreur.`
 							: `1 valeur ne peut pas devenir « ${typeLabel(m.pending.to)} » : elle sera gardée et marquée en erreur.`}
 					</p>
 					<button onclick={() => chooseType(m.pending!.to, true)}>Convertir quand même</button>
@@ -5186,19 +5772,22 @@
 		{#if filterDlg}
 			{@const d = filterDlg}
 			{@const shown = filterShown()}
+			{@const fcol = d.e.t.columns[d.i]}
+			{@const kind = filterKind(fcol?.type ?? 'text')}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
-				class="rules filter anchored"
+				class="rules filter colfilter anchored"
 				style:left="{d.x}px"
 				style:top="{d.y}px"
+				style:max-height="{Math.max(200, viewH - d.y - 8)}px"
 				use:focusFirst
 				onkeydown={(ev) => {
 					ev.stopPropagation();
 					if (ev.key === 'Escape') closeFilter();
-					if (ev.key === 'Enter') applyFilter();
+					if (ev.key === 'Enter' && !(ev.target instanceof HTMLButtonElement)) applyFilter();
 				}}
 			>
-				<div class="menu-title">Filtrer « {d.e.t.columns[d.i]?.name} »</div>
+				<div class="menu-title">Filtrer « {fcol?.name} »</div>
 				{#if source.sortTable}
 					<!-- Tri en haut du panneau, comme Excel. -->
 					<button
@@ -5217,28 +5806,85 @@
 					>
 					<hr />
 				{/if}
-				<div class="add"><input class="search" bind:value={d.search} placeholder="Rechercher" /></div>
-				<div class="values">
-					<label class="all">
-						<input
-							type="checkbox"
-							checked={shown.every((v) => v.on)}
-							onchange={(ev) => {
-								const on = (ev.currentTarget as HTMLInputElement).checked;
-								for (const v of shown) v.on = on;
-							}}
-						/>
-						(Sélectionner tout)
-					</label>
-					{#each shown as v (v.text)}
-						<label>
-							<input type="checkbox" bind:checked={v.on} />
-							<span class="what">{v.text === '' ? '(Vides)' : v.text}</span>
-							<span class="count">{v.count}</span>
-						</label>
-					{/each}
-					{#if d.values.length >= 1000}<p class="menu-note">Seules les 1 000 premières valeurs sont listées.</p>{/if}
-				</div>
+				{#if fcol?.filter}
+					<button class="sort" onclick={() => applyFilter(true)}>Effacer le filtre de « {fcol.name} »</button>
+				{/if}
+				{#if fcol?.formula}
+					<p class="menu-note">Colonne calculée : elle se trie mais ne se filtre pas.</p>
+				{:else}
+					<!-- Filtres par condition, comme le sous-menu d'Excel. -->
+					<button class="sort cond-menu" class:on={d.sub} aria-expanded={d.sub} onclick={() => (d.sub = !d.sub)}>
+						{kindTitle(kind)}<span class="sp"></span>{d.sub ? '▾' : '▸'}
+					</button>
+					{#if d.sub}
+						<div class="cond-list">
+							{#each condOps(kind) as op (op)}
+								<button class="sort" onclick={() => startCustom(op)}>{condLabel(op, kind)}{condArgs(op) ? '…' : ''}</button>
+							{/each}
+							<button class="sort" onclick={() => startCustom('eq')}>Filtre personnalisé…</button>
+						</div>
+					{/if}
+					{#if fcol?.filter?.conds?.length && !d.custom}
+						<p class="menu-note">
+							Filtre actif : {describeConds(fcol.filter, kind)}
+							<button class="link" onclick={() => startCustom()}>Modifier…</button>
+						</p>
+					{/if}
+					<hr />
+					{#if d.custom}
+						{@const cu = d.custom}
+						<div class="custom">
+							<p class="menu-note">Afficher les lignes dont « {fcol?.name} » :</p>
+							{#each cu.conds as c, k (k)}
+								{#if k === 1}
+									<div class="andor">
+										<label><input type="radio" bind:group={cu.or} value={false} /> Et</label>
+										<label><input type="radio" bind:group={cu.or} value={true} /> Ou</label>
+									</div>
+								{/if}
+								<div class="add">
+									<select bind:value={c.op} aria-label="Condition {k + 1}">
+										{#if k > 0}<option value="">(aucune)</option>{/if}
+										{#each condOps(kind) as op (op)}<option value={op}>{condLabel(op, kind)}</option>{/each}
+									</select>
+								</div>
+								{#if c.op && condArgs(c.op) > 0}
+									<div class="add">
+										<input bind:value={c.value} placeholder={c.op === 'top' || c.op === 'bottom' ? 'nombre' : kind === 'date' ? 'jj/mm/aaaa' : 'valeur'} />
+										{#if condArgs(c.op) === 2}<span>et</span><input bind:value={c.to} placeholder={kind === 'date' ? 'jj/mm/aaaa' : 'valeur'} />{/if}
+									</div>
+								{/if}
+							{/each}
+							{#if kind === 'text'}<p class="menu-note">* remplace plusieurs caractères, ? un seul.</p>{/if}
+						</div>
+					{:else}
+						<div class="add">
+							<input class="search" bind:value={d.search} oninput={() => (d.touched = true)} placeholder="Rechercher" />
+						</div>
+						<div class="values">
+							<label class="all">
+								<input
+									type="checkbox"
+									checked={shown.every((v) => v.on)}
+									onchange={(ev) => {
+										const on = (ev.currentTarget as HTMLInputElement).checked;
+										for (const v of shown) v.on = on;
+										d.touched = true;
+									}}
+								/>
+								{d.search.trim() ? '(Sélectionner tous les résultats)' : '(Sélectionner tout)'}
+							</label>
+							{#each shown as v (v.text)}
+								<label>
+									<input type="checkbox" bind:checked={v.on} onchange={() => (d.touched = true)} />
+									<span class="what">{v.text === '' ? '(Vides)' : v.text}</span>
+									<span class="count">{v.count}</span>
+								</label>
+							{/each}
+							{#if d.values.length >= 1000}<p class="menu-note">Seules les 1 000 premières valeurs sont listées.</p>{/if}
+						</div>
+					{/if}
+				{/if}
 				{#if d.e.t.columns[d.i]?.errors}
 					<div class="add">
 						<label><input type="checkbox" bind:checked={d.errors} /> Saisies hors type seulement ({d.e.t.columns[d.i]?.errors})</label>
@@ -5246,7 +5892,7 @@
 				{/if}
 				{#if d.error}<p class="menu-note error">{d.error}</p>{/if}
 				<div class="foot">
-					{#if d.e.t.columns[d.i]?.filter}<button onclick={() => applyFilter(true)}>Effacer le filtre</button>{/if}
+					{#if d.custom}<button onclick={() => (d.custom = null)}>‹ Liste des valeurs</button>{/if}
 					<span class="sp"></span>
 					<button class="primary" onclick={() => applyFilter()}>OK</button>
 					<button onclick={closeFilter}>Annuler</button>
@@ -5432,27 +6078,37 @@
 			</div>
 		{/if}
 		{#if editing}
-			<input
-				class="editor"
-				bind:this={input}
-				bind:value={editValueText}
-				oninput={(e) => onFormulaInput(e.currentTarget, 'cell')}
-				onkeyup={(e) => moveSig(e, 'cell')}
-				onclick={(e) => moveSig(e, 'cell')}
-				onkeydown={onEditorKey}
-				onblur={() => {
-					completion = sig = null;
-					// Saisie refusée (liste déroulante) quand le focus part ailleurs : abandonnée, le message reste.
-					if (!commit()) {
-						editing = false;
-						schedule();
-					}
-				}}
-				title={(() => {
-					const e = tableAt(active.row, active.col);
-					return e ? typeLabel(e.t.columns[active.col - e.t.col].type) : 'Cellule libre';
-				})()}
-			/>
+			{@const hl = isFormula(editValueText)}
+			<div class="editor-box">
+				{#if hl}
+					<!-- Formule : texte coloré sous la zone de saisie (transparente). -->
+					<div class="editor-hl" aria-hidden="true">{@render coloured(editValueText)}</div>
+				{/if}
+				<textarea
+					class="editor"
+					class:hl
+					rows="1"
+					spellcheck="false"
+					bind:this={input}
+					bind:value={editValueText}
+					oninput={(e) => onFormulaInput(e.currentTarget, 'cell')}
+					onkeyup={(e) => moveSig(e, 'cell')}
+					onclick={(e) => moveSig(e, 'cell')}
+					onkeydown={onEditorKey}
+					onblur={() => {
+						completion = sig = null;
+						// Saisie refusée par la liste déroulante quand le focus part ailleurs : abandonnée, le message reste.
+						if (!commit() && !editErr) {
+							editing = false;
+							schedule();
+						}
+					}}
+					title={(() => {
+						const e = tableAt(active.row, active.col);
+						return e ? typeLabel(e.t.columns[active.col - e.t.col].type) : 'Cellule libre';
+					})()}
+				></textarea>
+			</div>
 		{/if}
 	</div>
 	{#if panel?.kind === 'pivot'}
@@ -5742,6 +6398,11 @@
 	.filter {
 		min-width: 300px;
 	}
+	.colfilter {
+		max-width: 310px;
+		overflow-y: auto;
+		box-sizing: border-box;
+	}
 	.rules.anchored {
 		transform: none;
 	}
@@ -5899,6 +6560,41 @@
 	.filter .count {
 		color: #6b7280;
 		font-size: 11px;
+	}
+	.filter .cond-menu {
+		display: flex;
+	}
+	.filter .cond-menu.on {
+		background: #e3efe7;
+	}
+	.filter .cond-list .sort {
+		padding-left: 28px;
+	}
+	.filter .custom select {
+		flex: 1;
+		font: inherit;
+		padding: 2px 4px;
+		border: 1px solid #c9cdd2;
+		border-radius: 3px;
+	}
+	.filter .custom input {
+		flex: 1;
+		min-width: 0;
+	}
+	.filter .andor {
+		display: flex;
+		gap: 12px;
+		padding: 0 14px;
+	}
+	.filter .andor input {
+		width: auto;
+	}
+	.filter .menu-note .link {
+		border: none;
+		background: none;
+		color: #217346;
+		padding: 0 4px;
+		text-decoration: underline;
 	}
 	.rules .sample {
 		padding: 1px 8px;
@@ -6067,18 +6763,75 @@
 		pointer-events: none;
 		font-size: 12px;
 	}
-	.editor {
+	/* Éditeur de cellule : il s'élargit vers la droite sur les cellules vides,
+	   puis passe à la ligne (placeEditor) ; une formule y est colorée par un
+	   calque de texte sous la zone de saisie transparente. */
+	.editor-box {
 		position: absolute;
 		left: 0;
 		top: 0;
 		height: 22px;
 		box-sizing: border-box;
 		border: 2px solid #217346;
-		padding: 0 4px;
-		font: 13px 'Segoe UI', system-ui, -apple-system, sans-serif;
-		outline: none;
 		background: #fff;
 		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 		z-index: 2;
+	}
+	.editor,
+	.editor-hl {
+		position: absolute;
+		inset: 0;
+		box-sizing: border-box;
+		margin: 0;
+		border: 0;
+		padding: 0 4px;
+		font: 13px 'Segoe UI', system-ui, -apple-system, sans-serif;
+		line-height: 18px;
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+		overflow: hidden;
+	}
+	.editor {
+		width: 100%;
+		height: 100%;
+		resize: none;
+		outline: none;
+		background: transparent;
+		color: #1f2328;
+	}
+	.editor.hl,
+	.fx-input.hl {
+		color: transparent;
+		caret-color: #1f2328;
+	}
+	.editor-hl {
+		color: #1f2328;
+		pointer-events: none;
+	}
+	.hl-err {
+		text-decoration: underline wavy #c8302c;
+		text-decoration-skip-ink: none;
+		background: rgba(200, 48, 44, 0.12);
+	}
+	.fx-wrap {
+		position: relative;
+		flex: 1;
+		display: flex;
+		overflow: hidden;
+	}
+	.fx-hl {
+		position: absolute;
+		left: 0;
+		top: 0;
+		bottom: 0;
+		padding: 4px 2px;
+		white-space: pre;
+		font: inherit;
+		color: #1f2328;
+		pointer-events: none;
+	}
+	.fx-input.hl {
+		background: transparent;
+		position: relative;
 	}
 </style>

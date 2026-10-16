@@ -174,6 +174,15 @@ func TestHiddenLinesAndFreeze(t *testing.T) {
 	if l, _ = d.Layout(ctx, 1); l.Sheets[0].FreezeRows != 1 || l.Sheets[0].FreezeCols != 2 {
 		t.Fatalf("volets : %+v", l.Sheets[0])
 	}
+	// La copie de la feuille garde ses volets et son masquage.
+	cp, err := d.CopySheet(ctx, 1, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if l, _ = d.Layout(ctx, cp); l.Sheets[1].FreezeRows != 1 || l.Sheets[1].FreezeCols != 2 {
+		t.Fatalf("volets de la copie : %+v", l.Sheets)
+	}
+	d.bus.Undo(ctx)
 	id, err := d.AddSheet(ctx)
 	if err != nil {
 		t.Fatal(err)

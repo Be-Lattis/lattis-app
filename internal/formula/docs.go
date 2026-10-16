@@ -391,6 +391,46 @@ var docs = map[string]funcDoc{
 	"QUERY": {catSpill, "Exécute une requête SQL en lecture seule sur les tableaux du classeur ; le résultat se déverse sur la feuille.",
 		docArgs(docArg("sql", "Requête SELECT, entre guillemets ; les tableaux s'y nomment comme dans l'onglet SQL.")),
 		0, `=REQUETE("SELECT Client, SUM(Montant) FROM Ventes GROUP BY Client")`},
+	"SEQUENCE": {catSpill, "Renvoie une suite de nombres sur une ou plusieurs colonnes ; le résultat se déverse sur la feuille.",
+		docArgs(docArg("lignes", "Nombre de lignes."),
+			docOpt("colonnes", "Nombre de colonnes, écrit dans la formule (1 si omis)."),
+			docOpt("début", "Premier nombre (1 si omis)."),
+			docOpt("pas", "Écart entre deux nombres (1 si omis).")),
+		0, `=SEQUENCE(12; 1; 1; 1)`},
+
+	// Ajouts de la revue n° 2
+	"CHOOSE": {catLogic, "Renvoie la valeur dont le rang est donné par un numéro (1 = première valeur).",
+		docArgs(docArg("no_index", "Rang de la valeur à renvoyer."),
+			docArg("valeur1", "Valeur renvoyée pour ce rang.")),
+		1, `=CHOISIR([Trimestre]; "T1"; "T2"; "T3"; "T4")`},
+	"LET": {catLogic, "Donne un nom à des valeurs intermédiaires, utilisables ensuite dans le calcul final.",
+		docArgs(docArg("nom1", "Nom à définir (un identifiant, pas une adresse de cellule)."),
+			docArg("valeur1", "Valeur ou expression associée au nom ; les paires nom; valeur peuvent se répéter."),
+			docArg("calcul", "Dernier argument : le calcul qui utilise les noms.")),
+		0, `=LET(ht; [Prix]*[Qté]; ht*1,2)`},
+	"CEILING": {catMath, "Arrondit un nombre au multiple supérieur de la précision.",
+		docArgs(docArg("nombre", "Nombre à arrondir."), docOpt("précision", "Multiple visé (1 si omis).")),
+		0, `=PLAFOND([Prix]; 0,05)`},
+	"FLOOR": {catMath, "Arrondit un nombre au multiple inférieur de la précision.",
+		docArgs(docArg("nombre", "Nombre à arrondir."), docOpt("précision", "Multiple visé (1 si omis).")),
+		0, `=PLANCHER([Montant]; 10)`},
+	"DAYS": {catDate, "Renvoie le nombre de jours entre deux dates.",
+		docArgs(docArg("date_fin", "Date de fin."), docArg("date_début", "Date de début.")),
+		0, `=JOURS([Fin]; [Début])`},
+	"WEEKNUM": {catDate, "Renvoie le numéro de semaine d'une date (la semaine 1 contient le 1er janvier).",
+		docArgs(argDate, docOpt("type", "Premier jour de la semaine : 1 ou omis dimanche, 2 lundi, 11 à 17 lundi à dimanche, 21 semaine ISO.")),
+		0, `=NO.SEMAINE([Date]; 2)`},
+	"TIME": {catDate, "Renvoie une heure sous forme de fraction de journée (0,5 = midi).",
+		docArgs(docArg("heure", "Heures."), docArg("minute", "Minutes."), docArg("seconde", "Secondes.")),
+		0, `=TEXTE(TEMPS(9; 30; 0); "hh:mm")`},
+	"LARGE": {catAgg, "Renvoie la k-ième plus grande valeur d'une colonne.",
+		docArgs(docArg("matrice", "Colonne entière (Tableau[Colonne]) ou expression sur les colonnes d'un tableau."),
+			docArg("k", "Rang de la valeur (1 = la plus grande).")),
+		0, `=GRANDE.VALEUR(Ventes[Montant]; 2)`},
+	"SMALL": {catAgg, "Renvoie la k-ième plus petite valeur d'une colonne.",
+		docArgs(docArg("matrice", "Colonne entière (Tableau[Colonne]) ou expression sur les colonnes d'un tableau."),
+			docArg("k", "Rang de la valeur (1 = la plus petite).")),
+		0, `=PETITE.VALEUR(Ventes[Montant]; 1)`},
 }
 
 func argCritN(name string) ArgDoc {
@@ -400,6 +440,10 @@ func argCritN(name string) ArgDoc {
 // signature écrit la signature d'une fonction : SOMME.SI(plage; critère;
 // [plage_somme]), SOMME(valeur1; [valeur2]; …).
 func (d funcDoc) signature(name string) string {
+	if name == "LET" {
+		// Paires répétées avant le dernier argument : forme propre à LET.
+		return "LET(nom1; valeur1; [nom2; valeur2]; …; calcul)"
+	}
 	var parts []string
 	for _, x := range d.args {
 		if x.Optional {
