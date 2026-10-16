@@ -20,8 +20,14 @@ Décidée par Louis le 16/10/2026. Pas de `@`.
 | `Tableau[Colonne][ligne ou clé]` | Une valeur du tableau : par la valeur de la clé si le tableau en a une (stable au tri), sinon par le rang de la ligne (1 = première ligne de données) |
 | `Cell[A1]` | La cellule libre A1 de la feuille de la formule (pour une colonne calculée : la feuille du tableau) ; dans l'onglet SQL, de la feuille affichée |
 | `Feuille1!Cell[A1]`, `'Ma feuille'!Cell[A1]` | La cellule libre A1 d'une autre feuille |
+| `Tableau[Colonne][1:3]`, `[Colonne][1:3]` | Les lignes 1 à 3 d'une colonne, **par rang d'affichage** (1 = première ligne de données), que le tableau ait une clé ou non |
+| `Cell[C14:C16]`, `Feuille1!Cell[A1:B3]` | Une plage rectangulaire de cellules libres (10 000 cellules au plus) |
 
-La ligne ou la clé entre crochets est une expression : `Ventes[Prix][Cell[B1]]`. Les formes d'Excel `[@Colonne]` et les anciennes `Cell_A1` / `Feuille1.Cell_A1` restent lues et s'affichent dans la nouvelle écriture. En mode formule, un clic sur une cellule insère sa référence dans cette nomenclature. Insérer, supprimer ou déplacer des lignes, colonnes ou cellules met à jour les `Cell[…]` ; une cellule supprimée devient `#REF!`.
+La ligne ou la clé entre crochets est une expression : `Ventes[Prix][Cell[B1]]`. Les formes d'Excel `[@Colonne]` et les anciennes `Cell_A1` / `Feuille1.Cell_A1` restent lues et s'affichent dans la nouvelle écriture. En mode formule, un clic sur une cellule insère sa référence dans cette nomenclature ; un glissé insère une plage (`Cell[C14:C16]`, `Tableau[Colonne][1:3]`, ou `Tableau[Colonne]` s'il couvre toute la colonne). Insérer, supprimer ou déplacer des lignes, colonnes ou cellules met à jour les `Cell[…]` et les plages `Cell[…:…]` (une plage s'agrandit si l'on insère dedans, se réduit si l'on en supprime une partie) ; une cellule ou une plage entièrement supprimée devient `#REF!`. Les plages de lignes `Tableau[Colonne][1:3]` gardent leurs rangs.
+
+Les plages se lisent comme une colonne dans les agrégats (`SOMME`, `MOYENNE`, `NB`, `NBVAL`, `MAX`, `MIN`…) et dans les fonctions qui parcourent des plages (`SOMME.SI`, `NB.SI`, `SOMMEPROD`, `EQUIV`…), seules ou dans une expression (`SOMME(Cell[A1:A3]*Cell[B1:B3])`). Des plages lues ensemble doivent avoir la même forme, et une plage ne se mêle pas à une colonne entière (`#VALEUR!`). Hors d'un agrégat, une plage donne `#VALEUR!`.
+
+**Adresses à la Excel.** Une adresse A1 tapée par habitude (`=C14*2`, `=SOMME(C14:C16)`, `$C$14`, `Feuille2!B3`) est convertie à la validation : en `Cell[C14]` pour une cellule libre, en `Tableau[Colonne][k]` dans un tableau (k : la clé de la ligne si le tableau en a une, sinon son rang ; un en-tête donne `Tableau[Colonne]`), en `Cell[C14:C16]`, `Tableau[Colonne][1:3]` ou `Tableau[Colonne]` pour une plage. Une plage qui déborde d'une colonne de tableau est refusée avec un message. Un nom de cellule ou de tableau qui ressemble à une adresse (`TVA1`) reste un nom. Les plages des `RECHERCHEV` sont situées de la même façon.
 
 ## Logique
 

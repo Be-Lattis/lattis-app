@@ -115,7 +115,7 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 			// Formule dans une cellule libre : enregistrée réécrite (RECHERCHEV
 			// devient REFERENCE), calculée à l'affichage. Elle ne fait pas
 			// naître de tableau.
-			n, err := t.prepareFormula(strings.TrimSpace(raw))
+			n, err := t.prepareFormula(sheet, strings.TrimSpace(raw))
 			if err != nil {
 				return err
 			}

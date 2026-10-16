@@ -7,9 +7,11 @@ import (
 
 // Deps donne les cellules nommées et les tableaux dont dépend une formule.
 func Deps(n Node) (names, tables []string) {
+	seen := map[*[]string]map[string]bool{&names: {}, &tables: {}}
 	add := func(list *[]string, s string) {
 		s = strings.ToLower(s)
-		if !slices.Contains(*list, s) {
+		if !seen[list][s] {
+			seen[list][s] = true
 			*list = append(*list, s)
 		}
 	}
@@ -18,6 +20,14 @@ func Deps(n Node) (names, tables []string) {
 		switch n := n.(type) {
 		case Name:
 			add(&names, n.Name)
+		case CellRange:
+			for _, k := range n.keys(0) {
+				add(&names, k)
+			}
+		case RowRange:
+			if n.Ref.Table != "" {
+				add(&tables, n.Ref.Table)
+			}
 		case Ref:
 			if n.Table != "" {
 				add(&tables, n.Table)

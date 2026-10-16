@@ -384,3 +384,35 @@ locale EN
 =TEXTJOIN(",",TRUE,"a","b")	a,b
 =ROUNDUP(1.21,1)	1,3
 =NETWORKDAYS(DATE(2026,5,1),DATE(2026,5,31))	21
+
+@
+locale FR
+# Plages : Cell[A1:B3] (A1=1, A2=2, A3="x", A4 vide ; B1..B3 = 10, 20, 30) et Tableau[Col][1:3] (rangs d'affichage)
+=SOMME(Cell[A1:A4])	3
+=NB(Cell[A1:A4])	2
+=NBVAL(Cell[A1:A4])	3
+=MAX(Cell[A1:B3])	30
+=MOYENNE(Cell[B1:B3])	20
+=SOMME(Cell[A1:A2]*Cell[B1:B2])	50
+=SOMMEPROD(Cell[A1:A2];Cell[B1:B2])	50
+=SOMME.SI(Cell[B1:B3];">15")	50
+=SOMME.SI(Cell[A1:A3];"x";Cell[B1:B3])	30
+=NB.SI(Cell[A1:A3];">1")	1
+=SOMME(Cell[A1:A2];Cell[B1:B3])	63
+=SOMME(Cell[A1:A2]*Cell[B1:B3])	#VALEUR!
+=Cell[A1:A2]	#VALEUR!
+=SOMME(Cell[A1:A1];1)	2
+=SOMME(Ventes[Prix][1:2])	35,5
+=SOMME(Etapes[Valeur][1:2])	30
+=NB(Ventes[Prix][2:4])	2
+=Etapes[Valeur][3:3]	30
+=Etapes[Valeur][4:4]	#REF!
+=SOMMEPROD(Ventes[Prix][1:2];Ventes[Qté][1:2])	81
+=SOMME(Ventes[Prix][1:2]*Ventes[Qté])	#VALEUR!
+=EQUIV(20;Etapes[Valeur][1:3];0)	2
+=SOMME(Ventes[Montant][1:2])	81
+=SOMME(Ventes[Prix][5:9])	0
+=JOINDRE.TEXTE("-";VRAI;Etapes[Nom][2:3])	B-C
+
+@ Ventes 1
+=SOMME([Prix][1:2])+[Qté]	37,5

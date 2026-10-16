@@ -151,6 +151,12 @@ type Env struct {
 	arr    *Table
 	arrRow int
 
+	// ranges : plages Cell[A1:B3] parcourues, leurs valeurs et la position
+	// courante.
+	ranges    []CellRange
+	rangeVals [][]Value
+	rangePos  int
+
 	visiting map[[2]any]bool
 	rands    *int // rang du prochain appel à ALEA
 }
@@ -182,6 +188,20 @@ func Eval(n Node, env *Env) Value {
 		return Err(ErrName)
 	case Range:
 		return Err(ErrRef) // les plages A1 n'existent que pour la conversion
+	case CellRange:
+		for i, r := range env.ranges {
+			if r == n {
+				return env.rangeVals[i][env.rangePos]
+			}
+		}
+		return Err(ErrValue) // une plage hors d'un agrégat
+	case RowRange:
+		if env.arr != nil {
+			if t, i, err := env.resolve(n.Ref); !err.IsErr() && t == env.arr {
+				return env.cell(t, env.arrRow, i)
+			}
+		}
+		return env.rowValue(n)
 	case Ref:
 		t, i, err := env.resolve(n)
 		if err.IsErr() {
@@ -307,6 +327,14 @@ func (env *Env) aggregate(fn string, args []Node) Value {
 			leadV = append(leadV, Eval(a, env))
 			continue
 		}
+		if sp, ok, e := spanOf([]Node{a}, env.Schema, env.Table); ok {
+			if e != 0 {
+				acc.AddValue(Err(e))
+				continue
+			}
+			env.eachSpan(sp, func(sub *Env) { acc.AddRange(Eval(a, sub)) })
+			continue
+		}
 		if r, ok := a.(Ref); ok && !r.Row {
 			t, i, err := env.resolve(r)
 			if err.IsErr() {
@@ -362,16 +390,23 @@ func (env *Env) scan(sc scanCall) Value {
 	if len(sc.cols) == 0 {
 		return s.result()
 	}
-	t, e := arrayTable(sc.cols, env.Schema, env.Table)
-	if e != 0 {
-		return Err(e)
-	}
 	vals := make([]Value, len(sc.cols))
 	row := func(e *Env) {
 		for i, c := range sc.cols {
 			vals[i] = Eval(c, e)
 		}
 		s.add(vals)
+	}
+	if sp, ok, e := spanOf(sc.cols, env.Schema, env.Table); ok {
+		if e != 0 {
+			return Err(e)
+		}
+		env.eachSpan(sp, row)
+		return s.result()
+	}
+	t, e := arrayTable(sc.cols, env.Schema, env.Table)
+	if e != 0 {
+		return Err(e)
 	}
 	if t == nil {
 		row(env) // valeurs simples : une seule « ligne »

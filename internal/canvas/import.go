@@ -139,7 +139,7 @@ func (m *Model) Import(ctx context.Context, action string, sheets []ImportSheet)
 			for _, c := range s.Cells {
 				raw := c.Raw
 				if isFormula(raw) {
-					n, err := t.prepareFormula(strings.TrimSpace(raw))
+					n, err := t.prepareFormula(res.Sheets[si], strings.TrimSpace(raw))
 					switch {
 					case err == nil:
 						raw = formula.Format(n, formula.FR)

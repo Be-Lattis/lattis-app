@@ -56,7 +56,7 @@ func (t *tx) setFormula(tb Table, i int, src string) error {
 	if src == "" {
 		return t.apply([]stmt{st(q, nil, tb.ID, c.ID)}, []stmt{st(q, old, tb.ID, c.ID)})
 	}
-	n, err := t.prepareFormula(src)
+	n, err := t.prepareFormula(tb.Sheet, src)
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,10 @@ func (t *tx) setFormula(tb Table, i int, src string) error {
 
 // prepareFormula analyse une saisie de formule (français), convertit les
 // RECHERCHEV en REFERENCE et donne une clé unique aux tableaux cherchés.
-func (t *tx) prepareFormula(src string) (formula.Node, error) {
+//
+// Les adresses A1 tapées à la Excel (=C14*2, SOMME(C14:C16)) sont réécrites
+// selon la feuille sheet : Cell[C14], Tableau[Col][k], Cell[C14:C16]…
+func (t *tx) prepareFormula(sheet int64, src string) (formula.Node, error) {
 	n, err := formula.Parse(src, formula.FR)
 	if err != nil {
 		return nil, ErrFormula{err.Error()}
@@ -75,7 +78,14 @@ func (t *tx) prepareFormula(src string) (formula.Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	n, needs, err := formula.Convert(n, schema, noRanges{}, src)
+	loc := t.locator(sheet)
+	n, needs, err := formula.Convert(n, schema, formula.A1Resolver(loc), src)
+	if err == nil {
+		n, err = formula.ConvertA1(n, loc)
+	}
+	if loc.err != nil {
+		return nil, loc.err
+	}
 	if err != nil {
 		return nil, ErrFormula{err.Error()}
 	}

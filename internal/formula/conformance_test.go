@@ -111,6 +111,13 @@ func fixture(t testing.TB) *fixtureDoc {
 		"ca_ttc":  "=CA*(1+TVA)",
 		"boucle1": "=Boucle2+1",
 		"boucle2": "=Boucle1+1",
+		// Cellules libres de la plage Cell[A1:B3] (A4 vide).
+		"cell_a1": "=1",
+		"cell_a2": "=2",
+		"cell_a3": `="x"`,
+		"cell_b1": "=10",
+		"cell_b2": "=20",
+		"cell_b3": "=30",
 	} {
 		names.Formulas[name] = mustParse(t, f, FR)
 	}

@@ -51,6 +51,22 @@ type (
 	// argument de REFERENCE.
 	Name  struct{ Name string }
 	Range struct{ Text string } // plage A1, seulement dans une formule Excel à convertir
+	// CellRange est une plage rectangulaire de cellules libres : Cell[A1:B3]
+	// (Feuille!Cell[A1:B3] sur une autre feuille), lue dans les agrégats et
+	// les fonctions qui parcourent des plages. Home est la feuille de la
+	// formule, fixée par QualifyCells (0 : pas encore).
+	CellRange struct {
+		Sheet          string
+		R1, C1, R2, C2 int
+		Home           int64
+	}
+	// RowRange désigne les lignes From à To (rangs d'affichage, 1 = première
+	// ligne de données) d'une colonne : Tableau[Col][1:3], ou [Col][1:3] dans
+	// le tableau de la formule. Le rang ne tient pas compte de la clé.
+	RowRange struct {
+		Ref      Ref
+		From, To int
+	}
 	Unary struct {
 		Op string // "-", "+" ou "%"
 		X  Node
@@ -66,16 +82,18 @@ type (
 	}
 )
 
-func (NumLit) node()  {}
-func (StrLit) node()  {}
-func (BoolLit) node() {}
-func (ErrLit) node()  {}
-func (Ref) node()     {}
-func (Name) node()    {}
-func (Range) node()   {}
-func (Unary) node()   {}
-func (Binary) node()  {}
-func (Call) node()    {}
+func (NumLit) node()    {}
+func (StrLit) node()    {}
+func (BoolLit) node()   {}
+func (ErrLit) node()    {}
+func (Ref) node()       {}
+func (Name) node()      {}
+func (Range) node()     {}
+func (CellRange) node() {}
+func (RowRange) node()  {}
+func (Unary) node()     {}
+func (Binary) node()    {}
+func (Call) node()      {}
 
 // --- Lexer ------------------------------------------------------------------
 
@@ -102,7 +120,7 @@ type token struct {
 	pos  int
 }
 
-var a1Range = regexp.MustCompile(`^(?:[\p{L}\w]+!)?\$?[A-Za-z]{1,3}\$?\d+:\$?[A-Za-z]{1,3}\$?\d+`)
+var a1Range = regexp.MustCompile(`^(?:(?:[\p{L}\w]+|'(?:[^']|'')+')!)?\$?[A-Za-z]{1,3}\$?\d+:\$?[A-Za-z]{1,3}\$?\d+`)
 
 // SyntaxError situe une erreur de saisie.
 type SyntaxError struct {
@@ -234,19 +252,28 @@ func lex(src string, loc Locale) ([]token, error) {
 				name := string(rs[i+1 : j])
 				i = j + 2
 				k := i
-				for i < len(rs) && (unicode.IsLetter(rs[i]) || unicode.IsDigit(rs[i]) || rs[i] == '_') {
+				for i < len(rs) && (unicode.IsLetter(rs[i]) || unicode.IsDigit(rs[i]) || rs[i] == '_' || rs[i] == '$') {
 					i++
 				}
-				toks = append(toks, token{kind: tIdent, text: name + "!" + string(rs[k:i]), pos: start})
+				toks = append(toks, token{kind: tIdent, text: name + "!" + strings.ReplaceAll(string(rs[k:i]), "$", ""), pos: start})
 				continue
 			}
 		}
-		if unicode.IsLetter(c) || c == '_' {
-			for i < len(rs) && (unicode.IsLetter(rs[i]) || unicode.IsDigit(rs[i]) || rs[i] == '_' || rs[i] == '.' ||
-				rs[i] == '!' && i+1 < len(rs) && unicode.IsLetter(rs[i+1])) {
+		if unicode.IsLetter(c) || c == '_' || c == '$' {
+			// Les $ d'une adresse Excel ($C$14, Feuille2!C$3) sont acceptés
+			// puis retirés : les références de Slitable sont toujours fixes.
+			for i < len(rs) && (unicode.IsLetter(rs[i]) || unicode.IsDigit(rs[i]) || rs[i] == '_' || rs[i] == '.' || rs[i] == '$' ||
+				rs[i] == '!' && i+1 < len(rs) && (unicode.IsLetter(rs[i+1]) || rs[i+1] == '$')) {
 				i++
 			}
-			toks = append(toks, token{kind: tIdent, text: string(rs[start:i]), pos: start})
+			text := string(rs[start:i])
+			if strings.Contains(text, "$") {
+				text = strings.ReplaceAll(text, "$", "")
+				if _, _, _, ok := A1Address(text); !ok {
+					return nil, &SyntaxError{start, "caractère inattendu « $ »"}
+				}
+			}
+			toks = append(toks, token{kind: tIdent, text: text, pos: start})
 			continue
 		}
 		return nil, &SyntaxError{start, fmt.Sprintf("caractère inattendu %q", c)}
@@ -277,6 +304,7 @@ type parser struct {
 	toks []token
 	i    int
 	loc  Locale
+	src  []rune
 }
 
 // Parse analyse une formule (le « = » initial est facultatif).
@@ -287,13 +315,13 @@ func Parse(src string, loc Locale) (Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	p := &parser{toks: toks, loc: loc}
+	p := &parser{toks: toks, loc: loc, src: []rune(src)}
 	n, err := p.comparison()
 	if err != nil {
 		return nil, err
 	}
 	if t := p.peek(); t.kind != tEOF {
-		return nil, &SyntaxError{t.pos, "suite inattendue"}
+		return nil, p.extra(t)
 	}
 	return n, nil
 }
@@ -386,6 +414,9 @@ func (p *parser) primary() (Node, error) {
 		// [Col][ligne ou clé] : une autre ligne du tableau de la formule.
 		if p.peek().kind == tRef {
 			kt := p.next()
+			if rr, ok, err := rowRange(ref, kt); ok || err != nil {
+				return rr, err
+			}
 			key, err := parseInner(kt.text, p.loc)
 			if err != nil {
 				return nil, &SyntaxError{kt.pos, err.Error()}
@@ -398,8 +429,11 @@ func (p *parser) primary() (Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		if p.next().kind != tRParen {
-			return nil, &SyntaxError{t.pos, "parenthèse non fermée"}
+		if e := p.next(); e.kind != tRParen {
+			if e.kind != tEOF {
+				return nil, &SyntaxError{e.pos, "il manque un opérateur ou « ) » avant « " + p.word(e) + " »"}
+			}
+			return nil, &SyntaxError{t.pos, "il manque une parenthèse fermante « ) »"}
 		}
 		return n, nil
 	case tIdent:
@@ -414,6 +448,10 @@ func (p *parser) primary() (Node, error) {
 				sheet, word = t.text[:k], t.text[k+1:]
 			}
 			if strings.EqualFold(word, "cell") {
+				if a, b, ok := strings.Cut(inner, ":"); ok {
+					// Cell[A1:B3] : plage de cellules libres.
+					return cellRange(sheet, a, b, t.pos)
+				}
 				if r, c, ok := CellRef("Cell_" + strings.TrimSpace(inner)); ok {
 					name := CellName(r, c)
 					if sheet != "" {
@@ -427,6 +465,9 @@ func (p *parser) primary() (Node, error) {
 			// Tableau[Colonne][ligne ou clé] : une valeur du tableau.
 			if p.peek().kind == tRef {
 				kt := p.next()
+				if rr, ok, err := rowRange(ref, kt); ok || err != nil {
+					return rr, err
+				}
 				key, err := parseInner(kt.text, p.loc)
 				if err != nil {
 					return nil, &SyntaxError{kt.pos, err.Error()}
@@ -443,7 +484,109 @@ func (p *parser) primary() (Node, error) {
 		}
 		return Name{t.text}, nil
 	}
-	return nil, &SyntaxError{t.pos, "valeur attendue"}
+	return nil, p.missing(t)
+}
+
+// word donne le texte d'un jeton tel qu'il a été tapé (pour les messages).
+func (p *parser) word(t token) string {
+	switch t.kind {
+	case tOp:
+		return t.text
+	case tLParen:
+		return "("
+	case tRParen:
+		return ")"
+	case tSep:
+		return string(p.loc.sep())
+	}
+	if t.pos >= len(p.src) {
+		return t.text
+	}
+	end := t.pos + 1
+	for end < len(p.src) && end-t.pos < 20 && !unicode.IsSpace(p.src[end]) && !strings.ContainsRune("+-*/^&%<>=();", p.src[end]) {
+		end++
+	}
+	return string(p.src[t.pos:end])
+}
+
+// missing explique, en français ordinaire, une valeur manquante : t est le
+// jeton trouvé à sa place (déjà lu).
+func (p *parser) missing(t token) error {
+	var prev *token
+	if k := p.i - 2; k >= 0 {
+		prev = &p.toks[k]
+	}
+	after := ""
+	if prev != nil && (prev.kind == tOp || prev.kind == tLParen || prev.kind == tSep) {
+		after = " après « " + p.word(*prev) + " »"
+	}
+	switch t.kind {
+	case tEOF:
+		if prev == nil {
+			return &SyntaxError{t.pos, "la formule est vide"}
+		}
+		return &SyntaxError{t.pos, "il manque une valeur" + after}
+	case tRParen, tSep, tOp:
+		if after != "" {
+			return &SyntaxError{t.pos, "il manque une valeur" + after}
+		}
+		return &SyntaxError{t.pos, "il manque une valeur avant « " + p.word(t) + " »"}
+	}
+	return &SyntaxError{t.pos, "« " + p.word(t) + " » inattendu"}
+}
+
+// extra explique un jeton en trop après une formule complète.
+func (p *parser) extra(t token) error {
+	switch t.kind {
+	case tRParen:
+		return &SyntaxError{t.pos, "parenthèse fermante « ) » en trop"}
+	case tSep:
+		return &SyntaxError{t.pos, fmt.Sprintf("« %c » hors des parenthèses d'une fonction", p.loc.sep())}
+	}
+	return &SyntaxError{t.pos, "il manque un opérateur avant « " + p.word(t) + " »"}
+}
+
+// MaxRangeCells borne la taille d'une plage Cell[A1:B3].
+const MaxRangeCells = 10000
+
+// cellRange lit Cell[a:b] ; une plage d'une seule cellule est cette cellule.
+func cellRange(sheet, a, b string, pos int) (Node, error) {
+	r1, c1, ok1 := CellRef("Cell_" + strings.TrimSpace(a))
+	r2, c2, ok2 := CellRef("Cell_" + strings.TrimSpace(b))
+	if !ok1 || !ok2 {
+		return nil, &SyntaxError{pos, "adresse de cellule invalide : Cell[" + a + ":" + b + "]"}
+	}
+	r1, r2 = min(r1, r2), max(r1, r2)
+	c1, c2 = min(c1, c2), max(c1, c2)
+	if r1 == r2 && c1 == c2 {
+		name := CellName(r1, c1)
+		if sheet != "" {
+			name = sheet + "." + name
+		}
+		return Name{name}, nil
+	}
+	if (r2-r1+1)*(c2-c1+1) > MaxRangeCells {
+		return nil, &SyntaxError{pos, fmt.Sprintf("plage trop grande : %d cellules au plus", MaxRangeCells)}
+	}
+	return CellRange{Sheet: sheet, R1: r1, C1: c1, R2: r2, C2: c2}, nil
+}
+
+var rowSpanRe = regexp.MustCompile(`^\s*(\d+)\s*:\s*(\d+)\s*$`)
+
+// rowRange lit [1:3] après une colonne : les lignes 1 à 3 (rangs).
+func rowRange(ref Ref, kt token) (Node, bool, error) {
+	m := rowSpanRe.FindStringSubmatch(kt.text)
+	if m == nil {
+		return nil, false, nil
+	}
+	a, _ := strconv.Atoi(m[1])
+	b, _ := strconv.Atoi(m[2])
+	a, b = min(a, b), max(a, b)
+	if a < 1 {
+		return nil, false, &SyntaxError{kt.pos, "les lignes d'un tableau se comptent à partir de 1"}
+	}
+	ref.Row = false
+	return RowRange{Ref: ref, From: a, To: b}, true, nil
 }
 
 // parseRef lit le contenu des crochets. Nomenclature de Slitable (sans @) :
@@ -500,8 +643,11 @@ func (p *parser) call(name token) (Node, error) {
 			if t.kind == tRParen {
 				break
 			}
+			if t.kind == tEOF {
+				return nil, &SyntaxError{t.pos, "il manque une parenthèse fermante « ) » à " + strings.ToUpper(name.text)}
+			}
 			if t.kind != tSep {
-				return nil, &SyntaxError{t.pos, fmt.Sprintf("« %c » ou « ) » attendu", p.loc.sep())}
+				return nil, &SyntaxError{t.pos, fmt.Sprintf("il manque « %c » ou « ) » avant « %s »", p.loc.sep(), p.word(t))}
 			}
 		}
 	}
@@ -582,6 +728,10 @@ func format(b *strings.Builder, n Node, loc Locale) {
 		b.WriteString(CellText(n.Name))
 	case Range:
 		b.WriteString(n.Text)
+	case CellRange:
+		b.WriteString(n.String())
+	case RowRange:
+		b.WriteString(n.Ref.Table + "[" + n.Ref.Col + "]" + fmt.Sprintf("[%d:%d]", n.From, n.To))
 	case Unary:
 		if n.Op == "%" {
 			sub(n.X, 7)
