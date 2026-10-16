@@ -92,31 +92,9 @@ func (t *tx) prepareFormula(src string) (formula.Node, error) {
 	return n, nil
 }
 
-// referenceTargets donne les tableaux cherchés par REFERENCE dans une formule.
-func referenceTargets(n formula.Node) []string {
-	var out []string
-	var walk func(formula.Node)
-	walk = func(n formula.Node) {
-		switch n := n.(type) {
-		case formula.Unary:
-			walk(n.X)
-		case formula.Binary:
-			walk(n.L)
-			walk(n.R)
-		case formula.Call:
-			if n.Fn == "REFERENCE" && len(n.Args) > 0 {
-				if name, ok := n.Args[0].(formula.Name); ok {
-					out = append(out, name.Name)
-				}
-			}
-			for _, a := range n.Args {
-				walk(a)
-			}
-		}
-	}
-	walk(n)
-	return out
-}
+// referenceTargets donne les tableaux dont une formule lit la colonne clé
+// (REFERENCE, REFERENCE.APPROCHEE, EXISTE).
+func referenceTargets(n formula.Node) []string { return formula.KeyTargets(n) }
 
 // ErrKey signale une colonne qui ne peut pas servir de clé.
 type ErrKey struct{ Table, Column, Why string }
