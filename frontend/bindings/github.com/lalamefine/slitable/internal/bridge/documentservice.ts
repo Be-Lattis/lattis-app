@@ -32,6 +32,14 @@ export function AddSheet(): $CancellablePromise<number> {
 }
 
 /**
+ * ApplyStyle met en forme un rectangle de la feuille (patch : propriétés à
+ * poser, une valeur vide les retire).
+ */
+export function ApplyStyle(sheet: number, r0: number, c0: number, r1: number, c1: number, patch: { [_ in string]?: any } | null): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(515323768, sheet, r0, c0, r1, c1, patch);
+}
+
+/**
  * ConvertPreview compte les valeurs qui ne se convertiraient pas au type to.
  */
 export function ConvertPreview(table: string, i: number, to: grid$0.Type): $CancellablePromise<number> {
@@ -44,6 +52,13 @@ export function DeleteColumn(table: string, i: number): $CancellablePromise<$mod
 
 export function DeleteRow(table: string, n: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(3988464234, table, n);
+}
+
+/**
+ * DeleteScript supprime un script.
+ */
+export function DeleteScript(id: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3149349621, id);
 }
 
 export function DeleteSheet(sheet: number): $CancellablePromise<$models.DocState> {
@@ -64,6 +79,13 @@ export function Discard(dir: string): $CancellablePromise<void> {
  */
 export function ExportCSV(table: string): $CancellablePromise<string> {
     return $Call.ByID(1530430769, table);
+}
+
+/**
+ * FormulaHelp renvoie le catalogue de l'aide à la saisie.
+ */
+export function FormulaHelp(): $CancellablePromise<$models.FormulaHelp> {
+    return $Call.ByID(1517433598);
 }
 
 /**
@@ -146,10 +168,32 @@ export function RenameSheet(sheet: number, name: string): $CancellablePromise<$m
 }
 
 /**
+ * RunScript exécute un script Lua sur le classeur ouvert. Ses écritures
+ * forment une seule étape d'annulation, nommée d'après le script.
+ */
+export function RunScript(name: string, src: string): $CancellablePromise<$models.ScriptResult> {
+    return $Call.ByID(3285996221, name, src);
+}
+
+/**
  * Save enregistre ; as (ou un classeur jamais enregistré) demande le fichier.
  */
 export function Save($as: boolean): $CancellablePromise<$models.DocState> {
     return $Call.ByID(3713623380, $as);
+}
+
+/**
+ * SaveScript enregistre un script (id 0 : nouveau) et renvoie son identifiant.
+ */
+export function SaveScript(id: number, name: string, source: string): $CancellablePromise<number> {
+    return $Call.ByID(3570047407, id, name, source);
+}
+
+/**
+ * Scripts liste la bibliothèque de scripts du classeur.
+ */
+export function Scripts(): $CancellablePromise<canvas$0.ScriptInfo[] | null> {
+    return $Call.ByID(285284199);
 }
 
 /**
@@ -167,6 +211,13 @@ export function SetColumnWidth(sheet: number, col: number, width: number): $Canc
 }
 
 /**
+ * SetName nomme une cellule libre (vide : retire le nom).
+ */
+export function SetName(sheet: number, row: number, col: number, name: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(319879748, sheet, row, col, name);
+}
+
+/**
  * SetType fixe le type d'une colonne (valeurs non convertibles marquées en erreur).
  */
 export function SetType(table: string, i: number, to: grid$0.Type): $CancellablePromise<$models.DocState> {
@@ -174,10 +225,24 @@ export function SetType(table: string, i: number, to: grid$0.Type): $Cancellable
 }
 
 /**
+ * SortTable trie un tableau selon la colonne i (desc : décroissant).
+ */
+export function SortTable(table: string, i: number, desc: boolean): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1605359047, table, i, desc);
+}
+
+/**
  * State décrit le classeur ouvert.
  */
 export function State(): $CancellablePromise<$models.DocState> {
     return $Call.ByID(1491925746);
+}
+
+/**
+ * StopScript arrête le script en cours (bouton Arrêter).
+ */
+export function StopScript(): $CancellablePromise<void> {
+    return $Call.ByID(2070863182);
 }
 
 /**

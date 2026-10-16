@@ -21,6 +21,15 @@ export interface CellInfo {
 }
 
 /**
+ * CellStyle est la mise en forme d'une cellule hors tableau.
+ */
+export interface CellStyle {
+    "row": number;
+    "col": number;
+    "style": string;
+}
+
+/**
  * ColWidth est la largeur choisie pour une colonne de la feuille.
  */
 export interface ColWidth {
@@ -47,6 +56,12 @@ export interface ColumnInfo {
      * Colonne calculée : formule telle que l'utilisateur la lit (français).
      */
     "formula": string;
+
+    /**
+     * Mise en forme de toute la colonne et de son en-tête (JSON, voir Style).
+     */
+    "style": string;
+    "headerStyle": string;
 }
 
 /**
@@ -89,6 +104,34 @@ export interface Layout {
      * largeurs choisies par l'utilisateur
      */
     "widths": ColWidth[] | null;
+
+    /**
+     * cellules nommées de la feuille
+     */
+    "names": NameInfo[] | null;
+
+    /**
+     * mise en forme hors tableaux
+     */
+    "styles": CellStyle[] | null;
+}
+
+/**
+ * NameInfo est une cellule nommée de la feuille.
+ */
+export interface NameInfo {
+    "name": string;
+    "row": number;
+    "col": number;
+}
+
+/**
+ * ScriptInfo est un script de la bibliothèque du classeur.
+ */
+export interface ScriptInfo {
+    "id": number;
+    "name": string;
+    "source": string;
 }
 
 /**
@@ -118,4 +161,12 @@ export interface TableInfo {
      */
     "rows": number;
     "columns": ColumnInfo[] | null;
+}
+
+/**
+ * TableNames décrit un tableau pour l'aide à la saisie des formules.
+ */
+export interface TableNames {
+    "name": string;
+    "columns": string[] | null;
 }

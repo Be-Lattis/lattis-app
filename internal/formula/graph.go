@@ -138,3 +138,7 @@ func (ns *Names) Affected(tables, names []string) []string {
 	}
 	return out
 }
+
+// Order donne l'ordre de calcul des noms (dépendances d'abord) et les noms
+// pris dans une référence circulaire.
+func (ns *Names) Order() (order, cyclic []string) { return ns.order() }

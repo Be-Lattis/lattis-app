@@ -6,6 +6,12 @@
 import * as archive$0 from "../archive/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as canvas$0 from "../canvas/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as formula$0 from "../formula/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as grid$0 from "../grid/models.js";
 
 /**
@@ -22,6 +28,15 @@ export interface DocState {
      */
     "undo": string;
     "redo": string;
+}
+
+/**
+ * FormulaHelp sert l'aide à la saisie des formules : fonctions (en
+ * français) et tableaux du classeur avec leurs colonnes.
+ */
+export interface FormulaHelp {
+    "functions": formula$0.FunctionInfo[] | null;
+    "tables": canvas$0.TableNames[] | null;
 }
 
 /**
@@ -67,4 +82,14 @@ export interface OpenResult {
     "state": DocState;
     "recoverable"?: archive$0.Orphan | null;
     "cancelled": boolean;
+}
+
+/**
+ * ScriptResult est l'issue d'un script pour l'interface.
+ */
+export interface ScriptResult {
+    "output": string[] | null;
+    "writes": number;
+    "durationMs": number;
+    "error": string;
 }

@@ -4,13 +4,17 @@
 	// la grille (précédence sur GRID). Les commandes pas encore réalisées sont
 	// affichées désactivées, pour montrer l'organisation cible.
 
+	import Icon from '#lib/icons/Icon.svelte';
+	import type { IconName } from '#lib/icons/icons.js';
+
 	export type View = 'grid' | 'sql' | 'script';
 
 	interface Command {
 		label: string;
-		icon: string;
+		icon: IconName;
 		run?: () => void;
 		hint?: string;
+		color?: 'fg' | 'bg'; // commande avec un choix de couleur
 	}
 	interface Group {
 		title: string;
@@ -30,9 +34,15 @@
 		onundo: () => void;
 		onredo: () => void;
 		onbench?: () => void;
+		onsort?: (desc: boolean) => void;
+		/** Mise en forme de la sélection ('toggle' bascule gras, italique, souligné). */
+		onstyle?: (patch: Record<string, unknown>) => void;
 	}
 
-	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench }: Props = $props();
+	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench, onsort, onstyle }: Props = $props();
+	let fg = $state('#c00000');
+	let bg = $state('#fff2cc');
+	const st = (patch: Record<string, unknown>) => (onstyle ? () => onstyle(patch) : undefined);
 	let fileOpen = $state(false);
 
 	const tabs = ['Accueil', 'Insertion', 'Données', 'Formules', 'Affichage'] as const;
@@ -43,31 +53,63 @@
 			{
 				title: 'Annuler',
 				commands: [
-					{ label: 'Annuler', icon: '↶', run: undo ? onundo : undefined, hint: undo ? 'Annuler : ' + undo + ' (Ctrl+Z)' : 'Rien à annuler' },
-					{ label: 'Rétablir', icon: '↷', run: redo ? onredo : undefined, hint: redo ? 'Rétablir : ' + redo + ' (Ctrl+Y)' : 'Rien à rétablir' }
+					{ label: 'Annuler', icon: 'undo', run: undo ? onundo : undefined, hint: undo ? 'Annuler : ' + undo + ' (Ctrl+Z)' : 'Rien à annuler' },
+					{ label: 'Rétablir', icon: 'redo', run: redo ? onredo : undefined, hint: redo ? 'Rétablir : ' + redo + ' (Ctrl+Y)' : 'Rien à rétablir' }
 				]
 			},
-			{ title: 'Presse-papiers', commands: [{ label: 'Coller', icon: '📋' }, { label: 'Couper', icon: '✂' }, { label: 'Copier', icon: '⧉' }] },
-			{ title: 'Police', commands: [{ label: 'Gras', icon: 'G' }, { label: 'Italique', icon: 'I' }, { label: 'Souligné', icon: 'S' }, { label: 'Couleur', icon: 'A' }] },
-			{ title: 'Alignement', commands: [{ label: 'Gauche', icon: '⯇' }, { label: 'Centrer', icon: '≡' }, { label: 'Droite', icon: '⯈' }] },
-			{ title: 'Nombre', commands: [{ label: 'Format', icon: '123' }, { label: 'Monétaire', icon: '€' }, { label: 'Pourcentage', icon: '%' }] },
-			{ title: 'Édition', commands: [{ label: 'Trier et filtrer', icon: '⇅' }, { label: 'Rechercher', icon: '🔍' }] }
+			{ title: 'Presse-papiers', commands: [{ label: 'Coller', icon: 'paste' }, { label: 'Couper', icon: 'cut' }, { label: 'Copier', icon: 'copy' }] },
+			{
+				title: 'Police',
+				commands: [
+					{ label: 'Gras', icon: 'bold', run: st({ b: 'toggle' }), hint: 'Gras (Ctrl+B)' },
+					{ label: 'Italique', icon: 'italic', run: st({ i: 'toggle' }), hint: 'Italique (Ctrl+I)' },
+					{ label: 'Souligné', icon: 'underline', run: st({ u: 'toggle' }), hint: 'Souligné (Ctrl+U)' },
+					{ label: 'Couleur', icon: 'font-color', run: st({ fg }), hint: 'Couleur du texte (choisir la teinte avec le carré à côté)', color: 'fg' },
+					{ label: 'Remplissage', icon: 'font-color', run: st({ bg }), hint: 'Couleur de remplissage', color: 'bg' },
+					{ label: 'Effacer', icon: 'remove-duplicates', run: st({ b: null, i: null, u: null, fg: null, bg: null, al: null, nf: null }), hint: 'Effacer la mise en forme' }
+				]
+			},
+			{
+				title: 'Alignement',
+				commands: [
+					{ label: 'Gauche', icon: 'align-left', run: st({ al: 'left' }) },
+					{ label: 'Centrer', icon: 'align-center', run: st({ al: 'center' }) },
+					{ label: 'Droite', icon: 'align-right', run: st({ al: 'right' }) }
+				]
+			},
+			{
+				title: 'Nombre',
+				commands: [
+					{ label: '0,00', icon: 'number-format', run: st({ nf: '0,00' }), hint: 'Deux décimales' },
+					{ label: 'Monétaire', icon: 'currency', run: st({ nf: '€' }) },
+					{ label: 'Pourcentage', icon: 'percent', run: st({ nf: '%' }) },
+					{ label: 'Standard', icon: 'number-format', run: st({ nf: null }), hint: 'Format Standard' }
+				]
+			},
+			{ title: 'Édition', commands: [{ label: 'Trier et filtrer', icon: 'sort' }, { label: 'Rechercher', icon: 'search' }] }
 		],
 		Insertion: [
-			{ title: 'Tableaux', commands: [{ label: 'Tableau', icon: '▦' }, { label: 'Tableau croisé', icon: '⊞' }] },
-			{ title: 'Graphiques', commands: [{ label: 'Barres', icon: '📊' }, { label: 'Courbes', icon: '📈' }, { label: 'Secteurs', icon: '◔' }] }
+			{ title: 'Tableaux', commands: [{ label: 'Tableau', icon: 'table' }, { label: 'Tableau croisé', icon: 'pivot-table' }] },
+			{ title: 'Graphiques', commands: [{ label: 'Barres', icon: 'chart-bar' }, { label: 'Courbes', icon: 'chart-line' }, { label: 'Secteurs', icon: 'chart-pie' }] }
 		],
 		Données: [
-			{ title: 'Trier et filtrer', commands: [{ label: 'Trier', icon: '⇅' }, { label: 'Filtrer', icon: '⏷' }] },
-			{ title: 'Outils de données', commands: [{ label: 'Supprimer les doublons', icon: '⧈' }, { label: 'Convertir le type', icon: 'Aa' }, { label: 'Erreurs seulement', icon: '⚠' }] }
+			{
+				title: 'Trier et filtrer',
+				commands: [
+					{ label: 'Trier A → Z', icon: 'sort', run: onsort ? () => onsort(false) : undefined, hint: 'Trier le tableau par la colonne active, croissant' },
+					{ label: 'Trier Z → A', icon: 'sort', run: onsort ? () => onsort(true) : undefined, hint: 'Trier le tableau par la colonne active, décroissant' },
+					{ label: 'Filtrer', icon: 'filter' }
+				]
+			},
+			{ title: 'Outils de données', commands: [{ label: 'Supprimer les doublons', icon: 'remove-duplicates' }, { label: 'Convertir le type', icon: 'convert-type' }, { label: 'Erreurs seulement', icon: 'warning' }] }
 		],
 		Formules: [
-			{ title: 'Bibliothèque', commands: [{ label: 'Insérer une fonction', icon: 'fx' }, { label: 'Somme automatique', icon: 'Σ' }, { label: 'REFERENCE', icon: '⇢' }] },
-			{ title: 'Audit', commands: [{ label: 'Antécédents', icon: '↖' }, { label: 'Dépendants', icon: '↘' }, { label: 'Graphe', icon: '⛬' }] }
+			{ title: 'Bibliothèque', commands: [{ label: 'Insérer une fonction', icon: 'function' }, { label: 'Somme automatique', icon: 'autosum' }, { label: 'REFERENCE', icon: 'reference' }] },
+			{ title: 'Audit', commands: [{ label: 'Antécédents', icon: 'precedents' }, { label: 'Dépendants', icon: 'dependents' }, { label: 'Graphe', icon: 'dependency-graph' }] }
 		],
 		Affichage: [
-			{ title: 'Afficher', commands: [{ label: 'Figer les volets', icon: '❄' }, { label: 'Zoom', icon: '🔎' }] },
-			...(onbench ? [{ title: 'Mesures (prototype)', commands: [{ label: 'Mesurer la grille', icon: '⏱', run: () => onbench() }] }] : [])
+			{ title: 'Afficher', commands: [{ label: 'Figer les volets', icon: 'freeze-panes' }, { label: 'Zoom', icon: 'zoom' }] },
+			...(onbench ? [{ title: 'Mesures (prototype)', commands: [{ label: 'Mesurer la grille', icon: 'stopwatch' as IconName, run: () => onbench() }] }] : [])
 		]
 	});
 
@@ -84,7 +126,6 @@
 
 <header class="ribbon">
 	<nav class="tabs">
-		<span class="app">Slitable</span>
 		<div class="file-wrap">
 			<button class="tab file" onclick={() => (fileOpen = !fileOpen)}>Fichier</button>
 			{#if fileOpen}
@@ -99,7 +140,7 @@
 		{#each tabs as t (t)}
 			<button class="tab" class:on={tab === t} onclick={() => select(t)}>{t}</button>
 		{/each}
-		<span class="sep"><span class="doc-title">{title}{dirty ? ' •' : ''}</span></span>
+		<span class="sep"></span>
 		<button class="tab special" class:on={tab === 'SQL'} onclick={() => select('SQL')}>SQL</button>
 		<button class="tab special" class:on={tab === 'SCRIPT'} onclick={() => select('SCRIPT')}>SCRIPT</button>
 	</nav>
@@ -110,9 +151,14 @@
 					<div class="commands">
 						{#each g.commands as c (c.label)}
 							<button class="cmd" disabled={!c.run} onclick={c.run} title={c.hint ?? (c.run ? c.label : `${c.label} : à venir`)}>
-								<span class="icon">{c.icon}</span>
+								<Icon name={c.icon} />
 								<span class="label">{c.label}</span>
 							</button>
+							{#if c.color === 'fg'}
+								<input class="swatch" type="color" bind:value={fg} title="Couleur du texte" />
+							{:else if c.color === 'bg'}
+								<input class="swatch" type="color" bind:value={bg} title="Couleur de remplissage" />
+							{/if}
 						{/each}
 					</div>
 					<div class="title">{g.title}</div>
@@ -137,12 +183,6 @@
 		background: #217346;
 		padding: 0 8px;
 		gap: 2px;
-	}
-	.app {
-		color: #fff;
-		font-weight: 600;
-		align-self: center;
-		margin-right: 14px;
 	}
 	.tab {
 		font: inherit;
@@ -177,9 +217,6 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-	}
-	.doc-title {
-		color: #e8f3ec;
 	}
 	.file-wrap {
 		position: relative;
@@ -219,6 +256,7 @@
 		height: 78px;
 		padding: 4px 6px;
 		overflow-x: auto;
+		scrollbar-width: none; /* défilement à la molette, sans barre */
 	}
 	.group {
 		display: flex;
@@ -255,9 +293,20 @@
 		color: #9aa0a6;
 		cursor: default;
 	}
-	.icon {
-		font-size: 17px;
-		line-height: 22px;
+	.cmd {
+		--icon-accent: #217346;
+	}
+	.cmd:disabled {
+		/* Une commande désactivée perd sa couleur d'accent. */
+		--icon-accent: currentColor;
+	}
+	.swatch {
+		width: 16px;
+		height: 40px;
+		padding: 0;
+		border: none;
+		background: none;
+		cursor: pointer;
 	}
 	.title {
 		text-align: center;

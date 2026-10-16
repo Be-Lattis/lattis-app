@@ -472,3 +472,199 @@ func TestFormulas(t *testing.T) {
 		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
 	}
 }
+
+func TestNames(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Produit", "Prix"}, {"Clavier", "25,5"}, {"Souris", "10"}}); err != nil {
+		t.Fatal(err)
+	}
+	before := dump(t, d)
+	set := func(r, c int, raw string) {
+		t.Helper()
+		if _, err := d.SetCell(ctx, 1, r, c, raw); err != nil {
+			t.Fatal(err)
+		}
+	}
+	set(5, 0, "0,2")
+	if err := d.SetName(ctx, 1, 5, 0, "Taux"); err != nil {
+		t.Fatal(err)
+	}
+	for _, bad := range []string{"Feuille1", "SOMME", "VRAI", "2x", "avec espace"} {
+		if err := d.SetName(ctx, 1, 6, 0, bad); !errors.As(err, &ErrName{}) {
+			t.Errorf("nom %q accepté : %v", bad, err)
+		}
+	}
+	set(5, 2, "=Taux*100")
+	set(5, 4, "=Inconnu+1")
+	set(8, 0, "=B+1")
+	set(8, 2, "=A+1")
+	if err := d.SetName(ctx, 1, 8, 0, "A"); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.SetName(ctx, 1, 8, 2, "B"); err != nil {
+		t.Fatal(err)
+	}
+	// Colonne calculée qui utilise un nom.
+	set(0, 2, "TTC")
+	set(1, 2, "=[@Prix]*(1+Taux)")
+	l, err := d.Layout(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	vals := map[string]string{}
+	for _, c := range l.Cells {
+		vals[c.Raw] = c.Value
+	}
+	if vals["=Taux*100"] != "20" || vals["=Inconnu+1"] != "#NOM?" || vals["=B+1"] != "#REF!" {
+		t.Fatalf("valeurs : %v", vals)
+	}
+	exprs, args, _, err := d.ColumnExprs(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var v any
+	if err := d.db.Read().QueryRow(`SELECT `+exprs[2]+` FROM t_1 ORDER BY _pos LIMIT 1`, args...).Scan(&v); err != nil {
+		t.Fatal(err)
+	}
+	if got := formula.FromResult(v).String(); got != "30,6" {
+		t.Fatalf("TTC = %s", got)
+	}
+	// Deux lignes ajoutées au tableau poussent la cellule nommée : le nom suit.
+	for range 2 {
+		if err := d.InsertRow(ctx, "Feuille1", 0); err != nil {
+			t.Fatal(err)
+		}
+	}
+	l, _ = d.Layout(ctx, 1)
+	for _, n := range l.Names {
+		if n.Name == "Taux" && n.Row != 6 {
+			t.Fatalf("Taux est resté en ligne %d", n.Row)
+		}
+	}
+	check(t, d, "noms")
+	for range 12 {
+		d.bus.Undo(ctx)
+	}
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
+	}
+}
+
+func TestScriptsLibrary(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	before := dump(t, d)
+	id, err := d.SaveScript(ctx, 0, "Bonjour", `print("bonjour")`)
+	if err != nil || id != 1 {
+		t.Fatalf("SaveScript = %d, %v", id, err)
+	}
+	if _, err := d.SaveScript(ctx, 0, "bonjour", "x"); err == nil {
+		t.Fatal("doublon de nom accepté")
+	}
+	if _, err := d.SaveScript(ctx, id, "Bonjour", `print("salut")`); err != nil {
+		t.Fatal(err)
+	}
+	list, _ := d.Scripts(ctx)
+	if len(list) != 1 || list[0].Source != `print("salut")` {
+		t.Fatalf("bibliothèque : %+v", list)
+	}
+	if err := d.DeleteScript(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	for range 3 {
+		d.bus.Undo(ctx)
+	}
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
+	}
+}
+
+func TestSort(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Ville", "Pop"}, {"lyon", "520"}, {"Paris", "2100"}, {"nice", ""}, {"Brest", "140"}}); err != nil {
+		t.Fatal(err)
+	}
+	before := dump(t, d)
+	if err := d.SortTable(ctx, "Feuille1", 0, false); err != nil {
+		t.Fatal(err)
+	}
+	if got := view(t, d); got != lines("[Ville]|[Pop]", "Brest|140", "lyon|520", "nice", "Paris|2100") {
+		t.Fatalf("tri par ville :\n%s", got)
+	}
+	if err := d.SortTable(ctx, "Feuille1", 1, true); err != nil {
+		t.Fatal(err)
+	}
+	if got := view(t, d); got != lines("[Ville]|[Pop]", "Paris|2100", "lyon|520", "Brest|140", "nice") {
+		t.Fatalf("tri par population décroissante :\n%s", got)
+	}
+	check(t, d, "tri")
+	// On peut encore insérer entre deux lignes triées.
+	if err := d.InsertRow(ctx, "Feuille1", 1); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "insertion après tri")
+	for range 3 {
+		d.bus.Undo(ctx)
+	}
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
+	}
+}
+
+func TestStyles(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Ville", "Pop"}, {"Lyon", "520"}, {"Paris", "2100"}, {"Nice", "340"}}); err != nil {
+		t.Fatal(err)
+	}
+	before := dump(t, d)
+	// Toute la colonne Pop (lignes 1 à 3) : style de colonne.
+	if err := d.ApplyStyle(ctx, 1, 1, 1, 3, 1, Style{"nf": "0,00", "al": "center"}); err != nil {
+		t.Fatal(err)
+	}
+	// Une cellule (Paris) en gras, l'en-tête en couleur, une cellule libre.
+	if err := d.ApplyStyle(ctx, 1, 2, 0, 2, 0, Style{"b": true}); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.ApplyStyle(ctx, 1, 0, 0, 0, 1, Style{"bg": "#ffcc00"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.ApplyStyle(ctx, 1, 6, 3, 6, 3, Style{"i": true}); err != nil {
+		t.Fatal(err)
+	}
+	l, err := d.Layout(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cols := l.Tables[0].Columns
+	if cols[1].Style != `{"al":"center","nf":"0,00"}` || cols[0].HeaderStyle != `{"bg":"#ffcc00"}` {
+		t.Fatalf("styles de colonne : %+v", cols)
+	}
+	if len(l.Styles) != 1 || l.Styles[0].Style != `{"i":true}` {
+		t.Fatalf("styles libres : %+v", l.Styles)
+	}
+	// Le gras suit Paris quand on trie.
+	if err := d.SortTable(ctx, "Feuille1", 0, false); err != nil {
+		t.Fatal(err)
+	}
+	var rid int64
+	d.db.Read().QueryRow(`SELECT rid FROM _slitable_styles WHERE rid > 0`).Scan(&rid)
+	var ville string
+	d.db.Read().QueryRow(`SELECT c_1 FROM t_1 WHERE id = ?`, rid).Scan(&ville)
+	if ville != "Paris" {
+		t.Fatalf("le gras est sur %q", ville)
+	}
+	// Retirer le gras.
+	if err := d.ApplyStyle(ctx, 1, 3, 0, 3, 0, Style{"b": false}); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "styles")
+	for range 6 {
+		d.bus.Undo(ctx)
+	}
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
+	}
+}

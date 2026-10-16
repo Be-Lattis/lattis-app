@@ -13,7 +13,11 @@
 	import { VScroll, clamp } from './scroll';
 	import { Axis } from './axis';
 	import { parseTSV, toTSV } from './clipboard';
+	import { formatNumber, mergeStyles, parseStyle, type CellStyle } from './style';
+	import { apply as applySuggestion, signature, suggest, type Catalog, type Completion } from './autocomplete';
 	import {
+		isErrorValue,
+		valueAlignment,
 		alignment,
 		defaultWidth,
 		editValue,
@@ -28,6 +32,9 @@
 		type: ColumnType;
 		fixed?: boolean; // type choisi par l'utilisateur (sinon inféré)
 		errors?: number; // saisies hors type
+		formula?: string; // colonne calculée : formule affichée
+		style?: string; // mise en forme de toute la colonne (JSON)
+		headerStyle?: string;
 	}
 
 	export interface SheetTable {
@@ -41,9 +48,14 @@
 
 	export interface SheetData {
 		tables: SheetTable[];
-		cells: { row: number; col: number; raw: string }[];
+		/** value : résultat d'une formule (sinon raw est affiché). */
+		cells: { row: number; col: number; raw: string; value?: string; error?: boolean }[];
 		/** Largeurs choisies par l'utilisateur (sinon : selon le type). */
 		widths?: { col: number; width: number }[];
+		/** Cellules nommées de la feuille. */
+		names?: { name: string; row: number; col: number }[];
+		/** Mise en forme des cellules hors tableaux (JSON). */
+		styles?: { row: number; col: number; style: string }[];
 	}
 
 	/** Cible d'une saisie, pour la source. */
@@ -73,6 +85,11 @@
 		convertPreview?(table: SheetTable, i: number, to: ColumnType): Promise<number>;
 		setType?(table: SheetTable, i: number, to: ColumnType): Promise<unknown>;
 		setColumnWidth?(col: number, width: number): Promise<unknown>;
+		/** Nomme une cellule libre (vide : retire le nom). */
+		setName?(row: number, col: number, name: string): Promise<unknown>;
+		sortTable?(table: SheetTable, i: number, desc: boolean): Promise<unknown>;
+		/** Met en forme le rectangle sélectionné (une valeur vide retire la propriété). */
+		applyStyle?(r0: number, c0: number, r1: number, c1: number, patch: Record<string, unknown>): Promise<unknown>;
 	}
 
 	export interface SheetStatus {
@@ -83,17 +100,21 @@
 		fps: string;
 		edit: string;
 		blocks: number;
+		/** Agrégats de la sélection, comme la barre d'état d'Excel. */
+		stats: string;
 	}
 
 	interface Props {
 		data: SheetData;
 		source: SheetSource;
+		/** Fonctions et tableaux du classeur, pour l'aide à la saisie des formules. */
+		catalog?: Catalog;
 		onstatus?: (s: SheetStatus) => void;
 		/** Lance la mesure dès l'ouverture et transmet le résultat (mode SLITABLE_BENCH). */
 		autoBench?: (result: string) => void;
 	}
 
-	let { data, source, onstatus, autoBench }: Props = $props();
+	let { data, source, catalog, onstatus, autoBench }: Props = $props();
 
 	export const SHEET_ROWS = 1_048_576;
 	export const SHEET_COLS = 16_384;
@@ -135,6 +156,12 @@
 
 	let entries: Entry[] = [];
 	let cells = new Map<string, string>();
+	let names = new Map<string, string>(); // position → nom
+	let freeStyles = new Map<string, CellStyle>(); // position → style (hors tableaux)
+	// Styles de colonne et d'en-tête, par tableau puis colonne.
+	let colStyles = new Map<number, (CellStyle | undefined)[]>();
+	let headStyles = new Map<number, (CellStyle | undefined)[]>();
+	let shown = new Map<string, { text: string; error: boolean }>(); // formules des cellules libres
 	let colAxis = $state.raw(new Axis(SHEET_COLS, DEF_W));
 	const key = (r: number, c: number) => `${r},${c}`;
 
@@ -169,7 +196,12 @@
 			return e;
 		});
 		cells = new Map(d.cells.map((c) => [key(c.row, c.col), c.raw]));
+		shown = new Map(d.cells.filter((c) => c.raw.startsWith('=')).map((c) => [key(c.row, c.col), { text: c.value ?? '', error: !!c.error }]));
 		userWidths = new Map((d.widths ?? []).map((w) => [w.col, w.width]));
+		names = new Map((d.names ?? []).map((n) => [key(n.row, n.col), n.name]));
+		freeStyles = new Map((d.styles ?? []).map((s) => [key(s.row, s.col), parseStyle(s.style) ?? {}]));
+		colStyles = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseStyle(c.style))]));
+		headStyles = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseStyle(c.headerStyle))]));
 		rebuildAxis();
 		refreshFx();
 		schedule();
@@ -214,6 +246,57 @@
 	let editByTyping = false;
 	let editValueText = $state('');
 	let fxText = $state('');
+	let fxInput = $state<HTMLInputElement>();
+
+	// Aide à la saisie des formules (éditeur de cellule ou barre de formule).
+	let completion = $state<(Completion & { sel: number; where: 'cell' | 'fx' }) | null>(null);
+	let sig = $state<{ text: string; where: 'cell' | 'fx' } | null>(null);
+	let suggestPos = $state({ x: 0, y: 0 });
+
+	function onFormulaInput(el: HTMLInputElement, where: 'cell' | 'fx') {
+		if (!catalog) return;
+		suggestPos = { x: MARGIN + colAxis.offset(active.col) - scroller.scrollLeft, y: TOP_H + (active.row + 1) * ROW_H - vs.top + 2 };
+		const caret = el.selectionStart ?? el.value.length;
+		const e = tableAt(active.row, active.col);
+		const c = suggest(el.value, caret, catalog, e?.t.name);
+		completion = c ? { ...c, sel: 0, where } : null;
+		const s = signature(el.value, caret, catalog);
+		sig = s ? { text: s, where } : null;
+	}
+
+	/** Gère les touches de la liste de suggestions ; vrai si la touche est consommée. */
+	function completionKey(e: KeyboardEvent, el: HTMLInputElement, set: (v: string) => void): boolean {
+		if (!completion) return false;
+		const c = completion;
+		switch (e.key) {
+			case 'ArrowDown':
+				completion = { ...c, sel: (c.sel + 1) % c.items.length };
+				break;
+			case 'ArrowUp':
+				completion = { ...c, sel: (c.sel + c.items.length - 1) % c.items.length };
+				break;
+			case 'Tab':
+			case 'Enter': {
+				const caret = el.selectionStart ?? el.value.length;
+				const r = applySuggestion(el.value, caret, c.from, c.items[c.sel]);
+				set(r.text);
+				completion = null;
+				requestAnimationFrame(() => {
+					el.setSelectionRange(r.caret, r.caret);
+					onFormulaInput(el, c.where);
+				});
+				break;
+			}
+			case 'Escape':
+				completion = null;
+				break;
+			default:
+				return false;
+		}
+		e.preventDefault();
+		e.stopPropagation();
+		return true;
+	}
 	let nameBox = $state('');
 	let fxEditing = false;
 
@@ -319,6 +402,11 @@
 				for (let r = tr0; r <= tr1; r++) {
 					const y = ry(r);
 					if (r === e.t.row) {
+						const hs = headStyles.get(e.t.id)?.[i];
+						if (hs?.bg) {
+							ctx.fillStyle = hs.bg;
+							ctx.fillRect(x, y, cw, ROW_H);
+						}
 						ctx.font = FONT_SMALL;
 						ctx.fillStyle = C.icon;
 						ctx.textAlign = 'right';
@@ -333,8 +421,8 @@
 						ctx.beginPath();
 						ctx.rect(x, y, cw - ctx.measureText(icon).width - 10, ROW_H);
 						ctx.clip();
-						ctx.font = FONT_BOLD;
-						ctx.fillStyle = C.headText;
+						ctx.font = (hs?.i ? 'italic ' : '') + FONT_BOLD;
+						ctx.fillStyle = hs?.fg ?? C.headText;
 						ctx.textAlign = 'left';
 						ctx.fillText(col.name, x + 6, y + ROW_H / 2);
 						ctx.restore();
@@ -346,8 +434,14 @@
 						ctx.fillRect(x + 6, y + 7, cw * 0.6, ROW_H - 14);
 						continue;
 					}
-					const s = row.text[i];
+					const cs = mergeStyles(colStyles.get(e.t.id)?.[i], parseStyle(row.sty?.get(i)));
+					if (cs?.bg) {
+						ctx.fillStyle = cs.bg;
+						ctx.fillRect(x, y, cw, ROW_H);
+					}
+					let s = row.text[i];
 					if (!s) continue;
+					if (cs?.nf && typeof row.cells[i] === 'number' && !row.bad?.has(i)) s = formatNumber(cs.nf, row.cells[i] as number) ?? s;
 					if (row.bad?.has(i)) {
 						// Saisie hors type : valeur brute en rouge, coin rouge comme le
 						// triangle d'Excel.
@@ -363,11 +457,9 @@
 						ctx.fill();
 						continue;
 					}
-					const align = alignment(col.type);
-					ctx.font = FONT;
-					ctx.textAlign = align;
-					ctx.fillStyle = C.text;
-					ctx.fillText(s, align === 'left' ? x + 6 : align === 'right' ? x + cw - 6 : x + cw / 2, y + ROW_H / 2);
+					const v = row.cells[i];
+					const align = cs?.al ?? (col.type === 'formula' ? valueAlignment(v) : alignment(col.type));
+					drawText(s, x, y, cw, align, cs, col.type === 'formula' && isErrorValue(v) ? C.error : C.text);
 				}
 				ctx.restore();
 			}
@@ -376,12 +468,31 @@
 		// Cellules libres : texte à gauche, nombres à droite, comme Excel.
 		ctx.font = FONT;
 		ctx.fillStyle = C.text;
-		for (const [k, raw] of cells) {
+		for (const [k, fs] of freeStyles) {
+			if (!fs.bg) continue;
 			const [r, c] = k.split(',').map(Number);
 			if (r < r0 || r > r1 || c < c0 || c > c1) continue;
+			ctx.fillStyle = fs.bg;
+			ctx.fillRect(cx(c), ry(r), colAxis.size(c), ROW_H);
+		}
+		for (const [k, rawText] of cells) {
+			const [r, c] = k.split(',').map(Number);
+			if (r < r0 || r > r1 || c < c0 || c > c1) continue;
+			const fstyle = freeStyles.get(k);
 			const x = cx(c);
 			const cw = colAxis.size(c);
+			const f = shown.get(k);
+			let raw = f ? f.text : rawText;
 			const num = isNumeric(raw);
+			if (num && fstyle?.nf) {
+				const n = Number(raw.replace(/[\s\u00a0\u202f]/g, '').replace(',', '.'));
+				if (Number.isFinite(n)) raw = formatNumber(fstyle.nf, n) ?? raw;
+			}
+			if (fstyle) {
+				drawText(raw, x, ry(r), cw, fstyle.al ?? (num ? 'right' : 'left'), fstyle, f?.error ? C.error : C.text, num ? cw : w);
+				continue;
+			}
+			ctx.fillStyle = f?.error ? C.error : C.text;
 			ctx.save();
 			ctx.beginPath();
 			ctx.rect(Math.max(x, MARGIN), TOP_H, num ? cw : w, h - TOP_H);
@@ -491,6 +602,49 @@
 		while (frameStamps.length && frameStamps[0] < t1 - 1000) frameStamps.shift();
 	}
 
+	/** Texte d'une cellule avec sa mise en forme (gras, italique, souligné, couleur). */
+	function drawText(s: string, x: number, y: number, cw: number, align: 'left' | 'center' | 'right', st: CellStyle | undefined, color: string, clipW = cw) {
+		ctx.save();
+		ctx.beginPath();
+		ctx.rect(Math.max(x, MARGIN), TOP_H, clipW, viewH - TOP_H);
+		ctx.clip();
+		ctx.font = (st?.i ? 'italic ' : '') + (st?.b ? FONT_BOLD : FONT);
+		ctx.textAlign = align;
+		ctx.textBaseline = 'middle';
+		ctx.fillStyle = st?.fg ?? color;
+		const tx = align === 'left' ? x + 6 : align === 'right' ? x + cw - 6 : x + cw / 2;
+		ctx.fillText(s, tx, y + ROW_H / 2);
+		if (st?.u) {
+			const w = ctx.measureText(s).width;
+			const lx = align === 'left' ? tx : align === 'right' ? tx - w : tx - w / 2;
+			ctx.fillRect(lx, y + ROW_H / 2 + 7, w, 1);
+		}
+		ctx.restore();
+	}
+
+	/** Style de la cellule active (pour basculer gras, italique…). */
+	function activeStyle(): CellStyle {
+		const { row, col } = active;
+		const e = tableAt(row, col);
+		if (!e) return freeStyles.get(key(row, col)) ?? {};
+		const i = col - e.t.col;
+		if (row === e.t.row) return headStyles.get(e.t.id)?.[i] ?? {};
+		return mergeStyles(colStyles.get(e.t.id)?.[i], parseStyle(e.cache.row(row - e.t.row - 1)?.sty?.get(i))) ?? {};
+	}
+
+	/** Met en forme la sélection ; une bascule (b, i, u) suit la cellule active. */
+	export function applyStyle(patch: Record<string, unknown>) {
+		if (!source.applyStyle) return;
+		const p = { ...patch };
+		for (const k of ['b', 'i', 'u'] as const) if (p[k] === 'toggle') p[k] = !activeStyle()[k];
+		const r0 = Math.min(active.row, anchor.row);
+		const r1 = Math.max(active.row, anchor.row);
+		const c0 = Math.min(active.col, anchor.col);
+		const c1 = Math.max(active.col, anchor.col);
+		const apply = source.applyStyle;
+		menuAction(() => apply(r0, c0, r1, c1, p));
+	}
+
 	function pushStat(a: number[], v: number) {
 		a.push(v);
 		if (a.length > 300) a.shift();
@@ -513,12 +667,15 @@
 			row,
 			kind: 'data' as const,
 			// Une saisie hors type se corrige à partir de sa valeur brute.
-			value: row ? (row.bad?.get(i) ?? editValue(e.t.columns[i].type, row.cells[i])) : ''
+			// Colonne calculée : la barre de formule montre la formule, comme Excel.
+			value: e.t.columns[i].formula ?? (row ? (row.bad?.get(i) ?? editValue(e.t.columns[i].type, row.cells[i])) : '')
 		};
 	}
 
 	/** Désignation de la cellule active (pas d'adresse A1). */
 	function cellName(r: number, c: number): string {
+		const named = names.get(key(r, c));
+		if (named) return named;
 		const e = tableAt(r, c);
 		if (!e) return cells.has(key(r, c)) ? 'Cellule libre' : '';
 		const k = e.t.columns[c - e.t.col];
@@ -540,8 +697,71 @@
 			draw: `rendu ${ms(percentile(drawTimes, 0.5))}`,
 			fps: `${frameStamps.length} img/s`,
 			edit: `saisie ${ms(lastEditMs)}`,
-			blocks: entries.reduce((n, e) => n + e.cache.size, 0)
+			blocks: entries.reduce((n, e) => n + e.cache.size, 0),
+			stats: selectionStats()
 		});
+	}
+
+	const statFmt = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 10 });
+
+	/** « Moyenne · Nb · Somme » de la sélection (cellules chargées), si plusieurs cellules. */
+	function selectionStats(): string {
+		const r0 = Math.min(active.row, anchor.row);
+		const r1 = Math.max(active.row, anchor.row);
+		const c0 = Math.min(active.col, anchor.col);
+		const c1 = Math.max(active.col, anchor.col);
+		const n = (r1 - r0 + 1) * (c1 - c0 + 1);
+		if (n < 2) return '';
+		if (n > 50_000) return 'Sélection trop grande pour les totaux';
+		let count = 0;
+		let nums = 0;
+		let sum = 0;
+		let missing = false;
+		for (let r = r0; r <= r1; r++) {
+			for (let c = c0; c <= c1; c++) {
+				const e = tableAt(r, c);
+				let v: unknown;
+				if (e) {
+					if (r === e.t.row) {
+						count++;
+						continue;
+					}
+					const row = e.cache.row(r - e.t.row - 1);
+					if (!row) {
+						missing = true;
+						continue;
+					}
+					v = row.bad?.has(c - e.t.col) ? row.bad.get(c - e.t.col) : row.cells[c - e.t.col];
+				} else {
+					const f = shown.get(key(r, c));
+					v = f ? f.text : cells.get(key(r, c));
+					if (typeof v === 'string' && isNumeric(v)) v = Number(v.replace(/[\s\u00a0\u202f]/g, '').replace(',', '.'));
+				}
+				if (v === null || v === undefined || v === '') continue;
+				count++;
+				if (typeof v === 'number' && Number.isFinite(v)) {
+					nums++;
+					sum += v;
+				}
+			}
+		}
+		if (count === 0) return '';
+		const parts = [];
+		if (nums) parts.push(`Moyenne : ${statFmt.format(sum / nums)}`);
+		parts.push(`Nb : ${count.toLocaleString('fr-FR')}`);
+		if (nums) parts.push(`Somme : ${statFmt.format(sum)}`);
+		return parts.join('   ') + (missing ? ' (lignes en chargement)' : '');
+	}
+
+	/** Tri du tableau de la cellule active (ruban Données). */
+	export function sortActive(desc: boolean) {
+		const e = tableAt(active.row, active.col);
+		if (!e || !source.sortTable) {
+			say('Placez la cellule active dans la colonne d’un tableau pour trier');
+			return;
+		}
+		const sort = source.sortTable;
+		menuAction(() => sort(e.t, active.col - e.t.col, desc));
 	}
 
 	function refreshFx() {
@@ -709,6 +929,11 @@
 			source.undo().catch((err) => say(String(err?.message ?? err)));
 			return;
 		}
+		if (ctrl && ['b', 'i', 'u'].includes(e.key.toLowerCase()) && source.applyStyle) {
+			e.preventDefault();
+			applyStyle({ [e.key.toLowerCase()]: 'toggle' });
+			return;
+		}
 		if (ctrl && (e.key === 'y' || e.key === 'Y') && source.redo) {
 			e.preventDefault();
 			source.redo().catch((err) => say(String(err?.message ?? err)));
@@ -858,6 +1083,7 @@
 	}
 
 	function onEditorKey(e: KeyboardEvent) {
+		if (input && completionKey(e, input, (v) => (editValueText = v))) return;
 		e.stopPropagation();
 		const { row, col } = active;
 		switch (e.key) {
@@ -891,6 +1117,7 @@
 
 	// Barre de formule : même chemin d'écriture que l'éditeur de cellule.
 	function onFxKey(e: KeyboardEvent) {
+		if (fxInput && completionKey(e, fxInput, (v) => (fxText = v))) return;
 		e.stopPropagation();
 		if (e.key === 'Escape') {
 			fxEditing = false;
@@ -904,6 +1131,52 @@
 			moveTo(row + 1, col);
 		} else return;
 		e.preventDefault();
+	}
+
+	// --- Zone de nom ------------------------------------------------------------
+
+	function onNameKey(e: KeyboardEvent) {
+		e.stopPropagation();
+		const el = e.currentTarget as HTMLInputElement;
+		if (e.key === 'Escape') {
+			el.value = nameBox;
+			wrap.focus();
+			return;
+		}
+		if (e.key !== 'Enter') return;
+		e.preventDefault();
+		const text = el.value.trim();
+		// Le nom d'une cellule existante : y aller (comme Excel).
+		for (const [k, n] of names) {
+			if (n.toLowerCase() === text.toLowerCase()) {
+				const [r, c] = k.split(',').map(Number);
+				wrap.focus();
+				moveTo(r, c);
+				return;
+			}
+		}
+		const { row, col } = active;
+		if (tableAt(row, col)) {
+			say('Seule une cellule libre peut être nommée ; un tableau se référence par son nom : ' + tableAt(row, col)!.t.name);
+			wrap.focus();
+			return;
+		}
+		if (!source.setName || text === (names.get(key(row, col)) ?? '')) {
+			wrap.focus();
+			return;
+		}
+		const setName = source.setName;
+		writing = writing.then(async () => {
+			try {
+				await setName(row, col, text);
+				message = text ? `Cellule nommée « ${text} »` : 'Nom retiré';
+			} catch (err) {
+				message = String(err instanceof Error ? err.message : err);
+			}
+			refreshFx();
+			refreshStatus();
+		});
+		wrap.focus();
 	}
 
 	// --- Presse-papiers -----------------------------------------------------
@@ -966,6 +1239,7 @@
 	function openTypeMenu(ev: MouseEvent, cell: { row: number; col: number }): boolean {
 		const e = tableAt(cell.row, cell.col);
 		if (!e || cell.row !== e.t.row || !source.setType) return false;
+		if (e.t.columns[cell.col - e.t.col].formula) return false; // le type suit la formule
 		const r = scroller.getBoundingClientRect();
 		const right = MARGIN + colAxis.offset(cell.col + 1) - scroller.scrollLeft;
 		const mx = ev.clientX - r.left;
@@ -1184,23 +1458,60 @@
 	}
 </script>
 
+{#snippet suggestions(where: 'cell' | 'fx')}
+	{#if sig?.where === where}<div class="sig">{sig.text}</div>{/if}
+	{#if completion?.where === where}
+		{#each completion.items as s, i (s.kind + s.label)}
+			<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
+			<div
+				class="sugg"
+				class:on={i === completion.sel}
+				onmousedown={(e) => {
+					e.preventDefault();
+					completion = { ...completion!, sel: i };
+					const el = where === 'cell' ? input : fxInput;
+					if (el) completionKey(new KeyboardEvent('keydown', { key: 'Enter' }), el, (v) => (where === 'cell' ? (editValueText = v) : (fxText = v)));
+				}}
+			>
+				<span class="kind {s.kind}">{s.kind === 'function' ? 'fx' : s.kind === 'table' ? '▦' : s.kind === 'name' ? 'N' : '[ ]'}</span>
+				<span class="lab">{s.label}</span>
+				<span class="det">{s.detail}</span>
+			</div>
+		{/each}
+	{/if}
+{/snippet}
+
 <div class="sheet-root">
 	<div class="formula-bar">
-		<div class="name-box" title="Cellule active">{nameBox || '—'}</div>
+		<input
+			class="name-box"
+			title="Nom de la cellule : tapez un nom puis Entrée pour la nommer, ou le nom d'une cellule pour y aller"
+			value={nameBox}
+			placeholder="—"
+			onfocus={(e) => e.currentTarget.select()}
+			onkeydown={onNameKey}
+			spellcheck="false"
+		/>
 		<span class="fx">fx</span>
 		<input
 			class="fx-input"
+			bind:this={fxInput}
 			bind:value={fxText}
+			oninput={(e) => onFormulaInput(e.currentTarget, 'fx')}
 			onfocus={() => (fxEditing = true)}
 			onkeydown={onFxKey}
 			onblur={() => {
 				fxEditing = false;
+				completion = sig = null;
 				refreshFx();
 			}}
 			spellcheck="false"
 		/>
 	</div>
 	{#if bench}<div class="bench">{bench}</div>{/if}
+	{#if completion?.where === 'fx' || sig?.where === 'fx'}
+		<div class="suggest fx-suggest">{@render suggestions('fx')}</div>
+	{/if}
 
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 	<div class="wrap" bind:this={wrap} tabindex="0" role="grid" onkeydown={onKeyDown}>
@@ -1252,9 +1563,23 @@
 					<button onclick={() => menuAction(source.deleteRow && (() => source.deleteRow!(m.e.t, m.n)))}>Supprimer la ligne</button>
 					<hr />
 				{/if}
+				{#if source.sortTable && !m.e.t.columns[m.i]?.formula}
+					<button onclick={() => menuAction(() => source.sortTable!(m.e.t, m.i, false))}>Trier de A à Z (croissant)</button>
+					<button onclick={() => menuAction(() => source.sortTable!(m.e.t, m.i, true))}>Trier de Z à A (décroissant)</button>
+					<hr />
+				{/if}
 				<button onclick={() => menuAction(source.insertColumn && (() => source.insertColumn!(m.e.t, m.i)))}>Insérer une colonne à gauche</button>
 				<button onclick={() => menuAction(source.insertColumn && (() => source.insertColumn!(m.e.t, m.i + 1)))}>Insérer une colonne à droite</button>
 				<button onclick={() => menuAction(source.deleteColumn && (() => source.deleteColumn!(m.e.t, m.i)))}>Supprimer la colonne « {m.e.t.columns[m.i]?.name} »</button>
+			</div>
+		{/if}
+		{#if editing && (completion?.where === 'cell' || sig?.where === 'cell')}
+			<div
+				class="suggest"
+				style:left="{suggestPos.x}px"
+				style:top="{suggestPos.y}px"
+			>
+				{@render suggestions('cell')}
 			</div>
 		{/if}
 		{#if editing}
@@ -1262,8 +1587,12 @@
 				class="editor"
 				bind:this={input}
 				bind:value={editValueText}
+				oninput={(e) => onFormulaInput(e.currentTarget, 'cell')}
 				onkeydown={onEditorKey}
-				onblur={commit}
+				onblur={() => {
+					completion = sig = null;
+					commit();
+				}}
 				title={(() => {
 					const e = tableAt(active.row, active.col);
 					return e ? typeLabel(e.t.columns[active.col - e.t.col].type) : 'Cellule libre';
@@ -1293,6 +1622,8 @@
 	}
 	.name-box {
 		width: 260px;
+		font: inherit;
+		outline: none;
 		padding: 3px 8px;
 		border: 1px solid #d4d7db;
 		border-radius: 3px;
@@ -1338,6 +1669,51 @@
 		position: absolute;
 		inset: 0;
 		overflow: auto;
+	}
+	.sheet-root {
+		position: relative;
+	}
+	.suggest {
+		position: absolute;
+		z-index: 6;
+		background: #fff;
+		border: 1px solid #c9cdd2;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		min-width: 260px;
+		max-width: 420px;
+		font-size: 12px;
+	}
+	.fx-suggest {
+		left: 300px;
+		top: 30px;
+	}
+	.sig {
+		padding: 4px 10px;
+		background: #f7f8f9;
+		color: #374151;
+		border-bottom: 1px solid #e3e5e8;
+	}
+	.sugg {
+		display: flex;
+		gap: 8px;
+		align-items: center;
+		padding: 3px 10px;
+		cursor: pointer;
+	}
+	.sugg.on {
+		background: #e3efe7;
+	}
+	.kind {
+		width: 22px;
+		color: #217346;
+		font-weight: 600;
+		text-align: center;
+	}
+	.lab {
+		flex: 1;
+	}
+	.det {
+		color: #6b7280;
 	}
 	.menu {
 		position: absolute;

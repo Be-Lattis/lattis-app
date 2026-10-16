@@ -51,6 +51,7 @@ type Window struct {
 	IDs     []int64       `json:"ids"`
 	Cells   [][]any       `json:"cells"`
 	Invalid []InvalidCell `json:"invalid"` // saisies hors type de la fenêtre
+	Styles  []InvalidCell `json:"styles"`  // mise en forme des cellules (Raw : style JSON)
 	Micros  int64         `json:"micros"`  // temps passé côté Go, pour les mesures
 }
 
@@ -75,11 +76,23 @@ type Table struct {
 	rows    int
 
 	selectWindow string
+	args         []any                    // paramètres des expressions de colonnes (?1…)
+	decode       func(col int, v any) any // conversion des valeurs calculées
 
 	// Saisies hors type (tableaux du classeur) : identifiant du tableau et
 	// identifiant de chaque colonne affichée.
 	tableID int64
 	colIDs  map[int64]int
+}
+
+// WithExprs remplace les colonnes lues par des expressions SQL (colonnes
+// calculées), avec leurs paramètres numérotés ?1…?n, et une conversion des
+// valeurs lues pour l'interface.
+func (t *Table) WithExprs(exprs []string, args []any, decode func(col int, v any) any) *Table {
+	t.selectWindow = fmt.Sprintf(`SELECT id, %s FROM %s WHERE _pos >= ? ORDER BY _pos LIMIT ? OFFSET ?`,
+		strings.Join(exprs, ", "), t.sqlName)
+	t.args, t.decode = args, decode
+	return t
 }
 
 // WithInvalid fait lire les saisies hors type de _slitable_invalid avec les
@@ -171,7 +184,8 @@ func (t *Table) Window(ctx context.Context, first, count int) (Window, error) {
 	}
 	count = min(count, MaxWindow, rows-first)
 
-	rs, err := t.db.Read().QueryContext(ctx, t.selectWindow, anchor, count, first%AnchorEvery)
+	args := append(append([]any{}, t.args...), anchor, count, first%AnchorEvery)
+	rs, err := t.db.Read().QueryContext(ctx, t.selectWindow, args...)
 	if err != nil {
 		return Window{}, err
 	}
@@ -190,6 +204,10 @@ func (t *Table) Window(ctx context.Context, first, count int) (Window, error) {
 		id, _ := dest[0].(int64)
 		row := make([]any, len(t.cols))
 		for c := range row {
+			if t.decode != nil {
+				row[c] = t.decode(c, dest[c+1])
+				continue
+			}
 			row[c] = jsonValue(dest[c+1])
 		}
 		w.IDs = append(w.IDs, id)
@@ -248,8 +266,15 @@ func (t *Table) invalid(ctx context.Context, w *Window) error {
 		index[id] = i
 		lo, hi = min(lo, id), max(hi, id)
 	}
-	rs, err := t.db.Read().QueryContext(ctx,
-		`SELECT rid, col, raw FROM _slitable_invalid WHERE tbl = ? AND rid BETWEEN ? AND ?`, t.tableID, lo, hi)
+	if err := t.cellsFrom(ctx, `SELECT rid, col, style FROM _slitable_styles WHERE tbl = ? AND rid BETWEEN ? AND ?`, lo, hi, index, &w.Styles); err != nil {
+		return err
+	}
+	return t.cellsFrom(ctx, `SELECT rid, col, raw FROM _slitable_invalid WHERE tbl = ? AND rid BETWEEN ? AND ?`, lo, hi, index, &w.Invalid)
+}
+
+// cellsFrom lit des valeurs par cellule (rid, col, texte) pour la fenêtre.
+func (t *Table) cellsFrom(ctx context.Context, q string, lo, hi int64, index map[int64]int, out *[]InvalidCell) error {
+	rs, err := t.db.Read().QueryContext(ctx, q, t.tableID, max(lo, 1), hi)
 	if err != nil {
 		return err
 	}
@@ -263,7 +288,7 @@ func (t *Table) invalid(ctx context.Context, w *Window) error {
 		r, ok1 := index[rid]
 		c, ok2 := t.colIDs[col]
 		if ok1 && ok2 {
-			w.Invalid = append(w.Invalid, InvalidCell{r, c, raw})
+			*out = append(*out, InvalidCell{r, c, raw})
 		}
 	}
 	return rs.Err()
