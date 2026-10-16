@@ -4696,7 +4696,7 @@
 				{#if m.pending}
 					<p class="menu-note">
 						{m.pending.n > 1
-							? `${m.pending.n} valeurs ne peuvent pas devenir « ${typeLabel(m.pending.to)} » : elles seront gardées et marquées en erreur.`
+							? `${m.pending.n} ${m.pending.n > 1 ? 'valeurs ne peuvent' : 'valeur ne peut'} pas devenir « ${typeLabel(m.pending.to)} » : ${m.pending.n > 1 ? 'elles seront gardées et marquées' : 'elle sera gardée et marquée'} en erreur.`
 							: `1 valeur ne peut pas devenir « ${typeLabel(m.pending.to)} » : elle sera gardée et marquée en erreur.`}
 					</p>
 					<button onclick={() => chooseType(m.pending!.to, true)}>Convertir quand même</button>

@@ -387,7 +387,7 @@
 =LET(X;5;x+1)	6
 =LET(x;1;LET(x;10;x)+x)	11
 =LET(n;SOMME(Ventes[Qté]);n/2)	5,5
-=LET(x;1;Cell[A1])	#NOM?
+=LET(x;1;Cell[A1])	1
 =LET(Cell_A1;1;2)	#VALEUR!
 =SOMME(SEQUENCE(4))	10
 =SOMME(SEQUENCE(3;2))	21
