@@ -99,7 +99,7 @@ Une feuille protégée refuse l'actualisation de son tableau ; une structure de 
 ## Interface
 
 - **Données › Obtenir des données** : Texte/CSV, Classeur Excel, PostgreSQL, À partir du tableau ; **Requêtes et connexions** (volet à droite : liste, Modifier, Actualiser, Supprimer ; connexions) ; **Actualiser tout**.
-- **Éditeur de requête** (fenêtre plein écran comme l'éditeur Power Query) : à gauche les requêtes du classeur, au centre l'aperçu de l'étape choisie (en-têtes avec le type), à droite les **Étapes appliquées** (cliquer une étape montre l'aperçu à cette étape ; ✕ la supprime ; une étape en erreur est marquée), au-dessus un ruban d'étapes (Choisir les colonnes, Supprimer, Filtrer, Trier, Fractionner, Regrouper, Fusionner, Ajouter…) qui ouvre un petit formulaire. **Fermer et charger** enregistre et actualise.
+- **Éditeur de requête** (fenêtre plein écran comme l'éditeur Power Query) : au centre l'aperçu de l'étape choisie (en-têtes avec le type), à droite les **Étapes appliquées** (cliquer une étape montre l'aperçu à cette étape ; ✕ la supprime ; une étape en erreur est marquée), au-dessus un ruban d'étapes (Choisir les colonnes, Supprimer, Filtrer, Trier, Fractionner, Regrouper, Fusionner, Ajouter…) qui ouvre un petit formulaire. **Fermer et charger** enregistre et actualise.
 - Connexion PostgreSQL : boîte de dialogue (hôte, port, base, utilisateur, mot de passe, SSL, Mémoriser, Tester), puis un navigateur des tables du serveur ou une requête SQL libre.
 
 ## Limites de la première version

@@ -514,6 +514,7 @@ Conventions :
 | `ui` | sélection (`ui.selection`, `ui.select`, `ui.select_object`, `ui.select_cells`), feuille et vue affichées, boîtes de dialogue, messages |
 | `charts`, `pivots`, `buttons` | graphiques, tableaux croisés, boutons d'action |
 | `doc`, `scripts`, `formulas` | état du classeur, bibliothèque de scripts, catalogue des fonctions |
+| `queries`, `connections` | requêtes d'import (Données › Obtenir des données) : lister, enregistrer une source et ses étapes, aperçu, actualiser (`queries.refresh`, `queries.refresh_all`) ; connexions (sans mot de passe) |
 
 ```lua
 -- Une feuille de synthèse, un tableau, et la sélection dessus
@@ -542,6 +543,21 @@ end
 
 Les positions renvoyées (`sheets.get`, `ui.selection`, `cells.get`) se comptent elles aussi
 à partir de 1.
+
+```lua
+-- Une requête d'import (comme Power Query) : les grosses commandes par client,
+-- chargée dans une feuille puis actualisable
+queries.save("Grosses commandes", {kind = "table", table = "Commandes"}, {
+  {op = "filter", conditions = {{column = "Montant", cmp = ">", value = "50"}}},
+  {op = "group", columns = {"Client"}, aggs = {{name = "Total", op = "sum", column = "Montant"}}},
+})
+local r = queries.refresh("Grosses commandes")
+ui.notify(r.rows .. " ligne(s) dans « " .. r.table .. " »")
+```
+
+Une requête sur PostgreSQL demande le mot de passe de sa connexion : il se saisit une
+fois dans l'interface (il n'est jamais écrit dans le classeur), après quoi les scripts
+peuvent l'actualiser.
 
 ---
 
