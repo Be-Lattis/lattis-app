@@ -10,6 +10,8 @@ export type {
     ColWidth,
     ColumnFilter,
     ColumnInfo,
+    DepTarget,
+    Dependencies,
     Event,
     FilterValue,
     Layout,

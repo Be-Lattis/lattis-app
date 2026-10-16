@@ -1329,3 +1329,31 @@ func TestPasteWithoutHeader(t *testing.T) {
 	}
 	check(t, d, "en-têtes")
 }
+
+func TestDependencies(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Qté", "Prix", "Total"}, {"2", "10", "x"}, {"3", "5", "y"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.SetCell(ctx, 1, 1, 2, "=[@Qté]*[@Prix]"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.SetCell(ctx, 1, 0, 5, "=SOMME(Feuille1[Total])"); err != nil {
+		t.Fatal(err)
+	}
+	dep, err := d.Dependencies(ctx, 1, 2, 2) // une cellule de Total
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fmt.Sprintf("%d %s %s", len(dep.Precedents), dep.Precedents[0].Column, dep.Precedents[1].Column) != "2 Qté Prix" {
+		t.Fatalf("antécédents : %+v", dep.Precedents)
+	}
+	if len(dep.Dependents) != 1 || dep.Dependents[0].Kind != "cell" || dep.Dependents[0].Col != 5 {
+		t.Fatalf("dépendants : %+v", dep.Dependents)
+	}
+	dep, _ = d.Dependencies(ctx, 1, 1, 0) // Qté
+	if len(dep.Dependents) != 1 || dep.Dependents[0].Column != "Total" {
+		t.Fatalf("dépendants de Qté : %+v", dep.Dependents)
+	}
+}

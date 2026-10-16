@@ -161,6 +161,38 @@ export interface ColumnInfo {
 }
 
 /**
+ * DepTarget est un antécédent ou un dépendant d'une cellule : une colonne de
+ * tableau (Column vide : le tableau entier) ou une cellule (nommée ou non).
+ */
+export interface DepTarget {
+    /**
+     * column, table, cell
+     */
+    "kind": string;
+    "table"?: string;
+    "column"?: string;
+    "name"?: string;
+    "sheet": number;
+
+    /**
+     * en-tête de la colonne, ou la cellule
+     */
+    "row": number;
+    "col": number;
+}
+
+/**
+ * Dependencies donne les antécédents (ce que la formule de la cellule lit) et
+ * les dépendants (les formules qui lisent la cellule ou sa colonne) de la
+ * cellule (row, col) d'une feuille, comme l'audit de formules d'Excel.
+ */
+export interface Dependencies {
+    "subject": string;
+    "precedents": DepTarget[] | null;
+    "dependents": DepTarget[] | null;
+}
+
+/**
  * Event décrit ce qu'une saisie a provoqué, pour l'afficher à l'utilisateur.
  */
 export interface Event {

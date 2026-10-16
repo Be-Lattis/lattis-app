@@ -48,10 +48,11 @@
 		onformula?: (what: 'insert' | 'sum' | 'reference') => void;
 		onclip?: (what: 'cut' | 'copy' | 'paste') => void;
 		onpainter?: () => void;
+		onaudit?: (kind: 'pre' | 'dep' | 'clear') => void;
 		onchart?: (kind: 'bar' | 'line' | 'pie' | 'scatter') => void;
 	}
 
-	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip, onpainter }: Props = $props();
+	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip, onpainter, onaudit }: Props = $props();
 	let fg = $state('#c00000');
 	let bg = $state('#fff2cc');
 	const st = (patch: Record<string, unknown>) => (onstyle ? () => onstyle(patch) : undefined);
@@ -181,7 +182,7 @@
 		],
 		Formules: [
 			{ title: 'Bibliothèque', commands: [{ label: 'Insérer une fonction', icon: 'function', run: onformula ? () => onformula('insert') : undefined, hint: 'Choisir une fonction et commencer la formule dans la cellule active' }, { label: 'Somme automatique', icon: 'autosum', run: onformula ? () => onformula('sum') : undefined, hint: 'SOMME de la colonne du tableau au-dessus' }, { label: 'REFERENCE', icon: 'reference', run: onformula ? () => onformula('reference') : undefined, hint: 'REFERENCE(tableau; colonne; clé) : la RECHERCHEV de Slitable' }] },
-			{ title: 'Audit', commands: [{ label: 'Antécédents', icon: 'precedents' }, { label: 'Dépendants', icon: 'dependents' }, { label: 'Graphe', icon: 'dependency-graph' }] },
+			{ title: 'Audit', commands: [{ label: 'Antécédents', icon: 'precedents', run: onaudit ? () => onaudit('pre') : undefined, hint: 'Flèches depuis ce que lit la formule de la cellule active' }, { label: 'Dépendants', icon: 'dependents', run: onaudit ? () => onaudit('dep') : undefined, hint: 'Flèches vers les formules qui lisent la cellule active' }, { label: 'Effacer les flèches', icon: 'dependency-graph', run: onaudit ? () => onaudit('clear') : undefined, hint: 'Effacer les flèches (Échap)' }] },
 			{ title: 'Calcul', commands: [{ label: 'Calculer', icon: 'function', run: onrecalc, hint: 'Renouveler AUJOURDHUI, MAINTENANT et ALEA (F9)' }] }
 		],
 		Affichage: [

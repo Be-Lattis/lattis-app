@@ -115,6 +115,13 @@ export function DeleteTables(names: string[] | null): $CancellablePromise<$model
 }
 
 /**
+ * Dependencies donne les antécédents et les dépendants d'une cellule.
+ */
+export function Dependencies(sheet: number, row: number, col: number): $CancellablePromise<canvas$0.Dependencies> {
+    return $Call.ByID(1248047932, sheet, row, col);
+}
+
+/**
  * Discard abandonne une session interrompue.
  */
 export function Discard(dir: string): $CancellablePromise<void> {

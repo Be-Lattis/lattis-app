@@ -235,6 +235,10 @@
 		setKey: (t, i) => DocumentService.SetKey(t.name, i).then(reload),
 		clearKey: (t) => DocumentService.ClearKey(t.name).then(reload),
 		recalc: () => DocumentService.Recalc().then(reload),
+		dependencies: async (row, col) => {
+			const d = await DocumentService.Dependencies(sheetId, row, col);
+			return { subject: d.subject, precedents: d.precedents ?? [], dependents: d.dependents ?? [] };
+		},
 		createPivot: async (cfg) => {
 			const id = await DocumentService.CreatePivot(cfg);
 			await reload();
@@ -301,6 +305,7 @@
 						}))
 					};
 					}),
+					sheet: sheetId,
 					cells: (layout.cells ?? []).map((c) => ({ ...c, spill: c.spill?.map((r) => r ?? []) })),
 					widths: layout.widths ?? [],
 					names: layout.names ?? [],
@@ -401,6 +406,7 @@
 		onfind={mode === 'doc' ? (replace) => sheet?.openFinder(replace) : undefined}
 		onrules={mode === 'doc' ? () => sheet?.rulesActive() : undefined}
 		onfilter={mode === 'doc' ? (errorsOnly) => sheet?.filterActive(errorsOnly) : undefined}
+		onaudit={mode === 'doc' ? (k) => sheet?.auditActive(k) : undefined}
 		onpainter={mode === 'doc' ? () => sheet?.formatPainter() : undefined}
 		onclip={mode === 'doc' ? (what) => (what === 'paste' ? sheet?.pasteClipboard() : sheet?.copySelection(what === 'cut')) : undefined}
 		onchart={mode === 'doc' ? (kind) => sheet?.chartActive(kind) : undefined}

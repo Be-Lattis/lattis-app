@@ -646,3 +646,12 @@ func (s *DocumentService) PromoteHeader(ctx context.Context, table string) (DocS
 func (s *DocumentService) PlaceChart(ctx context.Context, id int64, row, col, offX, offY, width, height int) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.PlaceChart(ctx, id, row, col, offX, offY, width, height) })
 }
+
+// Dependencies donne les antécédents et les dépendants d'une cellule.
+func (s *DocumentService) Dependencies(ctx context.Context, sheet int64, row, col int) (canvas.Dependencies, error) {
+	d, err := s.current()
+	if err != nil {
+		return canvas.Dependencies{}, err
+	}
+	return d.Dependencies(ctx, sheet, row, col)
+}

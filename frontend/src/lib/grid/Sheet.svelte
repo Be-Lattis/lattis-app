@@ -106,6 +106,16 @@
 		error: string;
 	}
 
+	export interface DepTarget {
+		kind: string; // column, table, cell
+		table?: string;
+		column?: string;
+		name?: string;
+		sheet: number;
+		row: number;
+		col: number;
+	}
+
 	export interface ColumnFilter {
 		values?: string[]; // valeurs gardées (texte affiché, vide : cellules vides)
 		errors?: boolean; // saisies hors type seulement
@@ -125,6 +135,8 @@
 	}
 
 	export interface SheetData {
+		/** Feuille affichée. */
+		sheet?: number;
 		tables: SheetTable[];
 		/** value : résultat d'une formule (sinon raw est affiché). */
 		cells: { row: number; col: number; raw: string; value?: string; error?: boolean; spill?: string[][] }[];
@@ -189,6 +201,8 @@
 		clearKey?(table: SheetTable): Promise<unknown>;
 		/** Renouvelle AUJOURDHUI, MAINTENANT et ALEA (F9). */
 		recalc?(): Promise<unknown>;
+		/** Antécédents et dépendants d'une cellule (audit de formules). */
+		dependencies?(row: number, col: number): Promise<{ subject: string; precedents: DepTarget[]; dependents: DepTarget[] }>;
 		/** La 1re ligne de données devient les en-têtes. */
 		promoteHeader?(table: SheetTable): Promise<unknown>;
 		createPivot?(cfg: PivotConfig): Promise<unknown>;
@@ -847,6 +861,35 @@
 			ctx.strokeStyle = C.active;
 			ctx.lineWidth = 2;
 			ctx.strokeRect(cx(active.col) + 0.5, ry(active.row) + 0.5, colAxis.size(active.col) - 1, ROW_H - 1);
+		}
+		// Flèches d'audit : bleues vers la cellule (antécédents), rouges depuis
+		// elle (dépendants), comme Excel.
+		if (arrows) {
+			const center = (r: number, c: number) => ({ x: cx(c) + colAxis.size(c) / 2, y: ry(r) + ROW_H / 2 });
+			const me = center(arrows.row, arrows.col);
+			const draw = (from: { x: number; y: number }, to: { x: number; y: number }, color: string) => {
+				ctx.save();
+				ctx.strokeStyle = color;
+				ctx.fillStyle = color;
+				ctx.lineWidth = 1.5;
+				ctx.beginPath();
+				ctx.arc(from.x, from.y, 3, 0, Math.PI * 2);
+				ctx.fill();
+				ctx.beginPath();
+				ctx.moveTo(from.x, from.y);
+				ctx.lineTo(to.x, to.y);
+				ctx.stroke();
+				const a = Math.atan2(to.y - from.y, to.x - from.x);
+				ctx.beginPath();
+				ctx.moveTo(to.x, to.y);
+				ctx.lineTo(to.x - 9 * Math.cos(a - 0.4), to.y - 9 * Math.sin(a - 0.4));
+				ctx.lineTo(to.x - 9 * Math.cos(a + 0.4), to.y - 9 * Math.sin(a + 0.4));
+				ctx.closePath();
+				ctx.fill();
+				ctx.restore();
+			};
+			for (const p of arrows.pre) if (p.sheet === sheetIdOf()) draw(center(p.row, p.col), me, '#2b6cb0');
+			for (const d of arrows.dep) if (d.sheet === sheetIdOf()) draw(me, center(d.row, d.col), '#c0392b');
 		}
 		// Poignée de recopie (coin bas droit de la sélection) et aperçu.
 		if (!editing && selChart === null) {
@@ -1669,12 +1712,50 @@
 		return false;
 	}
 
+	// --- Audit de formules : flèches des antécédents et des dépendants --------
+
+	let arrows = $state<{ row: number; col: number; pre: DepTarget[]; dep: DepTarget[] } | null>(null);
+	const depLabel = (d: DepTarget) => (d.kind === 'column' ? `${d.table}[${d.column}]` : d.kind === 'table' ? (d.table ?? '') : d.name || 'cellule libre');
+
+	/** Formules › Antécédents / Dépendants ; 'clear' efface les flèches. */
+	export async function auditActive(kind: 'pre' | 'dep' | 'clear') {
+		if (kind === 'clear' || !source.dependencies) {
+			arrows = null;
+			schedule();
+			return;
+		}
+		const { row, col } = active;
+		try {
+			const d = await source.dependencies(row, col);
+			const list = kind === 'pre' ? d.precedents : d.dependents;
+			const keep = arrows && arrows.row === row && arrows.col === col ? arrows : { row, col, pre: [], dep: [] };
+			arrows = { ...keep, [kind]: list };
+			const here = list.filter((x) => x.sheet === sheetIdOf());
+			const away = list.filter((x) => x.sheet !== sheetIdOf());
+			const what = kind === 'pre' ? 'Antécédents' : 'Dépendants';
+			say(
+				list.length === 0
+					? `${what} : aucun${d.subject ? ` pour ${d.subject}` : ''}`
+					: `${what} : ${list.map(depLabel).join(', ')}${away.length ? ` (${away.length} sur d'autres feuilles)` : ''}${here.length ? ' · Échap pour effacer les flèches' : ''}`
+			);
+			schedule();
+		} catch (err) {
+			say(String(err instanceof Error ? err.message : err));
+		}
+	}
+
+	/** Feuille affichée (les cibles des autres feuilles n'ont pas de flèche). */
+	function sheetIdOf(): number {
+		return data?.sheet ?? 1;
+	}
+
 	/** Ferme les menus, dialogues et volets (changement de feuille ou de vue). */
 	export function closeOverlays() {
 		menu = null;
 		freeMenu = null;
 		typeMenu = null;
 		filterDlg = null;
+		arrows = null;
 		rulesDlg = null;
 		dedupDlg = null;
 		fnDlg = null;
@@ -2150,6 +2231,10 @@
 	function onKeyDown(e: KeyboardEvent) {
 		if (editing) return;
 		if (e.key === 'Escape' && painter) painter = null;
+		if (e.key === 'Escape' && arrows) {
+			arrows = null;
+			schedule();
+		}
 		if (e.key === 'Escape' && clipRange) {
 			clipRange = null;
 			schedule();
