@@ -198,9 +198,13 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 		if err != nil {
 			return err
 		}
-		pivots = append(pivots, charts...)
+		buttons, err := t.buttonRows(sheet)
+		if err != nil {
+			return err
+		}
+		pivots = append(append(pivots, charts...), buttons...)
 		return t.apply(
-			[]stmt{st(`DELETE FROM _slitable_pivots WHERE sheet = ?`, sheet), st(`DELETE FROM _slitable_charts WHERE sheet = ?`, sheet), st(`DELETE FROM _slitable_sheets WHERE id = ?`, sheet)},
+			[]stmt{st(`DELETE FROM _slitable_pivots WHERE sheet = ?`, sheet), st(`DELETE FROM _slitable_charts WHERE sheet = ?`, sheet), st(`DELETE FROM _slitable_buttons WHERE sheet = ?`, sheet), st(`DELETE FROM _slitable_sheets WHERE id = ?`, sheet)},
 			append([]stmt{st(`INSERT INTO _slitable_sheets (id, name, pos) VALUES (?, ?, ?)`, sheet, name, pos)}, pivots...),
 		)
 	})

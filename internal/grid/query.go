@@ -22,13 +22,18 @@ var ErrEmptyQuery = errors.New("requête vide")
 // Query exécute une requête en lecture seule (le pool de lecture est en
 // query_only : une écriture échoue) et renvoie au plus limit lignes.
 func Query(ctx context.Context, db *sql.DB, q string, limit int) (QueryResult, error) {
+	return QueryArgs(ctx, db, q, limit)
+}
+
+// QueryArgs est Query avec des paramètres (?).
+func QueryArgs(ctx context.Context, db *sql.DB, q string, limit int, args ...any) (QueryResult, error) {
 	if strings.TrimSpace(q) == "" {
 		return QueryResult{}, ErrEmptyQuery
 	}
 	start := time.Now()
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	rs, err := db.QueryContext(ctx, q)
+	rs, err := db.QueryContext(ctx, q, args...)
 	if err != nil {
 		return QueryResult{}, err
 	}

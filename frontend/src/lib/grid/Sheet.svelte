@@ -21,6 +21,8 @@
 	import Chart from '#lib/chart/Chart.svelte';
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
 	import PivotPanel from './PivotPanel.svelte';
+	import SheetButtons from './SheetButtons.svelte';
+	import type { ButtonConfig, SheetButton } from './buttons';
 	import { describeRule, parseRules, ruleStyle, RULE_OPS, RULE_STYLES, type Rule, type RuleOp } from './rules';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { drawIcon } from '#lib/icons/canvas.js';
@@ -159,6 +161,8 @@
 		pivots?: SheetPivot[];
 		/** Graphiques de la feuille, avec leurs données. */
 		charts?: SheetChart[];
+		/** Boutons d'action de la feuille. */
+		buttons?: SheetButton[] | null;
 	}
 
 	/** Cible d'une saisie, pour la source. */
@@ -227,6 +231,13 @@
 		/** Ancrage libre : cellule, décalage et taille en pixels. */
 		placeChart?(id: number, row: number, col: number, offX: number, offY: number, width: number, height: number): Promise<unknown>;
 		deleteChart?(id: number): Promise<unknown>;
+		/** Boutons d'action : bibliothèque de scripts, clic, création, modification. */
+		scripts?(): Promise<{ name: string; source: string }[]>;
+		runButton?(id: number): Promise<unknown>;
+		createButton?(row: number, col: number, cfg: ButtonConfig): Promise<unknown>;
+		setButton?(id: number, cfg: ButtonConfig): Promise<unknown>;
+		placeButton?(id: number, row: number, col: number, offX: number, offY: number, width: number, height: number): Promise<unknown>;
+		deleteButton?(id: number): Promise<unknown>;
 		setPivot?(id: number, cfg: PivotConfig): Promise<unknown>;
 		deletePivot?(id: number): Promise<unknown>;
 		/** Supprime les lignes en double ; renvoie leur nombre. */
@@ -250,6 +261,8 @@
 		blocks: number;
 		/** Agrégats de la sélection, comme la barre d'état d'Excel. */
 		stats: string;
+		/** Sélection (à partir de 0, r0 ≤ r1, c0 ≤ c1). */
+		sel: { r0: number; c0: number; r1: number; c1: number };
 	}
 
 	interface Props {
@@ -319,6 +332,8 @@
 	let spills: { row: number; col: number; rows: string[][] }[] = [];
 	let pivots = $state.raw<SheetPivot[]>([]);
 	let charts = $state.raw<SheetChart[]>([]);
+	let buttons = $state.raw<SheetButton[]>([]);
+	let buttonsLayer = $state<ReturnType<typeof SheetButtons>>();
 	// Décalage de la vue, pour placer les graphiques au-dessus de la grille.
 	let viewPos = $state({ x: 0, y: 0 });
 	let colAxis = $state.raw(new Axis(SHEET_COLS, DEF_W));
@@ -366,6 +381,7 @@
 			anchor = { ...active };
 		}
 		charts = d.charts ?? [];
+		buttons = d.buttons ?? [];
 		spills = d.cells.filter((c) => c.spill?.length).map((c) => ({ row: c.row, col: c.col, rows: c.spill! }));
 		shown = new Map(d.cells.filter((c) => c.raw.startsWith('=')).map((c) => [key(c.row, c.col), { text: c.value ?? '', error: !!c.error }]));
 		userWidths = new Map((d.widths ?? []).map((w) => [w.col, w.width]));
@@ -1254,7 +1270,8 @@
 			fps: `${frameStamps.length} img/s`,
 			edit: `saisie ${ms(lastEditMs)}`,
 			blocks: entries.reduce((n, e) => n + e.cache.size, 0),
-			stats: selectionStats()
+			stats: selectionStats(),
+			sel: selection()
 		});
 	}
 
@@ -1805,6 +1822,32 @@
 		filterDlg = rulesDlg = dedupDlg = fnDlg = null;
 		menu = freeMenu = typeMenu = chartMenu = null;
 		wrap.focus();
+	}
+
+	/** Sélectionne une plage (scripts : ui.select ; à partir de 0). */
+	export function selectRange(r0: number, c0: number, r1: number, c1: number) {
+		moveTo(r0, c0);
+		anchor = { row: clamp(r0, 0, SHEET_ROWS - 1), col: clamp(c0, 0, SHEET_COLS - 1) };
+		active = { row: clamp(r1, 0, SHEET_ROWS - 1), col: clamp(c1, 0, SHEET_COLS - 1) };
+		ensureVisible(r0, c0);
+		refreshFx();
+		refreshStatus();
+		schedule();
+	}
+
+	/** Insertion › Bouton : bouton d'action à la cellule active. */
+	export function insertButton() {
+		if (!source.createButton) return;
+		buttonsLayer?.openEditor();
+	}
+
+	function runButton(b: SheetButton) {
+		if (!source.runButton) return;
+		say(`« ${b.config.label} » : exécution…`);
+		source.runButton(b.id).then(
+			(msg) => say(typeof msg === 'string' ? msg : ''),
+			(err) => say(String(err?.message ?? err))
+		);
 	}
 
 	/** Sélectionne un tableau ou un tableau croisé de la feuille par son nom (onglet SQL). */
@@ -3526,6 +3569,22 @@
 					{/if}
 				</div>
 			{/each}
+			<SheetButtons
+				bind:this={buttonsLayer}
+				{buttons}
+				geo={{ colOffset: (c) => colAxis.offset(c), rowTop, colAt: (x) => colAxis.indexAt(x), rowAt: (y) => rowAxis.indexAt(y) }}
+				view={viewPos}
+				active={() => active}
+				scripts={() => source.scripts?.() ?? Promise.resolve([])}
+				onrun={runButton}
+				oncreate={source.createButton}
+				onset={source.setButton}
+				onplace={source.placeButton}
+				ondelete={source.deleteButton}
+				onwheel={(ev) => onWheel(ev)}
+				{say}
+				done={() => wrap.focus()}
+			/>
 		</div>
 		{#if typeMenu}
 			{@const m = typeMenu}
@@ -3753,6 +3812,14 @@
 							freeMenu = null;
 							pasteChart(chartClip!);
 						}}>Coller le graphique</button
+					>
+				{/if}
+				{#if buttonsLayer?.hasClip()}
+					<button
+						onclick={() => {
+							freeMenu = null;
+							buttonsLayer?.pasteAt(active.row, active.col);
+						}}>Coller le bouton</button
 					>
 				{/if}
 				<hr />

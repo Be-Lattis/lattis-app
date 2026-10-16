@@ -18,6 +18,10 @@
 	import SqlView from '#lib/shell/SqlView.svelte';
 	import TitleBar from '#lib/shell/TitleBar.svelte';
 	import ScriptView, { type Script } from '#lib/script/ScriptView.svelte';
+	import ScriptDialog, { type DialogSpec } from '#lib/script/ScriptDialog.svelte';
+	import McpPanel from '#lib/shell/McpPanel.svelte';
+	import type { ButtonConfig } from '#lib/grid/buttons.js';
+	import type { UICommand } from '#bindings/internal/bridge/models.js';
 	import { typeLabel, type ColumnType } from '#lib/grid/format.js';
 	import type { Fetched } from '#lib/grid/cache.js';
 
@@ -41,6 +45,9 @@
 	let recent = $state<string[]>([]);
 	// Fermer un classeur modifié : enregistrer d'abord ?
 	let closing = $state(false);
+	// Boîtes de dialogue ouvertes par un script ou un assistant (ui.dialog…), la plus ancienne d'abord.
+	let dialogs = $state<DialogSpec[]>([]);
+	let mcpOpen = $state(false);
 
 	// Démo.
 	let demo = $state<{ name: string; rows: number; columns: { name: string; type: ColumnType }[]; sqlName: string; sqlColumns: string[] } | null>(null);
@@ -131,9 +138,76 @@
 		e.preventDefault();
 	}
 
+	/** La feuille affichée a disparu (classeur ouvert par un assistant, feuille supprimée) : première feuille. */
+	async function keepSheet() {
+		if (layout && !(layout.sheets ?? []).some((s) => s.id === sheetId)) {
+			sheetId = layout.sheets?.[0]?.id ?? 1;
+			await reload();
+		}
+	}
+
+	/** Commandes de l'interface venues d'un script ou du serveur MCP (internal/bridge/host.go). */
+	async function uiCommand(c: UICommand) {
+		switch (c.kind) {
+			case 'select': {
+				const sel = c.selection;
+				if (!sel || mode !== 'doc') return;
+				if (view !== 'grid') {
+					sheet?.closeOverlays();
+					view = 'grid';
+				}
+				if (sel.sheet && sel.sheet !== sheetId) {
+					sheet?.closeOverlays();
+					sheetId = sel.sheet;
+				}
+				await reload();
+				await tick();
+				await new Promise((r) => requestAnimationFrame(r));
+				sheet?.selectRange(sel.r0, sel.c0, sel.r1, sel.c1);
+				break;
+			}
+			case 'view':
+				if (c.view === 'grid' || c.view === 'sql' || c.view === 'script') {
+					if (c.view !== view) sheet?.closeOverlays();
+					view = c.view;
+				}
+				break;
+			case 'notify':
+				notice = c.message ?? '';
+				break;
+			case 'dialog':
+				if (c.dialog) dialogs = [...dialogs, c.dialog as DialogSpec];
+				break;
+			case 'dialog-close':
+				dialogs = dialogs.filter((d) => d.id !== c.id);
+				break;
+		}
+	}
+
+	function answerDialog(d: DialogSpec, values: Record<string, unknown> | null) {
+		dialogs = dialogs.filter((x) => x.id !== d.id);
+		DocumentService.DialogAnswer(d.id, values ?? {}, values !== null).catch((e) => (notice = err(e)));
+		if (!dialogs.length) sheet?.focus();
+	}
+
+	// Feuille affichée, sélection et vue, lues par ui.selection (scripts, MCP).
+	let lastSel = '';
+	$effect(() => {
+		if (mode !== 'doc') return;
+		const s = sheetStatus?.sel ?? { r0: 0, c0: 0, r1: 0, c1: 0 };
+		const sel = { sheet: sheetId, r0: s.r0, c0: s.c0, r1: s.r1, c1: s.c1, view };
+		const k = JSON.stringify(sel);
+		if (k === lastSel) return;
+		lastSel = k;
+		DocumentService.SetSelection(sel).catch(() => {});
+	});
+
 	onMount(() => {
 		const off = Events.On('doc:changed', () => {
-			if (mode === 'doc') reload();
+			if (mode === 'doc') reload().then(keepSheet);
+		});
+		const offUI = Events.On('ui:command', (e: { data: UICommand }) => {
+			uiCommand(e.data).catch((x) => (notice = err(x)));
 		});
 		(async () => {
 			try {
@@ -160,6 +234,7 @@
 		window.addEventListener('keydown', keys);
 		return () => {
 			off();
+			offUI();
 			window.removeEventListener('keydown', keys);
 		};
 	});
@@ -209,6 +284,9 @@
 				}
 				case 'demo':
 					await startDemo();
+					break;
+				case 'mcp':
+					mcpOpen = true;
 					break;
 			}
 		} catch (e) {
@@ -293,6 +371,17 @@
 		moveChart: (id, row, col) => DocumentService.MoveChart(id, row, col).then(reload),
 		placeChart: (id, row, col, offX, offY, w, h) => DocumentService.PlaceChart(id, row, col, offX, offY, w, h).then(reload),
 		deleteChart: (id) => DocumentService.DeleteChart(id).then(reload),
+		scripts: async () => (await DocumentService.Scripts()) ?? [],
+		runButton: async (id) => {
+			const r = await DocumentService.RunButton(id);
+			if (r.error) return `Erreur du script : ${r.error}`;
+			const out = r.output ?? [];
+			return out.length ? out[out.length - 1] : '';
+		},
+		createButton: (row, col, cfg: ButtonConfig) => DocumentService.CreateButton(sheetId, row, col, cfg).then(reload),
+		setButton: (id, cfg: ButtonConfig) => DocumentService.SetButton(id, cfg).then(reload),
+		placeButton: (id, row, col, offX, offY, w, h) => DocumentService.PlaceButton(id, row, col, offX, offY, w, h).then(reload),
+		deleteButton: (id) => DocumentService.DeleteButton(id).then(reload),
 		deletePivot: (id) => DocumentService.DeletePivot(id).then(reload),
 		duplicatesPreview: (t, cols) => DocumentService.DuplicatesPreview(t.name, cols),
 		removeDuplicates: async (t, cols) => {
@@ -359,7 +448,8 @@
 						labels: c.labels ?? [],
 						series: (c.series ?? []).map((s) => ({ name: s.name, values: (s.values ?? []).map((v) => v ?? null) }))
 					})),
-					pivots: (layout.pivots ?? []).map((p) => ({ ...p, config: p.config as PivotConfig, cells: (p.cells ?? []).map((r) => r ?? []) }))
+					pivots: (layout.pivots ?? []).map((p) => ({ ...p, config: p.config as PivotConfig, cells: (p.cells ?? []).map((r) => r ?? []) })),
+					buttons: (layout.buttons ?? []).map((b) => ({ ...b, config: b.config as ButtonConfig }))
 				}
 			: null
 	);
@@ -463,6 +553,7 @@
 		onformula={mode === 'doc' ? (what) => (what === 'insert' ? sheet?.openFunctions() : what === 'sum' ? sheet?.autoSum() : sheet?.startFormula('=REFERENCE(')) : undefined}
 		onpivot={mode === 'doc' ? () => sheet?.pivotActive() : undefined}
 		ondedup={mode === 'doc' ? () => sheet?.dedupActive() : undefined}
+		onbutton={mode === 'doc' ? () => sheet?.insertButton() : undefined}
 		onrecalc={mode === 'doc' ? () => DocumentService.Recalc().then(reload).catch((e) => (notice = err(e))) : undefined}
 	/>
 
@@ -561,6 +652,12 @@
 		onrename={mode === 'doc' ? (id, name) => sheetAction(() => DocumentService.RenameSheet(id, name)) : undefined}
 		ondelete={mode === 'doc' ? (id) => sheetAction(() => DocumentService.DeleteSheet(id)) : undefined}
 	/>
+	{#each dialogs.slice(0, 1) as d (d.id)}
+		<ScriptDialog spec={d} onanswer={(v) => answerDialog(d, v)} />
+	{/each}
+	{#if mcpOpen}
+		<McpPanel onclose={() => (mcpOpen = false)} />
+	{/if}
 	{#if closing}
 		<div class="modal-back">
 			<div class="modal" role="dialog" aria-modal="true">

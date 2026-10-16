@@ -3,6 +3,9 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as api$0 from "../api/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as archive$0 from "../archive/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -13,6 +16,27 @@ import * as formula$0 from "../formula/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as grid$0 from "../grid/models.js";
+
+/**
+ * DialogRequest est une boîte de dialogue à afficher ; la réponse revient par
+ * DocumentService.DialogAnswer.
+ */
+export interface DialogRequest {
+    "id": number;
+    "title": string;
+    "message"?: string;
+    "fields": api$0.Field[] | null;
+
+    /**
+     * libellé du bouton de validation
+     */
+    "ok": string;
+
+    /**
+     * vide : pas de bouton Annuler
+     */
+    "cancel"?: string;
+}
 
 /**
  * DocState décrit le classeur ouvert pour l'interface (titre, menus).
@@ -87,6 +111,23 @@ export interface ImportResult {
 }
 
 /**
+ * MCPStatus décrit le serveur MCP pour le menu Fichier.
+ */
+export interface MCPStatus {
+    "enabled": boolean;
+    "running": boolean;
+    "url": string;
+    "token": string;
+
+    /**
+     * Command lance le relais stdio (clients qui démarrent un programme).
+     */
+    "command": string;
+    "args": string[] | null;
+    "error": string;
+}
+
+/**
  * OpenResult est le résultat d'une ouverture : soit le classeur est ouvert,
  * soit une session précédente interrompue est proposée en récupération.
  */
@@ -99,9 +140,23 @@ export interface OpenResult {
 /**
  * ScriptResult est l'issue d'un script pour l'interface.
  */
-export interface ScriptResult {
-    "output": string[] | null;
-    "writes": number;
-    "durationMs": number;
-    "error": string;
+export type ScriptResult = api$0.ScriptResult;
+
+/**
+ * UICommand est une commande pour l'interface.
+ */
+export interface UICommand {
+    /**
+     * Kind : select, view, dialog, dialog-close ou notify.
+     */
+    "kind": string;
+    "selection"?: api$0.Selection | null;
+    "view"?: string;
+    "dialog"?: DialogRequest | null;
+
+    /**
+     * dialog-close
+     */
+    "id"?: number;
+    "message"?: string;
 }

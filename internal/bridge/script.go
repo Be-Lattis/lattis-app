@@ -2,12 +2,10 @@ package bridge
 
 import (
 	"context"
-	"errors"
-	"sync"
 
+	"github.com/lalamefine/slitable/internal/api"
 	"github.com/lalamefine/slitable/internal/canvas"
 	"github.com/lalamefine/slitable/internal/doc"
-	"github.com/lalamefine/slitable/internal/script"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -19,77 +17,50 @@ func init() {
 }
 
 // ScriptResult est l'issue d'un script pour l'interface.
-type ScriptResult struct {
-	Output     []string `json:"output"`
-	Writes     int      `json:"writes"`
-	DurationMs int64    `json:"durationMs"`
-	Error      string   `json:"error"`
-}
+type ScriptResult = api.ScriptResult
 
-// scripts : un seul script à la fois, que le bouton Arrêter peut annuler.
-type scripts struct {
-	mu     sync.Mutex
-	cancel context.CancelFunc
-}
-
-var running scripts
-
-// RunScript exécute un script Lua sur le classeur ouvert. Ses écritures
-// forment une seule étape d'annulation, nommée d'après le script.
+// RunScript exécute un script Lua sur le classeur ouvert. Tout ce qu'il
+// modifie (écritures, feuilles, tableaux…) forme une seule étape
+// d'annulation, nommée d'après le script.
 func (s *DocumentService) RunScript(ctx context.Context, name, src string) (ScriptResult, error) {
-	d, err := s.current()
-	if err != nil {
-		return ScriptResult{}, err
-	}
-	if err := script.Check(src); err != nil {
-		return ScriptResult{Error: err.Error()}, nil
-	}
-	running.mu.Lock()
-	if running.cancel != nil {
-		running.mu.Unlock()
-		return ScriptResult{}, errors.New("un script est déjà en cours")
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	running.cancel = cancel
-	running.mu.Unlock()
-	defer func() {
-		running.mu.Lock()
-		running.cancel = nil
-		running.mu.Unlock()
-		cancel()
-	}()
-
-	label := "Script"
-	if name != "" {
-		label = "Script « " + name + " »"
-	}
-	env := script.Env{
-		Read: d.DB().Read(),
-		Edit: d.Editor(label),
-		Print: func(line string) {
-			if app := application.Get(); app != nil {
-				app.Event.Emit(PrintEvent, line)
-			}
-		},
-	}
-	res := script.Run(ctx, env, src, script.DefaultLimits)
-	out := ScriptResult{Output: res.Output, Writes: res.Writes, DurationMs: res.Duration.Milliseconds()}
-	if res.Err != nil {
-		out.Error = res.Err.Error()
-	}
-	if res.Writes > 0 {
-		s.changed(context.Background())
-	}
-	return out, nil
+	return api.RunScript(host{s}, name, src, "")
 }
 
 // StopScript arrête le script en cours (bouton Arrêter).
-func (s *DocumentService) StopScript() {
-	running.mu.Lock()
-	defer running.mu.Unlock()
-	if running.cancel != nil {
-		running.cancel()
+func (s *DocumentService) StopScript() { api.StopScript() }
+
+// RunButton exécute l'action d'un bouton (clic dans la grille).
+func (s *DocumentService) RunButton(ctx context.Context, id int64) (ScriptResult, error) {
+	return api.RunButton(host{s}, id)
+}
+
+// CreateButton pose un bouton d'action sur une feuille.
+func (s *DocumentService) CreateButton(ctx context.Context, sheet int64, row, col int, cfg canvas.ButtonConfig) (int64, error) {
+	d, err := s.current()
+	if err != nil {
+		return 0, err
 	}
+	id, err := d.CreateButton(ctx, sheet, row, col, cfg)
+	if err != nil {
+		return 0, err
+	}
+	_, err = s.changed(ctx)
+	return id, err
+}
+
+// SetButton change le libellé, le script ou la fonction d'un bouton.
+func (s *DocumentService) SetButton(ctx context.Context, id int64, cfg canvas.ButtonConfig) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetButton(ctx, id, cfg) })
+}
+
+// PlaceButton déplace et redimensionne un bouton.
+func (s *DocumentService) PlaceButton(ctx context.Context, id int64, row, col, offX, offY, width, height int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.PlaceButton(ctx, id, row, col, offX, offY, width, height) })
+}
+
+// DeleteButton supprime un bouton.
+func (s *DocumentService) DeleteButton(ctx context.Context, id int64) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.DeleteButton(ctx, id) })
 }
 
 // Scripts liste la bibliothèque de scripts du classeur.

@@ -174,3 +174,16 @@ func word(q string, i int) (string, int) {
 func quote(s string) string { return `"` + strings.ReplaceAll(s, `"`, `""`) + `"` }
 
 func itoa(n int64) string { return strconv.FormatInt(n, 10) }
+
+// Rewrite prépare une requête de lecture écrite avec les noms affichés des
+// tableaux et des colonnes, comme db.query (serveur MCP).
+func Rewrite(ctx context.Context, db *sql.DB, q string) (string, error) {
+	cat, err := loadCatalog(ctx, db)
+	if err != nil {
+		return "", err
+	}
+	return cat.rewrite(q), nil
+}
+
+// SQLError retire d'une erreur SQL la clause WITH ajoutée par Rewrite.
+func SQLError(err error) string { return sqlError(err) }

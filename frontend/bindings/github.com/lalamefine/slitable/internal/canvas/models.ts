@@ -6,6 +6,52 @@
 import * as grid$0 from "../grid/models.js";
 
 /**
+ * ButtonConfig est un bouton d'action posé sur une feuille : un clic exécute
+ * un script de la bibliothèque, ou l'une de ses fonctions.
+ */
+export interface ButtonConfig {
+    "label": string;
+
+    /**
+     * Script est le nom d'un script de la bibliothèque (onglet SCRIPT).
+     */
+    "script": string;
+
+    /**
+     * Function : fonction globale du script appelée après son chargement ;
+     * vide, le script s'exécute simplement de haut en bas.
+     */
+    "function"?: string;
+
+    /**
+     * Présentation, comme un graphique : décalage (px) dans la cellule
+     * d'ancrage et taille (px).
+     */
+    "offX"?: number;
+    "offY"?: number;
+
+    /**
+     * 120 par défaut
+     */
+    "width"?: number;
+
+    /**
+     * 32 par défaut
+     */
+    "height"?: number;
+}
+
+/**
+ * ButtonInfo décrit un bouton posé sur une feuille.
+ */
+export interface ButtonInfo {
+    "id": number;
+    "row": number;
+    "col": number;
+    "config": ButtonConfig;
+}
+
+/**
  * CellInfo est une cellule libre.
  */
 export interface CellInfo {
@@ -275,6 +321,11 @@ export interface Layout {
      * graphiques, avec leurs données
      */
     "charts": ChartInfo[] | null;
+
+    /**
+     * boutons d'action
+     */
+    "buttons": ButtonInfo[] | null;
 }
 
 /**

@@ -6,10 +6,13 @@ package main
 
 import (
 	"embed"
+	"fmt"
 	"log"
+	"os"
 	"runtime"
 
 	"github.com/lalamefine/slitable/internal/bridge"
+	"github.com/lalamefine/slitable/internal/mcp"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -17,6 +20,16 @@ import (
 var assets embed.FS
 
 func main() {
+	// « slitable mcp » : relais stdio du serveur MCP vers l'application
+	// ouverte, pour les clients qui lancent un programme (Claude Desktop…).
+	if len(os.Args) > 1 && os.Args[1] == "mcp" {
+		if err := mcp.Proxy(os.Stdin, os.Stdout); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	app := application.New(application.Options{
 		Name:        "Slitable",
 		Description: "Tableur relationnel local-first",

@@ -1,0 +1,362 @@
+package api
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/lalamefine/slitable/internal/canvas"
+	"github.com/lalamefine/slitable/internal/doc"
+)
+
+var (
+	pRow  = Param{Name: "row", Type: Integer, Desc: "ligne de la feuille, à partir de 1"}
+	pCol  = Param{Name: "col", Type: Integer, Desc: "colonne de la feuille, à partir de 1"}
+	pRow2 = Param{Name: "row2", Type: Integer, Desc: "dernière ligne de la plage (absente : row)", Optional: true}
+	pCol2 = Param{Name: "col2", Type: Integer, Desc: "dernière colonne de la plage (absente : col)", Optional: true}
+)
+
+// MaxClearCells borne cells.clear.
+const MaxClearCells = 10_000
+
+// CellValue est le contenu d'une cellule de la feuille.
+type CellValue struct {
+	Row    int    `json:"row"`
+	Col    int    `json:"col"`
+	Raw    string `json:"raw"`             // saisie (formule comprise)
+	Value  any    `json:"value"`           // valeur affichée
+	Table  string `json:"table,omitempty"` // tableau qui contient la cellule
+	Column string `json:"column,omitempty"`
+	Header bool   `json:"header,omitempty"` // ligne d'en-tête du tableau
+	Line   int    `json:"line,omitempty"`   // ligne de données du tableau, à partir de 1
+	ID     int64  `json:"id,omitempty"`     // clé _id de la ligne
+}
+
+// rect lit une plage row, col, row2, col2 (à partir de 1) et la renvoie à
+// partir de 0, dans l'ordre.
+func (c *Call) rect() (r0, c0, r1, c1 int, err error) {
+	if r0, err = c.Pos("row", 0); err != nil {
+		return
+	}
+	if c0, err = c.Pos("col", 0); err != nil {
+		return
+	}
+	if r1, err = c.Pos("row2", r0); err != nil {
+		return
+	}
+	if c1, err = c.Pos("col2", c0); err != nil {
+		return
+	}
+	r0, r1 = min(r0, r1), max(r0, r1)
+	c0, c1 = min(c0, c1), max(c0, c1)
+	return
+}
+
+// tableAt trouve le tableau qui contient (row, col), en-tête compris.
+func tableAt(l canvas.Layout, row, col int) *canvas.TableInfo {
+	for i, t := range l.Tables {
+		if row >= t.Row && row <= t.Row+t.Rows && col >= t.Col && col < t.Col+len(t.Columns) {
+			return &l.Tables[i]
+		}
+	}
+	return nil
+}
+
+func readCell(ctx context.Context, d *doc.Document, l canvas.Layout, row, col int) (CellValue, error) {
+	v := CellValue{Row: row + 1, Col: col + 1}
+	if t := tableAt(l, row, col); t != nil {
+		ci := col - t.Col
+		v.Table, v.Column = t.Name, t.Columns[ci].Name
+		if row == t.Row {
+			v.Header, v.Raw, v.Value = true, t.Columns[ci].Name, t.Columns[ci].Name
+			return v, nil
+		}
+		g, err := LoadGrid(ctx, d, *t)
+		if err != nil {
+			return v, err
+		}
+		n := row - t.Row - 1
+		w, err := g.Window(ctx, n, 1)
+		if err != nil {
+			return v, err
+		}
+		v.Line = n + 1
+		if len(w.Cells) > 0 {
+			v.Value, v.ID = w.Cells[0][ci], w.IDs[0]
+			v.Raw = raw(v.Value)
+			for _, bad := range w.Invalid {
+				if bad.Col == ci {
+					v.Raw, v.Value = bad.Raw, bad.Raw
+				}
+			}
+			if f := t.Columns[ci].Formula; f != "" {
+				v.Raw = f
+			}
+		}
+		return v, nil
+	}
+	for _, cell := range l.Cells {
+		if cell.Row == row && cell.Col == col {
+			v.Raw, v.Value = cell.Raw, cell.Raw
+			if cell.Value != "" || cell.Raw != "" && cell.Raw[0] == '=' {
+				v.Value = cell.Value
+			}
+			return v, nil
+		}
+	}
+	return v, nil
+}
+
+func init() {
+	register(
+		&Command{
+			Name:    "cells.get",
+			Summary: "Lit une cellule de la feuille : saisie, valeur affichée et, dans un tableau, le tableau, la colonne et la ligne.",
+			Returns: "{row, col, raw, value, table, column, header, line, id}",
+			Params:  []Param{pRow, pCol, pSheet},
+			Example: `local c = cells.get(2, 3)
+print(c.raw, c.value, c.table, c.column)`,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				row, err := c.Pos("row", 0)
+				if err != nil {
+					return nil, err
+				}
+				col, err := c.Pos("col", 0)
+				if err != nil {
+					return nil, err
+				}
+				d, _ := c.Doc()
+				l, err := d.Layout(c, s.ID)
+				if err != nil {
+					return nil, err
+				}
+				return readCell(c, d, l, row, col)
+			},
+		},
+		&Command{
+			Name:    "cells.set",
+			Label:   "Saisie",
+			Summary: "Saisit une valeur dans une cellule de la feuille, exactement comme une frappe dans la grille.",
+			Details: "Un texte qui commence par = est une formule. Saisir à côté d'un tableau l'agrandit, saisir deux lignes contiguës crée un tableau, \"\" efface la cellule. Renvoie ce que la saisie a provoqué (tableau créé, colonne élargie…).",
+			Returns: "{created, widened, from, to, invalid, keyed}",
+			Params:  []Param{pRow, pCol, {Name: "value", Type: Value, Desc: "saisie : texte, nombre, booléen, formule (=…)"}, pSheet},
+			Write:   true,
+			Example: `cells.set(1, 1, "Produit")
+cells.set(1, 2, "Prix")
+cells.set(2, 1, "Café")
+cells.set(2, 2, 3.5)`,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				row, err := c.Pos("row", 0)
+				if err != nil {
+					return nil, err
+				}
+				col, err := c.Pos("col", 0)
+				if err != nil {
+					return nil, err
+				}
+				d, _ := c.Doc()
+				return d.SetCell(c, s.ID, row, col, raw(c.Raw("value")))
+			},
+		},
+		&Command{
+			Name:    "cells.paste",
+			Label:   "Coller",
+			Summary: "Écrit un bloc de valeurs à partir d'une cellule, comme un collage : une ligne d'en-têtes suivie de lignes de données crée un tableau.",
+			Params:  []Param{pRow, pCol, {Name: "values", Type: Array, Items: Array, Desc: "lignes de valeurs : { {\"Nom\", \"Âge\"}, {\"Léa\", 31} }"}, pSheet},
+			Write:   true,
+			Example: `cells.paste(1, 1, {
+  {"Produit", "Prix"},
+  {"Café", 3.5},
+  {"Thé", 2.8},
+})`,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				row, err := c.Pos("row", 0)
+				if err != nil {
+					return nil, err
+				}
+				col, err := c.Pos("col", 0)
+				if err != nil {
+					return nil, err
+				}
+				var rows [][]any
+				if err := c.Decode("values", &rows); err != nil {
+					return nil, err
+				}
+				block := make([][]string, len(rows))
+				for i, r := range rows {
+					block[i] = make([]string, len(r))
+					for j, v := range r {
+						block[i][j] = raw(v)
+					}
+				}
+				d, _ := c.Doc()
+				return d.Paste(c, s.ID, row, col, block)
+			},
+		},
+		&Command{
+			Name:    "cells.clear",
+			Label:   "Effacer",
+			Summary: "Efface le contenu d'une plage de cellules (les tableaux gardent leur forme).",
+			Params:  []Param{pRow, pCol, pRow2, pCol2, pSheet},
+			Write:   true,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				r0, c0, r1, c1, err := c.rect()
+				if err != nil {
+					return nil, err
+				}
+				if (r1-r0+1)*(c1-c0+1) > MaxClearCells {
+					return nil, fmt.Errorf("plage trop grande (%d cellules au plus)", MaxClearCells)
+				}
+				d, _ := c.Doc()
+				l, err := d.Layout(c, s.ID)
+				if err != nil {
+					return nil, err
+				}
+				for r := r0; r <= r1; r++ {
+					for k := c0; k <= c1; k++ {
+						if t := tableAt(l, r, k); t != nil && r == t.Row {
+							continue // un en-tête ne s'efface pas
+						}
+						if _, err := d.SetCell(c, s.ID, r, k, ""); err != nil {
+							return nil, err
+						}
+					}
+				}
+				return nil, nil
+			},
+		},
+		&Command{
+			Name:    "cells.style",
+			Label:   "Mise en forme",
+			Summary: "Met en forme une plage de cellules.",
+			Details: styleHelp,
+			Params:  []Param{pRow, pCol, pRow2, pCol2, {Name: "style", Type: Object, Desc: "propriétés à poser : {bold = true, fill = \"#fff2cc\"}"}, pSheet},
+			Write:   true,
+			Example: `cells.style{row = 1, col = 1, col2 = 4, style = {bold = true, fill = "#fff2cc"}}`,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				r0, c0, r1, c1, err := c.rect()
+				if err != nil {
+					return nil, err
+				}
+				st, err := c.style("style")
+				if err != nil {
+					return nil, err
+				}
+				d, _ := c.Doc()
+				return nil, d.ApplyStyle(c, s.ID, r0, c0, r1, c1, st)
+			},
+		},
+		&Command{
+			Name:    "cells.name",
+			Label:   "Nommer la cellule",
+			Summary: "Nomme une cellule libre, pour la citer dans les formules ; un nom vide retire le nom.",
+			Params:  []Param{pRow, pCol, {Name: "name", Type: String, Desc: "nom (vide : retirer)"}, pSheet},
+			Write:   true,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				row, err := c.Pos("row", 0)
+				if err != nil {
+					return nil, err
+				}
+				col, err := c.Pos("col", 0)
+				if err != nil {
+					return nil, err
+				}
+				name, _ := c.Str("name")
+				d, _ := c.Doc()
+				return nil, d.SetName(c, s.ID, row, col, name)
+			},
+		},
+		&Command{
+			Name:    "cells.dependencies",
+			Summary: "Donne les antécédents (ce que lit la formule de la cellule) et les dépendants (les formules qui la lisent).",
+			Returns: "{subject, precedents, dependents}",
+			Params:  []Param{pRow, pCol, pSheet},
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				row, err := c.Pos("row", 0)
+				if err != nil {
+					return nil, err
+				}
+				col, err := c.Pos("col", 0)
+				if err != nil {
+					return nil, err
+				}
+				d, _ := c.Doc()
+				deps, err := d.Dependencies(c, s.ID, row, col)
+				for _, l := range [][]canvas.DepTarget{deps.Precedents, deps.Dependents} {
+					for i := range l {
+						l[i].Row++
+						l[i].Col++
+					}
+				}
+				return deps, err
+			},
+		},
+	)
+}
+
+const styleHelp = `style : bold, italic, underline (booléens), color et fill (couleurs "#rrggbb"), align ("left", "center" ou "right"), format ("0", "0,00", "%" ou "€"), decimals (nombre de décimales), borders (les quatre bordures) ou border_top, border_bottom, border_left, border_right. false ou "" retire la propriété.`
+
+// styleKeys traduit les noms lisibles des propriétés de mise en forme vers
+// les clés du classeur (internal/canvas/styles.go).
+var styleKeys = map[string]string{
+	"bold": "b", "italic": "i", "underline": "u", "color": "fg", "fill": "bg",
+	"align": "al", "format": "nf", "decimals": "dp",
+	"border_top": "bt", "border_bottom": "bb", "border_left": "bl", "border_right": "br",
+}
+
+var styleRaw = map[string]bool{"b": true, "i": true, "u": true, "fg": true, "bg": true, "al": true, "nf": true, "dp": true, "bt": true, "bb": true, "bl": true, "br": true}
+
+func toStyle(m map[string]any) (canvas.Style, error) {
+	st := canvas.Style{}
+	for k, v := range m {
+		if k == "borders" {
+			for _, b := range []string{"bt", "bb", "bl", "br"} {
+				st[b] = v
+			}
+			continue
+		}
+		if key, ok := styleKeys[k]; ok {
+			k = key
+		} else if !styleRaw[k] {
+			return nil, fmt.Errorf("propriété de style %q inconnue", k)
+		}
+		st[k] = v
+	}
+	return st, nil
+}
+
+// style lit un paramètre de mise en forme.
+func (c *Call) style(name string) (canvas.Style, error) {
+	var m map[string]any
+	if err := c.Decode(name, &m); err != nil {
+		return nil, err
+	}
+	return toStyle(m)
+}

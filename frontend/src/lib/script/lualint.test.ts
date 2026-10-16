@@ -148,3 +148,11 @@ describe('recherche dans la référence', () => {
 		expect(search('zzz')).toEqual([]);
 	});
 });
+
+describe('commandes de l’application (api.gen.ts)', () => {
+	it('connaît sheets, ui, buttons…', () => {
+		expect(messages('sheets.add("Synthèse")\nui.select(1, 1, 3, 2)\nlocal s = ui.selection()\nprint(s.sheet)\nbuttons.create{row = 1, col = 1, label = "Go", script = "X"}')).toEqual([]);
+		expect(only('sheets.ajouter("x")').text).toBe('ajouter');
+		expect(only('ui.select()').message).toMatch(/argument/);
+	});
+});

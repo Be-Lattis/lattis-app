@@ -156,6 +156,17 @@ CREATE TABLE _slitable_row_heights (
 	PRIMARY KEY (sheet, row)
 ) STRICT;
 `,
+	// 11 → 12 : boutons d'action (configuration JSON : libellé, script,
+	// fonction, taille), posés sur une feuille comme les graphiques.
+	`
+CREATE TABLE _slitable_buttons (
+	id     INTEGER PRIMARY KEY,
+	sheet  INTEGER NOT NULL REFERENCES _slitable_sheets(id),
+	row    INTEGER NOT NULL,
+	col    INTEGER NOT NULL,
+	config TEXT NOT NULL
+) STRICT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

@@ -72,16 +72,17 @@ type NameInfo struct {
 // Layout est la mise en page d'une feuille : ses tableaux et ses cellules
 // libres. Les valeurs des tableaux se lisent ensuite par fenêtres.
 type Layout struct {
-	Sheets  []SheetInfo `json:"sheets"`
-	Sheet   int64       `json:"sheet"`
-	Tables  []TableInfo `json:"tables"`
-	Cells   []CellInfo  `json:"cells"`
-	Widths  []ColWidth  `json:"widths"`  // largeurs choisies par l'utilisateur
-	Heights []RowHeight `json:"heights"` // hauteurs choisies par l'utilisateur
-	Names   []NameInfo  `json:"names"`   // cellules nommées de la feuille
-	Styles  []CellStyle `json:"styles"`  // mise en forme hors tableaux
-	Pivots  []PivotInfo `json:"pivots"`  // tableaux croisés, calculés
-	Charts  []ChartInfo `json:"charts"`  // graphiques, avec leurs données
+	Sheets  []SheetInfo  `json:"sheets"`
+	Sheet   int64        `json:"sheet"`
+	Tables  []TableInfo  `json:"tables"`
+	Cells   []CellInfo   `json:"cells"`
+	Widths  []ColWidth   `json:"widths"`  // largeurs choisies par l'utilisateur
+	Heights []RowHeight  `json:"heights"` // hauteurs choisies par l'utilisateur
+	Names   []NameInfo   `json:"names"`   // cellules nommées de la feuille
+	Styles  []CellStyle  `json:"styles"`  // mise en forme hors tableaux
+	Pivots  []PivotInfo  `json:"pivots"`  // tableaux croisés, calculés
+	Charts  []ChartInfo  `json:"charts"`  // graphiques, avec leurs données
+	Buttons []ButtonInfo `json:"buttons"` // boutons d'action
 }
 
 // CellStyle est la mise en forme d'une cellule hors tableau.
@@ -258,7 +259,10 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 		if l.Pivots, err = t.pivots(sheet); err != nil {
 			return err
 		}
-		l.Charts, err = t.charts(sheet)
+		if l.Charts, err = t.charts(sheet); err != nil {
+			return err
+		}
+		l.Buttons, err = t.buttons(sheet)
 		return err
 	})
 	return l, err

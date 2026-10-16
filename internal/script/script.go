@@ -43,6 +43,12 @@ type Env struct {
 	Edit Editor  // nil : script en lecture seule
 	// Print reçoit chaque ligne de print au fil de l'exécution (facultatif).
 	Print func(string)
+	// API : commandes de l'application (feuilles, sélection, boutons…) ;
+	// nil : seulement db et print.
+	API API
+	// Entry : fonction globale appelée après le chargement du script (bouton
+	// d'action lié à une fonction) ; vide : le script seul.
+	Entry string
 }
 
 // Limits borne un script.
@@ -78,9 +84,9 @@ func Run(ctx context.Context, env Env, src string, lim Limits) Result {
 	ctx, cancel := context.WithCancelCause(ctx)
 	defer cancel(nil)
 	if lim.Timeout > 0 {
-		var stop context.CancelFunc
-		ctx, stop = context.WithTimeoutCause(ctx, lim.Timeout, ErrTimeout)
-		defer stop()
+		c := &clock{since: start}
+		ctx = context.WithValue(ctx, clockKey{}, c)
+		go watchClock(ctx, cancel, c, lim.Timeout)
 	}
 	if lim.MaxHeap > 0 {
 		go watchHeap(ctx, cancel, lim.MaxHeap)
@@ -95,6 +101,15 @@ func Run(ctx context.Context, env Env, src string, lim Limits) Result {
 	err := r.load(L, src)
 	if err == nil {
 		err = L.PCall(0, 0, nil)
+	}
+	if err == nil && env.Entry != "" {
+		fn, ok := L.GetGlobal(env.Entry).(*lua.LFunction)
+		if !ok {
+			err = fmt.Errorf("le script ne définit pas de fonction %s", env.Entry)
+		} else {
+			L.Push(fn)
+			err = L.PCall(0, 0, nil)
+		}
 	}
 	res := Result{Output: r.output, Writes: r.writes, Duration: time.Since(start)}
 	if err != nil {
@@ -152,6 +167,7 @@ func (r *runner) install(L *lua.LState) {
 		db.RawSetString(name, L.NewFunction(fn))
 	}
 	L.SetGlobal("db", db)
+	r.installAPI(L)
 }
 
 func (r *runner) print(L *lua.LState) int {
