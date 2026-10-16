@@ -16,6 +16,8 @@
 	import { formatNumber, mergeStyles, parseStyle, type CellStyle } from './style';
 	import { dismiss } from './dismiss';
 	import { describeRule, parseRules, ruleStyle, RULE_OPS, RULE_STYLES, type Rule, type RuleOp } from './rules';
+	import Icon from '#lib/icons/Icon.svelte';
+	import { drawIcon } from '#lib/icons/canvas.js';
 	import { apply as applySuggestion, signature, suggest, type Catalog, type Completion } from './autocomplete';
 	import {
 		isErrorValue,
@@ -25,6 +27,7 @@
 		editValue,
 		formatValue,
 		typeIcon,
+		typeIconName,
 		typeLabel,
 		type ColumnType
 	} from './format';
@@ -478,16 +481,28 @@
 						ctx.font = FONT_SMALL;
 						ctx.fillStyle = C.icon;
 						ctx.textAlign = 'right';
-						const icon = (col.filter ? '⧩ ' : '') + typeIcon(col.type) + ' ▾';
+						// Icône du type : SVG pour date et booléen, texte pour les autres.
+						const svg = typeIconName(col.type);
+						const ICON = 13;
+						const icon = svg ? ' ▾' : (col.filter ? '⧩ ' : '') + typeIcon(col.type) + ' ▾';
+						let iconW = ctx.measureText(icon).width;
+						ctx.fillText(icon, x + cw - 6, y + ROW_H / 2);
+						if (svg) {
+							drawIcon(ctx, svg, x + cw - 6 - iconW - ICON, y + (ROW_H - ICON) / 2, ICON, C.icon, C.active, 1.3);
+							iconW += ICON;
+							if (col.filter) {
+								ctx.fillText('⧩ ', x + cw - 6 - iconW, y + ROW_H / 2);
+								iconW += ctx.measureText('⧩ ').width;
+							}
+						}
 						if (col.errors) {
 							ctx.fillStyle = C.error;
-							ctx.fillText('⚠ ' + col.errors, x + cw - 6 - ctx.measureText(icon + ' ').width, y + ROW_H / 2);
+							ctx.fillText('⚠ ' + col.errors, x + cw - 6 - iconW - ctx.measureText(' ').width, y + ROW_H / 2);
 							ctx.fillStyle = C.icon;
 						}
-						ctx.fillText(icon, x + cw - 6, y + ROW_H / 2);
 						ctx.save();
 						ctx.beginPath();
-						ctx.rect(x, y, cw - ctx.measureText(icon).width - 10, ROW_H);
+						ctx.rect(x, y, cw - iconW - 10, ROW_H);
 						ctx.clip();
 						ctx.font = (hs?.i ? 'italic ' : '') + FONT_BOLD;
 						ctx.fillStyle = hs?.fg ?? C.headText;
@@ -2044,7 +2059,7 @@
 				{:else}
 					{#each TYPES as t (t)}
 						<button onclick={() => chooseType(t)}>
-							<span class="check">{t === col.type ? '✓' : ''}</span>{typeIcon(t)}&nbsp;&nbsp;{typeLabel(t)}
+							<span class="check">{t === col.type ? '✓' : ''}</span>{#if typeIconName(t)}<span class="type-icon"><Icon name={typeIconName(t)!} size={14} /></span>{:else}{typeIcon(t)}{/if}&nbsp;&nbsp;{typeLabel(t)}
 						</button>
 					{/each}
 					{#if col.errors}<p class="menu-note error">{col.errors} saisie{col.errors > 1 ? 's' : ''} hors type dans la colonne</p>{/if}
@@ -2490,6 +2505,12 @@
 	}
 	.menu-note.error {
 		color: #c0392b;
+	}
+	.type-icon {
+		display: inline-flex;
+		vertical-align: -3px;
+		color: #6b8f78;
+		--icon-accent: #217346;
 	}
 	.check {
 		display: inline-block;

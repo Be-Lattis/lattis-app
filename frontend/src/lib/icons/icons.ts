@@ -65,6 +65,10 @@ export const icons = {
 	play: '<path class="af" d="M7 4.5v15l12.5-7.5z"/>',
 	stop: '<rect class="af" x="5.5" y="5.5" width="13" height="13" rx="2"/>',
 	key: '<circle cx="8" cy="15.5" r="4.5"/><path d="M11.2 12.3 20 3.5"/><path class="a" d="m16.5 7 2.5 2.5M14 9.5l2 2"/>',
+	// Types de colonne (en-têtes de tableau, menu des types) : tracés <path>
+	// seulement, pour être dessinés aussi sur le <canvas> de la grille (canvas.ts).
+	'type-date': '<path d="M5 5h14a1.5 1.5 0 0 1 1.5 1.5V19a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 19V6.5A1.5 1.5 0 0 1 5 5zM3.5 10h17M8 3v4M16 3v4"/><path class="af" d="M7 13h3.5v3.5H7z"/>',
+	'type-boolean': '<path d="M5 3.5h14A1.5 1.5 0 0 1 20.5 5v14a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 19V5A1.5 1.5 0 0 1 5 3.5z"/><path class="a" stroke-width="2" d="m7.5 12.5 3 3 6-7"/>',
 	'column-type': '<rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><path class="a" d="M8 8h8M12 8v9"/>',
 
 	// Fichier, historique

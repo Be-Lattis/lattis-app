@@ -69,7 +69,12 @@ export function alignment(type: ColumnType): 'left' | 'right' | 'center' {
 	}
 }
 
-/** Icône de type affichée dans l'en-tête de colonne. */
+/** Icône SVG du type (voir #lib/icons), à la place du texte de typeIcon. */
+export function typeIconName(type: ColumnType): 'type-date' | 'type-boolean' | null {
+	return type === 'date' ? 'type-date' : type === 'boolean' ? 'type-boolean' : null;
+}
+
+/** Icône de type affichée dans l'en-tête de colonne (texte ; voir aussi typeIconName). */
 export function typeIcon(type: ColumnType): string {
 	switch (type) {
 		case 'integer':
