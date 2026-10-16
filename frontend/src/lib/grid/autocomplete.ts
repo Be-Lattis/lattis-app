@@ -2,8 +2,28 @@
 // de colonnes selon ce qui précède le curseur, et signature de la fonction
 // en cours.
 
+/** Argument d'une fonction (nom français, description, facultatif). */
+export interface ArgInfo {
+	name: string;
+	desc: string;
+	optional?: boolean;
+}
+
+/** Fonction du catalogue, avec sa documentation (internal/formula/docs.go). */
+export interface FunctionDoc {
+	name: string;
+	other: string;
+	arity: string;
+	category?: string;
+	description?: string;
+	signature?: string;
+	args?: ArgInfo[] | null;
+	repeat?: number; // nombre de derniers arguments qui se répètent
+	example?: string;
+}
+
 export interface Catalog {
-	functions: { name: string; other: string; arity: string }[];
+	functions: FunctionDoc[];
 	tables: { name: string; columns: string[] | null }[];
 	names?: string[]; // cellules nommées
 }
@@ -65,7 +85,7 @@ export function suggest(text: string, caret: number, cat: Catalog, currentTable?
 	const prefix = fold(m[0]);
 	const items: Suggestion[] = [];
 	for (const f of cat.functions) {
-		if (fold(f.name).startsWith(prefix)) items.push({ label: f.name, insert: f.name + '(', kind: 'function', detail: f.arity });
+		if (fold(f.name).startsWith(prefix)) items.push({ label: f.name, insert: f.name + '(', kind: 'function', detail: f.description || f.arity });
 	}
 	for (const t of cat.tables) {
 		if (fold(t.name).startsWith(prefix)) items.push({ label: t.name, insert: t.name + '[', kind: 'table', detail: 'tableau' });
@@ -78,27 +98,113 @@ export function suggest(text: string, caret: number, cat: Catalog, currentTable?
 	return items.length && !exact ? { from: caret - m[0].length, items: items.slice(0, max) } : null;
 }
 
-/** Signature de la fonction dont le curseur est dans les parenthèses. */
-export function signature(text: string, caret: number, cat: Catalog): string | null {
+/** Appel de fonction qui contient le curseur : nom et rang (0 = premier) de l'argument en cours. */
+export interface CallAt {
+	name: string;
+	index: number;
+}
+
+/**
+ * Fonction dont le curseur est dans les parenthèses, et argument en cours :
+ * les séparateurs sont comptés au niveau de cet appel, sans tenir compte des
+ * chaînes, des appels imbriqués, des noms de colonnes entre crochets
+ * ([Prix (€)]) ni des noms de feuilles entre apostrophes. La ligne ou la clé
+ * de Tableau[Colonne][clé] est une expression, qui peut contenir un appel.
+ */
+export function callAt(text: string, caret: number, sep = ';'): CallAt | null {
 	if (!text.trimStart().startsWith('=')) return null;
 	const before = text.slice(0, caret);
-	let depth = 0;
-	let quoted = false;
-	for (let i = before.length - 1; i >= 0; i--) {
+	// Pile des parenthèses (avec le nom de la fonction, vide pour un simple
+	// regroupement) et des crochets de clé.
+	const stack: { kind: '(' | '['; name: string; index: number }[] = [];
+	for (let i = 0; i < before.length; i++) {
 		const c = before[i];
-		if (c === '"') quoted = !quoted;
-		if (quoted) continue;
-		if (c === ')') depth++;
-		else if (c === '(') {
-			if (depth === 0) {
-				const name = /[\p{L}_][\p{L}\p{N}_.]*$/u.exec(before.slice(0, i))?.[0];
-				const f = name && cat.functions.find((x) => fold(x.name) === fold(name) || fold(x.other) === fold(name));
-				return f ? `${f.name} : ${f.arity}` : null;
+		if (c === '"' || c === "'") {
+			const end = before.indexOf(c, i + 1);
+			if (end < 0) break; // curseur dans la chaîne
+			i = end; // "" (guillemet doublé) : deux chaînes accolées, même résultat
+		} else if (c === '[') {
+			if (before[i - 1] === ']') {
+				stack.push({ kind: '[', name: '', index: 0 });
+			} else {
+				// Nom de colonne ou adresse : texte littéral jusqu'au « ] ».
+				const end = before.indexOf(']', i + 1);
+				if (end < 0) break; // curseur dans le nom
+				i = end;
 			}
-			depth--;
+		} else if (c === '(') {
+			const name = /[\p{L}_][\p{L}\p{N}_.]*$/u.exec(before.slice(0, i))?.[0] ?? '';
+			stack.push({ kind: '(', name, index: 0 });
+		} else if (c === ')' || c === ']') {
+			const k = c === ')' ? '(' : '[';
+			while (stack.length && stack[stack.length - 1].kind !== k) stack.pop();
+			stack.pop();
+		} else if (c === sep && stack.length) {
+			stack[stack.length - 1].index++;
 		}
 	}
+	for (let i = stack.length - 1; i >= 0; i--) {
+		const f = stack[i];
+		if (f.kind === '(' && f.name) return { name: f.name, index: f.index };
+	}
 	return null;
+}
+
+/** Fonction dont le curseur est dans les parenthèses, et rang de l'argument en cours. */
+export function signature(text: string, caret: number, cat: Catalog): { fn: FunctionDoc; index: number } | null {
+	const c = callAt(text, caret);
+	if (!c) return null;
+	const fn = cat.functions.find((x) => fold(x.name) === fold(c.name) || fold(x.other) === fold(c.name));
+	return fn ? { fn, index: c.index } : null;
+}
+
+/** Morceau de signature ; on : argument en cours (en gras). */
+export interface SigPart {
+	text: string;
+	on?: boolean;
+}
+
+/** Nom d'un argument répété pour la n-ième occurrence (valeur1 → valeur3). */
+const numbered = (name: string, n: number) => name.replace(/1$/, String(n));
+
+/**
+ * Signature à afficher pendant la saisie, comme Excel :
+ * SOMME.SI(plage; **critère**; [plage_somme]), SOMME(valeur1; [valeur2]; …),
+ * avec l'argument en cours (nom numéroté s'il est répété) et sa description.
+ */
+export function signatureParts(fn: FunctionDoc, index: number): { parts: SigPart[]; arg: ArgInfo | null } {
+	const args = fn.args ?? [];
+	const rep = Math.min(fn.repeat ?? 0, args.length);
+	const off = args.length - rep;
+	// Occurrence (2, 3…) et position dans le groupe répété de l'argument en cours.
+	const group = rep && index >= args.length ? Math.floor((index - off) / rep) + 1 : 0;
+	const inGroup = group ? (index - off) % rep : -1;
+	const parts: SigPart[] = [{ text: fn.name + '(' }];
+	let arg: ArgInfo | null = null;
+	const push = (text: string, on: boolean) => {
+		if (parts.length > 1) parts.push({ text: '; ' });
+		parts.push(on ? { text, on } : { text });
+	};
+	args.forEach((a, i) => {
+		if (i === index) arg = a;
+		push(a.optional ? `[${a.name}]` : a.name, i === index);
+	});
+	if (rep) {
+		const n = Math.max(group, 2);
+		if (n > 2) push('…', false);
+		push('[', false);
+		for (let j = 0; j < rep; j++) {
+			const a = args[off + j];
+			const name = numbered(a.name, n);
+			if (j === inGroup) arg = { ...a, name };
+			if (j > 0) parts.push({ text: '; ' });
+			parts.push(j === inGroup ? { text: name, on: true } : { text: name });
+		}
+		parts.push({ text: ']' });
+		push('…', false);
+	}
+	parts.push({ text: ')' });
+	return { parts, arg };
 }
 
 /** Applique une suggestion : nouveau texte et position du curseur. */
