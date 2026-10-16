@@ -417,7 +417,7 @@ Chaque valeur est traitée **exactement comme une frappe dans la grille** :
 - Une colonne au type **fixé** garde son type et marque la saisie comme invalide.
 - Un tableau qui grandit décale les tableaux placés en dessous, comme à la main.
 - Les noms de tableau et de colonne doivent être écrits **exactement** comme dans la grille
-  (majuscules et accents compris). Sinon : `tableau "Commande" : sql: no rows in result set`
+  (majuscules et accents compris). Sinon : `tableau « Commande » introuvable`
   (tableau inconnu) ou `tableau "Commandes" : pas de colonne "montant"`.
 
 ### `db.execute(sql, ...)` : une requête d'écriture
@@ -437,11 +437,11 @@ db.execute([[INSERT INTO Synthese (Client, Total)
 
 Différences avec `db.insert` / `db.update` :
 
-- **Pas d'élargissement de type** : les colonnes sont typées strictement. Une valeur du
-  mauvais type (un texte dans une colonne d'entiers) fait échouer **toute** la requête, sans
-  rien écrire : `cannot store TEXT value in INTEGER column t_1.c_2` (le message cite les noms
-  internes du tableau et de la colonne). Un décimal ne rentre pas non plus dans une colonne
-  d'entiers. Un booléen s'écrit `1` ou `0`, une date `'aaaa-mm-jj'`.
+- **Élargissement de type, comme au clavier** : une valeur du mauvais type (un décimal dans
+  une colonne d'entiers, un texte dans une colonne de nombres) élargit la colonne au type
+  qui l'accepte, puis la requête s'exécute ; Ctrl+Z défait les deux. Une colonne au type
+  **fixé** est élargie elle aussi par une requête : pour la protéger, filtrez les valeurs
+  dans la requête. Un booléen s'écrit `1` ou `0`, une date `'aaaa-mm-jj'`.
 - Les lignes ajoutées vont en fin de tableau.
 - Beaucoup plus rapide pour traiter de nombreuses lignes d'un coup.
 
@@ -611,7 +611,7 @@ print(erreurs .. " erreur(s)")
 | `db.query : ... no such column: montant` | nom de colonne mal écrit, ou non mis entre guillemets | vérifier l'en-tête, `"Montant HT"` |
 | `db.query : ... no such table: Commande` | nom de tableau mal écrit | `db.tables()` donne les noms exacts |
 | `db.query : plus de 100000 lignes ...` | trop de lignes pour `db.query` | `LIMIT` ou `db.rows` |
-| `db.insert : tableau "X" : sql: no rows in result set` | nom de tableau inexact | `db.tables()` donne les noms exacts |
+| `db.insert : tableau « X » introuvable` | nom de tableau inexact | `db.tables()` donne les noms exacts |
 | `db.insert : tableau "X" : pas de colonne "Y"` | nom de colonne inexact (majuscules, accents) | copier l'en-tête exact |
 | `db.execute : ... cannot store TEXT value in INTEGER column ...` | valeur du mauvais type dans `db.execute` | convertir la valeur, ou passer par `db.update` |
 | `db.update : tableau "X" : pas de ligne 99` | `_id` inexistant ou ligne déjà supprimée | relire `_id` dans le tableau |
