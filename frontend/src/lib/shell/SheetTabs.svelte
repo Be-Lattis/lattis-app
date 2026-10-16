@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Onglets de feuilles en bas, comme Excel : clic pour changer de feuille,
-	// double-clic pour renommer, clic droit pour supprimer, « + » pour ajouter.
+	// double-clic pour renommer, clic droit pour insérer, renommer ou supprimer,
+	// glisser pour réordonner, « + » pour ajouter à la fin.
 	interface Sheet {
 		id: number;
 		name: string;
@@ -10,11 +11,15 @@
 		active: number;
 		onselect: (id: number) => void;
 		onadd?: () => void;
+		/** Insère une feuille avant la feuille before. */
+		oninsert?: (before: number) => void;
+		/** Place la feuille id au rang to (0 : première). */
+		onmove?: (id: number, to: number) => void;
 		onrename?: (id: number, name: string) => void;
 		ondelete?: (id: number) => void;
 	}
 
-	let { sheets, active, onselect, onadd, onrename, ondelete }: Props = $props();
+	let { sheets, active, onselect, onadd, oninsert, onmove, onrename, ondelete }: Props = $props();
 
 	let renaming = $state<number | null>(null);
 	let draft = $state('');
@@ -32,6 +37,38 @@
 	}
 
 	const index = $derived(sheets.findIndex((s) => s.id === active));
+
+	// Glisser un onglet : au-delà de quelques pixels, l'onglet suit la souris et
+	// un trait marque où il sera déposé (drop : rang d'insertion dans sheets).
+	let drag = $state<{ id: number; x0: number; moved: boolean; drop: number } | null>(null);
+	let tabEls: HTMLElement[] = $state([]);
+	let dropX = $state(0);
+
+	function dragStart(e: PointerEvent, s: Sheet) {
+		if (!onmove || e.button !== 0 || sheets.length < 2) return;
+		drag = { id: s.id, x0: e.clientX, moved: false, drop: -1 };
+		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+	}
+	function dragMove(e: PointerEvent) {
+		if (!drag) return;
+		if (!drag.moved && Math.abs(e.clientX - drag.x0) < 6) return;
+		drag.moved = true;
+		const rects = tabEls.map((el) => el?.getBoundingClientRect());
+		let k = rects.findIndex((r) => r && e.clientX < r.left + r.width / 2);
+		if (k < 0) k = sheets.length;
+		drag.drop = k;
+		const host = (e.currentTarget as HTMLElement).parentElement!.getBoundingClientRect();
+		const r = rects[Math.min(k, rects.length - 1)];
+		dropX = r ? (k < rects.length ? r.left : r.right) - host.left : 0;
+	}
+	function dragEnd() {
+		const d = drag;
+		drag = null;
+		if (!d?.moved) return;
+		const from = sheets.findIndex((s) => s.id === d.id);
+		const to = d.drop > from ? d.drop - 1 : d.drop;
+		if (from >= 0 && d.drop >= 0 && to !== from) onmove?.(d.id, to);
+	}
 </script>
 
 <div class="sheet-tabs">
@@ -39,7 +76,7 @@
 		<button disabled={index <= 0} onclick={() => onselect(sheets[index - 1].id)} title="Feuille précédente">◀</button>
 		<button disabled={index < 0 || index >= sheets.length - 1} onclick={() => onselect(sheets[index + 1].id)} title="Feuille suivante">▶</button>
 	</div>
-	{#each sheets as s (s.id)}
+	{#each sheets as s, si (s.id)}
 		{#if renaming === s.id}
 			<!-- svelte-ignore a11y_autofocus -->
 			<input
@@ -55,23 +92,38 @@
 			/>
 		{:else}
 			<button
+				bind:this={tabEls[si]}
 				class="sheet"
 				class:on={s.id === active}
+				class:dragging={drag?.moved && drag.id === s.id}
+				onpointerdown={(e) => dragStart(e, s)}
+				onpointermove={dragMove}
+				onpointerup={dragEnd}
+				onpointercancel={() => (drag = null)}
 				onclick={() => onselect(s.id)}
 				ondblclick={() => startRename(s)}
 				oncontextmenu={(e) => {
 					e.preventDefault();
-					if (ondelete || onrename) menu = { id: s.id, x: (e.currentTarget as HTMLElement).offsetLeft };
+					if (ondelete || onrename || oninsert) menu = { id: s.id, x: (e.currentTarget as HTMLElement).offsetLeft };
 				}}
-				title="Double-clic pour renommer">{s.name}</button
+				title={onmove ? 'Double-clic pour renommer, glisser pour déplacer' : 'Double-clic pour renommer'}>{s.name}</button
 			>
 		{/if}
 	{/each}
+	{#if drag?.moved && drag.drop >= 0}<span class="drop-mark" style:left="{dropX - 1}px"></span>{/if}
 	<button class="add" disabled={!onadd} onclick={() => onadd?.()} title="Nouvelle feuille">+</button>
 	{#if menu}
 		{@const m = menu}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div class="menu" style:left="{m.x}px" onmouseleave={() => (menu = null)}>
+			<button
+				disabled={!oninsert}
+				onclick={() => {
+					const id = m.id;
+					menu = null;
+					oninsert?.(id);
+				}}>Insérer une feuille</button
+			>
 			<button
 				onclick={() => {
 					const s = sheets.find((x) => x.id === m.id);
@@ -82,8 +134,9 @@
 			<button
 				disabled={sheets.length <= 1}
 				onclick={() => {
+					const id = m.id;
 					menu = null;
-					ondelete?.(m.id);
+					ondelete?.(id);
 				}}>Supprimer</button
 			>
 		</div>
@@ -135,6 +188,18 @@
 		color: #217346;
 		font-weight: 600;
 		box-shadow: inset 0 -3px 0 #217346;
+	}
+	.sheet.dragging {
+		opacity: 0.6;
+		cursor: grabbing;
+	}
+	.drop-mark {
+		position: absolute;
+		top: 3px;
+		bottom: 3px;
+		width: 2px;
+		background: #217346;
+		pointer-events: none;
 	}
 	.rename {
 		font: inherit;

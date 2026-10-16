@@ -21,7 +21,7 @@
 	import { typeLabel, type ColumnType } from '#lib/grid/format.js';
 	import type { Fetched } from '#lib/grid/cache.js';
 
-	type Mode = 'starting' | 'recover' | 'doc' | 'demo';
+	type Mode = 'starting' | 'recover' | 'doc' | 'demo' | 'closed';
 
 	let mode = $state<Mode>('starting');
 	let bench = $state(false);
@@ -38,6 +38,9 @@
 	let orphans = $state<Orphan[]>([]);
 	let help = $state<FormulaHelp | null>(null);
 	let scripts = $state<Script[]>([]);
+	let recent = $state<string[]>([]);
+	// Fermer un classeur modifié : enregistrer d'abord ?
+	let closing = $state(false);
 
 	// Démo.
 	let demo = $state<{ name: string; rows: number; columns: { name: string; type: ColumnType }[]; sqlName: string; sqlColumns: string[] } | null>(null);
@@ -52,8 +55,47 @@
 		scripts = (await DocumentService.Scripts()) ?? [];
 	}
 
+	const loadRecent = async () => (recent = (await DocumentService.Recent().catch(() => null)) ?? []);
+
+	async function openPath(path: string) {
+		const r = await DocumentService.Open(path);
+		if (r.recoverable) {
+			orphans = [r.recoverable];
+			mode = 'recover';
+		} else if (!r.cancelled) {
+			view = 'grid';
+			sheetId = 1;
+			mode = 'doc';
+			await reload();
+		}
+		await loadRecent();
+	}
+
+	/** Ferme le classeur ; modifié, il demande d'abord s'il faut l'enregistrer. */
+	async function closeDoc(save?: boolean) {
+		closing = false;
+		if (mode === 'doc' && docState.dirty && save === undefined) {
+			closing = true;
+			return;
+		}
+		if (save) {
+			docState = await DocumentService.Save(false);
+			if (docState.dirty) return; // enregistrement abandonné
+		}
+		sheet?.closeOverlays();
+		await DocumentService.CloseDocument();
+		docState = { open: false, path: '', title: '', dirty: false, undo: '', redo: '' };
+		layout = null;
+		sheetStatus = null;
+		view = 'grid';
+		mode = 'closed';
+		await loadRecent();
+	}
+
 	async function startDoc() {
 		mode = 'doc';
+		view = 'grid';
+		sheetId = 1;
 		await DocumentService.New();
 		await reload();
 	}
@@ -97,6 +139,7 @@
 			try {
 				bench = await GridService.BenchRequested();
 				if (bench) return startDemo();
+				loadRecent();
 				orphans = (await DocumentService.Orphans()) ?? [];
 				if (orphans.length > 0) mode = 'recover';
 				else await startDoc();
@@ -108,7 +151,7 @@
 			if (e.defaultPrevented) return; // déjà traité (éditeur de script : Ctrl+S)
 			const ctrl = e.ctrlKey || e.metaKey;
 			const action: FileAction | null =
-				e.key === 'F12' ? 'saveAs' : ctrl && e.key.toLowerCase() === 's' ? 'save' : ctrl && e.key.toLowerCase() === 'o' ? 'open' : ctrl && e.key.toLowerCase() === 'n' ? 'new' : null;
+				e.key === 'F12' ? 'saveAs' : ctrl && e.key.toLowerCase() === 's' ? 'save' : ctrl && e.key.toLowerCase() === 'o' ? 'open' : ctrl && e.key.toLowerCase() === 'n' ? 'new' : ctrl && e.key.toLowerCase() === 'w' ? 'close' : null;
 			if (action) {
 				e.preventDefault();
 				file(action);
@@ -128,22 +171,18 @@
 				case 'new':
 					await startDoc();
 					break;
-				case 'open': {
-					const r = await DocumentService.Open('');
-					if (r.recoverable) {
-						orphans = [r.recoverable];
-						mode = 'recover';
-					} else if (!r.cancelled) {
-						mode = 'doc';
-						await reload();
-					}
+				case 'open':
+					await openPath('');
 					break;
-				}
+				case 'close':
+					await closeDoc();
+					break;
 				case 'save':
 				case 'saveAs':
 					if (mode !== 'doc') return;
 					docState = await DocumentService.Save(a === 'saveAs');
 					if (!docState.dirty) notice = `Enregistré : ${docState.path}`;
+					await loadRecent();
 					break;
 				case 'import': {
 					if (mode !== 'doc') await startDoc();
@@ -337,7 +376,7 @@
 
 	const query = (sql: string) => (mode === 'demo' ? GridService.Query(sql) : DocumentService.Query(sql));
 	const data = $derived(mode === 'demo' ? demoData : docData);
-	const title = $derived(mode === 'demo' ? 'Démo : 1 M de lignes' : docState.title);
+	const title = $derived(mode === 'demo' ? 'Démo : 1 M de lignes' : mode === 'recover' ? 'Récupération' : docState.title);
 	const tabs = $derived(mode === 'demo' ? (demo ? [{ id: 1, name: demo.name }] : []) : (layout?.sheets ?? []).map((s) => ({ id: s.id, name: s.name })));
 
 	/** « Afficher sur la feuille » : va sur la feuille de l'objet et le sélectionne. */
@@ -394,6 +433,9 @@
 		{view}
 		{title}
 		dirty={mode === 'doc' && docState.dirty}
+		disabled={mode !== 'doc' && mode !== 'demo'}
+		{recent}
+		onrecent={(p) => openPath(p).catch((e) => (notice = err(e)))}
 		undo={mode === 'doc' ? docState.undo : ''}
 		redo={mode === 'doc' ? docState.redo : ''}
 		onview={(v) => (view = v)}
@@ -402,6 +444,7 @@
 		onredo={() => DocumentService.Redo().then(reload).catch((e) => (notice = err(e)))}
 		onbench={mode === 'demo' ? () => sheet?.runBench() : undefined}
 		onsort={mode === 'doc' ? (desc) => sheet?.sortActive(desc) : undefined}
+		oncells={mode === 'doc' ? (op) => sheet?.cellsActive(op) : undefined}
 		onstyle={mode === 'doc' ? (patch) => sheet?.applyStyle(patch) : undefined}
 		onfind={mode === 'doc' ? (replace) => sheet?.openFinder(replace) : undefined}
 		onrules={mode === 'doc' ? () => sheet?.rulesActive() : undefined}
@@ -433,6 +476,23 @@
 						<button onclick={() => recover(o, false)}>Abandonner</button>
 					</div>
 				{/each}
+			</div>
+		{:else if mode === 'closed'}
+			<div class="splash">
+				<h1>Slitable</h1>
+				<p>Aucun classeur ouvert.</p>
+				<div class="actions">
+					<button class="primary" onclick={() => file('new')}>Nouveau classeur</button>
+					<button onclick={() => file('open')}>Ouvrir…</button>
+				</div>
+				{#if recent.length}
+					<div class="recent">
+						<p class="muted">Récents</p>
+						{#each recent as p (p)}
+							<button class="link" title={p} onclick={() => openPath(p).catch((e) => (notice = err(e)))}>{p.split(/[\\/]/).pop()}</button>
+						{/each}
+					</div>
+				{/if}
 			</div>
 		{:else if data}
 			{#key mode}
@@ -489,9 +549,23 @@
 		active={mode === 'demo' ? 1 : sheetId}
 		onselect={selectSheet}
 		onadd={mode === 'doc' ? () => sheetAction(async () => selectSheet(await DocumentService.AddSheet())) : undefined}
+		oninsert={mode === 'doc' ? (before) => sheetAction(async () => selectSheet(await DocumentService.InsertSheet(before))) : undefined}
+		onmove={mode === 'doc' ? (id, to) => sheetAction(() => DocumentService.MoveSheet(id, to)) : undefined}
 		onrename={mode === 'doc' ? (id, name) => sheetAction(() => DocumentService.RenameSheet(id, name)) : undefined}
 		ondelete={mode === 'doc' ? (id) => sheetAction(() => DocumentService.DeleteSheet(id)) : undefined}
 	/>
+	{#if closing}
+		<div class="modal-back">
+			<div class="modal" role="dialog" aria-modal="true">
+				<p>Enregistrer les modifications de « {docState.title} » avant de le fermer ?</p>
+				<div class="actions">
+					<button class="primary" onclick={() => closeDoc(true).catch((e) => (notice = err(e)))}>Enregistrer</button>
+					<button onclick={() => closeDoc(false).catch((e) => (notice = err(e)))}>Ne pas enregistrer</button>
+					<button onclick={() => (closing = false)}>Annuler</button>
+				</div>
+			</div>
+		</div>
+	{/if}
 	<footer class="statusbar">
 		{#if sheetStatus}
 			<span class="cell">{sheetStatus.cell}</span>
@@ -622,6 +696,53 @@
 	.muted {
 		color: #6b7280;
 		font-size: 12px;
+	}
+	.actions {
+		display: flex;
+		gap: 8px;
+		justify-content: center;
+	}
+	.recent {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 2px;
+		margin-top: 12px;
+	}
+	.recent .muted {
+		margin: 0 0 4px;
+	}
+	button.link {
+		border: none;
+		background: none;
+		color: #217346;
+		padding: 2px 8px;
+	}
+	button.link:hover {
+		text-decoration: underline;
+	}
+	.modal-back {
+		position: fixed;
+		inset: 0;
+		z-index: 50;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(0, 0, 0, 0.2);
+	}
+	.modal {
+		background: #fff;
+		border: 1px solid #d4d7db;
+		border-radius: 4px;
+		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+		padding: 16px 20px;
+		max-width: 440px;
+	}
+	.modal p {
+		margin: 0 0 14px;
+	}
+	.modal .actions {
+		justify-content: flex-end;
 	}
 	.error {
 		color: #b42318;

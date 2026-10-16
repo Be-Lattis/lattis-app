@@ -121,6 +121,7 @@ func (s *DocumentService) Open(ctx context.Context, path string) (OpenResult, er
 		return OpenResult{}, err
 	}
 	s.replace(d)
+	addRecent(path)
 	st, err := s.State(ctx)
 	return OpenResult{State: st}, err
 }
@@ -186,6 +187,7 @@ func (s *DocumentService) Save(ctx context.Context, as bool) (DocState, error) {
 	if err := d.Save(ctx, path); err != nil {
 		return DocState{}, err
 	}
+	addRecent(d.Path())
 	return s.changed(ctx)
 }
 
@@ -372,7 +374,7 @@ func (s *DocumentService) Paste(ctx context.Context, sheet int64, row, col int, 
 	return ev, err
 }
 
-// AddSheet ajoute un onglet et renvoie son identifiant.
+// AddSheet ajoute un onglet à la fin et renvoie son identifiant.
 func (s *DocumentService) AddSheet(ctx context.Context) (int64, error) {
 	d, err := s.current()
 	if err != nil {
@@ -384,6 +386,25 @@ func (s *DocumentService) AddSheet(ctx context.Context) (int64, error) {
 	}
 	_, err = s.changed(ctx)
 	return id, err
+}
+
+// InsertSheet ajoute un onglet avant l'onglet before et renvoie son identifiant.
+func (s *DocumentService) InsertSheet(ctx context.Context, before int64) (int64, error) {
+	d, err := s.current()
+	if err != nil {
+		return 0, err
+	}
+	id, err := d.InsertSheet(ctx, before)
+	if err != nil {
+		return 0, err
+	}
+	_, err = s.changed(ctx)
+	return id, err
+}
+
+// MoveSheet place un onglet au rang to (0 : premier).
+func (s *DocumentService) MoveSheet(ctx context.Context, sheet int64, to int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.MoveSheet(ctx, sheet, to) })
 }
 
 // RenameSheet et DeleteSheet agissent sur un onglet.

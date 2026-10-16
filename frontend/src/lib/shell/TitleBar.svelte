@@ -72,7 +72,7 @@
 	</div>
 	<div class="caption title" role="presentation" ondblclick={dblclick}>
 		<span class="name">{title}</span>{#if dirty}<span class="muted" title="Modifications non enregistrées">&nbsp;•</span>{/if}
-		<span class="muted">&nbsp;– Slitable</span>
+		<span class="muted">{title ? '\u00a0– Slitable' : 'Slitable'}</span>
 	</div>
 	{#if !mac}
 		<div class="controls">

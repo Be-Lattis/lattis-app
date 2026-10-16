@@ -32,6 +32,7 @@ export const icons = {
 	'border-none': '<path stroke-dasharray="1.5 2" d="M4 4h16v16H4zM12 4v16M4 12h16"/>',
 	'format-painter': '<rect x="4" y="3.5" width="13" height="6" rx="1.5"/><path d="M17 6.5h2.5V12h-8v3"/><rect class="af" x="10" y="15" width="3" height="6" rx="1"/>',
 	'decimal-more': '<path d="M3.5 17.5h.01"/><path d="M8 9.5a2 2 0 1 1 4 0v5a2 2 0 1 1-4 0zM14 9.5a2 2 0 1 1 4 0v5a2 2 0 1 1-4 0z"/><path class="a" d="M17 21h5m-2-2 2 2-2 2"/>',
+	'decimal-fixed': '<path d="M3.5 17.5h.01"/><path d="M8 9.5a2 2 0 1 1 4 0v5a2 2 0 1 1-4 0zM14 9.5a2 2 0 1 1 4 0v5a2 2 0 1 1-4 0z"/><path class="a" d="M7 20.5h13"/>',
 	'decimal-less': '<path d="M3.5 17.5h.01"/><path d="M8 9.5a2 2 0 1 1 4 0v5a2 2 0 1 1-4 0z"/><path class="a" d="M22 21h-5m2-2-2 2 2 2"/>',
 
 	// Nombre
@@ -44,6 +45,10 @@ export const icons = {
 	filter: '<path class="a" d="M4 5h16l-6 7.5V19l-4 2v-8.5z"/>',
 	search: '<circle cx="10.5" cy="10.5" r="6"/><path class="a" d="m15 15 5.5 5.5"/>',
 	zoom: '<circle cx="10.5" cy="10.5" r="6"/><path class="a" d="m15 15 5.5 5.5"/><path d="M8 10.5h5M10.5 8v5"/>',
+	'insert-row': '<rect x="3.5" y="3.5" width="17" height="5" rx="1"/><rect x="3.5" y="15.5" width="17" height="5" rx="1"/><path class="a" d="M12 9.5v5M9.5 12h5"/>',
+	'delete-row': '<rect x="3.5" y="3.5" width="17" height="5" rx="1"/><rect x="3.5" y="15.5" width="17" height="5" rx="1"/><path class="a" d="m10 10 4 4m0-4-4 4"/>',
+	'insert-column': '<rect x="3.5" y="3.5" width="5" height="17" rx="1"/><rect x="15.5" y="3.5" width="5" height="17" rx="1"/><path class="a" d="M12 9.5v5M9.5 12h5"/>',
+	'delete-column': '<rect x="3.5" y="3.5" width="5" height="17" rx="1"/><rect x="15.5" y="3.5" width="5" height="17" rx="1"/><path class="a" d="m10 10 4 4m0-4-4 4"/>',
 	'remove-duplicates': '<rect x="3.5" y="3.5" width="11" height="11" rx="1.5"/><path d="M9.5 18v1a1.5 1.5 0 0 0 1.5 1.5h8a1.5 1.5 0 0 0 1.5-1.5v-8A1.5 1.5 0 0 0 19 9.5h-1"/><path class="a" d="m7 7 4 4m0-4-4 4"/>',
 	'convert-type': '<path d="M4 8h11M12 5l3 3-3 3"/><path class="a" d="M20 16H9M12 13l-3 3 3 3"/>',
 	warning: '<path class="a" d="M12 3.5 21.5 20h-19z"/><path d="M12 10v4.5M12 17.25v.25"/>',
@@ -53,6 +58,7 @@ export const icons = {
 	'pivot-table': '<rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><path d="M3.5 8.5h17M8.5 3.5v17"/><path class="a" d="M12 12.5h2.5A2.5 2.5 0 0 1 17 15v2.5M10.5 11l1.5 1.5-1.5 1.5M15.5 16l1.5 1.5 1.5-1.5"/>',
 	'chart-bar': '<path d="M3.5 20.5h17"/><rect class="af" x="5.5" y="13" width="3" height="7.5" rx=".5"/><rect class="af" x="10.5" y="6" width="3" height="14.5" rx=".5"/><rect class="af" x="15.5" y="10" width="3" height="10.5" rx=".5"/>',
 	'chart-line': '<path d="M4 4v16h16"/><path class="a" d="m7 15 4-4 3 3 6-7"/>',
+	'chart-scatter': '<path d="M4 4v16h16"/><circle class="af" cx="8.5" cy="15" r="1.5"/><circle class="af" cx="12" cy="10.5" r="1.5"/><circle class="af" cx="16" cy="13" r="1.5"/><circle class="af" cx="17.5" cy="6.5" r="1.5"/>',
 	'chart-pie': '<path d="M11 4a8.5 8.5 0 1 0 9 9h-9z"/><path class="af" d="M14 2.5V10h7.5A7.5 7.5 0 0 0 14 2.5z"/>',
 
 	// Formules
