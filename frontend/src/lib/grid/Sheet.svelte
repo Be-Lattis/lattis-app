@@ -531,6 +531,25 @@
 	let holdRows = 0;
 	let holdCols = 0;
 
+	// Pendant un défilement (molette, pavé, barre), la zone ne rétrécit pas :
+	// les barres gardent leur taille et ne sautent pas. Elle se réajuste un
+	// instant après le dernier mouvement.
+	let scrolling = 0;
+	let scrollHoldRows = 0;
+	let scrollHoldCols = 0;
+	function holdWhileScrolling() {
+		// Le plus grand atteint pendant le geste (il a pu s'agrandir en route).
+		scrollHoldRows = Math.max(scrollHoldRows, rowAxis.indexAt(vs.content));
+		scrollHoldCols = Math.max(scrollHoldCols, extentCols);
+		clearTimeout(scrolling);
+		scrolling = window.setTimeout(() => {
+			scrolling = 0;
+			scrollHoldRows = scrollHoldCols = 0;
+			updateExtent();
+			schedule();
+		}, 400);
+	}
+
 	/** Barre horizontale (ligne des onglets) tirée : figer la largeur, l'agrandir au bout. */
 	export function holdHScroll(on: boolean) {
 		holdCols = on ? extentCols : 0;
@@ -563,10 +582,10 @@
 		const lastVisible = rowAxis.indexAt(vs.top + vs.view);
 		// Comme Excel : la barre s'arrête à la zone utilisée (ou à l'écran affiché) ;
 		// molette, flèches et sélection vont au-delà et l'agrandissent.
-		const rows = Math.min(SHEET_ROWS, Math.max(usedRow + 1, lastVisible + 1, holdRows));
+		const rows = Math.min(SHEET_ROWS, Math.max(usedRow + 1, lastVisible + 1, holdRows, scrollHoldRows));
 		const cw = Math.max(0, viewW - MARGIN);
 		const lastVisibleCol = colAxis.indexAt(scroller.scrollLeft + cw);
-		extentCols = Math.min(SHEET_COLS, Math.max(usedCol + 1, lastVisibleCol + 1, holdCols));
+		extentCols = Math.min(SHEET_COLS, Math.max(usedCol + 1, lastVisibleCol + 1, holdCols, scrollHoldCols));
 		vs.content = rowTop(rows);
 		vs.to(vs.top);
 		onhscroll?.({ content: MARGIN + colAxis.offset(extentCols), view: scroller.clientWidth, left: scroller.scrollLeft });
@@ -2295,6 +2314,7 @@
 	}
 
 	function onScroll() {
+		holdWhileScrolling();
 		if (holdRows && scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 2) growAtEnd(true);
 		if (!vs.inSync(scroller.scrollTop)) vs.fromNative(scroller.scrollTop);
 		updateExtent();
@@ -2303,6 +2323,7 @@
 
 	function onWheel(e: WheelEvent) {
 		if (e.ctrlKey) return;
+		holdWhileScrolling();
 		const unit = e.deltaMode === 1 ? ROW_H : e.deltaMode === 2 ? vs.view : 1;
 		let dy = e.deltaY * unit;
 		let dx = e.deltaX * unit;
