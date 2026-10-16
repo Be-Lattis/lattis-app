@@ -3838,7 +3838,7 @@
 			{#if source.setLineRules}<button onclick={() => openLineRules(false)}>Mise en forme conditionnelle…</button>{/if}
 		{:else}
 			<button onclick={() => openLinesDialog(true, x, y)}>Insérer…</button>
-			<button onclick={() => openLinesDialog(false, x, y)}>Supprimer…</button>
+			<button onclick={() => { menu = freeMenu = null; clearSelection(); }}>Supprimer</button>
 		{/if}
 	{/if}
 {/snippet}
