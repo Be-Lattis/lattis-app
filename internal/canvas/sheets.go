@@ -21,7 +21,7 @@ func (m *Model) AddSheet(ctx context.Context) (int64, error) {
 		}
 		name := ""
 		for n := int(id); ; n++ {
-			name = fmt.Sprintf("Feuille %d", n)
+			name = fmt.Sprintf("Feuille%d", n)
 			var k int
 			if err := t.row(`SELECT count(*) FROM _slitable_sheets WHERE name = ?`, name).Scan(&k); err != nil {
 				return err

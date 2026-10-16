@@ -30,6 +30,9 @@ var st = command.S
 type tx struct {
 	*command.Tx
 	m *Model
+	// keyed : colonne devenue clé pendant la transaction ("Tableau.Colonne"),
+	// pour l'annoncer quand c'est une formule qui l'a posée.
+	keyed string
 }
 
 func (t *tx) apply(do, undo []stmt) error { return t.Apply(do, undo) }
@@ -70,7 +73,7 @@ func (m *Model) volatile() (time.Time, uint64) {
 
 // Do exécute une action dans une transaction du bus de commandes.
 func (m *Model) Do(ctx context.Context, name string, fn func(*tx) error) error {
-	_, err := m.bus.Do(ctx, name, func(c *command.Tx) error { return fn(&tx{c, m}) })
+	_, err := m.bus.Do(ctx, name, func(c *command.Tx) error { return fn(&tx{Tx: c, m: m}) })
 	return err
 }
 
@@ -81,5 +84,5 @@ func (m *Model) read(ctx context.Context, fn func(*tx) error) error {
 		return err
 	}
 	defer sqlTx.Rollback()
-	return fn(&tx{&command.Tx{Tx: sqlTx, Ctx: ctx}, m})
+	return fn(&tx{Tx: &command.Tx{Tx: sqlTx, Ctx: ctx}, m: m})
 }

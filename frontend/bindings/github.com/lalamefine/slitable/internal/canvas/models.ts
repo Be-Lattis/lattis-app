@@ -218,6 +218,11 @@ export interface Event {
      * Headless : tableau collé sans ligne d'en-tête reconnue (« Colonne n »).
      */
     "headless": boolean;
+
+    /**
+     * Keyed : colonne devenue clé pour une formule (« Tableau.Colonne »).
+     */
+    "keyed": string;
 }
 
 /**
@@ -278,6 +283,27 @@ export interface Layout {
 export interface Match {
     "row": number;
     "col": number;
+}
+
+/**
+ * Mix décrit une colonne passée en texte par élargissement alors que la
+ * plupart de ses valeurs sont d'un autre type (Type vide : pas de tel type).
+ */
+export interface Mix {
+    /**
+     * type majoritaire
+     */
+    "type": grid$0.Type;
+
+    /**
+     * valeurs qui n'en sont pas
+     */
+    "off": number;
+
+    /**
+     * valeurs non vides
+     */
+    "total": number;
 }
 
 /**

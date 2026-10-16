@@ -16,6 +16,7 @@ export type {
     FilterValue,
     Layout,
     Match,
+    Mix,
     NameInfo,
     PivotConfig,
     PivotFilter,

@@ -259,6 +259,29 @@ func TestWideningEvent(t *testing.T) {
 	check(t, d, "élargissement")
 }
 
+func TestTypeMix(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	for r, v := range []string{"Age", "31", "27", "45"} {
+		d.SetCell(ctx, 1, r, 0, v)
+	}
+	if mix, err := d.TypeMix(ctx, "Feuille1", 0); err != nil || mix != (Mix{}) {
+		t.Fatalf("colonne en entier : %+v, %v", mix, err)
+	}
+	if ev, _ := d.SetCell(ctx, 1, 4, 0, "abc"); ev.To != grid.Text {
+		t.Fatalf("pas d'élargissement : %+v", ev)
+	}
+	mix, err := d.TypeMix(ctx, "Feuille1", 0)
+	if err != nil || mix != (Mix{Type: grid.Integer, Off: 1, Total: 4}) {
+		t.Fatalf("TypeMix = %+v, %v", mix, err)
+	}
+	d.SetCell(ctx, 1, 5, 0, "def")
+	d.SetCell(ctx, 1, 6, 0, "ghi")
+	if mix, _ := d.TypeMix(ctx, "Feuille1", 0); mix.Type != "" {
+		t.Fatalf("moitié hors type : %+v", mix)
+	}
+}
+
 func TestInfer(t *testing.T) {
 	for raw, want := range map[string]grid.Type{
 		"12": grid.Integer, "1 234": grid.Integer, "12,5": grid.Decimal, "VRAI": grid.Boolean,
@@ -449,8 +472,8 @@ func TestFormulas(t *testing.T) {
 	if _, err := d.SetCell(ctx, 1, 6, 0, "=SOMME(Feuille1[Montant])"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := d.SetCell(ctx, 1, 6, 2, "=RECHERCHEV(\"souris\";Feuille1;2;FAUX)"); err != nil {
-		t.Fatal(err)
+	if ev, err := d.SetCell(ctx, 1, 6, 2, "=RECHERCHEV(\"souris\";Feuille1;2;FAUX)"); err != nil || ev.Keyed != "Feuille1.Produit" {
+		t.Fatalf("SetCell = %+v, %v", ev, err)
 	}
 	l, err := d.Layout(ctx, 1)
 	if err != nil {

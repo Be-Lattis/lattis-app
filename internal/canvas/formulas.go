@@ -139,6 +139,7 @@ func (t *tx) ensureKey(table, column string) error {
 		return ErrKey{table, column, fmt.Sprintf("%d valeur(s) en double", total-distinct)}
 	}
 	index := tb.sql() + "_key"
+	t.keyed = tb.Name + "." + c.Name
 	return t.apply([]stmt{
 		st(`CREATE UNIQUE INDEX ` + index + ` ON ` + tb.sql() + `(` + expr + `)`),
 		st(`UPDATE _slitable_tables SET key_col = ? WHERE id = ?`, c.ID, tb.ID),

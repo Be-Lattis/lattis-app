@@ -50,6 +50,13 @@
 		filter?: ColumnFilter; // filtre de la colonne
 	}
 
+	/** Colonne passée en texte par élargissement : type de la plupart de ses valeurs. */
+	export interface TypeMix {
+		type: ColumnType | ''; // vide : pas de type majoritaire
+		off: number; // valeurs hors de ce type
+		total: number; // valeurs non vides
+	}
+
 	export interface PivotValue {
 		field?: string; // vide : nombre de lignes
 		agg: 'sum' | 'count' | 'countDistinct' | 'avg' | 'min' | 'max';
@@ -180,6 +187,8 @@
 		/** Nombre de valeurs qui ne se convertiraient pas au type to. */
 		convertPreview?(table: SheetTable, i: number, to: ColumnType): Promise<number>;
 		setType?(table: SheetTable, i: number, to: ColumnType): Promise<unknown>;
+		/** Type majoritaire d'une colonne en texte au type inféré. */
+		typeMix?(table: SheetTable, i: number): Promise<TypeMix>;
 		setColumnWidth?(col: number, width: number): Promise<unknown>;
 		/** Hauteur d'une ligne de la feuille (0 : par défaut). */
 		setRowHeight?(row: number, height: number): Promise<unknown>;
@@ -346,6 +355,8 @@
 			return e;
 		});
 		cells = new Map(d.cells.map((c) => [key(c.row, c.col), c.raw]));
+		mixes.clear();
+		tipCell = '';
 		pivots = d.pivots ?? [];
 		if (openPivotOnLoad && pivots.length) {
 			openPivotOnLoad = false;
@@ -1033,11 +1044,8 @@
 			const e = mine ? cur : visible.find((e) => r > e.t.row && r <= e.last);
 			if (e) {
 				ctx.fillStyle = mine || !cur ? C.stripText : C.stripLine;
-				let label = String(r - e.t.row);
-				if (e.t.key !== undefined && r <= e.last) {
-					const k = e.cache.row(r - e.t.row - 1)?.text[e.t.key];
-					if (k !== undefined) label = k;
-				}
+				// Toujours le numéro de ligne, même avec une clé (🔑 dans l'en-tête).
+				const label = String(r - e.t.row);
 				ctx.save();
 				ctx.beginPath();
 				ctx.rect(0, y, MARGIN - 4, rh(r));
@@ -2374,6 +2382,7 @@
 						: headerAt(e)
 							? 'pointer'
 							: '';
+		if (!dragging) updateHeaderTip(e);
 		if (!dragging) return;
 		const cell = cellAt(e);
 		if (!cell) return;
@@ -2995,7 +3004,65 @@
 	// --- Menu de type (icône de l'en-tête) ------------------------------------
 
 	const TYPES: ColumnType[] = ['text', 'integer', 'decimal', 'date', 'boolean'];
-	let typeMenu = $state<{ x: number; y: number; e: Entry; i: number; pending?: { to: ColumnType; n: number }; keyWhy?: string | null } | null>(null);
+	let typeMenu = $state<{
+		x: number;
+		y: number;
+		e: Entry;
+		i: number;
+		pending?: { to: ColumnType; n: number };
+		keyWhy?: string | null;
+		mix?: TypeMix | null;
+	} | null>(null);
+
+	// Une valeur hors type fait passer une colonne inférée en texte : l'infobulle
+	// de l'en-tête et le menu ▾ disent combien de valeurs sortent du type
+	// majoritaire, et le menu propose d'y revenir (ces valeurs marquées en erreur).
+	const mixes = new Map<string, Promise<TypeMix | null>>();
+	function mixOf(e: Entry, i: number): Promise<TypeMix | null> {
+		const k = e.t.columns[i];
+		if (!source.typeMix || k.type !== 'text' || k.fixed || k.formula) return Promise.resolve(null);
+		const id = `${e.t.id}:${i}`;
+		let p = mixes.get(id);
+		if (!p) {
+			p = source.typeMix(e.t, i).then(
+				(m) => (m.type ? m : null),
+				() => null
+			);
+			mixes.set(id, p);
+		}
+		return p;
+	}
+
+	function mixText(m: TypeMix): string {
+		const n = m.off > 1;
+		const what =
+			m.type === 'date'
+				? n ? 'qui ne sont pas des dates' : "qui n'est pas une date"
+				: m.type === 'boolean'
+					? n ? 'non booléennes' : 'non booléenne'
+					: n ? 'non numériques' : 'non numérique';
+		return `${m.off} valeur${n ? 's' : ''} ${what} sur ${m.total}`;
+	}
+
+	/** Infobulle d'un en-tête de colonne : nom complet et type. */
+	let tipCell = '';
+	function updateHeaderTip(ev: MouseEvent) {
+		const cell = cellAt(ev);
+		const e = cell && tableAt(cell.row, cell.col);
+		if (!cell || !e || cell.row !== e.t.row) {
+			if (tipCell) scroller.title = tipCell = '';
+			return;
+		}
+		const i = cell.col - e.t.col;
+		const id = `${e.t.id}:${i}`;
+		if (id === tipCell) return;
+		tipCell = id;
+		const k = e.t.columns[i];
+		scroller.title = `${k.name} — ${typeLabel(k.type)}`;
+		mixOf(e, i).then((m) => {
+			if (m && tipCell === id) scroller.title = `${k.name} — ${typeLabel(k.type)} · ${mixText(m)}`;
+		});
+	}
 
 	/** Un clic sur l'icône de type d'un en-tête ouvre le menu de type. */
 	function openTypeMenu(ev: MouseEvent, cell: { row: number; col: number }): boolean {
@@ -3014,6 +3081,7 @@
 	/** Ouvre le menu de type et de clé de la colonne i (icône d'en-tête ou clic droit). */
 	function showTypeMenu(x: number, y: number, e: Entry, i: number) {
 		typeMenu = { x, y, e, i, keyWhy: null };
+		mixOf(e, i).then((mix) => typeMenu && typeMenu.e.t.id === e.t.id && typeMenu.i === i && (typeMenu.mix = mix));
 		if (source.keyCheck && e.t.key !== i)
 			source.keyCheck(e.t, i).then(
 				(why) => typeMenu && typeMenu.i === i && (typeMenu.keyWhy = why),
@@ -3489,6 +3557,13 @@
 							<span class="check">{t === col.type ? '✓' : ''}</span>{#if typeIconName(t)}<span class="type-icon"><Icon name={typeIconName(t)!} size={14} /></span>{:else}{typeIcon(t)}{/if}&nbsp;&nbsp;{typeLabel(t)}
 						</button>
 					{/each}
+					{#if m.mix && m.mix.type}
+						{@const to = m.mix.type}
+						<p class="menu-note">{mixText(m.mix)}</p>
+						<button onclick={() => chooseType(to, true)}
+							>Repasser en {typeLabel(to)} ({m.mix.off} valeur{m.mix.off > 1 ? 's' : ''} marquée{m.mix.off > 1 ? 's' : ''} en erreur)</button
+						>
+					{/if}
 					{#if col.errors}<p class="menu-note error">{col.errors} saisie{col.errors > 1 ? 's' : ''} hors type dans la colonne</p>{/if}
 					{#if source.setKey}
 						<hr />
