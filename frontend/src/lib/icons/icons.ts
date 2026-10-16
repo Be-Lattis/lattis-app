@@ -26,6 +26,14 @@ export const icons = {
 	'align-center': '<path d="M4 6h16M7 10h10M4 14h16M7 18h10"/>',
 	'align-right': '<path d="M4 6h16M10 10h10M4 14h16M10 18h10"/>',
 
+	// Bordures et mise en forme
+	'border-all': '<rect x="4" y="4" width="16" height="16"/><path d="M12 4v16M4 12h16"/>',
+	'border-outline': '<rect class="a" x="4" y="4" width="16" height="16"/><path stroke-dasharray="1.5 2" d="M12 6v12M6 12h12"/>',
+	'border-none': '<path stroke-dasharray="1.5 2" d="M4 4h16v16H4zM12 4v16M4 12h16"/>',
+	'format-painter': '<rect x="4" y="3.5" width="13" height="6" rx="1.5"/><path d="M17 6.5h2.5V12h-8v3"/><rect class="af" x="10" y="15" width="3" height="6" rx="1"/>',
+	'decimal-more': '<path d="M3.5 17.5h.01"/><path d="M8 9.5a2 2 0 1 1 4 0v5a2 2 0 1 1-4 0zM14 9.5a2 2 0 1 1 4 0v5a2 2 0 1 1-4 0z"/><path class="a" d="M17 21h5m-2-2 2 2-2 2"/>',
+	'decimal-less': '<path d="M3.5 17.5h.01"/><path d="M8 9.5a2 2 0 1 1 4 0v5a2 2 0 1 1-4 0z"/><path class="a" d="M22 21h-5m2-2-2 2 2 2"/>',
+
 	// Nombre
 	'number-format': '<path d="M9.5 4 7.5 20M16.5 4l-2 16M4.5 9h15.5M4 15h15.5"/>',
 	currency: '<path d="M18 7.2a6.5 6.5 0 1 0 0 9.6"/><path class="a" d="M4.5 10.5h8.5M4.5 13.5h8.5"/>',

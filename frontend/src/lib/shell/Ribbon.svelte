@@ -47,10 +47,11 @@
 		onpivot?: () => void;
 		onformula?: (what: 'insert' | 'sum' | 'reference') => void;
 		onclip?: (what: 'cut' | 'copy' | 'paste') => void;
+		onpainter?: () => void;
 		onchart?: (kind: 'bar' | 'line' | 'pie' | 'scatter') => void;
 	}
 
-	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip }: Props = $props();
+	let { view, title, dirty, undo, redo, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip, onpainter }: Props = $props();
 	let fg = $state('#c00000');
 	let bg = $state('#fff2cc');
 	const st = (patch: Record<string, unknown>) => (onstyle ? () => onstyle(patch) : undefined);
@@ -104,7 +105,7 @@
 					{ label: 'Rétablir', icon: 'redo', run: redo ? onredo : undefined, hint: redo ? 'Rétablir : ' + redo + ' (Ctrl+Y)' : 'Rien à rétablir' }
 				]
 			},
-			{ title: 'Presse-papiers', commands: [{ label: 'Coller', icon: 'paste', run: onclip ? () => onclip('paste') : undefined, hint: 'Coller (Ctrl+V)' }, { label: 'Couper', icon: 'cut', run: onclip ? () => onclip('cut') : undefined, hint: 'Couper (Ctrl+X)' }, { label: 'Copier', icon: 'copy', run: onclip ? () => onclip('copy') : undefined, hint: 'Copier (Ctrl+C)' }] },
+			{ title: 'Presse-papiers', commands: [{ label: 'Coller', icon: 'paste', run: onclip ? () => onclip('paste') : undefined, hint: 'Coller (Ctrl+V)' }, { label: 'Couper', icon: 'cut', run: onclip ? () => onclip('cut') : undefined, hint: 'Couper (Ctrl+X)' }, { label: 'Copier', icon: 'copy', run: onclip ? () => onclip('copy') : undefined, hint: 'Copier (Ctrl+C)' }, { label: 'Reproduire', icon: 'format-painter', run: onpainter, hint: 'Reproduire la mise en forme de la cellule active' }] },
 			{
 				title: 'Police',
 				commands: [
@@ -114,6 +115,14 @@
 					{ label: 'Couleur', icon: 'font-color', run: st({ fg }), hint: 'Couleur du texte (▾ : choisir la teinte)', color: 'fg' },
 					{ label: 'Remplissage', icon: 'font-color', run: st({ bg }), hint: 'Couleur de remplissage (▾ : choisir la teinte)', color: 'bg' },
 					{ label: 'Effacer', icon: 'remove-duplicates', run: st({ b: null, i: null, u: null, fg: null, bg: null, al: null, nf: null }), hint: 'Effacer la mise en forme' }
+				]
+			},
+			{
+				title: 'Bordures',
+				commands: [
+					{ label: 'Toutes', icon: 'border-all', run: st({ border: 'all' }), hint: 'Toutes les bordures' },
+					{ label: 'Contour', icon: 'border-outline', run: st({ border: 'outline' }), hint: 'Bordure extérieure de la sélection' },
+					{ label: 'Aucune', icon: 'border-none', run: st({ border: 'none' }), hint: 'Retirer les bordures' }
 				]
 			},
 			{
@@ -130,7 +139,9 @@
 					{ label: '0,00', icon: 'number-format', run: st({ nf: '0,00' }), hint: 'Deux décimales' },
 					{ label: 'Monétaire', icon: 'currency', run: st({ nf: '€' }) },
 					{ label: 'Pourcentage', icon: 'percent', run: st({ nf: '%' }) },
-					{ label: 'Standard', icon: 'number-format', run: st({ nf: null }), hint: 'Format Standard' }
+					{ label: 'Standard', icon: 'number-format', run: st({ nf: null }), hint: 'Format Standard' },
+					{ label: 'Ajouter une décimale', icon: 'decimal-more', run: st({ dp: 'more' }) },
+					{ label: 'Réduire les décimales', icon: 'decimal-less', run: st({ dp: 'less' }) }
 				]
 			},
 			{

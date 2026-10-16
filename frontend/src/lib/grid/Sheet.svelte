@@ -673,7 +673,7 @@
 					}
 					let s = row.text[i];
 					if (!s) continue;
-					if (cs?.nf && typeof row.cells[i] === 'number' && !row.bad?.has(i)) s = formatNumber(cs.nf, row.cells[i] as number) ?? s;
+					if ((cs?.nf || cs?.dp !== undefined) && typeof row.cells[i] === 'number' && !row.bad?.has(i)) s = formatNumber(cs!.nf, row.cells[i] as number, cs!.dp) ?? s;
 					if (row.bad?.has(i)) {
 						// Saisie hors type : valeur brute en rouge, coin rouge comme le
 						// triangle d'Excel.
@@ -692,6 +692,7 @@
 					const align = cs?.al ?? (col.type === 'formula' ? valueAlignment(v) : alignment(col.type));
 					drawText(s, x, y, cw, align, cs, col.type === 'formula' && isErrorValue(v) ? C.error : C.text);
 					if (col.type === 'formula' && isErrorValue(v)) errorCorner(x, y);
+					if (cs) borders(cs, x, y, cw);
 				}
 				ctx.restore();
 			}
@@ -701,11 +702,13 @@
 		ctx.font = FONT;
 		ctx.fillStyle = C.text;
 		for (const [k, fs] of freeStyles) {
-			if (!fs.bg) continue;
 			const [r, c] = k.split(',').map(Number);
 			if (r < r0 || r > r1 || c < c0 || c > c1) continue;
-			ctx.fillStyle = fs.bg;
-			ctx.fillRect(cx(c), ry(r), colAxis.size(c), ROW_H);
+			if (fs.bg) {
+				ctx.fillStyle = fs.bg;
+				ctx.fillRect(cx(c), ry(r), colAxis.size(c), ROW_H);
+			}
+			borders(fs, cx(c), ry(r), colAxis.size(c));
 		}
 		// Valeurs déversées : comme des cellules, dans un cadre bleu.
 		for (const sp of spills) {
@@ -762,7 +765,7 @@
 			const num = isNumeric(raw);
 			if (num && fstyle?.nf) {
 				const n = Number(raw.replace(/[\s\u00a0\u202f]/g, '').replace(',', '.'));
-				if (Number.isFinite(n)) raw = formatNumber(fstyle.nf, n) ?? raw;
+				if (Number.isFinite(n)) raw = formatNumber(fstyle.nf, n, fstyle.dp) ?? raw;
 			}
 			if (fstyle) {
 				drawText(raw, x, ry(r), cw, fstyle.al ?? (num ? 'right' : 'left'), fstyle, f?.error ? C.error : C.text, num ? cw : w);
@@ -960,6 +963,25 @@
 		return lo > 0 ? text.slice(0, lo) + '…' : '…';
 	}
 
+	/** Bordures d'une cellule (style bt, bb, bl, br). */
+	function borders(st: CellStyle, x: number, y: number, w: number) {
+		if (!st.bt && !st.bb && !st.bl && !st.br) return;
+		ctx.save();
+		ctx.strokeStyle = C.text;
+		ctx.lineWidth = 1;
+		ctx.beginPath();
+		const X0 = Math.round(x) + 0.5;
+		const X1 = Math.round(x + w) - 0.5;
+		const Y0 = Math.round(y) + 0.5;
+		const Y1 = Math.round(y + ROW_H) - 0.5;
+		if (st.bt) (ctx.moveTo(X0, Y0), ctx.lineTo(X1, Y0));
+		if (st.bb) (ctx.moveTo(X0, Y1), ctx.lineTo(X1, Y1));
+		if (st.bl) (ctx.moveTo(X0, Y0), ctx.lineTo(X0, Y1));
+		if (st.br) (ctx.moveTo(X1, Y0), ctx.lineTo(X1, Y1));
+		ctx.stroke();
+		ctx.restore();
+	}
+
 	/** Petit triangle d'angle d'une cellule en erreur (le détail est dans la barre d'état). */
 	function errorCorner(x: number, y: number) {
 		ctx.fillStyle = C.error;
@@ -1005,12 +1027,51 @@
 		if (!source.applyStyle) return;
 		const p = { ...patch };
 		for (const k of ['b', 'i', 'u'] as const) if (p[k] === 'toggle') p[k] = !activeStyle()[k];
-		const r0 = Math.min(active.row, anchor.row);
-		const r1 = Math.max(active.row, anchor.row);
-		const c0 = Math.min(active.col, anchor.col);
-		const c1 = Math.max(active.col, anchor.col);
+		if (p.dp === 'more' || p.dp === 'less') {
+			// Comme Excel : part des décimales affichées dans la cellule active.
+			const cur = activeStyle().dp ?? decimalsOf(cellInfo(active.row, active.col).value);
+			p.dp = Math.max(0, Math.min(10, cur + (p.dp === 'more' ? 1 : -1)));
+		}
+		const { r0, r1, c0, c1 } = selection();
 		const apply = source.applyStyle;
+		if (p.border === 'outline') {
+			// Contour : chaque bord de la plage reçoit son trait.
+			menuAction(async () => {
+				await apply(r0, c0, r0, c1, { bt: true });
+				await apply(r1, c0, r1, c1, { bb: true });
+				await apply(r0, c0, r1, c0, { bl: true });
+				await apply(r0, c1, r1, c1, { br: true });
+			});
+			return;
+		}
+		if (p.border === 'all') {
+			delete p.border;
+			Object.assign(p, { bt: true, bb: true, bl: true, br: true });
+		} else if (p.border === 'none') {
+			delete p.border;
+			Object.assign(p, { bt: null, bb: null, bl: null, br: null });
+		}
 		menuAction(() => apply(r0, c0, r1, c1, p));
+	}
+
+	function decimalsOf(text: string): number {
+		const m = /[,.](\d+)/.exec(text.replace(/\s/g, ''));
+		return m ? m[1].length : 0;
+	}
+
+	// Reproduire la mise en forme : la prochaine sélection reçoit le style copié.
+	let painter = $state<Record<string, unknown> | null>(null);
+	export function formatPainter() {
+		const st = activeStyle() as Record<string, unknown>;
+		const keys = ['b', 'i', 'u', 'fg', 'bg', 'al', 'nf', 'dp', 'bt', 'bb', 'bl', 'br'];
+		painter = Object.fromEntries(keys.map((k) => [k, st[k] ?? null]));
+		say('Reproduire la mise en forme : sélectionnez les cellules à mettre en forme (Échap pour annuler)');
+	}
+	function applyPainter() {
+		if (!painter) return;
+		const p = painter;
+		painter = null;
+		applyStyle(p);
 	}
 
 	function pushStat(a: number[], v: number) {
@@ -2050,6 +2111,7 @@
 
 	function onKeyDown(e: KeyboardEvent) {
 		if (editing) return;
+		if (e.key === 'Escape' && painter) painter = null;
 		if (e.key === 'Escape' && clipRange) {
 			clipRange = null;
 			schedule();
@@ -2849,6 +2911,7 @@
 		resize();
 		scroller.addEventListener('wheel', onWheel, { passive: false });
 		const up = () => {
+			if (dragging && painter) applyPainter();
 			dragging = false;
 			headerDrag = null;
 			if (filling) {

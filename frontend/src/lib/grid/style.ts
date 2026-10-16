@@ -9,6 +9,11 @@ export interface CellStyle {
 	bg?: string; // couleur de remplissage
 	al?: 'left' | 'center' | 'right';
 	nf?: '0' | '0,00' | '%' | '€';
+	dp?: number; // décimales imposées (Ajouter / Réduire les décimales)
+	bt?: boolean; // bordures haut, bas, gauche, droite
+	bb?: boolean;
+	bl?: boolean;
+	br?: boolean;
 }
 
 export function parseStyle(s: string | undefined | null): CellStyle | undefined {
@@ -33,7 +38,13 @@ const percent = new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFracti
 const euro = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
 
 /** Texte d'un nombre selon le format choisi (null : pas de format). */
-export function formatNumber(nf: CellStyle['nf'], v: number): string | null {
+export function formatNumber(nf: CellStyle['nf'], v: number, dp?: number): string | null {
+	if (dp !== undefined) {
+		const opts: Intl.NumberFormatOptions = { minimumFractionDigits: dp, maximumFractionDigits: dp };
+		if (nf === '%') return new Intl.NumberFormat('fr-FR', { ...opts, style: 'percent' }).format(v);
+		if (nf === '€') return new Intl.NumberFormat('fr-FR', { ...opts, style: 'currency', currency: 'EUR' }).format(v);
+		return new Intl.NumberFormat('fr-FR', opts).format(v);
+	}
 	switch (nf) {
 		case '0':
 			return fixed0.format(v);
