@@ -6,12 +6,14 @@ package main
 
 import (
 	"embed"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"runtime"
 
 	"github.com/lalamefine/slitable/internal/bridge"
+	"github.com/lalamefine/slitable/internal/console"
 	"github.com/lalamefine/slitable/internal/demo"
 	"github.com/lalamefine/slitable/internal/mcp"
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -32,9 +34,17 @@ func main() {
 	}
 
 	documents := &bridge.DocumentService{}
+	// -h, --help : l'aide dans le terminal, sans ouvrir la fenêtre ; une
+	// option inconnue l'affiche aussi, avec l'erreur.
 	preset, seed, err := demo.ParseArgs(os.Args[1:])
+	if errors.Is(err, demo.ErrHelp) {
+		console.Attach()
+		fmt.Fprint(os.Stdout, demo.Usage())
+		return
+	}
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		console.Attach()
+		fmt.Fprintf(os.Stderr, "slitable : %v\n\n", err)
 		fmt.Fprint(os.Stderr, demo.Usage())
 		os.Exit(2)
 	}

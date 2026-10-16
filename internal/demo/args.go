@@ -1,17 +1,24 @@
 package demo
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 )
 
-// ParseArgs lit les options de démonstration :
+// ErrHelp : l'aide est demandée (-h, --help) ; elle s'affiche sans ouvrir
+// la fenêtre.
+var ErrHelp = errors.New("aide demandée")
+
+// ParseArgs lit les options de la ligne de commande :
 //
 //	--demo [preset]   ouvre un classeur de fausses données (med par défaut)
 //	--seed n          graine du générateur (1 par défaut)
+//	-h, --help        aide (ErrHelp)
 //
-// Les autres arguments sont ignorés (laissés à Wails).
+// Une option ou un argument inconnu est une erreur (sauf -psn_…, ajouté par
+// macOS au lancement depuis le Finder).
 func ParseArgs(args []string) (preset string, seed uint64, err error) {
 	for i := 0; i < len(args); i++ {
 		name, value, inline := strings.Cut(args[i], "=")
@@ -41,17 +48,46 @@ func ParseArgs(args []string) (preset string, seed uint64, err error) {
 			if seed, err = strconv.ParseUint(v, 10, 64); !ok || err != nil {
 				return "", 0, fmt.Errorf("--seed attend un entier positif, pas « %s »", v)
 			}
+		case "-h", "--help", "-help", "/?":
+			return "", 0, ErrHelp
+		default:
+			switch {
+			case strings.HasPrefix(name, "-psn_"):
+			case strings.HasPrefix(name, "-"):
+				return "", 0, fmt.Errorf("option inconnue : %s", args[i])
+			default:
+				return "", 0, fmt.Errorf("argument inattendu : %s", args[i])
+			}
 		}
 	}
 	return preset, seed, nil
 }
 
-// Usage décrit les options et les presets.
+// Usage décrit la ligne de commande : options, sous-commande et presets.
 func Usage() string {
 	var b strings.Builder
-	b.WriteString("Usage : slitable --demo [preset] [--seed n]\nPresets :\n")
+	b.WriteString(`Slitable : tableur relationnel local-first.
+
+Usage :
+  slitable                       ouvre l'application
+  slitable --demo [preset]       ouvre un classeur de démonstration (fausses données)
+  slitable mcp                   relais stdio vers le serveur MCP de l'application ouverte
+                                 (pour les clients MCP qui lancent un programme)
+  slitable -h | --help           affiche cette aide
+
+Options :
+  --demo [preset]   classeur de démonstration ; preset par défaut : ` + DefaultPreset + `
+  --seed n          graine du générateur de la démonstration (1 par défaut)
+  -h, --help        affiche cette aide, sans ouvrir la fenêtre
+
+Presets de --demo :
+`)
 	for _, p := range Presets() {
 		fmt.Fprintf(&b, "  %-9s %s\n", p.Name, p.Description)
 	}
+	b.WriteString(`
+Variables d'environnement :
+  SLITABLE_BENCH=fichier    mesure le défilement de la grille et écrit le rapport dans fichier
+`)
 	return b.String()
 }

@@ -16,6 +16,11 @@ func TestParseArgs(t *testing.T) {
 		{[]string{"-demo", "--seed=7"}, "med", 7, false},
 		{[]string{"--demo", "géant"}, "", 0, true},
 		{[]string{"--seed", "x"}, "", 0, true},
+		{[]string{"--help"}, "", 0, true},
+		{[]string{"-h"}, "", 0, true},
+		{[]string{"--inconnue"}, "", 0, true},
+		{[]string{"fichier.slitable"}, "", 0, true},
+		{[]string{"-psn_0_12345"}, "", 0, false},
 	} {
 		p, s, err := ParseArgs(c.args)
 		if p != c.preset || s != c.seed || (err != nil) != c.err {
