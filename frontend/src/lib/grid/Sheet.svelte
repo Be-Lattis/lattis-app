@@ -63,7 +63,7 @@
 	export interface SheetData {
 		tables: SheetTable[];
 		/** value : résultat d'une formule (sinon raw est affiché). */
-		cells: { row: number; col: number; raw: string; value?: string; error?: boolean }[];
+		cells: { row: number; col: number; raw: string; value?: string; error?: boolean; spill?: string[][] }[];
 		/** Largeurs choisies par l'utilisateur (sinon : selon le type). */
 		widths?: { col: number; width: number }[];
 		/** Cellules nommées de la feuille. */
@@ -174,7 +174,8 @@
 		select: 'rgba(33, 115, 70, 0.10)',
 		active: '#217346',
 		activeStrip: '#d3e7dc',
-		error: '#c0392b'
+		error: '#c0392b',
+		spill: '#5b9bd5'
 	};
 
 	// --- Tableaux posés sur la feuille ------------------------------------
@@ -195,6 +196,8 @@
 	let headStyles = new Map<number, (CellStyle | undefined)[]>();
 	let colRules = new Map<number, (Rule[] | undefined)[]>();
 	let shown = new Map<string, { text: string; error: boolean }>(); // formules des cellules libres
+	// Tableaux dynamiques déversés depuis une cellule libre (FILTRE, TRIER…).
+	let spills: { row: number; col: number; rows: string[][] }[] = [];
 	let colAxis = $state.raw(new Axis(SHEET_COLS, DEF_W));
 	const key = (r: number, c: number) => `${r},${c}`;
 
@@ -229,6 +232,7 @@
 			return e;
 		});
 		cells = new Map(d.cells.map((c) => [key(c.row, c.col), c.raw]));
+		spills = d.cells.filter((c) => c.spill?.length).map((c) => ({ row: c.row, col: c.col, rows: c.spill! }));
 		shown = new Map(d.cells.filter((c) => c.raw.startsWith('=')).map((c) => [key(c.row, c.col), { text: c.value ?? '', error: !!c.error }]));
 		userWidths = new Map((d.widths ?? []).map((w) => [w.col, w.width]));
 		names = new Map((d.names ?? []).map((n) => [key(n.row, n.col), n.name]));
@@ -592,6 +596,24 @@
 			if (r < r0 || r > r1 || c < c0 || c > c1) continue;
 			ctx.fillStyle = fs.bg;
 			ctx.fillRect(cx(c), ry(r), colAxis.size(c), ROW_H);
+		}
+		// Valeurs déversées : comme des cellules, dans un cadre bleu.
+		for (const sp of spills) {
+			const sr1 = sp.row + sp.rows.length - 1;
+			const sc1 = sp.col + sp.rows[0].length - 1;
+			if (sr1 < r0 || sp.row > r1 || sc1 < c0 || sp.col > c1) continue;
+			for (let i = Math.max(0, r0 - sp.row); i < sp.rows.length && sp.row + i <= r1; i++)
+				sp.rows[i].forEach((v, j) => {
+					if ((i === 0 && j === 0) || !v) return;
+					const c = sp.col + j;
+					const num = isNumeric(v);
+					drawText(v, cx(c), ry(sp.row + i), colAxis.size(c), num ? 'right' : 'left', undefined, isErrorValue(v) ? C.error : C.text);
+				});
+			ctx.save();
+			ctx.strokeStyle = C.spill;
+			ctx.lineWidth = 1;
+			ctx.strokeRect(Math.round(cx(sp.col)) + 0.5, Math.round(ry(sp.row)) + 0.5, spanW(sp.col, sc1) - 1, sp.rows.length * ROW_H - 1);
+			ctx.restore();
 		}
 		for (const [k, rawText] of cells) {
 			const [r, c] = k.split(',').map(Number);

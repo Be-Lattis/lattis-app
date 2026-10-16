@@ -1017,3 +1017,34 @@ func TestRecalc(t *testing.T) {
 		t.Fatalf("ALEA inchangé après F9 : %s", c)
 	}
 }
+
+// FILTRE dans une cellule libre se déverse ; une cellule sur le chemin bloque.
+func TestSpill(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Pays", "Ventes"}, {"FR", "10"}, {"IT", "5"}, {"FR", "7"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.SetCell(ctx, 1, 0, 4, `=FILTRE(Feuille1;Feuille1[Pays]="FR")`); err != nil {
+		t.Fatal(err)
+	}
+	spill := func() CellInfo {
+		l, _ := d.Layout(ctx, 1)
+		for _, c := range l.Cells {
+			if c.Row == 0 && c.Col == 4 {
+				return c
+			}
+		}
+		return CellInfo{}
+	}
+	c := spill()
+	if fmt.Sprint(c.Spill) != "[[FR 10] [FR 7]]" || c.Error {
+		t.Fatalf("déversement : %+v", c)
+	}
+	if _, err := d.SetCell(ctx, 1, 1, 5, "x"); err != nil {
+		t.Fatal(err)
+	}
+	if c := spill(); c.Value != ErrSpillText || c.Spill != nil {
+		t.Fatalf("déversement bloqué : %+v", c)
+	}
+}

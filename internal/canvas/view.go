@@ -54,6 +54,9 @@ type CellInfo struct {
 	// Cellule avec formule : valeur calculée, affichée à la place de Raw.
 	Value string `json:"value"`
 	Error bool   `json:"error"`
+	// Tableau dynamique (FILTRE, TRIER…) : valeurs déversées depuis la
+	// cellule, vers le bas et la droite (la première est Value).
+	Spill [][]string `json:"spill,omitempty"`
 }
 
 // NameInfo est une cellule nommée de la feuille.
@@ -204,8 +207,21 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 		for _, c := range cells {
 			ci := CellInfo{Row: c.Row, Col: c.Col, Raw: c.Raw}
 			if isFormula(c.Raw) {
-				v := t.evalFree(c.Raw)
-				ci.Value, ci.Error = v.String(), v.IsErr()
+				if rows, ok, e := t.spillFree(c.Raw); ok {
+					switch {
+					case e.IsErr():
+						ci.Value, ci.Error = e.String(), true
+					case spillBlocked(c.Row, c.Col, rows, cells, tables):
+						ci.Value, ci.Error = ErrSpillText, true
+					case len(rows) == 0:
+						ci.Value, ci.Error = "#CALC!", true
+					default:
+						ci.Value, ci.Spill = rows[0][0], rows
+					}
+				} else {
+					v := t.evalFree(c.Raw)
+					ci.Value, ci.Error = v.String(), v.IsErr()
+				}
 			}
 			l.Cells = append(l.Cells, ci)
 		}

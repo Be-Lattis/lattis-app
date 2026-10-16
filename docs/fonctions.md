@@ -123,7 +123,7 @@ Ces précalculs, comme les agrégats sortis de la requête, sont à recalculer q
 
 ## Intégration dans le classeur
 
-- `Schema.Now` et `Schema.Seed` : à renseigner à l'ouverture et sur F9 (sinon heure courante et graine 0).
-- `IsSpill`, `EvalSpill`, `CompileSpill` : affichage des tableaux dynamiques (à brancher dans la grille).
+- `Schema.Now` et `Schema.Seed` : fixés à l'ouverture, renouvelés par F9 (ruban Formules, Calculer).
+- `IsSpill`, `CompileSpill` : une cellule libre déverse son tableau dynamique (10 000 lignes au plus) ; une cellule ou un tableau sur le chemin donne #DEVERSEMENT!.
 - `Suggestion` : infobulle de #NOM?.
-- `SOUS.TOTAL` : à relier au filtre de la grille quand il existera.
+- `SOUS.TOTAL` : ne compte que les lignes que le filtre de la grille laisse affichées (`Table.Visible`).
