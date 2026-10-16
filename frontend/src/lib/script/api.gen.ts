@@ -376,6 +376,24 @@ export const apiReference: RefEntry[] = [
 		args: [0, 2]
 	},
 	{
+		name: "sheets.color",
+		category: "sheets",
+		signature: "sheets.color(sheet, [color])",
+		summary: "Fixe la couleur de l'onglet d'une feuille (« #rrggbb » ; vide : aucune couleur).",
+		details: "Paramètres — sheet : feuille ; color : couleur #rrggbb, ou vide. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.color{sheet = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "sheets.color(\"Feuille1\", \"#217346\")",
+		args: [1, 2]
+	},
+	{
+		name: "sheets.copy",
+		category: "sheets",
+		signature: "sheets.copy(sheet, [position]) → {id, name}",
+		summary: "Copie une feuille (tableaux, cellules, mise en forme, tableaux croisés, graphiques, boutons) et renvoie {id, name} de la copie.",
+		details: "Comme Déplacer ou copier… › Créer une copie. Les tableaux copiés reçoivent un nom libre (Ventes → Ventes_2) ; un graphique ou un TCD de la feuille qui lisait un tableau copié lit sa copie. Sans position, la copie se place juste après la feuille copiée. Paramètres — sheet : feuille à copier ; position : rang de la copie parmi les onglets, à partir de 1. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.copy{sheet = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "local copie = sheets.copy(\"Feuille1\")\nprint(copie.name) -- Feuille1 (2)",
+		args: [1, 2]
+	},
+	{
 		name: "sheets.delete",
 		category: "sheets",
 		signature: "sheets.delete(sheet)",
@@ -399,6 +417,15 @@ export const apiReference: RefEntry[] = [
 		details: "Les positions (row, col) se comptent à partir de 1. Les valeurs des tableaux se lisent avec tables.rows ou db.query. Paramètres — sheet : feuille (nom ou identifiant) ; absente : la feuille affichée.",
 		example: "local f = sheets.get()\nfor _, t in ipairs(f.tables) do\n  print(t.name, t.rows .. \" lignes\", \"en \" .. t.row .. \",\" .. t.col)\nend",
 		args: [0, 1]
+	},
+	{
+		name: "sheets.hide",
+		category: "sheets",
+		signature: "sheets.hide(sheet, [hidden])",
+		summary: "Masque une feuille (Masquer) ou l'affiche de nouveau (hidden = false).",
+		details: "Une feuille masquée n'apparaît plus dans les onglets mais garde son contenu ; le classeur garde au moins une feuille visible. Paramètres — sheet : feuille à masquer ou afficher ; hidden : true (défaut) : masquer ; false : afficher. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.hide{sheet = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "sheets.add(\"Calculs\")\nsheets.hide(\"Calculs\")\nsheets.hide(\"Calculs\", false)",
+		args: [1, 2]
 	},
 	{
 		name: "sheets.list",

@@ -205,9 +205,9 @@ func (t *tx) chartDataRaw(cfg ChartConfig) ([]string, []ChartSeries, error) {
 		if xc.Type == grid.Text {
 			key = "coalesce(" + x + ", '')"
 		}
-		q = `SELECT ` + key + ` AS k, ` + strings.Join(sums, ", ") + ` FROM ` + tb.sql() + ` GROUP BY k ORDER BY min(_pos) LIMIT ?`
+		q = `SELECT ` + key + ` AS k, ` + strings.Join(sums, ", ") + ` FROM ` + tb.sql() + ` GROUP BY k ORDER BY min(_pos) LIMIT ?` + fmt.Sprint(len(args)+1)
 	} else {
-		q = `SELECT ` + x + `, ` + strings.Join(vals, ", ") + ` FROM ` + tb.sql() + ` ORDER BY _pos LIMIT ?`
+		q = `SELECT ` + x + `, ` + strings.Join(vals, ", ") + ` FROM ` + tb.sql() + ` ORDER BY _pos LIMIT ?` + fmt.Sprint(len(args)+1)
 	}
 	rs, err := t.query(q, append(args, MaxChartPoints)...)
 	if err != nil {

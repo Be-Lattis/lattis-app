@@ -551,6 +551,13 @@ export interface SheetInfo {
      */
     "protected": boolean;
     "password": boolean;
+
+    /**
+     * Color : couleur de l'onglet (« #rrggbb », vide : aucune) ; Hidden :
+     * feuille masquée (absente de la barre d'onglets).
+     */
+    "color": string;
+    "hidden": boolean;
 }
 
 /**

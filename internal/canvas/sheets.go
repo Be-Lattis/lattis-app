@@ -176,13 +176,20 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 			return err
 		}
 		var n, tables int
-		var name string
-		var pos, grid, heads int
+		var name, color string
+		var pos, grid, heads, hidden int
 		if err := t.row(`SELECT count(*) FROM _slitable_sheets`).Scan(&n); err != nil {
 			return err
 		}
 		if n <= 1 {
 			return fmt.Errorf("%w : un classeur garde au moins une feuille", ErrSheet)
+		}
+		var others int
+		if err := t.row(`SELECT count(*) FROM _slitable_sheets WHERE hidden = 0 AND id <> ?`, sheet).Scan(&others); err != nil {
+			return err
+		}
+		if others == 0 {
+			return fmt.Errorf("%w : un classeur garde au moins une feuille visible", ErrSheet)
 		}
 		if err := t.row(`SELECT count(*) FROM _slitable_tables WHERE sheet = ?`, sheet).Scan(&tables); err != nil {
 			return err
@@ -190,7 +197,7 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 		if tables > 0 {
 			return fmt.Errorf("%w : la feuille contient des tableaux, supprimez-les d'abord", ErrSheet)
 		}
-		if err := t.row(`SELECT name, pos, gridlines, headings FROM _slitable_sheets WHERE id = ?`, sheet).Scan(&name, &pos, &grid, &heads); err != nil {
+		if err := t.row(`SELECT name, pos, gridlines, headings, color, hidden FROM _slitable_sheets WHERE id = ?`, sheet).Scan(&name, &pos, &grid, &heads, &color, &hidden); err != nil {
 			return err
 		}
 		cells, err := t.cells(sheet)
@@ -234,7 +241,7 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 		}
 		return t.apply(
 			append(do, st(`DELETE FROM _slitable_sheets WHERE id = ?`, sheet)),
-			append([]stmt{st(`INSERT INTO _slitable_sheets (id, name, pos, gridlines, headings) VALUES (?, ?, ?, ?, ?)`, sheet, name, pos, grid, heads)}, pivots...),
+			append([]stmt{st(`INSERT INTO _slitable_sheets (id, name, pos, gridlines, headings, color, hidden) VALUES (?, ?, ?, ?, ?, ?, ?)`, sheet, name, pos, grid, heads, color, hidden)}, pivots...),
 		)
 	})
 }

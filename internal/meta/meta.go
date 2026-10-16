@@ -248,6 +248,12 @@ CREATE TABLE _slitable_queries (
 	refreshed TEXT
 ) STRICT;
 `,
+	// 19 → 20 : couleur d'onglet (« #rrggbb », vide : aucune) et feuilles
+	// masquées (Masquer / Afficher…, au moins une feuille reste visible).
+	`
+ALTER TABLE _slitable_sheets ADD COLUMN color TEXT NOT NULL DEFAULT '';
+ALTER TABLE _slitable_sheets ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0;
+`,
 }
 
 // Version est la version du format que ce programme écrit.
