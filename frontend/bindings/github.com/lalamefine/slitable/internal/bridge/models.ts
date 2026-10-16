@@ -31,6 +31,18 @@ export interface DocState {
 }
 
 /**
+ * ExecResult est l'issue d'une requête d'écriture de l'onglet SQL.
+ */
+export interface ExecResult {
+    /**
+     * lignes ajoutées, modifiées ou supprimées
+     */
+    "changed": number;
+    "micros": number;
+    "state": DocState;
+}
+
+/**
  * FormulaHelp sert l'aide à la saisie des formules : fonctions (en
  * français) et tableaux du classeur avec leurs colonnes.
  */

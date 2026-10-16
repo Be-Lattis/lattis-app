@@ -65,6 +65,15 @@ export function Discard(dir: string): $CancellablePromise<void> {
 }
 
 /**
+ * Execute exécute une requête d'écriture (INSERT, UPDATE, DELETE) sur le
+ * classeur, avec les noms affichés des tableaux. Elle forme une étape
+ * d'annulation ; les changements de structure sont refusés.
+ */
+export function Execute(q: string): $CancellablePromise<$models.ExecResult> {
+    return $Call.ByID(2776577956, q);
+}
+
+/**
  * FormulaHelp renvoie le catalogue de l'aide à la saisie.
  */
 export function FormulaHelp(): $CancellablePromise<$models.FormulaHelp> {

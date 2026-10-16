@@ -10,6 +10,7 @@ export {
 
 export type {
     DocState,
+    ExecResult,
     FormulaHelp,
     GridStatus,
     OpenResult,

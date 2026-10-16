@@ -44,9 +44,26 @@ saisie invalide, `""` efface la cellule. Les tableaux voisins se décalent comme
 Chaque écriture est une courte transaction : la grille reste utilisable pendant le script.
 Un script arrêté ou en erreur garde ce qu'il a déjà écrit (Ctrl+Z pour revenir en arrière).
 
-Il n'y a pas de `db.execute(sql)` libre : une instruction SQL quelconque ne saurait ni
-s'annuler ni respecter la mise en page de la feuille. Il reviendra si l'onglet SQL en a besoin,
-limité aux objets qui ne sont pas des tableaux de la feuille.
+### Requêtes d'écriture : `db.execute(sql, ...)`
+
+`db.execute` exécute un `INSERT`, `UPDATE` ou `DELETE` avec les noms affichés et renvoie le nombre
+de lignes touchées ; l'onglet SQL passe par le même mécanisme (`canvas.Model.ExecSQL`).
+
+```lua
+db.execute('UPDATE Commandes SET Remise = Montant * 0.1 WHERE Client = ?', "Durand")
+db.execute([[INSERT INTO Archives (Client, Total)
+             SELECT Client, sum(Montant) FROM Commandes GROUP BY Client]])
+```
+
+- **Annulable** : pendant la requête, des déclencheurs temporaires notent les lignes touchées et
+  leur état d'avant ; Ctrl+Z remet cet état, Ctrl+Y l'état d'après. Rien n'est rejoué, donc le
+  résultat ne change pas même avec `random()`. Les deux états sont gardés dans des tables
+  `_slitable_sqltrash_*`, supprimées quand la commande sort de l'historique.
+- Une ligne ajoutée va **en fin de tableau** ; un tableau qui grandit décale ceux du dessous.
+- Les colonnes sont `STRICT` : une valeur du mauvais type fait échouer toute la requête (pas
+  d'élargissement comme pour une saisie). Une valeur écrite remplace une saisie invalide.
+- Refusés : les changements de structure (`CREATE`, `ALTER`, `DROP`) et les écritures dans les
+  tables internes `_slitable_*`.
 
 ## Bac à sable et limites
 

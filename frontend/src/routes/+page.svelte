@@ -323,7 +323,7 @@
 				</div>
 			{/key}
 			{#if view === 'sql'}
-				<div class="pane"><SqlView {objects} run={query} ongoto={() => (view = 'grid')} /></div>
+				<div class="pane"><SqlView {objects} run={query} exec={mode === 'doc' ? (q) => DocumentService.Execute(q) : undefined} ongoto={() => (view = 'grid')} /></div>
 			{:else if view === 'script'}
 				<div class="pane">
 					{#if mode === 'doc'}

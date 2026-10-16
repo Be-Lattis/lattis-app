@@ -239,3 +239,23 @@ func TestRewrite(t *testing.T) {
 		}
 	}
 }
+
+func TestExecute(t *testing.T) {
+	f := commandes(t)
+	before := f.view(t)
+	out := f.mustRun(t, `
+		local n = db.execute('UPDATE Feuille1 SET Montant = Montant + ? WHERE Client = ?', 10, "Durand")
+		db.execute("INSERT INTO Feuille1 (Client, Montant) VALUES ('Neuf', 1)")
+		print(n, db.value('SELECT sum(Montant) FROM Feuille1'))
+	`)
+	if out[0] != "2\t261.5" {
+		t.Fatalf("sortie %q", out)
+	}
+	f.check(t)
+	if _, err := f.bus.Undo(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.view(t); got != before {
+		t.Fatalf("après Ctrl+Z :\n%s\nattendu :\n%s", got, before)
+	}
+}
