@@ -13,7 +13,7 @@
 	import { VScroll, clamp } from './scroll';
 	import { Axis } from './axis';
 	import { parseTSV, toTSV } from './clipboard';
-	import { formatNumber, mergeStyles, parseStyle, type CellStyle } from './style';
+	import { formatNumber, isNumericText, painterPatch, parseStyle, resolveStyle, styledNumber, type CellStyle, type StyleLayer } from './style';
 	import { dismiss } from './dismiss';
 	import { explainError } from './errors';
 	import { fillSeries } from './fill';
@@ -157,6 +157,9 @@
 		names?: { name: string; row: number; col: number }[];
 		/** Mise en forme des cellules hors tableaux (JSON). */
 		styles?: { row: number; col: number; style: string }[];
+		/** Mise en forme des lignes et colonnes entières de la feuille (JSON). */
+		rowStyles?: { index: number; style: string }[];
+		colStyles?: { index: number; style: string }[];
 		/** Tableaux croisés dynamiques de la feuille, calculés. */
 		pivots?: SheetPivot[];
 		/** Graphiques de la feuille, avec leurs données. */
@@ -201,6 +204,8 @@
 		sortTable?(table: SheetTable, i: number, desc: boolean): Promise<unknown>;
 		/** Met en forme le rectangle sélectionné (une valeur vide retire la propriété). */
 		applyStyle?(r0: number, c0: number, r1: number, c1: number, patch: Record<string, unknown>): Promise<unknown>;
+		/** Met en forme des lignes (rows) ou des colonnes entières de la feuille, comme Excel. */
+		applyLineStyle?(rows: boolean, i0: number, i1: number, patch: Record<string, unknown>): Promise<unknown>;
 		find?(text: string): Promise<{ row: number; col: number }[]>;
 		/** Remplace partout ; renvoie le nombre de cellules modifiées. */
 		replace?(text: string, by: string): Promise<number>;
@@ -326,10 +331,14 @@
 	let entries: Entry[] = [];
 	let cells = new Map<string, string>();
 	let names = new Map<string, string>(); // position → nom
-	let freeStyles = new Map<string, CellStyle>(); // position → style (hors tableaux)
+	// Mise en forme, en couches (voir style.ts) : colonnes et lignes entières
+	// de la feuille, colonnes et en-têtes des tableaux, cellules.
+	let freeStyles = new Map<string, StyleLayer>(); // position → style (hors tableaux : cellules libres, TCD)
+	let sheetRowStyles = new Map<number, StyleLayer>();
+	let sheetColStyles = new Map<number, StyleLayer>();
 	// Styles de colonne et d'en-tête, par tableau puis colonne.
-	let colStyles = new Map<number, (CellStyle | undefined)[]>();
-	let headStyles = new Map<number, (CellStyle | undefined)[]>();
+	let colStyles = new Map<number, (StyleLayer | undefined)[]>();
+	let headStyles = new Map<number, (StyleLayer | undefined)[]>();
 	let colRules = new Map<number, (Rule[] | undefined)[]>();
 	let shown = new Map<string, { text: string; error: boolean }>(); // formules des cellules libres
 	// Tableaux dynamiques déversés depuis une cellule libre (FILTRE, TRIER…).
@@ -393,6 +402,8 @@
 		rebuildRows();
 		names = new Map((d.names ?? []).map((n) => [key(n.row, n.col), n.name]));
 		freeStyles = new Map((d.styles ?? []).map((s) => [key(s.row, s.col), parseStyle(s.style) ?? {}]));
+		sheetRowStyles = new Map((d.rowStyles ?? []).map((s) => [s.index, parseStyle(s.style) ?? {}]));
+		sheetColStyles = new Map((d.colStyles ?? []).map((s) => [s.index, parseStyle(s.style) ?? {}]));
 		colStyles = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseStyle(c.style))]));
 		headStyles = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseStyle(c.headerStyle))]));
 		colRules = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseRules(c.rules))]));
@@ -639,20 +650,21 @@
 		return a <= b ? { first: a - e.t.row - 1, last: b - e.t.row - 1 } : null;
 	}
 
-	/** Texte d'un nombre affiché (« 1 234,5 », « 12,5 % ») selon le format de nombre et les décimales du style. */
-	function styledNumber(text: string, st: CellStyle | undefined): string {
-		if (!st || (st.nf === undefined && st.dp === undefined) || !isNumeric(text)) return text;
-		let t = text.replace(/[\s  ]/g, '');
-		const pct = t.endsWith('%');
-		t = t.replace('%', '').replace(',', '.');
-		let n = Number(t);
-		if (!Number.isFinite(n)) return text;
-		if (pct) n /= 100;
-		return formatNumber(st.nf, n, st.dp) ?? text;
-	}
+	const isNumeric = isNumericText;
 
-	function isNumeric(s: string) {
-		return /^[-+]?[\d\s  ]+([,.]\d+)?%?$/.test(s.trim());
+	/**
+	 * Style effectif d'une cellule de la feuille, quelle qu'elle soit (cellule
+	 * de tableau, en-tête, cellule libre, de tableau croisé ou vide) : colonne
+	 * puis ligne de la feuille, colonne du tableau, cellule. Sans la mise en
+	 * forme conditionnelle.
+	 */
+	function styleAt(r: number, c: number, e = tableAt(r, c)): CellStyle | undefined {
+		const col = sheetColStyles.get(c);
+		const row = sheetRowStyles.get(r);
+		if (!e) return resolveStyle(col, row, freeStyles.get(key(r, c)));
+		const i = c - e.t.col;
+		if (r === e.t.row) return resolveStyle(col, row, headStyles.get(e.t.id)?.[i]);
+		return resolveStyle(col, row, colStyles.get(e.t.id)?.[i], parseStyle(e.cache.row(r - e.t.row - 1)?.sty?.get(i)));
 	}
 
 	function draw() {
@@ -746,7 +758,8 @@
 				for (let r = tr0; r <= tr1; r++) {
 					const y = ry(r);
 					if (r === e.t.row) {
-						const hs = headStyles.get(e.t.id)?.[i];
+						const hs = styleAt(r, c, e);
+						if (hs) borders(hs, x, y, cw, rh(r));
 						if (hs?.bg) {
 							ctx.fillStyle = hs.bg;
 							ctx.fillRect(x, y, cw, rh(r));
@@ -784,7 +797,9 @@
 						ctx.font = (hs?.i ? 'italic ' : '') + FONT_BOLD;
 						ctx.fillStyle = hs?.fg ?? C.headText;
 						ctx.textAlign = 'left';
-						ctx.fillText(ellipsize(col.name, cw - iconW - 16), x + 6, y + rh(r) / 2);
+						const label = ellipsize(col.name, cw - iconW - 16);
+						ctx.fillText(label, x + 6, y + rh(r) / 2);
+						if (hs?.u) ctx.fillRect(x + 6, y + rh(r) / 2 + 7, ctx.measureText(label).width, 1);
 						ctx.restore();
 						continue;
 					}
@@ -796,14 +811,16 @@
 					}
 					const v = row.cells[i];
 					const bad = row.bad?.has(i) || (col.type === 'formula' && isErrorValue(v));
-					const cs = mergeStyles(mergeStyles(colStyles.get(e.t.id)?.[i], parseStyle(row.sty?.get(i))), ruleStyle(colRules.get(e.t.id)?.[i], v, row.text[i] ?? '', !!bad));
+					const cs = resolveStyle(styleAt(r, c, e), ruleStyle(colRules.get(e.t.id)?.[i], v, row.text[i] ?? '', !!bad));
 					if (cs?.bg) {
 						ctx.fillStyle = cs.bg;
 						ctx.fillRect(x, y, cw, rh(r));
 					}
+					if (cs) borders(cs, x, y, cw, rh(r));
 					let s = row.text[i];
 					if (!s) continue;
-					if ((cs?.nf || cs?.dp !== undefined) && typeof row.cells[i] === 'number' && !row.bad?.has(i)) s = formatNumber(cs!.nf, row.cells[i] as number, cs!.dp) ?? s;
+					if ((cs?.nf || cs?.dp !== undefined) && !row.bad?.has(i))
+						s = typeof row.cells[i] === 'number' ? (formatNumber(cs!.nf, row.cells[i] as number, cs!.dp) ?? s) : styledNumber(s, cs);
 					if (row.bad?.has(i)) {
 						// Saisie hors type : valeur brute en rouge, coin rouge comme le
 						// triangle d'Excel.
@@ -822,24 +839,32 @@
 					const align = cs?.al ?? (col.type === 'formula' ? valueAlignment(v) : alignment(col.type));
 					drawText(s, x, y, cw, align, cs, col.type === 'formula' && isErrorValue(v) ? C.error : C.text);
 					if (col.type === 'formula' && isErrorValue(v)) errorCorner(x, y);
-					if (cs) borders(cs, x, y, cw, rh(r));
 				}
 				ctx.restore();
 			}
 		}
 
-		// Cellules libres : texte à gauche, nombres à droite, comme Excel.
+		// Mise en forme hors tableaux (cellules libres, tableaux croisés, cellules
+		// vides des lignes et colonnes mises en forme) : remplissage et bordures.
 		ctx.font = FONT;
 		ctx.fillStyle = C.text;
-		for (const [k, fs] of freeStyles) {
-			const [r, c] = k.split(',').map(Number);
-			if (r < r0 || r > r1 || c < c0 || c > c1) continue;
+		const paint = (r: number, c: number) => {
+			if (tableAt(r, c)) return;
+			const fs = styleAt(r, c, undefined);
+			if (!fs) return;
 			if (fs.bg) {
 				ctx.fillStyle = fs.bg;
 				ctx.fillRect(cx(c), ry(r), colAxis.size(c), rh(r));
 			}
 			borders(fs, cx(c), ry(r), colAxis.size(c), rh(r));
-		}
+		};
+		if (sheetRowStyles.size || sheetColStyles.size) {
+			for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) paint(r, c);
+		} else
+			for (const k of freeStyles.keys()) {
+				const [r, c] = k.split(',').map(Number);
+				if (r >= r0 && r <= r1 && c >= c0 && c <= c1) paint(r, c);
+			}
 		// Valeurs déversées : comme des cellules, dans un cadre bleu.
 		for (const sp of spills) {
 			const sr1 = sp.row + sp.rows.length - 1;
@@ -850,7 +875,8 @@
 					if ((i === 0 && j === 0) || !v) return;
 					const c = sp.col + j;
 					const num = isNumeric(v);
-					drawText(v, cx(c), ry(sp.row + i), colAxis.size(c), num ? 'right' : 'left', undefined, isErrorValue(v) ? C.error : C.text);
+					const st = styleAt(sp.row + i, c, undefined);
+					drawText(styledNumber(v, st), cx(c), ry(sp.row + i), colAxis.size(c), st?.al ?? (num ? 'right' : 'left'), st, isErrorValue(v) ? C.error : C.text);
 				});
 			ctx.save();
 			ctx.strokeStyle = C.spill;
@@ -867,16 +893,17 @@
 			const pr1 = p.row + p.cells.length - 1;
 			const pc1 = p.col + p.cells[0].length - 1;
 			if (pr1 < r0 || p.row > r1 || pc1 < c0 || p.col > c1) continue;
+			// En-tête et total sur fond gris, sauf remplissage choisi.
 			ctx.fillStyle = C.head;
-			ctx.fillRect(cx(p.col), ry(p.row), spanW(p.col, pc1), rh(p.row));
-			ctx.fillRect(cx(p.col), ry(pr1), spanW(p.col, pc1), rh(pr1));
+			for (const r of [p.row, pr1])
+				for (let c = p.col; c <= pc1; c++) if (!styleAt(r, c, undefined)?.bg) ctx.fillRect(cx(c), ry(r), colAxis.size(c), rh(r));
 			for (let i = Math.max(0, r0 - p.row); i < p.cells.length && p.row + i <= r1; i++)
 				p.cells[i].forEach((v, j) => {
 					if (!v) return;
 					const c = p.col + j;
 					const bold = i === 0 || i === p.cells.length - 1;
-					// Mise en forme posée sur les cellules du TCD (format de nombre, décimales, police…).
-					const st = freeStyles.get(key(p.row + i, c));
+					// Mise en forme posée sur les cellules du TCD, leurs lignes ou colonnes (format de nombre, décimales, police…).
+					const st = styleAt(p.row + i, c, undefined);
 					const style = bold ? { ...st, b: st?.b ?? true } : st;
 					drawText(styledNumber(v, st), cx(c), ry(p.row + i), colAxis.size(c), st?.al ?? (j > 0 && i > 0 ? 'right' : 'left'), style, C.text);
 				});
@@ -889,7 +916,7 @@
 		for (const [k, rawText] of cells) {
 			const [r, c] = k.split(',').map(Number);
 			if (r < r0 || r > r1 || c < c0 || c > c1) continue;
-			const fstyle = freeStyles.get(k);
+			const fstyle = styleAt(r, c, undefined);
 			const x = cx(c);
 			const cw = colAxis.size(c);
 			const f = shown.get(k);
@@ -1236,14 +1263,16 @@
 		ctx.restore();
 	}
 
-	/** Style de la cellule active (pour basculer gras, italique…). */
+	/**
+	 * Style de la sélection (pour basculer gras, italique…, et le pinceau) :
+	 * celui de la ligne ou colonne entière sélectionnée, sinon celui de la
+	 * cellule active.
+	 */
 	function activeStyle(): CellStyle {
-		const { row, col } = active;
-		const e = tableAt(row, col);
-		if (!e) return freeStyles.get(key(row, col)) ?? {};
-		const i = col - e.t.col;
-		if (row === e.t.row) return headStyles.get(e.t.id)?.[i] ?? {};
-		return mergeStyles(colStyles.get(e.t.id)?.[i], parseStyle(e.cache.row(row - e.t.row - 1)?.sty?.get(i))) ?? {};
+		const w = wholeKind();
+		if (w === 'rows') return resolveStyle(sheetRowStyles.get(active.row)) ?? {};
+		if (w === 'cols') return resolveStyle(sheetColStyles.get(active.col)) ?? {};
+		return styleAt(active.row, active.col) ?? {};
 	}
 
 	/** Met en forme la sélection ; une bascule (b, i, u) suit la cellule active. */
@@ -1257,6 +1286,23 @@
 			p.dp = Math.max(0, Math.min(10, cur + (p.dp === 'more' ? 1 : -1)));
 		}
 		const { r0, r1, c0, c1 } = selection();
+		const w = wholeKind();
+		if (w && source.applyLineStyle) {
+			// Lignes ou colonnes entières : la mise en forme vaut pour toutes
+			// leurs cellules, présentes et à venir (comme Excel).
+			const line = source.applyLineStyle;
+			const rows = w === 'rows';
+			const [i0, i1] = rows ? [r0, r1] : [c0, c1];
+			if (p.border === 'outline') {
+				menuAction(async () => {
+					await line(rows, i0, i0, rows ? { bt: true } : { bl: true });
+					await line(rows, i1, i1, rows ? { bb: true } : { br: true });
+				});
+				return;
+			}
+			menuAction(() => line(rows, i0, i1, borderPatch(p)));
+			return;
+		}
 		const apply = source.applyStyle;
 		if (p.border === 'outline') {
 			// Contour : chaque bord de la plage reçoit son trait.
@@ -1268,6 +1314,11 @@
 			});
 			return;
 		}
+		menuAction(() => apply(r0, c0, r1, c1, borderPatch(p)));
+	}
+
+	/** Traduit border: 'all' | 'none' en propriétés de bordure. */
+	function borderPatch(p: Record<string, unknown>) {
 		if (p.border === 'all') {
 			delete p.border;
 			Object.assign(p, { bt: true, bb: true, bl: true, br: true });
@@ -1275,7 +1326,7 @@
 			delete p.border;
 			Object.assign(p, { bt: null, bb: null, bl: null, br: null });
 		}
-		menuAction(() => apply(r0, c0, r1, c1, p));
+		return p;
 	}
 
 	function decimalsOf(text: string): number {
@@ -1286,9 +1337,7 @@
 	// Reproduire la mise en forme : la prochaine sélection reçoit le style copié.
 	let painter = $state<Record<string, unknown> | null>(null);
 	export function formatPainter() {
-		const st = activeStyle() as Record<string, unknown>;
-		const keys = ['b', 'i', 'u', 'fg', 'bg', 'al', 'nf', 'dp', 'bt', 'bb', 'bl', 'br'];
-		painter = Object.fromEntries(keys.map((k) => [k, st[k] ?? null]));
+		painter = painterPatch(activeStyle());
 		say('Reproduire la mise en forme : sélectionnez les cellules à mettre en forme (Échap pour annuler)');
 	}
 	function applyPainter() {
@@ -2218,7 +2267,7 @@
 		}
 		for (const [k, raw] of cells) {
 			const [r, cc] = k.split(',').map(Number);
-			if (cc === c) w = Math.max(w, textWidth(shown.get(k)?.text ?? raw, !!freeStyles.get(key(r, cc))?.b));
+			if (cc === c) w = Math.max(w, textWidth(shown.get(k)?.text ?? raw, !!styleAt(r, cc, undefined)?.b));
 		}
 		for (const p of pivots) {
 			const j = c - p.col;
@@ -2400,9 +2449,21 @@
 		return Math.max(0, extentCols - 1);
 	}
 
+	// Sélection de lignes ou colonnes entières (marge ou bandeau) : tant que la
+	// sélection n'a pas changé, la mise en forme vaut pour les lignes ou
+	// colonnes entières.
+	let wholeSel: { kind: 'rows' | 'cols'; anchor: { row: number; col: number }; active: { row: number; col: number } } | null = null;
+	function wholeKind(): 'rows' | 'cols' | null {
+		const w = wholeSel;
+		if (!w) return null;
+		const same = (a: { row: number; col: number }, b: { row: number; col: number }) => a.row === b.row && a.col === b.col;
+		return same(w.anchor, anchor) && same(w.active, active) ? w.kind : null;
+	}
+
 	function selectRows(r0: number, r1: number) {
 		anchor = { row: r0, col: 0 };
 		active = { row: r1, col: lastCol() };
+		wholeSel = { kind: 'rows', anchor: { ...anchor }, active: { ...active } };
 		refreshFx();
 		refreshStatus();
 		schedule();
@@ -2410,6 +2471,7 @@
 	function selectCols(c0: number, c1: number) {
 		anchor = { row: 0, col: c0 };
 		active = { row: lastRow(), col: c1 };
+		wholeSel = { kind: 'cols', anchor: { ...anchor }, active: { ...active } };
 		refreshFx();
 		refreshStatus();
 		schedule();

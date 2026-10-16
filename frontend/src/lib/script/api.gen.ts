@@ -107,6 +107,15 @@ export const apiReference: RefEntry[] = [
 		args: [1, 6]
 	},
 	{
+		name: "cells.style_lines",
+		category: "cells",
+		signature: "cells.style_lines(axis, from, [to], style, [sheet])",
+		summary: "Met en forme des lignes ou des colonnes entières de la feuille (toutes leurs cellules, présentes et à venir, tableaux et tableaux croisés compris). Une cellule l'emporte sur sa ligne, une ligne sur sa colonne.",
+		details: "style : bold, italic, underline (booléens), color et fill (couleurs \"#rrggbb\"), align (\"left\", \"center\" ou \"right\"), format (\"0\", \"0,00\", \"%\" ou \"€\"), decimals (nombre de décimales), borders (les quatre bordures) ou border_top, border_bottom, border_left, border_right. false ou \"\" retire la propriété. Paramètres — axis : \"rows\" (lignes) ou \"cols\" (colonnes) ; from : première ligne ou colonne, à partir de 1 ; to : dernière ligne ou colonne (absente : from) ; style : propriétés à poser : {bold = true, fill = \"#fff2cc\"} ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : cells.style_lines{axis = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "cells.style_lines{axis = \"rows\", from = 1, style = {bold = true}}",
+		args: [1, 5]
+	},
+	{
 		name: "charts.create",
 		category: "objects",
 		signature: "charts.create(row, col, config, [sheet])",

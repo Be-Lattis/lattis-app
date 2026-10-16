@@ -488,6 +488,12 @@ func (s *DocumentService) ApplyStyle(ctx context.Context, sheet int64, r0, c0, r
 	return s.act(ctx, func(d *doc.Document) error { return d.ApplyStyle(ctx, sheet, r0, c0, r1, c1, patch) })
 }
 
+// ApplyLineStyle met en forme des lignes (rows) ou des colonnes entières
+// [i0, i1] de la feuille, comme Excel.
+func (s *DocumentService) ApplyLineStyle(ctx context.Context, sheet int64, rows bool, i0, i1 int, patch map[string]any) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.ApplyLineStyle(ctx, sheet, rows, i0, i1, patch) })
+}
+
 // Find cherche un texte dans une feuille (cellules dans l'ordre de lecture).
 func (s *DocumentService) Find(ctx context.Context, sheet int64, text string) ([]canvas.Match, error) {
 	d, err := s.current()

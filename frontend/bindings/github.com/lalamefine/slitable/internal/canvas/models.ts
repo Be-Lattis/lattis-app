@@ -313,6 +313,12 @@ export interface Layout {
     "styles": CellStyle[] | null;
 
     /**
+     * Mise en forme des lignes et colonnes entières de la feuille.
+     */
+    "rowStyles": LineStyle[] | null;
+    "colStyles": LineStyle[] | null;
+
+    /**
      * tableaux croisés, calculés
      */
     "pivots": PivotInfo[] | null;
@@ -326,6 +332,14 @@ export interface Layout {
      * boutons d'action
      */
     "buttons": ButtonInfo[] | null;
+}
+
+/**
+ * LineStyle est la mise en forme d'une ligne ou d'une colonne entière.
+ */
+export interface LineStyle {
+    "index": number;
+    "style": string;
 }
 
 /**
@@ -495,7 +509,23 @@ export interface SheetInfo {
 /**
  * Style est la mise en forme d'une cellule (JSON compact) : b, i, u
  * (gras, italique, souligné), fg et bg (couleurs #rrggbb), al (left,
- * center, right), nf (format de nombre : "0", "0,00", "%", "€", "date").
+ * center, right), nf (format de nombre : "0", "0,00", "%", "€"), dp
+ * (décimales), bt, bb, bl, br (bordures).
+ * 
+ * Un seul système de mise en forme, en couches, de la moins à la plus
+ * précise (comme Excel : cellule > ligne > colonne) :
+ * 
+ * 	colonne de la feuille   _slitable_col_styles (sheet, col)
+ * 	ligne de la feuille     _slitable_row_styles (sheet, row)
+ * 	colonne d'un tableau    _slitable_styles (tbl, rid = 0, col)
+ * 	en-tête d'un tableau    _slitable_styles (tbl, rid = -1, col)
+ * 	cellule d'un tableau    _slitable_styles (tbl, rid, col)
+ * 	cellule libre ou de TCD _slitable_cell_styles (sheet, row, col)
+ * 
+ * Une couche plus précise remplace propriété par propriété les couches
+ * au-dessous. Une propriété à null (JSON) est retirée explicitement : elle
+ * masque la valeur des couches au-dessous (par exemple une cellule non
+ * grasse dans une ligne en gras).
  */
 export type Style = { [_ in string]?: any } | null;
 

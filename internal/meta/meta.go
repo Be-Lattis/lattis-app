@@ -175,6 +175,24 @@ CREATE TABLE _slitable_buttons (
 	`
 ALTER TABLE _slitable_sheets ADD COLUMN headings INTEGER NOT NULL DEFAULT 0;
 `,
+	// 14 → 15 : mise en forme des lignes et colonnes entières de la feuille
+	// (JSON, voir canvas.Style) : elle vaut pour toutes leurs cellules,
+	// présentes et à venir ; une cellule l'emporte sur sa ligne, une ligne
+	// sur sa colonne.
+	`
+CREATE TABLE _slitable_row_styles (
+	sheet INTEGER NOT NULL,
+	row   INTEGER NOT NULL,
+	style TEXT NOT NULL,
+	PRIMARY KEY (sheet, row)
+) STRICT;
+CREATE TABLE _slitable_col_styles (
+	sheet INTEGER NOT NULL,
+	col   INTEGER NOT NULL,
+	style TEXT NOT NULL,
+	PRIMARY KEY (sheet, col)
+) STRICT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.
