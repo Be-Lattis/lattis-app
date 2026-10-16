@@ -9,6 +9,8 @@ export {
 };
 
 export type {
+    DemoProgress,
+    DemoResult,
     DialogRequest,
     DocState,
     ExecResult,

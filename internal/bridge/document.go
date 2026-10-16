@@ -49,9 +49,13 @@ type DocumentService struct {
 	tables map[int64]*grid.Table // tableaux chargés pour la lecture par fenêtres
 	ui     uiState
 	mcp    mcpState
+	demo   *demoRun // classeur de démonstration demandé au lancement
 }
 
-var errNoDoc = errors.New("aucun classeur ouvert")
+var (
+	errNoDoc  = errors.New("aucun classeur ouvert")
+	errNoDemo = errors.New("aucune démonstration demandée au lancement (--demo)")
+)
 
 func (s *DocumentService) current() (*doc.Document, error) {
 	s.mu.Lock()

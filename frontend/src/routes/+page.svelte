@@ -107,6 +107,28 @@
 		await reload();
 	}
 
+	/** Ouvre le classeur de démonstration demandé au lancement (--demo preset). */
+	async function startPresetDemo(preset: string) {
+		let waiting = true;
+		const poll = async () => {
+			if (!waiting) return;
+			const p = await DocumentService.DemoProgress().catch(() => null);
+			if (p && waiting) demoProgress = `Démo « ${preset} » : ${p.done.toLocaleString('fr-FR')} / ${p.total.toLocaleString('fr-FR')} lignes`;
+			setTimeout(poll, 250);
+		};
+		poll();
+		try {
+			const r = await DocumentService.OpenDemo();
+			view = 'grid';
+			sheetId = r.sheet;
+			mode = 'doc';
+			await reload();
+		} finally {
+			waiting = false;
+			demoProgress = '';
+		}
+	}
+
 	async function startDemo() {
 		mode = 'demo';
 		const poll = async () => {
@@ -214,6 +236,8 @@
 				bench = await GridService.BenchRequested();
 				if (bench) return startDemo();
 				loadRecent();
+				const preset = await DocumentService.DemoRequested();
+				if (preset) return await startPresetDemo(preset);
 				orphans = (await DocumentService.Orphans()) ?? [];
 				if (orphans.length > 0) mode = 'recover';
 				else await startDoc();
@@ -640,7 +664,7 @@
 		{:else}
 			<div class="splash">
 				<h1>Slitable</h1>
-				<p>{mode === 'demo' ? demoProgress : 'Ouverture…'}</p>
+				<p>{demoProgress || 'Ouverture…'}</p>
 			</div>
 		{/if}
 	</main>

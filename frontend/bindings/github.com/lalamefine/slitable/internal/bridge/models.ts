@@ -18,6 +18,31 @@ import * as formula$0 from "../formula/models.js";
 import * as grid$0 from "../grid/models.js";
 
 /**
+ * DemoProgress est l'avancement de la fabrication du classeur de démonstration.
+ */
+export interface DemoProgress {
+    "preset": string;
+
+    /**
+     * lignes écrites
+     */
+    "done": number;
+    "total": number;
+}
+
+/**
+ * DemoResult est le classeur de démonstration ouvert.
+ */
+export interface DemoResult {
+    "state": DocState;
+
+    /**
+     * premier onglet
+     */
+    "sheet": number;
+}
+
+/**
  * DialogRequest est une boîte de dialogue à afficher ; la réponse revient par
  * DocumentService.DialogAnswer.
  */

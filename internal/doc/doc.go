@@ -115,5 +115,15 @@ func (d *Document) Save(ctx context.Context, path string) error {
 	return nil
 }
 
+// MarkSaved considère l'état courant comme enregistré, sans écrire de
+// fichier (classeur de démonstration : rien à proposer à la fermeture).
+func (d *Document) MarkSaved(ctx context.Context) error {
+	top, err := d.top(ctx)
+	if err == nil {
+		d.saved = top
+	}
+	return err
+}
+
 // Close ferme le classeur (les modifications non enregistrées sont perdues).
 func (d *Document) Close() error { return d.arc.Close() }

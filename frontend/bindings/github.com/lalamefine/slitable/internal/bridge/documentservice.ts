@@ -147,6 +147,20 @@ export function DeleteTables(names: string[] | null): $CancellablePromise<$model
 }
 
 /**
+ * DemoProgress donne l'avancement de OpenDemo.
+ */
+export function DemoProgress(): $CancellablePromise<$models.DemoProgress> {
+    return $Call.ByID(3466320733);
+}
+
+/**
+ * DemoRequested donne le preset demandé au lancement (--demo), ou "".
+ */
+export function DemoRequested(): $CancellablePromise<string> {
+    return $Call.ByID(1714331694);
+}
+
+/**
  * Dependencies donne les antécédents et les dépendants d'une cellule.
  */
 export function Dependencies(sheet: number, row: number, col: number): $CancellablePromise<canvas$0.Dependencies> {
@@ -311,6 +325,15 @@ export function Open(path: string): $CancellablePromise<$models.OpenResult> {
 }
 
 /**
+ * OpenDemo fabrique et ouvre le classeur de démonstration demandé au
+ * lancement. Il n'est jamais enregistré : Fichier › Enregistrer sous pour
+ * le garder.
+ */
+export function OpenDemo(): $CancellablePromise<$models.DemoResult> {
+    return $Call.ByID(1389055070);
+}
+
+/**
  * Orphans liste les sessions interrompues à proposer au démarrage.
  */
 export function Orphans(): $CancellablePromise<archive$0.Orphan[] | null> {
@@ -470,6 +493,14 @@ export function SetChart(id: number, cfg: canvas$0.ChartConfig): $CancellablePro
  */
 export function SetColumnWidth(sheet: number, col: number, width: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(1916242223, sheet, col, width);
+}
+
+/**
+ * SetDemo demande, au lancement, un classeur de démonstration (main.go,
+ * option --demo) ; seed 0 : graine par défaut.
+ */
+export function SetDemo(preset: string, seed: number): $CancellablePromise<void> {
+    return $Call.ByID(2221492124, preset, seed);
 }
 
 /**
