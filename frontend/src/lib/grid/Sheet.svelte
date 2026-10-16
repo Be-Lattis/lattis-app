@@ -912,6 +912,9 @@
 		const h = viewH;
 		const dpr = window.devicePixelRatio || 1;
 		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+		// Texte centré verticalement partout (les volets dessinent entre save et
+		// restore : la ligne de base doit être posée avant, pour la marge et le bandeau).
+		ctx.textBaseline = 'middle';
 		ctx.fillStyle = C.bg;
 		ctx.fillRect(0, 0, w, h);
 
