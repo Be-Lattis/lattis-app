@@ -119,8 +119,9 @@ func TestProtectSheetNoPassword(t *testing.T) {
 	}
 }
 
-// La structure du classeur protégée refuse d'ajouter, renommer, déplacer ou
-// supprimer des feuilles ; le contenu reste modifiable.
+// Le classeur protégé refuse d'ajouter, renommer, déplacer ou supprimer des
+// feuilles, et verrouille aussi le contenu de toutes les feuilles (choix de
+// Louis, 17/10/2026).
 func TestProtectWorkbook(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
@@ -138,9 +139,10 @@ func TestProtectWorkbook(t *testing.T) {
 	protected(t, d.RenameSheet(ctx, id, "Budget"), "")
 	protected(t, d.DeleteSheet(ctx, id), "")
 	protected(t, d.MoveSheet(ctx, id, 0), "")
-	if _, err := d.SetCell(ctx, id, 0, 0, "contenu"); err != nil {
-		t.Fatalf("contenu refusé : %v", err)
-	}
+	_, err = d.SetCell(ctx, id, 0, 0, "contenu")
+	protected(t, err, "")
+	_, err = d.SetCell(ctx, 1, 0, 0, "contenu")
+	protected(t, err, "")
 	if l, _ := d.Layout(ctx, 1); !l.WorkbookProtected || !l.WorkbookPassword {
 		t.Fatalf("protection du classeur mal décrite : %+v", l)
 	}
@@ -152,6 +154,9 @@ func TestProtectWorkbook(t *testing.T) {
 	}
 	if err := d.RenameSheet(ctx, id, "Budget"); err != nil {
 		t.Fatal(err)
+	}
+	if _, err := d.SetCell(ctx, id, 0, 0, "contenu"); err != nil {
+		t.Fatalf("contenu refusé après déprotection : %v", err)
 	}
 }
 

@@ -640,9 +640,14 @@
 				.catch((e) => (notice = err(e)));
 		}, 400);
 	}
-	const sheetLocked = $derived(mode === 'doc' && !!activeInfo?.protected);
+	const bookLocked = $derived(mode === 'doc' && !!layout?.workbookProtected);
+	const sheetLocked = $derived(mode === 'doc' && (!!activeInfo?.protected || bookLocked));
 	const lockedMsg = $derived(
-		sheetLocked ? `La feuille « ${activeInfo?.name ?? ''} » est protégée : ôtez la protection (Révision › Ôter la protection) pour la modifier` : ''
+		activeInfo?.protected
+			? `La feuille « ${activeInfo?.name ?? ''} » est protégée : ôtez la protection (Révision › Ôter la protection) pour la modifier`
+			: bookLocked
+				? 'Le classeur est protégé : ôtez la protection (Révision › Ôter la protection du classeur) pour le modifier'
+				: ''
 	);
 
 	/** Protège, ou ôte la protection (mot de passe demandé s'il y en a un). */
@@ -753,6 +758,7 @@
 		headings={!!layout?.sheets?.find((s) => s.id === sheetId)?.headings}
 		onheadings={mode === 'doc' ? (show) => DocumentService.SetHeadings(sheetId, show).then(reload).catch((e) => (notice = err(e))) : undefined}
 		sheetProtected={sheetLocked}
+		sheetOwnProtected={!!activeInfo?.protected}
 		workbookProtected={mode === 'doc' && !!layout?.workbookProtected}
 		onprotect={mode === 'doc' ? (what) => toggleProtect(what) : undefined}
 		ondata={mode === 'doc' ? (what) => queryHost?.data(what) : undefined}

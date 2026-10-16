@@ -210,8 +210,8 @@
 						menu = { id: s.id, x: (e.currentTarget as HTMLElement).offsetLeft };
 					}
 				}}
-				title={(s.protected ? 'Feuille protégée. ' : '') + (locked ? 'Structure du classeur protégée' : onmove ? 'Double-clic pour renommer, glisser pour déplacer' : 'Double-clic pour renommer')}
-				>{#if s.protected}<span class="lock" aria-label="Feuille protégée"><Icon name="lock" size={12} /></span>{/if}{s.name}</button
+				title={(s.protected ? 'Feuille protégée. ' : '') + (locked ? 'Classeur protégé' : onmove ? 'Double-clic pour renommer, glisser pour déplacer' : 'Double-clic pour renommer')}
+				>{#if s.protected || locked}<span class="lock" aria-label={s.protected ? 'Feuille protégée' : 'Classeur protégé'}><Icon name="lock" size={12} /></span>{/if}{s.name}</button
 			>
 		{/if}
 	{/each}

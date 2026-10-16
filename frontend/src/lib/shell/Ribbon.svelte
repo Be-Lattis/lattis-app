@@ -86,6 +86,8 @@
 		onbutton?: () => void;
 		/** Feuille active protégée : les commandes qui la modifient sont grisées. */
 		sheetProtected?: boolean;
+		/** La feuille active elle-même est protégée (sheetProtected : verrouillée, par elle ou par le classeur). */
+		sheetOwnProtected?: boolean;
 		/** Structure du classeur protégée (onglets). */
 		workbookProtected?: boolean;
 		/** Révision › Protéger (ou ôter la protection de) la feuille ou le classeur. */
@@ -114,7 +116,7 @@
 		onzoom?: (z: number) => void;
 	}
 
-	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, onbutton, sheetProtected = false, workbookProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom }: Props = $props();
+	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom }: Props = $props();
 	const fmt = (tab: FormatTab) => (onformat ? () => onformat(tab) : undefined);
 	const lines = (rows: boolean, hide: boolean) => (onlines ? () => onlines(rows, hide) : undefined);
 	const frz = (what: FreezeAction) => (onfreeze ? () => onfreeze(what) : undefined);
@@ -351,7 +353,7 @@
 			{
 				title: 'Protéger',
 				commands: [
-					{ label: sheetProtected ? 'Ôter la protection' : 'Protéger la feuille', icon: 'lock-sheet', on: sheetProtected, run: onprotect ? () => onprotect('sheet') : undefined, hint: sheetProtected ? 'Ôter la protection de la feuille active' : 'Protéger la feuille active : plus aucune modification de son contenu (mot de passe facultatif)' },
+					{ label: sheetOwnProtected ? 'Ôter la protection' : 'Protéger la feuille', icon: 'lock-sheet', on: sheetOwnProtected, run: onprotect ? () => onprotect('sheet') : undefined, hint: sheetOwnProtected ? 'Ôter la protection de la feuille active' : 'Protéger la feuille active : plus aucune modification de son contenu (mot de passe facultatif)' },
 					{ label: workbookProtected ? 'Ôter la protection du classeur' : 'Protéger le classeur', icon: 'lock-book', on: workbookProtected, run: onprotect ? () => onprotect('workbook') : undefined, hint: workbookProtected ? 'Ôter la protection de la structure du classeur' : 'Protéger la structure du classeur : ajouter, supprimer, renommer ou déplacer des feuilles est refusé' }
 				]
 			}
@@ -393,9 +395,9 @@
 					...g,
 					commands: g.commands.map((c) =>
 						c.run && sheetProtected && !READ_ONLY.has(c.label)
-							? { ...c, run: undefined, hint: `${c.label} : feuille protégée (Révision › Ôter la protection)` }
+							? { ...c, run: undefined, hint: sheetOwnProtected ? `${c.label} : feuille protégée (Révision › Ôter la protection)` : `${c.label} : classeur protégé (Révision › Ôter la protection du classeur)` }
 							: c.run && workbookProtected && c.label === 'Tableau croisé'
-								? { ...c, run: undefined, hint: 'Tableau croisé : la structure du classeur est protégée (il crée une feuille)' }
+								? { ...c, run: undefined, hint: 'Tableau croisé : le classeur est protégé (il crée une feuille)' }
 								: c
 					)
 				}))

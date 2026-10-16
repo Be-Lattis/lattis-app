@@ -40,13 +40,14 @@ import (
 	"github.com/lalamefine/slitable/internal/command"
 )
 
-// ErrProtected refuse une modification d'une feuille protégée (Sheet) ou de
-// la structure du classeur protégée (Sheet vide).
+// ErrProtected refuse une modification d'une feuille protégée (Sheet) ou du
+// classeur protégé (Sheet vide) : un classeur protégé verrouille sa
+// structure et le contenu de toutes ses feuilles.
 type ErrProtected struct{ Sheet string }
 
 func (e ErrProtected) Error() string {
 	if e.Sheet == "" {
-		return "La structure du classeur est protégée : ôtez la protection (Révision › Ôter la protection du classeur) pour ajouter, supprimer, renommer ou déplacer des feuilles"
+		return "Le classeur est protégé : ôtez la protection (Révision › Ôter la protection du classeur) pour le modifier"
 	}
 	return fmt.Sprintf("La feuille « %s » est protégée : ôtez la protection (Révision › Ôter la protection) pour la modifier", e.Sheet)
 }
@@ -102,6 +103,9 @@ func checkPassword(stored, pw string) bool {
 
 // guard refuse l'action si la feuille est protégée.
 func (t *tx) guard(sheet int64) error {
+	if err := t.guardWorkbook(); err != nil {
+		return err
+	}
 	var name string
 	err := t.row(`SELECT s.name FROM _slitable_protection p JOIN _slitable_sheets s ON s.id = p.sheet WHERE p.sheet = ?`, sheet).Scan(&name)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -121,7 +125,7 @@ func (t *tx) guarded(sheet int64, fn func() error) error {
 	return fn()
 }
 
-// guardWorkbook refuse l'action si la structure du classeur est protégée.
+// guardWorkbook refuse l'action si le classeur est protégé.
 func (t *tx) guardWorkbook() error {
 	var k int
 	if err := t.row(`SELECT count(*) FROM _slitable_protection WHERE sheet = ?`, workbookScope).Scan(&k); err != nil {
