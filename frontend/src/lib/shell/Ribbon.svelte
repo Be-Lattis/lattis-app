@@ -292,7 +292,7 @@
 <header class="ribbon">
 	<nav class="tabs">
 		<div class="file-wrap">
-			<button class="tab file" onclick={() => (fileOpen = !fileOpen)}>Fichier</button>
+			<button class="tab file" data-label="Fichier" onclick={() => (fileOpen = !fileOpen)}>Fichier</button>
 			{#if fileOpen}
 				<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 				<div class="file-menu" use:dismiss={() => (fileOpen = false)}>
@@ -317,11 +317,11 @@
 			{/if}
 		</div>
 		{#each tabs as t (t)}
-			<button class="tab" class:on={tab === t} {disabled} onclick={() => select(t)}>{t}</button>
+			<button class="tab" data-label={t} class:on={tab === t} {disabled} onclick={() => select(t)}>{t}</button>
 		{/each}
 		<span class="sep"></span>
-		<button class="tab special" class:on={tab === 'SQL'} {disabled} onclick={() => select('SQL')}>SQL</button>
-		<button class="tab special" class:on={tab === 'SCRIPT'} {disabled} onclick={() => select('SCRIPT')}>SCRIPT</button>
+		<button class="tab special" data-label="SQL" class:on={tab === 'SQL'} {disabled} onclick={() => select('SQL')}>SQL</button>
+		<button class="tab special" data-label="SCRIPT" class:on={tab === 'SCRIPT'} {disabled} onclick={() => select('SCRIPT')}>SCRIPT</button>
 	</nav>
 	{#if tab !== 'SQL' && tab !== 'SCRIPT'}
 		<div class="groups" class:off={disabled} use:observe>
@@ -419,6 +419,16 @@
 		cursor: pointer;
 		border-radius: 4px 4px 0 0;
 		margin-top: 4px;
+	}
+	/* Largeur du texte en gras réservée : passer en gras (onglet actif) ne
+	   change pas la largeur, les autres onglets ne bougent pas. */
+	.tab::after {
+		content: attr(data-label);
+		display: block;
+		height: 0;
+		overflow: hidden;
+		visibility: hidden;
+		font-weight: 600;
 	}
 	.tab:hover:not(:disabled) {
 		background: rgba(255, 255, 255, 0.12);

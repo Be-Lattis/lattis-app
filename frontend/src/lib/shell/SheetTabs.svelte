@@ -119,6 +119,7 @@
 			<button
 				bind:this={tabEls[si]}
 				class="sheet"
+				data-label={s.name}
 				class:on={s.id === active}
 				class:dragging={drag?.moved && drag.id === s.id}
 				onpointerdown={(e) => dragStart(e, s)}
@@ -220,6 +221,16 @@
 		border-right: 1px solid #d4d7db;
 		color: #374151;
 		cursor: pointer;
+	}
+	/* Largeur du texte en gras réservée : passer en gras (onglet actif) ne
+	   change pas la largeur, les autres onglets ne bougent pas. */
+	.sheet::after {
+		content: attr(data-label);
+		display: block;
+		height: 0;
+		overflow: hidden;
+		visibility: hidden;
+		font-weight: 600;
 	}
 	.sheet.on {
 		background: #fff;
