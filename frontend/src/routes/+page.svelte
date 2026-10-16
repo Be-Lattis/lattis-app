@@ -29,6 +29,8 @@
 	import { typeLabel, type ColumnType } from '#lib/grid/format.js';
 	import type { Fetched } from '#lib/grid/cache.js';
 	import { shortcutOf } from '#lib/grid/shortcuts.js';
+	import { clampZoom } from '#lib/grid/zoom.js';
+	import ZoomBar from '#lib/shell/ZoomBar.svelte';
 
 	type Mode = 'starting' | 'recover' | 'doc' | 'demo' | 'closed';
 
@@ -610,6 +612,31 @@
 	// --- Protection (Révision) ----------------------------------------------
 
 	const activeInfo = $derived(layout?.sheets?.find((s) => s.id === sheetId));
+
+	// Zoom de la feuille active (Affichage › Zoom, Ctrl+molette, barre d'état) :
+	// appliqué tout de suite, enregistré avec la feuille un instant après (le
+	// curseur et la molette en envoient beaucoup).
+	let zoomSet = $state<Record<string, number>>({});
+	const docKey = $derived(`${mode}|${docState.open}|${docState.path}|${docState.title}`);
+	const zoomKey = $derived(`${docKey}|${sheetId}`);
+	const zoom = $derived(zoomSet[zoomKey] ?? clampZoom((activeInfo?.zoom || 100) / 100));
+	$effect(() => {
+		void docKey; // autre classeur : les zooms enregistrés font foi
+		zoomSet = {};
+	});
+	let zoomTimer = 0;
+	function setZoom(z: number) {
+		const v = clampZoom(z);
+		zoomSet = { ...zoomSet, [zoomKey]: v };
+		if (mode !== 'doc') return;
+		const id = sheetId;
+		clearTimeout(zoomTimer);
+		zoomTimer = window.setTimeout(() => {
+			DocumentService.SetZoom(id, Math.round(v * 100))
+				.then((st) => (docState = st))
+				.catch((e) => (notice = err(e)));
+		}, 400);
+	}
 	const sheetLocked = $derived(mode === 'doc' && !!activeInfo?.protected);
 	const lockedMsg = $derived(
 		sheetLocked ? `La feuille « ${activeInfo?.name ?? ''} » est protégée : ôtez la protection (Révision › Ôter la protection) pour la modifier` : ''
@@ -734,6 +761,8 @@
 		onnote={mode === 'doc' ? (what) => (what === 'edit' ? sheet?.editNote() : sheet?.deleteNote()) : undefined}
 		freeze={activeInfo ? { rows: activeInfo.freezeRows, cols: activeInfo.freezeCols } : undefined}
 		onfreeze={mode === 'doc' ? (what) => sheet?.freezeActive(what) : undefined}
+		{zoom}
+		onzoom={data && view === 'grid' ? setZoom : undefined}
 		cellStyle={sheetStatus?.style}
 		merged={!!sheetStatus?.merged}
 	/>
@@ -790,6 +819,8 @@
 						headings={!!layout?.sheets?.find((s) => s.id === sheetId)?.headings}
 						locked={lockedMsg}
 						freeze={activeInfo ? { rows: activeInfo.freezeRows, cols: activeInfo.freezeCols } : undefined}
+						{zoom}
+						onzoom={setZoom}
 						autoBench={bench ? (r) => GridService.ReportBench(r) : undefined}
 					/>
 				</div>
@@ -963,6 +994,7 @@
 		{:else}
 			<span>Prêt</span>
 		{/if}
+		{#if data && view === 'grid'}<ZoomBar {zoom} onzoom={setZoom} />{/if}
 	</footer>
 </div>
 

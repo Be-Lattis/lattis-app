@@ -17,10 +17,24 @@ export function distance(r: { left: number; top: number; right: number; bottom: 
 
 /** Action Svelte : `use:dismiss={close}`. */
 export function dismiss(node: HTMLElement, close: () => void) {
+	return watch(node, close, true);
+}
+
+/**
+ * Panneau ou boîte ancrée sur la grille (filtre, règles, note, taille…) :
+ * comme un menu, il se ferme sur un clic ailleurs, Échap, ou quand la
+ * fenêtre change de taille, mais pas quand la souris s'en éloigne (on y
+ * saisit des valeurs). `use:dismissPanel={close}`.
+ */
+export function dismissPanel(node: HTMLElement, close: () => void) {
+	return watch(node, close, false);
+}
+
+function watch(node: HTMLElement, close: () => void, far: boolean) {
 	let onClose = close;
 	const move = (e: MouseEvent) => {
 		// Un sous-menu qui déborde du menu compte comme le menu.
-		if (node.contains(e.target as Node)) return;
+		if (!far || node.contains(e.target as Node)) return;
 		if (distance(node.getBoundingClientRect(), e.clientX, e.clientY) > DISMISS_MARGIN) onClose();
 	};
 	const down = (e: MouseEvent) => {
@@ -37,7 +51,8 @@ export function dismiss(node: HTMLElement, close: () => void) {
 		window.addEventListener('pointerdown', down, CAPTURE);
 		window.addEventListener('keydown', key, CAPTURE);
 		window.addEventListener('resize', away);
-		window.addEventListener('blur', away);
+		// Un panneau reste ouvert quand on passe à une autre fenêtre (saisie en cours).
+		if (far) window.addEventListener('blur', away);
 	});
 	return {
 		update(c: () => void) {

@@ -30,9 +30,13 @@
 		say: (msg: string) => void;
 		/** Rend la main à la grille (focus). */
 		done: () => void;
+		/** Zoom de la feuille : le calque est agrandi, menus et dialogues gardent leur taille. */
+		zoom?: number;
 	}
 
-	let { buttons, geo, view, active, scripts, onrun, oncreate, onset, onplace, ondelete, onwheel, say, done }: Props = $props();
+	let { buttons, geo, view, active, scripts, onrun, oncreate, onset, onplace, ondelete, onwheel, say, done, zoom = 1 }: Props = $props();
+	// Menus et dialogues (position: fixed) : le zoom du calque est annulé.
+	const unzoom = $derived(zoom === 1 ? undefined : 1 / zoom);
 
 	let selected = $state<number | null>(null);
 	let menu = $state<{ b: SheetButton; x: number; y: number } | null>(null);
@@ -66,8 +70,8 @@
 		const y0 = ev.clientY;
 		let moved = false;
 		const move = (e: MouseEvent) => {
-			const dx = e.clientX - x0;
-			const dy = e.clientY - y0;
+			const dx = (e.clientX - x0) / zoom;
+			const dy = (e.clientY - y0) / zoom;
 			if (!moved && Math.abs(dx) + Math.abs(dy) < 4) return;
 			if (!moved && !onplace) return;
 			moved = true;
@@ -225,7 +229,7 @@
 
 {#if menu}
 	{@const m = menu}
-	<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (menu = null)}>
+	<div class="menu" style:zoom={unzoom} style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (menu = null)}>
 		<div class="menu-title">Bouton « {m.b.config.label} »</div>
 		<button
 			onclick={() => {
@@ -251,7 +255,7 @@
 
 {#if editor}
 	{@const e = editor}
-	<div class="back">
+	<div class="back" style:zoom={unzoom}>
 		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 		<div
 			class="dialog"

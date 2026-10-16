@@ -16,10 +16,12 @@
 	import { isNumericText, painterPatch, parseStyle, resolveStyle, type CellStyle, type StyleLayer } from './style';
 	import { formatCell } from './numfmt';
 	import { autoHeight, cellFont, fontPx, lineHeight, wrapLines } from './textwrap';
+	import { AutoRows } from './rowfit';
+	import { stepZoom } from './zoom';
 	import { panes, reveal, toGrid, type Pane } from './panes';
 	import { hiddenLines, mergeAt, mergeList, parseList, skipHidden, validate, type MergeRange } from './sheetfmt';
 	import FormatDialog, { type FormatTab } from './FormatDialog.svelte';
-	import { dismiss } from './dismiss';
+	import { dismiss, dismissPanel } from './dismiss';
 	import { explainError } from './errors';
 	import { freeDisplay } from './freecell';
 	import { bandAt, bandLabel, bandRefusal, hiddenBand } from './hidden';
@@ -344,9 +346,13 @@
 		locked?: string;
 		/** Volets figés : lignes et colonnes qui restent affichées pendant le défilement. */
 		freeze?: { rows: number; cols: number };
+		/** Zoom de la feuille (1 : 100 %), voir zoom.ts. */
+		zoom?: number;
+		/** Ctrl+molette : zoom demandé. */
+		onzoom?: (z: number) => void;
 	}
 
-	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', freeze }: Props = $props();
+	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', freeze, zoom = 1, onzoom }: Props = $props();
 
 	export const SHEET_ROWS = 1_048_576;
 	export const SHEET_COLS = 16_384;
@@ -444,7 +450,9 @@
 				(first, count) => source.window(e.t, first, count),
 				t.rows,
 				(c, v) => formatColumnValue(e.t.columns[c], v),
-				() => {
+				(first, count) => {
+					// Bloc arrivé : ses lignes se mesurent (hauteur automatique) au prochain dessin.
+					if (first !== undefined && count) autoRows.forget(e.t.row + 1 + first, count);
 					schedule();
 					refreshFx();
 				}
@@ -498,7 +506,11 @@
 		headStyles = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseStyle(c.headerStyle))]));
 		colRules = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseRules(c.rules))]));
 		rebuildAxis();
-		autoHeights = measureHeights();
+		// Données ou mise en forme changées : les lignes de tableau affichées se
+		// remesurent (elles gardent leur hauteur d'ici là, sans clignoter).
+		if (back) autoRows.clear();
+		else autoRows.forgetAll((r) => entries.some((e) => r > e.t.row && r <= e.t.row + e.t.rows));
+		autoRows.free = measureHeights();
 		rebuildRows();
 		if (back) {
 			active = back.active;
@@ -559,27 +571,76 @@
 	let merges: MergeRange[] = [];
 	let hiddenRows = new Set<number>();
 	let hiddenCols = new Set<number>();
-	let autoHeights = new Map<number, number>();
+	// Hauteurs automatiques (voir rowfit.ts) : cellules libres à chaque mise en
+	// page, lignes de tableau à mesure qu'elles s'affichent.
+	const autoRows = new AutoRows();
+	const MAX_AUTO_H = 400;
 
-	/** Hauteurs automatiques des lignes, comme Excel : cellules libres qui renvoient à la ligne ou en grande police. */
+	/** Hauteur nécessaire au texte d'une cellule (0 : la hauteur par défaut suffit). */
+	function fitHeight(text: string, c: number, st: CellStyle | undefined): number {
+		if ((!st || (!st.wr && !st.fs)) && !text.includes('\n')) return 0;
+		measurer ??= document.createElement('canvas').getContext('2d');
+		if (!measurer) return 0;
+		measurer.font = cellFont(st);
+		const m = measurer;
+		return Math.min(MAX_AUTO_H, autoHeight(text, colAxis.size(c), st ?? {}, (s) => m.measureText(s).width, ROW_H));
+	}
+
+	/** Hauteurs automatiques des lignes, comme Excel : cellules libres qui renvoient à la ligne, sur plusieurs lignes ou en grande police. */
 	function measureHeights(): Map<number, number> {
 		const out = new Map<number, number>();
 		const consider = (r: number, c: number, text: string, st: CellStyle | undefined) => {
-			if (!st || (!st.wr && !st.fs) || mergeAt(merges, r, c)) return;
-			measurer ??= document.createElement('canvas').getContext('2d');
-			if (!measurer) return;
-			measurer.font = cellFont(st);
-			const m = measurer;
-			const h = autoHeight(text, colAxis.size(c), st, (s) => m.measureText(s).width, ROW_H);
-			if (h > (out.get(r) ?? 0)) out.set(r, Math.min(h, 400));
+			if (mergeAt(merges, r, c)) return;
+			const h = fitHeight(text, c, st);
+			if (h > (out.get(r) ?? 0)) out.set(r, h);
 		};
 		for (const [k, raw] of cells) {
 			const [r, c] = k.split(',').map(Number);
-			consider(r, c, shown.get(k)?.text ?? raw, styleAt(r, c, undefined));
+			consider(r, c, shown.get(k)?.text ?? freeDisplay(raw).text, styleAt(r, c, undefined));
 		}
 		// Grande police posée sur des lignes entières ou des cellules vides.
 		for (const [r, st] of sheetRowStyles) if (st.fs) consider(r, -1, '', resolveStyle(st));
 		return out;
+	}
+
+	/**
+	 * Hauteur nécessaire aux cellules de tableau d'une ligne de la feuille
+	 * (0 : la hauteur par défaut suffit), undefined si la ligne n'est pas
+	 * encore chargée. Seules les cellules qui peuvent passer à la ligne ou
+	 * grossir sont mesurées.
+	 */
+	function measureTableRow(r: number): number | undefined {
+		let h = 0;
+		const rowSt = sheetRowStyles.get(r);
+		const rowFit = !!rowSt && ('wr' in rowSt || 'fs' in rowSt);
+		for (const e of entries) {
+			if (r <= e.t.row || r > e.t.row + e.t.rows) continue;
+			const row = e.cache.row(r - e.t.row - 1);
+			if (!row) return undefined;
+			const cs = colStyles.get(e.t.id);
+			for (let i = 0; i < e.t.columns.length; i++) {
+				const c = e.t.col + i;
+				const text = row.text[i] ?? '';
+				if (!colAxis.size(c) || (!rowFit && !cs?.[i] && !sheetColStyles.has(c) && !row.sty?.has(i) && !text.includes('\n'))) continue;
+				h = Math.max(h, fitHeight(text, c, styleAt(r, c, e)));
+			}
+		}
+		return h;
+	}
+
+	/** Mesure les lignes de tableau affichées pas encore mesurées et ajuste l'axe des lignes (seulement les lignes changées). */
+	function fitVisibleRows() {
+		if (!entries.length) return;
+		for (let pass = 0; pass < 3; pass++) {
+			const { first, last } = visibleRows();
+			const changed = autoRows.measure(first, last, measureTableRow);
+			if (fRows()) for (const [r, h] of autoRows.measure(0, fRows() - 1, measureTableRow)) changed.set(r, h);
+			const sizes = new Map<number, number | undefined>();
+			for (const [r, h] of changed) if (!userHeights.has(r) && !hiddenRows.has(r)) sizes.set(r, h);
+			if (!sizes.size) return;
+			rowAxis = rowAxis.with(sizes);
+			updateExtent();
+		}
 	}
 
 	/** Fusion qui couvre une cellule (cellules libres seulement). */
@@ -618,7 +679,7 @@
 	const rspan = (r0: number, r1: number) => rowAxis.offset(r1 + 1) - rowAxis.offset(r0);
 	function rebuildRows(override?: { row: number; height: number }) {
 		// Hauteur automatique (renvoyer à la ligne), sauf hauteur choisie ; masquée : nulle.
-		const hs = new Map(autoHeights);
+		const hs = autoRows.all();
 		for (const [r, h] of userHeights) hs.set(r, h);
 		if (override) hs.set(override.row, override.height);
 		for (const r of hiddenRows) hs.set(r, 0);
@@ -751,7 +812,7 @@
 			if (el.value.startsWith('=')) el.style.textAlign = 'left';
 		}
 		if (!catalog) return;
-		suggestPos = { x: screenX(active.col), y: screenY(active.row) + Math.max(editorH, rh(active.row)) + 2 };
+		suggestPos = { x: toView(screenX(active.col)), y: toView(screenY(active.row) + Math.max(editorH, rh(active.row))) + 2 };
 		const caret = el.selectionStart ?? el.value.length;
 		const e = tableAt(active.row, active.col);
 		const c = suggest(el.value, caret, catalog, e?.t.name);
@@ -900,6 +961,37 @@
 		untrack(() => schedule());
 	});
 
+	// --- Zoom (voir zoom.ts) ------------------------------------------------------
+	// La grille calcule en pixels de la feuille (100 %) ; le calque .zoom agrandit
+	// l'affichage. Les menus et dialogues restent hors du calque, à taille normale.
+
+	let resizeCanvas = () => {};
+	let zoomWheel = 0;
+	/** Facteur effectif entre pixels de l'écran et pixels de la feuille. */
+	function zoomK(): number {
+		const w = scroller?.offsetWidth;
+		const k = w ? scroller.getBoundingClientRect().width / w : zoom;
+		return k > 0 && Number.isFinite(k) ? k : 1;
+	}
+	/** Position de la souris dans la vue, en pixels de la feuille. */
+	function toLocal(e: MouseEvent): { x: number; y: number } {
+		const r = scroller.getBoundingClientRect();
+		const k = zoomK();
+		return { x: (e.clientX - r.left) / k, y: (e.clientY - r.top) / k };
+	}
+	/** Position (pixels de la feuille) d'un menu ou dialogue posé hors du calque zoomé. */
+	const toView = (v: number) => v * zoom;
+
+	$effect(() => {
+		void zoom;
+		untrack(() => {
+			noteTip = null;
+			listMenu = null;
+			completion = sig = null;
+			resizeCanvas();
+		});
+	});
+
 	// Défilement vertical du volet en cours de dessin (drawText).
 	let paneTop = 0;
 
@@ -908,9 +1000,10 @@
 		pendingBorders = [];
 		if (viewPos.x !== scroller.scrollLeft || viewPos.y !== vs.top) viewPos = { x: scroller.scrollLeft, y: vs.top };
 		const t0 = performance.now();
+		fitVisibleRows();
 		const w = viewW;
 		const h = viewH;
-		const dpr = window.devicePixelRatio || 1;
+		const dpr = (window.devicePixelRatio || 1) * zoom;
 		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 		// Texte centré verticalement partout (les volets dessinent entre save et
 		// restore : la ligne de base doit être posée avant, pour la marge et le bandeau).
@@ -1873,7 +1966,7 @@
 			say(locked);
 			return;
 		}
-		menu = freeMenu = null;
+		closeMenus();
 		const info = cellInfo(active.row, active.col);
 		const sel = selection();
 		const single = sel.r0 === sel.r1 && sel.c0 === sel.c1;
@@ -1979,7 +2072,7 @@
 	let sizeDlg = $state<{ rows: boolean; value: number; x: number; y: number } | null>(null);
 
 	function openSize(rows: boolean, x: number, y: number) {
-		menu = freeMenu = null;
+		closeMenus();
 		sizeDlg = { rows, value: rows ? rh(active.row) || ROW_H : colAxis.size(active.col) || DEF_W, x, y };
 	}
 
@@ -1999,6 +2092,35 @@
 		menuAction(async () => {
 			for (let i = d.rows ? r0 : c0; i <= (d.rows ? r1 : c1) && i - (d.rows ? r0 : c0) < 500; i++) await set(i, v);
 		});
+	}
+
+	/**
+	 * Ajuster la hauteur (lignes sélectionnées) : retour à la hauteur
+	 * automatique, d'après le contenu (comme le double-clic sur le bord
+	 * d'un numéro de ligne).
+	 */
+	function autoFitRows() {
+		closeMenus();
+		const set = source.setRowHeight;
+		if (!set) return;
+		const { r0, r1 } = selection();
+		const rows: number[] = [];
+		for (const r of userHeights.keys()) if (r >= r0 && r <= r1) rows.push(r);
+		if (!rows.length) return;
+		for (const r of rows) userHeights.delete(r);
+		rebuildRows();
+		updateExtent();
+		schedule();
+		menuAction(async () => {
+			for (const r of rows) await set(r, 0);
+		});
+	}
+
+	/** Ajuster la largeur de colonne (colonnes sélectionnées), d'après le contenu affiché. */
+	function autoFitCols() {
+		closeMenus();
+		const { c0, c1 } = selection();
+		for (let c = c0; c <= c1 && c - c0 < 500; c++) if (!hiddenCols.has(c)) autoFitColumn(c);
 	}
 
 	// Volets figés.
@@ -2056,7 +2178,8 @@
 		const values = listOf(active.row, active.col);
 		if (!values) return;
 		const b = dropButton();
-		listMenu = { x: screenX(active.col), y: b.y + b.h + 2, values, row: active.row, col: active.col };
+		closeMenus();
+		listMenu = { x: toView(screenX(active.col)), y: toView(b.y + b.h) + 2, values, row: active.row, col: active.col };
 	}
 
 	function pickFromList(v: string) {
@@ -2079,7 +2202,7 @@
 			say(locked);
 			return;
 		}
-		menu = freeMenu = null;
+		closeMenus();
 		validDlg = { text: (listOf(active.row, active.col) ?? []).join('\n'), error: '' };
 	}
 
@@ -2139,11 +2262,11 @@
 			say(locked);
 			return;
 		}
-		menu = freeMenu = null;
+		closeMenus();
 		noteTip = null;
 		const text = noteOf(active.row, active.col) ?? '';
 		const right = screenX(active.col) + colAxis.size(active.col);
-		noteDlg = { row: active.row, col: active.col, text, had: !!text, x: Math.min(right + 8, Math.max(8, viewW - 270)), y: Math.max(4, screenY(active.row)) };
+		noteDlg = { row: active.row, col: active.col, text, had: !!text, x: Math.min(toView(right) + 8, Math.max(8, toView(viewW) - 270)), y: Math.max(4, toView(screenY(active.row))) };
 	}
 
 	function saveNote(remove = false) {
@@ -2308,16 +2431,22 @@
 		sub: boolean; // sous-menu « Filtres textuels / numériques » ouvert
 		// Filtre personnalisé en cours (deux conditions au plus, comme Excel).
 		custom: { conds: { op: CondOp | ''; value: string; to: string }[]; or: boolean } | null;
+		// Section « Type de données » : conversion en attente de confirmation,
+		// raison pour laquelle la colonne ne peut pas être clé, valeurs hors type.
+		pending?: { to: ColumnType; n: number };
+		keyWhy?: string | null;
+		mix?: TypeMix | null;
 	} | null>(null);
 
 	/** Position d'un panneau ancré sous l'en-tête de la colonne i du tableau e
 	 * (sous le bandeau quand l'en-tête est figé), gardé dans la grille (width :
 	 * largeur du panneau). */
 	function anchorUnder(e: Entry, i: number, width: number) {
-		const x = screenX(e.t.col + i);
+		// Hors du calque zoomé : en pixels de l'écran (toView).
+		const x = toView(screenX(e.t.col + i));
 		return {
-			x: Math.max(4, Math.min(x, scroller.clientWidth - width - 4)),
-			y: clamp(screenY(e.t.row) + rh(e.t.row), TOP_H, Math.max(TOP_H, scroller.clientHeight - 200))
+			x: Math.max(4, Math.min(x, toView(scroller.clientWidth) - width - 4)),
+			y: toView(clamp(screenY(e.t.row) + rh(e.t.row), TOP_H, Math.max(TOP_H, scroller.clientHeight - 200 / zoom)))
 		};
 	}
 
@@ -2326,13 +2455,17 @@
 		requestAnimationFrame(() => (node.querySelector<HTMLElement>('.add input, .add textarea') ?? node.querySelector<HTMLElement>('.add button'))?.focus());
 	}
 
+	/**
+	 * Menu ▾ d'une colonne de tableau, comme celui d'Excel (le ▾ et l'icône de
+	 * type de l'en-tête, figé ou non, et le clic droit l'ouvrent) : tri,
+	 * filtres (conditions, recherche, liste à cocher, OK / Annuler), puis le
+	 * type de données et la clé du tableau.
+	 */
 	async function openFilter(e: Entry, i: number) {
-		menu = null;
-		if (!source.filterValues) return;
-		typeMenu = null;
+		closeMenus();
 		const f = e.t.columns[i]?.filter;
 		try {
-			const vals = e.t.columns[i]?.formula ? [] : await source.filterValues(e.t, i);
+			const vals = e.t.columns[i]?.formula || !source.filterValues ? [] : await source.filterValues(e.t, i);
 			const keep = f?.values ? new Set(f.values) : null;
 			filterDlg = {
 				e,
@@ -2344,8 +2477,15 @@
 				error: '',
 				touched: false,
 				sub: false,
-				custom: null
+				custom: null,
+				keyWhy: null
 			};
+			mixOf(e, i).then((mix) => filterDlg && filterDlg.e.t.id === e.t.id && filterDlg.i === i && (filterDlg.mix = mix));
+			if (source.keyCheck && e.t.key !== i)
+				source.keyCheck(e.t, i).then(
+					(why) => filterDlg && filterDlg.e.t.id === e.t.id && filterDlg.i === i && (filterDlg.keyWhy = why),
+					() => undefined
+				);
 		} catch (err) {
 			say(String(err instanceof Error ? err.message : err));
 		}
@@ -2448,6 +2588,15 @@
 		wrap.focus();
 	}
 
+	// Menu ▾ fermé par un clic ailleurs : si ce clic est sur le ▾ de la même
+	// colonne, il ne le rouvre pas (le ▾ ouvre et ferme son menu, comme Excel).
+	let filterClosed = { key: '', at: 0 };
+	function dismissFilter() {
+		const d = filterDlg;
+		if (d) filterClosed = { key: `${d.e.t.id}:${d.i}`, at: performance.now() };
+		filterDlg = null;
+	}
+
 	// --- Mise en forme conditionnelle -----------------------------------------
 
 	let rulesRev = $state(0); // relit les règles après enregistrement
@@ -2467,15 +2616,15 @@
 	/** Ouvre le dialogue des règles des lignes ou colonnes entières sélectionnées. */
 	function openLineRules(rows: boolean) {
 		const { r0, r1, c0, c1 } = selection();
-		menu = freeMenu = null;
-		const x = rows ? MARGIN + 8 : Math.max(MARGIN, screenX(c0));
-		const y = rows ? screenY(r1) + rh(r1) + 4 : TOP_H + 4;
+		closeMenus();
+		const x = toView(rows ? MARGIN + 8 : Math.max(MARGIN, screenX(c0)));
+		const y = toView(rows ? screenY(r1) + rh(r1) + 4 : TOP_H + 4);
 		rulesDlg = { i: rows ? r0 : c0, line: { rows, i0: rows ? r0 : c0, i1: rows ? r1 : c1 }, x, y, op: '>', value: '', to: '', style: 0, error: '' };
 	}
 
 	/** Ouvre le dialogue des règles de la colonne i du tableau e. */
 	function openRules(e: Entry, i: number) {
-		menu = null;
+		closeMenus();
 		rulesDlg = { e, i, ...anchorUnder(e, i, 470), op: '>', value: '', to: '', style: 0, error: '' };
 	}
 
@@ -2594,8 +2743,9 @@
 		chartGesture = { id: ch.id, box: { ...b0 } };
 		const move = (e: MouseEvent) => {
 			if (!chartGesture) return;
-			const dx = e.clientX - x0;
-			const dy = e.clientY - y0;
+			const k = zoomK();
+			const dx = (e.clientX - x0) / k;
+			const dy = (e.clientY - y0) / k;
 			const b = { ...b0 };
 			if (!dir) {
 				b.x = Math.max(0, b0.x + dx);
@@ -2648,6 +2798,7 @@
 		ev.stopPropagation();
 		selectChart(ch);
 		const r = wrap.getBoundingClientRect();
+		closeMenus();
 		chartMenu = { ch, x: ev.clientX - r.left, y: ev.clientY - r.top };
 	}
 
@@ -2791,6 +2942,7 @@
 			return;
 		}
 		// Comme Excel : toutes les colonnes cochées au départ.
+		closeMenus();
 		dedupDlg = { e, on: e.t.columns.map((c) => !c.formula), count: null, error: '' };
 		previewDedup();
 	}
@@ -2853,6 +3005,7 @@
 	}
 
 	export function openFunctions() {
+		closeMenus();
 		fnDlg = { search: '', sel: null };
 	}
 
@@ -2905,9 +3058,9 @@
 			sheetLines(insert ? (sel.rows ? 'insertRows' : 'insertCols') : sel.rows ? 'deleteRows' : 'deleteCols');
 			return;
 		}
-		menu = freeMenu = null;
-		const px = x ?? screenX(active.col) + 20;
-		const py = y ?? screenY(active.row) + rh(active.row) + 4;
+		closeMenus();
+		const px = x ?? toView(screenX(active.col) + 20);
+		const py = y ?? toView(screenY(active.row) + rh(active.row) + 4);
 		linesDlg = { x: px, y: py, insert, choice: 'rows' };
 	}
 
@@ -2946,12 +3099,26 @@
 	/** Échap ferme le dialogue ouvert, où que soit le focus. */
 	function onGlobalKey(e: KeyboardEvent) {
 		if (e.key !== 'Escape') return;
-		const open = filterDlg || rulesDlg || dedupDlg || fnDlg || menu || freeMenu || typeMenu || chartMenu || linesDlg || formatDlg || validDlg || noteDlg || listMenu || sizeDlg;
-		if (!open) return;
-		filterDlg = rulesDlg = dedupDlg = fnDlg = linesDlg = null;
-		formatDlg = validDlg = noteDlg = listMenu = sizeDlg = null;
-		menu = freeMenu = typeMenu = chartMenu = null;
+		if (!menusOpen()) return;
+		closeMenus();
 		wrap.focus();
+	}
+
+	/** Un menu, panneau ou boîte de la grille est-il ouvert ? */
+	function menusOpen(): boolean {
+		return !!(filterDlg || rulesDlg || dedupDlg || fnDlg || menu || freeMenu || chartMenu || linesDlg || formatDlg || validDlg || noteDlg || listMenu || sizeDlg);
+	}
+
+	/**
+	 * Ferme les menus, panneaux et boîtes ouverts sur la grille : un seul à la
+	 * fois (ouvrir le ▾ d'une colonne ferme celui d'une autre). Chaque ouverture
+	 * passe par ici ; un clic en dehors les ferme aussi (dismiss.ts).
+	 */
+	function closeMenus() {
+		menu = freeMenu = chartMenu = listMenu = null;
+		filterDlg = rulesDlg = dedupDlg = fnDlg = linesDlg = null;
+		formatDlg = validDlg = noteDlg = sizeDlg = null;
+		noteTip = null;
 	}
 
 	/** Sélectionne une plage (scripts : ui.select ; à partir de 0). */
@@ -3040,18 +3207,10 @@
 
 	/** Ferme les menus, dialogues et volets (changement de feuille ou de vue). */
 	export function closeOverlays() {
-		menu = null;
-		freeMenu = null;
-		typeMenu = null;
-		filterDlg = null;
+		closeMenus();
 		arrows = null;
-		rulesDlg = null;
-		dedupDlg = null;
-		fnDlg = null;
-		chartMenu = null;
 		selChart = null;
 		panel = null;
-		formatDlg = validDlg = noteDlg = listMenu = sizeDlg = noteTip = null;
 	}
 
 	/** Erreur de formule de la cellule (code et formule), ou null. */
@@ -3110,7 +3269,7 @@
 
 	// Barre verticale (native) tirée : repérée au clic dans sa zone.
 	function onScrollbarDown(e: PointerEvent) {
-		if (e.offsetX < scroller.clientWidth) return;
+		if (toLocal(e).x < scroller.clientWidth) return;
 		holdRows = rowAxis.indexAt(vs.content);
 		const up = () => {
 			holdRows = 0;
@@ -3130,7 +3289,17 @@
 	}
 
 	function onWheel(e: WheelEvent) {
-		if (e.ctrlKey) return;
+		if (e.ctrlKey) {
+			// Ctrl+molette : zoom de la feuille (pas celui de toute la page), par pas de 10 %.
+			// Pavé tactile (pincement : petits pas) : un pas tous les 50 px cumulés.
+			e.preventDefault();
+			zoomWheel += e.deltaMode === 0 ? e.deltaY : e.deltaY * 50;
+			if (onzoom && Math.abs(zoomWheel) >= 50) {
+				onzoom(stepZoom(zoom, -Math.sign(zoomWheel)));
+				zoomWheel = 0;
+			}
+			return;
+		}
 		holdWhileScrolling();
 		noteTip = null;
 		const unit = e.deltaMode === 1 ? ROW_H : e.deltaMode === 2 ? vs.view : 1;
@@ -3261,9 +3430,7 @@
 	}
 
 	function cellAt(e: MouseEvent): { row: number; col: number } | null {
-		const r = scroller.getBoundingClientRect();
-		const x = e.clientX - r.left;
-		const y = e.clientY - r.top;
+		const { x, y } = toLocal(e);
 		if (x < MARGIN || y < TOP_H || x >= scroller.clientWidth || y >= scroller.clientHeight) return null;
 		return { row: rowAtY(y), col: colAtX(x) };
 	}
@@ -3275,9 +3442,7 @@
 
 	/** Ligne dont le bord bas est sous la souris (marge de gauche), ou null. */
 	function rowBoundaryAt(e: MouseEvent): number | null {
-		const r = scroller.getBoundingClientRect();
-		const x = e.clientX - r.left;
-		const y = e.clientY - r.top;
+		const { x, y } = toLocal(e);
 		if (x >= MARGIN || y <= TOP_H) return null;
 		const py = toGrid(y, TOP_H, rowTop(fRows()), vs.top);
 		const row = rowAxis.indexAt(py);
@@ -3288,9 +3453,7 @@
 
 	/** Colonne dont le bord droit est sous la souris (bandeau du haut), ou null. */
 	function boundaryAt(e: MouseEvent): number | null {
-		const r = scroller.getBoundingClientRect();
-		const x = e.clientX - r.left;
-		const y = e.clientY - r.top;
+		const { x, y } = toLocal(e);
 		if (y >= TOP_H || x <= MARGIN) return null;
 		const px = toGrid(x, MARGIN, colAxis.offset(fCols()), scroller.scrollLeft);
 		const c = colAxis.indexAt(px);
@@ -3346,9 +3509,7 @@
 	/** La souris est-elle sur la bordure de la sélection (poignée de déplacement) ? */
 	function onSelectionEdge(e: MouseEvent): boolean {
 		if (!source.moveTable) return false;
-		const r = scroller.getBoundingClientRect();
-		const x = e.clientX - r.left;
-		const y = e.clientY - r.top;
+		const { x, y } = toLocal(e);
 		if (x < MARGIN || y < TOP_H) return false;
 		const { r0, r1, c0, c1 } = selection();
 		const left = screenX(c0);
@@ -3430,9 +3591,9 @@
 
 	function onFillHandle(e: MouseEvent): boolean {
 		if (editing || !source.paste) return false;
-		const r = scroller.getBoundingClientRect();
+		const p = toLocal(e);
 		const h = fillHandle();
-		return Math.abs(e.clientX - r.left - h.x) <= 5 && Math.abs(e.clientY - r.top - h.y) <= 5;
+		return Math.abs(p.x - h.x) <= 5 && Math.abs(p.y - h.y) <= 5;
 	}
 
 	/** Zone étendue par la poignée jusqu'à la cellule visée (une seule direction). */
@@ -3508,9 +3669,7 @@
 
 	/** Ligne (marge de gauche) ou colonne (bandeau du haut) sous la souris. */
 	function headerAt(e: MouseEvent): { kind: 'rows'; row: number } | { kind: 'cols'; col: number } | null {
-		const r = scroller.getBoundingClientRect();
-		const x = e.clientX - r.left;
-		const y = e.clientY - r.top;
+		const { x, y } = toLocal(e);
 		if (x < MARGIN && y >= TOP_H) return { kind: 'rows', row: clamp(rowAtY(y), 0, SHEET_ROWS - 1) };
 		if (y < TOP_H && x >= MARGIN) return { kind: 'cols', col: colAtX(x) };
 		return null;
@@ -3571,9 +3730,7 @@
 		// Flèche de la liste déroulante (validation) de la cellule active.
 		if (e.button === 0 && !editing && listOf(active.row, active.col)) {
 			const b = dropButton();
-			const r = scroller.getBoundingClientRect();
-			const x = e.clientX - r.left;
-			const y = e.clientY - r.top;
+			const { x, y } = toLocal(e);
 			if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) {
 				e.preventDefault();
 				if (listMenu) listMenu = null;
@@ -3751,14 +3908,14 @@
 			return;
 		}
 		if (rowResizing) {
-			rowResizing.height = Math.max(12, Math.round(rowResizing.startH + e.clientY - rowResizing.startY));
+			rowResizing.height = Math.max(12, Math.round(rowResizing.startH + (e.clientY - rowResizing.startY) / zoomK()));
 			rebuildRows({ row: rowResizing.row, height: rowResizing.height });
 			updateExtent();
 			schedule();
 			return;
 		}
 		if (resizing) {
-			resizing.width = Math.max(24, Math.round(resizing.startW + e.clientX - resizing.startX));
+			resizing.width = Math.max(24, Math.round(resizing.startW + (e.clientX - resizing.startX) / zoomK()));
 			rebuildAxis({ col: resizing.col, width: resizing.width });
 			schedule();
 			return;
@@ -3780,12 +3937,12 @@
 			return;
 		}
 		if (headerDrag) {
-			const r = scroller.getBoundingClientRect();
+			const p = toLocal(e);
 			if (headerDrag === 'rows') {
-				const row = clamp(rowAtY(e.clientY - r.top), 0, SHEET_ROWS - 1);
+				const row = clamp(rowAtY(p.y), 0, SHEET_ROWS - 1);
 				selectRows(anchor.row, row);
 			} else {
-				const col = colAtX(Math.max(MARGIN, e.clientX - r.left));
+				const col = colAtX(Math.max(MARGIN, p.x));
 				selectCols(anchor.col, col);
 			}
 			return;
@@ -4756,18 +4913,9 @@
 		return true;
 	}
 
-	// --- Menu de type (icône de l'en-tête) ------------------------------------
+	// --- Type de données (section du menu ▾ de la colonne) ----------------------
 
 	const TYPES: ColumnType[] = ['text', 'integer', 'decimal', 'date', 'boolean'];
-	let typeMenu = $state<{
-		x: number;
-		y: number;
-		e: Entry;
-		i: number;
-		pending?: { to: ColumnType; n: number };
-		keyWhy?: string | null;
-		mix?: TypeMix | null;
-	} | null>(null);
 
 	// Une valeur hors type fait passer une colonne inférée en texte : l'infobulle
 	// de l'en-tête et le menu ▾ disent combien de valeurs sortent du type
@@ -4819,7 +4967,7 @@
 		});
 	}
 
-	/** Un clic sur les boutons d'un en-tête : ▾ ouvre le filtre, l'icône de type son menu. */
+	/** Un clic sur les boutons d'un en-tête (▾ ou icône de type) : le menu de la colonne. */
 	function openTypeMenu(ev: MouseEvent, cell: { row: number; col: number }): boolean {
 		const e = tableAt(cell.row, cell.col);
 		if (!e || cell.row !== e.t.row) return false;
@@ -4828,31 +4976,28 @@
 
 	/**
 	 * Boutons d'en-tête de la colonne c du tableau e (frozen : en-tête figé
-	 * dans le bandeau du haut) : le ▾ ouvre directement la liste à cocher du
-	 * filtre, comme Excel ; l'icône de type, le menu de type et de clé.
+	 * dans le bandeau du haut) : le ▾ et l'icône de type (indicative) ouvrent
+	 * le même menu de la colonne, comme le ▾ d'Excel ; un second clic le ferme.
 	 */
 	function headerButton(ev: MouseEvent, e: Entry, c: number, frozen: boolean): boolean {
 		const i = c - e.t.col;
-		const col = e.t.columns[i];
-		const r = scroller.getBoundingClientRect();
 		const right = screenX(c) + colAxis.size(c);
-		const mx = ev.clientX - r.left;
-		if (right - mx > 34) return false;
-		const filter = !!source.filterValues && !!source.setFilter;
-		const typed = !!source.setType && !col.formula; // le type d'une colonne calculée suit la formule
-		if (!filter && !typed) return false;
+		if (right - toLocal(ev).x > 34) return false;
+		if (!source.sortTable && !(source.filterValues && source.setFilter) && !source.setType) return false;
 		if (!frozen) moveTo(e.t.row, c);
-		if (filter && (right - mx <= 18 || !typed)) openFilter(e, i);
-		else showTypeMenu(mx, frozen ? TOP_H : ev.clientY - r.top + 8, e, i);
+		if (filterClosed.key === `${e.t.id}:${i}` && performance.now() - filterClosed.at < 400) {
+			filterClosed = { key: '', at: 0 };
+			return true;
+		}
+		openFilter(e, i);
 		return true;
 	}
 
 	/** Colonne d'un en-tête figé (bandeau du haut) sous la souris. */
 	function frozenHeaderAt(ev: MouseEvent): { e: Entry; col: number } | null {
 		if (a1) return null;
-		const r = scroller.getBoundingClientRect();
-		const x = ev.clientX - r.left;
-		if (ev.clientY - r.top >= TOP_H || x < MARGIN) return null;
+		const { x, y } = toLocal(ev);
+		if (y >= TOP_H || x < MARGIN) return null;
 		const col = colAtX(x);
 		// Première ligne de la partie qui défile (sous les volets figés).
 		const r0 = rowAtY(TOP_H + rowTop(fRows()));
@@ -4860,30 +5005,28 @@
 		return e ? { e, col } : null;
 	}
 
-	/** Ouvre le menu de type et de clé de la colonne i (icône d'en-tête ou clic droit). */
-	function showTypeMenu(x: number, y: number, e: Entry, i: number) {
-		typeMenu = { x, y, e, i, keyWhy: null };
-		mixOf(e, i).then((mix) => typeMenu && typeMenu.e.t.id === e.t.id && typeMenu.i === i && (typeMenu.mix = mix));
-		if (source.keyCheck && e.t.key !== i)
-			source.keyCheck(e.t, i).then(
-				(why) => typeMenu && typeMenu.i === i && (typeMenu.keyWhy = why),
-				() => undefined
-			);
-	}
-
+	/** Type de données choisi dans le menu de la colonne (confirmé : malgré les valeurs qui ne s'y convertissent pas). */
 	async function chooseType(to: ColumnType, confirmed = false) {
-		const m = typeMenu;
-		if (!m) return;
+		const m = filterDlg;
+		if (!m || !source.setType) return;
 		if (!confirmed && source.convertPreview && to !== m.e.t.columns[m.i].type) {
 			const n = await source.convertPreview(m.e.t, m.i, to);
 			if (n > 0) {
-				typeMenu = { ...m, pending: { to, n } };
+				m.pending = { to, n };
 				return;
 			}
 		}
-		typeMenu = null;
-		const setType = source.setType!;
+		closeFilter();
+		const setType = source.setType;
 		await menuAction(() => setType(m.e.t, m.i, to));
+	}
+
+	/** Clé du tableau (pied du menu de la colonne) : la poser sur la colonne ou la retirer. */
+	function chooseKey(set: boolean) {
+		const m = filterDlg;
+		if (!m) return;
+		closeFilter();
+		menuAction(() => (set ? source.setKey!(m.e.t, m.i) : source.clearKey!(m.e.t)));
 	}
 
 	// --- Menu contextuel ----------------------------------------------------
@@ -4911,7 +5054,7 @@
 	function onContextMenu(ev: MouseEvent) {
 		const cell = cellAt(ev);
 		ev.preventDefault();
-		menu = null;
+		closeMenus();
 		if (!cell) {
 			// Clic droit sur un numéro de ligne : menu de la ligne du tableau ;
 			// hors tableau (ou sur une lettre de colonne) : presse-papiers.
@@ -5060,8 +5203,9 @@
 	onMount(() => {
 		ctx = canvas.getContext('2d', { alpha: false })!;
 		mounted = true;
-		const resize = () => {
-			const dpr = window.devicePixelRatio || 1;
+		const resize = (resizeCanvas = () => {
+			// Zoom : la zone fait clientWidth px de la feuille, le canevas a la résolution de l'écran.
+			const dpr = (window.devicePixelRatio || 1) * zoom;
 			const cw = scroller.clientWidth;
 			const ch = scroller.clientHeight;
 			const pw = Math.round(cw * dpr);
@@ -5080,7 +5224,7 @@
 			syncNative();
 			if (frame) cancelAnimationFrame(frame);
 			draw();
-		};
+		});
 		const ro = new ResizeObserver(resize);
 		ro.observe(wrap);
 		resize();
@@ -5159,7 +5303,7 @@
 			<button onclick={() => sheetLines('deleteRows')}>Supprimer {r1 > r0 ? 'les lignes' : 'la ligne'}</button>
 			{#if source.applyStyle}<button onclick={() => openFormat()}>Format de cellule…</button>{/if}
 			{#if source.setLineRules}<button onclick={() => openLineRules(true)}>Mise en forme conditionnelle…</button>{/if}
-			{#if source.setRowHeight}<button onclick={() => openSize(true, x, y)}>Hauteur de ligne…</button>{/if}
+			{#if source.setRowHeight}<button onclick={() => openSize(true, x, y)}>Hauteur de ligne…</button><button onclick={autoFitRows} title="Hauteur d’après le contenu (double-clic sur le bord du numéro de ligne)">Ajuster la hauteur de ligne</button>{/if}
 			{#if source.setLinesHidden}
 				<button onclick={() => setHidden(true, true)}>Masquer</button>
 				{#if hiddenIn(true)}<button onclick={() => unhide(true)}>Afficher</button>{/if}
@@ -5169,7 +5313,7 @@
 			<button onclick={() => sheetLines('deleteCols')}>Supprimer {c1 > c0 ? 'les colonnes' : 'la colonne'}</button>
 			{#if source.applyStyle}<button onclick={() => openFormat()}>Format de cellule…</button>{/if}
 			{#if source.setLineRules}<button onclick={() => openLineRules(false)}>Mise en forme conditionnelle…</button>{/if}
-			{#if source.setColumnWidth}<button onclick={() => openSize(false, x, y)}>Largeur de colonne…</button>{/if}
+			{#if source.setColumnWidth}<button onclick={() => openSize(false, x, y)}>Largeur de colonne…</button><button onclick={autoFitCols} title="Largeur d’après le contenu affiché (double-clic sur le bord de l’en-tête)">Ajuster la largeur de colonne</button>{/if}
 			{#if source.setLinesHidden}
 				<button onclick={() => setHidden(false, true)}>Masquer</button>
 				{#if hiddenIn(false)}<button onclick={() => unhide(false)}>Afficher</button>{/if}
@@ -5305,7 +5449,108 @@
 	<div class="body">
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 	<div class="wrap" bind:this={wrap} tabindex="0" role="grid" onkeydown={onKeyDown}>
-		<canvas bind:this={canvas}></canvas>
+		<!-- Calque zoomé (zoom.ts) : grille, graphiques, boutons, éditeur et notes ; menus et dialogues hors du calque. -->
+		<div class="zoom" style:zoom={zoom === 1 ? undefined : zoom}>
+			<canvas bind:this={canvas}></canvas>
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="scroller"
+				bind:this={scroller}
+				onscroll={onScroll}
+				onpointerdown={onScrollbarDown}
+				onmousedown={onMouseDown}
+				onmousemove={onMouseMove}
+				onmouseleave={() => (noteTip = null)}
+				ondblclick={onDblClick}
+				oncontextmenu={onContextMenu}
+			>
+				<div bind:this={spacer}></div>
+			</div>
+			<!-- Calque découpé à la zone des cellules : les graphiques ne passent pas sur les barres de défilement. -->
+			<div class="charts" style:left="{MARGIN}px" style:top="{TOP_H}px" style:width="{Math.max(0, viewW - MARGIN)}px" style:height="{Math.max(0, viewH - TOP_H)}px">
+				{#each charts as ch (ch.id)}
+					{@const box = chartBox(ch)}
+					<!-- svelte-ignore a11y_no_static_element_interactions -->
+					<div
+						class="chart"
+						style:left="{box.x - viewPos.x}px"
+						style:top="{box.y - viewPos.y}px"
+						class:selected={selChart === ch.id}
+						style:width="{box.w}px"
+						style:height="{box.h}px"
+						ondblclick={() => editChart(ch)}
+						onmousedown={(ev) => startChartGesture(ev, ch)}
+						oncontextmenu={(ev) => onChartMenu(ev, ch)}
+						onwheel={(ev) => onWheel(ev)}
+					>
+						{#if ch.error}
+							<p class="chart-error">Graphique : {ch.error}</p>
+						{:else}
+							<Chart kind={ch.config.kind} labels={ch.labels} series={ch.series} width={box.w} height={box.h} style={ch.config} />
+						{/if}
+						{#if selChart === ch.id}
+							{#each ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] as dir (dir)}
+								<!-- svelte-ignore a11y_no_static_element_interactions -->
+								<div class="handle {dir}" onmousedown={(ev) => startChartGesture(ev, ch, dir)}></div>
+							{/each}
+						{/if}
+					</div>
+				{/each}
+				<SheetButtons
+					bind:this={buttonsLayer}
+					{buttons}
+					geo={{ colOffset: (c) => colAxis.offset(c), rowTop, colAt: (x) => colAxis.indexAt(x), rowAt: (y) => rowAxis.indexAt(y) }}
+					{zoom}
+					view={viewPos}
+					active={() => active}
+					scripts={() => source.scripts?.() ?? Promise.resolve([])}
+					onrun={runButton}
+					oncreate={source.createButton}
+					onset={source.setButton}
+					onplace={source.placeButton}
+					ondelete={source.deleteButton}
+					onwheel={(ev) => onWheel(ev)}
+					{say}
+					done={() => wrap.focus()}
+				/>
+			</div>
+			{#if editing}
+				{@const hl = isFormula(editValueText)}
+				<div class="editor-box">
+					{#if hl}
+						<!-- Formule : texte coloré sous la zone de saisie (transparente). -->
+						<div class="editor-hl" aria-hidden="true">{@render coloured(editValueText)}</div>
+					{/if}
+					<textarea
+						class="editor"
+						class:hl
+						rows="1"
+						spellcheck="false"
+						bind:this={input}
+						bind:value={editValueText}
+						oninput={(e) => onFormulaInput(e.currentTarget, 'cell')}
+						onkeyup={(e) => moveSig(e, 'cell')}
+						onclick={(e) => moveSig(e, 'cell')}
+						onkeydown={onEditorKey}
+						onblur={() => {
+							completion = sig = null;
+							// Saisie refusée par la liste déroulante quand le focus part ailleurs : abandonnée, le message reste.
+							if (!commit() && !editErr) {
+								editing = false;
+								schedule();
+							}
+						}}
+						title={(() => {
+							const e = tableAt(active.row, active.col);
+							return e ? typeLabel(e.t.columns[active.col - e.t.col].type) : 'Cellule libre';
+						})()}
+					></textarea>
+				</div>
+			{/if}
+			{#if noteTip && !noteDlg}
+				<div class="note-tip" style:left="{noteTip.x}px" style:top="{noteTip.y}px">{noteTip.text}</div>
+			{/if}
+		</div>
 		{#if finder}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="finder" onkeydown={(e) => e.stopPropagation()}>
@@ -5325,158 +5570,6 @@
 					finder = null;
 					wrap.focus();
 				}} title="Fermer (Échap)">✕</button>
-			</div>
-		{/if}
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div
-			class="scroller"
-			bind:this={scroller}
-			onscroll={onScroll}
-			onpointerdown={onScrollbarDown}
-			onmousedown={onMouseDown}
-			onmousemove={onMouseMove}
-			onmouseleave={() => (noteTip = null)}
-			ondblclick={onDblClick}
-			oncontextmenu={onContextMenu}
-		>
-			<div bind:this={spacer}></div>
-		</div>
-		<!-- Calque découpé à la zone des cellules : les graphiques ne passent pas sur les barres de défilement. -->
-		<div class="charts" style:left="{MARGIN}px" style:top="{TOP_H}px" style:width="{Math.max(0, viewW - MARGIN)}px" style:height="{Math.max(0, viewH - TOP_H)}px">
-			{#each charts as ch (ch.id)}
-				{@const box = chartBox(ch)}
-				<!-- svelte-ignore a11y_no_static_element_interactions -->
-				<div
-					class="chart"
-					style:left="{box.x - viewPos.x}px"
-					style:top="{box.y - viewPos.y}px"
-					class:selected={selChart === ch.id}
-					style:width="{box.w}px"
-					style:height="{box.h}px"
-					ondblclick={() => editChart(ch)}
-					onmousedown={(ev) => startChartGesture(ev, ch)}
-					oncontextmenu={(ev) => onChartMenu(ev, ch)}
-					onwheel={(ev) => onWheel(ev)}
-				>
-					{#if ch.error}
-						<p class="chart-error">Graphique : {ch.error}</p>
-					{:else}
-						<Chart kind={ch.config.kind} labels={ch.labels} series={ch.series} width={box.w} height={box.h} style={ch.config} />
-					{/if}
-					{#if selChart === ch.id}
-						{#each ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] as dir (dir)}
-							<!-- svelte-ignore a11y_no_static_element_interactions -->
-							<div class="handle {dir}" onmousedown={(ev) => startChartGesture(ev, ch, dir)}></div>
-						{/each}
-					{/if}
-				</div>
-			{/each}
-			<SheetButtons
-				bind:this={buttonsLayer}
-				{buttons}
-				geo={{ colOffset: (c) => colAxis.offset(c), rowTop, colAt: (x) => colAxis.indexAt(x), rowAt: (y) => rowAxis.indexAt(y) }}
-				view={viewPos}
-				active={() => active}
-				scripts={() => source.scripts?.() ?? Promise.resolve([])}
-				onrun={runButton}
-				oncreate={source.createButton}
-				onset={source.setButton}
-				onplace={source.placeButton}
-				ondelete={source.deleteButton}
-				onwheel={(ev) => onWheel(ev)}
-				{say}
-				done={() => wrap.focus()}
-			/>
-		</div>
-		{#if typeMenu}
-			{@const m = typeMenu}
-			{@const col = m.e.t.columns[m.i]}
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (typeMenu = null)}>
-				<div class="menu-title">« {col.name} » · type {col.fixed ? 'fixé' : 'inféré automatiquement'}</div>
-				{#if m.pending}
-					<p class="menu-note">
-						{m.pending.n > 1
-							? `${m.pending.n} ${m.pending.n > 1 ? 'valeurs ne peuvent' : 'valeur ne peut'} pas devenir « ${typeLabel(m.pending.to)} » : ${m.pending.n > 1 ? 'elles seront gardées et marquées' : 'elle sera gardée et marquée'} en erreur.`
-							: `1 valeur ne peut pas devenir « ${typeLabel(m.pending.to)} » : elle sera gardée et marquée en erreur.`}
-					</p>
-					<button onclick={() => chooseType(m.pending!.to, true)}>Convertir quand même</button>
-					<button onclick={() => (typeMenu = { ...m, pending: undefined })}>Annuler</button>
-				{:else}
-					<!-- Tri et filtre de la colonne, comme le menu ▾ d'Excel. -->
-					{#if source.sortTable}
-						<button
-							onclick={() => {
-								const mm = { e: m.e, i: m.i };
-								typeMenu = null;
-								menuAction(() => source.sortTable!(mm.e.t, mm.i, false));
-							}}>Trier de A à Z</button
-						>
-						<button
-							onclick={() => {
-								const mm = { e: m.e, i: m.i };
-								typeMenu = null;
-								menuAction(() => source.sortTable!(mm.e.t, mm.i, true));
-							}}>Trier de Z à A</button
-						>
-					{/if}
-					{#if source.setFilter}
-						<button
-							onclick={() => {
-								const mm = { e: m.e, i: m.i };
-								typeMenu = null;
-								openFilter(mm.e, mm.i);
-							}}>Filtrer…</button
-						>
-						{#if col.filter}
-							<button
-								onclick={() => {
-									const mm = { e: m.e, i: m.i };
-									typeMenu = null;
-									menuAction(() => source.setFilter!(mm.e.t, mm.i, null));
-								}}>Effacer le filtre de « {col.name} »</button
-							>
-						{/if}
-					{/if}
-					<hr />
-					<div class="menu-title">Type de données</div>
-					{#each TYPES as t (t)}
-						<button onclick={() => chooseType(t)}>
-							<span class="check">{t === col.type ? '✓' : ''}</span>{#if typeIconName(t)}<span class="type-icon"><Icon name={typeIconName(t)!} size={14} /></span>{:else}{typeIcon(t)}{/if}&nbsp;&nbsp;{typeLabel(t)}
-						</button>
-					{/each}
-					{#if m.mix && m.mix.type}
-						{@const to = m.mix.type}
-						<p class="menu-note">{mixText(m.mix)}</p>
-						<button onclick={() => chooseType(to, true)}
-							>Repasser en {typeLabel(to)} ({m.mix.off} valeur{m.mix.off > 1 ? 's' : ''} marquée{m.mix.off > 1 ? 's' : ''} en erreur)</button
-						>
-					{/if}
-					{#if col.errors}<p class="menu-note error">{col.errors} saisie{col.errors > 1 ? 's' : ''} hors type dans la colonne</p>{/if}
-					{#if source.setKey}
-						<hr />
-						{#if m.e.t.key === m.i}
-							<p class="menu-note">🔑 Clé du tableau : ses valeurs identifient les lignes.</p>
-							<button
-								onclick={() => {
-									const mm = { e: m.e, i: m.i };
-									typeMenu = null;
-									menuAction(() => source.clearKey!(mm.e.t));
-								}}>Retirer la clé</button
-							>
-						{:else if m.keyWhy === ''}
-							<button
-								onclick={() => {
-									const mm = { e: m.e, i: m.i };
-									typeMenu = null;
-									menuAction(() => source.setKey!(mm.e.t, mm.i));
-								}}>🔑 Définir comme clé (identifiant des lignes){m.e.t.key !== undefined ? ', à la place de l’actuelle' : ''}</button
-							>
-						{:else if m.keyWhy}
-							<p class="menu-note">Clé impossible : {m.keyWhy}</p>
-						{/if}
-					{/if}
-				{/if}
 			</div>
 		{/if}
 		{#if menu}
@@ -5562,13 +5655,8 @@
 					{/if}
 					<hr />
 					{#if cols && source.setType && !col?.formula}
-						<button
-							onclick={() => {
-								const { x, y, e, i } = m;
-								menu = null;
-								showTypeMenu(x, y, e, i);
-							}}>Type de données et clé de « {col?.name} »…</button
-						>
+						<!-- Le menu ▾ de la colonne (tri, filtre, type, clé), sous son en-tête. -->
+						<button onclick={() => openFilter(m.e, m.i)}>Type de données et clé de « {col?.name} »…</button>
 					{/if}
 					{#if cols}
 						<button
@@ -5657,7 +5745,7 @@
 		{#if linesDlg}
 			{@const d = linesDlg}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="rules lines-dlg" use:dismiss={() => (linesDlg = null)} onkeydown={(e) => e.key === 'Enter' && applyLinesDialog()}>
+			<div class="rules lines-dlg" use:dismissPanel={() => (linesDlg = null)} onkeydown={(e) => e.key === 'Enter' && applyLinesDialog()}>
 				<div class="menu-title">{d.insert ? 'Insérer' : 'Supprimer'}</div>
 				<label><input type="radio" bind:group={d.choice} value="rows" /> {d.insert ? 'Ligne entière (au-dessus)' : 'Ligne entière'}</label>
 				<label><input type="radio" bind:group={d.choice} value="cols" /> {d.insert ? 'Colonne entière (à gauche)' : 'Colonne entière'}</label>
@@ -5690,6 +5778,7 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				class="rules filter"
+				use:dismissPanel={() => (dedupDlg = null)}
 				onkeydown={(ev) => {
 					ev.stopPropagation();
 					if (ev.key === 'Escape') {
@@ -5751,6 +5840,7 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				class="rules filter"
+				use:dismissPanel={() => (fnDlg = null)}
 				onkeydown={(ev) => {
 					ev.stopPropagation();
 					if (ev.key === 'Escape') {
@@ -5809,20 +5899,24 @@
 			{@const shown = filterShown()}
 			{@const fcol = d.e.t.columns[d.i]}
 			{@const kind = filterKind(fcol?.type ?? 'text')}
+			{@const filterable = !!source.setFilter && !fcol?.formula}
+			{@const typed = !!source.setType && !fcol?.formula}
+			<!-- Menu ▾ de la colonne (comme Excel) : tri, filtres, type de données, clé. -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				class="rules filter colfilter anchored"
 				style:left="{d.x}px"
 				style:top="{d.y}px"
-				style:max-height="{Math.max(200, viewH - d.y - 8)}px"
+				style:max-height="{Math.max(200, toView(viewH) - d.y - 8)}px"
 				use:focusFirst
+				use:dismissPanel={dismissFilter}
 				onkeydown={(ev) => {
 					ev.stopPropagation();
 					if (ev.key === 'Escape') closeFilter();
 					if (ev.key === 'Enter' && !(ev.target instanceof HTMLButtonElement)) applyFilter();
 				}}
 			>
-				<div class="menu-title">Filtrer « {fcol?.name} »</div>
+				<div class="menu-title">« {fcol?.name} »</div>
 				{#if source.sortTable}
 					<!-- Tri en haut du panneau, comme Excel. -->
 					<button
@@ -5845,8 +5939,8 @@
 					<button class="sort" onclick={() => applyFilter(true)}>Effacer le filtre de « {fcol.name} »</button>
 				{/if}
 				{#if fcol?.formula}
-					<p class="menu-note">Colonne calculée : elle se trie mais ne se filtre pas.</p>
-				{:else}
+					<p class="menu-note">Colonne calculée : elle se trie mais ne se filtre pas ; son type suit sa formule.</p>
+				{:else if filterable}
 					<!-- Filtres par condition, comme le sous-menu d'Excel. -->
 					<button class="sort cond-menu" class:on={d.sub} aria-expanded={d.sub} onclick={() => (d.sub = !d.sub)}>
 						{kindTitle(kind)}<span class="sp"></span>{d.sub ? '▾' : '▸'}
@@ -5926,12 +6020,64 @@
 					</div>
 				{/if}
 				{#if d.error}<p class="menu-note error">{d.error}</p>{/if}
-				<div class="foot">
-					{#if d.custom}<button onclick={() => (d.custom = null)}>‹ Liste des valeurs</button>{/if}
-					<span class="sp"></span>
-					<button class="primary" onclick={() => applyFilter()}>OK</button>
-					<button onclick={closeFilter}>Annuler</button>
-				</div>
+				{#if filterable}
+					<div class="foot">
+						{#if d.custom}<button onclick={() => (d.custom = null)}>‹ Liste des valeurs</button>{/if}
+						<span class="sp"></span>
+						<button class="primary" onclick={() => applyFilter()}>OK</button>
+						<button onclick={closeFilter}>Annuler</button>
+					</div>
+				{/if}
+				{#if typed}
+					<!-- Type de données de la colonne (inféré ou fixé), puis la clé du tableau. -->
+					<hr />
+					<div class="menu-title">Type de données · {fcol.fixed ? 'fixé' : 'inféré'}</div>
+					{#if d.pending}
+						{@const p = d.pending}
+						<p class="menu-note">
+							{p.n > 1 ? `${p.n} valeurs ne peuvent` : '1 valeur ne peut'} pas devenir « {typeLabel(p.to)} » : {p.n > 1 ? 'elles seront gardées et marquées' : 'elle sera gardée et marquée'} en erreur.
+						</p>
+						<div class="foot">
+							<span class="sp"></span>
+							<button class="primary" onclick={() => chooseType(p.to, true)}>Convertir quand même</button>
+							<button onclick={() => (d.pending = undefined)}>Annuler</button>
+						</div>
+					{:else}
+						<div class="types" role="radiogroup" aria-label="Type de données">
+							{#each TYPES as t (t)}
+								<button
+									class="sort type"
+									class:on={t === fcol.type}
+									role="radio"
+									aria-checked={t === fcol.type}
+									title={t === fcol.type ? (fcol.fixed ? 'Type fixé' : 'Type inféré : le choisir le fixe') : `Convertir en ${typeLabel(t)}`}
+									onclick={() => chooseType(t)}
+								>
+									<span class="check">{t === fcol.type ? '✓' : ''}</span>{#if typeIconName(t)}<span class="type-icon"><Icon name={typeIconName(t)!} size={14} /></span>{:else}<span class="type-icon">{typeIcon(t)}</span>{/if}{typeLabel(t)}
+								</button>
+							{/each}
+						</div>
+						{#if d.mix && d.mix.type}
+							{@const to = d.mix.type}
+							<p class="menu-note">{mixText(d.mix)}</p>
+							<button class="sort" onclick={() => chooseType(to, true)}
+								>Repasser en {typeLabel(to)} ({d.mix.off} valeur{d.mix.off > 1 ? 's' : ''} marquée{d.mix.off > 1 ? 's' : ''} en erreur)</button
+							>
+						{/if}
+						{#if fcol.errors}<p class="menu-note error">{fcol.errors} valeur{fcol.errors > 1 ? 's' : ''} hors type dans la colonne</p>{/if}
+					{/if}
+				{/if}
+				{#if source.setKey && !fcol?.formula}
+					<hr />
+					{#if d.e.t.key === d.i}
+						<p class="menu-note">🔑 Clé du tableau : ses valeurs identifient les lignes.</p>
+						<button class="sort" onclick={() => chooseKey(false)}>Retirer la clé</button>
+					{:else if d.keyWhy === ''}
+						<button class="sort" onclick={() => chooseKey(true)}>🔑 Utiliser comme clé{d.e.t.key !== undefined ? ' (à la place de l’actuelle)' : ''}</button>
+					{:else if d.keyWhy}
+						<p class="menu-note">Clé impossible : {d.keyWhy}</p>
+					{/if}
+				{/if}
 			</div>
 		{/if}
 		{#if rulesDlg}
@@ -5944,6 +6090,7 @@
 				style:left="{d.x}px"
 				style:top="{d.y}px"
 				use:focusFirst
+				use:dismissPanel={() => (rulesDlg = null)}
 				onkeydown={(ev) => {
 					ev.stopPropagation();
 					if (ev.key === 'Escape') closeRules();
@@ -6003,6 +6150,7 @@
 			<div
 				class="rules valid-dlg"
 				use:focusFirst
+				use:dismissPanel={() => (validDlg = null)}
 				onkeydown={(ev) => {
 					ev.stopPropagation();
 					if (ev.key === 'Escape') {
@@ -6039,6 +6187,7 @@
 				style:left="{d.x}px"
 				style:top="{d.y}px"
 				use:focusFirst
+				use:dismissPanel={() => noteDlg && saveNote()}
 				onkeydown={(ev) => {
 					ev.stopPropagation();
 					if (ev.key === 'Escape') {
@@ -6062,9 +6211,6 @@
 				</div>
 			</div>
 		{/if}
-		{#if noteTip && !noteDlg}
-			<div class="note-tip" style:left="{noteTip.x}px" style:top="{noteTip.y}px">{noteTip.text}</div>
-		{/if}
 		{#if listMenu}
 			{@const m = listMenu}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -6080,6 +6226,7 @@
 			<div
 				class="rules lines-dlg"
 				use:focusFirst
+				use:dismissPanel={() => (sizeDlg = null)}
 				onkeydown={(ev) => {
 					ev.stopPropagation();
 					if (ev.key === 'Enter') applySize();
@@ -6110,39 +6257,6 @@
 				style:top="{suggestPos.y}px"
 			>
 				{@render suggestions('cell')}
-			</div>
-		{/if}
-		{#if editing}
-			{@const hl = isFormula(editValueText)}
-			<div class="editor-box">
-				{#if hl}
-					<!-- Formule : texte coloré sous la zone de saisie (transparente). -->
-					<div class="editor-hl" aria-hidden="true">{@render coloured(editValueText)}</div>
-				{/if}
-				<textarea
-					class="editor"
-					class:hl
-					rows="1"
-					spellcheck="false"
-					bind:this={input}
-					bind:value={editValueText}
-					oninput={(e) => onFormulaInput(e.currentTarget, 'cell')}
-					onkeyup={(e) => moveSig(e, 'cell')}
-					onclick={(e) => moveSig(e, 'cell')}
-					onkeydown={onEditorKey}
-					onblur={() => {
-						completion = sig = null;
-						// Saisie refusée par la liste déroulante quand le focus part ailleurs : abandonnée, le message reste.
-						if (!commit() && !editErr) {
-							editing = false;
-							schedule();
-						}
-					}}
-					title={(() => {
-						const e = tableAt(active.row, active.col);
-						return e ? typeLabel(e.t.columns[active.col - e.t.col].type) : 'Cellule libre';
-					})()}
-				></textarea>
 			</div>
 		{/if}
 	</div>
@@ -6314,6 +6428,11 @@
 		outline: none;
 		overflow: hidden;
 	}
+	/* Calque zoomé : il couvre la zone de la grille, en pixels de la feuille. */
+	.zoom {
+		position: absolute;
+		inset: 0;
+	}
 	canvas {
 		position: absolute;
 		left: 0;
@@ -6451,6 +6570,18 @@
 	}
 	.filter .sort:hover {
 		background: #e3efe7;
+	}
+	/* Section « Type de données » du menu ▾ de la colonne. */
+	.filter .sort.type {
+		padding: 3px 14px;
+	}
+	.filter .sort.type .type-icon {
+		width: 18px;
+		margin-right: 6px;
+		justify-content: center;
+	}
+	.filter .sort.type.on {
+		font-weight: 600;
 	}
 	.charts {
 		position: absolute;

@@ -601,6 +601,11 @@ export interface SheetInfo {
      */
     "freezeRows": number;
     "freezeCols": number;
+
+    /**
+     * Zoom : zoom de la feuille en pour cent (100 par défaut).
+     */
+    "zoom": number;
 }
 
 /**

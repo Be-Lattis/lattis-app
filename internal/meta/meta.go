@@ -260,6 +260,11 @@ ALTER TABLE _slitable_sheets ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE _slitable_sheets ADD COLUMN freeze_rows INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE _slitable_sheets ADD COLUMN freeze_cols INTEGER NOT NULL DEFAULT 0;
 `,
+	// 21 → 22 : zoom de la feuille (Affichage › Zoom), en pour cent (10 à
+	// 400). Réglage d'affichage, hors du journal d'annulation.
+	`
+ALTER TABLE _slitable_sheets ADD COLUMN zoom INTEGER NOT NULL DEFAULT 100;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

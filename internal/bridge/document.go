@@ -616,6 +616,12 @@ func (s *DocumentService) SetFreeze(ctx context.Context, sheet int64, rows, cols
 	return s.act(ctx, func(d *doc.Document) error { return d.SetFreeze(ctx, sheet, rows, cols) })
 }
 
+// SetZoom fixe le zoom de la feuille, en pour cent (10 à 400) ; hors du
+// journal d'annulation.
+func (s *DocumentService) SetZoom(ctx context.Context, sheet int64, pct int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetZoom(ctx, sheet, pct) })
+}
+
 // Find cherche un texte dans une feuille (cellules dans l'ordre de lecture).
 func (s *DocumentService) Find(ctx context.Context, sheet int64, text string) ([]canvas.Match, error) {
 	d, err := s.current()
