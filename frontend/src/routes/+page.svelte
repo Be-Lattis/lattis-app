@@ -5,7 +5,7 @@
 	// Deux modes : un classeur (DocumentService : saisie libre, tableaux qui
 	// naissent, annuler, enregistrer) et la démo d'1 M de lignes (GridService),
 	// qui sert aussi à la mesure automatique (SLITABLE_BENCH).
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { Events } from '@wailsio/runtime';
 	import { DocumentService, GridService } from '#bindings/internal/bridge/index.js';
 	import type { DocState, FormulaHelp } from '#bindings/internal/bridge/models.js';
@@ -245,6 +245,7 @@
 		createChart: (row, col, cfg) => DocumentService.CreateChart(sheetId, row, col, cfg).then(reload),
 		setChart: (id, cfg) => DocumentService.SetChart(id, cfg).then(reload),
 		moveChart: (id, row, col) => DocumentService.MoveChart(id, row, col).then(reload),
+		placeChart: (id, row, col, offX, offY, w, h) => DocumentService.PlaceChart(id, row, col, offX, offY, w, h).then(reload),
 		deleteChart: (id) => DocumentService.DeleteChart(id).then(reload),
 		deletePivot: (id) => DocumentService.DeletePivot(id).then(reload),
 		duplicatesPreview: (t, cols) => DocumentService.DuplicatesPreview(t.name, cols),
@@ -333,6 +334,21 @@
 	const data = $derived(mode === 'demo' ? demoData : docData);
 	const title = $derived(mode === 'demo' ? 'Démo : 1 M de lignes' : docState.title);
 	const tabs = $derived(mode === 'demo' ? (demo ? [{ id: 1, name: demo.name }] : []) : (layout?.sheets ?? []).map((s) => ({ id: s.id, name: s.name })));
+
+	/** « Afficher sur la feuille » : va sur la feuille de l'objet et le sélectionne. */
+	async function gotoObject(name: string) {
+		view = 'grid';
+		const t = (help?.tables ?? []).find((x) => x.name.toLowerCase() === name.toLowerCase());
+		if (t && t.sheet && t.sheet !== sheetId) {
+			sheet?.closeOverlays();
+			sheetId = t.sheet;
+			await reload();
+		}
+		await tick();
+		await new Promise((r) => requestAnimationFrame(r));
+		sheet?.revealObject(name);
+		sheet?.focus();
+	}
 
 	async function selectSheet(id: number) {
 		view = 'grid';
@@ -429,7 +445,7 @@
 				</div>
 			{/key}
 			{#if view === 'sql'}
-				<div class="pane"><SqlView {objects} run={query} exec={mode === 'doc' ? (q) => DocumentService.Execute(q) : undefined} ongoto={() => (view = 'grid')} /></div>
+				<div class="pane"><SqlView {objects} run={query} exec={mode === 'doc' ? (q) => DocumentService.Execute(q) : undefined} ongoto={gotoObject} /></div>
 			{:else if view === 'script'}
 				<div class="pane">
 					{#if mode === 'doc'}

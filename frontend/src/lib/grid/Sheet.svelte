@@ -17,6 +17,7 @@
 	import { dismiss } from './dismiss';
 	import { explainError } from './errors';
 	import { fillSeries } from './fill';
+	import Select from '#lib/ui/Select.svelte';
 	import Chart from '#lib/chart/Chart.svelte';
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
 	import PivotPanel from './PivotPanel.svelte';
@@ -91,6 +92,8 @@
 		yMin?: number;
 		yMax?: number;
 		colors?: string[];
+		offX?: number;
+		offY?: number;
 	}
 
 	export interface SheetChart {
@@ -194,6 +197,8 @@
 		createChart?(row: number, col: number, cfg: ChartConfig): Promise<unknown>;
 		setChart?(id: number, cfg: ChartConfig): Promise<unknown>;
 		moveChart?(id: number, row: number, col: number): Promise<unknown>;
+		/** Ancrage libre : cellule, décalage et taille en pixels. */
+		placeChart?(id: number, row: number, col: number, offX: number, offY: number, width: number, height: number): Promise<unknown>;
 		deleteChart?(id: number): Promise<unknown>;
 		setPivot?(id: number, cfg: PivotConfig): Promise<unknown>;
 		deletePivot?(id: number): Promise<unknown>;
@@ -391,7 +396,6 @@
 
 	function updateExtent() {
 		if (!scroller) return;
-		const viewRows = Math.max(1, Math.ceil(vs.view / ROW_H));
 		let usedRow = Math.max(active.row, anchor.row);
 		let usedCol = Math.max(active.col, anchor.col);
 		for (const e of entries) {
@@ -404,11 +408,12 @@
 			usedCol = Math.max(usedCol, c);
 		}
 		const lastVisible = Math.floor((vs.top + vs.view) / ROW_H);
-		const rows = Math.min(SHEET_ROWS, Math.max(usedRow + 1, lastVisible + 1) + viewRows);
+		// Comme Excel : la barre s'arrête à la zone utilisée (ou à l'écran affiché) ;
+		// molette, flèches et sélection vont au-delà et l'agrandissent.
+		const rows = Math.min(SHEET_ROWS, Math.max(usedRow + 1, lastVisible + 1));
 		const cw = Math.max(0, viewW - MARGIN);
 		const lastVisibleCol = colAxis.indexAt(scroller.scrollLeft + cw);
-		const viewCols = Math.max(1, Math.ceil(cw / DEF_W));
-		extentCols = Math.min(SHEET_COLS, Math.max(usedCol + 1, lastVisibleCol + 1) + viewCols);
+		extentCols = Math.min(SHEET_COLS, Math.max(usedCol + 1, lastVisibleCol + 1));
 		vs.content = rows * ROW_H;
 		vs.to(vs.top);
 		if (spacer) {
@@ -1333,14 +1338,10 @@
 
 	const CHART_W = 480;
 	const CHART_H = 288;
-	let chartDrag: { id: number; startX: number; startY: number; row: number; col: number; dx: number; dy: number } | null = $state(null);
 	// Graphique sélectionné (cadre, poignées, volet) et redimensionnement en cours.
 	let selChart = $state<number | null>(null);
-	let chartSize: { id: number; w: number; h: number } | null = $state(null);
 	let chartMenu = $state<{ ch: SheetChart; x: number; y: number } | null>(null);
 	const CHART_CLIP = '\u2063slitable-chart:';
-	const chartW = (ch: SheetChart) => (chartSize?.id === ch.id ? chartSize.w : (ch.config.width ?? CHART_W));
-	const chartH = (ch: SheetChart) => (chartSize?.id === ch.id ? chartSize.h : (ch.config.height ?? CHART_H));
 
 	function selectChart(ch: SheetChart) {
 		selChart = ch.id;
@@ -1356,36 +1357,71 @@
 		return (t?.columns ?? []).map((c, i) => ({ name: c, numeric: ['integer', 'decimal', 'formula'].includes(t!.types[i]) }));
 	}
 
-	function startChartResize(ev: MouseEvent, ch: SheetChart, dir: string) {
-		if (ev.button !== 0 || !source.setChart) return;
+	/** Position et taille d'un graphique, en pixels de la feuille (ancrage libre). */
+	function chartBox(ch: SheetChart) {
+		if (chartGesture?.id === ch.id) return chartGesture.box;
+		return {
+			x: colAxis.offset(ch.col) + (ch.config.offX ?? 0),
+			y: ch.row * ROW_H + (ch.config.offY ?? 0),
+			w: ch.config.width ?? CHART_W,
+			h: ch.config.height ?? CHART_H
+		};
+	}
+
+	let chartGesture = $state<{ id: number; box: { x: number; y: number; w: number; h: number } } | null>(null);
+
+	/** Déplace (dir vide) ou redimensionne (n, s, e, w et coins) un graphique. */
+	function startChartGesture(ev: MouseEvent, ch: SheetChart, dir = '') {
+		if (ev.button !== 0 || !source.placeChart) return;
 		ev.preventDefault();
 		ev.stopPropagation();
-		const w0 = chartW(ch);
-		const h0 = chartH(ch);
+		selectChart(ch);
+		const b0 = chartBox(ch);
 		const x0 = ev.clientX;
 		const y0 = ev.clientY;
-		chartSize = { id: ch.id, w: w0, h: h0 };
+		chartGesture = { id: ch.id, box: { ...b0 } };
 		const move = (e: MouseEvent) => {
-			if (!chartSize) return;
-			if (dir.includes('e')) chartSize.w = Math.max(200, Math.round(w0 + e.clientX - x0));
-			if (dir.includes('s')) chartSize.h = Math.max(140, Math.round(h0 + e.clientY - y0));
+			if (!chartGesture) return;
+			const dx = e.clientX - x0;
+			const dy = e.clientY - y0;
+			const b = { ...b0 };
+			if (!dir) {
+				b.x = Math.max(0, b0.x + dx);
+				b.y = Math.max(0, b0.y + dy);
+			}
+			if (dir.includes('e')) b.w = Math.max(160, b0.w + dx);
+			if (dir.includes('s')) b.h = Math.max(120, b0.h + dy);
+			if (dir.includes('w')) {
+				const w = Math.max(160, b0.w - dx);
+				b.x = Math.max(0, b0.x + b0.w - w);
+				b.w = b0.x + b0.w - b.x;
+			}
+			if (dir.includes('n')) {
+				const h = Math.max(120, b0.h - dy);
+				b.y = Math.max(0, b0.y + b0.h - h);
+				b.h = b0.y + b0.h - b.y;
+			}
+			chartGesture.box = b;
 		};
 		const up = () => {
 			window.removeEventListener('mousemove', move);
 			window.removeEventListener('mouseup', up);
-			const sz = chartSize;
-			if (!sz || (sz.w === w0 && sz.h === h0)) {
-				chartSize = null;
+			const g = chartGesture;
+			if (!g || (g.box.x === b0.x && g.box.y === b0.y && g.box.w === b0.w && g.box.h === b0.h)) {
+				chartGesture = null;
 				return;
 			}
-			const set = source.setChart!;
+			const b = g.box;
+			const col = colAxis.indexAt(b.x);
+			const row = Math.floor(b.y / ROW_H);
+			const place = source.placeChart!;
 			writing = writing.then(() =>
-				set(ch.id, { ...ch.config, width: sz.w, height: sz.h }).then(
+				place(ch.id, row, col, Math.round(b.x - colAxis.offset(col)), Math.round(b.y - row * ROW_H), Math.round(b.w), Math.round(b.h)).then(
 					() => {
-						chartSize = null;
+						chartGesture = null;
 					},
 					(err) => {
-						chartSize = null;
+						chartGesture = null;
 						say(String(err?.message ?? err));
 					}
 				)
@@ -1477,30 +1513,6 @@
 		wrap.focus();
 	}
 
-	function startChartDrag(ev: MouseEvent, ch: SheetChart) {
-		if (ev.button !== 0 || !source.moveChart) return;
-		ev.preventDefault();
-		selectChart(ch);
-		chartDrag = { id: ch.id, startX: ev.clientX, startY: ev.clientY, row: ch.row, col: ch.col, dx: 0, dy: 0 };
-		const move = (e: MouseEvent) => {
-			if (!chartDrag) return;
-			chartDrag.dx = e.clientX - chartDrag.startX;
-			chartDrag.dy = e.clientY - chartDrag.startY;
-		};
-		const up = () => {
-			window.removeEventListener('mousemove', move);
-			window.removeEventListener('mouseup', up);
-			const d = chartDrag;
-			chartDrag = null;
-			if (!d || (Math.abs(d.dx) < 4 && Math.abs(d.dy) < 4)) return;
-			const row = Math.max(0, d.row + Math.round(d.dy / ROW_H));
-			const col = Math.max(0, colAxis.indexAt(colAxis.offset(d.col) + d.dx + 2));
-			const mv = source.moveChart!;
-			writing = writing.then(() => mv(d.id, row, col).then(() => undefined, (err) => say(String(err?.message ?? err))));
-		};
-		window.addEventListener('mousemove', move);
-		window.addEventListener('mouseup', up);
-	}
 
 	// --- Tableau croisé dynamique ---------------------------------------------
 
@@ -1636,6 +1648,27 @@
 		wrap.focus();
 	}
 
+	/** Sélectionne un tableau ou un tableau croisé de la feuille par son nom (onglet SQL). */
+	export function revealObject(name: string): boolean {
+		const lower = name.toLowerCase();
+		const e = entries.find((x) => x.t.name.toLowerCase() === lower);
+		if (e) {
+			moveTo(e.t.row, e.t.col);
+			anchor = { row: e.t.row, col: e.t.col };
+			active = { row: e.last, col: e.lastCol };
+			ensureVisible(e.t.row, e.t.col);
+			refreshFx();
+			schedule();
+			return true;
+		}
+		const p = pivots.find((x) => (x.config.name ?? '').toLowerCase() === lower);
+		if (p) {
+			moveTo(p.row, p.col);
+			return true;
+		}
+		return false;
+	}
+
 	/** Ferme les menus, dialogues et volets (changement de feuille ou de vue). */
 	export function closeOverlays() {
 		menu = null;
@@ -1715,6 +1748,11 @@
 			scroller.scrollTop = vs.toNative();
 		}
 		if (dx) {
+			// Vers la droite, la feuille s'agrandit d'autant avant de défiler.
+			if (dx > 0 && spacer) {
+				const want = colAxis.indexAt(scroller.scrollLeft + dx + viewW) + 2;
+				spacer.style.width = `${MARGIN + colAxis.offset(Math.min(SHEET_COLS, Math.max(extentCols, want)))}px`;
+			}
 			scroller.scrollLeft += dx;
 			updateExtent();
 		}
@@ -3078,29 +3116,29 @@
 		</div>
 		<div class="charts" style:left="{MARGIN}px" style:top="{TOP_H}px">
 			{#each charts as ch (ch.id)}
-				{@const drag = chartDrag?.id === ch.id ? chartDrag : null}
+				{@const box = chartBox(ch)}
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div
 					class="chart"
-					style:left="{colAxis.offset(ch.col) - viewPos.x + (drag?.dx ?? 0)}px"
-					style:top="{ch.row * ROW_H - viewPos.y + (drag?.dy ?? 0)}px"
+					style:left="{box.x - viewPos.x}px"
+					style:top="{box.y - viewPos.y}px"
 					class:selected={selChart === ch.id}
-					style:width="{chartW(ch)}px"
-					style:height="{chartH(ch)}px"
+					style:width="{box.w}px"
+					style:height="{box.h}px"
 					ondblclick={() => editChart(ch)}
-					onmousedown={(ev) => startChartDrag(ev, ch)}
+					onmousedown={(ev) => startChartGesture(ev, ch)}
 					oncontextmenu={(ev) => onChartMenu(ev, ch)}
 					onwheel={(ev) => onWheel(ev)}
 				>
 					{#if ch.error}
 						<p class="chart-error">Graphique : {ch.error}</p>
 					{:else}
-						<Chart kind={ch.config.kind} labels={ch.labels} series={ch.series} width={chartW(ch)} height={chartH(ch)} style={ch.config} />
+						<Chart kind={ch.config.kind} labels={ch.labels} series={ch.series} width={box.w} height={box.h} style={ch.config} />
 					{/if}
 					{#if selChart === ch.id}
-						{#each ['e', 's', 'se'] as dir (dir)}
+						{#each ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] as dir (dir)}
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
-							<div class="handle {dir}" onmousedown={(ev) => startChartResize(ev, ch, dir)}></div>
+							<div class="handle {dir}" onmousedown={(ev) => startChartGesture(ev, ch, dir)}></div>
 						{/each}
 					{/if}
 				</div>
@@ -3498,14 +3536,10 @@
 				{/each}
 				<hr />
 				<div class="add">
-					<select bind:value={d.op}>
-						{#each RULE_OPS as o (o.op)}<option value={o.op}>{o.label}</option>{/each}
-					</select>
+					<Select bind:value={d.op} options={RULE_OPS.map((o) => ({ value: o.op, label: o.label }))} />
 					{#if args > 0}<input bind:value={d.value} placeholder="valeur" onkeydown={(ev) => ev.key === 'Enter' && addRule()} />{/if}
 					{#if args > 1}<span>et</span><input bind:value={d.to} placeholder="valeur" onkeydown={(ev) => ev.key === 'Enter' && addRule()} />{/if}
-					<select bind:value={d.style}>
-						{#each RULE_STYLES as s, k (k)}<option value={k}>{s.label}</option>{/each}
-					</select>
+					<Select bind:value={d.style} options={RULE_STYLES.map((s, k) => ({ value: k, label: s.label }))} />
 					<button onclick={addRule}>Ajouter</button>
 				</div>
 				{#if d.error}<p class="menu-note error">{d.error}</p>{/if}
@@ -3818,24 +3852,48 @@
 	}
 	.handle {
 		position: absolute;
-		width: 10px;
-		height: 10px;
-		background: #fff;
-		border: 1px solid #217346;
+		width: 9px;
+		height: 9px;
+		background: #217346;
+		border: 1px solid #fff;
+		box-shadow: 0 0 0 1px #217346;
 	}
-	.handle.e {
-		right: -6px;
-		top: calc(50% - 5px);
-		cursor: ew-resize;
-	}
+	.handle.n,
 	.handle.s {
-		bottom: -6px;
 		left: calc(50% - 5px);
 		cursor: ns-resize;
 	}
+	.handle.e,
+	.handle.w {
+		top: calc(50% - 5px);
+		cursor: ew-resize;
+	}
+	.handle.n,
+	.handle.ne,
+	.handle.nw {
+		top: -6px;
+	}
+	.handle.s,
+	.handle.se,
+	.handle.sw {
+		bottom: -6px;
+	}
+	.handle.e,
+	.handle.ne,
 	.handle.se {
 		right: -6px;
-		bottom: -6px;
+	}
+	.handle.w,
+	.handle.nw,
+	.handle.sw {
+		left: -6px;
+	}
+	.handle.ne,
+	.handle.sw {
+		cursor: nesw-resize;
+	}
+	.handle.nw,
+	.handle.se {
 		cursor: nwse-resize;
 	}
 	.filter .fn {
@@ -3886,7 +3944,6 @@
 		border: 1px solid #c9cdd2;
 		border-radius: 3px;
 	}
-	.rules select,
 	.rules button {
 		font: inherit;
 		padding: 2px 6px;

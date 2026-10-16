@@ -4,6 +4,7 @@
 	// l'on glisse les champs. Chaque changement s'applique tout de suite (Ctrl+Z
 	// l'annule).
 	import type { PivotConfig, PivotValue } from './Sheet.svelte';
+	import Select from '#lib/ui/Select.svelte';
 
 	interface Props {
 		config: PivotConfig;
@@ -217,13 +218,9 @@
 					>
 						{#if z.zone === 'values'}
 							{@const v = (shown.values ?? [])[i]}
-							<select value={v.agg} onchange={(e) => setValue(i, { agg: (e.currentTarget as HTMLSelectElement).value as PivotValue['agg'] })}>
-								{#each AGGS as [a, label] (a)}<option value={a} disabled={!v.field && a !== 'count'}>{label}</option>{/each}
-							</select>
+							<Select value={v.agg} options={AGGS.map(([a, label]) => ({ value: a, label, disabled: !v.field && a !== 'count' }))} onchange={(agg) => setValue(i, { agg })} />
 							<span class="name">{name || 'lignes'}</span>
-							<select class="show" value={v.show ?? ''} onchange={(e) => setValue(i, { show: (e.currentTarget as HTMLSelectElement).value || undefined })} title="Afficher les valeurs">
-								{#each SHOWS as [s, label] (s)}<option value={s}>{label}</option>{/each}
-							</select>
+							<span class="show"><Select value={v.show ?? ''} width="100%" title="Afficher les valeurs" options={SHOWS.map(([s, label]) => ({ value: s, label }))} onchange={(s) => setValue(i, { show: s || undefined })} /></span>
 						{:else}
 							<span class="name">{name}</span>
 							{#if z.zone === 'filters'}
@@ -343,11 +340,6 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-	}
-	.chip select {
-		font: inherit;
-		font-size: 11px;
-		max-width: 100%;
 	}
 	.chip .show {
 		flex-basis: 100%;

@@ -641,3 +641,8 @@ func (s *DocumentService) FieldValues(ctx context.Context, table, field string) 
 func (s *DocumentService) PromoteHeader(ctx context.Context, table string) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.PromoteHeader(ctx, table) })
 }
+
+// PlaceChart déplace et redimensionne un graphique (ancrage libre).
+func (s *DocumentService) PlaceChart(ctx context.Context, id int64, row, col, offX, offY, width, height int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.PlaceChart(ctx, id, row, col, offX, offY, width, height) })
+}

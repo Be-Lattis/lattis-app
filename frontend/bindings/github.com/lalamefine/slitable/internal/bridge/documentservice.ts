@@ -257,6 +257,13 @@ export function Paste(sheet: number, row: number, col: number, block: (string[] 
 }
 
 /**
+ * PlaceChart déplace et redimensionne un graphique (ancrage libre).
+ */
+export function PlaceChart(id: number, row: number, col: number, offX: number, offY: number, width: number, height: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2193253128, id, row, col, offX, offY, width, height);
+}
+
+/**
  * PromoteHeader prend la première ligne d'un tableau comme en-têtes.
  */
 export function PromoteHeader(table: string): $CancellablePromise<$models.DocState> {

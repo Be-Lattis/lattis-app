@@ -52,6 +52,12 @@ export interface ChartConfig {
 
     /**
      * Présentation (lue par l'interface seulement).
+     * Décalage (px) dans la cellule d'ancrage : ancrage libre.
+     */
+    "offX"?: number;
+    "offY"?: number;
+
+    /**
      * px, 480 par défaut
      */
     "width"?: number;
@@ -423,4 +429,9 @@ export interface TableNames {
     "columnSql": string[] | null;
     "types": string[] | null;
     "rows": number;
+
+    /**
+     * Sheet : feuille où il est posé.
+     */
+    "sheet": number;
 }

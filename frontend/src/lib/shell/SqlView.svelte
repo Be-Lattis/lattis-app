@@ -44,8 +44,11 @@
 	let cursor = -1;
 	let draft = '';
 
+	// Exemple proposé une seule fois, à l'ouverture : un éditeur vidé reste vide.
+	let prefilled = false;
 	$effect(() => {
-		if (!sql && objects.length > 0) {
+		if (!prefilled && !sql && objects.length > 0) {
+			prefilled = true;
 			const o = objects[0];
 			sql = `SELECT ${o.columns.slice(0, 4).map((c) => quote(c.name)).join(', ')}\nFROM ${quote(o.name)}\nLIMIT 100`;
 		}

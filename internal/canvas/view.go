@@ -256,6 +256,8 @@ type TableNames struct {
 	ColumnSQL []string `json:"columnSql"`
 	Types     []string `json:"types"`
 	Rows      int      `json:"rows"`
+	// Sheet : feuille où il est posé.
+	Sheet int64 `json:"sheet"`
 }
 
 // AllTables liste les tableaux de toutes les feuilles et leurs colonnes.
@@ -281,7 +283,7 @@ func (m *Model) AllTables(ctx context.Context) ([]TableNames, error) {
 			if err != nil {
 				return err
 			}
-			tn := TableNames{Name: tb.Name, Kind: "table", SQL: tb.sql(), Rows: tb.Rows}
+			tn := TableNames{Name: tb.Name, Kind: "table", SQL: tb.sql(), Rows: tb.Rows, Sheet: tb.Sheet}
 			for _, c := range tb.Cols {
 				tn.Columns = append(tn.Columns, c.Name)
 				tn.ColumnSQL = append(tn.ColumnSQL, colSQL(c.ID))
@@ -306,7 +308,7 @@ func (m *Model) AllTables(ctx context.Context) ([]TableNames, error) {
 			if err != nil {
 				continue
 			}
-			tn := TableNames{Name: p.Cfg.Name, Kind: "pivot", SQL: `"` + p.Cfg.Name + `"`, Rows: len(cells) - 1}
+			tn := TableNames{Name: p.Cfg.Name, Kind: "pivot", Sheet: p.Sheet, SQL: `"` + p.Cfg.Name + `"`, Rows: len(cells) - 1}
 			for i, c := range cols {
 				tn.Columns = append(tn.Columns, c)
 				tn.ColumnSQL = append(tn.ColumnSQL, `"`+strings.ReplaceAll(c, `"`, `""`)+`"`)

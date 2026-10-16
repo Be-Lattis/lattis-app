@@ -21,6 +21,9 @@ type ChartConfig struct {
 	Title  string   `json:"title,omitempty"`
 
 	// Présentation (lue par l'interface seulement).
+	// Décalage (px) dans la cellule d'ancrage : ancrage libre.
+	OffX    int      `json:"offX,omitempty"`
+	OffY    int      `json:"offY,omitempty"`
 	Width   int      `json:"width,omitempty"`  // px, 480 par défaut
 	Height  int      `json:"height,omitempty"` // px, 288 par défaut
 	Legend  string   `json:"legend,omitempty"` // bottom (défaut), top, right, none
@@ -327,4 +330,31 @@ func (t *tx) chartFromPivot(cfg ChartConfig, pc PivotConfig) ([]string, []ChartS
 		}
 	}
 	return labels, series, nil
+}
+
+// PlaceChart pose un graphique au pixel près : cellule d'ancrage, décalage
+// dans la cellule (px) et taille (px). Déplacer et redimensionner par
+// n'importe quel bord ne fait qu'une étape d'annulation.
+func (m *Model) PlaceChart(ctx context.Context, id int64, row, col, offX, offY, width, height int) error {
+	if row < 0 || col < 0 || width < 50 || height < 50 {
+		return fmt.Errorf("%w : position ou taille invalide", ErrChart)
+	}
+	return m.Do(ctx, "Déplacer le graphique", func(t *tx) error {
+		var r, c int
+		var old string
+		if err := t.row(`SELECT row, col, config FROM _slitable_charts WHERE id = ?`, id).Scan(&r, &c, &old); err != nil {
+			return err
+		}
+		var cfg ChartConfig
+		if err := json.Unmarshal([]byte(old), &cfg); err != nil {
+			return err
+		}
+		cfg.OffX, cfg.OffY, cfg.Width, cfg.Height = offX, offY, width, height
+		b, err := json.Marshal(cfg)
+		if err != nil {
+			return err
+		}
+		q := `UPDATE _slitable_charts SET row = ?, col = ?, config = ? WHERE id = ?`
+		return t.apply([]stmt{st(q, row, col, string(b), id)}, []stmt{st(q, r, c, old, id)})
+	})
 }

@@ -3,6 +3,7 @@
 	// suite (aperçu direct, Ctrl+Z pour revenir en arrière).
 	import type { ChartConfig } from '#lib/grid/Sheet.svelte';
 	import { PALETTE } from './scale';
+	import Select from '#lib/ui/Select.svelte';
 
 	interface Props {
 		config: ChartConfig;
@@ -56,9 +57,7 @@
 	<section>
 		<h3>Données</h3>
 		<label class="line">Axe X
-			<select value={config.x} onchange={(e) => set({ x: (e.currentTarget as HTMLSelectElement).value, series: config.series.filter((s) => s !== (e.currentTarget as HTMLSelectElement).value) })}>
-				{#each columns as c (c)}<option value={c}>{c}</option>{/each}
-			</select>
+			<Select value={config.x} options={columns.map((c) => ({ value: c, label: c }))} onchange={(x) => set({ x, series: config.series.filter((s) => s !== x) })} />
 		</label>
 		<div class="series">
 			{#each columns.filter((c) => c !== config.x) as c (c)}
@@ -103,12 +102,16 @@
 	<section>
 		<h3>Éléments</h3>
 		<label class="line">Légende
-			<select value={config.legend || 'bottom'} onchange={(e) => set({ legend: (e.currentTarget as HTMLSelectElement).value === 'bottom' ? undefined : (e.currentTarget as HTMLSelectElement).value })}>
-				<option value="bottom">En bas</option>
-				<option value="top">En haut</option>
-				<option value="right">À droite</option>
-				<option value="none">Aucune</option>
-			</select>
+			<Select
+				value={config.legend || 'bottom'}
+				options={[
+					{ value: 'bottom', label: 'En bas' },
+					{ value: 'top', label: 'En haut' },
+					{ value: 'right', label: 'À droite' },
+					{ value: 'none', label: 'Aucune' }
+				]}
+				onchange={(v) => set({ legend: v === 'bottom' ? undefined : v })}
+			/>
 		</label>
 		<label class="opt"><input type="checkbox" checked={!!config.labels} onchange={(e) => set({ labels: (e.currentTarget as HTMLInputElement).checked || undefined })} /> Étiquettes de données</label>
 		{#if axes}
@@ -208,8 +211,7 @@
 	.minmax input {
 		width: 70px;
 	}
-	input:not([type]),
-	select {
+	input:not([type]) {
 		font: inherit;
 		padding: 2px 4px;
 		border: 1px solid #c9cdd2;
