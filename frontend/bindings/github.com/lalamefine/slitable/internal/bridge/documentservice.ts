@@ -137,6 +137,20 @@ export function Discard(dir: string): $CancellablePromise<void> {
 }
 
 /**
+ * DemoProgress donne l'avancement de OpenDemo.
+ */
+export function DemoProgress(): $CancellablePromise<$models.DemoProgress> {
+    return $Call.ByID(3466320733);
+}
+
+/**
+ * DemoRequested donne le preset demandé au lancement (--demo), ou "".
+ */
+export function DemoRequested(): $CancellablePromise<string> {
+    return $Call.ByID(1714331694);
+}
+
+/**
  * DuplicatesPreview compte les lignes en double selon des colonnes.
  */
 export function DuplicatesPreview(table: string, cols: number[] | null): $CancellablePromise<number> {
@@ -269,6 +283,15 @@ export function New(): $CancellablePromise<$models.DocState> {
  */
 export function Open(path: string): $CancellablePromise<$models.OpenResult> {
     return $Call.ByID(3724025261, path);
+}
+
+/**
+ * OpenDemo fabrique et ouvre le classeur de démonstration demandé au
+ * lancement. Il n'est jamais enregistré : Fichier › Enregistrer sous pour
+ * le garder.
+ */
+export function OpenDemo(): $CancellablePromise<$models.DemoResult> {
+    return $Call.ByID(1389055070);
 }
 
 /**
@@ -409,6 +432,14 @@ export function SetChart(id: number, cfg: canvas$0.ChartConfig): $CancellablePro
  */
 export function SetColumnWidth(sheet: number, col: number, width: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(1916242223, sheet, col, width);
+}
+
+/**
+ * SetDemo demande, au lancement, un classeur de démonstration (main.go,
+ * option --demo) ; seed 0 : graine par défaut.
+ */
+export function SetDemo(preset: string, seed: number): $CancellablePromise<void> {
+    return $Call.ByID(2221492124, preset, seed);
 }
 
 /**

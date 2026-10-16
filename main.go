@@ -6,10 +6,13 @@ package main
 
 import (
 	"embed"
+	"fmt"
 	"log"
+	"os"
 	"runtime"
 
 	"github.com/lalamefine/slitable/internal/bridge"
+	"github.com/lalamefine/slitable/internal/demo"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -17,12 +20,23 @@ import (
 var assets embed.FS
 
 func main() {
+	documents := &bridge.DocumentService{}
+	preset, seed, err := demo.ParseArgs(os.Args[1:])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprint(os.Stderr, demo.Usage())
+		os.Exit(2)
+	}
+	if preset != "" {
+		documents.SetDemo(preset, seed)
+	}
+
 	app := application.New(application.Options{
 		Name:        "Slitable",
 		Description: "Tableur relationnel local-first",
 		Services: []application.Service{
 			application.NewService(&bridge.GridService{}),
-			application.NewService(&bridge.DocumentService{}),
+			application.NewService(documents),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
