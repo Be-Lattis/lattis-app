@@ -12,6 +12,8 @@ export type {
     Layout,
     Match,
     NameInfo,
+    PivotConfig,
+    PivotInfo,
     Rule,
     ScriptInfo,
     SheetInfo,

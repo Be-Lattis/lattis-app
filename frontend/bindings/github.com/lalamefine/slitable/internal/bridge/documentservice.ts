@@ -53,8 +53,22 @@ export function ConvertPreview(table: string, i: number, to: grid$0.Type): $Canc
     return $Call.ByID(521549168, table, i, to);
 }
 
+/**
+ * CreatePivot crée un tableau croisé sur une nouvelle feuille ; renvoie la feuille.
+ */
+export function CreatePivot(cfg: canvas$0.PivotConfig): $CancellablePromise<number> {
+    return $Call.ByID(1379190243, cfg);
+}
+
 export function DeleteColumn(table: string, i: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(472790092, table, i);
+}
+
+/**
+ * DeletePivot supprime un tableau croisé.
+ */
+export function DeletePivot(id: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1561259534, id);
 }
 
 export function DeleteRow(table: string, n: number): $CancellablePromise<$models.DocState> {
@@ -302,6 +316,13 @@ export function SetFilter(table: string, i: number, f: canvas$0.ColumnFilter | n
  */
 export function SetName(sheet: number, row: number, col: number, name: string): $CancellablePromise<$models.DocState> {
     return $Call.ByID(319879748, sheet, row, col, name);
+}
+
+/**
+ * SetPivot change la configuration d'un tableau croisé.
+ */
+export function SetPivot(id: number, cfg: canvas$0.PivotConfig): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1526825357, id, cfg);
 }
 
 /**

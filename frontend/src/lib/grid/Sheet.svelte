@@ -44,6 +44,23 @@
 		filter?: ColumnFilter; // filtre de la colonne
 	}
 
+	export interface PivotConfig {
+		source: string;
+		rows: string;
+		cols?: string;
+		value?: string;
+		agg: 'sum' | 'count' | 'avg' | 'min' | 'max';
+	}
+
+	export interface SheetPivot {
+		id: number;
+		row: number;
+		col: number;
+		config: PivotConfig;
+		cells: string[][]; // en-tête, groupes, total
+		error: string;
+	}
+
 	export interface ColumnFilter {
 		values?: string[]; // valeurs gardées (texte affiché, vide : cellules vides)
 		errors?: boolean; // saisies hors type seulement
@@ -70,6 +87,8 @@
 		names?: { name: string; row: number; col: number }[];
 		/** Mise en forme des cellules hors tableaux (JSON). */
 		styles?: { row: number; col: number; style: string }[];
+		/** Tableaux croisés dynamiques de la feuille, calculés. */
+		pivots?: SheetPivot[];
 	}
 
 	/** Cible d'une saisie, pour la source. */
@@ -117,6 +136,9 @@
 		renameTable?(table: SheetTable, name: string): Promise<unknown>;
 		/** Renouvelle AUJOURDHUI, MAINTENANT et ALEA (F9). */
 		recalc?(): Promise<unknown>;
+		createPivot?(cfg: PivotConfig): Promise<unknown>;
+		setPivot?(id: number, cfg: PivotConfig): Promise<unknown>;
+		deletePivot?(id: number): Promise<unknown>;
 		/** Supprime les lignes en double ; renvoie leur nombre. */
 		removeDuplicates?(table: SheetTable): Promise<number>;
 		deleteTables?(tables: SheetTable[]): Promise<unknown>;
@@ -200,6 +222,7 @@
 	let shown = new Map<string, { text: string; error: boolean }>(); // formules des cellules libres
 	// Tableaux dynamiques déversés depuis une cellule libre (FILTRE, TRIER…).
 	let spills: { row: number; col: number; rows: string[][] }[] = [];
+	let pivots: SheetPivot[] = [];
 	let colAxis = $state.raw(new Axis(SHEET_COLS, DEF_W));
 	const key = (r: number, c: number) => `${r},${c}`;
 
@@ -234,6 +257,7 @@
 			return e;
 		});
 		cells = new Map(d.cells.map((c) => [key(c.row, c.col), c.raw]));
+		pivots = d.pivots ?? [];
 		spills = d.cells.filter((c) => c.spill?.length).map((c) => ({ row: c.row, col: c.col, rows: c.spill! }));
 		shown = new Map(d.cells.filter((c) => c.raw.startsWith('=')).map((c) => [key(c.row, c.col), { text: c.value ?? '', error: !!c.error }]));
 		userWidths = new Map((d.widths ?? []).map((w) => [w.col, w.width]));
@@ -615,6 +639,31 @@
 			ctx.strokeStyle = C.spill;
 			ctx.lineWidth = 1;
 			ctx.strokeRect(Math.round(cx(sp.col)) + 0.5, Math.round(ry(sp.row)) + 0.5, spanW(sp.col, sc1) - 1, sp.rows.length * ROW_H - 1);
+			ctx.restore();
+		}
+		// Tableaux croisés : en-tête et total en gras, dans un cadre.
+		for (const p of pivots) {
+			if (p.error) {
+				drawText('Tableau croisé : ' + p.error, cx(p.col), ry(p.row), colAxis.size(p.col), 'left', undefined, C.error, w);
+				continue;
+			}
+			const pr1 = p.row + p.cells.length - 1;
+			const pc1 = p.col + p.cells[0].length - 1;
+			if (pr1 < r0 || p.row > r1 || pc1 < c0 || p.col > c1) continue;
+			ctx.fillStyle = C.head;
+			ctx.fillRect(cx(p.col), ry(p.row), spanW(p.col, pc1), ROW_H);
+			ctx.fillRect(cx(p.col), ry(pr1), spanW(p.col, pc1), ROW_H);
+			for (let i = Math.max(0, r0 - p.row); i < p.cells.length && p.row + i <= r1; i++)
+				p.cells[i].forEach((v, j) => {
+					if (!v) return;
+					const c = p.col + j;
+					const bold = i === 0 || i === p.cells.length - 1;
+					drawText(v, cx(c), ry(p.row + i), colAxis.size(c), j > 0 && i > 0 ? 'right' : 'left', bold ? { b: true } : undefined, C.text);
+				});
+			ctx.save();
+			ctx.strokeStyle = C.border;
+			ctx.lineWidth = 1;
+			ctx.strokeRect(Math.round(cx(p.col)) + 0.5, Math.round(ry(p.row)) + 0.5, spanW(p.col, pc1) - 1, p.cells.length * ROW_H - 1);
 			ctx.restore();
 		}
 		for (const [k, rawText] of cells) {
@@ -1053,6 +1102,60 @@
 		wrap.focus();
 	}
 
+	// --- Tableau croisé dynamique ---------------------------------------------
+
+	let pivotDlg = $state<{ id?: number; source: string; columns: string[]; cfg: PivotConfig; error: string } | null>(null);
+
+	const pivotAt = (r: number, c: number) =>
+		pivots.find((p) => !p.error && r >= p.row && r < p.row + p.cells.length && c >= p.col && c < p.col + p.cells[0].length);
+
+	/** Crée un tableau croisé à partir du tableau actif, ou modifie celui sous la cellule active. */
+	export function pivotActive() {
+		const p = pivotAt(active.row, active.col) ?? pivots.find((p) => p.row === active.row && p.col === active.col);
+		if (p) {
+			const src = entries.find((e) => e.t.name.toLowerCase() === p.config.source.toLowerCase());
+			pivotDlg = { id: p.id, source: p.config.source, columns: src?.t.columns.filter((c) => !c.formula).map((c) => c.name) ?? catalog?.tables.find((t) => t.name.toLowerCase() === p.config.source.toLowerCase())?.columns ?? [], cfg: { ...p.config }, error: '' };
+			return;
+		}
+		const e = tableAt(active.row, active.col);
+		if (!e || !source.createPivot) {
+			say('Placez la cellule active dans un tableau pour créer un tableau croisé');
+			return;
+		}
+		const columns = e.t.columns.filter((c) => !c.formula).map((c) => c.name);
+		const k = e.t.columns[active.col - e.t.col];
+		// Valeur par défaut : la dernière colonne numérique (souvent un montant).
+		const num = e.t.columns.findLast((c) => !c.formula && (c.type === 'integer' || c.type === 'decimal') && c !== k);
+		pivotDlg = {
+			source: e.t.name,
+			columns,
+			cfg: { source: e.t.name, rows: k && !k.formula ? k.name : columns[0], cols: '', value: num?.name ?? '', agg: num ? 'sum' : 'count' },
+			error: ''
+		};
+	}
+
+	async function savePivot() {
+		const d = pivotDlg;
+		if (!d) return;
+		const cfg: PivotConfig = { ...d.cfg, cols: d.cfg.cols || undefined, value: d.cfg.value || undefined };
+		try {
+			if (d.id !== undefined) await source.setPivot?.(d.id, cfg);
+			else await source.createPivot?.(cfg);
+			pivotDlg = null;
+			wrap.focus();
+		} catch (err) {
+			d.error = String(err instanceof Error ? err.message : err);
+		}
+	}
+
+	async function removePivot() {
+		const d = pivotDlg;
+		if (!d || d.id === undefined || !source.deletePivot) return;
+		await source.deletePivot(d.id);
+		pivotDlg = null;
+		wrap.focus();
+	}
+
 	/** Supprime les doublons du tableau de la cellule active (ruban Données). */
 	export function dedupActive() {
 		const e = tableAt(active.row, active.col);
@@ -1309,7 +1412,12 @@
 	}
 
 	function onDblClick(e: MouseEvent) {
-		if (cellAt(e)) startEdit(false);
+		const cell = cellAt(e);
+		if (cell && pivotAt(cell.row, cell.col)) {
+			pivotActive();
+			return;
+		}
+		if (cell) startEdit(false);
 	}
 
 	function onKeyDown(e: KeyboardEvent) {
@@ -2179,6 +2287,51 @@
 				<button onclick={() => menuAction(source.deleteColumn && (() => source.deleteColumn!(m.e.t, m.i)))}>Supprimer la colonne « {m.e.t.columns[m.i]?.name} »</button>
 			</div>
 		{/if}
+		{#if pivotDlg}
+			{@const d = pivotDlg}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="rules pivot"
+				onkeydown={(ev) => {
+					ev.stopPropagation();
+					if (ev.key === 'Escape') {
+						pivotDlg = null;
+						wrap.focus();
+					}
+				}}
+			>
+				<div class="menu-title">Tableau croisé dynamique de « {d.source} »</div>
+				<div class="add"><span class="lab">Lignes</span><select bind:value={d.cfg.rows}>{#each d.columns as c (c)}<option value={c}>{c}</option>{/each}</select></div>
+				<div class="add">
+					<span class="lab">Colonnes</span>
+					<select bind:value={d.cfg.cols}><option value="">(aucune)</option>{#each d.columns as c (c)}<option value={c}>{c}</option>{/each}</select>
+				</div>
+				<div class="add">
+					<span class="lab">Valeurs</span>
+					<select bind:value={d.cfg.agg}>
+						<option value="sum">Somme</option>
+						<option value="count">Nombre</option>
+						<option value="avg">Moyenne</option>
+						<option value="min">Min</option>
+						<option value="max">Max</option>
+					</select>
+					<span>de</span>
+					<select bind:value={d.cfg.value}><option value="">(lignes)</option>{#each d.columns as c (c)}<option value={c}>{c}</option>{/each}</select>
+				</div>
+				{#if d.error}<p class="menu-note error">{d.error}</p>{/if}
+				<div class="foot">
+					{#if d.id !== undefined}<button onclick={removePivot}>Supprimer</button>{/if}
+					<span class="sp"></span>
+					<button onclick={savePivot}>{d.id !== undefined ? 'OK' : 'Créer sur une nouvelle feuille'}</button>
+					<button
+						onclick={() => {
+							pivotDlg = null;
+							wrap.focus();
+						}}>Annuler</button
+					>
+				</div>
+			</div>
+		{/if}
 		{#if filterDlg}
 			{@const d = filterDlg}
 			{@const shown = filterShown()}
@@ -2509,6 +2662,10 @@
 	}
 	.filter {
 		min-width: 300px;
+	}
+	.pivot .lab {
+		width: 70px;
+		color: #4b5563;
 	}
 	.filter .search {
 		width: 100%;

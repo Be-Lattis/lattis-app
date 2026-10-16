@@ -126,6 +126,17 @@ ALTER TABLE _slitable_columns ADD COLUMN rules TEXT;
 	`
 ALTER TABLE _slitable_tables ADD COLUMN filter TEXT;
 `,
+	// 8 → 9 : tableaux croisés dynamiques (configuration JSON), posés sur une
+	// feuille et recalculés à chaque lecture.
+	`
+CREATE TABLE _slitable_pivots (
+	id     INTEGER PRIMARY KEY,
+	sheet  INTEGER NOT NULL REFERENCES _slitable_sheets(id),
+	row    INTEGER NOT NULL,
+	col    INTEGER NOT NULL,
+	config TEXT NOT NULL
+) STRICT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

@@ -95,9 +95,13 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 				return err
 			}
 		}
+		pivots, err := t.pivotRows(sheet)
+		if err != nil {
+			return err
+		}
 		return t.apply(
-			[]stmt{st(`DELETE FROM _slitable_sheets WHERE id = ?`, sheet)},
-			[]stmt{st(`INSERT INTO _slitable_sheets (id, name, pos) VALUES (?, ?, ?)`, sheet, name, pos)},
+			[]stmt{st(`DELETE FROM _slitable_pivots WHERE sheet = ?`, sheet), st(`DELETE FROM _slitable_sheets WHERE id = ?`, sheet)},
+			append([]stmt{st(`INSERT INTO _slitable_sheets (id, name, pos) VALUES (?, ?, ?)`, sheet, name, pos)}, pivots...),
 		)
 	})
 }

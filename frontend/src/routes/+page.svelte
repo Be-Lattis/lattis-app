@@ -12,7 +12,7 @@
 	import type { Layout } from '#bindings/internal/canvas/models.js';
 	import type { Type } from '#bindings/internal/grid/models.js';
 	import type { Orphan } from '#bindings/internal/archive/models.js';
-	import Sheet, { type SheetData, type SheetSource, type SheetStatus, type ColumnFilter } from '#lib/grid/Sheet.svelte';
+	import Sheet, { type SheetData, type SheetSource, type SheetStatus, type ColumnFilter, type PivotConfig } from '#lib/grid/Sheet.svelte';
 	import Ribbon, { type FileAction, type View } from '#lib/shell/Ribbon.svelte';
 	import SheetTabs from '#lib/shell/SheetTabs.svelte';
 	import SqlView from '#lib/shell/SqlView.svelte';
@@ -221,6 +221,13 @@
 		clearFilters: (t) => DocumentService.ClearFilters(t.name).then(reload),
 		renameTable: (t, name) => DocumentService.RenameTable(t.name, name).then(reload),
 		recalc: () => DocumentService.Recalc().then(reload),
+		createPivot: async (cfg) => {
+			const id = await DocumentService.CreatePivot(cfg);
+			await reload();
+			await selectSheet(id);
+		},
+		setPivot: (id, cfg) => DocumentService.SetPivot(id, cfg).then(reload),
+		deletePivot: (id) => DocumentService.DeletePivot(id).then(reload),
 		removeDuplicates: async (t) => {
 			const n = await DocumentService.RemoveDuplicates(t.name, []);
 			await reload();
@@ -275,7 +282,8 @@
 					cells: (layout.cells ?? []).map((c) => ({ ...c, spill: c.spill?.map((r) => r ?? []) })),
 					widths: layout.widths ?? [],
 					names: layout.names ?? [],
-					styles: layout.styles ?? []
+					styles: layout.styles ?? [],
+					pivots: (layout.pivots ?? []).map((p) => ({ ...p, config: p.config as PivotConfig, cells: (p.cells ?? []).map((r) => r ?? []) }))
 				}
 			: null
 	);
@@ -346,6 +354,7 @@
 		onfind={mode === 'doc' ? (replace) => sheet?.openFinder(replace) : undefined}
 		onrules={mode === 'doc' ? () => sheet?.rulesActive() : undefined}
 		onfilter={mode === 'doc' ? (errorsOnly) => sheet?.filterActive(errorsOnly) : undefined}
+		onpivot={mode === 'doc' ? () => sheet?.pivotActive() : undefined}
 		ondedup={mode === 'doc' ? () => sheet?.dedupActive() : undefined}
 		onrecalc={mode === 'doc' ? () => DocumentService.Recalc().then(reload).catch((e) => (notice = err(e))) : undefined}
 	/>

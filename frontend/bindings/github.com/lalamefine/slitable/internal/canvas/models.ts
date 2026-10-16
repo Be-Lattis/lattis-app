@@ -146,6 +146,11 @@ export interface Layout {
      * mise en forme hors tableaux
      */
     "styles": CellStyle[] | null;
+
+    /**
+     * tableaux croisés, calculés
+     */
+    "pivots": PivotInfo[] | null;
 }
 
 /**
@@ -163,6 +168,43 @@ export interface NameInfo {
     "name": string;
     "row": number;
     "col": number;
+}
+
+/**
+ * PivotConfig décrit un tableau croisé dynamique : un tableau source, le
+ * champ des lignes, celui des colonnes (facultatif) et la valeur agrégée.
+ * Les champs sont désignés par le nom de leur colonne.
+ */
+export interface PivotConfig {
+    "source": string;
+    "rows": string;
+    "cols"?: string;
+
+    /**
+     * vide : nombre de lignes
+     */
+    "value"?: string;
+
+    /**
+     * sum, count, avg, min, max
+     */
+    "agg": string;
+}
+
+/**
+ * PivotInfo est un tableau croisé posé sur une feuille, avec son résultat.
+ */
+export interface PivotInfo {
+    "id": number;
+    "row": number;
+    "col": number;
+    "config": PivotConfig;
+
+    /**
+     * Cells : en-tête (1 ligne), groupes, puis la ligne de total.
+     */
+    "cells": (string[] | null)[] | null;
+    "error": string;
 }
 
 /**

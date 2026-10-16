@@ -76,6 +76,7 @@ type Layout struct {
 	Widths []ColWidth  `json:"widths"` // largeurs choisies par l'utilisateur
 	Names  []NameInfo  `json:"names"`  // cellules nommées de la feuille
 	Styles []CellStyle `json:"styles"` // mise en forme hors tableaux
+	Pivots []PivotInfo `json:"pivots"` // tableaux croisés, calculés
 }
 
 // CellStyle est la mise en forme d'une cellule hors tableau.
@@ -225,7 +226,8 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 			}
 			l.Cells = append(l.Cells, ci)
 		}
-		return nil
+		l.Pivots, err = t.pivots(sheet)
+		return err
 	})
 	return l, err
 }

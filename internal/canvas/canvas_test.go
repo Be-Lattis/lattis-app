@@ -1073,3 +1073,47 @@ func TestRemoveDuplicates(t *testing.T) {
 		t.Fatalf("annulation :\n%s", diff(before, got))
 	}
 }
+
+func TestPivot(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Pays", "Année", "Ventes"}, {"FR", "2024", "10"}, {"IT", "2024", "5"}, {"FR", "2025", "7"}, {"FR", "2024", "1"}}); err != nil {
+		t.Fatal(err)
+	}
+	before := dump(t, d)
+	if _, err := d.CreatePivot(ctx, PivotConfig{Source: "Feuille1", Rows: "Pays", Agg: "sum"}); err == nil {
+		t.Fatal("somme sans valeur acceptée")
+	}
+	sheet, err := d.CreatePivot(ctx, PivotConfig{Source: "Feuille1", Rows: "Pays", Cols: "Année", Value: "Ventes", Agg: "sum"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	l, _ := d.Layout(ctx, sheet)
+	if len(l.Pivots) != 1 {
+		t.Fatalf("tableaux croisés : %+v", l.Pivots)
+	}
+	if got := fmt.Sprint(l.Pivots[0].Cells); got != "[[Pays 2024 2025 Total] [FR 11 7 18] [IT 5  5] [Total 16 7 23]]" {
+		t.Fatalf("TCD : %s", got)
+	}
+	// La source change : le TCD suit.
+	if _, err := d.SetCell(ctx, 1, 2, 2, "50"); err != nil {
+		t.Fatal(err)
+	}
+	l, _ = d.Layout(ctx, sheet)
+	if got := fmt.Sprint(l.Pivots[0].Cells[2]); got != "[IT 50  50]" {
+		t.Fatalf("après modification : %s", got)
+	}
+	if err := d.SetPivot(ctx, l.Pivots[0].ID, PivotConfig{Source: "Feuille1", Rows: "Année", Agg: "count"}); err != nil {
+		t.Fatal(err)
+	}
+	l, _ = d.Layout(ctx, sheet)
+	if got := fmt.Sprint(l.Pivots[0].Cells); got != "[[Année Nombre] [2024 3] [2025 1] [Total 4]]" {
+		t.Fatalf("nombre : %s", got)
+	}
+	for range 3 {
+		d.bus.Undo(ctx)
+	}
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation :\n%s", diff(before, got))
+	}
+}

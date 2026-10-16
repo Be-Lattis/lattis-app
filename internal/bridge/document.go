@@ -548,3 +548,27 @@ func (s *DocumentService) RemoveDuplicates(ctx context.Context, table string, co
 	_, err = s.changed(ctx)
 	return n, err
 }
+
+// CreatePivot crée un tableau croisé sur une nouvelle feuille ; renvoie la feuille.
+func (s *DocumentService) CreatePivot(ctx context.Context, cfg canvas.PivotConfig) (int64, error) {
+	d, err := s.current()
+	if err != nil {
+		return 0, err
+	}
+	sheet, err := d.CreatePivot(ctx, cfg)
+	if err != nil {
+		return 0, err
+	}
+	_, err = s.changed(ctx)
+	return sheet, err
+}
+
+// SetPivot change la configuration d'un tableau croisé.
+func (s *DocumentService) SetPivot(ctx context.Context, id int64, cfg canvas.PivotConfig) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetPivot(ctx, id, cfg) })
+}
+
+// DeletePivot supprime un tableau croisé.
+func (s *DocumentService) DeletePivot(ctx context.Context, id int64) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.DeletePivot(ctx, id) })
+}

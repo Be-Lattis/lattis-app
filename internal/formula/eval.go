@@ -27,8 +27,8 @@ type Table struct {
 	// Visible : source SQL des lignes affichées quand un filtre en masque
 	// (sous-requête), vide sinon. SOUS.TOTAL ne compte que celles-là.
 	Visible string
-	Cols []Column
-	Key  string
+	Cols    []Column
+	Key     string
 }
 
 func (t *Table) col(name string) (int, bool) {
