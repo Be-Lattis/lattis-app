@@ -320,15 +320,11 @@ func (m *Model) AllTables(ctx context.Context) ([]TableNames, error) {
 			return err
 		}
 		for _, p := range ps {
-			cells, err := t.pivotCells(p.Cfg)
+			_, cols, nrows, err := t.pivotQuery(p.Cfg)
 			if err != nil {
 				continue
 			}
-			_, cols, err := t.pivotQuery(p.Cfg)
-			if err != nil {
-				continue
-			}
-			tn := TableNames{Name: p.Cfg.Name, Kind: "pivot", Sheet: p.Sheet, SQL: `"` + p.Cfg.Name + `"`, Rows: len(cells) - 1}
+			tn := TableNames{Name: p.Cfg.Name, Kind: "pivot", Sheet: p.Sheet, SQL: `"` + p.Cfg.Name + `"`, Rows: nrows}
 			for i, c := range cols {
 				tn.Columns = append(tn.Columns, c)
 				tn.ColumnSQL = append(tn.ColumnSQL, `"`+strings.ReplaceAll(c, `"`, `""`)+`"`)

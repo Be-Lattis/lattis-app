@@ -194,7 +194,7 @@ func (t *tx) schema() (*formula.Schema, error) {
 
 // evalFree calcule une cellule libre avec formule (moteur SQL : agrégats et
 // REFERENCE sur les tableaux du classeur).
-func (t *tx) evalFree(raw string) formula.Value {
+func (t *tx) evalFreeRaw(raw string) formula.Value {
 	n, err := formula.Parse(raw, formula.FR)
 	if err != nil {
 		return formula.Err(formula.ErrName)

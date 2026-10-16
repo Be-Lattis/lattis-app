@@ -141,9 +141,8 @@ func (t *tx) pivotPlan(raw PivotConfig) (pivotPlan, error) {
 	return p, nil
 }
 
-func pivotText(c *Column) string {
-	return fmt.Sprintf("coalesce(slt_text(%s, %s), '')", colSQL(c.ID), sqlLiteral(string(c.Type)))
-}
+// pivotText est le texte affiché d'un champ (voir textExpr : direct pour un texte).
+func pivotText(c *Column) string { return textExpr(*c) }
 
 func pivotLabel(v PivotValue) string {
 	label := pivotAggs[v.Agg].label
@@ -167,7 +166,7 @@ func pivotAgg(agg, v string) string {
 // pivotCells calcule le tableau croisé en deux passes : les valeurs distinctes
 // du champ des colonnes, puis un agrégat par colonne et par valeur
 // (CASE WHEN), groupé par les champs des lignes.
-func (t *tx) pivotCells(raw PivotConfig) ([][]string, error) {
+func (t *tx) pivotCellsRaw(raw PivotConfig) ([][]string, error) {
 	p, err := t.pivotPlan(raw)
 	if err != nil {
 		return nil, err
@@ -229,18 +228,22 @@ func (t *tx) pivotCells(raw PivotConfig) ([][]string, error) {
 			ms = append(ms, measure{vi, nil, name})
 		}
 	}
-	var exprs []string
-	var margs []any
-	for _, m := range ms {
+	// Une passe groupée par (lignes, colonne) plutôt qu'un CASE WHEN par
+	// valeur du champ des colonnes : chaque agrégat ne lit la source qu'une fois.
+	plain := make([]string, len(vals))
+	for vi := range vals {
 		v := "1"
-		if c := p.vals[m.v]; c != nil {
+		if c := p.vals[vi]; c != nil {
 			v = colSQL(c.ID)
 		}
-		if m.key != nil {
-			exprs = append(exprs, pivotAgg(vals[m.v].Agg, "CASE WHEN "+pivotText(p.cols)+" = ? THEN "+v+" END"))
-			margs = append(margs, *m.key)
-		} else {
-			exprs = append(exprs, pivotAgg(vals[m.v].Agg, v))
+		plain[vi] = pivotAgg(vals[vi].Agg, v)
+	}
+	var exprs []string
+	var totals []int // rang dans ms des colonnes de total
+	for i, m := range ms {
+		if m.key == nil {
+			exprs = append(exprs, plain[m.v])
+			totals = append(totals, i)
 		}
 	}
 	header := make([]string, 0, len(p.rows)+len(ms))
@@ -254,12 +257,79 @@ func (t *tx) pivotCells(raw PivotConfig) ([][]string, error) {
 		header = append(header, m.label)
 	}
 	nk := len(p.rows)
+	label := func(k any) string {
+		s := formula.FromResult(k).String()
+		if s == "" {
+			s = "(vide)"
+		}
+		return s
+	}
+	// byCol[lignes][colonne] : agrégats de chaque valeur.
+	byCol := map[string]map[string][]any{}
+	if len(keys) > 0 {
+		sel := make([]string, 0, nk+1+len(plain))
+		group := make([]string, 0, nk+1)
+		for i, c := range p.rows {
+			sel = append(sel, pivotText(c)+" AS k"+strconv.Itoa(i))
+			group = append(group, "k"+strconv.Itoa(i))
+		}
+		sel = append(sel, pivotText(p.cols)+" AS kc")
+		group = append(group, "kc")
+		sel = append(sel, plain...)
+		rs, err := t.query(`SELECT `+strings.Join(sel, ", ")+` FROM `+p.tb.sql()+where+` GROUP BY `+strings.Join(group, ", "), p.args...)
+		if err != nil {
+			return nil, err
+		}
+		for rs.Next() {
+			row := make([]any, len(sel))
+			ptrs := make([]any, len(sel))
+			for i := range row {
+				ptrs[i] = &row[i]
+			}
+			if err := rs.Scan(ptrs...); err != nil {
+				rs.Close()
+				return nil, err
+			}
+			ks := make([]string, nk)
+			for i := range nk {
+				ks[i] = label(row[i])
+			}
+			rk := strings.Join(ks, "\x00")
+			if byCol[rk] == nil {
+				byCol[rk] = map[string][]any{}
+			}
+			byCol[rk][formula.FromResult(row[nk]).String()] = row[nk+1:]
+		}
+		err = rs.Err()
+		rs.Close()
+		if err != nil {
+			return nil, err
+		}
+	}
 	// Lignes : groupes, puis total général.
 	type line struct {
 		keys []string
 		nums []any
 	}
 	var lines []line
+	// assemble range les mesures dans l'ordre des colonnes affichées.
+	assemble := func(rk string, tot []any) []any {
+		nums := make([]any, len(ms))
+		for j, i := range totals {
+			nums[i] = tot[j]
+		}
+		for i, m := range ms {
+			if m.key == nil {
+				continue
+			}
+			if vs, ok := byCol[rk][*m.key]; ok {
+				nums[i] = vs[m.v]
+			} else if a := vals[m.v].Agg; a == "count" || a == "countDistinct" {
+				nums[i] = int64(0)
+			}
+		}
+		return nums
+	}
 	scan := func(q string, args []any, withKeys bool) error {
 		rs, err := t.query(q, args...)
 		if err != nil {
@@ -269,7 +339,7 @@ func (t *tx) pivotCells(raw PivotConfig) ([][]string, error) {
 		for rs.Next() {
 			n := len(exprs)
 			if withKeys {
-				n += nk
+				n += nk + 1
 			}
 			row := make([]any, n)
 			ptrs := make([]any, n)
@@ -282,13 +352,9 @@ func (t *tx) pivotCells(raw PivotConfig) ([][]string, error) {
 			l := line{}
 			if withKeys {
 				for _, k := range row[:nk] {
-					s := formula.FromResult(k).String()
-					if s == "" {
-						s = "(vide)"
-					}
-					l.keys = append(l.keys, s)
+					l.keys = append(l.keys, label(k))
 				}
-				l.nums = row[nk:]
+				l.nums = assemble(strings.Join(l.keys, "\x00"), row[nk+1:])
 			} else {
 				l.keys = []string{"Total"}
 				l.nums = row
@@ -300,16 +366,14 @@ func (t *tx) pivotCells(raw PivotConfig) ([][]string, error) {
 	if nk > 0 {
 		sel := make([]string, nk)
 		group := make([]string, nk)
-		var order []string
 		for i, c := range p.rows {
 			sel[i] = pivotText(c) + " AS k" + strconv.Itoa(i)
 			group[i] = "k" + strconv.Itoa(i)
 		}
 		// Ordre de la source (première apparition), comme Excel par défaut.
-		order = append(order, "min(_pos)")
-		cols := append(sel, exprs...)
-		args := append(append(append([]any{}, margs...), p.args...), MaxPivotRows+1)
-		if err := scan(`SELECT `+strings.Join(cols, ", ")+` FROM `+p.tb.sql()+where+` GROUP BY `+strings.Join(group, ", ")+` ORDER BY `+strings.Join(order, ", ")+` LIMIT ?`, args, true); err != nil {
+		cols := append(append(sel, "min(_pos) AS o"), exprs...)
+		args := append(append([]any{}, p.args...), MaxPivotRows+1)
+		if err := scan(`SELECT `+strings.Join(cols, ", ")+` FROM `+p.tb.sql()+where+` GROUP BY `+strings.Join(group, ", ")+` ORDER BY o LIMIT ?`, args, true); err != nil {
 			return nil, err
 		}
 		if len(lines) > MaxPivotRows {
@@ -317,10 +381,46 @@ func (t *tx) pivotCells(raw PivotConfig) ([][]string, error) {
 		}
 	}
 	var total *line
-	if len(exprs) > 0 && (nk == 0 || !cfg.NoGrandTotal || hasPct(vals)) {
-		if err := scan(`SELECT `+strings.Join(exprs, ", ")+` FROM `+p.tb.sql()+where, append(append([]any{}, margs...), p.args...), false); err != nil {
-			return nil, err
+	if len(ms) > 0 && (nk == 0 || !cfg.NoGrandTotal || hasPct(vals)) {
+		// Total général : par valeur du champ des colonnes, puis tout confondu.
+		grand := map[string][]any{}
+		if len(keys) > 0 {
+			rs, err := t.query(`SELECT `+pivotText(p.cols)+` AS kc, `+strings.Join(plain, ", ")+` FROM `+p.tb.sql()+where+` GROUP BY kc`, p.args...)
+			if err != nil {
+				return nil, err
+			}
+			for rs.Next() {
+				row := make([]any, 1+len(plain))
+				ptrs := make([]any, len(row))
+				for i := range row {
+					ptrs[i] = &row[i]
+				}
+				if err := rs.Scan(ptrs...); err != nil {
+					rs.Close()
+					return nil, err
+				}
+				grand[formula.FromResult(row[0]).String()] = row[1:]
+			}
+			err = rs.Err()
+			rs.Close()
+			if err != nil {
+				return nil, err
+			}
 		}
+		tot := make([]any, len(exprs))
+		if len(exprs) > 0 {
+			ptrs := make([]any, len(tot))
+			for i := range tot {
+				ptrs[i] = &tot[i]
+			}
+			if err := t.row(`SELECT `+strings.Join(exprs, ", ")+` FROM `+p.tb.sql()+where, p.args...).Scan(ptrs...); err != nil {
+				return nil, err
+			}
+		}
+		saved := byCol
+		byCol = map[string]map[string][]any{"\x01": grand}
+		lines = append(lines, line{keys: []string{"Total"}, nums: assemble("\x01", tot)})
+		byCol = saved
 		total = &lines[len(lines)-1]
 		if nk > 0 && cfg.NoGrandTotal {
 			lines = lines[:len(lines)-1]

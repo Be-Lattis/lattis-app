@@ -8,6 +8,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/lalamefine/slitable/internal/grid"
 )
 
 // ColumnFilter est le filtre d'une colonne de tableau, comme le filtre
@@ -57,14 +59,20 @@ func (t *tx) loadFilter(tb *Table) error {
 			for i, v := range f.Values {
 				lits[i] = sqlLiteral(v)
 			}
-			conds = append(conds, fmt.Sprintf(`coalesce(slt_text(%s, %s), '') IN (%s)`, colSQL(c.ID), sqlLiteral(string(c.Type)), strings.Join(lits, ", ")))
+			conds = append(conds, fmt.Sprintf(`%s IN (%s)`, textExpr(c), strings.Join(lits, ", ")))
 		}
 	}
 	if len(conds) == 0 {
 		return nil
 	}
 	tb.where = strings.Join(conds, " AND ")
-	return t.row(`SELECT count(*) FROM ` + tb.view()).Scan(&tb.Shown)
+	n, err := cached(t, "fcount:"+tb.view(), func() (int, error) {
+		var n int
+		err := t.row(`SELECT count(*) FROM ` + tb.view()).Scan(&n)
+		return n, err
+	})
+	tb.Shown = n
+	return err
 }
 
 // view est la source SQL des lignes affichées (filtrées) du tableau.
@@ -176,8 +184,8 @@ func (m *Model) FilterValues(ctx context.Context, table string, i int) ([]Filter
 			return nil
 		}
 		col := colSQL(c.ID)
-		rs, err := t.query(`SELECT coalesce(slt_text(`+col+`, ?), '') AS v, count(*) FROM `+tb.sql()+
-			` GROUP BY v ORDER BY min(`+col+`) IS NOT NULL, min(`+col+`) LIMIT ?`, string(c.Type), MaxFilterValues)
+		rs, err := t.query(`SELECT `+textExpr(c)+` AS v, count(*) FROM `+tb.sql()+
+			` GROUP BY v ORDER BY min(`+col+`) IS NOT NULL, min(`+col+`) LIMIT ?`, MaxFilterValues)
 		if err != nil {
 			return err
 		}
@@ -223,4 +231,13 @@ func (m *Model) FieldValues(ctx context.Context, table, field string) ([]FilterV
 		return []FilterValue{}, err
 	}
 	return m.FilterValues(ctx, table, i)
+}
+
+// textExpr est le texte affiché d'une colonne pour comparer des valeurs : la
+// valeur elle-même pour un texte (rapide), slt_text sinon ; "" si vide.
+func textExpr(c Column) string {
+	if c.Type == grid.Text {
+		return "coalesce(" + colSQL(c.ID) + ", '')"
+	}
+	return fmt.Sprintf("coalesce(slt_text(%s, %s), '')", colSQL(c.ID), sqlLiteral(string(c.Type)))
 }
