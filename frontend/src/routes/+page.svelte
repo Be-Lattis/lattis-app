@@ -39,6 +39,8 @@
 	let docState = $state<DocState>({ open: false, path: '', title: '', dirty: false, undo: '', redo: '' });
 	let layout = $state<Layout | null>(null);
 	let sheetId = $state(1);
+	// Défilement horizontal de la grille, affiché dans la ligne des onglets.
+	let hscroll = $state<{ content: number; view: number; left: number } | undefined>();
 	// Les adresses Cell_A1 de l'onglet SQL se lisent sur la feuille affichée.
 	$effect(() => {
 		if (mode === 'doc') DocumentService.SetActiveSheet(sheetId).catch(() => {});
@@ -362,6 +364,16 @@
 			if (ev.created && ev.headless) return `Tableau « ${ev.created} » créé sans en-têtes : clic droit › « Utiliser la 1re ligne comme en-têtes » si besoin`;
 			if (ev.created) return `Tableau « ${ev.created} » créé (${block.length - 1} lignes)`;
 		},
+		moveCells: (r0, c0, r1, c1, dr, dc) => DocumentService.MoveCells(sheetId, r0, c0, r1, c1, dr, dc).then(reload),
+		sheetLines: (op, a, b) =>
+			(op === 'insertRows'
+				? DocumentService.InsertSheetRows(sheetId, a, b)
+				: op === 'deleteRows'
+					? DocumentService.DeleteSheetRows(sheetId, a, b)
+					: op === 'insertCols'
+						? DocumentService.InsertSheetColumns(sheetId, a, b)
+						: DocumentService.DeleteSheetColumns(sheetId, a, b)
+			).then(reload),
 		insertRow: (t, n) => DocumentService.InsertRow(t.name, n).then(reload),
 		deleteRow: (t, n) => DocumentService.DeleteRow(t.name, n).then(reload),
 		insertColumn: (t, i) => DocumentService.InsertColumn(t.name, i, `Colonne ${t.columns.length + 1}`).then(reload),
@@ -636,6 +648,7 @@
 							? { functions: help.functions ?? [], tables: (help.tables ?? []).filter((t) => t.kind !== 'pivot'), names: (layout?.names ?? []).map((n) => n.name) }
 							: undefined}
 						onstatus={(s) => (sheetStatus = s)}
+						onhscroll={(s) => (hscroll = s)}
 						gridlines={!layout?.sheets?.find((s) => s.id === sheetId)?.noGrid}
 						headings={!!layout?.sheets?.find((s) => s.id === sheetId)?.headings}
 						autoBench={bench ? (r) => GridService.ReportBench(r) : undefined}
@@ -685,6 +698,8 @@
 		onmove={mode === 'doc' ? (id, to) => sheetAction(() => DocumentService.MoveSheet(id, to)) : undefined}
 		onrename={mode === 'doc' ? (id, name) => sheetAction(() => DocumentService.RenameSheet(id, name)) : undefined}
 		ondelete={mode === 'doc' ? (id) => sheetAction(() => DocumentService.DeleteSheet(id)) : undefined}
+		hscroll={view === 'grid' ? hscroll : undefined}
+		onhscroll={(x) => sheet?.scrollLeftTo(x)}
 	/>
 	{#each dialogs.slice(0, 1) as d (d.id)}
 		<ScriptDialog spec={d} onanswer={(v) => answerDialog(d, v)} />

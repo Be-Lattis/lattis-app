@@ -17,9 +17,34 @@
 		onmove?: (id: number, to: number) => void;
 		onrename?: (id: number, name: string) => void;
 		ondelete?: (id: number) => void;
+		/** Défilement horizontal de la grille : barre en bout de ligne, comme Excel. */
+		hscroll?: { content: number; view: number; left: number };
+		onhscroll?: (left: number) => void;
 	}
 
-	let { sheets, active, onselect, onadd, oninsert, onmove, onrename, ondelete }: Props = $props();
+	let { sheets, active, onselect, onadd, oninsert, onmove, onrename, ondelete, hscroll, onhscroll }: Props = $props();
+
+	// Barre de défilement horizontale : une zone qui défile au même rapport
+	// que la grille (contenu / largeur visible).
+	let bar = $state<HTMLDivElement>();
+	let barW = $state(0);
+	let syncing = false;
+	$effect(() => {
+		const h = hscroll;
+		if (!bar || !h || !h.view) return;
+		const want = (h.left * barW) / h.view;
+		if (Math.abs(bar.scrollLeft - want) > 1) {
+			syncing = true;
+			bar.scrollLeft = want;
+		}
+	});
+	function onBarScroll() {
+		if (syncing) {
+			syncing = false;
+			return;
+		}
+		if (bar && hscroll?.view && barW) onhscroll?.((bar.scrollLeft * hscroll.view) / barW);
+	}
 
 	let renaming = $state<number | null>(null);
 	let draft = $state('');
@@ -112,6 +137,11 @@
 	{/each}
 	{#if drag?.moved && drag.drop >= 0}<span class="drop-mark" style:left="{dropX - 1}px"></span>{/if}
 	<button class="add" disabled={!onadd} onclick={() => onadd?.()} title="Nouvelle feuille">+</button>
+	{#if hscroll}
+		<div class="hbar" bind:this={bar} bind:clientWidth={barW} onscroll={onBarScroll}>
+			<div style:width="{hscroll.view ? (barW * Math.max(hscroll.content, hscroll.view)) / hscroll.view : 0}px" style:height="1px"></div>
+		</div>
+	{/if}
 	{#if menu}
 		{@const m = menu}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -144,6 +174,14 @@
 </div>
 
 <style>
+	.hbar {
+		margin-left: auto;
+		flex: 0 0 38%;
+		min-width: 120px;
+		overflow-x: auto;
+		overflow-y: hidden;
+		align-self: center;
+	}
 	.sheet-tabs {
 		position: relative;
 		display: flex;

@@ -173,6 +173,8 @@
 		rowId?: number; // clé technique de la ligne
 	}
 
+	export type LinesOp = 'insertRows' | 'deleteRows' | 'insertCols' | 'deleteCols';
+
 	export interface SheetSource {
 		window(table: SheetTable, first: number, count: number): Promise<Fetched>;
 		/**
@@ -184,6 +186,10 @@
 		redo?(): Promise<unknown>;
 		/** Colle un bloc (une seule étape d'annulation). */
 		paste?(row: number, col: number, block: string[][]): Promise<string | void>;
+		/** Lignes ou colonnes entières de la feuille : insertion (avant a, b lignes) ou suppression (a à b). */
+		sheetLines?(op: LinesOp, a: number, b: number): Promise<unknown>;
+		/** Déplace les cellules libres d'une plage (glisser la bordure de la sélection). */
+		moveCells?(r0: number, c0: number, r1: number, c1: number, dr: number, dc: number): Promise<unknown>;
 		insertRow?(table: SheetTable, n: number): Promise<unknown>;
 		deleteRow?(table: SheetTable, n: number): Promise<unknown>;
 		insertColumn?(table: SheetTable, i: number): Promise<unknown>;
@@ -279,9 +285,11 @@
 		gridlines?: boolean;
 		/** Lettres de colonnes et numéros de lignes toujours affichés (sinon : pendant la saisie d'une formule). */
 		headings?: boolean;
+		/** Défilement horizontal (largeur du contenu, largeur visible, position) : la barre est dans la ligne des onglets, comme Excel. */
+		onhscroll?: (s: { content: number; view: number; left: number }) => void;
 	}
 
-	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false }: Props = $props();
+	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll }: Props = $props();
 
 	export const SHEET_ROWS = 1_048_576;
 	export const SHEET_COLS = 16_384;
@@ -503,6 +511,7 @@
 		extentCols = Math.min(SHEET_COLS, Math.max(usedCol + 1, lastVisibleCol + 1));
 		vs.content = rowTop(rows);
 		vs.to(vs.top);
+		onhscroll?.({ content: MARGIN + colAxis.offset(extentCols), view: scroller.clientWidth, left: scroller.scrollLeft });
 		if (spacer) {
 			spacer.style.height = `${TOP_H + vs.spacer}px`;
 			spacer.style.width = `${MARGIN + colAxis.offset(extentCols)}px`;
@@ -612,6 +621,16 @@
 	// Mode A1 : lettres et numéros dans les bandeaux pendant la saisie d'une
 	// formule (ou toujours, Affichage › En-têtes A1) ; un clic sur une
 	// cellule insère alors sa référence.
+	// Barre de formule synchrone avec la saisie dans la cellule (et la cellule
+	// avec la barre), frappe par frappe, comme Excel.
+	$effect(() => {
+		if (editing) fxText = editValueText;
+	});
+	$effect(() => {
+		void fxText;
+		if (fxEditing) untrack(() => schedule());
+	});
+
 	const formulaMode = $derived((editing && editValueText.trimStart().startsWith('=')) || (fxEditing && fxText.trimStart().startsWith('=')));
 	const a1 = $derived(headings || formulaMode);
 
@@ -1013,6 +1032,15 @@
 			};
 			for (const p of arrows.pre) if (p.sheet === sheetIdOf()) draw(center(p.row, p.col), me, '#2b6cb0');
 			for (const d of arrows.dep) if (d.sheet === sheetIdOf()) draw(me, center(d.row, d.col), '#c0392b');
+		}
+		// Saisie dans la barre de formule : la cellule active l'affiche en direct.
+		if (fxEditing && !editing) {
+			const x = cx(active.col);
+			const y = ry(active.row);
+			const cw = colAxis.size(active.col);
+			ctx.fillStyle = C.bg;
+			ctx.fillRect(x + 1, y + 1, cw - 2, rh(active.row) - 2);
+			drawText(fxText, x, y, cw, 'left', undefined, C.text, w);
 		}
 		// Poignée de recopie (coin bas droit de la sélection) et aperçu.
 		if (!editing && selChart === null) {
@@ -1882,11 +1910,55 @@
 		menuAction(() => sort(e.t, active.col - e.t.col, desc));
 	}
 
+	/** Lignes (ou colonnes) entières couvertes par la sélection, comme Excel les insère ou les supprime. */
+	function selectionLines(): { r0: number; r1: number; c0: number; c1: number; rows: boolean; cols: boolean } {
+		const { r0, r1, c0, c1 } = selection();
+		return { r0, r1, c0, c1, rows: c0 === 0 && c1 >= lastCol(), cols: r0 === 0 && r1 >= lastRow() };
+	}
+
+	/** Insère ou supprime des lignes ou colonnes entières pour la sélection. */
+	export function sheetLines(op: LinesOp) {
+		if (!source.sheetLines) return;
+		const { r0, r1, c0, c1 } = selection();
+		const lines = source.sheetLines;
+		const args: Record<LinesOp, [number, number]> = {
+			insertRows: [r0, r1 - r0 + 1],
+			deleteRows: [r0, r1],
+			insertCols: [c0, c1 - c0 + 1],
+			deleteCols: [c0, c1]
+		};
+		menuAction(() => lines(op, ...args[op]));
+	}
+
+	// Insérer… / Supprimer… (comme la boîte d'Excel) : lignes ou colonnes entières.
+	let linesDlg = $state<{ x: number; y: number; insert: boolean; choice: 'rows' | 'cols' } | null>(null);
+
+	function openLinesDialog(insert: boolean, x?: number, y?: number) {
+		const sel = selectionLines();
+		if (sel.rows || sel.cols) {
+			sheetLines(insert ? (sel.rows ? 'insertRows' : 'insertCols') : sel.rows ? 'deleteRows' : 'deleteCols');
+			return;
+		}
+		menu = freeMenu = null;
+		const px = x ?? MARGIN + colAxis.offset(active.col) - scroller.scrollLeft + 20;
+		const py = y ?? TOP_H + rowTop(active.row + 1) - vs.top + 4;
+		linesDlg = { x: px, y: py, insert, choice: 'rows' };
+	}
+
+	function applyLinesDialog() {
+		const d = linesDlg;
+		linesDlg = null;
+		if (!d) return;
+		sheetLines(d.insert ? (d.choice === 'rows' ? 'insertRows' : 'insertCols') : d.choice === 'rows' ? 'deleteRows' : 'deleteCols');
+	}
+
 	/** Insérer ou supprimer la ligne ou la colonne de la cellule active (ruban Accueil › Cellules). */
 	export function cellsActive(op: 'insertRow' | 'deleteRow' | 'insertColumn' | 'deleteColumn') {
 		const e = tableAt(active.row, active.col);
-		if (!e) {
-			say('Placez la cellule active dans un tableau');
+		const sel = selectionLines();
+		// Hors tableau, ou lignes / colonnes entières sélectionnées : celles de la feuille.
+		if (!e || ((op === 'insertRow' || op === 'deleteRow') && sel.rows) || ((op === 'insertColumn' || op === 'deleteColumn') && sel.cols)) {
+			sheetLines(({ insertRow: 'insertRows', deleteRow: 'deleteRows', insertColumn: 'insertCols', deleteColumn: 'deleteCols' } as const)[op]);
 			return;
 		}
 		const n = active.row - e.t.row - 1; // -1 : ligne d'en-tête
@@ -1907,9 +1979,9 @@
 	/** Échap ferme le dialogue ouvert, où que soit le focus. */
 	function onGlobalKey(e: KeyboardEvent) {
 		if (e.key !== 'Escape') return;
-		const open = filterDlg || rulesDlg || dedupDlg || fnDlg || menu || freeMenu || typeMenu || chartMenu;
+		const open = filterDlg || rulesDlg || dedupDlg || fnDlg || menu || freeMenu || typeMenu || chartMenu || linesDlg;
 		if (!open) return;
-		filterDlg = rulesDlg = dedupDlg = fnDlg = null;
+		filterDlg = rulesDlg = dedupDlg = fnDlg = linesDlg = null;
 		menu = freeMenu = typeMenu = chartMenu = null;
 		wrap.focus();
 	}
@@ -2056,6 +2128,11 @@
 	}
 
 	// --- Défilement -------------------------------------------------------
+
+	/** Défilement horizontal piloté par la barre de la ligne des onglets. */
+	export function scrollLeftTo(x: number) {
+		scroller.scrollLeft = x;
+	}
 
 	function onScroll() {
 		if (!vs.inSync(scroller.scrollTop)) vs.fromNative(scroller.scrollTop);
@@ -2271,7 +2348,25 @@
 		const { r0, r1, c0, c1 } = m.sel;
 		const e = entries.find((e) => e.t.row === r0 && e.last === r1 && c0 >= e.t.col && c1 <= e.lastCol);
 		if (!e) {
-			say('Pour déplacer, sélectionnez un tableau entier (Ctrl+A) ou des colonnes entières, en-tête compris (Ctrl+Espace)');
+			// Hors tableau : les cellules libres de la plage se déplacent (comme Excel).
+			const touched = entries.some((x) => x.t.row <= r1 && x.last >= r0 && x.t.col <= c1 && x.lastCol >= c0);
+			if (touched || !source.moveCells) {
+				say('Pour déplacer, sélectionnez un tableau entier (Ctrl+A) ou des colonnes entières, en-tête compris (Ctrl+Espace)');
+				return;
+			}
+			const mv = source.moveCells;
+			writing = writing.then(async () => {
+				try {
+					await mv(r0, c0, r1, c1, dr, dc);
+					moveTo(r0 + dr, c0 + dc);
+					anchor = { row: r1 + dr, col: c1 + dc };
+					message = 'Cellules déplacées (Ctrl+Z pour annuler)';
+				} catch (err) {
+					message = String(err instanceof Error ? err.message : err);
+				}
+				refreshStatus();
+				schedule();
+			});
 			return;
 		}
 		const whole = c0 === e.t.col && c1 === e.lastCol;
@@ -2503,7 +2598,17 @@
 		const name = e.t.columns[c - e.t.col].name;
 		const here = tableAt(active.row, active.col);
 		if (here === e && r === active.row && r > e.t.row) return `[@${name}]`;
-		return `${e.t.name}[${name}]`;
+		if (r === e.t.row) return `${e.t.name}[${name}]`; // en-tête : toute la colonne
+		// Une cellule précise d'un autre tableau (ou d'une autre ligne) : par sa
+		// clé si le tableau en a une (stable au tri), sinon par son rang.
+		const n = r - e.t.row - 1;
+		const k = e.t.key !== undefined ? e.cache.row(n)?.text[e.t.key] : undefined;
+		if (k !== undefined && k !== '') {
+			const col = /^[\p{L}_][\p{L}\p{N}_]*$/u.test(name) ? name : `"${name.replaceAll('"', '""')}"`;
+			const key = isNumeric(k) ? k.replace(/[\s\u00a0\u202f]/g, '') : `"${k.replaceAll('"', '""')}"`;
+			return `REFERENCE(${e.t.name}; ${col}; ${key})`;
+		}
+		return `INDEX(${e.t.name}[${name}]; ${n + 1})`;
 	}
 
 	/** Pendant la saisie d'une formule, insère la référence de la cellule cliquée au curseur. */
@@ -2660,6 +2765,12 @@
 		if (ctrl && ['b', 'i', 'u'].includes(e.key.toLowerCase()) && source.applyStyle) {
 			e.preventDefault();
 			applyStyle({ [e.key.toLowerCase()]: 'toggle' });
+			return;
+		}
+		// Ctrl + et Ctrl - : insérer ou supprimer des lignes ou colonnes (comme Excel).
+		if (ctrl && (e.key === '+' || (e.key === '=' && e.shiftKey) || e.key === '-') && source.sheetLines) {
+			e.preventDefault();
+			openLinesDialog(e.key !== '-');
 			return;
 		}
 		if (ctrl && (e.key === 'y' || e.key === 'Y') && source.redo) {
@@ -3346,7 +3457,7 @@
 			const te = hd?.kind === 'rows' ? entries.find((x) => hd.row > x.t.row && hd.row <= x.last) : undefined;
 			freeMenu = null;
 			if (te && hd?.kind === 'rows') menu = { x: ev.clientX - r.left, y: ev.clientY - r.top, e: te, n: hd.row - te.t.row - 1, i: 0, header: false, rowOnly: true };
-			else if (hd) freeMenu = { x: ev.clientX - r.left, y: ev.clientY - r.top };
+			else if (hd) freeMenu = { x: ev.clientX - r.left, y: ev.clientY - r.top, kind: hd.kind };
 			return;
 		}
 		const e = tableAt(cell.row, cell.col);
@@ -3360,7 +3471,7 @@
 	}
 
 	// Menu du clic droit hors tableau : presse-papiers et effacement.
-	let freeMenu = $state<{ x: number; y: number } | null>(null);
+	let freeMenu = $state<{ x: number; y: number; kind?: 'rows' | 'cols' } | null>(null);
 
 	async function menuAction(fn: (() => Promise<unknown>) | undefined) {
 		menu = null;
@@ -3572,6 +3683,23 @@
 		wrap?.focus();
 	}
 </script>
+
+{#snippet linesItems(kind: 'rows' | 'cols' | undefined, x: number, y: number)}
+	{#if source.sheetLines}
+		{@const { r0, r1, c0, c1 } = selection()}
+		<hr />
+		{#if kind === 'rows'}
+			<button onclick={() => sheetLines('insertRows')}>Insérer {r1 > r0 ? `${r1 - r0 + 1} lignes` : 'une ligne'}</button>
+			<button onclick={() => sheetLines('deleteRows')}>Supprimer {r1 > r0 ? 'les lignes' : 'la ligne'}</button>
+		{:else if kind === 'cols'}
+			<button onclick={() => sheetLines('insertCols')}>Insérer {c1 > c0 ? `${c1 - c0 + 1} colonnes` : 'une colonne'}</button>
+			<button onclick={() => sheetLines('deleteCols')}>Supprimer {c1 > c0 ? 'les colonnes' : 'la colonne'}</button>
+		{:else}
+			<button onclick={() => openLinesDialog(true, x, y)}>Insérer…</button>
+			<button onclick={() => openLinesDialog(false, x, y)}>Supprimer…</button>
+		{/if}
+	{/if}
+{/snippet}
 
 {#snippet suggestions(where: 'cell' | 'fx')}
 	{#if sig?.where === where}<div class="sig">{sig.text}</div>{/if}
@@ -3861,7 +3989,7 @@
 						}}>Coller</button
 					>
 					<hr />
-					{#if !m.header}
+					{#if !m.header && !m.rowOnly}
 						<button onclick={() => menuAction(source.insertRow && (() => source.insertRow!(m.e.t, m.n)))}>Insérer une ligne au-dessus</button>
 						<button onclick={() => menuAction(source.insertRow && (() => source.insertRow!(m.e.t, m.n + 1)))}>Insérer une ligne en dessous</button>
 					{/if}
@@ -3869,12 +3997,13 @@
 						<button onclick={() => menuAction(source.insertColumn && (() => source.insertColumn!(m.e.t, m.i)))}>Insérer une colonne à gauche</button>
 						<button onclick={() => menuAction(source.insertColumn && (() => source.insertColumn!(m.e.t, m.i + 1)))}>Insérer une colonne à droite</button>
 					{/if}
-					{#if !m.header}
+					{#if !m.header && !m.rowOnly}
 						<button onclick={() => menuAction(source.deleteRow && (() => source.deleteRow!(m.e.t, m.n)))}>Supprimer la ligne</button>
 					{/if}
 					{#if cols}
 						<button onclick={() => menuAction(source.deleteColumn && (() => source.deleteColumn!(m.e.t, m.i)))}>Supprimer la colonne « {col?.name} »</button>
 					{/if}
+					{@render linesItems(m.rowOnly ? 'rows' : undefined, m.x, m.y)}
 					<button
 						onclick={() => {
 							menu = null;
@@ -3970,6 +4099,7 @@
 						}}>Coller le bouton</button
 					>
 				{/if}
+				{@render linesItems(m.kind, m.x, m.y)}
 				<hr />
 				<button
 					onclick={() => {
@@ -3977,6 +4107,20 @@
 						clearSelection();
 					}}>Effacer le contenu</button
 				>
+			</div>
+		{/if}
+		{#if linesDlg}
+			{@const d = linesDlg}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div class="rules anchored lines-dlg" style:left="{d.x}px" style:top="{d.y}px" use:dismiss={() => (linesDlg = null)} onkeydown={(e) => e.key === 'Enter' && applyLinesDialog()}>
+				<div class="menu-title">{d.insert ? 'Insérer' : 'Supprimer'}</div>
+				<label><input type="radio" bind:group={d.choice} value="rows" /> {d.insert ? 'Ligne entière (au-dessus)' : 'Ligne entière'}</label>
+				<label><input type="radio" bind:group={d.choice} value="cols" /> {d.insert ? 'Colonne entière (à gauche)' : 'Colonne entière'}</label>
+				<div class="foot">
+					<span class="sp"></span>
+					<button class="primary" onclick={applyLinesDialog}>OK</button>
+					<button onclick={() => (linesDlg = null)}>Annuler</button>
+				</div>
 			</div>
 		{/if}
 		{#if chartMenu}
@@ -4405,7 +4549,9 @@
 	.scroller {
 		position: absolute;
 		inset: 0;
-		overflow: auto;
+		/* La barre horizontale est dans la ligne des onglets (SheetTabs). */
+		overflow-x: hidden;
+		overflow-y: auto;
 	}
 	.sheet-root {
 		position: relative;
@@ -4627,6 +4773,16 @@
 		border-radius: 3px;
 		cursor: pointer;
 	}
+	.rules button.primary {
+		background: #217346;
+		border-color: #217346;
+		color: #fff;
+		padding-left: 15px;
+		padding-right: 15px;
+	}
+	.lines-dlg input[type='radio'] {
+		width: auto;
+	}
 	.rules .sp {
 		flex: 1;
 	}
@@ -4672,6 +4828,12 @@
 		display: inline-block;
 		width: 16px;
 		color: #217346;
+	}
+	.lines-dlg label {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 3px 2px;
 	}
 	.menu hr {
 		border: none;

@@ -197,9 +197,17 @@ func Migrate(ctx context.Context, db *store.Store) error {
 		if v > Version {
 			return ErrTooNew{v}
 		}
+		fresh := v == 0
 		for ; v < Version; v++ {
 			if _, err := tx.ExecContext(ctx, migrations[v]); err != nil {
 				return fmt.Errorf("migration %d → %d : %w", v, v+1, err)
+			}
+		}
+		// Nouveau classeur : feuille sans quadrillage, comme le veut Louis (les
+		// documents existants gardent le leur).
+		if fresh {
+			if _, err := tx.ExecContext(ctx, `UPDATE _slitable_sheets SET gridlines = 0`); err != nil {
+				return err
 			}
 		}
 		_, err := tx.ExecContext(ctx, fmt.Sprintf(`PRAGMA user_version = %d`, Version))

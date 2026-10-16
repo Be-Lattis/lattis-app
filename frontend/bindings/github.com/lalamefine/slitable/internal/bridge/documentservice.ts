@@ -140,6 +140,20 @@ export function DeleteSheet(sheet: number): $CancellablePromise<$models.DocState
 }
 
 /**
+ * DeleteSheetColumns supprime les colonnes entières c0 à c1 de la feuille.
+ */
+export function DeleteSheetColumns(sheet: number, c0: number, c1: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2899723816, sheet, c0, c1);
+}
+
+/**
+ * DeleteSheetRows supprime les lignes entières r0 à r1 de la feuille.
+ */
+export function DeleteSheetRows(sheet: number, r0: number, r1: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3699842500, sheet, r0, r1);
+}
+
+/**
  * DeleteTables supprime des tableaux entiers.
  */
 export function DeleteTables(names: string[] | null): $CancellablePromise<$models.DocState> {
@@ -254,9 +268,6 @@ export function InsertColumn(table: string, i: number, name: string): $Cancellab
     return $Call.ByID(1903411822, table, i, name);
 }
 
-/**
- * InsertRow, DeleteRow, InsertColumn et DeleteColumn agissent sur un tableau.
- */
 export function InsertRow(table: string, n: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(3318204728, table, n);
 }
@@ -266,6 +277,20 @@ export function InsertRow(table: string, n: number): $CancellablePromise<$models
  */
 export function InsertSheet(before: number): $CancellablePromise<number> {
     return $Call.ByID(2301526607, before);
+}
+
+/**
+ * InsertSheetColumns insère n colonnes entières avant la colonne at de la feuille.
+ */
+export function InsertSheetColumns(sheet: number, at: number, n: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(585782602, sheet, at, n);
+}
+
+/**
+ * InsertSheetRows insère n lignes entières avant la ligne at de la feuille.
+ */
+export function InsertSheetRows(sheet: number, at: number, n: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2439944714, sheet, at, n);
 }
 
 /**
@@ -287,6 +312,14 @@ export function Layout(sheet: number): $CancellablePromise<canvas$0.Layout> {
  */
 export function MCPState(): $CancellablePromise<$models.MCPStatus> {
     return $Call.ByID(1846870912);
+}
+
+/**
+ * InsertRow, DeleteRow, InsertColumn et DeleteColumn agissent sur un tableau.
+ * MoveCells déplace les cellules libres d'une plage de (dr, dc).
+ */
+export function MoveCells(sheet: number, r0: number, c0: number, r1: number, c1: number, dr: number, dc: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3170571341, sheet, r0, c0, r1, c1, dr, dc);
 }
 
 /**

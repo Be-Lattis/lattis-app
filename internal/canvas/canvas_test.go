@@ -1449,18 +1449,22 @@ func TestGridlines(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
 	const sheet = 1
-	if err := d.SetGridlines(ctx, sheet, false); err != nil {
+	// Nouveau classeur : sans quadrillage (choix de Louis).
+	if l, _ := d.Layout(ctx, sheet); !l.Sheets[0].NoGrid {
+		t.Fatal("nouveau classeur avec quadrillage")
+	}
+	if err := d.SetGridlines(ctx, sheet, true); err != nil {
 		t.Fatal(err)
 	}
 	l, err := d.Layout(ctx, sheet)
-	if err != nil || !l.Sheets[0].NoGrid {
-		t.Fatalf("quadrillage non masqué : %+v %v", l.Sheets, err)
+	if err != nil || l.Sheets[0].NoGrid {
+		t.Fatalf("quadrillage non affiché : %+v %v", l.Sheets, err)
 	}
 	if _, err := d.bus.Undo(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if l, _ = d.Layout(ctx, sheet); l.Sheets[0].NoGrid {
-		t.Fatal("l'annulation n'a pas rétabli le quadrillage")
+	if l, _ = d.Layout(ctx, sheet); !l.Sheets[0].NoGrid {
+		t.Fatal("l'annulation n'a pas remasqué le quadrillage")
 	}
 }
 
@@ -1580,5 +1584,131 @@ func TestCellSQL(t *testing.T) {
 	}
 	if _, err := d.CellSQL(ctx, `SELECT Cell_G1`, 1); err == nil {
 		t.Fatal("référence circulaire acceptée")
+	}
+}
+
+func TestSheetRowsCols(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	set := func(row, col int, raw string) {
+		t.Helper()
+		if _, err := d.SetCell(ctx, 1, row, col, raw); err != nil {
+			t.Fatalf("%s : %v", raw, err)
+		}
+	}
+	// Tableau en (2,0) : x = 1, 2, 3 ; cellules libres A1 = 5 et E1 = Cell_A1*2 ;
+	// une cellule libre sous le tableau en A8.
+	set(2, 0, "x")
+	set(3, 0, "1")
+	set(4, 0, "2")
+	set(5, 0, "3")
+	set(0, 2, "5")
+	set(0, 4, "=Cell_C1*2")
+	set(7, 0, "bas")
+	var table string
+	d.read(ctx, func(x *tx) error { return x.row(`SELECT name FROM _slitable_tables`).Scan(&table) })
+	start := dump(t, d)
+
+	// Deux lignes avant la ligne 5 (index 4) : le tableau grandit, A8 descend.
+	if err := d.InsertSheetRows(ctx, 1, 4, 2); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "insertion de lignes")
+	v := view(t, d)
+	if !strings.Contains(v, "bas") {
+		t.Fatalf("vue :\n%s", v)
+	}
+	d.read(ctx, func(x *tx) error {
+		tb, _ := x.tableByName(table)
+		var r int
+		x.row(`SELECT row FROM _slitable_cells WHERE raw = 'bas'`).Scan(&r)
+		if tb.Rows != 5 || r != 9 {
+			t.Errorf("lignes %d, « bas » en %d", tb.Rows, r)
+		}
+		return nil
+	})
+	// Une colonne avant A : tout se décale, la formule suit.
+	if err := d.InsertSheetColumns(ctx, 1, 0, 1); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "insertion de colonne")
+	d.read(ctx, func(x *tx) error {
+		var raw string
+		x.row(`SELECT raw FROM _slitable_cells WHERE row = 0 AND col = 5`).Scan(&raw)
+		if raw != "=Cell_D1*2" {
+			t.Errorf("formule : %q", raw)
+		}
+		return nil
+	})
+	// Supprimer la colonne D (index 3) : la valeur disparaît, la formule donne #REF!.
+	if err := d.DeleteSheetColumns(ctx, 1, 3, 3); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "suppression de colonne")
+	d.read(ctx, func(x *tx) error {
+		var raw string
+		x.row(`SELECT raw FROM _slitable_cells WHERE row = 0 AND col = 4`).Scan(&raw)
+		if raw != "=#REF!*2" {
+			t.Errorf("formule après suppression : %q", raw)
+		}
+		return nil
+	})
+	// Supprimer les lignes de données ajoutées : le tableau rétrécit.
+	if err := d.DeleteSheetRows(ctx, 1, 4, 5); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "suppression de lignes")
+	if err := d.DeleteSheetRows(ctx, 1, 2, 3); !errors.Is(err, ErrTable) {
+		t.Fatalf("en-tête seul : %v", err)
+	}
+	for range 4 {
+		if _, err := d.bus.Undo(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := dump(t, d); got != start {
+		t.Fatalf("annulations :\n%s\nattendu\n%s", got, start)
+	}
+}
+
+func TestMoveCells(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	for _, c := range []struct {
+		row, col int
+		raw      string
+	}{{0, 0, "5"}, {0, 1, "=Cell_A1*2"}, {3, 0, "=Cell_A1+Cell_B1"}, {5, 5, "écrasé"}, {7, 7, "=Cell_F6"}} {
+		if _, err := d.SetCell(ctx, 1, c.row, c.col, c.raw); err != nil {
+			t.Fatal(err)
+		}
+	}
+	start := dump(t, d)
+	// A1:B1 vers F6:G6 : F6 est remplacée.
+	if err := d.MoveCells(ctx, 1, 0, 0, 0, 1, 5, 5); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "déplacement")
+	got := map[string]string{}
+	d.read(ctx, func(x *tx) error {
+		cs, _ := x.cells(1)
+		for _, c := range cs {
+			got[fmt.Sprintf("%d,%d", c.Row, c.Col)] = c.Raw
+		}
+		return nil
+	})
+	want := map[string]string{"5,5": "5", "5,6": "=Cell_F6*2", "3,0": "=Cell_F6+Cell_G6", "7,7": "=#REF!"}
+	for k, v := range want {
+		if got[k] != v {
+			t.Errorf("%s : %q, attendu %q (%v)", k, got[k], v, got)
+		}
+	}
+	if len(got) != 4 {
+		t.Errorf("cellules : %v", got)
+	}
+	if _, err := d.bus.Undo(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if dump(t, d) != start {
+		t.Fatal("annulation du déplacement")
 	}
 }

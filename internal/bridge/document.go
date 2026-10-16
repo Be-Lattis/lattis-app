@@ -309,6 +309,31 @@ func (s *DocumentService) Redo(ctx context.Context) (DocState, error) {
 }
 
 // InsertRow, DeleteRow, InsertColumn et DeleteColumn agissent sur un tableau.
+// MoveCells déplace les cellules libres d'une plage de (dr, dc).
+func (s *DocumentService) MoveCells(ctx context.Context, sheet int64, r0, c0, r1, c1, dr, dc int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.MoveCells(ctx, sheet, r0, c0, r1, c1, dr, dc) })
+}
+
+// InsertSheetRows insère n lignes entières avant la ligne at de la feuille.
+func (s *DocumentService) InsertSheetRows(ctx context.Context, sheet int64, at, n int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.InsertSheetRows(ctx, sheet, at, n) })
+}
+
+// DeleteSheetRows supprime les lignes entières r0 à r1 de la feuille.
+func (s *DocumentService) DeleteSheetRows(ctx context.Context, sheet int64, r0, r1 int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.DeleteSheetRows(ctx, sheet, r0, r1) })
+}
+
+// InsertSheetColumns insère n colonnes entières avant la colonne at de la feuille.
+func (s *DocumentService) InsertSheetColumns(ctx context.Context, sheet int64, at, n int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.InsertSheetColumns(ctx, sheet, at, n) })
+}
+
+// DeleteSheetColumns supprime les colonnes entières c0 à c1 de la feuille.
+func (s *DocumentService) DeleteSheetColumns(ctx context.Context, sheet int64, c0, c1 int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.DeleteSheetColumns(ctx, sheet, c0, c1) })
+}
+
 func (s *DocumentService) InsertRow(ctx context.Context, table string, n int) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.InsertRow(ctx, table, n) })
 }

@@ -69,7 +69,7 @@ func (m *Model) CreatePivot(ctx context.Context, cfg PivotConfig) (int64, error)
 			return err
 		}
 		return t.apply([]stmt{
-			st(`INSERT INTO _slitable_sheets (id, name, pos) VALUES (?, ?, ?)`, sheet, name, pos),
+			st(`INSERT INTO _slitable_sheets (id, name, pos, gridlines) VALUES (?, ?, ?, 0)`, sheet, name, pos),
 			st(`INSERT INTO _slitable_pivots (id, sheet, row, col, config) VALUES (?, ?, 1, 1, ?)`, id, sheet, string(b)),
 		}, []stmt{
 			st(`DELETE FROM _slitable_pivots WHERE id = ?`, id),

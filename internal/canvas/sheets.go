@@ -67,7 +67,7 @@ func (t *tx) addSheet() (int64, error) {
 		}
 	}
 	return id, t.apply(
-		[]stmt{st(`INSERT INTO _slitable_sheets (id, name, pos) VALUES (?, ?, ?)`, id, name, pos)},
+		[]stmt{st(`INSERT INTO _slitable_sheets (id, name, pos, gridlines) VALUES (?, ?, ?, 0)`, id, name, pos)},
 		[]stmt{st(`DELETE FROM _slitable_sheets WHERE id = ?`, id)},
 	)
 }
