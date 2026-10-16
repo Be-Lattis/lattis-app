@@ -187,6 +187,8 @@ export interface Source {
 
     /**
      * PostgreSQL : nom de la connexion du classeur et requête SQL (SELECT).
+     * Requête SQL sur le classeur : SQL, et Sheet la feuille des adresses
+     * Cell[A1] sans feuille.
      */
     "connection"?: string;
     "sql"?: string;

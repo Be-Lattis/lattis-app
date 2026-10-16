@@ -32,7 +32,8 @@
 		{ value: 'xlsx', label: 'Classeur Excel' },
 		{ value: 'table', label: 'Tableau du classeur' },
 		{ value: 'query', label: 'Autre requête' },
-		{ value: 'postgres', label: 'PostgreSQL' }
+		{ value: 'postgres', label: 'PostgreSQL' },
+		{ value: 'sql', label: 'Requête SQL du classeur' }
 	];
 
 	// Classeur Excel : tableaux du fichier.
@@ -118,6 +119,7 @@
 		if (s.kind === 'table' && !s.table) return void (error = 'Choisissez un tableau.');
 		if (s.kind === 'query' && !s.query) return void (error = 'Choisissez une requête.');
 		if (s.kind === 'postgres' && (!s.connection || !s.sql?.trim())) return void (error = 'Choisissez une connexion et une table (ou écrivez une requête SQL).');
+		if (s.kind === 'sql' && !s.sql?.trim()) return void (error = 'Écrivez une requête SQL.');
 		onok(clone(s));
 	}
 </script>
@@ -200,6 +202,9 @@
 				{/if}
 				<label class="field">Requête SQL (lecture seule) <textarea rows="5" bind:value={s.sql} placeholder="SELECT * FROM public.ventes WHERE annee = 2026"></textarea></label>
 				<p class="muted">Filtrez de préférence ici : la requête est exécutée par le serveur, les étapes ensuite par Slitable.</p>
+			{:else if s.kind === 'sql'}
+				<label class="field">Requête SQL sur le classeur (lecture seule) <textarea rows="6" bind:value={s.sql} placeholder="SELECT * FROM Ventes WHERE annee = 2026"></textarea></label>
+				<p class="muted">Comme dans l'onglet SQL : la requête est relue à chaque actualisation.{s.sheet ? ` Les adresses Cell[A1] sans feuille se lisent sur « ${s.sheet} ».` : ''}</p>
 			{/if}
 		</div>
 		{#if error}<p class="error">{error}</p>{/if}

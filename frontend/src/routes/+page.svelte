@@ -831,10 +831,20 @@
 			{#if view === 'sql'}
 				<div class="pane"><SqlView {objects} run={query} exec={mode === 'doc' ? (q) => DocumentService.Execute(q) : undefined} ongoto={gotoObject}
 						tosheet={mode === 'doc'
-							? async (q, name, headers) => {
-									const r = await DocumentService.QueryToSheet(q, name, headers);
-									notice = `Résultat posé dans le tableau « ${r.table} » (Ctrl+Z pour annuler)`;
-									await selectSheet(r.sheet);
+							? async (q, name, headers, link, columns) => {
+									if (!link) {
+										const r = await DocumentService.QueryToSheet(q, name, headers);
+										notice = `Résultat copié dans le tableau « ${r.table} » (Ctrl+Z pour annuler)`;
+										await selectSheet(r.sheet);
+										return;
+									}
+									const r = await DocumentService.ReferenceQuery(q, name, columns, headers);
+									if (r.errors?.length) throw new Error(r.errors.join('\n'));
+									const l = r.loads?.[0];
+									if (!l) return;
+									notice = `Tableau « ${l.table} » lié à la requête : clic droit › Actualiser pour le relire`;
+									await reload();
+									await selectSheet(l.sheet);
 								}
 							: undefined}
 						favorites={mode === 'doc'

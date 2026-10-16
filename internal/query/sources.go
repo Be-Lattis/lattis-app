@@ -272,3 +272,36 @@ func (r *run) loadPostgres(src Source) (loaded, error) {
 	}
 	return l, err
 }
+
+// loadSQL lit une requête SQL sur le classeur (résultat référencé depuis
+// l'onglet SQL) : relue à chaque actualisation, jamais gardée en cache.
+func (r *run) loadSQL(src Source) (loaded, error) {
+	var s *storer
+	row := []any{}
+	err := r.env.Model.ReadSQL(r.ctx, src.SQL, src.Sheet, func(names []string) error {
+		cols := make([]Column, len(names))
+		for i, n := range names {
+			cols[i] = Column{Name: n}
+		}
+		var err error
+		s, err = r.begin(cols)
+		return err
+	}, func(vals []any) error {
+		row = row[:0]
+		for _, v := range vals {
+			row = append(row, plain(v))
+		}
+		return s.insert(row)
+	})
+	if s == nil {
+		if err == nil {
+			err = errors.New("la requête ne rend aucune colonne")
+		}
+		return loaded{}, err
+	}
+	l, err := s.finish(err)
+	if err == nil && r.limit > 0 && s.n >= r.limit {
+		l.truncated = true
+	}
+	return l, err
+}

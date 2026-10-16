@@ -619,6 +619,19 @@ export function Redo(): $CancellablePromise<$models.DocState> {
 }
 
 /**
+ * ReferenceQuery pose le résultat d'une requête de l'onglet SQL sur une
+ * nouvelle feuille, comme un tableau lié (Référencer) : une requête du
+ * classeur (source « requête SQL du classeur ») nommée name (vide :
+ * « Requête1 »…) est créée puis chargée ; le tableau s'actualise ensuite
+ * comme les sources externes. Les adresses Cell[A1] sans feuille se lisent
+ * sur la feuille affichée. headers : en-têtes affichés des colonnes
+ * (columns : noms rendus par la requête), repris par des étapes Renommer.
+ */
+export function ReferenceQuery(q: string, name: string, columns: string[] | null, headers: string[] | null): $CancellablePromise<$models.QueryRefresh> {
+    return $Call.ByID(208750754, q, name, columns, headers);
+}
+
+/**
  * RefreshAllQueries actualise toutes les requêtes chargées (Actualiser
  * tout), en une étape d'annulation.
  */

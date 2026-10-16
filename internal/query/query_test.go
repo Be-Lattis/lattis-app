@@ -359,3 +359,22 @@ func TestSecrets(t *testing.T) {
 		t.Fatal("mot de passe gardé")
 	}
 }
+
+// Une requête SQL sur le classeur (Référencer depuis l'onglet SQL) se relit
+// à chaque actualisation.
+func TestSQLSource(t *testing.T) {
+	d := newDoc(t)
+	addTable(t, d, "Ventes", []string{"Client", "Montant"}, []grid.Type{grid.Text, grid.Integer}, []any{"A", int64(10)}, []any{"B", int64(5)}, []any{"A", int64(1)})
+	id := save(t, d, Query{Name: "Totaux", Source: Source{Kind: SourceSQL, SQL: `SELECT c_1, SUM(c_2) AS s FROM t_1 GROUP BY c_1 ORDER BY c_1`}, Steps: []Step{{Op: OpRename, Column: "c_1", Name: "Client"}, {Op: OpRename, Column: "s", Name: "Total"}}})
+	l, err := Refresh(ctx, env(d), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := fmt.Sprint(dump(t, d, l.Table)); got != "[[Client:text Total:integer] [A 11] [B 5]]" {
+		t.Fatalf("chargé : %s", got)
+	}
+	bad := save(t, d, Query{Name: "Vide", Source: Source{Kind: SourceSQL, SQL: "SELECT * FROM Absent"}})
+	if _, err := Refresh(ctx, env(d), bad); err == nil {
+		t.Fatal("tableau absent : erreur attendue")
+	}
+}

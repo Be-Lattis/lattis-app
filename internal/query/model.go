@@ -26,6 +26,7 @@ const (
 	SourceTable    = "table"    // tableau du classeur : Table
 	SourceQuery    = "query"    // autre requête du classeur : Query
 	SourcePostgres = "postgres" // PostgreSQL : Connection, SQL
+	SourceSQL      = "sql"      // requête SQL sur le classeur (Référencer) : SQL, Sheet
 )
 
 // Source dit d'où une requête lit ses données.
@@ -43,6 +44,8 @@ type Source struct {
 	// Autre requête du classeur.
 	Query string `json:"query,omitempty"`
 	// PostgreSQL : nom de la connexion du classeur et requête SQL (SELECT).
+	// Requête SQL sur le classeur : SQL, et Sheet la feuille des adresses
+	// Cell[A1] sans feuille.
 	Connection string `json:"connection,omitempty"`
 	SQL        string `json:"sql,omitempty"`
 }
@@ -188,6 +191,8 @@ func SourceLabel(s Source) string {
 		return "Requête " + s.Query
 	case SourcePostgres:
 		return "PostgreSQL " + s.Connection
+	case SourceSQL:
+		return "Requête SQL du classeur"
 	}
 	return "Source"
 }

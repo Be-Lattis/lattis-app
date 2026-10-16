@@ -221,7 +221,7 @@ func (r *run) from(src Source) (string, []Column, error) {
 func (r *run) load(src Source) (loaded, error) {
 	key, _ := json.Marshal(src)
 	k := string(key) + "|" + strconv.Itoa(r.limit)
-	if l, ok := r.s.cache[k]; ok && !r.fresh && src.Kind != SourceTable {
+	if l, ok := r.s.cache[k]; ok && !r.fresh && src.Kind != SourceTable && src.Kind != SourceSQL {
 		r.truncated = r.truncated || l.truncated
 		return l, nil
 	}
@@ -240,6 +240,8 @@ func (r *run) load(src Source) (loaded, error) {
 		l, err = r.loadTable(src)
 	case SourcePostgres:
 		l, err = r.loadPostgres(src)
+	case SourceSQL:
+		l, err = r.loadSQL(src)
 	case "":
 		err = errors.New("source manquante")
 	default:
@@ -249,7 +251,7 @@ func (r *run) load(src Source) (loaded, error) {
 		return l, err
 	}
 	r.truncated = r.truncated || l.truncated
-	if src.Kind != SourceTable {
+	if src.Kind != SourceTable && src.Kind != SourceSQL {
 		r.s.cache[k] = l
 	}
 	return l, nil

@@ -48,7 +48,7 @@
 		 * tableau sur une nouvelle feuille nommée name (vide : « Requête1 »…) ;
 		 * absent : pas d'envoi (démonstration).
 		 */
-		tosheet?: (sql: string, name: string, headers: string[]) => Promise<void>;
+		tosheet?: (sql: string, name: string, headers: string[], link: boolean, columns: string[]) => Promise<void>;
 	}
 
 	let { objects, run, exec, ongoto, favorites, tosheet }: Props = $props();
@@ -224,13 +224,17 @@
 		}
 	}
 
-	/** Envoie tout le résultat vers une nouvelle feuille, nommée comme le favori s'il y en a un. */
-	async function sendToSheet() {
+	/**
+	 * Envoie tout le résultat vers une nouvelle feuille, nommée comme le favori
+	 * s'il y en a un : copié (valeurs figées) ou référencé (tableau lié à la
+	 * requête, actualisable comme une source externe).
+	 */
+	async function sendToSheet(link: boolean) {
 		if (!tosheet || !ran || sending) return;
 		sending = true;
 		try {
 			const fav = favList.find((f) => same(f.sql, ran));
-			await tosheet(sent, fav?.name ?? '', headers);
+			await tosheet(sent, fav?.name ?? '', headers, link, result?.columns ?? []);
 		} catch (e) {
 			error = String(e instanceof Error ? e.message : e).replace(/^sqlite3:\s*(SQL logic error:\s*)?/i, '');
 		}
@@ -391,12 +395,18 @@
 					</p>
 					{#if ran}
 						<button class="res-btn" onclick={copyResult} title={result.truncated ? 'Copie les lignes affichées (tronquées), à coller dans Excel' : 'Copie le résultat (en-têtes compris), à coller dans Excel'}
-							>{copied ? 'Copié ✓' : 'Copier'}</button
+							>{copied ? 'Copié ✓' : 'Presse-papiers'}</button
 						>
 						{#if tosheet}
-							<button class="res-btn" onclick={sendToSheet} disabled={sending} title="Pose tout le résultat dans un nouveau tableau, sur une nouvelle feuille (Ctrl+Z pour annuler)"
-								>Vers une feuille</button
-							>
+							<span class="to-sheet">
+								Vers une feuille :
+								<button class="res-btn" onclick={() => sendToSheet(false)} disabled={sending} title="Copie les valeurs du résultat dans un nouveau tableau, sur une nouvelle feuille (Ctrl+Z pour annuler)"
+									>Copier</button
+								>
+								<button class="res-btn" onclick={() => sendToSheet(true)} disabled={sending} title="Crée un tableau lié à la requête, sur une nouvelle feuille : fond bleu clair, actualisable au clic droit comme une source externe"
+									>Référencer</button
+								>
+							</span>
 						{/if}
 					{/if}
 				</div>
@@ -425,6 +435,12 @@
 	}
 	.result-bar p {
 		margin-right: auto;
+	}
+	.to-sheet {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		color: #57606a;
 	}
 	.res-btn {
 		font: inherit;

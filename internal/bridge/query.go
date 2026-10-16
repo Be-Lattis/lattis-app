@@ -378,3 +378,65 @@ func (s *DocumentService) WorkbookTables(ctx context.Context) ([]string, error) 
 func (s *DocumentService) FileBase(path string) string {
 	return strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
 }
+
+// ReferenceQuery pose le résultat d'une requête de l'onglet SQL sur une
+// nouvelle feuille, comme un tableau lié (Référencer) : une requête du
+// classeur (source « requête SQL du classeur ») nommée name (vide :
+// « Requête1 »…) est créée puis chargée ; le tableau s'actualise ensuite
+// comme les sources externes. Les adresses Cell[A1] sans feuille se lisent
+// sur la feuille affichée. headers : en-têtes affichés des colonnes
+// (columns : noms rendus par la requête), repris par des étapes Renommer.
+func (s *DocumentService) ReferenceQuery(ctx context.Context, q, name string, columns, headers []string) (QueryRefresh, error) {
+	d, err := s.current()
+	if err != nil {
+		return QueryRefresh{}, err
+	}
+	if strings.TrimSpace(q) == "" {
+		return QueryRefresh{}, errors.New("requête SQL vide")
+	}
+	home := ""
+	if l, err := d.Layout(ctx, 0); err == nil {
+		for _, sh := range l.Sheets {
+			if sh.ID == s.activeSheet() {
+				home = sh.Name
+			}
+		}
+	}
+	if name, err = s.NewQueryName(ctx, name); err != nil {
+		return QueryRefresh{}, err
+	}
+	id, err := s.SaveQuery(ctx, query.Query{Name: name, Source: query.Source{Kind: query.SourceSQL, SQL: q, Sheet: home}, Steps: renameSteps(columns, headers)})
+	if err != nil {
+		return QueryRefresh{}, err
+	}
+	out, err := s.RefreshQuery(ctx, id)
+	if err == nil && len(out.Loads) == 0 {
+		// Rien de chargé : la requête vide n'est pas gardée.
+		d.DeleteQuery(ctx, id)
+		out.State, err = s.changed(ctx)
+	}
+	return out, err
+}
+
+// renameSteps renomme les colonnes dont l'en-tête affiché diffère du nom
+// rendu par la requête (noms en double ou déjà pris : laissés tels quels).
+func renameSteps(columns, headers []string) []query.Step {
+	steps := []query.Step{}
+	if len(columns) != len(headers) {
+		return steps
+	}
+	taken := map[string]int{}
+	for _, c := range columns {
+		taken[strings.ToLower(c)]++
+	}
+	for i, c := range columns {
+		h := strings.TrimSpace(headers[i])
+		if h == "" || h == c || taken[strings.ToLower(c)] > 1 || (taken[strings.ToLower(h)] > 0 && !strings.EqualFold(h, c)) {
+			continue
+		}
+		taken[strings.ToLower(h)]++
+		taken[strings.ToLower(c)]--
+		steps = append(steps, query.Step{Op: query.OpRename, Column: c, Name: h})
+	}
+	return steps
+}

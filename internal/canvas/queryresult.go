@@ -271,3 +271,56 @@ func uniqueHeaders(hs []string) []string {
 	}
 	return out
 }
+
+// ReadSQL exécute une requête de l'onglet SQL en lecture seule, telle qu'une
+// requête liée (Référencer) la relit à chaque actualisation : adresses de
+// cellules remplacées par leurs valeurs (home : feuille des adresses sans
+// feuille, "" : la première), tableaux croisés cités définis. cols reçoit les
+// noms des colonnes, row chaque ligne.
+func (m *Model) ReadSQL(ctx context.Context, q, home string, cols func([]string) error, row func([]any) error) error {
+	if strings.TrimSpace(q) == "" {
+		return grid.ErrEmptyQuery
+	}
+	var sheet int64
+	if err := m.read(ctx, func(t *tx) error {
+		return t.row(`SELECT id FROM _slitable_sheets WHERE ? = '' OR lower(name) = lower(?) ORDER BY ? = '' AND pos, id LIMIT 1`, home, home, home).Scan(&sheet)
+	}); err != nil {
+		return fmt.Errorf("feuille « %s » introuvable", home)
+	}
+	q, err := m.CellSQL(ctx, q, sheet)
+	if err != nil {
+		return err
+	}
+	if q, err = m.PivotCTE(ctx, q); err != nil {
+		return err
+	}
+	rs, err := m.db.Read().QueryContext(ctx, q)
+	if err != nil {
+		return err
+	}
+	defer rs.Close()
+	names, err := rs.Columns()
+	if err != nil {
+		return err
+	}
+	if len(names) == 0 {
+		return fmt.Errorf("la requête ne rend aucune colonne")
+	}
+	if err := cols(names); err != nil {
+		return err
+	}
+	vals := make([]any, len(names))
+	ptrs := make([]any, len(names))
+	for i := range vals {
+		ptrs[i] = &vals[i]
+	}
+	for rs.Next() {
+		if err := rs.Scan(ptrs...); err != nil {
+			return err
+		}
+		if err := row(vals); err != nil {
+			return err
+		}
+	}
+	return rs.Err()
+}
