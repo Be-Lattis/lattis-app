@@ -142,6 +142,8 @@
 		cells: { row: number; col: number; raw: string; value?: string; error?: boolean; spill?: string[][] }[];
 		/** Largeurs choisies par l'utilisateur (sinon : selon le type). */
 		widths?: { col: number; width: number }[];
+		/** Hauteurs choisies par l'utilisateur (sinon ROW_H). */
+		heights?: { row: number; height: number }[];
 		/** Cellules nommées de la feuille. */
 		names?: { name: string; row: number; col: number }[];
 		/** Mise en forme des cellules hors tableaux (JSON). */
@@ -179,6 +181,8 @@
 		convertPreview?(table: SheetTable, i: number, to: ColumnType): Promise<number>;
 		setType?(table: SheetTable, i: number, to: ColumnType): Promise<unknown>;
 		setColumnWidth?(col: number, width: number): Promise<unknown>;
+		/** Hauteur d'une ligne de la feuille (0 : par défaut). */
+		setRowHeight?(row: number, height: number): Promise<unknown>;
 		/** Nomme une cellule libre (vide : retire le nom). */
 		setName?(row: number, col: number, name: string): Promise<unknown>;
 		sortTable?(table: SheetTable, i: number, desc: boolean): Promise<unknown>;
@@ -353,6 +357,8 @@
 		spills = d.cells.filter((c) => c.spill?.length).map((c) => ({ row: c.row, col: c.col, rows: c.spill! }));
 		shown = new Map(d.cells.filter((c) => c.raw.startsWith('=')).map((c) => [key(c.row, c.col), { text: c.value ?? '', error: !!c.error }]));
 		userWidths = new Map((d.widths ?? []).map((w) => [w.col, w.width]));
+		userHeights = new Map((d.heights ?? []).map((h) => [h.row, h.height]));
+		rebuildRows();
 		names = new Map((d.names ?? []).map((n) => [key(n.row, n.col), n.name]));
 		freeStyles = new Map((d.styles ?? []).map((s) => [key(s.row, s.col), parseStyle(s.style) ?? {}]));
 		colStyles = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseStyle(c.style))]));
@@ -404,6 +410,18 @@
 	// La zone de défilement suit le contenu, comme Excel : la partie utilisée
 	// de la feuille plus un écran, et elle grandit à mesure qu'on défile vers
 	// le bas ou la droite (au lieu de barres faites pour 1 M de lignes vides).
+	// Hauteurs des lignes : par défaut ROW_H, sinon celles choisies (marge de gauche).
+	let rowAxis = $state.raw(new Axis(SHEET_ROWS, ROW_H));
+	let userHeights = new Map<number, number>();
+	const rh = (r: number) => rowAxis.size(r);
+	const rowTop = (r: number) => rowAxis.offset(r);
+	const rspan = (r0: number, r1: number) => rowAxis.offset(r1 + 1) - rowAxis.offset(r0);
+	function rebuildRows(override?: { row: number; height: number }) {
+		const hs = new Map(userHeights);
+		if (override) hs.set(override.row, override.height);
+		rowAxis = new Axis(SHEET_ROWS, ROW_H, hs);
+	}
+
 	const vs = new VScroll(100 * ROW_H, 0);
 	let spacer: HTMLDivElement;
 	let extentCols = 26;
@@ -421,14 +439,14 @@
 			usedRow = Math.max(usedRow, r);
 			usedCol = Math.max(usedCol, c);
 		}
-		const lastVisible = Math.floor((vs.top + vs.view) / ROW_H);
+		const lastVisible = rowAxis.indexAt(vs.top + vs.view);
 		// Comme Excel : la barre s'arrête à la zone utilisée (ou à l'écran affiché) ;
 		// molette, flèches et sélection vont au-delà et l'agrandissent.
 		const rows = Math.min(SHEET_ROWS, Math.max(usedRow + 1, lastVisible + 1));
 		const cw = Math.max(0, viewW - MARGIN);
 		const lastVisibleCol = colAxis.indexAt(scroller.scrollLeft + cw);
 		extentCols = Math.min(SHEET_COLS, Math.max(usedCol + 1, lastVisibleCol + 1));
-		vs.content = rows * ROW_H;
+		vs.content = rowTop(rows);
 		vs.to(vs.top);
 		if (spacer) {
 			spacer.style.height = `${TOP_H + vs.spacer}px`;
@@ -475,7 +493,7 @@
 			if (el.value.startsWith('=')) el.style.textAlign = 'left';
 		}
 		if (!catalog) return;
-		suggestPos = { x: MARGIN + colAxis.offset(active.col) - scroller.scrollLeft, y: TOP_H + (active.row + 1) * ROW_H - vs.top + 2 };
+		suggestPos = { x: MARGIN + colAxis.offset(active.col) - scroller.scrollLeft, y: TOP_H + rowTop(active.row + 1) - vs.top + 2 };
 		const caret = el.selectionStart ?? el.value.length;
 		const e = tableAt(active.row, active.col);
 		const c = suggest(el.value, caret, catalog, e?.t.name);
@@ -542,8 +560,8 @@
 	}
 
 	function visibleRows() {
-		const first = Math.floor(vs.top / ROW_H);
-		const last = Math.min(SHEET_ROWS - 1, Math.floor((vs.top + vs.view - 1) / ROW_H));
+		const first = rowAxis.indexAt(vs.top);
+		const last = Math.min(SHEET_ROWS - 1, rowAxis.indexAt(vs.top + vs.view - 1));
 		return { first, last };
 	}
 
@@ -574,7 +592,7 @@
 		const c0 = colAxis.indexAt(left);
 		const c1 = colAxis.indexAt(left + w - MARGIN);
 		const cx = (c: number) => MARGIN + colAxis.offset(c) - left;
-		const ry = (r: number) => TOP_H + r * ROW_H - vs.top;
+		const ry = (r: number) => TOP_H + rowTop(r) - vs.top;
 		const xEnd = Math.min(w, cx(c1 + 1));
 		const spanW = (a: number, b: number) => colAxis.offset(b + 1) - colAxis.offset(a);
 
@@ -593,7 +611,7 @@
 		for (const e of visible) {
 			const g = grown(e);
 			ctx.fillStyle = C.head;
-			ctx.fillRect(cx(e.t.col), ry(e.t.row), spanW(e.t.col, g.lastCol), ROW_H);
+			ctx.fillRect(cx(e.t.col), ry(e.t.row), spanW(e.t.col, g.lastCol), rh(e.t.row));
 		}
 
 		// Plage sélectionnée.
@@ -603,7 +621,7 @@
 		const k1 = Math.max(active.col, anchor.col);
 		if (s0 !== s1 || k0 !== k1) {
 			ctx.fillStyle = C.select;
-			ctx.fillRect(cx(k0), ry(s0), spanW(k0, k1), (s1 - s0 + 1) * ROW_H);
+			ctx.fillRect(cx(k0), ry(s0), spanW(k0, k1), rspan(s0, s1));
 		}
 
 		// Lignes masquées par un filtre : une note sous le tableau.
@@ -615,7 +633,7 @@
 			ctx.fillStyle = C.icon;
 			ctx.textAlign = 'left';
 			ctx.textBaseline = 'middle';
-			ctx.fillText(`⧩ ${n} ligne${n > 1 ? 's' : ''} masquée${n > 1 ? 's' : ''} par le filtre`, cx(e.t.col) + 6, ry(r) + ROW_H / 2);
+			ctx.fillText(`⧩ ${n} ligne${n > 1 ? 's' : ''} masquée${n > 1 ? 's' : ''} par le filtre`, cx(e.t.col) + 6, ry(r) + rh(r) / 2);
 		}
 
 		// Contenu des tableaux, colonne par colonne (une découpe par colonne).
@@ -638,7 +656,7 @@
 						const hs = headStyles.get(e.t.id)?.[i];
 						if (hs?.bg) {
 							ctx.fillStyle = hs.bg;
-							ctx.fillRect(x, y, cw, ROW_H);
+							ctx.fillRect(x, y, cw, rh(r));
 						}
 						ctx.font = FONT_SMALL;
 						ctx.fillStyle = C.icon;
@@ -648,39 +666,39 @@
 						const ICON = 13;
 						const icon = svg ? ' ▾' : (col.filter ? '⧩ ' : '') + typeIcon(col.type) + ' ▾';
 						let iconW = ctx.measureText(icon).width;
-						ctx.fillText(icon, x + cw - 6, y + ROW_H / 2);
+						ctx.fillText(icon, x + cw - 6, y + rh(r) / 2);
 						if (svg) {
-							drawIcon(ctx, svg, x + cw - 6 - iconW - ICON, y + (ROW_H - ICON) / 2, ICON, C.icon, C.active, 1.3);
+							drawIcon(ctx, svg, x + cw - 6 - iconW - ICON, y + (rh(r) - ICON) / 2, ICON, C.icon, C.active, 1.3);
 							iconW += ICON;
 							if (col.filter) {
-								ctx.fillText('⧩ ', x + cw - 6 - iconW, y + ROW_H / 2);
+								ctx.fillText('⧩ ', x + cw - 6 - iconW, y + rh(r) / 2);
 								iconW += ctx.measureText('⧩ ').width;
 							}
 						}
 						if (e.t.key === i) {
-							ctx.fillText('🔑 ', x + cw - 6 - iconW, y + ROW_H / 2);
+							ctx.fillText('🔑 ', x + cw - 6 - iconW, y + rh(r) / 2);
 							iconW += ctx.measureText('🔑 ').width;
 						}
 						if (col.errors) {
 							ctx.fillStyle = C.error;
-							ctx.fillText('⚠ ' + col.errors, x + cw - 6 - iconW - ctx.measureText(' ').width, y + ROW_H / 2);
+							ctx.fillText('⚠ ' + col.errors, x + cw - 6 - iconW - ctx.measureText(' ').width, y + rh(r) / 2);
 							ctx.fillStyle = C.icon;
 						}
 						ctx.save();
 						ctx.beginPath();
-						ctx.rect(x, y, cw - iconW - 10, ROW_H);
+						ctx.rect(x, y, cw - iconW - 10, rh(r));
 						ctx.clip();
 						ctx.font = (hs?.i ? 'italic ' : '') + FONT_BOLD;
 						ctx.fillStyle = hs?.fg ?? C.headText;
 						ctx.textAlign = 'left';
-						ctx.fillText(ellipsize(col.name, cw - iconW - 16), x + 6, y + ROW_H / 2);
+						ctx.fillText(ellipsize(col.name, cw - iconW - 16), x + 6, y + rh(r) / 2);
 						ctx.restore();
 						continue;
 					}
 					const row = e.cache.row(r - e.t.row - 1);
 					if (!row) {
 						ctx.fillStyle = C.placeholder;
-						ctx.fillRect(x + 6, y + 7, cw * 0.6, ROW_H - 14);
+						ctx.fillRect(x + 6, y + 7, cw * 0.6, rh(r) - 14);
 						continue;
 					}
 					const v = row.cells[i];
@@ -688,7 +706,7 @@
 					const cs = mergeStyles(mergeStyles(colStyles.get(e.t.id)?.[i], parseStyle(row.sty?.get(i))), ruleStyle(colRules.get(e.t.id)?.[i], v, row.text[i] ?? '', !!bad));
 					if (cs?.bg) {
 						ctx.fillStyle = cs.bg;
-						ctx.fillRect(x, y, cw, ROW_H);
+						ctx.fillRect(x, y, cw, rh(r));
 					}
 					let s = row.text[i];
 					if (!s) continue;
@@ -699,7 +717,7 @@
 						ctx.font = FONT;
 						ctx.textAlign = 'left';
 						ctx.fillStyle = C.error;
-						ctx.fillText(s, x + 6, y + ROW_H / 2);
+						ctx.fillText(s, x + 6, y + rh(r) / 2);
 						ctx.beginPath();
 						ctx.moveTo(x + cw - 7, y + 1);
 						ctx.lineTo(x + cw - 1, y + 1);
@@ -725,7 +743,7 @@
 			if (r < r0 || r > r1 || c < c0 || c > c1) continue;
 			if (fs.bg) {
 				ctx.fillStyle = fs.bg;
-				ctx.fillRect(cx(c), ry(r), colAxis.size(c), ROW_H);
+				ctx.fillRect(cx(c), ry(r), colAxis.size(c), rh(r));
 			}
 			borders(fs, cx(c), ry(r), colAxis.size(c));
 		}
@@ -744,7 +762,7 @@
 			ctx.save();
 			ctx.strokeStyle = C.spill;
 			ctx.lineWidth = 1;
-			ctx.strokeRect(Math.round(cx(sp.col)) + 0.5, Math.round(ry(sp.row)) + 0.5, spanW(sp.col, sc1) - 1, sp.rows.length * ROW_H - 1);
+			ctx.strokeRect(Math.round(cx(sp.col)) + 0.5, Math.round(ry(sp.row)) + 0.5, spanW(sp.col, sc1) - 1, rspan(sp.row, sp.row + sp.rows.length - 1) - 1);
 			ctx.restore();
 		}
 		// Tableaux croisés : en-tête et total en gras, dans un cadre.
@@ -757,8 +775,8 @@
 			const pc1 = p.col + p.cells[0].length - 1;
 			if (pr1 < r0 || p.row > r1 || pc1 < c0 || p.col > c1) continue;
 			ctx.fillStyle = C.head;
-			ctx.fillRect(cx(p.col), ry(p.row), spanW(p.col, pc1), ROW_H);
-			ctx.fillRect(cx(p.col), ry(pr1), spanW(p.col, pc1), ROW_H);
+			ctx.fillRect(cx(p.col), ry(p.row), spanW(p.col, pc1), rh(p.row));
+			ctx.fillRect(cx(p.col), ry(pr1), spanW(p.col, pc1), rh(pr1));
 			for (let i = Math.max(0, r0 - p.row); i < p.cells.length && p.row + i <= r1; i++)
 				p.cells[i].forEach((v, j) => {
 					if (!v) return;
@@ -769,7 +787,7 @@
 			ctx.save();
 			ctx.strokeStyle = C.border;
 			ctx.lineWidth = 1;
-			ctx.strokeRect(Math.round(cx(p.col)) + 0.5, Math.round(ry(p.row)) + 0.5, spanW(p.col, pc1) - 1, p.cells.length * ROW_H - 1);
+			ctx.strokeRect(Math.round(cx(p.col)) + 0.5, Math.round(ry(p.row)) + 0.5, spanW(p.col, pc1) - 1, rspan(p.row, pr1) - 1);
 			ctx.restore();
 		}
 		for (const [k, rawText] of cells) {
@@ -796,7 +814,7 @@
 			ctx.rect(Math.max(x, MARGIN), TOP_H, num ? cw : w, h - TOP_H);
 			ctx.clip();
 			ctx.textAlign = num ? 'right' : 'left';
-			ctx.fillText(raw, num ? x + cw - 6 : x + 6, ry(r) + ROW_H / 2);
+			ctx.fillText(raw, num ? x + cw - 6 : x + 6, ry(r) + rh(r) / 2);
 			ctx.restore();
 		}
 
@@ -828,10 +846,10 @@
 			const x = Math.round(cx(e.t.col)) - 0.5;
 			const y = Math.round(ry(e.t.row)) - 0.5;
 			ctx.strokeStyle = g.last !== e.last || g.lastCol !== e.lastCol ? C.active : C.border;
-			ctx.strokeRect(x, y, spanW(e.t.col, g.lastCol), (g.last - e.t.row + 1) * ROW_H);
+			ctx.strokeRect(x, y, spanW(e.t.col, g.lastCol), rspan(e.t.row, g.last));
 			ctx.beginPath();
-			ctx.moveTo(x, y + ROW_H);
-			ctx.lineTo(x + spanW(e.t.col, g.lastCol), y + ROW_H);
+			ctx.moveTo(x, y + rh(e.t.row));
+			ctx.lineTo(x + spanW(e.t.col, g.lastCol), y + rh(e.t.row));
 			ctx.stroke();
 		}
 		// Zone copiée ou coupée : cadre pointillé, comme Excel.
@@ -841,7 +859,7 @@
 			ctx.setLineDash([4, 3]);
 			ctx.strokeStyle = C.active;
 			ctx.lineWidth = 1.5;
-			ctx.strokeRect(cx(k.c0) + 1, ry(k.r0) + 1, spanW(k.c0, k.c1) - 2, (k.r1 - k.r0 + 1) * ROW_H - 2);
+			ctx.strokeRect(cx(k.c0) + 1, ry(k.r0) + 1, spanW(k.c0, k.c1) - 2, rspan(k.r0, k.r1) - 2);
 			ctx.restore();
 		}
 				// Déplacement en cours : contour de la destination.
@@ -853,19 +871,19 @@
 			ctx.setLineDash([5, 3]);
 			ctx.strokeStyle = C.active;
 			ctx.lineWidth = 2;
-			ctx.strokeRect(cx(c0 + dc) + 1, ry(r0 + dr) + 1, spanW(c0 + dc, c1 + dc) - 2, (r1 - r0 + 1) * ROW_H - 2);
+			ctx.strokeRect(cx(c0 + dc) + 1, ry(r0 + dr) + 1, spanW(c0 + dc, c1 + dc) - 2, rspan(r0 + dr, r1 + dr) - 2);
 			ctx.restore();
 		}
 		// Cellule active.
 		if (active.row >= r0 - 1 && active.row <= r1 + 1) {
 			ctx.strokeStyle = C.active;
 			ctx.lineWidth = 2;
-			ctx.strokeRect(cx(active.col) + 0.5, ry(active.row) + 0.5, colAxis.size(active.col) - 1, ROW_H - 1);
+			ctx.strokeRect(cx(active.col) + 0.5, ry(active.row) + 0.5, colAxis.size(active.col) - 1, rh(active.row) - 1);
 		}
 		// Flèches d'audit : bleues vers la cellule (antécédents), rouges depuis
 		// elle (dépendants), comme Excel.
 		if (arrows) {
-			const center = (r: number, c: number) => ({ x: cx(c) + colAxis.size(c) / 2, y: ry(r) + ROW_H / 2 });
+			const center = (r: number, c: number) => ({ x: cx(c) + colAxis.size(c) / 2, y: ry(r) + rh(r) / 2 });
 			const me = center(arrows.row, arrows.col);
 			const draw = (from: { x: number; y: number }, to: { x: number; y: number }, color: string) => {
 				ctx.save();
@@ -906,7 +924,7 @@
 			ctx.setLineDash([3, 2]);
 			ctx.strokeStyle = C.active;
 			ctx.lineWidth = 1.5;
-			ctx.strokeRect(cx(t.c0) + 1, ry(t.r0) + 1, spanW(t.c0, t.c1) - 2, (t.r1 - t.r0 + 1) * ROW_H - 2);
+			ctx.strokeRect(cx(t.c0) + 1, ry(t.r0) + 1, spanW(t.c0, t.c1) - 2, rspan(t.r0, t.r1) - 2);
 			ctx.restore();
 		}
 		ctx.restore();
@@ -932,6 +950,17 @@
 				ctx.restore();
 			}
 		}
+		// Marge de gauche : petits traits aux séparations de lignes (redimensionnables).
+		ctx.beginPath();
+		ctx.strokeStyle = C.stripLine;
+		ctx.lineWidth = 1;
+		for (let r = r0; r <= r1; r++) {
+			const y = Math.round(ry(r + 1)) - 0.5;
+			if (y <= TOP_H) continue;
+			ctx.moveTo(MARGIN * 0.55, y);
+			ctx.lineTo(MARGIN, y);
+		}
+		ctx.stroke();
 		// Petits traits aux séparations de colonnes : on voit où redimensionner.
 		ctx.beginPath();
 		ctx.strokeStyle = C.stripLine;
@@ -961,7 +990,7 @@
 			const y = ry(r);
 			if (r >= s0 && r <= s1) {
 				ctx.fillStyle = C.activeStrip;
-				ctx.fillRect(0, y, MARGIN, ROW_H);
+				ctx.fillRect(0, y, MARGIN, rh(r));
 			}
 			const mine = !!cur && r > cur.t.row && r <= curLast;
 			const e = mine ? cur : visible.find((e) => r > e.t.row && r <= e.last);
@@ -974,9 +1003,9 @@
 				}
 				ctx.save();
 				ctx.beginPath();
-				ctx.rect(0, y, MARGIN - 4, ROW_H);
+				ctx.rect(0, y, MARGIN - 4, rh(r));
 				ctx.clip();
-				ctx.fillText(label, MARGIN - 8, y + ROW_H / 2);
+				ctx.fillText(label, MARGIN - 8, y + rh(r) / 2);
 				ctx.restore();
 			}
 		}
@@ -1021,7 +1050,7 @@
 		const X0 = Math.round(x) + 0.5;
 		const X1 = Math.round(x + w) - 0.5;
 		const Y0 = Math.round(y) + 0.5;
-		const Y1 = Math.round(y + ROW_H) - 0.5;
+		const Y1 = Math.round(y + rh(rowAxis.indexAt(y - TOP_H + vs.top + 1))) - 0.5;
 		if (st.bt) (ctx.moveTo(X0, Y0), ctx.lineTo(X1, Y0));
 		if (st.bb) (ctx.moveTo(X0, Y1), ctx.lineTo(X1, Y1));
 		if (st.bl) (ctx.moveTo(X0, Y0), ctx.lineTo(X0, Y1));
@@ -1051,11 +1080,12 @@
 		ctx.textBaseline = 'middle';
 		ctx.fillStyle = st?.fg ?? color;
 		const tx = align === 'left' ? x + 6 : align === 'right' ? x + cw - 6 : x + cw / 2;
-		ctx.fillText(s, tx, y + ROW_H / 2);
+		const h = rh(rowAxis.indexAt(y - TOP_H + vs.top + 1));
+		ctx.fillText(s, tx, y + h / 2);
 		if (st?.u) {
 			const w = ctx.measureText(s).width;
 			const lx = align === 'left' ? tx : align === 'right' ? tx - w : tx - w / 2;
-			ctx.fillRect(lx, y + ROW_H / 2 + 7, w, 1);
+			ctx.fillRect(lx, y + h / 2 + 7, w, 1);
 		}
 		ctx.restore();
 	}
@@ -1254,7 +1284,7 @@
 				e,
 				i,
 				x: Math.max(4, MARGIN + colAxis.offset(e.t.col + i) - scroller.scrollLeft),
-				y: Math.max(4, TOP_H + (e.t.row + 1) * ROW_H - vs.top),
+				y: Math.max(4, TOP_H + rowTop(e.t.row + 1) - vs.top),
 				values: vals.map((v) => ({ ...v, on: !keep || keep.has(v.text) })),
 				search: '',
 				errors: !!f?.errors,
@@ -1405,7 +1435,7 @@
 		if (chartGesture?.id === ch.id) return chartGesture.box;
 		return {
 			x: colAxis.offset(ch.col) + (ch.config.offX ?? 0),
-			y: ch.row * ROW_H + (ch.config.offY ?? 0),
+			y: rowTop(ch.row) + (ch.config.offY ?? 0),
 			w: ch.config.width ?? CHART_W,
 			h: ch.config.height ?? CHART_H
 		};
@@ -1456,10 +1486,10 @@
 			}
 			const b = g.box;
 			const col = colAxis.indexAt(b.x);
-			const row = Math.floor(b.y / ROW_H);
+			const row = rowAxis.indexAt(b.y);
 			const place = source.placeChart!;
 			writing = writing.then(() =>
-				place(ch.id, row, col, Math.round(b.x - colAxis.offset(col)), Math.round(b.y - row * ROW_H), Math.round(b.w), Math.round(b.h)).then(
+				place(ch.id, row, col, Math.round(b.x - colAxis.offset(col)), Math.round(b.y - rowTop(row)), Math.round(b.w), Math.round(b.h)).then(
 					() => {
 						chartGesture = null;
 					},
@@ -1823,7 +1853,7 @@
 		e.preventDefault();
 		if (dy) {
 			// Défiler vers le bas agrandit la feuille d'autant.
-			if (dy > 0) vs.content = Math.min(SHEET_ROWS * ROW_H, Math.max(vs.content, vs.top + dy + 2 * vs.view));
+			if (dy > 0) vs.content = Math.min(rowAxis.total, Math.max(vs.content, vs.top + dy + 2 * vs.view));
 			vs.by(dy);
 			updateExtent();
 			scroller.scrollTop = vs.toNative();
@@ -1847,9 +1877,9 @@
 
 	function ensureVisible(row: number, col: number) {
 		updateExtent();
-		const top = row * ROW_H;
+		const top = rowTop(row);
 		if (top < vs.top) vs.to(top);
-		else if (top + ROW_H > vs.top + vs.view) vs.to(top + ROW_H - vs.view);
+		else if (top + rh(row) > vs.top + vs.view) vs.to(top + rh(row) - vs.view);
 		const left = scroller.scrollLeft;
 		const cw = viewW - MARGIN;
 		const x0 = colAxis.offset(col);
@@ -1912,13 +1942,27 @@
 		const y = e.clientY - r.top;
 		if (x < MARGIN || y < TOP_H || x >= scroller.clientWidth || y >= scroller.clientHeight) return null;
 		const col = colAxis.indexAt(x - MARGIN + scroller.scrollLeft);
-		const row = Math.min(SHEET_ROWS - 1, Math.floor((y - TOP_H + vs.top) / ROW_H));
+		const row = Math.min(SHEET_ROWS - 1, rowAxis.indexAt(y - TOP_H + vs.top));
 		return { row, col };
 	}
 
 	// --- Largeur des colonnes : glisser une séparation du bandeau du haut ----
 
 	let resizing: { col: number; startX: number; startW: number; width: number } | null = null;
+	let rowResizing: { row: number; startY: number; startH: number; height: number } | null = null;
+
+	/** Ligne dont le bord bas est sous la souris (marge de gauche), ou null. */
+	function rowBoundaryAt(e: MouseEvent): number | null {
+		const r = scroller.getBoundingClientRect();
+		const x = e.clientX - r.left;
+		const y = e.clientY - r.top;
+		if (x >= MARGIN || y <= TOP_H) return null;
+		const py = y - TOP_H + vs.top;
+		const row = rowAxis.indexAt(py);
+		if (rowTop(row + 1) - py <= 3) return row;
+		if (py - rowTop(row) <= 3 && row > 0) return row - 1;
+		return null;
+	}
 
 	/** Colonne dont le bord droit est sous la souris (bandeau du haut), ou null. */
 	function boundaryAt(e: MouseEvent): number | null {
@@ -1944,11 +1988,11 @@
 		if (x < MARGIN || y < TOP_H) return false;
 		const { r0, r1, c0, c1 } = selection();
 		const cx = (c: number) => MARGIN + colAxis.offset(c) - scroller.scrollLeft;
-		const ry = (r: number) => TOP_H + r * ROW_H - vs.top;
+		const ry = (r: number) => TOP_H + rowTop(r) - vs.top;
 		const left = cx(c0);
 		const right = cx(c1) + colAxis.size(c1);
 		const top = ry(r0);
-		const bottom = ry(r1) + ROW_H;
+		const bottom = ry(r1) + rh(r1);
 		const near = (v: number, edge: number) => Math.abs(v - edge) <= 3;
 		const inX = x >= left - 3 && x <= right + 3;
 		const inY = y >= top - 3 && y <= bottom + 3;
@@ -1996,7 +2040,7 @@
 	/** Position (écran) du coin bas droit de la sélection. */
 	function fillHandle() {
 		const { r1, c1 } = selection();
-		return { x: MARGIN + colAxis.offset(c1 + 1) - scroller.scrollLeft, y: TOP_H + (r1 + 1) * ROW_H - vs.top };
+		return { x: MARGIN + colAxis.offset(c1 + 1) - scroller.scrollLeft, y: TOP_H + rowTop(r1 + 1) - vs.top };
 	}
 
 	function onFillHandle(e: MouseEvent): boolean {
@@ -2082,14 +2126,14 @@
 		const r = scroller.getBoundingClientRect();
 		const x = e.clientX - r.left;
 		const y = e.clientY - r.top;
-		if (x < MARGIN && y >= TOP_H) return { kind: 'rows', row: clamp(Math.floor((y - TOP_H + vs.top) / ROW_H), 0, SHEET_ROWS - 1) };
+		if (x < MARGIN && y >= TOP_H) return { kind: 'rows', row: clamp(rowAxis.indexAt(y - TOP_H + vs.top), 0, SHEET_ROWS - 1) };
 		if (y < TOP_H && x >= MARGIN) return { kind: 'cols', col: colAxis.indexAt(x - MARGIN + scroller.scrollLeft) };
 		return null;
 	}
 
 	/** Dernière ligne et colonne de la zone affichée (la sélection entière s'y arrête). */
 	function lastRow() {
-		return Math.max(0, Math.floor(vs.content / ROW_H) - 1);
+		return Math.max(0, rowAxis.indexAt(vs.content) - 1);
 	}
 	function lastCol() {
 		return Math.max(0, extentCols - 1);
@@ -2130,7 +2174,7 @@
 			selChart = null;
 			if (panel?.kind === 'chart') panel = null;
 		}
-		const hd = boundaryAt(e) === null ? headerAt(e) : null;
+		const hd = boundaryAt(e) === null && rowBoundaryAt(e) === null ? headerAt(e) : null;
 		if (hd && e.button !== 1) {
 			e.preventDefault();
 			if (editing) commit();
@@ -2149,6 +2193,22 @@
 				moving = { sel: selection(), from: cell };
 				return;
 			}
+		}
+		const rb = rowBoundaryAt(e);
+		if (rb !== null && source.setRowHeight) {
+			e.preventDefault();
+			if (e.detail === 2) {
+				// Double-clic : hauteur par défaut.
+				userHeights.delete(rb);
+				rebuildRows();
+				updateExtent();
+				schedule();
+				const set = source.setRowHeight;
+				writing = writing.then(() => set(rb, 0).then(() => undefined, (err) => say(String(err?.message ?? err))));
+				return;
+			}
+			rowResizing = { row: rb, startY: e.clientY, startH: rh(rb), height: rh(rb) };
+			return;
 		}
 		const b = boundaryAt(e);
 		if (b !== null && source.setColumnWidth) {
@@ -2169,6 +2229,13 @@
 	}
 
 	function onMouseMove(e: MouseEvent) {
+		if (rowResizing) {
+			rowResizing.height = Math.max(12, Math.round(rowResizing.startH + e.clientY - rowResizing.startY));
+			rebuildRows({ row: rowResizing.row, height: rowResizing.height });
+			updateExtent();
+			schedule();
+			return;
+		}
 		if (resizing) {
 			resizing.width = Math.max(24, Math.round(resizing.startW + e.clientX - resizing.startX));
 			rebuildAxis({ col: resizing.col, width: resizing.width });
@@ -2194,7 +2261,7 @@
 		if (headerDrag) {
 			const r = scroller.getBoundingClientRect();
 			if (headerDrag === 'rows') {
-				const row = clamp(Math.floor((e.clientY - r.top - TOP_H + vs.top) / ROW_H), 0, SHEET_ROWS - 1);
+				const row = clamp(rowAxis.indexAt(e.clientY - r.top - TOP_H + vs.top), 0, SHEET_ROWS - 1);
 				selectRows(anchor.row, row);
 			} else {
 				const col = colAxis.indexAt(Math.max(0, e.clientX - r.left - MARGIN + scroller.scrollLeft));
@@ -2203,7 +2270,9 @@
 			return;
 		}
 		scroller.style.cursor =
-			source.setColumnWidth && boundaryAt(e) !== null
+			source.setRowHeight && rowBoundaryAt(e) !== null
+				? 'row-resize'
+				: source.setColumnWidth && boundaryAt(e) !== null
 				? 'col-resize'
 				: !dragging && onFillHandle(e)
 					? 'crosshair'
@@ -2371,7 +2440,7 @@
 	function placeEditor() {
 		if (!input) return;
 		const x = MARGIN + colAxis.offset(active.col) - scroller.scrollLeft;
-		const y = TOP_H + active.row * ROW_H - vs.top;
+		const y = TOP_H + rowTop(active.row) - vs.top;
 		input.style.transform = `translate(${x}px, ${y}px)`;
 		input.style.width = `${Math.max(colAxis.size(active.col), 80)}px`;
 		const e = tableAt(active.row, active.col);
@@ -2922,8 +2991,8 @@
 				const step = () => (++k >= n ? res() : requestAnimationFrame(step));
 				requestAnimationFrame(step);
 			});
-		const tableTop = (e.t.row + 1) * ROW_H;
-		const tableSpan = Math.max(0, e.t.rows * ROW_H - vs.view);
+		const tableTop = rowTop(e.t.row + 1);
+		const tableSpan = Math.max(0, rspan(e.t.row + 1, e.t.row + e.t.rows) - vs.view);
 
 		vs.to(tableTop + Math.random() * tableSpan * 0.5);
 		syncNative();
@@ -3044,6 +3113,16 @@
 				schedule();
 			}
 			if (moving) dropMove();
+			if (rowResizing) {
+				const { row, height, startH } = rowResizing;
+				rowResizing = null;
+				if (height !== startH && source.setRowHeight) {
+					userHeights.set(row, height);
+					const setHeight = source.setRowHeight;
+					writing = writing.then(() => setHeight(row, height).then(() => undefined, (err) => say(String(err?.message ?? err))));
+				}
+				return;
+			}
 			if (!resizing) return;
 			const { col, width, startW } = resizing;
 			resizing = null;

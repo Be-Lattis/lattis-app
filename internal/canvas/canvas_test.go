@@ -1357,3 +1357,20 @@ func TestDependencies(t *testing.T) {
 		t.Fatalf("dépendants de Qté : %+v", dep.Dependents)
 	}
 }
+
+func TestRowHeight(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	before := dump(t, d)
+	if err := d.SetRowHeight(ctx, 1, 3, 40); err != nil {
+		t.Fatal(err)
+	}
+	l, _ := d.Layout(ctx, 1)
+	if len(l.Heights) != 1 || l.Heights[0].Height != 40 {
+		t.Fatalf("hauteurs : %+v", l.Heights)
+	}
+	d.bus.Undo(ctx)
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation :\n%s", diff(before, got))
+	}
+}

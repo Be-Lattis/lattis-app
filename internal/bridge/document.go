@@ -655,3 +655,8 @@ func (s *DocumentService) Dependencies(ctx context.Context, sheet int64, row, co
 	}
 	return d.Dependencies(ctx, sheet, row, col)
 }
+
+// SetRowHeight fixe la hauteur d'une ligne (0 : hauteur par défaut).
+func (s *DocumentService) SetRowHeight(ctx context.Context, sheet int64, row, height int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetRowHeight(ctx, sheet, row, height) })
+}

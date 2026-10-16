@@ -55,6 +55,7 @@ func (m *Model) Dump(ctx context.Context) (string, error) {
 		{"styles libres", `SELECT * FROM _slitable_cell_styles ORDER BY sheet, row, col`},
 		{"noms", `SELECT * FROM _slitable_names ORDER BY name`},
 		{"largeurs", `SELECT * FROM _slitable_col_widths ORDER BY sheet, col`},
+		{"hauteurs", `SELECT * FROM _slitable_row_heights ORDER BY sheet, row`},
 		{"scripts", `SELECT * FROM _slitable_scripts ORDER BY id`},
 		{"tableaux croisés", `SELECT * FROM _slitable_pivots ORDER BY id`},
 		{"graphiques", `SELECT * FROM _slitable_charts ORDER BY id`},

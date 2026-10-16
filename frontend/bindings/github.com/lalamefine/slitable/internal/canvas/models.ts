@@ -110,9 +110,6 @@ export interface ChartSeries {
     "values": (number | null)[] | null;
 }
 
-/**
- * ColWidth est la largeur choisie pour une colonne de la feuille.
- */
 export interface ColWidth {
     "col": number;
     "width": number;
@@ -250,6 +247,11 @@ export interface Layout {
     "widths": ColWidth[] | null;
 
     /**
+     * hauteurs choisies par l'utilisateur
+     */
+    "heights": RowHeight[] | null;
+
+    /**
      * cellules nommées de la feuille
      */
     "names": NameInfo[] | null;
@@ -356,6 +358,15 @@ export interface PivotValue {
      * "", pctTotal, pctRow, pctCol
      */
     "show"?: string;
+}
+
+/**
+ * ColWidth est la largeur choisie pour une colonne de la feuille.
+ * RowHeight est la hauteur choisie pour une ligne de la feuille.
+ */
+export interface RowHeight {
+    "row": number;
+    "height": number;
 }
 
 /**

@@ -133,3 +133,26 @@ func (m *Model) SetColumnWidth(ctx context.Context, sheet int64, col, width int)
 		return t.apply(set(width), set(old))
 	})
 }
+
+// SetRowHeight fixe la hauteur (en pixels) d'une ligne de la feuille ; 0
+// revient à la hauteur par défaut.
+func (m *Model) SetRowHeight(ctx context.Context, sheet int64, row, height int) error {
+	return m.Do(ctx, "Hauteur de ligne", func(t *tx) error {
+		var old int
+		err := t.row(`SELECT height FROM _slitable_row_heights WHERE sheet = ? AND row = ?`, sheet, row).Scan(&old)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+		if old == height {
+			return nil
+		}
+		set := func(h int) []stmt {
+			s := []stmt{st(`DELETE FROM _slitable_row_heights WHERE sheet = ? AND row = ?`, sheet, row)}
+			if h > 0 {
+				s = append(s, st(`INSERT INTO _slitable_row_heights (sheet, row, height) VALUES (?, ?, ?)`, sheet, row, h))
+			}
+			return s
+		}
+		return t.apply(set(height), set(old))
+	})
+}

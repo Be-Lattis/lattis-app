@@ -72,15 +72,16 @@ type NameInfo struct {
 // Layout est la mise en page d'une feuille : ses tableaux et ses cellules
 // libres. Les valeurs des tableaux se lisent ensuite par fenêtres.
 type Layout struct {
-	Sheets []SheetInfo `json:"sheets"`
-	Sheet  int64       `json:"sheet"`
-	Tables []TableInfo `json:"tables"`
-	Cells  []CellInfo  `json:"cells"`
-	Widths []ColWidth  `json:"widths"` // largeurs choisies par l'utilisateur
-	Names  []NameInfo  `json:"names"`  // cellules nommées de la feuille
-	Styles []CellStyle `json:"styles"` // mise en forme hors tableaux
-	Pivots []PivotInfo `json:"pivots"` // tableaux croisés, calculés
-	Charts []ChartInfo `json:"charts"` // graphiques, avec leurs données
+	Sheets  []SheetInfo `json:"sheets"`
+	Sheet   int64       `json:"sheet"`
+	Tables  []TableInfo `json:"tables"`
+	Cells   []CellInfo  `json:"cells"`
+	Widths  []ColWidth  `json:"widths"`  // largeurs choisies par l'utilisateur
+	Heights []RowHeight `json:"heights"` // hauteurs choisies par l'utilisateur
+	Names   []NameInfo  `json:"names"`   // cellules nommées de la feuille
+	Styles  []CellStyle `json:"styles"`  // mise en forme hors tableaux
+	Pivots  []PivotInfo `json:"pivots"`  // tableaux croisés, calculés
+	Charts  []ChartInfo `json:"charts"`  // graphiques, avec leurs données
 }
 
 // CellStyle est la mise en forme d'une cellule hors tableau.
@@ -91,6 +92,12 @@ type CellStyle struct {
 }
 
 // ColWidth est la largeur choisie pour une colonne de la feuille.
+// RowHeight est la hauteur choisie pour une ligne de la feuille.
+type RowHeight struct {
+	Row    int `json:"row"`
+	Height int `json:"height"`
+}
+
 type ColWidth struct {
 	Col   int `json:"col"`
 	Width int `json:"width"`
@@ -98,7 +105,7 @@ type ColWidth struct {
 
 // Layout lit la mise en page d'une feuille.
 func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
-	l := Layout{Sheet: sheet, Tables: []TableInfo{}, Cells: []CellInfo{}, Widths: []ColWidth{}, Names: []NameInfo{}, Styles: []CellStyle{}}
+	l := Layout{Sheet: sheet, Tables: []TableInfo{}, Cells: []CellInfo{}, Widths: []ColWidth{}, Heights: []RowHeight{}, Names: []NameInfo{}, Styles: []CellStyle{}}
 	err := m.read(ctx, func(t *tx) error {
 		rs, err := t.query(`SELECT id, name FROM _slitable_sheets ORDER BY pos, id`)
 		if err != nil {
@@ -182,6 +189,19 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 				return err
 			}
 			l.Widths = append(l.Widths, w)
+		}
+		rs.Close()
+		rs, err = t.query(`SELECT row, height FROM _slitable_row_heights WHERE sheet = ? ORDER BY row`, sheet)
+		if err != nil {
+			return err
+		}
+		for rs.Next() {
+			var h RowHeight
+			if err := rs.Scan(&h.Row, &h.Height); err != nil {
+				rs.Close()
+				return err
+			}
+			l.Heights = append(l.Heights, h)
 		}
 		rs.Close()
 		rs, err = t.query(`SELECT name, row, col FROM _slitable_names WHERE sheet = ? ORDER BY name`, sheet)

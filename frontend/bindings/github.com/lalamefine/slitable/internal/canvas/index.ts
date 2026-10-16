@@ -21,6 +21,7 @@ export type {
     PivotFilter,
     PivotInfo,
     PivotValue,
+    RowHeight,
     Rule,
     ScriptInfo,
     SheetInfo,
