@@ -79,53 +79,11 @@ func hasColumnRef(n Node) bool {
 // ligne à ligne par une expression. Les agrégats et parcours imbriqués lisent
 // leurs propres colonnes : seuls leurs paramètres sont visités.
 func walkArray(n Node, f func(Ref)) {
-	switch n := n.(type) {
-	case Ref:
-		if !n.Row {
-			f(n)
+	walkCols(n, func(x Node) {
+		if r, ok := x.(Ref); ok {
+			f(r)
 		}
-	case Unary:
-		walkArray(n.X, f)
-	case Binary:
-		walkArray(n.L, f)
-		walkArray(n.R, f)
-	case Call:
-		fn, ok := lookupFunc(n.Fn)
-		if !ok {
-			return
-		}
-		args := n.Args
-		switch fn.kind {
-		case spill:
-			return
-		case aggregate:
-			args = args[:min(aggLead[fn.EN], len(args))]
-		case scan:
-			rs, ok := scans[fn.EN].roles(len(args))
-			if !ok || fn.EN == "RANK" {
-				return
-			}
-			var ps []Node
-			for i, a := range args {
-				if rs[i] == param {
-					ps = append(ps, a)
-				}
-			}
-			args = ps
-		case special:
-			switch fn.EN {
-			case "REFERENCE", "REFERENCE.APPROX":
-				args = args[min(2, len(args)):]
-			case "EXISTS":
-				args = args[min(1, len(args)):]
-			case "SUBTOTAL", "VLOOKUP", "XLOOKUP", "HLOOKUP":
-				return
-			}
-		}
-		for _, a := range args {
-			walkArray(a, f)
-		}
-	}
+	})
 }
 
 // arrayTable donne le tableau parcouru par des expressions sur colonnes (nil

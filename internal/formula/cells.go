@@ -39,6 +39,67 @@ func CellText(name string) string {
 
 var identRe = regexp.MustCompile(`^[\p{L}_][\p{L}\p{N}_]*$`)
 
+// sheetPrefix écrit « Feuille! » ou « 'Ma feuille'! » ("" sans feuille).
+func sheetPrefix(sheet string) string {
+	if sheet == "" {
+		return ""
+	}
+	if !identRe.MatchString(sheet) {
+		sheet = "'" + strings.ReplaceAll(sheet, "'", "''") + "'"
+	}
+	return sheet + "!"
+}
+
+// String écrit la plage dans la nomenclature : Cell[A1:B3], Feuille!Cell[A1:B3].
+func (r CellRange) String() string {
+	return sheetPrefix(r.Sheet) + "Cell[" + ColumnLetters(r.C1) + strconv.Itoa(r.R1+1) + ":" + ColumnLetters(r.C2) + strconv.Itoa(r.R2+1) + "]"
+}
+
+// Size donne le nombre de lignes et de colonnes de la plage.
+func (r CellRange) Size() (rows, cols int) { return r.R2 - r.R1 + 1, r.C2 - r.C1 + 1 }
+
+// keys donne la clé (table des noms) de chaque cellule de la plage, ligne
+// par ligne : feuille de la formule (Home) ou citée, sinon home (feuille du
+// tableau d'une colonne calculée, 0 si inconnue).
+func (r CellRange) keys(home int64) []string {
+	if r.Home != 0 {
+		home = r.Home
+	}
+	out := make([]string, 0, (r.R2-r.R1+1)*(r.C2-r.C1+1))
+	for row := r.R1; row <= r.R2; row++ {
+		for col := r.C1; col <= r.C2; col++ {
+			switch {
+			case r.Sheet != "":
+				out = append(out, strings.ToLower(r.Sheet+"."+CellName(row, col)))
+			case home != 0:
+				out = append(out, CellKey(home, row, col))
+			default:
+				out = append(out, strings.ToLower(CellName(row, col)))
+			}
+		}
+	}
+	return out
+}
+
+var a1Re = regexp.MustCompile(`^([A-Za-z]{1,3})([1-9][0-9]{0,6})$`)
+
+// A1Address lit une adresse tapée à la Excel : « C14 », « Feuille2!C14 »
+// (le nom de feuille sans apostrophes). Les $ doivent être retirés.
+func A1Address(text string) (sheet string, row, col int, ok bool) {
+	addr := text
+	if k := strings.LastIndex(text, "!"); k >= 0 {
+		sheet, addr = text[:k], text[k+1:]
+		if sheet == "" {
+			return "", 0, 0, false
+		}
+	}
+	if !a1Re.MatchString(addr) {
+		return "", 0, 0, false
+	}
+	row, col, ok = CellRef("Cell_" + addr)
+	return sheet, row, col, ok
+}
+
 // itemCall traduit Tableau[Col][k] : par la clé si le tableau en a une
 // (stable au tri), sinon par le rang de la ligne (1 = première).
 // Sans nom de tableau ([Col][k]), c'est le tableau de la formule (cur).
@@ -105,6 +166,11 @@ func QualifyCells(n Node, sheet int64) Node {
 		if r, c, ok := CellRef(v.Name); ok {
 			return Name{Name: CellKey(sheet, r, c)}
 		}
+	case CellRange:
+		if v.Sheet == "" {
+			v.Home = sheet
+		}
+		return v
 	case Unary:
 		v.X = QualifyCells(v.X, sheet)
 		return v

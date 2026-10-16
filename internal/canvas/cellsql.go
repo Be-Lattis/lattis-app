@@ -17,8 +17,9 @@ import (
 //
 // Groupes : 1 feuille entre apostrophes, 2 feuille entre guillemets, 3 nom de
 // feuille ; 4 adresse après !Cell[ ; 5 adresse après .Cell_ ; 6 adresse de
-// Cell[ ] seule ; 7 adresse de Cell_ seule.
-var cellRefRe = regexp.MustCompile(`(?i)(?:'((?:[^']|'')+)'|"((?:[^"]|"")+)"|([\p{L}_][\p{L}\p{N}_]*))(?:!cell\[\s*([a-z]{1,3}[1-9][0-9]*)\s*\]|\.cell_([a-z]{1,3}[1-9][0-9]*)\b)|'(?:[^']|'')*'|"(?:[^"]|"")*"|\bcell\[\s*([a-z]{1,3}[1-9][0-9]*)\s*\]|\bcell_([a-z]{1,3}[1-9][0-9]*)\b`)
+// Cell[ ] seule ; 7 adresse de Cell_ seule. Entre crochets, l'adresse peut
+// être une plage (« A1:B3 »).
+var cellRefRe = regexp.MustCompile(`(?i)(?:'((?:[^']|'')+)'|"((?:[^"]|"")+)"|([\p{L}_][\p{L}\p{N}_]*))(?:!cell\[\s*([a-z]{1,3}[1-9][0-9]*(?:\s*:\s*[a-z]{1,3}[1-9][0-9]*)?)\s*\]|\.cell_([a-z]{1,3}[1-9][0-9]*)\b)|'(?:[^']|'')*'|"(?:[^"]|"")*"|\bcell\[\s*([a-z]{1,3}[1-9][0-9]*(?:\s*:\s*[a-z]{1,3}[1-9][0-9]*)?)\s*\]|\bcell_([a-z]{1,3}[1-9][0-9]*)\b`)
 
 // cellRefs remplace chaque adresse de cellule d'un texte : fn reçoit la
 // feuille citée ("" : celle du contexte), l'adresse (« A1 ») et le texte
@@ -106,6 +107,10 @@ func (m *Model) CellSQL(ctx context.Context, q string, sheet int64) (string, err
 					failed = err
 					return orig
 				}
+			}
+			if strings.Contains(addr, ":") {
+				failed = fmt.Errorf("%s : une requête SQL lit une cellule à la fois, pas une plage", orig)
+				return orig
 			}
 			r, c, _ := formula.CellRef("cell_" + addr)
 			v := values[formula.CellKey(on, r, c)]
