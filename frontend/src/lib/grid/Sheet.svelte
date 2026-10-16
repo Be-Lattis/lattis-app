@@ -17,6 +17,22 @@
 	import { dismiss } from './dismiss';
 	import { explainError } from './errors';
 	import { fillSeries } from './fill';
+	import {
+		condArgs,
+		condLabel,
+		condOps,
+		describeConds,
+		filterKind,
+		kindTitle,
+		searchValues,
+		valuesFilter,
+		type ColumnFilter as Filter,
+		type CondOp,
+		type PanelValue
+	} from './filtercond';
+	import { cellLines, copyFillBlock, copyFillPlan, fillBlock, insertAt, shortcutOf, timeText, todayText } from './shortcuts';
+	import { SheetViews } from './sheetview';
+	import { besideGutter, gutterOwner } from './gutter';
 	import Select from '#lib/ui/Select.svelte';
 	import Chart from '#lib/chart/Chart.svelte';
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
@@ -125,10 +141,8 @@
 		col: number;
 	}
 
-	export interface ColumnFilter {
-		values?: string[]; // valeurs gardées (texte affiché, vide : cellules vides)
-		errors?: boolean; // saisies hors type seulement
-	}
+	/** Filtre d'une colonne : valeurs, erreurs, conditions (voir filtercond.ts). */
+	export type ColumnFilter = Filter;
 
 	export interface SheetTable {
 		id: number;
@@ -299,9 +313,11 @@
 		onhscroll?: (s: { content: number; view: number; left: number }) => void;
 		/** Feuille protégée : message affiché au lieu d'ouvrir la saisie (vide : modifiable). */
 		locked?: string;
+		/** Ctrl+1 : ouvre la boîte « Format de cellule » (absente : message). */
+		onformatcells?: () => void;
 	}
 
-	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '' }: Props = $props();
+	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', onformatcells }: Props = $props();
 
 	export const SHEET_ROWS = 1_048_576;
 	export const SHEET_COLS = 16_384;
@@ -312,6 +328,7 @@
 	const FONT = '13px "Segoe UI", system-ui, -apple-system, sans-serif';
 	const FONT_BOLD = '600 13px "Segoe UI", system-ui, -apple-system, sans-serif';
 	const FONT_SMALL = '11px "Segoe UI", system-ui, -apple-system, sans-serif';
+	const FONT_TINY = '9px "Segoe UI", system-ui, -apple-system, sans-serif';
 
 	const C = {
 		bg: '#ffffff',
@@ -403,6 +420,9 @@
 
 	/** Recalcule la géométrie quand la mise en page change (après une saisie). */
 	function applyData(d: SheetData) {
+		// Changement de feuille : garder la position de la feuille quittée,
+		// retrouver celle de la nouvelle (A1 si elle n'a pas été visitée).
+		const back = sheetViews.switchTo(d.sheet ?? 1, { active: { ...active }, anchor: { ...anchor }, top: vs.top, left: scroller?.scrollLeft ?? 0 });
 		const old = new Map(entries.map((e) => [e.t.id, e]));
 		entries = d.tables.map((t) => {
 			const e = old.get(t.id);
@@ -441,10 +461,23 @@
 		headStyles = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseStyle(c.headerStyle))]));
 		colRules = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseRules(c.rules))]));
 		rebuildAxis();
+		if (back) {
+			active = back.active;
+			anchor = back.anchor;
+			wholeSel = null;
+		}
 		updateExtent();
+		if (back && scroller) {
+			vs.to(back.top);
+			scroller.scrollLeft = back.left;
+			updateExtent();
+			syncNative();
+		}
 		refreshFx();
+		if (back) refreshStatus();
 		schedule();
 	}
+	const sheetViews = new SheetViews();
 
 	// Largeurs : choisies par l'utilisateur, sinon selon le type de la colonne
 	// du premier tableau qui l'occupe, sinon la largeur par défaut.
@@ -600,7 +633,7 @@
 	let wrap: HTMLDivElement;
 	let scroller: HTMLDivElement;
 	let canvas: HTMLCanvasElement;
-	let input = $state<HTMLInputElement>();
+	let input = $state<HTMLTextAreaElement>();
 	let ctx: CanvasRenderingContext2D;
 	let mounted = false;
 
@@ -627,7 +660,7 @@
 	let sig = $state<{ fn: FunctionDoc; index: number; where: 'cell' | 'fx' } | null>(null);
 	let suggestPos = $state({ x: 0, y: 0 });
 
-	function onFormulaInput(el: HTMLInputElement, where: 'cell' | 'fx') {
+	function onFormulaInput(el: HTMLInputElement | HTMLTextAreaElement, where: 'cell' | 'fx') {
 		if (where === 'cell') {
 			fxText = el.value;
 			// Une formule se lit de gauche à droite, quelle que soit la colonne.
@@ -646,13 +679,13 @@
 	/** Le curseur bouge sans saisie (flèches, clic) : l'argument en gras suit. */
 	function moveSig(e: Event, where: 'cell' | 'fx') {
 		if (!catalog || (e instanceof KeyboardEvent && !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key))) return;
-		const el = e.currentTarget as HTMLInputElement;
+		const el = e.currentTarget as HTMLInputElement | HTMLTextAreaElement;
 		const s = signature(el.value, el.selectionStart ?? el.value.length, catalog);
 		sig = s ? { ...s, where } : null;
 	}
 
 	/** Gère les touches de la liste de suggestions ; vrai si la touche est consommée. */
-	function completionKey(e: KeyboardEvent, el: HTMLInputElement, set: (v: string) => void): boolean {
+	function completionKey(e: KeyboardEvent, el: HTMLInputElement | HTMLTextAreaElement, set: (v: string) => void): boolean {
 		if (!completion) return false;
 		const c = completion;
 		switch (e.key) {
@@ -857,32 +890,7 @@
 							ctx.fillStyle = hs.bg;
 							ctx.fillRect(x, y, cw, rh(r));
 						}
-						ctx.font = FONT_SMALL;
-						ctx.fillStyle = C.icon;
-						ctx.textAlign = 'right';
-						// Icône du type : SVG pour date et booléen, texte pour les autres.
-						const svg = typeIconName(col.type);
-						const ICON = 13;
-						const icon = svg ? ' ▾' : (col.filter ? '⧩ ' : '') + typeIcon(col.type) + ' ▾';
-						let iconW = ctx.measureText(icon).width;
-						ctx.fillText(icon, x + cw - 6, y + rh(r) / 2);
-						if (svg) {
-							drawIcon(ctx, svg, x + cw - 6 - iconW - ICON, y + (rh(r) - ICON) / 2, ICON, C.icon, C.active, 1.3);
-							iconW += ICON;
-							if (col.filter) {
-								ctx.fillText('⧩ ', x + cw - 6 - iconW, y + rh(r) / 2);
-								iconW += ctx.measureText('⧩ ').width;
-							}
-						}
-						if (e.t.key === i) {
-							ctx.fillText('🔑 ', x + cw - 6 - iconW, y + rh(r) / 2);
-							iconW += ctx.measureText('🔑 ').width;
-						}
-						if (col.errors) {
-							ctx.fillStyle = C.error;
-							ctx.fillText('⚠ ' + col.errors, x + cw - 6 - iconW - ctx.measureText(' ').width, y + rh(r) / 2);
-							ctx.fillStyle = C.icon;
-						}
+						const iconW = headIcons(e, i, x, y, cw, rh(r));
 						ctx.save();
 						ctx.beginPath();
 						ctx.rect(x, y, cw - iconW - 10, rh(r));
@@ -1017,8 +1025,8 @@
 			let raw = f ? f.text : rawText;
 			const num = isNumeric(raw);
 			if (num) raw = styledNumber(raw, fstyle);
-			if (fstyle) {
-				drawText(raw, x, ry(r), cw, fstyle.al ?? (num ? 'right' : 'left'), fstyle, f?.error ? C.error : C.text, num ? cw : w);
+			if (fstyle || raw.includes('\n')) {
+				drawText(raw, x, ry(r), cw, fstyle?.al ?? (num ? 'right' : 'left'), fstyle, f?.error ? C.error : C.text, num ? cw : w);
 				continue;
 			}
 			ctx.fillStyle = f?.error ? C.error : C.text;
@@ -1097,6 +1105,28 @@
 			ctx.strokeStyle = C.active;
 			ctx.lineWidth = 2;
 			ctx.strokeRect(cx(c0 + dc) + 1, ry(r0 + dr) + 1, spanW(c0 + dc, c1 + dc) - 2, rspan(r0 + dr, r1 + dr) - 2);
+			ctx.restore();
+		}
+		// Tableau actif qui ne touche pas la gouttière : ses numéros de ligne (ou
+		// sa clé) en petit, juste à gauche de sa première colonne, là où la
+		// cellule voisine est vide.
+		const act = a1 ? undefined : (tableAt(active.row, active.col) ?? entries.find((e) => grown(e).last !== e.last));
+		if (act && besideGutter({ row: act.t.row, last: act.last, col: act.t.col, lastCol: act.lastCol }, c0, c1)) {
+			const x = cx(act.t.col);
+			const gw = colAxis.size(act.t.col - 1);
+			ctx.save();
+			ctx.beginPath();
+			ctx.rect(Math.max(MARGIN, x - gw), TOP_H, Math.min(gw, x - MARGIN), h - TOP_H);
+			ctx.clip();
+			ctx.font = FONT_TINY;
+			ctx.fillStyle = C.stripText;
+			ctx.textAlign = 'right';
+			ctx.textBaseline = 'middle';
+			const last = grown(act).last;
+			for (let r = Math.max(r0, act.t.row + 1); r <= Math.min(r1, last); r++) {
+				if (tableAt(r, act.t.col - 1) || cells.has(key(r, act.t.col - 1))) continue;
+				ctx.fillText(rowLabel(act, r), x - 3, ry(r) + rh(r) / 2);
+			}
 			ctx.restore();
 		}
 		// Cellule active.
@@ -1192,6 +1222,11 @@
 				ctx.clip();
 				ctx.fillStyle = c >= k0 && c <= k1 ? C.activeStrip : C.head;
 				ctx.fillRect(x, 0, colAxis.size(c), TOP_H);
+				// Boutons ▾, type et entonnoir, cliquables comme dans l'en-tête.
+				const iw = headIcons(e, c - e.t.col, x, 0, colAxis.size(c), TOP_H);
+				ctx.beginPath();
+				ctx.rect(Math.max(x, MARGIN), 0, Math.max(0, colAxis.size(c) - iw - 10), TOP_H);
+				ctx.clip();
 				ctx.font = FONT_BOLD;
 				ctx.fillStyle = C.headText;
 				ctx.textAlign = 'left';
@@ -1235,6 +1270,7 @@
 		// prolonge) ; ceux des autres tableaux, plus discrets.
 		const cur = tableAt(active.row, active.col) ?? entries.find((e) => grown(e).last !== e.last);
 		const curLast = cur ? grown(cur).last : -1;
+		const blocks = visible.map((e) => ({ row: e.t.row, last: e.last, col: e.t.col, lastCol: e.lastCol, e }));
 		for (let r = r0; r <= r1; r++) {
 			const y = ry(r);
 			if (r >= s0 && r <= s1) {
@@ -1248,16 +1284,13 @@
 				ctx.fillText(String(r + 1), MARGIN - 8, y + rh(r) / 2);
 				continue;
 			}
-			const mine = !!cur && r > cur.t.row && r <= curLast;
-			const e = mine ? cur : visible.find((e) => r > e.t.row && r <= e.last);
+			// Seul le tableau qui touche la gouttière (première colonne affichée)
+			// y est numéroté : pas de numéros en face de lignes sans rapport.
+			const mine = !!cur && r > cur.t.row && r <= curLast && cur.t.col <= c0 && cur.lastCol >= c0;
+			const e = mine ? cur : gutterOwner(blocks, r, c0)?.e;
 			if (e) {
 				ctx.fillStyle = mine || !cur ? C.stripText : C.stripLine;
-				// Avec une clé, ses valeurs identifient les lignes dans la marge (choix de Louis).
-				let label = String(r - e.t.row);
-				if (e.t.key !== undefined && r <= e.last) {
-					const k = e.cache.row(r - e.t.row - 1)?.text[e.t.key];
-					if (k !== undefined) label = k;
-				}
+				const label = rowLabel(e, r);
 				ctx.save();
 				ctx.beginPath();
 				ctx.rect(0, y, MARGIN - 4, rh(r));
@@ -1283,7 +1316,52 @@
 		while (frameStamps.length && frameStamps[0] < t1 - 1000) frameStamps.shift();
 	}
 
-	/** Texte d'une cellule avec sa mise en forme (gras, italique, souligné, couleur). */
+	/**
+	 * Boutons d'un en-tête de colonne, alignés à droite : ▾ (filtre), type,
+	 * entonnoir d'un filtre actif, clé, erreurs. Dans la ligne d'en-tête du
+	 * tableau et dans le bandeau quand l'en-tête est figé. Renvoie leur largeur.
+	 */
+	function headIcons(e: Entry, i: number, x: number, y: number, cw: number, h: number): number {
+		const col = e.t.columns[i];
+		ctx.font = FONT_SMALL;
+		ctx.fillStyle = C.icon;
+		ctx.textAlign = 'right';
+		ctx.textBaseline = 'middle';
+		// Icône du type : SVG pour date et booléen, texte pour les autres.
+		const svg = typeIconName(col.type);
+		const ICON = 13;
+		const icon = svg ? ' ▾' : (col.filter ? '⧩ ' : '') + typeIcon(col.type) + ' ▾';
+		let iconW = ctx.measureText(icon).width;
+		ctx.fillText(icon, x + cw - 6, y + h / 2);
+		if (svg) {
+			drawIcon(ctx, svg, x + cw - 6 - iconW - ICON, y + (h - ICON) / 2, ICON, C.icon, C.active, 1.3);
+			iconW += ICON;
+			if (col.filter) {
+				ctx.fillText('⧩ ', x + cw - 6 - iconW, y + h / 2);
+				iconW += ctx.measureText('⧩ ').width;
+			}
+		}
+		if (e.t.key === i) {
+			ctx.fillText('🔑 ', x + cw - 6 - iconW, y + h / 2);
+			iconW += ctx.measureText('🔑 ').width;
+		}
+		if (col.errors) {
+			ctx.fillStyle = C.error;
+			ctx.fillText('⚠ ' + col.errors, x + cw - 6 - iconW - ctx.measureText(' ').width, y + h / 2);
+			ctx.fillStyle = C.icon;
+		}
+		return iconW;
+	}
+
+	/** Numéro d'une ligne de données du tableau (1 = première), ou sa clé : ses valeurs identifient les lignes (choix de Louis). */
+	function rowLabel(e: Entry, r: number): string {
+		if (e.t.key !== undefined && r <= e.last) {
+			const k = e.cache.row(r - e.t.row - 1)?.text[e.t.key];
+			if (k !== undefined) return k;
+		}
+		return String(r - e.t.row);
+	}
+
 	/** Texte raccourci avec « … » pour tenir dans width (police courante). */
 	function ellipsize(text: string, width: number): string {
 		if (ctx.measureText(text).width <= width) return text;
@@ -1356,6 +1434,15 @@
 		ctx.fillStyle = st?.fg ?? color;
 		const tx = align === 'left' ? x + 6 : align === 'right' ? x + cw - 6 : x + cw / 2;
 		const h = rh(rowAxis.indexAt(y - TOP_H + vs.top + 1));
+		if (s.includes('\n')) {
+			// Saut de ligne (Alt+Entrée) : les lignes qui tiennent dans la hauteur.
+			const LH = 16;
+			const lines = cellLines(s, Math.floor((h - 4) / LH));
+			const top = y + h / 2 - ((lines.length - 1) * LH) / 2;
+			lines.forEach((l, k) => ctx.fillText(l, tx, top + k * LH));
+			ctx.restore();
+			return;
+		}
 		ctx.fillText(s, tx, y + h / 2);
 		if (st?.u) {
 			const w = ctx.measureText(s).width;
@@ -1380,6 +1467,7 @@
 	/** Met en forme la sélection ; une bascule (b, i, u) suit la cellule active. */
 	export function applyStyle(patch: Record<string, unknown>) {
 		if (!source.applyStyle) return;
+		lastRepeat = () => applyStyle(patch); // F4
 		const p = { ...patch };
 		for (const k of ['b', 'i', 'u'] as const) if (p[k] === 'toggle') p[k] = !activeStyle()[k];
 		if (p.dp === 'more' || p.dp === 'less') {
@@ -1579,19 +1667,24 @@
 		i: number;
 		x: number;
 		y: number;
-		values: { text: string; count: number; on: boolean }[];
+		values: PanelValue[];
 		search: string;
 		errors: boolean;
 		error: string;
+		touched: boolean; // liste ou recherche modifiée
+		sub: boolean; // sous-menu « Filtres textuels / numériques » ouvert
+		// Filtre personnalisé en cours (deux conditions au plus, comme Excel).
+		custom: { conds: { op: CondOp | ''; value: string; to: string }[]; or: boolean } | null;
 	} | null>(null);
 
-	/** Position d'un panneau ancré sous l'en-tête de la colonne i du tableau e,
-	 * gardé dans la grille (width : largeur du panneau). */
+	/** Position d'un panneau ancré sous l'en-tête de la colonne i du tableau e
+	 * (sous le bandeau quand l'en-tête est figé), gardé dans la grille (width :
+	 * largeur du panneau). */
 	function anchorUnder(e: Entry, i: number, width: number) {
 		const x = MARGIN + colAxis.offset(e.t.col + i) - scroller.scrollLeft;
 		return {
 			x: Math.max(4, Math.min(x, scroller.clientWidth - width - 4)),
-			y: clamp(TOP_H + rowTop(e.t.row + 1) - vs.top, 4, Math.max(4, scroller.clientHeight - 200))
+			y: clamp(TOP_H + rowTop(e.t.row + 1) - vs.top, TOP_H, Math.max(TOP_H, scroller.clientHeight - 200))
 		};
 	}
 
@@ -1603,9 +1696,10 @@
 	async function openFilter(e: Entry, i: number) {
 		menu = null;
 		if (!source.filterValues) return;
+		typeMenu = null;
 		const f = e.t.columns[i]?.filter;
 		try {
-			const vals = await source.filterValues(e.t, i);
+			const vals = e.t.columns[i]?.formula ? [] : await source.filterValues(e.t, i);
 			const keep = f?.values ? new Set(f.values) : null;
 			filterDlg = {
 				e,
@@ -1614,7 +1708,10 @@
 				values: vals.map((v) => ({ ...v, on: !keep || keep.has(v.text) })),
 				search: '',
 				errors: !!f?.errors,
-				error: ''
+				error: '',
+				touched: false,
+				sub: false,
+				custom: null
 			};
 		} catch (err) {
 			say(String(err instanceof Error ? err.message : err));
@@ -1632,29 +1729,78 @@
 		if (errorsOnly) {
 			const f = e.t.columns[i]?.filter;
 			const set = source.setFilter;
-			menuAction(() => set(e.t, i, f?.errors ? (f.values ? { values: f.values } : null) : { ...f, errors: true }));
+			const rest: ColumnFilter = { ...f };
+			delete rest.errors;
+			menuAction(() => set(e.t, i, f?.errors ? (rest.values || rest.conds?.length ? rest : null) : { ...f, errors: true }));
 			return;
 		}
 		openFilter(e, i);
 	}
 
+	/** Ctrl+Maj+L : efface les filtres du tableau actif, sinon ouvre celui de la colonne. */
+	function toggleFilters() {
+		const e = tableAt(active.row, active.col);
+		if (e && source.clearFilters && e.t.columns.some((c) => c.filter)) {
+			const clear = source.clearFilters;
+			menuAction(() => clear(e.t));
+			return;
+		}
+		filterActive();
+	}
+
 	function filterShown() {
 		const d = filterDlg;
-		if (!d) return [];
-		const q = d.search.trim().toLocaleLowerCase('fr');
-		return q ? d.values.filter((v) => v.text.toLocaleLowerCase('fr').includes(q)) : d.values;
+		return d ? searchValues(d.values, d.search) : [];
+	}
+
+	/** Filtre personnalisé : première condition op (sous-menu), ou les conditions du filtre actif. */
+	function startCustom(op?: CondOp) {
+		const d = filterDlg;
+		if (!d) return;
+		d.sub = false;
+		d.error = '';
+		const cur = d.e.t.columns[d.i]?.filter;
+		if (op && condArgs(op) === 0) {
+			d.custom = { conds: [{ op, value: '', to: '' }], or: false };
+			applyFilter();
+			return;
+		}
+		const conds = op
+			? [{ op, value: op === 'top' || op === 'bottom' ? '10' : '', to: '' }]
+			: (cur?.conds ?? []).map((c) => ({ op: c.op as CondOp | '', value: c.value ?? '', to: c.to ?? '' }));
+		while (conds.length < 2) conds.push({ op: conds.length ? '' : 'eq', value: '', to: '' });
+		d.custom = { conds, or: !op && !!cur?.or };
 	}
 
 	async function applyFilter(clear = false) {
 		const d = filterDlg;
 		if (!d || !source.setFilter) return;
 		let f: ColumnFilter | null = null;
-		if (!clear) {
-			const all = d.values.every((v) => v.on);
-			f = {};
-			if (!all) f.values = d.values.filter((v) => v.on).map((v) => v.text);
+		const cur = d.e.t.columns[d.i]?.filter;
+		if (clear) f = null;
+		else if (d.custom) {
+			const conds = d.custom.conds
+				.filter((c) => c.op && (condArgs(c.op) === 0 || c.value.trim() !== ''))
+				.map((c) => ({ op: c.op as CondOp, ...(condArgs(c.op as CondOp) ? { value: c.value } : {}), ...(condArgs(c.op as CondOp) === 2 ? { to: c.to } : {}) }));
+			if (!conds.length) {
+				d.error = 'Saisissez la valeur de la condition';
+				return;
+			}
+			f = { conds };
+			if (d.custom.or && conds.length > 1) f.or = true;
 			if (d.errors) f.errors = true;
-			if (!f.values && !f.errors) f = null;
+		} else if (!d.touched && cur?.conds?.length) {
+			// Liste pas touchée : le filtre par condition reste.
+			f = { ...cur };
+			if (d.errors) f.errors = true;
+			else delete f.errors;
+		} else {
+			const r = valuesFilter(d.values, d.search, d.errors);
+			if (r.error) {
+				d.error = r.error;
+				return;
+			}
+			f = r.filter;
 		}
 		try {
 			await source.setFilter(d.e.t, d.i, f);
@@ -2083,6 +2229,7 @@
 	/** Insère ou supprime des lignes ou colonnes entières pour la sélection. */
 	export function sheetLines(op: LinesOp) {
 		if (!source.sheetLines) return;
+		lastRepeat = () => sheetLines(op); // F4
 		const { r0, r1, c0, c1 } = selection();
 		const lines = source.sheetLines;
 		const args: Record<LinesOp, [number, number]> = {
@@ -2125,6 +2272,7 @@
 			sheetLines(({ insertRow: 'insertRows', deleteRow: 'deleteRows', insertColumn: 'insertCols', deleteColumn: 'deleteCols' } as const)[op]);
 			return;
 		}
+		lastRepeat = () => cellsActive(op); // F4
 		const n = active.row - e.t.row - 1; // -1 : ligne d'en-tête
 		const i = active.col - e.t.col;
 		if (op === 'deleteRow' && n < 0) {
@@ -2281,7 +2429,9 @@
 			const inside = multi && inTable(e, sel.r0, sel.c0) && inTable(e, sel.r1, sel.c1);
 			tableBox = { name: e.t.name, col: inside ? `${label(sel.r0, sel.c0)}:${label(sel.r1, sel.c1)}` : label(active.row, active.col) };
 		} else tableBox = null;
-		if (multi && !e) nameBox = `${sel.r1 - sel.r0 + 1}L × ${sel.c1 - sel.c0 + 1}C`;
+		// Taille de la plage pendant le glissé seulement, comme Excel ; ensuite
+		// l'adresse de la cellule active revient.
+		if (multi && (dragging || headerDrag)) nameBox = `${sel.r1 - sel.r0 + 1}L × ${sel.c1 - sel.c0 + 1}C`;
 		if (fxEditing) return;
 		fxText = cellInfo(active.row, active.col).value;
 	}
@@ -2740,6 +2890,14 @@
 			selChart = null;
 			if (panel?.kind === 'chart') panel = null;
 		}
+		const frozen = e.button === 0 && boundaryAt(e) === null ? frozenHeaderAt(e) : null;
+		if (frozen) {
+			if (editing) commit();
+			if (headerButton(e, frozen.e, frozen.col, true)) {
+				e.preventDefault();
+				return;
+			}
+		}
 		const hd = boundaryAt(e) === null && rowBoundaryAt(e) === null ? headerAt(e) : null;
 		if (hd && e.button !== 1) {
 			e.preventDefault();
@@ -2799,7 +2957,7 @@
 	}
 
 	// Dernière référence insérée au clic : un autre clic la remplace (comme Excel).
-	let lastRef: { el: HTMLInputElement; start: number; end: number; value: string } | null = null;
+	let lastRef: { el: HTMLInputElement | HTMLTextAreaElement; start: number; end: number; value: string } | null = null;
 
 	/**
 	 * Référence d'une cellule dans une formule (nomenclature de Slitable) :
@@ -2907,6 +3065,8 @@
 		const cell = cellAt(e);
 		if (!cell) return;
 		active = cell;
+		const sel = selection();
+		nameBox = sel.r0 !== sel.r1 || sel.c0 !== sel.c1 ? `${sel.r1 - sel.r0 + 1}L × ${sel.c1 - sel.c0 + 1}C` : cellName(active.row, active.col);
 		schedule();
 	}
 
@@ -2922,6 +3082,80 @@
 			return;
 		}
 		if (cell) startEdit(false);
+	}
+
+	// --- Raccourcis d'Excel -------------------------------------------------------
+
+	// Fin pressée : la flèche suivante va au bout de la zone.
+	let endArmed = false;
+	// Dernière action répétable (F4) : saisie, mise en forme, insertion…
+	let lastRepeat: (() => void) | null = null;
+
+	/** Exécute un raccourci de la grille ; faux s'il ne s'applique pas. */
+	function runShortcut(sc: string): boolean {
+		switch (sc) {
+			case 'fillDown':
+			case 'fillRight':
+				copyFill(sc === 'fillDown');
+				return true;
+			case 'today':
+			case 'now':
+				startEdit(true, sc === 'today' ? todayText() : timeText());
+				return true;
+			case 'autoSum':
+				autoSum();
+				return true;
+			case 'formatCells':
+				if (onformatcells) onformatcells();
+				else say('Format de cellule : utilisez le ruban Accueil (Police, Nombre, Alignement)');
+				return true;
+			case 'selectRow': {
+				const t = tableAt(active.row, active.col);
+				if (t && active.row > t.t.row) {
+					// Dans un tableau : sa ligne, comme Excel.
+					anchor = { row: active.row, col: t.t.col };
+					active = { row: active.row, col: t.lastCol };
+					refreshFx();
+					refreshStatus();
+					schedule();
+				} else selectRows(active.row, active.row);
+				return true;
+			}
+			case 'toggleFilter':
+				toggleFilters();
+				return true;
+			case 'repeat':
+				if (lastRepeat) lastRepeat();
+				else say('Rien à répéter');
+				return true;
+		}
+		return false;
+	}
+
+	/** Ctrl+D / Ctrl+R : recopie la première ligne (colonne) de la sélection, ou celle du dessus (de gauche). */
+	function copyFill(down: boolean) {
+		if (!source.paste) return;
+		const plan = copyFillPlan(selection(), down);
+		if (!plan) return;
+		const { dst } = plan;
+		if ((dst.r1 - dst.r0 + 1) * (dst.c1 - dst.c0 + 1) > 10000) {
+			say('Recopie limitée à 10 000 cellules');
+			return;
+		}
+		const block = copyFillBlock(plan, down, (r, c) => cellInfo(r, c).value);
+		const paste = source.paste;
+		lastRepeat = () => copyFill(down);
+		writing = writing.then(async () => {
+			try {
+				await paste(dst.r0, dst.c0, block);
+				message = `Recopié vers ${down ? 'le bas' : 'la droite'} (Ctrl+Z pour annuler)`;
+			} catch (err) {
+				message = String(err instanceof Error ? err.message : err);
+			}
+			refreshFx();
+			refreshStatus();
+			schedule();
+		});
 	}
 
 	function onKeyDown(e: KeyboardEvent) {
@@ -2948,12 +3182,27 @@
 				return;
 			}
 		}
+		// Raccourcis d'Excel (shortcuts.ts) ; Fin puis flèche saute comme Ctrl+flèche.
+		const ended = endArmed;
+		if (!['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) endArmed = false;
+		const sc = shortcutOf(e);
+		if (sc === 'nextSheet' || sc === 'prevSheet' || sc === 'insertSheet') return; // onglets : la page s'en charge
+		if (sc === 'endMode') {
+			endArmed = !ended;
+			say(endArmed ? 'Fin : une flèche va au bout de la zone' : '');
+			e.preventDefault();
+			return;
+		}
+		if (sc && runShortcut(sc)) {
+			e.preventDefault();
+			return;
+		}
 		const page = Math.max(1, Math.floor(vs.view / ROW_H) - 1);
 		const { row, col } = active;
 		const ext = e.shiftKey;
 		const ctrl = e.ctrlKey || e.metaKey;
 		const arrow = (dr: number, dc: number) => {
-			const [r, c] = ctrl ? jump(row, col, dr, dc) : [row + dr, col + dc];
+			const [r, c] = ctrl || ended ? jump(row, col, dr, dc) : [row + dr, col + dc];
 			moveTo(r, c, ext);
 		};
 		if (ctrl && (e.key === 'z' || e.key === 'Z') && source.undo) {
@@ -3037,6 +3286,7 @@
 				break;
 			case 'Delete':
 				clearSelection();
+				lastRepeat = () => clearSelection();
 				break;
 			case 'Backspace':
 				startEdit(true, '');
@@ -3060,6 +3310,8 @@
 		// frappe ne doit pas être perdue ; seule l'édition de la valeur (F2)
 		// attend les données.
 		if (info.kind === 'data' && !info.row && initial === undefined) return;
+		// Sélection d'avant la saisie : Ctrl+Entrée valide dans toute la plage.
+		editRange = { sel: selection(), anchor: { ...anchor } };
 		anchor = { ...active };
 		editByTyping = byTyping;
 		editValueText = initial ?? info.value;
@@ -3118,8 +3370,61 @@
 		if (!editing) return;
 		editing = false;
 		const { row, col } = active;
-		if (editValueText !== cellInfo(row, col).value) write(row, col, editValueText);
+		const text = editValueText;
+		if (text !== cellInfo(row, col).value) {
+			write(row, col, text);
+			lastRepeat = () => write(active.row, active.col, text);
+		}
 		wrap.focus();
+	}
+
+	// Sélection au début de la saisie (startEdit ne garde que la cellule active).
+	let editRange: { sel: Range; anchor: { row: number; col: number } } | null = null;
+
+	/** Ctrl+Entrée : la saisie va dans toute la sélection (une seule étape d'annulation), qui reste sélectionnée. */
+	function commitAll() {
+		const r = editRange;
+		const sel = r?.sel;
+		if (!r || !sel || (sel.r0 === sel.r1 && sel.c0 === sel.c1) || !source.paste) {
+			commit();
+			return;
+		}
+		if ((sel.r1 - sel.r0 + 1) * (sel.c1 - sel.c0 + 1) > 10000) {
+			say('Ctrl+Entrée : sélection limitée à 10 000 cellules');
+			return;
+		}
+		editing = false;
+		const text = editValueText;
+		const paste = source.paste;
+		const fill = (s: Range) =>
+			(writing = writing.then(async () => {
+				try {
+					message = (await paste(s.r0, s.c0, fillBlock(s, text))) ?? '';
+				} catch (err) {
+					message = String(err instanceof Error ? err.message : err);
+				}
+				refreshFx();
+				refreshStatus();
+				schedule();
+			}));
+		fill(sel);
+		lastRepeat = () => fill(selection());
+		anchor = r.anchor;
+		wrap.focus();
+		refreshFx();
+		schedule();
+	}
+
+	/** Remplace le texte de l'éditeur de cellule et place le curseur. */
+	function setEditorText(value: string, caret: number) {
+		flushSync(() => (editValueText = value));
+		input?.setSelectionRange(caret, caret);
+		if (input) onFormulaInput(input, 'cell');
+	}
+
+	/** Hauteur de l'éditeur : une ligne de plus par saut de ligne (Alt+Entrée). */
+	function editorHeight(s: string): number {
+		return 18 * s.split('\n').length + 4;
 	}
 
 	function cancel() {
@@ -3177,8 +3482,28 @@
 		if (input && completionKey(e, input, (v) => (editValueText = v))) return;
 		e.stopPropagation();
 		const { row, col } = active;
+		const sc = shortcutOf(e);
+		if ((sc === 'today' || sc === 'now') && input) {
+			// Date ou heure du jour au curseur, comme Excel pendant la saisie.
+			const r = insertAt(input.value, input.selectionStart, input.selectionEnd, sc === 'today' ? todayText() : timeText());
+			setEditorText(r.value, r.caret);
+			e.preventDefault();
+			return;
+		}
 		switch (e.key) {
 			case 'Enter':
+				if (e.altKey && input) {
+					// Alt+Entrée : saut de ligne dans la cellule ; les flèches
+					// déplacent alors le curseur dans le texte.
+					const r = insertAt(input.value, input.selectionStart, input.selectionEnd, '\n');
+					setEditorText(r.value, r.caret);
+					editByTyping = false;
+					break;
+				}
+				if (e.ctrlKey || e.metaKey) {
+					commitAll();
+					break;
+				}
 				commit();
 				enterMove(e.shiftKey);
 				break;
@@ -3603,18 +3928,44 @@
 		});
 	}
 
-	/** Un clic sur l'icône de type d'un en-tête ouvre le menu de type. */
+	/** Un clic sur les boutons d'un en-tête : ▾ ouvre le filtre, l'icône de type son menu. */
 	function openTypeMenu(ev: MouseEvent, cell: { row: number; col: number }): boolean {
 		const e = tableAt(cell.row, cell.col);
-		if (!e || cell.row !== e.t.row || !source.setType) return false;
-		if (e.t.columns[cell.col - e.t.col].formula) return false; // le type suit la formule
+		if (!e || cell.row !== e.t.row) return false;
+		return headerButton(ev, e, cell.col, false);
+	}
+
+	/**
+	 * Boutons d'en-tête de la colonne c du tableau e (frozen : en-tête figé
+	 * dans le bandeau du haut) : le ▾ ouvre directement la liste à cocher du
+	 * filtre, comme Excel ; l'icône de type, le menu de type et de clé.
+	 */
+	function headerButton(ev: MouseEvent, e: Entry, c: number, frozen: boolean): boolean {
+		const i = c - e.t.col;
+		const col = e.t.columns[i];
 		const r = scroller.getBoundingClientRect();
-		const right = MARGIN + colAxis.offset(cell.col + 1) - scroller.scrollLeft;
+		const right = MARGIN + colAxis.offset(c + 1) - scroller.scrollLeft;
 		const mx = ev.clientX - r.left;
 		if (right - mx > 34) return false;
-		moveTo(cell.row, cell.col);
-		showTypeMenu(mx, ev.clientY - r.top + 8, e, cell.col - e.t.col);
+		const filter = !!source.filterValues && !!source.setFilter;
+		const typed = !!source.setType && !col.formula; // le type d'une colonne calculée suit la formule
+		if (!filter && !typed) return false;
+		if (!frozen) moveTo(e.t.row, c);
+		if (filter && (right - mx <= 18 || !typed)) openFilter(e, i);
+		else showTypeMenu(mx, frozen ? TOP_H : ev.clientY - r.top + 8, e, i);
 		return true;
+	}
+
+	/** Colonne d'un en-tête figé (bandeau du haut) sous la souris. */
+	function frozenHeaderAt(ev: MouseEvent): { e: Entry; col: number } | null {
+		if (a1) return null;
+		const r = scroller.getBoundingClientRect();
+		const x = ev.clientX - r.left;
+		if (ev.clientY - r.top >= TOP_H || x < MARGIN) return null;
+		const col = colAxis.indexAt(x - MARGIN + scroller.scrollLeft);
+		const r0 = visibleRows().first;
+		const e = entries.find((e) => e.t.row < r0 && e.last >= r0 && col >= e.t.col && col <= e.lastCol);
+		return e ? { e, col } : null;
 	}
 
 	/** Ouvre le menu de type et de clé de la colonne i (icône d'en-tête ou clic droit). */
@@ -3844,8 +4195,10 @@
 		scroller.addEventListener('wheel', onWheel, { passive: false });
 		const up = () => {
 			if (dragging && painter) applyPainter();
+			const dragged = dragging || headerDrag;
 			dragging = false;
 			headerDrag = null;
+			if (dragged) refreshFx(); // fin du glissé : l'adresse revient dans la zone de nom
 			if (filling) {
 				const f = filling;
 				filling = null;
@@ -4499,19 +4852,22 @@
 		{#if filterDlg}
 			{@const d = filterDlg}
 			{@const shown = filterShown()}
+			{@const fcol = d.e.t.columns[d.i]}
+			{@const kind = filterKind(fcol?.type ?? 'text')}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
-				class="rules filter anchored"
+				class="rules filter colfilter anchored"
 				style:left="{d.x}px"
 				style:top="{d.y}px"
+				style:max-height="{Math.max(200, viewH - d.y - 8)}px"
 				use:focusFirst
 				onkeydown={(ev) => {
 					ev.stopPropagation();
 					if (ev.key === 'Escape') closeFilter();
-					if (ev.key === 'Enter') applyFilter();
+					if (ev.key === 'Enter' && !(ev.target instanceof HTMLButtonElement)) applyFilter();
 				}}
 			>
-				<div class="menu-title">Filtrer « {d.e.t.columns[d.i]?.name} »</div>
+				<div class="menu-title">Filtrer « {fcol?.name} »</div>
 				{#if source.sortTable}
 					<!-- Tri en haut du panneau, comme Excel. -->
 					<button
@@ -4530,28 +4886,85 @@
 					>
 					<hr />
 				{/if}
-				<div class="add"><input class="search" bind:value={d.search} placeholder="Rechercher" /></div>
-				<div class="values">
-					<label class="all">
-						<input
-							type="checkbox"
-							checked={shown.every((v) => v.on)}
-							onchange={(ev) => {
-								const on = (ev.currentTarget as HTMLInputElement).checked;
-								for (const v of shown) v.on = on;
-							}}
-						/>
-						(Sélectionner tout)
-					</label>
-					{#each shown as v (v.text)}
-						<label>
-							<input type="checkbox" bind:checked={v.on} />
-							<span class="what">{v.text === '' ? '(Vides)' : v.text}</span>
-							<span class="count">{v.count}</span>
-						</label>
-					{/each}
-					{#if d.values.length >= 1000}<p class="menu-note">Seules les 1 000 premières valeurs sont listées.</p>{/if}
-				</div>
+				{#if fcol?.filter}
+					<button class="sort" onclick={() => applyFilter(true)}>Effacer le filtre de « {fcol.name} »</button>
+				{/if}
+				{#if fcol?.formula}
+					<p class="menu-note">Colonne calculée : elle se trie mais ne se filtre pas.</p>
+				{:else}
+					<!-- Filtres par condition, comme le sous-menu d'Excel. -->
+					<button class="sort cond-menu" class:on={d.sub} aria-expanded={d.sub} onclick={() => (d.sub = !d.sub)}>
+						{kindTitle(kind)}<span class="sp"></span>{d.sub ? '▾' : '▸'}
+					</button>
+					{#if d.sub}
+						<div class="cond-list">
+							{#each condOps(kind) as op (op)}
+								<button class="sort" onclick={() => startCustom(op)}>{condLabel(op, kind)}{condArgs(op) ? '…' : ''}</button>
+							{/each}
+							<button class="sort" onclick={() => startCustom('eq')}>Filtre personnalisé…</button>
+						</div>
+					{/if}
+					{#if fcol?.filter?.conds?.length && !d.custom}
+						<p class="menu-note">
+							Filtre actif : {describeConds(fcol.filter, kind)}
+							<button class="link" onclick={() => startCustom()}>Modifier…</button>
+						</p>
+					{/if}
+					<hr />
+					{#if d.custom}
+						{@const cu = d.custom}
+						<div class="custom">
+							<p class="menu-note">Afficher les lignes dont « {fcol?.name} » :</p>
+							{#each cu.conds as c, k (k)}
+								{#if k === 1}
+									<div class="andor">
+										<label><input type="radio" bind:group={cu.or} value={false} /> Et</label>
+										<label><input type="radio" bind:group={cu.or} value={true} /> Ou</label>
+									</div>
+								{/if}
+								<div class="add">
+									<select bind:value={c.op} aria-label="Condition {k + 1}">
+										{#if k > 0}<option value="">(aucune)</option>{/if}
+										{#each condOps(kind) as op (op)}<option value={op}>{condLabel(op, kind)}</option>{/each}
+									</select>
+								</div>
+								{#if c.op && condArgs(c.op) > 0}
+									<div class="add">
+										<input bind:value={c.value} placeholder={c.op === 'top' || c.op === 'bottom' ? 'nombre' : kind === 'date' ? 'jj/mm/aaaa' : 'valeur'} />
+										{#if condArgs(c.op) === 2}<span>et</span><input bind:value={c.to} placeholder={kind === 'date' ? 'jj/mm/aaaa' : 'valeur'} />{/if}
+									</div>
+								{/if}
+							{/each}
+							{#if kind === 'text'}<p class="menu-note">* remplace plusieurs caractères, ? un seul.</p>{/if}
+						</div>
+					{:else}
+						<div class="add">
+							<input class="search" bind:value={d.search} oninput={() => (d.touched = true)} placeholder="Rechercher" />
+						</div>
+						<div class="values">
+							<label class="all">
+								<input
+									type="checkbox"
+									checked={shown.every((v) => v.on)}
+									onchange={(ev) => {
+										const on = (ev.currentTarget as HTMLInputElement).checked;
+										for (const v of shown) v.on = on;
+										d.touched = true;
+									}}
+								/>
+								{d.search.trim() ? '(Sélectionner tous les résultats)' : '(Sélectionner tout)'}
+							</label>
+							{#each shown as v (v.text)}
+								<label>
+									<input type="checkbox" bind:checked={v.on} onchange={() => (d.touched = true)} />
+									<span class="what">{v.text === '' ? '(Vides)' : v.text}</span>
+									<span class="count">{v.count}</span>
+								</label>
+							{/each}
+							{#if d.values.length >= 1000}<p class="menu-note">Seules les 1 000 premières valeurs sont listées.</p>{/if}
+						</div>
+					{/if}
+				{/if}
 				{#if d.e.t.columns[d.i]?.errors}
 					<div class="add">
 						<label><input type="checkbox" bind:checked={d.errors} /> Saisies hors type seulement ({d.e.t.columns[d.i]?.errors})</label>
@@ -4559,7 +4972,7 @@
 				{/if}
 				{#if d.error}<p class="menu-note error">{d.error}</p>{/if}
 				<div class="foot">
-					{#if d.e.t.columns[d.i]?.filter}<button onclick={() => applyFilter(true)}>Effacer le filtre</button>{/if}
+					{#if d.custom}<button onclick={() => (d.custom = null)}>‹ Liste des valeurs</button>{/if}
 					<span class="sp"></span>
 					<button class="primary" onclick={() => applyFilter()}>OK</button>
 					<button onclick={closeFilter}>Annuler</button>
@@ -4624,10 +5037,14 @@
 			</div>
 		{/if}
 		{#if editing}
-			<input
+			<!-- Zone de texte : Alt+Entrée y passe à la ligne, comme Excel. -->
+			<textarea
 				class="editor"
+				rows="1"
+				spellcheck="false"
 				bind:this={input}
 				bind:value={editValueText}
+				style:height="{editorHeight(editValueText)}px"
 				oninput={(e) => onFormulaInput(e.currentTarget, 'cell')}
 				onkeyup={(e) => moveSig(e, 'cell')}
 				onclick={(e) => moveSig(e, 'cell')}
@@ -4640,7 +5057,7 @@
 					const e = tableAt(active.row, active.col);
 					return e ? typeLabel(e.t.columns[active.col - e.t.col].type) : 'Cellule libre';
 				})()}
-			/>
+			></textarea>
 		{/if}
 	</div>
 	{#if panel?.kind === 'pivot'}
@@ -4930,6 +5347,11 @@
 	.filter {
 		min-width: 300px;
 	}
+	.colfilter {
+		max-width: 310px;
+		overflow-y: auto;
+		box-sizing: border-box;
+	}
 	.rules.anchored {
 		transform: none;
 	}
@@ -5088,6 +5510,41 @@
 		color: #6b7280;
 		font-size: 11px;
 	}
+	.filter .cond-menu {
+		display: flex;
+	}
+	.filter .cond-menu.on {
+		background: #e3efe7;
+	}
+	.filter .cond-list .sort {
+		padding-left: 28px;
+	}
+	.filter .custom select {
+		flex: 1;
+		font: inherit;
+		padding: 2px 4px;
+		border: 1px solid #c9cdd2;
+		border-radius: 3px;
+	}
+	.filter .custom input {
+		flex: 1;
+		min-width: 0;
+	}
+	.filter .andor {
+		display: flex;
+		gap: 12px;
+		padding: 0 14px;
+	}
+	.filter .andor input {
+		width: auto;
+	}
+	.filter .menu-note .link {
+		border: none;
+		background: none;
+		color: #217346;
+		padding: 0 4px;
+		text-decoration: underline;
+	}
 	.rules .sample {
 		padding: 1px 8px;
 		border: 1px solid #d4d7db;
@@ -5189,6 +5646,10 @@
 		box-sizing: border-box;
 		border: 2px solid #217346;
 		padding: 0 4px;
+		line-height: 18px;
+		resize: none;
+		overflow: hidden;
+		white-space: pre;
 		font: 13px 'Segoe UI', system-ui, -apple-system, sans-serif;
 		outline: none;
 		background: #fff;

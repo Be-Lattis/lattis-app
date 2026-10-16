@@ -16,6 +16,7 @@ export type {
     Dependencies,
     Event,
     Favorite,
+    FilterCond,
     FilterValue,
     Layout,
     LineRules,

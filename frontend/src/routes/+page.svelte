@@ -25,6 +25,7 @@
 	import type { UICommand } from '#bindings/internal/bridge/models.js';
 	import { typeLabel, type ColumnType } from '#lib/grid/format.js';
 	import type { Fetched } from '#lib/grid/cache.js';
+	import { shortcutOf } from '#lib/grid/shortcuts.js';
 
 	type Mode = 'starting' | 'recover' | 'doc' | 'demo' | 'closed';
 
@@ -271,6 +272,18 @@
 			if (action) {
 				e.preventDefault();
 				file(action);
+				return;
+			}
+			// Onglets : Ctrl+Pg.Suiv / Ctrl+Pg.Préc (feuille suivante, précédente), Maj+F11 (insérer une feuille).
+			const sc = view === 'grid' && !protecting ? shortcutOf(e) : null;
+			if (sc === 'nextSheet' || sc === 'prevSheet') {
+				e.preventDefault();
+				const k = tabs.findIndex((t) => t.id === sheetId) + (sc === 'nextSheet' ? 1 : -1);
+				if (k >= 0 && k < tabs.length) selectSheet(tabs[k].id);
+			} else if (sc === 'insertSheet' && mode === 'doc') {
+				e.preventDefault();
+				if (layout?.workbookProtected) notice = 'La structure du classeur est protégée : ôtez la protection pour insérer une feuille';
+				else sheetAction(async () => selectSheet(await DocumentService.InsertSheet(sheetId)));
 			}
 		};
 		window.addEventListener('keydown', keys);
