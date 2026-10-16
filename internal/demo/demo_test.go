@@ -122,7 +122,7 @@ func TestFormes(t *testing.T) {
 		"sml":    "[Commandes/Commandes:100x10]",
 		"1Kx100": "[Relevés/Relevés:1000x100]",
 		"med":    "[Commandes/Commandes:100x10 Clients/Clients:1000x10 Employés/Employés:1200x10 Analyse/TCD Analyse/graphique Analyse/graphique]",
-		"refs":   "[Référentiel/Catégories:7x4 Référentiel/Produits:24x9 Clients/Clients:150x7 Ventes/Commandes:600x7 Ventes/Lignes:2000x9]",
+		"refs":   "[Référentiel/Catégories:7x4 Référentiel/Produits:24x9 Clients/Clients:150x8 Ventes/Commandes:600x7 Ventes/Lignes:2000x9]",
 	}
 	for p, w := range want {
 		d, _ := build(t, p, 0)

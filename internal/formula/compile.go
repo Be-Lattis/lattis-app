@@ -195,10 +195,18 @@ func (c *compiler) call(n Call, sc scope) string {
 		return errSQL(ErrName)
 	}
 	if c.hoist != nil && sc.arr == nil && hoistable(fn) && !rowDependent(n) {
-		sub := &compiler{schema: c.schema, names: c.names, visiting: map[*Column]bool{}}
-		sql := sub.call(n, scope{table: sc.table})
+		// Le sous-compilateur précalcule à son tour ce qu'il peut : une
+		// colonne calculée par SOMME.SI lue par MOYENNE garde ses totaux
+		// groupés au lieu d'un parcours par ligne.
+		sub := &compiler{schema: c.schema, names: c.names, visiting: map[*Column]bool{}, hoist: c.hoist}
+		sql := sub.callBody(fn, n, scope{table: sc.table})
 		return c.param(ToSQL(c.hoist(Compiled{sql, sub.args})))
 	}
+	return c.callBody(fn, n, sc)
+}
+
+// callBody compile l'appel lui-même, sans le précalculer.
+func (c *compiler) callBody(fn funcDef, n Call, sc scope) string {
 	switch fn.kind {
 	case aggregate:
 		return c.aggregate(fn.EN, n.Args, sc, false)

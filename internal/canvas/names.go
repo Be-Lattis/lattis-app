@@ -142,7 +142,8 @@ func (t *tx) nameValues(schema *formula.Schema) (map[string]formula.Value, error
 		values[n] = formula.Err(formula.ErrRef)
 	}
 	for _, n := range order {
-		c := formula.Compile(ns.Formulas[n], schema, values, nil, "")
+		hoist, _ := t.hoister()
+		c := formula.CompileHoisted(ns.Formulas[n], schema, values, nil, "", hoist)
 		var v any
 		if err := t.row(`SELECT `+c.SQL, c.Args...).Scan(&v); err != nil {
 			values[n] = formula.Err(formula.ErrValue)

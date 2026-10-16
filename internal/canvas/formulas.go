@@ -210,7 +210,10 @@ func (t *tx) evalFreeRaw(raw string) formula.Value {
 	if err != nil {
 		return formula.Err(formula.ErrValue)
 	}
-	c := formula.Compile(n, schema, names, nil, "")
+	// Agrégats précalculés : une colonne calculée par SOMME.SI lue dans un
+	// agrégat (MOYENNE(T[Montant])) ne refait pas un parcours par ligne.
+	hoist, _ := t.hoister()
+	c := formula.CompileHoisted(n, schema, names, nil, "", hoist)
 	var v any
 	if err := t.row(`SELECT `+c.SQL, c.Args...).Scan(&v); err != nil {
 		return formula.Err(formula.ErrValue)
@@ -249,15 +252,7 @@ func (t *tx) columnSQL(tb Table) (exprs []string, args []any, computed []bool, e
 		if err != nil {
 			return err
 		}
-		var hoistErr error
-		hoist := func(c formula.Compiled) formula.Value {
-			var v any
-			if err := t.row(`SELECT `+c.SQL, c.Args...).Scan(&v); err != nil {
-				hoistErr = err
-				return formula.Err(formula.ErrValue)
-			}
-			return formula.FromResult(v)
-		}
+		hoist, hoistErr := t.hoister()
 		// Une seule compilation pour toutes les colonnes : les paramètres
 		// restent numérotés de façon cohérente.
 		for _, c := range tb.Cols {
@@ -272,7 +267,22 @@ func (t *tx) columnSQL(tb Table) (exprs []string, args []any, computed []bool, e
 			args = append(args, cc.Args...)
 			computed = append(computed, true)
 		}
-		return hoistErr
+		return *hoistErr
 	}()
 	return exprs, args, computed, err
+}
+
+// hoister calcule à part, une fois, les agrégats qui ne dépendent pas de la
+// ligne (dont les totaux par valeur des familles .SI) ; l'erreur éventuelle
+// est rangée dans *err.
+func (t *tx) hoister() (func(formula.Compiled) formula.Value, *error) {
+	var hoistErr error
+	return func(c formula.Compiled) formula.Value {
+		var v any
+		if err := t.row(`SELECT `+c.SQL, c.Args...).Scan(&v); err != nil {
+			hoistErr = err
+			return formula.Err(formula.ErrValue)
+		}
+		return formula.FromResult(v)
+	}, &hoistErr
 }

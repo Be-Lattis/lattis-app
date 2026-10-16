@@ -246,10 +246,8 @@ func refs() Plan {
 		c("Client depuis", grid.Date, func(g *Gen, i int, _ []any) any { return g.Date(-4*365, today-400) }),
 		c("Région", grid.Text, func(g *Gen, i int, r []any) any { return villes[villeOf[str(r[2])]].Region }),
 		f("Nb commandes", grid.Integer, "=NB.SI(Commandes[Client]; [@Code client])"),
-		// Pas de « CA HT » = SOMME.SI(Commandes[Client]; [@Code client];
-		// Commandes[Montant HT]) : un SOMME.SI sur une colonne elle-même
-		// calculée par SOMME.SI prend 14 s pour 150 clients (à corriger dans le
-		// moteur de formules).
+		// SOMME.SI sur une colonne elle-même calculée par SOMME.SI.
+		f("CA HT", grid.Decimal, "=SOMME.SI(Commandes[Client]; [@Code client]; Commandes[Montant HT])"),
 	}}
 	commandes := TableSpec{Name: "Commandes", Rows: nCommandes, Cols: []Column{
 		c("N° commande", grid.Integer, func(g *Gen, i int, _ []any) any { return int64(i + 1) }),
@@ -302,7 +300,7 @@ func refs() Plan {
 		{Name: "Ventes", Tables: []TableSpec{commandes, lignes}, Cells: totals(ventesCol,
 			[2]string{"Chiffre d'affaires HT", "=SOMME(Lignes[Montant HT])"},
 			[2]string{"TVA collectée", "=SOMME(Lignes[TVA])"},
-			[2]string{"Panier moyen HT", "=ARRONDI(SOMME(Lignes[Montant HT])/NB(Commandes[N° commande]); 2)"},
+			[2]string{"Panier moyen HT", "=ARRONDI(MOYENNE(Commandes[Montant HT]); 2)"},
 			[2]string{"Commandes à Paris", `=NB.SI(Commandes[Ville]; "Paris")`},
 		)},
 	}}
