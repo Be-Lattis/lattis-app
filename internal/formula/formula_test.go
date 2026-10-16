@@ -305,6 +305,10 @@ func TestSpill(t *testing.T) {
 		`=PRENDRE(TRIERPAR(Ventes[Produit];Ventes[Montant];-1);2)`: `Produit / Écran / Clavier`,
 		`=FILTRE(Ventes[Date];Ventes[Date]>=DATE(2026;1;1))`:       `Date / 15/01/2026 / 28/02/2026`,
 		`=EXCLURE(FILTRE(Etapes;Etapes[Valeur]>0);-2)`:             `Nom|Valeur / A|10`,
+		`=SEQUENCE(3)`:                   `Valeur / 1 / 2 / 3`,
+		`=SEQUENCE(2;3;10;10)`:           `Valeur1|Valeur2|Valeur3 / 10|20|30 / 40|50|60`,
+		`=SEQUENCE(2;1;DATE(2026;1;31))`: `Valeur / 31/01/2026 / 01/02/2026`,
+		`=LET(n;2;SEQUENCE(n;1;0;0,5))`:  `Valeur / 0 / 0,5`,
 	} {
 		n := mustParse(t, src, FR)
 		cols, rows, e := EvalSpill(n, &Env{Schema: f.schema, Data: f.data})

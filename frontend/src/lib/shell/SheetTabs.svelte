@@ -1,17 +1,18 @@
 <script lang="ts">
 	// Onglets de feuilles en bas, comme Excel : clic pour changer de feuille,
-	// double-clic pour renommer, clic droit pour insérer, renommer ou supprimer,
-	// glisser pour réordonner, « + » pour ajouter à la fin. Une feuille
-	// protégée porte un cadenas ; la structure du classeur protégée fige les
-	// onglets (ni ajout, ni renommage, ni déplacement, ni suppression).
+	// double-clic pour renommer, clic droit pour insérer, renommer, supprimer,
+	// déplacer ou copier, colorer, masquer ou afficher, glisser pour
+	// réordonner, « + » pour ajouter à la fin. Une feuille protégée porte un
+	// cadenas ; la structure du classeur protégée fige les onglets (ni ajout,
+	// ni renommage, ni déplacement, ni suppression, ni masquage). Le menu se
+	// ferme sur Échap, sur un clic ailleurs et quand la fenêtre change de taille.
 	import Icon from '#lib/icons/Icon.svelte';
+	import { dismiss } from '#lib/grid/dismiss.js';
+	import { TAB_COLORS, moveTarget, textOn, visibleSheets, type TabSheet } from './sheets.js';
 
-	interface Sheet {
-		id: number;
-		name: string;
-		protected?: boolean;
-	}
+	type Sheet = TabSheet;
 	interface Props {
+		/** Toutes les feuilles, masquées comprises (elles n'ont pas d'onglet). */
 		sheets: Sheet[];
 		active: number;
 		onselect: (id: number) => void;
@@ -22,6 +23,12 @@
 		onmove?: (id: number, to: number) => void;
 		onrename?: (id: number, name: string) => void;
 		ondelete?: (id: number) => void;
+		/** Copie la feuille id et place la copie au rang to. */
+		oncopy?: (id: number, to: number) => void;
+		/** Couleur d'onglet (« #rrggbb », vide : aucune). */
+		oncolor?: (id: number, color: string) => void;
+		/** Masque (true) ou affiche (false) une feuille. */
+		onhide?: (id: number, hidden: boolean) => void;
 		/** Défilement horizontal de la grille : barre en bout de ligne, comme Excel. */
 		hscroll?: { content: number; view: number; left: number };
 		/** atEnd : la barre est au bout (la feuille s'agrandit). */
@@ -36,14 +43,19 @@
 		onrefused?: (msg: string) => void;
 	}
 
-	let { sheets, active, onselect, onadd: add, oninsert: insert, onmove: move, onrename: rename, ondelete: del, hscroll, onhscroll, onhhold, onprotect, locked = false, onrefused }: Props = $props();
+	let { sheets, active, onselect, onadd: add, oninsert: insert, onmove: move, onrename: rename, ondelete: del, oncopy: copy, oncolor: color, onhide: hide, hscroll, onhscroll, onhhold, onprotect, locked = false, onrefused }: Props = $props();
 	const LOCKED = 'La structure du classeur est protégée : ôtez la protection (Révision › Ôter la protection du classeur) pour ajouter, supprimer, renommer ou déplacer des feuilles';
 	const onadd = $derived(locked ? undefined : add);
 	const oninsert = $derived(locked ? undefined : insert);
 	const onmove = $derived(locked ? undefined : move);
 	const onrename = $derived(locked ? undefined : rename);
 	const ondelete = $derived(locked ? undefined : del);
-
+	const oncopy = $derived(locked ? undefined : copy);
+	const oncolor = $derived(locked ? undefined : color);
+	const onhide = $derived(locked ? undefined : hide);
+	// Onglets affichés : les feuilles masquées n'en ont pas.
+	const shown = $derived(visibleSheets(sheets));
+	const hiddenSheets = $derived(sheets.filter((s) => s.hidden));
 	// Barre de défilement horizontale : une zone qui défile au même rapport
 	// que la grille (contenu / largeur visible).
 	let bar = $state<HTMLDivElement>();
@@ -68,7 +80,46 @@
 	let renaming = $state<number | null>(null);
 	let draft = $state('');
 	let menu = $state<{ id: number; x: number } | null>(null);
+	let colors = $state(false);
+	// Dialogues « Déplacer ou copier » et « Afficher ».
+	let moving = $state<{ id: number; before: number | null; copy: boolean } | null>(null);
+	let unhiding = $state<number | null>(null);
 
+	function closeMenu() {
+		menu = null;
+		colors = false;
+	}
+
+	function confirmMove() {
+		const m = moving;
+		moving = null;
+		if (!m) return;
+		const order = sheets.map((s) => s.id);
+		const to = moveTarget(order, m.id, m.before, m.copy);
+		if (m.copy) oncopy?.(m.id, to);
+		else if (to !== order.indexOf(m.id)) onmove?.(m.id, to);
+	}
+
+	function confirmUnhide() {
+		const id = unhiding;
+		unhiding = null;
+		if (id !== null) onhide?.(id, false);
+	}
+
+	/** Donne le focus à la liste du dialogue (Échap et Entrée y sont lus). */
+	const focus = (node: HTMLElement) => {
+		node.focus();
+	};
+
+	/** Échap ferme un dialogue, Entrée le valide. */
+	function dialogKeys(e: KeyboardEvent, ok: () => void, cancel: () => void) {
+		e.stopPropagation();
+		if (e.key === 'Escape') cancel();
+		else if (e.key === 'Enter') {
+			e.preventDefault();
+			ok();
+		}
+	}
 	function startRename(s: Sheet) {
 		if (locked) onrefused?.(LOCKED);
 		if (!onrename) return;
@@ -81,7 +132,7 @@
 		renaming = null;
 	}
 
-	const index = $derived(sheets.findIndex((s) => s.id === active));
+	const index = $derived(shown.findIndex((s) => s.id === active));
 
 	// Glisser un onglet : au-delà de quelques pixels, l'onglet suit la souris et
 	// un trait marque où il sera déposé (drop : rang d'insertion dans sheets).
@@ -90,7 +141,7 @@
 	let dropX = $state(0);
 
 	function dragStart(e: PointerEvent, s: Sheet) {
-		if (!onmove || e.button !== 0 || sheets.length < 2) return;
+		if (!onmove || e.button !== 0 || shown.length < 2) return;
 		drag = { id: s.id, x0: e.clientX, moved: false, drop: -1 };
 		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 	}
@@ -100,7 +151,7 @@
 		drag.moved = true;
 		const rects = tabEls.map((el) => el?.getBoundingClientRect());
 		let k = rects.findIndex((r) => r && e.clientX < r.left + r.width / 2);
-		if (k < 0) k = sheets.length;
+		if (k < 0) k = shown.length;
 		drag.drop = k;
 		const host = (e.currentTarget as HTMLElement).parentElement!.getBoundingClientRect();
 		const r = rects[Math.min(k, rects.length - 1)];
@@ -109,19 +160,20 @@
 	function dragEnd() {
 		const d = drag;
 		drag = null;
-		if (!d?.moved) return;
-		const from = sheets.findIndex((s) => s.id === d.id);
-		const to = d.drop > from ? d.drop - 1 : d.drop;
-		if (from >= 0 && d.drop >= 0 && to !== from) onmove?.(d.id, to);
+		if (!d?.moved || d.drop < 0) return;
+		// Rang parmi toutes les feuilles (les masquées gardent leur place).
+		const order = sheets.map((s) => s.id);
+		const to = moveTarget(order, d.id, shown[d.drop]?.id ?? null, false);
+		if (to !== order.indexOf(d.id)) onmove?.(d.id, to);
 	}
 </script>
 
 <div class="sheet-tabs">
 	<div class="nav">
-		<button disabled={index <= 0} onclick={() => onselect(sheets[index - 1].id)} title="Feuille précédente">◀</button>
-		<button disabled={index < 0 || index >= sheets.length - 1} onclick={() => onselect(sheets[index + 1].id)} title="Feuille suivante">▶</button>
+		<button disabled={index <= 0} onclick={() => onselect(shown[index - 1].id)} title="Feuille précédente">◀</button>
+		<button disabled={index < 0 || index >= shown.length - 1} onclick={() => onselect(shown[index + 1].id)} title="Feuille suivante">▶</button>
 	</div>
-	{#each sheets as s, si (s.id)}
+	{#each shown as s, si (s.id)}
 		{#if renaming === s.id}
 			<!-- svelte-ignore a11y_autofocus -->
 			<input
@@ -141,6 +193,9 @@
 				class="sheet"
 				data-label={s.name}
 				class:on={s.id === active}
+				class:colored={!!s.color}
+				style:--tab-color={s.color || null}
+				style:--tab-text={s.color ? textOn(s.color) : null}
 				class:dragging={drag?.moved && drag.id === s.id}
 				onpointerdown={(e) => dragStart(e, s)}
 				onpointermove={dragMove}
@@ -150,7 +205,10 @@
 				ondblclick={() => startRename(s)}
 				oncontextmenu={(e) => {
 					e.preventDefault();
-					if (del || rename || insert || onprotect) menu = { id: s.id, x: (e.currentTarget as HTMLElement).offsetLeft };
+					if (del || rename || insert || onprotect || copy || color || hide) {
+						colors = false;
+						menu = { id: s.id, x: (e.currentTarget as HTMLElement).offsetLeft };
+					}
 				}}
 				title={(s.protected ? 'Feuille protégée. ' : '') + (locked ? 'Structure du classeur protégée' : onmove ? 'Double-clic pour renommer, glisser pour déplacer' : 'Double-clic pour renommer')}
 				>{#if s.protected}<span class="lock" aria-label="Feuille protégée"><Icon name="lock" size={12} /></span>{/if}{s.name}</button
@@ -183,44 +241,152 @@
 	{/if}
 	{#if menu}
 		{@const m = menu}
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div class="menu" style:left="{m.x}px" onmouseleave={() => (menu = null)}>
+		{@const ms = sheets.find((x) => x.id === m.id)}
+		<div class="menu" role="menu" style:left="{m.x}px" use:dismiss={closeMenu}>
 			<button
+				role="menuitem"
 				disabled={!oninsert}
 				onclick={() => {
 					const id = m.id;
-					menu = null;
+					closeMenu();
 					oninsert?.(id);
 				}}>Insérer une feuille</button
 			>
 			<button
-				disabled={!onrename}
-				onclick={() => {
-					const s = sheets.find((x) => x.id === m.id);
-					menu = null;
-					if (s) startRename(s);
-				}}>Renommer</button
-			>
-			<button
-				disabled={sheets.length <= 1 || !ondelete}
+				role="menuitem"
+				disabled={shown.length <= 1 || !ondelete}
 				onclick={() => {
 					const id = m.id;
-					menu = null;
+					closeMenu();
 					ondelete?.(id);
 				}}>Supprimer</button
 			>
+			<button
+				role="menuitem"
+				disabled={!onrename}
+				onclick={() => {
+					closeMenu();
+					if (ms) startRename(ms);
+				}}>Renommer</button
+			>
+			<button
+				role="menuitem"
+				disabled={!onmove && !oncopy}
+				onclick={() => {
+					const id = m.id;
+					closeMenu();
+					const i = sheets.findIndex((x) => x.id === id);
+					moving = { id, before: sheets[i + 1]?.id ?? null, copy: !onmove };
+				}}>Déplacer ou copier…</button
+			>
 			<hr />
 			<button
+				role="menuitem"
 				disabled={!onprotect}
 				onclick={() => {
 					const id = m.id;
-					menu = null;
+					closeMenu();
 					onprotect?.(id);
-				}}>{sheets.find((x) => x.id === m.id)?.protected ? 'Ôter la protection de la feuille…' : 'Protéger la feuille…'}</button
+				}}>{ms?.protected ? 'Ôter la protection de la feuille…' : 'Protéger la feuille…'}</button
+			>
+			<div class="sub-wrap" role="none" onmouseenter={() => oncolor && (colors = true)} onmouseleave={() => (colors = false)}>
+				<button role="menuitem" aria-haspopup="true" aria-expanded={colors} disabled={!oncolor} onclick={() => (colors = true)}
+					><span>Couleur d'onglet</span><span class="arrow">▸</span></button
+				>
+				{#if colors && oncolor}
+					<div class="menu colors" role="menu" aria-label="Couleur d'onglet">
+						<div class="swatches">
+							{#each TAB_COLORS as c (c)}
+								<button
+									class="swatch"
+									class:sel={ms?.color === c}
+									style:background={c}
+									title={c}
+									aria-label="Couleur {c}"
+									onclick={() => {
+										const id = m.id;
+										closeMenu();
+										oncolor?.(id, c);
+									}}
+								></button>
+							{/each}
+						</div>
+						<button
+							role="menuitem"
+							disabled={!ms?.color}
+							onclick={() => {
+								const id = m.id;
+								closeMenu();
+								oncolor?.(id, '');
+							}}>Aucune couleur</button
+						>
+					</div>
+				{/if}
+			</div>
+			<hr />
+			<button
+				role="menuitem"
+				disabled={!onhide || shown.length <= 1}
+				title={shown.length <= 1 ? 'Le classeur garde au moins une feuille visible' : undefined}
+				onclick={() => {
+					const id = m.id;
+					closeMenu();
+					onhide?.(id, true);
+				}}>Masquer</button
+			>
+			<button
+				role="menuitem"
+				disabled={!onhide || hiddenSheets.length === 0}
+				onclick={() => {
+					closeMenu();
+					unhiding = hiddenSheets[0]?.id ?? null;
+				}}>Afficher…</button
 			>
 		</div>
 	{/if}
 </div>
+
+{#if moving}
+	{@const mv = moving}
+	<div class="modal-back" role="presentation" onclick={(e) => e.target === e.currentTarget && (moving = null)}>
+		<div class="dialog" role="dialog" aria-modal="true" aria-label="Déplacer ou copier" tabindex="-1" onkeydown={(e) => dialogKeys(e, confirmMove, () => (moving = null))}>
+			<h2>Déplacer ou copier</h2>
+			<p>Déplacer la feuille « {sheets.find((x) => x.id === mv.id)?.name ?? ''} »</p>
+			<label for="move-before">Avant la feuille :</label>
+			<select id="move-before" size="8" bind:value={moving.before} use:focus>
+				{#each sheets as s (s.id)}
+					{#if s.id !== mv.id || moving.copy}
+						<option value={s.id}>{s.name}{s.hidden ? ' (masquée)' : ''}</option>
+					{/if}
+				{/each}
+				<option value={null}>(en dernier)</option>
+			</select>
+			<label class="check"><input type="checkbox" bind:checked={moving.copy} disabled={!oncopy || !onmove} /> Créer une copie</label>
+			<div class="actions">
+				<button class="primary" onclick={confirmMove}>OK</button>
+				<button onclick={() => (moving = null)}>Annuler</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
+{#if unhiding !== null}
+	<div class="modal-back" role="presentation" onclick={(e) => e.target === e.currentTarget && (unhiding = null)}>
+		<div class="dialog" role="dialog" aria-modal="true" aria-label="Afficher" tabindex="-1" onkeydown={(e) => dialogKeys(e, confirmUnhide, () => (unhiding = null))}>
+			<h2>Afficher</h2>
+			<label for="unhide">Afficher la feuille :</label>
+			<select id="unhide" size="6" bind:value={unhiding} ondblclick={confirmUnhide} use:focus>
+				{#each hiddenSheets as s (s.id)}
+					<option value={s.id}>{s.name}</option>
+				{/each}
+			</select>
+			<div class="actions">
+				<button class="primary" onclick={confirmUnhide}>OK</button>
+				<button onclick={() => (unhiding = null)}>Annuler</button>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	.hbar {
@@ -286,6 +452,14 @@
 		font-weight: 600;
 		box-shadow: inset 0 -3px 0 #217346;
 	}
+	/* Couleur d'onglet : fond de l'onglet inactif, soulignement de l'actif. */
+	.sheet.colored:not(.on) {
+		background: var(--tab-color);
+		color: var(--tab-text);
+	}
+	.sheet.colored.on {
+		box-shadow: inset 0 -4px 0 var(--tab-color);
+	}
 	.sheet.dragging {
 		opacity: 0.6;
 		cursor: grabbing;
@@ -338,6 +512,95 @@
 		border: none;
 		border-top: 1px solid #e5e7eb;
 		margin: 4px 0;
+	}
+	.sub-wrap {
+		position: relative;
+	}
+	.sub-wrap > button {
+		display: flex;
+		justify-content: space-between;
+	}
+	.arrow {
+		color: #6b7280;
+	}
+	.menu.colors {
+		left: 100%;
+		bottom: auto;
+		top: -4px;
+		min-width: 0;
+	}
+	.swatches {
+		display: grid;
+		grid-template-columns: repeat(5, 20px);
+		gap: 6px;
+		padding: 6px 12px;
+	}
+	.menu .swatch {
+		width: 20px;
+		height: 20px;
+		padding: 0;
+		border: 1px solid rgba(0, 0, 0, 0.2);
+	}
+	.menu .swatch:hover,
+	.menu .swatch.sel {
+		outline: 2px solid #217346;
+		outline-offset: 1px;
+	}
+	.modal-back {
+		position: fixed;
+		inset: 0;
+		z-index: 40;
+		background: rgba(0, 0, 0, 0.2);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font: 13px 'Segoe UI', system-ui, -apple-system, sans-serif;
+	}
+	.dialog {
+		background: #fff;
+		border: 1px solid #d4d7db;
+		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+		padding: 16px 18px;
+		min-width: 300px;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+	.dialog h2 {
+		font-size: 15px;
+		font-weight: 600;
+		margin: 0;
+	}
+	.dialog p {
+		margin: 0;
+	}
+	.dialog select {
+		font: inherit;
+		width: 100%;
+	}
+	.dialog .check {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+	}
+	.dialog .actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 8px;
+		margin-top: 4px;
+	}
+	.dialog .actions button {
+		font: inherit;
+		padding: 4px 16px;
+		border: 1px solid #d4d7db;
+		background: #fff;
+		border-radius: 2px;
+		cursor: pointer;
+	}
+	.dialog .actions button.primary {
+		background: #217346;
+		border-color: #217346;
+		color: #fff;
 	}
 	.lock {
 		display: inline-flex;

@@ -421,6 +421,12 @@ func (env *Env) scan(sc scanCall) Value {
 // special évalue les fonctions propres à chaque backend.
 func (env *Env) special(fn string, n Call) Value {
 	switch fn {
+	case "LET":
+		body, ok := expandLet(n)
+		if !ok {
+			return Err(ErrValue)
+		}
+		return Eval(body, env)
 	case "REFERENCE":
 		return env.reference(n)
 	case "REFERENCE.APPROX":

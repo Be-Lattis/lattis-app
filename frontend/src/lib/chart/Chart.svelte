@@ -2,7 +2,7 @@
 	// Graphique en SVG, sans bibliothèque : barres (verticales ou horizontales,
 	// groupées ou empilées), courbes, aires, secteurs, anneau, nuage de points.
 	// Les données arrivent déjà agrégées par le classeur.
-	import { PALETTE, parseNumber, tickLabel, ticks } from './scale';
+	import { PALETTE, axisFormat, categoryLayout, parseNumber, shortLabel, tickLabel, ticks } from './scale';
 
 	export interface Series {
 		name: string;
@@ -42,12 +42,20 @@
 	const legend = $derived(style.legend || 'bottom');
 	const legendItems = $derived(radial ? labels.map((l, i) => ({ name: l, color: color(i) })) : series.map((s, k) => ({ name: s.name, color: color(k) })));
 
-	// Marges : titre, légende, titres d'axes.
+	// Marges : titre, légende, titres d'axes, étiquettes de catégories
+	// (inclinées si elles ne tiennent pas droites).
+	const padLeft = $derived((radial ? 12 : horizontal ? 80 : 48) + (style.yTitle ? 18 : 0));
+	const padRight = $derived(16 + (legend === 'right' ? 130 : 0));
+	const catLayout = $derived(
+		radial || horizontal || kind === 'scatter'
+			? { every: 1, angle: 0, depth: 14, chars: 12 }
+			: categoryLayout(labels, Math.max(20, width - padLeft - padRight) / Math.max(1, labels.length))
+	);
 	const pad = $derived({
 		top: (style.title ? 30 : 12) + (legend === 'top' ? 22 : 0),
-		right: 16 + (legend === 'right' ? 130 : 0),
-		bottom: (radial ? 12 : horizontal ? 26 : 30) + (style.xTitle ? 18 : 0) + (legend === 'bottom' ? 22 : 0),
-		left: (radial ? 12 : horizontal ? 80 : 48) + (style.yTitle ? 18 : 0)
+		right: padRight,
+		bottom: (radial ? 12 : horizontal ? 26 : 16 + catLayout.depth) + (style.xTitle ? 18 : 0) + (legend === 'bottom' ? 22 : 0),
+		left: padLeft
 	});
 	const plotW = $derived(Math.max(20, width - pad.left - pad.right));
 	const plotH = $derived(Math.max(20, height - pad.top - pad.bottom));
@@ -84,9 +92,12 @@
 	const n = $derived(labels.length);
 	const band = $derived((horizontal ? plotH : plotW) / Math.max(1, n));
 	const cat = (i: number) => (horizontal ? pad.top + band * (i + 0.5) : pad.left + band * (i + 0.5));
-	const every = $derived(Math.max(1, Math.ceil(n / Math.max(1, Math.floor((horizontal ? plotH / 16 : plotW / 60))))));
-	const short = (s: string, k = 12) => (s.length > k ? s.slice(0, k - 1) + '…' : s);
+	const every = $derived(horizontal ? Math.max(1, Math.ceil(n / Math.max(1, Math.floor(plotH / 16)))) : catLayout.every);
+	const short = shortLabel;
+	// Étiquettes de données : chaque valeur pour elle-même ; graduations : un
+	// seul format par axe.
 	const fmt = (v: number) => tickLabel(v);
+	const vFmt = $derived(axisFormat(shownTicks));
 
 	// Barres : position de chaque rectangle (groupé ou empilé).
 	const bars = $derived.by(() => {
@@ -153,6 +164,7 @@
 	// Nuage : X numérique tiré des libellés.
 	const xs = $derived(labels.map((l, i) => parseNumber(l) ?? i));
 	const xTicks = $derived(ticks(Math.min(...xs, 0), Math.max(...xs, 1)));
+	const xFmt = $derived(axisFormat(xTicks));
 	const sx = (v: number) => pad.left + ((v - xTicks[0]) / (xTicks[xTicks.length - 1] - xTicks[0] || 1)) * plotW;
 
 	// Secteurs et anneau (première série).
@@ -203,16 +215,16 @@
 		{#each shownTicks as t (t)}
 			{#if horizontal}
 				{#if !style.noGrid || t === 0}<line x1={vx(t)} x2={vx(t)} y1={pad.top} y2={pad.top + plotH} class={t === 0 ? 'axis' : 'grid'} />{/if}
-				<text x={vx(t)} y={pad.top + plotH + 14} text-anchor="middle" class="small">{fmt(t)}</text>
+				<text x={vx(t)} y={pad.top + plotH + 14} text-anchor="middle" class="small">{vFmt(t)}</text>
 			{:else}
 				{#if !style.noGrid || t === 0}<line x1={pad.left} x2={pad.left + plotW} y1={vy(t)} y2={vy(t)} class={t === 0 ? 'axis' : 'grid'} />{/if}
-				<text x={pad.left - 6} y={vy(t) + 4} text-anchor="end" class="small">{fmt(t)}</text>
+				<text x={pad.left - 6} y={vy(t) + 4} text-anchor="end" class="small">{vFmt(t)}</text>
 			{/if}
 		{/each}
 		<!-- Axe des catégories. -->
 		{#if kind === 'scatter'}
 			{#each xTicks as t (t)}
-				<text x={sx(t)} y={pad.top + plotH + 14} text-anchor="middle" class="small">{fmt(t)}</text>
+				<text x={sx(t)} y={pad.top + plotH + 14} text-anchor="middle" class="small">{xFmt(t)}</text>
 			{/each}
 		{:else}
 			{#each labels as l, i (i)}
@@ -220,7 +232,12 @@
 					{#if horizontal}
 						<text x={pad.left - 6} y={cat(i) + 4} text-anchor="end" class="small">{short(l)}</text>
 					{:else}
-						<text x={cat(i)} y={pad.top + plotH + 14} text-anchor="middle" class="small">{short(l)}</text>
+						{#if catLayout.angle}
+							{@const y = pad.top + plotH + 10}
+							<text x={cat(i)} {y} text-anchor="end" class="small" transform="rotate({catLayout.angle} {cat(i)} {y})"><title>{l}</title>{short(l, catLayout.chars)}</text>
+						{:else}
+							<text x={cat(i)} y={pad.top + plotH + 14} text-anchor="middle" class="small">{short(l)}</text>
+						{/if}
 					{/if}
 				{/if}
 			{/each}
@@ -256,7 +273,7 @@
 			{/each}
 		{/if}
 
-		{#if style.xTitle}<text x={pad.left + plotW / 2} y={pad.top + plotH + 32} text-anchor="middle" class="axis-title">{style.xTitle}</text>{/if}
+		{#if style.xTitle}<text x={pad.left + plotW / 2} y={pad.top + plotH + (horizontal || radial ? 14 : catLayout.depth) + 18} text-anchor="middle" class="axis-title">{style.xTitle}</text>{/if}
 		{#if style.yTitle}
 			<text x="14" y={pad.top + plotH / 2} text-anchor="middle" class="axis-title" transform="rotate(-90 14 {pad.top + plotH / 2})">{style.yTitle}</text>
 		{/if}

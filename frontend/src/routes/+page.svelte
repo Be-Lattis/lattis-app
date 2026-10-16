@@ -15,6 +15,9 @@
 	import Sheet, { type SheetData, type SheetSource, type SheetStatus, type ColumnFilter, type PivotConfig, type ChartConfig, type TypeMix } from '#lib/grid/Sheet.svelte';
 	import Ribbon, { type FileAction, type View } from '#lib/shell/Ribbon.svelte';
 	import SheetTabs from '#lib/shell/SheetTabs.svelte';
+	import { visibleSheet } from '#lib/shell/sheets.js';
+	import { count } from '#lib/sql/result.js';
+	import { printSheet } from '#lib/shell/print.js';
 	import SqlView, { type Favorite } from '#lib/shell/SqlView.svelte';
 	import TitleBar from '#lib/shell/TitleBar.svelte';
 	import ScriptView, { type Script } from '#lib/script/ScriptView.svelte';
@@ -76,6 +79,12 @@
 	async function reload() {
 		docState = await DocumentService.State();
 		layout = await DocumentService.Layout(sheetId);
+		// Feuille affichée masquée ou disparue : la première feuille visible.
+		const shownId = visibleSheet(layout?.sheets ?? [], sheetId);
+		if (layout && shownId !== sheetId) {
+			sheetId = shownId;
+			layout = await DocumentService.Layout(sheetId);
+		}
 		help = await DocumentService.FormulaHelp();
 		scripts = (await DocumentService.Scripts()) ?? [];
 		favorites = (await DocumentService.Favorites()) ?? [];
@@ -181,8 +190,8 @@
 
 	/** La feuille affichée a disparu (classeur ouvert par un assistant, feuille supprimée) : première feuille. */
 	async function keepSheet() {
-		if (layout && !(layout.sheets ?? []).some((s) => s.id === sheetId)) {
-			sheetId = layout.sheets?.[0]?.id ?? 1;
+		if (layout && visibleSheet(layout.sheets ?? [], sheetId) !== sheetId) {
+			sheetId = visibleSheet(layout.sheets ?? [], sheetId);
 			await reload();
 		}
 	}
@@ -268,7 +277,7 @@
 			if (e.defaultPrevented) return; // déjà traité (éditeur de script : Ctrl+S)
 			const ctrl = e.ctrlKey || e.metaKey;
 			const action: FileAction | null =
-				e.key === 'F12' ? 'saveAs' : ctrl && e.key.toLowerCase() === 's' ? 'save' : ctrl && e.key.toLowerCase() === 'o' ? 'open' : ctrl && e.key.toLowerCase() === 'n' ? 'new' : ctrl && e.key.toLowerCase() === 'w' ? 'close' : null;
+				e.key === 'F12' ? 'saveAs' : ctrl && e.key.toLowerCase() === 's' ? 'save' : ctrl && e.key.toLowerCase() === 'o' ? 'open' : ctrl && e.key.toLowerCase() === 'n' ? 'new' : ctrl && e.key.toLowerCase() === 'w' ? 'close' : ctrl && e.key.toLowerCase() === 'p' && mode === 'doc' ? 'print' : null;
 			if (action) {
 				e.preventDefault();
 				file(action);
@@ -321,7 +330,7 @@
 					if (r.sheet) sheetId = r.sheet;
 					await reload();
 					const tables = r.tables ?? [];
-					const what = tables.length === 1 ? `Tableau « ${tables[0]} » importé` : `${tables.length} tableaux importés`;
+					const what = tables.length === 1 ? `Tableau « ${tables[0]} » importé` : count(tables.length, 'tableau importé', 'tableaux importés');
 					const warnings = r.warnings ?? [];
 					notice = warnings.length ? `${what} ; ${warnings.length} point(s) à vérifier : ${warnings.join(' · ')}` : what;
 					break;
@@ -335,6 +344,22 @@
 					}
 					const p = await DocumentService.ExportCSV(table);
 					if (p) notice = `Tableau « ${table} » exporté : ${p}`;
+					break;
+				}
+				case 'exportXlsx': {
+					if (mode !== 'doc') return;
+					const p = await DocumentService.ExportXLSX();
+					if (p) notice = `Classeur exporté (valeurs des formules) : ${p}`;
+					break;
+				}
+				case 'print':
+				case 'pdf': {
+					// Feuille active, plage utilisée ; le PDF passe par la fenêtre
+					// d'impression (imprimante « Microsoft Print to PDF »).
+					if (mode !== 'doc') return;
+					const name = layout?.sheets?.find((s) => s.id === sheetId)?.name ?? '';
+					if (a === 'pdf') notice = 'Exporter en PDF : choisissez l’imprimante « Microsoft Print to PDF » (ou « Enregistrer au format PDF »)';
+					printSheet(await DocumentService.PrintHTML(sheetId), `${docState.title} – ${name}`);
 					break;
 				}
 				case 'demo':
@@ -387,7 +412,7 @@
 			const ev = await DocumentService.Paste(sheetId, row, col, block);
 			await reload();
 			if (ev.created && ev.headless) return `Tableau « ${ev.created} » créé sans en-têtes : clic droit › « Utiliser la 1re ligne comme en-têtes » si besoin`;
-			if (ev.created) return `Tableau « ${ev.created} » créé (${block.length - 1} lignes)`;
+			if (ev.created) return `Tableau « ${ev.created} » créé (${count(block.length - 1)})`;
 		},
 		moveCells: (r0, c0, r1, c1, dr, dc) => DocumentService.MoveCells(sheetId, r0, c0, r1, c1, dr, dc).then(reload),
 		sheetLines: (op, a, b) =>
@@ -545,7 +570,7 @@
 	const query = (sql: string) => (mode === 'demo' ? GridService.Query(sql) : DocumentService.Query(sql));
 	const data = $derived(mode === 'demo' ? demoData : docData);
 	const title = $derived(mode === 'demo' ? 'Démo : 1 M de lignes' : mode === 'recover' ? 'Récupération' : docState.title);
-	const tabs = $derived(mode === 'demo' ? (demo ? [{ id: 1, name: demo.name }] : []) : (layout?.sheets ?? []).map((s) => ({ id: s.id, name: s.name, protected: s.protected })));
+	const tabs = $derived(mode === 'demo' ? (demo ? [{ id: 1, name: demo.name }] : []) : (layout?.sheets ?? []).map((s) => ({ id: s.id, name: s.name, protected: s.protected, color: s.color, hidden: s.hidden })));
 
 	/** « Afficher sur la feuille » : va sur la feuille de l'objet et le sélectionne. */
 	async function gotoObject(name: string) {
@@ -628,8 +653,8 @@
 		try {
 			await fn();
 			await reload();
-			if (!(layout?.sheets ?? []).some((s) => s.id === sheetId)) {
-				sheetId = layout?.sheets?.[0]?.id ?? 1;
+			if (visibleSheet(layout?.sheets ?? [], sheetId) !== sheetId) {
+				sheetId = visibleSheet(layout?.sheets ?? [], sheetId);
 				await reload();
 			}
 		} catch (e) {
@@ -749,6 +774,13 @@
 			{/key}
 			{#if view === 'sql'}
 				<div class="pane"><SqlView {objects} run={query} exec={mode === 'doc' ? (q) => DocumentService.Execute(q) : undefined} ongoto={gotoObject}
+						tosheet={mode === 'doc'
+							? async (q, name, headers) => {
+									const r = await DocumentService.QueryToSheet(q, name, headers);
+									notice = `Résultat posé dans le tableau « ${r.table} » (Ctrl+Z pour annuler)`;
+									await selectSheet(r.sheet);
+								}
+							: undefined}
 						favorites={mode === 'doc'
 							? {
 									list: favorites,
@@ -810,6 +842,12 @@
 		onmove={mode === 'doc' ? (id, to) => sheetAction(() => DocumentService.MoveSheet(id, to)) : undefined}
 		onrename={mode === 'doc' ? (id, name) => sheetAction(() => DocumentService.RenameSheet(id, name)) : undefined}
 		ondelete={mode === 'doc' ? (id) => sheetAction(() => DocumentService.DeleteSheet(id)) : undefined}
+		oncopy={mode === 'doc' ? (id, to) => sheetAction(async () => selectSheet(await DocumentService.CopySheet(id, to))) : undefined}
+		oncolor={mode === 'doc' ? (id, color) => sheetAction(() => DocumentService.SetSheetColor(id, color)) : undefined}
+		onhide={mode === 'doc' ? (id, hidden) => sheetAction(async () => {
+			await DocumentService.SetSheetHidden(id, hidden);
+			if (!hidden) await selectSheet(id);
+		}) : undefined}
 		hscroll={view === 'grid' ? hscroll : undefined}
 		onhscroll={(x, atEnd) => sheet?.scrollLeftTo(x, atEnd)}
 		onhhold={(on) => sheet?.holdHScroll(on)}

@@ -199,6 +199,92 @@ ui.show_sheet(f.name)`,
 			},
 		},
 		&Command{
+			Name:    "sheets.copy",
+			Label:   "Copier la feuille",
+			Summary: "Copie une feuille (tableaux, cellules, mise en forme, tableaux croisés, graphiques, boutons) et renvoie {id, name} de la copie.",
+			Details: "Comme Déplacer ou copier… › Créer une copie. Les tableaux copiés reçoivent un nom libre (Ventes → Ventes_2) ; un graphique ou un TCD de la feuille qui lisait un tableau copié lit sa copie. Sans position, la copie se place juste après la feuille copiée.",
+			Returns: "{id, name}",
+			Params:  []Param{{Name: "sheet", Type: Ref, Desc: "feuille à copier"}, {Name: "position", Type: Integer, Desc: "rang de la copie parmi les onglets, à partir de 1", Optional: true}},
+			Write:   true,
+			Example: `local copie = sheets.copy("Feuille1")
+print(copie.name) -- Feuille1 (2)`,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				d, _ := c.Doc()
+				list, err := sheetList(c, d)
+				if err != nil {
+					return nil, err
+				}
+				to := len(list)
+				for i, x := range list {
+					if x.ID == s.ID {
+						to = i + 1
+					}
+				}
+				if c.Has("position") {
+					if to, err = c.Pos("position", 0); err != nil {
+						return nil, err
+					}
+				}
+				id, err := d.CopySheet(c, s.ID, to)
+				if err != nil {
+					return nil, err
+				}
+				list, err = sheetList(c, d)
+				for _, x := range list {
+					if x.ID == id {
+						return x, nil
+					}
+				}
+				return sheetRef{ID: id}, err
+			},
+		},
+		&Command{
+			Name:    "sheets.hide",
+			Label:   "Masquer la feuille",
+			Summary: "Masque une feuille (Masquer) ou l'affiche de nouveau (hidden = false).",
+			Details: "Une feuille masquée n'apparaît plus dans les onglets mais garde son contenu ; le classeur garde au moins une feuille visible.",
+			Params:  []Param{{Name: "sheet", Type: Ref, Desc: "feuille à masquer ou afficher"}, {Name: "hidden", Type: Boolean, Desc: "true (défaut) : masquer ; false : afficher", Optional: true}},
+			Write:   true,
+			Example: `sheets.add("Calculs")
+sheets.hide("Calculs")
+sheets.hide("Calculs", false)`,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				hidden := true
+				if c.Has("hidden") {
+					if hidden, err = c.Bool("hidden"); err != nil {
+						return nil, err
+					}
+				}
+				d, _ := c.Doc()
+				return nil, d.SetSheetHidden(c, s.ID, hidden)
+			},
+		},
+		&Command{
+			Name:    "sheets.color",
+			Label:   "Couleur d'onglet",
+			Summary: "Fixe la couleur de l'onglet d'une feuille (« #rrggbb » ; vide : aucune couleur).",
+			Params:  []Param{{Name: "sheet", Type: Ref, Desc: "feuille"}, {Name: "color", Type: String, Desc: "couleur #rrggbb, ou vide", Optional: true}},
+			Write:   true,
+			Example: `sheets.color("Feuille1", "#217346")`,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				color, _ := c.Str("color")
+				d, _ := c.Doc()
+				return nil, d.SetSheetColor(c, s.ID, color)
+			},
+		},
+		&Command{
 			Name:    "sheets.protect",
 			Label:   "Protéger la feuille",
 			Summary: "Protège une feuille, comme Révision › Protéger la feuille : toute modification de son contenu est ensuite refusée.",

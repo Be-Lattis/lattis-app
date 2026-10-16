@@ -20,6 +20,10 @@ type SheetInfo struct {
 	// Password : il faut un mot de passe pour ôter la protection.
 	Protected bool `json:"protected"`
 	Password  bool `json:"password"`
+	// Color : couleur de l'onglet (« #rrggbb », vide : aucune) ; Hidden :
+	// feuille masquée (absente de la barre d'onglets).
+	Color  string `json:"color"`
+	Hidden bool   `json:"hidden"`
 }
 
 // ColumnInfo décrit une colonne de tableau pour l'interface.
@@ -128,13 +132,13 @@ type ColWidth struct {
 func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 	l := Layout{Sheet: sheet, Tables: []TableInfo{}, Cells: []CellInfo{}, Widths: []ColWidth{}, Heights: []RowHeight{}, Names: []NameInfo{}, Styles: []CellStyle{}}
 	err := m.read(ctx, func(t *tx) error {
-		rs, err := t.query(`SELECT id, name, gridlines = 0, headings <> 0 FROM _slitable_sheets ORDER BY pos, id`)
+		rs, err := t.query(`SELECT id, name, gridlines = 0, headings <> 0, color, hidden <> 0 FROM _slitable_sheets ORDER BY pos, id`)
 		if err != nil {
 			return err
 		}
 		for rs.Next() {
 			var s SheetInfo
-			if err := rs.Scan(&s.ID, &s.Name, &s.NoGrid, &s.Headings); err != nil {
+			if err := rs.Scan(&s.ID, &s.Name, &s.NoGrid, &s.Headings, &s.Color, &s.Hidden); err != nil {
 				rs.Close()
 				return err
 			}

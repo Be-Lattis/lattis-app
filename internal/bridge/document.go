@@ -396,6 +396,42 @@ func (s *DocumentService) Query(ctx context.Context, q string) (grid.QueryResult
 	return grid.Query(ctx, d.DB().Read(), q, QueryLimit)
 }
 
+// QuerySheet décrit un résultat SQL posé sur une nouvelle feuille.
+type QuerySheet struct {
+	Sheet int64    `json:"sheet"`
+	Table string   `json:"table"`
+	State DocState `json:"state"`
+}
+
+// QueryToSheet exécute une requête de lecture (onglet SQL) et pose tout son
+// résultat dans un nouveau tableau, sur une nouvelle feuille nommée name
+// (vide : « Requête1 »…) ; headers : en-têtes affichés. Annulable.
+func (s *DocumentService) QueryToSheet(ctx context.Context, q, name string, headers []string) (QuerySheet, error) {
+	d, err := s.current()
+	if err != nil {
+		return QuerySheet{}, err
+	}
+	if q, err = d.CellSQL(ctx, q, s.activeSheet()); err != nil {
+		return QuerySheet{}, err
+	}
+	if q, err = d.PivotCTE(ctx, q); err != nil {
+		return QuerySheet{}, err
+	}
+	res, err := d.QueryToSheet(ctx, q, name, headers)
+	if err != nil {
+		return QuerySheet{}, err
+	}
+	out := QuerySheet{}
+	if len(res.Sheets) > 0 {
+		out.Sheet = res.Sheets[0]
+	}
+	if len(res.Tables) > 0 {
+		out.Table = res.Tables[0]
+	}
+	out.State, err = s.changed(ctx)
+	return out, err
+}
+
 // Paste colle un bloc (presse-papiers d'Excel) à partir d'une cellule.
 func (s *DocumentService) Paste(ctx context.Context, sheet int64, row, col int, block [][]string) (canvas.Event, error) {
 	d, err := s.current()
@@ -450,6 +486,31 @@ func (s *DocumentService) RenameSheet(ctx context.Context, sheet int64, name str
 
 func (s *DocumentService) DeleteSheet(ctx context.Context, sheet int64) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.DeleteSheet(ctx, sheet) })
+}
+
+// CopySheet copie un onglet (tableaux, cellules, mise en forme, objets) et
+// place la copie au rang to ; renvoie l'identifiant de la copie.
+func (s *DocumentService) CopySheet(ctx context.Context, sheet int64, to int) (int64, error) {
+	d, err := s.current()
+	if err != nil {
+		return 0, err
+	}
+	id, err := d.CopySheet(ctx, sheet, to)
+	if err != nil {
+		return 0, err
+	}
+	_, err = s.changed(ctx)
+	return id, err
+}
+
+// SetSheetColor fixe la couleur d'un onglet (« #rrggbb », vide : aucune).
+func (s *DocumentService) SetSheetColor(ctx context.Context, sheet int64, color string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetSheetColor(ctx, sheet, color) })
+}
+
+// SetSheetHidden masque ou affiche un onglet.
+func (s *DocumentService) SetSheetHidden(ctx context.Context, sheet int64, hidden bool) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetSheetHidden(ctx, sheet, hidden) })
 }
 
 // ConvertPreview compte les valeurs qui ne se convertiraient pas au type to.

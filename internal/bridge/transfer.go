@@ -77,3 +77,43 @@ func (s *DocumentService) ExportCSV(ctx context.Context, table string) (string, 
 	}
 	return p, transfer.ExportCSVFile(ctx, d.Model, table, p, transfer.ExcelFR)
 }
+
+// PrintHTML rend la plage utilisée d'une feuille en HTML imprimable
+// (Fichier › Imprimer / Exporter en PDF).
+func (s *DocumentService) PrintHTML(ctx context.Context, sheet int64) (string, error) {
+	d, err := s.current()
+	if err != nil {
+		return "", err
+	}
+	return transfer.PrintHTML(ctx, d.Model, sheet)
+}
+
+// ExportXLSX écrit tout le classeur au format Excel .xlsx (valeurs : les
+// formules sont exportées par leur résultat). Renvoie le fichier écrit, vide
+// si l'utilisateur a annulé.
+func (s *DocumentService) ExportXLSX(ctx context.Context) (string, error) {
+	d, err := s.current()
+	if err != nil {
+		return "", err
+	}
+	name := "Classeur.xlsx"
+	if d.Path() != "" {
+		base := filepath.Base(d.Path())
+		name = strings.TrimSuffix(base, filepath.Ext(base)) + ".xlsx"
+	}
+	dlg := application.Get().Dialog.SaveFile().
+		SetMessage("Exporter le classeur au format Excel").
+		SetFilename(name).
+		AddFilter("Classeur Excel", "*.xlsx")
+	if d.Path() != "" {
+		dlg = dlg.SetDirectory(filepath.Dir(d.Path()))
+	}
+	p, err := dlg.PromptForSingleSelection()
+	if err != nil || p == "" {
+		return "", err
+	}
+	if !strings.HasSuffix(strings.ToLower(p), ".xlsx") {
+		p += ".xlsx"
+	}
+	return p, transfer.ExportXLSXFile(ctx, d.Model, p)
+}

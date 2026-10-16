@@ -40,10 +40,10 @@ func TestFunctionDocs(t *testing.T) {
 					t.Errorf("%s : l'argument répété %s doit finir par 1", f.EN, x.Name)
 				}
 			}
-		} else if f.Max != len(d.args) {
+		} else if f.Max != len(d.args) && f.EN != "LET" { // LET : paires répétées avant le calcul
 			t.Errorf("%s : %d arguments documentés, Max=%d", f.EN, len(d.args), f.Max)
 		}
-		if required != f.Min {
+		if required != f.Min && f.EN != "LET" {
 			t.Errorf("%s : %d arguments obligatoires documentés, Min=%d", f.EN, required, f.Min)
 		}
 		if !strings.HasPrefix(d.example, "=") {

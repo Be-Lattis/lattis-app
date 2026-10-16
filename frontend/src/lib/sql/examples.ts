@@ -4,6 +4,7 @@
 
 import type { ColumnType } from '#lib/grid/format.js';
 import { quote, type SqlObject } from './names';
+import { count } from './result';
 
 export type ExampleKind = 'select' | 'insert' | 'update' | 'delete';
 
@@ -64,12 +65,12 @@ export function example(o: SqlObject, kind: ExampleKind, today = new Date()): st
 	const table = quote(o.name);
 	const cols = o.columns;
 	const first = cols[0] ? quote(cols[0].name) : '';
-	const lines = (o.rows ?? 0).toLocaleString('fr-FR');
+	const lines = count(o.rows ?? 0);
 	switch (kind) {
 		case 'select': {
 			const what = isReadOnly(o) ? 'du tableau croisé' : 'du tableau';
 			return [
-				`-- Toutes les colonnes ${what} ${o.name} (${lines} lignes)`,
+				`-- Toutes les colonnes ${what} ${o.name} (${lines})`,
 				'SELECT',
 				cols.length ? list(cols.map((c) => ({ text: quote(c.name) })), '  ') : '  *',
 				`FROM ${table}`,

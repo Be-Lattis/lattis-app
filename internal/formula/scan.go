@@ -87,6 +87,8 @@ var scans = map[string]scanDef{
 		make: newRank},
 	"REFERENCE.APPROX": {roles: func(n int) ([]role, bool) { return roles(param, column, column), n == 3 },
 		make: func(p []Value) scanner { return &approx{key: p[0]} }},
+	"LARGE": {roles: func(n int) ([]role, bool) { return roles(column, param), n == 2 }, make: newKth(true)},
+	"SMALL": {roles: func(n int) ([]role, bool) { return roles(column, param), n == 2 }, make: newKth(false)},
 	"NETWORKDAYS": {roles: func(n int) ([]role, bool) { return roles(param, param, column)[:n], true },
 		make: func(p []Value) scanner { return newWorkdays(p, false) }},
 	"WORKDAY": {roles: func(n int) ([]role, bool) { return roles(param, param, column)[:n], true },

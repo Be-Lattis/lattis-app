@@ -7,6 +7,7 @@
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import type { Connection, PasswordNeed, PGTable, Source, XLSXTable } from '#bindings/internal/query/models.js';
 	import { clone } from './steps';
+	import { count } from '#lib/sql/result.js';
 
 	interface Props {
 		source: Source;
@@ -166,7 +167,7 @@
 						<div class="list">
 							{#each xlsx as t (t.sheet + t.index)}
 								<button class="item" class:on={t.sheet === s.sheet && t.index === (s.index ?? 0)} onclick={() => ((s.sheet = t.sheet), (s.index = t.index))}>
-									<strong>{t.sheet}</strong> › tableau {t.index + 1} <span class="muted">({t.rows} lignes : {(t.headers ?? []).slice(0, 6).join(', ')}{(t.headers ?? []).length > 6 ? '…' : ''})</span>
+									<strong>{t.sheet}</strong> › tableau {t.index + 1} <span class="muted">({count(t.rows)} : {(t.headers ?? []).slice(0, 6).join(', ')}{(t.headers ?? []).length > 6 ? '…' : ''})</span>
 								</button>
 							{:else}
 								<p class="muted">{s.path ? 'Aucun tableau de deux lignes ou plus dans ce classeur.' : 'Choisissez un fichier.'}</p>
