@@ -483,6 +483,7 @@
 							fixed: c.fixed,
 							errors: c.errors,
 							formula: c.formula || undefined,
+							result: c.result || undefined,
 							style: c.style || undefined,
 							headerStyle: c.headerStyle || undefined,
 							rules: c.rules || undefined,

@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/lalamefine/slitable/internal/formula"
-	"github.com/lalamefine/slitable/internal/grid"
 )
 
 // ErrName signale un nom de cellule refusé.
@@ -259,8 +258,8 @@ func (t *tx) cellFormulas(ns *formula.Names, schema *formula.Schema) error {
 	return nil
 }
 
-// literal donne le nœud d'une saisie : formule analysée, nombre, booléen ou
-// texte selon le type inféré.
+// literal donne le nœud d'une saisie : formule analysée, ou valeur reconnue
+// comme dans une colonne de tableau (voir valueLiteral).
 func literal(raw string) formula.Node {
 	if isFormula(raw) {
 		n, err := formula.Parse(raw, formula.FR)
@@ -269,14 +268,5 @@ func literal(raw string) formula.Node {
 		}
 		return n
 	}
-	switch Infer(raw) {
-	case grid.Integer, grid.Decimal:
-		if v, err := grid.Parse(grid.Decimal, raw); err == nil && v != nil {
-			return formula.NumLit{V: v.(float64)}
-		}
-	case grid.Boolean:
-		v, _ := grid.Parse(grid.Boolean, raw)
-		return formula.BoolLit{V: v == int64(1)}
-	}
-	return formula.StrLit{V: raw}
+	return valueLiteral(raw)
 }

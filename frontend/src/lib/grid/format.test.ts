@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { editValue, formatValue, isErrorValue } from './format';
+import { editValue, formatColumnValue, formatValue, isErrorValue } from './format';
+
+describe('formatColumnValue', () => {
+	it('colonne calculée décimale : mêmes décimales sur toutes les lignes', () => {
+		const col = { type: 'formula' as const, result: 'decimal' };
+		expect([1.44, 3, 0.96].map((v) => formatColumnValue(col, v))).toEqual(['1,44', '3,00', '0,96']);
+		expect(formatColumnValue(col, '#DIV/0!')).toBe('#DIV/0!');
+		expect(formatColumnValue({ type: 'formula' }, 3)).toBe('3');
+		expect(formatColumnValue({ type: 'formula', result: 'integer' }, 4)).toBe('4');
+		expect(formatColumnValue(undefined, 'x')).toBe('x');
+	});
+});
 
 describe('formatValue', () => {
 	it('affiche selon la locale française', () => {

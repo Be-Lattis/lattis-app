@@ -49,6 +49,16 @@ export function formatValue(type: ColumnType, v: unknown): string {
 	}
 }
 
+/**
+ * Texte d'une cellule de tableau. Une colonne calculée dont le résultat est
+ * décimal (result, deviné côté Go) s'affiche comme une colonne Décimal : le
+ * même nombre de décimales sur toutes ses lignes (1,44 / 3,00 / 0,96).
+ */
+export function formatColumnValue(col: { type: ColumnType; result?: string } | undefined, v: unknown): string {
+	if (col?.type === 'formula' && col.result === 'decimal' && typeof v === 'number') return formatValue('decimal', v);
+	return formatValue(col?.type ?? 'text', v);
+}
+
 /** Texte proposé à l'édition (sans séparateur de milliers). */
 export function editValue(type: ColumnType, v: unknown): string {
 	if (type === 'decimal' && typeof v === 'number') return String(v).replace('.', ',');
