@@ -8,7 +8,7 @@
 	import { onMount } from 'svelte';
 	import { Events } from '@wailsio/runtime';
 	import { DocumentService, GridService } from '#bindings/internal/bridge/index.js';
-	import type { DocState } from '#bindings/internal/bridge/models.js';
+	import type { DocState, FormulaHelp } from '#bindings/internal/bridge/models.js';
 	import type { Layout } from '#bindings/internal/canvas/models.js';
 	import type { Type } from '#bindings/internal/grid/models.js';
 	import type { Orphan } from '#bindings/internal/archive/models.js';
@@ -16,6 +16,8 @@
 	import Ribbon, { type FileAction, type View } from '#lib/shell/Ribbon.svelte';
 	import SheetTabs from '#lib/shell/SheetTabs.svelte';
 	import SqlView from '#lib/shell/SqlView.svelte';
+	import TitleBar from '#lib/shell/TitleBar.svelte';
+	import ScriptView, { type Script } from '#lib/script/ScriptView.svelte';
 	import { typeLabel, type ColumnType } from '#lib/grid/format.js';
 	import type { Fetched } from '#lib/grid/cache.js';
 
@@ -34,6 +36,8 @@
 	let layout = $state<Layout | null>(null);
 	let sheetId = $state(1);
 	let orphans = $state<Orphan[]>([]);
+	let help = $state<FormulaHelp | null>(null);
+	let scripts = $state<Script[]>([]);
 
 	// Démo.
 	let demo = $state<{ name: string; rows: number; columns: { name: string; type: ColumnType }[]; sqlName: string; sqlColumns: string[] } | null>(null);
@@ -44,6 +48,8 @@
 	async function reload() {
 		docState = await DocumentService.State();
 		layout = await DocumentService.Layout(sheetId);
+		help = await DocumentService.FormulaHelp();
+		scripts = (await DocumentService.Scripts()) ?? [];
 	}
 
 	async function startDoc() {
@@ -90,6 +96,7 @@
 			}
 		})();
 		const keys = (e: KeyboardEvent) => {
+			if (e.defaultPrevented) return; // déjà traité (éditeur de script : Ctrl+S)
 			const ctrl = e.ctrlKey || e.metaKey;
 			const action: FileAction | null =
 				e.key === 'F12' ? 'saveAs' : ctrl && e.key.toLowerCase() === 's' ? 'save' : ctrl && e.key.toLowerCase() === 'o' ? 'open' : ctrl && e.key.toLowerCase() === 'n' ? 'new' : null;
@@ -129,6 +136,29 @@
 					docState = await DocumentService.Save(a === 'saveAs');
 					if (!docState.dirty) notice = `Enregistré : ${docState.path}`;
 					break;
+				case 'import': {
+					if (mode !== 'doc') await startDoc();
+					const r = await DocumentService.Import('');
+					if (r.cancelled) break;
+					if (r.sheet) sheetId = r.sheet;
+					await reload();
+					const tables = r.tables ?? [];
+					const what = tables.length === 1 ? `Tableau « ${tables[0]} » importé` : `${tables.length} tableaux importés`;
+					const warnings = r.warnings ?? [];
+					notice = warnings.length ? `${what} ; ${warnings.length} point(s) à vérifier : ${warnings.join(' · ')}` : what;
+					break;
+				}
+				case 'export': {
+					if (mode !== 'doc') return;
+					const table = sheet?.activeTable() ?? layout?.tables?.[0]?.name;
+					if (!table) {
+						notice = 'Aucun tableau à exporter sur cette feuille';
+						break;
+					}
+					const p = await DocumentService.ExportCSV(table);
+					if (p) notice = `Tableau « ${table} » exporté : ${p}`;
+					break;
+				}
 				case 'demo':
 					await startDemo();
 					break;
@@ -182,7 +212,17 @@
 		deleteColumn: (t, i) => DocumentService.DeleteColumn(t.name, i).then(reload),
 		convertPreview: (t, i, to) => DocumentService.ConvertPreview(t.name, i, to as Type),
 		setType: (t, i, to) => DocumentService.SetType(t.name, i, to as Type).then(reload),
-		setColumnWidth: (col, width) => DocumentService.SetColumnWidth(sheetId, col, width).then(reload)
+		setColumnWidth: (col, width) => DocumentService.SetColumnWidth(sheetId, col, width).then(reload),
+		setName: (row, col, name) => DocumentService.SetName(sheetId, row, col, name).then(reload),
+		sortTable: (t, i, desc) => DocumentService.SortTable(t.name, i, desc).then(reload),
+		setRules: (t, i, rules) => DocumentService.SetRules(t.name, i, rules).then(reload),
+		applyStyle: (r0, c0, r1, c1, patch) => DocumentService.ApplyStyle(sheetId, r0, c0, r1, c1, patch).then(reload),
+		find: async (text) => (await DocumentService.Find(sheetId, text)) ?? [],
+		replace: async (text, by) => {
+			const n = await DocumentService.Replace(sheetId, text, by);
+			await reload();
+			return n;
+		}
 	};
 
 	const demoSource: SheetSource = {
@@ -203,10 +243,21 @@
 						row: t.row,
 						col: t.col,
 						rows: t.rows,
-						columns: (t.columns ?? []).map((c) => ({ name: c.name, type: c.type as ColumnType, fixed: c.fixed, errors: c.errors }))
+						columns: (t.columns ?? []).map((c) => ({
+							name: c.name,
+							type: (c.formula ? 'formula' : c.type) as ColumnType,
+							fixed: c.fixed,
+							errors: c.errors,
+							formula: c.formula || undefined,
+							style: c.style || undefined,
+							headerStyle: c.headerStyle || undefined,
+							rules: c.rules || undefined
+						}))
 					})),
 					cells: layout.cells ?? [],
-					widths: layout.widths ?? []
+					widths: layout.widths ?? [],
+					names: layout.names ?? [],
+					styles: layout.styles ?? []
 				}
 			: null
 	);
@@ -252,6 +303,15 @@
 </script>
 
 <div class="app">
+	<TitleBar
+		{title}
+		dirty={mode === 'doc' && docState.dirty}
+		actions={[
+			{ label: 'Enregistrer (Ctrl+S)', icon: 'save', run: mode === 'doc' ? () => file('save') : undefined },
+			{ label: docState.undo ? `Annuler : ${docState.undo} (Ctrl+Z)` : 'Annuler (Ctrl+Z)', icon: 'undo', run: mode === 'doc' && docState.undo ? () => DocumentService.Undo().then(reload).catch((e) => (notice = err(e))) : undefined },
+			{ label: docState.redo ? `Rétablir : ${docState.redo} (Ctrl+Y)` : 'Rétablir (Ctrl+Y)', icon: 'redo', run: mode === 'doc' && docState.redo ? () => DocumentService.Redo().then(reload).catch((e) => (notice = err(e))) : undefined }
+		]}
+	/>
 	<Ribbon
 		{view}
 		{title}
@@ -263,6 +323,10 @@
 		onundo={() => DocumentService.Undo().then(reload).catch((e) => (notice = err(e)))}
 		onredo={() => DocumentService.Redo().then(reload).catch((e) => (notice = err(e)))}
 		onbench={mode === 'demo' ? () => sheet?.runBench() : undefined}
+		onsort={mode === 'doc' ? (desc) => sheet?.sortActive(desc) : undefined}
+		onstyle={mode === 'doc' ? (patch) => sheet?.applyStyle(patch) : undefined}
+		onfind={mode === 'doc' ? (replace) => sheet?.openFinder(replace) : undefined}
+		onrules={mode === 'doc' ? () => sheet?.rulesActive() : undefined}
 	/>
 
 	<main>
@@ -290,6 +354,9 @@
 						bind:this={sheet}
 						{data}
 						source={mode === 'demo' ? demoSource : docSource}
+						catalog={mode === 'doc' && help
+							? { functions: help.functions ?? [], tables: help.tables ?? [], names: (layout?.names ?? []).map((n) => n.name) }
+							: undefined}
 						onstatus={(s) => (sheetStatus = s)}
 						autoBench={bench ? (r) => GridService.ReportBench(r) : undefined}
 					/>
@@ -298,9 +365,27 @@
 			{#if view === 'sql'}
 				<div class="pane"><SqlView {objects} run={query} ongoto={() => (view = 'grid')} /></div>
 			{:else if view === 'script'}
-				<div class="pane placeholder">
-					<h2>SCRIPT</h2>
-					<p>Éditeur Lua et bibliothèque de scripts : phase 5 du plan (sandbox gopher-lua, <code>db.query()</code>, <code>db.execute()</code>, bouton Arrêter).</p>
+				<div class="pane">
+					{#if mode === 'doc'}
+						<ScriptView
+							{scripts}
+							save={async (id, name, source) => {
+								const nid = await DocumentService.SaveScript(id, name, source);
+								await reload();
+								return nid;
+							}}
+							remove={(id) => DocumentService.DeleteScript(id).then(reload)}
+							run={async (name, source) => {
+								const r = await DocumentService.RunScript(name, source);
+								if (r.writes) await reload();
+								return r;
+							}}
+							stop={() => DocumentService.StopScript()}
+							subscribe={(fn) => Events.On('script:print', (e: { data: string }) => fn(e.data))}
+						/>
+					{:else}
+						<p class="placeholder">Les scripts s'exécutent sur un classeur : Fichier › Nouveau.</p>
+					{/if}
 				</div>
 			{/if}
 		{:else}
@@ -326,6 +411,7 @@
 		{#if notice || sheetStatus?.message}<span class="message">{sheetStatus?.message || notice}</span>{/if}
 		<span class="spacer"></span>
 		{#if sheetStatus}
+			{#if sheetStatus.stats}<span class="stats">{sheetStatus.stats}</span>{/if}
 			<span>{sheetStatus.fetch}</span>
 			<span>{sheetStatus.draw}</span>
 			<span>{sheetStatus.fps}</span>
@@ -389,6 +475,11 @@
 	}
 	.spacer {
 		flex: 1;
+	}
+	.stats {
+		color: #fff;
+		font-weight: 600;
+		margin-right: 12px;
 	}
 	.splash {
 		display: flex;

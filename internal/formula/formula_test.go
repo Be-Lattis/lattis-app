@@ -373,3 +373,19 @@ func TestFonctionsDocumentees(t *testing.T) {
 		}
 	}
 }
+
+func TestFunctionsCatalog(t *testing.T) {
+	fr := Functions(FR)
+	if len(fr) < 20 {
+		t.Fatalf("%d fonctions", len(fr))
+	}
+	found := false
+	for _, f := range fr {
+		if f.Name == "SI" && f.Other == "IF" && f.Arity == "de 2 à 3 arguments" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("SI absent ou mal décrit")
+	}
+}

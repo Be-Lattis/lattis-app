@@ -1,0 +1,287 @@
+<script lang="ts">
+	// Onglet SCRIPT : bibliothèque de scripts Lua du classeur, éditeur,
+	// exécution avec sortie en direct et bouton Arrêter. Les écritures d'un
+	// script forment une seule étape d'annulation. Référence : docs/scripting.md.
+	import { onMount } from 'svelte';
+	import { EditorState } from '@codemirror/state';
+	import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view';
+	import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
+	import { bracketMatching } from '@codemirror/language';
+	import { closeBrackets } from '@codemirror/autocomplete';
+
+	export interface Script {
+		id: number;
+		name: string;
+		source: string;
+	}
+	export interface RunResult {
+		output: string[] | null;
+		writes: number;
+		durationMs: number;
+		error: string;
+	}
+	interface Props {
+		scripts: Script[];
+		save: (id: number, name: string, source: string) => Promise<number>;
+		remove: (id: number) => Promise<unknown>;
+		run: (name: string, source: string) => Promise<RunResult>;
+		stop: () => Promise<unknown>;
+		/** Lignes de print reçues en direct (événement script:print). */
+		subscribe?: (fn: (line: string) => void) => () => void;
+	}
+
+	let { scripts, save, remove, run, stop, subscribe }: Props = $props();
+
+	const EXAMPLE = `-- Exemple : total par client, écrit dans la sortie.
+-- Référence de l'API : docs/scripting.md (db.query, db.rows, db.insert…)
+for _, t in ipairs(db.tables()) do
+  print(t.name, #t.columns .. " colonne(s)")
+end
+`;
+
+	let current = $state<Script>({ id: 0, name: 'Nouveau script', source: EXAMPLE });
+	let output = $state<string[]>([]);
+	let status = $state('');
+	let error = $state('');
+	let running = $state(false);
+	let dirty = $state(false);
+
+	let host: HTMLDivElement;
+	let view: EditorView | undefined;
+
+	function setSource(src: string) {
+		view?.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: src } });
+		dirty = false;
+	}
+
+	function open(s: Script) {
+		current = { ...s };
+		setSource(s.source);
+		output = [];
+		error = status = '';
+	}
+
+	function fresh() {
+		current = { id: 0, name: 'Nouveau script', source: EXAMPLE };
+		setSource(EXAMPLE);
+	}
+
+	async function doSave() {
+		try {
+			current.source = view?.state.doc.toString() ?? current.source;
+			current.id = await save(current.id, current.name, current.source);
+			dirty = false;
+			status = 'Script enregistré dans le classeur';
+			error = '';
+		} catch (e) {
+			error = String(e instanceof Error ? e.message : e);
+		}
+	}
+
+	async function doRun() {
+		if (running) return;
+		running = true;
+		output = [];
+		error = '';
+		status = 'Exécution…';
+		const unsub = subscribe?.((line) => (output = [...output, line]));
+		try {
+			const r = await run(current.name, view?.state.doc.toString() ?? '');
+			output = r.output ?? output;
+			error = r.error;
+			status = `${r.error ? 'Arrêté' : 'Terminé'} en ${(r.durationMs / 1000).toFixed(2)} s · ${r.writes} ligne(s) écrite(s)${r.writes ? ' (Ctrl+Z pour tout annuler)' : ''}`;
+		} catch (e) {
+			error = String(e instanceof Error ? e.message : e);
+			status = '';
+		} finally {
+			unsub?.();
+			running = false;
+		}
+	}
+
+	async function doRemove() {
+		if (!current.id) return fresh();
+		await remove(current.id);
+		fresh();
+	}
+
+	onMount(() => {
+		view = new EditorView({
+			parent: host,
+			state: EditorState.create({
+				doc: current.source,
+				extensions: [
+					lineNumbers(),
+					highlightActiveLine(),
+					drawSelection(),
+					history(),
+					bracketMatching(),
+					closeBrackets(),
+					keymap.of([
+						{ key: 'Mod-Enter', run: () => (doRun(), true) },
+						{ key: 'Mod-s', run: () => (doSave(), true) },
+						indentWithTab,
+						...defaultKeymap,
+						...historyKeymap
+					]),
+					EditorView.updateListener.of((u) => {
+						if (u.docChanged) dirty = true;
+					}),
+					EditorView.theme({
+						'&': { height: '100%', fontSize: '13px' },
+						'.cm-content': { fontFamily: "Consolas, 'Cascadia Mono', monospace" },
+						'.cm-gutters': { background: '#f7f8f9', borderRight: '1px solid #e3e5e8' }
+					})
+				]
+			})
+		});
+		return () => view?.destroy();
+	});
+</script>
+
+<div class="script">
+	<aside class="library">
+		<h2>Scripts du classeur</h2>
+		<button class="new" onclick={fresh}>+ Nouveau script</button>
+		{#each scripts as s (s.id)}
+			<button class="item" class:on={s.id === current.id} onclick={() => open(s)}>{s.name}</button>
+		{/each}
+		{#if scripts.length === 0}<p class="muted">Aucun script enregistré.</p>{/if}
+	</aside>
+	<section class="main">
+		<div class="toolbar">
+			<input class="name" bind:value={current.name} oninput={() => (dirty = true)} spellcheck="false" />
+			<button class="run" onclick={doRun} disabled={running}>▶ Exécuter</button>
+			<button onclick={() => stop()} disabled={!running}>■ Arrêter</button>
+			<button onclick={doSave}>Enregistrer{dirty ? ' •' : ''}</button>
+			<button onclick={doRemove} disabled={!current.id}>Supprimer</button>
+			<span class="muted">Ctrl+Entrée : exécuter · Ctrl+S : enregistrer le script</span>
+		</div>
+		<div class="editor" bind:this={host}></div>
+		<div class="output">
+			<div class="out-head">
+				<span>Sortie</span>
+				{#if status}<span class="muted">{status}</span>{/if}
+			</div>
+			<pre>{output.join('\n')}{#if error}<span class="error">{(output.length ? '\n' : '') + error}</span>{/if}</pre>
+		</div>
+	</section>
+</div>
+
+<style>
+	.script {
+		display: flex;
+		height: 100%;
+		min-height: 0;
+		font: 13px 'Segoe UI', system-ui, -apple-system, sans-serif;
+		color: #1f2328;
+	}
+	.library {
+		width: 240px;
+		border-right: 1px solid #d4d7db;
+		background: #fafbfb;
+		padding: 8px;
+		overflow: auto;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+	h2 {
+		font-size: 12px;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: #6b7280;
+		margin: 4px 4px 8px;
+	}
+	.library button {
+		text-align: left;
+		background: none;
+		border: none;
+		font: inherit;
+		padding: 5px 8px;
+		border-radius: 3px;
+		cursor: pointer;
+	}
+	.library .item.on {
+		background: #e3efe7;
+		color: #14532d;
+		font-weight: 600;
+	}
+	.library .new {
+		color: #217346;
+	}
+	.main {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+	}
+	.toolbar {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 6px 10px;
+		border-bottom: 1px solid #e3e5e8;
+	}
+	.toolbar button {
+		font: inherit;
+		padding: 4px 10px;
+		border: 1px solid #c9cdd2;
+		background: #fff;
+		border-radius: 3px;
+		cursor: pointer;
+	}
+	.toolbar .run {
+		background: #217346;
+		color: #fff;
+		border-color: #217346;
+	}
+	.toolbar button:disabled {
+		opacity: 0.5;
+		cursor: default;
+	}
+	.name {
+		font: inherit;
+		font-weight: 600;
+		border: 1px solid transparent;
+		padding: 3px 6px;
+		width: 220px;
+	}
+	.name:focus {
+		border-color: #217346;
+		outline: none;
+	}
+	.editor {
+		flex: 1;
+		min-height: 120px;
+		overflow: auto;
+	}
+	.output {
+		height: 35%;
+		border-top: 1px solid #d4d7db;
+		display: flex;
+		flex-direction: column;
+	}
+	.out-head {
+		display: flex;
+		gap: 12px;
+		padding: 4px 10px;
+		background: #f7f8f9;
+		font-weight: 600;
+	}
+	pre {
+		flex: 1;
+		margin: 0;
+		padding: 6px 10px;
+		overflow: auto;
+		font: 12px Consolas, 'Cascadia Mono', monospace;
+	}
+	.muted {
+		color: #6b7280;
+		font-weight: 400;
+		font-size: 12px;
+	}
+	.error {
+		color: #b42318;
+	}
+</style>

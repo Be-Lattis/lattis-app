@@ -1,6 +1,27 @@
 // Affichage des valeurs selon le type logique de la colonne (locale française).
 
-export type ColumnType = 'integer' | 'decimal' | 'text' | 'boolean' | 'date';
+export type ColumnType = 'integer' | 'decimal' | 'text' | 'boolean' | 'date' | 'formula';
+
+const general = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 10, useGrouping: false });
+
+/** Affichage « Standard » d'Excel pour une valeur calculée. */
+function generalValue(v: unknown): string {
+	if (typeof v === 'number') return general.format(v);
+	if (typeof v === 'boolean') return v ? 'VRAI' : 'FAUX';
+	return String(v);
+}
+
+/** Vrai pour le libellé d'une erreur de formule (« #DIV/0! »…). */
+export function isErrorValue(v: unknown): boolean {
+	return typeof v === 'string' && /^#(DIV\/0!|VALEUR!|N\/A|REF!|NOM\?|NOMBRE!)$/.test(v);
+}
+
+/** Alignement d'une valeur calculée : nombres à droite, booléens et erreurs centrés. */
+export function valueAlignment(v: unknown): 'left' | 'right' | 'center' {
+	if (typeof v === 'number') return 'right';
+	if (typeof v === 'boolean' || isErrorValue(v)) return 'center';
+	return 'left';
+}
 
 const decimal = new Intl.NumberFormat('fr-FR', {
 	minimumFractionDigits: 2,
@@ -11,6 +32,8 @@ const decimal = new Intl.NumberFormat('fr-FR', {
 export function formatValue(type: ColumnType, v: unknown): string {
 	if (v === null || v === undefined) return '';
 	switch (type) {
+		case 'formula':
+			return generalValue(v);
 		case 'integer':
 			return String(v);
 		case 'decimal':
@@ -57,13 +80,15 @@ export function typeIcon(type: ColumnType): string {
 			return '☑';
 		case 'date':
 			return '📅';
+		case 'formula':
+			return 'fx';
 		default:
 			return 'Abc';
 	}
 }
 
 export function typeLabel(type: ColumnType): string {
-	return { integer: 'Entier', decimal: 'Décimal', text: 'Texte', boolean: 'Booléen', date: 'Date' }[type];
+	return { integer: 'Entier', decimal: 'Décimal', text: 'Texte', boolean: 'Booléen', date: 'Date', formula: 'Calculée' }[type];
 }
 
 /** Largeur initiale d'une colonne, en pixels CSS. */

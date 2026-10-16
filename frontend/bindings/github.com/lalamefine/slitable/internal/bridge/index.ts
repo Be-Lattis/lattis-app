@@ -10,6 +10,9 @@ export {
 
 export type {
     DocState,
+    FormulaHelp,
     GridStatus,
-    OpenResult
+    ImportResult,
+    OpenResult,
+    ScriptResult
 } from "./models.js";

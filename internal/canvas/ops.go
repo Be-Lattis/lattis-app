@@ -109,8 +109,24 @@ func (t *tx) deleteRow(tb Table, rid int64) error {
 		undo = append(undo, st(`INSERT INTO _slitable_invalid (tbl, rid, col, raw) VALUES (?, ?, ?, ?)`, tb.ID, rid, col, raw))
 	}
 	rs.Close()
+	// Les styles de la ligne partent avec elle (et reviennent à l'annulation).
+	rs, err = t.query(`SELECT col, style FROM _slitable_styles WHERE tbl = ? AND rid = ?`, tb.ID, rid)
+	if err != nil {
+		return err
+	}
+	for rs.Next() {
+		var col int64
+		var style string
+		if err := rs.Scan(&col, &style); err != nil {
+			rs.Close()
+			return err
+		}
+		undo = append(undo, st(`INSERT INTO _slitable_styles (tbl, rid, col, style) VALUES (?, ?, ?, ?)`, tb.ID, rid, col, style))
+	}
+	rs.Close()
 	return t.apply([]stmt{
 		st(`DELETE FROM _slitable_invalid WHERE tbl = ? AND rid = ?`, tb.ID, rid),
+		st(`DELETE FROM _slitable_styles WHERE tbl = ? AND rid = ?`, tb.ID, rid),
 		st(`DELETE FROM `+tb.sql()+` WHERE id = ?`, rid),
 	}, undo)
 }
@@ -135,6 +151,10 @@ func (t *tx) addColumn(tb Table, id int64, name string, typ grid.Type, pos int) 
 func (t *tx) dropColumn(tb Table, c Column, pos int) error {
 	trash := fmt.Sprintf("_slitable_trash_%d_%d_%d", tb.ID, c.ID, time.Now().UnixNano())
 	col := colSQL(c.ID)
+	rules, err := t.columnRules(tb.ID, c.ID)
+	if err != nil {
+		return err
+	}
 	// Supprimer la colonne clé retire d'abord la clé (SQLite refuse de
 	// supprimer une colonne indexée) ; l'annulation la rétablit.
 	var unkey, rekey []stmt
@@ -152,21 +172,27 @@ func (t *tx) dropColumn(tb Table, c Column, pos int) error {
 		st(`CREATE TABLE ` + trash + ` AS SELECT id, ` + col + ` AS v FROM ` + tb.sql()),
 		st(`CREATE TABLE `+trash+`_inv AS SELECT rid, raw FROM _slitable_invalid WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
 		st(`DELETE FROM _slitable_invalid WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
+		st(`CREATE TABLE `+trash+`_sty AS SELECT rid, style FROM _slitable_styles WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
+		st(`DELETE FROM _slitable_styles WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
 		st(`ALTER TABLE ` + tb.sql() + ` DROP COLUMN ` + col),
 		st(`DELETE FROM _slitable_columns WHERE tbl = ? AND id = ?`, tb.ID, c.ID),
 		st(`UPDATE _slitable_columns SET pos = pos - 1 WHERE tbl = ? AND pos > ?`, tb.ID, pos),
 	}...), Undo: append([]stmt{
 		st(`UPDATE _slitable_columns SET pos = pos + 1 WHERE tbl = ? AND pos >= ?`, tb.ID, pos),
-		st(`INSERT INTO _slitable_columns (tbl, id, name, type, fixed, pos) VALUES (?, ?, ?, ?, ?, ?)`, tb.ID, c.ID, c.Name, string(c.Type), c.Fixed, pos),
+		st(`INSERT INTO _slitable_columns (tbl, id, name, type, fixed, pos, formula, rules) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			tb.ID, c.ID, c.Name, string(c.Type), c.Fixed, pos, nullIfEmpty(c.Formula), nullIfEmpty(rules)),
 		st(`ALTER TABLE ` + tb.sql() + ` ADD COLUMN ` + col + ` ` + sqlType(c.Type)),
 		st(`UPDATE ` + tb.sql() + ` SET ` + col + ` = (SELECT v FROM ` + trash + ` WHERE ` + trash + `.id = ` + tb.sql() + `.id)`),
 		st(`INSERT INTO _slitable_invalid (tbl, rid, col, raw) SELECT ?, rid, ?, raw FROM `+trash+`_inv`, tb.ID, c.ID),
+		st(`INSERT INTO _slitable_styles (tbl, rid, col, style) SELECT ?, rid, ?, style FROM `+trash+`_sty`, tb.ID, c.ID),
 		st(`DROP TABLE ` + trash),
 		st(`DROP TABLE ` + trash + `_inv`),
+		st(`DROP TABLE ` + trash + `_sty`),
 	}, rekey...), Purge: []stmt{
 		// La commande sort de l'historique : la corbeille ne servira plus.
 		st(`DROP TABLE IF EXISTS ` + trash),
 		st(`DROP TABLE IF EXISTS ` + trash + `_inv`),
+		st(`DROP TABLE IF EXISTS ` + trash + `_sty`),
 	}})
 }
 
@@ -326,4 +352,11 @@ func (t *tx) physical(tb Table) ([]Column, error) {
 		}
 	}
 	return out, rs.Err()
+}
+
+func nullIfEmpty(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
 }

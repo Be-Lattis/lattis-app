@@ -10,6 +10,7 @@ import (
 	"github.com/lalamefine/slitable/internal/archive"
 	"github.com/lalamefine/slitable/internal/canvas"
 	"github.com/lalamefine/slitable/internal/doc"
+	"github.com/lalamefine/slitable/internal/formula"
 	"github.com/lalamefine/slitable/internal/grid"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -251,7 +252,20 @@ func (s *DocumentService) Window(ctx context.Context, sheet, table int64, first,
 			for i, c := range ti.Columns {
 				cols[i], sqlCols[i], ids[i] = grid.Column{Name: c.Name, Type: c.Type}, c.SQL, c.ID
 			}
-			t = grid.NewTable(d.DB(), ti.SQL, ti.Name, cols, sqlCols).WithInvalid(ti.ID, ids)
+			exprs, args, computed, err := d.ColumnExprs(ctx, ti.ID)
+			if err != nil {
+				return grid.Window{}, err
+			}
+			decode := func(c int, v any) any {
+				if c < len(computed) && computed[c] {
+					return displayValue(formula.FromResult(v))
+				}
+				if b, ok := v.([]byte); ok {
+					return string(b)
+				}
+				return v
+			}
+			t = grid.NewTable(d.DB(), ti.SQL, ti.Name, cols, sqlCols).WithInvalid(ti.ID, ids).WithExprs(exprs, args, decode)
 			if err := t.Load(ctx); err != nil {
 				return grid.Window{}, err
 			}
@@ -394,4 +408,82 @@ func (s *DocumentService) SetType(ctx context.Context, table string, i int, to g
 // SetColumnWidth fixe la largeur d'une colonne de la feuille.
 func (s *DocumentService) SetColumnWidth(ctx context.Context, sheet int64, col, width int) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.SetColumnWidth(ctx, sheet, col, width) })
+}
+
+// displayValue convertit une valeur calculée pour l'interface : nombre,
+// texte, booléen, ou le libellé d'une erreur (« #DIV/0! »).
+func displayValue(v formula.Value) any {
+	switch v.Kind {
+	case formula.Number:
+		return v.Num
+	case formula.Text:
+		return v.Str
+	case formula.Bool:
+		return v.Bool
+	case formula.Error:
+		return v.Err.String()
+	}
+	return nil
+}
+
+// FormulaHelp sert l'aide à la saisie des formules : fonctions (en
+// français) et tableaux du classeur avec leurs colonnes.
+type FormulaHelp struct {
+	Functions []formula.FunctionInfo `json:"functions"`
+	Tables    []canvas.TableNames    `json:"tables"`
+}
+
+// FormulaHelp renvoie le catalogue de l'aide à la saisie.
+func (s *DocumentService) FormulaHelp(ctx context.Context) (FormulaHelp, error) {
+	h := FormulaHelp{Functions: formula.Functions(formula.FR), Tables: []canvas.TableNames{}}
+	d, err := s.current()
+	if err != nil {
+		return h, nil
+	}
+	h.Tables, err = d.AllTables(ctx)
+	return h, err
+}
+
+// SetName nomme une cellule libre (vide : retire le nom).
+func (s *DocumentService) SetName(ctx context.Context, sheet int64, row, col int, name string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetName(ctx, sheet, row, col, name) })
+}
+
+// SortTable trie un tableau selon la colonne i (desc : décroissant).
+func (s *DocumentService) SortTable(ctx context.Context, table string, i int, desc bool) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SortTable(ctx, table, i, desc) })
+}
+
+// ApplyStyle met en forme un rectangle de la feuille (patch : propriétés à
+// poser, une valeur vide les retire).
+func (s *DocumentService) ApplyStyle(ctx context.Context, sheet int64, r0, c0, r1, c1 int, patch map[string]any) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.ApplyStyle(ctx, sheet, r0, c0, r1, c1, patch) })
+}
+
+// Find cherche un texte dans une feuille (cellules dans l'ordre de lecture).
+func (s *DocumentService) Find(ctx context.Context, sheet int64, text string) ([]canvas.Match, error) {
+	d, err := s.current()
+	if err != nil {
+		return nil, err
+	}
+	return d.Find(ctx, sheet, text)
+}
+
+// Replace remplace un texte dans toute la feuille et renvoie le nombre de
+// cellules modifiées.
+func (s *DocumentService) Replace(ctx context.Context, sheet int64, text, by string) (int, error) {
+	d, err := s.current()
+	if err != nil {
+		return 0, err
+	}
+	n, err := d.Replace(ctx, sheet, text, by)
+	if err == nil && n > 0 {
+		s.changed(ctx)
+	}
+	return n, err
+}
+
+// SetRules remplace les règles de mise en forme conditionnelle d'une colonne.
+func (s *DocumentService) SetRules(ctx context.Context, table string, i int, rules []canvas.Rule) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetRules(ctx, table, i, rules) })
 }

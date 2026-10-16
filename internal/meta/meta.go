@@ -77,6 +77,50 @@ CREATE TABLE _slitable_col_widths (
 ALTER TABLE _slitable_columns ADD COLUMN formula TEXT;
 ALTER TABLE _slitable_tables ADD COLUMN key_col INTEGER;
 `,
+	// 3 → 4 : cellules nommées (pas d'adresse A1 : une cellule libre utilisée
+	// dans une formule porte un nom, comme les noms définis d'Excel).
+	`
+CREATE TABLE _slitable_names (
+	name  TEXT NOT NULL PRIMARY KEY COLLATE NOCASE,
+	sheet INTEGER NOT NULL REFERENCES _slitable_sheets(id),
+	row   INTEGER NOT NULL,
+	col   INTEGER NOT NULL
+) STRICT;
+CREATE UNIQUE INDEX _slitable_names_cell ON _slitable_names(sheet, row, col);
+`,
+	// 4 → 5 : bibliothèque de scripts Lua du classeur (onglet SCRIPT).
+	`
+CREATE TABLE _slitable_scripts (
+	id     INTEGER PRIMARY KEY,
+	name   TEXT NOT NULL UNIQUE COLLATE NOCASE,
+	source TEXT NOT NULL
+) STRICT;
+`,
+	// 5 → 6 : mise en forme (JSON : gras, italique, couleurs, alignement,
+	// format de nombre). Une cellule de tableau est désignée par sa ligne
+	// (clé technique) et sa colonne, pour suivre les tris et insertions ;
+	// une colonne entière a son propre style ; une cellule libre sa position.
+	`
+CREATE TABLE _slitable_styles (
+	tbl   INTEGER NOT NULL,
+	rid   INTEGER NOT NULL,        -- 0 : toute la colonne
+	col   INTEGER NOT NULL,
+	style TEXT NOT NULL,
+	PRIMARY KEY (tbl, rid, col)
+) STRICT;
+CREATE TABLE _slitable_cell_styles (
+	sheet INTEGER NOT NULL,
+	row   INTEGER NOT NULL,
+	col   INTEGER NOT NULL,
+	style TEXT NOT NULL,
+	PRIMARY KEY (sheet, row, col)
+) STRICT;
+`,
+	// 6 → 7 : mise en forme conditionnelle d'une colonne (règles JSON,
+	// évaluées sur les lignes affichées).
+	`
+ALTER TABLE _slitable_columns ADD COLUMN rules TEXT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

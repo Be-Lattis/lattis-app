@@ -202,7 +202,11 @@ func (t *tx) evalFree(raw string) formula.Value {
 	if n, _, err = formula.Convert(n, schema, noRanges{}, raw); err != nil {
 		return formula.Err(formula.ErrName)
 	}
-	c := formula.Compile(n, schema, nil, nil, "")
+	names, err := t.nameValues(schema)
+	if err != nil {
+		return formula.Err(formula.ErrValue)
+	}
+	c := formula.Compile(n, schema, names, nil, "")
 	var v any
 	if err := t.row(`SELECT `+c.SQL, c.Args...).Scan(&v); err != nil {
 		return formula.Err(formula.ErrValue)
@@ -228,6 +232,10 @@ func (m *Model) ColumnExprs(ctx context.Context, table int64) (exprs []string, a
 		if !ok {
 			return errors.New("tableau introuvable")
 		}
+		names, err := t.nameValues(schema)
+		if err != nil {
+			return err
+		}
 		var hoistErr error
 		hoist := func(c formula.Compiled) formula.Value {
 			var v any
@@ -246,7 +254,7 @@ func (m *Model) ColumnExprs(ctx context.Context, table int64) (exprs []string, a
 				continue
 			}
 			fc := ft.Cols[len(exprs)]
-			cc := formula.CompileHoistedFrom(fc.Formula, schema, nil, ft, tb.sql(), hoist, len(args))
+			cc := formula.CompileHoistedFrom(fc.Formula, schema, names, ft, tb.sql(), hoist, len(args))
 			exprs = append(exprs, cc.SQL)
 			args = append(args, cc.Args...)
 			computed = append(computed, true)

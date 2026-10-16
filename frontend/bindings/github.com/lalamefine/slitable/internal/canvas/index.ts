@@ -3,10 +3,17 @@
 
 export type {
     CellInfo,
+    CellStyle,
     ColWidth,
     ColumnInfo,
     Event,
     Layout,
+    Match,
+    NameInfo,
+    Rule,
+    ScriptInfo,
     SheetInfo,
-    TableInfo
+    Style,
+    TableInfo,
+    TableNames
 } from "./models.js";

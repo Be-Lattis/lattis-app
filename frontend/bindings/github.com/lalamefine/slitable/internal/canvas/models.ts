@@ -12,6 +12,21 @@ export interface CellInfo {
     "row": number;
     "col": number;
     "raw": string;
+
+    /**
+     * Cellule avec formule : valeur calculée, affichée à la place de Raw.
+     */
+    "value": string;
+    "error": boolean;
+}
+
+/**
+ * CellStyle est la mise en forme d'une cellule hors tableau.
+ */
+export interface CellStyle {
+    "row": number;
+    "col": number;
+    "style": string;
 }
 
 /**
@@ -36,6 +51,22 @@ export interface ColumnInfo {
     "sql": string;
     "type": grid$0.Type;
     "fixed": boolean;
+
+    /**
+     * Colonne calculée : formule telle que l'utilisateur la lit (français).
+     */
+    "formula": string;
+
+    /**
+     * Mise en forme de toute la colonne et de son en-tête (JSON, voir Style).
+     */
+    "style": string;
+    "headerStyle": string;
+
+    /**
+     * Mise en forme conditionnelle (JSON : liste de Rule).
+     */
+    "rules": string;
 }
 
 /**
@@ -78,6 +109,60 @@ export interface Layout {
      * largeurs choisies par l'utilisateur
      */
     "widths": ColWidth[] | null;
+
+    /**
+     * cellules nommées de la feuille
+     */
+    "names": NameInfo[] | null;
+
+    /**
+     * mise en forme hors tableaux
+     */
+    "styles": CellStyle[] | null;
+}
+
+/**
+ * Match est une cellule trouvée (coordonnées de la feuille).
+ */
+export interface Match {
+    "row": number;
+    "col": number;
+}
+
+/**
+ * NameInfo est une cellule nommée de la feuille.
+ */
+export interface NameInfo {
+    "name": string;
+    "row": number;
+    "col": number;
+}
+
+/**
+ * Rule est une règle de mise en forme conditionnelle d'une colonne :
+ * quand la valeur vérifie la condition, la cellule prend le style.
+ * 
+ * 	op : ">", ">=", "<", "<=", "=", "<>", "between", "contains", "empty",
+ * 	     "notempty", "error" (saisie hors type ou erreur de formule)
+ */
+export interface Rule {
+    "op": string;
+    "value"?: string;
+
+    /**
+     * borne haute de "between"
+     */
+    "to"?: string;
+    "style": Style;
+}
+
+/**
+ * ScriptInfo est un script de la bibliothèque du classeur.
+ */
+export interface ScriptInfo {
+    "id": number;
+    "name": string;
+    "source": string;
 }
 
 /**
@@ -87,6 +172,13 @@ export interface SheetInfo {
     "id": number;
     "name": string;
 }
+
+/**
+ * Style est la mise en forme d'une cellule (JSON compact) : b, i, u
+ * (gras, italique, souligné), fg et bg (couleurs #rrggbb), al (left,
+ * center, right), nf (format de nombre : "0", "0,00", "%", "€", "date").
+ */
+export type Style = { [_ in string]?: any } | null;
 
 /**
  * TableInfo décrit un tableau posé sur une feuille.
@@ -107,4 +199,12 @@ export interface TableInfo {
      */
     "rows": number;
     "columns": ColumnInfo[] | null;
+}
+
+/**
+ * TableNames décrit un tableau pour l'aide à la saisie des formules.
+ */
+export interface TableNames {
+    "name": string;
+    "columns": string[] | null;
 }
