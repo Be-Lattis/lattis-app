@@ -2353,12 +2353,12 @@
 
 	/** Filtre de la colonne de la cellule active (ruban Données). */
 	export function filterActive(errorsOnly = false) {
-		const e = tableAt(active.row, active.col);
+		const e = targetTable();
 		if (!e || !source.setFilter) {
 			say('Placez la cellule active dans la colonne d’un tableau pour filtrer');
 			return;
 		}
-		const i = active.col - e.t.col;
+		const i = targetCol(e);
 		if (errorsOnly) {
 			const f = e.t.columns[i]?.filter;
 			const set = source.setFilter;
@@ -2690,14 +2690,14 @@
 			);
 			return;
 		}
-		const e = tableAt(active.row, active.col);
+		const e = targetTable();
 		if (!e || !source.createChart) {
 			say('Placez la cellule active dans un tableau pour insérer un graphique');
 			return;
 		}
 		const cols = e.t.columns;
 		const num = (c: Column) => c.type === 'integer' || c.type === 'decimal' || (c.type === 'formula' && c.formula !== undefined);
-		const cur = cols[active.col - e.t.col];
+		const cur = cols[targetCol(e)];
 		// Nuage de points : X est une colonne de nombres (l'active, sinon la première).
 		const x = kind === 'scatter' ? (cur && num(cur) ? cur : (cols.find(num) ?? cols[0])) : cur && !num(cur) ? cur : (cols.find((c) => !num(c)) ?? cols[0]);
 		let series = cols.filter((c) => c !== x && num(c)).map((c) => c.name);
@@ -2743,12 +2743,12 @@
 			panel = { kind: 'pivot', id: p.id };
 			return;
 		}
-		const e = tableAt(active.row, active.col);
+		const e = targetTable();
 		if (!e || !source.createPivot) {
 			say('Placez la cellule active dans un tableau pour créer un tableau croisé');
 			return;
 		}
-		const k = e.t.columns[active.col - e.t.col];
+		const k = e.t.columns[targetCol(e)];
 		// Comme Excel : la colonne active en lignes, la dernière colonne de
 		// nombres en valeurs ; le volet s'ouvre pour la suite.
 		const num = e.t.columns.findLast((c) => !c.formula && (c.type === 'integer' || c.type === 'decimal') && c !== k);
@@ -2759,11 +2759,33 @@
 		writing = writing.then(() => create(cfg).then(() => undefined, (err) => say(String(err?.message ?? err))));
 	}
 
+	/**
+	 * Tableau visé par une commande de tableau (TCD, graphique, tri, filtre,
+	 * doublons, SQL) : celui de la cellule active ; ou, quand la sélection est
+	 * faite de lignes ou de colonnes entières qui ne contiennent qu'un tableau,
+	 * ce tableau-là, comme s'il était sélectionné.
+	 */
+	function targetTable(): Entry | undefined {
+		const here = tableAt(active.row, active.col);
+		if (here) return here;
+		const sel = selectionLines();
+		if (!sel.rows && !sel.cols) return undefined;
+		const hit = entries.filter((e) => (sel.cols ? e.t.col <= sel.c1 && e.lastCol >= sel.c0 : e.t.row <= sel.r1 && e.last >= sel.r0));
+		return hit.length === 1 ? hit[0] : undefined;
+	}
+
+	/** Colonne visée dans ce tableau : l'active si elle en fait partie, sinon la première colonne sélectionnée du tableau. */
+	function targetCol(e: Entry): number {
+		if (active.col >= e.t.col && active.col <= e.lastCol) return active.col - e.t.col;
+		const { c0 } = selection();
+		return Math.min(e.lastCol, Math.max(c0, e.t.col)) - e.t.col;
+	}
+
 	/** Supprime les doublons du tableau de la cellule active (ruban Données). */
 	let dedupDlg = $state<{ e: Entry; on: boolean[]; count: number | null; error: string } | null>(null);
 
 	export function dedupActive() {
-		const e = tableAt(active.row, active.col);
+		const e = targetTable();
 		if (!e || !source.removeDuplicates) {
 			say('Placez la cellule active dans un tableau');
 			return;
@@ -2844,13 +2866,13 @@
 
 	/** Tri du tableau de la cellule active (ruban Données). */
 	export function sortActive(desc: boolean) {
-		const e = tableAt(active.row, active.col);
+		const e = targetTable();
 		if (!e || !source.sortTable) {
 			say('Placez la cellule active dans la colonne d’un tableau pour trier');
 			return;
 		}
 		const sort = source.sortTable;
-		menuAction(() => sort(e.t, active.col - e.t.col, desc));
+		menuAction(() => sort(e.t, targetCol(e), desc));
 	}
 
 	/** Lignes (ou colonnes) entières couvertes par la sélection, comme Excel les insère ou les supprime. */
@@ -5119,7 +5141,7 @@
 
 	/** Nom du tableau de la cellule active (pour l'export), s'il y en a un. */
 	export function activeTable(): string | undefined {
-		return tableAt(active.row, active.col)?.t.name;
+		return targetTable()?.t.name;
 	}
 
 	/** Redonne le focus clavier à la feuille (après un dialogue, un menu…). */
