@@ -2835,14 +2835,18 @@
 		const mx = ev.clientX - r.left;
 		if (right - mx > 34) return false;
 		moveTo(cell.row, cell.col);
-		const i = cell.col - e.t.col;
-		typeMenu = { x: mx, y: ev.clientY - r.top + 8, e, i, keyWhy: null };
+		showTypeMenu(mx, ev.clientY - r.top + 8, e, cell.col - e.t.col);
+		return true;
+	}
+
+	/** Ouvre le menu de type et de clé de la colonne i (icône d'en-tête ou clic droit). */
+	function showTypeMenu(x: number, y: number, e: Entry, i: number) {
+		typeMenu = { x, y, e, i, keyWhy: null };
 		if (source.keyCheck && e.t.key !== i)
 			source.keyCheck(e.t, i).then(
 				(why) => typeMenu && typeMenu.i === i && (typeMenu.keyWhy = why),
 				() => undefined
 			);
-		return true;
 	}
 
 	async function chooseType(to: ColumnType, confirmed = false) {
@@ -2862,22 +2866,39 @@
 
 	// --- Menu contextuel ----------------------------------------------------
 
-	let menu = $state<{ x: number; y: number; e: Entry; n: number; i: number; header: boolean } | null>(null);
+	// rowOnly : clic droit sur un numéro de ligne (pas d'actions de colonne).
+	// confirmDelete : suppression d'un grand tableau en attente de confirmation.
+	let menu = $state<{ x: number; y: number; e: Entry; n: number; i: number; header: boolean; rowOnly?: boolean; confirmDelete?: boolean } | null>(null);
+
+	/** Au-delà de ce nombre de lignes, « Supprimer le tableau » demande confirmation. */
+	const CONFIRM_DELETE_ROWS = 500;
+
+	function deleteTable(t: SheetTable) {
+		// Pas menuAction : il effacerait le message une fois l'action finie.
+		const del = source.deleteTables!;
+		menu = null;
+		wrap.focus();
+		writing = writing.then(() =>
+			del([t]).then(
+				() => say(`Tableau « ${t.name} » supprimé (Ctrl+Z pour annuler)`),
+				(err) => say(String(err?.message ?? err))
+			)
+		);
+	}
 
 	function onContextMenu(ev: MouseEvent) {
 		const cell = cellAt(ev);
 		ev.preventDefault();
 		menu = null;
 		if (!cell) {
-			// Clic droit sur un numéro de ligne : menu de la ligne du tableau.
+			// Clic droit sur un numéro de ligne : menu de la ligne du tableau ;
+			// hors tableau (ou sur une lettre de colonne) : presse-papiers.
 			const hd = headerAt(ev);
-			if (hd?.kind === 'rows') {
-				const te = entries.find((x) => hd.row > x.t.row && hd.row <= x.last);
-				if (te) {
-					const r = wrap.getBoundingClientRect();
-					menu = { x: ev.clientX - r.left, y: ev.clientY - r.top, e: te, n: hd.row - te.t.row - 1, i: 0, header: false };
-				}
-			}
+			const r = wrap.getBoundingClientRect();
+			const te = hd?.kind === 'rows' ? entries.find((x) => hd.row > x.t.row && hd.row <= x.last) : undefined;
+			freeMenu = null;
+			if (te && hd?.kind === 'rows') menu = { x: ev.clientX - r.left, y: ev.clientY - r.top, e: te, n: hd.row - te.t.row - 1, i: 0, header: false, rowOnly: true };
+			else if (hd) freeMenu = { x: ev.clientX - r.left, y: ev.clientY - r.top };
 			return;
 		}
 		const e = tableAt(cell.row, cell.col);
@@ -3315,78 +3336,109 @@
 		{/if}
 		{#if menu}
 			{@const m = menu}
+			{@const col = m.e.t.columns[m.i]}
+			{@const cols = !m.rowOnly}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (menu = null)}>
 				<div class="menu-title">{m.e.t.name}</div>
-				<button
-					onclick={() => {
-						menu = null;
-						copySelection(true);
-					}}>Couper</button
-				>
-				<button
-					onclick={() => {
-						menu = null;
-						copySelection();
-					}}>Copier</button
-				>
-				<button
-					onclick={() => {
-						menu = null;
-						pasteClipboard();
-					}}>Coller</button
-				>
-				<button
-					onclick={() => {
-						menu = null;
-						clearSelection();
-					}}>Effacer le contenu</button
-				>
-				<hr />
-				{#if !m.header}
-					<button onclick={() => menuAction(source.insertRow && (() => source.insertRow!(m.e.t, m.n)))}>Insérer une ligne au-dessus</button>
-					<button onclick={() => menuAction(source.insertRow && (() => source.insertRow!(m.e.t, m.n + 1)))}>Insérer une ligne en dessous</button>
-					<button onclick={() => menuAction(source.deleteRow && (() => source.deleteRow!(m.e.t, m.n)))}>Supprimer la ligne</button>
-					<hr />
-				{/if}
-				{#if source.sortTable && !m.e.t.columns[m.i]?.formula}
-					<button onclick={() => menuAction(() => source.sortTable!(m.e.t, m.i, false))}>Trier de A à Z (croissant)</button>
-					<button onclick={() => menuAction(() => source.sortTable!(m.e.t, m.i, true))}>Trier de Z à A (décroissant)</button>
-					<hr />
-				{/if}
-				{#if source.setFilter && !m.e.t.columns[m.i]?.formula}
-					<button onclick={() => openFilter(m.e, m.i)}>Filtrer par « {m.e.t.columns[m.i]?.name} »…</button>
-				{/if}
-				{#if source.clearFilters && m.e.t.columns.some((c) => c.filter)}
-					<button onclick={() => menuAction(() => source.clearFilters!(m.e.t))}>Effacer le filtre du tableau</button>
-				{/if}
-				<button
-					onclick={() => {
-						const t = m.e.t;
-						const c = t.col + m.i;
-						menu = null;
-						moveTo(t.row, c);
-						startEdit(false);
-					}}>Renommer la colonne « {m.e.t.columns[m.i]?.name} »</button
-				>
-				{#if source.setRules}
-					<button onclick={() => openRules(m.e, m.i)}>Mise en forme conditionnelle…</button>
-					<hr />
-				{/if}
-				<button onclick={() => menuAction(source.insertColumn && (() => source.insertColumn!(m.e.t, m.i)))}>Insérer une colonne à gauche</button>
-				<button onclick={() => menuAction(source.insertColumn && (() => source.insertColumn!(m.e.t, m.i + 1)))}>Insérer une colonne à droite</button>
-				<button onclick={() => menuAction(source.deleteColumn && (() => source.deleteColumn!(m.e.t, m.i)))}>Supprimer la colonne « {m.e.t.columns[m.i]?.name} »</button>
-				{#if source.promoteHeader && m.e.t.rows > 0}
-					<button onclick={() => menuAction(() => source.promoteHeader!(m.e.t))}>Utiliser la 1re ligne comme en-têtes</button>
-				{/if}
-				{#if source.deleteTables}
-					<hr />
+				{#if m.confirmDelete}
+					<p class="menu-note">
+						Supprimer le tableau « {m.e.t.name} » et ses {(m.e.t.rows + (m.e.t.hidden ?? 0)).toLocaleString('fr-FR')} lignes ? Ctrl+Z permettra de l’annuler.
+					</p>
+					<button onclick={() => deleteTable(m.e.t)}>Supprimer le tableau</button>
+					<button onclick={() => (menu = { ...m, confirmDelete: false })}>Annuler</button>
+				{:else}
+					<!-- Même ordre que le menu contextuel d'Excel : presse-papiers, insertion
+					     et suppression, tri et filtre, mise en forme, puis ce qui est propre
+					     à Slitable (type, clé, nom de colonne, tableau). -->
 					<button
 						onclick={() => {
-							const t = m.e.t;
-							menuAction(() => source.deleteTables!([t]).then(() => say(`Tableau « ${t.name} » supprimé (Ctrl+Z pour annuler)`)));
-						}}>Supprimer le tableau « {m.e.t.name} »</button
+							menu = null;
+							copySelection(true);
+						}}>Couper</button
 					>
+					<button
+						onclick={() => {
+							menu = null;
+							copySelection();
+						}}>Copier</button
+					>
+					<button
+						onclick={() => {
+							menu = null;
+							pasteClipboard();
+						}}>Coller</button
+					>
+					<hr />
+					{#if !m.header}
+						<button onclick={() => menuAction(source.insertRow && (() => source.insertRow!(m.e.t, m.n)))}>Insérer une ligne au-dessus</button>
+						<button onclick={() => menuAction(source.insertRow && (() => source.insertRow!(m.e.t, m.n + 1)))}>Insérer une ligne en dessous</button>
+					{/if}
+					{#if cols}
+						<button onclick={() => menuAction(source.insertColumn && (() => source.insertColumn!(m.e.t, m.i)))}>Insérer une colonne à gauche</button>
+						<button onclick={() => menuAction(source.insertColumn && (() => source.insertColumn!(m.e.t, m.i + 1)))}>Insérer une colonne à droite</button>
+					{/if}
+					{#if !m.header}
+						<button onclick={() => menuAction(source.deleteRow && (() => source.deleteRow!(m.e.t, m.n)))}>Supprimer la ligne</button>
+					{/if}
+					{#if cols}
+						<button onclick={() => menuAction(source.deleteColumn && (() => source.deleteColumn!(m.e.t, m.i)))}>Supprimer la colonne « {col?.name} »</button>
+					{/if}
+					<button
+						onclick={() => {
+							menu = null;
+							clearSelection();
+						}}>Effacer le contenu</button
+					>
+					{#if cols && !col?.formula && (source.sortTable || source.setFilter)}
+						<hr />
+						{#if source.sortTable}
+							<button onclick={() => menuAction(() => source.sortTable!(m.e.t, m.i, false))}>Trier de A à Z (croissant)</button>
+							<button onclick={() => menuAction(() => source.sortTable!(m.e.t, m.i, true))}>Trier de Z à A (décroissant)</button>
+						{/if}
+						{#if source.setFilter}
+							<button onclick={() => openFilter(m.e, m.i)}>Filtrer par « {col?.name} »…</button>
+						{/if}
+					{/if}
+					{#if cols && source.clearFilters && m.e.t.columns.some((c) => c.filter)}
+						<button onclick={() => menuAction(() => source.clearFilters!(m.e.t))}>Effacer le filtre du tableau</button>
+					{/if}
+					{#if cols && source.setRules}
+						<hr />
+						<button onclick={() => openRules(m.e, m.i)}>Mise en forme conditionnelle…</button>
+					{/if}
+					<hr />
+					{#if cols && source.setType && !col?.formula}
+						<button
+							onclick={() => {
+								const { x, y, e, i } = m;
+								menu = null;
+								showTypeMenu(x, y, e, i);
+							}}>Type de données et clé de « {col?.name} »…</button
+						>
+					{/if}
+					{#if cols}
+						<button
+							onclick={() => {
+								const t = m.e.t;
+								const c = t.col + m.i;
+								menu = null;
+								moveTo(t.row, c);
+								startEdit(false);
+							}}>Renommer la colonne « {col?.name} »</button
+						>
+					{/if}
+					{#if cols && source.promoteHeader && m.e.t.rows > 0}
+						<button onclick={() => menuAction(() => source.promoteHeader!(m.e.t))}>Utiliser la 1re ligne comme en-têtes</button>
+					{/if}
+					{#if source.deleteTables}
+						<button
+							onclick={() => {
+								if (m.e.t.rows + (m.e.t.hidden ?? 0) > CONFIRM_DELETE_ROWS) menu = { ...m, confirmDelete: true };
+								else deleteTable(m.e.t);
+							}}>Supprimer le tableau « {m.e.t.name} »</button
+						>
+					{/if}
 				{/if}
 			</div>
 		{/if}
