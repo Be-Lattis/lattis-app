@@ -4,10 +4,10 @@
 import type { Connection, Header } from '#bindings/internal/query/models.js';
 
 /** Genres de connexion (Connection.kind). */
-export type ConnKind = 'postgres' | 'mysql' | 'sqlserver' | 'odbc' | 'web';
+export type ConnKind = 'postgres' | 'mysql' | 'sqlserver' | 'web';
 
 /** SGBD lus par une connexion du même genre (Source.kind = Connection.kind). */
-export const DB_KINDS: ConnKind[] = ['postgres', 'mysql', 'sqlserver', 'odbc'];
+export const DB_KINDS: ConnKind[] = ['postgres', 'mysql', 'sqlserver'];
 
 /** Fichiers de base lus par une requête SQL (Source.path + Source.sql). */
 export const FILE_DB_KINDS = ['sqlite'];
@@ -19,7 +19,6 @@ export const CONN_LABELS: Record<ConnKind, string> = {
 	postgres: 'PostgreSQL',
 	mysql: 'MySQL / MariaDB',
 	sqlserver: 'SQL Server',
-	odbc: 'ODBC',
 	web: 'Web (API)'
 };
 
@@ -38,7 +37,6 @@ export const SOURCE_KINDS = [
 	{ value: 'postgres', label: 'PostgreSQL' },
 	{ value: 'mysql', label: 'MySQL / MariaDB' },
 	{ value: 'sqlserver', label: 'SQL Server' },
-	{ value: 'odbc', label: 'ODBC' },
 	{ value: 'web', label: 'Web (API JSON)' }
 ];
 
@@ -59,7 +57,6 @@ export function describe(c: Connection): string {
 	const k = c.kind as ConnKind;
 	const cfg = c.config ?? {};
 	const label = CONN_LABELS[k] ?? c.kind;
-	if (k === 'odbc') return `${label} ${cfg.user ? cfg.user + '@' : ''}${cfg.odbc ?? ''}`;
 	if (k === 'web') return `${label} ${cfg.url ?? ''}`;
 	const host = k === 'sqlserver' && cfg.instance ? `${cfg.host}\\${cfg.instance}` : `${cfg.host}:${cfg.port || DEFAULT_PORT[k] || ''}`;
 	return `${label} ${cfg.user ? cfg.user + '@' : ''}${host}${cfg.database ? '/' + cfg.database : ''}`;
@@ -75,7 +72,6 @@ export function suggestName(c: Connection): string {
 			return '';
 		}
 	}
-	if (c.kind === 'odbc') return /DSN=([^;]+)/i.exec(cfg.odbc ?? '')?.[1]?.trim() ?? '';
 	return cfg.database || cfg.host || '';
 }
 
@@ -88,8 +84,6 @@ export function connectionReady(c: Connection): boolean {
 		case 'mysql':
 		case 'sqlserver':
 			return !!cfg.host?.trim();
-		case 'odbc':
-			return !!cfg.odbc?.trim();
 		case 'web':
 			return /^https?:\/\/[^/]+/i.test(cfg.url?.trim() ?? '');
 	}

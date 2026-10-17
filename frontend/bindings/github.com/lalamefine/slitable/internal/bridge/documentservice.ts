@@ -100,8 +100,7 @@ export function CloseDocument(): $CancellablePromise<void> {
 
 /**
  * ConnectionTables liste les tables d'une connexion du classeur
- * (PostgreSQL, MySQL, SQL Server, ODBC ; vide pour une connexion Web ou un
- * pilote ODBC sans INFORMATION_SCHEMA).
+ * (PostgreSQL, MySQL, SQL Server ; vide pour une connexion Web).
  */
 export function ConnectionTables(name: string): $CancellablePromise<$models.TableList> {
     return $Call.ByID(3299404044, name);
@@ -148,13 +147,6 @@ export function CreateChart(sheet: number, row: number, col: number, cfg: canvas
  */
 export function CreatePivot(cfg: canvas$0.PivotConfig): $CancellablePromise<number> {
     return $Call.ByID(1379190243, cfg);
-}
-
-/**
- * DataSources renvoie les sources disponibles dans cette version.
- */
-export function DataSources(): $CancellablePromise<$models.DataSources> {
-    return $Call.ByID(2639860237);
 }
 
 /**

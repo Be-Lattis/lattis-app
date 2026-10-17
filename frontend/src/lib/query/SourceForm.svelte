@@ -1,8 +1,8 @@
 <script lang="ts">
 	// Source d'une requête (première des étapes appliquées) : fichier (CSV,
 	// Excel, JSON, Parquet, base SQLite), tableau du classeur, autre
-	// requête, requête SQL du classeur, SGBD (PostgreSQL, MySQL, SQL Server,
-	// ODBC : connexion, navigateur des tables ou requête SQL) ou API web JSON.
+	// requête, requête SQL du classeur, SGBD (PostgreSQL, MySQL, SQL Server :
+	// connexion, navigateur des tables ou requête SQL) ou API web JSON.
 	import { onMount } from 'svelte';
 	import Select from '#lib/ui/Select.svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
@@ -28,12 +28,10 @@
 	let s = $state<Source>(initial());
 	let error = $state('');
 	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
-	let available = $state({ odbc: true });
 
 	const isFile = $derived(FILE_KINDS.includes(s.kind));
 	const isFileDB = $derived(FILE_DB_KINDS.includes(s.kind));
 	const isDB = $derived(isDbKind(s.kind));
-	const unavailable = $derived(s.kind === 'odbc' && !available.odbc);
 
 	// Classeur Excel : tableaux du fichier.
 	let xlsx = $state<XLSXTable[]>([]);
@@ -89,11 +87,6 @@
 	let headers = $state(headersText(initial().headers));
 
 	onMount(async () => {
-		try {
-			available = await DocumentService.DataSources();
-		} catch {
-			/* liaison absente : tout supposé disponible */
-		}
 		if (s.kind === 'xlsx') loadXlsx();
 		if (isDbKind(s.kind) || s.kind === 'web') loadConns().then(loadTables);
 		if (FILE_DB_KINDS.includes(s.kind)) loadTables();
@@ -165,11 +158,6 @@
 		<header>Source</header>
 		<div class="body">
 			<label class="field">Type de source <Select value={s.kind} options={SOURCE_KINDS} width="100%" onchange={changeKind} /></label>
-			{#if unavailable}
-				<p class="error inline">
-					ODBC n’est pas disponible dans cette version de Slitable (Windows seulement, ou compilation avec -tags odbc).
-				</p>
-			{/if}
 			{#if isFile}
 				<div class="field">
 					Fichier
@@ -367,9 +355,6 @@
 	.error {
 		color: #b42318;
 		margin: 6px 14px 0;
-	}
-	.error.inline {
-		margin: 0;
 	}
 	footer {
 		display: flex;

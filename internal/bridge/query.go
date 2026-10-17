@@ -319,8 +319,7 @@ type TableList struct {
 }
 
 // ConnectionTables liste les tables d'une connexion du classeur
-// (PostgreSQL, MySQL, SQL Server, ODBC ; vide pour une connexion Web ou un
-// pilote ODBC sans INFORMATION_SCHEMA).
+// (PostgreSQL, MySQL, SQL Server ; vide pour une connexion Web).
 func (s *DocumentService) ConnectionTables(ctx context.Context, name string) (TableList, error) {
 	c, err := s.connection(ctx, name)
 	if err != nil {
@@ -345,16 +344,6 @@ func (s *DocumentService) TableSQL(kind, schema, table string) string {
 	return query.TableSQL(kind, schema, table)
 }
 
-// DataSources dit quelles sources à pilote facultatif sont compilées dans
-// cette version (ODBC : Windows, ou -tags odbc).
-type DataSources struct {
-	ODBC bool `json:"odbc"`
-}
-
-// DataSources renvoie les sources disponibles dans cette version.
-func (s *DocumentService) DataSources() DataSources {
-	return DataSources{ODBC: query.ODBCAvailable}
-}
 
 // PickDataFile demande un fichier source (kind : "csv", "xlsx", "json",
 // "parquet" ou "sqlite") ; "" si l'utilisateur annule.

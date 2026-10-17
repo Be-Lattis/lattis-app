@@ -322,18 +322,10 @@ func TestConnectionStrings(t *testing.T) {
 	if ms := sqlServerDSN(DBConfig{Host: "srv"}, ""); ms != "sqlserver://srv:1433?app+name=Slitable&connection+timeout=10" {
 		t.Fatal(ms)
 	}
-	od := odbcConnString(DBConfig{ODBC: "DSN=Ventes;", User: "louis"}, "a;b}")
-	if od != "DSN=Ventes;UID=louis;PWD={a;b}}}" {
-		t.Fatal(od)
-	}
-	if !odbcHasPassword("Driver={x;y};Server=s;Pwd=1") || odbcHasPassword("Driver={PWD=1};Server=s") {
-		t.Fatal("PWD mal reconnu")
-	}
 	accounts := map[string]Connection{
 		"postgres://u@h:5432/b":        {Kind: KindPostgres, Config: DBConfig{Host: "h", Database: "b", User: "u"}},
 		"mysql://u@h:3306/b":           {Kind: KindMySQL, Config: DBConfig{Host: "h", Database: "b", User: "u"}},
 		`sqlserver://u@h\SQLEXPRESS/b`: {Kind: KindSQLServer, Config: DBConfig{Host: "h", Instance: "SQLEXPRESS", Database: "b", User: "u"}},
-		"odbc://u@DSN=Ventes":          {Kind: KindODBC, Config: DBConfig{ODBC: "DSN=Ventes", User: "u"}},
 		"web://@https://api.x.com/v1":  {Kind: KindWeb, Config: DBConfig{URL: "https://api.x.com/v1"}},
 		"postgres://u@h:5433/b":        {Config: DBConfig{Host: "h", Port: 5433, Database: "b", User: "u"}},
 	}
@@ -352,8 +344,6 @@ func TestConnectionChecks(t *testing.T) {
 		{Connection{Kind: KindPostgres, Config: DBConfig{Host: "h"}}, "hôte et base"},
 		{Connection{Kind: KindMySQL}, "MySQL : le serveur"},
 		{Connection{Kind: KindSQLServer}, "SQL Server : le serveur"},
-		{Connection{Kind: KindODBC}, "ODBC : la source"},
-		{Connection{Kind: KindODBC, Config: DBConfig{ODBC: "DSN=x;PWD=secret"}}, "ne mettez pas le mot de passe"},
 		{Connection{Kind: KindWeb, Config: DBConfig{URL: "api.x.com"}}, "http://"},
 		{Connection{Kind: "oracle"}, "non pris en charge"},
 	} {
@@ -382,9 +372,6 @@ func TestAuthFailures(t *testing.T) {
 	}
 	if !sqlServerAuthFailed(fmt.Errorf("ouverture : %w", mssql.Error{Number: 18456, Message: "Login failed for user 'x'."})) || sqlServerAuthFailed(mssql.Error{Number: 208}) {
 		t.Fatal("SQL Server")
-	}
-	if !odbcAuthFailed(errors.New("SQLDriverConnect: {28000} [Microsoft][ODBC SQL Server Driver]Login failed")) || odbcAuthFailed(errors.New("{08001} serveur introuvable")) {
-		t.Fatal("ODBC")
 	}
 }
 
@@ -434,12 +421,6 @@ func TestUnreachableServers(t *testing.T) {
 		var pe *ErrPassword
 		if err == nil || errors.As(err, &pe) || !strings.Contains(err.Error(), "connexion « Hors ligne »") {
 			t.Errorf("%s : %v", kind, err)
-		}
-	}
-	if !ODBCAvailable {
-		c := Connection{Name: "O", Kind: KindODBC, Config: DBConfig{ODBC: "DSN=x"}}
-		if err := TestConnection(ctx, sec, c, "", false); err == nil || !strings.Contains(err.Error(), "ODBC n'est pas disponible") {
-			t.Errorf("ODBC : %v", err)
 		}
 	}
 }

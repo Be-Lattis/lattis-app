@@ -10,7 +10,7 @@ import (
 // Requêtes d'import (équivalent de Power Query, voir
 // docs/decisions/0003-sources-externes-power-query.md).
 
-const queryHelp = `source : {kind, ...} avec kind "csv" (path, delimiter), "xlsx" (path, sheet, index à partir de 0), "json" (path, recordPath : chemin du tableau d'enregistrements, ex. data.items), "parquet" (path), "sqlite" (path, sql), "table" (table), "query" (query : autre requête), "postgres", "mysql", "sqlserver" ou "odbc" (connection, sql en lecture seule), "web" (url, headers = {{name, value}}, recordPath, connection : connexion Web facultative qui porte le jeton). steps : liste d'étapes {op, ...} : filter {conditions = {{column, cmp, value}}, any}, rename {column, name}, type {column, type}, remove/select {columns}, split {column, delimiter, parts}, replace {column, value, with}, transform {column, fn = "trim"|"upper"|"lower"}, addcolumn {name, expr (SQLite, [Colonne]), type}, index {name, start}, merge {other = source, keys, otherKeys, join = "left"|"inner"|"full"|"right"|"anti", columns}, append {other}, group {columns, aggs = {{name, op, column}}}, sort {sort = {{column, desc}}}, distinct {columns}, top {count}, unpivot {columns, name, valueName}, pivot {column, valueColumn, agg}. cmp : "=", "<>", "<", "<=", ">", ">=", "contains", "notcontains", "begins", "ends", "empty", "notempty".`
+const queryHelp = `source : {kind, ...} avec kind "csv" (path, delimiter), "xlsx" (path, sheet, index à partir de 0), "json" (path, recordPath : chemin du tableau d'enregistrements, ex. data.items), "parquet" (path), "sqlite" (path, sql), "table" (table), "query" (query : autre requête), "postgres", "mysql" ou "sqlserver" (connection, sql en lecture seule), "web" (url, headers = {{name, value}}, recordPath, connection : connexion Web facultative qui porte le jeton). steps : liste d'étapes {op, ...} : filter {conditions = {{column, cmp, value}}, any}, rename {column, name}, type {column, type}, remove/select {columns}, split {column, delimiter, parts}, replace {column, value, with}, transform {column, fn = "trim"|"upper"|"lower"}, addcolumn {name, expr (SQLite, [Colonne]), type}, index {name, start}, merge {other = source, keys, otherKeys, join = "left"|"inner"|"full"|"right"|"anti", columns}, append {other}, group {columns, aggs = {{name, op, column}}}, sort {sort = {{column, desc}}}, distinct {columns}, top {count}, unpivot {columns, name, valueName}, pivot {column, valueColumn, agg}. cmp : "=", "<>", "<", "<=", ">", ">=", "contains", "notcontains", "begins", "ends", "empty", "notempty".`
 
 var pQuery = Param{Name: "query", Type: Ref, Desc: "requête (nom ou identifiant)"}
 
@@ -178,7 +178,7 @@ func init() {
 		&Command{
 			Name:    "connections.list",
 			Summary: "Liste les connexions aux sources externes du classeur (sans mot de passe : il n'est jamais enregistré dans le classeur).",
-			Returns: "{ {id, name, kind, config = {host, port, database, user, sslmode, instance, odbc, url, header}}, ... } (kind : postgres, mysql, sqlserver, odbc ou web)",
+			Returns: "{ {id, name, kind, config = {host, port, database, user, sslmode, instance, url, header}}, ... } (kind : postgres, mysql, sqlserver ou web)",
 			Run: func(c *Call) (any, error) {
 				d, err := c.Doc()
 				if err != nil {

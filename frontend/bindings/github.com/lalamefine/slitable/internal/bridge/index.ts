@@ -9,7 +9,6 @@ export {
 };
 
 export type {
-    DataSources,
     DemoProgress,
     DemoResult,
     DialogRequest,

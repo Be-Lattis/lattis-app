@@ -43,7 +43,7 @@
 
 	export type FileAction = 'new' | 'open' | 'save' | 'saveAs' | 'import' | 'export' | 'exportXlsx' | 'print' | 'pdf' | 'close' | 'demo' | 'mcp';
 
-	export type DataAction = 'csv' | 'xlsx' | 'json' | 'parquet' | 'sqlite' | 'postgres' | 'mysql' | 'sqlserver' | 'odbc' | 'web' | 'table' | 'queries' | 'refreshAll';
+	export type DataAction = 'csv' | 'xlsx' | 'json' | 'parquet' | 'sqlite' | 'postgres' | 'mysql' | 'sqlserver' | 'web' | 'table' | 'queries' | 'refreshAll';
 
 	interface Props {
 		view: View;
@@ -338,8 +338,7 @@
 						items: [
 							{ label: 'PostgreSQL', run: data('postgres') },
 							{ label: 'MySQL / MariaDB', run: data('mysql') },
-							{ label: 'SQL Server', run: data('sqlserver') },
-							{ label: 'ODBC', run: data('odbc') }
+							{ label: 'SQL Server', run: data('sqlserver') }
 						]
 					},
 					{ label: 'Web', icon: 'web', run: data('web'), hint: 'Nouvelle requête à partir d’une API web qui répond en JSON (lecture seule)' },

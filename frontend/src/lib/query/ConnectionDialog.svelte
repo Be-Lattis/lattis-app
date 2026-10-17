@@ -1,9 +1,8 @@
 <script lang="ts">
 	// Connexion à une source externe (PostgreSQL, MySQL / MariaDB, SQL Server,
-	// ODBC, API web) : enregistrée dans le classeur sans son mot de passe (ou
+	// API web) : enregistrée dans le classeur sans son mot de passe (ou
 	// jeton), qui reste dans le trousseau du système (« Mémoriser ») ou en
 	// mémoire le temps de la session.
-	import { onMount } from 'svelte';
 	import Select from '#lib/ui/Select.svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import type { Connection } from '#bindings/internal/query/models.js';
@@ -27,19 +26,11 @@
 	let error = $state('');
 	let tested = $state('');
 	let busy = $state(false);
-	let odbcAvailable = $state(true);
 	let autoName = $state(!initial().id && !initial().name);
 	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
 	const k = $derived(c.kind as ConnKind);
 	const server = $derived(k === 'postgres' || k === 'mysql' || k === 'sqlserver');
 
-	onMount(async () => {
-		try {
-			odbcAvailable = (await DocumentService.DataSources()).odbc;
-		} catch {
-			/* ancienne liaison : on suppose disponible */
-		}
-	});
 
 	$effect(() => {
 		if (autoName && !c.id) c.name = suggestName(c);
@@ -128,11 +119,6 @@
 							onchange={(v) => (c.config.sslmode = v || undefined)}
 						/></label
 					>
-				{:else if k === 'odbc'}
-					<label class="wide"
-						>Source de données <input bind:value={c.config.odbc} placeholder="DSN=Ventes  ou  Driver={'{'}ODBC Driver 18 for SQL Server{'}'};Server=srv;Database=ventes" /></label
-					>
-					<label>Utilisateur <input bind:value={c.config.user} placeholder="(facultatif)" /></label>
 				{:else if k === 'web'}
 					<label class="wide">Adresse de l’API <input bind:value={c.config.url} placeholder="https://api.exemple.fr/v1" /></label>
 					<label>En-tête du jeton <input bind:value={c.config.header} placeholder="Authorization" /></label>
@@ -145,9 +131,6 @@
 				>
 				<label class="check"><input type="checkbox" bind:checked={remember} /> Mémoriser dans le trousseau du système</label>
 			</div>
-			{#if k === 'odbc' && !odbcAvailable}
-				<p class="error">ODBC n’est pas disponible dans cette version de Slitable (Windows seulement, ou compilation avec -tags odbc).</p>
-			{/if}
 			<p class="muted">
 				{#if k === 'web'}
 					Le jeton n’est jamais enregistré dans le classeur ; il n’est envoyé qu’aux adresses qui commencent par celle de la connexion
@@ -230,9 +213,6 @@
 	.error {
 		color: #b42318;
 		margin: 0 14px;
-	}
-	.body .error {
-		margin: 8px 0 0;
 	}
 	.ok {
 		color: #217346;

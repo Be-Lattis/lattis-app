@@ -22,13 +22,12 @@ const (
 	KindPostgres  = "postgres"  // PostgreSQL : Host, Port, Database, User, SSLMode
 	KindMySQL     = "mysql"     // MySQL ou MariaDB : Host, Port, Database, User, SSLMode
 	KindSQLServer = "sqlserver" // SQL Server : Host, Port, Instance, Database, User, SSLMode
-	KindODBC      = "odbc"      // ODBC : ODBC (chaîne de connexion sans mot de passe), User
 	KindWeb       = "web"       // API web : URL (préfixe), Header, User
 )
 
 // ConnectionKinds liste les genres de connexion, dans l'ordre de
 // l'interface.
-var ConnectionKinds = []string{KindPostgres, KindMySQL, KindSQLServer, KindODBC, KindWeb}
+var ConnectionKinds = []string{KindPostgres, KindMySQL, KindSQLServer, KindWeb}
 
 // DBConfig décrit une connexion, sans mot de passe. Les champs utilisés
 // dépendent du genre (voir les constantes Kind*).
@@ -42,9 +41,6 @@ type DBConfig struct {
 	SSLMode string `json:"sslmode,omitempty"`
 	// SQL Server : instance nommée (SQLEXPRESS…).
 	Instance string `json:"instance,omitempty"`
-	// ODBC : chaîne de connexion (DSN=Ventes ou Driver={…};Server=…),
-	// sans mot de passe : il est ajouté (PWD=) à la connexion.
-	ODBC string `json:"odbc,omitempty"`
 	// Web : adresse (préfixe) des requêtes autorisées à recevoir le secret,
 	// et en-tête qui le porte (Authorization par défaut ; avec User :
 	// authentification Basic).
@@ -71,8 +67,6 @@ func KindLabel(kind string) string {
 		return "MySQL"
 	case KindSQLServer:
 		return "SQL Server"
-	case KindODBC:
-		return "ODBC"
 	case KindWeb:
 		return "Web"
 	}
@@ -108,8 +102,6 @@ func (c Connection) Account() string {
 	}
 	cfg := c.Config
 	switch k {
-	case KindODBC:
-		return "odbc://" + cfg.User + "@" + cfg.ODBC
 	case KindWeb:
 		return "web://" + cfg.User + "@" + cfg.URL
 	case KindSQLServer:
@@ -170,13 +162,6 @@ func checkConfig(kind string, c DBConfig) error {
 	case KindMySQL, KindSQLServer:
 		if blank(c.Host) {
 			return fmt.Errorf("connexion %s : le serveur est obligatoire", KindLabel(kind))
-		}
-	case KindODBC:
-		if blank(c.ODBC) {
-			return errors.New("connexion ODBC : la source de données (DSN=… ou chaîne de connexion) est obligatoire")
-		}
-		if odbcHasPassword(c.ODBC) {
-			return errors.New("connexion ODBC : ne mettez pas le mot de passe (PWD=) dans la chaîne de connexion, il irait dans le classeur ; saisissez-le dans le champ Mot de passe")
 		}
 	case KindWeb:
 		u, err := url.Parse(strings.TrimSpace(c.URL))

@@ -78,12 +78,6 @@ export interface DBConfig {
     "instance"?: string;
 
     /**
-     * ODBC : chaîne de connexion (DSN=Ventes ou Driver={…};Server=…),
-     * sans mot de passe : il est ajouté (PWD=) à la connexion.
-     */
-    "odbc"?: string;
-
-    /**
      * Web : adresse (préfixe) des requêtes autorisées à recevoir le secret,
      * et en-tête qui le porte (Authorization par défaut ; avec User :
      * authentification Basic).

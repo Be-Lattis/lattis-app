@@ -2,7 +2,7 @@
 // docs/decisions/0003-sources-externes-power-query.md) : des requêtes
 // d'import enregistrées dans le classeur, faites d'une source (fichier CSV,
 // .xlsx, JSON, Parquet, SQLite ; tableau du classeur ; autre
-// requête ; PostgreSQL, MySQL, SQL Server, ODBC ; API web JSON) et d'une
+// requête ; PostgreSQL, MySQL, SQL Server ; API web JSON) et d'une
 // suite d'étapes
 // rejouables (filtrer, renommer, changer le type, regrouper…).
 //
@@ -32,7 +32,6 @@ const (
 	// Autres SGBD (connexion du même genre) : Connection, SQL.
 	SourceMySQL     = "mysql"
 	SourceSQLServer = "sqlserver"
-	SourceODBC      = "odbc"
 	// Fichiers de base, ouverts en lecture seule : Path, SQL.
 	SourceSQLite = "sqlite"
 	// Fichiers de données : Path (JSON : RecordPath).
@@ -46,7 +45,7 @@ const (
 // dbSource : source lue par une connexion à un SGBD.
 func dbSource(kind string) bool {
 	switch kind {
-	case SourcePostgres, SourceMySQL, SourceSQLServer, SourceODBC:
+	case SourcePostgres, SourceMySQL, SourceSQLServer:
 		return true
 	}
 	return false
@@ -220,7 +219,7 @@ func SourceLabel(s Source) string {
 		return "Tableau " + s.Table
 	case SourceQuery:
 		return "Requête " + s.Query
-	case SourcePostgres, SourceMySQL, SourceSQLServer, SourceODBC:
+	case SourcePostgres, SourceMySQL, SourceSQLServer:
 		return KindLabel(s.Kind) + " " + s.Connection
 	case SourceSQLite:
 		return "SQLite " + base(s.Path)

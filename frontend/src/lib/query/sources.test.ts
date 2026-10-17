@@ -9,7 +9,6 @@ group('sources des requêtes', () => {
 		const ms = newConnection('sqlserver');
 		ms.config = { host: 'srv', instance: 'SQLEXPRESS', database: 'Compta' };
 		expect(describe(ms)).toBe('SQL Server srv\\SQLEXPRESS/Compta');
-		expect(describe({ ...newConnection('odbc'), config: { odbc: 'DSN=Ventes', user: 'louis' } })).toBe('ODBC louis@DSN=Ventes');
 		expect(describe({ ...newConnection('web'), config: { url: 'https://api.x.com/v1' } })).toBe('Web (API) https://api.x.com/v1');
 	});
 
@@ -19,9 +18,6 @@ group('sources des requêtes', () => {
 		web.config.url = 'https://api.x.com/v1';
 		expect(connectionReady(web)).toBe(true);
 		expect(suggestName(web)).toBe('api.x.com');
-		const odbc = newConnection('odbc');
-		odbc.config.odbc = 'DSN=Ventes 2026;';
-		expect(suggestName(odbc)).toBe('Ventes 2026');
 		const my = newConnection('mysql');
 		expect(connectionReady(my)).toBe(true);
 		expect(connectionReady(newConnection('postgres'))).toBe(false);
