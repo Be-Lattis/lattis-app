@@ -87,21 +87,44 @@ func ControlValue(kind, shown string) any {
 	return shown
 }
 
-// linkedCell donne la cellule liée d'un contrôle (ok faux : aucune).
-func linkedCell(cfg canvas.ButtonConfig) (row, col int, ok bool) {
-	if cfg.Link == "" {
-		return 0, 0, false
+// linkedCell donne la cellule liée d'un contrôle (ok faux : aucune), et sa
+// feuille : celle du contrôle, ou celle nommée (« Feuille1!B3 », contrôle
+// d'un Onglet Document).
+func linkedCell(ctx context.Context, d *doc.Document, b canvas.ButtonInfo) (sheet int64, row, col int, ok bool, err error) {
+	if b.Config.Link == "" {
+		return 0, 0, 0, false, nil
 	}
-	return formula.CellRef("Cell_" + cfg.Link)
+	name, cell := canvas.SplitLink(b.Config.Link)
+	row, col, ok = formula.CellRef("Cell_" + cell)
+	if !ok {
+		return 0, 0, 0, false, nil
+	}
+	sheet = b.Sheet
+	if name != "" {
+		list, err := sheetList(ctx, d)
+		if err != nil {
+			return 0, 0, 0, false, err
+		}
+		sheet = 0
+		for _, s := range list {
+			if strings.EqualFold(s.Name, name) {
+				sheet = s.ID
+			}
+		}
+		if sheet == 0 {
+			return 0, 0, 0, false, fmt.Errorf("cellule liée « %s » : feuille « %s » introuvable", b.Config.Link, name)
+		}
+	}
+	return sheet, row, col, true, nil
 }
 
 // linkedValue lit la valeur affichée de la cellule liée d'un contrôle.
 func linkedValue(ctx context.Context, d *doc.Document, b canvas.ButtonInfo) (string, error) {
-	row, col, ok := linkedCell(b.Config)
-	if !ok {
-		return "", nil
+	sheet, row, col, ok, err := linkedCell(ctx, d, b)
+	if !ok || err != nil {
+		return "", err
 	}
-	l, err := d.Layout(ctx, b.Sheet)
+	l, err := d.Layout(ctx, sheet)
 	if err != nil {
 		return "", err
 	}
@@ -362,16 +385,19 @@ func (c *Call) setControlValue(b canvas.ButtonInfo, v any) error {
 	if b.Config.Kind == "" {
 		return fmt.Errorf("un bouton n'a pas de valeur")
 	}
-	row, col, ok := linkedCell(b.Config)
+	d, _ := c.Doc()
+	sheet, row, col, ok, err := linkedCell(c, d, b)
+	if err != nil {
+		return err
+	}
 	if !ok {
 		return fmt.Errorf("contrôle « %s » sans cellule liée", b.Config.Name)
 	}
-	d, _ := c.Doc()
 	old, err := linkedValue(c, d, b)
 	if err != nil {
 		return err
 	}
-	if _, err := d.SetCell(c, b.Sheet, row, col, cellInput(b.Config.Kind, v)); err != nil {
+	if _, err := d.SetCell(c, sheet, row, col, cellInput(b.Config.Kind, v)); err != nil {
 		return err
 	}
 	now, err := linkedValue(c, d, b)
@@ -547,6 +573,64 @@ func FireControl(host Host, id int64, event, value, old string) (ScriptResult, e
 		return res, err
 	}
 	return res, drain(ctx, host, q, &res)
+}
+
+// ControlState est un contrôle d'un Onglet Document pour l'interface : sa
+// configuration et la valeur affichée de sa cellule liée.
+type ControlState struct {
+	Config canvas.ButtonConfig `json:"config"`
+	Value  string              `json:"value"`
+	Error  string              `json:"error"`
+}
+
+// ControlOf lit un contrôle et la valeur de sa cellule liée.
+func ControlOf(host Host, id int64) (ControlState, error) {
+	d, err := host.Doc()
+	if err != nil {
+		return ControlState{}, err
+	}
+	b, err := d.Button(contextBG, id)
+	if err != nil {
+		return ControlState{}, err
+	}
+	st := ControlState{Config: b.Config}
+	if st.Value, err = linkedValue(contextBG, d, b); err != nil {
+		st.Error = err.Error()
+	}
+	return st, nil
+}
+
+// SetControlValue écrit raw dans la cellule liée du contrôle id (saisie dans
+// un Onglet Document : une étape d'annulation) puis, si la valeur affichée a
+// changé, déclenche son action et ses écouteurs (change).
+func SetControlValue(host Host, id int64, raw string) (ScriptResult, error) {
+	d, err := host.Doc()
+	if err != nil {
+		return ScriptResult{}, err
+	}
+	b, err := d.Button(contextBG, id)
+	if err != nil {
+		return ScriptResult{}, err
+	}
+	sheet, row, col, ok, err := linkedCell(contextBG, d, b)
+	if err != nil {
+		return ScriptResult{}, err
+	}
+	if !ok {
+		return ScriptResult{}, fmt.Errorf("contrôle « %s » sans cellule liée", b.Config.Name)
+	}
+	old, err := linkedValue(contextBG, d, b)
+	if err != nil {
+		return ScriptResult{}, err
+	}
+	if _, err := d.SetCell(contextBG, sheet, row, col, raw); err != nil {
+		return ScriptResult{}, err
+	}
+	now, err := linkedValue(contextBG, d, b)
+	if err != nil || now == old {
+		return ScriptResult{Output: []string{}}, err
+	}
+	return FireControl(host, id, canvas.EventChange, now, old)
 }
 
 // RunButton exécute l'action et les écouteurs du contrôle id, comme un

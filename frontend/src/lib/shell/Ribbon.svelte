@@ -33,6 +33,7 @@
 		| 'button'
 		| 'pivot'
 		| 'pdf'
+		| 'input'
 		| `block:${'normal' | 'h1' | 'h2' | 'h3' | 'bullet' | 'ordered' | 'quote' | 'code'}`
 		| `align:${'left' | 'center' | 'right' | 'justify'}`
 		| `chart:${'bar' | 'line' | 'pie' | 'scatter'}`;
@@ -550,7 +551,13 @@
 					{ label: 'Nuage de points', icon: 'chart-scatter', run: dc('chart:scatter'), hint: 'Nuage de points d’un tableau du classeur' }
 				]
 			},
-			{ title: 'Contrôles', commands: [{ label: 'Bouton', icon: 'button', run: dc('button'), hint: 'Bouton dans le texte : un clic exécute un script de l’onglet SCRIPT (ou l’une de ses fonctions)' }] },
+			{
+				title: 'Contrôles',
+				commands: [
+					{ label: 'Bouton', icon: 'button', run: dc('button'), hint: 'Bouton dans le texte : un clic exécute un script de l’onglet SCRIPT (ou l’une de ses fonctions)' },
+					{ label: 'Input', icon: 'text-input', run: dc('input'), hint: 'Contrôle lié à une cellule d’une feuille : champ texte, zone de texte, case à cocher, liste déroulante ou fichier, pilotable par les scripts (controls.*)' }
+				]
+			},
 			{
 				title: 'Liens',
 				commands: [

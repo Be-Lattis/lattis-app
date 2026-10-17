@@ -126,3 +126,15 @@ func (s *DocumentService) hosts(ctx context.Context, fn func(*doc.Document) erro
 	}
 	return s.HTTPHosts(ctx)
 }
+
+// DocControl lit un contrôle d'un Onglet Document et la valeur de sa
+// cellule liée.
+func (s *DocumentService) DocControl(ctx context.Context, id int64) (api.ControlState, error) {
+	return api.ControlOf(host{s}, id)
+}
+
+// SetControlValue écrit la valeur saisie dans un contrôle d'un Onglet
+// Document dans sa cellule liée, puis déclenche son évènement change.
+func (s *DocumentService) SetControlValue(ctx context.Context, id int64, raw string) (ScriptResult, error) {
+	return api.SetControlValue(host{s}, id, raw)
+}

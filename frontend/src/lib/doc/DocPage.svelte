@@ -18,7 +18,10 @@
 	import { printSheet } from '#lib/shell/print.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { scriptFunctions } from '#lib/grid/buttons.js';
-	import { BUTTON_BLOT, CHART_BLOT, PIVOT_BLOT, docClip, setupQuill, type DocButtonConfig } from './quill';
+	import { BUTTON_BLOT, CHART_BLOT, CONTROL_BLOT, PIVOT_BLOT, docClip, setupQuill, type DocButtonConfig } from './quill';
+	import DocControl, { type ControlState } from './DocControl.svelte';
+	import { CONTROL_KINDS, VALUE_KINDS, type ButtonConfig, type ControlKind } from '#lib/grid/buttons.js';
+	import { isDefaultTableName } from '#lib/grid/defaultname.js';
 	import DocChart from './DocChart.svelte';
 	import DocPivot from './DocPivot.svelte';
 	import { blockFormats, docFormat, DOC_FONT, DOC_PT, parseDelta, quillFormats, type DocBlock, type DocFormat } from './format';
@@ -45,6 +48,17 @@
 		scripts: { name: string; source: string }[];
 		loadChart: (cfg: ChartConfig) => Promise<ChartInfo>;
 		loadPivot: (cfg: PivotConfig) => Promise<PivotInfo>;
+		/** Feuilles (grilles) du classeur, pour la cellule liée des contrôles. */
+		sheets?: string[];
+		/** Contrôles du classeur posés dans le document (champ, case, liste, fichier). */
+		controls?: {
+			load: (id: number) => Promise<ControlState>;
+			create: (cfg: ButtonConfig) => Promise<number>;
+			update: (id: number, cfg: ButtonConfig) => Promise<void>;
+			setValue: (id: number, raw: string) => Promise<void>;
+			click: (id: number) => Promise<void>;
+			pickFile: (title: string) => Promise<string>;
+		};
 		/** Valeurs d'un champ (filtres du volet de tableau croisé). */
 		fieldValues?: (table: string, field: string) => Promise<{ text: string; count: number }[]>;
 		/** Exécute un script (ou sa fonction) ; renvoie le message à afficher. */
@@ -54,7 +68,7 @@
 		onnotice?: (msg: string) => void;
 	}
 
-	let { name, source, save, locked = '', stamp, animate = true, tables, scripts, loadChart, loadPivot, fieldValues, run, onformat, onnotice }: Props = $props();
+	let { name, source, save, locked = '', stamp, animate = true, tables, scripts, loadChart, loadPivot, fieldValues, sheets = [], controls, run, onformat, onnotice }: Props = $props();
 
 	let host = $state<HTMLDivElement>();
 	let quill: Quill | undefined;
@@ -66,7 +80,10 @@
 	const live = $state({ stamp: 0, animate: untrack(() => animate) });
 
 	// Objet en cours de modification dans le volet de droite (par sa position).
-	type Panel = { kind: 'chart' | 'button' | 'pivot'; index: number } | { kind: 'link'; index: number; length: number; url: string };
+	type Panel =
+		| { kind: 'chart' | 'button' | 'pivot'; index: number }
+		| { kind: 'link'; index: number; length: number; url: string }
+		| { kind: 'control'; index: number; id: number | null; cfg: ButtonConfig };
 	let panel = $state<Panel | null>(null);
 	let panelValue = $state.raw<Record<string, unknown> | null>(null);
 
@@ -118,10 +135,42 @@
 
 	type Mounted = { comp: ReturnType<typeof mount>; kind: 'chart' | 'pivot'; p: { config: Record<string, unknown>; selected: boolean } };
 	const mounted = new Map<HTMLElement, Mounted>();
-	const BLOT = { chart: CHART_BLOT, pivot: PIVOT_BLOT, button: BUTTON_BLOT } as const;
+	const BLOT = { chart: CHART_BLOT, pivot: PIVOT_BLOT, button: BUTTON_BLOT, control: CONTROL_BLOT } as const;
+	const ctlMounted = new Map<HTMLElement, ReturnType<typeof mount>>();
 
 	function hydrate() {
 		if (!quill) return;
+		if (controls) {
+			const api = controls;
+			for (const node of quill.root.querySelectorAll<HTMLElement>('.ql-lattis-control')) {
+				if (ctlMounted.has(node)) continue;
+				const v = JSON.parse(node.dataset.config ?? '{}') as { id?: number; width?: number; height?: number };
+				const target = node.querySelector<HTMLElement>('span[contenteditable]') ?? node;
+				const comp = mount(DocControl, {
+					target,
+					props: {
+						id: v.id ?? 0,
+						width: v.width,
+						height: v.height,
+						live,
+						load: api.load,
+						setValue: api.setValue,
+						click: api.click,
+						pickFile: api.pickFile,
+						get locked() {
+							return !!locked;
+						}
+					}
+				});
+				ctlMounted.set(node, comp);
+			}
+			for (const [node, comp] of ctlMounted) {
+				if (!node.isConnected) {
+					unmount(comp);
+					ctlMounted.delete(node);
+				}
+			}
+		}
 		for (const node of quill.root.querySelectorAll<HTMLElement>('.ql-lattis-chart, .ql-lattis-pivot')) {
 			if (mounted.has(node)) continue;
 			const kind = node.classList.contains('ql-lattis-pivot') ? 'pivot' : 'chart';
@@ -166,7 +215,7 @@
 
 	function openPanel(p: Panel | null) {
 		panel = p;
-		panelValue = p && p.kind !== 'link' ? embedAt(p.index, BLOT[p.kind]) : null;
+		panelValue = p && p.kind !== 'link' && p.kind !== 'control' ? embedAt(p.index, BLOT[p.kind]) : null;
 		markSelected();
 	}
 
@@ -366,18 +415,18 @@
 
 	// --- Taille des éléments insérés (poignée en bas à droite) ----------------
 
-	type Grip = { node: HTMLElement; kind: 'chart' | 'pivot' | 'button' | 'image'; x: number; y: number };
+	type Grip = { node: HTMLElement; kind: 'chart' | 'pivot' | 'button' | 'control' | 'image'; x: number; y: number };
 	let grip = $state<Grip | null>(null);
 	let pageEl = $state<HTMLDivElement>();
 	let sizing: { grip: Grip; x0: number; y0: number; w0: number; h0: number; w: number; h: number } | null = null;
 
-	const SIZED = '.ql-lattis-chart, .ql-lattis-pivot, .ql-lattis-button, .ql-editor img';
+	const SIZED = '.ql-lattis-chart, .ql-lattis-pivot, .ql-lattis-button, .ql-lattis-control, .ql-editor img';
 	function kindOf(el: HTMLElement): Grip['kind'] {
-		return el.tagName === 'IMG' ? 'image' : el.classList.contains('ql-lattis-pivot') ? 'pivot' : el.classList.contains('ql-lattis-button') ? 'button' : 'chart';
+		return el.tagName === 'IMG' ? 'image' : el.classList.contains('ql-lattis-pivot') ? 'pivot' : el.classList.contains('ql-lattis-button') ? 'button' : el.classList.contains('ql-lattis-control') ? 'control' : 'chart';
 	}
 	// Le cadre visible de l'élément (le bloc d'un graphique s'étend sur toute la ligne).
 	function boxOf(el: HTMLElement): HTMLElement {
-		return (el.querySelector('.dchart, .dpivot') as HTMLElement | null) ?? el;
+		return (el.querySelector('.dchart, .dpivot, .dctl') as HTMLElement | null) ?? el;
 	}
 	function placeGrip(el: HTMLElement | null) {
 		if (sizing) return;
@@ -409,7 +458,7 @@
 		const s = sizing;
 		const maxW = (quill?.root.clientWidth ?? 900) + 1;
 		s.w = Math.round(Math.max(40, Math.min(maxW, s.w0 + e.clientX - s.x0)));
-		s.h = Math.round(Math.max(s.grip.kind === 'button' ? 20 : 60, s.h0 + e.clientY - s.y0));
+		s.h = Math.round(Math.max(s.grip.kind === 'button' || s.grip.kind === 'control' ? 20 : 60, s.h0 + e.clientY - s.y0));
 		// Aperçu pendant le geste ; la valeur est enregistrée au lâcher.
 		const box = boxOf(s.grip.node);
 		box.style.width = s.w + 'px';
@@ -436,22 +485,35 @@
 
 	// --- Menus contextuels et presse-papiers des éléments ---------------------
 
-	type Menu = { x: number; y: number; kind: 'chart' | 'pivot' | 'button' | 'text'; index: number };
+	type Menu = { x: number; y: number; kind: 'chart' | 'pivot' | 'button' | 'control' | 'text'; index: number };
 	let menu = $state<Menu | null>(null);
 	let clip = $state(docClip.item);
 
-	function copyItem(kind: 'chart' | 'pivot' | 'button', index: number, cut: boolean) {
-		const value = embedAt(index, BLOT[kind]);
+	async function copyItem(kind: 'chart' | 'pivot' | 'button' | 'control', index: number, cut: boolean) {
+		let value = embedAt(index, BLOT[kind]);
 		if (!value) return;
+		// Un contrôle se copie par sa configuration : le coller en crée un nouveau.
+		if (kind === 'control' && controls) value = { cfg: (await controls.load(Number(value.id))).config, width: value.width, height: value.height };
 		docClip.item = clip = { type: BLOT[kind], value: structuredClone($state.snapshot(value)) };
 		if (cut) deleteEmbed(index);
 		onnotice?.(cut ? 'Élément coupé : clic droit › Coller dans le texte' : 'Élément copié : clic droit › Coller dans le texte');
 	}
 
-	function pasteItem(at: number) {
+	async function pasteItem(at: number) {
 		const c = docClip.item;
 		if (!c || !guard()) return;
-		quill!.insertEmbed(at, c.type, structuredClone(c.value), 'user');
+		let value = structuredClone(c.value) as Record<string, unknown>;
+		if (c.type === CONTROL_BLOT) {
+			if (!controls) return;
+			const cfg = { ...(value.cfg as ButtonConfig), name: '' };
+			try {
+				value = { id: await controls.create(cfg), width: value.width, height: value.height };
+			} catch (e) {
+				onnotice?.(String(e instanceof Error ? e.message : e));
+				return;
+			}
+		}
+		quill!.insertEmbed(at, c.type, value, 'user');
 		quill!.setSelection(at + 1, 0);
 		hydrate();
 	}
@@ -464,6 +526,46 @@
 	function act(fn: () => void) {
 		closeMenu();
 		fn();
+	}
+
+	/** Insertion › Input : un contrôle lié à une cellule (le volet le configure avant de l'insérer). */
+	export function insertControl(kind: ControlKind = 'input') {
+		if (!guard() || !controls) return;
+		const at = range()!.index;
+		const sheet = sheets[0] ?? 'Feuille1';
+		const ref = /^[\p{L}_][\p{L}\p{N}_]*$/u.test(sheet) ? sheet : `'${sheet.replace(/'/g, "''")}'`;
+		openPanel({ kind: 'control', index: at, id: null, cfg: { kind, label: '', script: '', link: `${ref}!A1`, options: kind === 'select' ? ['Choix 1', 'Choix 2'] : undefined } });
+	}
+
+	async function editControl(index: number) {
+		const v = embedAt(index, CONTROL_BLOT);
+		if (!v || !controls) return;
+		try {
+			const st = await controls.load(Number(v.id));
+			openPanel({ kind: 'control', index, id: Number(v.id), cfg: structuredClone(st.config) });
+		} catch {
+			onnotice?.('Ce contrôle n’existe plus : supprimez-le du texte.');
+		}
+	}
+
+	async function saveControl() {
+		if (panel?.kind !== 'control' || !controls || !guard()) return;
+		const p = panel;
+		const cfg = $state.snapshot(p.cfg) as ButtonConfig;
+		try {
+			if (p.id === null) {
+				const id = await controls.create(cfg);
+				quill!.insertEmbed(p.index, CONTROL_BLOT, { id }, 'user');
+				quill!.setSelection(p.index + 1, 0);
+				hydrate();
+				panel = { ...p, id };
+			} else {
+				await controls.update(p.id, cfg);
+				live.stamp++;
+			}
+		} catch (e) {
+			onnotice?.(String(e instanceof Error ? e.message : e));
+		}
 	}
 
 	export function insertButton() {
@@ -531,6 +633,7 @@
 			runButton(JSON.parse(b.dataset.config ?? '{}'));
 			return;
 		}
+		if (t.closest('.ql-lattis-control')) return;
 		const c = t.closest<HTMLElement>('.ql-lattis-chart, .ql-lattis-pivot');
 		if (c) {
 			openPanel({ kind: c.classList.contains('ql-lattis-pivot') ? 'pivot' : 'chart', index: indexOf(c) });
@@ -547,10 +650,10 @@
 	function onContext(e: MouseEvent) {
 		e.preventDefault();
 		const t = e.target as HTMLElement;
-		const el = t.closest<HTMLElement>('.ql-lattis-button, .ql-lattis-chart, .ql-lattis-pivot');
+		const el = t.closest<HTMLElement>('.ql-lattis-button, .ql-lattis-chart, .ql-lattis-pivot, .ql-lattis-control');
 		clip = docClip.item;
 		if (el) {
-			const kind = el.classList.contains('ql-lattis-button') ? 'button' : el.classList.contains('ql-lattis-pivot') ? 'pivot' : 'chart';
+			const kind = el.classList.contains('ql-lattis-button') ? 'button' : el.classList.contains('ql-lattis-pivot') ? 'pivot' : el.classList.contains('ql-lattis-control') ? 'control' : 'chart';
 			menu = { x: e.clientX, y: e.clientY, kind, index: indexOf(el) };
 		} else menu = { x: e.clientX, y: e.clientY, kind: 'text', index: range()?.index ?? 0 };
 		markSelected();
@@ -652,7 +755,7 @@
 							if (t) setChart({ ...defaultChart(t, chart.kind), title: chart.title === chart.source ? t.name : chart.title });
 						}}
 					>
-						{#each tables as t (t.name)}<option value={t.name}>{t.name}</option>{/each}
+						{#each tables as t (t.name)}<option value={t.name} class:dflt={isDefaultTableName(t.name)}>{t.name}</option>{/each}
 						{#if !tbl}<option value={chart.source}>{chart.source} (introuvable)</option>{/if}
 					</select>
 				</label>
@@ -678,7 +781,7 @@
 							if (t && at !== undefined) defaultPivot(t).then((cfg) => replaceEmbed(at, PIVOT_BLOT, cfg));
 						}}
 					>
-						{#each tables.filter((t) => t.kind !== 'pivot') as t (t.name)}<option value={t.name}>{t.name}</option>{/each}
+						{#each tables.filter((t) => t.kind !== 'pivot') as t (t.name)}<option value={t.name} class:dflt={isDefaultTableName(t.name)}>{t.name}</option>{/each}
 					</select>
 				</label>
 			</div>
@@ -693,6 +796,61 @@
 				/>
 			{/key}
 		</div>
+	{:else if panel?.kind === 'control'}
+		{@const p = panel}
+		{@const at = p.cfg.link ? (p.cfg.link.lastIndexOf('!') >= 0 ? [p.cfg.link.slice(0, p.cfg.link.lastIndexOf('!')).replace(/^'(.*)'$/, '$1').replace(/''/g, "'"), p.cfg.link.slice(p.cfg.link.lastIndexOf('!') + 1)] : [sheets[0] ?? '', p.cfg.link]) : [sheets[0] ?? '', 'A1']}
+		{@const setLink = (sheet: string, cell: string) => (p.cfg.link = `${/^[\p{L}_][\p{L}\p{N}_]*$/u.test(sheet) ? sheet : `'${sheet.replace(/'/g, "''")}'`}!${cell.trim().toUpperCase()}`)}
+		{@const cfns = p.cfg.script ? scriptFunctions(scripts.find((s) => s.name === p.cfg.script)?.source ?? '') : []}
+		<aside class="side form" use:resizePanel={{ key: 'doc-control' }}>
+			<header><span>{p.id === null ? 'Insérer' : 'Modifier'} : {CONTROL_KINDS[p.cfg.kind ?? 'input'].toLowerCase()}</span><button class="x" title="Fermer" onclick={() => openPanel(null)}>✕</button></header>
+			<label
+				>Type
+				<select bind:value={p.cfg.kind} disabled={!!locked}>
+					{#each VALUE_KINDS as k (k)}<option value={k}>{CONTROL_KINDS[k]}</option>{/each}
+				</select>
+			</label>
+			<label>Nom (pour les scripts)<input type="text" bind:value={p.cfg.name} placeholder="automatique" disabled={!!locked} /></label>
+			{#if p.cfg.kind !== 'select'}
+				<label>{p.cfg.kind === 'checkbox' ? 'Libellé' : p.cfg.kind === 'file' ? 'Texte du bouton' : 'Texte indicatif (facultatif)'}<input type="text" bind:value={p.cfg.label} disabled={!!locked} /></label>
+			{/if}
+			<div class="link">
+				<label
+					>Feuille liée
+					<select value={at[0]} disabled={!!locked} onchange={(e) => setLink((e.currentTarget as HTMLSelectElement).value, at[1])}>
+						{#each sheets as s (s)}<option value={s}>{s}</option>{/each}
+						{#if !sheets.includes(at[0])}<option value={at[0]}>{at[0]} (introuvable)</option>{/if}
+					</select>
+				</label>
+				<label>Cellule<input type="text" value={at[1]} disabled={!!locked} onchange={(e) => setLink(at[0], (e.currentTarget as HTMLInputElement).value)} /></label>
+			</div>
+			{#if p.cfg.kind === 'select'}
+				<label
+					>Choix (un par ligne)
+					<textarea rows="4" disabled={!!locked} value={(p.cfg.options ?? []).join('\n')} onchange={(e) => (p.cfg.options = (e.currentTarget as HTMLTextAreaElement).value.split('\n').map((x) => x.trim()).filter(Boolean))}></textarea>
+				</label>
+			{/if}
+			<label
+				>Script (à chaque changement)
+				<select value={p.cfg.script} disabled={!!locked} onchange={(e) => ((p.cfg.script = (e.currentTarget as HTMLSelectElement).value), (p.cfg.function = ''))}>
+					<option value="">(aucune action)</option>
+					{#each scripts as s (s.name)}<option value={s.name}>{s.name}</option>{/each}
+				</select>
+			</label>
+			{#if p.cfg.script}
+				<label
+					>Exécuter
+					<select bind:value={p.cfg.function} disabled={!!locked}>
+						<option value="">tout le script</option>
+						{#each cfns as f (f)}<option value={f}>la fonction {f}()</option>{/each}
+					</select>
+				</label>
+			{/if}
+			<p class="hint">La valeur du contrôle est celle de la cellule liée. Les scripts le pilotent par controls.get / controls.set et controls.on("change", …).</p>
+			<div class="row">
+				<button class="primary" disabled={!!locked} onclick={saveControl}>{p.id === null ? 'Insérer' : 'Enregistrer'}</button>
+				<button onclick={() => openPanel(null)}>{p.id === null ? 'Annuler' : 'Fermer'}</button>
+			</div>
+		</aside>
 	{:else if panel?.kind === 'button' && btn}
 		<aside class="side form" use:resizePanel={{ key: 'doc-control' }}>
 			<header><span>Bouton</span><button class="x" title="Fermer" onclick={() => openPanel(null)}>✕</button></header>
@@ -757,7 +915,7 @@
 			<button disabled={!!locked} onclick={() => act(() => command('cut'))}>Couper</button>
 			<button onclick={() => act(() => command('copy'))}>Copier</button>
 			<button disabled={!!locked} onclick={() => act(() => command('paste'))}>Coller</button>
-			{#if clip}<button disabled={!!locked} onclick={() => act(() => pasteItem(m.index))}>Coller l’élément ({clip.type === CHART_BLOT ? 'graphique' : clip.type === PIVOT_BLOT ? 'tableau croisé' : 'bouton'})</button>{/if}
+			{#if clip}<button disabled={!!locked} onclick={() => act(() => pasteItem(m.index))}>Coller l’élément ({clip.type === CHART_BLOT ? 'graphique' : clip.type === PIVOT_BLOT ? 'tableau croisé' : clip.type === CONTROL_BLOT ? 'contrôle' : 'bouton'})</button>{/if}
 			<hr />
 			<div class="menu-title">Insérer</div>
 			<button disabled={!!locked} onclick={() => act(() => insertChart('bar'))}><Icon name="chart-bar" size={14} />Graphique en barres</button>
@@ -766,22 +924,23 @@
 			<button disabled={!!locked} onclick={() => act(() => insertChart('scatter'))}><Icon name="chart-scatter" size={14} />Nuage de points</button>
 			<button disabled={!!locked} onclick={() => act(insertPivot)}><Icon name="pivot-table" size={14} />Tableau croisé dynamique</button>
 			<button disabled={!!locked} onclick={() => act(insertButton)}><Icon name="button" size={14} />Bouton</button>
+			{#if controls}<button disabled={!!locked} onclick={() => act(() => insertControl('input'))}><Icon name="text-input" size={14} />Input (champ, case, liste, fichier)…</button>{/if}
 			<button disabled={!!locked} onclick={() => act(() => command('image'))}><Icon name="image" size={14} />Image…</button>
 			<button disabled={!!locked} onclick={() => act(() => command('link'))}><Icon name="link" size={14} />Lien…</button>
 		{:else}
-			{@const label = m.kind === 'chart' ? 'Graphique' : m.kind === 'pivot' ? 'Tableau croisé' : 'Bouton'}
+			{@const label = m.kind === 'chart' ? 'Graphique' : m.kind === 'pivot' ? 'Tableau croisé' : m.kind === 'control' ? 'Contrôle' : 'Bouton'}
 			<div class="menu-title">{label}</div>
 			{#if m.kind === 'button'}
 				{@const b = embedAt(m.index, BUTTON_BLOT) as DocButtonConfig | null}
 				{#if b?.script}<button onclick={() => act(() => runButton(b))}>Exécuter l’action</button>{/if}
 			{/if}
-			<button onclick={() => act(() => openPanel({ kind: m.kind as 'chart' | 'pivot' | 'button', index: m.index }))}>Modifier…</button>
+			<button onclick={() => act(() => (m.kind === 'control' ? editControl(m.index) : openPanel({ kind: m.kind as 'chart' | 'pivot' | 'button', index: m.index })))}>Modifier…</button>
 			<hr />
 			<button disabled={!!locked} onclick={() => act(() => copyItem(m.kind as 'chart', m.index, true))}>Couper</button>
 			<button onclick={() => act(() => copyItem(m.kind as 'chart', m.index, false))}>Copier</button>
 			<button disabled={!clip || !!locked} onclick={() => act(() => pasteItem(m.index + 1))}>Coller l’élément après</button>
 			<hr />
-			<button disabled={!!locked} onclick={() => act(() => deleteEmbed(m.index))}>Supprimer {m.kind === 'chart' ? 'le graphique' : m.kind === 'pivot' ? 'le tableau croisé' : 'le bouton'}</button>
+			<button disabled={!!locked} onclick={() => act(() => deleteEmbed(m.index))}>Supprimer {m.kind === 'chart' ? 'le graphique' : m.kind === 'pivot' ? 'le tableau croisé' : m.kind === 'control' ? 'le contrôle' : 'le bouton'}</button>
 		{/if}
 	</div>
 {/if}
@@ -994,6 +1153,27 @@
 		border-radius: 3px;
 		background: #fff;
 		color: #1f2328;
+	}
+	.link {
+		display: flex;
+		gap: 8px;
+	}
+	.link label:first-child {
+		flex: 1;
+		min-width: 0;
+	}
+	.link label:last-child input {
+		width: 64px;
+	}
+	.side textarea {
+		font: inherit;
+		padding: 4px 6px;
+		border: 1px solid #c9cdd2;
+		border-radius: 3px;
+		resize: vertical;
+	}
+	.side option.dflt {
+		color: #c42b1c;
 	}
 	.colors {
 		display: flex;

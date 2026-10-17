@@ -25,6 +25,8 @@ export interface DocButtonConfig {
 export const CHART_BLOT = 'lattisChart';
 export const BUTTON_BLOT = 'lattisButton';
 export const PIVOT_BLOT = 'lattisPivot';
+/** Contrôle du classeur (champ, case, liste, fichier) : { id, width?, height? }. */
+export const CONTROL_BLOT = 'lattisControl';
 
 /** Élément copié ou coupé (clic droit › Copier), collable dans tout onglet Document. */
 export const docClip: { item: { type: string; value: unknown } | null } = { item: null };
@@ -122,6 +124,20 @@ export function setupQuill(): typeof Quill {
 			return readConfig<DocButtonConfig>(node);
 		}
 	}
+	class ControlBlot extends Embed {
+		static blotName = CONTROL_BLOT;
+		static tagName = 'SPAN';
+		static className = 'ql-lattis-control';
+		static create(value: unknown) {
+			const node = super.create() as HTMLElement;
+			node.dataset.config = JSON.stringify(value);
+			return node;
+		}
+		static value(node: HTMLElement) {
+			return readConfig<Record<string, unknown>>(node);
+		}
+	}
+	Quill.register(ControlBlot as never, true);
 	Quill.register(ChartBlot as never, true);
 	Quill.register(PivotBlot as never, true);
 	Quill.register(ButtonBlot as never, true);

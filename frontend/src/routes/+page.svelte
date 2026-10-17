@@ -687,6 +687,7 @@
 		else if (c === 'button') d.insertButton();
 		else if (c === 'pivot') d.insertPivot();
 		else if (c === 'pdf') exportDocPdf();
+		else if (c === 'input') d.insertControl('input');
 		else d.command(c as never);
 	}
 
@@ -980,6 +981,32 @@
 							loadChart={(cfg) => DocumentService.ChartData(cfg as never)}
 							loadPivot={(cfg) => DocumentService.PivotData(cfg as never)}
 							fieldValues={async (table, field) => (await DocumentService.FieldValues(table, field)) ?? []}
+							sheets={(layout?.sheets ?? []).filter((s) => !s.kind).map((s) => s.name)}
+							controls={{
+								load: (id) => DocumentService.DocControl(id) as never,
+								create: async (cfg) => {
+									const id = await DocumentService.CreateButton(pageId, 0, 0, cfg as never);
+									await reload();
+									return id;
+								},
+								update: async (id, cfg) => {
+									docState = await DocumentService.SetButton(id, cfg as never);
+									await reload();
+								},
+								setValue: async (id, raw) => {
+									const r = await DocumentService.SetControlValue(id, raw);
+									await reload();
+									if (r.error) notice = `Erreur du script : ${r.error}`;
+									else if (r.output?.length) notice = r.output[r.output.length - 1];
+								},
+								click: async (id) => {
+									const r = await DocumentService.RunButton(id);
+									await reload();
+									if (r.error) notice = `Erreur du script : ${r.error}`;
+									else if (r.output?.length) notice = r.output[r.output.length - 1];
+								},
+								pickFile: (title) => DocumentService.PickControlFile(title)
+							}}
 							run={async (script, fn) => {
 								const r = await DocumentService.RunFunction(script, fn);
 								await reload();

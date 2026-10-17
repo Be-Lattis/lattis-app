@@ -2,6 +2,7 @@ package doc
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -85,5 +86,39 @@ func TestDocSaved(t *testing.T) {
 	}
 	if p := d.PivotData(ctx, canvas.PivotConfig{Source: "Inconnu"}); p.Error == "" {
 		t.Fatal("TCD d'un tableau inconnu sans erreur")
+	}
+}
+
+// Un contrôle inséré dans un Onglet Document est lié à une cellule d'une
+// autre feuille ; effacé du texte, il disparaît à l'enregistrement, et
+// l'annulation le rend.
+func TestDocControl(t *testing.T) {
+	useRoot(t)
+	ctx := context.Background()
+	d, err := New(ctx)
+	must(t, err)
+	defer d.Close()
+	id, err := d.AddDoc(ctx, 0)
+	must(t, err)
+	c, err := d.CreateButton(ctx, id, 0, 0, canvas.ButtonConfig{Kind: "input", Link: "feuille1!b3"})
+	must(t, err)
+	b, err := d.Button(ctx, c)
+	must(t, err)
+	if b.Config.Link != "feuille1!B3" {
+		t.Fatalf("cellule liée %q", b.Config.Link)
+	}
+	must(t, d.SetPage(ctx, id, fmt.Sprintf(`{"ops":[{"insert":{"lattisControl":{"id":%d}}},{"insert":"\n"}]}`, c)))
+	if _, err := d.Button(ctx, c); err != nil {
+		t.Fatal("contrôle cité supprimé")
+	}
+	must(t, d.SetPage(ctx, id, `{"ops":[{"insert":"\n"}]}`))
+	if _, err := d.Button(ctx, c); err == nil {
+		t.Fatal("contrôle effacé du texte toujours là")
+	}
+	if _, err := d.Bus.Undo(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.Button(ctx, c); err != nil {
+		t.Fatal("annulation sans le contrôle")
 	}
 }

@@ -109,7 +109,13 @@ var ErrButton = errors.New("bouton")
 func (c *ButtonConfig) check() error {
 	c.Name = strings.TrimSpace(c.Name)
 	c.Label, c.Script, c.Function = strings.TrimSpace(c.Label), strings.TrimSpace(c.Script), strings.TrimSpace(c.Function)
-	c.Link = strings.ToUpper(strings.TrimSpace(c.Link))
+	// Cellule liée : « B3 » sur la feuille du contrôle, ou « Feuille!B3 »
+	// (contrôle d'un Onglet Document) ; seule l'adresse passe en majuscules.
+	sheetPart, cellPart := SplitLink(strings.TrimSpace(c.Link))
+	c.Link = strings.ToUpper(cellPart)
+	if sheetPart != "" {
+		c.Link = sheetPart + "!" + c.Link
+	}
 	if len([]rune(c.Name)) > 64 {
 		return fmt.Errorf("%w : nom trop long (64 caractères au plus)", ErrButton)
 	}
@@ -134,8 +140,8 @@ func (c *ButtonConfig) check() error {
 		return fmt.Errorf("%w : type « %s » inconnu", ErrButton, c.Kind)
 	}
 	if c.Kind != "" {
-		if _, _, ok := formula.CellRef("Cell_" + c.Link); !ok {
-			return fmt.Errorf("%w : cellule liée invalide (« B3 » par exemple)", ErrButton)
+		if _, cell := SplitLink(c.Link); cell == "" || !validCell(cell) {
+			return fmt.Errorf("%w : cellule liée invalide (« B3 » ou « Feuille1!B3 » par exemple)", ErrButton)
 		}
 	}
 	if c.Script == "" && c.Function != "" {
@@ -461,4 +467,23 @@ func (t *tx) buttonRows(sheet int64) ([]stmt, error) {
 		undo = append(undo, st(`INSERT INTO _lattis_buttons (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, id, sheet, row, col, cfg))
 	}
 	return undo, rs.Err()
+}
+
+// SplitLink sépare la cellule liée d'un contrôle en feuille (vide : celle
+// du contrôle ; guillemets simples ôtés) et adresse : « 'Ma feuille'!B3 ».
+func SplitLink(link string) (sheet, cell string) {
+	k := strings.LastIndex(link, "!")
+	if k < 0 {
+		return "", link
+	}
+	sheet = strings.TrimSpace(link[:k])
+	if len(sheet) >= 2 && sheet[0] == '\'' && sheet[len(sheet)-1] == '\'' {
+		sheet = strings.ReplaceAll(sheet[1:len(sheet)-1], "''", "'")
+	}
+	return sheet, strings.TrimSpace(link[k+1:])
+}
+
+func validCell(cell string) bool {
+	_, _, ok := formula.CellRef("Cell_" + strings.ToUpper(cell))
+	return ok
 }

@@ -3,6 +3,7 @@ package canvas
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -151,6 +152,69 @@ func (m *Model) SetPage(ctx context.Context, sheet int64, source string) error {
 			return err
 		}
 		q := `UPDATE _lattis_pages SET source = ? WHERE sheet = ?`
-		return t.apply([]stmt{st(q, source, sheet)}, []stmt{st(q, old, sheet)})
+		if err := t.apply([]stmt{st(q, source, sheet)}, []stmt{st(q, old, sheet)}); err != nil {
+			return err
+		}
+		if kind == KindDoc {
+			return t.dropDocControls(sheet, source)
+		}
+		return nil
 	})
+}
+
+// DocControlBlot est le nom, dans le Delta d'un Onglet Document, des
+// contrôles insérés ({"lattisControl": {"id": …}}).
+const DocControlBlot = "lattisControl"
+
+// docControlIDs liste les contrôles cités par le contenu d'un Onglet Document.
+func docControlIDs(source string) map[int64]bool {
+	var d struct {
+		Ops []struct {
+			Insert json.RawMessage `json:"insert"`
+		} `json:"ops"`
+	}
+	ids := map[int64]bool{}
+	if json.Unmarshal([]byte(source), &d) != nil {
+		return ids
+	}
+	for _, op := range d.Ops {
+		var e map[string]struct {
+			ID int64 `json:"id"`
+		}
+		if json.Unmarshal(op.Insert, &e) == nil {
+			if c, ok := e[DocControlBlot]; ok && c.ID > 0 {
+				ids[c.ID] = true
+			}
+		}
+	}
+	return ids
+}
+
+// dropDocControls supprime les contrôles d'un Onglet Document que son
+// contenu ne cite plus (effacés du texte) ; l'annulation les rend.
+func (t *tx) dropDocControls(sheet int64, source string) error {
+	keep := docControlIDs(source)
+	rs, err := t.query(`SELECT id, row, col, config FROM _lattis_buttons WHERE sheet = ?`, sheet)
+	if err != nil {
+		return err
+	}
+	var do, undo []stmt
+	for rs.Next() {
+		var id int64
+		var row, col int
+		var cfg string
+		if err := rs.Scan(&id, &row, &col, &cfg); err != nil {
+			rs.Close()
+			return err
+		}
+		if !keep[id] {
+			do = append(do, st(`DELETE FROM _lattis_buttons WHERE id = ?`, id))
+			undo = append(undo, st(`INSERT INTO _lattis_buttons (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, id, sheet, row, col, cfg))
+		}
+	}
+	rs.Close()
+	if len(do) == 0 {
+		return nil
+	}
+	return t.apply(do, undo)
 }

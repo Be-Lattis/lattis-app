@@ -31,7 +31,7 @@ import * as query$0 from "../query/models.js";
 import * as $models from "./models.js";
 
 /**
- * AddDoc ajoute un onglet Documentation avant l'onglet before (0 : à la
+ * AddDoc ajoute un onglet Document avant l'onglet before (0 : à la
  * fin) et renvoie son identifiant.
  */
 export function AddDoc(before: number): $CancellablePromise<number> {
@@ -93,7 +93,7 @@ export function Call(name: string, args: { [_ in string]?: any } | null): $Cance
 
 /**
  * ChartData calcule les données d'un graphique sans le poser sur une
- * feuille (graphiques insérés dans un onglet Documentation).
+ * feuille (graphiques insérés dans un onglet Document).
  */
 export function ChartData(cfg: canvas$0.ChartConfig): $CancellablePromise<canvas$0.ChartInfo> {
     return $Call.ByID(3622561794, cfg);
@@ -305,6 +305,14 @@ export function DialogAnswer(id: number, values: { [_ in string]?: any } | null,
  */
 export function Discard(dir: string): $CancellablePromise<void> {
     return $Call.ByID(1215055320, dir);
+}
+
+/**
+ * DocControl lit un contrôle d'un Onglet Document et la valeur de sa
+ * cellule liée.
+ */
+export function DocControl(id: number): $CancellablePromise<api$0.ControlState> {
+    return $Call.ByID(3893749813, id);
 }
 
 /**
@@ -625,7 +633,7 @@ export function PinNote(sheet: number, row: number, col: number, pinned: boolean
 
 /**
  * PivotData calcule un tableau croisé sans le poser sur une feuille
- * (tableaux croisés insérés dans un onglet Documentation).
+ * (tableaux croisés insérés dans un onglet Document).
  */
 export function PivotData(cfg: canvas$0.PivotConfig): $CancellablePromise<canvas$0.PivotInfo> {
     return $Call.ByID(269780518, cfg);
@@ -823,7 +831,7 @@ export function RunButton(id: number): $CancellablePromise<$models.ScriptResult>
 
 /**
  * RunFunction exécute le script name de la bibliothèque (onglet SCRIPT),
- * ou seulement sa fonction entry : bouton d'un onglet Documentation.
+ * ou seulement sa fonction entry : bouton d'un onglet Document.
  */
 export function RunFunction(name: string, entry: string): $CancellablePromise<$models.ScriptResult> {
     return $Call.ByID(1355166647, name, entry);
@@ -926,6 +934,14 @@ export function SetColumnWidth(sheet: number, col: number, width: number): $Canc
  */
 export function SetConnectionPassword(name: string, password: string, remember: boolean): $CancellablePromise<string> {
     return $Call.ByID(3506854031, name, password, remember);
+}
+
+/**
+ * SetControlValue écrit la valeur saisie dans un contrôle d'un Onglet
+ * Document dans sa cellule liée, puis déclenche son évènement change.
+ */
+export function SetControlValue(id: number, raw: string): $CancellablePromise<$models.ScriptResult> {
+    return $Call.ByID(1366785224, id, raw);
 }
 
 /**
