@@ -13,6 +13,7 @@
 	import Select from '#lib/ui/Select.svelte';
 	import { fit, groupWidth, type GroupShape, type Mode } from './fit';
 	import type { IconName } from '#lib/icons/icons.js';
+	import { MORE_KINDS, type ChartKind } from '#lib/chart/kinds.js';
 
 	export type View = 'grid' | 'sql' | 'script';
 	export type FormatTab = 'number' | 'align' | 'font' | 'border' | 'fill';
@@ -94,7 +95,7 @@
 		onclip?: (what: 'cut' | 'copy' | 'paste') => void;
 		onpainter?: () => void;
 		onaudit?: (kind: 'show' | 'clear') => void;
-		onchart?: (kind: 'bar' | 'line' | 'pie' | 'scatter') => void;
+		onchart?: (kind: ChartKind) => void;
 		oncells?: (op: 'insertRow' | 'deleteRow' | 'insertColumn' | 'deleteColumn') => void;
 		/** Quadrillage de la feuille active, et sa bascule. */
 		gridlines?: boolean;
@@ -364,7 +365,8 @@
 					{ label: 'Barres', icon: 'chart-bar', run: onchart ? () => onchart('bar') : undefined, hint: 'Graphique en barres du tableau actif' },
 					{ label: 'Courbes', icon: 'chart-line', run: onchart ? () => onchart('line') : undefined, hint: 'Graphique en courbes du tableau actif' },
 					{ label: 'Secteurs', icon: 'chart-pie', run: onchart ? () => onchart('pie') : undefined, hint: 'Graphique en secteurs du tableau actif' },
-					{ label: 'Nuage de points', icon: 'chart-scatter', run: onchart ? () => onchart('scatter') : undefined, hint: 'Nuage de points du tableau actif' }
+					{ label: 'Nuage de points', icon: 'chart-scatter', run: onchart ? () => onchart('scatter') : undefined, hint: 'Nuage de points du tableau actif' },
+					{ label: 'Autres graphiques', icon: 'chart-more', run: onchart ? openItems : undefined, hint: 'Combiné, 3D, carte, cascade, compartimentage, radar, entonnoir, boîte à moustaches, fréquences, jauge', items: MORE_KINDS.map((k) => ({ label: k.label, run: onchart ? () => onchart(k.kind) : undefined })) }
 				]
 			},
 			{

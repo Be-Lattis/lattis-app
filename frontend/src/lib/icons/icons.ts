@@ -88,6 +88,19 @@ export const icons = {
 	'chart-column': '<path d="M3.5 3.5v17"/><rect class="af" x="3.5" y="5.5" width="8" height="3" rx=".5"/><rect class="af" x="3.5" y="10.5" width="15" height="3" rx=".5"/><rect class="af" x="3.5" y="15.5" width="11" height="3" rx=".5"/>',
 	'chart-area': '<path d="M4 4v16h16"/><path class="af" opacity=".3" d="M7 17.5V15l4-4 3 3 5-6v9.5z"/><path class="a" d="m7 15 4-4 3 3 5-6"/>',
 	'chart-doughnut': '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path class="af" d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5H16a4 4 0 0 0-4-4z"/>',
+	// Autres graphiques (ruban Insertion › Autres graphiques, volet Graphique)
+	'chart-more': '<path d="M3.5 20.5h17"/><rect x="5" y="12" width="3" height="8.5" rx=".5"/><path d="M11 20.5V9.5"/><path class="a" d="m10 14 4-5 3 3 3.5-4.5"/><circle class="af" cx="17.5" cy="17" r="1.5"/>',
+	'chart-combo': '<path d="M3.5 20.5h17"/><rect x="5.5" y="13" width="3" height="7.5" rx=".5"/><rect x="10.5" y="9" width="3" height="11.5" rx=".5"/><rect x="15.5" y="11" width="3" height="9.5" rx=".5"/><path class="a" d="m4.5 10 5.5-5 4.5 3 5.5-4.5"/>',
+	'chart-bar3d': '<path d="M3.5 20.5h17"/><path class="af" opacity=".35" d="M5 12.5l2-2h3l-2 2zM12 7l2-2h3l-2 2z"/><path class="af" d="M5 12.5h3v8H5zM12 7h3v13.5h-3z"/><path d="M8 12.5l2-2v8l-2 2M15 7l2-2v13.5l-2 2"/>',
+	'chart-pie3d': '<path d="M3.5 10.5v3c0 2.8 3.8 5 8.5 5s8.5-2.2 8.5-5v-3"/><ellipse cx="12" cy="10.5" rx="8.5" ry="5"/><path class="af" d="M12 10.5V5.5a8.5 5 0 0 1 8.5 5z"/>',
+	'chart-map': '<path d="M3.5 6.5 9 4l6 2.5 5.5-2.5v13.5L15 20l-6-2.5-5.5 2.5z"/><path d="M9 4v13.5M15 6.5V20"/><path class="af" d="M12 8.5a2.5 2.5 0 0 1 2.5 2.5c0 1.8-2.5 4.5-2.5 4.5S9.5 12.8 9.5 11A2.5 2.5 0 0 1 12 8.5z"/>',
+	'chart-waterfall': '<path d="M3.5 20.5h17"/><rect class="af" x="4.5" y="11" width="3" height="9.5" rx=".5"/><rect class="af" x="8.5" y="7" width="3" height="4" rx=".5"/><rect x="12.5" y="7" width="3" height="6" rx=".5"/><rect class="af" x="16.5" y="9" width="3" height="11.5" rx=".5"/>',
+	'chart-treemap': '<rect x="3.5" y="3.5" width="17" height="17" rx="1"/><path class="af" opacity=".35" d="M3.5 3.5h9.5v10H3.5z"/><path d="M13 3.5v17M3.5 13.5H13M13 10h7.5M17 10v10.5"/>',
+	'chart-radar': '<path d="M12 3 20.5 9.5 17.3 19.5H6.7L3.5 9.5z"/><path d="M12 3v9l8.5-2.5M12 12l5.3 7.5M12 12l-5.3 7.5M12 12 3.5 9.5"/><path class="af" opacity=".5" d="M12 6.5 17 10.5 15 16.5 9 15.5 6.5 10z"/>',
+	'chart-funnel': '<rect class="af" x="3.5" y="4" width="17" height="4" rx=".5"/><rect class="af" x="6" y="10" width="12" height="4" rx=".5"/><rect class="af" x="8.5" y="16" width="7" height="4" rx=".5"/>',
+	'chart-boxplot': '<path d="M3.5 20.5h17M7.5 4v4M7.5 15v3M5.5 4h4M5.5 18h4M16.5 7v3M16.5 16v3M14.5 7h4M14.5 19h4"/><rect class="af" x="5" y="8" width="5" height="7" rx=".5"/><rect class="af" x="14" y="10" width="5" height="6" rx=".5"/><path d="M5 11.5h5M14 13h5"/>',
+	'chart-histogram': '<path d="M3.5 20.5h17"/><path class="af" d="M4.5 15h3v5.5h-3zM7.5 9h3v11.5h-3zM10.5 5h3v15.5h-3zM13.5 10h3v10.5h-3zM16.5 15.5h3v5h-3z"/>',
+	'chart-gauge': '<path d="M3.5 17a8.5 8.5 0 0 1 17 0"/><path class="a" d="M3.5 17a8.5 8.5 0 0 1 12.5-7.5"/><path d="M12 17l4.5-6"/><circle cx="12" cy="17" r="1.5"/>',
 
 	// Formules
 	function: '<path d="M12.5 4.5H11a2.5 2.5 0 0 0-2.5 2.2L7 18.3a2.5 2.5 0 0 1-2.5 2.2H4M5.5 10h6"/><path class="a" d="m14 11 6 8m0-8-6 8"/>',

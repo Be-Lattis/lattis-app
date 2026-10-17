@@ -36,6 +36,7 @@
 	import ZoomBar from '#lib/shell/ZoomBar.svelte';
 	import BusyBar from '#lib/shell/BusyBar.svelte';
 	import Icon from '#lib/icons/Icon.svelte';
+	import { setTileFetcher } from '#lib/chart/tiles.js';
 
 	type Mode = 'starting' | 'recover' | 'doc' | 'demo' | 'closed';
 
@@ -274,6 +275,9 @@
 		lastSel = k;
 		DocumentService.SetSelection(sel).catch(() => {});
 	});
+
+	// Tuiles des cartes : par le classeur, soumises à l'autorisation de l'hôte.
+	setTileFetcher((z, x, y) => DocumentService.Call('charts.tile', { z, x, y }) as Promise<string>);
 
 	onMount(() => {
 		const off = Events.On('doc:changed', () => {

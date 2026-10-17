@@ -59,7 +59,7 @@ var (
 	pButton = Param{Name: "button", Type: Ref, Desc: "bouton (identifiant ou libellé)"}
 )
 
-const chartHelp = `config : {source, kind, x, series, title, legend, xTitle, yTitle, labels, width, height}. source est un tableau ou un tableau croisé, x la colonne des abscisses, series la liste des colonnes tracées. kind : "bar" (barres verticales), "column" (horizontales), "line", "area", "pie", "doughnut" ou "scatter". legend : "bottom", "top", "right" ou "none".`
+const chartHelp = `config : {source, kind, x, series, title, legend, xTitle, yTitle, labels, width, height}. source est un tableau ou un tableau croisé, x la colonne des abscisses, series la liste des colonnes tracées. kind : "bar" (barres verticales), "column" (horizontales), "line", "area", "pie", "doughnut", "scatter", "combo" (barres et courbes : seriesKinds donne la forme de chaque série, "bar", "line" ou "area", et secondary les séries sur l'axe de droite), "bar3d" et "pie3d" (en perspective), "map" (carte OpenStreetMap : series = {latitude, longitude, valeur facultative}, x le nom des points ; mapMode "points" ou "heat" pour la densité), "waterfall" (cascade), "treemap" (compartimentage), "radar", "funnel" (entonnoir), "boxplot" (boîte à moustaches), "histogram" (fréquences, bins classes) ou "gauge" (jauge : dernière valeur de la première série, entre yMin et yMax). legend : "bottom", "top", "right" ou "none".`
 
 const pivotHelp = `config : {source, rowFields, cols, values, filters, name, noGrandTotal}. source est un tableau, rowFields la liste des champs en lignes, cols le champ en colonnes, values une liste de {field, agg, show} (agg : "sum", "count", "countDistinct", "avg", "min" ou "max" ; show : "", "pctTotal", "pctRow" ou "pctCol"), filters une liste de {field, values}.`
 

@@ -143,7 +143,7 @@ export interface ChartConfig {
     "source": string;
 
     /**
-     * bar (barres verticales), column (horizontales), line, area, pie, doughnut, scatter
+     * voir chartKinds
      */
     "kind": string;
     "x": string;
@@ -194,6 +194,22 @@ export interface ChartConfig {
      */
     "secondary"?: boolean[] | null;
     "y2Title"?: string;
+
+    /**
+     * SeriesKinds : graphique combiné, forme de chaque série (bar, line ou
+     * area ; par défaut la première en barres, les suivantes en courbes).
+     */
+    "seriesKinds"?: string[] | null;
+
+    /**
+     * MapMode : carte, « points » (défaut) ou « heat » (densité).
+     */
+    "mapMode"?: string;
+
+    /**
+     * Bins : histogramme de fréquences, nombre de classes (0 : automatique).
+     */
+    "bins"?: number;
 }
 
 /**

@@ -6,7 +6,7 @@
 	import { PALETTE } from './scale';
 	import Select from '#lib/ui/Select.svelte';
 	import Icon from '#lib/icons/Icon.svelte';
-	import type { IconName } from '#lib/icons/icons.js';
+	import { CARTESIAN, KINDS, SECONDARY, STACKABLE, guessLatLon, seriesShape } from './kinds';
 
 	interface Props {
 		config: ChartConfig;
@@ -17,16 +17,6 @@
 
 	let { config, columns, onchange, onclose }: Props = $props();
 
-	const KINDS: [ChartConfig['kind'], string, IconName][] = [
-		['bar', 'Histogramme', 'chart-bar'],
-		['column', 'Barres horizontales', 'chart-column'],
-		['line', 'Courbes', 'chart-line'],
-		['area', 'Aires', 'chart-area'],
-		['pie', 'Secteurs', 'chart-pie'],
-		['doughnut', 'Anneau', 'chart-doughnut'],
-		['scatter', 'Nuage de points', 'chart-scatter']
-	];
-
 	// Le titre et les champs texte s'appliquent à la sortie du champ.
 	function set(patch: Partial<ChartConfig>) {
 		onchange({ ...config, ...patch });
@@ -35,10 +25,47 @@
 		const t = s.trim().replace(',', '.');
 		return t === '' || isNaN(Number(t)) ? undefined : Number(t);
 	}
-	const stackable = $derived(config.kind === 'bar' || config.kind === 'column' || config.kind === 'area');
-	const axes = $derived(config.kind !== 'pie' && config.kind !== 'doughnut');
-	// Axe secondaire (Excel) : histogramme, courbes, aires, nuage de points.
-	const canSecondary = $derived(config.kind === 'bar' || config.kind === 'line' || config.kind === 'area' || config.kind === 'scatter');
+	const stackable = $derived(STACKABLE.has(config.kind));
+	const axes = $derived(CARTESIAN.has(config.kind));
+	const isMap = $derived(config.kind === 'map');
+	// Bornes : axes, radar et jauge (minimum et maximum du cadran).
+	const bounds = $derived(axes || config.kind === 'radar' || config.kind === 'gauge');
+	// Axe secondaire (Excel) : histogramme, courbes, aires, nuage, combiné.
+	const canSecondary = $derived(SECONDARY.has(config.kind));
+	const SHAPES = [
+		{ value: 'bar', label: 'Barres' },
+		{ value: 'line', label: 'Courbe' },
+		{ value: 'area', label: 'Aire' }
+	];
+	function setShape(k: number, v: string) {
+		const seriesKinds = config.series.map((_, j) => seriesShape(config.seriesKinds, j) as string);
+		seriesKinds[k] = v;
+		set({ seriesKinds });
+	}
+	// Changer de type : la carte prend les colonnes latitude et longitude
+	// (devinées d'après leur nom) ; en la quittant, la valeur redevient la série.
+	function setKind(kind: ChartConfig['kind']) {
+		if (kind === config.kind) return;
+		if (kind === 'map') {
+			const g = guessLatLon(columns);
+			const series = g.lat && g.lon ? [g.lat, g.lon] : config.series.length >= 2 ? config.series.slice(0, 2) : columns.filter((c) => c !== config.x).slice(0, 2);
+			set({ kind, series, colors: undefined, secondary: undefined, seriesKinds: undefined });
+			return;
+		}
+		if (config.kind === 'map') {
+			const series = [config.series[2] ?? config.series[0]];
+			set({ kind, series, colors: undefined, secondary: undefined, mapMode: undefined });
+			return;
+		}
+		set({ kind });
+	}
+	const none = '';
+	function setMapSeries(i: number, c: string) {
+		const series = [...config.series];
+		if (i === 2 && c === none) series.length = 2;
+		else series[i] = c;
+		set({ series });
+	}
 	const hasSecondary = $derived(canSecondary && config.series.some((_, k) => config.secondary?.[k]));
 	function toggleSecondary(k: number) {
 		const secondary = config.series.map((_, j) => !!config.secondary?.[j]);
@@ -56,8 +83,8 @@
 	<section>
 		<h3>Type</h3>
 		<div class="kinds">
-			{#each KINDS as [k, label, icon] (k)}
-				<button class:on={config.kind === k} onclick={() => set({ kind: k })}><Icon name={icon} size={16} />{label}</button>
+			{#each KINDS as k (k.kind)}
+				<button class:on={config.kind === k.kind} title={k.hint} onclick={() => setKind(k.kind)}><Icon name={k.icon} size={16} />{k.label}</button>
 			{/each}
 		</div>
 		{#if stackable}
@@ -67,6 +94,31 @@
 
 	<section>
 		<h3>Données</h3>
+		{#if isMap}
+		<label class="line">Nom
+			<Select value={config.x} options={columns.map((c) => ({ value: c, label: c }))} onchange={(x) => set({ x })} />
+		</label>
+		<label class="line">Latitude
+			<Select value={config.series[0] ?? ''} options={columns.map((c) => ({ value: c, label: c }))} onchange={(c) => setMapSeries(0, c)} />
+		</label>
+		<label class="line">Longitude
+			<Select value={config.series[1] ?? ''} options={columns.map((c) => ({ value: c, label: c }))} onchange={(c) => setMapSeries(1, c)} />
+		</label>
+		<label class="line">Valeur
+			<Select value={config.series[2] ?? none} options={[{ value: none, label: '(aucune)' }, ...columns.map((c) => ({ value: c, label: c }))]} onchange={(c) => setMapSeries(2, c)} />
+		</label>
+		<label class="line">Affichage
+			<Select
+				value={config.mapMode || 'points'}
+				options={[
+					{ value: 'points', label: 'Points' },
+					{ value: 'heat', label: 'Densité (chaleur)' }
+				]}
+				onchange={(v) => set({ mapMode: v === 'points' ? undefined : v })}
+			/>
+		</label>
+		<p class="hint">Fond de carte © OpenStreetMap (tile.openstreetmap.org), soumis à l’autorisation réseau du classeur. La valeur règle la taille des points, ou le poids de chacun dans la densité.</p>
+		{:else}
 		<label class="line">Axe X
 			<Select value={config.x} options={columns.map((c) => ({ value: c, label: c }))} onchange={(x) => set({ x, series: config.series.filter((s) => s !== x) })} />
 		</label>
@@ -95,6 +147,9 @@
 								set({ colors });
 							}}
 						/>
+						{#if config.kind === 'combo'}
+							<Select value={seriesShape(config.seriesKinds, k)} options={SHAPES} onchange={(v) => setShape(k, v)} title="Forme de la série" />
+						{/if}
 						{#if canSecondary && config.series.length > 1}
 							<button
 								class="sec"
@@ -110,6 +165,10 @@
 				</label>
 			{/each}
 		</div>
+		{#if config.kind === 'histogram'}
+			<label class="line">Classes<input value={config.bins ?? ''} onchange={(e) => set({ bins: num((e.currentTarget as HTMLInputElement).value) })} placeholder="auto" /></label>
+		{/if}
+		{/if}
 	</section>
 
 	<section>
@@ -126,6 +185,7 @@
 
 	<section>
 		<h3>Éléments</h3>
+		{#if !isMap && config.kind !== 'gauge'}
 		<label class="line">Légende
 			<Select
 				value={config.legend || 'bottom'}
@@ -138,9 +198,12 @@
 				onchange={(v) => set({ legend: v === 'bottom' ? undefined : v })}
 			/>
 		</label>
+		{/if}
 		<label class="opt"><input type="checkbox" checked={!!config.labels} onchange={(e) => set({ labels: (e.currentTarget as HTMLInputElement).checked || undefined })} /> Étiquettes de données</label>
-		{#if axes}
+		{#if axes || config.kind === 'radar'}
 			<label class="opt"><input type="checkbox" checked={!config.noGrid} onchange={(e) => set({ noGrid: !(e.currentTarget as HTMLInputElement).checked || undefined })} /> Quadrillage</label>
+		{/if}
+		{#if bounds}
 			<div class="minmax">
 				<label>Min<input value={config.yMin ?? ''} onchange={(e) => set({ yMin: num((e.currentTarget as HTMLInputElement).value) })} placeholder="auto" /></label>
 				<label>Max<input value={config.yMax ?? ''} onchange={(e) => set({ yMax: num((e.currentTarget as HTMLInputElement).value) })} placeholder="auto" /></label>
