@@ -12,6 +12,7 @@
 	import Icon from '#lib/icons/Icon.svelte';
 	import { luaTools } from './luaeditor';
 	import ScriptReference from './ScriptReference.svelte';
+	import NetworkAccess, { type HostAccess } from './NetworkAccess.svelte';
 
 	export interface Script {
 		id: number;
@@ -32,9 +33,12 @@
 		stop: () => Promise<unknown>;
 		/** Lignes de print reçues en direct (événement script:print). */
 		subscribe?: (fn: (line: string) => void) => () => void;
+		/** Hôtes HTTP autorisés pour le classeur (bouton Accès réseau). */
+		network?: HostAccess;
 	}
 
-	let { scripts, save, remove, run, stop, subscribe }: Props = $props();
+	let { scripts, save, remove, run, stop, subscribe, network }: Props = $props();
+	let netOpen = $state(false);
 
 	const EXAMPLE = `-- Exemple : la liste des tableaux du classeur et leurs colonnes.
 -- db.query, db.rows, db.insert, db.execute… : voir le bouton « Référence ».
@@ -246,6 +250,7 @@ end
 			<button onclick={doSave}><Icon name="save" size={14} />Enregistrer{dirty ? ' •' : ''}</button>
 			<button class="delete" onclick={doRemove} disabled={!current.id}><Icon name="trash" size={14} />Supprimer</button>
 			<button onclick={() => (showRef = !showRef)} aria-pressed={showRef}><Icon name="book" size={14} />Référence</button>
+			{#if network}<button onclick={() => (netOpen = true)} title="Hôtes que les scripts et pages HTML du classeur peuvent joindre en HTTP"><Icon name="web" size={14} />Accès réseau</button>{/if}
 			<span class="muted">Ctrl+Entrée : exécuter · Ctrl+S : enregistrer le script</span>
 		</div>
 		<div class="editor" bind:this={host}></div>
@@ -258,6 +263,7 @@ end
 		</div>
 	</section>
 	{#if showRef}<ScriptReference insert={insertSnippet} close={() => (showRef = false)} />{/if}
+	{#if netOpen && network}<NetworkAccess {...network} onclose={() => (netOpen = false)} />{/if}
 </div>
 
 <style>

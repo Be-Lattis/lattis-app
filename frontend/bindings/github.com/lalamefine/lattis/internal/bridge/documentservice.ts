@@ -39,10 +39,25 @@ export function AddFavorite(name: string, sql: string): $CancellablePromise<numb
 }
 
 /**
+ * AddPage ajoute un onglet page HTML avant l'onglet before (0 : à la fin)
+ * et renvoie son identifiant.
+ */
+export function AddPage(before: number): $CancellablePromise<number> {
+    return $Call.ByID(1783811502, before);
+}
+
+/**
  * AddSheet ajoute un onglet à la fin et renvoie son identifiant.
  */
 export function AddSheet(): $CancellablePromise<number> {
     return $Call.ByID(3787066848);
+}
+
+/**
+ * AllowHTTPHost autorise un hôte pour le classeur et renvoie la liste.
+ */
+export function AllowHTTPHost(h: string): $CancellablePromise<string[] | null> {
+    return $Call.ByID(1818783453, h);
 }
 
 /**
@@ -375,6 +390,14 @@ export function ForgetConnectionPassword(name: string): $CancellablePromise<void
 }
 
 /**
+ * ForgetHTTPHost retire un hôte (la prochaine requête redemandera) et
+ * renvoie la liste.
+ */
+export function ForgetHTTPHost(h: string): $CancellablePromise<string[] | null> {
+    return $Call.ByID(465675441, h);
+}
+
+/**
  * ForgetQueryCache vide le cache des sources de l'aperçu.
  */
 export function ForgetQueryCache(): $CancellablePromise<void> {
@@ -386,6 +409,14 @@ export function ForgetQueryCache(): $CancellablePromise<void> {
  */
 export function FormulaHelp(): $CancellablePromise<$models.FormulaHelp> {
     return $Call.ByID(1854565667);
+}
+
+/**
+ * HTTPHosts liste les hôtes que les scripts et pages du classeur peuvent
+ * joindre sans redemander (onglet SCRIPT › Accès réseau).
+ */
+export function HTTPHosts(): $CancellablePromise<string[] | null> {
+    return $Call.ByID(2230405609);
 }
 
 /**
@@ -518,6 +549,22 @@ export function OpenDemo(): $CancellablePromise<$models.DemoResult> {
  */
 export function Orphans(): $CancellablePromise<archive$0.Orphan[] | null> {
     return $Call.ByID(2899685153);
+}
+
+/**
+ * Page donne le contenu d'un onglet page HTML.
+ */
+export function Page(sheet: number): $CancellablePromise<string> {
+    return $Call.ByID(393663941, sheet);
+}
+
+/**
+ * PageCall exécute une commande demandée par une page HTML (pont
+ * postMessage du cadre isolé) : les commandes des scripts et du serveur MCP,
+ * sauf fichiers, annulation et scripts.run (api.PageCall).
+ */
+export function PageCall(name: string, args: { [_ in string]?: any } | null): $CancellablePromise<any> {
+    return $Call.ByID(65243337, name, args);
 }
 
 /**
@@ -755,6 +802,13 @@ export function Save($as: boolean): $CancellablePromise<$models.DocState> {
  */
 export function SaveConnection(c: query$0.Connection, password: string, remember: boolean): $CancellablePromise<number> {
     return $Call.ByID(4143582795, c, password, remember);
+}
+
+/**
+ * SavePage remplace le contenu d'un onglet page HTML (annulable).
+ */
+export function SavePage(sheet: number, source: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3759416528, sheet, source);
 }
 
 /**

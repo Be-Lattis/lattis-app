@@ -19,6 +19,8 @@
 		onadd?: () => void;
 		/** Insère une feuille avant la feuille before. */
 		oninsert?: (before: number) => void;
+		/** Nouvel onglet page HTML, avant la feuille before (absente : à la fin). */
+		onpage?: (before?: number) => void;
 		/** Place la feuille id au rang to (0 : première). */
 		onmove?: (id: number, to: number) => void;
 		onrename?: (id: number, name: string) => void;
@@ -43,10 +45,13 @@
 		onrefused?: (msg: string) => void;
 	}
 
-	let { sheets, active, onselect, onadd: add, oninsert: insert, onmove: move, onrename: rename, ondelete: del, oncopy: copy, oncolor: color, onhide: hide, hscroll, onhscroll, onhhold, onprotect, locked = false, onrefused }: Props = $props();
+	let { sheets, active, onselect, onadd: add, oninsert: insert, onpage: page, onmove: move, onrename: rename, ondelete: del, oncopy: copy, oncolor: color, onhide: hide, hscroll, onhscroll, onhhold, onprotect, locked = false, onrefused }: Props = $props();
 	const LOCKED = 'La structure du classeur est protégée : ôtez la protection (Révision › Ôter la protection du classeur) pour ajouter, supprimer, renommer ou déplacer des feuilles';
 	const onadd = $derived(locked ? undefined : add);
 	const oninsert = $derived(locked ? undefined : insert);
+	const onpage = $derived(locked ? undefined : page);
+	// Menu du bouton « + » (clic droit) : feuille ou onglet HTML.
+	let addMenu = $state<{ x: number } | null>(null);
 	const onmove = $derived(locked ? undefined : move);
 	const onrename = $derived(locked ? undefined : rename);
 	const ondelete = $derived(locked ? undefined : del);
@@ -239,7 +244,7 @@
 					}
 				}}
 				title={(s.protected ? 'Feuille protégée. ' : '') + (locked ? 'Classeur protégé' : onmove ? 'Double-clic pour renommer, glisser pour déplacer' : 'Double-clic pour renommer')}
-				>{#if s.protected || locked}<span class="lock" aria-label={s.protected ? 'Feuille protégée' : 'Classeur protégé'}><Icon name="lock" size={12} /></span>{/if}{s.name}</button
+				>{#if s.protected || locked}<span class="lock" aria-label={s.protected ? 'Feuille protégée' : 'Classeur protégé'}><Icon name="lock" size={12} /></span>{/if}{#if s.kind === 'html'}<span class="kind" aria-label="Page HTML"><Icon name="web" size={12} /></span>{/if}{s.name}</button
 			>
 		{/if}
 	{/each}
@@ -248,7 +253,36 @@
 		<button class="more" onclick={() => (listing = true)} title="{hiddenTabs} feuille{hiddenTabs > 1 ? 's' : ''} non affichée{hiddenTabs > 1 ? 's' : ''} : toutes les feuilles">…</button>
 	{/if}
 	{#if drag?.moved && drag.drop >= 0}<span class="drop-mark" style:left="{dropX - 1}px"></span>{/if}
-	<button class="add" disabled={!onadd} onclick={() => onadd?.()} title={locked ? 'Structure du classeur protégée' : 'Nouvelle feuille'}>+</button>
+	<button
+		class="add"
+		disabled={!onadd}
+		onclick={() => onadd?.()}
+		oncontextmenu={(e) => {
+			e.preventDefault();
+			if (onadd || onpage) addMenu = { x: (e.currentTarget as HTMLElement).offsetLeft };
+		}}
+		title={locked ? 'Structure du classeur protégée' : 'Nouvelle feuille (clic droit : nouvel onglet HTML)'}>+</button
+	>
+	{#if addMenu}
+		<div class="menu" role="menu" style:left="{addMenu.x}px" use:dismiss={() => (addMenu = null)}>
+			<button
+				role="menuitem"
+				disabled={!onadd}
+				onclick={() => {
+					addMenu = null;
+					onadd?.();
+				}}>Nouvelle feuille</button
+			>
+			<button
+				role="menuitem"
+				disabled={!onpage}
+				onclick={() => {
+					addMenu = null;
+					onpage?.();
+				}}>Nouvel onglet HTML</button
+			>
+		</div>
+	{/if}
 	{#if hscroll}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
@@ -283,6 +317,15 @@
 					closeMenu();
 					oninsert?.(id);
 				}}>Insérer une feuille</button
+			>
+			<button
+				role="menuitem"
+				disabled={!onpage}
+				onclick={() => {
+					const id = m.id;
+					closeMenu();
+					onpage?.(id);
+				}}>Insérer un onglet HTML</button
 			>
 			<button
 				role="menuitem"
@@ -720,6 +763,12 @@
 		background: #217346;
 		border-color: #217346;
 		color: #fff;
+	}
+	.kind {
+		display: inline-flex;
+		vertical-align: -1px;
+		margin-right: 4px;
+		--icon-accent: #217346;
 	}
 	.lock {
 		display: inline-flex;

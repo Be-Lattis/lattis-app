@@ -265,6 +265,19 @@ ALTER TABLE _lattis_sheets ADD COLUMN freeze_cols INTEGER NOT NULL DEFAULT 0;
 	`
 ALTER TABLE _lattis_sheets ADD COLUMN zoom INTEGER NOT NULL DEFAULT 100;
 `,
+	// 22 → 23 : onglets « page HTML » (une ligne par feuille de ce type :
+	// HTML, CSS et JavaScript affichés dans un cadre isolé) et hôtes que les
+	// scripts du classeur peuvent joindre en HTTP sans redemander (hors du
+	// journal : une autorisation ne s'annule pas).
+	`
+CREATE TABLE _lattis_pages (
+	sheet  INTEGER NOT NULL PRIMARY KEY REFERENCES _lattis_sheets(id),
+	source TEXT NOT NULL
+) STRICT;
+CREATE TABLE _lattis_http_hosts (
+	host TEXT NOT NULL PRIMARY KEY COLLATE NOCASE
+) STRICT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

@@ -146,7 +146,9 @@ func (s *Server) dispatch(ctx context.Context, req request) (any, *rpcError) {
 		if cmd == nil {
 			return nil, &rpcError{codeParams, "outil inconnu : " + p.Name}
 		}
-		res, err := api.Invoke(ctx, s.Host, cmd.Name, p.Arguments)
+		// Un assistant ne fait pas répondre l'utilisateur à sa place : une
+		// requête HTTP vers un hôte non autorisé est refusée (cmd_http.go).
+		res, err := api.Invoke(api.WithoutPrompt(ctx), s.Host, cmd.Name, p.Arguments)
 		if err != nil {
 			return toolResult(err.Error(), true), nil
 		}
@@ -239,7 +241,10 @@ func Tools() []Tool {
 			Name:        ToolName(c.Name),
 			Description: desc,
 			InputSchema: map[string]any{"type": "object", "properties": props, "required": required, "additionalProperties": false},
-			Annotations: map[string]any{"readOnlyHint": !c.Write && !strings.HasPrefix(c.Name, "doc.") && c.Name != "buttons.run" && c.Name != "scripts.run"},
+			Annotations: map[string]any{"readOnlyHint": !c.Write && !strings.HasPrefix(c.Name, "doc.") && !strings.HasPrefix(c.Name, "http.") && c.Name != "buttons.run" && c.Name != "scripts.run"},
+		}
+		if strings.HasPrefix(c.Name, "http.") {
+			t.Annotations["openWorldHint"] = true
 		}
 		if c.Label != "" {
 			t.Title = c.Label

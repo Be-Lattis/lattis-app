@@ -85,6 +85,8 @@
 		/** En-têtes A1 (lettres et numéros) toujours affichés, et leur bascule. */
 		headings?: boolean;
 		onheadings?: (show: boolean) => void;
+		/** Insertion › Page HTML : nouvel onglet page HTML. */
+		onpage?: () => void;
 		/** Insertion › Bouton : bouton d'action lié à un script. */
 		onbutton?: (kind?: '' | 'checkbox' | 'select') => void;
 		/** Feuille active protégée : les commandes qui la modifient sont grisées. */
@@ -122,7 +124,7 @@
 		onanimate?: (on: boolean) => void;
 	}
 
-	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate }: Props = $props();
+	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, onpage, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate }: Props = $props();
 	const fmt = (tab: FormatTab) => (onformat ? () => onformat(tab) : undefined);
 	const lines = (rows: boolean, hide: boolean) => (onlines ? () => onlines(rows, hide) : undefined);
 	const frz = (what: FreezeAction) => (onfreeze ? () => onfreeze(what) : undefined);
@@ -321,6 +323,7 @@
 			}
 		],
 		Insertion: [
+			{ title: 'Onglets', commands: [{ label: 'Page HTML', icon: 'web', run: onpage, hint: 'Nouvel onglet page HTML : HTML, CSS et JavaScript qui lisent et modifient le classeur (lattis.call)' }] },
 			{ title: 'Tableaux', commands: [{ label: 'Tableau croisé', icon: 'pivot-table', run: onpivot, hint: 'Tableau croisé dynamique du tableau actif (double-clic sur un TCD pour le modifier)' }] },
 			{
 				title: 'Graphiques',

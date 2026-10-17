@@ -66,6 +66,8 @@ schéma de chaque outil (`tools/list`).
 | Objets | `charts_create`, `charts_set`, `charts_place`, `charts_delete`, `pivots_create`, `pivots_set`, `pivots_delete`, `buttons_create`, `buttons_set`, `buttons_place`, `buttons_delete`, `buttons_list`, `buttons_run` |
 | Scripts | `scripts_list`, `scripts_save`, `scripts_delete`, `scripts_check`, `scripts_run`, `formulas_functions` |
 | Requêtes d'import | `queries_list`, `queries_save`, `queries_preview`, `queries_refresh`, `queries_refresh_all`, `queries_delete`, `connections_list` (sans mot de passe : une connexion PostgreSQL qui en demande un se déverrouille depuis l'interface) |
+| Pages HTML | `pages_add`, `pages_get`, `pages_set` (onglets « page HTML » : HTML, CSS et JavaScript affichés dans un cadre isolé) |
+| Réseau | `http_get`, `http_post`, `http_request` (seulement vers un hôte déjà autorisé pour le classeur, voir ci-dessous) |
 
 Une feuille protégée (Révision › Protéger la feuille, ou `sheets_protect`) refuse toute
 écriture, outils `cells_*`, `tables_*`, `columns_*`, objets et `db_execute` compris, avec
@@ -77,6 +79,14 @@ refusent aussi une action qui toucherait une feuille protégée.
 `ui_dialog`, `ui_confirm` et `ui_prompt` ouvrent une boîte de dialogue dans la fenêtre et
 attendent la réponse de l'utilisateur : l'assistant peut ainsi lui demander une
 confirmation ou une saisie.
+
+Les outils `http_*` (et un script lancé par `scripts_run` qui appelle `http.get`…) ne
+joignent que les hôtes que l'utilisateur a déjà autorisés pour ce classeur : en répondant
+« Autoriser » à la demande d'un script lancé dans Lattis, ou dans l'onglet SCRIPT ›
+Accès réseau. Vers un autre hôte, la requête est refusée avec le message « hôte non
+autorisé : « api.exemple.fr » n'est pas autorisé pour ce classeur ; seul l'utilisateur
+peut l'autoriser dans Lattis… » : un assistant ne peut pas accorder lui-même l'accès au
+réseau.
 
 ## Pour les développeurs
 

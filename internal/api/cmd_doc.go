@@ -310,7 +310,7 @@ func init() {
 						return nil, fmt.Errorf("script « %s » introuvable", name)
 					}
 				}
-				return RunScript(c.Host, name, src, fn)
+				return RunScriptFrom(c, c.Host, name, src, fn)
 			},
 		},
 	)

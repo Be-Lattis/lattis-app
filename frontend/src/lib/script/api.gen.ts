@@ -289,6 +289,60 @@ export const apiReference: RefEntry[] = [
 		args: [0, 0]
 	},
 	{
+		name: "http.get",
+		category: "http",
+		signature: "http.get(url, [options]) → {status, ok, url, headers, body, json}",
+		summary: "Envoie une requête HTTP GET (http:// ou https://) et renvoie la réponse.",
+		details: "La réponse : status (200, 404…), ok (true pour un statut 2xx), url (adresse finale, après les redirections), headers (noms en minuscules), body (texte) et json (le corps décodé quand la réponse est du JSON). Un statut d'erreur (404, 500…) n'est pas une erreur Lua : testez ok ; une panne réseau ou un délai dépassé en est une (pcall pour la rattraper). Avant la première requête vers un hôte, Lattis demande l'autorisation à l'utilisateur (mémorisable pour le classeur ; onglet SCRIPT › Accès réseau pour la revoir) ; le serveur MCP n'atteint que les hôtes déjà autorisés. Délai : 15 s par défaut (timeout, 120 s au plus), sans compter dans la durée maximale du script ; réponse de 10 Mo au plus ; 10 redirections au plus ; le bouton Arrêter interrompt la requête. Paramètres — url : adresse (http:// ou https://) ; options : {headers = {nom = valeur}, timeout = secondes}. Arguments dans l'ordre, ou une table d'arguments nommés : http.get{url = …}.",
+		example: "local r = http.get(\"https://api.example.com/taux?devise=USD\")\nif r.ok and r.json then\n  print(\"Taux :\", r.json.taux)\nelse\n  print(\"Erreur\", r.status, r.body)\nend",
+		args: [1, 2]
+	},
+	{
+		name: "http.post",
+		category: "http",
+		signature: "http.post(url, [body], [options]) → {status, ok, url, headers, body, json}",
+		summary: "Envoie une requête HTTP POST et renvoie la réponse ; un corps texte part tel quel, une table part en JSON.",
+		details: "La réponse : status (200, 404…), ok (true pour un statut 2xx), url (adresse finale, après les redirections), headers (noms en minuscules), body (texte) et json (le corps décodé quand la réponse est du JSON). Un statut d'erreur (404, 500…) n'est pas une erreur Lua : testez ok ; une panne réseau ou un délai dépassé en est une (pcall pour la rattraper). Avant la première requête vers un hôte, Lattis demande l'autorisation à l'utilisateur (mémorisable pour le classeur ; onglet SCRIPT › Accès réseau pour la revoir) ; le serveur MCP n'atteint que les hôtes déjà autorisés. Délai : 15 s par défaut (timeout, 120 s au plus), sans compter dans la durée maximale du script ; réponse de 10 Mo au plus ; 10 redirections au plus ; le bouton Arrêter interrompt la requête. Paramètres — url : adresse (http:// ou https://) ; body : corps : texte, ou table encodée en JSON (Content-Type: application/json) ; options : {headers = {nom = valeur}, timeout = secondes}. Arguments dans l'ordre, ou une table d'arguments nommés : http.post{url = …}.",
+		example: "local r = http.post(\"https://api.example.com/commandes\", {client = \"Dupont\", montant = 120})\nprint(r.status, r.ok)",
+		args: [1, 3]
+	},
+	{
+		name: "http.request",
+		category: "http",
+		signature: "http.request(url, [method], [headers], [body], [json], [timeout]) → {status, ok, url, headers, body, json}",
+		summary: "Envoie une requête HTTP quelconque (GET, POST, PUT, PATCH, DELETE…) et renvoie la réponse.",
+		details: "json encode une table en corps JSON (avec l'en-tête Content-Type qui va bien) ; body envoie un texte tel quel. La réponse : status (200, 404…), ok (true pour un statut 2xx), url (adresse finale, après les redirections), headers (noms en minuscules), body (texte) et json (le corps décodé quand la réponse est du JSON). Un statut d'erreur (404, 500…) n'est pas une erreur Lua : testez ok ; une panne réseau ou un délai dépassé en est une (pcall pour la rattraper). Avant la première requête vers un hôte, Lattis demande l'autorisation à l'utilisateur (mémorisable pour le classeur ; onglet SCRIPT › Accès réseau pour la revoir) ; le serveur MCP n'atteint que les hôtes déjà autorisés. Délai : 15 s par défaut (timeout, 120 s au plus), sans compter dans la durée maximale du script ; réponse de 10 Mo au plus ; 10 redirections au plus ; le bouton Arrêter interrompt la requête. Paramètres — url : adresse (http:// ou https://) ; method : méthode (GET par défaut) ; headers : en-têtes : {nom = valeur} ; body : corps de la requête (texte) ; json : corps de la requête : table encodée en JSON ; timeout : délai en secondes (15 par défaut, 120 au plus). Arguments dans l'ordre, ou une table d'arguments nommés : http.request{url = …}.",
+		example: "local jeton = \"abc123\"\nlocal r = http.request{\n  method = \"PUT\",\n  url = \"https://api.example.com/clients/42\",\n  headers = {Authorization = \"Bearer \" .. jeton},\n  json = {nom = \"Dupont\", ville = \"Lyon\"},\n  timeout = 30,\n}\nprint(r.status, r.headers[\"content-type\"])",
+		args: [1, 6]
+	},
+	{
+		name: "pages.add",
+		category: "sheets",
+		signature: "pages.add([name], [source], [before]) → {id, name, kind}",
+		summary: "Ajoute un onglet page HTML (HTML, CSS et JavaScript affichés dans un cadre isolé) et renvoie {id, name, kind}.",
+		details: "La page parle au classeur avec lattis.call(\"commande\", {arguments}), qui renvoie une promesse (les mêmes commandes que les scripts : sheets.list, db.query, cells.set…), et lattis.on(\"change\", fonction), appelée quand le classeur change. Sans source, la page reçoit un modèle d'exemple. Sans before, l'onglet s'ajoute à la fin. Paramètres — name : nom de l'onglet (Page1… par défaut) ; source : contenu HTML de la page ; before : feuille devant laquelle l'insérer. Arguments dans l'ordre, ou une table d'arguments nommés : pages.add{name = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "local p = pages.add(\"Tableau de bord\", [[\n\u003ch1\u003eCommandes\u003c/h1\u003e\n\u003cp\u003eTotal : \u003cb id=\"total\"\u003e…\u003c/b\u003e\u003c/p\u003e\n\u003cscript\u003e\n  async function maj() {\n    const r = await lattis.call(\"db.query\", {sql: \"SELECT sum(Montant) AS t FROM Commandes\"});\n    document.getElementById(\"total\").textContent = r.rows[0][0];\n  }\n  lattis.on(\"change\", maj);\n  maj();\n\u003c/script\u003e\n]])\nprint(p.name, p.kind)",
+		args: [0, 3]
+	},
+	{
+		name: "pages.get",
+		category: "sheets",
+		signature: "pages.get([sheet]) → texte HTML",
+		summary: "Renvoie le contenu HTML d'un onglet page HTML.",
+		details: "Paramètres — sheet : onglet page HTML (nom ou identifiant) ; absent : l'onglet affiché.",
+		example: "for _, f in ipairs(sheets.list()) do\n  if f.kind == \"html\" then print(f.name, #pages.get(f.name) .. \" caractères\") end\nend",
+		args: [0, 1]
+	},
+	{
+		name: "pages.set",
+		category: "sheets",
+		signature: "pages.set(sheet, source)",
+		summary: "Remplace le contenu HTML d'un onglet page HTML.",
+		details: "Paramètres — sheet : onglet page HTML (nom ou identifiant) ; source : nouveau contenu HTML. Arguments dans l'ordre, ou une table d'arguments nommés : pages.set{sheet = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "local p = pages.add()\npages.set(p.name, \"\u003ch1\u003eBonjour\u003c/h1\u003e\")",
+		args: [1, 2]
+	},
+	{
 		name: "pivots.create",
 		category: "objects",
 		signature: "pivots.create(config) → {id, name} (la feuille)",
@@ -474,9 +528,9 @@ export const apiReference: RefEntry[] = [
 	{
 		name: "sheets.list",
 		category: "sheets",
-		signature: "sheets.list() → { {id, name, protected}, ... }",
+		signature: "sheets.list() → { {id, name, protected, kind}, ... }",
 		summary: "Liste les feuilles du classeur, dans l'ordre des onglets.",
-		details: "protected vaut true pour une feuille protégée (Révision › Protéger la feuille).",
+		details: "protected vaut true pour une feuille protégée (Révision › Protéger la feuille) ; kind vaut \"html\" pour un onglet page HTML (absent pour une feuille).",
 		example: "for _, f in ipairs(sheets.list()) do\n  print(f.id, f.name)\nend",
 		args: [0, 0]
 	},

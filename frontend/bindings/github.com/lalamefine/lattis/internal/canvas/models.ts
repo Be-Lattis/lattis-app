@@ -757,6 +757,12 @@ export interface SheetInfo {
      * Zoom : zoom de la feuille en pour cent (100 par défaut).
      */
     "zoom": number;
+
+    /**
+     * Kind : "html" pour un onglet page HTML (voir pages.go), vide pour une
+     * feuille.
+     */
+    "kind": string;
 }
 
 /**

@@ -68,6 +68,11 @@ type Model struct {
 	// Changements de protection (hors journal) depuis l'ouverture.
 	protMu  sync.Mutex
 	protGen int64
+
+	// Hôtes HTTP autorisés (true) ou refusés (false) pour la session, sans
+	// être mémorisés dans le classeur (voir httphosts.go).
+	hostMu  sync.Mutex
+	session map[string]bool
 }
 
 // New relie le modèle à la base (déjà migrée) et au bus de commandes (dont

@@ -30,6 +30,14 @@ var ErrBusy = errors.New("un script est déjà en cours")
 // pour le script seul). Tout ce qu'il modifie forme une seule étape
 // d'annulation, nommée d'après le script.
 func RunScript(host Host, name, src, entry string) (ScriptResult, error) {
+	return RunScriptFrom(context.Background(), host, name, src, entry)
+}
+
+// RunScriptFrom est RunScript lancé depuis parent : un script lancé par le
+// serveur MCP (WithoutPrompt) ne consulte pas l'utilisateur pour joindre un
+// hôte HTTP. parent n'arrête pas le script (seuls Arrêter et la durée
+// maximale le font).
+func RunScriptFrom(parent context.Context, host Host, name, src, entry string) (ScriptResult, error) {
 	d, err := host.Doc()
 	if err != nil {
 		return ScriptResult{}, err
@@ -52,6 +60,9 @@ func RunScript(host Host, name, src, entry string) (ScriptResult, error) {
 		cancel()
 	}()
 
+	if !CanPrompt(parent) {
+		ctx = WithoutPrompt(ctx)
+	}
 	label := "Script"
 	if name != "" {
 		label = "Script « " + name + " »"

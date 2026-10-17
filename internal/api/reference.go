@@ -12,6 +12,7 @@ var luaCategory = map[string]string{
 	"ui": "ui", "charts": "objects", "pivots": "objects", "buttons": "objects",
 	"doc": "workbook", "scripts": "workbook", "formulas": "workbook",
 	"queries": "workbook", "connections": "workbook",
+	"http": "http", "pages": "sheets",
 }
 
 // LuaReference écrit frontend/src/lib/script/api.gen.ts : les commandes

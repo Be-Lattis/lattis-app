@@ -12,6 +12,7 @@ var pSheet = Param{Name: "sheet", Type: Ref, Desc: "feuille (nom ou identifiant)
 type SheetView struct {
 	ID      int64        `json:"id"`
 	Name    string       `json:"name"`
+	Kind    string       `json:"kind,omitempty"` // "html" : onglet page HTML
 	Tables  []Table      `json:"tables"`
 	Cells   []CellView   `json:"cells"`
 	Names   []NamedCell  `json:"names"`
@@ -61,8 +62,8 @@ func init() {
 		&Command{
 			Name:    "sheets.list",
 			Summary: "Liste les feuilles du classeur, dans l'ordre des onglets.",
-			Details: "protected vaut true pour une feuille protégée (Révision › Protéger la feuille).",
-			Returns: "{ {id, name, protected}, ... }",
+			Details: "protected vaut true pour une feuille protégée (Révision › Protéger la feuille) ; kind vaut \"html\" pour un onglet page HTML (absent pour une feuille).",
+			Returns: "{ {id, name, protected, kind}, ... }",
 			Example: `for _, f in ipairs(sheets.list()) do
   print(f.id, f.name)
 end`,
@@ -501,7 +502,7 @@ sheets.unprotect("Feuille1", "secret")`,
 }
 
 func describeSheet(s sheetRef, l canvas.Layout) SheetView {
-	v := SheetView{ID: s.ID, Name: s.Name, Tables: []Table{}, Cells: []CellView{}, Names: []NamedCell{}, Pivots: []ObjectView{}, Charts: []ObjectView{}, Buttons: []ButtonView{}}
+	v := SheetView{ID: s.ID, Name: s.Name, Kind: s.Kind, Tables: []Table{}, Cells: []CellView{}, Names: []NamedCell{}, Pivots: []ObjectView{}, Charts: []ObjectView{}, Buttons: []ButtonView{}}
 	for _, t := range l.Tables {
 		v.Tables = append(v.Tables, describeTable(t, s.Name))
 	}

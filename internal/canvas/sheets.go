@@ -49,7 +49,11 @@ func (m *Model) MoveSheet(ctx context.Context, sheet int64, to int) error {
 	return m.Do(ctx, "Déplacer la feuille", func(t *tx) error { return t.moveSheet(sheet, to) })
 }
 
-func (t *tx) addSheet() (int64, error) {
+func (t *tx) addSheet() (int64, error) { return t.addNamedSheet("Feuille") }
+
+// addNamedSheet ajoute un onglet nommé prefix suivi d'un numéro libre (celui
+// de l'onglet pour une feuille, comme Excel ; à partir de 1 sinon).
+func (t *tx) addNamedSheet(prefix string) (int64, error) {
 	if err := t.guardWorkbook(); err != nil {
 		return 0, err
 	}
@@ -59,8 +63,12 @@ func (t *tx) addSheet() (int64, error) {
 		return 0, err
 	}
 	name := ""
-	for n := int(id); ; n++ {
-		name = fmt.Sprintf("Feuille%d", n)
+	start := int(id)
+	if prefix != "Feuille" {
+		start = 1
+	}
+	for n := start; ; n++ {
+		name = fmt.Sprintf("%s%d", prefix, n)
 		var k int
 		if err := t.row(`SELECT count(*) FROM _lattis_sheets WHERE name = ?`, name).Scan(&k); err != nil {
 			return 0, err
@@ -336,8 +344,9 @@ func (m *Model) SetRowHeight(ctx context.Context, sheet int64, row, height int) 
 }
 
 // sheetPositioned sont les tables de métadonnées repérées par feuille et
-// position (sans identifiant propre), supprimées avec la feuille.
-var sheetPositioned = []string{`_lattis_cell_styles`, `_lattis_row_styles`, `_lattis_col_styles`, `_lattis_row_rules`, `_lattis_col_rules`, `_lattis_col_widths`, `_lattis_row_heights`}
+// position (sans identifiant propre), supprimées et copiées avec la feuille ;
+// le contenu d'un onglet page HTML (_lattis_pages) en fait partie.
+var sheetPositioned = []string{`_lattis_pages`, `_lattis_cell_styles`, `_lattis_row_styles`, `_lattis_col_styles`, `_lattis_row_rules`, `_lattis_col_rules`, `_lattis_col_widths`, `_lattis_row_heights`}
 
 // snapshot renvoie les insertions qui recréent les lignes d'une feuille dans
 // une table de métadonnées (pour l'annulation).

@@ -23,6 +23,7 @@
 	import ScriptView, { type Script } from '#lib/script/ScriptView.svelte';
 	import ScriptDialog, { type DialogSpec } from '#lib/script/ScriptDialog.svelte';
 	import McpPanel from '#lib/shell/McpPanel.svelte';
+	import HtmlPage from '#lib/page/HtmlPage.svelte';
 	import QueryHost from '#lib/query/QueryHost.svelte';
 	import type { ButtonConfig } from '#lib/grid/buttons.js';
 	import type { UICommand } from '#bindings/internal/bridge/models.js';
@@ -57,6 +58,8 @@
 	let orphans = $state<Orphan[]>([]);
 	let help = $state<FormulaHelp | null>(null);
 	let scripts = $state<Script[]>([]);
+	// Contenu de l'onglet page HTML affiché (null : une feuille).
+	let pageSource = $state<{ sheet: number; source: string } | null>(null);
 	// Requêtes favorites de l'onglet SQL, enregistrées dans le classeur.
 	let favorites = $state<Favorite[]>([]);
 	let recent = $state<string[]>([]);
@@ -91,6 +94,12 @@
 			sheetId = shownId;
 			layout = await DocumentService.Layout(sheetId);
 		}
+		// Onglet page HTML affiché : son contenu (la page se recharge s'il change).
+		const shown = layout?.sheets?.find((s) => s.id === sheetId);
+		if (shown?.kind === 'html') {
+			const src = await DocumentService.Page(sheetId);
+			if (!pageSource || pageSource.sheet !== sheetId || pageSource.source !== src) pageSource = { sheet: sheetId, source: src };
+		} else pageSource = null;
 		help = await DocumentService.FormulaHelp();
 		scripts = (await DocumentService.Scripts()) ?? [];
 		favorites = (await DocumentService.Favorites()) ?? [];
@@ -606,7 +615,7 @@
 	const query = (sql: string) => (mode === 'demo' ? GridService.Query(sql) : DocumentService.Query(sql));
 	const data = $derived(mode === 'demo' ? demoData : docData);
 	const title = $derived(mode === 'demo' ? 'Démo : 1 M de lignes' : mode === 'recover' ? 'Récupération' : docState.title);
-	const tabs = $derived(mode === 'demo' ? (demo ? [{ id: 1, name: demo.name }] : []) : (layout?.sheets ?? []).map((s) => ({ id: s.id, name: s.name, protected: s.protected, color: s.color, hidden: s.hidden })));
+	const tabs = $derived(mode === 'demo' ? (demo ? [{ id: 1, name: demo.name }] : []) : (layout?.sheets ?? []).map((s) => ({ id: s.id, name: s.name, protected: s.protected, color: s.color, hidden: s.hidden, kind: s.kind })));
 
 	/** « Afficher sur la feuille » : va sur la feuille de l'objet et le sélectionne. */
 	async function gotoObject(name: string) {
@@ -635,6 +644,9 @@
 	// --- Protection (Révision) ----------------------------------------------
 
 	const activeInfo = $derived(layout?.sheets?.find((s) => s.id === sheetId));
+	// Onglet page HTML affiché à la place de la grille.
+	const activePage = $derived(mode === 'doc' && activeInfo?.kind === 'html' && pageSource?.sheet === sheetId ? pageSource : null);
+	const addPage = (before = 0) => sheetAction(async () => selectSheet(await DocumentService.AddPage(before)));
 
 	// Zoom de la feuille active (Affichage › Zoom, Ctrl+molette, barre d'état) :
 	// appliqué tout de suite, enregistré avec la feuille un instant après (le
@@ -815,6 +827,7 @@
 		onpivot={mode === 'doc' ? () => sheet?.pivotActive() : undefined}
 		ondedup={mode === 'doc' ? () => sheet?.dedupActive() : undefined}
 		onbutton={mode === 'doc' ? (kind) => sheet?.insertButton(kind) : undefined}
+		onpage={mode === 'doc' ? () => addPage() : undefined}
 		onrecalc={mode === 'doc' ? () => DocumentService.Recalc().then(reload).catch((e) => (notice = err(e))) : undefined}
 		gridlines={!layout?.sheets?.find((s) => s.id === sheetId)?.noGrid}
 		ongridlines={mode === 'doc' ? (show) => DocumentService.SetGridlines(sheetId, show).then(reload).catch((e) => (notice = err(e))) : undefined}
@@ -836,7 +849,7 @@
 		{zoom}
 		{animate}
 		onanimate={setAnimate}
-		onzoom={data && view === 'grid' ? setZoom : undefined}
+		onzoom={data && view === 'grid' && !activePage ? setZoom : undefined}
 		cellStyle={sheetStatus?.style}
 		merged={!!sheetStatus?.merged}
 	/>
@@ -878,7 +891,7 @@
 			</div>
 		{:else if data}
 			{#key mode}
-				<div class="pane" class:hidden={view !== 'grid'}>
+				<div class="pane" class:hidden={view !== 'grid' || !!activePage}>
 					<Sheet
 						bind:this={sheet}
 						{data}
@@ -900,6 +913,25 @@
 					/>
 				</div>
 			{/key}
+			{#if view === 'grid' && activePage}
+				{#key activePage.sheet}
+					{@const pageId = activePage.sheet}
+					<div class="pane">
+						<HtmlPage
+							name={activeInfo?.name ?? ''}
+							source={activePage.source}
+							save={async (src) => {
+								docState = await DocumentService.SavePage(pageId, src);
+								await reload();
+							}}
+							call={(name, args) => DocumentService.PageCall(name, args)}
+							locked={lockedMsg}
+							stamp={layout}
+							onnotice={(m) => (notice = m)}
+						/>
+					</div>
+				{/key}
+			{/if}
 			{#if view === 'sql'}
 				<div class="pane"><SqlView {objects} run={query} exec={mode === 'doc' ? (q) => DocumentService.Execute(q) : undefined} ongoto={gotoObject}
 						tosheet={mode === 'doc'
@@ -950,6 +982,19 @@
 							}}
 							stop={() => DocumentService.StopScript()}
 							subscribe={(fn) => Events.On('script:print', (e: { data: string }) => fn(e.data))}
+							network={{
+								list: async () => (await DocumentService.HTTPHosts()) ?? [],
+								allow: async (h) => {
+									const l = (await DocumentService.AllowHTTPHost(h)) ?? [];
+									docState = await DocumentService.State();
+									return l;
+								},
+								forget: async (h) => {
+									const l = (await DocumentService.ForgetHTTPHost(h)) ?? [];
+									docState = await DocumentService.State();
+									return l;
+								}
+							}}
 						/>
 					{:else}
 						<p class="placeholder">Les scripts s'exécutent sur un classeur : Fichier › Nouveau.</p>
@@ -977,6 +1022,7 @@
 		onselect={selectSheet}
 		onadd={mode === 'doc' ? () => sheetAction(async () => selectSheet(await DocumentService.AddSheet())) : undefined}
 		oninsert={mode === 'doc' ? (before) => sheetAction(async () => selectSheet(await DocumentService.InsertSheet(before))) : undefined}
+		onpage={mode === 'doc' ? (before) => addPage(before) : undefined}
 		onmove={mode === 'doc' ? (id, to) => sheetAction(() => DocumentService.MoveSheet(id, to)) : undefined}
 		onrename={mode === 'doc' ? (id, name) => sheetAction(() => DocumentService.RenameSheet(id, name)) : undefined}
 		ondelete={mode === 'doc' ? (id) => askDeleteSheet(id) : undefined}
@@ -986,7 +1032,7 @@
 			await DocumentService.SetSheetHidden(id, hidden);
 			if (!hidden) await selectSheet(id);
 		}) : undefined}
-		hscroll={view === 'grid' ? hscroll : undefined}
+		hscroll={view === 'grid' && !activePage ? hscroll : undefined}
 		onhscroll={(x, atEnd) => sheet?.scrollLeftTo(x, atEnd)}
 		onhhold={(on) => sheet?.holdHScroll(on)}
 		onprotect={mode === 'doc' ? (id) => toggleProtect('sheet', id) : undefined}
@@ -1103,7 +1149,7 @@
 			<span>Prêt</span>
 		{/if}
 		<BusyBar />
-		{#if data && view === 'grid'}<ZoomBar {zoom} onzoom={setZoom} />{/if}
+		{#if data && view === 'grid' && !activePage}<ZoomBar {zoom} onzoom={setZoom} />{/if}
 	</footer>
 </div>
 

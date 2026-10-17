@@ -9,6 +9,8 @@ export interface TabSheet {
 	color?: string;
 	/** Feuille masquée : absente de la barre d'onglets. */
 	hidden?: boolean;
+	/** « html » : onglet page HTML (icône dans l'onglet). */
+	kind?: string;
 }
 
 /** Couleurs d'onglet proposées (couleurs standard d'Excel). */
