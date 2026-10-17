@@ -201,9 +201,6 @@
 		<button disabled={index <= 0} onclick={() => onselect(shown[index - 1].id)} title="Feuille précédente">◀</button>
 		<button disabled={index < 0 || index >= shown.length - 1} onclick={() => onselect(shown[index + 1].id)} title="Feuille suivante">▶</button>
 	</div>
-	{#if range.from > 0}
-		<button class="more" onclick={() => (listing = true)} title="{hiddenTabs} feuille{hiddenTabs > 1 ? 's' : ''} non affichée{hiddenTabs > 1 ? 's' : ''} : toutes les feuilles">…</button>
-	{/if}
 	{#each vis as s, si (s.id)}
 		{#if renaming === s.id}
 			<!-- svelte-ignore a11y_autofocus -->
@@ -246,7 +243,8 @@
 			>
 		{/if}
 	{/each}
-	{#if range.to < shown.length - 1}
+	{#if hiddenTabs > 0}
+		<!-- Toujours à droite des onglets affichés (choix de Louis). -->
 		<button class="more" onclick={() => (listing = true)} title="{hiddenTabs} feuille{hiddenTabs > 1 ? 's' : ''} non affichée{hiddenTabs > 1 ? 's' : ''} : toutes les feuilles">…</button>
 	{/if}
 	{#if drag?.moved && drag.drop >= 0}<span class="drop-mark" style:left="{dropX - 1}px"></span>{/if}
