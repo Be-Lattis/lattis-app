@@ -85,6 +85,45 @@
 		return pv.columns ?? [];
 	}
 
+	// Annuler / rétablir les changements d'étapes (Ctrl+Z, Ctrl+Y), comme
+	// l'éditeur de Power Query : chaque état des étapes et l'étape affichée.
+	type Snap = { steps: Step[]; sel: number };
+	let undoStack = $state<Snap[]>([]);
+	let redoStack = $state<Snap[]>([]);
+	const canUndo = $derived(undoStack.length > 0);
+	const canRedo = $derived(redoStack.length > 0);
+	const snap = (): Snap => ({ steps: clone(q.steps ?? []), sel });
+	/** À appeler avant tout changement des étapes. */
+	function remember() {
+		undoStack.push(snap());
+		if (undoStack.length > 100) undoStack.shift();
+		redoStack = [];
+	}
+	function restore(from: Snap[], to: Snap[]) {
+		const s = from.pop();
+		if (!s) return;
+		to.push(snap());
+		q.steps = s.steps;
+		sel = Math.min(s.sel, s.steps.length - 1);
+		form = null;
+		menu = null;
+		refresh();
+	}
+	const undoStep = () => restore(undoStack, redoStack);
+	const redoStep = () => restore(redoStack, undoStack);
+
+	function onKey(ev: KeyboardEvent) {
+		const t = ev.target as HTMLElement | null;
+		// Dans un champ de saisie, Ctrl+Z reste celui du champ.
+		if (t?.closest('input, textarea, select, [contenteditable="true"]') || form || sourceOpen) return;
+		if (!(ev.ctrlKey || ev.metaKey) || ev.altKey) return;
+		const k = ev.key.toLowerCase();
+		if (k === 'z' && !ev.shiftKey) undoStep();
+		else if (k === 'y' || (k === 'z' && ev.shiftKey)) redoStep();
+		else return;
+		ev.preventDefault();
+	}
+
 	async function addStep(op: Op) {
 		error = '';
 		menu = null;
@@ -99,6 +138,7 @@
 		error = '';
 		const add = quickSteps(a, shown, chosen, arg);
 		if (!add.length) return;
+		remember();
 		let steps = q.steps ?? [];
 		for (const s of add) steps = insertStep(steps, sel++, s);
 		q.steps = steps;
@@ -116,6 +156,16 @@
 		);
 		selCols = r.selected;
 		anchor = r.anchor;
+	}
+
+	/** Clic dans une cellule de l'aperçu : choisit sa colonne (Ctrl, Maj : plusieurs), sans la retirer d'un second clic. */
+	function clickCell(ev: MouseEvent, name: string) {
+		if (!ev.ctrlKey && !ev.metaKey && !ev.shiftKey) {
+			selCols = [name];
+			anchor = name;
+			return;
+		}
+		clickHeader(ev, name);
 	}
 
 	/** Menu de la colonne : la colonne rejoint le choix si elle n'y est pas. */
@@ -174,6 +224,7 @@
 	function applyForm(s: Step) {
 		const f = form!;
 		form = null;
+		remember();
 		if (f.edit !== null) {
 			q.steps = q.steps!.map((x, k) => (k === f.edit ? s : x));
 			sel = f.edit;
@@ -185,12 +236,14 @@
 	}
 
 	function removeStep(i: number) {
+		remember();
 		q.steps = (q.steps ?? []).filter((_, k) => k !== i);
 		if (sel >= i) sel = Math.max(-1, sel - 1);
 		refresh();
 	}
 
 	function move(i: number, d: number) {
+		remember();
 		q.steps = moveStep(q.steps ?? [], i, d);
 		if (sel === i) sel = i + d;
 		refresh();
@@ -260,7 +313,9 @@
 				big: [{ label: 'Actualiser l’aperçu', icon: 'refresh', hint: 'Relire les sources', run: () => refresh(true) }],
 				small: [
 					{ label: 'Source…', icon: 'database', hint: 'Modifier la source de la requête', run: () => (sourceOpen = true) },
-					{ label: 'Voir le SQL', icon: 'script', hint: 'Afficher le SQL de l’aperçu', on: showSQL, run: () => (showSQL = !showSQL) }
+					{ label: 'Voir le SQL', icon: 'script', hint: 'Afficher le SQL de l’aperçu', on: showSQL, run: () => (showSQL = !showSQL) },
+					{ label: 'Annuler', icon: 'undo', hint: 'Retirer la dernière action sur les étapes (Ctrl+Z)', off: !canUndo, run: undoStep },
+					{ label: 'Rétablir', icon: 'redo', hint: 'Remettre l’action annulée (Ctrl+Y)', off: !canRedo, run: redoStep }
 				]
 			},
 			{ title: 'Gérer les colonnes', big: [op('select', 'choose-columns'), op('remove', 'delete-column')] },
@@ -288,6 +343,7 @@
 	});
 </script>
 
+<svelte:window onkeydown={onKey} />
 <div class="editor" role="dialog" aria-modal="true" aria-label="Éditeur de requête">
 	<header class="title">
 		<span class="app">Éditeur de requête</span>
@@ -362,7 +418,13 @@
 								<tr>
 									<td class="num">{i + 1}</td>
 									{#each r as v, j (j)}
-										<td class:on={onCol[j]} class:right={preview.columns?.[j]?.type === 'integer' || preview.columns?.[j]?.type === 'decimal'}>{v}</td>
+										<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+										<td
+											class:on={onCol[j]}
+											class:right={preview.columns?.[j]?.type === 'integer' || preview.columns?.[j]?.type === 'decimal'}
+											onclick={(ev) => preview?.columns?.[j] && clickCell(ev, preview.columns[j].name)}
+											oncontextmenu={(ev) => preview?.columns?.[j] && onHeaderMenu(ev, preview.columns[j].name)}>{v}</td
+										>
 									{/each}
 								</tr>
 							{/each}
