@@ -86,7 +86,7 @@
 		headings?: boolean;
 		onheadings?: (show: boolean) => void;
 		/** Insertion › Bouton : bouton d'action lié à un script. */
-		onbutton?: () => void;
+		onbutton?: (kind?: '' | 'checkbox' | 'select') => void;
 		/** Feuille active protégée : les commandes qui la modifient sont grisées. */
 		sheetProtected?: boolean;
 		/** La feuille active elle-même est protégée (sheetProtected : verrouillée, par elle ou par le classeur). */
@@ -331,7 +331,14 @@
 					{ label: 'Nuage de points', icon: 'chart-scatter', run: onchart ? () => onchart('scatter') : undefined, hint: 'Nuage de points du tableau actif' }
 				]
 			},
-			{ title: 'Automatisation', commands: [{ label: 'Bouton', icon: 'button', run: onbutton, hint: 'Bouton d’action à la cellule active : un clic exécute un script de l’onglet SCRIPT' }] }
+			{
+				title: 'Contrôles',
+				commands: [
+					{ label: 'Bouton', icon: 'button', run: onbutton ? () => onbutton('') : undefined, hint: 'Bouton d’action à la cellule active : un clic exécute un script de l’onglet SCRIPT (ou rien)' },
+					{ label: 'Case à cocher', icon: 'type-boolean', run: onbutton ? () => onbutton('checkbox') : undefined, hint: 'Case à cocher liée à une cellule (VRAI / FAUX), qui peut aussi lancer une action' },
+					{ label: 'Liste déroulante', icon: 'validation', run: onbutton ? () => onbutton('select') : undefined, hint: 'Liste de choix liée à une cellule, qui peut aussi lancer une action' }
+				]
+			}
 		],
 		Données: [
 			{

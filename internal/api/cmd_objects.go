@@ -402,6 +402,10 @@ func RunButton(host Host, id int64) (ScriptResult, error) {
 	if err != nil {
 		return ScriptResult{}, err
 	}
+	// Aucune action liée (bouton créé sans script) : rien à exécuter.
+	if b.Config.Script == "" {
+		return ScriptResult{}, nil
+	}
 	list, err := d.Scripts(contextBG)
 	if err != nil {
 		return ScriptResult{}, err

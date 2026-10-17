@@ -814,7 +814,7 @@
 		onformula={mode === 'doc' ? (what) => (what === 'insert' ? sheet?.openFunctions() : what === 'sum' ? sheet?.autoSum() : sheet?.startFormula('=REFERENCE(')) : undefined}
 		onpivot={mode === 'doc' ? () => sheet?.pivotActive() : undefined}
 		ondedup={mode === 'doc' ? () => sheet?.dedupActive() : undefined}
-		onbutton={mode === 'doc' ? () => sheet?.insertButton() : undefined}
+		onbutton={mode === 'doc' ? (kind) => sheet?.insertButton(kind) : undefined}
 		onrecalc={mode === 'doc' ? () => DocumentService.Recalc().then(reload).catch((e) => (notice = err(e))) : undefined}
 		gridlines={!layout?.sheets?.find((s) => s.id === sheetId)?.noGrid}
 		ongridlines={mode === 'doc' ? (show) => DocumentService.SetGridlines(sheetId, show).then(reload).catch((e) => (notice = err(e))) : undefined}

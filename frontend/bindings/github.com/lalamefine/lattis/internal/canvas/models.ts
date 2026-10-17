@@ -6,16 +6,43 @@
 import * as grid$0 from "../grid/models.js";
 
 /**
- * ButtonConfig est un bouton d'action posé sur une feuille : un clic exécute
- * un script de la bibliothèque, ou l'une de ses fonctions.
+ * ButtonConfig est un contrôle posé sur une feuille, comme les contrôles de
+ * formulaire d'Excel : un bouton (un clic exécute un script de la
+ * bibliothèque, ou l'une de ses fonctions, ou rien), une case à cocher ou
+ * une liste déroulante (leur valeur est écrite dans la cellule liée, puis
+ * l'action éventuelle s'exécute).
  */
 export interface ButtonConfig {
+    /**
+     * Kind : "" (bouton), "checkbox" ou "select".
+     */
+    "kind"?: string;
     "label": string;
 
     /**
-     * Script est le nom d'un script de la bibliothèque (onglet SCRIPT).
+     * Script est le nom d'un script de la bibliothèque (onglet SCRIPT) ;
+     * vide : aucune action.
      */
     "script": string;
+
+    /**
+     * Link : cellule liée d'une case à cocher ou d'une liste (« B3 »).
+     */
+    "link"?: string;
+
+    /**
+     * Options : choix d'une liste déroulante.
+     */
+    "options"?: string[] | null;
+
+    /**
+     * Couleurs (« #rrggbb », vide : par défaut) : fond normal, survolé,
+     * enfoncé, et texte.
+     */
+    "color"?: string;
+    "hoverColor"?: string;
+    "activeColor"?: string;
+    "textColor"?: string;
 
     /**
      * Function : fonction globale du script appelée après son chargement ;

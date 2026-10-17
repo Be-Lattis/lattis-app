@@ -750,6 +750,7 @@
 		}
 		charts = d.charts ?? [];
 		buttons = d.buttons ?? [];
+		controlsTick++;
 		spills = d.cells.filter((c) => c.spill?.length).map((c) => ({ row: c.row, col: c.col, rows: c.spill! }));
 		shown = new Map(d.cells.filter((c) => c.raw.startsWith('=')).map((c) => [key(c.row, c.col), { text: c.value ?? '', error: !!c.error }]));
 		userWidths = new Map((d.widths ?? []).map((w) => [w.col, w.width]));
@@ -3911,11 +3912,13 @@
 		schedule();
 	}
 
-	/** Insertion › Bouton : bouton d'action à la cellule active. */
-	export function insertButton() {
+	/** Insertion › Bouton, Case à cocher, Liste déroulante : contrôle à la cellule active. */
+	export function insertButton(kind: '' | 'checkbox' | 'select' = '') {
 		if (!source.createButton) return;
-		buttonsLayer?.openEditor();
+		buttonsLayer?.openEditor(undefined, kind);
 	}
+	// Les cases à cocher et listes relisent leur cellule liée à chaque mise à jour.
+	let controlsTick = $state(0);
 
 	function runButton(b: SheetButton) {
 		if (!source.runButton) return;
@@ -6641,6 +6644,9 @@
 					onwheel={(ev) => onWheel(ev)}
 					{say}
 					done={() => wrap.focus()}
+					cellValue={(r, c) => shownValue(r, c)}
+					setCell={(r, c, raw) => write(r, c, raw)}
+					tick={controlsTick}
 				/>
 			</div>
 			{#if editing}

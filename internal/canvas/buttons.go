@@ -6,14 +6,32 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/lalamefine/lattis/internal/formula"
 )
 
-// ButtonConfig est un bouton d'action posé sur une feuille : un clic exécute
-// un script de la bibliothèque, ou l'une de ses fonctions.
+// ButtonConfig est un contrôle posé sur une feuille, comme les contrôles de
+// formulaire d'Excel : un bouton (un clic exécute un script de la
+// bibliothèque, ou l'une de ses fonctions, ou rien), une case à cocher ou
+// une liste déroulante (leur valeur est écrite dans la cellule liée, puis
+// l'action éventuelle s'exécute).
 type ButtonConfig struct {
+	// Kind : "" (bouton), "checkbox" ou "select".
+	Kind  string `json:"kind,omitempty"`
 	Label string `json:"label"`
-	// Script est le nom d'un script de la bibliothèque (onglet SCRIPT).
+	// Script est le nom d'un script de la bibliothèque (onglet SCRIPT) ;
+	// vide : aucune action.
 	Script string `json:"script"`
+	// Link : cellule liée d'une case à cocher ou d'une liste (« B3 »).
+	Link string `json:"link,omitempty"`
+	// Options : choix d'une liste déroulante.
+	Options []string `json:"options,omitempty"`
+	// Couleurs (« #rrggbb », vide : par défaut) : fond normal, survolé,
+	// enfoncé, et texte.
+	Color       string `json:"color,omitempty"`
+	HoverColor  string `json:"hoverColor,omitempty"`
+	ActiveColor string `json:"activeColor,omitempty"`
+	TextColor   string `json:"textColor,omitempty"`
 	// Function : fonction globale du script appelée après son chargement ;
 	// vide, le script s'exécute simplement de haut en bas.
 	Function string `json:"function,omitempty"`
@@ -39,11 +57,33 @@ var ErrButton = errors.New("bouton")
 
 func (c *ButtonConfig) check() error {
 	c.Label, c.Script, c.Function = strings.TrimSpace(c.Label), strings.TrimSpace(c.Script), strings.TrimSpace(c.Function)
-	if c.Label == "" {
-		return fmt.Errorf("%w : libellé vide", ErrButton)
+	c.Link = strings.ToUpper(strings.TrimSpace(c.Link))
+	switch c.Kind {
+	case "", "checkbox":
+		if c.Label == "" {
+			return fmt.Errorf("%w : libellé vide", ErrButton)
+		}
+	case "select":
+		var opts []string
+		for _, o := range c.Options {
+			if o = strings.TrimSpace(o); o != "" {
+				opts = append(opts, o)
+			}
+		}
+		if len(opts) == 0 {
+			return fmt.Errorf("%w : la liste n'a aucun choix", ErrButton)
+		}
+		c.Options = opts
+	default:
+		return fmt.Errorf("%w : type « %s » inconnu", ErrButton, c.Kind)
 	}
-	if c.Script == "" {
-		return fmt.Errorf("%w : aucun script associé", ErrButton)
+	if c.Kind != "" {
+		if _, _, ok := formula.CellRef("Cell_" + c.Link); !ok {
+			return fmt.Errorf("%w : cellule liée invalide (« B3 » par exemple)", ErrButton)
+		}
+	}
+	if c.Script == "" && c.Function != "" {
+		return fmt.Errorf("%w : choisissez le script de la fonction %s", ErrButton, c.Function)
 	}
 	if c.Width < 0 || c.Height < 0 || (c.Width > 0 && c.Width < 24) || (c.Height > 0 && c.Height < 16) {
 		return fmt.Errorf("%w : taille invalide", ErrButton)
@@ -169,12 +209,12 @@ func (t *tx) button(id int64) (ButtonInfo, error) {
 }
 
 func (t *tx) writeButton(id int64, old ButtonInfo, row, col int, cfg ButtonConfig) error {
-	if old.Row == row && old.Col == col && old.Config == cfg {
-		return nil
-	}
 	nb, err := json.Marshal(cfg)
 	if err != nil {
 		return err
+	}
+	if ob, err := json.Marshal(old.Config); err == nil && old.Row == row && old.Col == col && string(ob) == string(nb) {
+		return nil
 	}
 	ob, err := json.Marshal(old.Config)
 	if err != nil {
