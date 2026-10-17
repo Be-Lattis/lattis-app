@@ -39,6 +39,9 @@ func (t *tx) pivotFormats(cfg PivotConfig, cells [][]string) ([]string, error) {
 }
 
 func (t *tx) pivotValueFormat(tb Table, v PivotValue, c *Column) (string, error) {
+	if v.Show == "" && v.Format != "" && json.Valid([]byte(v.Format)) {
+		return v.Format, nil
+	}
 	if v.Show != "" || c == nil || v.Agg == "count" || v.Agg == "countDistinct" {
 		return "", nil
 	}

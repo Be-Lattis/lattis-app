@@ -92,6 +92,8 @@
 		field?: string; // vide : nombre de lignes
 		agg: 'sum' | 'count' | 'countDistinct' | 'avg' | 'min' | 'max';
 		show?: string; // '', pctTotal, pctRow, pctCol
+		label?: string; // nom personnalisé (« Somme de Ventes » sinon)
+		format?: string; // format de nombre imposé (style JSON : nf, dp)
 	}
 
 	export interface PivotConfig {
@@ -2884,11 +2886,11 @@
 	}
 
 	/** Colonnes du tableau source d'un graphique ou d'un TCD (autre feuille comprise). */
-	function sourceColumns(name: string): { name: string; numeric: boolean }[] {
+	function sourceColumns(name: string): { name: string; numeric: boolean; type: string }[] {
 		const e = entries.find((x) => x.t.name.toLowerCase() === name.toLowerCase());
-		if (e) return e.t.columns.map((c) => ({ name: c.name, numeric: c.type === 'integer' || c.type === 'decimal' || c.type === 'formula' }));
+		if (e) return e.t.columns.map((c) => ({ name: c.name, type: c.type, numeric: c.type === 'integer' || c.type === 'decimal' || c.type === 'formula' }));
 		const t = sources.find((x) => x.name.toLowerCase() === name.toLowerCase());
-		return (t?.columns ?? []).map((c, i) => ({ name: c, numeric: ['integer', 'decimal', 'formula'].includes(t!.types[i]) }));
+		return (t?.columns ?? []).map((c, i) => ({ name: c, type: t!.types[i], numeric: ['integer', 'decimal', 'formula'].includes(t!.types[i]) }));
 	}
 
 	/** Position et taille d'un graphique, en pixels de la feuille (ancrage libre). */
@@ -3064,6 +3066,7 @@
 	// Volet latéral : champs du TCD ou mise en forme du graphique.
 	let panel = $state<{ kind: 'pivot' | 'chart'; id: number } | null>(null);
 	let openPivotOnLoad = false;
+	let pivotPanelAt = '';
 
 	/** Crée un tableau croisé à partir du tableau actif, ou ouvre le volet de celui sous la cellule active. */
 	export function pivotActive() {
@@ -3408,8 +3411,12 @@
 		const err = errorAt(active.row, active.col);
 		if (err) message = explainError(err.code, err.formula, (r, c) => shown.get(key(r, c))?.text ?? cells.get(key(r, c))) || message;
 		const pv = pivotAt(active.row, active.col);
+		// Le volet du TCD reste ouvert quand le TCD rétrécit sous la cellule
+		// active (filtre, champ retiré) : il se ferme quand on la déplace.
+		const at = `${active.row}:${active.col}`;
 		if (pv) panel = { kind: 'pivot', id: pv.id };
-		else if (panel?.kind === 'pivot' && !openPivotOnLoad) panel = null;
+		else if (panel?.kind === 'pivot' && !openPivotOnLoad && at !== pivotPanelAt) panel = null;
+		pivotPanelAt = at;
 		const e = tableAt(active.row, active.col);
 		const label = (r: number, c: number) => {
 			const k = e!.t.columns[c - e!.t.col];
@@ -6511,6 +6518,7 @@
 	{#if panel?.kind === 'pivot'}
 		{@const pv = pivots.find((p) => p.id === panel!.id)}
 		{#if pv}
+			{#key pv.id}
 			<PivotPanel
 				config={pv.config}
 				fields={sourceColumns(pv.config.source)}
@@ -6523,6 +6531,7 @@
 				}}
 				onclose={() => (panel = null)}
 			/>
+			{/key}
 		{/if}
 	{:else if panel?.kind === 'chart'}
 		{@const ch = charts.find((c) => c.id === panel!.id)}
