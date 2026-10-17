@@ -5015,6 +5015,8 @@
 		if (editing && !commit()) return; // saisie refusée : l'éditeur reste ouvert
 		// Clic droit dans la sélection : elle reste (le menu porte sur elle).
 		if (e.button === 2 && inSelection(cell.row, cell.col)) return;
+		// Volet d'un contrôle ouvert, champ actif : le clic y met l'adresse ou la valeur de la cellule.
+		if (e.button === 0 && buttonsLayer?.pickCell(cell.row, cell.col, shownValue(cell.row, cell.col))) return;
 		if (e.button === 0 && openTypeMenu(e, cell)) return;
 		if (e.button === 0 && openPivotMenu(e, cell)) return;
 		wrap.focus();
@@ -7030,6 +7032,10 @@
 					cellValue={(r, c) => shownValue(r, c)}
 					setCell={(r, c, raw) => write(r, c, raw)}
 					tick={controlsTick}
+					dock={() => {
+						const r = wrap.getBoundingClientRect();
+						return { top: Math.round(r.top), bottom: Math.round(window.innerHeight - r.bottom) };
+					}}
 				/>
 			</div>
 			{#if editing}

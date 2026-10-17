@@ -45,6 +45,8 @@
 		done: () => void;
 		/** Zoom de la feuille : le calque est agrandi, menus et dialogues gardent leur taille. */
 		zoom?: number;
+		/** Haut et bas (px de la fenêtre) du volet d'édition, ancré à droite sous le ruban. */
+		dock?: () => { top: number; bottom: number };
 		/** Valeur affichée d'une cellule (case à cocher, liste : leur cellule liée). */
 		cellValue?: (row: number, col: number) => string;
 		/** Saisit raw dans une cellule (valeur d'une case ou d'une liste). */
@@ -53,7 +55,7 @@
 		tick?: number;
 	}
 
-	let { buttons, geo, view, active, scripts, onrun, onfire, pickFile, oncreate, onset, onplace, ondelete, onwheel, say, done, zoom = 1, cellValue, setCell, tick = 0 }: Props = $props();
+	let { buttons, geo, view, active, scripts, onrun, onfire, pickFile, oncreate, onset, onplace, ondelete, onwheel, say, done, zoom = 1, cellValue, setCell, tick = 0, dock }: Props = $props();
 	// Menus et dialogues (position: fixed) : le zoom du calque est annulé.
 	const unzoom = $derived(zoom === 1 ? undefined : 1 / zoom);
 
@@ -63,7 +65,7 @@
 	$effect(() => {
 		if (selected === null) return;
 		const off = (ev: MouseEvent) => {
-			if (!(ev.target as HTMLElement | null)?.closest('.action, .menu, .back')) selected = null;
+			if (!(ev.target as HTMLElement | null)?.closest('.action, .menu, .back, .cpanel')) selected = null;
 		};
 		window.addEventListener('mousedown', off, true);
 		return () => window.removeEventListener('mousedown', off, true);
@@ -275,6 +277,22 @@
 		error: string;
 	}
 	let editor = $state<Draft | null>(null);
+	// Volet d'édition (à droite, non modal) : un champ qui a le focus se
+	// remplit d'un clic dans le classeur (pickCell) : l'adresse pour la
+	// cellule liée, la valeur pour le libellé et les choix.
+	type PickField = 'link' | 'label' | 'options';
+	let pick = $state<{ field: PickField; el: HTMLElement } | null>(null);
+	const pickable = (field: PickField) => (ev: FocusEvent) => (pick = { field, el: ev.currentTarget as HTMLElement });
+
+	/** Clic sur la cellule (row, col) pendant l'édition : remplit le champ actif ; faux s'il n'y en a pas. */
+	export function pickCell(row: number, col: number, value: string): boolean {
+		const e = editor;
+		if (!e || !pick || document.activeElement !== pick.el) return false;
+		if (pick.field === 'link') e.link = colLetters(col) + (row + 1);
+		else if (pick.field === 'label') e.label = value;
+		else if (value !== '') e.options = e.options.trim() ? e.options.replace(/\n*$/, '') + '\n' + value : value;
+		return true;
+	}
 	const KINDS = CONTROL_KINDS;
 	/** Libellé par défaut d'un nouveau contrôle (vide : sans libellé, ou texte indicatif). */
 	const DEFAULT_LABEL: Record<ControlKind, string> = { '': 'Bouton', checkbox: 'Case à cocher', select: '', input: '', textarea: '', file: 'Choisir un fichier…' };
@@ -466,25 +484,37 @@
 
 {#if editor}
 	{@const e = editor}
-	<div class="back" style:zoom={unzoom}>
-		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-		<div
-			class="dialog"
-			role="dialog"
-			aria-modal="true"
-			tabindex="-1"
-			onkeydown={(ev) => {
+	{@const at = dock?.() ?? { top: 140, bottom: 24 }}
+	<!-- Volet de droite, non modal : la feuille reste cliquable (un clic remplit le champ actif). -->
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<aside
+		class="cpanel"
+		style:zoom={unzoom}
+		style:top="{at.top}px"
+		style:bottom="{at.bottom}px"
+		aria-label="Contrôle"
+		onkeydown={(ev) => {
 				ev.stopPropagation();
 				if (ev.key === 'Escape') {
 					editor = null;
 					done();
-				} else if (ev.key === 'Enter') {
+				} else if (ev.key === 'Enter' && (ev.target as HTMLElement).tagName !== 'TEXTAREA') {
 					ev.preventDefault();
 					save();
 				}
 			}}
 		>
-			<header>{e.id === null ? `Insérer : ${KINDS[e.kind].toLowerCase()}` : `Modifier : ${KINDS[e.kind].toLowerCase()}`}</header>
+			<header>
+				<span>{e.id === null ? `Insérer : ${KINDS[e.kind].toLowerCase()}` : `Modifier : ${KINDS[e.kind].toLowerCase()}`}</span>
+				<button
+					class="x"
+					title="Fermer sans enregistrer"
+					onclick={() => {
+						editor = null;
+						done();
+					}}>✕</button
+				>
+			</header>
 			<!-- Bouton d'un côté (Insertion › Bouton), contrôles liés à une cellule de l'autre (Insertion › Input). -->
 			{#if e.kind !== ''}
 				<label
@@ -495,13 +525,14 @@
 				</label>
 			{/if}
 			<label>Nom (pour les scripts)<input type="text" bind:value={e.name} placeholder="automatique" /></label>
-			{#if e.kind !== 'select'}<label>{LABEL_CAPTION[e.kind]}<input type="text" bind:value={e.label} use:focusSelect /></label>{/if}
+			{#if e.kind !== 'select'}<label>{LABEL_CAPTION[e.kind]}<input type="text" bind:value={e.label} use:focusSelect onfocus={pickable('label')} /></label>{/if}
 			{#if e.kind}
-				<label>Cellule liée<input type="text" bind:value={e.link} placeholder="B3" /></label>
+				<label>Cellule liée<input type="text" bind:value={e.link} placeholder="B3" onfocus={pickable('link')} /></label>
 			{/if}
 			{#if e.kind === 'select'}
-				<label>Choix (un par ligne)<textarea rows="4" bind:value={e.options}></textarea></label>
+				<label>Choix (un par ligne)<textarea rows="5" bind:value={e.options} onfocus={pickable('options')}></textarea></label>
 			{/if}
+			<p class="hint">Champ actif : un clic dans le classeur y met {pick?.field === 'link' ? 'l’adresse de la cellule' : 'la valeur de la cellule'}.</p>
 			<label
 				>Script
 				<select bind:value={e.script} onchange={() => (e.fn = '')}>
@@ -555,11 +586,43 @@
 					}}>Annuler</button
 				>
 			</div>
-		</div>
-	</div>
+	</aside>
 {/if}
 
 <style>
+	/* Volet d'édition d'un contrôle, ancré à droite comme ceux des graphiques et des TCD. */
+	.cpanel {
+		position: fixed;
+		right: 0;
+		z-index: 30;
+		pointer-events: auto;
+		width: 300px;
+		box-sizing: border-box;
+		overflow-y: auto;
+		background: #fff;
+		border-left: 1px solid #d4d7db;
+		box-shadow: -4px 0 12px rgba(0, 0, 0, 0.06);
+		padding-bottom: 14px;
+		outline: none;
+	}
+	.cpanel header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+	.cpanel .x {
+		border: none;
+		background: none;
+		font: inherit;
+		color: #6b7280;
+		cursor: pointer;
+		padding: 2px 6px;
+	}
+	.hint {
+		margin: 2px 16px 0;
+		font-size: 11px;
+		color: #6b7280;
+	}
 	.action {
 		position: absolute;
 		pointer-events: auto;
