@@ -417,6 +417,8 @@
 
 	const C = {
 		bg: '#ffffff',
+		// Colonne calculée dont la formule est en cours d'édition.
+		calc: 'rgba(33, 115, 70, 0.09)',
 		grid: '#e2e4e7',
 		strip: '#f5f6f7',
 		stripLine: '#d4d7db',
@@ -1009,6 +1011,20 @@
 	const fxHl = $derived(isFormula(fxText));
 	const formulaMode = $derived((editing && editValueText.trimStart().startsWith('=')) || (fxEditing && fxText.trimStart().startsWith('=')));
 	const a1 = $derived(headings || formulaMode);
+	// Formule d'une colonne de tableau en cours d'édition : elle s'appliquera
+	// à toute la colonne, teintée dès le focus (avec ƒx dans l'en-tête et un
+	// bandeau dans la barre de formule).
+	const calcEdit = $derived.by(() => {
+		if (!editing && !fxEditing) return null;
+		const e = tableAt(active.row, active.col);
+		if (!e || active.row <= e.t.row) return null;
+		const i = active.col - e.t.col;
+		return e.t.columns[i]?.formula || formulaMode ? { e, i } : null;
+	});
+	$effect(() => {
+		void calcEdit;
+		untrack(() => schedule());
+	});
 
 	$effect(() => {
 		void gridlines;
@@ -1569,6 +1585,16 @@
 			}
 			ctx.restore();
 		}
+		// Colonne calculée en cours d'édition : toute sa portée teintée.
+		if (calcEdit) {
+			const { e, i } = calcEdit;
+			const a = Math.max(e.t.row + 1, r0);
+			const b = Math.min(e.last, r1);
+			if (a <= b) {
+				ctx.fillStyle = C.calc;
+				ctx.fillRect(cx(e.t.col + i), ry(a), colAxis.size(e.t.col + i), rspan(a, b));
+			}
+		}
 		// Saisie d'une formule : chaque référence encadrée de sa couleur, comme
 		// dans l'éditeur (Excel).
 		if (formulaMode) {
@@ -1894,7 +1920,12 @@
 		const ICON = 13;
 		const icon = svg ? ' ▾' : (col.filter ? '⧩ ' : '') + typeIcon(col.type) + ' ▾';
 		let iconW = ctx.measureText(icon).width;
+		// Formule de la colonne en cours d'édition : son icône fx en vert.
+		const calc = calcEdit?.e === e && calcEdit.i === i;
+		const fx = !svg && typeIcon(col.type) === 'fx';
+		if (calc && fx) ctx.fillStyle = C.active;
 		ctx.fillText(icon, x + cw - 6, y + h / 2);
+		ctx.fillStyle = C.icon;
 		if (svg) {
 			drawIcon(ctx, svg, x + cw - 6 - iconW - ICON, y + (h - ICON) / 2, ICON, C.icon, C.active, 1.3);
 			iconW += ICON;
@@ -1906,6 +1937,14 @@
 		if (e.t.key === i) {
 			ctx.fillText('🔑 ', x + cw - 6 - iconW, y + h / 2);
 			iconW += ctx.measureText('🔑 ').width;
+		}
+		if (calc && !fx) {
+			ctx.save();
+			ctx.font = 'italic bold ' + FONT_SMALL;
+			ctx.fillStyle = C.active;
+			ctx.fillText('ƒx ', x + cw - 6 - iconW, y + h / 2);
+			iconW += ctx.measureText('ƒx ').width;
+			ctx.restore();
 		}
 		if (col.errors) {
 			ctx.fillStyle = C.error;
@@ -6043,6 +6082,11 @@
 			}}
 			spellcheck="false"
 		/>
+		{#if calcEdit}
+			<span class="fx-scope" title="La formule est celle de toute la colonne : elle s'applique à chacune de ses lignes."
+				>Colonne calculée : s'applique {calcEdit.e.t.rows > 1 ? `aux ${calcEdit.e.t.rows.toLocaleString('fr-FR')} lignes` : 'à la ligne'}</span
+			>
+		{/if}
 		</div>
 	</div>
 	{#if bench}<div class="bench">{bench}</div>{/if}
@@ -7643,6 +7687,17 @@
 		flex: 1;
 		display: flex;
 		overflow: hidden;
+	}
+	.fx-scope {
+		flex: none;
+		align-self: center;
+		margin: 0 6px;
+		padding: 1px 8px;
+		border-radius: 10px;
+		background: #e3efe7;
+		color: #185c37;
+		font-size: 11px;
+		white-space: nowrap;
 	}
 	.fx-hl {
 		position: absolute;
