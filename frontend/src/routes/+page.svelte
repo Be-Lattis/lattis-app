@@ -1138,9 +1138,6 @@
 		</div>
 	{/if}
 	<footer class="statusbar">
-		{#if sheetStatus}
-			<span class="cell">{sheetStatus.cell}</span>
-		{/if}
 		{#if notice || sheetStatus?.message}<span class="message">{sheetStatus?.message || notice}</span>{/if}
 		<span class="spacer"></span>
 		{#if sheetStatus}
