@@ -2,9 +2,7 @@ package canvas
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"strings"
 )
 
 // Mise en forme conditionnelle de lignes ou de colonnes entières de la
@@ -28,11 +26,18 @@ func (a axis) lineRules() string {
 // SetLineRules remplace les règles des lignes (ou colonnes) i0 à i1 de la
 // feuille ; aucune règle : les retire.
 func (m *Model) SetLineRules(ctx context.Context, sheet int64, rows bool, i0, i1 int, rules []Rule) error {
-	for _, r := range rules {
-		if !ruleOps[r.Op] {
-			return fmt.Errorf("règle : condition %q inconnue", r.Op)
-		}
+	if err := checkRules(rules); err != nil {
+		return err
 	}
+	return m.Do(ctx, "Mise en forme conditionnelle", func(t *tx) error {
+		if err := t.guard(sheet); err != nil {
+			return err
+		}
+		return t.setLineRules(sheet, rows, i0, i1, rules)
+	})
+}
+
+func (t *tx) setLineRules(sheet int64, rows bool, i0, i1 int, rules []Rule) error {
 	if i0 > i1 {
 		i0, i1 = i1, i0
 	}
@@ -43,33 +48,26 @@ func (m *Model) SetLineRules(ctx context.Context, sheet int64, rows bool, i0, i1
 	if rows {
 		a = rowsAxis
 	}
-	var neu any
-	if len(rules) > 0 {
-		var b strings.Builder
-		enc := json.NewEncoder(&b)
-		enc.SetEscapeHTML(false)
-		if err := enc.Encode(rules); err != nil {
-			return err
-		}
-		neu = strings.TrimSpace(b.String())
+	rules = append([]Rule{}, rules...)
+	for k := range rules {
+		rules[k].F = ""
 	}
-	return m.Do(ctx, "Mise en forme conditionnelle", func(t *tx) error {
-		if err := t.guard(sheet); err != nil {
-			return err
-		}
-		if err := t.deleteWhere(a.lineRules(), fmt.Sprintf(`sheet = ? AND %s BETWEEN ? AND ?`, a), sheet, i0, i1); err != nil {
-			return err
-		}
-		if neu == nil {
-			return nil
-		}
-		var do, undo []stmt
-		for i := i0; i <= i1; i++ {
-			do = append(do, st(fmt.Sprintf(`INSERT INTO %s (sheet, %s, rules) VALUES (?, ?, ?)`, a.lineRules(), a), sheet, i, neu))
-			undo = append(undo, st(fmt.Sprintf(`DELETE FROM %s WHERE sheet = ? AND %s = ?`, a.lineRules(), a), sheet, i))
-		}
-		return t.apply(do, undo)
-	})
+	neu, err := encodeRules(rules)
+	if err != nil {
+		return err
+	}
+	if err := t.deleteWhere(a.lineRules(), fmt.Sprintf(`sheet = ? AND %s BETWEEN ? AND ?`, a), sheet, i0, i1); err != nil {
+		return err
+	}
+	if neu == nil {
+		return nil
+	}
+	var do, undo []stmt
+	for i := i0; i <= i1; i++ {
+		do = append(do, st(fmt.Sprintf(`INSERT INTO %s (sheet, %s, rules) VALUES (?, ?, ?)`, a.lineRules(), a), sheet, i, neu))
+		undo = append(undo, st(fmt.Sprintf(`DELETE FROM %s WHERE sheet = ? AND %s = ?`, a.lineRules(), a), sheet, i))
+	}
+	return t.apply(do, undo)
 }
 
 // lineRulesOf lit les règles des lignes et des colonnes d'une feuille.

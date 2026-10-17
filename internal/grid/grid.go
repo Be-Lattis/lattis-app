@@ -52,7 +52,18 @@ type Window struct {
 	Cells   [][]any       `json:"cells"`
 	Invalid []InvalidCell `json:"invalid"` // saisies hors type de la fenêtre
 	Styles  []InvalidCell `json:"styles"`  // mise en forme des cellules (Raw : style JSON)
-	Micros  int64         `json:"micros"`  // temps passé côté Go, pour les mesures
+	// Règles « formule » de mise en forme conditionnelle vérifiées par les
+	// cellules de la fenêtre.
+	Marks  []Mark `json:"marks"`
+	Micros int64  `json:"micros"` // temps passé côté Go, pour les mesures
+}
+
+// Mark : la règle Rule (rang dans la liste de la colonne) s'applique à la
+// cellule (ligne Row de la fenêtre, colonne affichée Col).
+type Mark struct {
+	Row  int `json:"row"`
+	Col  int `json:"col"`
+	Rule int `json:"rule"`
 }
 
 // InvalidCell est une saisie hors type : la cellule est vide, la valeur
@@ -88,6 +99,28 @@ type Table struct {
 	// identifiant de chaque colonne affichée.
 	tableID int64
 	colIDs  map[int64]int
+
+	// Règles « formule » : expression SQL de chacune (après les colonnes
+	// dans la lecture des fenêtres), sa colonne affichée et son rang.
+	marks     []string
+	markCols  []int
+	markRules []int
+	truthy    func(v any) bool
+	cf        map[string]RuleStats // statistiques des règles déjà calculées
+}
+
+// WithMarks ajoute à la lecture des fenêtres les règles « formule » de mise
+// en forme conditionnelle (expressions SQL et leurs paramètres, numérotés à
+// la suite de ceux des colonnes) ; truthy dit si un résultat est vrai.
+func (t *Table) WithMarks(exprs []string, args []any, cols, rules []int, truthy func(v any) bool) *Table {
+	if len(exprs) == 0 {
+		return t
+	}
+	t.marks, t.markCols, t.markRules, t.truthy = exprs, cols, rules, truthy
+	t.args = append(t.args, args...)
+	t.selectWindow = fmt.Sprintf(`SELECT id, %s, %s FROM %s WHERE _pos >= ? ORDER BY _pos LIMIT ? OFFSET ?`,
+		strings.Join(t.exprs, ", "), strings.Join(exprs, ", "), t.sqlName)
+	return t
 }
 
 // WithExprs remplace les colonnes lues par des expressions SQL (colonnes
@@ -117,7 +150,7 @@ func (t *Table) Refresh(content, structure map[string]bool, all bool) bool {
 	}
 	if content[t.sqlName] || (t.computed && (len(content) > 0 || len(structure) > 0)) {
 		t.mu.Lock()
-		t.stats = nil
+		t.stats, t.cf = nil, nil
 		t.mu.Unlock()
 	}
 	return true
@@ -221,7 +254,7 @@ func (t *Table) Window(ctx context.Context, first, count int) (Window, error) {
 	defer rs.Close()
 
 	w := Window{First: first, IDs: make([]int64, 0, count), Cells: make([][]any, 0, count)}
-	dest := make([]any, len(t.cols)+1)
+	dest := make([]any, len(t.cols)+1+len(t.marks))
 	ptrs := make([]any, len(dest))
 	for i := range dest {
 		ptrs[i] = &dest[i]
@@ -231,6 +264,11 @@ func (t *Table) Window(ctx context.Context, first, count int) (Window, error) {
 			return Window{}, err
 		}
 		id, _ := dest[0].(int64)
+		for k := range t.marks {
+			if t.truthy(dest[len(t.cols)+1+k]) {
+				w.Marks = append(w.Marks, Mark{Row: len(w.IDs), Col: t.markCols[k], Rule: t.markRules[k]})
+			}
+		}
 		row := make([]any, len(t.cols))
 		for c := range row {
 			if t.decode != nil {

@@ -217,6 +217,15 @@ export interface ColumnInfo {
 }
 
 /**
+ * ColumnRules : règles d'une colonne de tableau (SetSheetRules).
+ */
+export interface ColumnRules {
+    "table": string;
+    "col": number;
+    "rules": Rule[] | null;
+}
+
+/**
  * DepTarget est un antécédent ou un dépendant d'une cellule : une colonne de
  * tableau (Column vide : le tableau entier) ou une cellule (nommée ou non).
  */
@@ -364,6 +373,11 @@ export interface Layout {
     "colRules": LineRules[] | null;
 
     /**
+     * Règles « formule » vérifiées par les cellules libres (voir ruleMarks).
+     */
+    "ruleMarks": RuleMark[] | null;
+
+    /**
      * tableaux croisés, calculés
      */
     "pivots": PivotInfo[] | null;
@@ -383,6 +397,16 @@ export interface Layout {
      */
     "workbookProtected": boolean;
     "workbookPassword": boolean;
+}
+
+/**
+ * LineRuleSet : règles de lignes (Rows) ou de colonnes entières I0 à I1.
+ */
+export interface LineRuleSet {
+    "rows": boolean;
+    "i0": number;
+    "i1": number;
+    "rules": Rule[] | null;
 }
 
 /**
@@ -553,6 +577,17 @@ export interface QueryLoad {
 }
 
 /**
+ * RangeRules : règles des cellules libres d'un rectangle.
+ */
+export interface RangeRules {
+    "r0": number;
+    "c0": number;
+    "r1": number;
+    "c1": number;
+    "rules": Rule[] | null;
+}
+
+/**
  * Rect est un rectangle de cellules d'une feuille, bornes comprises.
  */
 export interface Rect {
@@ -572,13 +607,19 @@ export interface RowHeight {
 }
 
 /**
- * Rule est une règle de mise en forme conditionnelle d'une colonne :
- * quand la valeur vérifie la condition, la cellule prend le style.
+ * Rule est une règle de mise en forme conditionnelle.
  * 
- * 	op : ">", ">=", "<", "<=", "=", "<>", "between", "contains", "empty",
- * 	     "notempty", "error" (saisie hors type ou erreur de formule)
+ * 	op : ">", ">=", "<", "<=", "=", "<>", "between", "notbetween",
+ * 	     "contains", "notcontains", "begins", "ends", "empty", "notempty",
+ * 	     "error" (saisie hors type ou erreur de formule), "noerror",
+ * 	     "date" (Value : yesterday, today, tomorrow, last7, lastweek,
+ * 	     thisweek, nextweek, lastmonth, thismonth, nextmonth),
+ * 	     "dup", "unique", "top", "bottom" (Value : N, Pct : N %),
+ * 	     "above", "below" (Value : "", "=" ou écart type "1", "2", "3"),
+ * 	     "formula" (Value : formule), "bar", "scale", "icons"
  */
 export interface Rule {
+    "id"?: string;
     "op": string;
     "value"?: string;
 
@@ -586,7 +627,48 @@ export interface Rule {
      * borne haute de "between"
      */
     "to"?: string;
+    "pct"?: boolean;
+
+    /**
+     * Stop : « Interrompre si vrai », les règles suivantes ne s'appliquent
+     * plus à la cellule.
+     */
+    "stop"?: boolean;
     "style": Style;
+
+    /**
+     * Barres de données, nuances de couleurs, jeux d'icônes : réglages lus
+     * par l'interface seulement.
+     */
+    "bar"?: { [_ in string]?: any } | null;
+    "scale"?: ({ [_ in string]?: any } | null)[] | null;
+    "icons"?: { [_ in string]?: any } | null;
+
+    /**
+     * F : formule d'une règle "formula" d'une colonne de tableau, analysée
+     * (anglais, références structurées), pour le calcul par ligne en SQL.
+     */
+    "f"?: string;
+}
+
+/**
+ * RuleChanges regroupe des changements de règles d'une feuille, appliqués
+ * en une seule étape d'annulation (gestionnaire des règles, Effacer les
+ * règles, nouvelle règle sur une sélection qui mêle tableaux et cellules).
+ */
+export interface RuleChanges {
+    "columns": ColumnRules[] | null;
+    "lines": LineRuleSet[] | null;
+    "cells": RangeRules[] | null;
+}
+
+/**
+ * RuleMark : la règle Rule (identifiant) s'applique à la cellule libre.
+ */
+export interface RuleMark {
+    "row": number;
+    "col": number;
+    "rule": string;
 }
 
 /**

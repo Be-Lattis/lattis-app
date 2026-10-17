@@ -42,6 +42,16 @@ export interface InvalidCell {
 }
 
 /**
+ * Mark : la règle Rule (rang dans la liste de la colonne) s'applique à la
+ * cellule (ligne Row de la fenêtre, colonne affichée Col).
+ */
+export interface Mark {
+    "row": number;
+    "col": number;
+    "rule": number;
+}
+
+/**
  * QueryResult est le résultat d'une requête de l'onglet SQL.
  */
 export interface QueryResult {
@@ -53,6 +63,66 @@ export interface QueryResult {
      */
     "truncated": boolean;
     "micros": number;
+}
+
+/**
+ * RuleStats sont les statistiques d'une ou plusieurs colonnes. Les dates
+ * comptent comme des nombres (numéro de série d'Excel).
+ */
+export interface RuleStats {
+    /**
+     * valeurs non vides
+     */
+    "count": number;
+
+    /**
+     * valeurs numériques
+     */
+    "nums": number;
+    "min": number;
+    "max": number;
+    "avg": number;
+
+    /**
+     * écart type (échantillon)
+     */
+    "std": number;
+
+    /**
+     * Rank : valeur seuil demandée (nil sans valeur numérique).
+     */
+    "rank": number | null;
+    "pctls": number[] | null;
+
+    /**
+     * Dups : valeurs en double (nombres, ou textes en minuscules ASCII) ;
+     * DupsMore : liste tronquée à MaxDups.
+     */
+    "dups": any[] | null;
+    "dupsMore": boolean;
+}
+
+/**
+ * RuleStatsReq dit ce qu'une règle demande en plus des statistiques de base
+ * (nombre, minimum, maximum, moyenne, écart type).
+ */
+export interface RuleStatsReq {
+    /**
+     * Rank : seuil des N plus grandes valeurs (N > 0) ou des N plus petites
+     * (N < 0) ; Pct : N pour cent des valeurs numériques.
+     */
+    "rank": number;
+    "pct": boolean;
+
+    /**
+     * Pctls : centiles voulus (0 à 100), interpolés comme CENTILE.INCLURE.
+     */
+    "pctls": number[] | null;
+
+    /**
+     * Dups : valeurs présentes plusieurs fois (texte sans casse).
+     */
+    "dups": boolean;
 }
 
 /**
@@ -103,6 +173,12 @@ export interface Window {
      * mise en forme des cellules (Raw : style JSON)
      */
     "styles": InvalidCell[] | null;
+
+    /**
+     * Règles « formule » de mise en forme conditionnelle vérifiées par les
+     * cellules de la fenêtre.
+     */
+    "marks": Mark[] | null;
 
     /**
      * temps passé côté Go, pour les mesures

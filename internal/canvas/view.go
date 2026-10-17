@@ -111,8 +111,10 @@ type Layout struct {
 	RowStyles []LineStyle `json:"rowStyles"`
 	ColStyles []LineStyle `json:"colStyles"`
 	// Mise en forme conditionnelle des lignes et colonnes entières.
-	RowRules []LineRules  `json:"rowRules"`
-	ColRules []LineRules  `json:"colRules"`
+	RowRules []LineRules `json:"rowRules"`
+	ColRules []LineRules `json:"colRules"`
+	// Règles « formule » vérifiées par les cellules libres (voir ruleMarks).
+	RuleMarks []RuleMark  `json:"ruleMarks"`
 	Pivots   []PivotInfo  `json:"pivots"`  // tableaux croisés, calculés
 	Charts   []ChartInfo  `json:"charts"`  // graphiques, avec leurs données
 	Buttons  []ButtonInfo `json:"buttons"` // boutons d'action
@@ -312,6 +314,9 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 				}
 			}
 			l.Cells = append(l.Cells, ci)
+		}
+		if l.RuleMarks, err = t.ruleMarks(sheet, l.Styles, l.RowRules, l.ColRules, l.Cells, l.Tables); err != nil {
+			return err
 		}
 		if l.Pivots, err = t.pivots(sheet); err != nil {
 			return err

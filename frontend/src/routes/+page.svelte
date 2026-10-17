@@ -9,7 +9,7 @@
 	import { Events } from '@wailsio/runtime';
 	import { DocumentService, GridService } from '#bindings/internal/bridge/index.js';
 	import type { DocState, FormulaHelp } from '#bindings/internal/bridge/models.js';
-	import type { Layout } from '#bindings/internal/canvas/models.js';
+	import type { Layout, RuleChanges } from '#bindings/internal/canvas/models.js';
 	import type { Type } from '#bindings/internal/grid/models.js';
 	import type { Orphan } from '#bindings/internal/archive/models.js';
 	import Sheet, { type SheetData, type SheetSource, type SheetStatus, type ColumnFilter, type PivotConfig, type ChartConfig, type TypeMix } from '#lib/grid/Sheet.svelte';
@@ -459,6 +459,8 @@
 		refreshTable: (t) => queryHost?.refreshOne(t.query!.id) ?? Promise.resolve(),
 		setRules: (t, i, rules) => DocumentService.SetRules(t.name, i, rules).then(reload),
 		setLineRules: (rows, i0, i1, rules) => DocumentService.SetLineRules(sheetId, rows, i0, i1, rules).then(reload),
+		setSheetRules: (ch) => DocumentService.SetSheetRules(sheetId, ch as RuleChanges).then(reload),
+		ruleStats: (t, cols, req) => DocumentService.RuleStats(sheetId, t.id, cols, req),
 		filterValues: async (t, i) => (await DocumentService.FilterValues(t.name, i)) ?? [],
 		setFilter: (t, i, f) => DocumentService.SetFilter(t.name, i, f).then(reload),
 		clearFilters: (t) => DocumentService.ClearFilters(t.name).then(reload),
@@ -572,6 +574,7 @@
 					colStyles: layout.colStyles ?? [],
 					rowRules: layout.rowRules ?? [],
 					colRules: layout.colRules ?? [],
+					ruleMarks: layout.ruleMarks ?? [],
 					charts: (layout.charts ?? []).map((c) => ({
 						...c,
 						config: c.config as ChartConfig,
@@ -802,7 +805,7 @@
 		oncells={mode === 'doc' ? (op) => sheet?.cellsActive(op) : undefined}
 		onstyle={mode === 'doc' ? (patch) => sheet?.applyStyle(patch) : undefined}
 		onfind={mode === 'doc' ? (replace) => sheet?.openFinder(replace) : undefined}
-		onrules={mode === 'doc' ? () => sheet?.rulesActive() : undefined}
+		onrules={mode === 'doc' ? (x, y) => sheet?.rulesMenu(x, y) : undefined}
 		onfilter={mode === 'doc' ? (errorsOnly) => sheet?.filterActive(errorsOnly) : undefined}
 		onaudit={mode === 'doc' ? (k) => sheet?.auditActive(k) : undefined}
 		onpainter={mode === 'doc' ? () => sheet?.formatPainter() : undefined}

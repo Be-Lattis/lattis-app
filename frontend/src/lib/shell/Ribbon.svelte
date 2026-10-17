@@ -27,6 +27,8 @@
 		on?: boolean; // commande à bascule, enfoncée
 		/** Commande à menu (▾) : ses choix. */
 		items?: { label: string; run?: () => void; on?: boolean }[];
+		/** Commande qui ouvre son propre menu (▾ affiché, voir anchor). */
+		menu?: boolean;
 	}
 	interface Group {
 		title: string;
@@ -65,7 +67,8 @@
 		/** Mise en forme de la sélection ('toggle' bascule gras, italique, souligné). */
 		onstyle?: (patch: Record<string, unknown>) => void;
 		onfind?: (replace: boolean) => void;
-		onrules?: () => void;
+		/** Mise en forme conditionnelle : menu à ouvrir sous le bouton (coordonnées de la fenêtre). */
+		onrules?: (x: number, y: number) => void;
 		onfilter?: (errorsOnly: boolean) => void;
 		onrecalc?: () => void;
 		ondedup?: () => void;
@@ -128,6 +131,13 @@
 	// qu'à dire qu'elle est active, le clic ouvre ses choix.
 	let dropMenu = $state<{ label: string; x: number; y: number } | null>(null);
 	const openItems = () => undefined;
+	// Bas gauche du dernier bouton cliqué : une commande à menu propre
+	// (Mise en forme conditionnelle) l'ouvre là.
+	let anchor = { x: 0, y: 0 };
+	function anchorAt(ev: MouseEvent) {
+		const r = (ev.currentTarget as HTMLElement).getBoundingClientRect();
+		anchor = { x: r.left, y: r.bottom + 2 };
+	}
 	function toggleDrop(c: Command, ev: MouseEvent) {
 		const r = (ev.currentTarget as HTMLElement).getBoundingClientRect();
 		dropMenu = dropMenu?.label === c.label ? null : { label: c.label, x: r.left, y: r.bottom + 2 };
@@ -252,7 +262,15 @@
 			},
 			{
 				title: 'Styles',
-				commands: [{ label: 'Mise en forme conditionnelle', icon: 'warning', run: onrules, hint: 'Règles de mise en forme de la colonne active' }]
+				commands: [
+					{
+						label: 'Mise en forme conditionnelle',
+						icon: 'warning',
+						menu: true,
+						run: onrules ? () => onrules(anchor.x, anchor.y) : undefined,
+						hint: 'Mise en évidence des cellules, barres de données, nuances de couleurs, jeux d’icônes, gestionnaire des règles'
+					}
+				]
 			},
 			{
 				title: 'Cellules',
@@ -581,7 +599,8 @@
 											class="cmd row-cmd"
 											class:pressed={c.on}
 											disabled={!c.run}
-											onclick={() => {
+											onclick={(ev) => {
+												anchorAt(ev);
 												openGroup = null;
 												c.run?.();
 											}}
@@ -606,11 +625,16 @@
 										class:row-cmd={mode !== 'large'}
 										class:pressed={c.on}
 										disabled={!c.run}
-										onclick={c.items ? (ev) => toggleDrop(c, ev) : c.run}
+										onclick={c.items
+											? (ev) => toggleDrop(c, ev)
+											: (ev) => {
+													anchorAt(ev);
+													c.run?.();
+												}}
 										title={c.hint ?? (c.run ? c.label : `${c.label} : à venir`)}
 									>
 										<Icon name={c.icon} size={mode === 'large' ? 24 : 16} />
-										{#if mode !== 'icon'}<span class="label">{c.label}{c.items ? ' ▾' : ''}</span>{/if}
+										{#if mode !== 'icon'}<span class="label">{c.label}{c.items || c.menu ? ' ▾' : ''}</span>{/if}
 									</button>
 								{/if}
 							{/each}
