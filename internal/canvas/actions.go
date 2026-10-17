@@ -141,32 +141,40 @@ func (t *tx) setCell(tb Table, n, i int, raw string, ev *Event) error {
 	if err != nil {
 		return err
 	}
+	_, err = t.setCellAt(tb, rid, i, raw, ev)
+	return err
+}
+
+// setCellAt saisit raw dans la colonne i de la ligne rid ; renvoie le
+// tableau, changé quand la colonne a pris un autre type.
+func (t *tx) setCellAt(tb Table, rid int64, i int, raw string, ev *Event) (Table, error) {
+	var err error
 	c := tb.Cols[i]
 	if src := strings.TrimSpace(raw); strings.HasPrefix(src, "=") && len(src) > 1 {
-		return t.setFormula(tb, i, src)
+		return tb, t.setFormula(tb, i, src)
 	}
 	if c.Formula != "" {
 		if strings.TrimSpace(raw) == "" {
-			return t.setFormula(tb, i, "") // effacer une cellule calculée retire la formule
+			return tb, t.setFormula(tb, i, "") // effacer une cellule calculée retire la formule
 		}
-		return ErrComputed{c.Name}
+		return tb, ErrComputed{c.Name}
 	}
 	if strings.TrimSpace(raw) == "" {
-		return t.setValue(tb, rid, c, nil, "")
+		return tb, t.setValue(tb, rid, c, nil, "")
 	}
 	v, perr := grid.Parse(c.Type, raw)
 	if c.Fixed {
 		if perr != nil {
 			ev.Invalid = true
-			return t.setValue(tb, rid, c, nil, raw)
+			return tb, t.setValue(tb, rid, c, nil, raw)
 		}
-		return t.setValue(tb, rid, c, v, "")
+		return tb, t.setValue(tb, rid, c, v, "")
 	}
 	// La colonne a-t-elle une autre valeur ? EXISTS s'arrête à la première
 	// (un count parcourait toute la colonne : 0,25 s par saisie sur 1 M de lignes).
 	var others int
 	if err := t.row(`SELECT EXISTS (SELECT 1 FROM `+tb.sql()+` WHERE `+colSQL(c.ID)+` IS NOT NULL AND id <> ?)`, rid).Scan(&others); err != nil {
-		return err
+		return tb, err
 	}
 	to := c.Type
 	switch {
@@ -178,13 +186,13 @@ func (t *tx) setCell(tb Table, n, i int, raw string, ev *Event) error {
 	}
 	if to != c.Type {
 		if tb, err = t.retype(tb, i, to); err != nil {
-			return err
+			return tb, err
 		}
 	}
 	if v, err = grid.Parse(to, raw); err != nil {
-		return err
+		return tb, err
 	}
-	return t.setValue(tb, rid, tb.Cols[i], v, "")
+	return tb, t.setValue(tb, rid, tb.Cols[i], v, "")
 }
 
 // appendRows ajoute n lignes vides en fin de tableau et décale ce qui est dessous.

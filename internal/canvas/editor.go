@@ -50,7 +50,7 @@ func (e *Editor) Insert(ctx context.Context, table string, vals map[string]strin
 		if err := t.row(`SELECT max(id) FROM ` + tb.sql()).Scan(&id); err != nil {
 			return err
 		}
-		return t.setCells(tb.ID, tb.Rows, idx, vals)
+		return t.setCells(tb, id, idx, vals)
 	})
 	return id, err
 }
@@ -66,11 +66,10 @@ func (e *Editor) Update(ctx context.Context, table string, id int64, vals map[st
 		if err != nil {
 			return err
 		}
-		n, err := t.rowIndex(tb, id)
-		if err != nil {
+		if err := t.hasRow(tb, id); err != nil {
 			return err
 		}
-		return t.setCells(tb.ID, n, idx, vals)
+		return t.setCells(tb, id, idx, vals)
 	})
 }
 
@@ -81,7 +80,7 @@ func (e *Editor) Delete(ctx context.Context, table string, id int64) error {
 		if err != nil {
 			return err
 		}
-		if _, err := t.rowIndex(tb, id); err != nil {
+		if err := t.hasRow(tb, id); err != nil {
 			return err
 		}
 		return t.deleteRow(tb, id)
@@ -106,27 +105,26 @@ func colIndexes(tb Table, vals map[string]string) (map[string]int, error) {
 	return idx, nil
 }
 
-// rowIndex donne le rang d'affichage de la ligne de clé id.
-func (t *tx) rowIndex(tb Table, id int64) (int, error) {
-	var n, ok int
-	err := t.row(`SELECT count(*), (SELECT count(*) FROM `+tb.sql()+` WHERE id = ?) FROM `+tb.sql()+
-		` WHERE _pos < (SELECT _pos FROM `+tb.sql()+` WHERE id = ?)`, id, id).Scan(&n, &ok)
-	if err == nil && ok == 0 {
-		err = fmt.Errorf("tableau %q : pas de ligne %d", tb.Name, id)
+// hasRow vérifie que le tableau a une ligne de clé id.
+func (t *tx) hasRow(tb Table, id int64) error {
+	var ok int
+	if err := t.row(`SELECT EXISTS (SELECT 1 FROM `+tb.sql()+` WHERE id = ?)`, id).Scan(&ok); err != nil {
+		return err
 	}
-	return n, err
+	if ok == 0 {
+		return fmt.Errorf("tableau %q : pas de ligne %d", tb.Name, id)
+	}
+	return nil
 }
 
-// setCells écrit les saisies dans la ligne n. Le tableau est relu après
-// chaque cellule : une saisie peut avoir changé le type d'une colonne.
-func (t *tx) setCells(table int64, n int, idx map[string]int, vals map[string]string) error {
+// setCells écrit les saisies dans la ligne de clé id, directement (sans
+// chercher son rang : sur un grand tableau, un parcours par ligne). Une
+// saisie peut changer le type d'une colonne : le tableau suit.
+func (t *tx) setCells(tb Table, id int64, idx map[string]int, vals map[string]string) error {
 	var ev Event
+	var err error
 	for name, i := range idx {
-		tb, err := t.table(table)
-		if err != nil {
-			return err
-		}
-		if err := t.setCell(tb, n, i, vals[name], &ev); err != nil {
+		if tb, err = t.setCellAt(tb, id, i, vals[name], &ev); err != nil {
 			return err
 		}
 	}

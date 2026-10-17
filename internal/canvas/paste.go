@@ -105,6 +105,13 @@ func (m *Model) Paste(ctx context.Context, sheet int64, row, col int, block [][]
 		if h*w > MaxPasteCells {
 			return ErrPasteTooBig{h * w}
 		}
+		// Bloc entièrement dans les données d'un tableau : ses lignes sont
+		// lues une fois, sans relire les tableaux de la feuille à chaque
+		// cellule (sur un grand tableau, plusieurs minutes pour quelques
+		// centaines de cellules).
+		if done, err := t.pasteInto(sheet, row, col, block, w, &ev); done || err != nil {
+			return err
+		}
 		for r := range h {
 			for c := range w {
 				if err := t.input(sheet, row+r, col+c, cell(r, c), &ev); err != nil {
@@ -115,6 +122,63 @@ func (m *Model) Paste(ctx context.Context, sheet int64, row, col int, block [][]
 		return nil
 	})
 	return ev, err
+}
+
+// pasteInto colle le bloc dans un tableau qui le contient entièrement
+// (données seulement, pas de formule) ; faux s'il ne s'y applique pas.
+func (t *tx) pasteInto(sheet int64, row, col int, block [][]string, w int, ev *Event) (bool, error) {
+	tables, err := t.tables(sheet)
+	if err != nil {
+		return false, err
+	}
+	h := len(block)
+	var tb *Table
+	for i := range tables {
+		x := &tables[i]
+		if row > x.Row && row+h-1 <= x.Bottom() && col >= x.Col && col+w-1 <= x.Right() {
+			tb = x
+		}
+	}
+	if tb == nil || (tb.Filtered() && row-tb.Row-1+h > tb.Shown) {
+		return false, nil
+	}
+	for _, r := range block {
+		for _, v := range r {
+			if strings.HasPrefix(strings.TrimSpace(v), "=") {
+				return false, nil
+			}
+		}
+	}
+	rs, err := t.query(`SELECT id FROM `+tb.view()+` ORDER BY _pos LIMIT ? OFFSET ?`, h, row-tb.Row-1)
+	if err != nil {
+		return false, err
+	}
+	var ids []int64
+	for rs.Next() {
+		var id int64
+		if err := rs.Scan(&id); err != nil {
+			rs.Close()
+			return false, err
+		}
+		ids = append(ids, id)
+	}
+	rs.Close()
+	if err := rs.Err(); err != nil || len(ids) != h {
+		return false, err
+	}
+	cur := *tb
+	for r, line := range block {
+		for c := range w {
+			v := ""
+			if c < len(line) {
+				v = line[c]
+			}
+			if cur, err = t.setCellAt(cur, ids[r], col+c-cur.Col, v, ev); err != nil {
+				return true, err
+			}
+		}
+	}
+	return true, nil
 }
 
 // areaFree indique si le rectangle [r0, r1] × [c0, c1] ne touche aucun
