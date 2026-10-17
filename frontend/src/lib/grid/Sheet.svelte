@@ -8008,6 +8008,8 @@
 	.zoom {
 		position: absolute;
 		inset: 0;
+		/* Sous la barre verticale (hors du canevas) : la ligne des lettres de colonnes se prolonge jusqu'au bord. */
+		background: linear-gradient(to bottom, #f5f6f7 21px, #d4d7db 21px 22px, #fff 22px);
 	}
 	canvas {
 		position: absolute;
@@ -8020,6 +8022,30 @@
 		/* La barre horizontale est dans la ligne des onglets (SheetTabs). */
 		overflow-x: hidden;
 		overflow-y: auto;
+	}
+	/* Barre verticale dessinée (comme celle des onglets) : elle commence sous la
+	   ligne des lettres de colonnes, sur fond transparent ; le curseur s'épaissit au survol. */
+	.scroller::-webkit-scrollbar {
+		width: 12px;
+		background: transparent;
+	}
+	.scroller::-webkit-scrollbar-track {
+		margin-top: 22px; /* TOP_H */
+		background: transparent;
+	}
+	.scroller::-webkit-scrollbar-thumb {
+		min-height: 32px;
+		border: 3px solid transparent;
+		border-radius: 6px;
+		background: rgba(60, 64, 67, 0.35) padding-box;
+	}
+	.scroller::-webkit-scrollbar-thumb:hover {
+		border-width: 2px;
+		background-color: rgba(60, 64, 67, 0.55);
+	}
+	.scroller::-webkit-scrollbar-thumb:active {
+		border-width: 2px;
+		background-color: rgba(60, 64, 67, 0.65);
 	}
 	.sheet-root {
 		position: relative;
