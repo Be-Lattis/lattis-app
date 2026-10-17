@@ -12,6 +12,7 @@
 	import { RowCache, percentile, type Fetched } from './cache';
 	import { VScroll, clamp } from './scroll';
 	import { Axis } from './axis';
+	import { DEFAULT_NAME_HINT, isDefaultTableName } from './defaultname';
 	import { ease, flashAlpha, lerpBar, motionAt, progress, reducedMotion, sameBar, shiftAxis, tableMotions, zeroBar, type AxisLike, type BarSpan, type Geo, type LinesShift, type Motion } from './anim';
 	import { followClip, overlaps, parseTSV, pasteArea, richClip, tileBlock, toTSV, type Clip, type Rect as ClipRect } from './clipboard';
 	import { isNumericText, painterPatch, parseStyle, resolveStyle, type CellStyle, type StyleLayer } from './style';
@@ -6936,7 +6937,8 @@
 			<div class="name-box split">
 				<input
 					class="table-name"
-					title="Nom du tableau : modifiez puis Entrée pour le renommer"
+					class:default-name={isDefaultTableName(tableBox.name)}
+					title={isDefaultTableName(tableBox.name) ? `${DEFAULT_NAME_HINT} (modifiez puis Entrée)` : 'Nom du tableau : modifiez puis Entrée pour le renommer'}
 					value={tableBox.name}
 					onfocus={(e) => e.currentTarget.select()}
 					onkeydown={onTableNameKey}
@@ -7153,7 +7155,7 @@
 			{@const cols = !m.rowOnly}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (menu = null)}>
-				<div class="menu-title">{m.e.t.name}</div>
+				<div class="menu-title" class:default-name={isDefaultTableName(m.e.t.name)} title={isDefaultTableName(m.e.t.name) ? DEFAULT_NAME_HINT : undefined}>{m.e.t.name}</div>
 				{#if m.confirmDelete}
 					<p class="menu-note">
 						Supprimer le tableau « {m.e.t.name} » et ses {(m.e.t.rows + (m.e.t.hidden ?? 0)).toLocaleString('fr-FR')} lignes ? Ctrl+Z permettra de l’annuler.
@@ -7947,6 +7949,9 @@
 		flex: 0 1 45%;
 		font-weight: 600;
 	}
+	.name-box.split .table-name.default-name {
+		color: #c42b1c; /* DEFAULT_NAME_COLOR : nom par défaut, à renommer */
+	}
 	.name-box.split .col-name {
 		flex: 1 1 55%;
 	}
@@ -8453,6 +8458,9 @@
 		padding: 4px 14px;
 		font-size: 11px;
 		color: #6b7280;
+	}
+	.menu-title.default-name {
+		color: #c42b1c; /* DEFAULT_NAME_COLOR */
 	}
 	.menu button {
 		display: block;

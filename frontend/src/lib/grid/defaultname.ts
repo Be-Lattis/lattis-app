@@ -1,0 +1,22 @@
+// Nom par défaut d'un tableau : celui que Lattis lui donne à la création
+// (internal/canvas, tableName) tant qu'on ne l'a pas renommé. C'est
+// « TableauN », ou le nom de la feuille quand le tableau en est le premier :
+// « FeuilleN » pour une feuille ajoutée, « RequêteN » pour le résultat d'une
+// requête. Ces noms ne disent rien du contenu : l'interface les montre en
+// rouge pour inviter à renommer le tableau.
+//
+// Les tableaux croisés (« TCDn ») ne sont pas concernés : aucun écran ne
+// permet de les renommer.
+
+const DEFAULT = /^(Tableau|Feuille|Requête)\d+$/i;
+
+/** Couleur des noms par défaut : rouge discret, lisible sur fond blanc. */
+export const DEFAULT_NAME_COLOR = '#c42b1c';
+
+/** Info-bulle d'un nom par défaut. */
+export const DEFAULT_NAME_HINT = 'Nom par défaut : renommez le tableau';
+
+/** Vrai si name est encore un nom de tableau donné automatiquement. */
+export function isDefaultTableName(name: string | null | undefined): boolean {
+	return !!name && DEFAULT.test(name.trim());
+}
