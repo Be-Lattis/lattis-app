@@ -12,7 +12,7 @@ export function clampWidth(w: number, min: number, max: number, room: number): n
 	return Math.round(Math.max(min, Math.min(w, max, room)));
 }
 
-type Options = { key: string; min?: number; max?: number };
+type Options = { key: string; min?: number; max?: number; /** Panneau inclus dans un autre, qui se redimensionne à sa place. */ off?: boolean };
 
 const storeKey = (key: string) => `lattis.panel.${key}`;
 
@@ -36,6 +36,7 @@ function save(key: string, w: number | undefined) {
 
 /** Action Svelte : rend un panneau de droite redimensionnable par son bord gauche. */
 export function resizePanel(node: HTMLElement, opts: Options) {
+	if (opts.off) return {};
 	let { key, min = 220, max = 900 } = opts;
 	const room = () => Math.max(min, (node.parentElement?.clientWidth ?? window.innerWidth) - 160);
 	// Largeur bordure comprise : celle qu'on mesure est celle qu'on pose.

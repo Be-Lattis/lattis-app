@@ -202,7 +202,37 @@
 		return blot ? quill!.getIndex(blot as never) : -1;
 	}
 
+	// Élément sélectionné hors volet (image cliquée) : Suppr le retire.
+	let picked = $state<{ kind: 'image'; index: number } | null>(null);
+
+	/** Suppr ou Retour arrière : supprime l'élément sélectionné (graphique, tableau croisé, bouton, contrôle, image). */
+	function onKey(ev: KeyboardEvent) {
+		if (ev.key !== 'Delete' && ev.key !== 'Backspace') return;
+		const target = ev.target as HTMLElement | null;
+		// Saisie dans un champ du volet ou d'un contrôle : la touche lui revient.
+		if (target?.closest('input, textarea, select') ) return;
+		// Graphique, tableau croisé ou image sélectionnés (cadre vert) ; bouton ou
+		// contrôle dont le volet est ouvert, si l'on n'écrit pas dans le texte.
+		const inText = !!target?.closest('.ql-editor');
+		const sel =
+			panel && (panel.kind === 'chart' || panel.kind === 'pivot')
+				? panel.index
+				: panel && !inText && (panel.kind === 'button' || (panel.kind === 'control' && panel.id !== null))
+					? panel.index
+					: picked?.index;
+		if (sel === undefined || sel === null || locked) return;
+		ev.preventDefault();
+		ev.stopPropagation();
+		picked = null;
+		deleteEmbed(sel);
+	}
+
 	function markSelected() {
+		quill?.root.querySelectorAll('img.picked').forEach((i) => i.classList.remove('picked'));
+		if (picked && quill) {
+			const [leaf] = quill.getLeaf(picked.index + 1) as unknown as [{ domNode?: HTMLElement } | null];
+			if (leaf?.domNode?.tagName === 'IMG') leaf.domNode.classList.add('picked');
+		}
 		for (const [node, m] of mounted) m.p.selected = (panel?.kind === m.kind && indexOf(node) === panel.index) || (menu?.index === indexOf(node) && menu.kind === m.kind);
 	}
 
@@ -219,17 +249,31 @@
 		markSelected();
 	}
 
+	// Remplacement en cours : la position de l'élément ne bouge pas (sans quoi
+	// le volet viserait le caractère suivant et dupliquerait l'élément).
+	let replacing = false;
+
 	function replaceEmbed(index: number, type: string, value: unknown) {
 		if (!quill || locked) return;
+		// Jamais à l'aveugle : il faut que l'élément soit bien là.
+		if (!embedAt(index, type)) return;
 		const Delta = (quill.constructor as typeof Quill).import('delta') as unknown as new () => { retain(n: number): unknown };
 		const d = new Delta() as { retain(n: number): { delete(n: number): { insert(v: unknown): unknown } } };
-		quill.updateContents(d.retain(index).delete(1).insert({ [type]: value }) as never, 'user');
-		panelValue = value as Record<string, unknown>;
+		replacing = true;
+		try {
+			quill.updateContents(d.retain(index).delete(1).insert({ [type]: value }) as never, 'user');
+		} finally {
+			replacing = false;
+		}
+		if (panel && panel.index === index && panel.kind !== 'link' && panel.kind !== 'control' && BLOT[panel.kind] === type) panelValue = value as Record<string, unknown>;
 		hydrate();
 	}
 
 	function deleteEmbed(index: number) {
 		if (!quill || locked) return;
+		// Seulement un élément inséré, jamais du texte.
+		const ins = quill.getContents(index, 1).ops[0]?.insert;
+		if (!ins || typeof ins !== 'object') return;
 		quill.deleteText(index, 1, 'user');
 		openPanel(null);
 		hydrate();
@@ -442,7 +486,13 @@
 		if (sizing) return;
 		const t = e.target as HTMLElement;
 		if (t.closest('.grip')) return;
-		placeGrip(t.closest<HTMLElement>(SIZED));
+		const el = t.closest<HTMLElement>(SIZED);
+		// En allant vers la poignée, le pointeur peut quitter l'élément : elle reste.
+		if (!el && grip && pageEl) {
+			const p = pageEl.getBoundingClientRect();
+			if (Math.hypot(e.clientX - p.left - grip.x, e.clientY - p.top - grip.y) < 28) return;
+		}
+		placeGrip(el);
 	}
 	function startSize(e: PointerEvent) {
 		if (!grip || e.button !== 0) return;
@@ -458,11 +508,12 @@
 		const s = sizing;
 		const maxW = (quill?.root.clientWidth ?? 900) + 1;
 		s.w = Math.round(Math.max(40, Math.min(maxW, s.w0 + e.clientX - s.x0)));
-		s.h = Math.round(Math.max(s.grip.kind === 'button' || s.grip.kind === 'control' ? 20 : 60, s.h0 + e.clientY - s.y0));
+		// Un tableau croisé garde la hauteur de son contenu.
+		s.h = s.grip.kind === 'pivot' ? s.h0 : Math.round(Math.max(s.grip.kind === 'button' || s.grip.kind === 'control' ? 20 : 60, s.h0 + e.clientY - s.y0));
 		// Aperçu pendant le geste ; la valeur est enregistrée au lâcher.
 		const box = boxOf(s.grip.node);
 		box.style.width = s.w + 'px';
-		box.style.height = s.h + 'px';
+		if (s.grip.kind !== 'pivot') box.style.height = s.h + 'px';
 		const p = pageEl!.getBoundingClientRect();
 		const r = box.getBoundingClientRect();
 		grip = { ...s.grip, x: r.right - p.left, y: r.bottom - p.top };
@@ -478,7 +529,7 @@
 		} else {
 			const type = BLOT[s.grip.kind];
 			const v = embedAt(i, type);
-			if (v) replaceEmbed(i, type, { ...v, width: s.w, height: s.h });
+			if (v) replaceEmbed(i, type, s.grip.kind === 'pivot' ? { ...v, width: s.w } : { ...v, width: s.w, height: s.h });
 		}
 		grip = null;
 	}
@@ -528,13 +579,33 @@
 		fn();
 	}
 
-	/** Insertion › Input : un contrôle lié à une cellule (le volet le configure avant de l'insérer). */
-	export function insertControl(kind: ControlKind = 'input') {
+	/**
+	 * Insertion › Input : un contrôle inséré tout de suite (le volet s'ouvre
+	 * pour le régler). Sa valeur est gardée par défaut dans le document même
+	 * (cellule A1, A3, A5… de l'onglet, hors de toute feuille de données) ;
+	 * le volet peut la lier à une cellule d'une feuille.
+	 */
+	export async function insertControl(kind: ControlKind = 'input') {
 		if (!guard() || !controls) return;
+		const api = controls;
 		const at = range()!.index;
-		const sheet = sheets[0] ?? 'Feuille1';
-		const ref = /^[\p{L}_][\p{L}\p{N}_]*$/u.test(sheet) ? sheet : `'${sheet.replace(/'/g, "''")}'`;
-		openPanel({ kind: 'control', index: at, id: null, cfg: { kind, label: '', script: '', link: `${ref}!A1`, options: kind === 'select' ? ['Choix 1', 'Choix 2'] : undefined } });
+		const used = new Set<string>();
+		for (const node of quill!.root.querySelectorAll<HTMLElement>('.ql-lattis-control')) {
+			const v = JSON.parse(node.dataset.config ?? '{}') as { id?: number };
+			if (v.id) await api.load(v.id).then((st) => used.add((st.config.link ?? '').toUpperCase()), () => {});
+		}
+		let row = 1;
+		while (used.has(`A${row}`)) row += 2;
+		const cfg: ButtonConfig = { kind, label: '', script: '', link: `A${row}`, options: kind === 'select' ? ['Choix 1', 'Choix 2'] : undefined };
+		try {
+			const id = await api.create(cfg);
+			quill!.insertEmbed(at, CONTROL_BLOT, { id }, 'user');
+			quill!.setSelection(at + 1, 0);
+			hydrate();
+			openPanel({ kind: 'control', index: at, id, cfg: (await api.load(id)).config });
+		} catch (e) {
+			onnotice?.(String(e instanceof Error ? e.message : e));
+		}
 	}
 
 	async function editControl(index: number) {
@@ -634,6 +705,12 @@
 			return;
 		}
 		if (t.closest('.ql-lattis-control')) return;
+		if (t.tagName === 'IMG') {
+			picked = { kind: 'image', index: indexOf(t) };
+			markSelected();
+			return;
+		}
+		picked = null;
 		const c = t.closest<HTMLElement>('.ql-lattis-chart, .ql-lattis-pivot');
 		if (c) {
 			openPanel({ kind: c.classList.contains('ql-lattis-pivot') ? 'pivot' : 'chart', index: indexOf(c) });
@@ -676,7 +753,7 @@
 		hydrate();
 		q.on('text-change', (delta, _old, src) => {
 			if (src === 'silent') return;
-			if (panel) {
+			if (panel && !replacing) {
 				const moved = (delta as unknown as { transformPosition(i: number): number }).transformPosition(panel.index);
 				if (moved !== panel.index) panel = { ...panel, index: moved };
 			}
@@ -689,8 +766,10 @@
 		q.on('editor-change', () => report());
 		q.root.addEventListener('click', onClick);
 		q.root.addEventListener('contextmenu', onContext);
+		window.addEventListener('keydown', onKey, true);
 		report();
 		return () => {
+			window.removeEventListener('keydown', onKey, true);
 			flush();
 			for (const m of mounted.values()) unmount(m.comp);
 			mounted.clear();
@@ -730,8 +809,8 @@
 			{#if grip}
 				<div
 					class="grip"
-					style:left="{grip.x - 6}px"
-					style:top="{grip.y - 6}px"
+					style:left="{grip.x - 13}px"
+					style:top="{grip.y - 13}px"
 					title="Tirer pour redimensionner"
 					onpointerdown={startSize}
 					onpointermove={moveSize}
@@ -743,7 +822,7 @@
 	</div>
 	{#if panel?.kind === 'chart' && chart}
 		{@const tbl = tables.find((t) => t.name.toLowerCase() === chart.source.toLowerCase())}
-		<div class="side">
+		<div class="side panelbox" use:resizePanel={{ key: 'doc-side', min: 260 }}>
 			<div class="srcbox">
 				<label
 					>Tableau source
@@ -765,10 +844,10 @@
 				</label>
 				<button class="danger" disabled={!!locked} onclick={() => panel && deleteEmbed(panel.index)}><Icon name="trash" size={14} />Supprimer le graphique</button>
 			</div>
-			<ChartPanel config={chart} columns={tbl?.columns ?? []} onchange={setChart} onclose={() => openPanel(null)} />
+			<ChartPanel config={chart} columns={tbl?.columns ?? []} onchange={setChart} onclose={() => openPanel(null)} resizable={false} />
 		</div>
 	{:else if panel?.kind === 'pivot' && pivot}
-		<div class="side">
+		<div class="side panelbox" use:resizePanel={{ key: 'doc-side', min: 260 }}>
 			<div class="srcbox">
 				<label
 					>Tableau source
@@ -793,13 +872,14 @@
 					onchange={(cfg) => panel && replaceEmbed(panel.index, PIVOT_BLOT, cfg)}
 					ondelete={() => panel && deleteEmbed(panel.index)}
 					onclose={() => openPanel(null)}
+					resizable={false}
 				/>
 			{/key}
 		</div>
 	{:else if panel?.kind === 'control'}
 		{@const p = panel}
-		{@const at = p.cfg.link ? (p.cfg.link.lastIndexOf('!') >= 0 ? [p.cfg.link.slice(0, p.cfg.link.lastIndexOf('!')).replace(/^'(.*)'$/, '$1').replace(/''/g, "'"), p.cfg.link.slice(p.cfg.link.lastIndexOf('!') + 1)] : [sheets[0] ?? '', p.cfg.link]) : [sheets[0] ?? '', 'A1']}
-		{@const setLink = (sheet: string, cell: string) => (p.cfg.link = `${/^[\p{L}_][\p{L}\p{N}_]*$/u.test(sheet) ? sheet : `'${sheet.replace(/'/g, "''")}'`}!${cell.trim().toUpperCase()}`)}
+		{@const at = p.cfg.link ? (p.cfg.link.lastIndexOf('!') >= 0 ? [p.cfg.link.slice(0, p.cfg.link.lastIndexOf('!')).replace(/^'(.*)'$/, '$1').replace(/''/g, "'"), p.cfg.link.slice(p.cfg.link.lastIndexOf('!') + 1)] : ['', p.cfg.link]) : ['', 'A1']}
+		{@const setLink = (sheet: string, cell: string) => (p.cfg.link = sheet ? `${/^[\p{L}_][\p{L}\p{N}_]*$/u.test(sheet) ? sheet : `'${sheet.replace(/'/g, "''")}'`}!${cell.trim().toUpperCase()}` : cell.trim().toUpperCase())}
 		{@const cfns = p.cfg.script ? scriptFunctions(scripts.find((s) => s.name === p.cfg.script)?.source ?? '') : []}
 		<aside class="side form" use:resizePanel={{ key: 'doc-control' }}>
 			<header><span>{p.id === null ? 'Insérer' : 'Modifier'} : {CONTROL_KINDS[p.cfg.kind ?? 'input'].toLowerCase()}</span><button class="x" title="Fermer" onclick={() => openPanel(null)}>✕</button></header>
@@ -815,10 +895,11 @@
 			{/if}
 			<div class="link">
 				<label
-					>Feuille liée
+					>Valeur gardée dans
 					<select value={at[0]} disabled={!!locked} onchange={(e) => setLink((e.currentTarget as HTMLSelectElement).value, at[1])}>
-						{#each sheets as s (s)}<option value={s}>{s}</option>{/each}
-						{#if !sheets.includes(at[0])}<option value={at[0]}>{at[0]} (introuvable)</option>{/if}
+						<option value="">ce document</option>
+						{#each sheets as s (s)}<option value={s}>la feuille {s}</option>{/each}
+						{#if at[0] && !sheets.includes(at[0])}<option value={at[0]}>{at[0]} (introuvable)</option>{/if}
 					</select>
 				</label>
 				<label>Cellule<input type="text" value={at[1]} disabled={!!locked} onchange={(e) => setLink(at[0], (e.currentTarget as HTMLInputElement).value)} /></label>
@@ -845,7 +926,7 @@
 					</select>
 				</label>
 			{/if}
-			<p class="hint">La valeur du contrôle est celle de la cellule liée. Les scripts le pilotent par controls.get / controls.set et controls.on("change", …).</p>
+			<p class="hint">La valeur du contrôle est celle de la cellule liée (dans ce document, ou sur une feuille pour la lire dans les formules). Les scripts le pilotent par controls.get / controls.set et controls.on("change", …).</p>
 			<div class="row">
 				<button class="primary" disabled={!!locked} onclick={saveControl}>{p.id === null ? 'Insérer' : 'Enregistrer'}</button>
 				<button onclick={() => openPanel(null)}>{p.id === null ? 'Annuler' : 'Fermer'}</button>
@@ -996,8 +1077,9 @@
 	}
 	.grip {
 		position: absolute;
-		width: 10px;
-		height: 10px;
+		width: 14px;
+		height: 14px;
+		box-sizing: border-box;
 		background: #fff;
 		border: 1.5px solid #217346;
 		border-radius: 2px;
@@ -1076,6 +1158,9 @@
 	.page :global(.ql-editor img) {
 		max-width: 100%;
 	}
+	.page :global(.ql-editor img.picked) {
+		outline: 2px solid #217346;
+	}
 	.page :global(.ql-lattis-button > span[contenteditable]) {
 		display: inline-block;
 		padding: 3px 12px;
@@ -1126,8 +1211,16 @@
 		width: 280px;
 		box-sizing: border-box;
 	}
+	.panelbox {
+		width: 310px;
+		flex: none;
+		overflow: hidden;
+	}
 	.side :global(.panel) {
 		flex: 1;
+		min-height: 0;
+		width: auto !important;
+		flex-basis: auto !important;
 		border-left: none;
 	}
 	.form header {

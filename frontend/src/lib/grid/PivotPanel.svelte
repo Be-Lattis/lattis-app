@@ -47,6 +47,8 @@
 	} from './pivotfields.js';
 
 	interface Props {
+		/** Bord gauche à tirer (faux : inclus dans un volet qui se redimensionne lui-même). */
+		resizable?: boolean;
 		config: PivotConfig;
 		/** Champs du tableau source, avec le type de leur colonne. */
 		fields: { name: string; numeric: boolean; type?: string }[];
@@ -57,7 +59,7 @@
 		onclose: () => void;
 	}
 
-	let { config, fields, error = '', filterValues, onchange, ondelete, onclose }: Props = $props();
+	let { config, fields, error = '', filterValues, onchange, ondelete, onclose, resizable = true }: Props = $props();
 
 	const flds = $derived<PivotField[]>(fields.map((f) => ({ name: f.name, type: f.type ?? (f.numeric ? 'decimal' : 'text') })));
 	const ZONE_ICONS: Record<Zone, IconName> = { filters: 'filter', cols: 'pivot-columns', rows: 'pivot-rows', values: 'autosum' };
@@ -429,7 +431,7 @@
 	const fieldType = (name: string) => flds.find((f) => f.name === name)?.type ?? '';
 </script>
 
-<aside class="panel" bind:this={panelEl} use:resizePanel={{ key: 'pivot' }} aria-label="Champs de tableau croisé dynamique">
+<aside class="panel" bind:this={panelEl} use:resizePanel={{ key: 'pivot', off: !resizable }} aria-label="Champs de tableau croisé dynamique">
 	<header>
 		<div class="titles">
 			<strong>Champs de tableau croisé dynamique</strong>

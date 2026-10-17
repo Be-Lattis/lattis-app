@@ -68,8 +68,22 @@
 		const off = (ev: MouseEvent) => {
 			if (!(ev.target as HTMLElement | null)?.closest('.action, .menu, .back, .cpanel')) selected = null;
 		};
+		// Suppr (ou Retour arrière) supprime le contrôle sélectionné, comme un graphique.
+		const key = (ev: KeyboardEvent) => {
+			if (ev.key !== 'Delete' && ev.key !== 'Backspace') return;
+			if ((ev.target as HTMLElement | null)?.closest('input, textarea, select, [contenteditable="true"], .cm-editor')) return;
+			const b = buttons.find((x) => x.id === selected);
+			if (!b) return;
+			ev.preventDefault();
+			ev.stopPropagation();
+			remove(b);
+		};
 		window.addEventListener('mousedown', off, true);
-		return () => window.removeEventListener('mousedown', off, true);
+		window.addEventListener('keydown', key, true);
+		return () => {
+			window.removeEventListener('mousedown', off, true);
+			window.removeEventListener('keydown', key, true);
+		};
 	});
 	$effect(() => {
 		if (selected !== null && !buttons.some((b) => b.id === selected)) selected = null;

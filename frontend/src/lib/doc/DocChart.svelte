@@ -18,6 +18,8 @@
 
 	let info = $state.raw<ChartInfo | null>(null);
 	let width = $state(0);
+	// Hauteur mesurée : le graphique suit la poignée pendant le geste.
+	let boxH = $state(0);
 	const height = $derived(config.height || 300);
 
 	$effect(() => {
@@ -32,11 +34,11 @@
 	});
 </script>
 
-<div class="dchart" class:selected bind:clientWidth={width} style:height="{height}px" style:width={config.width ? config.width + 'px' : null} style:max-width="100%">
+<div class="dchart" class:selected bind:clientWidth={width} bind:clientHeight={boxH} style:height="{height}px" style:width={config.width ? config.width + 'px' : null} style:max-width="100%">
 	{#if info?.error}
 		<div class="err">Graphique « {config.title || config.source} » : {info.error}</div>
 	{:else if info && width > 0}
-		<Chart kind={config.kind} labels={info.labels ?? []} series={(info.series ?? []) as never} {width} {height} style={config} animate={live.animate} />
+		<Chart kind={config.kind} labels={info.labels ?? []} series={(info.series ?? []) as never} {width} height={boxH || height} style={config} animate={live.animate} />
 	{/if}
 </div>
 

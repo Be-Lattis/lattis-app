@@ -9,13 +9,15 @@
 	import { CARTESIAN, KINDS, SECONDARY, STACKABLE, guessLatLon, seriesShape } from './kinds';
 
 	interface Props {
+		/** Bord gauche à tirer (faux : inclus dans un volet qui se redimensionne lui-même). */
+		resizable?: boolean;
 		config: ChartConfig;
 		columns: string[];
 		onchange: (cfg: ChartConfig) => void;
 		onclose: () => void;
 	}
 
-	let { config, columns, onchange, onclose }: Props = $props();
+	let { config, columns, onchange, onclose, resizable = true }: Props = $props();
 
 	// Le titre et les champs texte s'appliquent à la sortie du champ.
 	function set(patch: Partial<ChartConfig>) {
@@ -74,7 +76,7 @@
 	}
 </script>
 
-<aside class="panel" use:resizePanel={{ key: 'chart' }}>
+<aside class="panel" use:resizePanel={{ key: 'chart', off: !resizable }}>
 	<header>
 		<strong>Graphique</strong>
 		<button class="x" title="Fermer le volet" onclick={onclose}>✕</button>
