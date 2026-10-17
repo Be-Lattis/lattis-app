@@ -35,6 +35,10 @@ type ChartConfig struct {
 	YMin    *float64 `json:"yMin,omitempty"`
 	YMax    *float64 `json:"yMax,omitempty"`
 	Colors  []string `json:"colors,omitempty"` // couleur de chaque série
+	// Secondary : séries tracées sur l'axe secondaire (à droite, échelle
+	// propre), comme Excel ; Y2Title est le titre de cet axe.
+	Secondary []bool `json:"secondary,omitempty"`
+	Y2Title   string `json:"y2Title,omitempty"`
 }
 
 // ChartSeries est une série calculée (nil : valeur absente).

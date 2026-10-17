@@ -9,6 +9,8 @@
 	import type { QueryRefresh } from '#bindings/internal/bridge/models.js';
 	import type { DataAction } from '#lib/shell/Ribbon.svelte';
 	import Icon from '#lib/icons/Icon.svelte';
+	import type { IconName } from '#lib/icons/icons.js';
+	import { dismiss } from '#lib/grid/dismiss.js';
 	import QueryEditor from './QueryEditor.svelte';
 	import ConnectionDialog from './ConnectionDialog.svelte';
 	import PasswordDialog from './PasswordDialog.svelte';
@@ -29,7 +31,7 @@
 	let conns = $state<Connection[]>([]);
 	let tables = $state<string[]>([]);
 	let editing = $state<{ query: Query; editSource: boolean } | null>(null);
-	let connDialog = $state<{ connection: Connection | null; kind: ConnKind; done: (name: string | null) => void } | null>(null);
+	let connDialog = $state<{ connection: Connection | null; kind?: ConnKind; done: (name: string | null) => void } | null>(null);
 	let pwNeed = $state<{ need: PasswordNeed; done: (ok: boolean) => void } | null>(null);
 	let busy = $state('');
 
@@ -53,7 +55,8 @@
 		});
 	}
 
-	function newConnection(connection: Connection | null = null, kind: ConnKind = 'postgres'): Promise<string | null> {
+	/** kind absent (Nouvelle connexion…) : le genre se choisit dans le dialogue. */
+	function newConnection(connection: Connection | null = null, kind?: ConnKind): Promise<string | null> {
 		return new Promise((resolve) => {
 			connDialog = {
 				connection,
@@ -64,6 +67,48 @@
 				}
 			};
 		});
+	}
+
+	// « Nouvelle connexion… » : toutes les sources, comme Données › Obtenir des
+	// données. Une base de données s'enregistre comme connexion ; les autres
+	// ouvrent l'éditeur de requête sur la source choisie.
+	const SOURCES: { group: string; items: { what: DataAction; label: string; icon: IconName }[] }[] = [
+		{
+			group: 'Fichier',
+			items: [
+				{ what: 'csv', label: 'Texte/CSV', icon: 'file' },
+				{ what: 'xlsx', label: 'Classeur Excel', icon: 'table' },
+				{ what: 'json', label: 'JSON', icon: 'file' },
+				{ what: 'parquet', label: 'Parquet', icon: 'file' },
+				{ what: 'sqlite', label: 'Base SQLite', icon: 'database' }
+			]
+		},
+		{
+			group: 'Base de données',
+			items: [
+				{ what: 'postgres', label: 'PostgreSQL', icon: 'database' },
+				{ what: 'mysql', label: 'MySQL / MariaDB', icon: 'database' },
+				{ what: 'sqlserver', label: 'SQL Server', icon: 'database' }
+			]
+		},
+		{
+			group: 'Autres sources',
+			items: [
+				{ what: 'web', label: 'Web (API)', icon: 'web' },
+				{ what: 'table', label: 'Tableau du classeur', icon: 'sheet' }
+			]
+		}
+	];
+	let picking = $state(false);
+
+	async function newSource(what: DataAction) {
+		picking = false;
+		if (isDbKind(what)) {
+			const n = await newConnection(null, what);
+			if (n) await load().then(() => onchanged());
+			return;
+		}
+		await data(what);
 	}
 
 	/** Commande du ruban (Données). */
@@ -245,7 +290,19 @@
 				</div>
 			</div>
 		{/each}
-		<button class="add" onclick={() => newConnection().then((n) => (n ? load().then(() => onchanged()) : undefined))}><Icon name="plus" size={14} />Nouvelle connexion…</button>
+		<div class="new-wrap">
+			<button class="add" aria-haspopup="menu" aria-expanded={picking} onclick={() => (picking = !picking)}><Icon name="plus" size={14} />Nouvelle connexion…</button>
+			{#if picking}
+				<div class="src-menu" role="menu" use:dismiss={() => (picking = false)}>
+					{#each SOURCES as g (g.group)}
+						<div class="src-group">{g.group}</div>
+						{#each g.items as it (it.what)}
+							<button role="menuitem" onclick={() => newSource(it.what)}><Icon name={it.icon} size={14} />{it.label}</button>
+						{/each}
+					{/each}
+				</div>
+			{/if}
+		</div>
 	</aside>
 {/if}
 
@@ -320,6 +377,46 @@
 	}
 	/* Boutons d'action : icône devant le libellé, accent vert (rouge pour supprimer). */
 	.acts button,
+	.new-wrap {
+		position: relative;
+		align-self: flex-start;
+	}
+	.src-menu {
+		position: absolute;
+		left: 0;
+		top: calc(100% + 4px);
+		z-index: 20;
+		min-width: 220px;
+		background: #fff;
+		border: 1px solid #d4d7db;
+		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+		padding: 4px 0;
+		display: flex;
+		flex-direction: column;
+	}
+	.src-group {
+		padding: 6px 12px 2px;
+		font-size: 11px;
+		font-weight: 600;
+		color: #6b7280;
+		text-transform: uppercase;
+		letter-spacing: 0.03em;
+	}
+	.src-menu button {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 5px 12px;
+		border: none;
+		background: none;
+		font: inherit;
+		text-align: left;
+		cursor: pointer;
+		--icon-accent: #217346;
+	}
+	.src-menu button:hover {
+		background: #eef5f0;
+	}
 	.add {
 		display: inline-flex;
 		align-items: center;

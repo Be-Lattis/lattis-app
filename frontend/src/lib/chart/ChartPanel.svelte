@@ -37,6 +37,14 @@
 	}
 	const stackable = $derived(config.kind === 'bar' || config.kind === 'column' || config.kind === 'area');
 	const axes = $derived(config.kind !== 'pie' && config.kind !== 'doughnut');
+	// Axe secondaire (Excel) : histogramme, courbes, aires, nuage de points.
+	const canSecondary = $derived(config.kind === 'bar' || config.kind === 'line' || config.kind === 'area' || config.kind === 'scatter');
+	const hasSecondary = $derived(canSecondary && config.series.some((_, k) => config.secondary?.[k]));
+	function toggleSecondary(k: number) {
+		const secondary = config.series.map((_, j) => !!config.secondary?.[j]);
+		secondary[k] = !secondary[k];
+		set({ secondary: secondary.some(Boolean) ? secondary : undefined });
+	}
 </script>
 
 <aside class="panel" use:resizePanel={{ key: 'chart' }}>
@@ -72,7 +80,7 @@
 						onchange={(e) => {
 							const on = (e.currentTarget as HTMLInputElement).checked;
 							const series = on ? [...config.series, c] : config.series.filter((x) => x !== c);
-							if (series.length) set({ series, colors: undefined });
+							if (series.length) set({ series, colors: undefined, secondary: undefined });
 						}}
 					/>
 					<span>{c}</span>
@@ -87,6 +95,17 @@
 								set({ colors });
 							}}
 						/>
+						{#if canSecondary && config.series.length > 1}
+							<button
+								class="sec"
+								class:on={!!config.secondary?.[k]}
+								title={config.secondary?.[k] ? 'Série sur l’axe secondaire (à droite) : cliquer pour la remettre sur l’axe principal' : 'Tracer la série sur un axe secondaire, à droite, avec sa propre échelle'}
+								onclick={(e) => {
+									e.preventDefault();
+									toggleSecondary(k);
+								}}>Axe 2</button
+							>
+						{/if}
 					{/if}
 				</label>
 			{/each}
@@ -99,6 +118,9 @@
 		{#if axes}
 			<label class="line">Axe X<input value={config.xTitle ?? ''} onchange={(e) => set({ xTitle: (e.currentTarget as HTMLInputElement).value || undefined })} placeholder="(aucun)" /></label>
 			<label class="line">Axe Y<input value={config.yTitle ?? ''} onchange={(e) => set({ yTitle: (e.currentTarget as HTMLInputElement).value || undefined })} placeholder="(aucun)" /></label>
+			{#if hasSecondary}
+				<label class="line">Axe Y 2<input value={config.y2Title ?? ''} onchange={(e) => set({ y2Title: (e.currentTarget as HTMLInputElement).value || undefined })} placeholder="(aucun)" /></label>
+			{/if}
 		{/if}
 	</section>
 
@@ -192,6 +214,23 @@
 	}
 	.series span {
 		flex: 1;
+	}
+	.sec {
+		font: inherit;
+		font-size: 11px;
+		padding: 0 6px;
+		height: 18px;
+		border: 1px solid #c9cdd2;
+		background: #fff;
+		border-radius: 2px;
+		color: #6b7280;
+		cursor: pointer;
+	}
+	.sec.on {
+		background: #e3efe7;
+		border-color: #217346;
+		color: #185c37;
+		font-weight: 600;
 	}
 	input[type='color'] {
 		width: 26px;

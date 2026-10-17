@@ -22,6 +22,9 @@
 		yMin?: number;
 		yMax?: number;
 		colors?: string[];
+		/** Séries sur l'axe secondaire (à droite, échelle propre), par rang. */
+		secondary?: boolean[];
+		y2Title?: string;
 	}
 
 	interface Props {
@@ -40,12 +43,16 @@
 	const horizontal = $derived(kind === 'column');
 	const stacked = $derived(!!style.stacked && (kind === 'bar' || kind === 'column' || kind === 'area'));
 	const legend = $derived(style.legend || 'bottom');
+	// Axe secondaire : histogramme, courbes, aires et nuage (pas les barres
+	// horizontales ni les secteurs), dès qu'une série y est placée.
+	const isSec = (k: number) => !!style.secondary?.[k] && (kind === 'bar' || kind === 'line' || kind === 'area' || kind === 'scatter');
+	const hasSec = $derived(series.some((_, k) => isSec(k)));
 	const legendItems = $derived(radial ? labels.map((l, i) => ({ name: l, color: color(i) })) : series.map((s, k) => ({ name: s.name, color: color(k) })));
 
 	// Marges : titre, légende, titres d'axes, étiquettes de catégories
 	// (inclinées si elles ne tiennent pas droites).
 	const padLeft = $derived((radial ? 12 : horizontal ? 80 : 48) + (style.yTitle ? 18 : 0));
-	const padRight = $derived(16 + (legend === 'right' ? 130 : 0));
+	const padRight = $derived(16 + (legend === 'right' ? 130 : 0) + (hasSec ? 44 + (style.y2Title ? 18 : 0) : 0));
 	const catLayout = $derived(
 		radial || horizontal || kind === 'scatter'
 			? { every: 1, angle: 0, depth: 14, chars: 12 }
@@ -77,10 +84,29 @@
 				lo = Math.min(lo, n);
 			}
 		} else {
-			for (const s of series) for (const v of s.values) if (v !== null) (lo = Math.min(lo, v)), (hi = Math.max(hi, v));
+			series.forEach((s, k) => {
+				if (isSec(k)) return;
+				for (const v of s.values) if (v !== null) (lo = Math.min(lo, v)), (hi = Math.max(hi, v));
+			});
 		}
 		return [style.yMin ?? lo, style.yMax ?? hi];
 	});
+	// Axe secondaire : sa propre échelle, sur ses séries seulement.
+	const ticks2 = $derived.by(() => {
+		let lo = 0;
+		let hi = 0;
+		series.forEach((s, k) => {
+			if (!isSec(k)) return;
+			for (const v of s.values) if (v !== null) (lo = Math.min(lo, v)), (hi = Math.max(hi, v));
+		});
+		return ticks(lo, hi);
+	});
+	const w0 = $derived(ticks2[0]);
+	const w1 = $derived(ticks2[ticks2.length - 1]);
+	const fmt2 = $derived(axisFormat(ticks2));
+	const vy2 = (v: number) => pad.top + plotH - ((Math.min(Math.max(v, w0), w1) - w0) / (w1 - w0 || 1)) * plotH;
+	/** Position verticale d'une valeur de la série k (sur son axe). */
+	const vyOf = (k: number) => (isSec(k) ? vy2 : vy);
 	const vTicks = $derived(ticks(extent[0], extent[1]));
 	const v0 = $derived(style.yMin ?? vTicks[0]);
 	const v1 = $derived(style.yMax ?? vTicks[vTicks.length - 1]);
@@ -103,6 +129,7 @@
 	const bars = $derived.by(() => {
 		const out: { x: number; y: number; w: number; h: number; c: string; v: number }[] = [];
 		const base = Math.max(v0, Math.min(0, v1));
+		const base2 = Math.max(w0, Math.min(0, w1));
 		for (let i = 0; i < n; i++) {
 			let pos = 0;
 			let neg = 0;
@@ -113,11 +140,21 @@
 				let b: number;
 				let slot = 0;
 				let size = band * 0.7;
+				const y = vyOf(k);
+				if (isSec(k) && stacked) {
+					// Série de l'axe secondaire dans un histogramme empilé : barre
+					// étroite, centrée, posée sur la pile (comme Excel).
+					const x = pad.left + band * i + band * 0.35;
+					const y0 = y(Math.max(base2, v));
+					const y1 = y(Math.min(base2, v));
+					out.push({ x, y: y0, w: Math.max(1, band * 0.3), h: Math.max(1, y1 - y0), c: color(k), v });
+					return;
+				}
 				if (stacked) {
 					if (v >= 0) (a = pos), (b = pos += v);
 					else (a = neg), (b = neg += v);
 				} else {
-					a = base;
+					a = isSec(k) ? base2 : base;
 					b = v;
 					size = (band * 0.7) / series.length;
 					slot = k;
@@ -128,8 +165,8 @@
 					const x1 = vx(Math.max(a, b));
 					out.push({ x: x0, y: pad.top + start, w: Math.max(1, x1 - x0), h: Math.max(1, size - 1), c: color(k), v });
 				} else {
-					const y0 = vy(Math.max(a, b));
-					const y1 = vy(Math.min(a, b));
+					const y0 = y(Math.max(a, b));
+					const y1 = y(Math.min(a, b));
 					out.push({ x: pad.left + start, y: y0, w: Math.max(1, size - 1), h: Math.max(1, y1 - y0), c: color(k), v });
 				}
 			});
@@ -141,11 +178,14 @@
 	const lines = $derived.by(() => {
 		const acc = labels.map(() => 0);
 		return series.map((s, k) => {
+			const sec = isSec(k);
+			const y = vyOf(k);
 			const pts = s.values.map((v, i) => {
 				if (v === null) return null;
-				const lo = stacked ? acc[i] : Math.max(v0, Math.min(0, v1));
-				const hi = stacked ? (acc[i] += v) : v;
-				return { x: cat(i), y: vy(hi), y0: vy(lo), v };
+				// L'axe secondaire n'entre pas dans la pile.
+				const lo = stacked && !sec ? acc[i] : sec ? Math.max(w0, Math.min(0, w1)) : Math.max(v0, Math.min(0, v1));
+				const hi = stacked && !sec ? (acc[i] += v) : v;
+				return { x: cat(i), y: y(hi), y0: y(lo), v };
 			});
 			return { pts, c: color(k) };
 		});
@@ -257,7 +297,7 @@
 		{:else if kind === 'scatter'}
 			{#each series as s, k (k)}
 				{#each s.values as v, i (i)}
-					{#if v !== null}<circle cx={sx(xs[i])} cy={vy(v)} r="3.5" fill={color(k)} />{/if}
+					{#if v !== null}<circle cx={sx(xs[i])} cy={vyOf(k)(v)} r="3.5" fill={color(k)} />{/if}
 				{/each}
 			{/each}
 		{:else}
@@ -276,6 +316,17 @@
 		{#if style.xTitle}<text x={pad.left + plotW / 2} y={pad.top + plotH + (horizontal || radial ? 14 : catLayout.depth) + 18} text-anchor="middle" class="axis-title">{style.xTitle}</text>{/if}
 		{#if style.yTitle}
 			<text x="14" y={pad.top + plotH / 2} text-anchor="middle" class="axis-title" transform="rotate(-90 14 {pad.top + plotH / 2})">{style.yTitle}</text>
+		{/if}
+		{#if hasSec}
+			<!-- Axe secondaire, à droite. -->
+			<line x1={pad.left + plotW} x2={pad.left + plotW} y1={pad.top} y2={pad.top + plotH} class="axis" />
+			{#each ticks2 as t (t)}
+				<text x={pad.left + plotW + 6} y={vy2(t) + 4} class="small">{fmt2(t)}</text>
+			{/each}
+			{#if style.y2Title}
+				{@const tx = pad.left + plotW + 48}
+				<text x={tx} y={pad.top + plotH / 2} text-anchor="middle" class="axis-title" transform="rotate(90 {tx} {pad.top + plotH / 2})">{style.y2Title}</text>
+			{/if}
 		{/if}
 	{/if}
 
