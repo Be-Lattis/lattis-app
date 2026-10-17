@@ -12,15 +12,18 @@
 
 	interface Props {
 		connection?: Connection | null;
-		/** Genre d'une nouvelle connexion (choix possible tant qu'elle n'est pas enregistrée). */
+		/** Genre d'une nouvelle connexion ; absent : choisi dans le dialogue (« Nouvelle connexion… »). */
 		kind?: ConnKind;
 		/** Enregistrée : renvoie son nom. */
 		onsaved: (name: string) => void;
 		oncancel: () => void;
 	}
-	let { connection = null, kind = 'postgres', onsaved, oncancel }: Props = $props();
+	let { connection = null, kind, onsaved, oncancel }: Props = $props();
+	// Genre imposé par la commande (Données › Base de données PostgreSQL…) : il
+	// est dans le titre, pas de liste pour le changer (choix de Louis).
+	const choose = (() => !connection && !kind)();
 
-	const initial = (): Connection => (connection ? clone(connection) : newConnection(kind));
+	const initial = (): Connection => (connection ? clone(connection) : newConnection(kind ?? 'postgres'));
 	let c = $state<Connection>(initial());
 	let password = $state('');
 	let remember = $state(true);
@@ -89,7 +92,7 @@
 		<header>{k === 'web' ? 'Connexion à une API web' : `Base de données ${CONN_LABELS[k] ?? ''}`}</header>
 		<div class="body">
 			<div class="grid">
-				{#if !c.id}
+				{#if choose}
 					<label class="wide"
 						>Type de connexion <Select
 							value={c.kind}

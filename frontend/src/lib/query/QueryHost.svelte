@@ -29,7 +29,7 @@
 	let conns = $state<Connection[]>([]);
 	let tables = $state<string[]>([]);
 	let editing = $state<{ query: Query; editSource: boolean } | null>(null);
-	let connDialog = $state<{ connection: Connection | null; kind: ConnKind; done: (name: string | null) => void } | null>(null);
+	let connDialog = $state<{ connection: Connection | null; kind?: ConnKind; done: (name: string | null) => void } | null>(null);
 	let pwNeed = $state<{ need: PasswordNeed; done: (ok: boolean) => void } | null>(null);
 	let busy = $state('');
 
@@ -53,7 +53,8 @@
 		});
 	}
 
-	function newConnection(connection: Connection | null = null, kind: ConnKind = 'postgres'): Promise<string | null> {
+	/** kind absent (Nouvelle connexion…) : le genre se choisit dans le dialogue. */
+	function newConnection(connection: Connection | null = null, kind?: ConnKind): Promise<string | null> {
 		return new Promise((resolve) => {
 			connDialog = {
 				connection,
