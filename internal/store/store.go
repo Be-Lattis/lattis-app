@@ -11,6 +11,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"runtime"
 	"sync/atomic"
 
@@ -75,9 +76,11 @@ func setup(readOnly bool, extra []func(*sqlite3.Conn) error) func(*sqlite3.Conn)
 			"PRAGMA busy_timeout=5000",
 			"PRAGMA synchronous=NORMAL",
 			"PRAGMA foreign_keys=ON",
-			// Tris et index temporaires en mémoire, cache de 64 Mo : un tri ou un
-			// regroupement sur 1 M de lignes reste en mémoire au lieu du disque.
-			"PRAGMA temp_store=MEMORY",
+			// Cache de 64 Mo : un tri ou un regroupement sur 1 M de lignes reste
+			// en mémoire. Au-delà, les tris et index temporaires débordent sur
+			// disque (temp_store=FILE) : en mémoire, trier 10 M de lignes épuise
+			// la mémoire de SQLite (« out of memory », limitée à 4 Go en WASM).
+			"PRAGMA temp_store=FILE",
 			"PRAGMA cache_size=-65536",
 		}
 		if readOnly {
@@ -138,14 +141,28 @@ func (s *Store) writer() {
 	}
 }
 
-func (s *Store) run(j job) error {
+func (s *Store) run(j job) (err error) {
 	if err := j.ctx.Err(); err != nil {
 		return err
 	}
+	// Une panique de SQLite (mémoire épuisée…) devient l'erreur de cette
+	// écriture : l'application l'affiche au lieu de s'arrêter.
+	var tx *sql.Tx
+	defer func() {
+		if r := recover(); r != nil {
+			if tx != nil {
+				func() {
+					defer func() { recover() }()
+					tx.Rollback()
+				}()
+			}
+			err = fmt.Errorf("%w : %v", ErrEngine, r)
+		}
+	}()
 	if j.raw != nil {
 		return j.raw(s.write)
 	}
-	tx, err := s.write.BeginTx(j.ctx, nil)
+	tx, err = s.write.BeginTx(j.ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -155,6 +172,10 @@ func (s *Store) run(j job) error {
 	}
 	return tx.Commit()
 }
+
+// ErrEngine signale une erreur interne de SQLite pendant une écriture (par
+// exemple la mémoire épuisée) ; l'écriture est annulée.
+var ErrEngine = errors.New("opération impossible, le classeur n'a pas été modifié")
 
 // Close arrête la file d'écriture et ferme les connexions.
 func (s *Store) Close() error {
