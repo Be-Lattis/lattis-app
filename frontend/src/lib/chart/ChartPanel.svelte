@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resizePanel } from '#lib/ui/resize.js';
 	// Volet « Mise en forme du graphique » : chaque réglage s'applique tout de
 	// suite (aperçu direct, Ctrl+Z pour revenir en arrière).
 	import type { ChartConfig } from '#lib/grid/Sheet.svelte';
@@ -36,7 +37,7 @@
 	const axes = $derived(config.kind !== 'pie' && config.kind !== 'doughnut');
 </script>
 
-<aside class="panel">
+<aside class="panel" use:resizePanel={{ key: 'chart' }}>
 	<header>
 		<strong>Graphique</strong>
 		<button class="x" title="Fermer le volet" onclick={onclose}>✕</button>

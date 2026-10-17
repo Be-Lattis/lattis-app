@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resizePanel } from '#lib/ui/resize.js';
 	// Panneau « Référence » de l'onglet SCRIPT : les fonctions disponibles dans
 	// un script Lua, par catégorie, avec recherche. Un clic déplie une entrée ;
 	// Insérer place son exemple dans l'éditeur. Données : reference.ts.
@@ -27,7 +28,7 @@
 	}
 </script>
 
-<aside class="ref">
+<aside class="ref" use:resizePanel={{ key: 'lua-ref' }}>
 	<div class="head">
 		<h2>Référence Lua</h2>
 		<button class="close" onclick={close} title="Masquer la référence" aria-label="Masquer la référence">×</button>
