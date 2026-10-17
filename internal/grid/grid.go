@@ -390,7 +390,13 @@ func (t *Table) Stats(ctx context.Context, first, count int, cols []int) (Stats,
 	if first == 0 && count == rows {
 		// Toutes les lignes (colonne entière, Ctrl+A) : pas besoin de les
 		// ordonner pour les additionner.
-		q = "SELECT " + strings.Join(aggs, ", ") + fmt.Sprintf(" FROM (SELECT %s FROM %s)", strings.Join(inner, ", "), t.sqlName)
+		// ?n cité une fois : le pilote attend autant de paramètres que le
+		// plus grand numéro, même quand les colonnes résumées n'en lisent pas.
+		where := ""
+		if n > 0 {
+			where = fmt.Sprintf(" WHERE ?%d IS NULL OR 1", n)
+		}
+		q = "SELECT " + strings.Join(aggs, ", ") + fmt.Sprintf(" FROM (SELECT %s FROM %s%s)", strings.Join(inner, ", "), t.sqlName, where)
 		args = append([]any{}, t.args...)
 	}
 	got := make([]Stats, len(todo))

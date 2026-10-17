@@ -138,3 +138,17 @@ func TestStatsCache(t *testing.T) {
 		t.Fatalf("cache : %+v + %+v ≠ %+v (%d entrées)", a, b, both, len(tbl.stats))
 	}
 }
+
+// Colonne entière d'un tableau à colonnes calculées : les paramètres des
+// expressions sont passés même si la colonne résumée n'en lit aucun.
+func TestStatsWholeWithArgs(t *testing.T) {
+	tbl := openDemo(t, 1500)
+	ctx := context.Background()
+	exprs := append([]string{}, tbl.exprs...)
+	exprs[1] = "(c_1 || ?1)"
+	tbl.WithExprs(exprs, []any{"x"}, nil)
+	st, err := tbl.Stats(ctx, 0, 1500, []int{0})
+	if err != nil || st.Count != 1500 {
+		t.Fatalf("colonne entière : %+v, %v", st, err)
+	}
+}
