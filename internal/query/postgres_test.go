@@ -17,7 +17,7 @@ import (
 // base (par exemple postgres://postgres:secret@localhost:5432/postgres).
 // Ils ne créent rien sur le serveur : tout passe par des requêtes en
 // lecture seule.
-func pgEnv(t *testing.T) (PGConfig, string) {
+func pgEnv(t *testing.T) (DBConfig, string) {
 	t.Helper()
 	dsn := os.Getenv("SLITABLE_PG_DSN")
 	if dsn == "" {
@@ -31,7 +31,7 @@ func pgEnv(t *testing.T) (PGConfig, string) {
 	if cfg.TLSConfig != nil {
 		mode = "require"
 	}
-	return PGConfig{Host: cfg.Host, Port: int(cfg.Port), Database: cfg.Database, User: cfg.User, SSLMode: mode}, cfg.Password
+	return DBConfig{Host: cfg.Host, Port: int(cfg.Port), Database: cfg.Database, User: cfg.User, SSLMode: mode}, cfg.Password
 }
 
 const pgSample = `SELECT * FROM (VALUES
@@ -45,7 +45,7 @@ func TestPostgres(t *testing.T) {
 	d := newDoc(t)
 	s := newSession(t)
 	e := env(d)
-	def, err := EncodeConnection(Connection{Name: "Test", Postgres: cfg})
+	def, err := EncodeConnection(Connection{Name: "Test", Kind: KindPostgres, Config: cfg})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func TestPostgres(t *testing.T) {
 		if pv.NeedPassword == nil || pv.NeedPassword.Connection != "Test" {
 			t.Fatalf("mot de passe non demandé : %+v", pv)
 		}
-		conn := Connection{Name: "Test", Postgres: cfg}
+		conn := Connection{Name: "Test", Kind: KindPostgres, Config: cfg}
 		if err := TestConnection(ctx, e.Secrets, conn, "faux", false); err == nil {
 			t.Fatal("mauvais mot de passe accepté")
 		} else {
@@ -107,7 +107,7 @@ func TestPostgres(t *testing.T) {
 	}
 
 	// Navigateur.
-	tables, err := PGTables(ctx, e.Secrets, Connection{Name: "Test", Postgres: cfg})
+	tables, err := DBTables(ctx, e.Secrets, Connection{Name: "Test", Kind: KindPostgres, Config: cfg})
 	if err != nil {
 		t.Fatal(err)
 	}

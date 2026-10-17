@@ -99,6 +99,15 @@ export function CloseDocument(): $CancellablePromise<void> {
 }
 
 /**
+ * ConnectionTables liste les tables d'une connexion du classeur
+ * (PostgreSQL, MySQL, SQL Server, ODBC ; vide pour une connexion Web ou un
+ * pilote ODBC sans INFORMATION_SCHEMA).
+ */
+export function ConnectionTables(name: string): $CancellablePromise<$models.TableList> {
+    return $Call.ByID(3299404044, name);
+}
+
+/**
  * Connections liste les connexions du classeur.
  */
 export function Connections(): $CancellablePromise<query$0.Connection[] | null> {
@@ -139,6 +148,13 @@ export function CreateChart(sheet: number, row: number, col: number, cfg: canvas
  */
 export function CreatePivot(cfg: canvas$0.PivotConfig): $CancellablePromise<number> {
     return $Call.ByID(1379190243, cfg);
+}
+
+/**
+ * DataSources renvoie les sources disponibles dans cette version.
+ */
+export function DataSources(): $CancellablePromise<$models.DataSources> {
+    return $Call.ByID(2639860237);
 }
 
 /**
@@ -329,6 +345,14 @@ export function FileBase(path: string): $CancellablePromise<string> {
 }
 
 /**
+ * FileTables liste les tables et vues d'un fichier de base (kind :
+ * "sqlite" ou "duckdb").
+ */
+export function FileTables(kind: string, path: string): $CancellablePromise<query$0.DBTable[] | null> {
+    return $Call.ByID(669960542, kind, path);
+}
+
+/**
  * FilterValues donne les valeurs distinctes d'une colonne pour le filtre.
  */
 export function FilterValues(table: string, i: number): $CancellablePromise<canvas$0.FilterValue[] | null> {
@@ -504,8 +528,8 @@ export function Paste(sheet: number, row: number, col: number, block: (string[] 
 }
 
 /**
- * PickDataFile demande un fichier source (kind : "csv" ou "xlsx") ; ""
- * si l'utilisateur annule.
+ * PickDataFile demande un fichier source (kind : "csv", "xlsx", "json",
+ * "parquet", "sqlite" ou "duckdb") ; "" si l'utilisateur annule.
  */
 export function PickDataFile(kind: string): $CancellablePromise<string> {
     return $Call.ByID(2265459610, kind);
@@ -530,20 +554,6 @@ export function PlaceButton(id: number, row: number, col: number, offX: number, 
  */
 export function PlaceChart(id: number, row: number, col: number, offX: number, offY: number, width: number, height: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(2193253128, id, row, col, offX, offY, width, height);
-}
-
-/**
- * PostgresTableSQL écrit la requête qui lit une table entière.
- */
-export function PostgresTableSQL(schema: string, table: string): $CancellablePromise<string> {
-    return $Call.ByID(1911167034, schema, table);
-}
-
-/**
- * PostgresTables liste les tables d'une connexion du classeur.
- */
-export function PostgresTables(name: string): $CancellablePromise<$models.PostgresTables> {
-    return $Call.ByID(689024343, name);
 }
 
 /**
@@ -954,6 +964,14 @@ export function State(): $CancellablePromise<$models.DocState> {
  */
 export function StopScript(): $CancellablePromise<void> {
     return $Call.ByID(2070863182);
+}
+
+/**
+ * TableSQL écrit la requête qui lit une table entière (kind : genre de la
+ * connexion ou du fichier de base, pour les guillemets des identifiants).
+ */
+export function TableSQL(kind: string, schema: string, table: string): $CancellablePromise<string> {
+    return $Call.ByID(2653819301, kind, schema, table);
 }
 
 /**

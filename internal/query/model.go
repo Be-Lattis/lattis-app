@@ -1,7 +1,9 @@
 // Package query est l'équivalent de Power Query de Slitable (voir
 // docs/decisions/0003-sources-externes-power-query.md) : des requêtes
-// d'import enregistrées dans le classeur, faites d'une source (CSV, .xlsx,
-// tableau du classeur, autre requête, PostgreSQL) et d'une suite d'étapes
+// d'import enregistrées dans le classeur, faites d'une source (fichier CSV,
+// .xlsx, JSON, Parquet, SQLite, DuckDB ; tableau du classeur ; autre
+// requête ; PostgreSQL, MySQL, SQL Server, ODBC ; API web JSON) et d'une
+// suite d'étapes
 // rejouables (filtrer, renommer, changer le type, regrouper…).
 //
 // Les étapes sont compilées en SQL (une chaîne de CTE) et exécutées dans une
@@ -27,12 +29,34 @@ const (
 	SourceQuery    = "query"    // autre requête du classeur : Query
 	SourcePostgres = "postgres" // PostgreSQL : Connection, SQL
 	SourceSQL      = "sql"      // requête SQL sur le classeur (Référencer) : SQL, Sheet
+	// Autres SGBD (connexion du même genre) : Connection, SQL.
+	SourceMySQL     = "mysql"
+	SourceSQLServer = "sqlserver"
+	SourceODBC      = "odbc"
+	// Fichiers de base, ouverts en lecture seule : Path, SQL.
+	SourceSQLite = "sqlite"
+	SourceDuckDB = "duckdb"
+	// Fichiers de données : Path (JSON : RecordPath).
+	SourceJSON    = "json"
+	SourceParquet = "parquet"
+	// API web (GET, réponse JSON) : URL, Headers, RecordPath, Connection
+	// (facultative, de genre web : porte le secret).
+	SourceWeb = "web"
 )
+
+// dbSource : source lue par une connexion à un SGBD.
+func dbSource(kind string) bool {
+	switch kind {
+	case SourcePostgres, SourceMySQL, SourceSQLServer, SourceODBC:
+		return true
+	}
+	return false
+}
 
 // Source dit d'où une requête lit ses données.
 type Source struct {
 	Kind string `json:"kind"`
-	// Fichier (CSV, .xlsx) : chemin absolu.
+	// Fichier (CSV, .xlsx, JSON, Parquet, SQLite, DuckDB) : chemin absolu.
 	Path string `json:"path,omitempty"`
 	// CSV : séparateur (un caractère ; vide : détecté).
 	Delimiter string `json:"delimiter,omitempty"`
@@ -43,11 +67,19 @@ type Source struct {
 	Table string `json:"table,omitempty"`
 	// Autre requête du classeur.
 	Query string `json:"query,omitempty"`
-	// PostgreSQL : nom de la connexion du classeur et requête SQL (SELECT).
+	// SGBD : nom de la connexion du classeur et requête SQL (SELECT) ;
+	// fichier de base : requête SQL.
 	// Requête SQL sur le classeur : SQL, et Sheet la feuille des adresses
 	// Cell[A1] sans feuille.
 	Connection string `json:"connection,omitempty"`
 	SQL        string `json:"sql,omitempty"`
+	// API web : adresse et en-têtes (enregistrés dans le classeur : un
+	// jeton passe par une connexion Web).
+	URL     string   `json:"url,omitempty"`
+	Headers []Header `json:"headers,omitempty"`
+	// JSON et API web : chemin du tableau des enregistrements (data.items,
+	// $.resultats[0].lignes ; vide : la racine ou son seul tableau).
+	RecordPath string `json:"recordPath,omitempty"`
 }
 
 // Cond est une condition d'un filtre.
@@ -189,8 +221,18 @@ func SourceLabel(s Source) string {
 		return "Tableau " + s.Table
 	case SourceQuery:
 		return "Requête " + s.Query
-	case SourcePostgres:
-		return "PostgreSQL " + s.Connection
+	case SourcePostgres, SourceMySQL, SourceSQLServer, SourceODBC:
+		return KindLabel(s.Kind) + " " + s.Connection
+	case SourceSQLite:
+		return "SQLite " + base(s.Path)
+	case SourceDuckDB:
+		return "DuckDB " + base(s.Path)
+	case SourceJSON:
+		return "JSON " + base(s.Path)
+	case SourceParquet:
+		return "Parquet " + base(s.Path)
+	case SourceWeb:
+		return "Web " + hostOf(s.URL)
 	case SourceSQL:
 		return "Requête SQL du classeur"
 	}

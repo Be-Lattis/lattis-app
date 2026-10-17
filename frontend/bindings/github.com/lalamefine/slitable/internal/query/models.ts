@@ -48,7 +48,7 @@ export interface Connection {
     "id": number;
     "name": string;
     "kind": string;
-    "postgres": PGConfig;
+    "config": DBConfig;
 
     /**
      * Remembered : le trousseau du système connaît son mot de passe.
@@ -57,28 +57,57 @@ export interface Connection {
 }
 
 /**
- * PGConfig décrit une connexion PostgreSQL, sans mot de passe (voir
- * secrets.go).
+ * DBConfig décrit une connexion, sans mot de passe. Les champs utilisés
+ * dépendent du genre (voir les constantes Kind*).
  */
-export interface PGConfig {
-    "host": string;
-    "port": number;
-    "database": string;
-    "user": string;
+export interface DBConfig {
+    "host"?: string;
+    "port"?: number;
+    "database"?: string;
+    "user"?: string;
 
     /**
-     * SSLMode : disable, prefer (défaut), require, verify-ca, verify-full.
+     * SSLMode : "" (selon le serveur), disable, require, verify-full
+     * (PostgreSQL accepte aussi prefer, verify-ca).
      */
     "sslmode"?: string;
+
+    /**
+     * SQL Server : instance nommée (SQLEXPRESS…).
+     */
+    "instance"?: string;
+
+    /**
+     * ODBC : chaîne de connexion (DSN=Ventes ou Driver={…};Server=…),
+     * sans mot de passe : il est ajouté (PWD=) à la connexion.
+     */
+    "odbc"?: string;
+
+    /**
+     * Web : adresse (préfixe) des requêtes autorisées à recevoir le secret,
+     * et en-tête qui le porte (Authorization par défaut ; avec User :
+     * authentification Basic).
+     */
+    "url"?: string;
+    "header"?: string;
 }
 
 /**
- * PGTable est une table ou une vue d'un serveur PostgreSQL (navigateur).
+ * DBTable est une table ou une vue d'une base (navigateur).
  */
-export interface PGTable {
+export interface DBTable {
     "schema": string;
     "name": string;
     "view": boolean;
+}
+
+/**
+ * Header est un en-tête HTTP d'une source web (enregistré dans le
+ * classeur : un secret passe par une connexion Web).
+ */
+export interface Header {
+    "name": string;
+    "value": string;
 }
 
 /**
@@ -160,7 +189,7 @@ export interface Source {
     "kind": string;
 
     /**
-     * Fichier (CSV, .xlsx) : chemin absolu.
+     * Fichier (CSV, .xlsx, JSON, Parquet, SQLite, DuckDB) : chemin absolu.
      */
     "path"?: string;
 
@@ -186,12 +215,26 @@ export interface Source {
     "query"?: string;
 
     /**
-     * PostgreSQL : nom de la connexion du classeur et requête SQL (SELECT).
+     * SGBD : nom de la connexion du classeur et requête SQL (SELECT) ;
+     * fichier de base : requête SQL.
      * Requête SQL sur le classeur : SQL, et Sheet la feuille des adresses
      * Cell[A1] sans feuille.
      */
     "connection"?: string;
     "sql"?: string;
+
+    /**
+     * API web : adresse et en-têtes (enregistrés dans le classeur : un
+     * jeton passe par une connexion Web).
+     */
+    "url"?: string;
+    "headers"?: Header[] | null;
+
+    /**
+     * JSON et API web : chemin du tableau des enregistrements (data.items,
+     * $.resultats[0].lignes ; vide : la racine ou son seul tableau).
+     */
+    "recordPath"?: string;
 }
 
 /**

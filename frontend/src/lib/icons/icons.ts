@@ -92,6 +92,7 @@ export const icons = {
 	stop: '<rect class="af" x="5.5" y="5.5" width="13" height="13" rx="2"/>',
 	// Données › Obtenir des données : requêtes d'import, actualisation
 	query: '<rect x="3.5" y="3.5" width="11" height="13" rx="1.5"/><path d="M3.5 8h11M7.5 8v8.5"/><path class="a" d="M13 13.5h7.5l-3 3.75V21l-1.5-.75v-3z"/>',
+	web: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path class="a" d="M12 3.5c2.4 2.5 3.5 5.4 3.5 8.5s-1.1 6-3.5 8.5c-2.4-2.5-3.5-5.4-3.5-8.5s1.1-6 3.5-8.5z"/>',
 	refresh: '<path d="M19.5 9.5A8 8 0 0 0 5 8.5M4.5 14.5A8 8 0 0 0 19 15.5"/><path class="a" d="M19.5 4v5.5H14M4.5 20v-5.5H10"/>',
 	// Protection (Révision) : cadenas sur une feuille, et sur le classeur
 	lock: '<rect x="5" y="10.5" width="14" height="10" rx="1.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><path class="a" d="M12 14.5v2.5"/>',

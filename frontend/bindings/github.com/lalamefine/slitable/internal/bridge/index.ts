@@ -9,6 +9,7 @@ export {
 };
 
 export type {
+    DataSources,
     DemoProgress,
     DemoResult,
     DialogRequest,
@@ -19,10 +20,10 @@ export type {
     ImportResult,
     MCPStatus,
     OpenResult,
-    PostgresTables,
     QueryRefresh,
     QuerySheet,
     ScriptResult,
+    TableList,
     UICommand,
     XLSXExport
 } from "./models.js";

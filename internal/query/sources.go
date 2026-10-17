@@ -237,7 +237,9 @@ func (r *run) connection(name string) (Connection, error) {
 	return Connection{}, fmt.Errorf("connexion « %s » introuvable", name)
 }
 
-func (r *run) loadPostgres(src Source) (loaded, error) {
+// loadDB lit une source SGBD : connexion du classeur, requête SQL en
+// lecture seule.
+func (r *run) loadDB(src Source) (loaded, error) {
 	if trimSQL(src.SQL) == "" {
 		return loaded{}, errors.New("requête SQL vide")
 	}
@@ -245,14 +247,35 @@ func (r *run) loadPostgres(src Source) (loaded, error) {
 	if err != nil {
 		return loaded{}, err
 	}
-	db, err := connectPG(r.ctx, r.env.secrets(), conn.Name, conn.Postgres)
+	if conn.Kind != src.Kind {
+		return loaded{}, fmt.Errorf("la connexion « %s » est de type %s, pas %s", conn.Name, KindLabel(conn.Kind), KindLabel(src.Kind))
+	}
+	db, d, err := connectDB(r.ctx, r.env.secrets(), conn)
 	if err != nil {
 		return loaded{}, err
 	}
 	defer db.Close()
+	return r.readInto(db, d, src.SQL, d.label+" « "+conn.Name+" »")
+}
+
+// loadFileDB lit une source fichier de base (SQLite, DuckDB).
+func (r *run) loadFileDB(src Source) (loaded, error) {
+	if trimSQL(src.SQL) == "" {
+		return loaded{}, errors.New("requête SQL vide")
+	}
+	db, d, err := openFileDB(src.Kind, src.Path)
+	if err != nil {
+		return loaded{}, err
+	}
+	defer db.Close()
+	return r.readInto(db, d, src.SQL, d.label+" "+baseName(src.Path))
+}
+
+// readInto exécute la requête q et en charge le résultat ; la limite de
+// l'aperçu est poussée vers la base quand le dialecte le permet.
+func (r *run) readInto(db *sql.DB, d *dialect, q, label string) (loaded, error) {
 	var s *storer
-	// La limite de l'aperçu est poussée vers le serveur (LIMIT).
-	err = readPG(r.ctx, db, src.SQL, r.limit, func(cols []Column) error {
+	err := readDB(r.ctx, db, d, q, r.limit, func(cols []Column) error {
 		var err error
 		s, err = r.begin(cols)
 		return err
@@ -261,10 +284,10 @@ func (r *run) loadPostgres(src Source) (loaded, error) {
 		if err == nil {
 			err = errors.New("la requête ne rend aucune colonne")
 		}
-		return loaded{}, fmt.Errorf("PostgreSQL « %s » : %w", conn.Name, err)
+		return loaded{}, fmt.Errorf("%s : %w", label, err)
 	}
 	if err != nil && !errors.Is(err, errLimit) {
-		err = fmt.Errorf("PostgreSQL « %s » : %w", conn.Name, err)
+		err = fmt.Errorf("%s : %w", label, err)
 	}
 	l, err := s.finish(err)
 	if err == nil && r.limit > 0 && s.n >= r.limit {
