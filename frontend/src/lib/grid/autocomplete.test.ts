@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { apply, callAt, signature, signatureParts, suggest, type Catalog, type FunctionDoc } from './autocomplete';
+import { apply, argKindAt, callAt, signature, signatureParts, suggest, type Catalog, type FunctionDoc } from './autocomplete';
 
 const cat: Catalog = {
 	functions: [
@@ -139,5 +139,23 @@ describe('autocomplétion des formules', () => {
 		expect(show(ifs, 4)).toBe('SOMME.SI.ENS(plage_somme; plage_critères1; critère1; [plage_critères2; **critère2**]; …)');
 		expect(show(ifs, 5)).toBe('SOMME.SI.ENS(plage_somme; plage_critères1; critère1; …; [**plage_critères3**; critère3]; …)');
 		expect(show({ name: 'PI', other: 'PI', arity: '', args: [] }, 0)).toBe('PI()');
+	});
+});
+
+describe('argKindAt', () => {
+	const kinds = {
+		functions: [
+			{ name: 'REFERENCE', other: 'REFERENCE', arity: '2', args: [{ name: 'colonne', desc: '', kind: 'column' }, { name: 'clé', desc: '' }] },
+			{ name: 'EXISTE', other: 'EXISTS', arity: '2', args: [{ name: 'tableau', desc: '', kind: 'table' }, { name: 'clé', desc: '' }] },
+			{ name: 'SOMME', other: 'SUM', arity: '1+', args: [{ name: 'valeur1', desc: '', kind: 'column' }], repeat: 1 }
+		],
+		tables: []
+	} as unknown as Catalog;
+	it("donne ce qu'attend l'argument en cours", () => {
+		expect(argKindAt('=REFERENCE(', 11, kinds)).toBe('column');
+		expect(argKindAt('=REFERENCE(Clients[Ville]; ', 27, kinds)).toBe('');
+		expect(argKindAt('=EXISTE(', 8, kinds)).toBe('table');
+		expect(argKindAt('=SOMME(A; ', 10, kinds)).toBe('column');
+		expect(argKindAt('=1+', 3, kinds)).toBe('');
 	});
 });

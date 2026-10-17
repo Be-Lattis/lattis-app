@@ -46,7 +46,7 @@ func TestConvertA1(t *testing.T) {
 		`=SOMME(C4:C9)`:                 `=SOMME(Ventes[Prix][2:3])`,
 		`=SOMME(Feuille2!A1:A3)`:        `=SOMME(Feuille2!Cell[A1:A3])`,
 		`=SOMME(A1:A1)`:                 `=SOMME(Cell[A1])`,
-		`=REFERENCE(Clients;Q1;"C001")`: `=REFERENCE(Clients; Q1; "C001")`,
+		`=REFERENCE(Clients;Q1;"C001")`: `=REFERENCE(Clients[Q1]; "C001")`,
 	} {
 		n, err := Parse(src, FR)
 		if err != nil {

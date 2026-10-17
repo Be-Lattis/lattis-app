@@ -19,6 +19,13 @@ export interface ArgDoc {
      * affiché entre crochets
      */
     "optional"?: boolean;
+
+    /**
+     * Kind : ce que l'argument attend, pour le clic dans la grille pendant
+     * la saisie : "table" (un nom de tableau), "column" (Tableau[Colonne]),
+     * "" (une valeur : cellule, colonne de la ligne…). Voir argKind.
+     */
+    "kind"?: string;
 }
 
 /**

@@ -270,9 +270,9 @@ func refs() Plan {
 		c("N° commande", grid.Integer, func(g *Gen, i int, _ []any) any { return int64(i + 1) }),
 		c("Date", grid.Date, func(g *Gen, i int, _ []any) any { return Day(today - 400 + i*400/nCommandes) }),
 		c("Client", grid.Text, func(g *Gen, i int, _ []any) any { return fmt.Sprintf("C%04d", 1+g.Skewed(nClients)) }),
-		f("Nom client", grid.Text, "=REFERENCE(Clients; Nom; [Client])"),
-		f("Ville", grid.Text, "=REFERENCE(Clients; Ville; [Client])"),
-		f("Remise", grid.Decimal, "=REFERENCE(Clients; Remise; [Client])"),
+		f("Nom client", grid.Text, "=REFERENCE(Clients[Nom]; [Client])"),
+		f("Ville", grid.Text, "=REFERENCE(Clients[Ville]; [Client])"),
+		f("Remise", grid.Decimal, "=REFERENCE(Clients[Remise]; [Client])"),
 		f("Montant HT", grid.Decimal, "=SOMME.SI(Lignes[Commande]; [N° commande]; Lignes[Montant HT])"),
 	}}
 	lignes := TableSpec{Name: "Lignes", Rows: nLignes, Col: len(commandes.Cols) + 2, Cols: []Column{
@@ -286,11 +286,11 @@ func refs() Plan {
 		}),
 		c("Produit", grid.Text, func(g *Gen, i int, _ []any) any { return fmt.Sprintf("P%03d", 1+g.Skewed(nProduits)) }),
 		c("Quantité", grid.Integer, func(g *Gen, i int, _ []any) any { return int64(1 + g.Skewed(8)) }),
-		f("Désignation", grid.Text, "=REFERENCE(Produits; Désignation; [Produit])"),
-		f("Prix unitaire", grid.Decimal, `=REFERENCE(Produits; "Prix unitaire"; [Produit])`),
-		f("Remise", grid.Decimal, "=REFERENCE(Commandes; Remise; [Commande])"),
+		f("Désignation", grid.Text, "=REFERENCE(Produits[Désignation]; [Produit])"),
+		f("Prix unitaire", grid.Decimal, `=REFERENCE(Produits[Prix unitaire]; [Produit])`),
+		f("Remise", grid.Decimal, "=REFERENCE(Commandes[Remise]; [Commande])"),
 		f("Montant HT", grid.Decimal, "=ARRONDI([Quantité]*[Prix unitaire]*(1-[Remise]); 2)"),
-		f("TVA", grid.Decimal, `=ARRONDI([Montant HT]*REFERENCE(Produits; "Taux TVA"; [Produit]); 2)`),
+		f("TVA", grid.Decimal, `=ARRONDI([Montant HT]*REFERENCE(Produits[Taux TVA]; [Produit]); 2)`),
 	}}
 	// Totaux en cellules libres, une ligne vide entre deux (deux lignes
 	// remplies l'une sous l'autre formeraient un tableau).

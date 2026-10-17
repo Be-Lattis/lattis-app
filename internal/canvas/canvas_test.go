@@ -521,7 +521,7 @@ func TestFormulas(t *testing.T) {
 	for _, c := range l.Cells {
 		vals[c.Raw] = c.Value
 	}
-	if vals["=SOMME(Feuille1[Montant])"] != "81" || vals["=REFERENCE(Feuille1; Prix; \"souris\")"] != "10" {
+	if vals["=SOMME(Feuille1[Montant])"] != "81" || vals["=REFERENCE(Feuille1[Prix]; \"souris\")"] != "10" {
 		t.Fatalf("cellules libres : %v", vals)
 	}
 	if l.Tables[0].Columns[3].Formula != "=[Prix]*[Qté]" {

@@ -8,6 +8,10 @@ import (
 // TestFunctionDocs : chaque fonction du catalogue a sa documentation
 // (description, arguments conformes à son nombre d'arguments, exemple qui
 // s'analyse en français).
+// legacyForm : fonctions qui acceptent encore une ancienne forme plus longue
+// que celle documentée (REFERENCE(T; Col; clé) avant REFERENCE(T[Col]; clé)).
+var legacyForm = map[string]bool{"REFERENCE": true, "REFERENCE.APPROX": true}
+
 func TestFunctionDocs(t *testing.T) {
 	for _, f := range funcs {
 		d, ok := docs[f.EN]
@@ -40,7 +44,7 @@ func TestFunctionDocs(t *testing.T) {
 					t.Errorf("%s : l'argument répété %s doit finir par 1", f.EN, x.Name)
 				}
 			}
-		} else if f.Max != len(d.args) && f.EN != "LET" { // LET : paires répétées avant le calcul
+		} else if f.Max != len(d.args) && f.EN != "LET" && !legacyForm[f.EN] { // LET : paires répétées avant le calcul
 			t.Errorf("%s : %d arguments documentés, Max=%d", f.EN, len(d.args), f.Max)
 		}
 		if required != f.Min && f.EN != "LET" {

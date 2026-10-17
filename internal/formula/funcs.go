@@ -200,8 +200,8 @@ var funcs = []funcDef{
 	{"RANK", "RANG", 1, 3, scan, nil},
 
 	// Recherche
-	{"REFERENCE", "REFERENCE", 3, 3, special, nil},
-	{"REFERENCE.APPROX", "REFERENCE.APPROCHEE", 3, 3, special, nil},
+	{"REFERENCE", "REFERENCE", 2, 3, special, nil},
+	{"REFERENCE.APPROX", "REFERENCE.APPROCHEE", 2, 3, special, nil},
 	{"EXISTS", "EXISTE", 2, 2, special, nil},
 	{"MATCH", "EQUIV", 2, 3, scan, nil},
 	{"INDEX", "INDEX", 2, 2, scan, nil},

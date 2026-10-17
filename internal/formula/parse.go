@@ -323,7 +323,35 @@ func Parse(src string, loc Locale) (Node, error) {
 	if t := p.peek(); t.kind != tEOF {
 		return nil, p.extra(t)
 	}
-	return n, nil
+	return lookups(n), nil
+}
+
+// lookups lit REFERENCE(Tableau[Colonne]; clé) (et REFERENCE.APPROCHEE),
+// la forme écrite depuis le 17/10/2026 (choix de Louis), comme l'ancienne
+// REFERENCE(Tableau; Colonne; clé), toujours acceptée : en interne, les
+// arguments restent tableau, colonne, clé.
+func lookups(n Node) Node {
+	switch v := n.(type) {
+	case Unary:
+		v.X = lookups(v.X)
+		return v
+	case Binary:
+		v.L, v.R = lookups(v.L), lookups(v.R)
+		return v
+	case Call:
+		args := make([]Node, len(v.Args))
+		for i, a := range v.Args {
+			args[i] = lookups(a)
+		}
+		if (v.Fn == "REFERENCE" || v.Fn == "REFERENCE.APPROX") && len(args) == 2 {
+			if r, ok := args[0].(Ref); ok && r.Table != "" && !r.Row {
+				args = []Node{Name{Name: r.Table}, Name{Name: r.Col}, args[1]}
+			}
+		}
+		v.Args = args
+		return v
+	}
+	return n
 }
 
 func (p *parser) peek() token { return p.toks[p.i] }
@@ -756,6 +784,17 @@ func format(b *strings.Builder, n Node, loc Locale) {
 		name := n.Fn
 		if fn, ok := lookupFunc(n.Fn); ok {
 			name = fn.name(loc)
+		}
+		// REFERENCE s'écrit avec la colonne et son tableau : REFERENCE(T[Col]; clé).
+		if (n.Fn == "REFERENCE" || n.Fn == "REFERENCE.APPROX") && len(n.Args) == 3 {
+			t, ok1 := nameOf(n.Args[0])
+			c, ok2 := nameOf(n.Args[1])
+			if ok1 && ok2 {
+				b.WriteString(name + "(" + t + "[" + c + "]" + string(loc.sep()) + " ")
+				format(b, n.Args[2], loc)
+				b.WriteString(")")
+				return
+			}
 		}
 		b.WriteString(name + "(")
 		for i, a := range n.Args {

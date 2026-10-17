@@ -7,6 +7,8 @@ export interface ArgInfo {
 	name: string;
 	desc: string;
 	optional?: boolean;
+	/** Ce que l'argument attend : "table" (nom de tableau), "column" (Tableau[Colonne]), "" (une valeur). */
+	kind?: string;
 }
 
 /** Fonction du catalogue, avec sa documentation (internal/formula/docs.go). */
@@ -211,4 +213,16 @@ export function signatureParts(fn: FunctionDoc, index: number): { parts: SigPart
 export function apply(text: string, caret: number, from: number, s: Suggestion): { text: string; caret: number } {
 	const out = text.slice(0, from) + s.insert + text.slice(caret);
 	return { text: out, caret: from + s.insert.length };
+}
+
+/**
+ * Ce qu'attend l'argument en cours de saisie, pour le clic dans la grille :
+ * un tableau (son nom), une colonne (Tableau[Colonne]) ou une valeur (la
+ * cellule : [Col], Tableau[Col][k], Cell[A1]). "" hors d'une fonction connue.
+ */
+export function argKindAt(text: string, caret: number, cat: Catalog): '' | 'table' | 'column' {
+	const s = signature(text, caret, cat);
+	if (!s) return '';
+	const k = signatureParts(s.fn, s.index).arg?.kind;
+	return k === 'table' || k === 'column' ? k : '';
 }

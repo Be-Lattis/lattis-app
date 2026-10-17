@@ -525,6 +525,9 @@ func (env *Env) reference(n Call) Value {
 
 // refTarget lit les deux premiers arguments de REFERENCE.
 func refTarget(s *Schema, n Call) (*Table, int, Value) {
+	if len(n.Args) != 3 { // REFERENCE(T[Col]; clé) est relue en (T; Col; clé)
+		return nil, 0, Err(ErrValue)
+	}
 	tn, ok1 := nameOf(n.Args[0])
 	cn, ok2 := nameOf(n.Args[1])
 	if !ok1 || !ok2 {

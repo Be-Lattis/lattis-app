@@ -33,7 +33,7 @@ func TestConvertVLOOKUP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := Format(out, FR), `=SIERREUR(REFERENCE(Clients; Ville; [Client]); "?")`; got != want {
+	if got, want := Format(out, FR), `=SIERREUR(REFERENCE(Clients[Ville]; [Client]); "?")`; got != want {
 		t.Fatalf("conversion : %s, attendu %s", got, want)
 	}
 	if origin := out.(Call).Args[0].(Call).Origin; origin != src {
@@ -125,12 +125,12 @@ func TestConvertXLOOKUPAndIndexMatch(t *testing.T) {
 	f := fixture(t)
 	res := fakeResolver{"Clients!A2:A100": {"Clients", 0}, "Clients!C2:C100": {"Clients", 2}}
 	for src, want := range map[string]string{
-		`=RECHERCHEX([@Client];Clients[Id];Clients[Ville])`:           `=REFERENCE(Clients; Ville; [Client])`,
-		`=RECHERCHEX([@Client];Clients[Id];Clients[Ville];"?")`:       `=SI.NON.DISP(REFERENCE(Clients; Ville; [Client]); "?")`,
-		`=RECHERCHEX([@Client];Clients!A2:A100;Clients!C2:C100)`:      `=REFERENCE(Clients; Ville; [Client])`,
-		`=INDEX(Clients[Nom];EQUIV([@Client];Clients[Id];0))`:         `=REFERENCE(Clients; Nom; [Client])`,
+		`=RECHERCHEX([@Client];Clients[Id];Clients[Ville])`:           `=REFERENCE(Clients[Ville]; [Client])`,
+		`=RECHERCHEX([@Client];Clients[Id];Clients[Ville];"?")`:       `=SI.NON.DISP(REFERENCE(Clients[Ville]; [Client]); "?")`,
+		`=RECHERCHEX([@Client];Clients!A2:A100;Clients!C2:C100)`:      `=REFERENCE(Clients[Ville]; [Client])`,
+		`=INDEX(Clients[Nom];EQUIV([@Client];Clients[Id];0))`:         `=REFERENCE(Clients[Nom]; [Client])`,
 		`=INDEX(Clients[Nom];EQUIV([@Client];Clients[Id]))`:           `=INDEX(Clients[Nom]; EQUIV([Client]; Clients[Id]))`,
-		`=SIERREUR(INDEX(Clients[Nom];EQUIV(2;Clients[Id];FAUX));"")`: `=SIERREUR(REFERENCE(Clients; Nom; 2); "")`,
+		`=SIERREUR(INDEX(Clients[Nom];EQUIV(2;Clients[Id];FAUX));"")`: `=SIERREUR(REFERENCE(Clients[Nom]; 2); "")`,
 	} {
 		out, keys, err := Convert(mustParse(t, src, FR), f.schema, res, src)
 		if err != nil {

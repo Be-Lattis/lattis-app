@@ -31,9 +31,10 @@ func Functions(loc Locale) []FunctionInfo {
 			other = FR
 		}
 		d := docs[f.EN]
-		as := d.args
-		if as == nil {
-			as = []ArgDoc{}
+		as := make([]ArgDoc, 0, len(d.args))
+		for _, a := range d.args {
+			a.Kind = argKind(a)
+			as = append(as, a)
 		}
 		out = append(out, FunctionInfo{
 			Name: f.name(loc), Other: f.name(other), Arity: f.arity(),

@@ -10,6 +10,23 @@ type ArgDoc struct {
 	Name     string `json:"name"`               // nom français, « valeur1 » pour un argument répété
 	Desc     string `json:"desc"`               // une phrase
 	Optional bool   `json:"optional,omitempty"` // affiché entre crochets
+	// Kind : ce que l'argument attend, pour le clic dans la grille pendant
+	// la saisie : "table" (un nom de tableau), "column" (Tableau[Colonne]),
+	// "" (une valeur : cellule, colonne de la ligne…). Voir argKind.
+	Kind string `json:"kind,omitempty"`
+}
+
+// argKind déduit ce qu'attend un argument de son nom et de sa description.
+func argKind(a ArgDoc) string {
+	switch {
+	case a.Kind != "":
+		return a.Kind
+	case a.Name == "tableau":
+		return "table"
+	case strings.Contains(a.Desc, "Tableau[Colonne]"), strings.HasPrefix(a.Name, "plage"), strings.HasPrefix(a.Name, "par_tableau"), a.Name == "colonne":
+		return "column"
+	}
+	return ""
 }
 
 // funcDoc documente une fonction : description, arguments et exemple. Les
@@ -73,7 +90,7 @@ var docs = map[string]funcDoc{
 	"IFNA": {catLogic, "Renvoie la valeur, ou une autre valeur si elle vaut #N/A.",
 		docArgs(docArg("valeur", "Expression qui peut valoir #N/A (une recherche, par exemple)."),
 			docArg("valeur_si_na", "Résultat quand la valeur est #N/A.")),
-		0, `=SI.NON.DISP(REFERENCE(Clients; Ville; [IdClient]); "inconnu")`},
+		0, `=SI.NON.DISP(REFERENCE(Clients[Ville]; [IdClient]); "inconnu")`},
 	"AND": {catLogic, "Renvoie VRAI si toutes les conditions sont vraies.",
 		docArgs(docArg("logique1", "Condition à tester.")), 1, `=ET([Qté]>0; [Payé])`},
 	"OR": {catLogic, "Renvoie VRAI si au moins une condition est vraie.",
@@ -85,7 +102,7 @@ var docs = map[string]funcDoc{
 	"ISERROR": {catLogic, "Renvoie VRAI si la valeur est une erreur, quelle qu'elle soit.",
 		docArgs(argVal), 0, `=ESTERREUR([Montant]/[Qté])`},
 	"ISNA": {catLogic, "Renvoie VRAI si la valeur est l'erreur #N/A.",
-		docArgs(argVal), 0, `=ESTNA(REFERENCE(Clients; Nom; [IdClient]))`},
+		docArgs(argVal), 0, `=ESTNA(REFERENCE(Clients[Nom]; [IdClient]))`},
 	"ISBLANK": {catLogic, "Renvoie VRAI si la valeur est vide.",
 		docArgs(argVal), 0, `=ESTVIDE([Commentaire])`},
 	"ISNUMBER": {catLogic, "Renvoie VRAI si la valeur est un nombre (une date en est un).",
@@ -308,15 +325,13 @@ var docs = map[string]funcDoc{
 
 	// Recherche
 	"REFERENCE": {catLookup, "Renvoie la valeur d'une colonne d'un autre tableau pour la ligne dont la clé est donnée (la RECHERCHEV de Slitable).",
-		docArgs(docArg("tableau", "Tableau où chercher (il doit avoir une clé)."),
-			docArg("colonne", "Nom de la colonne à renvoyer."),
+		docArgs(docArg("colonne", "Colonne à renvoyer, avec son tableau : Tableau[Colonne] (le tableau doit avoir une clé)."),
 			docArg("clé", "Valeur de la clé cherchée, souvent une colonne de la ligne ([IdClient]).")),
-		0, `=REFERENCE(Clients; Ville; [IdClient])`},
+		0, `=REFERENCE(Clients[Ville]; [IdClient])`},
 	"REFERENCE.APPROX": {catLookup, "Renvoie la valeur de la ligne dont la clé est la plus grande inférieure ou égale à la valeur (tranches, barèmes).",
-		docArgs(docArg("tableau", "Tableau du barème (trié sur sa clé)."),
-			docArg("colonne", "Nom de la colonne à renvoyer."),
+		docArgs(docArg("colonne", "Colonne à renvoyer, avec son tableau de barème trié sur sa clé : Tableau[Colonne]."),
 			docArg("valeur", "Valeur à situer dans les tranches.")),
-		0, `=REFERENCE.APPROCHEE(Barèmes; Taux; [Montant])`},
+		0, `=REFERENCE.APPROCHEE(Barèmes[Taux]; [Montant])`},
 	"EXISTS": {catLookup, "Renvoie VRAI si une clé existe dans un tableau.",
 		docArgs(docArg("tableau", "Tableau où chercher (il doit avoir une clé)."),
 			docArg("clé", "Valeur de la clé cherchée.")),
@@ -349,7 +364,7 @@ var docs = map[string]funcDoc{
 			docArg("table_matrice", "Plage où chercher."),
 			docArg("no_index_lig", "Numéro de la ligne à renvoyer."),
 			docOpt("valeur_proche", "FAUX pour une correspondance exacte.")),
-		0, `=REFERENCE(Clients; Nom; [IdClient])`},
+		0, `=REFERENCE(Clients[Nom]; [IdClient])`},
 
 	// Tableaux dynamiques
 	"FILTER": {catSpill, "Renvoie les lignes d'un tableau ou d'une colonne qui remplissent une condition ; le résultat se déverse sur la feuille.",

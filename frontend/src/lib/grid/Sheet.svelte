@@ -53,7 +53,7 @@
 	import { describeRule, parseRules, ruleStyle, RULE_OPS, RULE_STYLES, type Rule, type RuleOp } from './rules';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { drawIcon } from '#lib/icons/canvas.js';
-	import { apply as applySuggestion, signature, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
+	import { apply as applySuggestion, argKindAt, signature, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
 	import { checkFormula, closeParens, editorWidth, formulaRefs, highlightParts, isFormula, rangeRef, refRect, serverErrorPos, type FormulaError, type RefTable } from './formulaEdit';
 	import {
 		isErrorValue,
@@ -4018,10 +4018,15 @@
 	 * (k : la clé si le tableau en a une, sinon le rang) ; un en-tête donne
 	 * Tableau[Col], toute la colonne.
 	 */
-	function refFor(r: number, c: number): string {
+	function refFor(r: number, c: number, kind: '' | 'table' | 'column' = ''): string {
 		const e = tableAt(r, c);
 		if (!e) return cellAddr(r, c);
 		const col = e.t.columns[c - e.t.col].name;
+		// L'argument en cours attend un tableau ou une colonne entière
+		// (REFERENCE(Tableau[Colonne]; …), SOMME(T[Col]), EXISTE(Tableau; …)) :
+		// le clic dans le tableau donne cette forme, quelle que soit la ligne.
+		if (kind === 'table') return e.t.name;
+		if (kind === 'column') return `${e.t.name}[${col}]`;
 		const here = tableAt(active.row, active.col);
 		// La formule est dans le tableau, ou juste à sa droite sur une de ses
 		// lignes (elle y devient une colonne calculée, comme dans Excel).
@@ -4047,7 +4052,7 @@
 		if (lastRef && lastRef.el === el && lastRef.end === pos && lastRef.value === v) start = lastRef.start;
 		else if (!/[=(;,+*/^&<>:-]$/.test(v.slice(0, pos).trimEnd())) return false;
 		if (text === undefined && editing && cell.row === active.row && cell.col === active.col) return false;
-		const ref = text ?? refFor(cell.row, cell.col);
+		const ref = text ?? refFor(cell.row, cell.col, catalog ? argKindAt(v, start, catalog) : '');
 		const next = v.slice(0, start) + ref + v.slice(pos);
 		if (editing) editValueText = next;
 		else fxText = next;
