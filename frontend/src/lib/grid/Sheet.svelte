@@ -2606,7 +2606,12 @@
 						sum += st.sum;
 					}
 				} catch {
-					if (statsPending === key) statsPending = '';
+					// Échec : pas de nouvel essai pour cette sélection (pas de boucle).
+					if (statsPending === key) {
+						statsPending = '';
+						statsCache = { key, text: '' };
+						refreshStatus();
+					}
 					return;
 				}
 				// Cellules libres : toutes en mémoire.

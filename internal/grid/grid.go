@@ -339,8 +339,11 @@ func (t *Table) Stats(ctx context.Context, first, count int, cols []int) (Stats,
 	if len(nums) == 0 {
 		nums, sum = []string{"0"}, []string{"0"}
 	}
+	// Paramètres numérotés : ceux des colonnes calculées (?1…?n, même si
+	// les colonnes résumées n'en utilisent aucun), puis la fenêtre.
+	n := len(t.args)
 	q := "SELECT " + strings.Join(cnt, " + ") + ", coalesce(" + strings.Join(nums, ", 0) + coalesce(") + ", 0), " + strings.Join(sum, " + ") +
-		" FROM (SELECT " + strings.Join(inner, ", ") + " FROM " + t.sqlName + " WHERE _pos >= ? ORDER BY _pos LIMIT ? OFFSET ?)"
+		fmt.Sprintf(" FROM (SELECT %s FROM %s WHERE _pos >= ?%d ORDER BY _pos LIMIT ?%d OFFSET ?%d)", strings.Join(inner, ", "), t.sqlName, n+1, n+2, n+3)
 	args := append(append([]any{}, t.args...), anchor, count, first%AnchorEvery)
 	var st Stats
 	err := t.db.Read().QueryRowContext(ctx, q, args...).Scan(&st.Count, &st.Nums, &st.Sum)
