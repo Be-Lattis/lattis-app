@@ -42,6 +42,11 @@ describe('références', () => {
 		expect(refs[0].color).toBe(refs[3].color);
 		expect(refs[0].color).not.toBe(refs[1].color);
 		expect(formulaRefs('texte')).toEqual([]);
+		// Index de ligne calculé : chaque référence garde sa couleur, l'expression n'en fait pas partie.
+		const nested = formulaRefs('=Commandes[Produit][1+Commandes[Quantité][1]]');
+		expect(nested.map((r) => r.text)).toEqual(['Commandes[Produit]', 'Commandes[Quantité][1]']);
+		expect(nested[0].color).not.toBe(nested[1].color);
+		expect(formulaRefs('=[Prix][[Rang]-1]+1').map((r) => r.text)).toEqual(['[Prix]', '[Rang]']);
 		// En cours de frappe : chaîne non fermée.
 		expect(formulaRefs('=Cell[A1]&"ab').map((r) => r.text)).toEqual(['Cell[A1]']);
 	});

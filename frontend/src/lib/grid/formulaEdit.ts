@@ -411,24 +411,43 @@ export function formulaRefs(text: string, sep = ';'): FormulaRef[] {
 		if (!colors.has(k)) colors.set(k, REF_COLORS[colors.size % REF_COLORS.length]);
 		out.push({ start, end, text: t, color: colors.get(k)! });
 	};
-	for (let i = 0; i < toks.length; i++) {
-		const t = toks[i];
-		if (t.k === 'range') {
-			add(t.pos, t.end);
-		} else if (t.k === 'ident' && toks[i + 1]?.k === 'ref' && toks[i + 1].pos === t.end) {
-			let end = toks[i + 1].end;
-			i++;
-			if (toks[i + 1]?.k === 'ref' && toks[i + 1].pos === end) end = toks[++i].end;
-			add(t.pos, end);
-		} else if (t.k === 'ref') {
-			let end = t.end;
-			if (toks[i + 1]?.k === 'ref' && toks[i + 1].pos === end) end = toks[++i].end;
-			add(t.pos, end);
-		} else if (t.k === 'ident' && toks[i + 1]?.k !== 'lp' && a1Address(t.text.replaceAll('$', '').replace(/^'(.*)'!/, '$1!'))) {
-			add(t.pos, t.end);
+	// Index de ligne : un nombre ou un décalage ([2], [-1]) fait partie de la
+	// référence ; une expression ([1+Tableau[Col][1]]) est colorée pour ses
+	// propres références, la référence s'arrêtant avant elle.
+	const index = (toks: Tok[], i: number, end: number): number => {
+		const k = toks[i + 1];
+		if (k?.k !== 'ref' || k.pos !== end) return end;
+		if (!k.text.includes('[')) return toks[i + 1].end;
+		let inner: Tok[] = [];
+		try {
+			inner = lex(k.text, k.pos + 1, sep);
+		} catch {
+			/* index en cours de frappe */
 		}
-	}
-	return out;
+		scan(inner);
+		return end;
+	};
+	const scan = (toks: Tok[]) => {
+		for (let i = 0; i < toks.length; i++) {
+			const t = toks[i];
+			if (t.k === 'range') {
+				add(t.pos, t.end);
+			} else if (t.k === 'ident' && toks[i + 1]?.k === 'ref' && toks[i + 1].pos === t.end) {
+				i++;
+				const col = toks[i].end;
+				add(t.pos, index(toks, i, col));
+				if (toks[i + 1]?.k === 'ref' && toks[i + 1].pos === col) i++;
+			} else if (t.k === 'ref') {
+				const end = index(toks, i, t.end);
+				add(t.pos, end);
+				if (toks[i + 1]?.k === 'ref' && toks[i + 1].pos === t.end) i++;
+			} else if (t.k === 'ident' && toks[i + 1]?.k !== 'lp' && a1Address(t.text.replaceAll('$', '').replace(/^'(.*)'!/, '$1!'))) {
+				add(t.pos, t.end);
+			}
+		}
+	};
+	scan(toks);
+	return out.sort((a, b) => a.start - b.start);
 }
 
 /** Découpe un texte en morceaux colorés (références) et ordinaires. */

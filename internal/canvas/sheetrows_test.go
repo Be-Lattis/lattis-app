@@ -103,3 +103,28 @@ func TestRelativeRows(t *testing.T) {
 		t.Fatalf("valeurs : %s", g)
 	}
 }
+
+// Index de ligne calculé, référence imbriquée comprise : Tableau[Col][1+Tableau[Col2][1]].
+func TestNestedRowIndex(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Mois", "Ventes"}, {"jan", "10"}, {"fév", "15"}, {"mars", "12"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.SetCell(ctx, 1, 8, 0, "=Feuille1[Mois][1+Feuille1[Ventes][1]-9]"); err != nil {
+		t.Fatal(err)
+	}
+	l, err := d.Layout(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range l.Cells {
+		if c.Row == 8 && c.Col == 0 {
+			if c.Value != "fév" {
+				t.Fatalf("valeur : %q (erreur %v)", c.Value, c.Error)
+			}
+			return
+		}
+	}
+	t.Fatal("cellule introuvable")
+}
