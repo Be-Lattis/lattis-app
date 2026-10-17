@@ -620,6 +620,25 @@
 	// Zoom de la feuille active (Affichage › Zoom, Ctrl+molette, barre d'état) :
 	// appliqué tout de suite, enregistré avec la feuille un instant après (le
 	// curseur et la molette en envoient beaucoup).
+	// Affichage › Animations : préférence de l'utilisateur, gardée sur ce poste.
+	let animate = $state(
+		(() => {
+			try {
+				return localStorage.getItem('slitable.animations') !== 'off';
+			} catch {
+				return true;
+			}
+		})()
+	);
+	function setAnimate(on: boolean) {
+		animate = on;
+		try {
+			localStorage.setItem('slitable.animations', on ? 'on' : 'off');
+		} catch {
+			// stockage indisponible : le choix vaut pour la session
+		}
+	}
+
 	let zoomSet = $state<Record<string, number>>({});
 	const docKey = $derived(`${mode}|${docState.open}|${docState.path}|${docState.title}`);
 	const zoomKey = $derived(`${docKey}|${sheetId}`);
@@ -772,6 +791,8 @@
 		freeze={activeInfo ? { rows: activeInfo.freezeRows, cols: activeInfo.freezeCols } : undefined}
 		onfreeze={mode === 'doc' ? (what) => sheet?.freezeActive(what) : undefined}
 		{zoom}
+		{animate}
+		onanimate={setAnimate}
 		onzoom={data && view === 'grid' ? setZoom : undefined}
 		cellStyle={sheetStatus?.style}
 		merged={!!sheetStatus?.merged}
@@ -830,6 +851,7 @@
 						locked={lockedMsg}
 						freeze={activeInfo ? { rows: activeInfo.freezeRows, cols: activeInfo.freezeCols } : undefined}
 						{zoom}
+						{animate}
 						onzoom={setZoom}
 						autoBench={bench ? (r) => GridService.ReportBench(r) : undefined}
 					/>

@@ -353,9 +353,11 @@
 		zoom?: number;
 		/** Ctrl+molette : zoom demandé. */
 		onzoom?: (z: number) => void;
+		/** Cadre de sélection animé (Affichage › Animations). */
+		animate?: boolean;
 	}
 
-	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', freeze, zoom = 1, onzoom }: Props = $props();
+	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', freeze, zoom = 1, onzoom, animate = true }: Props = $props();
 
 	// Feuille sans fin pratique (choix de Louis) : au-delà des limites d'Excel,
 	// bornée par la nomenclature Cell[ZZZZ999999999] (4 lettres, 9 chiffres).
@@ -365,7 +367,17 @@
 	const ROW_H = 22;
 	const DEF_W = 88;
 	const TOP_H = 22;
-	const MIN_MARGIN = 52;
+	// Gouttière de gauche (choix de Louis) : juste la largeur du plus long
+	// numéro affiché, 2 chiffres au moins ; elle s'élargit tout de suite et ne
+	// rétrécit qu'à l'arrêt du défilement (pas de grille qui tremble).
+	const MIN_MARGIN = 28;
+	const GUTTER_PAD = 14;
+	const GUTTER_MAX = 160; // clés longues : coupées au-delà
+	const GUTTER_SETTLE = 250; // ms sans défilement avant de rétrécir
+	let gutterNeed = 0; // plus large libellé dessiné à l'image précédente
+	let gutterDrawn = 0; // pendant l'image en cours
+	let scrolledAt = 0;
+	let gutterTimer = 0;
 	const FONT = '13px "Segoe UI", system-ui, -apple-system, sans-serif';
 	const FONT_BOLD = '600 13px "Segoe UI", system-ui, -apple-system, sans-serif';
 	const FONT_SMALL = '11px "Segoe UI", system-ui, -apple-system, sans-serif';
@@ -659,6 +671,45 @@
 	}
 
 	/** Cellule active, ou toute sa fusion. */
+	// Cadre de sélection animé (choix de Louis) : il glisse de l'ancienne
+	// cellule vers la nouvelle et s'étire vers la plage sélectionnée, en
+	// SEL_MS avec une courbe ease-out. Coupé pendant une touche maintenue,
+	// pour un saut lointain et si l'animation est désactivée. Les boîtes sont
+	// en coordonnées de feuille (le défilement ne les change pas).
+	type Box = { x: number; y: number; w: number; h: number };
+	const SEL_MS = 80;
+	let selShown: Box | null = null;
+	let selAnim: { from: Box; to: Box; t0: number } | null = null;
+	let noAnimUntil = 0;
+
+	/** Cadre extérieur cible : la plage sélectionnée, ou la cellule active (sa fusion). */
+	function frameTarget(): Box {
+		const s = singleSelection() ? activeRect() : selection();
+		return { x: colAxis.offset(s.c0), y: rowTop(s.r0), w: colAxis.offset(s.c1 + 1) - colAxis.offset(s.c0), h: rspan(s.r0, s.r1) };
+	}
+
+	/** Cadre à dessiner pour cette image ; demande l'image suivante tant qu'il bouge. */
+	function frameNow(now: number): Box {
+		const to = frameTarget();
+		const same = (a: Box, b: Box) => a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
+		const far = selShown && (Math.abs(to.x - selShown.x) > viewW * 2 || Math.abs(to.y - selShown.y) > viewH * 2);
+		if (!selShown || !animate || now < noAnimUntil || far) {
+			selAnim = null;
+			selShown = to;
+			return to;
+		}
+		if (!same(selAnim?.to ?? selShown, to)) selAnim = { from: { ...selShown }, to, t0: now };
+		if (!selAnim) return (selShown = to);
+		const k = Math.min(1, (now - selAnim.t0) / SEL_MS);
+		const e = 1 - (1 - k) ** 3;
+		const { from } = selAnim;
+		selShown = { x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e, w: from.w + (to.w - from.w) * e, h: from.h + (to.h - from.h) * e };
+		if (k < 1) queueMicrotask(schedule);
+		else selAnim = null;
+		return selShown;
+	}
+	let selBox: Box = { x: 0, y: 0, w: 0, h: 0 };
+
 	function activeRect() {
 		const g = mergeOf(active.row, active.col);
 		return g ? mergeRect(g) : { r0: active.row, r1: active.row, c0: active.col, c1: active.col };
@@ -1016,6 +1067,7 @@
 	// Défilement vertical du volet en cours de dessin (drawText).
 	let paneTop = 0;
 
+	let lastViewPos = { x: 0, y: 0 };
 	function draw() {
 		frame = 0;
 		pendingBorders = [];
@@ -1026,19 +1078,29 @@
 		const h = viewH;
 		const dpr = (window.devicePixelRatio || 1) * zoom;
 		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+		selBox = frameNow(t0);
 		// Texte centré verticalement partout (les volets dessinent entre save et
 		// restore : la ligne de base doit être posée avant, pour la marge et le bandeau).
 		ctx.textBaseline = 'middle';
 		ctx.fillStyle = C.bg;
 		ctx.fillRect(0, 0, w, h);
 
-		const { last } = visibleRows();
 		ctx.font = FONT_SMALL;
-		const margin = Math.max(MIN_MARGIN, Math.ceil(ctx.measureText(String(last)).width) + 14);
-		if (margin !== MARGIN) {
+		if (viewPos.x !== lastViewPos.x || viewPos.y !== lastViewPos.y) {
+			scrolledAt = t0;
+			lastViewPos = viewPos;
+		}
+		const minW = Math.ceil(ctx.measureText('99').width) + GUTTER_PAD;
+		const margin = Math.min(GUTTER_MAX, Math.max(minW, MIN_MARGIN, Math.ceil(gutterNeed) + GUTTER_PAD));
+		const settled = t0 - scrolledAt >= GUTTER_SETTLE;
+		if (margin > MARGIN || (margin < MARGIN && settled)) {
 			MARGIN = margin;
 			updateExtent();
+		} else if (margin < MARGIN) {
+			clearTimeout(gutterTimer);
+			gutterTimer = window.setTimeout(schedule, GUTTER_SETTLE);
 		}
+		gutterDrawn = 0;
 		const fw = colAxis.offset(fCols());
 		const fh = rowTop(fRows());
 		const all = panes(fw, fh, MARGIN, TOP_H, w, h, scroller.scrollLeft, vs.top);
@@ -1096,6 +1158,11 @@
 		}
 
 		if (editing) placeEditor();
+
+		// Gouttière trop étroite pour ce qui vient d'être dessiné : élargie à
+		// l'image suivante (les libellés ne sont connus qu'en dessinant).
+		gutterNeed = gutterDrawn;
+		if (Math.min(GUTTER_MAX, Math.ceil(gutterNeed) + GUTTER_PAD) > MARGIN) schedule();
 
 		const t1 = performance.now();
 		pushStat(drawTimes, t1 - t0);
@@ -1479,16 +1546,14 @@
 		// autour de la cellule active (Excel).
 		const ar = activeRect();
 		const many = !singleSelection();
-		if (many && L.s1 >= r0 - 1 && L.s0 <= r1 + 1) {
-			ctx.strokeStyle = C.active;
-			ctx.lineWidth = 2;
-			ctx.strokeRect(cx(L.k0) + 0.5, ry(L.s0) + 0.5, spanW(L.k0, L.k1) - 1, rspan(L.s0, L.s1) - 1);
-		}
+		// Cadre extérieur (animé) : la plage, ou la cellule active seule.
+		ctx.strokeStyle = C.active;
+		ctx.lineWidth = 2;
+		ctx.strokeRect(cx(0) + selBox.x + 0.5, ry(0) + selBox.y + 0.5, selBox.w - 1, selBox.h - 1);
 		if (ar.r1 >= r0 - 1 && ar.r0 <= r1 + 1) {
 			ctx.strokeStyle = C.active;
-			ctx.lineWidth = many ? 1 : 2;
+			ctx.lineWidth = 1;
 			if (many) ctx.strokeRect(cx(ar.c0) + 1.5, ry(ar.r0) + 1.5, spanW(ar.c0, ar.c1) - 3, rspan(ar.r0, ar.r1) - 3);
-			else ctx.strokeRect(cx(ar.c0) + 0.5, ry(ar.r0) + 0.5, spanW(ar.c0, ar.c1) - 1, rspan(ar.r0, ar.r1) - 1);
 			if (!editing && listOf(active.row, active.col)) {
 				const b = dropButton();
 				ctx.fillStyle = C.strip;
@@ -1666,6 +1731,7 @@
 			if (a1) {
 				ctx.fillStyle = r >= s0 && r <= s1 ? C.headText : C.stripText;
 				ctx.fillText(String(r + 1), MARGIN - 8, y + rh(r) / 2);
+				gutterDrawn = Math.max(gutterDrawn, ctx.measureText(String(r + 1)).width);
 				continue;
 			}
 			// Seul le tableau qui touche la gouttière (première colonne affichée)
@@ -1675,6 +1741,7 @@
 			if (e) {
 				ctx.fillStyle = mine || !cur ? C.stripText : C.stripLine;
 				const label = rowLabel(e, r);
+				gutterDrawn = Math.max(gutterDrawn, ctx.measureText(label).width);
 				ctx.save();
 				ctx.beginPath();
 				ctx.rect(0, y, MARGIN - 4, rh(r));
@@ -4128,6 +4195,8 @@
 	}
 
 	function onKeyDown(e: KeyboardEvent) {
+		// Touche maintenue : le cadre suit sans animation.
+		if (e.repeat) noAnimUntil = performance.now() + 150;
 		if (editing) return;
 		if (e.key === 'Escape' && painter) painter = null;
 		if (e.key === 'Escape' && arrows) {
