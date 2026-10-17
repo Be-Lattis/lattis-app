@@ -1402,6 +1402,13 @@
 			ctx.strokeStyle = C.border;
 			ctx.lineWidth = 1;
 			ctx.strokeRect(Math.round(cx(p.col)) + 0.5, Math.round(ry(p.row)) + 0.5, spanW(p.col, pc1) - 1, rspan(p.row, pr1) - 1);
+			// Traits sous l'en-tête et au-dessus du total.
+			ctx.beginPath();
+			for (const y of [ry(p.row + 1), ry(pr1)]) {
+				ctx.moveTo(Math.round(cx(p.col)), Math.round(y) + 0.5);
+				ctx.lineTo(Math.round(cx(p.col)) + spanW(p.col, pc1), Math.round(y) + 0.5);
+			}
+			ctx.stroke();
 			ctx.restore();
 		}
 		for (const [k, rawText] of cells) {
@@ -1441,6 +1448,17 @@
 				ctx.rect(cx(e.t.col), ry(e.t.row), spanW(e.t.col, g.lastCol), rspan(e.t.row, g.last));
 			}
 			ctx.clip();
+		} else if (pivots.length) {
+			// Comme Excel : pas de quadrillage dans un tableau croisé (seulement
+			// son cadre et les traits sous l'en-tête et au-dessus du total).
+			ctx.beginPath();
+			ctx.rect(0, 0, w, h);
+			for (const p of pivots) {
+				if (p.error) continue;
+				const pc1 = p.col + p.cells[0].length - 1;
+				ctx.rect(cx(p.col) + 1, ry(p.row) + 1, spanW(p.col, pc1) - 2, rspan(p.row, p.row + p.cells.length - 1) - 2);
+			}
+			ctx.clip('evenodd');
 		}
 		ctx.beginPath();
 		ctx.strokeStyle = C.grid;
@@ -2997,6 +3015,11 @@
 
 	const pivotAt = (r: number, c: number) =>
 		pivots.find((p) => !p.error && r >= p.row && r < p.row + p.cells.length && c >= p.col && c < p.col + p.cells[0].length);
+	/** Tableau croisé qui touche la plage, s'il y en a un. */
+	const pivotIn = (r0: number, c0: number, r1: number, c1: number) =>
+		pivots.find((p) => !p.error && p.row <= r1 && p.row + p.cells.length - 1 >= r0 && p.col <= c1 && p.col + p.cells[0].length - 1 >= c0);
+	// Un tableau croisé est calculé : ses cellules ne se saisissent pas (comme Excel).
+	const PIVOT_READONLY = 'Un tableau croisé ne se modifie pas cellule par cellule : double-cliquez dessus pour changer ses champs';
 
 	// Volet latéral : champs du TCD ou mise en forme du graphique.
 	let panel = $state<{ kind: 'pivot' | 'chart'; id: number } | null>(null);
@@ -4368,6 +4391,10 @@
 			say(locked);
 			return;
 		}
+		if (pivotAt(active.row, active.col)) {
+			say(PIVOT_READONLY);
+			return;
+		}
 		const band = bandAt(
 			entries.map((x) => x.t),
 			active.row,
@@ -4440,6 +4467,10 @@
 	}
 
 	async function writeNow(row: number, col: number, raw: string, keep = false) {
+		if (pivotAt(row, col)) {
+			message = PIVOT_READONLY;
+			return;
+		}
 		const info = cellInfo(row, col);
 		const target =
 			info.kind === 'free'
@@ -5060,6 +5091,10 @@
 		const block = parseTSV(text);
 		if (block.length === 0) return false;
 		const { row, col } = active;
+		if (pivotIn(row, col, row + block.length - 1, col + Math.max(...block.map((r) => r.length)) - 1)) {
+			say(PIVOT_READONLY);
+			return true;
+		}
 		// Collage d'une zone coupée : la source s'efface ensuite (hors cible).
 		const cut = clipRange?.cut && clipRange.text === text ? clipRange : null;
 		const paste = source.paste;
