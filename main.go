@@ -73,6 +73,15 @@ func main() {
 		// Journal de Wails : avertissements et erreurs seulement (pas une ligne
 		// par fichier servi, « [AssetFileServerFS] Handling request »).
 		LogLevel: slog.LevelWarn,
+		// Fenêtre sans cadre : le runtime JavaScript de Wails repère les bords
+		// à saisir pour redimensionner. Il lit ces clés telles quelles (avec
+		// le point) et prend 5 px sinon, une bande trop fine à attraper ;
+		// les coins sont plus larges encore.
+		Flags: map[string]any{
+			"system.resizeHandleWidth":  8,
+			"system.resizeHandleHeight": 8,
+			"resizeCornerExtra":         16,
+		},
 		Services: []application.Service{
 			application.NewService(&bridge.GridService{}),
 			application.NewService(documents),
