@@ -1051,8 +1051,10 @@
 			}
 		}
 		drawing = true;
+		const drawn = geoDrawn;
 		geoDrawn = new Map();
 		if (!motion()) {
+			grownSeen.clear();
 			if (valsNow.size || barsNow.size || flashes.size || barAnims.size || motions.size || inner.size) {
 				valsNow = new Map();
 				barsNow = new Map();
@@ -1068,6 +1070,28 @@
 		barsPrev = barsNow;
 		barsNow = new Map();
 		viewPrev = viewNow;
+		growMotions(drawn, now);
+	}
+
+	// Cadre prolongé par la cellule active (juste dessous ou à droite), ou
+	// rendu quand elle s'en va, sans que le tableau change : il s'étire ou se
+	// rétracte en douceur, depuis le cadre dessiné à l'image précédente.
+	const GROW_MS = 160;
+	let grownSeen = new Map<number, string>();
+	function growMotions(drawn: Map<number, Geo>, now: number) {
+		const seen = new Map<number, string>();
+		for (const e of entries) {
+			const g = grown(e);
+			const base = `${e.t.row},${e.t.col},${e.last},${e.lastCol}`;
+			const k = `${base}|${g.last},${g.lastCol}`;
+			seen.set(e.t.id, k);
+			const was = grownSeen.get(e.t.id);
+			// Tableau lui-même modifié (saisie, insertion) : startAnims s'en charge.
+			if (!was || was === k || !was.startsWith(base + '|')) continue;
+			const from = drawn.get(e.t.id);
+			if (from && !motions.get(e.t.id)?.born) motions.set(e.t.id, { t0: now, from, ms: GROW_MS });
+		}
+		grownSeen = seen;
 	}
 
 	/** Fin d'une image : vrais axes, image suivante s'il reste une animation. */
@@ -1154,7 +1178,7 @@
 		const to = tableGeo(e);
 		const m = motions.get(id);
 		if (m) {
-			const k = progress(animNow, m.t0);
+			const k = progress(animNow, m.t0, m.ms);
 			if (k >= 1) motions.delete(id);
 			else {
 				animBusy = true;
@@ -1807,7 +1831,8 @@
 			const g = grown(e);
 			const moved = enterTable(e, cx, ry);
 			ctx.fillStyle = e.t.query ? C.linkHead : C.head;
-			ctx.fillRect(cx(e.t.col), ry(e.t.row), spanW(e.t.col, g.lastCol), rh(e.t.row));
+			// En mouvement : l'en-tête suit le cadre animé (il se rétracte avec lui).
+			ctx.fillRect(cx(e.t.col), ry(e.t.row), moved ? tableAnim(e)!.w : spanW(e.t.col, g.lastCol), rh(e.t.row));
 			if (moved) ctx.restore();
 		}
 
