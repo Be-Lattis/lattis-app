@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resizePanel } from '#lib/ui/resize.js';
 	// Volet « Champs de tableau croisé dynamique », comme Excel : la liste des
 	// champs du tableau source (recherche, cases à cocher, icône du type) et
 	// quatre zones (Filtres, Colonnes, Lignes, Valeurs). Les champs se glissent
@@ -427,7 +428,7 @@
 	const fieldType = (name: string) => flds.find((f) => f.name === name)?.type ?? '';
 </script>
 
-<aside class="panel" bind:this={panelEl} aria-label="Champs de tableau croisé dynamique">
+<aside class="panel" bind:this={panelEl} use:resizePanel={{ key: 'pivot' }} aria-label="Champs de tableau croisé dynamique">
 	<header>
 		<div class="titles">
 			<strong>Champs de tableau croisé dynamique</strong>

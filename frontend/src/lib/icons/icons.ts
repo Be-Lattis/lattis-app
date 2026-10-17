@@ -109,7 +109,6 @@ export const icons = {
 	// Volet des champs de tableau croisé : zones Lignes et Colonnes, suppression
 	'pivot-rows': '<path class="af" opacity=".3" d="M5 3.5h4.5v17H5A1.5 1.5 0 0 1 3.5 19V5A1.5 1.5 0 0 1 5 3.5z"/><rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><path d="M9.5 3.5v17"/><path class="a" d="M3.5 9h6M3.5 14.5h6"/>',
 	'pivot-columns': '<path class="af" opacity=".3" d="M3.5 9.5V5A1.5 1.5 0 0 1 5 3.5h14A1.5 1.5 0 0 1 20.5 5v4.5z"/><rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><path d="M3.5 9.5h17"/><path class="a" d="M9 3.5v6M14.5 3.5v6"/>',
-	trash: '<path d="M4.5 6.5h15M9.5 6.5v-2h5v2M6.5 6.5l1 13a1.5 1.5 0 0 0 1.5 1.5h6a1.5 1.5 0 0 0 1.5-1.5l1-13"/><path class="a" d="M10 10.5V17M14 10.5V17"/>',
 
 	// Éditeur de requête (ruban et menu des colonnes, comme Power Query)
 	'close-load': '<rect x="2.5" y="4.5" width="12" height="15" rx="1.5"/><path d="M2.5 9h12M2.5 14h12M7 9v10.5"/><path class="a" d="M21.5 12H17M19.5 9.5 17 12l2.5 2.5"/>',
