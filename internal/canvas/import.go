@@ -38,6 +38,11 @@ type ImportTable struct {
 	// SelectKeys : la requête rend aussi la colonne k, clés d'ordre (_pos)
 	// des lignes, déjà croissantes avec n (sinon elles sont calculées ici).
 	SelectKeys bool
+	// Selects : Select découpé en morceaux exécutés dans l'ordre (mêmes
+	// colonnes), pour suivre l'avancement ; Progress reçoit le nombre de
+	// lignes écrites après chaque morceau.
+	Selects  []string
+	Progress func(rows int)
 }
 
 // ImportCell est une cellule libre importée.
@@ -250,7 +255,10 @@ func (t *tx) importTable(sheet int64, it *ImportTable) (Table, error) {
 		return Table{}, err
 	}
 	n := 0
-	if it.Select != "" {
+	if it.Select != "" && len(it.Selects) == 0 {
+		it.Selects = []string{it.Select}
+	}
+	if len(it.Selects) > 0 {
 		// Index d'ordre posé avant le remplissage : les clés arrivent déjà
 		// triées, il s'agrandit par la fin (un CREATE INDEX après coup trierait
 		// des millions de clés en mémoire).
@@ -265,12 +273,20 @@ func (t *tx) importTable(sheet int64, it *ImportTable) (Table, error) {
 		for i := range vs {
 			vs[i] = fmt.Sprintf("q.v%d", i+1)
 		}
-		res, err := t.ExecContext(t.Ctx, `INSERT INTO `+staging+` (`+strings.Join(names, ", ")+`) SELECT q.n, `+keys+`, `+strings.Join(vs, ", ")+` FROM (`+it.Select+`) AS q`, it.SelectArgs...)
-		if err != nil {
-			return Table{}, fmt.Errorf("import du tableau %s : %w", it.Name, err)
+		for _, sel := range it.Selects {
+			if err := t.Ctx.Err(); err != nil {
+				return Table{}, err
+			}
+			res, err := t.ExecContext(t.Ctx, `INSERT INTO `+staging+` (`+strings.Join(names, ", ")+`) SELECT q.n, `+keys+`, `+strings.Join(vs, ", ")+` FROM (`+sel+`) AS q`, it.SelectArgs...)
+			if err != nil {
+				return Table{}, fmt.Errorf("import du tableau %s : %w", it.Name, err)
+			}
+			k, _ := res.RowsAffected()
+			n += int(k)
+			if it.Progress != nil {
+				it.Progress(n)
+			}
 		}
-		k, _ := res.RowsAffected()
-		n = int(k)
 	}
 	ins, err := t.PrepareContext(t.Ctx, `INSERT INTO `+staging+` (`+strings.Join(names, ", ")+`) VALUES (`+marks(len(names))+`)`)
 	if err != nil {
@@ -278,11 +294,11 @@ func (t *tx) importTable(sheet int64, it *ImportTable) (Table, error) {
 	}
 	defer ins.Close()
 	var keys []string
-	if it.Select == "" {
+	if len(it.Selects) == 0 {
 		keys = order.Spread(it.Count)
 	}
 	args := make([]any, len(names))
-	if it.Rows != nil && it.Select == "" {
+	if it.Rows != nil && len(it.Selects) == 0 {
 		err = it.Rows(func(vals []any) error {
 			if n >= it.Count {
 				return fmt.Errorf("import du tableau %s : plus de %d lignes", it.Name, it.Count)
@@ -311,7 +327,7 @@ func (t *tx) importTable(sheet int64, it *ImportTable) (Table, error) {
 		return Table{}, fmt.Errorf("import du tableau %s : %d lignes au lieu de %d", it.Name, n, it.Count)
 	}
 	do := []stmt{st(`ALTER TABLE ` + staging + ` RENAME TO ` + tb.sql())}
-	if it.Select == "" {
+	if len(it.Selects) == 0 {
 		do = append(do, st(`CREATE INDEX ` + tb.sql() + `_pos ON ` + tb.sql() + `(_pos)`))
 	}
 	do = append(do, meta...)
@@ -320,7 +336,7 @@ func (t *tx) importTable(sheet int64, it *ImportTable) (Table, error) {
 		st(`DELETE FROM _slitable_columns WHERE tbl = ?`, id),
 		st(`DELETE FROM _slitable_tables WHERE id = ?`, id),
 	}
-	if it.Select == "" {
+	if len(it.Selects) == 0 {
 		undo = append(undo, st(`DROP INDEX ` + tb.sql() + `_pos`))
 	}
 	undo = append(undo, st(`ALTER TABLE ` + tb.sql() + ` RENAME TO ` + staging))

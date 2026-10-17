@@ -209,12 +209,16 @@ func TestSQLRows(t *testing.T) {
 		}
 		defer d.Close()
 		s := one(c.th, 12_345, c.cols)
-		s.Tables[0].Select = func(seed uint64) string {
-			q, ok := CopiedRows(c.th, c.cols, 12_345, seed)
-			if !ok {
-				t.Fatalf("%s : pas de version SQL", c.th.Name)
+		s.Tables[0].Select = func(seed uint64) []string {
+			var qs []string
+			for first := 0; first < 12_345; first += 5_000 { // morceaux comme les presets
+				q, ok := CopiedRows(c.th, c.cols, 12_345, seed, first, min(12_345, first+5_000)-1)
+				if !ok {
+					t.Fatalf("%s : pas de version SQL", c.th.Name)
+				}
+				qs = append(qs, q)
 			}
-			return q
+			return qs
 		}
 		start := time.Now()
 		if _, err := BuildPlan(ctx, d.Model, Plan{Sheets: []SheetSpec{s}}, Options{}); err != nil {

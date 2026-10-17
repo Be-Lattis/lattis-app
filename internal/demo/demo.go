@@ -71,7 +71,14 @@ func BuildPlan(ctx context.Context, m *canvas.Model, p Plan, opt Options) (Resul
 			}
 			t := t
 			if t.Select != nil {
-				it.Select, it.SelectKeys = t.Select(seed), true
+				it.Selects, it.SelectKeys = t.Select(seed), true
+				base := int(done.Load())
+				it.Progress = func(rows int) {
+					done.Store(int64(base + rows))
+					if opt.Progress != nil {
+						opt.Progress(base+rows, total)
+					}
+				}
 				is.Tables = append(is.Tables, it)
 				continue
 			}

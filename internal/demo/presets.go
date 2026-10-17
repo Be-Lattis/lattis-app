@@ -17,7 +17,8 @@ type TableSpec struct {
 	Row, Col int // ancre de l'en-tête
 	// Select, si défini, génère les lignes en SQL (voir sqlgen.go) au lieu
 	// de Cols[i].Value : pour les très gros volumes.
-	Select func(seed uint64) string
+	// Morceaux de copyChunk lignes, pour suivre l'avancement.
+	Select func(seed uint64) []string
 }
 
 // SheetSpec est un onglet à générer.
@@ -132,9 +133,13 @@ func sized(rows, cols int) Preset {
 	return Preset{name, desc, func() Plan {
 		s := one(th, rows, cols)
 		if rows >= sqlRows {
-			s.Tables[0].Select = func(seed uint64) string {
-				q, _ := CopiedRows(th, cols, rows, seed)
-				return q
+			s.Tables[0].Select = func(seed uint64) []string {
+				var qs []string
+				for first := 0; first < rows; first += copyChunk {
+					q, _ := CopiedRows(th, cols, rows, seed, first, min(rows, first+copyChunk)-1)
+					qs = append(qs, q)
+				}
+				return qs
 			}
 		}
 		return Plan{Sheets: []SheetSpec{s}}

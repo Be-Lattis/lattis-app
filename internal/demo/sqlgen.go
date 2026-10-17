@@ -215,8 +215,12 @@ func SQLRows(th Theme, cols, rows int, seed uint64) (string, bool) {
 }
 
 // copyBlock : lignes tirées une fois (choix de Louis : 5 000 lignes
-// aléatoires suffisent), puis recopiées à la suite jusqu'au total.
-const copyBlock = 5_000
+// aléatoires suffisent), puis recopiées à la suite jusqu'au total ;
+// copyChunk : lignes écrites par requête (la progression avance entre deux).
+const (
+	copyBlock = 5_000
+	copyChunk = 250_000
+)
 
 // CopiedRows écrit la requête des très gros presets : copyBlock lignes
 // tirées par SQLRows, recopiées autant de fois qu'il faut par un produit
@@ -224,7 +228,10 @@ const copyBlock = 5_000
 // numéro de copie en base 62 suivi de la clé de la ligne dans le bloc : pas
 // de calcul de clé par ligne, et des clés déjà croissantes. Les colonnes
 // qui numérotent (N° commande) restent uniques.
-func CopiedRows(th Theme, cols, rows int, seed uint64) (string, bool) {
+//
+// first et last (0 à rows - 1) bornent les lignes produites : un morceau
+// de la génération (multiple de copyBlock pour first, sauf la fin).
+func CopiedRows(th Theme, cols, rows int, seed uint64, first, last int) (string, bool) {
 	size := min(rows, copyBlock)
 	inner, ok := SQLRows(th, cols, size, seed)
 	if !ok {
@@ -239,8 +246,8 @@ func CopiedRows(th Theme, cols, rows int, seed uint64) (string, bool) {
 	if th.Name == Commandes.Name {
 		exprs[0] = "100000 + " + n + " AS v1"
 	}
-	return fmt.Sprintf("WITH RECURSIVE c(j) AS (SELECT 0 UNION ALL SELECT j + 1 FROM c WHERE j < %d), "+
+	return fmt.Sprintf("WITH RECURSIVE c(j) AS (SELECT %d UNION ALL SELECT j + 1 FROM c WHERE j < %d), "+
 		"b AS MATERIALIZED (SELECT q.*, %s AS sk FROM (%s) AS q) "+
-		"SELECT %s AS n, %s || b.sk AS k, %s FROM c CROSS JOIN b WHERE %s <= %d",
-		copies-1, order.SpreadSQL(size, "q.n"), inner, n, order.FixedSQL(order.FixedWidth(copies), "c.j"), strings.Join(exprs, ", "), n, rows), true
+		"SELECT %s AS n, %s || b.sk AS k, %s FROM c CROSS JOIN b WHERE %s BETWEEN %d AND %d",
+		first/size, last/size, order.SpreadSQL(size, "q.n"), inner, n, order.FixedSQL(order.FixedWidth(copies), "c.j"), strings.Join(exprs, ", "), n, first+1, last+1), true
 }
