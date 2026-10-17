@@ -12,16 +12,13 @@
 
 	interface Props {
 		connection?: Connection | null;
-		/** Genre d'une nouvelle connexion ; absent : choisi dans le dialogue (« Nouvelle connexion… »). */
+		/** Genre d'une nouvelle connexion (donné par la commande, affiché dans le titre). */
 		kind?: ConnKind;
 		/** Enregistrée : renvoie son nom. */
 		onsaved: (name: string) => void;
 		oncancel: () => void;
 	}
 	let { connection = null, kind, onsaved, oncancel }: Props = $props();
-	// Genre imposé par la commande (Données › Base de données PostgreSQL…) : il
-	// est dans le titre, pas de liste pour le changer (choix de Louis).
-	const choose = (() => !connection && !kind)();
 
 	const initial = (): Connection => (connection ? clone(connection) : newConnection(kind ?? 'postgres'));
 	let c = $state<Connection>(initial());
@@ -40,12 +37,6 @@
 		if (autoName && !c.id) c.name = suggestName(c);
 	});
 
-	function changeKind(v: string) {
-		const name = c.name;
-		c = newConnection(v as ConnKind);
-		if (!autoName) c.name = name;
-		error = tested = '';
-	}
 
 	async function test() {
 		error = tested = '';
@@ -92,16 +83,6 @@
 		<header>{k === 'web' ? 'Connexion à une API web' : `Base de données ${CONN_LABELS[k] ?? ''}`}</header>
 		<div class="body">
 			<div class="grid">
-				{#if choose}
-					<label class="wide"
-						>Type de connexion <Select
-							value={c.kind}
-							options={(Object.keys(CONN_LABELS) as ConnKind[]).map((v) => ({ value: v, label: CONN_LABELS[v] }))}
-							width="100%"
-							onchange={changeKind}
-						/></label
-					>
-				{/if}
 				{#if server}
 					<label>Serveur <input bind:value={c.config.host} placeholder="localhost" /></label>
 					<label>Port <input type="number" bind:value={c.config.port} placeholder={String(DEFAULT_PORT[k] ?? '')} /></label>
