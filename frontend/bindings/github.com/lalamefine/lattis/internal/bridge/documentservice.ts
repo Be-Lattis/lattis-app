@@ -382,6 +382,16 @@ export function Find(sheet: number, text: string): $CancellablePromise<canvas$0.
 }
 
 /**
+ * FireControl déclenche l'évènement event ("click" ou "change") d'un
+ * contrôle de la feuille : son action puis ses écouteurs (controls.on)
+ * s'exécutent, en une seule étape d'annulation. value et old sont la
+ * nouvelle et l'ancienne valeur affichée de la cellule liée.
+ */
+export function FireControl(id: number, event: string, value: string, old: string): $CancellablePromise<$models.ScriptResult> {
+    return $Call.ByID(215131767, id, event, value, old);
+}
+
+/**
  * ForgetConnectionPassword oublie le mot de passe d'une connexion (session
  * et trousseau).
  */
@@ -572,6 +582,14 @@ export function PageCall(name: string, args: { [_ in string]?: any } | null): $C
  */
 export function Paste(sheet: number, row: number, col: number, block: (string[] | null)[] | null): $CancellablePromise<canvas$0.Event> {
     return $Call.ByID(840855177, sheet, row, col, block);
+}
+
+/**
+ * PickControlFile demande un fichier pour un sélecteur de fichier de la
+ * feuille ; "" si l'utilisateur annule.
+ */
+export function PickControlFile(title: string): $CancellablePromise<string> {
+    return $Call.ByID(472855174, title);
 }
 
 /**

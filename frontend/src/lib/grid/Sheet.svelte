@@ -50,7 +50,7 @@
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
 	import PivotPanel from './PivotPanel.svelte';
 	import SheetButtons from './SheetButtons.svelte';
-	import type { ButtonConfig, SheetButton } from './buttons';
+	import type { ButtonConfig, ControlKind, SheetButton } from './buttons';
 	import { applyRules, computeStats, mergeStats, parseRules, prepareStats, reqKey, statsReq, todaySerial, type CfOut, type Rule, type RuleEnv, type RuleStats, type Stats, type StatsReq } from './rules';
 	import { formatLocs, groupKey, rectLocs, type Loc, type RuleChanges, type SheetRules } from './cfmodel';
 	import { ICON_SETS, drawCfIcon } from './cficons';
@@ -340,6 +340,10 @@
 		/** Boutons d'action : bibliothèque de scripts, clic, création, modification. */
 		scripts?(): Promise<{ name: string; source: string }[]>;
 		runButton?(id: number): Promise<unknown>;
+		/** Évènement d'un contrôle (clic, nouvelle valeur) : action et écouteurs ; renvoie le message à afficher. */
+		fireControl?(id: number, event: string, value: string, old: string): Promise<unknown>;
+		/** Fenêtre de choix d'un fichier (sélecteur de fichier) ; '' si annulé. */
+		pickFile?(title: string): Promise<string>;
 		createButton?(row: number, col: number, cfg: ButtonConfig): Promise<unknown>;
 		setButton?(id: number, cfg: ButtonConfig): Promise<unknown>;
 		placeButton?(id: number, row: number, col: number, offX: number, offY: number, width: number, height: number): Promise<unknown>;
@@ -1200,6 +1204,21 @@
 		return s;
 	}
 
+	// Formule de colonne validée : toutes ses cellules flashent, même si leur
+	// valeur ne change pas (on voit que toute la colonne a été modifiée). Les
+	// lignes chargées ensuite flashent à leur premier affichage.
+	let columnFlash: { table: number; name: string; t: number; done: Set<string> } | null = null;
+	function columnFlashes(table: number, name: string, k: string) {
+		const f = columnFlash;
+		if (!f || f.table !== table || f.name !== name || f.done.has(k)) return;
+		if (animNow - f.t > 1500) {
+			columnFlash = null;
+			return;
+		}
+		f.done.add(k);
+		flashes.set(k, animNow);
+	}
+
 	/** Éclat d'une valeur calculée (clé k, cellule r, c) qui vient de changer : opacité (0 : aucun). */
 	function flashOf(k: string, v: string, r: number, c: number): number {
 		if (!motion()) return 0;
@@ -1863,7 +1882,11 @@
 					if (cs) borders(cs, x, y, cw, rh(r));
 					if (cs?.nt) noteCorner(x + cw, y, cs);
 					let s = row.text[i];
-					if (calcCols?.[i]) paintFlash(flashOf(`t${e.t.id}:${row.id}:${col.name}`, s ?? '', r, c), x, y, cw, rh(r));
+					if (calcCols?.[i]) {
+						const fk = `t${e.t.id}:${row.id}:${col.name}`;
+						if (motion()) columnFlashes(e.t.id, col.name, fk);
+						paintFlash(flashOf(fk, s ?? '', r, c), x, y, cw, rh(r));
+					}
 					if (!s) continue;
 					// Jeu d'icônes : à gauche de la cellule ; barre ou icône seule : valeur masquée.
 					const iconW = cf?.icon && !row.bad?.has(i) ? drawIconAt(cf.icon, x, y, rh(r)) : 0;
@@ -3856,12 +3879,48 @@
 		updateExtent();
 		const b = chartBox(ch);
 		const t = reveal(b.y, b.y + b.h, vs.top, vs.view, rowTop(fRows()));
-		if (t !== vs.top) vs.to(t);
 		const l = reveal(b.x, b.x + b.w, scroller.scrollLeft, viewW - MARGIN, cax().offset(fCols()));
-		if (l !== scroller.scrollLeft) scroller.scrollLeft = l;
-		syncNative();
 		wrap.focus();
-		schedule();
+		glideTo(t, l);
+	}
+
+	/** Défile jusqu'à (top, left) : en douceur avec les animations (Affichage › Animations), d'un coup sinon. */
+	function glideTo(top: number, left: number) {
+		const t0 = vs.top;
+		const l0 = scroller.scrollLeft;
+		if (top === t0 && left === l0) return schedule();
+		const set = (t: number, l: number) => {
+			if (t !== vs.top) vs.to(t);
+			if (l !== scroller.scrollLeft) scroller.scrollLeft = l;
+			syncNative();
+			schedule();
+		};
+		if (!motion()) return set(top, left);
+		const start = performance.now();
+		const D = 320;
+		const step = (now: number) => {
+			const k = Math.min(1, (now - start) / D);
+			const e = 1 - Math.pow(1 - k, 3); // décélération
+			set(Math.round(t0 + (top - t0) * e), Math.round(l0 + (left - l0) * e));
+			if (k < 1) requestAnimationFrame(step);
+		};
+		requestAnimationFrame(step);
+	}
+
+	/**
+	 * Place libre pour un nouveau graphique (w × h px) à partir de (row, col) :
+	 * sous les graphiques qu'il chevaucherait, avec une ligne d'écart, pour
+	 * qu'aucun ne se superpose par défaut.
+	 */
+	function freeChartSpot(row: number, col: number, w = CHART_W, h = CHART_H): { row: number; col: number } {
+		const x = colAxis.offset(col);
+		for (let k = 0; k < 50; k++) {
+			const y = rowTop(row);
+			const hit = charts.map(chartBox).find((b) => x < b.x + b.w && b.x < x + w && y < b.y + b.h && b.y < y + h);
+			if (!hit) break;
+			row = rowAxis.indexAt(hit.y + hit.h) + 2;
+		}
+		return { row, col };
 	}
 
 	function pasteChart(cfg: ChartConfig) {
@@ -3870,7 +3929,7 @@
 		const { row, col } = active;
 		const before = new Set(charts.map((c) => c.id));
 		writing = writing.then(() =>
-			create(row, col, cfg).then(
+			create(freeChartSpot(row, col, cfg.width, cfg.height).row, col, cfg).then(
 				() => {
 					say('Graphique collé');
 					selectNewChart(before);
@@ -3893,7 +3952,7 @@
 			const name = pv.config.name ?? '';
 			const before = new Set(charts.map((c) => c.id));
 			writing = writing.then(() =>
-				create(pv.row, pv.col + head.length + 1, { source: name, kind, x: head[0], series }).then(
+				create(freeChartSpot(pv.row, pv.col + head.length + 1).row, pv.col + head.length + 1, { source: name, kind, x: head[0], series }).then(
 					() => {
 						say(`Graphique du tableau croisé « ${name} » inséré`);
 						selectNewChart(before);
@@ -3922,7 +3981,7 @@
 		const create = source.createChart;
 		const before = new Set(charts.map((c) => c.id));
 		writing = writing.then(() =>
-			create(e.t.row, e.lastCol + 2, { source: e.t.name, kind, x: x.name, series }).then(
+			create(freeChartSpot(e.t.row, e.lastCol + 2).row, e.lastCol + 2, { source: e.t.name, kind, x: x.name, series }).then(
 				() => {
 					say('Graphique inséré : double-clic pour le modifier, glissez-le pour le déplacer');
 					selectNewChart(before);
@@ -4217,8 +4276,8 @@
 		schedule();
 	}
 
-	/** Insertion › Bouton, Case à cocher, Liste déroulante : contrôle à la cellule active. */
-	export function insertButton(kind: '' | 'checkbox' | 'select' = '') {
+	/** Insertion › Contrôles (bouton, case, liste, zone de saisie, sélecteur de fichier) : contrôle à la cellule active. */
+	export function insertButton(kind: ControlKind = '') {
 		if (!source.createButton) return;
 		buttonsLayer?.openEditor(undefined, kind);
 	}
@@ -4227,8 +4286,18 @@
 
 	function runButton(b: SheetButton) {
 		if (!source.runButton) return;
-		say(`« ${b.config.label} » : exécution…`);
+		say(`« ${b.config.name || b.config.label} » : exécution…`);
 		source.runButton(b.id).then(
+			(msg) => say(typeof msg === 'string' ? msg : ''),
+			(err) => say(String(err?.message ?? err))
+		);
+	}
+
+	/** Évènement d'un contrôle de la feuille : son action et les écouteurs des scripts. */
+	function fireControl(b: SheetButton, event: 'click' | 'change', value: string, old: string) {
+		if (!source.fireControl) return runButton(b);
+		say(`« ${b.config.name || b.config.label} » : exécution…`);
+		source.fireControl(b.id, event, value, old).then(
 			(msg) => say(typeof msg === 'string' ? msg : ''),
 			(err) => say(String(err?.message ?? err))
 		);
@@ -5570,6 +5639,11 @@
 		try {
 			const m = await source.setCell(row, col, raw, target);
 			lastEditMs = performance.now() - t0;
+			if (info.kind === 'data' && isFormula(raw) && info.e) {
+				const name = info.e.t.columns[info.i!]?.name;
+				if (name) columnFlash = { table: info.e.t.id, name, t: performance.now(), done: new Set() };
+				schedule();
+			}
 			if (m && typeof m === 'object') {
 				if (info.kind === 'data' && info.n !== undefined) info.e!.cache.set(info.n, info.i!, m.value);
 				message = '';
@@ -6944,6 +7018,8 @@
 					active={() => active}
 					scripts={() => source.scripts?.() ?? Promise.resolve([])}
 					onrun={runButton}
+					onfire={fireControl}
+					pickFile={source.pickFile}
 					oncreate={source.createButton}
 					onset={source.setButton}
 					onplace={source.placeButton}

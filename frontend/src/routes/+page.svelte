@@ -502,6 +502,13 @@
 			const out = r.output ?? [];
 			return out.length ? out[out.length - 1] : '';
 		},
+		fireControl: async (id, event, value, old) => {
+			const r = await DocumentService.FireControl(id, event, value, old);
+			if (r.error) return `Erreur du script : ${r.error}`;
+			const out = r.output ?? [];
+			return out.length ? out[out.length - 1] : '';
+		},
+		pickFile: (title) => DocumentService.PickControlFile(title),
 		createButton: (row, col, cfg: ButtonConfig) => DocumentService.CreateButton(sheetId, row, col, cfg).then(reload),
 		setButton: (id, cfg: ButtonConfig) => DocumentService.SetButton(id, cfg).then(reload),
 		placeButton: (id, row, col, offX, offY, w, h) => DocumentService.PlaceButton(id, row, col, offX, offY, w, h).then(reload),

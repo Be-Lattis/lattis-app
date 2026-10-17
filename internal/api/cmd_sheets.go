@@ -50,6 +50,8 @@ type ObjectView struct {
 // ButtonView est un bouton d'action.
 type ButtonView struct {
 	ID       int64  `json:"id"`
+	Name     string `json:"name"`
+	Kind     string `json:"kind"`
 	Label    string `json:"label"`
 	Script   string `json:"script"`
 	Function string `json:"function,omitempty"`
@@ -529,7 +531,7 @@ func describeSheet(s sheetRef, l canvas.Layout) SheetView {
 }
 
 func describeButton(b canvas.ButtonInfo) ButtonView {
-	return ButtonView{ID: b.ID, Label: b.Config.Label, Script: b.Config.Script, Function: b.Config.Function, Row: b.Row + 1, Col: b.Col + 1}
+	return ButtonView{ID: b.ID, Name: b.Config.Name, Kind: kindName(b.Config.Kind), Label: b.Config.Label, Script: b.Config.Script, Function: b.Config.Function, Row: b.Row + 1, Col: b.Col + 1}
 }
 
 var _ = fmt.Sprint

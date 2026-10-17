@@ -23,6 +23,7 @@ export type {
     LineRuleSet,
     LineRules,
     LineStyle,
+    Listener,
     Match,
     Mix,
     NameInfo,
