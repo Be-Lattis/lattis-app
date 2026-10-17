@@ -34,6 +34,23 @@ func (s *DocumentService) RunButton(ctx context.Context, id int64) (ScriptResult
 	return api.RunButton(host{s}, id)
 }
 
+// FireControl déclenche l'évènement event ("click" ou "change") d'un
+// contrôle de la feuille : son action puis ses écouteurs (controls.on)
+// s'exécutent, en une seule étape d'annulation. value et old sont la
+// nouvelle et l'ancienne valeur affichée de la cellule liée.
+func (s *DocumentService) FireControl(ctx context.Context, id int64, event, value, old string) (ScriptResult, error) {
+	return api.FireControl(host{s}, id, event, value, old)
+}
+
+// PickControlFile demande un fichier pour un sélecteur de fichier de la
+// feuille ; "" si l'utilisateur annule.
+func (s *DocumentService) PickControlFile(title string) (string, error) {
+	if title == "" {
+		title = "Choisir un fichier"
+	}
+	return application.Get().Dialog.OpenFile().SetTitle(title).AddFilter("Tous les fichiers", "*.*").PromptForSingleSelection()
+}
+
 // CreateButton pose un bouton d'action sur une feuille.
 func (s *DocumentService) CreateButton(ctx context.Context, sheet int64, row, col int, cfg canvas.ButtonConfig) (int64, error) {
 	d, err := s.current()

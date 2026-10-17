@@ -1,14 +1,17 @@
 <script lang="ts">
 	// Contrôles de la feuille, posés comme les graphiques (ancrage libre au
 	// pixel près), comme les contrôles de formulaire d'Excel : bouton, case à
-	// cocher, liste déroulante. Un clic sur un bouton exécute le script lié
-	// (une seule étape d'annulation) ; une case ou une liste écrit sa valeur
-	// dans la cellule liée, puis exécute l'action éventuelle. Glisser déplace
+	// cocher, liste déroulante, zone de saisie (une ligne ou plusieurs),
+	// sélecteur de fichier. Un clic sur un bouton exécute le script lié (une
+	// seule étape d'annulation) ; les autres contrôles écrivent leur valeur
+	// dans la cellule liée (une zone de saisie en la quittant ou avec Entrée,
+	// un sélecteur de fichier le chemin du fichier choisi), puis exécutent
+	// l'action éventuelle et les écouteurs des scripts (controls.on). Glisser déplace
 	// le contrôle ; clic droit : exécuter, modifier, couper, copier,
 	// supprimer ; Ctrl+clic le sélectionne pour le redimensionner. Un clic
 	// ailleurs (cellule, onglet) le désélectionne.
 	import { dismiss } from './dismiss.js';
-	import { BUTTON_H, BUTTON_W, scriptFunctions, type ButtonConfig, type SheetButton } from './buttons';
+	import { BUTTON_H, BUTTON_W, CONTROL_KINDS, VALUE_KINDS, baseName, controlTitle, handlerLabel, handlers, scriptFunctions, type ButtonConfig, type ControlKind, type SheetButton } from './buttons';
 	import { a1Address } from './formulaEdit';
 	import { colLetters } from './cfmodel';
 
@@ -26,7 +29,12 @@
 		/** Cellule active : emplacement d'un bouton inséré ou collé. */
 		active: () => { row: number; col: number };
 		scripts: () => Promise<{ name: string; source: string }[]>;
+		/** Menu › Exécuter l'action : action et écouteurs, avec la valeur actuelle. */
 		onrun: (b: SheetButton) => void;
+		/** Évènement de l'interface (clic, nouvelle valeur déjà écrite) : action et écouteurs du contrôle. */
+		onfire?: (b: SheetButton, event: 'click' | 'change', value: string, old: string) => void;
+		/** Fenêtre de choix d'un fichier (sélecteur de fichier) ; '' si l'utilisateur annule. */
+		pickFile?: (title: string) => Promise<string>;
 		oncreate?: (row: number, col: number, cfg: ButtonConfig) => Promise<unknown>;
 		onset?: (id: number, cfg: ButtonConfig) => Promise<unknown>;
 		onplace?: (id: number, row: number, col: number, offX: number, offY: number, w: number, h: number) => Promise<unknown>;
@@ -45,7 +53,7 @@
 		tick?: number;
 	}
 
-	let { buttons, geo, view, active, scripts, onrun, oncreate, onset, onplace, ondelete, onwheel, say, done, zoom = 1, cellValue, setCell, tick = 0 }: Props = $props();
+	let { buttons, geo, view, active, scripts, onrun, onfire, pickFile, oncreate, onset, onplace, ondelete, onwheel, say, done, zoom = 1, cellValue, setCell, tick = 0 }: Props = $props();
 	// Menus et dialogues (position: fixed) : le zoom du calque est annulé.
 	const unzoom = $derived(zoom === 1 ? undefined : 1 / zoom);
 
@@ -73,27 +81,65 @@
 	}
 	const isTrue = (v: string) => /^(vrai|true|1)$/i.test(v.trim());
 
-	/** Clic (sans glisser) : exécute le bouton, coche ou décoche la case. */
+	/** Clic (sans glisser) : exécute le bouton, coche ou décoche la case, ouvre le choix d'un fichier. */
 	async function activate(b: SheetButton, value?: string) {
 		const kind = b.config.kind ?? '';
 		if (kind === '') {
-			if (!b.config.script) {
+			if (!handlers(b.config).length) {
 				say('Aucune action liée à ce bouton : clic droit › Modifier le bouton… pour en choisir une');
 				return;
 			}
-			onrun(b);
+			fire(b, 'click', '', '');
 			return;
 		}
 		const at = linkOf(b);
 		if (!at || !setCell) return;
-		const v = kind === 'checkbox' ? (isTrue(linked(b, tick)) ? 'FAUX' : 'VRAI') : (value ?? '');
+		const old = linked(b, tick);
+		let v = value ?? '';
+		if (kind === 'checkbox') v = isTrue(old) ? 'FAUX' : 'VRAI';
+		if (kind === 'file') {
+			if (!pickFile) return;
+			try {
+				v = await pickFile(b.config.label || 'Choisir un fichier');
+			} catch (err) {
+				fail(err);
+				return;
+			}
+			if (!v) return; // choix annulé
+		}
+		if (v === old && kind !== 'checkbox') return;
 		try {
 			await setCell(at.row, at.col, v);
 		} catch (err) {
 			fail(err);
 			return;
 		}
-		if (b.config.script) onrun(b);
+		if (handlers(b.config).length) fire(b, 'change', v, old);
+	}
+
+	function fire(b: SheetButton, event: 'click' | 'change', value: string, old: string) {
+		if (onfire) onfire(b, event, value, old);
+		else onrun(b);
+	}
+
+	/** Zone de saisie : valide la valeur tapée (Entrée, sortie du champ). */
+	function commitText(b: SheetButton, el: HTMLInputElement | HTMLTextAreaElement) {
+		if (el.value !== linked(b, tick)) activate(b, el.value);
+	}
+
+	/** Touches d'une zone de saisie : elles ne vont pas à la grille. Entrée valide (Ctrl+Entrée dans une zone de texte), Échap rétablit. */
+	function textKey(ev: KeyboardEvent, b: SheetButton) {
+		ev.stopPropagation();
+		const el = ev.currentTarget as HTMLInputElement | HTMLTextAreaElement;
+		if (ev.key === 'Escape') {
+			el.value = linked(b, tick);
+			el.blur();
+			done();
+		} else if (ev.key === 'Enter' && (el.tagName === 'INPUT' || ev.ctrlKey)) {
+			ev.preventDefault();
+			el.blur();
+			done();
+		}
 	}
 	let menu = $state<{ b: SheetButton; x: number; y: number } | null>(null);
 	let clip = $state.raw<ButtonConfig | null>(null);
@@ -116,7 +162,7 @@
 	function start(ev: MouseEvent, b: SheetButton, dir = '') {
 		if (ev.button !== 0) return;
 		// Liste déroulante non sélectionnée : elle s'ouvre normalement.
-		if (!dir && b.config.kind === 'select' && selected !== b.id && (ev.target as HTMLElement).tagName === 'SELECT') return;
+		if (!dir && selected !== b.id && /^(SELECT|INPUT|TEXTAREA)$/.test((ev.target as HTMLElement).tagName)) return;
 		ev.preventDefault();
 		ev.stopPropagation();
 		if (ev.ctrlKey || ev.metaKey) {
@@ -157,7 +203,7 @@
 			window.removeEventListener('mouseup', up);
 			if (!moved) {
 				gesture = null;
-				if (!dir && b.config.kind !== 'select') activate(b);
+				if (!dir && !['select', 'input', 'textarea'].includes(b.config.kind ?? '')) activate(b);
 				return;
 			}
 			const r = gesture!.box;
@@ -204,7 +250,7 @@
 	/** Colle le bouton copié en (row, col). */
 	export function pasteAt(row: number, col: number) {
 		if (!clip || !oncreate) return;
-		const { offX: _x, offY: _y, ...cfg } = clip;
+		const { offX: _x, offY: _y, name: _n, ...cfg } = clip;
 		oncreate(row, col, cfg).then(() => say('Bouton collé'), fail);
 	}
 
@@ -214,7 +260,8 @@
 		id: number | null;
 		row: number;
 		col: number;
-		kind: '' | 'checkbox' | 'select';
+		kind: ControlKind;
+		name: string;
 		label: string;
 		script: string;
 		fn: string;
@@ -228,12 +275,23 @@
 		error: string;
 	}
 	let editor = $state<Draft | null>(null);
-	const KINDS = { '': 'Bouton', checkbox: 'Case à cocher', select: 'Liste déroulante' } as const;
+	const KINDS = CONTROL_KINDS;
+	/** Libellé par défaut d'un nouveau contrôle (vide : sans libellé, ou texte indicatif). */
+	const DEFAULT_LABEL: Record<ControlKind, string> = { '': 'Bouton', checkbox: 'Case à cocher', select: '', input: '', textarea: '', file: 'Choisir un fichier…' };
+	/** Légende du champ Libellé selon le genre. */
+	const LABEL_CAPTION: Record<ControlKind, string> = {
+		'': 'Libellé',
+		checkbox: 'Libellé',
+		select: 'Libellé',
+		input: 'Texte indicatif (facultatif)',
+		textarea: 'Texte indicatif (facultatif)',
+		file: 'Texte du bouton'
+	};
 	let library = $state<{ name: string; source: string }[]>([]);
 	const functions = $derived(editor ? scriptFunctions(library.find((s) => s.name === editor!.script)?.source ?? '') : []);
 
 	/** Ouvre la fenêtre de création (b absent : nouveau contrôle du genre kind à la cellule active). */
-	export async function openEditor(b?: SheetButton, kind: '' | 'checkbox' | 'select' = '') {
+	export async function openEditor(b?: SheetButton, kind: ControlKind = '') {
 		menu = null;
 		try {
 			library = (await scripts()) ?? [];
@@ -248,7 +306,8 @@
 			row: b?.row ?? at.row,
 			col: b?.col ?? at.col,
 			kind: c?.kind ?? kind,
-			label: c?.label ?? (kind === 'checkbox' ? 'Case à cocher' : kind === 'select' ? '' : 'Bouton'),
+			name: c?.name ?? '',
+			label: c?.label ?? DEFAULT_LABEL[kind],
 			// Sans script dans la bibliothèque : bouton créé sans action.
 			script: c ? c.script : '',
 			fn: c?.function ?? '',
@@ -275,7 +334,7 @@
 	async function save() {
 		const e = editor;
 		if (!e) return;
-		if (e.kind !== 'select' && !e.label.trim()) {
+		if ((e.kind === '' || e.kind === 'checkbox') && !e.label.trim()) {
 			e.error = 'Donnez un libellé au contrôle';
 			return;
 		}
@@ -285,7 +344,8 @@
 		}
 		const old = e.id === null ? undefined : buttons.find((x) => x.id === e.id)?.config;
 		const cfg: ButtonConfig = {
-			...(old ? { offX: old.offX, offY: old.offY, width: old.width, height: old.height } : {}),
+			...(old ? { offX: old.offX, offY: old.offY, width: old.width, height: old.height, listeners: old.listeners, hidden: old.hidden } : {}),
+			name: e.name.trim() || undefined,
 			kind: e.kind || undefined,
 			label: e.label.trim(),
 			script: e.script,
@@ -305,7 +365,8 @@
 	}
 </script>
 
-{#each buttons as b (b.id)}
+<!-- Un contrôle masqué par un script (hidden) n'est pas dessiné. -->
+{#each buttons.filter((x) => !x.config.hidden) as b (b.id)}
 	{@const box = boxOf(b)}
 	{@const kind = b.config.kind ?? ''}
 	{@const value = kind ? linked(b, tick) : ''}
@@ -313,6 +374,7 @@
 	<div
 		class="action"
 		class:ctl={kind !== ''}
+		class:field={kind === 'input' || kind === 'textarea'}
 		class:selected={selected === b.id}
 		style:left="{box.x - view.x}px"
 		style:top="{box.y - view.y}px"
@@ -322,7 +384,7 @@
 		style:--btn-hover={b.config.hoverColor || null}
 		style:--btn-active={b.config.activeColor || null}
 		style:--btn-text={b.config.textColor || null}
-		title={(kind ? `Cellule liée : ${b.config.link}` : '') + (b.config.script ? (kind ? ' · ' : '') + (b.config.function ? `${b.config.script} › ${b.config.function}()` : b.config.script) : kind ? '' : 'Aucune action liée')}
+		title={controlTitle(b.config)}
 		onmousedown={(ev) => start(ev, b)}
 		oncontextmenu={(ev) => openMenu(ev, b)}
 		onwheel={(ev) => onwheel?.(ev)}
@@ -340,6 +402,28 @@
 				{#if !b.config.options?.includes(value)}<option value={value}>{value}</option>{/if}
 				{#each b.config.options ?? [] as o (o)}<option value={o}>{o}</option>{/each}
 			</select>
+		{:else if kind === 'input'}
+			<input
+				type="text"
+				{value}
+				placeholder={b.config.label}
+				readonly={selected === b.id}
+				aria-label={b.config.label || b.config.name || 'Zone de saisie'}
+				onkeydown={(ev) => textKey(ev, b)}
+				onblur={(ev) => commitText(b, ev.currentTarget)}
+			/>
+		{:else if kind === 'textarea'}
+			<textarea
+				{value}
+				placeholder={b.config.label}
+				readonly={selected === b.id}
+				aria-label={b.config.label || b.config.name || 'Zone de texte'}
+				onkeydown={(ev) => textKey(ev, b)}
+				onblur={(ev) => commitText(b, ev.currentTarget)}
+			></textarea>
+		{:else if kind === 'file'}
+			<span class="pick">{b.config.label || 'Choisir un fichier…'}</span>
+			<span class="path" class:empty={!value}>{baseName(value) || 'Aucun fichier'}</span>
 		{:else}
 			<span>{b.config.label}</span>
 		{/if}
@@ -355,8 +439,8 @@
 {#if menu}
 	{@const m = menu}
 	<div class="menu" style:zoom={unzoom} style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (menu = null)}>
-		<div class="menu-title">{KINDS[m.b.config.kind ?? '']} « {m.b.config.label || m.b.config.link} »</div>
-		{#if m.b.config.script}
+		<div class="menu-title" title={controlTitle(m.b.config)}>{KINDS[m.b.config.kind ?? '']} « {m.b.config.name || m.b.config.label || m.b.config.link} »</div>
+		{#if handlers(m.b.config).length}
 			<button
 				onclick={() => {
 					menu = null;
@@ -401,13 +485,17 @@
 			}}
 		>
 			<header>{e.id === null ? `Insérer : ${KINDS[e.kind].toLowerCase()}` : `Modifier : ${KINDS[e.kind].toLowerCase()}`}</header>
-			<label
-				>Type
-				<select bind:value={e.kind}>
-					{#each Object.entries(KINDS) as [k, l] (k)}<option value={k}>{l}</option>{/each}
-				</select>
-			</label>
-			{#if e.kind !== 'select'}<label>Libellé<input type="text" bind:value={e.label} use:focusSelect /></label>{/if}
+			<!-- Bouton d'un côté (Insertion › Bouton), contrôles liés à une cellule de l'autre (Insertion › Input). -->
+			{#if e.kind !== ''}
+				<label
+					>Type
+					<select bind:value={e.kind}>
+						{#each VALUE_KINDS as k (k)}<option value={k}>{KINDS[k]}</option>{/each}
+					</select>
+				</label>
+			{/if}
+			<label>Nom (pour les scripts)<input type="text" bind:value={e.name} placeholder="automatique" /></label>
+			{#if e.kind !== 'select'}<label>{LABEL_CAPTION[e.kind]}<input type="text" bind:value={e.label} use:focusSelect /></label>{/if}
 			{#if e.kind}
 				<label>Cellule liée<input type="text" bind:value={e.link} placeholder="B3" /></label>
 			{/if}
@@ -432,6 +520,17 @@
 					</select>
 				</label>
 			{/if}
+			{#if e.id !== null}
+				{@const ls = buttons.find((x) => x.id === e.id)?.config.listeners ?? []}
+				{#if ls.length}
+					<div class="listeners">
+						<span>Écouteurs des scripts (controls.on)</span>
+						<ul>
+							{#each ls as l, i (i)}<li><code>{l.event}</code> → {handlerLabel(l)}</li>{/each}
+						</ul>
+					</div>
+				{/if}
+			{/if}
 			{#if e.kind === ''}
 				<label class="check"><input type="checkbox" bind:checked={e.custom} /> Couleurs personnalisées</label>
 				{#if e.custom}
@@ -444,7 +543,7 @@
 				{/if}
 			{/if}
 			<p class="note">
-				{#if !library.length}Aucun script dans la bibliothèque (onglet SCRIPT) : le contrôle est créé sans action, à lier plus tard.{:else if e.kind}La valeur est écrite dans la cellule liée, puis l’action s’exécute ; tout s’annule d’un coup (Ctrl+Z).{:else}Un clic sur le bouton exécute l’action ; tout ce qu’elle modifie s’annule d’un coup (Ctrl+Z).{/if}
+				{#if !library.length}Aucun script dans la bibliothèque (onglet SCRIPT) : le contrôle est créé sans action, à lier plus tard.{:else if e.kind === 'input' || e.kind === 'textarea'}Le texte est écrit dans la cellule liée en quittant la zone{e.kind === 'input' ? ' ou avec Entrée' : ' ou avec Ctrl+Entrée'}, puis l’action s’exécute.{:else if e.kind === 'file'}Le chemin du fichier choisi est écrit dans la cellule liée, puis l’action s’exécute.{:else if e.kind}La valeur est écrite dans la cellule liée, puis l’action s’exécute ; tout s’annule d’un coup (Ctrl+Z).{:else}Un clic sur le bouton exécute l’action ; tout ce qu’elle modifie s’annule d’un coup (Ctrl+Z).{/if}
 			</p>
 			{#if e.error}<p class="error">{e.error}</p>{/if}
 			<div class="actions">
@@ -523,6 +622,49 @@
 		background: #217346;
 		border-color: #217346;
 	}
+	/* Zones de saisie : le champ occupe tout le contrôle. */
+	.action.field {
+		padding: 0;
+	}
+	.action input,
+	.action textarea {
+		box-sizing: border-box;
+		width: 100%;
+		height: 100%;
+		font: inherit;
+		color: var(--btn-text, #1f2328);
+		background: var(--btn-bg, #fff);
+		border: 1px solid #c4c8cc;
+		border-radius: 3px;
+		cursor: text;
+		resize: none;
+	}
+	.action input:focus,
+	.action textarea:focus {
+		outline: none;
+		border-color: #217346;
+		box-shadow: 0 0 0 1px #217346;
+	}
+	.action.selected input,
+	.action.selected textarea {
+		cursor: move;
+	}
+	.pick {
+		flex: none;
+		padding: 2px 8px;
+		border: 1px solid #b8bdc3;
+		border-radius: 3px;
+		background: var(--btn-bg, linear-gradient(#fdfdfd, #eef0f2));
+		color: var(--btn-text, #1f2328);
+	}
+	.action.ctl:hover .pick {
+		border-color: #217346;
+		background: var(--btn-hover, #e3efe7);
+	}
+	.path.empty {
+		color: #6b7280;
+		font-style: italic;
+	}
 	.action select {
 		width: 100%;
 		height: 100%;
@@ -543,6 +685,16 @@
 		flex-direction: row;
 		align-items: center;
 		gap: 6px;
+	}
+	.listeners {
+		padding: 5px 16px;
+		color: #374151;
+	}
+	.listeners ul {
+		margin: 3px 0 0;
+		padding-left: 18px;
+		font-size: 12px;
+		color: #4b5563;
 	}
 	.colors {
 		display: flex;

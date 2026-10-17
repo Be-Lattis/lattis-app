@@ -64,6 +64,7 @@ schéma de chaque outil (`tools/list`).
 | Colonnes | `columns_insert`, `columns_rename`, `columns_delete`, `columns_set_type`, `columns_type_preview`, `columns_type_mix`, `columns_fix_type`, `columns_values`, `columns_set_filter`, `columns_set_rules` |
 | Interface | `ui_selection`, `ui_select`, `ui_select_object`, `ui_select_cells`, `ui_show_sheet`, `ui_show_view`, `ui_notify`, `ui_alert`, `ui_confirm`, `ui_prompt`, `ui_dialog` |
 | Objets | `charts_create`, `charts_set`, `charts_place`, `charts_delete`, `pivots_create`, `pivots_set`, `pivots_delete`, `buttons_create`, `buttons_set`, `buttons_place`, `buttons_delete`, `buttons_list`, `buttons_run` |
+| Contrôles et évènements | `controls_list`, `controls_get`, `controls_add`, `controls_set` (écrire `value` déclenche l'évènement change), `controls_delete`, `controls_on`, `controls_off`, `controls_listeners`, `controls_fire` (exécute l'action et les écouteurs d'un contrôle) |
 | Scripts | `scripts_list`, `scripts_save`, `scripts_delete`, `scripts_check`, `scripts_run`, `formulas_functions` |
 | Requêtes d'import | `queries_list`, `queries_save`, `queries_preview`, `queries_refresh`, `queries_refresh_all`, `queries_delete`, `connections_list` (sans mot de passe : une connexion PostgreSQL qui en demande un se déverrouille depuis l'interface) |
 

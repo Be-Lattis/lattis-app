@@ -50,7 +50,7 @@
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
 	import PivotPanel from './PivotPanel.svelte';
 	import SheetButtons from './SheetButtons.svelte';
-	import type { ButtonConfig, SheetButton } from './buttons';
+	import type { ButtonConfig, ControlKind, SheetButton } from './buttons';
 	import { applyRules, computeStats, mergeStats, parseRules, prepareStats, reqKey, statsReq, todaySerial, type CfOut, type Rule, type RuleEnv, type RuleStats, type Stats, type StatsReq } from './rules';
 	import { formatLocs, groupKey, rectLocs, type Loc, type RuleChanges, type SheetRules } from './cfmodel';
 	import { ICON_SETS, drawCfIcon } from './cficons';
@@ -340,6 +340,10 @@
 		/** Boutons d'action : bibliothèque de scripts, clic, création, modification. */
 		scripts?(): Promise<{ name: string; source: string }[]>;
 		runButton?(id: number): Promise<unknown>;
+		/** Évènement d'un contrôle (clic, nouvelle valeur) : action et écouteurs ; renvoie le message à afficher. */
+		fireControl?(id: number, event: string, value: string, old: string): Promise<unknown>;
+		/** Fenêtre de choix d'un fichier (sélecteur de fichier) ; '' si annulé. */
+		pickFile?(title: string): Promise<string>;
 		createButton?(row: number, col: number, cfg: ButtonConfig): Promise<unknown>;
 		setButton?(id: number, cfg: ButtonConfig): Promise<unknown>;
 		placeButton?(id: number, row: number, col: number, offX: number, offY: number, width: number, height: number): Promise<unknown>;
@@ -4272,8 +4276,8 @@
 		schedule();
 	}
 
-	/** Insertion › Bouton, Case à cocher, Liste déroulante : contrôle à la cellule active. */
-	export function insertButton(kind: '' | 'checkbox' | 'select' = '') {
+	/** Insertion › Contrôles (bouton, case, liste, zone de saisie, sélecteur de fichier) : contrôle à la cellule active. */
+	export function insertButton(kind: ControlKind = '') {
 		if (!source.createButton) return;
 		buttonsLayer?.openEditor(undefined, kind);
 	}
@@ -4282,8 +4286,18 @@
 
 	function runButton(b: SheetButton) {
 		if (!source.runButton) return;
-		say(`« ${b.config.label} » : exécution…`);
+		say(`« ${b.config.name || b.config.label} » : exécution…`);
 		source.runButton(b.id).then(
+			(msg) => say(typeof msg === 'string' ? msg : ''),
+			(err) => say(String(err?.message ?? err))
+		);
+	}
+
+	/** Évènement d'un contrôle de la feuille : son action et les écouteurs des scripts. */
+	function fireControl(b: SheetButton, event: 'click' | 'change', value: string, old: string) {
+		if (!source.fireControl) return runButton(b);
+		say(`« ${b.config.name || b.config.label} » : exécution…`);
+		source.fireControl(b.id, event, value, old).then(
 			(msg) => say(typeof msg === 'string' ? msg : ''),
 			(err) => say(String(err?.message ?? err))
 		);
@@ -7004,6 +7018,8 @@
 					active={() => active}
 					scripts={() => source.scripts?.() ?? Promise.resolve([])}
 					onrun={runButton}
+					onfire={fireControl}
+					pickFile={source.pickFile}
 					oncreate={source.createButton}
 					onset={source.setButton}
 					onplace={source.placeButton}

@@ -8,15 +8,30 @@ import * as grid$0 from "../grid/models.js";
 /**
  * ButtonConfig est un contrôle posé sur une feuille, comme les contrôles de
  * formulaire d'Excel : un bouton (un clic exécute un script de la
- * bibliothèque, ou l'une de ses fonctions, ou rien), une case à cocher ou
- * une liste déroulante (leur valeur est écrite dans la cellule liée, puis
+ * bibliothèque, ou l'une de ses fonctions, ou rien), une case à cocher, une
+ * liste déroulante, une zone de saisie (une ligne ou plusieurs) ou un
+ * sélecteur de fichier (leur valeur est écrite dans la cellule liée, puis
  * l'action éventuelle s'exécute).
  */
 export interface ButtonConfig {
     /**
-     * Kind : "" (bouton), "checkbox" ou "select".
+     * Name : nom unique dans le classeur (« Bouton1 », « Liste2 »…), par
+     * lequel les scripts désignent le contrôle ; vide à la création : choisi
+     * automatiquement.
+     */
+    "name"?: string;
+
+    /**
+     * Kind : "" (bouton), "checkbox", "select", "input" (texte sur une
+     * ligne), "textarea" (texte sur plusieurs lignes) ou "file" (chemin d'un
+     * fichier choisi).
      */
     "kind"?: string;
+
+    /**
+     * Label : texte d'un bouton ou d'une case ; texte indicatif d'une zone de
+     * saisie ; texte du bouton d'un sélecteur de fichier.
+     */
     "label": string;
 
     /**
@@ -51,6 +66,17 @@ export interface ButtonConfig {
     "function"?: string;
 
     /**
+     * Listeners : fonctions de scripts appelées quand un évènement se
+     * produit sur le contrôle (controls.on), après l'action ci-dessus.
+     */
+    "listeners"?: Listener[] | null;
+
+    /**
+     * Hidden : contrôle masqué (un script peut le réafficher).
+     */
+    "hidden"?: boolean;
+
+    /**
      * Présentation, comme un graphique : décalage (px) dans la cellule
      * d'ancrage et taille (px).
      */
@@ -73,6 +99,7 @@ export interface ButtonConfig {
  */
 export interface ButtonInfo {
     "id": number;
+    "sheet"?: number;
     "row": number;
     "col": number;
     "config": ButtonConfig;
@@ -457,6 +484,17 @@ export interface LineRules {
 export interface LineStyle {
     "index": number;
     "style": string;
+}
+
+/**
+ * Listener est un abonnement à un évènement d'un contrôle : la fonction
+ * globale Function du script Script de la bibliothèque est appelée avec
+ * une table décrivant l'évènement.
+ */
+export interface Listener {
+    "event": string;
+    "script": string;
+    "function": string;
 }
 
 /**
