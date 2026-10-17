@@ -206,7 +206,10 @@
 		const box = el.closest('.cf-menu')!.getBoundingClientRect();
 		screen.sub = name;
 		screen.subY = el.getBoundingClientRect().top - box.top;
+		// Pas la place à droite (menu près du bord de la fenêtre) : sous-menu à gauche.
+		subLeft = box.right + 320 > window.innerWidth;
 	}
+	let subLeft = $state(false);
 
 	// --- Éditeur de règle ---------------------------------------------------------
 
@@ -713,7 +716,7 @@
 		{#if error}<p class="note error">{error}</p>{/if}
 
 		{#if m.sub}
-			<div class="cf-sub" style:top="{m.subY}px">
+			<div class="cf-sub" class:left={subLeft} style:top="{m.subY}px">
 				{#if m.sub === 'hl'}
 					<button onclick={() => quick('gt')}>Supérieur à…</button>
 					<button onclick={() => quick('lt')}>Inférieur à…</button>
@@ -1198,6 +1201,12 @@
 		margin-left: 2px;
 		padding: 4px 0;
 		min-width: 230px;
+	}
+	.cf-sub.left {
+		left: auto;
+		right: 100%;
+		margin-left: 0;
+		margin-right: 2px;
 	}
 	.cf-menu hr,
 	.cf-sub hr {
