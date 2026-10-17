@@ -9,7 +9,10 @@ export type {
     Column,
     Info,
     InvalidCell,
+    Mark,
     QueryResult,
+    RuleStats,
+    RuleStatsReq,
     Stats,
     Window
 } from "./models.js";

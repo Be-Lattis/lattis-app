@@ -717,6 +717,15 @@ export function Replace(sheet: number, text: string, by: string): $CancellablePr
 }
 
 /**
+ * RuleStats donne les statistiques de colonnes d'un tableau pour la mise
+ * en forme conditionnelle (10 premiers, moyenne, doublons, barres de
+ * données, nuances, icônes), calculées en SQL et gardées en cache.
+ */
+export function RuleStats(sheet: number, table: number, cols: number[] | null, req: grid$0.RuleStatsReq): $CancellablePromise<grid$0.RuleStats> {
+    return $Call.ByID(3323305035, sheet, table, cols, req);
+}
+
+/**
  * RunButton exécute l'action d'un bouton (clic dans la grille).
  */
 export function RunButton(id: number): $CancellablePromise<$models.ScriptResult> {
@@ -936,6 +945,15 @@ export function SetSheetColor(sheet: number, color: string): $CancellablePromise
  */
 export function SetSheetHidden(sheet: number, hidden: boolean): $CancellablePromise<$models.DocState> {
     return $Call.ByID(3324943109, sheet, hidden);
+}
+
+/**
+ * SetSheetRules applique des changements de mise en forme conditionnelle à
+ * une feuille (colonnes de tableaux, lignes ou colonnes entières, cellules
+ * libres) en une seule étape d'annulation.
+ */
+export function SetSheetRules(sheet: number, ch: canvas$0.RuleChanges): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3011496092, sheet, ch);
 }
 
 /**

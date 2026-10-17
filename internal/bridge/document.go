@@ -313,6 +313,17 @@ func (s *DocumentService) RangeStats(ctx context.Context, sheet, table int64, fi
 	return t.Stats(ctx, first, count, cols)
 }
 
+// RuleStats donne les statistiques de colonnes d'un tableau pour la mise
+// en forme conditionnelle (10 premiers, moyenne, doublons, barres de
+// données, nuances, icônes), calculées en SQL et gardées en cache.
+func (s *DocumentService) RuleStats(ctx context.Context, sheet, table int64, cols []int, req grid.RuleStatsReq) (grid.RuleStats, error) {
+	t, err := s.gridTable(ctx, sheet, table)
+	if err != nil {
+		return grid.RuleStats{}, err
+	}
+	return t.RuleStats(ctx, cols, req)
+}
+
 // SetCell traite une saisie validée dans une cellule de la feuille.
 func (s *DocumentService) SetCell(ctx context.Context, sheet int64, row, col int, raw string) (canvas.Event, error) {
 	d, err := s.current()
@@ -846,6 +857,13 @@ func (s *DocumentService) Dependencies(ctx context.Context, sheet int64, row, co
 // formule, les lettres de colonnes et numéros de lignes de la feuille.
 func (s *DocumentService) SetHeadings(ctx context.Context, sheet int64, show bool) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.SetHeadings(ctx, sheet, show) })
+}
+
+// SetSheetRules applique des changements de mise en forme conditionnelle à
+// une feuille (colonnes de tableaux, lignes ou colonnes entières, cellules
+// libres) en une seule étape d'annulation.
+func (s *DocumentService) SetSheetRules(ctx context.Context, sheet int64, ch canvas.RuleChanges) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetSheetRules(ctx, sheet, ch) })
 }
 
 // SetLineRules fixe la mise en forme conditionnelle de lignes (rows) ou de

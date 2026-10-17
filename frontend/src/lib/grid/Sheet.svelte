@@ -50,7 +50,10 @@
 	import PivotPanel from './PivotPanel.svelte';
 	import SheetButtons from './SheetButtons.svelte';
 	import type { ButtonConfig, SheetButton } from './buttons';
-	import { describeRule, parseRules, ruleStyle, RULE_OPS, RULE_STYLES, type Rule, type RuleOp } from './rules';
+	import { applyRules, computeStats, mergeStats, parseRules, prepareStats, reqKey, statsReq, todaySerial, type CfOut, type Rule, type RuleEnv, type RuleStats, type Stats, type StatsReq } from './rules';
+	import { formatLocs, groupKey, rectLocs, type Loc, type RuleChanges, type SheetRules } from './cfmodel';
+	import { ICON_SETS, drawCfIcon } from './cficons';
+	import CondFormat, { type CondHost, type CondView } from './CondFormat.svelte';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { drawIcon } from '#lib/icons/canvas.js';
 	import { apply as applySuggestion, argKindAt, signature, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
@@ -211,6 +214,8 @@
 		/** Mise en forme conditionnelle des lignes et colonnes entières (JSON). */
 		rowRules?: { index: number; rules: string }[];
 		colRules?: { index: number; rules: string }[];
+		/** Règles « formule » vérifiées par les cellules libres (rule : identifiant de la règle). */
+		ruleMarks?: { row: number; col: number; rule: string }[] | null;
 		/** Tableaux croisés dynamiques de la feuille, calculés. */
 		pivots?: SheetPivot[];
 		/** Graphiques de la feuille, avec leurs données. */
@@ -246,6 +251,10 @@
 		sheetLines?(op: LinesOp, a: number, b: number): Promise<unknown>;
 		/** Mise en forme conditionnelle de lignes (rows) ou colonnes entières i0 à i1. */
 		setLineRules?(rows: boolean, i0: number, i1: number, rules: Rule[]): Promise<unknown>;
+		/** Changements de mise en forme conditionnelle de la feuille, en une étape d'annulation. */
+		setSheetRules?(ch: RuleChanges): Promise<unknown>;
+		/** Statistiques de colonnes d'un tableau pour la mise en forme conditionnelle (calculées en SQL). */
+		ruleStats?(table: SheetTable, cols: number[], req: StatsReq): Promise<RuleStats>;
 		/** Déplace les cellules libres d'une plage (glisser la bordure de la sélection). */
 		moveCells?(r0: number, c0: number, r1: number, c1: number, dr: number, dc: number): Promise<unknown>;
 		/** Vide entièrement les cellules libres d'une plage : valeurs, mise en forme, fusions, notes, validations. */
@@ -476,14 +485,186 @@
 	let freeStyles = new Map<string, StyleLayer>(); // position → style (hors tableaux : cellules libres, TCD)
 	let sheetRowStyles = new Map<number, StyleLayer>();
 	let sheetColStyles = new Map<number, StyleLayer>();
-	// Mise en forme conditionnelle des lignes et colonnes entières.
+	// Mise en forme conditionnelle (voir rules.ts, cfmodel.ts) : règles des
+	// lignes et colonnes entières, des cellules libres (dans leur style) et
+	// des colonnes de tableau (colRules, plus bas).
 	let sheetRowRules = new Map<number, Rule[]>();
 	let sheetColRules = new Map<number, Rule[]>();
+	let cellRules = new Map<string, Rule[]>();
+	// Règles « formule » vraies des cellules libres : « ligne,colonne,règle ».
+	let freeMarks = new Set<string>();
+	// Statistiques des règles (10 premiers, moyenne, doublons, barres…) par
+	// règle et demande : recalculées après chaque modification, les
+	// précédentes servent en attendant (pas de clignotement).
+	let cfStats = new Map<string, Stats | null>();
+	let cfStale = new Map<string, Stats | null>();
+	let cfGen = 0;
+	let cfToday = todaySerial();
 
-	/** Style des règles de la ligne ou de la colonne entière d'une cellule (colonne d'abord, comme pour la mise en forme). */
+	/** Statistiques en cache, ou calculées (une promesse : demandées au classeur, redessin à l'arrivée). */
+	function cfStat(k: string, compute: () => Stats | undefined | Promise<Stats | undefined>): Stats | undefined {
+		if (cfStats.has(k)) return cfStats.get(k) ?? cfStale.get(k) ?? undefined;
+		const got = compute();
+		if (!(got instanceof Promise)) {
+			cfStats.set(k, got ?? null);
+			return got;
+		}
+		const gen = cfGen;
+		cfStats.set(k, null);
+		got.then((s) => {
+			if (gen !== cfGen) return;
+			cfStats.set(k, s ?? null);
+			schedule();
+		}).catch(() => {});
+		return cfStale.get(k) ?? undefined;
+	}
+
+	/** Valeur d'une cellule libre pour les règles (undefined : vide). */
+	function freeValue(r: number, c: number): { v: unknown; text: string; error: boolean } | undefined {
+		const k = key(r, c);
+		const f = shown.get(k);
+		const raw = cells.get(k);
+		if (f === undefined && raw === undefined) return undefined;
+		const text = f ? f.text : freeDisplay(raw!, undefined).text;
+		return { v: ruleValue(text), text, error: !!f?.error };
+	}
+
+	/**
+	 * Statistiques de la plage d'une règle (clé gk, voir groupKey) : ses
+	 * cellules libres, celles de ses lignes et colonnes entières, et ses
+	 * colonnes de tableau (ou celles sous ses colonnes entières), en SQL.
+	 */
+	function rangeStats(gk: string, q: StatsReq): Stats | undefined {
+		return cfStat(gk + '|' + reqKey(q), () => {
+			const rows = new Set<number>();
+			const cols = new Set<number>();
+			for (const [i, rs] of sheetRowRules) if (rs.some((x) => groupKey(x, { k: 'row', i }) === gk)) rows.add(i);
+			for (const [i, rs] of sheetColRules) if (rs.some((x) => groupKey(x, { k: 'col', i }) === gk)) cols.add(i);
+			const values: unknown[] = [];
+			const seen = new Set<string>();
+			const add = (r: number, c: number) => {
+				const k = key(r, c);
+				if (seen.has(k) || tableAt(r, c)) return;
+				seen.add(k);
+				const fv = freeValue(r, c);
+				if (fv && !fv.error) values.push(fv.v);
+			};
+			for (const [k, rs] of cellRules)
+				if (rs.some((x) => groupKey(x, { k: 'cell', r: 0, c: 0 }) === gk)) {
+					const [r, c] = k.split(',').map(Number);
+					add(r, c);
+				}
+			if (rows.size || cols.size)
+				for (const k of cells.keys()) {
+					const [r, c] = k.split(',').map(Number);
+					if (rows.has(r) || cols.has(c)) add(r, c);
+				}
+			const free = values.length ? computeStats(values, q) : undefined;
+			const parts: Promise<Stats>[] = [];
+			for (const e of entries) {
+				const tr = colRules.get(e.t.id);
+				const ci = e.t.columns.flatMap((_, i) => (tr?.[i]?.some((x) => groupKey(x, { k: 'tbl', t: e.t.id, c: i }) === gk) || cols.has(e.t.col + i) ? [i] : []));
+				if (ci.length && source.ruleStats && e.t.rows > 0) parts.push(source.ruleStats(e.t, ci, q).then((s) => prepareStats(s, q)));
+			}
+			if (!parts.length) return free;
+			return Promise.all(parts).then((list) => list.reduce<Stats | undefined>((a, b) => mergeStats(a, b), free));
+		});
+	}
+
+	/** Contexte d'évaluation des règles d'un emplacement. */
+	function cfEnv(loc: Loc, mark: (r: Rule, k: number) => boolean): RuleEnv {
+		return {
+			stats: (r) => {
+				const q = statsReq(r);
+				return q ? rangeStats(groupKey(r, loc), q) : undefined;
+			},
+			mark,
+			today: cfToday
+		};
+	}
+
+	const noMark = () => false;
+	/** Règle « formule » d'une cellule libre vérifiée (calculée par le classeur). */
+	const freeMark = (row: number, col: number) => (r: Rule) => freeMarks.has(`${row},${col},${r.id ?? r.value}`);
+
+	/**
+	 * Mise en forme conditionnelle d'une cellule : ses propres règles (colonne
+	 * de tableau ou cellule libre), puis celles de sa ligne et de sa colonne
+	 * entières (la ligne l'emporte, comme pour la mise en forme).
+	 */
+	function cfAt(
+		r: number,
+		c: number,
+		val: { v: unknown; text: string; error: boolean },
+		own?: { rules: Rule[] | undefined; loc: Loc; mark: (r: Rule, k: number) => boolean }
+	): CfOut | undefined {
+		const rr = sheetRowRules.get(r);
+		const cr = sheetColRules.get(c);
+		if (!own?.rules && !rr && !cr) return undefined;
+		const out: CfOut = {};
+		if (own?.rules) applyRules(own.rules, val, cfEnv(own.loc, own.mark), out);
+		const fm = rr || cr ? freeMark(r, c) : noMark;
+		if (rr) applyRules(rr, val, cfEnv({ k: 'row', i: r }, fm), out);
+		if (cr) applyRules(cr, val, cfEnv({ k: 'col', i: c }, fm), out);
+		return out;
+	}
+
+	/** Mise en forme conditionnelle d'une cellule libre (vide comprise). */
+	function freeCf(r: number, c: number): CfOut | undefined {
+		const k = key(r, c);
+		const own = cellRules.get(k);
+		if (!own && !sheetRowRules.size && !sheetColRules.size) return undefined;
+		return cfAt(r, c, freeValue(r, c) ?? { v: null, text: '', error: false }, own ? { rules: own, loc: { k: 'cell', r, c }, mark: freeMark(r, c) } : undefined);
+	}
+
+	/** Style des règles de la ligne ou de la colonne entière d'une cellule (tableaux croisés). */
 	function lineRule(r: number, c: number, v: unknown, text: string, bad = false): CellStyle | undefined {
 		if (!sheetRowRules.size && !sheetColRules.size) return undefined;
-		return resolveStyle(ruleStyle(sheetColRules.get(c), v, text, bad), ruleStyle(sheetRowRules.get(r), v, text, bad));
+		return cfAt(r, c, { v, text, error: bad })?.style;
+	}
+
+	/** Barre de données dans la cellule (x, y, w, h). */
+	function drawBar(b: NonNullable<CfOut['bar']>, x: number, y: number, w: number, h: number) {
+		const pad = 2;
+		const span = Math.max(0, w - 2 * pad);
+		const x0 = x + pad + b.a * span;
+		const x1 = x + pad + b.b * span;
+		const by = y + 2;
+		const bh = Math.max(2, h - 4);
+		if (x1 - x0 >= 0.5) {
+			if (b.gradient) {
+				const g = b.rev ? ctx.createLinearGradient(x1, 0, x0, 0) : ctx.createLinearGradient(x0, 0, x1, 0);
+				g.addColorStop(0, b.color);
+				g.addColorStop(1, '#ffffff');
+				ctx.fillStyle = g;
+			} else ctx.fillStyle = b.color;
+			ctx.fillRect(x0, by, x1 - x0, bh);
+			if (b.border || b.gradient) {
+				ctx.strokeStyle = b.color;
+				ctx.lineWidth = 1;
+				ctx.strokeRect(Math.round(x0) + 0.5, by + 0.5, Math.max(0, Math.round(x1 - x0) - 1), bh - 1);
+			}
+		}
+		if (b.axis !== undefined) {
+			const ax = Math.round(x + pad + b.axis * span) + 0.5;
+			ctx.save();
+			ctx.strokeStyle = '#000';
+			ctx.setLineDash([2, 2]);
+			ctx.beginPath();
+			ctx.moveTo(ax, y + 1);
+			ctx.lineTo(ax, y + h - 1);
+			ctx.stroke();
+			ctx.restore();
+		}
+	}
+
+	/** Icône d'un jeu d'icônes à gauche de la cellule ; renvoie la place prise. */
+	function drawIconAt(icon: NonNullable<CfOut['icon']>, x: number, y: number, h: number): number {
+		const spec = ICON_SETS[icon.set]?.icons[icon.index];
+		if (!spec) return 0;
+		const s = Math.min(16, h - 4);
+		drawCfIcon(ctx, spec, x + 3, y + (h - s) / 2, s);
+		return s + 4;
 	}
 
 	/** Valeur d'un texte affiché pour les règles : nombre si c'en est un. */
@@ -573,7 +754,21 @@
 		userWidths = new Map((d.widths ?? []).map((w) => [w.col, w.width]));
 		userHeights = new Map((d.heights ?? []).map((h) => [h.row, h.height]));
 		names = new Map((d.names ?? []).map((n) => [key(n.row, n.col), n.name]));
-		freeStyles = new Map((d.styles ?? []).map((s) => [key(s.row, s.col), parseStyle(s.style) ?? {}]));
+		// Règles des cellules libres : dans leur style (propriété cf), mises à part.
+		cellRules = new Map();
+		freeStyles = new Map(
+			(d.styles ?? []).map((s) => {
+				const l = (parseStyle(s.style) ?? {}) as StyleLayer & { cf?: Rule[] };
+				if (Array.isArray(l.cf) && l.cf.length) cellRules.set(key(s.row, s.col), l.cf.map((r) => ({ ...r, style: r.style ?? {} })));
+				delete l.cf;
+				return [key(s.row, s.col), l];
+			})
+		);
+		freeMarks = new Set((d.ruleMarks ?? []).map((m) => `${m.row},${m.col},${m.rule}`));
+		for (const [k, v] of cfStats) if (v) cfStale.set(k, v);
+		cfStats = new Map();
+		cfGen++;
+		cfToday = todaySerial();
 		sheetRowStyles = new Map((d.rowStyles ?? []).map((s) => [s.index, parseStyle(s.style) ?? {}]));
 		sheetColStyles = new Map((d.colStyles ?? []).map((s) => [s.index, parseStyle(s.style) ?? {}]));
 		merges = mergeList(freeStyles);
@@ -1378,15 +1573,21 @@
 					}
 					const v = row.cells[i];
 					const bad = row.bad?.has(i) || (col.type === 'formula' && isErrorValue(v));
-					const cs = resolveStyle(styleAt(r, c, e), lineRule(r, c, v, row.text[i] ?? '', !!bad), ruleStyle(colRules.get(e.t.id)?.[i], v, row.text[i] ?? '', !!bad));
+					const own = colRules.get(e.t.id)?.[i];
+					const cf = cfAt(r, c, { v, text: row.text[i] ?? '', error: !!bad }, own ? { rules: own, loc: { k: 'tbl', t: e.t.id, c: i }, mark: (_, k) => !!row.marks?.has(i * 1000 + k) } : undefined);
+					const cs = resolveStyle(styleAt(r, c, e), cf?.style);
 					if (cs?.bg) {
 						ctx.fillStyle = cs.bg;
 						ctx.fillRect(x, y, cw, rh(r));
 					}
+					if (cf?.bar) drawBar(cf.bar, x, y, cw, rh(r));
 					if (cs) borders(cs, x, y, cw, rh(r));
 					if (cs?.nt) noteCorner(x + cw, y, cs);
 					let s = row.text[i];
 					if (!s) continue;
+					// Jeu d'icônes : à gauche de la cellule ; barre ou icône seule : valeur masquée.
+					const iconW = cf?.icon && !row.bad?.has(i) ? drawIconAt(cf.icon, x, y, rh(r)) : 0;
+					if (cf?.hide && !row.bad?.has(i)) continue;
 					if (cs && !row.bad?.has(i)) s = formatCell(s, row.cells[i], cs);
 					if (row.bad?.has(i)) {
 						// Saisie hors type : valeur brute en rouge, coin rouge comme le
@@ -1404,7 +1605,7 @@
 						continue;
 					}
 					const align = cs?.al ?? (col.type === 'formula' ? valueAlignment(v) : alignment(col.type));
-					drawText(s, x, y, cw, align, cs, col.type === 'formula' && isErrorValue(v) ? C.error : C.text);
+					drawText(s, x + iconW, y, cw - iconW, align, cs, col.type === 'formula' && isErrorValue(v) ? C.error : C.text);
 					if (col.type === 'formula' && isErrorValue(v)) errorCorner(x, y);
 				}
 				ctx.restore();
@@ -1415,14 +1616,24 @@
 		// vides des lignes et colonnes mises en forme) : remplissage et bordures.
 		ctx.font = FONT;
 		ctx.fillStyle = C.text;
+		// Mise en forme conditionnelle des cellules libres, calculée une fois par dessin.
+		const frameCf = new Map<string, CfOut | undefined>();
+		const cfOf = (r: number, c: number) => {
+			const k = key(r, c);
+			if (!frameCf.has(k)) frameCf.set(k, freeCf(r, c));
+			return frameCf.get(k);
+		};
 		const paint = (r: number, c: number) => {
 			if (tableAt(r, c) || !rh(r) || !colAxis.size(c) || mergeOf(r, c)) return;
-			const fs = resolveStyle(styleAt(r, c, undefined), freeRule(r, c));
-			if (!fs) return;
-			if (fs.bg) {
+			const cf = cfOf(r, c);
+			const fs = resolveStyle(styleAt(r, c, undefined), cf?.style);
+			if (!fs && !cf?.bar) return;
+			if (fs?.bg) {
 				ctx.fillStyle = fs.bg;
 				ctx.fillRect(cx(c), ry(r), colAxis.size(c), rh(r));
 			}
+			if (cf?.bar) drawBar(cf.bar, cx(c), ry(r), colAxis.size(c), rh(r));
+			if (!fs) return;
 			borders(fs, cx(c), ry(r), colAxis.size(c), rh(r));
 			if (fs.nt) noteCorner(cx(c + 1), ry(r), fs);
 		};
@@ -1520,11 +1731,19 @@
 			// Cellule en cours d'édition : l'éditeur montre sa saisie ; sa valeur,
 			// qui peut déborder plus loin que lui, ne se dessine pas dessous.
 			if (editing && r === active.row && c === active.col) continue;
-			const fstyle = resolveStyle(styleAt(r, c, undefined), freeRule(r, c));
-			const x = cx(c);
-			const cw = colAxis.size(c);
+			const cf = cfOf(r, c);
+			const fstyle = resolveStyle(styleAt(r, c, undefined), cf?.style);
+			let x = cx(c);
+			let cw = colAxis.size(c);
 			const f = shown.get(k);
 			if (f?.error) errorCorner(x, ry(r));
+			// Jeu d'icônes à gauche ; barre ou icône seule : valeur masquée.
+			if (cf?.icon) {
+				const iw = drawIconAt(cf.icon, x, ry(r), rh(r));
+				x += iw;
+				cw -= iw;
+			}
+			if (cf?.hide) continue;
 			// Nombres, dates et heures à droite, booléens centrés, apostrophe de tête masquée ;
 			// format de la cellule (nombre, date, heure, texte : numfmt.ts).
 			const fd = freeDisplay(rawText, f?.text);
@@ -1927,7 +2146,7 @@
 			const gc1 = g.col + g.cols - 1;
 			if (gr1 < r0 || g.row > r1 || gc1 < c0 || g.col > c1) continue;
 			const k = key(g.row, g.col);
-			const st = resolveStyle(styleAt(g.row, g.col, undefined), freeRule(g.row, g.col));
+			const st = resolveStyle(styleAt(g.row, g.col, undefined), freeCf(g.row, g.col)?.style);
 			const x = cx(g.col);
 			const y = ry(g.row);
 			const gw = spanW(g.col, gc1);
@@ -3143,100 +3362,72 @@
 	}
 
 	// --- Mise en forme conditionnelle -----------------------------------------
+	// Menu du ruban, petites boîtes, nouvelle règle et gestionnaire des règles :
+	// CondFormat.svelte ; la feuille lui donne ses règles et sa sélection.
 
-	let rulesRev = $state(0); // relit les règles après enregistrement
-	// e/i : colonne d'un tableau ; line : lignes ou colonnes entières de la feuille.
-	let rulesDlg = $state<{ e?: Entry; i: number; line?: { rows: boolean; i0: number; i1: number }; x: number; y: number; op: RuleOp; value: string; to: string; style: number; error: string } | null>(null);
+	let cfView = $state<CondView | null>(null);
 
-	/** Règles d'une cellule libre (ou de TCD), d'après sa valeur affichée. */
-	function freeRule(r: number, c: number): CellStyle | undefined {
-		if (!sheetRowRules.size && !sheetColRules.size) return undefined;
-		const k = key(r, c);
-		const f = shown.get(k);
-		const text = f ? f.text : cells.get(k);
-		if (text === undefined) return undefined;
-		return lineRule(r, c, ruleValue(text), text, !!f?.error);
+	/** Règles de la feuille, par emplacement (gestionnaire). */
+	function sheetRules(): SheetRules {
+		return {
+			tables: entries.map((e) => ({ id: e.t.id, name: e.t.name, row: e.t.row, col: e.t.col, rows: e.t.rows, columns: e.t.columns.map((c) => c.name), rules: colRules.get(e.t.id) ?? [] })),
+			rows: sheetRowRules,
+			cols: sheetColRules,
+			cells: cellRules
+		};
 	}
 
-	/** Ouvre le dialogue des règles des lignes ou colonnes entières sélectionnées. */
-	function openLineRules(rows: boolean) {
+	/** Emplacements des règles de la sélection : lignes ou colonnes entières, colonnes de tableau, cellules libres. */
+	function selectionLocs(): Loc[] | string {
 		const { r0, r1, c0, c1 } = selection();
-		closeMenus();
-		const x = toView(rows ? MARGIN + 8 : Math.max(MARGIN, screenX(c0)));
-		const y = toView(rows ? screenY(r1) + rh(r1) + 4 : TOP_H + 4);
-		rulesDlg = { i: rows ? r0 : c0, line: { rows, i0: rows ? r0 : c0, i1: rows ? r1 : c1 }, x, y, op: '>', value: '', to: '', style: 0, error: '' };
+		const lines = selectionLines();
+		if (lines.rows) return Array.from({ length: r1 - r0 + 1 }, (_, k) => ({ k: 'row' as const, i: r0 + k }));
+		if (lines.cols) return Array.from({ length: c1 - c0 + 1 }, (_, k) => ({ k: 'col' as const, i: c0 + k }));
+		return rectLocs(r0, c0, r1, c1, sheetRules().tables);
 	}
 
-	/** Ouvre le dialogue des règles de la colonne i du tableau e. */
-	function openRules(e: Entry, i: number) {
+	const cfHost: CondHost = {
+		sheetRules,
+		selectionLocs,
+		selection: () => selection(),
+		activeTable: () => {
+			const e = tableAt(active.row, active.col);
+			return e ? sheetRules().tables.find((t) => t.id === e.t.id) : undefined;
+		},
+		async apply(ch: RuleChanges) {
+			if (!source.setSheetRules) throw new Error('Mise en forme conditionnelle indisponible');
+			await source.setSheetRules(ch);
+		}
+	};
+
+	/** Menu « Mise en forme conditionnelle » du ruban, sous son bouton (coordonnées de la fenêtre). */
+	export function rulesMenu(x: number, y: number) {
+		if (!source.setSheetRules) return;
 		closeMenus();
-		rulesDlg = { e, i, ...anchorUnder(e, i, 470), op: '>', value: '', to: '', style: 0, error: '' };
+		cfView = { kind: 'menu', x, y };
 	}
 
-	/** Règles de la colonne de la cellule active (ruban Accueil). */
+	/** Gestionnaire des règles de la sélection. */
 	export function rulesActive() {
-		const sel = selectionLines();
-		if ((sel.rows || sel.cols) && source.setLineRules) {
-			openLineRules(sel.rows);
-			return;
-		}
-		const e = tableAt(active.row, active.col);
-		if (!e || !source.setRules) {
-			say('Placez la cellule active dans la colonne d’un tableau');
-			return;
-		}
-		openRules(e, active.col - e.t.col);
+		if (!source.setSheetRules) return;
+		closeMenus();
+		cfView = { kind: 'manager' };
 	}
 
-	async function saveRules(rules: Rule[]) {
-		const d = rulesDlg;
-		if (!d) return;
-		try {
-			if (d.line) {
-				if (!source.setLineRules) return;
-				await source.setLineRules(d.line.rows, d.line.i0, d.line.i1, rules);
-			} else {
-				if (!source.setRules || !d.e) return;
-				await source.setRules(d.e.t, d.i, rules);
-			}
-			rulesRev++;
-			d.error = '';
-		} catch (err) {
-			d.error = String(err instanceof Error ? err.message : err);
-		}
+	/** Gestionnaire des règles d'une colonne de tableau (menu ▾ de la colonne). */
+	function openRules(e: Entry, i: number) {
+		selectRange(e.t.row + 1, e.t.col + i, Math.max(e.t.row + 1, e.last), e.t.col + i);
+		rulesActive();
 	}
 
-	// rev : dépendance réactive (le tableau est relu après chaque enregistrement).
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	function currentRules(rev = 0): Rule[] {
-		const d = rulesDlg;
-		if (!d) return [];
-		if (d.line) return (d.line.rows ? sheetRowRules : sheetColRules).get(d.line.i0) ?? [];
-		if (!d.e) return [];
-		// Le tableau a pu être rechargé : relire ses colonnes par identifiant.
-		const e = d.e;
-		const t = entries.find((x) => x.t.id === e.t.id)?.t ?? e.t;
-		return parseRules(t.columns[d.i]?.rules) ?? [];
-	}
-
-	function addRule() {
-		const d = rulesDlg;
-		if (!d) return;
-		const args = RULE_OPS.find((o) => o.op === d.op)?.args ?? 0;
-		if (args > 0 && d.value.trim() === '') {
-			d.error = 'Indiquez une valeur';
-			return;
-		}
-		const r: Rule = { op: d.op, style: RULE_STYLES[d.style].style };
-		if (args > 0) r.value = d.value.trim();
-		if (args > 1) r.to = d.to.trim();
-		saveRules([...currentRules(), r]);
-		d.value = '';
-		d.to = '';
+	/** « S'applique à » de la sélection (titre des boîtes). */
+	export function rulesTarget(): string {
+		const l = selectionLocs();
+		return typeof l === 'string' ? '' : formatLocs(l, sheetRules().tables);
 	}
 
 	function closeRules() {
-		rulesDlg = null;
+		cfView = null;
 		wrap.focus();
 	}
 
@@ -3691,7 +3882,7 @@
 
 	/** Un menu, panneau ou boîte de la grille est-il ouvert ? */
 	function menusOpen(): boolean {
-		return !!(filterDlg || rulesDlg || dedupDlg || fnDlg || menu || freeMenu || chartMenu || linesDlg || formatDlg || validDlg || noteDlg || listMenu || sizeDlg);
+		return !!(filterDlg || cfView || dedupDlg || fnDlg || menu || freeMenu || chartMenu || linesDlg || formatDlg || validDlg || noteDlg || listMenu || sizeDlg);
 	}
 
 	/**
@@ -3701,7 +3892,7 @@
 	 */
 	function closeMenus() {
 		menu = freeMenu = chartMenu = listMenu = null;
-		filterDlg = rulesDlg = dedupDlg = fnDlg = linesDlg = pivotDlg = null;
+		filterDlg = cfView = dedupDlg = fnDlg = linesDlg = pivotDlg = null;
 		formatDlg = validDlg = noteDlg = sizeDlg = null;
 		noteTip = null;
 	}
@@ -6231,7 +6422,7 @@
 			<button onclick={() => sheetLines('insertRows')}>Insérer {r1 > r0 ? `${r1 - r0 + 1} lignes` : 'une ligne'}</button>
 			<button onclick={() => sheetLines('deleteRows')}>Supprimer {r1 > r0 ? 'les lignes' : 'la ligne'}</button>
 			{#if source.applyStyle}<button onclick={() => openFormat()}>Format de cellule…</button>{/if}
-			{#if source.setLineRules}<button onclick={() => openLineRules(true)}>Mise en forme conditionnelle…</button>{/if}
+			{#if source.setSheetRules}<button onclick={rulesActive}>Mise en forme conditionnelle…</button>{/if}
 			{#if source.setRowHeight}<button onclick={() => openSize(true, x, y)}>Hauteur de ligne…</button><button onclick={autoFitRows} title="Hauteur d’après le contenu (double-clic sur le bord du numéro de ligne)">Ajuster la hauteur de ligne</button>{/if}
 			{#if source.setLinesHidden}
 				<button onclick={() => setHidden(true, true)}>Masquer</button>
@@ -6241,7 +6432,7 @@
 			<button onclick={() => sheetLines('insertCols')}>Insérer {c1 > c0 ? `${c1 - c0 + 1} colonnes` : 'une colonne'}</button>
 			<button onclick={() => sheetLines('deleteCols')}>Supprimer {c1 > c0 ? 'les colonnes' : 'la colonne'}</button>
 			{#if source.applyStyle}<button onclick={() => openFormat()}>Format de cellule…</button>{/if}
-			{#if source.setLineRules}<button onclick={() => openLineRules(false)}>Mise en forme conditionnelle…</button>{/if}
+			{#if source.setSheetRules}<button onclick={rulesActive}>Mise en forme conditionnelle…</button>{/if}
 			{#if source.setColumnWidth}<button onclick={() => openSize(false, x, y)}>Largeur de colonne…</button><button onclick={autoFitCols} title="Largeur d’après le contenu affiché (double-clic sur le bord de l’en-tête)">Ajuster la largeur de colonne</button>{/if}
 			{#if source.setLinesHidden}
 				<button onclick={() => setHidden(false, true)}>Masquer</button>
@@ -6583,7 +6774,7 @@
 						<hr />
 						<button onclick={() => openFormat()}>Format de cellule… <span class="keys">Ctrl+1</span></button>
 					{/if}
-					{#if cols && source.setRules}
+					{#if cols && source.setSheetRules}
 						{#if !source.applyStyle}<hr />{/if}
 						<button onclick={() => openRules(m.e, m.i)}>Mise en forme conditionnelle…</button>
 					{/if}
@@ -7084,54 +7275,10 @@
 				{/if}
 			</div>
 		{/if}
-		{#if rulesDlg}
-			{@const d = rulesDlg}
-			{@const rules = currentRules(rulesRev)}
-			{@const args = RULE_OPS.find((o) => o.op === d.op)?.args ?? 0}
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div
-				class="rules anchored"
-				style:left="{d.x}px"
-				style:top="{d.y}px"
-				use:focusFirst
-				use:dismissPanel={() => (rulesDlg = null)}
-				onkeydown={(ev) => {
-					ev.stopPropagation();
-					if (ev.key === 'Escape') closeRules();
-				}}
-			>
-				<div class="menu-title">
-					Mise en forme conditionnelle {d.line
-						? d.line.rows
-							? `des lignes ${d.line.i0 + 1}${d.line.i1 > d.line.i0 ? ` à ${d.line.i1 + 1}` : ''}`
-							: `des colonnes ${addrA1(0, d.line.i0).slice(0, -1)}${d.line.i1 > d.line.i0 ? ` à ${addrA1(0, d.line.i1).slice(0, -1)}` : ''}`
-						: `de « ${d.e?.t.columns[d.i]?.name} »`}
-				</div>
-				{#if rules.length === 0}
-					<p class="menu-note">Aucune règle. La première règle vérifiée s’applique.</p>
-				{/if}
-				{#each rules as r, k (k)}
-					<div class="rule">
-						<span class="sample" style:background={r.style.bg ?? '#fff'} style:color={r.style.fg ?? '#1f2328'} style:font-weight={r.style.b ? 'bold' : 'normal'}>AaBb</span>
-						<span class="what">{describeRule(r)}</span>
-						<button title="Supprimer la règle" onclick={() => saveRules(rules.filter((_, j) => j !== k))}>✕</button>
-					</div>
-				{/each}
-				<hr />
-				<div class="add">
-					<Select bind:value={d.op} options={RULE_OPS.map((o) => ({ value: o.op, label: o.label }))} />
-					{#if args > 0}<input bind:value={d.value} placeholder="valeur" onkeydown={(ev) => ev.key === 'Enter' && addRule()} />{/if}
-					{#if args > 1}<span>et</span><input bind:value={d.to} placeholder="valeur" onkeydown={(ev) => ev.key === 'Enter' && addRule()} />{/if}
-					<Select bind:value={d.style} options={RULE_STYLES.map((s, k) => ({ value: k, label: s.label }))} />
-					<button onclick={addRule}>Ajouter</button>
-				</div>
-				{#if d.error}<p class="menu-note error">{d.error}</p>{/if}
-				<div class="foot">
-					{#if rules.length}<button onclick={() => saveRules([])}>Effacer les règles</button>{/if}
-					<span class="sp"></span>
-					<button onclick={closeRules}>Fermer</button>
-				</div>
-			</div>
+		{#if cfView}
+			{#key cfView}
+				<CondFormat host={cfHost} view={cfView} onclose={closeRules} />
+			{/key}
 		{/if}
 		{#if formatDlg}
 			{@const d = formatDlg}

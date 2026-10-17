@@ -261,7 +261,15 @@ func LoadGrid(ctx context.Context, d *doc.Document, ti canvas.TableInfo) (*grid.
 	for _, c := range ti.Columns {
 		anyComputed = anyComputed || (c.Formula != "" && formula.External(c.Formula, ti.Name))
 	}
-	t := grid.NewTable(d.DB(), ti.Source, ti.Name, cols, sqlCols).WithInvalid(ti.ID, ids).WithExprs(exprs, args, decode).WithComputed(anyComputed)
+	// Règles « formule » de mise en forme conditionnelle : calculées par
+	// ligne avec les fenêtres.
+	marks, markArgs, markCols, markRules, err := d.RuleExprs(ctx, ti.ID, len(args))
+	if err != nil {
+		return nil, err
+	}
+	truthy := func(v any) bool { return canvas.Truthy(formula.FromResult(v)) }
+	t := grid.NewTable(d.DB(), ti.Source, ti.Name, cols, sqlCols).WithInvalid(ti.ID, ids).WithExprs(exprs, args, decode).
+		WithMarks(marks, markArgs, markCols, markRules, truthy).WithComputed(anyComputed || len(marks) > 0)
 	if err := t.Load(ctx); err != nil {
 		return nil, err
 	}
