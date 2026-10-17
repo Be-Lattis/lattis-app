@@ -21,45 +21,50 @@ func (m *Model) MoveCells(ctx context.Context, sheet int64, r0, c0, r1, c1, dr, 
 		if err := t.guard(sheet); err != nil {
 			return err
 		}
-		tables, err := t.tables(sheet)
-		if err != nil {
+		return t.moveFree(sheet, r0, c0, r1, c1, dr, dc)
+	})
+}
+
+// moveFree est le corps de MoveCells, dans la transaction en cours.
+func (t *tx) moveFree(sheet int64, r0, c0, r1, c1, dr, dc int) error {
+	tables, err := t.tables(sheet)
+	if err != nil {
+		return err
+	}
+	tr0, tr1, tc0, tc1 := r0+dr, r1+dr, c0+dc, c1+dc
+	for _, tb := range tables {
+		if tb.Row <= r1 && tb.Bottom() >= r0 && tb.Col <= c1 && tb.Right() >= c0 {
+			return fmt.Errorf("%w : la sélection contient une partie du tableau « %s » ; sélectionnez le tableau entier pour le déplacer", ErrTable, tb.Name)
+		}
+		if touches(tr0, tr1, tc0, tc1, tb) {
+			return fmt.Errorf("%w : la destination touche le tableau « %s »", ErrTable, tb.Name)
+		}
+	}
+	inSource := `row BETWEEN ? AND ? AND col BETWEEN ? AND ?`
+	for _, tbl := range []string{"_slitable_cells", "_slitable_cell_styles", "_slitable_names"} {
+		// La destination est remplacée (hors cellules déplacées elles-mêmes).
+		if err := t.deleteWhere(tbl, `sheet = ? AND `+inSource+` AND NOT (`+inSource+`)`,
+			sheet, tr0, tr1, tc0, tc1, r0, r1, c0, c1); err != nil {
 			return err
 		}
-		tr0, tr1, tc0, tc1 := r0+dr, r1+dr, c0+dc, c1+dc
-		for _, tb := range tables {
-			if tb.Row <= r1 && tb.Bottom() >= r0 && tb.Col <= c1 && tb.Right() >= c0 {
-				return fmt.Errorf("%w : la sélection contient une partie du tableau « %s » ; sélectionnez le tableau entier pour le déplacer", ErrTable, tb.Name)
-			}
-			if touches(tr0, tr1, tc0, tc1, tb) {
-				return fmt.Errorf("%w : la destination touche le tableau « %s »", ErrTable, tb.Name)
-			}
+		// Deux temps : pas de collision de clé quand source et destination se recouvrent.
+		away := `UPDATE ` + tbl + ` SET row = -(row + ?) - 1, col = -(col + ?) - 1 WHERE sheet = ? AND ` + inSource
+		back := `UPDATE ` + tbl + ` SET row = -row - 1, col = -col - 1 WHERE sheet = ? AND row < 0`
+		if err := t.apply(
+			[]stmt{st(away, dr, dc, sheet, r0, r1, c0, c1), st(back, sheet)},
+			[]stmt{st(away, -dr, -dc, sheet, tr0, tr1, tc0, tc1), st(back, sheet)},
+		); err != nil {
+			return err
 		}
-		inSource := `row BETWEEN ? AND ? AND col BETWEEN ? AND ?`
-		for _, tbl := range []string{"_slitable_cells", "_slitable_cell_styles", "_slitable_names"} {
-			// La destination est remplacée (hors cellules déplacées elles-mêmes).
-			if err := t.deleteWhere(tbl, `sheet = ? AND `+inSource+` AND NOT (`+inSource+`)`,
-				sheet, tr0, tr1, tc0, tc1, r0, r1, c0, c1); err != nil {
-				return err
-			}
-			// Deux temps : pas de collision de clé quand source et destination se recouvrent.
-			away := `UPDATE ` + tbl + ` SET row = -(row + ?) - 1, col = -(col + ?) - 1 WHERE sheet = ? AND ` + inSource
-			back := `UPDATE ` + tbl + ` SET row = -row - 1, col = -col - 1 WHERE sheet = ? AND row < 0`
-			if err := t.apply(
-				[]stmt{st(away, dr, dc, sheet, r0, r1, c0, c1), st(back, sheet)},
-				[]stmt{st(away, -dr, -dc, sheet, tr0, tr1, tc0, tc1), st(back, sheet)},
-			); err != nil {
-				return err
-			}
+	}
+	return t.rewriteCellRefs(sheet, func(r, c int) (int, int, bool) {
+		switch {
+		case r >= r0 && r <= r1 && c >= c0 && c <= c1:
+			return r + dr, c + dc, true
+		case r >= tr0 && r <= tr1 && c >= tc0 && c <= tc1:
+			return 0, 0, false
 		}
-		return t.rewriteCellRefs(sheet, func(r, c int) (int, int, bool) {
-			switch {
-			case r >= r0 && r <= r1 && c >= c0 && c <= c1:
-				return r + dr, c + dc, true
-			case r >= tr0 && r <= tr1 && c >= tc0 && c <= tc1:
-				return 0, 0, false
-			}
-			return r, c, true
-		})
+		return r, c, true
 	})
 }
 
@@ -75,23 +80,28 @@ func (m *Model) ClearCells(ctx context.Context, sheet int64, r0, c0, r1, c1 int)
 		if err := t.guard(sheet); err != nil {
 			return err
 		}
-		merges, err := t.merges(sheet)
-		if err != nil {
-			return err
-		}
-		for _, g := range merges {
-			inside := g.Row >= r0 && g.bottom() <= r1 && g.Col >= c0 && g.right() <= c1
-			if !inside && g.overlaps(r0, c0, r1, c1) {
-				if err := t.styleFree(sheet, g.Row, g.Col, Style{"mr": nil, "mc": nil}, nil); err != nil {
-					return err
-				}
-			}
-		}
-		for _, tbl := range []string{"_slitable_cells", "_slitable_cell_styles"} {
-			if err := t.deleteWhere(tbl, `sheet = ? AND row BETWEEN ? AND ? AND col BETWEEN ? AND ?`, sheet, r0, r1, c0, c1); err != nil {
+		return t.clearFree(sheet, r0, c0, r1, c1)
+	})
+}
+
+// clearFree est le corps de ClearCells, dans la transaction en cours.
+func (t *tx) clearFree(sheet int64, r0, c0, r1, c1 int) error {
+	merges, err := t.merges(sheet)
+	if err != nil {
+		return err
+	}
+	for _, g := range merges {
+		inside := g.Row >= r0 && g.bottom() <= r1 && g.Col >= c0 && g.right() <= c1
+		if !inside && g.overlaps(r0, c0, r1, c1) {
+			if err := t.styleFree(sheet, g.Row, g.Col, Style{"mr": nil, "mc": nil}, nil); err != nil {
 				return err
 			}
 		}
-		return nil
-	})
+	}
+	for _, tbl := range []string{"_slitable_cells", "_slitable_cell_styles"} {
+		if err := t.deleteWhere(tbl, `sheet = ? AND row BETWEEN ? AND ? AND col BETWEEN ? AND ?`, sheet, r0, r1, c0, c1); err != nil {
+			return err
+		}
+	}
+	return nil
 }

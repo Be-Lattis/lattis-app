@@ -423,6 +423,13 @@
 		rangeStats: (t, first, count, cols) => DocumentService.RangeStats(sheetId, t.id, first, count, cols),
 		moveCells: (r0, c0, r1, c1, dr, dc) => DocumentService.MoveCells(sheetId, r0, c0, r1, c1, dr, dc).then(reload),
 		clearCells: (r0, c0, r1, c1) => DocumentService.ClearCells(sheetId, r0, c0, r1, c1).then(reload),
+		clearRange: (r0, c0, r1, c1, all) => DocumentService.ClearRange(sheetId, r0, c0, r1, c1, all).then(reload),
+		async transfer(from, src, dst, move, values) {
+			const ev = await DocumentService.Transfer(from, src, sheetId, dst, move, values);
+			await reload();
+			if (ev.created) return `Tableau « ${ev.created} » créé`;
+			if (ev.widened) return `Colonne ${ev.widened} passée de ${typeLabel(ev.from as ColumnType)} à ${typeLabel(ev.to as ColumnType)} (Ctrl+Z pour annuler)`;
+		},
 		sheetLines: (op, a, b) =>
 			(op === 'insertRows'
 				? DocumentService.InsertSheetRows(sheetId, a, b)

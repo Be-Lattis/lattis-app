@@ -300,74 +300,81 @@ func (m *Model) ExtractColumns(ctx context.Context, name string, i0, i1, row, co
 		if err != nil {
 			return err
 		}
-		if tb.Filtered() {
-			return fmt.Errorf("%w : effacez le filtre avant de déplacer des colonnes", ErrTable)
-		}
-		cols := tb.Cols[i0 : i1+1]
-		for _, c := range cols {
-			if c.Formula != "" {
-				return fmt.Errorf("%w : la colonne calculée « %s » ne se déplace pas", ErrTable, c.Name)
-			}
-		}
-		var id int64
-		if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _slitable_tables`).Scan(&id); err != nil {
-			return err
-		}
-		newName, err := t.tableName(tb.Sheet, row, col)
-		if err != nil {
-			return err
-		}
-		nt := Table{ID: id, Sheet: tb.Sheet, Name: newName, Row: row, Col: col}
-		defs := []string{"id INTEGER PRIMARY KEY", "_pos TEXT NOT NULL"}
-		src := []string{"id", "_pos"}
-		dst := []string{"id", "_pos"}
-		do := []stmt{st(`INSERT INTO _slitable_tables (id, sheet, name, row, col) VALUES (?, ?, ?, ?, ?)`, id, tb.Sheet, newName, row, col)}
-		for k, c := range cols {
-			nid := int64(k + 1)
-			defs = append(defs, colSQL(nid)+" "+sqlType(c.Type))
-			src = append(src, colSQL(c.ID))
-			dst = append(dst, colSQL(nid))
-			rules, err := t.columnRules(tb.ID, c.ID)
-			if err != nil {
-				return err
-			}
-			do = append(do,
-				st(`INSERT INTO _slitable_columns (tbl, id, name, type, fixed, pos, rules) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-					id, nid, c.Name, string(c.Type), c.Fixed, k, nullIfEmpty(rules)),
-				st(`INSERT INTO _slitable_invalid (tbl, rid, col, raw) SELECT ?, rid, ?, raw FROM _slitable_invalid WHERE tbl = ? AND col = ?`, id, nid, tb.ID, c.ID),
-				st(`INSERT INTO _slitable_styles (tbl, rid, col, style) SELECT ?, rid, ?, style FROM _slitable_styles WHERE tbl = ? AND col = ?`, id, nid, tb.ID, c.ID))
-		}
-		// Mêmes clés et mêmes positions : les styles et saisies invalides
-		// suivent sans renumérotation.
-		do = append([]stmt{
-			st(`CREATE TABLE ` + nt.sql() + ` (` + strings.Join(defs, ", ") + `) STRICT`),
-			st(`CREATE INDEX ` + nt.sql() + `_pos ON ` + nt.sql() + `(_pos)`),
-			st(`INSERT INTO ` + nt.sql() + ` (` + strings.Join(dst, ", ") + `) SELECT ` + strings.Join(src, ", ") + ` FROM ` + tb.sql()),
-		}, do...)
-		undo := []stmt{
-			st(`DELETE FROM _slitable_styles WHERE tbl = ?`, id),
-			st(`DELETE FROM _slitable_invalid WHERE tbl = ?`, id),
-			st(`DELETE FROM _slitable_columns WHERE tbl = ?`, id),
-			st(`DELETE FROM _slitable_tables WHERE id = ?`, id),
-			st(`DROP TABLE ` + nt.sql()),
-		}
-		if err := t.apply(do, undo); err != nil {
-			return err
-		}
-		for i := i1; i >= i0; i-- {
-			cur, err := t.table(tb.ID)
-			if err != nil {
-				return err
-			}
-			if err := t.dropColumn(cur, cur.Cols[i], i); err != nil {
-				return err
-			}
-		}
-		nt, err = t.table(id)
-		if err != nil {
-			return err
-		}
-		_, err = t.place(nt)
-		return err
+		return t.extractColumns(tb, i0, i1, tb.Sheet, row, col)
 	})
+}
+
+// extractColumns sort les colonnes i0..i1 (pas toutes) de tb vers un nouveau
+// tableau de la feuille sheet, l'en-tête en (row, col), puis le pose (fusion
+// côte à côte, écartement des voisins).
+func (t *tx) extractColumns(tb Table, i0, i1 int, sheet int64, row, col int) error {
+	if tb.Filtered() {
+		return fmt.Errorf("%w : effacez le filtre avant de déplacer des colonnes", ErrTable)
+	}
+	cols := tb.Cols[i0 : i1+1]
+	for _, c := range cols {
+		if c.Formula != "" {
+			return fmt.Errorf("%w : la colonne calculée « %s » ne se déplace pas", ErrTable, c.Name)
+		}
+	}
+	var id int64
+	if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _slitable_tables`).Scan(&id); err != nil {
+		return err
+	}
+	newName, err := t.tableName(sheet, row, col)
+	if err != nil {
+		return err
+	}
+	nt := Table{ID: id, Sheet: sheet, Name: newName, Row: row, Col: col}
+	defs := []string{"id INTEGER PRIMARY KEY", "_pos TEXT NOT NULL"}
+	src := []string{"id", "_pos"}
+	dst := []string{"id", "_pos"}
+	do := []stmt{st(`INSERT INTO _slitable_tables (id, sheet, name, row, col) VALUES (?, ?, ?, ?, ?)`, id, sheet, newName, row, col)}
+	for k, c := range cols {
+		nid := int64(k + 1)
+		defs = append(defs, colSQL(nid)+" "+sqlType(c.Type))
+		src = append(src, colSQL(c.ID))
+		dst = append(dst, colSQL(nid))
+		rules, err := t.columnRules(tb.ID, c.ID)
+		if err != nil {
+			return err
+		}
+		do = append(do,
+			st(`INSERT INTO _slitable_columns (tbl, id, name, type, fixed, pos, rules) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+				id, nid, c.Name, string(c.Type), c.Fixed, k, nullIfEmpty(rules)),
+			st(`INSERT INTO _slitable_invalid (tbl, rid, col, raw) SELECT ?, rid, ?, raw FROM _slitable_invalid WHERE tbl = ? AND col = ?`, id, nid, tb.ID, c.ID),
+			st(`INSERT INTO _slitable_styles (tbl, rid, col, style) SELECT ?, rid, ?, style FROM _slitable_styles WHERE tbl = ? AND col = ?`, id, nid, tb.ID, c.ID))
+	}
+	// Mêmes clés et mêmes positions : les styles et saisies invalides
+	// suivent sans renumérotation.
+	do = append([]stmt{
+		st(`CREATE TABLE ` + nt.sql() + ` (` + strings.Join(defs, ", ") + `) STRICT`),
+		st(`CREATE INDEX ` + nt.sql() + `_pos ON ` + nt.sql() + `(_pos)`),
+		st(`INSERT INTO ` + nt.sql() + ` (` + strings.Join(dst, ", ") + `) SELECT ` + strings.Join(src, ", ") + ` FROM ` + tb.sql()),
+	}, do...)
+	undo := []stmt{
+		st(`DELETE FROM _slitable_styles WHERE tbl = ?`, id),
+		st(`DELETE FROM _slitable_invalid WHERE tbl = ?`, id),
+		st(`DELETE FROM _slitable_columns WHERE tbl = ?`, id),
+		st(`DELETE FROM _slitable_tables WHERE id = ?`, id),
+		st(`DROP TABLE ` + nt.sql()),
+	}
+	if err := t.apply(do, undo); err != nil {
+		return err
+	}
+	for i := i1; i >= i0; i-- {
+		cur, err := t.table(tb.ID)
+		if err != nil {
+			return err
+		}
+		if err := t.dropColumn(cur, cur.Cols[i], i); err != nil {
+			return err
+		}
+	}
+	nt, err = t.table(id)
+	if err != nil {
+		return err
+	}
+	_, err = t.place(nt)
+	return err
 }

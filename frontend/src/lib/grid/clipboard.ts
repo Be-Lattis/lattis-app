@@ -65,3 +65,78 @@ export function toTSV(rows: string[][]): string {
 	const quote = (s: string) => (/[\t\r\n"]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s);
 	return rows.map((r) => r.map(quote).join('\t')).join('\r\n') + '\r\n';
 }
+
+// --- Collage à la Excel --------------------------------------------------------
+
+export interface Rect {
+	r0: number;
+	c0: number;
+	r1: number;
+	c1: number;
+}
+
+/**
+ * Répétitions (lignes, colonnes) d'un bloc h × w collé sur la sélection sel,
+ * comme Excel : une sélection dont chaque côté est un multiple du bloc le
+ * reçoit répété (une seule cellule copiée remplit toute la sélection) ;
+ * sinon le bloc est collé une fois, à partir du coin haut gauche.
+ */
+export function tiles(h: number, w: number, sel: Rect): [number, number] {
+	const sh = sel.r1 - sel.r0 + 1;
+	const sw = sel.c1 - sel.c0 + 1;
+	if (h <= 0 || w <= 0 || sh < h || sw < w || sh % h || sw % w) return [1, 1];
+	return [sh / h, sw / w];
+}
+
+/** Le bloc répété pour remplir la sélection (voir tiles). */
+export function tileBlock(block: string[][], sel: Rect): string[][] {
+	const h = block.length;
+	const w = Math.max(0, ...block.map((r) => r.length));
+	const [nr, nc] = tiles(h, w, sel);
+	if (nr === 1 && nc === 1) return block;
+	const out: string[][] = [];
+	for (let i = 0; i < h * nr; i++) {
+		const src = block[i % h];
+		const line: string[] = [];
+		for (let j = 0; j < w * nc; j++) line.push(src[j % w] ?? '');
+		out.push(line);
+	}
+	return out;
+}
+
+/** Zone où va un bloc h × w collé : la sélection si elle en est un multiple, sinon le bloc à partir de son coin. */
+export function pasteArea(h: number, w: number, sel: Rect): Rect {
+	const [nr, nc] = tiles(h, w, sel);
+	return { r0: sel.r0, c0: sel.c0, r1: sel.r0 + h * nr - 1, c1: sel.c0 + w * nc - 1 };
+}
+
+/** Même texte de presse-papiers (fins de ligne et saut final mis à part). */
+export function sameClipText(a: string, b: string): boolean {
+	const norm = (s: string) => s.replace(/\r\n?/g, '\n').replace(/\n+$/, '');
+	return norm(a) === norm(b);
+}
+
+export function overlaps(a: Rect, b: Rect): boolean {
+	return a.r0 <= b.r1 && b.r0 <= a.r1 && a.c0 <= b.c1 && b.c0 <= a.c1;
+}
+
+/** La zone a contient-elle entièrement b ? */
+export function contains(a: Rect, b: Rect): boolean {
+	return b.r0 >= a.r0 && b.r1 <= a.r1 && b.c0 >= a.c0 && b.c1 <= a.c1;
+}
+
+/** Zone copiée ou coupée (cadre pointillé) : sa feuille, et le texte remis au presse-papiers. */
+export interface Clip extends Rect {
+	sheet: number;
+	cut: boolean;
+	text: string;
+	/** Valeurs affichées au moment de la copie (résultats des formules). */
+	values: string[][];
+	/** Valeurs seules (zone qui touche un tableau croisé) : collée comme un texte. */
+	plain: boolean;
+}
+
+/** Le texte collé vient-il de la dernière copie de Slitable (collage riche) ? */
+export function richClip(clip: Clip | null, text: string): Clip | null {
+	return clip && !clip.plain && sameClipText(clip.text, text) ? clip : null;
+}

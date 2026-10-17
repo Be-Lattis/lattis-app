@@ -12,7 +12,7 @@
 	import { RowCache, percentile, type Fetched } from './cache';
 	import { VScroll, clamp } from './scroll';
 	import { Axis } from './axis';
-	import { parseTSV, toTSV } from './clipboard';
+	import { overlaps, parseTSV, pasteArea, richClip, tileBlock, toTSV, type Clip, type Rect as ClipRect } from './clipboard';
 	import { isNumericText, painterPatch, parseStyle, resolveStyle, type CellStyle, type StyleLayer } from './style';
 	import { formatCell } from './numfmt';
 	import { autoHeight, cellFont, fontPx, lineHeight, wrapLines } from './textwrap';
@@ -235,6 +235,20 @@
 		moveCells?(r0: number, c0: number, r1: number, c1: number, dr: number, dc: number): Promise<unknown>;
 		/** Vide entièrement les cellules libres d'une plage : valeurs, mise en forme, fusions, notes, validations. */
 		clearCells?(r0: number, c0: number, r1: number, c1: number): Promise<unknown>;
+		/**
+		 * Efface une zone en une seule étape : tableaux entièrement compris
+		 * supprimés, cellules de tableau vidées, cellules libres vidées (all :
+		 * mise en forme comprise, comme Supprimer).
+		 */
+		clearRange?(r0: number, c0: number, r1: number, c1: number, all: boolean): Promise<unknown>;
+		/**
+		 * Copie ou déplace (move) la zone src de la feuille from vers la zone dst
+		 * de la feuille affichée, comme Excel (copier-coller, couper-coller,
+		 * glisser la bordure) : tableaux entiers avec leurs types, formules et
+		 * clé, cellules libres avec formules et mise en forme, cellules de
+		 * tableau en valeur. values : le bloc affiché de la source.
+		 */
+		transfer?(from: number, src: ClipRect, dst: ClipRect, move: boolean, values: string[][]): Promise<string | void>;
 		insertRow?(table: SheetTable, n: number): Promise<unknown>;
 		deleteRow?(table: SheetTable, n: number): Promise<unknown>;
 		insertColumn?(table: SheetTable, i: number): Promise<unknown>;
@@ -874,6 +888,8 @@
 		sel: { r0: number; r1: number; c0: number; c1: number };
 		from: { row: number; col: number };
 		to?: { row: number; col: number };
+		/** Ctrl enfoncé : copie au lieu de déplacer (Excel). */
+		copy?: boolean;
 	} | null>(null);
 
 	// Édition (dans la cellule ou dans la barre de formule).
@@ -1510,7 +1526,7 @@
 			ctx.stroke();
 		}
 		// Zone copiée ou coupée : cadre pointillé, comme Excel.
-		if (clipRange) {
+		if (clipRange && clipRange.sheet === sheetId()) {
 			const k = clipRange;
 			ctx.save();
 			ctx.setLineDash([4, 3]);
@@ -3806,7 +3822,7 @@
 
 	/** La souris est-elle sur la bordure de la sélection (poignée de déplacement) ? */
 	function onSelectionEdge(e: MouseEvent): boolean {
-		if (!source.moveTable) return false;
+		if (!source.transfer) return false;
 		const { x, y } = toLocal(e);
 		if (x < MARGIN || y < TOP_H) return false;
 		const { r0, r1, c0, c1 } = selection();
@@ -3820,52 +3836,45 @@
 		return (inY && (near(x, left) || near(x, right))) || (inX && (near(y, top) || near(y, bottom)));
 	}
 
+	/**
+	 * Fin du glisser de la bordure de la sélection, comme Excel : la zone se
+	 * déplace (Ctrl : se copie) d'un seul bloc, en une étape d'annulation —
+	 * tableaux entiers, colonnes entières, cellules libres et cellules de
+	 * tableau mêlés (voir transfer). Posée sur un tableau, elle remplace ses
+	 * valeurs ; juste à côté, elle l'étend ou le fusionne ; un tableau
+	 * chevauché s'écarte vers la droite.
+	 */
 	async function dropMove() {
 		const m = moving;
 		moving = null;
+		scroller.style.cursor = '';
 		schedule();
-		if (!m?.to) return;
+		if (!m?.to || !source.transfer) return;
 		const dr = m.to.row - m.from.row;
 		const dc = m.to.col - m.from.col;
 		if (!dr && !dc) return;
 		const { r0, r1, c0, c1 } = m.sel;
-		const e = entries.find((e) => e.t.row === r0 && e.last === r1 && c0 >= e.t.col && c1 <= e.lastCol);
-		if (!e) {
-			// Hors tableau : les cellules libres de la plage se déplacent (comme Excel).
-			const touched = entries.some((x) => x.t.row <= r1 && x.last >= r0 && x.t.col <= c1 && x.lastCol >= c0);
-			if (touched || !source.moveCells) {
-				say('Pour déplacer, sélectionnez un tableau entier (Ctrl+A) ou des colonnes entières, en-tête compris (Ctrl+Espace)');
-				return;
-			}
-			const mv = source.moveCells;
-			writing = writing.then(async () => {
-				try {
-					await mv(r0, c0, r1, c1, dr, dc);
-					moveTo(r0 + dr, c0 + dc);
-					anchor = { row: r1 + dr, col: c1 + dc };
-					message = 'Cellules déplacées (Ctrl+Z pour annuler)';
-				} catch (err) {
-					message = String(err instanceof Error ? err.message : err);
-				}
-				refreshStatus();
-				schedule();
-			});
+		const dst = { r0: r0 + dr, c0: c0 + dc, r1: r1 + dr, c1: c1 + dc };
+		if (dst.r0 < 0 || dst.c0 < 0) return;
+		if (pivotIn(dst.r0, dst.c0, dst.r1, dst.c1) || (!m.copy && pivotIn(r0, c0, r1, c1))) {
+			say(PIVOT_READONLY);
 			return;
 		}
-		const whole = c0 === e.t.col && c1 === e.lastCol;
-		const run = whole
-			? source.moveTable && (() => source.moveTable!(e.t, r0 + dr, c0 + dc))
-			: source.extractColumns && (() => source.extractColumns!(e.t, c0 - e.t.col, c1 - e.t.col, r0 + dr, c0 + dc));
-		if (!run) return;
+		const values = rangeValues(m.sel);
+		if (!values) return;
+		const copy = !!m.copy;
+		const transfer = source.transfer;
+		clipRange = null;
 		writing = writing.then(async () => {
 			try {
-				await run();
-				moveTo(r0 + dr, c0 + dc);
-				anchor = { row: r1 + dr, col: c1 + dc };
-				message = whole ? `Tableau « ${e.t.name} » déplacé (Ctrl+Z pour annuler)` : 'Colonnes déplacées (Ctrl+Z pour annuler)';
+				const msg = await transfer(sheetId(), m.sel, dst, !copy, values);
+				active = snapMerge(dst.r0, dst.c0);
+				anchor = { row: dst.r1, col: dst.c1 };
+				message = msg || (copy ? 'Cellules copiées (Ctrl+Z pour annuler)' : 'Cellules déplacées (Ctrl+Z pour annuler)');
 			} catch (err) {
 				message = String(err instanceof Error ? err.message : err);
 			}
+			refreshFx();
 			refreshStatus();
 			schedule();
 		});
@@ -4237,6 +4246,9 @@
 		}
 		if (moving) {
 			const cell = cellAt(e);
+			moving.copy = e.ctrlKey || e.metaKey;
+			// Ctrl : petit + sur le curseur, comme Excel.
+			scroller.style.cursor = moving.copy ? 'copy' : 'move';
 			if (cell) {
 				moving.to = cell;
 				schedule();
@@ -4556,6 +4568,11 @@
 		anchor = { ...active };
 		editByTyping = byTyping;
 		editValueText = initial ?? info.value;
+		// Saisir dans une cellule annule le copier-coller en cours (Excel).
+		if (clipRange) {
+			clipRange = null;
+			schedule();
+		}
 		// L'éditeur doit avoir le focus avant la frappe suivante : sinon une
 		// saisie rapide perdrait des caractères.
 		flushSync(() => (editing = true));
@@ -4790,6 +4807,25 @@
 		const wipe = all ? source.clearCells : undefined;
 		// Les tableaux entièrement compris dans la zone sont supprimés.
 		const whole = entries.filter((e) => e.t.row >= r0 && e.last <= r1 && e.t.col >= c0 && e.lastCol <= c1);
+		if (source.clearRange) {
+			// Tout en une seule étape d'annulation.
+			const clear = source.clearRange;
+			const tables = whole.map((e) => e.t);
+			writing = writing.then(() =>
+				clear(r0, c0, r1, c1, all).then(
+					() => {
+						if (tables.length > 1) say(`${tables.length} tableaux supprimés (Ctrl+Z pour annuler)`);
+						else if (tables.length) say(`Tableau « ${tables[0].name} » supprimé (Ctrl+Z pour annuler)`);
+						else if (all) say('Cellules supprimées (Ctrl+Z pour annuler)');
+						refreshFx();
+						schedule();
+					},
+					(err) => say(String(err?.message ?? err))
+				)
+			);
+			await writing;
+			return;
+		}
 		const rest = (r: number, c: number) => !whole.some((e) => inTable(e, r, c));
 		let n = 0;
 		for (const e of entries) {
@@ -5115,12 +5151,43 @@
 	/** La sélection n'est-elle que la cellule active (ou sa fusion) ? */
 	const singleSelection = () => isSingleCell(selection(), active, merges);
 
-	// Zone copiée ou coupée : cadre pointillé ; une zone coupée s'efface au collage.
-	let clipRange = $state<{ r0: number; r1: number; c0: number; c1: number; cut: boolean; text: string } | null>(null);
+	// Zone copiée ou coupée : cadre pointillé, sur sa feuille. Collée dans
+	// Slitable, elle emporte formules, mise en forme et tableaux (transfer) ;
+	// les autres applications reçoivent le texte tabulé des valeurs affichées.
+	// Le cadre disparaît au collage d'une zone coupée, sur Échap et dès qu'on
+	// saisit dans une cellule (Excel).
+	let clipRange = $state<Clip | null>(null);
+	const sheetId = () => data.sheet ?? 0;
 
-	/** Texte TSV de la sélection (null si trop grande). */
-	function selectionText(): string | null {
-		const { r0, r1, c0, c1 } = selection();
+	/**
+	 * Valeur affichée d'une cellule, comme Excel la donne aux autres
+	 * applications : le résultat d'une formule (cellule libre, colonne
+	 * calculée), les valeurs d'un tableau croisé ou d'un tableau déversé.
+	 */
+	function shownValue(r: number, c: number): string {
+		const info = cellInfo(r, c);
+		if (info.kind === 'free') {
+			const f = shown.get(key(r, c));
+			if (f) return f.text;
+			if (info.value) return info.value;
+			const p = pivotAt(r, c);
+			if (p) return p.cells[r - p.row]?.[c - p.col] ?? '';
+			for (const sp of spills) {
+				const v = sp.rows[r - sp.row]?.[c - sp.col];
+				if (v !== undefined) return v;
+			}
+			return '';
+		}
+		if (info.kind === 'data' && info.e.t.columns[info.i].formula !== undefined) {
+			const k = info.e.t.columns[info.i];
+			return info.row ? editValue((k.result ?? 'text') as ColumnType, info.row.cells[info.i]) : '';
+		}
+		return info.value;
+	}
+
+	/** Valeurs affichées d'une zone (null si trop grande). */
+	function rangeValues(sel: ClipRect): string[][] | null {
+		const { r0, r1, c0, c1 } = sel;
 		if ((r1 - r0 + 1) * (c1 - c0 + 1) > 100_000) {
 			say('Copie limitée à 100 000 cellules pour l’instant');
 			return null;
@@ -5128,10 +5195,29 @@
 		const rows: string[][] = [];
 		for (let r = r0; r <= r1; r++) {
 			const line: string[] = [];
-			for (let c = c0; c <= c1; c++) line.push(cellInfo(r, c).value);
+			for (let c = c0; c <= c1; c++) line.push(shownValue(r, c));
 			rows.push(line);
 		}
-		return toTSV(rows);
+		return rows;
+	}
+
+	/** Retient la sélection copiée ou coupée ; renvoie le texte pour le presse-papiers (null : rien). */
+	function takeClip(cut: boolean): string | null {
+		const sel = selection();
+		const values = rangeValues(sel);
+		if (!values) return null;
+		const text = toTSV(values);
+		// Un tableau croisé se copie en valeurs.
+		const plain = !source.transfer || !!pivotIn(sel.r0, sel.c0, sel.r1, sel.c1);
+		clipRange = { ...sel, sheet: sheetId(), cut, text, values, plain };
+		schedule();
+		return text;
+	}
+
+	function clipMessage(cut: boolean) {
+		const { r0, r1, c0, c1 } = clipRange ?? selection();
+		const n = (r1 - r0 + 1) * (c1 - c0 + 1);
+		say(cut ? 'Sélection coupée : collez-la avec Ctrl+V (Échap pour annuler)' : `${n} cellule${n > 1 ? 's' : ''} copiée${n > 1 ? 's' : ''}`);
 	}
 
 	/** Copier ou couper la sélection (ruban, clic droit). */
@@ -5139,18 +5225,16 @@
 		wrap.focus();
 		const sc = selChart !== null ? charts.find((c) => c.id === selChart) : undefined;
 		if (sc) return copyChart(sc, cut);
-		const text = selectionText();
+		const text = takeClip(cut);
 		if (text === null) return;
 		try {
 			await navigator.clipboard.writeText(text);
 		} catch {
+			clipRange = null;
 			say('Le presse-papiers est inaccessible : utilisez Ctrl+C');
 			return;
 		}
-		clipRange = { ...selection(), cut, text };
-		const n = text.split('\n').length;
-		say(cut ? 'Sélection coupée : collez-la avec Ctrl+V' : `${n} ligne(s) copiée(s)`);
-		schedule();
+		clipMessage(cut);
 	}
 
 	/** Coller à la cellule active (ruban, clic droit). */
@@ -5176,13 +5260,11 @@
 			removeChart(sc.id);
 			return;
 		}
-		const text = selectionText();
+		const text = takeClip(true);
 		if (text === null) return;
 		e.clipboardData?.setData('text/plain', text);
 		e.preventDefault();
-		clipRange = { ...selection(), cut: true, text };
-		say('Sélection coupée : collez-la avec Ctrl+V');
-		schedule();
+		clipMessage(true);
 	}
 
 	function onCopy(e: ClipboardEvent) {
@@ -5195,22 +5277,11 @@
 			say('Graphique copié : Ctrl+V pour le coller à la cellule active');
 			return;
 		}
-		const { r0, r1, c0, c1 } = selection();
-		if ((r1 - r0 + 1) * (c1 - c0 + 1) > 100_000) {
-			say('Copie limitée à 100 000 cellules pour l’instant');
-			return;
-		}
-		const rows: string[][] = [];
-		for (let r = r0; r <= r1; r++) {
-			const line: string[] = [];
-			for (let c = c0; c <= c1; c++) line.push(cellInfo(r, c).value);
-			rows.push(line);
-		}
-		e.clipboardData?.setData('text/plain', toTSV(rows));
+		const text = takeClip(false);
+		if (text === null) return;
+		e.clipboardData?.setData('text/plain', text);
 		e.preventDefault();
-		clipRange = { r0, r1, c0, c1, cut: false, text: toTSV(rows) };
-		schedule();
-		say(`${rows.length * (c1 - c0 + 1)} cellule(s) copiée(s)`);
+		clipMessage(false);
 	}
 
 	function onPaste(e: ClipboardEvent) {
@@ -5219,7 +5290,13 @@
 		if (pasteText(text)) e.preventDefault();
 	}
 
-	/** Colle un texte (TSV ou graphique) à la cellule active ; faux si rien à coller. */
+	/**
+	 * Colle un texte (TSV ou graphique) sur la sélection ; faux si rien à
+	 * coller. Le texte de la dernière copie de Slitable se colle « riche »
+	 * (transfer : formules, mise en forme, tableaux ; une zone coupée se
+	 * déplace). Comme Excel, une sélection multiple du bloc copié le reçoit
+	 * répété (une cellule copiée remplit toute la sélection).
+	 */
 	function pasteText(text: string): boolean {
 		if (!source.paste) return false;
 		if (text.startsWith(CHART_CLIP)) {
@@ -5232,32 +5309,50 @@
 		}
 		const block = parseTSV(text);
 		if (block.length === 0) return false;
-		const { row, col } = active;
-		if (pivotIn(row, col, row + block.length - 1, col + Math.max(...block.map((r) => r.length)) - 1)) {
+		const sel = selection();
+		const rich = source.transfer ? richClip(clipRange, text) : null;
+		const h = rich ? rich.r1 - rich.r0 + 1 : block.length;
+		const w = rich ? rich.c1 - rich.c0 + 1 : Math.max(...block.map((r) => r.length));
+		// Une zone coupée se colle une fois, à partir du coin de la sélection.
+		const area = rich?.cut ? { r0: sel.r0, c0: sel.c0, r1: sel.r0 + h - 1, c1: sel.c0 + w - 1 } : pasteArea(h, w, sel);
+		if (pivotIn(area.r0, area.c0, area.r1, area.c1)) {
 			say(PIVOT_READONLY);
 			return true;
 		}
-		// Collage d'une zone coupée : la source s'efface ensuite (hors cible).
-		const cut = clipRange?.cut && clipRange.text === text ? clipRange : null;
-		const paste = source.paste;
-		writing = writing.then(async () => {
-			try {
-				const m = await paste(row, col, block);
-				message = m ?? `${block.length} ligne(s) collée(s)`;
-			} catch (err) {
-				message = String(err instanceof Error ? err.message : err);
-			}
-			anchor = { row: row + block.length - 1, col: col + Math.max(...block.map((r) => r.length)) - 1 };
+		const done = (m: string | void, fallback: string) => {
+			message = m || fallback;
+			active = { row: area.r0, col: area.c0 };
+			anchor = { row: area.r1, col: area.c1 };
 			refreshFx();
 			refreshStatus();
 			schedule();
-		});
+		};
+		const fail = (err: unknown) => {
+			message = String(err instanceof Error ? err.message : err);
+			refreshStatus();
+			schedule();
+		};
+		if (rich && source.transfer) {
+			const transfer = source.transfer;
+			const src = { r0: rich.r0, c0: rich.c0, r1: rich.r1, c1: rich.c1 };
+			if (rich.cut) clipRange = null;
+			writing = writing.then(() =>
+				transfer(rich.sheet, src, area, rich.cut, rich.values).then(
+					(m) => done(m, rich.cut ? 'Cellules déplacées (Ctrl+Z pour annuler)' : 'Collé (Ctrl+Z pour annuler)'),
+					fail
+				)
+			);
+			return true;
+		}
+		// Texte venu d'ailleurs (ou d'un tableau croisé) : des valeurs.
+		const tiled = tileBlock(block, sel);
+		const cut = clipRange?.cut && richClip({ ...clipRange, plain: false }, text) ? clipRange : null;
+		const paste = source.paste;
+		writing = writing.then(() => paste(area.r0, area.c0, tiled).then((m) => done(m, `${tiled.length} ligne(s) collée(s)`), fail));
 		if (cut) {
-			const r1 = row + block.length - 1;
-			const c1 = col + Math.max(...block.map((r) => r.length)) - 1;
-			const overlap = cut.r0 <= r1 && cut.r1 >= row && cut.c0 <= c1 && cut.c1 >= col;
 			clipRange = null;
-			if (!overlap) writing = writing.then(() => clearSelection(cut));
+			// Une zone coupée de la feuille s'efface ensuite (hors cible).
+			if (cut.sheet === sheetId() && !overlaps(cut, area)) writing = writing.then(() => clearSelection(cut));
 		}
 		return true;
 	}
@@ -5578,7 +5673,7 @@
 		ro.observe(wrap);
 		resize();
 		scroller.addEventListener('wheel', onWheel, { passive: false });
-		const up = () => {
+		const up = (ev?: MouseEvent) => {
 			refDrag = null;
 			if (dragging && painter) applyPainter();
 			const dragged = dragging || headerDrag;
@@ -5591,7 +5686,10 @@
 				if (f.to) doFill(f.sel, f.to);
 				schedule();
 			}
-			if (moving) dropMove();
+			if (moving) {
+				if (ev) moving.copy = ev.ctrlKey || ev.metaKey;
+				dropMove();
+			}
 			if (rowResizing) {
 				const { row, height, startH } = rowResizing;
 				rowResizing = null;

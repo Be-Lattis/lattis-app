@@ -29,6 +29,7 @@ export type {
     PivotInfo,
     PivotValue,
     QueryLoad,
+    Rect,
     RowHeight,
     Rule,
     ScriptInfo,
