@@ -688,6 +688,11 @@
 	// Tableaux dynamiques déversés depuis une cellule libre (FILTRE, TRIER…).
 	let spills: { row: number; col: number; rows: string[][] }[] = [];
 	let pivots = $state.raw<SheetPivot[]>([]);
+	// Contenu de chaque TCD à la mise en page précédente : s'il change (source,
+	// champs, filtres), toute sa zone, telle qu'elle est après la mise à jour, s'éclaire.
+	let pivotSigs = new Map<number, string>();
+	const pivotFlashes = new Map<number, number>();
+	const pivotSig = (p: SheetPivot) => JSON.stringify([p.row, p.col, p.config, p.cells, p.formats ?? null, p.error]);
 	let charts = $state.raw<SheetChart[]>([]);
 	let buttons = $state.raw<SheetButton[]>([]);
 	let buttonsLayer = $state<ReturnType<typeof SheetButtons>>();
@@ -750,6 +755,11 @@
 			const f = p.error ? 0 : (p.config.filters?.length ?? 0);
 			return { ...p, anchor: p.row, row: p.row + (f ? f + 1 : 0) };
 		});
+		const sigs = new Map(pivots.map((p) => [p.id, pivotSig(p)]));
+		if (nav || !motion()) pivotFlashes.clear();
+		else for (const [id, sg] of sigs) if (pivotSigs.get(id) !== sg) pivotFlashes.set(id, performance.now());
+		for (const id of pivotFlashes.keys()) if (!sigs.has(id)) pivotFlashes.delete(id);
+		pivotSigs = sigs;
 		if (openPivotOnLoad && pivots.length) {
 			openPivotOnLoad = false;
 			const p = pivots[pivots.length - 1];
@@ -1233,7 +1243,21 @@
 		return a;
 	}
 
-	/** Pose l'éclat d'une cellule (sous son texte). */
+	/** Éclat de toute la zone d'un TCD recalculé : opacité (0 : aucun). */
+	function pivotFlashOf(id: number): number {
+		const t0 = pivotFlashes.get(id);
+		if (t0 === undefined) return 0;
+		if (!motion()) {
+			pivotFlashes.delete(id);
+			return 0;
+		}
+		const a = flashAlpha(animNow, t0);
+		if (a <= 0) pivotFlashes.delete(id);
+		else animBusy = true;
+		return a;
+	}
+
+	/** Pose l'éclat d'une cellule ou d'une zone (sous son texte). */
 	function paintFlash(a: number, x: number, y: number, w: number, h: number) {
 		if (a <= 0) return;
 		ctx.fillStyle = `rgba(33, 115, 70, ${(0.2 * a).toFixed(3)})`;
@@ -1977,6 +2001,7 @@
 			}
 			const pr1 = p.row + p.cells.length - 1;
 			const pc1 = p.col + p.cells[0].length - 1;
+			const fl = pivotFlashOf(p.id);
 			// Filtres de rapport au-dessus du tableau (Excel) : champ, valeur retenue, ▾.
 			(p.config.filters ?? []).forEach((f, k) => {
 				const r = (p.anchor ?? p.row) + k;
@@ -1985,6 +2010,7 @@
 				const w1 = cax().size(p.col + 1);
 				ctx.fillStyle = C.head;
 				ctx.fillRect(cx(p.col), ry(r), w0, rh(r));
+				paintFlash(fl, cx(p.col), ry(r), w0 + w1, rh(r));
 				drawText(f.field, cx(p.col), ry(r), w0, 'left', { b: true }, C.text);
 				drawText(pivotFilterText(f.values), cx(p.col + 1), ry(r), w1 - PIVOT_DROP, 'left', undefined, C.text);
 				ctx.save();
@@ -2001,6 +2027,11 @@
 			ctx.fillStyle = C.head;
 			for (const r of tot >= 0 ? [p.row, tot] : [p.row])
 				for (let c = p.col; c <= pc1; c++) if (!styleAt(r, c, undefined)?.bg) ctx.fillRect(cx(c), ry(r), cax().size(c), rh(r));
+			// Recalculé : toute la zone (la ligne vide sous les filtres comprise) s'éclaire, sous le texte.
+			if (fl > 0) {
+				const top = p.anchor !== undefined && p.anchor < p.row ? p.row - 1 : p.row;
+				paintFlash(fl, cx(p.col), ry(top), spanW(p.col, pc1), rspan(top, pr1));
+			}
 			for (let i = Math.max(0, r0 - p.row); i < p.cells.length && p.row + i <= r1; i++)
 				p.cells[i].forEach((v, j) => {
 					if (!v) return;
@@ -2009,7 +2040,6 @@
 					// Mise en forme posée sur les cellules du TCD, leurs lignes ou colonnes (format de nombre, décimales, police…).
 					const st = resolveStyle(styleAt(p.row + i, c, undefined), lineRule(p.row + i, c, ruleValue(v), v));
 					const style = bold ? { ...st, b: st?.b ?? true } : st;
-					paintFlash(flashOf(`p${p.id}:${i},${j}`, v, p.row + i, c), cx(c), ry(p.row + i), cax().size(c), rh(p.row + i));
 					drawText(formatCell(v, undefined, st), cx(c), ry(p.row + i), cax().size(c), st?.al ?? (j > 0 && i > 0 ? 'right' : 'left'), style, C.text);
 				});
 			// ▾ des étiquettes des lignes : trier et filtrer le champ (Excel).
@@ -7978,6 +8008,8 @@
 	.zoom {
 		position: absolute;
 		inset: 0;
+		/* Sous la barre verticale (hors du canevas) : la ligne des lettres de colonnes se prolonge jusqu'au bord. */
+		background: linear-gradient(to bottom, #f5f6f7 21px, #d4d7db 21px 22px, #fff 22px);
 	}
 	canvas {
 		position: absolute;
@@ -7990,6 +8022,30 @@
 		/* La barre horizontale est dans la ligne des onglets (SheetTabs). */
 		overflow-x: hidden;
 		overflow-y: auto;
+	}
+	/* Barre verticale dessinée (comme celle des onglets) : elle commence sous la
+	   ligne des lettres de colonnes, sur fond transparent ; le curseur s'épaissit au survol. */
+	.scroller::-webkit-scrollbar {
+		width: 12px;
+		background: transparent;
+	}
+	.scroller::-webkit-scrollbar-track {
+		margin-top: 22px; /* TOP_H */
+		background: transparent;
+	}
+	.scroller::-webkit-scrollbar-thumb {
+		min-height: 32px;
+		border: 3px solid transparent;
+		border-radius: 6px;
+		background: rgba(60, 64, 67, 0.35) padding-box;
+	}
+	.scroller::-webkit-scrollbar-thumb:hover {
+		border-width: 2px;
+		background-color: rgba(60, 64, 67, 0.55);
+	}
+	.scroller::-webkit-scrollbar-thumb:active {
+		border-width: 2px;
+		background-color: rgba(60, 64, 67, 0.65);
 	}
 	.sheet-root {
 		position: relative;

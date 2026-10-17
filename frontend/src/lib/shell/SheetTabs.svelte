@@ -519,6 +519,28 @@
 		overflow-y: hidden;
 		align-self: center;
 	}
+	/* Barre dessinée sur fond transparent (celle de la feuille a le même style) ; le curseur s'épaissit au survol. */
+	.hbar::-webkit-scrollbar {
+		height: 12px;
+		background: transparent;
+	}
+	.hbar::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	.hbar::-webkit-scrollbar-thumb {
+		min-width: 32px;
+		border: 3px solid transparent;
+		border-radius: 6px;
+		background: rgba(60, 64, 67, 0.35) padding-box;
+	}
+	.hbar::-webkit-scrollbar-thumb:hover {
+		border-width: 2px;
+		background-color: rgba(60, 64, 67, 0.55);
+	}
+	.hbar::-webkit-scrollbar-thumb:active {
+		border-width: 2px;
+		background-color: rgba(60, 64, 67, 0.65);
+	}
 	.sheet-tabs {
 		position: relative;
 		display: flex;
