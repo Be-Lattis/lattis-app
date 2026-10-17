@@ -137,6 +137,39 @@ print(c.raw, c.value, c.table, c.column)`,
 			},
 		},
 		&Command{
+			Name:    "cells.text_to_columns",
+			Label:   "Convertir",
+			Summary: "Convertit le texte des cellules de la colonne col, lignes row à row2, en colonnes (assistant Convertir d'Excel) : dans des cellules libres, les parties s'écrivent vers la droite (ou à partir de options.dest) ; dans un tableau, de nouvelles colonnes sont insérées. Renvoie le nombre de colonnes importées.",
+			Details: textColumnsHelp,
+			Params:  []Param{pRow, pCol, pRow2, {Name: "options", Type: Object, Desc: "{delims, merge, quote, fixed, breaks, columns, decimal, thousands, dest}"}, pSheet},
+			Write:   true,
+			Example: `cells.text_to_columns(2, 1, 20, {delims = ",", quote = "\""})`,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				row, err := c.Pos("row", 0)
+				if err != nil {
+					return nil, err
+				}
+				col, err := c.Pos("col", 0)
+				if err != nil {
+					return nil, err
+				}
+				row2, err := c.Pos("row2", row)
+				if err != nil {
+					return nil, err
+				}
+				var o canvas.TextColumnsOptions
+				if err := c.Decode("options", &o); err != nil {
+					return nil, err
+				}
+				d, _ := c.Doc()
+				return d.TextToColumns(c, s.ID, row, row2, col, o)
+			},
+		},
+		&Command{
 			Name:    "cells.set",
 			Label:   "Saisie",
 			Summary: "Saisit une valeur dans une cellule de la feuille, exactement comme une frappe dans la grille.",

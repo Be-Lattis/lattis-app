@@ -25,6 +25,9 @@ type Rows struct {
 	Rows    [][]any  `json:"rows"`
 }
 
+// textColumnsHelp décrit les options de « Convertir ».
+const textColumnsHelp = `options : {delims, merge, quote, fixed, breaks, columns, decimal, thousands, dest}. delims : caractères séparateurs (";", ",", " ", "	"…) ; merge = true : séparateurs consécutifs comptés pour un seul ; quote : qualificateur de texte ("\"" par défaut côté assistant, "'" ou "" pour aucun). fixed = true : largeur fixe, breaks donne les positions des coupures (en caractères). columns : format de chaque colonne produite, {format = "" (standard), "text", "date" ou "skip" (non importée), order = "DMY", "MDY", "YMD"… pour les dates}. decimal et thousands : séparateurs des nombres ("," et " " par défaut). dest : cellule de destination (« E2 ») dans des cellules libres.`
+
 // tableCmd : commande sur un tableau, sans autre paramètre.
 func tableCmd(name, label, summary string, write bool, run func(c *Call, t tableRef) (any, error)) *Command {
 	return &Command{Name: name, Label: label, Summary: summary, Write: write, Params: []Param{pTable},
@@ -308,6 +311,22 @@ end`,
 				return d.RemoveDuplicates(c, t.Name, cols)
 			},
 		},
+		columnCmd(&Command{
+			Name:    "tables.text_to_columns",
+			Label:   "Convertir",
+			Summary: "Convertit le texte d'une colonne en colonnes, comme l'assistant Convertir d'Excel : la première partie reste dans la colonne, les suivantes deviennent de nouvelles colonnes à droite. Renvoie le nombre de colonnes importées.",
+			Details: textColumnsHelp,
+			Params:  []Param{{Name: "options", Type: Object, Desc: "{delims, merge, quote, fixed, breaks, columns, decimal, thousands}"}},
+			Write:   true,
+			Example: `tables.text_to_columns("Commandes", "Échéance", {delims = "/", columns = {{format = "text"}}})`,
+		}, func(c *Call, t tableRef, i int) (any, error) {
+			var o canvas.TextColumnsOptions
+			if err := c.Decode("options", &o); err != nil {
+				return nil, err
+			}
+			d, _ := c.Doc()
+			return d.TextToColumns(c, t.Sheet.ID, t.Row+1, t.Row+t.Rows, t.Col+i, o)
+		}),
 		tableCmd("tables.promote_header", "Ligne d'en-tête", "Prend la première ligne de données comme ligne d'en-têtes.", true,
 			func(c *Call, t tableRef) (any, error) {
 				d, _ := c.Doc()
