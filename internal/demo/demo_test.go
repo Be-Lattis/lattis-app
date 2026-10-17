@@ -194,3 +194,60 @@ func TestPresetsLourds(t *testing.T) {
 		t.Run(p, func(t *testing.T) { build(t, p, 0) })
 	}
 }
+
+// Génération en SQL (presets de 10M lignes) : mêmes colonnes et types que le
+// thème, valeurs plausibles, lignes dans l'ordre ; vérifiée ici sur 2 000 lignes.
+func TestSQLRows(t *testing.T) {
+	ctx := context.Background()
+	for _, c := range []struct {
+		th   Theme
+		cols int
+	}{{Commandes, 10}, {Releves, 100}} {
+		d, err := doc.New(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer d.Close()
+		s := one(c.th, 2_000, c.cols)
+		s.Tables[0].Select = func(seed uint64) string {
+			q, ok := SQLRows(c.th, c.cols, 2_000, seed)
+			if !ok {
+				t.Fatalf("%s : pas de version SQL", c.th.Name)
+			}
+			return q
+		}
+		start := time.Now()
+		if _, err := BuildPlan(ctx, d.Model, Plan{Sheets: []SheetSpec{s}}, Options{}); err != nil {
+			t.Fatalf("%s : %v", c.th.Name, err)
+		}
+		t.Logf("%s : 2 000 lignes × %d colonnes en %v", c.th.Name, c.cols, time.Since(start).Round(time.Millisecond))
+		n := 0
+		err = d.ExportTable(ctx, c.th.Name, func(ec []canvas.ExportColumn) error {
+			if len(ec) != c.cols {
+				t.Fatalf("%s : %d colonnes", c.th.Name, len(ec))
+			}
+			return nil
+		}, func(vals []any) error {
+			n++
+			if n == 1 || n == 2_000 {
+				t.Logf("%s ligne %d : %v", c.th.Name, n, vals[:10])
+			}
+			date, _ := vals[1].(string)
+			if len(date) != 10 || date[:2] != "20" {
+				t.Fatalf("%s ligne %d : date %v", c.th.Name, n, vals[1])
+			}
+			if c.th.Name == Commandes.Name && vals[0] != int64(100000+n) {
+				t.Fatalf("ordre des lignes : ligne %d = %v", n, vals[0])
+			}
+			for i, v := range vals {
+				if v == nil {
+					t.Fatalf("%s ligne %d colonne %d vide", c.th.Name, n, i+1)
+				}
+			}
+			return nil
+		})
+		if err != nil || n != 2_000 {
+			t.Fatalf("%s : %d lignes, %v", c.th.Name, n, err)
+		}
+	}
+}

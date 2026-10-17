@@ -13,6 +13,7 @@ package order
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -189,4 +190,26 @@ func at(s string, i int) byte {
 		return s[i]
 	}
 	return '0'
+}
+
+// SpreadSQL est Spread écrit en SQL : l'expression donne la clé de la
+// ligne n (1 à count) quand n est une expression entière (une colonne), pour
+// remplir un tableau par INSERT … SELECT sans passer par Go.
+func SpreadSQL(count int, n string) string {
+	if count <= 0 {
+		return "NULL"
+	}
+	width, capacity := 1, uint64(base)
+	for capacity <= uint64(count)*uint64(base) {
+		width++
+		capacity *= uint64(base)
+	}
+	step := capacity / uint64(count+1)
+	parts := make([]string, width)
+	div := uint64(1)
+	for k := width - 1; k >= 0; k-- {
+		parts[k] = fmt.Sprintf("substr('%s', ((%s) * %d / %d) %% %d + 1, 1)", Digits, n, step, div, base)
+		div *= uint64(base)
+	}
+	return "rtrim(" + strings.Join(parts, " || ") + ", '0')"
 }

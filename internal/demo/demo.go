@@ -70,6 +70,11 @@ func BuildPlan(ctx context.Context, m *canvas.Model, p Plan, opt Options) (Resul
 				it.Formulas = append(it.Formulas, c.Formula)
 			}
 			t := t
+			if t.Select != nil {
+				it.Select = t.Select(seed)
+				is.Tables = append(is.Tables, it)
+				continue
+			}
 			it.Rows = func(yield func([]any) error) error {
 				return Rows(t.Cols, t.Rows, seed, s.Name+"/"+t.Name, func(row []any) error {
 					tick()
@@ -86,6 +91,9 @@ func BuildPlan(ctx context.Context, m *canvas.Model, p Plan, opt Options) (Resul
 	res, err := m.Import(ctx, "Données de démonstration", sheets)
 	if err != nil {
 		return Result{}, err
+	}
+	if opt.Progress != nil {
+		opt.Progress(total, total) // lignes générées en SQL : pas de décompte en route
 	}
 	out := Result{Sheets: res.Sheets, Rows: total, Warnings: res.Warnings}
 	for _, pv := range p.Pivots {

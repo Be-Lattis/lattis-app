@@ -29,6 +29,12 @@ type ImportTable struct {
 	// type de stockage de leur colonne : int64 (entier, booléen 0/1),
 	// float64 (décimal), string (texte, date ISO aaaa-mm-jj) ou nil.
 	Rows func(yield func([]any) error) error
+	// Select remplace Rows pour les gros volumes : une requête SQL qui rend
+	// les Count lignes, colonnes n (1 à Count, l'ordre des lignes) puis v1…vk
+	// (une par en-tête, au type de stockage), insérées par un seul
+	// INSERT … SELECT, sans aller-retour avec Go. SelectArgs : ses paramètres.
+	Select     string
+	SelectArgs []any
 }
 
 // ImportCell est une cellule libre importée.
@@ -240,15 +246,36 @@ func (t *tx) importTable(sheet int64, it *ImportTable) (Table, error) {
 	if _, err := t.ExecContext(t.Ctx, `CREATE TABLE `+staging+` (`+strings.Join(defs, ", ")+`) STRICT`); err != nil {
 		return Table{}, err
 	}
+	n := 0
+	if it.Select != "" {
+		// Index d'ordre posé avant le remplissage : les clés arrivent déjà
+		// triées, il s'agrandit par la fin (un CREATE INDEX après coup trierait
+		// des millions de clés en mémoire).
+		if _, err := t.ExecContext(t.Ctx, `CREATE INDEX `+tb.sql()+`_pos ON `+staging+`(_pos)`); err != nil {
+			return Table{}, err
+		}
+		vs := make([]string, len(it.Headers))
+		for i := range vs {
+			vs[i] = fmt.Sprintf("q.v%d", i+1)
+		}
+		res, err := t.ExecContext(t.Ctx, `INSERT INTO `+staging+` (`+strings.Join(names, ", ")+`) SELECT q.n, `+order.SpreadSQL(it.Count, "q.n")+`, `+strings.Join(vs, ", ")+` FROM (`+it.Select+`) AS q`, it.SelectArgs...)
+		if err != nil {
+			return Table{}, fmt.Errorf("import du tableau %s : %w", it.Name, err)
+		}
+		k, _ := res.RowsAffected()
+		n = int(k)
+	}
 	ins, err := t.PrepareContext(t.Ctx, `INSERT INTO `+staging+` (`+strings.Join(names, ", ")+`) VALUES (`+marks(len(names))+`)`)
 	if err != nil {
 		return Table{}, err
 	}
 	defer ins.Close()
-	keys := order.Spread(it.Count)
-	n := 0
+	var keys []string
+	if it.Select == "" {
+		keys = order.Spread(it.Count)
+	}
 	args := make([]any, len(names))
-	if it.Rows != nil {
+	if it.Rows != nil && it.Select == "" {
 		err = it.Rows(func(vals []any) error {
 			if n >= it.Count {
 				return fmt.Errorf("import du tableau %s : plus de %d lignes", it.Name, it.Count)
@@ -276,17 +303,20 @@ func (t *tx) importTable(sheet int64, it *ImportTable) (Table, error) {
 	if n != it.Count {
 		return Table{}, fmt.Errorf("import du tableau %s : %d lignes au lieu de %d", it.Name, n, it.Count)
 	}
-	do := append([]stmt{
-		st(`ALTER TABLE ` + staging + ` RENAME TO ` + tb.sql()),
-		st(`CREATE INDEX ` + tb.sql() + `_pos ON ` + tb.sql() + `(_pos)`),
-	}, meta...)
+	do := []stmt{st(`ALTER TABLE ` + staging + ` RENAME TO ` + tb.sql())}
+	if it.Select == "" {
+		do = append(do, st(`CREATE INDEX ` + tb.sql() + `_pos ON ` + tb.sql() + `(_pos)`))
+	}
+	do = append(do, meta...)
 	undo := []stmt{
 		st(`DELETE FROM _slitable_invalid WHERE tbl = ?`, id),
 		st(`DELETE FROM _slitable_columns WHERE tbl = ?`, id),
 		st(`DELETE FROM _slitable_tables WHERE id = ?`, id),
-		st(`DROP INDEX ` + tb.sql() + `_pos`),
-		st(`ALTER TABLE ` + tb.sql() + ` RENAME TO ` + staging),
 	}
+	if it.Select == "" {
+		undo = append(undo, st(`DROP INDEX ` + tb.sql() + `_pos`))
+	}
+	undo = append(undo, st(`ALTER TABLE ` + tb.sql() + ` RENAME TO ` + staging))
 	return tb, t.apply(do, undo)
 }
 

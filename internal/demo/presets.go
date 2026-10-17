@@ -15,6 +15,9 @@ type TableSpec struct {
 	Cols     []Column
 	Rows     int
 	Row, Col int // ancre de l'en-tête
+	// Select, si défini, génère les lignes en SQL (voir sqlgen.go) au lieu
+	// de Cols[i].Value : pour les très gros volumes.
+	Select func(seed uint64) string
 }
 
 // SheetSpec est un onglet à générer.
@@ -69,7 +72,7 @@ const DefaultPreset = "med"
 func Presets() []Preset {
 	var out []Preset
 	for _, cols := range []int{10, 100} {
-		for _, rows := range []int{1_000, 10_000, 100_000, 1_000_000} {
+		for _, rows := range []int{1_000, 10_000, 100_000, 1_000_000, 10_000_000} {
 			out = append(out, sized(rows, cols))
 		}
 	}
@@ -100,6 +103,9 @@ func Names() []string {
 	return out
 }
 
+// sqlRows : à partir de ce nombre de lignes, les presets sont générés en SQL.
+const sqlRows = 10_000_000
+
 func short(n int) string {
 	switch {
 	case n >= 1_000_000 && n%1_000_000 == 0:
@@ -119,8 +125,19 @@ func sized(rows, cols int) Preset {
 		th = Releves
 	}
 	name := short(rows) + "x" + fmt.Sprint(cols)
-	return Preset{name, fmt.Sprintf("%s lignes × %d colonnes (%s), 1 onglet", short(rows), cols, strings.ToLower(th.Name)), func() Plan {
-		return Plan{Sheets: []SheetSpec{one(th, rows, cols)}}
+	desc := fmt.Sprintf("%s lignes × %d colonnes (%s), 1 onglet", short(rows), cols, strings.ToLower(th.Name))
+	if rows >= sqlRows {
+		desc += ", généré en SQL"
+	}
+	return Preset{name, desc, func() Plan {
+		s := one(th, rows, cols)
+		if rows >= sqlRows {
+			s.Tables[0].Select = func(seed uint64) string {
+				q, _ := SQLRows(th, cols, rows, seed)
+				return q
+			}
+		}
+		return Plan{Sheets: []SheetSpec{s}}
 	}}
 }
 

@@ -1,6 +1,10 @@
 package order
 
 import (
+	"strconv"
+
+	"github.com/ncruces/go-sqlite3/driver"
+	_ "github.com/ncruces/go-sqlite3/embed"
 	"math/rand/v2"
 	"slices"
 	"testing"
@@ -132,6 +136,30 @@ func TestAppendKeepsKeysShort(t *testing.T) {
 		}
 		if len(k) > 12 {
 			t.Fatalf("%s : clé de %d caractères après 1 000 000 ajouts : %q", dir, len(k), k)
+		}
+	}
+}
+
+// SpreadSQL donne en SQL les mêmes clés que Spread.
+func TestSpreadSQL(t *testing.T) {
+	db, err := driver.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	for _, count := range []int{1, 7, 61, 62, 1000, 123_457, 10_000_000} {
+		keys := Spread(min(count, 200_000))
+		for _, n := range []int{1, 2, count / 2, count} {
+			if n < 1 || n > len(keys) {
+				continue
+			}
+			var got string
+			if err := db.QueryRow("SELECT " + SpreadSQL(count, strconv.Itoa(n))).Scan(&got); err != nil {
+				t.Fatal(err)
+			}
+			if count <= 200_000 && got != keys[n-1] {
+				t.Errorf("%d/%d : %q, attendu %q", n, count, got, keys[n-1])
+			}
 		}
 	}
 }
