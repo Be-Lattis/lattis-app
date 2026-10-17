@@ -211,6 +211,9 @@ func (c *compiler) newAlias() string {
 }
 
 func (c *compiler) call(n Call, sc scope) string {
+	if k, ok := relativeOffset(n); ok {
+		return c.relative(n, k, sc)
+	}
 	if n.Fn == "ITEM" {
 		it, ok := itemCall(n, c.schema, sc.table)
 		if !ok {
@@ -496,6 +499,9 @@ func rowDependent(n Node) bool {
 	case Binary:
 		return rowDependent(n.L) || rowDependent(n.R)
 	case Call:
+		if _, ok := relativeOffset(n); ok {
+			return true // [Col][-1] : la ligne voisine de celle de la formule
+		}
 		for _, a := range n.Args {
 			if rowDependent(a) {
 				return true

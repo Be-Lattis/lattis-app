@@ -226,3 +226,50 @@ func External(src, own string) bool {
 	}
 	return walk(n)
 }
+
+// relativeOffset reconnaît [Col][-1] / [Col][+1] (Tableau[Col][-2]…) :
+// la ligne k lignes plus haut (négatif) ou plus bas, dans l'ordre
+// d'affichage, à partir de la ligne de la formule. Le signe écrit distingue
+// ce décalage de [Col][2], rang absolu (choix de Louis, 17/10/2026).
+func relativeOffset(n Call) (int, bool) {
+	if n.Fn != "ITEM" || len(n.Args) != 2 {
+		return 0, false
+	}
+	u, ok := n.Args[1].(Unary)
+	if !ok || (u.Op != "-" && u.Op != "+") {
+		return 0, false
+	}
+	v, ok := u.X.(NumLit)
+	if !ok || v.V != float64(int(v.V)) {
+		return 0, false
+	}
+	if u.Op == "-" {
+		return -int(v.V), true
+	}
+	return int(v.V), true
+}
+
+// relative compile [Col][±k] : la valeur de la colonne k lignes plus haut
+// ou plus bas (vide hors du tableau). Seulement dans le tableau de la formule.
+func (c *compiler) relative(n Call, k int, sc scope) string {
+	r, ok := n.Args[0].(Ref)
+	t := sc.table
+	if !ok || t == nil || (r.Table != "" && !strings.EqualFold(r.Table, t.Name)) {
+		return errSQL(ErrRef)
+	}
+	i, ok := t.col(r.Col)
+	if !ok {
+		return errSQL(ErrRef)
+	}
+	if k == 0 {
+		return c.column(t, &t.Cols[i], sc.alias)
+	}
+	a := c.newAlias()
+	val := c.column(t, &t.Cols[i], a)
+	op, dir, off := "<", "DESC", -k
+	if k > 0 {
+		op, dir, off = ">", "ASC", k
+	}
+	return fmt.Sprintf("(SELECT %s FROM %s AS %s WHERE %s._pos %s %s._pos ORDER BY %s._pos %s LIMIT 1 OFFSET %d)",
+		val, t.SQL, a, a, op, sc.alias, a, dir, off-1)
+}

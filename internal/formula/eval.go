@@ -287,6 +287,10 @@ func (env *Env) cell(t *Table, row, i int) Value {
 }
 
 func (env *Env) call(n Call) Value {
+	if _, ok := relativeOffset(n); ok {
+		// [Col][-1] ne se calcule qu'en SQL, dans une colonne calculée.
+		return Err(ErrRef)
+	}
 	if n.Fn == "ITEM" {
 		it, ok := itemCall(n, env.Schema, env.Table)
 		if !ok {
