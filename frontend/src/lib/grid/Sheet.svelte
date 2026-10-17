@@ -3856,12 +3856,32 @@
 		updateExtent();
 		const b = chartBox(ch);
 		const t = reveal(b.y, b.y + b.h, vs.top, vs.view, rowTop(fRows()));
-		if (t !== vs.top) vs.to(t);
 		const l = reveal(b.x, b.x + b.w, scroller.scrollLeft, viewW - MARGIN, cax().offset(fCols()));
-		if (l !== scroller.scrollLeft) scroller.scrollLeft = l;
-		syncNative();
 		wrap.focus();
-		schedule();
+		glideTo(t, l);
+	}
+
+	/** Défile jusqu'à (top, left) : en douceur avec les animations (Affichage › Animations), d'un coup sinon. */
+	function glideTo(top: number, left: number) {
+		const t0 = vs.top;
+		const l0 = scroller.scrollLeft;
+		if (top === t0 && left === l0) return schedule();
+		const set = (t: number, l: number) => {
+			if (t !== vs.top) vs.to(t);
+			if (l !== scroller.scrollLeft) scroller.scrollLeft = l;
+			syncNative();
+			schedule();
+		};
+		if (!motion()) return set(top, left);
+		const start = performance.now();
+		const D = 320;
+		const step = (now: number) => {
+			const k = Math.min(1, (now - start) / D);
+			const e = 1 - Math.pow(1 - k, 3); // décélération
+			set(Math.round(t0 + (top - t0) * e), Math.round(l0 + (left - l0) * e));
+			if (k < 1) requestAnimationFrame(step);
+		};
+		requestAnimationFrame(step);
 	}
 
 	function pasteChart(cfg: ChartConfig) {
