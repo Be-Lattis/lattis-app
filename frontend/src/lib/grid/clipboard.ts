@@ -140,3 +140,40 @@ export interface Clip extends Rect {
 export function richClip(clip: Clip | null, text: string): Clip | null {
 	return clip && !clip.plain && sameClipText(clip.text, text) ? clip : null;
 }
+
+/** Tableau posé sur la feuille : son identifiant et sa zone (en-tête compris). */
+export interface Placed extends Rect {
+	id: number;
+}
+
+/**
+ * Cadre de copie après un changement de la feuille (before → after) : il
+ * suit les tableaux qu'il touche quand ils se sont tous déplacés ensemble
+ * (poussés en cascade par un collage), reste quand rien ne l'a touché, et
+ * disparaît sinon (tableau redimensionné, fusionné ou supprimé, tableau
+ * arrivé dans la zone) : il ne désigne jamais autre chose que ce qui a été
+ * copié, comme le mode copie d'Excel qui s'annule quand la feuille change
+ * sous lui.
+ */
+export function followClip<T extends Rect>(clip: T, before: Placed[], after: Placed[]): T | null {
+	const was = before.filter((b) => overlaps(b, clip));
+	const ids = new Set(was.map((b) => b.id));
+	const now = new Map(after.map((a) => [a.id, a]));
+	let dr = 0;
+	let dc = 0;
+	for (const [k, b] of was.entries()) {
+		const a = now.get(b.id);
+		if (!a || a.r1 - a.r0 !== b.r1 - b.r0 || a.c1 - a.c0 !== b.c1 - b.c0) return null;
+		if (k === 0) [dr, dc] = [a.r0 - b.r0, a.c0 - b.c0];
+		else if (a.r0 - b.r0 !== dr || a.c0 - b.c0 !== dc) return null;
+	}
+	const arrived = (zone: Rect) => after.some((a) => !ids.has(a.id) && overlaps(a, zone));
+	if (dr === 0 && dc === 0) return arrived(clip) ? null : clip;
+	// Les cellules libres ne bougent pas avec les tableaux : le cadre ne suit
+	// que s'il est dans un seul tableau, ou s'il est exactement leur ensemble.
+	const box = was.reduce<Rect>((u, b) => ({ r0: Math.min(u.r0, b.r0), c0: Math.min(u.c0, b.c0), r1: Math.max(u.r1, b.r1), c1: Math.max(u.c1, b.c1) }), was[0]);
+	const same = box.r0 === clip.r0 && box.c0 === clip.c0 && box.r1 === clip.r1 && box.c1 === clip.c1;
+	if (!same && !was.some((b) => contains(b, clip))) return null;
+	const moved = { ...clip, r0: clip.r0 + dr, r1: clip.r1 + dr, c0: clip.c0 + dc, c1: clip.c1 + dc };
+	return arrived(moved) ? null : moved;
+}

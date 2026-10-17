@@ -12,7 +12,7 @@
 	import { RowCache, percentile, type Fetched } from './cache';
 	import { VScroll, clamp } from './scroll';
 	import { Axis } from './axis';
-	import { overlaps, parseTSV, pasteArea, richClip, tileBlock, toTSV, type Clip, type Rect as ClipRect } from './clipboard';
+	import { followClip, overlaps, parseTSV, pasteArea, richClip, tileBlock, toTSV, type Clip, type Rect as ClipRect } from './clipboard';
 	import { isNumericText, painterPatch, parseStyle, resolveStyle, type CellStyle, type StyleLayer } from './style';
 	import { formatCell } from './numfmt';
 	import { autoHeight, cellFont, fontPx, lineHeight, wrapLines } from './textwrap';
@@ -525,12 +525,17 @@
 		return e;
 	}
 
+	// Feuille des tableaux affichés (entries) : leurs positions avant une mise à jour de la même feuille.
+	let placedSheet: number | undefined;
+	const placed = () => entries.map((e) => ({ id: e.t.id, r0: e.t.row, c0: e.t.col, r1: e.last, c1: e.lastCol }));
+
 	/** Recalcule la géométrie quand la mise en page change (après une saisie). */
 	function applyData(d: SheetData) {
 		// Changement de feuille : garder la position de la feuille quittée,
 		// retrouver celle de la nouvelle (A1 si elle n'a pas été visitée).
 		const back = sheetViews.switchTo(d.sheet ?? 1, { active: { ...active }, anchor: { ...anchor }, top: vs.top, left: scroller?.scrollLeft ?? 0 });
 		const old = new Map(entries.map((e) => [e.t.id, e]));
+		const placedBefore = placedSheet === (d.sheet ?? 0) ? placed() : null;
 		entries = d.tables.map((t) => {
 			const e = old.get(t.id);
 			if (!e) return makeEntry(t);
@@ -543,6 +548,10 @@
 		cells = new Map(d.cells.map((c) => [key(c.row, c.col), c.raw]));
 		mixes.clear();
 		tipCell = '';
+		// Cadre de copie : il suit le tableau copié poussé par un collage, ou
+		// disparaît s'il ne désigne plus ce qui a été copié.
+		if (clipRange && clipRange.sheet === (d.sheet ?? 0) && placedBefore) clipRange = followClip(clipRange, placedBefore, placed());
+		placedSheet = d.sheet ?? 0;
 		pivots = (d.pivots ?? []).map((p) => {
 			const f = p.error ? 0 : (p.config.filters?.length ?? 0);
 			return { ...p, anchor: p.row, row: p.row + (f ? f + 1 : 0) };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { contains, overlaps, parseTSV, pasteArea, richClip, sameClipText, tileBlock, tiles, toTSV, type Clip } from './clipboard';
+import { contains, followClip, overlaps, parseTSV, pasteArea, richClip, sameClipText, tileBlock, tiles, toTSV, type Clip } from './clipboard';
 
 describe('presse-papiers', () => {
 	it('lit le texte copié depuis Excel', () => {
@@ -73,5 +73,26 @@ describe('collage à la Excel', () => {
 		expect(overlaps(sel(0, 0, 2, 2), sel(3, 0, 3, 0))).toBe(false);
 		expect(contains(sel(0, 0, 5, 5), sel(1, 1, 2, 2))).toBe(true);
 		expect(contains(sel(1, 1, 2, 2), sel(0, 0, 5, 5))).toBe(false);
+	});
+});
+
+describe('cadre de copie après un changement de la feuille', () => {
+	const box = (id: number, r0: number, c0: number, r1: number, c1: number) => ({ id, r0, c0, r1, c1 });
+	const clip = { r0: 0, c0: 0, r1: 4, c1: 2 };
+	it('suit le tableau copié poussé en cascade par le collage', () => {
+		// Copie du tableau 1 (A1:C5), collé en B3 : le nouveau tableau 2 reste, le 1 part à droite.
+		expect(followClip(clip, [box(1, 0, 0, 4, 2)], [box(1, 0, 6, 4, 8), box(2, 2, 1, 6, 3)])).toEqual({ r0: 0, c0: 6, r1: 4, c1: 8 });
+	});
+	it('reste quand rien ne l’a touché', () => {
+		const before = [box(1, 0, 0, 4, 2), box(3, 0, 10, 4, 12)];
+		expect(followClip(clip, before, [box(1, 0, 0, 4, 2), box(3, 0, 14, 4, 16)])).toBe(clip);
+	});
+	it('disparaît quand la zone ne désigne plus ce qui a été copié', () => {
+		// Tableau agrandi, supprimé, ou un autre arrivé dans la zone.
+		expect(followClip(clip, [box(1, 0, 0, 4, 2)], [box(1, 0, 0, 5, 2)])).toBeNull();
+		expect(followClip(clip, [box(1, 0, 0, 4, 2)], [])).toBeNull();
+		expect(followClip({ r0: 0, c0: 0, r1: 4, c1: 1 }, [], [box(2, 1, 1, 3, 3)])).toBeNull();
+		// Cellules libres et tableau copiés ensemble, le tableau poussé : les cellules libres, elles, sont restées.
+		expect(followClip({ r0: 0, c0: 0, r1: 6, c1: 2 }, [box(1, 0, 0, 4, 2)], [box(1, 0, 5, 4, 7)])).toBeNull();
 	});
 });
