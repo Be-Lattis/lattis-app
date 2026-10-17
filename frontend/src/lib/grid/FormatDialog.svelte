@@ -410,6 +410,7 @@
 	.dlg {
 		background: #fff;
 		border: 1px solid #c9cdd2;
+		border-radius: var(--float-radius);
 		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 		width: 560px;
 		max-width: calc(100% - 24px);

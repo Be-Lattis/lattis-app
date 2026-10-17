@@ -772,6 +772,7 @@
 		z-index: 10;
 		background: #fff;
 		border: 1px solid #d4d7db;
+		border-radius: var(--float-radius);
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 		min-width: 220px;
 		padding: 4px 0;
@@ -901,6 +902,7 @@
 		padding: 6px;
 		background: #f3f4f6;
 		border: 1px solid #d4d7db;
+		border-radius: var(--float-radius);
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 	}
 	.color-cmd {
@@ -941,6 +943,7 @@
 		z-index: 20;
 		background: #fff;
 		border: 1px solid #d4d7db;
+		border-radius: var(--float-radius);
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 		padding: 8px;
 		/* Marge invisible : la palette ne se ferme pas au moindre écart. */
@@ -1032,6 +1035,7 @@
 		z-index: 20;
 		background: #fff;
 		border: 1px solid #d4d7db;
+		border-radius: var(--float-radius);
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 		padding: 4px 0;
 		min-width: 220px;

@@ -202,7 +202,7 @@
 		padding: 4px 0;
 		background: #fff;
 		border: 1px solid #d4d7db;
-		border-radius: 4px;
+		border-radius: var(--float-radius);
 		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
 		font-size: 12px;
 		user-select: none;

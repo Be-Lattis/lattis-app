@@ -134,6 +134,7 @@
 		background: #fff;
 		color: #1f2328;
 		border: 1px solid #c9cdd2;
+		border-radius: var(--float-radius);
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
 		padding: 4px 0;
 		min-width: 90px;

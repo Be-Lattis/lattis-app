@@ -1123,6 +1123,10 @@
 		background: #c0392b;
 		border-color: #c0392b;
 	}
+	/* Coins des surfaces flottantes (menus, boîtes de dialogue, panneaux de filtre…) : légèrement arrondis. */
+	:global(:root) {
+		--float-radius: 6px;
+	}
 	:global(html, body) {
 		margin: 0;
 		height: 100%;
@@ -1283,7 +1287,7 @@
 	.modal {
 		background: #fff;
 		border: 1px solid #d4d7db;
-		border-radius: 4px;
+		border-radius: var(--float-radius);
 		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 		padding: 16px 20px;
 		max-width: 440px;

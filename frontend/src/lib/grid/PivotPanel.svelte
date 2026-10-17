@@ -1045,6 +1045,7 @@
 		z-index: 40;
 		background: #fff;
 		border: 1px solid #d4d7db;
+		border-radius: var(--float-radius);
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 		font-size: 12px;
 		color: #1f2328;

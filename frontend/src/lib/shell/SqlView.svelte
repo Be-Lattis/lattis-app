@@ -469,6 +469,7 @@
 		padding: 4px 0;
 		background: #fff;
 		border: 1px solid #d4d7db;
+		border-radius: var(--float-radius);
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 	}
 	.ctx button {

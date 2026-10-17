@@ -183,6 +183,7 @@
 	.dialog {
 		background: #fff;
 		border: 1px solid #d4d7db;
+		border-radius: var(--float-radius);
 		box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
 		min-width: 340px;
 		max-width: min(560px, calc(100vw - 32px));

@@ -7536,7 +7536,7 @@
 		padding: 5px 8px 5px 10px;
 		background: #f7f8f9;
 		border: 1px solid #d4d7db;
-		border-radius: 4px;
+		border-radius: var(--float-radius);
 		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
 	}
 	.finder input {
@@ -7602,6 +7602,7 @@
 		z-index: 6;
 		background: #fff;
 		border: 1px solid #c9cdd2;
+		border-radius: var(--float-radius);
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 		min-width: 260px;
 		max-width: 520px;
@@ -7671,6 +7672,7 @@
 		z-index: 5;
 		background: #fff;
 		border: 1px solid #d4d7db;
+		border-radius: var(--float-radius);
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 		padding: 4px 0;
 		min-width: 240px;
@@ -7683,6 +7685,7 @@
 		transform: translateX(-50%);
 		background: #fff;
 		border: 1px solid #d4d7db;
+		border-radius: var(--float-radius);
 		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
 		padding: 6px 0 8px;
 		min-width: 460px;
@@ -8124,6 +8127,7 @@
 		padding: 5px 8px;
 		background: #fffbe6;
 		border: 1px solid #d6c27a;
+		border-radius: var(--float-radius);
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 		white-space: pre-wrap;
 		pointer-events: none;

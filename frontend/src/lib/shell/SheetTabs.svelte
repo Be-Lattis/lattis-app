@@ -605,6 +605,7 @@
 		z-index: 10;
 		background: #fff;
 		border: 1px solid #d4d7db;
+		border-radius: var(--float-radius);
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 		padding: 4px 0;
 		min-width: 140px;
@@ -676,6 +677,7 @@
 	.dialog {
 		background: #fff;
 		border: 1px solid #d4d7db;
+		border-radius: var(--float-radius);
 		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 		padding: 16px 18px;
 		min-width: 300px;
