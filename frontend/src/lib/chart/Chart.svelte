@@ -2,7 +2,9 @@
 	// Graphique en SVG, sans bibliothèque : barres (verticales ou horizontales,
 	// groupées ou empilées), courbes, aires, secteurs, anneau, nuage de points.
 	// Les données arrivent déjà agrégées par le classeur.
+	import { untrack } from 'svelte';
 	import { PALETTE, axisFormat, categoryLayout, parseNumber, shortLabel, tickLabel, ticks } from './scale';
+	import { ease, lerpSeries, progress, reducedMotion, sameSeries } from '../grid/anim';
 
 	export interface Series {
 		name: string;
@@ -34,9 +36,35 @@
 		width: number;
 		height: number;
 		style?: ChartStyle;
+		/** Données qui changent : barres, courbes et secteurs vont de l'ancienne valeur à la nouvelle. */
+		animate?: boolean;
+		/** Graphique qui vient de naître d'une modification : il pousse depuis zéro. */
+		grow?: boolean;
 	}
 
-	let { kind, labels, series, width, height, style = {} }: Props = $props();
+	let { kind, labels, series: target, width, height, style = {}, animate = false, grow = false }: Props = $props();
+
+	// Séries affichées : celles reçues, ou en chemin vers elles (choix de Louis :
+	// le graphique se remplit après une modification, pas après une
+	// navigation). L'échelle suit tout de suite les nouvelles valeurs.
+	let series = $state.raw<Series[]>(untrack(() => (animate && grow && !reducedMotion() ? lerpSeries(null, target, 0) : target)));
+	$effect(() => {
+		const to = target;
+		const from = untrack(() => series);
+		if (!animate || reducedMotion() || sameSeries(from, to)) {
+			series = to;
+			return;
+		}
+		const t0 = performance.now();
+		let raf = 0;
+		const step = (now: number) => {
+			const k = progress(now, t0);
+			series = lerpSeries(from, to, ease(k));
+			if (k < 1) raf = requestAnimationFrame(step);
+		};
+		raf = requestAnimationFrame(step);
+		return () => cancelAnimationFrame(raf);
+	});
 
 	const color = (k: number) => style.colors?.[k] || PALETTE[k % PALETTE.length];
 	const radial = $derived(kind === 'pie' || kind === 'doughnut');
@@ -75,7 +103,7 @@
 			for (let i = 0; i < labels.length; i++) {
 				let p = 0;
 				let n = 0;
-				for (const s of series) {
+				for (const s of target) {
 					const v = s.values[i] ?? 0;
 					if (v >= 0) p += v;
 					else n += v;
@@ -84,7 +112,7 @@
 				lo = Math.min(lo, n);
 			}
 		} else {
-			series.forEach((s, k) => {
+			target.forEach((s, k) => {
 				if (isSec(k)) return;
 				for (const v of s.values) if (v !== null) (lo = Math.min(lo, v)), (hi = Math.max(hi, v));
 			});
@@ -95,7 +123,7 @@
 	const ticks2 = $derived.by(() => {
 		let lo = 0;
 		let hi = 0;
-		series.forEach((s, k) => {
+		target.forEach((s, k) => {
 			if (!isSec(k)) return;
 			for (const v of s.values) if (v !== null) (lo = Math.min(lo, v)), (hi = Math.max(hi, v));
 		});

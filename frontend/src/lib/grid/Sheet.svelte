@@ -12,6 +12,7 @@
 	import { RowCache, percentile, type Fetched } from './cache';
 	import { VScroll, clamp } from './scroll';
 	import { Axis } from './axis';
+	import { ease, flashAlpha, lerpBar, motionAt, progress, reducedMotion, sameBar, shiftAxis, tableMotions, zeroBar, type AxisLike, type BarSpan, type Geo, type LinesShift, type Motion } from './anim';
 	import { followClip, overlaps, parseTSV, pasteArea, richClip, tileBlock, toTSV, type Clip, type Rect as ClipRect } from './clipboard';
 	import { isNumericText, painterPatch, parseStyle, resolveStyle, type CellStyle, type StyleLayer } from './style';
 	import { formatCell } from './numfmt';
@@ -624,11 +625,12 @@
 	}
 
 	/** Barre de données dans la cellule (x, y, w, h). */
-	function drawBar(b: NonNullable<CfOut['bar']>, x: number, y: number, w: number, h: number) {
+	function drawBar(b: NonNullable<CfOut['bar']>, x: number, y: number, w: number, h: number, k: string, r: number, c: number) {
 		const pad = 2;
 		const span = Math.max(0, w - 2 * pad);
-		const x0 = x + pad + b.a * span;
-		const x1 = x + pad + b.b * span;
+		const shown = barShown(k, b, r, c);
+		const x0 = x + pad + shown.a * span;
+		const x1 = x + pad + shown.b * span;
 		const by = y + 2;
 		const bh = Math.max(2, h - 4);
 		if (x1 - x0 >= 0.5) {
@@ -720,7 +722,10 @@
 		const back = sheetViews.switchTo(d.sheet ?? 1, { active: { ...active }, anchor: { ...anchor }, top: vs.top, left: scroller?.scrollLeft ?? 0 });
 		const old = new Map(entries.map((e) => [e.t.id, e]));
 		const placedBefore = placedSheet === (d.sheet ?? 0) ? placed() : null;
-		entries = d.tables.map((t) => {
+		// Navigation (ouverture, autre feuille) : rien ne s'anime.
+		const nav = placedSheet !== (d.sheet ?? 0);
+		const oldCharts = new Set(charts.map((c) => c.id));
+		entries =d.tables.map((t) => {
 			const e = old.get(t.id);
 			if (!e) return makeEntry(t);
 			e.t = t;
@@ -798,6 +803,7 @@
 			updateExtent();
 			syncNative();
 		}
+		startAnims(nav, new Set(old.keys()), oldCharts, performance.now());
 		refreshFx();
 		if (back) refreshStatus();
 		schedule();
@@ -857,7 +863,7 @@
 		if (!measurer) return 0;
 		measurer.font = cellFont(st);
 		const m = measurer;
-		return Math.min(MAX_AUTO_H, autoHeight(text, colAxis.size(c), st ?? {}, (s) => m.measureText(s).width, ROW_H));
+		return Math.min(MAX_AUTO_H, autoHeight(text, cax().size(c), st ?? {}, (s) => m.measureText(s).width, ROW_H));
 	}
 
 	/** Hauteurs automatiques des lignes, comme Excel : cellules libres qui renvoient à la ligne, sur plusieurs lignes ou en grande police. */
@@ -895,7 +901,7 @@
 			for (let i = 0; i < e.t.columns.length; i++) {
 				const c = e.t.col + i;
 				const text = row.text[i] ?? '';
-				if (!colAxis.size(c) || (!rowFit && !cs?.[i] && !sheetColStyles.has(c) && !row.sty?.has(i) && !text.includes('\n'))) continue;
+				if (!cax().size(c) || (!rowFit && !cs?.[i] && !sheetColStyles.has(c) && !row.sty?.has(i) && !text.includes('\n'))) continue;
 				h = Math.max(h, fitHeight(text, c, styleAt(r, c, e)));
 			}
 		}
@@ -941,7 +947,7 @@
 	/** Cadre extérieur cible : la plage sélectionnée, ou la cellule active (sa fusion). */
 	function frameTarget(): Box {
 		const s = singleSelection() ? activeRect() : selection();
-		return { x: colAxis.offset(s.c0), y: rowTop(s.r0), w: colAxis.offset(s.c1 + 1) - colAxis.offset(s.c0), h: rspan(s.r0, s.r1) };
+		return { x: cax().offset(s.c0), y: rowTop(s.r0), w: cax().offset(s.c1 + 1) - cax().offset(s.c0), h: rspan(s.r0, s.r1) };
 	}
 
 	/** Cadre à dessiner pour cette image ; demande l'image suivante tant qu'il bouge. */
@@ -949,7 +955,7 @@
 		const to = frameTarget();
 		const same = (a: Box, b: Box) => a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
 		const far = selShown && (Math.abs(to.x - selShown.x) > viewW * 2 || Math.abs(to.y - selShown.y) > viewH * 2);
-		if (!selShown || !animate || now < noAnimUntil || far) {
+		if (!selShown || !motion() || now < noAnimUntil || far || lines) {
 			selAnim = null;
 			selShown = to;
 			return to;
@@ -965,6 +971,253 @@
 		return selShown;
 	}
 	let selBox: Box = { x: 0, y: 0, w: 0, h: 0 };
+
+	// --- Animations après une modification (voir anim.ts) ------------------
+	// Courtes et discrètes (choix de Louis), coupées par Affichage ›
+	// Animations et par prefers-reduced-motion. Chacune part d'un instant
+	// posé par applyData (jamais pour une navigation : défilement, autre
+	// feuille, ouverture) et vit au dessin, sans relire le classeur ; une
+	// image de plus n'est demandée que tant qu'il en reste une en cours.
+	const motion = () => animate && !reducedMotion();
+	// Fenêtre après une modification où les valeurs qui changent s'animent
+	// (lignes rechargées, statistiques des règles arrivées un peu après).
+	const EDIT_WINDOW = 1500;
+	let editAt = -Infinity;
+	let animNow = 0;
+	let animBusy = false;
+	// 1. Lignes ou colonnes de la feuille insérées ou supprimées : axe décalé.
+	let lines: (LinesShift & { t0: number; rows: boolean }) | null = null;
+	// Insertion ou suppression demandée, en attente de la mise en page qui la reflète.
+	let linesHint: { t: number; rows: boolean; at: number; n: number; px: number; table?: number } | null = null;
+	// 1 et 5. Ligne ou colonne insérée ou supprimée dans un tableau : la suite glisse.
+	let inner = new Map<number, { t0: number; rows: boolean; at: number; n: number; px: number }>();
+	// 3 et 5. Tableaux déplacés, agrandis ou nés ; géométrie dessinée à l'image précédente.
+	let motions = new Map<number, Motion>();
+	let geoDrawn = new Map<number, Geo>();
+	// 2. Barres de données : celles de l'image précédente (cible, affichée), animations en cours.
+	let barsPrev = new Map<string, { t: BarSpan; s: BarSpan }>();
+	let barsNow = new Map<string, { t: BarSpan; s: BarSpan }>();
+	const barAnims = new Map<string, { from: BarSpan; to: BarSpan; t0: number }>();
+	// Plage visible (volet principal) de l'image précédente : une barre qui y
+	// apparaît après une modification pousse depuis zéro.
+	let viewPrev: { r0: number; r1: number; c0: number; c1: number } | null = null;
+	let viewNow: { r0: number; r1: number; c0: number; c1: number } | null = null;
+	// 4. Valeurs calculées de l'image précédente, et éclats en cours.
+	let valsPrev = new Map<string, string>();
+	let valsNow = new Map<string, string>();
+	const flashes = new Map<string, number>();
+	// Cellule saisie : elle ne s'éclaire pas.
+	let typed = { row: -1, col: -1, t: -Infinity };
+	// 2. Graphiques nés d'une modification : ils poussent depuis zéro.
+	let grownCharts = $state.raw(new Set<number>());
+
+	/** Début d'une image : axes animés, valeurs de l'image précédente. */
+	function beginAnimFrame(now: number) {
+		animNow = now;
+		animBusy = false;
+		rowDraw = rowAxis;
+		colDraw = colAxis;
+		if (lines) {
+			const k = progress(now, lines.t0);
+			if (k >= 1 || !motion()) lines = null;
+			else {
+				animBusy = true;
+				if (lines.rows) rowDraw = shiftAxis(rowAxis, lines, ease(k));
+				else colDraw = shiftAxis(colAxis, lines, ease(k));
+			}
+		}
+		drawing = true;
+		geoDrawn = new Map();
+		if (!motion()) {
+			if (valsNow.size || barsNow.size || flashes.size || barAnims.size || motions.size || inner.size) {
+				valsNow = new Map();
+				barsNow = new Map();
+				flashes.clear();
+				barAnims.clear();
+				motions.clear();
+				inner.clear();
+			}
+			return;
+		}
+		valsPrev = valsNow;
+		valsNow = new Map();
+		barsPrev = barsNow;
+		barsNow = new Map();
+		viewPrev = viewNow;
+	}
+
+	/** Fin d'une image : vrais axes, image suivante s'il reste une animation. */
+	function endAnimFrame() {
+		drawing = false;
+		if (animBusy) schedule();
+	}
+
+	/**
+	 * Animations d'une nouvelle mise en page (après rebuildAxis et rebuildRows) :
+	 * insertion ou suppression demandée, tableaux déplacés, agrandis ou nés.
+	 */
+	function startAnims(nav: boolean, known: Set<number>, oldCharts: Set<number>, now: number) {
+		const hint = linesHint && now - linesHint.t < 3000 ? linesHint : null;
+		linesHint = null;
+		if (nav || !motion()) {
+			editAt = -Infinity;
+			lines = null;
+			motions.clear();
+			inner.clear();
+			flashes.clear();
+			barAnims.clear();
+			valsNow = new Map();
+			barsNow = new Map();
+			viewNow = null;
+			if (grownCharts.size) grownCharts = new Set();
+			return;
+		}
+		editAt = now;
+		const born = charts.filter((c) => !oldCharts.has(c.id)).map((c) => c.id);
+		if (born.length || grownCharts.size) grownCharts = new Set(born);
+		if (hint && hint.table === undefined) {
+			// Lignes ou colonnes de la feuille : tout glisse avec l'axe ; les
+			// cellules libres ont changé de place, leurs valeurs ne s'éclairent pas.
+			const view = hint.rows ? viewH : viewW;
+			lines = { t0: now, rows: hint.rows, at: hint.at, n: hint.n, px: Math.min(hint.px, view) };
+			motions.clear();
+			inner.clear();
+			valsNow = new Map();
+			barsNow = new Map();
+			schedule();
+			return;
+		}
+		// Une même modification peut arriver en deux mises en page (relecture,
+		// puis événement du classeur) : les animations en cours continuent.
+		if (lines) return;
+		const geo = new Map(entries.map((e) => [e.t.id, tableGeo(e)]));
+		for (const [id, m] of tableMotions(geoDrawn, known, geo, now)) if (!motions.get(id)?.born) motions.set(id, m);
+		for (const id of inner.keys()) if (!geo.has(id)) inner.delete(id);
+		if (hint && hint.table !== undefined && entries.some((e) => e.t.id === hint.table)) inner.set(hint.table, { t0: now, rows: hint.rows, at: hint.at, n: hint.n, px: hint.px });
+		schedule();
+	}
+
+	/** Insertion ou suppression demandée (lignes ou colonnes de la feuille, ou d'un tableau). */
+	function hintLines(rows: boolean, at: number, n: number, table?: number) {
+		if (!motion()) return;
+		const px = n > 0 ? (rows ? rh(at) : cax().size(at)) : rows ? rspan(at, at - n - 1) : cax().offset(at - n) - cax().offset(at);
+		linesHint = { t: performance.now(), rows, at, n, px, table };
+	}
+
+	/** Cadre affiché d'un tableau (prolongé quand la cellule active est juste dessous ou à droite), en pixels de la feuille. */
+	function tableGeo(e: Entry): Geo {
+		const g = grown(e);
+		const x = cax().offset(e.t.col);
+		const y = rowTop(e.t.row);
+		return { x, y, w: cax().offset(g.lastCol + 1) - x, h: rspan(e.t.row, g.last) };
+	}
+
+	type TableAnim = { dx: number; dy: number; w: number; h: number; alpha: number; rowOff: (r: number) => number; colOff: (c: number) => number };
+	const noOff = () => 0;
+	let tableAnims = new Map<number, TableAnim | null>();
+	let tableAnimsAt = -1;
+
+	/** Mouvement d'un tableau à cette image (null : immobile). */
+	function tableAnim(e: Entry): TableAnim | null {
+		if (!motions.size && !inner.size) return null;
+		if (tableAnimsAt !== animNow) {
+			tableAnims = new Map();
+			tableAnimsAt = animNow;
+		}
+		const id = e.t.id;
+		if (tableAnims.has(id)) return tableAnims.get(id)!;
+		let out: TableAnim | null = null;
+		const to = tableGeo(e);
+		const m = motions.get(id);
+		if (m) {
+			const k = progress(animNow, m.t0);
+			if (k >= 1) motions.delete(id);
+			else {
+				animBusy = true;
+				const g = motionAt(m, to, ease(k), rh(e.t.row));
+				out = { dx: g.x - to.x, dy: g.y - to.y, w: g.w, h: g.h, alpha: g.alpha, rowOff: noOff, colOff: noOff };
+			}
+		}
+		const s = inner.get(id);
+		if (s) {
+			const k = progress(animNow, s.t0);
+			if (k >= 1) inner.delete(id);
+			else {
+				animBusy = true;
+				const left = (1 - ease(k)) * s.px;
+				// Insertion : ce qui suit la nouvelle ligne part de son ancienne place ;
+				// suppression : ce qui suivait la ligne supprimée remonte.
+				const off = (i: number) => (s.n > 0 ? (i > s.at ? -left : 0) : i >= s.at ? left : 0);
+				out ??= { dx: 0, dy: 0, w: to.w, h: to.h, alpha: 1, rowOff: noOff, colOff: noOff };
+				if (s.rows) out.rowOff = off;
+				else out.colOff = off;
+			}
+		}
+		tableAnims.set(id, out);
+		return out;
+	}
+
+	/**
+	 * Entre dans le repère d'un tableau en mouvement : décalage, opacité, et
+	 * découpe à son cadre animé (agrandi de ce que la saisie prolonge) ;
+	 * faux s'il est immobile (rien à restaurer).
+	 */
+	function enterTable(e: Entry, cx: (c: number) => number, ry: (r: number) => number): boolean {
+		const a = tableAnim(e);
+		if (!a) return false;
+		ctx.save();
+		ctx.translate(a.dx, a.dy);
+		ctx.globalAlpha *= a.alpha;
+		ctx.beginPath();
+		ctx.rect(cx(e.t.col) - 1, ry(e.t.row) - 1, a.w + 2, a.h + 2);
+		ctx.clip();
+		return true;
+	}
+
+	/** Barre de données affichée pour la cellule k (sheet r, c) : de l'ancienne valeur, ou de zéro, à la nouvelle. */
+	function barShown(k: string, b: BarSpan & { axis?: number; rev?: boolean }, r: number, c: number): BarSpan {
+		if (!motion()) return b;
+		const target = { a: b.a, b: b.b };
+		const prev = barsPrev.get(k);
+		let a = barAnims.get(k);
+		if (animNow - editAt < EDIT_WINDOW) {
+			const v = viewPrev;
+			if (prev && !sameBar(prev.t, target)) barAnims.set(k, (a = { from: prev.s, to: target, t0: animNow }));
+			else if (!prev && !a && v && r >= v.r0 && r <= v.r1 && c >= v.c0 && c <= v.c1) barAnims.set(k, (a = { from: zeroBar(b), to: target, t0: animNow }));
+		}
+		let s: BarSpan = target;
+		if (a) {
+			const p = progress(animNow, a.t0);
+			if (p >= 1 || !sameBar(a.to, target)) barAnims.delete(k);
+			else {
+				s = lerpBar(a.from, target, ease(p));
+				animBusy = true;
+			}
+		}
+		barsNow.set(k, { t: target, s });
+		return s;
+	}
+
+	/** Éclat d'une valeur calculée (clé k, cellule r, c) qui vient de changer : opacité (0 : aucun). */
+	function flashOf(k: string, v: string, r: number, c: number): number {
+		if (!motion()) return 0;
+		const prev = valsPrev.get(k);
+		valsNow.set(k, v);
+		if (prev !== undefined && prev !== v && animNow - editAt < EDIT_WINDOW && (r !== typed.row || c !== typed.col || animNow - typed.t > EDIT_WINDOW)) flashes.set(k, animNow);
+		const t0 = flashes.get(k);
+		if (t0 === undefined) return 0;
+		const a = flashAlpha(animNow, t0);
+		if (a <= 0) flashes.delete(k);
+		else animBusy = true;
+		return a;
+	}
+
+	/** Pose l'éclat d'une cellule (sous son texte). */
+	function paintFlash(a: number, x: number, y: number, w: number, h: number) {
+		if (a <= 0) return;
+		ctx.fillStyle = `rgba(33, 115, 70, ${(0.2 * a).toFixed(3)})`;
+		ctx.fillRect(x, y, w, h);
+	}
 
 	function activeRect() {
 		const g = mergeOf(active.row, active.col);
@@ -999,9 +1252,17 @@
 	// Hauteurs des lignes : par défaut ROW_H, sinon celles choisies (marge de gauche).
 	let rowAxis = $state.raw(new Axis(SHEET_ROWS, ROW_H));
 	let userHeights = new Map<number, number>();
-	const rh = (r: number) => rowAxis.size(r);
-	const rowTop = (r: number) => rowAxis.offset(r);
-	const rspan = (r0: number, r1: number) => rowAxis.offset(r1 + 1) - rowAxis.offset(r0);
+	// Pendant le dessin, les axes peuvent être ceux d'une insertion ou d'une
+	// suppression en cours d'animation (voir anim.ts) ; ailleurs (clics,
+	// défilement, calques), toujours les vrais.
+	let drawing = false;
+	let rowDraw: AxisLike = new Axis(SHEET_ROWS, ROW_H);
+	let colDraw: AxisLike = new Axis(SHEET_COLS, DEF_W);
+	const rax = (): AxisLike => (drawing ? rowDraw : rowAxis);
+	const cax = (): AxisLike => (drawing ? colDraw : colAxis);
+	const rh = (r: number) => rax().size(r);
+	const rowTop = (r: number) => rax().offset(r);
+	const rspan = (r0: number, r1: number) => rax().offset(r1 + 1) - rax().offset(r0);
 	function rebuildRows(override?: { row: number; height: number }) {
 		// Hauteur automatique (renvoyer à la ligne), sauf hauteur choisie ; masquée : nulle.
 		const hs = autoRows.all();
@@ -1032,7 +1293,7 @@
 	let scrollHoldCols = 0;
 	function holdWhileScrolling() {
 		// Le plus grand atteint pendant le geste (il a pu s'agrandir en route).
-		scrollHoldRows = Math.max(scrollHoldRows, rowAxis.indexAt(vs.content));
+		scrollHoldRows = Math.max(scrollHoldRows, rax().indexAt(vs.content));
 		scrollHoldCols = Math.max(scrollHoldCols, extentCols);
 		clearTimeout(scrolling);
 		scrolling = window.setTimeout(() => {
@@ -1051,11 +1312,11 @@
 
 	function growAtEnd(rows: boolean) {
 		if (rows) {
-			const lastVisible = rowAxis.indexAt(vs.top + vs.view);
+			const lastVisible = rax().indexAt(vs.top + vs.view);
 			holdRows = Math.min(SHEET_ROWS, Math.max(holdRows, lastVisible + Math.max(10, Math.floor(vs.view / ROW_H))));
 		} else {
 			const cw = Math.max(0, viewW - MARGIN);
-			holdCols = Math.min(SHEET_COLS, Math.max(holdCols, colAxis.indexAt(scroller.scrollLeft + cw) + Math.max(3, Math.floor(cw / DEF_W))));
+			holdCols = Math.min(SHEET_COLS, Math.max(holdCols, cax().indexAt(scroller.scrollLeft + cw) + Math.max(3, Math.floor(cw / DEF_W))));
 		}
 	}
 
@@ -1075,23 +1336,23 @@
 		// Graphiques : la barre de défilement va jusqu'à leur bord.
 		for (const ch of charts) {
 			const b = chartBox(ch);
-			usedRow = Math.max(usedRow, rowAxis.indexAt(b.y + b.h));
-			usedCol = Math.max(usedCol, colAxis.indexAt(b.x + b.w));
+			usedRow = Math.max(usedRow, rax().indexAt(b.y + b.h));
+			usedCol = Math.max(usedCol, cax().indexAt(b.x + b.w));
 		}
-		const lastVisible = rowAxis.indexAt(vs.top + vs.view);
+		const lastVisible = rax().indexAt(vs.top + vs.view);
 		// Comme Excel : la barre s'arrête à la zone utilisée (ou à l'écran affiché) ;
 		// molette, flèches et sélection vont au-delà et l'agrandissent.
 		const rows = Math.min(SHEET_ROWS, Math.max(usedRow + 1, lastVisible + 1, holdRows, scrollHoldRows));
 		extentRows = Math.min(SHEET_ROWS, usedRow + 1);
 		const cw = Math.max(0, viewW - MARGIN);
-		const lastVisibleCol = colAxis.indexAt(scroller.scrollLeft + cw);
+		const lastVisibleCol = cax().indexAt(scroller.scrollLeft + cw);
 		extentCols = Math.min(SHEET_COLS, Math.max(usedCol + 1, lastVisibleCol + 1, holdCols, scrollHoldCols));
 		vs.content = rowTop(rows);
 		vs.to(vs.top);
-		onhscroll?.({ content: MARGIN + colAxis.offset(extentCols), view: scroller.clientWidth, left: scroller.scrollLeft });
+		onhscroll?.({ content: MARGIN + cax().offset(extentCols), view: scroller.clientWidth, left: scroller.scrollLeft });
 		if (spacer) {
 			spacer.style.height = `${TOP_H + vs.spacer}px`;
-			spacer.style.width = `${MARGIN + colAxis.offset(extentCols)}px`;
+			spacer.style.width = `${MARGIN + cax().offset(extentCols)}px`;
 		}
 	}
 	let viewW = $state(0);
@@ -1266,8 +1527,8 @@
 	}
 
 	function visibleRows() {
-		const first = rowAxis.indexAt(vs.top);
-		const last = Math.min(SHEET_ROWS - 1, rowAxis.indexAt(vs.top + vs.view - 1));
+		const first = rax().indexAt(vs.top);
+		const last = Math.min(SHEET_ROWS - 1, rax().indexAt(vs.top + vs.view - 1));
 		return { first, last };
 	}
 
@@ -1303,11 +1564,11 @@
 	const fRows = () => freeze?.rows ?? 0;
 	const fCols = () => freeze?.cols ?? 0;
 	/** Position à l'écran du début d'une colonne ou d'une ligne. */
-	const screenX = (c: number) => MARGIN + colAxis.offset(c) - (c < fCols() ? 0 : scroller.scrollLeft);
+	const screenX = (c: number) => MARGIN + cax().offset(c) - (c < fCols() ? 0 : scroller.scrollLeft);
 	const screenY = (r: number) => TOP_H + rowTop(r) - (r < fRows() ? 0 : vs.top);
 	/** Colonne ou ligne sous un point de la vue. */
-	const colAtX = (x: number) => colAxis.indexAt(toGrid(x, MARGIN, colAxis.offset(fCols()), scroller.scrollLeft));
-	const rowAtY = (y: number) => Math.min(SHEET_ROWS - 1, rowAxis.indexAt(toGrid(y, TOP_H, rowTop(fRows()), vs.top)));
+	const colAtX = (x: number) => cax().indexAt(toGrid(x, MARGIN, cax().offset(fCols()), scroller.scrollLeft));
+	const rowAtY = (y: number) => Math.min(SHEET_ROWS - 1, rax().indexAt(toGrid(y, TOP_H, rowTop(fRows()), vs.top)));
 
 	$effect(() => {
 		void freeze?.rows;
@@ -1354,7 +1615,9 @@
 		pendingBorders = [];
 		if (viewPos.x !== scroller.scrollLeft || viewPos.y !== vs.top) viewPos = { x: scroller.scrollLeft, y: vs.top };
 		const t0 = performance.now();
+		drawing = false;
 		fitVisibleRows();
+		beginAnimFrame(t0);
 		const w = viewW;
 		const h = viewH;
 		const dpr = (window.devicePixelRatio || 1) * zoom;
@@ -1374,7 +1637,7 @@
 			updateExtent();
 		}
 		keyGrew = false;
-		const fw = colAxis.offset(fCols());
+		const fw = cax().offset(fCols());
 		const fh = rowTop(fRows());
 		const all = panes(fw, fh, MARGIN, TOP_H, w, h, scroller.scrollLeft, vs.top);
 		const main = all[all.length - 1] ?? { left: scroller.scrollLeft, top: vs.top, x0: MARGIN, x1: w, y0: TOP_H, y1: h };
@@ -1388,6 +1651,13 @@
 			ctx.restore();
 		}
 		if (incomplete) missingFrames++;
+		if (motion())
+			viewNow = {
+				r0: rax().indexAt(main.y0 - TOP_H + main.top),
+				r1: rax().indexAt(main.y1 - 1 - TOP_H + main.top),
+				c0: cax().indexAt(main.x0 - MARGIN + main.left),
+				c1: cax().indexAt(main.x1 - 1 - MARGIN + main.left)
+			};
 		// Bandeau du haut (par volet de colonnes) et marge de gauche (par volet de lignes).
 		for (const p of all.filter((p) => p.y0 === main.y0)) {
 			ctx.save();
@@ -1438,6 +1708,7 @@
 		// Une clé plus large que toutes celles vues : gouttière élargie à
 		// l'image suivante (les clés ne sont connues qu'une fois chargées).
 		if (keyGrew) schedule();
+		endAnimFrame();
 
 		const t1 = performance.now();
 		pushStat(drawTimes, t1 - t0);
@@ -1450,14 +1721,14 @@
 		const w = viewW;
 		const h = viewH;
 		const { left, top } = p;
-		const r0 = rowAxis.indexAt(p.y0 - TOP_H + top);
-		const r1 = Math.min(SHEET_ROWS - 1, rowAxis.indexAt(Math.max(p.y0, p.y1 - 1) - TOP_H + top));
-		const c0 = colAxis.indexAt(p.x0 - MARGIN + left);
-		const c1 = colAxis.indexAt(Math.max(p.x0, p.x1 - 1) - MARGIN + left);
-		const cx = (c: number) => MARGIN + colAxis.offset(c) - left;
+		const r0 = rax().indexAt(p.y0 - TOP_H + top);
+		const r1 = Math.min(SHEET_ROWS - 1, rax().indexAt(Math.max(p.y0, p.y1 - 1) - TOP_H + top));
+		const c0 = cax().indexAt(p.x0 - MARGIN + left);
+		const c1 = cax().indexAt(Math.max(p.x0, p.x1 - 1) - MARGIN + left);
+		const cx = (c: number) => MARGIN + cax().offset(c) - left;
 		const ry = (r: number) => TOP_H + rowTop(r) - top;
 		const xEnd = Math.min(w, cx(c1 + 1));
-		const spanW = (a: number, b: number) => colAxis.offset(b + 1) - colAxis.offset(a);
+		const spanW = (a: number, b: number) => cax().offset(b + 1) - cax().offset(a);
 		const visible = entries.filter((e) => e.last + 1 >= r0 && e.t.row <= r1 && e.lastCol + 1 >= c0 && e.t.col <= c1);
 		// Plage sélectionnée.
 		const { r0: s0, r1: s1, c0: k0, c1: k1 } = selection();
@@ -1481,8 +1752,10 @@
 		// En-têtes (agrandis à l'écran quand la cellule active les prolonge).
 		for (const e of visible) {
 			const g = grown(e);
+			const moved = enterTable(e, cx, ry);
 			ctx.fillStyle = e.t.query ? C.linkHead : C.head;
 			ctx.fillRect(cx(e.t.col), ry(e.t.row), spanW(e.t.col, g.lastCol), rh(e.t.row));
+			if (moved) ctx.restore();
 		}
 
 		// Plage sélectionnée.
@@ -1500,7 +1773,7 @@
 		if (finder && matches.length && matchText === finder.text) {
 			ctx.fillStyle = C.found;
 			for (const m of matches)
-				if (m.row >= r0 && m.row <= r1 && m.col >= c0 && m.col <= c1) ctx.fillRect(cx(m.col), ry(m.row), colAxis.size(m.col), rh(m.row));
+				if (m.row >= r0 && m.row <= r1 && m.col >= c0 && m.col <= c1) ctx.fillRect(cx(m.col), ry(m.row), cax().size(m.col), rh(m.row));
 		}
 
 		// Lignes masquées par un filtre : elles gardent leur place (les cellules
@@ -1530,18 +1803,22 @@
 		for (const e of visible) {
 			const tr0 = Math.max(r0, e.t.row);
 			const tr1 = Math.min(r1, e.last);
+			const mv = tableAnim(e);
+			const moved = enterTable(e, cx, ry);
+			// Colonne calculée : ses valeurs qui changent s'éclairent un instant.
+			const calcCols = motion() ? e.t.columns.map((k) => !!k.formula || k.type === 'formula') : null;
 			for (let c = Math.max(c0, e.t.col); c <= Math.min(c1, e.lastCol) && tr0 <= tr1; c++) {
 				const i = c - e.t.col;
 				const col = e.t.columns[i];
-				const x = cx(c);
-				const cw = colAxis.size(c);
+				const x = cx(c) + (mv ? mv.colOff(c) : 0);
+				const cw = cax().size(c);
 				if (!cw) continue; // colonne masquée
 				ctx.save();
 				ctx.beginPath();
 				ctx.rect(x, TOP_H, cw, h - TOP_H);
 				ctx.clip();
 				for (let r = tr0; r <= tr1; r++) {
-					const y = ry(r);
+					const y = ry(r) + (mv ? mv.rowOff(r) : 0);
 					if (!rh(r)) continue; // ligne masquée
 					if (r === e.t.row) {
 						const hs = styleAt(r, c, e);
@@ -1580,10 +1857,11 @@
 						ctx.fillStyle = cs.bg;
 						ctx.fillRect(x, y, cw, rh(r));
 					}
-					if (cf?.bar) drawBar(cf.bar, x, y, cw, rh(r));
+					if (cf?.bar) drawBar(cf.bar, x, y, cw, rh(r), `t${e.t.id}:${row.id}:${col.name}`, r, c);
 					if (cs) borders(cs, x, y, cw, rh(r));
 					if (cs?.nt) noteCorner(x + cw, y, cs);
 					let s = row.text[i];
+					if (calcCols?.[i]) paintFlash(flashOf(`t${e.t.id}:${row.id}:${col.name}`, s ?? '', r, c), x, y, cw, rh(r));
 					if (!s) continue;
 					// Jeu d'icônes : à gauche de la cellule ; barre ou icône seule : valeur masquée.
 					const iconW = cf?.icon && !row.bad?.has(i) ? drawIconAt(cf.icon, x, y, rh(r)) : 0;
@@ -1610,6 +1888,7 @@
 				}
 				ctx.restore();
 			}
+			if (moved) ctx.restore();
 		}
 
 		// Mise en forme hors tableaux (cellules libres, tableaux croisés, cellules
@@ -1624,17 +1903,17 @@
 			return frameCf.get(k);
 		};
 		const paint = (r: number, c: number) => {
-			if (tableAt(r, c) || !rh(r) || !colAxis.size(c) || mergeOf(r, c)) return;
+			if (tableAt(r, c) || !rh(r) || !cax().size(c) || mergeOf(r, c)) return;
 			const cf = cfOf(r, c);
 			const fs = resolveStyle(styleAt(r, c, undefined), cf?.style);
 			if (!fs && !cf?.bar) return;
 			if (fs?.bg) {
 				ctx.fillStyle = fs.bg;
-				ctx.fillRect(cx(c), ry(r), colAxis.size(c), rh(r));
+				ctx.fillRect(cx(c), ry(r), cax().size(c), rh(r));
 			}
-			if (cf?.bar) drawBar(cf.bar, cx(c), ry(r), colAxis.size(c), rh(r));
+			if (cf?.bar) drawBar(cf.bar, cx(c), ry(r), cax().size(c), rh(r), `f${r},${c}`, r, c);
 			if (!fs) return;
-			borders(fs, cx(c), ry(r), colAxis.size(c), rh(r));
+			borders(fs, cx(c), ry(r), cax().size(c), rh(r));
 			if (fs.nt) noteCorner(cx(c + 1), ry(r), fs);
 		};
 		// Lignes ou colonnes mises en forme (hors masquage seul) : toutes les cellules visibles.
@@ -1656,7 +1935,8 @@
 					if ((i === 0 && j === 0) || !v) return;
 					const c = sp.col + j;
 					const st = styleAt(sp.row + i, c, undefined);
-					drawText(formatCell(v, undefined, st), cx(c), ry(sp.row + i), colAxis.size(c), st?.al ?? freeDisplay('', v).align, st, isErrorValue(v) ? C.error : C.text);
+					paintFlash(flashOf(`s${sp.row},${sp.col}:${i},${j}`, v, sp.row + i, c), cx(c), ry(sp.row + i), cax().size(c), rh(sp.row + i));
+					drawText(formatCell(v, undefined, st), cx(c), ry(sp.row + i), cax().size(c), st?.al ?? freeDisplay('', v).align, st, isErrorValue(v) ? C.error : C.text);
 				});
 			ctx.save();
 			ctx.strokeStyle = C.spill;
@@ -1667,7 +1947,7 @@
 		// Tableaux croisés : en-tête et total en gras, dans un cadre.
 		for (const p of pivots) {
 			if (p.error) {
-				drawText('Tableau croisé : ' + p.error, cx(p.col), ry(p.row), colAxis.size(p.col), 'left', undefined, C.error, w);
+				drawText('Tableau croisé : ' + p.error, cx(p.col), ry(p.row), cax().size(p.col), 'left', undefined, C.error, w);
 				continue;
 			}
 			const pr1 = p.row + p.cells.length - 1;
@@ -1676,8 +1956,8 @@
 			(p.config.filters ?? []).forEach((f, k) => {
 				const r = (p.anchor ?? p.row) + k;
 				if (r < r0 || r > r1 || p.col + 1 < c0 || p.col > c1) return;
-				const w0 = colAxis.size(p.col);
-				const w1 = colAxis.size(p.col + 1);
+				const w0 = cax().size(p.col);
+				const w1 = cax().size(p.col + 1);
 				ctx.fillStyle = C.head;
 				ctx.fillRect(cx(p.col), ry(r), w0, rh(r));
 				drawText(f.field, cx(p.col), ry(r), w0, 'left', { b: true }, C.text);
@@ -1695,7 +1975,7 @@
 			// En-tête et total sur fond gris, sauf remplissage choisi.
 			ctx.fillStyle = C.head;
 			for (const r of tot >= 0 ? [p.row, tot] : [p.row])
-				for (let c = p.col; c <= pc1; c++) if (!styleAt(r, c, undefined)?.bg) ctx.fillRect(cx(c), ry(r), colAxis.size(c), rh(r));
+				for (let c = p.col; c <= pc1; c++) if (!styleAt(r, c, undefined)?.bg) ctx.fillRect(cx(c), ry(r), cax().size(c), rh(r));
 			for (let i = Math.max(0, r0 - p.row); i < p.cells.length && p.row + i <= r1; i++)
 				p.cells[i].forEach((v, j) => {
 					if (!v) return;
@@ -1704,13 +1984,14 @@
 					// Mise en forme posée sur les cellules du TCD, leurs lignes ou colonnes (format de nombre, décimales, police…).
 					const st = resolveStyle(styleAt(p.row + i, c, undefined), lineRule(p.row + i, c, ruleValue(v), v));
 					const style = bold ? { ...st, b: st?.b ?? true } : st;
-					drawText(formatCell(v, undefined, st), cx(c), ry(p.row + i), colAxis.size(c), st?.al ?? (j > 0 && i > 0 ? 'right' : 'left'), style, C.text);
+					paintFlash(flashOf(`p${p.id}:${i},${j}`, v, p.row + i, c), cx(c), ry(p.row + i), cax().size(c), rh(p.row + i));
+					drawText(formatCell(v, undefined, st), cx(c), ry(p.row + i), cax().size(c), st?.al ?? (j > 0 && i > 0 ? 'right' : 'left'), style, C.text);
 				});
 			// ▾ des étiquettes des lignes : trier et filtrer le champ (Excel).
 			if (p.row >= r0 && p.row <= r1)
 				(p.config.rowFields ?? []).forEach((f, j) => {
 					const c = p.col + j;
-					if (c >= c0 && c <= c1) pivotDrop(cx(c) + colAxis.size(c), ry(p.row), rh(p.row), pivotFiltered(p, f));
+					if (c >= c0 && c <= c1) pivotDrop(cx(c) + cax().size(c), ry(p.row), rh(p.row), pivotFiltered(p, f));
 				});
 			ctx.save();
 			ctx.strokeStyle = C.border;
@@ -1727,15 +2008,16 @@
 		}
 		for (const [k, rawText] of cells) {
 			const [r, c] = k.split(',').map(Number);
-			if (r < r0 || r > r1 || c < c0 || c > c1 || !rh(r) || !colAxis.size(c) || mergeOf(r, c)) continue;
+			if (r < r0 || r > r1 || c < c0 || c > c1 || !rh(r) || !cax().size(c) || mergeOf(r, c)) continue;
 			// Cellule en cours d'édition : l'éditeur montre sa saisie ; sa valeur,
 			// qui peut déborder plus loin que lui, ne se dessine pas dessous.
 			if (editing && r === active.row && c === active.col) continue;
 			const cf = cfOf(r, c);
 			const fstyle = resolveStyle(styleAt(r, c, undefined), cf?.style);
 			let x = cx(c);
-			let cw = colAxis.size(c);
+			let cw = cax().size(c);
 			const f = shown.get(k);
+			if (f) paintFlash(flashOf('f' + k, f.text, r, c), x, ry(r), cw, rh(r));
 			if (f?.error) errorCorner(x, ry(r));
 			// Jeu d'icônes à gauche ; barre ou icône seule : valeur masquée.
 			if (cf?.icon) {
@@ -1812,14 +2094,22 @@
 		ctx.lineWidth = 1;
 		for (const e of visible) {
 			const g = grown(e);
-			const x = Math.round(cx(e.t.col)) - 0.5;
-			const y = Math.round(ry(e.t.row)) - 0.5;
+			const a = tableAnim(e);
+			const to = tableGeo(e);
+			const fw = a ? a.w : to.w;
+			const fh = a ? a.h : to.h;
+			if (motion()) geoDrawn.set(e.t.id, { x: to.x + (a?.dx ?? 0), y: to.y + (a?.dy ?? 0), w: fw, h: fh });
+			const x = Math.round(cx(e.t.col) + (a?.dx ?? 0)) - 0.5;
+			const y = Math.round(ry(e.t.row) + (a?.dy ?? 0)) - 0.5;
+			ctx.save();
+			if (a) ctx.globalAlpha *= a.alpha;
 			ctx.strokeStyle = g.last !== e.last || g.lastCol !== e.lastCol ? C.active : e.t.query ? C.linkBorder : C.border;
-			ctx.strokeRect(x, y, spanW(e.t.col, g.lastCol), rspan(e.t.row, g.last));
+			ctx.strokeRect(x, y, fw, fh);
 			ctx.beginPath();
 			ctx.moveTo(x, y + rh(e.t.row));
-			ctx.lineTo(x + spanW(e.t.col, g.lastCol), y + rh(e.t.row));
+			ctx.lineTo(x + fw, y + rh(e.t.row));
 			ctx.stroke();
+			ctx.restore();
 		}
 		// Zone copiée ou coupée : cadre pointillé, comme Excel.
 		if (clipRange && clipRange.sheet === sheetId()) {
@@ -1849,7 +2139,7 @@
 		const act = a1 ? undefined : (tableAt(active.row, active.col) ?? entries.find((e) => grown(e).last !== e.last));
 		if (act && besideGutter({ row: act.t.row, last: act.last, col: act.t.col, lastCol: act.lastCol }, c0, c1)) {
 			const x = cx(act.t.col);
-			const gw = colAxis.size(act.t.col - 1);
+			const gw = cax().size(act.t.col - 1);
 			ctx.save();
 			ctx.beginPath();
 			ctx.rect(Math.max(MARGIN, x - gw), TOP_H, Math.min(gw, x - MARGIN), h - TOP_H);
@@ -1872,7 +2162,7 @@
 			const b = Math.min(e.last, r1);
 			if (a <= b) {
 				ctx.fillStyle = C.calc;
-				ctx.fillRect(cx(e.t.col + i), ry(a), colAxis.size(e.t.col + i), rspan(a, b));
+				ctx.fillRect(cx(e.t.col + i), ry(a), cax().size(e.t.col + i), rspan(a, b));
 			}
 		}
 		// Saisie d'une formule : chaque référence encadrée de sa couleur, comme
@@ -1945,7 +2235,7 @@
 		// sélectionnées) n'est dessinée qu'une fois.
 		const drawn = new Set<string>();
 		for (const arrows of links) {
-			const center = (r: number, c: number) => ({ x: cx(c) + colAxis.size(c) / 2, y: ry(r) + rh(r) / 2 });
+			const center = (r: number, c: number) => ({ x: cx(c) + cax().size(c) / 2, y: ry(r) + rh(r) / 2 });
 			const me = center(arrows.row, arrows.col);
 			const draw = (from: { x: number; y: number }, to: { x: number; y: number }, color: string) => {
 				ctx.save();
@@ -2025,9 +2315,9 @@
 			ctx.textAlign = 'center';
 			for (let c = c0; c <= c1; c++) {
 				const x = cx(c);
-				if (x + colAxis.size(c) <= MARGIN || !colAxis.size(c)) continue;
+				if (x + cax().size(c) <= MARGIN || !cax().size(c)) continue;
 				ctx.fillStyle = c >= k0 && c <= k1 ? C.headText : C.stripText;
-				ctx.fillText(addrA1(0, c).slice(0, -1), x + colAxis.size(c) / 2, TOP_H / 2);
+				ctx.fillText(addrA1(0, c).slice(0, -1), x + cax().size(c) / 2, TOP_H / 2);
 			}
 		}
 		for (const e of a1 ? [] : visible) {
@@ -2037,14 +2327,14 @@
 				const x = cx(c);
 				ctx.save();
 				ctx.beginPath();
-				ctx.rect(Math.max(x, MARGIN), 0, colAxis.size(c), TOP_H);
+				ctx.rect(Math.max(x, MARGIN), 0, cax().size(c), TOP_H);
 				ctx.clip();
 				ctx.fillStyle = c >= k0 && c <= k1 ? C.activeStrip : e.t.query ? C.linkHead : C.head;
-				ctx.fillRect(x, 0, colAxis.size(c), TOP_H);
+				ctx.fillRect(x, 0, cax().size(c), TOP_H);
 				// Boutons ▾, type et entonnoir, cliquables comme dans l'en-tête.
-				const iw = headIcons(e, c - e.t.col, x, 0, colAxis.size(c), TOP_H);
+				const iw = headIcons(e, c - e.t.col, x, 0, cax().size(c), TOP_H);
 				ctx.beginPath();
-				ctx.rect(Math.max(x, MARGIN), 0, Math.max(0, colAxis.size(c) - iw - 10), TOP_H);
+				ctx.rect(Math.max(x, MARGIN), 0, Math.max(0, cax().size(c) - iw - 10), TOP_H);
 				ctx.clip();
 				ctx.font = FONT_BOLD;
 				ctx.fillStyle = e.t.query ? C.linkHeadText : C.headText;
@@ -2077,7 +2367,7 @@
 		ctx.stroke();
 		for (let c = Math.max(c0, k0); c <= Math.min(c1, k1); c++) {
 			ctx.fillStyle = C.active;
-			ctx.fillRect(cx(c), TOP_H - 2, colAxis.size(c), 2);
+			ctx.fillRect(cx(c), TOP_H - 2, cax().size(c), 2);
 		}
 	}
 
@@ -2360,7 +2650,7 @@
 	 * ligne en y ; une fusion couvre plusieurs lignes).
 	 */
 	function drawText(s: string, x: number, y: number, cw: number, align: 'left' | 'center' | 'right', st: CellStyle | undefined, color: string, clipW = cw, hh?: number) {
-		const h = hh ?? rh(rowAxis.indexAt(y - TOP_H + paneTop + 1));
+		const h = hh ?? rh(rax().indexAt(y - TOP_H + paneTop + 1));
 		if (h <= 0 || cw <= 0) return;
 		ctx.save();
 		ctx.beginPath();
@@ -2559,6 +2849,7 @@
 				moveTo(r0, c0);
 				message = n ? `Cellules fusionnées : seule la valeur en haut à gauche est gardée (${n} effacée${n > 1 ? 's' : ''}, Ctrl+Z pour annuler)` : 'Cellules fusionnées et centrées';
 			} catch (err) {
+				linesHint = null; // refusée : rien ne glisse
 				message = String(err instanceof Error ? err.message : err);
 			}
 			refreshStatus();
@@ -2624,7 +2915,7 @@
 
 	function openSize(rows: boolean, x: number, y: number) {
 		closeMenus();
-		sizeDlg = { rows, value: rows ? rh(active.row) || ROW_H : colAxis.size(active.col) || DEF_W, x, y };
+		sizeDlg = { rows, value: rows ? rh(active.row) || ROW_H : cax().size(active.col) || DEF_W, x, y };
 	}
 
 	function applySize() {
@@ -2692,7 +2983,7 @@
 			}
 		}
 		// La partie figée part du haut de la feuille : elle doit tenir à l'écran.
-		if (rowTop(rows) > vs.view * 0.75 || colAxis.offset(cols) > (viewW - MARGIN) * 0.75) {
+		if (rowTop(rows) > vs.view * 0.75 || cax().offset(cols) > (viewW - MARGIN) * 0.75) {
 			say('La partie à figer dépasse l’écran : faites défiler la feuille vers le haut, ou choisissez une cellule plus haute ou plus à gauche');
 			return;
 		}
@@ -2717,7 +3008,7 @@
 	/** Bouton ▾ de la liste, juste à droite de la cellule active (comme Excel). */
 	function dropButton() {
 		const g = mergeOf(active.row, active.col);
-		const right = g ? screenX(g.col) + colAxis.offset(g.col + g.cols) - colAxis.offset(g.col) : screenX(active.col) + colAxis.size(active.col);
+		const right = g ? screenX(g.col) + cax().offset(g.col + g.cols) - cax().offset(g.col) : screenX(active.col) + cax().size(active.col);
 		const bottom = screenY(active.row) + (g ? rowTop(g.row + g.rows) - rowTop(g.row) : rh(active.row));
 		const h = Math.min(18, rh(active.row) - 2);
 		return { x: right + 1, y: bottom - h - 1, w: 16, h };
@@ -2805,7 +3096,7 @@
 		const c = g?.col ?? cell.col;
 		const k = key(r, c);
 		if (noteTip?.key === k) return;
-		const right = screenX(c) + colAxis.offset(c + (g?.cols ?? 1)) - colAxis.offset(c);
+		const right = screenX(c) + cax().offset(c + (g?.cols ?? 1)) - cax().offset(c);
 		noteTip = { x: Math.min(right + 8, viewW - 240), y: screenY(r), text, key: k };
 	}
 
@@ -2821,7 +3112,7 @@
 		const text = noteOf(active.row, active.col) ?? '';
 		const g = mergeOf(active.row, active.col);
 		const pinned = !!(g ? styleAt(g.row, g.col, undefined) : styleAt(active.row, active.col))?.np;
-		const right = screenX(active.col) + colAxis.size(active.col);
+		const right = screenX(active.col) + cax().size(active.col);
 		noteDlg = { row: active.row, col: active.col, text, had: !!text, pinned, x: Math.min(toView(right) + 8, Math.max(8, toView(viewW) - 270)), y: Math.max(4, toView(screenY(active.row))) };
 	}
 
@@ -3086,7 +3377,7 @@
 	function openPivotMenu(ev: MouseEvent, cell: { row: number; col: number }): boolean {
 		const p = pivotAt(cell.row, cell.col);
 		if (!p || !source.setPivot) return false;
-		const near = screenX(cell.col) + colAxis.size(cell.col) - toLocal(ev).x <= PIVOT_DROP + 2;
+		const near = screenX(cell.col) + cax().size(cell.col) - toLocal(ev).x <= PIVOT_DROP + 2;
 		if (!near) return false;
 		const a = p.anchor ?? p.row;
 		const filters = p.config.filters ?? [];
@@ -3461,7 +3752,7 @@
 	function chartBox(ch: SheetChart) {
 		if (chartGesture?.id === ch.id) return chartGesture.box;
 		return {
-			x: colAxis.offset(ch.col) + (ch.config.offX ?? 0),
+			x: cax().offset(ch.col) + (ch.config.offX ?? 0),
 			y: rowTop(ch.row) + (ch.config.offY ?? 0),
 			w: ch.config.width ?? CHART_W,
 			h: ch.config.height ?? CHART_H
@@ -3513,11 +3804,11 @@
 				return;
 			}
 			const b = g.box;
-			const col = colAxis.indexAt(b.x);
-			const row = rowAxis.indexAt(b.y);
+			const col = cax().indexAt(b.x);
+			const row = rax().indexAt(b.y);
 			const place = source.placeChart!;
 			writing = writing.then(() =>
-				place(ch.id, row, col, Math.round(b.x - colAxis.offset(col)), Math.round(b.y - rowTop(row)), Math.round(b.w), Math.round(b.h)).then(
+				place(ch.id, row, col, Math.round(b.x - cax().offset(col)), Math.round(b.y - rowTop(row)), Math.round(b.w), Math.round(b.h)).then(
 					() => {
 						chartGesture = null;
 					},
@@ -3564,7 +3855,7 @@
 		const b = chartBox(ch);
 		const t = reveal(b.y, b.y + b.h, vs.top, vs.view, rowTop(fRows()));
 		if (t !== vs.top) vs.to(t);
-		const l = reveal(b.x, b.x + b.w, scroller.scrollLeft, viewW - MARGIN, colAxis.offset(fCols()));
+		const l = reveal(b.x, b.x + b.w, scroller.scrollLeft, viewW - MARGIN, cax().offset(fCols()));
 		if (l !== scroller.scrollLeft) scroller.scrollLeft = l;
 		syncNative();
 		wrap.focus();
@@ -3825,7 +4116,14 @@
 			insertCols: [c0, c1 - c0 + 1],
 			deleteCols: [c0, c1]
 		};
-		menuAction(() => lines(op, ...args[op]));
+		// Animation : ce qui suit glisse (posée quand l'opération part, dans la file des écritures).
+		const hint: Record<LinesOp, () => void> = {
+			insertRows: () => hintLines(true, r0, r1 - r0 + 1),
+			deleteRows: () => hintLines(true, r0, -(r1 - r0 + 1)),
+			insertCols: () => hintLines(false, c0, c1 - c0 + 1),
+			deleteCols: () => hintLines(false, c0, -(c1 - c0 + 1))
+		};
+		menuAction(() => (hint[op](), lines(op, ...args[op])));
 	}
 
 	// Insérer… / Supprimer… (comme la boîte d'Excel) : lignes ou colonnes entières.
@@ -3867,12 +4165,19 @@
 			return;
 		}
 		const fn = {
-			insertRow: source.insertRow && (() => source.insertRow!(e.t, Math.max(0, n))),
-			deleteRow: source.deleteRow && (() => source.deleteRow!(e.t, n)),
-			insertColumn: source.insertColumn && (() => source.insertColumn!(e.t, i)),
-			deleteColumn: source.deleteColumn && (() => source.deleteColumn!(e.t, i))
+			insertRow: source.insertRow && (() => tableLines(e, 'insertRow', Math.max(0, n))),
+			deleteRow: source.deleteRow && (() => tableLines(e, 'deleteRow', n)),
+			insertColumn: source.insertColumn && (() => tableLines(e, 'insertColumn', i)),
+			deleteColumn: source.deleteColumn && (() => tableLines(e, 'deleteColumn', i))
 		}[op];
 		menuAction(fn);
+	}
+
+	/** Insère ou supprime la ligne n (ou la colonne n) d'un tableau ; ce qui suit glisse à sa place. */
+	function tableLines(e: Entry, op: 'insertRow' | 'deleteRow' | 'insertColumn' | 'deleteColumn', n: number): Promise<unknown> {
+		const rows = op === 'insertRow' || op === 'deleteRow';
+		hintLines(rows, rows ? e.t.row + 1 + n : e.t.col + n, op.startsWith('insert') ? 1 : -1, e.t.id);
+		return { insertRow: source.insertRow, deleteRow: source.deleteRow, insertColumn: source.insertColumn, deleteColumn: source.deleteColumn }[op]!(e.t, n);
 	}
 
 	/** Échap ferme le dialogue ouvert, où que soit le focus. */
@@ -4076,7 +4381,7 @@
 	// Barre verticale (native) tirée : repérée au clic dans sa zone.
 	function onScrollbarDown(e: PointerEvent) {
 		if (toLocal(e).x < scroller.clientWidth) return;
-		holdRows = rowAxis.indexAt(vs.content);
+		holdRows = rax().indexAt(vs.content);
 		const up = () => {
 			holdRows = 0;
 			window.removeEventListener('pointerup', up);
@@ -4119,18 +4424,18 @@
 		const notch = e.deltaMode === 1 || (e.deltaMode === 0 && Math.abs(e.deltaY) >= 50 && e.deltaY % 1 === 0);
 		if (dy && notch) {
 			const steps = e.deltaMode === 1 ? Math.round(e.deltaY) : Math.sign(dy) * Math.max(1, Math.round(Math.abs(e.deltaY) / 100)) * 3;
-			const first = rowAxis.indexAt(vs.top);
+			const first = rax().indexAt(vs.top);
 			const base = rowTop(first) < vs.top && steps < 0 ? first + 1 : first;
 			dy = rowTop(clamp(base + steps, 0, SHEET_ROWS - 1)) - vs.top;
 		}
 		if (dx && notch && e.shiftKey) {
 			const steps = Math.sign(dx) * 3;
-			const first = colAxis.indexAt(scroller.scrollLeft);
-			dx = colAxis.offset(clamp(first + steps, 0, SHEET_COLS - 1)) - scroller.scrollLeft;
+			const first = cax().indexAt(scroller.scrollLeft);
+			dx = cax().offset(clamp(first + steps, 0, SHEET_COLS - 1)) - scroller.scrollLeft;
 		}
 		if (dy) {
 			// Défiler vers le bas agrandit la feuille d'autant.
-			if (dy > 0) vs.content = Math.min(rowAxis.total, Math.max(vs.content, vs.top + dy + 2 * vs.view));
+			if (dy > 0) vs.content = Math.min(rax().total, Math.max(vs.content, vs.top + dy + 2 * vs.view));
 			vs.by(dy);
 			updateExtent();
 			scroller.scrollTop = vs.toNative();
@@ -4138,8 +4443,8 @@
 		if (dx) {
 			// Vers la droite, la feuille s'agrandit d'autant avant de défiler.
 			if (dx > 0 && spacer) {
-				const want = colAxis.indexAt(scroller.scrollLeft + dx + viewW) + 2;
-				spacer.style.width = `${MARGIN + colAxis.offset(Math.min(SHEET_COLS, Math.max(extentCols, want)))}px`;
+				const want = cax().indexAt(scroller.scrollLeft + dx + viewW) + 2;
+				spacer.style.width = `${MARGIN + cax().offset(Math.min(SHEET_COLS, Math.max(extentCols, want)))}px`;
 			}
 			scroller.scrollLeft += dx;
 			updateExtent();
@@ -4158,13 +4463,13 @@
 		const top = rowTop(row);
 		const t = reveal(top, top + rh(row), vs.top, vs.view, rowTop(fRows()));
 		if (t !== vs.top) vs.to(t);
-		const x0 = colAxis.offset(col);
-		const fw = colAxis.offset(fCols());
-		let l = reveal(x0, x0 + colAxis.size(col), scroller.scrollLeft, viewW - MARGIN, fw);
+		const x0 = cax().offset(col);
+		const fw = cax().offset(fCols());
+		let l = reveal(x0, x0 + cax().size(col), scroller.scrollLeft, viewW - MARGIN, fw);
 		if (fw && l > scroller.scrollLeft) {
 			// Volets figés : pas de colonne coupée contre la partie figée.
-			const c = colAxis.indexAt(l + fw);
-			if (colAxis.offset(c) < l + fw && c < col) l = colAxis.offset(c + 1) - fw;
+			const c = cax().indexAt(l + fw);
+			if (cax().offset(c) < l + fw && c < col) l = cax().offset(c + 1) - fw;
 		}
 		if (l !== scroller.scrollLeft) scroller.scrollLeft = l;
 		syncNative();
@@ -4276,7 +4581,7 @@
 		const { x, y } = toLocal(e);
 		if (x >= MARGIN || y <= TOP_H) return null;
 		const py = toGrid(y, TOP_H, rowTop(fRows()), vs.top);
-		const row = rowAxis.indexAt(py);
+		const row = rax().indexAt(py);
 		if (rowTop(row + 1) - py <= 3) return row;
 		if (py - rowTop(row) <= 3 && row > 0) return row - 1;
 		return null;
@@ -4286,10 +4591,10 @@
 	function boundaryAt(e: MouseEvent): number | null {
 		const { x, y } = toLocal(e);
 		if (y >= TOP_H || x <= MARGIN) return null;
-		const px = toGrid(x, MARGIN, colAxis.offset(fCols()), scroller.scrollLeft);
-		const c = colAxis.indexAt(px);
-		const right = colAxis.offset(c + 1);
-		const left = colAxis.offset(c);
+		const px = toGrid(x, MARGIN, cax().offset(fCols()), scroller.scrollLeft);
+		const c = cax().indexAt(px);
+		const right = cax().offset(c + 1);
+		const left = cax().offset(c);
 		if (right - px <= 4) return c;
 		if (px - left <= 4 && c > 0) return c - 1;
 		return null;
@@ -4329,7 +4634,7 @@
 		const setWidth = source.setColumnWidth;
 		if (!setWidth) return;
 		const width = fitWidth(c);
-		if (width === colAxis.size(c)) return;
+		if (width === cax().size(c)) return;
 		userWidths.set(c, width);
 		rebuildAxis();
 		updateExtent();
@@ -4344,7 +4649,7 @@
 		if (x < MARGIN || y < TOP_H) return false;
 		const { r0, r1, c0, c1 } = selection();
 		const left = screenX(c0);
-		const right = screenX(c1) + colAxis.size(c1);
+		const right = screenX(c1) + cax().size(c1);
 		const top = screenY(r0);
 		const bottom = screenY(r1) + rh(r1);
 		const near = (v: number, edge: number) => Math.abs(v - edge) <= 3;
@@ -4410,7 +4715,7 @@
 			r1 = g.row + g.rows - 1;
 			c1 = g.col + g.cols - 1;
 		}
-		return { x: screenX(c1) + colAxis.size(c1), y: screenY(r1) + rh(r1) };
+		return { x: screenX(c1) + cax().size(c1), y: screenY(r1) + rh(r1) };
 	}
 
 	function onFillHandle(e: MouseEvent): boolean {
@@ -4501,7 +4806,7 @@
 
 	/** Dernière ligne et colonne de la zone affichée (la sélection entière s'y arrête). */
 	function lastRow() {
-		return Math.max(0, rowAxis.indexAt(vs.content) - 1);
+		return Math.max(0, rax().indexAt(vs.content) - 1);
 	}
 	function lastCol() {
 		return Math.max(0, extentCols - 1);
@@ -4618,7 +4923,7 @@
 		const b = boundaryAt(e);
 		if (b !== null && source.setColumnWidth) {
 			e.preventDefault();
-			resizing = { col: b, startX: e.clientX, startW: colAxis.size(b), width: colAxis.size(b) };
+			resizing = { col: b, startX: e.clientX, startW: cax().size(b), width: cax().size(b) };
 			return;
 		}
 		const cell = cellAt(e);
@@ -4741,7 +5046,7 @@
 			const k = refRect(f.text, tables, '', at);
 			if (!k) continue;
 			const left = screenX(k.c0);
-			const right = screenX(k.c1) + colAxis.size(k.c1);
+			const right = screenX(k.c1) + cax().size(k.c1);
 			const top = screenY(k.r0);
 			const bottom = screenY(k.r1) + rh(k.r1);
 			const near = (v: number, edge: number) => Math.abs(v - edge) <= 4;
@@ -5210,8 +5515,8 @@
 		const longest = Math.max(...input.value.split('\n').map((l) => textWidth(l)));
 		const empty = (c: number) => !tableAt(row, c) && !cells.has(key(row, c));
 		const last = g ? g.col + g.cols - 1 : active.col;
-		const width = editorWidth(longest + 16, active.col, (c) => colAxis.size(c), (c) => c > last && empty(c), Math.max(80, viewW - x - 4));
-		const mergedW = g ? colAxis.offset(g.col + g.cols) - colAxis.offset(g.col) : 0;
+		const width = editorWidth(longest + 16, active.col, (c) => cax().size(c), (c) => c > last && empty(c), Math.max(80, viewW - x - 4));
+		const mergedW = g ? cax().offset(g.col + g.cols) - cax().offset(g.col) : 0;
 		// Largeur de confort seulement si la cellule voisine est vide : l'éditeur
 		// ne passe jamais par-dessus une cellule qui a un contenu (il passe à la
 		// ligne dans sa colonne).
@@ -5257,6 +5562,7 @@
 			info.e!.cache.set(info.n!, info.i!, raw.trim() === '' ? null : v);
 			schedule();
 		}
+		typed = { row, col, t: performance.now() };
 		try {
 			const m = await source.setCell(row, col, raw, target);
 			lastEditMs = performance.now() - t0;
@@ -6100,7 +6406,7 @@
 	 */
 	function headerButton(ev: MouseEvent, e: Entry, c: number, frozen: boolean): boolean {
 		const i = c - e.t.col;
-		const right = screenX(c) + colAxis.size(c);
+		const right = screenX(c) + cax().size(c);
 		if (right - toLocal(ev).x > 34) return false;
 		if (!source.sortTable && !(source.filterValues && source.setFilter) && !source.setType) return false;
 		if (!frozen) moveTo(e.t.row, c);
@@ -6208,6 +6514,7 @@
 				await fn();
 				message = '';
 			} catch (err) {
+				linesHint = null; // refusée : rien ne glisse
 				message = String(err instanceof Error ? err.message : err);
 			}
 			refreshStatus();
@@ -6614,7 +6921,7 @@
 						{#if ch.error}
 							<p class="chart-error">Graphique : {ch.error}</p>
 						{:else}
-							<Chart kind={ch.config.kind} labels={ch.labels} series={ch.series} width={box.w} height={box.h} style={ch.config} />
+							<Chart kind={ch.config.kind} labels={ch.labels} series={ch.series} width={box.w} height={box.h} style={ch.config} {animate} grow={grownCharts.has(ch.id)} />
 						{/if}
 						{#if selChart === ch.id}
 							{#each ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] as dir (dir)}
@@ -6627,7 +6934,7 @@
 				<SheetButtons
 					bind:this={buttonsLayer}
 					{buttons}
-					geo={{ colOffset: (c) => colAxis.offset(c), rowTop, colAt: (x) => colAxis.indexAt(x), rowAt: (y) => rowAxis.indexAt(y) }}
+					geo={{ colOffset: (c) => cax().offset(c), rowTop, colAt: (x) => cax().indexAt(x), rowAt: (y) => rax().indexAt(y) }}
 					{zoom}
 					view={viewPos}
 					active={() => active}
@@ -6740,18 +7047,18 @@
 					>
 					<hr />
 					{#if !m.header && !m.rowOnly}
-						<button onclick={() => menuAction(source.insertRow && (() => source.insertRow!(m.e.t, m.n)))}>Insérer une ligne au-dessus</button>
-						<button onclick={() => menuAction(source.insertRow && (() => source.insertRow!(m.e.t, m.n + 1)))}>Insérer une ligne en dessous</button>
+						<button onclick={() => menuAction(source.insertRow && (() => tableLines(m.e, 'insertRow', m.n)))}>Insérer une ligne au-dessus</button>
+						<button onclick={() => menuAction(source.insertRow && (() => tableLines(m.e, 'insertRow', m.n + 1)))}>Insérer une ligne en dessous</button>
 					{/if}
 					{#if cols}
-						<button onclick={() => menuAction(source.insertColumn && (() => source.insertColumn!(m.e.t, m.i)))}>Insérer une colonne à gauche</button>
-						<button onclick={() => menuAction(source.insertColumn && (() => source.insertColumn!(m.e.t, m.i + 1)))}>Insérer une colonne à droite</button>
+						<button onclick={() => menuAction(source.insertColumn && (() => tableLines(m.e, 'insertColumn', m.i)))}>Insérer une colonne à gauche</button>
+						<button onclick={() => menuAction(source.insertColumn && (() => tableLines(m.e, 'insertColumn', m.i + 1)))}>Insérer une colonne à droite</button>
 					{/if}
 					{#if !m.header && !m.rowOnly}
-						<button onclick={() => menuAction(source.deleteRow && (() => source.deleteRow!(m.e.t, m.n)))}>Supprimer la ligne</button>
+						<button onclick={() => menuAction(source.deleteRow && (() => tableLines(m.e, 'deleteRow', m.n)))}>Supprimer la ligne</button>
 					{/if}
 					{#if cols}
-						<button onclick={() => menuAction(source.deleteColumn && (() => source.deleteColumn!(m.e.t, m.i)))}>Supprimer la colonne « {col?.name} »</button>
+						<button onclick={() => menuAction(source.deleteColumn && (() => tableLines(m.e, 'deleteColumn', m.i)))}>Supprimer la colonne « {col?.name} »</button>
 					{/if}
 					{#if m.rowOnly}{@render linesItems('rows', m.x, m.y)}{/if}
 					<button
