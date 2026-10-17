@@ -387,6 +387,12 @@ func (t *Table) Stats(ctx context.Context, first, count int, cols []int) (Stats,
 	q := "SELECT " + strings.Join(aggs, ", ") +
 		fmt.Sprintf(" FROM (SELECT %s FROM %s WHERE _pos >= ?%d ORDER BY _pos LIMIT ?%d OFFSET ?%d)", strings.Join(inner, ", "), t.sqlName, n+1, n+2, n+3)
 	args := append(append([]any{}, t.args...), anchor, count, first%AnchorEvery)
+	if first == 0 && count == rows {
+		// Toutes les lignes (colonne entière, Ctrl+A) : pas besoin de les
+		// ordonner pour les additionner.
+		q = "SELECT " + strings.Join(aggs, ", ") + fmt.Sprintf(" FROM (SELECT %s FROM %s)", strings.Join(inner, ", "), t.sqlName)
+		args = append([]any{}, t.args...)
+	}
 	got := make([]Stats, len(todo))
 	dest := make([]any, 0, 3*len(todo))
 	for k := range got {
