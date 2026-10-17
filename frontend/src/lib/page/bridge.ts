@@ -98,3 +98,21 @@ export function replyOf(id: number, result: { ok: true; value: unknown } | { ok:
 export function eventOf(event: string, data?: unknown) {
 	return { lattis: 1, event, data: data ?? null };
 }
+
+// Page web externe : le contenu de l'onglet n'est qu'une adresse, gardée dans
+// un commentaire (pas de nouvelle colonne dans le classeur) ; l'onglet
+// affiche alors le site dans un cadre, sans le pont vers le classeur.
+const URL_MARK = /^\s*<!--\s*lattis:url\s+(\S+)\s*-->\s*$/;
+
+/** Adresse d'un onglet « page web externe », ou null pour une page HTML. */
+export function pageUrl(source: string): string | null {
+	const m = URL_MARK.exec(source);
+	return m && /^https?:\/\//i.test(m[1]) ? m[1] : null;
+}
+
+/** Contenu d'un onglet qui affiche l'adresse url (complétée en https:// au besoin). */
+export function urlSource(url: string): string {
+	let u = url.trim();
+	if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+	return `<!-- lattis:url ${u} -->`;
+}

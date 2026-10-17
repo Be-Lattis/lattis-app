@@ -3,6 +3,8 @@
 	// (bridge.ts), et son éditeur (HTML, CSS, JavaScript) avec un aperçu.
 	// Afficher / Modifier basculent entre les deux ; Ctrl+S enregistre (une
 	// étape d'annulation), Ctrl+Entrée met l'aperçu à jour sans enregistrer.
+	// Ou une page web externe : son adresse (« Page web… »), affichée dans un
+	// cadre, sans pont vers le classeur.
 	import { onMount, untrack } from 'svelte';
 	import { EditorState } from '@codemirror/state';
 	import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view';
@@ -11,7 +13,7 @@
 	import { closeBrackets } from '@codemirror/autocomplete';
 	import { html } from '@codemirror/lang-html';
 	import Icon from '#lib/icons/Icon.svelte';
-	import { buildSrcdoc, eventOf, parseCall, replyOf } from './bridge';
+	import { buildSrcdoc, eventOf, pageUrl, parseCall, replyOf, urlSource } from './bridge';
 
 	interface Props {
 		/** Nom de l'onglet (titre de la barre). */
@@ -55,6 +57,32 @@
 	});
 
 	const srcdoc = $derived(buildSrcdoc(shown));
+	// Page web externe : l'adresse affichée (null : page HTML du classeur).
+	const url = $derived(editing ? null : pageUrl(shown));
+	let asking = $state<string | null>(null);
+
+	async function setUrl() {
+		const u = (asking ?? '').trim();
+		if (!u) return;
+		asking = null;
+		const src = urlSource(u);
+		try {
+			await save(src);
+			shown = src;
+			dirty = false;
+			error = '';
+			onnotice?.(`Onglet « ${name} » : page web ${pageUrl(src)} (Ctrl+Z pour annuler)`);
+		} catch (e) {
+			error = String(e instanceof Error ? e.message : e);
+		}
+	}
+
+	function openOutside(u: string) {
+		import('@wailsio/runtime').then(
+			(rt) => rt.Browser.OpenURL(u),
+			() => window.open(u, '_blank')
+		);
+	}
 
 	// Pont : appels de la page vers le classeur.
 	function onMessage(e: MessageEvent) {
@@ -178,8 +206,34 @@
 			{#if dirty}<button onclick={() => stopEdit(false)}>Abandonner les modifications</button>{/if}
 			<span class="muted">Ctrl+S : enregistrer · Ctrl+Entrée : aperçu · lattis.call("sheets.list"), lattis.query(sql), lattis.on("change", f)</span>
 		{:else}
-			<button onclick={startEdit} disabled={!!locked} title={locked || 'Modifier le HTML, le CSS et le JavaScript de la page'}><Icon name="edit" size={14} />Modifier</button>
+			<button onclick={startEdit} disabled={!!locked} title={locked || 'Modifier le HTML, le CSS et le JavaScript de la page'}><Icon name="edit" size={14} />{url ? 'Page HTML' : 'Modifier'}</button>
+			{#if asking !== null}
+				<!-- svelte-ignore a11y_autofocus -->
+				<input
+					class="url"
+					bind:value={asking}
+					placeholder="https://exemple.fr"
+					autofocus
+					onkeydown={(e) => {
+						e.stopPropagation();
+						if (e.key === 'Enter') setUrl();
+						if (e.key === 'Escape') asking = null;
+					}}
+				/>
+				<button class="primary" onclick={setUrl}>Afficher</button>
+				<button onclick={() => (asking = null)}>Annuler</button>
+			{:else}
+				<button
+					onclick={() => (locked ? onnotice?.(locked) : (asking = url ?? 'https://'))}
+					disabled={!!locked}
+					title={locked || 'Afficher une page web externe dans cet onglet'}><Icon name="web" size={14} />Page web…</button
+				>
+			{/if}
 			<button onclick={() => reloads++} title="Recharger la page"><Icon name="refresh" size={14} />Recharger</button>
+			{#if url}
+				<button onclick={() => openOutside(url)} title="Ouvrir dans le navigateur"><Icon name="open" size={14} />{url}</button>
+				<span class="muted">Page blanche : le site refuse peut-être d’être affiché dans un cadre (ouvrez-le dans le navigateur).</span>
+			{/if}
 			{#if dirty}<span class="muted">Modifications non enregistrées</span>{/if}
 		{/if}
 		{#if error}<span class="error">{error}</span>{/if}
@@ -187,7 +241,14 @@
 	<div class="body" class:split={editing}>
 		{#if editing}<div class="editor" bind:this={host}></div>{/if}
 		<!-- Cadre isolé : scripts permis, mais ni même origine, ni formulaires, ni fenêtres. -->
-		{#key reloads}<iframe bind:this={frame} title="Page {name}" sandbox="allow-scripts" {srcdoc}></iframe>{/key}
+		{#key reloads}
+			{#if url}
+				<!-- Site externe : sa propre origine, sans pont vers le classeur. -->
+				<iframe title="Page {name}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" src={url}></iframe>
+			{:else}
+				<iframe bind:this={frame} title="Page {name}" sandbox="allow-scripts" {srcdoc}></iframe>
+			{/if}
+		{/key}
 	</div>
 </div>
 
@@ -239,6 +300,13 @@
 	.toolbar button:disabled {
 		opacity: 0.5;
 		cursor: default;
+	}
+	.url {
+		font: inherit;
+		width: 320px;
+		padding: 4px 6px;
+		border: 1px solid #c9cdd2;
+		border-radius: 3px;
 	}
 	.muted {
 		color: #6b7280;

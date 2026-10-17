@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BRIDGE_SCRIPT, PAGE_CSP, buildSrcdoc, eventOf, parseCall, replyOf } from './bridge';
+import { BRIDGE_SCRIPT, PAGE_CSP, buildSrcdoc, eventOf, pageUrl, parseCall, replyOf, urlSource } from './bridge';
 import { hostOf } from './hosts';
 
 describe('buildSrcdoc', () => {
@@ -101,5 +101,14 @@ describe('hostOf', () => {
 	});
 	it('refuse ce qui n’est pas un hôte', () => {
 		for (const s of ['', 'ftp://exemple.fr', 'a b', '-x.fr', 'exemple.fr:port']) expect(hostOf(s)).toBeNull();
+	});
+});
+
+describe('page web externe', () => {
+	it('adresse gardée dans le contenu', () => {
+		expect(urlSource('exemple.fr/a')).toBe('<!-- lattis:url https://exemple.fr/a -->');
+		expect(pageUrl(urlSource('http://x.org'))).toBe('http://x.org');
+		expect(pageUrl('<h1>page</h1>')).toBeNull();
+		expect(pageUrl('<!-- lattis:url javascript:alert(1) -->')).toBeNull();
 	});
 });
