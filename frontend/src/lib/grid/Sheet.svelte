@@ -106,6 +106,11 @@
 		noGrandTotal?: boolean;
 	}
 
+	/** Ligne du total général d'un TCD (la dernière), -1 quand il est masqué (« Totaux généraux » décoché ; sans champ en lignes, le total est la seule ligne). */
+	function pivotTotalRow(p: { row: number; cells: string[][]; config: PivotConfig }): number {
+		return p.config.noGrandTotal && p.config.rowFields?.length ? -1 : p.row + p.cells.length - 1;
+	}
+
 	export interface SheetPivot {
 		id: number;
 		row: number;
@@ -1429,15 +1434,17 @@
 			const pr1 = p.row + p.cells.length - 1;
 			const pc1 = p.col + p.cells[0].length - 1;
 			if (pr1 < r0 || p.row > r1 || pc1 < c0 || p.col > c1) continue;
+			// Ligne du total général : la dernière, quand il est affiché.
+			const tot = pivotTotalRow(p);
 			// En-tête et total sur fond gris, sauf remplissage choisi.
 			ctx.fillStyle = C.head;
-			for (const r of [p.row, pr1])
+			for (const r of tot >= 0 ? [p.row, tot] : [p.row])
 				for (let c = p.col; c <= pc1; c++) if (!styleAt(r, c, undefined)?.bg) ctx.fillRect(cx(c), ry(r), colAxis.size(c), rh(r));
 			for (let i = Math.max(0, r0 - p.row); i < p.cells.length && p.row + i <= r1; i++)
 				p.cells[i].forEach((v, j) => {
 					if (!v) return;
 					const c = p.col + j;
-					const bold = i === 0 || i === p.cells.length - 1;
+					const bold = i === 0 || p.row + i === tot;
 					// Mise en forme posée sur les cellules du TCD, leurs lignes ou colonnes (format de nombre, décimales, police…).
 					const st = resolveStyle(styleAt(p.row + i, c, undefined), lineRule(p.row + i, c, ruleValue(v), v));
 					const style = bold ? { ...st, b: st?.b ?? true } : st;
@@ -1449,7 +1456,7 @@
 			ctx.strokeRect(Math.round(cx(p.col)) + 0.5, Math.round(ry(p.row)) + 0.5, spanW(p.col, pc1) - 1, rspan(p.row, pr1) - 1);
 			// Traits sous l'en-tête et au-dessus du total.
 			ctx.beginPath();
-			for (const y of [ry(p.row + 1), ry(pr1)]) {
+			for (const y of tot >= 0 ? [ry(p.row + 1), ry(tot)] : [ry(p.row + 1)]) {
 				ctx.moveTo(Math.round(cx(p.col)), Math.round(y) + 0.5);
 				ctx.lineTo(Math.round(cx(p.col)) + spanW(p.col, pc1), Math.round(y) + 0.5);
 			}
@@ -3898,7 +3905,7 @@
 		for (const p of pivots) {
 			const j = c - p.col;
 			if (p.error || j < 0 || j >= (p.cells[0]?.length ?? 0)) continue;
-			p.cells.forEach((r, i) => (w = Math.max(w, textWidth(r[j] ?? '', i === 0 || i === p.cells.length - 1))));
+			p.cells.forEach((r, i) => (w = Math.max(w, textWidth(r[j] ?? '', i === 0 || p.row + i === pivotTotalRow(p)))));
 		}
 		return w ? clamp(Math.ceil(w) + 14, 24, MAX_FIT) : DEF_W;
 	}
