@@ -14,6 +14,7 @@
 	import Icon from '#lib/icons/Icon.svelte';
 	import type { IconName } from '#lib/icons/icons.js';
 	import Select from '#lib/ui/Select.svelte';
+	import { DEFAULT_NAME_HINT, isDefaultTableName } from './defaultname';
 	import { dismiss, dismissPanel } from './dismiss.js';
 	import { searchValues, valuesFilter, type PanelValue } from './filtercond.js';
 	import {
@@ -433,7 +434,8 @@
 		<div class="titles">
 			<strong>Champs de tableau croisé dynamique</strong>
 			<span class="sub" title="Le TCD s'interroge dans l'onglet SQL sous ce nom et sert de source aux graphiques">
-				{config.name ?? 'TCD'} · source : {config.source}
+				{config.name ?? 'TCD'} · source :
+				{#if isDefaultTableName(config.source)}<span class="default-name" title={DEFAULT_NAME_HINT}>{config.source}</span>{:else}{config.source}{/if}
 			</span>
 		</div>
 		<button class="icon-btn" title="Fermer le volet" aria-label="Fermer le volet" onclick={onclose}><Icon name="win-close" size={16} /></button>
@@ -1185,5 +1187,9 @@
 		display: flex;
 		justify-content: flex-end;
 		gap: 6px;
+	}
+	/* Nom de tableau par défaut (DEFAULT_NAME_COLOR) : à renommer. */
+	.default-name {
+		color: #c42b1c;
 	}
 </style>

@@ -24,6 +24,7 @@
 	import { Catalog, displayHeaders, quote, translate, type SqlObject } from '#lib/sql/names.js';
 	import { load, record, save, search, when, type HistoryEntry } from '#lib/sql/history.js';
 	import { isWrite } from '#lib/sql/write.js';
+	import { DEFAULT_NAME_HINT, isDefaultTableName } from '#lib/grid/defaultname.js';
 	import { example, isReadOnly, type ExampleKind } from '#lib/sql/examples.js';
 	import { dismiss } from '#lib/grid/dismiss.js';
 	import Icon from '#lib/icons/Icon.svelte';
@@ -272,7 +273,11 @@
 							title="Clic droit : exemples SELECT, INSERT, UPDATE, DELETE, voir sur la feuille"
 						>
 							<span>{open === o.sqlName ? '▾' : '▸'}</span>
-							<strong>{o.name}</strong>
+							{#if !isReadOnly(o) && isDefaultTableName(o.name)}
+								<strong class="default-name" title={DEFAULT_NAME_HINT}>{o.name}</strong>
+							{:else}
+								<strong>{o.name}</strong>
+							{/if}
 							<span class="muted">{isReadOnly(o) ? 'tableau croisé' : 'tableau'} · {count(o.rows)}</span>
 						</button>
 						{#if open === o.sqlName}
@@ -771,5 +776,9 @@
 	.error {
 		color: #b42318;
 		white-space: pre-wrap;
+	}
+	/* Nom de tableau par défaut (DEFAULT_NAME_COLOR) : à renommer. */
+	.default-name {
+		color: #c42b1c;
 	}
 </style>
