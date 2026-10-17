@@ -196,7 +196,7 @@ func TestPresetsLourds(t *testing.T) {
 }
 
 // Génération en SQL (presets de 10M lignes) : mêmes colonnes et types que le
-// thème, valeurs plausibles, lignes dans l'ordre ; vérifiée ici sur 2 000 lignes.
+// thème, valeurs plausibles, lignes dans l'ordre ; vérifiée ici sur 12 345 lignes.
 func TestSQLRows(t *testing.T) {
 	ctx := context.Background()
 	for _, c := range []struct {
@@ -208,9 +208,9 @@ func TestSQLRows(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer d.Close()
-		s := one(c.th, 2_000, c.cols)
+		s := one(c.th, 12_345, c.cols)
 		s.Tables[0].Select = func(seed uint64) string {
-			q, ok := SQLRows(c.th, c.cols, 2_000, seed)
+			q, ok := CopiedRows(c.th, c.cols, 12_345, seed)
 			if !ok {
 				t.Fatalf("%s : pas de version SQL", c.th.Name)
 			}
@@ -220,7 +220,7 @@ func TestSQLRows(t *testing.T) {
 		if _, err := BuildPlan(ctx, d.Model, Plan{Sheets: []SheetSpec{s}}, Options{}); err != nil {
 			t.Fatalf("%s : %v", c.th.Name, err)
 		}
-		t.Logf("%s : 2 000 lignes × %d colonnes en %v", c.th.Name, c.cols, time.Since(start).Round(time.Millisecond))
+		t.Logf("%s : 12 345 lignes × %d colonnes en %v", c.th.Name, c.cols, time.Since(start).Round(time.Millisecond))
 		n := 0
 		err = d.ExportTable(ctx, c.th.Name, func(ec []canvas.ExportColumn) error {
 			if len(ec) != c.cols {
@@ -229,7 +229,7 @@ func TestSQLRows(t *testing.T) {
 			return nil
 		}, func(vals []any) error {
 			n++
-			if n == 1 || n == 2_000 {
+			if n == 1 || n == 12_345 {
 				t.Logf("%s ligne %d : %v", c.th.Name, n, vals[:10])
 			}
 			date, _ := vals[1].(string)
@@ -246,7 +246,7 @@ func TestSQLRows(t *testing.T) {
 			}
 			return nil
 		})
-		if err != nil || n != 2_000 {
+		if err != nil || n != 12_345 {
 			t.Fatalf("%s : %d lignes, %v", c.th.Name, n, err)
 		}
 	}

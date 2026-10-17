@@ -213,3 +213,27 @@ func SpreadSQL(count int, n string) string {
 	}
 	return "rtrim(" + strings.Join(parts, " || ") + ", '0')"
 }
+
+// FixedSQL écrit en SQL les width chiffres en base 62 de l'entier expr,
+// zéros de tête compris : des préfixes de même largeur, dans l'ordre des
+// entiers. Préfixe + clé (Spread) donne des clés valables, dans l'ordre
+// (préfixe d'abord) : de quoi recopier un bloc de lignes à la suite.
+func FixedSQL(width int, expr string) string {
+	parts := make([]string, width)
+	div := uint64(1)
+	for k := width - 1; k >= 0; k-- {
+		parts[k] = fmt.Sprintf("substr('%s', ((%s) / %d) %% %d + 1, 1)", Digits, expr, div, base)
+		div *= uint64(base)
+	}
+	return strings.Join(parts, " || ")
+}
+
+// FixedWidth donne la largeur de FixedSQL pour les entiers de 0 à n - 1.
+func FixedWidth(n int) int {
+	w, c := 1, base
+	for c < n {
+		w++
+		c *= base
+	}
+	return w
+}

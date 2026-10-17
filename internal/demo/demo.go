@@ -71,7 +71,7 @@ func BuildPlan(ctx context.Context, m *canvas.Model, p Plan, opt Options) (Resul
 			}
 			t := t
 			if t.Select != nil {
-				it.Select = t.Select(seed)
+				it.Select, it.SelectKeys = t.Select(seed), true
 				is.Tables = append(is.Tables, it)
 				continue
 			}

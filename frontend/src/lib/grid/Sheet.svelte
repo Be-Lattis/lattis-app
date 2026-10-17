@@ -367,17 +367,29 @@
 	const ROW_H = 22;
 	const DEF_W = 88;
 	const TOP_H = 22;
-	// Gouttière de gauche (choix de Louis) : juste la largeur du plus long
-	// numéro affiché, 2 chiffres au moins ; elle s'élargit tout de suite et ne
-	// rétrécit qu'à l'arrêt du défilement (pas de grille qui tremble).
+	// Gouttière de gauche (choix de Louis) : la largeur du plus long numéro
+	// que la feuille peut afficher (pas seulement l'écran : elle ne bouge pas
+	// au défilement), 2 chiffres au moins. Numéros : le nombre de lignes de
+	// chaque tableau ; clés : la plus longue déjà affichée (elles ne sont pas
+	// toutes chargées) ; en-têtes A1 : la dernière ligne de la zone utilisée.
 	const MIN_MARGIN = 28;
 	const GUTTER_PAD = 14;
 	const GUTTER_MAX = 160; // clés longues : coupées au-delà
-	const GUTTER_SETTLE = 250; // ms sans défilement avant de rétrécir
-	let gutterNeed = 0; // plus large libellé dessiné à l'image précédente
-	let gutterDrawn = 0; // pendant l'image en cours
-	let scrolledAt = 0;
-	let gutterTimer = 0;
+	const keyWidths = new Map<string, number>(); // tableau → clé la plus large vue
+	let extentRows = 1;
+	let keyGrew = false; // une clé plus large a été dessinée pendant cette image
+
+	function gutterWidth(): number {
+		const m = (s: string) => ctx.measureText(s).width;
+		let need = m('99');
+		if (a1) need = Math.max(need, m(String(extentRows)));
+		else
+			for (const e of entries) {
+				need = Math.max(need, m(String(e.t.rows)));
+				if (e.t.key !== undefined) need = Math.max(need, keyWidths.get(e.t.name) ?? 0);
+			}
+		return Math.min(GUTTER_MAX, Math.max(MIN_MARGIN, Math.ceil(need) + GUTTER_PAD));
+	}
 	const FONT = '13px "Segoe UI", system-ui, -apple-system, sans-serif';
 	const FONT_BOLD = '600 13px "Segoe UI", system-ui, -apple-system, sans-serif';
 	const FONT_SMALL = '11px "Segoe UI", system-ui, -apple-system, sans-serif';
@@ -820,6 +832,7 @@
 		// Comme Excel : la barre s'arrête à la zone utilisée (ou à l'écran affiché) ;
 		// molette, flèches et sélection vont au-delà et l'agrandissent.
 		const rows = Math.min(SHEET_ROWS, Math.max(usedRow + 1, lastVisible + 1, holdRows, scrollHoldRows));
+		extentRows = Math.min(SHEET_ROWS, usedRow + 1);
 		const cw = Math.max(0, viewW - MARGIN);
 		const lastVisibleCol = colAxis.indexAt(scroller.scrollLeft + cw);
 		extentCols = Math.min(SHEET_COLS, Math.max(usedCol + 1, lastVisibleCol + 1, holdCols, scrollHoldCols));
@@ -1067,7 +1080,6 @@
 	// Défilement vertical du volet en cours de dessin (drawText).
 	let paneTop = 0;
 
-	let lastViewPos = { x: 0, y: 0 };
 	function draw() {
 		frame = 0;
 		pendingBorders = [];
@@ -1086,21 +1098,12 @@
 		ctx.fillRect(0, 0, w, h);
 
 		ctx.font = FONT_SMALL;
-		if (viewPos.x !== lastViewPos.x || viewPos.y !== lastViewPos.y) {
-			scrolledAt = t0;
-			lastViewPos = viewPos;
-		}
-		const minW = Math.ceil(ctx.measureText('99').width) + GUTTER_PAD;
-		const margin = Math.min(GUTTER_MAX, Math.max(minW, MIN_MARGIN, Math.ceil(gutterNeed) + GUTTER_PAD));
-		const settled = t0 - scrolledAt >= GUTTER_SETTLE;
-		if (margin > MARGIN || (margin < MARGIN && settled)) {
+		const margin = gutterWidth();
+		if (margin !== MARGIN) {
 			MARGIN = margin;
 			updateExtent();
-		} else if (margin < MARGIN) {
-			clearTimeout(gutterTimer);
-			gutterTimer = window.setTimeout(schedule, GUTTER_SETTLE);
 		}
-		gutterDrawn = 0;
+		keyGrew = false;
 		const fw = colAxis.offset(fCols());
 		const fh = rowTop(fRows());
 		const all = panes(fw, fh, MARGIN, TOP_H, w, h, scroller.scrollLeft, vs.top);
@@ -1159,10 +1162,9 @@
 
 		if (editing) placeEditor();
 
-		// Gouttière trop étroite pour ce qui vient d'être dessiné : élargie à
-		// l'image suivante (les libellés ne sont connus qu'en dessinant).
-		gutterNeed = gutterDrawn;
-		if (Math.min(GUTTER_MAX, Math.ceil(gutterNeed) + GUTTER_PAD) > MARGIN) schedule();
+		// Une clé plus large que toutes celles vues : gouttière élargie à
+		// l'image suivante (les clés ne sont connues qu'une fois chargées).
+		if (keyGrew) schedule();
 
 		const t1 = performance.now();
 		pushStat(drawTimes, t1 - t0);
@@ -1731,7 +1733,6 @@
 			if (a1) {
 				ctx.fillStyle = r >= s0 && r <= s1 ? C.headText : C.stripText;
 				ctx.fillText(String(r + 1), MARGIN - 8, y + rh(r) / 2);
-				gutterDrawn = Math.max(gutterDrawn, ctx.measureText(String(r + 1)).width);
 				continue;
 			}
 			// Seul le tableau qui touche la gouttière (première colonne affichée)
@@ -1741,7 +1742,13 @@
 			if (e) {
 				ctx.fillStyle = mine || !cur ? C.stripText : C.stripLine;
 				const label = rowLabel(e, r);
-				gutterDrawn = Math.max(gutterDrawn, ctx.measureText(label).width);
+				if (e.t.key !== undefined) {
+					const kw = ctx.measureText(label).width;
+					if (kw > (keyWidths.get(e.t.name) ?? 0)) {
+						keyWidths.set(e.t.name, kw);
+						keyGrew = true;
+					}
+				}
 				ctx.save();
 				ctx.beginPath();
 				ctx.rect(0, y, MARGIN - 4, rh(r));

@@ -133,7 +133,7 @@ func sized(rows, cols int) Preset {
 		s := one(th, rows, cols)
 		if rows >= sqlRows {
 			s.Tables[0].Select = func(seed uint64) string {
-				q, _ := SQLRows(th, cols, rows, seed)
+				q, _ := CopiedRows(th, cols, rows, seed)
 				return q
 			}
 		}

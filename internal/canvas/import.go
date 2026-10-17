@@ -35,6 +35,9 @@ type ImportTable struct {
 	// INSERT … SELECT, sans aller-retour avec Go. SelectArgs : ses paramètres.
 	Select     string
 	SelectArgs []any
+	// SelectKeys : la requête rend aussi la colonne k, clés d'ordre (_pos)
+	// des lignes, déjà croissantes avec n (sinon elles sont calculées ici).
+	SelectKeys bool
 }
 
 // ImportCell est une cellule libre importée.
@@ -254,11 +257,15 @@ func (t *tx) importTable(sheet int64, it *ImportTable) (Table, error) {
 		if _, err := t.ExecContext(t.Ctx, `CREATE INDEX `+tb.sql()+`_pos ON `+staging+`(_pos)`); err != nil {
 			return Table{}, err
 		}
+		keys := order.SpreadSQL(it.Count, "q.n")
+		if it.SelectKeys {
+			keys = "q.k"
+		}
 		vs := make([]string, len(it.Headers))
 		for i := range vs {
 			vs[i] = fmt.Sprintf("q.v%d", i+1)
 		}
-		res, err := t.ExecContext(t.Ctx, `INSERT INTO `+staging+` (`+strings.Join(names, ", ")+`) SELECT q.n, `+order.SpreadSQL(it.Count, "q.n")+`, `+strings.Join(vs, ", ")+` FROM (`+it.Select+`) AS q`, it.SelectArgs...)
+		res, err := t.ExecContext(t.Ctx, `INSERT INTO `+staging+` (`+strings.Join(names, ", ")+`) SELECT q.n, `+keys+`, `+strings.Join(vs, ", ")+` FROM (`+it.Select+`) AS q`, it.SelectArgs...)
 		if err != nil {
 			return Table{}, fmt.Errorf("import du tableau %s : %w", it.Name, err)
 		}

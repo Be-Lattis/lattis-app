@@ -3,6 +3,8 @@ package demo
 import (
 	"fmt"
 	"strings"
+
+	"github.com/lalamefine/slitable/internal/order"
 )
 
 // Génération en SQL des très gros presets (10M lignes) : les lignes ne
@@ -210,4 +212,35 @@ func SQLRows(th Theme, cols, rows int, seed uint64) (string, bool) {
 		return blockQuery(rows, a, b, exprs[:cols]), true
 	}
 	return "", false
+}
+
+// copyBlock : lignes tirées une fois (choix de Louis : 5 000 lignes
+// aléatoires suffisent), puis recopiées à la suite jusqu'au total.
+const copyBlock = 5_000
+
+// CopiedRows écrit la requête des très gros presets : copyBlock lignes
+// tirées par SQLRows, recopiées autant de fois qu'il faut par un produit
+// croisé avec les numéros de copie j. Les clés d'ordre (colonne k) sont le
+// numéro de copie en base 62 suivi de la clé de la ligne dans le bloc : pas
+// de calcul de clé par ligne, et des clés déjà croissantes. Les colonnes
+// qui numérotent (N° commande) restent uniques.
+func CopiedRows(th Theme, cols, rows int, seed uint64) (string, bool) {
+	size := min(rows, copyBlock)
+	inner, ok := SQLRows(th, cols, size, seed)
+	if !ok {
+		return "", false
+	}
+	copies := (rows + size - 1) / size
+	exprs := make([]string, cols)
+	for i := range exprs {
+		exprs[i] = fmt.Sprintf("b.v%d AS v%d", i+1, i+1)
+	}
+	n := fmt.Sprintf("(c.j * %d + b.n)", size)
+	if th.Name == Commandes.Name {
+		exprs[0] = "100000 + " + n + " AS v1"
+	}
+	return fmt.Sprintf("WITH RECURSIVE c(j) AS (SELECT 0 UNION ALL SELECT j + 1 FROM c WHERE j < %d), "+
+		"b AS MATERIALIZED (SELECT q.*, %s AS sk FROM (%s) AS q) "+
+		"SELECT %s AS n, %s || b.sk AS k, %s FROM c CROSS JOIN b WHERE %s <= %d",
+		copies-1, order.SpreadSQL(size, "q.n"), inner, n, order.FixedSQL(order.FixedWidth(copies), "c.j"), strings.Join(exprs, ", "), n, rows), true
 }
