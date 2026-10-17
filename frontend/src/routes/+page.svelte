@@ -144,7 +144,10 @@
 		const poll = async () => {
 			if (!waiting) return;
 			const p = await DocumentService.DemoProgress().catch(() => null);
-			if (p && waiting) demoProgress = `Démo « ${preset} » : ${p.done.toLocaleString('fr-FR')} / ${p.total.toLocaleString('fr-FR')} lignes`;
+			if (p && waiting)
+				demoProgress =
+					`Démo « ${preset} » : ${p.done.toLocaleString('fr-FR')} / ${p.total.toLocaleString('fr-FR')} lignes` +
+					(p.totalCells ? ` · ${p.cells.toLocaleString('fr-FR')} / ${p.totalCells.toLocaleString('fr-FR')} cellules` : '');
 			setTimeout(poll, 250);
 		};
 		poll();

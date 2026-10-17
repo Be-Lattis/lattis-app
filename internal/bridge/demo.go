@@ -12,6 +12,9 @@ type DemoProgress struct {
 	Preset string `json:"preset"`
 	Done   int    `json:"done"` // lignes écrites
 	Total  int    `json:"total"`
+	// Cellules écrites (estimées d'après les lignes) et total.
+	Cells      int `json:"cells"`
+	TotalCells int `json:"totalCells"`
 }
 
 // DemoResult est le classeur de démonstration ouvert.
@@ -25,12 +28,16 @@ type demoRun struct {
 	preset      string
 	seed        uint64
 	done, total atomic.Int64
+	cells       int // cellules de données du preset
 }
 
 // SetDemo demande, au lancement, un classeur de démonstration (main.go,
 // option --demo) ; seed 0 : graine par défaut.
 func (s *DocumentService) SetDemo(preset string, seed uint64) {
 	s.demo = &demoRun{preset: preset, seed: seed}
+	if p, ok := demo.Lookup(preset); ok {
+		s.demo.cells = p.Plan().Cells()
+	}
 }
 
 // DemoRequested donne le preset demandé au lancement (--demo), ou "".
@@ -46,7 +53,11 @@ func (s *DocumentService) DemoProgress() DemoProgress {
 	if s.demo == nil {
 		return DemoProgress{}
 	}
-	return DemoProgress{Preset: s.demo.preset, Done: int(s.demo.done.Load()), Total: int(s.demo.total.Load())}
+	p := DemoProgress{Preset: s.demo.preset, Done: int(s.demo.done.Load()), Total: int(s.demo.total.Load()), TotalCells: s.demo.cells}
+	if p.Total > 0 {
+		p.Cells = int(int64(p.Done) * int64(p.TotalCells) / int64(p.Total))
+	}
+	return p
 }
 
 // OpenDemo fabrique et ouvre le classeur de démonstration demandé au

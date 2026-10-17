@@ -59,6 +59,17 @@ func (p Plan) Rows() int {
 	return n
 }
 
+// Cells est le nombre total de cellules de données du plan.
+func (p Plan) Cells() int {
+	n := 0
+	for _, s := range p.Sheets {
+		for _, t := range s.Tables {
+			n += t.Rows * len(t.Cols)
+		}
+	}
+	return n
+}
+
 // Preset est un classeur de démonstration prêt à l'emploi.
 type Preset struct {
 	Name        string

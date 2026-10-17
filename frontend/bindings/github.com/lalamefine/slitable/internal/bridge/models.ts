@@ -31,6 +31,12 @@ export interface DemoProgress {
      */
     "done": number;
     "total": number;
+
+    /**
+     * Cellules écrites (estimées d'après les lignes) et total.
+     */
+    "cells": number;
+    "totalCells": number;
 }
 
 /**
