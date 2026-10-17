@@ -27,6 +27,18 @@ export const icons = {
 	'align-left': '<path d="M4 6h16M4 10h10M4 14h16M4 18h10"/>',
 	'align-center': '<path d="M4 6h16M7 10h10M4 14h16M7 18h10"/>',
 	'align-right': '<path d="M4 6h16M10 10h10M4 14h16M10 18h10"/>',
+	'align-justify': '<path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>',
+
+	// Texte (onglet Documentation)
+	strike: '<path d="M16 7.5c-.6-1.5-2.2-2.5-4-2.5-2.3 0-4 1.3-4 3.1 0 1.6 1.3 2.4 3 2.9M13.5 13.5c1.5.6 2.5 1.3 2.5 2.9 0 1.9-1.8 3.1-4 3.1-2 0-3.6-1-4.2-2.6"/><path class="a" d="M4 12h16"/>',
+	heading: '<path stroke-width="1.9" d="M5 5v14M14 5v14M5 12h9"/><path class="a" d="M17.5 13.5l2-1.5v7"/>',
+	'list-bullet': '<path d="M9.5 6.5h10.5M9.5 12h10.5M9.5 17.5h10.5"/><circle class="af" cx="5" cy="6.5" r="1.4"/><circle class="af" cx="5" cy="12" r="1.4"/><circle class="af" cx="5" cy="17.5" r="1.4"/>',
+	'list-number': '<path d="M10 6.5h10M10 12h10M10 17.5h10"/><path class="a" d="M4.5 5l1.5-1v5M4 11.2a1.2 1.2 0 1 1 2 1L4 14.5h2.5M4 16h2.4l-1.2 1.4a1.2 1.2 0 1 1-1.2 1.6"/>',
+	quote: '<path class="a" d="M5 5v14"/><path d="M9 7h11M9 12h11M9 17h7"/>',
+	'code-block': '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path class="a" d="M9.5 9.5 7 12l2.5 2.5M14.5 9.5 17 12l-2.5 2.5"/>',
+	link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path class="a" d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+	image: '<rect x="3.5" y="5" width="17" height="14" rx="1.5"/><circle class="af" cx="9" cy="10" r="1.6"/><path class="a" d="M4 17l5-4.5 3.5 3 3-2.5 4.5 4"/>',
+	document: '<path d="M6 3.5h8l4 4V20.5H6z"/><path d="M14 3.5v4h4"/><path class="a" d="M8.5 11h7M8.5 14h7M8.5 17h4.5"/>',
 	'align-top': '<path class="a" d="M4 4h16"/><path d="M12 20V8M8 12l4-4 4 4"/>',
 	'align-middle': '<path class="a" d="M4 12h16"/><path d="M12 3v6M9 6l3 3 3-3M12 21v-6M9 18l3-3 3 3"/>',
 	'align-bottom': '<path class="a" d="M4 20h16"/><path d="M12 4v12M8 12l4 4 4-4"/>',

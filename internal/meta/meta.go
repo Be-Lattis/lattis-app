@@ -278,6 +278,11 @@ CREATE TABLE _lattis_http_hosts (
 	host TEXT NOT NULL PRIMARY KEY COLLATE NOCASE
 ) STRICT;
 `,
+	// 23 → 24 : onglets « Documentation » (texte riche, avec graphiques et
+	// boutons) : des pages d'un autre genre.
+	`
+ALTER TABLE _lattis_pages ADD COLUMN kind TEXT NOT NULL DEFAULT 'html';
+`,
 }
 
 // Version est la version du format que ce programme écrit.

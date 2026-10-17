@@ -797,7 +797,7 @@ export interface SheetInfo {
     "zoom": number;
 
     /**
-     * Kind : "html" pour un onglet page HTML (voir pages.go), vide pour une
+     * Kind : "html" pour un onglet page HTML, "doc" pour un onglet Documentation (voir pages.go), vide pour une
      * feuille.
      */
     "kind": string;

@@ -17,6 +17,22 @@
 	export type View = 'grid' | 'sql' | 'script';
 	export type FormatTab = 'number' | 'align' | 'font' | 'border' | 'fill';
 	export type FreezeAction = 'cell' | 'row' | 'col' | 'none';
+	/** Onglet affiché : feuille (grille), page HTML ou Documentation ; le ruban ne montre que ce qui s'y applique. */
+	export type RibbonContext = 'sheet' | 'html' | 'doc';
+	/** Commandes du ruban propres à un onglet Documentation. */
+	export type DocCommand =
+		| 'undo'
+		| 'redo'
+		| 'cut'
+		| 'copy'
+		| 'paste'
+		| 'strike'
+		| 'link'
+		| 'image'
+		| 'button'
+		| `block:${'normal' | 'h1' | 'h2' | 'h3' | 'bullet' | 'ordered' | 'quote' | 'code'}`
+		| `align:${'left' | 'center' | 'right' | 'justify'}`
+		| `chart:${'bar' | 'line' | 'pie' | 'scatter'}`;
 
 	interface Command {
 		label: string;
@@ -87,6 +103,13 @@
 		onheadings?: (show: boolean) => void;
 		/** Insertion › Page HTML : nouvel onglet page HTML. */
 		onpage?: () => void;
+		/** Insertion › Documentation : nouvel onglet de texte riche. */
+		ondocpage?: () => void;
+		/** Onglet affiché (feuille par défaut). */
+		context?: RibbonContext;
+		/** Onglet Documentation : commandes, et état de la sélection (bloc, alignement, barré, lien). */
+		ondoc?: (cmd: DocCommand) => void;
+		docState?: { block: string; align: string; strike: boolean; link: boolean };
 		/** Insertion › Bouton : bouton d'action lié à un script. */
 		onbutton?: (kind?: '' | 'checkbox' | 'select' | 'input' | 'textarea' | 'file') => void;
 		/** Feuille active protégée : les commandes qui la modifient sont grisées. */
@@ -124,7 +147,7 @@
 		onanimate?: (on: boolean) => void;
 	}
 
-	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, onpage, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate }: Props = $props();
+	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, onpage, ondocpage, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate }: Props = $props();
 	const fmt = (tab: FormatTab) => (onformat ? () => onformat(tab) : undefined);
 	const lines = (rows: boolean, hide: boolean) => (onlines ? () => onlines(rows, hide) : undefined);
 	const frz = (what: FreezeAction) => (onfreeze ? () => onfreeze(what) : undefined);
@@ -192,7 +215,16 @@
 		return { destroy: () => ro.disconnect() };
 	}
 
-	const allRibbons: Record<string, Group[]> = $derived({
+	const tabGroup: Group = $derived({
+		title: 'Onglets',
+		commands: [
+			{ label: 'Page HTML', icon: 'web', run: onpage, hint: 'Nouvel onglet page HTML : HTML, CSS et JavaScript qui lisent et modifient le classeur (lattis.call)' },
+			{ label: 'Documentation', icon: 'document', run: ondocpage, hint: 'Nouvel onglet Documentation : texte mis en forme, avec graphiques et boutons de scripts' }
+		]
+	});
+	const dc = (cmd: DocCommand) => (ondoc ? () => ondoc(cmd) : undefined);
+	const blockOn = (b: string) => docState?.block === b;
+	const sheetRibbons: Record<string, Group[]> = $derived({
 		Accueil: [
 			{
 				title: 'Annuler',
@@ -323,7 +355,7 @@
 			}
 		],
 		Insertion: [
-			{ title: 'Onglets', commands: [{ label: 'Page HTML', icon: 'web', run: onpage, hint: 'Nouvel onglet page HTML : HTML, CSS et JavaScript qui lisent et modifient le classeur (lattis.call)' }] },
+			tabGroup,
 			{ title: 'Tableaux', commands: [{ label: 'Tableau croisé', icon: 'pivot-table', run: onpivot, hint: 'Tableau croisé dynamique du tableau actif (double-clic sur un TCD pour le modifier)' }] },
 			{
 				title: 'Graphiques',
@@ -442,6 +474,102 @@
 		]
 	});
 
+	// Onglet Documentation : un traitement de texte (police, paragraphes,
+	// graphiques et boutons insérés dans le texte).
+	const docRibbons: Record<string, Group[]> = $derived({
+		Accueil: [
+			{
+				title: 'Annuler',
+				iconOk: true,
+				commands: [
+					{ label: 'Annuler', icon: 'undo', run: dc('undo'), hint: 'Annuler la dernière modification du texte (Ctrl+Z)' },
+					{ label: 'Rétablir', icon: 'redo', run: dc('redo'), hint: 'Rétablir (Ctrl+Y)' }
+				]
+			},
+			{ title: 'Presse-papiers', iconOk: true, commands: [{ label: 'Coller', icon: 'paste', run: dc('paste'), hint: 'Coller le texte (Ctrl+V)' }, { label: 'Couper', icon: 'cut', run: dc('cut'), hint: 'Couper (Ctrl+X)' }, { label: 'Copier', icon: 'copy', run: dc('copy'), hint: 'Copier (Ctrl+C)' }] },
+			{
+				title: 'Police',
+				fonts: true,
+				iconOk: true,
+				commands: [
+					{ label: 'Gras', icon: 'bold', run: st({ b: 'toggle' }), hint: 'Gras (Ctrl+B)', on: !!cellStyle?.b },
+					{ label: 'Italique', icon: 'italic', run: st({ i: 'toggle' }), hint: 'Italique (Ctrl+I)', on: !!cellStyle?.i },
+					{ label: 'Souligné', icon: 'underline', run: st({ u: 'toggle' }), hint: 'Souligné (Ctrl+U)', on: !!cellStyle?.u },
+					{ label: 'Barré', icon: 'strike', run: dc('strike'), hint: 'Barré', on: !!docState?.strike },
+					{ label: 'Couleur', icon: 'font-color', run: st({ fg }), hint: 'Couleur du texte (▾ : choisir la teinte)', color: 'fg' },
+					{ label: 'Surlignage', icon: 'font-color', run: st({ bg }), hint: 'Couleur de surlignage (▾ : choisir la teinte)', color: 'bg' },
+					{ label: 'Effacer', icon: 'remove-duplicates', run: st(clearPatch()), hint: 'Effacer la mise en forme des caractères' }
+				]
+			},
+			{
+				title: 'Paragraphe',
+				iconOk: true,
+				commands: [
+					{ label: 'Puces', icon: 'list-bullet', run: dc('block:bullet'), on: blockOn('bullet'), hint: 'Liste à puces' },
+					{ label: 'Numéros', icon: 'list-number', run: dc('block:ordered'), on: blockOn('ordered'), hint: 'Liste numérotée' },
+					{ label: 'Citation', icon: 'quote', run: dc('block:quote'), on: blockOn('quote'), hint: 'Citation (retrait et trait à gauche)' },
+					{ label: 'Gauche', icon: 'align-left', run: dc('align:left'), on: docState?.align === 'left', hint: 'Aligner à gauche' },
+					{ label: 'Centrer', icon: 'align-center', run: dc('align:center'), on: docState?.align === 'center', hint: 'Centrer' },
+					{ label: 'Droite', icon: 'align-right', run: dc('align:right'), on: docState?.align === 'right', hint: 'Aligner à droite' },
+					{ label: 'Justifier', icon: 'align-justify', run: dc('align:justify'), on: docState?.align === 'justify', hint: 'Justifier' },
+					{ label: 'Code', icon: 'code-block', run: dc('block:code'), on: blockOn('code'), hint: 'Bloc de code (police à chasse fixe)' }
+				]
+			},
+			{
+				title: 'Styles',
+				commands: [
+					{
+						label: 'Style',
+						icon: 'heading',
+						run: ondoc ? openItems : undefined,
+						hint: 'Style du paragraphe : normal ou titre',
+						items: [
+							{ label: 'Normal', run: dc('block:normal'), on: blockOn('normal') },
+							{ label: 'Titre 1', run: dc('block:h1'), on: blockOn('h1') },
+							{ label: 'Titre 2', run: dc('block:h2'), on: blockOn('h2') },
+							{ label: 'Titre 3', run: dc('block:h3'), on: blockOn('h3') }
+						]
+					}
+				]
+			}
+		],
+		Insertion: [
+			tabGroup,
+			{
+				title: 'Graphiques',
+				commands: [
+					{ label: 'Barres', icon: 'chart-bar', run: dc('chart:bar'), hint: 'Graphique en barres d’un tableau du classeur, inséré dans le texte' },
+					{ label: 'Courbes', icon: 'chart-line', run: dc('chart:line'), hint: 'Graphique en courbes d’un tableau du classeur' },
+					{ label: 'Secteurs', icon: 'chart-pie', run: dc('chart:pie'), hint: 'Graphique en secteurs d’un tableau du classeur' },
+					{ label: 'Nuage de points', icon: 'chart-scatter', run: dc('chart:scatter'), hint: 'Nuage de points d’un tableau du classeur' }
+				]
+			},
+			{ title: 'Contrôles', commands: [{ label: 'Bouton', icon: 'button', run: dc('button'), hint: 'Bouton dans le texte : un clic exécute un script de l’onglet SCRIPT (ou l’une de ses fonctions)' }] },
+			{
+				title: 'Liens',
+				commands: [
+					{ label: 'Lien', icon: 'link', run: dc('link'), on: !!docState?.link, hint: 'Lien vers une page web (Ctrl+clic pour l’ouvrir)' },
+					{ label: 'Image', icon: 'image', run: dc('image'), hint: 'Insérer une image (enregistrée dans le classeur)' }
+				]
+			}
+		],
+		Révision: sheetRibbons.Révision.filter((g) => g.title === 'Protéger'),
+		Affichage: [{ title: 'Afficher', commands: sheetRibbons.Affichage[0].commands.filter((c) => c.label === 'Animations') }]
+	});
+	// Onglet page HTML : la page a ses propres commandes (Modifier, Page web…).
+	const htmlRibbons: Record<string, Group[]> = $derived({
+		Accueil: sheetRibbons.Accueil.filter((g) => g.title === 'Annuler'),
+		Insertion: [tabGroup],
+		Révision: sheetRibbons.Révision.filter((g) => g.title === 'Protéger'),
+		Affichage: docRibbons.Affichage
+	});
+	const allRibbons: Record<string, Group[]> = $derived(context === 'doc' ? docRibbons : context === 'html' ? htmlRibbons : sheetRibbons);
+	// Onglets du ruban qui ont des commandes pour l'onglet affiché.
+	const shownTabs = $derived(tabs.filter((t) => (allRibbons[t]?.length ?? 0) > 0));
+	$effect(() => {
+		if (tab !== 'SQL' && tab !== 'SCRIPT' && !shownTabs.includes(tab)) tab = 'Accueil';
+	});
+
 	// Sur une feuille protégée, seules les commandes qui ne la modifient pas
 	// restent actives (lecture, copie, filtres, affichage) ; un tableau croisé
 	// crée une feuille : refusé quand la structure du classeur est protégée.
@@ -468,7 +596,7 @@
 	const shapes = $derived(
 		tab === 'SQL' || tab === 'SCRIPT'
 			? []
-			: ribbons[tab].map((g) => ({ title: g.title, iconOk: g.iconOk, labels: [...(g.fonts ? [FONTS_W] : []), ...g.commands.map((c) => (c.color ? null : c.label))] }))
+			: (ribbons[tab] ?? []).map((g) => ({ title: g.title, iconOk: g.iconOk, labels: [...(g.fonts ? [FONTS_W] : []), ...g.commands.map((c) => (c.color ? null : c.label))] }))
 	);
 	// Les formes ne changent qu'avec les libellés : un clic dans la grille
 	// (annulation, quadrillage…) recrée les commandes sans recompacter le
@@ -560,7 +688,7 @@
 				</div>
 			{/if}
 		</div>
-		{#each tabs as t (t)}
+		{#each shownTabs as t (t)}
 			<button class="tab" data-label={t} class:on={tab === t} {disabled} onclick={() => select(t)}>{t}</button>
 		{/each}
 		<span class="sep"></span>
@@ -569,7 +697,7 @@
 	</nav>
 	{#if tab !== 'SQL' && tab !== 'SCRIPT'}
 		<div class="groups" class:off={disabled} use:observe>
-			{#each ribbons[tab] as g, gi (g.title)}
+			{#each ribbons[tab] ?? [] as g, gi (g.title)}
 				{@const mode = modes[gi] ?? 'large'}
 				<section class="group">
 					{#if mode === 'collapsed'}

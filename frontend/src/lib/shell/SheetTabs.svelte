@@ -21,6 +21,8 @@
 		oninsert?: (before: number) => void;
 		/** Nouvel onglet page HTML, avant la feuille before (absente : à la fin). */
 		onpage?: (before?: number) => void;
+		/** Nouvel onglet Documentation, avant la feuille before (absente : à la fin). */
+		ondocpage?: (before?: number) => void;
 		/** Place la feuille id au rang to (0 : première). */
 		onmove?: (id: number, to: number) => void;
 		onrename?: (id: number, name: string) => void;
@@ -45,11 +47,12 @@
 		onrefused?: (msg: string) => void;
 	}
 
-	let { sheets, active, onselect, onadd: add, oninsert: insert, onpage: page, onmove: move, onrename: rename, ondelete: del, oncopy: copy, oncolor: color, onhide: hide, hscroll, onhscroll, onhhold, onprotect, locked = false, onrefused }: Props = $props();
+	let { sheets, active, onselect, onadd: add, oninsert: insert, onpage: page, ondocpage: docPage, onmove: move, onrename: rename, ondelete: del, oncopy: copy, oncolor: color, onhide: hide, hscroll, onhscroll, onhhold, onprotect, locked = false, onrefused }: Props = $props();
 	const LOCKED = 'La structure du classeur est protégée : ôtez la protection (Révision › Ôter la protection du classeur) pour ajouter, supprimer, renommer ou déplacer des feuilles';
 	const onadd = $derived(locked ? undefined : add);
 	const oninsert = $derived(locked ? undefined : insert);
 	const onpage = $derived(locked ? undefined : page);
+	const ondocpage = $derived(locked ? undefined : docPage);
 	// Menu du bouton « + » (clic droit) : feuille ou onglet HTML.
 	let addMenu = $state<{ x: number } | null>(null);
 	const onmove = $derived(locked ? undefined : move);
@@ -244,7 +247,7 @@
 					}
 				}}
 				title={(s.protected ? 'Feuille protégée. ' : '') + (locked ? 'Classeur protégé' : onmove ? 'Double-clic pour renommer, glisser pour déplacer' : 'Double-clic pour renommer')}
-				>{#if s.protected || locked}<span class="lock" aria-label={s.protected ? 'Feuille protégée' : 'Classeur protégé'}><Icon name="lock" size={12} /></span>{/if}{#if s.kind === 'html'}<span class="kind" aria-label="Page HTML"><Icon name="web" size={12} /></span>{/if}{s.name}</button
+				>{#if s.protected || locked}<span class="lock" aria-label={s.protected ? 'Feuille protégée' : 'Classeur protégé'}><Icon name="lock" size={12} /></span>{/if}{#if s.kind === 'html'}<span class="kind" aria-label="Page HTML"><Icon name="web" size={12} /></span>{:else if s.kind === 'doc'}<span class="kind" aria-label="Documentation"><Icon name="document" size={12} /></span>{/if}{s.name}</button
 			>
 		{/if}
 	{/each}
@@ -261,7 +264,7 @@
 			e.preventDefault();
 			if (onadd || onpage) addMenu = { x: (e.currentTarget as HTMLElement).offsetLeft };
 		}}
-		title={locked ? 'Structure du classeur protégée' : 'Nouvelle feuille (clic droit : nouvel onglet HTML)'}>+</button
+		title={locked ? 'Structure du classeur protégée' : 'Nouvelle feuille (clic droit : onglet HTML ou Documentation)'}>+</button
 	>
 	{#if addMenu}
 		<div class="menu" role="menu" style:left="{addMenu.x}px" use:dismiss={() => (addMenu = null)}>
@@ -280,6 +283,14 @@
 					addMenu = null;
 					onpage?.();
 				}}>Nouvel onglet HTML</button
+			>
+			<button
+				role="menuitem"
+				disabled={!ondocpage}
+				onclick={() => {
+					addMenu = null;
+					ondocpage?.();
+				}}>Nouvel onglet Documentation</button
 			>
 		</div>
 	{/if}
@@ -326,6 +337,15 @@
 					closeMenu();
 					onpage?.(id);
 				}}>Insérer un onglet HTML</button
+			>
+			<button
+				role="menuitem"
+				disabled={!ondocpage}
+				onclick={() => {
+					const id = m.id;
+					closeMenu();
+					ondocpage?.(id);
+				}}>Insérer un onglet Documentation</button
 			>
 			<button
 				role="menuitem"

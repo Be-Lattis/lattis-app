@@ -32,7 +32,7 @@ type SheetInfo struct {
 	FreezeCols int `json:"freezeCols"`
 	// Zoom : zoom de la feuille en pour cent (100 par défaut).
 	Zoom int `json:"zoom"`
-	// Kind : "html" pour un onglet page HTML (voir pages.go), vide pour une
+	// Kind : "html" pour un onglet page HTML, "doc" pour un onglet Documentation (voir pages.go), vide pour une
 	// feuille.
 	Kind string `json:"kind"`
 }
@@ -150,7 +150,7 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 	l := Layout{Sheet: sheet, Tables: []TableInfo{}, Cells: []CellInfo{}, Widths: []ColWidth{}, Heights: []RowHeight{}, Names: []NameInfo{}, Styles: []CellStyle{}}
 	err := m.read(ctx, func(t *tx) error {
 		rs, err := t.query(`SELECT id, name, gridlines = 0, headings <> 0, color, hidden <> 0, freeze_rows, freeze_cols, zoom,
-			CASE WHEN EXISTS (SELECT 1 FROM _lattis_pages p WHERE p.sheet = _lattis_sheets.id) THEN 'html' ELSE '' END
+			coalesce((SELECT p.kind FROM _lattis_pages p WHERE p.sheet = _lattis_sheets.id), '')
 			FROM _lattis_sheets ORDER BY pos, id`)
 		if err != nil {
 			return err

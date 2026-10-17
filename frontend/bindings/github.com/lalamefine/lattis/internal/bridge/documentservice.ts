@@ -31,6 +31,14 @@ import * as query$0 from "../query/models.js";
 import * as $models from "./models.js";
 
 /**
+ * AddDoc ajoute un onglet Documentation avant l'onglet before (0 : à la
+ * fin) et renvoie son identifiant.
+ */
+export function AddDoc(before: number): $CancellablePromise<number> {
+    return $Call.ByID(129111501, before);
+}
+
+/**
  * AddFavorite ajoute une requête SQL aux favoris (nom vide : sa première
  * ligne) et renvoie son identifiant.
  */
@@ -81,6 +89,14 @@ export function ApplyStyle(sheet: number, r0: number, c0: number, r1: number, c1
  */
 export function Call(name: string, args: { [_ in string]?: any } | null): $CancellablePromise<any> {
     return $Call.ByID(350356514, name, args);
+}
+
+/**
+ * ChartData calcule les données d'un graphique sans le poser sur une
+ * feuille (graphiques insérés dans un onglet Documentation).
+ */
+export function ChartData(cfg: canvas$0.ChartConfig): $CancellablePromise<canvas$0.ChartInfo> {
+    return $Call.ByID(3622561794, cfg);
 }
 
 /**
@@ -795,6 +811,14 @@ export function RuleStats(sheet: number, table: number, cols: number[] | null, r
  */
 export function RunButton(id: number): $CancellablePromise<$models.ScriptResult> {
     return $Call.ByID(812354791, id);
+}
+
+/**
+ * RunFunction exécute le script name de la bibliothèque (onglet SCRIPT),
+ * ou seulement sa fonction entry : bouton d'un onglet Documentation.
+ */
+export function RunFunction(name: string, entry: string): $CancellablePromise<$models.ScriptResult> {
+    return $Call.ByID(1355166647, name, entry);
 }
 
 /**

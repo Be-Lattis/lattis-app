@@ -18,13 +18,13 @@ type sheetRef struct {
 	Name string `json:"name"`
 	// Protected : feuille protégée (ses modifications sont refusées).
 	Protected bool `json:"protected,omitempty"`
-	// Kind : "html" pour un onglet page HTML, vide pour une feuille.
+	// Kind : "html" pour un onglet page HTML, "doc" pour un onglet Documentation, vide pour une feuille.
 	Kind string `json:"kind,omitempty"`
 }
 
 func sheetList(ctx context.Context, d *doc.Document) ([]sheetRef, error) {
 	rs, err := d.DB().Read().QueryContext(ctx, `SELECT s.id, s.name, p.sheet IS NOT NULL,
-		CASE WHEN EXISTS (SELECT 1 FROM _lattis_pages g WHERE g.sheet = s.id) THEN 'html' ELSE '' END FROM _lattis_sheets s
+		coalesce((SELECT g.kind FROM _lattis_pages g WHERE g.sheet = s.id), '') FROM _lattis_sheets s
 		LEFT JOIN _lattis_protection p ON p.sheet = s.id ORDER BY s.pos, s.id`)
 	if err != nil {
 		return nil, err

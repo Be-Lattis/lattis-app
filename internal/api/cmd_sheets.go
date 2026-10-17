@@ -12,7 +12,7 @@ var pSheet = Param{Name: "sheet", Type: Ref, Desc: "feuille (nom ou identifiant)
 type SheetView struct {
 	ID      int64        `json:"id"`
 	Name    string       `json:"name"`
-	Kind    string       `json:"kind,omitempty"` // "html" : onglet page HTML
+	Kind    string       `json:"kind,omitempty"` // "html" : onglet page HTML, "doc" : onglet Documentation
 	Tables  []Table      `json:"tables"`
 	Cells   []CellView   `json:"cells"`
 	Names   []NamedCell  `json:"names"`
@@ -64,7 +64,7 @@ func init() {
 		&Command{
 			Name:    "sheets.list",
 			Summary: "Liste les feuilles du classeur, dans l'ordre des onglets.",
-			Details: "protected vaut true pour une feuille protégée (Révision › Protéger la feuille) ; kind vaut \"html\" pour un onglet page HTML (absent pour une feuille).",
+			Details: "protected vaut true pour une feuille protégée (Révision › Protéger la feuille) ; kind vaut \"html\" pour un onglet page HTML, \"doc\" pour un onglet Documentation (absent pour une feuille).",
 			Returns: "{ {id, name, protected, kind}, ... }",
 			Example: `for _, f in ipairs(sheets.list()) do
   print(f.id, f.name)

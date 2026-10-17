@@ -19,6 +19,14 @@ import (
 // KindHTML est le type d'un onglet page HTML (SheetInfo.Kind).
 const KindHTML = "html"
 
+// KindDoc est le type d'un onglet Documentation : texte riche (un Delta
+// Quill en JSON) où l'on insère des graphiques et des boutons ; même
+// stockage qu'une page HTML (_lattis_pages, colonne kind).
+const KindDoc = "doc"
+
+// DocTemplate est le contenu d'un nouvel onglet Documentation.
+const DocTemplate = `{"ops":[{"insert":"Documentation"},{"attributes":{"header":1},"insert":"\n"},{"insert":"\n"}]}`
+
 // PageTemplate est le contenu d'une nouvelle page HTML.
 const PageTemplate = `<!doctype html>
 <html lang="fr">
@@ -52,13 +60,26 @@ const PageTemplate = `<!doctype html>
 // AddPage ajoute un onglet page HTML, juste avant l'onglet before (0 : à
 // la fin), et renvoie son identifiant.
 func (m *Model) AddPage(ctx context.Context, before int64) (int64, error) {
+	return m.addPage(ctx, before, KindHTML)
+}
+
+// AddDoc ajoute un onglet Documentation, comme AddPage.
+func (m *Model) AddDoc(ctx context.Context, before int64) (int64, error) {
+	return m.addPage(ctx, before, KindDoc)
+}
+
+func (m *Model) addPage(ctx context.Context, before int64, kind string) (int64, error) {
 	var id int64
-	err := m.Do(ctx, "Nouvel onglet HTML", func(t *tx) (err error) {
-		if id, err = t.addNamedSheet("Page"); err != nil {
+	label, base, src := "Nouvel onglet HTML", "Page", PageTemplate
+	if kind == KindDoc {
+		label, base, src = "Nouvel onglet Documentation", "Documentation", DocTemplate
+	}
+	err := m.Do(ctx, label, func(t *tx) (err error) {
+		if id, err = t.addNamedSheet(base); err != nil {
 			return err
 		}
 		if err := t.apply(
-			[]stmt{st(`INSERT INTO _lattis_pages (sheet, source) VALUES (?, ?)`, id, PageTemplate)},
+			[]stmt{st(`INSERT INTO _lattis_pages (sheet, source, kind) VALUES (?, ?, ?)`, id, src, kind)},
 			[]stmt{st(`DELETE FROM _lattis_pages WHERE sheet = ?`, id)},
 		); err != nil {
 			return err
@@ -96,10 +117,25 @@ func (m *Model) Page(ctx context.Context, sheet int64) (string, error) {
 	return src, err
 }
 
-// SetPage remplace le contenu d'un onglet page HTML ; s'annule comme une
-// saisie (refusé sur une feuille protégée).
+// PageKind donne le type d'un onglet page : KindHTML ou KindDoc ("" : une feuille).
+func (m *Model) PageKind(ctx context.Context, sheet int64) (string, error) {
+	var k string
+	err := m.db.Read().QueryRowContext(ctx, `SELECT kind FROM _lattis_pages WHERE sheet = ?`, sheet).Scan(&k)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	return k, err
+}
+
+// SetPage remplace le contenu d'un onglet page HTML ou Documentation ;
+// s'annule comme une saisie (refusé sur une feuille protégée).
 func (m *Model) SetPage(ctx context.Context, sheet int64, source string) error {
-	return m.Do(ctx, "Modifier la page HTML", func(t *tx) error {
+	kind, _ := m.PageKind(ctx, sheet)
+	label := "Modifier la page HTML"
+	if kind == KindDoc {
+		label = "Modifier la documentation"
+	}
+	return m.Do(ctx, label, func(t *tx) error {
 		var old string
 		err := t.row(`SELECT source FROM _lattis_pages WHERE sheet = ?`, sheet).Scan(&old)
 		if errors.Is(err, sql.ErrNoRows) {

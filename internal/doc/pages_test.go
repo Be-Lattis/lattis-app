@@ -4,6 +4,8 @@ import (
 	"context"
 	"path/filepath"
 	"testing"
+
+	"github.com/lalamefine/lattis/internal/canvas"
 )
 
 // Un onglet page HTML et les hôtes HTTP autorisés s'enregistrent dans le
@@ -49,5 +51,36 @@ func TestPageAndHostsSaved(t *testing.T) {
 	}
 	if src, _ := d.Page(ctx, id); src == "<h1>Synthèse</h1>" {
 		t.Fatal("annulation sans effet sur la page")
+	}
+}
+
+// Un onglet Documentation est une page d'un autre genre : il garde son
+// type à la réouverture, et ses graphiques se calculent sans feuille.
+func TestDocSaved(t *testing.T) {
+	useRoot(t)
+	ctx := context.Background()
+	d, err := New(ctx)
+	must(t, err)
+	id, err := d.AddDoc(ctx, 0)
+	must(t, err)
+	delta := `{"ops":[{"insert":"Notes\n"}]}`
+	must(t, d.SetPage(ctx, id, delta))
+	path := filepath.Join(t.TempDir(), "doc.lattis")
+	must(t, d.Save(ctx, path))
+	must(t, d.Close())
+
+	d, err = Open(ctx, path)
+	must(t, err)
+	defer d.Close()
+	l, err := d.Layout(ctx, id)
+	must(t, err)
+	if len(l.Sheets) != 2 || l.Sheets[1].Kind != "doc" || l.Sheets[1].Name != "Documentation1" {
+		t.Fatalf("onglets %+v", l.Sheets)
+	}
+	if src, _ := d.Page(ctx, id); src != delta {
+		t.Fatalf("contenu %q", src)
+	}
+	if c := d.ChartData(ctx, canvas.ChartConfig{Source: "Inconnu", Kind: "bar"}); c.Error == "" {
+		t.Fatal("graphique d'un tableau inconnu sans erreur")
 	}
 }

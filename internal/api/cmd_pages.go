@@ -39,8 +39,8 @@ func (c *Call) page(name string) (sheetRef, error) {
 	if err != nil {
 		return s, err
 	}
-	if s.Kind != "html" {
-		return s, fmt.Errorf("« %s » n'est pas un onglet page HTML", s.Name)
+	if s.Kind != "html" && s.Kind != "doc" {
+		return s, fmt.Errorf("« %s » n'est pas un onglet page HTML ni Documentation", s.Name)
 	}
 	return s, nil
 }
@@ -50,13 +50,14 @@ func init() {
 		&Command{
 			Name:    "pages.add",
 			Label:   "Nouvel onglet HTML",
-			Summary: "Ajoute un onglet page HTML (HTML, CSS et JavaScript affichés dans un cadre isolé) et renvoie {id, name, kind}.",
+			Summary: "Ajoute un onglet page HTML (HTML, CSS et JavaScript affichés dans un cadre isolé), ou Documentation (kind = \"doc\" : texte riche), et renvoie {id, name, kind}.",
 			Details: "La page parle au classeur avec lattis.call(\"commande\", {arguments}), qui renvoie une promesse (les mêmes commandes que les scripts : sheets.list, db.query, cells.set…), et lattis.on(\"change\", fonction), appelée quand le classeur change. Sans source, la page reçoit un modèle d'exemple. Sans before, l'onglet s'ajoute à la fin.",
 			Returns: "{id, name, kind}",
 			Params: []Param{
 				{Name: "name", Type: String, Desc: "nom de l'onglet (Page1… par défaut)", Optional: true},
 				{Name: "source", Type: String, Desc: "contenu HTML de la page", Optional: true},
 				{Name: "before", Type: Ref, Desc: "feuille devant laquelle l'insérer", Optional: true},
+				{Name: "kind", Type: String, Desc: "\"html\" (défaut) ou \"doc\" : onglet Documentation, dont le contenu est un Delta Quill en JSON", Optional: true},
 			},
 			Write: true,
 			Example: `local p = pages.add("Tableau de bord", [[
@@ -85,7 +86,14 @@ print(p.name, p.kind)`,
 					}
 					before = b.ID
 				}
-				id, err := d.AddPage(c, before)
+				add := d.AddPage
+				kind := "html"
+				if k, _ := c.Str("kind"); k == "doc" {
+					add, kind = d.AddDoc, k
+				} else if k != "" && k != "html" {
+					return nil, fmt.Errorf("kind : \"html\" ou \"doc\", pas « %s »", k)
+				}
+				id, err := add(c, before)
 				if err != nil {
 					return nil, err
 				}
@@ -106,7 +114,7 @@ print(p.name, p.kind)`,
 						return s, nil
 					}
 				}
-				return sheetRef{ID: id, Kind: "html"}, err
+				return sheetRef{ID: id, Kind: kind}, err
 			},
 		},
 		&Command{

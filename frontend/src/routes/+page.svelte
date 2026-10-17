@@ -13,7 +13,7 @@
 	import type { Type } from '#bindings/internal/grid/models.js';
 	import type { Orphan } from '#bindings/internal/archive/models.js';
 	import Sheet, { type SheetData, type SheetSource, type SheetStatus, type ColumnFilter, type PivotConfig, type ChartConfig, type TypeMix } from '#lib/grid/Sheet.svelte';
-	import Ribbon, { type FileAction, type View } from '#lib/shell/Ribbon.svelte';
+	import Ribbon, { type DocCommand, type FileAction, type View } from '#lib/shell/Ribbon.svelte';
 	import SheetTabs from '#lib/shell/SheetTabs.svelte';
 	import { visibleSheet } from '#lib/shell/sheets.js';
 	import { count } from '#lib/sql/result.js';
@@ -24,6 +24,8 @@
 	import ScriptDialog, { type DialogSpec } from '#lib/script/ScriptDialog.svelte';
 	import McpPanel from '#lib/shell/McpPanel.svelte';
 	import HtmlPage from '#lib/page/HtmlPage.svelte';
+	import DocPage from '#lib/doc/DocPage.svelte';
+	import type { DocFormat } from '#lib/doc/format.js';
 	import QueryHost from '#lib/query/QueryHost.svelte';
 	import type { ButtonConfig } from '#lib/grid/buttons.js';
 	import type { UICommand } from '#bindings/internal/bridge/models.js';
@@ -58,8 +60,11 @@
 	let orphans = $state<Orphan[]>([]);
 	let help = $state<FormulaHelp | null>(null);
 	let scripts = $state<Script[]>([]);
-	// Contenu de l'onglet page HTML affiché (null : une feuille).
+	// Contenu de l'onglet page HTML ou Documentation affiché (null : une feuille).
 	let pageSource = $state<{ sheet: number; source: string } | null>(null);
+	// Onglet Documentation affiché : son éditeur, et la mise en forme à la sélection (ruban).
+	let docPage = $state<ReturnType<typeof DocPage>>();
+	let docFmt = $state<DocFormat | null>(null);
 	// Requêtes favorites de l'onglet SQL, enregistrées dans le classeur.
 	let favorites = $state<Favorite[]>([]);
 	let recent = $state<string[]>([]);
@@ -94,9 +99,9 @@
 			sheetId = shownId;
 			layout = await DocumentService.Layout(sheetId);
 		}
-		// Onglet page HTML affiché : son contenu (la page se recharge s'il change).
+		// Onglet page HTML ou Documentation affiché : son contenu (la page se recharge s'il change).
 		const shown = layout?.sheets?.find((s) => s.id === sheetId);
-		if (shown?.kind === 'html') {
+		if (shown?.kind === 'html' || shown?.kind === 'doc') {
 			const src = await DocumentService.Page(sheetId);
 			if (!pageSource || pageSource.sheet !== sheetId || pageSource.source !== src) pageSource = { sheet: sheetId, source: src };
 		} else pageSource = null;
@@ -651,9 +656,22 @@
 	// --- Protection (Révision) ----------------------------------------------
 
 	const activeInfo = $derived(layout?.sheets?.find((s) => s.id === sheetId));
-	// Onglet page HTML affiché à la place de la grille.
-	const activePage = $derived(mode === 'doc' && activeInfo?.kind === 'html' && pageSource?.sheet === sheetId ? pageSource : null);
+	// Onglet page HTML ou Documentation affiché à la place de la grille.
+	const activePage = $derived(mode === 'doc' && (activeInfo?.kind === 'html' || activeInfo?.kind === 'doc') && pageSource?.sheet === sheetId ? pageSource : null);
+	const activeDoc = $derived(!!activePage && activeInfo?.kind === 'doc');
 	const addPage = (before = 0) => sheetAction(async () => selectSheet(await DocumentService.AddPage(before)));
+	const addDoc = (before = 0) => sheetAction(async () => selectSheet(await DocumentService.AddDoc(before)));
+
+	// Commandes du ruban pour l'onglet Documentation.
+	function docCommand(c: DocCommand) {
+		const d = docPage;
+		if (!d) return;
+		if (c.startsWith('block:')) d.setBlock(c.slice(6) as never);
+		else if (c.startsWith('align:')) d.setAlign(c.slice(6) as never);
+		else if (c.startsWith('chart:')) d.insertChart(c.slice(6));
+		else if (c === 'button') d.insertButton();
+		else d.command(c as never);
+	}
 
 	// Zoom de la feuille active (Affichage › Zoom, Ctrl+molette, barre d'état) :
 	// appliqué tout de suite, enregistré avec la feuille un instant après (le
@@ -822,7 +840,7 @@
 		onbench={mode === 'demo' ? () => sheet?.runBench() : undefined}
 		onsort={mode === 'doc' ? (desc) => sheet?.sortActive(desc) : undefined}
 		oncells={mode === 'doc' ? (op) => sheet?.cellsActive(op) : undefined}
-		onstyle={mode === 'doc' ? (patch) => sheet?.applyStyle(patch) : undefined}
+		onstyle={mode === 'doc' ? (patch) => (activeDoc ? docPage?.applyStyle(patch) : sheet?.applyStyle(patch)) : undefined}
 		onfind={mode === 'doc' ? (replace) => sheet?.openFinder(replace) : undefined}
 		onrules={mode === 'doc' ? (x, y) => sheet?.rulesMenu(x, y) : undefined}
 		onfilter={mode === 'doc' ? (errorsOnly) => sheet?.filterActive(errorsOnly) : undefined}
@@ -835,6 +853,10 @@
 		ondedup={mode === 'doc' ? () => sheet?.dedupActive() : undefined}
 		onbutton={mode === 'doc' ? (kind) => sheet?.insertButton(kind) : undefined}
 		onpage={mode === 'doc' ? () => addPage() : undefined}
+		ondocpage={mode === 'doc' ? () => addDoc() : undefined}
+		context={activePage && view === 'grid' ? (activeDoc ? 'doc' : 'html') : 'sheet'}
+		ondoc={docCommand}
+		docState={activeDoc && docFmt ? docFmt : undefined}
 		onrecalc={mode === 'doc' ? () => DocumentService.Recalc().then(reload).catch((e) => (notice = err(e))) : undefined}
 		gridlines={!layout?.sheets?.find((s) => s.id === sheetId)?.noGrid}
 		ongridlines={mode === 'doc' ? (show) => DocumentService.SetGridlines(sheetId, show).then(reload).catch((e) => (notice = err(e))) : undefined}
@@ -857,7 +879,7 @@
 		{animate}
 		onanimate={setAnimate}
 		onzoom={data && view === 'grid' && !activePage ? setZoom : undefined}
-		cellStyle={sheetStatus?.style}
+		cellStyle={activeDoc ? docFmt?.style : sheetStatus?.style}
 		merged={!!sheetStatus?.merged}
 	/>
 
@@ -924,6 +946,32 @@
 				{#key activePage.sheet}
 					{@const pageId = activePage.sheet}
 					<div class="pane">
+						{#if activeDoc}
+						<DocPage
+							bind:this={docPage}
+							name={activeInfo?.name ?? ''}
+							source={activePage.source}
+							save={async (src) => {
+								docState = await DocumentService.SavePage(pageId, src);
+								await reload();
+							}}
+							locked={lockedMsg}
+							stamp={layout}
+							{animate}
+							tables={(help?.tables ?? []).map((t) => ({ name: t.name, columns: t.columns ?? [], types: t.types ?? [], kind: t.kind }))}
+							{scripts}
+							loadChart={(cfg) => DocumentService.ChartData(cfg as never)}
+							run={async (script, fn) => {
+								const r = await DocumentService.RunFunction(script, fn);
+								await reload();
+								if (r.error) return `Erreur du script : ${r.error}`;
+								const out = r.output ?? [];
+								return out.length ? out[out.length - 1] : '';
+							}}
+							onformat={(f) => (docFmt = f)}
+							onnotice={(m) => (notice = m)}
+						/>
+						{:else}
 						<HtmlPage
 							name={activeInfo?.name ?? ''}
 							source={activePage.source}
@@ -936,6 +984,7 @@
 							stamp={layout}
 							onnotice={(m) => (notice = m)}
 						/>
+						{/if}
 					</div>
 				{/key}
 			{/if}
@@ -1030,6 +1079,7 @@
 		onadd={mode === 'doc' ? () => sheetAction(async () => selectSheet(await DocumentService.AddSheet())) : undefined}
 		oninsert={mode === 'doc' ? (before) => sheetAction(async () => selectSheet(await DocumentService.InsertSheet(before))) : undefined}
 		onpage={mode === 'doc' ? (before) => addPage(before) : undefined}
+		ondocpage={mode === 'doc' ? (before) => addDoc(before) : undefined}
 		onmove={mode === 'doc' ? (id, to) => sheetAction(() => DocumentService.MoveSheet(id, to)) : undefined}
 		onrename={mode === 'doc' ? (id, name) => sheetAction(() => DocumentService.RenameSheet(id, name)) : undefined}
 		ondelete={mode === 'doc' ? (id) => askDeleteSheet(id) : undefined}

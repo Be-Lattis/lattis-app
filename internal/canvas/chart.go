@@ -379,3 +379,20 @@ func (m *Model) PlaceChart(ctx context.Context, id int64, row, col, offX, offY, 
 		return t.apply([]stmt{st(q, row, col, string(b), id)}, []stmt{st(q, r, c, old, id)})
 	})
 }
+
+// ChartData calcule les données d'un graphique qui n'est posé sur aucune
+// feuille (onglet Documentation) ; une erreur est rendue dans Error.
+func (m *Model) ChartData(ctx context.Context, cfg ChartConfig) ChartInfo {
+	out := ChartInfo{Config: cfg, Labels: []string{}, Series: []ChartSeries{}}
+	err := m.read(ctx, func(t *tx) error {
+		l, s, err := t.chartData(cfg)
+		if err == nil {
+			out.Labels, out.Series = l, s
+		}
+		return err
+	})
+	if err != nil {
+		out.Error = strings.TrimPrefix(err.Error(), ErrChart.Error()+" : ")
+	}
+	return out
+}

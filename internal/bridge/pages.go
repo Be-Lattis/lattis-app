@@ -2,8 +2,10 @@ package bridge
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/lalamefine/lattis/internal/api"
+	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/doc"
 )
 
@@ -20,6 +22,50 @@ func (s *DocumentService) AddPage(ctx context.Context, before int64) (int64, err
 	}
 	_, err = s.changed(ctx)
 	return id, err
+}
+
+// AddDoc ajoute un onglet Documentation avant l'onglet before (0 : à la
+// fin) et renvoie son identifiant.
+func (s *DocumentService) AddDoc(ctx context.Context, before int64) (int64, error) {
+	d, err := s.current()
+	if err != nil {
+		return 0, err
+	}
+	id, err := d.AddDoc(ctx, before)
+	if err != nil {
+		return 0, err
+	}
+	_, err = s.changed(ctx)
+	return id, err
+}
+
+// ChartData calcule les données d'un graphique sans le poser sur une
+// feuille (graphiques insérés dans un onglet Documentation).
+func (s *DocumentService) ChartData(ctx context.Context, cfg canvas.ChartConfig) (canvas.ChartInfo, error) {
+	d, err := s.current()
+	if err != nil {
+		return canvas.ChartInfo{}, err
+	}
+	return d.ChartData(ctx, cfg), nil
+}
+
+// RunFunction exécute le script name de la bibliothèque (onglet SCRIPT),
+// ou seulement sa fonction entry : bouton d'un onglet Documentation.
+func (s *DocumentService) RunFunction(ctx context.Context, name, entry string) (ScriptResult, error) {
+	d, err := s.current()
+	if err != nil {
+		return ScriptResult{}, err
+	}
+	list, err := d.Scripts(ctx)
+	if err != nil {
+		return ScriptResult{}, err
+	}
+	for _, sc := range list {
+		if sc.Name == name {
+			return api.RunScript(host{s}, sc.Name, sc.Source, entry)
+		}
+	}
+	return ScriptResult{}, fmt.Errorf("script « %s » introuvable (onglet SCRIPT)", name)
 }
 
 // Page donne le contenu d'un onglet page HTML.
