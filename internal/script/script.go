@@ -49,6 +49,10 @@ type Env struct {
 	// Entry : fonction globale appelée après le chargement du script (bouton
 	// d'action lié à une fonction) ; vide : le script seul.
 	Entry string
+	// Event : argument de l'appel de Entry (évènement d'un contrôle :
+	// {control, event, value, old}), converti comme du JSON ; il est aussi
+	// la variable globale event du script. nil : appel sans argument.
+	Event any
 }
 
 // Limits borne un script.
@@ -98,6 +102,11 @@ func Run(ctx context.Context, env Env, src string, lim Limits) Result {
 	defer r.closeRows()
 	r.install(L)
 
+	var arg lua.LValue = lua.LNil
+	if env.Event != nil {
+		arg = jsonToLua(L, env.Event)
+		L.SetGlobal("event", arg)
+	}
 	err := r.load(L, src)
 	if err == nil {
 		err = L.PCall(0, 0, nil)
@@ -108,7 +117,12 @@ func Run(ctx context.Context, env Env, src string, lim Limits) Result {
 			err = fmt.Errorf("le script ne définit pas de fonction %s", env.Entry)
 		} else {
 			L.Push(fn)
-			err = L.PCall(0, 0, nil)
+			n := 0
+			if env.Event != nil {
+				L.Push(arg)
+				n = 1
+			}
+			err = L.PCall(n, 0, nil)
 		}
 	}
 	res := Result{Output: r.output, Writes: r.writes, Duration: time.Since(start)}

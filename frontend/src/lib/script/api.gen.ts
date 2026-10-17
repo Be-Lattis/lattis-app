@@ -25,7 +25,7 @@ export const apiReference: RefEntry[] = [
 	{
 		name: "buttons.list",
 		category: "objects",
-		signature: "buttons.list([sheet]) → { {id, label, script, function, row, col}, ... }",
+		signature: "buttons.list([sheet]) → { {id, name, kind, label, script, function, row, col}, ... }",
 		summary: "Liste les boutons d'action d'une feuille.",
 		details: "Paramètres — sheet : feuille (nom ou identifiant) ; absente : la feuille affichée.",
 		args: [0, 1]
@@ -265,6 +265,84 @@ export const apiReference: RefEntry[] = [
 		signature: "connections.list() → { {id, name, kind, config = {host, port, database, user, sslmode, instance, url, header}}, ... } (kind : postgres, mysql, sqlserver ou web)",
 		summary: "Liste les connexions aux sources externes du classeur (sans mot de passe : il n'est jamais enregistré dans le classeur).",
 		args: [0, 0]
+	},
+	{
+		name: "controls.add",
+		category: "controls",
+		signature: "controls.add(kind, row, col, [props], [sheet]) → {id, name, kind, …} (comme controls.get)",
+		summary: "Pose un contrôle sur une feuille, coin haut gauche en row, col, et le renvoie décrit (son nom est choisi automatiquement s'il n'est pas donné).",
+		details: "Un contrôle a un nom unique dans le classeur (« Bouton1 », « Liste1 »…), choisi automatiquement et modifiable. kind : \"button\" (un clic exécute son action), \"checkbox\" (case à cocher, VRAI / FAUX), \"select\" (liste déroulante, options), \"input\" (texte sur une ligne), \"textarea\" (texte sur plusieurs lignes) ou \"file\" (sélecteur de fichier : la cellule reçoit le chemin du fichier choisi). Sauf le bouton, un contrôle est lié à une cellule (link, « B3 ») : sa valeur (value) est celle de cette cellule — un booléen pour une case à cocher, un texte sinon. Propriétés : name, label (texte du bouton ou de la case, texte indicatif d'une zone de saisie), link, value (écrite dans la cellule liée ; déclenche l'évènement change si elle change), options (liste déroulante), script et function (action du contrôle), color, hoverColor, activeColor, textColor (« #rrggbb »), hidden ou visible, row, col, width, height (pixels). Sans link, un contrôle autre qu'un bouton est lié à la cellule à sa droite. Paramètres — kind : \"button\", \"checkbox\", \"select\", \"input\", \"textarea\" ou \"file\" ; row : ligne de la feuille, à partir de 1 ; col : colonne de la feuille, à partir de 1 ; props : propriétés : {label = …, link = \"B3\", options = {…}, …} ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : controls.add{kind = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "local l = controls.add(\"select\", 1, 6, {options = {\"Tous\", \"Payés\", \"Impayés\"}, link = \"H1\", value = \"Tous\"})\nprint(l.name, l.value)",
+		args: [1, 5]
+	},
+	{
+		name: "controls.delete",
+		category: "controls",
+		signature: "controls.delete(control)",
+		summary: "Supprime un contrôle (sa cellule liée garde sa valeur).",
+		details: "Paramètres — control : contrôle (nom, identifiant ou libellé). Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		args: [1, 1]
+	},
+	{
+		name: "controls.fire",
+		category: "controls",
+		signature: "controls.fire(control, [event]) → {output, writes, durationMs, error} (hors script)",
+		summary: "Déclenche un évènement d'un contrôle comme l'interface (clic d'un bouton, change avec la valeur actuelle des autres) : son action puis ses écouteurs s'exécutent.",
+		details: "Dans un script, l'évènement est traité à la fin du script. Paramètres — control : contrôle (nom, identifiant ou libellé) ; event : \"click\" ou \"change\" (absent : celui du contrôle). Arguments dans l'ordre, ou une table d'arguments nommés : controls.fire{control = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		args: [1, 2]
+	},
+	{
+		name: "controls.get",
+		category: "controls",
+		signature: "controls.get(control) → {id, name, kind, label, sheet, row, col, width, height, link, value, options, script, function, color, hoverColor, activeColor, textColor, hidden, listeners}",
+		summary: "Décrit un contrôle : genre, libellé, cellule liée et sa valeur, choix, couleurs, position, action et écouteurs.",
+		details: "Un contrôle a un nom unique dans le classeur (« Bouton1 », « Liste1 »…), choisi automatiquement et modifiable. kind : \"button\" (un clic exécute son action), \"checkbox\" (case à cocher, VRAI / FAUX), \"select\" (liste déroulante, options), \"input\" (texte sur une ligne), \"textarea\" (texte sur plusieurs lignes) ou \"file\" (sélecteur de fichier : la cellule reçoit le chemin du fichier choisi). Sauf le bouton, un contrôle est lié à une cellule (link, « B3 ») : sa valeur (value) est celle de cette cellule — un booléen pour une case à cocher, un texte sinon. Paramètres — control : contrôle (nom, identifiant ou libellé).",
+		example: "controls.add(\"checkbox\", 1, 6, {name = \"Urgent\", label = \"Urgent\", link = \"H1\"})\nlocal c = controls.get(\"Urgent\")\nprint(c.kind, c.link, c.value)",
+		args: [1, 1]
+	},
+	{
+		name: "controls.list",
+		category: "controls",
+		signature: "controls.list([sheet]) → { {id, name, kind, label, sheet, row, col, width, height, link, value, options, script, function, hidden, listeners}, ... }",
+		summary: "Liste les contrôles (boutons, cases à cocher, listes, zones de saisie, sélecteurs de fichier) d'une feuille, ou de tout le classeur.",
+		details: "Un contrôle a un nom unique dans le classeur (« Bouton1 », « Liste1 »…), choisi automatiquement et modifiable. kind : \"button\" (un clic exécute son action), \"checkbox\" (case à cocher, VRAI / FAUX), \"select\" (liste déroulante, options), \"input\" (texte sur une ligne), \"textarea\" (texte sur plusieurs lignes) ou \"file\" (sélecteur de fichier : la cellule reçoit le chemin du fichier choisi). Sauf le bouton, un contrôle est lié à une cellule (link, « B3 ») : sa valeur (value) est celle de cette cellule — un booléen pour une case à cocher, un texte sinon. Paramètres — sheet : feuille (absente : tout le classeur).",
+		example: "for _, c in ipairs(controls.list()) do\n  print(c.name, c.kind, c.sheet, c.value)\nend",
+		args: [0, 1]
+	},
+	{
+		name: "controls.listeners",
+		category: "controls",
+		signature: "controls.listeners([control]) → { {control, event, script, function, action}, ... }",
+		summary: "Liste ce qu'exécutent les évènements d'un contrôle, ou de tous : son action (action = true), puis ses écouteurs, dans l'ordre.",
+		details: "Évènements : \"click\" (bouton) et \"change\" (nouvelle valeur des autres contrôles, saisie dans la feuille ou controls.set). Un écouteur est une fonction globale d'un script enregistré de la bibliothèque, appelée avec la table {control, event, value, old} (aussi dans la variable globale event) ; il est enregistré dans le classeur et survit au script. L'action du contrôle (script et function) s'exécute d'abord, puis les écouteurs dans l'ordre. Les évènements provoqués par un script s'exécutent à sa fin, dans la même étape d'annulation. Paramètres — control : contrôle (absent : tous).",
+		example: "for _, l in ipairs(controls.listeners()) do\n  print(l.control, l.event, l.script, l[\"function\"])\nend",
+		args: [0, 1]
+	},
+	{
+		name: "controls.off",
+		category: "controls",
+		signature: "controls.off(control, [event], [handler], [script])",
+		summary: "Désabonne des écouteurs d'un contrôle et renvoie leur nombre : tous, ou ceux d'un évènement, d'une fonction, d'un script.",
+		details: "L'action du contrôle (script et function, fenêtre Modifier) n'est pas un écouteur : controls.set(nom, {script = \"\"}) la retire. Paramètres — control : contrôle (nom, identifiant ou libellé) ; event : évènement (absent : tous) ; handler : fonction (ou son nom ; absente : toutes) ; script : script (absent : tous). Arguments dans l'ordre, ou une table d'arguments nommés : controls.off{control = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		args: [1, 4]
+	},
+	{
+		name: "controls.on",
+		category: "controls",
+		signature: "controls.on(control, event, handler, [script])",
+		summary: "Abonne une fonction d'un script à un évènement d'un contrôle (\"click\" d'un bouton, \"change\" des autres) ; elle sera appelée à chaque évènement avec {control, event, value, old}.",
+		details: "Évènements : \"click\" (bouton) et \"change\" (nouvelle valeur des autres contrôles, saisie dans la feuille ou controls.set). Un écouteur est une fonction globale d'un script enregistré de la bibliothèque, appelée avec la table {control, event, value, old} (aussi dans la variable globale event) ; il est enregistré dans le classeur et survit au script. L'action du contrôle (script et function) s'exécute d'abord, puis les écouteurs dans l'ordre. Les évènements provoqués par un script s'exécutent à sa fin, dans la même étape d'annulation. handler est la fonction elle-même ou son nom ; script, par défaut le script en cours (il doit être enregistré dans la bibliothèque). Abonner deux fois la même fonction ne change rien. Paramètres — control : contrôle (nom, identifiant ou libellé) ; event : \"click\" ou \"change\" ; handler : fonction globale du script (ou son nom) ; script : script de la fonction (absent : le script en cours). Arguments dans l'ordre, ou une table d'arguments nommés : controls.on{control = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "scripts.save(\"Filtres\", [==[\nfunction filtrer(e)\n  print(e.control .. \" : \" .. tostring(e.old) .. \" → \" .. tostring(e.value))\nend\n]==])\ncontrols.add(\"select\", 1, 6, {name = \"Statut\", options = {\"Tous\", \"Payés\"}, link = \"H1\"})\ncontrols.on(\"Statut\", \"change\", \"filtrer\", \"Filtres\")\ncontrols.set(\"Statut\", {value = \"Payés\"}) -- filtrer s'exécute à la fin du script",
+		args: [1, 4]
+	},
+	{
+		name: "controls.set",
+		category: "controls",
+		signature: "controls.set(control, props)",
+		summary: "Change des propriétés d'un contrôle (les autres ne changent pas) : libellé, valeur, choix, couleurs, visibilité, position.",
+		details: "Propriétés : name, label (texte du bouton ou de la case, texte indicatif d'une zone de saisie), link, value (écrite dans la cellule liée ; déclenche l'évènement change si elle change), options (liste déroulante), script et function (action du contrôle), color, hoverColor, activeColor, textColor (« #rrggbb »), hidden ou visible, row, col, width, height (pixels). Écrire value revient à saisir la valeur dans la cellule liée. Paramètres — control : contrôle (nom, identifiant ou libellé) ; props : propriétés à changer : {value = …, hidden = true, …}. Arguments dans l'ordre, ou une table d'arguments nommés : controls.set{control = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "controls.add(\"input\", 1, 6, {name = \"Recherche\", label = \"Client…\"})\ncontrols.set(\"Recherche\", {value = \"Durand\", textColor = \"#1f4e79\"})\nprint(controls.get(\"Recherche\").value)",
+		args: [1, 2]
 	},
 	{
 		name: "doc.recalc",

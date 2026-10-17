@@ -87,6 +87,9 @@ func (r *runner) command(sp Spec) lua.LGFunction {
 			for i := 1; i <= n; i++ {
 				if v := L.Get(i); v != lua.LNil {
 					args[sp.Params[i-1].Name] = fromLua(v, 0)
+					if fn, ok := v.(*lua.LFunction); ok {
+						args[sp.Params[i-1].Name] = globalName(L, sp.Name, fn)
+					}
 				}
 			}
 		}
@@ -101,6 +104,22 @@ func (r *runner) command(sp Spec) lua.LGFunction {
 		L.Push(jsonToLua(L, res))
 		return 1
 	}
+}
+
+// globalName donne le nom de la variable globale qui contient fn : une
+// fonction passée à une commande (controls.on("Liste1", "change", maj))
+// est désignée par son nom, qui survit au script.
+func globalName(L *lua.LState, cmd string, fn *lua.LFunction) string {
+	name := ""
+	L.G.Global.ForEach(func(k, v lua.LValue) {
+		if s, ok := k.(lua.LString); ok && v == fn && name == "" {
+			name = string(s)
+		}
+	})
+	if name == "" {
+		L.RaiseError("%s : la fonction doit être une fonction globale du script (function nom(e) … end)", cmd)
+	}
+	return name
 }
 
 // fromLua convertit une valeur Lua : une table de clés 1..n devient une

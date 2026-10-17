@@ -285,7 +285,7 @@ buttons.create(1, 6, "Relancer", "Relances", "relancer")`,
 			},
 			Write: true,
 			Run: func(c *Call) (any, error) {
-				id, err := c.object("_lattis_buttons", "label", "bouton", "button")
+				id, err := c.controlID("button")
 				if err != nil {
 					return nil, err
 				}
@@ -314,7 +314,7 @@ buttons.create(1, 6, "Relancer", "Relances", "relancer")`,
 			Params:  []Param{pButton, pRow, pCol, {Name: "width", Type: Integer, Desc: "largeur en pixels", Optional: true}, {Name: "height", Type: Integer, Desc: "hauteur en pixels", Optional: true}},
 			Write:   true,
 			Run: func(c *Call) (any, error) {
-				id, err := c.object("_lattis_buttons", "label", "bouton", "button")
+				id, err := c.controlID("button")
 				if err != nil {
 					return nil, err
 				}
@@ -349,7 +349,7 @@ buttons.create(1, 6, "Relancer", "Relances", "relancer")`,
 			Params:  []Param{pButton},
 			Write:   true,
 			Run: func(c *Call) (any, error) {
-				id, err := c.object("_lattis_buttons", "label", "bouton", "button")
+				id, err := c.controlID("button")
 				if err != nil {
 					return nil, err
 				}
@@ -360,7 +360,7 @@ buttons.create(1, 6, "Relancer", "Relances", "relancer")`,
 		&Command{
 			Name:    "buttons.list",
 			Summary: "Liste les boutons d'action d'une feuille.",
-			Returns: "{ {id, label, script, function, row, col}, ... }",
+			Returns: "{ {id, name, kind, label, script, function, row, col}, ... }",
 			Params:  []Param{pSheet},
 			Run: func(c *Call) (any, error) {
 				s, err := c.sheet("sheet")
@@ -382,7 +382,7 @@ buttons.create(1, 6, "Relancer", "Relances", "relancer")`,
 			Params:  []Param{pButton},
 			NoLua:   true, // un script ne lance pas d'autre script
 			Run: func(c *Call) (any, error) {
-				id, err := c.object("_lattis_buttons", "label", "bouton", "button")
+				id, err := c.controlID("button")
 				if err != nil {
 					return nil, err
 				}
@@ -390,30 +390,4 @@ buttons.create(1, 6, "Relancer", "Relances", "relancer")`,
 			},
 		},
 	)
-}
-
-// RunButton exécute l'action du bouton id.
-func RunButton(host Host, id int64) (ScriptResult, error) {
-	d, err := host.Doc()
-	if err != nil {
-		return ScriptResult{}, err
-	}
-	b, err := d.Button(contextBG, id)
-	if err != nil {
-		return ScriptResult{}, err
-	}
-	// Aucune action liée (bouton créé sans script) : rien à exécuter.
-	if b.Config.Script == "" {
-		return ScriptResult{}, nil
-	}
-	list, err := d.Scripts(contextBG)
-	if err != nil {
-		return ScriptResult{}, err
-	}
-	for _, s := range list {
-		if s.Name == b.Config.Script {
-			return RunScript(host, s.Name, s.Source, b.Config.Function)
-		}
-	}
-	return ScriptResult{}, fmt.Errorf("bouton « %s » : script « %s » introuvable", b.Config.Label, b.Config.Script)
 }

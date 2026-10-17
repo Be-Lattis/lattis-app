@@ -13,7 +13,7 @@
 
 import { apiReference } from './api.gen';
 
-export type Category = 'db' | 'sheets' | 'cells' | 'tables' | 'columns' | 'ui' | 'objects' | 'workbook' | 'base' | 'string' | 'table' | 'math' | 'os' | 'syntaxe';
+export type Category = 'db' | 'sheets' | 'cells' | 'tables' | 'columns' | 'ui' | 'objects' | 'controls' | 'workbook' | 'base' | 'string' | 'table' | 'math' | 'os' | 'syntaxe';
 
 export interface RefEntry {
 	/** Nom complet : "db.query", "string.format", "print", "for". */
@@ -42,6 +42,7 @@ export const categories: { id: Category; label: string }[] = [
 	{ id: 'tables', label: 'Tableaux (tables)' },
 	{ id: 'columns', label: 'Colonnes (columns)' },
 	{ id: 'ui', label: 'Sélection et boîtes de dialogue (ui)' },
+	{ id: 'controls', label: 'Contrôles et évènements (controls)' },
 	{ id: 'objects', label: 'Graphiques, TCD et boutons' },
 	{ id: 'workbook', label: 'Classeur et scripts (doc, scripts)' },
 	{ id: 'base', label: 'Fonctions de base' },

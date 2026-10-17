@@ -82,7 +82,13 @@ func (t *tx) copySheet(sheet int64, to int) (int64, error) {
 	}); err != nil {
 		return 0, err
 	}
-	if err := t.copyObjects(`_lattis_buttons`, sheet, id, nil); err != nil {
+	// Les contrôles copiés prennent un nom libre (unique dans le classeur).
+	if err := t.copyObjects(`_lattis_buttons`, sheet, id, func(cfg map[string]any) error {
+		taken, err := t.controlNames(0)
+		kind, _ := cfg["kind"].(string)
+		cfg["name"] = NextControlName(kind, taken)
+		return err
+	}); err != nil {
 		return 0, err
 	}
 	return id, t.moveSheet(id, to)
