@@ -205,3 +205,36 @@ func TestHiddenLinesAndFreeze(t *testing.T) {
 		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
 	}
 }
+
+// Une note s'épingle (toujours affichée) ; retirée, elle n'est plus épinglée.
+func TestPinNote(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	style := func() string {
+		var s string
+		d.db.Read().QueryRow(`SELECT coalesce(max(style), '') FROM _slitable_cell_styles WHERE sheet = 1 AND row = 2 AND col = 3`).Scan(&s)
+		return s
+	}
+	if err := d.SetNote(ctx, 1, 2, 3, "Rappel"); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.PinNote(ctx, 1, 2, 3, true); err != nil {
+		t.Fatal(err)
+	}
+	if s := style(); s != `{"np":true,"nt":"Rappel"}` {
+		t.Fatalf("épinglée : %q", s)
+	}
+	if err := d.PinNote(ctx, 1, 2, 3, false); err != nil {
+		t.Fatal(err)
+	}
+	if s := style(); s != `{"nt":"Rappel"}` {
+		t.Fatalf("désépinglée : %q", s)
+	}
+	d.PinNote(ctx, 1, 2, 3, true)
+	if err := d.SetNote(ctx, 1, 2, 3, ""); err != nil {
+		t.Fatal(err)
+	}
+	if s := style(); s != "" {
+		t.Fatalf("note retirée : %q", s)
+	}
+}

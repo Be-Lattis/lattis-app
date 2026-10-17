@@ -31,6 +31,7 @@ export interface CellStyle {
 	bc?: string; // couleur des bordures
 	// Hors mise en forme (ni effacées ni reproduites, voir internal/canvas/cellformat.go).
 	nt?: string; // note
+	np?: boolean; // note épinglée (toujours affichée)
 	dv?: string[]; // validation : valeurs permises (liste déroulante)
 	mr?: number; // fusion : lignes et colonnes couvertes (cellule en haut à gauche)
 	mc?: number;

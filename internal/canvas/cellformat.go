@@ -18,6 +18,7 @@ import (
 // pinceau les laissent en place.
 //
 //	nt      note de la cellule (texte)                   cellule
+//	np      note épinglée (toujours affichée)            cellule
 //	mr, mc  fusion : lignes et colonnes couvertes        cellule libre en haut à gauche
 //	hd      ligne ou colonne masquée                     ligne ou colonne de la feuille
 //	dv      validation : liste des valeurs permises      cellule, colonne de tableau
@@ -39,11 +40,30 @@ func (m *Model) SetNote(ctx context.Context, sheet int64, row, col int, text str
 	if text == "" {
 		label = "Supprimer la note"
 	}
+	patch := Style{"nt": text}
+	if text == "" {
+		patch["np"] = nil // une note retirée n'est plus épinglée
+	}
+	return m.notePatch(ctx, label, sheet, row, col, patch)
+}
+
+// PinNote épingle la note d'une cellule (toujours affichée, comme « Afficher
+// la note » d'Excel) ou la remet en infobulle.
+func (m *Model) PinNote(ctx context.Context, sheet int64, row, col int, pinned bool) error {
+	patch := Style{"np": nil}
+	label := "Masquer la note"
+	if pinned {
+		patch["np"], label = true, "Afficher la note"
+	}
+	return m.notePatch(ctx, label, sheet, row, col, patch)
+}
+
+// notePatch pose une propriété de note : dans un tableau elle suit sa ligne.
+func (m *Model) notePatch(ctx context.Context, label string, sheet int64, row, col int, patch Style) error {
 	return m.Do(ctx, label, func(t *tx) error {
 		if err := t.guard(sheet); err != nil {
 			return err
 		}
-		patch := Style{"nt": text}
 		tables, err := t.tables(sheet)
 		if err != nil {
 			return err

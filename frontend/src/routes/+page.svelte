@@ -493,6 +493,7 @@
 		applyStyle: (r0, c0, r1, c1, patch) => DocumentService.ApplyStyle(sheetId, r0, c0, r1, c1, patch).then(reload),
 		applyLineStyle: (rows, i0, i1, patch) => DocumentService.ApplyLineStyle(sheetId, rows, i0, i1, patch).then(reload),
 		setNote: (row, col, text) => DocumentService.SetNote(sheetId, row, col, text).then(reload),
+		pinNote: (row, col, pinned) => DocumentService.PinNote(sheetId, row, col, pinned).then(reload),
 		mergeCells: async (r0, c0, r1, c1) => {
 			const n = await DocumentService.MergeCells(sheetId, r0, c0, r1, c1);
 			await reload();

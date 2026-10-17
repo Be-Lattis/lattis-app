@@ -11,6 +11,8 @@
 
 export const icons = {
 	// Presse-papiers
+	trash: '<path d="M4 6.5h16M9.5 6.5V4.5h5v2M6.5 6.5l1 13a1.5 1.5 0 0 0 1.5 1.5h6a1.5 1.5 0 0 0 1.5-1.5l1-13"/><path class="a" d="M10 10.5v6.5M14 10.5v6.5"/>',
+	pin: '<path d="M9 3.5h6M10 3.5v5.5l-3.5 4h11L14 9V3.5"/><path class="a" d="M12 13v7.5"/>',
 	paste: '<rect x="4" y="4.5" width="12" height="16" rx="2"/><rect x="7" y="2.5" width="6" height="3.5" rx="1"/><rect class="a" x="11" y="10.5" width="9" height="10.5" rx="1.5"/>',
 	cut: '<circle cx="6" cy="17.5" r="2.5"/><circle cx="18" cy="17.5" r="2.5"/><path class="a" d="M7.8 15.7 18 4M16.2 15.7 6 4"/>',
 	copy: '<path d="M16 8V5a1.5 1.5 0 0 0-1.5-1.5h-9A1.5 1.5 0 0 0 4 5v10a1.5 1.5 0 0 0 1.5 1.5H8"/><rect class="a" x="8" y="7.5" width="12" height="13" rx="1.5"/>',

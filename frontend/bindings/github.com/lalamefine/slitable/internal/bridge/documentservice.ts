@@ -512,6 +512,13 @@ export function PickDataFile(kind: string): $CancellablePromise<string> {
 }
 
 /**
+ * PinNote épingle la note d'une cellule (toujours affichée) ou la remet en infobulle.
+ */
+export function PinNote(sheet: number, row: number, col: number, pinned: boolean): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3608485100, sheet, row, col, pinned);
+}
+
+/**
  * PlaceButton déplace et redimensionne un bouton.
  */
 export function PlaceButton(id: number, row: number, col: number, offX: number, offY: number, width: number, height: number): $CancellablePromise<$models.DocState> {

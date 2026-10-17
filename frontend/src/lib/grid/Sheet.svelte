@@ -252,6 +252,8 @@
 		applyLineStyle?(rows: boolean, i0: number, i1: number, patch: Record<string, unknown>): Promise<unknown>;
 		/** Note d'une cellule (texte vide : la retire). */
 		setNote?(row: number, col: number, text: string): Promise<unknown>;
+		/** Épingle la note (toujours affichée) ou la remet en infobulle. */
+		pinNote?(row: number, col: number, pinned: boolean): Promise<unknown>;
 		/** Fusionne et centre des cellules libres ; renvoie le nombre de valeurs effacées. */
 		mergeCells?(r0: number, c0: number, r1: number, c1: number): Promise<number>;
 		unmergeCells?(r0: number, c0: number, r1: number, c1: number): Promise<unknown>;
@@ -1091,6 +1093,7 @@
 		const dpr = (window.devicePixelRatio || 1) * zoom;
 		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 		selBox = frameNow(t0);
+		pinnedFrame = [];
 		// Texte centré verticalement partout (les volets dessinent entre save et
 		// restore : la ligne de base doit être posée avant, pour la marge et le bandeau).
 		ctx.textBaseline = 'middle';
@@ -1162,6 +1165,9 @@
 
 		if (editing) placeEditor();
 
+		const seen = new Set<string>();
+		const pins = pinnedFrame.filter((p) => !seen.has(p.x + ',' + p.y) && !!seen.add(p.x + ',' + p.y));
+		if (JSON.stringify(pins) !== JSON.stringify(pinnedShown)) pinnedShown = pins;
 		// Une clé plus large que toutes celles vues : gouttière élargie à
 		// l'image suivante (les clés ne sont connues qu'une fois chargées).
 		if (keyGrew) schedule();
@@ -1277,7 +1283,7 @@
 							ctx.fillStyle = hs.bg;
 							ctx.fillRect(x, y, cw, rh(r));
 						}
-						if (hs?.nt) noteCorner(x + cw, y);
+						if (hs?.nt) noteCorner(x + cw, y, hs);
 						const iconW = headIcons(e, i, x, y, cw, rh(r));
 						ctx.save();
 						ctx.beginPath();
@@ -1306,7 +1312,7 @@
 						ctx.fillRect(x, y, cw, rh(r));
 					}
 					if (cs) borders(cs, x, y, cw, rh(r));
-					if (cs?.nt) noteCorner(x + cw, y);
+					if (cs?.nt) noteCorner(x + cw, y, cs);
 					let s = row.text[i];
 					if (!s) continue;
 					if (cs && !row.bad?.has(i)) s = formatCell(s, row.cells[i], cs);
@@ -1346,7 +1352,7 @@
 				ctx.fillRect(cx(c), ry(r), colAxis.size(c), rh(r));
 			}
 			borders(fs, cx(c), ry(r), colAxis.size(c), rh(r));
-			if (fs.nt) noteCorner(cx(c + 1), ry(r));
+			if (fs.nt) noteCorner(cx(c + 1), ry(r), fs);
 		};
 		// Lignes ou colonnes mises en forme (hors masquage seul) : toutes les cellules visibles.
 		const lineFormats = [...sheetRowStyles.values(), ...sheetColStyles.values()].some((s) => Object.keys(s).some((k) => k !== 'hd'));
@@ -1814,12 +1820,13 @@
 				drawText(formatCell(raw, undefined, st), x, y, gw, st?.al ?? (num ? 'right' : 'left'), st, f?.error ? C.error : C.text, gw, gh);
 			}
 			if (st) borders(st, x, y, gw, gh);
-			if (st?.nt) noteCorner(x + gw, y);
+			if (st?.nt) noteCorner(x + gw, y, st);
 		}
 	}
 
 	/** Coin rouge d'une cellule qui a une note (en haut à droite, comme Excel). */
-	function noteCorner(xr: number, y: number) {
+	function noteCorner(xr: number, y: number, st?: { nt?: string; np?: boolean }) {
+		if (st?.np && st.nt) pinnedFrame.push({ x: xr + 6, y, text: st.nt });
 		ctx.fillStyle = C.note;
 		ctx.beginPath();
 		ctx.moveTo(xr - 7, y + 1);
@@ -2366,7 +2373,10 @@
 	// --- Notes (Révision) ---------------------------------------------------------
 
 	let noteTip = $state<{ x: number; y: number; text: string; key: string } | null>(null);
-	let noteDlg = $state<{ row: number; col: number; text: string; had: boolean; x: number; y: number } | null>(null);
+	let noteDlg = $state<{ row: number; col: number; text: string; had: boolean; pinned: boolean; x: number; y: number } | null>(null);
+	// Notes épinglées visibles : relevées en dessinant, affichées en post-it.
+	let pinnedFrame: { x: number; y: number; text: string }[] = [];
+	let pinnedShown = $state<{ x: number; y: number; text: string }[]>([]);
 
 	/** Note de la cellule, s'il y en a une. */
 	function noteOf(r: number, c: number): string | undefined {
@@ -2401,10 +2411,14 @@
 		closeMenus();
 		noteTip = null;
 		const text = noteOf(active.row, active.col) ?? '';
+		const g = mergeOf(active.row, active.col);
+		const pinned = !!(g ? styleAt(g.row, g.col, undefined) : styleAt(active.row, active.col))?.np;
 		const right = screenX(active.col) + colAxis.size(active.col);
-		noteDlg = { row: active.row, col: active.col, text, had: !!text, x: Math.min(toView(right) + 8, Math.max(8, toView(viewW) - 270)), y: Math.max(4, toView(screenY(active.row))) };
+		noteDlg = { row: active.row, col: active.col, text, had: !!text, pinned, x: Math.min(toView(right) + 8, Math.max(8, toView(viewW) - 270)), y: Math.max(4, toView(screenY(active.row))) };
 	}
 
+	// Enregistrement automatique (comme un post-it) : à la fermeture, par
+	// clic ailleurs ou Échap ; la corbeille supprime la note.
 	function saveNote(remove = false) {
 		const d = noteDlg;
 		noteDlg = null;
@@ -2412,8 +2426,30 @@
 		const set = source.setNote;
 		if (!d || !set) return;
 		const text = remove ? '' : d.text;
+		const before = noteOf(d.row, d.col) ?? '';
+		if (text.trim() === before.trim()) return;
 		if (text.trim() === '' && !d.had) return;
 		menuAction(() => set(d.row, d.col, text));
+	}
+
+	/** Épingle ou désépingle la note en cours (enregistrée d'abord si elle est neuve). */
+	function togglePin() {
+		const d = noteDlg;
+		const pin = source.pinNote;
+		const set = source.setNote;
+		if (!d || !pin || !set) return;
+		if (!d.text.trim()) {
+			say('Écrivez la note avant de l’épingler');
+			return;
+		}
+		d.pinned = !d.pinned;
+		const { row, col, text, pinned } = d;
+		const changed = text.trim() !== (noteOf(row, col) ?? '').trim();
+		d.had = true;
+		menuAction(async () => {
+			if (changed) await set(row, col, text);
+			await pin(row, col, pinned);
+		});
 	}
 
 	/** Révision › Supprimer la note de la cellule active. */
@@ -5754,6 +5790,9 @@
 					></textarea>
 				</div>
 			{/if}
+			{#each pinnedShown as p (p.x + ',' + p.y)}
+				<div class="note-tip pinned" style:left="{toView(p.x)}px" style:top="{toView(p.y)}px">{p.text}</div>
+			{/each}
 			{#if noteTip && !noteDlg}
 				<div class="note-tip" style:left="{noteTip.x}px" style:top="{noteTip.y}px">{noteTip.text}</div>
 			{/if}
@@ -6397,25 +6436,18 @@
 				use:dismissPanel={() => noteDlg && saveNote()}
 				onkeydown={(ev) => {
 					ev.stopPropagation();
-					if (ev.key === 'Escape') {
-						noteDlg = null;
-						wrap.focus();
-					}
-					if (ev.key === 'Enter' && ev.ctrlKey) saveNote();
+					if (ev.key === 'Escape' || (ev.key === 'Enter' && ev.ctrlKey)) saveNote();
 				}}
 			>
-				<div class="add"><textarea bind:value={d.text} rows="5" placeholder="Note de la cellule"></textarea></div>
-				<div class="foot">
-					{#if d.had}<button onclick={() => saveNote(true)}>Supprimer</button>{/if}
-					<span class="sp"></span>
-					<button class="primary" title="Ctrl+Entrée" onclick={() => saveNote()}>OK</button>
-					<button
-						onclick={() => {
-							noteDlg = null;
-							wrap.focus();
-						}}>Annuler</button
-					>
+				<div class="note-bar">
+					{#if source.pinNote}
+						<button class="note-ico" class:on={d.pinned} title={d.pinned ? 'Ne plus épingler (infobulle au survol)' : 'Épingler : toujours afficher la note'} aria-pressed={d.pinned} onclick={togglePin}
+							><Icon name="pin" size={15} /></button
+						>
+					{/if}
+					<button class="note-ico" title="Supprimer la note" onclick={() => saveNote(true)}><Icon name="trash" size={15} /></button>
 				</div>
+				<textarea bind:value={d.text} rows="6" placeholder="Note de la cellule" aria-label="Note de la cellule"></textarea>
 			</div>
 		{/if}
 		{#if listMenu}
@@ -7083,8 +7115,7 @@
 	.valid-dlg .menu-note {
 		max-width: none;
 	}
-	.valid-dlg textarea,
-	.note-dlg textarea {
+	.valid-dlg textarea {
 		flex: 1;
 		font: inherit;
 		padding: 4px 6px;
@@ -7092,37 +7123,62 @@
 		border-radius: 3px;
 		resize: vertical;
 	}
+	/* Note : un post-it, sans fond blanc ni cadre de saisie ; les lignes
+	   du papier suivent le texte (même interligne). */
 	.note-dlg {
 		position: absolute;
 		z-index: 6;
 		width: 250px;
-		background: #fffbe6;
-		border: 1px solid #d6c27a;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
-		padding: 6px 0;
+		background: #fff3a8;
+		box-shadow: 0 6px 14px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.12);
+		padding: 2px 10px 10px;
 	}
-	.note-dlg .add,
-	.note-dlg .foot {
+	.note-bar {
 		display: flex;
+		justify-content: flex-end;
+		gap: 2px;
+	}
+	.note-ico {
+		display: inline-flex;
 		align-items: center;
-		gap: 6px;
-		padding: 3px 8px;
-	}
-	.note-dlg .sp {
-		flex: 1;
-	}
-	.note-dlg button {
-		font: inherit;
-		padding: 2px 8px;
-		border: 1px solid #c9cdd2;
-		background: #fff;
+		justify-content: center;
+		width: 24px;
+		height: 24px;
+		padding: 0;
+		border: none;
 		border-radius: 3px;
+		background: transparent;
+		color: #7a6a1f;
 		cursor: pointer;
+		--icon-accent: #7a6a1f;
 	}
-	.note-dlg button.primary {
-		background: #217346;
-		border-color: #217346;
-		color: #fff;
+	.note-ico:hover {
+		background: rgba(0, 0, 0, 0.07);
+	}
+	.note-ico.on {
+		background: rgba(0, 0, 0, 0.12);
+		color: #4a3f0f;
+		--icon-accent: #c0392b;
+	}
+	.note-dlg textarea {
+		display: block;
+		width: 100%;
+		box-sizing: border-box;
+		font: inherit;
+		line-height: 20px;
+		padding: 0 2px;
+		border: none;
+		outline: none;
+		resize: vertical;
+		color: #3b3410;
+		background: transparent repeating-linear-gradient(to bottom, transparent 0, transparent 19px, rgba(160, 130, 30, 0.35) 19px, rgba(160, 130, 30, 0.35) 20px);
+		background-attachment: local;
+	}
+	.note-tip.pinned {
+		background: #fff3a8;
+		border: none;
+		box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18);
+		z-index: 5;
 	}
 	.note-tip {
 		position: absolute;
