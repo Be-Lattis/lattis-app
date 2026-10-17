@@ -40,6 +40,10 @@ type xsheet struct {
 	widths []canvas.ColWidth
 	// clipped : cellules au-delà des limites d'Excel, non exportées.
 	clipped int
+	// tables : tableaux lus pendant l'écriture (export), ligne à ligne, sans
+	// garder toute la feuille en mémoire ; vide quand cells les contient déjà.
+	tables []canvas.TableInfo
+	rows   func(ctx context.Context, tb canvas.TableInfo, send func(r int, cells []xcell) error) error
 }
 
 // Limites d'une feuille Excel : la feuille de Slitable va au-delà, l'export coupe.
@@ -58,37 +62,90 @@ func ExportXLSX(ctx context.Context, m *canvas.Model, w io.Writer) (clipped int,
 	}
 	var sheets []xsheet
 	for _, s := range first.Sheets {
-		sh, err := collectSheet(ctx, m, s)
+		sh, err := collectSmall(ctx, m, s)
 		if err != nil {
 			return 0, err
 		}
+		sh.rows = func(ctx context.Context, tb canvas.TableInfo, send func(int, []xcell) error) error {
+			return tableRows(ctx, m, tb, send)
+		}
 		sheets = append(sheets, sh)
-		clipped += sh.clipped
 		if err := ctx.Err(); err != nil {
 			return 0, err
 		}
 	}
-	return clipped, writeXLSX(w, sheets)
+	err = writeXLSX(ctx, w, sheets)
+	for _, sh := range sheets {
+		clipped += sh.clipped
+	}
+	return clipped, err
 }
 
-// collectSheet lit le contenu d'une feuille, cellule par cellule.
+// tableRows lit un tableau ligne à ligne (en-tête compris) en cellules.
+func tableRows(ctx context.Context, m *canvas.Model, tb canvas.TableInfo, send func(r int, cells []xcell) error) error {
+	var cols []canvas.ExportColumn
+	r := tb.Row
+	return m.ExportTable(ctx, tb.Name, func(cs []canvas.ExportColumn) error {
+		cols = cs
+		head := make([]xcell, len(cs))
+		for j, c := range cs {
+			head[j] = xcell{kind: 's', str: c.Name, bold: true}
+		}
+		return send(r, head)
+	}, func(row []any) error {
+		r++
+		cells := make([]xcell, len(row))
+		for j, v := range row {
+			cells[j] = tableCell(v, cols[j].Type)
+		}
+		return send(r, cells)
+	})
+}
+
+// collectSheet lit tout le contenu d'une feuille, cellule par cellule
+// (impression ; l'export lit ses tableaux pendant l'écriture).
 func collectSheet(ctx context.Context, m *canvas.Model, s canvas.SheetInfo) (xsheet, error) {
+	sh, err := collectSmall(ctx, m, s)
+	if err != nil {
+		return sh, err
+	}
+	for _, tb := range sh.tables {
+		err := tableRows(ctx, m, tb, func(r int, cells []xcell) error {
+			for j, x := range cells {
+				sh.put(r, tb.Col+j, x)
+			}
+			return nil
+		})
+		if err != nil {
+			return xsheet{}, err
+		}
+	}
+	sh.tables = nil
+	return sh, nil
+}
+
+// put pose une cellule, ou la compte hors des limites d'Excel.
+func (sh *xsheet) put(r, c int, x xcell) {
+	if r >= ExcelRows || c >= ExcelCols {
+		if x.kind != 0 {
+			sh.clipped++
+		}
+		return
+	}
+	if x.kind != 0 {
+		sh.cells[[2]int{r, c}] = x
+	}
+}
+
+// collectSmall lit une feuille sauf les lignes de ses tableaux : tableaux
+// croisés, cellules libres et déversements (sh.tables : les tableaux).
+func collectSmall(ctx context.Context, m *canvas.Model, s canvas.SheetInfo) (xsheet, error) {
 	l, err := m.Layout(ctx, s.ID)
 	if err != nil {
 		return xsheet{}, err
 	}
-	sh := xsheet{name: s.Name, hidden: s.Hidden, cells: map[[2]int]xcell{}, widths: l.Widths}
-	put := func(r, c int, x xcell) {
-		if r >= ExcelRows || c >= ExcelCols {
-			if x.kind != 0 {
-				sh.clipped++
-			}
-			return
-		}
-		if x.kind != 0 {
-			sh.cells[[2]int{r, c}] = x
-		}
-	}
+	sh := xsheet{name: s.Name, hidden: s.Hidden, cells: map[[2]int]xcell{}, widths: l.Widths, tables: l.Tables}
+	put := sh.put
 	// Tableaux croisés, cellules libres puis tableaux : un tableau
 	// l'emporte sur ce qu'il recouvre.
 	for _, p := range l.Pivots {
@@ -116,26 +173,6 @@ func collectSheet(ctx context.Context, m *canvas.Model, s canvas.SheetInfo) (xsh
 			put(c.Row, c.Col, textCell(c.Value))
 		default:
 			put(c.Row, c.Col, textCell(c.Raw))
-		}
-	}
-	for _, tb := range l.Tables {
-		var cols []canvas.ExportColumn
-		r := tb.Row
-		err := m.ExportTable(ctx, tb.Name, func(cs []canvas.ExportColumn) error {
-			cols = cs
-			for j, c := range cs {
-				put(r, tb.Col+j, xcell{kind: 's', str: c.Name, bold: true})
-			}
-			return nil
-		}, func(row []any) error {
-			r++
-			for j, v := range row {
-				put(r, tb.Col+j, tableCell(v, cols[j].Type))
-			}
-			return nil
-		})
-		if err != nil {
-			return xsheet{}, err
 		}
 	}
 	return sh, nil
@@ -311,7 +348,7 @@ const xlsxStyles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
 </styleSheet>`
 
-func writeXLSX(w io.Writer, sheets []xsheet) error {
+func writeXLSX(ctx context.Context, w io.Writer, sheets []xsheet) error {
 	zw := zip.NewWriter(w)
 	file := func(name, content string) error {
 		f, err := zw.Create(name)
@@ -365,19 +402,19 @@ func writeXLSX(w io.Writer, sheets []xsheet) error {
 			return err
 		}
 	}
-	for i, s := range sheets {
+	for i := range sheets {
 		f, err := zw.Create(fmt.Sprintf("xl/worksheets/sheet%d.xml", i+1))
 		if err != nil {
 			return err
 		}
-		if err := writeSheet(f, s, i == active); err != nil {
+		if err := writeSheet(ctx, f, &sheets[i], i == active); err != nil {
 			return err
 		}
 	}
 	return zw.Close()
 }
 
-func writeSheet(w io.Writer, s xsheet, active bool) error {
+func writeSheet(ctx context.Context, w io.Writer, s *xsheet, active bool) error {
 	bw := bufio.NewWriterSize(w, 64<<10)
 	keys := make([][2]int, 0, len(s.cells))
 	for k := range s.cells {
@@ -391,13 +428,19 @@ func writeSheet(w io.Writer, s xsheet, active bool) error {
 	})
 	bw.WriteString(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">`)
+	maxRow, maxCol := -1, 0
 	if len(keys) > 0 {
-		last := keys[len(keys)-1]
-		maxCol := 0
+		maxRow = keys[len(keys)-1][0]
 		for _, k := range keys {
 			maxCol = max(maxCol, k[1])
 		}
-		fmt.Fprintf(bw, `<dimension ref="A1:%s%d"/>`, colName(maxCol), last[0]+1)
+	}
+	for _, tb := range s.tables {
+		maxRow = max(maxRow, min(tb.Row+tb.Total, ExcelRows-1))
+		maxCol = max(maxCol, min(tb.Col+len(tb.Columns)-1, ExcelCols-1))
+	}
+	if maxRow >= 0 {
+		fmt.Fprintf(bw, `<dimension ref="A1:%s%d"/>`, colName(maxCol), maxRow+1)
 	}
 	if active {
 		bw.WriteString(`<sheetViews><sheetView tabSelected="1" workbookViewId="0"/></sheetViews>`)
@@ -415,41 +458,144 @@ func writeSheet(w io.Writer, s xsheet, active bool) error {
 		bw.WriteString(`</cols>`)
 	}
 	bw.WriteString(`<sheetData>`)
-	row := -1
-	for _, k := range keys {
-		if k[0] != row {
-			if row >= 0 {
-				bw.WriteString(`</row>`)
-			}
-			row = k[0]
-			fmt.Fprintf(bw, `<row r="%d">`, row+1)
+	if err := mergeRows(ctx, s, keys, func(r int, cols []int, cells []xcell) {
+		fmt.Fprintf(bw, `<row r="%d">`, r+1)
+		for i, c := range cells {
+			writeCell(bw, r, cols[i], c)
 		}
-		c := s.cells[k]
-		ref := colName(k[1]) + strconv.Itoa(k[0]+1)
-		style := ""
-		if c.bold {
-			style = ` s="3"`
-		}
-		switch c.kind {
-		case 'n':
-			fmt.Fprintf(bw, `<c r="%s"%s><v>%s</v></c>`, ref, style, strconv.FormatFloat(c.num, 'g', -1, 64))
-		case 'd':
-			st := 1
-			if c.num != math.Floor(c.num) {
-				st = 2
-			}
-			fmt.Fprintf(bw, `<c r="%s" s="%d"><v>%s</v></c>`, ref, st, strconv.FormatFloat(c.num, 'g', -1, 64))
-		case 'b':
-			fmt.Fprintf(bw, `<c r="%s"%s t="b"><v>%d</v></c>`, ref, style, int(c.num))
-		case 'e':
-			fmt.Fprintf(bw, `<c r="%s"%s t="e"><v>%s</v></c>`, ref, style, xmlEscape(c.str))
-		default:
-			fmt.Fprintf(bw, `<c r="%s"%s t="inlineStr"><is><t xml:space="preserve">%s</t></is></c>`, ref, style, xmlEscape(c.str))
-		}
-	}
-	if row >= 0 {
 		bw.WriteString(`</row>`)
+	}); err != nil {
+		return err
 	}
 	bw.WriteString(`</sheetData></worksheet>`)
 	return bw.Flush()
+}
+
+// tableLine est une ligne d'un tableau lue pendant l'écriture.
+type tableLine struct {
+	r     int
+	cells []xcell
+}
+
+// mergeRows rend les lignes de la feuille dans l'ordre : les cellules posées
+// (keys, triées) et les lignes des tableaux, lues en parallèle au fil de
+// l'écriture ; un tableau l'emporte sur ce qu'il recouvre.
+func mergeRows(ctx context.Context, s *xsheet, keys [][2]int, emit func(r int, cols []int, cells []xcell)) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	type source struct {
+		tb   canvas.TableInfo
+		ch   chan tableLine
+		head *tableLine
+		err  error
+	}
+	srcs := make([]*source, len(s.tables))
+	for i, tb := range s.tables {
+		src := &source{tb: tb, ch: make(chan tableLine, 512)}
+		srcs[i] = src
+		go func() {
+			defer close(src.ch)
+			src.err = s.rows(ctx, tb, func(r int, cells []xcell) error {
+				select {
+				case src.ch <- tableLine{r, cells}:
+					return nil
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			})
+		}()
+	}
+	next := func(src *source) {
+		if l, ok := <-src.ch; ok {
+			src.head = &l
+		} else {
+			src.head = nil
+		}
+	}
+	for _, src := range srcs {
+		next(src)
+	}
+	k := 0
+	line := map[int]xcell{}
+	for {
+		r := -1
+		if k < len(keys) {
+			r = keys[k][0]
+		}
+		for _, src := range srcs {
+			if src.head != nil && (r < 0 || src.head.r < r) {
+				r = src.head.r
+			}
+		}
+		if r < 0 {
+			break
+		}
+		clear(line)
+		for ; k < len(keys) && keys[k][0] == r; k++ {
+			line[keys[k][1]] = s.cells[keys[k]]
+		}
+		for _, src := range srcs {
+			for src.head != nil && src.head.r == r {
+				for j, x := range src.head.cells {
+					c := src.tb.Col + j
+					if r >= ExcelRows || c >= ExcelCols {
+						if x.kind != 0 {
+							s.clipped++
+						}
+						continue
+					}
+					if x.kind != 0 {
+						line[c] = x
+					} else {
+						delete(line, c)
+					}
+				}
+				next(src)
+			}
+		}
+		if r >= ExcelRows || len(line) == 0 {
+			continue
+		}
+		cols := make([]int, 0, len(line))
+		for c := range line {
+			cols = append(cols, c)
+		}
+		slices.Sort(cols)
+		cells := make([]xcell, len(cols))
+		for i, c := range cols {
+			cells[i] = line[c]
+		}
+		emit(r, cols, cells)
+	}
+	for _, src := range srcs {
+		if src.err != nil {
+			return src.err
+		}
+	}
+	return ctx.Err()
+}
+
+// writeCell écrit une cellule de la ligne r, colonne col.
+func writeCell(bw *bufio.Writer, r, col int, c xcell) {
+	ref := colName(col) + strconv.Itoa(r+1)
+	style := ""
+	if c.bold {
+		style = ` s="3"`
+	}
+	switch c.kind {
+	case 'n':
+		fmt.Fprintf(bw, `<c r="%s"%s><v>%s</v></c>`, ref, style, strconv.FormatFloat(c.num, 'g', -1, 64))
+	case 'd':
+		st := 1
+		if c.num != math.Floor(c.num) {
+			st = 2
+		}
+		fmt.Fprintf(bw, `<c r="%s" s="%d"><v>%s</v></c>`, ref, st, strconv.FormatFloat(c.num, 'g', -1, 64))
+	case 'b':
+		fmt.Fprintf(bw, `<c r="%s"%s t="b"><v>%d</v></c>`, ref, style, int(c.num))
+	case 'e':
+		fmt.Fprintf(bw, `<c r="%s"%s t="e"><v>%s</v></c>`, ref, style, xmlEscape(c.str))
+	default:
+		fmt.Fprintf(bw, `<c r="%s"%s t="inlineStr"><is><t xml:space="preserve">%s</t></is></c>`, ref, style, xmlEscape(c.str))
+	}
 }
