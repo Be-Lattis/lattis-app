@@ -9,6 +9,7 @@
 	// Rendu <canvas> de la zone visible, cache de blocs de lignes par tableau,
 	// éditeur DOM superposé à la cellule active, barre de formule.
 	import { flushSync, onMount, untrack } from 'svelte';
+	import { noticeTtl } from '#lib/shell/notice.js';
 	import { RowCache, percentile, type Fetched } from './cache';
 	import { VScroll, clamp } from './scroll';
 	import { Axis } from './axis';
@@ -1519,6 +1520,15 @@
 	let fxEditing = $state(false);
 
 	let message = '';
+	// Le message s'efface seul (noticeTtl) ; un nouveau message relance le délai.
+	let shownMessage = '';
+	let messageTimer: ReturnType<typeof setTimeout> | undefined;
+	/** Efface le message de la barre d'état (changement d'onglet). */
+	export function clearMessage() {
+		clearTimeout(messageTimer);
+		message = shownMessage = '';
+		refreshStatus();
+	}
 	let bench = $state('');
 
 	// Mesures.
@@ -3282,6 +3292,16 @@
 	}
 
 	function refreshStatus() {
+		if (message !== shownMessage) {
+			shownMessage = message;
+			clearTimeout(messageTimer);
+			if (message) {
+				const m = message;
+				messageTimer = setTimeout(() => {
+					if (message === m) clearMessage();
+				}, noticeTtl(m));
+			}
+		}
 		const stats = entries[0]?.cache.stats ?? { roundTrip: [], server: [] };
 		onstatus?.({
 			// Une cellule libre : son adresse est déjà dans la zone de nom.

@@ -5,7 +5,8 @@
 	// Deux modes : un classeur (DocumentService : saisie libre, tableaux qui
 	// naissent, annuler, enregistrer) et la démo d'1 M de lignes (GridService),
 	// qui sert aussi à la mesure automatique (LATTIS_BENCH).
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
+	import { noticeTtl } from '#lib/shell/notice.js';
 	import { Events } from '@wailsio/runtime';
 	import { DocumentService, GridService } from '#bindings/internal/bridge/index.js';
 	import type { DocState, FormulaHelp } from '#bindings/internal/bridge/models.js';
@@ -45,6 +46,28 @@
 	let view = $state<View>('grid');
 	let failure = $state('');
 	let notice = $state('');
+	// Message de la barre d'état : effacé seul au bout d'un moment (noticeTtl),
+	// et à chaque changement d'onglet.
+	let noticeAt = 0;
+	$effect(() => {
+		const m = notice;
+		if (!m) return;
+		noticeAt = Date.now();
+		const t = setTimeout(() => {
+			if (notice === m) notice = '';
+		}, noticeTtl(m));
+		return () => clearTimeout(t);
+	});
+	$effect(() => {
+		void sheetId;
+		void view;
+		untrack(() => {
+			// Un message donné juste avant d'ouvrir l'onglet (« Résultat copié
+			// dans… ») reste ; les anciens partent.
+			if (Date.now() - noticeAt > 1500) notice = '';
+			sheet?.clearMessage();
+		});
+	});
 	let sheetStatus = $state<SheetStatus | null>(null);
 	let sheet = $state<ReturnType<typeof Sheet>>();
 
