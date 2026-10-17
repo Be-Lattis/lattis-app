@@ -19,13 +19,13 @@ import (
 // KindHTML est le type d'un onglet page HTML (SheetInfo.Kind).
 const KindHTML = "html"
 
-// KindDoc est le type d'un onglet Documentation : texte riche (un Delta
+// KindDoc est le type d'un onglet Document : texte riche (un Delta
 // Quill en JSON) où l'on insère des graphiques et des boutons ; même
 // stockage qu'une page HTML (_lattis_pages, colonne kind).
 const KindDoc = "doc"
 
-// DocTemplate est le contenu d'un nouvel onglet Documentation.
-const DocTemplate = `{"ops":[{"insert":"Documentation"},{"attributes":{"header":1},"insert":"\n"},{"insert":"\n"}]}`
+// DocTemplate est le contenu d'un nouvel onglet Document.
+const DocTemplate = `{"ops":[{"insert":"Document"},{"attributes":{"header":1},"insert":"\n"},{"insert":"\n"}]}`
 
 // PageTemplate est le contenu d'une nouvelle page HTML.
 const PageTemplate = `<!doctype html>
@@ -63,7 +63,7 @@ func (m *Model) AddPage(ctx context.Context, before int64) (int64, error) {
 	return m.addPage(ctx, before, KindHTML)
 }
 
-// AddDoc ajoute un onglet Documentation, comme AddPage.
+// AddDoc ajoute un onglet Document, comme AddPage.
 func (m *Model) AddDoc(ctx context.Context, before int64) (int64, error) {
 	return m.addPage(ctx, before, KindDoc)
 }
@@ -72,7 +72,7 @@ func (m *Model) addPage(ctx context.Context, before int64, kind string) (int64, 
 	var id int64
 	label, base, src := "Nouvel onglet HTML", "Page", PageTemplate
 	if kind == KindDoc {
-		label, base, src = "Nouvel onglet Documentation", "Documentation", DocTemplate
+		label, base, src = "Nouvel onglet Document", "Document", DocTemplate
 	}
 	err := m.Do(ctx, label, func(t *tx) (err error) {
 		if id, err = t.addNamedSheet(base); err != nil {
@@ -127,13 +127,13 @@ func (m *Model) PageKind(ctx context.Context, sheet int64) (string, error) {
 	return k, err
 }
 
-// SetPage remplace le contenu d'un onglet page HTML ou Documentation ;
+// SetPage remplace le contenu d'un onglet page HTML ou Document ;
 // s'annule comme une saisie (refusé sur une feuille protégée).
 func (m *Model) SetPage(ctx context.Context, sheet int64, source string) error {
 	kind, _ := m.PageKind(ctx, sheet)
 	label := "Modifier la page HTML"
 	if kind == KindDoc {
-		label = "Modifier la documentation"
+		label = "Modifier le document"
 	}
 	return m.Do(ctx, label, func(t *tx) error {
 		var old string

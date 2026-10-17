@@ -61,9 +61,9 @@
 	let orphans = $state<Orphan[]>([]);
 	let help = $state<FormulaHelp | null>(null);
 	let scripts = $state<Script[]>([]);
-	// Contenu de l'onglet page HTML ou Documentation affiché (null : une feuille).
+	// Contenu de l'onglet page HTML ou Document affiché (null : une feuille).
 	let pageSource = $state<{ sheet: number; source: string } | null>(null);
-	// Onglet Documentation affiché : son éditeur, et la mise en forme à la sélection (ruban).
+	// Onglet Document affiché : son éditeur, et la mise en forme à la sélection (ruban).
 	let docPage = $state<ReturnType<typeof DocPage>>();
 	let docFmt = $state<DocFormat | null>(null);
 	// Requêtes favorites de l'onglet SQL, enregistrées dans le classeur.
@@ -100,7 +100,7 @@
 			sheetId = shownId;
 			layout = await DocumentService.Layout(sheetId);
 		}
-		// Onglet page HTML ou Documentation affiché : son contenu (la page se recharge s'il change).
+		// Onglet page HTML ou Document affiché : son contenu (la page se recharge s'il change).
 		const shown = layout?.sheets?.find((s) => s.id === sheetId);
 		if (shown?.kind === 'html' || shown?.kind === 'doc') {
 			const src = await DocumentService.Page(sheetId);
@@ -660,13 +660,13 @@
 	// --- Protection (Révision) ----------------------------------------------
 
 	const activeInfo = $derived(layout?.sheets?.find((s) => s.id === sheetId));
-	// Onglet page HTML ou Documentation affiché à la place de la grille.
+	// Onglet page HTML ou Document affiché à la place de la grille.
 	const activePage = $derived(mode === 'doc' && (activeInfo?.kind === 'html' || activeInfo?.kind === 'doc') && pageSource?.sheet === sheetId ? pageSource : null);
 	const activeDoc = $derived(!!activePage && activeInfo?.kind === 'doc');
 	const addPage = (before = 0) => sheetAction(async () => selectSheet(await DocumentService.AddPage(before)));
 	const addDoc = (before = 0) => sheetAction(async () => selectSheet(await DocumentService.AddDoc(before)));
 
-	// Commandes du ruban pour l'onglet Documentation.
+	// Commandes du ruban pour l'onglet Document.
 	function docCommand(c: DocCommand) {
 		const d = docPage;
 		if (!d) return;

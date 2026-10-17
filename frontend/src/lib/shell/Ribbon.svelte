@@ -18,9 +18,9 @@
 	export type View = 'grid' | 'sql' | 'script';
 	export type FormatTab = 'number' | 'align' | 'font' | 'border' | 'fill';
 	export type FreezeAction = 'cell' | 'row' | 'col' | 'none';
-	/** Onglet affiché : feuille (grille), page HTML ou Documentation ; le ruban ne montre que ce qui s'y applique. */
+	/** Onglet affiché : feuille (grille), page HTML ou Document ; le ruban ne montre que ce qui s'y applique. */
 	export type RibbonContext = 'sheet' | 'html' | 'doc';
-	/** Commandes du ruban propres à un onglet Documentation. */
+	/** Commandes du ruban propres à un onglet Document. */
 	export type DocCommand =
 		| 'undo'
 		| 'redo'
@@ -105,11 +105,11 @@
 		onheadings?: (show: boolean) => void;
 		/** Insertion › Page HTML : nouvel onglet page HTML. */
 		onpage?: () => void;
-		/** Insertion › Documentation : nouvel onglet de texte riche. */
+		/** Insertion › Document : nouvel onglet de texte riche. */
 		ondocpage?: () => void;
 		/** Onglet affiché (feuille par défaut). */
 		context?: RibbonContext;
-		/** Onglet Documentation : commandes, et état de la sélection (bloc, alignement, barré, lien). */
+		/** Onglet Document : commandes, et état de la sélection (bloc, alignement, barré, lien). */
 		ondoc?: (cmd: DocCommand) => void;
 		docState?: { block: string; align: string; strike: boolean; link: boolean };
 		/** Insertion › Bouton : bouton d'action lié à un script. */
@@ -221,7 +221,7 @@
 		title: 'Onglets',
 		commands: [
 			{ label: 'Page HTML', icon: 'web', run: onpage, hint: 'Nouvel onglet page HTML : HTML, CSS et JavaScript qui lisent et modifient le classeur (lattis.call)' },
-			{ label: 'Documentation', icon: 'document', run: ondocpage, hint: 'Nouvel onglet Documentation : texte mis en forme, avec graphiques et boutons de scripts' }
+			{ label: 'Document', icon: 'document', run: ondocpage, hint: 'Nouvel onglet Document : texte mis en forme, avec graphiques et boutons de scripts' }
 		]
 	});
 	const dc = (cmd: DocCommand) => (ondoc ? () => ondoc(cmd) : undefined);
@@ -477,7 +477,7 @@
 		]
 	});
 
-	// Onglet Documentation : un traitement de texte (police, paragraphes,
+	// Onglet Document : un traitement de texte (police, paragraphes,
 	// graphiques et boutons insérés dans le texte).
 	const docRibbons: Record<string, Group[]> = $derived({
 		Accueil: [

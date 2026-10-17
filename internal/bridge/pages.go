@@ -24,7 +24,7 @@ func (s *DocumentService) AddPage(ctx context.Context, before int64) (int64, err
 	return id, err
 }
 
-// AddDoc ajoute un onglet Documentation avant l'onglet before (0 : à la
+// AddDoc ajoute un onglet Document avant l'onglet before (0 : à la
 // fin) et renvoie son identifiant.
 func (s *DocumentService) AddDoc(ctx context.Context, before int64) (int64, error) {
 	d, err := s.current()
@@ -40,7 +40,7 @@ func (s *DocumentService) AddDoc(ctx context.Context, before int64) (int64, erro
 }
 
 // ChartData calcule les données d'un graphique sans le poser sur une
-// feuille (graphiques insérés dans un onglet Documentation).
+// feuille (graphiques insérés dans un onglet Document).
 func (s *DocumentService) ChartData(ctx context.Context, cfg canvas.ChartConfig) (canvas.ChartInfo, error) {
 	d, err := s.current()
 	if err != nil {
@@ -50,7 +50,7 @@ func (s *DocumentService) ChartData(ctx context.Context, cfg canvas.ChartConfig)
 }
 
 // PivotData calcule un tableau croisé sans le poser sur une feuille
-// (tableaux croisés insérés dans un onglet Documentation).
+// (tableaux croisés insérés dans un onglet Document).
 func (s *DocumentService) PivotData(ctx context.Context, cfg canvas.PivotConfig) (canvas.PivotInfo, error) {
 	d, err := s.current()
 	if err != nil {
@@ -60,7 +60,7 @@ func (s *DocumentService) PivotData(ctx context.Context, cfg canvas.PivotConfig)
 }
 
 // RunFunction exécute le script name de la bibliothèque (onglet SCRIPT),
-// ou seulement sa fonction entry : bouton d'un onglet Documentation.
+// ou seulement sa fonction entry : bouton d'un onglet Document.
 func (s *DocumentService) RunFunction(ctx context.Context, name, entry string) (ScriptResult, error) {
 	d, err := s.current()
 	if err != nil {

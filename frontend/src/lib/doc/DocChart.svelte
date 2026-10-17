@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Graphique d'un onglet Documentation : ses données sont relues à chaque
+	// Graphique d'un onglet Document : ses données sont relues à chaque
 	// modification du classeur (live.stamp), sa largeur suit celle du texte.
 	import { untrack } from 'svelte';
 	import Chart from '#lib/chart/Chart.svelte';

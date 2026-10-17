@@ -1,4 +1,4 @@
-// Onglet Documentation : passage entre la mise en forme de Quill (gras,
+// Onglet Document : passage entre la mise en forme de Quill (gras,
 // police, titre, liste…) et celle du ruban (CellStyle des groupes Police et
 // Alignement, plus l'état du groupe Paragraphe).
 
@@ -96,7 +96,7 @@ export function blockFormats(block: DocBlock, cur: DocBlock): Record<string, unk
 	};
 }
 
-/** Contenu enregistré d'un onglet Documentation (Delta Quill en JSON) ; un texte qui n'en est pas un devient un paragraphe. */
+/** Contenu enregistré d'un onglet Document (Delta Quill en JSON) ; un texte qui n'en est pas un devient un paragraphe. */
 export function parseDelta(source: string): { ops: Record<string, unknown>[] } {
 	try {
 		const d = JSON.parse(source);

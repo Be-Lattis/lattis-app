@@ -1,4 +1,4 @@
-// Quill pour l'onglet Documentation : polices et tailles libres (en style,
+// Quill pour l'onglet Document : polices et tailles libres (en style,
 // comme les cellules), et deux objets insérables propres à Lattis :
 // - un graphique (bloc) alimenté par un tableau du classeur, dessiné par
 //   DocChart.svelte dans le nœud du bloc ;
@@ -11,7 +11,7 @@
 import Quill from 'quill';
 import type { ChartConfig } from '#lib/grid/Sheet.svelte';
 
-/** Bouton d'un onglet Documentation. */
+/** Bouton d'un onglet Document. */
 export interface DocButtonConfig {
 	label: string;
 	script: string;
@@ -24,7 +24,7 @@ export const CHART_BLOT = 'lattisChart';
 export const BUTTON_BLOT = 'lattisButton';
 export const PIVOT_BLOT = 'lattisPivot';
 
-/** Élément copié ou coupé (clic droit › Copier), collable dans tout onglet Documentation. */
+/** Élément copié ou coupé (clic droit › Copier), collable dans tout onglet Document. */
 export const docClip: { item: { type: string; value: unknown } | null } = { item: null };
 
 let registered = false;

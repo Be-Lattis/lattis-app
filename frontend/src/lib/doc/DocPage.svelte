@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Onglet « Documentation » : une zone de texte riche sans fin (Quill) où
+	// Onglet « Document » : une zone de texte riche sans fin (Quill) où
 	// l'on écrit, met en forme (ruban : Police, Paragraphe…) et insère des
 	// graphiques et tableaux croisés alimentés par les tableaux du classeur, et
 	// des boutons qui exécutent des scripts. Clic droit : sur un élément inséré,
@@ -528,7 +528,7 @@
 
 <div class="doc" style:--doc-font={DOC_FONT} style:--doc-size="{DOC_PT}pt">
 	<div class="scroll">
-		<div class="page" aria-label="Documentation {name}">
+		<div class="page" aria-label="Document {name}">
 			<div bind:this={host}></div>
 		</div>
 	</div>

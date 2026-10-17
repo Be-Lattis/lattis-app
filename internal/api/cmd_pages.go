@@ -40,7 +40,7 @@ func (c *Call) page(name string) (sheetRef, error) {
 		return s, err
 	}
 	if s.Kind != "html" && s.Kind != "doc" {
-		return s, fmt.Errorf("« %s » n'est pas un onglet page HTML ni Documentation", s.Name)
+		return s, fmt.Errorf("« %s » n'est pas un onglet page HTML ni Document", s.Name)
 	}
 	return s, nil
 }
@@ -50,14 +50,14 @@ func init() {
 		&Command{
 			Name:    "pages.add",
 			Label:   "Nouvel onglet HTML",
-			Summary: "Ajoute un onglet page HTML (HTML, CSS et JavaScript affichés dans un cadre isolé), ou Documentation (kind = \"doc\" : texte riche), et renvoie {id, name, kind}.",
+			Summary: "Ajoute un onglet page HTML (HTML, CSS et JavaScript affichés dans un cadre isolé), ou Document (kind = \"doc\" : texte riche), et renvoie {id, name, kind}.",
 			Details: "La page parle au classeur avec lattis.call(\"commande\", {arguments}), qui renvoie une promesse (les mêmes commandes que les scripts : sheets.list, db.query, cells.set…), et lattis.on(\"change\", fonction), appelée quand le classeur change. Sans source, la page reçoit un modèle d'exemple. Sans before, l'onglet s'ajoute à la fin.",
 			Returns: "{id, name, kind}",
 			Params: []Param{
 				{Name: "name", Type: String, Desc: "nom de l'onglet (Page1… par défaut)", Optional: true},
 				{Name: "source", Type: String, Desc: "contenu HTML de la page", Optional: true},
 				{Name: "before", Type: Ref, Desc: "feuille devant laquelle l'insérer", Optional: true},
-				{Name: "kind", Type: String, Desc: "\"html\" (défaut) ou \"doc\" : onglet Documentation, dont le contenu est un Delta Quill en JSON", Optional: true},
+				{Name: "kind", Type: String, Desc: "\"html\" (défaut) ou \"doc\" : onglet Document, dont le contenu est un Delta Quill en JSON", Optional: true},
 			},
 			Write: true,
 			Example: `local p = pages.add("Tableau de bord", [[

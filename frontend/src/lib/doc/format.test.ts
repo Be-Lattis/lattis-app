@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { blockFormats, docFormat, parseDelta, quillFormats, sizePt } from './format';
 
-describe('documentation : mise en forme', () => {
+describe('document : mise en forme', () => {
 	it('lit la mise en forme Quill pour le ruban', () => {
 		const f = docFormat({ bold: true, font: 'Arial', size: '14pt', color: '#c00000', align: 'center', header: 2 });
 		expect(f.style).toEqual({ b: true, ff: 'Arial', fs: 14, fg: '#c00000', al: 'center' });

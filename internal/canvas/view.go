@@ -32,7 +32,7 @@ type SheetInfo struct {
 	FreezeCols int `json:"freezeCols"`
 	// Zoom : zoom de la feuille en pour cent (100 par défaut).
 	Zoom int `json:"zoom"`
-	// Kind : "html" pour un onglet page HTML, "doc" pour un onglet Documentation (voir pages.go), vide pour une
+	// Kind : "html" pour un onglet page HTML, "doc" pour un onglet Document (voir pages.go), vide pour une
 	// feuille.
 	Kind string `json:"kind"`
 }

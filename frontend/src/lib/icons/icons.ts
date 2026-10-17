@@ -29,7 +29,7 @@ export const icons = {
 	'align-right': '<path d="M4 6h16M10 10h10M4 14h16M10 18h10"/>',
 	'align-justify': '<path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>',
 
-	// Texte (onglet Documentation)
+	// Texte (onglet Document)
 	strike: '<path d="M16 7.5c-.6-1.5-2.2-2.5-4-2.5-2.3 0-4 1.3-4 3.1 0 1.6 1.3 2.4 3 2.9M13.5 13.5c1.5.6 2.5 1.3 2.5 2.9 0 1.9-1.8 3.1-4 3.1-2 0-3.6-1-4.2-2.6"/><path class="a" d="M4 12h16"/>',
 	heading: '<path stroke-width="1.9" d="M5 5v14M14 5v14M5 12h9"/><path class="a" d="M17.5 13.5l2-1.5v7"/>',
 	'list-bullet': '<path d="M9.5 6.5h10.5M9.5 12h10.5M9.5 17.5h10.5"/><circle class="af" cx="5" cy="6.5" r="1.4"/><circle class="af" cx="5" cy="12" r="1.4"/><circle class="af" cx="5" cy="17.5" r="1.4"/>',

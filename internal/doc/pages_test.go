@@ -54,7 +54,7 @@ func TestPageAndHostsSaved(t *testing.T) {
 	}
 }
 
-// Un onglet Documentation est une page d'un autre genre : il garde son
+// Un onglet Document est une page d'un autre genre : il garde son
 // type à la réouverture, et ses graphiques se calculent sans feuille.
 func TestDocSaved(t *testing.T) {
 	useRoot(t)
@@ -74,7 +74,7 @@ func TestDocSaved(t *testing.T) {
 	defer d.Close()
 	l, err := d.Layout(ctx, id)
 	must(t, err)
-	if len(l.Sheets) != 2 || l.Sheets[1].Kind != "doc" || l.Sheets[1].Name != "Documentation1" {
+	if len(l.Sheets) != 2 || l.Sheets[1].Kind != "doc" || l.Sheets[1].Name != "Document1" {
 		t.Fatalf("onglets %+v", l.Sheets)
 	}
 	if src, _ := d.Page(ctx, id); src != delta {

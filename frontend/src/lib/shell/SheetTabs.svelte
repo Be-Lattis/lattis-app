@@ -21,7 +21,7 @@
 		oninsert?: (before: number) => void;
 		/** Nouvel onglet page HTML, avant la feuille before (absente : à la fin). */
 		onpage?: (before?: number) => void;
-		/** Nouvel onglet Documentation, avant la feuille before (absente : à la fin). */
+		/** Nouvel onglet Document, avant la feuille before (absente : à la fin). */
 		ondocpage?: (before?: number) => void;
 		/** Place la feuille id au rang to (0 : première). */
 		onmove?: (id: number, to: number) => void;
@@ -247,7 +247,7 @@
 					}
 				}}
 				title={(s.protected ? 'Feuille protégée. ' : '') + (locked ? 'Classeur protégé' : onmove ? 'Double-clic pour renommer, glisser pour déplacer' : 'Double-clic pour renommer')}
-				>{#if s.protected || locked}<span class="lock" aria-label={s.protected ? 'Feuille protégée' : 'Classeur protégé'}><Icon name="lock" size={12} /></span>{/if}{#if s.kind === 'html'}<span class="kind" aria-label="Page HTML"><Icon name="web" size={12} /></span>{:else if s.kind === 'doc'}<span class="kind" aria-label="Documentation"><Icon name="document" size={12} /></span>{/if}{s.name}</button
+				>{#if s.protected || locked}<span class="lock" aria-label={s.protected ? 'Feuille protégée' : 'Classeur protégé'}><Icon name="lock" size={12} /></span>{/if}{#if s.kind === 'html'}<span class="kind" aria-label="Page HTML"><Icon name="web" size={12} /></span>{:else if s.kind === 'doc'}<span class="kind" aria-label="Document"><Icon name="document" size={12} /></span>{/if}{s.name}</button
 			>
 		{/if}
 	{/each}
@@ -264,7 +264,7 @@
 			e.preventDefault();
 			if (onadd || onpage) addMenu = { x: (e.currentTarget as HTMLElement).offsetLeft };
 		}}
-		title={locked ? 'Structure du classeur protégée' : 'Nouvelle feuille (clic droit : onglet HTML ou Documentation)'}>+</button
+		title={locked ? 'Structure du classeur protégée' : 'Nouvelle feuille (clic droit : onglet HTML ou Document)'}>+</button
 	>
 	{#if addMenu}
 		<div class="menu" role="menu" style:left="{addMenu.x}px" use:dismiss={() => (addMenu = null)}>
@@ -290,7 +290,7 @@
 				onclick={() => {
 					addMenu = null;
 					ondocpage?.();
-				}}>Nouvel onglet Documentation</button
+				}}>Nouvel onglet Document</button
 			>
 		</div>
 	{/if}
@@ -345,7 +345,7 @@
 					const id = m.id;
 					closeMenu();
 					ondocpage?.(id);
-				}}>Insérer un onglet Documentation</button
+				}}>Insérer un onglet Document</button
 			>
 			<button
 				role="menuitem"

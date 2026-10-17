@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Tableau croisé d'un onglet Documentation : recalculé à chaque
+	// Tableau croisé d'un onglet Document : recalculé à chaque
 	// modification du classeur (live.stamp), mis en forme comme sur la
 	// feuille (en-tête, nombres, ligne de total).
 	import { untrack } from 'svelte';
