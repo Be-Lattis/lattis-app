@@ -45,6 +45,16 @@ describe('RowCache', () => {
 		cache.set(3, 0, 42);
 		expect(cache.row(3)?.text[0]).toBe('<42>');
 	});
+
+	it('charge toute une plage pour la copier, au-delà du nombre de blocs gardés', async () => {
+		const calls: number[] = [];
+		const cache = new RowCache(fakeFetcher(100_000, calls), 100_000, (_, v) => String(v), () => {}, 3, 2);
+		expect(await cache.ensure(0, BLOCK * 6 - 1)).toBe(true);
+		expect(cache.has(0, BLOCK * 6 - 1)).toBe(true);
+		expect(cache.row(BLOCK * 5 + 1)?.text[0]).toBe(String(BLOCK * 5 + 1));
+		expect(await cache.ensure(0, BLOCK * 6 - 1)).toBe(true);
+		expect(calls).toHaveLength(6); // déjà chargées : pas relues
+	});
 });
 
 describe('RowCache.invalidate', () => {

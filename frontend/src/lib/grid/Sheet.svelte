@@ -5582,6 +5582,47 @@
 		return rows;
 	}
 
+	/** Lignes de tableau de la zone (rangs de données) pas encore chargées : [entrée, première, dernière]. */
+	function unloaded(sel: ClipRect): [Entry, number, number][] {
+		const out: [Entry, number, number][] = [];
+		// Trop grande pour être copiée (voir rangeValues) : rien à lire.
+		if ((sel.r1 - sel.r0 + 1) * (sel.c1 - sel.c0 + 1) > 100_000) return out;
+		for (const e of entries) {
+			if (e.t.col > sel.c1 || e.lastCol < sel.c0) continue;
+			const a = Math.max(sel.r0, e.t.row + 1) - e.t.row - 1;
+			const b = Math.min(sel.r1, e.last) - e.t.row - 1;
+			if (a <= b && !e.cache.has(a, b)) out.push([e, a, b]);
+		}
+		return out;
+	}
+
+	/** Charge les lignes de la zone jamais affichées (copie d'une grande plage), barre de progression comprise. */
+	async function loadRange(sel: ClipRect): Promise<boolean> {
+		const todo = unloaded(sel);
+		if (!todo.length) return true;
+		say('Lecture des lignes à copier…');
+		const ok = await Promise.all(todo.map(([e, a, b]) => e.cache.ensure(a, b)));
+		return ok.every(Boolean);
+	}
+
+	/** Copie ou coupe après avoir chargé les lignes manquantes (le presse-papiers est écrit ensuite). */
+	async function copyLater(cut: boolean) {
+		if (!(await loadRange(selection()))) {
+			say('Le tableau a changé pendant la copie : recommencez');
+			return;
+		}
+		const text = takeClip(cut);
+		if (text === null) return;
+		try {
+			await navigator.clipboard.writeText(text);
+		} catch {
+			clipRange = null;
+			say('Le presse-papiers est inaccessible');
+			return;
+		}
+		clipMessage(cut);
+	}
+
 	/** Retient la sélection copiée ou coupée ; renvoie le texte pour le presse-papiers (null : rien). */
 	function takeClip(cut: boolean): string | null {
 		const sel = selection();
@@ -5606,6 +5647,7 @@
 		wrap.focus();
 		const sc = selChart !== null ? charts.find((c) => c.id === selChart) : undefined;
 		if (sc) return copyChart(sc, cut);
+		if (unloaded(selection()).length) return copyLater(cut);
 		const text = takeClip(cut);
 		if (text === null) return;
 		try {
@@ -5641,6 +5683,12 @@
 			removeChart(sc.id);
 			return;
 		}
+		// Lignes jamais affichées : lues d'abord, le presse-papiers est écrit ensuite.
+		if (unloaded(selection()).length) {
+			e.preventDefault();
+			void copyLater(true);
+			return;
+		}
 		const text = takeClip(true);
 		if (text === null) return;
 		e.clipboardData?.setData('text/plain', text);
@@ -5656,6 +5704,11 @@
 			e.preventDefault();
 			chartClip = sc.config;
 			say('Graphique copié : Ctrl+V pour le coller à la cellule active');
+			return;
+		}
+		if (unloaded(selection()).length) {
+			e.preventDefault();
+			void copyLater(false);
 			return;
 		}
 		const text = takeClip(false);

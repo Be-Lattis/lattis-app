@@ -41,7 +41,9 @@ export class RowCache {
 	// nouveaux, pour éviter un clignotement après chaque saisie.
 	private stale = new Map<number, Block>();
 	private generation = 0;
-	private inflight = new Set<number>();
+	private inflight = new Map<number, Promise<void>>();
+	// Chargements complets en cours (ensure) : rien n'est évincé pendant ce temps.
+	private hold = 0;
 	private queue: number[] = [];
 	readonly stats: Stats = { roundTrip: [], server: [] };
 	error: string | null = null;
@@ -96,9 +98,14 @@ export class RowCache {
 		}
 	}
 
-	private async load(b: number) {
+	private load(b: number): Promise<void> {
+		const p = this.loadBlock(b);
+		this.inflight.set(b, p);
+		return p;
+	}
+
+	private async loadBlock(b: number) {
 		const gen = this.generation;
-		this.inflight.add(b);
 		const t0 = performance.now();
 		try {
 			const w = await this.fetcher(b * BLOCK, BLOCK);
@@ -129,9 +136,31 @@ export class RowCache {
 
 	/** Retire les blocs les plus éloignés du dernier chargé au-delà de maxBlocks. */
 	private evict(near: number) {
-		if (this.blocks.size <= this.maxBlocks) return;
+		if (this.hold > 0 || this.blocks.size <= this.maxBlocks) return;
 		const far = [...this.blocks.keys()].sort((a, b) => Math.abs(b - near) - Math.abs(a - near));
 		for (const b of far.slice(0, this.blocks.size - this.maxBlocks)) this.blocks.delete(b);
+	}
+
+	/**
+	 * Charge toutes les lignes [first, last] (copie d'une grande plage : les
+	 * lignes jamais affichées sont lues aussi) ; vrai si elles sont toutes là.
+	 */
+	async ensure(first: number, last: number): Promise<boolean> {
+		last = Math.min(last, this.rows - 1);
+		if (last < first) return true;
+		const gen = this.generation;
+		this.hold++;
+		try {
+			const todo: number[] = [];
+			for (let b = Math.floor(first / BLOCK); b <= Math.floor(last / BLOCK); b++) if (!this.blocks.has(b)) todo.push(b);
+			for (let i = 0; i < todo.length; i += this.maxInflight) {
+				await Promise.all(todo.slice(i, i + this.maxInflight).map((b) => this.inflight.get(b) ?? this.load(b)));
+				if (gen !== this.generation) return false;
+			}
+		} finally {
+			this.hold--;
+		}
+		return this.has(first, last);
 	}
 
 	/** Les données ont changé : tout recharger, en affichant l'ancien contenu en attendant. */
