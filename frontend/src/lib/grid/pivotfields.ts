@@ -1,0 +1,266 @@
+// Logique du volet « Champs de tableau croisé dynamique » (PivotPanel) : les
+// quatre zones (Filtres, Colonnes, Lignes, Valeurs), l'ajout d'un champ selon
+// son type, les déplacements entre zones et dans une zone, comme Excel.
+// Fonctions pures : chacune rend une nouvelle configuration.
+
+import type { PivotConfig, PivotValue } from './Sheet.svelte';
+
+export type Zone = 'filters' | 'cols' | 'rows' | 'values';
+
+export const ZONES: { zone: Zone; title: string; hint: string }[] = [
+	{ zone: 'filters', title: 'Filtres', hint: 'Glissez ici un champ pour filtrer tout le rapport' },
+	{ zone: 'cols', title: 'Colonnes', hint: 'Ses valeurs deviennent des colonnes (un champ)' },
+	{ zone: 'rows', title: 'Lignes', hint: 'Glissez ici les champs qui regroupent les lignes' },
+	{ zone: 'values', title: 'Valeurs', hint: 'Glissez ici les champs à synthétiser' }
+];
+
+export const zoneTitle = (z: Zone) => ZONES.find((x) => x.zone === z)!.title;
+
+/** Champ du tableau source, avec le type de sa colonne (voir format.ts). */
+export interface PivotField {
+	name: string;
+	type: string;
+}
+
+/** Pseudo-champ « Nombre de lignes » : une valeur sans colonne (count). */
+export const ROW_COUNT = '';
+
+export const AGGS: [PivotValue['agg'], string][] = [
+	['sum', 'Somme'],
+	['count', 'Nombre'],
+	['countDistinct', 'Nombre distinct'],
+	['avg', 'Moyenne'],
+	['min', 'Min'],
+	['max', 'Max']
+];
+
+export const SHOWS: [string, string][] = [
+	['', 'Aucun calcul'],
+	['pctTotal', '% du total général'],
+	['pctCol', '% du total de la colonne'],
+	['pctRow', '% du total de la ligne']
+];
+
+/** Formats de nombre proposés pour une valeur (style JSON, voir numfmt.ts). */
+export const FORMATS: [string, string][] = [
+	['', 'Automatique (format de la source)'],
+	['{"nf":"0,00","dp":0}', 'Nombre (1 235)'],
+	['{"nf":"0,00","dp":2}', 'Nombre, 2 décimales (1 234,50)'],
+	['{"nf":"€","dp":0}', 'Monétaire (1 235 €)'],
+	['{"nf":"€","dp":2}', 'Monétaire, 2 décimales (1 234,50 €)'],
+	['{"nf":"%","dp":1}', 'Pourcentage (12,3 %)']
+];
+
+export const isNumericType = (type: string) => type === 'integer' || type === 'decimal';
+
+/** Une colonne calculée ne sert pas (encore) de champ : voir pivotPlan côté Go. */
+export const isUsable = (f: PivotField) => f.type !== 'formula';
+
+/** Icône du type de champ (voir icons.ts). */
+export function fieldIcon(type: string): 'type-number' | 'type-text' | 'type-date' | 'type-boolean' | 'function' {
+	switch (type) {
+		case 'integer':
+		case 'decimal':
+			return 'type-number';
+		case 'date':
+			return 'type-date';
+		case 'boolean':
+			return 'type-boolean';
+		case 'formula':
+			return 'function';
+	}
+	return 'type-text';
+}
+
+/** Zone où va un champ coché, comme Excel : les nombres en Valeurs, le reste en Lignes. */
+export const defaultZone = (f: PivotField | undefined): Zone => (f && isNumericType(f.type) ? 'values' : 'rows');
+
+/** Valeur ajoutée pour un champ : somme d'un nombre, nombre sinon. */
+export function defaultValue(field: string, fields: PivotField[]): PivotValue {
+	if (field === ROW_COUNT) return { agg: 'count' };
+	const f = fields.find((x) => x.name === field);
+	return { field, agg: f && isNumericType(f.type) ? 'sum' : 'count' };
+}
+
+/** Nom affiché d'une valeur (comme pivotLabel côté Go, sans le pourcentage). */
+export function valueLabel(v: PivotValue): string {
+	if (v.label?.trim()) return v.label.trim();
+	if (!v.field) return 'Nombre de lignes';
+	return `${AGGS.find(([a]) => a === v.agg)?.[1] ?? v.agg} de ${v.field}`;
+}
+
+/** Champs d'une zone, dans l'ordre (Valeurs : ROW_COUNT pour un nombre de lignes). */
+export function zoneItems(c: PivotConfig, z: Zone): string[] {
+	switch (z) {
+		case 'rows':
+			return c.rowFields ?? [];
+		case 'cols':
+			return c.cols ? [c.cols] : [];
+		case 'filters':
+			return (c.filters ?? []).map((f) => f.field);
+		case 'values':
+			return (c.values ?? []).map((v) => v.field ?? ROW_COUNT);
+	}
+}
+
+/** Champs utilisés quelque part (cases cochées de la liste). */
+export function usedFields(c: PivotConfig): Set<string> {
+	const s = new Set<string>();
+	for (const z of ['filters', 'cols', 'rows', 'values'] as Zone[]) for (const f of zoneItems(c, z)) s.add(f);
+	return s;
+}
+
+/** Le rapport est vide : ni lignes, ni colonnes, ni valeurs. */
+export const isEmpty = (c: PivotConfig) => !c.rowFields?.length && !c.cols && !c.values?.length;
+
+// Copie profonde (les objets du pont Go ne passent pas structuredClone).
+export const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
+
+/** Nettoie une configuration : listes vides et options inutiles retirées. */
+function tidy(c: PivotConfig): PivotConfig {
+	if (!c.rowFields?.length) delete c.rowFields;
+	if (!c.cols) delete c.cols;
+	if (!c.values?.length) delete c.values;
+	if (!c.filters?.length) delete c.filters;
+	return c;
+}
+
+/** Retire l'élément i d'une zone. */
+export function removeAt(cfg: PivotConfig, z: Zone, i: number): PivotConfig {
+	const c = clone(cfg);
+	if (z === 'rows') c.rowFields = (c.rowFields ?? []).filter((_, k) => k !== i);
+	else if (z === 'cols') c.cols = undefined;
+	else if (z === 'filters') c.filters = (c.filters ?? []).filter((_, k) => k !== i);
+	else c.values = (c.values ?? []).filter((_, k) => k !== i);
+	return tidy(c);
+}
+
+/** Retire un champ de toutes les zones (case décochée). */
+export function removeField(cfg: PivotConfig, field: string): PivotConfig {
+	const c = clone(cfg);
+	c.rowFields = (c.rowFields ?? []).filter((f) => f !== field);
+	if (c.cols === field) c.cols = undefined;
+	c.filters = (c.filters ?? []).filter((f) => f.field !== field);
+	c.values = (c.values ?? []).filter((v) => (v.field ?? ROW_COUNT) !== field);
+	return tidy(c);
+}
+
+/** Un champ peut-il aller dans cette zone ? (Nombre de lignes : Valeurs seulement.) */
+export const accepts = (z: Zone, field: string) => z === 'values' || field !== ROW_COUNT;
+
+/**
+ * Ajoute un champ à une zone, au rang at (à la fin par défaut). Comme Excel,
+ * un champ n'est que dans une zone parmi Filtres, Colonnes et Lignes : il
+ * quitte les deux autres. La zone Colonnes ne prend qu'un champ : le nouveau
+ * remplace l'ancien. En Valeurs, un champ peut revenir plusieurs fois ; value
+ * garde les réglages d'une valeur déplacée.
+ */
+export function insertAt(cfg: PivotConfig, z: Zone, field: string, fields: PivotField[], at?: number, value?: PivotValue): PivotConfig {
+	if (!accepts(z, field)) return cfg;
+	const c = clone(cfg);
+	const put = <T>(list: T[], x: T) => {
+		list.splice(at === undefined ? list.length : Math.max(0, Math.min(at, list.length)), 0, x);
+		return list;
+	};
+	if (z === 'values') {
+		c.values = put(c.values ?? [], value ? clone(value) : defaultValue(field, fields));
+		return tidy(c);
+	}
+	const keep = z === 'filters' ? (c.filters ?? []).find((f) => f.field === field) : undefined;
+	c.rowFields = (c.rowFields ?? []).filter((f) => f !== field);
+	if (c.cols === field) c.cols = undefined;
+	c.filters = (c.filters ?? []).filter((f) => f.field !== field);
+	if (z === 'rows') c.rowFields = put(c.rowFields, field);
+	else if (z === 'cols') c.cols = field;
+	else c.filters = put(c.filters, keep ?? { field, values: [] }); // aucune valeur choisie : toutes les lignes
+	return tidy(c);
+}
+
+/** Coche un champ de la liste : il va dans sa zone par défaut. */
+export function addField(cfg: PivotConfig, field: string, fields: PivotField[]): PivotConfig {
+	return insertAt(cfg, field === ROW_COUNT ? 'values' : defaultZone(fields.find((f) => f.name === field)), field, fields);
+}
+
+/**
+ * Déplace l'élément i de la zone from vers la zone to, au rang at (rang
+ * compté avant le retrait, comme l'indicateur de dépôt ; à la fin par défaut).
+ */
+export function moveItem(cfg: PivotConfig, from: Zone, i: number, to: Zone, fields: PivotField[], at?: number): PivotConfig {
+	const field = zoneItems(cfg, from)[i];
+	if (field === undefined || !accepts(to, field)) return cfg;
+	if (from === to && at !== undefined && at > i) at--;
+	if (from === to && (at ?? zoneItems(cfg, to).length - 1) === i) return cfg;
+	const value = from === 'values' && to === 'values' ? cfg.values![i] : undefined;
+	const c = removeAt(cfg, from, i);
+	if (from === 'filters' && to === 'filters') {
+		// Un filtre réordonné garde ses valeurs.
+		c.filters = c.filters ?? [];
+		c.filters.splice(at === undefined ? c.filters.length : Math.min(at, c.filters.length), 0, clone(cfg.filters![i]));
+		return c;
+	}
+	// Une valeur passée en Lignes : le champ quitte aussi les autres zones d'axe.
+	return insertAt(c, to, field, fields, at, value);
+}
+
+/** Commandes du menu ▾ d'un champ posé dans une zone. */
+export interface MoveCommand {
+	label: string;
+	to: Zone;
+	at?: number;
+	disabled: boolean;
+}
+
+export function moveCommands(cfg: PivotConfig, z: Zone, i: number): MoveCommand[] {
+	const n = zoneItems(cfg, z).length;
+	const field = zoneItems(cfg, z)[i];
+	const out: MoveCommand[] = [
+		{ label: 'Monter', to: z, at: i - 1, disabled: i === 0 },
+		{ label: 'Descendre', to: z, at: i + 2, disabled: i >= n - 1 },
+		{ label: 'Placer au début', to: z, at: 0, disabled: i === 0 },
+		{ label: 'Placer à la fin', to: z, disabled: i >= n - 1 }
+	];
+	for (const { zone, title } of ZONES) {
+		if (zone === z) continue;
+		out.push({ label: `Déplacer vers ${title}`, to: zone, disabled: !accepts(zone, field) });
+	}
+	return out;
+}
+
+/** Patch d'une valeur (rang i). */
+export function setValue(cfg: PivotConfig, i: number, patch: Partial<PivotValue>): PivotConfig {
+	const c = clone(cfg);
+	c.values = (c.values ?? []).map((v, k) => {
+		if (k !== i) return v;
+		const n: PivotValue = { ...v, ...patch };
+		for (const key of ['show', 'label', 'format'] as const) if (!n[key]) delete n[key];
+		return n;
+	});
+	return c;
+}
+
+/** Valeurs gardées par un filtre (liste vide : toutes). */
+export function setFilter(cfg: PivotConfig, field: string, values: string[]): PivotConfig {
+	const c = clone(cfg);
+	c.filters = (c.filters ?? []).map((f) => (f.field === field ? { ...f, values } : f));
+	return c;
+}
+
+/** Résumé d'un filtre sur sa puce : « (Tous) », la valeur, ou « (Plusieurs) ». */
+export function filterSummary(values: string[]): string {
+	if (values.length === 0) return '(Tous)';
+	if (values.length === 1) return values[0] === '' ? '(Vides)' : values[0];
+	return `(${values.length} valeurs)`;
+}
+
+/** Recherche dans la liste des champs : sans casse ni accents. */
+export function matchField(name: string, search: string): boolean {
+	const norm = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('fr');
+	const q = norm(search.trim());
+	return !q || norm(name).includes(q);
+}
+
+/** Rang de dépôt dans une liste de puces d'après la position verticale du pointeur. */
+export function dropIndex(mids: number[], y: number): number {
+	const k = mids.findIndex((m) => y < m);
+	return k < 0 ? mids.length : k;
+}

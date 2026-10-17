@@ -1276,6 +1276,18 @@ func TestPivotFields(t *testing.T) {
 	if got := cells(); got != "[[Ville FR IT] [Lyon 100 % ] [Rome  100 %]]" {
 		t.Fatalf("colonnes, filtre, sans total : %s", got)
 	}
+	// Nom personnalisé et format de nombre imposé.
+	if err := d.SetPivot(ctx, id, PivotConfig{Source: "Feuille1", RowFields: []string{"Pays"},
+		Values: []PivotValue{{Field: "Ventes", Agg: "sum", Label: " CA ", Format: `{"nf":"€","dp":0}`}, {Agg: "count", Format: `{"dp":1}`}}}); err != nil {
+		t.Fatal(err)
+	}
+	if got := cells(); got != "[[Pays CA Nombre] [FR 80 3] [IT 20 1] [Total 100 4]]" {
+		t.Fatalf("nom personnalisé : %s", got)
+	}
+	l, _ = d.Layout(ctx, sheet)
+	if got := fmt.Sprint(l.Pivots[0].Formats); got != `[ {"nf":"€","dp":0} {"dp":1}]` {
+		t.Fatalf("formats imposés : %s", got)
+	}
 }
 
 func TestChart(t *testing.T) {

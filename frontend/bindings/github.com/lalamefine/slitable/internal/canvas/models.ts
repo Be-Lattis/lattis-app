@@ -515,6 +515,18 @@ export interface PivotValue {
      * "", pctTotal, pctRow, pctCol
      */
     "show"?: string;
+
+    /**
+     * Label remplace le nom affiché (« Somme de Ventes ») : le nom
+     * personnalisé d'Excel.
+     */
+    "label"?: string;
+
+    /**
+     * Format est le format de nombre imposé (style JSON : nf, dp), à la place
+     * de celui repris de la colonne source. Sans effet sur un pourcentage.
+     */
+    "format"?: string;
 }
 
 /**

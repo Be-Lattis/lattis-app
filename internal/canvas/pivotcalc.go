@@ -14,6 +14,12 @@ type PivotValue struct {
 	Field string `json:"field,omitempty"`
 	Agg   string `json:"agg"`            // sum, count, countDistinct, avg, min, max
 	Show  string `json:"show,omitempty"` // "", pctTotal, pctRow, pctCol
+	// Label remplace le nom affiché (« Somme de Ventes ») : le nom
+	// personnalisé d'Excel.
+	Label string `json:"label,omitempty"`
+	// Format est le format de nombre imposé (style JSON : nf, dp), à la place
+	// de celui repris de la colonne source. Sans effet sur un pourcentage.
+	Format string `json:"format,omitempty"`
 }
 
 // PivotFilter est un champ de la zone Filtres : les valeurs gardées.
@@ -145,6 +151,9 @@ func (t *tx) pivotPlan(raw PivotConfig) (pivotPlan, error) {
 func pivotText(c *Column) string { return textExpr(*c) }
 
 func pivotLabel(v PivotValue) string {
+	if l := strings.TrimSpace(v.Label); l != "" {
+		return l
+	}
 	label := pivotAggs[v.Agg].label
 	if v.Field != "" {
 		label += " de " + v.Field
