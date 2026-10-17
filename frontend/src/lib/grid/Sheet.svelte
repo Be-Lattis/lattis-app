@@ -1622,8 +1622,12 @@
 				ctx.fill();
 				ctx.restore();
 			};
-			for (const p of arrows.pre) if (p.sheet === sheetIdOf()) draw(center(p.row, p.col), me, '#2b6cb0');
-			for (const d of arrows.dep) if (d.sheet === sheetIdOf()) draw(me, center(d.row, d.col), '#c0392b');
+			// Colonne du même tableau, depuis une ligne de données : la flèche part de
+			// la cellule de cette ligne ([Quantité]*[Prix unitaire]), pas de l'en-tête.
+			const own = tableAt(arrows.row, arrows.col);
+			const rowOf = (d: DepTarget) => (d.kind === 'column' && own && d.table === own.t.name && arrows!.row > own.t.row ? arrows!.row : d.row);
+			for (const p of arrows.pre) if (p.sheet === sheetIdOf()) draw(center(rowOf(p), p.col), me, '#2b6cb0');
+			for (const d of arrows.dep) if (d.sheet === sheetIdOf()) draw(me, center(rowOf(d), d.col), '#c0392b');
 		}
 		// Saisie dans la barre de formule : la cellule active l'affiche en direct.
 		if (fxEditing && !editing) {
