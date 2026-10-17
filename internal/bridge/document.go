@@ -3,6 +3,7 @@ package bridge
 import (
 	"context"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -47,11 +48,15 @@ type DocumentService struct {
 	mu     sync.Mutex
 	doc    *doc.Document
 	tables map[int64]*grid.Table // tableaux chargés pour la lecture par fenêtres
-	sheet  int64                 // feuille affichée : Cell_A1 de l'onglet SQL s'y lit
-	ui     uiState
-	mcp    mcpState
-	demo   *demoRun // classeur de démonstration demandé au lancement
-	pq     pqState  // base de travail des requêtes d'import (query.go)
+	// memo garde les résultats coûteux du menu ▾ d'une colonne (valeurs du
+	// filtre, contrôle de clé, mélange de types), jusqu'à la prochaine
+	// modification de leur tableau.
+	memo  map[memoKey]memoVal
+	sheet int64 // feuille affichée : Cell_A1 de l'onglet SQL s'y lit
+	ui    uiState
+	mcp   mcpState
+	demo  *demoRun // classeur de démonstration demandé au lancement
+	pq    pqState  // base de travail des requêtes d'import (query.go)
 }
 
 var (
@@ -91,7 +96,7 @@ func (s *DocumentService) Orphans() ([]archive.Orphan, error) { return archive.O
 func (s *DocumentService) replace(d *doc.Document) {
 	s.mu.Lock()
 	old := s.doc
-	s.doc, s.tables = d, map[int64]*grid.Table{}
+	s.doc, s.tables, s.memo = d, map[int64]*grid.Table{}, nil
 	s.mu.Unlock()
 	if old != nil {
 		old.Close()
@@ -233,6 +238,11 @@ func (s *DocumentService) changed(ctx context.Context) (DocState, error) {
 	for id, t := range s.tables {
 		if !t.Reusable(touched, all) {
 			delete(s.tables, id)
+		}
+	}
+	for k, v := range s.memo {
+		if all || touched[v.sql] {
+			delete(s.memo, k)
 		}
 	}
 	s.mu.Unlock()
@@ -555,11 +565,7 @@ func (s *DocumentService) ConvertPreview(ctx context.Context, table string, i in
 // TypeMix donne le type majoritaire d'une colonne passée en texte par
 // élargissement, et le nombre de valeurs qui n'en sont pas.
 func (s *DocumentService) TypeMix(ctx context.Context, table string, i int) (canvas.Mix, error) {
-	d, err := s.current()
-	if err != nil {
-		return canvas.Mix{}, err
-	}
-	return d.TypeMix(ctx, table, i)
+	return remember(ctx, s, "mix", table, i, func(d *doc.Document) (canvas.Mix, error) { return d.TypeMix(ctx, table, i) })
 }
 
 // SetType fixe le type d'une colonne (valeurs non convertibles marquées en erreur).
@@ -692,11 +698,7 @@ func (s *DocumentService) ClearFilters(ctx context.Context, table string) (DocSt
 
 // FilterValues donne les valeurs distinctes d'une colonne pour le filtre.
 func (s *DocumentService) FilterValues(ctx context.Context, table string, i int) ([]canvas.FilterValue, error) {
-	d, err := s.current()
-	if err != nil {
-		return nil, err
-	}
-	return d.FilterValues(ctx, table, i)
+	return remember(ctx, s, "values", table, i, func(d *doc.Document) ([]canvas.FilterValue, error) { return d.FilterValues(ctx, table, i) })
 }
 
 // RenameTable renomme un tableau.
@@ -790,11 +792,7 @@ func (s *DocumentService) DeleteChart(ctx context.Context, id int64) (DocState, 
 
 // KeyCheck dit si une colonne peut devenir la clé du tableau (vide : oui).
 func (s *DocumentService) KeyCheck(ctx context.Context, table string, i int) (string, error) {
-	d, err := s.current()
-	if err != nil {
-		return "", err
-	}
-	return d.KeyCheck(ctx, table, i)
+	return remember(ctx, s, "key", table, i, func(d *doc.Document) (string, error) { return d.KeyCheck(ctx, table, i) })
 }
 
 // SetKey fait d'une colonne la clé du tableau.
@@ -952,4 +950,50 @@ func (s *DocumentService) Transfer(ctx context.Context, from int64, src canvas.R
 // PinNote épingle la note d'une cellule (toujours affichée) ou la remet en infobulle.
 func (s *DocumentService) PinNote(ctx context.Context, sheet int64, row, col int, pinned bool) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.PinNote(ctx, sheet, row, col, pinned) })
+}
+
+type memoKey struct {
+	kind, table string
+	col         int
+}
+
+type memoVal struct {
+	sql string // nom SQL du tableau (t_N), pour l'invalidation
+	v   any
+}
+
+// remember calcule fn une fois par tableau, colonne et genre de résultat,
+// jusqu'à la prochaine modification de ce tableau (voir changed).
+func remember[T any](ctx context.Context, s *DocumentService, kind, table string, i int, fn func(*doc.Document) (T, error)) (T, error) {
+	var zero T
+	d, err := s.current()
+	if err != nil {
+		return zero, err
+	}
+	k := memoKey{kind, table, i}
+	s.mu.Lock()
+	m, ok := s.memo[k]
+	s.mu.Unlock()
+	if ok {
+		if v, ok := m.v.(T); ok {
+			return v, nil
+		}
+	}
+	v, err := fn(d)
+	if err != nil {
+		return v, err
+	}
+	var id int64
+	if err := d.DB().Read().QueryRowContext(ctx, `SELECT id FROM _slitable_tables WHERE name = ?`, table).Scan(&id); err != nil {
+		return v, nil // tableau introuvable : résultat non gardé
+	}
+	s.mu.Lock()
+	if s.doc == d {
+		if s.memo == nil {
+			s.memo = map[memoKey]memoVal{}
+		}
+		s.memo[k] = memoVal{sql: fmt.Sprintf("t_%d", id), v: v}
+	}
+	s.mu.Unlock()
+	return v, nil
 }

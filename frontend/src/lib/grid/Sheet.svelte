@@ -2705,6 +2705,8 @@
 		x: number;
 		y: number;
 		values: PanelValue[];
+		/** Liste des valeurs en cours de chargement (grand tableau). */
+		loading?: boolean;
 		search: string;
 		errors: boolean;
 		error: string;
@@ -2745,31 +2747,45 @@
 	async function openFilter(e: Entry, i: number) {
 		closeMenus();
 		const f = e.t.columns[i]?.filter;
-		try {
-			const vals = e.t.columns[i]?.formula || !source.filterValues ? [] : await source.filterValues(e.t, i);
-			const keep = f?.values ? new Set(f.values) : null;
-			filterDlg = {
-				e,
-				i,
-				...anchorUnder(e, i, 310),
-				values: vals.map((v) => ({ ...v, on: !keep || keep.has(v.text) })),
-				search: '',
-				errors: !!f?.errors,
-				error: '',
-				touched: false,
-				sub: false,
-				custom: null,
-				keyWhy: null
-			};
-			mixOf(e, i).then((mix) => filterDlg && filterDlg.e.t.id === e.t.id && filterDlg.i === i && (filterDlg.mix = mix));
-			if (source.keyCheck && e.t.key !== i)
-				source.keyCheck(e.t, i).then(
-					(why) => filterDlg && filterDlg.e.t.id === e.t.id && filterDlg.i === i && (filterDlg.keyWhy = why),
-					() => undefined
-				);
-		} catch (err) {
-			say(String(err instanceof Error ? err.message : err));
-		}
+		const keep = f?.values ? new Set(f.values) : null;
+		const lists = !e.t.columns[i]?.formula && !!source.filterValues;
+		const checksKey = !!source.keyCheck && e.t.key !== i;
+		// Le menu s'ouvre tout de suite (tri, filtres, type) ; la liste des
+		// valeurs et le contrôle de la clé, longs sur un grand tableau,
+		// arrivent ensuite à la place de leur indicateur de chargement.
+		filterDlg = {
+			e,
+			i,
+			...anchorUnder(e, i, 310),
+			values: [],
+			loading: lists,
+			search: '',
+			errors: !!f?.errors,
+			error: '',
+			touched: false,
+			sub: false,
+			custom: null,
+			keyWhy: checksKey ? undefined : null
+		};
+		const mine = () => filterDlg !== null && filterDlg.e.t.id === e.t.id && filterDlg.i === i;
+		mixOf(e, i).then((mix) => mine() && (filterDlg!.mix = mix));
+		if (checksKey)
+			source.keyCheck!(e.t, i).then(
+				(why) => mine() && (filterDlg!.keyWhy = why),
+				() => mine() && (filterDlg!.keyWhy = null)
+			);
+		if (lists)
+			source.filterValues!(e.t, i).then(
+				(vals) => {
+					if (!mine()) return;
+					filterDlg!.values = vals.map((v) => ({ ...v, on: !keep || keep.has(v.text) }));
+					filterDlg!.loading = false;
+				},
+				(err) => {
+					if (mine()) filterDlg!.loading = false;
+					say(String(err instanceof Error ? err.message : err));
+				}
+			);
 	}
 
 	/** Filtre de la colonne de la cellule active (ruban Données). */
@@ -6441,6 +6457,9 @@
 							<input class="search" bind:value={d.search} oninput={() => (d.touched = true)} placeholder="Rechercher" />
 						</div>
 						<div class="values">
+							{#if d.loading}
+								<p class="loading"><span class="spinner" aria-hidden="true"></span> Chargement des valeurs…</p>
+							{:else}
 							<label class="all">
 								<input
 									type="checkbox"
@@ -6461,6 +6480,7 @@
 								</label>
 							{/each}
 							{#if d.values.length >= 1000}<p class="menu-note">Seules les 1 000 premières valeurs sont listées.</p>{/if}
+							{/if}
 						</div>
 					{/if}
 				{/if}
@@ -6474,7 +6494,7 @@
 					<div class="foot">
 						{#if d.custom}<button onclick={() => (d.custom = null)}>‹ Liste des valeurs</button>{/if}
 						<span class="sp"></span>
-						<button class="primary" onclick={() => applyFilter()}>OK</button>
+						<button class="primary" disabled={d.loading && !d.custom} onclick={() => applyFilter()}>OK</button>
 						<button onclick={closeFilter}>Annuler</button>
 					</div>
 				{/if}
@@ -6522,6 +6542,8 @@
 					{#if d.e.t.key === d.i}
 						<p class="menu-note">🔑 Clé du tableau : ses valeurs identifient les lignes.</p>
 						<button class="sort" onclick={() => chooseKey(false)}>Retirer la clé</button>
+					{:else if d.keyWhy === undefined}
+						<p class="menu-note loading"><span class="spinner" aria-hidden="true"></span> Vérification de la clé…</p>
 					{:else if d.keyWhy === ''}
 						<button class="sort" onclick={() => chooseKey(true)}>🔑 Utiliser comme clé{d.e.t.key !== undefined ? ' (à la place de l’actuelle)' : ''}</button>
 					{:else if d.keyWhy}
@@ -7151,6 +7173,33 @@
 	}
 	.filter .search {
 		width: 100%;
+	}
+	/* Indicateur de chargement (liste des valeurs, contrôle de la clé). */
+	.loading {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin: 6px 10px;
+		color: #6b7280;
+	}
+	.spinner {
+		width: 12px;
+		height: 12px;
+		flex: none;
+		border: 2px solid #d1d5db;
+		border-top-color: #217346;
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+	}
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.spinner {
+			animation-duration: 2.5s;
+		}
 	}
 	.filter .values {
 		max-height: 260px;
