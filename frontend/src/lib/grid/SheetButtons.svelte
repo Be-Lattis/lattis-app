@@ -11,6 +11,7 @@
 	// supprimer ; Ctrl+clic le sélectionne pour le redimensionner. Un clic
 	// ailleurs (cellule, onglet) le désélectionne.
 	import { dismiss } from './dismiss.js';
+	import { resizePanel } from '#lib/ui/resize.js';
 	import { BUTTON_H, BUTTON_W, CONTROL_KINDS, VALUE_KINDS, baseName, controlTitle, handlerLabel, handlers, scriptFunctions, type ButtonConfig, type ControlKind, type SheetButton } from './buttons';
 	import { a1Address } from './formulaEdit';
 	import { colLetters } from './cfmodel';
@@ -489,6 +490,7 @@
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<aside
 		class="cpanel"
+		use:resizePanel={{ key: 'control' }}
 		style:zoom={unzoom}
 		style:top="{at.top}px"
 		style:bottom="{at.bottom}px"

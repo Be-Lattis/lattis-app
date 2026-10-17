@@ -18,6 +18,8 @@ export interface DocButtonConfig {
 	function?: string;
 	color?: string;
 	textColor?: string;
+	width?: number;
+	height?: number;
 }
 
 export const CHART_BLOT = 'lattisChart';
@@ -48,6 +50,8 @@ export function paintButton(node: HTMLElement, cfg: DocButtonConfig) {
 	node.textContent = buttonText(cfg);
 	node.style.background = cfg.color ?? '';
 	node.style.color = cfg.textColor ?? '';
+	if (cfg.width) node.style.width = cfg.width + 'px';
+	if (cfg.height) node.style.height = cfg.height + 'px';
 	node.title = (cfg.script ? `Exécute ${cfg.function ? `${cfg.script} › ${cfg.function}()` : cfg.script}` : 'Aucune action liée') + ' · clic droit : modifier';
 }
 

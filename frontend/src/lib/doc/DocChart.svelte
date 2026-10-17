@@ -32,11 +32,11 @@
 	});
 </script>
 
-<div class="dchart" class:selected bind:clientWidth={width} style:height="{height}px">
+<div class="dchart" class:selected bind:clientWidth={width} style:height="{height}px" style:width={config.width ? config.width + 'px' : null} style:max-width="100%">
 	{#if info?.error}
 		<div class="err">Graphique « {config.title || config.source} » : {info.error}</div>
 	{:else if info && width > 0}
-		<Chart kind={config.kind} labels={info.labels ?? []} series={(info.series ?? []) as never} width={Math.min(width, config.width || width)} {height} style={config} animate={live.animate} />
+		<Chart kind={config.kind} labels={info.labels ?? []} series={(info.series ?? []) as never} {width} {height} style={config} animate={live.animate} />
 	{/if}
 </div>
 

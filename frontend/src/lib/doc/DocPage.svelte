@@ -14,6 +14,7 @@
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
 	import PivotPanel from '#lib/grid/PivotPanel.svelte';
 	import { dismiss } from '#lib/grid/dismiss.js';
+	import { resizePanel } from '#lib/ui/resize.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { scriptFunctions } from '#lib/grid/buttons.js';
 	import { BUTTON_BLOT, CHART_BLOT, PIVOT_BLOT, docClip, setupQuill, type DocButtonConfig } from './quill';
@@ -362,6 +363,76 @@
 		} as PivotConfig;
 	}
 
+	// --- Taille des éléments insérés (poignée en bas à droite) ----------------
+
+	type Grip = { node: HTMLElement; kind: 'chart' | 'pivot' | 'button' | 'image'; x: number; y: number };
+	let grip = $state<Grip | null>(null);
+	let pageEl = $state<HTMLDivElement>();
+	let sizing: { grip: Grip; x0: number; y0: number; w0: number; h0: number; w: number; h: number } | null = null;
+
+	const SIZED = '.ql-lattis-chart, .ql-lattis-pivot, .ql-lattis-button, .ql-editor img';
+	function kindOf(el: HTMLElement): Grip['kind'] {
+		return el.tagName === 'IMG' ? 'image' : el.classList.contains('ql-lattis-pivot') ? 'pivot' : el.classList.contains('ql-lattis-button') ? 'button' : 'chart';
+	}
+	// Le cadre visible de l'élément (le bloc d'un graphique s'étend sur toute la ligne).
+	function boxOf(el: HTMLElement): HTMLElement {
+		return (el.querySelector('.dchart, .dpivot') as HTMLElement | null) ?? el;
+	}
+	function placeGrip(el: HTMLElement | null) {
+		if (sizing) return;
+		if (!el || !pageEl || locked) {
+			grip = null;
+			return;
+		}
+		const r = boxOf(el).getBoundingClientRect();
+		const p = pageEl.getBoundingClientRect();
+		grip = { node: el, kind: kindOf(el), x: r.right - p.left, y: r.bottom - p.top };
+	}
+	function onHover(e: MouseEvent) {
+		if (sizing) return;
+		const t = e.target as HTMLElement;
+		if (t.closest('.grip')) return;
+		placeGrip(t.closest<HTMLElement>(SIZED));
+	}
+	function startSize(e: PointerEvent) {
+		if (!grip || e.button !== 0) return;
+		e.preventDefault();
+		e.stopPropagation();
+		const box = boxOf(grip.node);
+		const r = box.getBoundingClientRect();
+		sizing = { grip, x0: e.clientX, y0: e.clientY, w0: r.width, h0: r.height, w: r.width, h: r.height };
+		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+	}
+	function moveSize(e: PointerEvent) {
+		if (!sizing) return;
+		const s = sizing;
+		const maxW = (quill?.root.clientWidth ?? 900) + 1;
+		s.w = Math.round(Math.max(40, Math.min(maxW, s.w0 + e.clientX - s.x0)));
+		s.h = Math.round(Math.max(s.grip.kind === 'button' ? 20 : 60, s.h0 + e.clientY - s.y0));
+		// Aperçu pendant le geste ; la valeur est enregistrée au lâcher.
+		const box = boxOf(s.grip.node);
+		box.style.width = s.w + 'px';
+		box.style.height = s.h + 'px';
+		const p = pageEl!.getBoundingClientRect();
+		const r = box.getBoundingClientRect();
+		grip = { ...s.grip, x: r.right - p.left, y: r.bottom - p.top };
+	}
+	function endSize() {
+		const s = sizing;
+		sizing = null;
+		if (!s || !quill) return;
+		const i = indexOf(s.grip.node);
+		if (i < 0) return;
+		if (s.grip.kind === 'image') {
+			quill.formatText(i, 1, { width: String(s.w), height: String(s.h) }, 'user');
+		} else {
+			const type = BLOT[s.grip.kind];
+			const v = embedAt(i, type);
+			if (v) replaceEmbed(i, type, { ...v, width: s.w, height: s.h });
+		}
+		grip = null;
+	}
+
 	// --- Menus contextuels et presse-papiers des éléments ---------------------
 
 	type Menu = { x: number; y: number; kind: 'chart' | 'pivot' | 'button' | 'text'; index: number };
@@ -528,8 +599,21 @@
 
 <div class="doc" style:--doc-font={DOC_FONT} style:--doc-size="{DOC_PT}pt">
 	<div class="scroll">
-		<div class="page" aria-label="Document {name}">
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div class="page" aria-label="Document {name}" bind:this={pageEl} onmouseover={onHover} onfocus={() => {}} onmouseleave={() => !sizing && (grip = null)}>
 			<div bind:this={host}></div>
+			{#if grip}
+				<div
+					class="grip"
+					style:left="{grip.x - 6}px"
+					style:top="{grip.y - 6}px"
+					title="Tirer pour redimensionner"
+					onpointerdown={startSize}
+					onpointermove={moveSize}
+					onpointerup={endSize}
+					role="presentation"
+				></div>
+			{/if}
 		</div>
 	</div>
 	{#if panel?.kind === 'chart' && chart}
@@ -588,7 +672,7 @@
 			{/key}
 		</div>
 	{:else if panel?.kind === 'button' && btn}
-		<aside class="side form">
+		<aside class="side form" use:resizePanel={{ key: 'doc-control' }}>
 			<header><span>Bouton</span><button class="x" title="Fermer" onclick={() => openPanel(null)}>✕</button></header>
 			<label>Libellé<input type="text" value={btn.label} disabled={!!locked} onchange={(e) => setButton({ label: (e.currentTarget as HTMLInputElement).value })} /></label>
 			<label
@@ -619,7 +703,7 @@
 		</aside>
 	{:else if panel?.kind === 'link'}
 		{@const p = panel}
-		<aside class="side form">
+		<aside class="side form" use:resizePanel={{ key: 'doc-link' }}>
 			<header><span>Lien</span><button class="x" title="Fermer" onclick={() => openPanel(null)}>✕</button></header>
 			<label
 				>Adresse
@@ -729,7 +813,19 @@
 		overflow-y: auto;
 		container-type: inline-size;
 	}
+	.grip {
+		position: absolute;
+		width: 10px;
+		height: 10px;
+		background: #fff;
+		border: 1.5px solid #217346;
+		border-radius: 2px;
+		cursor: nwse-resize;
+		z-index: 6;
+		touch-action: none;
+	}
 	.page {
+		position: relative;
 		max-width: 920px;
 		margin: 0 auto;
 		padding: 24px 40px 120px;
@@ -809,6 +905,11 @@
 		user-select: none;
 	}
 	.page :global(.ql-lattis-button) {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		vertical-align: middle;
+		box-sizing: border-box;
 		background: #217346;
 		color: #fff;
 		border-radius: var(--float-radius, 6px);
@@ -838,7 +939,6 @@
 	}
 	.srcbox {
 		border-bottom: 1px solid #e5e7eb;
-		width: 280px;
 		box-sizing: border-box;
 	}
 	.form {

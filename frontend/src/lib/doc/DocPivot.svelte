@@ -57,7 +57,15 @@
 	}
 </script>
 
-<div class="dpivot" class:selected class:flash onanimationend={() => (flash = false)}>
+<div
+	class="dpivot"
+	class:selected
+	class:flash
+	class:sized={!!(config as { height?: number }).height}
+	style:width={(config as { width?: number }).width ? (config as { width?: number }).width + 'px' : null}
+	style:height={(config as { height?: number }).height ? (config as { height?: number }).height + 'px' : null}
+	onanimationend={() => (flash = false)}
+>
 	{#if info?.error}
 		<div class="err">Tableau croisé : {info.error}</div>
 	{:else if rows.length}
@@ -89,6 +97,9 @@
 		cursor: default;
 		user-select: none;
 		font-size: 0.95em;
+	}
+	.dpivot.sized {
+		overflow: auto;
 	}
 	.dpivot:hover {
 		border-color: #d4d7db;
