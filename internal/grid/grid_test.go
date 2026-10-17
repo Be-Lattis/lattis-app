@@ -92,3 +92,30 @@ func TestQueryReadOnly(t *testing.T) {
 		t.Fatal("une écriture a été acceptée dans l'onglet SQL")
 	}
 }
+
+// Stats résume en SQL n'importe quelle plage de lignes, sans limite de taille.
+func TestStats(t *testing.T) {
+	const rows = 2*AnchorEvery + 500
+	tbl := openDemo(t, rows)
+	ctx := context.Background()
+	// N° commande = 100000 + rang : somme connue.
+	first, count := AnchorEvery-5, AnchorEvery+10
+	st, err := tbl.Stats(ctx, first, count, []int{0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := 0.0
+	for i := first; i < first+count; i++ {
+		want += float64(100_000 + i)
+	}
+	if st.Count != count || st.Nums != count || st.Sum != want {
+		t.Fatalf("Stats = %+v, attendu %d nombres de somme %v", st, count, want)
+	}
+	// Toute la colonne, et au-delà de la fin : bornée au tableau.
+	if st, err = tbl.Stats(ctx, 0, rows+100, []int{0}); err != nil || st.Count != rows {
+		t.Fatalf("colonne entière : %+v, %v", st, err)
+	}
+	if st, err = tbl.Stats(ctx, rows, 10, []int{0}); err != nil || st.Count != 0 {
+		t.Fatalf("hors tableau : %+v, %v", st, err)
+	}
+}

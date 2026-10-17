@@ -10,5 +10,6 @@ export type {
     Info,
     InvalidCell,
     QueryResult,
+    Stats,
     Window
 } from "./models.js";

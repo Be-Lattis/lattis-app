@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -169,7 +170,10 @@ func (t *tx) dropColumn(tb Table, c Column, pos int) error {
 		}
 	}
 	return t.ApplyStep(command.Step{Do: append(unkey, []stmt{
-		st(`CREATE TABLE ` + trash + ` AS SELECT id, ` + col + ` AS v FROM ` + tb.sql()),
+		// Corbeille indexée sur id : l'annulation relit chaque ligne par sa clé
+		// (sans index, 1 M de lignes demandaient 1 M de parcours complets).
+		st(`CREATE TABLE ` + trash + ` (id INTEGER PRIMARY KEY, v)`),
+		st(`INSERT INTO ` + trash + ` (id, v) SELECT id, ` + col + ` FROM ` + tb.sql()),
 		st(`CREATE TABLE `+trash+`_inv AS SELECT rid, raw FROM _slitable_invalid WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
 		st(`DELETE FROM _slitable_invalid WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
 		st(`CREATE TABLE `+trash+`_sty AS SELECT rid, style FROM _slitable_styles WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
@@ -182,7 +186,7 @@ func (t *tx) dropColumn(tb Table, c Column, pos int) error {
 		st(`INSERT INTO _slitable_columns (tbl, id, name, type, fixed, pos, formula, rules) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 			tb.ID, c.ID, c.Name, string(c.Type), c.Fixed, pos, nullIfEmpty(c.Formula), nullIfEmpty(rules)),
 		st(`ALTER TABLE ` + tb.sql() + ` ADD COLUMN ` + col + ` ` + sqlType(c.Type)),
-		st(`UPDATE ` + tb.sql() + ` SET ` + col + ` = (SELECT v FROM ` + trash + ` WHERE ` + trash + `.id = ` + tb.sql() + `.id)`),
+		st(`UPDATE ` + tb.sql() + ` SET ` + col + ` = ` + trash + `.v FROM ` + trash + ` WHERE ` + trash + `.id = ` + tb.sql() + `.id`),
 		st(`INSERT INTO _slitable_invalid (tbl, rid, col, raw) SELECT ?, rid, ?, raw FROM `+trash+`_inv`, tb.ID, c.ID),
 		st(`INSERT INTO _slitable_styles (tbl, rid, col, style) SELECT ?, rid, ?, style FROM `+trash+`_sty`, tb.ID, c.ID),
 		st(`DROP TABLE ` + trash),
@@ -359,4 +363,124 @@ func nullIfEmpty(s string) any {
 		return nil
 	}
 	return s
+}
+
+// dropColumns supprime plusieurs colonnes d'un coup (positions d'affichage
+// idx, croissantes). SQLite réécrit toute la table à chaque DROP COLUMN :
+// avec plusieurs colonnes, une seule reconstruction de la table les retire
+// toutes. Leurs valeurs partent dans une corbeille indexée sur id, avec
+// leurs saisies invalides et leur mise en forme ; l'annulation reconstruit
+// la table d'origine (même schéma) en y rejoignant la corbeille.
+func (t *tx) dropColumns(tb Table, idx []int) error {
+	if len(idx) == 1 {
+		return t.dropColumn(tb, tb.Cols[idx[0]], idx[0])
+	}
+	physical, err := t.physical(tb)
+	if err != nil {
+		return err
+	}
+	gone := map[int64]Column{}
+	var ids []string
+	for _, i := range idx {
+		gone[tb.Cols[i].ID] = tb.Cols[i]
+		ids = append(ids, strconv.FormatInt(tb.Cols[i].ID, 10))
+	}
+	trash := fmt.Sprintf("_slitable_trash_%d_cols_%d", tb.ID, time.Now().UnixNano())
+	name, tmp := tb.sql(), tb.sql()+"_rebuild"
+	in := strings.Join(ids, ", ")
+
+	// Corbeille : id puis une colonne par colonne supprimée.
+	tdefs := []string{"id INTEGER PRIMARY KEY"}
+	tcols, tsel := []string{"id"}, []string{"id"}
+	for _, c := range physical {
+		if _, ok := gone[c.ID]; ok {
+			tdefs = append(tdefs, colSQL(c.ID))
+			tcols = append(tcols, colSQL(c.ID))
+			tsel = append(tsel, colSQL(c.ID))
+		}
+	}
+	// Schéma reconstruit : sans (do) ou avec (undo) les colonnes supprimées.
+	build := func(keep bool) []stmt {
+		defs := []string{"id INTEGER PRIMARY KEY", "_pos TEXT NOT NULL"}
+		cols := []string{"id", "_pos"}
+		sel := []string{name + ".id", name + "._pos"}
+		for _, c := range physical {
+			_, dropped := gone[c.ID]
+			if dropped && !keep {
+				continue
+			}
+			defs = append(defs, colSQL(c.ID)+" "+sqlType(c.Type))
+			cols = append(cols, colSQL(c.ID))
+			if dropped {
+				sel = append(sel, trash+"."+colSQL(c.ID))
+			} else {
+				sel = append(sel, name+"."+colSQL(c.ID))
+			}
+		}
+		from := name
+		if keep {
+			from = name + " LEFT JOIN " + trash + " ON " + trash + ".id = " + name + ".id"
+		}
+		out := []stmt{
+			st(`CREATE TABLE ` + tmp + ` (` + strings.Join(defs, ", ") + `) STRICT`),
+			st(`INSERT INTO ` + tmp + ` (` + strings.Join(cols, ", ") + `) SELECT ` + strings.Join(sel, ", ") + ` FROM ` + from),
+			st(`DROP TABLE ` + name),
+			st(`ALTER TABLE ` + tmp + ` RENAME TO ` + name),
+			st(`CREATE INDEX ` + name + `_pos ON ` + name + `(_pos)`),
+		}
+		for _, c := range physical {
+			if _, dropped := gone[c.ID]; c.ID == tb.Key && (keep || !dropped) {
+				out = append(out, st(`CREATE UNIQUE INDEX `+name+`_key ON `+name+`(`+keyExpr(c.ID, c.Type)+`)`))
+			}
+		}
+		return out
+	}
+
+	do := []stmt{
+		st(`CREATE TABLE ` + trash + ` (` + strings.Join(tdefs, ", ") + `)`),
+		st(`INSERT INTO ` + trash + ` (` + strings.Join(tcols, ", ") + `) SELECT ` + strings.Join(tsel, ", ") + ` FROM ` + name),
+		st(`CREATE TABLE `+trash+`_inv AS SELECT rid, col, raw FROM _slitable_invalid WHERE tbl = ? AND col IN (`+in+`)`, tb.ID),
+		st(`DELETE FROM _slitable_invalid WHERE tbl = ? AND col IN (`+in+`)`, tb.ID),
+		st(`CREATE TABLE `+trash+`_sty AS SELECT rid, col, style FROM _slitable_styles WHERE tbl = ? AND col IN (`+in+`)`, tb.ID),
+		st(`DELETE FROM _slitable_styles WHERE tbl = ? AND col IN (`+in+`)`, tb.ID),
+	}
+	if _, ok := gone[tb.Key]; ok && tb.Key != 0 {
+		do = append(do, st(`UPDATE _slitable_tables SET key_col = NULL WHERE id = ?`, tb.ID))
+	}
+	do = append(do, build(false)...)
+	// Colonnes retirées des métadonnées, de la dernière à la première.
+	var undo []stmt
+	for k := len(idx) - 1; k >= 0; k-- {
+		c := tb.Cols[idx[k]]
+		do = append(do,
+			st(`DELETE FROM _slitable_columns WHERE tbl = ? AND id = ?`, tb.ID, c.ID),
+			st(`UPDATE _slitable_columns SET pos = pos - 1 WHERE tbl = ? AND pos > ?`, tb.ID, idx[k]))
+	}
+	for _, i := range idx {
+		c := tb.Cols[i]
+		rules, err := t.columnRules(tb.ID, c.ID)
+		if err != nil {
+			return err
+		}
+		undo = append(undo,
+			st(`UPDATE _slitable_columns SET pos = pos + 1 WHERE tbl = ? AND pos >= ?`, tb.ID, i),
+			st(`INSERT INTO _slitable_columns (tbl, id, name, type, fixed, pos, formula, rules) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+				tb.ID, c.ID, c.Name, string(c.Type), c.Fixed, i, nullIfEmpty(c.Formula), nullIfEmpty(rules)))
+	}
+	undo = append(undo, build(true)...)
+	if _, ok := gone[tb.Key]; ok && tb.Key != 0 {
+		undo = append(undo, st(`UPDATE _slitable_tables SET key_col = ? WHERE id = ?`, tb.Key, tb.ID))
+	}
+	undo = append(undo,
+		st(`INSERT INTO _slitable_invalid (tbl, rid, col, raw) SELECT ?, rid, col, raw FROM `+trash+`_inv`, tb.ID),
+		st(`INSERT INTO _slitable_styles (tbl, rid, col, style) SELECT ?, rid, col, style FROM `+trash+`_sty`, tb.ID),
+		st(`DROP TABLE `+trash),
+		st(`DROP TABLE `+trash+`_inv`),
+		st(`DROP TABLE `+trash+`_sty`),
+	)
+	return t.ApplyStep(command.Step{Do: do, Undo: undo, Purge: []stmt{
+		st(`DROP TABLE IF EXISTS ` + trash),
+		st(`DROP TABLE IF EXISTS ` + trash + `_inv`),
+		st(`DROP TABLE IF EXISTS ` + trash + `_sty`),
+	}})
 }

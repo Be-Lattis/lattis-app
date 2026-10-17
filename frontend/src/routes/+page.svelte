@@ -31,6 +31,7 @@
 	import { shortcutOf } from '#lib/grid/shortcuts.js';
 	import { clampZoom } from '#lib/grid/zoom.js';
 	import ZoomBar from '#lib/shell/ZoomBar.svelte';
+	import BusyBar from '#lib/shell/BusyBar.svelte';
 
 	type Mode = 'starting' | 'recover' | 'doc' | 'demo' | 'closed';
 
@@ -419,6 +420,7 @@
 			if (ev.created && ev.headless) return `Tableau « ${ev.created} » créé sans en-têtes : clic droit › « Utiliser la 1re ligne comme en-têtes » si besoin`;
 			if (ev.created) return `Tableau « ${ev.created} » créé (${count(block.length - 1)})`;
 		},
+		rangeStats: (t, first, count, cols) => DocumentService.RangeStats(sheetId, t.id, first, count, cols),
 		moveCells: (r0, c0, r1, c1, dr, dc) => DocumentService.MoveCells(sheetId, r0, c0, r1, c1, dr, dc).then(reload),
 		clearCells: (r0, c0, r1, c1) => DocumentService.ClearCells(sheetId, r0, c0, r1, c1).then(reload),
 		sheetLines: (op, a, b) =>
@@ -1037,6 +1039,7 @@
 		{:else}
 			<span>Prêt</span>
 		{/if}
+		<BusyBar />
 		{#if data && view === 'grid'}<ZoomBar {zoom} onzoom={setZoom} />{/if}
 	</footer>
 </div>

@@ -325,16 +325,11 @@ func (t *tx) deleteTableRows(tb Table, a, b int) error {
 
 // deleteTableCols supprime les colonnes i à j du tableau.
 func (t *tx) deleteTableCols(tb Table, i, j int) error {
-	for k := j; k >= i; k-- {
-		if err := t.dropColumn(tb, tb.Cols[k], k); err != nil {
-			return err
-		}
-		var err error
-		if tb, err = t.table(tb.ID); err != nil {
-			return err
-		}
+	idx := make([]int, 0, j-i+1)
+	for k := i; k <= j; k++ {
+		idx = append(idx, k)
 	}
-	return nil
+	return t.dropColumns(tb, idx)
 }
 
 // trashRows supprime d'un tableau les lignes dont la requête ids donne les

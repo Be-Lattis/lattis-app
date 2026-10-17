@@ -56,6 +56,19 @@ export interface QueryResult {
 }
 
 /**
+ * Stats résume des cellules d'un tableau pour la barre d'état : valeurs non
+ * vides, nombres et leur somme. Lignes first à first+count-1 (ordre
+ * d'affichage), colonnes cols (indices d'affichage). Le calcul se fait en
+ * SQL, sans lire les lignes : une colonne d'un million de lignes se résume
+ * en une requête.
+ */
+export interface Stats {
+    "count": number;
+    "nums": number;
+    "sum": number;
+}
+
+/**
  * Type est le type logique d'une colonne, tel qu'affiché à l'utilisateur.
  */
 export enum Type {

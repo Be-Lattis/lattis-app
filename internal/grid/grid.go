@@ -76,6 +76,7 @@ type Table struct {
 	rows    int
 
 	selectWindow string
+	exprs        []string                 // expression SQL de chaque colonne affichée
 	args         []any                    // paramètres des expressions de colonnes (?1…)
 	decode       func(col int, v any) any // conversion des valeurs calculées
 
@@ -91,7 +92,7 @@ type Table struct {
 func (t *Table) WithExprs(exprs []string, args []any, decode func(col int, v any) any) *Table {
 	t.selectWindow = fmt.Sprintf(`SELECT id, %s FROM %s WHERE _pos >= ? ORDER BY _pos LIMIT ? OFFSET ?`,
 		strings.Join(exprs, ", "), t.sqlName)
-	t.args, t.decode = args, decode
+	t.args, t.decode, t.exprs = args, decode, exprs
 	return t
 }
 
@@ -125,6 +126,7 @@ func NewTable(db *store.Store, sqlName, name string, cols []Column, sqlCols []st
 		name:    name,
 		cols:    cols,
 		sqlCols: names,
+		exprs:   names,
 		selectWindow: fmt.Sprintf(`SELECT id, %s FROM %s WHERE _pos >= ? ORDER BY _pos LIMIT ? OFFSET ?`,
 			strings.Join(names, ", "), sqlName),
 	}
@@ -292,4 +294,55 @@ func (t *Table) cellsFrom(ctx context.Context, q string, lo, hi int64, index map
 		}
 	}
 	return rs.Err()
+}
+
+// Stats résume des cellules d'un tableau pour la barre d'état : valeurs non
+// vides, nombres et leur somme. Lignes first à first+count-1 (ordre
+// d'affichage), colonnes cols (indices d'affichage). Le calcul se fait en
+// SQL, sans lire les lignes : une colonne d'un million de lignes se résume
+// en une requête.
+type Stats struct {
+	Count int     `json:"count"`
+	Nums  int     `json:"nums"`
+	Sum   float64 `json:"sum"`
+}
+
+// Stats résume les lignes first à first+count-1 et les colonnes cols.
+
+func (t *Table) Stats(ctx context.Context, first, count int, cols []int) (Stats, error) {
+	t.mu.RLock()
+	rows := t.rows
+	var anchor string
+	if first >= 0 && first < rows {
+		anchor = t.anchors[first/AnchorEvery]
+	}
+	t.mu.RUnlock()
+	if first < 0 || first >= rows || count <= 0 || len(cols) == 0 {
+		return Stats{}, nil
+	}
+	count = min(count, rows-first)
+	var inner, cnt, nums, sum []string
+	for k, c := range cols {
+		if c < 0 || c >= len(t.exprs) {
+			return Stats{}, ErrRange
+		}
+		x := fmt.Sprintf("x%d", k)
+		inner = append(inner, t.exprs[c]+" AS "+x)
+		cnt = append(cnt, "count("+x+")")
+		if t.cols[c].Type == Boolean {
+			continue // VRAI / FAUX : comptés, pas additionnés (comme Excel)
+		}
+		isNum := "typeof(" + x + ") IN ('integer', 'real')"
+		nums = append(nums, "sum("+isNum+")")
+		sum = append(sum, "total(CASE WHEN "+isNum+" THEN "+x+" END)")
+	}
+	if len(nums) == 0 {
+		nums, sum = []string{"0"}, []string{"0"}
+	}
+	q := "SELECT " + strings.Join(cnt, " + ") + ", coalesce(" + strings.Join(nums, ", 0) + coalesce(") + ", 0), " + strings.Join(sum, " + ") +
+		" FROM (SELECT " + strings.Join(inner, ", ") + " FROM " + t.sqlName + " WHERE _pos >= ? ORDER BY _pos LIMIT ? OFFSET ?)"
+	args := append(append([]any{}, t.args...), anchor, count, first%AnchorEvery)
+	var st Stats
+	err := t.db.Read().QueryRowContext(ctx, q, args...).Scan(&st.Count, &st.Nums, &st.Sum)
+	return st, err
 }

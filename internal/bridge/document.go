@@ -241,11 +241,11 @@ func (s *DocumentService) Layout(ctx context.Context, sheet int64) (canvas.Layou
 	return d.Layout(ctx, sheet)
 }
 
-// Window lit des lignes d'un tableau (lecture par fenêtres).
-func (s *DocumentService) Window(ctx context.Context, sheet, table int64, first, count int) (grid.Window, error) {
+// gridTable donne le tableau prêt à lire par fenêtres (gardé en cache).
+func (s *DocumentService) gridTable(ctx context.Context, sheet, table int64) (*grid.Table, error) {
 	d, err := s.current()
 	if err != nil {
-		return grid.Window{}, err
+		return nil, err
 	}
 	s.mu.Lock()
 	t := s.tables[table]
@@ -253,24 +253,43 @@ func (s *DocumentService) Window(ctx context.Context, sheet, table int64, first,
 	if t == nil {
 		l, err := d.Layout(ctx, sheet)
 		if err != nil {
-			return grid.Window{}, err
+			return nil, err
 		}
 		for _, ti := range l.Tables {
 			if ti.ID != table {
 				continue
 			}
 			if t, err = api.LoadGrid(ctx, d, ti); err != nil {
-				return grid.Window{}, err
+				return nil, err
 			}
 			s.mu.Lock()
 			s.tables[table] = t
 			s.mu.Unlock()
 		}
 		if t == nil {
-			return grid.Window{}, grid.ErrRange
+			return nil, grid.ErrRange
 		}
 	}
+	return t, nil
+}
+
+// Window lit des lignes d'un tableau (lecture par fenêtres).
+func (s *DocumentService) Window(ctx context.Context, sheet, table int64, first, count int) (grid.Window, error) {
+	t, err := s.gridTable(ctx, sheet, table)
+	if err != nil {
+		return grid.Window{}, err
+	}
 	return t.Window(ctx, first, count)
+}
+
+// RangeStats résume des cellules d'un tableau pour la barre d'état
+// (Moyenne, Nb, Somme), en SQL : lignes first à first+count-1, colonnes cols.
+func (s *DocumentService) RangeStats(ctx context.Context, sheet, table int64, first, count int, cols []int) (grid.Stats, error) {
+	t, err := s.gridTable(ctx, sheet, table)
+	if err != nil {
+		return grid.Stats{}, err
+	}
+	return t.Stats(ctx, first, count, cols)
 }
 
 // SetCell traite une saisie validée dans une cellule de la feuille.

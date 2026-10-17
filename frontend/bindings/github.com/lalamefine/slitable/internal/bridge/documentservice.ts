@@ -609,6 +609,14 @@ export function QueryToSheet(q: string, name: string, headers: string[] | null):
 }
 
 /**
+ * RangeStats résume des cellules d'un tableau pour la barre d'état
+ * (Moyenne, Nb, Somme), en SQL : lignes first à first+count-1, colonnes cols.
+ */
+export function RangeStats(sheet: number, table: number, first: number, count: number, cols: number[] | null): $CancellablePromise<grid$0.Stats> {
+    return $Call.ByID(3280475605, sheet, table, first, count, cols);
+}
+
+/**
  * Recalc renouvelle AUJOURDHUI, MAINTENANT et ALEA (F9).
  */
 export function Recalc(): $CancellablePromise<$models.DocState> {

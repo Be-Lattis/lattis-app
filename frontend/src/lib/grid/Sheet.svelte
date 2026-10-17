@@ -216,6 +216,8 @@
 
 	export interface SheetSource {
 		window(table: SheetTable, first: number, count: number): Promise<Fetched>;
+		/** Totaux de la barre d'état calculés en SQL : lignes first…first+count-1, colonnes cols. */
+		rangeStats?(table: SheetTable, first: number, count: number, cols: number[]): Promise<{ count: number; nums: number; sum: number }>;
 		/**
 		 * Enregistre une saisie. Renvoie un message pour la barre d'état, ou la
 		 * valeur stockée quand la source ne relit pas sa mise en page.
@@ -967,7 +969,10 @@
 
 	$effect(() => {
 		const d = data;
-		untrack(() => applyData(d));
+		untrack(() => {
+			statsEpoch++;
+			applyData(d);
+		});
 	});
 
 	// Mode A1 : lettres et numéros dans les bandeaux pendant la saisie d'une
@@ -2555,12 +2560,85 @@
 
 	const statFmt = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 10 });
 
-	/** « Moyenne · Nb · Somme » de la sélection (cellules chargées), si plusieurs cellules. */
+	// Totaux d'une grande sélection (ou de lignes pas encore chargées) :
+	// calculés en SQL par le moteur, en tâche de fond ; la barre d'état les
+	// affiche dès qu'ils arrivent. statsEpoch change avec les données.
+	let statsEpoch = 0;
+	let statsCache: { key: string; text: string } | null = null;
+	let statsPending = '';
+	let statsTimer = 0;
+
+	function statsText(count: number, nums: number, sum: number): string {
+		if (count === 0) return '';
+		const parts = [];
+		if (nums) parts.push(`Moyenne : ${statFmt.format(sum / nums)}`);
+		parts.push(`Nb : ${count.toLocaleString('fr-FR')}`);
+		if (nums) parts.push(`Somme : ${statFmt.format(sum)}`);
+		return parts.join('   ');
+	}
+
+	/** Totaux de la sélection par le moteur (SQL) : cellules libres et en-têtes ici, données là-bas. */
+	function remoteStats(r0: number, r1: number, c0: number, c1: number): string {
+		const rs = source.rangeStats;
+		if (!rs) return '';
+		const key = `${statsEpoch}|${r0},${r1},${c0},${c1}`;
+		if (statsCache?.key === key) return statsCache.text;
+		if (statsPending !== key) {
+			statsPending = key;
+			window.clearTimeout(statsTimer);
+			statsTimer = window.setTimeout(async () => {
+				let count = 0;
+				let nums = 0;
+				let sum = 0;
+				try {
+					for (const e of entries) {
+						if (e.t.row > r1 || e.last < r0 || e.t.col > c1 || e.lastCol < c0) continue;
+						const ka = Math.max(c0, e.t.col) - e.t.col;
+						const kb = Math.min(c1, e.lastCol) - e.t.col;
+						if (r0 <= e.t.row && e.t.row <= r1) count += kb - ka + 1; // en-têtes
+						const first = Math.max(r0, e.t.row + 1) - e.t.row - 1;
+						const last = Math.min(r1, e.last) - e.t.row - 1;
+						if (last < first) continue;
+						const cols = Array.from({ length: kb - ka + 1 }, (_, i) => ka + i);
+						const st = await rs(e.t, first, last - first + 1, cols);
+						count += st.count;
+						nums += st.nums;
+						sum += st.sum;
+					}
+				} catch {
+					if (statsPending === key) statsPending = '';
+					return;
+				}
+				// Cellules libres : toutes en mémoire.
+				for (const [k, raw] of cells) {
+					const [r, c] = k.split(',').map(Number);
+					if (r < r0 || r > r1 || c < c0 || c > c1 || tableAt(r, c)) continue;
+					const f = shown.get(k);
+					let v: unknown = f ? f.text : raw;
+					if (v === null || v === undefined || v === '') continue;
+					count++;
+					if (typeof v === 'string' && isNumeric(v)) v = Number(v.replace(/[\s\u00a0\u202f]/g, '').replace(',', '.'));
+					if (typeof v === 'number' && Number.isFinite(v)) {
+						nums++;
+						sum += v;
+					}
+				}
+				if (statsPending !== key) return; // sélection changée entre-temps
+				statsPending = '';
+				statsCache = { key, text: statsText(count, nums, sum) };
+				refreshStatus();
+			}, 150);
+		}
+		return statsCache && statsCache.key.endsWith(`|${r0},${r1},${c0},${c1}`) ? statsCache.text : 'Calcul des totaux…';
+	}
+
+	/** « Moyenne · Nb · Somme » de la sélection, si plusieurs cellules. */
 	function selectionStats(): string {
 		const { r0, r1, c0, c1 } = selection();
 		const n = (r1 - r0 + 1) * (c1 - c0 + 1);
 		if (n < 2 || singleSelection()) return '';
-		if (n > 50_000) return 'Sélection trop grande pour les totaux';
+		// Grande sélection (colonne entière d'un million de lignes…) : SQL.
+		if (n > 50_000) return source.rangeStats ? remoteStats(r0, r1, c0, c1) : 'Sélection trop grande pour les totaux';
 		let count = 0;
 		let nums = 0;
 		let sum = 0;
@@ -2593,12 +2671,9 @@
 				}
 			}
 		}
-		if (count === 0) return '';
-		const parts = [];
-		if (nums) parts.push(`Moyenne : ${statFmt.format(sum / nums)}`);
-		parts.push(`Nb : ${count.toLocaleString('fr-FR')}`);
-		if (nums) parts.push(`Somme : ${statFmt.format(sum)}`);
-		return parts.join('   ') + (missing ? ' (lignes en chargement)' : '');
+		// Lignes pas encore chargées : le moteur fait le compte exact.
+		if (missing && source.rangeStats) return remoteStats(r0, r1, c0, c1);
+		return statsText(count, nums, sum) + (missing ? ' (lignes en chargement)' : '');
 	}
 
 	// --- Filtre -----------------------------------------------------------------

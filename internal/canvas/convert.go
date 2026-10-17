@@ -251,7 +251,8 @@ func (m *Model) SetType(ctx context.Context, table string, i int, to grid.Type) 
 		trash := fmt.Sprintf("_slitable_trash_conv_%d_%d_%d", tb.ID, c.ID, time.Now().UnixNano())
 		do := []stmt{
 			// Les valeurs qui ne passeront pas : gardées pour l'annulation…
-			st(`CREATE TABLE ` + trash + ` AS SELECT id, ` + col + ` AS v FROM ` + tb.sql() +
+			st(`CREATE TABLE ` + trash + ` (id INTEGER PRIMARY KEY, v)`),
+			st(`INSERT INTO ` + trash + ` (id, v) SELECT id, ` + col + ` FROM ` + tb.sql() +
 				` WHERE ` + col + ` IS NOT NULL AND ` + convertExpr(col, c.Type, to) + ` IS NULL`),
 			// … et marquées en erreur avec leur valeur lisible.
 			st(`INSERT OR REPLACE INTO _slitable_invalid (tbl, rid, col, raw) SELECT ?, id, ?, slt_text(v, ?) FROM `+trash, tb.ID, c.ID, string(c.Type)),
@@ -260,7 +261,7 @@ func (m *Model) SetType(ctx context.Context, table string, i int, to grid.Type) 
 		do = append(do, st(fix, 1, tb.ID, c.ID))
 		undo := rebuildStmts(tb, physical, c.ID, to, c.Type)
 		undo = append(undo,
-			st(`UPDATE `+tb.sql()+` SET `+col+` = (SELECT v FROM `+trash+` WHERE `+trash+`.id = `+tb.sql()+`.id) WHERE id IN (SELECT id FROM `+trash+`)`),
+			st(`UPDATE `+tb.sql()+` SET `+col+` = `+trash+`.v FROM `+trash+` WHERE `+trash+`.id = `+tb.sql()+`.id`),
 			st(`DELETE FROM _slitable_invalid WHERE tbl = ? AND col = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID, c.ID),
 			st(`DROP TABLE `+trash),
 			st(fix, c.Fixed, tb.ID, c.ID),
