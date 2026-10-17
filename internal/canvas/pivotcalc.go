@@ -39,6 +39,13 @@ type PivotConfig struct {
 	Cols      string        `json:"cols,omitempty"`
 	Values    []PivotValue  `json:"values,omitempty"`
 	Filters   []PivotFilter `json:"filters,omitempty"`
+	// Items garde des valeurs des champs des lignes et des colonnes (le ▾ de
+	// leurs étiquettes, comme Excel) : un filtre qui n'est pas un filtre de
+	// rapport.
+	Items []PivotFilter `json:"items,omitempty"`
+	// Sort ordonne les étiquettes d'un champ des lignes ou des colonnes :
+	// "asc" ou "desc" (absent : ordre de la source, première apparition).
+	Sort map[string]string `json:"sort,omitempty"`
 	// NoGrandTotal masque la ligne et la colonne de total général.
 	NoGrandTotal bool `json:"noGrandTotal,omitempty"`
 
@@ -129,7 +136,19 @@ func (t *tx) pivotPlan(raw PivotConfig) (pivotPlan, error) {
 		}
 		p.vals = append(p.vals, c)
 	}
-	for _, f := range cfg.Filters {
+	// Filtres d'étiquettes : seulement ceux des champs encore en lignes ou en
+	// colonnes (un champ déplacé ailleurs ne filtre plus par son ▾).
+	shown := map[string]bool{strings.ToLower(cfg.Cols): cfg.Cols != ""}
+	for _, f := range cfg.RowFields {
+		shown[strings.ToLower(f)] = true
+	}
+	all := append([]PivotFilter{}, cfg.Filters...)
+	for _, f := range cfg.Items {
+		if shown[strings.ToLower(f.Field)] {
+			all = append(all, f)
+		}
+	}
+	for _, f := range all {
 		c, err := find(f.Field)
 		if err != nil {
 			return p, err
@@ -149,6 +168,18 @@ func (t *tx) pivotPlan(raw PivotConfig) (pivotPlan, error) {
 
 // pivotText est le texte affiché d'un champ (voir textExpr : direct pour un texte).
 func pivotText(c *Column) string { return textExpr(*c) }
+
+// pivotOrder est le tri des étiquettes d'un champ (ORDER BY, valeurs
+// d'origine : 9 avant 10), ou "" pour l'ordre de la source.
+func (p pivotPlan) pivotOrder(c *Column) string {
+	switch p.cfg.Sort[c.Name] {
+	case "asc":
+		return "min(" + colSQL(c.ID) + ") ASC"
+	case "desc":
+		return "min(" + colSQL(c.ID) + ") DESC"
+	}
+	return ""
+}
 
 func pivotLabel(v PivotValue) string {
 	if l := strings.TrimSpace(v.Label); l != "" {
@@ -188,7 +219,11 @@ func (t *tx) pivotCellsRaw(raw PivotConfig) ([][]string, error) {
 	// Valeurs distinctes du champ des colonnes.
 	var keys []string
 	if p.cols != nil {
-		rs, err := t.query(`SELECT `+pivotText(p.cols)+` AS k FROM `+p.tb.sql()+where+` GROUP BY k ORDER BY min(_pos) LIMIT ?`, append(append([]any{}, p.args...), MaxPivotCols+1)...)
+		order := "min(_pos)"
+		if o := p.pivotOrder(p.cols); o != "" {
+			order = o + ", min(_pos)"
+		}
+		rs, err := t.query(`SELECT `+pivotText(p.cols)+` AS k FROM `+p.tb.sql()+where+` GROUP BY k ORDER BY `+order+` LIMIT ?`, append(append([]any{}, p.args...), MaxPivotCols+1)...)
 		if err != nil {
 			return nil, err
 		}
@@ -379,10 +414,25 @@ func (t *tx) pivotCellsRaw(raw PivotConfig) ([][]string, error) {
 			sel[i] = pivotText(c) + " AS k" + strconv.Itoa(i)
 			group[i] = "k" + strconv.Itoa(i)
 		}
-		// Ordre de la source (première apparition), comme Excel par défaut.
+		// Ordre de la source (première apparition), sauf tri choisi sur un
+		// champ (▾ de son étiquette).
 		cols := append(append(sel, "min(_pos) AS o"), exprs...)
+		// Champ par champ, dans la hiérarchie : un champ non trié garde
+		// l'ordre de première apparition de son groupe.
+		order := []string{"o"}
+		if len(cfg.Sort) > 0 {
+			order = order[:0]
+			for i, c := range p.rows {
+				if o := p.pivotOrder(c); o != "" {
+					order = append(order, o)
+				} else {
+					order = append(order, "min(min(_pos)) OVER (PARTITION BY "+strings.Join(group[:i+1], ", ")+")")
+				}
+			}
+			order = append(order, "o")
+		}
 		args := append(append([]any{}, p.args...), MaxPivotRows+1)
-		if err := scan(`SELECT `+strings.Join(cols, ", ")+` FROM `+p.tb.sql()+where+` GROUP BY `+strings.Join(group, ", ")+` ORDER BY o LIMIT ?`, args, true); err != nil {
+		if err := scan(`SELECT `+strings.Join(cols, ", ")+` FROM `+p.tb.sql()+where+` GROUP BY `+strings.Join(group, ", ")+` ORDER BY `+strings.Join(order, ", ")+` LIMIT ?`, args, true); err != nil {
 			return nil, err
 		}
 		if len(lines) > MaxPivotRows {

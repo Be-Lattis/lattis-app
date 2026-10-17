@@ -456,6 +456,19 @@ export interface PivotConfig {
     "filters"?: PivotFilter[] | null;
 
     /**
+     * Items garde des valeurs des champs des lignes et des colonnes (le ▾ de
+     * leurs étiquettes, comme Excel) : un filtre qui n'est pas un filtre de
+     * rapport.
+     */
+    "items"?: PivotFilter[] | null;
+
+    /**
+     * Sort ordonne les étiquettes d'un champ des lignes ou des colonnes :
+     * "asc" ou "desc" (absent : ordre de la source, première apparition).
+     */
+    "sort"?: { [_ in string]?: string } | null;
+
+    /**
      * NoGrandTotal masque la ligne et la colonne de total général.
      */
     "noGrandTotal"?: boolean;

@@ -1288,6 +1288,22 @@ func TestPivotFields(t *testing.T) {
 	if got := fmt.Sprint(l.Pivots[0].Formats); got != `[ {"nf":"€","dp":0} {"dp":1}]` {
 		t.Fatalf("formats imposés : %s", got)
 	}
+	// ▾ des étiquettes : valeurs gardées et tri, champ par champ dans la
+	// hiérarchie (Pays dans l'ordre de la source, Ville de Z à A).
+	if err := d.SetPivot(ctx, id, PivotConfig{Source: "Feuille1", RowFields: []string{"Pays", "Ville"}, Values: []PivotValue{{Field: "Ventes", Agg: "sum"}},
+		Items: []PivotFilter{{Field: "Ville", Values: []string{"Lyon", "Paris"}}}, Sort: map[string]string{"Ville": "desc"}}); err != nil {
+		t.Fatal(err)
+	}
+	if got := cells(); got != "[[Pays Ville Somme de Ventes] [FR Paris 30] [FR Lyon 50] [Total  80]]" {
+		t.Fatalf("étiquettes filtrées et triées : %s", got)
+	}
+	if err := d.SetPivot(ctx, id, PivotConfig{Source: "Feuille1", RowFields: []string{"Pays"}, Cols: "Ville", Values: []PivotValue{{Field: "Ventes", Agg: "sum"}},
+		Sort: map[string]string{"Pays": "desc", "Ville": "desc"}, NoGrandTotal: true}); err != nil {
+		t.Fatal(err)
+	}
+	if got := cells(); got != "[[Pays Rome Paris Lyon] [IT 20  ] [FR  30 50]]" {
+		t.Fatalf("lignes et colonnes de Z à A : %s", got)
+	}
 }
 
 func TestChart(t *testing.T) {

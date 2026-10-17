@@ -103,6 +103,10 @@
 		cols?: string;
 		values?: PivotValue[];
 		filters?: { field: string; values: string[] }[];
+		/** Valeurs gardées d'un champ des lignes ou des colonnes (▾ de son étiquette). */
+		items?: { field: string; values: string[] }[];
+		/** Tri des étiquettes d'un champ : 'asc' ou 'desc' (absent : ordre de la source). */
+		sort?: Record<string, 'asc' | 'desc'>;
 		noGrandTotal?: boolean;
 	}
 
@@ -113,8 +117,11 @@
 
 	export interface SheetPivot {
 		id: number;
+		/** Première ligne du TCD affiché (sous ses filtres de rapport). */
 		row: number;
 		col: number;
+		/** Ligne où le TCD est posé : ses filtres de rapport d'abord (comme Excel), une ligne vide, puis le tableau. */
+		anchor?: number;
 		config: PivotConfig;
 		cells: string[][]; // en-tête, groupes, total
 		/** Format de nombre par défaut de chaque colonne (style JSON, voir pivotformat.ts). */
@@ -536,7 +543,10 @@
 		cells = new Map(d.cells.map((c) => [key(c.row, c.col), c.raw]));
 		mixes.clear();
 		tipCell = '';
-		pivots = d.pivots ?? [];
+		pivots = (d.pivots ?? []).map((p) => {
+			const f = p.error ? 0 : (p.config.filters?.length ?? 0);
+			return { ...p, anchor: p.row, row: p.row + (f ? f + 1 : 0) };
+		});
 		if (openPivotOnLoad && pivots.length) {
 			openPivotOnLoad = false;
 			const p = pivots[pivots.length - 1];
@@ -1433,6 +1443,23 @@
 			}
 			const pr1 = p.row + p.cells.length - 1;
 			const pc1 = p.col + p.cells[0].length - 1;
+			// Filtres de rapport au-dessus du tableau (Excel) : champ, valeur retenue, ▾.
+			(p.config.filters ?? []).forEach((f, k) => {
+				const r = (p.anchor ?? p.row) + k;
+				if (r < r0 || r > r1 || p.col + 1 < c0 || p.col > c1) return;
+				const w0 = colAxis.size(p.col);
+				const w1 = colAxis.size(p.col + 1);
+				ctx.fillStyle = C.head;
+				ctx.fillRect(cx(p.col), ry(r), w0, rh(r));
+				drawText(f.field, cx(p.col), ry(r), w0, 'left', { b: true }, C.text);
+				drawText(pivotFilterText(f.values), cx(p.col + 1), ry(r), w1 - PIVOT_DROP, 'left', undefined, C.text);
+				ctx.save();
+				ctx.strokeStyle = C.border;
+				ctx.lineWidth = 1;
+				ctx.strokeRect(Math.round(cx(p.col)) + 0.5, Math.round(ry(r)) + 0.5, w0 + w1 - 1, rh(r) - 1);
+				ctx.restore();
+				pivotDrop(cx(p.col + 1) + w1, ry(r), rh(r), f.values.length > 0);
+			});
 			if (pr1 < r0 || p.row > r1 || pc1 < c0 || p.col > c1) continue;
 			// Ligne du total général : la dernière, quand il est affiché.
 			const tot = pivotTotalRow(p);
@@ -1449,6 +1476,12 @@
 					const st = resolveStyle(styleAt(p.row + i, c, undefined), lineRule(p.row + i, c, ruleValue(v), v));
 					const style = bold ? { ...st, b: st?.b ?? true } : st;
 					drawText(formatCell(v, undefined, st), cx(c), ry(p.row + i), colAxis.size(c), st?.al ?? (j > 0 && i > 0 ? 'right' : 'left'), style, C.text);
+				});
+			// ▾ des étiquettes des lignes : trier et filtrer le champ (Excel).
+			if (p.row >= r0 && p.row <= r1)
+				(p.config.rowFields ?? []).forEach((f, j) => {
+					const c = p.col + j;
+					if (c >= c0 && c <= c1) pivotDrop(cx(c) + colAxis.size(c), ry(p.row), rh(p.row), pivotFiltered(p, f));
 				});
 			ctx.save();
 			ctx.strokeStyle = C.border;
@@ -1909,6 +1942,40 @@
 		ctx.lineTo(xr - 1, y + 7);
 		ctx.closePath();
 		ctx.fill();
+	}
+
+	// Bouton ▾ d'un TCD (filtre de rapport, étiquette des lignes) : largeur réservée à droite de la cellule.
+	const PIVOT_DROP = 18;
+
+	/** Bouton ▾ au bord droit d'une cellule (xr : son bord droit) ; filtré : entonnoir, comme Excel. */
+	function pivotDrop(xr: number, y: number, h: number, filtered: boolean) {
+		const size = Math.min(15, h - 4);
+		const x = xr - size - 2;
+		const top = y + (h - size) / 2;
+		ctx.save();
+		ctx.fillStyle = C.strip;
+		ctx.fillRect(x, top, size, size);
+		ctx.strokeStyle = C.stripLine;
+		ctx.lineWidth = 1;
+		ctx.strokeRect(Math.round(x) + 0.5, Math.round(top) + 0.5, size - 1, size - 1);
+		ctx.fillStyle = filtered ? C.active : C.icon;
+		ctx.font = FONT_SMALL;
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+		ctx.fillText(filtered ? '⧩' : '▾', x + size / 2, top + size / 2 + 0.5);
+		ctx.restore();
+	}
+
+	/** Valeur affichée d'un filtre de rapport : « (Tous) », la valeur, ou « (Plusieurs éléments) ». */
+	function pivotFilterText(values: string[]): string {
+		if (!values.length) return '(Tous)';
+		if (values.length === 1) return values[0] === '' ? '(Vides)' : values[0];
+		return '(Plusieurs éléments)';
+	}
+
+	/** Le champ f du TCD est-il filtré ou trié par le ▾ de son étiquette ? */
+	function pivotFiltered(p: SheetPivot, f: string): boolean {
+		return !!p.config.items?.some((x) => x.field === f && x.values.length) || !!p.config.sort?.[f];
 	}
 
 	/**
@@ -2758,6 +2825,105 @@
 		return statsText(count, nums, sum) + (missing ? ' (lignes en chargement)' : '');
 	}
 
+	// --- Filtres d'un TCD (▾ dans la grille, comme Excel) ---------------------------
+
+	let pivotDlg = $state<{
+		p: SheetPivot;
+		field: string;
+		/** filter : filtre de rapport ; rows : étiquette d'un champ des lignes (tri en plus). */
+		kind: 'filter' | 'rows';
+		x: number;
+		y: number;
+		values: PanelValue[];
+		loading: boolean;
+		search: string;
+	} | null>(null);
+
+	/** Le clic tombe-t-il sur un ▾ de TCD ? Ouvre alors son menu. */
+	function openPivotMenu(ev: MouseEvent, cell: { row: number; col: number }): boolean {
+		const p = pivotAt(cell.row, cell.col);
+		if (!p || !source.setPivot) return false;
+		const near = screenX(cell.col) + colAxis.size(cell.col) - toLocal(ev).x <= PIVOT_DROP + 2;
+		if (!near) return false;
+		const a = p.anchor ?? p.row;
+		const filters = p.config.filters ?? [];
+		let field: string | undefined;
+		let kind: 'filter' | 'rows' = 'filter';
+		if (cell.row - a < filters.length && cell.col === p.col + 1) field = filters[cell.row - a].field;
+		else if (cell.row === p.row && cell.col - p.col < (p.config.rowFields?.length ?? 0)) {
+			field = p.config.rowFields![cell.col - p.col];
+			kind = 'rows';
+		}
+		if (field === undefined) return false;
+		moveTo(cell.row, cell.col);
+		closeMenus();
+		const kept = (kind === 'filter' ? filters : (p.config.items ?? [])).find((x) => x.field === field)?.values ?? [];
+		const keep = kept.length ? new Set(kept) : null;
+		pivotDlg = {
+			p,
+			field,
+			kind,
+			x: Math.max(4, Math.min(toView(screenX(cell.col)), toView(scroller.clientWidth) - 280)),
+			y: toView(screenY(cell.row) + rh(cell.row)),
+			values: [],
+			loading: !!source.pivotFieldValues,
+			search: ''
+		};
+		const mine = () => pivotDlg?.p.id === p.id && pivotDlg.field === field;
+		source.pivotFieldValues?.(p.config.source, field).then(
+			(vals) => {
+				if (!mine()) return;
+				pivotDlg!.values = vals.map((v) => ({ ...v, on: !keep || keep.has(v.text) }));
+				pivotDlg!.loading = false;
+			},
+			(err) => {
+				if (mine()) pivotDlg!.loading = false;
+				say(String(err instanceof Error ? err.message : err));
+			}
+		);
+		return true;
+	}
+
+	/** Enregistre la configuration du TCD du menu ▾ (annulable comme un changement du volet). */
+	function savePivot(cfg: PivotConfig) {
+		const d = pivotDlg;
+		pivotDlg = null;
+		if (!d || !source.setPivot) return;
+		const set = source.setPivot;
+		menuAction(() => set(d.p.id, cfg));
+	}
+
+	function sortPivot(dir: 'asc' | 'desc') {
+		const d = pivotDlg;
+		if (!d) return;
+		savePivot({ ...d.p.config, sort: { ...d.p.config.sort, [d.field]: dir } });
+	}
+
+	/** OK : valeurs cochées gardées (toutes : plus de filtre) ; clear : efface le filtre et le tri du champ. */
+	function applyPivotFilter(clear = false) {
+		const d = pivotDlg;
+		if (!d) return;
+		const on = d.values.filter((v) => v.on).map((v) => v.text);
+		if (!clear && !on.length) {
+			say('Choisissez au moins une valeur');
+			return;
+		}
+		const values = clear || on.length === d.values.length ? [] : on;
+		const cfg = { ...d.p.config };
+		if (d.kind === 'filter') {
+			cfg.filters = (cfg.filters ?? []).map((f) => (f.field === d.field ? { field: f.field, values } : f));
+		} else {
+			const rest = (cfg.items ?? []).filter((x) => x.field !== d.field);
+			cfg.items = values.length ? [...rest, { field: d.field, values }] : rest;
+			if (!cfg.items.length) delete cfg.items;
+			if (clear && cfg.sort) {
+				const { [d.field]: _, ...sort } = cfg.sort;
+				cfg.sort = Object.keys(sort).length ? sort : undefined;
+			}
+		}
+		savePivot(cfg);
+	}
+
 	// --- Filtre -----------------------------------------------------------------
 
 	let filterDlg = $state<{
@@ -3239,10 +3405,10 @@
 	// --- Tableau croisé dynamique ---------------------------------------------
 
 	const pivotAt = (r: number, c: number) =>
-		pivots.find((p) => !p.error && r >= p.row && r < p.row + p.cells.length && c >= p.col && c < p.col + p.cells[0].length);
+		pivots.find((p) => !p.error && r >= (p.anchor ?? p.row) && r < p.row + p.cells.length && c >= p.col && c < p.col + p.cells[0].length);
 	/** Tableau croisé qui touche la plage, s'il y en a un. */
 	const pivotIn = (r0: number, c0: number, r1: number, c1: number) =>
-		pivots.find((p) => !p.error && p.row <= r1 && p.row + p.cells.length - 1 >= r0 && p.col <= c1 && p.col + p.cells[0].length - 1 >= c0);
+		pivots.find((p) => !p.error && (p.anchor ?? p.row) <= r1 && p.row + p.cells.length - 1 >= r0 && p.col <= c1 && p.col + p.cells[0].length - 1 >= c0);
 	// Un tableau croisé est calculé : ses cellules ne se saisissent pas (comme Excel).
 	const PIVOT_READONLY = 'Un tableau croisé ne se modifie pas cellule par cellule : double-cliquez dessus pour changer ses champs';
 
@@ -3480,7 +3646,7 @@
 	 */
 	function closeMenus() {
 		menu = freeMenu = chartMenu = listMenu = null;
-		filterDlg = rulesDlg = dedupDlg = fnDlg = linesDlg = null;
+		filterDlg = rulesDlg = dedupDlg = fnDlg = linesDlg = pivotDlg = null;
 		formatDlg = validDlg = noteDlg = sizeDlg = null;
 		noteTip = null;
 	}
@@ -4219,6 +4385,7 @@
 		// Clic droit dans la sélection : elle reste (le menu porte sur elle).
 		if (e.button === 2 && inSelection(cell.row, cell.col)) return;
 		if (e.button === 0 && openTypeMenu(e, cell)) return;
+		if (e.button === 0 && openPivotMenu(e, cell)) return;
 		wrap.focus();
 		moveTo(cell.row, cell.col, e.shiftKey);
 		dragging = true;
@@ -6549,6 +6716,67 @@
 							wrap.focus();
 						}}>Fermer</button
 					>
+				</div>
+			</div>
+		{/if}
+		{#if pivotDlg}
+			{@const d = pivotDlg}
+			{@const shown = searchValues(d.values, d.search)}
+			<!-- Menu ▾ d'un TCD (comme Excel) : tri des étiquettes, valeurs à cocher. -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="rules filter colfilter anchored"
+				style:left="{d.x}px"
+				style:top="{d.y}px"
+				style:max-height="{Math.max(200, toView(viewH) - d.y - 8)}px"
+				use:focusFirst
+				use:dismissPanel={() => (pivotDlg = null)}
+				onkeydown={(ev) => {
+					ev.stopPropagation();
+					if (ev.key === 'Escape') pivotDlg = null;
+					if (ev.key === 'Enter' && !(ev.target instanceof HTMLButtonElement)) applyPivotFilter();
+				}}
+			>
+				<div class="menu-title">« {d.field} »{d.kind === 'filter' ? ' · filtre du rapport' : ''}</div>
+				{#if d.kind === 'rows'}
+					<button class="sort" class:on={d.p.config.sort?.[d.field] === 'asc'} onclick={() => sortPivot('asc')}>Trier de A à Z</button>
+					<button class="sort" class:on={d.p.config.sort?.[d.field] === 'desc'} onclick={() => sortPivot('desc')}>Trier de Z à A</button>
+					<hr />
+				{/if}
+				{#if d.kind === 'filter' ? d.p.config.filters?.some((f) => f.field === d.field && f.values.length) : pivotFiltered(d.p, d.field)}
+					<button class="sort" onclick={() => applyPivotFilter(true)}>Effacer le filtre de « {d.field} »</button>
+				{/if}
+				<div class="add">
+					<input class="search" bind:value={d.search} placeholder="Rechercher" />
+				</div>
+				<div class="values">
+					{#if d.loading}
+						<p class="loading"><span class="spinner" aria-hidden="true"></span> Chargement des valeurs…</p>
+					{:else}
+						<label class="all">
+							<input
+								type="checkbox"
+								checked={shown.every((v) => v.on)}
+								onchange={(ev) => {
+									const on = (ev.currentTarget as HTMLInputElement).checked;
+									for (const v of shown) v.on = on;
+								}}
+							/>
+							{d.search.trim() ? '(Sélectionner tous les résultats)' : d.kind === 'filter' ? '(Tous)' : '(Sélectionner tout)'}
+						</label>
+						{#each shown as v (v.text)}
+							<label>
+								<input type="checkbox" bind:checked={v.on} />
+								<span class="what">{v.text === '' ? '(Vides)' : v.text}</span>
+								<span class="count">{v.count}</span>
+							</label>
+						{/each}
+					{/if}
+				</div>
+				<div class="foot">
+					<span class="sp"></span>
+					<button class="primary" disabled={d.loading} onclick={() => applyPivotFilter()}>OK</button>
+					<button onclick={() => (pivotDlg = null)}>Annuler</button>
 				</div>
 			</div>
 		{/if}
