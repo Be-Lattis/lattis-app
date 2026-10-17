@@ -247,7 +247,7 @@
 					}
 				}}
 				title={(s.protected ? 'Feuille protégée. ' : '') + (locked ? 'Classeur protégé' : onmove ? 'Double-clic pour renommer, glisser pour déplacer' : 'Double-clic pour renommer')}
-				>{#if s.protected || locked}<span class="lock" aria-label={s.protected ? 'Feuille protégée' : 'Classeur protégé'}><Icon name="lock" size={12} /></span>{/if}{#if s.kind === 'html'}<span class="kind" aria-label="Page HTML"><Icon name="web" size={12} /></span>{:else if s.kind === 'doc'}<span class="kind" aria-label="Document"><Icon name="document" size={12} /></span>{/if}{s.name}</button
+				>{#if s.protected || locked}<span class="lock" aria-label={s.protected ? 'Feuille protégée' : 'Classeur protégé'}><Icon name="lock" size={12} /></span>{/if}{#if s.kind === 'html'}<span class="kind" aria-label="Onglet HTML"><Icon name="web" size={12} /></span>{:else if s.kind === 'doc'}<span class="kind" aria-label="Onglet Document"><Icon name="document" size={12} /></span>{/if}{s.name}</button
 			>
 		{/if}
 	{/each}
@@ -264,7 +264,7 @@
 			e.preventDefault();
 			if (onadd || onpage) addMenu = { x: (e.currentTarget as HTMLElement).offsetLeft };
 		}}
-		title={locked ? 'Structure du classeur protégée' : 'Nouvelle feuille (clic droit : onglet HTML ou Document)'}>+</button
+		title={locked ? 'Structure du classeur protégée' : 'Nouvelle feuille (clic droit : Onglet HTML ou Onglet Document)'}>+</button
 	>
 	{#if addMenu}
 		<div class="menu" role="menu" style:left="{addMenu.x}px" use:dismiss={() => (addMenu = null)}>
@@ -282,7 +282,7 @@
 				onclick={() => {
 					addMenu = null;
 					onpage?.();
-				}}>Nouvel onglet HTML</button
+				}}>Nouvel Onglet HTML</button
 			>
 			<button
 				role="menuitem"
@@ -290,7 +290,7 @@
 				onclick={() => {
 					addMenu = null;
 					ondocpage?.();
-				}}>Nouvel onglet Document</button
+				}}>Nouvel Onglet Document</button
 			>
 		</div>
 	{/if}
@@ -336,7 +336,7 @@
 					const id = m.id;
 					closeMenu();
 					onpage?.(id);
-				}}>Insérer un onglet HTML</button
+				}}>Insérer un Onglet HTML</button
 			>
 			<button
 				role="menuitem"
@@ -345,7 +345,7 @@
 					const id = m.id;
 					closeMenu();
 					ondocpage?.(id);
-				}}>Insérer un onglet Document</button
+				}}>Insérer un Onglet Document</button
 			>
 			<button
 				role="menuitem"

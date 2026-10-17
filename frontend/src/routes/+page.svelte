@@ -387,6 +387,11 @@
 					// Feuille active, plage utilisée ; le PDF passe par la fenêtre
 					// d'impression (imprimante « Microsoft Print to PDF »).
 					if (mode !== 'doc') return;
+					if (activeDoc && docPage) {
+						if (a === 'pdf') exportDocPdf();
+						else docPage.print(`${docState.title} – ${activeInfo?.name ?? ''}`);
+						break;
+					}
 					const name = layout?.sheets?.find((s) => s.id === sheetId)?.name ?? '';
 					if (a === 'pdf') notice = 'Exporter en PDF : choisissez l’imprimante « Microsoft Print to PDF » (ou « Enregistrer au format PDF »)';
 					printSheet(await DocumentService.PrintHTML(sheetId), `${docState.title} – ${name}`);
@@ -666,6 +671,12 @@
 	const addPage = (before = 0) => sheetAction(async () => selectSheet(await DocumentService.AddPage(before)));
 	const addDoc = (before = 0) => sheetAction(async () => selectSheet(await DocumentService.AddDoc(before)));
 
+	// Onglet Document en PDF : la fenêtre d'impression, imprimante « Microsoft Print to PDF ».
+	function exportDocPdf() {
+		notice = 'Exporter en PDF : choisissez l’imprimante « Microsoft Print to PDF » (ou « Enregistrer au format PDF »)';
+		docPage?.print(`${docState.title} – ${activeInfo?.name ?? ''}`);
+	}
+
 	// Commandes du ruban pour l'onglet Document.
 	function docCommand(c: DocCommand) {
 		const d = docPage;
@@ -675,6 +686,7 @@
 		else if (c.startsWith('chart:')) d.insertChart(c.slice(6));
 		else if (c === 'button') d.insertButton();
 		else if (c === 'pivot') d.insertPivot();
+		else if (c === 'pdf') exportDocPdf();
 		else d.command(c as never);
 	}
 

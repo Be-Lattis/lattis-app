@@ -32,6 +32,7 @@
 		| 'image'
 		| 'button'
 		| 'pivot'
+		| 'pdf'
 		| `block:${'normal' | 'h1' | 'h2' | 'h3' | 'bullet' | 'ordered' | 'quote' | 'code'}`
 		| `align:${'left' | 'center' | 'right' | 'justify'}`
 		| `chart:${'bar' | 'line' | 'pie' | 'scatter'}`;
@@ -220,8 +221,8 @@
 	const tabGroup: Group = $derived({
 		title: 'Onglets',
 		commands: [
-			{ label: 'Page HTML', icon: 'web', run: onpage, hint: 'Nouvel onglet page HTML : HTML, CSS et JavaScript qui lisent et modifient le classeur (lattis.call)' },
-			{ label: 'Document', icon: 'document', run: ondocpage, hint: 'Nouvel onglet Document : texte mis en forme, avec graphiques et boutons de scripts' }
+			{ label: 'Onglet HTML', icon: 'web', run: onpage, hint: 'Nouvel Onglet HTML : une page (HTML, CSS et JavaScript) qui lit et modifie le classeur, ou une page web externe' },
+			{ label: 'Onglet Document', icon: 'document', run: ondocpage, hint: 'Nouvel Onglet Document : texte mis en forme, avec graphiques, tableaux croisés et boutons de scripts' }
 		]
 	});
 	const dc = (cmd: DocCommand) => (ondoc ? () => ondoc(cmd) : undefined);
@@ -534,7 +535,8 @@
 						]
 					}
 				]
-			}
+			},
+			{ title: 'Exporter', commands: [{ label: 'Exporter en PDF', icon: 'file', run: dc('pdf'), hint: 'Enregistrer le document en PDF, graphiques et tableaux croisés compris (imprimante « Microsoft Print to PDF »)' }] }
 		],
 		Insertion: [
 			tabGroup,

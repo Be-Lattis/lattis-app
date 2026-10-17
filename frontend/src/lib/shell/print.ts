@@ -12,6 +12,7 @@ export const PRINT_CSS = `
 @media print {
 	@page { margin: 12mm; }
 	body > *:not(#${AREA}) { display: none !important; }
+	html, body { height: auto !important; overflow: visible !important; }
 	#${AREA} { display: block; font: 10pt 'Segoe UI', system-ui, sans-serif; color: #000; }
 	#${AREA} .print-title { font-size: 12pt; font-weight: 600; margin: 0 0 6pt; }
 	#${AREA} table { border-collapse: collapse; table-layout: fixed; }
@@ -20,6 +21,12 @@ export const PRINT_CSS = `
 	#${AREA} td.c { text-align: center; }
 	#${AREA} td.b { font-weight: 600; background: #eef3f0; }
 	#${AREA} tr { break-inside: avoid; }
+	#${AREA} .doc-print table { table-layout: auto; }
+	#${AREA} .doc-print td { overflow: visible; }
+	#${AREA} .doc-print .ql-lattis-chart { break-inside: avoid; }
+	#${AREA} .doc-print .dpivot { overflow: visible !important; height: auto !important; max-width: none; }
+	#${AREA} .doc-print .dchart { max-width: 100%; height: auto !important; }
+	#${AREA} .doc-print svg { max-width: 100%; height: auto; }
 	#${AREA} .print-more { font-style: italic; margin-top: 6pt; }
 }`;
 

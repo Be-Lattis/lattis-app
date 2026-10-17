@@ -15,6 +15,7 @@
 	import PivotPanel from '#lib/grid/PivotPanel.svelte';
 	import { dismiss } from '#lib/grid/dismiss.js';
 	import { resizePanel } from '#lib/ui/resize.js';
+	import { printSheet } from '#lib/shell/print.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { scriptFunctions } from '#lib/grid/buttons.js';
 	import { BUTTON_BLOT, CHART_BLOT, PIVOT_BLOT, docClip, setupQuill, type DocButtonConfig } from './quill';
@@ -472,6 +473,27 @@
 		quill!.insertEmbed(at, BUTTON_BLOT, cfg, 'user');
 		quill!.setSelection(at + 1, 0);
 		openPanel({ kind: 'button', index: at });
+	}
+
+	/** Imprime le document (ou l'enregistre en PDF) tel qu'il est affiché : graphiques et tableaux croisés compris. */
+	export async function print(title: string) {
+		await flush();
+		if (!pageEl) return;
+		const clone = pageEl.cloneNode(true) as HTMLElement;
+		clone.querySelectorAll('.grip, .ql-clipboard, .ql-tooltip').forEach((e) => e.remove());
+		clone.querySelectorAll('.selected').forEach((e) => e.classList.remove('selected'));
+		clone.style.setProperty('--doc-font', DOC_FONT);
+		clone.style.setProperty('--doc-size', `${DOC_PT}pt`);
+		// Graphiques à l'échelle de la page imprimée.
+		clone.querySelectorAll('svg').forEach((svg) => {
+			const w = svg.getAttribute('width');
+			const h = svg.getAttribute('height');
+			if (w && h && !svg.getAttribute('viewBox')) svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+		});
+		clone.style.maxWidth = 'none';
+		clone.style.border = 'none';
+		clone.style.padding = '0';
+		printSheet(`<div class="doc-print">${clone.outerHTML}</div>`, title);
 	}
 
 	export function focus() {
