@@ -43,7 +43,7 @@
 
 	export type FileAction = 'new' | 'open' | 'save' | 'saveAs' | 'import' | 'export' | 'exportXlsx' | 'print' | 'pdf' | 'close' | 'demo' | 'mcp';
 
-	export type DataAction = 'csv' | 'xlsx' | 'json' | 'parquet' | 'sqlite' | 'duckdb' | 'postgres' | 'mysql' | 'sqlserver' | 'odbc' | 'web' | 'table' | 'queries' | 'refreshAll';
+	export type DataAction = 'csv' | 'xlsx' | 'json' | 'parquet' | 'sqlite' | 'postgres' | 'mysql' | 'sqlserver' | 'odbc' | 'web' | 'table' | 'queries' | 'refreshAll';
 
 	interface Props {
 		view: View;
@@ -323,12 +323,11 @@
 						label: 'Autres fichiers',
 						icon: 'file',
 						run: ondata ? openItems : undefined,
-						hint: 'Nouvelle requête à partir d’un fichier JSON, Parquet, ou d’une base SQLite ou DuckDB',
+						hint: 'Nouvelle requête à partir d’un fichier JSON, Parquet, ou d’une base SQLite',
 						items: [
 							{ label: 'JSON', run: data('json') },
 							{ label: 'Parquet', run: data('parquet') },
-							{ label: 'Base SQLite', run: data('sqlite') },
-							{ label: 'Base DuckDB', run: data('duckdb') }
+							{ label: 'Base SQLite', run: data('sqlite') }
 						]
 					},
 					{

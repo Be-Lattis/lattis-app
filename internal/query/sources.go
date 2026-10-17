@@ -258,7 +258,7 @@ func (r *run) loadDB(src Source) (loaded, error) {
 	return r.readInto(db, d, src.SQL, d.label+" « "+conn.Name+" »")
 }
 
-// loadFileDB lit une source fichier de base (SQLite, DuckDB).
+// loadFileDB lit une source fichier de base (SQLite).
 func (r *run) loadFileDB(src Source) (loaded, error) {
 	if trimSQL(src.SQL) == "" {
 		return loaded{}, errors.New("requête SQL vide")

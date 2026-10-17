@@ -4,7 +4,7 @@
 
 ## En bref
 
-Une **requête** est enregistrée dans le classeur : une **source** (CSV, `.xlsx`, JSON, Parquet, base SQLite ou DuckDB, tableau du classeur, autre requête, PostgreSQL, MySQL / MariaDB, SQL Server, ODBC, API web JSON) suivie d'une liste d'**étapes** rejouables (filtrer, renommer, changer le type…). Elle se **charge** dans un tableau d'une feuille, et **Actualiser** relit la source et rejoue les étapes. L'éditeur montre un aperçu à chaque étape, comme l'éditeur Power Query d'Excel.
+Une **requête** est enregistrée dans le classeur : une **source** (CSV, `.xlsx`, JSON, Parquet, base SQLite, tableau du classeur, autre requête, PostgreSQL, MySQL / MariaDB, SQL Server, ODBC, API web JSON) suivie d'une liste d'**étapes** rejouables (filtrer, renommer, changer le type…). Elle se **charge** dans un tableau d'une feuille, et **Actualiser** relit la source et rejoue les étapes. L'éditeur montre un aperçu à chaque étape, comme l'éditeur Power Query d'Excel.
 
 | Sujet | Décision | Statut |
 |---|---|---|
@@ -15,7 +15,7 @@ Une **requête** est enregistrée dans le classeur : une **source** (CSV, `.xlsx
 | Chargement | Une actualisation est **une** étape d'annulation : l'ancien tableau part à la corbeille (comme Supprimer le tableau), le nouveau est chargé hors journal puis mis en place (comme l'import CSV). Même nom, même ancre, mêmes colonnes calculées ajoutées à la main | Proposé |
 | Aperçu | Calculé sur les **1 000 premières lignes** de chaque source, comme l'aperçu d'Excel ; 200 lignes affichées | Proposé |
 | Autres SGBD | MySQL / MariaDB (`go-sql-driver/mysql`), SQL Server (`microsoft/go-mssqldb`), ODBC (`alexbrainman/odbc`) : même interface que PostgreSQL (boîte de connexion, Tester, navigateur des tables, requête SQL en lecture seule), mot de passe au trousseau | Proposé (17/10/2026) |
-| Fichiers et web | JSON et NDJSON, Parquet (`parquet-go/parquet-go`), base SQLite (pilote du classeur), DuckDB (`duckdb/duckdb-go`, **facultatif**), API web JSON (GET) | Proposé (17/10/2026) |
+| Fichiers et web | JSON et NDJSON, Parquet (`parquet-go/parquet-go`), base SQLite (pilote du classeur), API web JSON (GET) | Proposé (17/10/2026) |
 
 ## Connexions et secrets
 
@@ -40,7 +40,6 @@ Toutes sont en **lecture seule** ; aucune n'écrit vers l'extérieur.
 | `sqlserver` | `connection`, `sql` | pas de transaction en lecture seule : transaction **toujours annulée** et seules les requêtes de lecture (`SELECT`, `WITH`…) acceptées | `TOP (n)` poussé, sauf requête `WITH` ou triée (lecture arrêtée après n lignes) | `microsoft/go-mssqldb`, Go pur ; sans utilisateur : authentification Windows intégrée |
 | `odbc` | `connection`, `sql` | comme SQL Server (rien n'est garanti côté pilote) | lecture arrêtée après n lignes | `alexbrainman/odbc` : appels système sous Windows (amd64, 386) ; ailleurs CGO + unixODBC, donc seulement avec `-tags odbc` |
 | `sqlite` | `path`, `sql` | fichier ouvert `mode=ro` + `query_only` | `LIMIT` | `ncruces/go-sqlite3`, déjà là ; types inférés des valeurs (typage dynamique) |
-| `duckdb` | `path`, `sql` | fichier ouvert `access_mode=READ_ONLY` | `LIMIT` | `duckdb/duckdb-go` : **CGO**, et l'exécutable grossit d'environ 70 Mo ; compilé seulement avec `-tags duckdb` (sinon la source explique qu'elle n'est pas disponible) |
 | `json` | `path`, `recordPath` | — | lecture entière, n lignes gardées | `encoding/json` (ordre des clés conservé) |
 | `parquet` | `path` | — | lecture arrêtée après n lignes | `parquet-go/parquet-go`, Go pur |
 | `web` | `url`, `headers`, `recordPath`, `connection` (facultative) | GET seulement | comme JSON | `net/http` |
@@ -49,7 +48,7 @@ Toutes sont en **lecture seule** ; aucune n'écrit vers l'extérieur.
 - **JSON.** Chemin des enregistrements `data.items`, `$.resultats[0].lignes` ; vide : la racine, ou son seul tableau (`{"data": [...]}`), sinon l'objet comme unique ligne. Les objets imbriqués sont aplatis en colonnes `parent.enfant`, les tableaux imbriqués gardés en texte JSON, les colonnes dans l'ordre de première apparition. Type d'une colonne : entier, décimal, booléen ou date (`AAAA-MM-JJ`) si **toutes** ses valeurs s'y prêtent, sinon texte. Un fichier d'une valeur par ligne (NDJSON) est lu comme un tableau.
 - **Parquet.** Une colonne par feuille du schéma (`parent.enfant` pour une structure, niveaux `list.element` retirés) ; une liste devient le texte de ses valeurs ; `DATE` → date, `DECIMAL` → décimal, horodatages et heures en texte ISO, `INT96` (Spark, Impala) compris.
 - **API web.** Les en-têtes de la source sont enregistrés dans le classeur : un jeton passe par une **connexion Web** (adresse de base, en-tête — `Authorization` par défaut, `Bearer ` ajouté à un jeton nu —, ou utilisateur pour l'authentification Basic), dont le secret reste au trousseau. Le secret n'est envoyé qu'aux adresses couvertes par celle de la connexion (même schéma, même hôte, chemin qui commence par le sien) et retiré d'une redirection vers un autre hôte. Réponse limitée à 512 Mo, délai de 2 minutes. Pas de pagination ni de méthode autre que GET (à faire).
-- **Interface.** Données › Obtenir des données : Texte/CSV, Classeur Excel, **Autres fichiers ▾** (JSON, Parquet, Base SQLite, Base DuckDB), **Base de données ▾** (PostgreSQL, MySQL / MariaDB, SQL Server, ODBC), **Web**, À partir du tableau. La boîte de connexion change ses champs selon le genre ; la boîte de la source a le navigateur des tables pour les SGBD et les fichiers de base.
+- **Interface.** Données › Obtenir des données : Texte/CSV, Classeur Excel, **Autres fichiers ▾** (JSON, Parquet, Base SQLite), **Base de données ▾** (PostgreSQL, MySQL / MariaDB, SQL Server, ODBC), **Web**, À partir du tableau. La boîte de connexion change ses champs selon le genre ; la boîte de la source a le navigateur des tables pour les SGBD et les fichiers de base.
 - **Lua.** `connections.list()` rend désormais `config = {…}` au lieu de `postgres = {…}`.
 
 ## Types : PostgreSQL → Slitable
@@ -133,3 +132,5 @@ Une feuille protégée refuse l'actualisation de son tableau ; une structure de 
 - L'aperçu travaille sur les 1 000 premières lignes de chaque source (une fusion ou un regroupement peut y différer du résultat complet, comme dans Excel).
 - Le résultat d'une actualisation passe par la mémoire de la base de travail (fichier temporaire) : pensé jusqu'à quelques millions de lignes.
 - Chemins de fichiers absolus : un classeur déplacé sur un autre poste doit faire repointer ses sources (Modifier la source).
+
+- **DuckDB abandonné** (choix de Louis, 17/10/2026) : son pilote est en C (CGO) et alourdit l'exécutable d'environ 70 Mo ; un fichier DuckDB peut être exporté en Parquet, que Slitable lit.

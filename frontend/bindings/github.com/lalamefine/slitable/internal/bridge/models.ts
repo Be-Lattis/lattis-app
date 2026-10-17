@@ -22,11 +22,10 @@ import * as query$0 from "../query/models.js";
 
 /**
  * DataSources dit quelles sources à pilote facultatif sont compilées dans
- * cette version (ODBC : Windows, ou -tags odbc ; DuckDB : -tags duckdb).
+ * cette version (ODBC : Windows, ou -tags odbc).
  */
 export interface DataSources {
     "odbc": boolean;
-    "duckdb": boolean;
 }
 
 /**

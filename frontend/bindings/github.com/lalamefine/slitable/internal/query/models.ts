@@ -189,7 +189,7 @@ export interface Source {
     "kind": string;
 
     /**
-     * Fichier (CSV, .xlsx, JSON, Parquet, SQLite, DuckDB) : chemin absolu.
+     * Fichier (CSV, .xlsx, JSON, Parquet, SQLite) : chemin absolu.
      */
     "path"?: string;
 

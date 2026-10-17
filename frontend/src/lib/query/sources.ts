@@ -10,10 +10,10 @@ export type ConnKind = 'postgres' | 'mysql' | 'sqlserver' | 'odbc' | 'web';
 export const DB_KINDS: ConnKind[] = ['postgres', 'mysql', 'sqlserver', 'odbc'];
 
 /** Fichiers de base lus par une requête SQL (Source.path + Source.sql). */
-export const FILE_DB_KINDS = ['sqlite', 'duckdb'];
+export const FILE_DB_KINDS = ['sqlite'];
 
 /** Fichiers choisis par Parcourir… */
-export const FILE_KINDS = ['csv', 'xlsx', 'json', 'parquet', 'sqlite', 'duckdb'];
+export const FILE_KINDS = ['csv', 'xlsx', 'json', 'parquet', 'sqlite'];
 
 export const CONN_LABELS: Record<ConnKind, string> = {
 	postgres: 'PostgreSQL',
@@ -32,7 +32,6 @@ export const SOURCE_KINDS = [
 	{ value: 'json', label: 'Fichier JSON' },
 	{ value: 'parquet', label: 'Fichier Parquet' },
 	{ value: 'sqlite', label: 'Base SQLite (fichier)' },
-	{ value: 'duckdb', label: 'Base DuckDB (fichier)' },
 	{ value: 'table', label: 'Tableau du classeur' },
 	{ value: 'query', label: 'Autre requête' },
 	{ value: 'sql', label: 'Requête SQL du classeur' },

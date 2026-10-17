@@ -240,7 +240,7 @@ func (r *run) load(src Source) (loaded, error) {
 		l, err = r.loadTable(src)
 	case SourcePostgres, SourceMySQL, SourceSQLServer, SourceODBC:
 		l, err = r.loadDB(src)
-	case SourceSQLite, SourceDuckDB:
+	case SourceSQLite:
 		l, err = r.loadFileDB(src)
 	case SourceJSON:
 		l, err = r.loadJSON(src)

@@ -345,8 +345,7 @@ export function FileBase(path: string): $CancellablePromise<string> {
 }
 
 /**
- * FileTables liste les tables et vues d'un fichier de base (kind :
- * "sqlite" ou "duckdb").
+ * FileTables liste les tables et vues d'un fichier de base (kind : "sqlite").
  */
 export function FileTables(kind: string, path: string): $CancellablePromise<query$0.DBTable[] | null> {
     return $Call.ByID(669960542, kind, path);
@@ -529,7 +528,7 @@ export function Paste(sheet: number, row: number, col: number, block: (string[] 
 
 /**
  * PickDataFile demande un fichier source (kind : "csv", "xlsx", "json",
- * "parquet", "sqlite" ou "duckdb") ; "" si l'utilisateur annule.
+ * "parquet" ou "sqlite") ; "" si l'utilisateur annule.
  */
 export function PickDataFile(kind: string): $CancellablePromise<string> {
     return $Call.ByID(2265459610, kind);

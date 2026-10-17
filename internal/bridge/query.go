@@ -334,8 +334,7 @@ func (s *DocumentService) ConnectionTables(ctx context.Context, name string) (Ta
 	return TableList{Tables: ts}, err
 }
 
-// FileTables liste les tables et vues d'un fichier de base (kind :
-// "sqlite" ou "duckdb").
+// FileTables liste les tables et vues d'un fichier de base (kind : "sqlite").
 func (s *DocumentService) FileTables(ctx context.Context, kind, path string) ([]query.DBTable, error) {
 	return query.FileTables(ctx, kind, path)
 }
@@ -347,19 +346,18 @@ func (s *DocumentService) TableSQL(kind, schema, table string) string {
 }
 
 // DataSources dit quelles sources à pilote facultatif sont compilées dans
-// cette version (ODBC : Windows, ou -tags odbc ; DuckDB : -tags duckdb).
+// cette version (ODBC : Windows, ou -tags odbc).
 type DataSources struct {
-	ODBC   bool `json:"odbc"`
-	DuckDB bool `json:"duckdb"`
+	ODBC bool `json:"odbc"`
 }
 
 // DataSources renvoie les sources disponibles dans cette version.
 func (s *DocumentService) DataSources() DataSources {
-	return DataSources{ODBC: query.ODBCAvailable, DuckDB: query.DuckDBAvailable}
+	return DataSources{ODBC: query.ODBCAvailable}
 }
 
 // PickDataFile demande un fichier source (kind : "csv", "xlsx", "json",
-// "parquet", "sqlite" ou "duckdb") ; "" si l'utilisateur annule.
+// "parquet" ou "sqlite") ; "" si l'utilisateur annule.
 func (s *DocumentService) PickDataFile(kind string) (string, error) {
 	dlg := application.Get().Dialog.OpenFile().SetTitle("Obtenir des données")
 	switch kind {
@@ -371,8 +369,6 @@ func (s *DocumentService) PickDataFile(kind string) (string, error) {
 		dlg = dlg.AddFilter("Parquet", "*.parquet;*.parq")
 	case "sqlite":
 		dlg = dlg.AddFilter("Base SQLite", "*.db;*.sqlite;*.sqlite3;*.db3")
-	case "duckdb":
-		dlg = dlg.AddFilter("Base DuckDB", "*.duckdb;*.ddb;*.db")
 	default:
 		dlg = dlg.AddFilter("Texte ou CSV", "*.csv;*.tsv;*.txt")
 	}

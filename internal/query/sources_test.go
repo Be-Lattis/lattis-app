@@ -303,16 +303,6 @@ func TestSQLiteFile(t *testing.T) {
 	}
 }
 
-func TestDuckDBStub(t *testing.T) {
-	if DuckDBAvailable {
-		t.Skip("DuckDB compilé")
-	}
-	p := writeFile(t, "x.duckdb", "")
-	if _, err := FileTables(ctx, KindDuckDB, p); err == nil || !strings.Contains(err.Error(), "-tags duckdb") {
-		t.Fatalf("DuckDB : %v", err)
-	}
-}
-
 func TestConnectionStrings(t *testing.T) {
 	pg := pgDSN(DBConfig{Host: "db", Database: "ventes", User: "l'oui", SSLMode: "require"}, `p\w'd`)
 	if pg != `host='db' port=5432 dbname='ventes' connect_timeout=10 application_name=Slitable user='l\'oui' sslmode='require' password='p\\w\'d'` {

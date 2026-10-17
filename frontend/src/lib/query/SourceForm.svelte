@@ -1,6 +1,6 @@
 <script lang="ts">
 	// Source d'une requête (première des étapes appliquées) : fichier (CSV,
-	// Excel, JSON, Parquet, base SQLite ou DuckDB), tableau du classeur, autre
+	// Excel, JSON, Parquet, base SQLite), tableau du classeur, autre
 	// requête, requête SQL du classeur, SGBD (PostgreSQL, MySQL, SQL Server,
 	// ODBC : connexion, navigateur des tables ou requête SQL) ou API web JSON.
 	import { onMount } from 'svelte';
@@ -28,12 +28,12 @@
 	let s = $state<Source>(initial());
 	let error = $state('');
 	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
-	let available = $state({ odbc: true, duckdb: true });
+	let available = $state({ odbc: true });
 
 	const isFile = $derived(FILE_KINDS.includes(s.kind));
 	const isFileDB = $derived(FILE_DB_KINDS.includes(s.kind));
 	const isDB = $derived(isDbKind(s.kind));
-	const unavailable = $derived((s.kind === 'odbc' && !available.odbc) || (s.kind === 'duckdb' && !available.duckdb));
+	const unavailable = $derived(s.kind === 'odbc' && !available.odbc);
 
 	// Classeur Excel : tableaux du fichier.
 	let xlsx = $state<XLSXTable[]>([]);
@@ -167,9 +167,7 @@
 			<label class="field">Type de source <Select value={s.kind} options={SOURCE_KINDS} width="100%" onchange={changeKind} /></label>
 			{#if unavailable}
 				<p class="error inline">
-					{s.kind === 'odbc'
-						? 'ODBC n’est pas disponible dans cette version de Slitable (Windows seulement, ou compilation avec -tags odbc).'
-						: 'DuckDB n’est pas disponible dans cette version de Slitable (compilation avec CGO et -tags duckdb).'}
+					ODBC n’est pas disponible dans cette version de Slitable (Windows seulement, ou compilation avec -tags odbc).
 				</p>
 			{/if}
 			{#if isFile}

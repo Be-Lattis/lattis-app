@@ -80,13 +80,12 @@
 				case 'xlsx':
 				case 'json':
 				case 'parquet':
-				case 'sqlite':
-				case 'duckdb': {
+				case 'sqlite': {
 					const path = await DocumentService.PickDataFile(what);
 					if (!path) return;
 					const name = await DocumentService.NewQueryName(await DocumentService.FileBase(path));
-					// Base SQLite ou DuckDB : la table se choisit dans la boîte de la source.
-					let editSource = what === 'sqlite' || what === 'duckdb';
+					// Base SQLite : la table se choisit dans la boîte de la source.
+					let editSource = what === 'sqlite';
 					const source = { kind: what, path } as Query['source'];
 					if (what === 'xlsx') {
 						const ts = (await DocumentService.ExcelTables(path)) ?? [];

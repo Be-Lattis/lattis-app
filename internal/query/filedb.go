@@ -10,15 +10,13 @@ import (
 	"github.com/ncruces/go-sqlite3/driver"
 )
 
-// Fichiers de base de données : SQLite (pilote déjà utilisé par le
-// classeur, Go pur) et DuckDB (voir duckdb.go). Le fichier est ouvert en
-// lecture seule ; la requête SQL de la source y est exécutée telle quelle.
+// Fichier de base de données SQLite (pilote déjà utilisé par le classeur,
+// Go pur). Le fichier est ouvert en lecture seule ; la requête SQL de la
+// source y est exécutée telle quelle. (DuckDB abandonné par Louis le
+// 17/10/2026 : pilote en C, 70 Mo de plus.)
 
-// Genres de fichier de base (Source.Kind).
-const (
-	KindSQLite = "sqlite"
-	KindDuckDB = "duckdb"
-)
+// KindSQLite : genre du fichier de base (Source.Kind).
+const KindSQLite = "sqlite"
 
 func init() {
 	dialects[KindSQLite] = &dialect{

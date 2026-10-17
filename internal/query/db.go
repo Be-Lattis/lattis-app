@@ -213,7 +213,7 @@ type DBTable struct {
 type dialect struct {
 	label string
 	// open ouvre une connexion à un serveur (sans la tester) ; openFile
-	// ouvre un fichier (SQLite, DuckDB) en lecture seule.
+	// ouvre un fichier (SQLite) en lecture seule.
 	open     func(c DBConfig, password string) (*sql.DB, error)
 	openFile func(path string) (*sql.DB, error)
 	// authFailed reconnaît un refus d'authentification.
@@ -248,8 +248,7 @@ func dialectOf(kind string) (*dialect, error) {
 	return d, nil
 }
 
-// limitClause : SELECT * FROM (…) LIMIT n (PostgreSQL, MySQL, SQLite,
-// DuckDB).
+// limitClause : SELECT * FROM (…) LIMIT n (PostgreSQL, MySQL, SQLite).
 func limitClause(q string, n int) string {
 	return "SELECT * FROM (" + q + "\n) AS _slitable_apercu LIMIT " + strconv.Itoa(n)
 }
@@ -600,8 +599,7 @@ func listTables(ctx context.Context, db *sql.DB, d *dialect) ([]DBTable, error) 
 	return ts, nil
 }
 
-// FileTables liste les tables et vues d'un fichier de base (SQLite,
-// DuckDB).
+// FileTables liste les tables et vues d'un fichier de base (SQLite).
 func FileTables(ctx context.Context, kind, path string) ([]DBTable, error) {
 	db, d, err := openFileDB(kind, path)
 	if err != nil {

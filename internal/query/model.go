@@ -1,7 +1,7 @@
 // Package query est l'équivalent de Power Query de Slitable (voir
 // docs/decisions/0003-sources-externes-power-query.md) : des requêtes
 // d'import enregistrées dans le classeur, faites d'une source (fichier CSV,
-// .xlsx, JSON, Parquet, SQLite, DuckDB ; tableau du classeur ; autre
+// .xlsx, JSON, Parquet, SQLite ; tableau du classeur ; autre
 // requête ; PostgreSQL, MySQL, SQL Server, ODBC ; API web JSON) et d'une
 // suite d'étapes
 // rejouables (filtrer, renommer, changer le type, regrouper…).
@@ -35,7 +35,6 @@ const (
 	SourceODBC      = "odbc"
 	// Fichiers de base, ouverts en lecture seule : Path, SQL.
 	SourceSQLite = "sqlite"
-	SourceDuckDB = "duckdb"
 	// Fichiers de données : Path (JSON : RecordPath).
 	SourceJSON    = "json"
 	SourceParquet = "parquet"
@@ -56,7 +55,7 @@ func dbSource(kind string) bool {
 // Source dit d'où une requête lit ses données.
 type Source struct {
 	Kind string `json:"kind"`
-	// Fichier (CSV, .xlsx, JSON, Parquet, SQLite, DuckDB) : chemin absolu.
+	// Fichier (CSV, .xlsx, JSON, Parquet, SQLite) : chemin absolu.
 	Path string `json:"path,omitempty"`
 	// CSV : séparateur (un caractère ; vide : détecté).
 	Delimiter string `json:"delimiter,omitempty"`
@@ -225,8 +224,6 @@ func SourceLabel(s Source) string {
 		return KindLabel(s.Kind) + " " + s.Connection
 	case SourceSQLite:
 		return "SQLite " + base(s.Path)
-	case SourceDuckDB:
-		return "DuckDB " + base(s.Path)
 	case SourceJSON:
 		return "JSON " + base(s.Path)
 	case SourceParquet:
