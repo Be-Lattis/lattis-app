@@ -12,9 +12,9 @@ import (
 	"sync"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/driver"
 
 	"github.com/lalamefine/slitable/internal/canvas"
+	"github.com/lalamefine/slitable/internal/store"
 )
 
 // Env donne au moteur ce qu'il lit hors de la base de travail : le classeur
@@ -57,7 +57,7 @@ func NewSession() (*Session, error) {
 	}
 	path := f.Name()
 	f.Close()
-	db, err := driver.Open("file:"+path, func(c *sqlite3.Conn) error {
+	db, err := store.OpenDB("file:"+path, "requêtes", func(c *sqlite3.Conn) error {
 		for _, p := range []string{"PRAGMA journal_mode=OFF", "PRAGMA synchronous=OFF", "PRAGMA temp_store=MEMORY", "PRAGMA cache_size=-65536"} {
 			if err := c.Exec(p); err != nil {
 				return err

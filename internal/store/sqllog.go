@@ -1,0 +1,207 @@
+package store
+
+import (
+	"context"
+	"database/sql"
+	"database/sql/driver"
+	"fmt"
+	"os"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"github.com/ncruces/go-sqlite3"
+	sqlite "github.com/ncruces/go-sqlite3/driver"
+)
+
+// Journal SQL : chaque requête jouée contre le SQLite local (classeur, base
+// de travail de Power Query, fichier SQLite source) est écrite dans la
+// console (sortie d'erreur), avec sa durée et la connexion. Actif par
+// défaut hors version livrée (go run, wails dev), sinon avec --sql ;
+// SLITABLE_SQL=1 ou 0 force. Une requête répétée à l'identique (insertion
+// ligne à ligne d'un import) n'est écrite qu'une fois, suivie du nombre de
+// répétitions.
+//
+// Le journal enveloppe le pilote (database/sql) : le traçage de SQLite ne
+// voit pas les requêtes sans paramètre que le pilote exécute directement.
+
+var sqlLog atomic.Bool
+
+func init() {
+	sqlLog.Store(defaultSQLLog)
+	switch os.Getenv("SLITABLE_SQL") {
+	case "1", "true", "oui":
+		sqlLog.Store(true)
+	case "0", "false", "non":
+		sqlLog.Store(false)
+	}
+}
+
+// SetSQLLog active ou coupe le journal SQL (option --sql).
+func SetSQLLog(on bool) { sqlLog.Store(on) }
+
+// SQLLog dit si le journal SQL est actif.
+func SQLLog() bool { return sqlLog.Load() }
+
+// maxLogSQL borne la longueur d'une requête écrite.
+const maxLogSQL = 4000
+
+var logMu sync.Mutex
+var last struct {
+	sql    string
+	kind   string
+	repeat int
+	total  time.Duration
+}
+
+func flushRepeat() {
+	if last.repeat > 0 {
+		fmt.Fprintf(os.Stderr, "[SQL %s]   … répétée %d fois de plus (%s au total)\n", last.kind, last.repeat, fmtDur(last.total))
+	}
+	last.repeat, last.total = 0, 0
+}
+
+func fmtDur(d time.Duration) string {
+	switch {
+	case d >= time.Second:
+		return fmt.Sprintf("%.2f s", d.Seconds())
+	case d >= time.Millisecond:
+		return fmt.Sprintf("%.1f ms", float64(d.Microseconds())/1000)
+	}
+	return fmt.Sprintf("%d µs", d.Microseconds())
+}
+
+// logSQL écrit une requête jouée (kind : connexion), avec sa durée.
+func logSQL(kind, q string, d time.Duration, err error) {
+	if !sqlLog.Load() {
+		return
+	}
+	q = strings.TrimSpace(q)
+	logMu.Lock()
+	defer logMu.Unlock()
+	if q == last.sql && kind == last.kind && err == nil {
+		last.repeat++
+		last.total += d
+		return
+	}
+	flushRepeat()
+	last.sql, last.kind = q, kind
+	// Sur une ligne : les requêtes écrites sur plusieurs lignes restent lisibles.
+	shown := strings.Join(strings.Fields(q), " ")
+	if len(shown) > maxLogSQL {
+		shown = shown[:maxLogSQL] + fmt.Sprintf(" … (%d caractères)", len(shown))
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[SQL %s %s] %s\n  ERREUR : %v\n", kind, fmtDur(d), shown, err)
+		return
+	}
+	fmt.Fprintf(os.Stderr, "[SQL %s %s] %s\n", kind, fmtDur(d), shown)
+}
+
+// OpenDB ouvre une base SQLite (dsn du pilote) dont les requêtes passent par
+// le journal SQL ; kind nomme la connexion dans le journal ; init configure
+// chaque nouvelle connexion (pragmas, fonctions).
+func OpenDB(dsn, kind string, init func(*sqlite3.Conn) error) (*sql.DB, error) {
+	inner, err := (&sqlite.SQLite{}).OpenConnector(dsn)
+	if err != nil {
+		return nil, err
+	}
+	return sql.OpenDB(&logConnector{inner: inner, kind: kind, init: init}), nil
+}
+
+type logConnector struct {
+	inner driver.Connector
+	kind  string
+	init  func(*sqlite3.Conn) error
+}
+
+func (c *logConnector) Driver() driver.Driver { return c.inner.Driver() }
+
+func (c *logConnector) Connect(ctx context.Context) (driver.Conn, error) {
+	cn, err := c.inner.Connect(ctx)
+	if err != nil {
+		return nil, err
+	}
+	sc, ok := cn.(sqlite.Conn)
+	if !ok {
+		cn.Close()
+		return nil, fmt.Errorf("store : connexion SQLite inattendue (%T)", cn)
+	}
+	if c.init != nil {
+		if err := c.init(sc.Raw()); err != nil {
+			cn.Close()
+			return nil, err
+		}
+	}
+	return &logConn{Conn: sc, kind: c.kind}, nil
+}
+
+// logConn enveloppe une connexion du pilote : les exécutions directes et
+// les requêtes préparées passent par le journal.
+type logConn struct {
+	sqlite.Conn
+	kind string
+}
+
+func (c *logConn) Raw() *sqlite3.Conn { return c.Conn.Raw() }
+
+func (c *logConn) ExecContext(ctx context.Context, q string, args []driver.NamedValue) (driver.Result, error) {
+	ex, ok := c.Conn.(driver.ExecerContext)
+	if !ok {
+		return nil, driver.ErrSkip
+	}
+	start := time.Now()
+	r, err := ex.ExecContext(ctx, q, args)
+	if err == driver.ErrSkip { // requête avec paramètres : préparée, journalisée par logStmt
+		return nil, err
+	}
+	logSQL(c.kind, q, time.Since(start), err)
+	return r, err
+}
+
+func (c *logConn) Prepare(q string) (driver.Stmt, error) {
+	return c.PrepareContext(context.Background(), q)
+}
+
+func (c *logConn) PrepareContext(ctx context.Context, q string) (driver.Stmt, error) {
+	s, err := c.Conn.PrepareContext(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	return &logStmt{Stmt: s, q: q, kind: c.kind}, nil
+}
+
+type logStmt struct {
+	driver.Stmt
+	q    string
+	kind string
+}
+
+func (s *logStmt) ExecContext(ctx context.Context, args []driver.NamedValue) (driver.Result, error) {
+	start := time.Now()
+	r, err := s.Stmt.(driver.StmtExecContext).ExecContext(ctx, args)
+	logSQL(s.kind, s.q, time.Since(start), err)
+	return r, err
+}
+
+func (s *logStmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
+	start := time.Now()
+	r, err := s.Stmt.(driver.StmtQueryContext).QueryContext(ctx, args)
+	logSQL(s.kind, s.q, time.Since(start), err)
+	return r, err
+}
+
+func (s *logStmt) CheckNamedValue(arg *driver.NamedValue) error {
+	if ck, ok := s.Stmt.(driver.NamedValueChecker); ok {
+		return ck.CheckNamedValue(arg)
+	}
+	return driver.ErrSkip
+}
+
+func (c *logConn) CheckNamedValue(arg *driver.NamedValue) error {
+	if ck, ok := c.Conn.(driver.NamedValueChecker); ok {
+		return ck.CheckNamedValue(arg)
+	}
+	return driver.ErrSkip
+}

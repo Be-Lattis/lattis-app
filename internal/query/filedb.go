@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ncruces/go-sqlite3/driver"
+	"github.com/lalamefine/slitable/internal/store"
 )
 
 // Fichier de base de données SQLite (pilote déjà utilisé par le classeur,
@@ -42,7 +42,7 @@ func openSQLiteFile(path string) (*sql.DB, error) {
 	if _, err := os.Stat(path); err != nil {
 		return nil, fmt.Errorf("fichier introuvable : %w", err)
 	}
-	db, err := driver.Open(sqliteFileDSN(path))
+	db, err := store.OpenDB(sqliteFileDSN(path), "fichier SQLite", nil)
 	if err != nil {
 		return nil, err
 	}

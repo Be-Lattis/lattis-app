@@ -78,6 +78,8 @@ Usage :
 Options :
   --demo [preset]   classeur de démonstration ; preset par défaut : ` + DefaultPreset + `
   --seed n          graine du générateur de la démonstration (1 par défaut)
+  --sql, --no-sql   écrit (ou non) dans la console chaque requête SQL jouée contre le
+                    SQLite local, avec sa durée ; actif par défaut avec go run / wails dev
   -h, --help        affiche cette aide, sans ouvrir la fenêtre
 
 Presets de --demo :
@@ -88,6 +90,7 @@ Presets de --demo :
 	b.WriteString(`
 Variables d'environnement :
   SLITABLE_BENCH=fichier    mesure le défilement de la grille et écrit le rapport dans fichier
+  SLITABLE_SQL=1 ou 0       force le journal SQL (comme --sql / --no-sql)
 `)
 	return b.String()
 }

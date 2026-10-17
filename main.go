@@ -16,6 +16,7 @@ import (
 	"github.com/lalamefine/slitable/internal/console"
 	"github.com/lalamefine/slitable/internal/demo"
 	"github.com/lalamefine/slitable/internal/mcp"
+	"github.com/lalamefine/slitable/internal/store"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -36,7 +37,20 @@ func main() {
 	documents := &bridge.DocumentService{}
 	// -h, --help : l'aide dans le terminal, sans ouvrir la fenêtre ; une
 	// option inconnue l'affiche aussi, avec l'erreur.
-	preset, seed, err := demo.ParseArgs(os.Args[1:])
+	// --sql / --no-sql : journal des requêtes SQL dans la console.
+	var args []string
+	for _, a := range os.Args[1:] {
+		switch a {
+		case "--sql", "-sql":
+			store.SetSQLLog(true)
+			console.Attach()
+		case "--no-sql", "-no-sql":
+			store.SetSQLLog(false)
+		default:
+			args = append(args, a)
+		}
+	}
+	preset, seed, err := demo.ParseArgs(args)
 	if errors.Is(err, demo.ErrHelp) {
 		console.Attach()
 		fmt.Fprint(os.Stdout, demo.Usage())

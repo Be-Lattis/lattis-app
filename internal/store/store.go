@@ -16,7 +16,6 @@ import (
 	"sync/atomic"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/driver"
 )
 
 // ErrClosed signale une écriture soumise après Close.
@@ -46,7 +45,7 @@ type job struct {
 // Open ouvre (ou crée) la base au chemin donné, en mode WAL. extra est
 // appelé sur chaque nouvelle connexion (fonctions SQL personnalisées).
 func Open(path string, extra ...func(*sqlite3.Conn) error) (*Store, error) {
-	write, err := driver.Open("file:"+path, setup(false, extra))
+	write, err := OpenDB("file:"+path, "écriture", setup(false, extra))
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +56,7 @@ func Open(path string, extra ...func(*sqlite3.Conn) error) (*Store, error) {
 		write.Close()
 		return nil, err
 	}
-	read, err := driver.Open("file:"+path, setup(true, extra))
+	read, err := OpenDB("file:"+path, "lecture", setup(true, extra))
 	if err != nil {
 		write.Close()
 		return nil, err
