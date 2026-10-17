@@ -33,7 +33,9 @@ func richSteps(h *host) []step {
 		{"règle conditionnelle", func() {
 			h.do("columns.set_rules", "table", "Ventes", "column", "Prix", "rules", []any{map[string]any{"op": ">", "value": "3", "style": map[string]any{"color": "#c00000"}}})
 		}},
-		{"filtre", func() { h.do("columns.set_filter", "table", "Ventes", "column", "Produit", "values", []any{"Café", "Thé", "Sucre"}) }},
+		{"filtre", func() {
+			h.do("columns.set_filter", "table", "Ventes", "column", "Produit", "values", []any{"Café", "Thé", "Sucre"})
+		}},
 		{"retirer le filtre", func() { h.do("tables.clear_filters", "table", "Ventes") }},
 		{"renommer une colonne", func() { h.do("columns.rename", "table", "Ventes", "column", "Qté", "name", "Quantité") }},
 		{"insérer une colonne", func() { h.do("columns.insert", "table", "Ventes", "name", "Remise", "position", 3) }},
