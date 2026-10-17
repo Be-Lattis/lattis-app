@@ -2031,8 +2031,9 @@
 		const p = { ...patch };
 		for (const k of ['b', 'i', 'u'] as const) if (p[k] === 'toggle') p[k] = !activeStyle()[k];
 		if (p.dp === 'more' || p.dp === 'less') {
-			// Comme Excel : part des décimales affichées dans la cellule active.
-			const cur = activeStyle().dp ?? decimalsOf(cellInfo(active.row, active.col).value);
+			// Comme Excel : part des décimales affichées dans la cellule active
+			// (pas de la valeur stockée ni, pour une colonne calculée, de la formule).
+			const cur = activeStyle().dp ?? decimalsOf(shownText(active.row, active.col));
 			p.dp = Math.max(0, Math.min(10, cur + (p.dp === 'more' ? 1 : -1)));
 		}
 		const { r0, r1, c0, c1 } = selection();
@@ -2077,6 +2078,15 @@
 			Object.assign(p, { bt: null, bb: null, bl: null, br: null });
 		}
 		return p;
+	}
+
+	/** Texte affiché d'une cellule (avant la mise en forme de la cellule). */
+	function shownText(r: number, c: number): string {
+		const e = tableAt(r, c);
+		if (e && r > e.t.row) return e.cache.row(r - e.t.row - 1)?.text[c - e.t.col] ?? '';
+		if (e) return e.t.columns[c - e.t.col]?.name ?? '';
+		const k = key(r, c);
+		return shown.get(k)?.text ?? cells.get(k) ?? '';
 	}
 
 	function decimalsOf(text: string): number {

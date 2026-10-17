@@ -242,10 +242,12 @@
 					{ label: '0,00', icon: 'decimal-fixed', run: st({ nf: '0,00', dp: null, ng: null, df: null }), hint: 'Deux décimales' },
 					{ label: 'Monétaire', icon: 'currency', run: st({ nf: '€', ng: null, df: null }) },
 					{ label: 'Pourcentage', icon: 'percent', run: st({ nf: '%', ng: null, df: null }) },
+					// Les deux boutons de décimales restent côte à côte, dans le ruban
+					// large comme empilés (même colonne de trois).
+					{ label: 'Ajouter une décimale', icon: 'decimal-more', run: st({ dp: 'more' }), hint: 'Ajouter une décimale à l’affichage' },
+					{ label: 'Réduire les décimales', icon: 'decimal-less', run: st({ dp: 'less' }), hint: 'Afficher une décimale de moins' },
 					{ label: 'Date', icon: 'type-date', run: st({ nf: 'date', df: 'jj/mm/aaaa', dp: null, ng: null }), hint: 'Date courte (jj/mm/aaaa) ; Ctrl+1 pour les autres formats de date et d’heure' },
-					{ label: 'Standard', icon: 'number-format', run: st({ nf: null, dp: null, ng: null, df: null }), hint: 'Format Standard' },
-					{ label: 'Ajouter une décimale', icon: 'decimal-more', run: st({ dp: 'more' }) },
-					{ label: 'Réduire les décimales', icon: 'decimal-less', run: st({ dp: 'less' }) }
+					{ label: 'Standard', icon: 'number-format', run: st({ nf: null, dp: null, ng: null, df: null }), hint: 'Format Standard' }
 				]
 			},
 			{
