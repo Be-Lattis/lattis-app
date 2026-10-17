@@ -2,6 +2,7 @@ package canvas
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -29,13 +30,14 @@ func (m *Model) RemoveDuplicates(ctx context.Context, table string, cols []int) 
 		if err != nil || dups == "" {
 			return err
 		}
-		if err := t.row(`SELECT count(*) FROM (` + dups + `)`).Scan(&n); err != nil || n == 0 {
-			return err
-		}
+		// Les doublons ne sont cherchés qu'une fois (un parcours trié du
+		// tableau) : ils vont à la corbeille, puis on les compte ; aucun :
+		// la transaction est abandonnée, sans étape d'annulation.
 		trash := fmt.Sprintf("_lattis_trash_dup_%d_%d", tb.ID, time.Now().UnixNano())
-		return t.ApplyStep(command.Step{
+		err = t.ApplyStep(command.Step{
 			Do: []stmt{
 				st(`CREATE TABLE ` + trash + ` AS SELECT * FROM ` + tb.sql() + ` WHERE id IN (` + dups + `)`),
+				st(`CREATE INDEX ` + trash + `_id ON ` + trash + `(id)`),
 				st(`CREATE TABLE `+trash+`_inv AS SELECT * FROM _lattis_invalid WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
 				st(`CREATE TABLE `+trash+`_sty AS SELECT * FROM _lattis_styles WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
 				st(`DELETE FROM _lattis_invalid WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
@@ -56,9 +58,25 @@ func (m *Model) RemoveDuplicates(ctx context.Context, table string, cols []int) 
 				st(`DROP TABLE IF EXISTS ` + trash + `_sty`),
 			},
 		})
+		if err != nil {
+			return err
+		}
+		if err := t.row(`SELECT count(*) FROM ` + trash).Scan(&n); err != nil {
+			return err
+		}
+		if n == 0 {
+			return errNoDuplicates
+		}
+		return nil
 	})
+	if errors.Is(err, errNoDuplicates) {
+		return 0, nil
+	}
 	return n, err
 }
+
+// errNoDuplicates abandonne une suppression des doublons qui n'en trouve pas.
+var errNoDuplicates = errors.New("aucun doublon")
 
 // DuplicatesPreview compte les lignes que RemoveDuplicates retirerait.
 func (m *Model) DuplicatesPreview(ctx context.Context, table string, cols []int) (int, error) {

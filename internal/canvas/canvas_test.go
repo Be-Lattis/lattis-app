@@ -1157,6 +1157,17 @@ func TestRemoveDuplicates(t *testing.T) {
 	if got := dump(t, d); got != before {
 		t.Fatalf("annulation :\n%s", diff(before, got))
 	}
+	// Une fois les doublons retirés, une nouvelle suppression n'écrit rien.
+	if n, err := d.RemoveDuplicates(ctx, "Feuille1", nil); err != nil || n != 2 {
+		t.Fatalf("doublons à nouveau : %d, %v", n, err)
+	}
+	after := dump(t, d)
+	if n, err := d.RemoveDuplicates(ctx, "Feuille1", nil); err != nil || n != 0 {
+		t.Fatalf("sans doublon : %d, %v", n, err)
+	}
+	if got := dump(t, d); got != after {
+		t.Fatalf("sans doublon, le classeur a changé :\n%s", diff(after, got))
+	}
 }
 
 func TestPivot(t *testing.T) {
