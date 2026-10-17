@@ -5,6 +5,8 @@
 	import type { ChartConfig } from '#lib/grid/Sheet.svelte';
 	import { PALETTE } from './scale';
 	import Select from '#lib/ui/Select.svelte';
+	import Icon from '#lib/icons/Icon.svelte';
+	import type { IconName } from '#lib/icons/icons.js';
 
 	interface Props {
 		config: ChartConfig;
@@ -15,14 +17,14 @@
 
 	let { config, columns, onchange, onclose }: Props = $props();
 
-	const KINDS: [ChartConfig['kind'], string][] = [
-		['bar', 'Histogramme'],
-		['column', 'Barres horizontales'],
-		['line', 'Courbes'],
-		['area', 'Aires'],
-		['pie', 'Secteurs'],
-		['doughnut', 'Anneau'],
-		['scatter', 'Nuage de points']
+	const KINDS: [ChartConfig['kind'], string, IconName][] = [
+		['bar', 'Histogramme', 'chart-bar'],
+		['column', 'Barres horizontales', 'chart-column'],
+		['line', 'Courbes', 'chart-line'],
+		['area', 'Aires', 'chart-area'],
+		['pie', 'Secteurs', 'chart-pie'],
+		['doughnut', 'Anneau', 'chart-doughnut'],
+		['scatter', 'Nuage de points', 'chart-scatter']
 	];
 
 	// Le titre et les champs texte s'appliquent à la sortie du champ.
@@ -46,8 +48,8 @@
 	<section>
 		<h3>Type</h3>
 		<div class="kinds">
-			{#each KINDS as [k, label] (k)}
-				<button class:on={config.kind === k} onclick={() => set({ kind: k })}>{label}</button>
+			{#each KINDS as [k, label, icon] (k)}
+				<button class:on={config.kind === k} onclick={() => set({ kind: k })}><Icon name={icon} size={16} />{label}</button>
 			{/each}
 		</div>
 		{#if stackable}
@@ -163,8 +165,12 @@
 		gap: 4px;
 	}
 	.kinds button {
+		display: flex;
+		align-items: center;
+		gap: 6px;
 		text-align: left;
 		padding: 4px 6px;
+		--icon-accent: #217346;
 	}
 	.kinds .on {
 		border-color: #217346;

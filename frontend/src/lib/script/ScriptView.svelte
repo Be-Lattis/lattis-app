@@ -9,6 +9,7 @@
 	import { bracketMatching } from '@codemirror/language';
 	import { closeBrackets } from '@codemirror/autocomplete';
 	import { dismiss } from '#lib/grid/dismiss.js';
+	import Icon from '#lib/icons/Icon.svelte';
 	import { luaTools } from './luaeditor';
 	import ScriptReference from './ScriptReference.svelte';
 
@@ -202,7 +203,7 @@ end
 <div class="script">
 	<aside class="library">
 		<h2>Scripts du classeur</h2>
-		<button class="new" onclick={fresh}>+ Nouveau script</button>
+		<button class="new" onclick={fresh}><Icon name="new-file" size={14} />Nouveau script</button>
 		{#each scripts as s (s.id)}
 			{#if renaming === s.id}
 				<!-- svelte-ignore a11y_autofocus -->
@@ -240,11 +241,11 @@ end
 	<section class="main">
 		<div class="toolbar">
 			<input class="name" bind:value={current.name} oninput={() => (dirty = true)} spellcheck="false" />
-			<button class="run" onclick={doRun} disabled={running}>▶ Exécuter</button>
-			<button onclick={() => stop()} disabled={!running}>■ Arrêter</button>
-			<button onclick={doSave}>Enregistrer{dirty ? ' •' : ''}</button>
-			<button onclick={doRemove} disabled={!current.id}>Supprimer</button>
-			<button onclick={() => (showRef = !showRef)} aria-pressed={showRef}>Référence</button>
+			<button class="run" onclick={doRun} disabled={running}><Icon name="play" size={14} />Exécuter</button>
+			<button class="stop" onclick={() => stop()} disabled={!running}><Icon name="stop" size={14} />Arrêter</button>
+			<button onclick={doSave}><Icon name="save" size={14} />Enregistrer{dirty ? ' •' : ''}</button>
+			<button class="delete" onclick={doRemove} disabled={!current.id}><Icon name="trash" size={14} />Supprimer</button>
+			<button onclick={() => (showRef = !showRef)} aria-pressed={showRef}><Icon name="book" size={14} />Référence</button>
 			<span class="muted">Ctrl+Entrée : exécuter · Ctrl+S : enregistrer le script</span>
 		</div>
 		<div class="editor" bind:this={host}></div>
@@ -328,6 +329,9 @@ end
 		background: #e3efe7;
 	}
 	.library .new {
+		display: flex;
+		align-items: center;
+		gap: 6px;
 		color: #217346;
 	}
 	.main {
@@ -349,6 +353,11 @@ end
 		white-space: nowrap;
 	}
 	.toolbar button {
+		/* Icône devant le libellé, accent vert comme le ruban. */
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		--icon-accent: #217346;
 		font: inherit;
 		padding: 4px 10px;
 		border: 1px solid #c9cdd2;
@@ -360,6 +369,11 @@ end
 		background: #217346;
 		color: #fff;
 		border-color: #217346;
+		--icon-accent: currentColor;
+	}
+	.toolbar .stop,
+	.toolbar .delete {
+		--icon-accent: #c0392b;
 	}
 	.toolbar button:disabled {
 		opacity: 0.5;

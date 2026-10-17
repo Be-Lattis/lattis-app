@@ -32,6 +32,7 @@
 	import { clampZoom } from '#lib/grid/zoom.js';
 	import ZoomBar from '#lib/shell/ZoomBar.svelte';
 	import BusyBar from '#lib/shell/BusyBar.svelte';
+	import Icon from '#lib/icons/Icon.svelte';
 
 	type Mode = 'starting' | 'recover' | 'doc' | 'demo' | 'closed';
 
@@ -824,8 +825,8 @@
 							<strong>{o.source ? o.source.split(/[\\/]/).pop() : 'Classeur sans titre'}</strong>
 							<span class="muted">modifié le {new Date(o.modified).toLocaleString('fr-FR')}</span>
 						</div>
-						<button class="primary" onclick={() => recover(o, true)}>Récupérer</button>
-						<button onclick={() => recover(o, false)}>Abandonner</button>
+						<button class="primary ico" onclick={() => recover(o, true)}><Icon name="undo" size={14} />Récupérer</button>
+						<button class="ico discard" onclick={() => recover(o, false)}><Icon name="trash" size={14} />Abandonner</button>
 					</div>
 				{/each}
 			</div>
@@ -834,8 +835,8 @@
 				<h1>Slitable</h1>
 				<p>Aucun classeur ouvert.</p>
 				<div class="actions">
-					<button class="primary" onclick={() => file('new')}>Nouveau classeur</button>
-					<button onclick={() => file('open')}>Ouvrir…</button>
+					<button class="primary ico" onclick={() => file('new')}><Icon name="new-file" size={14} />Nouveau classeur</button>
+					<button class="ico" onclick={() => file('open')}><Icon name="open" size={14} />Ouvrir…</button>
 				</div>
 				{#if recent.length}
 					<div class="recent">
@@ -1170,6 +1171,19 @@
 		display: flex;
 		gap: 8px;
 		justify-content: center;
+	}
+	/* Boutons de l'accueil : icône devant le libellé. */
+	.ico {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		--icon-accent: #217346;
+	}
+	.ico.primary {
+		--icon-accent: currentColor;
+	}
+	.ico.discard {
+		--icon-accent: #c0392b;
 	}
 	.recent {
 		display: flex;

@@ -71,6 +71,10 @@ export const icons = {
 	'chart-line': '<path d="M4 4v16h16"/><path class="a" d="m7 15 4-4 3 3 6-7"/>',
 	'chart-scatter': '<path d="M4 4v16h16"/><circle class="af" cx="8.5" cy="15" r="1.5"/><circle class="af" cx="12" cy="10.5" r="1.5"/><circle class="af" cx="16" cy="13" r="1.5"/><circle class="af" cx="17.5" cy="6.5" r="1.5"/>',
 	'chart-pie': '<path d="M11 4a8.5 8.5 0 1 0 9 9h-9z"/><path class="af" d="M14 2.5V10h7.5A7.5 7.5 0 0 0 14 2.5z"/>',
+	// Volet Graphique : les autres types (barres horizontales, aires, anneau)
+	'chart-column': '<path d="M3.5 3.5v17"/><rect class="af" x="3.5" y="5.5" width="8" height="3" rx=".5"/><rect class="af" x="3.5" y="10.5" width="15" height="3" rx=".5"/><rect class="af" x="3.5" y="15.5" width="11" height="3" rx=".5"/>',
+	'chart-area': '<path d="M4 4v16h16"/><path class="af" opacity=".3" d="M7 17.5V15l4-4 3 3 5-6v9.5z"/><path class="a" d="m7 15 4-4 3 3 5-6"/>',
+	'chart-doughnut': '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path class="af" d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5H16a4 4 0 0 0-4-4z"/>',
 
 	// Formules
 	function: '<path d="M12.5 4.5H11a2.5 2.5 0 0 0-2.5 2.2L7 18.3a2.5 2.5 0 0 1-2.5 2.2H4M5.5 10h6"/><path class="a" d="m14 11 6 8m0-8-6 8"/>',
@@ -90,6 +94,12 @@ export const icons = {
 	script: '<path d="M8.5 7 3.5 12l5 5M15.5 7l5 5-5 5"/><path class="a" d="m13.5 4.5-3 15"/>',
 	play: '<path class="af" d="M7 4.5v15l12.5-7.5z"/>',
 	stop: '<rect class="af" x="5.5" y="5.5" width="13" height="13" rx="2"/>',
+	// Tester une connexion : une prise
+	plug: '<path d="M9 3.5V8M15 3.5V8"/><path d="M6.5 8h11v3a5.5 5.5 0 0 1-11 0z"/><path class="a" d="M12 16.5v4"/>',
+	// Référence des scripts : un petit livre, tranche et signet en accent
+	book: '<path d="M5 18.5V5.5A2 2 0 0 1 7 3.5h12v14H7a2 2 0 0 0-2 2 2 2 0 0 0 2 2h12v-4"/><path class="a" d="M9 7.5h6.5M9 11h4.5"/>',
+	// Modifier (requête, connexion) : un crayon
+	edit: '<path d="M15 4.5 19.5 9 9 19.5H4.5V15z"/><path class="a" d="m12.5 7 4.5 4.5"/>',
 	// Données › Obtenir des données : requêtes d'import, actualisation
 	query: '<rect x="3.5" y="3.5" width="11" height="13" rx="1.5"/><path d="M3.5 8h11M7.5 8v8.5"/><path class="a" d="M13 13.5h7.5l-3 3.75V21l-1.5-.75v-3z"/>',
 	web: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path class="a" d="M12 3.5c2.4 2.5 3.5 5.4 3.5 8.5s-1.1 6-3.5 8.5c-2.4-2.5-3.5-5.4-3.5-8.5s1.1-6 3.5-8.5z"/>',

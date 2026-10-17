@@ -5,6 +5,7 @@
 	// connexion, navigateur des tables ou requête SQL) ou API web JSON.
 	import { onMount } from 'svelte';
 	import Select from '#lib/ui/Select.svelte';
+	import Icon from '#lib/icons/Icon.svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import type { Connection, DBTable, PasswordNeed, Source, XLSXTable } from '#bindings/internal/query/models.js';
 	import { clone } from './steps';
@@ -163,7 +164,7 @@
 					Fichier
 					<div class="row">
 						<input class="grow" bind:value={s.path} onchange={() => (s.kind === 'xlsx' ? loadXlsx() : isFileDB ? loadTables() : undefined)} placeholder="Chemin du fichier" />
-						<button onclick={browse}>Parcourir…</button>
+						<button class="ico" onclick={browse}><Icon name="open" size={14} />Parcourir…</button>
 					</div>
 				</div>
 				{#if s.kind === 'csv'}
@@ -210,7 +211,7 @@
 					Connexion {CONN_LABELS[s.kind as ConnKind]}
 					<div class="row">
 						<Select value={s.connection ?? ''} options={kindConns.map((c) => ({ value: c.name, label: `${c.name} (${describe(c)})` }))} width="100%" onchange={(v) => ((s.connection = v), loadTables())} />
-						<button onclick={addConnection}>Nouvelle…</button>
+						<button class="ico" onclick={addConnection}><Icon name="plus" size={14} />Nouvelle…</button>
 					</div>
 				</div>
 			{:else if s.kind === 'web'}
@@ -228,7 +229,7 @@
 							width="100%"
 							onchange={(v) => (s.connection = v || undefined)}
 						/>
-						<button onclick={addConnection}>Nouvelle…</button>
+						<button class="ico" onclick={addConnection}><Icon name="plus" size={14} />Nouvelle…</button>
 					</div>
 				</div>
 				<p class="muted">Les en-têtes sont enregistrés dans le classeur : un jeton ou une clé d’API passe par une connexion Web (gardée dans le trousseau du système).</p>
@@ -351,6 +352,13 @@
 		border-radius: 3px;
 		padding: 3px 10px;
 		cursor: pointer;
+	}
+	/* Bouton avec icône devant le libellé. */
+	.ico {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		--icon-accent: #217346;
 	}
 	.error {
 		color: #b42318;

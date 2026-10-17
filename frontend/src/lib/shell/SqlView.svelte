@@ -26,6 +26,7 @@
 	import { isWrite } from '#lib/sql/write.js';
 	import { example, isReadOnly, type ExampleKind } from '#lib/sql/examples.js';
 	import { dismiss } from '#lib/grid/dismiss.js';
+	import Icon from '#lib/icons/Icon.svelte';
 	import { count, toTSV } from '#lib/sql/result.js';
 	import { tick } from 'svelte';
 
@@ -345,7 +346,7 @@
 		{:else}
 			<div class="hist-tools">
 				<input type="search" placeholder="Rechercher" bind:value={filter} />
-				{#if entries.length}<button class="link" onclick={clearHistory}>Effacer</button>{/if}
+				{#if entries.length}<button class="link clear" onclick={clearHistory}><Icon name="trash" size={14} />Effacer</button>{/if}
 			</div>
 			<div class="list">
 				{#each shown as e (e.at + e.sql)}
@@ -370,7 +371,7 @@
 	</aside>
 	<section class="main">
 		<div class="toolbar">
-			<button class="run" onclick={() => editor?.runCurrent()} disabled={running} title="Exécute la sélection, sinon l'instruction sous le curseur (Ctrl+Entrée)">▶ Exécuter</button>
+			<button class="run" onclick={() => editor?.runCurrent()} disabled={running} title="Exécute la sélection, sinon l'instruction sous le curseur (Ctrl+Entrée)"><Icon name="play" size={14} />Exécuter</button>
 			{#if favorites}
 				<button
 					class="fav-btn"
@@ -395,16 +396,16 @@
 					</p>
 					{#if ran}
 						<button class="res-btn" onclick={copyResult} title={result.truncated ? 'Copie les lignes affichées (tronquées), à coller dans Excel' : 'Copie le résultat (en-têtes compris), à coller dans Excel'}
-							>{copied ? 'Copié ✓' : 'Presse-papiers'}</button
+							><Icon name="copy" size={14} />{copied ? 'Copié ✓' : 'Presse-papiers'}</button
 						>
 						{#if tosheet}
 							<span class="to-sheet">
 								Vers une feuille :
 								<button class="res-btn" onclick={() => sendToSheet(false)} disabled={sending} title="Copie les valeurs du résultat dans un nouveau tableau, sur une nouvelle feuille (Ctrl+Z pour annuler)"
-									>Copier</button
+									><Icon name="sheet" size={14} />Copier</button
 								>
 								<button class="res-btn" onclick={() => sendToSheet(true)} disabled={sending} title="Crée un tableau lié à la requête, sur une nouvelle feuille : fond bleu clair, actualisable au clic droit comme une source externe"
-									>Référencer</button
+									><Icon name="reference" size={14} />Référencer</button
 								>
 							</span>
 						{/if}
@@ -443,6 +444,10 @@
 		color: #57606a;
 	}
 	.res-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		--icon-accent: #217346;
 		font: inherit;
 		background: #fff;
 		color: #1f2328;
@@ -675,6 +680,11 @@
 		color: #6b7280;
 		font-size: 12px;
 	}
+	.link.clear {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+	}
 	.link {
 		background: none;
 		border: none;
@@ -697,6 +707,9 @@
 		border-bottom: 1px solid #e3e5e8;
 	}
 	.run {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
 		font: inherit;
 		background: #217346;
 		color: #fff;

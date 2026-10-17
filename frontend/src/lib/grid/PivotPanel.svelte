@@ -538,7 +538,7 @@
 		<label class="opt"><input type="checkbox" checked={!draft.noGrandTotal} onchange={(e) => change({ ...clone(draft), noGrandTotal: !(e.currentTarget as HTMLInputElement).checked || undefined })} /> Totaux généraux</label>
 		<div class="update">
 			<label class="opt"><input type="checkbox" checked={defer} onchange={(e) => setDefer((e.currentTarget as HTMLInputElement).checked)} /> Différer la mise à jour</label>
-			<button class="primary" disabled={!defer || !dirty} onclick={flush} title="Appliquer les changements au tableau croisé">Mettre à jour</button>
+			<button class="primary apply" disabled={!defer || !dirty} onclick={flush} title="Appliquer les changements au tableau croisé"><Icon name="refresh" size={14} />Mettre à jour</button>
 		</div>
 		{#if defer && dirty}<p class="pending">Modifications en attente : le tableau croisé n'est pas encore à jour.</p>{/if}
 		<button class="delete" onclick={ondelete}><Icon name="trash" size={14} />Supprimer le tableau croisé</button>
@@ -1018,6 +1018,12 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 6px;
+	}
+	.apply {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		--icon-accent: currentColor;
 	}
 	.delete {
 		display: inline-flex;

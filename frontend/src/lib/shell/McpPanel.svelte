@@ -6,6 +6,7 @@
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import type { MCPStatus } from '#bindings/internal/bridge/models.js';
 	import { mcpConfigs } from './mcp';
+	import Icon from '#lib/icons/Icon.svelte';
 
 	interface Props {
 		onclose: () => void;
@@ -81,7 +82,7 @@
 					<div class="config">
 						<div class="config-head">
 							<strong>{c.label}</strong>
-							<button onclick={() => copy(c.label, c.text)}>{copied === c.label ? 'Copié' : 'Copier'}</button>
+							<button class="ico" onclick={() => copy(c.label, c.text)}><Icon name="copy" size={14} />{copied === c.label ? 'Copié' : 'Copier'}</button>
 						</div>
 						<p class="hint">{c.hint}</p>
 						<pre>{c.text}</pre>
@@ -179,6 +180,13 @@
 		border: 1px solid #c4c8cc;
 		background: #fff;
 		cursor: pointer;
+	}
+	/* Bouton avec icône devant le libellé. */
+	.ico {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		--icon-accent: #217346;
 	}
 	button.link {
 		border: none;
