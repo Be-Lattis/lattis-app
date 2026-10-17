@@ -49,21 +49,35 @@ func (m *Model) Find(ctx context.Context, sheet int64, text string) ([]Match, er
 				if strings.Contains(strings.ToLower(c.Name), strings.ToLower(text)) {
 					out = append(out, Match{tb.Row, tb.Col + i})
 				}
-				if c.Formula != "" {
+				if c.Formula != "" || !canHold(c.Type, text) {
 					continue
 				}
 				col := colSQL(c.ID)
 				sel = append(sel, col)
-				if c.Type == grid.Text {
+				switch c.Type {
+				case grid.Text:
 					conds = append(conds, col+` LIKE ? ESCAPE '\'`)
 					args = append(args, pattern)
-				} else {
+				case grid.Integer:
+					// Entier : son texte est celui de SQLite (sans passer par Go).
+					conds = append(conds, `CAST(`+col+` AS TEXT) LIKE ? ESCAPE '\'`)
+					args = append(args, pattern)
+				default:
 					conds = append(conds, `slt_text(`+col+`, ?) LIKE ? ESCAPE '\'`)
 					args = append(args, string(c.Type), pattern)
 				}
 				idx = append(idx, i)
 			}
 			if len(conds) == 0 {
+				continue
+			}
+			// Rien de trouvé (cas le plus long : tout est parcouru) : pas de
+			// numérotation des lignes, qui coûte un tri de tout le tableau.
+			var found int
+			if err := t.row(`SELECT EXISTS (SELECT 1 FROM `+tb.view()+` WHERE `+strings.Join(conds, " OR ")+`)`, args...).Scan(&found); err != nil {
+				return err
+			}
+			if found == 0 {
 				continue
 			}
 			q := `SELECT n, ` + strings.Join(conds, ", ") + ` FROM (SELECT row_number() OVER (ORDER BY _pos) AS n, ` +
@@ -112,6 +126,33 @@ func (m *Model) Find(ctx context.Context, sheet int64, text string) ([]Match, er
 		out = out[:MaxMatches]
 	}
 	return out, err
+}
+
+// canHold : le texte affiché d'une valeur de ce type peut-il contenir s ?
+// Un entier ne s'écrit qu'avec des chiffres et « - », un décimal aussi
+// avec « , », une date avec « / », un booléen VRAI ou FAUX : chercher des
+// lettres n'y lit pas une seule valeur.
+func canHold(t grid.Type, s string) bool {
+	only := func(set string) bool {
+		for _, r := range s {
+			if !strings.ContainsRune(set, r) {
+				return false
+			}
+		}
+		return true
+	}
+	switch t {
+	case grid.Integer:
+		return only("-0123456789")
+	case grid.Decimal:
+		return only("-0123456789,")
+	case grid.Date:
+		return only("0123456789/")
+	case grid.Boolean:
+		u := strings.ToUpper(s)
+		return strings.Contains("VRAI", u) || strings.Contains("FAUX", u)
+	}
+	return true
 }
 
 func sortMatches(ms []Match) {

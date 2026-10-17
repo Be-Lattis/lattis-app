@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 	"testing"
+
+	"github.com/lalamefine/slitable/internal/grid"
 )
 
 // Supprimer sur des cellules libres vide tout : valeurs, mise en forme,
@@ -49,5 +51,20 @@ func TestClearCells(t *testing.T) {
 	}
 	if l, _ := d.Layout(ctx, 1); len(l.Cells) != 1 {
 		t.Fatalf("annulation : %+v", l.Cells)
+	}
+}
+
+func TestFindCanHold(t *testing.T) {
+	for _, c := range []struct {
+		typ  grid.Type
+		s    string
+		want bool
+	}{
+		{grid.Integer, "12", true}, {grid.Integer, "ab", false}, {grid.Decimal, "3,5", true}, {grid.Decimal, "3.5", false},
+		{grid.Date, "12/03", true}, {grid.Date, "mars", false}, {grid.Boolean, "vr", true}, {grid.Boolean, "oui", false}, {grid.Text, "x", true},
+	} {
+		if got := canHold(c.typ, c.s); got != c.want {
+			t.Errorf("canHold(%s, %q) = %v", c.typ, c.s, got)
+		}
 	}
 }

@@ -111,6 +111,12 @@ func (d *Document) Save(ctx context.Context, path string) error {
 		return err
 	}
 	prot := d.ProtectionChanges()
+	// Rien de changé depuis le dernier enregistrement dans ce fichier (le même
+	// critère que la question à la fermeture) : le réécrire prendrait des
+	// secondes sur un gros classeur et bloquerait les saisies.
+	if (path == "" || path == d.arc.Path) && d.arc.Path != "" && top == d.saved && prot == d.savedProt {
+		return nil
+	}
 	if err := d.arc.Save(ctx, path); err != nil {
 		return err
 	}
