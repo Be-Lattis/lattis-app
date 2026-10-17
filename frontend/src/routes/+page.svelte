@@ -346,10 +346,17 @@
 			}
 		};
 		window.addEventListener('keydown', keys);
+		// Un texte ou un lien lâché hors d'une zone prévue ne doit jamais faire
+		// quitter la page de l'application (la fenêtre afficherait une erreur).
+		const noDrop = (e: DragEvent) => e.preventDefault();
+		window.addEventListener('dragover', noDrop);
+		window.addEventListener('drop', noDrop);
 		return () => {
 			off();
 			offUI();
 			window.removeEventListener('keydown', keys);
+			window.removeEventListener('dragover', noDrop);
+			window.removeEventListener('drop', noDrop);
 		};
 	});
 

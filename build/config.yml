@@ -38,6 +38,9 @@ dev_mode:
   ignore:
     dir:
       - .git
+      # Worktrees des tâches en parallèle (agents) : leurs modifications ne
+      # doivent pas relancer l'application en cours de développement.
+      - .claude
       - node_modules
       - frontend
       - bin
