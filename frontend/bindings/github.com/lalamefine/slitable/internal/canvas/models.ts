@@ -540,6 +540,16 @@ export interface QueryLoad {
 }
 
 /**
+ * Rect est un rectangle de cellules d'une feuille, bornes comprises.
+ */
+export interface Rect {
+    "r0": number;
+    "c0": number;
+    "r1": number;
+    "c1": number;
+}
+
+/**
  * ColWidth est la largeur choisie pour une colonne de la feuille.
  * RowHeight est la hauteur choisie pour une ligne de la feuille.
  */

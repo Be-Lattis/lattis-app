@@ -896,6 +896,29 @@ func (s *DocumentService) ClearCells(ctx context.Context, sheet int64, r0, c0, r
 	return s.act(ctx, func(d *doc.Document) error { return d.ClearCells(ctx, sheet, r0, c0, r1, c1) })
 }
 
+// ClearRange efface une zone en une seule étape d'annulation (tableaux
+// entièrement compris supprimés ; all : mise en forme des cellules libres
+// comprise, comme Supprimer).
+func (s *DocumentService) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int, all bool) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.ClearRange(ctx, sheet, r0, c0, r1, c1, all) })
+}
+
+// Transfer copie ou déplace (move) une zone d'une feuille vers une autre
+// zone, d'une feuille à l'autre : copier-coller et couper-coller internes,
+// glisser de la bordure de la sélection (voir canvas.Model.Transfer).
+func (s *DocumentService) Transfer(ctx context.Context, from int64, src canvas.Rect, to int64, dst canvas.Rect, move bool, values [][]string) (canvas.Event, error) {
+	d, err := s.current()
+	if err != nil {
+		return canvas.Event{}, err
+	}
+	ev, err := d.Transfer(ctx, from, src, to, dst, move, values)
+	if err != nil {
+		return ev, err
+	}
+	_, err = s.changed(ctx)
+	return ev, err
+}
+
 // PinNote épingle la note d'une cellule (toujours affichée) ou la remet en infobulle.
 func (s *DocumentService) PinNote(ctx context.Context, sheet int64, row, col int, pinned bool) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.PinNote(ctx, sheet, row, col, pinned) })

@@ -91,6 +91,15 @@ export function ClearKey(table: string): $CancellablePromise<$models.DocState> {
 }
 
 /**
+ * ClearRange efface une zone en une seule étape d'annulation (tableaux
+ * entièrement compris supprimés ; all : mise en forme des cellules libres
+ * comprise, comme Supprimer).
+ */
+export function ClearRange(sheet: number, r0: number, c0: number, r1: number, c1: number, all: boolean): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3576597635, sheet, r0, c0, r1, c1, all);
+}
+
+/**
  * CloseDocument ferme le classeur ouvert (les modifications non enregistrées sont
  * perdues : l'interface demande d'abord).
  */
@@ -971,6 +980,15 @@ export function TableSQL(kind: string, schema: string, table: string): $Cancella
  */
 export function TestConnection(c: query$0.Connection, password: string, remember: boolean): $CancellablePromise<string> {
     return $Call.ByID(3716934421, c, password, remember);
+}
+
+/**
+ * Transfer copie ou déplace (move) une zone d'une feuille vers une autre
+ * zone, d'une feuille à l'autre : copier-coller et couper-coller internes,
+ * glisser de la bordure de la sélection (voir canvas.Model.Transfer).
+ */
+export function Transfer($from: number, src: canvas$0.Rect, to: number, dst: canvas$0.Rect, move: boolean, values: (string[] | null)[] | null): $CancellablePromise<canvas$0.Event> {
+    return $Call.ByID(2795365586, $from, src, to, dst, move, values);
 }
 
 /**
