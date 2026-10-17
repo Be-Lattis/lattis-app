@@ -1225,9 +1225,6 @@
 		white-space: nowrap;
 		overflow: hidden;
 	}
-	.statusbar .cell {
-		color: #fff;
-	}
 	.message {
 		background: #fff7e0;
 		color: #7a4b00;
