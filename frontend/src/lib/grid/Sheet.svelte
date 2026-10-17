@@ -146,6 +146,9 @@
 		yMin?: number;
 		yMax?: number;
 		colors?: string[];
+		/** Séries sur l'axe secondaire (à droite), par rang de série. */
+		secondary?: boolean[];
+		y2Title?: string;
 		offX?: number;
 		offY?: number;
 	}
@@ -873,6 +876,12 @@
 			const [r, c] = k.split(',').map(Number);
 			usedRow = Math.max(usedRow, r);
 			usedCol = Math.max(usedCol, c);
+		}
+		// Graphiques : la barre de défilement va jusqu'à leur bord.
+		for (const ch of charts) {
+			const b = chartBox(ch);
+			usedRow = Math.max(usedRow, rowAxis.indexAt(b.y + b.h));
+			usedCol = Math.max(usedCol, colAxis.indexAt(b.x + b.w));
 		}
 		const lastVisible = rowAxis.indexAt(vs.top + vs.view);
 		// Comme Excel : la barre s'arrête à la zone utilisée (ou à l'écran affiché) ;
@@ -3351,11 +3360,37 @@
 	}
 	let chartClip = $state.raw<ChartConfig | null>(null);
 
+	/** Après la création d'un graphique : le nouveau est sélectionné (Excel), prêt à être déplacé, redimensionné ou mis en forme. */
+	function selectNewChart(before: Set<number>) {
+		const ch = charts.find((c) => !before.has(c.id));
+		if (!ch) return;
+		selChart = ch.id;
+		// Amené à l'écran, en entier s'il tient (son coin haut gauche sinon).
+		updateExtent();
+		const b = chartBox(ch);
+		const t = reveal(b.y, b.y + b.h, vs.top, vs.view, rowTop(fRows()));
+		if (t !== vs.top) vs.to(t);
+		const l = reveal(b.x, b.x + b.w, scroller.scrollLeft, viewW - MARGIN, colAxis.offset(fCols()));
+		if (l !== scroller.scrollLeft) scroller.scrollLeft = l;
+		syncNative();
+		wrap.focus();
+		schedule();
+	}
+
 	function pasteChart(cfg: ChartConfig) {
 		if (!source.createChart) return;
 		const create = source.createChart;
 		const { row, col } = active;
-		writing = writing.then(() => create(row, col, cfg).then(() => say('Graphique collé'), (err) => say(String(err?.message ?? err))));
+		const before = new Set(charts.map((c) => c.id));
+		writing = writing.then(() =>
+			create(row, col, cfg).then(
+				() => {
+					say('Graphique collé');
+					selectNewChart(before);
+				},
+				(err) => say(String(err?.message ?? err))
+			)
+		);
 	}
 
 	/** Insère un graphique du tableau actif à sa droite (ruban Insertion). */
@@ -3369,9 +3404,13 @@
 			if (kind === 'pie') series = series.slice(0, 1);
 			const create = source.createChart;
 			const name = pv.config.name ?? '';
+			const before = new Set(charts.map((c) => c.id));
 			writing = writing.then(() =>
 				create(pv.row, pv.col + head.length + 1, { source: name, kind, x: head[0], series }).then(
-					() => say(`Graphique du tableau croisé « ${name} » inséré`),
+					() => {
+						say(`Graphique du tableau croisé « ${name} » inséré`);
+						selectNewChart(before);
+					},
 					(err) => say(String(err?.message ?? err))
 				)
 			);
@@ -3394,9 +3433,13 @@
 			return;
 		}
 		const create = source.createChart;
+		const before = new Set(charts.map((c) => c.id));
 		writing = writing.then(() =>
 			create(e.t.row, e.lastCol + 2, { source: e.t.name, kind, x: x.name, series }).then(
-				() => say('Graphique inséré : double-clic pour le modifier, glissez-le pour le déplacer'),
+				() => {
+					say('Graphique inséré : double-clic pour le modifier, glissez-le pour le déplacer');
+					selectNewChart(before);
+				},
 				(err) => say(String(err?.message ?? err))
 			)
 		);

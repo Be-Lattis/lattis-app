@@ -133,6 +133,13 @@ export interface ChartConfig {
      * couleur de chaque série
      */
     "colors"?: string[] | null;
+
+    /**
+     * Secondary : séries tracées sur l'axe secondaire (à droite, échelle
+     * propre), comme Excel ; Y2Title est le titre de cet axe.
+     */
+    "secondary"?: boolean[] | null;
+    "y2Title"?: string;
 }
 
 /**
