@@ -229,7 +229,7 @@ func (s *DocumentService) Connections(ctx context.Context) ([]query.Connection, 
 		if err != nil {
 			continue
 		}
-		c.Remembered = query.DefaultSecrets.Remembered(c.Postgres.Account())
+		c.Remembered = query.DefaultSecrets.Remembered(c.Account())
 		out = append(out, c)
 	}
 	return out, nil
@@ -265,7 +265,7 @@ func (s *DocumentService) SaveConnection(ctx context.Context, c query.Connection
 		return 0, err
 	}
 	if password != "" {
-		if err := query.DefaultSecrets.Set(c.Postgres.Account(), password, remember); err != nil {
+		if err := query.DefaultSecrets.Set(c.Account(), password, remember); err != nil {
 			return id, fmt.Errorf("connexion enregistrée, mais le trousseau du système a refusé le mot de passe (gardé pour cette session) : %w", err)
 		}
 	}
@@ -308,44 +308,75 @@ func (s *DocumentService) ForgetConnectionPassword(ctx context.Context, name str
 	if err != nil {
 		return err
 	}
-	return query.DefaultSecrets.Forget(c.Postgres.Account())
+	return query.DefaultSecrets.Forget(c.Account())
 }
 
-// PostgresTables liste les tables et vues d'une connexion (navigateur).
+// TableList liste les tables et vues d'une connexion (navigateur).
 // needPassword est rempli si le serveur demande un mot de passe.
-type PostgresTables struct {
-	Tables       []query.PGTable     `json:"tables"`
+type TableList struct {
+	Tables       []query.DBTable     `json:"tables"`
 	NeedPassword *query.PasswordNeed `json:"needPassword"`
 }
 
-// PostgresTables liste les tables d'une connexion du classeur.
-func (s *DocumentService) PostgresTables(ctx context.Context, name string) (PostgresTables, error) {
+// ConnectionTables liste les tables d'une connexion du classeur
+// (PostgreSQL, MySQL, SQL Server, ODBC ; vide pour une connexion Web ou un
+// pilote ODBC sans INFORMATION_SCHEMA).
+func (s *DocumentService) ConnectionTables(ctx context.Context, name string) (TableList, error) {
 	c, err := s.connection(ctx, name)
 	if err != nil {
-		return PostgresTables{}, err
+		return TableList{}, err
 	}
-	ts, err := query.PGTables(ctx, query.DefaultSecrets, c)
+	ts, err := query.DBTables(ctx, query.DefaultSecrets, c)
 	var pe *query.ErrPassword
 	if errors.As(err, &pe) {
-		return PostgresTables{Tables: []query.PGTable{}, NeedPassword: &query.PasswordNeed{Connection: pe.Connection, Account: pe.Account, Message: pe.Message}}, nil
+		return TableList{Tables: []query.DBTable{}, NeedPassword: &query.PasswordNeed{Connection: pe.Connection, Account: pe.Account, Message: pe.Message}}, nil
 	}
-	return PostgresTables{Tables: ts}, err
+	return TableList{Tables: ts}, err
 }
 
-// PostgresTableSQL écrit la requête qui lit une table entière.
-func (s *DocumentService) PostgresTableSQL(schema, table string) string {
-	return "SELECT * FROM " + query.PGIdent(schema) + "." + query.PGIdent(table)
+// FileTables liste les tables et vues d'un fichier de base (kind :
+// "sqlite" ou "duckdb").
+func (s *DocumentService) FileTables(ctx context.Context, kind, path string) ([]query.DBTable, error) {
+	return query.FileTables(ctx, kind, path)
 }
 
-// PickDataFile demande un fichier source (kind : "csv" ou "xlsx") ; ""
-// si l'utilisateur annule.
+// TableSQL écrit la requête qui lit une table entière (kind : genre de la
+// connexion ou du fichier de base, pour les guillemets des identifiants).
+func (s *DocumentService) TableSQL(kind, schema, table string) string {
+	return query.TableSQL(kind, schema, table)
+}
+
+// DataSources dit quelles sources à pilote facultatif sont compilées dans
+// cette version (ODBC : Windows, ou -tags odbc ; DuckDB : -tags duckdb).
+type DataSources struct {
+	ODBC   bool `json:"odbc"`
+	DuckDB bool `json:"duckdb"`
+}
+
+// DataSources renvoie les sources disponibles dans cette version.
+func (s *DocumentService) DataSources() DataSources {
+	return DataSources{ODBC: query.ODBCAvailable, DuckDB: query.DuckDBAvailable}
+}
+
+// PickDataFile demande un fichier source (kind : "csv", "xlsx", "json",
+// "parquet", "sqlite" ou "duckdb") ; "" si l'utilisateur annule.
 func (s *DocumentService) PickDataFile(kind string) (string, error) {
 	dlg := application.Get().Dialog.OpenFile().SetTitle("Obtenir des données")
-	if kind == "xlsx" {
+	switch kind {
+	case "xlsx":
 		dlg = dlg.AddFilter("Classeur Excel", "*.xlsx;*.xlsm")
-	} else {
+	case "json":
+		dlg = dlg.AddFilter("JSON", "*.json;*.ndjson;*.jsonl;*.geojson")
+	case "parquet":
+		dlg = dlg.AddFilter("Parquet", "*.parquet;*.parq")
+	case "sqlite":
+		dlg = dlg.AddFilter("Base SQLite", "*.db;*.sqlite;*.sqlite3;*.db3")
+	case "duckdb":
+		dlg = dlg.AddFilter("Base DuckDB", "*.duckdb;*.ddb;*.db")
+	default:
 		dlg = dlg.AddFilter("Texte ou CSV", "*.csv;*.tsv;*.txt")
 	}
+	dlg = dlg.AddFilter("Tous les fichiers", "*.*")
 	return dlg.PromptForSingleSelection()
 }
 

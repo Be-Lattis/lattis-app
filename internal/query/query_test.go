@@ -322,7 +322,7 @@ func TestQueryDefinitionsUndo(t *testing.T) {
 		t.Fatalf("annulation : %+v %v", q, err)
 	}
 	// Connexions : jamais de mot de passe, suppression refusée si utilisée.
-	cdef, err := EncodeConnection(Connection{Name: "Prod", Postgres: PGConfig{Host: "db", Database: "ventes", User: "louis"}})
+	cdef, err := EncodeConnection(Connection{Name: "Prod", Config: DBConfig{Host: "db", Database: "ventes", User: "louis"}})
 	if err != nil {
 		t.Fatal(err)
 	}

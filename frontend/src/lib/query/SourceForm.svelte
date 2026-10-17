@@ -1,12 +1,14 @@
 <script lang="ts">
-	// Source d'une requête (première des étapes appliquées) : fichier CSV,
-	// tableau d'un classeur Excel, tableau du classeur, autre requête ou
-	// PostgreSQL (connexion, navigateur des tables ou requête SQL).
+	// Source d'une requête (première des étapes appliquées) : fichier (CSV,
+	// Excel, JSON, Parquet, base SQLite ou DuckDB), tableau du classeur, autre
+	// requête, requête SQL du classeur, SGBD (PostgreSQL, MySQL, SQL Server,
+	// ODBC : connexion, navigateur des tables ou requête SQL) ou API web JSON.
 	import { onMount } from 'svelte';
 	import Select from '#lib/ui/Select.svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
-	import type { Connection, PasswordNeed, PGTable, Source, XLSXTable } from '#bindings/internal/query/models.js';
+	import type { Connection, DBTable, PasswordNeed, Source, XLSXTable } from '#bindings/internal/query/models.js';
 	import { clone } from './steps';
+	import { CONN_LABELS, FILE_DB_KINDS, FILE_KINDS, SOURCE_KINDS, describe, headersText, isDbKind, parseHeaders, type ConnKind } from './sources';
 	import { count } from '#lib/sql/result.js';
 
 	interface Props {
@@ -14,8 +16,8 @@
 		/** Requêtes du classeur (sauf celle qu'on modifie). */
 		queries: string[];
 		tables: string[];
-		/** Nouvelle connexion PostgreSQL : renvoie son nom (null : abandon). */
-		newConnection: () => Promise<string | null>;
+		/** Nouvelle connexion du genre kind : renvoie son nom (null : abandon). */
+		newConnection: (kind: ConnKind) => Promise<string | null>;
 		askPassword: (need: PasswordNeed) => Promise<boolean>;
 		onok: (s: Source) => void;
 		oncancel: () => void;
@@ -26,15 +28,12 @@
 	let s = $state<Source>(initial());
 	let error = $state('');
 	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
+	let available = $state({ odbc: true, duckdb: true });
 
-	const KINDS = [
-		{ value: 'csv', label: 'Fichier texte ou CSV' },
-		{ value: 'xlsx', label: 'Classeur Excel' },
-		{ value: 'table', label: 'Tableau du classeur' },
-		{ value: 'query', label: 'Autre requête' },
-		{ value: 'postgres', label: 'PostgreSQL' },
-		{ value: 'sql', label: 'Requête SQL du classeur' }
-	];
+	const isFile = $derived(FILE_KINDS.includes(s.kind));
+	const isFileDB = $derived(FILE_DB_KINDS.includes(s.kind));
+	const isDB = $derived(isDbKind(s.kind));
+	const unavailable = $derived((s.kind === 'odbc' && !available.odbc) || (s.kind === 'duckdb' && !available.duckdb));
 
 	// Classeur Excel : tableaux du fichier.
 	let xlsx = $state<XLSXTable[]>([]);
@@ -52,74 +51,100 @@
 		}
 	}
 
-	// PostgreSQL : connexions et tables.
+	// SGBD et fichiers de base : connexions et tables.
 	let conns = $state<Connection[]>([]);
-	let pgTables = $state<PGTable[]>([]);
-	let pgFilter = $state('');
+	let dbTables = $state<DBTable[]>([]);
+	let tableFilter = $state('');
+	const kindConns = $derived(conns.filter((c) => c.kind === (s.kind === 'web' ? 'web' : s.kind)));
 	async function loadConns() {
 		conns = (await DocumentService.Connections()) ?? [];
-		if (!s.connection && conns.length) s.connection = conns[0].name;
+		if (isDbKind(s.kind) && !kindConns.some((c) => c.name === s.connection)) s.connection = kindConns[0]?.name;
 	}
-	async function loadPgTables() {
-		pgTables = [];
-		if (!s.connection) return;
+	async function loadTables() {
+		dbTables = [];
 		error = '';
 		try {
-			let r = await DocumentService.PostgresTables(s.connection);
-			if (r.needPassword && (await askPassword(r.needPassword))) r = await DocumentService.PostgresTables(s.connection);
+			if (FILE_DB_KINDS.includes(s.kind)) {
+				if (s.path) dbTables = (await DocumentService.FileTables(s.kind, s.path)) ?? [];
+				return;
+			}
+			if (!isDbKind(s.kind) || !s.connection) return;
+			let r = await DocumentService.ConnectionTables(s.connection);
+			if (r.needPassword && (await askPassword(r.needPassword))) r = await DocumentService.ConnectionTables(s.connection);
 			if (r.needPassword) {
 				error = 'Mot de passe requis pour lister les tables.';
 				return;
 			}
-			pgTables = r.tables ?? [];
+			dbTables = r.tables ?? [];
 		} catch (e) {
 			error = err(e);
 		}
 	}
-	async function pickTable(t: PGTable) {
-		s.sql = await DocumentService.PostgresTableSQL(t.schema, t.name);
+	async function pickTable(t: DBTable) {
+		s.sql = await DocumentService.TableSQL(s.kind, t.schema, t.name);
 	}
-	const shownTables = $derived(pgTables.filter((t) => !pgFilter || (t.schema + '.' + t.name).toLowerCase().includes(pgFilter.toLowerCase())).slice(0, 300));
+	const shownTables = $derived(dbTables.filter((t) => !tableFilter || (t.schema + '.' + t.name).toLowerCase().includes(tableFilter.toLowerCase())).slice(0, 300));
 
-	onMount(() => {
+	// API web : en-têtes saisis en texte.
+	let headers = $state(headersText(initial().headers));
+
+	onMount(async () => {
+		try {
+			available = await DocumentService.DataSources();
+		} catch {
+			/* liaison absente : tout supposé disponible */
+		}
 		if (s.kind === 'xlsx') loadXlsx();
-		if (s.kind === 'postgres') loadConns().then(loadPgTables);
+		if (isDbKind(s.kind) || s.kind === 'web') loadConns().then(loadTables);
+		if (FILE_DB_KINDS.includes(s.kind)) loadTables();
 		if (s.kind === 'table' && !s.table) s.table = tables[0];
 		if (s.kind === 'query' && !s.query) s.query = queries[0];
 	});
 
 	async function browse() {
-		const p = await DocumentService.PickDataFile(s.kind === 'xlsx' ? 'xlsx' : 'csv');
+		const p = await DocumentService.PickDataFile(s.kind);
 		if (p) {
 			s.path = p;
 			if (s.kind === 'xlsx') await loadXlsx();
+			if (FILE_DB_KINDS.includes(s.kind)) await loadTables();
 		}
 	}
 
 	async function addConnection() {
-		const name = await newConnection();
+		const name = await newConnection((s.kind === 'web' ? 'web' : s.kind) as ConnKind);
 		if (!name) return;
 		await loadConns();
 		s.connection = name;
-		await loadPgTables();
+		await loadTables();
 	}
 
 	function changeKind(k: string) {
 		s = { kind: k };
 		error = '';
-		if (k === 'postgres') loadConns().then(loadPgTables);
+		dbTables = [];
+		if (isDbKind(k) || k === 'web') loadConns().then(loadTables);
 		if (k === 'table') s.table = tables[0];
 		if (k === 'query') s.query = queries[0];
+		if (k === 'web') s.url = 'https://';
 	}
 
 	function ok() {
 		error = '';
-		if ((s.kind === 'csv' || s.kind === 'xlsx') && !s.path) return void (error = 'Choisissez un fichier.');
+		if (isFile && !s.path) return void (error = 'Choisissez un fichier.');
 		if (s.kind === 'xlsx' && !s.sheet) return void (error = 'Choisissez un tableau du classeur.');
 		if (s.kind === 'table' && !s.table) return void (error = 'Choisissez un tableau.');
 		if (s.kind === 'query' && !s.query) return void (error = 'Choisissez une requête.');
-		if (s.kind === 'postgres' && (!s.connection || !s.sql?.trim())) return void (error = 'Choisissez une connexion et une table (ou écrivez une requête SQL).');
+		if (isDB && (!s.connection || !s.sql?.trim())) return void (error = 'Choisissez une connexion et une table (ou écrivez une requête SQL).');
+		if (isFileDB && !s.sql?.trim()) return void (error = 'Choisissez une table (ou écrivez une requête SQL).');
 		if (s.kind === 'sql' && !s.sql?.trim()) return void (error = 'Écrivez une requête SQL.');
+		if (s.kind === 'web') {
+			if (!/^https?:\/\/[^/]+/i.test(s.url?.trim() ?? '')) return void (error = 'L’adresse doit commencer par http:// ou https://.');
+			s.url = s.url!.trim();
+			s.headers = parseHeaders(headers);
+			if (!s.headers.length) delete s.headers;
+			if (!s.connection) delete s.connection;
+		}
+		if (!s.recordPath?.trim()) delete s.recordPath;
 		onok(clone(s));
 	}
 </script>
@@ -139,12 +164,19 @@
 	>
 		<header>Source</header>
 		<div class="body">
-			<label class="field">Type de source <Select value={s.kind} options={KINDS} width="100%" onchange={changeKind} /></label>
-			{#if s.kind === 'csv' || s.kind === 'xlsx'}
+			<label class="field">Type de source <Select value={s.kind} options={SOURCE_KINDS} width="100%" onchange={changeKind} /></label>
+			{#if unavailable}
+				<p class="error inline">
+					{s.kind === 'odbc'
+						? 'ODBC n’est pas disponible dans cette version de Slitable (Windows seulement, ou compilation avec -tags odbc).'
+						: 'DuckDB n’est pas disponible dans cette version de Slitable (compilation avec CGO et -tags duckdb).'}
+				</p>
+			{/if}
+			{#if isFile}
 				<div class="field">
 					Fichier
 					<div class="row">
-						<input class="grow" bind:value={s.path} onchange={() => s.kind === 'xlsx' && loadXlsx()} placeholder="Chemin du fichier" />
+						<input class="grow" bind:value={s.path} onchange={() => (s.kind === 'xlsx' ? loadXlsx() : isFileDB ? loadTables() : undefined)} placeholder="Chemin du fichier" />
 						<button onclick={browse}>Parcourir…</button>
 					</div>
 				</div>
@@ -163,7 +195,7 @@
 							onchange={(v) => (s.delimiter = v || undefined)}
 						/></label
 					>
-				{:else}
+				{:else if s.kind === 'xlsx'}
 					<div class="field">
 						Tableau du classeur
 						<div class="list">
@@ -176,32 +208,60 @@
 							{/each}
 						</div>
 					</div>
+				{:else if s.kind === 'json'}
+					<label class="field">Chemin des enregistrements <input bind:value={s.recordPath} placeholder="vide : la racine ou son seul tableau ; ex. data.items" /></label>
+					<p class="muted">Tableau d’objets, ou un objet JSON par ligne (NDJSON). Les objets imbriqués deviennent des colonnes « parent.enfant ».</p>
+				{:else if s.kind === 'parquet'}
+					<p class="muted">Chaque colonne du fichier donne une colonne (« parent.enfant » pour une structure ; une liste devient du texte).</p>
 				{/if}
 			{:else if s.kind === 'table'}
 				<label class="field">Tableau <Select value={s.table ?? ''} options={tables.map((t) => ({ value: t, label: t }))} width="100%" onchange={(v) => (s.table = v)} /></label>
 			{:else if s.kind === 'query'}
 				<label class="field">Requête <Select value={s.query ?? ''} options={queries.map((t) => ({ value: t, label: t }))} width="100%" onchange={(v) => (s.query = v)} /></label>
 				<p class="muted">La requête part du résultat de l'autre requête (référence) : modifier l'autre requête change aussi celle-ci.</p>
-			{:else if s.kind === 'postgres'}
+			{:else if isDB}
 				<div class="field">
-					Connexion
+					Connexion {CONN_LABELS[s.kind as ConnKind]}
 					<div class="row">
-						<Select value={s.connection ?? ''} options={conns.map((c) => ({ value: c.name, label: `${c.name} (${c.postgres.user}@${c.postgres.host}/${c.postgres.database})` }))} width="100%" onchange={(v) => ((s.connection = v), loadPgTables())} />
+						<Select value={s.connection ?? ''} options={kindConns.map((c) => ({ value: c.name, label: `${c.name} (${describe(c)})` }))} width="100%" onchange={(v) => ((s.connection = v), loadTables())} />
 						<button onclick={addConnection}>Nouvelle…</button>
 					</div>
 				</div>
-				{#if pgTables.length}
+			{:else if s.kind === 'web'}
+				<label class="field">Adresse (GET) <input bind:value={s.url} placeholder="https://api.exemple.fr/v1/clients?page=1" /></label>
+				<label class="field">Chemin des enregistrements <input bind:value={s.recordPath} placeholder="vide : la racine ou son seul tableau ; ex. data.items" /></label>
+				<label class="field"
+					>En-têtes (un par ligne, « Nom: valeur ») <textarea rows="2" bind:value={headers} placeholder="Accept-Language: fr"></textarea></label
+				>
+				<div class="field">
+					Authentification
+					<div class="row">
+						<Select
+							value={s.connection ?? ''}
+							options={[{ value: '', label: 'Aucune (API publique)' }, ...kindConns.map((c) => ({ value: c.name, label: `${c.name} (${c.config.url})` }))]}
+							width="100%"
+							onchange={(v) => (s.connection = v || undefined)}
+						/>
+						<button onclick={addConnection}>Nouvelle…</button>
+					</div>
+				</div>
+				<p class="muted">Les en-têtes sont enregistrés dans le classeur : un jeton ou une clé d’API passe par une connexion Web (gardée dans le trousseau du système).</p>
+			{/if}
+			{#if isDB || isFileDB}
+				{#if dbTables.length}
 					<div class="field">
-						Tables et vues <input placeholder="Rechercher" bind:value={pgFilter} />
+						Tables et vues <input placeholder="Rechercher" bind:value={tableFilter} />
 						<div class="list">
 							{#each shownTables as t (t.schema + '.' + t.name)}
-								<button class="item" onclick={() => pickTable(t)}>{t.schema}.<strong>{t.name}</strong>{t.view ? ' (vue)' : ''}</button>
+								<button class="item" onclick={() => pickTable(t)}>{t.schema ? t.schema + '.' : ''}<strong>{t.name}</strong>{t.view ? ' (vue)' : ''}</button>
 							{/each}
 						</div>
 					</div>
 				{/if}
-				<label class="field">Requête SQL (lecture seule) <textarea rows="5" bind:value={s.sql} placeholder="SELECT * FROM public.ventes WHERE annee = 2026"></textarea></label>
-				<p class="muted">Filtrez de préférence ici : la requête est exécutée par le serveur, les étapes ensuite par Slitable.</p>
+				<label class="field">Requête SQL (lecture seule) <textarea rows="5" bind:value={s.sql} placeholder="SELECT * FROM ventes WHERE annee = 2026"></textarea></label>
+				<p class="muted">
+					{isDB ? 'Filtrez de préférence ici : la requête est exécutée par le serveur, les étapes ensuite par Slitable.' : 'Le fichier est ouvert en lecture seule ; les étapes s’appliquent ensuite.'}
+				</p>
 			{:else if s.kind === 'sql'}
 				<label class="field">Requête SQL sur le classeur (lecture seule) <textarea rows="6" bind:value={s.sql} placeholder="SELECT * FROM Ventes WHERE annee = 2026"></textarea></label>
 				<p class="muted">Comme dans l'onglet SQL : la requête est relue à chaque actualisation.{s.sheet ? ` Les adresses Cell[A1] sans feuille se lisent sur « ${s.sheet} ».` : ''}</p>
@@ -309,6 +369,9 @@
 	.error {
 		color: #b42318;
 		margin: 6px 14px 0;
+	}
+	.error.inline {
+		margin: 0;
 	}
 	footer {
 		display: flex;

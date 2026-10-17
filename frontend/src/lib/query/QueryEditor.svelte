@@ -14,6 +14,7 @@
 	import { typeIcon, typeIconName, type ColumnType } from '#lib/grid/format.js';
 	import StepForm from './StepForm.svelte';
 	import SourceForm from './SourceForm.svelte';
+	import type { ConnKind } from './sources';
 	import { OPS, TYPES, clickColumns, clone, defaultStep, insertStep, moveStep, newQuery, otherSource, quickSteps, typeName, withColumns, type Op, type QuickAction } from './steps';
 
 	interface Props {
@@ -23,7 +24,7 @@
 		queries: string[];
 		tables: string[];
 		askPassword: (need: PasswordNeed) => Promise<boolean>;
-		newConnection: () => Promise<string | null>;
+		newConnection: (kind: ConnKind) => Promise<string | null>;
 		/** Enregistrer (et charger si load) ; renvoie un message d'erreur ou "". */
 		onfinish: (q: Query, load: boolean) => Promise<string>;
 		onclose: () => void;

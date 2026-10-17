@@ -21,6 +21,15 @@ import * as grid$0 from "../grid/models.js";
 import * as query$0 from "../query/models.js";
 
 /**
+ * DataSources dit quelles sources à pilote facultatif sont compilées dans
+ * cette version (ODBC : Windows, ou -tags odbc ; DuckDB : -tags duckdb).
+ */
+export interface DataSources {
+    "odbc": boolean;
+    "duckdb": boolean;
+}
+
+/**
  * DemoProgress est l'avancement de la fabrication du classeur de démonstration.
  */
 export interface DemoProgress {
@@ -166,15 +175,6 @@ export interface OpenResult {
 }
 
 /**
- * PostgresTables liste les tables et vues d'une connexion (navigateur).
- * needPassword est rempli si le serveur demande un mot de passe.
- */
-export interface PostgresTables {
-    "tables": query$0.PGTable[] | null;
-    "needPassword": query$0.PasswordNeed | null;
-}
-
-/**
  * QueryRefresh est le résultat d'une actualisation : tableaux chargés, ou
  * mot de passe à demander.
  */
@@ -198,6 +198,15 @@ export interface QuerySheet {
  * ScriptResult est l'issue d'un script pour l'interface.
  */
 export type ScriptResult = api$0.ScriptResult;
+
+/**
+ * TableList liste les tables et vues d'une connexion (navigateur).
+ * needPassword est rempli si le serveur demande un mot de passe.
+ */
+export interface TableList {
+    "tables": query$0.DBTable[] | null;
+    "needPassword": query$0.PasswordNeed | null;
+}
 
 /**
  * UICommand est une commande pour l'interface.

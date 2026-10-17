@@ -1,33 +1,56 @@
 <script lang="ts">
-	// Connexion PostgreSQL : enregistrée dans le classeur sans son mot de
-	// passe, qui reste dans le trousseau du système (« Mémoriser ») ou en
+	// Connexion à une source externe (PostgreSQL, MySQL / MariaDB, SQL Server,
+	// ODBC, API web) : enregistrée dans le classeur sans son mot de passe (ou
+	// jeton), qui reste dans le trousseau du système (« Mémoriser ») ou en
 	// mémoire le temps de la session.
+	import { onMount } from 'svelte';
 	import Select from '#lib/ui/Select.svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import type { Connection } from '#bindings/internal/query/models.js';
 	import { clone } from './steps';
+	import { CONN_LABELS, DEFAULT_PORT, connectionReady, newConnection, suggestName, type ConnKind } from './sources';
 
 	interface Props {
 		connection?: Connection | null;
+		/** Genre d'une nouvelle connexion (choix possible tant qu'elle n'est pas enregistrée). */
+		kind?: ConnKind;
 		/** Enregistrée : renvoie son nom. */
 		onsaved: (name: string) => void;
 		oncancel: () => void;
 	}
-	let { connection = null, onsaved, oncancel }: Props = $props();
+	let { connection = null, kind = 'postgres', onsaved, oncancel }: Props = $props();
 
-	const initial = (): Connection =>
-		connection ? clone(connection) : { id: 0, name: '', kind: 'postgres', postgres: { host: 'localhost', port: 5432, database: '', user: 'postgres', sslmode: '' }, remembered: false };
+	const initial = (): Connection => (connection ? clone(connection) : newConnection(kind));
 	let c = $state<Connection>(initial());
 	let password = $state('');
 	let remember = $state(true);
 	let error = $state('');
 	let tested = $state('');
 	let busy = $state(false);
+	let odbcAvailable = $state(true);
+	let autoName = $state(!initial().id && !initial().name);
 	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
+	const k = $derived(c.kind as ConnKind);
+	const server = $derived(k === 'postgres' || k === 'mysql' || k === 'sqlserver');
+
+	onMount(async () => {
+		try {
+			odbcAvailable = (await DocumentService.DataSources()).odbc;
+		} catch {
+			/* ancienne liaison : on suppose disponible */
+		}
+	});
 
 	$effect(() => {
-		if (!c.id && !c.name && c.postgres.database) c.name = c.postgres.database;
+		if (autoName && !c.id) c.name = suggestName(c);
 	});
+
+	function changeKind(v: string) {
+		const name = c.name;
+		c = newConnection(v as ConnKind);
+		if (!autoName) c.name = name;
+		error = tested = '';
+	}
 
 	async function test() {
 		error = tested = '';
@@ -35,7 +58,7 @@
 		try {
 			const msg = await DocumentService.TestConnection(c, password, remember);
 			if (msg) error = msg;
-			else tested = 'Connexion réussie.';
+			else tested = k === 'web' ? 'Le serveur répond.' : 'Connexion réussie.';
 		} catch (e) {
 			error = err(e);
 		} finally {
@@ -64,45 +87,84 @@
 		class="dialog"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Connexion PostgreSQL"
+		aria-label="Connexion {CONN_LABELS[k] ?? ''}"
 		tabindex="-1"
 		onkeydown={(e) => {
 			e.stopPropagation();
 			if (e.key === 'Escape') oncancel();
 		}}
 	>
-		<header>Base de données PostgreSQL</header>
+		<header>{k === 'web' ? 'Connexion à une API web' : `Base de données ${CONN_LABELS[k] ?? ''}`}</header>
 		<div class="body">
 			<div class="grid">
-				<label>Serveur <input bind:value={c.postgres.host} placeholder="localhost" /></label>
-				<label>Port <input type="number" bind:value={c.postgres.port} /></label>
-				<label>Base de données <input bind:value={c.postgres.database} /></label>
-				<label>Utilisateur <input bind:value={c.postgres.user} /></label>
+				{#if !c.id}
+					<label class="wide"
+						>Type de connexion <Select
+							value={c.kind}
+							options={(Object.keys(CONN_LABELS) as ConnKind[]).map((v) => ({ value: v, label: CONN_LABELS[v] }))}
+							width="100%"
+							onchange={changeKind}
+						/></label
+					>
+				{/if}
+				{#if server}
+					<label>Serveur <input bind:value={c.config.host} placeholder="localhost" /></label>
+					<label>Port <input type="number" bind:value={c.config.port} placeholder={String(DEFAULT_PORT[k] ?? '')} /></label>
+					{#if k === 'sqlserver'}
+						<label>Instance <input bind:value={c.config.instance} placeholder="(par défaut) ou SQLEXPRESS" /></label>
+					{/if}
+					<label>Base de données <input bind:value={c.config.database} placeholder={k === 'postgres' ? '' : '(facultative)'} /></label>
+					<label>Utilisateur <input bind:value={c.config.user} placeholder={k === 'sqlserver' ? 'vide : authentification Windows' : ''} /></label>
+					<label
+						>Chiffrement (SSL/TLS) <Select
+							value={c.config.sslmode ?? ''}
+							options={[
+								{ value: '', label: k === 'sqlserver' ? 'Réglage du pilote' : 'Si le serveur le propose' },
+								{ value: 'disable', label: 'Désactivé' },
+								{ value: 'require', label: 'Obligatoire' },
+								{ value: 'verify-full', label: 'Obligatoire, certificat vérifié' }
+							]}
+							width="100%"
+							onchange={(v) => (c.config.sslmode = v || undefined)}
+						/></label
+					>
+				{:else if k === 'odbc'}
+					<label class="wide"
+						>Source de données <input bind:value={c.config.odbc} placeholder="DSN=Ventes  ou  Driver={'{'}ODBC Driver 18 for SQL Server{'}'};Server=srv;Database=ventes" /></label
+					>
+					<label>Utilisateur <input bind:value={c.config.user} placeholder="(facultatif)" /></label>
+				{:else if k === 'web'}
+					<label class="wide">Adresse de l’API <input bind:value={c.config.url} placeholder="https://api.exemple.fr/v1" /></label>
+					<label>En-tête du jeton <input bind:value={c.config.header} placeholder="Authorization" /></label>
+					<label>Utilisateur (Basic) <input bind:value={c.config.user} placeholder="vide : jeton seul" /></label>
+				{/if}
+				<label>Nom de la connexion <input bind:value={c.name} oninput={() => (autoName = false)} /></label>
 				<label
-					>Chiffrement (SSL) <Select
-						value={c.postgres.sslmode ?? ''}
-						options={[
-							{ value: '', label: 'Si le serveur le propose' },
-							{ value: 'disable', label: 'Désactivé' },
-							{ value: 'require', label: 'Obligatoire' },
-							{ value: 'verify-full', label: 'Obligatoire, certificat vérifié' }
-						]}
-						width="100%"
-						onchange={(v) => (c.postgres.sslmode = v || undefined)}
-					/></label
+					>{k === 'web' ? (c.config.user ? 'Mot de passe' : 'Jeton') : 'Mot de passe'}
+					<input type="password" bind:value={password} autocomplete="off" placeholder={c.remembered ? '(mémorisé)' : ''} /></label
 				>
-				<label>Nom de la connexion <input bind:value={c.name} /></label>
-				<label>Mot de passe <input type="password" bind:value={password} autocomplete="off" placeholder={c.remembered ? '(mémorisé)' : ''} /></label>
 				<label class="check"><input type="checkbox" bind:checked={remember} /> Mémoriser dans le trousseau du système</label>
 			</div>
-			<p class="muted">Le mot de passe n'est jamais enregistré dans le classeur. La connexion ne sert qu'à lire (transaction en lecture seule).</p>
+			{#if k === 'odbc' && !odbcAvailable}
+				<p class="error">ODBC n’est pas disponible dans cette version de Slitable (Windows seulement, ou compilation avec -tags odbc).</p>
+			{/if}
+			<p class="muted">
+				{#if k === 'web'}
+					Le jeton n’est jamais enregistré dans le classeur ; il n’est envoyé qu’aux adresses qui commencent par celle de la connexion
+					({c.config.header || 'Authorization'}{!c.config.user && (c.config.header || 'Authorization').toLowerCase() === 'authorization' ? ' : Bearer ajouté à un jeton seul' : ''}).
+				{:else}
+					Le mot de passe n’est jamais enregistré dans le classeur. La connexion ne sert qu’à lire ({k === 'postgres' || k === 'mysql'
+						? 'transaction en lecture seule'
+						: 'requêtes SELECT seulement, transaction toujours annulée'}).
+				{/if}
+			</p>
 		</div>
 		{#if error}<p class="error">{error}</p>{/if}
 		{#if tested}<p class="ok">{tested}</p>{/if}
 		<footer>
-			<button onclick={test} disabled={busy || !c.postgres.host || !c.postgres.database}>Tester</button>
+			<button onclick={test} disabled={busy || !connectionReady(c)}>Tester</button>
 			<span class="grow"></span>
-			<button class="primary" onclick={save} disabled={busy || !c.postgres.host || !c.postgres.database}>OK</button>
+			<button class="primary" onclick={save} disabled={busy || !connectionReady(c)}>OK</button>
 			<button onclick={oncancel}>Annuler</button>
 		</footer>
 	</div>
@@ -122,7 +184,7 @@
 		background: #fff;
 		border: 1px solid #c9cdd2;
 		box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
-		width: 520px;
+		width: 560px;
 		max-width: calc(100vw - 32px);
 		font-size: 12px;
 	}
@@ -143,6 +205,9 @@
 		display: flex;
 		flex-direction: column;
 		gap: 2px;
+	}
+	label.wide {
+		grid-column: 1 / -1;
 	}
 	label.check {
 		flex-direction: row;
@@ -165,6 +230,9 @@
 	.error {
 		color: #b42318;
 		margin: 0 14px;
+	}
+	.body .error {
+		margin: 8px 0 0;
 	}
 	.ok {
 		color: #217346;

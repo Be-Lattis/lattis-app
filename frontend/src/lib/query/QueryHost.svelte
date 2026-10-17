@@ -12,6 +12,7 @@
 	import ConnectionDialog from './ConnectionDialog.svelte';
 	import PasswordDialog from './PasswordDialog.svelte';
 	import { newQuery } from './steps';
+	import { CONN_LABELS, describe, isDbKind, type ConnKind } from './sources';
 
 	interface Props {
 		/** Le classeur a changé ; sheet : feuille à afficher (tableau chargé). */
@@ -27,7 +28,7 @@
 	let conns = $state<Connection[]>([]);
 	let tables = $state<string[]>([]);
 	let editing = $state<{ query: Query; editSource: boolean } | null>(null);
-	let connDialog = $state<{ connection: Connection | null; done: (name: string | null) => void } | null>(null);
+	let connDialog = $state<{ connection: Connection | null; kind: ConnKind; done: (name: string | null) => void } | null>(null);
 	let pwNeed = $state<{ need: PasswordNeed; done: (ok: boolean) => void } | null>(null);
 	let busy = $state('');
 
@@ -51,10 +52,11 @@
 		});
 	}
 
-	function newConnection(connection: Connection | null = null): Promise<string | null> {
+	function newConnection(connection: Connection | null = null, kind: ConnKind = 'postgres'): Promise<string | null> {
 		return new Promise((resolve) => {
 			connDialog = {
 				connection,
+				kind: (connection?.kind as ConnKind) ?? kind,
 				done: (name) => {
 					connDialog = null;
 					resolve(name);
@@ -75,11 +77,16 @@
 					await refresh(null);
 					return;
 				case 'csv':
-				case 'xlsx': {
+				case 'xlsx':
+				case 'json':
+				case 'parquet':
+				case 'sqlite':
+				case 'duckdb': {
 					const path = await DocumentService.PickDataFile(what);
 					if (!path) return;
 					const name = await DocumentService.NewQueryName(await DocumentService.FileBase(path));
-					let editSource = false;
+					// Base SQLite ou DuckDB : la table se choisit dans la boîte de la source.
+					let editSource = what === 'sqlite' || what === 'duckdb';
 					const source = { kind: what, path } as Query['source'];
 					if (what === 'xlsx') {
 						const ts = (await DocumentService.ExcelTables(path)) ?? [];
@@ -97,13 +104,21 @@
 					editing = { query: newQuery(name, { kind: 'table', table: tables[0] }), editSource: tables.length > 1 };
 					return;
 				}
-				case 'postgres': {
-					let conn: string | null = conns[0]?.name ?? null;
-					if (!conn) conn = await newConnection();
+				case 'web': {
+					const name = await DocumentService.NewQueryName('Web');
+					editing = { query: newQuery(name, { kind: 'web', url: 'https://' }), editSource: true };
+					return;
+				}
+				default: {
+					if (!isDbKind(what)) return;
+					let conn: string | null = conns.find((c) => c.kind === what)?.name ?? null;
+					if (!conn) conn = await newConnection(null, what);
 					if (!conn) return;
 					await load();
+					// La boîte de connexion permet de changer de genre : la source suit.
+					const kind = conns.find((c) => c.name === conn)?.kind ?? what;
 					const name = await DocumentService.NewQueryName(conn);
-					editing = { query: newQuery(name, { kind: 'postgres', connection: conn, sql: '' }), editSource: true };
+					editing = { query: newQuery(name, { kind, connection: conn, sql: '' }), editSource: true };
 					return;
 				}
 			}
@@ -222,15 +237,15 @@
 		{#each conns as c (c.id)}
 			<div class="item">
 				<span class="name">{c.name}</span>
-				<span class="muted">PostgreSQL {c.postgres.user}@{c.postgres.host}:{c.postgres.port || 5432}/{c.postgres.database}{c.remembered ? ' · mot de passe mémorisé' : ''}</span>
+				<span class="muted">{describe(c)}{c.remembered ? (c.kind === 'web' ? ' · jeton mémorisé' : ' · mot de passe mémorisé') : ''}</span>
 				<div class="acts">
 					<button onclick={() => newConnection(c).then((n) => (n ? load() : undefined))}>Modifier</button>
-					<button onclick={() => forget(c)}>Oublier le mot de passe</button>
+					<button onclick={() => forget(c)}>{c.kind === 'web' ? 'Oublier le jeton' : 'Oublier le mot de passe'}</button>
 					<button onclick={() => removeConn(c)}>Supprimer</button>
 				</div>
 			</div>
 		{/each}
-		<button class="add" onclick={() => newConnection().then((n) => (n ? load().then(() => onchanged()) : undefined))}>Nouvelle connexion PostgreSQL…</button>
+		<button class="add" onclick={() => newConnection().then((n) => (n ? load().then(() => onchanged()) : undefined))}>Nouvelle connexion…</button>
 	</aside>
 {/if}
 
@@ -241,13 +256,13 @@
 		queries={queries.map((q) => q.name)}
 		{tables}
 		{askPassword}
-		newConnection={() => newConnection()}
+		newConnection={(kind) => newConnection(null, kind)}
 		onfinish={finish}
 		onclose={() => (editing = null)}
 	/>
 {/if}
 {#if connDialog}
-	<ConnectionDialog connection={connDialog.connection} onsaved={(n) => connDialog?.done(n)} oncancel={() => connDialog?.done(null)} />
+	<ConnectionDialog connection={connDialog.connection} kind={connDialog.kind} onsaved={(n) => connDialog?.done(n)} oncancel={() => connDialog?.done(null)} />
 {/if}
 {#if pwNeed}
 	<PasswordDialog need={pwNeed.need} ondone={(ok) => pwNeed?.done(ok)} />

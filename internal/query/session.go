@@ -238,8 +238,16 @@ func (r *run) load(src Source) (loaded, error) {
 		l, err = r.loadXLSX(src)
 	case SourceTable:
 		l, err = r.loadTable(src)
-	case SourcePostgres:
-		l, err = r.loadPostgres(src)
+	case SourcePostgres, SourceMySQL, SourceSQLServer, SourceODBC:
+		l, err = r.loadDB(src)
+	case SourceSQLite, SourceDuckDB:
+		l, err = r.loadFileDB(src)
+	case SourceJSON:
+		l, err = r.loadJSON(src)
+	case SourceParquet:
+		l, err = r.loadParquet(src)
+	case SourceWeb:
+		l, err = r.loadWeb(src)
 	case SourceSQL:
 		l, err = r.loadSQL(src)
 	case "":

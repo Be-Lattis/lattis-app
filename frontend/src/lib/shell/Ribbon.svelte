@@ -43,7 +43,7 @@
 
 	export type FileAction = 'new' | 'open' | 'save' | 'saveAs' | 'import' | 'export' | 'exportXlsx' | 'print' | 'pdf' | 'close' | 'demo' | 'mcp';
 
-	export type DataAction = 'csv' | 'xlsx' | 'postgres' | 'table' | 'queries' | 'refreshAll';
+	export type DataAction = 'csv' | 'xlsx' | 'json' | 'parquet' | 'sqlite' | 'duckdb' | 'postgres' | 'mysql' | 'sqlserver' | 'odbc' | 'web' | 'table' | 'queries' | 'refreshAll';
 
 	interface Props {
 		view: View;
@@ -319,7 +319,31 @@
 				commands: [
 					{ label: 'Texte/CSV', icon: 'file', run: data('csv'), hint: 'Nouvelle requête à partir d’un fichier CSV (étapes de transformation, actualisable)' },
 					{ label: 'Classeur Excel', icon: 'table', run: data('xlsx'), hint: 'Nouvelle requête à partir d’un tableau d’un classeur .xlsx' },
-					{ label: 'PostgreSQL', icon: 'database', run: data('postgres'), hint: 'Nouvelle requête sur une base PostgreSQL (lecture seule)' },
+					{
+						label: 'Autres fichiers',
+						icon: 'file',
+						run: ondata ? openItems : undefined,
+						hint: 'Nouvelle requête à partir d’un fichier JSON, Parquet, ou d’une base SQLite ou DuckDB',
+						items: [
+							{ label: 'JSON', run: data('json') },
+							{ label: 'Parquet', run: data('parquet') },
+							{ label: 'Base SQLite', run: data('sqlite') },
+							{ label: 'Base DuckDB', run: data('duckdb') }
+						]
+					},
+					{
+						label: 'Base de données',
+						icon: 'database',
+						run: ondata ? openItems : undefined,
+						hint: 'Nouvelle requête sur une base de données (lecture seule)',
+						items: [
+							{ label: 'PostgreSQL', run: data('postgres') },
+							{ label: 'MySQL / MariaDB', run: data('mysql') },
+							{ label: 'SQL Server', run: data('sqlserver') },
+							{ label: 'ODBC', run: data('odbc') }
+						]
+					},
+					{ label: 'Web', icon: 'web', run: data('web'), hint: 'Nouvelle requête à partir d’une API web qui répond en JSON (lecture seule)' },
 					{ label: 'À partir du tableau', icon: 'sheet', run: data('table'), hint: 'Nouvelle requête à partir d’un tableau du classeur' }
 				]
 			},
@@ -389,7 +413,7 @@
 	// Sur une feuille protégée, seules les commandes qui ne la modifient pas
 	// restent actives (lecture, copie, filtres, affichage) ; un tableau croisé
 	// crée une feuille : refusé quand la structure du classeur est protégée.
-	const READ_ONLY = new Set(['Annuler', 'Rétablir', 'Copier', 'Rechercher', 'Filtrer', 'Erreurs seulement', 'Antécédents', 'Dépendants', 'Effacer les flèches', 'Calculer', 'Quadrillage', 'En-têtes A1', 'Animations', 'Figer les volets', 'Zoom', '100 %', 'Mesurer la grille', 'Tableau croisé', 'Protéger la feuille', 'Protéger le classeur', 'Ôter la protection', 'Ôter la protection du classeur', 'Texte/CSV', 'Classeur Excel', 'PostgreSQL', 'À partir du tableau', 'Requêtes et connexions', 'Actualiser tout']);
+	const READ_ONLY = new Set(['Annuler', 'Rétablir', 'Copier', 'Rechercher', 'Filtrer', 'Erreurs seulement', 'Antécédents', 'Dépendants', 'Effacer les flèches', 'Calculer', 'Quadrillage', 'En-têtes A1', 'Animations', 'Figer les volets', 'Zoom', '100 %', 'Mesurer la grille', 'Tableau croisé', 'Protéger la feuille', 'Protéger le classeur', 'Ôter la protection', 'Ôter la protection du classeur', 'Texte/CSV', 'Classeur Excel', 'Autres fichiers', 'Base de données', 'Web', 'À partir du tableau', 'Requêtes et connexions', 'Actualiser tout']);
 	const ribbons: Record<string, Group[]> = $derived(
 		Object.fromEntries(
 			Object.entries(allRibbons).map(([k, gs]) => [

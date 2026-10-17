@@ -4,7 +4,7 @@
 
 ## En bref
 
-Une **requête** est enregistrée dans le classeur : une **source** (CSV, `.xlsx`, tableau du classeur, autre requête, PostgreSQL) suivie d'une liste d'**étapes** rejouables (filtrer, renommer, changer le type…). Elle se **charge** dans un tableau d'une feuille, et **Actualiser** relit la source et rejoue les étapes. L'éditeur montre un aperçu à chaque étape, comme l'éditeur Power Query d'Excel.
+Une **requête** est enregistrée dans le classeur : une **source** (CSV, `.xlsx`, JSON, Parquet, base SQLite ou DuckDB, tableau du classeur, autre requête, PostgreSQL, MySQL / MariaDB, SQL Server, ODBC, API web JSON) suivie d'une liste d'**étapes** rejouables (filtrer, renommer, changer le type…). Elle se **charge** dans un tableau d'une feuille, et **Actualiser** relit la source et rejoue les étapes. L'éditeur montre un aperçu à chaque étape, comme l'éditeur Power Query d'Excel.
 
 | Sujet | Décision | Statut |
 |---|---|---|
@@ -14,6 +14,8 @@ Une **requête** est enregistrée dans le classeur : une **source** (CSV, `.xlsx
 | PostgreSQL | Pilote `github.com/jackc/pgx/v5/stdlib` (Go pur). Lecture seule garantie par une transaction `READ ONLY`. La requête SQL de la source est poussée telle quelle vers le serveur ; les étapes s'appliquent ensuite côté SQLite (pas encore de « query folding ») | Proposé |
 | Chargement | Une actualisation est **une** étape d'annulation : l'ancien tableau part à la corbeille (comme Supprimer le tableau), le nouveau est chargé hors journal puis mis en place (comme l'import CSV). Même nom, même ancre, mêmes colonnes calculées ajoutées à la main | Proposé |
 | Aperçu | Calculé sur les **1 000 premières lignes** de chaque source, comme l'aperçu d'Excel ; 200 lignes affichées | Proposé |
+| Autres SGBD | MySQL / MariaDB (`go-sql-driver/mysql`), SQL Server (`microsoft/go-mssqldb`), ODBC (`alexbrainman/odbc`) : même interface que PostgreSQL (boîte de connexion, Tester, navigateur des tables, requête SQL en lecture seule), mot de passe au trousseau | Proposé (17/10/2026) |
+| Fichiers et web | JSON et NDJSON, Parquet (`parquet-go/parquet-go`), base SQLite (pilote du classeur), DuckDB (`duckdb/duckdb-go`, **facultatif**), API web JSON (GET) | Proposé (17/10/2026) |
 
 ## Connexions et secrets
 
@@ -27,6 +29,28 @@ Le mot de passe est rangé sous le service `Slitable` et le compte `postgres://u
 4. si le serveur refuse l'authentification (SQLSTATE `28P01` ou `28000`) : l'interface demande le mot de passe, avec la case « Mémoriser dans le trousseau ».
 
 Pourquoi go-keyring : bibliothèque connue (Zalando), sans CGO, déjà présente dans les dépendances indirectes de Wails ; un trousseau indisponible n'empêche rien (repli sur la mémoire). « Oublier le mot de passe » le retire de la mémoire et du trousseau.
+
+## Autres sources (17/10/2026)
+
+Toutes sont en **lecture seule** ; aucune n'écrit vers l'extérieur.
+
+| Source (`kind`) | Champs | Lecture seule | Aperçu (1 000 lignes) | Pilote |
+|---|---|---|---|---|
+| `mysql` | `connection`, `sql` | `START TRANSACTION READ ONLY` | `LIMIT` poussé au serveur | `go-sql-driver/mysql`, Go pur |
+| `sqlserver` | `connection`, `sql` | pas de transaction en lecture seule : transaction **toujours annulée** et seules les requêtes de lecture (`SELECT`, `WITH`…) acceptées | `TOP (n)` poussé, sauf requête `WITH` ou triée (lecture arrêtée après n lignes) | `microsoft/go-mssqldb`, Go pur ; sans utilisateur : authentification Windows intégrée |
+| `odbc` | `connection`, `sql` | comme SQL Server (rien n'est garanti côté pilote) | lecture arrêtée après n lignes | `alexbrainman/odbc` : appels système sous Windows (amd64, 386) ; ailleurs CGO + unixODBC, donc seulement avec `-tags odbc` |
+| `sqlite` | `path`, `sql` | fichier ouvert `mode=ro` + `query_only` | `LIMIT` | `ncruces/go-sqlite3`, déjà là ; types inférés des valeurs (typage dynamique) |
+| `duckdb` | `path`, `sql` | fichier ouvert `access_mode=READ_ONLY` | `LIMIT` | `duckdb/duckdb-go` : **CGO**, et l'exécutable grossit d'environ 70 Mo ; compilé seulement avec `-tags duckdb` (sinon la source explique qu'elle n'est pas disponible) |
+| `json` | `path`, `recordPath` | — | lecture entière, n lignes gardées | `encoding/json` (ordre des clés conservé) |
+| `parquet` | `path` | — | lecture arrêtée après n lignes | `parquet-go/parquet-go`, Go pur |
+| `web` | `url`, `headers`, `recordPath`, `connection` (facultative) | GET seulement | comme JSON | `net/http` |
+
+- **Connexions.** Un même objet pour tous les genres (`kind` : `postgres`, `mysql`, `sqlserver`, `odbc`, `web`) avec une configuration commune (`host`, `port`, `database`, `user`, `sslmode`, `instance` pour SQL Server, `odbc` : chaîne de connexion **sans** `PWD=` — refusée si elle en contient un —, `url` et `header` pour le web). Compte du trousseau : `genre://utilisateur@hôte:port/base` (inchangé pour PostgreSQL : les mots de passe déjà mémorisés restent valables), `odbc://utilisateur@chaîne`, `web://utilisateur@adresse`. Refus d'authentification reconnus : MySQL 1045, SQL Server 18456, ODBC SQLSTATE 28000, HTTP 401/403.
+- **JSON.** Chemin des enregistrements `data.items`, `$.resultats[0].lignes` ; vide : la racine, ou son seul tableau (`{"data": [...]}`), sinon l'objet comme unique ligne. Les objets imbriqués sont aplatis en colonnes `parent.enfant`, les tableaux imbriqués gardés en texte JSON, les colonnes dans l'ordre de première apparition. Type d'une colonne : entier, décimal, booléen ou date (`AAAA-MM-JJ`) si **toutes** ses valeurs s'y prêtent, sinon texte. Un fichier d'une valeur par ligne (NDJSON) est lu comme un tableau.
+- **Parquet.** Une colonne par feuille du schéma (`parent.enfant` pour une structure, niveaux `list.element` retirés) ; une liste devient le texte de ses valeurs ; `DATE` → date, `DECIMAL` → décimal, horodatages et heures en texte ISO, `INT96` (Spark, Impala) compris.
+- **API web.** Les en-têtes de la source sont enregistrés dans le classeur : un jeton passe par une **connexion Web** (adresse de base, en-tête — `Authorization` par défaut, `Bearer ` ajouté à un jeton nu —, ou utilisateur pour l'authentification Basic), dont le secret reste au trousseau. Le secret n'est envoyé qu'aux adresses couvertes par celle de la connexion (même schéma, même hôte, chemin qui commence par le sien) et retiré d'une redirection vers un autre hôte. Réponse limitée à 512 Mo, délai de 2 minutes. Pas de pagination ni de méthode autre que GET (à faire).
+- **Interface.** Données › Obtenir des données : Texte/CSV, Classeur Excel, **Autres fichiers ▾** (JSON, Parquet, Base SQLite, Base DuckDB), **Base de données ▾** (PostgreSQL, MySQL / MariaDB, SQL Server, ODBC), **Web**, À partir du tableau. La boîte de connexion change ses champs selon le genre ; la boîte de la source a le navigateur des tables pour les SGBD et les fichiers de base.
+- **Lua.** `connections.list()` rend désormais `config = {…}` au lieu de `postgres = {…}`.
 
 ## Types : PostgreSQL → Slitable
 
@@ -104,8 +128,8 @@ Une feuille protégée refuse l'actualisation de son tableau ; une structure de 
 
 ## Limites de la première version
 
-- Lecture seule (pas d'écriture vers PostgreSQL) ; seul PostgreSQL parmi les SGBD (MySQL ensuite, même interface `Connector`).
-- Les étapes ne sont pas poussées vers le serveur : une source PostgreSQL volumineuse est lue en entier (filtrer dans le SQL de la source en attendant).
+- Lecture seule (pas d'écriture vers les sources externes).
+- Les étapes ne sont pas poussées vers le serveur : une source SGBD volumineuse est lue en entier (filtrer dans le SQL de la source en attendant).
 - L'aperçu travaille sur les 1 000 premières lignes de chaque source (une fusion ou un regroupement peut y différer du résultat complet, comme dans Excel).
 - Le résultat d'une actualisation passe par la mémoire de la base de travail (fichier temporaire) : pensé jusqu'à quelques millions de lignes.
 - Chemins de fichiers absolus : un classeur déplacé sur un autre poste doit faire repointer ses sources (Modifier la source).
