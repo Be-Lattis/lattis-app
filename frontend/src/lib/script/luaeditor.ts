@@ -158,6 +158,20 @@ const lintSummary = showPanel.of((view) => {
 	return { dom, bottom: true, update: paint };
 });
 
+// Soulignement fin et simple, point de la marge discret (choix de Louis) :
+// remplace la vague de @codemirror/lint (thème prioritaire sur le sien).
+const quiet = EditorView.theme({
+	'& .cm-lintRange, & .cm-lintRange-error, & .cm-lintRange-warning, & .cm-lintRange-info': {
+		backgroundImage: 'none',
+		textDecoration: 'none',
+		paddingBottom: '0'
+	},
+	'& .cm-lintRange-error': { borderBottom: '1px dotted #e05252' },
+	'& .cm-lintRange-warning': { borderBottom: '1px dotted #d19a3a' },
+	'& .cm-lintRange-info': { borderBottom: '1px dotted #9ca3af' },
+	'& .cm-lint-marker': { width: '0.55em', height: '0.55em', opacity: '0.6', marginTop: '0.45em' }
+});
+
 const theme = EditorView.baseTheme({
 	'.cm-lua-line-error': { backgroundColor: 'rgba(220, 38, 38, 0.07)' },
 	'.cm-lua-line-warning': { backgroundColor: 'rgba(217, 119, 6, 0.07)' },
@@ -171,18 +185,6 @@ const theme = EditorView.baseTheme({
 	'.cm-lua-lens-error': { color: '#b91c1c' },
 	'.cm-lua-lens-warning': { color: '#b45309' },
 	'.cm-lua-lens-info, .cm-lua-lens-hint': { color: '#6b7280' },
-	'.cm-lintRange-error': {
-		backgroundImage: 'none',
-		textDecoration: 'underline wavy #dc2626',
-		textDecorationThickness: '1.5px',
-		textUnderlineOffset: '3px'
-	},
-	'.cm-lintRange-warning': {
-		backgroundImage: 'none',
-		textDecoration: 'underline wavy #d97706',
-		textDecorationThickness: '1.5px',
-		textUnderlineOffset: '3px'
-	},
 	'.cm-lua-summary': {
 		display: 'block',
 		width: '100%',
@@ -218,5 +220,5 @@ const theme = EditorView.baseTheme({
 
 /** Coloration, linter, marges d'erreur et aide au survol. */
 export function luaTools(): Extension[] {
-	return [...luaSyntax(), luaLinter, lintGutter(), lens, lintSummary, keymap.of(lintKeymap), luaHover, theme];
+	return [...luaSyntax(), luaLinter, lintGutter(), lens, lintSummary, keymap.of(lintKeymap), luaHover, theme, quiet];
 }

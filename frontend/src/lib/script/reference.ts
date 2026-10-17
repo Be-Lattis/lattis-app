@@ -34,6 +34,8 @@ export interface RefEntry {
 }
 
 export const categories: { id: Category; label: string }[] = [
+	// Les bases du langage d'abord : conditions, boucles, fonctions (choix de Louis).
+	{ id: 'syntaxe', label: 'Bases du langage : conditions, boucles, fonctions' },
 	{ id: 'db', label: 'Données SQL (db)' },
 	{ id: 'sheets', label: 'Feuilles (sheets)' },
 	{ id: 'cells', label: 'Cellules (cells)' },
@@ -46,8 +48,7 @@ export const categories: { id: Category; label: string }[] = [
 	{ id: 'string', label: 'Texte (string)' },
 	{ id: 'table', label: 'Tables (table)' },
 	{ id: 'math', label: 'Maths (math)' },
-	{ id: 'os', label: 'Date et heure (os)' },
-	{ id: 'syntaxe', label: 'Syntaxe Lua' }
+	{ id: 'os', label: 'Date et heure (os)' }
 ];
 
 export const reference: RefEntry[] = [
@@ -574,6 +575,14 @@ end`
 		details: 'break sort de la boucle ; il n’y a pas de continue.',
 		example: `for i = 1, 3 do print(i) end
 for i = 10, 1, -3 do print(i) end`
+	},
+	{
+		name: 'for in',
+		category: 'syntaxe',
+		signature: 'for i, v in ipairs(liste) do ... end  |  for k, v in pairs(t) do ... end',
+		summary: 'Parcourt une liste dans l’ordre (ipairs) ou toutes les clés d’une table (pairs, ordre quelconque).',
+		example: `for i, nom in ipairs({"Durand", "Martin"}) do print(i, nom) end
+for _, t in ipairs(db.tables()) do print(t.name) end`
 	},
 	{
 		name: 'while',
