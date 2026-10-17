@@ -3,6 +3,7 @@
 	// comme les boîtes de Power Query : Filtrer les lignes, Regrouper par,
 	// Fusionner…
 	import Select from '#lib/ui/Select.svelte';
+	import Icon from '#lib/icons/Icon.svelte';
 	import type { Column, Step } from '#bindings/internal/query/models.js';
 	import { AGGS, CMPS, JOINS, OPS, TYPES, clone, otherKey, otherSource, type Op } from './steps';
 
@@ -118,7 +119,7 @@
 					</div>
 				{/each}
 				<div class="row">
-					<button onclick={() => (s.conditions = [...(s.conditions ?? []), { column: cols[0]?.name ?? '', cmp: '=', value: '' }])}>Ajouter une condition</button>
+					<button class="ico" onclick={() => (s.conditions = [...(s.conditions ?? []), { column: cols[0]?.name ?? '', cmp: '=', value: '' }])}><Icon name="plus" size={14} />Ajouter une condition</button>
 					<label><input type="radio" checked={!s.any} onchange={() => (s.any = false)} /> Et</label>
 					<label><input type="radio" checked={!!s.any} onchange={() => (s.any = true)} /> Ou</label>
 				</div>
@@ -196,7 +197,7 @@
 							{#if (s.keys ?? []).length > 1}<button class="x" title="Retirer" onclick={() => { s.keys = s.keys!.filter((_, k) => k !== i); s.otherKeys = s.otherKeys!.filter((_, k) => k !== i); }}>✕</button>{/if}
 						</div>
 					{/each}
-					<button onclick={() => { s.keys = [...(s.keys ?? []), cols[0]?.name ?? '']; s.otherKeys = [...(s.otherKeys ?? []), theirs[0]?.name ?? '']; }}>Ajouter une colonne de correspondance</button>
+					<button class="ico" onclick={() => { s.keys = [...(s.keys ?? []), cols[0]?.name ?? '']; s.otherKeys = [...(s.otherKeys ?? []), theirs[0]?.name ?? '']; }}><Icon name="plus" size={14} />Ajouter une colonne de correspondance</button>
 					<label class="field">Type de jointure <Select bind:value={s.join!} options={JOINS.map(([v, label]) => ({ value: v, label }))} width="100%" /></label>
 					{#if s.join !== 'anti'}
 						<p class="hint">Colonnes à reprendre de la seconde (aucune cochée : toutes sauf les colonnes de correspondance) :</p>
@@ -225,7 +226,7 @@
 						<button class="x" title="Retirer" onclick={() => (s.aggs = (s.aggs ?? []).filter((_, k) => k !== i))}>✕</button>
 					</div>
 				{/each}
-				<button onclick={() => (s.aggs = [...(s.aggs ?? []), { name: '', op: 'sum', column: cols.find((c) => c.type === 'integer' || c.type === 'decimal')?.name ?? cols[0]?.name }])}>Ajouter un agrégat</button>
+				<button class="ico" onclick={() => (s.aggs = [...(s.aggs ?? []), { name: '', op: 'sum', column: cols.find((c) => c.type === 'integer' || c.type === 'decimal')?.name ?? cols[0]?.name }])}><Icon name="plus" size={14} />Ajouter un agrégat</button>
 			{:else if s.op === 'sort'}
 				{#each s.sort ?? [] as k, i (i)}
 					<div class="row">
@@ -235,7 +236,7 @@
 						{#if (s.sort ?? []).length > 1}<button class="x" title="Retirer" onclick={() => (s.sort = (s.sort ?? []).filter((_, j) => j !== i))}>✕</button>{/if}
 					</div>
 				{/each}
-				<button onclick={() => (s.sort = [...(s.sort ?? []), { column: cols[0]?.name ?? '' }])}>Ajouter un niveau</button>
+				<button class="ico" onclick={() => (s.sort = [...(s.sort ?? []), { column: cols[0]?.name ?? '' }])}><Icon name="plus" size={14} />Ajouter un niveau</button>
 			{:else if s.op === 'top'}
 				<label class="field">Nombre de lignes <input type="number" min="0" bind:value={s.count} /></label>
 			{:else if s.op === 'pivot'}
@@ -349,6 +350,13 @@
 		padding: 3px 10px;
 		cursor: pointer;
 		align-self: flex-start;
+	}
+	/* Bouton avec icône devant le libellé. */
+	.ico {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		--icon-accent: #217346;
 	}
 	button:hover:not(:disabled) {
 		border-color: #217346;

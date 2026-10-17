@@ -8,6 +8,7 @@
 	import type { Connection, PasswordNeed, Query } from '#bindings/internal/query/models.js';
 	import type { QueryRefresh } from '#bindings/internal/bridge/models.js';
 	import type { DataAction } from '#lib/shell/Ribbon.svelte';
+	import Icon from '#lib/icons/Icon.svelte';
 	import QueryEditor from './QueryEditor.svelte';
 	import ConnectionDialog from './ConnectionDialog.svelte';
 	import PasswordDialog from './PasswordDialog.svelte';
@@ -224,9 +225,9 @@
 				<button class="name" title="Modifier la requête" onclick={() => (editing = { query: q, editSource: false })}>{q.name}</button>
 				<span class="muted">{q.table ? `→ ${q.table}` : 'connexion seulement'}{q.refreshed ? ` · ${q.refreshed}` : ''}</span>
 				<div class="acts">
-					<button onclick={() => (editing = { query: q, editSource: false })}>Modifier</button>
-					<button onclick={() => refresh(q.id)} disabled={!!busy}>{q.table ? 'Actualiser' : 'Charger'}</button>
-					<button onclick={() => remove(q)}>Supprimer</button>
+					<button onclick={() => (editing = { query: q, editSource: false })}><Icon name="edit" size={14} />Modifier</button>
+					<button onclick={() => refresh(q.id)} disabled={!!busy}><Icon name="refresh" size={14} />{q.table ? 'Actualiser' : 'Charger'}</button>
+					<button class="delete" onclick={() => remove(q)}><Icon name="trash" size={14} />Supprimer</button>
 				</div>
 			</div>
 		{:else}
@@ -238,13 +239,13 @@
 				<span class="name">{c.name}</span>
 				<span class="muted">{describe(c)}{c.remembered ? (c.kind === 'web' ? ' · jeton mémorisé' : ' · mot de passe mémorisé') : ''}</span>
 				<div class="acts">
-					<button onclick={() => newConnection(c).then((n) => (n ? load() : undefined))}>Modifier</button>
-					<button onclick={() => forget(c)}>{c.kind === 'web' ? 'Oublier le jeton' : 'Oublier le mot de passe'}</button>
-					<button onclick={() => removeConn(c)}>Supprimer</button>
+					<button onclick={() => newConnection(c).then((n) => (n ? load() : undefined))}><Icon name="edit" size={14} />Modifier</button>
+					<button onclick={() => forget(c)}><Icon name="key" size={14} />{c.kind === 'web' ? 'Oublier le jeton' : 'Oublier le mot de passe'}</button>
+					<button class="delete" onclick={() => removeConn(c)}><Icon name="trash" size={14} />Supprimer</button>
 				</div>
 			</div>
 		{/each}
-		<button class="add" onclick={() => newConnection().then((n) => (n ? load().then(() => onchanged()) : undefined))}>Nouvelle connexion…</button>
+		<button class="add" onclick={() => newConnection().then((n) => (n ? load().then(() => onchanged()) : undefined))}><Icon name="plus" size={14} />Nouvelle connexion…</button>
 	</aside>
 {/if}
 
@@ -316,6 +317,17 @@
 		display: flex;
 		gap: 4px;
 		flex-wrap: wrap;
+	}
+	/* Boutons d'action : icône devant le libellé, accent vert (rouge pour supprimer). */
+	.acts button,
+	.add {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		--icon-accent: #217346;
+	}
+	.acts .delete {
+		--icon-accent: #c0392b;
 	}
 	.muted {
 		color: #6b7280;

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resizePanel } from '#lib/ui/resize.js';
+	import Icon from '#lib/icons/Icon.svelte';
 	// Panneau « Référence » de l'onglet SCRIPT : les fonctions disponibles dans
 	// un script Lua, par catégorie, avec recherche. Un clic déplie une entrée ;
 	// Insérer place son exemple dans l'éditeur. Données : reference.ts.
@@ -60,7 +61,7 @@
 							{#if e.details}<p>{e.details}</p>{/if}
 							{#if e.example}
 								<pre>{e.example}</pre>
-								<button class="insert" onclick={() => insert(e.example!)}>Insérer l’exemple</button>
+								<button class="insert" onclick={() => insert(e.example!)}><Icon name="paste" size={14} />Insérer l’exemple</button>
 							{/if}
 						</div>
 					{/if}
@@ -191,6 +192,10 @@
 		overflow-x: auto;
 	}
 	.insert {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		--icon-accent: #217346;
 		font: inherit;
 		font-size: 12px;
 		padding: 3px 10px;

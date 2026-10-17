@@ -4,6 +4,7 @@
 	// jeton), qui reste dans le trousseau du système (« Mémoriser ») ou en
 	// mémoire le temps de la session.
 	import Select from '#lib/ui/Select.svelte';
+	import Icon from '#lib/icons/Icon.svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import type { Connection } from '#bindings/internal/query/models.js';
 	import { clone } from './steps';
@@ -145,7 +146,7 @@
 		{#if error}<p class="error">{error}</p>{/if}
 		{#if tested}<p class="ok">{tested}</p>{/if}
 		<footer>
-			<button onclick={test} disabled={busy || !connectionReady(c)}>Tester</button>
+			<button class="ico" onclick={test} disabled={busy || !connectionReady(c)}><Icon name="plug" size={14} />Tester</button>
 			<span class="grow"></span>
 			<button class="primary" onclick={save} disabled={busy || !connectionReady(c)}>OK</button>
 			<button onclick={oncancel}>Annuler</button>
@@ -236,6 +237,13 @@
 	}
 	button:disabled {
 		opacity: 0.5;
+	}
+	/* Bouton avec icône devant le libellé. */
+	.ico {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		--icon-accent: #217346;
 	}
 	button.primary {
 		background: #217346;
