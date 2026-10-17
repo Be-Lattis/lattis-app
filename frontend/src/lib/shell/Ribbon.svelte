@@ -705,7 +705,7 @@
 		font-weight: 600;
 	}
 	.tab:hover:not(:disabled) {
-		background: rgba(255, 255, 255, 0.12);
+		background: rgba(255, 255, 255, 0.18);
 	}
 	.tab.on:hover {
 		background: #f3f4f6;

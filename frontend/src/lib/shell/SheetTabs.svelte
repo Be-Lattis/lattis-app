@@ -435,6 +435,24 @@
 		border-right: 1px solid #d4d7db;
 		color: #374151;
 		cursor: pointer;
+		transition:
+			background-color 0.12s,
+			color 0.12s,
+			box-shadow 0.12s;
+	}
+	/* Survol : fond éclairci et trait sous l'onglet, comme Excel. */
+	.sheet:hover:not(.on):not(.dragging) {
+		background: #e8ebee;
+		color: #111827;
+		box-shadow: inset 0 -2px 0 #a7c4b2;
+	}
+	.sheet.colored:not(.on):hover {
+		background: var(--tab-color);
+		filter: brightness(1.06);
+		box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.25);
+	}
+	.sheet.on:hover {
+		background: #f7faf8;
 	}
 	/* Largeur du texte en gras réservée : passer en gras (onglet actif) ne
 	   change pas la largeur, les autres onglets ne bougent pas. */
