@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { moveTarget, textOn, visibleSheet, visibleSheets } from './sheets';
+import { moveTarget, tabWindow, textOn, visibleSheet, visibleSheets } from './sheets';
 
 describe('feuilles masquées', () => {
 	const sheets = [
@@ -39,5 +39,22 @@ describe('couleur du texte d’un onglet coloré', () => {
 		expect(textOn('#002060')).toBe('#ffffff');
 		expect(textOn('#ffff00')).toBe('#1f2328');
 		expect(textOn('rouge')).toBe('#1f2328');
+	});
+});
+
+describe('onglets qui tiennent dans la barre', () => {
+	const w = [100, 100, 100, 100, 100];
+	it('tous quand ils tiennent', () => {
+		expect(tabWindow(w, 4, 500, 30)).toEqual({ from: 0, to: 4 });
+	});
+	it('depuis le premier si l’actif y tient, place gardée pour « … »', () => {
+		expect(tabWindow(w, 1, 330, 30)).toEqual({ from: 0, to: 2 });
+	});
+	it('jusqu’à l’actif sinon', () => {
+		expect(tabWindow(w, 4, 330, 30)).toEqual({ from: 2, to: 4 });
+		expect(tabWindow(w, 3, 230, 30)).toEqual({ from: 2, to: 3 });
+	});
+	it('l’actif reste, même trop large', () => {
+		expect(tabWindow(w, 2, 50, 30)).toEqual({ from: 2, to: 2 });
 	});
 });

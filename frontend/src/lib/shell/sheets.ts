@@ -45,3 +45,27 @@ export function textOn(hex: string): string {
 	const l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
 	return l > 0.55 ? '#1f2328' : '#ffffff';
 }
+
+/**
+ * Onglets qui tiennent dans room pixels (widths : largeur de chaque onglet,
+ * active : rang de l'onglet actif, toujours gardé) : la plage [from, to]
+ * affichée, depuis le premier onglet si l'actif y tient, sinon jusqu'à
+ * l'actif puis au-delà. more : largeur du bouton « … », réservée quand des
+ * onglets sont masqués.
+ */
+export function tabWindow(widths: number[], active: number, room: number, more: number): { from: number; to: number } {
+	const n = widths.length;
+	const total = widths.reduce((a, b) => a + b, 0);
+	if (n === 0 || total <= room) return { from: 0, to: n - 1 };
+	room -= more;
+	const a = Math.min(Math.max(active, 0), n - 1);
+	let used = 0;
+	for (let i = 0; i <= a; i++) used += widths[i];
+	let from = 0;
+	// L'actif ne tient pas depuis le premier : la plage finit sur lui.
+	while (from < a && used > room) used -= widths[from++];
+	let to = a;
+	while (to + 1 < n && used + widths[to + 1] <= room) used += widths[++to];
+	while (from > 0 && used + widths[from - 1] <= room) used += widths[--from];
+	return { from, to };
+}

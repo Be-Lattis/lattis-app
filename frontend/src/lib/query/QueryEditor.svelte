@@ -305,7 +305,7 @@
 				big: [{ label: 'Fermer et charger', icon: 'close-load', hint: 'Enregistrer la requête et charger son résultat dans un tableau', off: busy, run: () => finish(true) }],
 				small: [
 					{ label: 'Enregistrer', icon: 'save', hint: 'Enregistrer la requête sans la charger (connexion seulement)', off: busy, run: () => finish(false) },
-					{ label: 'Fermer', icon: 'win-close', hint: 'Fermer sans enregistrer', run: onclose }
+					{ label: 'Annuler', icon: 'win-close', hint: 'Fermer l’éditeur de requête sans enregistrer les changements (le classeur reste ouvert)', run: onclose }
 				]
 			},
 			{
@@ -314,8 +314,8 @@
 				small: [
 					{ label: 'Source…', icon: 'database', hint: 'Modifier la source de la requête', run: () => (sourceOpen = true) },
 					{ label: 'Voir le SQL', icon: 'script', hint: 'Afficher le SQL de l’aperçu', on: showSQL, run: () => (showSQL = !showSQL) },
-					{ label: 'Annuler', icon: 'undo', hint: 'Retirer la dernière action sur les étapes (Ctrl+Z)', off: !canUndo, run: undoStep },
-					{ label: 'Rétablir', icon: 'redo', hint: 'Remettre l’action annulée (Ctrl+Y)', off: !canRedo, run: redoStep }
+					{ label: 'Défaire', icon: 'undo', hint: 'Retirer la dernière action sur les étapes (Ctrl+Z)', off: !canUndo, run: undoStep },
+					{ label: 'Refaire', icon: 'redo', hint: 'Remettre l’action défaite (Ctrl+Y)', off: !canRedo, run: redoStep }
 				]
 			},
 			{ title: 'Gérer les colonnes', big: [op('select', 'choose-columns'), op('remove', 'delete-column')] },
@@ -354,7 +354,7 @@
 			{/each}
 		</nav>
 		<span class="grow"></span>
-		<button class="close" title="Fermer sans enregistrer" aria-label="Fermer sans enregistrer" onclick={onclose}><Icon name="win-close" size={16} /></button>
+		<button class="close" title="Annuler : fermer l’éditeur de requête sans enregistrer (le classeur reste ouvert)" aria-label="Annuler et fermer l’éditeur de requête" onclick={onclose}><Icon name="win-close" size={16} /></button>
 	</header>
 	<nav class="ribbon">
 		{#each ribbon[tab] as g (g.title)}

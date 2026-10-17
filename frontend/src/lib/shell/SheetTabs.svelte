@@ -8,7 +8,7 @@
 	// ferme sur Échap, sur un clic ailleurs et quand la fenêtre change de taille.
 	import Icon from '#lib/icons/Icon.svelte';
 	import { dismiss } from '#lib/grid/dismiss.js';
-	import { TAB_COLORS, moveTarget, textOn, visibleSheets, type TabSheet } from './sheets.js';
+	import { TAB_COLORS, moveTarget, tabWindow, textOn, visibleSheets, type TabSheet } from './sheets.js';
 
 	type Sheet = TabSheet;
 	interface Props {
@@ -134,6 +134,33 @@
 
 	const index = $derived(shown.findIndex((s) => s.id === active));
 
+	// Trop d'onglets pour garder à la barre de défilement sa largeur minimale
+	// (le quart de la barre, 150 px au moins) : ceux qui ne tiennent pas se
+	// cachent derrière « … », qui les liste tous ; l'onglet actif reste visible.
+	let width = $state(0);
+	let navW = $state(0);
+	const MORE_W = 30;
+	const ADD_W = 24;
+	const measurer = typeof document !== 'undefined' ? document.createElement('canvas').getContext('2d') : null;
+	function tabWidth(s: Sheet, on: boolean): number {
+		if (!measurer) return 100;
+		measurer.font = `${on ? '600 ' : ''}13px 'Segoe UI', system-ui, -apple-system, sans-serif`;
+		return Math.ceil(measurer.measureText(s.name).width) + 37 + (s.protected || locked ? 16 : 0);
+	}
+	const range = $derived.by(() => {
+		if (!width) return { from: 0, to: shown.length - 1 };
+		const room = width - navW - ADD_W - (hscroll ? Math.max(width / 4, 150) : 0);
+		return tabWindow(
+			shown.map((s) => tabWidth(s, s.id === active)),
+			index,
+			room,
+			MORE_W
+		);
+	});
+	const vis = $derived(shown.slice(range.from, range.to + 1));
+	const hiddenTabs = $derived(shown.length - vis.length);
+	let listing = $state(false);
+
 	// Glisser un onglet : au-delà de quelques pixels, l'onglet suit la souris et
 	// un trait marque où il sera déposé (drop : rang d'insertion dans sheets).
 	let drag = $state<{ id: number; x0: number; moved: boolean; drop: number } | null>(null);
@@ -141,7 +168,7 @@
 	let dropX = $state(0);
 
 	function dragStart(e: PointerEvent, s: Sheet) {
-		if (!onmove || e.button !== 0 || shown.length < 2) return;
+		if (!onmove || e.button !== 0 || vis.length < 2) return;
 		drag = { id: s.id, x0: e.clientX, moved: false, drop: -1 };
 		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 	}
@@ -151,7 +178,7 @@
 		drag.moved = true;
 		const rects = tabEls.map((el) => el?.getBoundingClientRect());
 		let k = rects.findIndex((r) => r && e.clientX < r.left + r.width / 2);
-		if (k < 0) k = shown.length;
+		if (k < 0) k = vis.length;
 		drag.drop = k;
 		const host = (e.currentTarget as HTMLElement).parentElement!.getBoundingClientRect();
 		const r = rects[Math.min(k, rects.length - 1)];
@@ -163,17 +190,21 @@
 		if (!d?.moved || d.drop < 0) return;
 		// Rang parmi toutes les feuilles (les masquées gardent leur place).
 		const order = sheets.map((s) => s.id);
-		const to = moveTarget(order, d.id, shown[d.drop]?.id ?? null, false);
+		// Déposé après le dernier onglet visible : avant le premier caché (ou en dernier).
+		const to = moveTarget(order, d.id, vis[d.drop]?.id ?? shown[range.to + 1]?.id ?? null, false);
 		if (to !== order.indexOf(d.id)) onmove?.(d.id, to);
 	}
 </script>
 
-<div class="sheet-tabs">
-	<div class="nav">
+<div class="sheet-tabs" bind:clientWidth={width}>
+	<div class="nav" bind:clientWidth={navW}>
 		<button disabled={index <= 0} onclick={() => onselect(shown[index - 1].id)} title="Feuille précédente">◀</button>
 		<button disabled={index < 0 || index >= shown.length - 1} onclick={() => onselect(shown[index + 1].id)} title="Feuille suivante">▶</button>
 	</div>
-	{#each shown as s, si (s.id)}
+	{#if range.from > 0}
+		<button class="more" onclick={() => (listing = true)} title="{hiddenTabs} feuille{hiddenTabs > 1 ? 's' : ''} non affichée{hiddenTabs > 1 ? 's' : ''} : toutes les feuilles">…</button>
+	{/if}
+	{#each vis as s, si (s.id)}
 		{#if renaming === s.id}
 			<!-- svelte-ignore a11y_autofocus -->
 			<input
@@ -215,6 +246,9 @@
 			>
 		{/if}
 	{/each}
+	{#if range.to < shown.length - 1}
+		<button class="more" onclick={() => (listing = true)} title="{hiddenTabs} feuille{hiddenTabs > 1 ? 's' : ''} non affichée{hiddenTabs > 1 ? 's' : ''} : toutes les feuilles">…</button>
+	{/if}
 	{#if drag?.moved && drag.drop >= 0}<span class="drop-mark" style:left="{dropX - 1}px"></span>{/if}
 	<button class="add" disabled={!onadd} onclick={() => onadd?.()} title={locked ? 'Structure du classeur protégée' : 'Nouvelle feuille'}>+</button>
 	{#if hscroll}
@@ -370,6 +404,32 @@
 	</div>
 {/if}
 
+{#if listing}
+	<div class="modal-back" role="presentation" onclick={(e) => e.target === e.currentTarget && (listing = false)}>
+		<div class="dialog" role="dialog" aria-modal="true" aria-label="Toutes les feuilles" tabindex="-1" onkeydown={(e) => dialogKeys(e, () => (listing = false), () => (listing = false))} use:focus>
+			<h2>Toutes les feuilles</h2>
+			<ul class="all-sheets">
+				{#each shown as s (s.id)}
+					<li>
+						<button
+							class:on={s.id === active}
+							style:--tab-color={s.color || null}
+							onclick={() => {
+								listing = false;
+								onselect(s.id);
+							}}
+							>{#if s.protected || locked}<span class="lock"><Icon name="lock" size={12} /></span>{/if}{s.name}</button
+						>
+					</li>
+				{/each}
+			</ul>
+			<div class="actions">
+				<button onclick={() => (listing = false)}>Fermer</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
 {#if unhiding !== null}
 	<div class="modal-back" role="presentation" onclick={(e) => e.target === e.currentTarget && (unhiding = null)}>
 		<div class="dialog" role="dialog" aria-modal="true" aria-label="Afficher" tabindex="-1" onkeydown={(e) => dialogKeys(e, confirmUnhide, () => (unhiding = null))}>
@@ -391,8 +451,9 @@
 <style>
 	.hbar {
 		margin-left: auto;
-		flex: 0 0 38%;
-		min-width: 120px;
+		flex: 0 1 38%;
+		/* Largeur minimale : le quart de la barre, 150 px au moins (au-delà, des onglets se cachent derrière « … »). */
+		min-width: max(25%, 150px);
 		overflow-x: auto;
 		overflow-y: hidden;
 		align-self: center;
@@ -421,6 +482,46 @@
 		font: inherit;
 		width: 24px;
 		cursor: pointer;
+	}
+	.more {
+		background: none;
+		border: none;
+		border-right: 1px solid #d4d7db;
+		color: #4b5563;
+		font: inherit;
+		font-weight: 600;
+		width: 30px;
+		cursor: pointer;
+	}
+	.more:hover {
+		background: #e5e7eb;
+	}
+	.all-sheets {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		max-height: 60vh;
+		overflow-y: auto;
+		border: 1px solid #e3e5e8;
+	}
+	.all-sheets button {
+		display: block;
+		width: 100%;
+		text-align: left;
+		font: inherit;
+		padding: 5px 10px;
+		background: none;
+		border: none;
+		border-left: 3px solid var(--tab-color, transparent);
+		cursor: pointer;
+	}
+	.all-sheets button:hover {
+		background: #eef5f0;
+	}
+	.all-sheets button.on {
+		font-weight: 600;
+		color: #217346;
+		background: #e3efe7;
 	}
 	.nav button:disabled,
 	.add:disabled {

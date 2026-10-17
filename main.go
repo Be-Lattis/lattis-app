@@ -89,8 +89,8 @@ func main() {
 		Title:            "Lattis",
 		Width:            1280,
 		Height:           800,
-		MinWidth:         640,
-		MinHeight:        400,
+		MinWidth:         400,
+		MinHeight:        300,
 		BackgroundColour: application.NewRGB(255, 255, 255),
 		URL:              "/",
 		// Barre de titre dessinée par la page (frontend/src/lib/shell/TitleBar.svelte).
