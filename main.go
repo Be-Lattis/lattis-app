@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"runtime"
 
@@ -69,6 +70,9 @@ func main() {
 	app := application.New(application.Options{
 		Name:        "Slitable",
 		Description: "Tableur relationnel local-first",
+		// Journal de Wails : avertissements et erreurs seulement (pas une ligne
+		// par fichier servi, « [AssetFileServerFS] Handling request »).
+		LogLevel: slog.LevelWarn,
 		Services: []application.Service{
 			application.NewService(&bridge.GridService{}),
 			application.NewService(documents),

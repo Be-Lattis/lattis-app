@@ -119,3 +119,22 @@ func TestStats(t *testing.T) {
 		t.Fatalf("hors tableau : %+v, %v", st, err)
 	}
 }
+
+// Les résumés sont gardés par colonne : une sélection qui en réutilise une
+// donne le même total, sans la recalculer.
+func TestStatsCache(t *testing.T) {
+	tbl := openDemo(t, 3000)
+	ctx := context.Background()
+	a, err := tbl.Stats(ctx, 10, 500, []int{0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := tbl.Stats(ctx, 10, 500, []int{6})
+	both, err := tbl.Stats(ctx, 10, 500, []int{0, 6})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if both.Count != a.Count+b.Count || both.Sum != a.Sum+b.Sum || len(tbl.stats) != 2 {
+		t.Fatalf("cache : %+v + %+v ≠ %+v (%d entrées)", a, b, both, len(tbl.stats))
+	}
+}

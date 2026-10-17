@@ -12,7 +12,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"regexp"
 	"runtime"
+	"strings"
+	"sync"
 	"sync/atomic"
 
 	"github.com/ncruces/go-sqlite3"
@@ -30,6 +33,54 @@ type Store struct {
 	// gen compte les écritures : un résultat calculé à la génération g reste
 	// valable tant que Generation() vaut g (caches de lecture).
 	gen atomic.Int64
+
+	// Tableaux (t_N) modifiés depuis le dernier TakeTouched ; touchedAll :
+	// une écriture qui peut les concerner tous (colonnes, formules…).
+	tmu        sync.Mutex
+	touched    map[string]bool
+	touchedAll bool
+}
+
+var (
+	tableName = regexp.MustCompile(`\bt_\d+\b`)
+	// Métadonnées qui changent ce qu'on lit d'un tableau : colonnes, types,
+	// formules, saisies invalides, tableaux eux-mêmes.
+	tableMeta = regexp.MustCompile(`_slitable_(columns|tables|invalid)\b`)
+)
+
+// noteWrite relève les tableaux qu'une requête de l'écrivain peut modifier.
+func (s *Store) noteWrite(q string) {
+	head := strings.ToUpper(strings.TrimSpace(q))
+	if strings.HasPrefix(head, "SELECT") || strings.HasPrefix(head, "PRAGMA") {
+		return
+	}
+	names := tableName.FindAllString(q, -1)
+	meta := tableMeta.MatchString(q)
+	if len(names) == 0 && !meta {
+		return
+	}
+	s.tmu.Lock()
+	defer s.tmu.Unlock()
+	if meta {
+		s.touchedAll = true
+	}
+	if s.touched == nil {
+		s.touched = map[string]bool{}
+	}
+	for _, n := range names {
+		s.touched[n] = true
+	}
+}
+
+// TakeTouched donne, et remet à zéro, les tableaux modifiés depuis l'appel
+// précédent (all : peut-être tous) : un cache de lecture d'un tableau non
+// touché reste valable (lignes chargées, totaux).
+func (s *Store) TakeTouched() (names map[string]bool, all bool) {
+	s.tmu.Lock()
+	defer s.tmu.Unlock()
+	names, all = s.touched, s.touchedAll
+	s.touched, s.touchedAll = nil, false
+	return names, all
 }
 
 // Generation donne le nombre d'écritures passées par le Store.
@@ -45,7 +96,8 @@ type job struct {
 // Open ouvre (ou crée) la base au chemin donné, en mode WAL. extra est
 // appelé sur chaque nouvelle connexion (fonctions SQL personnalisées).
 func Open(path string, extra ...func(*sqlite3.Conn) error) (*Store, error) {
-	write, err := OpenDB("file:"+path, "écriture", setup(false, extra))
+	s := &Store{jobs: make(chan job), done: make(chan struct{})}
+	write, err := openDB("file:"+path, "écriture", setup(false, extra), s.noteWrite)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +115,7 @@ func Open(path string, extra ...func(*sqlite3.Conn) error) (*Store, error) {
 	}
 	read.SetMaxOpenConns(max(4, runtime.NumCPU()))
 
-	s := &Store{read: read, write: write, jobs: make(chan job), done: make(chan struct{})}
+	s.read, s.write = read, write
 	go s.writer()
 	return s, nil
 }

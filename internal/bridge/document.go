@@ -220,10 +220,21 @@ func (s *DocumentService) State(ctx context.Context) (DocState, error) {
 	return st, err
 }
 
-// changed invalide les tableaux chargés et prévient l'interface.
+// changed invalide les tableaux chargés que les écritures ont pu toucher
+// (les autres gardent leurs lignes et leurs totaux en cache) et prévient
+// l'interface.
 func (s *DocumentService) changed(ctx context.Context) (DocState, error) {
+	var touched map[string]bool
+	all := true
+	if d, err := s.current(); err == nil {
+		touched, all = d.DB().TakeTouched()
+	}
 	s.mu.Lock()
-	s.tables = map[int64]*grid.Table{}
+	for id, t := range s.tables {
+		if !t.Reusable(touched, all) {
+			delete(s.tables, id)
+		}
+	}
 	s.mu.Unlock()
 	st, err := s.State(ctx)
 	if app := application.Get(); app != nil && err == nil {

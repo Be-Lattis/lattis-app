@@ -188,3 +188,41 @@ func QualifyCells(n Node, sheet int64) Node {
 	}
 	return n
 }
+
+// External dit si une formule de colonne calculée du tableau own peut
+// dépendre d'autre chose que de son propre tableau : un autre tableau, une
+// cellule libre ou nommée, une plage de cellules, une fonction volatile
+// (ALEA, MAINTENANT…). Faute de pouvoir l'analyser, la réponse est oui.
+func External(src, own string) bool {
+	n, err := Parse(src, FR)
+	if err != nil {
+		return true
+	}
+	var walk func(Node) bool
+	walk = func(n Node) bool {
+		switch v := n.(type) {
+		case Ref:
+			return v.Table != "" && !strings.EqualFold(v.Table, own)
+		case RowRange:
+			return v.Ref.Table != "" && !strings.EqualFold(v.Ref.Table, own)
+		case Name, CellRange, Range:
+			return true
+		case Unary:
+			return walk(v.X)
+		case Binary:
+			return walk(v.L) || walk(v.R)
+		case Call:
+			switch v.Fn {
+			case "RAND", "RANDBETWEEN", "RANDARRAY", "NOW", "TODAY":
+				return true
+			}
+			for _, a := range v.Args {
+				if walk(a) {
+					return true
+				}
+			}
+		}
+		return false
+	}
+	return walk(n)
+}

@@ -119,3 +119,19 @@ func TestSyntaxMessages(t *testing.T) {
 		t.Error(Format(n, FR))
 	}
 }
+
+func TestExternal(t *testing.T) {
+	for src, want := range map[string]bool{
+		"=ARRONDI([Quantité]*[Prix unitaire]; 2)": false,
+		"=SOMME(Ventes[Prix])":                    false,
+		"=[Prix]*Autres[Taux]":                    true,
+		"=REFERENCE(Clients[Ville]; [Client])":    true,
+		"=[Prix]*Cell[A1]":                        true,
+		"=ALEA()":                                 true,
+		"=(((":                                    true,
+	} {
+		if got := External(src, "Ventes"); got != want {
+			t.Errorf("%s : %v", src, got)
+		}
+	}
+}

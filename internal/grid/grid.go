@@ -77,6 +77,10 @@ type Table struct {
 
 	selectWindow string
 	exprs        []string                 // expression SQL de chaque colonne affichée
+	stats        map[statsKey]Stats       // résumés déjà calculés (Stats)
+	// computed : le tableau a des colonnes calculées, qui peuvent lire
+	// d'autres tableaux ou des cellules : toute modification l'invalide.
+	computed bool
 	args         []any                    // paramètres des expressions de colonnes (?1…)
 	decode       func(col int, v any) any // conversion des valeurs calculées
 
@@ -94,6 +98,19 @@ func (t *Table) WithExprs(exprs []string, args []any, decode func(col int, v any
 		strings.Join(exprs, ", "), t.sqlName)
 	t.args, t.decode, t.exprs = args, decode, exprs
 	return t
+}
+
+// WithComputed marque un tableau à colonnes calculées (voir Reusable).
+func (t *Table) WithComputed(on bool) *Table {
+	t.computed = on
+	return t
+}
+
+// Reusable dit si le tableau chargé (lignes, totaux en cache) reste valable
+// après des écritures qui n'ont touché que les tableaux touched (all :
+// peut-être tous).
+func (t *Table) Reusable(touched map[string]bool, all bool) bool {
+	return !all && !t.computed && !touched[t.sqlName]
 }
 
 // WithInvalid fait lire les saisies hors type de _slitable_invalid avec les
@@ -321,31 +338,64 @@ func (t *Table) Stats(ctx context.Context, first, count int, cols []int) (Stats,
 		return Stats{}, nil
 	}
 	count = min(count, rows-first)
-	var inner, cnt, nums, sum []string
-	for k, c := range cols {
+	// Cache par colonne : la Table est jetée à chaque modification du
+	// classeur, ses résultats restent donc justes ; resélectionner une
+	// colonne, ou en ajouter une à la sélection, ne recalcule que le neuf.
+	var out Stats
+	var todo []int
+	t.mu.RLock()
+	for _, c := range cols {
 		if c < 0 || c >= len(t.exprs) {
+			t.mu.RUnlock()
 			return Stats{}, ErrRange
 		}
+		if st, ok := t.stats[statsKey{first, count, c}]; ok {
+			out.Count, out.Nums, out.Sum = out.Count+st.Count, out.Nums+st.Nums, out.Sum+st.Sum
+		} else {
+			todo = append(todo, c)
+		}
+	}
+	t.mu.RUnlock()
+	if len(todo) == 0 {
+		return out, nil
+	}
+	// Une seule requête pour les colonnes à calculer : trois agrégats chacune.
+	var inner, aggs []string
+	for k, c := range todo {
 		x := fmt.Sprintf("x%d", k)
 		inner = append(inner, t.exprs[c]+" AS "+x)
-		cnt = append(cnt, "count("+x+")")
-		if t.cols[c].Type == Boolean {
-			continue // VRAI / FAUX : comptés, pas additionnés (comme Excel)
+		if t.cols[c].Type == Boolean { // VRAI / FAUX : comptés, pas additionnés (comme Excel)
+			aggs = append(aggs, "count("+x+"), 0, 0")
+			continue
 		}
 		isNum := "typeof(" + x + ") IN ('integer', 'real')"
-		nums = append(nums, "sum("+isNum+")")
-		sum = append(sum, "total(CASE WHEN "+isNum+" THEN "+x+" END)")
-	}
-	if len(nums) == 0 {
-		nums, sum = []string{"0"}, []string{"0"}
+		aggs = append(aggs, "count("+x+"), coalesce(sum("+isNum+"), 0), total(CASE WHEN "+isNum+" THEN "+x+" END)")
 	}
 	// Paramètres numérotés : ceux des colonnes calculées (?1…?n, même si
 	// les colonnes résumées n'en utilisent aucun), puis la fenêtre.
 	n := len(t.args)
-	q := "SELECT " + strings.Join(cnt, " + ") + ", coalesce(" + strings.Join(nums, ", 0) + coalesce(") + ", 0), " + strings.Join(sum, " + ") +
+	q := "SELECT " + strings.Join(aggs, ", ") +
 		fmt.Sprintf(" FROM (SELECT %s FROM %s WHERE _pos >= ?%d ORDER BY _pos LIMIT ?%d OFFSET ?%d)", strings.Join(inner, ", "), t.sqlName, n+1, n+2, n+3)
 	args := append(append([]any{}, t.args...), anchor, count, first%AnchorEvery)
-	var st Stats
-	err := t.db.Read().QueryRowContext(ctx, q, args...).Scan(&st.Count, &st.Nums, &st.Sum)
-	return st, err
+	got := make([]Stats, len(todo))
+	dest := make([]any, 0, 3*len(todo))
+	for k := range got {
+		dest = append(dest, &got[k].Count, &got[k].Nums, &got[k].Sum)
+	}
+	if err := t.db.Read().QueryRowContext(ctx, q, args...).Scan(dest...); err != nil {
+		return Stats{}, err
+	}
+	t.mu.Lock()
+	if t.stats == nil {
+		t.stats = map[statsKey]Stats{}
+	}
+	for k, c := range todo {
+		t.stats[statsKey{first, count, c}] = got[k]
+		out.Count, out.Nums, out.Sum = out.Count+got[k].Count, out.Nums+got[k].Nums, out.Sum+got[k].Sum
+	}
+	t.mu.Unlock()
+	return out, nil
 }
+
+// statsKey : plage de lignes et colonne d'un résumé gardé en cache.
+type statsKey struct{ first, count, col int }

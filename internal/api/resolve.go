@@ -255,7 +255,13 @@ func LoadGrid(ctx context.Context, d *doc.Document, ti canvas.TableInfo) (*grid.
 		}
 		return v
 	}
-	t := grid.NewTable(d.DB(), ti.Source, ti.Name, cols, sqlCols).WithInvalid(ti.ID, ids).WithExprs(exprs, args, decode)
+	// Une colonne calculée qui ne lit que son propre tableau ne rend pas le
+	// tableau dépendant des autres écritures (voir grid.Table.Reusable).
+	anyComputed := false
+	for _, c := range ti.Columns {
+		anyComputed = anyComputed || (c.Formula != "" && formula.External(c.Formula, ti.Name))
+	}
+	t := grid.NewTable(d.DB(), ti.Source, ti.Name, cols, sqlCols).WithInvalid(ti.ID, ids).WithExprs(exprs, args, decode).WithComputed(anyComputed)
 	if err := t.Load(ctx); err != nil {
 		return nil, err
 	}
