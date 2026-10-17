@@ -1200,6 +1200,21 @@
 		return s;
 	}
 
+	// Formule de colonne validée : toutes ses cellules flashent, même si leur
+	// valeur ne change pas (on voit que toute la colonne a été modifiée). Les
+	// lignes chargées ensuite flashent à leur premier affichage.
+	let columnFlash: { table: number; name: string; t: number; done: Set<string> } | null = null;
+	function columnFlashes(table: number, name: string, k: string) {
+		const f = columnFlash;
+		if (!f || f.table !== table || f.name !== name || f.done.has(k)) return;
+		if (animNow - f.t > 1500) {
+			columnFlash = null;
+			return;
+		}
+		f.done.add(k);
+		flashes.set(k, animNow);
+	}
+
 	/** Éclat d'une valeur calculée (clé k, cellule r, c) qui vient de changer : opacité (0 : aucun). */
 	function flashOf(k: string, v: string, r: number, c: number): number {
 		if (!motion()) return 0;
@@ -1863,7 +1878,11 @@
 					if (cs) borders(cs, x, y, cw, rh(r));
 					if (cs?.nt) noteCorner(x + cw, y, cs);
 					let s = row.text[i];
-					if (calcCols?.[i]) paintFlash(flashOf(`t${e.t.id}:${row.id}:${col.name}`, s ?? '', r, c), x, y, cw, rh(r));
+					if (calcCols?.[i]) {
+						const fk = `t${e.t.id}:${row.id}:${col.name}`;
+						if (motion()) columnFlashes(e.t.id, col.name, fk);
+						paintFlash(flashOf(fk, s ?? '', r, c), x, y, cw, rh(r));
+					}
 					if (!s) continue;
 					// Jeu d'icônes : à gauche de la cellule ; barre ou icône seule : valeur masquée.
 					const iconW = cf?.icon && !row.bad?.has(i) ? drawIconAt(cf.icon, x, y, rh(r)) : 0;
@@ -5606,6 +5625,11 @@
 		try {
 			const m = await source.setCell(row, col, raw, target);
 			lastEditMs = performance.now() - t0;
+			if (info.kind === 'data' && isFormula(raw) && info.e) {
+				const name = info.e.t.columns[info.i!]?.name;
+				if (name) columnFlash = { table: info.e.t.id, name, t: performance.now(), done: new Set() };
+				schedule();
+			}
 			if (m && typeof m === 'object') {
 				if (info.kind === 'data' && info.n !== undefined) info.e!.cache.set(info.n, info.i!, m.value);
 				message = '';
