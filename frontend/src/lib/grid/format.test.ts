@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { editValue, formatColumnValue, formatValue, isErrorValue } from './format';
+import { editValue, formatColumnValue, formatValue, isErrorValue, sortLabels } from './format';
 
 describe('formatColumnValue', () => {
 	it('colonne calculée décimale : mêmes décimales sur toutes les lignes', () => {
@@ -39,5 +39,14 @@ describe('valeurs calculées', () => {
 		expect(isErrorValue('#N/A')).toBe(true);
 		expect(isErrorValue('#NOM?')).toBe(true);
 		expect(isErrorValue('#hashtag')).toBe(false);
+	});
+});
+
+describe('libellés du tri', () => {
+	it('selon le type, comme Excel', () => {
+		expect(sortLabels('integer')[0]).toBe('Trier par ordre croissant');
+		expect(sortLabels('date')[1]).toBe('Trier du plus récent au plus ancien');
+		expect(sortLabels('text')[0]).toBe('Trier de A à Z');
+		expect(sortLabels('formula', 'decimal')[1]).toBe('Trier par ordre décroissant');
 	});
 });

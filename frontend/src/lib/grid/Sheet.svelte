@@ -68,6 +68,7 @@
 		typeIcon,
 		typeIconName,
 		typeLabel,
+		sortLabels,
 		type ColumnType
 	} from './format';
 
@@ -6763,8 +6764,9 @@
 					{#if cols && !col?.formula && (source.sortTable || source.setFilter)}
 						<hr />
 						{#if source.sortTable}
-							<button onclick={() => menuAction(() => source.sortTable!(m.e.t, m.i, false))}>Trier de A à Z (croissant)</button>
-							<button onclick={() => menuAction(() => source.sortTable!(m.e.t, m.i, true))}>Trier de Z à A (décroissant)</button>
+							{@const lab = sortLabels(col?.type ?? 'text', col?.result)}
+							<button onclick={() => menuAction(() => source.sortTable!(m.e.t, m.i, false))}>{lab[0]}</button>
+							<button onclick={() => menuAction(() => source.sortTable!(m.e.t, m.i, true))}>{lab[1]}</button>
 						{/if}
 						{#if source.setFilter}
 							<button onclick={() => openFilter(m.e, m.i)}>Filtrer par « {col?.name} »…</button>
@@ -7116,14 +7118,14 @@
 						onclick={() => {
 							filterDlg = null;
 							menuAction(() => source.sortTable!(d.e.t, d.i, false));
-						}}>Trier de A à Z</button
+						}}>{sortLabels(fcol?.type ?? 'text', fcol?.result)[0]}</button
 					>
 					<button
 						class="sort"
 						onclick={() => {
 							filterDlg = null;
 							menuAction(() => source.sortTable!(d.e.t, d.i, true));
-						}}>Trier de Z à A</button
+						}}>{sortLabels(fcol?.type ?? 'text', fcol?.result)[1]}</button
 					>
 					<hr />
 				{/if}

@@ -102,6 +102,18 @@ export function typeIcon(type: ColumnType): string {
 	}
 }
 
+/**
+ * Libellés du tri croissant et décroissant selon le type, comme Excel :
+ * nombres par ordre croissant / décroissant, dates du plus ancien au plus
+ * récent, textes de A à Z. result : type du résultat d'une colonne calculée.
+ */
+export function sortLabels(type: ColumnType | string, result?: string): [string, string] {
+	const t = type === 'formula' ? (result ?? 'text') : type;
+	if (t === 'integer' || t === 'decimal') return ['Trier par ordre croissant', 'Trier par ordre décroissant'];
+	if (t === 'date') return ['Trier du plus ancien au plus récent', 'Trier du plus récent au plus ancien'];
+	return ['Trier de A à Z', 'Trier de Z à A'];
+}
+
 export function typeLabel(type: ColumnType): string {
 	return { integer: 'Entier', decimal: 'Décimal', text: 'Texte', boolean: 'Booléen', date: 'Date', formula: 'Calculée' }[type];
 }
