@@ -53,10 +53,10 @@
 	const toggle = () => Window.ToggleMaximise().then(refresh, ignore);
 	const close = () => Window.Close().catch(ignore);
 
-	function dblclick() {
-		// Sous Windows le système gère le double-clic sur la zone de titre.
-		if (linux) toggle();
-	}
+	// Double-clic sur la zone de titre : agrandir ou restaurer. Quand le
+	// système traite la zone de titre (Windows), le double-clic n'arrive pas à
+	// la page : il n'y a jamais de double bascule.
+	const dblclick = () => toggle();
 </script>
 
 <div class="titlebar" class:mac>
