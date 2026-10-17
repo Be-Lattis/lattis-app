@@ -565,7 +565,11 @@
 			return n;
 		},
 		textColumnsPreview: (r0, r1, col, o) => DocumentService.TextToColumnsPreview(sheetId, r0, r1, col, o),
-		textToColumns: (r0, r1, col, o) => DocumentService.TextToColumns(sheetId, r0, r1, col, o).then(async (n) => (await reload(), n)),
+		textToColumns: (r0, r1, col, o) => DocumentService.TextToColumns(sheetId, r0, r1, col, o).then((n) => {
+			// L'assistant se ferme tout de suite ; la feuille se recharge ensuite.
+			reload().catch((e) => (notice = err(e)));
+			return n;
+		}),
 		deleteTables: (ts) => DocumentService.DeleteTables(ts.map((t) => t.name)).then(reload),
 		moveTable: (t, row, col) => DocumentService.MoveTable(t.name, row, col).then(reload),
 		extractColumns: (t, i0, i1, row, col) => DocumentService.ExtractColumns(t.name, i0, i1, row, col).then(reload),
