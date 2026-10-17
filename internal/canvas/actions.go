@@ -162,8 +162,10 @@ func (t *tx) setCell(tb Table, n, i int, raw string, ev *Event) error {
 		}
 		return t.setValue(tb, rid, c, v, "")
 	}
+	// La colonne a-t-elle une autre valeur ? EXISTS s'arrête à la première
+	// (un count parcourait toute la colonne : 0,25 s par saisie sur 1 M de lignes).
 	var others int
-	if err := t.row(`SELECT count(`+colSQL(c.ID)+`) FROM `+tb.sql()+` WHERE id <> ?`, rid).Scan(&others); err != nil {
+	if err := t.row(`SELECT EXISTS (SELECT 1 FROM `+tb.sql()+` WHERE `+colSQL(c.ID)+` IS NOT NULL AND id <> ?)`, rid).Scan(&others); err != nil {
 		return err
 	}
 	to := c.Type

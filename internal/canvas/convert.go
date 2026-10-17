@@ -201,17 +201,26 @@ func (m *Model) TypeMix(ctx context.Context, table string, i int) (Mix, error) {
 			return nil
 		}
 		col := colSQL(c.ID)
-		if err := t.row(`SELECT count(` + col + `) FROM ` + tb.sql()).Scan(&mix.Total); err != nil || mix.Total == 0 {
+		// Un seul parcours du tableau : le total et, pour chaque type, les
+		// valeurs qui ne s'y convertiraient pas (un parcours par type prenait
+		// cinq fois plus de temps sur un million de lignes).
+		types := []grid.Type{grid.Boolean, grid.Integer, grid.Decimal, grid.Date}
+		sums := make([]string, len(types))
+		for k, to := range types {
+			sums[k] = "coalesce(sum(" + convertExpr(col, c.Type, to) + " IS NULL), 0)"
+		}
+		off := make([]int, len(types))
+		dest := []any{&mix.Total}
+		for k := range off {
+			dest = append(dest, &off[k])
+		}
+		if err := t.row(`SELECT count(*), ` + strings.Join(sums, ", ") + ` FROM ` + tb.sql() + ` WHERE ` + col + ` IS NOT NULL`).Scan(dest...); err != nil || mix.Total == 0 {
 			return err
 		}
 		best := mix.Total
-		for _, to := range []grid.Type{grid.Boolean, grid.Integer, grid.Decimal, grid.Date} {
-			var n int
-			if err := t.row(`SELECT count(*) FROM ` + tb.sql() + ` WHERE ` + col + ` IS NOT NULL AND ` + convertExpr(col, c.Type, to) + ` IS NULL`).Scan(&n); err != nil {
-				return err
-			}
-			if n < best {
-				best, mix.Type = n, to
+		for k, to := range types {
+			if off[k] < best {
+				best, mix.Type = off[k], to
 			}
 		}
 		if best == 0 || 2*best >= mix.Total {

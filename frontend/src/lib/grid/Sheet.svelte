@@ -4742,15 +4742,15 @@
 		const row = active.row;
 		const g = mergeOf(active.row, active.col);
 		const longest = Math.max(...input.value.split('\n').map((l) => textWidth(l)));
-		const width = editorWidth(
-			longest + 16,
-			active.col,
-			(c) => colAxis.size(c),
-			(c) => !tableAt(row, c) && !cells.has(key(row, c)),
-			Math.max(80, viewW - x - 4)
-		);
+		const empty = (c: number) => !tableAt(row, c) && !cells.has(key(row, c));
+		const last = g ? g.col + g.cols - 1 : active.col;
+		const width = editorWidth(longest + 16, active.col, (c) => colAxis.size(c), (c) => c > last && empty(c), Math.max(80, viewW - x - 4));
 		const mergedW = g ? colAxis.offset(g.col + g.cols) - colAxis.offset(g.col) : 0;
-		box.style.width = `${Math.max(width, mergedW, 80)}px`;
+		// Largeur de confort seulement si la cellule voisine est vide : l'éditeur
+		// ne passe jamais par-dessus une cellule qui a un contenu (il passe à la
+		// ligne dans sa colonne).
+		const floor = empty(last + 1) ? 80 : 0;
+		box.style.width = `${Math.max(width, mergedW, floor)}px`;
 		input.style.height = '0px';
 		editorH = Math.max(g ? rspan(g.row, g.row + g.rows - 1) : rh(row), input.scrollHeight + 4);
 		input.style.height = '';
@@ -4782,6 +4782,15 @@
 				? {}
 				: { table: info.e!.t, column: info.i, index: info.kind === 'data' ? info.n : undefined, rowId: info.kind === 'data' ? info.row?.id : undefined };
 		const t0 = performance.now();
+		// Affichage immédiat (optimiste) d'une valeur saisie dans un tableau :
+		// le moteur confirme ensuite (valeur typée), ou la saisie est annulée.
+		const optimistic = info.kind === 'data' && info.n !== undefined && info.row && !isFormula(raw) && !info.e!.t.columns[info.i!]?.formula;
+		const before = optimistic ? info.row!.cells[info.i!] : undefined;
+		if (optimistic) {
+			const v = isNumeric(raw) ? Number(raw.replace(/[\s  ]/g, '').replace(',', '.')) : raw;
+			info.e!.cache.set(info.n!, info.i!, raw.trim() === '' ? null : v);
+			schedule();
+		}
 		try {
 			const m = await source.setCell(row, col, raw, target);
 			lastEditMs = performance.now() - t0;
@@ -4790,6 +4799,7 @@
 				message = '';
 			} else message = m ?? '';
 		} catch (e) {
+			if (optimistic) info.e!.cache.set(info.n!, info.i!, before); // saisie refusée : valeur d'avant
 			message = String(e instanceof Error ? e.message : e);
 			// Formule refusée : la saisie n'est pas perdue, l'éditeur se rouvre.
 			const k = message.indexOf('formule : ');

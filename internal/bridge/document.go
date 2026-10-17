@@ -229,19 +229,19 @@ func (s *DocumentService) State(ctx context.Context) (DocState, error) {
 // (les autres gardent leurs lignes et leurs totaux en cache) et prévient
 // l'interface.
 func (s *DocumentService) changed(ctx context.Context) (DocState, error) {
-	var touched map[string]bool
+	var content, structure map[string]bool
 	all := true
 	if d, err := s.current(); err == nil {
-		touched, all = d.DB().TakeTouched()
+		content, structure, all = d.DB().TakeTouched()
 	}
 	s.mu.Lock()
 	for id, t := range s.tables {
-		if !t.Reusable(touched, all) {
+		if !t.Refresh(content, structure, all) {
 			delete(s.tables, id)
 		}
 	}
 	for k, v := range s.memo {
-		if all || touched[v.sql] {
+		if all || content[v.sql] || structure[v.sql] {
 			delete(s.memo, k)
 		}
 	}

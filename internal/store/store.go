@@ -34,10 +34,13 @@ type Store struct {
 	// valable tant que Generation() vaut g (caches de lecture).
 	gen atomic.Int64
 
-	// Tableaux (t_N) modifiés depuis le dernier TakeTouched ; touchedAll :
-	// une écriture qui peut les concerner tous (colonnes, formules…).
+	// Tableaux (t_N) modifiés depuis le dernier TakeTouched : contenu
+	// (valeurs seulement) ou structure (lignes ajoutées, retirées ou
+	// déplacées) ; touchedAll : une écriture qui peut les concerner tous
+	// (colonnes, formules…).
 	tmu        sync.Mutex
-	touched    map[string]bool
+	content    map[string]bool
+	structure  map[string]bool
 	touchedAll bool
 }
 
@@ -59,28 +62,36 @@ func (s *Store) noteWrite(q string) {
 	if len(names) == 0 && !meta {
 		return
 	}
+	// Une mise à jour qui ne touche pas l'ordre (_pos) ne change que des
+	// valeurs : les lignes, leur nombre et leur ordre restent.
+	valuesOnly := strings.HasPrefix(head, "UPDATE") && !strings.Contains(head, "_POS")
 	s.tmu.Lock()
 	defer s.tmu.Unlock()
 	if meta {
 		s.touchedAll = true
 	}
-	if s.touched == nil {
-		s.touched = map[string]bool{}
+	if s.content == nil {
+		s.content, s.structure = map[string]bool{}, map[string]bool{}
 	}
 	for _, n := range names {
-		s.touched[n] = true
+		if valuesOnly {
+			s.content[n] = true
+		} else {
+			s.structure[n] = true
+		}
 	}
 }
 
 // TakeTouched donne, et remet à zéro, les tableaux modifiés depuis l'appel
-// précédent (all : peut-être tous) : un cache de lecture d'un tableau non
-// touché reste valable (lignes chargées, totaux).
-func (s *Store) TakeTouched() (names map[string]bool, all bool) {
+// précédent : dans leurs valeurs seulement (content) ou dans leurs lignes
+// (structure) ; all : peut-être tous. Un tableau non touché garde ses
+// caches de lecture ; un tableau touché dans ses valeurs garde ses lignes.
+func (s *Store) TakeTouched() (content, structure map[string]bool, all bool) {
 	s.tmu.Lock()
 	defer s.tmu.Unlock()
-	names, all = s.touched, s.touchedAll
-	s.touched, s.touchedAll = nil, false
-	return names, all
+	content, structure, all = s.content, s.structure, s.touchedAll
+	s.content, s.structure, s.touchedAll = nil, nil, false
+	return content, structure, all
 }
 
 // Generation donne le nombre d'écritures passées par le Store.

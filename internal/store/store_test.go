@@ -55,15 +55,16 @@ func TestTouched(t *testing.T) {
 	exec(`CREATE TABLE _slitable_columns (x)`)
 	s.TakeTouched()
 	exec(`INSERT INTO t_2 VALUES (1)`)
-	names, all := s.TakeTouched()
-	if all || !names["t_2"] || names["t_1"] {
-		t.Fatalf("après t_2 : %v %v", names, all)
+	exec(`UPDATE t_1 SET x = 2`)
+	content, structure, all := s.TakeTouched()
+	if all || !structure["t_2"] || structure["t_1"] || !content["t_1"] {
+		t.Fatalf("après t_2 et t_1 : %v %v %v", content, structure, all)
 	}
-	if names, all = s.TakeTouched(); all || len(names) != 0 {
-		t.Fatalf("remise à zéro : %v %v", names, all)
+	if content, structure, all = s.TakeTouched(); all || len(content)+len(structure) != 0 {
+		t.Fatalf("remise à zéro : %v %v %v", content, structure, all)
 	}
 	exec(`INSERT INTO _slitable_columns VALUES (1)`)
-	if _, all = s.TakeTouched(); !all {
+	if _, _, all = s.TakeTouched(); !all {
 		t.Fatal("métadonnées des colonnes : tous les tableaux concernés")
 	}
 }

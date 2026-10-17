@@ -6,6 +6,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -99,6 +100,12 @@ func logSQL(kind, q string, d time.Duration, err error) {
 	fmt.Fprintf(os.Stderr, "[SQL %s %s] %s\n", kind, fmtDur(d), shown)
 }
 
+// logSQLRows écrit une lecture terminée : durée jusqu'à la dernière ligne et
+// nombre de lignes lues.
+func logSQLRows(kind, q string, d time.Duration, rows int) {
+	logSQL(kind+fmt.Sprintf(" %d ligne(s)", rows), q, d, nil)
+}
+
 // OpenDB ouvre une base SQLite (dsn du pilote) dont les requêtes passent par
 // le journal SQL ; kind nomme la connexion dans le journal ; init configure
 // chaque nouvelle connexion (pragmas, fonctions).
@@ -159,12 +166,12 @@ func (c *logConn) ExecContext(ctx context.Context, q string, args []driver.Named
 	if !ok {
 		return nil, driver.ErrSkip
 	}
-	start := time.Now()
+	start := clock()
 	r, err := ex.ExecContext(ctx, q, args)
 	if err == driver.ErrSkip { // requête avec paramètres : préparée, journalisée par logStmt
 		return nil, err
 	}
-	logSQL(c.kind, q, time.Since(start), err)
+	logSQL(c.kind, q, since(start), err)
 	if c.onWrite != nil {
 		c.onWrite(q)
 	}
@@ -191,9 +198,9 @@ type logStmt struct {
 }
 
 func (s *logStmt) ExecContext(ctx context.Context, args []driver.NamedValue) (driver.Result, error) {
-	start := time.Now()
+	start := clock()
 	r, err := s.Stmt.(driver.StmtExecContext).ExecContext(ctx, args)
-	logSQL(s.kind, s.q, time.Since(start), err)
+	logSQL(s.kind, s.q, since(start), err)
 	if s.onWrite != nil {
 		s.onWrite(s.q)
 	}
@@ -201,10 +208,62 @@ func (s *logStmt) ExecContext(ctx context.Context, args []driver.NamedValue) (dr
 }
 
 func (s *logStmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
-	start := time.Now()
+	start := clock()
 	r, err := s.Stmt.(driver.StmtQueryContext).QueryContext(ctx, args)
-	logSQL(s.kind, s.q, time.Since(start), err)
-	return r, err
+	if err != nil || !sqlLog.Load() {
+		logSQL(s.kind, s.q, since(start), err)
+		return r, err
+	}
+	// Lecture : journalisée à sa fin (Close), durée et nombre de lignes compris.
+	return &logRows{Rows: r, start: start, kind: s.kind, q: s.q}, nil
+}
+
+// logRows mesure une lecture jusqu'à sa dernière ligne.
+type logRows struct {
+	driver.Rows
+	start int64
+	kind  string
+	q     string
+	n     int
+	done  bool
+}
+
+func (r *logRows) Next(dest []driver.Value) error {
+	err := r.Rows.Next(dest)
+	if err == nil {
+		r.n++
+	}
+	return err
+}
+
+func (r *logRows) Close() error {
+	err := r.Rows.Close()
+	if !r.done {
+		r.done = true
+		logSQLRows(r.kind, r.q, since(r.start), r.n)
+	}
+	return err
+}
+
+func (r *logRows) ColumnTypeDatabaseTypeName(i int) string {
+	if c, ok := r.Rows.(driver.RowsColumnTypeDatabaseTypeName); ok {
+		return c.ColumnTypeDatabaseTypeName(i)
+	}
+	return ""
+}
+
+func (r *logRows) ColumnTypeNullable(i int) (nullable, ok bool) {
+	if c, ok := r.Rows.(driver.RowsColumnTypeNullable); ok {
+		return c.ColumnTypeNullable(i)
+	}
+	return false, false
+}
+
+func (r *logRows) ColumnTypeScanType(i int) reflect.Type {
+	if c, ok := r.Rows.(driver.RowsColumnTypeScanType); ok {
+		return c.ColumnTypeScanType(i)
+	}
+	return reflect.TypeFor[any]()
 }
 
 func (s *logStmt) CheckNamedValue(arg *driver.NamedValue) error {

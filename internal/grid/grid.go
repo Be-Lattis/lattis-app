@@ -106,11 +106,21 @@ func (t *Table) WithComputed(on bool) *Table {
 	return t
 }
 
-// Reusable dit si le tableau chargé (lignes, totaux en cache) reste valable
-// après des écritures qui n'ont touché que les tableaux touched (all :
-// peut-être tous).
-func (t *Table) Reusable(touched map[string]bool, all bool) bool {
-	return !all && !t.computed && !touched[t.sqlName]
+// Refresh dit ce que deviennent les lectures du tableau après des
+// écritures (voir store.TakeTouched) : faux s'il faut le recharger (ses
+// lignes ont changé) ; sinon ses totaux en cache sont oubliés quand ses
+// valeurs ont pu changer (les siennes, ou celles que lisent ses colonnes
+// calculées), et le reste sert encore.
+func (t *Table) Refresh(content, structure map[string]bool, all bool) bool {
+	if all || structure[t.sqlName] {
+		return false
+	}
+	if content[t.sqlName] || (t.computed && (len(content) > 0 || len(structure) > 0)) {
+		t.mu.Lock()
+		t.stats = nil
+		t.mu.Unlock()
+	}
+	return true
 }
 
 // WithInvalid fait lire les saisies hors type de _slitable_invalid avec les
