@@ -124,7 +124,7 @@ func TestXLSXImport(t *testing.T) {
 		}
 		cols = append(cols, s)
 	}
-	want := `Code:integer Produit:text Qté:integer Prix:decimal=REFERENCE(Produits; "Prix unitaire"; [Produit]) ` +
+	want := `Code:integer Produit:text Qté:integer Prix:decimal=REFERENCE(Produits[Prix unitaire]; [Produit]) ` +
 		`Total:decimal=[Qté]*[Prix] Date:text Payé:boolean Note:text`
 	if got := strings.Join(cols, " "); got != want {
 		t.Errorf("colonnes :\n%s\nattendu :\n%s", got, want)
