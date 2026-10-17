@@ -168,14 +168,15 @@ func (m *Model) RenameSheet(ctx context.Context, sheet int64, name string) error
 	})
 }
 
-// DeleteSheet supprime un onglet sans tableau (ses cellules libres partent
-// avec lui ; l'annulation les rend). Le dernier onglet ne se supprime pas.
+// DeleteSheet supprime un onglet et tout ce qu'il contient (tableaux,
+// cellules, TCD, graphiques, boutons, mise en forme) ; une seule étape
+// d'annulation rend tout. Le dernier onglet visible ne se supprime pas.
 func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 	return m.Do(ctx, "Supprimer la feuille", func(t *tx) error {
 		if err := t.guardWorkbook(); err != nil {
 			return err
 		}
-		var n, tables int
+		var n int
 		var name, color string
 		var pos, grid, heads, hidden, frows, fcols, zoom int
 		if err := t.row(`SELECT count(*) FROM _lattis_sheets`).Scan(&n); err != nil {
@@ -191,11 +192,16 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 		if others == 0 {
 			return fmt.Errorf("%w : un classeur garde au moins une feuille visible", ErrSheet)
 		}
-		if err := t.row(`SELECT count(*) FROM _lattis_tables WHERE sheet = ?`, sheet).Scan(&tables); err != nil {
+		// Tout ce que contient la feuille part avec elle, tableaux compris
+		// (dans la même étape : une annulation rend tout).
+		tables, err := t.tables(sheet)
+		if err != nil {
 			return err
 		}
-		if tables > 0 {
-			return fmt.Errorf("%w : la feuille contient des tableaux, supprimez-les d'abord", ErrSheet)
+		for _, tb := range tables {
+			if err := t.deleteTable(tb); err != nil {
+				return err
+			}
 		}
 		if err := t.row(`SELECT name, pos, gridlines, headings, color, hidden, freeze_rows, freeze_cols, zoom FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&name, &pos, &grid, &heads, &color, &hidden, &frows, &fcols, &zoom); err != nil {
 			return err

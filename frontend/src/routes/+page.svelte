@@ -69,6 +69,8 @@
 	let queryHost = $state<ReturnType<typeof QueryHost>>();
 	// Révision › Protéger : boîte du mot de passe (protéger, ou ôter une
 	// protection qui en a un).
+	// Suppression d'une feuille qui contient quelque chose : confirmée avec la liste de ce qui part.
+	let deleting = $state<{ id: number; name: string; items: string[] } | null>(null);
 	let protecting = $state<{ what: 'sheet' | 'workbook'; id: number; name: string; off: boolean } | null>(null);
 	let pw1 = $state('');
 	let pw2 = $state('');
@@ -729,6 +731,30 @@
 		applyProtect(p.what, p.id, p.name, p.off, pw1);
 	}
 
+	/** Supprimer une feuille : tout son contenu part avec elle (un Ctrl+Z rend tout) ; demandé d'abord si elle n'est pas vide. */
+	async function askDeleteSheet(id: number) {
+		try {
+			const l = await DocumentService.Layout(id);
+			const name = l.sheets?.find((x) => x.id === id)?.name ?? '';
+			const items: string[] = [];
+			const count = (n: number, one: string, many: string, names?: string[]) => {
+				if (!n) return;
+				const list = names?.length ? ` (${names.slice(0, 5).join(', ')}${names.length > 5 ? '…' : ''})` : '';
+				items.push((n > 1 ? `${n.toLocaleString('fr-FR')} ${many}` : `1 ${one}`) + list);
+			};
+			const tables = l.tables ?? [];
+			count(tables.length, 'tableau', 'tableaux', tables.map((t) => `${t.name} : ${t.total.toLocaleString('fr-FR')} ligne${t.total > 1 ? 's' : ''}`));
+			count(l.pivots?.length ?? 0, 'tableau croisé', 'tableaux croisés', l.pivots?.map((x) => x.config.name ?? ''));
+			count(l.charts?.length ?? 0, 'graphique', 'graphiques');
+			count(l.buttons?.length ?? 0, 'bouton', 'boutons');
+			count(l.cells?.length ?? 0, 'cellule remplie', 'cellules remplies');
+			if (!items.length) return sheetAction(() => DocumentService.DeleteSheet(id));
+			deleting = { id, name, items };
+		} catch (e) {
+			notice = err(e);
+		}
+	}
+
 	async function sheetAction(fn: () => Promise<unknown>) {
 		try {
 			await fn();
@@ -950,7 +976,7 @@
 		oninsert={mode === 'doc' ? (before) => sheetAction(async () => selectSheet(await DocumentService.InsertSheet(before))) : undefined}
 		onmove={mode === 'doc' ? (id, to) => sheetAction(() => DocumentService.MoveSheet(id, to)) : undefined}
 		onrename={mode === 'doc' ? (id, name) => sheetAction(() => DocumentService.RenameSheet(id, name)) : undefined}
-		ondelete={mode === 'doc' ? (id) => sheetAction(() => DocumentService.DeleteSheet(id)) : undefined}
+		ondelete={mode === 'doc' ? (id) => askDeleteSheet(id) : undefined}
 		oncopy={mode === 'doc' ? (id, to) => sheetAction(async () => selectSheet(await DocumentService.CopySheet(id, to))) : undefined}
 		oncolor={mode === 'doc' ? (id, color) => sheetAction(() => DocumentService.SetSheetColor(id, color)) : undefined}
 		onhide={mode === 'doc' ? (id, hidden) => sheetAction(async () => {
@@ -1020,6 +1046,29 @@
 			</form>
 		</div>
 	{/if}
+	{#if deleting}
+		{@const d = deleting}
+		<div class="modal-back">
+			<div class="modal" role="dialog" aria-modal="true" aria-label="Supprimer la feuille">
+				<p>Supprimer la feuille « {d.name} » et tout ce qu'elle contient ?</p>
+				<ul class="delete-list">
+					{#each d.items as it (it)}<li>{it}</li>{/each}
+				</ul>
+				<p class="hint">Ctrl+Z rend la feuille et tout son contenu.</p>
+				<div class="actions">
+					<button
+						class="primary danger"
+						onclick={() => {
+							const id = d.id;
+							deleting = null;
+							sheetAction(() => DocumentService.DeleteSheet(id));
+						}}>Supprimer</button
+					>
+					<button onclick={() => (deleting = null)}>Annuler</button>
+				</div>
+			</div>
+		</div>
+	{/if}
 	{#if closing}
 		<div class="modal-back">
 			<div class="modal" role="dialog" aria-modal="true">
@@ -1056,6 +1105,21 @@
 </div>
 
 <style>
+	.delete-list {
+		margin: 6px 0 4px;
+		padding-left: 20px;
+		font-size: 12px;
+		line-height: 1.5;
+	}
+	.hint {
+		margin: 4px 0 0;
+		font-size: 12px;
+		color: #5f6368;
+	}
+	.modal .primary.danger {
+		background: #c0392b;
+		border-color: #c0392b;
+	}
 	:global(html, body) {
 		margin: 0;
 		height: 100%;

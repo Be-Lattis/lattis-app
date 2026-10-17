@@ -1890,3 +1890,36 @@ func TestPivotCacheDeps(t *testing.T) {
 		t.Fatalf("le TCD ne suit pas sa source : %s", got)
 	}
 }
+
+// Supprimer une feuille emporte ses tableaux ; une annulation rend tout.
+func TestDeleteSheetWithTables(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	id, err := d.AddSheet(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.Paste(ctx, id, 0, 0, [][]string{{"Pays", "Ventes"}, {"FR", "10"}, {"IT", "5"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.Paste(ctx, id, 0, 4, [][]string{{"Code", "N"}, {"a", "1"}, {"b", "2"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.SetCell(ctx, id, 6, 0, "=SOMME(Feuille2[Ventes])"); err != nil {
+		t.Fatal(err)
+	}
+	before := dump(t, d)
+	if err := d.DeleteSheet(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "feuille supprimée avec ses tableaux")
+	l, _ := d.Layout(ctx, 1)
+	if len(l.Sheets) != 1 {
+		t.Fatalf("feuilles : %+v", l.Sheets)
+	}
+	d.bus.Undo(ctx)
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
+	}
+	check(t, d, "feuille rendue")
+}

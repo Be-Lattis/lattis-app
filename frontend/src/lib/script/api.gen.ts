@@ -423,8 +423,8 @@ export const apiReference: RefEntry[] = [
 		name: "sheets.delete",
 		category: "sheets",
 		signature: "sheets.delete(sheet)",
-		summary: "Supprime une feuille sans tableau (ses cellules, graphiques et boutons partent avec elle).",
-		details: "Une feuille qui contient des tableaux est refusée : supprimez-les d'abord avec tables.delete. Le classeur garde au moins une feuille. Paramètres — sheet : feuille à supprimer. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		summary: "Supprime une feuille et tout ce qu'elle contient : tableaux, cellules, tableaux croisés, graphiques et boutons.",
+		details: "Une seule étape d'annulation rend la feuille et tout son contenu. Le classeur garde au moins une feuille visible. Paramètres — sheet : feuille à supprimer. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		args: [1, 1]
 	},
 	{

@@ -166,8 +166,8 @@ ui.show_sheet(f.name)`,
 		&Command{
 			Name:    "sheets.delete",
 			Label:   "Supprimer la feuille",
-			Summary: "Supprime une feuille sans tableau (ses cellules, graphiques et boutons partent avec elle).",
-			Details: "Une feuille qui contient des tableaux est refusée : supprimez-les d'abord avec tables.delete. Le classeur garde au moins une feuille.",
+			Summary: "Supprime une feuille et tout ce qu'elle contient : tableaux, cellules, tableaux croisés, graphiques et boutons.",
+			Details: "Une seule étape d'annulation rend la feuille et tout son contenu. Le classeur garde au moins une feuille visible.",
 			Params:  []Param{{Name: "sheet", Type: Ref, Desc: "feuille à supprimer"}},
 			Write:   true,
 			Run: func(c *Call) (any, error) {
