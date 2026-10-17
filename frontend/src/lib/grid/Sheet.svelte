@@ -1508,6 +1508,9 @@
 		for (const [k, rawText] of cells) {
 			const [r, c] = k.split(',').map(Number);
 			if (r < r0 || r > r1 || c < c0 || c > c1 || !rh(r) || !colAxis.size(c) || mergeOf(r, c)) continue;
+			// Cellule en cours d'édition : l'éditeur montre sa saisie ; sa valeur,
+			// qui peut déborder plus loin que lui, ne se dessine pas dessous.
+			if (editing && r === active.row && c === active.col) continue;
 			const fstyle = resolveStyle(styleAt(r, c, undefined), freeRule(r, c));
 			const x = cx(c);
 			const cw = colAxis.size(c);
