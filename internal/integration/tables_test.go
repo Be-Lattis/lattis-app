@@ -234,15 +234,23 @@ func TestSheetCopy(t *testing.T) {
 	if got == "40" {
 		knownBug(t, "copie-feuille", "la formule libre de la feuille copiée lit toujours le tableau d'origine ("+h.getOn(copy, 8, 1).Raw+")")
 	}
-	// Une feuille avec tableau ne se supprime pas par sheets.delete.
-	if _, err := h.try("sheets.delete", "sheet", "Mars"); err == nil {
-		t.Fatal("feuille avec tableau supprimée")
-	}
-	h.do("tables.delete", "tables", []any{ct[0].Name})
+	// Supprimer une feuille emporte ses tableaux, en une seule étape
+	// d'annulation ; le classeur garde au moins une feuille.
+	before := h.snapshot()
 	h.do("sheets.delete", "sheet", copy)
-	if got := len(h.sheetNames()); got != 1 {
-		t.Fatalf("%d feuilles", got)
+	if got := strings.Join(h.sheetNames(), ","); got != "Mars" {
+		t.Fatalf("feuilles %s", got)
 	}
+	if _, err := h.try("tables.get", "table", ct[0].Name); err == nil {
+		t.Fatal("le tableau de la feuille supprimée existe encore")
+	}
+	if _, err := h.try("db.query", "sql", `SELECT * FROM "`+ct[0].Name+`"`); err == nil {
+		t.Fatal("le tableau de la feuille supprimée se lit encore en SQL")
+	}
+	h.undo()
+	sameSnapshot(t, "annuler la suppression de feuille", before, h.snapshot())
+	h.do("sheets.delete", "sheet", copy)
+	h.fails("", "sheets.delete", "sheet", "Mars")
 }
 
 // Extraire des colonnes et promouvoir la première ligne en en-têtes.
