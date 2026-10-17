@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { axisFormat, categoryLayout, parseNumber, tickLabel, ticks } from './scale';
+import { axisFormat, categoryLayout, legendFlow, parseNumber, tickLabel, ticks } from './scale';
 
 // Espaces insécables de Intl (fr-FR) ramenées à des espaces simples.
 const plain = (s: string) => s.replace(/[  ]/g, ' ');
@@ -43,5 +43,18 @@ describe('étiquettes de catégories', () => {
 	});
 	it('une sur plusieurs seulement si même inclinées elles se chevauchent', () => {
 		expect(categoryLayout(services, 8).every).toBe(3);
+	});
+});
+
+describe('légende sur toute la largeur', () => {
+	it('enchaîne les entrées puis passe à la rangée suivante, libellés complets', () => {
+		const f = legendFlow(['Informatique', 'Audio', 'Stockage', 'Mobilier'], 220, 4);
+		expect(f.items.map((i) => i.text)).toEqual(['Informatique', 'Audio', 'Stockage', 'Mobilier']);
+		expect(f.rows).toBe(2);
+		expect(f.items[2].row).toBe(1);
+		expect(f.items[2].x).toBe(10);
+	});
+	it('omet ce qui dépasse le nombre de rangées', () => {
+		expect(legendFlow(['a', 'b', 'c'], 60, 1).items.length).toBeLessThan(3);
 	});
 });

@@ -3,7 +3,7 @@
 	// groupées ou empilées), courbes, aires, secteurs, anneau, nuage de points.
 	// Les données arrivent déjà agrégées par le classeur.
 	import { untrack } from 'svelte';
-	import { PALETTE, axisFormat, categoryLayout, parseNumber, shortLabel, tickLabel, ticks } from './scale';
+	import { PALETTE, axisFormat, categoryLayout, legendFlow, parseNumber, shortLabel, tickLabel, ticks } from './scale';
 	import { ease, lerpSeries, progress, reducedMotion, sameSeries } from '../grid/anim';
 
 	export interface Series {
@@ -86,10 +86,16 @@
 			? { every: 1, angle: 0, depth: 14, chars: 12 }
 			: categoryLayout(labels, Math.max(20, width - padLeft - padRight) / Math.max(1, labels.length))
 	);
+	// Légende en haut ou en bas : toute la largeur, sur plusieurs rangées au
+	// besoin (au plus le tiers de la hauteur), libellés complets.
+	const flow = $derived(
+		legend === 'top' || legend === 'bottom' ? legendFlow(legendItems.map((it) => it.name), width, Math.max(1, Math.floor(height / 3 / 16))) : { items: [], rows: 0 }
+	);
+	const legendH = $derived(flow.rows ? 6 + flow.rows * 16 : 0);
 	const pad = $derived({
-		top: (style.title ? 30 : 12) + (legend === 'top' ? 22 : 0),
+		top: (style.title ? 30 : 12) + (legend === 'top' ? legendH : 0),
 		right: padRight,
-		bottom: (radial ? 12 : horizontal ? 26 : 16 + catLayout.depth) + (style.xTitle ? 18 : 0) + (legend === 'bottom' ? 22 : 0),
+		bottom: (radial ? 12 : horizontal ? 26 : 16 + catLayout.depth) + (style.xTitle ? 18 : 0) + (legend === 'bottom' ? legendH : 0),
 		left: padLeft
 	});
 	const plotW = $derived(Math.max(20, width - pad.left - pad.right));
@@ -366,11 +372,11 @@
 				<text x={width - 122} y={pad.top + i * 18 + 9} class="small">{short(it.name, 18)}{radial && slices[i] ? ` (${pct.format(slices[i].part)})` : ''}</text>
 			{/each}
 		{:else}
-			{@const y = legend === 'top' ? (style.title ? 34 : 12) : height - 14}
-			{@const w = Math.min(130, (width - 20) / Math.max(1, legendItems.length))}
-			{#each legendItems.slice(0, Math.floor((width - 20) / 60)) as it, i (i)}
-				<rect x={10 + i * w} y={y - 8} width="10" height="10" fill={it.color} />
-				<text x={10 + i * w + 14} y={y + 1} class="small">{short(it.name, Math.max(4, Math.floor((w - 18) / 6.5)))}</text>
+			{@const y0 = legend === 'top' ? (style.title ? 34 : 12) : height - legendH + 10}
+			{#each flow.items as f, i (i)}
+				{@const y = y0 + f.row * 16}
+				<rect x={f.x} y={y - 8} width="10" height="10" fill={legendItems[i].color} />
+				<text x={f.x + 14} y={y + 1} class="small"><title>{legendItems[i].name}</title>{f.text}</text>
 			{/each}
 		{/if}
 	{/if}

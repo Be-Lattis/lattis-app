@@ -86,3 +86,36 @@ export function parseNumber(s: string): number | null {
 	if (!/^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i.test(t)) return null;
 	return Number(t);
 }
+
+export interface LegendPlace {
+	x: number;
+	row: number;
+	/** Libellé affiché (coupé seulement s'il dépasse toute la largeur). */
+	text: string;
+}
+
+/**
+ * Légende en haut ou en bas : les entrées s'enchaînent sur toute la largeur
+ * et passent à la rangée suivante au besoin, libellés complets ; au-delà de
+ * maxRows rangées, les dernières entrées sont omises. Renvoie la place de
+ * chaque entrée affichée et le nombre de rangées.
+ */
+export function legendFlow(names: string[], width: number, maxRows: number, charW = 6.2): { items: LegendPlace[]; rows: number } {
+	const items: LegendPlace[] = [];
+	const room = Math.max(40, width - 20);
+	const maxChars = Math.max(4, Math.floor((room - 30) / charW));
+	let x = 0;
+	let row = 0;
+	for (const n of names) {
+		const text = shortLabel(n, maxChars);
+		const w = 14 + Math.ceil(text.length * charW) + 14;
+		if (x > 0 && x + w > room) {
+			row++;
+			x = 0;
+		}
+		if (row >= maxRows) break;
+		items.push({ x: 10 + x, row, text });
+		x += w;
+	}
+	return { items, rows: items.length ? row + 1 : 0 };
+}
