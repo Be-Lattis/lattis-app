@@ -1883,26 +1883,29 @@
 			const at = here && active.row > here.t.row ? { table: tables[entries.indexOf(here)], row: active.row } : undefined;
 			ctx.save();
 			ctx.lineWidth = 2;
-			for (const f of formulaRefs(editing ? editValueText : fxText)) {
-				const k = refRect(f.text, tables, '', at);
-				if (!k || k.r1 < r0 - 1 || k.r0 > r1 + 1) continue;
-				ctx.strokeStyle = f.color;
-				ctx.fillStyle = f.color + '14';
+			// Référence glissée : son cadre coloré suit la souris, la zone
+			// d'origine garde le même cadre en gris (choix de Louis).
+			const box = (k: { r0: number; r1: number; c0: number; c1: number }, color: string) => {
+				if (k.r1 < r0 - 1 || k.r0 > r1 + 1) return;
+				ctx.strokeStyle = color;
+				ctx.fillStyle = color + '14';
 				const x = cx(k.c0) + 1;
 				const y = ry(k.r0) + 1;
 				ctx.fillRect(x, y, spanW(k.c0, k.c1) - 2, rspan(k.r0, k.r1) - 2);
 				ctx.strokeRect(x, y, spanW(k.c0, k.c1) - 2, rspan(k.r0, k.r1) - 2);
-			}
-			if (refMove) {
-				const dr = refMove.to.row - refMove.from.row;
-				const dc = refMove.to.col - refMove.from.col;
-				const k = { r0: refMove.rect.r0 + dr, r1: refMove.rect.r1 + dr, c0: refMove.rect.c0 + dc, c1: refMove.rect.c1 + dc };
-				if (k.r0 >= 0 && k.c0 >= 0) {
-					ctx.setLineDash([4, 3]);
-					ctx.strokeStyle = C.active;
-					ctx.strokeRect(cx(k.c0) + 1, ry(k.r0) + 1, spanW(k.c0, k.c1) - 2, rspan(k.r0, k.r1) - 2);
-					ctx.setLineDash([]);
+			};
+			for (const f of formulaRefs(editing ? editValueText : fxText)) {
+				const k = refRect(f.text, tables, '', at);
+				if (!k) continue;
+				if (refMove && f.start === refMove.start) {
+					const dr = refMove.to.row - refMove.from.row;
+					const dc = refMove.to.col - refMove.from.col;
+					const moved = { r0: k.r0 + dr, r1: k.r1 + dr, c0: k.c0 + dc, c1: k.c1 + dc };
+					if (dr || dc) box(k, '#9ca3af');
+					if (moved.r0 >= 0 && moved.c0 >= 0) box(moved, f.color);
+					continue;
 				}
+				box(k, f.color);
 			}
 			ctx.restore();
 		}
