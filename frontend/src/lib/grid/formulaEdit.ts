@@ -520,6 +520,14 @@ export function refRect(ref: string, tables: RefTable[], sheet: string, here?: {
 		if (a < 1 || a > t.rows) return null;
 		return { r0: t.row + a, c0: c, r1: t.row + Math.min(b, t.rows), c1: c };
 	}
+	// [Col][-1], [Col][+2] : relatif à la ligne de la formule.
+	const rel = /^\s*([+-])\s*(\d+)\s*$/.exec(m[3]);
+	if (rel) {
+		if (!here || here.table.name !== t.name) return null;
+		const row = here.row + (rel[1] === '-' ? -1 : 1) * Number(rel[2]);
+		if (row <= t.row || row > last) return null;
+		return { r0: row, c0: c, r1: row, c1: c };
+	}
 	let n: number | undefined;
 	if (t.keyed) n = t.keyRow?.(unquote(m[3]));
 	else if (/^\s*\d+\s*$/.test(m[3])) n = Number(m[3]) - 1;
@@ -573,4 +581,43 @@ export function editorWidth(textWidth: number, col: number, colWidth: (c: number
 		w = next;
 	}
 	return Math.min(w, Math.max(colWidth(col), maxWidth));
+}
+
+/**
+ * Référence d'une cellule pour une formule du tableau here (ligne here.row),
+ * comme un clic l'écrit : [Col] sur la même ligne, [Col][-1] / [Col][+2] sur
+ * une autre ligne du même tableau (relatif, choix de Louis), Tableau[Col][n]
+ * dans un autre tableau, Tableau[Col] sur un en-tête, Cell[A1] hors tableau.
+ */
+export function cellRefText(row: number, col: number, tables: RefTable[], here?: { table: RefTable; row: number }): string {
+	const t = tables.find((x) => row >= x.row && row <= x.row + x.rows && col >= x.col && col < x.col + x.columns.length);
+	if (!t) return 'Cell[' + colLetters(col) + (row + 1) + ']';
+	const name = t.columns[col - t.col];
+	if (row === t.row) return `${t.name}[${name}]`;
+	if (here && here.table.name === t.name && here.row > t.row) {
+		const k = row - here.row;
+		return k === 0 ? `[${name}]` : `[${name}][${k > 0 ? '+' : ''}${k}]`;
+	}
+	return `${t.name}[${name}][${row - t.row}]`;
+}
+
+function colLetters(c: number): string {
+	let s = '';
+	for (c++; c > 0; c = Math.floor((c - 1) / 26)) s = String.fromCharCode(65 + ((c - 1) % 26)) + s;
+	return s;
+}
+
+/**
+ * Nouvelle référence d'un marqueur de formule déplacé de (dr, dc) sur la
+ * grille (rect : sa plage avant) : la même forme qu'au clic pour une
+ * cellule, une plage sinon ; null si la plage ne se décrit pas.
+ */
+export function movedRef(rect: Rect, dr: number, dc: number, tables: RefTable[], here?: { table: RefTable; row: number }): string | null {
+	const r: Rect = { r0: rect.r0 + dr, r1: rect.r1 + dr, c0: rect.c0 + dc, c1: rect.c1 + dc };
+	if (r.r0 < 0 || r.c0 < 0) return null;
+	if (r.r0 === r.r1 && r.c0 === r.c1) return cellRefText(r.r0, r.c0, tables, here);
+	// Colonne entière d'un tableau (en-tête compris) : Tableau[Col].
+	const t = tables.find((x) => r.r0 === x.row && r.r1 === x.row + x.rows && r.c0 === r.c1 && r.c0 >= x.col && r.c0 < x.col + x.columns.length);
+	if (t) return `${t.name}[${t.columns[r.c0 - t.col]}]`;
+	return rangeRef(r, tables, here?.table);
 }

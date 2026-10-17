@@ -54,7 +54,7 @@
 	import Icon from '#lib/icons/Icon.svelte';
 	import { drawIcon } from '#lib/icons/canvas.js';
 	import { apply as applySuggestion, argKindAt, signature, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
-	import { checkFormula, closeParens, editorWidth, formulaRefs, highlightParts, isFormula, rangeRef, refRect, serverErrorPos, type FormulaError, type RefTable } from './formulaEdit';
+	import { checkFormula, closeParens, editorWidth, formulaRefs, highlightParts, isFormula, movedRef, rangeRef, refRect, serverErrorPos, type FormulaError, type Rect, type RefTable } from './formulaEdit';
 	import {
 		isErrorValue,
 		valueAlignment,
@@ -1586,6 +1586,17 @@
 				const y = ry(k.r0) + 1;
 				ctx.fillRect(x, y, spanW(k.c0, k.c1) - 2, rspan(k.r0, k.r1) - 2);
 				ctx.strokeRect(x, y, spanW(k.c0, k.c1) - 2, rspan(k.r0, k.r1) - 2);
+			}
+			if (refMove) {
+				const dr = refMove.to.row - refMove.from.row;
+				const dc = refMove.to.col - refMove.from.col;
+				const k = { r0: refMove.rect.r0 + dr, r1: refMove.rect.r1 + dr, c0: refMove.rect.c0 + dc, c1: refMove.rect.c1 + dc };
+				if (k.r0 >= 0 && k.c0 >= 0) {
+					ctx.setLineDash([4, 3]);
+					ctx.strokeStyle = C.active;
+					ctx.strokeRect(cx(k.c0) + 1, ry(k.r0) + 1, spanW(k.c0, k.c1) - 2, rspan(k.r0, k.r1) - 2);
+					ctx.setLineDash([]);
+				}
 			}
 			ctx.restore();
 		}
@@ -4147,6 +4158,10 @@
 		}
 		const cell = cellAt(e);
 		if (!cell) return;
+		if (e.button === 0 && formulaMode && grabRefMark(e, cell)) {
+			e.preventDefault();
+			return;
+		}
 		if (e.button === 0 && formulaMode && insertRef(cell)) {
 			e.preventDefault();
 			// Glisser ensuite insère une plage (Cell[A1:B3], Tableau[Col][1:3]…).
@@ -4191,10 +4206,14 @@
 		if (r === e.t.row) return `${e.t.name}[${col}]`;
 		// Même ligne du tableau de la formule : la valeur de la ligne.
 		if (same && r === active.row) return `[${col}]`;
-		// Une autre ligne : par son rang (1 = première ligne de données), même si
-		// le tableau a une clé (choix de Louis : tout par rang).
-		const item = String(r - e.t.row);
-		return same ? `[${col}][${item}]` : `${e.t.name}[${col}][${item}]`;
+		// Une autre ligne du tableau de la formule : relative ([Col][-1],
+		// [Col][+2]) ; d'un autre tableau : par son rang (1 = première ligne de
+		// données), même si le tableau a une clé (choix de Louis).
+		if (same) {
+			const k = r - active.row;
+			return `[${col}][${k > 0 ? '+' : ''}${k}]`;
+		}
+		return `${e.t.name}[${col}][${r - e.t.row}]`;
 	}
 
 	/** Pendant la saisie d'une formule, insère la référence de la cellule cliquée au curseur. */
@@ -4221,6 +4240,78 @@
 
 	// Glissé en mode formule depuis une référence insérée : la plage couverte.
 	let refDrag: { from: { row: number; col: number }; to: { row: number; col: number } } | null = null;
+
+	// Marqueur de référence glissé (comme Excel : on attrape le bord du cadre
+	// coloré d'une référence pendant la saisie d'une formule, on le dépose
+	// ailleurs, la référence est réécrite).
+	let refMove = $state<{ start: number; end: number; rect: Rect; from: { row: number; col: number }; to: { row: number; col: number } } | null>(null);
+
+	/** Contexte des références : tableaux et ligne de la formule. */
+	function refContext() {
+		const here = tableAt(active.row, active.col);
+		const tables = refTables();
+		const at = here && active.row > here.t.row ? { table: tables[entries.indexOf(here)], row: active.row } : undefined;
+		return { tables, at };
+	}
+
+	/** Le bord d'un marqueur de référence est-il sous la souris ? */
+	function hitRefMark(e: MouseEvent): boolean {
+		return markAt(e) !== null;
+	}
+
+	/** Attrape le marqueur dont le bord est sous la souris ; faux s'il n'y en a pas. */
+	function grabRefMark(e: MouseEvent, cell: { row: number; col: number }): boolean {
+		const m = markAt(e);
+		if (!m) return false;
+		refMove = { start: m.f.start, end: m.f.end, rect: m.k, from: cell, to: cell };
+		return true;
+	}
+
+	/** Marqueur (référence et plage) dont le bord est à moins de 4 px de la souris. */
+	function markAt(e: MouseEvent) {
+		const { tables, at } = refContext();
+		const { x, y } = toLocal(e);
+		for (const f of formulaRefs(editing ? editValueText : fxText)) {
+			const k = refRect(f.text, tables, '', at);
+			if (!k) continue;
+			const left = screenX(k.c0);
+			const right = screenX(k.c1) + colAxis.size(k.c1);
+			const top = screenY(k.r0);
+			const bottom = screenY(k.r1) + rh(k.r1);
+			const near = (v: number, edge: number) => Math.abs(v - edge) <= 4;
+			const inX = x >= left - 4 && x <= right + 4;
+			const inY = y >= top - 4 && y <= bottom + 4;
+			if ((inY && (near(x, left) || near(x, right))) || (inX && (near(y, top) || near(y, bottom)))) return { f, k };
+		}
+		return null;
+	}
+
+	/** Dépose le marqueur glissé : la référence est réécrite dans la formule. */
+	function dropRefMark() {
+		const m = refMove;
+		refMove = null;
+		schedule();
+		if (!m) return;
+		const dr = m.to.row - m.from.row;
+		const dc = m.to.col - m.from.col;
+		if (!dr && !dc) return;
+		const { tables, at } = refContext();
+		const text = movedRef(m.rect, dr, dc, tables, at);
+		if (text === null) {
+			say('Cette plage ne peut pas devenir une référence : une plage couvre une seule colonne d’un tableau');
+			return;
+		}
+		const el = editing ? input : fxEditing ? fxInput : null;
+		if (!el) return;
+		const next = el.value.slice(0, m.start) + text + el.value.slice(m.end);
+		if (editing) editValueText = next;
+		else fxText = next;
+		el.value = next;
+		const caret = m.start + text.length;
+		el.setSelectionRange(caret, caret);
+		el.focus();
+		lastRef = null;
+	}
 
 	/** Tableaux de la feuille, pour situer et écrire les références. */
 	function refTables(): RefTable[] {
@@ -4263,6 +4354,14 @@
 	}
 
 	function onMouseMove(e: MouseEvent) {
+		if (refMove) {
+			const cell = cellAt(e);
+			if (cell && (cell.row !== refMove.to.row || cell.col !== refMove.to.col)) {
+				refMove.to = cell;
+				schedule();
+			}
+			return;
+		}
 		if (refDrag) {
 			const cell = cellAt(e);
 			if (cell) dragRef(cell);
@@ -4312,7 +4411,9 @@
 			return;
 		}
 		scroller.style.cursor =
-			source.setRowHeight && rowBoundaryAt(e) !== null
+			formulaMode && !refDrag && hitRefMark(e)
+				? 'move' // bord d'un marqueur de référence : il se glisse
+				: source.setRowHeight && rowBoundaryAt(e) !== null
 				? 'row-resize'
 				: source.setColumnWidth && boundaryAt(e) !== null
 				? 'col-resize'
@@ -5720,6 +5821,7 @@
 		scroller.addEventListener('wheel', onWheel, { passive: false });
 		const up = (ev?: MouseEvent) => {
 			refDrag = null;
+			if (refMove) dropRefMark();
 			if (dragging && painter) applyPainter();
 			const dragged = dragging || headerDrag;
 			dragging = false;

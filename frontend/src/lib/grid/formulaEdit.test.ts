@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkFormula, closeParens, editorWidth, formulaRefs, highlightParts, rangeRef, refRect, serverErrorPos, type RefTable } from './formulaEdit';
+import { cellRefText, checkFormula, closeParens, movedRef, editorWidth, formulaRefs, highlightParts, rangeRef, refRect, serverErrorPos, type RefTable } from './formulaEdit';
 
 describe('closeParens', () => {
 	it('ferme les parenthèses oubliées', () => {
@@ -82,5 +82,30 @@ describe('editorWidth', () => {
 		expect(editorWidth(120, 0, w, () => true, 500)).toBe(150);
 		expect(editorWidth(120, 0, w, (c) => c < 2, 500)).toBe(100);
 		expect(editorWidth(900, 0, w, () => true, 320)).toBe(320);
+	});
+});
+
+describe('références relatives et marqueurs déplacés', () => {
+	const t: RefTable = { name: 'Ventes', row: 0, col: 0, columns: ['Qté', 'Prix'], rows: 5 };
+	const here = { table: t, row: 3 };
+	it('situe [Col][-1] et [Col][+1] par rapport à la ligne de la formule', () => {
+		expect(refRect('[Prix][-1]', [t], '', here)).toEqual({ r0: 2, c0: 1, r1: 2, c1: 1 });
+		expect(refRect('[Prix][+2]', [t], '', here)).toEqual({ r0: 5, c0: 1, r1: 5, c1: 1 });
+		expect(refRect('[Prix][-3]', [t], '', here)).toBeNull(); // l'en-tête
+	});
+	it('écrit la référence d’une cellule comme un clic', () => {
+		expect(cellRefText(3, 1, [t], here)).toBe('[Prix]');
+		expect(cellRefText(2, 1, [t], here)).toBe('[Prix][-1]');
+		expect(cellRefText(4, 0, [t], here)).toBe('[Qté][+1]');
+		expect(cellRefText(0, 1, [t], here)).toBe('Ventes[Prix]');
+		expect(cellRefText(7, 3, [t], here)).toBe('Cell[D8]');
+		expect(cellRefText(2, 1, [t])).toBe('Ventes[Prix][2]');
+	});
+	it('réécrit un marqueur déplacé', () => {
+		// [Prix] (ligne 3) monté d'une ligne : [Prix][-1].
+		expect(movedRef({ r0: 3, c0: 1, r1: 3, c1: 1 }, -1, 0, [t], here)).toBe('[Prix][-1]');
+		// Toute la colonne Qté décalée vers Prix.
+		expect(movedRef({ r0: 0, c0: 0, r1: 5, c1: 0 }, 0, 1, [t], here)).toBe('Ventes[Prix]');
+		expect(movedRef({ r0: 0, c0: 0, r1: 0, c1: 0 }, -1, 0, [t], here)).toBeNull();
 	});
 });
