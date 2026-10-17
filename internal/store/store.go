@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -42,6 +43,10 @@ type Store struct {
 	content    map[string]bool
 	structure  map[string]bool
 	touchedAll bool
+	// Écritures par tableau (t_N) et sur les métadonnées, depuis l'ouverture :
+	// la version d'un calcul qui ne lit que quelques tableaux (Version).
+	tgen    map[string]int64
+	metaGen int64
 }
 
 var (
@@ -49,6 +54,9 @@ var (
 	// Métadonnées qui changent ce qu'on lit d'un tableau : colonnes, types,
 	// formules, saisies invalides, tableaux eux-mêmes.
 	tableMeta = regexp.MustCompile(`_slitable_(columns|tables|invalid)\b`)
+	// Structure des tableaux (noms, colonnes, types) : ce que lit tout calcul
+	// sur un tableau (voir Version ; les saisies invalides n'en sont pas).
+	schemaMeta = regexp.MustCompile(`_slitable_(columns|tables)\b`)
 )
 
 // noteWrite relève les tableaux qu'une requête de l'écrivain peut modifier.
@@ -69,6 +77,15 @@ func (s *Store) noteWrite(q string) {
 	defer s.tmu.Unlock()
 	if meta {
 		s.touchedAll = true
+		if schemaMeta.MatchString(q) {
+			s.metaGen++
+		}
+	}
+	if s.tgen == nil {
+		s.tgen = map[string]int64{}
+	}
+	for _, n := range names {
+		s.tgen[n]++
 	}
 	if s.content == nil {
 		s.content, s.structure = map[string]bool{}, map[string]bool{}
@@ -92,6 +109,20 @@ func (s *Store) TakeTouched() (content, structure map[string]bool, all bool) {
 	content, structure, all = s.content, s.structure, s.touchedAll
 	s.content, s.structure, s.touchedAll = nil, nil, false
 	return content, structure, all
+}
+
+// Version résume les écritures sur les tableaux nommés (t_N) et sur les
+// métadonnées : un calcul qui ne lit qu'eux reste valable tant qu'elle ne
+// change pas, quoi qu'on écrive ailleurs.
+func (s *Store) Version(tables ...string) string {
+	s.tmu.Lock()
+	defer s.tmu.Unlock()
+	var b strings.Builder
+	b.WriteString(strconv.FormatInt(s.metaGen, 10))
+	for _, n := range tables {
+		b.WriteString("|" + n + ":" + strconv.FormatInt(s.tgen[n], 10))
+	}
+	return b.String()
 }
 
 // Generation donne le nombre d'écritures passées par le Store.

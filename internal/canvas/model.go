@@ -61,6 +61,9 @@ type Model struct {
 	cacheMu  sync.Mutex
 	cache    map[string]any
 	cacheGen int64
+	// depCache : résultats qui ne dépendent que de quelques tableaux (voir
+	// cachedOn), gardés tant que ces tableaux ne changent pas.
+	depCache map[string]depEntry
 
 	// Changements de protection (hors journal) depuis l'ouverture.
 	protMu  sync.Mutex
@@ -85,7 +88,45 @@ func (m *Model) Recalc() {
 	m.mu.Unlock()
 	m.cacheMu.Lock()
 	m.cache = nil
+	m.depCache = nil
 	m.cacheMu.Unlock()
+}
+
+type depEntry struct {
+	ver string
+	v   any
+}
+
+// cachedOn est cached pour un calcul qui ne lit que les tableaux deps (noms
+// SQL t_N) et les métadonnées : il reste valable après des écritures
+// ailleurs (un TCD ou un graphique ne se recalcule plus quand on modifie un
+// autre tableau ou une cellule libre).
+func cachedOn[T any](t *tx, key string, deps []string, fn func() (T, error)) (T, error) {
+	if !t.ro || t.m == nil {
+		return fn()
+	}
+	m := t.m
+	ver := m.db.Version(deps...)
+	m.cacheMu.Lock()
+	if e, ok := m.depCache[key]; ok && e.ver == ver {
+		m.cacheMu.Unlock()
+		return e.v.(T), nil
+	}
+	m.cacheMu.Unlock()
+	v, err := fn()
+	// Une écriture pendant le calcul : le résultat n'est pas gardé.
+	if err == nil && m.db.Version(deps...) == ver {
+		m.cacheMu.Lock()
+		if m.depCache == nil {
+			m.depCache = map[string]depEntry{}
+		}
+		if len(m.depCache) > 256 {
+			clear(m.depCache)
+		}
+		m.depCache[key] = depEntry{ver, v}
+		m.cacheMu.Unlock()
+	}
+	return v, err
 }
 
 // cached rend le résultat de fn pour la clé, calculé une fois par génération

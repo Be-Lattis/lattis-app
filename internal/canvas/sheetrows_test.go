@@ -74,7 +74,9 @@ func TestRelativeRows(t *testing.T) {
 	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Mois", "Ventes"}, {"jan", "10"}, {"fév", "15"}, {"mars", "12"}}); err != nil {
 		t.Fatal(err)
 	}
-	for col, f := range map[int]string{2: "=[Ventes]-[Ventes][-1]", 3: "=[Ventes][+1]", 4: "=[Ventes][2]"} {
+	// Colonnes dans l'ordre : une saisie à deux colonnes du tableau ne l'étend pas.
+	for k, f := range []string{"=[Ventes]-[Ventes][-1]", "=[Ventes][+1]", "=[Ventes][2]"} {
+		col := k + 2
 		if _, err := d.SetCell(ctx, 1, 0, col, "c"+fmt.Sprint(col)); err != nil {
 			t.Fatal(err)
 		}

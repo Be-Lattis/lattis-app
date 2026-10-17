@@ -1834,3 +1834,48 @@ func TestLineRules(t *testing.T) {
 		t.Fatal("annulation des règles de colonnes")
 	}
 }
+
+// Un TCD reste en cache quand on écrit ailleurs, et suit sa source.
+func TestPivotCacheDeps(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Pays", "Ventes"}, {"FR", "10"}, {"IT", "5"}, {"FR", "7"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.Paste(ctx, 1, 0, 5, [][]string{{"Autre", "N"}, {"a", "1"}, {"b", "2"}}); err != nil {
+		t.Fatal(err)
+	}
+	sheet, err := d.CreatePivot(ctx, PivotConfig{Source: "Feuille1", RowFields: []string{"Pays"}, Values: []PivotValue{{Field: "Ventes", Agg: "sum"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cells := func() string {
+		l, err := d.Layout(ctx, sheet)
+		if err != nil || l.Pivots[0].Error != "" {
+			t.Fatal(err, l.Pivots[0].Error)
+		}
+		return fmt.Sprint(l.Pivots[0].Cells)
+	}
+	cells()
+	var name string
+	if err := d.read(ctx, func(t *tx) error {
+		tb, err := t.tableByName("Feuille1")
+		name = tb.sql()
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	before := d.db.Version(name)
+	if _, err := d.SetCell(ctx, 1, 1, 6, "9"); err != nil { // l'autre tableau
+		t.Fatal(err)
+	}
+	if after := d.db.Version(name); after != before {
+		t.Fatalf("écrire dans un autre tableau change la version de la source : %s → %s", before, after)
+	}
+	if _, err := d.SetCell(ctx, 1, 1, 1, "100"); err != nil { // la source
+		t.Fatal(err)
+	}
+	if got := cells(); got != "[[Pays Somme de Ventes] [FR 107] [IT 5] [Total 112]]" {
+		t.Fatalf("le TCD ne suit pas sa source : %s", got)
+	}
+}
