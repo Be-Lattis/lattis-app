@@ -7,6 +7,7 @@ import (
 	"slices"
 
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/store"
 )
 
 func tableSQL(id int64) string { return fmt.Sprintf("t_%d", id) }
@@ -112,9 +113,17 @@ func (t *tx) fill(tb *Table) error {
 	if err := rs.Err(); err != nil {
 		return err
 	}
-	if err := t.row(`SELECT count(*) FROM ` + tb.sql()).Scan(&tb.Rows); err != nil {
+	// Nombre de lignes : un parcours de tout le tableau (0,2 s sur 10 M de
+	// lignes), relu seulement quand le tableau a changé.
+	n, err := cachedOn(t, "rows:"+tb.sql(), []string{store.RowsOf(tb.sql())}, func() (int, error) {
+		var n int
+		err := t.row(`SELECT count(*) FROM ` + tb.sql()).Scan(&n)
+		return n, err
+	})
+	if err != nil {
 		return err
 	}
+	tb.Rows = n
 	return t.loadFilter(tb)
 }
 

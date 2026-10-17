@@ -68,3 +68,38 @@ func TestTouched(t *testing.T) {
 		t.Fatal("métadonnées des colonnes : tous les tableaux concernés")
 	}
 }
+
+// Versions par tableau : une saisie ne change pas celle de ses lignes ; une
+// écriture ailleurs ne change rien.
+func TestVersion(t *testing.T) {
+	ctx := context.Background()
+	s, err := Open(filepath.Join(t.TempDir(), "x.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	exec := func(q string) {
+		t.Helper()
+		if err := s.Write(ctx, func(tx *sql.Tx) error { _, err := tx.Exec(q); return err }); err != nil {
+			t.Fatal(err)
+		}
+	}
+	exec(`CREATE TABLE t_1 (x)`)
+	exec(`CREATE TABLE t_2 (x)`)
+	all, rows := s.Version("t_1"), s.Version(RowsOf("t_1"))
+	exec(`INSERT INTO t_2 VALUES (1)`)
+	if s.Version("t_1") != all || s.Version(RowsOf("t_1")) != rows {
+		t.Fatal("une écriture dans t_2 change la version de t_1")
+	}
+	exec(`UPDATE t_1 SET x = 2`)
+	if s.Version("t_1") == all || s.Version(RowsOf("t_1")) != rows {
+		t.Fatal("une mise à jour de valeurs : version des valeurs seulement")
+	}
+	exec(`INSERT INTO t_1 VALUES (3)`)
+	if s.Version(RowsOf("t_1")) == rows {
+		t.Fatal("un ajout de ligne change la version des lignes")
+	}
+	if s.Quiet() < 0 {
+		t.Fatal("aucune écriture ne tourne")
+	}
+}

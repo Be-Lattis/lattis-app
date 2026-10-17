@@ -102,7 +102,7 @@ type depEntry struct {
 // ailleurs (un TCD ou un graphique ne se recalcule plus quand on modifie un
 // autre tableau ou une cellule libre).
 func cachedOn[T any](t *tx, key string, deps []string, fn func() (T, error)) (T, error) {
-	if !t.ro || t.m == nil {
+	if t.m == nil {
 		return fn()
 	}
 	m := t.m
@@ -113,9 +113,12 @@ func cachedOn[T any](t *tx, key string, deps []string, fn func() (T, error)) (T,
 		return e.v.(T), nil
 	}
 	m.cacheMu.Unlock()
+	// Une écriture le lit (version à jour) mais ne garde rien : elle peut
+	// être annulée. Une lecture garde son résultat si aucune écriture n'a
+	// tourné pendant le calcul.
+	quiet := m.db.Quiet()
 	v, err := fn()
-	// Une écriture pendant le calcul : le résultat n'est pas gardé.
-	if err == nil && m.db.Version(deps...) == ver {
+	if err == nil && t.ro && quiet >= 0 && m.db.Quiet() == quiet && m.db.Version(deps...) == ver {
 		m.cacheMu.Lock()
 		if m.depCache == nil {
 			m.depCache = map[string]depEntry{}

@@ -47,6 +47,15 @@ type Store struct {
 	// la version d'un calcul qui ne lit que quelques tableaux (Version).
 	tgen    map[string]int64
 	metaGen int64
+	// sgen : écritures qui changent les lignes d'un tableau (pas seulement
+	// des valeurs) ; voir Version, suffixe RowsOf.
+	sgen map[string]int64
+	// pending : tableaux écrits par la tâche en cours, dont la version
+	// avance encore à sa fin (validée ou annulée) ; busy : une tâche tourne.
+	pending     map[string]bool
+	pendingRows map[string]bool
+	pendingMeta bool
+	busy        atomic.Bool
 }
 
 var (
@@ -79,13 +88,22 @@ func (s *Store) noteWrite(q string) {
 		s.touchedAll = true
 		if schemaMeta.MatchString(q) {
 			s.metaGen++
+			s.pendingMeta = true
 		}
 	}
 	if s.tgen == nil {
 		s.tgen = map[string]int64{}
 	}
+	if s.pending == nil {
+		s.pending, s.pendingRows, s.sgen = map[string]bool{}, map[string]bool{}, map[string]int64{}
+	}
 	for _, n := range names {
 		s.tgen[n]++
+		s.pending[n] = true
+		if !valuesOnly {
+			s.sgen[n]++
+			s.pendingRows[n] = true
+		}
 	}
 	if s.content == nil {
 		s.content, s.structure = map[string]bool{}, map[string]bool{}
@@ -120,9 +138,54 @@ func (s *Store) Version(tables ...string) string {
 	var b strings.Builder
 	b.WriteString(strconv.FormatInt(s.metaGen, 10))
 	for _, n := range tables {
+		if t, ok := strings.CutSuffix(n, rowsSuffix); ok {
+			b.WriteString("|" + n + ":" + strconv.FormatInt(s.sgen[t], 10))
+			continue
+		}
 		b.WriteString("|" + n + ":" + strconv.FormatInt(s.tgen[n], 10))
 	}
 	return b.String()
+}
+
+const rowsSuffix = "#lignes"
+
+// RowsOf désigne, pour Version, les lignes du tableau t_N seulement
+// (ajouts, suppressions, ordre) : un calcul qui n'en lit pas les valeurs,
+// comme leur nombre, reste valable après une saisie.
+func RowsOf(table string) string { return table + rowsSuffix }
+
+// settle fait encore avancer, à la fin d'une tâche, la version des
+// tableaux qu'elle a écrits : un calcul lu pendant la tâche (avant sa
+// validation, ou annulée ensuite) ne sert plus.
+func (s *Store) settle() {
+	s.tmu.Lock()
+	defer s.tmu.Unlock()
+	for n := range s.pending {
+		s.tgen[n]++
+	}
+	for n := range s.pendingRows {
+		s.sgen[n]++
+	}
+	if s.pendingMeta {
+		s.metaGen++
+	}
+	clear(s.pending)
+	clear(s.pendingRows)
+	s.pendingMeta = false
+}
+
+// Quiet donne la génération si aucune écriture ne tourne (-1 sinon) : un
+// calcul de lecture n'est gardé en cache que si Quiet n'a pas changé
+// pendant qu'il tournait (il ne peut alors avoir vu qu'un état validé).
+func (s *Store) Quiet() int64 {
+	if s.busy.Load() {
+		return -1
+	}
+	g := s.gen.Load()
+	if s.busy.Load() {
+		return -1
+	}
+	return g
 }
 
 // Generation donne le nombre d'écritures passées par le Store.
@@ -225,8 +288,11 @@ func (s *Store) writer() {
 	for {
 		select {
 		case j := <-s.jobs:
+			s.busy.Store(true)
 			err := s.run(j)
+			s.settle()
 			s.gen.Add(1)
+			s.busy.Store(false)
 			j.res <- err
 		case <-s.done:
 			return
