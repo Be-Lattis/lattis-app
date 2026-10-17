@@ -114,6 +114,8 @@ export interface Motion {
 	from: Geo;
 	/** Tableau qui vient de naître : il s'ouvre en fondu. */
 	born?: boolean;
+	/** Durée, en ms (ANIM_MS par défaut). */
+	ms?: number;
 }
 
 /**
