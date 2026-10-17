@@ -77,12 +77,12 @@ var Commandes = Theme{
 		c("Prix unitaire", grid.Decimal, func(g *Gen, i int, r []any) any {
 			return Round(produits[produitOf[str(r[4])]].Prix*g.Float(0.92, 1.08), 2)
 		}),
-		c("Montant HT", grid.Decimal, func(g *Gen, i int, r []any) any { return Round(f64(r[6])*f64(r[7]), 2) }),
+		f("Montant HT", grid.Decimal, "=ARRONDI([Quantité]*[Prix unitaire]; 2)"),
 		c("Payé", grid.Boolean, func(g *Gen, i int, _ []any) any { return Bool(g.Chance(0.88)) }),
 		c("Mode de paiement", grid.Text, func(g *Gen, i int, _ []any) any { return Pick(g, paiements) }),
 		c("Vendeur", grid.Text, func(g *Gen, i int, _ []any) any { return Pick(g, vendeurs) }),
 		c("Remise", grid.Decimal, func(g *Gen, i int, _ []any) any { return Pick(g, []float64{0, 0, 0, 0, 0.05, 0.05, 0.1, 0.15}) }),
-		c("Montant TTC", grid.Decimal, func(g *Gen, i int, r []any) any { return Round(f64(r[8])*(1-f64(r[12]))*1.2, 2) }),
+		f("Montant TTC", grid.Decimal, "=ARRONDI([Montant HT]*(1-[Remise])*1,2; 2)"),
 		c("Date livraison", grid.Date, func(g *Gen, i int, r []any) any { return Day(DayOf(r[1]) + g.Int(1, 12)) }),
 		c("Code postal", grid.Text, func(g *Gen, i int, r []any) any { return villes[villeOf[str(r[3])]].CP }),
 		c("Région", grid.Text, func(g *Gen, i int, r []any) any { return villes[villeOf[str(r[3])]].Region }),
@@ -145,7 +145,7 @@ var Employes = Theme{
 			return ""
 		}),
 		c("Date d'embauche", grid.Date, func(g *Gen, i int, _ []any) any { return Day(today - 1 - g.Skewed(30*365)) }),
-		c("Ancienneté", grid.Integer, func(g *Gen, i int, r []any) any { return int64((today - DayOf(r[5])) / 365) }),
+		f("Ancienneté", grid.Integer, "=ENT((DATE(2026; 1; 1)-[Date d'embauche])/365)"),
 		c("Salaire brut", grid.Decimal, func(g *Gen, i int, r []any) any {
 			base := 2500.0
 			for _, s := range services {
@@ -153,7 +153,8 @@ var Employes = Theme{
 					base = s.Base
 				}
 			}
-			return Round(base*(1+0.025*f64(r[6]))*g.Normal(1, 0.08)/10, 0) * 10
+			anc := float64((today - DayOf(r[5])) / 365) // la colonne Ancienneté est une formule
+			return Round(base*(1+0.025*anc)*g.Normal(1, 0.08)/10, 0) * 10
 		}),
 		c("Temps partiel", grid.Boolean, func(g *Gen, i int, _ []any) any { return Bool(g.Chance(0.12)) }),
 		c("Ville", grid.Text, func(g *Gen, i int, _ []any) any { return villes[g.Skewed(len(villes))].Nom }),
@@ -201,7 +202,7 @@ var Releves = Theme{
 			sun := math.Max(0, math.Sin(math.Pi*(h-6)/14))
 			return int64(sun * g.Float(200, 900))
 		}),
-		c("Alerte", grid.Boolean, func(g *Gen, i int, r []any) any { return Bool(i64(r[6]) > 50 || f64(r[7]) > 12) }),
+		f("Alerte", grid.Boolean, "=OU([Vent (km/h)]>50; [Pluie (mm)]>12)"),
 	},
 	Extra: func(k int) Column {
 		n := k/3 + 1
@@ -232,11 +233,11 @@ var Stock = Theme{
 		c("Entrepôt", grid.Text, func(g *Gen, i int, _ []any) any { return Pick(g, entrepots) }),
 		c("Quantité", grid.Integer, func(g *Gen, i int, _ []any) any { return int64(g.Skewed(500)) }),
 		c("Seuil d'alerte", grid.Integer, func(g *Gen, i int, _ []any) any { return int64(g.Int(2, 10) * 5) }),
-		c("À commander", grid.Boolean, func(g *Gen, i int, r []any) any { return Bool(i64(r[4]) < i64(r[5])) }),
+		f("À commander", grid.Boolean, "=[Quantité]<[Seuil d'alerte]"),
 		c("Prix d'achat", grid.Decimal, func(g *Gen, i int, r []any) any {
 			return Round(produits[produitOf[produitName(str(r[1]))]].Prix*g.Float(0.5, 0.7), 2)
 		}),
-		c("Valeur du stock", grid.Decimal, func(g *Gen, i int, r []any) any { return Round(f64(r[4])*f64(r[7]), 2) }),
+		f("Valeur du stock", grid.Decimal, "=ARRONDI([Quantité]*[Prix d'achat]; 2)"),
 		c("Dernier inventaire", grid.Date, func(g *Gen, i int, _ []any) any { return g.Date(today-365, today-1) }),
 	},
 	Extra: func(k int) Column {
@@ -281,7 +282,7 @@ var Vols = Theme{
 			return int64(150)
 		}),
 		c("Passagers", grid.Integer, func(g *Gen, i int, r []any) any { return int64(clamp(g.Normal(0.84, 0.1), 0.2, 1) * f64(r[6])) }),
-		c("Remplissage (%)", grid.Decimal, func(g *Gen, i int, r []any) any { return Round(100*f64(r[7])/f64(r[6]), 1) }),
+		f("Remplissage (%)", grid.Decimal, "=ARRONDI(100*[Passagers]/[Capacité]; 1)"),
 		c("Retard (min)", grid.Integer, func(g *Gen, i int, _ []any) any {
 			if g.Chance(0.7) {
 				return int64(0)
@@ -337,8 +338,8 @@ var Factures = Theme{
 		c("Date d'émission", grid.Date, func(g *Gen, i int, _ []any) any { return g.Date(today-3*365, today-1) }),
 		c("Échéance", grid.Date, func(g *Gen, i int, r []any) any { return Day(DayOf(r[2]) + Pick(g, []int{30, 30, 45, 60})) }),
 		c("Montant HT", grid.Decimal, func(g *Gen, i int, _ []any) any { return Round(math.Exp(g.Normal(6.5, 1)), 2) }),
-		c("TVA", grid.Decimal, func(g *Gen, i int, r []any) any { return Round(f64(r[4])*0.2, 2) }),
-		c("Montant TTC", grid.Decimal, func(g *Gen, i int, r []any) any { return Round(f64(r[4])+f64(r[5]), 2) }),
+		f("TVA", grid.Decimal, "=ARRONDI([Montant HT]*0,2; 2)"),
+		f("Montant TTC", grid.Decimal, "=[Montant HT]+[TVA]"),
 		c("Réglée", grid.Boolean, func(g *Gen, i int, r []any) any { return Bool(DayOf(r[3]) < today-60 || g.Chance(0.7)) }),
 		c("Relances", grid.Integer, func(g *Gen, i int, r []any) any {
 			if i64(r[7]) == 1 {
@@ -448,6 +449,7 @@ var Projets = Theme{
 			}
 		}),
 		c("Budget (€)", grid.Decimal, func(g *Gen, i int, r []any) any { return Round(f64(r[5])*g.Float(450, 750), 0) }),
+		f("Reste à faire (j)", grid.Decimal, "=ARRONDI([Charge (j)]*(1-[Avancement (%)]/100); 1)"),
 	},
 	Extra: func(k int) Column {
 		return c(fmt.Sprintf("Temps sem. %d (h)", k+1), grid.Decimal, func(g *Gen, i int, _ []any) any {
