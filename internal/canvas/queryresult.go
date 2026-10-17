@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/formula"
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // MaxResultRows borne les lignes d'un résultat SQL envoyé vers une feuille.
@@ -283,7 +283,7 @@ func (m *Model) ReadSQL(ctx context.Context, q, home string, cols func([]string)
 	}
 	var sheet int64
 	if err := m.read(ctx, func(t *tx) error {
-		return t.row(`SELECT id FROM _slitable_sheets WHERE ? = '' OR lower(name) = lower(?) ORDER BY ? = '' AND pos, id LIMIT 1`, home, home, home).Scan(&sheet)
+		return t.row(`SELECT id FROM _lattis_sheets WHERE ? = '' OR lower(name) = lower(?) ORDER BY ? = '' AND pos, id LIMIT 1`, home, home, home).Scan(&sheet)
 	}); err != nil {
 		return fmt.Errorf("feuille « %s » introuvable", home)
 	}

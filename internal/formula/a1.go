@@ -6,7 +6,7 @@ import (
 )
 
 // Adresses A1 tapées à la Excel (=C14*2, =SOMME(C14:C16)) : à la validation,
-// elles sont réécrites dans la nomenclature de Slitable selon ce qui occupe
+// elles sont réécrites dans la nomenclature de Lattis selon ce qui occupe
 // la feuille. Une cellule libre devient Cell[C14] ; une cellule de tableau
 // Tableau[Col][k] (k : la clé de la ligne si le tableau en a une, sinon son
 // rang), un en-tête Tableau[Col]. Une plage de cellules libres devient

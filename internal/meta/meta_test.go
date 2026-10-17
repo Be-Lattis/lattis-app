@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lalamefine/slitable/internal/store"
+	"github.com/lalamefine/lattis/internal/store"
 )
 
 func TestMigrate(t *testing.T) {
@@ -24,7 +24,7 @@ func TestMigrate(t *testing.T) {
 	}
 	var v, sheets int
 	db.Read().QueryRow(`PRAGMA user_version`).Scan(&v)
-	db.Read().QueryRow(`SELECT count(*) FROM _slitable_sheets`).Scan(&sheets)
+	db.Read().QueryRow(`SELECT count(*) FROM _lattis_sheets`).Scan(&sheets)
 	if v != Version || sheets != 1 {
 		t.Fatalf("version %d, %d feuilles", v, sheets)
 	}

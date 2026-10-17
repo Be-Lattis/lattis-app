@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/canvas"
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // Compilation des étapes en SQL (SQLite) : chaque étape devient un CTE qui

@@ -5,11 +5,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/canvas"
-	"github.com/lalamefine/slitable/internal/formula"
-	"github.com/lalamefine/slitable/internal/grid"
-	"github.com/lalamefine/slitable/internal/script"
-	"github.com/lalamefine/slitable/internal/transfer"
+	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/script"
+	"github.com/lalamefine/lattis/internal/transfer"
 )
 
 // QueryLimit borne les lignes renvoyées par db.query (serveur MCP).
@@ -89,8 +89,8 @@ func init() {
 			},
 		},
 		&Command{
-			Name: "doc.open", Summary: "Ouvre un classeur .slitable.", NoLua: true,
-			Params: []Param{{Name: "path", Type: String, Desc: "chemin du fichier .slitable"}},
+			Name: "doc.open", Summary: "Ouvre un classeur .lattis.", NoLua: true,
+			Params: []Param{{Name: "path", Type: String, Desc: "chemin du fichier .lattis"}},
 			Run: func(c *Call) (any, error) {
 				p, _ := c.Str("path")
 				if err := c.Host.OpenDoc(c, p); err != nil {
@@ -101,11 +101,11 @@ func init() {
 		},
 		&Command{
 			Name: "doc.save", Summary: "Enregistre le classeur (path : enregistrer sous ce fichier).", NoLua: true,
-			Params: []Param{{Name: "path", Type: String, Desc: "chemin du fichier .slitable (absent : le fichier courant)", Optional: true}},
+			Params: []Param{{Name: "path", Type: String, Desc: "chemin du fichier .lattis (absent : le fichier courant)", Optional: true}},
 			Run: func(c *Call) (any, error) {
 				p, _ := c.Str("path")
-				if p != "" && !strings.HasSuffix(strings.ToLower(p), ".slitable") {
-					p += ".slitable"
+				if p != "" && !strings.HasSuffix(strings.ToLower(p), ".lattis") {
+					p += ".lattis"
 				}
 				if err := c.Host.SaveDoc(c, p); err != nil {
 					return nil, err

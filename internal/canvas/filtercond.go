@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // Filtres par condition (« Filtres textuels », « Filtres numériques », dates),

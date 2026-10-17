@@ -1,12 +1,12 @@
 // Package mcp est le serveur MCP (Model Context Protocol) intégré à
-// Slitable : un assistant (Claude Desktop, Claude Code…) pilote le classeur
+// Lattis : un assistant (Claude Desktop, Claude Code…) pilote le classeur
 // ouvert avec les mêmes commandes que les scripts Lua (internal/api).
 //
 // Le serveur n'écoute que sur 127.0.0.1, exige un jeton (en-tête
 // Authorization: Bearer) et refuse les requêtes d'une page web (en-tête
 // Origin étranger). Il parle JSON-RPC 2.0 en « Streamable HTTP » (POST /mcp,
 // réponse JSON) ; les clients qui ne savent lancer qu'un programme en stdio
-// passent par « slitable mcp » (Proxy), qui relaie vers l'application
+// passent par « lattis mcp » (Proxy), qui relaie vers l'application
 // ouverte.
 package mcp
 
@@ -16,7 +16,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/api"
+	"github.com/lalamefine/lattis/internal/api"
 )
 
 // Versions du protocole acceptées, la plus récente d'abord.
@@ -164,12 +164,12 @@ func (s *Server) dispatch(ctx context.Context, req request) (any, *rpcError) {
 
 func (s *Server) name() string {
 	if s.Name == "" {
-		return "slitable"
+		return "lattis"
 	}
 	return s.Name
 }
 
-const instructions = `Slitable est un tableur relationnel : chaque tableau d'une feuille est une table SQLite. ` +
+const instructions = `Lattis est un tableur relationnel : chaque tableau d'une feuille est une table SQLite. ` +
 	`Les feuilles se désignent par leur nom, les tableaux par leur nom, les colonnes par leur nom ; les lignes et colonnes de la feuille se comptent à partir de 1. ` +
 	`Commencez par sheets_list, sheets_get et tables_list ; lisez avec db_query (SQL avec les noms affichés) ou tables_rows, écrivez avec cells_set, cells_paste, db_execute et les outils tables_*, columns_*. ` +
 	`Chaque outil qui modifie le classeur forme une étape que l'utilisateur peut annuler (Ctrl+Z) ; scripts_run exécute du Lua avec les mêmes fonctions (db.query, sheets.add, ui.select…).`

@@ -4,7 +4,7 @@
 // montre ; la fenêtre d'impression du système (WebView2) propose aussi
 // « Microsoft Print to PDF » / « Enregistrer au format PDF ».
 
-const AREA = 'slitable-print';
+const AREA = 'lattis-print';
 
 /** Feuille de style de l'impression : seule la zone imprimée est visible. */
 export const PRINT_CSS = `

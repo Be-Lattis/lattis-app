@@ -261,7 +261,7 @@ func lex(src string, loc Locale) ([]token, error) {
 		}
 		if unicode.IsLetter(c) || c == '_' || c == '$' {
 			// Les $ d'une adresse Excel ($C$14, Feuille2!C$3) sont acceptés
-			// puis retirés : les références de Slitable sont toujours fixes.
+			// puis retirés : les références de Lattis sont toujours fixes.
 			for i < len(rs) && (unicode.IsLetter(rs[i]) || unicode.IsDigit(rs[i]) || rs[i] == '_' || rs[i] == '.' || rs[i] == '$' ||
 				rs[i] == '!' && i+1 < len(rs) && (unicode.IsLetter(rs[i+1]) || rs[i+1] == '$')) {
 				i++
@@ -617,7 +617,7 @@ func rowRange(ref Ref, kt token) (Node, bool, error) {
 	return RowRange{Ref: ref, From: a, To: b}, true, nil
 }
 
-// parseRef lit le contenu des crochets. Nomenclature de Slitable (sans @) :
+// parseRef lit le contenu des crochets. Nomenclature de Lattis (sans @) :
 // [Col] seul est la valeur de la ligne courante, Tableau[Col] toute la
 // colonne. [@Col] et Tableau[@Col] (forme Excel) restent acceptés.
 func parseRef(table, inner string) Ref {
@@ -749,7 +749,7 @@ func format(b *strings.Builder, n Node, loc Locale) {
 	case Ref:
 		at := ""
 		if n.Row && n.Table != "" {
-			at = "@" // forme Excel, sans équivalent dans la nomenclature de Slitable
+			at = "@" // forme Excel, sans équivalent dans la nomenclature de Lattis
 		}
 		b.WriteString(n.Table + "[" + at + n.Col + "]")
 	case Name:

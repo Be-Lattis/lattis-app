@@ -324,7 +324,7 @@ var docs = map[string]funcDoc{
 		0, `=RANG([Score])`},
 
 	// Recherche
-	"REFERENCE": {catLookup, "Renvoie la valeur d'une colonne d'un autre tableau pour la ligne dont la clé est donnée (la RECHERCHEV de Slitable).",
+	"REFERENCE": {catLookup, "Renvoie la valeur d'une colonne d'un autre tableau pour la ligne dont la clé est donnée (la RECHERCHEV de Lattis).",
 		docArgs(docArg("colonne", "Colonne à renvoyer, avec son tableau : Tableau[Colonne] (le tableau doit avoir une clé)."),
 			docArg("clé", "Valeur de la clé cherchée, souvent une colonne de la ligne ([IdClient]).")),
 		0, `=REFERENCE(Clients[Ville]; [IdClient])`},
@@ -359,7 +359,7 @@ var docs = map[string]funcDoc{
 			docOpt("mode_correspondance", "0 : exacte, seule prise en charge."),
 			docOpt("mode_recherche", "Sens de la recherche ; ignoré (la clé est unique).")),
 		0, `=RECHERCHEX([IdClient]; Clients[Id]; Clients[Nom]; "inconnu")`},
-	"HLOOKUP": {catLookup, "Recherche horizontale d'Excel : refusée, les tableaux de Slitable sont orientés lignes (utilisez REFERENCE).",
+	"HLOOKUP": {catLookup, "Recherche horizontale d'Excel : refusée, les tableaux de Lattis sont orientés lignes (utilisez REFERENCE).",
 		docArgs(docArg("valeur_cherchée", "Valeur à trouver dans la première ligne."),
 			docArg("table_matrice", "Plage où chercher."),
 			docArg("no_index_lig", "Numéro de la ligne à renvoyer."),

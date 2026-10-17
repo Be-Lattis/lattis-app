@@ -3,9 +3,9 @@ package bridge
 import (
 	"context"
 
-	"github.com/lalamefine/slitable/internal/api"
-	"github.com/lalamefine/slitable/internal/canvas"
-	"github.com/lalamefine/slitable/internal/doc"
+	"github.com/lalamefine/lattis/internal/api"
+	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 

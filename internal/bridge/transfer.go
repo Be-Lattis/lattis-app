@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/transfer"
+	"github.com/lalamefine/lattis/internal/transfer"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 

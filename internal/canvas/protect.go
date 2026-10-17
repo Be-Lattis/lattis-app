@@ -13,7 +13,7 @@ package canvas
 // feuilles (y compris par un import ou un tableau croisé, qui créent une
 // feuille).
 //
-// La protection vit dans _slitable_protection (sheet = 0 : le classeur),
+// La protection vit dans _lattis_protection (sheet = 0 : le classeur),
 // hors du journal : la poser ou l'ôter ne s'annule pas (comme Excel). Pour
 // qu'une annulation ou un rétablissement d'une action antérieure ne la
 // contourne pas, le bus de commandes compare une empreinte du contenu des
@@ -37,7 +37,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/command"
+	"github.com/lalamefine/lattis/internal/command"
 )
 
 // ErrProtected refuse une modification d'une feuille protégée (Sheet) ou du
@@ -55,7 +55,7 @@ func (e ErrProtected) Error() string {
 // ErrPassword signale un mot de passe de protection incorrect.
 var ErrPassword = errors.New("mot de passe incorrect")
 
-// workbookScope désigne la structure du classeur dans _slitable_protection.
+// workbookScope désigne la structure du classeur dans _lattis_protection.
 const workbookScope = 0
 
 const pbkdf2Iter = 120_000
@@ -107,7 +107,7 @@ func (t *tx) guard(sheet int64) error {
 		return err
 	}
 	var name string
-	err := t.row(`SELECT s.name FROM _slitable_protection p JOIN _slitable_sheets s ON s.id = p.sheet WHERE p.sheet = ?`, sheet).Scan(&name)
+	err := t.row(`SELECT s.name FROM _lattis_protection p JOIN _lattis_sheets s ON s.id = p.sheet WHERE p.sheet = ?`, sheet).Scan(&name)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil
 	}
@@ -128,7 +128,7 @@ func (t *tx) guarded(sheet int64, fn func() error) error {
 // guardWorkbook refuse l'action si le classeur est protégé.
 func (t *tx) guardWorkbook() error {
 	var k int
-	if err := t.row(`SELECT count(*) FROM _slitable_protection WHERE sheet = ?`, workbookScope).Scan(&k); err != nil {
+	if err := t.row(`SELECT count(*) FROM _lattis_protection WHERE sheet = ?`, workbookScope).Scan(&k); err != nil {
 		return err
 	}
 	if k > 0 {
@@ -190,7 +190,7 @@ func (m *Model) setProtection(ctx context.Context, scope int64, on bool, pw stri
 	err = m.db.Write(ctx, func(sqlTx *sql.Tx) error {
 		name := ""
 		if scope != workbookScope {
-			if err := sqlTx.QueryRowContext(ctx, `SELECT name FROM _slitable_sheets WHERE id = ?`, scope).Scan(&name); err != nil {
+			if err := sqlTx.QueryRowContext(ctx, `SELECT name FROM _lattis_sheets WHERE id = ?`, scope).Scan(&name); err != nil {
 				if errors.Is(err, sql.ErrNoRows) {
 					return fmt.Errorf("%w : feuille introuvable", ErrSheet)
 				}
@@ -198,7 +198,7 @@ func (m *Model) setProtection(ctx context.Context, scope int64, on bool, pw stri
 			}
 		}
 		var stored string
-		err := sqlTx.QueryRowContext(ctx, `SELECT hash FROM _slitable_protection WHERE sheet = ?`, scope).Scan(&stored)
+		err := sqlTx.QueryRowContext(ctx, `SELECT hash FROM _lattis_protection WHERE sheet = ?`, scope).Scan(&stored)
 		protected := err == nil
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return err
@@ -211,7 +211,7 @@ func (m *Model) setProtection(ctx context.Context, scope int64, on bool, pw stri
 			if protected {
 				return fmt.Errorf("%s est déjà protégée", what)
 			}
-			_, err := sqlTx.ExecContext(ctx, `INSERT INTO _slitable_protection (sheet, hash) VALUES (?, ?)`, scope, h)
+			_, err := sqlTx.ExecContext(ctx, `INSERT INTO _lattis_protection (sheet, hash) VALUES (?, ?)`, scope, h)
 			return err
 		}
 		if !protected {
@@ -220,7 +220,7 @@ func (m *Model) setProtection(ctx context.Context, scope int64, on bool, pw stri
 		if !checkPassword(stored, pw) {
 			return ErrPassword
 		}
-		_, err = sqlTx.ExecContext(ctx, `DELETE FROM _slitable_protection WHERE sheet = ?`, scope)
+		_, err = sqlTx.ExecContext(ctx, `DELETE FROM _lattis_protection WHERE sheet = ?`, scope)
 		return err
 	})
 	if err == nil {
@@ -260,7 +260,7 @@ func (m *Model) Protection(ctx context.Context) (Protection, error) {
 
 func (t *tx) protection() (Protection, error) {
 	p := Protection{Sheets: map[int64]bool{}}
-	rs, err := t.query(`SELECT sheet, hash <> '' FROM _slitable_protection`)
+	rs, err := t.query(`SELECT sheet, hash <> '' FROM _lattis_protection`)
 	if err != nil {
 		return p, err
 	}
@@ -323,7 +323,7 @@ func (t *tx) prints() (map[int64]string, map[int64]string, error) {
 	h := sha256.New()
 	sum := func() string { s := string(h.Sum(nil)); h.Reset(); return s }
 	if p.Workbook {
-		if err := t.hashRows(h, `SELECT id, name, pos FROM _slitable_sheets ORDER BY id`); err != nil {
+		if err := t.hashRows(h, `SELECT id, name, pos FROM _lattis_sheets ORDER BY id`); err != nil {
 			return nil, nil, err
 		}
 		out[workbookScope] = sum()
@@ -337,7 +337,7 @@ func (t *tx) prints() (map[int64]string, map[int64]string, error) {
 		bySheet    bool
 	}
 	var metas []metaTable
-	rs, err := t.query(`SELECT name FROM main.sqlite_schema WHERE type = 'table' AND name LIKE '\_slitable\_%' ESCAPE '\' ORDER BY name`)
+	rs, err := t.query(`SELECT name FROM main.sqlite_schema WHERE type = 'table' AND name LIKE '\_lattis\_%' ESCAPE '\' ORDER BY name`)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -352,7 +352,7 @@ func (t *tx) prints() (map[int64]string, map[int64]string, error) {
 	}
 	rs.Close()
 	for _, n := range tnames {
-		if n == "_slitable_protection" || n == "_slitable_journal" || n == "_slitable_sheets" || strings.HasPrefix(n, sqlTrash) {
+		if n == "_lattis_protection" || n == "_lattis_journal" || n == "_lattis_sheets" || strings.HasPrefix(n, sqlTrash) {
 			continue
 		}
 		crs, err := t.query(`SELECT name FROM pragma_table_info(?)`, n)
@@ -373,7 +373,7 @@ func (t *tx) prints() (map[int64]string, map[int64]string, error) {
 			case "tbl":
 				tbl = true
 			}
-			if !(n == "_slitable_tables" && c == "filter") {
+			if !(n == "_lattis_tables" && c == "filter") {
 				cols = append(cols, `"`+c+`"`)
 			}
 		}
@@ -385,7 +385,7 @@ func (t *tx) prints() (map[int64]string, map[int64]string, error) {
 	for id := range p.Sheets {
 		var exists int
 		var name string
-		if err := t.row(`SELECT count(*), coalesce(max(name), '') FROM _slitable_sheets WHERE id = ?`, id).Scan(&exists, &name); err != nil {
+		if err := t.row(`SELECT count(*), coalesce(max(name), '') FROM _lattis_sheets WHERE id = ?`, id).Scan(&exists, &name); err != nil {
 			return nil, nil, err
 		}
 		names[id] = name
@@ -393,14 +393,14 @@ func (t *tx) prints() (map[int64]string, map[int64]string, error) {
 		for _, mt := range metas {
 			where := `sheet = ?`
 			if !mt.bySheet {
-				where = `tbl IN (SELECT id FROM _slitable_tables WHERE sheet = ?)`
+				where = `tbl IN (SELECT id FROM _lattis_tables WHERE sheet = ?)`
 			}
 			fmt.Fprintf(h, "%s\x1d", mt.name)
 			if err := t.hashRows(h, `SELECT `+mt.cols+` FROM `+mt.name+` WHERE `+where+` ORDER BY `+mt.cols, id); err != nil {
 				return nil, nil, err
 			}
 		}
-		tables, err := t.query(`SELECT id FROM _slitable_tables WHERE sheet = ? ORDER BY id`, id)
+		tables, err := t.query(`SELECT id FROM _lattis_tables WHERE sheet = ? ORDER BY id`, id)
 		if err != nil {
 			return nil, nil, err
 		}

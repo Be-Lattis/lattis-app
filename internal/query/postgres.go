@@ -42,7 +42,7 @@ func pgDSN(c DBConfig, password string) string {
 		"port=" + strconv.Itoa(c.port(KindPostgres)),
 		"dbname=" + dsnValue(c.Database),
 		"connect_timeout=10",
-		"application_name=Slitable",
+		"application_name=Lattis",
 	}
 	if c.User != "" {
 		parts = append(parts, "user="+dsnValue(c.User))

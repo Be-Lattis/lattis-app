@@ -69,19 +69,19 @@ func (m *Model) AddFavorite(ctx context.Context, name, q string) (int64, error) 
 				return nil
 			}
 		}
-		if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _slitable_favorites`).Scan(&id); err != nil {
+		if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_favorites`).Scan(&id); err != nil {
 			return err
 		}
 		return t.apply(
-			[]stmt{st(`INSERT INTO _slitable_favorites (id, name, sql) VALUES (?, ?, ?)`, id, name, q)},
-			[]stmt{st(`DELETE FROM _slitable_favorites WHERE id = ?`, id)},
+			[]stmt{st(`INSERT INTO _lattis_favorites (id, name, sql) VALUES (?, ?, ?)`, id, name, q)},
+			[]stmt{st(`DELETE FROM _lattis_favorites WHERE id = ?`, id)},
 		)
 	})
 	return id, err
 }
 
 func (t *tx) favorites() ([]Favorite, error) {
-	rs, err := t.query(`SELECT id, name, sql FROM _slitable_favorites ORDER BY id`)
+	rs, err := t.query(`SELECT id, name, sql FROM _lattis_favorites ORDER BY id`)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func (t *tx) favorites() ([]Favorite, error) {
 // favorite lit un favori.
 func (t *tx) favorite(id int64) (Favorite, error) {
 	f := Favorite{ID: id}
-	err := t.row(`SELECT name, sql FROM _slitable_favorites WHERE id = ?`, id).Scan(&f.Name, &f.SQL)
+	err := t.row(`SELECT name, sql FROM _lattis_favorites WHERE id = ?`, id).Scan(&f.Name, &f.SQL)
 	if errors.Is(err, sql.ErrNoRows) {
 		return f, fmt.Errorf("favori %d introuvable", id)
 	}
@@ -118,7 +118,7 @@ func (m *Model) RenameFavorite(ctx context.Context, id int64, name string) error
 		if err != nil || f.Name == name {
 			return err
 		}
-		q := `UPDATE _slitable_favorites SET name = ? WHERE id = ?`
+		q := `UPDATE _lattis_favorites SET name = ? WHERE id = ?`
 		return t.apply([]stmt{st(q, name, id)}, []stmt{st(q, f.Name, id)})
 	})
 }
@@ -131,8 +131,8 @@ func (m *Model) DeleteFavorite(ctx context.Context, id int64) error {
 			return err
 		}
 		return t.apply(
-			[]stmt{st(`DELETE FROM _slitable_favorites WHERE id = ?`, id)},
-			[]stmt{st(`INSERT INTO _slitable_favorites (id, name, sql) VALUES (?, ?, ?)`, id, f.Name, f.SQL)},
+			[]stmt{st(`DELETE FROM _lattis_favorites WHERE id = ?`, id)},
+			[]stmt{st(`INSERT INTO _lattis_favorites (id, name, sql) VALUES (?, ?, ?)`, id, f.Name, f.SQL)},
 		)
 	})
 }

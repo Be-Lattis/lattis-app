@@ -5,8 +5,8 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/formula"
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // sheetLocator décrit les feuilles du classeur au moteur de formules, pour
@@ -27,8 +27,8 @@ func (t *tx) locator(home int64) *sheetLocator {
 
 func (l *sheetLocator) Known(name string) bool {
 	var n int
-	err := l.t.row(`SELECT (SELECT count(*) FROM _slitable_names WHERE name = ? COLLATE NOCASE)
-		+ (SELECT count(*) FROM _slitable_tables WHERE name = ? COLLATE NOCASE)`, name, name).Scan(&n)
+	err := l.t.row(`SELECT (SELECT count(*) FROM _lattis_names WHERE name = ? COLLATE NOCASE)
+		+ (SELECT count(*) FROM _lattis_tables WHERE name = ? COLLATE NOCASE)`, name, name).Scan(&n)
 	if err != nil && l.err == nil {
 		l.err = err
 	}

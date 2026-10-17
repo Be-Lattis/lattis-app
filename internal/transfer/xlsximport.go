@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/canvas"
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // ImportXLSX ajoute au classeur les feuilles d'un classeur Excel .xlsx.

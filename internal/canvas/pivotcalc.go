@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/formula"
+	"github.com/lalamefine/lattis/internal/formula"
 )
 
 // PivotValue est un champ de la zone Valeurs : la colonne agrégée (vide :

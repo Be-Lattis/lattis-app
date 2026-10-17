@@ -65,7 +65,7 @@
 
 	// --- Brouillon et mise à jour (immédiate après un délai, ou différée) ---
 
-	const DEFER_KEY = 'slitable.pivot.defer';
+	const DEFER_KEY = 'lattis.pivot.defer';
 	const DELAY = 350;
 	let draft = $state.raw<PivotConfig>(untrack(() => clone(config)));
 	let dirty = $state(false);

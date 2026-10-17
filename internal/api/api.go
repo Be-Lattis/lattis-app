@@ -1,4 +1,4 @@
-// Package api est la couche de commandes de Slitable commune aux scripts Lua
+// Package api est la couche de commandes de Lattis commune aux scripts Lua
 // (onglet SCRIPT, boutons d'action) et au serveur MCP (internal/mcp).
 //
 // Chaque commande a un nom ("sheets.rename"), des paramètres décrits une
@@ -27,9 +27,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/command"
-	"github.com/lalamefine/slitable/internal/doc"
-	"github.com/lalamefine/slitable/internal/script"
+	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/script"
 )
 
 // Types de paramètres.

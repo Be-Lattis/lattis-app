@@ -1,4 +1,4 @@
-// Package bridge expose au frontend l'API Go de Slitable.
+// Package bridge expose au frontend l'API Go de Lattis.
 //
 // C'est la seule couche qui connaît Wails : les autres paquets restent du Go
 // ordinaire, testable sans fenêtre, et un changement d'API de Wails v3 (encore
@@ -13,8 +13,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/lalamefine/slitable/internal/grid"
-	"github.com/lalamefine/slitable/internal/store"
+	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/store"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -49,7 +49,7 @@ func (s *GridService) ServiceStartup(ctx context.Context, _ application.ServiceO
 	if err != nil {
 		return err
 	}
-	dir = filepath.Join(dir, "Slitable", "prototype")
+	dir = filepath.Join(dir, "Lattis", "prototype")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
@@ -156,7 +156,7 @@ func (s *GridService) SetCell(ctx context.Context, id int64, col int, raw string
 // de la grille : elle donne le fichier où écrire le résultat (JSON), puis
 // l'application se ferme. Sert à comparer les moteurs web (WebView2,
 // WebKitGTK, WKWebView) sur la même mesure.
-const BenchEnv = "SLITABLE_BENCH"
+const BenchEnv = "LATTIS_BENCH"
 
 // BenchRequested indique si la mesure automatique est demandée.
 func (s *GridService) BenchRequested() bool {

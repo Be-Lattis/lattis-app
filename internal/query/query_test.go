@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lalamefine/slitable/internal/canvas"
-	"github.com/lalamefine/slitable/internal/doc"
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 var ctx = context.Background()

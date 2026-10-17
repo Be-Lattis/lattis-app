@@ -1,4 +1,4 @@
-// Slitable : tableur relationnel local-first (Go + Wails v3 + SvelteKit).
+// Lattis : tableur relationnel local-first (Go + Wails v3 + SvelteKit).
 //
 // Le point d'entrée reste à la racine du module : les tâches de build Wails
 // (Taskfile, bindings, embed de frontend/dist) l'attendent ici.
@@ -13,11 +13,11 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/lalamefine/slitable/internal/bridge"
-	"github.com/lalamefine/slitable/internal/console"
-	"github.com/lalamefine/slitable/internal/demo"
-	"github.com/lalamefine/slitable/internal/mcp"
-	"github.com/lalamefine/slitable/internal/store"
+	"github.com/lalamefine/lattis/internal/bridge"
+	"github.com/lalamefine/lattis/internal/console"
+	"github.com/lalamefine/lattis/internal/demo"
+	"github.com/lalamefine/lattis/internal/mcp"
+	"github.com/lalamefine/lattis/internal/store"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -25,7 +25,7 @@ import (
 var assets embed.FS
 
 func main() {
-	// « slitable mcp » : relais stdio du serveur MCP vers l'application
+	// « lattis mcp » : relais stdio du serveur MCP vers l'application
 	// ouverte, pour les clients qui lancent un programme (Claude Desktop…).
 	if len(os.Args) > 1 && os.Args[1] == "mcp" {
 		if err := mcp.Proxy(os.Stdin, os.Stdout); err != nil {
@@ -59,7 +59,7 @@ func main() {
 	}
 	if err != nil {
 		console.Attach()
-		fmt.Fprintf(os.Stderr, "slitable : %v\n\n", err)
+		fmt.Fprintf(os.Stderr, "lattis : %v\n\n", err)
 		fmt.Fprint(os.Stderr, demo.Usage())
 		os.Exit(2)
 	}
@@ -68,7 +68,7 @@ func main() {
 	}
 
 	app := application.New(application.Options{
-		Name:        "Slitable",
+		Name:        "Lattis",
 		Description: "Tableur relationnel local-first",
 		// Journal de Wails : avertissements et erreurs seulement (pas une ligne
 		// par fichier servi, « [AssetFileServerFS] Handling request »).
@@ -86,7 +86,7 @@ func main() {
 	})
 
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:            "Slitable",
+		Title:            "Lattis",
 		Width:            1280,
 		Height:           800,
 		MinWidth:         640,

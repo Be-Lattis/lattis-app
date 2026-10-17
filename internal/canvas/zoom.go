@@ -27,7 +27,7 @@ func (m *Model) SetZoom(ctx context.Context, sheet int64, pct int) error {
 	changed := false
 	err := m.db.Write(ctx, func(sqlTx *sql.Tx) error {
 		var old int
-		if err := sqlTx.QueryRowContext(ctx, `SELECT zoom FROM _slitable_sheets WHERE id = ?`, sheet).Scan(&old); err != nil {
+		if err := sqlTx.QueryRowContext(ctx, `SELECT zoom FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&old); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return fmt.Errorf("%w : feuille introuvable", ErrSheet)
 			}
@@ -37,7 +37,7 @@ func (m *Model) SetZoom(ctx context.Context, sheet int64, pct int) error {
 			return nil
 		}
 		changed = true
-		_, err := sqlTx.ExecContext(ctx, `UPDATE _slitable_sheets SET zoom = ? WHERE id = ?`, pct, sheet)
+		_, err := sqlTx.ExecContext(ctx, `UPDATE _lattis_sheets SET zoom = ? WHERE id = ?`, pct, sheet)
 		return err
 	})
 	if err == nil && changed {

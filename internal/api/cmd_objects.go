@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/canvas"
+	"github.com/lalamefine/lattis/internal/canvas"
 )
 
 // object résout un objet flottant (tableau croisé, graphique, bouton) par
@@ -103,7 +103,7 @@ func init() {
 			Params:  []Param{pChart, {Name: "config", Type: Object, Desc: "nouvelle configuration"}},
 			Write:   true,
 			Run: func(c *Call) (any, error) {
-				id, err := c.object("_slitable_charts", "title", "graphique", "chart")
+				id, err := c.object("_lattis_charts", "title", "graphique", "chart")
 				if err != nil {
 					return nil, err
 				}
@@ -122,7 +122,7 @@ func init() {
 			Params:  []Param{pChart, pRow, pCol, {Name: "width", Type: Integer, Desc: "largeur en pixels", Optional: true}, {Name: "height", Type: Integer, Desc: "hauteur en pixels", Optional: true}},
 			Write:   true,
 			Run: func(c *Call) (any, error) {
-				id, err := c.object("_slitable_charts", "title", "graphique", "chart")
+				id, err := c.object("_lattis_charts", "title", "graphique", "chart")
 				if err != nil {
 					return nil, err
 				}
@@ -153,7 +153,7 @@ func init() {
 			Params:  []Param{pChart},
 			Write:   true,
 			Run: func(c *Call) (any, error) {
-				id, err := c.object("_slitable_charts", "title", "graphique", "chart")
+				id, err := c.object("_lattis_charts", "title", "graphique", "chart")
 				if err != nil {
 					return nil, err
 				}
@@ -203,7 +203,7 @@ ui.show_sheet(f.name)`,
 			Params:  []Param{pPivot, {Name: "config", Type: Object, Desc: "nouvelle configuration"}},
 			Write:   true,
 			Run: func(c *Call) (any, error) {
-				id, err := c.object("_slitable_pivots", "name", "tableau croisé", "pivot")
+				id, err := c.object("_lattis_pivots", "name", "tableau croisé", "pivot")
 				if err != nil {
 					return nil, err
 				}
@@ -222,7 +222,7 @@ ui.show_sheet(f.name)`,
 			Params:  []Param{pPivot},
 			Write:   true,
 			Run: func(c *Call) (any, error) {
-				id, err := c.object("_slitable_pivots", "name", "tableau croisé", "pivot")
+				id, err := c.object("_lattis_pivots", "name", "tableau croisé", "pivot")
 				if err != nil {
 					return nil, err
 				}
@@ -285,7 +285,7 @@ buttons.create(1, 6, "Relancer", "Relances", "relancer")`,
 			},
 			Write: true,
 			Run: func(c *Call) (any, error) {
-				id, err := c.object("_slitable_buttons", "label", "bouton", "button")
+				id, err := c.object("_lattis_buttons", "label", "bouton", "button")
 				if err != nil {
 					return nil, err
 				}
@@ -314,7 +314,7 @@ buttons.create(1, 6, "Relancer", "Relances", "relancer")`,
 			Params:  []Param{pButton, pRow, pCol, {Name: "width", Type: Integer, Desc: "largeur en pixels", Optional: true}, {Name: "height", Type: Integer, Desc: "hauteur en pixels", Optional: true}},
 			Write:   true,
 			Run: func(c *Call) (any, error) {
-				id, err := c.object("_slitable_buttons", "label", "bouton", "button")
+				id, err := c.object("_lattis_buttons", "label", "bouton", "button")
 				if err != nil {
 					return nil, err
 				}
@@ -349,7 +349,7 @@ buttons.create(1, 6, "Relancer", "Relances", "relancer")`,
 			Params:  []Param{pButton},
 			Write:   true,
 			Run: func(c *Call) (any, error) {
-				id, err := c.object("_slitable_buttons", "label", "bouton", "button")
+				id, err := c.object("_lattis_buttons", "label", "bouton", "button")
 				if err != nil {
 					return nil, err
 				}
@@ -382,7 +382,7 @@ buttons.create(1, 6, "Relancer", "Relances", "relancer")`,
 			Params:  []Param{pButton},
 			NoLua:   true, // un script ne lance pas d'autre script
 			Run: func(c *Call) (any, error) {
-				id, err := c.object("_slitable_buttons", "label", "bouton", "button")
+				id, err := c.object("_lattis_buttons", "label", "bouton", "button")
 				if err != nil {
 					return nil, err
 				}

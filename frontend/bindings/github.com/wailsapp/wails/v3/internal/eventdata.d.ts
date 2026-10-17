@@ -7,7 +7,7 @@ import type { Events } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import type * as bridge$0 from "../../../../lalamefine/slitable/internal/bridge/models.js";
+import type * as bridge$0 from "../../../../lalamefine/lattis/internal/bridge/models.js";
 
 declare module "@wailsio/runtime" {
     namespace Events {

@@ -6,7 +6,7 @@
 
 L'aide détaillée de chaque fonction (description, arguments nommés et décrits, exemple) est dans `internal/formula/docs.go` : elle alimente l'infobulle de saisie (argument en cours en gras, comme Excel), l'autocomplétion et le dialogue « Insérer une fonction ». `TestFunctionDocs` vérifie que chaque fonction y figure, que ses arguments correspondent à son nombre d'arguments et que son exemple s'analyse.
 
-✅ comme Excel · ⚠️ différence documentée · 🆕 propre à Slitable
+✅ comme Excel · ⚠️ différence documentée · 🆕 propre à Lattis
 
 ## Références (nomenclature)
 
@@ -134,7 +134,7 @@ Leur résultat se déverse sur la feuille : `EvalSpill` (Go) et `CompileSpill` (
 
 ## Performances
 
-Mesures en conteneur Linux (`SLITABLE_MESURE=1000000`, tableau de démonstration de 1 M de lignes × 20 colonnes) :
+Mesures en conteneur Linux (`LATTIS_MESURE=1000000`, tableau de démonstration de 1 M de lignes × 20 colonnes) :
 
 | | Temps |
 |---|---|

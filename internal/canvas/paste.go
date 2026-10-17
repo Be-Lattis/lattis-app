@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // MaxPasteCells borne un collage cellule par cellule (le collage d'un bloc
@@ -194,7 +194,7 @@ func (t *tx) areaFree(sheet int64, r0, c0, r1, c1 int) (bool, error) {
 		}
 	}
 	var n int
-	err = t.row(`SELECT count(*) FROM _slitable_cells WHERE sheet = ? AND row BETWEEN ? AND ? AND col BETWEEN ? AND ?`,
+	err = t.row(`SELECT count(*) FROM _lattis_cells WHERE sheet = ? AND row BETWEEN ? AND ? AND col BETWEEN ? AND ?`,
 		sheet, r0, r1, c0, c1).Scan(&n)
 	return n == 0, err
 }

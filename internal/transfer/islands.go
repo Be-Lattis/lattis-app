@@ -17,7 +17,7 @@ func (a rect) union(b rect) rect {
 	return rect{min(a.r0, b.r0), min(a.c0, b.c0), max(a.r1, b.r1), max(a.c1, b.c1)}
 }
 
-// islands découpe une feuille en îlots, selon la règle de Slitable : une
+// islands découpe une feuille en îlots, selon la règle de Lattis : une
 // ligne ou une colonne vide termine un tableau. Les cellules occupées sont
 // reçues ligne par ligne (cols croissantes), en plages contiguës ; les plages
 // qui se touchent forment un îlot, et des îlots dont les rectangles se

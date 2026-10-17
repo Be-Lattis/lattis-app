@@ -84,10 +84,10 @@ func (t *tx) dropKey(tb Table) error {
 		}
 		return t.apply([]stmt{
 			st(`DROP INDEX ` + tb.sql() + `_key`),
-			st(`UPDATE _slitable_tables SET key_col = NULL WHERE id = ?`, tb.ID),
+			st(`UPDATE _lattis_tables SET key_col = NULL WHERE id = ?`, tb.ID),
 		}, []stmt{
 			st(`CREATE UNIQUE INDEX ` + tb.sql() + `_key ON ` + tb.sql() + `(` + keyExpr(c.ID, c.Type) + `)`),
-			st(`UPDATE _slitable_tables SET key_col = ? WHERE id = ?`, c.ID, tb.ID),
+			st(`UPDATE _lattis_tables SET key_col = ? WHERE id = ?`, c.ID, tb.ID),
 		})
 	}
 	return nil

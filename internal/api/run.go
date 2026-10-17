@@ -5,8 +5,8 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/lalamefine/slitable/internal/command"
-	"github.com/lalamefine/slitable/internal/script"
+	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/script"
 )
 
 // ScriptResult est l'issue d'un script.

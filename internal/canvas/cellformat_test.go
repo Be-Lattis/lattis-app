@@ -19,7 +19,7 @@ func TestNotes(t *testing.T) {
 		t.Fatal(err)
 	}
 	var s string
-	d.db.Read().QueryRow(`SELECT style FROM _slitable_cell_styles WHERE sheet = 1 AND row = 6 AND col = 4`).Scan(&s)
+	d.db.Read().QueryRow(`SELECT style FROM _lattis_cell_styles WHERE sheet = 1 AND row = 6 AND col = 4`).Scan(&s)
 	if s != `{"nt":"À vérifier"}` {
 		t.Fatalf("note libre : %q", s)
 	}
@@ -29,13 +29,13 @@ func TestNotes(t *testing.T) {
 	}
 	var paris int64
 	d.db.Read().QueryRow(`SELECT id FROM t_1 WHERE c_1 = 'Paris'`).Scan(&paris)
-	d.db.Read().QueryRow(`SELECT style FROM _slitable_styles WHERE rid = ? AND col = 2`, paris).Scan(&s)
+	d.db.Read().QueryRow(`SELECT style FROM _lattis_styles WHERE rid = ? AND col = 2`, paris).Scan(&s)
 	if s != `{"nt":"Source : INSEE"}` {
 		t.Fatalf("note du tableau : %q", s)
 	}
 	// Une seule ligne de données sélectionnée n'est pas toute la colonne.
 	var col string
-	d.db.Read().QueryRow(`SELECT coalesce(max(style), '') FROM _slitable_styles WHERE rid = 0`).Scan(&col)
+	d.db.Read().QueryRow(`SELECT coalesce(max(style), '') FROM _lattis_styles WHERE rid = 0`).Scan(&col)
 	if col != "" {
 		t.Fatalf("la note ne doit pas toucher la colonne : %q", col)
 	}
@@ -46,7 +46,7 @@ func TestNotes(t *testing.T) {
 	if err := d.SetNote(ctx, 1, 6, 4, ""); err != nil {
 		t.Fatal(err)
 	}
-	d.db.Read().QueryRow(`SELECT style FROM _slitable_cell_styles WHERE sheet = 1 AND row = 6 AND col = 4`).Scan(&s)
+	d.db.Read().QueryRow(`SELECT style FROM _lattis_cell_styles WHERE sheet = 1 AND row = 6 AND col = 4`).Scan(&s)
 	if s != `{"b":true}` {
 		t.Fatalf("note retirée : %q", s)
 	}
@@ -93,7 +93,7 @@ func TestMergeCells(t *testing.T) {
 		t.Fatalf("cellules après fusion : %+v", l.Cells)
 	}
 	var s string
-	d.db.Read().QueryRow(`SELECT style FROM _slitable_cell_styles WHERE sheet = 1 AND row = 6 AND col = 4`).Scan(&s)
+	d.db.Read().QueryRow(`SELECT style FROM _lattis_cell_styles WHERE sheet = 1 AND row = 6 AND col = 4`).Scan(&s)
 	if s != `{"al":"center","mc":3,"mr":2}` {
 		t.Fatalf("style de la fusion : %q", s)
 	}
@@ -155,7 +155,7 @@ func TestHiddenLinesAndFreeze(t *testing.T) {
 	}
 	// Les cellules du tableau ne reçoivent rien : masquer n'est pas une mise en forme.
 	var n int
-	d.db.Read().QueryRow(`SELECT count(*) FROM _slitable_styles`).Scan(&n)
+	d.db.Read().QueryRow(`SELECT count(*) FROM _lattis_styles`).Scan(&n)
 	if n != 0 {
 		t.Fatalf("%d styles de tableau", n)
 	}
@@ -212,7 +212,7 @@ func TestPinNote(t *testing.T) {
 	d := open(t)
 	style := func() string {
 		var s string
-		d.db.Read().QueryRow(`SELECT coalesce(max(style), '') FROM _slitable_cell_styles WHERE sheet = 1 AND row = 2 AND col = 3`).Scan(&s)
+		d.db.Read().QueryRow(`SELECT coalesce(max(style), '') FROM _lattis_cell_styles WHERE sheet = 1 AND row = 2 AND col = 3`).Scan(&s)
 		return s
 	}
 	if err := d.SetNote(ctx, 1, 2, 3, "Rappel"); err != nil {

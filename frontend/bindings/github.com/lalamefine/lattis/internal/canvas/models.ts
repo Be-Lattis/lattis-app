@@ -656,12 +656,12 @@ export interface SheetInfo {
  * Un seul système de mise en forme, en couches, de la moins à la plus
  * précise (comme Excel : cellule > ligne > colonne) :
  * 
- * 	colonne de la feuille   _slitable_col_styles (sheet, col)
- * 	ligne de la feuille     _slitable_row_styles (sheet, row)
- * 	colonne d'un tableau    _slitable_styles (tbl, rid = 0, col)
- * 	en-tête d'un tableau    _slitable_styles (tbl, rid = -1, col)
- * 	cellule d'un tableau    _slitable_styles (tbl, rid, col)
- * 	cellule libre ou de TCD _slitable_cell_styles (sheet, row, col)
+ * 	colonne de la feuille   _lattis_col_styles (sheet, col)
+ * 	ligne de la feuille     _lattis_row_styles (sheet, row)
+ * 	colonne d'un tableau    _lattis_styles (tbl, rid = 0, col)
+ * 	en-tête d'un tableau    _lattis_styles (tbl, rid = -1, col)
+ * 	cellule d'un tableau    _lattis_styles (tbl, rid, col)
+ * 	cellule libre ou de TCD _lattis_cell_styles (sheet, row, col)
  * 
  * Une couche plus précise remplace propriété par propriété les couches
  * au-dessous. Une propriété à null (JSON) est retirée explicitement : elle

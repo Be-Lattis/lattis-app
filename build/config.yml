@@ -5,11 +5,11 @@ version: '3'
 
 # This information is used to generate the build assets.
 info:
-  companyName: "Slitable" # The name of the company
-  productName: "Slitable" # The name of the application
-  productIdentifier: "fr.triboulin.slitable" # The unique product identifier
+  companyName: "Lattis" # The name of the company
+  productName: "Lattis" # The name of the application
+  productIdentifier: "fr.triboulin.lattis" # The unique product identifier
   description: "Tableur relationnel local-first" # The application description
-  copyright: "© 2026 Slitable" # Copyright text
+  copyright: "© 2026 Lattis" # Copyright text
   comments: "Some Product Comments" # Comments
   version: "0.1.0" # The application version
   # cfBundleIconName: "appicon" # The macOS icon name in Assets.car icon bundles (optional)

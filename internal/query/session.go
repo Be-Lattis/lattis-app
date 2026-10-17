@@ -13,8 +13,8 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 
-	"github.com/lalamefine/slitable/internal/canvas"
-	"github.com/lalamefine/slitable/internal/store"
+	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/store"
 )
 
 // Env donne au moteur ce qu'il lit hors de la base de travail : le classeur
@@ -51,7 +51,7 @@ type loaded struct {
 
 // NewSession ouvre une base de travail.
 func NewSession() (*Session, error) {
-	f, err := os.CreateTemp("", "slitable-requetes-*.db")
+	f, err := os.CreateTemp("", "lattis-requetes-*.db")
 	if err != nil {
 		return nil, err
 	}

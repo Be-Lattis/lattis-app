@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/lalamefine/slitable/internal/canvas"
-	"github.com/lalamefine/slitable/internal/doc"
+	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/doc"
 )
 
 var (

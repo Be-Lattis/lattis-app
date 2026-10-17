@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/canvas"
-	"github.com/lalamefine/slitable/internal/script"
+	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/script"
 )
 
 // SelectionView est la sélection de la grille (positions à partir de 1).
@@ -256,7 +256,7 @@ end`,
 		&Command{
 			Name:    "ui.alert",
 			Summary: "Affiche un message dans une boîte de dialogue et attend que l'utilisateur la ferme.",
-			Params:  []Param{{Name: "message", Type: String, Desc: "texte du message"}, {Name: "title", Type: String, Desc: "titre (Slitable par défaut)", Optional: true}},
+			Params:  []Param{{Name: "message", Type: String, Desc: "texte du message"}, {Name: "title", Type: String, Desc: "titre (Lattis par défaut)", Optional: true}},
 			Example: `local n = db.value("SELECT count(*) FROM Commandes")
 ui.alert("Le tableau compte " .. n .. " commandes")`,
 			Run: func(c *Call) (any, error) {
@@ -270,7 +270,7 @@ ui.alert("Le tableau compte " .. n .. " commandes")`,
 		&Command{
 			Name:    "ui.confirm",
 			Summary: "Pose une question oui / non ; renvoie true si l'utilisateur confirme.",
-			Params:  []Param{{Name: "message", Type: String, Desc: "question posée"}, {Name: "title", Type: String, Desc: "titre (Slitable par défaut)", Optional: true}},
+			Params:  []Param{{Name: "message", Type: String, Desc: "question posée"}, {Name: "title", Type: String, Desc: "titre (Lattis par défaut)", Optional: true}},
 			Example: `if ui.confirm("Supprimer les commandes payées ?") then
   db.execute([[DELETE FROM Commandes WHERE "Payé"]])
 end`,
@@ -288,7 +288,7 @@ end`,
 			Params: []Param{
 				{Name: "message", Type: String, Desc: "question posée"},
 				{Name: "default", Type: String, Desc: "valeur proposée", Optional: true},
-				{Name: "title", Type: String, Desc: "titre (Slitable par défaut)", Optional: true},
+				{Name: "title", Type: String, Desc: "titre (Lattis par défaut)", Optional: true},
 			},
 			Example: `local nom = ui.prompt("Nom de la nouvelle feuille", "Synthèse")
 if nom then sheets.add(nom) end`,
@@ -314,7 +314,7 @@ const dialogHelp = `Types de champs (type) : "text" (par défaut), "textarea", "
 // saisies (nil : annulée).
 func (c *Call) dialog(d Dialog) (map[string]any, error) {
 	if d.Title == "" {
-		d.Title = "Slitable"
+		d.Title = "Lattis"
 	}
 	if d.OK == "" {
 		d.OK = "OK"

@@ -1,7 +1,7 @@
-// Package archive gère le cycle de vie d'un fichier .slitable
+// Package archive gère le cycle de vie d'un fichier .lattis
 // (validé au spike 1.4, voir docs/decisions/0001-jalon-m1.md).
 //
-// L'archive .slitable est un ZIP qui contient database.sqlite et un
+// L'archive .lattis est un ZIP qui contient database.sqlite et un
 // manifeste YAML minimal. À l'ouverture, elle est extraite dans un
 // répertoire de travail local, sous le dossier cache de l'utilisateur
 // (os.UserCacheDir, conservé entre deux redémarrages), où la base vit en WAL.
@@ -30,7 +30,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/store"
+	"github.com/lalamefine/lattis/internal/store"
 	"github.com/ncruces/go-sqlite3"
 )
 
@@ -40,7 +40,7 @@ const (
 	FormatVersion = 1
 	dbName        = "database.sqlite"
 	manifestName  = "manifest.yaml"
-	lockName      = "slitable.lock"
+	lockName      = "lattis.lock"
 	sourceName    = "source.txt" // chemin de l'archive d'origine, pour la récupération
 )
 
@@ -48,7 +48,7 @@ var (
 	// ErrAlreadyOpen signale une archive déjà ouverte (par ce processus ou un autre).
 	ErrAlreadyOpen = errors.New("archive déjà ouverte")
 	// ErrFormat signale une archive illisible ou d'une version trop récente.
-	ErrFormat = errors.New("archive .slitable invalide")
+	ErrFormat = errors.New("archive .lattis invalide")
 )
 
 // Manifest est le manifeste YAML : volontairement minimal, tout le reste vit
@@ -61,7 +61,7 @@ type Manifest struct {
 
 // Doc est un document ouvert.
 type Doc struct {
-	Path string // archive .slitable (vide pour un nouveau document jamais enregistré)
+	Path string // archive .lattis (vide pour un nouveau document jamais enregistré)
 	Dir  string // répertoire de travail
 	DB   *store.Store
 	lock *os.File
@@ -74,7 +74,7 @@ var Root = func() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "Slitable", "work"), nil
+	return filepath.Join(dir, "Lattis", "work"), nil
 }
 
 // workDir donne le répertoire de travail d'une archive : un nom dérivé de
@@ -237,7 +237,7 @@ func (d *Doc) Save(ctx context.Context, path string) error {
 	if err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".slitable-*.tmp")
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".lattis-*.tmp")
 	if err != nil {
 		return err
 	}
@@ -270,7 +270,7 @@ func writeZip(w io.Writer, snap string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(mw, "format_version: %d\napplication: Slitable\nsaved: %s\n", FormatVersion, time.Now().UTC().Format(time.RFC3339))
+	fmt.Fprintf(mw, "format_version: %d\napplication: Lattis\nsaved: %s\n", FormatVersion, time.Now().UTC().Format(time.RFC3339))
 	dw, err := zw.CreateHeader(&zip.FileHeader{Name: dbName, Method: zip.Store, Modified: time.Now()})
 	if err != nil {
 		return err

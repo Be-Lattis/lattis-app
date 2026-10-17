@@ -6,7 +6,7 @@
 |---|---|---|---|
 | Driver SQLite | `ncruces/go-sqlite3` (sans CGO, fonctions Go 3 à 4× plus rapides qu'avec mattn) | Retenu | `spikes/sqlite-drivers/RESULTATS.md` |
 | Rendu de la grille | `<canvas>` + éditeur DOM superposé, défilement virtuel, cache de blocs de 200 lignes | Retenu sous Windows ; Linux à confirmer sur un vrai poste | `docs/mesures/grille.md` |
-| Stockage des colonnes | Tables `STRICT` + `_slitable_invalid` pour les saisies hors type | Retenu | ci-dessous, spike 1.2 |
+| Stockage des colonnes | Tables `STRICT` + `_lattis_invalid` pour les saisies hors type | Retenu | ci-dessous, spike 1.2 |
 | Annulation | Journal de commandes : chaque opération enregistre ses instructions SQL inverses | Retenu | ci-dessous, spike 1.2 |
 | Modèle canevas ↔ tables | Identifiants internes, `_pos` fractionnaire, cellules libres en métadonnées, règles d'îlots | Retenu | ci-dessous, spike 1.2 |
 | Archive | ZIP (manifeste + base) extrait dans le dossier cache, verrou du système, VACUUM INTO + renommage atomique, récupération des répertoires orphelins | Proposé | ci-dessous, spike 1.4 |
@@ -21,10 +21,10 @@ Code : `spikes/canvas` (≈ 1 500 lignes hors tests), devenu `internal/canvas` e
 
 ### Modèle retenu
 
-- **Tables utilisateur** `t_<id>` en `STRICT`, colonnes `c_<id>` ; noms affichés, types logiques et rang d'affichage dans `_slitable_columns`. Un renommage ne touche jamais au schéma SQL, et les mots réservés, accents ou doublons ne posent aucun problème.
+- **Tables utilisateur** `t_<id>` en `STRICT`, colonnes `c_<id>` ; noms affichés, types logiques et rang d'affichage dans `_lattis_columns`. Un renommage ne touche jamais au schéma SQL, et les mots réservés, accents ou doublons ne posent aucun problème.
 - **Ordre des lignes** : clé technique `id INTEGER PRIMARY KEY` + `_pos TEXT` indexé (clés fractionnaires de `internal/order`). Insérer au milieu ne renumérote rien.
-- **Ancre** du tableau (ligne d'en-tête, première colonne) dans `_slitable_tables` ; déplacer un tableau ne touche pas aux données.
-- **Cellules libres** dans `_slitable_cells`, en texte brut tel que saisi ; le type n'est inféré qu'à la naissance d'un tableau.
+- **Ancre** du tableau (ligne d'en-tête, première colonne) dans `_lattis_tables` ; déplacer un tableau ne touche pas aux données.
+- **Cellules libres** dans `_lattis_cells`, en texte brut tel que saisi ; le type n'est inféré qu'à la naissance d'un tableau.
 - **Ordre physique des colonnes** : il ne fait pas partie du modèle (une colonne supprimée puis restaurée revient à la fin de la table SQL). Tout le code nomme les colonnes explicitement, jamais `SELECT *`.
 
 ### Règles d'îlots (implémentées et testées)
@@ -33,11 +33,11 @@ Code : `spikes/canvas` (≈ 1 500 lignes hors tests), devenu `internal/canvas` e
 - Saisie dans la **ligne grisée** sous un tableau (dans ses colonnes) : nouvelle ligne. Dans la **colonne grisée** à droite (dans ses lignes) : nouvelle colonne, nommée par la saisie si elle est faite sur la ligne d'en-tête.
 - **Jamais de fusion** : quand un tableau grandit et que sa ligne (ou colonne) grisée atteindrait un autre objet, tout ce qui est dessous (ou à droite) dans sa bande descend (ou se décale), et chaque tableau déplacé dégage à son tour sa propre bande.
 - Supprimer une ligne fait rétrécir le tableau ; ce qui est dessous ne remonte pas. Vider une ligne ne coupe pas le tableau.
-- Une colonne encore vide prend le type de sa première valeur. Une valeur hors type **élargit** une colonne au type inféré (treillis booléen → entier → décimal → texte, date → texte) et la saisie le signale (`Event.Widened`) pour la notification « Annuler / Garder et marquer en erreur ». Dans une colonne au type **fixé**, la cellule vaut `NULL` et la saisie brute part dans `_slitable_invalid`.
+- Une colonne encore vide prend le type de sa première valeur. Une valeur hors type **élargit** une colonne au type inféré (treillis booléen → entier → décimal → texte, date → texte) et la saisie le signale (`Event.Widened`) pour la notification « Annuler / Garder et marquer en erreur ». Dans une colonne au type **fixé**, la cellule vaut `NULL` et la saisie brute part dans `_lattis_invalid`.
 
 ### Stockage : STRICT ou ANY
 
-Mesuré par `TestMesureElargissement` (`SLITABLE_MESURE=1000000`), tableau de 1 M de lignes × 20 colonnes, Windows, poste de Louis :
+Mesuré par `TestMesureElargissement` (`LATTIS_MESURE=1000000`), tableau de 1 M de lignes × 20 colonnes, Windows, poste de Louis :
 
 | | STRICT (reconstruction) | ANY (métadonnées seules) |
 |---|---|---|
@@ -57,7 +57,7 @@ Chaque opération élémentaire (`setValue`, `insertRow`, `deleteRow`, `addColum
 
 - Couvre le DDL (création, reconstruction, ajout et suppression de colonnes), ce que des triggers de journal ne font pas, et l'extension *session* n'est exposée par aucun driver Go.
 - Une suppression de colonne range les valeurs dans une table de corbeille : l'inverse tient en quelques instructions, quelle que soit la taille du tableau. Ces corbeilles devront être purgées quand la commande sort de la pile (phase 2).
-- Les commandes sont des listes d'instructions SQL paramétrées : elles peuvent être **persistées** dans une table `_slitable_journal`, ce qui donnerait l'annulation après réouverture et un journal pour la récupération après crash.
+- Les commandes sont des listes d'instructions SQL paramétrées : elles peuvent être **persistées** dans une table `_lattis_journal`, ce qui donnerait l'annulation après réouverture et un journal pour la récupération après crash.
 - Un script Lua pourra être une seule commande, ses écritures passant par les mêmes primitives.
 
 ### Limites connues du prototype
@@ -104,13 +104,13 @@ Code : `spikes/formula` (≈ 2 200 lignes hors tests). Critère de sortie : `tes
 
 ---
 
-## Spike 1.4 : archive .slitable et Lua
+## Spike 1.4 : archive .lattis et Lua
 
 Code : `spikes/archive` (devenu `internal/archive` en phase 2) et `spikes/script`. Critères de sortie : un `while true do end` est interrompu sans geler la grille ; un processus tué puis relancé propose la récupération. **Les deux sont atteints** (`TestInfiniteLoopTimeout`, `TestCrashRecovery`).
 
 ### Archive
 
-- **Ouverture** : extraction de `database.sqlite` dans un répertoire de travail sous le dossier cache de l'utilisateur (`os.UserCacheDir()/Slitable/work/<empreinte du chemin>`), base en WAL. Un manifeste d'une version plus récente est refusé.
+- **Ouverture** : extraction de `database.sqlite` dans un répertoire de travail sous le dossier cache de l'utilisateur (`os.UserCacheDir()/Lattis/work/<empreinte du chemin>`), base en WAL. Un manifeste d'une version plus récente est refusé.
 - **Verrou** : un verrou du système (`LockFileEx` sous Windows, `flock` ailleurs) sur un fichier du répertoire de travail, tenu tant que le document est ouvert. Il empêche d'ouvrir deux fois la même archive et **disparaît avec le processus**, même tué : pas de fichier de verrou périmé à nettoyer.
 - **Enregistrer** : `VACUUM INTO` (instantané cohérent des trois fichiers WAL, passé dans la file d'écriture), ZIP sans compression, écriture dans un fichier temporaire à côté de la cible puis renommage atomique. Manifeste minimal (`format_version`, `application`, `saved`), tout le reste dans SQLite.
 - **Récupération** : au démarrage, `Orphans()` liste les répertoires dont le verrou est libre ; rouvrir une archive dont la session a été interrompue renvoie `RecoverableError` au lieu d'écraser le travail. `Recover` rouvre la base telle quelle (SQLite rejoue son WAL) : le test tue un processus après 1 000 écritures non enregistrées et les retrouve toutes.

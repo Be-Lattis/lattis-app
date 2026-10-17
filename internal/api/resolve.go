@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/canvas"
-	"github.com/lalamefine/slitable/internal/doc"
-	"github.com/lalamefine/slitable/internal/formula"
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // sheetRef est une feuille du classeur.
@@ -21,8 +21,8 @@ type sheetRef struct {
 }
 
 func sheetList(ctx context.Context, d *doc.Document) ([]sheetRef, error) {
-	rs, err := d.DB().Read().QueryContext(ctx, `SELECT s.id, s.name, p.sheet IS NOT NULL FROM _slitable_sheets s
-		LEFT JOIN _slitable_protection p ON p.sheet = s.id ORDER BY s.pos, s.id`)
+	rs, err := d.DB().Read().QueryContext(ctx, `SELECT s.id, s.name, p.sheet IS NOT NULL FROM _lattis_sheets s
+		LEFT JOIN _lattis_protection p ON p.sheet = s.id ORDER BY s.pos, s.id`)
 	if err != nil {
 		return nil, err
 	}

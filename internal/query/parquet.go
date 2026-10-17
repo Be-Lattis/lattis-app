@@ -15,7 +15,7 @@ import (
 	"github.com/parquet-go/parquet-go/deprecated"
 	"github.com/parquet-go/parquet-go/format"
 
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // Fichiers Parquet : lecteur parquet-go (Go pur). Chaque colonne feuille

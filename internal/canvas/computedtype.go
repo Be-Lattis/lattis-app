@@ -4,8 +4,8 @@ import (
 	"math"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/formula"
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // Type numérique du résultat d'une colonne calculée, deviné sur sa formule :

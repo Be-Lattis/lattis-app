@@ -369,7 +369,7 @@
 		/** Tableaux et tableaux croisés de toutes les feuilles (sources de graphiques et de TCD). */
 		sources?: { name: string; columns: string[]; types: string[] }[];
 		onstatus?: (s: SheetStatus) => void;
-		/** Lance la mesure dès l'ouverture et transmet le résultat (mode SLITABLE_BENCH). */
+		/** Lance la mesure dès l'ouverture et transmet le résultat (mode LATTIS_BENCH). */
 		autoBench?: (result: string) => void;
 		/** Quadrillage de la feuille (masqué : seules les lignes des tableaux restent). */
 		gridlines?: boolean;
@@ -3238,7 +3238,7 @@
 	// Graphique sélectionné (cadre, poignées, volet) et redimensionnement en cours.
 	let selChart = $state<number | null>(null);
 	let chartMenu = $state<{ ch: SheetChart; x: number; y: number } | null>(null);
-	const CHART_CLIP = '\u2063slitable-chart:';
+	const CHART_CLIP = '\u2063lattis-chart:';
 
 	function selectChart(ch: SheetChart) {
 		selChart = ch.id;
@@ -4407,7 +4407,7 @@
 	let lastRef: { el: TextField; start: number; end: number; value: string } | null = null;
 
 	/**
-	 * Référence d'une cellule dans une formule (nomenclature de Slitable) :
+	 * Référence d'une cellule dans une formule (nomenclature de Lattis) :
 	 * Cell[A1] pour une cellule libre ; dans le tableau de la formule, [Col]
 	 * pour sa ligne et [Col][k] pour une autre ; ailleurs Tableau[Col][k]
 	 * (k : la clé si le tableau en a une, sinon le rang) ; un en-tête donne
@@ -5533,7 +5533,7 @@
 	const singleSelection = () => isSingleCell(selection(), active, merges);
 
 	// Zone copiée ou coupée : cadre pointillé, sur sa feuille. Collée dans
-	// Slitable, elle emporte formules, mise en forme et tableaux (transfer) ;
+	// Lattis, elle emporte formules, mise en forme et tableaux (transfer) ;
 	// les autres applications reçoivent le texte tabulé des valeurs affichées.
 	// Le cadre disparaît au collage d'une zone coupée, sur Échap et dès qu'on
 	// saisit dans une cellule (Excel).
@@ -5726,7 +5726,7 @@
 
 	/**
 	 * Colle un texte (TSV ou graphique) sur la sélection ; faux si rien à
-	 * coller. Le texte de la dernière copie de Slitable se colle « riche »
+	 * coller. Le texte de la dernière copie de Lattis se colle « riche »
 	 * (transfer : formules, mise en forme, tableaux ; une zone coupée se
 	 * déplace). Comme Excel, une sélection multiple du bloc copié le reçoit
 	 * répété (une cellule copiée remplit toute la sélection).
@@ -6068,8 +6068,8 @@
 			blockRoundTripP95: +percentile(e.cache.stats.roundTrip, 0.95).toFixed(2),
 			blockGoP50: +percentile(e.cache.stats.server, 0.5).toFixed(2)
 		};
-		console.log('slitable-bench', JSON.stringify(result));
-		(window as unknown as { slitableBench: unknown }).slitableBench = result;
+		console.log('lattis-bench', JSON.stringify(result));
+		(window as unknown as { lattisBench: unknown }).lattisBench = result;
 		bench =
 			`Défilement : ${result.scroll.fps} img/s, image p95 ${result.scroll.frameP95} ms, ` +
 			`${janky} images > 33 ms, ${scrollMissing}/${drawn} images incomplètes · ` +
@@ -6478,7 +6478,7 @@
 				{:else}
 					<!-- Même ordre que le menu contextuel d'Excel : presse-papiers, insertion
 					     et suppression, tri et filtre, mise en forme, puis ce qui est propre
-					     à Slitable (type, clé, nom de colonne, tableau). -->
+					     à Lattis (type, clé, nom de colonne, tableau). -->
 					<button
 						onclick={() => {
 							menu = null;

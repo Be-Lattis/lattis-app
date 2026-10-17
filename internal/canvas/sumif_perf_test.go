@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // Un agrégat sur une colonne calculée par SOMME.SI garde les totaux groupés
@@ -43,7 +43,9 @@ func TestSumIfColumnPerf(t *testing.T) {
 		t.Fatal(err)
 	}
 	var sheet int64
-	d.read(ctx, func(x *tx) error { return x.row(`SELECT sheet FROM _slitable_tables WHERE name = 'Commandes'`).Scan(&sheet) })
+	d.read(ctx, func(x *tx) error {
+		return x.row(`SELECT sheet FROM _lattis_tables WHERE name = 'Commandes'`).Scan(&sheet)
+	})
 	step := func(name string, fn func() error) {
 		s := time.Now()
 		if err := fn(); err != nil {

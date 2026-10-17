@@ -5,7 +5,7 @@ import (
 	"math"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // Compiled est une expression SQL et ses paramètres.

@@ -31,22 +31,22 @@ func (t *tx) copySheet(sheet int64, to int) (int64, error) {
 		return 0, err
 	}
 	var name string
-	if err := t.row(`SELECT name FROM _slitable_sheets WHERE id = ?`, sheet).Scan(&name); err != nil {
+	if err := t.row(`SELECT name FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&name); err != nil {
 		return 0, fmt.Errorf("%w : feuille introuvable", ErrSheet)
 	}
 	var id int64
 	var pos int
-	if err := t.row(`SELECT coalesce(max(id), 0) + 1, coalesce(max(pos), -1) + 1 FROM _slitable_sheets`).Scan(&id, &pos); err != nil {
+	if err := t.row(`SELECT coalesce(max(id), 0) + 1, coalesce(max(pos), -1) + 1 FROM _lattis_sheets`).Scan(&id, &pos); err != nil {
 		return 0, err
 	}
 	copyName, err := t.copySheetName(name)
 	if err != nil {
 		return 0, err
 	}
-	if err := t.copyRows(`_slitable_sheets`, "id", sheet, id, map[string]any{"name": copyName, "pos": pos, "hidden": 0}); err != nil {
+	if err := t.copyRows(`_lattis_sheets`, "id", sheet, id, map[string]any{"name": copyName, "pos": pos, "hidden": 0}); err != nil {
 		return 0, err
 	}
-	for _, tbl := range append([]string{`_slitable_cells`}, sheetPositioned...) {
+	for _, tbl := range append([]string{`_lattis_cells`}, sheetPositioned...) {
 		if err := t.copyRows(tbl, "sheet", sheet, id, nil); err != nil {
 			return 0, err
 		}
@@ -65,7 +65,7 @@ func (t *tx) copySheet(sheet int64, to int) (int64, error) {
 		}
 		renamed[strings.ToLower(tb.Name)] = n
 	}
-	if err := t.copyObjects(`_slitable_pivots`, sheet, id, func(cfg map[string]any) error {
+	if err := t.copyObjects(`_lattis_pivots`, sheet, id, func(cfg map[string]any) error {
 		remapSource(cfg, renamed)
 		n, err := t.pivotName()
 		if old, ok := cfg["name"].(string); ok && old != "" {
@@ -76,13 +76,13 @@ func (t *tx) copySheet(sheet int64, to int) (int64, error) {
 	}); err != nil {
 		return 0, err
 	}
-	if err := t.copyObjects(`_slitable_charts`, sheet, id, func(cfg map[string]any) error {
+	if err := t.copyObjects(`_lattis_charts`, sheet, id, func(cfg map[string]any) error {
 		remapSource(cfg, renamed)
 		return nil
 	}); err != nil {
 		return 0, err
 	}
-	if err := t.copyObjects(`_slitable_buttons`, sheet, id, nil); err != nil {
+	if err := t.copyObjects(`_lattis_buttons`, sheet, id, nil); err != nil {
 		return 0, err
 	}
 	return id, t.moveSheet(id, to)
@@ -106,7 +106,7 @@ func (t *tx) copySheetName(name string) (string, error) {
 	for n := 2; ; n++ {
 		cand := fmt.Sprintf("%s (%d)", base, n)
 		var k int
-		if err := t.row(`SELECT count(*) FROM _slitable_sheets WHERE name = ?`, cand).Scan(&k); err != nil {
+		if err := t.row(`SELECT count(*) FROM _lattis_sheets WHERE name = ?`, cand).Scan(&k); err != nil {
 			return "", err
 		}
 		if k == 0 {
@@ -216,7 +216,7 @@ func (t *tx) copyObjects(table string, from, to int64, edit func(map[string]any)
 // invalides, styles) sur la feuille sheet et renvoie le nom de la copie.
 func (t *tx) copyTable(tb Table, sheet int64) (string, error) {
 	var id int64
-	if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _slitable_tables`).Scan(&id); err != nil {
+	if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_tables`).Scan(&id); err != nil {
 		return "", err
 	}
 	name, err := t.copyTableName(tb.Name)
@@ -253,10 +253,10 @@ func (t *tx) copyTable(tb Table, sheet int64) (string, error) {
 	if err := t.apply(do, []stmt{st(`DROP TABLE ` + newSQL)}); err != nil {
 		return "", err
 	}
-	if err := t.copyRows(`_slitable_tables`, "id", tb.ID, id, map[string]any{"sheet": sheet, "name": name}); err != nil {
+	if err := t.copyRows(`_lattis_tables`, "id", tb.ID, id, map[string]any{"sheet": sheet, "name": name}); err != nil {
 		return "", err
 	}
-	for _, meta := range []string{`_slitable_columns`, `_slitable_invalid`, `_slitable_styles`} {
+	for _, meta := range []string{`_lattis_columns`, `_lattis_invalid`, `_lattis_styles`} {
 		if err := t.copyRows(meta, "tbl", tb.ID, id, nil); err != nil {
 			return "", err
 		}
@@ -282,7 +282,7 @@ func (t *tx) copyTableName(name string) (string, error) {
 	for n := 2; ; n++ {
 		cand := fmt.Sprintf("%s_%d", base, n)
 		var k int
-		if err := t.row(`SELECT count(*) FROM _slitable_tables WHERE name = ? COLLATE NOCASE`, cand).Scan(&k); err != nil {
+		if err := t.row(`SELECT count(*) FROM _lattis_tables WHERE name = ? COLLATE NOCASE`, cand).Scan(&k); err != nil {
 			return "", err
 		}
 		if k == 0 && !taken[strings.ToLower(cand)] {
@@ -302,13 +302,13 @@ func (m *Model) SetSheetColor(ctx context.Context, sheet int64, color string) er
 			return err
 		}
 		var old string
-		if err := t.row(`SELECT color FROM _slitable_sheets WHERE id = ?`, sheet).Scan(&old); err != nil {
+		if err := t.row(`SELECT color FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&old); err != nil {
 			return fmt.Errorf("%w : feuille introuvable", ErrSheet)
 		}
 		if old == color {
 			return nil
 		}
-		q := `UPDATE _slitable_sheets SET color = ? WHERE id = ?`
+		q := `UPDATE _lattis_sheets SET color = ? WHERE id = ?`
 		return t.apply([]stmt{st(q, color, sheet)}, []stmt{st(q, old, sheet)})
 	})
 }
@@ -325,7 +325,7 @@ func (m *Model) SetSheetHidden(ctx context.Context, sheet int64, hidden bool) er
 			return err
 		}
 		var old bool
-		if err := t.row(`SELECT hidden <> 0 FROM _slitable_sheets WHERE id = ?`, sheet).Scan(&old); err != nil {
+		if err := t.row(`SELECT hidden <> 0 FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&old); err != nil {
 			return fmt.Errorf("%w : feuille introuvable", ErrSheet)
 		}
 		if old == hidden {
@@ -333,14 +333,14 @@ func (m *Model) SetSheetHidden(ctx context.Context, sheet int64, hidden bool) er
 		}
 		if hidden {
 			var visible int
-			if err := t.row(`SELECT count(*) FROM _slitable_sheets WHERE hidden = 0`).Scan(&visible); err != nil {
+			if err := t.row(`SELECT count(*) FROM _lattis_sheets WHERE hidden = 0`).Scan(&visible); err != nil {
 				return err
 			}
 			if visible <= 1 {
 				return fmt.Errorf("%w : un classeur garde au moins une feuille visible", ErrSheet)
 			}
 		}
-		q := `UPDATE _slitable_sheets SET hidden = ? WHERE id = ?`
+		q := `UPDATE _lattis_sheets SET hidden = ? WHERE id = ?`
 		return t.apply([]stmt{st(q, hidden, sheet)}, []stmt{st(q, old, sheet)})
 	})
 }

@@ -13,7 +13,7 @@ import (
 // panne n'empêche rien : on retombe sur la mémoire.
 
 // keyringService est le service sous lequel les mots de passe sont rangés.
-const keyringService = "Slitable"
+const keyringService = "Lattis"
 
 // Secrets garde les mots de passe des connexions, par compte
 // (postgres://utilisateur@hôte:port/base).

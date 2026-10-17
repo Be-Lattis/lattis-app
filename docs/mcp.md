@@ -1,6 +1,6 @@
-# Piloter Slitable depuis un assistant (serveur MCP)
+# Piloter Lattis depuis un assistant (serveur MCP)
 
-Slitable embarque un serveur [MCP](https://modelcontextprotocol.io) : un assistant
+Lattis embarque un serveur [MCP](https://modelcontextprotocol.io) : un assistant
 compatible (Claude Desktop, Claude Code…) lit et modifie le classeur ouvert avec les mêmes
 commandes que les scripts Lua (voir [scripting-lua.md](scripting-lua.md), section 5).
 
@@ -20,8 +20,8 @@ pour chaque client.
 - Désactivé (par défaut), rien n'écoute.
 
 Les réglages (port, jeton) sont dans `mcp.json`, dans le dossier de configuration de
-l'utilisateur (`%AppData%\Slitable` sous Windows, `~/Library/Application Support/Slitable`
-sous macOS, `~/.config/Slitable` sous Linux). Supprimer le fichier renouvelle le jeton.
+l'utilisateur (`%AppData%\Lattis` sous Windows, `~/Library/Application Support/Lattis`
+sous macOS, `~/.config/Lattis` sous Linux). Supprimer le fichier renouvelle le jeton.
 
 ## Brancher un client
 
@@ -31,18 +31,18 @@ sous macOS, `~/.config/Slitable` sous Linux). Supprimer le fichier renouvelle le
 ```json
 {
   "mcpServers": {
-    "slitable": { "command": "C:\\Program Files\\Slitable\\slitable.exe", "args": ["mcp"] }
+    "lattis": { "command": "C:\\Program Files\\Lattis\\lattis.exe", "args": ["mcp"] }
   }
 }
 ```
 
-`slitable mcp` ne lance pas de deuxième fenêtre : il relaie les messages vers l'application
-ouverte (et répond « Slitable n'est pas ouvert » sinon).
+`lattis mcp` ne lance pas de deuxième fenêtre : il relaie les messages vers l'application
+ouverte (et répond « Lattis n'est pas ouvert » sinon).
 
 **Claude Code** :
 
 ```sh
-claude mcp add --transport http slitable http://127.0.0.1:47390/mcp --header "Authorization: Bearer <jeton>"
+claude mcp add --transport http lattis http://127.0.0.1:47390/mcp --header "Authorization: Bearer <jeton>"
 ```
 
 **Autres clients HTTP** : transport *Streamable HTTP*, `POST http://127.0.0.1:47390/mcp`,

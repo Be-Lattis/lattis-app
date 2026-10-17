@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // Sources JSON : fichier (.json, ou une valeur par ligne : NDJSON) et API
@@ -537,7 +537,7 @@ func fetchWeb(ctx context.Context, sec *Secrets, conn *Connection, raw string, h
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "Slitable")
+	req.Header.Set("User-Agent", "Lattis")
 	for _, h := range headers {
 		if n := strings.TrimSpace(h.Name); n != "" {
 			req.Header.Set(n, h.Value)

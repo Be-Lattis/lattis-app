@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/canvas"
-	"github.com/lalamefine/slitable/internal/command"
-	"github.com/lalamefine/slitable/internal/meta"
-	"github.com/lalamefine/slitable/internal/store"
+	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/meta"
+	"github.com/lalamefine/lattis/internal/store"
 )
 
 type fixture struct {

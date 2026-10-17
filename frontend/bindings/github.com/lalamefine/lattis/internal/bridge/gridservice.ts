@@ -22,40 +22,40 @@ import * as $models from "./models.js";
  * BenchRequested indique si la mesure automatique est demandée.
  */
 export function BenchRequested(): $CancellablePromise<boolean> {
-    return $Call.ByID(347935142);
+    return $Call.ByID(2316013313);
 }
 
 /**
  * Query exécute une requête SQL en lecture seule (onglet SQL).
  */
 export function Query(q: string): $CancellablePromise<grid$0.QueryResult> {
-    return $Call.ByID(1800746624, q);
+    return $Call.ByID(231718441, q);
 }
 
 /**
  * ReportBench écrit le résultat de la mesure automatique et ferme l'application.
  */
 export function ReportBench(result: string): $CancellablePromise<void> {
-    return $Call.ByID(507851156, result);
+    return $Call.ByID(3662378489, result);
 }
 
 /**
  * SetCell enregistre une saisie et renvoie la valeur stockée.
  */
 export function SetCell(id: number, col: number, raw: string): $CancellablePromise<any> {
-    return $Call.ByID(1125830688, id, col, raw);
+    return $Call.ByID(1244976225, id, col, raw);
 }
 
 /**
  * Status renvoie l'état de préparation du tableau.
  */
 export function Status(): $CancellablePromise<$models.GridStatus> {
-    return $Call.ByID(3624858798);
+    return $Call.ByID(2921683085);
 }
 
 /**
  * Window lit count lignes à partir de la ligne first.
  */
 export function Window(first: number, count: number): $CancellablePromise<grid$0.Window> {
-    return $Call.ByID(4061461144, first, count);
+    return $Call.ByID(2158859843, first, count);
 }

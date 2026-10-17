@@ -698,7 +698,7 @@ export const apiReference: RefEntry[] = [
 		category: "ui",
 		signature: "ui.alert(message, [title])",
 		summary: "Affiche un message dans une boîte de dialogue et attend que l'utilisateur la ferme.",
-		details: "Paramètres — message : texte du message ; title : titre (Slitable par défaut). Arguments dans l'ordre, ou une table d'arguments nommés : ui.alert{message = …}.",
+		details: "Paramètres — message : texte du message ; title : titre (Lattis par défaut). Arguments dans l'ordre, ou une table d'arguments nommés : ui.alert{message = …}.",
 		example: "local n = db.value(\"SELECT count(*) FROM Commandes\")\nui.alert(\"Le tableau compte \" .. n .. \" commandes\")",
 		args: [1, 2]
 	},
@@ -707,7 +707,7 @@ export const apiReference: RefEntry[] = [
 		category: "ui",
 		signature: "ui.confirm(message, [title])",
 		summary: "Pose une question oui / non ; renvoie true si l'utilisateur confirme.",
-		details: "Paramètres — message : question posée ; title : titre (Slitable par défaut). Arguments dans l'ordre, ou une table d'arguments nommés : ui.confirm{message = …}.",
+		details: "Paramètres — message : question posée ; title : titre (Lattis par défaut). Arguments dans l'ordre, ou une table d'arguments nommés : ui.confirm{message = …}.",
 		example: "if ui.confirm(\"Supprimer les commandes payées ?\") then\n  db.execute([[DELETE FROM Commandes WHERE \"Payé\"]])\nend",
 		args: [1, 2]
 	},
@@ -733,7 +733,7 @@ export const apiReference: RefEntry[] = [
 		category: "ui",
 		signature: "ui.prompt(message, [default], [title])",
 		summary: "Demande un texte à l'utilisateur ; renvoie le texte saisi, ou nil s'il annule.",
-		details: "Paramètres — message : question posée ; default : valeur proposée ; title : titre (Slitable par défaut). Arguments dans l'ordre, ou une table d'arguments nommés : ui.prompt{message = …}.",
+		details: "Paramètres — message : question posée ; default : valeur proposée ; title : titre (Lattis par défaut). Arguments dans l'ordre, ou une table d'arguments nommés : ui.prompt{message = …}.",
 		example: "local nom = ui.prompt(\"Nom de la nouvelle feuille\", \"Synthèse\")\nif nom then sheets.add(nom) end",
 		args: [1, 3]
 	},

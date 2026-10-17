@@ -3,7 +3,7 @@ package transfer
 import (
 	"context"
 
-	"github.com/lalamefine/slitable/internal/canvas"
+	"github.com/lalamefine/lattis/internal/canvas"
 )
 
 // ReadXLSX lit un classeur .xlsx comme l'import (îlots, en-têtes, types)

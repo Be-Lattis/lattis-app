@@ -4,7 +4,7 @@
 // Une feuille est un canevas libre ; une zone contiguë d'au moins deux lignes
 // y devient un tableau, stocké dans une vraie table SQLite STRICT. Les
 // métadonnées (feuilles, ancres, colonnes, types, cellules libres, saisies
-// invalides) vivent dans les tables _slitable_* (internal/meta).
+// invalides) vivent dans les tables _lattis_* (internal/meta).
 //
 // Toute modification passe par le bus de commandes (internal/command) :
 // chaque opération élémentaire enregistre ses instructions inverses, et une
@@ -18,8 +18,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/command"
-	"github.com/lalamefine/slitable/internal/store"
+	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/store"
 )
 
 type stmt = command.Stmt

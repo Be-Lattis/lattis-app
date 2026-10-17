@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lalamefine/slitable/internal/store"
+	"github.com/lalamefine/lattis/internal/store"
 )
 
 func openDemo(t *testing.T, rows int) *Table {

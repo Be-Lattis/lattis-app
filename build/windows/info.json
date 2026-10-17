@@ -5,10 +5,10 @@
 	"info": {
 		"0409": {
 			"ProductVersion": "0.1.0",
-			"CompanyName": "Slitable",
+			"CompanyName": "Lattis",
 			"FileDescription": "Tableur relationnel local-first",
-			"LegalCopyright": "© 2026 Slitable",
-			"ProductName": "Slitable",
+			"LegalCopyright": "© 2026 Lattis",
+			"ProductName": "Lattis",
 			"Comments": "Some Product Comments"
 		}
 	}

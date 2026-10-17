@@ -32,7 +32,7 @@ func TestDeleteSeveralColumns(t *testing.T) {
 	}
 	before := dump(t, d)
 	var styles int
-	d.db.Read().QueryRow(`SELECT count(*) FROM _slitable_styles`).Scan(&styles)
+	d.db.Read().QueryRow(`SELECT count(*) FROM _lattis_styles`).Scan(&styles)
 	if err := d.DeleteSheetColumns(ctx, 1, 1, 2); err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func TestDeleteSeveralColumns(t *testing.T) {
 		t.Fatalf("annulation :\n%s\nattendu :\n%s", got, before)
 	}
 	var after int
-	d.db.Read().QueryRow(`SELECT count(*) FROM _slitable_styles`).Scan(&after)
+	d.db.Read().QueryRow(`SELECT count(*) FROM _lattis_styles`).Scan(&after)
 	if after != styles {
 		t.Fatalf("mise en forme : %d au lieu de %d", after, styles)
 	}

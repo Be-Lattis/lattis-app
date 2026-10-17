@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // Column est une colonne de tableau : stockée (Formula nil) ou calculée.

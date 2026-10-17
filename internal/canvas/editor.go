@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/lalamefine/slitable/internal/command"
+	"github.com/lalamefine/lattis/internal/command"
 )
 
 // Editor écrit dans les tableaux pour un script. Chaque appel est une courte

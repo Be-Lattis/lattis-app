@@ -16,9 +16,9 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
-	"github.com/lalamefine/slitable/internal/canvas"
-	"github.com/lalamefine/slitable/internal/formula"
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 func isLetter(r rune) bool { return unicode.IsLetter(r) }

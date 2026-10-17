@@ -12,17 +12,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/grid"
-	"github.com/lalamefine/slitable/internal/store"
+	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/store"
 )
 
 // TestMesureColonnesCalculees mesure, sur le tableau de démonstration, le
 // coût de colonnes calculées dans les fenêtres de la grille et dans un agrégat
-// sur tout le tableau. Lancé seulement avec SLITABLE_MESURE=<lignes>.
+// sur tout le tableau. Lancé seulement avec LATTIS_MESURE=<lignes>.
 func TestMesureColonnesCalculees(t *testing.T) {
-	rows, _ := strconv.Atoi(os.Getenv("SLITABLE_MESURE"))
+	rows, _ := strconv.Atoi(os.Getenv("LATTIS_MESURE"))
 	if rows <= 0 {
-		t.Skip("SLITABLE_MESURE=<nombre de lignes> pour lancer la mesure")
+		t.Skip("LATTIS_MESURE=<nombre de lignes> pour lancer la mesure")
 	}
 	ctx := context.Background()
 	db, err := store.Open(filepath.Join(t.TempDir(), "m.sqlite"), Register)

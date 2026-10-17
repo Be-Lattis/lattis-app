@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lalamefine/slitable/internal/store"
+	"github.com/lalamefine/lattis/internal/store"
 )
 
 func open(t *testing.T, path string) (*store.Store, *Bus) {

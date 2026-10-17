@@ -50,7 +50,7 @@ func sqlServerDSN(c DBConfig, password string) string {
 	if c.Database != "" {
 		q.Set("database", c.Database)
 	}
-	q.Set("app name", "Slitable")
+	q.Set("app name", "Lattis")
 	q.Set("connection timeout", "10")
 	switch c.SSLMode {
 	case "disable":
@@ -92,7 +92,7 @@ func sqlServerLimit(q string, n int) string {
 	if firstKeyword(q) != "SELECT" || strings.Contains(strings.ToUpper(q), "ORDER BY") {
 		return q
 	}
-	return "SELECT TOP (" + strconv.Itoa(n) + ") * FROM (" + q + "\n) AS _slitable_apercu"
+	return "SELECT TOP (" + strconv.Itoa(n) + ") * FROM (" + q + "\n) AS _lattis_apercu"
 }
 
 // sqlServerValue écrit les identifiants uniques (rendus en octets dans

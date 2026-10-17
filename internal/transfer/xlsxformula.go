@@ -7,10 +7,10 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/lalamefine/slitable/internal/formula"
+	"github.com/lalamefine/lattis/internal/formula"
 )
 
-// Conversion des formules Excel : Slitable n'a pas d'adresses A1. Une
+// Conversion des formules Excel : Lattis n'a pas d'adresses A1. Une
 // référence à la cellule de la même ligne d'un tableau devient [@Colonne],
 // une plage qui couvre une colonne de tableau devient Tableau[Colonne], et
 // la plage d'une RECHERCHEV qui commence à la première colonne d'un tableau
@@ -49,7 +49,7 @@ type piece struct {
 	ref  *ref
 }
 
-// errFormula signale une formule Excel que Slitable ne sait pas reprendre.
+// errFormula signale une formule Excel que Lattis ne sait pas reprendre.
 type errFormula struct{ msg string }
 
 func (e errFormula) Error() string { return e.msg }
@@ -285,7 +285,7 @@ type where struct {
 	table    *island // tableau de la cellule (colonne calculée), sinon nil
 }
 
-// rewrite traduit une formule découpée en formule Slitable (français, avec
+// rewrite traduit une formule découpée en formule Lattis (français, avec
 // =), ou explique pourquoi elle ne peut pas l'être.
 func (rv *resolver) rewrite(ps []piece, at where) (string, error) {
 	var b strings.Builder
@@ -342,7 +342,7 @@ func booleans(n formula.Node) formula.Node {
 	return n
 }
 
-// checkFormula refuse ce que Slitable calculerait en #NOM? : fonctions inconnues,
+// checkFormula refuse ce que Lattis calculerait en #NOM? : fonctions inconnues,
 // noms définis d'Excel.
 func checkFormula(n formula.Node, nameOK bool) error {
 	switch n := n.(type) {
@@ -400,7 +400,7 @@ func (rv *resolver) ref(r *ref, at where) (string, error) {
 			}
 			return colRef("", is.headers[c0-is.c0])
 		}
-		return "", unsupported("référence à une cellule (%s) : Slitable n'a pas d'adresses", cellName(row, c0))
+		return "", unsupported("référence à une cellule (%s) : Lattis n'a pas d'adresses", cellName(row, c0))
 	}
 	r0, r1 := 0, 1<<30
 	if !r.cols {

@@ -136,7 +136,7 @@ export interface Clip extends Rect {
 	plain: boolean;
 }
 
-/** Le texte collé vient-il de la dernière copie de Slitable (collage riche) ? */
+/** Le texte collé vient-il de la dernière copie de Lattis (collage riche) ? */
 export function richClip(clip: Clip | null, text: string): Clip | null {
 	return clip && !clip.plain && sameClipText(clip.text, text) ? clip : null;
 }

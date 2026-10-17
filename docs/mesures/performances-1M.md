@@ -4,7 +4,7 @@ Tableau « Commandes » de 1 M de lignes × 6 colonnes (client, ville, pays,
 montant, quantité, date), sur le poste de développement (Windows 10).
 Reproduire avec :
 
-    SLITABLE_MESURE=1000000 go test ./internal/canvas -run TestMesureOperations -v -timeout 20m
+    LATTIS_MESURE=1000000 go test ./internal/canvas -run TestMesureOperations -v -timeout 20m
 
 | Opération | Avant | Après |
 |---|---:|---:|

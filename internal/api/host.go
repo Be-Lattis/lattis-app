@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/doc"
+	"github.com/lalamefine/lattis/internal/doc"
 )
 
 // Host est l'application qui exécute les commandes (internal/bridge) : le

@@ -20,12 +20,12 @@ import (
 // Un seul système de mise en forme, en couches, de la moins à la plus
 // précise (comme Excel : cellule > ligne > colonne) :
 //
-//	colonne de la feuille   _slitable_col_styles (sheet, col)
-//	ligne de la feuille     _slitable_row_styles (sheet, row)
-//	colonne d'un tableau    _slitable_styles (tbl, rid = 0, col)
-//	en-tête d'un tableau    _slitable_styles (tbl, rid = -1, col)
-//	cellule d'un tableau    _slitable_styles (tbl, rid, col)
-//	cellule libre ou de TCD _slitable_cell_styles (sheet, row, col)
+//	colonne de la feuille   _lattis_col_styles (sheet, col)
+//	ligne de la feuille     _lattis_row_styles (sheet, row)
+//	colonne d'un tableau    _lattis_styles (tbl, rid = 0, col)
+//	en-tête d'un tableau    _lattis_styles (tbl, rid = -1, col)
+//	cellule d'un tableau    _lattis_styles (tbl, rid, col)
+//	cellule libre ou de TCD _lattis_cell_styles (sheet, row, col)
 //
 // Une couche plus précise remplace propriété par propriété les couches
 // au-dessous. Une propriété à null (JSON) est retirée explicitement : elle
@@ -123,8 +123,8 @@ func (t *tx) sheetLines(sheet int64) (sheetLines, error) {
 		sql string
 		to  map[int]Style
 	}{
-		{`SELECT row, style FROM _slitable_row_styles WHERE sheet = ?`, l.rows},
-		{`SELECT col, style FROM _slitable_col_styles WHERE sheet = ?`, l.cols},
+		{`SELECT row, style FROM _lattis_row_styles WHERE sheet = ?`, l.rows},
+		{`SELECT col, style FROM _lattis_col_styles WHERE sheet = ?`, l.cols},
 	} {
 		rs, err := t.query(q.sql, sheet)
 		if err != nil {
@@ -183,7 +183,7 @@ func (l sheetLines) anyCol() Style {
 // en-tête (rid -1).
 func (t *tx) tableStyle(tbl, rid, col int64) (Style, error) {
 	var s string
-	err := t.row(`SELECT style FROM _slitable_styles WHERE tbl = ? AND rid = ? AND col = ?`, tbl, rid, col).Scan(&s)
+	err := t.row(`SELECT style FROM _lattis_styles WHERE tbl = ? AND rid = ? AND col = ?`, tbl, rid, col).Scan(&s)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
@@ -475,19 +475,19 @@ func (t *tx) setStyle(table, where string, cols string, args []any, fn func(stri
 }
 
 func (t *tx) styleFree(sheet int64, row, col int, patch, inh Style) error {
-	return t.setStyle(`_slitable_cell_styles`, `sheet = ? AND row = ? AND col = ?`, `sheet, row, col`, []any{sheet, row, col},
+	return t.setStyle(`_lattis_cell_styles`, `sheet = ? AND row = ? AND col = ?`, `sheet, row, col`, []any{sheet, row, col},
 		func(old string) (string, error) { return merge(old, patch, inh) })
 }
 
 func (t *tx) styleTable(tbl, rid, col int64, patch, inh Style) error {
-	return t.setStyle(`_slitable_styles`, `tbl = ? AND rid = ? AND col = ?`, `tbl, rid, col`, []any{tbl, rid, col},
+	return t.setStyle(`_lattis_styles`, `tbl = ? AND rid = ? AND col = ?`, `tbl, rid, col`, []any{tbl, rid, col},
 		func(old string) (string, error) { return merge(old, patch, inh) })
 }
 
 func (t *tx) styleLine(sheet int64, row bool, i int, patch, inh Style) error {
-	table, where, cols := `_slitable_col_styles`, `sheet = ? AND col = ?`, `sheet, col`
+	table, where, cols := `_lattis_col_styles`, `sheet = ? AND col = ?`, `sheet, col`
 	if row {
-		table, where, cols = `_slitable_row_styles`, `sheet = ? AND row = ?`, `sheet, row`
+		table, where, cols = `_lattis_row_styles`, `sheet = ? AND row = ?`, `sheet, row`
 	}
 	return t.setStyle(table, where, cols, []any{sheet, i}, func(old string) (string, error) { return merge(old, patch, inh) })
 }
@@ -495,7 +495,7 @@ func (t *tx) styleLine(sheet int64, row bool, i int, patch, inh Style) error {
 // stripFree retire les propriétés du correctif des cellules libres d'une
 // ligne ou d'une colonne (cond : "row = ?" ou "col = ?").
 func (t *tx) stripFree(sheet int64, cond string, i int, patch Style) error {
-	rs, err := t.query(`SELECT row, col FROM _slitable_cell_styles WHERE sheet = ? AND `+cond, sheet, i)
+	rs, err := t.query(`SELECT row, col FROM _lattis_cell_styles WHERE sheet = ? AND `+cond, sheet, i)
 	if err != nil {
 		return err
 	}
@@ -510,7 +510,7 @@ func (t *tx) stripFree(sheet int64, cond string, i int, patch Style) error {
 	}
 	rs.Close()
 	for _, p := range pos {
-		err := t.setStyle(`_slitable_cell_styles`, `sheet = ? AND row = ? AND col = ?`, `sheet, row, col`, []any{sheet, p[0], p[1]},
+		err := t.setStyle(`_lattis_cell_styles`, `sheet = ? AND row = ? AND col = ?`, `sheet, row, col`, []any{sheet, p[0], p[1]},
 			func(old string) (string, error) { return strip(old, patch) })
 		if err != nil {
 			return err
@@ -522,7 +522,7 @@ func (t *tx) stripFree(sheet int64, cond string, i int, patch Style) error {
 // clearCellStyles retire des styles de cellule d'une colonne les propriétés
 // que l'on vient de poser sur toute la colonne.
 func (t *tx) clearCellStyles(tbl, col int64, patch Style) error {
-	rs, err := t.query(`SELECT rid FROM _slitable_styles WHERE tbl = ? AND col = ? AND rid > 0`, tbl, col)
+	rs, err := t.query(`SELECT rid FROM _lattis_styles WHERE tbl = ? AND col = ? AND rid > 0`, tbl, col)
 	if err != nil {
 		return err
 	}
@@ -537,7 +537,7 @@ func (t *tx) clearCellStyles(tbl, col int64, patch Style) error {
 	}
 	rs.Close()
 	for _, r := range rids {
-		err := t.setStyle(`_slitable_styles`, `tbl = ? AND rid = ? AND col = ?`, `tbl, rid, col`, []any{tbl, r, col},
+		err := t.setStyle(`_lattis_styles`, `tbl = ? AND rid = ? AND col = ?`, `tbl, rid, col`, []any{tbl, r, col},
 			func(old string) (string, error) { return strip(old, patch) })
 		if err != nil {
 			return err
@@ -559,8 +559,8 @@ func (t *tx) lineStyles(sheet int64) (rows, cols []LineStyle, err error) {
 		sql string
 		to  *[]LineStyle
 	}{
-		{`SELECT row, style FROM _slitable_row_styles WHERE sheet = ? ORDER BY row`, &rows},
-		{`SELECT col, style FROM _slitable_col_styles WHERE sheet = ? ORDER BY col`, &cols},
+		{`SELECT row, style FROM _lattis_row_styles WHERE sheet = ? ORDER BY row`, &rows},
+		{`SELECT col, style FROM _lattis_col_styles WHERE sheet = ? ORDER BY col`, &cols},
 	} {
 		rs, err := t.query(q.sql, sheet)
 		if err != nil {

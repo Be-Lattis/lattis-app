@@ -3,7 +3,7 @@ package canvas
 import (
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // Infer donne le type le plus étroit qui accepte la saisie, dans le treillis

@@ -8,7 +8,7 @@ Une **requête** est enregistrée dans le classeur : une **source** (CSV, `.xlsx
 
 | Sujet | Décision | Statut |
 |---|---|---|
-| Où vivent les requêtes | Deux tables de métadonnées, `_slitable_connections` et `_slitable_queries` (définitions en JSON), modifiées par le bus de commandes : créer, modifier ou supprimer une requête s'annule | Proposé |
+| Où vivent les requêtes | Deux tables de métadonnées, `_lattis_connections` et `_lattis_queries` (définitions en JSON), modifiées par le bus de commandes : créer, modifier ou supprimer une requête s'annule | Proposé |
 | Mots de passe | **Jamais dans l'archive.** Trousseau du système (`github.com/zalando/go-keyring` : Gestionnaire d'identification Windows, Trousseau macOS, Secret Service Linux), case « Mémoriser » ; sinon gardés en mémoire pour la session. Sans mot de passe connu, la connexion est d'abord tentée sans (méthode `trust`, fichier `.pgpass`, `PGPASSWORD`), puis l'interface le demande | **À confirmer** |
 | Moteur des étapes | Les étapes sont **compilées en SQL** (une chaîne de CTE) et exécutées dans une base SQLite **de travail**, à part du classeur, où les sources sont chargées brutes | Proposé |
 | PostgreSQL | Pilote `github.com/jackc/pgx/v5/stdlib` (Go pur). Lecture seule garantie par une transaction `READ ONLY`. La requête SQL de la source est poussée telle quelle vers le serveur ; les étapes s'appliquent ensuite côté SQLite (pas encore de « query folding ») | Proposé |
@@ -19,9 +19,9 @@ Une **requête** est enregistrée dans le classeur : une **source** (CSV, `.xlsx
 
 ## Connexions et secrets
 
-Une connexion est un objet du classeur (`_slitable_connections`) : nom, type (`postgres`), et une configuration JSON **sans mot de passe** : hôte, port, base, utilisateur, `sslmode`. Elle voyage avec le classeur : quelqu'un qui l'ouvre sur un autre poste voit la connexion et donne son propre mot de passe.
+Une connexion est un objet du classeur (`_lattis_connections`) : nom, type (`postgres`), et une configuration JSON **sans mot de passe** : hôte, port, base, utilisateur, `sslmode`. Elle voyage avec le classeur : quelqu'un qui l'ouvre sur un autre poste voit la connexion et donne son propre mot de passe.
 
-Le mot de passe est rangé sous le service `Slitable` et le compte `postgres://utilisateur@hôte:port/base` : la même base utilisée par deux classeurs ne le demande qu'une fois. Ordre de recherche à l'actualisation :
+Le mot de passe est rangé sous le service `Lattis` et le compte `postgres://utilisateur@hôte:port/base` : la même base utilisée par deux classeurs ne le demande qu'une fois. Ordre de recherche à l'actualisation :
 
 1. mémoire de la session (saisi plus tôt, mémorisé ou non) ;
 2. trousseau du système (s'il répond : sous Linux sans Secret Service, on passe) ;
@@ -50,9 +50,9 @@ Toutes sont en **lecture seule** ; aucune n'écrit vers l'extérieur.
 - **Interface.** Données › Obtenir des données : Texte/CSV, Classeur Excel, **Autres fichiers ▾** (JSON, Parquet, Base SQLite), **Base de données ▾** (PostgreSQL, MySQL / MariaDB, SQL Server), **Web**, À partir du tableau. La boîte de connexion change ses champs selon le genre ; la boîte de la source a le navigateur des tables pour les SGBD et les fichiers de base.
 - **Lua.** `connections.list()` rend désormais `config = {…}` au lieu de `postgres = {…}`.
 
-## Types : PostgreSQL → Slitable
+## Types : PostgreSQL → Lattis
 
-| PostgreSQL | Slitable |
+| PostgreSQL | Lattis |
 |---|---|
 | `smallint`, `integer`, `bigint`, `oid` | entier |
 | `real`, `double precision`, `numeric`/`decimal`, `money` | décimal (`numeric` passe par un `float64` : 15 à 17 chiffres significatifs) |
@@ -66,18 +66,18 @@ Un `NULL` donne une cellule vide. Côté CSV et `.xlsx`, l'inférence de `intern
 ## Stockage dans le classeur (migration, après le format 18)
 
 ```sql
-CREATE TABLE _slitable_connections (
+CREATE TABLE _lattis_connections (
 	id     INTEGER PRIMARY KEY,
 	name   TEXT NOT NULL UNIQUE COLLATE NOCASE,
 	kind   TEXT NOT NULL,             -- 'postgres'
 	config TEXT NOT NULL              -- JSON, sans mot de passe
 ) STRICT;
-CREATE TABLE _slitable_queries (
+CREATE TABLE _lattis_queries (
 	id        INTEGER PRIMARY KEY,
 	name      TEXT NOT NULL UNIQUE COLLATE NOCASE,
 	source    TEXT NOT NULL,          -- JSON : {kind, path, sheet, index, table, query, connection, sql, delimiter}
 	steps     TEXT NOT NULL,          -- JSON : liste d'étapes {op, ...}
-	target    INTEGER,                -- tableau chargé (_slitable_tables.id), NULL si pas encore chargé
+	target    INTEGER,                -- tableau chargé (_lattis_tables.id), NULL si pas encore chargé
 	refreshed TEXT                    -- date de la dernière actualisation (ISO)
 ) STRICT;
 ```
@@ -132,5 +132,5 @@ Une feuille protégée refuse l'actualisation de son tableau ; une structure de 
 - Le résultat d'une actualisation passe par la mémoire de la base de travail (fichier temporaire) : pensé jusqu'à quelques millions de lignes.
 - Chemins de fichiers absolus : un classeur déplacé sur un autre poste doit faire repointer ses sources (Modifier la source).
 
-- **DuckDB abandonné** (choix de Louis, 17/10/2026) : son pilote est en C (CGO) et alourdit l'exécutable d'environ 70 Mo ; un fichier DuckDB peut être exporté en Parquet, que Slitable lit.
+- **DuckDB abandonné** (choix de Louis, 17/10/2026) : son pilote est en C (CGO) et alourdit l'exécutable d'environ 70 Mo ; un fichier DuckDB peut être exporté en Parquet, que Lattis lit.
 - **ODBC abandonné** (choix de Louis, 17/10/2026) : hors Windows, son pilote exige unixODBC dès le démarrage de l'application ; MySQL, SQL Server et PostgreSQL ont leur pilote natif.

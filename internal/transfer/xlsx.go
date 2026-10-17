@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // Lecture d'un classeur .xlsx (Office Open XML) avec la seule bibliothèque
@@ -518,7 +518,7 @@ func (x *xlsxFile) serial(f float64) time.Time {
 }
 
 // dateValue : une date sans heure devient une date ; une heure, ou une date
-// avec heure, reste du texte (Slitable n'a pas encore de type heure).
+// avec heure, reste du texte (Lattis n'a pas encore de type heure).
 func (x *xlsxFile) dateValue(d time.Time, k dateKind) value {
 	midnight := d.Hour() == 0 && d.Minute() == 0 && d.Second() == 0
 	switch {

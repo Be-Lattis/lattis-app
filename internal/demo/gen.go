@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // Gen est le mini générateur de fausses données : un tirage pseudo-aléatoire

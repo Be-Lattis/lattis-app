@@ -247,7 +247,7 @@
 				{/if}
 				<label class="field">Requête SQL (lecture seule) <textarea rows="5" bind:value={s.sql} placeholder="SELECT * FROM ventes WHERE annee = 2026"></textarea></label>
 				<p class="muted">
-					{isDB ? 'Filtrez de préférence ici : la requête est exécutée par le serveur, les étapes ensuite par Slitable.' : 'Le fichier est ouvert en lecture seule ; les étapes s’appliquent ensuite.'}
+					{isDB ? 'Filtrez de préférence ici : la requête est exécutée par le serveur, les étapes ensuite par Lattis.' : 'Le fichier est ouvert en lecture seule ; les étapes s’appliquent ensuite.'}
 				</p>
 			{:else if s.kind === 'sql'}
 				<label class="field">Requête SQL sur le classeur (lecture seule) <textarea rows="6" bind:value={s.sql} placeholder="SELECT * FROM Ventes WHERE annee = 2026"></textarea></label>

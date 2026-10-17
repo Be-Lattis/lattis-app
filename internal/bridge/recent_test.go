@@ -13,7 +13,7 @@ func TestRecent(t *testing.T) {
 	recentFile = func() (string, error) { return filepath.Join(dir, "cache", "recent.json"), nil }
 	var files []string
 	for _, n := range []string{"a", "b", "c"} {
-		p := filepath.Join(dir, n+".slitable")
+		p := filepath.Join(dir, n+".lattis")
 		if err := os.WriteFile(p, nil, 0o644); err != nil {
 			t.Fatal(err)
 		}

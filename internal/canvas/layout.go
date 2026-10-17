@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 func tableSQL(id int64) string { return fmt.Sprintf("t_%d", id) }
@@ -51,7 +51,7 @@ func (t Table) spansCols(lo, hi int) bool { return t.Col <= hi && t.Right() >= l
 func (t Table) spansRows(lo, hi int) bool { return t.Row <= hi && t.Bottom() >= lo }
 
 func (t *tx) tables(sheet int64) ([]Table, error) {
-	rs, err := t.query(`SELECT id, name, row, col, coalesce(key_col, 0) FROM _slitable_tables WHERE sheet = ? ORDER BY id`, sheet)
+	rs, err := t.query(`SELECT id, name, row, col, coalesce(key_col, 0) FROM _lattis_tables WHERE sheet = ? ORDER BY id`, sheet)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (t *tx) tables(sheet int64) ([]Table, error) {
 
 func (t *tx) table(id int64) (Table, error) {
 	tb := Table{ID: id}
-	err := t.row(`SELECT sheet, name, row, col, coalesce(key_col, 0) FROM _slitable_tables WHERE id = ?`, id).
+	err := t.row(`SELECT sheet, name, row, col, coalesce(key_col, 0) FROM _lattis_tables WHERE id = ?`, id).
 		Scan(&tb.Sheet, &tb.Name, &tb.Row, &tb.Col, &tb.Key)
 	if err != nil {
 		return tb, err
@@ -85,7 +85,7 @@ func (t *tx) table(id int64) (Table, error) {
 
 func (t *tx) tableByName(name string) (Table, error) {
 	var id int64
-	if err := t.row(`SELECT id FROM _slitable_tables WHERE name = ?`, name).Scan(&id); err != nil {
+	if err := t.row(`SELECT id FROM _lattis_tables WHERE name = ?`, name).Scan(&id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Table{}, fmt.Errorf("tableau « %s » introuvable", name)
 		}
@@ -96,7 +96,7 @@ func (t *tx) tableByName(name string) (Table, error) {
 
 // fill charge les colonnes et le nombre de lignes.
 func (t *tx) fill(tb *Table) error {
-	rs, err := t.query(`SELECT id, name, type, fixed, coalesce(formula, '') FROM _slitable_columns WHERE tbl = ? ORDER BY pos`, tb.ID)
+	rs, err := t.query(`SELECT id, name, type, fixed, coalesce(formula, '') FROM _lattis_columns WHERE tbl = ? ORDER BY pos`, tb.ID)
 	if err != nil {
 		return err
 	}
@@ -135,7 +135,7 @@ type cell struct {
 }
 
 func (t *tx) cells(sheet int64) ([]cell, error) {
-	rs, err := t.query(`SELECT row, col, raw FROM _slitable_cells WHERE sheet = ? ORDER BY row, col`, sheet)
+	rs, err := t.query(`SELECT row, col, raw FROM _lattis_cells WHERE sheet = ? ORDER BY row, col`, sheet)
 	if err != nil {
 		return nil, err
 	}
@@ -253,8 +253,8 @@ func (t *tx) ensureGapRight(sheet int64, self int64, oldEdge, newEdge, lo, hi in
 
 func (t *tx) moveTable(tb Table, dRow, dCol int) error {
 	return t.apply(
-		[]stmt{st(`UPDATE _slitable_tables SET row = row + ?, col = col + ? WHERE id = ?`, dRow, dCol, tb.ID)},
-		[]stmt{st(`UPDATE _slitable_tables SET row = row - ?, col = col - ? WHERE id = ?`, dRow, dCol, tb.ID)},
+		[]stmt{st(`UPDATE _lattis_tables SET row = row + ?, col = col + ? WHERE id = ?`, dRow, dCol, tb.ID)},
+		[]stmt{st(`UPDATE _lattis_tables SET row = row - ?, col = col - ? WHERE id = ?`, dRow, dCol, tb.ID)},
 	)
 }
 
@@ -277,12 +277,12 @@ func (t *tx) moveCells(sheet int64, match func(cell) bool, dRow, dCol int) error
 	}
 	var do, undo []stmt
 	for _, c := range moved {
-		do = append(do, st(`DELETE FROM _slitable_cells WHERE sheet = ? AND row = ? AND col = ?`, sheet, c.Row, c.Col))
-		undo = append(undo, st(`DELETE FROM _slitable_cells WHERE sheet = ? AND row = ? AND col = ?`, sheet, c.Row+dRow, c.Col+dCol))
+		do = append(do, st(`DELETE FROM _lattis_cells WHERE sheet = ? AND row = ? AND col = ?`, sheet, c.Row, c.Col))
+		undo = append(undo, st(`DELETE FROM _lattis_cells WHERE sheet = ? AND row = ? AND col = ?`, sheet, c.Row+dRow, c.Col+dCol))
 	}
 	for _, c := range moved {
-		do = append(do, st(`INSERT INTO _slitable_cells (sheet, row, col, raw) VALUES (?, ?, ?, ?)`, sheet, c.Row+dRow, c.Col+dCol, c.Raw))
-		undo = append(undo, st(`INSERT INTO _slitable_cells (sheet, row, col, raw) VALUES (?, ?, ?, ?)`, sheet, c.Row, c.Col, c.Raw))
+		do = append(do, st(`INSERT INTO _lattis_cells (sheet, row, col, raw) VALUES (?, ?, ?, ?)`, sheet, c.Row+dRow, c.Col+dCol, c.Raw))
+		undo = append(undo, st(`INSERT INTO _lattis_cells (sheet, row, col, raw) VALUES (?, ?, ?, ?)`, sheet, c.Row, c.Col, c.Raw))
 	}
 	if err := t.apply(do, undo); err != nil {
 		return err

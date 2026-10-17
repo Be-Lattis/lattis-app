@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/formula"
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // ChartConfig décrit un graphique alimenté par un tableau : l'axe des
@@ -72,7 +72,7 @@ func (m *Model) CreateChart(ctx context.Context, sheet int64, row, col int, cfg 
 		if _, _, err := t.chartData(cfg); err != nil {
 			return err
 		}
-		if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _slitable_charts`).Scan(&id); err != nil {
+		if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_charts`).Scan(&id); err != nil {
 			return err
 		}
 		b, err := json.Marshal(cfg)
@@ -80,8 +80,8 @@ func (m *Model) CreateChart(ctx context.Context, sheet int64, row, col int, cfg 
 			return err
 		}
 		return t.apply(
-			[]stmt{st(`INSERT INTO _slitable_charts (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, id, sheet, row, col, string(b))},
-			[]stmt{st(`DELETE FROM _slitable_charts WHERE id = ?`, id)},
+			[]stmt{st(`INSERT INTO _lattis_charts (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, id, sheet, row, col, string(b))},
+			[]stmt{st(`DELETE FROM _lattis_charts WHERE id = ?`, id)},
 		)
 	})
 	return id, err
@@ -90,21 +90,21 @@ func (m *Model) CreateChart(ctx context.Context, sheet int64, row, col int, cfg 
 // SetChart change la configuration d'un graphique.
 func (m *Model) SetChart(ctx context.Context, id int64, cfg ChartConfig) error {
 	return m.Do(ctx, "Modifier le graphique", func(t *tx) error {
-		if err := t.guardObject(`_slitable_charts`, id); err != nil {
+		if err := t.guardObject(`_lattis_charts`, id); err != nil {
 			return err
 		}
 		if _, _, err := t.chartData(cfg); err != nil {
 			return err
 		}
 		var old string
-		if err := t.row(`SELECT config FROM _slitable_charts WHERE id = ?`, id).Scan(&old); err != nil {
+		if err := t.row(`SELECT config FROM _lattis_charts WHERE id = ?`, id).Scan(&old); err != nil {
 			return err
 		}
 		b, err := json.Marshal(cfg)
 		if err != nil {
 			return err
 		}
-		q := `UPDATE _slitable_charts SET config = ? WHERE id = ?`
+		q := `UPDATE _lattis_charts SET config = ? WHERE id = ?`
 		return t.apply([]stmt{st(q, string(b), id)}, []stmt{st(q, old, id)})
 	})
 }
@@ -115,17 +115,17 @@ func (m *Model) MoveChart(ctx context.Context, id int64, row, col int) error {
 		return fmt.Errorf("%w : hors de la feuille", ErrChart)
 	}
 	return m.Do(ctx, "Déplacer le graphique", func(t *tx) error {
-		if err := t.guardObject(`_slitable_charts`, id); err != nil {
+		if err := t.guardObject(`_lattis_charts`, id); err != nil {
 			return err
 		}
 		var r, c int
-		if err := t.row(`SELECT row, col FROM _slitable_charts WHERE id = ?`, id).Scan(&r, &c); err != nil {
+		if err := t.row(`SELECT row, col FROM _lattis_charts WHERE id = ?`, id).Scan(&r, &c); err != nil {
 			return err
 		}
 		if r == row && c == col {
 			return nil
 		}
-		q := `UPDATE _slitable_charts SET row = ?, col = ? WHERE id = ?`
+		q := `UPDATE _lattis_charts SET row = ?, col = ? WHERE id = ?`
 		return t.apply([]stmt{st(q, row, col, id)}, []stmt{st(q, r, c, id)})
 	})
 }
@@ -133,18 +133,18 @@ func (m *Model) MoveChart(ctx context.Context, id int64, row, col int) error {
 // DeleteChart supprime un graphique.
 func (m *Model) DeleteChart(ctx context.Context, id int64) error {
 	return m.Do(ctx, "Supprimer le graphique", func(t *tx) error {
-		if err := t.guardObject(`_slitable_charts`, id); err != nil {
+		if err := t.guardObject(`_lattis_charts`, id); err != nil {
 			return err
 		}
 		var sheet int64
 		var row, col int
 		var cfg string
-		if err := t.row(`SELECT sheet, row, col, config FROM _slitable_charts WHERE id = ?`, id).Scan(&sheet, &row, &col, &cfg); err != nil {
+		if err := t.row(`SELECT sheet, row, col, config FROM _lattis_charts WHERE id = ?`, id).Scan(&sheet, &row, &col, &cfg); err != nil {
 			return err
 		}
 		return t.apply(
-			[]stmt{st(`DELETE FROM _slitable_charts WHERE id = ?`, id)},
-			[]stmt{st(`INSERT INTO _slitable_charts (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, id, sheet, row, col, cfg)},
+			[]stmt{st(`DELETE FROM _lattis_charts WHERE id = ?`, id)},
+			[]stmt{st(`INSERT INTO _lattis_charts (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, id, sheet, row, col, cfg)},
 		)
 	})
 }
@@ -244,7 +244,7 @@ func (t *tx) chartDataRaw(cfg ChartConfig) ([]string, []ChartSeries, error) {
 
 // charts donne les graphiques d'une feuille, avec leurs données.
 func (t *tx) charts(sheet int64) ([]ChartInfo, error) {
-	rs, err := t.query(`SELECT id, row, col, config FROM _slitable_charts WHERE sheet = ? ORDER BY id`, sheet)
+	rs, err := t.query(`SELECT id, row, col, config FROM _lattis_charts WHERE sheet = ? ORDER BY id`, sheet)
 	if err != nil {
 		return nil, err
 	}
@@ -278,7 +278,7 @@ func (t *tx) charts(sheet int64) ([]ChartInfo, error) {
 
 // chartRows donne l'inverse de la suppression des graphiques d'une feuille.
 func (t *tx) chartRows(sheet int64) ([]stmt, error) {
-	rs, err := t.query(`SELECT id, row, col, config FROM _slitable_charts WHERE sheet = ?`, sheet)
+	rs, err := t.query(`SELECT id, row, col, config FROM _lattis_charts WHERE sheet = ?`, sheet)
 	if err != nil {
 		return nil, err
 	}
@@ -291,7 +291,7 @@ func (t *tx) chartRows(sheet int64) ([]stmt, error) {
 		if err := rs.Scan(&id, &row, &col, &cfg); err != nil {
 			return nil, err
 		}
-		undo = append(undo, st(`INSERT INTO _slitable_charts (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, id, sheet, row, col, cfg))
+		undo = append(undo, st(`INSERT INTO _lattis_charts (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, id, sheet, row, col, cfg))
 	}
 	return undo, rs.Err()
 }
@@ -354,12 +354,12 @@ func (m *Model) PlaceChart(ctx context.Context, id int64, row, col, offX, offY, 
 		return fmt.Errorf("%w : position ou taille invalide", ErrChart)
 	}
 	return m.Do(ctx, "Déplacer le graphique", func(t *tx) error {
-		if err := t.guardObject(`_slitable_charts`, id); err != nil {
+		if err := t.guardObject(`_lattis_charts`, id); err != nil {
 			return err
 		}
 		var r, c int
 		var old string
-		if err := t.row(`SELECT row, col, config FROM _slitable_charts WHERE id = ?`, id).Scan(&r, &c, &old); err != nil {
+		if err := t.row(`SELECT row, col, config FROM _lattis_charts WHERE id = ?`, id).Scan(&r, &c, &old); err != nil {
 			return err
 		}
 		var cfg ChartConfig
@@ -371,7 +371,7 @@ func (m *Model) PlaceChart(ctx context.Context, id int64, row, col, offX, offY, 
 		if err != nil {
 			return err
 		}
-		q := `UPDATE _slitable_charts SET row = ?, col = ?, config = ? WHERE id = ?`
+		q := `UPDATE _lattis_charts SET row = ?, col = ?, config = ? WHERE id = ?`
 		return t.apply([]stmt{st(q, row, col, string(b), id)}, []stmt{st(q, r, c, old, id)})
 	})
 }

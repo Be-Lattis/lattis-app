@@ -1,5 +1,5 @@
 // Command sqlite-drivers compare les trois drivers SQLite Go envisagés pour
-// Slitable sur les opérations dont dépend la grille : chargement en masse,
+// Lattis sur les opérations dont dépend la grille : chargement en masse,
 // lecture de fenêtres de lignes par clé d'ordre, édition d'une cellule et appel
 // d'une fonction SQL écrite en Go.
 //

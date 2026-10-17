@@ -52,7 +52,7 @@ func TestTouched(t *testing.T) {
 	}
 	exec(`CREATE TABLE t_1 (x)`)
 	exec(`CREATE TABLE t_2 (x)`)
-	exec(`CREATE TABLE _slitable_columns (x)`)
+	exec(`CREATE TABLE _lattis_columns (x)`)
 	s.TakeTouched()
 	exec(`INSERT INTO t_2 VALUES (1)`)
 	exec(`UPDATE t_1 SET x = 2`)
@@ -63,7 +63,7 @@ func TestTouched(t *testing.T) {
 	if content, structure, all = s.TakeTouched(); all || len(content)+len(structure) != 0 {
 		t.Fatalf("remise à zéro : %v %v %v", content, structure, all)
 	}
-	exec(`INSERT INTO _slitable_columns VALUES (1)`)
+	exec(`INSERT INTO _lattis_columns VALUES (1)`)
 	if _, _, all = s.TakeTouched(); !all {
 		t.Fatal("métadonnées des colonnes : tous les tableaux concernés")
 	}

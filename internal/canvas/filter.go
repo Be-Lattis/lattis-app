@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // ColumnFilter est le filtre d'une colonne de tableau, comme le filtre
@@ -60,7 +60,7 @@ func sqlLiteral(s string) string { return "'" + strings.ReplaceAll(s, "'", "''")
 // lignes affichées.
 func (t *tx) loadFilter(tb *Table) error {
 	var raw sql.NullString
-	if err := t.row(`SELECT filter FROM _slitable_tables WHERE id = ?`, tb.ID).Scan(&raw); err != nil {
+	if err := t.row(`SELECT filter FROM _lattis_tables WHERE id = ?`, tb.ID).Scan(&raw); err != nil {
 		return err
 	}
 	tb.Filter, tb.where, tb.Shown = nil, "", tb.Rows
@@ -77,7 +77,7 @@ func (t *tx) loadFilter(tb *Table) error {
 			continue
 		}
 		if f.Errors {
-			conds = append(conds, fmt.Sprintf(`id IN (SELECT rid FROM _slitable_invalid WHERE tbl = %d AND col = %d)`, tb.ID, c.ID))
+			conds = append(conds, fmt.Sprintf(`id IN (SELECT rid FROM _lattis_invalid WHERE tbl = %d AND col = %d)`, tb.ID, c.ID))
 		}
 		if f.Values != nil && c.Formula == "" {
 			lits := make([]string, len(f.Values))
@@ -175,7 +175,7 @@ func (m *Model) ClearFilters(ctx context.Context, table string) error {
 
 func (t *tx) writeFilter(tb Table, filter map[string]ColumnFilter) error {
 	var old sql.NullString
-	if err := t.row(`SELECT filter FROM _slitable_tables WHERE id = ?`, tb.ID).Scan(&old); err != nil {
+	if err := t.row(`SELECT filter FROM _lattis_tables WHERE id = ?`, tb.ID).Scan(&old); err != nil {
 		return err
 	}
 	var neu, prev any
@@ -192,7 +192,7 @@ func (t *tx) writeFilter(tb Table, filter map[string]ColumnFilter) error {
 	if neu == prev {
 		return nil
 	}
-	q := `UPDATE _slitable_tables SET filter = ? WHERE id = ?`
+	q := `UPDATE _lattis_tables SET filter = ? WHERE id = ?`
 	return t.apply([]stmt{st(q, neu, tb.ID)}, []stmt{st(q, prev, tb.ID)})
 }
 

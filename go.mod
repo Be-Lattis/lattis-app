@@ -1,4 +1,4 @@
-module github.com/lalamefine/slitable
+module github.com/lalamefine/lattis
 
 go 1.26.0
 

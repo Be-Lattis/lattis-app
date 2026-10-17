@@ -65,13 +65,13 @@ func (m *Model) CreateButton(ctx context.Context, sheet int64, row, col int, cfg
 			return err
 		}
 		var n int
-		if err := t.row(`SELECT count(*) FROM _slitable_sheets WHERE id = ?`, sheet).Scan(&n); err != nil {
+		if err := t.row(`SELECT count(*) FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&n); err != nil {
 			return err
 		}
 		if n == 0 {
 			return fmt.Errorf("%w : feuille introuvable", ErrSheet)
 		}
-		if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _slitable_buttons`).Scan(&id); err != nil {
+		if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_buttons`).Scan(&id); err != nil {
 			return err
 		}
 		b, err := json.Marshal(cfg)
@@ -79,8 +79,8 @@ func (m *Model) CreateButton(ctx context.Context, sheet int64, row, col int, cfg
 			return err
 		}
 		return t.apply(
-			[]stmt{st(`INSERT INTO _slitable_buttons (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, id, sheet, row, col, string(b))},
-			[]stmt{st(`DELETE FROM _slitable_buttons WHERE id = ?`, id)},
+			[]stmt{st(`INSERT INTO _lattis_buttons (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, id, sheet, row, col, string(b))},
+			[]stmt{st(`DELETE FROM _lattis_buttons WHERE id = ?`, id)},
 		)
 	})
 	return id, err
@@ -93,7 +93,7 @@ func (m *Model) SetButton(ctx context.Context, id int64, cfg ButtonConfig) error
 		return err
 	}
 	return m.Do(ctx, "Modifier le bouton", func(t *tx) error {
-		if err := t.guardObject(`_slitable_buttons`, id); err != nil {
+		if err := t.guardObject(`_lattis_buttons`, id); err != nil {
 			return err
 		}
 		old, err := t.button(id)
@@ -112,7 +112,7 @@ func (m *Model) PlaceButton(ctx context.Context, id int64, row, col, offX, offY,
 		return fmt.Errorf("%w : hors de la feuille", ErrButton)
 	}
 	return m.Do(ctx, "Déplacer le bouton", func(t *tx) error {
-		if err := t.guardObject(`_slitable_buttons`, id); err != nil {
+		if err := t.guardObject(`_lattis_buttons`, id); err != nil {
 			return err
 		}
 		old, err := t.button(id)
@@ -131,18 +131,18 @@ func (m *Model) PlaceButton(ctx context.Context, id int64, row, col, offX, offY,
 // DeleteButton supprime un bouton.
 func (m *Model) DeleteButton(ctx context.Context, id int64) error {
 	return m.Do(ctx, "Supprimer le bouton", func(t *tx) error {
-		if err := t.guardObject(`_slitable_buttons`, id); err != nil {
+		if err := t.guardObject(`_lattis_buttons`, id); err != nil {
 			return err
 		}
 		var sheet int64
 		var row, col int
 		var cfg string
-		if err := t.row(`SELECT sheet, row, col, config FROM _slitable_buttons WHERE id = ?`, id).Scan(&sheet, &row, &col, &cfg); err != nil {
+		if err := t.row(`SELECT sheet, row, col, config FROM _lattis_buttons WHERE id = ?`, id).Scan(&sheet, &row, &col, &cfg); err != nil {
 			return fmt.Errorf("%w : bouton %d introuvable", ErrButton, id)
 		}
 		return t.apply(
-			[]stmt{st(`DELETE FROM _slitable_buttons WHERE id = ?`, id)},
-			[]stmt{st(`INSERT INTO _slitable_buttons (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, id, sheet, row, col, cfg)},
+			[]stmt{st(`DELETE FROM _lattis_buttons WHERE id = ?`, id)},
+			[]stmt{st(`INSERT INTO _lattis_buttons (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, id, sheet, row, col, cfg)},
 		)
 	})
 }
@@ -161,7 +161,7 @@ func (m *Model) Button(ctx context.Context, id int64) (ButtonInfo, error) {
 func (t *tx) button(id int64) (ButtonInfo, error) {
 	b := ButtonInfo{ID: id}
 	var cfg string
-	if err := t.row(`SELECT row, col, config FROM _slitable_buttons WHERE id = ?`, id).Scan(&b.Row, &b.Col, &cfg); err != nil {
+	if err := t.row(`SELECT row, col, config FROM _lattis_buttons WHERE id = ?`, id).Scan(&b.Row, &b.Col, &cfg); err != nil {
 		return b, fmt.Errorf("%w : bouton %d introuvable", ErrButton, id)
 	}
 	err := json.Unmarshal([]byte(cfg), &b.Config)
@@ -180,13 +180,13 @@ func (t *tx) writeButton(id int64, old ButtonInfo, row, col int, cfg ButtonConfi
 	if err != nil {
 		return err
 	}
-	q := `UPDATE _slitable_buttons SET row = ?, col = ?, config = ? WHERE id = ?`
+	q := `UPDATE _lattis_buttons SET row = ?, col = ?, config = ? WHERE id = ?`
 	return t.apply([]stmt{st(q, row, col, string(nb), id)}, []stmt{st(q, old.Row, old.Col, string(ob), id)})
 }
 
 // buttons lit les boutons d'une feuille.
 func (t *tx) buttons(sheet int64) ([]ButtonInfo, error) {
-	rs, err := t.query(`SELECT id, row, col, config FROM _slitable_buttons WHERE sheet = ? ORDER BY id`, sheet)
+	rs, err := t.query(`SELECT id, row, col, config FROM _lattis_buttons WHERE sheet = ? ORDER BY id`, sheet)
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +208,7 @@ func (t *tx) buttons(sheet int64) ([]ButtonInfo, error) {
 
 // buttonRows donne l'inverse de la suppression des boutons d'une feuille.
 func (t *tx) buttonRows(sheet int64) ([]stmt, error) {
-	rs, err := t.query(`SELECT id, row, col, config FROM _slitable_buttons WHERE sheet = ?`, sheet)
+	rs, err := t.query(`SELECT id, row, col, config FROM _lattis_buttons WHERE sheet = ?`, sheet)
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +221,7 @@ func (t *tx) buttonRows(sheet int64) ([]stmt, error) {
 		if err := rs.Scan(&id, &row, &col, &cfg); err != nil {
 			return nil, err
 		}
-		undo = append(undo, st(`INSERT INTO _slitable_buttons (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, id, sheet, row, col, cfg))
+		undo = append(undo, st(`INSERT INTO _lattis_buttons (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, id, sheet, row, col, cfg))
 	}
 	return undo, rs.Err()
 }

@@ -20,9 +20,9 @@ type LineRules struct {
 
 func (a axis) lineRules() string {
 	if a == rowsAxis {
-		return "_slitable_row_rules"
+		return "_lattis_row_rules"
 	}
-	return "_slitable_col_rules"
+	return "_lattis_col_rules"
 }
 
 // SetLineRules remplace les règles des lignes (ou colonnes) i0 à i1 de la

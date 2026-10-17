@@ -35,14 +35,14 @@ import * as $models from "./models.js";
  * ligne) et renvoie son identifiant.
  */
 export function AddFavorite(name: string, sql: string): $CancellablePromise<number> {
-    return $Call.ByID(2605473092, name, sql);
+    return $Call.ByID(4244979589, name, sql);
 }
 
 /**
  * AddSheet ajoute un onglet à la fin et renvoie son identifiant.
  */
 export function AddSheet(): $CancellablePromise<number> {
-    return $Call.ByID(1000932635);
+    return $Call.ByID(3787066848);
 }
 
 /**
@@ -50,7 +50,7 @@ export function AddSheet(): $CancellablePromise<number> {
  * [i0, i1] de la feuille, comme Excel.
  */
 export function ApplyLineStyle(sheet: number, rows: boolean, i0: number, i1: number, patch: { [_ in string]?: any } | null): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(166329190, sheet, rows, i0, i1, patch);
+    return $Call.ByID(139341505, sheet, rows, i0, i1, patch);
 }
 
 /**
@@ -58,14 +58,14 @@ export function ApplyLineStyle(sheet: number, rows: boolean, i0: number, i1: num
  * poser, une valeur vide les retire).
  */
 export function ApplyStyle(sheet: number, r0: number, c0: number, r1: number, c1: number, patch: { [_ in string]?: any } | null): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(515323768, sheet, r0, c0, r1, c1, patch);
+    return $Call.ByID(2797992075, sheet, r0, c0, r1, c1, patch);
 }
 
 /**
  * Call exécute une commande de l'API (internal/api) depuis l'interface.
  */
 export function Call(name: string, args: { [_ in string]?: any } | null): $CancellablePromise<any> {
-    return $Call.ByID(1387604997, name, args);
+    return $Call.ByID(350356514, name, args);
 }
 
 /**
@@ -73,21 +73,21 @@ export function Call(name: string, args: { [_ in string]?: any } | null): $Cance
  * mise en forme, fusions, notes, validations).
  */
 export function ClearCells(sheet: number, r0: number, c0: number, r1: number, c1: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(3800788935, sheet, r0, c0, r1, c1);
+    return $Call.ByID(1680091776, sheet, r0, c0, r1, c1);
 }
 
 /**
  * ClearFilters retire tous les filtres d'un tableau.
  */
 export function ClearFilters(table: string): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(3821886489, table);
+    return $Call.ByID(364512750, table);
 }
 
 /**
  * ClearKey retire la clé d'un tableau.
  */
 export function ClearKey(table: string): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(3624858029, table);
+    return $Call.ByID(3612364886, table);
 }
 
 /**
@@ -96,7 +96,7 @@ export function ClearKey(table: string): $CancellablePromise<$models.DocState> {
  * comprise, comme Supprimer).
  */
 export function ClearRange(sheet: number, r0: number, c0: number, r1: number, c1: number, all: boolean): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(3576597635, sheet, r0, c0, r1, c1, all);
+    return $Call.ByID(866897828, sheet, r0, c0, r1, c1, all);
 }
 
 /**
@@ -104,7 +104,7 @@ export function ClearRange(sheet: number, r0: number, c0: number, r1: number, c1
  * perdues : l'interface demande d'abord).
  */
 export function CloseDocument(): $CancellablePromise<void> {
-    return $Call.ByID(3667101050);
+    return $Call.ByID(1090607799);
 }
 
 /**
@@ -112,21 +112,21 @@ export function CloseDocument(): $CancellablePromise<void> {
  * (PostgreSQL, MySQL, SQL Server ; vide pour une connexion Web).
  */
 export function ConnectionTables(name: string): $CancellablePromise<$models.TableList> {
-    return $Call.ByID(3299404044, name);
+    return $Call.ByID(2416836391, name);
 }
 
 /**
  * Connections liste les connexions du classeur.
  */
 export function Connections(): $CancellablePromise<query$0.Connection[] | null> {
-    return $Call.ByID(263361706);
+    return $Call.ByID(1318472555);
 }
 
 /**
  * ConvertPreview compte les valeurs qui ne se convertiraient pas au type to.
  */
 export function ConvertPreview(table: string, i: number, to: grid$0.Type): $CancellablePromise<number> {
-    return $Call.ByID(521549168, table, i, to);
+    return $Call.ByID(3675827775, table, i, to);
 }
 
 /**
@@ -134,131 +134,131 @@ export function ConvertPreview(table: string, i: number, to: grid$0.Type): $Canc
  * place la copie au rang to ; renvoie l'identifiant de la copie.
  */
 export function CopySheet(sheet: number, to: number): $CancellablePromise<number> {
-    return $Call.ByID(3666121675, sheet, to);
+    return $Call.ByID(11722070, sheet, to);
 }
 
 /**
  * CreateButton pose un bouton d'action sur une feuille.
  */
 export function CreateButton(sheet: number, row: number, col: number, cfg: canvas$0.ButtonConfig): $CancellablePromise<number> {
-    return $Call.ByID(314900421, sheet, row, col, cfg);
+    return $Call.ByID(3192313954, sheet, row, col, cfg);
 }
 
 /**
  * CreateChart pose un graphique sur une feuille.
  */
 export function CreateChart(sheet: number, row: number, col: number, cfg: canvas$0.ChartConfig): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(2729239783, sheet, row, col, cfg);
+    return $Call.ByID(1051115966, sheet, row, col, cfg);
 }
 
 /**
  * CreatePivot crée un tableau croisé sur une nouvelle feuille ; renvoie la feuille.
  */
 export function CreatePivot(cfg: canvas$0.PivotConfig): $CancellablePromise<number> {
-    return $Call.ByID(1379190243, cfg);
+    return $Call.ByID(2880887650, cfg);
 }
 
 /**
  * DeleteButton supprime un bouton.
  */
 export function DeleteButton(id: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(4222085142, id);
+    return $Call.ByID(2760831645, id);
 }
 
 /**
  * DeleteChart supprime un graphique.
  */
 export function DeleteChart(id: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(2539134122, id);
+    return $Call.ByID(2825760031, id);
 }
 
 export function DeleteColumn(table: string, i: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(472790092, table, i);
+    return $Call.ByID(935642547, table, i);
 }
 
 /**
  * DeleteConnection supprime une connexion qu'aucune requête n'utilise.
  */
 export function DeleteConnection(id: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(1849251250, id);
+    return $Call.ByID(2133916901, id);
 }
 
 /**
  * DeleteFavorite retire une requête des favoris.
  */
 export function DeleteFavorite(id: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(141410170, id);
+    return $Call.ByID(1877158681, id);
 }
 
 /**
  * DeletePivot supprime un tableau croisé.
  */
 export function DeletePivot(id: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(1561259534, id);
+    return $Call.ByID(1553250507, id);
 }
 
 /**
  * DeleteQuery supprime une requête (son tableau reste sur la feuille).
  */
 export function DeleteQuery(id: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(2675786682, id);
+    return $Call.ByID(2031608415, id);
 }
 
 export function DeleteRow(table: string, n: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(3988464234, table, n);
+    return $Call.ByID(1279471111, table, n);
 }
 
 /**
  * DeleteScript supprime un script.
  */
 export function DeleteScript(id: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(3149349621, id);
+    return $Call.ByID(1292876230, id);
 }
 
 export function DeleteSheet(sheet: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(3962694849, sheet);
+    return $Call.ByID(3132305772, sheet);
 }
 
 /**
  * DeleteSheetColumns supprime les colonnes entières c0 à c1 de la feuille.
  */
 export function DeleteSheetColumns(sheet: number, c0: number, c1: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(2899723816, sheet, c0, c1);
+    return $Call.ByID(4261246775, sheet, c0, c1);
 }
 
 /**
  * DeleteSheetRows supprime les lignes entières r0 à r1 de la feuille.
  */
 export function DeleteSheetRows(sheet: number, r0: number, r1: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(3699842500, sheet, r0, r1);
+    return $Call.ByID(991204001, sheet, r0, r1);
 }
 
 /**
  * DeleteTables supprime des tableaux entiers.
  */
 export function DeleteTables(names: string[] | null): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(2205181947, names);
+    return $Call.ByID(2144760912, names);
 }
 
 /**
  * DemoProgress donne l'avancement de OpenDemo.
  */
 export function DemoProgress(): $CancellablePromise<$models.DemoProgress> {
-    return $Call.ByID(3466320733);
+    return $Call.ByID(1297731146);
 }
 
 /**
  * DemoRequested donne le preset demandé au lancement (--demo), ou "".
  */
 export function DemoRequested(): $CancellablePromise<string> {
-    return $Call.ByID(1714331694);
+    return $Call.ByID(2155566807);
 }
 
 /**
  * Dependencies donne les antécédents et les dépendants d'une cellule.
  */
 export function Dependencies(sheet: number, row: number, col: number): $CancellablePromise<canvas$0.Dependencies> {
-    return $Call.ByID(1248047932, sheet, row, col);
+    return $Call.ByID(744713339, sheet, row, col);
 }
 
 /**
@@ -266,28 +266,28 @@ export function Dependencies(sheet: number, row: number, col: number): $Cancella
  * sans valider).
  */
 export function DialogAnswer(id: number, values: { [_ in string]?: any } | null, ok: boolean): $CancellablePromise<void> {
-    return $Call.ByID(489748287, id, values, ok);
+    return $Call.ByID(3528680568, id, values, ok);
 }
 
 /**
  * Discard abandonne une session interrompue.
  */
 export function Discard(dir: string): $CancellablePromise<void> {
-    return $Call.ByID(3379363957, dir);
+    return $Call.ByID(1215055320, dir);
 }
 
 /**
  * DuplicatesPreview compte les lignes en double selon des colonnes.
  */
 export function DuplicatesPreview(table: string, cols: number[] | null): $CancellablePromise<number> {
-    return $Call.ByID(1565976229, table, cols);
+    return $Call.ByID(1937033744, table, cols);
 }
 
 /**
  * ExcelTables liste les tableaux d'un classeur .xlsx (navigateur).
  */
 export function ExcelTables(path: string): $CancellablePromise<query$0.XLSXTable[] | null> {
-    return $Call.ByID(498273081, path);
+    return $Call.ByID(211032248, path);
 }
 
 /**
@@ -296,7 +296,7 @@ export function ExcelTables(path: string): $CancellablePromise<query$0.XLSXTable
  * d'annulation ; les changements de structure sont refusés.
  */
 export function Execute(q: string): $CancellablePromise<$models.ExecResult> {
-    return $Call.ByID(2776577956, q);
+    return $Call.ByID(1682621773, q);
 }
 
 /**
@@ -305,7 +305,7 @@ export function Execute(q: string): $CancellablePromise<$models.ExecResult> {
  * écrit, vide si l'utilisateur a annulé.
  */
 export function ExportCSV(table: string): $CancellablePromise<string> {
-    return $Call.ByID(1530430769, table);
+    return $Call.ByID(3599375228, table);
 }
 
 /**
@@ -313,28 +313,28 @@ export function ExportCSV(table: string): $CancellablePromise<string> {
  * formules sont exportées par leur résultat).
  */
 export function ExportXLSX(): $CancellablePromise<$models.XLSXExport> {
-    return $Call.ByID(1072062328);
+    return $Call.ByID(2538967355);
 }
 
 /**
  * ExtractColumns sort des colonnes d'un tableau vers un nouveau tableau.
  */
 export function ExtractColumns(name: string, i0: number, i1: number, row: number, col: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(552666561, name, i0, i1, row, col);
+    return $Call.ByID(2680011710, name, i0, i1, row, col);
 }
 
 /**
  * Favorites liste les requêtes SQL favorites du classeur.
  */
 export function Favorites(): $CancellablePromise<canvas$0.Favorite[] | null> {
-    return $Call.ByID(404363814);
+    return $Call.ByID(1037850787);
 }
 
 /**
  * FieldValues donne les valeurs distinctes d'une colonne désignée par son nom.
  */
 export function FieldValues(table: string, field: string): $CancellablePromise<canvas$0.FilterValue[] | null> {
-    return $Call.ByID(2964970657, table, field);
+    return $Call.ByID(1281823872, table, field);
 }
 
 /**
@@ -342,28 +342,28 @@ export function FieldValues(table: string, field: string): $CancellablePromise<c
  * proposé pour une requête).
  */
 export function FileBase(path: string): $CancellablePromise<string> {
-    return $Call.ByID(647236074, path);
+    return $Call.ByID(1326815165, path);
 }
 
 /**
  * FileTables liste les tables et vues d'un fichier de base (kind : "sqlite").
  */
 export function FileTables(kind: string, path: string): $CancellablePromise<query$0.DBTable[] | null> {
-    return $Call.ByID(669960542, kind, path);
+    return $Call.ByID(1813719805, kind, path);
 }
 
 /**
  * FilterValues donne les valeurs distinctes d'une colonne pour le filtre.
  */
 export function FilterValues(table: string, i: number): $CancellablePromise<canvas$0.FilterValue[] | null> {
-    return $Call.ByID(3461780889, table, i);
+    return $Call.ByID(773954254, table, i);
 }
 
 /**
  * Find cherche un texte dans une feuille (cellules dans l'ordre de lecture).
  */
 export function Find(sheet: number, text: string): $CancellablePromise<canvas$0.Match[] | null> {
-    return $Call.ByID(4206668974, sheet, text);
+    return $Call.ByID(2209243769, sheet, text);
 }
 
 /**
@@ -371,21 +371,21 @@ export function Find(sheet: number, text: string): $CancellablePromise<canvas$0.
  * et trousseau).
  */
 export function ForgetConnectionPassword(name: string): $CancellablePromise<void> {
-    return $Call.ByID(719773361, name);
+    return $Call.ByID(541366102, name);
 }
 
 /**
  * ForgetQueryCache vide le cache des sources de l'aperçu.
  */
 export function ForgetQueryCache(): $CancellablePromise<void> {
-    return $Call.ByID(3156251582);
+    return $Call.ByID(3234263277);
 }
 
 /**
  * FormulaHelp renvoie le catalogue de l'aide à la saisie.
  */
 export function FormulaHelp(): $CancellablePromise<$models.FormulaHelp> {
-    return $Call.ByID(1517433598);
+    return $Call.ByID(1854565667);
 }
 
 /**
@@ -393,57 +393,57 @@ export function FormulaHelp(): $CancellablePromise<$models.FormulaHelp> {
  * (path vide : boîte de dialogue), en une seule étape d'annulation.
  */
 export function Import(path: string): $CancellablePromise<$models.ImportResult> {
-    return $Call.ByID(545927768, path);
+    return $Call.ByID(1293434995, path);
 }
 
 export function InsertColumn(table: string, i: number, name: string): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(1903411822, table, i, name);
+    return $Call.ByID(2623907613, table, i, name);
 }
 
 export function InsertRow(table: string, n: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(3318204728, table, n);
+    return $Call.ByID(2995896157, table, n);
 }
 
 /**
  * InsertSheet ajoute un onglet avant l'onglet before et renvoie son identifiant.
  */
 export function InsertSheet(before: number): $CancellablePromise<number> {
-    return $Call.ByID(2301526607, before);
+    return $Call.ByID(3242252402, before);
 }
 
 /**
  * InsertSheetColumns insère n colonnes entières avant la colonne at de la feuille.
  */
 export function InsertSheetColumns(sheet: number, at: number, n: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(585782602, sheet, at, n);
+    return $Call.ByID(617743081, sheet, at, n);
 }
 
 /**
  * InsertSheetRows insère n lignes entières avant la ligne at de la feuille.
  */
 export function InsertSheetRows(sheet: number, at: number, n: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(2439944714, sheet, at, n);
+    return $Call.ByID(1186857943, sheet, at, n);
 }
 
 /**
  * KeyCheck dit si une colonne peut devenir la clé du tableau (vide : oui).
  */
 export function KeyCheck(table: string, i: number): $CancellablePromise<string> {
-    return $Call.ByID(3345463632, table, i);
+    return $Call.ByID(2170940615, table, i);
 }
 
 /**
  * Layout donne la mise en page d'une feuille (tableaux et cellules libres).
  */
 export function Layout(sheet: number): $CancellablePromise<canvas$0.Layout> {
-    return $Call.ByID(424945563, sheet);
+    return $Call.ByID(2081121064, sheet);
 }
 
 /**
  * MCPState décrit le serveur MCP.
  */
 export function MCPState(): $CancellablePromise<$models.MCPStatus> {
-    return $Call.ByID(1846870912);
+    return $Call.ByID(1343995807);
 }
 
 /**
@@ -451,7 +451,7 @@ export function MCPState(): $CancellablePromise<$models.MCPStatus> {
  * valeurs effacées (seule celle en haut à gauche est gardée).
  */
 export function MergeCells(sheet: number, r0: number, c0: number, r1: number, c1: number): $CancellablePromise<number> {
-    return $Call.ByID(350103724, sheet, r0, c0, r1, c1);
+    return $Call.ByID(1098984687, sheet, r0, c0, r1, c1);
 }
 
 /**
@@ -459,49 +459,49 @@ export function MergeCells(sheet: number, r0: number, c0: number, r1: number, c1
  * MoveCells déplace les cellules libres d'une plage de (dr, dc).
  */
 export function MoveCells(sheet: number, r0: number, c0: number, r1: number, c1: number, dr: number, dc: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(3170571341, sheet, r0, c0, r1, c1, dr, dc);
+    return $Call.ByID(455891772, sheet, r0, c0, r1, c1, dr, dc);
 }
 
 /**
  * MoveChart déplace un graphique.
  */
 export function MoveChart(id: number, row: number, col: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(566740440, id, row, col);
+    return $Call.ByID(1597876373, id, row, col);
 }
 
 /**
  * MoveSheet place un onglet au rang to (0 : premier).
  */
 export function MoveSheet(sheet: number, to: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(4221634211, sheet, to);
+    return $Call.ByID(1231887758, sheet, to);
 }
 
 /**
  * MoveTable déplace un tableau (fusion s'il est posé côte à côte d'un autre).
  */
 export function MoveTable(name: string, row: number, col: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(905164132, name, row, col);
+    return $Call.ByID(1700254381, name, row, col);
 }
 
 /**
  * New crée un classeur vide.
  */
 export function New(): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(2923110957);
+    return $Call.ByID(2885739304);
 }
 
 /**
  * NewQueryName propose un nom libre (« Requête1 », ou d'après base).
  */
 export function NewQueryName(base: string): $CancellablePromise<string> {
-    return $Call.ByID(2397457360, base);
+    return $Call.ByID(1241451847, base);
 }
 
 /**
  * Open ouvre un classeur (path vide : boîte de dialogue).
  */
 export function Open(path: string): $CancellablePromise<$models.OpenResult> {
-    return $Call.ByID(3724025261, path);
+    return $Call.ByID(968864030, path);
 }
 
 /**
@@ -510,21 +510,21 @@ export function Open(path: string): $CancellablePromise<$models.OpenResult> {
  * le garder.
  */
 export function OpenDemo(): $CancellablePromise<$models.DemoResult> {
-    return $Call.ByID(1389055070);
+    return $Call.ByID(3355681729);
 }
 
 /**
  * Orphans liste les sessions interrompues à proposer au démarrage.
  */
 export function Orphans(): $CancellablePromise<archive$0.Orphan[] | null> {
-    return $Call.ByID(4109158204);
+    return $Call.ByID(2899685153);
 }
 
 /**
  * Paste colle un bloc (presse-papiers d'Excel) à partir d'une cellule.
  */
 export function Paste(sheet: number, row: number, col: number, block: (string[] | null)[] | null): $CancellablePromise<canvas$0.Event> {
-    return $Call.ByID(4130142476, sheet, row, col, block);
+    return $Call.ByID(840855177, sheet, row, col, block);
 }
 
 /**
@@ -532,28 +532,28 @@ export function Paste(sheet: number, row: number, col: number, block: (string[] 
  * "parquet" ou "sqlite") ; "" si l'utilisateur annule.
  */
 export function PickDataFile(kind: string): $CancellablePromise<string> {
-    return $Call.ByID(2265459610, kind);
+    return $Call.ByID(3344599001, kind);
 }
 
 /**
  * PinNote épingle la note d'une cellule (toujours affichée) ou la remet en infobulle.
  */
 export function PinNote(sheet: number, row: number, col: number, pinned: boolean): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(3608485100, sheet, row, col, pinned);
+    return $Call.ByID(464474125, sheet, row, col, pinned);
 }
 
 /**
  * PlaceButton déplace et redimensionne un bouton.
  */
 export function PlaceButton(id: number, row: number, col: number, offX: number, offY: number, width: number, height: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(1043277412, id, row, col, offX, offY, width, height);
+    return $Call.ByID(4250097845, id, row, col, offX, offY, width, height);
 }
 
 /**
  * PlaceChart déplace et redimensionne un graphique (ancrage libre).
  */
 export function PlaceChart(id: number, row: number, col: number, offX: number, offY: number, width: number, height: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(2193253128, id, row, col, offX, offY, width, height);
+    return $Call.ByID(1575878103, id, row, col, offX, offY, width, height);
 }
 
 /**
@@ -561,7 +561,7 @@ export function PlaceChart(id: number, row: number, col: number, offX: number, o
  * après ses upto premières étapes (-1 : toutes). fresh relit les sources.
  */
 export function PreviewQuery(q: query$0.Query, upto: number, fresh: boolean): $CancellablePromise<query$0.Preview> {
-    return $Call.ByID(2679934665, q, upto, fresh);
+    return $Call.ByID(1395025182, q, upto, fresh);
 }
 
 /**
@@ -569,14 +569,14 @@ export function PreviewQuery(q: query$0.Query, upto: number, fresh: boolean): $C
  * (Fichier › Imprimer / Exporter en PDF).
  */
 export function PrintHTML(sheet: number): $CancellablePromise<string> {
-    return $Call.ByID(706296713, sheet);
+    return $Call.ByID(1446055356, sheet);
 }
 
 /**
  * PromoteHeader prend la première ligne d'un tableau comme en-têtes.
  */
 export function PromoteHeader(table: string): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(532047070, table);
+    return $Call.ByID(3209319035, table);
 }
 
 /**
@@ -584,28 +584,28 @@ export function PromoteHeader(table: string): $CancellablePromise<$models.DocSta
  * hors de l'historique d'annulation, comme Excel.
  */
 export function ProtectSheet(sheet: number, password: string): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(152349075, sheet, password);
+    return $Call.ByID(646792760, sheet, password);
 }
 
 /**
  * ProtectWorkbook protège la structure du classeur (onglets).
  */
 export function ProtectWorkbook(password: string): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(990396416, password);
+    return $Call.ByID(4052942421, password);
 }
 
 /**
  * Queries liste les requêtes du classeur.
  */
 export function Queries(): $CancellablePromise<query$0.Query[] | null> {
-    return $Call.ByID(1155033519);
+    return $Call.ByID(2158816722);
 }
 
 /**
  * Query exécute une requête SQL en lecture seule sur le classeur (onglet SQL).
  */
 export function Query(q: string): $CancellablePromise<grid$0.QueryResult> {
-    return $Call.ByID(2935912471, q);
+    return $Call.ByID(1193263682, q);
 }
 
 /**
@@ -614,7 +614,7 @@ export function Query(q: string): $CancellablePromise<grid$0.QueryResult> {
  * (vide : « Requête1 »…) ; headers : en-têtes affichés. Annulable.
  */
 export function QueryToSheet(q: string, name: string, headers: string[] | null): $CancellablePromise<$models.QuerySheet> {
-    return $Call.ByID(4222133085, q, name, headers);
+    return $Call.ByID(2558197242, q, name, headers);
 }
 
 /**
@@ -622,14 +622,14 @@ export function QueryToSheet(q: string, name: string, headers: string[] | null):
  * (Moyenne, Nb, Somme), en SQL : lignes first à first+count-1, colonnes cols.
  */
 export function RangeStats(sheet: number, table: number, first: number, count: number, cols: number[] | null): $CancellablePromise<grid$0.Stats> {
-    return $Call.ByID(3280475605, sheet, table, first, count, cols);
+    return $Call.ByID(179064470, sheet, table, first, count, cols);
 }
 
 /**
  * Recalc renouvelle AUJOURDHUI, MAINTENANT et ALEA (F9).
  */
 export function Recalc(): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(3502116793);
+    return $Call.ByID(1851472922);
 }
 
 /**
@@ -637,18 +637,18 @@ export function Recalc(): $CancellablePromise<$models.DocState> {
  * encore, du plus récent au plus ancien.
  */
 export function Recent(): $CancellablePromise<string[] | null> {
-    return $Call.ByID(1134676474);
+    return $Call.ByID(4286126885);
 }
 
 /**
  * Recover rouvre une session interrompue (répertoire de travail dir).
  */
 export function Recover(dir: string): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(3028961455, dir);
+    return $Call.ByID(836614650, dir);
 }
 
 export function Redo(): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(308727197);
+    return $Call.ByID(1784021454);
 }
 
 /**
@@ -661,7 +661,7 @@ export function Redo(): $CancellablePromise<$models.DocState> {
  * (columns : noms rendus par la requête), repris par des étapes Renommer.
  */
 export function ReferenceQuery(q: string, name: string, columns: string[] | null, headers: string[] | null): $CancellablePromise<$models.QueryRefresh> {
-    return $Call.ByID(208750754, q, name, columns, headers);
+    return $Call.ByID(835221209, q, name, columns, headers);
 }
 
 /**
@@ -669,7 +669,7 @@ export function ReferenceQuery(q: string, name: string, columns: string[] | null
  * tout), en une étape d'annulation.
  */
 export function RefreshAllQueries(): $CancellablePromise<$models.QueryRefresh> {
-    return $Call.ByID(2848501005);
+    return $Call.ByID(1125913140);
 }
 
 /**
@@ -677,35 +677,35 @@ export function RefreshAllQueries(): $CancellablePromise<$models.QueryRefresh> {
  * tableau remplacé (une étape d'annulation).
  */
 export function RefreshQuery(id: number): $CancellablePromise<$models.QueryRefresh> {
-    return $Call.ByID(155309716, id);
+    return $Call.ByID(1512484451, id);
 }
 
 /**
  * RemoveDuplicates supprime les lignes en double d'un tableau ; renvoie leur nombre.
  */
 export function RemoveDuplicates(table: string, cols: number[] | null): $CancellablePromise<number> {
-    return $Call.ByID(1454030531, table, cols);
+    return $Call.ByID(2034604952, table, cols);
 }
 
 /**
  * RenameFavorite renomme une requête favorite.
  */
 export function RenameFavorite(id: number, name: string): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(1239881375, id, name);
+    return $Call.ByID(1249389156, id, name);
 }
 
 /**
  * RenameSheet et DeleteSheet agissent sur un onglet.
  */
 export function RenameSheet(sheet: number, name: string): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(85727842, sheet, name);
+    return $Call.ByID(750369211, sheet, name);
 }
 
 /**
  * RenameTable renomme un tableau.
  */
 export function RenameTable(old: string, name: string): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(3362494641, old, name);
+    return $Call.ByID(1439044092, old, name);
 }
 
 /**
@@ -713,14 +713,14 @@ export function RenameTable(old: string, name: string): $CancellablePromise<$mod
  * cellules modifiées.
  */
 export function Replace(sheet: number, text: string, by: string): $CancellablePromise<number> {
-    return $Call.ByID(2849830015, sheet, text, by);
+    return $Call.ByID(2674593386, sheet, text, by);
 }
 
 /**
  * RunButton exécute l'action d'un bouton (clic dans la grille).
  */
 export function RunButton(id: number): $CancellablePromise<$models.ScriptResult> {
-    return $Call.ByID(1928049966, id);
+    return $Call.ByID(812354791, id);
 }
 
 /**
@@ -729,14 +729,14 @@ export function RunButton(id: number): $CancellablePromise<$models.ScriptResult>
  * d'annulation, nommée d'après le script.
  */
 export function RunScript(name: string, src: string): $CancellablePromise<$models.ScriptResult> {
-    return $Call.ByID(3285996221, name, src);
+    return $Call.ByID(1194755280, name, src);
 }
 
 /**
  * Save enregistre ; as (ou un classeur jamais enregistré) demande le fichier.
  */
 export function Save($as: boolean): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(3713623380, $as);
+    return $Call.ByID(64231195, $as);
 }
 
 /**
@@ -745,7 +745,7 @@ export function Save($as: boolean): $CancellablePromise<$models.DocState> {
  * n'est jamais écrit dans le classeur.
  */
 export function SaveConnection(c: query$0.Connection, password: string, remember: boolean): $CancellablePromise<number> {
-    return $Call.ByID(2886245604, c, password, remember);
+    return $Call.ByID(4143582795, c, password, remember);
 }
 
 /**
@@ -753,21 +753,21 @@ export function SaveConnection(c: query$0.Connection, password: string, remember
  * identifiant.
  */
 export function SaveQuery(q: query$0.Query): $CancellablePromise<number> {
-    return $Call.ByID(2122420080, q);
+    return $Call.ByID(3671332713, q);
 }
 
 /**
  * SaveScript enregistre un script (id 0 : nouveau) et renvoie son identifiant.
  */
 export function SaveScript(id: number, name: string, source: string): $CancellablePromise<number> {
-    return $Call.ByID(3570047407, id, name, source);
+    return $Call.ByID(816874412, id, name, source);
 }
 
 /**
  * Scripts liste la bibliothèque de scripts du classeur.
  */
 export function Scripts(): $CancellablePromise<canvas$0.ScriptInfo[] | null> {
-    return $Call.ByID(285284199);
+    return $Call.ByID(2140143930);
 }
 
 /**
@@ -775,35 +775,35 @@ export function Scripts(): $CancellablePromise<canvas$0.ScriptInfo[] | null> {
  * feuille de l'onglet SQL s'y lisent.
  */
 export function SetActiveSheet(sheet: number): $CancellablePromise<void> {
-    return $Call.ByID(3870118268, sheet);
+    return $Call.ByID(3714465619, sheet);
 }
 
 /**
  * SetButton change le libellé, le script ou la fonction d'un bouton.
  */
 export function SetButton(id: number, cfg: canvas$0.ButtonConfig): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(3335396311, id, cfg);
+    return $Call.ByID(2748002022, id, cfg);
 }
 
 /**
  * SetCell traite une saisie validée dans une cellule de la feuille.
  */
 export function SetCell(sheet: number, row: number, col: number, raw: string): $CancellablePromise<canvas$0.Event> {
-    return $Call.ByID(1429016395, sheet, row, col, raw);
+    return $Call.ByID(4265625758, sheet, row, col, raw);
 }
 
 /**
  * SetChart change la configuration d'un graphique.
  */
 export function SetChart(id: number, cfg: canvas$0.ChartConfig): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(2137167057, id, cfg);
+    return $Call.ByID(890277690, id, cfg);
 }
 
 /**
  * SetColumnWidth fixe la largeur d'une colonne de la feuille.
  */
 export function SetColumnWidth(sheet: number, col: number, width: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(1916242223, sheet, col, width);
+    return $Call.ByID(623622472, sheet, col, width);
 }
 
 /**
@@ -812,7 +812,7 @@ export function SetColumnWidth(sheet: number, col: number, width: number): $Canc
  * remember). Renvoie "" s'il est accepté, sinon le message d'erreur.
  */
 export function SetConnectionPassword(name: string, password: string, remember: boolean): $CancellablePromise<string> {
-    return $Call.ByID(1709343094, name, password, remember);
+    return $Call.ByID(3506854031, name, password, remember);
 }
 
 /**
@@ -820,28 +820,28 @@ export function SetConnectionPassword(name: string, password: string, remember: 
  * option --demo) ; seed 0 : graine par défaut.
  */
 export function SetDemo(preset: string, seed: number): $CancellablePromise<void> {
-    return $Call.ByID(2221492124, preset, seed);
+    return $Call.ByID(452298921, preset, seed);
 }
 
 /**
  * SetFilter remplace le filtre d'une colonne (nil : retire le filtre).
  */
 export function SetFilter(table: string, i: number, f: canvas$0.ColumnFilter | null): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(541852321, table, i, f);
+    return $Call.ByID(3208871712, table, i, f);
 }
 
 /**
  * SetFreeze fige les volets de la feuille (0, 0 : les libère).
  */
 export function SetFreeze(sheet: number, rows: number, cols: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(3509348088, sheet, rows, cols);
+    return $Call.ByID(2327743821, sheet, rows, cols);
 }
 
 /**
  * SetGridlines affiche ou masque le quadrillage de la feuille.
  */
 export function SetGridlines(sheet: number, show: boolean): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(1278244054, sheet, show);
+    return $Call.ByID(697489253, sheet, show);
 }
 
 /**
@@ -849,14 +849,14 @@ export function SetGridlines(sheet: number, show: boolean): $CancellablePromise<
  * formule, les lettres de colonnes et numéros de lignes de la feuille.
  */
 export function SetHeadings(sheet: number, show: boolean): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(240468400, sheet, show);
+    return $Call.ByID(1712569041, sheet, show);
 }
 
 /**
  * SetKey fait d'une colonne la clé du tableau.
  */
 export function SetKey(table: string, i: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(3567461950, table, i);
+    return $Call.ByID(1981085629, table, i);
 }
 
 /**
@@ -864,56 +864,56 @@ export function SetKey(table: string, i: number): $CancellablePromise<$models.Do
  * colonnes entières i0 à i1 de la feuille (aucune règle : la retire).
  */
 export function SetLineRules(sheet: number, rows: boolean, i0: number, i1: number, rules: canvas$0.Rule[] | null): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(1541007248, sheet, rows, i0, i1, rules);
+    return $Call.ByID(2997663987, sheet, rows, i0, i1, rules);
 }
 
 /**
  * SetLinesHidden masque ou affiche des lignes (rows) ou des colonnes [i0, i1].
  */
 export function SetLinesHidden(sheet: number, rows: boolean, i0: number, i1: number, hide: boolean): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(4208018554, sheet, rows, i0, i1, hide);
+    return $Call.ByID(3410588049, sheet, rows, i0, i1, hide);
 }
 
 /**
  * SetMCPEnabled active ou désactive le serveur MCP (réglage gardé).
  */
 export function SetMCPEnabled(on: boolean): $CancellablePromise<$models.MCPStatus> {
-    return $Call.ByID(1802628078, on);
+    return $Call.ByID(3086787999, on);
 }
 
 /**
  * SetName nomme une cellule libre (vide : retire le nom).
  */
 export function SetName(sheet: number, row: number, col: number, name: string): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(319879748, sheet, row, col, name);
+    return $Call.ByID(1061547909, sheet, row, col, name);
 }
 
 /**
  * SetNote pose la note d'une cellule (texte vide : la retire).
  */
 export function SetNote(sheet: number, row: number, col: number, text: string): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(2235772631, sheet, row, col, text);
+    return $Call.ByID(2247277922, sheet, row, col, text);
 }
 
 /**
  * SetPivot change la configuration d'un tableau croisé.
  */
 export function SetPivot(id: number, cfg: canvas$0.PivotConfig): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(1526825357, id, cfg);
+    return $Call.ByID(2338451198, id, cfg);
 }
 
 /**
  * SetRowHeight fixe la hauteur d'une ligne (0 : hauteur par défaut).
  */
 export function SetRowHeight(sheet: number, row: number, height: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(1962576274, sheet, row, height);
+    return $Call.ByID(234932537, sheet, row, height);
 }
 
 /**
  * SetRules remplace les règles de mise en forme conditionnelle d'une colonne.
  */
 export function SetRules(table: string, i: number, rules: canvas$0.Rule[] | null): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(1836090686, table, i, rules);
+    return $Call.ByID(1004185385, table, i, rules);
 }
 
 /**
@@ -921,28 +921,28 @@ export function SetRules(table: string, i: number, rules: canvas$0.Rule[] | null
  * vue (l'interface l'appelle à chaque changement) : ui.selection la lit.
  */
 export function SetSelection(sel: api$0.Selection): $CancellablePromise<void> {
-    return $Call.ByID(3429410115, sel);
+    return $Call.ByID(1169873088, sel);
 }
 
 /**
  * SetSheetColor fixe la couleur d'un onglet (« #rrggbb », vide : aucune).
  */
 export function SetSheetColor(sheet: number, color: string): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(1595035837, sheet, color);
+    return $Call.ByID(2553006228, sheet, color);
 }
 
 /**
  * SetSheetHidden masque ou affiche un onglet.
  */
 export function SetSheetHidden(sheet: number, hidden: boolean): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(3244300706, sheet, hidden);
+    return $Call.ByID(3324943109, sheet, hidden);
 }
 
 /**
  * SetType fixe le type d'une colonne (valeurs non convertibles marquées en erreur).
  */
 export function SetType(table: string, i: number, to: grid$0.Type): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(1037606431, table, i, to);
+    return $Call.ByID(2970216598, table, i, to);
 }
 
 /**
@@ -950,28 +950,28 @@ export function SetType(table: string, i: number, to: grid$0.Type): $Cancellable
  * journal d'annulation.
  */
 export function SetZoom(sheet: number, pct: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(2433371080, sheet, pct);
+    return $Call.ByID(1595119909, sheet, pct);
 }
 
 /**
  * SortTable trie un tableau selon la colonne i (desc : décroissant).
  */
 export function SortTable(table: string, i: number, desc: boolean): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(1605359047, table, i, desc);
+    return $Call.ByID(3731472066, table, i, desc);
 }
 
 /**
  * State décrit le classeur ouvert.
  */
 export function State(): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(1491925746);
+    return $Call.ByID(2337286659);
 }
 
 /**
  * StopScript arrête le script en cours (bouton Arrêter).
  */
 export function StopScript(): $CancellablePromise<void> {
-    return $Call.ByID(2070863182);
+    return $Call.ByID(862558389);
 }
 
 /**
@@ -979,7 +979,7 @@ export function StopScript(): $CancellablePromise<void> {
  * connexion ou du fichier de base, pour les guillemets des identifiants).
  */
 export function TableSQL(kind: string, schema: string, table: string): $CancellablePromise<string> {
-    return $Call.ByID(2653819301, kind, schema, table);
+    return $Call.ByID(4119477982, kind, schema, table);
 }
 
 /**
@@ -987,7 +987,7 @@ export function TableSQL(kind: string, schema: string, table: string): $Cancella
  * connu). Renvoie "" si elle répond, sinon le message d'erreur.
  */
 export function TestConnection(c: query$0.Connection, password: string, remember: boolean): $CancellablePromise<string> {
-    return $Call.ByID(3716934421, c, password, remember);
+    return $Call.ByID(3721400482, c, password, remember);
 }
 
 /**
@@ -996,7 +996,7 @@ export function TestConnection(c: query$0.Connection, password: string, remember
  * glisser de la bordure de la sélection (voir canvas.Model.Transfer).
  */
 export function Transfer($from: number, src: canvas$0.Rect, to: number, dst: canvas$0.Rect, move: boolean, values: (string[] | null)[] | null): $CancellablePromise<canvas$0.Event> {
-    return $Call.ByID(2795365586, $from, src, to, dst, move, values);
+    return $Call.ByID(2587500501, $from, src, to, dst, move, values);
 }
 
 /**
@@ -1004,42 +1004,42 @@ export function Transfer($from: number, src: canvas$0.Rect, to: number, dst: can
  * élargissement, et le nombre de valeurs qui n'en sont pas.
  */
 export function TypeMix(table: string, i: number): $CancellablePromise<canvas$0.Mix> {
-    return $Call.ByID(913517829, table, i);
+    return $Call.ByID(3509044616, table, i);
 }
 
 /**
  * Undo et Redo annulent et rétablissent.
  */
 export function Undo(): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(1702602619);
+    return $Call.ByID(74815564);
 }
 
 /**
  * UnmergeCells annule les fusions qui touchent un rectangle.
  */
 export function UnmergeCells(sheet: number, r0: number, c0: number, r1: number, c1: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(1081996215, sheet, r0, c0, r1, c1);
+    return $Call.ByID(2540767840, sheet, r0, c0, r1, c1);
 }
 
 /**
  * UnprotectSheet ôte la protection d'une feuille.
  */
 export function UnprotectSheet(sheet: number, password: string): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(2997544496, sheet, password);
+    return $Call.ByID(4209283687, sheet, password);
 }
 
 /**
  * UnprotectWorkbook ôte la protection de la structure du classeur.
  */
 export function UnprotectWorkbook(password: string): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(3983197373, password);
+    return $Call.ByID(1932212916, password);
 }
 
 /**
  * Window lit des lignes d'un tableau (lecture par fenêtres).
  */
 export function Window(sheet: number, table: number, first: number, count: number): $CancellablePromise<grid$0.Window> {
-    return $Call.ByID(4033404289, sheet, table, first, count);
+    return $Call.ByID(448852098, sheet, table, first, count);
 }
 
 /**
@@ -1047,5 +1047,5 @@ export function Window(sheet: number, table: number, first: number, count: numbe
  * fusions).
  */
 export function WorkbookTables(): $CancellablePromise<string[] | null> {
-    return $Call.ByID(2912537448);
+    return $Call.ByID(3899765683);
 }

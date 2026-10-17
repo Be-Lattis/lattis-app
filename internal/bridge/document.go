@@ -8,12 +8,12 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/lalamefine/slitable/internal/api"
-	"github.com/lalamefine/slitable/internal/archive"
-	"github.com/lalamefine/slitable/internal/canvas"
-	"github.com/lalamefine/slitable/internal/doc"
-	"github.com/lalamefine/slitable/internal/formula"
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/api"
+	"github.com/lalamefine/lattis/internal/archive"
+	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -118,7 +118,7 @@ func (s *DocumentService) Open(ctx context.Context, path string) (OpenResult, er
 	if path == "" {
 		p, err := application.Get().Dialog.OpenFile().
 			SetTitle("Ouvrir un classeur").
-			AddFilter("Classeur Slitable", "*.slitable").
+			AddFilter("Classeur Lattis", "*.lattis").
 			PromptForSingleSelection()
 		if err != nil {
 			return OpenResult{}, err
@@ -183,20 +183,20 @@ func (s *DocumentService) Save(ctx context.Context, as bool) (DocState, error) {
 	}
 	path := ""
 	if as || d.Path() == "" {
-		name := "Classeur.slitable"
+		name := "Classeur.lattis"
 		if d.Path() != "" {
 			name = filepath.Base(d.Path())
 		}
 		p, err := application.Get().Dialog.SaveFile().
 			SetMessage("Enregistrer le classeur").
 			SetFilename(name).
-			AddFilter("Classeur Slitable", "*.slitable").
+			AddFilter("Classeur Lattis", "*.lattis").
 			PromptForSingleSelection()
 		if err != nil || p == "" {
 			return s.State(ctx)
 		}
-		if !strings.HasSuffix(strings.ToLower(p), ".slitable") {
-			p += ".slitable"
+		if !strings.HasSuffix(strings.ToLower(p), ".lattis") {
+			p += ".lattis"
 		}
 		path = p
 	}
@@ -984,7 +984,7 @@ func remember[T any](ctx context.Context, s *DocumentService, kind, table string
 		return v, err
 	}
 	var id int64
-	if err := d.DB().Read().QueryRowContext(ctx, `SELECT id FROM _slitable_tables WHERE name = ?`, table).Scan(&id); err != nil {
+	if err := d.DB().Read().QueryRowContext(ctx, `SELECT id FROM _lattis_tables WHERE name = ?`, table).Scan(&id); err != nil {
 		return v, nil // tableau introuvable : résultat non gardé
 	}
 	s.mu.Lock()

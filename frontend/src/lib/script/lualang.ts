@@ -1,5 +1,5 @@
 // Coloration syntaxique des scripts Lua (onglet SCRIPT) : mots-clés, chaînes
-// (longues comprises), nombres, commentaires, et les noms de l'API Slitable
+// (longues comprises), nombres, commentaires, et les noms de l'API Lattis
 // (db, sheets, print…) tirés de la référence, dans les couleurs de l'éditeur SQL.
 
 import { HighlightStyle, StreamLanguage, syntaxHighlighting, type StringStream } from '@codemirror/language';

@@ -1,4 +1,4 @@
-module github.com/lalamefine/slitable/spikes/sqlite-drivers
+module github.com/lalamefine/lattis/spikes/sqlite-drivers
 
 go 1.26.0
 

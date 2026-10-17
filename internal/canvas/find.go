@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // MaxMatches borne une recherche.
@@ -106,7 +106,7 @@ func (m *Model) Find(ctx context.Context, sheet int64, text string) ([]Match, er
 			}
 			rs.Close()
 		}
-		rs, err := t.query(`SELECT row, col FROM _slitable_cells WHERE sheet = ? AND raw LIKE ? ESCAPE '\' LIMIT ?`, sheet, pattern, MaxMatches)
+		rs, err := t.query(`SELECT row, col FROM _lattis_cells WHERE sheet = ? AND raw LIKE ? ESCAPE '\' LIMIT ?`, sheet, pattern, MaxMatches)
 		if err != nil {
 			return err
 		}
@@ -224,7 +224,7 @@ func (t *tx) rawAt(sheet int64, row, col int) (string, bool, error) {
 		return *s, true, nil
 	}
 	var raw string
-	err = t.row(`SELECT raw FROM _slitable_cells WHERE sheet = ? AND row = ? AND col = ?`, sheet, row, col).Scan(&raw)
+	err = t.row(`SELECT raw FROM _lattis_cells WHERE sheet = ? AND row = ? AND col = ?`, sheet, row, col).Scan(&raw)
 	if err != nil {
 		return "", false, nil
 	}

@@ -105,7 +105,7 @@ func (g Merge) overlaps(r0, c0, r1, c1 int) bool {
 
 // merges lit les fusions de la feuille.
 func (t *tx) merges(sheet int64) ([]Merge, error) {
-	rs, err := t.query(`SELECT row, col, style FROM _slitable_cell_styles WHERE sheet = ? AND style LIKE '%"mr"%'`, sheet)
+	rs, err := t.query(`SELECT row, col, style FROM _lattis_cell_styles WHERE sheet = ? AND style LIKE '%"mr"%'`, sheet)
 	if err != nil {
 		return nil, err
 	}
@@ -276,9 +276,9 @@ func (m *Model) SetLinesHidden(ctx context.Context, sheet int64, rows bool, i0, 
 			}
 			return nil
 		}
-		table, col := `_slitable_col_styles`, `col`
+		table, col := `_lattis_col_styles`, `col`
 		if rows {
-			table, col = `_slitable_row_styles`, `row`
+			table, col = `_lattis_row_styles`, `row`
 		}
 		rs, err := t.query(`SELECT `+col+` FROM `+table+` WHERE sheet = ? AND `+col+` BETWEEN ? AND ? AND style LIKE '%"hd"%'`, sheet, i0, i1)
 		if err != nil {
@@ -317,13 +317,13 @@ func (m *Model) SetFreeze(ctx context.Context, sheet int64, rows, cols int) erro
 	}
 	return m.Do(ctx, label, func(t *tx) error {
 		var r, c int
-		if err := t.row(`SELECT freeze_rows, freeze_cols FROM _slitable_sheets WHERE id = ?`, sheet).Scan(&r, &c); err != nil {
+		if err := t.row(`SELECT freeze_rows, freeze_cols FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&r, &c); err != nil {
 			return err
 		}
 		if r == rows && c == cols {
 			return nil
 		}
-		q := `UPDATE _slitable_sheets SET freeze_rows = ?, freeze_cols = ? WHERE id = ?`
+		q := `UPDATE _lattis_sheets SET freeze_rows = ?, freeze_cols = ? WHERE id = ?`
 		return t.apply([]stmt{st(q, rows, cols, sheet)}, []stmt{st(q, r, c, sheet)})
 	})
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/formula"
+	"github.com/lalamefine/lattis/internal/formula"
 )
 
 // DepTarget est un antécédent ou un dépendant d'une cellule : une colonne de
@@ -80,7 +80,7 @@ func (m *Model) Dependencies(ctx context.Context, sheet int64, row, col int) (De
 	d.Precedents, d.Dependents = []DepTarget{}, []DepTarget{}
 	err := m.read(ctx, func(t *tx) error {
 		// Tous les tableaux et cellules nommées du classeur.
-		rs, err := t.query(`SELECT id FROM _slitable_tables`)
+		rs, err := t.query(`SELECT id FROM _lattis_tables`)
 		if err != nil {
 			return err
 		}
@@ -105,7 +105,7 @@ func (m *Model) Dependencies(ctx context.Context, sheet int64, row, col int) (De
 		}
 		names := map[string]named{}
 		nameAt := map[[3]int64]string{}
-		rs, err = t.query(`SELECT name, sheet, row, col FROM _slitable_names`)
+		rs, err = t.query(`SELECT name, sheet, row, col FROM _lattis_names`)
 		if err != nil {
 			return err
 		}
@@ -181,7 +181,7 @@ func (m *Model) Dependencies(ctx context.Context, sheet int64, row, col int) (De
 			}
 		} else {
 			subName = nameAt[[3]int64{sheet, int64(row), int64(col)}]
-			t.row(`SELECT raw FROM _slitable_cells WHERE sheet = ? AND row = ? AND col = ?`, sheet, row, col).Scan(&subRaw)
+			t.row(`SELECT raw FROM _lattis_cells WHERE sheet = ? AND row = ? AND col = ?`, sheet, row, col).Scan(&subRaw)
 			d.Subject = subName
 			if isFormula(subRaw) {
 				if n, err := formula.Parse(subRaw, formula.FR); err == nil {
@@ -222,7 +222,7 @@ func (m *Model) Dependencies(ctx context.Context, sheet int64, row, col int) (De
 				}
 			}
 		}
-		rs, err = t.query(`SELECT sheet, row, col, raw FROM _slitable_cells WHERE raw LIKE '=%'`)
+		rs, err = t.query(`SELECT sheet, row, col, raw FROM _lattis_cells WHERE raw LIKE '=%'`)
 		if err != nil {
 			return err
 		}

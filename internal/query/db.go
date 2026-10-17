@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/canvas"
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // Genres de connexion. Une connexion est enregistrée dans le classeur sans
@@ -235,7 +235,7 @@ func dialectOf(kind string) (*dialect, error) {
 
 // limitClause : SELECT * FROM (…) LIMIT n (PostgreSQL, MySQL, SQLite).
 func limitClause(q string, n int) string {
-	return "SELECT * FROM (" + q + "\n) AS _slitable_apercu LIMIT " + strconv.Itoa(n)
+	return "SELECT * FROM (" + q + "\n) AS _lattis_apercu LIMIT " + strconv.Itoa(n)
 }
 
 // quoteANSI écrit un identifiant entre guillemets doubles.
@@ -328,7 +328,7 @@ func TestConnection(ctx context.Context, sec *Secrets, c Connection, password st
 	return sec.Set(c.Account(), password, remember)
 }
 
-// sqlType donne le type Slitable d'un type SQL (nom rendu par le pilote :
+// sqlType donne le type Lattis d'un type SQL (nom rendu par le pilote :
 // INT4, NUMERIC, VARCHAR, DATETIME2…) ; "" : à inférer des valeurs.
 func sqlType(name string) grid.Type {
 	n := strings.ToUpper(strings.TrimSpace(name))
@@ -354,7 +354,7 @@ func sqlType(name string) grid.Type {
 }
 
 // dbValue ramène une valeur lue par un pilote au stockage de son type
-// Slitable.
+// Lattis.
 func dbValue(v any, t grid.Type) any {
 	switch x := v.(type) {
 	case nil:

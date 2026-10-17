@@ -7,7 +7,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // SheetInfo décrit un onglet.
@@ -144,7 +144,7 @@ type ColWidth struct {
 func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 	l := Layout{Sheet: sheet, Tables: []TableInfo{}, Cells: []CellInfo{}, Widths: []ColWidth{}, Heights: []RowHeight{}, Names: []NameInfo{}, Styles: []CellStyle{}}
 	err := m.read(ctx, func(t *tx) error {
-		rs, err := t.query(`SELECT id, name, gridlines = 0, headings <> 0, color, hidden <> 0, freeze_rows, freeze_cols, zoom FROM _slitable_sheets ORDER BY pos, id`)
+		rs, err := t.query(`SELECT id, name, gridlines = 0, headings <> 0, color, hidden <> 0, freeze_rows, freeze_cols, zoom FROM _lattis_sheets ORDER BY pos, id`)
 		if err != nil {
 			return err
 		}
@@ -171,7 +171,7 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 		}
 		for _, tb := range tables {
 			ti := TableInfo{ID: tb.ID, Name: tb.Name, SQL: tb.sql(), Row: tb.Row, Col: tb.Col, Rows: tb.Shown, Total: tb.Rows, Source: tb.view(), Key: -1}
-			if err := t.row(`SELECT id, name FROM _slitable_queries WHERE target = ? ORDER BY id LIMIT 1`, tb.ID).Scan(&ti.QueryID, &ti.QueryName); err != nil && !errors.Is(err, sql.ErrNoRows) {
+			if err := t.row(`SELECT id, name FROM _lattis_queries WHERE target = ? ORDER BY id LIMIT 1`, tb.ID).Scan(&ti.QueryID, &ti.QueryName); err != nil && !errors.Is(err, sql.ErrNoRows) {
 				return err
 			}
 			for i, c := range tb.Cols {
@@ -187,7 +187,7 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 				ti.Filter = string(b)
 			}
 			errs := map[int64]int{}
-			rs, err := t.query(`SELECT col, count(*) FROM _slitable_invalid WHERE tbl = ? GROUP BY col`, tb.ID)
+			rs, err := t.query(`SELECT col, count(*) FROM _lattis_invalid WHERE tbl = ? GROUP BY col`, tb.ID)
 			if err != nil {
 				return err
 			}
@@ -202,7 +202,7 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 			}
 			rs.Close()
 			colStyles := map[[2]int64]string{}
-			rs, err = t.query(`SELECT rid, col, style FROM _slitable_styles WHERE tbl = ? AND rid <= 0`, tb.ID)
+			rs, err = t.query(`SELECT rid, col, style FROM _lattis_styles WHERE tbl = ? AND rid <= 0`, tb.ID)
 			if err != nil {
 				return err
 			}
@@ -230,7 +230,7 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 			}
 			l.Tables = append(l.Tables, ti)
 		}
-		rs, err = t.query(`SELECT col, width FROM _slitable_col_widths WHERE sheet = ? ORDER BY col`, sheet)
+		rs, err = t.query(`SELECT col, width FROM _lattis_col_widths WHERE sheet = ? ORDER BY col`, sheet)
 		if err != nil {
 			return err
 		}
@@ -243,7 +243,7 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 			l.Widths = append(l.Widths, w)
 		}
 		rs.Close()
-		rs, err = t.query(`SELECT row, height FROM _slitable_row_heights WHERE sheet = ? ORDER BY row`, sheet)
+		rs, err = t.query(`SELECT row, height FROM _lattis_row_heights WHERE sheet = ? ORDER BY row`, sheet)
 		if err != nil {
 			return err
 		}
@@ -256,7 +256,7 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 			l.Heights = append(l.Heights, h)
 		}
 		rs.Close()
-		rs, err = t.query(`SELECT name, row, col FROM _slitable_names WHERE sheet = ? ORDER BY name`, sheet)
+		rs, err = t.query(`SELECT name, row, col FROM _lattis_names WHERE sheet = ? ORDER BY name`, sheet)
 		if err != nil {
 			return err
 		}
@@ -275,7 +275,7 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 		if l.RowRules, l.ColRules, err = t.lineRulesOf(sheet); err != nil {
 			return err
 		}
-		rs, err = t.query(`SELECT row, col, style FROM _slitable_cell_styles WHERE sheet = ?`, sheet)
+		rs, err = t.query(`SELECT row, col, style FROM _lattis_cell_styles WHERE sheet = ?`, sheet)
 		if err != nil {
 			return err
 		}
@@ -347,7 +347,7 @@ type TableNames struct {
 func (m *Model) AllTables(ctx context.Context) ([]TableNames, error) {
 	var out []TableNames
 	err := m.read(ctx, func(t *tx) error {
-		rs, err := t.query(`SELECT id FROM _slitable_tables ORDER BY name`)
+		rs, err := t.query(`SELECT id FROM _lattis_tables ORDER BY name`)
 		if err != nil {
 			return err
 		}

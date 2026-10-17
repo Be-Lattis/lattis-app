@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync/atomic"
 
-	"github.com/lalamefine/slitable/internal/demo"
+	"github.com/lalamefine/lattis/internal/demo"
 )
 
 // DemoProgress est l'avancement de la fabrication du classeur de démonstration.

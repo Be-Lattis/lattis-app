@@ -5,7 +5,7 @@
 | Sujet | Décision | Statut |
 |---|---|---|
 | Où arrivent les données | Chaque fichier ajoute des feuilles après les existantes ; un CSV donne une feuille nommée d'après le fichier, avec un tableau en haut à gauche (il prend donc le nom de la feuille) | Proposé |
-| Annulation | Tout l'import est **une** étape d'annulation. Les lignes ne passent pas par le journal : elles sont chargées dans une table `_slitable_trash_import_*` que l'opération renomme en `t_<id>` (l'annulation la renomme en sens inverse). Une table de chargement qu'aucune commande ne cite plus est supprimée au prochain import | Proposé |
+| Annulation | Tout l'import est **une** étape d'annulation. Les lignes ne passent pas par le journal : elles sont chargées dans une table `_lattis_trash_import_*` que l'opération renomme en `t_<id>` (l'annulation la renomme en sens inverse). Une table de chargement qu'aucune commande ne cite plus est supprimée au prochain import | Proposé |
 | Types | Inférés sur **toutes** les valeurs avant la création (aucun élargissement après coup). Un nombre avec un zéro en tête (`01234`) ou de plus de 15 chiffres reste du texte | Proposé |
 | CSV lu | Encodage détecté (BOM UTF-8 / UTF-16, sinon UTF-8, sinon Windows-1252), séparateur détecté parmi `; , tabulation \|`, guillemets et sauts de ligne dans les champs | Proposé |
 | CSV écrit | Par défaut « Excel français » : `;`, virgule décimale, dates jj/mm/aaaa, VRAI/FAUX, UTF-8 avec BOM. Style `Standard` (RFC 4180) disponible côté Go. Écriture dans un fichier temporaire puis renommage | Proposé |

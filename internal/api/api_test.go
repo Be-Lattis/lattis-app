@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lalamefine/slitable/internal/doc"
+	"github.com/lalamefine/lattis/internal/doc"
 )
 
 type fakeHost struct {

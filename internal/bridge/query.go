@@ -9,9 +9,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/lalamefine/slitable/internal/canvas"
-	"github.com/lalamefine/slitable/internal/doc"
-	"github.com/lalamefine/slitable/internal/query"
+	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/query"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -343,7 +343,6 @@ func (s *DocumentService) FileTables(ctx context.Context, kind, path string) ([]
 func (s *DocumentService) TableSQL(kind, schema, table string) string {
 	return query.TableSQL(kind, schema, table)
 }
-
 
 // PickDataFile demande un fichier source (kind : "csv", "xlsx", "json",
 // "parquet" ou "sqlite") ; "" si l'utilisateur annule.

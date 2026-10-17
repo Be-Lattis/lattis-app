@@ -1,4 +1,4 @@
-// Package query est l'équivalent de Power Query de Slitable (voir
+// Package query est l'équivalent de Power Query de Lattis (voir
 // docs/decisions/0003-sources-externes-power-query.md) : des requêtes
 // d'import enregistrées dans le classeur, faites d'une source (fichier CSV,
 // .xlsx, JSON, Parquet, SQLite ; tableau du classeur ; autre
@@ -17,8 +17,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/canvas"
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // Genres de source.

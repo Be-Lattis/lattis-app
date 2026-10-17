@@ -26,7 +26,7 @@ import (
 const DefaultPort = 47390
 
 // Settings sont les réglages du serveur, gardés avec les données de
-// l'application ; « slitable mcp » y lit le port et le jeton.
+// l'application ; « lattis mcp » y lit le port et le jeton.
 type Settings struct {
 	Enabled bool   `json:"enabled"`
 	Port    int    `json:"port"`
@@ -39,7 +39,7 @@ var settingsFile = func() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "Slitable", "mcp.json"), nil
+	return filepath.Join(dir, "Lattis", "mcp.json"), nil
 }
 
 // LoadSettings lit les réglages (désactivé par défaut) et crée le jeton s'il
@@ -168,11 +168,11 @@ func URL(port int) string { return fmt.Sprintf("http://127.0.0.1:%d/mcp", port) 
 
 // --- Relais stdio -------------------------------------------------------------
 
-// ErrNotRunning : Slitable n'est pas ouvert, ou son serveur est désactivé.
-var ErrNotRunning = errors.New("Slitable n'est pas ouvert, ou son serveur MCP est désactivé (Fichier › Serveur MCP)")
+// ErrNotRunning : Lattis n'est pas ouvert, ou son serveur est désactivé.
+var ErrNotRunning = errors.New("Lattis n'est pas ouvert, ou son serveur MCP est désactivé (Fichier › Serveur MCP)")
 
 // Proxy relaie les messages MCP lus sur in (un par ligne) vers l'application
-// ouverte et écrit ses réponses sur out : c'est la commande « slitable mcp »
+// ouverte et écrit ses réponses sur out : c'est la commande « lattis mcp »
 // que lancent les clients stdio.
 func Proxy(in io.Reader, out io.Writer) error {
 	client := &http.Client{}
@@ -237,7 +237,7 @@ func forward(client *http.Client, msg []byte) ([]byte, error) {
 		return nil, nil
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Slitable : %s", strings.TrimSpace(string(body)))
+		return nil, fmt.Errorf("Lattis : %s", strings.TrimSpace(string(body)))
 	}
 	return body, nil
 }
@@ -255,7 +255,7 @@ func errorReply(msg []byte, err error) []byte {
 		return encode(response{JSONRPC: "2.0", ID: req.ID, Result: map[string]any{
 			"protocolVersion": versions[0],
 			"capabilities":    map[string]any{"tools": map[string]any{}},
-			"serverInfo":      map[string]any{"name": "slitable", "version": ""},
+			"serverInfo":      map[string]any{"name": "lattis", "version": ""},
 			"instructions":    err.Error(),
 		}})
 	}

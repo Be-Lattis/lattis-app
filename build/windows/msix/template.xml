@@ -8,15 +8,15 @@
         AllowPromptForPassword="false">
     </Settings>
     <Installer
-        Path="slitable"
+        Path="lattis"
         Arguments=""
-        InstallLocation="C:\Program Files\Slitable\Slitable">
+        InstallLocation="C:\Program Files\Lattis\Lattis">
     </Installer>
     <PackageInformation
-        PackageName="Slitable"
-        PackageDisplayName="Slitable"
-        PublisherName="CN=Slitable"
-        PublisherDisplayName="Slitable"
+        PackageName="Lattis"
+        PackageDisplayName="Lattis"
+        PublisherName="CN=Lattis"
+        PublisherDisplayName="Lattis"
         Version="0.1.0.0"
         PackageDescription="Tableur relationnel local-first">
         <Capabilities>
@@ -25,10 +25,10 @@
         </Capabilities>
         <Applications>
             <Application
-                Id="fr.triboulin.slitable"
+                Id="fr.triboulin.lattis"
                 Description="Tableur relationnel local-first"
-                DisplayName="Slitable"
-                ExecutableName="slitable"
+                DisplayName="Lattis"
+                ExecutableName="lattis"
                 EntryPoint="Windows.FullTrustApplication">
                 
             </Application>
@@ -41,13 +41,13 @@
         </Dependencies>
         <Properties>
             <Framework>false</Framework>
-            <DisplayName>Slitable</DisplayName>
-            <PublisherDisplayName>Slitable</PublisherDisplayName>
+            <DisplayName>Lattis</DisplayName>
+            <PublisherDisplayName>Lattis</PublisherDisplayName>
             <Description>Tableur relationnel local-first</Description>
             <Logo>Assets\AppIcon.png</Logo>
         </Properties>
     </PackageInformation>
-    <SaveLocation PackagePath="slitable.msix" />
+    <SaveLocation PackagePath="lattis.msix" />
     <PackageIntegrity>
         <CertificatePath></CertificatePath>
     </PackageIntegrity>

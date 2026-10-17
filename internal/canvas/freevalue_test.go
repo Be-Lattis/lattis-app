@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/formula"
+	"github.com/lalamefine/lattis/internal/formula"
 )
 
 // Une liste de nombres saisie l'un sous l'autre devient un tableau sans

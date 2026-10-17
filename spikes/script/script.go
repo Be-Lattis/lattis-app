@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/store"
+	"github.com/lalamefine/lattis/internal/store"
 	lua "github.com/yuin/gopher-lua"
 )
 

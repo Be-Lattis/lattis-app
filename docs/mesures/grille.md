@@ -1,6 +1,6 @@
 # Prototype de grille (spike 1.1) : mesures
 
-Tableau de démonstration : 1 000 000 lignes × 20 colonnes (entiers, décimaux, textes, dates, booléen) dans une table SQLite `STRICT`, driver `ncruces/go-sqlite3`, WAL. Généré au premier lancement dans `os.UserCacheDir()/Slitable/prototype/demo.sqlite` (≈ 15 s, environ 300 Mo).
+Tableau de démonstration : 1 000 000 lignes × 20 colonnes (entiers, décimaux, textes, dates, booléen) dans une table SQLite `STRICT`, driver `ncruces/go-sqlite3`, WAL. Généré au premier lancement dans `os.UserCacheDir()/Lattis/prototype/demo.sqlite` (≈ 15 s, environ 300 Mo).
 
 ## Architecture mesurée
 
@@ -15,7 +15,7 @@ Tableau de démonstration : 1 000 000 lignes × 20 colonnes (entiers, décimaux,
 Bouton **Mesurer** dans l'application, ou mesure automatique :
 
 ```bash
-SLITABLE_BENCH=resultat.json ./bin/slitable
+LATTIS_BENCH=resultat.json ./bin/lattis
 ```
 
 L'application s'ouvre, mesure, écrit le JSON et se ferme. La mesure enchaîne :

@@ -49,7 +49,7 @@ func TestSaveOpenRoundTrip(t *testing.T) {
 	}
 	exec1(t, d, `CREATE TABLE t (id INTEGER PRIMARY KEY, v TEXT) STRICT`)
 	exec1(t, d, `INSERT INTO t (v) VALUES ('a'), ('b')`)
-	path := filepath.Join(t.TempDir(), "classeur.slitable")
+	path := filepath.Join(t.TempDir(), "classeur.lattis")
 	if err := d.Save(ctx, path); err != nil {
 		t.Fatal(err)
 	}
@@ -88,11 +88,11 @@ func TestSaveOpenRoundTrip(t *testing.T) {
 
 func TestRejectsNewerFormat(t *testing.T) {
 	useRoot(t)
-	path := filepath.Join(t.TempDir(), "futur.slitable")
+	path := filepath.Join(t.TempDir(), "futur.lattis")
 	f, _ := os.Create(path)
 	zw := zip.NewWriter(f)
 	w, _ := zw.Create(manifestName)
-	w.Write([]byte("format_version: 99\napplication: Slitable\n"))
+	w.Write([]byte("format_version: 99\napplication: Lattis\n"))
 	w, _ = zw.Create(dbName)
 	w.Write([]byte("x"))
 	zw.Close()
@@ -106,7 +106,7 @@ func TestRejectsNewerFormat(t *testing.T) {
 // le répertoire de travail orphelin est proposé en récupération, avec les
 // écritures validées avant l'arrêt.
 func TestCrashRecovery(t *testing.T) {
-	if os.Getenv("SLITABLE_CRASH_CHILD") != "" {
+	if os.Getenv("LATTIS_CRASH_CHILD") != "" {
 		crashChild()
 		return
 	}
@@ -118,7 +118,7 @@ func TestCrashRecovery(t *testing.T) {
 	}
 	exec1(t, d, `CREATE TABLE t (id INTEGER PRIMARY KEY, v TEXT) STRICT`)
 	exec1(t, d, `INSERT INTO t (v) VALUES ('enregistré')`)
-	path := filepath.Join(t.TempDir(), "crash.slitable")
+	path := filepath.Join(t.TempDir(), "crash.lattis")
 	if err := d.Save(ctx, path); err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +127,7 @@ func TestCrashRecovery(t *testing.T) {
 	// Enfant : ouvre l'archive, écrit, puis meurt brutalement (os.Exit sans
 	// fermer la base ni relâcher le verrou).
 	cmd := exec.Command(os.Args[0], "-test.run=^TestCrashRecovery$")
-	cmd.Env = append(os.Environ(), "SLITABLE_CRASH_CHILD="+path, "SLITABLE_CRASH_ROOT="+root)
+	cmd.Env = append(os.Environ(), "LATTIS_CRASH_CHILD="+path, "LATTIS_CRASH_ROOT="+root)
 	out, err := cmd.CombinedOutput()
 	var exit *exec.ExitError
 	if !errors.As(err, &exit) || exit.ExitCode() != 3 {
@@ -160,8 +160,8 @@ func TestCrashRecovery(t *testing.T) {
 }
 
 func crashChild() {
-	Root = func() (string, error) { return os.Getenv("SLITABLE_CRASH_ROOT"), nil }
-	d, err := Open(os.Getenv("SLITABLE_CRASH_CHILD"))
+	Root = func() (string, error) { return os.Getenv("LATTIS_CRASH_ROOT"), nil }
+	d, err := Open(os.Getenv("LATTIS_CRASH_CHILD"))
 	if err != nil {
 		panic(err)
 	}

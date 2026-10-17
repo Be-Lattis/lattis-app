@@ -8,15 +8,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // TestMesureSauvegarde mesure l'enregistrement et la réouverture d'un
-// classeur de SLITABLE_MESURE lignes (tableau de démonstration, 20 colonnes).
+// classeur de LATTIS_MESURE lignes (tableau de démonstration, 20 colonnes).
 func TestMesureSauvegarde(t *testing.T) {
-	rows, _ := strconv.Atoi(os.Getenv("SLITABLE_MESURE"))
+	rows, _ := strconv.Atoi(os.Getenv("LATTIS_MESURE"))
 	if rows <= 0 {
-		t.Skip("SLITABLE_MESURE=<nombre de lignes> pour lancer la mesure")
+		t.Skip("LATTIS_MESURE=<nombre de lignes> pour lancer la mesure")
 	}
 	useRoot(t)
 	ctx := context.Background()
@@ -27,7 +27,7 @@ func TestMesureSauvegarde(t *testing.T) {
 	if err := grid.CreateDemo(ctx, d.DB, rows, nil); err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(t.TempDir(), "gros.slitable")
+	path := filepath.Join(t.TempDir(), "gros.lattis")
 	start := time.Now()
 	if err := d.Save(ctx, path); err != nil {
 		t.Fatal(err)

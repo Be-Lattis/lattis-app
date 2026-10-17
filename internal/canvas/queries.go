@@ -54,7 +54,7 @@ func (m *Model) Queries(ctx context.Context) ([]QueryDef, error) {
 
 func (t *tx) queries() ([]QueryDef, error) {
 	rs, err := t.query(`SELECT q.id, q.name, q.source, q.steps, coalesce(t.name, ''), coalesce(t.sheet, 0), coalesce(q.refreshed, '')
-		FROM _slitable_queries q LEFT JOIN _slitable_tables t ON t.id = q.target ORDER BY q.name COLLATE NOCASE`)
+		FROM _lattis_queries q LEFT JOIN _lattis_tables t ON t.id = q.target ORDER BY q.name COLLATE NOCASE`)
 	if err != nil {
 		return nil, err
 	}
@@ -123,23 +123,23 @@ func (m *Model) SaveQuery(ctx context.Context, q QueryDef) (int64, error) {
 	id := q.ID
 	err := m.Do(ctx, label, func(t *tx) error {
 		var k int
-		if err := t.row(`SELECT count(*) FROM _slitable_queries WHERE name = ? COLLATE NOCASE AND id <> ?`, q.Name, q.ID).Scan(&k); err != nil {
+		if err := t.row(`SELECT count(*) FROM _lattis_queries WHERE name = ? COLLATE NOCASE AND id <> ?`, q.Name, q.ID).Scan(&k); err != nil {
 			return err
 		}
 		if k > 0 {
 			return fmt.Errorf("%w : « %s » existe déjà", ErrQuery, q.Name)
 		}
 		if q.ID == 0 {
-			if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _slitable_queries`).Scan(&id); err != nil {
+			if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_queries`).Scan(&id); err != nil {
 				return err
 			}
 			return t.apply(
-				[]stmt{st(`INSERT INTO _slitable_queries (id, name, source, steps) VALUES (?, ?, ?, ?)`, id, q.Name, q.Source, q.Steps)},
-				[]stmt{st(`DELETE FROM _slitable_queries WHERE id = ?`, id)},
+				[]stmt{st(`INSERT INTO _lattis_queries (id, name, source, steps) VALUES (?, ?, ?, ?)`, id, q.Name, q.Source, q.Steps)},
+				[]stmt{st(`DELETE FROM _lattis_queries WHERE id = ?`, id)},
 			)
 		}
 		var name, source, steps string
-		if err := t.row(`SELECT name, source, steps FROM _slitable_queries WHERE id = ?`, q.ID).Scan(&name, &source, &steps); err != nil {
+		if err := t.row(`SELECT name, source, steps FROM _lattis_queries WHERE id = ?`, q.ID).Scan(&name, &source, &steps); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return fmt.Errorf("%w introuvable", ErrQuery)
 			}
@@ -148,7 +148,7 @@ func (m *Model) SaveQuery(ctx context.Context, q QueryDef) (int64, error) {
 		if name == q.Name && source == q.Source && steps == q.Steps {
 			return nil
 		}
-		u := `UPDATE _slitable_queries SET name = ?, source = ?, steps = ? WHERE id = ?`
+		u := `UPDATE _lattis_queries SET name = ?, source = ?, steps = ? WHERE id = ?`
 		return t.apply([]stmt{st(u, q.Name, q.Source, q.Steps, q.ID)}, []stmt{st(u, name, source, steps, q.ID)})
 	})
 	return id, err
@@ -161,7 +161,7 @@ func (m *Model) DeleteQuery(ctx context.Context, id int64) error {
 		var name, source, steps string
 		var target sql.NullInt64
 		var refreshed sql.NullString
-		if err := t.row(`SELECT name, source, steps, target, refreshed FROM _slitable_queries WHERE id = ?`, id).Scan(&name, &source, &steps, &target, &refreshed); err != nil {
+		if err := t.row(`SELECT name, source, steps, target, refreshed FROM _lattis_queries WHERE id = ?`, id).Scan(&name, &source, &steps, &target, &refreshed); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return fmt.Errorf("%w introuvable", ErrQuery)
 			}
@@ -172,8 +172,8 @@ func (m *Model) DeleteQuery(ctx context.Context, id int64) error {
 			tgt = target.Int64
 		}
 		return t.apply(
-			[]stmt{st(`DELETE FROM _slitable_queries WHERE id = ?`, id)},
-			[]stmt{st(`INSERT INTO _slitable_queries (id, name, source, steps, target, refreshed) VALUES (?, ?, ?, ?, ?, ?)`, id, name, source, steps, tgt, nullable(refreshed))},
+			[]stmt{st(`DELETE FROM _lattis_queries WHERE id = ?`, id)},
+			[]stmt{st(`INSERT INTO _lattis_queries (id, name, source, steps, target, refreshed) VALUES (?, ?, ?, ?, ?, ?)`, id, name, source, steps, tgt, nullable(refreshed))},
 		)
 	})
 }
@@ -197,7 +197,7 @@ func (m *Model) LoadQuery(ctx context.Context, id int64, it ImportTable) (QueryL
 	var res QueryLoad
 	var qname string
 	if err := m.read(ctx, func(t *tx) error {
-		return t.row(`SELECT name FROM _slitable_queries WHERE id = ?`, id).Scan(&qname)
+		return t.row(`SELECT name FROM _lattis_queries WHERE id = ?`, id).Scan(&qname)
 	}); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return res, fmt.Errorf("%w introuvable", ErrQuery)
@@ -208,7 +208,7 @@ func (m *Model) LoadQuery(ctx context.Context, id int64, it ImportTable) (QueryL
 		res = QueryLoad{Warnings: []string{}}
 		var target sql.NullInt64
 		var refreshed sql.NullString
-		if err := t.row(`SELECT target, refreshed FROM _slitable_queries WHERE id = ?`, id).Scan(&target, &refreshed); err != nil {
+		if err := t.row(`SELECT target, refreshed FROM _lattis_queries WHERE id = ?`, id).Scan(&target, &refreshed); err != nil {
 			return err
 		}
 		if err := t.purgeImports(); err != nil {
@@ -281,7 +281,7 @@ func (m *Model) LoadQuery(ctx context.Context, id int64, it ImportTable) (QueryL
 		if target.Valid {
 			oldTarget = target.Int64
 		}
-		u := `UPDATE _slitable_queries SET target = ?, refreshed = ? WHERE id = ?`
+		u := `UPDATE _lattis_queries SET target = ?, refreshed = ? WHERE id = ?`
 		now := time.Now().Format("2006-01-02 15:04:05")
 		if err := t.apply([]stmt{st(u, tb.ID, now, id)}, []stmt{st(u, oldTarget, nullable(refreshed), id)}); err != nil {
 			return err
@@ -302,7 +302,7 @@ func (t *tx) freeTableName(name string) (string, error) {
 	cand := base
 	for n := 2; ; n++ {
 		var k int
-		if err := t.row(`SELECT count(*) FROM _slitable_tables WHERE name = ? COLLATE NOCASE`, cand).Scan(&k); err != nil {
+		if err := t.row(`SELECT count(*) FROM _lattis_tables WHERE name = ? COLLATE NOCASE`, cand).Scan(&k); err != nil {
 			return "", err
 		}
 		if k == 0 {
@@ -316,7 +316,7 @@ func (t *tx) freeTableName(name string) (string, error) {
 func (m *Model) Connections(ctx context.Context) ([]ConnectionDef, error) {
 	out := []ConnectionDef{}
 	err := m.read(ctx, func(t *tx) error {
-		rs, err := t.query(`SELECT id, name, kind, config FROM _slitable_connections ORDER BY name COLLATE NOCASE`)
+		rs, err := t.query(`SELECT id, name, kind, config FROM _lattis_connections ORDER BY name COLLATE NOCASE`)
 		if err != nil {
 			return err
 		}
@@ -351,23 +351,23 @@ func (m *Model) SaveConnection(ctx context.Context, c ConnectionDef) (int64, err
 	id := c.ID
 	err := m.Do(ctx, label, func(t *tx) error {
 		var k int
-		if err := t.row(`SELECT count(*) FROM _slitable_connections WHERE name = ? COLLATE NOCASE AND id <> ?`, c.Name, c.ID).Scan(&k); err != nil {
+		if err := t.row(`SELECT count(*) FROM _lattis_connections WHERE name = ? COLLATE NOCASE AND id <> ?`, c.Name, c.ID).Scan(&k); err != nil {
 			return err
 		}
 		if k > 0 {
 			return fmt.Errorf("%w : la connexion « %s » existe déjà", ErrQuery, c.Name)
 		}
 		if c.ID == 0 {
-			if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _slitable_connections`).Scan(&id); err != nil {
+			if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_connections`).Scan(&id); err != nil {
 				return err
 			}
 			return t.apply(
-				[]stmt{st(`INSERT INTO _slitable_connections (id, name, kind, config) VALUES (?, ?, ?, ?)`, id, c.Name, c.Kind, c.Config)},
-				[]stmt{st(`DELETE FROM _slitable_connections WHERE id = ?`, id)},
+				[]stmt{st(`INSERT INTO _lattis_connections (id, name, kind, config) VALUES (?, ?, ?, ?)`, id, c.Name, c.Kind, c.Config)},
+				[]stmt{st(`DELETE FROM _lattis_connections WHERE id = ?`, id)},
 			)
 		}
 		var old ConnectionDef
-		if err := t.row(`SELECT name, kind, config FROM _slitable_connections WHERE id = ?`, c.ID).Scan(&old.Name, &old.Kind, &old.Config); err != nil {
+		if err := t.row(`SELECT name, kind, config FROM _lattis_connections WHERE id = ?`, c.ID).Scan(&old.Name, &old.Kind, &old.Config); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return fmt.Errorf("%w : connexion introuvable", ErrQuery)
 			}
@@ -381,7 +381,7 @@ func (m *Model) SaveConnection(ctx context.Context, c ConnectionDef) (int64, err
 				return err
 			}
 		}
-		u := `UPDATE _slitable_connections SET name = ?, kind = ?, config = ? WHERE id = ?`
+		u := `UPDATE _lattis_connections SET name = ?, kind = ?, config = ? WHERE id = ?`
 		return t.apply([]stmt{st(u, c.Name, c.Kind, c.Config, c.ID)}, []stmt{st(u, old.Name, old.Kind, old.Config, c.ID)})
 	})
 	return id, err
@@ -390,7 +390,7 @@ func (m *Model) SaveConnection(ctx context.Context, c ConnectionDef) (int64, err
 // connectionUsed donne le nom d'une requête dont la source cite la
 // connexion, "" si aucune.
 func (t *tx) connectionUsed(name string) (string, error) {
-	rs, err := t.query(`SELECT name FROM _slitable_queries WHERE json_extract(source, '$.connection') = ? COLLATE NOCASE ORDER BY name`, name)
+	rs, err := t.query(`SELECT name FROM _lattis_queries WHERE json_extract(source, '$.connection') = ? COLLATE NOCASE ORDER BY name`, name)
 	if err != nil {
 		return "", err
 	}
@@ -407,7 +407,7 @@ func (t *tx) connectionUsed(name string) (string, error) {
 func (m *Model) DeleteConnection(ctx context.Context, id int64) error {
 	return m.Do(ctx, "Supprimer la connexion", func(t *tx) error {
 		var c ConnectionDef
-		if err := t.row(`SELECT name, kind, config FROM _slitable_connections WHERE id = ?`, id).Scan(&c.Name, &c.Kind, &c.Config); err != nil {
+		if err := t.row(`SELECT name, kind, config FROM _lattis_connections WHERE id = ?`, id).Scan(&c.Name, &c.Kind, &c.Config); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return fmt.Errorf("%w : connexion introuvable", ErrQuery)
 			}
@@ -421,8 +421,8 @@ func (m *Model) DeleteConnection(ctx context.Context, id int64) error {
 			return fmt.Errorf("%w : la connexion « %s » sert à la requête « %s »", ErrQuery, c.Name, used)
 		}
 		return t.apply(
-			[]stmt{st(`DELETE FROM _slitable_connections WHERE id = ?`, id)},
-			[]stmt{st(`INSERT INTO _slitable_connections (id, name, kind, config) VALUES (?, ?, ?, ?)`, id, c.Name, c.Kind, c.Config)},
+			[]stmt{st(`DELETE FROM _lattis_connections WHERE id = ?`, id)},
+			[]stmt{st(`INSERT INTO _lattis_connections (id, name, kind, config) VALUES (?, ?, ?, ?)`, id, c.Name, c.Kind, c.Config)},
 		)
 	})
 }

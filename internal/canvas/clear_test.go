@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // Supprimer sur des cellules libres vide tout : valeurs, mise en forme,

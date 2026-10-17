@@ -1,7 +1,7 @@
 package canvas
 
 import (
-	"github.com/lalamefine/slitable/internal/formula"
+	"github.com/lalamefine/lattis/internal/formula"
 )
 
 // MaxSpillRows borne le nombre de lignes déversées par une cellule.

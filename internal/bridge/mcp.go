@@ -5,7 +5,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/lalamefine/slitable/internal/mcp"
+	"github.com/lalamefine/lattis/internal/mcp"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -44,7 +44,7 @@ func (s *DocumentService) startMCP(st mcp.Settings) {
 	if s.mcp.ln != nil {
 		return
 	}
-	srv := &mcp.Server{Host: host{s}, Name: "slitable", Version: Version}
+	srv := &mcp.Server{Host: host{s}, Name: "lattis", Version: Version}
 	ln, err := mcp.Listen(srv, st.Port, st.Token)
 	if err != nil {
 		s.mcp.err = err.Error()

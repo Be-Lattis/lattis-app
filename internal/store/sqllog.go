@@ -20,7 +20,7 @@ import (
 // de travail de Power Query, fichier SQLite source) est écrite dans la
 // console (sortie d'erreur), avec sa durée et la connexion. Actif par
 // défaut hors version livrée (go run, wails dev), sinon avec --sql ;
-// SLITABLE_SQL=1 ou 0 force. Une requête répétée à l'identique (insertion
+// LATTIS_SQL=1 ou 0 force. Une requête répétée à l'identique (insertion
 // ligne à ligne d'un import) n'est écrite qu'une fois, suivie du nombre de
 // répétitions.
 //
@@ -31,7 +31,7 @@ var sqlLog atomic.Bool
 
 func init() {
 	sqlLog.Store(defaultSQLLog)
-	switch os.Getenv("SLITABLE_SQL") {
+	switch os.Getenv("LATTIS_SQL") {
 	case "1", "true", "oui":
 		sqlLog.Store(true)
 	case "0", "false", "non":

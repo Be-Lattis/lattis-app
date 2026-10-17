@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/grid"
-	"github.com/lalamefine/slitable/internal/store"
+	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/store"
 )
 
 func mustParse(t testing.TB, src string, loc Locale) Node {

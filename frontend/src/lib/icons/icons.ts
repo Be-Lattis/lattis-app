@@ -1,4 +1,4 @@
-// Jeu d'icônes de Slitable : grille de 24 × 24, trait de 1,5, extrémités
+// Jeu d'icônes de Lattis : grille de 24 × 24, trait de 1,5, extrémités
 // arrondies, dessinées pour rester lisibles à 16 px (barre de titre, menus)
 // comme à 24 px (ruban).
 //

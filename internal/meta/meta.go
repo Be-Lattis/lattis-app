@@ -1,4 +1,4 @@
-// Package meta définit le schéma des tables de métadonnées _slitable_* et
+// Package meta définit le schéma des tables de métadonnées _lattis_* et
 // ses migrations.
 //
 // La version du format est le user_version de SQLite : chaque migration fait
@@ -15,8 +15,8 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/lalamefine/slitable/internal/command"
-	"github.com/lalamefine/slitable/internal/store"
+	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/store"
 )
 
 // migrations[i] fait passer la base de la version i à la version i+1.
@@ -24,20 +24,20 @@ var migrations = []string{
 	// 0 → 1 : feuilles, tableaux, colonnes, cellules libres, saisies
 	// invalides, journal des commandes.
 	`
-CREATE TABLE _slitable_sheets (
+CREATE TABLE _lattis_sheets (
 	id   INTEGER PRIMARY KEY,
 	name TEXT NOT NULL UNIQUE,
 	pos  INTEGER NOT NULL          -- rang de l'onglet
 ) STRICT;
-CREATE TABLE _slitable_tables (
+CREATE TABLE _lattis_tables (
 	id    INTEGER PRIMARY KEY,
-	sheet INTEGER NOT NULL REFERENCES _slitable_sheets(id),
+	sheet INTEGER NOT NULL REFERENCES _lattis_sheets(id),
 	name  TEXT NOT NULL UNIQUE,
 	row   INTEGER NOT NULL,        -- ancre : ligne d'en-tête
 	col   INTEGER NOT NULL         -- ancre : première colonne
 ) STRICT;
-CREATE TABLE _slitable_columns (
-	tbl   INTEGER NOT NULL REFERENCES _slitable_tables(id),
+CREATE TABLE _lattis_columns (
+	tbl   INTEGER NOT NULL REFERENCES _lattis_tables(id),
 	id    INTEGER NOT NULL,
 	name  TEXT NOT NULL,
 	type  TEXT NOT NULL,
@@ -45,27 +45,27 @@ CREATE TABLE _slitable_columns (
 	pos   INTEGER NOT NULL,           -- rang d'affichage, 0..n-1
 	PRIMARY KEY (tbl, id)
 ) STRICT;
-CREATE TABLE _slitable_cells (
-	sheet INTEGER NOT NULL REFERENCES _slitable_sheets(id),
+CREATE TABLE _lattis_cells (
+	sheet INTEGER NOT NULL REFERENCES _lattis_sheets(id),
 	row   INTEGER NOT NULL,
 	col   INTEGER NOT NULL,
 	raw   TEXT NOT NULL,
 	PRIMARY KEY (sheet, row, col)
 ) STRICT;
-CREATE TABLE _slitable_invalid (
+CREATE TABLE _lattis_invalid (
 	tbl INTEGER NOT NULL,
 	rid INTEGER NOT NULL,
 	col INTEGER NOT NULL,
 	raw TEXT NOT NULL,
 	PRIMARY KEY (tbl, rid, col)
 ) STRICT;
-INSERT INTO _slitable_sheets (id, name, pos) VALUES (1, 'Feuille1', 0);
+INSERT INTO _lattis_sheets (id, name, pos) VALUES (1, 'Feuille1', 0);
 ` + command.Schema,
 	// 1 → 2 : largeur des colonnes de chaque feuille (comme Excel, une largeur
 	// par colonne de la feuille, quel que soit le tableau qui s'y trouve).
 	`
-CREATE TABLE _slitable_col_widths (
-	sheet INTEGER NOT NULL REFERENCES _slitable_sheets(id),
+CREATE TABLE _lattis_col_widths (
+	sheet INTEGER NOT NULL REFERENCES _lattis_sheets(id),
 	col   INTEGER NOT NULL,
 	width INTEGER NOT NULL,
 	PRIMARY KEY (sheet, col)
@@ -74,23 +74,23 @@ CREATE TABLE _slitable_col_widths (
 	// 2 → 3 : colonnes calculées (formule de la colonne, en anglais canonique)
 	// et colonne clé de chaque tableau (pour REFERENCE).
 	`
-ALTER TABLE _slitable_columns ADD COLUMN formula TEXT;
-ALTER TABLE _slitable_tables ADD COLUMN key_col INTEGER;
+ALTER TABLE _lattis_columns ADD COLUMN formula TEXT;
+ALTER TABLE _lattis_tables ADD COLUMN key_col INTEGER;
 `,
 	// 3 → 4 : cellules nommées (pas d'adresse A1 : une cellule libre utilisée
 	// dans une formule porte un nom, comme les noms définis d'Excel).
 	`
-CREATE TABLE _slitable_names (
+CREATE TABLE _lattis_names (
 	name  TEXT NOT NULL PRIMARY KEY COLLATE NOCASE,
-	sheet INTEGER NOT NULL REFERENCES _slitable_sheets(id),
+	sheet INTEGER NOT NULL REFERENCES _lattis_sheets(id),
 	row   INTEGER NOT NULL,
 	col   INTEGER NOT NULL
 ) STRICT;
-CREATE UNIQUE INDEX _slitable_names_cell ON _slitable_names(sheet, row, col);
+CREATE UNIQUE INDEX _lattis_names_cell ON _lattis_names(sheet, row, col);
 `,
 	// 4 → 5 : bibliothèque de scripts Lua du classeur (onglet SCRIPT).
 	`
-CREATE TABLE _slitable_scripts (
+CREATE TABLE _lattis_scripts (
 	id     INTEGER PRIMARY KEY,
 	name   TEXT NOT NULL UNIQUE COLLATE NOCASE,
 	source TEXT NOT NULL
@@ -101,14 +101,14 @@ CREATE TABLE _slitable_scripts (
 	// (clé technique) et sa colonne, pour suivre les tris et insertions ;
 	// une colonne entière a son propre style ; une cellule libre sa position.
 	`
-CREATE TABLE _slitable_styles (
+CREATE TABLE _lattis_styles (
 	tbl   INTEGER NOT NULL,
 	rid   INTEGER NOT NULL,        -- 0 : toute la colonne
 	col   INTEGER NOT NULL,
 	style TEXT NOT NULL,
 	PRIMARY KEY (tbl, rid, col)
 ) STRICT;
-CREATE TABLE _slitable_cell_styles (
+CREATE TABLE _lattis_cell_styles (
 	sheet INTEGER NOT NULL,
 	row   INTEGER NOT NULL,
 	col   INTEGER NOT NULL,
@@ -119,19 +119,19 @@ CREATE TABLE _slitable_cell_styles (
 	// 6 → 7 : mise en forme conditionnelle d'une colonne (règles JSON,
 	// évaluées sur les lignes affichées).
 	`
-ALTER TABLE _slitable_columns ADD COLUMN rules TEXT;
+ALTER TABLE _lattis_columns ADD COLUMN rules TEXT;
 `,
 	// 7 → 8 : filtre automatique d'un tableau (JSON : identifiant de colonne →
 	// valeurs gardées, erreurs seulement).
 	`
-ALTER TABLE _slitable_tables ADD COLUMN filter TEXT;
+ALTER TABLE _lattis_tables ADD COLUMN filter TEXT;
 `,
 	// 8 → 9 : tableaux croisés dynamiques (configuration JSON), posés sur une
 	// feuille et recalculés à chaque lecture.
 	`
-CREATE TABLE _slitable_pivots (
+CREATE TABLE _lattis_pivots (
 	id     INTEGER PRIMARY KEY,
-	sheet  INTEGER NOT NULL REFERENCES _slitable_sheets(id),
+	sheet  INTEGER NOT NULL REFERENCES _lattis_sheets(id),
 	row    INTEGER NOT NULL,
 	col    INTEGER NOT NULL,
 	config TEXT NOT NULL
@@ -139,9 +139,9 @@ CREATE TABLE _slitable_pivots (
 `,
 	// 9 → 10 : graphiques (configuration JSON), posés sur une feuille.
 	`
-CREATE TABLE _slitable_charts (
+CREATE TABLE _lattis_charts (
 	id     INTEGER PRIMARY KEY,
-	sheet  INTEGER NOT NULL REFERENCES _slitable_sheets(id),
+	sheet  INTEGER NOT NULL REFERENCES _lattis_sheets(id),
 	row    INTEGER NOT NULL,
 	col    INTEGER NOT NULL,
 	config TEXT NOT NULL
@@ -149,8 +149,8 @@ CREATE TABLE _slitable_charts (
 `,
 	// 10 → 11 : hauteur des lignes de chaque feuille (comme les largeurs).
 	`
-CREATE TABLE _slitable_row_heights (
-	sheet  INTEGER NOT NULL REFERENCES _slitable_sheets(id),
+CREATE TABLE _lattis_row_heights (
+	sheet  INTEGER NOT NULL REFERENCES _lattis_sheets(id),
 	row    INTEGER NOT NULL,
 	height INTEGER NOT NULL,
 	PRIMARY KEY (sheet, row)
@@ -158,14 +158,14 @@ CREATE TABLE _slitable_row_heights (
 `,
 	// 11 → 12 : quadrillage affiché ou masqué, feuille par feuille.
 	`
-ALTER TABLE _slitable_sheets ADD COLUMN gridlines INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE _lattis_sheets ADD COLUMN gridlines INTEGER NOT NULL DEFAULT 1;
 `,
 	// 12 → 13 : boutons d'action (configuration JSON : libellé, script,
 	// fonction, taille), posés sur une feuille comme les graphiques.
 	`
-CREATE TABLE _slitable_buttons (
+CREATE TABLE _lattis_buttons (
 	id     INTEGER PRIMARY KEY,
-	sheet  INTEGER NOT NULL REFERENCES _slitable_sheets(id),
+	sheet  INTEGER NOT NULL REFERENCES _lattis_sheets(id),
 	row    INTEGER NOT NULL,
 	col    INTEGER NOT NULL,
 	config TEXT NOT NULL
@@ -173,20 +173,20 @@ CREATE TABLE _slitable_buttons (
 `,
 	// 13 → 14 : en-têtes A1 (lettres et numéros) toujours affichés.
 	`
-ALTER TABLE _slitable_sheets ADD COLUMN headings INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE _lattis_sheets ADD COLUMN headings INTEGER NOT NULL DEFAULT 0;
 `,
 	// 14 → 15 : mise en forme des lignes et colonnes entières de la feuille
 	// (JSON, voir canvas.Style) : elle vaut pour toutes leurs cellules,
 	// présentes et à venir ; une cellule l'emporte sur sa ligne, une ligne
 	// sur sa colonne.
 	`
-CREATE TABLE _slitable_row_styles (
+CREATE TABLE _lattis_row_styles (
 	sheet INTEGER NOT NULL,
 	row   INTEGER NOT NULL,
 	style TEXT NOT NULL,
 	PRIMARY KEY (sheet, row)
 ) STRICT;
-CREATE TABLE _slitable_col_styles (
+CREATE TABLE _lattis_col_styles (
 	sheet INTEGER NOT NULL,
 	col   INTEGER NOT NULL,
 	style TEXT NOT NULL,
@@ -195,13 +195,13 @@ CREATE TABLE _slitable_col_styles (
 `,
 	// 15 → 16 : mise en forme conditionnelle des lignes et colonnes entières.
 	`
-CREATE TABLE _slitable_row_rules (
+CREATE TABLE _lattis_row_rules (
 	sheet INTEGER NOT NULL,
 	row   INTEGER NOT NULL,
 	rules TEXT NOT NULL,
 	PRIMARY KEY (sheet, row)
 ) STRICT;
-CREATE TABLE _slitable_col_rules (
+CREATE TABLE _lattis_col_rules (
 	sheet INTEGER NOT NULL,
 	col   INTEGER NOT NULL,
 	rules TEXT NOT NULL,
@@ -211,7 +211,7 @@ CREATE TABLE _slitable_col_rules (
 	// 16 → 17 : requêtes favorites de l'onglet SQL (nom affiché et texte
 	// SQL tel que saisi, avec les noms affichés), dans l'ordre d'ajout.
 	`
-CREATE TABLE _slitable_favorites (
+CREATE TABLE _lattis_favorites (
 	id   INTEGER PRIMARY KEY,
 	name TEXT NOT NULL,
 	sql  TEXT NOT NULL
@@ -222,7 +222,7 @@ CREATE TABLE _slitable_favorites (
 	// PBKDF2-SHA256 (jamais le mot de passe en clair, voir canvas/protect.go).
 	// Hors du journal : protéger ou ôter la protection ne s'annule pas.
 	`
-CREATE TABLE _slitable_protection (
+CREATE TABLE _lattis_protection (
 	sheet INTEGER NOT NULL PRIMARY KEY,
 	hash  TEXT NOT NULL
 ) STRICT;
@@ -233,13 +233,13 @@ CREATE TABLE _slitable_protection (
 	// requête : JSON (internal/query) ; target : tableau chargé (pas « tbl » :
 	// la protection des feuilles empreinte les tables qui ont une colonne tbl).
 	`
-CREATE TABLE _slitable_connections (
+CREATE TABLE _lattis_connections (
 	id     INTEGER PRIMARY KEY,
 	name   TEXT NOT NULL UNIQUE COLLATE NOCASE,
 	kind   TEXT NOT NULL,
 	config TEXT NOT NULL
 ) STRICT;
-CREATE TABLE _slitable_queries (
+CREATE TABLE _lattis_queries (
 	id        INTEGER PRIMARY KEY,
 	name      TEXT NOT NULL UNIQUE COLLATE NOCASE,
 	source    TEXT NOT NULL,
@@ -251,19 +251,19 @@ CREATE TABLE _slitable_queries (
 	// 19 → 20 : couleur d'onglet (« #rrggbb », vide : aucune) et feuilles
 	// masquées (Masquer / Afficher…, au moins une feuille reste visible).
 	`
-ALTER TABLE _slitable_sheets ADD COLUMN color TEXT NOT NULL DEFAULT '';
-ALTER TABLE _slitable_sheets ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE _lattis_sheets ADD COLUMN color TEXT NOT NULL DEFAULT '';
+ALTER TABLE _lattis_sheets ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0;
 `,
 	// 20 → 21 : volets figés (Affichage › Figer les volets) : nombre de
 	// lignes et de colonnes qui restent affichées pendant le défilement.
 	`
-ALTER TABLE _slitable_sheets ADD COLUMN freeze_rows INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE _slitable_sheets ADD COLUMN freeze_cols INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE _lattis_sheets ADD COLUMN freeze_rows INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE _lattis_sheets ADD COLUMN freeze_cols INTEGER NOT NULL DEFAULT 0;
 `,
 	// 21 → 22 : zoom de la feuille (Affichage › Zoom), en pour cent (10 à
 	// 400). Réglage d'affichage, hors du journal d'annulation.
 	`
-ALTER TABLE _slitable_sheets ADD COLUMN zoom INTEGER NOT NULL DEFAULT 100;
+ALTER TABLE _lattis_sheets ADD COLUMN zoom INTEGER NOT NULL DEFAULT 100;
 `,
 }
 
@@ -274,7 +274,7 @@ var Version = len(migrations)
 type ErrTooNew struct{ Found int }
 
 func (e ErrTooNew) Error() string {
-	return fmt.Sprintf("document au format %d, cette version de Slitable lit jusqu'au format %d", e.Found, Version)
+	return fmt.Sprintf("document au format %d, cette version de Lattis lit jusqu'au format %d", e.Found, Version)
 }
 
 // Migrate met la base à la version courante.
@@ -296,7 +296,7 @@ func Migrate(ctx context.Context, db *store.Store) error {
 		// Nouveau classeur : feuille sans quadrillage, comme le veut Louis (les
 		// documents existants gardent le leur).
 		if fresh {
-			if _, err := tx.ExecContext(ctx, `UPDATE _slitable_sheets SET gridlines = 0`); err != nil {
+			if _, err := tx.ExecContext(ctx, `UPDATE _lattis_sheets SET gridlines = 0`); err != nil {
 				return err
 			}
 		}

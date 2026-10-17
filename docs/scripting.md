@@ -59,12 +59,12 @@ db.execute([[INSERT INTO Archives (Client, Total)
 - **Annulable** : pendant la requête, des déclencheurs temporaires notent les lignes touchées et
   leur état d'avant ; Ctrl+Z remet cet état, Ctrl+Y l'état d'après. Rien n'est rejoué, donc le
   résultat ne change pas même avec `random()`. Les deux états sont gardés dans des tables
-  `_slitable_sqltrash_*`, supprimées quand la commande sort de l'historique.
+  `_lattis_sqltrash_*`, supprimées quand la commande sort de l'historique.
 - Une ligne ajoutée va **en fin de tableau** ; un tableau qui grandit décale ceux du dessous.
 - Les colonnes sont `STRICT` : une valeur du mauvais type fait échouer toute la requête (pas
   d'élargissement comme pour une saisie). Une valeur écrite remplace une saisie invalide.
 - Refusés : les changements de structure (`CREATE`, `ALTER`, `DROP`) et les écritures dans les
-  tables internes `_slitable_*`.
+  tables internes `_lattis_*`.
 
 ## Bac à sable et limites
 

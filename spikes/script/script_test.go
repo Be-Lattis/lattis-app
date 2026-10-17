@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/store"
+	"github.com/lalamefine/lattis/internal/store"
 )
 
 func openDB(t *testing.T) *store.Store {

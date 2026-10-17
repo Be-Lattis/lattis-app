@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // Dump donne un texte déterministe de tout l'état du document : schéma SQL,
@@ -46,27 +46,27 @@ func (m *Model) Dump(ctx context.Context) (string, error) {
 	}
 	steps := []struct{ title, q string }{
 		{"schéma", `SELECT type, name, CASE WHEN type = 'table' AND name GLOB 't_[0-9]*' THEN NULL ELSE replace(sql, '"', '') END FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%' ORDER BY name`},
-		{"feuilles", `SELECT * FROM _slitable_sheets ORDER BY id`},
-		{"tableaux", `SELECT * FROM _slitable_tables ORDER BY id`},
-		{"colonnes", `SELECT * FROM _slitable_columns ORDER BY tbl, pos`},
-		{"cellules", `SELECT * FROM _slitable_cells ORDER BY sheet, row, col`},
-		{"invalides", `SELECT * FROM _slitable_invalid ORDER BY tbl, rid, col`},
-		{"styles", `SELECT * FROM _slitable_styles ORDER BY tbl, rid, col`},
-		{"styles libres", `SELECT * FROM _slitable_cell_styles ORDER BY sheet, row, col`},
-		{"styles de lignes", `SELECT * FROM _slitable_row_styles ORDER BY sheet, row`},
-		{"styles de colonnes", `SELECT * FROM _slitable_col_styles ORDER BY sheet, col`},
-		{"règles de lignes", `SELECT * FROM _slitable_row_rules ORDER BY sheet, row`},
-		{"règles de colonnes", `SELECT * FROM _slitable_col_rules ORDER BY sheet, col`},
-		{"noms", `SELECT * FROM _slitable_names ORDER BY name`},
-		{"largeurs", `SELECT * FROM _slitable_col_widths ORDER BY sheet, col`},
-		{"hauteurs", `SELECT * FROM _slitable_row_heights ORDER BY sheet, row`},
-		{"scripts", `SELECT * FROM _slitable_scripts ORDER BY id`},
-		{"tableaux croisés", `SELECT * FROM _slitable_pivots ORDER BY id`},
-		{"graphiques", `SELECT * FROM _slitable_charts ORDER BY id`},
-		{"boutons", `SELECT * FROM _slitable_buttons ORDER BY id`},
-		{"favoris", `SELECT * FROM _slitable_favorites ORDER BY id`},
-		{"connexions", `SELECT * FROM _slitable_connections ORDER BY id`},
-		{"requêtes", `SELECT id, name, source, steps, target FROM _slitable_queries ORDER BY id`},
+		{"feuilles", `SELECT * FROM _lattis_sheets ORDER BY id`},
+		{"tableaux", `SELECT * FROM _lattis_tables ORDER BY id`},
+		{"colonnes", `SELECT * FROM _lattis_columns ORDER BY tbl, pos`},
+		{"cellules", `SELECT * FROM _lattis_cells ORDER BY sheet, row, col`},
+		{"invalides", `SELECT * FROM _lattis_invalid ORDER BY tbl, rid, col`},
+		{"styles", `SELECT * FROM _lattis_styles ORDER BY tbl, rid, col`},
+		{"styles libres", `SELECT * FROM _lattis_cell_styles ORDER BY sheet, row, col`},
+		{"styles de lignes", `SELECT * FROM _lattis_row_styles ORDER BY sheet, row`},
+		{"styles de colonnes", `SELECT * FROM _lattis_col_styles ORDER BY sheet, col`},
+		{"règles de lignes", `SELECT * FROM _lattis_row_rules ORDER BY sheet, row`},
+		{"règles de colonnes", `SELECT * FROM _lattis_col_rules ORDER BY sheet, col`},
+		{"noms", `SELECT * FROM _lattis_names ORDER BY name`},
+		{"largeurs", `SELECT * FROM _lattis_col_widths ORDER BY sheet, col`},
+		{"hauteurs", `SELECT * FROM _lattis_row_heights ORDER BY sheet, row`},
+		{"scripts", `SELECT * FROM _lattis_scripts ORDER BY id`},
+		{"tableaux croisés", `SELECT * FROM _lattis_pivots ORDER BY id`},
+		{"graphiques", `SELECT * FROM _lattis_charts ORDER BY id`},
+		{"boutons", `SELECT * FROM _lattis_buttons ORDER BY id`},
+		{"favoris", `SELECT * FROM _lattis_favorites ORDER BY id`},
+		{"connexions", `SELECT * FROM _lattis_connections ORDER BY id`},
+		{"requêtes", `SELECT id, name, source, steps, target FROM _lattis_queries ORDER BY id`},
 	}
 	for _, s := range steps {
 		if err := dumpQuery(s.title, s.q); err != nil {
@@ -100,7 +100,7 @@ type tableCols struct {
 }
 
 func (m *Model) tableColumns(ctx context.Context) ([]tableCols, error) {
-	rs, err := m.db.Read().QueryContext(ctx, `SELECT tbl, id FROM _slitable_columns ORDER BY tbl, pos`)
+	rs, err := m.db.Read().QueryContext(ctx, `SELECT tbl, id FROM _lattis_columns ORDER BY tbl, pos`)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +130,7 @@ func (m *Model) Check(ctx context.Context) ([]string, error) {
 
 		// Objets SQL : exactement les tables déclarées, plus les métadonnées.
 		known := map[string]bool{}
-		rs, err := t.query(`SELECT id FROM _slitable_sheets`)
+		rs, err := t.query(`SELECT id FROM _lattis_sheets`)
 		if err != nil {
 			return err
 		}
@@ -228,7 +228,7 @@ func (m *Model) Check(ctx context.Context) ([]string, error) {
 				}
 			}
 			// Saisies invalides : ligne et colonne existantes, cellule à NULL.
-			rs, err = t.query(`SELECT rid, col FROM _slitable_invalid WHERE tbl = ?`, tb.ID)
+			rs, err = t.query(`SELECT rid, col FROM _lattis_invalid WHERE tbl = ?`, tb.ID)
 			if err != nil {
 				return err
 			}
@@ -252,20 +252,20 @@ func (m *Model) Check(ctx context.Context) ([]string, error) {
 				}
 			}
 		}
-		rs, err = t.query(`SELECT name FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%' AND name NOT LIKE '_slitable_%' OR name LIKE '_slitable_trash%'`)
+		rs, err = t.query(`SELECT name FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%' AND name NOT LIKE '_lattis_%' OR name LIKE '_lattis_trash%'`)
 		if err != nil {
 			return err
 		}
 		for rs.Next() {
 			var n string
 			rs.Scan(&n)
-			if !known[n] && !strings.HasPrefix(n, "_slitable_trash") {
+			if !known[n] && !strings.HasPrefix(n, "_lattis_trash") {
 				bad("objet SQL orphelin : %s", n)
 			}
 		}
 		rs.Close()
 		var orphans int
-		t.row(`SELECT count(*) FROM _slitable_columns WHERE tbl NOT IN (SELECT id FROM _slitable_tables)`).Scan(&orphans)
+		t.row(`SELECT count(*) FROM _lattis_columns WHERE tbl NOT IN (SELECT id FROM _lattis_tables)`).Scan(&orphans)
 		if orphans > 0 {
 			bad("%d colonnes sans tableau", orphans)
 		}

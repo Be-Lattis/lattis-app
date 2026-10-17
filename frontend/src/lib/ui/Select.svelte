@@ -1,5 +1,5 @@
 <script lang="ts" generics="T extends string | number">
-	// Liste déroulante de Slitable : même allure que le ruban (bordure fine,
+	// Liste déroulante de Lattis : même allure que le ruban (bordure fine,
 	// vert au survol et à la sélection), liste flottante au-dessus de tout,
 	// clavier (flèches, Entrée, Échap, première lettre).
 	import { dismiss } from '#lib/grid/dismiss.js';

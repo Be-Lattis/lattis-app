@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lalamefine/slitable/internal/formula"
+	"github.com/lalamefine/lattis/internal/formula"
 )
 
 // TestRangesAndA1 : adresses A1 tapées à la Excel converties à la saisie,
@@ -42,7 +42,7 @@ func TestRangesAndA1(t *testing.T) {
 	set(6, 0, "2")
 	set(7, 0, "3")
 	var table string
-	d.read(ctx, func(x *tx) error { return x.row(`SELECT name FROM _slitable_tables`).Scan(&table) })
+	d.read(ctx, func(x *tx) error { return x.row(`SELECT name FROM _lattis_tables`).Scan(&table) })
 	set(0, 4, "=SOMME(A1:C1)")
 	set(1, 4, "=SOMME(A6:$A$7)")
 	set(2, 4, "=A6*10+B1")

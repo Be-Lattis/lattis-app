@@ -20,7 +20,7 @@ type pivotRow struct {
 }
 
 func (t *tx) allPivots() ([]pivotRow, error) {
-	rs, err := t.query(`SELECT id, sheet, config FROM _slitable_pivots ORDER BY id`)
+	rs, err := t.query(`SELECT id, sheet, config FROM _lattis_pivots ORDER BY id`)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func (t *tx) pivotName() (string, error) {
 	for n := 1; ; n++ {
 		name := fmt.Sprintf("TCD%d", n)
 		var k int
-		if err := t.row(`SELECT count(*) FROM _slitable_tables WHERE name = ? COLLATE NOCASE`, name).Scan(&k); err != nil {
+		if err := t.row(`SELECT count(*) FROM _lattis_tables WHERE name = ? COLLATE NOCASE`, name).Scan(&k); err != nil {
 			return "", err
 		}
 		if k == 0 && !taken[strings.ToLower(name)] {

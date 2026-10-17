@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/command"
+	"github.com/lalamefine/lattis/internal/command"
 )
 
 // ErrTable signale une opération impossible sur un tableau entier
@@ -31,13 +31,13 @@ func (m *Model) RenameTable(ctx context.Context, old, name string) error {
 			return nil
 		}
 		var k int
-		if err := t.row(`SELECT count(*) FROM _slitable_tables WHERE name = ? COLLATE NOCASE AND id <> ?`, name, tb.ID).Scan(&k); err != nil {
+		if err := t.row(`SELECT count(*) FROM _lattis_tables WHERE name = ? COLLATE NOCASE AND id <> ?`, name, tb.ID).Scan(&k); err != nil {
 			return err
 		}
 		if k > 0 {
 			return fmt.Errorf("%w : « %s » existe déjà", ErrTable, name)
 		}
-		q := `UPDATE _slitable_tables SET name = ? WHERE id = ?`
+		q := `UPDATE _lattis_tables SET name = ? WHERE id = ?`
 		return t.apply([]stmt{st(q, name, tb.ID)}, []stmt{st(q, tb.Name, tb.ID)})
 	})
 }
@@ -65,28 +65,28 @@ func (m *Model) DeleteTables(ctx context.Context, names []string) error {
 // deleteTable retire un tableau : ses lignes, saisies invalides et styles
 // partent dans des tables de corbeille que l'annulation remet en place.
 func (t *tx) deleteTable(tb Table) error {
-	trash := fmt.Sprintf("_slitable_trash_t%d_%d", tb.ID, time.Now().UnixNano())
+	trash := fmt.Sprintf("_lattis_trash_t%d_%d", tb.ID, time.Now().UnixNano())
 	var key, filter sql.NullString
-	if err := t.row(`SELECT key_col, filter FROM _slitable_tables WHERE id = ?`, tb.ID).Scan(&key, &filter); err != nil {
+	if err := t.row(`SELECT key_col, filter FROM _lattis_tables WHERE id = ?`, tb.ID).Scan(&key, &filter); err != nil {
 		return err
 	}
 	undo := []stmt{
-		st(`INSERT INTO _slitable_tables (id, sheet, name, row, col, key_col, filter) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		st(`INSERT INTO _lattis_tables (id, sheet, name, row, col, key_col, filter) VALUES (?, ?, ?, ?, ?, ?, ?)`,
 			tb.ID, tb.Sheet, tb.Name, tb.Row, tb.Col, nullable(key), nullable(filter)),
-		st(`INSERT INTO _slitable_columns SELECT * FROM ` + trash + `_col`),
-		st(`INSERT INTO _slitable_invalid SELECT * FROM ` + trash + `_inv`),
-		st(`INSERT INTO _slitable_styles SELECT * FROM ` + trash + `_sty`),
+		st(`INSERT INTO _lattis_columns SELECT * FROM ` + trash + `_col`),
+		st(`INSERT INTO _lattis_invalid SELECT * FROM ` + trash + `_inv`),
+		st(`INSERT INTO _lattis_styles SELECT * FROM ` + trash + `_sty`),
 		st(`ALTER TABLE ` + trash + ` RENAME TO ` + tb.sql()),
 		st(`CREATE INDEX ` + tb.sql() + `_pos ON ` + tb.sql() + `(_pos)`),
 	}
 	do := []stmt{
-		st(`CREATE TABLE `+trash+`_col AS SELECT * FROM _slitable_columns WHERE tbl = ?`, tb.ID),
-		st(`CREATE TABLE `+trash+`_inv AS SELECT * FROM _slitable_invalid WHERE tbl = ?`, tb.ID),
-		st(`CREATE TABLE `+trash+`_sty AS SELECT * FROM _slitable_styles WHERE tbl = ?`, tb.ID),
-		st(`DELETE FROM _slitable_columns WHERE tbl = ?`, tb.ID),
-		st(`DELETE FROM _slitable_invalid WHERE tbl = ?`, tb.ID),
-		st(`DELETE FROM _slitable_styles WHERE tbl = ?`, tb.ID),
-		st(`DELETE FROM _slitable_tables WHERE id = ?`, tb.ID),
+		st(`CREATE TABLE `+trash+`_col AS SELECT * FROM _lattis_columns WHERE tbl = ?`, tb.ID),
+		st(`CREATE TABLE `+trash+`_inv AS SELECT * FROM _lattis_invalid WHERE tbl = ?`, tb.ID),
+		st(`CREATE TABLE `+trash+`_sty AS SELECT * FROM _lattis_styles WHERE tbl = ?`, tb.ID),
+		st(`DELETE FROM _lattis_columns WHERE tbl = ?`, tb.ID),
+		st(`DELETE FROM _lattis_invalid WHERE tbl = ?`, tb.ID),
+		st(`DELETE FROM _lattis_styles WHERE tbl = ?`, tb.ID),
+		st(`DELETE FROM _lattis_tables WHERE id = ?`, tb.ID),
 		// Les index portent le nom de la table : ils partent, pour qu'un
 		// nouveau tableau puisse reprendre l'identifiant.
 		st(`DROP INDEX ` + tb.sql() + `_pos`),
@@ -214,7 +214,7 @@ func (t *tx) mergeRight(a, b Table) (Table, error) {
 		return a, err
 	}
 	var next int64
-	if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _slitable_columns WHERE tbl = ?`, a.ID).Scan(&next); err != nil {
+	if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_columns WHERE tbl = ?`, a.ID).Scan(&next); err != nil {
 		return a, err
 	}
 	names := map[string]bool{}
@@ -236,18 +236,18 @@ func (t *tx) mergeRight(a, b Table) (Table, error) {
 			return a, err
 		}
 		if err := t.apply([]stmt{
-			st(`UPDATE _slitable_columns SET fixed = ?, formula = ?, rules = ? WHERE tbl = ? AND id = ?`,
+			st(`UPDATE _lattis_columns SET fixed = ?, formula = ?, rules = ? WHERE tbl = ? AND id = ?`,
 				c.Fixed, nullIfEmpty(c.Formula), nullIfEmpty(rules), a.ID, id),
 			st(`UPDATE ` + a.sql() + ` SET ` + colSQL(id) + ` = (SELECT ` + colSQL(c.ID) + ` FROM ` + b.sql() +
 				` WHERE ` + b.sql() + `.id = (SELECT bid FROM ` + m + ` WHERE aid = ` + a.sql() + `.id))`),
-			st(`INSERT INTO _slitable_invalid (tbl, rid, col, raw) SELECT ?, m.aid, ?, i.raw
-				FROM _slitable_invalid i JOIN `+m+` m ON m.bid = i.rid WHERE i.tbl = ? AND i.col = ?`, a.ID, id, b.ID, c.ID),
-			st(`INSERT INTO _slitable_styles (tbl, rid, col, style) SELECT ?, m.aid, ?, s.style
-				FROM _slitable_styles s JOIN `+m+` m ON m.bid = s.rid WHERE s.tbl = ? AND s.col = ?`, a.ID, id, b.ID, c.ID),
-			st(`INSERT INTO _slitable_styles (tbl, rid, col, style) SELECT ?, rid, ?, style
-				FROM _slitable_styles WHERE tbl = ? AND col = ? AND rid <= 0`, a.ID, id, b.ID, c.ID),
+			st(`INSERT INTO _lattis_invalid (tbl, rid, col, raw) SELECT ?, m.aid, ?, i.raw
+				FROM _lattis_invalid i JOIN `+m+` m ON m.bid = i.rid WHERE i.tbl = ? AND i.col = ?`, a.ID, id, b.ID, c.ID),
+			st(`INSERT INTO _lattis_styles (tbl, rid, col, style) SELECT ?, m.aid, ?, s.style
+				FROM _lattis_styles s JOIN `+m+` m ON m.bid = s.rid WHERE s.tbl = ? AND s.col = ?`, a.ID, id, b.ID, c.ID),
+			st(`INSERT INTO _lattis_styles (tbl, rid, col, style) SELECT ?, rid, ?, style
+				FROM _lattis_styles WHERE tbl = ? AND col = ? AND rid <= 0`, a.ID, id, b.ID, c.ID),
 		}, []stmt{
-			st(`DELETE FROM _slitable_styles WHERE tbl = ? AND col = ?`, a.ID, id),
+			st(`DELETE FROM _lattis_styles WHERE tbl = ? AND col = ?`, a.ID, id),
 		}); err != nil {
 			return a, err
 		}
@@ -318,7 +318,7 @@ func (t *tx) extractColumns(tb Table, i0, i1 int, sheet int64, row, col int) err
 		}
 	}
 	var id int64
-	if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _slitable_tables`).Scan(&id); err != nil {
+	if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_tables`).Scan(&id); err != nil {
 		return err
 	}
 	newName, err := t.tableName(sheet, row, col)
@@ -329,7 +329,7 @@ func (t *tx) extractColumns(tb Table, i0, i1 int, sheet int64, row, col int) err
 	defs := []string{"id INTEGER PRIMARY KEY", "_pos TEXT NOT NULL"}
 	src := []string{"id", "_pos"}
 	dst := []string{"id", "_pos"}
-	do := []stmt{st(`INSERT INTO _slitable_tables (id, sheet, name, row, col) VALUES (?, ?, ?, ?, ?)`, id, sheet, newName, row, col)}
+	do := []stmt{st(`INSERT INTO _lattis_tables (id, sheet, name, row, col) VALUES (?, ?, ?, ?, ?)`, id, sheet, newName, row, col)}
 	for k, c := range cols {
 		nid := int64(k + 1)
 		defs = append(defs, colSQL(nid)+" "+sqlType(c.Type))
@@ -340,10 +340,10 @@ func (t *tx) extractColumns(tb Table, i0, i1 int, sheet int64, row, col int) err
 			return err
 		}
 		do = append(do,
-			st(`INSERT INTO _slitable_columns (tbl, id, name, type, fixed, pos, rules) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			st(`INSERT INTO _lattis_columns (tbl, id, name, type, fixed, pos, rules) VALUES (?, ?, ?, ?, ?, ?, ?)`,
 				id, nid, c.Name, string(c.Type), c.Fixed, k, nullIfEmpty(rules)),
-			st(`INSERT INTO _slitable_invalid (tbl, rid, col, raw) SELECT ?, rid, ?, raw FROM _slitable_invalid WHERE tbl = ? AND col = ?`, id, nid, tb.ID, c.ID),
-			st(`INSERT INTO _slitable_styles (tbl, rid, col, style) SELECT ?, rid, ?, style FROM _slitable_styles WHERE tbl = ? AND col = ?`, id, nid, tb.ID, c.ID))
+			st(`INSERT INTO _lattis_invalid (tbl, rid, col, raw) SELECT ?, rid, ?, raw FROM _lattis_invalid WHERE tbl = ? AND col = ?`, id, nid, tb.ID, c.ID),
+			st(`INSERT INTO _lattis_styles (tbl, rid, col, style) SELECT ?, rid, ?, style FROM _lattis_styles WHERE tbl = ? AND col = ?`, id, nid, tb.ID, c.ID))
 	}
 	// Mêmes clés et mêmes positions : les styles et saisies invalides
 	// suivent sans renumérotation.
@@ -353,10 +353,10 @@ func (t *tx) extractColumns(tb Table, i0, i1 int, sheet int64, row, col int) err
 		st(`INSERT INTO ` + nt.sql() + ` (` + strings.Join(dst, ", ") + `) SELECT ` + strings.Join(src, ", ") + ` FROM ` + tb.sql()),
 	}, do...)
 	undo := []stmt{
-		st(`DELETE FROM _slitable_styles WHERE tbl = ?`, id),
-		st(`DELETE FROM _slitable_invalid WHERE tbl = ?`, id),
-		st(`DELETE FROM _slitable_columns WHERE tbl = ?`, id),
-		st(`DELETE FROM _slitable_tables WHERE id = ?`, id),
+		st(`DELETE FROM _lattis_styles WHERE tbl = ?`, id),
+		st(`DELETE FROM _lattis_invalid WHERE tbl = ?`, id),
+		st(`DELETE FROM _lattis_columns WHERE tbl = ?`, id),
+		st(`DELETE FROM _lattis_tables WHERE id = ?`, id),
 		st(`DROP TABLE ` + nt.sql()),
 	}
 	if err := t.apply(do, undo); err != nil {

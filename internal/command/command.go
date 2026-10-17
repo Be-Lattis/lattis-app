@@ -5,7 +5,7 @@
 // enregistre en même temps les instructions inverses (Tx.Apply). Une action
 // de l'utilisateur forme une commande, c'est-à-dire une étape d'annulation.
 //
-// Les commandes sont persistées dans _slitable_journal, dans la même
+// Les commandes sont persistées dans _lattis_journal, dans la même
 // transaction que les données : l'historique d'annulation survit à un
 // enregistrement, à une réouverture et à un crash, et il est toujours
 // cohérent avec la base. Le rétablissement rejoue les instructions
@@ -23,12 +23,12 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/lalamefine/slitable/internal/store"
+	"github.com/lalamefine/lattis/internal/store"
 )
 
 // Schema crée la table du journal.
 const Schema = `
-CREATE TABLE IF NOT EXISTS _slitable_journal (
+CREATE TABLE IF NOT EXISTS _lattis_journal (
 	seq    INTEGER PRIMARY KEY,
 	name   TEXT NOT NULL,
 	steps  TEXT NOT NULL,           -- JSON : opérations et inverses
@@ -141,14 +141,14 @@ func (b *Bus) Do(ctx context.Context, name string, fn func(*Tx) error) (int64, e
 			return nil
 		}
 		// Une nouvelle action efface ce qui pouvait être rétabli.
-		if _, err := sqlTx.ExecContext(ctx, `DELETE FROM _slitable_journal WHERE undone = 1`); err != nil {
+		if _, err := sqlTx.ExecContext(ctx, `DELETE FROM _lattis_journal WHERE undone = 1`); err != nil {
 			return err
 		}
 		data, err := encodeSteps(t.steps)
 		if err != nil {
 			return err
 		}
-		r, err := sqlTx.ExecContext(ctx, `INSERT INTO _slitable_journal (name, steps) VALUES (?, ?)`, name, data)
+		r, err := sqlTx.ExecContext(ctx, `INSERT INTO _lattis_journal (name, steps) VALUES (?, ?)`, name, data)
 		if err != nil {
 			return err
 		}
@@ -215,19 +215,19 @@ func (b *Bus) appendTo(ctx context.Context, seq int64, name string, fn func(*Tx)
 		}
 		var last int64
 		var data string
-		err := sqlTx.QueryRowContext(ctx, `SELECT seq, steps FROM _slitable_journal WHERE undone = 0 ORDER BY seq DESC LIMIT 1`).Scan(&last, &data)
+		err := sqlTx.QueryRowContext(ctx, `SELECT seq, steps FROM _lattis_journal WHERE undone = 0 ORDER BY seq DESC LIMIT 1`).Scan(&last, &data)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return err
 		}
 		if seq == 0 || last != seq {
-			if _, err := sqlTx.ExecContext(ctx, `DELETE FROM _slitable_journal WHERE undone = 1`); err != nil {
+			if _, err := sqlTx.ExecContext(ctx, `DELETE FROM _lattis_journal WHERE undone = 1`); err != nil {
 				return err
 			}
 			enc, err := encodeSteps(t.steps)
 			if err != nil {
 				return err
 			}
-			r, err := sqlTx.ExecContext(ctx, `INSERT INTO _slitable_journal (name, steps) VALUES (?, ?)`, name, enc)
+			r, err := sqlTx.ExecContext(ctx, `INSERT INTO _lattis_journal (name, steps) VALUES (?, ?)`, name, enc)
 			if err != nil {
 				return err
 			}
@@ -242,7 +242,7 @@ func (b *Bus) appendTo(ctx context.Context, seq int64, name string, fn func(*Tx)
 		if err != nil {
 			return err
 		}
-		_, err = sqlTx.ExecContext(ctx, `UPDATE _slitable_journal SET steps = ? WHERE seq = ?`, enc, seq)
+		_, err = sqlTx.ExecContext(ctx, `UPDATE _lattis_journal SET steps = ? WHERE seq = ?`, enc, seq)
 		return err
 	})
 	return out, err
@@ -250,7 +250,7 @@ func (b *Bus) appendTo(ctx context.Context, seq int64, name string, fn func(*Tx)
 
 // trim fait sortir de l'historique les commandes au-delà de Depth.
 func (b *Bus) trim(ctx context.Context, tx *sql.Tx) error {
-	rs, err := tx.QueryContext(ctx, `SELECT seq, steps FROM _slitable_journal WHERE undone = 0 ORDER BY seq DESC LIMIT -1 OFFSET ?`, b.Depth)
+	rs, err := tx.QueryContext(ctx, `SELECT seq, steps FROM _lattis_journal WHERE undone = 0 ORDER BY seq DESC LIMIT -1 OFFSET ?`, b.Depth)
 	if err != nil {
 		return err
 	}
@@ -278,7 +278,7 @@ func (b *Bus) trim(ctx context.Context, tx *sql.Tx) error {
 				return err
 			}
 		}
-		if _, err := tx.ExecContext(ctx, `DELETE FROM _slitable_journal WHERE seq = ?`, o.seq); err != nil {
+		if _, err := tx.ExecContext(ctx, `DELETE FROM _lattis_journal WHERE seq = ?`, o.seq); err != nil {
 			return err
 		}
 	}
@@ -291,7 +291,7 @@ func (b *Bus) Undo(ctx context.Context) (string, error) {
 	err := b.db.Write(ctx, func(tx *sql.Tx) error {
 		var seq int64
 		var data string
-		err := tx.QueryRowContext(ctx, `SELECT seq, name, steps FROM _slitable_journal WHERE undone = 0 ORDER BY seq DESC LIMIT 1`).Scan(&seq, &name, &data)
+		err := tx.QueryRowContext(ctx, `SELECT seq, name, steps FROM _lattis_journal WHERE undone = 0 ORDER BY seq DESC LIMIT 1`).Scan(&seq, &name, &data)
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrNothing
 		}
@@ -313,7 +313,7 @@ func (b *Bus) Undo(ctx context.Context) (string, error) {
 		if err != nil {
 			return err
 		}
-		_, err = tx.ExecContext(ctx, `UPDATE _slitable_journal SET undone = 1 WHERE seq = ?`, seq)
+		_, err = tx.ExecContext(ctx, `UPDATE _lattis_journal SET undone = 1 WHERE seq = ?`, seq)
 		return err
 	})
 	return name, err
@@ -325,7 +325,7 @@ func (b *Bus) Redo(ctx context.Context) (string, error) {
 	err := b.db.Write(ctx, func(tx *sql.Tx) error {
 		var seq int64
 		var data string
-		err := tx.QueryRowContext(ctx, `SELECT seq, name, steps FROM _slitable_journal WHERE undone = 1 ORDER BY seq LIMIT 1`).Scan(&seq, &name, &data)
+		err := tx.QueryRowContext(ctx, `SELECT seq, name, steps FROM _lattis_journal WHERE undone = 1 ORDER BY seq LIMIT 1`).Scan(&seq, &name, &data)
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrNothing
 		}
@@ -347,7 +347,7 @@ func (b *Bus) Redo(ctx context.Context) (string, error) {
 		if err != nil {
 			return err
 		}
-		_, err = tx.ExecContext(ctx, `UPDATE _slitable_journal SET undone = 0 WHERE seq = ?`, seq)
+		_, err = tx.ExecContext(ctx, `UPDATE _lattis_journal SET undone = 0 WHERE seq = ?`, seq)
 		return err
 	})
 	return name, err
@@ -364,8 +364,8 @@ type State struct {
 func (b *Bus) State(ctx context.Context) (State, error) {
 	var s State
 	err := b.db.Read().QueryRowContext(ctx, `SELECT
-		coalesce((SELECT name FROM _slitable_journal WHERE undone = 0 ORDER BY seq DESC LIMIT 1), ''),
-		coalesce((SELECT name FROM _slitable_journal WHERE undone = 1 ORDER BY seq LIMIT 1), '')`).Scan(&s.Undo, &s.Redo)
+		coalesce((SELECT name FROM _lattis_journal WHERE undone = 0 ORDER BY seq DESC LIMIT 1), ''),
+		coalesce((SELECT name FROM _lattis_journal WHERE undone = 1 ORDER BY seq LIMIT 1), '')`).Scan(&s.Undo, &s.Redo)
 	return s, err
 }
 

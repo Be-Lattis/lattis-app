@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/canvas"
-	"github.com/lalamefine/slitable/internal/doc"
-	"github.com/lalamefine/slitable/internal/formula"
+	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/formula"
 )
 
 func build(t *testing.T, preset string, seed uint64) (*doc.Document, Result) {
@@ -179,12 +179,12 @@ func TestPresetInconnu(t *testing.T) {
 	}
 }
 
-// TestPresetsLourds fabrique les gros presets (SLITABLE_DEMO_LOURD=1, ou
+// TestPresetsLourds fabrique les gros presets (LATTIS_DEMO_LOURD=1, ou
 // =big,100Kx100 pour en choisir).
 func TestPresetsLourds(t *testing.T) {
-	v := os.Getenv("SLITABLE_DEMO_LOURD")
+	v := os.Getenv("LATTIS_DEMO_LOURD")
 	if v == "" {
-		t.Skip("SLITABLE_DEMO_LOURD non défini")
+		t.Skip("LATTIS_DEMO_LOURD non défini")
 	}
 	list := []string{"10Kx10", "10Kx100", "100Kx10", "big"}
 	if v != "1" {

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/lalamefine/slitable/internal/query"
+	"github.com/lalamefine/lattis/internal/query"
 )
 
 // Requêtes d'import (équivalent de Power Query, voir

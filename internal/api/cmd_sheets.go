@@ -3,7 +3,7 @@ package api
 import (
 	"fmt"
 
-	"github.com/lalamefine/slitable/internal/canvas"
+	"github.com/lalamefine/lattis/internal/canvas"
 )
 
 var pSheet = Param{Name: "sheet", Type: Ref, Desc: "feuille (nom ou identifiant) ; absente : la feuille affichée", Optional: true}

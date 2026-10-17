@@ -19,7 +19,7 @@ var recentFile = func() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "Slitable", "recent.json"), nil
+	return filepath.Join(dir, "Lattis", "recent.json"), nil
 }
 
 func readRecent() []string {

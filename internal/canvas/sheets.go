@@ -55,14 +55,14 @@ func (t *tx) addSheet() (int64, error) {
 	}
 	var id int64
 	var pos int
-	if err := t.row(`SELECT coalesce(max(id), 0) + 1, coalesce(max(pos), -1) + 1 FROM _slitable_sheets`).Scan(&id, &pos); err != nil {
+	if err := t.row(`SELECT coalesce(max(id), 0) + 1, coalesce(max(pos), -1) + 1 FROM _lattis_sheets`).Scan(&id, &pos); err != nil {
 		return 0, err
 	}
 	name := ""
 	for n := int(id); ; n++ {
 		name = fmt.Sprintf("Feuille%d", n)
 		var k int
-		if err := t.row(`SELECT count(*) FROM _slitable_sheets WHERE name = ?`, name).Scan(&k); err != nil {
+		if err := t.row(`SELECT count(*) FROM _lattis_sheets WHERE name = ?`, name).Scan(&k); err != nil {
 			return 0, err
 		}
 		if k == 0 {
@@ -70,14 +70,14 @@ func (t *tx) addSheet() (int64, error) {
 		}
 	}
 	return id, t.apply(
-		[]stmt{st(`INSERT INTO _slitable_sheets (id, name, pos, gridlines) VALUES (?, ?, ?, 0)`, id, name, pos)},
-		[]stmt{st(`DELETE FROM _slitable_sheets WHERE id = ?`, id)},
+		[]stmt{st(`INSERT INTO _lattis_sheets (id, name, pos, gridlines) VALUES (?, ?, ?, 0)`, id, name, pos)},
+		[]stmt{st(`DELETE FROM _lattis_sheets WHERE id = ?`, id)},
 	)
 }
 
 // sheetOrder donne les onglets dans l'ordre affiché.
 func (t *tx) sheetOrder() ([]int64, error) {
-	rs, err := t.query(`SELECT id FROM _slitable_sheets ORDER BY pos, id`)
+	rs, err := t.query(`SELECT id FROM _lattis_sheets ORDER BY pos, id`)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (t *tx) moveSheet(sheet int64, to int) error {
 		return nil
 	}
 	old := map[int64]int{}
-	rs, err := t.query(`SELECT id, pos FROM _slitable_sheets`)
+	rs, err := t.query(`SELECT id, pos FROM _lattis_sheets`)
 	if err != nil {
 		return err
 	}
@@ -129,7 +129,7 @@ func (t *tx) moveSheet(sheet int64, to int) error {
 	if err := rs.Err(); err != nil {
 		return err
 	}
-	q := `UPDATE _slitable_sheets SET pos = ? WHERE id = ?`
+	q := `UPDATE _lattis_sheets SET pos = ? WHERE id = ?`
 	var do, undo []stmt
 	ids = slices.Insert(slices.Delete(ids, from, from+1), to, sheet)
 	for i, id := range ids {
@@ -150,20 +150,20 @@ func (m *Model) RenameSheet(ctx context.Context, sheet int64, name string) error
 			return err
 		}
 		var old string
-		if err := t.row(`SELECT name FROM _slitable_sheets WHERE id = ?`, sheet).Scan(&old); err != nil {
+		if err := t.row(`SELECT name FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&old); err != nil {
 			return err
 		}
 		if old == name {
 			return nil
 		}
 		var k int
-		if err := t.row(`SELECT count(*) FROM _slitable_sheets WHERE name = ? AND id <> ?`, name, sheet).Scan(&k); err != nil {
+		if err := t.row(`SELECT count(*) FROM _lattis_sheets WHERE name = ? AND id <> ?`, name, sheet).Scan(&k); err != nil {
 			return err
 		}
 		if k > 0 {
 			return fmt.Errorf("%w : « %s » existe déjà", ErrSheet, name)
 		}
-		q := `UPDATE _slitable_sheets SET name = ? WHERE id = ?`
+		q := `UPDATE _lattis_sheets SET name = ? WHERE id = ?`
 		return t.apply([]stmt{st(q, name, sheet)}, []stmt{st(q, old, sheet)})
 	})
 }
@@ -178,26 +178,26 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 		var n, tables int
 		var name, color string
 		var pos, grid, heads, hidden, frows, fcols, zoom int
-		if err := t.row(`SELECT count(*) FROM _slitable_sheets`).Scan(&n); err != nil {
+		if err := t.row(`SELECT count(*) FROM _lattis_sheets`).Scan(&n); err != nil {
 			return err
 		}
 		if n <= 1 {
 			return fmt.Errorf("%w : un classeur garde au moins une feuille", ErrSheet)
 		}
 		var others int
-		if err := t.row(`SELECT count(*) FROM _slitable_sheets WHERE hidden = 0 AND id <> ?`, sheet).Scan(&others); err != nil {
+		if err := t.row(`SELECT count(*) FROM _lattis_sheets WHERE hidden = 0 AND id <> ?`, sheet).Scan(&others); err != nil {
 			return err
 		}
 		if others == 0 {
 			return fmt.Errorf("%w : un classeur garde au moins une feuille visible", ErrSheet)
 		}
-		if err := t.row(`SELECT count(*) FROM _slitable_tables WHERE sheet = ?`, sheet).Scan(&tables); err != nil {
+		if err := t.row(`SELECT count(*) FROM _lattis_tables WHERE sheet = ?`, sheet).Scan(&tables); err != nil {
 			return err
 		}
 		if tables > 0 {
 			return fmt.Errorf("%w : la feuille contient des tableaux, supprimez-les d'abord", ErrSheet)
 		}
-		if err := t.row(`SELECT name, pos, gridlines, headings, color, hidden, freeze_rows, freeze_cols, zoom FROM _slitable_sheets WHERE id = ?`, sheet).Scan(&name, &pos, &grid, &heads, &color, &hidden, &frows, &fcols, &zoom); err != nil {
+		if err := t.row(`SELECT name, pos, gridlines, headings, color, hidden, freeze_rows, freeze_cols, zoom FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&name, &pos, &grid, &heads, &color, &hidden, &frows, &fcols, &zoom); err != nil {
 			return err
 		}
 		cells, err := t.cells(sheet)
@@ -223,13 +223,13 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 		}
 		pivots = append(append(pivots, charts...), buttons...)
 		// Mise en forme, largeurs et hauteurs de la feuille.
-		do := []stmt{st(`DELETE FROM _slitable_pivots WHERE sheet = ?`, sheet), st(`DELETE FROM _slitable_charts WHERE sheet = ?`, sheet), st(`DELETE FROM _slitable_buttons WHERE sheet = ?`, sheet)}
+		do := []stmt{st(`DELETE FROM _lattis_pivots WHERE sheet = ?`, sheet), st(`DELETE FROM _lattis_charts WHERE sheet = ?`, sheet), st(`DELETE FROM _lattis_buttons WHERE sheet = ?`, sheet)}
 		// Protection de la feuille : supprimée avec elle, rendue par l'annulation.
-		prot, err := t.snapshot(`_slitable_protection`, sheet)
+		prot, err := t.snapshot(`_lattis_protection`, sheet)
 		if err != nil {
 			return err
 		}
-		do = append(do, st(`DELETE FROM _slitable_protection WHERE sheet = ?`, sheet))
+		do = append(do, st(`DELETE FROM _lattis_protection WHERE sheet = ?`, sheet))
 		pivots = append(pivots, prot...)
 		for _, tbl := range sheetPositioned {
 			rows, err := t.snapshot(tbl, sheet)
@@ -240,8 +240,8 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 			pivots = append(pivots, rows...)
 		}
 		return t.apply(
-			append(do, st(`DELETE FROM _slitable_sheets WHERE id = ?`, sheet)),
-			append([]stmt{st(`INSERT INTO _slitable_sheets (id, name, pos, gridlines, headings, color, hidden, freeze_rows, freeze_cols, zoom) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, sheet, name, pos, grid, heads, color, hidden, frows, fcols, zoom)}, pivots...),
+			append(do, st(`DELETE FROM _lattis_sheets WHERE id = ?`, sheet)),
+			append([]stmt{st(`INSERT INTO _lattis_sheets (id, name, pos, gridlines, headings, color, hidden, freeze_rows, freeze_cols, zoom) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, sheet, name, pos, grid, heads, color, hidden, frows, fcols, zoom)}, pivots...),
 		)
 	})
 }
@@ -250,13 +250,13 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 func (m *Model) SetGridlines(ctx context.Context, sheet int64, show bool) error {
 	return m.Do(ctx, "Quadrillage", func(t *tx) error {
 		var old bool
-		if err := t.row(`SELECT gridlines <> 0 FROM _slitable_sheets WHERE id = ?`, sheet).Scan(&old); err != nil {
+		if err := t.row(`SELECT gridlines <> 0 FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&old); err != nil {
 			return err
 		}
 		if old == show {
 			return nil
 		}
-		q := `UPDATE _slitable_sheets SET gridlines = ? WHERE id = ?`
+		q := `UPDATE _lattis_sheets SET gridlines = ? WHERE id = ?`
 		return t.apply([]stmt{st(q, show, sheet)}, []stmt{st(q, old, sheet)})
 	})
 }
@@ -266,13 +266,13 @@ func (m *Model) SetGridlines(ctx context.Context, sheet int64, show bool) error 
 func (m *Model) SetHeadings(ctx context.Context, sheet int64, show bool) error {
 	return m.Do(ctx, "En-têtes A1", func(t *tx) error {
 		var old bool
-		if err := t.row(`SELECT headings <> 0 FROM _slitable_sheets WHERE id = ?`, sheet).Scan(&old); err != nil {
+		if err := t.row(`SELECT headings <> 0 FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&old); err != nil {
 			return err
 		}
 		if old == show {
 			return nil
 		}
-		q := `UPDATE _slitable_sheets SET headings = ? WHERE id = ?`
+		q := `UPDATE _lattis_sheets SET headings = ? WHERE id = ?`
 		return t.apply([]stmt{st(q, show, sheet)}, []stmt{st(q, old, sheet)})
 	})
 }
@@ -285,7 +285,7 @@ func (m *Model) SetColumnWidth(ctx context.Context, sheet int64, col, width int)
 			return err
 		}
 		var old int
-		err := t.row(`SELECT width FROM _slitable_col_widths WHERE sheet = ? AND col = ?`, sheet, col).Scan(&old)
+		err := t.row(`SELECT width FROM _lattis_col_widths WHERE sheet = ? AND col = ?`, sheet, col).Scan(&old)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return err
 		}
@@ -293,9 +293,9 @@ func (m *Model) SetColumnWidth(ctx context.Context, sheet int64, col, width int)
 			return nil
 		}
 		set := func(w int) []stmt {
-			s := []stmt{st(`DELETE FROM _slitable_col_widths WHERE sheet = ? AND col = ?`, sheet, col)}
+			s := []stmt{st(`DELETE FROM _lattis_col_widths WHERE sheet = ? AND col = ?`, sheet, col)}
 			if w > 0 {
-				s = append(s, st(`INSERT INTO _slitable_col_widths (sheet, col, width) VALUES (?, ?, ?)`, sheet, col, w))
+				s = append(s, st(`INSERT INTO _lattis_col_widths (sheet, col, width) VALUES (?, ?, ?)`, sheet, col, w))
 			}
 			return s
 		}
@@ -311,7 +311,7 @@ func (m *Model) SetRowHeight(ctx context.Context, sheet int64, row, height int) 
 			return err
 		}
 		var old int
-		err := t.row(`SELECT height FROM _slitable_row_heights WHERE sheet = ? AND row = ?`, sheet, row).Scan(&old)
+		err := t.row(`SELECT height FROM _lattis_row_heights WHERE sheet = ? AND row = ?`, sheet, row).Scan(&old)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return err
 		}
@@ -319,9 +319,9 @@ func (m *Model) SetRowHeight(ctx context.Context, sheet int64, row, height int) 
 			return nil
 		}
 		set := func(h int) []stmt {
-			s := []stmt{st(`DELETE FROM _slitable_row_heights WHERE sheet = ? AND row = ?`, sheet, row)}
+			s := []stmt{st(`DELETE FROM _lattis_row_heights WHERE sheet = ? AND row = ?`, sheet, row)}
 			if h > 0 {
-				s = append(s, st(`INSERT INTO _slitable_row_heights (sheet, row, height) VALUES (?, ?, ?)`, sheet, row, h))
+				s = append(s, st(`INSERT INTO _lattis_row_heights (sheet, row, height) VALUES (?, ?, ?)`, sheet, row, h))
 			}
 			return s
 		}
@@ -331,7 +331,7 @@ func (m *Model) SetRowHeight(ctx context.Context, sheet int64, row, height int) 
 
 // sheetPositioned sont les tables de métadonnées repérées par feuille et
 // position (sans identifiant propre), supprimées avec la feuille.
-var sheetPositioned = []string{`_slitable_cell_styles`, `_slitable_row_styles`, `_slitable_col_styles`, `_slitable_row_rules`, `_slitable_col_rules`, `_slitable_col_widths`, `_slitable_row_heights`}
+var sheetPositioned = []string{`_lattis_cell_styles`, `_lattis_row_styles`, `_lattis_col_styles`, `_lattis_row_rules`, `_lattis_col_rules`, `_lattis_col_widths`, `_lattis_row_heights`}
 
 // snapshot renvoie les insertions qui recréent les lignes d'une feuille dans
 // une table de métadonnées (pour l'annulation).

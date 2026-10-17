@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // pivotFormats donne le format de nombre par défaut de chaque colonne d'un
@@ -46,7 +46,7 @@ func (t *tx) pivotValueFormat(tb Table, v PivotValue, c *Column) (string, error)
 		return "", nil
 	}
 	var raw string
-	err := t.row(`SELECT style FROM _slitable_styles WHERE tbl = ? AND rid = 0 AND col = ?`, tb.ID, c.ID).Scan(&raw)
+	err := t.row(`SELECT style FROM _lattis_styles WHERE tbl = ? AND rid = 0 AND col = ?`, tb.ID, c.ID).Scan(&raw)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return "", err
 	}

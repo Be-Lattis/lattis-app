@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/canvas"
+	"github.com/lalamefine/lattis/internal/canvas"
 )
 
 // ImportFile importe un fichier d'après son extension : .csv, .tsv, .txt

@@ -1,4 +1,4 @@
-// Package doc assemble un document Slitable ouvert : l'archive et son
+// Package doc assemble un document Lattis ouvert : l'archive et son
 // répertoire de travail (internal/archive), la base migrée (internal/meta),
 // le bus de commandes (internal/command) et le modèle des feuilles
 // (internal/canvas).
@@ -8,11 +8,11 @@ import (
 	"context"
 	"errors"
 
-	"github.com/lalamefine/slitable/internal/archive"
-	"github.com/lalamefine/slitable/internal/canvas"
-	"github.com/lalamefine/slitable/internal/command"
-	"github.com/lalamefine/slitable/internal/meta"
-	"github.com/lalamefine/slitable/internal/store"
+	"github.com/lalamefine/lattis/internal/archive"
+	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/meta"
+	"github.com/lalamefine/lattis/internal/store"
 )
 
 // Document est un classeur ouvert.
@@ -83,14 +83,14 @@ func Recover(ctx context.Context, o archive.Orphan) (*Document, error) {
 // DB donne la base du document.
 func (d *Document) DB() *store.Store { return d.arc.DB }
 
-// Path est le fichier .slitable (vide si jamais enregistré).
+// Path est le fichier .lattis (vide si jamais enregistré).
 func (d *Document) Path() string { return d.arc.Path }
 
 // top donne le numéro de la dernière commande appliquée (0 si aucune).
 func (d *Document) top(ctx context.Context) (int64, error) {
 	var seq int64
 	err := d.arc.DB.Read().QueryRowContext(ctx,
-		`SELECT coalesce(max(seq), 0) FROM _slitable_journal WHERE undone = 0`).Scan(&seq)
+		`SELECT coalesce(max(seq), 0) FROM _lattis_journal WHERE undone = 0`).Scan(&seq)
 	return seq, err
 }
 

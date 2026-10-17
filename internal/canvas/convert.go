@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/command"
-	"github.com/lalamefine/slitable/internal/formula"
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/ncruces/go-sqlite3"
 )
 
@@ -236,7 +236,7 @@ func (m *Model) TypeMix(ctx context.Context, table string, i int) (Mix, error) {
 
 // SetType fixe le type d'une colonne choisi par l'utilisateur. Les valeurs
 // qui ne se convertissent pas sont gardées telles quelles comme saisies en
-// erreur (cellule vide, valeur brute dans _slitable_invalid) ; l'annulation
+// erreur (cellule vide, valeur brute dans _lattis_invalid) ; l'annulation
 // les rend intactes.
 func (m *Model) SetType(ctx context.Context, table string, i int, to grid.Type) error {
 	return m.Do(ctx, "Changer le type", func(t *tx) error {
@@ -248,7 +248,7 @@ func (m *Model) SetType(ctx context.Context, table string, i int, to grid.Type) 
 			return fmt.Errorf("colonne %d hors du tableau", i)
 		}
 		c := tb.Cols[i]
-		fix := `UPDATE _slitable_columns SET fixed = ? WHERE tbl = ? AND id = ?`
+		fix := `UPDATE _lattis_columns SET fixed = ? WHERE tbl = ? AND id = ?`
 		if c.Type == to {
 			return t.apply([]stmt{st(fix, 1, tb.ID, c.ID)}, []stmt{st(fix, c.Fixed, tb.ID, c.ID)})
 		}
@@ -257,21 +257,21 @@ func (m *Model) SetType(ctx context.Context, table string, i int, to grid.Type) 
 			return err
 		}
 		col := colSQL(c.ID)
-		trash := fmt.Sprintf("_slitable_trash_conv_%d_%d_%d", tb.ID, c.ID, time.Now().UnixNano())
+		trash := fmt.Sprintf("_lattis_trash_conv_%d_%d_%d", tb.ID, c.ID, time.Now().UnixNano())
 		do := []stmt{
 			// Les valeurs qui ne passeront pas : gardées pour l'annulation…
 			st(`CREATE TABLE ` + trash + ` (id INTEGER PRIMARY KEY, v)`),
 			st(`INSERT INTO ` + trash + ` (id, v) SELECT id, ` + col + ` FROM ` + tb.sql() +
 				` WHERE ` + col + ` IS NOT NULL AND ` + convertExpr(col, c.Type, to) + ` IS NULL`),
 			// … et marquées en erreur avec leur valeur lisible.
-			st(`INSERT OR REPLACE INTO _slitable_invalid (tbl, rid, col, raw) SELECT ?, id, ?, slt_text(v, ?) FROM `+trash, tb.ID, c.ID, string(c.Type)),
+			st(`INSERT OR REPLACE INTO _lattis_invalid (tbl, rid, col, raw) SELECT ?, id, ?, slt_text(v, ?) FROM `+trash, tb.ID, c.ID, string(c.Type)),
 		}
 		do = append(do, rebuildStmts(tb, physical, c.ID, c.Type, to)...)
 		do = append(do, st(fix, 1, tb.ID, c.ID))
 		undo := rebuildStmts(tb, physical, c.ID, to, c.Type)
 		undo = append(undo,
 			st(`UPDATE `+tb.sql()+` SET `+col+` = `+trash+`.v FROM `+trash+` WHERE `+trash+`.id = `+tb.sql()+`.id`),
-			st(`DELETE FROM _slitable_invalid WHERE tbl = ? AND col = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID, c.ID),
+			st(`DELETE FROM _lattis_invalid WHERE tbl = ? AND col = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID, c.ID),
 			st(`DROP TABLE `+trash),
 			st(fix, c.Fixed, tb.ID, c.ID),
 		)

@@ -42,7 +42,7 @@ func (m *Model) SetRules(ctx context.Context, table string, i int, rules []Rule)
 		}
 		c := tb.Cols[i]
 		var old sql.NullString
-		if err := t.row(`SELECT rules FROM _slitable_columns WHERE tbl = ? AND id = ?`, tb.ID, c.ID).Scan(&old); err != nil {
+		if err := t.row(`SELECT rules FROM _lattis_columns WHERE tbl = ? AND id = ?`, tb.ID, c.ID).Scan(&old); err != nil {
 			return err
 		}
 		var neu any
@@ -62,7 +62,7 @@ func (m *Model) SetRules(ctx context.Context, table string, i int, rules []Rule)
 		if prev == neu {
 			return nil
 		}
-		q := `UPDATE _slitable_columns SET rules = ? WHERE tbl = ? AND id = ?`
+		q := `UPDATE _lattis_columns SET rules = ? WHERE tbl = ? AND id = ?`
 		return t.apply([]stmt{st(q, neu, tb.ID, c.ID)}, []stmt{st(q, prev, tb.ID, c.ID)})
 	})
 }
@@ -70,7 +70,7 @@ func (m *Model) SetRules(ctx context.Context, table string, i int, rules []Rule)
 // columnRules lit les règles d'une colonne (JSON brut, vide s'il n'y en a pas).
 func (t *tx) columnRules(tbl, col int64) (string, error) {
 	var s sql.NullString
-	err := t.row(`SELECT rules FROM _slitable_columns WHERE tbl = ? AND id = ?`, tbl, col).Scan(&s)
+	err := t.row(`SELECT rules FROM _lattis_columns WHERE tbl = ? AND id = ?`, tbl, col).Scan(&s)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", nil
 	}

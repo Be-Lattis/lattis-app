@@ -7,9 +7,9 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/lalamefine/slitable/internal/formula"
-	"github.com/lalamefine/slitable/internal/grid"
-	"github.com/lalamefine/slitable/internal/order"
+	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/order"
 )
 
 // MinRows est le nombre de lignes (en-tête compris) à partir duquel une zone
@@ -218,7 +218,7 @@ func (t *tx) appendRows(tb Table, n int) error {
 // newColumn ajoute une colonne au rang pos et décale ce qui est à droite.
 func (t *tx) newColumn(tb Table, pos int, name string) (Table, error) {
 	var id int64
-	if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _slitable_columns WHERE tbl = ?`, tb.ID).Scan(&id); err != nil {
+	if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_columns WHERE tbl = ?`, tb.ID).Scan(&id); err != nil {
 		return tb, err
 	}
 	if err := t.addColumn(tb, id, name, grid.Text, pos); err != nil {
@@ -341,17 +341,17 @@ func identifier(s string) string {
 
 func (t *tx) tableName(sheet int64, row, col int) (string, error) {
 	var sheetName string
-	if err := t.row(`SELECT name FROM _slitable_sheets WHERE id = ?`, sheet).Scan(&sheetName); err != nil {
+	if err := t.row(`SELECT name FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&sheetName); err != nil {
 		return "", err
 	}
 	free := func(n string) (bool, error) {
 		var k int
-		err := t.row(`SELECT count(*) FROM _slitable_tables WHERE name = ?`, n).Scan(&k)
+		err := t.row(`SELECT count(*) FROM _lattis_tables WHERE name = ?`, n).Scan(&k)
 		return k == 0, err
 	}
 	// Le nom de l'onglet va au premier tableau de la feuille, seul tableau.
 	var others int
-	if err := t.row(`SELECT count(*) FROM _slitable_tables WHERE sheet = ?`, sheet).Scan(&others); err != nil {
+	if err := t.row(`SELECT count(*) FROM _lattis_tables WHERE sheet = ?`, sheet).Scan(&others); err != nil {
 		return "", err
 	}
 	if others == 0 {
@@ -464,7 +464,7 @@ func (m *Model) FixType(ctx context.Context, table string, i int) error {
 		if err != nil {
 			return err
 		}
-		q := `UPDATE _slitable_columns SET fixed = ? WHERE tbl = ? AND id = ?`
+		q := `UPDATE _lattis_columns SET fixed = ? WHERE tbl = ? AND id = ?`
 		return t.apply([]stmt{st(q, 1, tb.ID, tb.Cols[i].ID)}, []stmt{st(q, tb.Cols[i].Fixed, tb.ID, tb.Cols[i].ID)})
 	})
 }

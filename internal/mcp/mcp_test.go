@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lalamefine/slitable/internal/api"
-	"github.com/lalamefine/slitable/internal/doc"
+	"github.com/lalamefine/lattis/internal/api"
+	"github.com/lalamefine/lattis/internal/doc"
 )
 
 type host struct {

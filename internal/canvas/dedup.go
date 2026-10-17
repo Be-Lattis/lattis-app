@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/command"
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // RemoveDuplicates supprime les lignes dont les colonnes cols (toutes si
@@ -32,20 +32,20 @@ func (m *Model) RemoveDuplicates(ctx context.Context, table string, cols []int) 
 		if err := t.row(`SELECT count(*) FROM (` + dups + `)`).Scan(&n); err != nil || n == 0 {
 			return err
 		}
-		trash := fmt.Sprintf("_slitable_trash_dup_%d_%d", tb.ID, time.Now().UnixNano())
+		trash := fmt.Sprintf("_lattis_trash_dup_%d_%d", tb.ID, time.Now().UnixNano())
 		return t.ApplyStep(command.Step{
 			Do: []stmt{
 				st(`CREATE TABLE ` + trash + ` AS SELECT * FROM ` + tb.sql() + ` WHERE id IN (` + dups + `)`),
-				st(`CREATE TABLE `+trash+`_inv AS SELECT * FROM _slitable_invalid WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
-				st(`CREATE TABLE `+trash+`_sty AS SELECT * FROM _slitable_styles WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
-				st(`DELETE FROM _slitable_invalid WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
-				st(`DELETE FROM _slitable_styles WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
+				st(`CREATE TABLE `+trash+`_inv AS SELECT * FROM _lattis_invalid WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
+				st(`CREATE TABLE `+trash+`_sty AS SELECT * FROM _lattis_styles WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
+				st(`DELETE FROM _lattis_invalid WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
+				st(`DELETE FROM _lattis_styles WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
 				st(`DELETE FROM ` + tb.sql() + ` WHERE id IN (SELECT id FROM ` + trash + `)`),
 			},
 			Undo: []stmt{
 				st(`INSERT INTO ` + tb.sql() + ` SELECT * FROM ` + trash),
-				st(`INSERT INTO _slitable_invalid SELECT * FROM ` + trash + `_inv`),
-				st(`INSERT INTO _slitable_styles SELECT * FROM ` + trash + `_sty`),
+				st(`INSERT INTO _lattis_invalid SELECT * FROM ` + trash + `_inv`),
+				st(`INSERT INTO _lattis_styles SELECT * FROM ` + trash + `_sty`),
 				st(`DROP TABLE ` + trash),
 				st(`DROP TABLE ` + trash + `_inv`),
 				st(`DROP TABLE ` + trash + `_sty`),

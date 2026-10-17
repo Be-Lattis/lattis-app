@@ -4,7 +4,7 @@
 	//
 	// Deux modes : un classeur (DocumentService : saisie libre, tableaux qui
 	// naissent, annuler, enregistrer) et la démo d'1 M de lignes (GridService),
-	// qui sert aussi à la mesure automatique (SLITABLE_BENCH).
+	// qui sert aussi à la mesure automatique (LATTIS_BENCH).
 	import { onMount, tick } from 'svelte';
 	import { Events } from '@wailsio/runtime';
 	import { DocumentService, GridService } from '#bindings/internal/bridge/index.js';
@@ -638,7 +638,7 @@
 	let animate = $state(
 		(() => {
 			try {
-				return localStorage.getItem('slitable.animations') !== 'off';
+				return localStorage.getItem('lattis.animations') !== 'off';
 			} catch {
 				return true;
 			}
@@ -647,7 +647,7 @@
 	function setAnimate(on: boolean) {
 		animate = on;
 		try {
-			localStorage.setItem('slitable.animations', on ? 'on' : 'off');
+			localStorage.setItem('lattis.animations', on ? 'on' : 'off');
 		} catch {
 			// stockage indisponible : le choix vaut pour la session
 		}
@@ -814,11 +814,11 @@
 
 	<main>
 		{#if failure}
-			<div class="splash"><h1>Slitable</h1><p class="error">{failure}</p></div>
+			<div class="splash"><h1>Lattis</h1><p class="error">{failure}</p></div>
 		{:else if mode === 'recover'}
 			<div class="splash">
 				<h1>Récupération</h1>
-				<p>Slitable s'est fermé sans enregistrer. Ces classeurs ont des modifications récupérables :</p>
+				<p>Lattis s'est fermé sans enregistrer. Ces classeurs ont des modifications récupérables :</p>
 				{#each orphans as o (o.dir)}
 					<div class="orphan">
 						<div>
@@ -832,7 +832,7 @@
 			</div>
 		{:else if mode === 'closed'}
 			<div class="splash">
-				<h1>Slitable</h1>
+				<h1>Lattis</h1>
 				<p>Aucun classeur ouvert.</p>
 				<div class="actions">
 					<button class="primary ico" onclick={() => file('new')}><Icon name="new-file" size={14} />Nouveau classeur</button>
@@ -929,7 +929,7 @@
 			{/if}
 		{:else}
 			<div class="splash">
-				<h1>Slitable</h1>
+				<h1>Lattis</h1>
 				<p>{demoProgress || 'Ouverture…'}</p>
 			</div>
 		{/if}

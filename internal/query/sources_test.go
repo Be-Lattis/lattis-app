@@ -17,8 +17,8 @@ import (
 	"github.com/ncruces/go-sqlite3/driver"
 	"github.com/parquet-go/parquet-go"
 
-	"github.com/lalamefine/slitable/internal/canvas"
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // previewOf calcule l'aperçu de la source seule (relue).
@@ -305,7 +305,7 @@ func TestSQLiteFile(t *testing.T) {
 
 func TestConnectionStrings(t *testing.T) {
 	pg := pgDSN(DBConfig{Host: "db", Database: "ventes", User: "l'oui", SSLMode: "require"}, `p\w'd`)
-	if pg != `host='db' port=5432 dbname='ventes' connect_timeout=10 application_name=Slitable user='l\'oui' sslmode='require' password='p\\w\'d'` {
+	if pg != `host='db' port=5432 dbname='ventes' connect_timeout=10 application_name=Lattis user='l\'oui' sslmode='require' password='p\\w\'d'` {
 		t.Fatal(pg)
 	}
 	my := mysqlDSN(DBConfig{Host: "srv", Database: "ventes", User: "louis", SSLMode: "disable"}, "p@ss:/w")
@@ -316,10 +316,10 @@ func TestConnectionStrings(t *testing.T) {
 		t.Fatalf("DSN MySQL relu : %+v %v", cfg, err)
 	}
 	ms := sqlServerDSN(DBConfig{Host: "srv", Instance: "SQLEXPRESS", Database: "Ventes", User: `DOM\louis`, SSLMode: "require"}, "p&ss w")
-	if ms != "sqlserver://DOM%5Clouis:p&ss%20w@srv/SQLEXPRESS?TrustServerCertificate=true&app+name=Slitable&connection+timeout=10&database=Ventes&encrypt=true" {
+	if ms != "sqlserver://DOM%5Clouis:p&ss%20w@srv/SQLEXPRESS?TrustServerCertificate=true&app+name=Lattis&connection+timeout=10&database=Ventes&encrypt=true" {
 		t.Fatal(ms)
 	}
-	if ms := sqlServerDSN(DBConfig{Host: "srv"}, ""); ms != "sqlserver://srv:1433?app+name=Slitable&connection+timeout=10" {
+	if ms := sqlServerDSN(DBConfig{Host: "srv"}, ""); ms != "sqlserver://srv:1433?app+name=Lattis&connection+timeout=10" {
 		t.Fatal(ms)
 	}
 	accounts := map[string]Connection{
@@ -386,7 +386,7 @@ func TestReadGuards(t *testing.T) {
 			t.Errorf("%q : %s", q, got)
 		}
 	}
-	if got := sqlServerLimit("SELECT a FROM t", 5); got != "SELECT TOP (5) * FROM (SELECT a FROM t\n) AS _slitable_apercu" {
+	if got := sqlServerLimit("SELECT a FROM t", 5); got != "SELECT TOP (5) * FROM (SELECT a FROM t\n) AS _lattis_apercu" {
 		t.Fatal(got)
 	}
 	for _, q := range []string{"SELECT a FROM t ORDER BY a", "WITH x AS (SELECT 1 AS a) SELECT a FROM x"} {

@@ -12,9 +12,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/lalamefine/slitable/internal/canvas"
-	"github.com/lalamefine/slitable/internal/formula"
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // Écriture d'un classeur .xlsx avec la seule bibliothèque standard. Chaque
@@ -46,7 +46,7 @@ type xsheet struct {
 	rows   func(ctx context.Context, tb canvas.TableInfo, send func(r int, cells []xcell) error) error
 }
 
-// Limites d'une feuille Excel : la feuille de Slitable va au-delà, l'export coupe.
+// Limites d'une feuille Excel : la feuille de Lattis va au-delà, l'export coupe.
 const (
 	ExcelRows = 1_048_576
 	ExcelCols = 16_384
@@ -218,7 +218,7 @@ func textCell(s string) xcell {
 	return xcell{kind: 's', str: s}
 }
 
-// excelErrors : codes d'erreur de Slitable (français) et leur code Excel.
+// excelErrors : codes d'erreur de Lattis (français) et leur code Excel.
 var excelErrors = map[string]string{
 	"#DIV/0!": "#DIV/0!", "#N/A": "#N/A", "#VALEUR!": "#VALUE!", "#REF!": "#REF!",
 	"#NOM?": "#NAME?", "#NOMBRE!": "#NUM!", "#NUL!": "#NULL!",

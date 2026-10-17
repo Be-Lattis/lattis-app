@@ -161,7 +161,7 @@ func (t *tx) transfer(from int64, src Rect, to int64, dst Rect, move bool, value
 			oR, oC := dr+ti*h, dc+tj*w // décalage de cette répétition
 			block := Rect{src.R0 + oR, src.C0 + oC, src.R1 + oR, src.C1 + oC}
 			// La destination est remplacée (cellules libres et leur mise en forme).
-			for _, tbl := range []string{"_slitable_cells", "_slitable_cell_styles"} {
+			for _, tbl := range []string{"_lattis_cells", "_lattis_cell_styles"} {
 				if err := t.deleteWhere(tbl, `sheet = ? AND row BETWEEN ? AND ? AND col BETWEEN ? AND ?`,
 					to, block.R0, block.R1, block.C0, block.C1); err != nil {
 					return err
@@ -246,9 +246,9 @@ func (t *tx) gather(sheet int64, src Rect, tables []Table, values [][]string, mo
 		sql string
 		set func(*piece, string)
 	}{
-		{`SELECT row, col, raw FROM _slitable_cells WHERE ` + in, func(pc *piece, s string) { pc.raw = s }},
-		{`SELECT row, col, style FROM _slitable_cell_styles WHERE ` + in, func(pc *piece, s string) { pc.style = s }},
-		{`SELECT row, col, name FROM _slitable_names WHERE ` + in, func(pc *piece, s string) {
+		{`SELECT row, col, raw FROM _lattis_cells WHERE ` + in, func(pc *piece, s string) { pc.raw = s }},
+		{`SELECT row, col, style FROM _lattis_cell_styles WHERE ` + in, func(pc *piece, s string) { pc.style = s }},
+		{`SELECT row, col, name FROM _lattis_names WHERE ` + in, func(pc *piece, s string) {
 			if move {
 				pc.name = s
 			}
@@ -342,7 +342,7 @@ func (t *tx) gatherPartial(p *payload, tb Table, src Rect, shown func(r, c int) 
 	var args []any
 	for c := c0; c <= c1; c++ {
 		col := tb.Cols[c-tb.Col]
-		sel = append(sel, fmt.Sprintf(`coalesce(slt_text(%s, ?), (SELECT raw FROM _slitable_invalid i WHERE i.tbl = ? AND i.rid = %s.id AND i.col = ?), '')`,
+		sel = append(sel, fmt.Sprintf(`coalesce(slt_text(%s, ?), (SELECT raw FROM _lattis_invalid i WHERE i.tbl = ? AND i.rid = %s.id AND i.col = ?), '')`,
 			colSQL(col.ID), tb.sql()))
 		args = append(args, string(col.Type), tb.ID, col.ID)
 	}
@@ -398,7 +398,7 @@ func (t *tx) gatherPartial(p *payload, tb Table, src Rect, shown func(r, c int) 
 // redeviennent « Colonne n »). Tableaux et colonnes entières partent avec
 // placeTables.
 func (t *tx) lift(sheet int64, src Rect, p payload) error {
-	for _, tbl := range []string{"_slitable_cells", "_slitable_cell_styles", "_slitable_names"} {
+	for _, tbl := range []string{"_lattis_cells", "_lattis_cell_styles", "_lattis_names"} {
 		if err := t.deleteWhere(tbl, `sheet = ? AND row BETWEEN ? AND ? AND col BETWEEN ? AND ?`, sheet, src.R0, src.R1, src.C0, src.C1); err != nil {
 			return err
 		}
@@ -439,7 +439,7 @@ func (t *tx) placeTables(p payload, to int64, dr, dc int, move bool) error {
 		id := tb.ID
 		if move {
 			if tb.Sheet != to {
-				q := `UPDATE _slitable_tables SET sheet = ? WHERE id = ?`
+				q := `UPDATE _lattis_tables SET sheet = ? WHERE id = ?`
 				if err := t.apply([]stmt{st(q, to, tb.ID)}, []stmt{st(q, tb.Sheet, tb.ID)}); err != nil {
 					return err
 				}
@@ -490,7 +490,7 @@ func (t *tx) placeTables(p payload, to int64, dr, dc int, move bool) error {
 	}
 	for _, id := range ids {
 		var n int
-		if err := t.row(`SELECT count(*) FROM _slitable_tables WHERE id = ?`, id).Scan(&n); err != nil {
+		if err := t.row(`SELECT count(*) FROM _lattis_tables WHERE id = ?`, id).Scan(&n); err != nil {
 			return err
 		}
 		if n == 0 {
@@ -518,7 +518,7 @@ func (t *tx) copyTableID(tb Table, sheet int64) (int64, error) {
 		return 0, err
 	}
 	var id int64
-	err = t.row(`SELECT id FROM _slitable_tables WHERE name = ?`, n).Scan(&id)
+	err = t.row(`SELECT id FROM _lattis_tables WHERE name = ?`, n).Scan(&id)
 	return id, err
 }
 
@@ -613,11 +613,11 @@ func (t *tx) putPieces(pieces []piece, sheet int64, row, col int, move bool, ev 
 				return err
 			}
 			if move && pc.name != "" {
-				if err := t.deleteWhere(`_slitable_names`, `sheet = ? AND row = ? AND col = ?`, sheet, r, c); err != nil {
+				if err := t.deleteWhere(`_lattis_names`, `sheet = ? AND row = ? AND col = ?`, sheet, r, c); err != nil {
 					return err
 				}
-				q := `INSERT INTO _slitable_names (name, sheet, row, col) VALUES (?, ?, ?, ?)`
-				if err := t.apply([]stmt{st(q, pc.name, sheet, r, c)}, []stmt{st(`DELETE FROM _slitable_names WHERE name = ?`, pc.name)}); err != nil {
+				q := `INSERT INTO _lattis_names (name, sheet, row, col) VALUES (?, ?, ?, ?)`
+				if err := t.apply([]stmt{st(q, pc.name, sheet, r, c)}, []stmt{st(`DELETE FROM _lattis_names WHERE name = ?`, pc.name)}); err != nil {
 					return err
 				}
 			}
@@ -651,14 +651,14 @@ func (t *tx) putPieces(pieces []piece, sheet int64, row, col int, move bool, ev 
 
 // putFreeStyle remplace la mise en forme d'une cellule libre (vide : aucune).
 func (t *tx) putFreeStyle(sheet int64, row, col int, style string) error {
-	return t.setStyle(`_slitable_cell_styles`, `sheet = ? AND row = ? AND col = ?`, `sheet, row, col`, []any{sheet, row, col},
+	return t.setStyle(`_lattis_cell_styles`, `sheet = ? AND row = ? AND col = ?`, `sheet, row, col`, []any{sheet, row, col},
 		func(string) (string, error) { return style, nil })
 }
 
 // putTableStyle remplace la mise en forme d'une cellule de tableau (rid -1 :
 // en-tête ; vide : aucune).
 func (t *tx) putTableStyle(tbl, rid, col int64, style string) error {
-	return t.setStyle(`_slitable_styles`, `tbl = ? AND rid = ? AND col = ?`, `tbl, rid, col`, []any{tbl, rid, col},
+	return t.setStyle(`_lattis_styles`, `tbl = ? AND rid = ? AND col = ?`, `tbl, rid, col`, []any{tbl, rid, col},
 		func(string) (string, error) { return style, nil })
 }
 
@@ -735,6 +735,6 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 		if all {
 			return t.clearFree(sheet, r0, c0, r1, c1)
 		}
-		return t.deleteWhere(`_slitable_cells`, `sheet = ? AND row BETWEEN ? AND ? AND col BETWEEN ? AND ?`, sheet, r0, r1, c0, c1)
+		return t.deleteWhere(`_lattis_cells`, `sheet = ? AND row BETWEEN ? AND ? AND col BETWEEN ? AND ?`, sheet, r0, r1, c0, c1)
 	})
 }

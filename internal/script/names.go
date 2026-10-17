@@ -49,9 +49,9 @@ type querier interface {
 func loadCatalog(ctx context.Context, db querier) (*catalog, error) {
 	rs, err := db.QueryContext(ctx, `
 		SELECT t.id, t.name, s.name, c.id, c.name, c.type, c.fixed
-		FROM _slitable_tables t
-		JOIN _slitable_sheets s ON s.id = t.sheet
-		JOIN _slitable_columns c ON c.tbl = t.id
+		FROM _lattis_tables t
+		JOIN _lattis_sheets s ON s.id = t.sheet
+		JOIN _lattis_columns c ON c.tbl = t.id
 		ORDER BY s.pos, t.id, c.pos`)
 	if err != nil {
 		return nil, err

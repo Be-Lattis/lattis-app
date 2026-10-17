@@ -5,8 +5,8 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/lalamefine/slitable/internal/api"
-	"github.com/lalamefine/slitable/internal/doc"
+	"github.com/lalamefine/lattis/internal/api"
+	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -143,7 +143,7 @@ func (h host) OpenDoc(ctx context.Context, path string) error {
 		return err
 	}
 	if res.Recoverable != nil {
-		return errors.New("une session interrompue de ce classeur attend d'être récupérée : ouvrez-le dans Slitable")
+		return errors.New("une session interrompue de ce classeur attend d'être récupérée : ouvrez-le dans Lattis")
 	}
 	h.s.changed(ctx)
 	return nil

@@ -66,14 +66,14 @@ func ParseArgs(args []string) (preset string, seed uint64, err error) {
 // Usage décrit la ligne de commande : options, sous-commande et presets.
 func Usage() string {
 	var b strings.Builder
-	b.WriteString(`Slitable : tableur relationnel local-first.
+	b.WriteString(`Lattis : tableur relationnel local-first.
 
 Usage :
-  slitable                       ouvre l'application
-  slitable --demo [preset]       ouvre un classeur de démonstration (fausses données)
-  slitable mcp                   relais stdio vers le serveur MCP de l'application ouverte
+  lattis                       ouvre l'application
+  lattis --demo [preset]       ouvre un classeur de démonstration (fausses données)
+  lattis mcp                   relais stdio vers le serveur MCP de l'application ouverte
                                  (pour les clients MCP qui lancent un programme)
-  slitable -h | --help           affiche cette aide
+  lattis -h | --help           affiche cette aide
 
 Options :
   --demo [preset]   classeur de démonstration ; preset par défaut : ` + DefaultPreset + `
@@ -89,8 +89,8 @@ Presets de --demo :
 	}
 	b.WriteString(`
 Variables d'environnement :
-  SLITABLE_BENCH=fichier    mesure le défilement de la grille et écrit le rapport dans fichier
-  SLITABLE_SQL=1 ou 0       force le journal SQL (comme --sql / --no-sql)
+  LATTIS_BENCH=fichier    mesure le défilement de la grille et écrit le rapport dans fichier
+  LATTIS_SQL=1 ou 0       force le journal SQL (comme --sql / --no-sql)
 `)
 	return b.String()
 }

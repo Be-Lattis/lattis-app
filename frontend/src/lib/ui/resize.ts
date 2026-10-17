@@ -14,7 +14,7 @@ export function clampWidth(w: number, min: number, max: number, room: number): n
 
 type Options = { key: string; min?: number; max?: number };
 
-const storeKey = (key: string) => `slitable.panel.${key}`;
+const storeKey = (key: string) => `lattis.panel.${key}`;
 
 function load(key: string): number | undefined {
 	try {

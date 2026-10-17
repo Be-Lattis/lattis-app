@@ -1,18 +1,18 @@
-# Slitable
+# Lattis
 
 **Le tableur que vous connaissez, avec une vraie base de données dessous.**
 
-Slitable a la souplesse d'Excel : une grille infinie, des formules en français, un ruban familier, Ctrl+C / Ctrl+V. Chaque tableau que vous tapez est en réalité une table **SQLite** typée, indexée et interrogeable en SQL. Résultat : un million de lignes ne fait plus peur, les données restent propres, et vous pouvez passer à tout moment de la souris au SQL, ou au script.
+Lattis a la souplesse d'Excel : une grille infinie, des formules en français, un ruban familier, Ctrl+C / Ctrl+V. Chaque tableau que vous tapez est en réalité une table **SQLite** typée, indexée et interrogeable en SQL. Résultat : un million de lignes ne fait plus peur, les données restent propres, et vous pouvez passer à tout moment de la souris au SQL, ou au script.
 
-Application de bureau native (Go + Wails), **local-first** : vos classeurs sont de simples fichiers `.slitable`, sans compte ni cloud ni abonnement.
+Application de bureau native (Go + Wails), **local-first** : vos classeurs sont de simples fichiers `.lattis`, sans compte ni cloud ni abonnement.
 
-![Une feuille Slitable : deux tableaux reliés par une formule NB.SI](docs/captures/grille-formule.png)
+![Une feuille Lattis : deux tableaux reliés par une formule NB.SI](docs/captures/grille-formule.png)
 
 ---
 
-## Pourquoi Slitable ?
+## Pourquoi Lattis ?
 
-| Dans un tableur classique… | Dans Slitable |
+| Dans un tableur classique… | Dans Lattis |
 | --- | --- |
 | Une plage de cellules sans structure | **Chaque tableau est une table** : colonnes typées (texte, entier, décimal, date, booléen), clé unique détectée automatiquement |
 | `RECHERCHEV` fragile, décalée dès qu'on insère une colonne | `REFERENCE(Produits[Prix]; [Code])` : une jointure par **nom de colonne**, qui ne casse pas |
@@ -24,7 +24,7 @@ Application de bureau native (Go + Wails), **local-first** : vos classeurs sont 
 
 ### Saisir comme dans Excel, sans rien déclarer
 
-Tapez quelques lignes n'importe où : Slitable reconnaît l'îlot de données, met l'en-tête en valeur, devine le type de chaque colonne et crée la table correspondante. Collez depuis Excel, glissez un tableau à côté d'un autre pour les fusionner, annulez tout avec Ctrl+Z.
+Tapez quelques lignes n'importe où : Lattis reconnaît l'îlot de données, met l'en-tête en valeur, devine le type de chaque colonne et crée la table correspondante. Collez depuis Excel, glissez un tableau à côté d'un autre pour les fusionner, annulez tout avec Ctrl+Z.
 
 Les formules parlent français (`SOMME.SI`, `NB.SI`, `SI`, `ARRONDI`…) et désignent les colonnes par leur nom : `=[Quantité]*[Prix unitaire]` s'applique à toute la colonne, comme un tableau structuré d'Excel. Les références sont colorées pendant la saisie et se placent d'un clic, et la colonne calculée concernée est mise en évidence.
 
@@ -64,7 +64,7 @@ Chaque transformation devient une étape rejouable : filtrer, trier, choisir des
 
 - **Import / export** `.xlsx` et `.csv`, impression.
 - **Serveur MCP** intégré : laissez un assistant comme Claude lire et modifier le classeur ouvert, en local et avec un jeton. → [docs/mcp.md](docs/mcp.md)
-- **Fichier `.slitable`** : une seule archive (base SQLite + manifeste), facile à envoyer par e-mail ou à archiver, avec enregistrement atomique et récupération après incident.
+- **Fichier `.lattis`** : une seule archive (base SQLite + manifeste), facile à envoyer par e-mail ou à archiver, avec enregistrement atomique et récupération après incident.
 - Protection de feuilles et de classeur, notes façon post-it, cellules fusionnées, volets figés, zoom, animations de sélection.
 
 ## Les performances, mesurées
@@ -113,7 +113,7 @@ go run . --help          # toutes les options
 wails3 build          # binaire dans bin/
 go test ./internal/...
 cd frontend && npm run check && npm test
-SLITABLE_BENCH=resultat.json ./bin/slitable   # mesure automatique de la grille
+LATTIS_BENCH=resultat.json ./bin/lattis   # mesure automatique de la grille
 go run . --demo med [--seed 42]                 # ouvre un classeur de démonstration
 go run . --sql                                  # journal des requêtes SQL dans la console
 ```
@@ -131,7 +131,7 @@ go run . --sql                                  # journal des requêtes SQL dans
 | `big` | `med`, plus 8 onglets de 5 à 50 colonnes et de 100 à 100 000 lignes |
 | `refs` | 5 tableaux sur 3 onglets reliés par des `REFERENCE` en chaîne, `SOMME.SI` et `NB.SI` |
 
-En Go : `demo.New(ctx, "med", demo.Options{Seed: 42})` (internal/demo), ou `demo.Build` pour ajouter un preset à un classeur ouvert. `SLITABLE_DEMO_LOURD=1 go test ./internal/demo/` fabrique aussi les gros presets.
+En Go : `demo.New(ctx, "med", demo.Options{Seed: 42})` (internal/demo), ou `demo.Build` pour ajouter un preset à un classeur ouvert. `LATTIS_DEMO_LOURD=1 go test ./internal/demo/` fabrique aussi les gros presets.
 
 ### Organisation
 
@@ -139,8 +139,8 @@ En Go : `demo.New(ctx, "med", demo.Options{Seed: 42})` (internal/demo), ou `demo
 main.go               point d'entrée Wails (à la racine : les tâches Wails l'attendent ici)
 internal/bridge/      API exposée au frontend, seule couche qui dépend de Wails
 internal/doc/         un classeur ouvert : archive + base + journal + modèle
-internal/archive/     fichier .slitable : extraction, verrou, enregistrement atomique, récupération
-internal/meta/        schéma des tables _slitable_* et migrations
+internal/archive/     fichier .lattis : extraction, verrou, enregistrement atomique, récupération
+internal/meta/        schéma des tables _lattis_* et migrations
 internal/command/     bus de commandes réversibles, journal d'annulation persisté
 internal/canvas/      modèle canevas ↔ tables : îlots, lignes, colonnes, types, TCD, graphiques
 internal/formula/     analyse et calcul des formules (traduites en SQL quand c'est possible)

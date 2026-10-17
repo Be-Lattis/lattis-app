@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/formula"
+	"github.com/lalamefine/lattis/internal/formula"
 )
 
 // cellRefRe trouve les adresses de cellules libres d'un texte (formule ou
@@ -55,7 +55,7 @@ func mentionsCell(s string) bool {
 // sheetIDs donne l'identifiant de chaque feuille, par nom en minuscules.
 func (t *tx) sheetIDs() (map[string]int64, error) {
 	out := map[string]int64{}
-	rs, err := t.query(`SELECT id, name FROM _slitable_sheets`)
+	rs, err := t.query(`SELECT id, name FROM _lattis_sheets`)
 	if err != nil {
 		return nil, err
 	}

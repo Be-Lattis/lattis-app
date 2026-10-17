@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/command"
-	"github.com/lalamefine/slitable/internal/formula"
-	"github.com/lalamefine/slitable/internal/grid"
-	"github.com/lalamefine/slitable/internal/order"
+	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/order"
 )
 
 // Insertion et suppression de lignes ou de colonnes entières de la feuille,
@@ -29,45 +29,53 @@ const (
 )
 
 // Tables des métadonnées positionnées sur une feuille (colonnes sheet, row, col).
-var positioned = []string{"_slitable_cells", "_slitable_cell_styles", "_slitable_names", "_slitable_tables", "_slitable_pivots", "_slitable_charts", "_slitable_buttons"}
+var positioned = []string{"_lattis_cells", "_lattis_cell_styles", "_lattis_names", "_lattis_tables", "_lattis_pivots", "_lattis_charts", "_lattis_buttons"}
 
 // Objets ancrés (pas de contenu par cellule) : leur ancre recule au début
 // d'une plage supprimée au lieu de disparaître.
-var anchored = []string{"_slitable_pivots", "_slitable_charts", "_slitable_buttons"}
+var anchored = []string{"_lattis_pivots", "_lattis_charts", "_lattis_buttons"}
 
 func (a axis) sizes() string {
 	if a == rowsAxis {
-		return "_slitable_row_heights"
+		return "_lattis_row_heights"
 	}
-	return "_slitable_col_widths"
+	return "_lattis_col_widths"
 }
 
 // lineStyles est la table des styles de lignes (ou de colonnes) entières.
 func (a axis) lineStyles() string {
 	if a == rowsAxis {
-		return "_slitable_row_styles"
+		return "_lattis_row_styles"
 	}
-	return "_slitable_col_styles"
+	return "_lattis_col_styles"
 }
 
 // InsertSheetRows insère n lignes vides avant la ligne at de la feuille.
 func (m *Model) InsertSheetRows(ctx context.Context, sheet int64, at, n int) error {
-	return m.Do(ctx, plural(n, "Insérer une ligne", "Insérer des lignes"), func(t *tx) error { return t.guarded(sheet, func() error { return t.insertLines(sheet, rowsAxis, at, n) }) })
+	return m.Do(ctx, plural(n, "Insérer une ligne", "Insérer des lignes"), func(t *tx) error {
+		return t.guarded(sheet, func() error { return t.insertLines(sheet, rowsAxis, at, n) })
+	})
 }
 
 // DeleteSheetRows supprime les lignes r0 à r1 de la feuille.
 func (m *Model) DeleteSheetRows(ctx context.Context, sheet int64, r0, r1 int) error {
-	return m.Do(ctx, plural(r1-r0+1, "Supprimer une ligne", "Supprimer des lignes"), func(t *tx) error { return t.guarded(sheet, func() error { return t.deleteLines(sheet, rowsAxis, r0, r1) }) })
+	return m.Do(ctx, plural(r1-r0+1, "Supprimer une ligne", "Supprimer des lignes"), func(t *tx) error {
+		return t.guarded(sheet, func() error { return t.deleteLines(sheet, rowsAxis, r0, r1) })
+	})
 }
 
 // InsertSheetColumns insère n colonnes vides avant la colonne at de la feuille.
 func (m *Model) InsertSheetColumns(ctx context.Context, sheet int64, at, n int) error {
-	return m.Do(ctx, plural(n, "Insérer une colonne", "Insérer des colonnes"), func(t *tx) error { return t.guarded(sheet, func() error { return t.insertLines(sheet, colsAxis, at, n) }) })
+	return m.Do(ctx, plural(n, "Insérer une colonne", "Insérer des colonnes"), func(t *tx) error {
+		return t.guarded(sheet, func() error { return t.insertLines(sheet, colsAxis, at, n) })
+	})
 }
 
 // DeleteSheetColumns supprime les colonnes c0 à c1 de la feuille.
 func (m *Model) DeleteSheetColumns(ctx context.Context, sheet int64, c0, c1 int) error {
-	return m.Do(ctx, plural(c1-c0+1, "Supprimer une colonne", "Supprimer des colonnes"), func(t *tx) error { return t.guarded(sheet, func() error { return t.deleteLines(sheet, colsAxis, c0, c1) }) })
+	return m.Do(ctx, plural(c1-c0+1, "Supprimer une colonne", "Supprimer des colonnes"), func(t *tx) error {
+		return t.guarded(sheet, func() error { return t.deleteLines(sheet, colsAxis, c0, c1) })
+	})
 }
 
 func plural(n int, one, many string) string {
@@ -144,14 +152,14 @@ func (t *tx) deleteLines(sheet int64, a axis, lo, hi int) error {
 			}
 			if first >= lo {
 				// Les premières colonnes partent : le tableau commence au début de la plage.
-				q := `UPDATE _slitable_tables SET col = ? WHERE id = ?`
+				q := `UPDATE _lattis_tables SET col = ? WHERE id = ?`
 				if err := t.apply([]stmt{st(q, lo, tb.ID)}, []stmt{st(q, tb.Col, tb.ID)}); err != nil {
 					return err
 				}
 			}
 		}
 	}
-	for _, tbl := range []string{"_slitable_cells", "_slitable_cell_styles", "_slitable_names", a.sizes(), a.lineStyles(), a.lineRules()} {
+	for _, tbl := range []string{"_lattis_cells", "_lattis_cell_styles", "_lattis_names", a.sizes(), a.lineStyles(), a.lineRules()} {
 		if err := t.deleteIn(tbl, a, sheet, lo, hi); err != nil {
 			return err
 		}
@@ -290,7 +298,7 @@ func (t *tx) insertTableRows(tb Table, k, n int) error {
 // insertTableCols insère n colonnes de texte vides avant la colonne i.
 func (t *tx) insertTableCols(tb Table, i, n int) error {
 	var id int64
-	if err := t.row(`SELECT coalesce(max(id), 0) FROM _slitable_columns WHERE tbl = ?`, tb.ID).Scan(&id); err != nil {
+	if err := t.row(`SELECT coalesce(max(id), 0) FROM _lattis_columns WHERE tbl = ?`, tb.ID).Scan(&id); err != nil {
 		return err
 	}
 	taken := map[string]bool{}
@@ -336,20 +344,20 @@ func (t *tx) deleteTableCols(tb Table, i, j int) error {
 // identifiants : lignes, saisies invalides et styles passent dans des tables
 // de corbeille que l'annulation remet en place.
 func (t *tx) trashRows(tb Table, ids string) error {
-	trash := fmt.Sprintf("_slitable_trash_rows_%d_%d", tb.ID, time.Now().UnixNano())
+	trash := fmt.Sprintf("_lattis_trash_rows_%d_%d", tb.ID, time.Now().UnixNano())
 	return t.ApplyStep(command.Step{
 		Do: []stmt{
 			st(`CREATE TABLE ` + trash + ` AS SELECT * FROM ` + tb.sql() + ` WHERE id IN (` + ids + `)`),
-			st(`CREATE TABLE `+trash+`_inv AS SELECT * FROM _slitable_invalid WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
-			st(`CREATE TABLE `+trash+`_sty AS SELECT * FROM _slitable_styles WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
-			st(`DELETE FROM _slitable_invalid WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
-			st(`DELETE FROM _slitable_styles WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
+			st(`CREATE TABLE `+trash+`_inv AS SELECT * FROM _lattis_invalid WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
+			st(`CREATE TABLE `+trash+`_sty AS SELECT * FROM _lattis_styles WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
+			st(`DELETE FROM _lattis_invalid WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
+			st(`DELETE FROM _lattis_styles WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
 			st(`DELETE FROM ` + tb.sql() + ` WHERE id IN (SELECT id FROM ` + trash + `)`),
 		},
 		Undo: []stmt{
 			st(`INSERT INTO ` + tb.sql() + ` SELECT * FROM ` + trash),
-			st(`INSERT INTO _slitable_invalid SELECT * FROM ` + trash + `_inv`),
-			st(`INSERT INTO _slitable_styles SELECT * FROM ` + trash + `_sty`),
+			st(`INSERT INTO _lattis_invalid SELECT * FROM ` + trash + `_inv`),
+			st(`INSERT INTO _lattis_styles SELECT * FROM ` + trash + `_sty`),
 			st(`DROP TABLE ` + trash),
 			st(`DROP TABLE ` + trash + `_inv`),
 			st(`DROP TABLE ` + trash + `_sty`),
@@ -464,7 +472,7 @@ func (t *tx) rewriteCellRefs(sheet int64, move func(r, c int) (int, int, bool)) 
 		raw      string
 	}
 	var cells []freeCell
-	rs, err := t.query(`SELECT sheet, row, col, raw FROM _slitable_cells WHERE raw LIKE '=%' AND raw LIKE '%cell%'`)
+	rs, err := t.query(`SELECT sheet, row, col, raw FROM _lattis_cells WHERE raw LIKE '=%' AND raw LIKE '%cell%'`)
 	if err != nil {
 		return err
 	}
@@ -478,7 +486,7 @@ func (t *tx) rewriteCellRefs(sheet int64, move func(r, c int) (int, int, bool)) 
 	}
 	rs.Close()
 	var do, undo []stmt
-	qc := `UPDATE _slitable_cells SET raw = ? WHERE sheet = ? AND row = ? AND col = ?`
+	qc := `UPDATE _lattis_cells SET raw = ? WHERE sheet = ? AND row = ? AND col = ?`
 	for _, c := range cells {
 		if neu := rewrite(c.raw, c.sheet); neu != c.raw {
 			do = append(do, st(qc, neu, c.sheet, c.row, c.col))
@@ -491,7 +499,7 @@ func (t *tx) rewriteCellRefs(sheet int64, move func(r, c int) (int, int, bool)) 
 		f              string
 	}
 	var cols []colFormula
-	rs, err = t.query(`SELECT c.tbl, c.id, t.sheet, c.formula FROM _slitable_columns c JOIN _slitable_tables t ON t.id = c.tbl
+	rs, err = t.query(`SELECT c.tbl, c.id, t.sheet, c.formula FROM _lattis_columns c JOIN _lattis_tables t ON t.id = c.tbl
 		WHERE c.formula LIKE '%cell%'`)
 	if err != nil {
 		return err
@@ -505,7 +513,7 @@ func (t *tx) rewriteCellRefs(sheet int64, move func(r, c int) (int, int, bool)) 
 		cols = append(cols, c)
 	}
 	rs.Close()
-	qf := `UPDATE _slitable_columns SET formula = ? WHERE tbl = ? AND id = ?`
+	qf := `UPDATE _lattis_columns SET formula = ? WHERE tbl = ? AND id = ?`
 	for _, c := range cols {
 		if neu := rewrite(c.f, c.sheet); neu != c.f {
 			do = append(do, st(qf, neu, c.tbl, c.id))

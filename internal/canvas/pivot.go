@@ -46,14 +46,14 @@ func (m *Model) CreatePivot(ctx context.Context, cfg PivotConfig) (int64, error)
 			return err
 		}
 		var pos int
-		if err := t.row(`SELECT coalesce(max(id), 0) + 1, coalesce(max(pos), -1) + 1 FROM _slitable_sheets`).Scan(&sheet, &pos); err != nil {
+		if err := t.row(`SELECT coalesce(max(id), 0) + 1, coalesce(max(pos), -1) + 1 FROM _lattis_sheets`).Scan(&sheet, &pos); err != nil {
 			return err
 		}
 		name := ""
 		for n := 1; ; n++ {
 			name = fmt.Sprintf("TCD %d", n)
 			var k int
-			if err := t.row(`SELECT count(*) FROM _slitable_sheets WHERE name = ?`, name).Scan(&k); err != nil {
+			if err := t.row(`SELECT count(*) FROM _lattis_sheets WHERE name = ?`, name).Scan(&k); err != nil {
 				return err
 			}
 			if k == 0 {
@@ -61,7 +61,7 @@ func (m *Model) CreatePivot(ctx context.Context, cfg PivotConfig) (int64, error)
 			}
 		}
 		var id int64
-		if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _slitable_pivots`).Scan(&id); err != nil {
+		if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_pivots`).Scan(&id); err != nil {
 			return err
 		}
 		if cfg.Name == "" {
@@ -76,11 +76,11 @@ func (m *Model) CreatePivot(ctx context.Context, cfg PivotConfig) (int64, error)
 			return err
 		}
 		return t.apply([]stmt{
-			st(`INSERT INTO _slitable_sheets (id, name, pos, gridlines) VALUES (?, ?, ?, 0)`, sheet, name, pos),
-			st(`INSERT INTO _slitable_pivots (id, sheet, row, col, config) VALUES (?, ?, 1, 1, ?)`, id, sheet, string(b)),
+			st(`INSERT INTO _lattis_sheets (id, name, pos, gridlines) VALUES (?, ?, ?, 0)`, sheet, name, pos),
+			st(`INSERT INTO _lattis_pivots (id, sheet, row, col, config) VALUES (?, ?, 1, 1, ?)`, id, sheet, string(b)),
 		}, []stmt{
-			st(`DELETE FROM _slitable_pivots WHERE id = ?`, id),
-			st(`DELETE FROM _slitable_sheets WHERE id = ?`, sheet),
+			st(`DELETE FROM _lattis_pivots WHERE id = ?`, id),
+			st(`DELETE FROM _lattis_sheets WHERE id = ?`, sheet),
 		})
 	})
 	return sheet, err
@@ -90,14 +90,14 @@ func (m *Model) CreatePivot(ctx context.Context, cfg PivotConfig) (int64, error)
 func (m *Model) SetPivot(ctx context.Context, id int64, cfg PivotConfig) error {
 	cfg = cfg.normalized()
 	return m.Do(ctx, "Modifier le tableau croisé", func(t *tx) error {
-		if err := t.guardObject(`_slitable_pivots`, id); err != nil {
+		if err := t.guardObject(`_lattis_pivots`, id); err != nil {
 			return err
 		}
 		if _, err := t.pivotPlan(cfg); err != nil {
 			return err
 		}
 		var old string
-		if err := t.row(`SELECT config FROM _slitable_pivots WHERE id = ?`, id).Scan(&old); err != nil {
+		if err := t.row(`SELECT config FROM _lattis_pivots WHERE id = ?`, id).Scan(&old); err != nil {
 			return err
 		}
 		if cfg.Name == "" {
@@ -110,7 +110,7 @@ func (m *Model) SetPivot(ctx context.Context, id int64, cfg PivotConfig) error {
 		if err != nil {
 			return err
 		}
-		q := `UPDATE _slitable_pivots SET config = ? WHERE id = ?`
+		q := `UPDATE _lattis_pivots SET config = ? WHERE id = ?`
 		return t.apply([]stmt{st(q, string(b), id)}, []stmt{st(q, old, id)})
 	})
 }
@@ -118,25 +118,25 @@ func (m *Model) SetPivot(ctx context.Context, id int64, cfg PivotConfig) error {
 // DeletePivot supprime un tableau croisé (sa feuille reste).
 func (m *Model) DeletePivot(ctx context.Context, id int64) error {
 	return m.Do(ctx, "Supprimer le tableau croisé", func(t *tx) error {
-		if err := t.guardObject(`_slitable_pivots`, id); err != nil {
+		if err := t.guardObject(`_lattis_pivots`, id); err != nil {
 			return err
 		}
 		var sheet int64
 		var row, col int
 		var cfg string
-		if err := t.row(`SELECT sheet, row, col, config FROM _slitable_pivots WHERE id = ?`, id).Scan(&sheet, &row, &col, &cfg); err != nil {
+		if err := t.row(`SELECT sheet, row, col, config FROM _lattis_pivots WHERE id = ?`, id).Scan(&sheet, &row, &col, &cfg); err != nil {
 			return err
 		}
 		return t.apply(
-			[]stmt{st(`DELETE FROM _slitable_pivots WHERE id = ?`, id)},
-			[]stmt{st(`INSERT INTO _slitable_pivots (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, id, sheet, row, col, cfg)},
+			[]stmt{st(`DELETE FROM _lattis_pivots WHERE id = ?`, id)},
+			[]stmt{st(`INSERT INTO _lattis_pivots (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, id, sheet, row, col, cfg)},
 		)
 	})
 }
 
 // pivots donne les tableaux croisés d'une feuille, calculés.
 func (t *tx) pivots(sheet int64) ([]PivotInfo, error) {
-	rs, err := t.query(`SELECT id, row, col, config FROM _slitable_pivots WHERE sheet = ? ORDER BY id`, sheet)
+	rs, err := t.query(`SELECT id, row, col, config FROM _lattis_pivots WHERE sheet = ? ORDER BY id`, sheet)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +177,7 @@ func (t *tx) pivots(sheet int64) ([]PivotInfo, error) {
 
 // pivotIDs liste les tableaux croisés d'une feuille (suppression de feuille).
 func (t *tx) pivotRows(sheet int64) ([]stmt, error) {
-	rs, err := t.query(`SELECT id, row, col, config FROM _slitable_pivots WHERE sheet = ?`, sheet)
+	rs, err := t.query(`SELECT id, row, col, config FROM _lattis_pivots WHERE sheet = ?`, sheet)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +190,7 @@ func (t *tx) pivotRows(sheet int64) ([]stmt, error) {
 		if err := rs.Scan(&id, &row, &col, &cfg); err != nil {
 			return nil, err
 		}
-		undo = append(undo, st(`INSERT INTO _slitable_pivots (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, id, sheet, row, col, cfg.String))
+		undo = append(undo, st(`INSERT INTO _lattis_pivots (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, id, sheet, row, col, cfg.String))
 	}
 	return undo, rs.Err()
 }

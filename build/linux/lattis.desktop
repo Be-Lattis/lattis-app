@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
-Name=slitable
-Exec=slitable
-Icon=slitable
+Name=lattis
+Exec=lattis
+Icon=lattis
 Categories=Development;
 Terminal=false
 Keywords=wails

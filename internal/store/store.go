@@ -1,4 +1,4 @@
-// Package store ouvre la base SQLite d'un document Slitable.
+// Package store ouvre la base SQLite d'un document Lattis.
 //
 // SQLite en WAL accepte plusieurs lecteurs mais un seul écrivain. Le Store
 // sépare donc un pool de connexions en lecture (la grille, les requêtes) d'une
@@ -53,10 +53,10 @@ var (
 	tableName = regexp.MustCompile(`\bt_\d+\b`)
 	// Métadonnées qui changent ce qu'on lit d'un tableau : colonnes, types,
 	// formules, saisies invalides, tableaux eux-mêmes.
-	tableMeta = regexp.MustCompile(`_slitable_(columns|tables|invalid)\b`)
+	tableMeta = regexp.MustCompile(`_lattis_(columns|tables|invalid)\b`)
 	// Structure des tableaux (noms, colonnes, types) : ce que lit tout calcul
 	// sur un tableau (voir Version ; les saisies invalides n'en sont pas).
-	schemaMeta = regexp.MustCompile(`_slitable_(columns|tables)\b`)
+	schemaMeta = regexp.MustCompile(`_lattis_(columns|tables)\b`)
 )
 
 // noteWrite relève les tableaux qu'une requête de l'écrivain peut modifier.

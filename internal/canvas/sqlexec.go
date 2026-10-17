@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/grid"
 
-	"github.com/lalamefine/slitable/internal/command"
-	"github.com/lalamefine/slitable/internal/order"
+	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/order"
 )
 
 // Requêtes SQL d'écriture annulables (onglet SQL, db.execute en Lua).
@@ -31,12 +31,12 @@ import (
 // par la vue reçoit sa position (_pos) en fin de tableau.
 //
 // Restent refusés : les changements de structure (CREATE, ALTER, DROP...) et
-// les écritures dans les métadonnées _slitable_*.
+// les écritures dans les métadonnées _lattis_*.
 
 // ErrStructure signale une requête qui change la structure de la base.
 var ErrStructure = errors.New("les changements de structure (CREATE, ALTER, DROP…) ne sont pas encore pris en charge : seuls INSERT, UPDATE et DELETE le sont")
 
-const sqlTrash = "_slitable_sqltrash_"
+const sqlTrash = "_lattis_sqltrash_"
 
 // ExecSQL exécute une requête d'écriture en une action annulable et renvoie
 // le nombre de lignes touchées.
@@ -211,7 +211,7 @@ func (t *tx) exec(stmts []string) error {
 
 // captureTables liste tous les tableaux avec leurs colonnes physiques.
 func (t *tx) captureTables() ([]captured, error) {
-	rs, err := t.query(`SELECT id FROM _slitable_tables ORDER BY id`)
+	rs, err := t.query(`SELECT id FROM _lattis_tables ORDER BY id`)
 	if err != nil {
 		return nil, err
 	}
@@ -260,7 +260,7 @@ func (t *tx) captureSQL(tables []captured) (setup, teardown []string, err error)
 			return nil, nil, err
 		}
 		taken[strings.ToLower(n)] = true
-		if strings.HasPrefix(n, "_slitable_") {
+		if strings.HasPrefix(n, "_lattis_") {
 			meta = append(meta, n)
 		}
 	}
@@ -276,7 +276,7 @@ func (t *tx) captureSQL(tables []captured) (setup, teardown []string, err error)
 		}
 		for _, op := range []string{"INSERT", "UPDATE", "DELETE"} {
 			trg := fmt.Sprintf("_slt_guard_%s_%s", name, strings.ToLower(op))
-			setup = append(setup, fmt.Sprintf(`CREATE TEMP TRIGGER %s BEFORE %s ON main.%s BEGIN SELECT RAISE(ABORT, 'les tables internes de Slitable ne se modifient pas en SQL'); END`, trg, op, name))
+			setup = append(setup, fmt.Sprintf(`CREATE TEMP TRIGGER %s BEFORE %s ON main.%s BEGIN SELECT RAISE(ABORT, 'les tables internes de Lattis ne se modifient pas en SQL'); END`, trg, op, name))
 			teardown = append(teardown, `DROP TRIGGER temp.`+trg)
 		}
 	}
@@ -444,7 +444,7 @@ func (t *tx) recordChanges(tb captured) (int64, error) {
 // cleanInvalid retire les saisies invalides devenues sans objet dans les
 // lignes touchées : ligne supprimée, ou cellule qui a reçu une valeur.
 func (t *tx) cleanInvalid(tb Table, ids string) error {
-	rs, err := t.query(`SELECT rid, col, raw FROM _slitable_invalid WHERE tbl = ? AND rid IN (SELECT id FROM `+ids+`)`, tb.ID)
+	rs, err := t.query(`SELECT rid, col, raw FROM _lattis_invalid WHERE tbl = ? AND rid IN (SELECT id FROM `+ids+`)`, tb.ID)
 	if err != nil {
 		return err
 	}
@@ -472,10 +472,10 @@ func (t *tx) cleanInvalid(tb Table, ids string) error {
 		if keep == 1 {
 			continue
 		}
-		q := `DELETE FROM _slitable_invalid WHERE tbl = ? AND rid = ? AND col = ?`
+		q := `DELETE FROM _lattis_invalid WHERE tbl = ? AND rid = ? AND col = ?`
 		if err := t.apply(
 			[]stmt{st(q, tb.ID, i.rid, i.col)},
-			[]stmt{st(`INSERT INTO _slitable_invalid (tbl, rid, col, raw) VALUES (?, ?, ?, ?)`, tb.ID, i.rid, i.col, i.raw)},
+			[]stmt{st(`INSERT INTO _lattis_invalid (tbl, rid, col, raw) VALUES (?, ?, ?, ?)`, tb.ID, i.rid, i.col, i.raw)},
 		); err != nil {
 			return err
 		}
@@ -504,7 +504,7 @@ func (t *tx) dropOrphanTrash() error {
 	var drops []string
 	for _, n := range names {
 		var used int
-		if err := t.row(`SELECT count(*) FROM _slitable_journal WHERE instr(steps, ?) > 0`, n).Scan(&used); err != nil {
+		if err := t.row(`SELECT count(*) FROM _lattis_journal WHERE instr(steps, ?) > 0`, n).Scan(&used); err != nil {
 			return err
 		}
 		if used == 0 {

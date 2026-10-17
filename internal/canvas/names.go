@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/formula"
+	"github.com/lalamefine/lattis/internal/formula"
 )
 
 // ErrName signale un nom de cellule refusé.
@@ -27,7 +27,7 @@ func (m *Model) SetName(ctx context.Context, sheet int64, row, col int, name str
 			return err
 		}
 		var old string
-		err := t.row(`SELECT name FROM _slitable_names WHERE sheet = ? AND row = ? AND col = ?`, sheet, row, col).Scan(&old)
+		err := t.row(`SELECT name FROM _lattis_names WHERE sheet = ? AND row = ? AND col = ?`, sheet, row, col).Scan(&old)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return err
 		}
@@ -39,9 +39,9 @@ func (m *Model) SetName(ctx context.Context, sheet int64, row, col int, name str
 				return err
 			}
 		}
-		del := st(`DELETE FROM _slitable_names WHERE sheet = ? AND row = ? AND col = ?`, sheet, row, col)
+		del := st(`DELETE FROM _lattis_names WHERE sheet = ? AND row = ? AND col = ?`, sheet, row, col)
 		put := func(n string) stmt {
-			return st(`INSERT INTO _slitable_names (name, sheet, row, col) VALUES (?, ?, ?, ?)`, n, sheet, row, col)
+			return st(`INSERT INTO _lattis_names (name, sheet, row, col) VALUES (?, ?, ?, ?)`, n, sheet, row, col)
 		}
 		do, undo := []stmt{del}, []stmt{del}
 		if name != "" {
@@ -72,13 +72,13 @@ func (t *tx) checkName(name string, sheet int64, row, col int) error {
 		}
 	}
 	var n int
-	if err := t.row(`SELECT count(*) FROM _slitable_tables WHERE name = ? COLLATE NOCASE`, name).Scan(&n); err != nil {
+	if err := t.row(`SELECT count(*) FROM _lattis_tables WHERE name = ? COLLATE NOCASE`, name).Scan(&n); err != nil {
 		return err
 	}
 	if n > 0 {
 		return ErrName{name, "c'est le nom d'un tableau"}
 	}
-	if err := t.row(`SELECT count(*) FROM _slitable_names WHERE name = ? AND NOT (sheet = ? AND row = ? AND col = ?)`, name, sheet, row, col).Scan(&n); err != nil {
+	if err := t.row(`SELECT count(*) FROM _lattis_names WHERE name = ? AND NOT (sheet = ? AND row = ? AND col = ?)`, name, sheet, row, col).Scan(&n); err != nil {
 		return err
 	}
 	if n > 0 {
@@ -97,7 +97,7 @@ func (t *tx) moveNames(sheet int64, moved []cell, dRow, dCol int) error {
 	var ns []named
 	for _, c := range moved {
 		var n string
-		err := t.row(`SELECT name FROM _slitable_names WHERE sheet = ? AND row = ? AND col = ?`, sheet, c.Row, c.Col).Scan(&n)
+		err := t.row(`SELECT name FROM _lattis_names WHERE sheet = ? AND row = ? AND col = ?`, sheet, c.Row, c.Col).Scan(&n)
 		if errors.Is(err, sql.ErrNoRows) {
 			continue
 		}
@@ -109,7 +109,7 @@ func (t *tx) moveNames(sheet int64, moved []cell, dRow, dCol int) error {
 	if len(ns) == 0 {
 		return nil
 	}
-	q := `UPDATE _slitable_names SET row = ?, col = ? WHERE name = ?`
+	q := `UPDATE _lattis_names SET row = ?, col = ? WHERE name = ?`
 	var do, undo []stmt
 	for i, n := range ns {
 		do = append(do, st(q, -1-i, -1, n.name))
@@ -140,8 +140,8 @@ func (t *tx) nameValuesRaw(schema *formula.Schema) (map[string]formula.Value, er
 // formule enregistrée ne cite d'adresse (requêtes de l'onglet SQL).
 func (t *tx) nameValuesWith(schema *formula.Schema, allCells bool) (map[string]formula.Value, error) {
 	ns := &formula.Names{Formulas: map[string]formula.Node{}, Extra: map[string][]string{}}
-	rs, err := t.query(`SELECT n.name, n.sheet, coalesce(c.raw, '') FROM _slitable_names n
-		LEFT JOIN _slitable_cells c ON c.sheet = n.sheet AND c.row = n.row AND c.col = n.col`)
+	rs, err := t.query(`SELECT n.name, n.sheet, coalesce(c.raw, '') FROM _lattis_names n
+		LEFT JOIN _lattis_cells c ON c.sheet = n.sheet AND c.row = n.row AND c.col = n.col`)
 	if err != nil {
 		return nil, err
 	}
@@ -157,8 +157,8 @@ func (t *tx) nameValuesWith(schema *formula.Schema, allCells bool) (map[string]f
 	rs.Close()
 	cited := allCells
 	if !cited {
-		if err := t.row(`SELECT EXISTS (SELECT 1 FROM _slitable_cells WHERE raw LIKE '%cell%')
-			OR EXISTS (SELECT 1 FROM _slitable_columns WHERE formula LIKE '%cell%')`).Scan(&cited); err != nil {
+		if err := t.row(`SELECT EXISTS (SELECT 1 FROM _lattis_cells WHERE raw LIKE '%cell%')
+			OR EXISTS (SELECT 1 FROM _lattis_columns WHERE formula LIKE '%cell%')`).Scan(&cited); err != nil {
 			return nil, err
 		}
 	}
@@ -189,7 +189,7 @@ func (t *tx) nameValuesWith(schema *formula.Schema, allCells bool) (map[string]f
 // et les dépendances qui passent par les colonnes calculées des tableaux.
 func (t *tx) cellFormulas(ns *formula.Names, schema *formula.Schema) error {
 	sheetNames := map[int64]string{}
-	rs, err := t.query(`SELECT id, name FROM _slitable_sheets`)
+	rs, err := t.query(`SELECT id, name FROM _lattis_sheets`)
 	if err != nil {
 		return err
 	}
@@ -203,7 +203,7 @@ func (t *tx) cellFormulas(ns *formula.Names, schema *formula.Schema) error {
 		sheetNames[id] = strings.ToLower(name)
 	}
 	rs.Close()
-	rs, err = t.query(`SELECT sheet, row, col, raw FROM _slitable_cells`)
+	rs, err = t.query(`SELECT sheet, row, col, raw FROM _lattis_cells`)
 	if err != nil {
 		return err
 	}

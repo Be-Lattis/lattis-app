@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/order"
+	"github.com/lalamefine/lattis/internal/order"
 )
 
 // Génération en SQL des très gros presets (10M lignes) : les lignes ne

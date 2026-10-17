@@ -14,18 +14,18 @@ export interface McpConfig {
 }
 
 export function mcpConfigs(s: McpInfo): McpConfig[] {
-	const desktop = { mcpServers: { slitable: { command: s.command, args: s.args ?? ['mcp'] } } };
-	const http = { mcpServers: { slitable: { type: 'http', url: s.url, headers: { Authorization: `Bearer ${s.token}` } } } };
+	const desktop = { mcpServers: { lattis: { command: s.command, args: s.args ?? ['mcp'] } } };
+	const http = { mcpServers: { lattis: { type: 'http', url: s.url, headers: { Authorization: `Bearer ${s.token}` } } } };
 	return [
 		{
 			label: 'Claude Desktop (et clients stdio)',
-			hint: 'À ajouter dans claude_desktop_config.json : le client lance Slitable en relais vers l’application ouverte.',
+			hint: 'À ajouter dans claude_desktop_config.json : le client lance Lattis en relais vers l’application ouverte.',
 			text: JSON.stringify(desktop, null, 2)
 		},
 		{
 			label: 'Claude Code',
 			hint: 'Commande à lancer dans un terminal.',
-			text: `claude mcp add --transport http slitable ${s.url} --header "Authorization: Bearer ${s.token}"`
+			text: `claude mcp add --transport http lattis ${s.url} --header "Authorization: Bearer ${s.token}"`
 		},
 		{
 			label: 'Clients HTTP (Streamable HTTP)',

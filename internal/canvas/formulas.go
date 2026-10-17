@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/formula"
+	"github.com/lalamefine/lattis/internal/formula"
 )
 
 // ErrComputed signale une saisie de valeur dans une colonne calculée.
@@ -38,7 +38,7 @@ func displayFormula(en string) string {
 	return formula.Format(n, formula.FR)
 }
 
-// noRanges refuse les plages A1 : elles n'existent pas dans Slitable.
+// noRanges refuse les plages A1 : elles n'existent pas dans Lattis.
 type noRanges struct{}
 
 func (noRanges) Resolve(string) (string, int, bool) { return "", 0, false }
@@ -48,7 +48,7 @@ func (noRanges) Resolve(string) (string, int, bool) { return "", 0, false }
 // en REFERENCE, et les tableaux cherchés reçoivent une clé unique si besoin.
 func (t *tx) setFormula(tb Table, i int, src string) error {
 	c := tb.Cols[i]
-	q := `UPDATE _slitable_columns SET formula = ? WHERE tbl = ? AND id = ?`
+	q := `UPDATE _lattis_columns SET formula = ? WHERE tbl = ? AND id = ?`
 	old := any(nil)
 	if c.Formula != "" {
 		old = c.Formula
@@ -152,16 +152,16 @@ func (t *tx) ensureKey(table, column string) error {
 	t.keyed = tb.Name + "." + c.Name
 	return t.apply([]stmt{
 		st(`CREATE UNIQUE INDEX ` + index + ` ON ` + tb.sql() + `(` + expr + `)`),
-		st(`UPDATE _slitable_tables SET key_col = ? WHERE id = ?`, c.ID, tb.ID),
+		st(`UPDATE _lattis_tables SET key_col = ? WHERE id = ?`, c.ID, tb.ID),
 	}, []stmt{
-		st(`UPDATE _slitable_tables SET key_col = NULL WHERE id = ?`, tb.ID),
+		st(`UPDATE _lattis_tables SET key_col = NULL WHERE id = ?`, tb.ID),
 		st(`DROP INDEX ` + index),
 	})
 }
 
 // schema décrit tous les tableaux du classeur pour le moteur de formules.
 func (t *tx) schema() (*formula.Schema, error) {
-	rs, err := t.query(`SELECT id FROM _slitable_tables ORDER BY id`)
+	rs, err := t.query(`SELECT id FROM _lattis_tables ORDER BY id`)
 	if err != nil {
 		return nil, err
 	}

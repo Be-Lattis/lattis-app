@@ -1,6 +1,6 @@
 # Scripter un classeur en Lua
 
-Ce guide s'adresse à quelqu'un qui découvre Lua ou les scripts de Slitable. Il présente
+Ce guide s'adresse à quelqu'un qui découvre Lua ou les scripts de Lattis. Il présente
 d'abord l'onglet SCRIPT, puis les bases du langage, puis l'API `db` qui lit et écrit le
 classeur, et se termine par des recettes complètes.
 
@@ -54,7 +54,7 @@ d'exécuter : le linter montre les erreurs plus tôt, il ne garantit pas qu'un s
 
 Bon à savoir :
 
-- Les scripts sont rangés **dans le classeur** (fichier `.slitable`) : ils voyagent avec lui.
+- Les scripts sont rangés **dans le classeur** (fichier `.lattis`) : ils voyagent avec lui.
   *Enregistrer* range le script dans le classeur ouvert ; pensez ensuite à enregistrer le
   classeur lui-même.
 - On peut exécuter un script sans l'enregistrer.
@@ -67,7 +67,7 @@ Bon à savoir :
 
 ## 2. Les bases de Lua
 
-Slitable embarque **Lua 5.1** (bibliothèque gopher-lua). Cette section couvre ce qu'il faut
+Lattis embarque **Lua 5.1** (bibliothèque gopher-lua). Cette section couvre ce qu'il faut
 pour écrire des scripts de classeur ; le manuel complet est sur
 [lua.org/manual/5.1](https://www.lua.org/manual/5.1/).
 
@@ -464,7 +464,7 @@ Refusés pour l'instant :
 
 - les changements de structure : `CREATE`, `ALTER`, `DROP`... (message : *les changements de
   structure (CREATE, ALTER, DROP…) ne sont pas encore pris en charge*) ;
-- les écritures dans les tables internes `_slitable_*`.
+- les écritures dans les tables internes `_lattis_*`.
 
 Un script ne peut donc pas encore créer de tableau ni de colonne : préparez le tableau de
 destination dans la grille (en-têtes compris), puis remplissez-le par script.

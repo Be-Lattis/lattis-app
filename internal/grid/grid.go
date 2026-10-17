@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/store"
+	"github.com/lalamefine/lattis/internal/store"
 )
 
 // AnchorEvery est l'écart, en lignes, entre deux ancres.
@@ -76,13 +76,13 @@ type Table struct {
 	rows    int
 
 	selectWindow string
-	exprs        []string                 // expression SQL de chaque colonne affichée
-	stats        map[statsKey]Stats       // résumés déjà calculés (Stats)
+	exprs        []string           // expression SQL de chaque colonne affichée
+	stats        map[statsKey]Stats // résumés déjà calculés (Stats)
 	// computed : le tableau a des colonnes calculées, qui peuvent lire
 	// d'autres tableaux ou des cellules : toute modification l'invalide.
 	computed bool
-	args         []any                    // paramètres des expressions de colonnes (?1…)
-	decode       func(col int, v any) any // conversion des valeurs calculées
+	args     []any                    // paramètres des expressions de colonnes (?1…)
+	decode   func(col int, v any) any // conversion des valeurs calculées
 
 	// Saisies hors type (tableaux du classeur) : identifiant du tableau et
 	// identifiant de chaque colonne affichée.
@@ -123,7 +123,7 @@ func (t *Table) Refresh(content, structure map[string]bool, all bool) bool {
 	return true
 }
 
-// WithInvalid fait lire les saisies hors type de _slitable_invalid avec les
+// WithInvalid fait lire les saisies hors type de _lattis_invalid avec les
 // fenêtres.
 func (t *Table) WithInvalid(tableID int64, colIDs []int64) *Table {
 	t.tableID = tableID
@@ -295,10 +295,10 @@ func (t *Table) invalid(ctx context.Context, w *Window) error {
 		index[id] = i
 		lo, hi = min(lo, id), max(hi, id)
 	}
-	if err := t.cellsFrom(ctx, `SELECT rid, col, style FROM _slitable_styles WHERE tbl = ? AND rid BETWEEN ? AND ?`, lo, hi, index, &w.Styles); err != nil {
+	if err := t.cellsFrom(ctx, `SELECT rid, col, style FROM _lattis_styles WHERE tbl = ? AND rid BETWEEN ? AND ?`, lo, hi, index, &w.Styles); err != nil {
 		return err
 	}
-	return t.cellsFrom(ctx, `SELECT rid, col, raw FROM _slitable_invalid WHERE tbl = ? AND rid BETWEEN ? AND ?`, lo, hi, index, &w.Invalid)
+	return t.cellsFrom(ctx, `SELECT rid, col, raw FROM _lattis_invalid WHERE tbl = ? AND rid BETWEEN ? AND ?`, lo, hi, index, &w.Invalid)
 }
 
 // cellsFrom lit des valeurs par cellule (rid, col, texte) pour la fenêtre.

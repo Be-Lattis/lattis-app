@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/order"
-	"github.com/lalamefine/slitable/internal/store"
+	"github.com/lalamefine/lattis/internal/order"
+	"github.com/lalamefine/lattis/internal/store"
 )
 
 // DemoColumns sont les 20 colonnes du tableau de démonstration, avec un

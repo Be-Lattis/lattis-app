@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/command"
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // SortTable trie les lignes d'un tableau selon la colonne i, comme le tri
@@ -36,8 +36,8 @@ func (m *Model) SortTable(ctx context.Context, table string, i int, desc bool) e
 			dir = "DESC"
 		}
 		stamp := time.Now().UnixNano()
-		trash := fmt.Sprintf("_slitable_trash_sort_%d_%d", tb.ID, stamp)
-		rank := fmt.Sprintf("_slitable_rank_%d_%d", tb.ID, stamp)
+		trash := fmt.Sprintf("_lattis_trash_sort_%d_%d", tb.ID, stamp)
+		rank := fmt.Sprintf("_lattis_rank_%d_%d", tb.ID, stamp)
 		// Nouvelles clés : le rang écrit sur 12 chiffres, suivi d'une lettre
 		// (une clé ne finit jamais par 0) ; l'ordre lexicographique est celui
 		// du rang, et l'on peut toujours insérer entre deux clés.

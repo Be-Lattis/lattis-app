@@ -46,12 +46,12 @@ func TestLineStyles(t *testing.T) {
 	before := dump(t, d)
 	free := func(r, c int) string {
 		var s string
-		d.db.Read().QueryRow(`SELECT style FROM _slitable_cell_styles WHERE sheet = 1 AND row = ? AND col = ?`, r, c).Scan(&s)
+		d.db.Read().QueryRow(`SELECT style FROM _lattis_cell_styles WHERE sheet = 1 AND row = ? AND col = ?`, r, c).Scan(&s)
 		return s
 	}
 	tableStyle := func(rid, col int64) string {
 		var s string
-		d.db.Read().QueryRow(`SELECT style FROM _slitable_styles WHERE rid = ? AND col = ?`, rid, col).Scan(&s)
+		d.db.Read().QueryRow(`SELECT style FROM _lattis_styles WHERE rid = ? AND col = ?`, rid, col).Scan(&s)
 		return s
 	}
 
@@ -139,7 +139,7 @@ func TestDeleteSheetStyles(t *testing.T) {
 		t.Fatal(err)
 	}
 	var n int
-	d.db.Read().QueryRow(`SELECT (SELECT count(*) FROM _slitable_row_styles) + (SELECT count(*) FROM _slitable_col_styles) + (SELECT count(*) FROM _slitable_cell_styles) + (SELECT count(*) FROM _slitable_col_widths)`).Scan(&n)
+	d.db.Read().QueryRow(`SELECT (SELECT count(*) FROM _lattis_row_styles) + (SELECT count(*) FROM _lattis_col_styles) + (SELECT count(*) FROM _lattis_cell_styles) + (SELECT count(*) FROM _lattis_col_widths)`).Scan(&n)
 	if n != 0 {
 		t.Fatalf("%d styles restent après la suppression de la feuille", n)
 	}

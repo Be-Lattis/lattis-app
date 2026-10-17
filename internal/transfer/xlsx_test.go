@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // xlsxFixture écrit un classeur minimal, tel qu'Excel l'enregistre : les

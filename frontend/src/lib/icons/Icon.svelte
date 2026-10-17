@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Icône du jeu de Slitable (voir icons.ts). La taille suit size (px) ; la
+	// Icône du jeu de Lattis (voir icons.ts). La taille suit size (px) ; la
 	// couleur du trait suit color du parent, l'accent suit --icon-accent.
 	import { icons, type IconName } from './icons.js';
 

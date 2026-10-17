@@ -8,11 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lalamefine/slitable/internal/command"
-	"github.com/lalamefine/slitable/internal/formula"
-	"github.com/lalamefine/slitable/internal/grid"
-	"github.com/lalamefine/slitable/internal/meta"
-	"github.com/lalamefine/slitable/internal/store"
+	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/meta"
+	"github.com/lalamefine/lattis/internal/store"
 )
 
 type fixture struct {
@@ -393,7 +393,7 @@ func TestSheetOrder(t *testing.T) {
 	d := open(t)
 	order := func() string {
 		var s string
-		if err := d.db.Read().QueryRowContext(ctx, `SELECT group_concat(id, ',') FROM (SELECT id FROM _slitable_sheets ORDER BY pos, id)`).Scan(&s); err != nil {
+		if err := d.db.Read().QueryRowContext(ctx, `SELECT group_concat(id, ',') FROM (SELECT id FROM _lattis_sheets ORDER BY pos, id)`).Scan(&s); err != nil {
 			t.Fatal(err)
 		}
 		return s
@@ -713,7 +713,7 @@ func TestStyles(t *testing.T) {
 		t.Fatal(err)
 	}
 	var rid int64
-	d.db.Read().QueryRow(`SELECT rid FROM _slitable_styles WHERE rid > 0`).Scan(&rid)
+	d.db.Read().QueryRow(`SELECT rid FROM _lattis_styles WHERE rid > 0`).Scan(&rid)
 	var ville string
 	d.db.Read().QueryRow(`SELECT c_1 FROM t_1 WHERE id = ?`, rid).Scan(&ville)
 	if ville != "Paris" {
@@ -1576,7 +1576,7 @@ func TestCellAddresses(t *testing.T) {
 	set(4, 1, "y")
 	set(5, 1, "=[@x]*Cell_A1")
 	var table string
-	d.read(ctx, func(x *tx) error { return x.row(`SELECT name FROM _slitable_tables`).Scan(&table) })
+	d.read(ctx, func(x *tx) error { return x.row(`SELECT name FROM _lattis_tables`).Scan(&table) })
 	set(2, 0, "=SOMME("+table+"[y])")
 	// Cycle à travers le tableau : la colonne lit Cell_G1, qui somme la colonne.
 	set(0, 6, "=SOMME("+table+"[z])")
@@ -1634,7 +1634,7 @@ func TestSheetRowsCols(t *testing.T) {
 	set(0, 4, "=Cell_C1*2")
 	set(7, 0, "bas")
 	var table string
-	d.read(ctx, func(x *tx) error { return x.row(`SELECT name FROM _slitable_tables`).Scan(&table) })
+	d.read(ctx, func(x *tx) error { return x.row(`SELECT name FROM _lattis_tables`).Scan(&table) })
 	start := dump(t, d)
 
 	// Deux lignes avant la ligne 5 (index 4) : le tableau grandit, A8 descend.
@@ -1649,7 +1649,7 @@ func TestSheetRowsCols(t *testing.T) {
 	d.read(ctx, func(x *tx) error {
 		tb, _ := x.tableByName(table)
 		var r int
-		x.row(`SELECT row FROM _slitable_cells WHERE raw = 'bas'`).Scan(&r)
+		x.row(`SELECT row FROM _lattis_cells WHERE raw = 'bas'`).Scan(&r)
 		if tb.Rows != 5 || r != 9 {
 			t.Errorf("lignes %d, « bas » en %d", tb.Rows, r)
 		}
@@ -1662,7 +1662,7 @@ func TestSheetRowsCols(t *testing.T) {
 	check(t, d, "insertion de colonne")
 	d.read(ctx, func(x *tx) error {
 		var raw string
-		x.row(`SELECT raw FROM _slitable_cells WHERE row = 0 AND col = 5`).Scan(&raw)
+		x.row(`SELECT raw FROM _lattis_cells WHERE row = 0 AND col = 5`).Scan(&raw)
 		if raw != "=Cell[D1]*2" {
 			t.Errorf("formule : %q", raw)
 		}
@@ -1675,7 +1675,7 @@ func TestSheetRowsCols(t *testing.T) {
 	check(t, d, "suppression de colonne")
 	d.read(ctx, func(x *tx) error {
 		var raw string
-		x.row(`SELECT raw FROM _slitable_cells WHERE row = 0 AND col = 4`).Scan(&raw)
+		x.row(`SELECT raw FROM _lattis_cells WHERE row = 0 AND col = 4`).Scan(&raw)
 		if raw != "=#REF!*2" {
 			t.Errorf("formule après suppression : %q", raw)
 		}
@@ -1752,7 +1752,7 @@ func TestItemReferences(t *testing.T) {
 		}
 	}
 	var table string
-	d.read(ctx, func(x *tx) error { return x.row(`SELECT name FROM _slitable_tables`).Scan(&table) })
+	d.read(ctx, func(x *tx) error { return x.row(`SELECT name FROM _lattis_tables`).Scan(&table) })
 	// Sans clé : par le rang ; puis [Col][k] dans le tableau.
 	for _, c := range []struct {
 		row, col int

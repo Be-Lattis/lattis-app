@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/formula"
-	"github.com/lalamefine/slitable/internal/grid"
-	"github.com/lalamefine/slitable/internal/order"
+	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/order"
 )
 
 // ImportTable est un tableau créé d'un bloc par Import (fichier CSV, classeur
@@ -68,13 +68,13 @@ type ImportResult struct {
 
 // importPrefix nomme les tables de chargement d'un import. Elles restent
 // dans le fichier tant que l'import peut être rétabli (comme une corbeille).
-const importPrefix = "_slitable_trash_import_"
+const importPrefix = "_lattis_trash_import_"
 
 // TableNames donne les noms de tableaux déjà pris dans le classeur.
 func (m *Model) TableNames(ctx context.Context) (map[string]bool, error) {
 	names := map[string]bool{}
 	err := m.read(ctx, func(t *tx) error {
-		rs, err := t.query(`SELECT name FROM _slitable_tables`)
+		rs, err := t.query(`SELECT name FROM _lattis_tables`)
 		if err != nil {
 			return err
 		}
@@ -189,13 +189,13 @@ func (t *tx) newSheet(name string) (int64, error) {
 	}
 	var id int64
 	var pos int
-	if err := t.row(`SELECT coalesce(max(id), 0) + 1, coalesce(max(pos), -1) + 1 FROM _slitable_sheets`).Scan(&id, &pos); err != nil {
+	if err := t.row(`SELECT coalesce(max(id), 0) + 1, coalesce(max(pos), -1) + 1 FROM _lattis_sheets`).Scan(&id, &pos); err != nil {
 		return 0, err
 	}
 	base := name
 	for n := 2; ; n++ {
 		var k int
-		if err := t.row(`SELECT count(*) FROM _slitable_sheets WHERE name = ?`, name).Scan(&k); err != nil {
+		if err := t.row(`SELECT count(*) FROM _lattis_sheets WHERE name = ?`, name).Scan(&k); err != nil {
 			return 0, err
 		}
 		if k == 0 {
@@ -204,8 +204,8 @@ func (t *tx) newSheet(name string) (int64, error) {
 		name = fmt.Sprintf("%s (%d)", base, n)
 	}
 	return id, t.apply(
-		[]stmt{st(`INSERT INTO _slitable_sheets (id, name, pos, gridlines) VALUES (?, ?, ?, 0)`, id, name, pos)},
-		[]stmt{st(`DELETE FROM _slitable_sheets WHERE id = ?`, id)},
+		[]stmt{st(`INSERT INTO _lattis_sheets (id, name, pos, gridlines) VALUES (?, ?, ?, 0)`, id, name, pos)},
+		[]stmt{st(`DELETE FROM _lattis_sheets WHERE id = ?`, id)},
 	)
 }
 
@@ -219,21 +219,21 @@ func (t *tx) importTable(sheet int64, it *ImportTable) (Table, error) {
 		return Table{}, fmt.Errorf("import : %q n'est pas un nom de tableau valable", it.Name)
 	}
 	var taken int
-	if err := t.row(`SELECT count(*) FROM _slitable_tables WHERE name = ?`, it.Name).Scan(&taken); err != nil {
+	if err := t.row(`SELECT count(*) FROM _lattis_tables WHERE name = ?`, it.Name).Scan(&taken); err != nil {
 		return Table{}, err
 	}
 	if taken > 0 {
 		return Table{}, fmt.Errorf("import : le tableau %s existe déjà", it.Name)
 	}
 	var id int64
-	if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _slitable_tables`).Scan(&id); err != nil {
+	if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_tables`).Scan(&id); err != nil {
 		return Table{}, err
 	}
 	tb := Table{ID: id, Sheet: sheet, Name: it.Name, Row: it.Row, Col: it.Col, Rows: it.Count}
 	staging := fmt.Sprintf("%s%d_%d", importPrefix, id, time.Now().UnixNano())
 	defs := []string{"id INTEGER PRIMARY KEY", "_pos TEXT NOT NULL"}
 	names := []string{"id", "_pos"}
-	meta := []stmt{st(`INSERT INTO _slitable_tables (id, sheet, name, row, col) VALUES (?, ?, ?, ?, ?)`, id, sheet, it.Name, it.Row, it.Col)}
+	meta := []stmt{st(`INSERT INTO _lattis_tables (id, sheet, name, row, col) VALUES (?, ?, ?, ?, ?)`, id, sheet, it.Name, it.Row, it.Col)}
 	for i, h := range it.Headers {
 		c := Column{ID: int64(i + 1), Name: strings.TrimSpace(h), Type: it.Types[i]}
 		if c.Name == "" {
@@ -247,7 +247,7 @@ func (t *tx) importTable(sheet int64, it *ImportTable) (Table, error) {
 		tb.Cols = append(tb.Cols, c)
 		defs = append(defs, colSQL(c.ID)+" "+sqlType(c.Type))
 		names = append(names, colSQL(c.ID))
-		meta = append(meta, st(`INSERT INTO _slitable_columns (tbl, id, name, type, pos) VALUES (?, ?, ?, ?, ?)`, id, c.ID, c.Name, string(c.Type), i))
+		meta = append(meta, st(`INSERT INTO _lattis_columns (tbl, id, name, type, pos) VALUES (?, ?, ?, ?, ?)`, id, c.ID, c.Name, string(c.Type), i))
 	}
 	// Chargement hors journal, dans la transaction de la commande : si
 	// l'import échoue, rien ne reste.
@@ -328,18 +328,18 @@ func (t *tx) importTable(sheet int64, it *ImportTable) (Table, error) {
 	}
 	do := []stmt{st(`ALTER TABLE ` + staging + ` RENAME TO ` + tb.sql())}
 	if len(it.Selects) == 0 {
-		do = append(do, st(`CREATE INDEX ` + tb.sql() + `_pos ON ` + tb.sql() + `(_pos)`))
+		do = append(do, st(`CREATE INDEX `+tb.sql()+`_pos ON `+tb.sql()+`(_pos)`))
 	}
 	do = append(do, meta...)
 	undo := []stmt{
-		st(`DELETE FROM _slitable_invalid WHERE tbl = ?`, id),
-		st(`DELETE FROM _slitable_columns WHERE tbl = ?`, id),
-		st(`DELETE FROM _slitable_tables WHERE id = ?`, id),
+		st(`DELETE FROM _lattis_invalid WHERE tbl = ?`, id),
+		st(`DELETE FROM _lattis_columns WHERE tbl = ?`, id),
+		st(`DELETE FROM _lattis_tables WHERE id = ?`, id),
 	}
 	if len(it.Selects) == 0 {
-		undo = append(undo, st(`DROP INDEX ` + tb.sql() + `_pos`))
+		undo = append(undo, st(`DROP INDEX `+tb.sql()+`_pos`))
 	}
-	undo = append(undo, st(`ALTER TABLE ` + tb.sql() + ` RENAME TO ` + staging))
+	undo = append(undo, st(`ALTER TABLE `+tb.sql()+` RENAME TO `+staging))
 	return tb, t.apply(do, undo)
 }
 
@@ -363,7 +363,7 @@ func (t *tx) purgeImports() error {
 	rs.Close()
 	for _, n := range names {
 		var used int
-		if err := t.row(`SELECT count(*) FROM _slitable_journal WHERE instr(steps, ?) > 0`, n).Scan(&used); err != nil {
+		if err := t.row(`SELECT count(*) FROM _lattis_journal WHERE instr(steps, ?) > 0`, n).Scan(&used); err != nil {
 			return err
 		}
 		if used == 0 {
@@ -395,7 +395,7 @@ func (m *Model) ExportTable(ctx context.Context, table string, header func([]Exp
 		if tb, err = t.tableByName(table); err != nil {
 			return err
 		}
-		rs, err := t.query(`SELECT rid, col, raw FROM _slitable_invalid WHERE tbl = ?`, tb.ID)
+		rs, err := t.query(`SELECT rid, col, raw FROM _lattis_invalid WHERE tbl = ?`, tb.ID)
 		if err != nil {
 			return err
 		}

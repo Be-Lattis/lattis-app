@@ -5,19 +5,19 @@
 !include "FileFunc.nsh"
 
 !ifndef INFO_PROJECTNAME
-    !define INFO_PROJECTNAME "slitable"
+    !define INFO_PROJECTNAME "lattis"
 !endif
 !ifndef INFO_COMPANYNAME
-    !define INFO_COMPANYNAME "Slitable"
+    !define INFO_COMPANYNAME "Lattis"
 !endif
 !ifndef INFO_PRODUCTNAME
-    !define INFO_PRODUCTNAME "Slitable"
+    !define INFO_PRODUCTNAME "Lattis"
 !endif
 !ifndef INFO_PRODUCTVERSION
     !define INFO_PRODUCTVERSION "0.1.0"
 !endif
 !ifndef INFO_COPYRIGHT
-    !define INFO_COPYRIGHT "© 2026 Slitable"
+    !define INFO_COPYRIGHT "© 2026 Lattis"
 !endif
 !ifndef PRODUCT_EXECUTABLE
     !define PRODUCT_EXECUTABLE "${INFO_PROJECTNAME}.exe"

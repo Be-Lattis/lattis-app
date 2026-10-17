@@ -12,7 +12,7 @@ export interface HistoryEntry {
 }
 
 export const HISTORY_MAX = 100;
-const KEY = 'slitable.sql.history';
+const KEY = 'lattis.sql.history';
 
 /** Ajoute une exécution ; une requête déjà présente remonte en tête. */
 export function record(list: HistoryEntry[], e: HistoryEntry, max = HISTORY_MAX): HistoryEntry[] {

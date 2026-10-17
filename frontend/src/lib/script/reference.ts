@@ -139,7 +139,7 @@ if id then db.delete("Commandes", id) end`,
 		signature: 'db.execute(sql, ...) → nombre de lignes touchées',
 		summary: 'Exécute un INSERT, UPDATE ou DELETE avec les noms affichés.',
 		details:
-			'Annulable comme le reste du script. Les colonnes sont typées strictement : une valeur du mauvais type fait échouer toute la requête (un booléen s’écrit 1 ou 0, une date \'aaaa-mm-jj\'). Refusés pour l’instant : CREATE, ALTER, DROP et les tables internes _slitable_*.',
+			'Annulable comme le reste du script. Les colonnes sont typées strictement : une valeur du mauvais type fait échouer toute la requête (un booléen s’écrit 1 ou 0, une date \'aaaa-mm-jj\'). Refusés pour l’instant : CREATE, ALTER, DROP et les tables internes _lattis_*.',
 		example: `local n = db.execute([[UPDATE Commandes SET "Payé" = 1 WHERE Client = ?]], "Durand")
 print(n .. " ligne(s) modifiée(s)")`,
 		args: [1, null]

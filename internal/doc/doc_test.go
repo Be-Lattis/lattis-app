@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lalamefine/slitable/internal/archive"
+	"github.com/lalamefine/lattis/internal/archive"
 )
 
 func useRoot(t *testing.T) string {
@@ -52,13 +52,13 @@ func checkOK(t *testing.T, d *Document) {
 // TestM2 est le jalon M2 : ouvrir, modifier, annuler, enregistrer, rouvrir
 // (avec l'historique d'annulation), simuler un crash et récupérer.
 func TestM2(t *testing.T) {
-	if os.Getenv("SLITABLE_M2_CHILD") != "" {
+	if os.Getenv("LATTIS_M2_CHILD") != "" {
 		m2Child()
 		return
 	}
 	root := useRoot(t)
 	ctx := context.Background()
-	path := filepath.Join(t.TempDir(), "ventes.slitable")
+	path := filepath.Join(t.TempDir(), "ventes.lattis")
 
 	// 1. Nouveau classeur, saisie d'un tableau, annulation, enregistrement.
 	d, err := New(ctx)
@@ -108,7 +108,7 @@ func TestM2(t *testing.T) {
 
 	// 3. Crash : un autre processus ouvre le fichier, saisit, puis meurt.
 	cmd := exec.Command(os.Args[0], "-test.run=^TestM2$")
-	cmd.Env = append(os.Environ(), "SLITABLE_M2_CHILD="+path, "SLITABLE_M2_ROOT="+root)
+	cmd.Env = append(os.Environ(), "LATTIS_M2_CHILD="+path, "LATTIS_M2_ROOT="+root)
 	out, err := cmd.CombinedOutput()
 	var exit *exec.ExitError
 	if !errors.As(err, &exit) || exit.ExitCode() != 3 {
@@ -143,9 +143,9 @@ func TestM2(t *testing.T) {
 }
 
 func m2Child() {
-	archive.Root = func() (string, error) { return os.Getenv("SLITABLE_M2_ROOT"), nil }
+	archive.Root = func() (string, error) { return os.Getenv("LATTIS_M2_ROOT"), nil }
 	ctx := context.Background()
-	d, err := Open(ctx, os.Getenv("SLITABLE_M2_CHILD"))
+	d, err := Open(ctx, os.Getenv("LATTIS_M2_CHILD"))
 	if err != nil {
 		panic(err)
 	}
@@ -165,7 +165,7 @@ func m2Child() {
 func TestProtectionSaved(t *testing.T) {
 	useRoot(t)
 	ctx := context.Background()
-	path := filepath.Join(t.TempDir(), "protege.slitable")
+	path := filepath.Join(t.TempDir(), "protege.lattis")
 	d, err := New(ctx)
 	must(t, err)
 	must(t, d.Save(ctx, path))

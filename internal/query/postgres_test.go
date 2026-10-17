@@ -10,18 +10,18 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
-// Tests d'intégration PostgreSQL : seulement si SLITABLE_PG_DSN désigne une
+// Tests d'intégration PostgreSQL : seulement si LATTIS_PG_DSN désigne une
 // base (par exemple postgres://postgres:secret@localhost:5432/postgres).
 // Ils ne créent rien sur le serveur : tout passe par des requêtes en
 // lecture seule.
 func pgEnv(t *testing.T) (DBConfig, string) {
 	t.Helper()
-	dsn := os.Getenv("SLITABLE_PG_DSN")
+	dsn := os.Getenv("LATTIS_PG_DSN")
 	if dsn == "" {
-		t.Skip("SLITABLE_PG_DSN non défini : tests PostgreSQL ignorés")
+		t.Skip("LATTIS_PG_DSN non défini : tests PostgreSQL ignorés")
 	}
 	cfg, err := pgx.ParseConfig(dsn)
 	if err != nil {
@@ -101,7 +101,7 @@ func TestPostgres(t *testing.T) {
 	}
 
 	// Lecture seule : une écriture est refusée par le serveur.
-	bad := save(t, d, Query{Name: "Écriture", Source: Source{Kind: SourcePostgres, Connection: "Test", SQL: "CREATE TABLE slitable_interdit (x int)"}})
+	bad := save(t, d, Query{Name: "Écriture", Source: Source{Kind: SourcePostgres, Connection: "Test", SQL: "CREATE TABLE lattis_interdit (x int)"}})
 	if _, err := s.Refresh(ctx, e, bad); err == nil || !strings.Contains(err.Error(), "read-only") {
 		t.Fatalf("écriture acceptée : %v", err)
 	}

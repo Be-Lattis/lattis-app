@@ -117,7 +117,7 @@ func TestExecSQLRefused(t *testing.T) {
 	for q, want := range map[string]string{
 		`CREATE TABLE x (a)`:                              "structure",
 		`DROP TABLE t_1`:                                  "structure",
-		`DELETE FROM _slitable_tables`:                    "internes",
+		`DELETE FROM _lattis_tables`:                      "internes",
 		`UPDATE Feuille1 SET Inconnue = 1`:                "Inconnue",
 		`UPDATE Feuille1 SET Montant = 1; DROP TABLE t_2`: "structure",
 	} {
@@ -141,7 +141,7 @@ func TestExecSQLOrphanTrash(t *testing.T) {
 	d := sqlFixture(t)
 	count := func() int {
 		var n int
-		if err := d.db.Read().QueryRow(`SELECT count(*) FROM sqlite_schema WHERE name LIKE '_slitable_sqltrash_%'`).Scan(&n); err != nil {
+		if err := d.db.Read().QueryRow(`SELECT count(*) FROM sqlite_schema WHERE name LIKE '_lattis_sqltrash_%'`).Scan(&n); err != nil {
 			t.Fatal(err)
 		}
 		return n
@@ -181,7 +181,7 @@ func TestExecSQLClearsInvalid(t *testing.T) {
 	}
 	check(t, d, "après la requête")
 	var n int
-	if err := d.db.Read().QueryRow(`SELECT count(*) FROM _slitable_invalid`).Scan(&n); err != nil || n != 0 {
+	if err := d.db.Read().QueryRow(`SELECT count(*) FROM _lattis_invalid`).Scan(&n); err != nil || n != 0 {
 		t.Fatalf("%d saisies invalides restantes (%v)", n, err)
 	}
 }

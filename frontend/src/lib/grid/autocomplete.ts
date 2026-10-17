@@ -72,7 +72,7 @@ export function suggest(text: string, caret: number, cat: Catalog, currentTable?
 		let prefix = before.slice(open + 1);
 		if (prefix.startsWith('@')) prefix = prefix.slice(1); // forme Excel, acceptée
 		const cols = (t.columns ?? []).filter((c) => fold(c).startsWith(fold(prefix)));
-		// Nomenclature de Slitable : [Colonne] dans le tableau est la valeur de
+		// Nomenclature de Lattis : [Colonne] dans le tableau est la valeur de
 		// la ligne ; Tableau[Colonne] toute la colonne.
 		const row = !explicit && !!currentTable;
 		const items = cols

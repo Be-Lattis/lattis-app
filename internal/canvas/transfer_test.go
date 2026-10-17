@@ -150,7 +150,7 @@ func TestTransferCopyTable(t *testing.T) {
 	fillCells(t, d, 0, 0, []string{"Produit", "Prix"}, []string{"a", "10"}, []string{"b", "20"})
 	fillCells(t, d, 0, 2, []string{"Double"}, []string{"=[Prix]*2"})
 	var name string
-	d.read(ctx, func(x *tx) error { return x.row(`SELECT name FROM _slitable_tables`).Scan(&name) })
+	d.read(ctx, func(x *tx) error { return x.row(`SELECT name FROM _lattis_tables`).Scan(&name) })
 	if err := d.SetKey(ctx, name, 0); err != nil {
 		t.Fatal(err)
 	}

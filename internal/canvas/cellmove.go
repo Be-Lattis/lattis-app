@@ -41,7 +41,7 @@ func (t *tx) moveFree(sheet int64, r0, c0, r1, c1, dr, dc int) error {
 		}
 	}
 	inSource := `row BETWEEN ? AND ? AND col BETWEEN ? AND ?`
-	for _, tbl := range []string{"_slitable_cells", "_slitable_cell_styles", "_slitable_names"} {
+	for _, tbl := range []string{"_lattis_cells", "_lattis_cell_styles", "_lattis_names"} {
 		// La destination est remplacée (hors cellules déplacées elles-mêmes).
 		if err := t.deleteWhere(tbl, `sheet = ? AND `+inSource+` AND NOT (`+inSource+`)`,
 			sheet, tr0, tr1, tc0, tc1, r0, r1, c0, c1); err != nil {
@@ -98,7 +98,7 @@ func (t *tx) clearFree(sheet int64, r0, c0, r1, c1 int) error {
 			}
 		}
 	}
-	for _, tbl := range []string{"_slitable_cells", "_slitable_cell_styles"} {
+	for _, tbl := range []string{"_lattis_cells", "_lattis_cell_styles"} {
 		if err := t.deleteWhere(tbl, `sheet = ? AND row BETWEEN ? AND ? AND col BETWEEN ? AND ?`, sheet, r0, r1, c0, c1); err != nil {
 			return err
 		}

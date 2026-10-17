@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // Resolver situe une plage A1 d'une formule Excel collée : quel tableau elle
@@ -75,7 +75,7 @@ func Convert(n Node, s *Schema, r Resolver, original string) (Node, []KeyNeed, e
 					return m, nil
 				}
 			case "HLOOKUP":
-				return nil, &ErrConvert{"RECHERCHEH n'existe pas dans Slitable : les tableaux sont orientés lignes. Transposez les données, puis utilisez REFERENCE"}
+				return nil, &ErrConvert{"RECHERCHEH n'existe pas dans Lattis : les tableaux sont orientés lignes. Transposez les données, puis utilisez REFERENCE"}
 			default:
 				return m, nil
 			}
@@ -220,21 +220,21 @@ func indexMatch(c Call, s *Schema, r Resolver, original string) (Node, KeyNeed, 
 	return out, need, err == nil
 }
 
-// suggestions : fonctions d'Excel absentes de Slitable, et ce qu'on propose.
+// suggestions : fonctions d'Excel absentes de Lattis, et ce qu'on propose.
 var suggestions = map[string]string{
-	"OFFSET":     "DECALER n'existe pas dans Slitable : essayez FILTRE ou PRENDRE",
-	"DECALER":    "DECALER n'existe pas dans Slitable : essayez FILTRE ou PRENDRE",
-	"INDIRECT":   "INDIRECT n'existe pas dans Slitable : essayez REFERENCE ou FILTRE",
-	"HLOOKUP":    "RECHERCHEH n'existe pas dans Slitable : transposez les données, puis utilisez REFERENCE",
-	"RECHERCHEH": "RECHERCHEH n'existe pas dans Slitable : transposez les données, puis utilisez REFERENCE",
-	"LOOKUP":     "RECHERCHE n'existe pas dans Slitable : utilisez REFERENCE ou REFERENCE.APPROCHEE",
-	"RECHERCHE":  "RECHERCHE n'existe pas dans Slitable : utilisez REFERENCE ou REFERENCE.APPROCHEE",
-	"LAMBDA":     "LAMBDA n'existe pas dans Slitable : utilisez un script Lua",
+	"OFFSET":     "DECALER n'existe pas dans Lattis : essayez FILTRE ou PRENDRE",
+	"DECALER":    "DECALER n'existe pas dans Lattis : essayez FILTRE ou PRENDRE",
+	"INDIRECT":   "INDIRECT n'existe pas dans Lattis : essayez REFERENCE ou FILTRE",
+	"HLOOKUP":    "RECHERCHEH n'existe pas dans Lattis : transposez les données, puis utilisez REFERENCE",
+	"RECHERCHEH": "RECHERCHEH n'existe pas dans Lattis : transposez les données, puis utilisez REFERENCE",
+	"LOOKUP":     "RECHERCHE n'existe pas dans Lattis : utilisez REFERENCE ou REFERENCE.APPROCHEE",
+	"RECHERCHE":  "RECHERCHE n'existe pas dans Lattis : utilisez REFERENCE ou REFERENCE.APPROCHEE",
+	"LAMBDA":     "LAMBDA n'existe pas dans Lattis : utilisez un script Lua",
 	"VLOOKUP":    "RECHERCHEV est convertie en REFERENCE à la saisie (correspondance exacte seulement)",
 	"RECHERCHEV": "RECHERCHEV est convertie en REFERENCE à la saisie (correspondance exacte seulement)",
 }
 
-// Suggestion donne l'infobulle d'une fonction inconnue (#NOM?) quand Slitable
+// Suggestion donne l'infobulle d'une fonction inconnue (#NOM?) quand Lattis
 // propose un équivalent, ou "".
 func Suggestion(fn string) string {
 	return suggestions[strings.ToUpper(fn)]

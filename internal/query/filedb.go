@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/lalamefine/slitable/internal/store"
+	"github.com/lalamefine/lattis/internal/store"
 )
 
 // Fichier de base de données SQLite (pilote déjà utilisé par le classeur,

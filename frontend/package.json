@@ -1,5 +1,5 @@
 {
-  "name": "slitable-frontend",
+  "name": "lattis-frontend",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -36,6 +36,6 @@
   },
   "imports": {
     "#lib/*": "./src/lib/*",
-    "#bindings/*": "./bindings/github.com/lalamefine/slitable/*"
+    "#bindings/*": "./bindings/github.com/lalamefine/lattis/*"
   }
 }

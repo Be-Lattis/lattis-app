@@ -8,16 +8,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/grid"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // TestMesureOperations chronomètre les opérations d'un classeur sur un grand
 // tableau (Commandes : client, ville, pays, montant, quantité, date) :
-// SLITABLE_MESURE=1000000 go test ./internal/canvas -run TestMesureOperations -v
+// LATTIS_MESURE=1000000 go test ./internal/canvas -run TestMesureOperations -v
 func TestMesureOperations(t *testing.T) {
-	n, _ := strconv.Atoi(os.Getenv("SLITABLE_MESURE"))
+	n, _ := strconv.Atoi(os.Getenv("LATTIS_MESURE"))
 	if n == 0 {
-		t.Skip("SLITABLE_MESURE non défini")
+		t.Skip("LATTIS_MESURE non défini")
 	}
 	ctx := context.Background()
 	d := open(t)
@@ -49,7 +49,9 @@ func TestMesureOperations(t *testing.T) {
 		return err
 	})
 	var sheet int64
-	d.read(ctx, func(t *tx) error { return t.row(`SELECT sheet FROM _slitable_tables WHERE name = 'Commandes'`).Scan(&sheet) })
+	d.read(ctx, func(t *tx) error {
+		return t.row(`SELECT sheet FROM _lattis_tables WHERE name = 'Commandes'`).Scan(&sheet)
+	})
 	mesure("mise en page de la feuille", func() error { _, err := d.Layout(ctx, sheet); return err })
 	mesure("saisie d'une cellule", func() error { _, err := d.SetCell(ctx, sheet, 5000, 3, "12,5"); return err })
 	mesure("annuler la saisie", func() error { _, err := d.bus.Undo(ctx); return err })

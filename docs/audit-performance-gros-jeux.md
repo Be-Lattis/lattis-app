@@ -2,7 +2,7 @@
 
 **Méthode.** Les mesures ont été prises avec `DocumentService`, appelé comme le fait l'interface (rechargement compris), sur trois démos : 1M×10, 1M×100 et une partie de 10M×10. Le code mesuré date d'**avant** trois optimisations de main : la saisie qui garde le tableau, le contrôle par EXISTS et TypeMix en un seul parcours. Les points marqués **[à remesurer]** sont peut-être déjà améliorés.
 
-**Pas de bug à la réouverture.** L'erreur « archive .slitable invalide » venait du test lui-même. La réouverture fonctionne : 0,6 s en 1M×10.
+**Pas de bug à la réouverture.** L'erreur « archive .lattis invalide » venait du test lui-même. La réouverture fonctionne : 0,6 s en 1M×10.
 
 ## Problèmes, du plus gênant au moins gênant
 

@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lalamefine/slitable/internal/command"
-	"github.com/lalamefine/slitable/internal/grid"
-	"github.com/lalamefine/slitable/internal/order"
+	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/order"
 )
 
 // --- Opérations élémentaires (chacune enregistre son inverse) ---------------
@@ -18,7 +18,7 @@ import (
 // setFreeCell pose ou efface (raw vide) une cellule libre.
 func (t *tx) setFreeCell(sheet int64, row, col int, raw string) error {
 	var old string
-	err := t.row(`SELECT raw FROM _slitable_cells WHERE sheet = ? AND row = ? AND col = ?`, sheet, row, col).Scan(&old)
+	err := t.row(`SELECT raw FROM _lattis_cells WHERE sheet = ? AND row = ? AND col = ?`, sheet, row, col).Scan(&old)
 	exists := err == nil
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
@@ -26,9 +26,9 @@ func (t *tx) setFreeCell(sheet int64, row, col int, raw string) error {
 	if !exists && raw == "" || exists && old == raw {
 		return nil
 	}
-	del := st(`DELETE FROM _slitable_cells WHERE sheet = ? AND row = ? AND col = ?`, sheet, row, col)
+	del := st(`DELETE FROM _lattis_cells WHERE sheet = ? AND row = ? AND col = ?`, sheet, row, col)
 	put := func(v string) stmt {
-		return st(`INSERT INTO _slitable_cells (sheet, row, col, raw) VALUES (?, ?, ?, ?)`, sheet, row, col, v)
+		return st(`INSERT INTO _lattis_cells (sheet, row, col, raw) VALUES (?, ?, ?, ?)`, sheet, row, col, v)
 	}
 	do := []stmt{del}
 	if raw != "" {
@@ -49,7 +49,7 @@ func (t *tx) setValue(tb Table, rid int64, c Column, v any, invalid string) erro
 		return err
 	}
 	var oldInvalid string
-	err := t.row(`SELECT raw FROM _slitable_invalid WHERE tbl = ? AND rid = ? AND col = ?`, tb.ID, rid, c.ID).Scan(&oldInvalid)
+	err := t.row(`SELECT raw FROM _lattis_invalid WHERE tbl = ? AND rid = ? AND col = ?`, tb.ID, rid, c.ID).Scan(&oldInvalid)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
@@ -62,10 +62,10 @@ func (t *tx) setValue(tb Table, rid int64, c Column, v any, invalid string) erro
 	write := func(v any, inv string) []stmt {
 		s := []stmt{
 			st(`UPDATE `+tb.sql()+` SET `+colSQL(c.ID)+` = ? WHERE id = ?`, v, rid),
-			st(`DELETE FROM _slitable_invalid WHERE tbl = ? AND rid = ? AND col = ?`, tb.ID, rid, c.ID),
+			st(`DELETE FROM _lattis_invalid WHERE tbl = ? AND rid = ? AND col = ?`, tb.ID, rid, c.ID),
 		}
 		if inv != "" {
-			s = append(s, st(`INSERT INTO _slitable_invalid (tbl, rid, col, raw) VALUES (?, ?, ?, ?)`, tb.ID, rid, c.ID, inv))
+			s = append(s, st(`INSERT INTO _lattis_invalid (tbl, rid, col, raw) VALUES (?, ?, ?, ?)`, tb.ID, rid, c.ID, inv))
 		}
 		return s
 	}
@@ -96,7 +96,7 @@ func (t *tx) deleteRow(tb Table, rid int64) error {
 		return err
 	}
 	undo := []stmt{st(`INSERT INTO `+tb.sql()+` (`+strings.Join(names, ", ")+`) VALUES (`+marks(len(names))+`)`, normalize(vals)...)}
-	rs, err := t.query(`SELECT col, raw FROM _slitable_invalid WHERE tbl = ? AND rid = ?`, tb.ID, rid)
+	rs, err := t.query(`SELECT col, raw FROM _lattis_invalid WHERE tbl = ? AND rid = ?`, tb.ID, rid)
 	if err != nil {
 		return err
 	}
@@ -107,11 +107,11 @@ func (t *tx) deleteRow(tb Table, rid int64) error {
 			rs.Close()
 			return err
 		}
-		undo = append(undo, st(`INSERT INTO _slitable_invalid (tbl, rid, col, raw) VALUES (?, ?, ?, ?)`, tb.ID, rid, col, raw))
+		undo = append(undo, st(`INSERT INTO _lattis_invalid (tbl, rid, col, raw) VALUES (?, ?, ?, ?)`, tb.ID, rid, col, raw))
 	}
 	rs.Close()
 	// Les styles de la ligne partent avec elle (et reviennent à l'annulation).
-	rs, err = t.query(`SELECT col, style FROM _slitable_styles WHERE tbl = ? AND rid = ?`, tb.ID, rid)
+	rs, err = t.query(`SELECT col, style FROM _lattis_styles WHERE tbl = ? AND rid = ?`, tb.ID, rid)
 	if err != nil {
 		return err
 	}
@@ -122,12 +122,12 @@ func (t *tx) deleteRow(tb Table, rid int64) error {
 			rs.Close()
 			return err
 		}
-		undo = append(undo, st(`INSERT INTO _slitable_styles (tbl, rid, col, style) VALUES (?, ?, ?, ?)`, tb.ID, rid, col, style))
+		undo = append(undo, st(`INSERT INTO _lattis_styles (tbl, rid, col, style) VALUES (?, ?, ?, ?)`, tb.ID, rid, col, style))
 	}
 	rs.Close()
 	return t.apply([]stmt{
-		st(`DELETE FROM _slitable_invalid WHERE tbl = ? AND rid = ?`, tb.ID, rid),
-		st(`DELETE FROM _slitable_styles WHERE tbl = ? AND rid = ?`, tb.ID, rid),
+		st(`DELETE FROM _lattis_invalid WHERE tbl = ? AND rid = ?`, tb.ID, rid),
+		st(`DELETE FROM _lattis_styles WHERE tbl = ? AND rid = ?`, tb.ID, rid),
 		st(`DELETE FROM `+tb.sql()+` WHERE id = ?`, rid),
 	}, undo)
 }
@@ -136,12 +136,12 @@ func (t *tx) deleteRow(tb Table, rid int64) error {
 func (t *tx) addColumn(tb Table, id int64, name string, typ grid.Type, pos int) error {
 	return t.apply([]stmt{
 		st(`ALTER TABLE ` + tb.sql() + ` ADD COLUMN ` + colSQL(id) + ` ` + sqlType(typ)),
-		st(`UPDATE _slitable_columns SET pos = pos + 1 WHERE tbl = ? AND pos >= ?`, tb.ID, pos),
-		st(`INSERT INTO _slitable_columns (tbl, id, name, type, pos) VALUES (?, ?, ?, ?, ?)`, tb.ID, id, name, string(typ), pos),
+		st(`UPDATE _lattis_columns SET pos = pos + 1 WHERE tbl = ? AND pos >= ?`, tb.ID, pos),
+		st(`INSERT INTO _lattis_columns (tbl, id, name, type, pos) VALUES (?, ?, ?, ?, ?)`, tb.ID, id, name, string(typ), pos),
 	}, []stmt{
-		st(`DELETE FROM _slitable_invalid WHERE tbl = ? AND col = ?`, tb.ID, id),
-		st(`DELETE FROM _slitable_columns WHERE tbl = ? AND id = ?`, tb.ID, id),
-		st(`UPDATE _slitable_columns SET pos = pos - 1 WHERE tbl = ? AND pos > ?`, tb.ID, pos),
+		st(`DELETE FROM _lattis_invalid WHERE tbl = ? AND col = ?`, tb.ID, id),
+		st(`DELETE FROM _lattis_columns WHERE tbl = ? AND id = ?`, tb.ID, id),
+		st(`UPDATE _lattis_columns SET pos = pos - 1 WHERE tbl = ? AND pos > ?`, tb.ID, pos),
 		st(`ALTER TABLE ` + tb.sql() + ` DROP COLUMN ` + colSQL(id)),
 	})
 }
@@ -150,7 +150,7 @@ func (t *tx) addColumn(tb Table, id int64, name string, typ grid.Type, pos int) 
 // corbeille, d'où l'annulation les remet : l'inverse reste en quelques
 // instructions quelle que soit la taille du tableau.
 func (t *tx) dropColumn(tb Table, c Column, pos int) error {
-	trash := fmt.Sprintf("_slitable_trash_%d_%d_%d", tb.ID, c.ID, time.Now().UnixNano())
+	trash := fmt.Sprintf("_lattis_trash_%d_%d_%d", tb.ID, c.ID, time.Now().UnixNano())
 	col := colSQL(c.ID)
 	rules, err := t.columnRules(tb.ID, c.ID)
 	if err != nil {
@@ -162,11 +162,11 @@ func (t *tx) dropColumn(tb Table, c Column, pos int) error {
 	if c.ID == tb.Key {
 		unkey = []stmt{
 			st(`DROP INDEX ` + tb.sql() + `_key`),
-			st(`UPDATE _slitable_tables SET key_col = NULL WHERE id = ?`, tb.ID),
+			st(`UPDATE _lattis_tables SET key_col = NULL WHERE id = ?`, tb.ID),
 		}
 		rekey = []stmt{
 			st(`CREATE UNIQUE INDEX ` + tb.sql() + `_key ON ` + tb.sql() + `(` + keyExpr(c.ID, c.Type) + `)`),
-			st(`UPDATE _slitable_tables SET key_col = ? WHERE id = ?`, c.ID, tb.ID),
+			st(`UPDATE _lattis_tables SET key_col = ? WHERE id = ?`, c.ID, tb.ID),
 		}
 	}
 	return t.ApplyStep(command.Step{Do: append(unkey, []stmt{
@@ -174,21 +174,21 @@ func (t *tx) dropColumn(tb Table, c Column, pos int) error {
 		// (sans index, 1 M de lignes demandaient 1 M de parcours complets).
 		st(`CREATE TABLE ` + trash + ` (id INTEGER PRIMARY KEY, v)`),
 		st(`INSERT INTO ` + trash + ` (id, v) SELECT id, ` + col + ` FROM ` + tb.sql()),
-		st(`CREATE TABLE `+trash+`_inv AS SELECT rid, raw FROM _slitable_invalid WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
-		st(`DELETE FROM _slitable_invalid WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
-		st(`CREATE TABLE `+trash+`_sty AS SELECT rid, style FROM _slitable_styles WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
-		st(`DELETE FROM _slitable_styles WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
+		st(`CREATE TABLE `+trash+`_inv AS SELECT rid, raw FROM _lattis_invalid WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
+		st(`DELETE FROM _lattis_invalid WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
+		st(`CREATE TABLE `+trash+`_sty AS SELECT rid, style FROM _lattis_styles WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
+		st(`DELETE FROM _lattis_styles WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
 		st(`ALTER TABLE ` + tb.sql() + ` DROP COLUMN ` + col),
-		st(`DELETE FROM _slitable_columns WHERE tbl = ? AND id = ?`, tb.ID, c.ID),
-		st(`UPDATE _slitable_columns SET pos = pos - 1 WHERE tbl = ? AND pos > ?`, tb.ID, pos),
+		st(`DELETE FROM _lattis_columns WHERE tbl = ? AND id = ?`, tb.ID, c.ID),
+		st(`UPDATE _lattis_columns SET pos = pos - 1 WHERE tbl = ? AND pos > ?`, tb.ID, pos),
 	}...), Undo: append([]stmt{
-		st(`UPDATE _slitable_columns SET pos = pos + 1 WHERE tbl = ? AND pos >= ?`, tb.ID, pos),
-		st(`INSERT INTO _slitable_columns (tbl, id, name, type, fixed, pos, formula, rules) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		st(`UPDATE _lattis_columns SET pos = pos + 1 WHERE tbl = ? AND pos >= ?`, tb.ID, pos),
+		st(`INSERT INTO _lattis_columns (tbl, id, name, type, fixed, pos, formula, rules) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 			tb.ID, c.ID, c.Name, string(c.Type), c.Fixed, pos, nullIfEmpty(c.Formula), nullIfEmpty(rules)),
 		st(`ALTER TABLE ` + tb.sql() + ` ADD COLUMN ` + col + ` ` + sqlType(c.Type)),
 		st(`UPDATE ` + tb.sql() + ` SET ` + col + ` = ` + trash + `.v FROM ` + trash + ` WHERE ` + trash + `.id = ` + tb.sql() + `.id`),
-		st(`INSERT INTO _slitable_invalid (tbl, rid, col, raw) SELECT ?, rid, ?, raw FROM `+trash+`_inv`, tb.ID, c.ID),
-		st(`INSERT INTO _slitable_styles (tbl, rid, col, style) SELECT ?, rid, ?, style FROM `+trash+`_sty`, tb.ID, c.ID),
+		st(`INSERT INTO _lattis_invalid (tbl, rid, col, raw) SELECT ?, rid, ?, raw FROM `+trash+`_inv`, tb.ID, c.ID),
+		st(`INSERT INTO _lattis_styles (tbl, rid, col, style) SELECT ?, rid, ?, style FROM `+trash+`_sty`, tb.ID, c.ID),
 		st(`DROP TABLE ` + trash),
 		st(`DROP TABLE ` + trash + `_inv`),
 		st(`DROP TABLE ` + trash + `_sty`),
@@ -205,7 +205,7 @@ func (t *tx) rename(tb Table, c Column, name string) error {
 	if name == c.Name {
 		return nil
 	}
-	q := `UPDATE _slitable_columns SET name = ? WHERE tbl = ? AND id = ?`
+	q := `UPDATE _lattis_columns SET name = ? WHERE tbl = ? AND id = ?`
 	return t.apply([]stmt{st(q, name, tb.ID, c.ID)}, []stmt{st(q, c.Name, tb.ID, c.ID)})
 }
 
@@ -245,7 +245,7 @@ func rebuildStmts(tb Table, physical []Column, colID int64, from, to grid.Type) 
 			out = append(out, st(`CREATE UNIQUE INDEX `+name+`_key ON `+name+`(`+keyExpr(c.ID, typ)+`)`))
 		}
 	}
-	return append(out, st(`UPDATE _slitable_columns SET type = ? WHERE tbl = ? AND id = ?`, string(to), tb.ID, colID))
+	return append(out, st(`UPDATE _lattis_columns SET type = ? WHERE tbl = ? AND id = ?`, string(to), tb.ID, colID))
 }
 
 // keyExpr est l'expression de l'index de la clé : sans tenir compte de la
@@ -276,13 +276,13 @@ func (t *tx) retype(tb Table, i int, to grid.Type) (Table, error) {
 // données, types inférés colonne par colonne.
 func (t *tx) createTable(sheet int64, name string, row, col int, headers []string, data [][]string) (Table, error) {
 	var id int64
-	if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _slitable_tables`).Scan(&id); err != nil {
+	if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_tables`).Scan(&id); err != nil {
 		return Table{}, err
 	}
 	tb := Table{ID: id, Sheet: sheet, Name: name, Row: row, Col: col, Rows: len(data)}
 	defs := []string{"id INTEGER PRIMARY KEY", "_pos TEXT NOT NULL"}
 	names := []string{"id", "_pos"}
-	do := []stmt{st(`INSERT INTO _slitable_tables (id, sheet, name, row, col) VALUES (?, ?, ?, ?, ?)`, id, sheet, name, row, col)}
+	do := []stmt{st(`INSERT INTO _lattis_tables (id, sheet, name, row, col) VALUES (?, ?, ?, ?, ?)`, id, sheet, name, row, col)}
 	for i, h := range headers {
 		raws := make([]string, len(data))
 		for r := range data {
@@ -295,7 +295,7 @@ func (t *tx) createTable(sheet int64, name string, row, col int, headers []strin
 		tb.Cols = append(tb.Cols, c)
 		defs = append(defs, colSQL(c.ID)+" "+sqlType(c.Type))
 		names = append(names, colSQL(c.ID))
-		do = append(do, st(`INSERT INTO _slitable_columns (tbl, id, name, type, pos) VALUES (?, ?, ?, ?, ?)`, id, c.ID, c.Name, string(c.Type), i))
+		do = append(do, st(`INSERT INTO _lattis_columns (tbl, id, name, type, pos) VALUES (?, ?, ?, ?, ?)`, id, c.ID, c.Name, string(c.Type), i))
 	}
 	do = append([]stmt{
 		st(`CREATE TABLE ` + tb.sql() + ` (` + strings.Join(defs, ", ") + `) STRICT`),
@@ -314,9 +314,9 @@ func (t *tx) createTable(sheet int64, name string, row, col int, headers []strin
 		do = append(do, st(`INSERT INTO `+tb.sql()+` (`+strings.Join(names, ", ")+`) VALUES (`+marks(len(names))+`)`, args...))
 	}
 	undo := []stmt{
-		st(`DELETE FROM _slitable_invalid WHERE tbl = ?`, id),
-		st(`DELETE FROM _slitable_columns WHERE tbl = ?`, id),
-		st(`DELETE FROM _slitable_tables WHERE id = ?`, id),
+		st(`DELETE FROM _lattis_invalid WHERE tbl = ?`, id),
+		st(`DELETE FROM _lattis_columns WHERE tbl = ?`, id),
+		st(`DELETE FROM _lattis_tables WHERE id = ?`, id),
 		st(`DROP TABLE ` + tb.sql()),
 	}
 	return tb, t.apply(do, undo)
@@ -385,7 +385,7 @@ func (t *tx) dropColumns(tb Table, idx []int) error {
 		gone[tb.Cols[i].ID] = tb.Cols[i]
 		ids = append(ids, strconv.FormatInt(tb.Cols[i].ID, 10))
 	}
-	trash := fmt.Sprintf("_slitable_trash_%d_cols_%d", tb.ID, time.Now().UnixNano())
+	trash := fmt.Sprintf("_lattis_trash_%d_cols_%d", tb.ID, time.Now().UnixNano())
 	name, tmp := tb.sql(), tb.sql()+"_rebuild"
 	in := strings.Join(ids, ", ")
 
@@ -439,13 +439,13 @@ func (t *tx) dropColumns(tb Table, idx []int) error {
 	do := []stmt{
 		st(`CREATE TABLE ` + trash + ` (` + strings.Join(tdefs, ", ") + `)`),
 		st(`INSERT INTO ` + trash + ` (` + strings.Join(tcols, ", ") + `) SELECT ` + strings.Join(tsel, ", ") + ` FROM ` + name),
-		st(`CREATE TABLE `+trash+`_inv AS SELECT rid, col, raw FROM _slitable_invalid WHERE tbl = ? AND col IN (`+in+`)`, tb.ID),
-		st(`DELETE FROM _slitable_invalid WHERE tbl = ? AND col IN (`+in+`)`, tb.ID),
-		st(`CREATE TABLE `+trash+`_sty AS SELECT rid, col, style FROM _slitable_styles WHERE tbl = ? AND col IN (`+in+`)`, tb.ID),
-		st(`DELETE FROM _slitable_styles WHERE tbl = ? AND col IN (`+in+`)`, tb.ID),
+		st(`CREATE TABLE `+trash+`_inv AS SELECT rid, col, raw FROM _lattis_invalid WHERE tbl = ? AND col IN (`+in+`)`, tb.ID),
+		st(`DELETE FROM _lattis_invalid WHERE tbl = ? AND col IN (`+in+`)`, tb.ID),
+		st(`CREATE TABLE `+trash+`_sty AS SELECT rid, col, style FROM _lattis_styles WHERE tbl = ? AND col IN (`+in+`)`, tb.ID),
+		st(`DELETE FROM _lattis_styles WHERE tbl = ? AND col IN (`+in+`)`, tb.ID),
 	}
 	if _, ok := gone[tb.Key]; ok && tb.Key != 0 {
-		do = append(do, st(`UPDATE _slitable_tables SET key_col = NULL WHERE id = ?`, tb.ID))
+		do = append(do, st(`UPDATE _lattis_tables SET key_col = NULL WHERE id = ?`, tb.ID))
 	}
 	do = append(do, build(false)...)
 	// Colonnes retirées des métadonnées, de la dernière à la première.
@@ -453,8 +453,8 @@ func (t *tx) dropColumns(tb Table, idx []int) error {
 	for k := len(idx) - 1; k >= 0; k-- {
 		c := tb.Cols[idx[k]]
 		do = append(do,
-			st(`DELETE FROM _slitable_columns WHERE tbl = ? AND id = ?`, tb.ID, c.ID),
-			st(`UPDATE _slitable_columns SET pos = pos - 1 WHERE tbl = ? AND pos > ?`, tb.ID, idx[k]))
+			st(`DELETE FROM _lattis_columns WHERE tbl = ? AND id = ?`, tb.ID, c.ID),
+			st(`UPDATE _lattis_columns SET pos = pos - 1 WHERE tbl = ? AND pos > ?`, tb.ID, idx[k]))
 	}
 	for _, i := range idx {
 		c := tb.Cols[i]
@@ -463,17 +463,17 @@ func (t *tx) dropColumns(tb Table, idx []int) error {
 			return err
 		}
 		undo = append(undo,
-			st(`UPDATE _slitable_columns SET pos = pos + 1 WHERE tbl = ? AND pos >= ?`, tb.ID, i),
-			st(`INSERT INTO _slitable_columns (tbl, id, name, type, fixed, pos, formula, rules) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			st(`UPDATE _lattis_columns SET pos = pos + 1 WHERE tbl = ? AND pos >= ?`, tb.ID, i),
+			st(`INSERT INTO _lattis_columns (tbl, id, name, type, fixed, pos, formula, rules) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 				tb.ID, c.ID, c.Name, string(c.Type), c.Fixed, i, nullIfEmpty(c.Formula), nullIfEmpty(rules)))
 	}
 	undo = append(undo, build(true)...)
 	if _, ok := gone[tb.Key]; ok && tb.Key != 0 {
-		undo = append(undo, st(`UPDATE _slitable_tables SET key_col = ? WHERE id = ?`, tb.Key, tb.ID))
+		undo = append(undo, st(`UPDATE _lattis_tables SET key_col = ? WHERE id = ?`, tb.Key, tb.ID))
 	}
 	undo = append(undo,
-		st(`INSERT INTO _slitable_invalid (tbl, rid, col, raw) SELECT ?, rid, col, raw FROM `+trash+`_inv`, tb.ID),
-		st(`INSERT INTO _slitable_styles (tbl, rid, col, style) SELECT ?, rid, col, style FROM `+trash+`_sty`, tb.ID),
+		st(`INSERT INTO _lattis_invalid (tbl, rid, col, raw) SELECT ?, rid, col, raw FROM `+trash+`_inv`, tb.ID),
+		st(`INSERT INTO _lattis_styles (tbl, rid, col, style) SELECT ?, rid, col, style FROM `+trash+`_sty`, tb.ID),
 		st(`DROP TABLE `+trash),
 		st(`DROP TABLE `+trash+`_inv`),
 		st(`DROP TABLE `+trash+`_sty`),

@@ -8,11 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lalamefine/slitable/internal/canvas"
-	"github.com/lalamefine/slitable/internal/command"
-	"github.com/lalamefine/slitable/internal/grid"
-	"github.com/lalamefine/slitable/internal/meta"
-	"github.com/lalamefine/slitable/internal/store"
+	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/meta"
+	"github.com/lalamefine/lattis/internal/store"
 )
 
 type fixture struct {
@@ -150,7 +150,7 @@ func TestCSVRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	var n int
-	if err := d.db.Read().QueryRow(`SELECT count(*) FROM sqlite_schema WHERE name LIKE '_slitable_trash_import_%'`).Scan(&n); err != nil {
+	if err := d.db.Read().QueryRow(`SELECT count(*) FROM sqlite_schema WHERE name LIKE '_lattis_trash_import_%'`).Scan(&n); err != nil {
 		t.Fatal(err)
 	}
 	if n != 0 {

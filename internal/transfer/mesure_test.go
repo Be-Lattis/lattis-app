@@ -9,11 +9,11 @@ import (
 )
 
 // TestMesureImport importe un vrai fichier et affiche ce qui a été créé :
-// SLITABLE_IMPORT=chemin.xlsx (ou .csv) go test -run TestMesureImport -v
+// LATTIS_IMPORT=chemin.xlsx (ou .csv) go test -run TestMesureImport -v
 func TestMesureImport(t *testing.T) {
-	path := os.Getenv("SLITABLE_IMPORT")
+	path := os.Getenv("LATTIS_IMPORT")
 	if path == "" {
-		t.Skip("SLITABLE_IMPORT non défini")
+		t.Skip("LATTIS_IMPORT non défini")
 	}
 	ctx := context.Background()
 	d := open(t)
