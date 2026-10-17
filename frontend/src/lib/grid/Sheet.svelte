@@ -3860,12 +3860,48 @@
 		updateExtent();
 		const b = chartBox(ch);
 		const t = reveal(b.y, b.y + b.h, vs.top, vs.view, rowTop(fRows()));
-		if (t !== vs.top) vs.to(t);
 		const l = reveal(b.x, b.x + b.w, scroller.scrollLeft, viewW - MARGIN, cax().offset(fCols()));
-		if (l !== scroller.scrollLeft) scroller.scrollLeft = l;
-		syncNative();
 		wrap.focus();
-		schedule();
+		glideTo(t, l);
+	}
+
+	/** Défile jusqu'à (top, left) : en douceur avec les animations (Affichage › Animations), d'un coup sinon. */
+	function glideTo(top: number, left: number) {
+		const t0 = vs.top;
+		const l0 = scroller.scrollLeft;
+		if (top === t0 && left === l0) return schedule();
+		const set = (t: number, l: number) => {
+			if (t !== vs.top) vs.to(t);
+			if (l !== scroller.scrollLeft) scroller.scrollLeft = l;
+			syncNative();
+			schedule();
+		};
+		if (!motion()) return set(top, left);
+		const start = performance.now();
+		const D = 320;
+		const step = (now: number) => {
+			const k = Math.min(1, (now - start) / D);
+			const e = 1 - Math.pow(1 - k, 3); // décélération
+			set(Math.round(t0 + (top - t0) * e), Math.round(l0 + (left - l0) * e));
+			if (k < 1) requestAnimationFrame(step);
+		};
+		requestAnimationFrame(step);
+	}
+
+	/**
+	 * Place libre pour un nouveau graphique (w × h px) à partir de (row, col) :
+	 * sous les graphiques qu'il chevaucherait, avec une ligne d'écart, pour
+	 * qu'aucun ne se superpose par défaut.
+	 */
+	function freeChartSpot(row: number, col: number, w = CHART_W, h = CHART_H): { row: number; col: number } {
+		const x = colAxis.offset(col);
+		for (let k = 0; k < 50; k++) {
+			const y = rowTop(row);
+			const hit = charts.map(chartBox).find((b) => x < b.x + b.w && b.x < x + w && y < b.y + b.h && b.y < y + h);
+			if (!hit) break;
+			row = rowAxis.indexAt(hit.y + hit.h) + 2;
+		}
+		return { row, col };
 	}
 
 	function pasteChart(cfg: ChartConfig) {
@@ -3874,7 +3910,7 @@
 		const { row, col } = active;
 		const before = new Set(charts.map((c) => c.id));
 		writing = writing.then(() =>
-			create(row, col, cfg).then(
+			create(freeChartSpot(row, col, cfg.width, cfg.height).row, col, cfg).then(
 				() => {
 					say('Graphique collé');
 					selectNewChart(before);
@@ -3897,7 +3933,7 @@
 			const name = pv.config.name ?? '';
 			const before = new Set(charts.map((c) => c.id));
 			writing = writing.then(() =>
-				create(pv.row, pv.col + head.length + 1, { source: name, kind, x: head[0], series }).then(
+				create(freeChartSpot(pv.row, pv.col + head.length + 1).row, pv.col + head.length + 1, { source: name, kind, x: head[0], series }).then(
 					() => {
 						say(`Graphique du tableau croisé « ${name} » inséré`);
 						selectNewChart(before);
@@ -3926,7 +3962,7 @@
 		const create = source.createChart;
 		const before = new Set(charts.map((c) => c.id));
 		writing = writing.then(() =>
-			create(e.t.row, e.lastCol + 2, { source: e.t.name, kind, x: x.name, series }).then(
+			create(freeChartSpot(e.t.row, e.lastCol + 2).row, e.lastCol + 2, { source: e.t.name, kind, x: x.name, series }).then(
 				() => {
 					say('Graphique inséré : double-clic pour le modifier, glissez-le pour le déplacer');
 					selectNewChart(before);
