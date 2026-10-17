@@ -1621,7 +1621,10 @@
 		}
 		// Flèches d'audit : bleues vers la cellule (antécédents), rouges depuis
 		// elle (dépendants), comme Excel.
-		if (arrows) {
+		// Une même flèche (antécédent de l'une, dépendant de l'autre, toutes deux
+		// sélectionnées) n'est dessinée qu'une fois.
+		const drawn = new Set<string>();
+		for (const arrows of links) {
 			const center = (r: number, c: number) => ({ x: cx(c) + colAxis.size(c) / 2, y: ry(r) + rh(r) / 2 });
 			const me = center(arrows.row, arrows.col);
 			const draw = (from: { x: number; y: number }, to: { x: number; y: number }, color: string) => {
@@ -1648,9 +1651,10 @@
 			// Colonne du même tableau, depuis une ligne de données : la flèche part de
 			// la cellule de cette ligne ([Quantité]*[Prix unitaire]), pas de l'en-tête.
 			const own = tableAt(arrows.row, arrows.col);
-			const rowOf = (d: DepTarget) => (d.kind === 'column' && own && d.table === own.t.name && arrows!.row > own.t.row ? arrows!.row : d.row);
-			for (const p of arrows.pre) if (p.sheet === sheetIdOf()) draw(center(rowOf(p), p.col), me, '#2b6cb0');
-			for (const d of arrows.dep) if (d.sheet === sheetIdOf()) draw(me, center(rowOf(d), d.col), '#c0392b');
+			const rowOf = (d: DepTarget) => (d.kind === 'column' && own && d.table === own.t.name && arrows.row > own.t.row ? arrows.row : d.row);
+			const once = (k: string) => !drawn.has(k) && !!drawn.add(k);
+			for (const p of arrows.pre) if (p.sheet === sheetIdOf() && once(`${rowOf(p)},${p.col}>${arrows.row},${arrows.col}`)) draw(center(rowOf(p), p.col), me, '#2b6cb0');
+			for (const d of arrows.dep) if (d.sheet === sheetIdOf() && once(`${arrows.row},${arrows.col}>${rowOf(d)},${d.col}`)) draw(me, center(rowOf(d), d.col), '#c0392b');
 		}
 		// Saisie dans la barre de formule : la cellule active l'affiche en direct.
 		if (fxEditing && !editing) {
@@ -3471,29 +3475,54 @@
 
 	// --- Audit de formules : flèches des antécédents et des dépendants --------
 
-	let arrows = $state<{ row: number; col: number; pre: DepTarget[]; dep: DepTarget[] } | null>(null);
-	const depLabel = (d: DepTarget) => (d.kind === 'column' ? `${d.table}[${d.column}]` : d.kind === 'table' ? (d.table ?? '') : d.name || 'cellule libre');
+	// Liens affichés : pour chaque cellule de la sélection, ses antécédents
+	// (flèches bleues vers elle) et ses dépendants (flèches rouges depuis elle).
+	type Link = { row: number; col: number; pre: DepTarget[]; dep: DepTarget[] };
+	let links = $state<Link[]>([]);
+	/** Cellules analysées au plus par « Afficher les liens » (la sélection peut être une colonne entière). */
+	const MAX_LINK_CELLS = 400;
 
-	/** Formules › Antécédents / Dépendants ; 'clear' efface les flèches. */
-	export async function auditActive(kind: 'pre' | 'dep' | 'clear') {
+	/** Formules › Afficher les liens (toute la sélection) ou Masquer les liens. */
+	export async function auditActive(kind: 'show' | 'clear') {
 		if (kind === 'clear' || !source.dependencies) {
-			arrows = null;
+			links = [];
 			schedule();
 			return;
 		}
-		const { row, col } = active;
+		const deps = source.dependencies;
+		const { r0, r1, c0, c1 } = selection();
+		// Lignes visibles d'abord : sur une colonne entière, ce sont celles qu'on voit.
+		const { first, last } = visibleRows();
+		const rows: number[] = [];
+		for (let r = Math.max(r0, first); r <= Math.min(r1, last); r++) rows.push(r);
+		for (let r = r0; r <= r1 && rows.length * (c1 - c0 + 1) < MAX_LINK_CELLS; r++) if (r < first || r > last) rows.push(r);
+		const cellsToSee: { row: number; col: number }[] = [];
+		for (const r of rows) for (let c = c0; c <= c1 && cellsToSee.length < MAX_LINK_CELLS; c++) cellsToSee.push({ row: r, col: c });
+		const cut = (r1 - r0 + 1) * (c1 - c0 + 1) > cellsToSee.length;
 		try {
-			const d = await source.dependencies(row, col);
-			const list = kind === 'pre' ? d.precedents : d.dependents;
-			const keep = arrows && arrows.row === row && arrows.col === col ? arrows : { row, col, pre: [], dep: [] };
-			arrows = { ...keep, [kind]: list };
-			const here = list.filter((x) => x.sheet === sheetIdOf());
-			const away = list.filter((x) => x.sheet !== sheetIdOf());
-			const what = kind === 'pre' ? 'Antécédents' : 'Dépendants';
+			const found: Link[] = [];
+			let pre = 0;
+			let dep = 0;
+			let away = 0;
+			// Par petits groupes : le moteur n'est pas inondé de requêtes.
+			for (let i = 0; i < cellsToSee.length; i += 16) {
+				const part = await Promise.all(cellsToSee.slice(i, i + 16).map((p) => deps(p.row, p.col).then((d) => ({ ...p, d }))));
+				for (const { row, col, d } of part) {
+					if (!d.precedents.length && !d.dependents.length) continue;
+					found.push({ row, col, pre: d.precedents, dep: d.dependents });
+					pre += d.precedents.length;
+					dep += d.dependents.length;
+					away += [...d.precedents, ...d.dependents].filter((x) => x.sheet !== sheetIdOf()).length;
+				}
+			}
+			links = found;
 			say(
-				list.length === 0
-					? `${what} : aucun${d.subject ? ` pour ${d.subject}` : ''}`
-					: `${what} : ${list.map(depLabel).join(', ')}${away.length ? ` (${away.length} sur d'autres feuilles)` : ''}${here.length ? ' · Échap pour effacer les flèches' : ''}`
+				found.length === 0
+					? 'Aucun lien : la sélection ne contient ni formule ni cellule lue par une formule'
+					: `Liens de ${found.length} cellule(s) : ${pre} antécédent(s), ${dep} dépendant(s)` +
+							(away ? ` (${away} sur d'autres feuilles)` : '') +
+							(cut ? ` · ${MAX_LINK_CELLS} premières cellules seulement` : '') +
+							' · Échap ou Masquer les liens pour les retirer'
 			);
 			schedule();
 		} catch (err) {
@@ -3509,7 +3538,7 @@
 	/** Ferme les menus, dialogues et volets (changement de feuille ou de vue). */
 	export function closeOverlays() {
 		closeMenus();
-		arrows = null;
+		links = [];
 		selChart = null;
 		panel = null;
 	}
@@ -4399,8 +4428,8 @@
 		if (e.repeat) noAnimUntil = performance.now() + 150;
 		if (editing) return;
 		if (e.key === 'Escape' && painter) painter = null;
-		if (e.key === 'Escape' && arrows) {
-			arrows = null;
+		if (e.key === 'Escape' && links.length) {
+			links = [];
 			schedule();
 		}
 		if (e.key === 'Escape' && clipRange) {

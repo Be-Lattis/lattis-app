@@ -73,7 +73,7 @@
 		onformula?: (what: 'insert' | 'sum' | 'reference') => void;
 		onclip?: (what: 'cut' | 'copy' | 'paste') => void;
 		onpainter?: () => void;
-		onaudit?: (kind: 'pre' | 'dep' | 'clear') => void;
+		onaudit?: (kind: 'show' | 'clear') => void;
 		onchart?: (kind: 'bar' | 'line' | 'pie' | 'scatter') => void;
 		oncells?: (op: 'insertRow' | 'deleteRow' | 'insertColumn' | 'deleteColumn') => void;
 		/** Quadrillage de la feuille active, et sa bascule. */
@@ -366,7 +366,7 @@
 		],
 		Formules: [
 			{ title: 'Bibliothèque', commands: [{ label: 'Insérer une fonction', icon: 'function', run: onformula ? () => onformula('insert') : undefined, hint: 'Choisir une fonction et commencer la formule dans la cellule active' }, { label: 'Somme automatique', icon: 'autosum', run: onformula ? () => onformula('sum') : undefined, hint: 'SOMME de la colonne du tableau au-dessus' }, { label: 'REFERENCE', icon: 'reference', run: onformula ? () => onformula('reference') : undefined, hint: 'REFERENCE(Tableau[Colonne]; clé) : la RECHERCHEV de Slitable' }] },
-			{ title: 'Audit', commands: [{ label: 'Antécédents', icon: 'precedents', run: onaudit ? () => onaudit('pre') : undefined, hint: 'Flèches depuis ce que lit la formule de la cellule active' }, { label: 'Dépendants', icon: 'dependents', run: onaudit ? () => onaudit('dep') : undefined, hint: 'Flèches vers les formules qui lisent la cellule active' }, { label: 'Effacer les flèches', icon: 'dependency-graph', run: onaudit ? () => onaudit('clear') : undefined, hint: 'Effacer les flèches (Échap)' }] },
+			{ title: 'Audit', commands: [{ label: 'Afficher les liens', icon: 'dependency-graph', run: onaudit ? () => onaudit('show') : undefined, hint: 'Flèches des liens de toutes les cellules sélectionnées : bleues depuis ce que lisent leurs formules, rouges vers les formules qui les lisent' }, { label: 'Masquer les liens', icon: 'win-close', run: onaudit ? () => onaudit('clear') : undefined, hint: 'Retirer les flèches des liens (Échap)' }] },
 			{ title: 'Calcul', commands: [{ label: 'Calculer', icon: 'function', run: onrecalc, hint: 'Renouveler AUJOURDHUI, MAINTENANT et ALEA (F9)' }] }
 		],
 		Révision: [
@@ -413,7 +413,7 @@
 	// Sur une feuille protégée, seules les commandes qui ne la modifient pas
 	// restent actives (lecture, copie, filtres, affichage) ; un tableau croisé
 	// crée une feuille : refusé quand la structure du classeur est protégée.
-	const READ_ONLY = new Set(['Annuler', 'Rétablir', 'Copier', 'Rechercher', 'Filtrer', 'Erreurs seulement', 'Antécédents', 'Dépendants', 'Effacer les flèches', 'Calculer', 'Quadrillage', 'En-têtes A1', 'Animations', 'Figer les volets', 'Zoom', '100 %', 'Mesurer la grille', 'Tableau croisé', 'Protéger la feuille', 'Protéger le classeur', 'Ôter la protection', 'Ôter la protection du classeur', 'Texte/CSV', 'Classeur Excel', 'Autres fichiers', 'Base de données', 'Web', 'À partir du tableau', 'Requêtes et connexions', 'Actualiser tout']);
+	const READ_ONLY = new Set(['Annuler', 'Rétablir', 'Copier', 'Rechercher', 'Filtrer', 'Erreurs seulement', 'Afficher les liens', 'Masquer les liens', 'Calculer', 'Quadrillage', 'En-têtes A1', 'Animations', 'Figer les volets', 'Zoom', '100 %', 'Mesurer la grille', 'Tableau croisé', 'Protéger la feuille', 'Protéger le classeur', 'Ôter la protection', 'Ôter la protection du classeur', 'Texte/CSV', 'Classeur Excel', 'Autres fichiers', 'Base de données', 'Web', 'À partir du tableau', 'Requêtes et connexions', 'Actualiser tout']);
 	const ribbons: Record<string, Group[]> = $derived(
 		Object.fromEntries(
 			Object.entries(allRibbons).map(([k, gs]) => [
