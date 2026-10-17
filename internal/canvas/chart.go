@@ -15,7 +15,7 @@ import (
 // catégories (X) et une ou plusieurs séries de valeurs, par nom de colonne.
 type ChartConfig struct {
 	Source string   `json:"source"`
-	Kind   string   `json:"kind"` // bar (barres verticales), column (horizontales), line, area, pie, doughnut, scatter
+	Kind   string   `json:"kind"` // voir chartKinds
 	X      string   `json:"x"`
 	Series []string `json:"series"`
 	Title  string   `json:"title,omitempty"`
@@ -39,6 +39,13 @@ type ChartConfig struct {
 	// propre), comme Excel ; Y2Title est le titre de cet axe.
 	Secondary []bool `json:"secondary,omitempty"`
 	Y2Title   string `json:"y2Title,omitempty"`
+	// SeriesKinds : graphique combiné, forme de chaque série (bar, line ou
+	// area ; par défaut la première en barres, les suivantes en courbes).
+	SeriesKinds []string `json:"seriesKinds,omitempty"`
+	// MapMode : carte, « points » (défaut) ou « heat » (densité).
+	MapMode string `json:"mapMode,omitempty"`
+	// Bins : histogramme de fréquences, nombre de classes (0 : automatique).
+	Bins int `json:"bins,omitempty"`
 }
 
 // ChartSeries est une série calculée (nil : valeur absente).
@@ -64,7 +71,49 @@ var ErrChart = errors.New("graphique")
 // MaxChartPoints borne les points d'un graphique.
 const MaxChartPoints = 2000
 
-var chartKinds = map[string]bool{"bar": true, "column": true, "line": true, "area": true, "pie": true, "doughnut": true, "scatter": true}
+// chartKinds : types de graphiques. bar (barres verticales), column
+// (horizontales), line, area, pie, doughnut, scatter ; combo (barres et
+// courbes, SeriesKinds) ; bar3d, pie3d (perspective) ; map (carte
+// OpenStreetMap : séries latitude, longitude et valeur facultative) ;
+// waterfall (cascade), treemap (compartimentage), radar, funnel (entonnoir),
+// boxplot (boîte à moustaches), histogram (fréquences), gauge (jauge).
+var chartKinds = map[string]bool{
+	"bar": true, "column": true, "line": true, "area": true, "pie": true, "doughnut": true, "scatter": true,
+	"combo": true, "bar3d": true, "pie3d": true, "map": true,
+	"waterfall": true, "treemap": true, "radar": true, "funnel": true, "boxplot": true, "histogram": true, "gauge": true,
+}
+
+// chartRawRows : types qui lisent les lignes du tableau une à une, sans
+// regrouper par catégorie (coordonnées, distributions).
+var chartRawRows = map[string]bool{"map": true, "histogram": true, "boxplot": true}
+
+// chartSeriesKinds : formes possibles d'une série d'un graphique combiné.
+var chartSeriesKinds = map[string]bool{"": true, "bar": true, "line": true, "area": true}
+
+// checkChart vérifie ce qui ne dépend pas des données.
+func checkChart(cfg ChartConfig) error {
+	if !chartKinds[cfg.Kind] {
+		return fmt.Errorf("%w : type %q inconnu", ErrChart, cfg.Kind)
+	}
+	if len(cfg.Series) == 0 {
+		return fmt.Errorf("%w : choisissez au moins une série", ErrChart)
+	}
+	for _, k := range cfg.SeriesKinds {
+		if !chartSeriesKinds[k] {
+			return fmt.Errorf("%w : forme de série %q inconnue (bar, line ou area)", ErrChart, k)
+		}
+	}
+	if cfg.Kind == "map" && len(cfg.Series) < 2 {
+		return fmt.Errorf("%w : une carte demande deux séries, latitude puis longitude (et une valeur facultative)", ErrChart)
+	}
+	if cfg.MapMode != "" && cfg.MapMode != "points" && cfg.MapMode != "heat" {
+		return fmt.Errorf("%w : mode de carte %q inconnu (points ou heat)", ErrChart, cfg.MapMode)
+	}
+	if cfg.Bins < 0 || cfg.Bins > 200 {
+		return fmt.Errorf("%w : nombre de classes entre 1 et 200", ErrChart)
+	}
+	return nil
+}
 
 // CreateChart pose un graphique sur une feuille, coin haut gauche en (row, col).
 func (m *Model) CreateChart(ctx context.Context, sheet int64, row, col int, cfg ChartConfig) (int64, error) {
@@ -158,11 +207,8 @@ func (m *Model) DeleteChart(ctx context.Context, id int64) error {
 // comme un graphique tiré d'un tableau croisé ; un axe numérique ou de dates
 // prend les lignes dans l'ordre du tableau.
 func (t *tx) chartDataRaw(cfg ChartConfig) ([]string, []ChartSeries, error) {
-	if !chartKinds[cfg.Kind] {
-		return nil, nil, fmt.Errorf("%w : type %q inconnu", ErrChart, cfg.Kind)
-	}
-	if len(cfg.Series) == 0 {
-		return nil, nil, fmt.Errorf("%w : choisissez au moins une série", ErrChart)
+	if err := checkChart(cfg); err != nil {
+		return nil, nil, err
 	}
 	tb, err := t.tableByName(cfg.Source)
 	if err != nil {
@@ -200,7 +246,7 @@ func (t *tx) chartDataRaw(cfg ChartConfig) ([]string, []ChartSeries, error) {
 	xc := tb.Cols[xi]
 	x := exprs[xi]
 	var q string
-	if xc.Formula == "" && (xc.Type == grid.Text || xc.Type == grid.Boolean) {
+	if xc.Formula == "" && (xc.Type == grid.Text || xc.Type == grid.Boolean) && !chartRawRows[cfg.Kind] {
 		sums := make([]string, len(vals))
 		for k, v := range vals {
 			sums[k] = "sum(" + v + ")"

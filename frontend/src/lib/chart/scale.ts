@@ -2,10 +2,12 @@
 
 export const PALETTE = ['#4472c4', '#ed7d31', '#a5a5a5', '#ffc000', '#5b9bd5', '#70ad47', '#264478', '#9e480e'];
 
-/** Graduations rondes couvrant [lo, hi] (0 inclus), environ n intervalles. */
-export function ticks(lo: number, hi: number, n = 5): number[] {
-	lo = Math.min(0, lo);
-	hi = Math.max(0, hi);
+/** Graduations rondes couvrant [lo, hi] (0 inclus, sauf zero faux), environ n intervalles. */
+export function ticks(lo: number, hi: number, n = 5, zero = true): number[] {
+	if (zero) {
+		lo = Math.min(0, lo);
+		hi = Math.max(0, hi);
+	}
 	if (lo === hi) hi = lo + 1;
 	const raw = (hi - lo) / n;
 	const mag = 10 ** Math.floor(Math.log10(raw));

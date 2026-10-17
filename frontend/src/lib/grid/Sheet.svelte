@@ -47,6 +47,7 @@
 	import { besideGutter, gutterOwner } from './gutter';
 	import Select from '#lib/ui/Select.svelte';
 	import Chart from '#lib/chart/Chart.svelte';
+	import { SINGLE_SERIES, guessLatLon, type ChartKind } from '#lib/chart/kinds.js';
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
 	import PivotPanel from './PivotPanel.svelte';
 	import SheetButtons from './SheetButtons.svelte';
@@ -136,7 +137,7 @@
 
 	export interface ChartConfig {
 		source: string;
-		kind: 'bar' | 'column' | 'line' | 'area' | 'pie' | 'doughnut' | 'scatter';
+		kind: ChartKind;
 		x: string;
 		series: string[];
 		title?: string;
@@ -154,6 +155,12 @@
 		/** Séries sur l'axe secondaire (à droite), par rang de série. */
 		secondary?: boolean[];
 		y2Title?: string;
+		/** Graphique combiné : forme de chaque série (bar, line, area). */
+		seriesKinds?: string[];
+		/** Carte : points (défaut) ou heat (densité). */
+		mapMode?: string;
+		/** Fréquences : nombre de classes (absent : automatique). */
+		bins?: number;
 		offX?: number;
 		offY?: number;
 	}
@@ -3947,7 +3954,7 @@
 			const head = pv.cells[0];
 			const nk = Math.max(1, pv.config.rowFields?.length ?? 0);
 			let series = head.slice(nk).filter((h) => !h.startsWith('Total'));
-			if (kind === 'pie') series = series.slice(0, 1);
+			if (SINGLE_SERIES.has(kind)) series = series.slice(0, 1);
 			const create = source.createChart;
 			const name = pv.config.name ?? '';
 			const before = new Set(charts.map((c) => c.id));
@@ -3973,7 +3980,18 @@
 		// Nuage de points : X est une colonne de nombres (l'active, sinon la première).
 		const x = kind === 'scatter' ? (cur && num(cur) ? cur : (cols.find(num) ?? cols[0])) : cur && !num(cur) ? cur : (cols.find((c) => !num(c)) ?? cols[0]);
 		let series = cols.filter((c) => c !== x && num(c)).map((c) => c.name);
-		if (kind === 'pie') series = series.slice(-1);
+		if (SINGLE_SERIES.has(kind)) series = series.slice(-1);
+		// Fréquences : la colonne active si elle est numérique, sinon la première.
+		if (kind === 'histogram' && series.length) series = [cur && num(cur) && cur !== x ? cur.name : series[0]];
+		if (kind === 'map') {
+			// Carte : colonnes latitude et longitude, devinées d'après leur nom.
+			const g = guessLatLon(cols.filter(num).map((c) => c.name));
+			if (!g.lat || !g.lon || g.lat === g.lon) {
+				say('Une carte demande des colonnes de nombres nommées latitude et longitude (ou lat et lon)');
+				return;
+			}
+			series = [g.lat, g.lon];
+		}
 		if (!series.length) {
 			say('Le tableau n’a pas de colonne de nombres à représenter');
 			return;
@@ -3981,7 +3999,7 @@
 		const create = source.createChart;
 		const before = new Set(charts.map((c) => c.id));
 		writing = writing.then(() =>
-			create(freeChartSpot(e.t.row, e.lastCol + 2).row, e.lastCol + 2, { source: e.t.name, kind, x: x.name, series }).then(
+			create(freeChartSpot(e.t.row, e.lastCol + 2).row, e.lastCol + 2, { source: e.t.name, kind, x: kind === 'map' ? (cols.find((c) => !num(c)) ?? x).name : x.name, series }).then(
 				() => {
 					say('Graphique inséré : double-clic pour le modifier, glissez-le pour le déplacer');
 					selectNewChart(before);

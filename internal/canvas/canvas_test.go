@@ -1324,7 +1324,7 @@ func TestChart(t *testing.T) {
 		t.Fatal(err)
 	}
 	before := dump(t, d)
-	if _, err := d.CreateChart(ctx, 1, 0, 5, ChartConfig{Source: "Feuille1", Kind: "radar", X: "Pays", Series: []string{"Ventes"}}); err == nil {
+	if _, err := d.CreateChart(ctx, 1, 0, 5, ChartConfig{Source: "Feuille1", Kind: "hologramme", X: "Pays", Series: []string{"Ventes"}}); err == nil {
 		t.Fatal("type inconnu accepté")
 	}
 	id, err := d.CreateChart(ctx, 1, 0, 5, ChartConfig{Source: "Feuille1", Kind: "bar", X: "Pays", Series: []string{"Ventes", "Coût"}})
