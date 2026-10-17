@@ -4354,7 +4354,11 @@
 			const cell = cellAt(e);
 			if (cell) {
 				e.preventDefault();
-				moving = { sel: selection(), from: cell };
+				// Point saisi ramené dans la sélection : la bordure se prend à
+				// quelques pixels de part et d'autre, et une prise juste à
+				// l'extérieur décalait le dépôt d'une ligne ou d'une colonne.
+				const sel = selection();
+				moving = { sel, from: { row: clamp(cell.row, sel.r0, sel.r1), col: clamp(cell.col, sel.c0, sel.c1) } };
 				return;
 			}
 		}
