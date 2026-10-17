@@ -1129,6 +1129,22 @@ export function TestConnection(c: query$0.Connection, password: string, remember
 }
 
 /**
+ * TextToColumns convertit le texte des lignes r0 à r1 de la colonne col en
+ * colonnes ; renvoie le nombre de colonnes importées.
+ */
+export function TextToColumns(sheet: number, r0: number, r1: number, col: number, o: canvas$0.TextColumnsOptions): $CancellablePromise<number> {
+    return $Call.ByID(2599242519, sheet, r0, r1, col, o);
+}
+
+/**
+ * TextToColumnsPreview donne l'aperçu de « Convertir » (texte en colonnes)
+ * sur les lignes r0 à r1 de la colonne col.
+ */
+export function TextToColumnsPreview(sheet: number, r0: number, r1: number, col: number, o: canvas$0.TextColumnsOptions): $CancellablePromise<canvas$0.TextColumnsPreview> {
+    return $Call.ByID(992558561, sheet, r0, r1, col, o);
+}
+
+/**
  * Transfer copie ou déplace (move) une zone d'une feuille vers une autre
  * zone, d'une feuille à l'autre : copier-coller et couper-coller internes,
  * glisser de la bordure de la sélection (voir canvas.Model.Transfer).

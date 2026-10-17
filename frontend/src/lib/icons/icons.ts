@@ -72,6 +72,7 @@ export const icons = {
 	'insert-column': '<rect x="3.5" y="3.5" width="5" height="17" rx="1"/><rect x="15.5" y="3.5" width="5" height="17" rx="1"/><path class="a" d="M12 9.5v5M9.5 12h5"/>',
 	'delete-column': '<rect x="3.5" y="3.5" width="5" height="17" rx="1"/><rect x="15.5" y="3.5" width="5" height="17" rx="1"/><path class="a" d="m10 10 4 4m0-4-4 4"/>',
 	'remove-duplicates': '<rect x="3.5" y="3.5" width="11" height="11" rx="1.5"/><path d="M9.5 18v1a1.5 1.5 0 0 0 1.5 1.5h8a1.5 1.5 0 0 0 1.5-1.5v-8A1.5 1.5 0 0 0 19 9.5h-1"/><path class="a" d="m7 7 4 4m0-4-4 4"/>',
+	'text-columns': '<rect x="3" y="4.5" width="7" height="15" rx="1"/><path d="M5 9h3M5 12h3M5 15h3"/><path class="a" d="M11 12h3.5M13 10l1.75 2L13 14"/><rect x="15.5" y="4.5" width="5.5" height="15" rx="1"/><path d="M18.25 4.5v15"/>',
 	'convert-type': '<path d="M4 8h11M12 5l3 3-3 3"/><path class="a" d="M20 16H9M12 13l-3 3 3 3"/>',
 	warning: '<path class="a" d="M12 3.5 21.5 20h-19z"/><path d="M12 10v4.5M12 17.25v.25"/>',
 

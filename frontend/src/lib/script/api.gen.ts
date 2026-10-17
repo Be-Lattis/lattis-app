@@ -134,6 +134,15 @@ export const apiReference: RefEntry[] = [
 		args: [1, 5]
 	},
 	{
+		name: "cells.text_to_columns",
+		category: "cells",
+		signature: "cells.text_to_columns(row, col, [row2], options, [sheet])",
+		summary: "Convertit le texte des cellules de la colonne col, lignes row à row2, en colonnes (assistant Convertir d'Excel) : dans des cellules libres, les parties s'écrivent vers la droite (ou à partir de options.dest) ; dans un tableau, de nouvelles colonnes sont insérées. Renvoie le nombre de colonnes importées.",
+		details: "options : {delims, merge, quote, fixed, breaks, columns, decimal, thousands, dest}. delims : caractères séparateurs (\";\", \",\", \" \", \"\t\"…) ; merge = true : séparateurs consécutifs comptés pour un seul ; quote : qualificateur de texte (\"\\\"\" par défaut côté assistant, \"'\" ou \"\" pour aucun). fixed = true : largeur fixe, breaks donne les positions des coupures (en caractères). columns : format de chaque colonne produite, {format = \"\" (standard), \"text\", \"date\" ou \"skip\" (non importée), order = \"DMY\", \"MDY\", \"YMD\"… pour les dates}. decimal et thousands : séparateurs des nombres (\",\" et \" \" par défaut). dest : cellule de destination (« E2 ») dans des cellules libres. Paramètres — row : ligne de la feuille, à partir de 1 ; col : colonne de la feuille, à partir de 1 ; row2 : dernière ligne de la plage (absente : row) ; options : {delims, merge, quote, fixed, breaks, columns, decimal, thousands, dest} ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : cells.text_to_columns{row = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "cells.text_to_columns(2, 1, 20, {delims = \",\", quote = \"\\\"\"})",
+		args: [1, 5]
+	},
+	{
 		name: "cells.unmerge",
 		category: "cells",
 		signature: "cells.unmerge(row, col, [row2], [col2], [sheet])",
@@ -823,6 +832,15 @@ export const apiReference: RefEntry[] = [
 		summary: "Trie un tableau selon une colonne.",
 		details: "Paramètres — table : nom du tableau ; column : colonne (nom ou rang à partir de 1) ; descending : ordre décroissant. Arguments dans l'ordre, ou une table d'arguments nommés : tables.sort{table = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		example: "tables.sort(\"Commandes\", \"Montant\", true)",
+		args: [1, 3]
+	},
+	{
+		name: "tables.text_to_columns",
+		category: "tables",
+		signature: "tables.text_to_columns(table, column, options)",
+		summary: "Convertit le texte d'une colonne en colonnes, comme l'assistant Convertir d'Excel : la première partie reste dans la colonne, les suivantes deviennent de nouvelles colonnes à droite. Renvoie le nombre de colonnes importées.",
+		details: "options : {delims, merge, quote, fixed, breaks, columns, decimal, thousands, dest}. delims : caractères séparateurs (\";\", \",\", \" \", \"\t\"…) ; merge = true : séparateurs consécutifs comptés pour un seul ; quote : qualificateur de texte (\"\\\"\" par défaut côté assistant, \"'\" ou \"\" pour aucun). fixed = true : largeur fixe, breaks donne les positions des coupures (en caractères). columns : format de chaque colonne produite, {format = \"\" (standard), \"text\", \"date\" ou \"skip\" (non importée), order = \"DMY\", \"MDY\", \"YMD\"… pour les dates}. decimal et thousands : séparateurs des nombres (\",\" et \" \" par défaut). dest : cellule de destination (« E2 ») dans des cellules libres. Paramètres — table : nom du tableau ; column : colonne (nom ou rang à partir de 1) ; options : {delims, merge, quote, fixed, breaks, columns, decimal, thousands}. Arguments dans l'ordre, ou une table d'arguments nommés : tables.text_to_columns{table = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "tables.text_to_columns(\"Commandes\", \"Échéance\", {delims = \"/\", columns = {{format = \"text\"}}})",
 		args: [1, 3]
 	},
 	{

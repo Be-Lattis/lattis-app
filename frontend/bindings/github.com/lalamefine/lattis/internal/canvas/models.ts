@@ -925,3 +925,114 @@ export interface TableNames {
      */
     "key": number;
 }
+
+/**
+ * TextColumnFormat est le format d'une colonne produite.
+ */
+export interface TextColumnFormat {
+    /**
+     * Format : "" (Standard), "text", "date" ou "skip" (ne pas importer).
+     */
+    "format": string;
+
+    /**
+     * Order : ordre des dates (« DMY » par défaut, « MDY », « YMD », « DYM »,
+     * « MYD », « YDM »).
+     */
+    "order": string;
+}
+
+/**
+ * TextColumnsOptions décrit une conversion.
+ */
+export interface TextColumnsOptions {
+    /**
+     * Fixed : largeur fixe (coupures Breaks) ; sinon délimité.
+     */
+    "fixed": boolean;
+
+    /**
+     * Delims : caractères séparateurs (tabulation, point-virgule, virgule,
+     * espace, autre).
+     */
+    "delims": string;
+
+    /**
+     * Merge : séparateurs consécutifs considérés comme un seul.
+     */
+    "merge": boolean;
+
+    /**
+     * Quote : qualificateur de texte (" ou ', vide : aucun).
+     */
+    "quote": string;
+
+    /**
+     * Breaks : positions des coupures (en caractères), largeur fixe.
+     */
+    "breaks": number[] | null;
+
+    /**
+     * Columns : format de chaque colonne produite (absente : Standard).
+     */
+    "columns": TextColumnFormat[] | null;
+
+    /**
+     * Decimal et Thousands : séparateurs des nombres (défaut « , » et espace).
+     */
+    "decimal": string;
+    "thousands": string;
+
+    /**
+     * Dest : cellule de destination (« C3 », « $C$3 ») des cellules libres ;
+     * vide : la première cellule convertie. Ignorée dans un tableau.
+     */
+    "dest": string;
+}
+
+/**
+ * TextColumnsPreview est l'aperçu de l'assistant.
+ */
+export interface TextColumnsPreview {
+    /**
+     * tableau converti ("" : cellules libres)
+     */
+    "table": string;
+
+    /**
+     * sa colonne
+     */
+    "column": string;
+
+    /**
+     * l'en-tête du tableau est converti aussi
+     */
+    "header": boolean;
+
+    /**
+     * Lines : premières lignes de texte (l'en-tête en premier s'il est
+     * converti) ; Rows : leurs parties.
+     */
+    "lines": string[] | null;
+    "rows": (string[] | null)[] | null;
+
+    /**
+     * colonnes produites (toutes les lignes)
+     */
+    "count": number;
+
+    /**
+     * lignes converties
+     */
+    "total": number;
+
+    /**
+     * Overwrite : des cellules non vides de la destination seraient remplacées.
+     */
+    "overwrite": boolean;
+
+    /**
+     * destination par défaut
+     */
+    "dest": string;
+}

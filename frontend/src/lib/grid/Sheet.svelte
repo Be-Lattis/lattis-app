@@ -24,6 +24,8 @@
 	import { hiddenLines, mergeAt, mergeList, parseList, skipHidden, validate, type MergeRange } from './sheetfmt';
 	import { expandRange, extendCorner, isSingleCell, mergeRect, rangeOf, stepCell } from './mergesel';
 	import FormatDialog, { type FormatTab } from './FormatDialog.svelte';
+	import TextToColumns from './TextToColumns.svelte';
+	import type { TextColumnsOptions, TextColumnsPreview } from './textcols';
 	import { dismiss, dismissPanel } from './dismiss';
 	import { explainError } from './errors';
 	import { freeDisplay } from './freecell';
@@ -362,6 +364,9 @@
 		removeDuplicates?(table: SheetTable, cols: number[]): Promise<number>;
 		/** Nombre de lignes que removeDuplicates retirerait. */
 		duplicatesPreview?(table: SheetTable, cols: number[]): Promise<number>;
+		/** Données › Convertir : aperçu et conversion du texte des lignes r0 à r1 de la colonne col. */
+		textColumnsPreview?(r0: number, r1: number, col: number, o: TextColumnsOptions): Promise<TextColumnsPreview>;
+		textToColumns?(r0: number, r1: number, col: number, o: TextColumnsOptions): Promise<number>;
 		deleteTables?(tables: SheetTable[]): Promise<unknown>;
 		/** Déplace un tableau, en-tête en (row, col) ; côte à côte d'un autre : fusion. */
 		moveTable?(table: SheetTable, row: number, col: number): Promise<unknown>;
@@ -4112,6 +4117,24 @@
 		return Math.min(e.lastCol, Math.max(c0, e.t.col)) - e.t.col;
 	}
 
+	/** Données › Convertir : assistant « Convertir le texte en colonnes » sur une sélection d'une seule colonne. */
+	let ttcDlg = $state<{ r0: number; r1: number; col: number } | null>(null);
+
+	export function textToColumnsActive() {
+		if (!source.textToColumns || !source.textColumnsPreview) return;
+		if (locked) {
+			say(locked);
+			return;
+		}
+		const { r0, r1, c0, c1 } = selection();
+		if (c0 !== c1) {
+			say('Convertir ne peut traiter qu’une seule colonne à la fois : sélectionnez des cellules d’une seule colonne');
+			return;
+		}
+		closeMenus();
+		ttcDlg = { r0, r1, col: c0 };
+	}
+
 	/** Supprime les doublons du tableau de la cellule active (ruban Données). */
 	let dedupDlg = $state<{ e: Entry; on: boolean[]; count: number | null; error: string } | null>(null);
 
@@ -7350,6 +7373,24 @@
 				<hr />
 				<button onclick={() => removeChart(m.ch.id)}>Supprimer le graphique</button>
 			</div>
+		{/if}
+		{#if ttcDlg && source.textColumnsPreview && source.textToColumns}
+			{@const d = ttcDlg}
+			{@const pv = source.textColumnsPreview}
+			{@const run = source.textToColumns}
+			<TextToColumns
+				preview={(o) => pv(d.r0, d.r1, d.col, o)}
+				apply={(o) => run(d.r0, d.r1, d.col, o)}
+				ondone={(n, table) => {
+					ttcDlg = null;
+					wrap.focus();
+					say(`Texte converti en ${n} colonne${n > 1 ? 's' : ''}${table ? ` (tableau ${table})` : ''} (Ctrl+Z pour annuler)`);
+				}}
+				onclose={() => {
+					ttcDlg = null;
+					wrap.focus();
+				}}
+			/>
 		{/if}
 		{#if dedupDlg}
 			{@const d = dedupDlg}

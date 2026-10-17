@@ -42,5 +42,8 @@ export type {
     SheetInfo,
     Style,
     TableInfo,
-    TableNames
+    TableNames,
+    TextColumnFormat,
+    TextColumnsOptions,
+    TextColumnsPreview
 } from "./models.js";

@@ -754,6 +754,31 @@ func (s *DocumentService) RemoveDuplicates(ctx context.Context, table string, co
 	return n, err
 }
 
+// TextToColumnsPreview donne l'aperçu de « Convertir » (texte en colonnes)
+// sur les lignes r0 à r1 de la colonne col.
+func (s *DocumentService) TextToColumnsPreview(ctx context.Context, sheet int64, r0, r1, col int, o canvas.TextColumnsOptions) (canvas.TextColumnsPreview, error) {
+	d, err := s.current()
+	if err != nil {
+		return canvas.TextColumnsPreview{}, err
+	}
+	return d.TextToColumnsPreview(ctx, sheet, r0, r1, col, o)
+}
+
+// TextToColumns convertit le texte des lignes r0 à r1 de la colonne col en
+// colonnes ; renvoie le nombre de colonnes importées.
+func (s *DocumentService) TextToColumns(ctx context.Context, sheet int64, r0, r1, col int, o canvas.TextColumnsOptions) (int, error) {
+	d, err := s.current()
+	if err != nil {
+		return 0, err
+	}
+	n, err := d.TextToColumns(ctx, sheet, r0, r1, col, o)
+	if err != nil {
+		return 0, err
+	}
+	_, err = s.changed(ctx)
+	return n, err
+}
+
 // CreatePivot crée un tableau croisé sur une nouvelle feuille ; renvoie la feuille.
 func (s *DocumentService) CreatePivot(ctx context.Context, cfg canvas.PivotConfig) (int64, error) {
 	d, err := s.current()
