@@ -194,3 +194,22 @@ func (t *tx) pivotRows(sheet int64) ([]stmt, error) {
 	}
 	return undo, rs.Err()
 }
+
+// PivotData calcule un tableau croisé qui n'est posé sur aucune feuille
+// (onglet Documentation) ; une erreur est rendue dans Error.
+func (m *Model) PivotData(ctx context.Context, cfg PivotConfig) PivotInfo {
+	out := PivotInfo{Config: cfg.normalized(), Cells: [][]string{}, Formats: []string{}}
+	err := m.read(ctx, func(t *tx) error {
+		cells, err := t.pivotCells(out.Config)
+		if err != nil {
+			return err
+		}
+		out.Cells = cells
+		out.Formats, err = t.pivotFormats(out.Config, cells)
+		return err
+	})
+	if err != nil {
+		out.Error = strings.TrimPrefix(err.Error(), ErrPivot.Error()+" : ")
+	}
+	return out
+}

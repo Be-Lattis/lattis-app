@@ -670,6 +670,7 @@
 		else if (c.startsWith('align:')) d.setAlign(c.slice(6) as never);
 		else if (c.startsWith('chart:')) d.insertChart(c.slice(6));
 		else if (c === 'button') d.insertButton();
+		else if (c === 'pivot') d.insertPivot();
 		else d.command(c as never);
 	}
 
@@ -961,6 +962,8 @@
 							tables={(help?.tables ?? []).map((t) => ({ name: t.name, columns: t.columns ?? [], types: t.types ?? [], kind: t.kind }))}
 							{scripts}
 							loadChart={(cfg) => DocumentService.ChartData(cfg as never)}
+							loadPivot={(cfg) => DocumentService.PivotData(cfg as never)}
+							fieldValues={async (table, field) => (await DocumentService.FieldValues(table, field)) ?? []}
 							run={async (script, fn) => {
 								const r = await DocumentService.RunFunction(script, fn);
 								await reload();

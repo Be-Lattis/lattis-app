@@ -624,6 +624,14 @@ export function PinNote(sheet: number, row: number, col: number, pinned: boolean
 }
 
 /**
+ * PivotData calcule un tableau croisé sans le poser sur une feuille
+ * (tableaux croisés insérés dans un onglet Documentation).
+ */
+export function PivotData(cfg: canvas$0.PivotConfig): $CancellablePromise<canvas$0.PivotInfo> {
+    return $Call.ByID(269780518, cfg);
+}
+
+/**
  * PlaceButton déplace et redimensionne un bouton.
  */
 export function PlaceButton(id: number, row: number, col: number, offX: number, offY: number, width: number, height: number): $CancellablePromise<$models.DocState> {

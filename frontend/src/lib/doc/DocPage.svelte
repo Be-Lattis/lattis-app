@@ -1,20 +1,24 @@
 <script lang="ts">
 	// Onglet « Documentation » : une zone de texte riche sans fin (Quill) où
 	// l'on écrit, met en forme (ruban : Police, Paragraphe…) et insère des
-	// graphiques alimentés par les tableaux du classeur et des boutons qui
-	// exécutent des scripts. Le contenu (Delta Quill en JSON) s'enregistre un
+	// graphiques et tableaux croisés alimentés par les tableaux du classeur, et
+	// des boutons qui exécutent des scripts. Clic droit : sur un élément inséré,
+	// le même menu que sur la grille ; ailleurs, un menu pour insérer. Le contenu (Delta Quill en JSON) s'enregistre un
 	// instant après la dernière frappe, en une étape d'annulation du classeur ;
 	// Ctrl+Z dans le texte annule la frappe elle-même.
 	import 'quill/dist/quill.core.css';
 	import { mount, onMount, unmount, untrack } from 'svelte';
 	import type Quill from 'quill';
-	import type { ChartInfo } from '#bindings/internal/canvas/models.js';
-	import type { ChartConfig } from '#lib/grid/Sheet.svelte';
+	import type { ChartInfo, PivotInfo } from '#bindings/internal/canvas/models.js';
+	import type { ChartConfig, PivotConfig } from '#lib/grid/Sheet.svelte';
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
+	import PivotPanel from '#lib/grid/PivotPanel.svelte';
+	import { dismiss } from '#lib/grid/dismiss.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { scriptFunctions } from '#lib/grid/buttons.js';
-	import { BUTTON_BLOT, CHART_BLOT, setupQuill, type DocButtonConfig } from './quill';
+	import { BUTTON_BLOT, CHART_BLOT, PIVOT_BLOT, docClip, setupQuill, type DocButtonConfig } from './quill';
 	import DocChart from './DocChart.svelte';
+	import DocPivot from './DocPivot.svelte';
 	import { blockFormats, docFormat, DOC_FONT, DOC_PT, parseDelta, quillFormats, type DocBlock, type DocFormat } from './format';
 
 	export interface DocTable {
@@ -38,6 +42,9 @@
 		tables: DocTable[];
 		scripts: { name: string; source: string }[];
 		loadChart: (cfg: ChartConfig) => Promise<ChartInfo>;
+		loadPivot: (cfg: PivotConfig) => Promise<PivotInfo>;
+		/** Valeurs d'un champ (filtres du volet de tableau croisé). */
+		fieldValues?: (table: string, field: string) => Promise<{ text: string; count: number }[]>;
 		/** Exécute un script (ou sa fonction) ; renvoie le message à afficher. */
 		run: (script: string, fn: string) => Promise<string>;
 		/** Mise en forme à la sélection, pour le ruban. */
@@ -45,7 +52,7 @@
 		onnotice?: (msg: string) => void;
 	}
 
-	let { name, source, save, locked = '', stamp, animate = true, tables, scripts, loadChart, run, onformat, onnotice }: Props = $props();
+	let { name, source, save, locked = '', stamp, animate = true, tables, scripts, loadChart, loadPivot, fieldValues, run, onformat, onnotice }: Props = $props();
 
 	let host = $state<HTMLDivElement>();
 	let quill: Quill | undefined;
@@ -57,7 +64,7 @@
 	const live = $state({ stamp: 0, animate: untrack(() => animate) });
 
 	// Objet en cours de modification dans le volet de droite (par sa position).
-	type Panel = { kind: 'chart' | 'button'; index: number } | { kind: 'link'; index: number; length: number; url: string };
+	type Panel = { kind: 'chart' | 'button' | 'pivot'; index: number } | { kind: 'link'; index: number; length: number; url: string };
 	let panel = $state<Panel | null>(null);
 	let panelValue = $state.raw<Record<string, unknown> | null>(null);
 
@@ -105,30 +112,29 @@
 		quill?.enable(!locked);
 	});
 
-	// --- Graphiques insérés : un composant par bloc ----------------------------
+	// --- Graphiques et tableaux croisés insérés : un composant par bloc --------
 
-	type Mounted = { comp: ReturnType<typeof mount>; p: { config: ChartConfig; selected: boolean } };
+	type Mounted = { comp: ReturnType<typeof mount>; kind: 'chart' | 'pivot'; p: { config: Record<string, unknown>; selected: boolean } };
 	const mounted = new Map<HTMLElement, Mounted>();
+	const BLOT = { chart: CHART_BLOT, pivot: PIVOT_BLOT, button: BUTTON_BLOT } as const;
 
 	function hydrate() {
 		if (!quill) return;
-		for (const node of quill.root.querySelectorAll<HTMLElement>('.ql-lattis-chart')) {
+		for (const node of quill.root.querySelectorAll<HTMLElement>('.ql-lattis-chart, .ql-lattis-pivot')) {
 			if (mounted.has(node)) continue;
-			const p = $state({ config: JSON.parse(node.dataset.config ?? '{}') as ChartConfig, selected: false });
-			const comp = mount(DocChart, {
-				target: node,
-				props: {
-					get config() {
-						return p.config;
-					},
-					get selected() {
-						return p.selected;
-					},
-					live,
-					load: loadChart
-				}
-			});
-			mounted.set(node, { comp, p });
+			const kind = node.classList.contains('ql-lattis-pivot') ? 'pivot' : 'chart';
+			const p = $state({ config: JSON.parse(node.dataset.config ?? '{}') as Record<string, unknown>, selected: false });
+			const props = {
+				get config() {
+					return p.config as never;
+				},
+				get selected() {
+					return p.selected;
+				},
+				live
+			};
+			const comp = kind === 'pivot' ? mount(DocPivot, { target: node, props: { ...props, load: loadPivot } }) : mount(DocChart, { target: node, props: { ...props, load: loadChart } });
+			mounted.set(node, { comp, kind, p });
 		}
 		for (const [node, m] of mounted) {
 			if (!node.isConnected) {
@@ -146,7 +152,7 @@
 	}
 
 	function markSelected() {
-		for (const [node, m] of mounted) m.p.selected = panel?.kind === 'chart' && indexOf(node) === panel.index;
+		for (const [node, m] of mounted) m.p.selected = (panel?.kind === m.kind && indexOf(node) === panel.index) || (menu?.index === indexOf(node) && menu.kind === m.kind);
 	}
 
 	/** Valeur de l'objet inséré à la position index (null : il n'y en a plus). */
@@ -158,7 +164,7 @@
 
 	function openPanel(p: Panel | null) {
 		panel = p;
-		panelValue = p && p.kind !== 'link' ? embedAt(p.index, p.kind === 'chart' ? CHART_BLOT : BUTTON_BLOT) : null;
+		panelValue = p && p.kind !== 'link' ? embedAt(p.index, BLOT[p.kind]) : null;
 		markSelected();
 	}
 
@@ -316,6 +322,78 @@
 		return { source: t.name, kind, x: t.columns[xi] ?? '', series, title: t.name } as ChartConfig;
 	}
 
+	/** Insère un tableau croisé d'un tableau du classeur (champs à choisir dans le volet). */
+	export async function insertPivot() {
+		if (!guard()) return;
+		const t = tables.find((x) => x.kind !== 'pivot');
+		if (!t) {
+			onnotice?.('Aucun tableau dans le classeur : créez-en un sur une feuille pour l’analyser ici.');
+			return;
+		}
+		const at = range()!.index;
+		quill!.insertEmbed(at, PIVOT_BLOT, await defaultPivot(t), 'user');
+		quill!.setSelection(at + 1, 0);
+		hydrate();
+		openPanel({ kind: 'pivot', index: at });
+	}
+
+	// Champs de départ : en lignes, la première colonne de texte qui regroupe
+	// (2 à 50 valeurs distinctes) ; en valeurs, la somme du premier nombre qui
+	// n'est pas un identifiant (sinon le nombre de lignes).
+	async function defaultPivot(t: DocTable): Promise<PivotConfig> {
+		const num = (i: number) => /^(int|integer|decimal|real|number)/i.test(t.types[i] ?? '');
+		const idLike = (c: string) => /^(n°|no\b|num|id\b|code|matricule|réf)/i.test(c);
+		const texts = t.columns.filter((_, i) => !num(i));
+		let row = texts[0];
+		if (fieldValues) {
+			for (const c of texts) {
+				const vals = await fieldValues(t.name, c).catch(() => []);
+				if (vals.length >= 2 && vals.length <= 50) {
+					row = c;
+					break;
+				}
+			}
+		}
+		const val = t.columns.find((c, i) => num(i) && !idLike(c));
+		return {
+			source: t.name,
+			rowFields: row ? [row] : [],
+			values: val ? [{ field: val, agg: 'sum' }] : [{ field: row ?? t.columns[0], agg: 'count' }]
+		} as PivotConfig;
+	}
+
+	// --- Menus contextuels et presse-papiers des éléments ---------------------
+
+	type Menu = { x: number; y: number; kind: 'chart' | 'pivot' | 'button' | 'text'; index: number };
+	let menu = $state<Menu | null>(null);
+	let clip = $state(docClip.item);
+
+	function copyItem(kind: 'chart' | 'pivot' | 'button', index: number, cut: boolean) {
+		const value = embedAt(index, BLOT[kind]);
+		if (!value) return;
+		docClip.item = clip = { type: BLOT[kind], value: structuredClone($state.snapshot(value)) };
+		if (cut) deleteEmbed(index);
+		onnotice?.(cut ? 'Élément coupé : clic droit › Coller dans le texte' : 'Élément copié : clic droit › Coller dans le texte');
+	}
+
+	function pasteItem(at: number) {
+		const c = docClip.item;
+		if (!c || !guard()) return;
+		quill!.insertEmbed(at, c.type, structuredClone(c.value), 'user');
+		quill!.setSelection(at + 1, 0);
+		hydrate();
+	}
+
+	function closeMenu() {
+		menu = null;
+		markSelected();
+	}
+
+	function act(fn: () => void) {
+		closeMenu();
+		fn();
+	}
+
 	export function insertButton() {
 		if (!guard()) return;
 		const at = range()!.index;
@@ -360,9 +438,9 @@
 			runButton(JSON.parse(b.dataset.config ?? '{}'));
 			return;
 		}
-		const c = t.closest<HTMLElement>('.ql-lattis-chart');
+		const c = t.closest<HTMLElement>('.ql-lattis-chart, .ql-lattis-pivot');
 		if (c) {
-			openPanel({ kind: 'chart', index: indexOf(c) });
+			openPanel({ kind: c.classList.contains('ql-lattis-pivot') ? 'pivot' : 'chart', index: indexOf(c) });
 			return;
 		}
 		const a = t.closest<HTMLAnchorElement>('a[href]');
@@ -370,14 +448,19 @@
 			e.preventDefault();
 			if (e.ctrlKey || e.metaKey) openOutside(a.href);
 		}
-		if (panel?.kind === 'chart') openPanel(null);
+		if (panel?.kind === 'chart' || panel?.kind === 'pivot') openPanel(null);
 	}
 
 	function onContext(e: MouseEvent) {
-		const b = (e.target as HTMLElement).closest<HTMLElement>('.ql-lattis-button');
-		if (!b) return;
 		e.preventDefault();
-		openPanel({ kind: 'button', index: indexOf(b) });
+		const t = e.target as HTMLElement;
+		const el = t.closest<HTMLElement>('.ql-lattis-button, .ql-lattis-chart, .ql-lattis-pivot');
+		clip = docClip.item;
+		if (el) {
+			const kind = el.classList.contains('ql-lattis-button') ? 'button' : el.classList.contains('ql-lattis-pivot') ? 'pivot' : 'chart';
+			menu = { x: e.clientX, y: e.clientY, kind, index: indexOf(el) };
+		} else menu = { x: e.clientX, y: e.clientY, kind: 'text', index: range()?.index ?? 0 };
+		markSelected();
 	}
 
 	function openOutside(u: string) {
@@ -423,6 +506,11 @@
 	const fns = $derived(btn?.script ? scriptFunctions(scripts.find((s) => s.name === btn.script)?.source ?? '') : []);
 	const setButton = (patch: Partial<DocButtonConfig>) => panel && btn && replaceEmbed(panel.index, BUTTON_BLOT, { ...btn, ...patch });
 	const setChart = (cfg: ChartConfig) => panel && replaceEmbed(panel.index, CHART_BLOT, cfg);
+	const pivot = $derived(panel?.kind === 'pivot' ? (panelValue as unknown as PivotConfig | null) : null);
+	const pivotFields = (src: string) => {
+		const t = tables.find((x) => x.name.toLowerCase() === src.toLowerCase());
+		return (t?.columns ?? []).map((c, i) => ({ name: c, type: t!.types[i], numeric: ['integer', 'decimal', 'formula'].includes(t!.types[i]) }));
+	};
 
 	function applyLink(url: string | null) {
 		if (!quill || panel?.kind !== 'link') return;
@@ -469,6 +557,35 @@
 				<button class="danger" disabled={!!locked} onclick={() => panel && deleteEmbed(panel.index)}><Icon name="trash" size={14} />Supprimer le graphique</button>
 			</div>
 			<ChartPanel config={chart} columns={tbl?.columns ?? []} onchange={setChart} onclose={() => openPanel(null)} />
+		</div>
+	{:else if panel?.kind === 'pivot' && pivot}
+		<div class="side">
+			<div class="srcbox">
+				<label
+					>Tableau source
+					<select
+						value={pivot.source}
+						disabled={!!locked}
+						onchange={(e) => {
+							const t = tables.find((x) => x.name === (e.currentTarget as HTMLSelectElement).value);
+							const at = panel?.index;
+							if (t && at !== undefined) defaultPivot(t).then((cfg) => replaceEmbed(at, PIVOT_BLOT, cfg));
+						}}
+					>
+						{#each tables.filter((t) => t.kind !== 'pivot') as t (t.name)}<option value={t.name}>{t.name}</option>{/each}
+					</select>
+				</label>
+			</div>
+			{#key panel.index + ':' + pivot.source}
+				<PivotPanel
+					config={pivot}
+					fields={pivotFields(pivot.source)}
+					filterValues={fieldValues ? (f) => fieldValues!(pivot.source, f) : undefined}
+					onchange={(cfg) => panel && replaceEmbed(panel.index, PIVOT_BLOT, cfg)}
+					ondelete={() => panel && deleteEmbed(panel.index)}
+					onclose={() => openPanel(null)}
+				/>
+			{/key}
 		</div>
 	{:else if panel?.kind === 'button' && btn}
 		<aside class="side form">
@@ -527,7 +644,77 @@
 	{/if}
 </div>
 
+{#if menu}
+	{@const m = menu}
+	<div class="menu" role="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={closeMenu}>
+		{#if m.kind === 'text'}
+			<button disabled={!!locked} onclick={() => act(() => command('cut'))}>Couper</button>
+			<button onclick={() => act(() => command('copy'))}>Copier</button>
+			<button disabled={!!locked} onclick={() => act(() => command('paste'))}>Coller</button>
+			{#if clip}<button disabled={!!locked} onclick={() => act(() => pasteItem(m.index))}>Coller l’élément ({clip.type === CHART_BLOT ? 'graphique' : clip.type === PIVOT_BLOT ? 'tableau croisé' : 'bouton'})</button>{/if}
+			<hr />
+			<div class="menu-title">Insérer</div>
+			<button disabled={!!locked} onclick={() => act(() => insertChart('bar'))}><Icon name="chart-bar" size={14} />Graphique en barres</button>
+			<button disabled={!!locked} onclick={() => act(() => insertChart('line'))}><Icon name="chart-line" size={14} />Graphique en courbes</button>
+			<button disabled={!!locked} onclick={() => act(() => insertChart('pie'))}><Icon name="chart-pie" size={14} />Graphique en secteurs</button>
+			<button disabled={!!locked} onclick={() => act(() => insertChart('scatter'))}><Icon name="chart-scatter" size={14} />Nuage de points</button>
+			<button disabled={!!locked} onclick={() => act(insertPivot)}><Icon name="pivot-table" size={14} />Tableau croisé dynamique</button>
+			<button disabled={!!locked} onclick={() => act(insertButton)}><Icon name="button" size={14} />Bouton</button>
+			<button disabled={!!locked} onclick={() => act(() => command('image'))}><Icon name="image" size={14} />Image…</button>
+			<button disabled={!!locked} onclick={() => act(() => command('link'))}><Icon name="link" size={14} />Lien…</button>
+		{:else}
+			{@const label = m.kind === 'chart' ? 'Graphique' : m.kind === 'pivot' ? 'Tableau croisé' : 'Bouton'}
+			<div class="menu-title">{label}</div>
+			{#if m.kind === 'button'}
+				{@const b = embedAt(m.index, BUTTON_BLOT) as DocButtonConfig | null}
+				{#if b?.script}<button onclick={() => act(() => runButton(b))}>Exécuter l’action</button>{/if}
+			{/if}
+			<button onclick={() => act(() => openPanel({ kind: m.kind as 'chart' | 'pivot' | 'button', index: m.index }))}>Modifier…</button>
+			<hr />
+			<button disabled={!!locked} onclick={() => act(() => copyItem(m.kind as 'chart', m.index, true))}>Couper</button>
+			<button onclick={() => act(() => copyItem(m.kind as 'chart', m.index, false))}>Copier</button>
+			<button disabled={!clip || !!locked} onclick={() => act(() => pasteItem(m.index + 1))}>Coller l’élément après</button>
+			<hr />
+			<button disabled={!!locked} onclick={() => act(() => deleteEmbed(m.index))}>Supprimer {m.kind === 'chart' ? 'le graphique' : m.kind === 'pivot' ? 'le tableau croisé' : 'le bouton'}</button>
+		{/if}
+	</div>
+{/if}
+
 <style>
+	.menu {
+		position: fixed;
+		z-index: 40;
+		background: #fff;
+		border: 1px solid #d4d7db;
+		border-radius: var(--float-radius, 6px);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		padding: 4px 0;
+		min-width: 220px;
+		font: 13px 'Segoe UI', system-ui, -apple-system, sans-serif;
+	}
+	.menu-title {
+		padding: 4px 14px;
+		font-size: 11px;
+		color: #6b7280;
+	}
+	.menu button {
+		display: flex;
+		width: 100%;
+		text-align: left;
+		padding: 6px 14px;
+		background: none;
+		border: none;
+		border-radius: 0;
+		gap: 8px;
+	}
+	.menu button:hover:not(:disabled) {
+		background: #e8f1ec;
+	}
+	.menu hr {
+		border: none;
+		border-top: 1px solid #e5e7eb;
+		margin: 4px 0;
+	}
 	.doc {
 		display: flex;
 		height: 100%;
@@ -540,6 +727,7 @@
 		flex: 1;
 		min-width: 0;
 		overflow-y: auto;
+		container-type: inline-size;
 	}
 	.page {
 		max-width: 920px;
@@ -547,6 +735,14 @@
 		padding: 24px 40px 120px;
 		min-height: 100%;
 		box-sizing: border-box;
+	}
+	/* Fenêtre large (plus de 300 px vides de chaque côté) : un trait fin, à
+	   une petite marge du texte, délimite la zone d'édition. */
+	@container (min-width: 1521px) {
+		.page {
+			border-left: 1px solid #e3e5e8;
+			border-right: 1px solid #e3e5e8;
+		}
 	}
 	.page :global(.ql-container) {
 		font-family: var(--doc-font);

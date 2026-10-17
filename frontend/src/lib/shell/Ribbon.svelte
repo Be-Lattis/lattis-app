@@ -30,6 +30,7 @@
 		| 'link'
 		| 'image'
 		| 'button'
+		| 'pivot'
 		| `block:${'normal' | 'h1' | 'h2' | 'h3' | 'bullet' | 'ordered' | 'quote' | 'code'}`
 		| `align:${'left' | 'center' | 'right' | 'justify'}`
 		| `chart:${'bar' | 'line' | 'pie' | 'scatter'}`;
@@ -535,6 +536,7 @@
 		],
 		Insertion: [
 			tabGroup,
+			{ title: 'Tableaux', commands: [{ label: 'Tableau croisé', icon: 'pivot-table', run: dc('pivot'), hint: 'Tableau croisé dynamique d’un tableau du classeur, inséré dans le texte et recalculé avec lui' }] },
 			{
 				title: 'Graphiques',
 				commands: [

@@ -49,6 +49,16 @@ func (s *DocumentService) ChartData(ctx context.Context, cfg canvas.ChartConfig)
 	return d.ChartData(ctx, cfg), nil
 }
 
+// PivotData calcule un tableau croisé sans le poser sur une feuille
+// (tableaux croisés insérés dans un onglet Documentation).
+func (s *DocumentService) PivotData(ctx context.Context, cfg canvas.PivotConfig) (canvas.PivotInfo, error) {
+	d, err := s.current()
+	if err != nil {
+		return canvas.PivotInfo{}, err
+	}
+	return d.PivotData(ctx, cfg), nil
+}
+
 // RunFunction exécute le script name de la bibliothèque (onglet SCRIPT),
 // ou seulement sa fonction entry : bouton d'un onglet Documentation.
 func (s *DocumentService) RunFunction(ctx context.Context, name, entry string) (ScriptResult, error) {

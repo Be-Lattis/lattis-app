@@ -83,4 +83,7 @@ func TestDocSaved(t *testing.T) {
 	if c := d.ChartData(ctx, canvas.ChartConfig{Source: "Inconnu", Kind: "bar"}); c.Error == "" {
 		t.Fatal("graphique d'un tableau inconnu sans erreur")
 	}
+	if p := d.PivotData(ctx, canvas.PivotConfig{Source: "Inconnu"}); p.Error == "" {
+		t.Fatal("TCD d'un tableau inconnu sans erreur")
+	}
 }

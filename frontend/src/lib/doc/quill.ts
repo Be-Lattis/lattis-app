@@ -2,6 +2,8 @@
 // comme les cellules), et deux objets insérables propres à Lattis :
 // - un graphique (bloc) alimenté par un tableau du classeur, dessiné par
 //   DocChart.svelte dans le nœud du bloc ;
+// - un tableau croisé dynamique (bloc), recalculé comme les graphiques
+//   (DocPivot.svelte) ;
 // - un bouton (dans la ligne) qui exécute un script de l'onglet SCRIPT, ou
 //   l'une de ses fonctions.
 // Leur configuration est la valeur de l'objet dans le Delta enregistré.
@@ -20,6 +22,10 @@ export interface DocButtonConfig {
 
 export const CHART_BLOT = 'lattisChart';
 export const BUTTON_BLOT = 'lattisButton';
+export const PIVOT_BLOT = 'lattisPivot';
+
+/** Élément copié ou coupé (clic droit › Copier), collable dans tout onglet Documentation. */
+export const docClip: { item: { type: string; value: unknown } | null } = { item: null };
 
 let registered = false;
 
@@ -80,6 +86,21 @@ export function setupQuill(): typeof Quill {
 		}
 	}
 
+	class PivotBlot extends BlockEmbed {
+		static blotName = PIVOT_BLOT;
+		static tagName = 'DIV';
+		static className = 'ql-lattis-pivot';
+		static create(value: unknown) {
+			const node = super.create() as HTMLElement;
+			node.setAttribute('contenteditable', 'false');
+			node.dataset.config = JSON.stringify(value);
+			return node;
+		}
+		static value(node: HTMLElement) {
+			return readConfig<Record<string, unknown>>(node);
+		}
+	}
+
 	const Embed = Quill.import('blots/embed') as unknown as {
 		new (...a: unknown[]): object;
 		create(v?: unknown): HTMLElement;
@@ -98,6 +119,7 @@ export function setupQuill(): typeof Quill {
 		}
 	}
 	Quill.register(ChartBlot as never, true);
+	Quill.register(PivotBlot as never, true);
 	Quill.register(ButtonBlot as never, true);
 	return Quill;
 }
