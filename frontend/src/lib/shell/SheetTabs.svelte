@@ -634,6 +634,9 @@
 	}
 	.sheet {
 		font: inherit;
+		/* Un nom long ou à espaces reste sur une ligne (« Ventes mensuelles »). */
+		white-space: nowrap;
+		flex: none;
 		padding: 0 18px;
 		background: none;
 		border: none;

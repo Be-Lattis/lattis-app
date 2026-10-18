@@ -30,6 +30,9 @@ type Report struct {
 	// Applied : changements appliqués en local (réception, remise à l'état
 	// du serveur après un refus).
 	Applied canvas.RemoteApplied
+	// Reloaded : tableaux relus en entier (point de reprise que les
+	// pierres tombales du serveur ne couvrent plus).
+	Reloaded int
 	// Notices : messages pour la barre d'état.
 	Notices []string
 }
@@ -49,6 +52,7 @@ func (r *Report) add(o Report) {
 	r.Rejected += o.Rejected
 	r.Skipped += o.Skipped
 	r.Lost += o.Lost
+	r.Reloaded += o.Reloaded
 	r.Applied.Inserted += o.Applied.Inserted
 	r.Applied.Updated += o.Applied.Updated
 	r.Applied.Deleted += o.Applied.Deleted
@@ -83,6 +87,14 @@ func (e *Engine) send(ctx context.Context) (Report, error) {
 	if err != nil {
 		return rep, err
 	}
+	sent, err := readSkip(ctx, e.db.Read())
+	if err != nil {
+		return rep, err
+	}
+	mine := map[string]bool{}
+	for _, x := range sent {
+		mine[x] = true
+	}
 	for ctx.Err() == nil {
 		entries, err := e.nextBatch(ctx)
 		if err != nil {
@@ -91,9 +103,12 @@ func (e *Engine) send(ctx context.Context) (Report, error) {
 		if len(entries) == 0 {
 			break
 		}
-		o, err := e.sendBatch(ctx, srv, info, tables, entries)
+		o, err := e.sendBatch(ctx, srv, info, tables, entries, mine)
 		if err != nil {
 			return rep, err
+		}
+		if o.xid != "" {
+			mine[o.xid] = true
 		}
 		if err := e.finish(ctx, srv, info, tables, o, &rep); err != nil {
 			return rep, err
@@ -122,7 +137,13 @@ type outcome struct {
 	errs      []string
 	conflicts []conflict
 	resync    map[int64]map[string]bool // tableau → lignes à relire sur le serveur
-	rep       Report
+	// authors : auteur des lignes ajoutées (tableau → lattis_id →
+	// lattis_author), noté en local : leur écho ne revient plus.
+	authors map[int64]map[string]string
+	// xid : transaction du serveur de l'étape (Writer.Xact), écartée des
+	// changements reçus ensuite (échos).
+	xid string
+	rep Report
 }
 
 // conflict est un conflit à noter.
@@ -136,7 +157,8 @@ type conflict struct {
 }
 
 func newOutcome(entries []entry) *outcome {
-	o := &outcome{entries: entries, state: make([]string, len(entries)), errs: make([]string, len(entries)), resync: map[int64]map[string]bool{}}
+	o := &outcome{entries: entries, state: make([]string, len(entries)), errs: make([]string, len(entries)), resync: map[int64]map[string]bool{},
+		authors: map[int64]map[string]string{}}
 	for i := range o.state {
 		o.state[i] = "sent"
 	}
@@ -148,6 +170,7 @@ func (o *outcome) reset() {
 		o.state[i], o.errs[i] = "sent", ""
 	}
 	o.conflicts, o.resync, o.rep = nil, map[int64]map[string]bool{}, Report{}
+	o.authors, o.xid = map[int64]map[string]string{}, ""
 }
 
 func (o *outcome) refetch(tbl int64, id string) {
@@ -170,8 +193,11 @@ func (o *outcome) reject(it item, msg string) {
 
 // sendBatch envoie une étape dans une transaction du serveur. Une erreur
 // rendue est une coupure (rien n'est noté) ; un refus du serveur est dans
-// le résultat.
-func (e *Engine) sendBatch(ctx context.Context, srv workbook.Server, info *workbook.Info, tables map[int64]*rtable, entries []entry) (*outcome, error) {
+// le résultat. Chaque écriture a son point de sauvegarde : une opération
+// refusée par une erreur SQL (filtre d'écriture d'un participant, droits)
+// est seule refusée, le reste de l'étape s'applique. mine : transactions
+// du serveur de ce poste (échos à écarter).
+func (e *Engine) sendBatch(ctx context.Context, srv workbook.Server, info *workbook.Info, tables map[int64]*rtable, entries []entry, mine map[string]bool) (*outcome, error) {
 	o := newOutcome(entries)
 	var items []item
 	for ei, en := range entries {
@@ -228,24 +254,48 @@ func (e *Engine) sendBatch(ctx context.Context, srv workbook.Server, info *workb
 		o.reset()
 		for _, it := range items {
 			op := it.op
-			var n int64
+			var wr workbook.Wrote
 			var err error
 			switch op.Kind {
 			case command.OpSet:
-				n, err = w.Update(ctx, schema, it.t.remote.Name, op.Row, it.col, op.Old, op.New)
+				wr, err = w.Update(ctx, schema, it.t.remote.Name, op.Row, it.col, op.Old, op.New)
 			case command.OpInsert:
-				n, err = w.Insert(ctx, schema, it.t.remote.Name, op.Row, op.Pos, it.cols, it.vals)
-				n = 1 // déjà présente : renvoi après une coupure
+				wr, err = w.Insert(ctx, schema, it.t.remote.Name, op.Row, op.Pos, it.cols, it.vals)
+				if err == nil && wr.Author != "" {
+					if o.authors[op.Table] == nil {
+						o.authors[op.Table] = map[string]string{}
+					}
+					o.authors[op.Table][op.Row] = wr.Author
+				}
+				wr.Rows = 1 // déjà présente : renvoi après une coupure
 			case command.OpDelete:
-				n, err = w.Delete(ctx, schema, it.t.remote.Name, op.Row)
+				wr, err = w.Delete(ctx, schema, it.t.remote.Name, op.Row)
 			case command.OpMove:
 				old, _ := op.Old.(string)
-				n, err = w.Move(ctx, schema, it.t.remote.Name, op.Row, old, op.Pos)
+				wr, err = w.Move(ctx, schema, it.t.remote.Name, op.Row, old, op.Pos)
 			}
 			if err != nil {
-				return err
+				if _, rejected := workbook.Rejected(err); !rejected {
+					return err
+				}
+				// Refusée seule (point de sauvegarde) : la ligne reprend
+				// l'état du serveur, le reste de l'étape continue.
+				o.reject(it, errText(err))
+				if workbook.Privilege(err) {
+					o.rep.notice("Droits insuffisants sur « " + it.t.remote.Name + " » : modification annulée")
+				} else {
+					o.rep.notice("Modification refusée par le serveur, annulée : " + errText(err))
+				}
+				continue
 			}
-			if n > 0 {
+			if wr.Rows > 0 {
+				// La ligne portait l'écriture d'un autre, peut-être pas encore
+				// reçue : elle ne reviendra pas par changes_since (notre
+				// transaction en est désormais la dernière, écartée comme
+				// écho), elle est relue.
+				if wr.Prev != "" && !mine[wr.Prev] && workbook.XidAfter(wr.Prev, it.t.since) {
+					o.refetch(op.Table, op.Row)
+				}
 				continue
 			}
 			why, err := w.WhyNot(ctx, info.WorkbookID, it.t.remote, op.Row)
@@ -254,7 +304,9 @@ func (e *Engine) sendBatch(ctx context.Context, srv workbook.Server, info *workb
 			}
 			o.refused(it, why)
 		}
-		return nil
+		x, err := w.Xact(ctx)
+		o.xid = x
+		return err
 	})
 	if err == nil {
 		return o, nil
@@ -347,6 +399,18 @@ func (e *Engine) finish(ctx context.Context, srv workbook.Server, info *workbook
 				msg = o.errs[i]
 			}
 			if _, err := tx.ExecContext(ctx, `UPDATE _lattis_outbox SET state = ?, error = ? WHERE id = ?`, o.state[i], msg, en.id); err != nil {
+				return nil, err
+			}
+		}
+		for tbl, rows := range o.authors {
+			for id, author := range rows {
+				if _, err := tx.ExecContext(ctx, `UPDATE _lattis_row_ids SET lattis_author = ? WHERE tbl = ? AND lattis_id = ? AND lattis_author IS NOT ?`, author, tbl, id, author); err != nil {
+					return nil, err
+				}
+			}
+		}
+		if o.xid != "" {
+			if err := addSkip(ctx, tx, o.xid); err != nil {
 				return nil, err
 			}
 		}

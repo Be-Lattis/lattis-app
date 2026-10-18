@@ -129,7 +129,7 @@ func (s pgServer) Publish(ctx context.Context, fn func(Publisher) error) error {
 func (s pgServer) Read(ctx context.Context, fn func(Reader) error) error {
 	return s.with(ctx, usageLoad, func(c *pgx.Conn) error {
 		return pgx.BeginTxFunc(ctx, c, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly}, func(tx pgx.Tx) error {
-			return fn(pgReader{tx})
+			return fn(pgReader{tx: tx, v8: new(int8)})
 		})
 	})
 }
@@ -245,7 +245,12 @@ func (p pgPublisher) FinishPublish(ctx context.Context, id string) (int, error) 
 	return v, err
 }
 
-type pgReader struct{ tx pgx.Tx }
+// pgReader : v8 retient si le serveur a la migration 0008 (0 : pas encore
+// lu ; 1 : oui ; -1 : non).
+type pgReader struct {
+	tx pgx.Tx
+	v8 *int8
+}
 
 func (r pgReader) Capabilities(ctx context.Context, id string) (Capabilities, error) {
 	return capabilities(ctx, r.tx, id)
@@ -253,7 +258,11 @@ func (r pgReader) Capabilities(ctx context.Context, id string) (Capabilities, er
 
 func (r pgReader) SyncPoint(ctx context.Context) (string, error) {
 	var s string
-	err := r.tx.QueryRow(ctx, `SELECT lattis.sync_point()::text`).Scan(&s)
+	var v8 bool
+	err := r.tx.QueryRow(ctx, `SELECT lattis.sync_point()::text, `+sync8Query).Scan(&s, &v8)
+	if err == nil {
+		r.note8(v8)
+	}
 	return s, err
 }
 

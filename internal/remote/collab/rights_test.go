@@ -29,8 +29,8 @@ func roleID(t *testing.T, srv workbook.Server, id, key string) string {
 	return ""
 }
 
-// remoteTable donne l'identifiant du serveur du tableau Ventes.
-func remoteTable(t *testing.T, srv workbook.Server, id string) string {
+// aclTableID donne l'identifiant du serveur du tableau Ventes.
+func aclTableID(t *testing.T, srv workbook.Server, id string) string {
 	t.Helper()
 	acl, err := srv.ACL(context.Background(), id)
 	must(t, err)
@@ -138,7 +138,7 @@ func TestRightsCustomRoleFilterRestriction(t *testing.T) {
 	ctx := context.Background()
 	f, _, bob, id := setup(t)
 	as := f.As("alice")
-	rt := remoteTable(t, as, id)
+	rt := aclTableID(t, as, id)
 	nord, err := as.CreateRole(ctx, id, "Nord")
 	must(t, err)
 	if _, err := as.CreateRole(ctx, id, "nord"); err == nil {
@@ -288,12 +288,12 @@ func TestRightsDriftAndPreview(t *testing.T) {
 		t.Fatal("écarts lus par un éditeur")
 	}
 	p := as.(workbook.Previewer)
-	res, err := p.Preview(ctx, id, "bob", remoteTable(t, as, id))
+	res, err := p.Preview(ctx, id, "bob", aclTableID(t, as, id))
 	must(t, err)
 	if len(res.Rows) != 3 || res.Rows[0]["Produit"] != "Café" {
 		t.Fatalf("aperçu : %+v", res)
 	}
-	if _, err := f.As("bob").(workbook.Previewer).Preview(ctx, id, "alice", remoteTable(t, as, id)); err == nil {
+	if _, err := f.As("bob").(workbook.Previewer).Preview(ctx, id, "alice", aclTableID(t, as, id)); err == nil {
 		t.Fatal("aperçu par un éditeur")
 	}
 }

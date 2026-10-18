@@ -3,6 +3,7 @@ package workbook
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -17,7 +18,7 @@ import (
 func (s pgServer) Delta(ctx context.Context, fn func(Reader) error) error {
 	return s.with(ctx, usageListen, func(c *pgx.Conn) error {
 		return pgx.BeginTxFunc(ctx, c, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly}, func(tx pgx.Tx) error {
-			return fn(pgReader{tx})
+			return fn(pgReader{tx: tx, v8: new(int8)})
 		})
 	})
 }
@@ -48,46 +49,128 @@ func pgType(t string) string {
 
 type pgWriter struct{ tx pgx.Tx }
 
-func (w pgWriter) Update(ctx context.Context, schema, table, id string, col RemoteColumn, old, new any) (int64, error) {
-	o, err := ToRemote(col.Type, old)
+// savepoint : nom du point de sauvegarde de chaque écriture.
+const savepoint = "lattis_op"
+
+// write exécute une écriture sous son point de sauvegarde (contrat client
+// §6) : SAVEPOINT, l'écriture et RELEASE partent dans un même lot, sans
+// aller-retour de plus. Une erreur SQL (filtre d'écriture, droits) ne
+// défait que cette écriture (ROLLBACK TO) et est rendue telle quelle ; la
+// transaction continue. read lit le résultat de l'écriture (deuxième ordre
+// du lot).
+func (w pgWriter) write(ctx context.Context, q string, args []any, read func(pgx.BatchResults) error) error {
+	b := &pgx.Batch{}
+	b.Queue(`SAVEPOINT ` + savepoint)
+	b.Queue(q, args...)
+	b.Queue(`RELEASE SAVEPOINT ` + savepoint)
+	br := w.tx.SendBatch(ctx, b)
+	_, err := br.Exec()
+	if err == nil {
+		err = read(br)
+	}
+	if err == nil {
+		_, err = br.Exec()
+	}
+	if cerr := br.Close(); err == nil {
+		err = cerr
+	}
+	if err == nil {
+		return nil
+	}
+	if _, rejected := Rejected(err); rejected {
+		if _, rerr := w.tx.Exec(ctx, `ROLLBACK TO SAVEPOINT `+savepoint); rerr != nil {
+			// La transaction n'est plus utilisable : une coupure, pas un refus.
+			return fmt.Errorf("retour au point de sauvegarde après « %v » : %s", err, rerr.Error())
+		}
+	}
+	return err
+}
+
+// returning lit la ligne rendue par RETURNING (aucune : 0 ligne touchée).
+func returning(br pgx.BatchResults, out *string) (int64, error) {
+	var v *string
+	err := br.QueryRow().Scan(&v)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, nil
+	}
 	if err != nil {
 		return 0, err
+	}
+	if v != nil {
+		*out = *v
+	}
+	return 1, nil
+}
+
+func (w pgWriter) Update(ctx context.Context, schema, table, id string, col RemoteColumn, old, new any) (Wrote, error) {
+	o, err := ToRemote(col.Type, old)
+	if err != nil {
+		return Wrote{}, err
 	}
 	n, err := ToRemote(col.Type, new)
 	if err != nil {
-		return 0, err
+		return Wrote{}, err
 	}
 	c, typ := pgx.Identifier{col.Name}.Sanitize(), pgType(col.Type)
-	tag, err := w.tx.Exec(ctx, `UPDATE `+pgx.Identifier{schema, table}.Sanitize()+` SET `+c+` = $1::`+typ+
-		` WHERE lattis_id = $2::uuid AND `+c+` IS NOT DISTINCT FROM $3::`+typ, n, id, o)
-	return tag.RowsAffected(), err
+	var out Wrote
+	err = w.write(ctx, `UPDATE `+pgx.Identifier{schema, table}.Sanitize()+` SET `+c+` = $1::`+typ+
+		` WHERE lattis_id = $2::uuid AND `+c+` IS NOT DISTINCT FROM $3::`+typ+` RETURNING old.lattis_xid::text`, []any{n, id, o},
+		func(br pgx.BatchResults) (err error) {
+			out.Rows, err = returning(br, &out.Prev)
+			return err
+		})
+	return out, err
 }
 
-func (w pgWriter) Insert(ctx context.Context, schema, table, id, pos string, cols []RemoteColumn, vals []any) (int64, error) {
+func (w pgWriter) Insert(ctx context.Context, schema, table, id, pos string, cols []RemoteColumn, vals []any) (Wrote, error) {
 	names := []string{"lattis_id", "lattis_pos"}
 	marks := []string{"$1::uuid", "$2"}
 	args := []any{id, pos}
 	for i, c := range cols {
 		v, err := ToRemote(c.Type, vals[i])
 		if err != nil {
-			return 0, fmt.Errorf("colonne « %s » : %w", c.Name, err)
+			return Wrote{}, fmt.Errorf("colonne « %s » : %w", c.Name, err)
 		}
 		names = append(names, pgx.Identifier{c.Name}.Sanitize())
 		args = append(args, v)
 		marks = append(marks, "$"+strconv.Itoa(len(args))+"::"+pgType(c.Type))
 	}
-	tag, err := w.tx.Exec(ctx, `INSERT INTO `+pgx.Identifier{schema, table}.Sanitize()+` (`+strings.Join(names, ", ")+`) VALUES (`+strings.Join(marks, ", ")+`) ON CONFLICT (lattis_id) DO NOTHING`, args...)
-	return tag.RowsAffected(), err
+	var out Wrote
+	err := w.write(ctx, `INSERT INTO `+pgx.Identifier{schema, table}.Sanitize()+` (`+strings.Join(names, ", ")+`) VALUES (`+strings.Join(marks, ", ")+`) ON CONFLICT (lattis_id) DO NOTHING RETURNING lattis_author::text`, args,
+		func(br pgx.BatchResults) (err error) {
+			out.Rows, err = returning(br, &out.Author)
+			return err
+		})
+	return out, err
 }
 
-func (w pgWriter) Delete(ctx context.Context, schema, table, id string) (int64, error) {
-	tag, err := w.tx.Exec(ctx, `DELETE FROM `+pgx.Identifier{schema, table}.Sanitize()+` WHERE lattis_id = $1::uuid`, id)
-	return tag.RowsAffected(), err
+func (w pgWriter) Delete(ctx context.Context, schema, table, id string) (Wrote, error) {
+	var out Wrote
+	err := w.write(ctx, `DELETE FROM `+pgx.Identifier{schema, table}.Sanitize()+` WHERE lattis_id = $1::uuid`, []any{id},
+		func(br pgx.BatchResults) error {
+			tag, err := br.Exec()
+			out.Rows = tag.RowsAffected()
+			return err
+		})
+	return out, err
 }
 
-func (w pgWriter) Move(ctx context.Context, schema, table, id, old, pos string) (int64, error) {
-	tag, err := w.tx.Exec(ctx, `UPDATE `+pgx.Identifier{schema, table}.Sanitize()+` SET lattis_pos = $1 WHERE lattis_id = $2::uuid AND lattis_pos = $3`, pos, id, old)
-	return tag.RowsAffected(), err
+func (w pgWriter) Move(ctx context.Context, schema, table, id, old, pos string) (Wrote, error) {
+	var out Wrote
+	err := w.write(ctx, `UPDATE `+pgx.Identifier{schema, table}.Sanitize()+` SET lattis_pos = $1 WHERE lattis_id = $2::uuid AND lattis_pos = $3 RETURNING old.lattis_xid::text`, []any{pos, id, old},
+		func(br pgx.BatchResults) (err error) {
+			out.Rows, err = returning(br, &out.Prev)
+			return err
+		})
+	return out, err
+}
+
+func (w pgWriter) Xact(ctx context.Context) (string, error) {
+	var x *string
+	if err := w.tx.QueryRow(ctx, `SELECT pg_current_xact_id_if_assigned()::text`).Scan(&x); err != nil || x == nil {
+		return "", err
+	}
+	return *x, nil
 }
 
 func (w pgWriter) WhyNot(ctx context.Context, workbookID string, t RemoteTable, id string) (WhyNot, error) {
@@ -155,11 +238,60 @@ func decodeRow(raw []byte) (map[string]any, error) {
 	return m, err
 }
 
-func (r pgReader) Changes(ctx context.Context, workbookID string, t RemoteTable, since string, fn func(Change) error) error {
+// sync8Query dit si le serveur a la migration 0008 (changes_since avec
+// skip, since_covered) ; lu une fois par transaction (avec SyncPoint).
+const sync8Query = `to_regprocedure('lattis.since_covered(xid8)') IS NOT NULL`
+
+func (r pgReader) has8(ctx context.Context) (bool, error) {
+	if r.v8 != nil && *r.v8 != 0 {
+		return *r.v8 > 0, nil
+	}
+	var ok bool
+	if err := r.tx.QueryRow(ctx, `SELECT `+sync8Query).Scan(&ok); err != nil {
+		return false, err
+	}
+	r.note8(ok)
+	return ok, nil
+}
+
+func (r pgReader) note8(ok bool) {
+	if r.v8 == nil {
+		return
+	}
+	*r.v8 = -1
+	if ok {
+		*r.v8 = 1
+	}
+}
+
+func (r pgReader) Covered(ctx context.Context, since string) (bool, bool, error) {
+	if since == "" || since == "0" {
+		return true, true, nil
+	}
+	ok, err := r.has8(ctx)
+	if err != nil || !ok {
+		return true, false, err
+	}
+	var covered bool
+	err = r.tx.QueryRow(ctx, `SELECT lattis.since_covered($1::xid8)`, since).Scan(&covered)
+	return covered, true, err
+}
+
+func (r pgReader) Changes(ctx context.Context, workbookID string, t RemoteTable, since string, skip []string, fn func(Change) error) error {
 	if since == "" {
 		since = "0"
 	}
-	rs, err := r.tx.Query(ctx, `SELECT row_data::text, deleted FROM lattis.changes_since($1::uuid, $2::uuid, $3::xid8)`, workbookID, t.ID, since)
+	q, args := `SELECT row_data::text, deleted FROM lattis.changes_since($1::uuid, $2::uuid, $3::xid8)`, []any{workbookID, t.ID, since}
+	if len(skip) > 0 {
+		ok, err := r.has8(ctx)
+		if err != nil {
+			return err
+		}
+		if ok {
+			q, args = `SELECT row_data::text, deleted FROM lattis.changes_since($1::uuid, $2::uuid, $3::xid8, $4::text[]::xid8[])`, append(args, skip)
+		}
+	}
+	rs, err := r.tx.Query(ctx, q, args...)
 	if err != nil {
 		return err
 	}

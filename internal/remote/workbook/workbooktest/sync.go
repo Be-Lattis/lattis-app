@@ -25,6 +25,33 @@ func (f *Fake) SetLevel(workbookID, user, name, level string) {
 	f.levels[workbookID+"\x00"+user+"\x00"+name] = level
 }
 
+// Forbid impose un filtre d'écriture (règle WITH CHECK d'un participant) :
+// une ligne écrite avec value dans la colonne col du tableau name est
+// refusée (42501).
+func (f *Fake) Forbid(workbookID, name, col string, value any) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.checks = append(f.checks, check{workbookID, name, col, value})
+}
+
+// PurgeTombstones purge les pierres tombales de tous les tableaux
+// (lattis.purge_tombstones) : un point de reprise antérieur n'est plus
+// couvert.
+func (f *Fake) PurgeTombstones() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, b := range f.books {
+		for _, sc := range b.schemas {
+			for _, t := range sc.tables {
+				for _, x := range t.tombs {
+					f.purged = max(f.purged, x.xid)
+				}
+				t.tombs = nil
+			}
+		}
+	}
+}
+
 // Value lit une cellule de la version publiée (essais) : valeur du
 // serveur, auteur de la ligne et dernier modificateur ; ok faux si la ligne
 // n'existe pas.
@@ -71,7 +98,9 @@ func (s *session) Write(ctx context.Context, fn func(workbook.Writer) error) err
 		s.f.mu.Unlock()
 		return err
 	}
-	s.f.xid = w.xid
+	if w.wrote {
+		s.f.xid = w.xid
+	}
 	touched := w.touched
 	s.f.mu.Unlock()
 	for id, channel := range touched {
@@ -102,6 +131,7 @@ type writer struct {
 	xid     int64
 	at      time.Time
 	touched map[string]string // tableau → canal
+	wrote   bool              // un xid est attribué (pg_current_xact_id_if_assigned)
 }
 
 // target vérifie le droit d'écrire dans un tableau et rend son niveau.
@@ -121,6 +151,7 @@ func (w *writer) target(schemaName, name string) (*book, *table, string, error) 
 }
 
 func (w *writer) touch(b *book, t *table, r *row) {
+	w.wrote = true
 	if r != nil {
 		r.xid, r.by, r.at = w.xid, w.s.user, w.at
 	}
@@ -135,82 +166,114 @@ func (t *table) col(name string) int {
 	return slices.IndexFunc(t.cols, func(c workbook.RemoteColumn) bool { return c.Name == name })
 }
 
-func (w *writer) Update(ctx context.Context, schemaName, name, id string, col workbook.RemoteColumn, old, new any) (int64, error) {
+// check applique les filtres d'écriture (Forbid) à une ligne écrite.
+func (w *writer) check(b *book, t *table, vals []any) error {
+	for _, c := range w.s.f.checks {
+		if c.workbook != b.id || c.table != t.name {
+			continue
+		}
+		if j := t.col(c.col); j >= 0 && workbook.SameRemote(vals[j], c.value) {
+			return ErrPrivilege{"la nouvelle ligne viole la politique de sécurité au niveau ligne pour la table « " + t.name + " »"}
+		}
+	}
+	return nil
+}
+
+func xidText(x int64) string { return strconv.FormatInt(x, 10) }
+
+func (w *writer) Xact(ctx context.Context) (string, error) {
+	if !w.wrote {
+		return "", nil
+	}
+	return xidText(w.xid), nil
+}
+
+func (w *writer) Update(ctx context.Context, schemaName, name, id string, col workbook.RemoteColumn, old, new any) (workbook.Wrote, error) {
 	b, t, lv, err := w.target(schemaName, name)
 	if err != nil {
-		return 0, err
+		return workbook.Wrote{}, err
 	}
 	o, err := workbook.ToRemote(col.Type, old)
 	if err != nil {
-		return 0, err
+		return workbook.Wrote{}, err
 	}
 	n, err := workbook.ToRemote(col.Type, new)
 	if err != nil {
-		return 0, err
+		return workbook.Wrote{}, err
 	}
 	j := t.col(col.Name)
 	if j < 0 {
-		return 0, fmt.Errorf("la colonne « %s » n'existe pas", col.Name)
+		return workbook.Wrote{}, fmt.Errorf("la colonne « %s » n'existe pas", col.Name)
 	}
 	i := t.row(id)
 	if i < 0 || (lv == "participant" && t.rows[i].author != w.s.user) || !workbook.SameRemote(t.rows[i].vals[j], o) {
-		return 0, nil
+		return workbook.Wrote{}, nil
 	}
-	t.rows[i].vals[j] = n
+	vals := slices.Clone(t.rows[i].vals)
+	vals[j] = n
+	if err := w.check(b, t, vals); err != nil {
+		return workbook.Wrote{}, err
+	}
+	prev := t.rows[i].xid
+	t.rows[i].vals = vals
 	w.touch(b, t, &t.rows[i])
-	return 1, nil
+	return workbook.Wrote{Rows: 1, Prev: xidText(prev)}, nil
 }
 
-func (w *writer) Insert(ctx context.Context, schemaName, name, id, pos string, cols []workbook.RemoteColumn, vals []any) (int64, error) {
+func (w *writer) Insert(ctx context.Context, schemaName, name, id, pos string, cols []workbook.RemoteColumn, vals []any) (workbook.Wrote, error) {
 	b, t, _, err := w.target(schemaName, name)
 	if err != nil {
-		return 0, err
+		return workbook.Wrote{}, err
 	}
 	if t.row(id) >= 0 {
-		return 0, nil // ON CONFLICT DO NOTHING
+		return workbook.Wrote{}, nil // ON CONFLICT DO NOTHING
 	}
 	r := row{id: id, pos: pos, author: w.s.user, vals: make([]any, len(t.cols))}
 	for k, c := range cols {
 		j := t.col(c.Name)
 		if j < 0 {
-			return 0, fmt.Errorf("la colonne « %s » n'existe pas", c.Name)
+			return workbook.Wrote{}, fmt.Errorf("la colonne « %s » n'existe pas", c.Name)
 		}
 		if r.vals[j], err = workbook.ToRemote(c.Type, vals[k]); err != nil {
-			return 0, err
+			return workbook.Wrote{}, err
 		}
+	}
+	if err := w.check(b, t, r.vals); err != nil {
+		return workbook.Wrote{}, err
 	}
 	w.touch(b, t, &r)
 	t.rows = append(t.rows, r)
-	return 1, nil
+	return workbook.Wrote{Rows: 1, Author: r.author}, nil
 }
 
-func (w *writer) Delete(ctx context.Context, schemaName, name, id string) (int64, error) {
+func (w *writer) Delete(ctx context.Context, schemaName, name, id string) (workbook.Wrote, error) {
 	b, t, lv, err := w.target(schemaName, name)
 	if err != nil {
-		return 0, err
+		return workbook.Wrote{}, err
 	}
 	i := t.row(id)
 	if i < 0 || (lv == "participant" && t.rows[i].author != w.s.user) {
-		return 0, nil
+		return workbook.Wrote{}, nil
 	}
 	t.rows = slices.Delete(t.rows, i, i+1)
 	t.tombs = append(t.tombs, tomb{id: id, xid: w.xid, by: w.s.user, at: w.at})
 	w.touch(b, t, nil)
-	return 1, nil
+	return workbook.Wrote{Rows: 1}, nil
 }
 
-func (w *writer) Move(ctx context.Context, schemaName, name, id, old, pos string) (int64, error) {
+func (w *writer) Move(ctx context.Context, schemaName, name, id, old, pos string) (workbook.Wrote, error) {
 	b, t, lv, err := w.target(schemaName, name)
 	if err != nil {
-		return 0, err
+		return workbook.Wrote{}, err
 	}
 	i := t.row(id)
 	if i < 0 || (lv == "participant" && t.rows[i].author != w.s.user) || t.rows[i].pos != old {
-		return 0, nil
+		return workbook.Wrote{}, nil
 	}
+	prev := t.rows[i].xid
 	t.rows[i].pos = pos
 	w.touch(b, t, &t.rows[i])
-	return 1, nil
+	return workbook.Wrote{Rows: 1, Prev: xidText(prev)}, nil
 }
 
 func (w *writer) WhyNot(ctx context.Context, workbookID string, rt workbook.RemoteTable, id string) (workbook.WhyNot, error) {
@@ -276,22 +339,40 @@ func (r *reader) table(workbookID, tableID string) (*table, error) {
 	return nil, errors.New("tableau inconnu")
 }
 
-func (r *reader) Changes(ctx context.Context, workbookID string, rt workbook.RemoteTable, since string, fn func(workbook.Change) error) error {
+func (r *reader) Covered(ctx context.Context, since string) (bool, bool, error) {
+	from, _ := strconv.ParseInt(since, 10, 64)
+	if from == 0 {
+		return true, true, nil
+	}
+	if r.s.f.Legacy {
+		return true, false, nil
+	}
+	r.s.f.Calls["since_covered"]++
+	return from > r.s.f.purged, true, nil
+}
+
+func (r *reader) Changes(ctx context.Context, workbookID string, rt workbook.RemoteTable, since string, skip []string, fn func(workbook.Change) error) error {
 	r.s.f.Calls["changes_since"]++
 	t, err := r.table(workbookID, rt.ID)
 	if err != nil {
 		return err
 	}
+	if r.s.f.Legacy {
+		skip = nil
+	}
 	from, _ := strconv.ParseInt(since, 10, 64)
+	skipped := func(x int64) bool { return slices.Contains(skip, xidText(x)) }
 	for _, x := range t.sorted() {
-		if x.xid >= from {
+		if x.xid >= from && !skipped(x.xid) {
+			r.s.f.Calls["changes_rows"]++
 			if err := fn(change(t, rt, x)); err != nil {
 				return err
 			}
 		}
 	}
 	for _, x := range t.tombs {
-		if x.xid >= from {
+		if x.xid >= from && !skipped(x.xid) {
+			r.s.f.Calls["changes_rows"]++
 			if err := fn(workbook.Change{ID: x.id, Deleted: true}); err != nil {
 				return err
 			}

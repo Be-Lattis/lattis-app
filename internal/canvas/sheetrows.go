@@ -10,7 +10,6 @@ import (
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
-	"github.com/lalamefine/lattis/internal/order"
 )
 
 // Insertion et suppression de lignes ou de colonnes entières de la feuille,
@@ -282,7 +281,7 @@ func (t *tx) insertTableRows(tb Table, k, n int) error {
 		return err
 	}
 	for range n {
-		pos, err := order.Between(before, after)
+		pos, err := t.rowKey(tb, before, after)
 		if err != nil {
 			return err
 		}

@@ -92,3 +92,40 @@ export function fillSeries(src: string[], n: number): string[] {
 	for (let k = 0; k < n; k++) out.push(src[k % src.length]);
 	return out;
 }
+
+/**
+ * Recopie d'une formule vers la droite ou la gauche (choix de Louis) : une
+ * référence à une colonne de tableau (Ventes[Prix], Ventes[Prix][2]) passe à
+ * la colonne voisine du même tableau, dc colonnes plus loin, comme les
+ * références structurées d'Excel. Les adresses Cell[…] restent absolues ; une
+ * colonne qui sortirait du tableau ne bouge pas.
+ */
+export function shiftTableColumns(f: string, dc: number, tables: readonly { name: string; columns: readonly string[] }[]): string {
+	if (!dc || !f.trim().startsWith('=')) return f;
+	const byName = new Map(tables.map((t) => [t.name.toLowerCase(), t]));
+	let out = '';
+	let i = 0;
+	while (i < f.length) {
+		const ch = f[i];
+		if (ch === '"') {
+			// Chaîne : recopiée telle quelle ("" : guillemet doublé).
+			let j = i + 1;
+			while (j < f.length && !(f[j] === '"' && f[j + 1] !== '"')) j += f[j] === '"' ? 2 : 1;
+			out += f.slice(i, j + 1);
+			i = j + 1;
+			continue;
+		}
+		const m = /^([\p{L}_][\p{L}\p{N}_.]*)\[([^\[\]]+)\]/u.exec(f.slice(i));
+		if (m && !/[\p{L}\p{N}_.]/u.test(f[i - 1] ?? '')) {
+			const t = byName.get(m[1].toLowerCase());
+			const k = t ? t.columns.findIndex((c) => c.toLowerCase() === m[2].trim().toLowerCase()) : -1;
+			const to = k + dc;
+			out += t && k >= 0 && to >= 0 && to < t.columns.length ? `${m[1]}[${t.columns[to]}]` : m[0];
+			i += m[0].length;
+			continue;
+		}
+		out += ch;
+		i++;
+	}
+	return out;
+}

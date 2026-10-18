@@ -9,7 +9,6 @@ import (
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
-	"github.com/lalamefine/lattis/internal/order"
 )
 
 // MinRows est le nombre de lignes (en-tête compris) à partir duquel une zone
@@ -244,7 +243,7 @@ func (t *tx) appendRows(tb Table, n int) error {
 		return err
 	}
 	for k := range n {
-		pos, err := order.Between(last, "")
+		pos, err := t.rowKey(tb, last, "")
 		if err != nil {
 			return err
 		}
@@ -445,7 +444,7 @@ func (m *Model) InsertRow(ctx context.Context, table string, n int) error {
 				return err
 			}
 		}
-		pos, err := order.Between(before, after)
+		pos, err := t.rowKey(tb, before, after)
 		if err != nil {
 			return err
 		}

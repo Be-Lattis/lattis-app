@@ -33,7 +33,7 @@
 	import { bandAt, bandLabel, bandRefusal, hiddenBand } from './hidden';
 	import { pivotLayer, pivotValueText } from './pivotformat';
 	import { canFoldAll, foldAll, foldTarget, pivotBoxHit, pivotBoxLeft, pivotLabelOffset, PIVOT_BOX, setFolded, type PivotRowInfo } from './pivottree';
-	import { fillSeries } from './fill';
+	import { fillSeries, shiftTableColumns } from './fill';
 	import {
 		condArgs,
 		condLabel,
@@ -2338,6 +2338,18 @@
 			ctx.stroke();
 			ctx.restore();
 		}
+		// Texte aligné à gauche qui déborde (comme Excel) : seulement sur les
+		// cellules voisines vides ; il est coupé à la première cellule occupée
+		// (valeur, tableau, tableau croisé, fusion).
+		const overflowW = (r: number, c: number): number => {
+			let ow = cax().size(c);
+			for (let cc = c + 1; cc <= c1 + 1; cc++) {
+				const v = cells.get(key(r, cc));
+				if ((v !== undefined && v !== '') || tableAt(r, cc) || pivotAt(r, cc) || mergeOf(r, cc)) break;
+				ow += cax().size(cc);
+			}
+			return ow;
+		};
 		for (const [k, rawText] of cells) {
 			const [r, c] = k.split(',').map(Number);
 			if (r < r0 || r > r1 || c < c0 || c > c1 || !rh(r) || !cax().size(c) || mergeOf(r, c)) continue;
@@ -2363,14 +2375,15 @@
 			const fd = freeDisplay(rawText, f?.text);
 			const raw = fd.kind === 'text' ? fd.text : formatCell(fd.text, undefined, fstyle);
 			const boxed = fd.align !== 'left';
+			const spread = boxed ? cw : overflowW(r, c) - (x - cx(c));
 			if (fstyle || raw.includes('\n')) {
-				drawText(raw, x, ry(r), cw, fstyle?.al ?? fd.align, fstyle, f?.error ? C.error : C.text, boxed ? cw : w);
+				drawText(raw, x, ry(r), cw, fstyle?.al ?? fd.align, fstyle, f?.error ? C.error : C.text, spread);
 				continue;
 			}
 			ctx.fillStyle = f?.error ? C.error : C.text;
 			ctx.save();
 			ctx.beginPath();
-			ctx.rect(Math.max(x, MARGIN), TOP_H, boxed ? cw : w, h - TOP_H);
+			ctx.rect(Math.max(x, MARGIN), TOP_H, spread - Math.max(0, MARGIN - x), h - TOP_H);
 			ctx.clip();
 			ctx.textAlign = fd.align;
 			ctx.fillText(raw, fd.align === 'right' ? x + cw - 6 : fd.align === 'center' ? x + cw / 2 : x + 6, ry(r) + rh(r) / 2);
@@ -5348,10 +5361,20 @@
 		} else {
 			const right = to.c1 > sel.c1;
 			const n = right ? to.c1 - sel.c1 : sel.c0 - to.c0;
+			const w = sel.c1 - sel.c0 + 1;
+			const tables = refTables();
 			for (let r = sel.r0; r <= sel.r1; r++) {
 				const src: string[] = [];
 				for (let c = sel.c0; c <= sel.c1; c++) src.push(val(r, c));
-				block.push(right ? fillSeries(src, n) : fillSeries([...src].reverse(), n).reverse());
+				const line = right ? fillSeries(src, n) : fillSeries([...src].reverse(), n).reverse();
+				// Les colonnes de tableau citées suivent le décalage (Ventes[Prix] → Ventes[Qté]).
+				block.push(
+					line.map((v, j) => {
+						const dest = right ? sel.c1 + 1 + j : to.c0 + j;
+						const from = right ? sel.c0 + (j % w) : sel.c1 - ((sel.c0 - 1 - dest) % w);
+						return shiftTableColumns(v, dest - from, tables);
+					})
+				);
 			}
 			row = sel.r0;
 			col = right ? sel.c1 + 1 : to.c0;

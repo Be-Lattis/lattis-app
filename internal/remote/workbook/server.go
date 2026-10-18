@@ -12,6 +12,7 @@ package workbook
 import (
 	"context"
 	"errors"
+	"strconv"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -172,26 +173,48 @@ type WhyNot struct {
 	By, At string
 }
 
+// Wrote est le résultat d'une écriture.
+type Wrote struct {
+	// Rows : lignes touchées (0 : conflit ou refus, voir WhyNot).
+	Rows int64
+	// Prev : lattis_xid de la ligne avant l'écriture (Update, Move ; "" :
+	// inconnu). Une transaction d'un autre, postérieure au point de reprise,
+	// n'est peut-être pas encore reçue : la ligne est à relire, car ses
+	// changements ne reviendront pas par changes_since (lattis_xid est
+	// désormais celui de notre transaction, écartée comme écho).
+	Prev string
+	// Author : lattis_author de la ligne ajoutée (Insert).
+	Author string
+}
+
 // Writer est la transaction d'une étape de la file d'envoi. Les valeurs
 // sont des valeurs de stockage locales (entier, réel, texte, json.Number),
-// converties au type de la colonne du serveur (ToRemote). Chaque appel
+// converties au type de la colonne du serveur (ToRemote). Chaque écriture
 // rend le nombre de lignes touchées : 0 est un conflit ou un refus
-// (WhyNot), pas une erreur ; une erreur défait toute la transaction.
+// (WhyNot), pas une erreur. Chaque écriture a son point de sauvegarde
+// (contrat client §6) : une erreur SQL (Rejected : filtre d'écriture,
+// droits, contrainte) ne défait qu'elle, la transaction continue ; toute
+// autre erreur (coupure) la défait en entier.
 type Writer interface {
 	// Update : UPDATE … SET col = new WHERE lattis_id = id AND col IS NOT
 	// DISTINCT FROM old.
-	Update(ctx context.Context, schema, table, id string, col RemoteColumn, old, new any) (int64, error)
+	Update(ctx context.Context, schema, table, id string, col RemoteColumn, old, new any) (Wrote, error)
 	// Insert : INSERT (lattis_id, lattis_pos, cols…) ; une ligne déjà
 	// présente (renvoi après une coupure) n'est pas une erreur : 0.
-	Insert(ctx context.Context, schema, table, id, pos string, cols []RemoteColumn, vals []any) (int64, error)
+	Insert(ctx context.Context, schema, table, id, pos string, cols []RemoteColumn, vals []any) (Wrote, error)
 	// Delete : DELETE … WHERE lattis_id = id.
-	Delete(ctx context.Context, schema, table, id string) (int64, error)
+	Delete(ctx context.Context, schema, table, id string) (Wrote, error)
 	// Move : UPDATE … SET lattis_pos = pos WHERE lattis_id = id AND
 	// lattis_pos = old.
-	Move(ctx context.Context, schema, table, id, old, pos string) (int64, error)
+	Move(ctx context.Context, schema, table, id, old, pos string) (Wrote, error)
 	// WhyNot explique une écriture sans effet (lattis.why_not) ; t donne
 	// les colonnes pour relire la ligne actuelle.
 	WhyNot(ctx context.Context, workbookID string, t RemoteTable, id string) (WhyNot, error)
+	// Xact rend l'identifiant (xid8, en texte) de la transaction, "" si
+	// elle n'a rien écrit (pg_current_xact_id_if_assigned) : le poste le
+	// garde pour écarter ses propres écritures des changements reçus
+	// (Reader.Changes, skip).
+	Xact(ctx context.Context) (string, error)
 }
 
 // Rejected dit si err est un refus du serveur (erreur SQL : droits,
@@ -203,6 +226,20 @@ func Rejected(err error) (string, bool) {
 		return s.SQLState(), true
 	}
 	return "", false
+}
+
+// XidAfter dit si l'xid8 a (en texte) est postérieur ou égal à since ("" :
+// 0) ; faux si a est illisible.
+func XidAfter(a, since string) bool {
+	x, err := strconv.ParseUint(a, 10, 64)
+	if err != nil {
+		return false
+	}
+	if since == "" {
+		return true
+	}
+	s, err := strconv.ParseUint(since, 10, 64)
+	return err != nil || x >= s
 }
 
 // Privilege dit si err est un refus de droits (42501).
@@ -250,9 +287,17 @@ type Reader interface {
 	// (voir FromRemote).
 	Rows(ctx context.Context, schema string, t RemoteTable, fn func(id, pos, author string, vals []any) error) error
 	// Changes lit les lignes modifiées ou supprimées d'un tableau depuis
-	// since (lattis.changes_since, filtré par les droits de l'utilisateur).
-	// Une ligne peut revenir deux fois : l'application est idempotente.
-	Changes(ctx context.Context, workbookID string, t RemoteTable, since string, fn func(Change) error) error
+	// since (lattis.changes_since, filtré par les droits de l'utilisateur),
+	// sauf celles dont la dernière écriture vient d'une des transactions
+	// skip (ses propres écritures, Writer.Xact ; ignoré par un serveur sans
+	// la migration 0008). Une ligne peut revenir deux fois : l'application
+	// est idempotente.
+	Changes(ctx context.Context, workbookID string, t RemoteTable, since string, skip []string, fn func(Change) error) error
+	// Covered dit si les changements depuis since sont complets
+	// (lattis.since_covered) : faux, des pierres tombales ont été purgées
+	// depuis, le tableau est à recharger en entier (Rows). known faux : le
+	// serveur ne sait pas le dire (sans la migration 0008).
+	Covered(ctx context.Context, since string) (covered, known bool, err error)
 	// RowsByID relit des lignes par leur identifiant (absentes : invisibles ou
 	// supprimées) : remise à l'état du serveur après un refus.
 	RowsByID(ctx context.Context, schema string, t RemoteTable, ids []string, fn func(Change) error) error
