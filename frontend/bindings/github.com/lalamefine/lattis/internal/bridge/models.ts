@@ -86,6 +86,12 @@ export interface DocState {
      */
     "undo": string;
     "redo": string;
+
+    /**
+     * Notice : message de la dernière action pour la barre d'état (tableaux
+     * fusionnés, cellules rattachées à un tableau), vide sinon.
+     */
+    "notice"?: string;
 }
 
 /**

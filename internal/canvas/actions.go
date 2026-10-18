@@ -70,35 +70,38 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 				if tb.Filtered() {
 					return ErrFiltered{tb.Name}
 				}
+				// Les autres cellules libres de la nouvelle ligne la rejoignent.
+				taken, err := t.takeFree(sheet, func(c cell) bool {
+					return c.Row == row && c.Col >= tb.Col && c.Col <= tb.Right() && c.Col != col
+				})
+				if err != nil {
+					return err
+				}
 				if err := t.appendRows(tb, 1); err != nil {
 					return err
 				}
 				tb.Rows++
-				return t.setCell(tb, tb.Rows-1, col-tb.Col, raw, ev)
-			case inRows && col == tb.Right()+1 && !empty:
-				// Un tableau juste après, en-tête sur la même ligne : la saisie
-				// comble l'écart et les deux tableaux fusionnent.
-				var next *Table
-				for i := range tables {
-					if o := tables[i]; o.Row == tb.Row && o.Col == col+1 {
-						next = &tables[i]
-					}
-				}
-				name := fmt.Sprintf("Colonne %d", len(tb.Cols)+1)
-				if row == tb.Row {
-					name = strings.TrimSpace(raw)
-				}
-				tb, err = t.newColumn(tb, len(tb.Cols), name)
-				if err != nil {
-					return err
-				}
-				if row != tb.Row {
-					if err := t.setCell(tb, row-tb.Row-1, len(tb.Cols)-1, raw, ev); err != nil {
+				for _, c := range taken {
+					if err := t.setCell(tb, tb.Rows-1, c.Col-tb.Col, c.Raw, ev); err != nil {
 						return err
 					}
 				}
-				if next == nil {
-					return nil
+				return t.setCell(tb, tb.Rows-1, col-tb.Col, raw, ev)
+			case inRows && col == tb.Col-1 && !empty && !inAny(tables, row, col):
+				// Juste à gauche : nouvelle première colonne.
+				return t.growSide(tb, row, col, raw, ev, true)
+			case inRows && col == tb.Right()+1 && !empty && !inAny(tables, row, col):
+				// Juste à droite : nouvelle dernière colonne. Un tableau juste
+				// après (lignes qui se recoupent) : la saisie comble l'écart
+				// et les deux tableaux fusionnent.
+				var next *Table
+				for i := range tables {
+					if o := tables[i]; o.Col == col+1 && o.Row <= tb.Bottom() && tb.Row <= o.Bottom() {
+						next = &tables[i]
+					}
+				}
+				if err := t.growSide(tb, row, col, raw, ev, false); err != nil || next == nil {
+					return err
 				}
 				o, err := t.table(next.ID)
 				if err != nil {
@@ -107,8 +110,7 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 				if tb, err = t.table(tb.ID); err != nil {
 					return err
 				}
-				_, err = t.mergeRight(tb, o)
-				return err
+				return t.joinTables(tb, o)
 			}
 		}
 		if isFormula(raw) {

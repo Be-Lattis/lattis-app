@@ -37,6 +37,12 @@ type tx struct {
 	// son ouverture (les résultats calculés peuvent être mis en cache).
 	ro  bool
 	gen int64
+	// layout : l'action a changé la disposition d'une feuille (ancres,
+	// colonnes, lignes, cellules libres) ; joining : rattachement en cours ;
+	// notes : messages pour la barre d'état (voir adjacent.go).
+	layout  bool
+	joining bool
+	notes   []string
 }
 
 func (t *tx) apply(do, undo []stmt) error { return t.Apply(do, undo) }
@@ -73,6 +79,10 @@ type Model struct {
 	// être mémorisés dans le classeur (voir httphosts.go).
 	hostMu  sync.Mutex
 	session map[string]bool
+
+	// Message de la dernière action pour la barre d'état (TakeNotice).
+	noticeMu sync.Mutex
+	notice   string
 }
 
 // New relie le modèle à la base (déjà migrée) et au bus de commandes (dont
@@ -172,7 +182,15 @@ func (m *Model) volatile() (time.Time, uint64) {
 
 // Do exécute une action dans une transaction du bus de commandes.
 func (m *Model) Do(ctx context.Context, name string, fn func(*tx) error) error {
-	_, err := m.bus.Do(ctx, name, func(c *command.Tx) error { return fn(&tx{Tx: c, m: m}) })
+	var notes []string
+	_, err := m.bus.Do(ctx, name, func(c *command.Tx) error {
+		t, err := m.run(c, fn)
+		notes = t.notes
+		return err
+	})
+	if err == nil {
+		m.note(notes)
+	}
 	return err
 }
 

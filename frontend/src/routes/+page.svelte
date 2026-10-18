@@ -337,8 +337,17 @@
 	}
 
 	onMount(() => {
-		const off = Events.On('doc:changed', () => {
-			if (mode === 'doc') reload().then(keepSheet);
+		const off = Events.On('doc:changed', (e: { data?: DocState }) => {
+			// Tableaux fusionnés, cellules rattachées : annoncé après la
+			// relecture, pour passer après le message de l'action elle-même.
+			const said = e?.data?.notice ?? '';
+			if (mode === 'doc')
+				reload()
+					.then(keepSheet)
+					.then(() => {
+						if (said) setTimeout(() => (sheet ? sheet.announce(said) : (notice = said)), 250);
+					});
+			else if (said) notice = said;
 		});
 		const offUI = Events.On('ui:command', (e: { data: UICommand }) => {
 			uiCommand(e.data).catch((x) => (notice = err(x)));

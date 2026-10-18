@@ -25,9 +25,17 @@ type Editor struct {
 func (m *Model) Editor(name string) *Editor { return &Editor{m: m, name: name} }
 
 func (e *Editor) do(ctx context.Context, fn func(*tx) error) error {
-	seq, err := e.m.bus.Append(ctx, e.seq, e.name, func(c *command.Tx) error { return fn(&tx{Tx: c, m: e.m}) })
+	var notes []string
+	seq, err := e.m.bus.Append(ctx, e.seq, e.name, func(c *command.Tx) error {
+		t, err := e.m.run(c, fn)
+		notes = t.notes
+		return err
+	})
 	if err == nil && seq != 0 {
 		e.seq = seq
+	}
+	if err == nil {
+		e.m.note(notes)
 	}
 	return err
 }

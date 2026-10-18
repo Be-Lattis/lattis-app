@@ -137,10 +137,13 @@ func (t *tx) place(tb Table) (Table, error) {
 		if o.ID == tb.ID || !touches(tb.Row, tb.Bottom(), tb.Col, tb.Right(), o) {
 			continue
 		}
+		// Côte à côte, lignes qui se recoupent : fusion, lignes alignées par
+		// rang (voir aussi joinAdjacent).
+		overlap := o.Row <= tb.Bottom() && tb.Row <= o.Bottom()
 		switch {
-		case o.Row == tb.Row && o.Right()+1 == tb.Col && left == nil:
+		case overlap && o.Right()+1 == tb.Col && left == nil:
 			left = &tables[i]
-		case o.Row == tb.Row && tb.Right()+1 == o.Col && right == nil:
+		case overlap && tb.Right()+1 == o.Col && right == nil:
 			right = &tables[i]
 		}
 	}
@@ -154,12 +157,21 @@ func (t *tx) place(tb Table) (Table, error) {
 		}
 	}
 	if left != nil {
-		if tb, err = t.mergeRight(*left, tb); err != nil {
+		if err := t.joinTables(*left, tb); err != nil {
+			return tb, err
+		}
+		if tb, err = t.table(left.ID); err != nil {
 			return tb, err
 		}
 	}
 	if right != nil {
-		if tb, err = t.mergeRight(tb, *right); err != nil {
+		if r, err := t.table(right.ID); err == nil {
+			right = &r
+		}
+		if err := t.joinTables(tb, *right); err != nil {
+			return tb, err
+		}
+		if tb, err = t.table(tb.ID); err != nil {
 			return tb, err
 		}
 	}
