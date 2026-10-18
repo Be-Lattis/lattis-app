@@ -20,13 +20,15 @@
 		selected?: boolean;
 		/** Nouvelle configuration (carte zoomée ou déplacée : vue enregistrée, annulable). */
 		onconfig?: (cfg: ChartConfig) => void;
+		/** Point de carte cliqué : aller à la ligne id du tableau source. */
+		onrow?: (table: string, id: number) => void;
 	}
 
-	let { config, live, load, selected = false, onconfig }: Props = $props();
+	let { config, live, load, selected = false, onconfig, onrow }: Props = $props();
 
 	// Données déjà lues pour la même source : un graphique remplacé (vue de
 	// carte enregistrée) renaît sans clignoter, puis se relit.
-	const dataKey = (c: ChartConfig) => JSON.stringify([c.source, c.kind, c.x, c.series, c.mapCoords, c.mapDraft]);
+	const dataKey = (c: ChartConfig) => JSON.stringify([c.source, c.kind, c.x, c.series, c.mapCoords, c.mapDraft, c.colorBy]);
 	let info = $state.raw<ChartInfo | null>(untrack(() => lastInfo.get(dataKey(config)) ?? null));
 	let width = $state(untrack(() => lastWidth.get(dataKey(config)) ?? 0));
 	$effect(() => {
@@ -55,7 +57,7 @@
 	{#if info?.error}
 		<div class="err">Graphique « {config.title || config.source} » : {info.error}</div>
 	{:else if info && width > 0}
-		<Chart kind={config.kind} labels={info.labels ?? []} series={(info.series ?? []) as never} {width} height={boxH || height} style={config} animate={live.animate} interactive={selected} onview={(v) => onconfig?.({ ...config, mapView: v ?? undefined })} />
+		<Chart kind={config.kind} labels={info.labels ?? []} series={(info.series ?? []) as never} {width} height={boxH || height} style={config} animate={live.animate} interactive={selected} onview={(v) => onconfig?.({ ...config, mapView: v ?? undefined })} map={info} onpoint={onrow && ((r) => onrow(config.source, r))} />
 	{/if}
 </div>
 

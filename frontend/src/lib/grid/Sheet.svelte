@@ -196,6 +196,8 @@
 		mapDraft?: boolean;
 		/** Carte : vue choisie (centre et zoom) ; absente, ajustée aux points. */
 		mapView?: { lat: number; lon: number; zoom: number };
+		/** Carte de points : colonne dont chaque valeur distincte prend sa couleur. */
+		colorBy?: string;
 		/** Fréquences : nombre de classes (absent : automatique). */
 		bins?: number;
 		offX?: number;
@@ -214,6 +216,11 @@
 		invalid?: number;
 		/** Carte : colonnes de coordonnées repérées par le classeur. */
 		guess?: MapGuess | null;
+		/** Carte tirée d'un tableau : ligne (id) de chaque point. */
+		rows?: number[] | null;
+		/** Carte colorée : valeurs distinctes triées, et rang de la valeur de chaque point (−1 : vide). */
+		categories?: string[] | null;
+		groups?: number[] | null;
 	}
 
 	export interface DepTarget {
@@ -491,9 +498,11 @@
 		sheetName?: string;
 		/** Retour à une feuille (formule pointée sur une autre feuille, validée ou abandonnée). */
 		onsheet?: (sheet: number) => void;
+		/** Point de carte cliqué : aller à la ligne id du tableau (éventuellement sur une autre feuille). */
+		onrowlink?: (table: string, id: number) => void;
 	}
 
-	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', freeze, zoom = 1, onzoom, animate = true, sheetName = '', onsheet }: Props = $props();
+	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', freeze, zoom = 1, onzoom, animate = true, sheetName = '', onsheet, onrowlink }: Props = $props();
 
 	// Feuille sans fin pratique (choix de Louis) : au-delà des limites d'Excel,
 	// bornée par la nomenclature Cell[ZZZZ999999999] (4 lettres, 9 chiffres).
@@ -4457,6 +4466,13 @@
 		writing = writing.catch(() => undefined).then(() => set(id, { ...ch.config, mapView: v ?? undefined }).then(undefined, (err) => say(String(err?.message ?? err))));
 	}
 
+	/** Point de carte cliqué : la carte se désélectionne (comme un clic dans la grille), puis la ligne est sélectionnée. */
+	function pointToRow(ch: SheetChart, id: number) {
+		if (selChart === ch.id) selChart = null;
+		if (panel?.kind === 'chart') panel = null;
+		onrowlink?.(ch.config.source, id);
+	}
+
 	function pasteChart(cfg: ChartConfig) {
 		if (!source.createChart) return;
 		const create = source.createChart;
@@ -8015,7 +8031,7 @@
 						{#if ch.error}
 							<p class="chart-error">Graphique : {ch.error}</p>
 						{:else}
-							<Chart kind={ch.config.kind} labels={ch.labels} series={ch.series} width={box.w} height={box.h} style={ch.config} {animate} grow={grownCharts.has(ch.id)} interactive={selChart === ch.id} onview={(v) => setMapView(ch.id, v)} />
+							<Chart kind={ch.config.kind} labels={ch.labels} series={ch.series} width={box.w} height={box.h} style={ch.config} {animate} grow={grownCharts.has(ch.id)} interactive={selChart === ch.id} onview={(v) => setMapView(ch.id, v)} map={ch} onpoint={onrowlink && ((r) => pointToRow(ch, r))} />
 						{/if}
 						{#if selChart === ch.id}
 							{#each ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] as dir (dir)}

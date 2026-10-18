@@ -187,6 +187,32 @@
 		sheet?.selectRange(c.row, c.col, c.row, c.col);
 		sheet?.focus();
 	}
+	/**
+	 * Point de carte cliqué (feuille ou document) : va sur la feuille du
+	 * tableau et sélectionne la ligne du point, retrouvée par son identifiant
+	 * (le tri ou le filtre du moment sont suivis).
+	 */
+	async function gotoRow(table: string, id: number) {
+		if (mode !== 'doc') return;
+		try {
+			const spot = await DocumentService.LocateRow(table, id);
+			view = 'grid';
+			if (spot.sheet !== sheetId) {
+				sheet?.closeOverlays();
+				sheetId = spot.sheet;
+				await reload();
+			}
+			await tick();
+			await new Promise((r) => requestAnimationFrame(r));
+			const last = spot.col + Math.max(1, spot.cols) - 1;
+			// Ligne masquée par le filtre : l'en-tête du tableau est sélectionné.
+			sheet?.selectRange(spot.row, spot.col, spot.row, last);
+			if (spot.hidden) notice = `Ligne masquée par le filtre de ${spot.table}`;
+			sheet?.focus();
+		} catch (e) {
+			notice = err(e);
+		}
+	}
 	let shareDlg = $state<{ republish: boolean } | null>(null);
 	// Fichier › Partager… : droits du classeur publié (propriétaire ou
 	// concepteur), aussi depuis le menu Compte ; onglet SQL : règles et
@@ -1403,6 +1429,7 @@
 						autoBench={bench ? (r) => GridService.ReportBench(r) : undefined}
 						sheetName={activeInfo?.name ?? ''}
 						onsheet={(id) => selectSheet(id).catch((e) => (notice = err(e)))}
+						onrowlink={mode === 'doc' ? gotoRow : undefined}
 					/>
 				</div>
 			{/key}
@@ -1462,6 +1489,7 @@
 							}}
 							onformat={(f) => (docFmt = f)}
 							onnotice={(m) => (notice = m)}
+							onrowlink={gotoRow}
 						/>
 						{:else}
 						<HtmlPage

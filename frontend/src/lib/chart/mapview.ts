@@ -131,3 +131,25 @@ export function fallbackTiles(tiles: ViewTile[], v: MapView, has: (z: number, x:
 export function heatRadius(base: number, zoom: number, fitZoom: number, w: number, h: number): number {
 	return Math.max(8, Math.min(Math.max(base, Math.min(w, h) / 4), base * 2 ** (zoom - fitZoom)));
 }
+
+/** Marge (px) autour d'un point dans laquelle un clic ou le survol le prend. */
+export const HIT_SLOP = 3;
+
+/**
+ * Point sous le curseur (px, py) : parmi les points (centre x, y, rayon r)
+ * dont le disque élargi de slop contient le curseur, le plus proche de son
+ * centre ; à égalité, le dernier dessiné (au-dessus). −1 : aucun.
+ */
+export function hitPoint(pts: readonly { x: number; y: number; r: number }[], px: number, py: number, slop = HIT_SLOP): number {
+	let best = -1;
+	let bestD = Infinity;
+	for (let i = 0; i < pts.length; i++) {
+		const p = pts[i];
+		const d = Math.hypot(p.x - px, p.y - py);
+		if (d <= p.r + slop && d <= bestD) {
+			best = i;
+			bestD = d;
+		}
+	}
+	return best;
+}

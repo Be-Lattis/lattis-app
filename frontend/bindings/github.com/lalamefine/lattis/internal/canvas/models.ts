@@ -244,6 +244,12 @@ export interface ChartConfig {
     "mapView"?: MapView | null;
 
     /**
+     * ColorBy : carte de points, colonne dont chaque valeur distincte prend
+     * sa couleur (ChartInfo.Categories et Groups) ; vide : une seule couleur.
+     */
+    "colorBy"?: string;
+
+    /**
      * Bins : histogramme de fréquences, nombre de classes (0 : automatique).
      */
     "bins"?: number;
@@ -271,6 +277,20 @@ export interface ChartInfo {
      * Guess : carte, colonnes de coordonnées repérées (proposées par le volet).
      */
     "guess"?: MapGuess | null;
+
+    /**
+     * Rows : carte tirée d'un tableau, identifiant (id) de la ligne de chaque
+     * point, pour aller à la ligne d'un clic (LocateRow).
+     */
+    "rows"?: number[] | null;
+
+    /**
+     * Categories : carte colorée (ColorBy), valeurs distinctes triées
+     * (nombres, puis texte sans tenir compte de la casse) ; Groups : rang de
+     * la valeur de chaque point dans Categories, -1 pour une cellule vide.
+     */
+    "categories"?: string[] | null;
+    "groups"?: number[] | null;
 }
 
 /**
@@ -840,6 +860,20 @@ export interface Rect {
 export interface RowHeight {
     "row": number;
     "height": number;
+}
+
+/**
+ * RowSpot : place d'une ligne de tableau sur sa feuille (LocateRow). Row
+ * est la ligne de la feuille où elle s'affiche, Col et Cols les colonnes du
+ * tableau ; Hidden : ligne masquée par le filtre (Row est alors l'en-tête).
+ */
+export interface RowSpot {
+    "table": string;
+    "sheet": number;
+    "row": number;
+    "col": number;
+    "cols": number;
+    "hidden"?: boolean;
 }
 
 /**

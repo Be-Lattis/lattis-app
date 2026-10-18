@@ -1,11 +1,16 @@
 package canvas
 
 import (
+	"context"
+	"database/sql"
+	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"unicode"
 
 	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // MapGuess : colonnes de coordonnées repérées dans un tableau, proposées à
@@ -75,6 +80,18 @@ func (t *tx) mapData(cfg ChartConfig, tb Table) (chartResult, error) {
 	for _, i := range cols {
 		sel = append(sel, exprs[i])
 	}
+	// Identifiant de la ligne (clic sur un point), puis colonne de couleur.
+	idAt := len(sel)
+	sel = append(sel, "id")
+	colorAt, colorCol := -1, Column{}
+	if cfg.ColorBy != "" {
+		ci, err := find(cfg.ColorBy)
+		if err != nil {
+			return chartResult{}, err
+		}
+		colorAt, colorCol = len(sel), tb.Cols[ci]
+		sel = append(sel, exprs[ci])
+	}
 	q := `SELECT ` + strings.Join(sel, ", ") + ` FROM ` + tb.sql() + ` ORDER BY _pos LIMIT ?` + fmt.Sprint(len(args)+1)
 	rs, err := t.query(q, append(args, MaxChartPoints)...)
 	if err != nil {
@@ -85,7 +102,9 @@ func (t *tx) mapData(cfg ChartConfig, tb Table) (chartResult, error) {
 	if !single {
 		lonName = tb.Cols[cols[1]].Name
 	}
-	out := chartResult{guess: g, labels: []string{}, series: []ChartSeries{{Name: latName, Values: []*float64{}}, {Name: lonName, Values: []*float64{}}}}
+	out := chartResult{guess: g, labels: []string{}, rows: []int64{}, series: []ChartSeries{{Name: latName, Values: []*float64{}}, {Name: lonName, Values: []*float64{}}}}
+	// Couleur : valeur de chaque point, rangée ensuite parmi les valeurs distinctes.
+	var colorVals []formula.Value
 	hasVal := len(cols) > nc
 	if hasVal {
 		out.series = append(out.series, ChartSeries{Name: tb.Cols[cols[nc]].Name, Values: []*float64{}})
@@ -128,6 +147,18 @@ func (t *tx) mapData(cfg ChartConfig, tb Table) (chartResult, error) {
 			label = vals[0].String()
 		}
 		out.labels = append(out.labels, label)
+		if id := vals[idAt]; id.Kind == formula.Number {
+			out.rows = append(out.rows, int64(id.Num))
+		} else {
+			out.rows = append(out.rows, 0)
+		}
+		if colorAt >= 0 {
+			v := vals[colorAt]
+			if colorCol.Formula == "" && colorCol.Type == grid.Date && v.Kind == formula.Number {
+				v = formula.DateSerial(v.Num)
+			}
+			colorVals = append(colorVals, v)
+		}
 		a, o := lat, lon
 		out.series[0].Values = append(out.series[0].Values, &a)
 		out.series[1].Values = append(out.series[1].Values, &o)
@@ -141,7 +172,66 @@ func (t *tx) mapData(cfg ChartConfig, tb Table) (chartResult, error) {
 			}
 		}
 	}
-	return out, rs.Err()
+	if err := rs.Err(); err != nil {
+		return chartResult{}, err
+	}
+	if colorAt >= 0 {
+		out.cats, out.groups = mapCategories(colorVals)
+	}
+	return out, nil
+}
+
+// mapCategories range les valeurs de la colonne de couleur : valeurs
+// distinctes (par leur texte affiché) triées, nombres d'abord (par valeur),
+// puis le reste par texte sans tenir compte de la casse ; et pour chaque
+// point le rang de sa valeur (-1 : cellule vide). Le tri, et non l'ordre
+// des lignes, fixe le rang : trier ou déplacer des lignes ne change pas
+// les couleurs.
+func mapCategories(vals []formula.Value) ([]string, []int) {
+	type cat struct {
+		v     formula.Value
+		label string
+	}
+	seen := map[string]int{}
+	var cats []cat
+	for _, v := range vals {
+		if mapBlank(v) {
+			continue
+		}
+		l := v.String()
+		if _, ok := seen[l]; !ok {
+			seen[l] = len(cats)
+			cats = append(cats, cat{v, l})
+		}
+	}
+	sort.SliceStable(cats, func(i, j int) bool {
+		a, b := cats[i], cats[j]
+		an, bn := a.v.Kind == formula.Number, b.v.Kind == formula.Number
+		if an != bn {
+			return an
+		}
+		if an && a.v.Num != b.v.Num {
+			return a.v.Num < b.v.Num
+		}
+		if la, lb := strings.ToLower(a.label), strings.ToLower(b.label); la != lb {
+			return la < lb
+		}
+		return a.label < b.label
+	})
+	labels := make([]string, len(cats))
+	for i, c := range cats {
+		labels[i] = c.label
+		seen[c.label] = i
+	}
+	groups := make([]int, len(vals))
+	for i, v := range vals {
+		if mapBlank(v) {
+			groups[i] = -1
+		} else {
+			groups[i] = seen[v.String()]
+		}
+	}
+	return labels, groups
 }
 
 func mapBlank(v formula.Value) bool {
@@ -290,4 +380,48 @@ func (t *tx) mapGuess(tb Table, exprs []string, args []any) (*MapGuess, error) {
 		return true
 	})
 	return g, nil
+}
+
+// RowSpot : place d'une ligne de tableau sur sa feuille (LocateRow). Row
+// est la ligne de la feuille où elle s'affiche, Col et Cols les colonnes du
+// tableau ; Hidden : ligne masquée par le filtre (Row est alors l'en-tête).
+type RowSpot struct {
+	Table  string `json:"table"`
+	Sheet  int64  `json:"sheet"`
+	Row    int    `json:"row"`
+	Col    int    `json:"col"`
+	Cols   int    `json:"cols"`
+	Hidden bool   `json:"hidden,omitempty"`
+}
+
+// LocateRow situe la ligne id (ChartInfo.Rows) d'un tableau : son rang
+// parmi les lignes affichées, dans l'ordre et le filtre du moment (un tri
+// ou un filtre posé après la lecture de la carte est suivi).
+func (m *Model) LocateRow(ctx context.Context, table string, id int64) (RowSpot, error) {
+	var spot RowSpot
+	err := m.read(ctx, func(t *tx) error {
+		tb, err := t.tableByName(table)
+		if err != nil {
+			return err
+		}
+		spot = RowSpot{Table: tb.Name, Sheet: tb.Sheet, Row: tb.Row, Col: tb.Col, Cols: len(tb.Cols)}
+		var pos string
+		if err := t.row(`SELECT _pos FROM `+tb.sql()+` WHERE id = ?`, id).Scan(&pos); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return fmt.Errorf("ligne introuvable dans %s (supprimée ?)", tb.Name)
+			}
+			return err
+		}
+		var shown, n int
+		if err := t.row(`SELECT count(*) FILTER (WHERE id = ?), count(*) FILTER (WHERE _pos < ?) FROM `+tb.view(), id, pos).Scan(&shown, &n); err != nil {
+			return err
+		}
+		if shown == 0 {
+			spot.Hidden = true
+			return nil
+		}
+		spot.Row = tb.Row + 1 + n
+		return nil
+	})
+	return spot, err
 }

@@ -38,6 +38,7 @@ export type {
     RangeRules,
     Rect,
     RowHeight,
+    RowSpot,
     Rule,
     RuleChanges,
     RuleMark,
