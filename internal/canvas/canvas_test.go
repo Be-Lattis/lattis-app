@@ -1923,3 +1923,49 @@ func TestDeleteSheetWithTables(t *testing.T) {
 	}
 	check(t, d, "feuille rendue")
 }
+
+// Couper-coller d'un tableau croisé entier : il se déplace ; copier-coller :
+// une copie sous un nouveau nom. L'annulation revient à l'état de départ.
+func TestPivotMoveCopy(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Pays", "Ventes"}, {"FR", "10"}, {"IT", "5"}}); err != nil {
+		t.Fatal(err)
+	}
+	sheet, err := d.CreatePivot(ctx, PivotConfig{Source: "Feuille1", Rows: "Pays", Value: "Ventes", Agg: "sum"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := dump(t, d)
+	l, err := d.Layout(ctx, sheet)
+	if err != nil || len(l.Pivots) != 1 {
+		t.Fatalf("tcd : %v %+v", err, l.Pivots)
+	}
+	id := l.Pivots[0].ID
+	// Sur le tableau source : refusé.
+	if err := d.MovePivot(ctx, id, 1, 1, 0); err == nil {
+		t.Fatal("tableau croisé posé sur un tableau")
+	}
+	if err := d.MovePivot(ctx, id, 1, 10, 4); err != nil {
+		t.Fatal(err)
+	}
+	if l, _ := d.Layout(ctx, 1); len(l.Pivots) != 1 || l.Pivots[0].Row != 10 || l.Pivots[0].Col != 4 {
+		t.Fatalf("déplacé : %+v", l.Pivots)
+	}
+	nid, err := d.CopyPivot(ctx, id, 1, 20, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	l, _ = d.Layout(ctx, 1)
+	if len(l.Pivots) != 2 || nid == id || l.Pivots[0].Config.Name == l.Pivots[1].Config.Name {
+		t.Fatalf("copie : %+v", l.Pivots)
+	}
+	if len(l.Pivots[1].Cells) != len(l.Pivots[0].Cells) {
+		t.Fatalf("copie sans les mêmes cellules : %+v", l.Pivots)
+	}
+	d.bus.Undo(ctx)
+	d.bus.Undo(ctx)
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation :\n%s", diff(before, got))
+	}
+}

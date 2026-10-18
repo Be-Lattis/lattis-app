@@ -134,6 +134,12 @@ export interface Clip extends Rect {
 	values: string[][];
 	/** Valeurs seules (zone qui touche un tableau croisé) : collée comme un texte. */
 	plain: boolean;
+	/**
+	 * Tableau croisé copié ou coupé en entier (comme Excel) : il se colle en
+	 * tableau croisé (copie, ou déplacement s'il est coupé) ; dr, dc : place
+	 * de son coin dans la zone copiée.
+	 */
+	pivot?: { id: number; dr: number; dc: number };
 }
 
 /** Le texte collé vient-il de la dernière copie de Lattis (collage riche) ? */

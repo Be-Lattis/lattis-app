@@ -138,3 +138,16 @@ func (s *DocumentService) DocControl(ctx context.Context, id int64) (api.Control
 func (s *DocumentService) SetControlValue(ctx context.Context, id int64, raw string) (ScriptResult, error) {
 	return api.SetControlValue(host{s}, id, raw)
 }
+
+// MovePivot déplace un tableau croisé entier (couper-coller).
+func (s *DocumentService) MovePivot(ctx context.Context, id, sheet int64, row, col int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.MovePivot(ctx, id, sheet, row, col) })
+}
+
+// CopyPivot colle une copie d'un tableau croisé entier.
+func (s *DocumentService) CopyPivot(ctx context.Context, id, sheet int64, row, col int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error {
+		_, err := d.CopyPivot(ctx, id, sheet, row, col)
+		return err
+	})
+}

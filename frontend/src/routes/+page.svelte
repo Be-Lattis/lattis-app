@@ -606,6 +606,8 @@
 		placeButton: (id, row, col, offX, offY, w, h) => DocumentService.PlaceButton(id, row, col, offX, offY, w, h).then(reload),
 		deleteButton: (id) => DocumentService.DeleteButton(id).then(reload),
 		deletePivot: (id) => DocumentService.DeletePivot(id).then(reload),
+		movePivot: (id, row, col) => DocumentService.MovePivot(id, sheetId, row, col).then(reload),
+		copyPivot: (id, row, col) => DocumentService.CopyPivot(id, sheetId, row, col).then(reload),
 		duplicatesPreview: (t, cols) => DocumentService.DuplicatesPreview(t.name, cols),
 		removeDuplicates: async (t, cols) => {
 			const n = await DocumentService.RemoveDuplicates(t.name, cols);

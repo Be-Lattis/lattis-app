@@ -15,7 +15,7 @@
 	import { Axis } from './axis';
 	import { DEFAULT_NAME_HINT, isDefaultTableName } from './defaultname';
 	import { ease, flashAlpha, lerpBar, motionAt, progress, reducedMotion, sameBar, shiftAxis, tableMotions, zeroBar, type AxisLike, type BarSpan, type Geo, type LinesShift, type Motion } from './anim';
-	import { followClip, overlaps, parseTSV, pasteArea, richClip, tileBlock, toTSV, type Clip, type Rect as ClipRect } from './clipboard';
+	import { followClip, overlaps, parseTSV, pasteArea, richClip, sameClipText, tileBlock, toTSV, type Clip, type Rect as ClipRect } from './clipboard';
 	import { isNumericText, painterPatch, parseStyle, resolveStyle, type CellStyle, type StyleLayer } from './style';
 	import { formatCell } from './numfmt';
 	import { autoHeight, cellFont, fontPx, lineHeight, wrapLines } from './textwrap';
@@ -361,6 +361,10 @@
 		deleteButton?(id: number): Promise<unknown>;
 		setPivot?(id: number, cfg: PivotConfig): Promise<unknown>;
 		deletePivot?(id: number): Promise<unknown>;
+		/** Tableau croisé entier coupé puis collé : déplacé en (row, col) de la feuille affichée. */
+		movePivot?(id: number, row: number, col: number): Promise<unknown>;
+		/** Tableau croisé entier copié puis collé : une copie en (row, col). */
+		copyPivot?(id: number, row: number, col: number): Promise<unknown>;
 		/** Supprime les lignes en double ; renvoie leur nombre. */
 		removeDuplicates?(table: SheetTable, cols: number[]): Promise<number>;
 		/** Nombre de lignes que removeDuplicates retirerait. */
@@ -2947,7 +2951,7 @@
 			say('Fusionner et centrer ne s’applique pas dans un tableau : un tableau garde une cellule par valeur. Fusionnez des cellules libres, hors des tableaux.');
 			return;
 		}
-		writing = writing.then(async () => {
+		writing = writing.catch(() => undefined).then(async () => {
 			try {
 				const n = await mergeCells(r0, c0, r1, c1);
 				moveTo(r0, c0);
@@ -3921,7 +3925,7 @@
 			const col = cax().indexAt(b.x);
 			const row = rax().indexAt(b.y);
 			const place = source.placeChart!;
-			writing = writing.then(() =>
+			writing = writing.catch(() => undefined).then(() =>
 				place(ch.id, row, col, Math.round(b.x - cax().offset(col)), Math.round(b.y - rowTop(row)), Math.round(b.w), Math.round(b.h)).then(
 					() => {
 						chartGesture = null;
@@ -4017,7 +4021,7 @@
 		const create = source.createChart;
 		const { row, col } = active;
 		const before = new Set(charts.map((c) => c.id));
-		writing = writing.then(() =>
+		writing = writing.catch(() => undefined).then(() =>
 			create(freeChartSpot(row, col, cfg.width, cfg.height).row, col, cfg).then(
 				() => {
 					say('Graphique collé');
@@ -4040,7 +4044,7 @@
 			const create = source.createChart;
 			const name = pv.config.name ?? '';
 			const before = new Set(charts.map((c) => c.id));
-			writing = writing.then(() =>
+			writing = writing.catch(() => undefined).then(() =>
 				create(freeChartSpot(pv.row, pv.col + head.length + 1).row, pv.col + head.length + 1, { source: name, kind, x: head[0], series }).then(
 					() => {
 						say(`Graphique du tableau croisé « ${name} » inséré`);
@@ -4080,7 +4084,7 @@
 		}
 		const create = source.createChart;
 		const before = new Set(charts.map((c) => c.id));
-		writing = writing.then(() =>
+		writing = writing.catch(() => undefined).then(() =>
 			create(freeChartSpot(e.t.row, e.lastCol + 2).row, e.lastCol + 2, { source: e.t.name, kind, x: kind === 'map' ? (cols.find((c) => !num(c)) ?? x).name : x.name, series }).then(
 				() => {
 					say('Graphique inséré : double-clic pour le modifier, glissez-le pour le déplacer');
@@ -4138,7 +4142,7 @@
 		const cfg: PivotConfig = { source: e.t.name, rowFields: [first], values: [num ? { field: num.name, agg: 'sum' } : { agg: 'count' }] };
 		openPivotOnLoad = true;
 		const create = source.createPivot;
-		writing = writing.then(() => create(cfg).then(() => undefined, (err) => say(String(err?.message ?? err))));
+		writing = writing.catch(() => undefined).then(() => create(cfg).then(() => undefined, (err) => say(String(err?.message ?? err))));
 	}
 
 	/**
@@ -4830,7 +4834,7 @@
 		rebuildAxis();
 		updateExtent();
 		schedule();
-		writing = writing.then(() => setWidth(c, width).then(() => undefined, (err) => say(String(err?.message ?? err))));
+		writing = writing.catch(() => undefined).then(() => setWidth(c, width).then(() => undefined, (err) => say(String(err?.message ?? err))));
 	}
 
 	/** La souris est-elle sur la bordure de la sélection (poignée de déplacement) ? */
@@ -4878,7 +4882,7 @@
 		const copy = !!m.copy;
 		const transfer = source.transfer;
 		clipRange = null;
-		writing = writing.then(async () => {
+		writing = writing.catch(() => undefined).then(async () => {
 			try {
 				const msg = await transfer(sheetId(), m.sel, dst, !copy, values);
 				active = snapMerge(dst.r0, dst.c0);
@@ -4961,7 +4965,7 @@
 			col = right ? sel.c1 + 1 : to.c0;
 		}
 		const paste = source.paste;
-		writing = writing.then(async () => {
+		writing = writing.catch(() => undefined).then(async () => {
 			try {
 				await paste(row, col, block);
 				message = 'Recopie incrémentée (Ctrl+Z pour annuler)';
@@ -5105,7 +5109,7 @@
 				updateExtent();
 				schedule();
 				const set = source.setRowHeight;
-				writing = writing.then(() => set(rb, 0).then(() => undefined, (err) => say(String(err?.message ?? err))));
+				writing = writing.catch(() => undefined).then(() => set(rb, 0).then(() => undefined, (err) => say(String(err?.message ?? err))));
 				return;
 			}
 			rowResizing = { row: rb, startY: e.clientY, startH: rh(rb), height: rh(rb) };
@@ -5475,7 +5479,7 @@
 		const block = copyFillBlock(plan, down, (r, c) => cellInfo(r, c).value);
 		const paste = source.paste;
 		lastRepeat = () => copyFill(down);
-		writing = writing.then(async () => {
+		writing = writing.catch(() => undefined).then(async () => {
 			try {
 				await paste(dst.r0, dst.c0, block);
 				message = `Recopié vers ${down ? 'le bas' : 'la droite'} (Ctrl+Z pour annuler)`;
@@ -5728,11 +5732,12 @@
 
 	// Les saisies partent l'une après l'autre : la suivante peut dépendre de
 	// la précédente (une saisie fait naître un tableau, la suivante le remplit).
+	// Une écriture qui échoue ne bloque jamais les suivantes (catch).
 	let writing: Promise<void> = Promise.resolve();
 	// keep : saisie au clavier ; refusée, son texte revient dans l'éditeur
 	// (sur sa cellule) au lieu d'être perdu.
 	function write(row: number, col: number, raw: string, keep = false): Promise<void> {
-		writing = writing.then(() => writeNow(row, col, raw, keep));
+		writing = writing.catch(() => undefined).then(() => writeNow(row, col, raw, keep));
 		return writing;
 	}
 
@@ -5847,7 +5852,7 @@
 		const text = editValueText;
 		const paste = source.paste;
 		const fill = (s: Range) =>
-			(writing = writing.then(async () => {
+			(writing = writing.catch(() => undefined).then(async () => {
 				try {
 					message = (await paste(s.r0, s.c0, fillBlock(s, text))) ?? '';
 				} catch (err) {
@@ -5938,7 +5943,7 @@
 			// Tout en une seule étape d'annulation.
 			const clear = source.clearRange;
 			const tables = whole.map((e) => e.t);
-			writing = writing.then(() =>
+			writing = writing.catch(() => undefined).then(() =>
 				clear(r0, c0, r1, c1, all).then(
 					() => {
 						if (tables.length > 1) say(`${tables.length} tableaux supprimés (Ctrl+Z pour annuler)`);
@@ -5973,7 +5978,7 @@
 		if (whole.length && source.deleteTables) {
 			const del = source.deleteTables;
 			const tables = whole.map((e) => e.t);
-			writing = writing.then(() =>
+			writing = writing.catch(() => undefined).then(() =>
 				del(tables).then(
 					() => say(tables.length > 1 ? `${tables.length} tableaux supprimés (Ctrl+Z pour annuler)` : `Tableau « ${tables[0].name} » supprimé (Ctrl+Z pour annuler)`),
 					(err) => say(String(err?.message ?? err))
@@ -5990,7 +5995,7 @@
 				}
 		}
 		if (wipe) {
-			writing = writing.then(() =>
+			writing = writing.catch(() => undefined).then(() =>
 				wipe(r0, c0, r1, c1).then(
 					() => say('Cellules supprimées (Ctrl+Z pour annuler)'),
 					(err) => say(String(err?.message ?? err))
@@ -6124,7 +6129,7 @@
 		wrap.focus();
 		if (!source.renameTable || name === t.name) return;
 		const rename = source.renameTable;
-		writing = writing.then(async () => {
+		writing = writing.catch(() => undefined).then(async () => {
 			try {
 				await rename(t, name);
 				message = `Tableau renommé « ${name} »`;
@@ -6194,7 +6199,7 @@
 			return;
 		}
 		const setName = source.setName;
-		writing = writing.then(async () => {
+		writing = writing.catch(() => undefined).then(async () => {
 			try {
 				await setName(row, col, text);
 				message = text ? `Cellule nommée « ${text} »` : 'Nom retiré';
@@ -6298,7 +6303,11 @@
 			if (f) return f.text;
 			if (info.value) return info.value;
 			const p = pivotAt(r, c);
-			if (p) return p.cells[r - p.row]?.[c - p.col] ?? '';
+			if (p) {
+				// Comme affichées (format de nombre du TCD), comme Excel les copie.
+				const v = p.cells[r - p.row]?.[c - p.col] ?? '';
+				return v === '' ? '' : formatCell(v, undefined, styleAt(r, c));
+			}
 			for (const sp of spills) {
 				const v = sp.rows[r - sp.row]?.[c - sp.col];
 				if (v !== undefined) return v;
@@ -6375,9 +6384,22 @@
 		const values = rangeValues(sel);
 		if (!values) return null;
 		const text = toTSV(values);
-		// Un tableau croisé se copie en valeurs.
-		const plain = !source.transfer || !!pivotIn(sel.r0, sel.c0, sel.r1, sel.c1);
-		clipRange = { ...sel, sheet: sheetId(), cut, text, values, plain };
+		// Un tableau croisé se copie en valeurs, sauf pris en entier : il se
+		// colle alors en tableau croisé (copie, ou déplacé s'il est coupé).
+		// Une partie seulement ne se coupe pas (Excel).
+		const pv = pivotIn(sel.r0, sel.c0, sel.r1, sel.c1);
+		let pivot: Clip['pivot'];
+		if (pv) {
+			const top = pv.anchor ?? pv.row;
+			const whole = sel.r0 <= top && sel.c0 <= pv.col && sel.r1 >= pv.row + pv.cells.length - 1 && sel.c1 >= pv.col + pv.cells[0].length - 1;
+			if (whole) pivot = { id: pv.id, dr: top - sel.r0, dc: pv.col - sel.c0 };
+			else if (cut) {
+				say('Une partie d’un tableau croisé ne se coupe pas : sélectionnez-le en entier pour le déplacer, ou copiez ses valeurs (Ctrl+C)');
+				return null;
+			}
+		}
+		const plain = !source.transfer || !!pv;
+		clipRange = { ...sel, sheet: sheetId(), cut, text, values, plain, pivot };
 		schedule();
 		return text;
 	}
@@ -6490,6 +6512,29 @@
 		const block = parseTSV(text);
 		if (block.length === 0) return false;
 		const sel = selection();
+		// Tableau croisé copié ou coupé en entier : collé en tableau croisé.
+		const pc = clipRange?.pivot && sameClipText(clipRange.text, text) ? clipRange : null;
+		if (pc?.pivot && source.movePivot && source.copyPivot) {
+			const { id, dr, dc } = pc.pivot;
+			const op = pc.cut ? source.movePivot : source.copyPivot;
+			writing = writing.catch(() => undefined).then(() =>
+				op(id, sel.r0 + dr, sel.c0 + dc).then(
+					() => {
+						// Coupé : le cadre part une fois le déplacement fait (refusé, on peut recoller ailleurs).
+						if (pc.cut && clipRange === pc) clipRange = null;
+						message = pc.cut ? 'Tableau croisé déplacé (Ctrl+Z pour annuler)' : 'Tableau croisé collé (Ctrl+Z pour annuler)';
+						refreshStatus();
+						schedule();
+					},
+					(err) => {
+						message = String(err instanceof Error ? err.message : err);
+						refreshStatus();
+						schedule();
+					}
+				)
+			);
+			return true;
+		}
 		const rich = source.transfer ? richClip(clipRange, text) : null;
 		const h = rich ? rich.r1 - rich.r0 + 1 : block.length;
 		const w = rich ? rich.c1 - rich.c0 + 1 : Math.max(...block.map((r) => r.length));
@@ -6516,7 +6561,7 @@
 			const transfer = source.transfer;
 			const src = { r0: rich.r0, c0: rich.c0, r1: rich.r1, c1: rich.c1 };
 			if (rich.cut) clipRange = null;
-			writing = writing.then(() =>
+			writing = writing.catch(() => undefined).then(() =>
 				transfer(rich.sheet, src, area, rich.cut, rich.values).then(
 					(m) => done(m, rich.cut ? 'Cellules déplacées (Ctrl+Z pour annuler)' : 'Collé (Ctrl+Z pour annuler)'),
 					fail
@@ -6528,11 +6573,14 @@
 		const tiled = tileBlock(block, sel);
 		const cut = clipRange?.cut && richClip({ ...clipRange, plain: false }, text) ? clipRange : null;
 		const paste = source.paste;
-		writing = writing.then(() => paste(area.r0, area.c0, tiled).then((m) => done(m, `${tiled.length} ligne(s) collée(s)`), fail));
+		writing = writing.catch(() => undefined).then(() => paste(area.r0, area.c0, tiled).then((m) => done(m, `${tiled.length} ligne(s) collée(s)`), fail));
 		if (cut) {
 			clipRange = null;
 			// Une zone coupée de la feuille s'efface ensuite (hors cible).
-			if (cut.sheet === sheetId() && !overlaps(cut, area)) writing = writing.then(() => clearSelection(cut));
+			// clearSelection se met elle-même à la suite des écritures (après le
+			// collage) : l'appeler depuis la file la ferait s'attendre elle-même
+			// et bloquerait toute saisie ensuite.
+			if (cut.sheet === sheetId() && !overlaps(cut, area)) void clearSelection(cut);
 		}
 		return true;
 	}
@@ -6667,7 +6715,7 @@
 		const del = source.deleteTables!;
 		menu = null;
 		wrap.focus();
-		writing = writing.then(() =>
+		writing = writing.catch(() => undefined).then(() =>
 			del([t]).then(
 				() => say(`Tableau « ${t.name} » supprimé (Ctrl+Z pour annuler)`),
 				(err) => say(String(err?.message ?? err))
@@ -6708,7 +6756,7 @@
 		freeMenu = null;
 		wrap.focus();
 		if (!fn) return;
-		writing = writing.then(async () => {
+		writing = writing.catch(() => undefined).then(async () => {
 			try {
 				await fn();
 				message = '';
@@ -6879,7 +6927,7 @@
 				if (height !== startH && source.setRowHeight) {
 					userHeights.set(row, height);
 					const setHeight = source.setRowHeight;
-					writing = writing.then(() => setHeight(row, height).then(() => undefined, (err) => say(String(err?.message ?? err))));
+					writing = writing.catch(() => undefined).then(() => setHeight(row, height).then(() => undefined, (err) => say(String(err?.message ?? err))));
 				}
 				return;
 			}
@@ -6889,7 +6937,7 @@
 			if (width === startW || !source.setColumnWidth) return;
 			userWidths.set(col, width);
 			const setWidth = source.setColumnWidth;
-			writing = writing.then(() => setWidth(col, width).then(() => undefined, (err) => say(String(err?.message ?? err))));
+			writing = writing.catch(() => undefined).then(() => setWidth(col, width).then(() => undefined, (err) => say(String(err?.message ?? err))));
 		};
 		window.addEventListener('mouseup', up);
 		const timer = setInterval(refreshStatus, 250);

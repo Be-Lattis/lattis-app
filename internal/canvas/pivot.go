@@ -213,3 +213,123 @@ func (m *Model) PivotData(ctx context.Context, cfg PivotConfig) PivotInfo {
 	}
 	return out
 }
+
+// MovePivot déplace un tableau croisé (couper-coller du tableau entier) :
+// son coin haut gauche va en (row, col) de la feuille sheet.
+func (m *Model) MovePivot(ctx context.Context, id, sheet int64, row, col int) error {
+	if row < 0 || col < 0 {
+		return fmt.Errorf("%w : hors de la feuille", ErrPivot)
+	}
+	return m.Do(ctx, "Déplacer le tableau croisé", func(t *tx) error {
+		if err := t.guardObject(`_lattis_pivots`, id); err != nil {
+			return err
+		}
+		if err := t.guard(sheet); err != nil {
+			return err
+		}
+		var s0 int64
+		var r0, c0 int
+		var raw string
+		if err := t.row(`SELECT sheet, row, col, config FROM _lattis_pivots WHERE id = ?`, id).Scan(&s0, &r0, &c0, &raw); err != nil {
+			return fmt.Errorf("%w : tableau croisé introuvable", ErrPivot)
+		}
+		var cfg PivotConfig
+		if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
+			return err
+		}
+		if err := t.pivotFree(sheet, row, col, cfg.normalized(), id); err != nil {
+			return err
+		}
+		q := `UPDATE _lattis_pivots SET sheet = ?, row = ?, col = ? WHERE id = ?`
+		return t.apply([]stmt{st(q, sheet, row, col, id)}, []stmt{st(q, s0, r0, c0, id)})
+	})
+}
+
+// CopyPivot pose une copie d'un tableau croisé (copier-coller du tableau
+// entier), sous un nouveau nom, en (row, col) de la feuille sheet ; renvoie
+// son identifiant.
+func (m *Model) CopyPivot(ctx context.Context, id, sheet int64, row, col int) (int64, error) {
+	if row < 0 || col < 0 {
+		return 0, fmt.Errorf("%w : hors de la feuille", ErrPivot)
+	}
+	var nid int64
+	err := m.Do(ctx, "Coller le tableau croisé", func(t *tx) error {
+		if err := t.guard(sheet); err != nil {
+			return err
+		}
+		var raw string
+		if err := t.row(`SELECT config FROM _lattis_pivots WHERE id = ?`, id).Scan(&raw); err != nil {
+			return fmt.Errorf("%w : tableau croisé introuvable", ErrPivot)
+		}
+		var cfg PivotConfig
+		if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
+			return err
+		}
+		if err := t.pivotFree(sheet, row, col, cfg.normalized(), 0); err != nil {
+			return err
+		}
+		name, err := t.pivotName()
+		if err != nil {
+			return err
+		}
+		cfg.Name = name
+		if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_pivots`).Scan(&nid); err != nil {
+			return err
+		}
+		b, err := json.Marshal(cfg)
+		if err != nil {
+			return err
+		}
+		return t.apply(
+			[]stmt{st(`INSERT INTO _lattis_pivots (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, nid, sheet, row, col, string(b))},
+			[]stmt{st(`DELETE FROM _lattis_pivots WHERE id = ?`, nid)},
+		)
+	})
+	return nid, err
+}
+
+// pivotFree vérifie qu'un tableau croisé posé en (row, col) de la feuille
+// (filtres de rapport compris) ne recouvre ni un tableau ni un autre
+// tableau croisé (skip : celui qu'on déplace).
+func (t *tx) pivotFree(sheet int64, row, col int, cfg PivotConfig, skip int64) error {
+	cells, err := t.pivotCells(cfg)
+	if err != nil {
+		return err
+	}
+	h, w := len(cells), 1
+	if h > 0 {
+		w = len(cells[0])
+	}
+	if len(cfg.Filters) > 0 {
+		h += len(cfg.Filters) + 1
+	}
+	over := func(r0, c0, r1, c1 int) bool {
+		return r0 <= row+h-1 && r1 >= row && c0 <= col+w-1 && c1 >= col
+	}
+	tables, err := t.tables(sheet)
+	if err != nil {
+		return err
+	}
+	for _, tb := range tables {
+		if over(tb.Row, tb.Col, tb.Row+tb.Rows, tb.Col+len(tb.Cols)-1) {
+			return fmt.Errorf("%w : la place est prise par le tableau « %s » ; choisissez une zone libre", ErrPivot, tb.Name)
+		}
+	}
+	others, err := t.pivots(sheet)
+	if err != nil {
+		return err
+	}
+	for _, o := range others {
+		if o.ID == skip || len(o.Cells) == 0 {
+			continue
+		}
+		oh := len(o.Cells)
+		if len(o.Config.Filters) > 0 {
+			oh += len(o.Config.Filters) + 1
+		}
+		if over(o.Row, o.Col, o.Row+oh-1, o.Col+len(o.Cells[0])-1) {
+			return fmt.Errorf("%w : la place est prise par le tableau croisé « %s » ; choisissez une zone libre", ErrPivot, o.Config.Name)
+		}
+	}
+	return nil
+}

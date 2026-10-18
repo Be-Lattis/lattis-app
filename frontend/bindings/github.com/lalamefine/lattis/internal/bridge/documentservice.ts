@@ -161,6 +161,13 @@ export function ConvertPreview(table: string, i: number, to: grid$0.Type): $Canc
 }
 
 /**
+ * CopyPivot colle une copie d'un tableau croisé entier.
+ */
+export function CopyPivot(id: number, sheet: number, row: number, col: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2594540265, id, sheet, row, col);
+}
+
+/**
  * CopySheet copie un onglet (tableaux, cellules, mise en forme, objets) et
  * place la copie au rang to ; renvoie l'identifiant de la copie.
  */
@@ -532,6 +539,13 @@ export function MoveCells(sheet: number, r0: number, c0: number, r1: number, c1:
  */
 export function MoveChart(id: number, row: number, col: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(1597876373, id, row, col);
+}
+
+/**
+ * MovePivot déplace un tableau croisé entier (couper-coller).
+ */
+export function MovePivot(id: number, sheet: number, row: number, col: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3069941457, id, sheet, row, col);
 }
 
 /**
