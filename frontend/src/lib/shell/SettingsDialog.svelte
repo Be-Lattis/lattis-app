@@ -10,8 +10,10 @@
 
 	interface Props {
 		onclose: () => void;
+		/** Ouvre la fenêtre du serveur MCP (assistants compatibles MCP). */
+		onmcp?: () => void;
 	}
-	let { onclose }: Props = $props();
+	let { onclose, onmcp }: Props = $props();
 
 	let sectionId = $state(settingSections[0].id);
 	// Une fonctionnalité décochée cache ses réglages.
@@ -110,7 +112,10 @@
 				{#if error}<p class="error">{error}</p>{/if}
 			</section>
 		</div>
-		<footer><button class="primary" onclick={onclose}>Fermer</button></footer>
+		<footer>
+			{#if onmcp && mcpAvailable()}<button class="mcp" title="Laisser un assistant compatible MCP (Claude Desktop, Claude Code…) lire et modifier le classeur ouvert" onclick={onmcp}>Serveur MCP (assistants)…</button>{/if}
+			<button class="primary" onclick={onclose}>Fermer</button>
+		</footer>
 	</div>
 </div>
 
@@ -240,6 +245,9 @@
 		justify-content: flex-end;
 		padding: 10px 16px;
 		border-top: 1px solid #e3e5e8;
+	}
+	.mcp {
+		margin-right: auto;
 	}
 	button {
 		font: inherit;

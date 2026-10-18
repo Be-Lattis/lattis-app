@@ -8,6 +8,6 @@ Dans une entreprise, l'administrateur peut fixer certains réglages pour tout le
 
 ## Serveur MCP
 
-Assistant › Connexion › Application de bureau laisse un assistant compatible MCP (Claude Desktop, Claude Code…) lire et modifier le classeur ouvert. Le serveur n'écoute que sur cet ordinateur et exige un jeton, affiché dans la même fenêtre ; chaque modification de l'assistant s'annule avec `Ctrl+Z`.
+Fichier › Paramètres › Serveur MCP (assistants) laisse un assistant compatible MCP (Claude Desktop, Claude Code…) lire et modifier le classeur ouvert. Le serveur n'écoute que sur cet ordinateur et exige un jeton, affiché dans la même fenêtre ; chaque modification de l'assistant s'annule avec `Ctrl+Z`.
 
 ## Réglages disponibles

@@ -1736,7 +1736,7 @@
 	<!-- Accord demandé avant une écriture de Claude Desktop / Code (mcp.confirmWrites). -->
 	<McpConfirm />
 	{#if settingsOpen}
-		<SettingsDialog onclose={() => (settingsOpen = false)} />
+		<SettingsDialog onclose={() => (settingsOpen = false)} onmcp={() => { settingsOpen = false; mcpOpen = true; }} />
 	{/if}
 	{#if rightsOpen && canRights && share}
 		<RightsDialog title={share.title} server={share.server} link={share.link} onclose={() => (rightsOpen = false)} />
