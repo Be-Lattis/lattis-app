@@ -632,6 +632,8 @@
 			return n;
 		}),
 		deleteTables: (ts) => DocumentService.DeleteTables(ts.map((t) => t.name)).then(reload),
+		convertToRange: (t) => DocumentService.ConvertToRange(t.name).then(reload),
+		formatAsTable: (row, col) => DocumentService.FormatAsTable(sheetId, row, col).then(reload),
 		moveTable: (t, row, col) => DocumentService.MoveTable(t.name, row, col).then(reload),
 		extractColumns: (t, i0, i1, row, col) => DocumentService.ExtractColumns(t.name, i0, i1, row, col).then(reload),
 		applyStyle: (r0, c0, r1, c1, patch) => DocumentService.ApplyStyle(sheetId, r0, c0, r1, c1, patch).then(reload),
@@ -709,7 +711,8 @@
 						series: (c.series ?? []).map((s) => ({ name: s.name, values: (s.values ?? []).map((v) => v ?? null) }))
 					})),
 					pivots: (layout.pivots ?? []).map((p) => ({ ...p, config: p.config as PivotConfig, cells: (p.cells ?? []).map((r) => r ?? []) })),
-					buttons: (layout.buttons ?? []).map((b) => ({ ...b, config: b.config as ButtonConfig }))
+					buttons: (layout.buttons ?? []).map((b) => ({ ...b, config: b.config as ButtonConfig })),
+					ranges: layout.ranges ?? []
 				}
 			: null
 	);

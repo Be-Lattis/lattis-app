@@ -3,6 +3,7 @@ package canvas
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/command"
@@ -32,7 +33,7 @@ import (
 // layoutRe reconnaît une instruction qui peut changer la disposition d'une
 // feuille : ancres et colonnes des tableaux, cellules libres, lignes ajoutées
 // ou retirées d'un tableau.
-var layoutRe = regexp.MustCompile(`(?is)^\s*(INSERT\s+INTO|DELETE\s+FROM|ALTER\s+TABLE)\s+t_\d+\b|_lattis_(tables|cells|columns)\b`)
+var layoutRe = regexp.MustCompile(`(?is)^\s*(INSERT\s+INTO|DELETE\s+FROM|ALTER\s+TABLE)\s+t_\d+\b|_lattis_(tables|cells|columns|range_cells)\b`)
 
 func (t *tx) markLayout(do []stmt) {
 	if t.layout {
@@ -176,6 +177,14 @@ func (t *tx) joinStep(sheet int64, absorbed func(tb Table, first string, n int))
 	cells, err := t.cells(sheet)
 	if err != nil {
 		return false, err
+	}
+	// Les cellules d'une plage (tableau converti) restent libres.
+	marks, err := t.rangeMarks(sheet)
+	if err != nil {
+		return false, err
+	}
+	if len(marks) > 0 {
+		cells = slices.DeleteFunc(cells, func(c cell) bool { return marks[[2]int{c.Row, c.Col}] })
 	}
 	for _, tb := range tables {
 		if fixed[tb.ID] {

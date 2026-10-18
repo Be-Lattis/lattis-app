@@ -161,6 +161,13 @@ export function ConvertPreview(table: string, i: number, to: grid$0.Type): $Canc
 }
 
 /**
+ * ConvertToRange convertit un tableau en plage de cellules libres.
+ */
+export function ConvertToRange(name: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1037290081, name);
+}
+
+/**
  * CopyPivot colle une copie d'un tableau croisé entier.
  */
 export function CopyPivot(id: number, sheet: number, row: number, col: number): $CancellablePromise<$models.DocState> {
@@ -443,6 +450,13 @@ export function ForgetHTTPHost(h: string): $CancellablePromise<string[] | null> 
  */
 export function ForgetQueryCache(): $CancellablePromise<void> {
     return $Call.ByID(3234263277);
+}
+
+/**
+ * FormatAsTable refait un tableau de la plage qui contient la cellule.
+ */
+export function FormatAsTable(sheet: number, row: number, col: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3133102287, sheet, row, col);
 }
 
 /**

@@ -745,6 +745,14 @@ export const apiReference: RefEntry[] = [
 		args: [1, 5]
 	},
 	{
+		name: "tables.from_range",
+		category: "tables",
+		signature: "tables.from_range(row, col, [sheet])",
+		summary: "Refait un tableau d'une plage (tableau converti par tables.to_range) qui contient la cellule : sa première ligne donne les en-têtes. Renvoie le nom du tableau.",
+		details: "Paramètres — row : ligne de la feuille, à partir de 1 ; col : colonne de la feuille, à partir de 1 ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : tables.from_range{row = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		args: [1, 3]
+	},
+	{
 		name: "tables.get",
 		category: "tables",
 		signature: "tables.get(table)",
@@ -842,6 +850,14 @@ export const apiReference: RefEntry[] = [
 		details: "options : {delims, merge, quote, fixed, breaks, columns, decimal, thousands, dest}. delims : caractères séparateurs (\";\", \",\", \" \", \"\t\"…) ; merge = true : séparateurs consécutifs comptés pour un seul ; quote : qualificateur de texte (\"\\\"\" par défaut côté assistant, \"'\" ou \"\" pour aucun). fixed = true : largeur fixe, breaks donne les positions des coupures (en caractères). columns : format de chaque colonne produite, {format = \"\" (standard), \"text\", \"date\" ou \"skip\" (non importée), order = \"DMY\", \"MDY\", \"YMD\"… pour les dates}. decimal et thousands : séparateurs des nombres (\",\" et \" \" par défaut). dest : cellule de destination (« E2 ») dans des cellules libres. Paramètres — table : nom du tableau ; column : colonne (nom ou rang à partir de 1) ; options : {delims, merge, quote, fixed, breaks, columns, decimal, thousands}. Arguments dans l'ordre, ou une table d'arguments nommés : tables.text_to_columns{table = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		example: "tables.text_to_columns(\"Commandes\", \"Échéance\", {delims = \"/\", columns = {{format = \"text\"}}})",
 		args: [1, 3]
+	},
+	{
+		name: "tables.to_range",
+		category: "tables",
+		signature: "tables.to_range(table)",
+		summary: "Convertit un tableau en plage de cellules libres (comme Excel) : en-tête et valeurs restent au même endroit, avec leur mise en forme ; une colonne calculée donne sa formule en adresses de cellules (Cell[B2]*Cell[C2]) si elle se traduit simplement, sinon ses valeurs. Les formules qui citaient le tableau dans un agrégat visent ses cellules (Cell[B2:B9]) ; les autres donnent #REF!. La zone reste une plage : y écrire, ou juste à côté, ne refait pas de tableau.",
+		details: "Paramètres — table : nom du tableau. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		args: [1, 1]
 	},
 	{
 		name: "ui.alert",

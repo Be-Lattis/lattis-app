@@ -184,6 +184,35 @@ end`,
 				return nil, d.DeleteTables(c, names)
 			},
 		},
+		tableCmd("tables.to_range", "Convertir en plage",
+			"Convertit un tableau en plage de cellules libres (comme Excel) : en-tête et valeurs restent au même endroit, avec leur mise en forme ; une colonne calculée donne sa formule en adresses de cellules (Cell[B2]*Cell[C2]) si elle se traduit simplement, sinon ses valeurs. Les formules qui citaient le tableau dans un agrégat visent ses cellules (Cell[B2:B9]) ; les autres donnent #REF!. La zone reste une plage : y écrire, ou juste à côté, ne refait pas de tableau.",
+			true, func(c *Call, t tableRef) (any, error) {
+				d, _ := c.Doc()
+				return nil, d.ConvertToRange(c, t.Name)
+			}),
+		&Command{
+			Name:    "tables.from_range",
+			Label:   "Mettre sous forme de tableau",
+			Summary: "Refait un tableau d'une plage (tableau converti par tables.to_range) qui contient la cellule : sa première ligne donne les en-têtes. Renvoie le nom du tableau.",
+			Params:  []Param{pRow, pCol, pSheet},
+			Write:   true,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				row, err := c.Pos("row", 0)
+				if err != nil {
+					return nil, err
+				}
+				col, err := c.Pos("col", 0)
+				if err != nil {
+					return nil, err
+				}
+				d, _ := c.Doc()
+				return d.FormatAsTable(c, s.ID, row, col)
+			},
+		},
 		&Command{
 			Name:    "tables.move",
 			Label:   "Déplacer le tableau",

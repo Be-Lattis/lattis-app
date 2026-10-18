@@ -296,6 +296,9 @@ func (t *tx) moveCells(sheet int64, match func(cell) bool, dRow, dCol int) error
 	if err := t.apply(do, undo); err != nil {
 		return err
 	}
+	if err := t.moveMarks(sheet, match, dRow, dCol); err != nil {
+		return err
+	}
 	return t.moveNames(sheet, moved, dRow, dCol)
 }
 

@@ -65,6 +65,15 @@ func (m *Model) Paste(ctx context.Context, sheet int64, row, col int, block [][]
 		if err != nil {
 			return err
 		}
+		if free {
+			// Collé dans une plage (tableau converti) ou contre elle : des
+			// cellules libres qui l'agrandissent, pas un tableau.
+			near, err := t.nearRange(sheet, row, col, row+h-1, col+w-1)
+			if err != nil {
+				return err
+			}
+			free = !near
+		}
 		if free && h >= MinRows {
 			// La première ligne n'est un en-tête que si elle en a l'air (voir
 			// hasHeader) ; sinon les colonnes s'appellent « Colonne n » et

@@ -121,6 +121,8 @@ type Layout struct {
 	Pivots   []PivotInfo  `json:"pivots"`  // tableaux croisés, calculés
 	Charts   []ChartInfo  `json:"charts"`  // graphiques, avec leurs données
 	Buttons  []ButtonInfo `json:"buttons"` // boutons d'action
+	// Ranges : zones « plage » (tableaux convertis), en rectangles.
+	Ranges []Rect `json:"ranges"`
 	// Structure du classeur protégée (onglets), avec ou sans mot de passe.
 	WorkbookProtected bool `json:"workbookProtected"`
 	WorkbookPassword  bool `json:"workbookPassword"`
@@ -329,7 +331,11 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 		if l.Charts, err = t.charts(sheet); err != nil {
 			return err
 		}
-		l.Buttons, err = t.buttons(sheet)
+		if l.Buttons, err = t.buttons(sheet); err != nil {
+			return err
+		}
+		marks, err := t.rangeMarks(sheet)
+		l.Ranges = rangeRects(marks)
 		return err
 	})
 	return l, err

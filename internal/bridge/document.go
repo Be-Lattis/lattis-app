@@ -728,6 +728,19 @@ func (s *DocumentService) DeleteTables(ctx context.Context, names []string) (Doc
 	return s.act(ctx, func(d *doc.Document) error { return d.DeleteTables(ctx, names) })
 }
 
+// ConvertToRange convertit un tableau en plage de cellules libres.
+func (s *DocumentService) ConvertToRange(ctx context.Context, name string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.ConvertToRange(ctx, name) })
+}
+
+// FormatAsTable refait un tableau de la plage qui contient la cellule.
+func (s *DocumentService) FormatAsTable(ctx context.Context, sheet int64, row, col int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error {
+		_, err := d.FormatAsTable(ctx, sheet, row, col)
+		return err
+	})
+}
+
 // MoveTable déplace un tableau (fusion s'il est posé côte à côte d'un autre).
 func (s *DocumentService) MoveTable(ctx context.Context, name string, row, col int) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.MoveTable(ctx, name, row, col) })

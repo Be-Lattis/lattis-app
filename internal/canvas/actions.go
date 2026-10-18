@@ -53,6 +53,12 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 			return err
 		}
 		empty := strings.TrimSpace(raw) == ""
+		// Dans une plage (tableau converti), la saisie reste libre : elle
+		// n'agrandit pas un tableau voisin.
+		plain, err := t.inRange(sheet, row, col)
+		if err != nil {
+			return err
+		}
 		for _, tb := range tables {
 			inCols := col >= tb.Col && col <= tb.Right()
 			inRows := row >= tb.Row && row <= tb.Bottom()
@@ -66,6 +72,8 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 				return t.rename(tb, c, name)
 			case inCols && inRows:
 				return t.setCell(tb, row-tb.Row-1, col-tb.Col, raw, ev)
+			case plain && !(inCols && inRows) && !(inCols && row == tb.Row):
+				continue
 			case inCols && row == tb.Bottom()+1 && !empty:
 				if tb.Filtered() {
 					return ErrFiltered{tb.Name}
@@ -241,6 +249,10 @@ func (t *tx) birth(sheet int64, row, col int) (string, error) {
 		return "", err
 	}
 	isl := island(cells, row, col)
+	// Près d'une plage (tableau converti), l'îlot reste une plage.
+	if keep, err := t.keepRange(sheet, isl); keep || err != nil {
+		return "", err
+	}
 	r0, r1, c0, c1 := isl[0].Row, isl[0].Row, isl[0].Col, isl[0].Col
 	for _, c := range isl {
 		r1 = max(r1, c.Row)

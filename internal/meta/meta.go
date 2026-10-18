@@ -283,6 +283,17 @@ CREATE TABLE _lattis_http_hosts (
 	`
 ALTER TABLE _lattis_pages ADD COLUMN kind TEXT NOT NULL DEFAULT 'html';
 `,
+	// 24 → 25 : zones « plage » (un tableau converti en plage, comme dans
+	// Excel) : leurs cellules libres ne refont pas de tableau d'elles-mêmes
+	// et ne rejoignent pas un tableau voisin.
+	`
+CREATE TABLE _lattis_range_cells (
+	sheet INTEGER NOT NULL,
+	row   INTEGER NOT NULL,
+	col   INTEGER NOT NULL,
+	PRIMARY KEY (sheet, row, col)
+) STRICT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

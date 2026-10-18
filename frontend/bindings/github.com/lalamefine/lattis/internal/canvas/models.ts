@@ -512,6 +512,11 @@ export interface Layout {
     "buttons": ButtonInfo[] | null;
 
     /**
+     * Ranges : zones « plage » (tableaux convertis), en rectangles.
+     */
+    "ranges": Rect[] | null;
+
+    /**
      * Structure du classeur protégée (onglets), avec ou sans mot de passe.
      */
     "workbookProtected": boolean;

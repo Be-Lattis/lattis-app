@@ -265,6 +265,8 @@
 		charts?: SheetChart[];
 		/** Boutons d'action de la feuille. */
 		buttons?: SheetButton[] | null;
+		/** Zones « plage » (tableaux convertis) : y écrire ne refait pas de tableau. */
+		ranges?: { r0: number; c0: number; r1: number; c1: number }[];
 	}
 
 	/** Cible d'une saisie, pour la source. */
@@ -403,6 +405,10 @@
 		textColumnsPreview?(r0: number, r1: number, col: number, o: TextColumnsOptions): Promise<TextColumnsPreview>;
 		textToColumns?(r0: number, r1: number, col: number, o: TextColumnsOptions): Promise<number>;
 		deleteTables?(tables: SheetTable[]): Promise<unknown>;
+		/** Convertir en plage : le tableau devient des cellules libres, au même endroit. */
+		convertToRange?(table: SheetTable): Promise<unknown>;
+		/** Mettre sous forme de tableau la plage (tableau converti) qui contient la cellule. */
+		formatAsTable?(row: number, col: number): Promise<unknown>;
 		/** Déplace un tableau, en-tête en (row, col) ; côte à côte d'un autre : fusion. */
 		moveTable?(table: SheetTable, row: number, col: number): Promise<unknown>;
 		/** Sort les colonnes i0..i1 vers un nouveau tableau en (row, col). */
@@ -7030,6 +7036,9 @@
 		menu = { x: ev.clientX - r.left, y: ev.clientY - r.top, e, n: cell.row - e.t.row - 1, i: cell.col - e.t.col, header: cell.row === e.t.row };
 	}
 
+	/** La cellule est dans une zone « plage » (tableau converti). */
+	const inRangeZone = (row: number, col: number) => (data.ranges ?? []).some((z) => row >= z.r0 && row <= z.r1 && col >= z.c0 && col <= z.c1);
+
 	// Menu du clic droit hors tableau : presse-papiers et effacement.
 	let freeMenu = $state<{ x: number; y: number; kind?: 'rows' | 'cols' } | null>(null);
 
@@ -7671,6 +7680,9 @@
 						<hr />
 						<button title="F5 dans le tableau" onclick={() => menuAction(() => source.refreshTable!(t))}>Actualiser « {t.query?.name} »</button>
 					{/if}
+					{#if source.convertToRange}
+						<button title="Le tableau devient des cellules libres, au même endroit" onclick={() => menuAction(() => source.convertToRange!(m.e.t))}>Convertir en plage</button>
+					{/if}
 					{#if source.deleteTables}
 						<button
 							onclick={() => {
@@ -7744,6 +7756,11 @@
 						<button onclick={() => openFormat()}>Format de cellule… <span class="keys">Ctrl+1</span></button>
 					{/if}
 					{#if source.setNote}{@render noteItems()}{/if}
+					{#if source.formatAsTable && inRangeZone(active.row, active.col)}
+						{@const at = { row: active.row, col: active.col }}
+						<hr />
+						<button title="La plage redevient un tableau (sa première ligne donne les en-têtes)" onclick={() => menuAction(() => source.formatAsTable!(at.row, at.col))}>Mettre sous forme de tableau</button>
+					{/if}
 				{/if}
 			</div>
 		{/if}
