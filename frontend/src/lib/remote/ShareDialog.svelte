@@ -35,6 +35,22 @@
 	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
 	const servers = $derived(connected(lattis.state.servers));
 	const blocked = $derived(check ? blocking(check, selected) : []);
+	// Droit de créer un classeur sur le serveur choisi (lattis.login_summary) :
+	// sans lui, Publier reste grisé et la boîte dit pourquoi. null : pas encore lu.
+	let canCreate = $state<boolean | null>(null);
+	$effect(() => {
+		const url = server;
+		canCreate = null;
+		if (republish || !url) return;
+		DocumentService.ShareCanPublish(url).then(
+			(ok) => {
+				if (server === url) canCreate = ok;
+			},
+			() => {
+				if (server === url) canCreate = true; // illisible : le serveur tranchera à la publication
+			}
+		);
+	});
 
 	onMount(async () => {
 		await loadLattis();
@@ -118,6 +134,7 @@
 					{:else}
 						<span><button onclick={login} disabled={busy}>Se connecter à un serveur…</button></span>
 					{/if}
+					{#if canCreate === false}<p class="error span" role="alert">Votre compte ne peut pas créer de classeur sur ce serveur : demandez à son propriétaire le rôle « créateur de classeurs ».</p>{/if}
 					<label for="share-title">Titre</label>
 					<input id="share-title" bind:value={name} disabled={busy} />
 					<span>Mode</span>
@@ -168,7 +185,7 @@
 		<footer>
 			{#if check && blocked.length && selected.length}<span class="muted grow">{blocked.length} point(s) à régler avant de publier</span>{:else}<span class="grow"></span>{/if}
 			<button onclick={() => ondone(null)} disabled={busy}>Annuler</button>
-			<button class="primary" onclick={publish} disabled={busy || !check || blocked.length > 0 || (!republish && (!server || !name.trim()))}>
+			<button class="primary" onclick={publish} disabled={busy || !check || blocked.length > 0 || (!republish && (!server || !name.trim() || canCreate === false))}>
 				{busy ? 'Publication…' : republish ? 'Republier' : 'Publier'}
 			</button>
 		</footer>
@@ -223,6 +240,10 @@
 		grid-template-columns: max-content 1fr;
 		gap: 8px 12px;
 		align-items: center;
+	}
+	.grid .span {
+		grid-column: 1 / -1;
+		margin: 0;
 	}
 	.modes {
 		display: flex;

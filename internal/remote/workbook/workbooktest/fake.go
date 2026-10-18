@@ -83,6 +83,9 @@ type Fake struct {
 	// serveur (ServerOwner), qui voient les membres des équipes.
 	teams        []*fteam
 	serverOwners map[string]bool
+	// Creators : créateurs de classeurs (rôle de serveur) ; nil : tout le
+	// monde publie. Les autres reçoivent 42501 de create_workbook.
+	Creators map[string]bool
 }
 
 // check refuse (42501) l'écriture de value dans la colonne col d'un
@@ -500,6 +503,9 @@ func (p *publisher) CreateWorkbook(ctx context.Context, title, mode string) (str
 	if err := p.s.f.call("create_workbook"); err != nil {
 		return "", err
 	}
+	if !p.s.canCreate() {
+		return "", ErrPrivilege{"permission denied: seuls les créateurs de classeurs publient"}
+	}
 	if mode != workbook.Frozen && mode != workbook.Collaborative {
 		return "", errors.New("mode : frozen ou collaborative")
 	}
@@ -906,4 +912,19 @@ func (r *reader) Rows(ctx context.Context, name string, t workbook.RemoteTable, 
 		return nil
 	}
 	return fmt.Errorf("tableau %s introuvable", t.Name)
+}
+
+func (s *session) CanCreateWorkbooks(ctx context.Context) (bool, error) {
+	s.f.mu.Lock()
+	defer s.f.mu.Unlock()
+	if err := s.begin("login_summary"); err != nil {
+		return false, err
+	}
+	return s.canCreate(), nil
+}
+
+// canCreate : publication ouverte à tous, créateur de classeurs ou
+// propriétaire du serveur (mu tenu).
+func (s *session) canCreate() bool {
+	return s.f.Creators == nil || s.f.Creators[s.user] || s.f.serverOwners[s.user]
 }

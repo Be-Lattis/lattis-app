@@ -404,6 +404,18 @@ func (s *DocumentService) SharePublish(ctx context.Context, req ShareRequest) (w
 	return s.afterShare(ctx, d)
 }
 
+// ShareCanPublish dit si le compte connecté à server peut y créer un
+// classeur (rôle « créateur de classeurs », propriétaire du serveur, ou
+// publication ouverte à tous) : sinon, Partager sur un serveur ne propose
+// pas de publier.
+func (s *DocumentService) ShareCanPublish(ctx context.Context, server string) (bool, error) {
+	srv, _, _, err := remoteServer(ctx, server)
+	if err != nil {
+		return false, err
+	}
+	return srv.CanCreateWorkbooks(ctx)
+}
+
 // ShareRepublish publie une nouvelle version du classeur figé ouvert
 // (Fichier › Republier) ; tables nil : les tableaux déjà publiés.
 func (s *DocumentService) ShareRepublish(ctx context.Context, tables []int64) (workbook.State, error) {

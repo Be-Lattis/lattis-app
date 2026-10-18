@@ -399,3 +399,27 @@ func (r pgReader) Rows(ctx context.Context, schema string, t RemoteTable, fn fun
 	}
 	return rs.Err()
 }
+
+func (s pgServer) CanCreateWorkbooks(ctx context.Context) (bool, error) {
+	can := true
+	err := s.with(ctx, usageCatalog, func(c *pgx.Conn) error {
+		var raw []byte
+		if err := c.QueryRow(ctx, `SELECT lattis.login_summary()::text`).Scan(&raw); err != nil {
+			if code, ok := Rejected(err); ok && code == "42883" {
+				return nil // serveur d'avant login_summary : tout le monde publie
+			}
+			return err
+		}
+		var sum struct {
+			Can *bool `json:"can_create_workbooks"`
+		}
+		if err := json.Unmarshal(raw, &sum); err != nil {
+			return fmt.Errorf("lattis.login_summary : %w", err)
+		}
+		if sum.Can != nil {
+			can = *sum.Can
+		}
+		return nil
+	})
+	return can, err
+}

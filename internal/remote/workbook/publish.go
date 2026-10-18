@@ -159,6 +159,9 @@ func publish(ctx context.Context, srv Server, db *store.Store, info *Info, ids [
 		} else {
 			id, err := p.CreateWorkbook(ctx, info.Title, info.Mode)
 			if err != nil {
+				if Privilege(err) {
+					return ErrCannotCreate
+				}
 				return err
 			}
 			info.WorkbookID = id

@@ -124,6 +124,11 @@ type Server interface {
 	// Workbooks liste les classeurs accessibles (« Ouvrir depuis un
 	// serveur »).
 	Workbooks(ctx context.Context) ([]Listing, error)
+	// CanCreateWorkbooks dit si l'utilisateur peut publier un nouveau
+	// classeur (lattis.login_summary, can_create_workbooks : rôle « créateur
+	// de classeurs », propriétaire du serveur, ou publication ouverte à tous).
+	// Vrai pour un serveur qui ne connaît pas encore ce droit.
+	CanCreateWorkbooks(ctx context.Context) (bool, error)
 	// Capabilities lit les droits sur un classeur (version courante).
 	Capabilities(ctx context.Context, id string) (Capabilities, error)
 	// Publish exécute fn dans une seule transaction (tout ou rien).

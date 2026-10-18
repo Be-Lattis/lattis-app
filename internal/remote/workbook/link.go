@@ -22,6 +22,9 @@ var (
 	ErrReader   = errors.New("Tableau en lecture seule : vos droits ne permettent pas de le modifier")
 	ErrNoAccess = errors.New("Tableau inaccessible avec vos droits")
 	ErrNotYours = errors.New("Ligne d'un autre membre : en tant que participant, vous ne modifiez que vos propres lignes")
+	// ErrCannotCreate : publication refusée, le compte n'a pas le droit de
+	// créer de classeur sur ce serveur (Server.CanCreateWorkbooks).
+	ErrCannotCreate = errors.New("Votre compte ne peut pas créer de classeur sur ce serveur : demandez à son propriétaire le rôle « créateur de classeurs »")
 )
 
 // Link est l'état d'un classeur partagé ouvert : ce qui vient du serveur

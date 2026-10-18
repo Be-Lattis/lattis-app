@@ -1465,6 +1465,16 @@ export function ShareAddRestriction(r: workbook$0.RestrictionRule): $Cancellable
 }
 
 /**
+ * ShareCanPublish dit si le compte connecté à server peut y créer un
+ * classeur (rôle « créateur de classeurs », propriétaire du serveur, ou
+ * publication ouverte à tous) : sinon, Partager sur un serveur ne propose
+ * pas de publier.
+ */
+export function ShareCanPublish(server: string): $CancellablePromise<boolean> {
+    return $Call.ByID(93833160, server);
+}
+
+/**
  * ShareCheck fait les vérifications avant publication sur tous les
  * tableaux du classeur (noms, types figés, saisies invalides).
  */

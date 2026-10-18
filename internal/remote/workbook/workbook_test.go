@@ -529,3 +529,31 @@ func TestPublishFailureLeavesNothing(t *testing.T) {
 		t.Fatalf("republication par un lecteur : %v", err)
 	}
 }
+
+// Sans le rôle « créateur de classeurs » (serveur qui le réserve), le
+// compte ne peut pas publier : CanCreateWorkbooks le dit avant, et la
+// publication est refusée avec un message clair, sans rien noter en local.
+func TestPublishNeedsCreator(t *testing.T) {
+	useRoot(t)
+	ctx := context.Background()
+	fake := workbooktest.New()
+	fake.Creators = map[string]bool{"bob": true}
+	a := author(t)
+	if ok, err := fake.As("alice").CanCreateWorkbooks(ctx); err != nil || ok {
+		t.Fatalf("alice : %v, %v", ok, err)
+	}
+	if ok, err := fake.As("bob").CanCreateWorkbooks(ctx); err != nil || !ok {
+		t.Fatalf("bob : %v, %v", ok, err)
+	}
+	_, err := workbook.Publish(ctx, fake.As("alice"), a.DB(), workbook.Request{Server: server, Title: "X", Mode: workbook.Frozen, Tables: []int64{tableID(t, a, "Ventes")}})
+	if !errors.Is(err, workbook.ErrCannotCreate) {
+		t.Fatalf("publication sans le rôle : %v", err)
+	}
+	if i, err := workbook.ReadInfo(ctx, a.DB().Read()); err != nil || i != nil {
+		t.Fatalf("classeur noté publié : %+v, %v", i, err)
+	}
+	fake.Creators = nil
+	if ok, _ := fake.As("alice").CanCreateWorkbooks(ctx); !ok {
+		t.Fatal("publication ouverte à tous refusée")
+	}
+}
