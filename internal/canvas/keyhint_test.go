@@ -27,7 +27,7 @@ func TestKeyHint(t *testing.T) {
 		t.Fatalf("%d lignes de données", l.Tables[0].Total)
 	}
 	if !keyHintOf(t, d) {
-		t.Fatal("entier unique et croissant : pas de suggestion")
+		t.Fatal("valeurs uniques : pas de suggestion")
 	}
 	// Lu deux fois (cache) : même réponse.
 	if !keyHintOf(t, d) {
@@ -38,10 +38,7 @@ func TestKeyHint(t *testing.T) {
 		do   func() error
 	}{
 		{"valeur en double", func() error { _, err := d.SetCell(ctx, 1, 2, 0, "3"); return err }},
-		{"décroissante", func() error { _, err := d.SetCell(ctx, 1, 1, 0, "9"); return err }},
 		{"vide", func() error { _, err := d.SetCell(ctx, 1, 2, 0, ""); return err }},
-		{"hors type", func() error { _, err := d.SetCell(ctx, 1, 2, 0, "abc"); return err }},
-		{"tri décroissant", func() error { return d.SortTable(ctx, "Feuille1", 0, true) }},
 		{"clé posée", func() error { return d.SetKey(ctx, "Feuille1", 0) }},
 		{"ne plus proposer", func() error { return d.DismissKeyHint(ctx, "Feuille1") }},
 	}
@@ -68,13 +65,20 @@ func TestKeyHint(t *testing.T) {
 	}
 }
 
-func TestKeyHintText(t *testing.T) {
+// Quel que soit le type : texte, décimal, date, dans n'importe quel ordre.
+func TestKeyHintAnyType(t *testing.T) {
 	ctx := context.Background()
-	d := open(t)
-	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Code", "Nom"}, {"A", "Ana"}, {"B", "Bob"}}); err != nil {
-		t.Fatal(err)
-	}
-	if keyHintOf(t, d) {
-		t.Fatal("colonne texte proposée")
+	for _, rows := range [][][]string{
+		{{"Code", "Nom"}, {"B", "Ana"}, {"A", "Bob"}},
+		{{"Taux", "Nom"}, {"2,5", "Ana"}, {"1,25", "Bob"}},
+		{{"Jour", "Nom"}, {"18/10/2026", "Ana"}, {"01/01/2026", "Bob"}},
+	} {
+		d := open(t)
+		if _, err := d.Paste(ctx, 1, 0, 0, rows); err != nil {
+			t.Fatal(err)
+		}
+		if !keyHintOf(t, d) {
+			t.Fatalf("%s : valeurs uniques non proposées", rows[0][0])
+		}
 	}
 }
