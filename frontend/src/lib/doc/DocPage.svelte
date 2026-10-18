@@ -1110,7 +1110,7 @@
 		gap: 8px;
 	}
 	.menu-hint {
-		padding: 2px 12px 4px 34px;
+		padding: 0 14px 4px;
 		font-size: 11px;
 		color: #6b7280;
 	}
