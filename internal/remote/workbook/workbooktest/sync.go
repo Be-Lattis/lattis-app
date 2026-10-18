@@ -40,15 +40,22 @@ func (f *Fake) Forbid(workbookID, name, col string, value any) {
 func (f *Fake) PurgeTombstones() {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	n := 0
 	for _, b := range f.books {
 		for _, sc := range b.schemas {
 			for _, t := range sc.tables {
 				for _, x := range t.tombs {
 					f.purged = max(f.purged, x.xid)
 				}
+				n += len(t.tombs)
 				t.tombs = nil
 			}
 		}
+	}
+	if n > 0 {
+		// La purge est une transaction : son xid (purge_xid, migration 0010).
+		f.xid++
+		f.purgeXid = f.xid
 	}
 }
 

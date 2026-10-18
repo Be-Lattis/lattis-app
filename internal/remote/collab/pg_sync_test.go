@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -29,6 +30,19 @@ func pgHas0008(t *testing.T, p *pgClients) {
 	if !ok {
 		t.Skip("serveur sans la migration 0008 (version avec lattis_other_xid)")
 	}
+}
+
+// pgHas0010 dit si le serveur a since_covered(since, pg_snapshot)
+// (migration 0010).
+func pgHas0010(t *testing.T, p *pgClients) bool {
+	t.Helper()
+	ctx := context.Background()
+	c, err := pgx.Connect(ctx, p.env.Super)
+	must(t, err)
+	defer c.Close(ctx)
+	var ok bool
+	must(t, c.QueryRow(ctx, `SELECT to_regprocedure('lattis.since_covered(xid8,pg_snapshot)') IS NOT NULL`).Scan(&ok))
+	return ok
 }
 
 // pgAs exécute q sous le rôle d'un utilisateur.
@@ -173,13 +187,28 @@ func TestPostgresSyncGaps(t *testing.T) {
 	must(t, err)
 	must(t, alice.d.DeleteRow(ctx, "Ventes", 2)) // Chocolat
 	alice.send()
+	// Purge imitée (lattis.purge_tombstones) ; avec la migration 0010, elle
+	// note aussi son xid (purge_xid).
 	p.env.Exec(t, `UPDATE lattis.sync_horizon SET purged_xid = (SELECT max(xid) FROM lattis.tombstones)`)
 	p.env.Exec(t, `DELETE FROM lattis.tombstones`)
+	snapshot := pgHas0010(t, p)
+	if snapshot {
+		p.env.Exec(t, `UPDATE lattis.sync_horizon SET purge_xid = pg_current_xact_id()`)
+	}
 	r = bob.receive()
 	if r.Reloaded != 1 {
 		t.Fatalf("réception : %+v", r)
 	}
 	eq(t, "Bob rechargé", bob.col("Produit"), []string{"Café", "Thé vert", "Tisane", "Lait"})
+	// Témoin du rechargement : son instantané (0010), sinon xmax.
+	var probes map[string]string
+	must(t, bob.d.DB().Read().QueryRow(`SELECT value FROM _lattis_info WHERE key = 'sync_probe'`).Scan(&raw))
+	must(t, json.Unmarshal([]byte(raw), &probes))
+	for _, v := range probes {
+		if strings.Contains(v, ":") != snapshot {
+			t.Fatalf("témoin : %q", v)
+		}
+	}
 	if r := bob.receive(); r.Reloaded != 0 || r.Changed() {
 		t.Fatalf("seconde réception : %+v", r)
 	}
@@ -187,6 +216,11 @@ func TestPostgresSyncGaps(t *testing.T) {
 	bob.receive()
 	if r := bob.receive(); r.Reloaded != 0 || r.Changed() {
 		t.Fatalf("après la transaction longue : %+v", r)
+	}
+	var left int
+	must(t, bob.d.DB().Read().QueryRow(`SELECT count(*) FROM _lattis_info WHERE key = 'sync_probe'`).Scan(&left))
+	if left != 0 {
+		t.Fatal("témoin gardé alors que le point de reprise est couvert")
 	}
 
 	// Ajouts simultanés en fin de tableau : clés distinctes, même ordre.

@@ -290,7 +290,7 @@ func (r pgReader) Capabilities(ctx context.Context, id string) (Capabilities, er
 func (r pgReader) SyncPoint(ctx context.Context) (string, error) {
 	var s string
 	var v8 sync8
-	err := r.tx.QueryRow(ctx, `SELECT lattis.sync_point()::text, `+sync8Query).Scan(&s, &v8.covered, &v8.skip)
+	err := r.tx.QueryRow(ctx, `SELECT lattis.sync_point()::text, `+sync8Query).Scan(&s, &v8.covered, &v8.skip, &v8.snapshot)
 	if err == nil {
 		r.note8(v8)
 	}

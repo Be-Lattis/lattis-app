@@ -306,13 +306,19 @@ type Reader interface {
 	// depuis, le tableau est à recharger en entier (Rows). known faux : le
 	// serveur ne sait pas le dire (sans la migration 0008).
 	Covered(ctx context.Context, since string) (covered, known bool, err error)
-	// Probe rend la fin de l'instantané de la lecture (pg_snapshot_xmax) :
-	// une transaction d'identifiant inférieur est validée (et lue) ou était
-	// en cours. Après un rechargement, Covered(probe) dit si des pierres
-	// tombales que le rechargement n'a pas vues ont été purgées, quand
-	// Covered(since) reste faux à cause d'une transaction longue (since,
-	// pg_snapshot_xmin, ne dépasse pas la purge tant qu'elle dure).
+	// Probe rend le témoin d'un rechargement, à garder tant que
+	// Covered(since) seul reste faux à cause d'une transaction longue
+	// (since, pg_snapshot_xmin, ne dépasse pas la purge tant qu'elle dure) :
+	// l'instantané de la lecture (pg_current_snapshot, migration 0010), ou,
+	// sans elle, sa fin (pg_snapshot_xmax : une transaction d'identifiant
+	// inférieur est validée et lue, ou était en cours).
 	Probe(ctx context.Context) (string, error)
+	// CoveredBy dit si les changements depuis since sont complets compte
+	// tenu du témoin probe d'un rechargement : instantané,
+	// lattis.since_covered(since, probe) (la dernière purge y est visible :
+	// le rechargement a vu ces suppressions) ; point de contrôle,
+	// Covered(probe). Un instantané sur un serveur sans 0010 : faux.
+	CoveredBy(ctx context.Context, since, probe string) (bool, error)
 	// RowsByID relit des lignes par leur identifiant (absentes : invisibles ou
 	// supprimées) : remise à l'état du serveur après un refus.
 	RowsByID(ctx context.Context, schema string, t RemoteTable, ids []string, fn func(Change) error) error

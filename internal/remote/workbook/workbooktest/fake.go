@@ -66,8 +66,12 @@ type Fake struct {
 	Before09 bool
 	// pending : adresses invitées inconnues, comptes en attente (0009).
 	pending map[string]bool
-	// purged : plus grand xid des pierres tombales purgées (sync_horizon).
-	purged int64
+	// purged : plus grand xid des pierres tombales purgées (sync_horizon) ;
+	// purgeXid : transaction de la dernière purge (migration 0010).
+	purged, purgeXid int64
+	// Before10 imite un serveur sans la migration 0010 : témoin de
+	// rechargement par point de contrôle (xmax), pas d'instantané.
+	Before10 bool
 	// checks : filtres d'écriture (WITH CHECK) imposés par Forbid.
 	checks []check
 	// held : transactions en cours (Hold) ; sync_point ne les dépasse pas.
@@ -770,8 +774,42 @@ func (r *reader) SyncPoint(ctx context.Context) (string, error) {
 	return strconv.FormatInt(x, 10), nil
 }
 
+// Probe : instantané de la lecture (xmin:xmax:xip, comme
+// pg_current_snapshot) ; point de contrôle (xmax) sans la migration 0010.
 func (r *reader) Probe(ctx context.Context) (string, error) {
-	return strconv.FormatInt(r.s.f.xid+1, 10), nil
+	xmax := r.s.f.xid + 1
+	if r.s.f.Legacy || r.s.f.Before10 {
+		return strconv.FormatInt(xmax, 10), nil
+	}
+	xmin, xip := xmax, []string{}
+	for _, h := range slices.Sorted(slices.Values(r.s.f.held)) {
+		xmin = min(xmin, h)
+		xip = append(xip, strconv.FormatInt(h, 10))
+	}
+	return fmt.Sprintf("%d:%d:%s", xmin, xmax, strings.Join(xip, ",")), nil
+}
+
+// CoveredBy : lattis.since_covered(since, instantané) (migration 0010),
+// ou Covered(probe) pour un point de contrôle.
+func (r *reader) CoveredBy(ctx context.Context, since, probe string) (bool, error) {
+	parts := strings.Split(probe, ":")
+	if len(parts) != 3 {
+		ok, _, err := r.Covered(ctx, probe)
+		return ok, err
+	}
+	if r.s.f.Legacy || r.s.f.Before10 {
+		return false, nil
+	}
+	r.s.f.Calls["since_covered"]++
+	from, _ := strconv.ParseInt(since, 10, 64)
+	if from == 0 || from > r.s.f.purged {
+		return true, nil
+	}
+	p := r.s.f.purgeXid
+	xmin, _ := strconv.ParseInt(parts[0], 10, 64)
+	xmax, _ := strconv.ParseInt(parts[1], 10, 64)
+	visible := p < xmin || (p < xmax && !slices.Contains(strings.Split(parts[2], ","), strconv.FormatInt(p, 10)))
+	return p != 0 && visible, nil
 }
 
 func (r *reader) schema(name string) (*schema, error) {

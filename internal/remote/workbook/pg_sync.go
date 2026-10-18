@@ -236,16 +236,21 @@ func decodeRow(raw []byte) (map[string]any, error) {
 //   - changes_since(…, skip) ne masque pas l'écriture d'un autre recouverte
 //     par le poste (lattis_other_xid, version finale de 0008). Sans cela,
 //     skip n'est pas passé : les échos reviennent, sans effet, plutôt que
-//     de perdre une valeur d'un collègue.
+//     de perdre une valeur d'un collègue ;
+//   - since_covered(since, pg_snapshot) existe (migration 0010) : le témoin
+//     d'un rechargement est son instantané (Probe, CoveredBy).
 const sync8Query = `to_regprocedure('lattis.since_covered(xid8)') IS NOT NULL,
 	coalesce((SELECT prosrc LIKE '%lattis_other_xid%' FROM pg_catalog.pg_proc
-		WHERE oid = to_regprocedure('lattis.changes_since(uuid,uuid,xid8,xid8[])')), false)`
+		WHERE oid = to_regprocedure('lattis.changes_since(uuid,uuid,xid8,xid8[])')), false),
+	to_regprocedure('lattis.since_covered(xid8,pg_snapshot)') IS NOT NULL`
 
 // sync8 : fonctions de la migration 0008 du serveur.
 type sync8 struct {
 	read    bool // lu dans cette transaction
 	covered bool // lattis.since_covered
 	skip    bool // changes_since(…, skip) avec lattis_other_xid
+	// snapshot : lattis.since_covered(since, pg_snapshot) (migration 0010).
+	snapshot bool
 }
 
 func (r pgReader) has8(ctx context.Context) (sync8, error) {
@@ -253,7 +258,7 @@ func (r pgReader) has8(ctx context.Context) (sync8, error) {
 		return *r.v8, nil
 	}
 	var s sync8
-	if err := r.tx.QueryRow(ctx, `SELECT `+sync8Query).Scan(&s.covered, &s.skip); err != nil {
+	if err := r.tx.QueryRow(ctx, `SELECT `+sync8Query).Scan(&s.covered, &s.skip, &s.snapshot); err != nil {
 		return sync8{}, err
 	}
 	r.note8(s)
@@ -267,13 +272,44 @@ func (r pgReader) note8(s sync8) {
 	}
 }
 
-// Probe rend la fin de l'instantané de la transaction
-// (pg_snapshot_xmax) : toute transaction d'identifiant inférieur est
-// validée ou en cours à son début (voir Reader.Probe).
+// Probe rend le témoin de la lecture (voir Reader.Probe) : son instantané
+// (pg_current_snapshot, le même pendant toute la transaction REPEATABLE
+// READ, donc celui de sync_point) avec la migration 0010 ; sinon la fin de
+// cet instantané (pg_snapshot_xmax) : toute transaction d'identifiant
+// inférieur est validée ou en cours à son début.
 func (r pgReader) Probe(ctx context.Context) (string, error) {
+	s8, err := r.has8(ctx)
+	if err != nil {
+		return "", err
+	}
+	q := `SELECT pg_snapshot_xmax(pg_current_snapshot())::text`
+	if s8.snapshot {
+		q = `SELECT pg_current_snapshot()::text`
+	}
 	var s string
-	err := r.tx.QueryRow(ctx, `SELECT pg_snapshot_xmax(pg_current_snapshot())::text`).Scan(&s)
+	err = r.tx.QueryRow(ctx, q).Scan(&s)
 	return s, err
+}
+
+// probeSnapshot dit si un témoin est un instantané (xmin:xmax:xip) plutôt
+// qu'un point de contrôle (xmax seul, serveur sans la migration 0010).
+func probeSnapshot(probe string) bool { return strings.Contains(probe, ":") }
+
+func (r pgReader) CoveredBy(ctx context.Context, since, probe string) (bool, error) {
+	if !probeSnapshot(probe) {
+		covered, _, err := r.Covered(ctx, probe)
+		return covered, err
+	}
+	s8, err := r.has8(ctx)
+	if err != nil || !s8.snapshot {
+		return false, err // instantané d'un serveur qui n'en a plus l'usage : recharger
+	}
+	if since == "" {
+		since = "0"
+	}
+	var covered bool
+	err = r.tx.QueryRow(ctx, `SELECT lattis.since_covered($1::xid8, $2::pg_snapshot)`, since, probe).Scan(&covered)
+	return covered, err
 }
 
 func (r pgReader) Covered(ctx context.Context, since string) (bool, bool, error) {

@@ -71,10 +71,10 @@ func (e *Engine) receive(ctx context.Context, only map[int64]bool) (Report, erro
 			covered, _, err := r.Covered(ctx, t.since)
 			if err == nil && !covered && probes[tbl] != "" {
 				// Rechargé alors qu'une transaction longue retenait since sous
-				// la purge : seules comptent les pierres tombales que le
-				// rechargement n'a pas vues (voir Reader.Probe).
+				// la purge : seules comptent les purges que le rechargement
+				// n'a pas vues (voir Reader.Probe et Reader.CoveredBy).
 				withProbe = true
-				covered, _, err = r.Covered(ctx, probes[tbl])
+				covered, err = r.CoveredBy(ctx, t.since, probes[tbl])
 			}
 			if err != nil {
 				return fmt.Errorf("tableau « %s » : %w", t.remote.Name, err)
@@ -103,8 +103,9 @@ func (e *Engine) receive(ctx context.Context, only map[int64]bool) (Report, erro
 		// Le nouveau point de reprise est-il couvert ? Non tant qu'une
 		// transaction commencée avant la dernière purge dure (sync_point
 		// est le plus petit xid en cours) : le prochain Covered(since)
-		// serait faux et ferait recharger encore. La fin de cet instantané
-		// sert alors de témoin (Reader.Probe).
+		// serait faux et ferait recharger encore. L'instantané de cette
+		// lecture (ou sa fin, sans la migration 0010) sert alors de témoin
+		// (Reader.Probe), oublié dès que Covered(since) seul redevient vrai.
 		if reloaded > 0 || withProbe {
 			ok, _, err := r.Covered(ctx, sp)
 			if err == nil && !ok {
@@ -245,8 +246,9 @@ func pruneSkip(ctx context.Context, tx *sql.Tx) error {
 // --- Témoins de couverture ----------------------------------------------------------
 
 // probeKey : témoin de couverture par tableau (Reader.Probe ; JSON, tableau
-// local → xid8 en texte), dans _lattis_info. Noté quand le point de reprise
-// d'un tableau rechargé n'est pas couvert, oublié dès qu'il l'est.
+// local → instantané pg_snapshot en texte, ou xid8 en texte sans la
+// migration 0010), dans _lattis_info. Noté quand le point de reprise d'un
+// tableau rechargé n'est pas couvert, oublié dès qu'il l'est.
 const probeKey = "sync_probe"
 
 func readProbes(ctx context.Context, q interface {

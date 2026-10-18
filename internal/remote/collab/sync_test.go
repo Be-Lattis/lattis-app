@@ -157,9 +157,17 @@ func TestSinceNotCovered(t *testing.T) {
 // (pg_snapshot_xmin) sous l'horizon des pierres tombales : le tableau est
 // rechargé une fois, pas à chaque réception tant qu'elle dure (témoin de
 // couverture, Reader.Probe).
+// Témoin : instantané du rechargement (since_covered(since, instantané),
+// migration 0010), ou point de contrôle xmax sans elle.
 func TestSinceHeldByLongTransaction(t *testing.T) {
+	t.Run("instantané", func(t *testing.T) { sinceHeld(t, false) })
+	t.Run("sans 0010", func(t *testing.T) { sinceHeld(t, true) })
+}
+
+func sinceHeld(t *testing.T, before10 bool) {
 	ctx := context.Background()
 	f, alice, bob, _ := setup(t)
+	f.Before10 = before10
 	release := f.Hold()
 	must(t, alice.d.DeleteRow(ctx, "Ventes", 2))
 	alice.send()
@@ -168,6 +176,11 @@ func TestSinceHeldByLongTransaction(t *testing.T) {
 		t.Fatalf("réception : %+v", r)
 	}
 	eq(t, "Bob", bob.col("Produit"), []string{"Café", "Thé"})
+	var probe string
+	must(t, bob.d.DB().Read().QueryRow(`SELECT value FROM _lattis_info WHERE key = 'sync_probe'`).Scan(&probe))
+	if (strings.Count(probe, ":") > 1) == before10 { // {"1":"xmin:xmax:xip"} ou {"1":"xmax"}
+		t.Fatalf("témoin : %s", probe)
+	}
 	for i := range 2 {
 		if r := bob.receive(); r.Reloaded != 0 {
 			t.Fatalf("réception %d pendant la transaction longue : %+v", i+2, r)
