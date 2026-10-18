@@ -14,7 +14,9 @@ export type Shortcut =
 	| 'prevSheet' // Ctrl+Pg.Préc
 	| 'repeat' // F4
 	| 'insertSheet' // Maj+F11
-	| 'endMode'; // Fin (puis flèche)
+	| 'endMode' // Fin (puis flèche)
+	| 'refresh' // F5 : actualise la requête du tableau, sinon recalcule
+	| 'refreshAll'; // Ctrl+F5 ou Maj+F5 : actualise tout (requêtes et recalcul)
 
 type Keys = Pick<KeyboardEvent, 'key' | 'code' | 'ctrlKey' | 'metaKey' | 'shiftKey' | 'altKey'>;
 
@@ -23,6 +25,7 @@ export function shortcutOf(e: Keys): Shortcut | null {
 	const ctrl = e.ctrlKey || e.metaKey;
 	const k = e.key;
 	const lower = k.length === 1 ? k.toLowerCase() : k;
+	if (k === 'F5' && !e.altKey) return ctrl || e.shiftKey ? 'refreshAll' : 'refresh';
 	if (ctrl && !e.altKey) {
 		if (k === 'PageDown') return 'nextSheet';
 		if (k === 'PageUp') return 'prevSheet';
@@ -43,6 +46,15 @@ export function shortcutOf(e: Keys): Shortcut | null {
 	if (!e.shiftKey && k === 'F4') return 'repeat';
 	if (!e.shiftKey && k === 'End') return 'endMode';
 	return null;
+}
+
+/**
+ * Touche qui rechargerait la page de l'application dans la fenêtre (WebView2)
+ * ou le navigateur : F5 (avec ou sans modificateur), Ctrl+R, Ctrl+Maj+R.
+ */
+export function isReloadKey(e: Keys): boolean {
+	if (e.key === 'F5' || e.key === 'BrowserRefresh') return true;
+	return (e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'r' || e.key === 'R' || e.code === 'KeyR');
 }
 
 const pad = (n: number) => String(n).padStart(2, '0');

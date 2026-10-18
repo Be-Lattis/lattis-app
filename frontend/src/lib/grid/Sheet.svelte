@@ -5519,6 +5519,7 @@
 		if (!['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) endArmed = false;
 		const sc = shortcutOf(e);
 		if (sc === 'nextSheet' || sc === 'prevSheet' || sc === 'insertSheet') return; // onglets : la page s'en charge
+		if (sc === 'refresh' || sc === 'refreshAll') return; // F5 : la page s'en charge (tableHere)
 		if (sc === 'endMode') {
 			endArmed = !ended;
 			say(endArmed ? 'Fin : une flèche va au bout de la zone' : '');
@@ -6917,6 +6918,11 @@
 		return targetTable()?.t.name;
 	}
 
+	/** Tableau de la cellule active, s'il y en a un (F5). */
+	export function tableHere(): SheetTable | undefined {
+		return tableAt(active.row, active.col)?.t;
+	}
+
 	/** Redonne le focus clavier à la feuille (après un dialogue, un menu…). */
 	export function focus() {
 		wrap?.focus();
@@ -7324,7 +7330,7 @@
 					{#if m.e.t.query && source.refreshTable}
 						{@const t = m.e.t}
 						<hr />
-						<button onclick={() => menuAction(() => source.refreshTable!(t))}>Actualiser « {t.query?.name} »</button>
+						<button title="F5 dans le tableau" onclick={() => menuAction(() => source.refreshTable!(t))}>Actualiser « {t.query?.name} »</button>
 					{/if}
 					{#if source.deleteTables}
 						<button
