@@ -360,6 +360,11 @@
 		const offUI = Events.On('ui:command', (e: { data: UICommand }) => {
 			uiCommand(e.data).catch((x) => (notice = err(x)));
 		});
+		// Classeur ouvert depuis le système pendant que l'application tourne
+		// (macOS : double-clic sur un .lattis dans le Finder).
+		const offOpen = Events.On('doc:open-file', (e: { data: string }) => {
+			openPath(e.data).catch((x) => (notice = err(x)));
+		});
 		(async () => {
 			try {
 				bench = await GridService.BenchRequested();
@@ -367,6 +372,15 @@
 				loadRecent();
 				const preset = await DocumentService.DemoRequested();
 				if (preset) return await startPresetDemo(preset);
+				// Classeur passé par l'association de fichiers (double-clic sur un .lattis).
+				const launch = await DocumentService.LaunchFile();
+				if (launch) {
+					try {
+						return await openPath(launch);
+					} catch (e) {
+						notice = err(e); // fichier illisible : on démarre comme d'habitude
+					}
+				}
 				orphans = (await DocumentService.Orphans()) ?? [];
 				if (orphans.length > 0) mode = 'recover';
 				else await startDoc();
@@ -418,6 +432,7 @@
 		return () => {
 			off();
 			offUI();
+			offOpen();
 			window.removeEventListener('keydown', keys);
 			window.removeEventListener('keydown', noReload, true);
 			window.removeEventListener('dragover', noDrop);
