@@ -99,8 +99,8 @@ func (s *DocumentService) SavePage(ctx context.Context, sheet int64, source stri
 }
 
 // PageCall exécute une commande demandée par une page HTML (pont
-// postMessage du cadre isolé) : les commandes des scripts et du serveur MCP,
-// sauf fichiers, annulation et scripts.run (api.PageCall).
+// postMessage du cadre isolé) : les commandes de la liste autorisée aux
+// pages (api.PageCall).
 func (s *DocumentService) PageCall(ctx context.Context, name string, args map[string]any) (any, error) {
 	return api.PageCall(ctx, host{s}, name, args)
 }
