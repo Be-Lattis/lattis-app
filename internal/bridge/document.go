@@ -970,9 +970,10 @@ func (s *DocumentService) UnprotectSheet(ctx context.Context, sheet int64, passw
 	return s.act(ctx, func(d *doc.Document) error { return d.UnprotectSheet(ctx, sheet, password) })
 }
 
-// ProtectWorkbook protège la structure du classeur (onglets).
-func (s *DocumentService) ProtectWorkbook(ctx context.Context, password string) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.ProtectWorkbook(ctx, password) })
+// ProtectWorkbook protège la structure du classeur (onglets) ; sheets
+// verrouille aussi le contenu de toutes les feuilles.
+func (s *DocumentService) ProtectWorkbook(ctx context.Context, password string, sheets bool) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.ProtectWorkbook(ctx, password, sheets) })
 }
 
 // UnprotectWorkbook ôte la protection de la structure du classeur.

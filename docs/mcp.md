@@ -74,7 +74,9 @@ Une feuille protégée (Révision › Protéger la feuille, ou `sheets_protect`)
 écriture, outils `cells_*`, `tables_*`, `columns_*`, objets et `db_execute` compris, avec
 le message « La feuille « X » est protégée : ôtez la protection (Révision › Ôter la
 protection) pour la modifier ». La structure du classeur protégée (`sheets_protect_workbook`)
-refuse d'ajouter, supprimer, renommer ou déplacer des feuilles. `doc_undo` et `doc_redo`
+refuse d'ajouter, supprimer, renommer ou déplacer des feuilles ; le contenu des feuilles
+non protégées reste modifiable, sauf avec `sheets: true`, qui verrouille aussi le contenu de
+toutes les feuilles jusqu'à `sheets_unprotect_workbook`. `doc_undo` et `doc_redo`
 refusent aussi une action qui toucherait une feuille protégée.
 
 `ui_dialog`, `ui_confirm` et `ui_prompt` ouvrent une boîte de dialogue dans la fenêtre et

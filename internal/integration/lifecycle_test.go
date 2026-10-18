@@ -188,15 +188,27 @@ func TestProtectionSurvivesReopen(t *testing.T) {
 	}
 	h.wantColumn("Gens", "Nom", "Léa", "Tom")
 
-	// La structure protégée ne devrait pas empêcher de saisir dans une
-	// feuille non protégée (Excel, et le résumé de sheets.protect_workbook).
-	if _, err := h.try("cells.set", "sheet", "Libre", "row", 1, "col", 1, "value", "ok"); err != nil {
-		knownBug(t, "classeur-protege-contenu", "Protéger le classeur refuse aussi les saisies dans les feuilles non protégées : "+err.Error())
-	}
+	// La structure protégée n'empêche pas de saisir dans une feuille non
+	// protégée (Excel, et le résumé de sheets.protect_workbook).
+	h.do("cells.set", "sheet", "Libre", "row", 1, "col", 1, "value", "ok")
 	h.do("sheets.unprotect", "sheet", "Feuille1", "password", "s3cret")
 	h.do("sheets.unprotect_workbook")
 	h.do("cells.set", "sheet", "Feuille1", "row", 2, "col", 2, "value", 32)
 	h.do("sheets.add", "name", "Encore")
+
+	// Avec sheets = true, le contenu de toutes les feuilles est verrouillé
+	// aussi, même après réouverture ; ôter la protection du classeur ôte ce
+	// verrou, et laisse protégées les feuilles qui l'étaient pour elles-mêmes.
+	h.do("sheets.protect", "sheet", "Encore")
+	h.do("sheets.protect_workbook", "password", "clé", "sheets", true)
+	h.reopen(path(t, "protege2.lattis"))
+	refused("saisie (classeur verrouillé)", "cells.set", "sheet", "Libre", "row", 1, "col", 1, "value", "non")
+	refused("saisie dans le tableau (classeur verrouillé)", "cells.set", "sheet", "Feuille1", "row", 2, "col", 2, "value", 1)
+	refused("ajout de feuille (classeur verrouillé)", "sheets.add", "name", "Plus")
+	refused("mauvais mot de passe du classeur", "sheets.unprotect_workbook", "password", "faux")
+	h.do("sheets.unprotect_workbook", "password", "clé")
+	h.do("cells.set", "sheet", "Libre", "row", 1, "col", 1, "value", "oui")
+	refused("saisie (feuille protégée pour elle-même)", "cells.set", "sheet", "Encore", "row", 1, "col", 1, "value", "non")
 }
 
 // Récupération après un arrêt brutal : un processus fils modifie un classeur

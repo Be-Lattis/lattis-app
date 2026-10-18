@@ -126,6 +126,8 @@ type Layout struct {
 	// Structure du classeur protégée (onglets), avec ou sans mot de passe.
 	WorkbookProtected bool `json:"workbookProtected"`
 	WorkbookPassword  bool `json:"workbookPassword"`
+	// … avec le contenu de toutes les feuilles verrouillé.
+	WorkbookSheets bool `json:"workbookSheets"`
 }
 
 // CellStyle est la mise en forme d'une cellule hors tableau.
@@ -170,7 +172,7 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 		if err != nil {
 			return err
 		}
-		l.WorkbookProtected, l.WorkbookPassword = prot.Workbook, prot.WorkbookPassword
+		l.WorkbookProtected, l.WorkbookPassword, l.WorkbookSheets = prot.Workbook, prot.WorkbookPassword, prot.WorkbookSheets
 		for i, s := range l.Sheets {
 			l.Sheets[i].Password, l.Sheets[i].Protected = prot.Sheets[s.ID]
 		}

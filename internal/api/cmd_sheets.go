@@ -328,22 +328,29 @@ sheets.unprotect("Feuille1", "secret")`,
 			Name:    "sheets.protect_workbook",
 			Label:   "Protéger le classeur",
 			Summary: "Protège la structure du classeur, comme Révision › Protéger le classeur : ajouter, supprimer, renommer ou déplacer des feuilles est ensuite refusé.",
-			Details: "Le contenu des feuilles reste modifiable (voir sheets.protect). Le mot de passe est facultatif. Protéger ne s'annule pas.",
-			Params:  []Param{{Name: "password", Type: String, Desc: "mot de passe pour ôter la protection", Optional: true}},
-			Write:   true,
+			Details: "Comme Excel, le contenu des feuilles non protégées reste modifiable (voir sheets.protect), sauf avec sheets = true : le contenu de toutes les feuilles est alors verrouillé aussi, jusqu'à sheets.unprotect_workbook, qui ôte ce verrou et lui seul (les feuilles protégées une à une le restent). Le mot de passe est facultatif. Protéger ne s'annule pas.",
+			Params: []Param{{Name: "password", Type: String, Desc: "mot de passe pour ôter la protection", Optional: true},
+				{Name: "sheets", Type: Boolean, Desc: "verrouiller aussi le contenu de toutes les feuilles", Optional: true}},
+			Write: true,
+			Example: `sheets.protect_workbook("secret", true)
+sheets.unprotect_workbook("secret")`,
 			Run: func(c *Call) (any, error) {
 				d, err := c.Doc()
 				if err != nil {
 					return nil, err
 				}
 				pw, _ := c.Str("password")
-				return nil, d.ProtectWorkbook(c, pw)
+				all, err := c.Bool("sheets")
+				if err != nil {
+					return nil, err
+				}
+				return nil, d.ProtectWorkbook(c, pw, all)
 			},
 		},
 		&Command{
 			Name:    "sheets.unprotect_workbook",
 			Label:   "Ôter la protection du classeur",
-			Summary: "Ôte la protection de la structure du classeur (avec son mot de passe s'il y en a un).",
+			Summary: "Ôte la protection de la structure du classeur (avec son mot de passe s'il y en a un), et le verrou du contenu des feuilles posé avec elle.",
 			Params:  []Param{{Name: "password", Type: String, Desc: "mot de passe donné en protégeant", Optional: true}},
 			Write:   true,
 			Run: func(c *Call) (any, error) {

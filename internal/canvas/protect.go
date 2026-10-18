@@ -11,9 +11,17 @@ package canvas
 // requêtes SQL de lecture. La structure du classeur protégée refuse
 // d'ajouter, d'insérer, de supprimer, de renommer ou de déplacer des
 // feuilles (y compris par un import ou un tableau croisé, qui créent une
-// feuille).
+// feuille). Comme dans Excel, elle laisse modifiable le contenu des feuilles
+// non protégées, sauf si l'on choisit en la posant de verrouiller aussi le
+// contenu de toutes les feuilles (Révision › Protéger le classeur, case
+// « Verrouiller aussi le contenu de toutes les feuilles ») : chaque feuille
+// est alors traitée comme protégée, et ôter la protection du classeur ôte ce
+// verrou, et seulement lui (les feuilles protégées pour elles-mêmes le
+// restent).
 //
-// La protection vit dans _lattis_protection (sheet = 0 : le classeur),
+// La protection vit dans _lattis_protection (sheet = 0 : le classeur ;
+// sheet = -1 : le verrou du contenu de toutes les feuilles posé avec lui,
+// sans empreinte propre : c'est le mot de passe du classeur qui l'ôte),
 // hors du journal : la poser ou l'ôter ne s'annule pas (comme Excel). Pour
 // qu'une annulation ou un rétablissement d'une action antérieure ne la
 // contourne pas, le bus de commandes compare une empreinte du contenu des
@@ -42,7 +50,7 @@ import (
 
 // ErrProtected refuse une modification d'une feuille protégée (Sheet) ou du
 // classeur protégé (Sheet vide) : un classeur protégé verrouille sa
-// structure et le contenu de toutes ses feuilles.
+// structure, et le contenu de toutes ses feuilles si on l'a choisi.
 type ErrProtected struct{ Sheet string }
 
 func (e ErrProtected) Error() string {
@@ -57,6 +65,10 @@ var ErrPassword = errors.New("mot de passe incorrect")
 
 // workbookScope désigne la structure du classeur dans _lattis_protection.
 const workbookScope = 0
+
+// sheetsScope désigne, dans _lattis_protection, le verrou du contenu de
+// toutes les feuilles posé avec la protection du classeur.
+const sheetsScope = -1
 
 const pbkdf2Iter = 120_000
 
@@ -101,20 +113,26 @@ func checkPassword(stored, pw string) bool {
 	return err == nil && subtle.ConstantTimeCompare(got, want) == 1
 }
 
-// guard refuse l'action si la feuille est protégée.
+// guard refuse l'action si la feuille est protégée, ou si le classeur est
+// protégé avec le contenu de toutes ses feuilles. La seule protection de la
+// structure du classeur laisse le contenu modifiable, comme Excel.
 func (t *tx) guard(sheet int64) error {
-	if err := t.guardWorkbook(); err != nil {
-		return err
-	}
 	var name string
 	err := t.row(`SELECT s.name FROM _lattis_protection p JOIN _lattis_sheets s ON s.id = p.sheet WHERE p.sheet = ?`, sheet).Scan(&name)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil
+	if err == nil {
+		return ErrProtected{name}
 	}
-	if err != nil {
+	if !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
-	return ErrProtected{name}
+	var k int
+	if err := t.row(`SELECT count(*) FROM _lattis_protection WHERE sheet = ?`, sheetsScope).Scan(&k); err != nil {
+		return err
+	}
+	if k > 0 {
+		return ErrProtected{}
+	}
+	return nil
 }
 
 // guarded exécute fn si la feuille n'est pas protégée.
@@ -162,27 +180,31 @@ func (t *tx) guardObject(table string, id int64) error {
 
 // ProtectSheet protège une feuille (pw vide : sans mot de passe).
 func (m *Model) ProtectSheet(ctx context.Context, sheet int64, pw string) error {
-	return m.setProtection(ctx, sheet, true, pw)
+	return m.setProtection(ctx, sheet, true, pw, false)
 }
 
 // UnprotectSheet ôte la protection d'une feuille ; pw doit être le mot de
 // passe donné en la protégeant, s'il y en avait un.
 func (m *Model) UnprotectSheet(ctx context.Context, sheet int64, pw string) error {
-	return m.setProtection(ctx, sheet, false, pw)
+	return m.setProtection(ctx, sheet, false, pw, false)
 }
 
-// ProtectWorkbook protège la structure du classeur (onglets).
-func (m *Model) ProtectWorkbook(ctx context.Context, pw string) error {
-	return m.setProtection(ctx, workbookScope, true, pw)
+// ProtectWorkbook protège la structure du classeur (onglets) ; sheets
+// verrouille aussi le contenu de toutes les feuilles, jusqu'à ce que la
+// protection du classeur soit ôtée.
+func (m *Model) ProtectWorkbook(ctx context.Context, pw string, sheets bool) error {
+	return m.setProtection(ctx, workbookScope, true, pw, sheets)
 }
 
-// UnprotectWorkbook ôte la protection de la structure du classeur.
+// UnprotectWorkbook ôte la protection de la structure du classeur, et le
+// verrou du contenu des feuilles posé avec elle.
 func (m *Model) UnprotectWorkbook(ctx context.Context, pw string) error {
-	return m.setProtection(ctx, workbookScope, false, pw)
+	return m.setProtection(ctx, workbookScope, false, pw, false)
 }
 
-// setProtection écrit hors du journal (rien à annuler).
-func (m *Model) setProtection(ctx context.Context, scope int64, on bool, pw string) error {
+// setProtection écrit hors du journal (rien à annuler). sheets (classeur
+// seulement) pose aussi le verrou du contenu de toutes les feuilles.
+func (m *Model) setProtection(ctx context.Context, scope int64, on bool, pw string, sheets bool) error {
 	h, err := hashPassword(pw)
 	if err != nil {
 		return err
@@ -211,8 +233,14 @@ func (m *Model) setProtection(ctx context.Context, scope int64, on bool, pw stri
 			if protected {
 				return fmt.Errorf("%s est déjà protégée", what)
 			}
-			_, err := sqlTx.ExecContext(ctx, `INSERT INTO _lattis_protection (sheet, hash) VALUES (?, ?)`, scope, h)
-			return err
+			if _, err := sqlTx.ExecContext(ctx, `INSERT INTO _lattis_protection (sheet, hash) VALUES (?, ?)`, scope, h); err != nil {
+				return err
+			}
+			if sheets && scope == workbookScope {
+				_, err := sqlTx.ExecContext(ctx, `INSERT OR REPLACE INTO _lattis_protection (sheet, hash) VALUES (?, '')`, sheetsScope)
+				return err
+			}
+			return nil
 		}
 		if !protected {
 			return fmt.Errorf("%s n'est pas protégée", what)
@@ -220,7 +248,11 @@ func (m *Model) setProtection(ctx context.Context, scope int64, on bool, pw stri
 		if !checkPassword(stored, pw) {
 			return ErrPassword
 		}
-		_, err = sqlTx.ExecContext(ctx, `DELETE FROM _lattis_protection WHERE sheet = ?`, scope)
+		if scope == workbookScope {
+			_, err = sqlTx.ExecContext(ctx, `DELETE FROM _lattis_protection WHERE sheet IN (?, ?)`, workbookScope, sheetsScope)
+		} else {
+			_, err = sqlTx.ExecContext(ctx, `DELETE FROM _lattis_protection WHERE sheet = ?`, scope)
+		}
 		return err
 	})
 	if err == nil {
@@ -244,6 +276,8 @@ func (m *Model) ProtectionChanges() int64 {
 type Protection struct {
 	Workbook         bool `json:"workbook"`         // structure du classeur protégée
 	WorkbookPassword bool `json:"workbookPassword"` // … avec un mot de passe
+	// Contenu de toutes les feuilles verrouillé avec la structure du classeur.
+	WorkbookSheets bool `json:"workbookSheets"`
 	// Feuilles protégées : identifiant → protégée avec un mot de passe.
 	Sheets map[int64]bool `json:"sheets"`
 }
@@ -271,9 +305,12 @@ func (t *tx) protection() (Protection, error) {
 		if err := rs.Scan(&id, &pw); err != nil {
 			return p, err
 		}
-		if id == workbookScope {
+		switch {
+		case id == workbookScope:
 			p.Workbook, p.WorkbookPassword = true, pw
-		} else {
+		case id == sheetsScope:
+			p.WorkbookSheets = true
+		default:
 			p.Sheets[id] = pw
 		}
 	}
@@ -317,7 +354,7 @@ func (t *tx) prints() (map[int64]string, map[int64]string, error) {
 		return nil, nil, err
 	}
 	out, names := map[int64]string{}, map[int64]string{}
-	if !p.Workbook && len(p.Sheets) == 0 {
+	if !p.Workbook && !p.WorkbookSheets && len(p.Sheets) == 0 {
 		return out, names, nil
 	}
 	h := sha256.New()
@@ -328,7 +365,32 @@ func (t *tx) prints() (map[int64]string, map[int64]string, error) {
 		}
 		out[workbookScope] = sum()
 	}
-	if len(p.Sheets) == 0 {
+	// Feuilles dont le contenu est verrouillé : protégées elles-mêmes, ou
+	// toutes si le classeur verrouille leur contenu.
+	locked := map[int64]bool{}
+	for id := range p.Sheets {
+		locked[id] = true
+	}
+	if p.WorkbookSheets {
+		rs, err := t.query(`SELECT id FROM _lattis_sheets`)
+		if err != nil {
+			return nil, nil, err
+		}
+		for rs.Next() {
+			var id int64
+			if err := rs.Scan(&id); err != nil {
+				rs.Close()
+				return nil, nil, err
+			}
+			locked[id] = true
+		}
+		err = rs.Err()
+		rs.Close()
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	if len(locked) == 0 {
 		return out, names, nil
 	}
 	// Tables de métadonnées et leurs colonnes (hors filtre).
@@ -382,7 +444,7 @@ func (t *tx) prints() (map[int64]string, map[int64]string, error) {
 			metas = append(metas, metaTable{n, strings.Join(cols, ", "), sheet})
 		}
 	}
-	for id := range p.Sheets {
+	for id := range locked {
 		var exists int
 		var name string
 		if err := t.row(`SELECT count(*), coalesce(max(name), '') FROM _lattis_sheets WHERE id = ?`, id).Scan(&exists, &name); err != nil {

@@ -521,6 +521,11 @@ export interface Layout {
      */
     "workbookProtected": boolean;
     "workbookPassword": boolean;
+
+    /**
+     * … avec le contenu de toutes les feuilles verrouillé.
+     */
+    "workbookSheets": boolean;
 }
 
 /**
