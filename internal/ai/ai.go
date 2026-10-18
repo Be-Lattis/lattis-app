@@ -8,11 +8,12 @@
 // la configuration : elles sont gardées dans le trousseau du système
 // (keys.go).
 //
-// Plusieurs fournisseurs sont prévus (Claude, Mistral, GPT, Gemini, Mammouth
-// AI…) : la conversation est gardée dans un format neutre (Message, Block)
-// et chaque fournisseur n'implémente qu'un tour d'échange (Provider.Turn) ;
-// la boucle d'outils (agent.go) est commune. Seul Claude est branché pour
-// l'instant (anthropic.go) ; les autres figurent au catalogue, indisponibles.
+// Plusieurs fournisseurs : Claude (anthropic.go, SDK officiel) et, par un
+// adaptateur compatible OpenAI (openai.go), Mistral, OpenAI, Gemini,
+// Mammouth AI et un modèle local (Ollama, LM Studio…). La conversation est
+// gardée dans un format neutre (Message, Block) et chaque fournisseur
+// n'implémente qu'un tour d'échange (Provider.Turn) ; la boucle d'outils
+// (agent.go) est commune.
 package ai
 
 import (
@@ -119,6 +120,13 @@ type KeyChecker interface {
 	CheckKey(ctx context.Context, cred Credentials) error
 }
 
+// ModelLister est un fournisseur qui lit sa liste de modèles chez lui
+// (GET /models) ; Info().Models rend ensuite la dernière liste lue, ou une
+// petite liste fixe de repli.
+type ModelLister interface {
+	ListModels(ctx context.Context, cred Credentials) ([]Model, error)
+}
+
 // ErrUnreachable : le fournisseur n'a pas pu être joint (réseau, proxy).
 var ErrUnreachable = errors.New("fournisseur injoignable")
 
@@ -151,13 +159,6 @@ type Model struct {
 var (
 	regMu     sync.RWMutex
 	providers = map[string]Provider{}
-	// planned : fournisseurs prévus, pas encore branchés (non proposés).
-	planned = []Info{
-		{ID: "mistral", Name: "Mistral AI", KeyURL: "https://console.mistral.ai/api-keys"},
-		{ID: "openai", Name: "OpenAI (GPT)", KeyURL: "https://platform.openai.com/api-keys"},
-		{ID: "gemini", Name: "Google Gemini", KeyURL: "https://aistudio.google.com/apikey"},
-		{ID: "mammouth", Name: "Mammouth AI", KeyURL: "https://mammouth.ai"},
-	}
 )
 
 // Register ajoute un fournisseur branché.
@@ -174,8 +175,7 @@ func Lookup(id string) Provider {
 	return providers[id]
 }
 
-// Catalog liste les fournisseurs branchés, seuls proposés (choix de Louis :
-// pas de fournisseur annoncé mais pas encore intégré dans l'interface).
+// Catalog liste les fournisseurs branchés, par nom.
 func Catalog() []Info {
 	regMu.RLock()
 	defer regMu.RUnlock()

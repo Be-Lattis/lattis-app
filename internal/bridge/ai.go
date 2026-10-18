@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/lalamefine/lattis/internal/ai"
 	"github.com/lalamefine/lattis/internal/command"
@@ -88,6 +89,9 @@ type aiState struct {
 	order   []int    // réponses dans l'ordre (pour repérer les annulations)
 	notes   []string // remarques à joindre au prochain message
 	gen     int      // change à chaque remise à zéro (classeur remplacé)
+	// listing : fournisseurs dont la liste des modèles est en cours de
+	// lecture (refreshModels).
+	listing map[string]bool
 }
 
 // AIProvider est un fournisseur pour l'interface.
@@ -134,6 +138,9 @@ func (s *DocumentService) AIState() AIStatus {
 		if info.Available {
 			_, p.HasKey = ai.DefaultKeys.Get(info.ID)
 		}
+		if info.ID == st.Provider && (p.HasKey || !info.NeedsKey) {
+			s.refreshModels(info.ID, c.String("ai.endpoint", ""))
+		}
 		st.Providers = append(st.Providers, p)
 		if info.ID == st.Provider && st.Model == "" {
 			st.Model = info.DefaultModel
@@ -143,6 +150,36 @@ func (s *DocumentService) AIState() AIStatus {
 	st.Busy = s.ai.cancel != nil
 	s.ai.mu.Unlock()
 	return st
+}
+
+// refreshModels lit en arrière-plan la liste des modèles d'un fournisseur
+// qui la publie (ai.ModelLister, mise en cache par le fournisseur) : le
+// prochain AIState la montre. L'interface relit l'état après chaque envoi et
+// à chaque changement de réglage.
+func (s *DocumentService) refreshModels(id, endpoint string) {
+	ml, ok := ai.Lookup(id).(ai.ModelLister)
+	if !ok {
+		return
+	}
+	s.ai.mu.Lock()
+	if s.ai.listing[id] {
+		s.ai.mu.Unlock()
+		return
+	}
+	if s.ai.listing == nil {
+		s.ai.listing = map[string]bool{}
+	}
+	s.ai.listing[id] = true
+	s.ai.mu.Unlock()
+	go func() {
+		key, _ := ai.DefaultKeys.Get(id)
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		_, _ = ml.ListModels(ctx, ai.Credentials{Key: key, Endpoint: endpoint})
+		s.ai.mu.Lock()
+		delete(s.ai.listing, id)
+		s.ai.mu.Unlock()
+	}()
 }
 
 // AISetKey vérifie la clé d'API d'un fournisseur auprès de lui, puis

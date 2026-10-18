@@ -497,6 +497,20 @@ func TestSetUser(t *testing.T) {
 	if _, err := l.SetUser(ctx, "ai.dataSharing", "tout"); err == nil {
 		t.Fatal("ai.dataSharing invalide accepté")
 	}
+	// Modèle local : http:// vers ce poste seulement, https:// partout.
+	if v := l.Load(ctx).String("ai.localUrl", ""); v != "http://localhost:11434/v1" {
+		t.Fatalf("ai.localUrl par défaut = %q", v)
+	}
+	for _, ok := range []string{"http://localhost:1234/v1", "http://127.0.0.1:11434/v1", "http://[::1]:8080/v1", "https://ia.acme/v1"} {
+		if c, err = l.SetUser(ctx, "ai.localUrl", ok); err != nil || c.String("ai.localUrl", "") != ok {
+			t.Fatalf("ai.localUrl %s : %v", ok, err)
+		}
+	}
+	for _, bad := range []string{"http://192.168.1.5:11434/v1", "http://ia.acme/v1", "ftp://localhost/", "localhost:11434"} {
+		if _, err := l.SetUser(ctx, "ai.localUrl", bad); err == nil {
+			t.Fatalf("ai.localUrl %s accepté", bad)
+		}
+	}
 	// Fichier illisible : pas écrasé.
 	os.WriteFile(file, []byte(`{cassé`), 0o600)
 	if _, err := l.SetUser(ctx, "features.htmlTabs", true); err == nil {

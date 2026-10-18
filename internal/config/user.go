@@ -19,7 +19,7 @@ import (
 // l'emportent toujours sur eux.
 
 // UserEditable liste les clés que l'interface peut écrire.
-var UserEditable = []string{"features.htmlTabs", "features.sharedWorkbooks", "ai.enabled", "ai.dataSharing", "ai.provider", "ai.model", "ai.keepConversation"}
+var UserEditable = []string{"features.htmlTabs", "features.sharedWorkbooks", "ai.enabled", "ai.dataSharing", "ai.provider", "ai.model", "ai.keepConversation", "ai.localUrl"}
 
 // Editable dit si l'interface peut écrire cette clé.
 func Editable(path string) bool {

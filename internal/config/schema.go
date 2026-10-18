@@ -83,6 +83,10 @@ type AI struct {
 	Auth     Auth   `json:"auth,omitempty"`
 	// DataSharing : schema-only ou sample.
 	DataSharing string `json:"dataSharing,omitempty"`
+	// LocalURL : adresse du modèle local (Ollama, LM Studio…), compatible
+	// OpenAI ; http:// permis seulement vers ce poste (localhost,
+	// 127.0.0.1, ::1).
+	LocalURL string `json:"localUrl,omitempty"`
 }
 
 // Features active ou coupe des fonctions.
@@ -129,7 +133,8 @@ func Defaults() Tree {
 			// Ajout de Serveurs Lattis par l'utilisateur.
 			"allowUserLattisServers": true,
 		},
-		"ai": Tree{"enabled": false, "provider": "anthropic", "dataSharing": "schema-only"},
+		"ai": Tree{"enabled": false, "provider": "anthropic", "dataSharing": "schema-only",
+			"localUrl": "http://localhost:11434/v1"}, // Ollama
 	}
 }
 
@@ -248,6 +253,7 @@ var validators = []struct {
 	{"features.luaHttp.allowedDomains", isStringList},
 	{"ai.enabled", isBool},
 	{"ai.endpoint", isHTTPSURL},
+	{"ai.localUrl", isLocalOrHTTPSURL},
 	{"ai.provider", isIdent},
 	{"ai.model", isIdent},
 	{"ai.dataSharing", oneOf("schema-only", "sample")},
@@ -328,6 +334,28 @@ func isHTTPSURL(v any) error {
 		return errors.New("adresse https:// attendue")
 	}
 	return nil
+}
+
+// isLocalOrHTTPSURL : adresse https://, ou http:// vers ce poste seulement
+// (modèle local : Ollama, LM Studio…) ; rien ne sort alors en clair.
+func isLocalOrHTTPSURL(v any) error {
+	s, ok := v.(string)
+	if !ok {
+		return errors.New("adresse attendue")
+	}
+	u, err := url.Parse(s)
+	if err == nil && u.Host != "" {
+		switch u.Scheme {
+		case "https":
+			return nil
+		case "http":
+			switch u.Hostname() {
+			case "localhost", "127.0.0.1", "::1":
+				return nil
+			}
+		}
+	}
+	return errors.New("adresse https://, ou http://localhost ou http://127.0.0.1, attendue")
 }
 
 func isPublicKey(v any) error {
