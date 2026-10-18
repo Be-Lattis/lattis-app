@@ -708,8 +708,8 @@ export function Page(sheet: number): $CancellablePromise<string> {
 
 /**
  * PageCall exécute une commande demandée par une page HTML (pont
- * postMessage du cadre isolé) : les commandes des scripts et du serveur MCP,
- * sauf fichiers, annulation et scripts.run (api.PageCall).
+ * postMessage du cadre isolé) : les commandes de la liste autorisée aux
+ * pages (api.PageCall).
  */
 export function PageCall(name: string, args: { [_ in string]?: any } | null): $CancellablePromise<any> {
     return $Call.ByID(65243337, name, args);

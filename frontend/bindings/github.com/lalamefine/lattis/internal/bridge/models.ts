@@ -163,6 +163,12 @@ export interface DialogRequest {
      * vide : pas de bouton Annuler
      */
     "cancel"?: string;
+
+    /**
+     * Code : code affiché sur demande (bouton « Voir le code ») ; accord
+     * d'exécution d'un script (consent.go).
+     */
+    "code"?: string;
 }
 
 /**

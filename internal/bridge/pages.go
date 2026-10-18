@@ -78,7 +78,7 @@ func (s *DocumentService) RunFunction(ctx context.Context, name, entry string) (
 	}
 	for _, sc := range list {
 		if sc.Name == name {
-			return api.RunScript(host{s}, sc.Name, sc.Source, entry)
+			return api.RunLibraryScript(host{s}, sc.Name, sc.Source, entry)
 		}
 	}
 	return ScriptResult{}, fmt.Errorf("script « %s » introuvable (onglet SCRIPT)", name)
