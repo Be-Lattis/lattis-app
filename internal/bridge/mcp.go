@@ -66,6 +66,18 @@ func (s *DocumentService) startMCP(st mcp.Settings) {
 	}
 }
 
+// syncMCP arrête le serveur MCP quand il n'est plus permis (assistant IA
+// désactivé), et le relance quand il le redevient s'il était activé.
+func (s *DocumentService) syncMCP() {
+	if s.mcpRefused() != nil {
+		s.stopMCP()
+		return
+	}
+	if st, err := mcp.LoadSettings(); err == nil && st.Enabled {
+		s.startMCP(st)
+	}
+}
+
 func (s *DocumentService) stopMCP() {
 	s.mcp.mu.Lock()
 	defer s.mcp.mu.Unlock()

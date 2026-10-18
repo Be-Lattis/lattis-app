@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lalamefine/lattis/internal/config"
 	"github.com/lalamefine/lattis/internal/mcp"
 )
 
@@ -67,9 +68,20 @@ func mcpHome(t *testing.T) string {
 	return dir
 }
 
+// mcpAIEnabled règle ai.enabled : le serveur MCP n'est permis qu'avec
+// l'assistant IA.
+func mcpAIEnabled(t *testing.T, on bool) {
+	t.Helper()
+	old := config.Current()
+	t.Cleanup(func() { config.SetCurrent(old) })
+	config.SetCurrent(config.Resolve(context.Background(), config.Options{}, &config.TreeSource{N: "essai", R: config.RankUser,
+		T: config.Tree{"ai": config.Tree{"enabled": on}}}))
+}
+
 func mcpService(t *testing.T) (*DocumentService, *emitter, *mcp.Server) {
 	t.Helper()
 	mcpHome(t)
+	mcpAIEnabled(t, true)
 	ctx := context.Background()
 	s := &DocumentService{}
 	e := &emitter{}
@@ -354,5 +366,30 @@ fi
 	}
 	if !strings.Contains(c.CodeCommand, st.URL) || !strings.Contains(c.CodeCommand, "--scope user") {
 		t.Fatalf("commande à copier : %s", c.CodeCommand)
+	}
+}
+
+// Assistant IA désactivé : le serveur MCP est refusé et s'arrête ; il
+// repart quand l'assistant est réactivé, s'il était activé.
+func TestMCPStopsWithAI(t *testing.T) {
+	s, _, _ := mcpService(t)
+	if _, err := s.SetMCPEnabled(true); err != nil {
+		t.Fatal(err)
+	}
+	if st, _ := s.MCPState(); !st.Running {
+		t.Fatal("serveur non démarré")
+	}
+	mcpAIEnabled(t, false)
+	s.syncMCP()
+	if st, _ := s.MCPState(); st.Running {
+		t.Fatal("serveur encore en marche, assistant désactivé")
+	}
+	if _, err := s.SetMCPEnabled(true); !errors.Is(err, errNoMCPAI) {
+		t.Fatalf("activation permise sans assistant : %v", err)
+	}
+	mcpAIEnabled(t, true)
+	s.syncMCP()
+	if st, _ := s.MCPState(); !st.Running {
+		t.Fatal("serveur non relancé")
 	}
 }
