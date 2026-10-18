@@ -3,6 +3,7 @@
 	// essayé, puis gardé pour la session (et dans le trousseau si coché).
 	// S'il est déjà enregistré sur ce poste (need.stored), il suffit
 	// d'autoriser ce classeur à s'en servir (accord retenu sur ce poste).
+	import { modal } from '#lib/ui/focus.js';
 	import { untrack } from 'svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import type { PasswordNeed } from '#bindings/internal/query/models.js';
@@ -61,6 +62,7 @@
 		aria-modal="true"
 		aria-label="Mot de passe"
 		tabindex="-1"
+		use:modal
 		onkeydown={(e) => {
 			e.stopPropagation();
 			if (e.key === 'Escape') ondone(false);

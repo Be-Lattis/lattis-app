@@ -6,6 +6,7 @@
 	// Format de cellule (Ctrl+1), comme Excel : onglets Nombre, Alignement,
 	// Police, Bordure et Remplissage. Seules les propriétés modifiées sont
 	// envoyées : une sélection aux styles différents garde le reste.
+	import { modal } from '#lib/ui/focus.js';
 	import Select from '#lib/ui/Select.svelte';
 	import { categoryOf, DATE_FORMATS, formatCell, formatPatch, TIME_FORMATS, type Category } from './numfmt';
 	import { cellFont, DEFAULT_PT, FONTS, SIZES } from './textwrap';
@@ -154,7 +155,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="back" onmousedown={(e) => e.target === e.currentTarget && onclose()}>
-	<div class="dlg" role="dialog" aria-label="Format de cellule" tabindex="-1" use:grab onkeydown={onKey}>
+	<div class="dlg" role="dialog" aria-label="Format de cellule" tabindex="-1" aria-modal="true" use:grab use:modal onkeydown={onKey}>
 		<div class="head">Format de cellule</div>
 		<div class="tabs">
 			{#each TABS as t (t.id)}

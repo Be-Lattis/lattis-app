@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resizePanel } from '#lib/ui/resize.js';
+	import { panelKeys } from '#lib/ui/focus.js';
 	// Données › Obtenir des données : tout ce qui touche aux requêtes d'import
 	// (équivalent de Power Query) et aux connexions, hors de la grille. La page
 	// n'appelle que data() et reçoit onchanged (classeur modifié, feuille à
@@ -276,10 +277,10 @@
 </script>
 
 {#if panel}
-	<aside class="panel" use:resizePanel={{ key: 'queries' }}>
+	<aside class="panel" use:resizePanel={{ key: 'queries' }} use:panelKeys={() => (panel = false)} aria-label="Requêtes et connexions">
 		<header>
 			<strong>Requêtes et connexions</strong>
-			<button class="x" title="Fermer le volet" onclick={() => (panel = false)}>✕</button>
+			<button class="x" title="Fermer le volet (Échap)" aria-label="Fermer le volet" onclick={() => (panel = false)}>✕</button>
 		</header>
 		{#if busy}<p class="muted">{busy}</p>{/if}
 		<h3>Requêtes ({queries.length})</h3>

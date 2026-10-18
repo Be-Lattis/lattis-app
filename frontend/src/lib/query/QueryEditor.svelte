@@ -5,6 +5,7 @@
 	// l'aperçu à cette étape ; une nouvelle étape s'insère après celle qui est
 	// choisie. « Fermer et charger » enregistre la requête et charge son
 	// résultat dans un tableau de feuille.
+	import { modal } from '#lib/ui/focus.js';
 	import { onMount } from 'svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import type { Column, PasswordNeed, Preview, Query, Source, Step } from '#bindings/internal/query/models.js';
@@ -344,7 +345,7 @@
 </script>
 
 <svelte:window onkeydown={onKey} />
-<div class="editor" role="dialog" aria-modal="true" aria-label="Éditeur de requête">
+<div class="editor" role="dialog" aria-modal="true" aria-label="Éditeur de requête" use:modal>
 	<header class="title">
 		<span class="app">Éditeur de requête</span>
 		<span class="name">{q.name}</span>

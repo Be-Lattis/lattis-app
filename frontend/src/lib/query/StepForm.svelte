@@ -2,6 +2,7 @@
 	// Paramètres d'une étape de requête (boîte de dialogue de l'éditeur),
 	// comme les boîtes de Power Query : Filtrer les lignes, Regrouper par,
 	// Fusionner…
+	import { modal } from '#lib/ui/focus.js';
 	import Select from '#lib/ui/Select.svelte';
 	import Icon from '#lib/icons/Icon.svelte';
 	import type { Column, Step } from '#bindings/internal/query/models.js';
@@ -99,6 +100,7 @@
 		aria-modal="true"
 		aria-label={info?.label}
 		tabindex="-1"
+		use:modal
 		onkeydown={(e) => {
 			e.stopPropagation();
 			if (e.key === 'Escape') oncancel();

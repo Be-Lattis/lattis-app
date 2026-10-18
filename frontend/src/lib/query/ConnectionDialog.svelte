@@ -3,6 +3,7 @@
 	// API web) : enregistrée dans le classeur sans son mot de passe (ou
 	// jeton), qui reste dans le trousseau du système (« Mémoriser ») ou en
 	// mémoire le temps de la session.
+	import { modal } from '#lib/ui/focus.js';
 	import Select from '#lib/ui/Select.svelte';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
@@ -75,6 +76,7 @@
 		aria-modal="true"
 		aria-label="Connexion {CONN_LABELS[k] ?? ''}"
 		tabindex="-1"
+		use:modal
 		onkeydown={(e) => {
 			e.stopPropagation();
 			if (e.key === 'Escape') oncancel();

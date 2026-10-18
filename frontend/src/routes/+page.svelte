@@ -37,6 +37,7 @@
 	import { typeLabel, type ColumnType } from '#lib/grid/format.js';
 	import type { Fetched } from '#lib/grid/cache.js';
 	import { isReloadKey, shortcutOf } from '#lib/grid/shortcuts.js';
+	import { cycleRegions, modal, modalOpen } from '#lib/ui/focus.js';
 	import { clampZoom } from '#lib/grid/zoom.js';
 	import ZoomBar from '#lib/shell/ZoomBar.svelte';
 	import BusyBar from '#lib/shell/BusyBar.svelte';
@@ -410,6 +411,16 @@
 			refreshKey(sc === 'refreshAll');
 		};
 		window.addEventListener('keydown', noReload, true);
+		// F6 (Maj+F6 : en arrière) : ruban, barre de formule, grille, volet,
+		// onglets, barre d'état. En capture : les éditeurs ne la gardent pas.
+		const regions = (e: KeyboardEvent) => {
+			if (e.key !== 'F6' || e.ctrlKey || e.altKey || e.metaKey) return;
+			e.preventDefault();
+			if (modalOpen()) return;
+			e.stopPropagation();
+			cycleRegions(e.shiftKey);
+		};
+		window.addEventListener('keydown', regions, true);
 		// Un texte ou un lien lâché hors d'une zone prévue ne doit jamais faire
 		// quitter la page de l'application (la fenêtre afficherait une erreur).
 		const noDrop = (e: DragEvent) => e.preventDefault();
@@ -420,6 +431,7 @@
 			offUI();
 			window.removeEventListener('keydown', keys);
 			window.removeEventListener('keydown', noReload, true);
+			window.removeEventListener('keydown', regions, true);
 			window.removeEventListener('dragover', noDrop);
 			window.removeEventListener('drop', noDrop);
 		};
@@ -1065,7 +1077,7 @@
 			</div>
 		{:else if data}
 			{#key mode}
-				<div class="pane" class:hidden={view !== 'grid' || !!activePage}>
+				<div class="pane" data-region="grid" class:hidden={view !== 'grid' || !!activePage}>
 					<Sheet
 						bind:this={sheet}
 						{data}
@@ -1092,7 +1104,7 @@
 			{#if view === 'grid' && activePage}
 				{#key activePage.sheet}
 					{@const pageId = activePage.sheet}
-					<div class="pane">
+					<div class="pane" data-region="grid">
 						{#if activeDoc}
 						<DocPage
 							bind:this={docPage}
@@ -1164,7 +1176,7 @@
 				{/key}
 			{/if}
 			{#if view === 'sql'}
-				<div class="pane"><SqlView {objects} run={query} exec={mode === 'doc' ? (q) => DocumentService.Execute(q) : undefined} ongoto={gotoObject}
+				<div class="pane" data-region="grid"><SqlView {objects} run={query} exec={mode === 'doc' ? (q) => DocumentService.Execute(q) : undefined} ongoto={gotoObject}
 						onrename={mode === 'doc'
 							? async (from, to) => {
 									docState = await DocumentService.RenameTable(from, to);
@@ -1203,7 +1215,7 @@
 							: undefined}
 					/></div>
 			{:else if view === 'script'}
-				<div class="pane">
+				<div class="pane" data-region="grid">
 					{#if mode === 'doc'}
 						<ScriptView
 							{scripts}
@@ -1295,6 +1307,7 @@
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<form
 				class="modal protect"
+				use:modal
 				aria-label="Protection"
 				onkeydown={(e) => {
 					e.stopPropagation();
@@ -1350,7 +1363,7 @@
 	{#if deleting}
 		{@const d = deleting}
 		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true" aria-label="Supprimer la feuille">
+			<div class="modal" role="dialog" aria-modal="true" aria-label="Supprimer la feuille" use:modal={() => (deleting = null)}>
 				<p>Supprimer la feuille « {d.name} » et tout ce qu'elle contient ?</p>
 				<ul class="delete-list">
 					{#each d.items as it (it)}<li>{it}</li>{/each}
@@ -1372,7 +1385,7 @@
 	{/if}
 	{#if closing}
 		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true">
+			<div class="modal" role="dialog" aria-modal="true" aria-label="Enregistrer les modifications" use:modal={() => (closing = false)}>
 				<p>Enregistrer les modifications de « {docState.title} » avant de le fermer ?</p>
 				<div class="actions">
 					<button class="primary" onclick={() => closeDoc(true).catch((e) => (notice = err(e)))}>Enregistrer</button>
@@ -1382,7 +1395,7 @@
 			</div>
 		</div>
 	{/if}
-	<footer class="statusbar">
+	<footer class="statusbar" data-region="status" aria-label="Barre d'état">
 		{#if notice || sheetStatus?.message}<span class="message">{sheetStatus?.message || notice}</span>{/if}
 		<span class="spacer"></span>
 		{#if sheetStatus}
@@ -1422,6 +1435,7 @@
 	/* Coins des surfaces flottantes (menus, boîtes de dialogue, panneaux de filtre…) : légèrement arrondis. */
 	:global(:root) {
 		--float-radius: 6px;
+		--focus-ring: #0f6cbd;
 	}
 	:global(html, body) {
 		margin: 0;
@@ -1434,6 +1448,16 @@
 	.app :global(.cm-editor),
 	.app :global(pre) {
 		user-select: text;
+	}
+	/* Focus clavier visible partout (boutons, entrées de menu, liens,
+	   éléments atteignables) ; les composants qui ont leur propre marque
+	   (bordure d'un champ, fond d'une entrée) la gardent. */
+	:global(:is(button, a[href], summary, [role^='menuitem'], [role='option'], [role='tab'], [tabindex='0']):focus-visible) {
+		outline: 2px solid var(--focus-ring);
+		outline-offset: -2px;
+	}
+	:global([role='grid']:focus-visible) {
+		outline: none; /* la grille montre sa cellule active */
 	}
 	.app {
 		user-select: none;
