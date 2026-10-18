@@ -58,9 +58,12 @@
 		tick?: number;
 		/** Colonnes des tableaux (« Clients[Ville] ») qui peuvent donner les choix d'une liste. */
 		columnRefs?: string[];
+		/** Feuille protégée : un clic exécute le bouton, mais rien ne se
+		 * sélectionne, ne se déplace ni ne s'édite (pas de menu). */
+		locked?: boolean;
 	}
 
-	let { buttons, geo, view, active, scripts, onrun, onfire, pickFile, oncreate, onset, onplace, ondelete, onwheel, say, done, zoom = 1, cellValue, setCell, tick = 0, dock, columnRefs = [] }: Props = $props();
+	let { buttons, geo, view, active, scripts, onrun, onfire, pickFile, oncreate, onset, onplace, ondelete, onwheel, say, done, zoom = 1, cellValue, setCell, tick = 0, dock, columnRefs = [], locked = false }: Props = $props();
 	// Menus et dialogues (position: fixed) : le zoom du calque est annulé.
 	const unzoom = $derived(zoom === 1 ? undefined : 1 / zoom);
 
@@ -90,7 +93,7 @@
 		};
 	});
 	$effect(() => {
-		if (selected !== null && !buttons.some((b) => b.id === selected)) selected = null;
+		if (selected !== null && (locked || !buttons.some((b) => b.id === selected))) selected = null;
 	});
 
 	/** Cellule liée d'une case ou d'une liste. */
@@ -189,8 +192,9 @@
 		if (!dir && selected !== b.id && /^(SELECT|INPUT|TEXTAREA)$/.test((ev.target as HTMLElement).tagName)) return;
 		ev.preventDefault();
 		ev.stopPropagation();
+		if (locked && dir) return;
 		if (ev.ctrlKey || ev.metaKey) {
-			selected = selected === b.id ? null : b.id;
+			if (!locked) selected = selected === b.id ? null : b.id;
 			return;
 		}
 		const b0 = boxOf(b);
@@ -201,7 +205,7 @@
 			const dx = (e.clientX - x0) / zoom;
 			const dy = (e.clientY - y0) / zoom;
 			if (!moved && Math.abs(dx) + Math.abs(dy) < 4) return;
-			if (!moved && !onplace) return;
+			if (!moved && (!onplace || locked)) return; // feuille protégée : le bouton ne bouge pas
 			moved = true;
 			const r = { ...b0 };
 			if (!dir) {
@@ -248,6 +252,7 @@
 	function openMenu(ev: MouseEvent, b: SheetButton) {
 		ev.preventDefault();
 		ev.stopPropagation();
+		if (locked) return;
 		selected = b.id;
 		menu = { b, x: ev.clientX, y: ev.clientY };
 	}

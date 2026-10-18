@@ -492,7 +492,10 @@
 		headings?: boolean;
 		/** Défilement horizontal (largeur du contenu, largeur visible, position) : la barre est dans la ligne des onglets, comme Excel. */
 		onhscroll?: (s: { content: number; view: number; left: number }) => void;
-		/** Feuille protégée : message affiché au lieu d'ouvrir la saisie (vide : modifiable). */
+		/** Feuille protégée : message des commandes refusées (vide : modifiable). Les
+		 * cellules ne prennent plus le focus (ni sélection ni cellule active
+		 * affichée), sans message ; graphiques et contrôles ne se sélectionnent
+		 * plus, les boutons s'exécutent toujours. */
 		locked?: string;
 		/** Volets figés : lignes et colonnes qui restent affichées pendant le défilement. */
 		freeze?: { rows: number; cols: number };
@@ -1439,6 +1442,8 @@
 		const { row, col } = active;
 		let last = e.last;
 		let lastCol = e.lastCol;
+		// Feuille protégée : rien à saisir, le cadre reste celui du tableau.
+		if (locked) return { last, lastCol, firstCol: e.t.col };
 		// Une note ou un total gardé hors du tableau ne l'étend pas.
 		if (keptOut(row, col)) return { last, lastCol, firstCol: e.t.col };
 		// Juste à gauche, sur ses lignes : la saisie y fera sa nouvelle
@@ -2142,7 +2147,7 @@
 
 		// Plage sélectionnée.
 		// Comme Excel, la cellule active (ou sa fusion) reste blanche.
-		if (!singleSelection()) {
+		if (!locked && !singleSelection()) {
 			const a = activeRect();
 			ctx.fillStyle = C.select;
 			ctx.beginPath();
@@ -2631,14 +2636,15 @@
 		// Cadre extérieur (animé) : la plage, ou la cellule active seule.
 		ctx.strokeStyle = C.active;
 		ctx.lineWidth = 2;
-		ctx.strokeRect(cx(0) + selBox.x + 0.5, ry(0) + selBox.y + 0.5, selBox.w - 1, selBox.h - 1);
+		// Feuille protégée : pas de cellule active affichée (elle ne prend pas le focus).
+		if (!locked) ctx.strokeRect(cx(0) + selBox.x + 0.5, ry(0) + selBox.y + 0.5, selBox.w - 1, selBox.h - 1);
 		// Rechercher dans la sélection : la cellule trouvée, encadrée (la sélection ne bouge pas).
 		if (finder?.zone && finder.at && inZone(finder.at, finder.zone)) {
 			const f = finder.at;
 			ctx.lineWidth = 2;
 			ctx.strokeRect(cx(f.col) + 2, ry(f.row) + 2, cax().size(f.col) - 4, rh(f.row) - 4);
 		}
-		if (ar.r1 >= r0 - 1 && ar.r0 <= r1 + 1) {
+		if (!locked && ar.r1 >= r0 - 1 && ar.r0 <= r1 + 1) {
 			ctx.strokeStyle = C.active;
 			ctx.lineWidth = 1;
 			if (many) ctx.strokeRect(cx(ar.c0) + 1.5, ry(ar.r0) + 1.5, spanW(ar.c0, ar.c1) - 3, rspan(ar.r0, ar.r1) - 3);
@@ -4368,6 +4374,10 @@
 
 	/** Déplace (dir vide) ou redimensionne (n, s, e, w et coins) un graphique. */
 	function startChartGesture(ev: MouseEvent, ch: SheetChart, dir = '') {
+		if (locked) {
+			ev.preventDefault(); // feuille protégée : le graphique ne se sélectionne pas
+			return;
+		}
 		if (ev.button !== 0 || !source.placeChart) return;
 		ev.preventDefault();
 		ev.stopPropagation();
@@ -4431,6 +4441,7 @@
 	function onChartMenu(ev: MouseEvent, ch: SheetChart) {
 		ev.preventDefault();
 		ev.stopPropagation();
+		if (locked && !hold) return;
 		selectChart(ch);
 		const r = wrap.getBoundingClientRect();
 		closeMenus();
@@ -4606,6 +4617,7 @@
 	}
 
 	function editChart(ch: SheetChart) {
+		if (locked && !hold) return;
 		selectChart(ch);
 	}
 	async function removeChart(id: number) {
@@ -5569,6 +5581,14 @@
 			pointAway(e);
 			return;
 		}
+		// Feuille protégée : les cellules ne prennent pas le focus (ni
+		// sélection, ni menus de tableau, ni redimensionnement), sans message.
+		if (locked) {
+			e.preventDefault();
+			wrap.focus();
+			if (selChart !== null) selChart = null;
+			return;
+		}
 		if (e.button === 0 && onFillHandle(e)) {
 			e.preventDefault();
 			if (e.detail === 2) {
@@ -6112,6 +6132,7 @@
 
 	function onDblClick(e: MouseEvent) {
 		if (hold) return; // pointage d'une formule d'une autre feuille
+		if (locked) return; // feuille protégée : pas de saisie, sans message
 		const b = boundaryAt(e);
 		if (b !== null && source.setColumnWidth) {
 			autoFitColumn(b);
@@ -6206,6 +6227,9 @@
 		// Touche maintenue : le cadre suit sans animation.
 		if (e.repeat) noAnimUntil = performance.now() + 150;
 		if (editing) return;
+		// Feuille protégée : ni déplacement ni saisie, sans message ; les
+		// raccourcis de la page (Ctrl+S, onglets…) passent.
+		if (locked && !hold) return;
 		// Maj+F10 ou touche Menu : menu contextuel de la cellule active (ou du graphique sélectionné).
 		if ((e.shiftKey && e.key === 'F10' && !e.ctrlKey && !e.altKey) || e.key === 'ContextMenu') {
 			e.preventDefault();
@@ -7653,6 +7677,10 @@
 	}
 
 	function onContextMenu(ev: MouseEvent) {
+		if (locked && !hold) {
+			ev.preventDefault(); // feuille protégée : aucune cellule à cibler
+			return;
+		}
 		if (!formulaMode && openHintMenu(ev)) return;
 		const cell = cellAt(ev);
 		ev.preventDefault();
@@ -8178,6 +8206,7 @@
 				{/each}
 				<SheetButtons
 					bind:this={buttonsLayer}
+					locked={!!locked}
 					{buttons}
 					geo={{ colOffset: (c) => cax().offset(c), rowTop, colAt: (x) => cax().indexAt(x), rowAt: (y) => rax().indexAt(y) }}
 					{zoom}
