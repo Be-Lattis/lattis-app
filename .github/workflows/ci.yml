@@ -65,7 +65,7 @@ jobs:
       - run: wails3 build
       - uses: actions/upload-artifact@v4
         with:
-          name: slitable-${{ runner.os }}
+          name: lattis-${{ runner.os }}
           path: bin/
 
   # Mesure de la grille sous WebKitGTK (le moteur le plus lent), dans un
@@ -93,9 +93,9 @@ jobs:
         run: |
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           export GTK_A11Y=none
-          export SLITABLE_BENCH="$PWD/bench-webkitgtk.json"
-          timeout 600 xvfb-run -a -s "-screen 0 1280x800x24" ./bin/slitable
-          cat "$SLITABLE_BENCH"
+          export LATTIS_BENCH="$PWD/bench-webkitgtk.json"
+          timeout 600 xvfb-run -a -s "-screen 0 1280x800x24" ./bin/lattis
+          cat "$LATTIS_BENCH"
       - uses: actions/upload-artifact@v4
         with:
           name: bench-webkitgtk
