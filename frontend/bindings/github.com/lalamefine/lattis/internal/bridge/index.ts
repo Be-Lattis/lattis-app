@@ -10,6 +10,7 @@ export {
 
 export type {
     AIContext,
+    AIConversation,
     AIEventData,
     AILogEntry,
     AIProvider,

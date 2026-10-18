@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -89,6 +90,9 @@ type aiState struct {
 	order   []int    // réponses dans l'ordre (pour repérer les annulations)
 	notes   []string // remarques à joindre au prochain message
 	gen     int      // change à chaque remise à zéro (classeur remplacé)
+	// others : conversations mises de côté ; nextConv : dernier identifiant.
+	others   []aiConv
+	nextConv int
 	// listing : fournisseurs dont la liste des modèles est en cours de
 	// lecture (refreshModels).
 	listing map[string]bool
@@ -576,6 +580,9 @@ type aiSaved struct {
 	History []ai.Message `json:"history"`
 	Log     []AILogEntry `json:"log"`
 	Usage   ai.Usage     `json:"usage"`
+	// Others : conversations mises de côté (ignorées des versions qui ne
+	// les connaissent pas).
+	Others []aiConv `json:"others,omitempty"`
 }
 
 // aiReplaced remet la conversation à zéro quand le classeur change (d nil :
@@ -593,6 +600,11 @@ func (s *DocumentService) aiReplaced(d *doc.Document) {
 	}
 	s.ai.gen++
 	s.ai.log, s.ai.runs, s.ai.order, s.ai.notes = saved.Log, nil, nil, nil
+	s.ai.others = saved.Others
+	s.ai.nextConv = 0
+	for _, c := range saved.Others {
+		s.ai.nextConv = max(s.ai.nextConv, c.ID)
+	}
 	s.ai.mu.Unlock()
 	s.ai.session.Restore(saved.History, saved.Usage)
 	s.sys().Emit(AIResetEvent, nil)
@@ -625,9 +637,12 @@ func (s *DocumentService) storeConversation(ctx context.Context, d *doc.Document
 	var value []byte
 	if keep {
 		hist, usage := s.ai.session.Snapshot()
-		if len(hist) > 0 {
+		s.ai.mu.Lock()
+		others := len(s.ai.others) > 0
+		s.ai.mu.Unlock()
+		if len(hist) > 0 || others {
 			s.ai.mu.Lock()
-			saved := aiSaved{Version: 1, History: hist, Log: s.ai.log, Usage: usage}
+			saved := aiSaved{Version: 1, History: hist, Log: s.ai.log, Usage: usage, Others: s.ai.others}
 			var err error
 			value, err = json.Marshal(saved)
 			s.ai.mu.Unlock()
@@ -654,4 +669,116 @@ func (s *DocumentService) storeConversation(ctx context.Context, d *doc.Document
 		_, err := tx.ExecContext(ctx, `INSERT INTO _lattis_info (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value`, aiConversationKey, string(value))
 		return err
 	})
+}
+
+// --- Plusieurs conversations ---------------------------------------------------
+
+// aiConv est une conversation mise de côté (Nouvelle conversation, ou une
+// autre reprise) : elle se reprend telle quelle, sans ses annulations de
+// réponse (seule la conversation en cours suit le journal).
+type aiConv struct {
+	ID      int          `json:"id"`
+	Title   string       `json:"title"`
+	Updated time.Time    `json:"updated"`
+	History []ai.Message `json:"history"`
+	Log     []AILogEntry `json:"log"`
+	Usage   ai.Usage     `json:"usage"`
+}
+
+// AIConversation décrit une conversation pour la liste de l'interface.
+type AIConversation struct {
+	// ID : 0 pour la conversation en cours.
+	ID      int    `json:"id"`
+	Title   string `json:"title"`
+	Updated string `json:"updated"` // RFC 3339
+	Current bool   `json:"current"`
+}
+
+// aiTitle : le premier message de l'utilisateur, abrégé.
+func aiTitle(log []AILogEntry) string {
+	for _, e := range log {
+		if e.User != "" {
+			t := strings.Join(strings.Fields(e.User), " ")
+			if r := []rune(t); len(r) > 60 {
+				t = string(r[:59]) + "…"
+			}
+			return t
+		}
+	}
+	return "Conversation"
+}
+
+// aiShelve met la conversation en cours de côté (rien si elle est vide) et
+// en commence une nouvelle ; mu tenu, aucune réponse en cours.
+func (s *DocumentService) aiShelve() {
+	hist, usage := s.ai.session.Snapshot()
+	if len(hist) > 0 {
+		s.ai.nextConv++
+		s.ai.others = append(s.ai.others, aiConv{
+			ID: s.ai.nextConv, Title: aiTitle(s.ai.log), Updated: time.Now(),
+			History: hist, Log: s.ai.log, Usage: usage,
+		})
+	}
+	s.ai.session.Restore(nil, ai.Usage{})
+	s.ai.log, s.ai.runs, s.ai.order, s.ai.notes = nil, nil, nil, nil
+}
+
+// AIConversations liste les conversations du classeur : celle en cours (si
+// elle a commencé), puis les autres, de la plus récente à la plus ancienne.
+func (s *DocumentService) AIConversations() []AIConversation {
+	s.ai.mu.Lock()
+	defer s.ai.mu.Unlock()
+	out := []AIConversation{}
+	if s.ai.session.Len() > 0 {
+		out = append(out, AIConversation{Title: aiTitle(s.ai.log), Updated: time.Now().Format(time.RFC3339), Current: true})
+	}
+	for i := len(s.ai.others) - 1; i >= 0; i-- {
+		c := s.ai.others[i]
+		out = append(out, AIConversation{ID: c.ID, Title: c.Title, Updated: c.Updated.Format(time.RFC3339)})
+	}
+	return out
+}
+
+// AINewConversation met la conversation en cours de côté (elle reste dans
+// la liste) et en commence une nouvelle.
+func (s *DocumentService) AINewConversation() error {
+	s.ai.mu.Lock()
+	defer s.ai.mu.Unlock()
+	if s.ai.cancel != nil {
+		return ai.ErrBusy
+	}
+	s.aiShelve()
+	return nil
+}
+
+// AIOpenConversation reprend une conversation mise de côté ; celle en cours
+// est mise de côté à sa place.
+func (s *DocumentService) AIOpenConversation(id int) error {
+	s.ai.mu.Lock()
+	defer s.ai.mu.Unlock()
+	if s.ai.cancel != nil {
+		return ai.ErrBusy
+	}
+	i := slices.IndexFunc(s.ai.others, func(c aiConv) bool { return c.ID == id })
+	if i < 0 {
+		return errors.New("conversation introuvable")
+	}
+	c := s.ai.others[i]
+	s.ai.others = slices.Delete(s.ai.others, i, i+1)
+	s.aiShelve()
+	s.ai.session.Restore(c.History, c.Usage)
+	s.ai.log = c.Log
+	return nil
+}
+
+// AIDeleteConversation supprime une conversation (0 : celle en cours, qui
+// est vidée).
+func (s *DocumentService) AIDeleteConversation(id int) error {
+	if id == 0 {
+		return s.AIReset()
+	}
+	s.ai.mu.Lock()
+	defer s.ai.mu.Unlock()
+	s.ai.others = slices.DeleteFunc(s.ai.others, func(c aiConv) bool { return c.ID == id })
+	return nil
 }

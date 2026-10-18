@@ -24,7 +24,7 @@
 	import ExternalActivity from './ExternalActivity.svelte';
 	import { changesLabel, contextLabel, costLabel, replyError, replyText, retryDelay, retryLabel, segments, stepsLabel, suggestionsFor, type ChatContext, type Reply, type TableInfo } from './chat';
 	import { openOutside } from './links';
-	import { chat, load, refreshStatus, reset, send, stop, undoRun } from './state.svelte.js';
+	import { chat, conversations, deleteConversation, load, newConversation, openConversation, refreshStatus, send, stop, undoRun, type Conversation } from './state.svelte.js';
 
 	interface Props {
 		/** Un classeur est ouvert (sinon l'assistant n'a rien sur quoi agir). */
@@ -131,6 +131,23 @@
 		}
 	}
 
+
+	// Liste des conversations du classeur (bouton ☰ de l'en-tête).
+	let convOpen = $state(false);
+	let convList = $state<Conversation[]>([]);
+	async function toggleConvs() {
+		convOpen = !convOpen;
+		if (convOpen) convList = await conversations().catch(() => []);
+	}
+	async function pickConv(id: number) {
+		convOpen = false;
+		await openConversation(id).catch((e) => (chat.error = String(e?.message ?? e)));
+	}
+	async function dropConv(id: number) {
+		await deleteConversation(id).catch((e) => (chat.error = String(e?.message ?? e)));
+		convList = await conversations().catch(() => []);
+	}
+
 	const ask = (text: string) => send(text, context ?? { sheet: '', table: '', selection: '' });
 
 	// Réessayer après une erreur (quota, coupure) : renvoie le même message, une
@@ -223,10 +240,29 @@
 			<button class="hd" class:on={showConnect} aria-pressed={showConnect} title="Connexion : clé d’API, abonnement Claude, modèle" onclick={() => (connectOpen = !showConnect)}
 				><Icon name="key" size={14} />Connexion</button
 			>
-			<button class="hd icon" title="Nouvelle conversation" aria-label="Nouvelle conversation" disabled={chat.busy || !chat.items.length} onclick={reset}><Icon name="new-file" size={14} /></button>
+			<button class="hd" title="Nouvelle conversation (la conversation actuelle reste dans la liste)" disabled={chat.busy || !chat.items.length} onclick={() => newConversation().catch((e) => (chat.error = String(e?.message ?? e)))}
+				><Icon name="plus" size={14} />Nouvelle</button
+			>
+			<button class="hd icon" class:on={convOpen} aria-expanded={convOpen} title="Conversations" aria-label="Conversations" onclick={toggleConvs}><Icon name="list-bullet" size={14} /></button>
 		{/if}
 		<button class="hd icon x" title="Fermer le volet (Échap)" aria-label="Fermer le volet" onclick={onclose}>✕</button>
 	</header>
+	{#if convOpen}
+		<div class="convs" role="menu" aria-label="Conversations">
+			{#if !convList.length}
+				<p class="muted">Aucune conversation pour ce classeur.</p>
+			{/if}
+			{#each convList as c (c.id)}
+				<div class="conv" class:current={c.current}>
+					<button class="conv-open" role="menuitem" disabled={c.current || chat.busy} title={c.current ? 'Conversation en cours' : 'Reprendre cette conversation'} onclick={() => pickConv(c.id)}>
+						<span class="conv-title">{c.title}</span>
+						<span class="muted">{c.current ? 'en cours' : new Date(c.updated).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span>
+					</button>
+					<button class="conv-del" title="Supprimer cette conversation" aria-label="Supprimer « {c.title} »" disabled={chat.busy} onclick={() => dropConv(c.id)}><Icon name="trash" size={13} /></button>
+				</div>
+			{/each}
+		</div>
+	{/if}
 
 	{#if !st}
 		<p class="placeholder">{loaded ? 'L’assistant n’est pas disponible dans cette version.' : 'Chargement…'}</p>
@@ -402,6 +438,52 @@
 </aside>
 
 <style>
+	.convs {
+		border-bottom: 1px solid #e5e7eb;
+		max-height: 260px;
+		overflow: auto;
+		padding: 4px 0;
+	}
+	.convs > .muted {
+		padding: 4px 12px;
+		margin: 0;
+	}
+	.conv {
+		display: flex;
+		align-items: center;
+	}
+	.conv-open {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 1px;
+		border: 0;
+		background: none;
+		padding: 5px 12px;
+		text-align: left;
+		cursor: pointer;
+	}
+	.conv-open:hover:not(:disabled) {
+		background: #f3f4f6;
+	}
+	.conv.current .conv-title {
+		font-weight: 600;
+	}
+	.conv-title {
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.conv-del {
+		border: 0;
+		background: none;
+		padding: 4px 10px;
+		cursor: pointer;
+		color: #6b7280;
+	}
 	.result {
 		margin: 6px 0;
 	}

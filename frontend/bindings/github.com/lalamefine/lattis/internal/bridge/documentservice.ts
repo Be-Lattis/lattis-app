@@ -40,10 +40,42 @@ import * as workbook$0 from "../remote/workbook/models.js";
 import * as $models from "./models.js";
 
 /**
+ * AIConversations liste les conversations du classeur : celle en cours (si
+ * elle a commencé), puis les autres, de la plus récente à la plus ancienne.
+ */
+export function AIConversations(): $CancellablePromise<$models.AIConversation[] | null> {
+    return $Call.ByID(115435688);
+}
+
+/**
+ * AIDeleteConversation supprime une conversation (0 : celle en cours, qui
+ * est vidée).
+ */
+export function AIDeleteConversation(id: number): $CancellablePromise<void> {
+    return $Call.ByID(2654057608, id);
+}
+
+/**
  * AIForgetKey oublie la clé d'API d'un fournisseur.
  */
 export function AIForgetKey(provider: string): $CancellablePromise<$models.AIStatus> {
     return $Call.ByID(1381214596, provider);
+}
+
+/**
+ * AINewConversation met la conversation en cours de côté (elle reste dans
+ * la liste) et en commence une nouvelle.
+ */
+export function AINewConversation(): $CancellablePromise<void> {
+    return $Call.ByID(492173609);
+}
+
+/**
+ * AIOpenConversation reprend une conversation mise de côté ; celle en cours
+ * est mise de côté à sa place.
+ */
+export function AIOpenConversation(id: number): $CancellablePromise<void> {
+    return $Call.ByID(2825359019, id);
 }
 
 /**

@@ -276,3 +276,49 @@ func TestAISetKeyChecked(t *testing.T) {
 		t.Fatal("clé vide acceptée")
 	}
 }
+
+// Nouvelle conversation : l'ancienne reste dans la liste et se reprend ;
+// une conversation se supprime.
+func TestAIConversations(t *testing.T) {
+	workRoot(t)
+	defer config.SetCurrent(config.Current())
+	aiConfig(true)
+	p := &scriptProvider{}
+	ai.Register(p)
+	ctx := context.Background()
+	s := &DocumentService{}
+	UseHost(&aiHost{}, nil, s)
+	t.Cleanup(func() { s.CloseDocument(ctx) })
+	if _, err := s.New(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if l := s.AIConversations(); len(l) != 0 {
+		t.Fatalf("liste de départ : %+v", l)
+	}
+	p.replies = addSheet("Analyse")
+	if err := s.AISend(ctx, 1, "Crée une feuille d'analyse", AIContext{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.AINewConversation(); err != nil {
+		t.Fatal(err)
+	}
+	l := s.AIConversations()
+	if len(l) != 1 || l[0].Current || l[0].Title != "Crée une feuille d'analyse" || len(s.AITranscript()) != 0 {
+		t.Fatalf("après Nouvelle conversation : %+v", l)
+	}
+	if err := s.AIOpenConversation(l[0].ID); err != nil {
+		t.Fatal(err)
+	}
+	if tr := s.AITranscript(); len(tr) == 0 || tr[0].User != "Crée une feuille d'analyse" {
+		t.Fatalf("conversation reprise : %+v", tr)
+	}
+	if l := s.AIConversations(); len(l) != 1 || !l[0].Current {
+		t.Fatalf("liste après reprise : %+v", l)
+	}
+	if err := s.AIDeleteConversation(0); err != nil {
+		t.Fatal(err)
+	}
+	if l := s.AIConversations(); len(l) != 0 {
+		t.Fatalf("après suppression : %+v", l)
+	}
+}

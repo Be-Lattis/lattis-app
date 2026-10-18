@@ -135,3 +135,41 @@ export function openAssistant() {
 	chat.open = true;
 	chat.focus++;
 }
+
+/** Conversation de la liste (bridge.AIConversation) ; id 0 : celle en cours. */
+export interface Conversation {
+	id: number;
+	title: string;
+	updated: string;
+	current: boolean;
+}
+
+/** Conversations du classeur : celle en cours, puis les autres. */
+export async function conversations(): Promise<Conversation[]> {
+	return ((await DocumentService.AIConversations()) ?? []) as Conversation[];
+}
+
+/** Nouvelle conversation : l'actuelle reste dans la liste. */
+export async function newConversation() {
+	if (chat.busy) return;
+	await DocumentService.AINewConversation();
+	chat.items = [];
+	chat.error = '';
+	await refreshStatus();
+}
+
+/** Reprend une conversation de la liste. */
+export async function openConversation(id: number) {
+	if (chat.busy) return;
+	await DocumentService.AIOpenConversation(id);
+	chat.error = '';
+	await load();
+}
+
+/** Supprime une conversation de la liste (0 : vide celle en cours). */
+export async function deleteConversation(id: number) {
+	if (chat.busy) return;
+	await DocumentService.AIDeleteConversation(id);
+	if (id === 0) chat.items = [];
+	await refreshStatus();
+}

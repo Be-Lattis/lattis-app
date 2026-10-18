@@ -53,6 +53,23 @@ export interface AIContext {
 }
 
 /**
+ * AIConversation décrit une conversation pour la liste de l'interface.
+ */
+export interface AIConversation {
+    /**
+     * ID : 0 pour la conversation en cours.
+     */
+    "id": number;
+    "title": string;
+
+    /**
+     * RFC 3339
+     */
+    "updated": string;
+    "current": boolean;
+}
+
+/**
  * AIEventData est un évènement d'une réponse ; Run la désigne.
  */
 export interface AIEventData {
