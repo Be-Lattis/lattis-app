@@ -39,7 +39,7 @@
 	// Application de bureau d'un fournisseur qui pilote Lattis par son serveur
 	// MCP (avec l'abonnement de la personne) : Claude pour l'instant, la liste
 	// accueillera les autres.
-	const DESKTOP_APPS = [{ id: 'claude', name: 'Claude (Pro, Max, Team)' }] as const;
+	const DESKTOP_APPS = [{ id: 'claude', name: 'Claude (Pro, Max, Team)', apps: 'Claude Desktop ou Claude Code' }] as const;
 	let desktopApp = $state<(typeof DESKTOP_APPS)[number]['id']>('claude');
 	let keyDraft = $state('');
 	let checking = $state(false);
@@ -167,29 +167,25 @@
 		</div>
 
 		{#if way === 'key'}
-			<div class="pick">
-				<label>
-					Fournisseur
-					<select value={st.provider} disabled={chat.busy || checking} onchange={(e) => choose('ai.provider', e.currentTarget.value)}>
-						{#each providers as p (p.id)}
-							<option value={p.id}>{p.name}</option>
-						{/each}
-						{#if provider && !provider.available}<option value={provider.id}>{provider.name}</option>{/if}
-					</select>
-				</label>
+			<!-- Un seul champ coupé en deux : fournisseur à gauche, modèle à droite. -->
+			<div class="split" role="group" aria-label="Fournisseur et modèle">
+				<select aria-label="Fournisseur" title="Fournisseur" value={st.provider} disabled={chat.busy || checking} onchange={(e) => choose('ai.provider', e.currentTarget.value)}>
+					{#each providers as p (p.id)}
+						<option value={p.id}>{p.name}</option>
+					{/each}
+					{#if provider && !provider.available}<option value={provider.id}>{provider.name}</option>{/if}
+				</select>
 				{#if provider?.models?.length}
-					<label>
-						Modèle
-						<select value={st.model} disabled={chat.busy} onchange={(e) => choose('ai.model', e.currentTarget.value)}>
-							{#each provider.models as m (m.id)}
-								<option value={m.id}>{modelLabel(m)}</option>
-							{/each}
-							{#if !provider.models.some((m) => m.id === st.model)}<option value={st.model}>{st.model}</option>{/if}
-						</select>
-					</label>
+					<select aria-label="Modèle" title="Modèle" value={st.model} disabled={chat.busy} onchange={(e) => choose('ai.model', e.currentTarget.value)}>
+						{#each provider.models as m (m.id)}
+							<option value={m.id}>{modelLabel(m)}</option>
+						{/each}
+						{#if !provider.models.some((m) => m.id === st.model)}<option value={st.model}>{st.model}</option>{/if}
+					</select>
+				{:else}
+					<span class="rest">modèle par défaut</span>
 				{/if}
 			</div>
-
 			{#if provider && (provider.local || provider.needsKey === false)}
 				<p>Le modèle tourne sur ce poste (Ollama, LM Studio…) : aucune donnée ne quitte l’ordinateur, et il n’y a pas de clé.</p>
 				<form
@@ -275,15 +271,13 @@
 			{#if keyError}<p class="error" role="alert">{keyError}</p>{/if}
 			{#if error}<p class="error" role="alert">{error}</p>{/if}
 		{:else}
-			<div class="pick">
-				<label>
-					Application
-					<select bind:value={desktopApp}>
-						{#each DESKTOP_APPS as a (a.id)}
-							<option value={a.id}>{a.name}</option>
-						{/each}
-					</select>
-				</label>
+			<div class="split" role="group" aria-label="Fournisseur et application">
+				<select aria-label="Fournisseur" title="Fournisseur" bind:value={desktopApp}>
+					{#each DESKTOP_APPS as a (a.id)}
+						<option value={a.id}>{a.name}</option>
+					{/each}
+				</select>
+				<span class="rest">{DESKTOP_APPS.find((a) => a.id === desktopApp)?.apps}</span>
 			</div>
 			<p class="muted">L’application de bureau d’un fournisseur pilote Lattis avec votre abonnement chez lui, sans clé d’API.</p>
 			{#if desktopApp === 'claude'}
@@ -357,11 +351,39 @@
 		border-radius: 8px;
 		padding: 0 5px;
 	}
-	.pick {
+	/* Fournisseur | modèle : un seul champ, coupé par un trait vertical. */
+	.split {
 		display: flex;
-		flex-wrap: wrap;
-		gap: 6px 12px;
+		align-items: stretch;
+		max-width: 520px;
 		margin-bottom: 8px;
+		border: 1px solid #c4c9d0;
+		border-radius: 4px;
+		background: #fff;
+		overflow: hidden;
+	}
+	.split:focus-within {
+		border-color: #217346;
+	}
+	.split > select,
+	.split > .rest {
+		flex: 1 1 0;
+		min-width: 0;
+		border: 0;
+		border-radius: 0;
+		background: transparent;
+		padding: 4px 8px;
+		font: inherit;
+	}
+	.split > :first-child {
+		border-right: 1px solid #c4c9d0;
+	}
+	.split > select:focus {
+		outline: none;
+	}
+	.split > .rest {
+		color: #6b7280;
+		align-self: center;
 	}
 	label {
 		display: flex;
