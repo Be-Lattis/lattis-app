@@ -1,0 +1,36 @@
+# Tableaux croisés
+
+Un tableau croisé dynamique (TCD) résume un tableau : des totaux par client, par mois, par région… Lattis le calcule en SQL (`GROUP BY`), ce qui reste rapide sur un million de lignes.
+
+## Créer un tableau croisé
+
+1. Cliquez dans le tableau source.
+2. Insertion › Tableau croisé dynamique.
+3. Le TCD se pose sur la feuille et le volet **Champs de tableau croisé dynamique** s'ouvre à droite.
+
+## Le volet des champs
+
+La liste du haut montre les colonnes du tableau source, avec l'icône de leur type ; la recherche filtre la liste. Cochez un champ pour l'ajouter, ou glissez-le dans l'une des quatre zones :
+
+| Zone | Rôle |
+| --- | --- |
+| Filtres | Filtres du rapport, au-dessus du TCD |
+| Colonnes | Une colonne du TCD par valeur du champ |
+| Lignes | Une ligne du TCD par valeur du champ (plusieurs champs s'emboîtent) |
+| Valeurs | Les nombres calculés |
+
+Chaque puce a son menu ▾ : déplacer, retirer, filtrer et, pour une valeur, la synthèse et l'affichage. Au clavier : `Tab` passe d'un élément à l'autre, `Entrée` ouvre le menu d'une puce, `Suppr` la retire, `Alt+Haut` / `Alt+Bas` la déplacent.
+
+Une colonne calculée ne sert pas encore de champ.
+
+## Synthèse et affichage des valeurs
+
+Synthèses : Somme, Nombre, Nombre distinct, Moyenne, Min, Max. Une colonne de nombres est sommée par défaut, les autres comptées. L'affichage peut aussi être un pourcentage : du total général, du total de la colonne ou du total de la ligne. Un format de nombre (monétaire, pourcentage, décimales) se choisit par valeur.
+
+## Mise à jour
+
+Le TCD suit les changements du volet après un court délai, en une seule étape d'annulation. Il suit aussi les données du tableau source. Le volet se rouvre d'un clic dans le TCD.
+
+## Utiliser un tableau croisé ailleurs
+
+Un TCD a un nom (affiché en haut du volet) : il s'interroge dans l'[onglet SQL](sql) comme une table, et sert de source aux [graphiques](graphiques). La fonction [GROUPER.PAR](fonction:GROUPER.PAR) donne un regroupement simple directement dans une formule.

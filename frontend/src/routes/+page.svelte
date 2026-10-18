@@ -42,6 +42,9 @@
 	import BusyBar from '#lib/shell/BusyBar.svelte';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { setTileFetcher } from '#lib/chart/tiles.js';
+	import HelpPanel from '#lib/help/HelpPanel.svelte';
+	import { functionAt, viewTarget } from '#lib/help/help.js';
+	import { helpState, openHelp } from '#lib/help/state.svelte.js';
 
 	type Mode = 'starting' | 'recover' | 'doc' | 'demo' | 'closed';
 
@@ -410,6 +413,24 @@
 			refreshKey(sc === 'refreshAll');
 		};
 		window.addEventListener('keydown', noReload, true);
+		// F1 : l'aide. Dans une formule en cours de saisie, la page de la
+		// fonction sous le curseur (la saisie garde le focus) ; ailleurs, la
+		// page de ce qui est affiché (SQL, SCRIPT, onglet HTML ou Document).
+		const helpKey = (e: KeyboardEvent) => {
+			if (e.key !== 'F1' || e.ctrlKey || e.altKey || e.metaKey) return;
+			e.preventDefault();
+			e.stopPropagation();
+			const el = document.activeElement;
+			if (el instanceof HTMLElement && el.closest('.help')) return;
+			if ((el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) && /^\s*=/.test(el.value)) {
+				const f = functionAt(el.value, el.selectionStart ?? el.value.length, help?.functions ?? []);
+				openHelp(f ? `fonction:${f.name}` : 'formules', false);
+				return;
+			}
+			const editing = el instanceof HTMLElement && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName));
+			openHelp(viewTarget(view, activePage ? (activeDoc ? 'doc' : 'html') : ''), !editing);
+		};
+		window.addEventListener('keydown', helpKey, true);
 		// Un texte ou un lien lâché hors d'une zone prévue ne doit jamais faire
 		// quitter la page de l'application (la fenêtre afficherait une erreur).
 		const noDrop = (e: DragEvent) => e.preventDefault();
@@ -420,12 +441,14 @@
 			offUI();
 			window.removeEventListener('keydown', keys);
 			window.removeEventListener('keydown', noReload, true);
+			window.removeEventListener('keydown', helpKey, true);
 			window.removeEventListener('dragover', noDrop);
 			window.removeEventListener('drop', noDrop);
 		};
 	});
 
 	async function file(a: FileAction) {
+		if (a === 'help') return openHelp();
 		notice = '';
 		try {
 			switch (a) {
@@ -1253,6 +1276,9 @@
 				onchanged={(sh) => (sh && sh !== sheetId ? selectSheet(sh) : reload()).catch((e) => (notice = err(e)))}
 				onnotice={(m) => (notice = m)}
 			/>
+		{/if}
+		{#if helpState.open}
+			<HelpPanel />
 		{/if}
 	</main>
 
