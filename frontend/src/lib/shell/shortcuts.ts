@@ -5,6 +5,7 @@
 // de ui/keytips.ts.
 
 import { TAB_TIPS } from '#lib/ui/keytips.js';
+import { isWeb, keyLabel } from '#lib/web/platform.js';
 
 export interface ShortcutInfo {
 	/** Touches, écrites comme sur le clavier français : « Ctrl+Maj+L ». */
@@ -19,7 +20,7 @@ export interface ShortcutGroup {
 	items: ShortcutInfo[];
 }
 
-export const shortcutGroups: ShortcutGroup[] = [
+const groups: ShortcutGroup[] = [
 	{
 		id: 'fichier',
 		title: 'Classeur',
@@ -139,3 +140,14 @@ export const shortcutGroups: ShortcutGroup[] = [
 		]
 	}
 ];
+
+/**
+ * Les raccourcis affichés. En web, ceux que le navigateur garde pour lui
+ * (Ctrl+N, Ctrl+W, F12, Ctrl+Pg.Suiv…) sont remplacés par leur équivalent
+ * (web/platform.ts), reconnu aussi sur le bureau.
+ */
+export const shortcutGroups: ShortcutGroup[] = isWeb ? webGroups(groups) : groups;
+
+export function webGroups(list: ShortcutGroup[]): ShortcutGroup[] {
+	return list.map((g) => ({ ...g, items: g.items.map((s) => ({ ...s, keys: keyLabel(s.keys, true) })) }));
+}
