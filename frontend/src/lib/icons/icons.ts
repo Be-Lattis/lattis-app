@@ -185,6 +185,14 @@ export const icons = {
 	'chevron-down': '<path d="m6 9 6 6 6-6"/>',
 	sheet: '<rect x="3.5" y="5" width="17" height="14" rx="1.5"/><path d="M3.5 9.5h17M3.5 14h17M9 5v14"/>',
 
+	// Onglets de feuille (menu contextuel)
+	'move-sheet': '<rect x="3.5" y="3.5" width="11" height="13" rx="1.5"/><path d="M3.5 8h11M8 3.5v13"/><path class="a" d="M12 20.5h8.5M18 18l2.5 2.5L18 23"/>',
+	'tab-color': '<path d="M3.5 4.5h17l-2 10h-13z"/><rect class="af" x="3.5" y="17.5" width="17" height="3.5" rx=".75"/>',
+	'no-color': '<rect x="4" y="4" width="16" height="16" rx="1.5"/><path class="a" d="M5.5 18.5l13-13"/>',
+	unlock: '<rect x="5" y="10.5" width="14" height="10" rx="1.5"/><path d="M8 10.5V7.5a4 4 0 0 1 7.7-1.5"/><path class="a" d="M12 14.5v2.5"/>',
+	show: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle class="a" cx="12" cy="12" r="3"/>',
+	hide: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/><path class="a" d="M4 20 20 4"/>',
+
 	// Barre de titre (traits fins : dessinées pour 16 px)
 	'win-minimize': '<path d="M6 12h12"/>',
 	'win-maximize': '<rect x="6" y="6" width="12" height="12" rx="1"/>',
