@@ -535,6 +535,13 @@ export function KeyCheck(table: string, i: number): $CancellablePromise<string> 
 }
 
 /**
+ * LaunchFile donne, une seule fois, le classeur à ouvrir au lancement, ou "".
+ */
+export function LaunchFile(): $CancellablePromise<string> {
+    return $Call.ByID(3854994751);
+}
+
+/**
  * Layout donne la mise en page d'une feuille (tableaux et cellules libres).
  */
 export function Layout(sheet: number): $CancellablePromise<canvas$0.Layout> {
@@ -864,6 +871,15 @@ export function RenameTable(old: string, name: string): $CancellablePromise<$mod
  */
 export function Replace(sheet: number, text: string, by: string): $CancellablePromise<number> {
     return $Call.ByID(2674593386, sheet, text, by);
+}
+
+/**
+ * RequestOpen demande l'ouverture d'un classeur. Avant que l'interface ait
+ * lu le classeur de lancement, il le devient ; ensuite, l'interface est
+ * prévenue par OpenFileEvent.
+ */
+export function RequestOpen(path: string): $CancellablePromise<void> {
+    return $Call.ByID(2080541887, path);
 }
 
 /**

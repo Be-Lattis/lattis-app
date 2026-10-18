@@ -4,12 +4,12 @@ includes:
   common: ../Taskfile.yml
 
 vars:
-  # Signing configuration - edit these values for your project
-  # SIGN_CERTIFICATE: "path/to/certificate.pfx"
-  # SIGN_THUMBPRINT: "certificate-thumbprint"  # Alternative to SIGN_CERTIFICATE
-  # TIMESTAMP_SERVER: "http://timestamp.digicert.com"
-  #
-  # Password is stored securely in system keychain. Run: wails3 setup signing
+  # Signature : variables d'environnement lues par build/windows/sign.ps1 et
+  # build/windows/msix/build-msix.ps1 (voir docs/release/signature.md) :
+  #   WINDOWS_CERT_PATH + WINDOWS_CERT_PASSWORD  certificat .pfx
+  #   WINDOWS_CERT_THUMBPRINT                    ou certificat du magasin (jeton EV)
+  #   WINDOWS_TIMESTAMP_URL                      horodatage (DigiCert par défaut)
+  #   WINDOWS_PUBLISHER                          éditeur MSIX sans .pfx (Trusted Signing)
 
   # Docker image for cross-compilation with CGO (used when CGO_ENABLED=1 on non-Windows)
   CROSS_IMAGE: wails-cross
@@ -114,9 +114,24 @@ tasks:
 
   create:nsis:installer:
     summary: Creates an NSIS installer
-    dir: build/windows/nsis
     deps:
       - task: build
+    cmds:
+      - task: package:nsis
+        vars:
+          ARCH: '{{.ARCH}}'
+          INSTALL_SCOPE: '{{.INSTALL_SCOPE}}'
+    vars:
+      ARCH: '{{.ARCH | default ARCH}}'
+      INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "machine"}}'
+
+  # Installeur NSIS à partir de bin/lattis.exe tel qu'il est (sans le
+  # reconstruire : release le signe avant). Avec un certificat
+  # (WINDOWS_CERT_PATH ou WINDOWS_CERT_THUMBPRINT), makensis signe
+  # l'installeur et le désinstalleur par build/windows/sign.ps1.
+  package:nsis:
+    summary: Creates the NSIS installer from the existing bin/lattis.exe (no rebuild)
+    dir: build/windows/nsis
     preconditions:
       - sh: '[ "{{.INSTALL_SCOPE}}" = "user" ] || [ "{{.INSTALL_SCOPE}}" = "machine" ]'
         msg: "INSTALL_SCOPE must be 'user' or 'machine', got '{{.INSTALL_SCOPE}}'"
@@ -125,7 +140,7 @@ tasks:
       - wails3 generate webview2bootstrapper -dir "{{.ROOT_DIR}}/build/windows/nsis"
       - |
         {{if eq OS "windows"}}
-        makensis {{if eq .INSTALL_SCOPE "user"}}-DWAILS_INSTALL_SCOPE=user -DREQUEST_EXECUTION_LEVEL=user {{end}}-DARG_WAILS_{{.ARG_FLAG}}_BINARY="{{.ROOT_DIR}}\{{.BIN_DIR}}\{{.APP_NAME}}.exe" project.nsi
+        makensis {{if eq .INSTALL_SCOPE "user"}}-DWAILS_INSTALL_SCOPE=user -DREQUEST_EXECUTION_LEVEL=user {{end}}{{if .SIGNING}}-DSIGN_SCRIPT="{{.ROOT_DIR}}\build\windows\sign.ps1" {{end}}-DARG_WAILS_{{.ARG_FLAG}}_BINARY="{{.ROOT_DIR}}\{{.BIN_DIR}}\{{.APP_NAME}}.exe" project.nsi
         {{else}}
         makensis {{if eq .INSTALL_SCOPE "user"}}-DWAILS_INSTALL_SCOPE=user -DREQUEST_EXECUTION_LEVEL=user {{end}}-DARG_WAILS_{{.ARG_FLAG}}_BINARY="{{.ROOT_DIR}}/{{.BIN_DIR}}/{{.APP_NAME}}.exe" project.nsi
         {{end}}
@@ -133,27 +148,36 @@ tasks:
       ARCH: '{{.ARCH | default ARCH}}'
       ARG_FLAG: '{{if eq .ARCH "amd64"}}AMD64{{else}}ARM64{{end}}'
       INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "machine"}}'
+      SIGNING: '{{if and (ne .SIGN "false") (or (env "WINDOWS_CERT_PATH") (env "WINDOWS_CERT_THUMBPRINT"))}}true{{end}}'
 
   create:msix:package:
-    summary: Creates an MSIX package
+    summary: Creates an MSIX package (signed when a certificate is configured)
+    desc: |
+      Construit bin/lattis-<version>-<arch>.msix avec build/windows/msix/build-msix.ps1
+      (manifeste build/windows/msix/AppxManifest.xml, icônes, association .lattis,
+      alias « lattis » en ligne de commande). Signé si WINDOWS_CERT_PATH (+
+      WINDOWS_CERT_PASSWORD) ou WINDOWS_CERT_THUMBPRINT est défini, ou avec
+      CERT_PATH=... ; PUBLISHER=... impose l'éditeur sans certificat (Azure
+      Trusted Signing). Voir docs/release/signature.md.
     deps:
       - task: build
     cmds:
-      - |-
-        wails3 tool msix \
-          --config "{{.ROOT_DIR}}/build/config.yml" \
-          --name "{{.APP_NAME}}.exe" \
-          --executable "{{.ROOT_DIR}}/{{.BIN_DIR}}/{{.APP_NAME}}.exe" \
-          --arch "{{.ARCH}}" \
-          --out "{{.ROOT_DIR}}/{{.BIN_DIR}}/{{.APP_NAME}}-{{.ARCH}}.msix" \
-          {{if .CERT_PATH}}--cert "{{.CERT_PATH}}"{{end}} \
-          {{if .PUBLISHER}}--publisher "{{.PUBLISHER}}"{{end}} \
-          {{if eq .USE_MSIX_TOOL "true"}}--use-msix-tool{{else}}--use-makeappx{{end}}
+      - task: package:msix
+        vars:
+          ARCH: '{{.ARCH}}'
+          CERT_PATH: '{{.CERT_PATH}}'
+          PUBLISHER: '{{.PUBLISHER}}'
     vars:
       ARCH: '{{.ARCH | default ARCH}}'
       CERT_PATH: '{{.CERT_PATH | default ""}}'
       PUBLISHER: '{{.PUBLISHER | default ""}}'
-      USE_MSIX_TOOL: '{{.USE_MSIX_TOOL | default "false"}}'
+
+  package:msix:
+    summary: Creates the MSIX package from the existing bin/lattis.exe (no rebuild)
+    cmds:
+      - pwsh -NoProfile -ExecutionPolicy Bypass -File "{{.ROOT_DIR}}/build/windows/msix/build-msix.ps1" -Arch {{.ARCH}} {{if .CERT_PATH}}-CertPath "{{.CERT_PATH}}" {{end}}{{if .PUBLISHER}}-Publisher "{{.PUBLISHER}}" {{end}}{{if eq .SIGN "false"}}-NoSign{{end}}
+    vars:
+      ARCH: '{{.ARCH | default ARCH}}'
 
   install:msix:tools:
     summary: Installs tools required for MSIX packaging
@@ -167,29 +191,51 @@ tasks:
   sign:
     summary: Signs the Windows executable
     desc: |
-      Signs the .exe with an Authenticode certificate.
-      Set SIGN_CERTIFICATE or SIGN_THUMBPRINT to override the certificate
-      configured globally via `wails3 setup` (~/.config/wails/defaults.yaml).
-      Password is retrieved from system keychain (run: wails3 setup signing)
+      Signe bin/lattis.exe (Authenticode SHA-256, horodaté) avec
+      build/windows/sign.ps1 : certificat WINDOWS_CERT_PATH + WINDOWS_CERT_PASSWORD
+      (.pfx) ou WINDOWS_CERT_THUMBPRINT (magasin de l'utilisateur, jeton EV).
     deps:
       - task: build
     cmds:
-      # Certificate vars are optional: if unset, `wails3 tool sign` falls back to
-      # the certificate configured globally via `wails3 setup`.
-      - wails3 tool sign --input "{{.BIN_DIR}}/{{.APP_NAME}}.exe" {{if .SIGN_CERTIFICATE}}--certificate "{{.SIGN_CERTIFICATE}}"{{end}} {{if .SIGN_THUMBPRINT}}--thumbprint "{{.SIGN_THUMBPRINT}}"{{end}} {{if .TIMESTAMP_SERVER}}--timestamp "{{.TIMESTAMP_SERVER}}"{{end}}
+      - task: sign:exe
+
+  sign:exe:
+    summary: Signs the existing bin/lattis.exe (no rebuild)
+    cmds:
+      - pwsh -NoProfile -ExecutionPolicy Bypass -File "{{.ROOT_DIR}}/build/windows/sign.ps1" -Files "{{.ROOT_DIR}}/{{.BIN_DIR}}/{{.APP_NAME}}.exe"
 
   sign:installer:
-    summary: Signs the NSIS installer
-    desc: |
-      Creates and signs the NSIS installer.
-      Set SIGN_CERTIFICATE or SIGN_THUMBPRINT to override the certificate
-      configured globally via `wails3 setup` (~/.config/wails/defaults.yaml).
-      Password is retrieved from system keychain (run: wails3 setup signing)
-    deps:
+    summary: Creates the NSIS installer, signed (installer and uninstaller)
+    cmds:
       - task: create:nsis:installer
         vars:
           INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "machine"}}'
-    vars:
-      INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "machine"}}'
+
+  release:
+    summary: Builds the signed Windows release (lattis.exe, NSIS installer, MSIX)
+    desc: |
+      Construit lattis.exe, le signe, puis en fait l'installeur NSIS et le paquet
+      MSIX, signés eux aussi quand un certificat est configuré (sinon : non
+      signés, avec un avertissement). Résultats dans bin/.
+      SIGN=false force des paquets non signés.
     cmds:
-      - wails3 tool sign --input "build/windows/nsis/{{.APP_NAME}}-installer.exe" {{if .SIGN_CERTIFICATE}}--certificate "{{.SIGN_CERTIFICATE}}"{{end}} {{if .SIGN_THUMBPRINT}}--thumbprint "{{.SIGN_THUMBPRINT}}"{{end}} {{if .TIMESTAMP_SERVER}}--timestamp "{{.TIMESTAMP_SERVER}}"{{end}}
+      - task: build
+        vars:
+          ARCH: '{{.ARCH}}'
+      - task: '{{if ne .SIGN "false"}}sign:exe{{else}}release:nosign{{end}}'
+      - task: package:nsis
+        vars:
+          ARCH: '{{.ARCH}}'
+          INSTALL_SCOPE: machine
+          SIGN: '{{.SIGN}}'
+      - task: package:msix
+        vars:
+          ARCH: '{{.ARCH}}'
+          SIGN: '{{.SIGN}}'
+    vars:
+      ARCH: '{{.ARCH | default ARCH}}'
+
+  release:nosign:
+    internal: true
+    cmds:
+      - 'echo "SIGN=false : paquets Windows non signés"'

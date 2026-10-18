@@ -75,6 +75,9 @@ type DocumentService struct {
 	mcp   mcpState
 	demo  *demoRun // classeur de démonstration demandé au lancement
 	pq    pqState  // base de travail des requêtes d'import (query.go)
+
+	// Classeur à ouvrir au lancement (association de fichiers, launch.go).
+	launch launchState
 }
 
 var (

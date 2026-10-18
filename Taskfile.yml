@@ -27,6 +27,19 @@ tasks:
     cmds:
       - task: "{{.GOOS}}:package"
 
+  release:
+    summary: Builds the signed installers for the host OS (docs/release/signature.md)
+    desc: |
+      Windows : lattis.exe signé, installeur NSIS et paquet MSIX signés.
+      macOS   : .app universelle signée Developer ID et notarisée, dans un .dmg.
+      Linux   : AppImage, .deb et .rpm (signés si une clé GPG est fournie).
+      Sans certificat, les paquets sont produits non signés.
+      VERSION=v1.2.3 reporte d'abord la version dans les fichiers de build.
+    cmds:
+      - cmd: bash build/release/set-version.sh "{{.VERSION}}"
+        if: '[ -n "{{.VERSION}}" ]'
+      - task: "{{.GOOS}}:release"
+
   run:
     summary: Runs the application
     cmds:

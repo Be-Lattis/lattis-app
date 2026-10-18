@@ -70,6 +70,13 @@ ManifestDPIAware true
 ## The following two statements can be used to sign the installer and the uninstaller. The path to the binaries are provided in %1
 #!uninstfinalize 'signtool --file "%1"'
 #!finalize 'signtool --file "%1"'
+## Lattis : makensis -DSIGN_SCRIPT=chemin\build\windows\sign.ps1 signe l'installeur et le
+## desinstalleur (certificat lu dans WINDOWS_CERT_PATH / WINDOWS_CERT_PASSWORD ou
+## WINDOWS_CERT_THUMBPRINT, voir docs/release/signature.md).
+!ifdef SIGN_SCRIPT
+    !uninstfinalize 'pwsh -NoProfile -ExecutionPolicy Bypass -File "${SIGN_SCRIPT}" -Require -Files "%1"' = 0
+    !finalize 'pwsh -NoProfile -ExecutionPolicy Bypass -File "${SIGN_SCRIPT}" -Require -Files "%1"' = 0
+!endif
 
 Name "${INFO_PRODUCTNAME}"
 OutFile "..\..\..\bin\${INFO_PROJECTNAME}-${ARCH}-installer.exe" # Name of the installer's file.

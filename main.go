@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"os"
 	"runtime"
+	"strings"
 
 	"github.com/lalamefine/lattis/internal/bridge"
 	"github.com/lalamefine/lattis/internal/config"
@@ -21,6 +22,7 @@ import (
 	"github.com/lalamefine/lattis/internal/mcp"
 	"github.com/lalamefine/lattis/internal/store"
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
 //go:embed all:frontend/dist
@@ -68,6 +70,12 @@ func main() {
 		case "--no-sql", "-no-sql":
 			store.SetSQLLog(false)
 		default:
+			// Classeur passé par l'association de fichiers (double-clic
+			// sur un .lattis sous Windows ou Linux).
+			if !strings.HasPrefix(a, "-") && bridge.IsWorkbook(a) {
+				documents.RequestOpen(a)
+				continue
+			}
 			args = append(args, a)
 		}
 	}
@@ -131,6 +139,14 @@ func main() {
 			TitleBar:                application.MacTitleBarHidden,
 			InvisibleTitleBarHeight: 32,
 		},
+	})
+
+	// macOS : un .lattis ouvert depuis le Finder arrive par un événement,
+	// au lancement comme pendant que l'application tourne.
+	app.Event.OnApplicationEvent(events.Common.ApplicationOpenedWithFile, func(e *application.ApplicationEvent) {
+		if p := e.Context().Filename(); bridge.IsWorkbook(p) {
+			documents.RequestOpen(p)
+		}
 	})
 
 	if err := app.Run(); err != nil {
