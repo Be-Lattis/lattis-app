@@ -111,6 +111,10 @@ describe('références relatives et marqueurs déplacés', () => {
 		expect(movedRef({ r0: 3, c0: 1, r1: 3, c1: 1 }, -1, 0, [t], here)).toBe('[Prix][-1]');
 		// Toute la colonne Qté décalée vers Prix.
 		expect(movedRef({ r0: 0, c0: 0, r1: 5, c1: 0 }, 0, 1, [t], here)).toBe('Ventes[Prix]');
+		// Attrapée plus bas et déposée sur une autre ligne : toujours toute la colonne.
+		expect(movedRef({ r0: 0, c0: 0, r1: 5, c1: 0 }, 2, 1, [t], here, { row: 4, col: 1 })).toBe('Ventes[Prix]');
+		// Hors du tableau : la même hauteur, sur les mêmes lignes.
+		expect(movedRef({ r0: 0, c0: 0, r1: 5, c1: 0 }, 3, 4, [t], here, { row: 3, col: 4 })).toBe('Cell[E1:E6]');
 		expect(movedRef({ r0: 0, c0: 0, r1: 0, c1: 0 }, -1, 0, [t], here)).toBeNull();
 	});
 });

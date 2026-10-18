@@ -637,9 +637,20 @@ function colLetters(c: number): string {
 /**
  * Nouvelle référence d'un marqueur de formule déplacé de (dr, dc) sur la
  * grille (rect : sa plage avant) : la même forme qu'au clic pour une
- * cellule, une plage sinon ; null si la plage ne se décrit pas.
+ * cellule, une plage sinon ; null si la plage ne se décrit pas. Une colonne
+ * entière d'un tableau reste une colonne entière : déposée dans un tableau
+ * (to : la cellule sous la souris), celle de ce tableau ; ailleurs, la même
+ * hauteur, sans changer de lignes.
  */
-export function movedRef(rect: Rect, dr: number, dc: number, tables: RefTable[], here?: { table: RefTable; row: number }): string | null {
+export function movedRef(rect: Rect, dr: number, dc: number, tables: RefTable[], here?: { table: RefTable; row: number }, to?: { row: number; col: number }): string | null {
+	const whole = (x: RefTable, r: Rect) => r.r0 === x.row && r.r1 === x.row + x.rows && r.c0 === r.c1 && r.c0 >= x.col && r.c0 < x.col + x.columns.length;
+	if (tables.some((x) => whole(x, rect))) {
+		const c = rect.c0 + dc;
+		const row = to?.row ?? rect.r0 + dr;
+		const t = tables.find((x) => row >= x.row && row <= x.row + x.rows && c >= x.col && c < x.col + x.columns.length);
+		if (t) return `${t.name}[${t.columns[c - t.col]}]`;
+		dr = 0;
+	}
 	const r: Rect = { r0: rect.r0 + dr, r1: rect.r1 + dr, c0: rect.c0 + dc, c1: rect.c1 + dc };
 	if (r.r0 < 0 || r.c0 < 0) return null;
 	if (r.r0 === r.r1 && r.c0 === r.c1) return cellRefText(r.r0, r.c0, tables, here);

@@ -5619,7 +5619,7 @@
 		const dc = m.to.col - m.from.col;
 		if (!dr && !dc) return;
 		const { tables, at } = refContext();
-		const moved = movedRef(m.rect, dr, dc, tables, at);
+		const moved = movedRef(m.rect, dr, dc, tables, at, m.to);
 		const text = moved !== null && hold ? qualifyRef(moved, sheetName) : moved;
 		if (text === null) {
 			say('Cette plage ne peut pas devenir une référence : une plage couvre une seule colonne d’un tableau');
