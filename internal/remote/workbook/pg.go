@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/lalamefine/lattis/protocol"
 )
 
 // Dialer donne une connexion PostgreSQL au serveur pour un usage
