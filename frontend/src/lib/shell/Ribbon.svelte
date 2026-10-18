@@ -11,7 +11,7 @@
 	import { DEFAULT_PT, FONTS, SIZES } from '#lib/grid/textwrap.js';
 	import { ZOOM_LEVELS, zoomLabel } from '#lib/grid/zoom.js';
 	import Select from '#lib/ui/Select.svelte';
-	import { fit, groupWidth, type GroupShape, type Mode } from './fit';
+	import { estimate, fit, groupWidth, type GroupShape, type Measure, type Mode } from './fit';
 	import type { IconName } from '#lib/icons/icons.js';
 	import { MORE_KINDS, type ChartKind } from '#lib/chart/kinds.js';
 
@@ -607,18 +607,26 @@
 		)
 	);
 
+	// Largeur réelle des libellés (police du ruban), pour l'estimation de fit.
+	let measureCtx: CanvasRenderingContext2D | null = null;
+	const measure: Measure = (s, px) => {
+		measureCtx ??= typeof document === 'undefined' ? null : document.createElement('canvas').getContext('2d');
+		if (!measureCtx) return estimate(s, px);
+		measureCtx.font = `${px}px 'Segoe UI', system-ui, -apple-system, sans-serif`;
+		return measureCtx.measureText(s).width;
+	};
 	type ShapesArr = GroupShape[];
 	const shapes = $derived(
 		tab === 'SQL' || tab === 'SCRIPT'
 			? []
-			: (ribbons[tab] ?? []).map((g) => ({ title: g.title, iconOk: g.iconOk, labels: [...(g.fonts ? [FONTS_W] : []), ...g.commands.map((c) => (c.color ? null : c.label))] }))
+			: (ribbons[tab] ?? []).map((g) => ({ title: g.title, iconOk: g.iconOk, labels: [...(g.fonts ? [FONTS_W] : []), ...g.commands.map((c) => (c.color ? null : c.items || c.menu ? c.label + ' ▾' : c.label))] }))
 	);
 	// Les formes ne changent qu'avec les libellés : un clic dans la grille
 	// (annulation, quadrillage…) recrée les commandes sans recompacter le
 	// ruban ni remesurer (sinon les boutons changent de taille).
 	const shapesKey = $derived(JSON.stringify(shapes));
 	const modesKey = $derived(
-		tab === 'SQL' || tab === 'SCRIPT' ? '' : fit(JSON.parse(shapesKey), (groupsW - 12) / ratio).join(',')
+		tab === 'SQL' || tab === 'SCRIPT' ? '' : fit(JSON.parse(shapesKey), (groupsW - 12) / ratio, measure).join(',')
 	);
 	const modes: Mode[] = $derived(modesKey ? (modesKey.split(',') as Mode[]) : []);
 	$effect(() => {
@@ -627,7 +635,7 @@
 		const shapes = JSON.parse(untrack(() => shapesKey)) as ShapesArr;
 		requestAnimationFrame(() => {
 			const actual = [...groupsEl.children].reduce((s, c) => s + c.getBoundingClientRect().width, 0);
-			const est = shapes.reduce((s, g, i) => s + groupWidth(g, m[i] ?? 'large'), 0);
+			const est = shapes.reduce((s, g, i) => s + groupWidth(g, m[i] ?? 'large', measure), 0);
 			const r = actual && est ? actual / est : 1;
 			if (Math.abs(r - ratio) / ratio > 0.03) ratio = r;
 		});
@@ -990,6 +998,9 @@
 		scrollbar-width: none; /* défilement à la molette, sans barre */
 	}
 	.group {
+		/* Largeur naturelle : un groupe ne se tasse pas (libellés coupés ou
+		   sur deux lignes), fit choisit les modes pour que tout tienne. */
+		flex: none;
 		display: flex;
 		flex-direction: column;
 		padding: 0 8px;
@@ -1015,6 +1026,10 @@
 		border-radius: 3px;
 		cursor: pointer;
 		color: #1f2328;
+	}
+	.cmd .label,
+	.title {
+		white-space: nowrap;
 	}
 	.cmd:hover:not(:disabled) {
 		background: #e2e8e4;

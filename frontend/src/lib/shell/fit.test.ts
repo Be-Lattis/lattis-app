@@ -21,7 +21,7 @@ describe('ruban adaptatif', () => {
 	it('replie tout quand il ne reste presque rien', () => {
 		expect(fit(groups, 100)).toEqual(['collapsed', 'collapsed', 'collapsed', 'collapsed']);
 	});
-	it('Styles, Cellules et Édition gardent leurs libellés à 1280 px (ruban Accueil)', () => {
+	it('Styles, Cellules et Édition gardent leurs libellés à 1280 et 1400 px (ruban Accueil)', () => {
 		const accueil: GroupShape[] = [
 			{ title: 'Annuler', labels: ['Annuler', 'Rétablir'], iconOk: true },
 			{ title: 'Presse-papiers', labels: ['Coller', 'Couper', 'Copier', 'Reproduire'], iconOk: true },
@@ -29,15 +29,27 @@ describe('ruban adaptatif', () => {
 			{ title: 'Bordures', labels: ['Toutes', 'Contour', 'Aucune'], iconOk: true },
 			{ title: 'Alignement', labels: ['Haut', 'Milieu', 'Bas', 'Gauche', 'Centrer', 'Droite', 'Renvoyer à la ligne', 'Fusionner et centrer'], iconOk: true },
 			{ title: 'Nombre', labels: ['0,00', 'Monétaire', 'Pourcentage', 'Date', 'Standard', 'Ajouter une décimale', 'Réduire les décimales'], iconOk: true },
-			{ title: 'Styles', labels: ['Mise en forme conditionnelle'] },
-			{ title: 'Cellules', labels: ['Insérer', 'Supprimer', 'Format'] },
+			{ title: 'Styles', labels: ['Mise en forme conditionnelle ▾'] },
+			{ title: 'Cellules', labels: ['Insérer ▾', 'Supprimer ▾', 'Format ▾'] },
 			{ title: 'Édition', labels: ['Trier A → Z', 'Rechercher', 'Remplacer'] }
 		];
-		for (const width of [1256, 1180]) {
+		for (const width of [1388, 1268, 1180]) {
 			const m = fit(accueil, width);
 			expect(m.slice(6).every((x) => x === 'large' || x === 'small')).toBe(true);
 			expect(accueil.reduce((s, g, i) => s + groupWidth(g, m[i]), 0)).toBeLessThanOrEqual(width);
 		}
+	});
+
+	it('suit les styles du ruban (libellés mesurés, sans retour à la ligne)', () => {
+		// Mesure fictive : 6 px par caractère, quelle que soit la taille.
+		const m = (s: string) => s.length * 6;
+		const g: GroupShape = { title: 'Édition', labels: ['Trier A → Z', 'Rechercher', 'Remplacer'] };
+		// Grand : max(54, libellé + 14) par commande, écart de 2, marges du groupe 17.
+		expect(groupWidth(g, 'large', m)).toBe(80 + 2 + 74 + 2 + 68 + 17);
+		// Petit : une colonne de trois, icône 16 + écart 6 + libellé + 14.
+		expect(groupWidth(g, 'small', m)).toBe(22 + 66 + 14 + 17);
+		// Le titre, avec ses marges de 12 px, fixe la largeur minimale.
+		expect(groupWidth({ title: 'Requêtes et connexions', labels: ['A'] }, 'icon', m)).toBe(22 * 6 + 24 + 17);
 	});
 
 	it('une liste de largeur fixe compte pour sa largeur', () => {
