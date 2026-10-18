@@ -682,7 +682,6 @@
 
 <style>
 	.panel {
-		width: 460px;
 		flex: none;
 		display: flex;
 		flex-direction: column;

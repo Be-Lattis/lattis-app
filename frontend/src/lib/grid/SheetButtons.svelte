@@ -710,7 +710,6 @@
 		right: 0;
 		z-index: 30;
 		pointer-events: auto;
-		width: 450px;
 		box-sizing: border-box;
 		overflow-y: auto;
 		background: #fff;

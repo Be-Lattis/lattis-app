@@ -1,18 +1,28 @@
-// Panneaux qui se déplient à droite (graphique, tableau croisé, requêtes,
-// référence Lua…) : leur bord gauche se tire pour les élargir ou les
-// rétrécir, comme les volets d'Excel. La largeur choisie est gardée sur ce
-// poste, par panneau ; un double-clic sur le bord revient à la largeur
-// d'origine.
+// Volets qui se déplient à droite (graphique, tableau croisé, contrôles,
+// requêtes, référence Lua, volets des Onglets Document) : tous ont la même
+// largeur par défaut, bornée à la moitié de la fenêtre (et rebornée quand la
+// fenêtre change). Leur bord gauche se tire pour les élargir ou les
+// rétrécir, comme les volets d'Excel ; la largeur choisie est gardée sur ce
+// poste, par volet, sous la même borne. Un double-clic sur le bord revient à
+// la largeur par défaut.
 
 /** Zone de prise du bord gauche, en pixels. */
 export const EDGE = 5;
 
-/** Largeur bornée : au moins min, au plus max et la place disponible. */
-export function clampWidth(w: number, min: number, max: number, room: number): number {
-	return Math.round(Math.max(min, Math.min(w, max, room)));
+/** Largeur de référence d'un volet ; la largeur par défaut en vaut trois. */
+export const BASE_WIDTH = 450;
+export const DEFAULT_WIDTH = 3 * BASE_WIDTH;
+/** Part maximale de la fenêtre qu'un volet peut prendre. */
+export const MAX_SHARE = 0.5;
+/** Largeur minimale d'un volet. */
+export const MIN_WIDTH = 220;
+
+/** Largeur d'un volet : celle choisie (ou celle par défaut), au moins min, au plus la moitié de la fenêtre. */
+export function panelWidth(w: number | undefined, viewport: number, min = MIN_WIDTH): number {
+	return Math.round(Math.max(min, Math.min(w ?? DEFAULT_WIDTH, viewport * MAX_SHARE)));
 }
 
-type Options = { key: string; min?: number; max?: number; /** Panneau inclus dans un autre, qui se redimensionne à sa place. */ off?: boolean };
+type Options = { key: string; min?: number; /** Volet inclus dans un autre, qui se redimensionne à sa place. */ off?: boolean };
 
 const storeKey = (key: string) => `lattis.panel.${key}`;
 
@@ -34,26 +44,28 @@ function save(key: string, w: number | undefined) {
 	}
 }
 
-/** Action Svelte : rend un panneau de droite redimensionnable par son bord gauche. */
+/** Action Svelte : donne à un volet de droite la largeur commune et le rend redimensionnable par son bord gauche. */
 export function resizePanel(node: HTMLElement, opts: Options) {
 	if (opts.off) return {};
-	let { key, min = 220, max = 900 } = opts;
-	const room = () => Math.max(min, (node.parentElement?.clientWidth ?? window.innerWidth) - 160);
+	let { key, min = MIN_WIDTH } = opts;
+	// Largeur tirée par l'utilisateur, undefined : largeur par défaut.
+	let chosen = load(key);
 	// Largeur bordure comprise : celle qu'on mesure est celle qu'on pose.
 	node.style.boxSizing = 'border-box';
-	const apply = (w: number | undefined) => {
-		node.style.width = w === undefined ? '' : `${w}px`;
-		node.style.flexBasis = w === undefined ? '' : `${w}px`;
+	const apply = () => {
+		const w = `${panelWidth(chosen, window.innerWidth, min)}px`;
+		node.style.width = w;
+		node.style.flexBasis = w;
 	};
-	const saved = load(key);
-	if (saved !== undefined) apply(clampWidth(saved, min, max, room()));
+	apply();
 
 	const onEdge = (e: PointerEvent) => e.clientX - node.getBoundingClientRect().left <= EDGE;
 	let drag: { x: number; w: number } | null = null;
 
 	function move(e: PointerEvent) {
 		if (drag) {
-			apply(clampWidth(drag.w + (drag.x - e.clientX), min, max, room()));
+			chosen = panelWidth(drag.w + (drag.x - e.clientX), window.innerWidth, min);
+			apply();
 			e.preventDefault();
 			return;
 		}
@@ -64,7 +76,7 @@ export function resizePanel(node: HTMLElement, opts: Options) {
 		drag = { x: e.clientX, w: node.getBoundingClientRect().width };
 		node.setPointerCapture(e.pointerId);
 		document.body.style.userSelect = 'none';
-		// La prise du bord n'est pas un clic dans la page (qui fermerait le panneau).
+		// La prise du bord n'est pas un clic dans la page (qui fermerait le volet).
 		e.preventDefault();
 		e.stopPropagation();
 	}
@@ -73,36 +85,43 @@ export function resizePanel(node: HTMLElement, opts: Options) {
 		drag = null;
 		node.releasePointerCapture(e.pointerId);
 		document.body.style.userSelect = '';
-		save(key, Math.round(node.getBoundingClientRect().width));
+		save(key, chosen);
 	}
 	function dbl(e: MouseEvent) {
 		if (e.clientX - node.getBoundingClientRect().left > EDGE) return;
-		apply(undefined);
+		chosen = undefined;
+		apply();
 		save(key, undefined);
 	}
 	function leave() {
 		if (!drag) node.style.cursor = '';
 	}
+	function edgeDown(e: MouseEvent) {
+		if (e.button === 0 && e.clientX - node.getBoundingClientRect().left <= EDGE) e.stopPropagation();
+	}
 	node.addEventListener('pointermove', move);
 	node.addEventListener('pointerdown', down);
-	node.addEventListener('mousedown', (e) => {
-		if (e.button === 0 && e.clientX - node.getBoundingClientRect().left <= EDGE) e.stopPropagation();
-	});
+	node.addEventListener('mousedown', edgeDown);
 	node.addEventListener('pointerup', up);
 	node.addEventListener('pointercancel', up);
 	node.addEventListener('pointerleave', leave);
 	node.addEventListener('dblclick', dbl);
+	window.addEventListener('resize', apply);
 	return {
 		update(o: Options) {
-			({ key, min = 220, max = 900 } = o);
+			if (o.key !== key) chosen = load(o.key);
+			({ key, min = MIN_WIDTH } = o);
+			apply();
 		},
 		destroy() {
 			node.removeEventListener('pointermove', move);
 			node.removeEventListener('pointerdown', down);
+			node.removeEventListener('mousedown', edgeDown);
 			node.removeEventListener('pointerup', up);
 			node.removeEventListener('pointercancel', up);
 			node.removeEventListener('pointerleave', leave);
 			node.removeEventListener('dblclick', dbl);
+			window.removeEventListener('resize', apply);
 		}
 	};
 }

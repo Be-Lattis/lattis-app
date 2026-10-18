@@ -1250,11 +1250,9 @@
 		box-sizing: border-box;
 	}
 	.form {
-		width: 430px;
 		box-sizing: border-box;
 	}
 	.panelbox {
-		width: 460px;
 		flex: none;
 		overflow: hidden;
 	}
