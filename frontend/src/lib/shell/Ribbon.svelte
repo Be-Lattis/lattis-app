@@ -641,6 +641,9 @@
 	$effect(() => {
 		// Revenir à la grille depuis la page (onglet de feuille) remet un onglet de ruban.
 		if (view === 'grid' && (tab === 'SQL' || tab === 'SCRIPT')) tab = 'Accueil';
+		// Vue changée sans le ruban (retour de la pipette de l'onglet SCRIPT).
+		else if (view === 'script' && tab !== 'SCRIPT') tab = 'SCRIPT';
+		else if (view === 'sql' && tab !== 'SQL') tab = 'SQL';
 	});
 </script>
 

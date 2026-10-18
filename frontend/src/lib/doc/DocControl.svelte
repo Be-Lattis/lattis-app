@@ -6,6 +6,7 @@
 	import { untrack } from 'svelte';
 	import type { ButtonConfig } from '#lib/grid/buttons.js';
 	import { baseName, choicesOf } from '#lib/grid/buttons.js';
+	import { pickCapture, picker } from '#lib/script/pick.svelte.js';
 
 	export interface ControlState {
 		config: ButtonConfig;
@@ -85,7 +86,14 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<span class="dctl" {style} title={st ? `${st.config.name ?? ''} · ${st.config.link ? 'cellule liée : ' + st.config.link : 'valeur gardée dans le contrôle'}${st.error ? ' · ' + st.error : ''} · clic droit : modifier` : ''} onmousedown={(e) => e.stopPropagation()}>
+<span
+	class="dctl"
+	class:picking={picker.active}
+	onpointerdowncapture={(e) => pickCapture(e, id)}
+	onmousedowncapture={(e) => pickCapture(e, id)}
+	onclickcapture={(e) => pickCapture(e, id)}
+	{style}
+	title={st ? `${st.config.name ?? ''} · ${st.config.link ? 'cellule liée : ' + st.config.link : 'valeur gardée dans le contrôle'}${st.error ? ' · ' + st.error : ''} · clic droit : modifier` : ''} onmousedown={(e) => e.stopPropagation()}>
 	{#if missing}
 		<span class="gone">Contrôle supprimé</span>
 	{:else if !st}
@@ -120,6 +128,15 @@
 		box-sizing: border-box;
 		font: 13px 'Segoe UI', system-ui, sans-serif;
 		user-select: none;
+	}
+	/* Pipette de l'onglet SCRIPT : les contrôles se désignent d'un clic. */
+	.dctl.picking,
+	.dctl.picking :global(*) {
+		cursor: crosshair;
+	}
+	.dctl.picking:hover {
+		outline: 2px solid #217346;
+		outline-offset: 1px;
 	}
 	input[type='text'],
 	textarea,

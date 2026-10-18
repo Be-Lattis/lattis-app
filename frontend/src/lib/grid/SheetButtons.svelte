@@ -14,6 +14,7 @@
 	import { resizePanel } from '#lib/ui/resize.js';
 	import { BUTTON_H, BUTTON_W, CONTROL_KINDS, VALUE_KINDS, baseName, choicesOf, controlTitle, handlerLabel, handlers, scriptFunctions, type ButtonConfig, type ControlKind, type SheetButton } from './buttons';
 	import { a1Address } from './formulaEdit';
+	import { pickCapture, picker } from '#lib/script/pick.svelte.js';
 	import { colLetters } from './cfmodel';
 
 	interface Geometry {
@@ -479,6 +480,7 @@
 		class:ctl={kind !== ''}
 		class:field={kind === 'input' || kind === 'textarea'}
 		class:selected={selected === b.id}
+		class:picking={picker.active}
 		style:left="{box.x - view.x}px"
 		style:top="{box.y - view.y}px"
 		style:width="{box.w}px"
@@ -488,6 +490,9 @@
 		style:--btn-active={b.config.activeColor || null}
 		style:--btn-text={b.config.textColor || null}
 		title={controlTitle(b.config)}
+		onpointerdowncapture={(ev) => pickCapture(ev, b.id)}
+		onmousedowncapture={(ev) => pickCapture(ev, b.id)}
+		onclickcapture={(ev) => pickCapture(ev, b.id)}
 		onmousedown={(ev) => start(ev, b)}
 		oncontextmenu={(ev) => openMenu(ev, b)}
 		onwheel={(ev) => onwheel?.(ev)}
@@ -797,6 +802,15 @@
 	}
 	.action:active {
 		background: var(--btn-active, #d5e8db);
+	}
+	/* Pipette de l'onglet SCRIPT : les contrôles se désignent d'un clic. */
+	.action.picking,
+	.action.picking :global(*) {
+		cursor: crosshair;
+	}
+	.action.picking:hover {
+		outline: 2px solid #217346;
+		outline-offset: 1px;
 	}
 	/* Case à cocher et liste : sans relief de bouton. */
 	.action.ctl {

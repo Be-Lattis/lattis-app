@@ -23,6 +23,8 @@
 	import TitleBar from '#lib/shell/TitleBar.svelte';
 	import ScriptView, { type Script } from '#lib/script/ScriptView.svelte';
 	import ScriptDialog, { type DialogSpec } from '#lib/script/ScriptDialog.svelte';
+	import PickBanner from '#lib/script/PickBanner.svelte';
+	import type { ControlInfo } from '#lib/script/controls.js';
 	import McpPanel from '#lib/shell/McpPanel.svelte';
 	import HtmlPage from '#lib/page/HtmlPage.svelte';
 	import DocPage from '#lib/doc/DocPage.svelte';
@@ -1179,6 +1181,8 @@
 								return r;
 							}}
 							stop={() => DocumentService.StopScript()}
+							controls={() => DocumentService.Call('controls.list', {}) as Promise<ControlInfo[]>}
+							showSheet={(on) => (view = on ? 'grid' : 'script')}
 							subscribe={(fn) => Events.On('script:print', (e: { data: string }) => fn(e.data))}
 							network={{
 								list: async () => (await DocumentService.HTTPHosts()) ?? [],
@@ -1345,6 +1349,7 @@
 			<span>Prêt</span>
 		{/if}
 		<BusyBar />
+		<PickBanner />
 		{#if data && view === 'grid' && !activePage}<ZoomBar {zoom} onzoom={setZoom} />{/if}
 	</footer>
 </div>
