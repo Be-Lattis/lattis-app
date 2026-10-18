@@ -22,6 +22,7 @@ export type {
     QueryRefresh,
     QuerySheet,
     ScriptResult,
+    Setting,
     TableList,
     UICommand,
     XLSXExport

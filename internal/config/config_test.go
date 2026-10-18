@@ -412,3 +412,98 @@ func TestCLISignAndCheck(t *testing.T) {
 		t.Fatal("check a accepté une adresse http")
 	}
 }
+
+func TestWebPagesSetting(t *testing.T) {
+	c := resolve(t, Options{}, src("défaut", RankDefault, false, Defaults()))
+	if v, ok := c.Lookup("features.webPages"); !ok || v != false {
+		t.Fatalf("features.webPages par défaut = %v, %v", v, ok)
+	}
+	c = resolve(t, Options{},
+		src("défaut", RankDefault, false, Defaults()),
+		src("env", RankEnv, false, Tree{"features": Tree{"webPages": "1"}}),
+	)
+	if !c.Bool("features.webPages", false) {
+		t.Fatal("features.webPages = \"1\" non converti")
+	}
+	c = resolve(t, Options{},
+		src("défaut", RankDefault, false, Defaults()),
+		src("user", RankUser, false, Tree{"features": Tree{"webPages": "peut-être"}}),
+	)
+	if c.Bool("features.webPages", true) || len(c.Warnings) != 1 {
+		t.Fatalf("valeur invalide gardée : %v", c.Warnings)
+	}
+	var s Settings
+	c = resolve(t, Options{}, src("défaut", RankDefault, false, Defaults()),
+		src("user", RankUser, false, Tree{"features": Tree{"webPages": true}}))
+	if err := c.Decode("", &s); err != nil || s.Features.WebPages == nil || !*s.Features.WebPages {
+		t.Fatalf("Settings.Features.WebPages = %v, %v", s.Features.WebPages, err)
+	}
+}
+
+func TestSetUser(t *testing.T) {
+	defer SetCurrent(nil)
+	ctx := context.Background()
+	file := filepath.Join(t.TempDir(), "Lattis", "config.json")
+	var policy Tree
+	l := &Loader{
+		Environ:  func() []string { return nil },
+		UserFile: file,
+		Local: func() []Source {
+			out := []Source{&FileSource{Path: file, R: RankUser}}
+			if policy != nil {
+				out = append(out, src("stratégie", RankPolicy, true, policy))
+			}
+			return out
+		},
+	}
+	if l.Load(ctx).Bool("features.webPages", true) {
+		t.Fatal("features.webPages activé par défaut")
+	}
+	// Fichier et dossier créés ; la configuration courante suit.
+	c, err := l.SetUser(ctx, "features.webPages", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !c.Bool("features.webPages", false) || !Current().Bool("features.webPages", false) {
+		t.Fatal("réglage non pris en compte")
+	}
+	st := UserSettings(c)
+	if len(st) != 1 || st[0].Value != true || st[0].Locked || st[0].Fixed || st[0].Source != file {
+		t.Fatalf("UserSettings = %+v", st)
+	}
+	// Les autres clés du fichier sont gardées.
+	os.WriteFile(file, []byte(`{"organization":"ACME","features":{"webPages":true,"mcp":{"enabled":true}}}`), 0o600)
+	if c, err = l.SetUser(ctx, "features.webPages", false); err != nil {
+		t.Fatal(err)
+	}
+	if c.Bool("features.webPages", true) || c.String("organization", "") != "ACME" || !c.Bool("features.mcp.enabled", false) {
+		t.Fatalf("fichier mal réécrit : %v", c.Explain())
+	}
+	// Clé hors de la liste, valeur invalide : refusées.
+	if _, err := l.SetUser(ctx, "features.mcp.enabled", true); err == nil {
+		t.Fatal("clé hors de la liste acceptée")
+	}
+	if _, err := l.SetUser(ctx, "features.webPages", "peut-être"); err == nil {
+		t.Fatal("valeur invalide acceptée")
+	}
+	// Fichier illisible : pas écrasé.
+	os.WriteFile(file, []byte(`{cassé`), 0o600)
+	if _, err := l.SetUser(ctx, "features.webPages", true); err == nil {
+		t.Fatal("fichier cassé écrasé")
+	}
+	if b, _ := os.ReadFile(file); string(b) != `{cassé` {
+		t.Fatalf("fichier modifié : %s", b)
+	}
+	os.Remove(file)
+	// Stratégie : verrouillé, refusé, rien d'écrit.
+	policy = Tree{"features": Tree{"webPages": false}}
+	if _, err := l.SetUser(ctx, "features.webPages", true); err == nil {
+		t.Fatal("réglage verrouillé modifié")
+	}
+	if st := UserSettings(l.Load(ctx)); !st[0].Locked {
+		t.Fatalf("UserSettings = %+v", st)
+	}
+	if _, err := os.Stat(file); err == nil {
+		t.Fatal("fichier écrit malgré la stratégie")
+	}
+}

@@ -1098,6 +1098,15 @@ export function SetSelection(sel: api$0.Selection): $CancellablePromise<void> {
 }
 
 /**
+ * SetSetting écrit un réglage de l'utilisateur (chemin pointé de la
+ * configuration, par exemple features.webPages) et rend les réglages à jour.
+ * Refusé pour une clé hors de la liste ou imposée par une stratégie.
+ */
+export function SetSetting(path: string, value: any): $CancellablePromise<$models.Setting[] | null> {
+    return $Call.ByID(4185703154, path, value);
+}
+
+/**
  * SetSheetColor fixe la couleur d'un onglet (« #rrggbb », vide : aucune).
  */
 export function SetSheetColor(sheet: number, color: string): $CancellablePromise<$models.DocState> {
@@ -1133,6 +1142,14 @@ export function SetType(table: string, i: number, to: grid$0.Type): $Cancellable
  */
 export function SetZoom(sheet: number, pct: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(1595119909, sheet, pct);
+}
+
+/**
+ * Settings donne les réglages modifiables depuis l'interface, avec leur
+ * valeur effective et s'ils sont verrouillés.
+ */
+export function Settings(): $CancellablePromise<$models.Setting[] | null> {
+    return $Call.ByID(2324248331);
 }
 
 /**

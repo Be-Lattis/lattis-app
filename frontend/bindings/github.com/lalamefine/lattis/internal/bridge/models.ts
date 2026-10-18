@@ -12,6 +12,9 @@ import * as archive$0 from "../archive/models.js";
 import * as canvas$0 from "../canvas/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as config$0 from "../config/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as formula$0 from "../formula/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -201,6 +204,11 @@ export interface QuerySheet {
  * ScriptResult est l'issue d'un script pour l'interface.
  */
 export type ScriptResult = api$0.ScriptResult;
+
+/**
+ * Setting est l'état d'un réglage pour l'interface.
+ */
+export type Setting = config$0.UserSetting;
 
 /**
  * TableList liste les tables et vues d'une connexion (navigateur).
