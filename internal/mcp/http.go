@@ -143,7 +143,18 @@ func Handler(s *Server, token string) http.Handler {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		out := s.Handle(r.Context(), body)
+		// Client : nommé par le relais stdio, sinon par la session ouverte
+		// à initialize (Claude Code et les clients HTTP la renvoient).
+		client := r.Header.Get(ClientHeader)
+		if client == "" {
+			client = s.session(r.Header.Get("Mcp-Session-Id"))
+		}
+		sess := &sessionOut{}
+		ctx := context.WithValue(WithClient(r.Context(), client), sessionKey{}, sess)
+		out := s.Handle(ctx, body)
+		if sess.id != "" {
+			w.Header().Set("Mcp-Session-Id", sess.id)
+		}
 		if out == nil {
 			w.WriteHeader(http.StatusAccepted)
 			return
@@ -185,15 +196,22 @@ func Proxy(in io.Reader, out io.Writer) error {
 	}
 	sc := bufio.NewScanner(in)
 	sc.Buffer(make([]byte, 64<<10), maxBody)
+	// Nom du client (clientInfo de initialize), transmis avec chaque
+	// message : l'application montre qui agit sur le classeur.
+	name := ""
 	for sc.Scan() {
 		line := append([]byte(nil), sc.Bytes()...)
 		if len(bytes.TrimSpace(line)) == 0 {
 			continue
 		}
+		if n := initializeClient(line); n != "" {
+			name = n
+		}
+		who := name
 		wg.Add(1)
 		go func() { // une boîte de dialogue peut attendre l'utilisateur : ne pas bloquer le reste
 			defer wg.Done()
-			resp, err := forward(client, line)
+			resp, err := forward(client, line, who)
 			if err != nil {
 				if r := errorReply(line, err); r != nil {
 					write(r)
@@ -209,7 +227,23 @@ func Proxy(in io.Reader, out io.Writer) error {
 	return sc.Err()
 }
 
-func forward(client *http.Client, msg []byte) ([]byte, error) {
+// initializeClient rend clientInfo.name d'un message initialize ("" sinon).
+func initializeClient(msg []byte) string {
+	var req struct {
+		Method string `json:"method"`
+		Params struct {
+			ClientInfo struct {
+				Name string `json:"name"`
+			} `json:"clientInfo"`
+		} `json:"params"`
+	}
+	if json.Unmarshal(msg, &req) != nil || req.Method != "initialize" {
+		return ""
+	}
+	return req.Params.ClientInfo.Name
+}
+
+func forward(client *http.Client, msg []byte, name string) ([]byte, error) {
 	s, err := LoadSettings()
 	if err != nil {
 		return nil, err
@@ -224,6 +258,9 @@ func forward(client *http.Client, msg []byte) ([]byte, error) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json, text/event-stream")
 	req.Header.Set("Authorization", "Bearer "+s.Token)
+	if name != "" {
+		req.Header.Set(ClientHeader, name)
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, ErrNotRunning

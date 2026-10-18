@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/lalamefine/lattis/internal/api"
 )
@@ -27,6 +28,46 @@ type Server struct {
 	Host    api.Host
 	Name    string
 	Version string
+	// Watch, s'il est donné, entoure chaque appel d'outil (fil d'activité,
+	// accord de l'utilisateur, groupe d'annulation).
+	Watch Watcher
+	// Connect, s'il est donné, apprend le nom du client à chaque initialize.
+	Connect func(client string)
+
+	mu       sync.Mutex
+	sessions map[string]string // Mcp-Session-Id → nom du client
+}
+
+type sessionKey struct{}
+
+// sessionOut reçoit l'identifiant de session créé par initialize, que
+// Handler renvoie dans l'en-tête Mcp-Session-Id.
+type sessionOut struct{ id string }
+
+// maxSessions borne les sessions gardées (un client qui se reconnecte en
+// ouvre une nouvelle) : au-delà, la liste repart de zéro et un client
+// oublié n'est plus nommé (ses appels marchent toujours).
+const maxSessions = 64
+
+// session rend le client d'une session connue ("" sinon).
+func (s *Server) session(id string) string {
+	if id == "" {
+		return ""
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.sessions[id]
+}
+
+func (s *Server) newSession(client string) string {
+	id := newToken()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.sessions == nil || len(s.sessions) >= maxSessions {
+		s.sessions = map[string]string{}
+	}
+	s.sessions[id] = client
+	return id
 }
 
 type request struct {
@@ -116,8 +157,21 @@ func (s *Server) dispatch(ctx context.Context, req request) (any, *rpcError) {
 	case "initialize":
 		var p struct {
 			ProtocolVersion string `json:"protocolVersion"`
+			ClientInfo      struct {
+				Name string `json:"name"`
+			} `json:"clientInfo"`
 		}
 		_ = json.Unmarshal(req.Params, &p)
+		client := p.ClientInfo.Name
+		if client == "" {
+			client = ClientOf(ctx)
+		}
+		if out, ok := ctx.Value(sessionKey{}).(*sessionOut); ok {
+			out.id = s.newSession(client)
+		}
+		if s.Connect != nil && client != "" {
+			s.Connect(client)
+		}
 		v := versions[0]
 		for _, x := range versions {
 			if x == p.ProtocolVersion {
@@ -148,7 +202,24 @@ func (s *Server) dispatch(ctx context.Context, req request) (any, *rpcError) {
 		}
 		// Un assistant ne fait pas répondre l'utilisateur à sa place : une
 		// requête HTTP vers un hôte non autorisé est refusée (cmd_http.go).
-		res, err := api.Invoke(api.WithoutPrompt(ctx), s.Host, cmd.Name, p.Arguments)
+		run := func(ctx context.Context) (any, error) {
+			return api.Invoke(api.WithoutPrompt(ctx), s.Host, cmd.Name, p.Arguments)
+		}
+		var res any
+		var err error
+		if s.Watch != nil {
+			res, err = s.Watch(ctx, Call{
+				Client:  ClientOf(ctx),
+				Tool:    p.Name,
+				Command: cmd.Name,
+				Label:   Label(cmd, p.Arguments),
+				Write:   Writes(cmd),
+				Target:  Target(p.Arguments),
+				Args:    p.Arguments,
+			}, run)
+		} else {
+			res, err = run(ctx)
+		}
 		if err != nil {
 			return toolResult(err.Error(), true), nil
 		}

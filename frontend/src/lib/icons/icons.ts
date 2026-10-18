@@ -206,7 +206,7 @@ export const icons = {
 	'win-close': '<path d="m6.5 6.5 11 11m0-11-11 11"/>',
 
 	// Logo : un tableau dont la colonne de gauche est une base
-	// Onglet IA : l'étoile propre à l'assistant.
+	// Assistant IA : l'étoile propre à l'assistant.
 	sparkle: '<path class="af" d="M10 3.5c.7 4.4 2.6 6.3 7 7-4.4.7-6.3 2.6-7 7-.7-4.4-2.6-6.3-7-7 4.4-.7 6.3-2.6 7-7z"/><path class="a" d="M18 14.5c.3 1.9 1.1 2.7 3 3-1.9.3-2.7 1.1-3 3-.3-1.9-1.1-2.7-3-3 1.9-.3 2.7-1.1 3-3z"/>',
 	// Logo de Lattis : la grille en L de l'icône (docs/design/identite-visuelle.md), sans son carré vert.
 	logo: '<rect class="af" x="3" y="3" width="5" height="5" rx="1"/><rect class="a" stroke-opacity="0.5" stroke-width="1.2" x="10.1" y="3.6" width="3.8" height="3.8" rx="0.8"/><rect class="a" stroke-opacity="0.5" stroke-width="1.2" x="16.6" y="3.6" width="3.8" height="3.8" rx="0.8"/><rect class="af" x="3" y="9.5" width="5" height="5" rx="1"/><rect class="a" stroke-opacity="0.5" stroke-width="1.2" x="10.1" y="10.1" width="3.8" height="3.8" rx="0.8"/><rect class="a" stroke-opacity="0.5" stroke-width="1.2" x="16.6" y="10.1" width="3.8" height="3.8" rx="0.8"/><rect class="af" x="3" y="16" width="5" height="5" rx="1"/><rect class="af" x="9.5" y="16" width="5" height="5" rx="1"/><rect class="af" x="16" y="16" width="5" height="5" rx="1"/>',

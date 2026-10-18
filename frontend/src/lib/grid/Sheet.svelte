@@ -508,9 +508,11 @@
 		onsheet?: (sheet: number) => void;
 		/** Point de carte cliqué : aller à la ligne id du tableau (éventuellement sur une autre feuille). */
 		onrowlink?: (table: string, id: number) => void;
+		/** Clic droit › « Demander à l'assistant… » (absent : entrée masquée). */
+		onask?: () => void;
 	}
 
-	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', freeze, zoom = 1, onzoom, animate = true, sheetName = '', onsheet, onrowlink }: Props = $props();
+	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', freeze, zoom = 1, onzoom, animate = true, sheetName = '', onsheet, onrowlink, onask }: Props = $props();
 
 	// Feuille sans fin pratique (choix de Louis) : au-delà des limites d'Excel,
 	// bornée par la nomenclature Cell[ZZZZ999999999] (4 lettres, 9 chiffres).
@@ -7901,6 +7903,30 @@
 		return targetTable()?.t.name;
 	}
 
+	/**
+	 * Ce que l'utilisateur regarde, pour l'assistant (bridge.AIContext) : le
+	 * tableau de la cellule active et la sélection lisible, comme la zone
+	 * d'adresse : « Commandes[Montant][3:10] » (lignes du tableau, à partir
+	 * de 1), « Commandes[Montant:Prix][3] », « Commandes[Montant] » (en-tête),
+	 * ou « B2:D5 » hors tableau.
+	 */
+	export function aiContext(): { table: string; selection: string } {
+		const sel = selection();
+		const e = tableAt(active.row, active.col);
+		const a1 = (r0: number, c0: number, r1: number, c1: number) => (r0 === r1 && c0 === c1 ? addrA1(r0, c0) : `${addrA1(r0, c0)}:${addrA1(r1, c1)}`);
+		if (!e) return { table: '', selection: a1(sel.r0, sel.c0, sel.r1, sel.c1) };
+		// Sélection débordant du tableau : la cellule active seulement.
+		const inside = inTable(e, sel.r0, sel.c0) && inTable(e, sel.r1, sel.c1);
+		const [r0, c0, r1, c1] = inside ? [sel.r0, sel.c0, sel.r1, sel.c1] : [active.row, active.col, active.row, active.col];
+		const name = (c: number) => e.t.columns[c - e.t.col]?.name ?? '';
+		const cols = c0 === c1 ? name(c0) : `${name(c0)}:${name(c1)}`;
+		// Lignes de données (l'en-tête n'en est pas une).
+		const d0 = Math.max(r0, e.t.row + 1) - e.t.row;
+		const d1 = r1 - e.t.row;
+		const rows = r1 <= e.t.row ? '' : d0 === d1 ? `[${d0}]` : `[${d0}:${d1}]`;
+		return { table: e.t.name, selection: `${e.t.name}[${cols}]${rows}` };
+	}
+
 	/** Tableau de la cellule active, s'il y en a un (F5). */
 	export function tableHere(): SheetTable | undefined {
 		return tableAt(active.row, active.col)?.t;
@@ -8377,6 +8403,15 @@
 							}}>Supprimer le tableau « {m.e.t.name} »</button
 						>
 					{/if}
+					{#if onask}
+						<hr />
+						<button
+							onclick={() => {
+								menu = null;
+								onask();
+							}}>Demander à l’assistant…</button
+						>
+					{/if}
 				{/if}
 			</div>
 		{/if}
@@ -8472,6 +8507,15 @@
 						<hr />
 						<button data-shed="1" title="La plage redevient un tableau (sa première ligne donne les en-têtes)" onclick={() => menuAction(() => source.formatAsTable!(at.row, at.col))}>Mettre sous forme de tableau</button>
 					{/if}
+				{/if}
+				{#if onask}
+					<hr />
+					<button
+						onclick={() => {
+							freeMenu = null;
+							onask();
+						}}>Demander à l’assistant…</button
+					>
 				{/if}
 			</div>
 		{/if}

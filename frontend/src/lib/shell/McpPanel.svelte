@@ -8,6 +8,7 @@
 	import type { MCPStatus } from '#bindings/internal/bridge/models.js';
 	import { mcpConfigs } from './mcp';
 	import Icon from '#lib/icons/Icon.svelte';
+	import ClaudeSetup from '#lib/ai/ClaudeSetup.svelte';
 
 	interface Props {
 		onclose: () => void;
@@ -20,9 +21,10 @@
 	let showToken = $state(false);
 
 	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
-	onMount(() => {
+	function reload() {
 		DocumentService.MCPState().then((s) => (st = s), (e) => (error = err(e)));
-	});
+	}
+	onMount(reload);
 
 	async function toggle() {
 		if (!st) return;
@@ -62,9 +64,12 @@
 	>
 		<header>Serveur MCP</header>
 		<p>
-			Un assistant compatible MCP (Claude Desktop, Claude Code…) peut lire et modifier le classeur ouvert : feuilles, tableaux, cellules, sélection, SQL, scripts, boutons. Chacune de ses
-			modifications s’annule avec Ctrl+Z. Le serveur n’écoute que sur cet ordinateur et exige un jeton.
+			Un assistant compatible MCP (Claude Desktop, Claude Code…) peut lire et modifier le classeur ouvert : feuilles, tableaux, cellules, sélection, SQL, scripts, boutons. Ce qu’il
+			modifie au cours d’une série d’actions s’annule d’un coup (Ctrl+Z). Le serveur n’écoute que sur cet ordinateur et exige un jeton.
 		</p>
+		<div class="setup">
+			<ClaudeSetup onchange={reload} />
+		</div>
 		{#if st}
 			<label class="switch">
 				<input type="checkbox" checked={st.enabled} onchange={toggle} />
@@ -128,6 +133,9 @@
 	p {
 		margin: 10px 16px;
 		color: #374151;
+	}
+	.setup {
+		margin: 10px 16px 14px;
 	}
 	.switch {
 		display: flex;

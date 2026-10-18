@@ -18,6 +18,7 @@ import controles from './pages/controles.md?raw';
 import sql from './pages/sql.md?raw';
 import lua from './pages/lua.md?raw';
 import connexions from './pages/connexions.md?raw';
+import assistant from './pages/assistant.md?raw';
 import raccourcis from './pages/raccourcis.md?raw';
 import parametres from './pages/parametres.md?raw';
 
@@ -44,6 +45,7 @@ export const pages: HelpPage[] = [
 	page('sql', sql),
 	page('lua', lua),
 	page('connexions', connexions),
+	page('assistant', assistant),
 	page('raccourcis', raccourcis),
 	page('parametres', parametres)
 ];

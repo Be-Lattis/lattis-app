@@ -33,6 +33,26 @@ import * as auth$0 from "../remote/auth/models.js";
 import * as workbook$0 from "../remote/workbook/models.js";
 
 /**
+ * AIContext : ce que l'utilisateur regarde, joint à chaque message.
+ */
+export interface AIContext {
+    /**
+     * feuille active ("" : aucune)
+     */
+    "sheet": string;
+
+    /**
+     * tableau sous le curseur ("" sinon)
+     */
+    "table": string;
+
+    /**
+     * sélection lisible : « Commandes[Montant][3:10] » ou « B2:D5 » ("" sinon)
+     */
+    "selection": string;
+}
+
+/**
  * AIEventData est un évènement d'une réponse ; Run la désigne.
  */
 export interface AIEventData {
@@ -55,6 +75,39 @@ export interface AIEventData {
      */
     "id"?: string;
     "error"?: boolean;
+
+    /**
+     * Write : l'outil modifie le classeur (tool, tool-done).
+     */
+    "write"?: boolean;
+
+    /**
+     * Target : feuille ou tableau visé par l'outil, pour « Aller à ».
+     */
+    "target"?: string;
+
+    /**
+     * Usage : jetons et coût du tour (usage).
+     */
+    "usage"?: ai$0.Usage | null;
+
+    /**
+     * Changes : nombre d'appels d'outils d'écriture réussis de la réponse ;
+     * Undo : la réponse peut être annulée d'un coup (done).
+     */
+    "changes"?: number;
+    "undo"?: boolean;
+}
+
+/**
+ * AILogEntry est un élément de la conversation affichée, dans l'ordre :
+ * message de l'utilisateur (User) ou évènement d'une réponse (Event).
+ * L'interface la rejoue pour réafficher la conversation.
+ */
+export interface AILogEntry {
+    "run": number;
+    "user"?: string;
+    "event"?: AIEventData | null;
 }
 
 /**
@@ -80,16 +133,22 @@ export interface AIProvider {
      * KeyHint : début attendu d'une clé (« sk-ant- »), pour l'aide.
      */
     "keyHint"?: string;
-    "hasKey": boolean;
 
     /**
-     * Account : connexion par compte, sans clé (nil : non proposée).
+     * NeedsKey : une clé d'API est nécessaire (faux pour un modèle local).
      */
-    "account"?: ai$0.Account | null;
+    "needsKey": boolean;
+
+    /**
+     * Local : le modèle tourne sur ce poste ou le réseau local ; aucune
+     * donnée ne part chez un fournisseur.
+     */
+    "local": boolean;
+    "hasKey": boolean;
 }
 
 /**
- * AIStatus décrit l'onglet IA.
+ * AIStatus décrit l'assistant.
  */
 export interface AIStatus {
     "enabled": boolean;
@@ -106,10 +165,31 @@ export interface AIStatus {
      * passerelle de l'entreprise (ai.endpoint)
      */
     "managed": boolean;
+
+    /**
+     * passerelle sans clé personnelle (ai.auth.mode = none)
+     */
+    "gatewayNoKey": boolean;
     "providers": AIProvider[] | null;
     "busy": boolean;
     "messages": number;
+
+    /**
+     * Usage : cumul des jetons et du coût de la conversation.
+     */
+    "usage": AIUsage;
+
+    /**
+     * KeepConversation : la conversation est gardée avec le classeur
+     * (réglage ai.keepConversation).
+     */
+    "keepConversation": boolean;
 }
+
+/**
+ * AIUsage : jetons et coût (dollars US) de la conversation.
+ */
+export type AIUsage = ai$0.Usage;
 
 /**
  * DamagedFile décrit un classeur endommagé.
@@ -275,6 +355,57 @@ export interface LattisState {
      */
     "allowUserServers": boolean;
     "servers": auth$0.ServerState[] | null;
+}
+
+/**
+ * MCPClients décrit les clients d'Anthropic qui peuvent piloter Lattis : la
+ * voie « abonnement Claude » (Pro, Max, Team), où l'on discute dans Claude
+ * et où Lattis montre ce qui est fait.
+ */
+export interface MCPClients {
+    "desktopInstalled": boolean;
+    "desktopConfigured": boolean;
+
+    /**
+     * chemin de claude_desktop_config.json
+     */
+    "desktopConfig": string;
+
+    /**
+     * commande claude trouvée
+     */
+    "codeFound": boolean;
+    "codeConfigured": boolean;
+
+    /**
+     * commande « claude mcp add … » à copier
+     */
+    "codeCommand": string;
+
+    /**
+     * client vu récemment (nom affiché), "" sinon
+     */
+    "connected": string;
+    "confirmWrites": boolean;
+}
+
+/**
+ * MCPSeriesState dit si une série peut être annulée d'un clic.
+ */
+export interface MCPSeriesState {
+    "id": number;
+    "client": string;
+
+    /**
+     * étapes du journal encore en place
+     */
+    "writes": number;
+    "undo": boolean;
+
+    /**
+     * pourquoi pas, sinon ""
+     */
+    "reason": string;
 }
 
 /**

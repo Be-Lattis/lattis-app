@@ -1,13 +1,10 @@
 package ai
 
 import (
-	"os"
-
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/anthropics/anthropic-sdk-go/config"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -294,14 +291,14 @@ func TestAnthropicTurn(t *testing.T) {
 		b, _ := io.ReadAll(r.Body)
 		json.Unmarshal(b, &body)
 		beta = r.Header.Get("anthropic-beta")
-		if r.Header.Get("X-Api-Key") != "sk-test" && r.Header.Get("Authorization") != "Bearer jeton-compte" {
+		if r.Header.Get("X-Api-Key") != "sk-test" {
 			w.WriteHeader(401)
 			io.WriteString(w, `{"type":"error","error":{"type":"authentication_error","message":"bad key"}}`)
 			return
 		}
 		w.Header().Set("Content-Type", "text/event-stream")
 		for _, ev := range []string{
-			`{"type":"message_start","message":{"id":"msg_1","type":"message","role":"assistant","model":"claude-opus-5-5","content":[],"stop_reason":null,"usage":{"input_tokens":10,"output_tokens":1}}}`,
+			`{"type":"message_start","message":{"id":"msg_1","type":"message","role":"assistant","model":"claude-opus-5-5","content":[],"stop_reason":null,"usage":{"input_tokens":10,"output_tokens":1,"cache_read_input_tokens":300,"cache_creation_input_tokens":50}}}`,
 			`{"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}`,
 			`{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Je regarde "}}`,
 			`{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"vos tableaux."}}`,
@@ -358,45 +355,13 @@ func TestAnthropicTurn(t *testing.T) {
 	if _, err := p.Turn(context.Background(), Credentials{Key: "sk-faux", Endpoint: srv.URL}, req, func(Event) {}); err == nil || !strings.Contains(err.Error(), "clé d'API refusée") {
 		t.Fatalf("err %v", err)
 	}
-	// Sans clé ni compte connecté.
-	dir := t.TempDir()
-	t.Setenv("ANTHROPIC_CONFIG_DIR", dir)
-	t.Setenv("ANTHROPIC_PROFILE", "")
-	os.Unsetenv("ANTHROPIC_PROFILE")
+	// Sans clé.
 	if _, err := p.Turn(context.Background(), Credentials{Endpoint: srv.URL}, req, func(Event) {}); !errors.Is(err, ErrNoKey) {
 		t.Fatalf("err %v", err)
 	}
-	if acc := p.(AccountProvider).Account(); acc.Connected {
-		t.Fatalf("compte inventé : %+v", acc)
-	}
-	// Compte connecté (profil rangé par « ant auth login ») : jeton porteur.
-	writeProfile(t, dir, "jeton-compte")
-	if acc := p.(AccountProvider).Account(); !acc.Connected || acc.Name != "louis@exemple.fr" {
-		t.Fatalf("compte : %+v", acc)
-	}
-	if _, err := p.Turn(context.Background(), Credentials{Endpoint: srv.URL}, req, func(Event) {}); err != nil {
-		t.Fatal(err)
-	}
-	// Une clé enregistrée reste prioritaire.
-	if _, err := p.Turn(context.Background(), Credentials{Key: "sk-test", Endpoint: srv.URL}, req, func(Event) {}); err != nil {
-		t.Fatal(err)
-	}
-	// Jeton refusé : message propre au compte.
-	writeProfile(t, dir, "jeton-expire")
-	if _, err := p.Turn(context.Background(), Credentials{Endpoint: srv.URL}, req, func(Event) {}); err == nil || !strings.Contains(err.Error(), "reconnectez-vous") {
-		t.Fatalf("err %v", err)
-	}
-}
-
-// writeProfile range un profil Anthropic comme le fait « ant auth login ».
-func writeProfile(t *testing.T, dir, token string) {
-	t.Helper()
-	cfg := &config.Config{AuthenticationInfo: config.NewUserOAuthAuthentication("")}
-	if err := config.SaveProfile(dir, "default", cfg); err != nil {
-		t.Fatal(err)
-	}
-	if err := config.WriteCredentials(config.ProfileCredentialsPath(dir, "default"), config.Credentials{AccessToken: token, AccountEmail: "louis@exemple.fr"}); err != nil {
-		t.Fatal(err)
+	// Usage lu dans le flux (début et fin du message).
+	if u := reply.Usage; u.InputTokens != 10+300+50 || u.CacheReadTokens != 300 || u.CacheWriteTokens != 50 || u.OutputTokens != 20 {
+		t.Fatalf("usage : %+v", u)
 	}
 }
 

@@ -5,7 +5,10 @@
 // (>), tableaux (| a | b |), filets (---) ; dans le texte : **gras**,
 // *italique*, `code` et liens [texte](cible) vers une page de l'aide
 // (« sql », « sql#ancre », « fonction:SOMME »). Un lien externe s'affiche
-// comme du texte : l'aide marche hors ligne.
+// comme du texte : l'aide marche hors ligne. Les réponses de l'assistant
+// (lib/ai) passent par le même lecteur avec external : seuls les liens
+// http(s) restent des liens (ouverts dans le navigateur), les autres sont
+// du texte.
 
 export type Inline =
 	| { t: 'text'; text: string }
@@ -37,8 +40,8 @@ export function slug(s: string): string {
 		.replace(/^-|-$/g, '');
 }
 
-/** Morceaux d'une ligne de texte. */
-export function inline(s: string): Inline[] {
+/** Morceaux d'une ligne de texte ; external : liens http(s) seulement (réponses de l'assistant). */
+export function inline(s: string, external = false): Inline[] {
 	const out: Inline[] = [];
 	const re = /`([^`]+)`|\*\*(.+?)\*\*|\*([^*\s][^*]*?)\*|\[([^\]]+)\]\(([^)\s]+)\)/g;
 	let last = 0;
@@ -54,25 +57,27 @@ export function inline(s: string): Inline[] {
 		if (m[1] !== undefined) out.push({ t: 'code', text: m[1] });
 		else if (m[2] !== undefined) out.push({ t: 'b', text: m[2] });
 		else if (m[3] !== undefined) out.push({ t: 'i', text: m[3] });
-		else if (/^[a-z]+:\/\//i.test(m[5])) text(m[4]);
+		else if (external ? !/^https?:\/\//i.test(m[5]) : /^[a-z]+:\/\//i.test(m[5])) text(m[4]);
 		else out.push({ t: 'link', text: m[4], href: m[5] });
 	}
 	text(s.slice(last));
 	return out;
 }
 
+const inlineOf = (s: string, external: boolean) => inline(s, external);
+
 /** Texte brut de morceaux (recherche, titres). */
 export const plain = (l: Inline[]) => l.map((x) => x.text).join('');
 
-const cells = (line: string) =>
-	line
-		.trim()
-		.replace(/^\||\|$/g, '')
-		.split('|')
-		.map((c) => inline(c.trim()));
-
-/** Blocs d'une page. */
-export function parse(md: string): Block[] {
+/** Blocs d'une page ; external : voir inline. */
+export function parse(md: string, external = false): Block[] {
+	const inline = (s: string) => inlineOf(s, external);
+	const cells = (line: string) =>
+		line
+			.trim()
+			.replace(/^\||\|$/g, '')
+			.split('|')
+			.map((c) => inline(c.trim()));
 	const lines = md.replace(/\r\n?/g, '\n').split('\n');
 	const out: Block[] = [];
 	let para: string[] = [];
@@ -94,10 +99,10 @@ export function parse(md: string): Block[] {
 			out.push({ t: 'code', text: code.join('\n') });
 			continue;
 		}
-		const h = /^(#{1,3})\s+(.*)$/.exec(trimmed);
+		const h = /^(#{1,6})\s+(.*)$/.exec(trimmed);
 		if (h) {
 			flush();
-			out.push({ t: 'h', level: h[1].length as 1 | 2 | 3, id: slug(h[2]), text: inline(h[2]) });
+			out.push({ t: 'h', level: Math.min(3, h[1].length) as 1 | 2 | 3, id: slug(h[2]), text: inline(h[2]) });
 			continue;
 		}
 		if (/^(-{3,}|\*{3,})$/.test(trimmed)) {

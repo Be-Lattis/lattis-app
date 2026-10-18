@@ -90,6 +90,18 @@
 									<span>{c.label}</span>
 								</label>
 							{/each}
+						{:else if d.kind === 'text'}
+							<label class="text" class:off={st?.locked}>
+								<span>{d.label}</span>
+								<input
+									type="text"
+									spellcheck="false"
+									value={typeof st?.value === 'string' ? st.value : ''}
+									placeholder={d.placeholder}
+									disabled={!st || st.locked || busy === d.path}
+									onchange={(e) => change(d.path, e.currentTarget.value.trim())}
+								/>
+							</label>
 						{/if}
 						{#if d.help}<p class="muted">{d.help}</p>{/if}
 						{#if note}<p class="note">{note}</p>{/if}
@@ -190,6 +202,23 @@
 	label.choice {
 		font-weight: normal;
 		margin: 2px 0 2px 8px;
+	}
+	/* Réglage texte (adresse…) : libellé au-dessus, champ sur toute la largeur. */
+	label.text {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 4px;
+	}
+	label.text input {
+		font: inherit;
+		font-weight: normal;
+		padding: 3px 6px;
+		border: 1px solid #c4c8cc;
+		border-radius: 3px;
+	}
+	label.text input:focus {
+		outline: none;
+		border-color: #217346;
 	}
 	p {
 		margin: 4px 0 0 24px;

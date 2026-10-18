@@ -14,9 +14,11 @@ export interface SettingState {
 
 export interface SettingDef {
 	path: string;
-	kind: 'bool' | 'choice';
+	kind: 'bool' | 'choice' | 'text';
 	label: string;
 	help?: string;
+	/** Exemple affiché dans un réglage 'text' vide. */
+	placeholder?: string;
 	/** Choix d'un réglage 'choice' (valeur, libellé). */
 	choices?: { value: string; label: string }[];
 	/** Réglage d'une fonctionnalité à activer : masqué tant qu'elle ne l'est pas. */
@@ -51,8 +53,8 @@ export const settingSections: SettingSection[] = [
 			{
 				path: 'ai.enabled',
 				kind: 'bool',
-				label: 'Onglet IA (assistant)',
-				help: 'Ajoute l’onglet IA, à gauche de SQL : un assistant qui aide à construire une analyse et agit sur le classeur. Il faut se connecter au compte du fournisseur, ou enregistrer une clé d’API personnelle, gardée dans le trousseau du système.'
+				label: 'Assistant IA',
+				help: 'Le bouton « Assistant ✦ », en haut à droite du ruban (Alt+I), ouvre un volet à droite de la grille : un assistant qui aide à construire une analyse et agit sur le classeur, chaque réponse s’annulant d’un coup. Il faut une clé d’API d’un fournisseur (Anthropic, Mistral, OpenAI…), gardée dans le trousseau du système, un modèle installé sur ce poste, ou Claude Desktop avec un abonnement Claude.'
 			}
 		]
 	},
@@ -69,7 +71,20 @@ export const settingSections: SettingSection[] = [
 					{ value: 'schema-only', label: 'Structure seulement (noms, types, nombre de lignes et de valeurs distinctes)' },
 					{ value: 'sample', label: 'Structure et quelques lignes d’exemple' }
 				],
-				help: 'L’assistant ne reçoit jamais tout le contenu du classeur. Le fournisseur reçoit aussi vos messages.'
+				help: 'L’assistant ne reçoit jamais tout le contenu du classeur. Le fournisseur reçoit aussi vos messages, la feuille active et la sélection.'
+			},
+			{
+				path: 'ai.keepConversation',
+				kind: 'bool',
+				label: 'Garder la conversation dans le classeur',
+				help: 'La conversation est enregistrée avec le classeur et réapparaît à sa prochaine ouverture. Sinon, elle s’efface quand on ferme le classeur ou qu’on en ouvre un autre.'
+			},
+			{
+				path: 'ai.localUrl',
+				kind: 'text',
+				label: 'Adresse du modèle local',
+				placeholder: 'http://localhost:11434/v1',
+				help: 'Fournisseur « Modèle local » : l’adresse d’Ollama, LM Studio ou d’un autre serveur compatible OpenAI sur ce poste. Aucune donnée ne quitte l’ordinateur.'
 			}
 		]
 	}

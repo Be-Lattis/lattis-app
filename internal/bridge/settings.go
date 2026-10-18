@@ -27,5 +27,8 @@ func (s *DocumentService) SetSetting(ctx context.Context, path string, value any
 	if err != nil {
 		return nil, err
 	}
+	if path == "ai.enabled" {
+		s.syncMCP()
+	}
 	return config.UserSettings(c), nil
 }

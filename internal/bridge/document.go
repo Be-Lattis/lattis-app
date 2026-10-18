@@ -130,6 +130,8 @@ func (s *DocumentService) replace(d *doc.Document) {
 	if old != nil {
 		old.Close()
 	}
+	// Conversation de l'assistant : propre au classeur.
+	s.aiReplaced(d)
 }
 
 // New crée un classeur vide.
@@ -234,6 +236,10 @@ func (s *DocumentService) Save(ctx context.Context, as bool) (DocState, error) {
 	d, err := s.current()
 	if err != nil {
 		return DocState{}, err
+	}
+	// Conversation de l'assistant gardée avec le classeur, si demandé.
+	if err := s.storeConversation(ctx, d); err != nil {
+		return DocState{}, fmt.Errorf("conversation de l'assistant non enregistrée : %w", err)
 	}
 	if s.listening(api.EventBeforeSave) {
 		r := s.fireSync(api.EventBeforeSave, map[string]any{"path": d.Path(), "as": as || d.Path() == ""})

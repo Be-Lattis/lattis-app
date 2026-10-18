@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 	"sync"
+
+	"github.com/lalamefine/lattis/internal/config"
 )
 
 // Hôte des services : ce que le bureau (Wails) et la version web (moteur
@@ -229,10 +231,17 @@ func (s *DocumentService) Platform() Platform { return s.sys().Platform() }
 
 var errNoMCPWeb = errors.New("le serveur MCP local n'existe pas dans la version web")
 
-// mcpRefused refuse le serveur MCP en web et sans scripting.
+var errNoMCPAI = errors.New("le serveur MCP est coupé avec l'assistant IA : activez-le dans Fichier › Paramètres › Fonctionnalités")
+
+// mcpRefused refuse le serveur MCP en web, sans scripting, et quand
+// l'assistant IA est désactivé (choix de Louis : couper les assistants
+// coupe aussi le serveur qui sert aux assistants externes).
 func (s *DocumentService) mcpRefused() error {
 	if s.sys().Platform().Web {
 		return errNoMCPWeb
+	}
+	if !config.Current().Bool("ai.enabled", false) {
+		return errNoMCPAI
 	}
 	return s.scripting()
 }

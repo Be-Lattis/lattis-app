@@ -21,7 +21,9 @@
 	import { count } from '#lib/sql/result.js';
 	import { printSheet } from '#lib/shell/print.js';
 	import SqlView, { type Favorite } from '#lib/shell/SqlView.svelte';
-	import AiView from '#lib/ai/AiView.svelte';
+	import AiPanel from '#lib/ai/AiPanel.svelte';
+	import { chat as aiChat, openAssistant } from '#lib/ai/state.svelte.js';
+	import McpConfirm from '#lib/shell/McpConfirm.svelte';
 	import TitleBar from '#lib/shell/TitleBar.svelte';
 	import ScriptView, { type Script } from '#lib/script/ScriptView.svelte';
 	import ScriptDialog, { type DialogSpec } from '#lib/script/ScriptDialog.svelte';
@@ -29,7 +31,8 @@
 	import type { ControlInfo } from '#lib/script/controls.js';
 	import McpPanel from '#lib/shell/McpPanel.svelte';
 	import SettingsDialog from '#lib/shell/SettingsDialog.svelte';
-	import { aiEnabled, htmlTabsEnabled, loadSettings } from '#lib/shell/settings.svelte.js';
+	import { htmlTabsEnabled, loadSettings, mcpAvailable } from '#lib/shell/settings.svelte.js';
+	import { listenExternal } from '#lib/ai/external.svelte.js';
 	import { isWeb } from '#lib/web/platform.js';
 	import HtmlPage from '#lib/page/HtmlPage.svelte';
 	import DocPage from '#lib/doc/DocPage.svelte';
@@ -451,11 +454,6 @@
 	}
 
 	/** Commandes de l'interface venues d'un script ou du serveur MCP (internal/bridge/host.go). */
-	// Onglet IA désactivé (Fichier › Paramètres) pendant qu'il est affiché :
-	// retour à la grille.
-	$effect(() => {
-		if (view === 'ai' && !aiEnabled()) untrack(() => (view = 'grid'));
-	});
 
 	async function uiCommand(c: UICommand) {
 		switch (c.kind) {
@@ -551,7 +549,12 @@
 
 	onMount(() => {
 		installErrorReporting();
-		loadSettings();
+		// Fil des actions de Claude Desktop / Claude Code : écouté dès le
+		// démarrage (réglages lus) pour ne rien manquer avant l'ouverture du
+		// volet.
+		loadSettings().then(() => {
+			if (mcpAvailable()) listenExternal();
+		});
 		const off = Events.On('doc:changed', (e: { data?: DocState }) => {
 			// Tableaux fusionnés, cellules rattachées : annoncé après la
 			// relecture, pour passer après le message de l'action elle-même.
@@ -672,6 +675,7 @@
 			e.stopPropagation();
 			const el = document.activeElement;
 			if (el instanceof HTMLElement && el.closest('.help')) return;
+			if (el instanceof HTMLElement && el.closest('.ai-panel')) return openHelp('assistant', false);
 			if ((el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) && /^\s*=/.test(el.value)) {
 				const f = functionAt(el.value, el.selectionStart ?? el.value.length, help?.functions ?? []);
 				openHelp(f ? `fonction:${f.name}` : 'formules', false);
@@ -1067,6 +1071,30 @@
 	const title = $derived(mode === 'demo' ? 'Démo : 1 M de lignes' : mode === 'recover' ? 'Récupération' : docState.title);
 	const tabs = $derived(mode === 'demo' ? (demo ? [{ id: 1, name: demo.name }] : []) : (layout?.sheets ?? []).map((s) => ({ id: s.id, name: s.name, protected: s.protected, color: s.color, hidden: s.hidden, kind: s.kind })));
 
+	// --- Assistant IA (volet de droite, lib/ai) ------------------------------
+
+	// Largeur du volet : la grille (et les vues SQL, SCRIPT) se loge à sa gauche.
+	let aiWidth = $state(0);
+	// Ce que l'utilisateur regarde, joint à chaque message et affiché au-dessus
+	// de la saisie : feuille active, tableau et sélection (comme la zone
+	// d'adresse). Suit la grille par sheetStatus, envoyé à chaque sélection.
+	const aiContext = $derived.by(() => {
+		if (mode !== 'doc') return null;
+		void sheetStatus;
+		const onGrid = view === 'grid' && !activePage;
+		const here = onGrid ? sheet?.aiContext() : undefined;
+		return { sheet: activeInfo?.name ?? '', table: here?.table ?? '', selection: here?.selection ?? '' };
+	});
+	const aiTables = $derived((help?.tables ?? []).map((t) => ({ name: t.name, rows: t.rows, kind: t.kind })));
+
+	/** Cible d'une étape de l'assistant (tableau, sinon feuille) : y aller. */
+	async function gotoTarget(name: string) {
+		if ((help?.tables ?? []).some((t) => t.name.toLowerCase() === name.toLowerCase())) return gotoObject(name);
+		const s = (layout?.sheets ?? []).find((x) => x.name.toLowerCase() === name.toLowerCase());
+		if (s) await selectSheet(s.id);
+		else notice = `« ${name} » est introuvable dans le classeur`;
+	}
+
 	/** « Afficher sur la feuille » : va sur la feuille de l'objet et le sélectionne. */
 	async function gotoObject(name: string) {
 		view = 'grid';
@@ -1090,7 +1118,8 @@
 			sheet?.resumeFormula();
 			return;
 		}
-		// Changement d'onglet : tous les volets de droite se ferment.
+		// Changement d'onglet : tous les volets de droite se ferment, sauf
+		// celui de l'assistant (il agit souvent sur une autre feuille).
 		sheet?.closeOverlays();
 		queryHost?.closePanel();
 		sheetId = id;
@@ -1291,6 +1320,8 @@
 		onrecent={(p) => openPath(p).catch((e) => (notice = err(e)))}
 		undo={mode === 'doc' ? docState.undo : ''}
 		redo={mode === 'doc' ? docState.redo : ''}
+		ai={aiChat.open}
+		onai={() => (aiChat.open ? (aiChat.open = false) : openAssistant())}
 		onview={(v) => {
 			if (v !== view) sheet?.closeOverlays();
 			view = v;
@@ -1352,7 +1383,7 @@
 
 	<!-- Une erreur d’un composant ne remplace plus tout par un écran 500 : elle est journalisée (pile, dernières actions) et l’on peut réessayer. -->
 	<svelte:boundary onerror={(e) => void reportError(`interface (${mode})`, e)}>
-	<main>
+	<main style:--ai-w={aiChat.open && aiWidth ? `${aiWidth}px` : undefined}>
 		{#if failure}
 			<div class="splash"><h1>Lattis</h1><p class="error">{failure}</p></div>
 		{:else if mode === 'recover'}
@@ -1433,6 +1464,7 @@
 						sheetName={activeInfo?.name ?? ''}
 						onsheet={(id) => selectSheet(id).catch((e) => (notice = err(e)))}
 						onrowlink={mode === 'doc' ? gotoRow : undefined}
+						onask={mode === 'doc' ? openAssistant : undefined}
 					/>
 				</div>
 			{/key}
@@ -1513,9 +1545,7 @@
 					</div>
 				{/key}
 			{/if}
-			{#if view === 'ai'}
-				<div class="pane" data-region="grid"><AiView hasDoc={mode === 'doc'} onsettings={() => (settingsOpen = true)} /></div>
-			{:else if view === 'sql'}
+			{#if view === 'sql'}
 				<div class="pane" data-region="grid"><SqlView {objects} rights={rightsObjs} onrights={canRights && share?.canManage ? () => (rightsOpen = true) : undefined} run={query} exec={mode === 'doc' ? (q) => DocumentService.Execute(q) : undefined} ongoto={gotoObject}
 						onrename={mode === 'doc'
 							? async (from, to) => {
@@ -1606,6 +1636,18 @@
 				onnotice={(m) => (notice = m)}
 			/>
 		{/if}
+		{#if aiChat.open && (mode === 'doc' || mode === 'closed')}
+			<AiPanel
+				bind:width={aiWidth}
+				hasDoc={mode === 'doc'}
+				context={aiContext}
+				tables={aiTables}
+				onsettings={() => (settingsOpen = true)}
+				ongoto={(t) => gotoTarget(t).catch((e) => (notice = err(e)))}
+				onchanged={reload}
+				onclose={() => (aiChat.open = false)}
+			/>
+		{/if}
 		{#if helpState.open}
 			<HelpPanel />
 		{/if}
@@ -1658,9 +1700,11 @@
 	{#each dialogs.slice(0, 1) as d (d.id)}
 		<ScriptDialog spec={d} onanswer={(v) => answerDialog(d, v)} />
 	{/each}
-	{#if mcpOpen}
+	{#if mcpOpen && mcpAvailable()}
 		<McpPanel onclose={() => (mcpOpen = false)} />
 	{/if}
+	<!-- Accord demandé avant une écriture de Claude Desktop / Code (mcp.confirmWrites). -->
+	<McpConfirm />
 	{#if settingsOpen}
 		<SettingsDialog onclose={() => (settingsOpen = false)} />
 	{/if}
@@ -1882,6 +1926,8 @@
 	.pane {
 		position: absolute;
 		inset: 0;
+		/* Volet de l'assistant ouvert : la vue se loge à sa gauche. */
+		right: var(--ai-w, 0px);
 	}
 	.hidden {
 		visibility: hidden;

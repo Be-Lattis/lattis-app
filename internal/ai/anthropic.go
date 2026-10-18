@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
@@ -33,30 +34,62 @@ func (anthropicProvider) Info() Info {
 			{ID: "claude-sonnet-5-5", Name: "Claude Sonnet 5.5", Note: "rapide et polyvalent"},
 			{ID: "claude-haiku-5-5", Name: "Claude Haiku 5.5", Note: "le plus rapide et le moins cher"},
 		},
-		DefaultModel: "claude-opus-5-5",
-		KeyURL:       "https://console.anthropic.com/settings/keys",
+		// Sonnet par défaut : bien moins cher qu'Opus pour une longue suite
+		// d'appels d'outils, et suffisant pour construire une analyse.
+		DefaultModel: "claude-sonnet-5-5",
+		KeyURL:       "https://platform.claude.com/settings/keys",
 		KeyHint:      "sk-ant-",
+		NeedsKey:     true,
 	}
 }
 
-func (p anthropicProvider) Turn(ctx context.Context, cred Credentials, req Request, emit func(Event)) (Reply, error) {
-	// Variables d'environnement ignorées : seule la clé du trousseau ou le
-	// compte connecté comptent.
+// anthropicClient prépare le client : seule la clé donnée compte (variables
+// d'environnement et profils de l'outil « ant » ignorés).
+func anthropicClient(cred Credentials) (anthropic.Client, error) {
+	// Sans clé : seulement à travers une passerelle d'entreprise qui
+	// authentifie elle-même (ai.auth.mode = none).
+	if cred.Key == "" && cred.Endpoint == "" {
+		return anthropic.Client{}, ErrNoKey
+	}
 	opts := []option.RequestOption{option.WithoutEnvironmentDefaults()}
-	account := cred.Key == ""
-	if account {
-		cfg, _, ok := anthropicProfile()
-		if !ok {
-			return Reply{}, ErrNoKey
-		}
-		opts = append(opts, option.WithConfigQuiet(cfg))
-	} else {
+	if cred.Key != "" {
 		opts = append(opts, option.WithAPIKey(cred.Key))
 	}
 	if cred.Endpoint != "" {
 		opts = append(opts, option.WithBaseURL(cred.Endpoint))
 	}
-	client := anthropic.NewClient(opts...)
+	return anthropic.NewClient(opts...), nil
+}
+
+// CheckKey vérifie la clé par la liste des modèles (appel gratuit). Une
+// clé sans crédit y est acceptée : le manque de crédit n'apparaît qu'au
+// premier message (anthropicError).
+func (anthropicProvider) CheckKey(ctx context.Context, cred Credentials) error {
+	client, err := anthropicClient(cred)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	defer cancel()
+	_, err = client.Models.List(ctx, anthropic.ModelListParams{Limit: anthropic.Int(1)}, option.WithMaxRetries(0))
+	if err == nil {
+		return nil
+	}
+	var apierr *anthropic.Error
+	if !errors.As(err, &apierr) {
+		return fmt.Errorf("%w : %v", ErrUnreachable, err)
+	}
+	if apierr.StatusCode >= 500 {
+		return fmt.Errorf("%w (%d)", ErrUnreachable, apierr.StatusCode)
+	}
+	return anthropicError(err)
+}
+
+func (p anthropicProvider) Turn(ctx context.Context, cred Credentials, req Request, emit func(Event)) (Reply, error) {
+	client, err := anthropicClient(cred)
+	if err != nil {
+		return Reply{}, err
+	}
 
 	params := anthropic.MessageNewParams{
 		Model:        req.Model,
@@ -104,7 +137,7 @@ func (p anthropicProvider) Turn(ctx context.Context, cred Credentials, req Reque
 		}
 	}
 	if err := stream.Err(); err != nil {
-		return Reply{}, anthropicError(err, account)
+		return Reply{}, anthropicError(err)
 	}
 
 	out := Message{Role: Assistant, Provider: "anthropic", Native: msg.ToParam()}
@@ -125,7 +158,14 @@ func (p anthropicProvider) Turn(ctx context.Context, cred Credentials, req Reque
 	case anthropic.StopReasonRefusal:
 		stop = StopRefusal
 	}
-	return Reply{Message: out, Stop: stop}, nil
+	u := msg.Usage
+	usage := Usage{
+		InputTokens:      u.InputTokens + u.CacheReadInputTokens + u.CacheCreationInputTokens,
+		OutputTokens:     u.OutputTokens,
+		CacheReadTokens:  u.CacheReadInputTokens,
+		CacheWriteTokens: u.CacheCreationInputTokens,
+	}
+	return Reply{Message: out, Stop: stop, Usage: usage}, nil
 }
 
 // messages traduit la conversation : un message rendu par Claude lui est
@@ -154,6 +194,11 @@ func (anthropicProvider) messages(msgs []Message) []anthropic.MessageParam {
 				blocks = append(blocks, anthropic.NewToolResultBlock(b.ToolUseID, b.Text, b.IsError))
 			}
 		}
+		if len(blocks) == 0 {
+			// Message réduit à des blocs de réflexion, perdus dans la forme
+			// neutre : l'API refuse un message vide.
+			blocks = append(blocks, anthropic.NewTextBlock("…"))
+		}
 		if m.Role == Assistant {
 			out = append(out, anthropic.NewAssistantMessage(blocks...))
 		} else {
@@ -163,10 +208,10 @@ func (anthropicProvider) messages(msgs []Message) []anthropic.MessageParam {
 	return out
 }
 
-var _ AccountProvider = anthropicProvider{}
+var _ KeyChecker = anthropicProvider{}
 
 // anthropicError rend une erreur de l'API lisible par l'utilisateur.
-func anthropicError(err error, account bool) error {
+func anthropicError(err error) error {
 	var apierr *anthropic.Error
 	if !errors.As(err, &apierr) {
 		if errors.Is(err, context.Canceled) {
@@ -174,16 +219,23 @@ func anthropicError(err error, account bool) error {
 		}
 		return fmt.Errorf("Claude injoignable : %w", err)
 	}
+	msg := strings.ToLower(apierr.Error())
 	switch apierr.StatusCode {
-	case 401:
-		if account {
-			return errors.New("connexion au compte Anthropic refusée ou expirée : reconnectez-vous (bouton « Compte »)")
+	case 400:
+		switch {
+		case strings.Contains(msg, "credit balance"):
+			return errors.New("Crédits épuisés sur votre compte Anthropic : ajoutez-en (platform.claude.com › Facturation) ; abonnés Max ou Team : liez votre organisation pour recevoir vos crédits mensuels")
+		case strings.Contains(msg, "prompt is too long") || strings.Contains(msg, "too many tokens") || strings.Contains(msg, "context window") || strings.Contains(msg, "context length"):
+			return errors.New("conversation trop longue pour le modèle : commencez une « Nouvelle conversation »")
 		}
-		return errors.New("clé d'API refusée par Anthropic : vérifiez-la (bouton « Compte »)")
+	case 401:
+		return errors.New("clé d'API refusée par Anthropic : vérifiez-la ou remplacez-la (bouton « Connexion »)")
 	case 403:
 		return errors.New("accès refusé par Anthropic (droits de la clé ou de l'organisation)")
 	case 404:
 		return errors.New("modèle inconnu d'Anthropic : choisissez-en un autre")
+	case 413:
+		return errors.New("conversation trop longue pour le modèle : commencez une « Nouvelle conversation »")
 	case 429:
 		return errors.New("limite d'utilisation atteinte chez Anthropic : réessayez dans un moment")
 	case 529, 503:

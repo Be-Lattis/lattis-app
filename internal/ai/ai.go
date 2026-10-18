@@ -1,4 +1,4 @@
-// Package ai est l'onglet IA de Lattis : un assistant conversationnel qui
+// Package ai est l'Assistant ✦ de Lattis : un assistant conversationnel qui
 // aide à construire une analyse à partir de la structure du classeur, et qui
 // agit dessus avec les commandes communes aux scripts Lua et au serveur MCP
 // (internal/api).
@@ -8,11 +8,12 @@
 // la configuration : elles sont gardées dans le trousseau du système
 // (keys.go).
 //
-// Plusieurs fournisseurs sont prévus (Claude, Mistral, GPT, Gemini, Mammouth
-// AI…) : la conversation est gardée dans un format neutre (Message, Block)
-// et chaque fournisseur n'implémente qu'un tour d'échange (Provider.Turn) ;
-// la boucle d'outils (agent.go) est commune. Seul Claude est branché pour
-// l'instant (anthropic.go) ; les autres figurent au catalogue, indisponibles.
+// Plusieurs fournisseurs : Claude (anthropic.go, SDK officiel) et, par un
+// adaptateur compatible OpenAI (openai.go), Mistral, OpenAI, Gemini,
+// Mammouth AI et un modèle local (Ollama, LM Studio…). La conversation est
+// gardée dans un format neutre (Message, Block) et chaque fournisseur
+// n'implémente qu'un tour d'échange (Provider.Turn) ; la boucle d'outils
+// (agent.go) est commune.
 package ai
 
 import (
@@ -88,12 +89,15 @@ const (
 type Reply struct {
 	Message Message
 	Stop    string
+	// Usage : jetons consommés par ce tour, tels que le fournisseur les
+	// compte (zéro s'il ne les donne pas) ; le coût est calculé par la
+	// session (Price).
+	Usage Usage
 }
 
 // Credentials : de quoi joindre le fournisseur.
 type Credentials struct {
-	// Key : clé d'API ; vide : le compte connecté (AccountProvider), s'il y
-	// en a un.
+	// Key : clé d'API ; vide pour un fournisseur sans clé (modèle local).
 	Key string
 	// Endpoint : adresse imposée (passerelle de l'entreprise, ai.endpoint) ;
 	// vide : l'adresse publique du fournisseur.
@@ -108,26 +112,23 @@ type Provider interface {
 	Turn(ctx context.Context, cred Credentials, req Request, emit func(Event)) (Reply, error)
 }
 
-// AccountProvider est un fournisseur qui permet de se connecter avec son
-// compte, sans copier de clé d'API. Une clé enregistrée reste prioritaire.
-type AccountProvider interface {
-	Account() Account
-	// Login lance la connexion (navigateur) et rend la main quand elle est
-	// finie.
-	Login(ctx context.Context) error
+// KeyChecker est un fournisseur qui sait vérifier une clé avant qu'elle
+// soit enregistrée (appel léger, sans coût). L'erreur dit pourquoi la clé
+// est refusée ; une erreur ErrUnreachable : le fournisseur n'a pas pu être
+// joint, la clé n'est ni acceptée ni refusée.
+type KeyChecker interface {
+	CheckKey(ctx context.Context, cred Credentials) error
 }
 
-// Account décrit la connexion par compte d'un fournisseur.
-type Account struct {
-	// Connected : un compte est connecté sur ce poste.
-	Connected bool `json:"connected"`
-	// Name : profil ou organisation connectée, pour l'affichage.
-	Name string `json:"name,omitempty"`
-	// CanLogin : l'outil de connexion est installé sur ce poste.
-	CanLogin bool `json:"canLogin"`
-	// Tool : outil de connexion (« ant »), pour l'aide.
-	Tool string `json:"tool,omitempty"`
+// ModelLister est un fournisseur qui lit sa liste de modèles chez lui
+// (GET /models) ; Info().Models rend ensuite la dernière liste lue, ou une
+// petite liste fixe de repli.
+type ModelLister interface {
+	ListModels(ctx context.Context, cred Credentials) ([]Model, error)
 }
+
+// ErrUnreachable : le fournisseur n'a pas pu être joint (réseau, proxy).
+var ErrUnreachable = errors.New("fournisseur injoignable")
 
 // Info décrit un fournisseur pour l'interface.
 type Info struct {
@@ -141,6 +142,11 @@ type Info struct {
 	KeyURL string `json:"keyUrl,omitempty"`
 	// KeyHint : début attendu d'une clé (« sk-ant- »), pour l'aide.
 	KeyHint string `json:"keyHint,omitempty"`
+	// NeedsKey : une clé d'API est nécessaire (faux pour un modèle local).
+	NeedsKey bool `json:"needsKey"`
+	// Local : le modèle tourne sur ce poste ou le réseau local ; aucune
+	// donnée ne part chez un fournisseur.
+	Local bool `json:"local"`
 }
 
 // Model est un modèle proposé.
@@ -153,13 +159,6 @@ type Model struct {
 var (
 	regMu     sync.RWMutex
 	providers = map[string]Provider{}
-	// planned : fournisseurs prévus, pas encore branchés (non proposés).
-	planned = []Info{
-		{ID: "mistral", Name: "Mistral AI", KeyURL: "https://console.mistral.ai/api-keys"},
-		{ID: "openai", Name: "OpenAI (GPT)", KeyURL: "https://platform.openai.com/api-keys"},
-		{ID: "gemini", Name: "Google Gemini", KeyURL: "https://aistudio.google.com/apikey"},
-		{ID: "mammouth", Name: "Mammouth AI", KeyURL: "https://mammouth.ai"},
-	}
 )
 
 // Register ajoute un fournisseur branché.
@@ -176,8 +175,7 @@ func Lookup(id string) Provider {
 	return providers[id]
 }
 
-// Catalog liste les fournisseurs branchés, seuls proposés (choix de Louis :
-// pas de fournisseur annoncé mais pas encore intégré dans l'interface).
+// Catalog liste les fournisseurs branchés, par nom.
 func Catalog() []Info {
 	regMu.RLock()
 	defer regMu.RUnlock()
@@ -190,4 +188,4 @@ func Catalog() []Info {
 }
 
 // ErrNoKey : aucune clé d'API pour ce fournisseur.
-var ErrNoKey = errors.New("ni compte connecté ni clé d'API enregistrée pour ce fournisseur")
+var ErrNoKey = errors.New("aucune clé d'API enregistrée pour ce fournisseur : ouvrez « Connexion »")
