@@ -17,6 +17,7 @@
 	import PivotPanel from '#lib/grid/PivotPanel.svelte';
 	import { dismiss } from '#lib/grid/dismiss.js';
 	import { resizePanel } from '#lib/ui/resize.js';
+	import HelpLink from '#lib/help/HelpLink.svelte';
 	import { printSheet } from '#lib/shell/print.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { scriptFunctions } from '#lib/grid/buttons.js';
@@ -974,7 +975,7 @@
 		{@const setLink = (sheet: string, cell: string) => (p.cfg.link = !sheet ? '' : sheet === name ? (cell.trim() || 'A1').toUpperCase() : `${/^[\p{L}_][\p{L}\p{N}_]*$/u.test(sheet) ? sheet : `'${sheet.replace(/'/g, "''")}'`}!${(cell.trim() || 'A1').toUpperCase()}`)}
 		{@const cfns = p.cfg.script ? scriptFunctions(scripts.find((s) => s.name === p.cfg.script)?.source ?? '') : []}
 		<aside class="side form" use:resizePanel={{ key: 'doc-control' }}>
-			<header><span>{p.id === null ? 'Insérer' : 'Modifier'} : {CONTROL_KINDS[p.cfg.kind ?? 'input'].toLowerCase()}</span><button class="x" title="Fermer" onclick={() => openPanel(null)}>✕</button></header>
+			<header><span>{p.id === null ? 'Insérer' : 'Modifier'} : {CONTROL_KINDS[p.cfg.kind ?? 'input'].toLowerCase()}</span><HelpLink target="controles" label="Aide sur les boutons et contrôles" /><button class="x" title="Fermer" onclick={() => openPanel(null)}>✕</button></header>
 			<label
 				>Type
 				<select bind:value={p.cfg.kind} disabled={!!locked}>
@@ -1042,7 +1043,7 @@
 		</aside>
 	{:else if panel?.kind === 'button' && btn}
 		<aside class="side form" use:resizePanel={{ key: 'doc-control' }}>
-			<header><span>Bouton</span><button class="x" title="Fermer" onclick={() => openPanel(null)}>✕</button></header>
+			<header><span>Bouton</span><HelpLink target="controles" label="Aide sur les boutons et contrôles" /><button class="x" title="Fermer" onclick={() => openPanel(null)}>✕</button></header>
 			<label>Libellé<input type="text" value={btn.label} disabled={!!locked} onchange={(e) => setButton({ label: (e.currentTarget as HTMLInputElement).value })} /></label>
 			<label
 				>Script
