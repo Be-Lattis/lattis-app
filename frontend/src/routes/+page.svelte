@@ -595,6 +595,7 @@
 			await selectSheet(id);
 		},
 		setPivot: (id, cfg) => DocumentService.SetPivot(id, cfg).then(reload),
+		placePivot: (row, col, cfg) => DocumentService.PlacePivot(sheetId, row, col, cfg).then(reload),
 		pivotFieldValues: async (table, field) => (await DocumentService.FieldValues(table, field)) ?? [],
 		createChart: (row, col, cfg) => DocumentService.CreateChart(sheetId, row, col, cfg).then(reload),
 		setChart: (id, cfg) => DocumentService.SetChart(id, cfg).then(reload),

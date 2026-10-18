@@ -52,6 +52,7 @@
 	import { besideGutter, gutterOwner } from './gutter';
 	import Select from '#lib/ui/Select.svelte';
 	import Chart from '#lib/chart/Chart.svelte';
+	import { encodeObj, objFromText, rememberObj } from '#lib/clip/objects.js';
 	import { SINGLE_SERIES, chartFields, type ChartKind, type MapGuess } from '#lib/chart/kinds.js';
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
 	import PivotPanel from './PivotPanel.svelte';
@@ -402,6 +403,8 @@
 		movePivot?(id: number, row: number, col: number): Promise<unknown>;
 		/** Tableau croisé entier copié puis collé : une copie en (row, col). */
 		copyPivot?(id: number, row: number, col: number): Promise<unknown>;
+		/** Pose un tableau croisé de cette configuration (collé depuis un Onglet Document). */
+		placePivot?(row: number, col: number, cfg: PivotConfig): Promise<unknown>;
 		/** Supprime les lignes en double ; renvoie leur nombre. */
 		removeDuplicates?(table: SheetTable, cols: number[]): Promise<number>;
 		/** Nombre de lignes que removeDuplicates retirerait. */
@@ -4168,7 +4171,6 @@
 	// Graphique sélectionné (cadre, poignées, volet) et redimensionnement en cours.
 	let selChart = $state<number | null>(null);
 	let chartMenu = $state<{ ch: SheetChart; x: number; y: number } | null>(null);
-	const CHART_CLIP = '\u2063lattis-chart:';
 
 	function selectChart(ch: SheetChart) {
 		selChart = ch.id;
@@ -4271,7 +4273,7 @@
 	async function copyChart(ch: SheetChart, cut: boolean) {
 		chartMenu = null;
 		try {
-			await navigator.clipboard.writeText(CHART_CLIP + JSON.stringify(ch.config));
+			await navigator.clipboard.writeText(encodeObj({ kind: 'chart', config: ch.config as never }));
 		} catch {
 			chartClip = ch.config;
 		}
@@ -6789,6 +6791,8 @@
 		}
 		const plain = !source.transfer || !!pv;
 		clipRange = { ...sel, sheet: sheetId(), cut, text, values, plain, pivot };
+		// Un tableau croisé entier se colle aussi dans un Onglet Document.
+		rememberObj(text, pivot && pv ? { kind: 'pivot', config: $state.snapshot(pv.config) as never } : null);
 		schedule();
 		return text;
 	}
@@ -6835,7 +6839,7 @@
 		const sc = selChart !== null ? charts.find((c) => c.id === selChart) : undefined;
 		if (sc) {
 			e.preventDefault();
-			e.clipboardData?.setData('text/plain', CHART_CLIP + JSON.stringify(sc.config));
+			e.clipboardData?.setData('text/plain', encodeObj({ kind: 'chart', config: sc.config as never }));
 			chartClip = sc.config;
 			removeChart(sc.id);
 			return;
@@ -6857,7 +6861,7 @@
 		if (document.activeElement !== wrap || editing) return;
 		const sc = selChart !== null ? charts.find((c) => c.id === selChart) : undefined;
 		if (sc) {
-			e.clipboardData?.setData('text/plain', CHART_CLIP + JSON.stringify(sc.config));
+			e.clipboardData?.setData('text/plain', encodeObj({ kind: 'chart', config: sc.config as never }));
 			e.preventDefault();
 			chartClip = sc.config;
 			say('Graphique copié : Ctrl+V pour le coller à la cellule active');
@@ -6890,17 +6894,26 @@
 	 */
 	function pasteText(text: string): boolean {
 		if (!source.paste) return false;
-		if (text.startsWith(CHART_CLIP)) {
-			try {
-				pasteChart(JSON.parse(text.slice(CHART_CLIP.length)) as ChartConfig);
-			} catch {
-				say('Graphique illisible dans le presse-papiers');
-			}
+		const sel = selection();
+		// Graphique (d'une feuille ou d'un Onglet Document) ; tableau croisé
+		// d'un Onglet Document, posé à la cellule active par sa configuration.
+		const obj = objFromText(text);
+		if (obj?.kind === 'chart') {
+			pasteChart(obj.config as unknown as ChartConfig);
+			return true;
+		}
+		if (obj?.kind === 'pivot' && source.placePivot && !(clipRange?.pivot && sameClipText(clipRange.text, text))) {
+			const place = source.placePivot;
+			writing = writing.catch(() => undefined).then(() =>
+				place(sel.r0, sel.c0, obj.config as unknown as PivotConfig).then(
+					() => say('Tableau croisé collé (Ctrl+Z pour annuler)'),
+					(err) => say(String(err instanceof Error ? err.message : err))
+				)
+			);
 			return true;
 		}
 		const block = parseTSV(text);
 		if (block.length === 0) return false;
-		const sel = selection();
 		// Tableau croisé copié ou coupé en entier : collé en tableau croisé.
 		const pc = clipRange?.pivot && sameClipText(clipRange.text, text) ? clipRange : null;
 		if (pc?.pivot && source.movePivot && source.copyPivot) {

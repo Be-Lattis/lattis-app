@@ -697,6 +697,14 @@ export function PlaceChart(id: number, row: number, col: number, offX: number, o
 }
 
 /**
+ * PlacePivot pose sur la feuille un tableau croisé de configuration cfg
+ * (collé depuis un Onglet Document).
+ */
+export function PlacePivot(sheet: number, row: number, col: number, cfg: canvas$0.PivotConfig): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(4069234803, sheet, row, col, cfg);
+}
+
+/**
  * PreviewQuery calcule l'aperçu d'une requête (pas forcément enregistrée)
  * après ses upto premières étapes (-1 : toutes). fresh relit les sources.
  */

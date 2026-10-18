@@ -13,6 +13,7 @@
 	import type { ChartConfig, PivotConfig } from '#lib/grid/Sheet.svelte';
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
 	import { MORE_KINDS, chartFields } from '#lib/chart/kinds.js';
+	import { encodeObj, objFromText, type ObjClip } from '#lib/clip/objects.js';
 	import PivotPanel from '#lib/grid/PivotPanel.svelte';
 	import { dismiss } from '#lib/grid/dismiss.js';
 	import { resizePanel } from '#lib/ui/resize.js';
@@ -359,6 +360,7 @@
 					?.readText()
 					.then((t) => {
 						const at = range()!;
+						if (pasteObject(t, at)) return;
 						quill!.deleteText(at.index, at.length, 'user');
 						quill!.insertText(at.index, t, 'user');
 						quill!.setSelection(at.index + t.length, 0);
@@ -548,14 +550,66 @@
 	let moreCharts = $state(false);
 	let clip = $state(docClip.item);
 
+	/** Graphique ou tableau croisé à la position index, pour le presse-papiers (feuilles comprises). */
+	function objAt(index: number): ObjClip | null {
+		for (const kind of ['chart', 'pivot'] as const) {
+			const v = embedAt(index, BLOT[kind]);
+			if (v) return { kind, config: structuredClone($state.snapshot(v)) };
+		}
+		return null;
+	}
+
+	/**
+	 * Collage d'un graphique ou d'un tableau croisé copié sur une feuille ou
+	 * dans un Onglet Document (objFromText) : inséré dans le texte, à la place
+	 * de la sélection. Faux : autre chose, collé comme du texte.
+	 */
+	function pasteObject(text: string, at: { index: number; length: number }): boolean {
+		const o = objFromText(text);
+		if (!o || !quill || !guard()) return false;
+		// Place sur la feuille et nom du TCD : propres à la feuille.
+		const config = { ...o.config };
+		for (const k of ['offX', 'offY', 'name']) delete config[k];
+		if (at.length) quill.deleteText(at.index, at.length, 'user');
+		quill.insertEmbed(at.index, o.kind === 'chart' ? CHART_BLOT : PIVOT_BLOT, config, 'user');
+		quill.setSelection(at.index + 1, 0);
+		hydrate();
+		onnotice?.(o.kind === 'chart' ? 'Graphique collé' : 'Tableau croisé collé');
+		return true;
+	}
+
+	function onPaste(e: ClipboardEvent) {
+		const text = e.clipboardData?.getData('text/plain') ?? '';
+		if (!objFromText(text)) return;
+		e.preventDefault();
+		e.stopPropagation();
+		pasteObject(text, range()!);
+	}
+
+	// Ctrl+C / Ctrl+X sur un graphique ou un tableau croisé sélectionné (cadre
+	// vert) : copié aussi pour les feuilles.
+	function onCopyCut(e: ClipboardEvent) {
+		if ((e.target as HTMLElement | null)?.closest?.('input, textarea, select')) return;
+		if (!panel || (panel.kind !== 'chart' && panel.kind !== 'pivot')) return;
+		const o = objAt(panel.index);
+		if (!o) return;
+		e.preventDefault();
+		e.clipboardData?.setData('text/plain', encodeObj(o));
+		docClip.item = clip = { type: BLOT[o.kind], value: o.config };
+		if (e.type === 'cut' && !locked) deleteEmbed(panel.index);
+		onnotice?.(o.kind === 'chart' ? 'Graphique copié : Ctrl+V dans le texte ou sur une feuille' : 'Tableau croisé copié : Ctrl+V dans le texte ou sur une feuille');
+	}
+
 	async function copyItem(kind: 'chart' | 'pivot' | 'button' | 'control', index: number, cut: boolean) {
 		let value = embedAt(index, BLOT[kind]);
 		if (!value) return;
+		const o = objAt(index);
+		if (o) await navigator.clipboard?.writeText(encodeObj(o)).catch(() => undefined);
 		// Un contrôle se copie par sa configuration : le coller en crée un nouveau.
 		if (kind === 'control' && controls) value = { cfg: (await controls.load(Number(value.id))).config, width: value.width, height: value.height };
 		docClip.item = clip = { type: BLOT[kind], value: structuredClone($state.snapshot(value)) };
 		if (cut) deleteEmbed(index);
-		onnotice?.(cut ? 'Élément coupé : clic droit › Coller dans le texte' : 'Élément copié : clic droit › Coller dans le texte');
+		onnotice?.(o ? (cut ? 'Élément coupé : Ctrl+V dans le texte ou sur une feuille' : 'Élément copié : Ctrl+V dans le texte ou sur une feuille') : cut ? 'Élément coupé : clic droit › Coller dans le texte' : 'Élément copié : clic droit › Coller dans le texte');
 	}
 
 	async function pasteItem(at: number) {
@@ -771,7 +825,10 @@
 		q.on('editor-change', () => report());
 		q.root.addEventListener('click', onClick);
 		q.root.addEventListener('contextmenu', onContext);
+		q.root.addEventListener('paste', onPaste, true);
 		window.addEventListener('keydown', onKey, true);
+		window.addEventListener('copy', onCopyCut);
+		window.addEventListener('cut', onCopyCut);
 		report();
 		// Document créé ou ouvert : le curseur dans le texte, à la fin (sous le
 		// titre d'un nouveau document) ; le focus ne reste pas sur le bouton du
@@ -785,6 +842,8 @@
 		return () => {
 			cancelAnimationFrame(raf);
 			window.removeEventListener('keydown', onKey, true);
+			window.removeEventListener('copy', onCopyCut);
+			window.removeEventListener('cut', onCopyCut);
 			flush();
 			for (const m of mounted.values()) unmount(m.comp);
 			mounted.clear();

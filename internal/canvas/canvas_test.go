@@ -2010,6 +2010,17 @@ func TestPivotMoveCopy(t *testing.T) {
 	if len(l.Pivots[1].Cells) != len(l.Pivots[0].Cells) {
 		t.Fatalf("copie sans les mêmes cellules : %+v", l.Pivots)
 	}
+	// Collé depuis un Onglet Document : par sa configuration.
+	if _, err := d.PlacePivot(ctx, 1, 0, 0, l.Pivots[0].Config); err == nil {
+		t.Fatal("tableau croisé collé sur un tableau")
+	}
+	if _, err := d.PlacePivot(ctx, 1, 30, 4, l.Pivots[0].Config); err != nil {
+		t.Fatal(err)
+	}
+	if l, _ := d.Layout(ctx, 1); len(l.Pivots) != 3 || l.Pivots[2].Config.Name == l.Pivots[0].Config.Name {
+		t.Fatalf("collé : %+v", l.Pivots)
+	}
+	d.bus.Undo(ctx)
 	d.bus.Undo(ctx)
 	d.bus.Undo(ctx)
 	if got := dump(t, d); got != before {

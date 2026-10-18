@@ -269,27 +269,57 @@ func (m *Model) CopyPivot(ctx context.Context, id, sheet int64, row, col int) (i
 		if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
 			return err
 		}
-		if err := t.pivotFree(sheet, row, col, cfg.normalized(), 0); err != nil {
-			return err
-		}
-		name, err := t.pivotName()
-		if err != nil {
-			return err
-		}
-		cfg.Name = name
-		if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_pivots`).Scan(&nid); err != nil {
-			return err
-		}
-		b, err := json.Marshal(cfg)
-		if err != nil {
-			return err
-		}
-		return t.apply(
-			[]stmt{st(`INSERT INTO _lattis_pivots (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, nid, sheet, row, col, string(b))},
-			[]stmt{st(`DELETE FROM _lattis_pivots WHERE id = ?`, nid)},
-		)
+		var err error
+		nid, err = t.placePivot(sheet, row, col, cfg)
+		return err
 	})
 	return nid, err
+}
+
+// PlacePivot pose en (row, col) de la feuille un tableau croisé de
+// configuration cfg (collé depuis un Onglet Document), sous un nouveau nom ;
+// renvoie son identifiant.
+func (m *Model) PlacePivot(ctx context.Context, sheet int64, row, col int, cfg PivotConfig) (int64, error) {
+	if row < 0 || col < 0 {
+		return 0, fmt.Errorf("%w : hors de la feuille", ErrPivot)
+	}
+	var nid int64
+	err := m.Do(ctx, "Coller le tableau croisé", func(t *tx) error {
+		if err := t.guard(sheet); err != nil {
+			return err
+		}
+		if _, err := t.pivotPlan(cfg.normalized()); err != nil {
+			return err
+		}
+		var err error
+		nid, err = t.placePivot(sheet, row, col, cfg)
+		return err
+	})
+	return nid, err
+}
+
+// placePivot insère un tableau croisé à une place libre, sous un nouveau nom.
+func (t *tx) placePivot(sheet int64, row, col int, cfg PivotConfig) (int64, error) {
+	if err := t.pivotFree(sheet, row, col, cfg.normalized(), 0); err != nil {
+		return 0, err
+	}
+	name, err := t.pivotName()
+	if err != nil {
+		return 0, err
+	}
+	cfg.Name = name
+	var nid int64
+	if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_pivots`).Scan(&nid); err != nil {
+		return 0, err
+	}
+	b, err := json.Marshal(cfg)
+	if err != nil {
+		return 0, err
+	}
+	return nid, t.apply(
+		[]stmt{st(`INSERT INTO _lattis_pivots (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, nid, sheet, row, col, string(b))},
+		[]stmt{st(`DELETE FROM _lattis_pivots WHERE id = ?`, nid)},
+	)
 }
 
 // pivotFree vérifie qu'un tableau croisé posé en (row, col) de la feuille

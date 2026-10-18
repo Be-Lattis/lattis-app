@@ -144,6 +144,15 @@ func (s *DocumentService) MovePivot(ctx context.Context, id, sheet int64, row, c
 	return s.act(ctx, func(d *doc.Document) error { return d.MovePivot(ctx, id, sheet, row, col) })
 }
 
+// PlacePivot pose sur la feuille un tableau croisé de configuration cfg
+// (collé depuis un Onglet Document).
+func (s *DocumentService) PlacePivot(ctx context.Context, sheet int64, row, col int, cfg canvas.PivotConfig) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error {
+		_, err := d.PlacePivot(ctx, sheet, row, col, cfg)
+		return err
+	})
+}
+
 // CopyPivot colle une copie d'un tableau croisé entier.
 func (s *DocumentService) CopyPivot(ctx context.Context, id, sheet int64, row, col int) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error {
