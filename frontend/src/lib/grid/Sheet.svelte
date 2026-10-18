@@ -6258,6 +6258,14 @@
 		return 18 * s.split('\n').length + 4;
 	}
 
+	/**
+	 * Formule validable (bouton « Valider ») : sans faute, ou presque, quand il
+	 * ne manque que des parenthèses fermantes, que la validation ajoute.
+	 */
+	function formulaReady(text: string): boolean {
+		return !checkFormula(closeParens(text));
+	}
+
 	/** Montre une faute de formule dans l'éditeur ouvert : message, caractère sélectionné. */
 	function showFormulaError(err: FormulaError) {
 		editErr = err;
@@ -7505,6 +7513,21 @@
 			</div>
 		{/each}
 	{/if}
+	{#if isFormula(where === 'cell' ? editValueText : fxText)}
+		{@const ok = formulaReady(where === 'cell' ? editValueText : fxText)}
+		<div class="sig-foot">
+			<button
+				class="validate"
+				disabled={!ok}
+				title={ok ? 'Valider la formule (Entrée)' : 'La formule a une faute : corrigez-la pour la valider'}
+				onmousedown={(e) => {
+					// Le focus reste dans l'éditeur : la validation passe par Entrée.
+					e.preventDefault();
+					(where === 'cell' ? input : fxInput)?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+				}}>Valider</button
+			>
+		</div>
+	{/if}
 {/snippet}
 
 <div class="sheet-root">
@@ -7587,7 +7610,7 @@
 		</div>
 	</div>
 	{#if bench}<div class="bench">{bench}</div>{/if}
-	{#if completion?.where === 'fx' || sig?.where === 'fx'}
+	{#if completion?.where === 'fx' || sig?.where === 'fx' || (fxEditing && isFormula(fxText))}
 		<div class="suggest fx-suggest">{@render suggestions('fx')}</div>
 	{/if}
 
@@ -8500,7 +8523,7 @@
 				</div>
 			</div>
 		{/if}
-		{#if editing && (completion?.where === 'cell' || sig?.where === 'cell')}
+		{#if editing && (completion?.where === 'cell' || sig?.where === 'cell' || isFormula(editValueText))}
 			<div
 				class="suggest"
 				style:left="{suggestPos.x}px"
@@ -8745,6 +8768,30 @@
 	.fx-suggest {
 		left: 300px;
 		top: 30px;
+	}
+	.sig-foot {
+		display: flex;
+		padding: 5px 10px;
+		border-top: 1px solid #e3e5e8;
+	}
+	.sig-foot:first-child {
+		border-top: none;
+	}
+	.validate {
+		font: inherit;
+		font-size: 12px;
+		padding: 2px 12px;
+		border: 1px solid #1b5e3a;
+		border-radius: 3px;
+		background: #217346;
+		color: #fff;
+		cursor: pointer;
+	}
+	.validate:disabled {
+		border-color: #d4d7db;
+		background: #eef0f2;
+		color: #9aa1a9;
+		cursor: default;
 	}
 	.sig {
 		padding: 5px 10px;
