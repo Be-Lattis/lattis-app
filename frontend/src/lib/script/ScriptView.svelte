@@ -16,6 +16,11 @@
 		result: Promise<number | null>;
 	}
 	let draft: Draft | null = null;
+
+	// Dernier script ouvert, retrouvé en revenant sur l'onglet (démonté entre-
+	// temps), avec sa saisie pas encore enregistrée ; null : aucun, l'onglet
+	// montre « Nouveau script ».
+	let last: { script: { id: number; name: string; source: string }; dirty: boolean } | null = null;
 </script>
 
 <script lang="ts">
@@ -166,6 +171,8 @@ end
 `;
 
 	let current = $state<Script>({ id: 0, name: 'Nouveau script', source: EXAMPLE });
+	// editing : un script est ouvert ; sinon, seulement « Nouveau script ».
+	let editing = $state(false);
 	let output = $state<string[]>([]);
 	let status = $state('');
 	let error = $state('');
@@ -182,15 +189,29 @@ end
 	}
 
 	function open(s: Script) {
+		editing = true;
 		current = { ...s };
 		setSource(s.source);
 		output = [];
 		error = status = '';
 	}
 
+	// Nouveau script : l'exemple sert de modèle de départ.
 	function fresh() {
+		editing = true;
 		current = { id: 0, name: 'Nouveau script', source: EXAMPLE };
 		setSource(EXAMPLE);
+		output = [];
+		error = status = '';
+		view?.focus();
+	}
+
+	function close() {
+		editing = false;
+		current = { id: 0, name: 'Nouveau script', source: '' };
+		setSource('');
+		output = [];
+		error = status = '';
 	}
 
 	async function doSave() {
@@ -304,20 +325,19 @@ end
 	async function removeScript(s: Script) {
 		menu = null;
 		await remove(s.id);
-		if (s.id === current.id) fresh();
+		if (s.id === current.id) close();
 	}
 
 	async function doRemove() {
-		if (!current.id) return fresh();
-		await remove(current.id);
-		fresh();
+		if (current.id) await remove(current.id);
+		close();
 	}
 
 	onMount(() => {
 		view = new EditorView({
 			parent: host,
 			state: EditorState.create({
-				doc: current.source,
+				doc: '',
 				extensions: [
 					lineNumbers(),
 					highlightActiveLine(),
@@ -346,8 +366,19 @@ end
 				]
 			})
 		});
-		if (draft) void restoreDraft(draft);
-		return () => view?.destroy();
+		if (draft) {
+			editing = true;
+			void restoreDraft(draft);
+		} else if (last && (last.script.id === 0 || scripts.some((s) => s.id === last!.script.id && s.name === last!.script.name))) {
+			const l = last;
+			open(l.script);
+			dirty = l.dirty;
+		} else close();
+		return () => {
+			// Pipette en cours : draft garde déjà tout.
+			if (!draft) last = editing && view ? { script: { ...current, source: view.state.doc.toString() }, dirty } : null;
+			view?.destroy();
+		};
 	});
 </script>
 
@@ -380,7 +411,7 @@ end
 				<button class="item" class:on={s.id === current.id} onclick={() => open(s)} oncontextmenu={(e) => onItemMenu(e, s)}>{s.name}</button>
 			{/if}
 		{/each}
-		{#if scripts.length === 0}<p class="empty">Aucun script enregistré dans ce classeur. Écrivez un script à droite, puis Enregistrer (Ctrl+S).</p>{/if}
+		{#if scripts.length === 0}<p class="empty">Aucun script enregistré dans ce classeur.</p>{/if}
 		</div>
 	</aside>
 	{#if menu}
@@ -397,7 +428,13 @@ end
 		</div>
 	{/if}
 	<section class="main">
-		<div class="toolbar">
+		{#if !editing}
+			<div class="start">
+				<button class="new big" onclick={fresh}><Icon name="new-file" size={16} />Nouveau script</button>
+				{#if scripts.length}<p class="empty">Ou ouvrez un script du classeur, à gauche.</p>{/if}
+			</div>
+		{/if}
+		<div class="toolbar" hidden={!editing}>
 			<input class="name" bind:this={nameField} aria-label="Nom du script" bind:value={current.name} oninput={() => (dirty = true)} spellcheck="false" />
 			<!-- Boutons par groupes : un groupe passe à la ligne en entier. -->
 			<span class="grp">
@@ -421,8 +458,8 @@ end
 			{#if network}<button onclick={() => (netOpen = true)} title="Hôtes que les scripts et pages HTML du classeur peuvent joindre en HTTP"><Icon name="web" size={14} />Accès réseau</button>{/if}
 			</span>
 		</div>
-		<div class="editor" bind:this={host}></div>
-		<div class="output">
+		<div class="editor" bind:this={host} hidden={!editing}></div>
+		<div class="output" hidden={!editing}>
 			<div class="out-head">
 				<span>Sortie</span>
 				{#if status}<span class="muted">{status}</span>{/if}
@@ -601,6 +638,29 @@ end
 	.name:focus {
 		border-color: #217346;
 		outline: none;
+	}
+	.start {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+	}
+	.start .big {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		color: #217346;
+		--icon-accent: #217346;
+		border: 1px solid #c9cdd2;
+		background: #fff;
+		border-radius: 4px;
+		padding: 8px 16px;
+		font-size: 14px;
+	}
+	[hidden] {
+		display: none !important;
 	}
 	.editor {
 		flex: 1;
