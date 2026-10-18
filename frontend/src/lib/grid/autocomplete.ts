@@ -226,3 +226,32 @@ export function argKindAt(text: string, caret: number, cat: Catalog): '' | 'tabl
 	const k = signatureParts(s.fn, s.index).arg?.kind;
 	return k === 'table' || k === 'column' ? k : '';
 }
+
+/**
+ * Après une référence pointée à la souris (choix de Louis) : la fonction en
+ * cours attend-elle encore un argument obligatoire après celui-ci ? Alors
+ * la saisie passe d'elle-même à l'argument suivant. Pas après le dernier
+ * argument, ni avant un argument facultatif.
+ */
+export function needsNextArg(text: string, caret: number, cat: Catalog): boolean {
+	const s = signature(text, caret, cat);
+	if (!s) return false;
+	const args = s.fn.args ?? [];
+	const rep = Math.min(s.fn.repeat ?? 0, args.length);
+	const off = args.length - rep;
+	const i = s.index;
+	if (i < args.length - 1) return !args[i + 1].optional;
+	// Groupe répété (plage_critères2; critère2) : le reste du groupe suit.
+	return rep > 1 && i >= off && (i - off) % rep < rep - 1;
+}
+
+/**
+ * Passe à l'argument suivant : le curseur saute un « ; » déjà là, sinon
+ * « ; » est inséré. Rend le nouveau texte et la position du curseur.
+ */
+export function toNextArg(text: string, caret: number): { text: string; caret: number } {
+	const rest = text.slice(caret);
+	const m = /^\s*;\s?/.exec(rest);
+	if (m) return { text, caret: caret + m[0].length };
+	return { text: text.slice(0, caret) + '; ' + rest, caret: caret + 2 };
+}

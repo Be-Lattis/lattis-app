@@ -64,7 +64,7 @@
 	import CondFormat, { type CondHost, type CondView } from './CondFormat.svelte';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { drawIcon } from '#lib/icons/canvas.js';
-	import { apply as applySuggestion, argKindAt, signature, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
+	import { apply as applySuggestion, argKindAt, needsNextArg, signature, toNextArg, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
 	import { checkFormula, closeParens, editorWidth, formulaRefs, highlightParts, isFormula, movedRef, rangeRef, refRect, serverErrorPos, type FormulaError, type Rect, type RefTable } from './formulaEdit';
 	import { formulaTyping, holdFormula, insertRefAt, qualifyRef, updateHold, type FormulaHold } from './crossref';
 	import { a1Like, parseGoto, type GotoTable } from './goto';
@@ -5570,6 +5570,25 @@
 		return true;
 	}
 
+	/**
+	 * Référence pointée (clic ou glissé terminé) : si la fonction attend encore
+	 * un argument obligatoire, la saisie passe au suivant (« ; »), comme le
+	 * ferait l'utilisateur (choix de Louis) ; pas après le dernier argument.
+	 */
+	function nextArg() {
+		const el = editing ? input : fxEditing ? fxInput : null;
+		if (!el || !catalog) return;
+		const caret = el.selectionEnd ?? el.value.length;
+		if (!needsNextArg(el.value, caret, catalog)) return;
+		const r = toNextArg(el.value, caret);
+		if (editing) editValueText = r.text;
+		else fxText = r.text;
+		el.value = r.text;
+		el.setSelectionRange(r.caret, r.caret);
+		lastRef = null; // le clic suivant ajoute une référence, il ne remplace plus celle-ci
+		onFormulaInput(el, editing ? 'cell' : 'fx');
+	}
+
 	// Glissé en mode formule depuis une référence insérée : la plage couverte.
 	let refDrag: { from: { row: number; col: number }; to: { row: number; col: number } } | null = null;
 
@@ -7358,6 +7377,7 @@
 		resize();
 		scroller.addEventListener('wheel', onWheel, { passive: false });
 		const up = (ev?: MouseEvent) => {
+			if (refDrag) nextArg();
 			refDrag = null;
 			if (refMove) dropRefMark();
 			if (dragging && painter) applyPainter();
