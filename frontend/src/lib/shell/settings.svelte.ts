@@ -45,9 +45,10 @@ export function scriptingEnabled(): boolean {
 	return platform.scripting;
 }
 
-/** Le serveur MCP local est proposé (bureau seulement). */
+/** Le serveur MCP local est proposé : bureau seulement, et assistant IA
+ * activé (le couper coupe aussi le serveur des assistants externes). */
 export function mcpAvailable(): boolean {
-	return platform.scripting && !platform.web;
+	return platform.scripting && !platform.web && aiEnabled();
 }
 
 /** Classeurs partagés (Serveur Lattis) activés : menu Compte, connexions lattis. */
@@ -55,7 +56,7 @@ export function sharedWorkbooksEnabled(): boolean {
 	return boolSetting(userSettings.list, 'features.sharedWorkbooks', true);
 }
 
-/** L'onglet IA est activé (opt-in, coupé par défaut). */
+/** L'Assistant IA est activé (opt-in, coupé par défaut). */
 export function aiEnabled(): boolean {
 	return boolSetting(userSettings.list, 'ai.enabled');
 }

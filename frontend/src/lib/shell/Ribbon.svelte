@@ -13,14 +13,14 @@
 	import { ZOOM_LEVELS, zoomLabel } from '#lib/grid/zoom.js';
 	import Select from '#lib/ui/Select.svelte';
 	import { estimate, fit, groupWidth, type GroupShape, type Measure, type Mode } from './fit';
-	import { aiEnabled, mcpAvailable, scriptingEnabled, sharedWorkbooksEnabled } from './settings.svelte.js';
+	import { mcpAvailable, scriptingEnabled, sharedWorkbooksEnabled } from './settings.svelte.js';
 	import { keyLabel } from '#lib/web/platform.js';
 	import type { IconName } from '#lib/icons/icons.js';
 	import { MORE_KINDS, type ChartKind } from '#lib/chart/kinds.js';
 	import { COMMAND_TIPS, TAB_TIPS, assignKeyTips, keyChars, keyOf, matchTip } from '#lib/ui/keytips.js';
 	import { cycle, focusRegion, isTextField, modalOpen, regionOf, tabbables } from '#lib/ui/focus.js';
 
-	export type View = 'grid' | 'ai' | 'sql' | 'script';
+	export type View = 'grid' | 'sql' | 'script';
 	export type FormatTab = 'number' | 'align' | 'font' | 'border' | 'fill';
 	export type FreezeAction = 'cell' | 'row' | 'col' | 'none';
 	/** Onglet affiché : feuille (grille), page HTML ou Document ; le ruban ne montre que ce qui s'y applique. */
@@ -84,6 +84,9 @@
 		recent?: string[];
 		onrecent?: (path: string) => void;
 		onview: (v: View) => void;
+		/** Volet de l'Assistant IA ouvert, et sa bascule (bouton « Assistant ✦ », Alt+I). */
+		ai?: boolean;
+		onai?: () => void;
 		onfile: (a: FileAction) => void;
 		onundo: () => void;
 		onredo: () => void;
@@ -159,7 +162,7 @@
 		rights?: boolean;
 	}
 
-	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, ontextcols, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, rights = false }: Props = $props();
+	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, ontextcols, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, rights = false }: Props = $props();
 	const fmt = (tab: FormatTab) => (onformat ? () => onformat(tab) : undefined);
 	const lines = (rows: boolean, hide: boolean) => (onlines ? () => onlines(rows, hide) : undefined);
 	const frz = (what: FreezeAction) => (onfreeze ? () => onfreeze(what) : undefined);
@@ -211,9 +214,9 @@
 	}
 
 	const tabs = ['Accueil', 'Insertion', 'Données', 'Formules', 'Révision', 'Affichage'] as const;
-	let tab = $state<(typeof tabs)[number] | 'IA' | 'SQL' | 'SCRIPT'>('Accueil');
+	let tab = $state<(typeof tabs)[number] | 'SQL' | 'SCRIPT'>('Accueil');
 	/** Onglets qui remplacent la grille (pas de groupes de commandes). */
-	const isView = (t: string) => t === 'IA' || t === 'SQL' || t === 'SCRIPT';
+	const isView = (t: string) => t === 'SQL' || t === 'SCRIPT';
 	// Largeur disponible pour les groupes : ils se compactent pour y tenir.
 	let groupsW = $state(2000);
 	let openGroup = $state<{ title: string; x: number; y: number } | null>(null);
@@ -701,7 +704,7 @@
 	function select(t: typeof tab, keep = false) {
 		peek = folded && !isView(t) && (keep || !(peek && tab === t));
 		tab = t;
-		onview(t === 'IA' ? 'ai' : t === 'SQL' ? 'sql' : t === 'SCRIPT' ? 'script' : 'grid');
+		onview(t === 'SQL' ? 'sql' : t === 'SCRIPT' ? 'script' : 'grid');
 	}
 
 	// --- Clavier : KeyTips (Alt ou F10) et flèches, comme Excel -------------
@@ -739,7 +742,7 @@
 
 	async function openTab(el: HTMLElement) {
 		const t = el.dataset.label ?? '';
-		if (!t || t === 'Fichier' || t === 'SQL' || t === 'SCRIPT') {
+		if (!t || t === 'Fichier' || t === 'SQL' || t === 'SCRIPT' || t === 'Assistant ✦') {
 			kt = null;
 			el.click(); // Fichier : son menu prend le focus (ouvert au clavier) ; ? : l'aide
 			return;
@@ -907,7 +910,6 @@
 		// Vue changée sans le ruban (retour de la pipette de l'onglet SCRIPT).
 		else if (view === 'script' && tab !== 'SCRIPT') tab = 'SCRIPT';
 		else if (view === 'sql' && tab !== 'SQL') tab = 'SQL';
-		else if (view === 'ai' && tab !== 'IA') tab = 'IA';
 	});
 </script>
 
@@ -984,8 +986,10 @@
 			<button class="tab" data-label={t} class:on={tab === t} aria-pressed={tab === t} aria-keyshortcuts="Alt+{TAB_TIPS[t]}" data-region-focus={tab === t ? '' : undefined} {disabled} onclick={() => select(t)} ondblclick={toggleFold}>{t}</button>
 		{/each}
 		<span class="sep"></span>
-		{#if aiEnabled() || view === 'ai'}
-			<button class="tab ai" data-label="Assistant ✦" class:on={tab === 'IA'} aria-pressed={tab === 'IA'} aria-keyshortcuts="Alt+{TAB_TIPS['Assistant ✦']}" data-region-focus={tab === 'IA' ? '' : undefined} {disabled} onclick={() => select('IA')} title="Assistant IA"
+		<!-- Bascule du volet de l'Assistant IA (pas un onglet : la grille reste) ;
+		     visible même désactivé, le volet propose alors de l'activer. -->
+		{#if onai}
+			<button class="tab ai" data-label="Assistant ✦" class:on={ai} aria-pressed={ai} aria-keyshortcuts="Alt+{TAB_TIPS['Assistant ✦']}" {disabled} onclick={onai} title={ai ? 'Fermer l’Assistant IA (Alt+I)' : 'Ouvrir l’Assistant IA (Alt+I)'}
 				>Assistant <Icon name="sparkle" size={13} /></button
 			>
 		{/if}
