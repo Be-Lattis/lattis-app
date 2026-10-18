@@ -76,7 +76,7 @@ func remoteServer(ctx context.Context, raw string) (workbook.Server, auth.User, 
 	if shareServer != nil {
 		return shareServer(ctx, raw)
 	}
-	m, err := lattisOn()
+	m, err := sessions()
 	if err != nil {
 		return nil, auth.User{}, "", err
 	}
@@ -641,4 +641,10 @@ func recordOpens(ctx context.Context, info *workbook.Info) {
 		case <-time.After(wait):
 		}
 	}
+}
+
+// SetShareCacheDir range les copies locales des classeurs du serveur dans
+// dir (moteur d'une session web : son répertoire de session).
+func SetShareCacheDir(dir string) {
+	shareCacheDir = func() (string, error) { return dir, nil }
 }

@@ -100,6 +100,11 @@ func New(ctx context.Context, o Options) (*Engine, error) {
 	e.mux.HandleFunc("GET "+base+"/download/{token}", e.host.serveDownload)
 	if o.Static != nil {
 		e.mux.Handle("GET "+base+"/", http.StripPrefix(base, spa(o.Static)))
+		if base != "" {
+			// /app → /app/ : les chemins relatifs de la page (ressources, ws)
+			// partent du préfixe.
+			e.mux.Handle("GET "+base, http.RedirectHandler(base+"/", http.StatusMovedPermanently))
+		}
 	}
 	return e, nil
 }

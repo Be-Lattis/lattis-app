@@ -280,6 +280,10 @@ func (s *DocumentService) Save(ctx context.Context, as bool) (DocState, error) {
 	return s.changed(ctx)
 }
 
+// HidePaths : le moteur tourne sur un serveur (lattisd) ; DocState.Path ne
+// donne que le nom du fichier.
+var HidePaths bool
+
 // State décrit le classeur ouvert.
 func (s *DocumentService) State(ctx context.Context) (DocState, error) {
 	d, err := s.current()
@@ -289,6 +293,10 @@ func (s *DocumentService) State(ctx context.Context) (DocState, error) {
 	st := DocState{Open: true, Path: d.Path(), Title: "Classeur sans titre"}
 	if st.Path != "" {
 		st.Title = strings.TrimSuffix(filepath.Base(st.Path), filepath.Ext(st.Path))
+	}
+	// Moteur d'une session web : les chemins du serveur ne sont pas montrés.
+	if HidePaths && st.Path != "" {
+		st.Path = filepath.Base(st.Path)
 	}
 	if st.Dirty, err = d.Dirty(ctx); err != nil {
 		return st, err

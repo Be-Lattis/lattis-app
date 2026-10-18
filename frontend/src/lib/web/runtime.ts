@@ -239,10 +239,14 @@ export class RpcClient {
 	}
 }
 
-/** Adresse du WebSocket : VITE_LATTIS_WS, sinon /ws sur l'origine de la page. */
+/**
+ * Adresse du WebSocket : VITE_LATTIS_WS, sinon « ws » à côté de la page
+ * (/ws à la racine, /app/ws quand lattisd sert le moteur sous /app/).
+ */
 export function socketURL(): string {
 	const loc = globalThis.location;
-	const u = new URL(import.meta.env.VITE_LATTIS_WS || '/ws', loc?.href ?? 'http://localhost/');
+	const dir = loc ? loc.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '') : 'http://localhost/';
+	const u = new URL(import.meta.env.VITE_LATTIS_WS || 'ws', dir);
 	u.protocol = u.protocol === 'https:' ? 'wss:' : 'ws:';
 	return u.href;
 }

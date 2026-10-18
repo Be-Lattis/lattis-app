@@ -163,11 +163,27 @@ mux.Handle("/download/", …) // idem
 // dans son répertoire de travail, récupérable) ; LATTIS_WEB_MAX_ENGINES borne le nombre de moteurs.
 ```
 
+### 6.1 Processus moteur (`lattis-engine` en mode serveur)
+
+Pour l'isolation par processus (point 1 ci-dessous), `lattisd` lance une image `ghcr.io/be-lattis/lattis-engine:<version>` (binaire `/usr/local/bin/lattis-engine`, frontend web embarqué ; `build/engine/Dockerfile`, workflow `Engine`) une fois par session :
+
+```
+LATTIS_ENGINE_SECRET=<secret> lattis-engine \
+  --addr 127.0.0.1:0 --dir <répertoire de session> --base-path /app \
+  --server <issuer> --token-url <url> [--workbook <id>] [--idle 30m] [--scripting]
+```
+
+- **Démarrage** : quand il écoute, le moteur écrit `LISTENING 127.0.0.1:<port>` sur sa sortie standard ; `lattisd` relaie `/app/`, `/app/ws`, `/app/upload/…` et `/app/download/…` vers ce port (`/app` redirige vers `/app/`).
+- **Arrêt** : à la fermeture de l'entrée standard (session finie, `lattisd` arrêté), ou après `--idle` sans onglet connecté. Un classeur modifié et non enregistré reste dans `<dir>/work` (récupération).
+- **Jetons** : `GET <token-url>` avec `Authorization: Bearer $LATTIS_ENGINE_SECRET` rend `{"access_token", "pg_role", "expires_in"}` ; le moteur le redemande une minute avant l'expiration, ou après un refus de PostgreSQL. Ce jeton sert de fournisseur `OAUTHBEARER` (pgx) pour ce seul serveur : ouverture de `--workbook` au démarrage (même chemin que « Ouvrir depuis un serveur », copie locale dans `<dir>/partages`), « Ouvrir depuis un serveur » dans la session. Aucun autre serveur n'est joignable.
+- **Chemins** : `DocState.Path` ne donne que le nom du fichier (`bridge.HidePaths`) ; tout ce que la session écrit reste dans `--dir`.
+- La découverte (`/.well-known/lattis.json`) du serveur est lue une fois, pour les points PostgreSQL.
+
 Points d'attention pour `lattisd` :
 
 1. **Une session par processus**, au moins pour commencer. Le moteur garde encore des états globaux au processus : configuration (`config.Current`), fichiers récents et sessions interrompues (dans les dossiers de l'utilisateur système), arrêt de script (`api.StopScript`), réglages MCP. Plusieurs moteurs dans un même processus partageraient ces états ; la spécification serveur (§ 18) permet l'isolation par processus : `lattisd` lance alors un processus moteur par session (par exemple `lattis-engine --addr 127.0.0.1:0 --dir …` derrière un relais), ou l'on retire ces états globaux avant de mutualiser.
 2. **Origine du WebSocket** : `Handler` accepte la même origine ; `Options.OriginPatterns` en ajoute d'autres. Derrière un relais qui réécrit l'hôte, régler ces motifs.
-3. **Chemins rendus au navigateur** : `DocState.Path` contient le chemin du fichier sur le serveur ; à masquer (ou remplacer par l'identifiant du classeur du serveur) quand les classeurs viendront du Serveur Lattis.
+3. **Chemins rendus au navigateur** : masqués en mode serveur (`bridge.HidePaths` : le nom du fichier seulement).
 4. **Classeurs récents du serveur** et ouverture d'un classeur partagé : à brancher sur l'API du Serveur Lattis (étapes 2 et 3), à la place des fichiers récents locaux.
 5. **Secrets** : passer `Options.Secrets` ; sans lui, un coffre en mémoire perdu à la fermeture.
 

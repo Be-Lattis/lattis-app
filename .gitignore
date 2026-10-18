@@ -14,3 +14,4 @@ frontend/.svelte-kit
 
 # Worktrees des agents locaux
 .claude/worktrees/
+cmd/lattis-engine/dist-web

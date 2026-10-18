@@ -60,7 +60,7 @@ func lattisOn() (*auth.Manager, error) {
 // lattisOpen ouvre la base d'un serveur sous l'identité de l'utilisateur
 // (query.LattisOpen).
 func lattisOpen(ctx context.Context, server, usage string) (*sql.DB, error) {
-	m, err := lattisOn()
+	m, err := sessions()
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func lattisOpen(ctx context.Context, server, usage string) (*sql.DB, error) {
 }
 
 // lattisTarget décrit la base du serveur pour pgpool (OAUTHBEARER).
-func lattisTarget(m *auth.Manager, server string, user auth.User, disc *auth.Discovery) pgpool.Target {
+func lattisTarget(m sessionSource, server string, user auth.User, disc *auth.Discovery) pgpool.Target {
 	pg := disc.Postgres
 	return pgpool.Target{
 		RW: string(pg.RW), RO: auth.Strings(pg.RO), Port: pg.Port, Database: pg.Database, SSLMode: pg.SSLMode,
@@ -112,6 +112,9 @@ type LattisState struct {
 // LattisState donne les serveurs connus (ceux de l'organisation, ceux où
 // l'utilisateur s'est connecté) et l'utilisateur connecté à chacun.
 func (s *DocumentService) LattisState() LattisState {
+	if fixed != nil {
+		return fixed.state()
+	}
 	m, err := lattisOn()
 	if err != nil {
 		return LattisState{Servers: []auth.ServerState{}}
