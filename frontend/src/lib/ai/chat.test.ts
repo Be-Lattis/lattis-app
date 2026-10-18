@@ -136,7 +136,8 @@ describe('conversation de l’assistant', () => {
 			{ name: 'Commandes', rows: 2000 },
 			{ name: 'TCD', rows: 5, kind: 'pivot' }
 		]);
-		expect(s[0]).toBe('Analyser Commandes (2 000 lignes)');
+		expect(s[0]).toBe('Réparer les tableaux de cette feuille');
+		expect(s[1]).toBe('Analyser Commandes (2 000 lignes)');
 		expect(s).toContain('Vérifier les types de Clients');
 		expect(s.join(' ')).not.toContain('TCD');
 		expect(suggestionsFor([{ name: 'A', rows: 3 }], { sheet: 'F', table: 'A', selection: 'A[x][1:2]' })[0]).toBe('Explique la sélection x[1:2] de A');
