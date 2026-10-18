@@ -635,7 +635,64 @@
 		});
 	});
 
-	function select(t: typeof tab) {
+	// Ruban réduit (comme Excel : Ctrl+F1, double-clic sur un onglet) : seuls
+	// les onglets restent ; un clic sur un onglet déplie ses commandes
+	// par-dessus la feuille, repliées après une commande ou un clic ailleurs.
+	// Le choix est gardé sur ce poste.
+	const FOLD_KEY = 'lattis.ribbon.folded';
+	let folded = $state(readFold());
+	let peek = $state(false);
+
+	function readFold(): boolean {
+		try {
+			return localStorage.getItem(FOLD_KEY) === '1';
+		} catch {
+			return false;
+		}
+	}
+
+	/** Réduit ou épingle le ruban (Ctrl+F1). */
+	export function toggleFold() {
+		folded = !folded;
+		peek = false;
+		try {
+			localStorage.setItem(FOLD_KEY, folded ? '1' : '0');
+		} catch {
+			// stockage indisponible : le choix vaut pour la session
+		}
+	}
+
+	/** Clic dans les commandes dépliées : une commande lancée replie le ruban. */
+	function peekClick(e: MouseEvent) {
+		const b = (e.target as HTMLElement).closest('button');
+		if (!folded || !b || b.hasAttribute('aria-haspopup') || b.classList.contains('fold')) return;
+		setTimeout(() => (peek = false));
+	}
+
+	/** Ruban déplié par-dessus la feuille : replié sur un clic ailleurs ou Échap. */
+	function peekWatch(node: HTMLElement) {
+		const away = (e: Event) => {
+			const t = e.target as HTMLElement;
+			// Les menus des commandes (couleurs, listes) s'ouvrent hors du ruban.
+			if (!headerEl.contains(t) && !t.closest?.('.palette, .drop-menu, .group-menu, .file-menu')) peek = false;
+		};
+		const key = (e: KeyboardEvent) => {
+			if (e.key === 'Escape' && !kt) peek = false;
+		};
+		window.addEventListener('pointerdown', away, true);
+		window.addEventListener('keydown', key);
+		void node;
+		return {
+			destroy() {
+				window.removeEventListener('pointerdown', away, true);
+				window.removeEventListener('keydown', key);
+			}
+		};
+	}
+
+	/** keep : déplier sans replier (KeyTips), au lieu de basculer comme un clic. */
+	function select(t: typeof tab, keep = false) {
+		peek = folded && !isView(t) && (keep || !(peek && tab === t));
 		tab = t;
 		onview(t === 'IA' ? 'ai' : t === 'SQL' ? 'sql' : t === 'SCRIPT' ? 'script' : 'grid');
 	}
@@ -680,7 +737,7 @@
 			el.click(); // Fichier : son menu prend le focus (ouvert au clavier) ; ? : l'aide
 			return;
 		}
-		select(t as typeof tab);
+		select(t as typeof tab, true);
 		await tick();
 		// Le ruban se compacte (fit) puis se remesure : deux images plus tard, il est en place.
 		for (let i = 0; i < 2; i++) await new Promise((r) => requestAnimationFrame(r));
@@ -755,6 +812,12 @@
 			}
 			altAlone = false;
 			if (modalOpen()) return;
+			if (e.key === 'F1' && e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
+				e.preventDefault();
+				e.stopPropagation();
+				toggleFold();
+				return;
+			}
 			if (e.key === 'F10' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
 				e.preventDefault();
 				e.stopPropagation();
@@ -911,7 +974,7 @@
 			{/if}
 		</div>
 		{#each shownTabs as t (t)}
-			<button class="tab" data-label={t} class:on={tab === t} aria-pressed={tab === t} aria-keyshortcuts="Alt+{TAB_TIPS[t]}" data-region-focus={tab === t ? '' : undefined} {disabled} onclick={() => select(t)}>{t}</button>
+			<button class="tab" data-label={t} class:on={tab === t} aria-pressed={tab === t} aria-keyshortcuts="Alt+{TAB_TIPS[t]}" data-region-focus={tab === t ? '' : undefined} {disabled} onclick={() => select(t)} ondblclick={toggleFold}>{t}</button>
 		{/each}
 		<span class="sep"></span>
 		{#if aiEnabled() || view === 'ai'}
@@ -923,7 +986,9 @@
 		<button class="tab special" data-label="SCRIPT" class:on={tab === 'SCRIPT'} aria-pressed={tab === 'SCRIPT'} aria-keyshortcuts="Alt+{TAB_TIPS.SCRIPT}" data-region-focus={tab === 'SCRIPT' ? '' : undefined} {disabled} onclick={() => select('SCRIPT')}>SCRIPT</button>
 		<button class="tab help" title="Aide (F1)" aria-label="Aide" onclick={() => onfile('help')}>?</button>
 	</nav>
-	{#if !isView(tab)}
+	{#if !isView(tab) && (!folded || peek)}
+		<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+		<div class="fold-wrap" class:peek={folded} use:peekWatch onclick={peekClick}>
 		<div class="groups" class:off={disabled} use:observe>
 			{#each ribbons[tab] ?? [] as g, gi (g.title)}
 				{@const mode = modes[gi] ?? 'large'}
@@ -1028,6 +1093,12 @@
 				</section>
 			{/each}
 		</div>
+		<button class="fold" title={folded ? 'Épingler le ruban (Ctrl+F1)' : 'Réduire le ruban : seuls les onglets restent (Ctrl+F1)'} aria-label={folded ? 'Épingler le ruban' : 'Réduire le ruban'} onclick={toggleFold}>
+			<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+				{#if folded}<path d="M3 1.5h6M6 1.5v5M3.5 6.5h5L7 4.5H5zM6 6.5v4" fill="none" stroke="currentColor" stroke-width="1.2" />{:else}<path d="M2.5 7.5 6 4l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.4" />{/if}
+			</svg>
+		</button>
+		</div>
 	{/if}
 	{#if dropMenu}
 		{@const c = ribbons[tab]?.flatMap((g) => g.commands).find((x) => x.label === dropMenu!.label)}
@@ -1081,6 +1152,7 @@
 
 <style>
 	.ribbon {
+		position: relative;
 		background: #f3f4f6;
 		border-bottom: 1px solid #d4d7db;
 		font: 13px 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -1255,10 +1327,43 @@
 		color: #6b7280;
 		font-size: 12px;
 	}
+	/* Ruban réduit : les commandes dépliées passent par-dessus la feuille. */
+	.fold-wrap {
+		position: relative;
+	}
+	.fold-wrap.peek {
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: 100%;
+		z-index: 40;
+		background: #f3f4f6;
+		border-bottom: 1px solid #d4d7db;
+		box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+	}
+	.fold {
+		position: absolute;
+		right: 6px;
+		bottom: 4px;
+		width: 20px;
+		height: 20px;
+		display: grid;
+		place-items: center;
+		padding: 0;
+		border: 1px solid transparent;
+		border-radius: 3px;
+		background: transparent;
+		color: #4b5563;
+		cursor: pointer;
+	}
+	.fold:hover {
+		background: #e2e5e9;
+		border-color: #c9cdd2;
+	}
 	.groups {
 		display: flex;
 		height: 78px;
-		padding: 4px 6px;
+		padding: 4px 30px 4px 6px;
 		overflow-x: auto;
 		scrollbar-width: none; /* défilement à la molette, sans barre */
 	}

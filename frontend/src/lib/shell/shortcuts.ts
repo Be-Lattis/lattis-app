@@ -40,6 +40,7 @@ export const shortcutGroups: ShortcutGroup[] = [
 		title: 'Ruban, menus et fenêtres',
 		items: [
 			{ keys: 'Alt / F10', label: 'Lettres d’accès (KeyTips) du ruban ; Échap revient en arrière' },
+			{ keys: 'Ctrl+F1', label: 'Réduire ou épingler le ruban (aussi : double-clic sur un onglet du ruban)' },
 			{ keys: 'Alt puis F', label: 'Menu Fichier' },
 			...Object.entries(TAB_TIPS)
 				.filter(([t]) => t !== 'Fichier' && t !== 'Aide')
