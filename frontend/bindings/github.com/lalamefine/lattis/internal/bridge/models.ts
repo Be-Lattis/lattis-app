@@ -283,6 +283,24 @@ export interface OpenResult {
 }
 
 /**
+ * Platform décrit l'hôte à l'interface (DocumentService.Platform).
+ */
+export interface Platform {
+    /**
+     * Web : application dans le navigateur (pas de fenêtre, fichiers
+     * envoyés et téléchargés).
+     */
+    "web": boolean;
+
+    /**
+     * Scripting : Lua, boutons, pages web et serveur MCP permis. Toujours
+     * vrai sur le bureau ; en web, réglage du serveur (web_scripting) lu à
+     * l'ouverture de la session.
+     */
+    "scripting": boolean;
+}
+
+/**
  * QueryRefresh est le résultat d'une actualisation : tableaux chargés, ou
  * mot de passe à demander.
  */

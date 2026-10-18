@@ -7,16 +7,11 @@ import (
 
 	"github.com/lalamefine/lattis/internal/api"
 	"github.com/lalamefine/lattis/internal/doc"
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // UIEvent porte une commande de l'interface venue d'un script ou du serveur
 // MCP : sélection, changement de vue, boîte de dialogue, message.
 const UIEvent = "ui:command"
-
-func init() {
-	application.RegisterEvent[UICommand](UIEvent)
-}
 
 // UICommand est une commande pour l'interface.
 type UICommand struct {
@@ -53,13 +48,8 @@ type uiState struct {
 	dialogs map[int]chan dialogAnswer
 }
 
-func emitUI(c UICommand) bool {
-	app := application.Get()
-	if app == nil {
-		return false
-	}
-	app.Event.Emit(UIEvent, c)
-	return true
+func (s *DocumentService) emitUI(c UICommand) bool {
+	return s.sys().Emit(UIEvent, c)
 }
 
 func (h host) Doc() (*doc.Document, error) { return h.s.current() }
@@ -76,7 +66,7 @@ func (h host) Select(_ context.Context, sel api.Selection) error {
 	h.s.ui.mu.Lock()
 	h.s.ui.sel = sel
 	h.s.ui.mu.Unlock()
-	emitUI(UICommand{Kind: "select", Selection: &sel})
+	h.s.emitUI(UICommand{Kind: "select", Selection: &sel})
 	return nil
 }
 
@@ -84,7 +74,7 @@ func (h host) ShowView(_ context.Context, view string) error {
 	h.s.ui.mu.Lock()
 	h.s.ui.sel.View = view
 	h.s.ui.mu.Unlock()
-	emitUI(UICommand{Kind: "view", View: view})
+	h.s.emitUI(UICommand{Kind: "view", View: view})
 	return nil
 }
 
@@ -106,24 +96,22 @@ func (h host) Dialog(ctx context.Context, d api.Dialog) (map[string]any, bool, e
 		delete(u.dialogs, id)
 		u.mu.Unlock()
 	}()
-	if !emitUI(UICommand{Kind: "dialog", Dialog: &DialogRequest{ID: id, Dialog: d}}) {
+	if !h.s.emitUI(UICommand{Kind: "dialog", Dialog: &DialogRequest{ID: id, Dialog: d}}) {
 		return nil, false, errNoUI
 	}
 	select {
 	case a := <-ch:
 		return a.values, a.ok, nil
 	case <-ctx.Done():
-		emitUI(UICommand{Kind: "dialog-close", ID: id})
+		h.s.emitUI(UICommand{Kind: "dialog-close", ID: id})
 		return nil, false, context.Cause(ctx)
 	}
 }
 
-func (h host) Notify(msg string) { emitUI(UICommand{Kind: "notify", Message: msg}) }
+func (h host) Notify(msg string) { h.s.emitUI(UICommand{Kind: "notify", Message: msg}) }
 
 func (h host) Print(line string) {
-	if app := application.Get(); app != nil {
-		app.Event.Emit(PrintEvent, line)
-	}
+	h.s.sys().Emit(PrintEvent, line)
 }
 
 func (h host) NewDoc(ctx context.Context) error {

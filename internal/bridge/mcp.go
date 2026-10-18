@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/lalamefine/lattis/internal/mcp"
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // Version est la version de l'application annoncée au client MCP.
@@ -30,8 +29,12 @@ type MCPStatus struct {
 	Error   string   `json:"error"`
 }
 
-// ServiceStartup démarre le serveur MCP s'il est activé.
-func (s *DocumentService) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
+// startup démarre le serveur MCP s'il est activé. Jamais en web : un
+// serveur MCP local à la machine de lattisd ne servirait pas l'utilisateur.
+func (s *DocumentService) startup(ctx context.Context) error {
+	if s.mcpRefused() != nil {
+		return nil
+	}
 	if st, err := mcp.LoadSettings(); err == nil && st.Enabled {
 		s.startMCP(st)
 	}
@@ -84,6 +87,9 @@ func (s *DocumentService) MCPState() (MCPStatus, error) {
 
 // SetMCPEnabled active ou désactive le serveur MCP (réglage gardé).
 func (s *DocumentService) SetMCPEnabled(on bool) (MCPStatus, error) {
+	if err := s.mcpRefused(); on && err != nil {
+		return MCPStatus{}, err
+	}
 	st, err := mcp.LoadSettings()
 	if err != nil {
 		return MCPStatus{}, err

@@ -29,6 +29,7 @@
 	import McpPanel from '#lib/shell/McpPanel.svelte';
 	import SettingsDialog from '#lib/shell/SettingsDialog.svelte';
 	import { aiEnabled, htmlTabsEnabled, loadSettings } from '#lib/shell/settings.svelte.js';
+	import { isWeb } from '#lib/web/platform.js';
 	import HtmlPage from '#lib/page/HtmlPage.svelte';
 	import DocPage from '#lib/doc/DocPage.svelte';
 	import type { DocFormat } from '#lib/doc/format.js';
@@ -420,6 +421,14 @@
 				bench = await GridService.BenchRequested();
 				if (bench) return startDemo();
 				loadRecent();
+				// Web : le moteur survit à l'onglet (rechargement, onglet
+				// fermé puis rouvert) ; on reprend le classeur qu'il a ouvert.
+				if (isWeb && (await DocumentService.State()).open) {
+					mode = 'doc';
+					view = 'grid';
+					sheetId = 1;
+					return await reload();
+				}
 				const preset = await DocumentService.DemoRequested();
 				if (preset) return await startPresetDemo(preset);
 				// Classeur passé par l'association de fichiers (double-clic sur un .lattis).
@@ -442,7 +451,7 @@
 			if (e.defaultPrevented) return; // déjà traité (éditeur de script : Ctrl+S)
 			const ctrl = e.ctrlKey || e.metaKey;
 			const action: FileAction | null =
-				e.key === 'F12' ? 'saveAs' : ctrl && e.key.toLowerCase() === 's' ? 'save' : ctrl && e.key.toLowerCase() === 'o' ? 'open' : ctrl && e.key.toLowerCase() === 'n' ? 'new' : ctrl && e.key.toLowerCase() === 'w' ? 'close' : ctrl && e.key.toLowerCase() === 'p' && mode === 'doc' ? 'print' : null;
+				e.key === 'F12' ? 'saveAs' : ctrl && e.key.toLowerCase() === 's' ? (e.shiftKey ? 'saveAs' : 'save') : ctrl && e.key.toLowerCase() === 'o' ? 'open' : ctrl && e.key.toLowerCase() === 'n' ? 'new' : ctrl && e.key.toLowerCase() === 'w' ? 'close' : ctrl && e.key.toLowerCase() === 'p' && mode === 'doc' ? 'print' : null;
 			if (action) {
 				e.preventDefault();
 				file(action);
@@ -461,6 +470,12 @@
 			}
 		};
 		window.addEventListener('keydown', keys);
+		// Web : Ctrl+W ou la fermeture de l'onglet demandent confirmation
+		// quand le classeur a des modifications non enregistrées.
+		const leave = (e: BeforeUnloadEvent) => {
+			if (isWeb && mode === 'doc' && docState.dirty) e.preventDefault();
+		};
+		window.addEventListener('beforeunload', leave);
 		// F5 et Ctrl+R ne rechargent jamais la page de l'application (fenêtre
 		// WebView2 ou navigateur) ; F5 actualise (refreshKey). En capture : rien
 		// ne peut l'arrêter avant.
@@ -512,6 +527,7 @@
 			offUI();
 			offOpen();
 			window.removeEventListener('keydown', keys);
+			window.removeEventListener('beforeunload', leave);
 			window.removeEventListener('keydown', noReload, true);
 			window.removeEventListener('keydown', regions, true);
 			window.removeEventListener('keydown', helpKey, true);

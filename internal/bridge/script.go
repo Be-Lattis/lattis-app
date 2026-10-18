@@ -6,15 +6,10 @@ import (
 	"github.com/lalamefine/lattis/internal/api"
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/doc"
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // PrintEvent porte une ligne de sortie d'un script en cours (onglet SCRIPT).
 const PrintEvent = "script:print"
-
-func init() {
-	application.RegisterEvent[string](PrintEvent)
-}
 
 // ScriptResult est l'issue d'un script pour l'interface.
 type ScriptResult = api.ScriptResult
@@ -23,6 +18,9 @@ type ScriptResult = api.ScriptResult
 // modifie (écritures, feuilles, tableaux…) forme une seule étape
 // d'annulation, nommée d'après le script.
 func (s *DocumentService) RunScript(ctx context.Context, name, src string) (ScriptResult, error) {
+	if err := s.scripting(); err != nil {
+		return ScriptResult{}, err
+	}
 	return api.RunScript(host{s}, name, src, "")
 }
 
@@ -31,6 +29,9 @@ func (s *DocumentService) StopScript() { api.StopScript() }
 
 // RunButton exécute l'action d'un bouton (clic dans la grille).
 func (s *DocumentService) RunButton(ctx context.Context, id int64) (ScriptResult, error) {
+	if err := s.scripting(); err != nil {
+		return ScriptResult{}, err
+	}
 	return api.RunButton(host{s}, id)
 }
 
@@ -39,6 +40,9 @@ func (s *DocumentService) RunButton(ctx context.Context, id int64) (ScriptResult
 // s'exécutent, en une seule étape d'annulation. value et old sont la
 // nouvelle et l'ancienne valeur affichée de la cellule liée.
 func (s *DocumentService) FireControl(ctx context.Context, id int64, event, value, old string) (ScriptResult, error) {
+	if s.scripting() != nil {
+		return ScriptResult{}, nil // sans scripting : le contrôle garde sa valeur, sans action
+	}
 	return api.FireControl(host{s}, id, event, value, old)
 }
 
@@ -48,7 +52,7 @@ func (s *DocumentService) PickControlFile(title string) (string, error) {
 	if title == "" {
 		title = "Choisir un fichier"
 	}
-	return application.Get().Dialog.OpenFile().SetTitle(title).AddFilter("Tous les fichiers", "*.*").PromptForSingleSelection()
+	return s.sys().OpenFile(FileDialog{Title: title, Filters: []FileFilter{{"Tous les fichiers", "*.*"}}})
 }
 
 // CreateButton pose un bouton d'action sur une feuille.
