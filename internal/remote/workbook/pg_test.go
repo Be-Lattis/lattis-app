@@ -146,6 +146,41 @@ func (e *pgEnv) addMember(t *testing.T, wb, builtin, userID string) {
 	must(t, err)
 }
 
+// Un classeur collaboratif se publie par le même chemin ; un éditeur
+// l'ouvre (lecture sous RLS) et ses écritures vont dans la file d'envoi
+// (la synchronisation est l'étape suivante).
+func TestPostgresCollaborativePublish(t *testing.T) {
+	env := pgSetup(t)
+	useRoot(t)
+	ctx := context.Background()
+	alice, _ := env.user(t, "alice")
+	carol, carolID := env.user(t, "carol")
+	a := author(t)
+	info, err := workbook.Publish(ctx, env.as(alice), a.DB(), workbook.Request{Server: server, User: alice, Title: "Suivi", Mode: workbook.Collaborative, Tables: []int64{tableID(t, a, "Ventes")}})
+	must(t, err)
+	if info.Mode != workbook.Collaborative || info.Version != 1 {
+		t.Fatalf("info : %+v", info)
+	}
+	env.addMember(t, info.WorkbookID, "editor", carolID)
+	r := open(t, env.as(carol), info.WorkbookID, carol)
+	if got := column(t, r, "Ventes", "Produit"); !slices.Equal(got, []string{"Café", "Thé", "Chocolat"}) {
+		t.Fatalf("produits : %v", got)
+	}
+	if st := r.Share.State(); st.ReadOnly != "" || st.Mode != workbook.Collaborative {
+		t.Fatalf("état : %+v", st)
+	}
+	_, err = r.SetCell(ctx, 1, 1, 0, "Café moulu")
+	must(t, err)
+	var n int
+	must(t, r.DB().Read().QueryRow(`SELECT count(*) FROM _lattis_outbox WHERE state = 'pending'`).Scan(&n))
+	if n != 1 {
+		t.Fatalf("%d entrées en attente", n)
+	}
+	if _, err := workbook.Republish(ctx, env.as(alice), a.DB(), nil); err == nil {
+		t.Fatal("un classeur collaboratif ne se republie pas")
+	}
+}
+
 func TestPostgresFrozenLifecycle(t *testing.T) {
 	env := pgSetup(t)
 	useRoot(t)
