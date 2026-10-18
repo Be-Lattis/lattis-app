@@ -30,11 +30,22 @@ export interface ChatEvent {
 	changes?: number;
 	/** done : la réponse peut être annulée (AIUndoRun). */
 	undo?: boolean;
+	/** result : résultat d'une requête montré à l'utilisateur (query_show). */
+	result?: ChatResult | null;
+}
+
+/** Résultat d'une requête de l'assistant (ai.Result), montré sous sa réponse. */
+export interface ChatResult {
+	title?: string;
+	columns: string[] | null;
+	rows: string[][] | null;
+	total: number;
+	truncated?: boolean;
 }
 
 export type ToolPart = { kind: 'tool'; id: string; label: string; state: 'run' | 'ok' | 'error'; detail?: string; write?: boolean; target?: string };
 
-export type Part = { kind: 'text'; text: string } | ToolPart | { kind: 'notice'; text: string; error?: boolean };
+export type Part = { kind: 'text'; text: string } | ToolPart | { kind: 'notice'; text: string; error?: boolean } | { kind: 'result'; result: ChatResult };
 
 export type Reply = {
 	role: 'assistant';
@@ -94,6 +105,10 @@ export function applyEvent(items: Item[], ev: ChatEvent): Item[] {
 		}
 		case 'notice':
 			parts.push({ kind: 'notice', text: ev.text ?? '' });
+			break;
+		case 'result':
+			if (!ev.result) return items;
+			parts.push({ kind: 'result', result: ev.result });
 			break;
 		case 'done': {
 			// Fin de la réponse (aussi après une erreur ou un arrêt) : bilan.
@@ -182,7 +197,7 @@ export function maxRun(items: readonly Item[]): number {
 // --- Affichage d'une réponse ------------------------------------------------
 
 /** Morceaux d'une réponse : textes, notes, et suites d'appels d'outils regroupées (« 6 étapes »). */
-export type Segment = { kind: 'text'; text: string; at: number } | { kind: 'notice'; text: string; error?: boolean; at: number } | { kind: 'steps'; tools: (ToolPart & { recovered: boolean })[]; at: number };
+export type Segment = { kind: 'text'; text: string; at: number } | { kind: 'result'; result: ChatResult; at: number } | { kind: 'notice'; text: string; error?: boolean; at: number } | { kind: 'steps'; tools: (ToolPart & { recovered: boolean })[]; at: number };
 
 /**
  * Regroupe les appels d'outils qui se suivent. Une erreur d'outil suivie

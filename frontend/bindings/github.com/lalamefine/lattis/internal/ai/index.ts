@@ -3,5 +3,6 @@
 
 export type {
     Model,
+    Result,
     Usage
 } from "./models.js";

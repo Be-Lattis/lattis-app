@@ -19,7 +19,8 @@ import {
 	startRun,
 	stepsLabel,
 	suggestionsFor,
-	type Item
+	type Item,
+	type Reply
 } from './chat';
 
 describe('conversation de l’assistant', () => {
@@ -175,5 +176,15 @@ describe('Réessayer', () => {
 		expect(replyError([{ kind: 'notice', text: 'quota', error: true }, { kind: 'text', text: 'ok' }])).toBe('');
 		expect(retryLabel(12)).toBe('Réessayer dans 12 s');
 		expect(retryLabel(0)).toBe('Réessayer');
+	});
+});
+
+describe('Résultat montré', () => {
+	it('ajoute le résultat d’une requête à la réponse', () => {
+		let items = startRun([], 1, 'Quelle ville ?');
+		items = applyEvent(items, { run: 1, kind: 'result', result: { title: 'Meilleure ville', columns: ['Ville'], rows: [['Lyon']], total: 1 } });
+		const segs = segments((items[1] as Reply).parts);
+		expect(segs).toHaveLength(1);
+		expect(segs[0].kind).toBe('result');
 	});
 });

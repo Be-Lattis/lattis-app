@@ -11,6 +11,17 @@ export interface Model {
 }
 
 /**
+ * Result est un résultat montré dans la conversation.
+ */
+export interface Result {
+    "title"?: string;
+    "columns": string[] | null;
+    "rows": (string[] | null)[] | null;
+    "total": number;
+    "truncated"?: boolean;
+}
+
+/**
  * Usage compte les jetons d'un tour ou d'une conversation.
  */
 export interface Usage {

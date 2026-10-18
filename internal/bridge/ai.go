@@ -316,7 +316,14 @@ func (s *DocumentService) AISend(ctx context.Context, run int, text string, view
 		s.aiEmit(gen, run, e)
 	}
 	gctx := command.WithGroup(ctx, aiUndoGroup)
+	// Résultats des requêtes de l'assistant (query_show) : montrés à
+	// l'utilisateur dans la conversation.
+	gctx = ai.WithShow(gctx, func(res ai.Result) { emit(ai.Event{Kind: ai.EventResult, Result: &res}) })
 	msg := ai.Compose(text, ai.View{Sheet: view.Sheet, Table: view.Table, Selection: view.Selection}, notes)
+	// Premier message : la structure du classeur, pour répondre sans explorer.
+	if s.ai.session.Len() == 0 {
+		msg = ai.Structure(ctx, h) + msg
+	}
 	err := s.ai.session.Send(gctx, turn, msg, emit)
 
 	s.ai.mu.Lock()

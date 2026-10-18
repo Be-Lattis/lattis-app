@@ -39,6 +39,8 @@ type Event struct {
 	// Undo : la réponse peut être annulée d'un coup (done).
 	Changes int  `json:"changes,omitempty"`
 	Undo    bool `json:"undo,omitempty"`
+	// Result : résultat d'une requête montré à l'utilisateur (result).
+	Result *Result `json:"result,omitempty"`
 }
 
 // Executor exécute un appel d'outil et rend son résultat (texte, souvent du

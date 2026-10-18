@@ -101,7 +101,7 @@ func Tools(sharing string) []Tool {
 		Schema: map[string]any{"type": "object", "properties": map[string]any{
 			"table": map[string]any{"type": "string", "description": "nom du tableau"},
 		}, "required": []string{"table"}},
-	}, Tool{
+	}, showToolDef, Tool{
 		Name:        errorsTool,
 		Description: "Vérifie les colonnes calculées d'un tableau sans en montrer les valeurs : pour chacune, sa formule, le type de son résultat (majoritaire) et le nombre de cellules en erreur par code (#DIV/0!, #REF!, #NOM?, #VALEUR!, #N/A, #NOMBRE!, #CIRC!). À utiliser après avoir écrit une formule.",
 		Schema: map[string]any{"type": "object", "properties": map[string]any{
@@ -150,6 +150,8 @@ func Exec(host api.Host, sharing string) Executor {
 			return profile(ctx, host, args)
 		case errorsTool:
 			return formulaErrors(ctx, host, args)
+		case showTool:
+			return show(ctx, host, args, sharing)
 		}
 		cmd := allowed[name]
 		if cmd == nil {
@@ -412,6 +414,12 @@ func Label(name string, input json.RawMessage) string {
 	var args map[string]any
 	_ = json.Unmarshal(input, &args)
 	label := ""
+	if name == showTool {
+		if t, _ := args["title"].(string); t != "" {
+			return "Résultat : " + t
+		}
+		return "Résultat d'une requête"
+	}
 	if name == profileTool {
 		label = "Profil du tableau"
 	} else if name == errorsTool {
@@ -455,7 +463,9 @@ func System(sharing string) string {
 	return `Vous êtes l'assistant d'analyse de données de Lattis, un tableur relationnel de bureau : chaque tableau d'une feuille est une table SQLite, avec des colonnes typées (texte, entier, décimal, date, booléen). ` +
 		`Vous aidez l'utilisateur à construire une analyse pertinente : choisir les bons types, les clés, les colonnes calculées, les tableaux croisés dynamiques et les graphiques, et à comprendre ses données.
 
-Conventions : les feuilles, tableaux et colonnes se désignent par leur nom ; les lignes et colonnes de la feuille se comptent à partir de 1. Commencez par tables_list (et tables_profile au besoin) pour connaître le classeur avant de proposer quoi que ce soit.
+Conventions : les feuilles, tableaux et colonnes se désignent par leur nom ; les lignes et colonnes de la feuille se comptent à partir de 1. La structure du classeur (tableaux, colonnes et leurs types) est jointe au premier message dans une ligne « [Structure du classeur : …] » : servez-vous-en au lieu de tables_list et sheets_list, et ne relisez la structure (tables_get, tables_profile) qu'au besoin.
+Questions : pour répondre à une question sur les données (« quelle ville a le meilleur chiffre d'affaires ? », « combien de commandes en mars ? »), ne modifiez pas le classeur : écrivez une requête SQL de lecture et appelez query_show, en une étape si possible ; Lattis montre le résultat à l'utilisateur sous votre réponse. Ne créez de colonne, de tableau croisé, de graphique ou de cellule que si l'utilisateur le demande.
+
 Contexte : chaque message de l'utilisateur peut commencer par une ligne « [Contexte : feuille active « … », tableau « … », sélection …] » que Lattis ajoute d'elle-même : c'est ce que l'utilisateur regarde quand il écrit. « Ce tableau », « cette colonne », « la sélection » s'y rapportent. Une ligne « [Remarque : …] » vient aussi de Lattis (par exemple quand l'utilisateur a annulé vos modifications : tenez-en compte, ce que vous aviez fait n'existe plus). Ne recopiez pas ces lignes dans vos réponses.
 
 Formules : elles commencent par = et utilisent des fonctions proches d'Excel en français (outil formulas_functions), arguments séparés par ; et décimales avec une virgule. Dans un tableau, [Colonne] désigne la valeur de la ligne courante, [Colonne][-1] la ligne précédente, Tableau[Colonne] toute la colonne d'un autre tableau, Tableau[Colonne][n] la valeur de la n-ième ligne ; Cell[A1] une cellule libre de la feuille. Une formule saisie dans une cellule de données d'un tableau fait de toute la colonne une colonne calculée : pour en ajouter une, columns_insert puis cells_set de la formule dans la première ligne de données (position du tableau : tables_get). Après avoir écrit une formule, vérifiez-la avec formulas_errors.

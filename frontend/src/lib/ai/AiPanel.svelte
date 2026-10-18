@@ -290,6 +290,20 @@
 							{#each segments(it.parts) as seg (seg.at)}
 								{#if seg.kind === 'text'}
 									<div class="md"><Markdown blocks={parse(seg.text, true)} go={openOutside} anchors={false} /></div>
+								{:else if seg.kind === 'result'}
+									{@const r = seg.result}
+									<figure class="result">
+										{#if r.title}<figcaption>{r.title}</figcaption>{/if}
+										<div class="result-scroll">
+											<table>
+												<thead><tr>{#each r.columns ?? [] as c, k (k)}<th>{c}</th>{/each}</tr></thead>
+												<tbody>
+													{#each r.rows ?? [] as row, k (k)}<tr>{#each row as v, j (j)}<td>{v}</td>{/each}</tr>{/each}
+												</tbody>
+											</table>
+										</div>
+										{#if r.truncated}<p class="muted">{r.rows?.length ?? 0} premières lignes sur {r.total}</p>{:else if !r.total}<p class="muted">Aucune ligne</p>{/if}
+									</figure>
 								{:else if seg.kind === 'notice'}
 									<div class="notice" class:error={seg.error}>{seg.text}</div>
 								{:else}
@@ -388,6 +402,36 @@
 </aside>
 
 <style>
+	.result {
+		margin: 6px 0;
+	}
+	.result figcaption {
+		font-weight: 600;
+		margin-bottom: 4px;
+	}
+	.result-scroll {
+		max-height: 240px;
+		overflow: auto;
+		border: 1px solid #e5e7eb;
+		border-radius: 4px;
+	}
+	.result table {
+		border-collapse: collapse;
+		font-size: 12px;
+		width: 100%;
+	}
+	.result th,
+	.result td {
+		padding: 3px 8px;
+		border-bottom: 1px solid #eef0f2;
+		text-align: left;
+		white-space: nowrap;
+	}
+	.result th {
+		position: sticky;
+		top: 0;
+		background: #f5f6f7;
+	}
 	.ai-panel {
 		position: absolute;
 		top: 0;

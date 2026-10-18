@@ -97,6 +97,11 @@ export interface AIEventData {
      */
     "changes"?: number;
     "undo"?: boolean;
+
+    /**
+     * Result : résultat d'une requête montré à l'utilisateur (result).
+     */
+    "result"?: ai$0.Result | null;
 }
 
 /**
