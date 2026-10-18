@@ -46,7 +46,7 @@ L'onglet **SQL** liste les objets du classeur et exécute vos requêtes sur les 
 
 ![L'éditeur de scripts : coloration, linter en direct, référence de l'API](docs/captures/script-lua.png)
 
-L'onglet **SCRIPT** offre un vrai éditeur : coloration syntaxique, linter en direct (variables non définies, fautes de frappe dans l'API, `end` manquant) et une référence intégrée. Il donne accès à l'API `db.query`, `db.update`, `sheets.*`, `ui.*`… Les scripts tournent dans un bac à sable, et tout ce qu'ils modifient s'annule en un Ctrl+Z. → [Guide du scripting](docs/scripting-lua.md)
+L'onglet **SCRIPT** offre un vrai éditeur : coloration syntaxique, linter en direct (variables non définies, fautes de frappe dans l'API, `end` manquant) et une référence intégrée. Il donne accès à l'API `db.query`, `db.update`, `sheets.*`, `ui.*`… Les scripts tournent dans un bac à sable, et tout ce qu'ils modifient s'annule en un Ctrl+Z. Ceux d'un classeur reçu demandent votre accord à leur première exécution. → [Guide du scripting](docs/scripting-lua.md)
 
 ### Importer et transformer les données (façon Power Query)
 
@@ -149,7 +149,8 @@ internal/script/      moteur Lua en bac à sable
 internal/api/         commandes communes aux scripts et au serveur MCP
 internal/mcp/         serveur MCP local
 internal/transfer/    import / export xlsx et csv, impression
-internal/store/       SQLite : WAL, pool de lecture, file d'écriture unique
+internal/store/       SQLite : WAL, pool de lecture, file d'écriture unique, autorisateur du SQL de l'utilisateur
+internal/trust/       accords de l'utilisateur hors des classeurs (scripts par version, hôtes réseau)
 internal/demo/        générateur de fausses données et presets --demo
 internal/grid/        lecture par fenêtres (ancres + clé d'ordre)
 internal/order/       clés d'ordre fractionnaires (_pos)
