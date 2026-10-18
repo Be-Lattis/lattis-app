@@ -2,6 +2,7 @@ package canvas
 
 import (
 	"context"
+	"math"
 	"regexp"
 	"sort"
 	"strings"
@@ -29,9 +30,20 @@ func likeEscape(s string) string {
 // cellules libres, ligne par ligne. Les colonnes calculées ne sont pas
 // parcourues.
 func (m *Model) Find(ctx context.Context, sheet int64, text string) ([]Match, error) {
+	return m.FindIn(ctx, sheet, text, nil)
+}
+
+// FindIn cherche comme Find, limité au rectangle in quand il est donné
+// (recherche dans la sélection, comme Excel) ; nil : toute la feuille.
+func (m *Model) FindIn(ctx context.Context, sheet int64, text string, in *Rect) ([]Match, error) {
 	out := []Match{}
 	if text == "" {
 		return out, nil
+	}
+	// Toute la feuille : un rectangle sans bornes.
+	zone := Rect{R0: 0, C0: 0, R1: math.MaxInt32, C1: math.MaxInt32}
+	if in != nil {
+		zone = *in
 	}
 	pattern := likeEscape(text)
 	err := m.read(ctx, func(t *tx) error {
@@ -40,13 +52,19 @@ func (m *Model) Find(ctx context.Context, sheet int64, text string) ([]Match, er
 			return err
 		}
 		for _, tb := range tables {
+			if !zone.meets(tb) {
+				continue
+			}
 			// Un seul parcours du tableau : une condition par colonne saisie
 			// (le texte directement, les autres types par leur texte affiché).
 			var conds, sel []string
 			var args []any
 			var idx []int
 			for i, c := range tb.Cols {
-				if strings.Contains(strings.ToLower(c.Name), strings.ToLower(text)) {
+				if tb.Col+i < zone.C0 || tb.Col+i > zone.C1 {
+					continue
+				}
+				if zone.has(tb.Row, tb.Col+i) && strings.Contains(strings.ToLower(c.Name), strings.ToLower(text)) {
 					out = append(out, Match{tb.Row, tb.Col + i})
 				}
 				if c.Formula != "" || !canHold(c.Type, text) {
@@ -68,21 +86,26 @@ func (m *Model) Find(ctx context.Context, sheet int64, text string) ([]Match, er
 				}
 				idx = append(idx, i)
 			}
-			if len(conds) == 0 {
+			// Lignes de données dans la zone (rangs 1…).
+			first, last := max(zone.R0-tb.Row, 1), zone.R1-tb.Row
+			if len(conds) == 0 || first > last {
 				continue
 			}
 			// Rien de trouvé (cas le plus long : tout est parcouru) : pas de
 			// numérotation des lignes, qui coûte un tri de tout le tableau.
-			var found int
-			if err := t.row(`SELECT EXISTS (SELECT 1 FROM `+tb.view()+` WHERE `+strings.Join(conds, " OR ")+`)`, args...).Scan(&found); err != nil {
-				return err
-			}
-			if found == 0 {
-				continue
+			// Seulement sur toute la hauteur : une zone se lit par ses rangs.
+			if first == 1 && last >= tb.Bottom()-tb.Row {
+				var found int
+				if err := t.row(`SELECT EXISTS (SELECT 1 FROM `+tb.view()+` WHERE `+strings.Join(conds, " OR ")+`)`, args...).Scan(&found); err != nil {
+					return err
+				}
+				if found == 0 {
+					continue
+				}
 			}
 			q := `SELECT n, ` + strings.Join(conds, ", ") + ` FROM (SELECT row_number() OVER (ORDER BY _pos) AS n, ` +
-				strings.Join(sel, ", ") + ` FROM ` + tb.view() + `) WHERE ` + strings.Join(conds, " OR ") + ` LIMIT ?`
-			all := append(append(append([]any{}, args...), args...), MaxMatches)
+				strings.Join(sel, ", ") + ` FROM ` + tb.view() + `) WHERE n BETWEEN ? AND ? AND (` + strings.Join(conds, " OR ") + `) LIMIT ?`
+			all := append(append(append(append([]any{}, args...), first, last), args...), MaxMatches)
 			rs, err := t.query(q, all...)
 			if err != nil {
 				return err
@@ -106,7 +129,8 @@ func (m *Model) Find(ctx context.Context, sheet int64, text string) ([]Match, er
 			}
 			rs.Close()
 		}
-		rs, err := t.query(`SELECT row, col FROM _lattis_cells WHERE sheet = ? AND raw LIKE ? ESCAPE '\' LIMIT ?`, sheet, pattern, MaxMatches)
+		rs, err := t.query(`SELECT row, col FROM _lattis_cells WHERE sheet = ? AND raw LIKE ? ESCAPE '\'
+			AND row BETWEEN ? AND ? AND col BETWEEN ? AND ? LIMIT ?`, sheet, pattern, zone.R0, zone.R1, zone.C0, zone.C1, MaxMatches)
 		if err != nil {
 			return err
 		}
@@ -169,7 +193,14 @@ func sortMatches(ms []Match) {
 // comme au clavier (types, élargissement). Une seule étape d'annulation ;
 // renvoie le nombre de cellules modifiées.
 func (m *Model) Replace(ctx context.Context, sheet int64, text, by string) (int, error) {
-	matches, err := m.Find(ctx, sheet, text)
+	return m.ReplaceIn(ctx, sheet, text, by, nil)
+}
+
+// ReplaceIn remplace comme Replace, limité au rectangle in quand il est
+// donné (la sélection, ou la seule cellule trouvée pour « Remplacer ») ;
+// nil : toute la feuille.
+func (m *Model) ReplaceIn(ctx context.Context, sheet int64, text, by string, in *Rect) (int, error) {
+	matches, err := m.FindIn(ctx, sheet, text, in)
 	if err != nil || len(matches) == 0 {
 		return 0, err
 	}

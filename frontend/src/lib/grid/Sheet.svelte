@@ -24,6 +24,7 @@
 	import { panes, reveal, revealWhole, toGrid, type Pane } from './panes';
 	import { hiddenLines, mergeAt, mergeList, parseList, skipHidden, validate, type MergeRange } from './sheetfmt';
 	import { expandRange, extendCorner, isSingleCell, mergeRect, rangeOf, stepCell } from './mergesel';
+	import { findKey, findZone, inZone, nextHit, type Zone } from './findzone';
 	import FormatDialog, { type FormatTab } from './FormatDialog.svelte';
 	import TextToColumns from './TextToColumns.svelte';
 	import type { TextColumnsOptions, TextColumnsPreview } from './textcols';
@@ -366,9 +367,10 @@
 		setLinesHidden?(rows: boolean, i0: number, i1: number, hide: boolean): Promise<unknown>;
 		/** Fige les volets (0, 0 : les libère). */
 		setFreeze?(rows: number, cols: number): Promise<unknown>;
-		find?(text: string): Promise<{ row: number; col: number }[]>;
-		/** Remplace partout ; renvoie le nombre de cellules modifiées. */
-		replace?(text: string, by: string): Promise<number>;
+		/** Cherche un texte dans la zone (la sélection), ou dans toute la feuille (null). */
+		find?(text: string, zone: Zone | null): Promise<{ row: number; col: number }[]>;
+		/** Remplace dans la zone (null : partout) ; renvoie le nombre de cellules modifiées. */
+		replace?(text: string, by: string, zone: Zone | null): Promise<number>;
 		/** Remplace les règles de mise en forme conditionnelle d'une colonne. */
 		/** Actualise la requête d'import qui charge le tableau. */
 		refreshTable?(table: SheetTable): Promise<unknown>;
@@ -2080,7 +2082,7 @@
 		}
 
 		// Recherche : toutes les occurrences visibles, en léger (l'active reste encadrée).
-		if (finder && matches.length && matchText === finder.text) {
+		if (finder && matches.length && matchKey === findKey(finder.text, finder.zone)) {
 			ctx.fillStyle = C.found;
 			for (const m of matches)
 				if (m.row >= r0 && m.row <= r1 && m.col >= c0 && m.col <= c1) ctx.fillRect(cx(m.col), ry(m.row), cax().size(m.col), rh(m.row));
@@ -2560,6 +2562,12 @@
 		ctx.strokeStyle = C.active;
 		ctx.lineWidth = 2;
 		ctx.strokeRect(cx(0) + selBox.x + 0.5, ry(0) + selBox.y + 0.5, selBox.w - 1, selBox.h - 1);
+		// Rechercher dans la sélection : la cellule trouvée, encadrée (la sélection ne bouge pas).
+		if (finder?.zone && finder.at && inZone(finder.at, finder.zone)) {
+			const f = finder.at;
+			ctx.lineWidth = 2;
+			ctx.strokeRect(cx(f.col) + 2, ry(f.row) + 2, cax().size(f.col) - 4, rh(f.row) - 4);
+		}
 		if (ar.r1 >= r0 - 1 && ar.r0 <= r1 + 1) {
 			ctx.strokeStyle = C.active;
 			ctx.lineWidth = 1;
@@ -3705,6 +3713,7 @@
 	}
 
 	function refreshStatus() {
+		syncFinderZone();
 		if (message !== shownMessage) {
 			shownMessage = message;
 			clearTimeout(messageTimer);
@@ -6782,51 +6791,110 @@
 
 	// --- Rechercher / remplacer -------------------------------------------------
 
-	let finder = $state<{ replace: boolean; text: string; by: string; info: string } | null>(null);
+	// Comme Excel, une sélection de plusieurs cellules borne la recherche
+	// (zone) : elle reste affichée et la cellule trouvée (at) y est
+	// encadrée ; une seule cellule : toute la feuille, la cellule active va
+	// sur chaque occurrence.
+	let finder = $state<{ replace: boolean; text: string; by: string; info: string; zone: Zone | null; at: { row: number; col: number } | null } | null>(null);
 	let findInput = $state<HTMLInputElement>();
 	let matches: { row: number; col: number }[] = [];
-	let matchText = '';
+	// Recherche des occurrences en mémoire (texte et zone, findKey).
+	let matchKey = '';
 	// Barre ouverte ou fermée : redessiner le surlignage des occurrences.
 	$effect(() => {
 		void finder;
 		schedule();
 	});
 
+	/** Zone de recherche : la sélection si elle compte plusieurs cellules, sinon null (toute la feuille). */
+	const searchZone = () => findZone(selection(), singleSelection());
+
+	/** Suit la sélection : zone affichée dans la barre, cellule trouvée oubliée hors zone. */
+	function syncFinderZone() {
+		if (!finder) return;
+		const z = searchZone();
+		const old = finder.zone;
+		if (findKey('', z) !== findKey('', old)) finder.zone = z;
+		if (finder.at && (z ? !inZone(finder.at, z) : finder.at.row !== active.row || finder.at.col !== active.col)) finder.at = null;
+	}
+
 	/** Ouvre la barre de recherche (replace : avec le champ Remplacer par). */
 	export function openFinder(replace: boolean) {
 		if (!source.find) return;
-		finder = { replace, text: finder?.text ?? '', by: finder?.by ?? '', info: '' };
+		finder = { replace, text: finder?.text ?? '', by: finder?.by ?? '', info: '', zone: searchZone(), at: null };
 		requestAnimationFrame(() => findInput?.select());
+	}
+
+	/** Occurrences du texte cherché dans la zone (relues si le texte ou la zone a changé). */
+	async function findAll(zone: Zone | null) {
+		if (!finder || !source.find) return;
+		const k = findKey(finder.text, zone);
+		if (k !== matchKey) {
+			matches = await source.find(finder.text, zone);
+			matchKey = k;
+		}
 	}
 
 	async function findNext(back = false) {
 		if (!finder || !source.find || !finder.text) return;
-		if (finder.text !== matchText) {
-			matches = await source.find(finder.text);
-			matchText = finder.text;
-		}
+		const zone = searchZone();
+		finder.zone = zone;
+		await findAll(zone);
+		if (!finder) return;
 		if (matches.length === 0) {
-			finder.info = 'Aucune cellule trouvée';
+			finder.at = null;
+			finder.info = zone ? 'Aucune cellule trouvée dans la sélection' : 'Aucune cellule trouvée';
+			schedule();
 			return;
 		}
-		const { row, col } = active;
-		const after = (m: { row: number; col: number }) => m.row > row || (m.row === row && m.col > col);
-		const before = (m: { row: number; col: number }) => m.row < row || (m.row === row && m.col < col);
-		const i = back ? matches.findLastIndex(before) : matches.findIndex(after);
-		const k = i >= 0 ? i : back ? matches.length - 1 : 0;
-		moveTo(matches[k].row, matches[k].col);
+		// Dans la sélection : à partir de la dernière cellule trouvée (la
+		// sélection ne bouge pas) ; sur la feuille : de la cellule active.
+		const from = zone ? (finder.at && inZone(finder.at, zone) ? finder.at : null) : active;
+		const k = nextHit(matches, from, back);
+		const m = matches[k];
+		if (zone) {
+			finder.at = { row: m.row, col: m.col };
+			ensureVisible(m.row, m.col);
+			schedule();
+		} else {
+			moveTo(m.row, m.col);
+			finder.at = { row: active.row, col: active.col };
+		}
 		finder.info = `${k + 1} sur ${matches.length}${matches.length >= 5000 ? '+' : ''}`;
+	}
+
+	/** Remplace la cellule trouvée (si elle contient le texte), puis passe à la suivante (Excel). */
+	async function replaceOne() {
+		if (!finder || !source.replace || !finder.text) return;
+		const zone = searchZone();
+		await findAll(zone);
+		if (!finder) return;
+		const at = zone ? finder.at : active;
+		if (at && inZone(at, zone) && matches.some((m) => m.row === at.row && m.col === at.col)) {
+			try {
+				await source.replace(finder.text, finder.by, { r0: at.row, c0: at.col, r1: at.row, c1: at.col });
+			} catch (e) {
+				finder.info = String(e instanceof Error ? e.message : e);
+				return;
+			}
+			matchKey = '';
+		}
+		await findNext();
 	}
 
 	async function replaceAll() {
 		if (!finder || !source.replace || !finder.text) return;
 		const { text, by } = finder;
+		const zone = searchZone();
 		try {
-			const n = await source.replace(text, by);
-			finder.info = n ? `${n} cellule${n > 1 ? 's' : ''} remplacée${n > 1 ? 's' : ''} (Ctrl+Z pour annuler)` : 'Aucune cellule trouvée';
-			matchText = '';
+			const n = await source.replace(text, by, zone);
+			if (!finder) return;
+			const where = zone ? ' dans la sélection' : '';
+			finder.info = n ? `${n} cellule${n > 1 ? 's' : ''} remplacée${n > 1 ? 's' : ''}${where} (Ctrl+Z pour annuler)` : `Aucune cellule trouvée${where}`;
+			finder.at = null;
+			matchKey = '';
 		} catch (e) {
-			finder.info = String(e instanceof Error ? e.message : e);
+			if (finder) finder.info = String(e instanceof Error ? e.message : e);
 		}
 	}
 
@@ -7897,9 +7965,13 @@
 				{#if finder.replace}
 					<span>Remplacer par</span>
 					<input bind:value={finder.by} onkeydown={onFinderKey} spellcheck="false" />
+					<button onclick={replaceOne} title="Remplace la cellule trouvée, puis passe à la suivante">Remplacer</button>
 					<button onclick={replaceAll}>Remplacer tout</button>
 				{:else if source.replace}
 					<button class="link" onclick={() => finder && (finder.replace = true)}>Remplacer…</button>
+				{/if}
+				{#if finder.zone}
+					<span class="zone" title="La sélection borne la recherche ; sélectionnez une seule cellule pour chercher dans toute la feuille">Dans la sélection</span>
 				{/if}
 				<span class="muted">{finder.info}</span>
 				<button onclick={() => {
@@ -8845,6 +8917,14 @@
 	}
 	.finder .muted {
 		color: #6b7280;
+	}
+	.finder .zone {
+		padding: 1px 7px;
+		border-radius: 10px;
+		background: #d3e7dc;
+		color: #14532d;
+		font-size: 0.92em;
+		white-space: nowrap;
 	}
 	.bench {
 		padding: 4px 10px;

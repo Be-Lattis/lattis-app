@@ -927,9 +927,9 @@
 		unmergeCells: (r0, c0, r1, c1) => DocumentService.UnmergeCells(sheetId, r0, c0, r1, c1).then(reload),
 		setLinesHidden: (rows, i0, i1, hide) => DocumentService.SetLinesHidden(sheetId, rows, i0, i1, hide).then(reload),
 		setFreeze: (rows, cols) => DocumentService.SetFreeze(sheetId, rows, cols).then(reload),
-		find: async (text) => (await DocumentService.Find(sheetId, text)) ?? [],
-		replace: async (text, by) => {
-			const n = await DocumentService.Replace(sheetId, text, by);
+		find: async (text, zone) => (await DocumentService.Find(sheetId, text, zone)) ?? [],
+		replace: async (text, by, zone) => {
+			const n = await DocumentService.Replace(sheetId, text, by, zone);
 			await reload();
 			return n;
 		}
