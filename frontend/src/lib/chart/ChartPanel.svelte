@@ -158,6 +158,16 @@
 				onchange={(v) => set({ mapMode: v === 'points' ? undefined : v })}
 			/>
 		</label>
+		<div class="line mapview">
+			<span>Vue</span>
+			{#if config.mapView}
+				<span class="vv">Enregistrée (zoom {config.mapView.zoom.toLocaleString('fr-FR', { maximumFractionDigits: 1 })})</span>
+				<button type="button" title="Revenir à la vue ajustée aux points" onclick={() => set({ mapView: undefined })}>Recentrer</button>
+			{:else}
+				<span class="vv">Ajustée aux points</span>
+			{/if}
+		</div>
+		<p class="hint">Carte sélectionnée : la molette zoome, glisser déplace la carte (Alt+glisser déplace le graphique), double-clic ou + / − zooment.</p>
 		<p class="hint">Fond de carte © OpenStreetMap (tile.openstreetmap.org), soumis à l’autorisation réseau du classeur. La valeur règle la taille des points, ou le poids de chacun dans la densité.</p>
 		{:else}
 		<label class="line">Axe X
@@ -381,6 +391,24 @@
 	.hint {
 		margin: 0;
 		color: #6b7280;
+	}
+	.mapview {
+		grid-template-columns: 80px 1fr auto;
+	}
+	.mapview .vv {
+		color: #374151;
+	}
+	.mapview button {
+		padding: 2px 8px;
+		border: 1px solid #c4c8cd;
+		border-radius: 4px;
+		background: #fff;
+		font: inherit;
+		cursor: pointer;
+	}
+	.mapview button:hover {
+		border-color: #217346;
+		color: #217346;
 	}
 	.seg {
 		display: flex;

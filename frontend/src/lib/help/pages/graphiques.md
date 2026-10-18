@@ -25,6 +25,8 @@ Histogramme, barres horizontales, courbes, aires, secteurs, anneau, nuage de poi
 
 Une carte lit soit deux colonnes (latitude, longitude), soit une seule colonne qui contient les deux. Les fonds de carte viennent d'OpenStreetMap : ils demandent une connexion, et l'accès au serveur de tuiles est soumis à votre accord.
 
+Pour zoomer, sélectionnez la carte (un clic) : la molette zoome autour du pointeur, glisser déplace la carte, un double-clic rapproche (Maj+double-clic éloigne), et les touches **+** et **−** zooment aussi. Tant que la carte n'est pas sélectionnée, la molette fait défiler la feuille ou le document ; Alt+glisser déplace le graphique sélectionné. Les boutons **+**, **−** et **recentrer** apparaissent en haut à droite au survol. La vue choisie est enregistrée avec le classeur (Ctrl+Z la défait) ; **recentrer**, ici ou dans le volet du graphique, revient à la vue ajustée aux points.
+
 ## Copier un graphique
 
 Un graphique copié se colle sur une autre feuille ou dans un [document](onglets), où il reste branché sur ses données.

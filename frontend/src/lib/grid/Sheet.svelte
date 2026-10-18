@@ -194,6 +194,8 @@
 		mapCoords?: string;
 		/** Carte qui attend le choix de ses coordonnées (carré grisé). */
 		mapDraft?: boolean;
+		/** Carte : vue choisie (centre et zoom) ; absente, ajustée aux points. */
+		mapView?: { lat: number; lon: number; zoom: number };
 		/** Fréquences : nombre de classes (absent : automatique). */
 		bins?: number;
 		offX?: number;
@@ -4447,6 +4449,14 @@
 		return { row, col };
 	}
 
+	/** Carte zoomée ou déplacée (MapChart) : vue enregistrée dans sa configuration (annulable). */
+	function setMapView(id: number, v: ChartConfig['mapView'] | null) {
+		const ch = charts.find((c) => c.id === id);
+		if (!ch || !source.setChart) return;
+		const set = source.setChart;
+		writing = writing.catch(() => undefined).then(() => set(id, { ...ch.config, mapView: v ?? undefined }).then(undefined, (err) => say(String(err?.message ?? err))));
+	}
+
 	function pasteChart(cfg: ChartConfig) {
 		if (!source.createChart) return;
 		const create = source.createChart;
@@ -8005,7 +8015,7 @@
 						{#if ch.error}
 							<p class="chart-error">Graphique : {ch.error}</p>
 						{:else}
-							<Chart kind={ch.config.kind} labels={ch.labels} series={ch.series} width={box.w} height={box.h} style={ch.config} {animate} grow={grownCharts.has(ch.id)} />
+							<Chart kind={ch.config.kind} labels={ch.labels} series={ch.series} width={box.w} height={box.h} style={ch.config} {animate} grow={grownCharts.has(ch.id)} interactive={selChart === ch.id} onview={(v) => setMapView(ch.id, v)} />
 						{/if}
 						{#if selChart === ch.id}
 							{#each ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] as dir (dir)}

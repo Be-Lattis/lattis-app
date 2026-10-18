@@ -11,6 +11,7 @@
 	import { boxGroups, histogramBins, shade, waterfallSteps, type BoxStats } from './shapes';
 	import ChartFree from './ChartFree.svelte';
 	import MapChart from './MapChart.svelte';
+	import type { MapCam } from './mapview';
 	import { ease, lerpSeries, progress, reducedMotion, sameSeries } from '../grid/anim';
 
 	export interface Series {
@@ -38,6 +39,8 @@
 		mapMode?: string;
 		/** Carte qui attend le choix de ses coordonnées : carré grisé. */
 		mapDraft?: boolean;
+		/** Carte : vue choisie (centre et zoom) ; absente, ajustée aux points. */
+		mapView?: MapCam | null;
 		/** Fréquences : nombre de classes (0 ou absent : automatique). */
 		bins?: number;
 	}
@@ -53,9 +56,13 @@
 		animate?: boolean;
 		/** Graphique qui vient de naître d'une modification : il pousse depuis zéro. */
 		grow?: boolean;
+		/** Carte sélectionnée : molette, glisser et clavier la zooment (voir MapChart). */
+		interactive?: boolean;
+		/** Carte : vue choisie par l'utilisateur, à enregistrer (null : recentrée). */
+		onview?: (v: MapCam | null) => void;
 	}
 
-	let { kind, labels: rawLabels, series: target, width, height, style = {}, animate = false, grow = false }: Props = $props();
+	let { kind, labels: rawLabels, series: target, width, height, style = {}, animate = false, grow = false, interactive = false, onview }: Props = $props();
 
 	// Séries affichées : celles reçues, ou en chemin vers elles (choix de Louis :
 	// le graphique se remplit après une modification, pas après une
@@ -365,7 +372,7 @@
 </script>
 
 {#if kind === 'map'}
-	<MapChart labels={rawLabels} series={target} {width} {height} {style} />
+	<MapChart labels={rawLabels} series={target} {width} {height} {style} {interactive} {onview} />
 {:else}
 	<svg {width} {height} viewBox="0 0 {width} {height}" role="img" aria-label={style.title || 'Graphique'}>
 		<rect {width} {height} fill="#fff" />

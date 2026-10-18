@@ -51,8 +51,19 @@ type ChartConfig struct {
 	// MapDraft : carte qui attend le choix de ses coordonnées (carré grisé,
 	// rien n'est lu ; ChartInfo.Guess propose des colonnes).
 	MapDraft bool `json:"mapDraft,omitempty"`
+	// MapView : carte, vue choisie par l'utilisateur (centre et zoom) ;
+	// absente, la vue s'ajuste aux points.
+	MapView *MapView `json:"mapView,omitempty"`
 	// Bins : histogramme de fréquences, nombre de classes (0 : automatique).
 	Bins int `json:"bins,omitempty"`
+}
+
+// MapView : vue d'une carte, centre (degrés) et niveau de zoom (fractionnaire,
+// celui des tuiles OpenStreetMap : 0 montre le monde entier).
+type MapView struct {
+	Lat  float64 `json:"lat"`
+	Lon  float64 `json:"lon"`
+	Zoom float64 `json:"zoom"`
 }
 
 // ChartSeries est une série calculée (nil : valeur absente).
