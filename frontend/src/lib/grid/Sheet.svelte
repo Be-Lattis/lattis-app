@@ -31,7 +31,7 @@
 	import { explainError } from './errors';
 	import { freeDisplay } from './freecell';
 	import { bandAt, bandLabel, bandRefusal, hiddenBand } from './hidden';
-	import { pivotLayer } from './pivotformat';
+	import { pivotLayer, pivotValueText } from './pivotformat';
 	import { canFoldAll, foldAll, foldTarget, pivotBoxHit, pivotBoxLeft, pivotLabelOffset, PIVOT_BOX, setFolded, type PivotRowInfo } from './pivottree';
 	import { fillSeries } from './fill';
 	import {
@@ -2280,7 +2280,7 @@
 					const st = resolveStyle(styleAt(p.row + i, c, undefined), lineRule(p.row + i, c, ruleValue(v), v));
 					const style = bold ? { ...st, b: st?.b ?? true } : st;
 					const ind = pivotLabelOffset(info);
-					drawText(formatCell(v, undefined, st), cx(c) + ind, ry(p.row + i), cax().size(c) - ind, st?.al ?? (j > 0 && i > 0 ? 'right' : 'left'), style, C.text);
+					drawText(pivotValueText(formatCell(v, undefined, st), i, j), cx(c) + ind, ry(p.row + i), cax().size(c) - ind, st?.al ?? (j > 0 && i > 0 ? 'right' : 'left'), style, C.text);
 				});
 			// ▾ des étiquettes des lignes : trier et filtrer le champ (Excel) ; en
 			// arborescence, un seul ▾ sur « Étiquettes de lignes » (choix du champ dans le menu).
@@ -3666,7 +3666,11 @@
 		if (count === 0) return '';
 		const parts = [];
 		// Comme Excel : au format de la cellule active, sinon arrondies.
-		const st = styleAt(active.row, active.col);
+		let st = styleAt(active.row, active.col);
+		const e = tableAt(active.row, active.col);
+		const col = e?.t.columns[active.col - e.t.col];
+		// Colonne décimale sans format : deux décimales, comme ses cellules.
+		if (col && st?.nf === undefined && st?.dp === undefined && (col.type === 'decimal' || (col.type === 'formula' && col.result === 'decimal'))) st = { ...st, dp: 2 };
 		if (nums) parts.push(`Moyenne : ${formatStat(sum / nums, st)}`);
 		parts.push(`Nb : ${count.toLocaleString('fr-FR')}`);
 		if (nums) parts.push(`Somme : ${formatStat(sum, st)}`);
@@ -6507,8 +6511,10 @@
 		if (e.key !== 'Enter') return;
 		e.preventDefault();
 		const name = el.value.trim();
-		if (name !== t.name && goToName(name)) return;
+		// Le champ revient au nom du tableau (aller ailleurs ne le change pas
+		// toujours : même tableau, la valeur liée ne bouge pas).
 		el.value = t.name;
+		if (name !== t.name && goToName(name)) return;
 		wrap.focus();
 		if (!source.renameTable || name === t.name) return;
 		if (a1Like(name)) {
@@ -6544,7 +6550,11 @@
 		const text = el.value.trim();
 		// Une autre cellule (Prix[3], Ventes[Prix][2], Cell[F10], A1:C3) : y
 		// aller ; un nom seul (même « Q1 ») renomme la colonne.
-		if (text !== tableBox?.col && /[[:]/.test(text) && goToName(text)) return;
+		if (text !== tableBox?.col && /[[:]/.test(text)) {
+			el.value = tableBox?.col ?? '';
+			if (goToName(text)) return;
+			el.value = text;
+		}
 		const name = text.replace(/\[.*$/, '').trim();
 		wrap.focus();
 		if (name && name !== en.t.columns[c - en.t.col].name) write(en.t.row, c, name);
@@ -6690,7 +6700,7 @@
 			if (p) {
 				// Comme affichées (format de nombre du TCD), comme Excel les copie.
 				const v = p.cells[r - p.row]?.[c - p.col] ?? '';
-				return v === '' ? '' : formatCell(v, undefined, styleAt(r, c));
+				return v === '' ? '' : pivotValueText(formatCell(v, undefined, styleAt(r, c)), r - p.row, c - p.col);
 			}
 			for (const sp of spills) {
 				const v = sp.rows[r - sp.row]?.[c - sp.col];
