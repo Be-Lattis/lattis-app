@@ -985,7 +985,8 @@
 		const to = frameTarget();
 		const same = (a: Box, b: Box) => a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
 		const far = selShown && (Math.abs(to.x - selShown.x) > viewW * 2 || Math.abs(to.y - selShown.y) > viewH * 2);
-		if (!selShown || !motion() || now < noAnimUntil || far || lines) {
+		// Largeur ou hauteur tirée : le cadre suit la grille sans glisser derrière.
+		if (!selShown || !motion() || now < noAnimUntil || far || lines || resizing || rowResizing) {
 			selAnim = null;
 			selShown = to;
 			return to;
@@ -6870,6 +6871,7 @@
 				if (ev) moving.copy = ev.ctrlKey || ev.metaKey;
 				dropMove();
 			}
+			if (rowResizing || resizing) noAnimUntil = performance.now() + 400;
 			if (rowResizing) {
 				const { row, height, startH } = rowResizing;
 				rowResizing = null;
