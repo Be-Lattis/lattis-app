@@ -6,7 +6,7 @@
 	import { modal } from '#lib/ui/focus.js';
 	import { onMount } from 'svelte';
 	import { findSetting, settingNote, settingSections, visibleSections } from './settings';
-	import { loadSettings, setSetting, userSettings } from './settings.svelte.js';
+	import { loadSettings, mcpAvailable, setSetting, userSettings } from './settings.svelte.js';
 
 	interface Props {
 		onclose: () => void;
