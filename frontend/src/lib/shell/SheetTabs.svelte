@@ -380,8 +380,10 @@
 				role="menuitem"
 				disabled={!onrename}
 				onclick={() => {
+					// La feuille d'abord : ms se relit sur le menu, que la fermeture efface.
+					const sheet = ms;
 					closeMenu();
-					if (ms) startRename(ms);
+					if (sheet) startRename(sheet);
 				}}><span class="ic"><Icon name="rename" size={16} /></span>Renommer</button
 			>
 			<button
