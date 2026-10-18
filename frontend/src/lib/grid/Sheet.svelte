@@ -238,6 +238,10 @@
 		keyHint?: boolean;
 		/** Requête d'import qui charge le tableau (source externe ou autre tableau). */
 		query?: { id: number; name: string };
+		/** Classeur partagé : tableau publié sur le serveur, ou resté privé (sur ce poste). */
+		shared?: 'published' | 'private';
+		/** Tableau publié en lecture seule : le message à afficher (« Classeur publié en lecture seule »). */
+		readOnly?: string;
 		columns: Column[];
 	}
 
@@ -2943,6 +2947,13 @@
 		if (e.t.key === i) {
 			ctx.fillText('🔑 ', x + cw - 6 - iconW, y + h / 2);
 			iconW += ctx.measureText('🔑 ').width;
+		}
+		// Classeur partagé, première colonne : tableau privé (resté sur ce
+		// poste) ou publié en lecture seule.
+		const share = i === 0 ? (e.t.shared === 'private' ? 'local' : e.t.readOnly ? 'readonly' : null) : null;
+		if (share) {
+			drawIcon(ctx, share, x + cw - 6 - iconW - ICON - 2, y + (h - ICON) / 2, ICON, C.icon, C.active, 1.3);
+			iconW += ICON + 4;
 		}
 		if (hasKeyHint(e, i)) {
 			// Clé proposée : la même clé, grisée et pâle ; un clic la pose.
@@ -6034,6 +6045,12 @@
 	function startEdit(byTyping: boolean, initial?: string) {
 		if (locked) {
 			say(locked);
+			return;
+		}
+		// Tableau publié en lecture seule (classeur partagé figé, hors ligne).
+		const ro = tableAt(active.row, active.col)?.t.readOnly;
+		if (ro) {
+			say(ro);
 			return;
 		}
 		if (pivotAt(active.row, active.col)) {

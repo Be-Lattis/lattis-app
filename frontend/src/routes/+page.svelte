@@ -35,6 +35,12 @@
 	import type { DocFormat } from '#lib/doc/format.js';
 	import QueryHost from '#lib/query/QueryHost.svelte';
 	import LattisHost from '#lib/remote/LattisHost.svelte';
+	import ShareDialog from '#lib/remote/ShareDialog.svelte';
+	import OpenRemoteDialog from '#lib/remote/OpenRemoteDialog.svelte';
+	import ShareBanner from '#lib/remote/ShareBanner.svelte';
+	import { canRepublish } from '#lib/remote/share.js';
+	import { requestLogin } from '#lib/remote/lattis.svelte.js';
+	import type { State as ShareState } from '#bindings/internal/remote/workbook/models.js';
 	import type { ButtonConfig } from '#lib/grid/buttons.js';
 	import type { UICommand } from '#bindings/internal/bridge/models.js';
 	import { typeLabel, type ColumnType } from '#lib/grid/format.js';
@@ -113,6 +119,12 @@
 	let dialogs = $state<DialogSpec[]>([]);
 	let mcpOpen = $state(false);
 	let settingsOpen = $state(false);
+	// Classeur partagé sur un Serveur Lattis : état (bandeau, Fichier ›
+	// Republier), boîtes Partager / Republier et Ouvrir depuis un serveur.
+	let share = $state<ShareState | null>(null);
+	let shareDlg = $state<{ republish: boolean } | null>(null);
+	let openRemote = $state(false);
+	let shareReloading = $state(false);
 	// Données › Obtenir des données : requêtes d'import (lib/query).
 	let queryHost = $state<ReturnType<typeof QueryHost>>();
 	// Révision › Protéger : boîte du mot de passe (protéger, ou ôter une
@@ -150,6 +162,34 @@
 		help = await DocumentService.FormulaHelp();
 		scripts = (await DocumentService.Scripts()) ?? [];
 		favorites = (await DocumentService.Favorites()) ?? [];
+		share = await DocumentService.ShareState().catch(() => null);
+	}
+
+	/** Bandeau « Nouvelle version disponible » : recharge la version publiée (ajouts locaux gardés). */
+	async function reloadShare() {
+		shareReloading = true;
+		try {
+			docState = await DocumentService.ShareReload();
+			await reload();
+			await keepSheet();
+			notice = `Version ${share?.version ?? ''} chargée`;
+		} catch (e) {
+			notice = err(e);
+		} finally {
+			shareReloading = false;
+		}
+	}
+
+	/** Classeur ouvert depuis un serveur (cache local). */
+	async function openedRemote(r: { state: DocState }) {
+		docState = r.state;
+		view = 'grid';
+		sheetId = 1;
+		mode = 'doc';
+		await reload();
+		await keepSheet();
+		workbookReady();
+		await loadRecent();
 	}
 
 	const loadRecent = async () => (recent = (await DocumentService.Recent().catch(() => null)) ?? []);
@@ -218,6 +258,7 @@
 		await DocumentService.CloseDocument();
 		docState = { open: false, path: '', title: '', dirty: false, undo: '', redo: '' };
 		layout = null;
+		share = null;
 		sheetStatus = null;
 		view = 'grid';
 		mode = 'closed';
@@ -409,6 +450,12 @@
 					});
 			else if (said) notice = said;
 		});
+		// Classeur partagé : connexion perdue ou retrouvée, nouvelle version
+		// publiée (tableaux en lecture seule ou non : mise en page relue).
+		const offShare = Events.On('share:changed', (e: { data?: ShareState }) => {
+			if (e?.data) share = e.data;
+			if (mode === 'doc') reload().catch(() => {});
+		});
 		const offUI = Events.On('ui:command', (e: { data: UICommand }) => {
 			uiCommand(e.data).catch((x) => (notice = err(x)));
 		});
@@ -527,6 +574,7 @@
 			off();
 			offUI();
 			offOpen();
+			offShare();
 			window.removeEventListener('keydown', keys);
 			window.removeEventListener('beforeunload', leave);
 			window.removeEventListener('keydown', noReload, true);
@@ -547,6 +595,14 @@
 					break;
 				case 'open':
 					await openPath('');
+					break;
+				case 'openRemote':
+					openRemote = true;
+					break;
+				case 'share':
+				case 'republish':
+					if (mode !== 'doc') return;
+					shareDlg = { republish: a === 'republish' };
 					break;
 				case 'close':
 					await closeDoc();
@@ -816,6 +872,8 @@
 						key: t.key >= 0 ? t.key : undefined,
 						keyHint: t.keyHint || undefined,
 						query: t.queryId ? { id: t.queryId, name: t.queryName } : undefined,
+						shared: (t.shared || undefined) as 'published' | 'private' | undefined,
+						readOnly: t.readOnly || undefined,
 						columns: (t.columns ?? []).map((c) => ({
 							name: c.name,
 							type: (c.formula ? 'formula' : c.type) as ColumnType,
@@ -1149,7 +1207,13 @@
 		onzoom={data && view === 'grid' && !activePage ? setZoom : undefined}
 		cellStyle={activeDoc ? docFmt?.style : sheetStatus?.style}
 		merged={!!sheetStatus?.merged}
+		shared={mode === 'doc' && !!share?.shared}
+		republish={mode === 'doc' && canRepublish(share)}
 	/>
+
+	{#if mode === 'doc'}
+		<ShareBanner {share} busy={shareReloading} onreload={reloadShare} onlogin={() => share && requestLogin(share.server)} />
+	{/if}
 
 	<main>
 		{#if failure}
@@ -1417,6 +1481,29 @@
 	{/if}
 	{#if settingsOpen}
 		<SettingsDialog onclose={() => (settingsOpen = false)} />
+	{/if}
+	{#if shareDlg && mode === 'doc'}
+		<ShareDialog
+			republish={shareDlg.republish}
+			{share}
+			title={docState.title}
+			ondone={(st) => {
+				const again = shareDlg?.republish;
+				shareDlg = null;
+				if (!st) return;
+				share = st;
+				notice = again ? `Version ${st.version} publiée` : `Classeur publié sur ${st.serverName || st.server} (${st.mode === 'frozen' ? 'figé' : 'collaboratif'})`;
+				reload().catch((e) => (notice = err(e)));
+			}}
+		/>
+	{/if}
+	{#if openRemote}
+		<OpenRemoteDialog
+			ondone={(r) => {
+				openRemote = false;
+				if (r) openedRemote(r).catch((e) => (notice = err(e)));
+			}}
+		/>
 	{/if}
 	<LattisHost />
 	{#if protecting}
