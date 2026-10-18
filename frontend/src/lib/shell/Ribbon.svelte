@@ -68,7 +68,7 @@
 	}
 	const FONTS_W = 134; // largeur des listes Police et Taille (fit.ts)
 
-	export type FileAction = 'new' | 'open' | 'openRemote' | 'share' | 'republish' | 'save' | 'saveAs' | 'import' | 'export' | 'exportXlsx' | 'print' | 'pdf' | 'close' | 'demo' | 'mcp' | 'settings' | 'help';
+	export type FileAction = 'new' | 'open' | 'openRemote' | 'share' | 'rights' | 'republish' | 'save' | 'saveAs' | 'import' | 'export' | 'exportXlsx' | 'print' | 'pdf' | 'close' | 'demo' | 'mcp' | 'settings' | 'help';
 
 	export type DataAction = 'csv' | 'xlsx' | 'json' | 'parquet' | 'sqlite' | 'postgres' | 'mysql' | 'sqlserver' | 'lattis' | 'web' | 'table' | 'queries' | 'refreshAll';
 
@@ -155,9 +155,11 @@
 		/** Classeur partagé sur un Serveur Lattis (Fichier › Partager masqué), et Fichier › Republier permis. */
 		shared?: boolean;
 		republish?: boolean;
+		/** Fichier › Partager… (droits du classeur publié : propriétaire ou concepteur). */
+		rights?: boolean;
 	}
 
-	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, ontextcols, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false }: Props = $props();
+	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, ontextcols, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, rights = false }: Props = $props();
 	const fmt = (tab: FormatTab) => (onformat ? () => onformat(tab) : undefined);
 	const lines = (rows: boolean, hide: boolean) => (onlines ? () => onlines(rows, hide) : undefined);
 	const frz = (what: FreezeAction) => (onfreeze ? () => onfreeze(what) : undefined);
@@ -972,7 +974,7 @@
 						{/if}
 					</div>
 					<hr />
-					{#each [['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ...(sharedWorkbooksEnabled() && !shared ? [['share', 'Partager sur un serveur…', '']] : []), ...(sharedWorkbooksEnabled() && republish ? [['republish', 'Republier', '']] : []), ['import', 'Importer (CSV, Excel)…', ''], ['export', 'Exporter le tableau en CSV…', ''], ['exportXlsx', 'Exporter le classeur (.xlsx)…', ''], ['pdf', 'Exporter en PDF…', ''], ['print', 'Imprimer…', 'Ctrl+P'], ['close', 'Fermer', 'Ctrl+W'], ['mcp', 'Serveur MCP (assistants)…', ''], ['settings', 'Paramètres…', ''], ['help', 'Aide', 'F1'], ...(import.meta.env.DEV ? [['demo', 'Démo : 1 M de lignes', '']] : [])].filter(([a]) => a !== 'mcp' || mcpAvailable()) as [a, label, keys] (a)}
+					{#each [['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ...(sharedWorkbooksEnabled() && !shared ? [['share', 'Partager sur un serveur…', '']] : []), ...(sharedWorkbooksEnabled() && rights ? [['rights', 'Partager…', '']] : []), ...(sharedWorkbooksEnabled() && republish ? [['republish', 'Republier', '']] : []), ['import', 'Importer (CSV, Excel)…', ''], ['export', 'Exporter le tableau en CSV…', ''], ['exportXlsx', 'Exporter le classeur (.xlsx)…', ''], ['pdf', 'Exporter en PDF…', ''], ['print', 'Imprimer…', 'Ctrl+P'], ['close', 'Fermer', 'Ctrl+W'], ['mcp', 'Serveur MCP (assistants)…', ''], ['settings', 'Paramètres…', ''], ['help', 'Aide', 'F1'], ...(import.meta.env.DEV ? [['demo', 'Démo : 1 M de lignes', '']] : [])].filter(([a]) => a !== 'mcp' || mcpAvailable()) as [a, label, keys] (a)}
 						<button disabled={disabled && a !== 'import' && a !== 'demo' && a !== 'mcp' && a !== 'settings' && a !== 'help'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 				</div>

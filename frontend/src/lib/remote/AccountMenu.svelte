@@ -5,7 +5,7 @@
 	import Icon from '#lib/icons/Icon.svelte';
 	import { dismiss } from '#lib/grid/dismiss.js';
 	import { accountTitle, connected, hostOf, initials, userDetail, userName } from './lattis';
-	import { lattis, requestLogin, signOut } from './lattis.svelte.js';
+	import { lattis, requestLogin, shareRights, signOut } from './lattis.svelte.js';
 
 	let open = $state(false);
 	let error = $state('');
@@ -56,6 +56,18 @@
 				{:else}
 					<p class="muted empty">Aucun serveur.{lattis.state.allowUserServers ? '' : ' Votre organisation n’en a déclaré aucun.'}</p>
 				{/each}
+				{#if shareRights.current}
+					{@const r = shareRights.current}
+					<button
+						class="add"
+						role="menuitem"
+						title="Membres, rôles, restrictions, « Voir en tant que… »"
+						onclick={() => {
+							open = false;
+							r.open();
+						}}><Icon name="user" size={14} />Partager « {r.title} »…</button
+					>
+				{/if}
 				{#if lattis.state.allowUserServers}
 					<button class="add" role="menuitem" onclick={() => login('')}><Icon name="plus" size={14} />Se connecter à un serveur…</button>
 				{/if}

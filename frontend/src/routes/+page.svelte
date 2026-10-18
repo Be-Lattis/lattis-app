@@ -39,10 +39,12 @@
 	import OpenRemoteDialog from '#lib/remote/OpenRemoteDialog.svelte';
 	import ShareBanner from '#lib/remote/ShareBanner.svelte';
 	import ConflictPanel from '#lib/remote/ConflictPanel.svelte';
+	import RightsDialog from '#lib/remote/RightsDialog.svelte';
+	import { rightsObjects, type RightsObject } from '#lib/remote/rights.js';
 	import { refusedNotice } from '#lib/remote/share.js';
 	import type { Conflict } from '#bindings/internal/remote/collab/models.js';
 	import { canRepublish } from '#lib/remote/share.js';
-	import { requestLogin } from '#lib/remote/lattis.svelte.js';
+	import { requestLogin, shareRights } from '#lib/remote/lattis.svelte.js';
 	import type { State as ShareState } from '#bindings/internal/remote/workbook/models.js';
 	import type { ButtonConfig } from '#lib/grid/buttons.js';
 	import type { UICommand } from '#bindings/internal/bridge/models.js';
@@ -180,6 +182,25 @@
 		sheet?.focus();
 	}
 	let shareDlg = $state<{ republish: boolean } | null>(null);
+	// Fichier › Partager… : droits du classeur publié (propriétaire ou
+	// concepteur), aussi depuis le menu Compte ; onglet SQL : règles et
+	// rôles générés (lecture seule).
+	let rightsOpen = $state(false);
+	const canRights = $derived(mode === 'doc' && !!share?.shared && (!!share?.canManage || !!share?.canDesign));
+	$effect(() => {
+		shareRights.current = canRights ? { title: share?.title ?? '', open: () => (rightsOpen = true) } : null;
+	});
+	let rightsObjs = $state<RightsObject[]>([]);
+	$effect(() => {
+		const sh = share;
+		if (view !== 'sql' || mode !== 'doc' || !sh?.shared) {
+			rightsObjs = [];
+			return;
+		}
+		DocumentService.ShareRights(!!sh.canManage && sh.online)
+			.then((v) => (rightsObjs = rightsObjects(v)))
+			.catch(() => (rightsObjs = []));
+	});
 	let openRemote = $state(false);
 	let shareReloading = $state(false);
 	// Données › Obtenir des données : requêtes d'import (lib/query).
@@ -659,6 +680,9 @@
 				case 'openRemote':
 					openRemote = true;
 					break;
+				case 'rights':
+					if (canRights) rightsOpen = true;
+					break;
 				case 'share':
 				case 'republish':
 					if (mode !== 'doc') return;
@@ -937,6 +961,8 @@
 						query: t.queryId ? { id: t.queryId, name: t.queryName } : undefined,
 						shared: (t.shared || undefined) as 'published' | 'private' | undefined,
 						readOnly: t.readOnly || undefined,
+						access: t.access || undefined,
+						filtered: t.filtered || undefined,
 						columns: (t.columns ?? []).map((c) => ({
 							name: c.name,
 							type: (c.formula ? 'formula' : c.type) as ColumnType,
@@ -1272,6 +1298,7 @@
 		merged={!!sheetStatus?.merged}
 		shared={mode === 'doc' && !!share?.shared}
 		republish={mode === 'doc' && canRepublish(share)}
+		rights={canRights}
 	/>
 
 	{#if mode === 'doc'}
@@ -1424,7 +1451,7 @@
 			{#if view === 'ai'}
 				<div class="pane" data-region="grid"><AiView hasDoc={mode === 'doc'} onsettings={() => (settingsOpen = true)} /></div>
 			{:else if view === 'sql'}
-				<div class="pane" data-region="grid"><SqlView {objects} run={query} exec={mode === 'doc' ? (q) => DocumentService.Execute(q) : undefined} ongoto={gotoObject}
+				<div class="pane" data-region="grid"><SqlView {objects} rights={rightsObjs} onrights={canRights && share?.canManage ? () => (rightsOpen = true) : undefined} run={query} exec={mode === 'doc' ? (q) => DocumentService.Execute(q) : undefined} ongoto={gotoObject}
 						onrename={mode === 'doc'
 							? async (from, to) => {
 									docState = await DocumentService.RenameTable(from, to);
@@ -1554,6 +1581,9 @@
 	{/if}
 	{#if settingsOpen}
 		<SettingsDialog onclose={() => (settingsOpen = false)} />
+	{/if}
+	{#if rightsOpen && canRights && share}
+		<RightsDialog title={share.title} server={share.server} onclose={() => (rightsOpen = false)} />
 	{/if}
 	{#if shareDlg && mode === 'doc'}
 		<ShareDialog

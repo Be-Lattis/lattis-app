@@ -31,6 +31,7 @@
 	import Icon from '#lib/icons/Icon.svelte';
 	import { count, toTSV } from '#lib/sql/result.js';
 	import { tick } from 'svelte';
+	import type { RightsObject } from '#lib/remote/rights.js';
 
 	interface Result {
 		columns: string[] | null;
@@ -54,9 +55,14 @@
 		tosheet?: (sql: string, name: string, headers: string[], link: boolean, columns: string[]) => Promise<void>;
 		/** Renomme un tableau (même commande que la grille) ; absent : pas de renommage. */
 		onrename?: (from: string, to: string) => Promise<void>;
+		/** Classeur partagé : rôles et règles générés par le serveur (lecture seule). */
+		rights?: RightsObject[];
+		/** Propriétaire : ouvre l'écran Partager (modifier les droits). */
+		onrights?: () => void;
 	}
 
-	let { objects, run, exec, ongoto, favorites, tosheet, onrename }: Props = $props();
+	let { objects, run, exec, ongoto, favorites, tosheet, onrename, rights = [], onrights }: Props = $props();
+	let rightsOpen = $state<string | null>(null);
 
 	// Renommage d'un tableau dans la liste des objets (double-clic, F2, clic droit).
 	let tblRen = $state<{ name: string; draft: string } | null>(null);
@@ -356,6 +362,26 @@
 						{/if}
 					</div>
 				{/each}
+				{#if rights.length}
+					<div class="rights-head">
+						<span>Droits (serveur)</span>
+						{#if onrights}<button class="link" onclick={onrights} title="Écran Partager : membres, rôles, restrictions">Modifier…</button>{/if}
+					</div>
+					{#each rights as r (r.name + r.kind)}
+						<div class="obj">
+							<button class="obj-head" onclick={() => (rightsOpen = rightsOpen === r.name + r.kind ? null : r.name + r.kind)} title="Généré par le serveur : lecture seule">
+								<span>{rightsOpen === r.name + r.kind ? '▾' : '▸'}</span>
+								<strong>{r.name}</strong>
+								<span class="muted">{r.kind}</span>
+							</button>
+							{#if rightsOpen === r.name + r.kind}
+								<ul>
+									{#each r.lines as l, i (i)}<li class="rule">{l}</li>{/each}
+								</ul>
+							{/if}
+						</div>
+					{/each}
+				{/if}
 			</div>
 			{#if objMenu}
 				{@const m = objMenu}
@@ -746,6 +772,24 @@
 	}
 	.obj-head:hover {
 		background: #eef2ef;
+	}
+	.rights-head {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		margin: 10px 4px 2px;
+		padding-top: 6px;
+		border-top: 1px solid #e3e5e8;
+		font-size: 12px;
+		font-weight: 600;
+		color: #4b5563;
+	}
+	li.rule {
+		display: block;
+		font-family: var(--mono, monospace);
+		font-size: 11px;
+		color: #374151;
+		word-break: break-word;
 	}
 	ul {
 		list-style: none;

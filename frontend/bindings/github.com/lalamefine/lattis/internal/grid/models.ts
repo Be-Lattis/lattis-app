@@ -198,6 +198,12 @@ export interface Window {
     "sync"?: SyncMark[] | null;
 
     /**
+     * Locked : lignes de la fenêtre en lecture seule pour un participant
+     * (lignes d'autres membres, §8.1 ; rempli par le pont).
+     */
+    "locked"?: number[] | null;
+
+    /**
      * temps passé côté Go, pour les mesures
      */
     "micros": number;

@@ -13,7 +13,7 @@ const check: Check = {
 	]
 };
 
-const state = (s: Partial<State>): State => ({ shared: true, server: 'https://l.test', serverName: 'Serveur Acme', workbookId: 'w', title: 'T', mode: 'frozen', version: 3, roles: ['reader'], canDesign: false, online: true, published: 1, ...s });
+const state = (s: Partial<State>): State => ({ shared: true, server: 'https://l.test', serverName: 'Serveur Acme', workbookId: 'w', title: 'T', mode: 'frozen', version: 3, roles: ['reader'], canDesign: false, canManage: false, online: true, published: 1, ...s });
 
 describe('partage', () => {
 	it('coche d’avance ce qui se publie', () => {

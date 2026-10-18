@@ -22,6 +22,8 @@ export interface Fetched {
 	 * serveur (pending) ou en conflit (conflict) ; col -1 : toute la ligne.
 	 */
 	sync?: { row: number; col: number; kind: string }[] | null;
+	/** Participant (classeur collaboratif) : lignes d'autres membres, en lecture seule. */
+	locked?: number[] | null;
 	micros: number;
 }
 
@@ -45,6 +47,8 @@ export interface Block {
 	marks: (Set<number> | undefined)[];
 	/** Marques de synchronisation (classeur collaboratif) : colonne → marque. */
 	sync?: (Map<number, SyncKind> | undefined)[];
+	/** Lignes en lecture seule pour un participant (lignes d’autres membres). */
+	locked?: Set<number>;
 }
 
 export interface Stats {
@@ -87,6 +91,7 @@ export class RowCache {
 				sty?: Map<number, string>;
 				marks?: Set<number>;
 				sync?: Map<number, SyncKind>;
+				locked?: boolean;
 		  }
 		| undefined {
 		const k = Math.floor(row / BLOCK);
@@ -102,7 +107,8 @@ export class RowCache {
 			bad: b.bad[i],
 			sty: b.sty[i],
 			marks: b.marks?.[i],
-			sync: b.sync?.[i]
+			sync: b.sync?.[i],
+			locked: b.locked?.has(i)
 		};
 	}
 
@@ -163,7 +169,7 @@ export class RowCache {
 			const sync: (Map<number, SyncKind> | undefined)[] = [];
 			for (const x of w.sync ?? []) (sync[x.row] ??= new Map()).set(x.col, x.kind === 'conflict' ? 'conflict' : 'pending');
 			this.stale.delete(b);
-			this.blocks.set(b, { ids: w.ids ?? [], cells, text, bad, sty, marks, sync });
+			this.blocks.set(b, { ids: w.ids ?? [], cells, text, bad, sty, marks, sync, locked: w.locked?.length ? new Set(w.locked) : undefined });
 			this.evict(b);
 			this.error = null;
 		} catch (e) {

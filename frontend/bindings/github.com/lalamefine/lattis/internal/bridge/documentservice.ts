@@ -1350,6 +1350,13 @@ export function ShareAcceptText(table: string, i: number): $CancellablePromise<w
 }
 
 /**
+ * ShareAddRestriction ajoute une restriction.
+ */
+export function ShareAddRestriction(r: workbook$0.RestrictionRule): $CancellablePromise<$models.RightsView> {
+    return $Call.ByID(1236133298, r);
+}
+
+/**
  * ShareCheck fait les vérifications avant publication sur tous les
  * tableaux du classeur (noms, types figés, saisies invalides).
  */
@@ -1366,6 +1373,28 @@ export function ShareConflicts(): $CancellablePromise<collab$0.Conflict[] | null
 }
 
 /**
+ * ShareCreateRole crée un rôle personnalisé (sans droit tant qu'aucun
+ * niveau n'est posé).
+ */
+export function ShareCreateRole(name: string): $CancellablePromise<$models.RightsView> {
+    return $Call.ByID(855021969, name);
+}
+
+/**
+ * ShareDropRestriction retire une restriction.
+ */
+export function ShareDropRestriction(id: string): $CancellablePromise<$models.RightsView> {
+    return $Call.ByID(1785918074, id);
+}
+
+/**
+ * ShareDropRole supprime un rôle personnalisé.
+ */
+export function ShareDropRole(roleID: string): $CancellablePromise<$models.RightsView> {
+    return $Call.ByID(3577790260, roleID);
+}
+
+/**
  * ShareEditing note la cellule de feuille en cours de saisie (on faux :
  * saisie terminée ou abandonnée) : une modification reçue du serveur pour
  * elle attend la validation, qui peut produire un conflit (§6.3).
@@ -1375,12 +1404,35 @@ export function ShareEditing(sheet: number, row: number, col: number, on: boolea
 }
 
 /**
+ * ShareGrantRole donne un rôle à un membre ; on faux : le lui retire.
+ */
+export function ShareGrantRole(roleID: string, userID: string, on: boolean): $CancellablePromise<$models.RightsView> {
+    return $Call.ByID(490379137, roleID, userID, on);
+}
+
+/**
+ * ShareInvite invite une adresse au classeur ouvert avec des rôles fournis
+ * (reader, participant, editor, designer, owner).
+ */
+export function ShareInvite(email: string, roles: string[] | null): $CancellablePromise<$models.RightsView> {
+    return $Call.ByID(3874681680, email, roles);
+}
+
+/**
  * ShareOpen ouvre un classeur du serveur : chargé en entier dans son cache
  * local (un fichier .lattis du dossier cache de l'utilisateur, rouvert et
  * actualisé s'il existe), qui reste consultable hors ligne.
  */
 export function ShareOpen(server: string, id: string, title: string): $CancellablePromise<$models.OpenResult> {
     return $Call.ByID(2745915401, server, id, title);
+}
+
+/**
+ * SharePreview montre un tableau publié tel que le voit un membre (lecture
+ * seule, au plus 1 000 lignes) : propriétaires et concepteurs.
+ */
+export function SharePreview(userID: string, table: number): $CancellablePromise<$models.PreviewView> {
+    return $Call.ByID(155267991, userID, table);
 }
 
 /**
@@ -1415,6 +1467,33 @@ export function ShareRepublish(tables: number[] | null): $CancellablePromise<wor
  */
 export function ShareResolve(id: number, mine: boolean): $CancellablePromise<$models.DocState> {
     return $Call.ByID(2071380643, id, mine);
+}
+
+/**
+ * ShareRevokeInvitation retire une invitation en attente.
+ */
+export function ShareRevokeInvitation(id: string): $CancellablePromise<$models.RightsView> {
+    return $Call.ByID(777606468, id);
+}
+
+/**
+ * ShareRights décrit les droits du classeur partagé ouvert ; remote :
+ * demander aussi au serveur la liste complète (propriétaire) et les écarts
+ * (propriétaire ou concepteur).
+ */
+export function ShareRights(remote: boolean): $CancellablePromise<$models.RightsView> {
+    return $Call.ByID(306207586, remote);
+}
+
+/**
+ * ShareSetLevels pose des niveaux (et filtres) dans une seule transaction.
+ * Un niveau sur une feuille est posé sur chacun de ses tableaux publiés :
+ * le serveur ne connaît pas encore les feuilles (sheet_id vide, voir
+ * droits.md) ; l'interface envoie alors NodeKind « sheet » et l'identifiant
+ * local de la feuille.
+ */
+export function ShareSetLevels(levels: workbook$0.Level[] | null): $CancellablePromise<$models.RightsView> {
+    return $Call.ByID(1124447680, levels);
 }
 
 /**

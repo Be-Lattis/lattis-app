@@ -28,6 +28,9 @@ import * as query$0 from "../query/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as auth$0 from "../remote/auth/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as workbook$0 from "../remote/workbook/models.js";
 
 /**
  * AIEventData est un évènement d'une réponse ; Run la désigne.
@@ -326,6 +329,16 @@ export interface Platform {
 }
 
 /**
+ * PreviewView est un tableau tel que le voit un membre (« Voir en tant
+ * que… ») : colonnes du tableau publié, puis l'auteur de la ligne.
+ */
+export interface PreviewView {
+    "columns": string[] | null;
+    "rows": (any[] | null)[] | null;
+    "truncated": boolean;
+}
+
+/**
  * QueryRefresh est le résultat d'une actualisation : tableaux chargés, ou
  * mot de passe à demander.
  */
@@ -343,6 +356,65 @@ export interface QuerySheet {
     "sheet": number;
     "table": string;
     "state": DocState;
+}
+
+/**
+ * RightsColumn est une colonne d'un tableau publié (nom et type du
+ * serveur : formulaire des filtres).
+ */
+export interface RightsColumn {
+    "name": string;
+    "type": string;
+}
+
+/**
+ * RightsTable est un tableau publié : où il est dans le classeur local
+ * (arborescence classeur → feuilles → tableaux) et les droits de
+ * l'utilisateur dessus.
+ */
+export interface RightsTable {
+    "table": number;
+    "name": string;
+    "remoteId": string;
+    "sheet": number;
+    "sheetName": string;
+    "level": string;
+    "filtered": boolean;
+    "restrictions": workbook$0.Restriction[] | null;
+    "columns": RightsColumn[] | null;
+}
+
+/**
+ * RightsView décrit les droits d'un classeur partagé : ceux de
+ * l'utilisateur (toujours, depuis le classeur local) et, en ligne, la liste
+ * complète (propriétaire) et les écarts (propriétaire ou concepteur).
+ */
+export interface RightsView {
+    "shared": boolean;
+    "collaborative": boolean;
+    "online": boolean;
+    "canManage": boolean;
+    "canDesign": boolean;
+    "user": string;
+    "roles": string[] | null;
+    "customRoles": string[] | null;
+    "tables": RightsTable[] | null;
+
+    /**
+     * ACL : rôles, membres, restrictions, invitations (propriétaire, en
+     * ligne ; nil sinon).
+     */
+    "acl": workbook$0.ACL | null;
+
+    /**
+     * Drift : écarts détectés par le serveur (propriétaire ou concepteur).
+     */
+    "drift": workbook$0.Drift[] | null;
+
+    /**
+     * Error : le serveur n'a pas répondu (droits locaux seulement).
+     */
+    "error"?: string;
 }
 
 /**

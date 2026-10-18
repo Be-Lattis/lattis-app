@@ -1042,6 +1042,14 @@ export interface TableInfo {
      * publié en lecture seule », « Hors ligne, lecture seule »), vide sinon.
      */
     "readOnly"?: string;
+
+    /**
+     * Classeur collaboratif (§8.1) : niveau de l'utilisateur sur le tableau
+     * publié (reader, participant, editor, none ; vide sinon) et lecture
+     * filtrée par ses droits (« Vue filtrée par vos droits »).
+     */
+    "access"?: string;
+    "filtered"?: boolean;
 }
 
 /**

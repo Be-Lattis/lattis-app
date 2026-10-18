@@ -242,6 +242,10 @@
 		shared?: 'published' | 'private';
 		/** Tableau publié en lecture seule : le message à afficher (« Classeur publié en lecture seule »). */
 		readOnly?: string;
+		/** Classeur collaboratif : niveau sur le tableau publié (participant : ses lignes seulement). */
+		access?: string;
+		/** Lecture filtrée par les droits de l'utilisateur (« Vue filtrée par vos droits »). */
+		filtered?: boolean;
 		columns: Column[];
 	}
 
@@ -1424,6 +1428,15 @@
 
 	const inTable = (e: Entry, r: number, c: number) => r >= e.t.row && r <= e.last && c >= e.t.col && c <= e.lastCol;
 	const tableAt = (r: number, c: number) => entries.find((e) => inTable(e, r, c));
+	/** Ligne de données d'un autre membre, en lecture seule pour un participant (§8.1). */
+	function lockedRowAt(r: number, c: number): boolean {
+		const e = tableAt(r, c);
+		if (!e || e.t.access !== 'participant' || r <= e.t.row) return false;
+		return !!e.cache.row(r - e.t.row - 1)?.locked;
+	}
+	const NOT_YOURS = "Ligne d'un autre membre : en tant que participant, vous ne modifiez que vos propres lignes";
+	/** Ligne survolée en lecture seule (participant) : légèrement grisée ; -1 sinon. */
+	let hoverLocked = -1;
 
 	// La zone de défilement suit le contenu, comme Excel : la partie utilisée
 	// de la feuille plus un écran, et elle grandit à mesure qu'on défile vers
@@ -2154,6 +2167,10 @@
 						ctx.fillStyle = cs.bg;
 						ctx.fillRect(x, y, cw, rh(r));
 					}
+					if (r === hoverLocked && row.locked) {
+						ctx.fillStyle = 'rgba(107, 114, 128, 0.12)';
+						ctx.fillRect(x, y, cw, rh(r));
+					}
 					if (cf?.bar) drawBar(cf.bar, x, y, cw, rh(r), `t${e.t.id}:${row.id}:${col.name}`, r, c);
 					if (cs) borders(cs, x, y, cw, rh(r));
 					if (cs?.nt) noteCorner(x + cw, y, cs);
@@ -2424,6 +2441,14 @@
 			ctx.moveTo(x, y + rh(e.t.row));
 			ctx.lineTo(x + fw, y + rh(e.t.row));
 			ctx.stroke();
+			// Classeur collaboratif : lecture filtrée par les droits (§8.1).
+			if (e.t.filtered) {
+				ctx.font = 'italic ' + FONT_SMALL;
+				ctx.fillStyle = C.icon;
+				ctx.textAlign = 'right';
+				ctx.textBaseline = 'top';
+				ctx.fillText('Vue filtrée par vos droits', x + fw, y + fh + 2);
+			}
 			ctx.restore();
 		}
 		// Zone copiée ou coupée : cadre pointillé, comme Excel.
@@ -5756,6 +5781,14 @@
 	}
 
 	function onMouseMove(e: MouseEvent) {
+		{
+			const hc = entries.some((x) => x.t.access === 'participant') ? cellAt(e) : null;
+			const hl = hc && lockedRowAt(hc.row, hc.col) ? hc.row : -1;
+			if (hl !== hoverLocked) {
+				hoverLocked = hl;
+				schedule();
+			}
+		}
 		if (refMove) {
 			const cell = cellAt(e);
 			if (cell && (cell.row !== refMove.to.row || cell.col !== refMove.to.col)) {
@@ -6108,6 +6141,11 @@
 		const ro = tableAt(active.row, active.col)?.t.readOnly;
 		if (ro) {
 			say(ro);
+			return;
+		}
+		// Participant (classeur collaboratif) : les lignes des autres membres.
+		if (lockedRowAt(active.row, active.col)) {
+			say(NOT_YOURS);
 			return;
 		}
 		if (pivotAt(active.row, active.col)) {
@@ -7720,7 +7758,7 @@
 				onpointerdown={onScrollbarDown}
 				onmousedown={onMouseDown}
 				onmousemove={onMouseMove}
-				onmouseleave={() => (noteTip = null)}
+				onmouseleave={() => ((noteTip = null), hoverLocked >= 0 && ((hoverLocked = -1), schedule()))}
 				ondblclick={onDblClick}
 				oncontextmenu={onContextMenu}
 			>
