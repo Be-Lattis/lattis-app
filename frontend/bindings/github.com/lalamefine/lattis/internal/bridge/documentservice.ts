@@ -1028,6 +1028,15 @@ export function Replace(sheet: number, text: string, by: string): $CancellablePr
 }
 
 /**
+ * ReportError journalise une erreur de l'interface : où (composant, action),
+ * message, pile et dernières actions (une par ligne). Rend le chemin du
+ * journal ("" s'il n'a pas pu être écrit).
+ */
+export function ReportError(where: string, message: string, stack: string, trail: string): $CancellablePromise<string> {
+    return $Call.ByID(2146121754, where, message, stack, trail);
+}
+
+/**
  * RequestOpen demande l'ouverture d'un classeur. Avant que l'interface ait
  * lu le classeur de lancement, il le devient ; ensuite, l'interface est
  * prévenue par OpenFileEvent.

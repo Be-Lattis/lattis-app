@@ -5,6 +5,7 @@
 	// Deux modes : un classeur (DocumentService : saisie libre, tableaux qui
 	// naissent, annuler, enregistrer) et la démo d'1 M de lignes (GridService),
 	// qui sert aussi à la mesure automatique (LATTIS_BENCH).
+	import { describe, installErrorReporting, reportError } from '#lib/shell/errors.js';
 	import { onMount, tick, untrack } from 'svelte';
 	import { noticeTtl } from '#lib/shell/notice.js';
 	import { Events } from '@wailsio/runtime';
@@ -518,6 +519,7 @@
 	}
 
 	onMount(() => {
+		installErrorReporting();
 		loadSettings();
 		const off = Events.On('doc:changed', (e: { data?: DocState }) => {
 			// Tableaux fusionnés, cellules rattachées : annoncé après la
@@ -1305,6 +1307,8 @@
 		<ShareBanner {share} busy={shareReloading} onreload={reloadShare} onlogin={() => share && requestLogin(share.server)} onconflicts={() => (conflictsOpen = true)} />
 	{/if}
 
+	<!-- Une erreur d’un composant ne remplace plus tout par un écran 500 : elle est journalisée (pile, dernières actions) et l’on peut réessayer. -->
+	<svelte:boundary onerror={(e) => void reportError(`interface (${mode})`, e)}>
 	<main>
 		{#if failure}
 			<div class="splash"><h1>Lattis</h1><p class="error">{failure}</p></div>
@@ -1548,6 +1552,20 @@
 			<ConflictPanel {conflicts} busy={conflictBusy} onresolve={resolveConflict} ongoto={gotoConflict} onclose={() => (conflictsOpen = false)} />
 		{/if}
 	</main>
+		{#snippet failed(error, reset)}
+			<main>
+				<div class="splash">
+					<h1>Erreur de l’interface</h1>
+					<p class="error">{describe(error).message}</p>
+					<p class="muted">Le détail (pile, dernières actions) est dans le journal des erreurs. Le classeur n’est pas perdu.</p>
+					<div class="actions">
+						<button class="primary" onclick={reset}>Réessayer</button>
+						<button onclick={() => location.reload()}>Recharger l’interface</button>
+					</div>
+				</div>
+			</main>
+		{/snippet}
+	</svelte:boundary>
 
 	<SheetTabs
 		sheets={tabs}
