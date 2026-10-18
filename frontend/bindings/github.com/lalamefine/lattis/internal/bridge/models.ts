@@ -304,6 +304,12 @@ export interface DataShareInfo {
     "tableId": string;
     "table": string;
     "columns": string[] | null;
+
+    /**
+     * Fields : colonnes du tableau avec leur type (formulaire des filtres de
+     * l'audience, comme ceux des rôles).
+     */
+    "fields": RightsColumn[] | null;
     "catalog": protocol$0.DataCatalog;
     "teams": DataTeam[] | null;
 

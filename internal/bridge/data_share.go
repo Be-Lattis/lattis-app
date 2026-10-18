@@ -17,14 +17,17 @@ import (
 // publieur de données propriétaire ou concepteur du classeur.
 type DataShareInfo struct {
 	// Reason : pourquoi le partage est impossible ("" : possible).
-	Reason     string               `json:"reason"`
-	Server     string               `json:"server"`
-	WorkbookID string               `json:"workbookId"`
-	TableID    string               `json:"tableId"`
-	Table      string               `json:"table"`
-	Columns    []string             `json:"columns"`
-	Catalog    protocol.DataCatalog `json:"catalog"`
-	Teams      []DataTeam           `json:"teams"`
+	Reason     string   `json:"reason"`
+	Server     string   `json:"server"`
+	WorkbookID string   `json:"workbookId"`
+	TableID    string   `json:"tableId"`
+	Table      string   `json:"table"`
+	Columns    []string `json:"columns"`
+	// Fields : colonnes du tableau avec leur type (formulaire des filtres de
+	// l'audience, comme ceux des rôles).
+	Fields  []RightsColumn       `json:"fields"`
+	Catalog protocol.DataCatalog `json:"catalog"`
+	Teams   []DataTeam           `json:"teams"`
 	// Dataset : la donnée qui partage déjà ce tableau (nil : aucune).
 	Dataset *protocol.Dataset `json:"dataset"`
 }
@@ -37,7 +40,7 @@ type DataTeam struct {
 
 // DataShareInfo lit de quoi partager le tableau table du classeur ouvert.
 func (s *DocumentService) DataShareInfo(ctx context.Context, table string) (DataShareInfo, error) {
-	out := DataShareInfo{Table: table, Columns: []string{}, Teams: []DataTeam{},
+	out := DataShareInfo{Table: table, Columns: []string{}, Fields: []RightsColumn{}, Teams: []DataTeam{},
 		Catalog: protocol.DataCatalog{Folders: []protocol.DataFolder{}, Datasets: []protocol.Dataset{}}}
 	d, err := s.current()
 	if err != nil {
@@ -67,6 +70,15 @@ func (s *DocumentService) DataShareInfo(ctx context.Context, table string) (Data
 		return out, err
 	}
 	out.Columns = l
+	if rs, err := d.DB().Read().QueryContext(ctx, `SELECT name, type FROM _lattis_columns WHERE tbl = ? ORDER BY pos`, tbl); err == nil {
+		for rs.Next() {
+			var c RightsColumn
+			if rs.Scan(&c.Name, &c.Type) == nil {
+				out.Fields = append(out.Fields, c)
+			}
+		}
+		rs.Close()
+	}
 	out.Server, out.WorkbookID = info.Server, info.WorkbookID
 	srv, _, _, err := remoteServer(ctx, info.Server)
 	if err != nil {

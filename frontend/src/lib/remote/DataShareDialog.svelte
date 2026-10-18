@@ -9,6 +9,8 @@
 	import { onMount, untrack } from 'svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import { folderChoices, type DataAudience, type DataCatalog, type Dataset } from './data';
+	import FilterEditor from './FilterEditor.svelte';
+	import type { RightsColumn } from '#bindings/internal/bridge/models.js';
 
 	interface Props {
 		table: string;
@@ -22,11 +24,14 @@
 		workbookId: string;
 		tableId: string;
 		columns: string[] | null;
+		/** Colonnes et types : formulaire du filtre (comme ceux des rôles). */
+		fields: RightsColumn[] | null;
 		catalog: DataCatalog;
 		teams: { id: string; name: string }[] | null;
 		dataset: Dataset | null;
 	};
-	type Entry = { email: string; team: string; predicate: string };
+	/** Entrée d'audience à ajouter ; error : filtre en cours de saisie invalide. */
+	type Entry = { email: string; team: string; predicate: string; error: string };
 
 	let info = $state<Info | null>(null);
 	let name = $state(untrack(() => table));
@@ -43,6 +48,7 @@
 	let error = $state('');
 	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
 	const ds = $derived(info?.dataset ?? null);
+	const badFilter = $derived(adds.some((a) => !!a.error));
 
 	onMount(load);
 
@@ -101,7 +107,7 @@
 				sqlName: ds ? '' : sqlName.trim(),
 				hidden: (info.columns ?? []).filter((c) => !shown.has(c)),
 				inherit,
-				add: adds.filter((a) => a.email.trim() || a.team),
+				add: adds.filter((a) => a.email.trim() || a.team).map(({ email, team, predicate }) => ({ email, team, predicate })),
 				remove: [...removed]
 			});
 			ondone();
@@ -195,21 +201,34 @@
 							>
 						</li>
 					{/each}
-					{#each adds as a, i (i)}
+					{#each adds as a, i (a)}
 						<li class="add">
-							<input placeholder="adresse@exemple.fr" bind:value={a.email} disabled={busy || !!a.team} aria-label="Adresse" />
-							<span class="muted">ou</span>
-							<select bind:value={a.team} disabled={busy || !!a.email.trim()} aria-label="Équipe">
-								<option value="">(équipe)</option>
-								{#each info.teams ?? [] as t (t.id)}<option value={t.id}>{t.name}</option>{/each}
-							</select>
-							<input class="pred" placeholder={'filtre facultatif : "Région" = \'Nord\''} bind:value={a.predicate} disabled={busy} aria-label="Filtre" spellcheck="false" />
-							<button class="link" onclick={() => (adds = adds.filter((_, k) => k !== i))} aria-label="Retirer cette ligne">×</button>
+							<div class="who">
+								<input placeholder="adresse@exemple.fr" bind:value={a.email} disabled={busy || !!a.team} aria-label="Adresse" />
+								<span class="muted">ou</span>
+								<select bind:value={a.team} disabled={busy || !!a.email.trim()} aria-label="Équipe">
+									<option value="">(équipe)</option>
+									{#each info.teams ?? [] as t (t.id)}<option value={t.id}>{t.name}</option>{/each}
+								</select>
+								<button class="link" onclick={() => (adds = adds.filter((_, k) => k !== i))} aria-label="Retirer cette ligne">×</button>
+							</div>
+							<FilterEditor
+								label="Lignes visibles si…"
+								columns={info.fields ?? []}
+								value={a.predicate}
+								disabled={busy}
+								teams
+								onchange={(sql, e) => {
+									a.predicate = sql ?? a.predicate;
+									a.error = e;
+								}}
+							/>
+							{#if a.error}<p class="error">{a.error}</p>{/if}
 						</li>
 					{/each}
 				</ul>
-				<button class="link" onclick={() => (adds = [...adds, { email: '', team: '', predicate: '' }])} disabled={busy}>+ Ajouter une personne ou une équipe</button>
-				<p class="muted">Le filtre limite les lignes que voit cette entrée (même écriture qu'un filtre de rôle) ; vide : toutes les lignes.</p>
+				<button class="link" onclick={() => (adds = [...adds, { email: '', team: '', predicate: '', error: '' }])} disabled={busy}>+ Ajouter une personne ou une équipe</button>
+				<p class="muted">Le filtre limite les lignes que voit cette entrée (même écriture qu'un filtre de rôle, vérifiée par le serveur) ; aucun : toutes les lignes.</p>
 
 				{#if ds?.used_by?.length}
 					<h3>Utilisée par</h3>
@@ -230,7 +249,7 @@
 			<span class="grow"></span>
 			<button onclick={ondone} disabled={busy}>{info?.reason ? 'Fermer' : 'Annuler'}</button>
 			{#if info && !info.reason}
-				<button class="primary" onclick={save} disabled={busy || !name.trim() || shown.size === 0}>{busy ? 'Enregistrement…' : ds ? 'Enregistrer' : 'Partager'}</button>
+				<button class="primary" onclick={save} disabled={busy || !name.trim() || shown.size === 0 || badFilter} title={badFilter ? "Un filtre d'audience est à corriger" : ''}>{busy ? 'Enregistrement…' : ds ? 'Enregistrer' : 'Partager'}</button>
 			{/if}
 		</footer>
 	</div>
@@ -314,9 +333,22 @@
 		text-decoration: line-through;
 		color: #9ca3af;
 	}
-	.aud .pred {
+	.aud li.add {
+		flex-direction: column;
+		align-items: stretch;
+		border-top: 1px solid #f0f1f3;
+	}
+	.aud .who {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+	}
+	.aud .who input {
 		flex: 1;
 		min-width: 0;
+	}
+	.aud .error {
+		margin: 0;
 	}
 	.link {
 		border: none;
