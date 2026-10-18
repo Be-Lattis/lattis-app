@@ -429,7 +429,7 @@ func (t *tx) lift(sheet int64, src Rect, p payload) error {
 		}
 	}
 	for id := range cur {
-		if err := t.tidyAfterMove(id); err != nil {
+		if err := t.tidyBottom(id, true); err != nil {
 			return err
 		}
 	}
@@ -439,11 +439,12 @@ func (t *tx) lift(sheet int64, src Rect, p payload) error {
 // defaultColumnName : nom donné d'office à une colonne (jamais renommée).
 var defaultColumnName = regexp.MustCompile(`^Colonne \d+$`)
 
-// tidyAfterMove range un tableau dont des cellules viennent d'être emportées
-// (choix de Louis) : vidé et jamais personnalisé (colonnes « Colonne n »,
-// sans formule), il disparaît, ce qui libère la place autour ; sinon ses
-// dernières lignes devenues vides sont supprimées (il en garde une).
-func (t *tx) tidyAfterMove(id int64) error {
+// tidyBottom range un tableau dont des cellules viennent d'être emportées
+// ou effacées (choix de Louis) : ses dernières lignes devenues vides sont
+// supprimées (il en garde une). Avec drop (cellules emportées), vidé et
+// jamais personnalisé (colonnes « Colonne n », sans formule), il disparaît,
+// ce qui libère la place autour.
+func (t *tx) tidyBottom(id int64, drop bool) error {
 	tb, err := t.table(id)
 	if err != nil || tb.Filtered() {
 		return err
@@ -483,7 +484,7 @@ func (t *tx) tidyAfterMove(id int64) error {
 	switch {
 	case empty == 0:
 		return nil
-	case empty == tb.Rows && plain:
+	case empty == tb.Rows && plain && drop:
 		return t.deleteTable(tb)
 	case empty == tb.Rows:
 		empty-- // un tableau nommé garde une ligne
@@ -795,6 +796,10 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 							}
 						}
 					}
+				}
+				// Les dernières lignes devenues vides partent (choix de Louis).
+				if err := t.tidyBottom(tb.ID, false); err != nil {
+					return err
 				}
 			}
 		}
