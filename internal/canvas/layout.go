@@ -180,15 +180,28 @@ func (t *tx) ensureGapBelow(sheet int64, self int64, oldEdge, newEdge, lo, hi in
 			first = tb.Row
 		}
 	}
+	outs, err := t.outCells(sheet)
+	if err != nil {
+		return err
+	}
+	// Une cellule gardée hors du tableau (note, total) reste collée à lui :
+	// elle ne demande pas de ligne vide.
+	delta := 0
+	if first >= 0 {
+		delta = newEdge + 2 - first
+	}
 	for _, c := range cells {
-		if c.Col >= lo && c.Col <= hi && c.Row > oldEdge && (first < 0 || c.Row < first) {
-			first = c.Row
+		if c.Col >= lo && c.Col <= hi && c.Row > oldEdge {
+			need := newEdge + 2 - c.Row
+			if outs[[2]int{c.Row, c.Col}] {
+				need--
+			}
+			delta = max(delta, need)
 		}
 	}
-	if first < 0 || first > newEdge+1 {
+	if delta <= 0 {
 		return nil
 	}
-	delta := newEdge + 2 - first
 	// Toute la bande bouge d'abord, puis chaque tableau déplacé dégage sa
 	// propre bande : un objet n'est jamais déplacé deux fois.
 	var moved []Table
@@ -228,15 +241,26 @@ func (t *tx) ensureGapRight(sheet int64, self int64, oldEdge, newEdge, lo, hi in
 			first = tb.Col
 		}
 	}
+	outs, err := t.outCells(sheet)
+	if err != nil {
+		return err
+	}
+	delta := 0
+	if first >= 0 {
+		delta = newEdge + 2 - first
+	}
 	for _, c := range cells {
-		if c.Row >= lo && c.Row <= hi && c.Col > oldEdge && (first < 0 || c.Col < first) {
-			first = c.Col
+		if c.Row >= lo && c.Row <= hi && c.Col > oldEdge {
+			need := newEdge + 2 - c.Col
+			if outs[[2]int{c.Row, c.Col}] {
+				need--
+			}
+			delta = max(delta, need)
 		}
 	}
-	if first < 0 || first > newEdge+1 {
+	if delta <= 0 {
 		return nil
 	}
-	delta := newEdge + 2 - first
 	// Toute la bande bouge d'abord, puis chaque tableau déplacé dégage sa
 	// propre bande : un objet n'est jamais déplacé deux fois.
 	var moved []Table

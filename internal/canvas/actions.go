@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -96,9 +97,25 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 				if tb.Filtered() {
 					return ErrFiltered{Table: tb.Name}
 				}
-				// Les autres cellules libres de la nouvelle ligne la rejoignent.
+				// Une note ou un total sous le tableau reste à part (legend.go).
+				if !t.noLegend {
+					kind, why, err := t.footKind(tb, row, col, raw)
+					if err != nil {
+						return err
+					}
+					if kind != "" {
+						return t.keepOut(tb, row, col, raw, kind, why)
+					}
+				}
+				outs, err := t.outCells(sheet)
+				if err != nil {
+					return err
+				}
+				// Les autres cellules libres de la nouvelle ligne la rejoignent
+				// (pas celles gardées à part, qui descendent avec le bas du
+				// tableau).
 				taken, err := t.takeFree(sheet, func(c cell) bool {
-					return c.Row == row && c.Col >= tb.Col && c.Col <= tb.Right() && c.Col != col
+					return c.Row == row && c.Col >= tb.Col && c.Col <= tb.Right() && c.Col != col && !outs[[2]int{c.Row, c.Col}]
 				})
 				if err != nil {
 					return err
@@ -113,9 +130,17 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 					}
 				}
 				return t.setCell(tb, tb.Rows-1, col-tb.Col, raw, ev)
+			case (inRows && (col == tb.Col-1 || col == tb.Right()+1)) && row != tb.Row && !empty && !t.noLegend &&
+				noteRe.MatchString(raw) && !inAny(tables, row, col):
+				// « ← à vérifier » à côté d'une ligne : une remarque, pas une
+				// colonne.
+				return t.keepOut(tb, row, col, raw, outNote, "remarque à côté du tableau")
 			case inRows && col == tb.Col-1 && !empty && !inAny(tables, row, col):
 				// Juste à gauche : nouvelle première colonne.
-				return t.growSide(tb, row, col, raw, ev, true)
+				if err := t.growSide(tb, row, col, raw, ev, true); err != nil || row != tb.Bottom() {
+					return err
+				}
+				return t.reshapeYoung(tb.ID)
 			case inRows && col == tb.Right()+1 && !empty && !inAny(tables, row, col):
 				// Juste à droite : nouvelle dernière colonne. Un tableau juste
 				// après (lignes qui se recoupent) : la saisie comble l'écart
@@ -126,8 +151,14 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 						next = &tables[i]
 					}
 				}
-				if err := t.growSide(tb, row, col, raw, ev, false); err != nil || next == nil {
+				if err := t.growSide(tb, row, col, raw, ev, false); err != nil {
 					return err
+				}
+				if next == nil {
+					if row != tb.Bottom() {
+						return nil
+					}
+					return t.reshapeYoung(tb.ID)
 				}
 				o, err := t.table(next.ID)
 				if err != nil {
@@ -156,8 +187,22 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 			}
 			return t.setFreeCell(sheet, row, col, formula.Format(n, formula.FR))
 		}
+		if empty {
+			if err := t.clearOut(sheet, row, col); err != nil {
+				return err
+			}
+		}
 		if err := t.setFreeCell(sheet, row, col, freeRaw(raw)); err != nil || empty {
 			return err
+		}
+		// Sous une note gardée hors du tableau, une autre note.
+		if !t.noLegend {
+			if out, err := t.noteAbove(sheet, row, col); err != nil || out {
+				if err != nil {
+					return err
+				}
+				return t.markOut(sheet, row, col, outNote)
+			}
 		}
 		name, err := t.birth(sheet, row, col)
 		if name != "" {
@@ -298,28 +343,57 @@ func (t *tx) birth(sheet int64, row, col int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	isl := island(cells, row, col)
+	// Les cellules gardées hors des tableaux (notes, totaux) ne relient pas
+	// un îlot.
+	outs, err := t.outCells(sheet)
+	if err != nil {
+		return "", err
+	}
+	if outs[[2]int{row, col}] {
+		return "", nil
+	}
+	isl := island(slices.DeleteFunc(slices.Clone(cells), func(c cell) bool { return outs[[2]int{c.Row, c.Col}] }), row, col)
 	// Près d'une plage (tableau converti), l'îlot reste une plage.
 	if keep, err := t.keepRange(sheet, isl); keep || err != nil {
 		return "", err
 	}
-	r0, r1, c0, c1 := isl[0].Row, isl[0].Row, isl[0].Col, isl[0].Col
-	for _, c := range isl {
-		r1 = max(r1, c.Row)
-		c0, c1 = min(c0, c.Col), max(c1, c.Col)
+	bounds := func(isl []cell) (r0, r1, c0, c1 int) {
+		r0, r1, c0, c1 = isl[0].Row, isl[0].Row, isl[0].Col, isl[0].Col
+		for _, c := range isl {
+			r0, r1 = min(r0, c.Row), max(r1, c.Row)
+			c0, c1 = min(c0, c.Col), max(c1, c.Col)
+		}
+		return
+	}
+	read := func(r0, r1, c0, c1 int) [][]string {
+		g := make([][]string, r1-r0+1)
+		for i := range g {
+			g[i] = make([]string, c1-c0+1)
+		}
+		for _, c := range cells {
+			if c.Row >= r0 && c.Row <= r1 && c.Col >= c0 && c.Col <= c1 {
+				g[c.Row-r0][c.Col-c0] = c.Raw
+			}
+		}
+		return g
+	}
+	r0, r1, c0, c1 := bounds(isl)
+	// Un titre (« Ventes 2026 ») au-dessus de la ligne d'en-têtes reste une
+	// cellule libre : le tableau naît dessous.
+	var titles []string
+	if n := titleRows(read(r0, r1, c0, c1)); n > 0 {
+		for _, c := range isl {
+			if c.Row < r0+n {
+				titles = append(titles, c.Raw)
+			}
+		}
+		isl = slices.DeleteFunc(isl, func(c cell) bool { return c.Row < r0+n })
+		r0, r1, c0, c1 = bounds(isl)
 	}
 	if r1-r0+1 < MinRows {
 		return "", nil
 	}
-	grid2 := make([][]string, r1-r0+1)
-	for i := range grid2 {
-		grid2[i] = make([]string, c1-c0+1)
-	}
-	for _, c := range cells {
-		if c.Row >= r0 && c.Row <= r1 && c.Col >= c0 && c.Col <= c1 {
-			grid2[c.Row-r0][c.Col-c0] = c.Raw
-		}
-	}
+	grid2 := read(r0, r1, c0, c1)
 	headers, data, top := grid2[0], grid2[1:], r0
 	if !typedHeader(grid2) {
 		// Une liste de valeurs (10, 20, 30) : la première ligne reste une
@@ -344,7 +418,13 @@ func (t *tx) birth(sheet int64, row, col int) (string, error) {
 			if err := t.setFreeCell(sheet, c.Row, c.Col, ""); err != nil {
 				return "", err
 			}
+			if err := t.clearOut(sheet, c.Row, c.Col); err != nil {
+				return "", err
+			}
 		}
+	}
+	if len(titles) > 0 {
+		t.notes = append(t.notes, fmt.Sprintf("« %s » gardé comme titre au-dessus du tableau (clic droit sur l'en-tête pour changer)", clip(strings.Join(titles, " "))))
 	}
 	name, err := t.tableName(sheet, top, c0)
 	if err != nil {

@@ -56,6 +56,9 @@ type tx struct {
 	layoutAll    bool
 	layoutSheets map[int64]bool
 	layoutTables map[int64]bool
+	// noLegend : « Ajouter au tableau », une saisie sous le tableau n'est pas
+	// lue comme une note ou un total (voir legend.go).
+	noLegend bool
 }
 
 func (t *tx) apply(do, undo []stmt) error { return t.Apply(do, undo) }

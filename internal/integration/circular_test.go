@@ -51,17 +51,20 @@ func TestSelfAggregateColumn(t *testing.T) {
 }
 
 // Les autres chemins vers la même boucle : un total saisi juste sous le
-// tableau (la ligne est absorbée), et une formule libre absorbée quand le
-// tableau s'élargit jusqu'à elle.
+// tableau n'en est plus un (il reste libre), une formule libre absorbée quand
+// le tableau s'élargit jusqu'à elle en reste un.
 func TestSelfAggregateAbsorbed(t *testing.T) {
 	h := newHost(t)
 	h.paste(1, 1, []any{"Produit", "X"}, []any{"a", 2}, []any{"b", 4})
 	h.onlyTable("T")
+	// Un total tapé juste sous le tableau reste une cellule libre, gardée
+	// hors du tableau : la colonne ne devient pas calculée (audit de la
+	// détection des tableaux).
 	h.set(4, 2, "=SOMME(T[X])")
-	if tb := h.table("T"); tb.Rows != 3 {
-		t.Fatalf("le total saisi sous le tableau n'a pas été absorbé : %+v", tb)
+	if tb := h.table("T"); tb.Rows != 2 || tb.Columns[1].Formula != "" {
+		t.Fatalf("le total saisi sous le tableau a été absorbé : %+v", tb)
 	}
-	h.wantCirc("T", "X")
+	h.wantVal(4, 2, "6")
 
 	h = newHost(t)
 	h.paste(1, 1, []any{"Produit", "X"}, []any{"a", 2}, []any{"b", 4})

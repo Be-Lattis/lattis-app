@@ -999,6 +999,24 @@ func (s *DocumentService) PromoteHeader(ctx context.Context, table string) (DocS
 	return s.act(ctx, func(d *doc.Document) error { return d.PromoteHeader(ctx, table) })
 }
 
+// HeaderToTitle sort l'en-tête d'un tableau (c'est un titre) : la 1re ligne
+// de données devient l'en-tête.
+func (s *DocumentService) HeaderToTitle(ctx context.Context, table string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.HeaderToTitle(ctx, table) })
+}
+
+// RowToNote sort la dernière ligne d'un tableau : elle reste dessous, hors
+// du tableau (note ou total).
+func (s *DocumentService) RowToNote(ctx context.Context, table string, n int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.RowToNote(ctx, table, n) })
+}
+
+// JoinTable ajoute au tableau voisin une cellule libre gardée hors du
+// tableau (note, total, remarque).
+func (s *DocumentService) JoinTable(ctx context.Context, sheet int64, row, col int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.JoinTable(ctx, sheet, row, col) })
+}
+
 // PlaceChart déplace et redimensionne un graphique (ancrage libre).
 func (s *DocumentService) PlaceChart(ctx context.Context, id int64, row, col, offX, offY, width, height int) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.PlaceChart(ctx, id, row, col, offX, offY, width, height) })
