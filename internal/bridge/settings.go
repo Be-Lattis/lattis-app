@@ -20,7 +20,7 @@ func (s *DocumentService) Settings(ctx context.Context) []Setting {
 }
 
 // SetSetting écrit un réglage de l'utilisateur (chemin pointé de la
-// configuration, par exemple features.webPages) et rend les réglages à jour.
+// configuration, par exemple features.htmlTabs) et rend les réglages à jour.
 // Refusé pour une clé hors de la liste ou imposée par une stratégie.
 func (s *DocumentService) SetSetting(ctx context.Context, path string, value any) ([]Setting, error) {
 	c, err := config.SetUserValue(ctx, path, value)

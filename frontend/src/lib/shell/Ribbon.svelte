@@ -12,7 +12,7 @@
 	import { ZOOM_LEVELS, zoomLabel } from '#lib/grid/zoom.js';
 	import Select from '#lib/ui/Select.svelte';
 	import { estimate, fit, groupWidth, type GroupShape, type Measure, type Mode } from './fit';
-	import { webPagesEnabled } from './settings.svelte.js';
+	import { htmlTabsEnabled } from './settings.svelte.js';
 	import type { IconName } from '#lib/icons/icons.js';
 	import { MORE_KINDS, type ChartKind } from '#lib/chart/kinds.js';
 
@@ -225,7 +225,8 @@
 	const tabGroup: Group = $derived({
 		title: 'Onglets',
 		commands: [
-			{ label: 'Onglet HTML', icon: 'web', run: onpage, hint: 'Nouvel Onglet HTML : une page (HTML, CSS et JavaScript) qui lit et modifie le classeur' + (webPagesEnabled() ? ', ou une page web externe' : '') },
+			// Onglets HTML : à activer dans Fichier › Paramètres › Fonctionnalités.
+			...(htmlTabsEnabled() ? [{ label: 'Onglet HTML', icon: 'web' as const, run: onpage, hint: 'Nouvel Onglet HTML : une page (HTML, CSS et JavaScript) qui lit et modifie le classeur, ou une page web externe' }] : []),
 			{ label: 'Onglet Document', icon: 'document', run: ondocpage, hint: 'Nouvel Onglet Document : texte mis en forme, avec graphiques, tableaux croisés et boutons de scripts' }
 		]
 	});

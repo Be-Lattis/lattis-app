@@ -27,7 +27,7 @@
 	import type { ControlInfo } from '#lib/script/controls.js';
 	import McpPanel from '#lib/shell/McpPanel.svelte';
 	import SettingsDialog from '#lib/shell/SettingsDialog.svelte';
-	import { loadSettings } from '#lib/shell/settings.svelte.js';
+	import { htmlTabsEnabled, loadSettings } from '#lib/shell/settings.svelte.js';
 	import HtmlPage from '#lib/page/HtmlPage.svelte';
 	import DocPage from '#lib/doc/DocPage.svelte';
 	import type { DocFormat } from '#lib/doc/format.js';
@@ -997,7 +997,7 @@
 		ondedup={mode === 'doc' ? () => sheet?.dedupActive() : undefined}
 		ontextcols={mode === 'doc' ? () => sheet?.textToColumnsActive() : undefined}
 		onbutton={mode === 'doc' ? (kind) => sheet?.insertButton(kind) : undefined}
-		onpage={mode === 'doc' ? () => addPage() : undefined}
+		onpage={mode === 'doc' && htmlTabsEnabled() ? () => addPage() : undefined}
 		ondocpage={mode === 'doc' ? () => addDoc() : undefined}
 		context={activePage && view === 'grid' ? (activeDoc ? 'doc' : 'html') : 'sheet'}
 		ondoc={docCommand}
@@ -1262,7 +1262,7 @@
 		onselect={selectSheet}
 		onadd={mode === 'doc' ? () => sheetAction(async () => selectSheet(await DocumentService.AddSheet())) : undefined}
 		oninsert={mode === 'doc' ? (before) => sheetAction(async () => selectSheet(await DocumentService.InsertSheet(before))) : undefined}
-		onpage={mode === 'doc' ? (before) => addPage(before) : undefined}
+		onpage={mode === 'doc' && htmlTabsEnabled() ? (before) => addPage(before) : undefined}
 		ondocpage={mode === 'doc' ? (before) => addDoc(before) : undefined}
 		onmove={mode === 'doc' ? (id, to) => sheetAction(() => DocumentService.MoveSheet(id, to)) : undefined}
 		onrename={mode === 'doc' ? (id, name) => sheetAction(() => DocumentService.RenameSheet(id, name)) : undefined}

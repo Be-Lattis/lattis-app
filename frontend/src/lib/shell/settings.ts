@@ -31,10 +31,10 @@ export const settingSections: SettingSection[] = [
 		title: 'Fonctionnalités',
 		settings: [
 			{
-				path: 'features.webPages',
+				path: 'features.htmlTabs',
 				kind: 'bool',
-				label: 'Pages web externes dans les Onglets HTML',
-				help: 'Permet d’afficher une page d’un site dans un Onglet HTML. Les classeurs qui en contiennent déjà s’ouvrent normalement.'
+				label: 'Onglets HTML',
+				help: 'Permet d’ajouter des Onglets HTML : une page HTML, CSS et JavaScript qui lit et modifie le classeur, ou une page d’un site. Les classeurs qui en contiennent déjà s’ouvrent et s’utilisent normalement.'
 			}
 		]
 	}

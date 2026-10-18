@@ -21,7 +21,7 @@ export async function setSetting(path: string, value: unknown) {
 	userSettings.list = (await DocumentService.SetSetting(path, value)) ?? [];
 }
 
-/** Un Onglet HTML peut être pointé vers une page web externe (« Page web… »). */
-export function webPagesEnabled(): boolean {
-	return boolSetting(userSettings.list, 'features.webPages');
+/** Les Onglets HTML sont proposés (ajout, « Page web… »). */
+export function htmlTabsEnabled(): boolean {
+	return boolSetting(userSettings.list, 'features.htmlTabs');
 }

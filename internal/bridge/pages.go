@@ -2,16 +2,22 @@ package bridge
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/lalamefine/lattis/internal/api"
 	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/config"
 	"github.com/lalamefine/lattis/internal/doc"
 )
 
 // AddPage ajoute un onglet page HTML avant l'onglet before (0 : à la fin)
-// et renvoie son identifiant.
+// et renvoie son identifiant. Les Onglets HTML sont une fonctionnalité à
+// activer (Fichier › Paramètres › Fonctionnalités, features.htmlTabs).
 func (s *DocumentService) AddPage(ctx context.Context, before int64) (int64, error) {
+	if !config.Current().Bool("features.htmlTabs", false) {
+		return 0, errors.New("les Onglets HTML sont désactivés : activez-les dans Fichier › Paramètres › Fonctionnalités")
+	}
 	d, err := s.current()
 	if err != nil {
 		return 0, err

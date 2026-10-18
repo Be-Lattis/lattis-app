@@ -48,7 +48,8 @@ export function AddFavorite(name: string, sql: string): $CancellablePromise<numb
 
 /**
  * AddPage ajoute un onglet page HTML avant l'onglet before (0 : à la fin)
- * et renvoie son identifiant.
+ * et renvoie son identifiant. Les Onglets HTML sont une fonctionnalité à
+ * activer (Fichier › Paramètres › Fonctionnalités, features.htmlTabs).
  */
 export function AddPage(before: number): $CancellablePromise<number> {
     return $Call.ByID(1783811502, before);
@@ -1107,7 +1108,7 @@ export function SetSelection(sel: api$0.Selection): $CancellablePromise<void> {
 
 /**
  * SetSetting écrit un réglage de l'utilisateur (chemin pointé de la
- * configuration, par exemple features.webPages) et rend les réglages à jour.
+ * configuration, par exemple features.htmlTabs) et rend les réglages à jour.
  * Refusé pour une clé hors de la liste ou imposée par une stratégie.
  */
 export function SetSetting(path: string, value: any): $CancellablePromise<$models.Setting[] | null> {

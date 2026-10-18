@@ -264,7 +264,7 @@
 			e.preventDefault();
 			if (onadd || onpage) addMenu = { x: (e.currentTarget as HTMLElement).offsetLeft };
 		}}
-		title={locked ? 'Structure du classeur protégée' : 'Nouvelle feuille (clic droit : Onglet HTML ou Onglet Document)'}>+</button
+		title={locked ? 'Structure du classeur protégée' : page ? 'Nouvelle feuille (clic droit : Onglet HTML ou Onglet Document)' : 'Nouvelle feuille (clic droit : Onglet Document)'}>+</button
 	>
 	{#if addMenu}
 		<div class="menu" role="menu" style:left="{addMenu.x}px" use:dismiss={() => (addMenu = null)}>
@@ -276,6 +276,7 @@
 					onadd?.();
 				}}><span class="ic"><Icon name="sheet" size={16} /></span>Nouvelle feuille</button
 			>
+			{#if page}
 			<button
 				role="menuitem"
 				disabled={!onpage}
@@ -284,6 +285,7 @@
 					onpage?.();
 				}}><span class="ic"><Icon name="web" size={16} /></span>Nouvel Onglet HTML</button
 			>
+			{/if}
 			<button
 				role="menuitem"
 				disabled={!ondocpage}
@@ -329,6 +331,7 @@
 					oninsert?.(id);
 				}}><span class="ic"><Icon name="sheet" size={16} /></span>Insérer une feuille</button
 			>
+			{#if page}
 			<button
 				role="menuitem"
 				disabled={!onpage}
@@ -338,6 +341,7 @@
 					onpage?.(id);
 				}}><span class="ic"><Icon name="web" size={16} /></span>Insérer un Onglet HTML</button
 			>
+			{/if}
 			<button
 				role="menuitem"
 				disabled={!ondocpage}

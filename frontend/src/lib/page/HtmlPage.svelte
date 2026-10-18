@@ -14,7 +14,7 @@
 	import { html } from '@codemirror/lang-html';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { buildSrcdoc, eventOf, pageUrl, parseCall, replyOf, urlSource } from './bridge';
-	import { webPagesEnabled } from '#lib/shell/settings.svelte.js';
+	import { htmlTabsEnabled } from '#lib/shell/settings.svelte.js';
 
 	interface Props {
 		/** Nom de l'onglet (titre de la barre). */
@@ -65,11 +65,11 @@
 	// Pointer l'onglet vers une page web externe : seulement si Fichier ›
 	// Paramètres › Fonctionnalités le permet (coupé par défaut). Une page web
 	// déjà posée s'affiche dans tous les cas.
-	const webPages = $derived(webPagesEnabled());
+	const htmlTabs = $derived(htmlTabsEnabled());
 
 	async function setUrl() {
 		const u = (asking ?? '').trim();
-		if (!u || !webPages) return;
+		if (!u || !htmlTabs) return;
 		asking = null;
 		const src = urlSource(u);
 		try {
@@ -213,8 +213,8 @@
 			<span class="muted">Ctrl+S : enregistrer · Ctrl+Entrée : aperçu · lattis.call("sheets.list"), lattis.query(sql), lattis.on("change", f)</span>
 		{:else}
 			<button onclick={startEdit} disabled={!!locked} title={locked || 'Modifier le HTML, le CSS et le JavaScript de la page'}><Icon name="edit" size={14} />{url ? 'Page HTML' : 'Modifier'}</button>
-			{#if !webPages}
-				<!-- « Page web… » coupée (Fichier › Paramètres › Fonctionnalités) : une page web déjà posée s'affiche quand même. -->
+			{#if !htmlTabs}
+				<!-- Onglets HTML coupés (Fichier › Paramètres › Fonctionnalités) : la page déjà posée s'affiche quand même. -->
 			{:else if asking !== null}
 				<!-- svelte-ignore a11y_autofocus -->
 				<input

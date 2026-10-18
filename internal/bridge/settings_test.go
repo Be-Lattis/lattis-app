@@ -5,18 +5,18 @@ import (
 	"testing"
 )
 
-func TestSettingsWebPagesOffByDefault(t *testing.T) {
+func TestSettingsHtmlTabsOffByDefault(t *testing.T) {
 	s := &DocumentService{}
 	list := s.Settings(context.Background())
 	for _, st := range list {
-		if st.Path == "features.webPages" {
+		if st.Path == "features.htmlTabs" {
 			if st.Value != false || st.Locked {
-				t.Fatalf("features.webPages = %+v", st)
+				t.Fatalf("features.htmlTabs = %+v", st)
 			}
 			return
 		}
 	}
-	t.Fatalf("features.webPages absent : %+v", list)
+	t.Fatalf("features.htmlTabs absent : %+v", list)
 }
 
 func TestSetSettingRefusesUnknownKey(t *testing.T) {
