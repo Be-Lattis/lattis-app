@@ -134,10 +134,25 @@ func TestSQLCannotTouchFiles(t *testing.T) {
 	byScript := filepath.Join(dir, "script.db")
 	res, _ := h.try("scripts.run", "source", `pcall(db.execute, "ATTACH DATABASE '`+strings.ReplaceAll(byScript, `\`, `\\`)+`' AS p")`)
 	_ = res
-	for _, f := range []string{attached, byScript} {
+	byQuery := filepath.Join(dir, "lecture.db")
+	if _, err := h.try("db.query", "sql", `ATTACH DATABASE '`+byQuery+`' AS l`); err == nil {
+		t.Error("db.query accepte ATTACH DATABASE")
+	}
+	for _, f := range []string{attached, byScript, byQuery} {
 		if fi, err := os.Stat(f); err == nil {
-			knownBug(t, "sql-attach", fmt.Sprintf("db.execute accepte ATTACH DATABASE : une requête (ou un script, ou un bouton d'un classeur reçu) crée ou modifie un fichier SQLite n'importe où sur le disque (%s, %d octets)", filepath.Base(f), fi.Size()))
+			t.Errorf("ATTACH DATABASE accepté : une requête (ou un script, ou un bouton d'un classeur reçu) crée ou modifie un fichier SQLite n'importe où sur le disque (%s, %d octets)", filepath.Base(f), fi.Size())
 		}
+	}
+	// Les tables internes ne se lisent pas non plus (accords, journal…),
+	// ni depuis un script.
+	if _, err := h.try("db.query", "sql", `SELECT * FROM _lattis_info`); err == nil {
+		t.Error("db.query lit _lattis_info")
+	}
+	if res := h.lua(`print(pcall(db.value, "SELECT count(*) FROM _lattis_journal"))`); !strings.HasPrefix(strings.Join(res.Output, ""), "false") {
+		t.Errorf("un script lit _lattis_journal : %+v", res)
+	}
+	if _, err := h.try("db.execute", "sql", `PRAGMA query_only = 0`); err == nil {
+		t.Error("db.execute accepte un PRAGMA")
 	}
 	if _, err := h.try("db.execute", "sql", `VACUUM INTO '`+filepath.Join(dir, "copie.db")+`'`); err == nil {
 		t.Fatal("VACUUM INTO accepté")

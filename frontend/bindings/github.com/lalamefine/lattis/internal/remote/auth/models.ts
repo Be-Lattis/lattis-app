@@ -28,7 +28,9 @@ export interface Provider {
     "label": string;
 
     /**
-     * Icon : comme Discovery.Logo (vide : icône du genre).
+     * Icon : image (comme Discovery.Logo) ; lattisd envoie le genre
+     * (« password »), qui n'est pas une image : vide après Discover, et
+     * l'interface prend l'icône du genre.
      */
     "icon"?: string;
 }

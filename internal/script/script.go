@@ -26,6 +26,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lalamefine/lattis/internal/sqltext"
+	"github.com/lalamefine/lattis/internal/store"
 )
 
 // Editor écrit dans les tableaux ; *canvas.Editor le réalise. vals associe
@@ -107,6 +108,7 @@ func Run(ctx context.Context, env Env, src string, lim Limits) Result {
 	L := newState(ctx)
 	defer L.Close()
 	r := &runner{ctx: ctx, env: env, lim: lim}
+	defer r.releaseUser()
 	defer r.closeRows()
 	r.install(L)
 
@@ -166,6 +168,15 @@ type runner struct {
 	output []string
 	writes int
 	open   []*sql.Rows
+	// user : connexion de lecture des requêtes du script, sous
+	// l'autorisateur (store.UserConn) ; prise à la première requête.
+	user *sql.Conn
+}
+
+// releaseUser rend la connexion des requêtes (après closeRows).
+func (r *runner) releaseUser() {
+	store.ReleaseUserConn(r.user)
+	r.user = nil
 }
 
 func (r *runner) load(L *lua.LState, src string) error {
@@ -244,7 +255,14 @@ func (r *runner) exec(L *lua.LState, fn string) (*sql.Rows, []string, map[string
 			L.RaiseError("db.%s : %s", fn, sqlError(err))
 		}
 	}
-	rs, err := r.env.Read.QueryContext(r.ctx, cat.rewrite(q), args(L, 2)...)
+	if r.user == nil {
+		c, err := store.UserConn(r.ctx, r.env.Read)
+		if err != nil {
+			L.RaiseError("db.%s : %v", fn, err)
+		}
+		r.user = c
+	}
+	rs, err := r.user.QueryContext(r.ctx, cat.rewrite(q), args(L, 2)...)
 	if err != nil {
 		L.RaiseError("db.%s : %s", fn, sqlError(err))
 	}

@@ -9,21 +9,45 @@ import (
 // isolé, qui parle au classeur par PageCall avec les mêmes commandes que
 // les scripts Lua.
 
-// pageBlocked sont les commandes refusées à une page HTML : fichiers,
-// annulation et exécution de code Lua arbitraire restent à l'utilisateur.
-var pageBlocked = map[string]bool{
-	"doc.undo": true, "doc.redo": true, "doc.new": true, "doc.open": true, "doc.save": true,
-	"doc.import": true, "doc.export_csv": true, "scripts.run": true,
+// pageAllowed sont les seules commandes qu'une page HTML peut appeler (liste
+// autorisée : une commande ajoutée à l'API reste refusée aux pages tant
+// qu'elle n'est pas ici). Une page vient avec le classeur, éventuellement
+// reçu, et s'exécute dès qu'on affiche son onglet : elle lit le classeur,
+// modifie des valeurs (chaque appel s'annule), dialogue avec
+// l'utilisateur, joint les hôtes qu'il autorise et lance les actions des
+// boutons et contrôles (soumises à l'accord des scripts). Restent à
+// l'utilisateur : fichiers, annulation, code (scripts, pages, écouteurs,
+// actions des boutons), structure (feuilles, tableaux, colonnes),
+// protections et sources de données.
+var pageAllowed = map[string]bool{
+	// Lecture.
+	"sheets.list": true, "sheets.get": true, "sheets.find": true,
+	"tables.list": true, "tables.get": true, "tables.rows": true, "tables.duplicates": true, "tables.key_check": true,
+	"columns.values": true, "columns.type_mix": true, "columns.type_preview": true,
+	"cells.get": true, "cells.dependencies": true,
+	"controls.list": true, "controls.get": true, "buttons.list": true,
+	"db.query": true, "formulas.functions": true, "doc.state": true, "pages.get": true, "queries.list": true,
+	// Valeurs et présentation (annulables).
+	"cells.set": true, "cells.clear": true, "cells.paste": true, "cells.style": true, "cells.note": true,
+	"tables.insert_row": true, "tables.delete_row": true, "tables.sort": true, "tables.clear_filters": true,
+	"columns.set_filter": true, "db.execute": true, "doc.recalc": true, "controls.set": true,
+	"queries.refresh": true, "queries.refresh_all": true,
+	// Actions des boutons et contrôles (accord des scripts).
+	"buttons.run": true, "controls.fire": true,
+	// Interface.
+	"ui.alert": true, "ui.confirm": true, "ui.dialog": true, "ui.notify": true, "ui.prompt": true,
+	"ui.select": true, "ui.select_cells": true, "ui.select_object": true, "ui.selection": true, "ui.show_sheet": true,
+	// Réseau (accord de l'utilisateur par hôte).
+	"http.get": true, "http.post": true, "http.request": true,
 }
 
 // PageCommand dit si une page HTML peut appeler la commande name.
-func PageCommand(name string) bool { return registry[name] != nil && !pageBlocked[name] }
+func PageCommand(name string) bool { return registry[name] != nil && pageAllowed[name] }
 
 // PageCall exécute une commande demandée par une page HTML (pont
-// postMessage de l'interface) : les commandes des scripts et du serveur MCP
-// (db.query, db.execute compris), sauf fichiers, annulation et scripts.run ;
-// chaque modification forme une étape d'annulation, et l'utilisateur est
-// consulté avant une requête HTTP vers un hôte inconnu.
+// postMessage de l'interface), si elle est dans la liste autorisée
+// (pageAllowed) ; chaque modification forme une étape d'annulation, et
+// l'utilisateur est consulté avant une requête HTTP vers un hôte inconnu.
 func PageCall(ctx context.Context, host Host, name string, args map[string]any) (any, error) {
 	if !PageCommand(name) {
 		if registry[name] != nil {
@@ -51,7 +75,7 @@ func init() {
 			Name:    "pages.add",
 			Label:   "Nouvelle page web",
 			Summary: "Ajoute une page web (HTML, CSS et JavaScript affichés dans un cadre isolé), ou un document (kind = \"doc\" : texte riche), et renvoie {id, name, kind}.",
-			Details: "La page parle au classeur avec lattis.call(\"commande\", {arguments}), qui renvoie une promesse (les mêmes commandes que les scripts : sheets.list, db.query, cells.set…), et lattis.on(\"change\", fonction), appelée quand le classeur change. Sans source, la page reçoit un modèle d'exemple. Sans before, l'onglet s'ajoute à la fin.",
+			Details: "La page parle au classeur avec lattis.call(\"commande\", {arguments}), qui renvoie une promesse (une liste autorisée des commandes des scripts : lecture comme sheets.list ou db.query, valeurs comme cells.set ou db.execute, ui.*, http.*, buttons.run ; ni fichiers, ni scripts, ni structure, ni protections), et lattis.on(\"change\", fonction), appelée quand le classeur change. Sans source, la page reçoit un modèle d'exemple. Sans before, l'onglet s'ajoute à la fin.",
 			Returns: "{id, name, kind}",
 			Params: []Param{
 				{Name: "name", Type: String, Desc: "nom de l'onglet (Page1… par défaut)", Optional: true},

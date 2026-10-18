@@ -24,6 +24,7 @@ export type {
     LattisState,
     MCPStatus,
     OpenResult,
+    Platform,
     QueryRefresh,
     QuerySheet,
     SalvageResult,

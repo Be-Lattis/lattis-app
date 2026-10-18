@@ -2,56 +2,31 @@ package canvas
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"strings"
 )
 
 // Hôtes que les scripts et les pages HTML du classeur peuvent joindre en
 // HTTP (module http des scripts, internal/api/cmd_http.go). Avant la
-// première requête vers un hôte, l'utilisateur est consulté ; « mémoriser
-// pour ce classeur » range l'hôte dans _lattis_http_hosts. Comme la
-// protection, ce réglage ne passe pas par le journal (une autorisation ne
-// s'annule pas) mais rend le classeur « modifié » (ProtectionChanges).
+// première requête vers un hôte, l'utilisateur est consulté. La réponse
+// vaut pour la session (ici) ou, avec « mémoriser », est rangée sur ce
+// poste, hors du classeur (internal/trust, doc.Document.AllowHTTPHost) :
+// un classeur reçu ne peut pas s'accorder lui-même l'accès au réseau.
+//
+// Les versions précédentes rangeaient les hôtes dans le classeur
+// (_lattis_http_hosts) : la table n'est plus lue que pour reprendre, une
+// fois, les accords d'un classeur de ce poste (LegacyHTTPHosts).
 
-// HTTPHosts liste les hôtes mémorisés, par ordre alphabétique.
-func (m *Model) HTTPHosts(ctx context.Context) ([]string, error) {
-	rs, err := m.db.Read().QueryContext(ctx, `SELECT host FROM _lattis_http_hosts ORDER BY host`)
-	if err != nil {
-		return nil, err
-	}
-	defer rs.Close()
-	out := []string{}
-	for rs.Next() {
-		var h string
-		if err := rs.Scan(&h); err != nil {
-			return nil, err
-		}
-		out = append(out, h)
-	}
-	return out, rs.Err()
-}
-
-// HTTPHostAllowed dit si l'hôte est autorisé : mémorisé dans le classeur ou
-// accordé pour la session. known est faux si l'utilisateur n'a encore rien
-// répondu pour cet hôte.
-func (m *Model) HTTPHostAllowed(ctx context.Context, host string) (allowed, known bool, err error) {
-	host = NormalizeHost(host)
-	var k int
-	if err := m.db.Read().QueryRowContext(ctx, `SELECT count(*) FROM _lattis_http_hosts WHERE host = ?`, host).Scan(&k); err != nil {
-		return false, false, err
-	}
-	if k > 0 {
-		return true, true, nil
-	}
+// SessionHost donne la réponse de l'utilisateur pour la session ; known
+// est faux s'il n'a encore rien répondu pour cet hôte.
+func (m *Model) SessionHost(host string) (allowed, known bool) {
 	m.hostMu.Lock()
 	defer m.hostMu.Unlock()
-	allowed, known = m.session[host]
-	return allowed, known, nil
+	allowed, known = m.session[NormalizeHost(host)]
+	return allowed, known
 }
 
 // SetSessionHost retient la réponse de l'utilisateur pour la session (le
-// classeur ouvert), sans la mémoriser dans le fichier.
+// classeur ouvert), sans la mémoriser.
 func (m *Model) SetSessionHost(host string, allowed bool) {
 	m.hostMu.Lock()
 	defer m.hostMu.Unlock()
@@ -61,43 +36,34 @@ func (m *Model) SetSessionHost(host string, allowed bool) {
 	m.session[NormalizeHost(host)] = allowed
 }
 
-// AllowHTTPHost mémorise l'hôte dans le classeur.
-func (m *Model) AllowHTTPHost(ctx context.Context, host string) error {
-	host = NormalizeHost(host)
-	if host == "" || strings.ContainsAny(host, "/ \t") {
-		return errors.New("hôte invalide : nom de domaine (et port éventuel) attendu")
-	}
-	m.SetSessionHost(host, true)
-	return m.writeHosts(ctx, `INSERT OR IGNORE INTO _lattis_http_hosts (host) VALUES (?)`, host)
-}
-
-// ForgetHTTPHost retire l'hôte du classeur et oublie la réponse donnée pour
-// la session : la prochaine requête redemandera.
-func (m *Model) ForgetHTTPHost(ctx context.Context, host string) error {
-	host = NormalizeHost(host)
+// ForgetSessionHost oublie la réponse donnée pour la session.
+func (m *Model) ForgetSessionHost(host string) {
 	m.hostMu.Lock()
-	delete(m.session, host)
-	m.hostMu.Unlock()
-	return m.writeHosts(ctx, `DELETE FROM _lattis_http_hosts WHERE host = ?`, host)
+	defer m.hostMu.Unlock()
+	delete(m.session, NormalizeHost(host))
 }
 
-func (m *Model) writeHosts(ctx context.Context, q, host string) error {
-	changed := false
-	err := m.db.Write(ctx, func(t *sql.Tx) error {
-		r, err := t.ExecContext(ctx, q, host)
-		if err != nil {
-			return err
-		}
-		n, _ := r.RowsAffected()
-		changed = n > 0
-		return nil
-	})
-	if err == nil && changed {
-		m.protMu.Lock()
-		m.protGen++
-		m.protMu.Unlock()
+// LegacyHTTPHosts lit les hôtes enregistrés dans le classeur par une
+// version précédente (vide si la table n'existe pas).
+func (m *Model) LegacyHTTPHosts(ctx context.Context) ([]string, error) {
+	var n int
+	if err := m.db.Read().QueryRowContext(ctx, `SELECT count(*) FROM sqlite_schema WHERE type = 'table' AND name = '_lattis_http_hosts'`).Scan(&n); err != nil || n == 0 {
+		return nil, err
 	}
-	return err
+	rs, err := m.db.Read().QueryContext(ctx, `SELECT host FROM _lattis_http_hosts ORDER BY host`)
+	if err != nil {
+		return nil, err
+	}
+	defer rs.Close()
+	var out []string
+	for rs.Next() {
+		var h string
+		if err := rs.Scan(&h); err != nil {
+			return nil, err
+		}
+		out = append(out, h)
+	}
+	return out, rs.Err()
 }
 
 // NormalizeHost écrit un hôte comme il est rangé : en minuscules, sans

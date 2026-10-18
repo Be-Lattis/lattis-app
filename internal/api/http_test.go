@@ -108,8 +108,9 @@ print(n.status, n.ok, n.body, n.json)
 	if err != nil || len(hosts) != 1 || !strings.HasPrefix(hosts[0], "127.0.0.1:") {
 		t.Fatalf("hôtes mémorisés %v %v", hosts, err)
 	}
-	if dirty, _ := h.d.Dirty(context.Background()); !dirty {
-		t.Fatal("hôte mémorisé sans rendre le classeur modifié")
+	// L'accord est rangé sur ce poste, pas dans le classeur.
+	if dirty, _ := h.d.Dirty(context.Background()); dirty {
+		t.Fatal("hôte mémorisé dans le classeur")
 	}
 }
 

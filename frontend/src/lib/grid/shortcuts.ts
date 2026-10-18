@@ -40,6 +40,10 @@ export function shortcutOf(e: Keys): Shortcut | null {
 		return null;
 	}
 	if (e.altKey && !ctrl && (k === '=' || e.code === 'Equal')) return 'autoSum';
+	// Équivalent de Ctrl+Pg.Suiv / Pg.Préc, que le navigateur garde pour
+	// changer d'onglet (version web).
+	if (e.altKey && !ctrl && !e.shiftKey && k === 'PageDown') return 'nextSheet';
+	if (e.altKey && !ctrl && !e.shiftKey && k === 'PageUp') return 'prevSheet';
 	if (ctrl || e.altKey) return null;
 	if (e.shiftKey && (k === ' ' || e.code === 'Space')) return 'selectRow';
 	if (e.shiftKey && k === 'F11') return 'insertSheet';

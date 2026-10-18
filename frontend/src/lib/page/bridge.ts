@@ -10,8 +10,10 @@
 //                                                  → [{Client, Montant…}, …]
 //   lattis.on("change", () => …)                   → le classeur a changé
 //
-// Les commandes sont celles des scripts Lua et du serveur MCP
-// (internal/api, DocumentService.PageCall). Une règle de sécurité du
+// Les commandes sont une liste autorisée de celles des scripts Lua
+// (internal/api/cmd_pages.go, DocumentService.PageCall) : lecture,
+// valeurs, interface, réseau ; ni fichiers, ni code, ni structure, ni
+// protections. Une règle de sécurité du
 // contenu (CSP) coupe tout accès direct au réseau : une page ne joint un
 // site que par lattis.call("http.get", …), avec l'accord de l'utilisateur.
 

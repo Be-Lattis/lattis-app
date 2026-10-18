@@ -11,9 +11,12 @@
 	// fenêtre et le double-clic est traité ici.
 	// macOS : on garde les feux tricolores natifs (barre masquée, contenu
 	// pleine hauteur) ; la barre laisse leur place à gauche.
+	// Web : pas de fenêtre à réduire, agrandir ou fermer (onglet du
+	// navigateur) ; ni boutons, ni double-clic.
 	import { onMount } from 'svelte';
 	import { System, Window } from '@wailsio/runtime';
 	import Icon from '#lib/icons/Icon.svelte';
+	import { isWeb } from '#lib/web/platform.js';
 	import type { IconName } from '#lib/icons/icons.js';
 	import AccountMenu from '#lib/remote/AccountMenu.svelte';
 
@@ -41,6 +44,7 @@
 			.catch(() => {});
 
 	onMount(() => {
+		if (isWeb) return;
 		mac = System.IsMac();
 		linux = System.IsLinux();
 		refresh();
@@ -57,7 +61,7 @@
 	// Double-clic sur la zone de titre : agrandir ou restaurer. Quand le
 	// système traite la zone de titre (Windows), le double-clic n'arrive pas à
 	// la page : il n'y a jamais de double bascule.
-	const dblclick = () => toggle();
+	const dblclick = () => (isWeb ? undefined : toggle());
 </script>
 
 <div class="titlebar" class:mac>
@@ -76,7 +80,7 @@
 		<span class="muted">{title ? '\u00a0– Lattis' : 'Lattis'}</span>
 	</div>
 	<AccountMenu />
-	{#if !mac}
+	{#if !mac && !isWeb}
 		<div class="controls">
 			<button class="ctl min" title="Réduire" onclick={minimise}><Icon name="win-minimize" size={16} /></button>
 			<button class="ctl max" title={maximised ? 'Niveau inférieur' : 'Agrandir'} onclick={toggle}>

@@ -7,6 +7,8 @@
     "dev": "vite dev",
     "build:dev": "vite build --minify false --mode development",
     "build": "vite build --mode production",
+    "build:web": "vite build --mode web",
+    "dev:web": "vite dev --mode web",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest run",

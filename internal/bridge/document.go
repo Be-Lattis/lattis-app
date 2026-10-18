@@ -14,16 +14,11 @@ import (
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // ChangedEvent est émis après chaque modification du document : l'interface
 // relit la mise en page et vide son cache de lignes.
 const ChangedEvent = "doc:changed"
-
-func init() {
-	application.RegisterEvent[DocState](ChangedEvent)
-}
 
 // DocState décrit le classeur ouvert pour l'interface (titre, menus).
 type DocState struct {
@@ -63,9 +58,10 @@ type SalvageResult struct {
 
 // DocumentService expose un classeur à l'interface (phase 2).
 type DocumentService struct {
-	mu     sync.Mutex
-	doc    *doc.Document
-	tables map[int64]*grid.Table // tableaux chargés pour la lecture par fenêtres
+	hostRef // hôte : bureau (Wails) ou web (platform.go)
+	mu      sync.Mutex
+	doc     *doc.Document
+	tables  map[int64]*grid.Table // tableaux chargés pour la lecture par fenêtres
 	// memo garde les résultats coûteux du menu ▾ d'une colonne (valeurs du
 	// filtre, contrôle de clé, mélange de types), jusqu'à la prochaine
 	// modification de leur tableau.
@@ -140,10 +136,10 @@ func (s *DocumentService) New(ctx context.Context) (DocState, error) {
 // Open ouvre un classeur (path vide : boîte de dialogue).
 func (s *DocumentService) Open(ctx context.Context, path string) (OpenResult, error) {
 	if path == "" {
-		p, err := application.Get().Dialog.OpenFile().
-			SetTitle("Ouvrir un classeur").
-			AddFilter("Classeur Lattis", "*.lattis").
-			PromptForSingleSelection()
+		p, err := s.sys().OpenFile(FileDialog{
+			Title:   "Ouvrir un classeur",
+			Filters: []FileFilter{{"Classeur Lattis", "*.lattis"}},
+		})
 		if err != nil {
 			return OpenResult{}, err
 		}
@@ -234,26 +230,28 @@ func (s *DocumentService) Save(ctx context.Context, as bool) (DocState, error) {
 			return st, err
 		}
 	}
-	path := ""
 	if as || d.Path() == "" {
 		name := "Classeur.lattis"
 		if d.Path() != "" {
 			name = filepath.Base(d.Path())
 		}
-		p, err := application.Get().Dialog.SaveFile().
-			SetMessage("Enregistrer le classeur").
-			SetFilename(name).
-			AddFilter("Classeur Lattis", "*.lattis").
-			PromptForSingleSelection()
+		var werr error
+		p, err := s.sys().SaveFile(FileDialog{
+			Title:    "Enregistrer le classeur",
+			Filename: name,
+			Filters:  []FileFilter{{"Classeur Lattis", "*.lattis"}},
+			Ext:      ".lattis",
+		}, func(p string) error {
+			werr = saveDoc(ctx, d, p)
+			return werr
+		})
+		if werr != nil {
+			return DocState{}, werr
+		}
 		if err != nil || p == "" {
 			return s.State(ctx)
 		}
-		if !strings.HasSuffix(strings.ToLower(p), ".lattis") {
-			p += ".lattis"
-		}
-		path = p
-	}
-	if err := saveDoc(ctx, d, path); err != nil {
+	} else if err := saveDoc(ctx, d, ""); err != nil {
 		return DocState{}, err
 	}
 	addRecent(d.Path())
@@ -306,8 +304,8 @@ func (s *DocumentService) changed(ctx context.Context) (DocState, error) {
 	if d, derr := s.current(); derr == nil {
 		st.Notice = d.TakeNotice()
 	}
-	if app := application.Get(); app != nil && err == nil {
-		app.Event.Emit(ChangedEvent, st)
+	if err == nil {
+		s.sys().Emit(ChangedEvent, st)
 	}
 	return st, err
 }

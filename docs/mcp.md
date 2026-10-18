@@ -92,6 +92,14 @@ autorisé : « api.exemple.fr » n'est pas autorisé pour ce classeur ; seul l'u
 peut l'autoriser dans Lattis… » : un assistant ne peut pas accorder lui-même l'accès au
 réseau.
 
+De même, `scripts_run` avec `name` (un script de la bibliothèque du classeur) et
+`buttons_run` / `controls_fire` n'exécutent que des versions de scripts déjà autorisées sur
+ce poste : écrites ou lancées ici, ou acceptées à leur première exécution dans Lattis
+(classeur reçu, voir le guide des scripts, § 10). Le code passé directement dans `source`
+n'est pas soumis à cet accord. Les requêtes `db_query` et `db_execute` ne lisent ni
+n'écrivent les tables internes `_lattis_*` et refusent `ATTACH`, les changements de
+structure et les `PRAGMA`.
+
 ## Pour les développeurs
 
 Les commandes sont définies une seule fois, dans `internal/api` (nom, paramètres, aide,

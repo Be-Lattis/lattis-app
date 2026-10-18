@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { answer, initialValues, validate, type DialogField } from './ScriptDialog.svelte';
+import { answer, codeLabel, initialValues, validate, type DialogField } from './ScriptDialog.svelte';
 
 const fields: DialogField[] = [
 	{ name: 'client', required: true },
@@ -26,5 +26,10 @@ describe('boîte de dialogue des scripts', () => {
 		v.nb = '3';
 		expect(validate(fields, v)).toBe('');
 		expect(answer(fields, v)).toEqual({ client: 'Durand', montant: 12.5, nb: 3, paye: true, mode: 'Carte', couleur: '#000000' });
+	});
+	it('bouton « Voir le code » de l’accord d’un script reçu', () => {
+		expect(codeLabel('print(1)', false)).toBe('Voir le code (1 ligne)');
+		expect(codeLabel('a = 1\r\nprint(a)\r\n', false)).toBe('Voir le code (2 lignes)');
+		expect(codeLabel('print(1)', true)).toBe('Masquer le code');
 	});
 });

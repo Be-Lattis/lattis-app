@@ -5,18 +5,12 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // OpenFileEvent demande à l'interface d'ouvrir un classeur désigné par le
 // système (double-clic sur un fichier .lattis alors que l'application tourne
 // déjà, sous macOS).
 const OpenFileEvent = "doc:open-file"
-
-func init() {
-	application.RegisterEvent[string](OpenFileEvent)
-}
 
 // Extension est l'extension des classeurs Lattis, associée à l'application
 // par les installeurs (MSIX, NSIS, .app, .desktop).
@@ -72,9 +66,7 @@ func (s *DocumentService) RequestOpen(path string) {
 		return
 	}
 	s.launch.mu.Unlock()
-	if app := application.Get(); app != nil {
-		app.Event.Emit(OpenFileEvent, path)
-	}
+	s.sys().Emit(OpenFileEvent, path)
 }
 
 // LaunchFile donne, une seule fois, le classeur à ouvrir au lancement, ou "".
