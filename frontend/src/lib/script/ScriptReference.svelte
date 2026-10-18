@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resizePanel } from '#lib/ui/resize.js';
+	import { panelKeys } from '#lib/ui/focus.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	// Panneau « Référence » de l'onglet SCRIPT : les fonctions disponibles dans
 	// un script Lua, par catégorie, avec recherche. Un clic déplie une entrée ;
@@ -29,7 +30,7 @@
 	}
 </script>
 
-<aside class="ref" use:resizePanel={{ key: 'lua-ref' }}>
+<aside class="ref" use:resizePanel={{ key: 'lua-ref' }} use:panelKeys={close} aria-label="Référence Lua">
 	<div class="head">
 		<h2>Référence Lua</h2>
 		<button class="close" onclick={close} title="Masquer la référence" aria-label="Masquer la référence">×</button>
@@ -41,7 +42,10 @@
 		bind:value={query}
 		onkeydown={(e) => {
 			if (e.key === 'Enter' && results[0]) openName = results[0].name;
-			else if (e.key === 'Escape') query = '';
+			else if (e.key === 'Escape' && query) {
+				query = ''; // Échap vide la recherche ; une seconde fois, ferme le volet
+				e.preventDefault();
+			}
 		}}
 		spellcheck="false"
 	/>

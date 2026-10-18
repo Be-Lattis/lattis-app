@@ -4,7 +4,7 @@
 	// la grille (précédence sur GRID). Les commandes pas encore réalisées sont
 	// affichées désactivées, pour montrer l'organisation cible.
 
-	import { untrack } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { dismiss } from '#lib/grid/dismiss.js';
 	import { clearPatch, type CellStyle } from '#lib/grid/style.js';
@@ -15,6 +15,8 @@
 	import { htmlTabsEnabled } from './settings.svelte.js';
 	import type { IconName } from '#lib/icons/icons.js';
 	import { MORE_KINDS, type ChartKind } from '#lib/chart/kinds.js';
+	import { COMMAND_TIPS, TAB_TIPS, assignKeyTips, keyChars, keyOf, matchTip } from '#lib/ui/keytips.js';
+	import { cycle, focusRegion, isTextField, modalOpen, regionOf, tabbables } from '#lib/ui/focus.js';
 
 	export type View = 'grid' | 'sql' | 'script';
 	export type FormatTab = 'number' | 'align' | 'font' | 'border' | 'fill';
@@ -650,6 +652,197 @@
 		onview(t === 'SQL' ? 'sql' : t === 'SCRIPT' ? 'script' : 'grid');
 	}
 
+	// --- Clavier : KeyTips (Alt ou F10) et flèches, comme Excel -------------
+
+	let headerEl: HTMLElement;
+	type Tip = { el: HTMLElement; tip: string; x: number; y: number };
+	/** KeyTips affichées : sur les onglets, puis sur les commandes de l'onglet choisi ; typed : touches déjà tapées. */
+	let kt = $state<{ level: 'tabs' | 'cmds'; typed: string; tips: Tip[] } | null>(null);
+	/** Élément qui avait le focus avant le ruban (Échap l'y ramène). */
+	let returnTo: HTMLElement | null = null;
+	let altAlone = false;
+
+	const usable = (el: HTMLElement) => !(el as HTMLButtonElement).disabled && el.getClientRects().length > 0;
+	const tabEls = () => [...headerEl.querySelectorAll<HTMLElement>('.tabs .tab')].filter(usable);
+	const cmdEls = () => (groupsEl?.isConnected ? tabbables(groupsEl) : []);
+	const tipLabel = (el: HTMLElement) => el.dataset.kt || el.getAttribute('aria-label') || el.title || el.textContent?.trim() || '';
+	const activeTabEl = () => tabEls().find((el) => el.dataset.label === tab) ?? tabEls()[0];
+
+	function tipsAt(level: 'tabs' | 'cmds'): Tip[] {
+		const els = level === 'tabs' ? tabEls() : cmdEls();
+		const tabName = (el: HTMLElement) => el.dataset.label ?? el.getAttribute('aria-label') ?? '';
+		const codes = level === 'tabs' ? els.map((el) => TAB_TIPS[tabName(el)] ?? keyChars(tabName(el))[0] ?? '') : assignKeyTips(els.map(tipLabel), COMMAND_TIPS);
+		return els.map((el, i) => {
+			const r = el.getBoundingClientRect();
+			return { el, tip: codes[i], x: r.left + r.width / 2, y: r.bottom - (level === 'tabs' ? 10 : 8) };
+		});
+	}
+
+	function startTips() {
+		if (modalOpen()) return;
+		const a = document.activeElement as HTMLElement | null;
+		if (!headerEl.contains(a)) returnTo = a;
+		kt = { level: 'tabs', typed: '', tips: tipsAt('tabs') };
+	}
+
+	async function openTab(el: HTMLElement) {
+		const t = el.dataset.label ?? '';
+		if (!t || t === 'Fichier' || t === 'SQL' || t === 'SCRIPT') {
+			kt = null;
+			el.click(); // Fichier : son menu prend le focus (ouvert au clavier) ; ? : l'aide
+			return;
+		}
+		select(t as typeof tab);
+		await tick();
+		// Le ruban se compacte (fit) puis se remesure : deux images plus tard, il est en place.
+		for (let i = 0; i < 2; i++) await new Promise((r) => requestAnimationFrame(r));
+		const tips = tipsAt('cmds');
+		kt = tips.length ? { level: 'cmds', typed: '', tips } : null;
+	}
+
+	// Le ruban se recompacte parfois juste après le changement d'onglet (fit
+	// remesuré) : les boutons sont remplacés, les KeyTips sont recalculées.
+	$effect(() => {
+		if (kt?.level !== 'cmds' || !groupsEl) return;
+		const mo = new MutationObserver(() => {
+			if (kt?.level === 'cmds') kt = { level: 'cmds', typed: '', tips: tipsAt('cmds') };
+		});
+		mo.observe(groupsEl, { childList: true, subtree: true });
+		return () => mo.disconnect();
+	});
+
+	function runTip(t: Tip, level: 'tabs' | 'cmds') {
+		if (level === 'tabs') return openTab(t.el);
+		kt = null;
+		// Liste (police, taille) : elle s'ouvre et garde le clavier.
+		if (t.el.getAttribute('aria-haspopup') === 'listbox') t.el.focus();
+		t.el.click();
+	}
+
+	function tipKey(e: KeyboardEvent) {
+		if (!kt || ['Shift', 'Control', 'Meta'].includes(e.key)) return;
+		e.preventDefault();
+		e.stopPropagation();
+		if (e.key === 'Alt') {
+			altAlone = true; // relâchée seule : les KeyTips disparaissent
+			return;
+		}
+		if (e.key === 'F10') {
+			kt = null;
+			return;
+		}
+		if (e.key === 'Escape') {
+			if (kt.typed) kt.typed = '';
+			else if (kt.level === 'cmds') kt = { level: 'tabs', typed: '', tips: tipsAt('tabs') };
+			else kt = null;
+			return;
+		}
+		if (e.key.startsWith('Arrow') || e.key === 'Tab') {
+			// Flèches : le focus entre dans le ruban, sur l'onglet actif ou la première commande.
+			const level = kt.level;
+			kt = null;
+			(level === 'cmds' ? cmdEls()[0] : activeTabEl())?.focus();
+			return;
+		}
+		const k = keyOf(e.key);
+		if (!k) return;
+		// Ruban recompacté entre-temps (boutons remplacés) : codes recalculés.
+		if (kt.tips.some((t) => !t.el.isConnected)) kt = { level: kt.level, typed: '', tips: tipsAt(kt.level) };
+		const typed = kt.typed + k;
+		const m = matchTip(
+			kt.tips.map((t) => t.tip),
+			typed
+		);
+		if (m.hit >= 0) runTip(kt.tips[m.hit], kt.level);
+		else if (m.live) kt.typed = typed;
+	}
+
+	onMount(() => {
+		const down = (e: KeyboardEvent) => {
+			if (kt) return tipKey(e);
+			if (e.key === 'Alt') {
+				// Alt seule (ni AltGr, ni Alt+touche) : les KeyTips au relâchement.
+				if (!e.repeat) altAlone = !e.ctrlKey && !e.shiftKey && !e.metaKey;
+				return;
+			}
+			altAlone = false;
+			if (modalOpen()) return;
+			if (e.key === 'F10' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+				e.preventDefault();
+				e.stopPropagation();
+				startTips();
+				return;
+			}
+			// Alt maintenue + lettre d'un onglet (Alt+H) : ses commandes directement.
+			if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+				const k = keyOf(e.key);
+				const t = k ? tipsAt('tabs').find((x) => x.tip === k) : undefined;
+				if (!t) return;
+				e.preventDefault();
+				e.stopPropagation();
+				const a = document.activeElement as HTMLElement | null;
+				if (!headerEl.contains(a)) returnTo = a;
+				openTab(t.el);
+			}
+		};
+		const up = (e: KeyboardEvent) => {
+			if (e.key !== 'Alt' || !altAlone) return;
+			altAlone = false;
+			e.preventDefault();
+			if (kt) kt = null;
+			else startTips();
+		};
+		const off = () => {
+			altAlone = false;
+			kt = null;
+		};
+		window.addEventListener('keydown', down, true);
+		window.addEventListener('keyup', up, true);
+		window.addEventListener('pointerdown', off, true);
+		window.addEventListener('blur', off);
+		window.addEventListener('resize', off);
+		return () => {
+			window.removeEventListener('keydown', down, true);
+			window.removeEventListener('keyup', up, true);
+			window.removeEventListener('pointerdown', off, true);
+			window.removeEventListener('blur', off);
+			window.removeEventListener('resize', off);
+		};
+	});
+
+	/** Flèches dans le ruban : ← → entre onglets (et commandes), ↓ vers les commandes, ↑ vers l'onglet, Échap pour en sortir. */
+	function navKey(e: KeyboardEvent) {
+		if (kt || e.defaultPrevented || e.ctrlKey || e.altKey || e.metaKey) return;
+		const a = document.activeElement as HTMLElement | null;
+		if (!a || isTextField(a) || a.closest('.file-menu, .drop-menu, .group-menu, .palette')) return;
+		const ts = tabEls();
+		const cs = cmdEls();
+		const ti = ts.indexOf(a);
+		const ci = cs.indexOf(a);
+		if (ti < 0 && ci < 0) return;
+		if (e.key === 'Escape') {
+			e.preventDefault();
+			// Comme Excel : retour à la feuille (ou à la page affichée), là où on était.
+			if (returnTo?.isConnected && regionOf(returnTo) === 'grid') returnTo.focus();
+			else focusRegion('grid');
+			return;
+		}
+		let to: HTMLElement | undefined;
+		if (ti >= 0) {
+			if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+				to = ts[cycle(ts.length, ti, e.key === 'ArrowRight' ? 1 : -1)];
+				// Comme Excel, l'onglet du ruban suit (pas Fichier, ni SQL et SCRIPT qui changent de vue).
+				const l = to.dataset.label as (typeof tabs)[number];
+				if (tabs.includes(l)) select(l);
+			} else if (e.key === 'ArrowDown') to = cs[0];
+		} else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') to = cs[cycle(cs.length, ci, 1)];
+		else if (e.key === 'ArrowLeft') to = cs[cycle(cs.length, ci, -1)];
+		else if (e.key === 'ArrowUp') to = activeTabEl();
+		if (!to) return;
+		e.preventDefault();
+		to.focus();
+	}
+
 	$effect(() => {
 		// Revenir à la grille depuis la page (onglet de feuille) remet un onglet de ruban.
 		if (view === 'grid' && (tab === 'SQL' || tab === 'SCRIPT')) tab = 'Accueil';
@@ -662,7 +855,7 @@
 {#snippet colorCmd(c: Command)}
 	{@const kind = c.color!}
 		<div class="color-cmd">
-			<button class="cmd" disabled={!c.run} onclick={c.run} title={c.hint}>
+			<button class="cmd" disabled={!c.run} onclick={c.run} title={c.hint} data-kt={c.label}>
 				<!-- La lettre montre l'effet : couleur du texte, ou fond rempli. -->
 				<span
 					class="swatch-icon"
@@ -671,7 +864,7 @@
 					aria-label={c.label}>A</span
 				>
 			</button>
-			<button class="drop" disabled={!c.run} onclick={(ev) => openPalette(kind, ev)} title="Choisir la couleur">▾</button>
+			<button class="drop" disabled={!c.run} onclick={(ev) => openPalette(kind, ev)} title="Choisir la couleur" aria-label="{c.label} : choisir la couleur" aria-haspopup="menu" data-kt="{c.label} ▾">▾</button>
 			{#if palette === kind}
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div class="palette" style:left="{palettePos.x}px" style:top="{palettePos.y}px" use:dismiss={() => (palette = null)}>
@@ -691,10 +884,20 @@
 		</div>
 {/snippet}
 
-<header class="ribbon">
-	<nav class="tabs">
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<header
+	class="ribbon"
+	bind:this={headerEl}
+	data-region="ribbon"
+	onkeydown={navKey}
+	onfocusin={(e) => {
+		const from = e.relatedTarget as HTMLElement | null;
+		if (from && !headerEl.contains(from)) returnTo = from;
+	}}
+>
+	<nav class="tabs" aria-label="Onglets du ruban">
 		<div class="file-wrap">
-			<button class="tab file" data-label="Fichier" onclick={() => (fileOpen = !fileOpen)}>Fichier</button>
+			<button class="tab file" data-label="Fichier" aria-haspopup="menu" aria-expanded={fileOpen} aria-keyshortcuts="Alt+F" onclick={() => (fileOpen = !fileOpen)}>Fichier</button>
 			{#if fileOpen}
 				<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 				<div class="file-menu" use:dismiss={() => (fileOpen = false)}>
@@ -719,11 +922,11 @@
 			{/if}
 		</div>
 		{#each shownTabs as t (t)}
-			<button class="tab" data-label={t} class:on={tab === t} {disabled} onclick={() => select(t)}>{t}</button>
+			<button class="tab" data-label={t} class:on={tab === t} aria-pressed={tab === t} aria-keyshortcuts="Alt+{TAB_TIPS[t]}" data-region-focus={tab === t ? '' : undefined} {disabled} onclick={() => select(t)}>{t}</button>
 		{/each}
 		<span class="sep"></span>
-		<button class="tab special" data-label="SQL" class:on={tab === 'SQL'} {disabled} onclick={() => select('SQL')}>SQL</button>
-		<button class="tab special" data-label="SCRIPT" class:on={tab === 'SCRIPT'} {disabled} onclick={() => select('SCRIPT')}>SCRIPT</button>
+		<button class="tab special" data-label="SQL" class:on={tab === 'SQL'} aria-pressed={tab === 'SQL'} aria-keyshortcuts="Alt+{TAB_TIPS.SQL}" data-region-focus={tab === 'SQL' ? '' : undefined} {disabled} onclick={() => select('SQL')}>SQL</button>
+		<button class="tab special" data-label="SCRIPT" class:on={tab === 'SCRIPT'} aria-pressed={tab === 'SCRIPT'} aria-keyshortcuts="Alt+{TAB_TIPS.SCRIPT}" data-region-focus={tab === 'SCRIPT' ? '' : undefined} {disabled} onclick={() => select('SCRIPT')}>SCRIPT</button>
 		<button class="tab help" title="Aide (F1)" aria-label="Aide" onclick={() => onfile('help')}>?</button>
 	</nav>
 	{#if tab !== 'SQL' && tab !== 'SCRIPT'}
@@ -735,6 +938,9 @@
 						<div class="commands">
 							<button
 								class="cmd"
+								data-kt={g.title}
+								aria-haspopup="menu"
+								aria-expanded={openGroup?.title === g.title}
 								onclick={(ev) => {
 									const r = (ev.currentTarget as HTMLElement).getBoundingClientRect();
 									openGroup = openGroup?.title === g.title ? null : { title: g.title, x: r.left, y: r.bottom + 2 };
@@ -797,6 +1003,10 @@
 										class="cmd"
 										class:row-cmd={mode !== 'large'}
 										class:pressed={c.on}
+										aria-pressed={c.on === undefined ? undefined : c.on}
+										aria-haspopup={c.items || c.menu ? 'menu' : undefined}
+										aria-label={mode === 'icon' ? c.label : undefined}
+										data-kt={c.label}
 										disabled={!c.run}
 										onclick={c.items
 											? (ev) => toggleDrop(c, ev)
@@ -816,7 +1026,7 @@
 					<div class="title">
 						{g.title}
 						{#if g.launch}
-							<button class="launch" onclick={g.launch} title={g.launchHint ?? g.title} aria-label={g.launchHint ?? g.title}>
+							<button class="launch" onclick={g.launch} title={g.launchHint ?? g.title} aria-label={g.launchHint ?? g.title} data-kt="{g.title} …">
 								<svg viewBox="0 0 10 10" width="9" height="9" aria-hidden="true"><path d="M1.5 1.5h4M1.5 1.5v4M3.5 3.5l5 5M8.5 4.5v4h-4" fill="none" stroke="currentColor" stroke-width="1.1" /></svg>
 							</button>
 						{/if}
@@ -842,6 +1052,14 @@
 				{/each}
 			</div>
 		{/if}
+	{/if}
+	{#if kt}
+		{@const k = kt}
+		<div class="keytips" aria-hidden="true">
+			{#each k.tips as t, i (i)}
+				{#if t.tip && t.tip.startsWith(k.typed)}<span class="keytip" style:left="{t.x}px" style:top="{t.y}px">{t.tip}</span>{/if}
+			{/each}
+		</div>
 	{/if}
 </header>
 
@@ -916,6 +1134,29 @@
 	}
 	.tab.file {
 		color: #fff;
+	}
+	/* Focus clavier sur le vert des onglets : contour blanc. */
+	.tab:focus-visible {
+		outline: 2px solid #fff;
+		outline-offset: -3px;
+	}
+	.tab.on:focus-visible {
+		outline-color: #217346;
+	}
+	/* KeyTips (Alt, F10) : lettre sous chaque onglet ou commande. */
+	.keytip {
+		position: fixed;
+		z-index: 1000;
+		transform: translateX(-50%);
+		min-width: 10px;
+		padding: 1px 4px;
+		font: 600 11px/14px 'Segoe UI', system-ui, sans-serif;
+		text-align: center;
+		color: #fff;
+		background: #3c4043;
+		border-radius: 3px;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+		pointer-events: none;
 	}
 	.tab:disabled {
 		opacity: 0.6;

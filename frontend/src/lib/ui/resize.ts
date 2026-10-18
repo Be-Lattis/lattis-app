@@ -47,6 +47,8 @@ function save(key: string, w: number | undefined) {
 /** Action Svelte : donne à un volet de droite la largeur commune et le rend redimensionnable par son bord gauche. */
 export function resizePanel(node: HTMLElement, opts: Options) {
 	if (opts.off) return {};
+	// Région du volet pour F6 (focus.ts).
+	node.dataset.region ??= 'panel';
 	let { key, min = MIN_WIDTH } = opts;
 	// Largeur tirée par l'utilisateur, undefined : largeur par défaut.
 	let chosen = load(key);

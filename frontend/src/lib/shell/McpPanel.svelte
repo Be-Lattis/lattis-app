@@ -2,6 +2,7 @@
 	// Fichier › Serveur MCP : un assistant (Claude Desktop, Claude Code…)
 	// pilote le classeur ouvert avec les mêmes commandes que les scripts Lua.
 	// Le serveur n'écoute que sur cet ordinateur et demande un jeton.
+	import { modal } from '#lib/ui/focus.js';
 	import { onMount } from 'svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import type { MCPStatus } from '#bindings/internal/bridge/models.js';
@@ -53,6 +54,7 @@
 		aria-modal="true"
 		aria-label="Serveur MCP"
 		tabindex="-1"
+		use:modal
 		onkeydown={(e) => {
 			e.stopPropagation();
 			if (e.key === 'Escape') onclose();

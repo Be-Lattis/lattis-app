@@ -3,6 +3,7 @@
 	// Excel, JSON, Parquet, base SQLite), tableau du classeur, autre
 	// requête, requête SQL du classeur, SGBD (PostgreSQL, MySQL, SQL Server :
 	// connexion, navigateur des tables ou requête SQL) ou API web JSON.
+	import { modal } from '#lib/ui/focus.js';
 	import { onMount } from 'svelte';
 	import Select from '#lib/ui/Select.svelte';
 	import Icon from '#lib/icons/Icon.svelte';
@@ -151,6 +152,7 @@
 		aria-modal="true"
 		aria-label="Source"
 		tabindex="-1"
+		use:modal
 		onkeydown={(e) => {
 			e.stopPropagation();
 			if (e.key === 'Escape') oncancel();

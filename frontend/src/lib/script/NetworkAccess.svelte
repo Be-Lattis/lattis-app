@@ -2,6 +2,7 @@
 	// Onglet SCRIPT › Accès réseau : les hôtes que les scripts et les pages
 	// HTML du classeur joignent sans redemander (module http). Un hôte
 	// retiré redemandera l'autorisation à la prochaine requête.
+	import { modal } from '#lib/ui/focus.js';
 	import { onMount } from 'svelte';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { hostOf } from '#lib/page/hosts.js';
@@ -54,6 +55,7 @@
 		aria-modal="true"
 		aria-label="Accès réseau"
 		tabindex="-1"
+		use:modal
 		onkeydown={(e) => {
 			e.stopPropagation();
 			if (e.key === 'Escape') onclose();

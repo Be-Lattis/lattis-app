@@ -3,6 +3,7 @@
 	// trois étapes comme Excel : type des données, séparateurs ou coupures,
 	// format et destination de chaque colonne. L'aperçu vient du backend, qui
 	// coupe le texte exactement comme la conversion.
+	import { modal } from '#lib/ui/focus.js';
 	import Select from '#lib/ui/Select.svelte';
 	import {
 		addBreak,
@@ -255,7 +256,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="back" onmousedown={(e) => e.target === e.currentTarget && onclose()}>
-	<div class="dlg" role="dialog" aria-label="Convertir le texte en colonnes" tabindex="-1" use:grab onkeydown={onKey}>
+	<div class="dlg" role="dialog" aria-label="Convertir le texte en colonnes" tabindex="-1" aria-modal="true" use:grab use:modal onkeydown={onKey}>
 		<div class="head">Assistant Conversion – Étape {step} sur 3 : {STEPS[step - 1]}</div>
 		<div class="body">
 			{#if pv}

@@ -1,7 +1,10 @@
 // Raccourcis clavier de l'application, par domaine : la seule liste affichée
 // à l'utilisateur (aide › Raccourcis clavier). Le traitement des touches est
 // ailleurs (grid/shortcuts.ts, Sheet.svelte, +page.svelte, éditeurs) : une
-// touche ajoutée là s'ajoute ici.
+// touche ajoutée là s'ajoute ici. Les lettres du ruban (KeyTips) viennent
+// de ui/keytips.ts.
+
+import { TAB_TIPS } from '#lib/ui/keytips.js';
 
 export interface ShortcutInfo {
 	/** Touches, écrites comme sur le clavier français : « Ctrl+Maj+L ». */
@@ -33,12 +36,32 @@ export const shortcutGroups: ShortcutGroup[] = [
 		]
 	},
 	{
+		id: 'clavier',
+		title: 'Ruban, menus et fenêtres',
+		items: [
+			{ keys: 'Alt / F10', label: 'Lettres d’accès (KeyTips) du ruban ; Échap revient en arrière' },
+			{ keys: 'Alt puis F', label: 'Menu Fichier' },
+			...Object.entries(TAB_TIPS)
+				.filter(([t]) => t !== 'Fichier' && t !== 'Aide')
+				.map(([t, k]) => ({ keys: `Alt puis ${k}`, label: `Onglet ${t} du ruban (ou Alt+${k})` })),
+			{ keys: 'Flèches', label: 'Dans le ruban : onglet ou commande voisine ; Bas descend aux commandes, Haut remonte à l’onglet' },
+			{ keys: 'F6 / Maj+F6', label: 'Région suivante, précédente : ruban, barre de formule, grille, volet, onglets, barre d’état' },
+			{ keys: 'Maj+F10 / Menu', label: 'Menu contextuel de la cellule active (ou du graphique sélectionné)' },
+			{ keys: 'Haut / Bas', label: 'Dans un menu : entrée précédente, suivante (Origine, Fin : la première, la dernière)' },
+			{ keys: 'Lettre', label: 'Dans un menu : entrée suivante qui commence par cette lettre' },
+			{ keys: 'Entrée / Espace', label: 'Dans un menu : choisir l’entrée' },
+			{ keys: 'Tab / Maj+Tab', label: 'Dans une boîte de dialogue : champ suivant, précédent' },
+			{ keys: 'Échap', label: 'Fermer le menu, la boîte de dialogue ou le volet ; le focus revient où il était' }
+		]
+	},
+	{
 		id: 'feuilles',
 		title: 'Feuilles',
 		items: [
 			{ keys: 'Ctrl+Pg.Suiv', label: 'Feuille suivante' },
 			{ keys: 'Ctrl+Pg.Préc', label: 'Feuille précédente' },
-			{ keys: 'Maj+F11', label: 'Insérer une feuille' }
+			{ keys: 'Maj+F11', label: 'Insérer une feuille' },
+			{ keys: 'Gauche / Droite', label: 'Sur un onglet de feuille (F6) : onglet voisin ; Entrée l’affiche' }
 		]
 	},
 	{

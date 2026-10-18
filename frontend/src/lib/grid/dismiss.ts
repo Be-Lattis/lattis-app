@@ -3,6 +3,10 @@
 // ailleurs (y compris sur la grille, qui intercepte pointerdown, ou dans un
 // éditeur intégré qui prend le focus de la fenêtre), sur Échap et quand la
 // fenêtre change de taille (un simple mouseleave le fermait trop facilement).
+// Un menu se parcourt aussi au clavier (focus.ts : flèches, première lettre),
+// et le focus revient où il était quand il se ferme.
+
+import { menuKeys, topMenu } from '#lib/ui/focus.js';
 
 export const DISMISS_MARGIN = 60;
 
@@ -159,6 +163,8 @@ function keepInside(node: HTMLElement): () => void {
 function watch(node: HTMLElement, close: () => void, far: boolean) {
 	let onClose = close;
 	const unfit = keepInside(node);
+	// Menu (pas un panneau, ni une liste qui a ses propres touches) : clavier.
+	const unkeys = far && typeof document !== 'undefined' && node.getAttribute('role') !== 'listbox' && !node.hasAttribute('data-own-keys') ? menuKeys(node) : null;
 	const move = (e: MouseEvent) => {
 		// Un sous-menu qui déborde du menu compte comme le menu.
 		if (!far || node.contains(e.target as Node)) return;
@@ -168,7 +174,10 @@ function watch(node: HTMLElement, close: () => void, far: boolean) {
 		if (!node.contains(e.target as Node)) onClose();
 	};
 	const key = (e: KeyboardEvent) => {
-		if (e.key === 'Escape') onClose();
+		// Menus imbriqués (palette d'un groupe replié) : Échap ferme le dernier.
+		if (e.key !== 'Escape' || (unkeys && !topMenu(node))) return;
+		e.preventDefault();
+		onClose();
 	};
 	const away = () => onClose();
 	// Le clic qui ouvre le menu ne doit pas le refermer aussitôt.
@@ -187,6 +196,7 @@ function watch(node: HTMLElement, close: () => void, far: boolean) {
 		},
 		destroy() {
 			unfit();
+			unkeys?.();
 			clearTimeout(t);
 			window.removeEventListener('mousemove', move);
 			window.removeEventListener('mousedown', down, CAPTURE);

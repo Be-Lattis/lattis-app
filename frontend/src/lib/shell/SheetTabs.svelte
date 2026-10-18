@@ -8,6 +8,7 @@
 	// ferme sur Échap, sur un clic ailleurs et quand la fenêtre change de taille.
 	import Icon from '#lib/icons/Icon.svelte';
 	import { dismiss } from '#lib/grid/dismiss.js';
+	import { cycle, modal } from '#lib/ui/focus.js';
 	import { TAB_COLORS, moveTarget, tabWindow, textOn, visibleSheets, type TabSheet } from './sheets.js';
 
 	type Sheet = TabSheet;
@@ -119,6 +120,18 @@
 		node.focus();
 	};
 
+	/** Flèches sur un onglet (atteint par Tab ou F6) : onglet voisin ; Entrée ou Espace l'affiche. */
+	function tabKeys(e: KeyboardEvent) {
+		const t = e.target as HTMLElement;
+		if (!t.classList?.contains('sheet') || e.ctrlKey || e.altKey || e.metaKey) return;
+		const all = tabEls.filter((el) => el?.isConnected);
+		const i = all.indexOf(t as HTMLButtonElement);
+		const to = e.key === 'ArrowRight' ? cycle(all.length, i, 1) : e.key === 'ArrowLeft' ? cycle(all.length, i, -1) : e.key === 'Home' ? 0 : e.key === 'End' ? all.length - 1 : -1;
+		if (to < 0 || !all[to]) return;
+		e.preventDefault();
+		all[to].focus();
+	}
+
 	/** Échap ferme un dialogue, Entrée le valide. */
 	function dialogKeys(e: KeyboardEvent, ok: () => void, cancel: () => void) {
 		e.stopPropagation();
@@ -204,10 +217,11 @@
 	}
 </script>
 
-<div class="sheet-tabs" bind:clientWidth={width}>
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="sheet-tabs" bind:clientWidth={width} data-region="tabs" onkeydown={tabKeys}>
 	<div class="nav" bind:clientWidth={navW}>
-		<button disabled={index <= 0} onclick={() => onselect(shown[index - 1].id)} title="Feuille précédente">◀</button>
-		<button disabled={index < 0 || index >= shown.length - 1} onclick={() => onselect(shown[index + 1].id)} title="Feuille suivante">▶</button>
+		<button disabled={index <= 0} onclick={() => onselect(shown[index - 1].id)} title="Feuille précédente (Ctrl+Pg.Préc)" aria-label="Feuille précédente">◀</button>
+		<button disabled={index < 0 || index >= shown.length - 1} onclick={() => onselect(shown[index + 1].id)} title="Feuille suivante (Ctrl+Pg.Suiv)" aria-label="Feuille suivante">▶</button>
 	</div>
 	{#each vis as s, si (s.id)}
 		{#if renaming === s.id}
@@ -228,6 +242,8 @@
 				bind:this={tabEls[si]}
 				class="sheet"
 				data-label={s.name}
+				data-region-focus={s.id === active ? '' : undefined}
+				aria-current={s.id === active ? 'page' : undefined}
 				class:on={s.id === active}
 				class:colored={!!s.color}
 				style:--tab-color={s.color || null}
@@ -449,7 +465,7 @@
 {#if moving}
 	{@const mv = moving}
 	<div class="modal-back" role="presentation" onclick={(e) => e.target === e.currentTarget && (moving = null)}>
-		<div class="dialog" role="dialog" aria-modal="true" aria-label="Déplacer ou copier" tabindex="-1" onkeydown={(e) => dialogKeys(e, confirmMove, () => (moving = null))}>
+		<div class="dialog" role="dialog" aria-modal="true" aria-label="Déplacer ou copier" tabindex="-1" use:modal onkeydown={(e) => dialogKeys(e, confirmMove, () => (moving = null))}>
 			<h2>Déplacer ou copier</h2>
 			<p>Déplacer la feuille « {sheets.find((x) => x.id === mv.id)?.name ?? ''} »</p>
 			<label for="move-before">Avant la feuille :</label>
@@ -472,7 +488,7 @@
 
 {#if listing}
 	<div class="modal-back" role="presentation" onclick={(e) => e.target === e.currentTarget && (listing = false)}>
-		<div class="dialog" role="dialog" aria-modal="true" aria-label="Toutes les feuilles" tabindex="-1" onkeydown={(e) => dialogKeys(e, () => (listing = false), () => (listing = false))} use:focus>
+		<div class="dialog" role="dialog" aria-modal="true" aria-label="Toutes les feuilles" tabindex="-1" use:modal onkeydown={(e) => dialogKeys(e, () => (listing = false), () => (listing = false))} use:focus>
 			<h2>Toutes les feuilles</h2>
 			<ul class="all-sheets">
 				{#each shown as s (s.id)}
@@ -498,7 +514,7 @@
 
 {#if unhiding !== null}
 	<div class="modal-back" role="presentation" onclick={(e) => e.target === e.currentTarget && (unhiding = null)}>
-		<div class="dialog" role="dialog" aria-modal="true" aria-label="Afficher" tabindex="-1" onkeydown={(e) => dialogKeys(e, confirmUnhide, () => (unhiding = null))}>
+		<div class="dialog" role="dialog" aria-modal="true" aria-label="Afficher" tabindex="-1" use:modal onkeydown={(e) => dialogKeys(e, confirmUnhide, () => (unhiding = null))}>
 			<h2>Afficher</h2>
 			<label for="unhide">Afficher la feuille :</label>
 			<select id="unhide" size="6" bind:value={unhiding} ondblclick={confirmUnhide} use:focus>
