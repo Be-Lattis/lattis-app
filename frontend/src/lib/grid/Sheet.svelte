@@ -1217,7 +1217,7 @@
 			// Tableau lui-même modifié (saisie, insertion) : startAnims s'en charge.
 			if (!was || was === k || !was.startsWith(base + '|')) continue;
 			const from = drawn.get(e.t.id);
-			if (from && !motions.get(e.t.id)?.born) motions.set(e.t.id, { t0: now, from, ms: GROW_MS });
+			if (from && !motions.get(e.t.id)?.born) motions.set(e.t.id, { t0: now, from, ms: GROW_MS, grow: true });
 		}
 		grownSeen = seen;
 	}
@@ -1288,7 +1288,9 @@
 		return { x, y, w: cax().offset(g.lastCol + 1) - x, h: rspan(e.t.row, g.last) };
 	}
 
-	type TableAnim = { dx: number; dy: number; w: number; h: number; alpha: number; rowOff: (r: number) => number; colOff: (c: number) => number };
+	// ox : bord gauche du cadre animé par rapport à sa place finale (cadre qui
+	// s'étire vers la gauche, contenu immobile).
+	type TableAnim = { dx: number; dy: number; ox: number; w: number; h: number; alpha: number; rowOff: (r: number) => number; colOff: (c: number) => number };
 	const noOff = () => 0;
 	let tableAnims = new Map<number, TableAnim | null>();
 	let tableAnimsAt = -1;
@@ -1311,7 +1313,8 @@
 			else {
 				animBusy = true;
 				const g = motionAt(m, to, ease(k), rh(e.t.row));
-				out = { dx: g.x - to.x, dy: g.y - to.y, w: g.w, h: g.h, alpha: g.alpha, rowOff: noOff, colOff: noOff };
+				// Cadre seul étiré : il s'ouvre vers la gauche, le contenu ne glisse pas.
+				out = m.grow ? { dx: 0, dy: 0, ox: g.x - to.x, w: g.w, h: g.h, alpha: g.alpha, rowOff: noOff, colOff: noOff } : { dx: g.x - to.x, dy: g.y - to.y, ox: 0, w: g.w, h: g.h, alpha: g.alpha, rowOff: noOff, colOff: noOff };
 			}
 		}
 		const s = inner.get(id);
@@ -1324,7 +1327,7 @@
 				// Insertion : ce qui suit la nouvelle ligne part de son ancienne place ;
 				// suppression : ce qui suivait la ligne supprimée remonte.
 				const off = (i: number) => (s.n > 0 ? (i > s.at ? -left : 0) : i >= s.at ? left : 0);
-				out ??= { dx: 0, dy: 0, w: to.w, h: to.h, alpha: 1, rowOff: noOff, colOff: noOff };
+				out ??= { dx: 0, dy: 0, ox: 0, w: to.w, h: to.h, alpha: 1, rowOff: noOff, colOff: noOff };
 				if (s.rows) out.rowOff = off;
 				else out.colOff = off;
 			}
@@ -1345,7 +1348,7 @@
 		ctx.translate(a.dx, a.dy);
 		ctx.globalAlpha *= a.alpha;
 		ctx.beginPath();
-		ctx.rect(cx(grown(e).firstCol) - 1, ry(e.t.row) - 1, a.w + 2, a.h + 2);
+		ctx.rect(cx(grown(e).firstCol) + a.ox - 1, ry(e.t.row) - 1, a.w + 2, a.h + 2);
 		ctx.clip();
 		return true;
 	}
@@ -2133,7 +2136,7 @@
 			const moved = enterTable(e, cx, ry);
 			ctx.fillStyle = e.t.query ? C.linkHead : C.head;
 			// En mouvement : l'en-tête suit le cadre animé (il se rétracte avec lui).
-			ctx.fillRect(cx(g.firstCol), ry(e.t.row), moved ? tableAnim(e)!.w : spanW(g.firstCol, g.lastCol), rh(e.t.row));
+			ctx.fillRect(cx(g.firstCol) + (moved ? tableAnim(e)!.ox : 0), ry(e.t.row), moved ? tableAnim(e)!.w : spanW(g.firstCol, g.lastCol), rh(e.t.row));
 			if (moved) ctx.restore();
 		}
 
@@ -2512,8 +2515,8 @@
 			const to = tableGeo(e);
 			const fw = a ? a.w : to.w;
 			const fh = a ? a.h : to.h;
-			if (motion()) geoDrawn.set(e.t.id, { x: to.x + (a?.dx ?? 0), y: to.y + (a?.dy ?? 0), w: fw, h: fh });
-			const x = Math.round(cx(g.firstCol) + (a?.dx ?? 0)) - 0.5;
+			if (motion()) geoDrawn.set(e.t.id, { x: to.x + (a?.dx ?? 0) + (a?.ox ?? 0), y: to.y + (a?.dy ?? 0), w: fw, h: fh });
+			const x = Math.round(cx(g.firstCol) + (a?.dx ?? 0) + (a?.ox ?? 0)) - 0.5;
 			const y = Math.round(ry(e.t.row) + (a?.dy ?? 0)) - 0.5;
 			ctx.save();
 			if (a) ctx.globalAlpha *= a.alpha;

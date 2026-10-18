@@ -116,6 +116,9 @@ export interface Motion {
 	born?: boolean;
 	/** Durée, en ms (ANIM_MS par défaut). */
 	ms?: number;
+	/** Cadre seul étiré ou rétracté (cellule active juste à côté) : le contenu
+	 * du tableau ne bouge pas. */
+	grow?: boolean;
 }
 
 /**
