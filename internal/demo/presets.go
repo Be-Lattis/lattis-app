@@ -19,6 +19,8 @@ type TableSpec struct {
 	// de Cols[i].Value : pour les très gros volumes.
 	// Morceaux de copyChunk lignes, pour suivre l'avancement.
 	Select func(seed uint64) []string
+	// Key : colonne clé (1 = la première ; 0 : sans clé).
+	Key int
 }
 
 // SheetSpec est un onglet à générer.
@@ -248,13 +250,13 @@ func refProduit(i int) (nom, cat string, prix float64) {
 func refs() Plan {
 	nProduits := len(produits) + len(refLivres)
 	const nClients, nCommandes, nLignes = 150, 600, 2_000
-	categories := TableSpec{Name: "Catégories", Rows: len(refCategories), Cols: []Column{
+	categories := TableSpec{Name: "Catégories", Key: 1, Rows: len(refCategories), Cols: []Column{
 		c("Code", grid.Text, func(g *Gen, i int, _ []any) any { return refCategories[i].Code }),
 		c("Libellé", grid.Text, func(g *Gen, i int, _ []any) any { return refCategories[i].Libelle }),
 		c("Taux TVA", grid.Decimal, func(g *Gen, i int, _ []any) any { return refCategories[i].TVA }),
 		f("Nb produits", grid.Integer, "=NB.SI(Produits[Catégorie]; [Code])"),
 	}}
-	produitsT := TableSpec{Name: "Produits", Rows: nProduits, Col: len(categories.Cols) + 2, Cols: []Column{
+	produitsT := TableSpec{Name: "Produits", Key: 1, Rows: nProduits, Col: len(categories.Cols) + 2, Cols: []Column{
 		c("Code", grid.Text, func(g *Gen, i int, _ []any) any { return fmt.Sprintf("P%03d", i+1) }),
 		c("Désignation", grid.Text, func(g *Gen, i int, _ []any) any { n, _, _ := refProduit(i); return n }),
 		c("Catégorie", grid.Text, func(g *Gen, i int, _ []any) any { _, k, _ := refProduit(i); return k }),
@@ -265,7 +267,7 @@ func refs() Plan {
 		f("Prix TTC", grid.Decimal, "=ARRONDI([Prix unitaire]*(1+[Taux TVA]); 2)"),
 		f("Quantité vendue", grid.Integer, "=SOMME.SI(Lignes[Produit]; [Code]; Lignes[Quantité])"),
 	}}
-	clients := TableSpec{Name: "Clients", Rows: nClients, Cols: []Column{
+	clients := TableSpec{Name: "Clients", Key: 1, Rows: nClients, Cols: []Column{
 		c("Code client", grid.Text, func(g *Gen, i int, _ []any) any { return fmt.Sprintf("C%04d", i+1) }),
 		c("Nom", grid.Text, func(g *Gen, i int, _ []any) any {
 			if i < len(entreprises) {
@@ -282,7 +284,7 @@ func refs() Plan {
 		// SOMME.SI sur une colonne elle-même calculée par SOMME.SI.
 		f("CA HT", grid.Decimal, "=SOMME.SI(Commandes[Client]; [Code client]; Commandes[Montant HT])"),
 	}}
-	commandes := TableSpec{Name: "Commandes", Rows: nCommandes, Cols: []Column{
+	commandes := TableSpec{Name: "Commandes", Key: 1, Rows: nCommandes, Cols: []Column{
 		c("N° commande", grid.Integer, func(g *Gen, i int, _ []any) any { return int64(i + 1) }),
 		c("Date", grid.Date, func(g *Gen, i int, _ []any) any { return Day(today - 400 + i*400/nCommandes) }),
 		c("Client", grid.Text, func(g *Gen, i int, _ []any) any { return fmt.Sprintf("C%04d", 1+g.Skewed(nClients)) }),
