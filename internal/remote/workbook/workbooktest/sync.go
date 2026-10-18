@@ -153,7 +153,12 @@ func (w *writer) target(schemaName, name string) (*book, *table, string, error) 
 func (w *writer) touch(b *book, t *table, r *row) {
 	w.wrote = true
 	if r != nil {
-		r.xid, r.by, r.at = w.xid, w.s.user, w.at
+		// lattis.trg_stamp : la dernière écriture d'un autre auteur (rôle
+		// et poste) reste connue (lattis_other_xid).
+		if r.xid != 0 && (r.by != w.s.user || r.device != w.s.device) {
+			r.other = r.xid
+		}
+		r.xid, r.by, r.device, r.at = w.xid, w.s.user, w.s.device, w.at
 	}
 	w.touched[t.id] = "wb_" + b.slug
 }
@@ -214,10 +219,9 @@ func (w *writer) Update(ctx context.Context, schemaName, name, id string, col wo
 	if err := w.check(b, t, vals); err != nil {
 		return workbook.Wrote{}, err
 	}
-	prev := t.rows[i].xid
 	t.rows[i].vals = vals
 	w.touch(b, t, &t.rows[i])
-	return workbook.Wrote{Rows: 1, Prev: xidText(prev)}, nil
+	return workbook.Wrote{Rows: 1}, nil
 }
 
 func (w *writer) Insert(ctx context.Context, schemaName, name, id, pos string, cols []workbook.RemoteColumn, vals []any) (workbook.Wrote, error) {
@@ -270,10 +274,9 @@ func (w *writer) Move(ctx context.Context, schemaName, name, id, old, pos string
 	if i < 0 || (lv == "participant" && t.rows[i].author != w.s.user) || t.rows[i].pos != old {
 		return workbook.Wrote{}, nil
 	}
-	prev := t.rows[i].xid
 	t.rows[i].pos = pos
 	w.touch(b, t, &t.rows[i])
-	return workbook.Wrote{Rows: 1, Prev: xidText(prev)}, nil
+	return workbook.Wrote{Rows: 1}, nil
 }
 
 func (w *writer) WhyNot(ctx context.Context, workbookID string, rt workbook.RemoteTable, id string) (workbook.WhyNot, error) {
@@ -363,7 +366,9 @@ func (r *reader) Changes(ctx context.Context, workbookID string, rt workbook.Rem
 	from, _ := strconv.ParseInt(since, 10, 64)
 	skipped := func(x int64) bool { return slices.Contains(skip, xidText(x)) }
 	for _, x := range t.sorted() {
-		if x.xid >= from && !skipped(x.xid) {
+		// Écho, sauf si un autre a écrit la ligne depuis since : le poste a
+		// pu recouvrir une valeur qu'il n'a pas encore (lattis_other_xid).
+		if x.xid >= from && (!skipped(x.xid) || (x.other != 0 && x.other >= from)) {
 			r.s.f.Calls["changes_rows"]++
 			if err := fn(change(t, rt, x)); err != nil {
 				return err

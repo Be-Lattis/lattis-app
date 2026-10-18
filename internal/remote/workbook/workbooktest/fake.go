@@ -70,6 +70,8 @@ type Fake struct {
 	purged int64
 	// checks : filtres d'écriture (WITH CHECK) imposés par Forbid.
 	checks []check
+	// held : transactions en cours (Hold) ; sync_point ne les dépasse pas.
+	held []int64
 }
 
 // check refuse (42501) l'écriture de value dans la colonne col d'un
@@ -114,11 +116,14 @@ type table struct {
 type row struct {
 	id, pos, author string
 	vals            []any // par colonne, valeurs PostgreSQL (ToRemote)
-	// xid : transaction de la dernière modification ; by, at : son auteur
-	// et sa date.
-	xid int64
-	by  string
-	at  time.Time
+	// xid : transaction de la dernière modification ; by, device, at : son
+	// auteur (rôle et poste) et sa date ; other : dernière transaction d'un
+	// autre auteur avant elle (lattis_other_xid, 0 : NULL).
+	xid    int64
+	by     string
+	device string
+	at     time.Time
+	other  int64
 }
 
 // tomb est une pierre tombale (lattis.tombstones).
@@ -135,15 +140,36 @@ func New() *Fake {
 		levels: map[string]string{}, Clock: time.Now}
 }
 
-// As rend le serveur vu par un utilisateur (rôle PostgreSQL).
-func (f *Fake) As(user string) workbook.Server {
+// As rend le serveur vu par un utilisateur (rôle PostgreSQL), sans
+// identifiant de poste.
+func (f *Fake) As(user string) workbook.Server { return f.AsDevice(user, "") }
+
+// AsDevice rend le serveur vu par un utilisateur depuis un poste
+// (SET lattis.device) : deux postes du même utilisateur sont deux auteurs.
+func (f *Fake) AsDevice(user, device string) workbook.Server {
 	f.mu.Lock()
 	if f.users == nil {
 		f.users = map[string]bool{}
 	}
 	f.users[user] = true
 	f.mu.Unlock()
-	return &session{f: f, user: user}
+	return &session{f: f, user: user, device: device}
+}
+
+// Hold imite une transaction d'écriture longue, commencée maintenant :
+// tant qu'elle dure, sync_point (pg_snapshot_xmin) ne la dépasse pas.
+// release la termine.
+func (f *Fake) Hold() (release func()) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.xid++
+	x := f.xid
+	f.held = append(f.held, x)
+	return func() {
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		f.held = slices.DeleteFunc(f.held, func(h int64) bool { return h == x })
+	}
 }
 
 // SetDown rend le serveur injoignable (ou de nouveau joignable) ; les
@@ -282,8 +308,8 @@ func (f *Fake) snapshot() map[string]*book {
 }
 
 type session struct {
-	f    *Fake
-	user string
+	f            *Fake
+	user, device string
 }
 
 func (s *session) begin(name string) error {
@@ -737,6 +763,14 @@ func (r *reader) Capabilities(ctx context.Context, id string) (workbook.Capabili
 }
 
 func (r *reader) SyncPoint(ctx context.Context) (string, error) {
+	x := r.s.f.xid + 1
+	for _, h := range r.s.f.held {
+		x = min(x, h)
+	}
+	return strconv.FormatInt(x, 10), nil
+}
+
+func (r *reader) Probe(ctx context.Context) (string, error) {
 	return strconv.FormatInt(r.s.f.xid+1, 10), nil
 }
 

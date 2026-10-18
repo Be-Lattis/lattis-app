@@ -186,12 +186,6 @@ type WhyNot struct {
 type Wrote struct {
 	// Rows : lignes touchées (0 : conflit ou refus, voir WhyNot).
 	Rows int64
-	// Prev : lattis_xid de la ligne avant l'écriture (Update, Move ; "" :
-	// inconnu). Une transaction d'un autre, postérieure au point de reprise,
-	// n'est peut-être pas encore reçue : la ligne est à relire, car ses
-	// changements ne reviendront pas par changes_since (lattis_xid est
-	// désormais celui de notre transaction, écartée comme écho).
-	Prev string
 	// Author : lattis_author de la ligne ajoutée (Insert).
 	Author string
 }
@@ -300,15 +294,25 @@ type Reader interface {
 	// Changes lit les lignes modifiées ou supprimées d'un tableau depuis
 	// since (lattis.changes_since, filtré par les droits de l'utilisateur),
 	// sauf celles dont la dernière écriture vient d'une des transactions
-	// skip (ses propres écritures, Writer.Xact ; ignoré par un serveur sans
-	// la migration 0008). Une ligne peut revenir deux fois : l'application
-	// est idempotente.
+	// skip (ses propres écritures, Writer.Xact), sauf si un autre auteur
+	// (rôle et poste, lattis.device) l'a écrite depuis since
+	// (lattis_other_xid) : le poste a pu recouvrir une valeur pas encore
+	// reçue. skip est ignoré par un serveur sans la version finale de la
+	// migration 0008 (sans lattis_other_xid). Une ligne peut revenir deux
+	// fois : l'application est idempotente.
 	Changes(ctx context.Context, workbookID string, t RemoteTable, since string, skip []string, fn func(Change) error) error
 	// Covered dit si les changements depuis since sont complets
 	// (lattis.since_covered) : faux, des pierres tombales ont été purgées
 	// depuis, le tableau est à recharger en entier (Rows). known faux : le
 	// serveur ne sait pas le dire (sans la migration 0008).
 	Covered(ctx context.Context, since string) (covered, known bool, err error)
+	// Probe rend la fin de l'instantané de la lecture (pg_snapshot_xmax) :
+	// une transaction d'identifiant inférieur est validée (et lue) ou était
+	// en cours. Après un rechargement, Covered(probe) dit si des pierres
+	// tombales que le rechargement n'a pas vues ont été purgées, quand
+	// Covered(since) reste faux à cause d'une transaction longue (since,
+	// pg_snapshot_xmin, ne dépasse pas la purge tant qu'elle dure).
+	Probe(ctx context.Context) (string, error)
 	// RowsByID relit des lignes par leur identifiant (absentes : invisibles ou
 	// supprimées) : remise à l'état du serveur après un refus.
 	RowsByID(ctx context.Context, schema string, t RemoteTable, ids []string, fn func(Change) error) error

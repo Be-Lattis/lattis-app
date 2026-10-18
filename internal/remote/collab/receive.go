@@ -43,11 +43,17 @@ func (e *Engine) receive(ctx context.Context, only map[int64]bool) (Report, erro
 	if err != nil {
 		return rep, err
 	}
+	probes, err := readProbes(ctx, e.db.Read())
+	if err != nil {
+		return rep, err
+	}
 	var batches []canvas.RemoteTable
 	since := map[int64]string{}
+	probe := ""
 	reloaded := 0
 	err = srv.Delta(ctx, func(r workbook.Reader) error {
-		batches, since, reloaded = nil, map[int64]string{}, 0
+		batches, since, probe, reloaded = nil, map[int64]string{}, "", 0
+		withProbe := false
 		// Point de reprise lu au début de la lecture : une transaction
 		// validée après lui sera relue la prochaine fois (contrat §6).
 		sp, err := r.SyncPoint(ctx)
@@ -63,6 +69,13 @@ func (e *Engine) receive(ctx context.Context, only map[int64]bool) (Report, erro
 			// Serveur sans since_covered (known faux) : le point de reprise
 			// est supposé couvert.
 			covered, _, err := r.Covered(ctx, t.since)
+			if err == nil && !covered && probes[tbl] != "" {
+				// Rechargé alors qu'une transaction longue retenait since sous
+				// la purge : seules comptent les pierres tombales que le
+				// rechargement n'a pas vues (voir Reader.Probe).
+				withProbe = true
+				covered, _, err = r.Covered(ctx, probes[tbl])
+			}
 			if err != nil {
 				return fmt.Errorf("tableau « %s » : %w", t.remote.Name, err)
 			}
@@ -87,14 +100,42 @@ func (e *Engine) receive(ctx context.Context, only map[int64]bool) (Report, erro
 			batches = append(batches, rt)
 			since[tbl] = sp
 		}
+		// Le nouveau point de reprise est-il couvert ? Non tant qu'une
+		// transaction commencée avant la dernière purge dure (sync_point
+		// est le plus petit xid en cours) : le prochain Covered(since)
+		// serait faux et ferait recharger encore. La fin de cet instantané
+		// sert alors de témoin (Reader.Probe).
+		if reloaded > 0 || withProbe {
+			ok, _, err := r.Covered(ctx, sp)
+			if err == nil && !ok {
+				probe, err = r.Probe(ctx)
+			}
+			return err
+		}
 		return nil
 	})
 	if err != nil {
 		return rep, err
 	}
+	dirty := false
+	for tbl := range since {
+		if probes[tbl] != probe {
+			dirty = true
+			if probe != "" {
+				probes[tbl] = probe
+			} else {
+				delete(probes, tbl)
+			}
+		}
+	}
 	applied, err := e.model.ApplyRemote(ctx, batches, e.keep, func(tx *sql.Tx) error {
 		for tbl, sp := range since {
 			if _, err := tx.ExecContext(ctx, `UPDATE _lattis_remote_tables SET since = ? WHERE tbl = ?`, sp, tbl); err != nil {
+				return err
+			}
+		}
+		if dirty {
+			if err := writeProbes(ctx, tx, probes); err != nil {
 				return err
 			}
 		}
@@ -199,6 +240,41 @@ func pruneSkip(ctx context.Context, tx *sql.Tx) error {
 		return nil
 	}
 	return writeSkip(ctx, tx, keep)
+}
+
+// --- Témoins de couverture ----------------------------------------------------------
+
+// probeKey : témoin de couverture par tableau (Reader.Probe ; JSON, tableau
+// local → xid8 en texte), dans _lattis_info. Noté quand le point de reprise
+// d'un tableau rechargé n'est pas couvert, oublié dès qu'il l'est.
+const probeKey = "sync_probe"
+
+func readProbes(ctx context.Context, q interface {
+	QueryRowContext(ctx context.Context, q string, args ...any) *sql.Row
+}) (map[int64]string, error) {
+	out := map[int64]string{}
+	var raw string
+	err := q.QueryRowContext(ctx, `SELECT value FROM _lattis_info WHERE key = ?`, probeKey).Scan(&raw)
+	if errors.Is(err, sql.ErrNoRows) {
+		return out, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if json.Unmarshal([]byte(raw), &out) != nil {
+		return map[int64]string{}, nil // illisible : au pire, un rechargement de plus
+	}
+	return out, nil
+}
+
+func writeProbes(ctx context.Context, tx *sql.Tx, m map[int64]string) error {
+	if len(m) == 0 {
+		_, err := tx.ExecContext(ctx, `DELETE FROM _lattis_info WHERE key = ?`, probeKey)
+		return err
+	}
+	raw, _ := json.Marshal(m)
+	_, err := tx.ExecContext(ctx, `INSERT INTO _lattis_info (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value`, probeKey, string(raw))
+	return err
 }
 
 // skipSince garde les transactions postérieures à since (contrat §6).
