@@ -69,6 +69,7 @@ d'identifiants que les autres tableaux citent.
 | `pick` | une des `values`, au hasard | `skew` |
 | `cycle` | les `values` dans l'ordre, en boucle (clés uniques) | |
 | `constant` | `value` | |
+| `regex` | une chaîne au hasard qui correspond à l'expression : `[A-Z]{3}-\d{4}` → KQZ-4821 | `pattern` (les répétitions sans borne `*`, `+` s'arrêtent à 8 de plus que le minimum) |
 | `firstname`, `lastname`, `person` | prénom, nom, « Prénom Nom » | |
 | `company` | raison sociale | `skew` |
 | `email` | adresse | `of` : colonne « Prénom Nom », `domain` |
