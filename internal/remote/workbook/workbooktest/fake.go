@@ -83,6 +83,8 @@ type Fake struct {
 	// serveur (ServerOwner), qui voient les membres des équipes.
 	teams        []*fteam
 	serverOwners map[string]bool
+	// dataStore : données d'entreprise (data.go).
+	dataStore *fdata
 	// Creators : créateurs de classeurs (rôle de serveur) ; nil : tout le
 	// monde publie. Les autres reçoivent 42501 de create_workbook.
 	Creators map[string]bool

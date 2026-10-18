@@ -74,6 +74,12 @@ type Source struct {
 	// Cell[A1] sans feuille.
 	Connection string `json:"connection,omitempty"`
 	SQL        string `json:"sql,omitempty"`
+	// Place : premier chargement à cet endroit (donnée d'entreprise insérée
+	// à la cellule active) ; absent : une nouvelle feuille.
+	Place *canvas.QueryAnchor `json:"place,omitempty"`
+	// Dataset : donnée d'entreprise (identifiant au catalogue du serveur) que
+	// la requête lit, suivie en direct.
+	Dataset string `json:"dataset,omitempty"`
 	// API web : adresse et en-têtes (enregistrés dans le classeur : un
 	// jeton passe par une connexion Web).
 	URL     string   `json:"url,omitempty"`

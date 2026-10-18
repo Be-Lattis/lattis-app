@@ -296,7 +296,9 @@ func (s *Session) Refresh(ctx context.Context, env Env, id int64) (canvas.QueryL
 		return canvas.QueryLoad{}, err
 	}
 	defer res.Close()
-	return env.Model.LoadQuery(ctx, id, res.Table)
+	it := res.Table
+	it.At = q.Source.Place
+	return env.Model.LoadQuery(ctx, id, it)
 }
 
 // RefreshAll actualise toutes les requêtes déjà chargées dans une feuille,

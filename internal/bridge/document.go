@@ -76,6 +76,7 @@ type DocumentService struct {
 	ev    eventLoop  // évènements du classeur (events.go)
 	ai    aiState    // conversation de l'onglet IA (ai.go)
 	share shareState // classeur partagé : suivi du serveur (sharing.go)
+	data  dataWatch  // données d'entreprise liées : suivi en direct (data.go)
 
 	// Classeur à ouvrir au lancement (association de fichiers, launch.go).
 	launch launchState
@@ -128,6 +129,7 @@ func (s *DocumentService) replace(d *doc.Document) {
 	} else {
 		s.stopShare()
 	}
+	s.watchData(d)
 	if old != nil {
 		old.Close()
 	}

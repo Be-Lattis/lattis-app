@@ -154,6 +154,10 @@ type LoginSummary struct {
 	// CanCreateWorkbooks : peut publier un classeur (créateur, propriétaire,
 	// ou publication ouverte à tous). Nil : serveur d'avant ce droit.
 	CanCreateWorkbooks *bool `json:"can_create_workbooks,omitempty"`
+	// DataPublisher : rôle « publieur de données » ; CanPublishData : peut
+	// partager des tableaux comme données d'entreprise (§9).
+	DataPublisher  bool  `json:"data_publisher"`
+	CanPublishData *bool `json:"can_publish_data,omitempty"`
 	// Workbooks : lattis.my_workbooks(), tel quel.
 	Workbooks json.RawMessage `json:"workbooks,omitempty"`
 }
@@ -222,3 +226,101 @@ func ParseDesktopLink(raw string) (issuer, id string, err error) {
 	}
 	return strings.TrimRight(s.String(), "/"), strings.ToLower(id), nil
 }
+
+// --- Données d'entreprise (§9) -------------------------------------------------
+
+// DataCatalog est le résultat de lattis.data_catalog().
+type DataCatalog struct {
+	// CanPublish : la personne peut partager des tableaux et gérer les dossiers.
+	CanPublish bool         `json:"can_publish"`
+	Folders    []DataFolder `json:"folders"`
+	Datasets   []Dataset    `json:"datasets"`
+}
+
+// DataFolder est un dossier du catalogue.
+type DataFolder struct {
+	ID       string `json:"id"`
+	ParentID string `json:"parent_id,omitempty"`
+	Name     string `json:"name"`
+	// Path : chemin lisible (« Ventes › Europe »).
+	Path  string `json:"path"`
+	Depth int    `json:"depth"`
+	// Audience : pour un publieur seulement.
+	Audience []DataAudience `json:"audience,omitempty"`
+}
+
+// Dataset est une donnée d'entreprise : un tableau d'un classeur publié,
+// lisible par son audience dans la vue donnees."<SQLName>".
+type Dataset struct {
+	ID          string `json:"id"`
+	FolderID    string `json:"folder_id,omitempty"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	SQLName     string `json:"sql_name"`
+	// Readable : la personne lit ses lignes ; Manageable : elle la gère.
+	Readable   bool `json:"readable"`
+	Manageable bool `json:"manageable"`
+	// Available faux : source supprimée ou tableau introuvable.
+	Available bool `json:"available"`
+	// TableID et Channel : notifications du classeur source (LISTEN Channel,
+	// charge TableID ou *version:<n>).
+	TableID   string       `json:"table_id,omitempty"`
+	Channel   string       `json:"channel,omitempty"`
+	Columns   []DataColumn `json:"columns"`
+	UpdatedAt string       `json:"updated_at,omitempty"`
+	// Source, Audience, UsedBy : pour qui gère la donnée seulement.
+	Source   *DataSource    `json:"source,omitempty"`
+	Audience []DataAudience `json:"audience,omitempty"`
+	UsedBy   []DataUse      `json:"used_by,omitempty"`
+}
+
+// DataColumn est une colonne de la vue (type PostgreSQL).
+type DataColumn struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+}
+
+// DataSource est l'origine d'une donnée.
+type DataSource struct {
+	WorkbookID      string   `json:"workbook_id"`
+	Title           string   `json:"title"`
+	Table           string   `json:"table"`
+	HiddenColumns   []string `json:"hidden_columns"`
+	InheritAudience bool     `json:"inherit_audience"`
+}
+
+// DataAudience est une entrée de l'audience d'une donnée ou d'un dossier.
+type DataAudience struct {
+	ID string `json:"id"`
+	// Kind : user ou team.
+	Kind      string `json:"kind"`
+	Principal string `json:"principal"`
+	Label     string `json:"label"`
+	Predicate string `json:"predicate,omitempty"`
+}
+
+// DataUse est un classeur qui utilise une donnée (« Utilisée par »).
+type DataUse struct {
+	WorkbookID string          `json:"workbook_id"`
+	Title      string          `json:"title"`
+	LinkedAt   string          `json:"linked_at,omitempty"`
+	LastEdit   json.RawMessage `json:"last_edit,omitempty"`
+	LastRead   *DataRead       `json:"last_read,omitempty"`
+}
+
+// DataRead est la dernière lecture d'un classeur.
+type DataRead struct {
+	Email string `json:"email"`
+	At    string `json:"at"`
+}
+
+// Canal des notifications du catalogue et charges particulières.
+const (
+	DataChannel        = "lattis_data"
+	DataCatalogChanged = "*catalog"
+	DataWithdrawn      = "*withdrawn:"
+	DataVersion        = "*version:"
+)
+
+// DataSchema est le schéma PostgreSQL des vues des données d'entreprise.
+const DataSchema = "donnees"

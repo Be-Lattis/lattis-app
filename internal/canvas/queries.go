@@ -178,6 +178,12 @@ func (m *Model) DeleteQuery(ctx context.Context, id int64) error {
 	})
 }
 
+// QueryAnchor est l'emplacement du premier chargement d'une requête.
+type QueryAnchor struct {
+	Sheet    int64 `json:"sheet"`
+	Row, Col int
+}
+
 // QueryLoad décrit le chargement d'une requête dans une feuille.
 type QueryLoad struct {
 	Sheet    int64    `json:"sheet"`
@@ -244,13 +250,24 @@ func (m *Model) LoadQuery(ctx context.Context, id int64, it ImportTable) (QueryL
 				return err
 			}
 			var err error
-			if sheet, err = t.newSheet(qname); err != nil {
-				return err
+			if it.At != nil {
+				if err := t.guard(it.At.Sheet); err != nil {
+					return err
+				}
+				sheet = it.At.Sheet
+				if it.Name, err = t.freeTableName(qname); err != nil {
+					return err
+				}
+				it.Row, it.Col = it.At.Row, it.At.Col
+			} else {
+				if sheet, err = t.newSheet(qname); err != nil {
+					return err
+				}
+				if it.Name, err = t.freeTableName(qname); err != nil {
+					return err
+				}
+				it.Row, it.Col = 0, 0
 			}
-			if it.Name, err = t.freeTableName(qname); err != nil {
-				return err
-			}
-			it.Row, it.Col = 0, 0
 		}
 		tb, err := t.importTable(sheet, &it)
 		if err != nil {

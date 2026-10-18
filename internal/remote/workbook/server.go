@@ -155,6 +155,8 @@ type Server interface {
 	// Rights : gestion des droits d'un classeur (écran « Partager »,
 	// propriétaires ; voir rights.go).
 	Rights
+	// Data : données d'entreprise (catalogue, partage, lecture ; pg_data.go).
+	Data
 }
 
 // Change est une ligne modifiée ou supprimée depuis un point de reprise

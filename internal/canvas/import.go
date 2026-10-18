@@ -18,8 +18,11 @@ import (
 type ImportTable struct {
 	Name     string // identifiant libre (voir TableNames)
 	Row, Col int    // ancre : cellule d'en-tête en haut à gauche
-	Headers  []string
-	Types    []grid.Type
+	// At : premier chargement d'une requête à cet endroit (donnée d'entreprise
+	// insérée à la cellule active) ; nil : nouvelle feuille, en A1.
+	At      *QueryAnchor
+	Headers []string
+	Types   []grid.Type
 	// Formulas donne, par colonne, la formule (français, commençant par =)
 	// d'une colonne calculée, ou "". Si elle ne peut pas être enregistrée, la
 	// colonne garde ses valeurs et Import le signale dans ses avertissements.
@@ -480,3 +483,19 @@ func (m *Model) ExportTable(ctx context.Context, table string, header func([]Exp
 
 // Invalid est une saisie hors type, gardée telle quelle (voir ExportTable).
 type Invalid string
+
+// TableColumns donne les noms des colonnes du tableau tbl, dans l'ordre.
+func (m *Model) TableColumns(ctx context.Context, tbl int64) ([]string, error) {
+	out := []string{}
+	err := m.read(ctx, func(t *tx) error {
+		tb, err := t.table(tbl)
+		if err != nil {
+			return err
+		}
+		for _, c := range tb.Cols {
+			out = append(out, c.Name)
+		}
+		return nil
+	})
+	return out, err
+}
