@@ -34,6 +34,9 @@ import * as collab$0 from "../remote/collab/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as workbook$0 from "../remote/workbook/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as protocol$0 from "../../protocol/models.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -330,10 +333,31 @@ export function CreateChart(sheet: number, row: number, col: number, cfg: canvas
 }
 
 /**
+ * CreateDataFolder crée un dossier du catalogue (parent "" : à la racine).
+ */
+export function CreateDataFolder(server: string, name: string, parent: string): $CancellablePromise<string> {
+    return $Call.ByID(3587172722, server, name, parent);
+}
+
+/**
  * CreatePivot crée un tableau croisé sur une nouvelle feuille ; renvoie la feuille.
  */
 export function CreatePivot(cfg: canvas$0.PivotConfig): $CancellablePromise<number> {
     return $Call.ByID(2880887650, cfg);
+}
+
+/**
+ * DataCatalog lit le catalogue des données d'entreprise d'un serveur.
+ */
+export function DataCatalog(server: string): $CancellablePromise<protocol$0.DataCatalog> {
+    return $Call.ByID(3706784597, server);
+}
+
+/**
+ * DataShareInfo lit de quoi partager le tableau table du classeur ouvert.
+ */
+export function DataShareInfo(table: string): $CancellablePromise<$models.DataShareInfo> {
+    return $Call.ByID(3874833925, table);
 }
 
 /**
@@ -475,6 +499,14 @@ export function DismissKeyHint(table: string): $CancellablePromise<$models.DocSt
  */
 export function DocControl(id: number): $CancellablePromise<api$0.ControlState> {
     return $Call.ByID(3893749813, id);
+}
+
+/**
+ * DropDataset retire le partage d'une donnée (la vue disparaît ; les
+ * classeurs qui l'utilisent gardent leur dernière copie).
+ */
+export function DropDataset(server: string, id: string): $CancellablePromise<void> {
+    return $Call.ByID(2664052985, server, id);
 }
 
 /**
@@ -642,6 +674,16 @@ export function Import(path: string): $CancellablePromise<$models.ImportResult> 
 
 export function InsertColumn(table: string, i: number, name: string): $CancellablePromise<$models.DocState> {
     return $Call.ByID(2623907613, table, i, name);
+}
+
+/**
+ * InsertDataset insère une donnée d'entreprise comme tableau lié (Insérer ›
+ * Donnée d'entreprise) : connexion au serveur (créée au besoin), requête,
+ * premier chargement à la cellule donnée ; dans un classeur du même serveur,
+ * le lien est annoncé (« Utilisée par »).
+ */
+export function InsertDataset($in: $models.DataInsert): $CancellablePromise<$models.QueryRefresh> {
+    return $Call.ByID(2398319309, $in);
 }
 
 export function InsertRow(table: string, n: number): $CancellablePromise<$models.DocState> {
@@ -848,6 +890,14 @@ export function MoveCells(sheet: number, r0: number, c0: number, r1: number, c1:
  */
 export function MoveChart(id: number, row: number, col: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(1597876373, id, row, col);
+}
+
+/**
+ * MoveDataItem range une donnée (kind dataset) ou un dossier (kind folder)
+ * dans le dossier parent ("" : la racine) : glisser-déposer dans l'arbre.
+ */
+export function MoveDataItem(server: string, kind: string, id: string, parent: string): $CancellablePromise<void> {
+    return $Call.ByID(13605652, server, kind, id, parent);
 }
 
 /**
@@ -1569,6 +1619,16 @@ export function ShareConflicts(): $CancellablePromise<collab$0.Conflict[] | null
  */
 export function ShareCreateRole(name: string): $CancellablePromise<$models.RightsView> {
     return $Call.ByID(855021969, name);
+}
+
+/**
+ * ShareDataset partage un tableau comme donnée d'entreprise, ou modifie la
+ * donnée qui le partage ; rend son identifiant. Une entrée d'audience
+ * refusée (adresse sans compte) est signalée après coup : le reste est
+ * enregistré.
+ */
+export function ShareDataset(req: $models.DataShare): $CancellablePromise<string> {
+    return $Call.ByID(2205127075, req);
 }
 
 /**

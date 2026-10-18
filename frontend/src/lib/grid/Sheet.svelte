@@ -511,11 +511,13 @@
 		onsheet?: (sheet: number) => void;
 		/** Point de carte cliqué : aller à la ligne id du tableau (éventuellement sur une autre feuille). */
 		onrowlink?: (table: string, id: number) => void;
+		/** Partager le tableau comme donnée d'entreprise (clic droit sur un tableau). */
+		onsharedata?: (table: string) => void;
 		/** Clic droit › « Demander à l'assistant… » (absent : entrée masquée). */
 		onask?: () => void;
 	}
 
-	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', freeze, zoom = 1, onzoom, animate = true, sheetName = '', onsheet, onrowlink, onask }: Props = $props();
+	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', freeze, zoom = 1, onzoom, animate = true, sheetName = '', onsheet, onrowlink, onask, onsharedata }: Props = $props();
 
 	// Feuille sans fin pratique (choix de Louis) : au-delà des limites d'Excel,
 	// bornée par la nomenclature Cell[ZZZZ999999999] (4 lettres, 9 chiffres).
@@ -7978,6 +7980,11 @@
 	});
 
 	/** Nom du tableau de la cellule active (pour l'export), s'il y en a un. */
+	/** Cellule active (lignes et colonnes de la feuille, à partir de 0). */
+	export function activeCell(): { row: number; col: number } {
+		return { row: active.row, col: active.col };
+	}
+
 	export function activeTable(): string | undefined {
 		return targetTable()?.t.name;
 	}
@@ -8471,6 +8478,9 @@
 						{@const t = m.e.t}
 						<hr />
 						<button data-shed="2" title="F5 dans le tableau" onclick={() => menuAction(() => source.refreshTable!(t))}>Actualiser « {t.query?.name} »</button>
+					{/if}
+					{#if cols && onsharedata && !m.e.t.query}
+						<button data-shed="2" title="Rendre ce tableau lisible depuis d'autres classeurs du serveur (catalogue des données d'entreprise)" onclick={() => { const n = m.e.t.name; menu = null; onsharedata(n); }}>Partager comme donnée d'entreprise…</button>
 					{/if}
 					{#if source.convertToRange}
 						<button data-shed="1" title="Le tableau devient des cellules libres, au même endroit" onclick={() => menuAction(() => source.convertToRange!(m.e.t))}>Convertir en plage</button>

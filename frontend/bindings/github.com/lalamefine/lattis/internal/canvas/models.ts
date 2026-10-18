@@ -823,6 +823,15 @@ export interface PivotValue {
 }
 
 /**
+ * QueryAnchor est l'emplacement du premier chargement d'une requête.
+ */
+export interface QueryAnchor {
+    "sheet": number;
+    "Row": number;
+    "Col": number;
+}
+
+/**
  * QueryLoad décrit le chargement d'une requête dans une feuille.
  */
 export interface QueryLoad {

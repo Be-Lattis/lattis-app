@@ -31,7 +31,7 @@
 	import type { ControlInfo } from '#lib/script/controls.js';
 	import McpPanel from '#lib/shell/McpPanel.svelte';
 	import SettingsDialog from '#lib/shell/SettingsDialog.svelte';
-	import { htmlTabsEnabled, loadSettings, mcpAvailable } from '#lib/shell/settings.svelte.js';
+	import { htmlTabsEnabled, loadSettings, mcpAvailable, sharedWorkbooksEnabled } from '#lib/shell/settings.svelte.js';
 	import { listenExternal } from '#lib/ai/external.svelte.js';
 	import { isWeb } from '#lib/web/platform.js';
 	import HtmlPage from '#lib/page/HtmlPage.svelte';
@@ -41,6 +41,8 @@
 	import LattisHost from '#lib/remote/LattisHost.svelte';
 	import ShareDialog from '#lib/remote/ShareDialog.svelte';
 	import OpenRemoteDialog from '#lib/remote/OpenRemoteDialog.svelte';
+	import DataCatalogDialog from '#lib/remote/DataCatalogDialog.svelte';
+	import DataShareDialog from '#lib/remote/DataShareDialog.svelte';
 	import ShareBanner from '#lib/remote/ShareBanner.svelte';
 	import ConflictPanel from '#lib/remote/ConflictPanel.svelte';
 	import RightsDialog from '#lib/remote/RightsDialog.svelte';
@@ -238,6 +240,9 @@
 			.catch(() => (rightsObjs = []));
 	});
 	let openRemote = $state(false);
+	// Données d'entreprise : insertion (cellule visée) et partage d'un tableau.
+	let dataInsert = $state<{ sheet: number; row: number; col: number } | null>(null);
+	let dataShare = $state<string | null>(null);
 	let shareReloading = $state(false);
 	// Données › Obtenir des données : requêtes d'import (lib/query).
 	let queryHost = $state<ReturnType<typeof QueryHost>>();
@@ -1374,6 +1379,10 @@
 		onchart={mode === 'doc' ? (kind) => sheet?.chartActive(kind) : undefined}
 		onformula={mode === 'doc' ? (what) => (what === 'insert' ? sheet?.openFunctions() : what === 'sum' ? sheet?.autoSum() : sheet?.startFormula('=REFERENCE(')) : undefined}
 		onpivot={mode === 'doc' ? () => sheet?.pivotActive() : undefined}
+		oninsertdata={mode === 'doc' ? () => {
+			const c = sheet?.activeCell() ?? { row: 0, col: 0 };
+			dataInsert = { sheet: sheetId, ...c };
+		} : undefined}
 		ondedup={mode === 'doc' ? () => sheet?.dedupActive() : undefined}
 		ontextcols={mode === 'doc' ? () => sheet?.textToColumnsActive() : undefined}
 		onbutton={mode === 'doc' ? (kind) => sheet?.insertButton(kind) : undefined}
@@ -1496,6 +1505,7 @@
 						sheetName={activeInfo?.name ?? ''}
 						onsheet={(id) => selectSheet(id).catch((e) => (notice = err(e)))}
 						onrowlink={mode === 'doc' ? gotoRow : undefined}
+						onsharedata={mode === 'doc' && sharedWorkbooksEnabled() ? (t) => (dataShare = t) : undefined}
 						onask={mode === 'doc' ? openAssistant : undefined}
 					/>
 				</div>
@@ -1759,6 +1769,21 @@
 				reload().catch((e) => (notice = err(e)));
 			}}
 		/>
+	{/if}
+	{#if dataInsert}
+		{@const at = dataInsert}
+		<DataCatalogDialog
+			sheet={at.sheet}
+			row={at.row}
+			col={at.col}
+			ondone={(ok) => {
+				dataInsert = null;
+				if (ok) reload().catch((e) => (notice = err(e)));
+			}}
+		/>
+	{/if}
+	{#if dataShare}
+		<DataShareDialog table={dataShare} ondone={() => (dataShare = null)} />
 	{/if}
 	{#if openRemote}
 		<OpenRemoteDialog

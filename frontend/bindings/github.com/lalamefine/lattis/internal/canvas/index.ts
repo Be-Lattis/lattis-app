@@ -34,6 +34,7 @@ export type {
     PivotInfo,
     PivotRowInfo,
     PivotValue,
+    QueryAnchor,
     QueryLoad,
     RangeRules,
     Rect,

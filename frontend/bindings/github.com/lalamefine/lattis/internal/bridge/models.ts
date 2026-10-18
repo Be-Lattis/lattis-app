@@ -31,6 +31,9 @@ import * as auth$0 from "../remote/auth/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as workbook$0 from "../remote/workbook/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as protocol$0 from "../../protocol/models.js";
 
 /**
  * AIContext : ce que l'utilisateur regarde, joint à chaque message.
@@ -219,6 +222,85 @@ export type AIUsage = ai$0.Usage;
 export interface DamagedFile {
     "path": string;
     "message": string;
+}
+
+/**
+ * DataAudienceEntry est une entrée d'audience à ajouter : une adresse
+ * (Email) ou une équipe (Team), avec un filtre facultatif.
+ */
+export interface DataAudienceEntry {
+    "email": string;
+    "team": string;
+    "predicate": string;
+}
+
+/**
+ * DataInsert est une donnée à insérer à la cellule (Row, Col) d'une feuille.
+ */
+export interface DataInsert {
+    "server": string;
+    "dataset": string;
+    "sheet": number;
+    "row": number;
+    "col": number;
+}
+
+/**
+ * DataShare est le partage (création ou modification) d'un tableau.
+ */
+export interface DataShare {
+    "server": string;
+
+    /**
+     * Dataset : donnée à modifier ("" : partager le tableau).
+     */
+    "dataset": string;
+    "workbookId": string;
+    "tableId": string;
+    "folderId": string;
+    "name": string;
+    "description": string;
+    "sqlName": string;
+    "hidden": string[] | null;
+    "inherit": boolean;
+
+    /**
+     * Add : entrées d'audience à ajouter ; Remove : identifiants à retirer.
+     */
+    "add": DataAudienceEntry[] | null;
+    "remove": string[] | null;
+}
+
+/**
+ * DataShareInfo décrit ce qu'il faut pour partager un tableau : possible
+ * seulement pour un tableau publié d'un classeur du serveur, par un
+ * publieur de données propriétaire ou concepteur du classeur.
+ */
+export interface DataShareInfo {
+    /**
+     * Reason : pourquoi le partage est impossible ("" : possible).
+     */
+    "reason": string;
+    "server": string;
+    "workbookId": string;
+    "tableId": string;
+    "table": string;
+    "columns": string[] | null;
+    "catalog": protocol$0.DataCatalog;
+    "teams": DataTeam[] | null;
+
+    /**
+     * Dataset : la donnée qui partage déjà ce tableau (nil : aucune).
+     */
+    "dataset": protocol$0.Dataset | null;
+}
+
+/**
+ * DataTeam est une équipe proposée pour l'audience.
+ */
+export interface DataTeam {
+    "id": string;
+    "name": string;
 }
 
 /**

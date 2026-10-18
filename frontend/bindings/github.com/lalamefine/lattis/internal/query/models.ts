@@ -3,6 +3,9 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as canvas$0 from "../canvas/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as grid$0 from "../grid/models.js";
 
 /**
@@ -234,6 +237,18 @@ export interface Source {
      */
     "connection"?: string;
     "sql"?: string;
+
+    /**
+     * Place : premier chargement à cet endroit (donnée d'entreprise insérée
+     * à la cellule active) ; absent : une nouvelle feuille.
+     */
+    "place"?: canvas$0.QueryAnchor | null;
+
+    /**
+     * Dataset : donnée d'entreprise (identifiant au catalogue du serveur) que
+     * la requête lit, suivie en direct.
+     */
+    "dataset"?: string;
 
     /**
      * API web : adresse et en-têtes (enregistrés dans le classeur : un
