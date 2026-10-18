@@ -358,6 +358,17 @@ export interface LattisState {
 }
 
 /**
+ * LinkTarget est un classeur désigné par un lien lattis:// : son serveur
+ * (adresse normalisée) et son identifiant, et si Lattis connaît déjà ce
+ * serveur (sinon l'interface demande confirmation avant de s'y connecter).
+ */
+export interface LinkTarget {
+    "server": string;
+    "workbook": string;
+    "known": boolean;
+}
+
+/**
  * MCPClients décrit les clients d'Anthropic qui peuvent piloter Lattis : la
  * voie « abonnement Claude » (Pro, Max, Team), où l'on discute dans Claude
  * et où Lattis montre ce qui est fait.

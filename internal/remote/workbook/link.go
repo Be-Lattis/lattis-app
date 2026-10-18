@@ -9,6 +9,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/store"
+	"github.com/lalamefine/lattis/protocol"
 )
 
 // Messages des refus d'écriture sur un tableau publié (§5.4, §10).
@@ -330,14 +331,16 @@ func (l *Link) Gate(op command.Op) (bool, error) {
 
 // State est l'état de partage pour l'interface.
 type State struct {
-	Shared     bool     `json:"shared"`
-	Server     string   `json:"server"`
-	ServerName string   `json:"serverName"`
-	WorkbookID string   `json:"workbookId"`
-	Title      string   `json:"title"`
-	Mode       string   `json:"mode"`
-	Version    int      `json:"version"`
-	Roles      []string `json:"roles"`
+	Shared     bool   `json:"shared"`
+	Server     string `json:"server"`
+	ServerName string `json:"serverName"`
+	WorkbookID string `json:"workbookId"`
+	// Link : adresse à partager (<serveur>/w/<id>, contrat de lattisd §8).
+	Link    string   `json:"link,omitempty"`
+	Title   string   `json:"title"`
+	Mode    string   `json:"mode"`
+	Version int      `json:"version"`
+	Roles   []string `json:"roles"`
 	// CanDesign : propriétaire ou concepteur (Fichier › Republier).
 	CanDesign bool `json:"canDesign"`
 	// CanManage : propriétaire (écran « Partager » : membres, rôles,
@@ -384,6 +387,7 @@ func (l *Link) State() State {
 		CanDesign: l.info.CanDesign(), CanManage: l.info.CanManage(), Online: l.online, Offline: l.offline, NewVersion: l.newVersion, Published: len(l.published),
 		Pending: l.pending, Conflicts: l.conflicts,
 	}
+	s.Link = protocol.WorkbookLink(s.Server, s.WorkbookID)
 	switch {
 	case !l.online:
 		s.ReadOnly = ErrOffline.Error()

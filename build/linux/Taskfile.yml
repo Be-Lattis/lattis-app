@@ -175,12 +175,13 @@ tasks:
       APP_NAME: '{{.APP_NAME}}'
       DISPLAY_NAME: 'Lattis'
       COMMENT: 'Tableur relationnel local-first'
-      # %f : le classeur ouvert depuis le gestionnaire de fichiers (main.go).
-      EXEC: '{{.APP_NAME}} %f'
+      # %U : le classeur ouvert depuis le gestionnaire de fichiers, ou un lien
+      # lattis://open?… (lien vers un classeur partagé) ; main.go les distingue.
+      EXEC: '{{.APP_NAME}} %U'
       ICON: '{{.APP_NAME}}'
       CATEGORIES: 'Office;Spreadsheet;'
       # Type déclaré par build/linux/mime/lattis.xml (paquets deb et rpm).
-      MIMETYPE: 'application/x-lattis;'
+      MIMETYPE: 'application/x-lattis;x-scheme-handler/lattis;'
       KEYWORDS: 'tableur;spreadsheet;sql;'
       OUTPUTFILE: '{{.ROOT_DIR}}/build/linux/{{.APP_NAME}}.desktop'
 

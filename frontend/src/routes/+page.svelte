@@ -48,7 +48,8 @@
 	import { refusedNotice } from '#lib/remote/share.js';
 	import type { Conflict } from '#bindings/internal/remote/collab/models.js';
 	import { canRepublish } from '#lib/remote/share.js';
-	import { requestLogin, shareRights } from '#lib/remote/lattis.svelte.js';
+	import { lattis, loadLattis, requestLogin, shareRights } from '#lib/remote/lattis.svelte.js';
+	import { hostOf } from '#lib/remote/lattis.js';
 	import type { State as ShareState } from '#bindings/internal/remote/workbook/models.js';
 	import type { ButtonConfig } from '#lib/grid/buttons.js';
 	import type { UICommand } from '#bindings/internal/bridge/models.js';
@@ -304,6 +305,24 @@
 		if (r.state.notice) notice = r.state.notice;
 		workbookReady();
 		await loadRecent();
+	}
+
+	// Lien lattis://open?server=…&workbook=… (navigateur, lien partagé) :
+	// serveur jamais utilisé, confirmation d'abord ; connexion si besoin ; puis
+	// le même chemin que « Ouvrir depuis un serveur ».
+	let linkAsk = $state<{ name: string; host: string; ok: (yes: boolean) => void } | null>(null);
+	async function openLink(raw: string) {
+		const t = await DocumentService.ParseLink(raw);
+		await loadLattis();
+		if (!t.known) {
+			const d = await DocumentService.LattisDiscover(t.server); // un vrai Serveur Lattis ?
+			const yes = await new Promise<boolean>((ok) => (linkAsk = { name: d.name || hostOf(t.server), host: hostOf(t.server), ok }));
+			linkAsk = null;
+			if (!yes) return;
+			await loadLattis();
+		}
+		if (!(lattis.state.servers ?? []).find((s) => s.url === t.server)?.user && !(await requestLogin(t.server))) return;
+		await openedRemote(await DocumentService.ShareOpen(t.server, t.workbook, ''));
 	}
 
 	const loadRecent = async () => (recent = (await DocumentService.Recent().catch(() => null)) ?? []);
@@ -581,6 +600,10 @@
 		const offOpen = Events.On('doc:open-file', (e: { data: string }) => {
 			openPath(e.data).catch((x) => (notice = err(x)));
 		});
+		// Lien lattis:// reçu pendant que l'application tourne.
+		const offLink = Events.On('doc:open-link', (e: { data: string }) => {
+			openLink(e.data).catch((x) => (notice = err(x)));
+		});
 		(async () => {
 			try {
 				bench = await GridService.BenchRequested();
@@ -606,6 +629,13 @@
 					} catch (e) {
 						notice = err(e); // fichier illisible : on démarre comme d'habitude
 					}
+				}
+				// Lien lattis:// du lancement : un classeur vide le temps de le suivre.
+				const link = await DocumentService.LaunchLink();
+				if (link) {
+					await startDoc();
+					openLink(link).catch((x) => (notice = err(x)));
+					return;
 				}
 				orphans = (await DocumentService.Orphans()) ?? [];
 				if (orphans.length > 0) mode = 'recover';
@@ -694,6 +724,7 @@
 			off();
 			offUI();
 			offOpen();
+			offLink();
 			offShare();
 			window.removeEventListener('keydown', keys);
 			window.removeEventListener('beforeunload', leave);
@@ -1709,7 +1740,7 @@
 		<SettingsDialog onclose={() => (settingsOpen = false)} />
 	{/if}
 	{#if rightsOpen && canRights && share}
-		<RightsDialog title={share.title} server={share.server} onclose={() => (rightsOpen = false)} />
+		<RightsDialog title={share.title} server={share.server} link={share.link} onclose={() => (rightsOpen = false)} />
 	{/if}
 	{#if shareDlg && mode === 'doc'}
 		<ShareDialog
@@ -1735,6 +1766,19 @@
 		/>
 	{/if}
 	<LattisHost />
+	{#if linkAsk}
+		{@const a = linkAsk}
+		<div class="modal-back">
+			<div class="modal" role="dialog" aria-modal="true" aria-label="Ouvrir un lien Lattis" use:modal={() => a.ok(false)}>
+				<p>Ouvrir un classeur de « {a.name} » ?</p>
+				<p class="muted">Lattis ne s’est jamais connecté à {a.host}. N’acceptez que si vous connaissez ce serveur et attendiez ce lien.</p>
+				<div class="actions">
+					<button class="primary" onclick={() => a.ok(true)}>Se connecter et ouvrir</button>
+					<button onclick={() => a.ok(false)}>Annuler</button>
+				</div>
+			</div>
+		</div>
+	{/if}
 	{#if protecting}
 		{@const p = protecting}
 		<div class="modal-back">

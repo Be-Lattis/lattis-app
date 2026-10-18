@@ -254,11 +254,15 @@ RequestExecutionLevel "${REQUEST_EXECUTION_LEVEL}"
 !macroend
 
 !macro wails.associateCustomProtocols
-    ; Create custom protocols associations
-    
+    ; Liens lattis://open?server=…&workbook=… (lien vers un classeur partagé,
+    ; contrat de lattisd §8) : HKCU\Software\Classes\lattis, pour l'utilisateur.
+    WriteRegStr HKCU "Software\Classes\lattis" "" "URL:Lattis"
+    WriteRegStr HKCU "Software\Classes\lattis" "URL Protocol" ""
+    WriteRegStr HKCU "Software\Classes\lattis\DefaultIcon" "" "$INSTDIR\${PRODUCT_EXECUTABLE},0"
+    WriteRegStr HKCU "Software\Classes\lattis\shell\open\command" "" "$\"$INSTDIR\${PRODUCT_EXECUTABLE}$\" $\"%1$\""
 !macroend
 
 !macro wails.unassociateCustomProtocols
     ; Delete app custom protocol associations
-    
+    DeleteRegKey HKCU "Software\Classes\lattis"
 !macroend

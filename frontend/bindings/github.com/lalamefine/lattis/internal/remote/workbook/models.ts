@@ -201,6 +201,11 @@ export interface State {
     "server": string;
     "serverName": string;
     "workbookId": string;
+
+    /**
+     * Link : adresse à partager (<serveur>/w/<id>, contrat de lattisd §8).
+     */
+    "link"?: string;
     "title": string;
     "mode": string;
     "version": number;

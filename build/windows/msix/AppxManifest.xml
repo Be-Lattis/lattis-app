@@ -68,6 +68,14 @@
           </uap:FileTypeAssociation>
         </uap:Extension>
 
+        <!-- Liens lattis://open?… (lien vers un classeur partagé) :
+             lattis.exe "lattis://…". -->
+        <uap:Extension Category="windows.protocol">
+          <uap:Protocol Name="lattis">
+            <uap:DisplayName>Lien Lattis</uap:DisplayName>
+          </uap:Protocol>
+        </uap:Extension>
+
         <!-- « lattis » dans un terminal : lattis mcp (relais MCP pour Claude
              Desktop…), lattis config. -->
         <uap3:Extension Category="windows.appExecutionAlias" Executable="lattis.exe" EntryPoint="Windows.FullTrustApplication">

@@ -40,9 +40,21 @@
 	interface Props {
 		title: string;
 		server: string;
+		/** Adresse à partager du classeur (<serveur>/w/<id>) ; vide : non affichée. */
+		link?: string;
 		onclose: () => void;
 	}
-	let { title, server, onclose }: Props = $props();
+	let { title, server, link = '', onclose }: Props = $props();
+	let linkCopied = $state(false);
+	async function copyLink() {
+		try {
+			await navigator.clipboard.writeText(link);
+			linkCopied = true;
+			setTimeout(() => (linkCopied = false), 1500);
+		} catch (e) {
+			error = err(e);
+		}
+	}
 
 	type Tab = 'members' | 'roles' | 'restrictions' | 'preview' | 'drift';
 	let view = $state<RightsView | null>(null);
@@ -253,6 +265,13 @@
 			<span class="muted grow">{hostOf(server)}{view && !view.collaborative ? ' · classeur figé : lecteurs seulement' : ''}</span>
 			<button class="link" disabled={busy} onclick={load} title="Relire les droits sur le serveur">Actualiser</button>
 		</header>
+		{#if link}
+			<div class="share-link">
+				<span class="muted">Lien du classeur</span>
+				<input readonly value={link} aria-label="Lien du classeur" onfocus={(e) => e.currentTarget.select()} />
+				<button onclick={copyLink} title="Copier le lien : il ouvre le classeur dans Lattis (ou le navigateur) pour qui y a accès">{linkCopied ? 'Copié' : 'Copier'}</button>
+			</div>
+		{/if}
 		<div class="tabs" role="tablist">
 			{#each TABS.filter((t) => manage || !t.manage) as t (t.id)}
 				<button role="tab" aria-selected={tab === t.id} class:on={tab === t.id} onclick={() => (tab = t.id)}>
@@ -656,6 +675,18 @@
 </div>
 
 <style>
+	.share-link {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 6px 14px;
+		border-bottom: 1px solid #e5e7eb;
+	}
+	.share-link input {
+		flex: 1;
+		min-width: 0;
+		font: inherit;
+	}
 	.back {
 		position: fixed;
 		inset: 0;

@@ -25,6 +25,7 @@ export type {
     GridStatus,
     ImportResult,
     LattisState,
+    LinkTarget,
     MCPClients,
     MCPSeriesState,
     MCPStatus,

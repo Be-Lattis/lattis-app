@@ -26,6 +26,19 @@
 		<string>true</string>
 		<key>NSHumanReadableCopyright</key>
 		<string>© 2026 Lattis</string>
+		<!-- Liens lattis://open?… (lien vers un classeur partagé, contrat de
+		     lattisd §8) : ouverts par l'application (main.go). -->
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleURLName</key>
+				<string>fr.triboulin.lattis.link</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>lattis</string>
+				</array>
+			</dict>
+		</array>
 		<!-- Classeurs .lattis : type déclaré par l'application, ouvert par
 		     elle (événement « ouvrir le fichier », main.go). -->
 		<key>CFBundleDocumentTypes</key>

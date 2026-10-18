@@ -707,6 +707,13 @@ export function LaunchFile(): $CancellablePromise<string> {
 }
 
 /**
+ * LaunchLink donne, une seule fois, le lien lattis:// du lancement, ou "".
+ */
+export function LaunchLink(): $CancellablePromise<string> {
+    return $Call.ByID(1111181709);
+}
+
+/**
  * Layout donne la mise en page d'une feuille (tableaux et cellules libres).
  */
 export function Layout(sheet: number): $CancellablePromise<canvas$0.Layout> {
@@ -885,6 +892,14 @@ export function PageAllowed(source: string): $CancellablePromise<boolean> {
  */
 export function PageCall(name: string, args: { [_ in string]?: any } | null): $CancellablePromise<any> {
     return $Call.ByID(65243337, name, args);
+}
+
+/**
+ * ParseLink lit un lien lattis://open?server=…&workbook=… (aucun autre
+ * paramètre n'est lu).
+ */
+export function ParseLink(link: string): $CancellablePromise<$models.LinkTarget> {
+    return $Call.ByID(316544565, link);
 }
 
 /**
@@ -1125,6 +1140,15 @@ export function Replace(sheet: number, text: string, by: string, $in: canvas$0.R
  */
 export function ReportError(where: string, message: string, stack: string, trail: string): $CancellablePromise<string> {
     return $Call.ByID(2146121754, where, message, stack, trail);
+}
+
+/**
+ * RequestLink demande l'ouverture d'un lien lattis:// : au lancement, il est
+ * gardé pour l'interface (LaunchLink) ; ensuite, elle est prévenue par
+ * OpenLinkEvent.
+ */
+export function RequestLink(link: string): $CancellablePromise<void> {
+    return $Call.ByID(858709015, link);
 }
 
 /**

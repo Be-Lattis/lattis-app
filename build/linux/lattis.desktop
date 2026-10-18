@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Lattis
-Exec=lattis %f
+Exec=lattis %U
 Icon=lattis
 Categories=Office;Spreadsheet;
 Comment=Tableur relationnel local-first
@@ -9,4 +9,4 @@ Terminal=false
 Keywords=tableur;spreadsheet;sql;
 Version=1.0
 StartupNotify=false
-MimeType=application/x-lattis;
+MimeType=application/x-lattis;x-scheme-handler/lattis;

@@ -17,6 +17,7 @@ import (
 	"github.com/lalamefine/lattis/internal/config"
 	"github.com/lalamefine/lattis/internal/console"
 	"github.com/lalamefine/lattis/internal/demo"
+	"github.com/lalamefine/lattis/internal/instance"
 	"github.com/lalamefine/lattis/internal/mcp"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -67,6 +68,17 @@ func main() {
 	}
 	var args []string
 	for i, a := range cliArgs {
+		// « lattis lattis://open?… » : lien vers un classeur partagé (navigateur,
+		// schéma déclaré à l'installation). Une instance déjà ouverte le reçoit
+		// et ce lancement s'arrête ; sinon, il l'ouvre lui-même.
+		if bridge.IsDesktopLink(a) {
+			if instance.Forward(a) == nil {
+				return
+			}
+			documents.RequestLink(a)
+			continue
+		}
+		a = bridge.FileURI(a) // file:///… : %U du .desktop (Linux)
 		// « lattis [classeur] » : le classeur à ouvrir (aussi l'association
 		// de fichiers, double-clic sur un .lattis sous Windows ou Linux).
 		// La valeur de --demo ou --seed n'en est pas un.
@@ -155,6 +167,25 @@ func main() {
 			documents.RequestOpen(p)
 		}
 	})
+
+	// Liens lattis:// transmis par un second lancement (instance.Forward) ;
+	// macOS les annonce par un événement.
+	if stop, err := instance.Serve(func(link string) {
+		documents.RequestLink(link)
+		application.InvokeSync(func() {
+			win.Show()
+			win.Focus()
+		})
+	}); err == nil {
+		defer stop()
+	}
+	if runtime.GOOS == "darwin" {
+		app.Event.OnApplicationEvent(events.Common.ApplicationLaunchedWithUrl, func(e *application.ApplicationEvent) {
+			if u := e.Context().URL(); bridge.IsDesktopLink(u) {
+				documents.RequestLink(u)
+			}
+		})
+	}
 
 	if err := app.Run(); err != nil {
 		log.Fatal(err)
