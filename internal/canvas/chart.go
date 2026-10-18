@@ -54,6 +54,9 @@ type ChartConfig struct {
 	// MapView : carte, vue choisie par l'utilisateur (centre et zoom) ;
 	// absente, la vue s'ajuste aux points.
 	MapView *MapView `json:"mapView,omitempty"`
+	// ColorBy : carte de points, colonne dont chaque valeur distincte prend
+	// sa couleur (ChartInfo.Categories et Groups) ; vide : une seule couleur.
+	ColorBy string `json:"colorBy,omitempty"`
 	// Bins : histogramme de fréquences, nombre de classes (0 : automatique).
 	Bins int `json:"bins,omitempty"`
 }
@@ -86,6 +89,14 @@ type ChartInfo struct {
 	Invalid int `json:"invalid,omitempty"`
 	// Guess : carte, colonnes de coordonnées repérées (proposées par le volet).
 	Guess *MapGuess `json:"guess,omitempty"`
+	// Rows : carte tirée d'un tableau, identifiant (id) de la ligne de chaque
+	// point, pour aller à la ligne d'un clic (LocateRow).
+	Rows []int64 `json:"rows,omitempty"`
+	// Categories : carte colorée (ColorBy), valeurs distinctes triées
+	// (nombres, puis texte sans tenir compte de la casse) ; Groups : rang de
+	// la valeur de chaque point dans Categories, -1 pour une cellule vide.
+	Categories []string `json:"categories,omitempty"`
+	Groups     []int    `json:"groups,omitempty"`
 }
 
 // ErrChart signale un graphique impossible.

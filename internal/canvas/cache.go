@@ -85,15 +85,19 @@ type chartResult struct {
 	series  []ChartSeries
 	invalid int       // carte : coordonnées illisibles ignorées
 	guess   *MapGuess // carte en attente : colonnes repérées
+	rows    []int64   // carte : ligne (id) de chaque point
+	cats    []string  // carte colorée : valeurs distinctes triées
+	groups  []int     // carte colorée : rang de la valeur de chaque point
 }
 
 // fill reporte les données dans un graphique.
 func (r chartResult) fill(c *ChartInfo) {
 	c.Labels, c.Series, c.Invalid, c.Guess = r.labels, r.series, r.invalid, r.guess
+	c.Rows, c.Categories, c.Groups = r.rows, r.cats, r.groups
 }
 
 func (t *tx) chartData(cfg ChartConfig) (chartResult, error) {
-	key := keyOf("chart:", ChartConfig{Source: cfg.Source, Kind: cfg.Kind, X: cfg.X, Series: cfg.Series, MapCoords: cfg.MapCoords, MapDraft: cfg.MapDraft})
+	key := keyOf("chart:", ChartConfig{Source: cfg.Source, Kind: cfg.Kind, X: cfg.X, Series: cfg.Series, MapCoords: cfg.MapCoords, MapDraft: cfg.MapDraft, ColorBy: cfg.ColorBy})
 	calc := func() (chartResult, error) {
 		return t.chartDataRaw(cfg)
 	}

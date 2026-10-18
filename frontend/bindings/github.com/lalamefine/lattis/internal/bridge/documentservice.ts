@@ -686,6 +686,14 @@ export function Layout(sheet: number): $CancellablePromise<canvas$0.Layout> {
 }
 
 /**
+ * LocateRow situe une ligne de tableau sur sa feuille, d'après son
+ * identifiant (point de carte cliqué : ChartInfo.Rows).
+ */
+export function LocateRow(table: string, id: number): $CancellablePromise<canvas$0.RowSpot> {
+    return $Call.ByID(2674511388, table, id);
+}
+
+/**
  * MCPState décrit le serveur MCP.
  */
 export function MCPState(): $CancellablePromise<$models.MCPStatus> {

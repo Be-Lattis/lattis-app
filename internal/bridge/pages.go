@@ -58,6 +58,16 @@ func (s *DocumentService) ChartData(ctx context.Context, cfg canvas.ChartConfig)
 	return d.ChartData(ctx, cfg), nil
 }
 
+// LocateRow situe une ligne de tableau sur sa feuille, d'après son
+// identifiant (point de carte cliqué : ChartInfo.Rows).
+func (s *DocumentService) LocateRow(ctx context.Context, table string, id int64) (canvas.RowSpot, error) {
+	d, err := s.current()
+	if err != nil {
+		return canvas.RowSpot{}, err
+	}
+	return d.LocateRow(ctx, table, id)
+}
+
 // PivotData calcule un tableau croisé sans le poser sur une feuille
 // (tableaux croisés insérés dans un onglet Document).
 func (s *DocumentService) PivotData(ctx context.Context, cfg canvas.PivotConfig) (canvas.PivotInfo, error) {

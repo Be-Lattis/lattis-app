@@ -253,7 +253,7 @@ func med() Plan {
 		Widths: []WidthSpec{{Col: 0, Width: 140}, {Col: 1, Width: 110}, {Col: 2, Width: 185}, {Col: 3, Width: 85}, {Col: 4, Width: 85},
 			{Col: 5, Width: 100}, {Col: 6, Width: 115}, {Col: 7, Width: 110}, {Col: 8, Width: 145}, {Col: 9, Width: 20}},
 		Charts: []ChartSpec{{Row: 0, Col: 10, Config: canvas.ChartConfig{
-			Source: "Villes", Kind: "map", X: "Ville", Series: []string{"Latitude", "Longitude", "CA HT"},
+			Source: "Villes", Kind: "map", X: "Ville", Series: []string{"Latitude", "Longitude", "CA HT"}, ColorBy: "Région",
 			Title: "Chiffre d'affaires par ville", Width: 400, Height: 520,
 		}}},
 	}

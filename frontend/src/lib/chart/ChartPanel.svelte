@@ -62,7 +62,7 @@
 		if (config.kind === 'map') {
 			const m = mapChoice(config, guess);
 			const first = m.value || m.cols.find(Boolean) || columns.find((c) => c !== config.x) || '';
-			set({ kind, series: first ? [first] : [], colors: undefined, secondary: undefined, mapMode: undefined, mapCoords: undefined, mapDraft: undefined });
+			set({ kind, series: first ? [first] : [], colors: undefined, secondary: undefined, mapMode: undefined, mapCoords: undefined, mapDraft: undefined, colorBy: undefined });
 			return;
 		}
 		set({ kind });
@@ -158,6 +158,18 @@
 				onchange={(v) => set({ mapMode: v === 'points' ? undefined : v })}
 			/>
 		</label>
+		{#if config.mapMode === 'heat'}
+			<label class="line" title="La densité est une seule nappe de chaleur : passez en « Points » pour colorer par valeur">Couleur par
+				<Select value={none} options={[{ value: none, label: '(points seulement)' }]} disabled onchange={() => {}} />
+			</label>
+		{:else}
+			<label class="line" title="Chaque valeur distincte de la colonne prend sa couleur, réparties sur tout le spectre">Couleur par
+				<Select value={config.colorBy ?? none} options={[{ value: none, label: '(une seule couleur)' }, ...columns.map((c) => ({ value: c, label: c }))]} onchange={(c) => set({ colorBy: c || undefined })} />
+			</label>
+			{#if config.colorBy}
+				<label class="opt"><input type="checkbox" checked={config.legend !== 'none'} onchange={(e) => set({ legend: (e.currentTarget as HTMLInputElement).checked ? undefined : 'none' })} /> Légende des couleurs</label>
+			{/if}
+		{/if}
 		<div class="line mapview">
 			<span>Vue</span>
 			{#if config.mapView}
@@ -167,7 +179,7 @@
 				<span class="vv">Ajustée aux points</span>
 			{/if}
 		</div>
-		<p class="hint">Carte sélectionnée : la molette zoome, glisser déplace la carte (Alt+glisser déplace le graphique), double-clic ou + / − zooment.</p>
+		<p class="hint">Carte sélectionnée : la molette zoome, glisser déplace la carte (Alt+glisser déplace le graphique), double-clic ou + / − zooment ; un clic sur un point va à sa ligne dans le tableau.</p>
 		<p class="hint">Fond de carte © OpenStreetMap (tile.openstreetmap.org), soumis à l’autorisation réseau du classeur. La valeur règle la taille des points, ou le poids de chacun dans la densité.</p>
 		{:else}
 		<label class="line">Axe X

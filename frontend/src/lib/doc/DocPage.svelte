@@ -70,9 +70,11 @@
 		/** Mise en forme à la sélection, pour le ruban. */
 		onformat?: (f: DocFormat) => void;
 		onnotice?: (msg: string) => void;
+		/** Point d'une carte cliqué : aller à la ligne id du tableau (sur sa feuille). */
+		onrowlink?: (table: string, id: number) => void;
 	}
 
-	let { name, source, save, locked = '', stamp, animate = true, tables, scripts, loadChart, loadPivot, fieldValues, sheets = [], controls, run, onformat, onnotice }: Props = $props();
+	let { name, source, save, locked = '', stamp, animate = true, tables, scripts, loadChart, loadPivot, fieldValues, sheets = [], controls, run, onformat, onnotice, onrowlink }: Props = $props();
 
 	let host = $state<HTMLDivElement>();
 	let quill: Quill | undefined;
@@ -198,7 +200,11 @@
 					: mount(DocChart, {
 							target: node,
 							// Carte zoomée ou déplacée : vue enregistrée dans l'élément (annulable).
-							props: Object.assign(props, { load: loadChart, onconfig: (cfg: ChartConfig) => !locked && node.isConnected && replaceEmbed(indexOf(node), CHART_BLOT, cfg) })
+							props: Object.assign(props, {
+								load: loadChart,
+								onconfig: (cfg: ChartConfig) => !locked && node.isConnected && replaceEmbed(indexOf(node), CHART_BLOT, cfg),
+								onrow: (table: string, id: number) => onrowlink?.(table, id)
+							})
 						});
 			mounted.set(node, { comp, kind, p });
 		}

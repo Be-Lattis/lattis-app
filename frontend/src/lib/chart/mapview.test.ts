@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_ZOOM, MIN_ZOOM, camView, clampCam, clampZoom, fallbackTiles, heatRadius, panBy, parseCam, roundCam, unproject, viewCam, wheelZoom, zoomAt } from './mapview';
+import { HIT_SLOP, MAX_ZOOM, MIN_ZOOM, camView, clampCam, clampZoom, fallbackTiles, heatRadius, hitPoint, panBy, parseCam, roundCam, unproject, viewCam, wheelZoom, zoomAt } from './mapview';
 import { fitView, project, tileZoom, viewTiles } from './shapes';
 
 const W = 480;
@@ -138,5 +138,35 @@ describe('densité zoomée', () => {
 		expect(heatRadius(36, 12, 8, W, H)).toBe(H / 4);
 		expect(heatRadius(36, 7, 8, W, H)).toBe(18);
 		expect(heatRadius(36, 2, 8, W, H)).toBe(8);
+	});
+});
+
+describe('point sous le curseur', () => {
+	const pts = [
+		{ x: 100, y: 100, r: 5 },
+		{ x: 108, y: 100, r: 5 },
+		{ x: 300, y: 50, r: 16 }
+	];
+	it('dans le disque ou sa marge, sinon aucun', () => {
+		expect(hitPoint(pts, 300, 50)).toBe(2);
+		expect(hitPoint(pts, 300 + 16 + HIT_SLOP, 50)).toBe(2);
+		expect(hitPoint(pts, 300 + 16 + HIT_SLOP + 0.5, 50)).toBe(-1);
+		expect(hitPoint(pts, 20, 20)).toBe(-1);
+		expect(hitPoint([], 0, 0)).toBe(-1);
+	});
+	it('points qui se chevauchent : le plus proche du curseur', () => {
+		expect(hitPoint(pts, 102, 100)).toBe(0);
+		expect(hitPoint(pts, 106, 101)).toBe(1);
+		// À égalité : le dernier dessiné, au-dessus.
+		expect(hitPoint(pts, 104, 100)).toBe(1);
+	});
+	it('marge réglable', () => {
+		expect(hitPoint(pts, 100, 108, 0)).toBe(-1);
+		expect(hitPoint(pts, 100, 108, 3)).toBe(0);
+	});
+	it('un point de la carte, à l’écran, est retrouvé après zoom', () => {
+		const c = zoomAt({ ...paris, zoom: 10 }, W, H, 50, 60, 12.5);
+		const s = screen(c, paris.lat, paris.lon);
+		expect(hitPoint([{ ...s, r: 5 }], s.x + 4, s.y - 3)).toBe(0);
 	});
 });

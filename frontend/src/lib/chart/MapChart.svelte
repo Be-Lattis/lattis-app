@@ -16,10 +16,23 @@
 	// - la vue est enregistrée (onview, annulable) au relâchement, ou un
 	//   instant après le dernier cran de molette ; « recentrer » revient à la
 	//   vue ajustée aux points.
+	//
+	// Couleur par colonne (style.colorBy, carte de points) : chaque valeur
+	// distincte a sa couleur (categories.ts), légende en bas à gauche
+	// (masquée par legend: 'none'). La densité garde une seule nappe.
+	//
+	// Points cliquables (choix : comme pour un élément de graphique Excel, le
+	// premier clic sélectionne la carte, les suivants visent les points) :
+	// - survol (sélectionnée ou non) : info-bulle du point le plus proche du
+	//   curseur (nom, couleur, valeur) ;
+	// - carte sélectionnée : un clic sans déplacement sur un point va à sa
+	//   ligne dans le tableau (onpoint, curseur main) ; glisser déplace
+	//   toujours la carte.
 	import { onDestroy, untrack } from 'svelte';
 	import { PALETTE, tickLabel } from './scale';
 	import { fitView, heatColor, heatGrid, project, viewTiles, type MapView } from './shapes';
-	import { ZOOM_STEP, camView, fallbackTiles, heatRadius, panBy, parseCam, roundCam, viewCam, wheelZoom, zoomAt, MAX_ZOOM, MIN_ZOOM, type MapCam } from './mapview';
+	import { colorCategories, groupColor } from './categories';
+	import { ZOOM_STEP, camView, fallbackTiles, heatRadius, hitPoint, panBy, parseCam, roundCam, viewCam, wheelZoom, zoomAt, MAX_ZOOM, MIN_ZOOM, type MapCam } from './mapview';
 	import { loadTile, tileNow } from './tiles';
 
 	interface Props {
@@ -27,14 +40,22 @@
 		series: { name: string; values: (number | null)[] }[];
 		width: number;
 		height: number;
-		style?: { title?: string; mapMode?: string; colors?: string[]; labels?: boolean; mapDraft?: boolean; mapView?: MapCam | null };
+		style?: { title?: string; mapMode?: string; colors?: string[]; labels?: boolean; mapDraft?: boolean; mapView?: MapCam | null; colorBy?: string; legend?: string };
+		/** Carte tirée d'un tableau : ligne (id) de chaque point. */
+		rows?: number[];
+		/** Carte colorée (style.colorBy) : valeurs distinctes triées. */
+		categories?: string[];
+		/** Carte colorée : rang dans categories de la valeur de chaque point (−1 : vide). */
+		groups?: number[];
+		/** Clic sur un point de la carte sélectionnée : aller à sa ligne (id dans rows). */
+		onpoint?: (row: number) => void;
 		/** Carte sélectionnée : molette, glisser, double-clic et clavier la zooment ou la déplacent. */
 		interactive?: boolean;
 		/** Vue choisie (null : recentrée sur les points), à enregistrer dans la configuration. */
 		onview?: (v: MapCam | null) => void;
 	}
 
-	let { labels, series, width, height, style = {}, interactive = false, onview }: Props = $props();
+	let { labels, series, width, height, style = {}, interactive = false, onview, rows, categories, groups, onpoint }: Props = $props();
 
 	let uid = Math.random().toString(36).slice(2, 8);
 	const top = $derived(style.title ? 30 : 0);
@@ -49,11 +70,11 @@
 		const lat = series[0]?.values ?? [];
 		const lon = series[1]?.values ?? [];
 		const val = series[2]?.values;
-		const out: { lat: number; lon: number; v: number | null; label: string }[] = [];
+		const out: { lat: number; lon: number; v: number | null; label: string; i: number }[] = [];
 		lat.forEach((a, i) => {
 			const o = lon[i];
 			if (a === null || o === null || o === undefined || Math.abs(a) > 90 || Math.abs(o) > 180) return;
-			out.push({ lat: a, lon: o, v: val ? (val[i] ?? null) : null, label: labels[i] ?? '' });
+			out.push({ lat: a, lon: o, v: val ? (val[i] ?? null) : null, label: labels[i] ?? '', i });
 		});
 		return out;
 	});
@@ -86,14 +107,27 @@
 	});
 	const wantedTiles = $derived(draft ? [] : viewTiles(settled, w, h));
 
+	const vmax = $derived(Math.max(0, ...pts.map((p) => Math.abs(p.v ?? 0))));
+	const radius = (v: number | null) => (series[2] && vmax > 0 && v !== null ? 3 + 13 * Math.sqrt(Math.abs(v) / vmax) : 5);
 	const placed = $derived(
 		pts.map((p) => {
 			const q = project(p.lat, p.lon, view.z);
-			return { ...p, x: q.x - view.x0, y: top + q.y - view.y0 };
+			return { ...p, x: q.x - view.x0, y: top + q.y - view.y0, r: radius(p.v) };
 		})
 	);
-	const vmax = $derived(Math.max(0, ...pts.map((p) => Math.abs(p.v ?? 0))));
-	const radius = (v: number | null) => (series[2] && vmax > 0 && v !== null ? 3 + 13 * Math.sqrt(Math.abs(v) / vmax) : 5);
+
+	// Couleur par colonne : points seulement (la densité reste une nappe).
+	const coloring = $derived(!heat && style.colorBy && categories && groups?.length ? colorCategories(categories, groups) : null);
+	const fill = (i: number) => (coloring ? groupColor(coloring, groups?.[i]) : color);
+	const showLegend = $derived(!!coloring && style.legend !== 'none' && pts.length > 0);
+
+	// Point survolé (rang dans placed, −1 : aucun) ; cliquable si la carte est
+	// sélectionnée et que ses points viennent d'un tableau.
+	let hot = $state(-1);
+	const canGo = $derived(!!onpoint && !!rows?.length && !heat);
+	const hotPt = $derived(hot >= 0 && hot < placed.length && !heat ? placed[hot] : null);
+	const pick = (x: number, y: number) => (heat ? -1 : hitPoint(placed.map((p) => ({ x: p.x, y: p.y - top, r: p.r })), x, y));
+	const fmtTip = (v: number) => v.toLocaleString('fr-FR', { maximumFractionDigits: 6 });
 
 	// Densité : grille lissée, pondérée par la valeur (positive) s'il y en a
 	// une. Le rayon suit l'échelle de la carte (borné).
@@ -184,6 +218,7 @@
 		return { x: (e.clientX - r.left) / k, y: (e.clientY - r.top) / k - top };
 	}
 	const onControls = (e: Event) => !!(e.target as Element | null)?.closest?.('.mapctl');
+	const onLegend = (e: Event) => !!(e.target as Element | null)?.closest?.('.maplegend');
 
 	// Écouteurs natifs : la molette doit pouvoir empêcher le défilement
 	// (passive: false), et un geste pris par la carte ne doit pas remonter à
@@ -193,6 +228,12 @@
 		const el = box;
 		if (!el || draft) return;
 		const wheel = (e: WheelEvent) => {
+			// Légende longue : la molette la fait défiler.
+			const lg = (e.target as Element | null)?.closest?.('.maplegend');
+			if (lg && lg.scrollHeight > lg.clientHeight) {
+				e.stopPropagation();
+				return;
+			}
 			if (!interactive || e.ctrlKey || !pts.length) return;
 			e.preventDefault();
 			e.stopPropagation();
@@ -200,7 +241,7 @@
 			zoomBy(wheelZoom(e.deltaY, e.deltaMode), p.x, p.y);
 		};
 		const down = (e: MouseEvent) => {
-			if (onControls(e)) {
+			if (onControls(e) || (interactive && onLegend(e))) {
 				e.stopPropagation();
 				downs = 0;
 				return;
@@ -223,15 +264,23 @@
 				if (!moved && Math.hypot(dx, dy) < 3) return;
 				moved = true;
 				dragging = true;
+				hot = -1;
 				cam = panBy(c0, dx, dy);
 				dirty = true;
 				clearTimeout(saveTimer);
 			};
-			const up = () => {
+			const up = (u: MouseEvent) => {
 				window.removeEventListener('mousemove', move);
 				window.removeEventListener('mouseup', up);
 				dragging = false;
 				if (moved) flushSave();
+				else if (canGo && downs === 1) {
+					// Clic sans déplacement sur un point : aller à sa ligne.
+					const p = local(u);
+					const i = pick(p.x, p.y);
+					const row = i >= 0 ? rows?.[placed[i].i] : undefined;
+					if (row) onpoint?.(row);
+				}
 			};
 			window.addEventListener('mousemove', move);
 			window.addEventListener('mouseup', up);
@@ -247,13 +296,27 @@
 			const p = local(e);
 			zoomBy(e.shiftKey ? -ZOOM_STEP : ZOOM_STEP, p.x, p.y);
 		};
+		// Survol : point le plus proche du curseur (info-bulle, curseur main).
+		const over = (e: MouseEvent) => {
+			if (dragging || onControls(e) || onLegend(e) || !pts.length) {
+				hot = -1;
+				return;
+			}
+			const p = local(e);
+			hot = pick(p.x, p.y);
+		};
+		const leave = () => (hot = -1);
 		el.addEventListener('wheel', wheel, { passive: false });
 		el.addEventListener('mousedown', down);
 		el.addEventListener('dblclick', dbl);
+		el.addEventListener('mousemove', over);
+		el.addEventListener('mouseleave', leave);
 		return () => {
 			el.removeEventListener('wheel', wheel);
 			el.removeEventListener('mousedown', down);
 			el.removeEventListener('dblclick', dbl);
+			el.removeEventListener('mousemove', over);
+			el.removeEventListener('mouseleave', leave);
 		};
 	});
 
@@ -293,7 +356,7 @@
 </svg>
 {:else}
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="mapbox" class:pan={interactive && pts.length > 0} class:dragging bind:this={box} onmouseenter={() => (hover = true)} onmouseleave={() => (hover = false)}>
+<div class="mapbox" class:pan={interactive && pts.length > 0} class:dragging class:point={interactive && canGo && !!hotPt && !dragging} bind:this={box} onmouseenter={() => (hover = true)} onmouseleave={() => (hover = false)}>
 <svg {width} {height} viewBox="0 0 {width} {height}" role="img" aria-label={style.title || 'Carte'}>
 	<defs>
 		<clipPath id="map-{uid}"><rect x="0" y={top} width={w} height={h} /></clipPath>
@@ -318,9 +381,18 @@
 			</g>
 		{:else}
 			{#each placed as p, i (i)}
-				<circle cx={p.x} cy={p.y} r={radius(p.v)} fill={color} fill-opacity="0.75" stroke="#fff" stroke-width="1"><title>{p.label}{p.v !== null ? ` : ${tickLabel(p.v)}` : ''}</title></circle>
-				{#if style.labels && p.label}<text x={p.x + radius(p.v) + 3} y={p.y + 4} class="small halo">{p.label}</text>{/if}
+				{#if coloring}
+					<!-- Liseré sombre sous le contour blanc : lisible sur les tuiles claires comme foncées. -->
+					<circle cx={p.x} cy={p.y} r={p.r + 1.1} fill="none" stroke="#1f2328" stroke-opacity="0.45" stroke-width="1" />
+					<circle cx={p.x} cy={p.y} r={p.r} fill={fill(p.i)} fill-opacity="0.92" stroke="#fff" stroke-width="1.25" />
+				{:else}
+					<circle cx={p.x} cy={p.y} r={p.r} fill={color} fill-opacity="0.75" stroke="#fff" stroke-width="1" />
+				{/if}
+				{#if style.labels && p.label}<text x={p.x + p.r + 3} y={p.y + 4} class="small halo">{p.label}</text>{/if}
 			{/each}
+			{#if hotPt}
+				<circle cx={hotPt.x} cy={hotPt.y} r={hotPt.r + 3} fill="none" stroke="#1f2328" stroke-width="2" />
+			{/if}
 		{/if}
 	</g>
 	{#if heat && cells.length}
@@ -342,6 +414,27 @@
 		<text x={w / 2} y={top + h / 2} text-anchor="middle" class="small halo">Aucun point : latitude et longitude attendues</text>
 	{/if}
 </svg>
+{#if hotPt && !dragging}
+	{@const g = groups?.[hotPt.i]}
+	{@const left = hotPt.x + hotPt.r + 8}
+	<div class="maptip" style:left={left + 160 > w ? null : `${left}px`} style:right={left + 160 > w ? `${w - hotPt.x + hotPt.r + 8}px` : null} style:top="{Math.max(top + 2, hotPt.y - 14)}px">
+		{#if hotPt.label}<strong>{hotPt.label}</strong>{/if}
+		{#if coloring}
+			<span class="tiprow"><span class="sw" style:background={fill(hotPt.i)}></span>{style.colorBy} : {g !== undefined && g >= 0 && categories ? categories[g] : '(vide)'}</span>
+		{/if}
+		{#if hotPt.v !== null && series[2]}<span class="tiprow">{series[2].name} : {fmtTip(hotPt.v)}</span>{/if}
+		{#if !hotPt.label && !coloring && (hotPt.v === null || !series[2])}<span class="tiprow">{tickLabel(hotPt.lat)}, {tickLabel(hotPt.lon)}</span>{/if}
+		{#if interactive && canGo}<span class="tiphint">Clic : aller à la ligne</span>{/if}
+	</div>
+{/if}
+{#if showLegend && coloring}
+	<div class="maplegend" style:max-height="{Math.max(48, h * 0.6)}px" aria-label="Légende : {style.colorBy}">
+		<div class="lt">{style.colorBy}</div>
+		{#each coloring.legend as e (e.label)}
+			<div class="le" title="{e.label} : {e.count} point{e.count > 1 ? 's' : ''}"><span class="sw" style:background={e.color}></span><span class="ll">{e.label}</span></div>
+		{/each}
+	</div>
+{/if}
 {#if showControls}
 	<div class="mapctl" style:top="{top + 6}px">
 		<button type="button" title="Zoom avant (+)" aria-label="Zoom avant" disabled={view.z >= MAX_ZOOM} onclick={() => zoomBy(ZOOM_STEP)}>+</button>
@@ -357,12 +450,89 @@
 <style>
 	.mapbox {
 		position: relative;
+		/* Dans un document, l'éditeur garde les blancs (pre-wrap) : pas ici. */
+		white-space: normal;
 	}
 	.mapbox.pan {
 		cursor: grab;
 	}
 	.mapbox.dragging {
 		cursor: grabbing;
+	}
+	.mapbox.point {
+		cursor: pointer;
+	}
+	.maptip {
+		position: absolute;
+		z-index: 2;
+		max-width: 220px;
+		display: flex;
+		flex-direction: column;
+		gap: 1px;
+		padding: 4px 7px;
+		border: 1px solid #c4c8cd;
+		border-radius: 4px;
+		background: rgba(255, 255, 255, 0.97);
+		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+		font: 11px/1.35 'Segoe UI', system-ui, sans-serif;
+		color: #1f2328;
+		pointer-events: none;
+		white-space: nowrap;
+	}
+	.maptip strong {
+		font-weight: 600;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.tiprow {
+		display: flex;
+		align-items: center;
+		gap: 5px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.tiphint {
+		color: #6b7280;
+	}
+	.maplegend {
+		position: absolute;
+		left: 6px;
+		bottom: 6px;
+		max-width: min(45%, 200px);
+		overflow-y: auto;
+		padding: 4px 7px 5px;
+		border: 1px solid #c4c8cd;
+		border-radius: 4px;
+		background: rgba(255, 255, 255, 0.92);
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+		font: 11px/1.3 'Segoe UI', system-ui, sans-serif;
+		color: #1f2328;
+		cursor: default;
+	}
+	.maplegend .lt {
+		font-weight: 600;
+		margin-bottom: 2px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.maplegend .le {
+		display: flex;
+		align-items: center;
+		gap: 5px;
+		min-width: 0;
+	}
+	.maplegend .ll {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.sw {
+		flex: none;
+		width: 9px;
+		height: 9px;
+		border-radius: 50%;
+		border: 1px solid rgba(31, 35, 40, 0.45);
 	}
 	.mapctl {
 		position: absolute;

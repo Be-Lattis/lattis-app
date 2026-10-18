@@ -41,6 +41,8 @@
 		mapDraft?: boolean;
 		/** Carte : vue choisie (centre et zoom) ; absente, ajustée aux points. */
 		mapView?: MapCam | null;
+		/** Carte de points : colonne dont chaque valeur prend sa couleur. */
+		colorBy?: string;
 		/** Fréquences : nombre de classes (0 ou absent : automatique). */
 		bins?: number;
 	}
@@ -60,9 +62,13 @@
 		interactive?: boolean;
 		/** Carte : vue choisie par l'utilisateur, à enregistrer (null : recentrée). */
 		onview?: (v: MapCam | null) => void;
+		/** Carte : ligne (id) de chaque point, valeurs de couleur et rang de chacune (voir MapChart). */
+		map?: { rows?: number[] | null; categories?: string[] | null; groups?: number[] | null };
+		/** Carte sélectionnée : clic sur un point, aller à sa ligne. */
+		onpoint?: (row: number) => void;
 	}
 
-	let { kind, labels: rawLabels, series: target, width, height, style = {}, animate = false, grow = false, interactive = false, onview }: Props = $props();
+	let { kind, labels: rawLabels, series: target, width, height, style = {}, animate = false, grow = false, interactive = false, onview, map, onpoint }: Props = $props();
 
 	// Séries affichées : celles reçues, ou en chemin vers elles (choix de Louis :
 	// le graphique se remplit après une modification, pas après une
@@ -372,7 +378,7 @@
 </script>
 
 {#if kind === 'map'}
-	<MapChart labels={rawLabels} series={target} {width} {height} {style} {interactive} {onview} />
+	<MapChart labels={rawLabels} series={target} {width} {height} {style} {interactive} {onview} rows={map?.rows ?? undefined} categories={map?.categories ?? undefined} groups={map?.groups ?? undefined} {onpoint} />
 {:else}
 	<svg {width} {height} viewBox="0 0 {width} {height}" role="img" aria-label={style.title || 'Graphique'}>
 		<rect {width} {height} fill="#fff" />

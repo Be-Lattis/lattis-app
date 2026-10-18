@@ -27,6 +27,10 @@ Une carte lit soit deux colonnes (latitude, longitude), soit une seule colonne q
 
 Pour zoomer, sélectionnez la carte (un clic) : la molette zoome autour du pointeur, glisser déplace la carte, un double-clic rapproche (Maj+double-clic éloigne), et les touches **+** et **−** zooment aussi. Tant que la carte n'est pas sélectionnée, la molette fait défiler la feuille ou le document ; Alt+glisser déplace le graphique sélectionné. Les boutons **+**, **−** et **recentrer** apparaissent en haut à droite au survol. La vue choisie est enregistrée avec le classeur (Ctrl+Z la défait) ; **recentrer**, ici ou dans le volet du graphique, revient à la vue ajustée aux points.
 
+**Couleur par** (volet du graphique, affichage en points) : choisissez une colonne, et chaque valeur distincte prend sa couleur, réparties sur tout le spectre ; une légende en bas à gauche les nomme (case **Légende des couleurs** pour la masquer). Les couleurs suivent l'ordre trié des valeurs, pas celui des lignes : trier ou filtrer le tableau ne les mélange pas. Au-delà de 20 valeurs, les 19 plus fréquentes gardent une couleur et les autres sont grises (« Autres ») ; les cellules vides sont gris clair. La densité reste une seule nappe : l'option n'y est pas proposée.
+
+Le survol d'un point affiche son nom, sa couleur et sa valeur. Une fois la carte sélectionnée, un clic sur un point (sans glisser) sélectionne sa ligne dans le tableau, sur sa feuille, même depuis un document ; si plusieurs points se chevauchent, c'est le plus proche du pointeur. Le premier clic sur une carte non sélectionnée la sélectionne seulement.
+
 ## Copier un graphique
 
 Un graphique copié se colle sur une autre feuille ou dans un [document](onglets), où il reste branché sur ses données.
