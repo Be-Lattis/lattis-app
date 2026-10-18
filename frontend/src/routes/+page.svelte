@@ -581,6 +581,7 @@
 		keyCheck: (t, i) => DocumentService.KeyCheck(t.name, i),
 		setKey: (t, i) => DocumentService.SetKey(t.name, i).then(reload),
 		clearKey: (t) => DocumentService.ClearKey(t.name).then(reload),
+		dismissKeyHint: (t) => DocumentService.DismissKeyHint(t.name).then(reload),
 		recalc: () => DocumentService.Recalc().then(reload),
 		dependencies: async (row, col) => {
 			const d = await DocumentService.Dependencies(sheetId, row, col);
@@ -678,6 +679,7 @@
 						rows: t.rows,
 						hidden: t.total - t.rows,
 						key: t.key >= 0 ? t.key : undefined,
+						keyHint: t.keyHint || undefined,
 						query: t.queryId ? { id: t.queryId, name: t.queryName } : undefined,
 						columns: (t.columns ?? []).map((c) => ({
 							name: c.name,

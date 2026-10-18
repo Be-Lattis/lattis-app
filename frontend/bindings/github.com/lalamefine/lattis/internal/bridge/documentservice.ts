@@ -322,6 +322,13 @@ export function Discard(dir: string): $CancellablePromise<void> {
 }
 
 /**
+ * DismissKeyHint ne propose plus la première colonne du tableau comme clé.
+ */
+export function DismissKeyHint(table: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1151779140, table);
+}
+
+/**
  * DocControl lit un contrôle d'un Onglet Document et la valeur de sa
  * cellule liée.
  */

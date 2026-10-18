@@ -1006,6 +1006,12 @@ export interface TableInfo {
     "key": number;
 
     /**
+     * Sans clé : la première colonne semble identifier chaque ligne (entier
+     * unique et croissant) ; l'interface propose d'en faire la clé.
+     */
+    "keyHint": boolean;
+
+    /**
      * Requête d'import qui charge le tableau (source externe ou autre
      * tableau) : identifiant et nom, 0 et vide sinon.
      */
