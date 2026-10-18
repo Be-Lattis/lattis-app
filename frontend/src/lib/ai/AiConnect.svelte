@@ -5,8 +5,9 @@
 	// et l'enregistrer : AISetKey la teste auprès du fournisseur). Le résultat
 	// s'affiche ici, et le panneau reste ouvert tant qu'il y a une erreur (la
 	// clé gardée en mémoire seulement faute de trousseau, par exemple). Modèle
-	// local : son adresse au lieu d'une clé. « Abonnement Claude » : Claude
-	// Desktop ou Claude Code pilotent Lattis par le serveur MCP (ClaudeSetup).
+	// local : son adresse au lieu d'une clé. « Application de bureau » : l'appli
+	// d'un fournisseur, choisie dans une liste (Claude pour l'instant : Claude
+	// Desktop ou Claude Code), pilote Lattis par le serveur MCP (ClaudeSetup).
 	// Passerelle de l'entreprise (ai.endpoint) : rien à choisir, sinon la clé
 	// personnelle qu'elle demande (sauf ai.auth.mode = none).
 	import Icon from '#lib/icons/Icon.svelte';
@@ -34,7 +35,12 @@
 	const keyUrl = $derived(provider?.keyUrl || (anthropic ? ANTHROPIC_KEYS : ''));
 	const localUrl = $derived(String(findSetting(userSettings.list, 'ai.localUrl')?.value ?? ''));
 
-	let way = $state<'key' | 'claude'>('key');
+	let way = $state<'key' | 'desktop'>('key');
+	// Application de bureau d'un fournisseur qui pilote Lattis par son serveur
+	// MCP (avec l'abonnement de la personne) : Claude pour l'instant, la liste
+	// accueillera les autres.
+	const DESKTOP_APPS = [{ id: 'claude', name: 'Claude (Pro, Max, Team)' }] as const;
+	let desktopApp = $state<(typeof DESKTOP_APPS)[number]['id']>('claude');
 	let keyDraft = $state('');
 	let checking = $state(false);
 	let keyOk = $state('');
@@ -155,8 +161,8 @@
 			<button role="tab" aria-selected={way === 'key'} class:on={way === 'key'} onclick={() => (way = 'key')}>
 				<Icon name="key" size={14} />Clé d’API <span class="tag">recommandé</span>
 			</button>
-			<button role="tab" aria-selected={way === 'claude'} class:on={way === 'claude'} onclick={() => (way = 'claude')}>
-				<Icon name="user" size={14} />Abonnement Claude (Pro, Max, Team)
+			<button role="tab" aria-selected={way === 'desktop'} class:on={way === 'desktop'} onclick={() => (way = 'desktop')}>
+				<Icon name="user" size={14} />Application de bureau
 			</button>
 		</div>
 
@@ -269,19 +275,32 @@
 			{#if keyError}<p class="error" role="alert">{keyError}</p>{/if}
 			{#if error}<p class="error" role="alert">{error}</p>{/if}
 		{:else}
-			<p>
-				Un abonnement Claude ne s’utilise pas directement dans une autre application, mais <strong>Claude Desktop</strong> et
-				<strong>Claude Code</strong> savent piloter Lattis. Vous parlez à Claude dans son application ; Lattis montre ce qu’il fait (« Depuis Claude »)
-				et peut tout annuler.
-			</p>
-			{#if mcpAvailable()}
-				<ClaudeSetup />
-			{:else}
-				<p class="muted">Cette voie demande l’application de bureau de Lattis.</p>
+			<div class="pick">
+				<label>
+					Application
+					<select bind:value={desktopApp}>
+						{#each DESKTOP_APPS as a (a.id)}
+							<option value={a.id}>{a.name}</option>
+						{/each}
+					</select>
+				</label>
+			</div>
+			<p class="muted">L’application de bureau d’un fournisseur pilote Lattis avec votre abonnement chez lui, sans clé d’API.</p>
+			{#if desktopApp === 'claude'}
+				<p>
+					Un abonnement Claude ne s’utilise pas directement dans une autre application, mais <strong>Claude Desktop</strong> et
+					<strong>Claude Code</strong> savent piloter Lattis. Vous parlez à Claude dans son application ; Lattis montre ce qu’il fait (« Depuis Claude »)
+					et peut tout annuler.
+				</p>
+				{#if mcpAvailable()}
+					<ClaudeSetup />
+				{:else}
+					<p class="muted">Cette voie demande l’application de bureau de Lattis.</p>
+				{/if}
+				<p class="muted">
+					Abonnés Max ou Team : vos crédits d’API mensuels paient aussi une clé d’API (onglet « Clé d’API »), qui garde la conversation dans Lattis.
+				</p>
 			{/if}
-			<p class="muted">
-				Abonnés Max ou Team : vos crédits d’API mensuels paient aussi une clé d’API (onglet « Clé d’API »), qui garde la conversation dans Lattis.
-			</p>
 		{/if}
 	{/if}
 </section>

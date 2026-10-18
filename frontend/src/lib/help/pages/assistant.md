@@ -22,9 +22,9 @@ La clé est gardée dans le trousseau du système, jamais dans le classeur. **Ou
 
 > Chez Anthropic, une clé ne marche qu'avec des crédits : ajoutez-en dans la page **Facturation** de la console (platform.claude.com). Les abonnements **Claude Max** et **Team** donnent des crédits d'API chaque mois (de 100 à 500 $ selon la formule) : liez l'organisation de la console dans claude.ai › Paramètres › Facturation pour les recevoir. Les abonnements Pro et Enterprise n'en donnent pas.
 
-### Abonnement Claude (Pro, Max, Team)
+### Application de bureau (abonnement Claude Pro, Max, Team)
 
-Un abonnement Claude ne s'utilise pas directement dans une autre application, mais **Claude Desktop** et **Claude Code** savent piloter Lattis par son serveur MCP. L'onglet « Abonnement Claude » du panneau de connexion les configure en un clic ; redémarrez ensuite Claude Desktop.
+Un abonnement Claude ne s'utilise pas directement dans une autre application, mais **Claude Desktop** et **Claude Code** savent piloter Lattis par son serveur MCP. L'onglet « Application de bureau » du panneau de connexion (application : Claude) les configure en un clic ; redémarrez ensuite Claude Desktop.
 
 Vous parlez alors à Claude dans son application. Le volet de l'assistant affiche **Depuis Claude** : ce que Claude fait dans le classeur, au fil de l'eau, avec **Annuler ces modifications** pour chaque série d'actions. L'option **Demander avant de modifier** fait valider chaque écriture dans Lattis.
 
