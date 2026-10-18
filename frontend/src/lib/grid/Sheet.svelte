@@ -3864,8 +3864,11 @@
 					}
 					v = row.bad?.has(c - e.t.col) ? row.bad.get(c - e.t.col) : row.cells[c - e.t.col];
 				} else {
+					// Tableau crois\u00e9 : ses cellules calcul\u00e9es comptent aussi (nombre, somme, moyenne).
+					const p = pivotAt(r, c);
+					const pv = p && r >= p.row ? p.cells[r - p.row]?.[c - p.col] : undefined;
 					const f = shown.get(key(r, c));
-					v = f ? f.text : cells.get(key(r, c));
+					v = pv !== undefined ? pv : f ? f.text : cells.get(key(r, c));
 					if (typeof v === 'string' && isNumeric(v)) v = Number(v.replace(/[\s\u00a0\u202f]/g, '').replace(',', '.'));
 				}
 				if (v === null || v === undefined || v === '') continue;
