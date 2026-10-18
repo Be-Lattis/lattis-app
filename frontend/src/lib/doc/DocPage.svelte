@@ -727,8 +727,11 @@
 	}
 
 	function onContext(e: MouseEvent) {
-		e.preventDefault();
 		const t = e.target as HTMLElement;
+		// Maj + clic droit dans le texte : menu du système, avec les suggestions
+		// d'orthographe (le navigateur ne les donne pas à la page).
+		if (e.shiftKey && !t.closest('.ql-lattis-button, .ql-lattis-chart, .ql-lattis-pivot, .ql-lattis-control')) return;
+		e.preventDefault();
 		const el = t.closest<HTMLElement>('.ql-lattis-button, .ql-lattis-chart, .ql-lattis-pivot, .ql-lattis-control');
 		clip = docClip.item;
 		if (el) {
@@ -1042,6 +1045,7 @@
 			<button disabled={!!locked} onclick={() => act(() => command('cut'))}>Couper</button>
 			<button onclick={() => act(() => command('copy'))}>Copier</button>
 			<button disabled={!!locked} onclick={() => act(() => command('paste'))}>Coller</button>
+			<div class="menu-hint">Maj + clic droit : suggestions d’orthographe</div>
 			{#if clip}<button disabled={!!locked} onclick={() => act(() => pasteItem(m.index))}>Coller l’élément ({clip.type === CHART_BLOT ? 'graphique' : clip.type === PIVOT_BLOT ? 'tableau croisé' : clip.type === CONTROL_BLOT ? 'contrôle' : 'bouton'})</button>{/if}
 			<hr />
 			<div class="menu-title">Insérer</div>
@@ -1104,6 +1108,11 @@
 		border: none;
 		border-radius: 0;
 		gap: 8px;
+	}
+	.menu-hint {
+		padding: 2px 12px 4px 34px;
+		font-size: 11px;
+		color: #6b7280;
 	}
 	.menu button.sub {
 		padding-left: 28px;
