@@ -56,6 +56,9 @@ type Dialog struct {
 	// Code : code affiché sur demande (bouton « Voir le code ») ; accord
 	// d'exécution d'un script (consent.go).
 	Code string `json:"code,omitempty"`
+	// Warning : mise en garde mise en évidence (accords d'exécution) ; un
+	// script ne peut pas en poser (ui.dialog).
+	Warning string `json:"warning,omitempty"`
 }
 
 // Types de champs d'une boîte de dialogue.

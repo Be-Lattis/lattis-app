@@ -21,6 +21,10 @@
 		cancel?: string;
 		/** Code affiché sur demande (accord d'exécution d'un script reçu). */
 		code?: string;
+		/** Mise en garde mise en évidence (accords d'exécution : scripts et pages web reçus). */
+		warning?: string;
+		/** Nom du code affiché, pour les lecteurs d'écran (« Code du script » par défaut). */
+		codeName?: string;
 	}
 
 	/** Libellé du bouton qui montre ou cache le code. */
@@ -141,6 +145,7 @@
 	<div class="dialog" role="dialog" aria-modal="true" aria-label={spec.title} tabindex="-1" bind:this={box} use:modal onkeydown={onkey}>
 		<header>{spec.title}</header>
 		{#if spec.message}<p class="message">{spec.message}</p>{/if}
+		{#if spec.warning}<p class="warning" role="note"><strong>Attention.</strong> {spec.warning}</p>{/if}
 		{#each fields as f (f.name)}
 			{@const id = `dlg-${spec.id}-${f.name}`}
 			<div class="field" class:inline={f.type === 'checkbox'}>
@@ -173,7 +178,7 @@
 				{/if}
 			</div>
 		{/each}
-		{#if spec.code && showCode}<pre class="code" aria-label="Code du script">{spec.code}</pre>{/if}
+		{#if spec.code && showCode}<pre class="code" aria-label={spec.codeName ?? 'Code du script'}>{spec.code}</pre>{/if}
 		{#if error}<p class="error">{error}</p>{/if}
 		<div class="actions">
 			{#if spec.code}
@@ -217,6 +222,16 @@
 	.message {
 		margin: 6px 16px 10px;
 		white-space: pre-wrap;
+		user-select: text;
+	}
+	.warning {
+		margin: 6px 16px 10px;
+		padding: 8px 10px;
+		border: 1px solid #f0c36d;
+		border-left: 4px solid #d97706;
+		border-radius: 3px;
+		background: #fff8e6;
+		color: #5c3d00;
 		user-select: text;
 	}
 	.field {

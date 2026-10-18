@@ -69,10 +69,10 @@ type DocumentService struct {
 	sheet int64 // feuille affichée : Cell_A1 de l'onglet SQL s'y lit
 	ui    uiState
 	mcp   mcpState
-	demo  *demoRun  // classeur de démonstration demandé au lancement
-	pq    pqState   // base de travail des requêtes d'import (query.go)
-	ev    eventLoop // évènements du classeur (events.go)
-	ai    aiState   // conversation de l'onglet IA (ai.go)
+	demo  *demoRun   // classeur de démonstration demandé au lancement
+	pq    pqState    // base de travail des requêtes d'import (query.go)
+	ev    eventLoop  // évènements du classeur (events.go)
+	ai    aiState    // conversation de l'onglet IA (ai.go)
 	share shareState // classeur partagé : suivi du serveur (sharing.go)
 
 	// Classeur à ouvrir au lancement (association de fichiers, launch.go).
@@ -171,6 +171,7 @@ func (s *DocumentService) Open(ctx context.Context, path string) (OpenResult, er
 	s.replace(d)
 	addRecent(path)
 	st, err := s.State(ctx)
+	st.Notice = d.TakeOpenNotice()
 	return OpenResult{State: st}, err
 }
 
@@ -188,6 +189,7 @@ func (s *DocumentService) Salvage(ctx context.Context, path string) (SalvageResu
 	}
 	msg += ". Enregistrer sous un nouveau nom, puis vérifier le contenu."
 	st, err := s.State(ctx)
+	st.Notice = d.TakeOpenNotice()
 	return SalvageResult{State: st, Report: msg}, err
 }
 
@@ -204,7 +206,9 @@ func (s *DocumentService) Recover(ctx context.Context, dir string) (DocState, er
 				return DocState{}, err
 			}
 			s.replace(d)
-			return s.State(ctx)
+			st, err := s.State(ctx)
+			st.Notice = d.TakeOpenNotice()
+			return st, err
 		}
 	}
 	return DocState{}, errors.New("session introuvable")

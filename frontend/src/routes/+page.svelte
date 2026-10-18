@@ -192,6 +192,7 @@
 		mode = 'doc';
 		await reload();
 		await keepSheet();
+		if (r.state.notice) notice = r.state.notice;
 		workbookReady();
 		await loadRecent();
 	}
@@ -211,6 +212,8 @@
 			sheetId = 1;
 			mode = 'doc';
 			await reload();
+			// Déclencheurs inconnus supprimés à l'ouverture (sécurité).
+			if (r.state.notice) notice = r.state.notice;
 			workbookReady();
 		}
 		await loadRecent();
@@ -1352,6 +1355,8 @@
 								await reload();
 							}}
 							call={(name, args) => DocumentService.PageCall(name, args)}
+							trusted={(src) => DocumentService.PageAllowed(src)}
+							allow={(src) => DocumentService.AllowPage(pageId, src)}
 							locked={lockedMsg}
 							stamp={layout}
 							onnotice={(m) => (notice = m)}

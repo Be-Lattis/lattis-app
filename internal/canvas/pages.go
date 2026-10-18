@@ -118,6 +118,25 @@ func (m *Model) Page(ctx context.Context, sheet int64) (string, error) {
 	return src, err
 }
 
+// HTMLPages donne le contenu de chaque onglet page HTML (pas les
+// Documents), par nom d'onglet.
+func (m *Model) HTMLPages(ctx context.Context) (map[string]string, error) {
+	rs, err := m.db.Read().QueryContext(ctx, `SELECT s.name, p.source FROM _lattis_pages p JOIN _lattis_sheets s ON s.id = p.sheet WHERE p.kind = ?`, KindHTML)
+	if err != nil {
+		return nil, err
+	}
+	defer rs.Close()
+	out := map[string]string{}
+	for rs.Next() {
+		var name, src string
+		if err := rs.Scan(&name, &src); err != nil {
+			return nil, err
+		}
+		out[name] = src
+	}
+	return out, rs.Err()
+}
+
 // PageKind donne le type d'un onglet page : KindHTML ou KindDoc ("" : une feuille).
 func (m *Model) PageKind(ctx context.Context, sheet int64) (string, error) {
 	var k string

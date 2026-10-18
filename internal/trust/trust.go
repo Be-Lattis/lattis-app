@@ -10,6 +10,11 @@
 //     classeur reçu, ou un script modifié ailleurs, demande « Autoriser /
 //     Refuser / Voir le code » à la première exécution de chaque version.
 //     Un refus vaut pour la session.
+//   - Pages web : un onglet page HTML d'un classeur ne s'affiche (son code
+//     ne s'exécute) que si sa version (empreinte du HTML) est autorisée sur
+//     ce poste. Une page créée ou modifiée ici l'est d'office ; une page
+//     reçue demande « Autoriser / Ne pas exécuter / Voir le code » la
+//     première fois qu'on affiche chaque version.
 //   - Réseau : les hôtes que les scripts et les pages HTML d'un classeur
 //     peuvent joindre, par classeur (son identifiant aléatoire,
 //     doc.Document.SecretScope), comme les accords des mots de passe
@@ -50,6 +55,8 @@ type Store struct {
 type fileData struct {
 	// Scripts : versions autorisées, par empreinte.
 	Scripts map[string]ScriptGrant `json:"scripts,omitempty"`
+	// Pages : versions de pages web (onglets HTML) autorisées, par empreinte.
+	Pages map[string]ScriptGrant `json:"pages,omitempty"`
 	// Hosts : hôtes autorisés, par classeur.
 	Hosts map[string][]string `json:"hotes,omitempty"`
 	// Legacy : classeurs récents au moment de la création du fichier, dont
@@ -124,7 +131,7 @@ func recentWorkbooks() []string {
 	return list
 }
 
-// Hash donne l'empreinte d'une version de script.
+// Hash donne l'empreinte d'une version de script ou de page web.
 func Hash(source string) string {
 	sum := sha256.Sum256([]byte(strings.ReplaceAll(source, "\r\n", "\n")))
 	return hex.EncodeToString(sum[:])
@@ -136,7 +143,7 @@ func (s *Store) load() {
 		return
 	}
 	s.loaded = true
-	s.data = fileData{Scripts: map[string]ScriptGrant{}, Hosts: map[string][]string{}}
+	s.data = fileData{Scripts: map[string]ScriptGrant{}, Pages: map[string]ScriptGrant{}, Hosts: map[string][]string{}}
 	if s.path == "" {
 		return
 	}
@@ -160,6 +167,9 @@ func (s *Store) load() {
 	}
 	if d.Scripts != nil {
 		s.data.Scripts = d.Scripts
+	}
+	if d.Pages != nil {
+		s.data.Pages = d.Pages
 	}
 	if d.Hosts != nil {
 		s.data.Hosts = d.Hosts
@@ -237,6 +247,42 @@ func (s *Store) ScriptRefused(hash string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.refused[hash]
+}
+
+// --- Pages web ---------------------------------------------------------------
+
+// PageAllowed dit si la version hash d'une page web est autorisée.
+func (s *Store) PageAllowed(hash string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.load()
+	_, ok := s.data.Pages[hash]
+	return ok
+}
+
+// AllowPages autorise des versions de pages web (empreinte → nom de
+// l'onglet).
+func (s *Store) AllowPages(versions map[string]string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.load()
+	changed := false
+	for h, name := range versions {
+		if _, ok := s.data.Pages[h]; ok {
+			continue
+		}
+		s.data.Pages[h] = ScriptGrant{Name: name, At: time.Now().UTC().Truncate(time.Second)}
+		changed = true
+	}
+	if !changed {
+		return nil
+	}
+	return s.save()
+}
+
+// AllowPage autorise la version hash de la page name.
+func (s *Store) AllowPage(hash, name string) error {
+	return s.AllowPages(map[string]string{hash: name})
 }
 
 // --- Réseau ------------------------------------------------------------------

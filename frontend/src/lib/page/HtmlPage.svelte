@@ -5,6 +5,8 @@
 	// étape d'annulation), Ctrl+Entrée met l'aperçu à jour sans enregistrer.
 	// Ou une page web externe : son adresse (« Site web… », si les paramètres
 	// le permettent), affichée dans un cadre, sans pont vers le classeur.
+	// Une version de page jamais autorisée sur ce poste (classeur reçu) ne
+	// s'exécute pas : l'onglet demande l'accord de l'utilisateur (consent.ts).
 	import { onMount, untrack } from 'svelte';
 	import { EditorState } from '@codemirror/state';
 	import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view';
@@ -15,6 +17,8 @@
 	import Icon from '#lib/icons/Icon.svelte';
 	import { buildSrcdoc, eventOf, pageUrl, parseCall, replyOf, urlSource } from './bridge';
 	import { htmlTabsEnabled } from '#lib/shell/settings.svelte.js';
+	import ScriptDialog, { type DialogSpec } from '#lib/script/ScriptDialog.svelte';
+	import { declinedPages, pageConsent } from './consent';
 
 	interface Props {
 		/** Nom de l'onglet (titre de la barre). */
@@ -30,9 +34,13 @@
 		/** Change à chaque modification du classeur : la page reçoit « change ». */
 		stamp?: unknown;
 		onnotice?: (msg: string) => void;
+		/** Dit si cette version de la page est autorisée sur ce poste (DocumentService.PageAllowed). */
+		trusted: (source: string) => Promise<boolean>;
+		/** Autorise cette version de la page sur ce poste (DocumentService.AllowPage). */
+		allow: (source: string) => Promise<unknown>;
 	}
 
-	let { name, source, save, call, locked = '', stamp, onnotice }: Props = $props();
+	let { name, source, save, call, locked = '', stamp, onnotice, trusted, allow }: Props = $props();
 
 	let editing = $state(false);
 	let dirty = $state(false);
@@ -57,6 +65,46 @@
 		});
 	});
 
+	// Accord : version autorisée (allowed), aperçu demandé dans l'éditeur
+	// (forced : code sous les yeux), question en cours (consent).
+	let allowed = $state<string | null>(null);
+	let forced = $state<string | null>(null);
+	let checked = $state<string | null>(null);
+	let consent = $state<DialogSpec | null>(null);
+	const runs = $derived(shown === allowed || shown === forced);
+
+	$effect(() => {
+		const s = shown;
+		if (s === allowed || s === forced) return;
+		untrack(() => {
+			trusted(s).then(
+				(ok) => {
+					if (shown !== s) return;
+					checked = s;
+					if (ok) allowed = s;
+					else if (!editing && !declinedPages.has(s)) consent = pageConsent(name, s);
+				},
+				(e) => (error = String(e instanceof Error ? e.message : e))
+			);
+		});
+	});
+
+	async function answerConsent(v: Record<string, unknown> | null) {
+		const s = consent?.code ?? '';
+		consent = null;
+		if (v === null) {
+			declinedPages.add(s);
+			return;
+		}
+		try {
+			await allow(s);
+			declinedPages.delete(s);
+			allowed = s;
+		} catch (e) {
+			error = String(e instanceof Error ? e.message : e);
+		}
+	}
+
 	const srcdoc = $derived(buildSrcdoc(shown));
 	// Page web externe : l'adresse affichée (null : page HTML du classeur).
 	const url = $derived(editing ? null : pageUrl(shown));
@@ -74,6 +122,7 @@
 		const src = urlSource(u);
 		try {
 			await save(src);
+			allowed = src;
 			shown = src;
 			dirty = false;
 			error = '';
@@ -125,6 +174,7 @@
 		const src = draft();
 		try {
 			await save(src);
+			allowed = src;
 			dirty = false;
 			shown = src;
 			error = '';
@@ -136,6 +186,7 @@
 
 	function preview() {
 		shown = draft();
+		forced = shown; // aperçu demandé, code sous les yeux
 	}
 
 	function startEdit() {
@@ -250,7 +301,22 @@
 		{#if editing}<div class="editor" bind:this={host}></div>{/if}
 		<!-- Cadre isolé : scripts permis, mais ni même origine, ni formulaires, ni fenêtres. -->
 		{#key reloads}
-			{#if url}
+			{#if !runs}
+				<div class="blocked" role="status">
+					{#if checked === shown}
+						<p><strong>Cette page web n’a pas été exécutée.</strong></p>
+						<p class="muted">
+							Elle n’a encore jamais été autorisée sur ce poste (classeur reçu, ou page modifiée ailleurs). N’autorisez que si vous faites confiance à la
+							personne qui vous a fourni ce classeur.
+						</p>
+						{#if editing}
+							<p class="muted">Aperçu (Ctrl+Entrée) exécute le code affiché dans l’éditeur.</p>
+						{:else}
+							<button class="decide" onclick={() => (consent = pageConsent(name, shown))}>Décider…</button>
+						{/if}
+					{/if}
+				</div>
+			{:else if url}
 				<!-- Site externe : sa propre origine, sans pont vers le classeur. -->
 				<iframe title="Page {name}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" src={url}></iframe>
 			{:else}
@@ -259,6 +325,7 @@
 		{/key}
 	</div>
 </div>
+{#if consent}<ScriptDialog spec={consent} onanswer={answerConsent} />{/if}
 
 <style>
 	.page {
@@ -333,6 +400,25 @@
 		min-width: 0;
 		overflow: auto;
 		border-right: 1px solid #d4d7db;
+	}
+	.blocked {
+		flex: 1;
+		min-width: 0;
+		padding: 24px;
+		background: #fafafa;
+	}
+	.blocked p {
+		margin: 0 0 8px;
+		max-width: 640px;
+	}
+	.decide {
+		font: inherit;
+		padding: 4px 12px;
+		border: 1px solid #217346;
+		background: #217346;
+		color: #fff;
+		border-radius: 3px;
+		cursor: pointer;
 	}
 	iframe {
 		flex: 1;

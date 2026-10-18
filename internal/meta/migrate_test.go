@@ -213,3 +213,34 @@ func tableSQL(t *testing.T, db *store.Store, name string) string {
 	}
 	return q
 }
+
+// TestMigrateOpenDropsTriggers : les déclencheurs du fichier (Lattis n'en
+// crée aucun de persistant) sont supprimés avant la migration ; vues et
+// index inconnus restent.
+func TestMigrateOpenDropsTriggers(t *testing.T) {
+	ctx := context.Background()
+	db := open(t)
+	if err := MigrateTo(ctx, db, Version-1); err != nil {
+		t.Fatal(err)
+	}
+	exec(t, db,
+		`CREATE TRIGGER "piège ""1""" AFTER UPDATE ON _lattis_sheets BEGIN SELECT RAISE(ABORT, 'piège'); END`,
+		`CREATE TRIGGER piege2 BEFORE INSERT ON _lattis_cells BEGIN SELECT RAISE(ABORT, 'piège'); END`,
+		`CREATE VIEW v_inconnue AS SELECT 1`,
+	)
+	r, err := MigrateOpen(ctx, db)
+	if err != nil || r.From != Version-1 || version(t, db) != Version {
+		t.Fatalf("origine %d, %v", r.From, err)
+	}
+	if strings.Join(r.Dropped, "|") != `piege2|piège "1"` {
+		t.Fatalf("supprimés : %q", r.Dropped)
+	}
+	if s := schema(t, db); strings.Contains(s, "TRIGGER") || !strings.Contains(s, "v_inconnue") {
+		t.Fatalf("schéma :\n%s", s)
+	}
+	exec(t, db, `UPDATE _lattis_sheets SET name = name`, `INSERT INTO _lattis_cells (sheet, row, col, raw) VALUES (1, 0, 0, 'x')`)
+	// Une base saine : rien à signaler.
+	if r, err := MigrateOpen(ctx, db); err != nil || len(r.Dropped) != 0 {
+		t.Fatalf("réouverture : %v %v", r.Dropped, err)
+	}
+}

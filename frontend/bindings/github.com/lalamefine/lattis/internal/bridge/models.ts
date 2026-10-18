@@ -172,6 +172,12 @@ export interface DialogRequest {
      * d'exécution d'un script (consent.go).
      */
     "code"?: string;
+
+    /**
+     * Warning : mise en garde mise en évidence (accords d'exécution) ; un
+     * script ne peut pas en poser (ui.dialog).
+     */
+    "warning"?: string;
 }
 
 /**

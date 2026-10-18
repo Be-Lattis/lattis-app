@@ -38,7 +38,7 @@ func TestScriptConsentRefused(t *testing.T) {
 	if err != nil || !strings.Contains(res.Error, "refusé") || len(h.prints) != 0 {
 		t.Fatalf("refus : %+v %v %v", res, err, h.prints)
 	}
-	if len(h.dialogs) != 1 || h.dialogs[0].Code != src || h.dialogs[0].OK != "Autoriser" || h.dialogs[0].Cancel != "Refuser" || !strings.Contains(h.dialogs[0].Message, "Action") {
+	if len(h.dialogs) != 1 || h.dialogs[0].Code != src || h.dialogs[0].OK != "Autoriser" || h.dialogs[0].Cancel != "Refuser" || !strings.Contains(h.dialogs[0].Message, "Action") || !strings.Contains(h.dialogs[0].Warning, "faites confiance à la personne") {
 		t.Fatalf("question : %+v", h.dialogs)
 	}
 	if res, _ := RunButton(h, id); !strings.Contains(res.Error, "pour cette session") || len(h.dialogs) != 1 {

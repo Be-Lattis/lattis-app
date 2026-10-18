@@ -29,6 +29,8 @@ lattis.on("change", () => rafraichir())
 
 Les commandes de `lattis.call` sont celles des [scripts Lua](lua). Une page ne joint un site que par `lattis.call("http.get", …)`, avec votre accord.
 
+Une page web reçue avec un classeur (ou modifiée ailleurs) ne s'exécute pas d'emblée : l'onglet demande **Autoriser** ou **Ne pas exécuter**, avec **Voir le code**. Une page peut lire et modifier le classeur : n'autorisez que si vous faites confiance à la personne qui vous a fourni ce classeur. L'accord vaut pour cette version de la page, sur ce poste ; les pages que vous créez ou modifiez ici sont autorisées d'office. Après « Ne pas exécuter », le bouton **Décider…** de l'onglet repose la question.
+
 L'éditeur de la page est à côté de l'aperçu : `Ctrl+S` enregistre, `Ctrl+Entrée` met l'aperçu à jour sans enregistrer.
 
 ## Pages web externes

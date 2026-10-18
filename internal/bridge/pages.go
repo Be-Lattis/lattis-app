@@ -99,6 +99,24 @@ func (s *DocumentService) Page(ctx context.Context, sheet int64) (string, error)
 	return d.Page(ctx, sheet)
 }
 
+// PageAllowed dit si cette version d'une page web (son HTML) peut
+// s'afficher sur ce poste : créée ou modifiée ici, ou déjà autorisée.
+// Sinon (classeur reçu), l'interface demande l'accord de l'utilisateur au
+// lieu d'exécuter la page.
+func (s *DocumentService) PageAllowed(ctx context.Context, source string) bool {
+	return doc.PageAllowed(source)
+}
+
+// AllowPage autorise sur ce poste cette version de la page web de
+// l'onglet sheet (réponse « Autoriser »).
+func (s *DocumentService) AllowPage(ctx context.Context, sheet int64, source string) error {
+	d, err := s.current()
+	if err != nil {
+		return err
+	}
+	return d.AllowPage(ctx, sheet, source)
+}
+
 // SavePage remplace le contenu d'un onglet page HTML (annulable).
 func (s *DocumentService) SavePage(ctx context.Context, sheet int64, source string) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.SetPage(ctx, sheet, source) })

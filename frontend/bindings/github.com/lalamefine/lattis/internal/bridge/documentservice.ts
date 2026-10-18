@@ -139,6 +139,14 @@ export function AllowHTTPHost(h: string): $CancellablePromise<string[] | null> {
 }
 
 /**
+ * AllowPage autorise sur ce poste cette version de la page web de
+ * l'onglet sheet (réponse « Autoriser »).
+ */
+export function AllowPage(sheet: number, source: string): $CancellablePromise<void> {
+    return $Call.ByID(2298623480, sheet, source);
+}
+
+/**
  * ApplyLineStyle met en forme des lignes (rows) ou des colonnes entières
  * [i0, i1] de la feuille, comme Excel.
  */
@@ -765,6 +773,16 @@ export function Orphans(): $CancellablePromise<archive$0.Orphan[] | null> {
  */
 export function Page(sheet: number): $CancellablePromise<string> {
     return $Call.ByID(393663941, sheet);
+}
+
+/**
+ * PageAllowed dit si cette version d'une page web (son HTML) peut
+ * s'afficher sur ce poste : créée ou modifiée ici, ou déjà autorisée.
+ * Sinon (classeur reçu), l'interface demande l'accord de l'utilisateur au
+ * lieu d'exécuter la page.
+ */
+export function PageAllowed(source: string): $CancellablePromise<boolean> {
+    return $Call.ByID(3338943203, source);
 }
 
 /**

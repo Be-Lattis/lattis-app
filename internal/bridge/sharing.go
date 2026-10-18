@@ -408,6 +408,7 @@ func (s *DocumentService) ShareOpen(ctx context.Context, server, id, title strin
 		return OpenResult{}, err
 	}
 	st, err := s.State(ctx)
+	st.Notice = d.TakeOpenNotice()
 	return OpenResult{State: st}, err
 }
 
