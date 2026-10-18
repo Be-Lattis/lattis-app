@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fillSeries } from './fill';
+import { fillSeries, shiftTableColumns } from './fill';
 
 describe('poignée de recopie', () => {
 	it('nombres', () => {
@@ -23,5 +23,19 @@ describe('poignée de recopie', () => {
 	it('recopie sinon', () => {
 		expect(fillSeries(['a', 'b'], 3)).toEqual(['a', 'b', 'a']);
 		expect(fillSeries(['=SOMME(T[x])'], 2)).toEqual(['=SOMME(T[x])', '=SOMME(T[x])']);
+	});
+});
+
+describe('recopie à droite des colonnes de tableau', () => {
+	const tables = [{ name: 'Villes', columns: ['Ville', 'Région', 'Population'] }];
+	it('passe à la colonne voisine, Cell[…] reste fixe', () => {
+		expect(shiftTableColumns('=REFERENCE(Villes[Région]; Cell[S7])', 1, tables)).toBe('=REFERENCE(Villes[Population]; Cell[S7])');
+		expect(shiftTableColumns('=SOMME(villes[Ville])+Villes[Ville][2]', 1, tables)).toBe('=SOMME(villes[Région])+Villes[Région][2]');
+		expect(shiftTableColumns('=Villes[Région]', -1, tables)).toBe('=Villes[Ville]');
+	});
+	it("ne sort pas du tableau et ne touche ni aux chaînes ni aux autres noms", () => {
+		expect(shiftTableColumns('=Villes[Population]', 1, tables)).toBe('=Villes[Population]');
+		expect(shiftTableColumns('="Villes[Ville]"&Autre[Ville]', 1, tables)).toBe('="Villes[Ville]"&Autre[Ville]');
+		expect(shiftTableColumns('Villes[Ville]', 1, tables)).toBe('Villes[Ville]');
 	});
 });
