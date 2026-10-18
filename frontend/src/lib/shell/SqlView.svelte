@@ -653,6 +653,8 @@
 		font-size: 12px;
 	}
 	.sql {
+		/* Contexte d'empilement propre : rien de la vue ne passe au-dessus du volet d'aide. */
+		isolation: isolate;
 		display: flex;
 		height: 100%;
 		min-height: 0;

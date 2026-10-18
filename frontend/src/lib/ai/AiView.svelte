@@ -263,6 +263,8 @@
 
 <style>
 	.ai {
+		/* Contexte d'empilement propre : rien de la vue ne passe au-dessus du volet d'aide. */
+		isolation: isolate;
 		position: absolute;
 		inset: 0;
 		display: flex;

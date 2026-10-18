@@ -220,7 +220,7 @@
 		top: 0;
 		right: 0;
 		bottom: 0;
-		z-index: 40;
+		z-index: 60;
 		display: flex;
 		flex-direction: column;
 		min-height: 0;
