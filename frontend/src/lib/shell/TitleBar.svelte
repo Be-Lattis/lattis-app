@@ -90,8 +90,38 @@
 		</div>
 	{/if}
 </div>
+{#if !mac && !isWeb && !maximised}
+	<!-- Bords de la fenêtre sans cadre : la barre de défilement de la grille, contre le bord, ne
+	     transmet pas la souris à la page, et Wails n'y voyait pas la poignée de redimensionnement. -->
+	<div class="edge right" aria-hidden="true"></div>
+	<div class="edge bottom" aria-hidden="true"></div>
+	<div class="edge left" aria-hidden="true"></div>
+{/if}
 
 <style>
+	.edge {
+		position: fixed;
+		z-index: 2147483000;
+		background: transparent;
+	}
+	.edge.right {
+		top: 0;
+		right: 0;
+		bottom: 0;
+		width: 5px;
+	}
+	.edge.left {
+		top: 0;
+		left: 0;
+		bottom: 0;
+		width: 5px;
+	}
+	.edge.bottom {
+		left: 0;
+		right: 0;
+		bottom: 0;
+		height: 5px;
+	}
 	.titlebar {
 		display: flex;
 		height: 32px;
