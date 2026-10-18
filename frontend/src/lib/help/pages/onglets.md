@@ -16,6 +16,8 @@ Clic droit sur un élément inséré : le même menu que sur la feuille ; ailleu
 
 ## Onglet HTML
 
+Fonctionnalité à activer dans Fichier › Paramètres › Fonctionnalités (voir [Paramètres](parametres)) ; un classeur qui en contient déjà les affiche et s'en sert même sans elle.
+
 Une page web écrite par vous (HTML, CSS, JavaScript), affichée dans un cadre isolé : elle n'a accès ni au disque, ni au réseau, ni au reste de l'application. Elle parle au classeur par un petit objet `lattis` :
 
 ```
@@ -31,4 +33,4 @@ L'éditeur de la page est à côté de l'aperçu : `Ctrl+S` enregistre, `Ctrl+En
 
 ## Pages web externes
 
-Un Onglet HTML peut aussi afficher une page d'un site. Cette possibilité est coupée par défaut : elle s'active dans Fichier › Paramètres › Fonctionnalités (voir [Paramètres](parametres)).
+Un Onglet HTML peut aussi afficher une page d'un site (« Page web… »), quand les Onglets HTML sont activés.
