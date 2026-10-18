@@ -13,7 +13,7 @@
 	import { ZOOM_LEVELS, zoomLabel } from '#lib/grid/zoom.js';
 	import Select from '#lib/ui/Select.svelte';
 	import { estimate, fit, groupWidth, type GroupShape, type Measure, type Mode } from './fit';
-	import { mcpAvailable, scriptingEnabled, sharedWorkbooksEnabled } from './settings.svelte.js';
+	import { scriptingEnabled, sharedWorkbooksEnabled } from './settings.svelte.js';
 	import { keyLabel } from '#lib/web/platform.js';
 	import type { IconName } from '#lib/icons/icons.js';
 	import { MORE_KINDS, type ChartKind } from '#lib/chart/kinds.js';
@@ -187,6 +187,7 @@
 	const st = (patch: Record<string, unknown>) => (onstyle ? () => onstyle(patch) : undefined);
 	let fileOpen = $state(false);
 	let recentOpen = $state(false);
+	let exportOpen = $state(false);
 	const fileName = (p: string) => p.split(/[\\/]/).pop() ?? p;
 	const data = (what: DataAction) => (ondata ? () => ondata(what) : undefined);
 	const cells = (op: 'insertRow' | 'deleteRow' | 'insertColumn' | 'deleteColumn') => (oncells ? () => oncells(op) : undefined);
@@ -962,8 +963,8 @@
 			{#if fileOpen}
 				<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 				<div class="file-menu" use:dismiss={() => (fileOpen = false)}>
-					{#each [['new', 'Nouveau', 'Ctrl+N'], ['open', 'Ouvrir…', 'Ctrl+O'], ...(sharedWorkbooksEnabled() ? [['openRemote', 'Ouvrir depuis un serveur…', '']] : [])] as [a, label, keys] (a)}
-						<button onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
+					{#each [['new', 'Nouveau', 'Ctrl+N'], ['open', 'Ouvrir…', 'Ctrl+O'], ...(sharedWorkbooksEnabled() ? [['openRemote', 'Ouvrir depuis un serveur…', '']] : []), ['close', 'Fermer', 'Ctrl+W']] as [a, label, keys] (a)}
+						<button disabled={disabled && a === 'close'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 					<div class="recent-wrap" role="presentation" onmouseenter={() => (recentOpen = true)} onmouseleave={() => (recentOpen = false)}>
 						<button disabled={!recent.length} onclick={() => (recentOpen = !recentOpen)}><span>Récents</span><span class="keys">▸</span></button>
@@ -976,8 +977,25 @@
 						{/if}
 					</div>
 					<hr />
-					{#each [['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ...(sharedWorkbooksEnabled() && !shared ? [['share', 'Partager sur un serveur…', '']] : []), ...(sharedWorkbooksEnabled() && rights ? [['rights', 'Partager…', '']] : []), ...(sharedWorkbooksEnabled() && republish ? [['republish', 'Republier', '']] : []), ['import', 'Importer (CSV, Excel)…', ''], ['export', 'Exporter le tableau en CSV…', ''], ['exportXlsx', 'Exporter le classeur (.xlsx)…', ''], ['print', 'Imprimer / PDF…', 'Ctrl+P'], ['close', 'Fermer', 'Ctrl+W'], ['mcp', 'Serveur MCP (assistants)…', ''], ['settings', 'Paramètres…', ''], ['help', 'Aide', 'F1'], ...(import.meta.env.DEV ? [['demo', 'Démo : 1 M de lignes', '']] : [])].filter(([a]) => a !== 'mcp' || mcpAvailable()) as [a, label, keys] (a)}
-						<button disabled={disabled && a !== 'import' && a !== 'demo' && a !== 'mcp' && a !== 'settings' && a !== 'help'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
+					{#each [['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ...(sharedWorkbooksEnabled() && !shared ? [['share', 'Partager sur un serveur…', '']] : []), ...(sharedWorkbooksEnabled() && rights ? [['rights', 'Partager…', '']] : []), ...(sharedWorkbooksEnabled() && republish ? [['republish', 'Republier', '']] : []), ['import', 'Importer (CSV, Excel)…', '']] as [a, label, keys] (a)}
+						<button disabled={disabled && a !== 'import'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
+					{/each}
+					<hr />
+					<!-- Exporter : sous-menu (CSV du tableau, classeur .xlsx) ; l'impression reste à part. -->
+					<div class="recent-wrap" role="presentation" onmouseenter={() => (exportOpen = true)} onmouseleave={() => (exportOpen = false)}>
+						<button {disabled} onclick={() => (exportOpen = !exportOpen)}><span>Exporter</span><span class="keys">▸</span></button>
+						{#if exportOpen && !disabled}
+							<div class="file-menu sub">
+								{#each [['export', 'Le tableau en CSV…'], ['exportXlsx', 'Le classeur (.xlsx)…']] as [a, label] (a)}
+									<button onclick={() => { fileOpen = exportOpen = false; onfile(a as FileAction); }}><span>{label}</span></button>
+								{/each}
+							</div>
+						{/if}
+					</div>
+					<button {disabled} onclick={() => { fileOpen = false; onfile('print'); }}><span>Imprimer / PDF…</span><span class="keys">{keyLabel('Ctrl+P')}</span></button>
+					<hr />
+					{#each [['settings', 'Paramètres…', ''], ['help', 'Aide', 'F1'], ...(import.meta.env.DEV ? [['demo', 'Démo : 1 M de lignes', '']] : [])] as [a, label, keys] (a)}
+						<button onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 				</div>
 			{/if}

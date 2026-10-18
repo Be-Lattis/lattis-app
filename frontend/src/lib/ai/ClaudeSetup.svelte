@@ -4,7 +4,7 @@
 	// configuration en un clic (Lattis active son serveur et écrit lui-même
 	// la configuration du client), lien de téléchargement, et la commande ou
 	// le JSON à copier si l'on préfère faire soi-même. Aucune prop
-	// obligatoire ; onchange prévient l'hôte (Fichier › Serveur MCP) quand le
+	// obligatoire ; onchange prévient l'hôte quand le
 	// serveur vient d'être activé.
 	import { onMount } from 'svelte';
 	import Icon from '#lib/icons/Icon.svelte';

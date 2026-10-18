@@ -180,7 +180,7 @@ func URL(port int) string { return fmt.Sprintf("http://127.0.0.1:%d/mcp", port) 
 // --- Relais stdio -------------------------------------------------------------
 
 // ErrNotRunning : Lattis n'est pas ouvert, ou son serveur est désactivé.
-var ErrNotRunning = errors.New("Lattis n'est pas ouvert, ou son serveur MCP est désactivé (Fichier › Serveur MCP)")
+var ErrNotRunning = errors.New("Lattis n'est pas ouvert, ou son serveur MCP est désactivé (Assistant › Connexion › Application de bureau)")
 
 // Proxy relaie les messages MCP lus sur in (un par ligne) vers l'application
 // ouverte et écrit ses réponses sur out : c'est la commande « lattis mcp »
