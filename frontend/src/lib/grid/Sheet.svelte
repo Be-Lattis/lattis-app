@@ -1767,10 +1767,16 @@
 		if (!editing || !input) return;
 		input.setSelectionRange(h.start, h.end);
 		onFormulaInput(input, 'cell');
+		// Retour pour l'argument suivant : le focus que le changement de feuille
+		// remet à la grille ne doit pas valider la formule.
+		if (!h.finish) keepEditorUntil = performance.now() + 400;
 		// Entrée sur l'autre feuille : validée dans sa cellule (une faute laisse l'éditeur ouvert).
 		if (h.finish === 'commit' && commit()) moveTo(h.row + 1, h.col);
 		schedule();
 	}
+
+	// Jusqu'à cet instant, l'éditeur de cellule qui perd le focus le reprend (retour de pointage).
+	let keepEditorUntil = 0;
 
 	/** Entrée ou Échap sur l'autre feuille : retour à la feuille de la formule, qui est validée ou abandonnée. */
 	function finishHold(finish: 'commit' | 'cancel') {
@@ -5745,6 +5751,15 @@
 		el.setSelectionRange(r.caret, r.caret);
 		lastRef = null; // le clic suivant ajoute une référence, il ne remplace plus celle-ci
 		onFormulaInput(el, editing ? 'cell' : 'fx');
+		// Pointage sur une autre feuille : l'argument suivant se saisit dans la
+		// feuille de la formule, où l'on revient (demande de Louis).
+		if (hold) {
+			hold = updateHold(hold, r.text, r.caret, r.caret);
+			completion = sig = null;
+			// Après la fin du clic (mouseup) : la saisie reprend dans sa cellule sans être validée.
+			const back = hold.sheet;
+			setTimeout(() => onsheet?.(back));
+		}
 	}
 
 	// Glissé en mode formule depuis une référence insérée : la plage couverte.
@@ -8091,6 +8106,16 @@
 							completion = sig = null;
 							// Clic sur un onglet de feuille : la formule est gardée pour pointer sur l'autre feuille.
 							if (tabPress && formulaTyping(editValueText)) return;
+							// Retour de pointage sur une autre feuille : la saisie continue.
+							if (performance.now() < keepEditorUntil && formulaTyping(editValueText)) {
+								const el = input;
+								const at = [el?.selectionStart ?? 0, el?.selectionEnd ?? 0];
+								requestAnimationFrame(() => {
+									el?.focus();
+									el?.setSelectionRange(at[0], at[1]);
+								});
+								return;
+							}
 							// Saisie refusée par la liste déroulante quand le focus part ailleurs : abandonnée, le message reste.
 							if (!commit() && !editErr) {
 								editing = false;
