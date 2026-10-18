@@ -94,7 +94,7 @@
 	let scripts = $state<Script[]>([]);
 	// Contenu de l'onglet page HTML ou Document affiché (null : une feuille).
 	let pageSource = $state<{ sheet: number; source: string } | null>(null);
-	// Onglet Document affiché : son éditeur, et la mise en forme à la sélection (ruban).
+	// Document affiché : son éditeur, et la mise en forme à la sélection (ruban).
 	let docPage = $state<ReturnType<typeof DocPage>>();
 	let docFmt = $state<DocFormat | null>(null);
 	// Requêtes favorites de l'onglet SQL, enregistrées dans le classeur.
@@ -866,7 +866,7 @@
 		sheetId = id;
 		await reload();
 		sheet?.focus();
-		// Onglet Document : le curseur dans le texte (DocPage le met aussi en
+		// Document : le curseur dans le texte (DocPage le met aussi en
 		// place à son montage, une fois le contenu chargé).
 		if (activeDoc) docPage?.focus();
 	}
@@ -880,7 +880,7 @@
 	const addPage = (before = 0) => sheetAction(async () => selectSheet(await DocumentService.AddPage(before)));
 	const addDoc = (before = 0) => sheetAction(async () => selectSheet(await DocumentService.AddDoc(before)));
 
-	// Onglet Document en PDF : la fenêtre d'impression, imprimante « Microsoft Print to PDF ».
+	// Document en PDF : la fenêtre d'impression, imprimante « Microsoft Print to PDF ».
 	function exportDocPdf() {
 		notice = 'Exporter en PDF : choisissez l’imprimante « Microsoft Print to PDF » (ou « Enregistrer au format PDF »)';
 		docPage?.print(`${docState.title} – ${activeInfo?.name ?? ''}`);
@@ -1084,8 +1084,6 @@
 		ondedup={mode === 'doc' ? () => sheet?.dedupActive() : undefined}
 		ontextcols={mode === 'doc' ? () => sheet?.textToColumnsActive() : undefined}
 		onbutton={mode === 'doc' ? (kind) => sheet?.insertButton(kind) : undefined}
-		onpage={mode === 'doc' && htmlTabsEnabled() ? () => addPage() : undefined}
-		ondocpage={mode === 'doc' ? () => addDoc() : undefined}
 		context={activePage && view === 'grid' ? (activeDoc ? 'doc' : 'html') : 'sheet'}
 		ondoc={docCommand}
 		docState={activeDoc && docFmt ? docFmt : undefined}

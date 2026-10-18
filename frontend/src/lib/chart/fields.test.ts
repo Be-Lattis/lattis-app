@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { chartFields } from './kinds';
 
-// Même règle pour une feuille et un Onglet Document.
+// Même règle pour une feuille et un document.
 describe('axe et séries d’un nouveau graphique', () => {
 	const cols = [
 		{ name: 'Produit', numeric: false },

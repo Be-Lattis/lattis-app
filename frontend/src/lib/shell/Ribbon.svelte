@@ -12,7 +12,6 @@
 	import { ZOOM_LEVELS, zoomLabel } from '#lib/grid/zoom.js';
 	import Select from '#lib/ui/Select.svelte';
 	import { estimate, fit, groupWidth, type GroupShape, type Measure, type Mode } from './fit';
-	import { htmlTabsEnabled } from './settings.svelte.js';
 	import type { IconName } from '#lib/icons/icons.js';
 	import { MORE_KINDS, type ChartKind } from '#lib/chart/kinds.js';
 	import { COMMAND_TIPS, TAB_TIPS, assignKeyTips, keyChars, keyOf, matchTip } from '#lib/ui/keytips.js';
@@ -110,13 +109,9 @@
 		/** En-têtes A1 (lettres et numéros) toujours affichés, et leur bascule. */
 		headings?: boolean;
 		onheadings?: (show: boolean) => void;
-		/** Insertion › Page HTML : nouvel onglet page HTML. */
-		onpage?: () => void;
-		/** Insertion › Document : nouvel onglet de texte riche. */
-		ondocpage?: () => void;
 		/** Onglet affiché (feuille par défaut). */
 		context?: RibbonContext;
-		/** Onglet Document : commandes, et état de la sélection (bloc, alignement, barré, lien). */
+		/** Document : commandes, et état de la sélection (bloc, alignement, barré, lien). */
 		ondoc?: (cmd: DocCommand) => void;
 		docState?: { block: string; align: string; strike: boolean; link: boolean };
 		/** Insertion › Bouton : bouton d'action lié à un script. */
@@ -156,7 +151,7 @@
 		onanimate?: (on: boolean) => void;
 	}
 
-	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, ontextcols, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, onpage, ondocpage, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate }: Props = $props();
+	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, ontextcols, onpivot, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate }: Props = $props();
 	const fmt = (tab: FormatTab) => (onformat ? () => onformat(tab) : undefined);
 	const lines = (rows: boolean, hide: boolean) => (onlines ? () => onlines(rows, hide) : undefined);
 	const frz = (what: FreezeAction) => (onfreeze ? () => onfreeze(what) : undefined);
@@ -224,14 +219,6 @@
 		return { destroy: () => ro.disconnect() };
 	}
 
-	const tabGroup: Group = $derived({
-		title: 'Onglets',
-		commands: [
-			// Onglets HTML : à activer dans Fichier › Paramètres › Fonctionnalités.
-			...(htmlTabsEnabled() ? [{ label: 'Onglet HTML', icon: 'web' as const, run: onpage, hint: 'Nouvel Onglet HTML : une page (HTML, CSS et JavaScript) qui lit et modifie le classeur, ou une page web externe' }] : []),
-			{ label: 'Onglet Document', icon: 'document', run: ondocpage, hint: 'Nouvel Onglet Document : texte mis en forme, avec graphiques, tableaux croisés et boutons de scripts' }
-		]
-	});
 	const dc = (cmd: DocCommand) => (ondoc ? () => ondoc(cmd) : undefined);
 	const blockOn = (b: string) => docState?.block === b;
 	const sheetRibbons: Record<string, Group[]> = $derived({
@@ -365,7 +352,6 @@
 			}
 		],
 		Insertion: [
-			tabGroup,
 			{ title: 'Tableaux', commands: [{ label: 'Tableau croisé', icon: 'pivot-table', run: onpivot, hint: 'Tableau croisé dynamique du tableau actif (double-clic sur un TCD pour le modifier)' }] },
 			{
 				title: 'Graphiques',
@@ -485,7 +471,7 @@
 		]
 	});
 
-	// Onglet Document : un traitement de texte (police, paragraphes,
+	// Document : un traitement de texte (police, paragraphes,
 	// graphiques et boutons insérés dans le texte).
 	const docRibbons: Record<string, Group[]> = $derived({
 		Accueil: [
@@ -546,7 +532,6 @@
 			{ title: 'Exporter', commands: [{ label: 'Exporter en PDF', icon: 'file', run: dc('pdf'), hint: 'Enregistrer le document en PDF, graphiques et tableaux croisés compris (imprimante « Microsoft Print to PDF »)' }] }
 		],
 		Insertion: [
-			tabGroup,
 			{ title: 'Tableaux', commands: [{ label: 'Tableau croisé', icon: 'pivot-table', run: dc('pivot'), hint: 'Tableau croisé dynamique d’un tableau du classeur, inséré dans le texte et recalculé avec lui' }] },
 			{
 				title: 'Graphiques',
@@ -576,11 +561,10 @@
 		Révision: sheetRibbons.Révision.filter((g) => g.title === 'Protéger'),
 		Affichage: [{ title: 'Afficher', commands: sheetRibbons.Affichage[0].commands.filter((c) => c.label === 'Animations') }]
 	});
-	// Onglet page HTML : la page a ses propres commandes (Modifier, et Page
+	// Page web : elle a ses propres commandes (Modifier, et Site
 	// web… si Fichier › Paramètres › Fonctionnalités le permet).
 	const htmlRibbons: Record<string, Group[]> = $derived({
 		Accueil: sheetRibbons.Accueil.filter((g) => g.title === 'Annuler'),
-		Insertion: [tabGroup],
 		Révision: sheetRibbons.Révision.filter((g) => g.title === 'Protéger'),
 		Affichage: docRibbons.Affichage
 	});

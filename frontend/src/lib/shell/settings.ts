@@ -33,8 +33,8 @@ export const settingSections: SettingSection[] = [
 			{
 				path: 'features.htmlTabs',
 				kind: 'bool',
-				label: 'Onglets HTML',
-				help: 'Permet d’ajouter des Onglets HTML : une page HTML, CSS et JavaScript qui lit et modifie le classeur, ou une page d’un site. Les classeurs qui en contiennent déjà s’ouvrent et s’utilisent normalement.'
+				label: 'Pages web',
+				help: 'Permet d’ajouter des pages web : une page HTML, CSS et JavaScript qui lit et modifie le classeur, ou une page d’un site. Les classeurs qui en contiennent déjà s’ouvrent et s’utilisent normalement.'
 			}
 		]
 	}

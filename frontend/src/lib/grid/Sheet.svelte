@@ -403,7 +403,7 @@
 		movePivot?(id: number, row: number, col: number): Promise<unknown>;
 		/** Tableau croisé entier copié puis collé : une copie en (row, col). */
 		copyPivot?(id: number, row: number, col: number): Promise<unknown>;
-		/** Pose un tableau croisé de cette configuration (collé depuis un Onglet Document). */
+		/** Pose un tableau croisé de cette configuration (collé depuis un document). */
 		placePivot?(row: number, col: number, cfg: PivotConfig): Promise<unknown>;
 		/** Supprime les lignes en double ; renvoie leur nombre. */
 		removeDuplicates?(table: SheetTable, cols: number[]): Promise<number>;
@@ -6808,7 +6808,7 @@
 		}
 		const plain = !source.transfer || !!pv;
 		clipRange = { ...sel, sheet: sheetId(), cut, text, values, plain, pivot };
-		// Un tableau croisé entier se colle aussi dans un Onglet Document.
+		// Un tableau croisé entier se colle aussi dans un document.
 		rememberObj(text, pivot && pv ? { kind: 'pivot', config: $state.snapshot(pv.config) as never } : null);
 		schedule();
 		return text;
@@ -6912,8 +6912,8 @@
 	function pasteText(text: string): boolean {
 		if (!source.paste) return false;
 		const sel = selection();
-		// Graphique (d'une feuille ou d'un Onglet Document) ; tableau croisé
-		// d'un Onglet Document, posé à la cellule active par sa configuration.
+		// Graphique (d'une feuille ou d'un document) ; tableau croisé
+		// d'un document, posé à la cellule active par sa configuration.
 		const obj = objFromText(text);
 		if (obj?.kind === 'chart') {
 			pasteChart(obj.config as unknown as ChartConfig);

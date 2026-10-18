@@ -1,6 +1,6 @@
 # Boutons et contrôles
 
-Comme les contrôles de formulaire d'Excel, les contrôles se posent librement sur une feuille (ou dans un [onglet Document](onglets)) : Insertion › Bouton, ou Insertion › Champ.
+Comme les contrôles de formulaire d'Excel, les contrôles se posent librement sur une feuille (ou dans un [document](onglets)) : Insertion › Bouton, ou Insertion › Champ.
 
 ## Types de contrôles
 

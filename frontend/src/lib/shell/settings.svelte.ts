@@ -21,7 +21,7 @@ export async function setSetting(path: string, value: unknown) {
 	userSettings.list = (await DocumentService.SetSetting(path, value)) ?? [];
 }
 
-/** Les Onglets HTML sont proposés (ajout, « Page web… »). */
+/** Les pages web sont proposés (ajout, « Site web… »). */
 export function htmlTabsEnabled(): boolean {
 	return boolSetting(userSettings.list, 'features.htmlTabs');
 }

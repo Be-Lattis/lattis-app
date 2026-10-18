@@ -1,5 +1,5 @@
 // Presse-papiers des objets (graphique, tableau croisé) entre les feuilles et
-// les Onglets Document : un graphique s'écrit en texte marqué
+// les documents : un graphique s'écrit en texte marqué
 // (« ⁣lattis-chart:{…} ») ; un tableau croisé copié en entier sur une feuille
 // garde ses valeurs en texte (collées ailleurs telles quelles), et sa
 // configuration est retenue ici, retrouvée au collage par ce même texte.

@@ -24,7 +24,7 @@ pages.set("Tableau de bord", pages.get("Tableau de bord") .. "<p>suite</p>")
 	if got := call(t, h, "pages.get", map[string]any{"sheet": "Tableau de bord"}); got != "<h1>Bonjour</h1><p>suite</p>" {
 		t.Fatalf("page %q", got)
 	}
-	if _, err := Invoke(ctx, h, "pages.get", map[string]any{"sheet": "Feuille1"}); err == nil || !strings.Contains(err.Error(), "page HTML") {
+	if _, err := Invoke(ctx, h, "pages.get", map[string]any{"sheet": "Feuille1"}); err == nil || !strings.Contains(err.Error(), "page web") {
 		t.Fatalf("feuille lue comme page : %v", err)
 	}
 

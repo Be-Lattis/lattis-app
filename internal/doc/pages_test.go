@@ -89,7 +89,7 @@ func TestDocSaved(t *testing.T) {
 	}
 }
 
-// Un contrôle inséré dans un Onglet Document est lié à une cellule d'une
+// Un contrôle inséré dans un document est lié à une cellule d'une
 // autre feuille ; effacé du texte, il disparaît à l'enregistrement, et
 // l'annulation le rend.
 func TestDocControl(t *testing.T) {

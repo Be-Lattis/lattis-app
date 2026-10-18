@@ -563,7 +563,7 @@
 
 	/**
 	 * Collage d'un graphique ou d'un tableau croisé copié sur une feuille ou
-	 * dans un Onglet Document (objFromText) : inséré dans le texte, à la place
+	 * dans un document (objFromText) : inséré dans le texte, à la place
 	 * de la sélection. Faux : autre chose, collé comme du texte.
 	 */
 	function pasteObject(text: string, at: { index: number; length: number }): boolean {

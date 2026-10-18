@@ -1,4 +1,4 @@
-// Onglet Document : passage entre la mise en forme de Quill (gras,
+// Document : passage entre la mise en forme de Quill (gras,
 // police, titre, liste…) et celle du ruban (CellStyle des groupes Police et
 // Alignement, plus l'état du groupe Paragraphe).
 

@@ -263,7 +263,7 @@
 					}
 				}}
 				title={(s.protected ? 'Feuille protégée. ' : '') + (locked ? 'Classeur protégé' : onmove ? 'Double-clic pour renommer, glisser pour déplacer' : 'Double-clic pour renommer')}
-				>{#if s.protected || locked}<span class="lock" aria-label={s.protected ? 'Feuille protégée' : 'Classeur protégé'}><Icon name="lock" size={12} /></span>{/if}{#if s.kind === 'html'}<span class="kind" aria-label="Onglet HTML"><Icon name="web" size={12} /></span>{:else if s.kind === 'doc'}<span class="kind" aria-label="Onglet Document"><Icon name="document" size={12} /></span>{/if}{s.name}</button
+				>{#if s.protected || locked}<span class="lock" aria-label={s.protected ? 'Feuille protégée' : 'Classeur protégé'}><Icon name="lock" size={12} /></span>{/if}{#if s.kind === 'html'}<span class="kind" aria-label="Page web"><Icon name="web" size={12} /></span>{:else if s.kind === 'doc'}<span class="kind" aria-label="Document"><Icon name="document" size={12} /></span>{/if}{s.name}</button
 			>
 		{/if}
 	{/each}
@@ -280,7 +280,7 @@
 			e.preventDefault();
 			if (onadd || onpage) addMenu = { x: (e.currentTarget as HTMLElement).offsetLeft };
 		}}
-		title={locked ? 'Structure du classeur protégée' : page ? 'Nouvelle feuille (clic droit : Onglet HTML ou Onglet Document)' : 'Nouvelle feuille (clic droit : Onglet Document)'}>+</button
+		title={locked ? 'Structure du classeur protégée' : page ? 'Nouvelle feuille (clic droit : Page web ou Document)' : 'Nouvelle feuille (clic droit : Document)'}>+</button
 	>
 	{#if addMenu}
 		<div class="menu" role="menu" style:left="{addMenu.x}px" use:dismiss={() => (addMenu = null)}>
@@ -299,7 +299,7 @@
 				onclick={() => {
 					addMenu = null;
 					onpage?.();
-				}}><span class="ic"><Icon name="web" size={16} /></span>Nouvel Onglet HTML</button
+				}}><span class="ic"><Icon name="web" size={16} /></span>Nouvelle page web</button
 			>
 			{/if}
 			<button
@@ -308,7 +308,7 @@
 				onclick={() => {
 					addMenu = null;
 					ondocpage?.();
-				}}><span class="ic"><Icon name="document" size={16} /></span>Nouvel Onglet Document</button
+				}}><span class="ic"><Icon name="document" size={16} /></span>Nouveau document</button
 			>
 		</div>
 	{/if}
@@ -355,7 +355,7 @@
 					const id = m.id;
 					closeMenu();
 					onpage?.(id);
-				}}><span class="ic"><Icon name="web" size={16} /></span>Insérer un Onglet HTML</button
+				}}><span class="ic"><Icon name="web" size={16} /></span>Insérer une page web</button
 			>
 			{/if}
 			<button
@@ -365,7 +365,7 @@
 					const id = m.id;
 					closeMenu();
 					ondocpage?.(id);
-				}}><span class="ic"><Icon name="document" size={16} /></span>Insérer un Onglet Document</button
+				}}><span class="ic"><Icon name="document" size={16} /></span>Insérer un document</button
 			>
 			<button
 				role="menuitem"
