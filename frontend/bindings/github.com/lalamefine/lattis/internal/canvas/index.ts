@@ -25,6 +25,7 @@ export type {
     LineStyle,
     Listener,
     MapGuess,
+    MapView,
     Match,
     Mix,
     NameInfo,

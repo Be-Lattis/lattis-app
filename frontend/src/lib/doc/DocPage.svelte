@@ -190,7 +190,16 @@
 			};
 			// −/+ d'un tableau croisé : nouvelle configuration de l'élément (annulable).
 			const onconfig = (cfg: PivotConfig) => (locked ? onnotice?.(locked) : replaceEmbed(indexOf(node), PIVOT_BLOT, cfg));
-			const comp = kind === 'pivot' ? mount(DocPivot, { target: node, props: { ...props, load: loadPivot, onconfig } }) : mount(DocChart, { target: node, props: { ...props, load: loadChart } });
+			// Object.assign et non { ...props } : la décomposition lirait les accesseurs une fois
+			// pour toutes (la sélection ne suivrait plus).
+			const comp =
+				kind === 'pivot'
+					? mount(DocPivot, { target: node, props: Object.assign(props, { load: loadPivot, onconfig }) })
+					: mount(DocChart, {
+							target: node,
+							// Carte zoomée ou déplacée : vue enregistrée dans l'élément (annulable).
+							props: Object.assign(props, { load: loadChart, onconfig: (cfg: ChartConfig) => !locked && node.isConnected && replaceEmbed(indexOf(node), CHART_BLOT, cfg) })
+						});
 			mounted.set(node, { comp, kind, p });
 		}
 		for (const [node, m] of mounted) {

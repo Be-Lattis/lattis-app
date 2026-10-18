@@ -331,14 +331,41 @@ export function fitView(pts: { lat: number; lon: number }[], w: number, h: numbe
 	return { z, x0: cx - w / 2, y0: cy - h / 2 };
 }
 
-/** Tuiles qui couvrent la vue : position à l'écran et coordonnées (x replié autour du globe). */
-export function viewTiles(v: MapView, w: number, h: number): { z: number; x: number; y: number; left: number; top: number }[] {
-	const n = 2 ** v.z;
-	const out: { z: number; x: number; y: number; left: number; top: number }[] = [];
-	for (let ty = Math.floor(v.y0 / TILE); ty * TILE < v.y0 + h; ty++) {
+/** Niveau des tuiles OpenStreetMap le plus fort. */
+export const TILE_MAX_ZOOM = 19;
+
+/** Niveau de tuiles pour un zoom fractionnaire : le plus proche (tuiles affichées entre 181 et 362 px). */
+export function tileZoom(z: number): number {
+	return Math.max(0, Math.min(TILE_MAX_ZOOM, Math.round(z)));
+}
+
+export interface ViewTile {
+	z: number;
+	/** Colonne repliée autour du globe (celle qu'on demande). */
+	x: number;
+	y: number;
+	/** Colonne non repliée (position dans la vue). */
+	u: number;
+	left: number;
+	top: number;
+	/** Côté à l'écran (256 px au zoom entier). */
+	size: number;
+}
+
+/**
+ * Tuiles qui couvrent la vue : position à l'écran et coordonnées (x replié
+ * autour du globe). Zoom fractionnaire : tuiles du niveau le plus proche,
+ * agrandies ou réduites.
+ */
+export function viewTiles(v: MapView, w: number, h: number): ViewTile[] {
+	const tz = tileZoom(v.z);
+	const size = TILE * 2 ** (v.z - tz);
+	const n = 2 ** tz;
+	const out: ViewTile[] = [];
+	for (let ty = Math.floor(v.y0 / size); ty * size < v.y0 + h; ty++) {
 		if (ty < 0 || ty >= n) continue;
-		for (let tx = Math.floor(v.x0 / TILE); tx * TILE < v.x0 + w; tx++) {
-			out.push({ z: v.z, x: ((tx % n) + n) % n, y: ty, left: tx * TILE - v.x0, top: ty * TILE - v.y0 });
+		for (let tx = Math.floor(v.x0 / size); tx * size < v.x0 + w; tx++) {
+			out.push({ z: tz, x: ((tx % n) + n) % n, y: ty, u: tx, left: tx * size - v.x0, top: ty * size - v.y0, size });
 		}
 	}
 	return out;

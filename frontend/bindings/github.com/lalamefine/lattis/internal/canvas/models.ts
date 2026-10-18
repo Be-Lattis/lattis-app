@@ -238,6 +238,12 @@ export interface ChartConfig {
     "mapDraft"?: boolean;
 
     /**
+     * MapView : carte, vue choisie par l'utilisateur (centre et zoom) ;
+     * absente, la vue s'ajuste aux points.
+     */
+    "mapView"?: MapView | null;
+
+    /**
      * Bins : histogramme de fréquences, nombre de classes (0 : automatique).
      */
     "bins"?: number;
@@ -584,6 +590,16 @@ export interface MapGuess {
     "lon"?: string;
     "coord"?: string;
     "name"?: string;
+}
+
+/**
+ * MapView : vue d'une carte, centre (degrés) et niveau de zoom (fractionnaire,
+ * celui des tuiles OpenStreetMap : 0 montre le monde entier).
+ */
+export interface MapView {
+    "lat": number;
+    "lon": number;
+    "zoom": number;
 }
 
 /**

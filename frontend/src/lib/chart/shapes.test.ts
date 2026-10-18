@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { boxGroups, boxStats, fitView, gaugeValue, heatColor, heatGrid, histogramBins, niceStep, pie3d, project, quantile, shade, squarify, viewTiles, waterfallSteps } from './shapes';
 import { KINDS, MORE_KINDS, mapChoice, mapComplete, mapPatch, seriesShape } from './kinds';
 import { ticks } from './scale';
-import { loadTile, setTileFetcher } from './tiles';
+import { loadTile, setTileFetcher, tileNow } from './tiles';
 
 const plain = (s: string) => s.replace(/[  ]/g, ' ');
 
@@ -189,6 +189,40 @@ describe('carte', () => {
 		}
 		await all;
 		expect(peak).toBe(2);
+		setTileFetcher(null);
+	});
+	it('tuiles : une demande en attente que plus personne ne veut ne part pas', async () => {
+		const asked: string[] = [];
+		const wait: (() => void)[] = [];
+		setTileFetcher(
+			(z, x, y) =>
+				new Promise((resolve) => {
+					asked.push(`${z}/${x}/${y}`);
+					wait.push(() => resolve(`data:image/png;base64,${x}`));
+				})
+		);
+		let want = true;
+		const a = loadTile(5, 0, 0);
+		const b = loadTile(5, 1, 0);
+		const c = loadTile(5, 2, 0, () => want); // en file : deux demandes déjà parties
+		const d = loadTile(5, 3, 0, () => false);
+		const e = loadTile(5, 3, 0, () => want); // une autre carte la veut encore
+		want = false;
+		await new Promise((r) => setTimeout(r, 0));
+		wait.shift()?.();
+		wait.shift()?.();
+		expect(await c).toBeUndefined();
+		expect(asked).toEqual(['5/0/0', '5/1/0']);
+		expect(await Promise.all([a, b])).toEqual(['data:image/png;base64,0', 'data:image/png;base64,1']);
+		expect(tileNow(5, 0, 0)).toBe('data:image/png;base64,0');
+		expect(tileNow(5, 2, 0)).toBeUndefined();
+		expect(await d).toBeUndefined();
+		expect(await e).toBeUndefined();
+		// Redemandée plus tard : elle part.
+		const again = loadTile(5, 2, 0);
+		await new Promise((r) => setTimeout(r, 0));
+		wait.shift()?.();
+		expect(await again).toBe('data:image/png;base64,2');
 		setTileFetcher(null);
 	});
 });
