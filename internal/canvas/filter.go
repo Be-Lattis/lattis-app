@@ -47,10 +47,17 @@ func (f *ColumnFilter) empty() bool {
 
 // ErrFiltered refuse d'ajouter des lignes à un tableau filtré : les lignes
 // masquées gardent leur place sur la feuille.
-type ErrFiltered struct{ Table string }
+type ErrFiltered struct {
+	Table  string
+	Column bool // c'est une colonne qu'on ajoutait
+}
 
 func (e ErrFiltered) Error() string {
-	return fmt.Sprintf("le tableau « %s » est filtré : effacez le filtre pour y ajouter des lignes", e.Table)
+	what := "des lignes"
+	if e.Column {
+		what = "une colonne"
+	}
+	return fmt.Sprintf("Le tableau « %s » est filtré : effacez le filtre pour y ajouter %s", e.Table, what)
 }
 
 // sqlLiteral écrit un texte en littéral SQL.

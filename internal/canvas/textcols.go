@@ -160,7 +160,7 @@ func (t *tx) tableSource(src *textSource, tb Table, r0, r1 int) error {
 		return ErrComputed{c.Name}
 	}
 	if tb.Filtered() {
-		return ErrFiltered{tb.Name}
+		return ErrFiltered{Table: tb.Name}
 	}
 	if r0 == tb.Row {
 		src.header = true

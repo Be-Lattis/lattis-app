@@ -46,6 +46,12 @@ type tx struct {
 	layout  bool
 	joining bool
 	notes   []string
+	// Feuilles et tableaux dont l'action a changé la disposition (le
+	// rattachement ne regarde qu'eux) ; layoutAll : une instruction ne se
+	// lisait pas, toutes les feuilles sont examinées.
+	layoutAll    bool
+	layoutSheets map[int64]bool
+	layoutTables map[int64]bool
 }
 
 func (t *tx) apply(do, undo []stmt) error { return t.Apply(do, undo) }

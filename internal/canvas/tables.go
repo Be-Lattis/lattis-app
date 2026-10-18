@@ -37,6 +37,10 @@ func (m *Model) RenameTable(ctx context.Context, old, name string) error {
 		if k > 0 {
 			return fmt.Errorf("%w : « %s » existe déjà", ErrTable, name)
 		}
+		// Ce qui cite le tableau suit (formules, TCD, graphiques, requêtes).
+		if err := t.rewriteRefs(tableChange(tb.Name, name)); err != nil {
+			return err
+		}
 		q := `UPDATE _lattis_tables SET name = ? WHERE id = ?`
 		return t.apply([]stmt{st(q, name, tb.ID)}, []stmt{st(q, tb.Name, tb.ID)})
 	})
@@ -137,9 +141,9 @@ func (t *tx) place(tb Table) (Table, error) {
 		if o.ID == tb.ID || !touches(tb.Row, tb.Bottom(), tb.Col, tb.Right(), o) {
 			continue
 		}
-		// Côte à côte, lignes qui se recoupent : fusion, lignes alignées par
-		// rang (voir aussi joinAdjacent).
-		overlap := o.Row <= tb.Bottom() && tb.Row <= o.Bottom()
+		// Côte à côte, en-têtes sur la même ligne : fusion (voir aussi
+		// joinAdjacent, qui écarte les autres cas).
+		overlap := o.Row == tb.Row && !o.Filtered() && !tb.Filtered()
 		switch {
 		case overlap && o.Right()+1 == tb.Col && left == nil:
 			left = &tables[i]
@@ -204,18 +208,54 @@ func (m *Model) MoveTable(ctx context.Context, name string, row, col int) error 
 	})
 }
 
-// mergeRight fusionne b à droite de a (en-têtes sur la même ligne) : les
-// colonnes de b s'ajoutent à a, ligne à ligne dans l'ordre affiché ; le plus
-// court des deux est complété de lignes vides. b disparaît.
+// mergeRight fusionne b à droite de a, en-têtes sur la même ligne : les
+// colonnes de b s'ajoutent à a, chaque ligne de b dans la ligne de a qui est
+// sur la même ligne de la feuille ; le plus court des deux est complété de
+// lignes vides. b disparaît : ce qui le citait (formules, colonnes calculées,
+// règles, TCD, graphiques, requêtes) cite a, sous les nouveaux noms de ses
+// colonnes (« Prix 2 » quand a a déjà un « Prix »). Sa clé devient celle de
+// a si a n'en a pas.
 func (t *tx) mergeRight(a, b Table) (Table, error) {
 	if a.Filtered() || b.Filtered() {
 		return a, fmt.Errorf("%w : effacez le filtre avant de fusionner « %s » et « %s »", ErrTable, a.Name, b.Name)
+	}
+	if a.Row != b.Row {
+		return a, fmt.Errorf("%w : les en-têtes de « %s » et « %s » ne sont pas sur la même ligne", ErrTable, a.Name, b.Name)
+	}
+	// Noms des colonnes de b dans a.
+	names := map[string]bool{}
+	for _, c := range a.Cols {
+		names[strings.ToLower(c.Name)] = true
+	}
+	rc := tableChange(b.Name, a.Name)
+	rc.kept = map[string][]string{}
+	newNames := make([]string, len(b.Cols))
+	for k, c := range b.Cols {
+		name := c.Name
+		for n := 2; names[strings.ToLower(name)]; n++ {
+			name = fmt.Sprintf("%s %d", c.Name, n)
+		}
+		names[strings.ToLower(name)] = true
+		newNames[k] = name
+		rc.column(b.Name, c.Name, name)
+		rc.kept[strings.ToLower(b.Name)] = append(rc.kept[strings.ToLower(b.Name)], name)
+	}
+	// Formules d'abord (avec les noms d'avant) : les colonnes calculées de b
+	// sont réécrites sur place, puis recopiées.
+	if err := t.rewriteRefs(rc); err != nil {
+		return a, err
+	}
+	b, err := t.table(b.ID)
+	if err != nil {
+		return a, err
 	}
 	if b.Rows > a.Rows {
 		if err := t.appendRows(a, b.Rows-a.Rows); err != nil {
 			return a, err
 		}
 	}
+	// Mêmes lignes d'en-tête : la n-ième ligne de données de chacun est sur
+	// la même ligne de la feuille.
 	m := fmt.Sprintf("temp._slt_merge_%d", time.Now().UnixNano())
 	if err := t.apply([]stmt{
 		st(`CREATE TABLE ` + m + ` AS SELECT a.id AS aid, b.id AS bid FROM
@@ -229,19 +269,14 @@ func (t *tx) mergeRight(a, b Table) (Table, error) {
 	if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_columns WHERE tbl = ?`, a.ID).Scan(&next); err != nil {
 		return a, err
 	}
-	names := map[string]bool{}
-	for _, c := range a.Cols {
-		names[strings.ToLower(c.Name)] = true
-	}
+	var key *Column
 	for k, c := range b.Cols {
 		id := next + int64(k)
-		name := c.Name
-		for n := 2; names[strings.ToLower(name)]; n++ {
-			name = fmt.Sprintf("%s %d", c.Name, n)
-		}
-		names[strings.ToLower(name)] = true
-		if err := t.addColumn(a, id, name, c.Type, len(a.Cols)+k); err != nil {
+		if err := t.addColumn(a, id, newNames[k], c.Type, len(a.Cols)+k); err != nil {
 			return a, err
+		}
+		if c.ID == b.Key && a.Key == 0 {
+			key = &Column{ID: id, Type: c.Type, Name: newNames[k]}
 		}
 		rules, err := t.columnRules(b.ID, c.ID)
 		if err != nil {
@@ -269,6 +304,21 @@ func (t *tx) mergeRight(a, b Table) (Table, error) {
 	}
 	if err := t.deleteTable(b); err != nil {
 		return a, err
+	}
+	// La clé de b (REFERENCE) devient celle de a, qui n'en avait pas.
+	if key != nil {
+		index := a.sql() + "_key"
+		if err := t.apply([]stmt{
+			st(`CREATE UNIQUE INDEX ` + index + ` ON ` + a.sql() + `(` + keyExpr(key.ID, key.Type) + `)`),
+			st(`UPDATE _lattis_tables SET key_col = ? WHERE id = ?`, key.ID, a.ID),
+		}, []stmt{
+			st(`UPDATE _lattis_tables SET key_col = NULL WHERE id = ?`, a.ID),
+			st(`DROP INDEX ` + index),
+		}); err != nil {
+			return a, err
+		}
+	} else if b.Key != 0 {
+		t.notes = append(t.notes, fmt.Sprintf("La clé de « %s » n'en est plus une : « %s » garde la sienne", b.Name, a.Name))
 	}
 	merged, err := t.table(a.ID)
 	if err != nil {

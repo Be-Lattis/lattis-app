@@ -39,6 +39,12 @@ func (m *Model) SetName(ctx context.Context, sheet int64, row, col int, name str
 				return err
 			}
 		}
+		// Un nom remplacé par un autre : les formules qui le citent suivent.
+		if old != "" && name != "" {
+			if err := t.rewriteRefs(refChange{Renames: formula.Renames{Names: lowerMap(old, name)}}); err != nil {
+				return err
+			}
+		}
 		del := st(`DELETE FROM _lattis_names WHERE sheet = ? AND row = ? AND col = ?`, sheet, row, col)
 		put := func(n string) stmt {
 			return st(`INSERT INTO _lattis_names (name, sheet, row, col) VALUES (?, ?, ?, ?)`, n, sheet, row, col)

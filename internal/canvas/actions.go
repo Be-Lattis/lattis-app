@@ -82,7 +82,7 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 				continue
 			case inCols && row == tb.Bottom()+1 && !empty:
 				if tb.Filtered() {
-					return ErrFiltered{tb.Name}
+					return ErrFiltered{Table: tb.Name}
 				}
 				// Les autres cellules libres de la nouvelle ligne la rejoignent.
 				taken, err := t.takeFree(sheet, func(c cell) bool {
@@ -122,6 +122,13 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 					return err
 				}
 				if tb, err = t.table(tb.ID); err != nil {
+					return err
+				}
+				// En-têtes sur des lignes différentes, tableau filtré ou chargé
+				// par une requête : pas de fusion, le rattachement de fin
+				// d'action les écarte et le dit.
+				fixed, err := t.fixedTables([]Table{tb, o})
+				if err != nil || tb.Row != o.Row || fixed[tb.ID] != "" || fixed[o.ID] != "" {
 					return err
 				}
 				return t.joinTables(tb, o)
@@ -403,7 +410,7 @@ func (m *Model) InsertRow(ctx context.Context, table string, n int) error {
 			return err
 		}
 		if tb.Filtered() {
-			return ErrFiltered{tb.Name}
+			return ErrFiltered{Table: tb.Name}
 		}
 		if n < 0 || n > tb.Rows {
 			return errors.New("canvas: ligne hors du tableau")
