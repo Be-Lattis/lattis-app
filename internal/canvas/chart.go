@@ -44,6 +44,13 @@ type ChartConfig struct {
 	SeriesKinds []string `json:"seriesKinds,omitempty"`
 	// MapMode : carte, « points » (défaut) ou « heat » (densité).
 	MapMode string `json:"mapMode,omitempty"`
+	// MapCoords : carte, coordonnées en deux colonnes (« pair », défaut :
+	// séries latitude, longitude, valeur) ou en une (« single » : séries
+	// coordonnées, valeur ; toute écriture standard, voir ParseCoord).
+	MapCoords string `json:"mapCoords,omitempty"`
+	// MapDraft : carte qui attend le choix de ses coordonnées (carré grisé,
+	// rien n'est lu ; ChartInfo.Guess propose des colonnes).
+	MapDraft bool `json:"mapDraft,omitempty"`
 	// Bins : histogramme de fréquences, nombre de classes (0 : automatique).
 	Bins int `json:"bins,omitempty"`
 }
@@ -63,6 +70,11 @@ type ChartInfo struct {
 	Labels []string      `json:"labels"`
 	Series []ChartSeries `json:"series"`
 	Error  string        `json:"error"`
+	// Invalid : carte, valeurs de coordonnées illisibles ou hors bornes,
+	// ignorées.
+	Invalid int `json:"invalid,omitempty"`
+	// Guess : carte, colonnes de coordonnées repérées (proposées par le volet).
+	Guess *MapGuess `json:"guess,omitempty"`
 }
 
 // ErrChart signale un graphique impossible.
@@ -95,7 +107,8 @@ func checkChart(cfg ChartConfig) error {
 	if !chartKinds[cfg.Kind] {
 		return fmt.Errorf("%w : type %q inconnu", ErrChart, cfg.Kind)
 	}
-	if len(cfg.Series) == 0 {
+	draft := cfg.Kind == "map" && cfg.MapDraft
+	if len(cfg.Series) == 0 && !draft {
 		return fmt.Errorf("%w : choisissez au moins une série", ErrChart)
 	}
 	for _, k := range cfg.SeriesKinds {
@@ -103,7 +116,10 @@ func checkChart(cfg ChartConfig) error {
 			return fmt.Errorf("%w : forme de série %q inconnue (bar, line ou area)", ErrChart, k)
 		}
 	}
-	if cfg.Kind == "map" && len(cfg.Series) < 2 {
+	if cfg.MapCoords != "" && cfg.MapCoords != "pair" && cfg.MapCoords != "single" {
+		return fmt.Errorf("%w : coordonnées %q inconnues (pair ou single)", ErrChart, cfg.MapCoords)
+	}
+	if cfg.Kind == "map" && !draft && cfg.MapCoords != "single" && len(cfg.Series) < 2 {
 		return fmt.Errorf("%w : une carte demande deux séries, latitude puis longitude (et une valeur facultative)", ErrChart)
 	}
 	if cfg.MapMode != "" && cfg.MapMode != "points" && cfg.MapMode != "heat" {
@@ -122,7 +138,7 @@ func (m *Model) CreateChart(ctx context.Context, sheet int64, row, col int, cfg 
 		if err := t.guard(sheet); err != nil {
 			return err
 		}
-		if _, _, err := t.chartData(cfg); err != nil {
+		if _, err := t.chartData(cfg); err != nil {
 			return err
 		}
 		if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_charts`).Scan(&id); err != nil {
@@ -146,7 +162,7 @@ func (m *Model) SetChart(ctx context.Context, id int64, cfg ChartConfig) error {
 		if err := t.guardObject(`_lattis_charts`, id); err != nil {
 			return err
 		}
-		if _, _, err := t.chartData(cfg); err != nil {
+		if _, err := t.chartData(cfg); err != nil {
 			return err
 		}
 		var old string
@@ -206,17 +222,33 @@ func (m *Model) DeleteChart(ctx context.Context, id int64) error {
 // booléens) regroupe les lignes par catégorie et additionne les séries,
 // comme un graphique tiré d'un tableau croisé ; un axe numérique ou de dates
 // prend les lignes dans l'ordre du tableau.
-func (t *tx) chartDataRaw(cfg ChartConfig) ([]string, []ChartSeries, error) {
+func (t *tx) chartDataRaw(cfg ChartConfig) (chartResult, error) {
 	if err := checkChart(cfg); err != nil {
-		return nil, nil, err
+		return chartResult{}, err
 	}
 	tb, err := t.tableByName(cfg.Source)
 	if err != nil {
 		if pc, ok, perr := t.pivotByName(cfg.Source); perr == nil && ok {
-			return t.chartFromPivot(cfg, pc)
+			if cfg.Kind == "map" && cfg.MapDraft {
+				return chartResult{labels: []string{}, series: []ChartSeries{}, guess: &MapGuess{}}, nil
+			}
+			if cfg.Kind == "map" && cfg.MapCoords == "single" {
+				return chartResult{}, fmt.Errorf("%w : coordonnées en une colonne : choisissez un tableau", ErrChart)
+			}
+			l, s, err := t.chartFromPivot(cfg, pc)
+			return chartResult{labels: l, series: s}, err
 		}
-		return nil, nil, fmt.Errorf("%w : tableau « %s » introuvable", ErrChart, cfg.Source)
+		return chartResult{}, fmt.Errorf("%w : tableau « %s » introuvable", ErrChart, cfg.Source)
 	}
+	if cfg.Kind == "map" {
+		return t.mapData(cfg, tb)
+	}
+	l, s, err := t.chartTable(cfg, tb)
+	return chartResult{labels: l, series: s}, err
+}
+
+// chartTable lit les données d'un graphique dans un tableau.
+func (t *tx) chartTable(cfg ChartConfig, tb Table) ([]string, []ChartSeries, error) {
 	exprs, args, _, err := t.columnSQL(tb)
 	if err != nil {
 		return nil, nil, err
@@ -316,12 +348,12 @@ func (t *tx) charts(sheet int64) ([]ChartInfo, error) {
 		if out[i].Error != "" {
 			continue
 		}
-		labels, series, err := t.chartData(out[i].Config)
+		r, err := t.chartData(out[i].Config)
 		if err != nil {
 			out[i].Error = strings.TrimPrefix(err.Error(), ErrChart.Error()+" : ")
 			continue
 		}
-		out[i].Labels, out[i].Series = labels, series
+		r.fill(&out[i])
 	}
 	return out, nil
 }
@@ -431,9 +463,9 @@ func (m *Model) PlaceChart(ctx context.Context, id int64, row, col, offX, offY, 
 func (m *Model) ChartData(ctx context.Context, cfg ChartConfig) ChartInfo {
 	out := ChartInfo{Config: cfg, Labels: []string{}, Series: []ChartSeries{}}
 	err := m.read(ctx, func(t *tx) error {
-		l, s, err := t.chartData(cfg)
+		r, err := t.chartData(cfg)
 		if err == nil {
-			out.Labels, out.Series = l, s
+			r.fill(&out)
 		}
 		return err
 	})

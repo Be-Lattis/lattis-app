@@ -6,18 +6,22 @@
 	import { PALETTE } from './scale';
 	import Select from '#lib/ui/Select.svelte';
 	import Icon from '#lib/icons/Icon.svelte';
-	import { CARTESIAN, KINDS, SECONDARY, STACKABLE, guessLatLon, seriesShape } from './kinds';
+	import { CARTESIAN, KINDS, SECONDARY, STACKABLE, mapChoice, mapComplete, mapPatch, seriesShape, type MapChoice, type MapGuess } from './kinds';
 
 	interface Props {
 		/** Bord gauche à tirer (faux : inclus dans un volet qui se redimensionne lui-même). */
 		resizable?: boolean;
 		config: ChartConfig;
 		columns: string[];
+		/** Carte : colonnes de coordonnées repérées par le classeur (proposées en attente et au changement de mode). */
+		guess?: MapGuess | null;
+		/** Carte : coordonnées illisibles ou hors bornes, ignorées. */
+		invalid?: number;
 		onchange: (cfg: ChartConfig) => void;
 		onclose: () => void;
 	}
 
-	let { config, columns, onchange, onclose, resizable = true }: Props = $props();
+	let { config, columns, guess = null, invalid = 0, onchange, onclose, resizable = true }: Props = $props();
 
 	// Le titre et les champs texte s'appliquent à la sortie du champ.
 	function set(patch: Partial<ChartConfig>) {
@@ -44,30 +48,40 @@
 		seriesKinds[k] = v;
 		set({ seriesKinds });
 	}
-	// Changer de type : la carte prend les colonnes latitude et longitude
-	// (devinées d'après leur nom) ; en la quittant, la valeur redevient la série.
+	// Changer de type : la carte attend le choix de ses coordonnées (carré
+	// grisé, colonnes repérées proposées) ; en la quittant, la valeur
+	// redevient la série.
 	function setKind(kind: ChartConfig['kind']) {
 		if (kind === config.kind) return;
 		if (kind === 'map') {
-			const g = guessLatLon(columns);
-			const series = g.lat && g.lon ? [g.lat, g.lon] : config.series.length >= 2 ? config.series.slice(0, 2) : columns.filter((c) => c !== config.x).slice(0, 2);
-			set({ kind, series, colors: undefined, secondary: undefined, seriesKinds: undefined });
+			set({ kind, series: [], mapDraft: true, mapCoords: undefined, colors: undefined, secondary: undefined, seriesKinds: undefined });
 			return;
 		}
 		if (config.kind === 'map') {
-			const series = [config.series[2] ?? config.series[0]];
-			set({ kind, series, colors: undefined, secondary: undefined, mapMode: undefined });
+			const m = mapChoice(config, guess);
+			const first = m.value || m.cols.find(Boolean) || columns.find((c) => c !== config.x) || '';
+			set({ kind, series: first ? [first] : [], colors: undefined, secondary: undefined, mapMode: undefined, mapCoords: undefined, mapDraft: undefined });
 			return;
 		}
 		set({ kind });
 	}
 	const none = '';
-	function setMapSeries(i: number, c: string) {
-		const series = [...config.series];
-		if (i === 2 && c === none) series.length = 2;
-		else series[i] = c;
-		set({ series });
+	// Carte : choix affiché (celui de la carte, ou les colonnes repérées).
+	const map = $derived(mapChoice(config, guess));
+	function setMap(patch: Partial<MapChoice>, validate: boolean) {
+		set(mapPatch({ ...map, ...patch }, validate));
 	}
+	function setMapCol(i: number, c: string) {
+		const cols = [...map.cols];
+		cols[i] = c;
+		setMap({ cols }, true);
+	}
+	function setCoords(coords: 'pair' | 'single') {
+		if (coords === map.coords) return;
+		const cols = coords === 'single' ? [guess?.coord ?? ''] : [guess?.lat ?? '', guess?.lon ?? ''];
+		setMap({ coords, cols }, false);
+	}
+	const colOptions = $derived([{ value: none, label: '(choisir)' }, ...columns.map((c) => ({ value: c, label: c }))]);
 	const hasSecondary = $derived(canSecondary && config.series.some((_, k) => config.secondary?.[k]));
 	function toggleSecondary(k: number) {
 		const secondary = config.series.map((_, j) => !!config.secondary?.[j]);
@@ -97,17 +111,39 @@
 	<section>
 		<h3>Données</h3>
 		{#if isMap}
+		<div class="line">Coordonnées
+			<div class="seg" role="radiogroup" aria-label="Coordonnées">
+				<button role="radio" aria-checked={map.coords === 'pair'} class:on={map.coords === 'pair'} title="Une colonne de latitudes, une colonne de longitudes" onclick={() => setCoords('pair')}>2 colonnes</button>
+				<button role="radio" aria-checked={map.coords === 'single'} class:on={map.coords === 'single'} title="Latitude et longitude dans la même cellule, écrites de toute façon standard" onclick={() => setCoords('single')}>1 colonne</button>
+			</div>
+		</div>
+		{#if map.coords === 'pair'}
+			<label class="line">Latitude
+				<Select value={map.cols[0] ?? none} options={colOptions} onchange={(c) => setMapCol(0, c)} />
+			</label>
+			<label class="line">Longitude
+				<Select value={map.cols[1] ?? none} options={colOptions} onchange={(c) => setMapCol(1, c)} />
+			</label>
+			<p class="hint">Nombres décimaux (48,8566 ou 48.8566), ou degrés 48°51'24"N.</p>
+		{:else}
+			<label class="line">Position
+				<Select value={map.cols[0] ?? none} options={colOptions} onchange={(c) => setMapCol(0, c)} />
+			</label>
+			<p class="hint">Toute écriture standard : 48.8566, 2.3522 · 48,8566;2,3522 · 48°51'24"N 2°21'03"E · 48°51.4'N 2°21.05'E · N48.85 E2.35 · POINT(2.3522 48.8566) · geo:48.8566,2.3522</p>
+		{/if}
+		{#if map.draft}
+			<div class="draft">
+				<p class="hint">{mapComplete(map) ? 'Colonnes proposées : vérifiez-les, puis affichez la carte.' : 'Choisissez les colonnes de coordonnées : la carte se dessine ensuite.'}</p>
+				<button class="go" disabled={!mapComplete(map)} onclick={() => setMap({}, true)}>Afficher la carte</button>
+			</div>
+		{:else if invalid > 0}
+			<p class="warn">{invalid === 1 ? '1 valeur illisible ignorée' : `${invalid} valeurs illisibles ignorées`}</p>
+		{/if}
 		<label class="line">Nom
-			<Select value={config.x} options={columns.map((c) => ({ value: c, label: c }))} onchange={(x) => set({ x })} />
-		</label>
-		<label class="line">Latitude
-			<Select value={config.series[0] ?? ''} options={columns.map((c) => ({ value: c, label: c }))} onchange={(c) => setMapSeries(0, c)} />
-		</label>
-		<label class="line">Longitude
-			<Select value={config.series[1] ?? ''} options={columns.map((c) => ({ value: c, label: c }))} onchange={(c) => setMapSeries(1, c)} />
+			<Select value={map.name} options={[{ value: none, label: '(aucun)' }, ...columns.map((c) => ({ value: c, label: c }))]} onchange={(name) => setMap({ name }, false)} />
 		</label>
 		<label class="line">Valeur
-			<Select value={config.series[2] ?? none} options={[{ value: none, label: '(aucune)' }, ...columns.map((c) => ({ value: c, label: c }))]} onchange={(c) => setMapSeries(2, c)} />
+			<Select value={map.value} options={[{ value: none, label: '(aucune)' }, ...columns.map((c) => ({ value: c, label: c }))]} onchange={(value) => setMap({ value }, false)} />
 		</label>
 		<label class="line">Affichage
 			<Select
@@ -343,5 +379,52 @@
 	.hint {
 		margin: 0;
 		color: #6b7280;
+	}
+	.seg {
+		display: flex;
+	}
+	.seg button {
+		flex: 1;
+		padding: 2px 6px;
+	}
+	.seg button + button {
+		margin-left: -1px;
+	}
+	.seg .on {
+		border-color: #217346;
+		background: #e3efe7;
+		color: #185c37;
+		font-weight: 600;
+		position: relative;
+	}
+	.hint + .line,
+	.line + .hint {
+		margin-bottom: 6px;
+	}
+	.draft {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		margin: 6px 0;
+		padding: 6px 8px;
+		border: 1px solid #c6dccd;
+		background: #f1f7f3;
+		border-radius: 3px;
+	}
+	.go {
+		align-self: flex-start;
+		padding: 3px 10px;
+		border-color: #217346;
+		background: #217346;
+		color: #fff;
+		font-weight: 600;
+	}
+	.go:disabled {
+		opacity: 0.5;
+		cursor: default;
+	}
+	.warn {
+		margin: 4px 0 6px;
+		color: #9a3412;
 	}
 </style>

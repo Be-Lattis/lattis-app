@@ -52,7 +52,7 @@
 	import { besideGutter, gutterOwner } from './gutter';
 	import Select from '#lib/ui/Select.svelte';
 	import Chart from '#lib/chart/Chart.svelte';
-	import { SINGLE_SERIES, guessLatLon, type ChartKind } from '#lib/chart/kinds.js';
+	import { SINGLE_SERIES, type ChartKind, type MapGuess } from '#lib/chart/kinds.js';
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
 	import PivotPanel from './PivotPanel.svelte';
 	import SheetButtons from './SheetButtons.svelte';
@@ -184,6 +184,10 @@
 		seriesKinds?: string[];
 		/** Carte : points (défaut) ou heat (densité). */
 		mapMode?: string;
+		/** Carte : coordonnées en deux colonnes (pair, défaut) ou en une (single). */
+		mapCoords?: string;
+		/** Carte qui attend le choix de ses coordonnées (carré grisé). */
+		mapDraft?: boolean;
 		/** Fréquences : nombre de classes (absent : automatique). */
 		bins?: number;
 		offX?: number;
@@ -198,6 +202,10 @@
 		labels: string[];
 		series: { name: string; values: (number | null)[] }[];
 		error: string;
+		/** Carte : coordonnées illisibles ignorées. */
+		invalid?: number;
+		/** Carte : colonnes de coordonnées repérées par le classeur. */
+		guess?: MapGuess | null;
 	}
 
 	export interface DepTarget {
@@ -4056,7 +4064,7 @@
 	let chartClip = $state.raw<ChartConfig | null>(null);
 
 	/** Après la création d'un graphique : le nouveau est sélectionné (Excel), prêt à être déplacé, redimensionné ou mis en forme. */
-	function selectNewChart(before: Set<number>) {
+	function selectNewChart(before: Set<number>): SheetChart | undefined {
 		const ch = charts.find((c) => !before.has(c.id));
 		if (!ch) return;
 		selChart = ch.id;
@@ -4067,6 +4075,7 @@
 		const l = reveal(b.x, b.x + b.w, scroller.scrollLeft, viewW - MARGIN, cax().offset(fCols()));
 		wrap.focus();
 		glideTo(t, l);
+		return ch;
 	}
 
 	/** Défile jusqu'à (top, left) : en douceur avec les animations (Affichage › Animations), d'un coup sinon. */
@@ -4164,13 +4173,23 @@
 		// Fréquences : la colonne active si elle est numérique, sinon la première.
 		if (kind === 'histogram' && series.length) series = [cur && num(cur) && cur !== x ? cur.name : series[0]];
 		if (kind === 'map') {
-			// Carte : colonnes latitude et longitude, devinées d'après leur nom.
-			const g = guessLatLon(cols.filter(num).map((c) => c.name));
-			if (!g.lat || !g.lon || g.lat === g.lon) {
-				say('Une carte demande des colonnes de nombres nommées latitude et longitude (ou lat et lon)');
-				return;
-			}
-			series = [g.lat, g.lon];
+			// Carte : un carré grisé, en attente de ses coordonnées ; le volet
+			// s'ouvre avec les colonnes repérées par le classeur.
+			const create = source.createChart;
+			const before = new Set(charts.map((c) => c.id));
+			const side = CHART_H + 32;
+			const at = freeChartSpot(e.t.row, e.lastCol + 2, side, side);
+			writing = writing.catch(() => undefined).then(() =>
+				create(at.row, e.lastCol + 2, { source: e.t.name, kind, x: '', series: [], mapDraft: true, width: side, height: side }).then(
+					() => {
+						say('Carte insérée : choisissez ses coordonnées dans le volet');
+						const ch = selectNewChart(before);
+						if (ch) panel = { kind: 'chart', id: ch.id };
+					},
+					(err) => say(String(err?.message ?? err))
+				)
+			);
+			return;
 		}
 		if (!series.length) {
 			say('Le tableau n’a pas de colonne de nombres à représenter');
@@ -4179,7 +4198,7 @@
 		const create = source.createChart;
 		const before = new Set(charts.map((c) => c.id));
 		writing = writing.catch(() => undefined).then(() =>
-			create(freeChartSpot(e.t.row, e.lastCol + 2).row, e.lastCol + 2, { source: e.t.name, kind, x: kind === 'map' ? (cols.find((c) => !num(c)) ?? x).name : x.name, series }).then(
+			create(freeChartSpot(e.t.row, e.lastCol + 2).row, e.lastCol + 2, { source: e.t.name, kind, x: x.name, series }).then(
 				() => {
 					say('Graphique inséré : double-clic pour le modifier, glissez-le pour le déplacer');
 					selectNewChart(before);
@@ -8150,6 +8169,8 @@
 		{#if ch}
 			<ChartPanel
 				config={ch.config}
+				guess={ch.guess}
+				invalid={ch.invalid}
 				columns={sourceColumns(ch.config.source).map((c) => c.name)}
 				onchange={(cfg) => menuAction(source.setChart && (() => source.setChart!(ch.id, cfg)))}
 				onclose={() => {

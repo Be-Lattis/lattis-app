@@ -225,6 +225,19 @@ export interface ChartConfig {
     "mapMode"?: string;
 
     /**
+     * MapCoords : carte, coordonnées en deux colonnes (« pair », défaut :
+     * séries latitude, longitude, valeur) ou en une (« single » : séries
+     * coordonnées, valeur ; toute écriture standard, voir ParseCoord).
+     */
+    "mapCoords"?: string;
+
+    /**
+     * MapDraft : carte qui attend le choix de ses coordonnées (carré grisé,
+     * rien n'est lu ; ChartInfo.Guess propose des colonnes).
+     */
+    "mapDraft"?: boolean;
+
+    /**
      * Bins : histogramme de fréquences, nombre de classes (0 : automatique).
      */
     "bins"?: number;
@@ -241,6 +254,17 @@ export interface ChartInfo {
     "labels": string[] | null;
     "series": ChartSeries[] | null;
     "error": string;
+
+    /**
+     * Invalid : carte, valeurs de coordonnées illisibles ou hors bornes,
+     * ignorées.
+     */
+    "invalid"?: number;
+
+    /**
+     * Guess : carte, colonnes de coordonnées repérées (proposées par le volet).
+     */
+    "guess"?: MapGuess | null;
 }
 
 /**
@@ -529,6 +553,19 @@ export interface Listener {
     "event": string;
     "script": string;
     "function": string;
+}
+
+/**
+ * MapGuess : colonnes de coordonnées repérées dans un tableau, proposées à
+ * une carte en attente. Mode : « pair » (Lat et Lon), « single » (Coord) ou
+ * vide (rien de sûr). Name : colonne de texte pour le nom des points.
+ */
+export interface MapGuess {
+    "mode": string;
+    "lat"?: string;
+    "lon"?: string;
+    "coord"?: string;
+    "name"?: string;
 }
 
 /**

@@ -36,6 +36,8 @@
 		seriesKinds?: string[];
 		/** Carte : points (défaut) ou heat (densité). */
 		mapMode?: string;
+		/** Carte qui attend le choix de ses coordonnées : carré grisé. */
+		mapDraft?: boolean;
 		/** Fréquences : nombre de classes (0 ou absent : automatique). */
 		bins?: number;
 	}
