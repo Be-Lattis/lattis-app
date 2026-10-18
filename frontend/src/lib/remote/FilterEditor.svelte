@@ -5,7 +5,7 @@
 	// serveur (lattis.check_predicate) ; voir rights.ts.
 	import type { RightsColumn } from '#bindings/internal/bridge/models.js';
 	import { untrack } from 'svelte';
-	import { FILTER_OPS, checkFreeFilter, filterSQL, parseFilter, type Condition, type FilterOp } from './rights';
+	import { FILTER_OPS, MY_TEAMS, checkFreeFilter, filterSQL, parseFilter, type Condition, type FilterOp } from './rights';
 
 	interface Props {
 		columns: RightsColumn[];
@@ -16,8 +16,10 @@
 		label: string;
 		/** Nouveau filtre SQL, ou erreur de saisie (sql null). */
 		onchange: (sql: string | null, error: string) => void;
+		/** Le serveur connaît les équipes (migration 0012) : « mon équipe » permis. */
+		teams?: boolean;
 	}
-	let { columns, value, disabled = false, label, onchange }: Props = $props();
+	let { columns, value, disabled = false, label, onchange, teams = false }: Props = $props();
 
 	const types = $derived(Object.fromEntries(columns.map((c) => [c.name, c.type])));
 	const parsed = untrack(() => parseFilter(value, Object.fromEntries(columns.map((c) => [c.name, c.type]))));
@@ -32,7 +34,7 @@
 			return;
 		}
 		try {
-			onchange(filterSQL(conds, types), '');
+			onchange(filterSQL(conds, types, teams), '');
 		} catch (e) {
 			onchange(null, String(e instanceof Error ? e.message : e));
 		}
@@ -47,7 +49,7 @@
 		if (m === mode) return;
 		if (m === 'sql') {
 			try {
-				sql = filterSQL(conds, types);
+				sql = filterSQL(conds, types, teams);
 			} catch {
 				// Saisie incomplète : le SQL repart de la dernière valeur.
 			}
@@ -95,7 +97,11 @@
 					>
 						<option value="value">valeur</option>
 						<option value="me">moi</option>
-						<option value="team" title="Pas encore connu du serveur">mon équipe</option>
+						<option
+							value="team"
+							disabled={!teams && c.value.kind !== 'team'}
+							title={teams ? 'Les équipes Lattis de la personne qui lit (lattis.my_teams)' : 'Ce serveur ne connaît pas les équipes (mise à jour de lattisd nécessaire)'}>mon équipe</option
+						>
 					</select>
 					{#if c.value.kind === 'value'}
 						<input aria-label="Valeur" bind:value={c.value.value} {disabled} oninput={emit} />
@@ -117,7 +123,10 @@
 		<button class="link" {disabled} onclick={add}>+ Condition</button>
 	{:else}
 		<textarea aria-label="Filtre SQL" rows="2" bind:value={sql} {disabled} oninput={emit} placeholder={`"Région" = 'Nord' AND "Commercial" = current_user`}></textarea>
-		<p class="muted">Expression booléenne sur les colonnes du tableau ; <code>current_user</code> : la personne connectée.</p>
+		<p class="muted">
+			Expression booléenne sur les colonnes du tableau ; <code>current_user</code> : la personne connectée{#if teams}
+				; <code>"Équipe" IN {MY_TEAMS}</code> : une de ses équipes{/if}.
+		</p>
 	{/if}
 </div>
 

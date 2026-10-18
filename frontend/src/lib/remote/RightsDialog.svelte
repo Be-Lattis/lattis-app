@@ -1,7 +1,8 @@
 <script lang="ts">
 	// Fichier › Partager… (classeur publié) : droits du classeur
 	// (spécification de l'application collaborative, §8.2). Trois onglets
-	// pour les propriétaires — Membres (rôles de chacun, invitations), Rôles
+	// pour les propriétaires — Membres (rôles de chacun, invitations, rôles
+	// des équipes Lattis sur un serveur qui les connaît, migration 0012), Rôles
 	// (fournis et personnalisés, niveau par nœud classeur → feuilles →
 	// tableaux, filtres de lecture et d'écriture), Restrictions — plus « Voir
 	// en tant que… » et les écarts détectés par le serveur (propriétaires et
@@ -23,6 +24,7 @@
 		commandLabel,
 		fullRights,
 		levelLabel,
+		memberCount,
 		members,
 		ownerCount,
 		parentLevel,
@@ -30,6 +32,7 @@
 		serverSheet,
 		sheetLevel,
 		tableLevel,
+		teamRows,
 		tree,
 		workbookLevel
 	} from './rights';
@@ -55,6 +58,10 @@
 	const sheets = $derived(tree(view?.tables));
 	const wbId = $derived(acl?.workbook.id ?? '');
 	const tables = $derived(view?.tables ?? []);
+	/** Le serveur connaît les équipes (migration 0012). */
+	const teamsOn = $derived(!!view?.teams);
+	const allTeams = $derived(view?.teams ?? []);
+	const teamsWithRoles = $derived(teamRows(acl, view?.teams));
 
 	onMount(load);
 
@@ -103,12 +110,31 @@
 		run(() => DocumentService.ShareGrantRole(r.id, userId, on));
 	}
 
-	async function removeMember(userId: string, ids: string[]) {
+	/** Retire ses rôles à un membre ou à une équipe (principal : user_id ou team_id). */
+	async function removeMember(principal: string, ids: string[]) {
 		for (const id of ids) {
-			await run(() => DocumentService.ShareGrantRole(id, userId, false));
+			await run(() => DocumentService.ShareGrantRole(id, principal, false));
 			if (error) return;
 		}
 	}
+
+	// --- Équipes (serveur 0012) ---------------------------------------------------------
+	let addTeam = $state('');
+	let addTeamRole = $state('');
+	/** Rôle à donner à l'équipe (lecteur par défaut). */
+	const teamRole = $derived(roles.some((r) => r.id === addTeamRole) ? addTeamRole : (roles.find((r) => r.builtin === 'reader')?.id ?? ''));
+
+	function grantTeam() {
+		const t = allTeams.find((x) => x.id === addTeam);
+		const r = roles.find((x) => x.id === teamRole);
+		if (!t || !r) return;
+		run(() => DocumentService.ShareGrantRole(r.id, t.id, true), `Rôle ${roleLabel(r)} donné à l’équipe ${t.name}`).then(() => {
+			if (!error) addTeam = '';
+		});
+	}
+
+	/** Membres d'une équipe (propriétaire du serveur) pour une infobulle. */
+	const teamMembersTitle = (ms: { email: string; display_name: string }[] | null) => (ms ? ms.map((m) => m.display_name || m.email).join(', ') || 'Aucun membre' : '');
 
 	// --- Rôles ---------------------------------------------------------------------------
 	let roleId = $state('');
@@ -272,9 +298,13 @@
 					<tbody>
 						{#each people as p (p.userId)}
 							<tr>
-								<td><strong>{p.name || p.email}</strong>{#if p.name}<br /><span class="muted">{p.email}</span>{/if}</td>
+								<td>
+									<strong>{p.name || p.email}</strong>{#if p.name}<br /><span class="muted">{p.email}</span>{/if}
+									{#if p.teams.length}<br /><span class="via" title="Membre du classeur par son équipe : ses rôles d’équipe se changent dans « Équipes » ci-dessous">via équipe {p.teams.join(', ')}</span>{/if}
+								</td>
 								{#each roles as r (r.id)}
-									{@const on = p.roles.includes(r.id)}
+									{@const on = p.personal.includes(r.id)}
+									{@const via = p.via[r.id]}
 									{@const lastOwner = on && r.builtin === 'owner' && ownerCount(acl) <= 1}
 									<td class="c">
 										<input
@@ -282,14 +312,15 @@
 											aria-label="{roleLabel(r)} pour {p.email}"
 											checked={on}
 											disabled={busy || lastOwner}
-											title={lastOwner ? 'Un classeur garde au moins un propriétaire' : ''}
+											title={lastOwner ? 'Un classeur garde au moins un propriétaire' : on ? 'Rôle donné en personne' : ''}
 											onchange={(e) => toggleRole(r, p.userId, (e.currentTarget as HTMLInputElement).checked)}
 										/>
+										{#if via}<span class="via" title="Rôle reçu par l’équipe {via.join(', ')}">✓ {via.join(', ')}</span>{/if}
 									</td>
 								{/each}
 								<td>
-									{#if !(p.roles.some((id) => roles.find((r) => r.id === id)?.builtin === 'owner') && ownerCount(acl) <= 1)}
-										<button class="link" disabled={busy} onclick={() => removeMember(p.userId, p.roles)}>Retirer</button>
+									{#if p.personal.length && !(p.personal.some((id) => roles.find((r) => r.id === id)?.builtin === 'owner') && ownerCount(acl) <= 1)}
+										<button class="link" disabled={busy} onclick={() => removeMember(p.userId, p.personal)} title={p.teams.length ? 'Retire ses rôles en personne ; ceux de son équipe restent' : ''}>Retirer</button>
 									{/if}
 								</td>
 							</tr>
@@ -310,13 +341,76 @@
 						{/each}
 					</ul>
 				{/if}
-				<p class="muted">Groupes d’annuaire : pas encore proposés par le serveur.</p>
+				{#if teamsOn}
+					<h3>Équipes</h3>
+					<table class="members">
+						<thead>
+							<tr>
+								<th>Équipe</th>
+								{#each roles as r (r.id)}<th>{roleLabel(r)}</th>{/each}
+								<th></th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each teamsWithRoles as t (t.teamId)}
+								<tr>
+									<td>
+										<strong>{t.name}</strong>
+										{#if t.count !== undefined}<br /><span class="muted" title={teamMembersTitle(t.members)}>{memberCount(t.count)}</span>{/if}
+										{#if t.members?.length}<br /><span class="muted">{t.members.map((m) => m.display_name || m.email).join(', ')}</span>{/if}
+									</td>
+									{#each roles as r (r.id)}
+										<td class="c">
+											<input
+												type="checkbox"
+												aria-label="{roleLabel(r)} pour l’équipe {t.name}"
+												checked={t.roles.includes(r.id)}
+												disabled={busy}
+												onchange={(e) => toggleRole(r, t.teamId, (e.currentTarget as HTMLInputElement).checked)}
+											/>
+										</td>
+									{/each}
+									<td><button class="link" disabled={busy} onclick={() => removeMember(t.teamId, t.roles)}>Retirer</button></td>
+								</tr>
+							{:else}
+								<tr><td class="muted" colspan={roles.length + 2}>Aucune équipe n’a de rôle sur ce classeur.</td></tr>
+							{/each}
+						</tbody>
+					</table>
+					{#if allTeams.length}
+						<form
+							class="invite"
+							onsubmit={(e) => {
+								e.preventDefault();
+								grantTeam();
+							}}
+						>
+							<select aria-label="Équipe" bind:value={addTeam} disabled={busy}>
+								<option value="" disabled>Équipe…</option>
+								{#each allTeams as t (t.id)}<option value={t.id}>{t.name} ({memberCount(t.member_count)})</option>{/each}
+							</select>
+							<select aria-label="Rôle de l’équipe" value={teamRole} disabled={busy} onchange={(e) => (addTeamRole = (e.currentTarget as HTMLSelectElement).value)}>
+								{#each roles as r (r.id)}<option value={r.id}>{roleLabel(r)}</option>{/each}
+							</select>
+							<button class="primary" type="submit" disabled={busy || !addTeam}>Donner le rôle</button>
+						</form>
+						<p class="muted">Les membres de l’équipe reçoivent ses rôles tant qu’ils en font partie. Les équipes se créent et se composent dans l’administration du serveur (propriétaires du serveur).</p>
+					{:else}
+						<p class="muted">Aucune équipe sur ce serveur : les propriétaires du serveur les créent dans son administration (écran « Équipes »).</p>
+					{/if}
+					<p class="muted">Groupes d’annuaire : plus tard (ils alimenteront les équipes).</p>
+				{:else}
+					<p class="muted">Équipes et groupes d’annuaire : pas encore proposés par ce serveur.</p>
+				{/if}
 			{:else if tab === 'roles'}
 				<div class="roles">
 					<aside>
 						{#each roles as r (r.id)}
 							<button class="role" class:on={role?.id === r.id} onclick={() => ((roleId = r.id), (editing = null))}>
-								{roleLabel(r)}<span class="muted">{r.builtin ? 'fourni' : 'personnalisé'} · {r.members?.length ?? 0}</span>
+								{roleLabel(r)}<span class="muted"
+									>{r.builtin ? 'fourni' : 'personnalisé'} · {r.members?.length ?? 0}{#if r.teams?.length}
+										+ {r.teams.length} équipe{r.teams.length > 1 ? 's' : ''}{/if}</span
+								>
 							</button>
 						{/each}
 						{#if view.collaborative}
@@ -409,6 +503,7 @@
 															columns={t.columns ?? []}
 															value={ed.read ?? ''}
 															disabled={busy}
+															teams={teamsOn}
 															onchange={(sql, e) => ((ed.read = sql), (ed.readErr = e))}
 														/>
 														{#if ed.readErr}<p class="problem">{ed.readErr}</p>{/if}
@@ -418,6 +513,7 @@
 																columns={t.columns ?? []}
 																value={ed.write ?? ''}
 																disabled={busy}
+																teams={teamsOn}
 																onchange={(sql, e) => ((ed.write = sql), (ed.writeErr = e))}
 															/>
 															{#if ed.writeErr}<p class="problem">{ed.writeErr}</p>{/if}
@@ -438,6 +534,16 @@
 									? ' Feuille marquée « mixte » ou publiée avant que le serveur connaisse les feuilles : son niveau est posé sur chacun de ses tableaux.'
 									: ''}
 								Participant : tout lire, ajouter des lignes, modifier et supprimer les siennes.
+							</p>
+						{/if}
+						{#if role && teamsOn}
+							<p class="muted teams">
+								{#if role.teams?.length}
+									Équipes de ce rôle :
+									{#each role.teams as t, i (t.team_id)}{@const n = allTeams.find((x) => x.id === t.team_id)?.member_count}{i ? ', ' : ''}<strong>{t.name}</strong>{n !== undefined ? ` (${memberCount(n)})` : ''}{/each}.
+								{:else}
+									Aucune équipe n’a ce rôle (Membres › Équipes pour en donner un).
+								{/if}
 							</p>
 						{/if}
 					</section>
@@ -482,7 +588,7 @@
 						<input aria-label="Libellé" bind:value={rLabel} disabled={busy} placeholder="Pas les dossiers clos" />
 					</div>
 					{#key `${rKey}:${rTarget?.table}`}
-						<FilterEditor label="Condition à respecter" columns={rTarget?.columns ?? []} value="" disabled={busy} onchange={(sql, e) => ((rPred = sql), (rPredErr = e))} />
+						<FilterEditor label="Condition à respecter" columns={rTarget?.columns ?? []} value="" disabled={busy} teams={teamsOn} onchange={(sql, e) => ((rPred = sql), (rPredErr = e))} />
 					{/key}
 					{#if rPredErr}<p class="problem">{rPredErr}</p>{/if}
 					<div class="actions">
@@ -770,6 +876,14 @@
 	.muted {
 		color: #6b7280;
 		font-size: 12px;
+	}
+	.via {
+		color: #1d4ed8;
+		font-size: 11px;
+		margin-left: 2px;
+	}
+	p.teams {
+		margin-top: 8px;
 	}
 	.problem {
 		color: #b45309;

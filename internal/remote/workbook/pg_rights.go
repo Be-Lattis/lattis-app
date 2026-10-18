@@ -10,7 +10,7 @@ import (
 
 // Droits d'un classeur par l'API SQL du serveur (contrat client de lattisd,
 // §5 et §7 ; schema/0005_advanced_rights.sql, 0006_admin.sql,
-// 0009_droits.sql). Écritures sur rw, une transaction par appel.
+// 0009_droits.sql, 0012_teams.sql). Écritures sur rw, une transaction par appel.
 
 func (s pgServer) tx(ctx context.Context, fn func(pgx.Tx) error) error {
 	return s.with(ctx, usageWrite, func(c *pgx.Conn) error {
@@ -68,12 +68,24 @@ func (s pgServer) DropRole(ctx context.Context, roleID string) error {
 	return s.exec(ctx, `SELECT lattis.drop_role($1::uuid)`, roleID)
 }
 
-func (s pgServer) GrantRole(ctx context.Context, roleID, userID string) error {
-	return s.exec(ctx, `SELECT lattis.grant_role($1::uuid, $2::uuid)`, roleID, userID)
+// GrantRole : une personne ou une équipe (migration 0012), même fonction.
+func (s pgServer) GrantRole(ctx context.Context, roleID, principal string) error {
+	return s.exec(ctx, `SELECT lattis.grant_role($1::uuid, $2::uuid)`, roleID, principal)
 }
 
-func (s pgServer) RevokeRole(ctx context.Context, roleID, userID string) error {
-	return s.exec(ctx, `SELECT lattis.revoke_role($1::uuid, $2::uuid)`, roleID, userID)
+func (s pgServer) RevokeRole(ctx context.Context, roleID, principal string) error {
+	return s.exec(ctx, `SELECT lattis.revoke_role($1::uuid, $2::uuid)`, roleID, principal)
+}
+
+// Teams : lattis.list_teams (migration 0012) ; fonction absente (42883) :
+// ErrUnsupported.
+func (s pgServer) Teams(ctx context.Context) ([]Team, error) {
+	out := []Team{}
+	err := s.jsonCall(ctx, `SELECT lattis.list_teams()::text`, &out)
+	if code, ok := Rejected(err); ok && code == "42883" {
+		return nil, ErrUnsupported
+	}
+	return out, err
 }
 
 // nullable : chaîne vide → NULL.

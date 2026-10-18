@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/lalamefine/lattis/internal/remote/workbook"
+	"github.com/lalamefine/lattis/internal/remote/workbook/workbooktest"
 )
 
 func TestHTTPPreview(t *testing.T) {
@@ -73,6 +74,90 @@ func TestCheckLevelAndRestriction(t *testing.T) {
 	}
 	if workbook.CheckRestriction(workbook.RestrictionRule{TableID: "t", Command: "all"}) == nil {
 		t.Fatal("restriction sans condition acceptée")
+	}
+}
+
+// TestFakeTeams : équipes Lattis du faux serveur (comme la migration 0012) :
+// rôle donné à une équipe, ses membres le reçoivent (capacités), membres
+// par l'équipe, *acl quand l'équipe change ; serveur sans 0012 : ancien
+// comportement.
+func TestFakeTeams(t *testing.T) {
+	useRoot(t)
+	ctx := context.Background()
+	fake := workbooktest.New()
+	as := fake.As("alice")
+	info := publish(t, author(t), as, workbook.Collaborative, "Ventes")
+	nord := fake.CreateTeam("Nord")
+	fake.AddTeamMember(nord, "dave")
+	teams, err := as.Teams(ctx)
+	must(t, err)
+	if len(teams) != 1 || teams[0].Name != "Nord" || teams[0].MemberCount != 1 || teams[0].Members != nil {
+		t.Fatalf("équipes : %+v", teams)
+	}
+	fake.ServerOwner("alice")
+	if teams, _ := as.Teams(ctx); len(teams[0].Members) != 1 || teams[0].Members[0].UserID != "dave" {
+		t.Fatalf("équipes vues par un propriétaire du serveur : %+v", teams)
+	}
+	if _, err := fake.As("dave").Capabilities(ctx, info.WorkbookID); err == nil {
+		t.Fatal("Dave a accès sans rôle")
+	}
+	acl, err := as.ACL(ctx, info.WorkbookID)
+	must(t, err)
+	editor := acl.Roles[slices.IndexFunc(acl.Roles, func(r workbook.Role) bool { return r.Builtin == "editor" })].ID
+	notified := make(chan string, 16)
+	lctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	ready := make(chan struct{})
+	go as.Listen(lctx, info.Channel, func() { close(ready) }, func(p string) { notified <- p })
+	<-ready
+	must(t, as.GrantRole(ctx, editor, nord))
+	caps, err := fake.As("dave").Capabilities(ctx, info.WorkbookID)
+	must(t, err)
+	if !slices.Contains(caps.Roles, "editor") {
+		t.Fatalf("capacités de Dave par son équipe : %+v", caps)
+	}
+	acl, err = as.ACL(ctx, info.WorkbookID)
+	must(t, err)
+	for _, r := range acl.Roles {
+		if want := r.ID == editor; want != (len(r.Teams) == 1 && r.Teams[0].TeamID == nord && r.Teams[0].Name == "Nord") || len(r.Members) > 0 && r.Builtin != "owner" {
+			t.Fatalf("rôle %s : %+v", r.Name, r)
+		}
+	}
+	members, err := as.Members(ctx, info.WorkbookID)
+	must(t, err)
+	if len(members) != 2 || members[1].UserID != "dave" || !slices.Equal(members[1].Roles, []string{"editor"}) || !slices.Equal(members[1].Teams, []string{"Nord"}) || len(members[0].Teams) != 0 {
+		t.Fatalf("membres : %+v", members)
+	}
+	// Un membre ajouté à l'équipe : *acl sur le canal du classeur.
+	for len(notified) > 0 {
+		<-notified
+	}
+	fake.AddTeamMember(nord, "erin")
+	select {
+	case p := <-notified:
+		if p != workbook.NoticeACL {
+			t.Fatalf("notification : %q", p)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("pas de *acl pour un membre ajouté à l'équipe")
+	}
+	must(t, as.RevokeRole(ctx, editor, nord))
+	if _, err := fake.As("dave").Capabilities(ctx, info.WorkbookID); err == nil {
+		t.Fatal("Dave garde l'accès après le retrait du rôle de son équipe")
+	}
+
+	// Serveur sans la migration 0012.
+	fake.Before12 = true
+	if _, err := as.Teams(ctx); !errors.Is(err, workbook.ErrUnsupported) {
+		t.Fatalf("équipes sans 0012 : %v", err)
+	}
+	if err := as.GrantRole(ctx, editor, nord); err == nil {
+		t.Fatal("rôle donné à une équipe sans 0012")
+	}
+	acl, err = as.ACL(ctx, info.WorkbookID)
+	must(t, err)
+	if acl.Roles[0].Teams != nil {
+		t.Fatalf("équipes d'un rôle sans 0012 : %+v", acl.Roles[0])
 	}
 }
 
@@ -202,6 +287,11 @@ func TestPostgresACL(t *testing.T) {
 	} else if _, err := as.Members(ctx, info.WorkbookID); !errors.Is(err, workbook.ErrUnsupported) {
 		t.Fatalf("membres sans 0009 : %v", err)
 	}
+	if hasMigration("0012") {
+		rights0012(t, env, as, alice, info.WorkbookID, rt)
+	} else if _, err := as.Teams(ctx); !errors.Is(err, workbook.ErrUnsupported) {
+		t.Fatalf("équipes sans 0012 : %v", err)
+	}
 
 	// Invitations.
 	inv, err := as.Invite(ctx, info.WorkbookID, "dan@example.test", []string{"reader"})
@@ -235,9 +325,73 @@ func has0008() bool {
 	return len(m) > 0
 }
 
-func has0009() bool {
-	m, _ := filepath.Glob(filepath.Join(os.Getenv("LATTIS_SERVER_SCHEMA"), "0009_*.sql"))
+func has0009() bool { return hasMigration("0009") }
+
+// hasMigration : le schéma du serveur essayé a la migration n (« 0012 »).
+func hasMigration(n string) bool {
+	m, _ := filepath.Glob(filepath.Join(os.Getenv("LATTIS_SERVER_SCHEMA"), n+"_*.sql"))
 	return len(m) > 0
+}
+
+// rights0012 : équipes Lattis (migration 0012) : liste des équipes (membres
+// pour un propriétaire du serveur seulement), rôle donné à une équipe
+// (workbook_acl.teams, workbook_members avec « teams »), filtre « mon
+// équipe » (IN (SELECT lattis.my_teams())) appliqué à la lecture d'un
+// membre de l'équipe, rôle retiré.
+func rights0012(t *testing.T, env *pgEnv, as workbook.Server, alice, wb, rt string) {
+	t.Helper()
+	ctx := context.Background()
+	erin, erinID := env.user(t, "erin")
+	// L'équipe porte le nom d'un produit : « mon équipe » le compare à la
+	// colonne Produit.
+	team := env.Text(t, `SELECT lattis.create_team('Café')::text`)
+	env.Exec(t, `SELECT lattis.add_team_member($1::uuid, $2::uuid)`, team, erinID)
+	teams, err := as.Teams(ctx)
+	must(t, err)
+	if len(teams) != 1 || teams[0].ID != team || teams[0].Name != "Café" || teams[0].MemberCount != 1 || teams[0].Members != nil {
+		t.Fatalf("équipes vues par Alice : %+v", teams)
+	}
+	role, err := as.CreateRole(ctx, wb, "Par équipe")
+	must(t, err)
+	must(t, as.SetLevels(ctx, []workbook.Level{{RoleID: role, NodeKind: workbook.NodeTable, NodeID: rt, Level: "reader", ReadFilter: `"Produit" IN (SELECT lattis.my_teams())`}}))
+	must(t, as.GrantRole(ctx, role, team))
+	acl, err := as.ACL(ctx, wb)
+	must(t, err)
+	i := slices.IndexFunc(acl.Roles, func(r workbook.Role) bool { return r.ID == role })
+	if i < 0 || len(acl.Roles[i].Teams) != 1 || acl.Roles[i].Teams[0].TeamID != team || acl.Roles[i].Teams[0].Name != "Café" || len(acl.Roles[i].Members) != 0 {
+		t.Fatalf("rôle de l'équipe : %+v", acl.Roles)
+	}
+	members, err := as.Members(ctx, wb)
+	must(t, err)
+	j := slices.IndexFunc(members, func(m workbook.WorkbookMember) bool { return m.UserID == erinID })
+	if j < 0 || !slices.Equal(members[j].Teams, []string{"Café"}) || !slices.Equal(members[j].Roles, []string{"Par équipe"}) {
+		t.Fatalf("membres par l'équipe : %+v", members)
+	}
+	// Erin lit Ventes par son équipe : seules les lignes « Café ».
+	e := open(t, env.as(erin), wb, erin)
+	if got := column(t, e, "Ventes", "Produit"); len(got) == 0 || slices.ContainsFunc(got, func(p string) bool { return p != "Café" }) {
+		t.Fatalf("lignes vues par Erin (mon équipe) : %v", got)
+	}
+	// Propriétaire du serveur : les membres de l'équipe.
+	env.Exec(t, `GRANT lattis_server_owners TO `+quoteIdent(alice))
+	teams, err = as.Teams(ctx)
+	must(t, err)
+	if len(teams) != 1 || len(teams[0].Members) != 1 || teams[0].Members[0].UserID != erinID {
+		t.Fatalf("équipes vues par un propriétaire du serveur : %+v", teams)
+	}
+	env.Exec(t, `REVOKE lattis_server_owners FROM `+quoteIdent(alice))
+	must(t, as.RevokeRole(ctx, role, team))
+	acl, err = as.ACL(ctx, wb)
+	must(t, err)
+	if i := slices.IndexFunc(acl.Roles, func(r workbook.Role) bool { return r.ID == role }); i < 0 || len(acl.Roles[i].Teams) != 0 {
+		t.Fatalf("rôle retiré à l'équipe : %+v", acl.Roles)
+	}
+	members, err = as.Members(ctx, wb)
+	must(t, err)
+	if slices.ContainsFunc(members, func(m workbook.WorkbookMember) bool { return m.UserID == erinID }) {
+		t.Fatalf("Erin encore membre : %+v", members)
+	}
+	must(t, as.DropRole(ctx, role))
 }
 
 // rights0009 : retours du serveur sur les droits (migration 0009) : feuille
@@ -247,13 +401,22 @@ func rights0009(t *testing.T, env *pgEnv, as workbook.Server, wb, rt, carol, car
 	t.Helper()
 	ctx := context.Background()
 	// Recompiler (avant tout set_level, qui recompile aussi) : l'empreinte
-	// est reprise, plus d'écart ; la règle posée à la main reste dans
-	// PostgreSQL mais n'est plus signalée (droits.md §4).
+	// est reprise ; la règle posée à la main reste dans PostgreSQL et, avec
+	// la migration 0011 à jour, reste signalée (droits.md §4) tant qu'elle
+	// n'est pas retirée.
 	must(t, as.Recompile(ctx, wb))
 	d, err := as.Drift(ctx, wb)
 	must(t, err)
-	if len(d) != 0 {
+	if len(d) > 1 || len(d) == 1 && !slices.Equal(d[0].ForeignPolicies, []string{"main_libre"}) {
 		t.Fatalf("écarts après recompilation : %+v", d)
+	}
+	acl0, err := as.ACL(ctx, wb)
+	must(t, err)
+	env.Exec(t, `DROP POLICY main_libre ON `+quoteIdent(acl0.Workbook.Schema)+`."Ventes"`)
+	d, err = as.Drift(ctx, wb)
+	must(t, err)
+	if len(d) != 0 {
+		t.Fatalf("écarts après le retrait de la règle : %+v", d)
 	}
 	acl, err := as.ACL(ctx, wb)
 	must(t, err)

@@ -76,6 +76,13 @@ type Fake struct {
 	checks []check
 	// held : transactions en cours (Hold) ; sync_point ne les dépasse pas.
 	held []int64
+	// Before12 imite un serveur sans la migration 0012 : pas d'équipes
+	// (list_teams absent, grant_role pour une personne seulement).
+	Before12 bool
+	// teams : équipes Lattis (CreateTeam) ; serverOwners : propriétaires du
+	// serveur (ServerOwner), qui voient les membres des équipes.
+	teams        []*fteam
+	serverOwners map[string]bool
 }
 
 // check refuse (42501) l'écriture de value dans la colonne col d'un
@@ -324,7 +331,16 @@ func (s *session) begin(name string) error {
 	return nil
 }
 
-func (s *session) roles(b *book) []string { return b.roles[s.user] }
+// roles : rôles fournis de l'utilisateur, en personne ou par une équipe.
+func (s *session) roles(b *book) []string {
+	out := b.roles[s.user]
+	for _, r := range s.f.teamRoles(b, s.user) {
+		if r.builtin != "" && !slices.Contains(out, r.builtin) {
+			out = append(slices.Clip(out), r.builtin)
+		}
+	}
+	return out
+}
 
 func (s *session) has(b *book, want ...string) bool {
 	for _, r := range s.roles(b) {

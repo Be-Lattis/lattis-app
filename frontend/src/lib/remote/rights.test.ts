@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ACL, Role } from '#bindings/internal/remote/workbook/models.js';
 import type { RightsTable, RightsView } from '#bindings/internal/bridge/models.js';
-import { checkFreeFilter, conditionSQL, filterSQL, members, ownerCount, parentLevel, parseFilter, rightsObjects, serverSheet, sheetLevel, tableLevel, tree, type Condition } from './rights';
+import { checkFreeFilter, conditionSQL, filterSQL, memberCount, members, ownerCount, teamRows, parentLevel, parseFilter, rightsObjects, serverSheet, sheetLevel, tableLevel, tree, type Condition } from './rights';
 
 const types = { Produit: 'text', Quantité: 'integer', Prix: 'decimal', Livré: 'date', Payé: 'boolean', Commercial: 'text' };
 
@@ -19,7 +19,7 @@ const table = (o: Partial<RightsTable>): RightsTable => ({
 	...o
 });
 
-const role = (o: Partial<Role>): Role => ({ id: 'r', name: 'Nord', builtin: '', grants: [], members: [], ...o });
+const role = (o: Partial<Role>): Role => ({ id: 'r', name: 'Nord', builtin: '', grants: [], members: [], teams: null, ...o });
 
 describe('filtres en formulaire simple', () => {
 	it('écrit le SQL de chaque opérateur', () => {
@@ -35,11 +35,26 @@ describe('filtres en formulaire simple', () => {
 		expect(conditionSQL(c('Quantité', 'filled', ''), types)).toBe(`"Quantité" IS NOT NULL`);
 		expect(conditionSQL({ column: 'Commercial', op: '=', value: { kind: 'me' } }, types)).toBe(`"Commercial" = current_user`);
 	});
-	it('refuse les valeurs hors type, « moi » mal placé et « mon équipe »', () => {
+	it('refuse les valeurs hors type, « moi » mal placé et « mon équipe » sans équipes', () => {
 		expect(() => conditionSQL({ column: 'Quantité', op: '=', value: { kind: 'value', value: '1,5' } }, types)).toThrow(/entier/);
 		expect(() => conditionSQL({ column: 'Quantité', op: '=', value: { kind: 'me' } }, types)).toThrow(/texte/);
-		expect(() => conditionSQL({ column: 'Commercial', op: '=', value: { kind: 'team' } }, types)).toThrow(/équipe/);
+		expect(() => conditionSQL({ column: 'Commercial', op: '=', value: { kind: 'team' } }, types)).toThrow(/ne connaît pas les équipes/);
 		expect(() => conditionSQL({ column: 'Inconnue', op: '=', value: { kind: 'value', value: 'x' } }, types)).toThrow(/inconnue/);
+	});
+	it('« mon équipe » (serveur 0012) : IN (SELECT lattis.my_teams())', () => {
+		const team = (column: string, op: Condition['op']): Condition => ({ column, op, value: { kind: 'team' } });
+		expect(conditionSQL(team('Commercial', '='), types, true)).toBe(`"Commercial" IN (SELECT lattis.my_teams())`);
+		expect(conditionSQL(team('Commercial', '<>'), types, true)).toBe(`"Commercial" NOT IN (SELECT lattis.my_teams())`);
+		expect(() => conditionSQL(team('Quantité', '='), types, true)).toThrow(/texte/);
+		expect(() => conditionSQL(team('Commercial', 'contains'), types, true)).toThrow(/égal ou différent/);
+		const cs = [team('Commercial', '='), { column: 'Quantité', op: '>', value: { kind: 'value', value: '2' } } as Condition, team('Produit', '<>')];
+		const sql = filterSQL(cs, types, true);
+		expect(sql).toBe(`"Commercial" IN (SELECT lattis.my_teams()) AND "Quantité" > 2 AND "Produit" NOT IN (SELECT lattis.my_teams())`);
+		expect(parseFilter(sql, types)).toEqual(cs);
+		expect(parseFilter(`"Inconnue" IN (SELECT lattis.my_teams())`, types)).toBeNull();
+		// Contrôle local d'un filtre libre : la sous-requête est permise.
+		expect(checkFreeFilter(sql)).toBe('');
+		expect(checkFreeFilter(`"Équipe" IN (SELECT lattis.my_teams()) OR "Commercial" = current_user`)).toBe('');
 	});
 	it('relit ce qu’il écrit, et laisse le reste en SQL libre', () => {
 		const cs: Condition[] = [
@@ -119,21 +134,48 @@ const acl: ACL = {
 describe('membres', () => {
 	it('regroupe les rôles par personne', () => {
 		expect(members(acl)).toEqual([
-			{ userId: 'a', email: 'alice@x', name: 'Alice', roles: ['o'] },
-			{ userId: 'b', email: 'bob@x', name: '', roles: ['p', 'n'] }
+			{ userId: 'a', email: 'alice@x', name: 'Alice', roles: ['o'], personal: ['o'], teams: [], via: {} },
+			{ userId: 'b', email: 'bob@x', name: '', roles: ['p', 'n'], personal: ['p', 'n'], teams: [], via: {} }
 		]);
 		expect(ownerCount(acl)).toBe(1);
 	});
 	it('liste du serveur (workbook_members) : rôles par nom rendus en identifiants', () => {
 		const list = [
-			{ user_id: 'b', email: 'bob@x', display_name: '', pg_role: 'bob@x', roles: ['participant', 'nord'] },
-			{ user_id: 'a', email: 'alice@x', display_name: 'Alice', pg_role: 'alice@x', roles: ['owner'] }
+			{ user_id: 'b', email: 'bob@x', display_name: '', pg_role: 'bob@x', roles: ['participant', 'nord'], teams: null },
+			{ user_id: 'a', email: 'alice@x', display_name: 'Alice', pg_role: 'alice@x', roles: ['owner'], teams: null }
 		];
 		expect(members(acl, list)).toEqual([
-			{ userId: 'a', email: 'alice@x', name: 'Alice', roles: ['o'] },
-			{ userId: 'b', email: 'bob@x', name: '', roles: ['p', 'n'] }
+			{ userId: 'a', email: 'alice@x', name: 'Alice', roles: ['o'], personal: ['o'], teams: [], via: {} },
+			{ userId: 'b', email: 'bob@x', name: '', roles: ['p', 'n'], personal: ['p', 'n'], teams: [], via: {} }
 		]);
 		expect(members(null, list)[1].roles).toEqual(['participant', 'nord']);
+		expect(members(null, list)[1].personal).toEqual(['participant', 'nord']);
+	});
+	it('équipes (serveur 0012) : membres par une équipe, rôles en personne et par équipe', () => {
+		const withTeams: ACL = {
+			...acl,
+			roles: (acl.roles ?? []).map((r) => (r.id === 'n' ? { ...r, teams: [{ team_id: 'T1', name: 'Nord' }] } : r.id === 'p' ? { ...r, teams: [{ team_id: 'T2', name: 'Sud' }, { team_id: 'T1', name: 'Nord' }] } : { ...r, teams: [] }))
+		};
+		const list = [
+			{ user_id: 'b', email: 'bob@x', display_name: '', pg_role: 'bob', roles: ['participant', 'Nord'], teams: [] },
+			{ user_id: 'c', email: 'carol@x', display_name: 'Carol', pg_role: 'carol', roles: ['Nord', 'participant'], teams: ['Nord'] }
+		];
+		const rows = members(withTeams, list);
+		expect(rows[1]).toEqual({ userId: 'c', email: 'carol@x', name: 'Carol', roles: ['n', 'p'], personal: [], teams: ['Nord'], via: { p: ['Nord'], n: ['Nord'] } });
+		expect(rows[0].personal).toEqual(['p', 'n']);
+		const teams = [
+			{ id: 'T1', name: 'Nord', member_count: 2, members: [{ user_id: 'c', email: 'carol@x', display_name: 'Carol' }] },
+			{ id: 'T2', name: 'Sud', member_count: 0, members: null },
+			{ id: 'T3', name: 'Est', member_count: 5, members: null }
+		];
+		expect(teamRows(withTeams, teams)).toEqual([
+			{ teamId: 'T1', name: 'Nord', roles: ['p', 'n'], count: 2, members: [{ user_id: 'c', email: 'carol@x', display_name: 'Carol' }] },
+			{ teamId: 'T2', name: 'Sud', roles: ['p'], count: 0, members: null }
+		]);
+		expect(teamRows(withTeams, null)[0]).toMatchObject({ teamId: 'T1', count: undefined, members: null });
+		expect(teamRows(acl, teams)).toEqual([]);
+		expect(memberCount(1)).toBe('1 membre');
+		expect(memberCount(3)).toBe('3 membres');
 	});
 });
 
@@ -152,6 +194,7 @@ describe("objets de l'onglet SQL", () => {
 		drift: [],
 		members: null,
 		customInvite: false,
+		teams: null,
 		...o
 	});
 	it('propriétaire : rôles et règles générés', () => {
@@ -160,6 +203,8 @@ describe("objets de l'onglet SQL", () => {
 		expect(objs[2].lines).toEqual([`"Ventes" : SELECT USING ("Région" = 'Nord')`]);
 		expect(objs[1].kind).toBe('rôle fourni · 1 membre');
 		expect(objs[3].lines[0]).toBe(`"Ventes" : AS RESTRICTIVE FOR DELETE TO tous les rôles USING ("Clos" = false)`);
+		const teamed: ACL = { ...acl, roles: (acl.roles ?? []).map((r) => (r.id === 'n' ? { ...r, teams: [{ team_id: 'T1', name: 'Nord' }, { team_id: 'T2', name: 'Sud' }] } : r)) };
+		expect(rightsObjects(view({ canManage: true, acl: teamed }))[2].kind).toBe('rôle personnalisé · 1 membre · équipes Nord, Sud');
 	});
 	it('autres membres : leurs droits', () => {
 		expect(rightsObjects(view({}))).toEqual([{ name: 'Vos droits', kind: 'Participant, Nord', lines: ['Ventes : Participant (vue filtrée, restriction « Pas les dossiers clos »)'] }]);

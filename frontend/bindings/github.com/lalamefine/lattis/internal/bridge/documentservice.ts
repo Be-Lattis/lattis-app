@@ -1416,10 +1416,11 @@ export function ShareEditing(sheet: number, row: number, col: number, on: boolea
 }
 
 /**
- * ShareGrantRole donne un rôle à un membre ; on faux : le lui retire.
+ * ShareGrantRole donne un rôle à un membre, personne (user_id) ou équipe
+ * (team_id de RightsView.Teams, migration 0012) ; on faux : le lui retire.
  */
-export function ShareGrantRole(roleID: string, userID: string, on: boolean): $CancellablePromise<$models.RightsView> {
-    return $Call.ByID(490379137, roleID, userID, on);
+export function ShareGrantRole(roleID: string, principal: string, on: boolean): $CancellablePromise<$models.RightsView> {
+    return $Call.ByID(490379137, roleID, principal, on);
 }
 
 /**

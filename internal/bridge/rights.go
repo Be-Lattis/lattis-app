@@ -81,6 +81,11 @@ type RightsView struct {
 	// CustomInvite : le serveur invite à un rôle personnalisé (migration
 	// 0009).
 	CustomInvite bool `json:"customInvite"`
+	// Teams : équipes Lattis du serveur, à qui donner des rôles
+	// (lattis.list_teams, propriétaire, en ligne ; membres de chacune pour un
+	// propriétaire du serveur). nil : serveur sans la migration 0012 (pas
+	// d'équipes ni de filtre « mon équipe »).
+	Teams []workbook.Team `json:"teams"`
 	// Error : le serveur n'a pas répondu (droits locaux seulement).
 	Error string `json:"error,omitempty"`
 }
@@ -165,6 +170,10 @@ func (s *DocumentService) ShareRights(ctx context.Context, remote bool) (RightsV
 		}
 		v.ACL = &acl
 		sheetKeys(v.Tables, acl)
+		// Équipes (0012) : sans elles, l'écran reste celui d'avant.
+		if teams, err := srv.Teams(ctx); err == nil {
+			v.Teams = teams
+		}
 	}
 	switch m, err := srv.Members(ctx, info.WorkbookID); {
 	case errors.Is(err, workbook.ErrUnsupported):
@@ -286,13 +295,14 @@ func (s *DocumentService) ShareDropRole(ctx context.Context, roleID string) (Rig
 	return s.rightsDo(ctx, func(srv workbook.Server, _ *workbook.Info) error { return srv.DropRole(ctx, roleID) })
 }
 
-// ShareGrantRole donne un rôle à un membre ; on faux : le lui retire.
-func (s *DocumentService) ShareGrantRole(ctx context.Context, roleID, userID string, on bool) (RightsView, error) {
+// ShareGrantRole donne un rôle à un membre, personne (user_id) ou équipe
+// (team_id de RightsView.Teams, migration 0012) ; on faux : le lui retire.
+func (s *DocumentService) ShareGrantRole(ctx context.Context, roleID, principal string, on bool) (RightsView, error) {
 	return s.rightsDo(ctx, func(srv workbook.Server, _ *workbook.Info) error {
 		if on {
-			return srv.GrantRole(ctx, roleID, userID)
+			return srv.GrantRole(ctx, roleID, principal)
 		}
-		return srv.RevokeRole(ctx, roleID, userID)
+		return srv.RevokeRole(ctx, roleID, principal)
 	})
 }
 

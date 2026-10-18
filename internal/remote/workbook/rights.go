@@ -52,9 +52,11 @@ type Rights interface {
 	// n'est posé (lattis.create_role).
 	CreateRole(ctx context.Context, workbookID, name string) (string, error)
 	DropRole(ctx context.Context, roleID string) error
-	// GrantRole et RevokeRole ajoutent ou retirent un membre d'un rôle.
-	GrantRole(ctx context.Context, roleID, userID string) error
-	RevokeRole(ctx context.Context, roleID, userID string) error
+	// GrantRole et RevokeRole ajoutent ou retirent un membre d'un rôle :
+	// une personne (user_id) ou, sur un serveur qui a la migration 0012, une
+	// équipe (team_id, voir Teams).
+	GrantRole(ctx context.Context, roleID, principal string) error
+	RevokeRole(ctx context.Context, roleID, principal string) error
 	// SetLevels pose des niveaux (et filtres) dans une seule transaction
 	// (lattis.set_level pour chacun).
 	SetLevels(ctx context.Context, levels []Level) error
@@ -69,6 +71,10 @@ type Rights interface {
 	// (lattis.workbook_members : propriétaires et concepteurs) ;
 	// ErrUnsupported sur un serveur sans la migration 0009.
 	Members(ctx context.Context, workbookID string) ([]WorkbookMember, error)
+	// Teams liste les équipes Lattis du serveur (lattis.list_teams, tout
+	// utilisateur connecté ; leurs membres pour les propriétaires du serveur
+	// seulement) ; ErrUnsupported sur un serveur sans la migration 0012.
+	Teams(ctx context.Context) ([]Team, error)
 	// Recompile recompile les droits du classeur sans rien changer
 	// (lattis.compile_acl : propriétaires et concepteurs) : remet d'aplomb
 	// les écarts (les règles ajoutées à la main restent).
@@ -80,13 +86,33 @@ type Rights interface {
 var ErrUnsupported = errors.New("fonction absente de ce serveur (mise à jour de lattisd nécessaire)")
 
 // WorkbookMember est un membre du classeur (lattis.workbook_members) :
-// Roles nomme ses rôles, fournis (owner, reader…) ou personnalisés (nom).
+// Roles nomme ses rôles, fournis (owner, reader…) ou personnalisés (nom),
+// en personne ou par une équipe ; Teams nomme les équipes par lesquelles il
+// est membre (migration 0012 ; vide : en personne seulement).
 type WorkbookMember struct {
 	UserID      string   `json:"user_id"`
 	Email       string   `json:"email"`
 	DisplayName string   `json:"display_name"`
 	PGRole      string   `json:"pg_role"`
 	Roles       []string `json:"roles"`
+	Teams       []string `json:"teams"`
+}
+
+// Team est une équipe Lattis (lattis.list_teams, migration 0012) : créée
+// par les propriétaires du serveur, elle reçoit des rôles de classeur comme
+// une personne. Members : ses membres, pour un propriétaire du serveur
+// seulement (nil sinon).
+type Team struct {
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	MemberCount int      `json:"member_count"`
+	Members     []Member `json:"members"`
+}
+
+// RoleTeam est une équipe membre d'un rôle (workbook_acl, migration 0012).
+type RoleTeam struct {
+	TeamID string `json:"team_id"`
+	Name   string `json:"name"`
 }
 
 // ACL est la liste des droits d'un classeur (lattis.workbook_acl).
@@ -117,13 +143,15 @@ type ACLTable struct {
 }
 
 // Role est un rôle du classeur : fourni (Builtin : owner, designer,
-// editor, participant, reader) ou personnalisé (Builtin vide).
+// editor, participant, reader) ou personnalisé (Builtin vide). Members :
+// ses membres en personne ; Teams : ses équipes (migration 0012).
 type Role struct {
-	ID      string   `json:"id"`
-	Name    string   `json:"name"`
-	Builtin string   `json:"builtin"`
-	Grants  []Grant  `json:"grants"`
-	Members []Member `json:"members"`
+	ID      string     `json:"id"`
+	Name    string     `json:"name"`
+	Builtin string     `json:"builtin"`
+	Grants  []Grant    `json:"grants"`
+	Members []Member   `json:"members"`
+	Teams   []RoleTeam `json:"teams"`
 }
 
 // Grant est le niveau propre d'un rôle sur un nœud ; les filtres ne se

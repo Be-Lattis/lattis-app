@@ -13,7 +13,8 @@ import (
 )
 
 // Droits d'un classeur (schema/0005_advanced_rights.sql, 0006_admin.sql,
-// 0008_sync.sql et 0009_droits.sql du serveur) : rôles fournis et
+// 0008_sync.sql, 0009_droits.sql et 0012_teams.sql du serveur ; équipes :
+// teams.go) : rôles fournis et
 // personnalisés, niveaux par nœud hérités (classeur → feuille → tableau ;
 // la feuille est celle donnée à create_table), filtres (gardés, non
 // évalués : la RLS se vérifie contre PostgreSQL), restrictions,
@@ -37,6 +38,7 @@ type frole struct {
 	id, name, builtin string
 	grants            map[string]workbook.Grant // node_kind/node_id
 	members           []string                  // rôles personnalisés (fournis : book.roles)
+	teams             []string                  // équipes membres du rôle (0012)
 }
 
 type bookACL struct {
@@ -78,11 +80,12 @@ func (f *Fake) SetDrift(workbookID string, d []workbook.Drift) {
 	}
 }
 
-// userRoles : rôles (fournis et personnalisés) d'un utilisateur.
+// userRoles : rôles (fournis et personnalisés) d'un utilisateur, en
+// personne ou par une équipe.
 func (f *Fake) userRoles(b *book, user string) []*frole {
 	var out []*frole
 	for _, r := range f.acl(b).roles {
-		if (r.builtin != "" && slices.Contains(b.roles[user], r.builtin)) || slices.Contains(r.members, user) {
+		if (r.builtin != "" && slices.Contains(b.roles[user], r.builtin)) || slices.Contains(r.members, user) || f.inTeams(r, user) {
 			out = append(out, r)
 		}
 	}
@@ -237,6 +240,15 @@ func (s *session) ACL(ctx context.Context, workbookID string) (workbook.ACL, err
 	slices.Sort(users)
 	for _, r := range a.roles {
 		role := workbook.Role{ID: r.id, Name: r.name, Builtin: r.builtin, Grants: []workbook.Grant{}, Members: []workbook.Member{}}
+		if !s.f.Before12 {
+			role.Teams = []workbook.RoleTeam{}
+			for _, id := range r.teams {
+				if t := s.f.team(id); t != nil {
+					role.Teams = append(role.Teams, workbook.RoleTeam{TeamID: t.id, Name: t.name})
+				}
+			}
+			slices.SortFunc(role.Teams, func(x, y workbook.RoleTeam) int { return strings.Compare(strings.ToLower(x.Name), strings.ToLower(y.Name)) })
+		}
 		for _, g := range r.grants {
 			role.Grants = append(role.Grants, g)
 		}
@@ -326,6 +338,11 @@ func (f *Fake) known(user string) bool {
 			return true
 		}
 	}
+	for _, t := range f.teams {
+		if slices.Contains(t.members, user) {
+			return true
+		}
+	}
 	return false
 }
 
@@ -412,14 +429,19 @@ func (s *session) GrantRole(ctx context.Context, roleID, userID string) error {
 		return err
 	}
 	b, r, err := s.role(roleID)
-	if err == nil && !s.f.known(userID) && !s.f.pending[userID] {
-		err = errors.New("utilisateur inconnu")
+	team := s.f.team(userID)
+	if err == nil && team == nil && !s.f.known(userID) && !s.f.pending[userID] {
+		err = errors.New("utilisateur ou équipe inconnu")
 	}
 	if err != nil {
 		s.f.mu.Unlock()
 		return err
 	}
-	if r.builtin != "" {
+	if team != nil {
+		if !slices.Contains(r.teams, team.id) {
+			r.teams = append(r.teams, team.id)
+		}
+	} else if r.builtin != "" {
 		if !slices.Contains(b.roles[userID], r.builtin) {
 			b.roles[userID] = append(b.roles[userID], r.builtin)
 		}
@@ -442,7 +464,9 @@ func (s *session) RevokeRole(ctx context.Context, roleID, userID string) error {
 		s.f.mu.Unlock()
 		return err
 	}
-	if r.builtin != "" {
+	if team := s.f.team(userID); team != nil {
+		r.teams = slices.DeleteFunc(r.teams, func(x string) bool { return x == team.id })
+	} else if r.builtin != "" {
 		if r.builtin == "owner" && slices.Contains(b.roles[userID], "owner") {
 			n := 0
 			for _, rs := range b.roles {
@@ -681,7 +705,7 @@ func (s *session) Preview(ctx context.Context, workbookID, userID, tableID strin
 
 // levelOf : niveau et lecture filtrée d'un utilisateur sur un tableau.
 func (s *session) levelOf(b *book, t *table) (string, bool) {
-	if len(s.roles(b)) == 0 && !slices.ContainsFunc(s.f.acl(b).roles, func(r *frole) bool { return slices.Contains(r.members, s.user) }) {
+	if len(s.roles(b)) == 0 && len(s.f.userRoles(b, s.user)) == 0 {
 		return workbook.LevelNone, false
 	}
 	if b.mode != workbook.Collaborative {
@@ -740,15 +764,35 @@ func (s *session) Members(ctx context.Context, workbookID string) ([]workbook.Wo
 		return nil, ErrPrivilege{"réservé aux propriétaires et concepteurs du classeur"}
 	}
 	by := map[string][]string{}
+	via := map[string][]string{} // équipes par lesquelles l'utilisateur est membre (0012)
+	add := func(u, name string) {
+		if !slices.Contains(by[u], name) {
+			by[u] = append(by[u], name)
+		}
+	}
 	for u, rs := range b.roles {
 		for _, r := range rs {
-			by[u] = append(by[u], r)
+			add(u, r)
 		}
 	}
 	for _, r := range s.f.acl(b).roles {
-		if r.builtin == "" {
+		key := r.builtin
+		if key == "" {
+			key = r.name
 			for _, u := range r.members {
-				by[u] = append(by[u], r.name)
+				add(u, key)
+			}
+		}
+		for _, id := range r.teams {
+			t := s.f.team(id)
+			if t == nil {
+				continue
+			}
+			for _, u := range t.members {
+				add(u, key)
+				if !slices.Contains(via[u], t.name) {
+					via[u] = append(via[u], t.name)
+				}
 			}
 		}
 	}
@@ -758,7 +802,15 @@ func (s *session) Members(ctx context.Context, workbookID string) ([]workbook.Wo
 			continue
 		}
 		slices.Sort(rs)
-		out = append(out, workbook.WorkbookMember{UserID: u, Email: email(u), DisplayName: u, PGRole: u, Roles: rs})
+		m := workbook.WorkbookMember{UserID: u, Email: email(u), DisplayName: u, PGRole: u, Roles: rs}
+		if !s.f.Before12 {
+			m.Teams = via[u]
+			if m.Teams == nil {
+				m.Teams = []string{}
+			}
+			slices.Sort(m.Teams)
+		}
+		out = append(out, m)
 	}
 	slices.SortFunc(out, func(x, y workbook.WorkbookMember) int { return strings.Compare(x.Email, y.Email) })
 	return out, nil

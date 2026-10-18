@@ -3,7 +3,7 @@
 // DocumentService.ShareRights (internal/bridge/rights.go) ; les niveaux, les
 // filtres et les restrictions suivent l'API SQL du serveur
 // (docs/collaboration/droits.md).
-import type { ACL, Grant, Role, WorkbookMember } from '#bindings/internal/remote/workbook/models.js';
+import type { ACL, Grant, Member, Role, Team, WorkbookMember } from '#bindings/internal/remote/workbook/models.js';
 import type { RightsTable, RightsView } from '#bindings/internal/bridge/models.js';
 
 export const LEVELS = ['none', 'reader', 'participant', 'editor'] as const;
@@ -43,32 +43,89 @@ export interface MemberRow {
 	userId: string;
 	email: string;
 	name: string;
-	/** Rôles du membre (identifiants). */
+	/** Rôles du membre (identifiants), en personne ou par une équipe. */
 	roles: string[];
+	/** Rôles donnés en personne (ceux qu'on coche ou décoche pour lui). */
+	personal: string[];
+	/** Équipes par lesquelles il est membre (noms, serveur 0012). */
+	teams: string[];
+	/** Rôle (identifiant) → équipes du membre qui le lui donnent. */
+	via: Record<string, string[]>;
 }
 
 /**
  * Membres du classeur (une ligne par personne), triés par adresse : liste
  * du serveur (lattis.workbook_members, rôles par nom, rendus en
- * identifiants par la liste des rôles de acl) quand elle est là, sinon
- * tirée des membres de chaque rôle de acl (serveur sans la migration 0009).
+ * identifiants par la liste des rôles de acl ; avec la migration 0012, les
+ * membres par une équipe aussi) quand elle est là, sinon tirée des membres
+ * de chaque rôle de acl (serveur sans la migration 0009).
  */
 export function members(acl: ACL | null | undefined, list?: readonly WorkbookMember[] | null): MemberRow[] {
 	if (list) {
 		const idOf = (name: string) => acl?.roles?.find((r) => (r.builtin ? r.builtin === name : r.name.toLowerCase() === name.toLowerCase()))?.id ?? name;
 		return list
-			.map((m) => ({ userId: m.user_id, email: m.email, name: m.display_name || '', roles: (m.roles ?? []).map(idOf) }))
+			.map((m) => {
+				const roles = (m.roles ?? []).map(idOf);
+				const teams = m.teams ?? [];
+				const via: Record<string, string[]> = {};
+				for (const r of acl?.roles ?? []) {
+					const names = (r.teams ?? []).map((t) => t.name).filter((n) => teams.includes(n));
+					if (names.length) via[r.id] = names;
+				}
+				// Sans la liste complète (concepteur) : tout compte comme en personne.
+				const personal = acl ? roles.filter((id) => acl.roles?.find((r) => r.id === id)?.members?.some((x) => x.user_id === m.user_id)) : roles;
+				return { userId: m.user_id, email: m.email, name: m.display_name || '', roles, personal, teams, via };
+			})
 			.sort((a, b) => a.email.localeCompare(b.email));
 	}
 	const by = new Map<string, MemberRow>();
 	for (const r of acl?.roles ?? []) {
 		for (const m of r.members ?? []) {
 			let row = by.get(m.user_id);
-			if (!row) by.set(m.user_id, (row = { userId: m.user_id, email: m.email, name: m.display_name || '', roles: [] }));
+			if (!row) by.set(m.user_id, (row = { userId: m.user_id, email: m.email, name: m.display_name || '', roles: [], personal: [], teams: [], via: {} }));
 			row.roles.push(r.id);
+			row.personal.push(r.id);
 		}
 	}
 	return [...by.values()].sort((a, b) => a.email.localeCompare(b.email));
+}
+
+// --- Équipes (serveur 0012) ------------------------------------------------------
+
+export interface TeamRow {
+	teamId: string;
+	name: string;
+	/** Rôles donnés à l'équipe (identifiants). */
+	roles: string[];
+	/** Nombre de membres (list_teams ; undefined : équipe absente de la liste). */
+	count?: number;
+	/** Membres, pour un propriétaire du serveur seulement (null sinon). */
+	members: Member[] | null;
+}
+
+/**
+ * Équipes qui ont au moins un rôle sur le classeur (workbook_acl), triées
+ * par nom, avec leur nombre de membres (et leurs membres pour un
+ * propriétaire du serveur) tirés de list_teams.
+ */
+export function teamRows(acl: ACL | null | undefined, teams: readonly Team[] | null | undefined): TeamRow[] {
+	const by = new Map<string, TeamRow>();
+	for (const r of acl?.roles ?? []) {
+		for (const t of r.teams ?? []) {
+			let row = by.get(t.team_id);
+			if (!row) {
+				const info = teams?.find((x) => x.id === t.team_id);
+				by.set(t.team_id, (row = { teamId: t.team_id, name: t.name, roles: [], count: info?.member_count, members: info?.members ?? null }));
+			}
+			row.roles.push(r.id);
+		}
+	}
+	return [...by.values()].sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+}
+
+/** « 3 membres », « 1 membre ». */
+export function memberCount(n: number): string {
+	return `${n} membre${n > 1 ? 's' : ''}`;
 }
 
 /** Nombre de propriétaires (on garde au moins un). */
@@ -224,14 +281,25 @@ export function literal(value: string, type: string): string {
 	return quoteText(value);
 }
 
-/** Expression SQL d'une condition (colonnes du tableau : name → type). */
-export function conditionSQL(c: Condition, types: Record<string, string>): string {
+/** Équipes de la personne qui lit (lattis.my_teams, serveur 0012). */
+export const MY_TEAMS = '(SELECT lattis.my_teams())';
+
+/**
+ * Expression SQL d'une condition (colonnes du tableau : name → type) ;
+ * teams : le serveur connaît les équipes (migration 0012, « mon équipe »).
+ */
+export function conditionSQL(c: Condition, types: Record<string, string>, teams = false): string {
 	const type = types[c.column];
 	if (type === undefined) throw new Error(`colonne inconnue : ${c.column}`);
 	const col = quoteIdent(c.column);
 	if (c.op === 'empty') return type === 'text' ? `coalesce(${col}, '') = ''` : `${col} IS NULL`;
 	if (c.op === 'filled') return type === 'text' ? `coalesce(${col}, '') <> ''` : `${col} IS NOT NULL`;
-	if (c.value.kind === 'team') throw new Error("« mon équipe » n'est pas encore connu du serveur : écrire la condition en SQL");
+	if (c.value.kind === 'team') {
+		if (!teams) throw new Error("« mon équipe » : ce serveur ne connaît pas les équipes (mise à jour de lattisd nécessaire)");
+		if (type !== 'text') throw new Error("« mon équipe » se compare à une colonne de texte (nom de l'équipe)");
+		if (c.op !== '=' && c.op !== '<>') throw new Error('« mon équipe » : égal ou différent seulement');
+		return `${col} ${c.op === '=' ? 'IN' : 'NOT IN'} ${MY_TEAMS}`;
+	}
 	let val: string;
 	if (c.value.kind === 'me') {
 		if (type !== 'text') throw new Error('« moi » se compare à une colonne de texte (adresse de la personne)');
@@ -244,8 +312,8 @@ export function conditionSQL(c: Condition, types: Record<string, string>): strin
 }
 
 /** Filtre SQL de plusieurs conditions (toutes : ET) ; vide : aucun filtre. */
-export function filterSQL(cs: readonly Condition[], types: Record<string, string>): string {
-	return cs.map((c) => conditionSQL(c, types)).join(' AND ');
+export function filterSQL(cs: readonly Condition[], types: Record<string, string>, teams = false): string {
+	return cs.map((c) => conditionSQL(c, types, teams)).join(' AND ');
 }
 
 const IDENT = String.raw`"((?:[^"]|"")+)"`;
@@ -278,6 +346,8 @@ export function parseCondition(sql: string, types: Record<string, string>): Cond
 	if (m) return { column: unIdent(m[1]), op: 'contains', value: { kind: 'value', value: unText(m[2]) } };
 	m = new RegExp(`^starts_with\\(${IDENT}, ${TEXT}\\)$`).exec(s);
 	if (m) return { column: unIdent(m[1]), op: 'starts', value: { kind: 'value', value: unText(m[2]) } };
+	m = new RegExp(`^${IDENT} (IN|NOT IN) \\(SELECT lattis\\.my_teams\\(\\)\\)$`).exec(s);
+	if (m) return unIdent(m[1]) in types ? { column: unIdent(m[1]), op: m[2] === 'IN' ? '=' : '<>', value: { kind: 'team' } } : null;
 	m = new RegExp(`^${IDENT} (=|<>|<=|>=|<|>) (current_user|${TEXT}|-?\\d+(?:\\.\\d+)?|true|false)$`).exec(s);
 	if (!m) return null;
 	const column = unIdent(m[1]);
@@ -421,8 +491,12 @@ export function rightsObjects(v: RightsView | null | undefined): RightsObject[] 
 					const l = tableLevel(r, acl.workbook.id, t.table_id, t.sheet_id || undefined);
 					return policyLine(nameOf(t.table_id), l.effective, l.read, l.write);
 				});
-		const n = r.members?.length ?? 0;
-		out.push({ name: roleLabel(r), kind: `${r.builtin ? 'rôle fourni' : 'rôle personnalisé'} · ${n} membre${n > 1 ? 's' : ''}`, lines });
+		const teams = (r.teams ?? []).map((t) => t.name);
+		out.push({
+			name: roleLabel(r),
+			kind: `${r.builtin ? 'rôle fourni' : 'rôle personnalisé'} · ${memberCount(r.members?.length ?? 0)}${teams.length ? ` · équipe${teams.length > 1 ? 's' : ''} ${teams.join(', ')}` : ''}`,
+			lines
+		});
 	}
 	for (const x of acl.restrictions ?? []) {
 		const who = (x.applies_to ?? []).length ? (x.applies_to ?? []).map((id) => roleLabel(acl.roles?.find((r) => r.id === id) ?? { name: id, builtin: '' })).join(', ') : 'tous les rôles';

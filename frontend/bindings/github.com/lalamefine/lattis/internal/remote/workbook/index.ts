@@ -16,7 +16,9 @@ export type {
     Restriction,
     RestrictionRule,
     Role,
+    RoleTeam,
     State,
     TableCheck,
+    Team,
     WorkbookMember
 } from "./models.js";

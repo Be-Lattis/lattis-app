@@ -433,6 +433,14 @@ export interface RightsView {
     "customInvite": boolean;
 
     /**
+     * Teams : équipes Lattis du serveur, à qui donner des rôles
+     * (lattis.list_teams, propriétaire, en ligne ; membres de chacune pour un
+     * propriétaire du serveur). nil : serveur sans la migration 0012 (pas
+     * d'équipes ni de filtre « mon équipe »).
+     */
+    "teams": workbook$0.Team[] | null;
+
+    /**
      * Error : le serveur n'a pas répondu (droits locaux seulement).
      */
     "error"?: string;

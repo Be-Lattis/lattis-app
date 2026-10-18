@@ -173,7 +173,8 @@ export interface RestrictionRule {
 
 /**
  * Role est un rôle du classeur : fourni (Builtin : owner, designer,
- * editor, participant, reader) ou personnalisé (Builtin vide).
+ * editor, participant, reader) ou personnalisé (Builtin vide). Members :
+ * ses membres en personne ; Teams : ses équipes (migration 0012).
  */
 export interface Role {
     "id": string;
@@ -181,6 +182,15 @@ export interface Role {
     "builtin": string;
     "grants": Grant[] | null;
     "members": Member[] | null;
+    "teams": RoleTeam[] | null;
+}
+
+/**
+ * RoleTeam est une équipe membre d'un rôle (workbook_acl, migration 0012).
+ */
+export interface RoleTeam {
+    "team_id": string;
+    "name": string;
 }
 
 /**
@@ -262,8 +272,23 @@ export interface TableCheck {
 }
 
 /**
+ * Team est une équipe Lattis (lattis.list_teams, migration 0012) : créée
+ * par les propriétaires du serveur, elle reçoit des rôles de classeur comme
+ * une personne. Members : ses membres, pour un propriétaire du serveur
+ * seulement (nil sinon).
+ */
+export interface Team {
+    "id": string;
+    "name": string;
+    "member_count": number;
+    "members": Member[] | null;
+}
+
+/**
  * WorkbookMember est un membre du classeur (lattis.workbook_members) :
- * Roles nomme ses rôles, fournis (owner, reader…) ou personnalisés (nom).
+ * Roles nomme ses rôles, fournis (owner, reader…) ou personnalisés (nom),
+ * en personne ou par une équipe ; Teams nomme les équipes par lesquelles il
+ * est membre (migration 0012 ; vide : en personne seulement).
  */
 export interface WorkbookMember {
     "user_id": string;
@@ -271,4 +296,5 @@ export interface WorkbookMember {
     "display_name": string;
     "pg_role": string;
     "roles": string[] | null;
+    "teams": string[] | null;
 }

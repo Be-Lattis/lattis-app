@@ -85,6 +85,36 @@ func TestShareRights(t *testing.T) {
 	if len(v.Members) != 2 || v.Members[1].UserID != "bob" || !slices.Equal(v.Members[1].Roles, []string{"participant"}) {
 		t.Fatalf("membres : %+v", v.Members)
 	}
+	// Équipes Lattis (serveur 0012) : rôle Nord donné à l'équipe Nord, ses
+	// membres le reçoivent ; serveur sans 0012 : pas d'équipes.
+	if v.Teams == nil || len(v.Teams) != 0 {
+		t.Fatalf("équipes : %+v", v.Teams)
+	}
+	team := fake.CreateTeam("Nord")
+	fake.AddTeamMember(team, "dave")
+	v, err = a.ShareGrantRole(ctx, nord, team, true)
+	mustShare(t, err)
+	if len(v.Teams) != 1 || v.Teams[0].MemberCount != 1 || v.Teams[0].Members != nil {
+		t.Fatalf("équipes : %+v", v.Teams)
+	}
+	if i := slices.IndexFunc(v.ACL.Roles, func(r workbook.Role) bool { return r.ID == nord }); len(v.ACL.Roles[i].Teams) != 1 || v.ACL.Roles[i].Teams[0].TeamID != team {
+		t.Fatalf("équipes de Nord : %+v", v.ACL.Roles[i])
+	}
+	if i := slices.IndexFunc(v.Members, func(m workbook.WorkbookMember) bool { return m.UserID == "dave" }); i < 0 || !slices.Equal(v.Members[i].Teams, []string{"Nord"}) || !slices.Equal(v.Members[i].Roles, []string{"Nord"}) {
+		t.Fatalf("membres par l'équipe : %+v", v.Members)
+	}
+	v, err = a.ShareGrantRole(ctx, nord, team, false)
+	mustShare(t, err)
+	if len(v.Members) != 2 {
+		t.Fatalf("membres après le retrait de l'équipe : %+v", v.Members)
+	}
+	fake.Before12 = true
+	v, err = a.ShareRights(ctx, true)
+	mustShare(t, err)
+	fake.Before12 = false
+	if v.Teams != nil || v.Error != "" {
+		t.Fatalf("serveur sans équipes : %+v %q", v.Teams, v.Error)
+	}
 	if _, err := a.ShareSetLevels(ctx, []workbook.Level{{RoleID: nord, NodeKind: workbook.NodeTable, NodeID: v.Tables[0].RemoteID, Level: "reader", ReadFilter: "1; DROP TABLE x"}}); err == nil || strings.Contains(err.Error(), "SQLSTATE") {
 		t.Fatalf("filtre refusé : %v", err)
 	}

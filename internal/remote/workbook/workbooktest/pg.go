@@ -171,6 +171,19 @@ func (e *PGEnv) AddMember(t *testing.T, wb, builtin, userID string) {
 	e.Exec(t, `SELECT lattis.add_member($1::uuid, $2, $3::uuid)`, wb, builtin, userID)
 }
 
+// Text exécute une requête en superutilisateur et rend la première colonne
+// de sa ligne en texte (essais : lattis.create_team…).
+func (e *PGEnv) Text(t *testing.T, q string, args ...any) string {
+	t.Helper()
+	ctx := context.Background()
+	c, err := pgx.Connect(ctx, e.Super)
+	must(t, err)
+	defer c.Close(ctx)
+	var out string
+	must(t, c.QueryRow(ctx, q, args...).Scan(&out))
+	return out
+}
+
 // Exec exécute une instruction en superutilisateur (essais).
 func (e *PGEnv) Exec(t *testing.T, q string, args ...any) {
 	t.Helper()
