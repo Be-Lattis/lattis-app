@@ -36,6 +36,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
+	"testing"
 	"time"
 
 	"github.com/lalamefine/lattis/internal/store"
@@ -50,6 +52,13 @@ const (
 	manifestName  = "manifest.yaml"
 	lockName      = "lattis.lock"
 	sourceName    = "source.txt" // chemin de l'archive d'origine, pour la récupération
+	// pristineName marque un répertoire de travail sans aucune modification
+	// depuis la création ou l'ouverture (ou le dernier enregistrement) : rien
+	// à récupérer, Orphans le supprime sans le proposer (voir MarkPristine).
+	pristineName = "pristine"
+	// workbookName garde l'identifiant du classeur (_lattis_info, clé id) :
+	// les sessions d'un même classeur sont regroupées à la récupération.
+	workbookName = "workbook.txt"
 	sqliteMagic   = "SQLite format 3\x00"
 )
 
@@ -143,14 +152,25 @@ type Doc struct {
 }
 
 // Root est le dossier des répertoires de travail. Il est surchargeable pour
-// les tests.
+// les tests ; dans un binaire de test (go test), c'est par défaut un dossier
+// temporaire propre au processus : un test interrompu (délai dépassé,
+// panique) ne laisse pas de session à « récupérer » dans le profil de
+// l'utilisateur.
 var Root = func() (string, error) {
+	if testing.Testing() {
+		return testRoot()
+	}
 	dir, err := os.UserCacheDir()
 	if err != nil {
 		return "", err
 	}
 	return filepath.Join(dir, "Lattis", "work"), nil
 }
+
+var testRoot = sync.OnceValues(func() (string, error) {
+	dir, err := os.MkdirTemp("", "lattis-test-work-")
+	return filepath.Join(dir, "work"), err
+})
 
 // workDir donne le répertoire de travail d'une archive : un nom dérivé de
 // son chemin absolu, pour qu'une deuxième ouverture tombe sur le même verrou.
@@ -217,8 +237,17 @@ func Open(path string, extra ...func(*sqliteConn) error) (*Doc, error) {
 		if err != nil {
 			return nil, err
 		}
-		lock.Close() // relâché : c'est à l'utilisateur de choisir
-		return nil, &RecoverableError{Orphan{Dir: dir, Source: path}}
+		if _, err := os.Stat(filepath.Join(dir, pristineName)); err == nil {
+			// Session sans modification : rien à proposer, on rouvre le fichier.
+			lock.Close()
+			if err := os.RemoveAll(dir); err != nil {
+				return nil, err
+			}
+		} else {
+			id := workbookID(dir)
+			lock.Close() // relâché : c'est à l'utilisateur de choisir
+			return nil, &RecoverableError{Orphan{Dir: dir, Source: path, Workbook: id}}
+		}
 	}
 	if err := sniff(path); err != nil {
 		return nil, err
@@ -454,7 +483,9 @@ func (d *Doc) save(ctx context.Context, path string) error {
 	defer os.Remove(snap)
 	// VACUUM INTO passe par la file d'écriture : l'instantané voit toutes les
 	// écritures validées avant lui, et aucune à moitié.
+	var gen int64
 	err := d.DB.Exec(ctx, func(db *sql.DB) error {
+		gen = d.DB.Generation() + 1 // génération une fois l'instantané pris
 		_, err := db.ExecContext(ctx, `VACUUM INTO ?`, snap)
 		return err
 	})
@@ -507,7 +538,52 @@ func (d *Doc) save(ctx context.Context, path string) error {
 		return err
 	}
 	syncDir(dir)
+	// Copie de travail identique au fichier enregistré, si rien n'a été
+	// écrit depuis l'instantané : rien à récupérer après un arrêt brutal.
+	d.markPristine(ctx, gen)
 	return nil
+}
+
+// MarkPristine note que le répertoire de travail n'a rien à récupérer
+// (classeur neuf, tout juste ouvert, ou de démonstration) : jusqu'à la
+// prochaine écriture dans la base, un arrêt brutal du processus ne laisse
+// pas de session à proposer en récupération, Orphans la supprime.
+func (d *Doc) MarkPristine(ctx context.Context) error {
+	_, err := d.markPristine(ctx, -1)
+	return err
+}
+
+// markPristine pose la marque si aucune écriture n'est passée depuis la
+// génération since (since < 0 : sans condition) ; la marque est retirée
+// avant toute écriture suivante (une écriture refusée sinon : jamais de
+// modification sous la marque).
+func (d *Doc) markPristine(ctx context.Context, since int64) (bool, error) {
+	marker := filepath.Join(d.Dir, pristineName)
+	return d.DB.Mark(ctx, since, func() error {
+		return os.WriteFile(marker, nil, 0o644)
+	}, func() error {
+		var err error
+		for i := range 8 { // Windows : un antivirus peut tenir le fichier un instant
+			if err = os.Remove(marker); err == nil || errors.Is(err, os.ErrNotExist) {
+				return nil
+			}
+			time.Sleep(time.Duration(i+1) * 25 * time.Millisecond)
+		}
+		return fmt.Errorf("modification impossible (marque de récupération) : %w", err)
+	})
+}
+
+// Pristine dit si le répertoire de travail porte la marque « rien à
+// récupérer ».
+func (d *Doc) Pristine() bool {
+	_, err := os.Stat(filepath.Join(d.Dir, pristineName))
+	return err == nil
+}
+
+// SetWorkbook garde l'identifiant du classeur dans le répertoire de travail,
+// pour regrouper ses sessions à la récupération (Orphan.Workbook).
+func (d *Doc) SetWorkbook(id string) error {
+	return os.WriteFile(filepath.Join(d.Dir, workbookName), []byte(id), 0o644)
 }
 
 // staleTemp : âge à partir duquel un fichier temporaire d'enregistrement est
@@ -720,6 +796,10 @@ type Orphan struct {
 	Dir      string    `json:"dir"`
 	Source   string    `json:"source"` // archive d'origine (vide : document jamais enregistré)
 	Modified time.Time `json:"modified"`
+	// Workbook : identifiant aléatoire du classeur (_lattis_info, clé id),
+	// le même pour toutes ses sessions quel que soit son nom (vide :
+	// illisible). La récupération regroupe les sessions par classeur.
+	Workbook string `json:"workbook"`
 }
 
 // RecoverableError est renvoyé par Open quand une session précédente de
@@ -732,7 +812,9 @@ func (e *RecoverableError) Error() string {
 
 // Orphans liste les répertoires de travail abandonnés (verrou libre), à
 // proposer en récupération au démarrage. Un répertoire sans base (extraction
-// interrompue) n'a rien à récupérer : il est supprimé.
+// interrompue) ou sans aucune modification (marque de MarkPristine : classeur
+// neuf jamais modifié, fichier seulement ouvert ou enregistré, démonstration)
+// n'a rien à récupérer : il est supprimé sans être proposé.
 func Orphans() ([]Orphan, error) {
 	root, err := Root()
 	if err != nil {
@@ -756,8 +838,9 @@ func Orphans() ([]Orphan, error) {
 			continue // document ouvert par un processus vivant
 		}
 		db, err := os.Stat(filepath.Join(dir, dbName))
-		lock.Close()
-		if err != nil {
+		_, perr := os.Stat(filepath.Join(dir, pristineName))
+		if err != nil || perr == nil {
+			lock.Close()
 			os.RemoveAll(dir)
 			continue
 		}
@@ -766,9 +849,35 @@ func Orphans() ([]Orphan, error) {
 		if wal, err := os.Stat(filepath.Join(dir, dbName+"-wal")); err == nil && wal.ModTime().After(mod) {
 			mod = wal.ModTime()
 		}
-		out = append(out, Orphan{Dir: dir, Source: string(src), Modified: mod})
+		id := workbookID(dir)
+		lock.Close()
+		out = append(out, Orphan{Dir: dir, Source: string(src), Modified: mod, Workbook: id})
 	}
 	return out, nil
+}
+
+// workbookID lit l'identifiant du classeur d'un répertoire de travail :
+// workbook.txt, ou, pour une session d'une version précédente, la base
+// elle-même, ouverte en lecture seule (rien n'y est écrit). Vide si
+// illisible.
+func workbookID(dir string) string {
+	if b, err := os.ReadFile(filepath.Join(dir, workbookName)); err == nil {
+		return strings.TrimSpace(string(b))
+	}
+	c, err := sqlite3.OpenFlags(filepath.Join(dir, dbName), sqlite3.OPEN_READONLY)
+	if err != nil {
+		return ""
+	}
+	defer c.Close()
+	st, _, err := c.Prepare(`SELECT value FROM _lattis_info WHERE key = 'id'`)
+	if err != nil {
+		return ""
+	}
+	defer st.Close()
+	if !st.Step() {
+		return ""
+	}
+	return st.ColumnText(0)
 }
 
 // Recover rouvre un répertoire orphelin tel quel : la base SQLite rejoue son

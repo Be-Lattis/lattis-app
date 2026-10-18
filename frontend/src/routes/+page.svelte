@@ -57,6 +57,7 @@
 	import ZoomBar from '#lib/shell/ZoomBar.svelte';
 	import BusyBar from '#lib/shell/BusyBar.svelte';
 	import Icon from '#lib/icons/Icon.svelte';
+	import { groupSessions, olderLabel, sessionName } from '#lib/shell/recovery.js';
 	import { setTileFetcher } from '#lib/chart/tiles.js';
 	import HelpPanel from '#lib/help/HelpPanel.svelte';
 	import { functionAt, viewTarget } from '#lib/help/help.js';
@@ -105,10 +106,14 @@
 		if (mode === 'doc') DocumentService.SetActiveSheet(sheetId).catch(() => {});
 	});
 	let orphans = $state<Orphan[]>([]);
-	// Écran de récupération : les 3 plus récents d'abord, les autres sur demande.
+	// Écran de récupération : une entrée par classeur (son identifiant, pas
+	// son nom), la session la plus récente ; les 3 classeurs les plus récents
+	// d'abord, les autres sur demande.
 	const ORPHANS_SHOWN = 3;
 	let allOrphans = $state(false);
-	const sortedOrphans = $derived([...orphans].sort((a, b) => String(b.modified).localeCompare(String(a.modified))));
+	const orphanGroups = $derived(groupSessions(orphans));
+	// Versions plus anciennes dépliées, par classeur.
+	let olderShown = $state<Record<string, boolean>>({});
 	let help = $state<FormulaHelp | null>(null);
 	let scripts = $state<Script[]>([]);
 	// Contenu de l'onglet page HTML ou Document affiché (null : une feuille).
@@ -552,9 +557,11 @@
 				bench = await GridService.BenchRequested();
 				if (bench) return startDemo();
 				loadRecent();
-				// Web : le moteur survit à l'onglet (rechargement, onglet
-				// fermé puis rouvert) ; on reprend le classeur qu'il a ouvert.
-				if (isWeb && (await DocumentService.State()).open) {
+				// Le moteur survit à la page (web : rechargement, onglet fermé
+				// puis rouvert ; bureau : rechargement de la fenêtre, wails3 dev) :
+				// on reprend le classeur qu'il a ouvert, au lieu d'en créer un
+				// autre par-dessus (qui fermait l'ancien, modifié ou non).
+				if ((await DocumentService.State()).open) {
 					mode = 'doc';
 					view = 'grid';
 					sheetId = 1;
@@ -764,14 +771,21 @@
 		sheet?.focus();
 	}
 
-	async function recover(o: Orphan, keep: boolean) {
+	/** Récupère (keep) ou abandonne une session ; also : versions plus anciennes du même classeur, abandonnées avec elle. */
+	async function recover(o: Orphan, keep: boolean, also: Orphan[] = []) {
 		recoverError = '';
+		const gone = new Set<string>();
 		try {
 			if (keep) await DocumentService.Recover(o.dir);
-			else await DocumentService.Discard(o.dir);
+			else
+				for (const x of [o, ...also]) {
+					await DocumentService.Discard(x.dir);
+					gone.add(x.dir);
+				}
 		} catch (e) {
 			// La session reste proposée : rien n'est perdu, l'utilisateur choisit.
 			recoverError = err(e);
+			if (gone.size) orphans = orphans.filter((x) => !gone.has(x.dir));
 			return;
 		}
 		try {
@@ -781,7 +795,7 @@
 				notice = 'Modifications récupérées : pensez à enregistrer.';
 				workbookReady();
 			} else {
-				orphans = orphans.filter((x) => x.dir !== o.dir);
+				orphans = orphans.filter((x) => !gone.has(x.dir));
 				if (orphans.length > 0) return;
 				// Session d'un fichier abandonnée : le fichier tel qu'enregistré.
 				if (o.source) await openPath(o.source).catch(() => startDoc());
@@ -1317,19 +1331,35 @@
 				<h1>Récupération</h1>
 				<p>Lattis s'est fermé sans enregistrer. Ces classeurs ont des modifications récupérables :</p>
 				<div class="orphans">
-				{#each allOrphans ? sortedOrphans : sortedOrphans.slice(0, ORPHANS_SHOWN) as o (o.dir)}
+				{#each allOrphans ? orphanGroups : orphanGroups.slice(0, ORPHANS_SHOWN) as g (g.key)}
+					{@const o = g.latest}
 					<div class="orphan">
 						<div>
-							<strong>{o.source ? o.source.split(/[\\/]/).pop() : 'Classeur sans titre'}</strong>
+							<strong>{sessionName(o)}</strong>
 							<span class="muted">modifié le {new Date(o.modified).toLocaleString('fr-FR')}</span>
+							{#if g.older.length}
+								<button class="link older-toggle" aria-expanded={!!olderShown[g.key]} onclick={() => (olderShown[g.key] = !olderShown[g.key])}>{olderLabel(g.older.length)}</button>
+							{/if}
 						</div>
 						<button class="primary ico" onclick={() => recover(o, true)}><Icon name="undo" size={14} />Récupérer</button>
-						<button class="ico discard" onclick={() => recover(o, false)}><Icon name="trash" size={14} />Abandonner</button>
+						<button class="ico discard" title={g.older.length ? 'Abandonner cette session et ses versions plus anciennes' : undefined} onclick={() => recover(o, false, g.older)}><Icon name="trash" size={14} />{g.older.length ? 'Tout abandonner' : 'Abandonner'}</button>
 					</div>
+					{#if olderShown[g.key]}
+						{#each g.older as v (v.dir)}
+							<div class="orphan older">
+								<div>
+									<span>{sessionName(v)}</span>
+									<span class="muted">modifié le {new Date(v.modified).toLocaleString('fr-FR')}</span>
+								</div>
+								<button class="ico" onclick={() => recover(v, true)}><Icon name="undo" size={14} />Récupérer</button>
+								<button class="ico discard" onclick={() => recover(v, false)}><Icon name="trash" size={14} />Abandonner</button>
+							</div>
+						{/each}
+					{/if}
 				{/each}
 				</div>
-				{#if !allOrphans && orphans.length > ORPHANS_SHOWN}
-					<button class="link" onclick={() => (allOrphans = true)}>Voir les {orphans.length - ORPHANS_SHOWN} plus anciens</button>
+				{#if !allOrphans && orphanGroups.length > ORPHANS_SHOWN}
+					<button class="link" onclick={() => (allOrphans = true)}>Voir les {orphanGroups.length - ORPHANS_SHOWN} plus anciens</button>
 				{/if}
 				{#if recoverError}<p class="error">{recoverError}</p>{/if}
 			</div>
@@ -1882,6 +1912,18 @@
 		flex: 1;
 		display: flex;
 		flex-direction: column;
+	}
+	/* Versions plus anciennes d'un classeur, dépliées sous sa session la plus récente. */
+	.orphan.older {
+		margin-left: 24px;
+		min-width: 436px;
+		padding: 4px 14px;
+		border-style: dashed;
+	}
+	.orphan .older-toggle {
+		align-self: flex-start;
+		padding: 2px 0;
+		font-size: 12px;
 	}
 	button {
 		font: inherit;

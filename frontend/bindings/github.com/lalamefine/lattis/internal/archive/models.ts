@@ -12,4 +12,11 @@ export interface Orphan {
      */
     "source": string;
     "modified": string;
+
+    /**
+     * Workbook : identifiant aléatoire du classeur (_lattis_info, clé id),
+     * le même pour toutes ses sessions quel que soit son nom (vide :
+     * illisible). La récupération regroupe les sessions par classeur.
+     */
+    "workbook": string;
 }

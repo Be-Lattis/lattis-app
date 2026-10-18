@@ -58,6 +58,8 @@ type Store struct {
 	busy        atomic.Bool
 	// writeConn : connexion SQLite de l'écrivain (autorisateur, AsUser).
 	writeConn atomic.Pointer[sqlite3.Conn]
+	// unmark : appelé avant la prochaine tâche de l'écrivain (voir Mark).
+	unmark atomic.Pointer[func() error]
 }
 
 var (
@@ -295,10 +297,38 @@ func (s *Store) submit(j job) error {
 	return <-j.res
 }
 
+// Mark exécute mark dans la file d'écriture, si aucune tâche n'y est passée
+// depuis la génération since (since < 0 : sans condition), et appelle
+// unmark juste avant la tâche suivante, quelle qu'elle soit : une marque
+// posée par mark (« rien de modifié ») ne survit pas à une écriture. Si
+// unmark échoue, la tâche suivante est refusée avec son erreur (et unmark
+// réessayé à la suivante). ok : la marque a été posée.
+func (s *Store) Mark(ctx context.Context, since int64, mark func() error, unmark func() error) (ok bool, err error) {
+	err = s.submit(job{ctx: ctx, res: make(chan error, 1), raw: func(*sql.DB) error {
+		if since >= 0 && s.gen.Load() != since {
+			return nil
+		}
+		if err := mark(); err != nil {
+			return err
+		}
+		s.unmark.Store(&unmark)
+		ok = true
+		return nil
+	}})
+	return ok, err
+}
+
 func (s *Store) writer() {
 	for {
 		select {
 		case j := <-s.jobs:
+			if f := s.unmark.Load(); f != nil {
+				if err := (*f)(); err != nil {
+					j.res <- err
+					continue
+				}
+				s.unmark.CompareAndSwap(f, nil)
+			}
 			s.busy.Store(true)
 			err := s.run(j)
 			s.settle()
