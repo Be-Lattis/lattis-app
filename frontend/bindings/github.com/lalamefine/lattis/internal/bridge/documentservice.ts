@@ -549,8 +549,18 @@ export function ExportCSV(table: string): $CancellablePromise<string> {
 }
 
 /**
- * ExportXLSX écrit tout le classeur au format Excel .xlsx (valeurs : les
- * formules sont exportées par leur résultat).
+ * ExportODS écrit tout le classeur au format OpenDocument .ods (LibreOffice) :
+ * formules traduites quand c'est possible, mise en forme, tableaux en plages
+ * nommées.
+ */
+export function ExportODS(): $CancellablePromise<$models.XLSXExport> {
+    return $Call.ByID(3720836340);
+}
+
+/**
+ * ExportXLSX écrit tout le classeur au format Excel .xlsx : tableaux Excel,
+ * formules traduites quand Excel a un équivalent (sinon leur résultat),
+ * mise en forme.
  */
 export function ExportXLSX(): $CancellablePromise<$models.XLSXExport> {
     return $Call.ByID(2538967355);

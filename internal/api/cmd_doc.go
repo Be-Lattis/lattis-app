@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -137,6 +138,22 @@ func init() {
 				p, _ := c.Str("path")
 				d, _ := c.Doc()
 				return p, transfer.ExportCSVFile(c, d.Model, t.Name, p, transfer.ExcelFR)
+			},
+		},
+		&Command{
+			Name: "doc.export_xlsx", Summary: "Exporte tout le classeur au format Excel .xlsx : tableaux Excel, formules traduites quand Excel a un équivalent (sinon leur valeur), mise en forme.", NoLua: true,
+			Returns: "{path, clipped} (clipped : cellules au-delà des limites d'Excel, non exportées)",
+			Params:  []Param{{Name: "path", Type: String, Desc: "chemin du fichier .xlsx à écrire"}},
+			Run: func(c *Call) (any, error) {
+				return exportBook(c, ".xlsx", transfer.ExportXLSXFile)
+			},
+		},
+		&Command{
+			Name: "doc.export_ods", Summary: "Exporte tout le classeur au format OpenDocument .ods (LibreOffice) : formules traduites quand c'est possible (sinon leur valeur), mise en forme, tableaux en plages nommées.", NoLua: true,
+			Returns: "{path, clipped}",
+			Params:  []Param{{Name: "path", Type: String, Desc: "chemin du fichier .ods à écrire"}},
+			Run: func(c *Call) (any, error) {
+				return exportBook(c, ".ods", transfer.ExportODSFile)
 			},
 		},
 		&Command{
@@ -331,6 +348,26 @@ func scriptID(c *Call, name string) (int64, error) {
 		}
 	}
 	return 0, nil
+}
+
+// exportBook écrit tout le classeur (doc.export_xlsx, doc.export_ods).
+func exportBook(c *Call, ext string, export func(context.Context, *canvas.Model, string) (int, error)) (any, error) {
+	d, err := c.Doc()
+	if err != nil {
+		return nil, err
+	}
+	p, _ := c.Str("path")
+	if strings.TrimSpace(p) == "" {
+		return nil, fmt.Errorf("path : chemin du fichier %s attendu", ext)
+	}
+	if !strings.EqualFold(filepath.Ext(p), ext) {
+		p += ext
+	}
+	n, err := export(c, d.Model, p)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"path": p, "clipped": n}, nil
 }
 
 var _ canvas.ScriptInfo

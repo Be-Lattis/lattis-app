@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/transfer"
 )
 
@@ -83,34 +84,47 @@ func (s *DocumentService) PrintHTML(ctx context.Context, sheet int64) (string, e
 	return transfer.PrintHTML(ctx, d.Model, sheet)
 }
 
-// XLSXExport est le résultat d'un export .xlsx : le fichier écrit (vide si
-// l'utilisateur a annulé) et le nombre de cellules hors des limites d'Excel.
+// XLSXExport est le résultat d'un export .xlsx ou .ods : le fichier écrit
+// (vide si l'utilisateur a annulé) et le nombre de cellules hors des limites
+// d'Excel (et de LibreOffice).
 type XLSXExport struct {
 	Path    string `json:"path"`
 	Clipped int    `json:"clipped"`
 }
 
-// ExportXLSX écrit tout le classeur au format Excel .xlsx (valeurs : les
-// formules sont exportées par leur résultat).
+// ExportXLSX écrit tout le classeur au format Excel .xlsx : tableaux Excel,
+// formules traduites quand Excel a un équivalent (sinon leur résultat),
+// mise en forme.
 func (s *DocumentService) ExportXLSX(ctx context.Context) (XLSXExport, error) {
+	return s.exportBook(ctx, ".xlsx", "Exporter le classeur au format Excel", FileFilter{"Classeur Excel", "*.xlsx"}, transfer.ExportXLSXFile)
+}
+
+// ExportODS écrit tout le classeur au format OpenDocument .ods (LibreOffice) :
+// formules traduites quand c'est possible, mise en forme, tableaux en plages
+// nommées.
+func (s *DocumentService) ExportODS(ctx context.Context) (XLSXExport, error) {
+	return s.exportBook(ctx, ".ods", "Exporter le classeur au format OpenDocument", FileFilter{"Classeur OpenDocument", "*.ods"}, transfer.ExportODSFile)
+}
+
+func (s *DocumentService) exportBook(ctx context.Context, ext, title string, filter FileFilter, export func(context.Context, *canvas.Model, string) (int, error)) (XLSXExport, error) {
 	d, err := s.current()
 	if err != nil {
 		return XLSXExport{}, err
 	}
-	name := "Classeur.xlsx"
+	name := "Classeur" + ext
 	if d.Path() != "" {
 		base := filepath.Base(d.Path())
-		name = strings.TrimSuffix(base, filepath.Ext(base)) + ".xlsx"
+		name = strings.TrimSuffix(base, filepath.Ext(base)) + ext
 	}
 	var n int
 	p, err := s.sys().SaveFile(FileDialog{
-		Title:     "Exporter le classeur au format Excel",
+		Title:     title,
 		Filename:  name,
 		Directory: docDir(d.Path()),
-		Filters:   []FileFilter{{"Classeur Excel", "*.xlsx"}},
-		Ext:       ".xlsx",
+		Filters:   []FileFilter{filter},
+		Ext:       ext,
 	}, func(p string) (err error) {
-		n, err = transfer.ExportXLSXFile(ctx, d.Model, p)
+		n, err = export(ctx, d.Model, p)
 		return err
 	})
 	return XLSXExport{Path: p, Clipped: n}, err

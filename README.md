@@ -62,7 +62,7 @@ Chaque transformation devient une étape rejouable : filtrer, trier, choisir des
 
 ### Et aussi
 
-- **Import / export** `.xlsx` et `.csv`, impression.
+- **Import / export** `.xlsx` et `.csv`, export `.ods` (formules traduites, mise en forme, tableaux), impression.
 - **Serveur MCP** intégré : laissez un assistant comme Claude lire et modifier le classeur ouvert, en local et avec un jeton. → [docs/mcp.md](docs/mcp.md)
 - **Fichier `.lattis`** : une seule archive (base SQLite + manifeste), facile à envoyer par e-mail ou à archiver, avec enregistrement atomique et récupération après incident.
 - **Commune d'un point GPS**, hors ligne : `=COMMUNE([Latitude]; [Longitude])` donne la commune française (ou son code INSEE, son code postal, son département, sa région) à partir des contours officiels embarqués, même sur 100 000 lignes. Contient des données IGN et INSEE, Licence Ouverte / Etalab 2.0. → [docs/fonctions.md](docs/fonctions.md#géographie)

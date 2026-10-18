@@ -10,172 +10,35 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/lalamefine/lattis/internal/canvas"
-	"github.com/lalamefine/lattis/internal/formula"
-	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // Écriture d'un classeur .xlsx avec la seule bibliothèque standard. Chaque
 // feuille du classeur devient une feuille Excel (les feuilles masquées le
-// restent) : les tableaux avec leur ligne d'en-têtes (en gras), les cellules
-// libres, les résultats déversés et les tableaux croisés, aux mêmes
-// positions, ainsi que les largeurs de colonnes. Version 1 : les formules
-// sont exportées par leur valeur calculée (pas de formule Excel), sans la
-// mise en forme ni les graphiques.
-
-// xcell est une cellule à écrire.
-type xcell struct {
-	kind byte // 'n' nombre, 'd' date (numéro de série), 's' texte, 'b' booléen, 'e' erreur
-	num  float64
-	str  string
-	bold bool
-}
-
-type xsheet struct {
-	name   string
-	hidden bool
-	cells  map[[2]int]xcell
-	widths []canvas.ColWidth
-	// clipped : cellules au-delà des limites d'Excel, non exportées.
-	clipped int
-	// tables : tableaux lus pendant l'écriture (export), ligne à ligne, sans
-	// garder toute la feuille en mémoire ; vide quand cells les contient déjà.
-	tables []canvas.TableInfo
-	rows   func(ctx context.Context, tb canvas.TableInfo, send func(r int, cells []xcell) error) error
-}
-
-// Limites d'une feuille Excel : la feuille de Lattis va au-delà, l'export coupe.
-const (
-	ExcelRows = 1_048_576
-	ExcelCols = 16_384
-)
+// restent), aux mêmes positions : les tableaux deviennent des tableaux
+// Excel (nom, ligne d'en-têtes, filtre, colonnes calculées), avec les
+// cellules libres, les résultats déversés et les tableaux croisés (en
+// valeurs). Les formules sont traduites quand Excel a un équivalent (voir
+// exportformula.go), sinon exportées par leur valeur ; la valeur calculée
+// accompagne toujours la formule. Mise en forme : formats de nombre et de
+// date, police, couleurs, alignement, bordures, largeurs, hauteurs, lignes
+// et colonnes masquées, fusions, volets figés. Ni graphiques ni mise en
+// forme conditionnelle.
 
 // ExportXLSX écrit tout le classeur au format .xlsx ; clipped compte les
 // cellules hors des limites d'Excel (1 048 576 lignes × 16 384 colonnes),
 // qui ne sont pas exportées.
 func ExportXLSX(ctx context.Context, m *canvas.Model, w io.Writer) (clipped int, err error) {
-	first, err := m.Layout(ctx, 0)
+	sheets, fm, err := exportBook(ctx, m, toXLSX)
 	if err != nil {
 		return 0, err
 	}
-	var sheets []xsheet
-	for _, s := range first.Sheets {
-		sh, err := collectSmall(ctx, m, s)
-		if err != nil {
-			return 0, err
-		}
-		sh.rows = func(ctx context.Context, tb canvas.TableInfo, send func(int, []xcell) error) error {
-			return tableRows(ctx, m, tb, send)
-		}
-		sheets = append(sheets, sh)
-		if err := ctx.Err(); err != nil {
-			return 0, err
-		}
-	}
-	err = writeXLSX(ctx, w, sheets)
+	err = writeXLSX(ctx, w, sheets, fm)
 	for _, sh := range sheets {
 		clipped += sh.clipped
 	}
 	return clipped, err
-}
-
-// tableRows lit un tableau ligne à ligne (en-tête compris) en cellules.
-func tableRows(ctx context.Context, m *canvas.Model, tb canvas.TableInfo, send func(r int, cells []xcell) error) error {
-	var cols []canvas.ExportColumn
-	r := tb.Row
-	return m.ExportTable(ctx, tb.Name, func(cs []canvas.ExportColumn) error {
-		cols = cs
-		head := make([]xcell, len(cs))
-		for j, c := range cs {
-			head[j] = xcell{kind: 's', str: c.Name, bold: true}
-		}
-		return send(r, head)
-	}, func(row []any) error {
-		r++
-		cells := make([]xcell, len(row))
-		for j, v := range row {
-			cells[j] = tableCell(v, cols[j].Type)
-		}
-		return send(r, cells)
-	})
-}
-
-// collectSheet lit tout le contenu d'une feuille, cellule par cellule
-// (impression ; l'export lit ses tableaux pendant l'écriture).
-func collectSheet(ctx context.Context, m *canvas.Model, s canvas.SheetInfo) (xsheet, error) {
-	sh, err := collectSmall(ctx, m, s)
-	if err != nil {
-		return sh, err
-	}
-	for _, tb := range sh.tables {
-		err := tableRows(ctx, m, tb, func(r int, cells []xcell) error {
-			for j, x := range cells {
-				sh.put(r, tb.Col+j, x)
-			}
-			return nil
-		})
-		if err != nil {
-			return xsheet{}, err
-		}
-	}
-	sh.tables = nil
-	return sh, nil
-}
-
-// put pose une cellule, ou la compte hors des limites d'Excel.
-func (sh *xsheet) put(r, c int, x xcell) {
-	if r >= ExcelRows || c >= ExcelCols {
-		if x.kind != 0 {
-			sh.clipped++
-		}
-		return
-	}
-	if x.kind != 0 {
-		sh.cells[[2]int{r, c}] = x
-	}
-}
-
-// collectSmall lit une feuille sauf les lignes de ses tableaux : tableaux
-// croisés, cellules libres et déversements (sh.tables : les tableaux).
-func collectSmall(ctx context.Context, m *canvas.Model, s canvas.SheetInfo) (xsheet, error) {
-	l, err := m.Layout(ctx, s.ID)
-	if err != nil {
-		return xsheet{}, err
-	}
-	sh := xsheet{name: s.Name, hidden: s.Hidden, cells: map[[2]int]xcell{}, widths: l.Widths, tables: l.Tables}
-	put := sh.put
-	// Tableaux croisés, cellules libres puis tableaux : un tableau
-	// l'emporte sur ce qu'il recouvre.
-	for _, p := range l.Pivots {
-		for i, row := range p.Cells {
-			for j, v := range row {
-				x := textCell(v)
-				x.bold = i == 0
-				put(p.Row+i, p.Col+j, x)
-			}
-		}
-	}
-	for _, c := range l.Cells {
-		if len(c.Spill) > 0 {
-			for i, row := range c.Spill {
-				for j, v := range row {
-					put(c.Row+i, c.Col+j, textCell(v))
-				}
-			}
-			continue
-		}
-		switch {
-		case c.Error:
-			put(c.Row, c.Col, errorCell(c.Value))
-		case strings.HasPrefix(c.Raw, "="):
-			put(c.Row, c.Col, textCell(c.Value))
-		default:
-			put(c.Row, c.Col, textCell(c.Raw))
-		}
-	}
-	return sh, nil
 }
 
 // ExportXLSXFile écrit le classeur dans un fichier (via un fichier temporaire).
@@ -188,168 +51,15 @@ func ExportXLSXFile(ctx context.Context, m *canvas.Model, path string) (clipped 
 	return clipped, err
 }
 
-// textCell type une valeur affichée (cellule libre, TCD, déversement) comme
-// le ferait la saisie : nombre, booléen, date ou texte.
-func textCell(s string) xcell {
-	if s == "" {
-		return xcell{}
-	}
-	if strings.HasPrefix(s, "#") {
-		if _, ok := excelErrors[s]; ok {
-			return errorCell(s)
-		}
-	}
-	v := parseText(s)
-	switch v.t {
-	case grid.Integer:
-		return xcell{kind: 'n', num: float64(v.i)}
-	case grid.Decimal:
-		return xcell{kind: 'n', num: v.f}
-	case grid.Boolean:
-		return xcell{kind: 'b', num: float64(v.i)}
-	case grid.Date:
-		if f, ok := formula.ParseDate(v.s); ok {
-			return xcell{kind: 'd', num: f}
-		}
-	}
-	if f, ok := formula.ParseDate(s); ok && strings.Contains(s, ":") {
-		return xcell{kind: 'd', num: f}
-	}
-	return xcell{kind: 's', str: s}
+// xlsxTable est un tableau Excel écrit (partie xl/tables/tableN.xml).
+type xlsxTable struct {
+	id   int
+	xt   *xtable
+	ref  string
+	cols []string
 }
 
-// excelErrors : codes d'erreur de Lattis (français) et leur code Excel.
-var excelErrors = map[string]string{
-	"#DIV/0!": "#DIV/0!", "#N/A": "#N/A", "#VALEUR!": "#VALUE!", "#REF!": "#REF!",
-	"#NOM?": "#NAME?", "#NOMBRE!": "#NUM!", "#NUL!": "#NULL!",
-	"#CIRC!": "#REF!", // Excel n'a pas de code pour une référence circulaire
-}
-
-func errorCell(s string) xcell {
-	if e, ok := excelErrors[s]; ok {
-		return xcell{kind: 'e', str: e}
-	}
-	return xcell{kind: 's', str: s}
-}
-
-// tableCell convertit une valeur lue par canvas.Model.ExportTable.
-func tableCell(v any, t grid.Type) xcell {
-	switch v := v.(type) {
-	case nil:
-		return xcell{}
-	case int64:
-		if t == grid.Boolean {
-			return xcell{kind: 'b', num: float64(v)}
-		}
-		return xcell{kind: 'n', num: float64(v)}
-	case float64:
-		return xcell{kind: 'n', num: v}
-	case string:
-		if t == grid.Date {
-			if f, ok := formula.ParseDate(v); ok {
-				return xcell{kind: 'd', num: f}
-			}
-		}
-		return xcell{kind: 's', str: v}
-	case canvas.Invalid:
-		return xcell{kind: 's', str: string(v)}
-	case formula.Value:
-		switch v.Kind {
-		case formula.Number:
-			return xcell{kind: 'n', num: v.Num}
-		case formula.Date:
-			return xcell{kind: 'd', num: v.Num}
-		case formula.Bool:
-			if v.Bool {
-				return xcell{kind: 'b', num: 1}
-			}
-			return xcell{kind: 'b'}
-		case formula.Error:
-			return errorCell(v.String())
-		case formula.Text:
-			return xcell{kind: 's', str: v.Str}
-		}
-		return xcell{}
-	}
-	return xcell{kind: 's', str: fmt.Sprint(v)}
-}
-
-// excelSheetNames rend les noms valides pour Excel : 31 caractères au plus,
-// sans []:*?/\, uniques sans tenir compte de la casse.
-func excelSheetNames(names []string) []string {
-	out := make([]string, len(names))
-	seen := map[string]bool{}
-	for i, n := range names {
-		n = strings.Map(func(r rune) rune {
-			if strings.ContainsRune(`[]:*?/\`, r) {
-				return '_'
-			}
-			return r
-		}, n)
-		n = strings.Trim(n, "'")
-		if n == "" {
-			n = fmt.Sprintf("Feuille%d", i+1)
-		}
-		base := truncateRunes(n, 31)
-		cand := base
-		for k := 2; seen[strings.ToLower(cand)]; k++ {
-			suffix := fmt.Sprintf(" (%d)", k)
-			cand = truncateRunes(base, 31-utf8.RuneCountInString(suffix)) + suffix
-		}
-		seen[strings.ToLower(cand)] = true
-		out[i] = cand
-	}
-	return out
-}
-
-func truncateRunes(s string, n int) string {
-	if utf8.RuneCountInString(s) <= n {
-		return s
-	}
-	return string([]rune(s)[:n])
-}
-
-// colName donne la lettre de colonne Excel (0 : A).
-func colName(c int) string {
-	s := ""
-	for c++; c > 0; c = (c - 1) / 26 {
-		s = string(rune('A'+(c-1)%26)) + s
-	}
-	return s
-}
-
-func xmlEscape(s string) string {
-	var b strings.Builder
-	for _, r := range s {
-		switch {
-		case r == '<':
-			b.WriteString("&lt;")
-		case r == '>':
-			b.WriteString("&gt;")
-		case r == '&':
-			b.WriteString("&amp;")
-		case r == '"':
-			b.WriteString("&quot;")
-		case r == '\t' || r == '\n' || r == '\r' || r >= 0x20 && r != 0xFFFE && r != 0xFFFF:
-			b.WriteRune(r)
-		}
-	}
-	return b.String()
-}
-
-// Styles : 0 normal, 1 date, 2 date et heure, 3 gras.
-const xlsxStyles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-<numFmts count="1"><numFmt numFmtId="164" formatCode="dd/mm/yyyy\ hh:mm"/></numFmts>
-<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>
-<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>
-<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
-<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="14" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs>
-<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
-</styleSheet>`
-
-func writeXLSX(ctx context.Context, w io.Writer, sheets []xsheet) error {
+func writeXLSX(ctx context.Context, w io.Writer, sheets []xsheet, fm *fmts) error {
 	zw := zip.NewWriter(w)
 	file := func(name, content string) error {
 		f, err := zw.Create(name)
@@ -359,18 +69,6 @@ func writeXLSX(ctx context.Context, w io.Writer, sheets []xsheet) error {
 		_, err = io.WriteString(f, content)
 		return err
 	}
-	var types, wb, rels strings.Builder
-	types.WriteString(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>`)
-	wb.WriteString(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>`)
-	rels.WriteString(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">`)
-	names := make([]string, len(sheets))
-	for i, s := range sheets {
-		names[i] = s.name
-	}
-	names = excelSheetNames(names)
 	active := 0
 	for i, s := range sheets {
 		if !s.hidden {
@@ -378,6 +76,27 @@ func writeXLSX(ctx context.Context, w io.Writer, sheets []xsheet) error {
 			break
 		}
 	}
+	// Tableaux Excel : numérotés dans tout le classeur.
+	tables := make([][]xlsxTable, len(sheets))
+	n := 0
+	for i, s := range sheets {
+		for _, xt := range s.tables {
+			p := xt.place
+			if p == nil || len(p.cols) == 0 || p.row+1 >= ExcelRows || p.col+len(p.cols)-1 >= ExcelCols {
+				continue
+			}
+			n++
+			ref := fmt.Sprintf("%s%d:%s%d", colName(p.col), p.row+1, colName(p.col+len(p.cols)-1), min(p.lastRow(), ExcelRows-1)+1)
+			tables[i] = append(tables[i], xlsxTable{id: n, xt: xt, ref: ref, cols: p.cols})
+		}
+	}
+	var types, wb, rels strings.Builder
+	types.WriteString(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>`)
+	fmt.Fprintf(&wb, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView activeTab="%d"/></bookViews><sheets>`, active)
+	rels.WriteString(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">`)
 	for i, s := range sheets {
 		n := i + 1
 		fmt.Fprintf(&types, `<Override PartName="/xl/worksheets/sheet%d.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`, n)
@@ -385,11 +104,16 @@ func writeXLSX(ctx context.Context, w io.Writer, sheets []xsheet) error {
 		if s.hidden {
 			state = ` state="hidden"`
 		}
-		fmt.Fprintf(&wb, `<sheet name="%s" sheetId="%d"%s r:id="rId%d"/>`, xmlEscape(names[i]), n, state, n)
+		fmt.Fprintf(&wb, `<sheet name="%s" sheetId="%d"%s r:id="rId%d"/>`, xmlEscape(s.name), n, state, n)
 		fmt.Fprintf(&rels, `<Relationship Id="rId%d" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet%d.xml"/>`, n, n)
+		for _, t := range tables[i] {
+			fmt.Fprintf(&types, `<Override PartName="/xl/tables/table%d.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml"/>`, t.id)
+		}
 	}
 	types.WriteString(`</Types>`)
-	wb.WriteString(`</sheets></workbook>`)
+	// Excel recalcule à l'ouverture : les valeurs écrites ne servent qu'en
+	// attendant (et aux lecteurs qui ne calculent pas).
+	wb.WriteString(`</sheets><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>`)
 	fmt.Fprintf(&rels, `<Relationship Id="rId%d" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`, len(sheets)+1)
 	for _, f := range [][2]string{
 		{"[Content_Types].xml", types.String()},
@@ -397,7 +121,6 @@ func writeXLSX(ctx context.Context, w io.Writer, sheets []xsheet) error {
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`},
 		{"xl/workbook.xml", wb.String()},
 		{"xl/_rels/workbook.xml.rels", rels.String()},
-		{"xl/styles.xml", xlsxStyles},
 	} {
 		if err := file(f[0], f[1]); err != nil {
 			return err
@@ -408,27 +131,69 @@ func writeXLSX(ctx context.Context, w io.Writer, sheets []xsheet) error {
 		if err != nil {
 			return err
 		}
-		if err := writeSheet(ctx, f, &sheets[i], i == active); err != nil {
+		if err := writeSheet(ctx, f, &sheets[i], i == active, tables[i], fm); err != nil {
 			return err
 		}
+		if len(tables[i]) == 0 {
+			continue
+		}
+		var r strings.Builder
+		r.WriteString(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">`)
+		for k, t := range tables[i] {
+			fmt.Fprintf(&r, `<Relationship Id="rId%d" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/table" Target="../tables/table%d.xml"/>`, k+1, t.id)
+			if err := file(fmt.Sprintf("xl/tables/table%d.xml", t.id), tablePart(t)); err != nil {
+				return err
+			}
+		}
+		r.WriteString(`</Relationships>`)
+		if err := file(fmt.Sprintf("xl/worksheets/_rels/sheet%d.xml.rels", i+1), r.String()); err != nil {
+			return err
+		}
+	}
+	// Les styles en dernier : toutes les mises en forme sont alors connues.
+	if err := file("xl/styles.xml", xlsxStyles(fm.all())); err != nil {
+		return err
 	}
 	return zw.Close()
 }
 
-func writeSheet(ctx context.Context, w io.Writer, s *xsheet, active bool) error {
-	bw := bufio.NewWriterSize(w, 64<<10)
-	keys := make([][2]int, 0, len(s.cells))
-	for k := range s.cells {
-		keys = append(keys, k)
-	}
-	slices.SortFunc(keys, func(a, b [2]int) int {
-		if a[0] != b[0] {
-			return a[0] - b[0]
+// tablePart écrit la définition d'un tableau Excel.
+func tablePart(t xlsxTable) string {
+	var b strings.Builder
+	name := xmlEscape(t.xt.place.name)
+	fmt.Fprintf(&b, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<table xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" id="%d" name="%s" displayName="%s" ref="%s" totalsRowShown="0"><autoFilter ref="%s"/><tableColumns count="%d">`, t.id, name, name, t.ref, t.ref, len(t.cols))
+	for j, c := range t.cols {
+		fmt.Fprintf(&b, `<tableColumn id="%d" name="%s"`, j+1, xmlEscape(c))
+		if j < len(t.xt.formulas) && t.xt.formulas[j] != "" {
+			fmt.Fprintf(&b, `><calculatedColumnFormula>%s</calculatedColumnFormula></tableColumn>`, xmlEscape(t.xt.formulas[j]))
+		} else {
+			b.WriteString(`/>`)
 		}
-		return a[1] - b[1]
-	})
+	}
+	// Style clair : la mise en forme exportée (en-têtes, couleurs) reste lisible.
+	b.WriteString(`</tableColumns><tableStyleInfo name="TableStyleLight1" showFirstColumn="0" showLastColumn="0" showRowStripes="1" showColumnStripes="0"/></table>`)
+	return b.String()
+}
+
+// pxWidth convertit une largeur en pixels en largeur Excel (caractères :
+// environ 7 pixels par caractère).
+func pxWidth(px int) string {
+	return strconv.FormatFloat(math.Round(float64(px)/7*100)/100, 'f', -1, 64)
+}
+
+// defaultColPx : largeur d'une colonne sans largeur choisie.
+const defaultColPx = 100
+
+func writeSheet(ctx context.Context, w io.Writer, s *xsheet, active bool, tables []xlsxTable, fm *fmts) error {
+	bw := bufio.NewWriterSize(w, 64<<10)
+	keys := s.sortedKeys()
 	bw.WriteString(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">`)
+	if c := color(s.info.Color); c != "" {
+		fmt.Fprintf(bw, `<sheetPr><tabColor rgb="FF%s"/></sheetPr>`, c)
+	}
 	maxRow, maxCol := -1, 0
 	if len(keys) > 0 {
 		maxRow = keys[len(keys)-1][0]
@@ -436,167 +201,159 @@ func writeSheet(ctx context.Context, w io.Writer, s *xsheet, active bool) error 
 			maxCol = max(maxCol, k[1])
 		}
 	}
-	for _, tb := range s.tables {
+	for _, xt := range s.tables {
+		tb := xt.info
 		maxRow = max(maxRow, min(tb.Row+tb.Total, ExcelRows-1))
 		maxCol = max(maxCol, min(tb.Col+len(tb.Columns)-1, ExcelCols-1))
 	}
 	if maxRow >= 0 {
 		fmt.Fprintf(bw, `<dimension ref="A1:%s%d"/>`, colName(maxCol), maxRow+1)
 	}
+	view := ""
 	if active {
-		bw.WriteString(`<sheetViews><sheetView tabSelected="1" workbookViewId="0"/></sheetViews>`)
-	} else {
-		bw.WriteString(`<sheetViews><sheetView workbookViewId="0"/></sheetViews>`)
+		view += ` tabSelected="1"`
 	}
-	if len(s.widths) > 0 {
-		ws := slices.Clone(s.widths)
-		slices.SortFunc(ws, func(a, b canvas.ColWidth) int { return a.Col - b.Col })
-		bw.WriteString(`<cols>`)
-		for _, c := range ws {
-			// Largeur Excel en caractères : environ 7 pixels par caractère.
-			fmt.Fprintf(bw, `<col min="%d" max="%d" width="%s" customWidth="1"/>`, c.Col+1, c.Col+1, strconv.FormatFloat(math.Round(float64(c.Width)/7*100)/100, 'f', -1, 64))
+	if s.info.NoGrid {
+		view += ` showGridLines="0"`
+	}
+	if z := s.info.Zoom; z > 0 && z != 100 {
+		view += fmt.Sprintf(` zoomScale="%d"`, min(max(z, 10), 400))
+	}
+	fmt.Fprintf(bw, `<sheetViews><sheetView%s workbookViewId="0"`, view)
+	if fr, fc := s.info.FreezeRows, s.info.FreezeCols; fr > 0 || fc > 0 {
+		pane := "bottomRight"
+		switch {
+		case fc == 0:
+			pane = "bottomLeft"
+		case fr == 0:
+			pane = "topRight"
 		}
-		bw.WriteString(`</cols>`)
+		split := ""
+		if fc > 0 {
+			split += fmt.Sprintf(` xSplit="%d"`, fc)
+		}
+		if fr > 0 {
+			split += fmt.Sprintf(` ySplit="%d"`, fr)
+		}
+		fmt.Fprintf(bw, `><pane%s topLeftCell="%s%d" activePane="%s" state="frozen"/></sheetView></sheetViews>`, split, colName(fc), fr+1, pane)
+	} else {
+		bw.WriteString(`/></sheetViews>`)
 	}
+	writeCols(bw, s)
 	bw.WriteString(`<sheetData>`)
-	if err := mergeRows(ctx, s, keys, func(r int, cols []int, cells []xcell) {
-		fmt.Fprintf(bw, `<row r="%d">`, r+1)
+	if err := mergeRows(ctx, s, keys, s.marks(), func(r int, cols []int, cells []xcell) error {
+		fmt.Fprintf(bw, `<row r="%d"`, r+1)
+		if n := s.rowFmt[r]; n != 0 {
+			fmt.Fprintf(bw, ` s="%d" customFormat="1"`, n)
+		}
+		if h, ok := s.heights[r]; ok {
+			fmt.Fprintf(bw, ` ht="%s" customHeight="1"`, strconv.FormatFloat(float64(h)*0.75, 'f', -1, 64))
+		}
+		if s.hiddenR[r] {
+			bw.WriteString(` hidden="1"`)
+		}
+		bw.WriteString(`>`)
 		for i, c := range cells {
-			writeCell(bw, r, cols[i], c)
+			writeCell(bw, r, cols[i], c, fm)
 		}
 		bw.WriteString(`</row>`)
+		return nil
 	}); err != nil {
 		return err
 	}
-	bw.WriteString(`</sheetData></worksheet>`)
+	bw.WriteString(`</sheetData>`)
+	var merges []string
+	for _, g := range s.merges {
+		r1, c1 := g[0]+g[2]-1, g[1]+g[3]-1
+		if r1 < ExcelRows && c1 < ExcelCols {
+			merges = append(merges, fmt.Sprintf(`<mergeCell ref="%s%d:%s%d"/>`, colName(g[1]), g[0]+1, colName(c1), r1+1))
+		}
+	}
+	if len(merges) > 0 {
+		fmt.Fprintf(bw, `<mergeCells count="%d">%s</mergeCells>`, len(merges), strings.Join(merges, ""))
+	}
+	if len(tables) > 0 {
+		fmt.Fprintf(bw, `<tableParts count="%d">`, len(tables))
+		for k := range tables {
+			fmt.Fprintf(bw, `<tablePart r:id="rId%d"/>`, k+1)
+		}
+		bw.WriteString(`</tableParts>`)
+	}
+	bw.WriteString(`</worksheet>`)
 	return bw.Flush()
 }
 
-// tableLine est une ligne d'un tableau lue pendant l'écriture.
-type tableLine struct {
-	r     int
-	cells []xcell
-}
-
-// mergeRows rend les lignes de la feuille dans l'ordre : les cellules posées
-// (keys, triées) et les lignes des tableaux, lues en parallèle au fil de
-// l'écriture ; un tableau l'emporte sur ce qu'il recouvre.
-func mergeRows(ctx context.Context, s *xsheet, keys [][2]int, emit func(r int, cols []int, cells []xcell)) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	type source struct {
-		tb   canvas.TableInfo
-		ch   chan tableLine
-		head *tableLine
-		err  error
+// writeCols écrit les largeurs, styles et masquage des colonnes.
+func writeCols(bw *bufio.Writer, s *xsheet) {
+	widths := map[int]int{}
+	set := map[int]bool{}
+	for _, c := range s.widths {
+		widths[c.Col] = c.Width
+		set[c.Col] = true
 	}
-	srcs := make([]*source, len(s.tables))
-	for i, tb := range s.tables {
-		src := &source{tb: tb, ch: make(chan tableLine, 512)}
-		srcs[i] = src
-		go func() {
-			defer close(src.ch)
-			src.err = s.rows(ctx, tb, func(r int, cells []xcell) error {
-				select {
-				case src.ch <- tableLine{r, cells}:
-					return nil
-				case <-ctx.Done():
-					return ctx.Err()
-				}
-			})
-		}()
+	for c := range s.colFmt {
+		set[c] = true
 	}
-	next := func(src *source) {
-		if l, ok := <-src.ch; ok {
-			src.head = &l
-		} else {
-			src.head = nil
-		}
+	for c := range s.hiddenC {
+		set[c] = true
 	}
-	for _, src := range srcs {
-		next(src)
-	}
-	k := 0
-	line := map[int]xcell{}
-	for {
-		r := -1
-		if k < len(keys) {
-			r = keys[k][0]
-		}
-		for _, src := range srcs {
-			if src.head != nil && (r < 0 || src.head.r < r) {
-				r = src.head.r
-			}
-		}
-		if r < 0 {
-			break
-		}
-		clear(line)
-		for ; k < len(keys) && keys[k][0] == r; k++ {
-			line[keys[k][1]] = s.cells[keys[k]]
-		}
-		for _, src := range srcs {
-			for src.head != nil && src.head.r == r {
-				for j, x := range src.head.cells {
-					c := src.tb.Col + j
-					if r >= ExcelRows || c >= ExcelCols {
-						if x.kind != 0 {
-							s.clipped++
-						}
-						continue
-					}
-					if x.kind != 0 {
-						line[c] = x
-					} else {
-						delete(line, c)
-					}
-				}
-				next(src)
-			}
-		}
-		if r >= ExcelRows || len(line) == 0 {
-			continue
-		}
-		cols := make([]int, 0, len(line))
-		for c := range line {
+	var cols []int
+	for c := range set {
+		if c < ExcelCols {
 			cols = append(cols, c)
 		}
-		slices.Sort(cols)
-		cells := make([]xcell, len(cols))
-		for i, c := range cols {
-			cells[i] = line[c]
-		}
-		emit(r, cols, cells)
 	}
-	for _, src := range srcs {
-		if src.err != nil {
-			return src.err
-		}
+	if len(cols) == 0 {
+		return
 	}
-	return ctx.Err()
+	slices.Sort(cols)
+	bw.WriteString(`<cols>`)
+	for _, c := range cols {
+		w, ok := widths[c]
+		if !ok {
+			w = defaultColPx
+		}
+		fmt.Fprintf(bw, `<col min="%d" max="%d" width="%s"`, c+1, c+1, pxWidth(w))
+		if n := s.colFmt[c]; n != 0 {
+			fmt.Fprintf(bw, ` style="%d"`, n)
+		}
+		if s.hiddenC[c] {
+			bw.WriteString(` hidden="1"`)
+		}
+		bw.WriteString(` customWidth="1"/>`)
+	}
+	bw.WriteString(`</cols>`)
 }
 
 // writeCell écrit une cellule de la ligne r, colonne col.
-func writeCell(bw *bufio.Writer, r, col int, c xcell) {
+func writeCell(bw *bufio.Writer, r, col int, c xcell, fm *fmts) {
 	ref := colName(col) + strconv.Itoa(r+1)
+	st := c.fm
+	if c.kind == 'd' && fm != nil {
+		st = fm.date(st, c.num)
+	}
 	style := ""
-	if c.bold {
-		style = ` s="3"`
+	if st != 0 {
+		style = ` s="` + strconv.Itoa(int(st)) + `"`
+	}
+	f := ""
+	if c.f != "" {
+		f = "<f>" + xmlEscape(c.f) + "</f>"
 	}
 	switch c.kind {
-	case 'n':
-		fmt.Fprintf(bw, `<c r="%s"%s><v>%s</v></c>`, ref, style, strconv.FormatFloat(c.num, 'g', -1, 64))
-	case 'd':
-		st := 1
-		if c.num != math.Floor(c.num) {
-			st = 2
-		}
-		fmt.Fprintf(bw, `<c r="%s" s="%d"><v>%s</v></c>`, ref, st, strconv.FormatFloat(c.num, 'g', -1, 64))
+	case 'n', 'd':
+		fmt.Fprintf(bw, `<c r="%s"%s>%s<v>%s</v></c>`, ref, style, f, strconv.FormatFloat(c.num, 'g', -1, 64))
 	case 'b':
-		fmt.Fprintf(bw, `<c r="%s"%s t="b"><v>%d</v></c>`, ref, style, int(c.num))
+		fmt.Fprintf(bw, `<c r="%s"%s t="b">%s<v>%d</v></c>`, ref, style, f, int(c.num))
 	case 'e':
-		fmt.Fprintf(bw, `<c r="%s"%s t="e"><v>%s</v></c>`, ref, style, xmlEscape(c.str))
+		fmt.Fprintf(bw, `<c r="%s"%s t="e">%s<v>%s</v></c>`, ref, style, f, xmlEscape(c.str))
+	case 's':
+		if f != "" {
+			fmt.Fprintf(bw, `<c r="%s"%s t="str">%s<v>%s</v></c>`, ref, style, f, xmlEscape(c.str))
+		} else {
+			fmt.Fprintf(bw, `<c r="%s"%s t="inlineStr"><is><t xml:space="preserve">%s</t></is></c>`, ref, style, xmlEscape(c.str))
+		}
 	default:
-		fmt.Fprintf(bw, `<c r="%s"%s t="inlineStr"><is><t xml:space="preserve">%s</t></is></c>`, ref, style, xmlEscape(c.str))
+		fmt.Fprintf(bw, `<c r="%s"%s>%s</c>`, ref, style, f)
 	}
 }

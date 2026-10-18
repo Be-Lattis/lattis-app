@@ -805,13 +805,15 @@
 					if (p) notice = `Tableau « ${table} » exporté : ${p}`;
 					break;
 				}
-				case 'exportXlsx': {
+				case 'exportXlsx':
+				case 'exportOds': {
+					// Formules traduites quand le format a un équivalent, sinon leur valeur.
 					if (mode !== 'doc') return;
-					const r = await DocumentService.ExportXLSX();
+					const r = a === 'exportOds' ? await DocumentService.ExportODS() : await DocumentService.ExportXLSX();
 					if (r.path)
 						notice =
-							`Classeur exporté (valeurs des formules) : ${r.path}` +
-							(r.clipped ? ` ; ${r.clipped.toLocaleString('fr-FR')} cellule(s) au-delà des limites d'Excel (1 048 576 lignes × 16 384 colonnes) non exportée(s)` : '');
+							`Classeur exporté : ${r.path}` +
+							(r.clipped ? ` ; ${r.clipped.toLocaleString('fr-FR')} cellule(s) au-delà de 1 048 576 lignes × 16 384 colonnes non exportée(s)` : '');
 					break;
 				}
 				case 'print':

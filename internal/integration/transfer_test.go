@@ -55,6 +55,21 @@ func TestCSVImport(t *testing.T) {
 	}
 }
 
+// Export du classeur par les commandes MCP doc.export_xlsx et
+// doc.export_ods : l'extension est ajoutée, le fichier est un zip.
+func TestExportBookCommands(t *testing.T) {
+	h := newHost(t)
+	commandes(h)
+	for _, ext := range []string{"xlsx", "ods"} {
+		res := h.do("doc.export_"+ext, "path", path(t, "classeur"))
+		p, _ := res.(map[string]any)["path"].(string)
+		b, err := os.ReadFile(p)
+		if err != nil || !strings.HasSuffix(p, "."+ext) || !strings.HasPrefix(string(b), "PK") {
+			t.Errorf("export %s : %v %q", ext, err, p)
+		}
+	}
+}
+
 // Export CSV puis réimport : mêmes valeurs, mêmes types, colonnes calculées
 // exportées avec leurs valeurs.
 func TestCSVRoundTrip(t *testing.T) {

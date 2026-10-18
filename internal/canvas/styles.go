@@ -581,3 +581,40 @@ func (t *tx) lineStyles(sheet int64) (rows, cols []LineStyle, err error) {
 	}
 	return rows, cols, nil
 }
+
+// TableCellStyles donne la mise en forme propre à des cellules d'un tableau
+// (export) : Row est le rang de la ligne dans l'ordre d'affichage (0 :
+// première ligne de données), Col le rang de la colonne.
+func (m *Model) TableCellStyles(ctx context.Context, tbl int64) ([]CellStyle, error) {
+	var out []CellStyle
+	err := m.read(ctx, func(t *tx) error {
+		tb, err := t.table(tbl)
+		if err != nil {
+			return err
+		}
+		idx := map[int64]int{}
+		for i, c := range tb.Cols {
+			idx[c.ID] = i
+		}
+		rs, err := t.query(`SELECT r.n, s.col, s.style FROM _lattis_styles s
+			JOIN (SELECT id, row_number() OVER (ORDER BY _pos) - 1 AS n FROM `+tb.sql()+`) r ON r.id = s.rid
+			WHERE s.tbl = ? AND s.rid > 0`, tbl)
+		if err != nil {
+			return err
+		}
+		defer rs.Close()
+		for rs.Next() {
+			var n int
+			var col int64
+			var style string
+			if err := rs.Scan(&n, &col, &style); err != nil {
+				return err
+			}
+			if j, ok := idx[col]; ok {
+				out = append(out, CellStyle{Row: n, Col: j, Style: style})
+			}
+		}
+		return rs.Err()
+	})
+	return out, err
+}

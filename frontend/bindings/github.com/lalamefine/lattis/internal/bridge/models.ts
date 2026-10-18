@@ -779,8 +779,9 @@ export interface UICommand {
 }
 
 /**
- * XLSXExport est le résultat d'un export .xlsx : le fichier écrit (vide si
- * l'utilisateur a annulé) et le nombre de cellules hors des limites d'Excel.
+ * XLSXExport est le résultat d'un export .xlsx ou .ods : le fichier écrit
+ * (vide si l'utilisateur a annulé) et le nombre de cellules hors des limites
+ * d'Excel (et de LibreOffice).
  */
 export interface XLSXExport {
     "path": string;
