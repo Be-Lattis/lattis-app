@@ -232,6 +232,8 @@
 		hidden?: number;
 		/** Rang de la colonne clé (identifiant des lignes), absent sans clé. */
 		key?: number;
+		/** Sans clé : la première colonne semble identifier chaque ligne (proposée comme clé). */
+		keyHint?: boolean;
 		/** Requête d'import qui charge le tableau (source externe ou autre tableau). */
 		query?: { id: number; name: string };
 		columns: Column[];
@@ -365,6 +367,8 @@
 		keyCheck?(table: SheetTable, i: number): Promise<string>;
 		setKey?(table: SheetTable, i: number): Promise<unknown>;
 		clearKey?(table: SheetTable): Promise<unknown>;
+		/** Ne plus proposer la première colonne du tableau comme clé. */
+		dismissKeyHint?(table: SheetTable): Promise<unknown>;
 		/** Renouvelle AUJOURDHUI, MAINTENANT et ALEA (F9). */
 		recalc?(): Promise<unknown>;
 		/** Antécédents et dépendants d'une cellule (audit de formules). */
@@ -1883,6 +1887,7 @@
 		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 		selBox = frameNow(t0);
 		pinnedFrame = [];
+		keyHintBoxes = [];
 		// Texte centré verticalement partout (les volets dessinent entre save et
 		// restore : la ligne de base doit être posée avant, pour la marge et le bandeau).
 		ctx.textBaseline = 'middle';
@@ -2837,6 +2842,55 @@
 		return !!p.config.items?.some((x) => x.field === f && x.values.length) || !!p.config.sort?.[f];
 	}
 
+	// --- Clé proposée -------------------------------------------------------
+	// Jamais de clé automatique (choix de Louis) : quand la première colonne
+	// d'un tableau sans clé est un entier unique et croissant, une petite clé
+	// grisée dans son en-tête propose d'en faire la clé, en un clic ; clic
+	// droit : « Ne plus proposer » pour ce tableau.
+
+	const KEY_HINT_TIP = 'Cette colonne semble identifier chaque ligne : cliquer pour en faire la clé du tableau';
+	/** Zones (écran) des clés proposées dessinées à cette image. */
+	let keyHintBoxes: { e: Entry; x0: number; x1: number; y0: number; y1: number }[] = [];
+	let hintMenu = $state<{ x: number; y: number; e: Entry } | null>(null);
+
+	const hasKeyHint = (e: Entry, i: number) => i === 0 && !!e.t.keyHint && e.t.key === undefined && !!source.setKey;
+
+	/** Tableau dont la clé proposée est sous la souris. */
+	function keyHintAt(ev: MouseEvent): Entry | null {
+		const { x, y } = toLocal(ev);
+		return keyHintBoxes.find((b) => x >= b.x0 - 2 && x <= b.x1 + 1 && y >= b.y0 && y <= b.y1)?.e ?? null;
+	}
+
+	/** Pose la clé proposée (une étape d'annulation). */
+	function acceptKeyHint(e: Entry) {
+		const setKey = source.setKey;
+		if (!setKey) return;
+		const t = e.t;
+		const name = t.columns[0]?.name ?? '';
+		wrap.focus();
+		writing = writing
+			.catch(() => undefined)
+			.then(async () => {
+				try {
+					await setKey(t, 0);
+					say(`« ${name} » est maintenant la clé du tableau ${t.name} (Ctrl+Z pour annuler)`);
+				} catch (err) {
+					say(String(err instanceof Error ? err.message : err));
+				}
+			});
+	}
+
+	/** Clic droit sur la clé proposée : son petit menu. */
+	function openHintMenu(ev: MouseEvent): boolean {
+		const he = keyHintAt(ev);
+		if (!he) return false;
+		ev.preventDefault();
+		closeMenus();
+		const r = wrap.getBoundingClientRect();
+		hintMenu = { x: ev.clientX - r.left, y: ev.clientY - r.top, e: he };
+		return true;
+	}
+
 	/**
 	 * Boutons d'un en-tête de colonne, alignés à droite : ▾ (filtre), type,
 	 * entonnoir d'un filtre actif, clé, erreurs. Dans la ligne d'en-tête du
@@ -2870,6 +2924,18 @@
 		if (e.t.key === i) {
 			ctx.fillText('🔑 ', x + cw - 6 - iconW, y + h / 2);
 			iconW += ctx.measureText('🔑 ').width;
+		}
+		if (hasKeyHint(e, i)) {
+			// Clé proposée : la même clé, grisée et pâle ; un clic la pose.
+			const kx = x + cw - 6 - iconW;
+			const kw = ctx.measureText('🔑 ').width;
+			ctx.save();
+			ctx.globalAlpha = 0.4;
+			ctx.filter = 'grayscale(1)';
+			ctx.fillText('🔑 ', kx, y + h / 2);
+			ctx.restore();
+			keyHintBoxes.push({ e, x0: kx - kw, x1: kx, y0: y, y1: y + h });
+			iconW += kw;
 		}
 		if (calc && !fx) {
 			ctx.save();
@@ -5052,7 +5118,7 @@
 			if (c < e.t.col || c > e.lastCol) continue;
 			const i = c - e.t.col;
 			const col = e.t.columns[i];
-			const icon = (col.filter ? '⧩ ' : '') + (typeIconName(col.type) ? ' ▾' : typeIcon(col.type) + ' ▾') + (e.t.key === i ? '🔑 ' : '');
+			const icon = (col.filter ? '⧩ ' : '') + (typeIconName(col.type) ? ' ▾' : typeIcon(col.type) + ' ▾') + (e.t.key === i || hasKeyHint(e, i) ? '🔑 ' : '');
 			measurer ??= document.createElement('canvas').getContext('2d');
 			if (measurer) measurer.font = FONT_SMALL;
 			const iconW = (measurer?.measureText(icon).width ?? 0) + (typeIconName(col.type) ? 13 : 0);
@@ -5317,6 +5383,12 @@
 		if (selChart !== null) {
 			selChart = null;
 			if (panel?.kind === 'chart') panel = null;
+		}
+		if (e.button !== 1 && !formulaMode && keyHintAt(e)) {
+			e.preventDefault();
+			if (editing && !commit()) return;
+			if (e.button === 0) acceptKeyHint(keyHintAt(e)!);
+			return;
 		}
 		const frozen = e.button === 0 && boundaryAt(e) === null ? frozenHeaderAt(e) : null;
 		if (frozen) {
@@ -6910,6 +6982,11 @@
 	/** Infobulle d'un en-tête de colonne : nom complet et type. */
 	let tipCell = '';
 	function updateHeaderTip(ev: MouseEvent) {
+		if (keyHintAt(ev)) {
+			if (tipCell !== 'keyhint') scroller.title = KEY_HINT_TIP;
+			tipCell = 'keyhint';
+			return;
+		}
 		const cell = cellAt(ev);
 		const e = cell && tableAt(cell.row, cell.col);
 		if (!cell || !e || cell.row !== e.t.row) {
@@ -7012,6 +7089,7 @@
 	}
 
 	function onContextMenu(ev: MouseEvent) {
+		if (!formulaMode && openHintMenu(ev)) return;
 		const cell = cellAt(ev);
 		ev.preventDefault();
 		closeMenus();
@@ -7691,6 +7769,26 @@
 							}}>Supprimer le tableau « {m.e.t.name} »</button
 						>
 					{/if}
+				{/if}
+			</div>
+		{/if}
+		{#if hintMenu}
+			{@const m = hintMenu}
+			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (hintMenu = null)}>
+				<button
+					onclick={() => {
+						hintMenu = null;
+						acceptKeyHint(m.e);
+					}}>Faire de « {m.e.t.columns[0]?.name} » la clé du tableau</button
+				>
+				{#if source.dismissKeyHint}
+					{@const dismissHint = source.dismissKeyHint}
+					<button
+						onclick={() => {
+							hintMenu = null;
+							menuAction(() => dismissHint(m.e.t));
+						}}>Ne plus proposer</button
+					>
 				{/if}
 			</div>
 		{/if}

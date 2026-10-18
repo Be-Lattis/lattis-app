@@ -294,6 +294,11 @@ CREATE TABLE _lattis_range_cells (
 	PRIMARY KEY (sheet, row, col)
 ) STRICT;
 `,
+	// 25 → 26 : « Ne plus proposer » la première colonne d'un tableau comme
+	// clé (voir canvas/keyhint.go).
+	`
+ALTER TABLE _lattis_tables ADD COLUMN no_key_hint INTEGER NOT NULL DEFAULT 0;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

@@ -860,6 +860,11 @@ func (s *DocumentService) ClearKey(ctx context.Context, table string) (DocState,
 	return s.act(ctx, func(d *doc.Document) error { return d.ClearKey(ctx, table) })
 }
 
+// DismissKeyHint ne propose plus la première colonne du tableau comme clé.
+func (s *DocumentService) DismissKeyHint(ctx context.Context, table string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.DismissKeyHint(ctx, table) })
+}
+
 // DuplicatesPreview compte les lignes en double selon des colonnes.
 func (s *DocumentService) DuplicatesPreview(ctx context.Context, table string, cols []int) (int, error) {
 	d, err := s.current()
