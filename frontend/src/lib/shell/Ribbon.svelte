@@ -543,7 +543,7 @@
 					}
 				]
 			},
-			{ title: 'Exporter', commands: [{ label: 'Exporter en PDF', icon: 'file', run: dc('pdf'), hint: 'Enregistrer le document en PDF, graphiques et tableaux croisés compris (imprimante « Microsoft Print to PDF »)' }] }
+			{ title: 'Imprimer', commands: [{ label: 'Imprimer / PDF', icon: 'file', run: dc('pdf'), hint: 'Imprimer le document, ou l’enregistrer en PDF (imprimante « Microsoft Print to PDF »), graphiques et tableaux croisés compris' }] }
 		],
 		Insertion: [
 			{ title: 'Tableaux', commands: [{ label: 'Tableau croisé', icon: 'pivot-table', run: dc('pivot'), hint: 'Tableau croisé dynamique d’un tableau du classeur, inséré dans le texte et recalculé avec lui' }] },
@@ -976,7 +976,7 @@
 						{/if}
 					</div>
 					<hr />
-					{#each [['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ...(sharedWorkbooksEnabled() && !shared ? [['share', 'Partager sur un serveur…', '']] : []), ...(sharedWorkbooksEnabled() && rights ? [['rights', 'Partager…', '']] : []), ...(sharedWorkbooksEnabled() && republish ? [['republish', 'Republier', '']] : []), ['import', 'Importer (CSV, Excel)…', ''], ['export', 'Exporter le tableau en CSV…', ''], ['exportXlsx', 'Exporter le classeur (.xlsx)…', ''], ['pdf', 'Exporter en PDF…', ''], ['print', 'Imprimer…', 'Ctrl+P'], ['close', 'Fermer', 'Ctrl+W'], ['mcp', 'Serveur MCP (assistants)…', ''], ['settings', 'Paramètres…', ''], ['help', 'Aide', 'F1'], ...(import.meta.env.DEV ? [['demo', 'Démo : 1 M de lignes', '']] : [])].filter(([a]) => a !== 'mcp' || mcpAvailable()) as [a, label, keys] (a)}
+					{#each [['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ...(sharedWorkbooksEnabled() && !shared ? [['share', 'Partager sur un serveur…', '']] : []), ...(sharedWorkbooksEnabled() && rights ? [['rights', 'Partager…', '']] : []), ...(sharedWorkbooksEnabled() && republish ? [['republish', 'Republier', '']] : []), ['import', 'Importer (CSV, Excel)…', ''], ['export', 'Exporter le tableau en CSV…', ''], ['exportXlsx', 'Exporter le classeur (.xlsx)…', ''], ['print', 'Imprimer / PDF…', 'Ctrl+P'], ['close', 'Fermer', 'Ctrl+W'], ['mcp', 'Serveur MCP (assistants)…', ''], ['settings', 'Paramètres…', ''], ['help', 'Aide', 'F1'], ...(import.meta.env.DEV ? [['demo', 'Démo : 1 M de lignes', '']] : [])].filter(([a]) => a !== 'mcp' || mcpAvailable()) as [a, label, keys] (a)}
 						<button disabled={disabled && a !== 'import' && a !== 'demo' && a !== 'mcp' && a !== 'settings' && a !== 'help'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 				</div>

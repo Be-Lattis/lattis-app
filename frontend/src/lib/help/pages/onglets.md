@@ -12,7 +12,7 @@ On y insère aussi des éléments vivants, alimentés par les tableaux du classe
 - des **boutons** qui exécutent une fonction d'un script ;
 - des **champs** (case à cocher, liste, zone de saisie…) dont la valeur s'écrit dans une cellule.
 
-Clic droit sur un élément inséré : le même menu que sur la feuille ; ailleurs, un menu pour insérer. Le texte s'enregistre seul un instant après la dernière frappe, en une étape d'annulation du classeur. Fichier › Exporter en PDF et Imprimer s'appliquent au document.
+Clic droit sur un élément inséré : le même menu que sur la feuille ; ailleurs, un menu pour insérer. Le texte s'enregistre seul un instant après la dernière frappe, en une étape d'annulation du classeur. Fichier › Imprimer / PDF s'applique au document.
 
 ## Page web
 

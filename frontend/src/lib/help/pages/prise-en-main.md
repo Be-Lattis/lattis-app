@@ -47,7 +47,7 @@ Voir [Formules](formules) pour les références et la liste des fonctions. Penda
 
 ## Enregistrer
 
-Un classeur est un seul fichier `.lattis` (une base SQLite et sa description). `Ctrl+S` enregistre ; si Lattis se ferme sans enregistrer, les modifications sont proposées à la récupération au démarrage suivant. Fichier › Importer lit les fichiers CSV et Excel ; Fichier › Exporter écrit du CSV, du `.xlsx` ou du PDF.
+Un classeur est un seul fichier `.lattis` (une base SQLite et sa description). `Ctrl+S` enregistre ; si Lattis se ferme sans enregistrer, les modifications sont proposées à la récupération au démarrage suivant. Fichier › Importer lit les fichiers CSV et Excel ; Fichier › Exporter écrit du CSV ou du `.xlsx` ; Fichier › Imprimer / PDF imprime ou enregistre en PDF.
 
 ## Et ensuite
 

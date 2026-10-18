@@ -1172,7 +1172,6 @@
 
 	// Document en PDF : la fenêtre d'impression, imprimante « Microsoft Print to PDF ».
 	function exportDocPdf() {
-		notice = 'Exporter en PDF : choisissez l’imprimante « Microsoft Print to PDF » (ou « Enregistrer au format PDF »)';
 		docPage?.print(`${docState.title} – ${activeInfo?.name ?? ''}`);
 	}
 
