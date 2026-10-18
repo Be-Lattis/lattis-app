@@ -771,15 +771,18 @@ dans le fichier.
 
 | Protection | Comportement |
 |---|---|
-| Accord des scripts | Un script du classeur lancé sans que vous voyiez son code (bouton, contrôle, évènement du classeur, bouton d'un onglet Document, `scripts_run` du serveur MCP) ne s'exécute que si **cette version** (empreinte de son code) est autorisée sur ce poste. Un script écrit, enregistré ou lancé depuis l'onglet SCRIPT de ce poste l'est d'office : un classeur créé ici ne demande rien. Sinon, sa première exécution demande **Autoriser / Refuser**, avec **Voir le code** et « Autoriser aussi les autres scripts de ce classeur ». Un script modifié ailleurs redemande. Un refus vaut jusqu'à la fermeture de Lattis. Le serveur MCP n'exécute que des versions déjà autorisées. |
+| Accord des scripts | Un script du classeur lancé sans que vous voyiez son code (bouton, contrôle, évènement du classeur, bouton d'un onglet Document, `scripts_run` du serveur MCP) ne s'exécute que si **cette version** (empreinte de son code) est autorisée sur ce poste. Un script écrit, enregistré ou lancé depuis l'onglet SCRIPT de ce poste l'est d'office : un classeur créé ici ne demande rien. Sinon, sa première exécution demande **Autoriser / Refuser**, avec **Voir le code** et « Autoriser aussi les autres scripts de ce classeur » : n'autorisez que si vous faites confiance à la personne qui vous a fourni ce classeur. Un script modifié ailleurs redemande. Un refus vaut jusqu'à la fermeture de Lattis. Le serveur MCP n'exécute que des versions déjà autorisées. |
 | Requêtes SQL | `db.query`, `db.execute`, l'onglet SQL, les pages HTML et le serveur MCP ne lisent et n'écrivent que les tableaux : pas les tables internes `_lattis_*` (journal, accords…), ni un autre fichier (`ATTACH`), ni la structure (`CREATE`, `DROP`, `ALTER`, temporaires compris), ni les transactions, ni les `PRAGMA` (sauf `table_info` et ceux qui décrivent les tables). Erreur : *Requête refusée : le SQL lit et modifie les tableaux du classeur, mais pas ses tables internes…* |
 | Réseau | Avant la première requête vers un hôte, Lattis demande l'autorisation. « Mémoriser pour ce classeur » range l'hôte sur ce poste, pour ce classeur (onglet SCRIPT › Accès réseau) : le même classeur ouvert ailleurs redemande. Les hôtes qu'une version précédente enregistrait dans le fichier ne sont repris que pour les classeurs récents de ce poste au moment de la mise à jour. |
+| Accord des pages web | Une page web (onglet HTML) ne s'exécute à l'affichage de son onglet que si **cette version** (empreinte de son HTML) est autorisée sur ce poste. Une page créée ou modifiée ici l'est d'office. Sinon, l'onglet demande **Autoriser / Ne pas exécuter**, avec **Voir le code** ; « Ne pas exécuter » laisse un message et un bouton **Décider…**. N'autorisez que si vous faites confiance à la personne qui vous a fourni ce classeur. |
+| Déclencheurs SQL | Lattis ne range aucun déclencheur (`TRIGGER`) dans le fichier. Un déclencheur écrit hors de Lattis est supprimé à l'ouverture, avant toute écriture, avec un message dans la barre d'état ; enregistrez le classeur pour qu'il disparaisse aussi du fichier. Vues et index inconnus restent. |
 | Pages HTML | Une page n'appelle (`lattis.call`) qu'une **liste autorisée** de commandes : lecture, valeurs (`cells.set`, `db.execute`…), boîtes de dialogue, réseau (avec accord), actions des boutons (avec l'accord des scripts). Ni fichiers, ni annulation, ni code (scripts, pages, écouteurs), ni structure, ni protections. |
 | Mots de passe | Un mot de passe enregistré au trousseau ne sert à un classeur qu'avec votre accord pour ce classeur : un classeur reçu qui vise le même serveur le demande. |
 
 Les classeurs déjà présents sur ce poste avant cette protection : à la première ouverture
 de Lattis qui la contient, les classeurs de la liste des récents gardent leurs scripts et
-leurs hôtes autorisés ; pour les autres, chaque script demande une fois l'accord.
+leurs hôtes autorisés, et leurs pages web ; pour les autres, chaque script et chaque page web
+demandent une fois l'accord.
 
 ---
 

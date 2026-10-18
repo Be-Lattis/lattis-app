@@ -27,6 +27,11 @@ import (
 // ErrScriptNotAllowed refuse un script dont la version n'est pas autorisée.
 var ErrScriptNotAllowed = errors.New("script non autorisé")
 
+// TrustWarning est la mise en garde des accords d'exécution (scripts ici,
+// pages web dans l'interface : frontend/src/lib/page/consent.ts).
+const TrustWarning = "N'autorisez que si vous faites confiance à la personne qui vous a fourni ce classeur. " +
+	"Dans le doute, refusez : le classeur reste utilisable sans ce script."
+
 // askScript sérialise les demandes d'accord : deux écouteurs du même script
 // ne posent qu'une question.
 var askScript = make(chan struct{}, 1)
@@ -67,12 +72,12 @@ func allowScript(ctx context.Context, host Host, d *doc.Document, name, src stri
 		Title: "Exécuter un script du classeur ?",
 		Message: fmt.Sprintf("Le classeur veut exécuter le script « %s », qui n'a encore jamais été autorisé sur ce poste "+
 			"(classeur reçu, ou script modifié ailleurs). Un script peut lire et modifier tout le classeur, "+
-			"vous poser des questions et joindre les sites que vous autorisez. "+
-			"Ne l'autorisez que si vous faites confiance à la personne qui vous a envoyé le classeur.", name),
-		Fields: []Field{{Name: "all", Label: "Autoriser aussi les autres scripts de ce classeur", Type: "checkbox"}},
-		OK:     "Autoriser",
-		Cancel: "Refuser",
-		Code:   src,
+			"vous poser des questions et, avec votre accord, contacter des sites web.", name),
+		Warning: TrustWarning,
+		Fields:  []Field{{Name: "all", Label: "Autoriser aussi les autres scripts de ce classeur", Type: "checkbox"}},
+		OK:      "Autoriser",
+		Cancel:  "Refuser",
+		Code:    src,
 	})
 	if err != nil {
 		return err

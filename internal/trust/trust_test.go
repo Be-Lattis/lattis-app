@@ -74,3 +74,21 @@ func TestLegacy(t *testing.T) {
 		t.Fatalf("liste relue (%d fois) ou reprise refaite", calls)
 	}
 }
+
+// Les accords des pages web survivent au redémarrage, séparés de ceux des
+// scripts.
+func TestPagesPersist(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "accords.json")
+	s := New(path, nil)
+	h := Hash("<h1>a</h1>\r\n")
+	if s.PageAllowed(h) {
+		t.Fatal("page autorisée d'office")
+	}
+	if err := s.AllowPage(h, "Page1"); err != nil {
+		t.Fatal(err)
+	}
+	s2 := New(path, nil)
+	if !s2.PageAllowed(Hash("<h1>a</h1>\n")) || s2.ScriptAllowed(h) {
+		t.Fatal("accord de page non relu, ou confondu avec un script")
+	}
+}

@@ -35,7 +35,7 @@ type Document struct {
 	// Changements de partage (publication, rechargement : hors journal)
 	// depuis l'ouverture, et au moment de l'enregistrement.
 	shareGen, savedShare atomic.Int64
-	saved int64 // dernière commande appliquée au moment de l'enregistrement
+	saved                int64 // dernière commande appliquée au moment de l'enregistrement
 	// Changements de protection (hors journal) au moment de l'enregistrement.
 	savedProt int64
 	// id est l'identifiant aléatoire du classeur (_lattis_info, SecretScope).
@@ -43,6 +43,9 @@ type Document struct {
 	// backup : copie de sauvegarde à faire du fichier ouvert avant de
 	// l'écraser, s'il était d'un format plus ancien (vide sinon).
 	backup string
+	// dropped : déclencheurs inconnus supprimés à l'ouverture (sécurité),
+	// signalés une fois (TakeOpenNotice).
+	dropped []string
 }
 
 // wrap migre la base et assemble le document. En cas d'échec, keep garde le
@@ -56,7 +59,7 @@ func wrap(ctx context.Context, a *archive.Doc, keep bool) (*Document, error) {
 		}
 		return nil, err
 	}
-	from, err := meta.MigrateFrom(ctx, a.DB)
+	opened, err := meta.MigrateOpen(ctx, a.DB)
 	if err != nil {
 		return fail(err)
 	}
@@ -89,8 +92,15 @@ func wrap(ctx context.Context, a *archive.Doc, keep bool) (*Document, error) {
 		return fail(err)
 	}
 	d.saved = top
-	if from > 0 && from < meta.Version && a.Path != "" {
+	if from := opened.From; from > 0 && from < meta.Version && a.Path != "" {
 		d.backup = backupName(a.Path, from)
+	}
+	// Déclencheurs écrits hors de Lattis, supprimés de la copie de travail
+	// (meta.MigrateOpen) : le classeur est à enregistrer pour qu'ils
+	// disparaissent aussi du fichier, qui ne change pas d'ici là.
+	if len(opened.Dropped) > 0 {
+		d.saved = -1
+		d.dropped = opened.Dropped
 	}
 	return d, nil
 }
@@ -288,6 +298,22 @@ func backupFile(src, dst string) error {
 func (d *Document) ShareChanged(ctx context.Context) error {
 	d.shareGen.Add(1)
 	return d.Share.Reload(ctx)
+}
+
+// TakeOpenNotice rend (une fois) le message à afficher à l'ouverture :
+// déclencheurs inconnus supprimés du classeur (meta.MigrateOpen), vide
+// sinon.
+func (d *Document) TakeOpenNotice() string {
+	n := len(d.dropped)
+	if n == 0 {
+		return ""
+	}
+	names := strings.Join(d.dropped, ", ")
+	d.dropped = nil
+	if n == 1 {
+		return fmt.Sprintf("1 déclencheur inconnu supprimé du classeur (sécurité) : %s. Enregistrez le classeur pour le retirer aussi du fichier.", names)
+	}
+	return fmt.Sprintf("%d déclencheurs inconnus supprimés du classeur (sécurité) : %s. Enregistrez le classeur pour les retirer aussi du fichier.", n, names)
 }
 
 // Backup donne la copie de sauvegarde que le prochain enregistrement fera

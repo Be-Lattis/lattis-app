@@ -15,6 +15,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/store"
@@ -423,12 +424,37 @@ func Migrate(ctx context.Context, db *store.Store) error {
 // d'origine (0 : base neuve). Toutes les étapes passent dans une seule
 // transaction : un échec laisse la base telle qu'elle était.
 func MigrateFrom(ctx context.Context, db *store.Store) (from int, err error) {
+	r, err := MigrateOpen(ctx, db)
+	return r.From, err
+}
+
+// Opened est le résultat de MigrateOpen.
+type Opened struct {
+	// From : version d'origine (0 : base neuve).
+	From int
+	// Dropped : déclencheurs inconnus supprimés (voir MigrateOpen).
+	Dropped []string
+}
+
+// MigrateOpen prépare une base à l'ouverture : supprime les déclencheurs
+// (TRIGGER) du schéma principal, puis la met à la version courante, dans
+// une seule transaction (un échec laisse la base telle qu'elle était).
+//
+// Lattis ne crée aucun déclencheur persistant : les siens sont temporaires,
+// sur la connexion (canvas/sqlexec.go, remote/oplog) ; l'utilisateur ne
+// peut pas en créer (autorisateur, store/authorizer.go). Un déclencheur
+// rangé dans le fichier y a donc été écrit hors de Lattis (classeur piégé)
+// et s'exécuterait avec les écritures du moteur, migrations comprises : il
+// est supprimé avant toute autre écriture. Les vues et les index inconnus,
+// qui ne font rien d'eux-mêmes, restent.
+func MigrateOpen(ctx context.Context, db *store.Store) (r Opened, err error) {
 	err = db.Write(ctx, func(tx *sql.Tx) error {
+		r = Opened{}
 		var v int
 		if err := tx.QueryRowContext(ctx, `PRAGMA user_version`).Scan(&v); err != nil {
 			return err
 		}
-		from = v
+		r.From = v
 		if v > Version {
 			return ErrTooNew{v}
 		}
@@ -442,6 +468,11 @@ func MigrateFrom(ctx context.Context, db *store.Store) (from int, err error) {
 				return ErrForeign
 			}
 		}
+		dropped, err := dropTriggers(ctx, tx)
+		if err != nil {
+			return err
+		}
+		r.Dropped = dropped
 		for ; v < Version; v++ {
 			if _, err := tx.ExecContext(ctx, migrations[v]); err != nil {
 				return fmt.Errorf("migration du format %d au format %d : %w", v, v+1, err)
@@ -454,8 +485,36 @@ func MigrateFrom(ctx context.Context, db *store.Store) (from int, err error) {
 				return err
 			}
 		}
-		_, err := tx.ExecContext(ctx, fmt.Sprintf(`PRAGMA user_version = %d`, Version))
+		_, err = tx.ExecContext(ctx, fmt.Sprintf(`PRAGMA user_version = %d`, Version))
 		return err
 	})
-	return from, err
+	return r, err
+}
+
+// dropTriggers supprime les déclencheurs du schéma principal et donne leurs
+// noms (voir MigrateOpen).
+func dropTriggers(ctx context.Context, tx *sql.Tx) ([]string, error) {
+	rs, err := tx.QueryContext(ctx, `SELECT name FROM main.sqlite_master WHERE type = 'trigger' ORDER BY name`)
+	if err != nil {
+		return nil, err
+	}
+	var names []string
+	for rs.Next() {
+		var n string
+		if err := rs.Scan(&n); err != nil {
+			rs.Close()
+			return nil, err
+		}
+		names = append(names, n)
+	}
+	rs.Close()
+	if err := rs.Err(); err != nil {
+		return nil, err
+	}
+	for _, n := range names {
+		if _, err := tx.ExecContext(ctx, `DROP TRIGGER IF EXISTS main."`+strings.ReplaceAll(n, `"`, `""`)+`"`); err != nil {
+			return nil, fmt.Errorf("suppression du déclencheur « %s » : %w", n, err)
+		}
+	}
+	return names, nil
 }

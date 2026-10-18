@@ -12,9 +12,10 @@ import (
 // pageAllowed sont les seules commandes qu'une page HTML peut appeler (liste
 // autorisée : une commande ajoutée à l'API reste refusée aux pages tant
 // qu'elle n'est pas ici). Une page vient avec le classeur, éventuellement
-// reçu, et s'exécute dès qu'on affiche son onglet : elle lit le classeur,
-// modifie des valeurs (chaque appel s'annule), dialogue avec
-// l'utilisateur, joint les hôtes qu'il autorise et lance les actions des
+// reçu, et s'exécute quand on affiche son onglet (une version reçue,
+// après l'accord de l'utilisateur : frontend/src/lib/page/consent.ts) :
+// elle lit le classeur, modifie des valeurs (chaque appel s'annule),
+// dialogue avec l'utilisateur, joint les hôtes qu'il autorise et lance les actions des
 // boutons et contrôles (soumises à l'accord des scripts). Restent à
 // l'utilisateur : fichiers, annulation, code (scripts, pages, écouteurs,
 // actions des boutons), structure (feuilles, tableaux, colonnes),
