@@ -1165,6 +1165,10 @@
 	let typed = { row: -1, col: -1, t: -Infinity };
 	// 2. Graphiques nés d'une modification : ils poussent depuis zéro.
 	let grownCharts = $state.raw(new Set<number>());
+	// Graphiques : leurs valeurs glissent vers les nouvelles après une
+	// modification seulement ; après une navigation (ouverture, autre feuille),
+	// les données qui arrivent s'affichent telles quelles.
+	let chartTween = $state(false);
 
 	/** Début d'une image : axes animés, valeurs de l'image précédente. */
 	function beginAnimFrame(now: number) {
@@ -1240,6 +1244,7 @@
 		linesHint = null;
 		if (nav || !motion()) {
 			editAt = -Infinity;
+			chartTween = false;
 			lines = null;
 			motions.clear();
 			inner.clear();
@@ -1252,6 +1257,7 @@
 			return;
 		}
 		editAt = now;
+		chartTween = true;
 		const born = charts.filter((c) => !oldCharts.has(c.id)).map((c) => c.id);
 		if (born.length || grownCharts.size) grownCharts = new Set(born);
 		if (hint && hint.table === undefined) {
@@ -8194,7 +8200,7 @@
 						{#if ch.error}
 							<p class="chart-error">Graphique : {ch.error}</p>
 						{:else}
-							<Chart kind={ch.config.kind} labels={ch.labels} series={ch.series} width={box.w} height={box.h} style={ch.config} {animate} grow={grownCharts.has(ch.id)} interactive={selChart === ch.id} onview={(v) => setMapView(ch.id, v)} map={ch} onpoint={onrowlink && ((r) => pointToRow(ch, r))} />
+							<Chart kind={ch.config.kind} labels={ch.labels} series={ch.series} width={box.w} height={box.h} style={ch.config} animate={animate && chartTween} grow={grownCharts.has(ch.id)} interactive={selChart === ch.id} onview={(v) => setMapView(ch.id, v)} map={ch} onpoint={onrowlink && ((r) => pointToRow(ch, r))} />
 						{/if}
 						{#if selChart === ch.id}
 							{#each ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] as dir (dir)}

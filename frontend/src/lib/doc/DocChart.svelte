@@ -37,6 +37,9 @@
 	// Hauteur mesurée : le graphique suit la poignée pendant le geste.
 	let boxH = $state(0);
 	const height = $derived(config.height || 300);
+	// Première lecture (ouverture, retour sur l'onglet) : affichée telle quelle ;
+	// seules les relectures suivantes (données modifiées) s'animent.
+	let settled = $state(false);
 
 	$effect(() => {
 		void live.stamp;
@@ -45,6 +48,7 @@
 			load(cfg).then(
 				(r) => {
 					info = r;
+					setTimeout(() => (settled = true)); // après le premier dessin
 					if (!r.error) lastInfo.set(dataKey(cfg), r);
 				},
 				(e) => (info = { id: 0, row: 0, col: 0, config: cfg as never, labels: [], series: [], error: String(e instanceof Error ? e.message : e) })
@@ -57,7 +61,7 @@
 	{#if info?.error}
 		<div class="err">Graphique « {config.title || config.source} » : {info.error}</div>
 	{:else if info && width > 0}
-		<Chart kind={config.kind} labels={info.labels ?? []} series={(info.series ?? []) as never} {width} height={boxH || height} style={config} animate={live.animate} interactive={selected} onview={(v) => onconfig?.({ ...config, mapView: v ?? undefined })} map={info} onpoint={onrow && ((r) => onrow(config.source, r))} />
+		<Chart kind={config.kind} labels={info.labels ?? []} series={(info.series ?? []) as never} {width} height={boxH || height} style={config} animate={live.animate && settled} interactive={selected} onview={(v) => onconfig?.({ ...config, mapView: v ?? undefined })} map={info} onpoint={onrow && ((r) => onrow(config.source, r))} />
 	{/if}
 </div>
 
