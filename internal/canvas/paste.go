@@ -37,9 +37,11 @@ func itoa(n int) string {
 // d'Excel) à partir de la cellule (row, col). Tout le collage est une seule
 // étape d'annulation.
 //
-// Dans une zone vide (rien dans le bloc ni dans sa bordure), un bloc d'au
-// moins MinRows lignes devient directement un tableau : sa première ligne
-// donne les en-têtes, les types sont inférés sur toutes les valeurs. Sinon,
+// Dans une zone vide (rien dans le bloc ni dans sa bordure), le bloc est
+// découpé aux lignes et colonnes vides, comme à l'import xlsx (voir
+// pasteIslands) : chaque îlot d'au moins MinRows lignes devient directement
+// un tableau (sa première ligne donne les en-têtes, les types sont inférés
+// sur toutes les valeurs) ; titres, notes et totaux restent libres. Sinon,
 // chaque cellule est saisie comme au clavier (extension des tableaux,
 // élargissement des types, cellules libres).
 func (m *Model) Paste(ctx context.Context, sheet int64, row, col int, block [][]string) (Event, error) {
@@ -76,41 +78,7 @@ func (m *Model) Paste(ctx context.Context, sheet int64, row, col int, block [][]
 			free = !near
 		}
 		if free && h >= MinRows {
-			// La première ligne n'est un en-tête que si elle en a l'air (voir
-			// hasHeader) ; sinon les colonnes s'appellent « Colonne n » et
-			// l'en-tête se place au-dessus du bloc collé, qui ne bouge pas.
-			first := 0
-			headers := make([]string, w)
-			if hasHeader(block, w) {
-				for c := range w {
-					headers[c] = strings.TrimSpace(cell(0, c))
-				}
-				first = 1
-			} else {
-				for c := range w {
-					headers[c] = "Colonne " + itoa(c+1)
-				}
-				if row > 0 {
-					row--
-				}
-				ev.Headless = true
-			}
-			data := make([][]string, h-first)
-			for r := range data {
-				data[r] = make([]string, w)
-				for c := range w {
-					data[r][c] = cell(r+first, c)
-				}
-			}
-			name, err := t.tableName(sheet, row, col)
-			if err != nil {
-				return err
-			}
-			if _, err := t.createTable(sheet, name, row, col, headers, data); err != nil {
-				return err
-			}
-			ev.Created = name
-			return nil
+			return t.pasteIslands(sheet, row, col, block, w, &ev)
 		}
 		if h*w > MaxPasteCells {
 			return ErrPasteTooBig{h * w}
@@ -225,17 +193,23 @@ func hasHeader(block [][]string, w int) bool {
 	if len(block) < 2 {
 		return false
 	}
-	seen, dup := map[string]bool{}, false
+	seen, dup, text := map[string]bool{}, false, false
 	for c := range w {
 		if c >= len(block[0]) {
 			return false
 		}
 		h := strings.TrimSpace(block[0][c])
-		if h == "" || Infer(h) != grid.Text || isTimeOrPercent(h) {
+		// Une année (Pays | 2024 | 2025) nomme une colonne comme un texte,
+		// pourvu que la ligne ait aussi un vrai texte.
+		if h == "" || (Infer(h) != grid.Text || isTimeOrPercent(h)) && !yearLike(h) {
 			return false
 		}
+		text = text || !yearLike(h)
 		dup = dup || seen[strings.ToLower(h)]
 		seen[strings.ToLower(h)] = true
+	}
+	if !text {
+		return false
 	}
 	votes := 0
 	for c := range w {
@@ -282,6 +256,14 @@ func hasHeader(block [][]string, w int) bool {
 	return votes > 0 && !dup
 }
 
+// yearLike : un entier entre 1900 et 2100, en-tête de colonne courant.
+func yearLike(s string) bool {
+	if len(s) != 4 || Infer(s) != grid.Integer {
+		return false
+	}
+	return s >= "1900" && s <= "2100"
+}
+
 // PromoteHeader prend la première ligne de données comme en-têtes (noms des
 // colonnes) puis la supprime : « Utiliser la 1re ligne comme en-têtes ».
 func (m *Model) PromoteHeader(ctx context.Context, table string) error {
@@ -293,28 +275,34 @@ func (m *Model) PromoteHeader(ctx context.Context, table string) error {
 		if tb.Rows < 1 || tb.Filtered() {
 			return nil
 		}
-		rid, _, err := t.rowID(tb, 0)
+		return t.promote(tb)
+	})
+}
+
+// promote : la première ligne de données donne les noms des colonnes, puis
+// est supprimée.
+func (t *tx) promote(tb Table) error {
+	rid, _, err := t.rowID(tb, 0)
+	if err != nil {
+		return err
+	}
+	used := map[string]bool{}
+	for i, c := range tb.Cols {
+		raw, _, err := t.rawAt(tb.Sheet, tb.Row+1, tb.Col+i)
 		if err != nil {
 			return err
 		}
-		used := map[string]bool{}
-		for i, c := range tb.Cols {
-			raw, _, err := t.rawAt(tb.Sheet, tb.Row+1, tb.Col+i)
-			if err != nil {
-				return err
-			}
-			name := strings.TrimSpace(raw)
-			if name == "" {
-				name = c.Name
-			}
-			for n := 2; used[strings.ToLower(name)]; n++ {
-				name = strings.TrimSpace(raw) + " " + itoa(n)
-			}
-			used[strings.ToLower(name)] = true
-			if err := t.rename(tb, c, name); err != nil {
-				return err
-			}
+		name := strings.TrimSpace(raw)
+		if name == "" {
+			name = c.Name
 		}
-		return t.deleteRow(tb, rid)
-	})
+		for n := 2; used[strings.ToLower(name)]; n++ {
+			name = strings.TrimSpace(raw) + " " + itoa(n)
+		}
+		used[strings.ToLower(name)] = true
+		if err := t.rename(tb, c, name); err != nil {
+			return err
+		}
+	}
+	return t.deleteRow(tb, rid)
 }

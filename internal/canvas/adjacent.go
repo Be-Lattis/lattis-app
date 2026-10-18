@@ -339,6 +339,14 @@ func (t *tx) joinStep(sheet int64, absorbed func(tb Table, first string, n int))
 	if len(marks) > 0 {
 		cells = slices.DeleteFunc(cells, func(c cell) bool { return marks[[2]int{c.Row, c.Col}] })
 	}
+	// Les cellules gardées hors des tableaux (notes, totaux) aussi.
+	outs, err := t.outCells(sheet)
+	if err != nil {
+		return false, err
+	}
+	if len(outs) > 0 {
+		cells = slices.DeleteFunc(cells, func(c cell) bool { return outs[[2]int{c.Row, c.Col}] })
+	}
 	for _, tb := range tables {
 		if fixed[tb.ID] != "" {
 			continue

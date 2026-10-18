@@ -573,6 +573,14 @@ export function HTTPHosts(): $CancellablePromise<string[] | null> {
 }
 
 /**
+ * HeaderToTitle sort l'en-tête d'un tableau (c'est un titre) : la 1re ligne
+ * de données devient l'en-tête.
+ */
+export function HeaderToTitle(table: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1740447836, table);
+}
+
+/**
  * Import ajoute au classeur un fichier CSV ou un classeur Excel .xlsx
  * (path vide : boîte de dialogue), en une seule étape d'annulation.
  */
@@ -607,6 +615,14 @@ export function InsertSheetColumns(sheet: number, at: number, n: number): $Cance
  */
 export function InsertSheetRows(sheet: number, at: number, n: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(1186857943, sheet, at, n);
+}
+
+/**
+ * JoinTable ajoute au tableau voisin une cellule libre gardée hors du
+ * tableau (note, total, remarque).
+ */
+export function JoinTable(sheet: number, row: number, col: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3139488414, sheet, row, col);
 }
 
 /**
@@ -1054,6 +1070,14 @@ export function ReportError(where: string, message: string, stack: string, trail
  */
 export function RequestOpen(path: string): $CancellablePromise<void> {
     return $Call.ByID(2080541887, path);
+}
+
+/**
+ * RowToNote sort la dernière ligne d'un tableau : elle reste dessous, hors
+ * du tableau (note ou total).
+ */
+export function RowToNote(table: string, n: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(120953239, table, n);
 }
 
 /**

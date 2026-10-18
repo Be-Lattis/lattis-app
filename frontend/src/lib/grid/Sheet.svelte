@@ -406,6 +406,12 @@
 		dependencies?(row: number, col: number): Promise<{ subject: string; precedents: DepTarget[]; dependents: DepTarget[] }>;
 		/** La 1re ligne de données devient les en-têtes. */
 		promoteHeader?(table: SheetTable): Promise<unknown>;
+		/** Sortir l'en-tête du tableau : c'est un titre, la 1re ligne devient l'en-tête. */
+		headerToTitle?(table: SheetTable): Promise<unknown>;
+		/** Sortir la dernière ligne du tableau : elle reste dessous comme note ou total. */
+		rowToNote?(table: SheetTable, n: number): Promise<unknown>;
+		/** Ajouter au tableau voisin une cellule gardée hors du tableau (note, total). */
+		joinTable?(row: number, col: number): Promise<unknown>;
 		createPivot?(cfg: PivotConfig): Promise<unknown>;
 		/** Valeurs distinctes d'une colonne d'un tableau (filtre d'un TCD). */
 		pivotFieldValues?(table: string, field: string): Promise<{ text: string; count: number }[]>;
@@ -1428,6 +1434,8 @@
 		const { row, col } = active;
 		let last = e.last;
 		let lastCol = e.lastCol;
+		// Une note ou un total gardé hors du tableau ne l'étend pas.
+		if (keptOut(row, col)) return { last, lastCol, firstCol: e.t.col };
 		// Juste à gauche, sur ses lignes : la saisie y fera sa nouvelle
 		// première colonne (le tableau s'ancre une colonne plus à gauche).
 		const firstCol = col === e.t.col - 1 && row >= e.t.row && row <= e.last && !tableAt(row, col) ? e.t.col - 1 : e.t.col;
@@ -7666,6 +7674,8 @@
 	}
 
 	/** La cellule est dans une zone « plage » (tableau converti). */
+	// Cellule libre gardée hors du tableau voisin (note, total : style « out »).
+	const keptOut = (row: number, col: number) => !!(freeStyles.get(key(row, col)) as { out?: boolean } | undefined)?.out;
 	const inRangeZone = (row: number, col: number) => (data.ranges ?? []).some((z) => row >= z.r0 && row <= z.r1 && col >= z.c0 && col <= z.c1);
 
 	// Menu du clic droit hors tableau : presse-papiers et effacement.
@@ -8291,6 +8301,9 @@
 					{#if !m.header && !m.rowOnly}
 						<button onclick={() => menuAction(source.deleteRow && (() => tableLines(m.e, 'deleteRow', m.n)))}>Supprimer la ligne</button>
 					{/if}
+					{#if !m.header && !m.rowOnly && source.rowToNote && m.n === m.e.t.rows - 1}
+						<button data-shed="2" title="La ligne reste sous le tableau, comme note ou total, sans en faire partie" onclick={() => menuAction(() => source.rowToNote!(m.e.t, m.n))}>Sortir la ligne du tableau (note)</button>
+					{/if}
 					{#if cols}
 						<button onclick={() => menuAction(source.deleteColumn && (() => tableLines(m.e, 'deleteColumn', m.i)))}>Supprimer la colonne « {col?.name} »</button>
 					{/if}
@@ -8344,6 +8357,9 @@
 					{/if}
 					{#if cols && source.promoteHeader && m.e.t.rows > 0}
 						<button data-shed="1" onclick={() => menuAction(() => source.promoteHeader!(m.e.t))}>Utiliser la 1re ligne comme en-têtes</button>
+					{/if}
+					{#if cols && m.header && source.headerToTitle && m.e.t.rows > 0}
+						<button data-shed="1" title="L'en-tête devient un titre au-dessus du tableau ; la 1re ligne devient l'en-tête" onclick={() => menuAction(() => source.headerToTitle!(m.e.t))}>Sortir l'en-tête du tableau (c'est un titre)</button>
 					{/if}
 					{#if m.e.t.query && source.refreshTable}
 						{@const t = m.e.t}
@@ -8446,6 +8462,11 @@
 						<button data-shed="1" onclick={() => openFormat()}>Format de cellule… <span class="keys">Ctrl+1</span></button>
 					{/if}
 					{#if source.setNote}{@render noteItems()}{/if}
+					{#if source.joinTable && keptOut(active.row, active.col)}
+						{@const at = { row: active.row, col: active.col }}
+						<hr />
+						<button data-shed="1" title="Cette cellule est gardée hors du tableau voisin (note, total) ; elle le rejoint" onclick={() => menuAction(() => source.joinTable!(at.row, at.col))}>Ajouter au tableau</button>
+					{/if}
 					{#if source.formatAsTable && inRangeZone(active.row, active.col)}
 						{@const at = { row: active.row, col: active.col }}
 						<hr />
