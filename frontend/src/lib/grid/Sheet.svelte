@@ -1850,8 +1850,31 @@
 		const i = active.col - e.t.col;
 		return e.t.columns[i]?.formula || formulaMode ? { e, i } : null;
 	});
+	// Portée d'une modification qui touchera une colonne ou une plage entière
+	// (demande de Louis) : teintée comme la colonne d'une formule en cours
+	// d'édition. Menu ▾ d'une colonne (type, tri, filtre, clé), mise en forme
+	// conditionnelle et validation des données ouvertes : leur cible.
+	const scopeTints = $derived.by((): Range[] => {
+		if (calcEdit) {
+			const { e, i } = calcEdit;
+			return [{ r0: e.t.row + 1, r1: e.last, c0: e.t.col + i, c1: e.t.col + i }];
+		}
+		if (filterDlg) {
+			const { e, i } = filterDlg;
+			return [{ r0: e.t.row + 1, r1: e.last, c0: e.t.col + i, c1: e.t.col + i }];
+		}
+		if (cfView || validDlg) {
+			const sel = selection();
+			// Dans un tableau, une règle vaut pour ses colonnes entières.
+			const e = tableAt(active.row, active.col);
+			if (e) return [{ r0: e.t.row + 1, r1: e.last, c0: Math.max(sel.c0, e.t.col), c1: Math.min(sel.c1, e.lastCol) }];
+			return singleSelection() ? [] : [sel];
+		}
+		return [];
+	});
 	$effect(() => {
 		void calcEdit;
+		void scopeTints;
 		untrack(() => schedule());
 	});
 
@@ -2540,14 +2563,14 @@
 			}
 			ctx.restore();
 		}
-		// Colonne calculée en cours d'édition : toute sa portée teintée.
-		if (calcEdit) {
-			const { e, i } = calcEdit;
-			const a = Math.max(e.t.row + 1, r0);
-			const b = Math.min(e.last, r1);
-			if (a <= b) {
+		// Colonne calculée en cours d'édition, ou cible d'une modification
+		// de colonne (scopeTints) : toute sa portée teintée.
+		for (const t of scopeTints) {
+			const a = Math.max(t.r0, r0);
+			const b = Math.min(t.r1, r1);
+			if (a <= b && t.c0 <= t.c1) {
 				ctx.fillStyle = C.calc;
-				ctx.fillRect(cx(e.t.col + i), ry(a), cax().size(e.t.col + i), rspan(a, b));
+				ctx.fillRect(cx(t.c0), ry(a), spanW(t.c0, t.c1), rspan(a, b));
 			}
 		}
 		// Saisie d'une formule : chaque référence encadrée de sa couleur, comme
