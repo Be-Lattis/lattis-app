@@ -80,7 +80,7 @@ func TestWriteLeftGrows(t *testing.T) {
 	}
 	check(t, d, "donnée à gauche")
 	ts = tablesOf(t, d)
-	if len(ts) != 1 || ts[0].Col != 2 || colNames(ts[0]) != "Colonne 3|Nom|Prenom" {
+	if len(ts) != 1 || ts[0].Col != 2 || colNames(ts[0]) != "Colonne 1|Nom|Prenom" {
 		t.Fatalf("donnée à gauche : %+v", ts)
 	}
 	if got := view(t, d); !strings.Contains(got, "7|Durand|Marie") {
@@ -111,6 +111,7 @@ func TestWriteLeftTouchesOther(t *testing.T) {
 	if len(ts) != 2 {
 		t.Fatalf("départ : %+v", ts)
 	}
+	big := ts[1].Name // 3 lignes × 2 colonnes, contre 1 × 1
 	before := dump(t, d)
 	d.TakeNotice()
 	// Ligne 3 : hors des lignes du tableau de gauche, c'est celui de droite
@@ -120,11 +121,11 @@ func TestWriteLeftTouchesOther(t *testing.T) {
 	}
 	check(t, d, "fusion par la gauche")
 	ts = tablesOf(t, d)
-	if len(ts) != 1 || ts[0].Col != 0 || colNames(ts[0]) != "ID|Colonne 3|Nom|Sexe" {
+	if len(ts) != 1 || ts[0].Col != 0 || colNames(ts[0]) != "ID|Colonne 1|Nom|Sexe" {
 		t.Fatalf("fusion par la gauche : %+v", ts)
 	}
 	// Le plus gros garde son nom.
-	if ts[0].Name != ts[0].Name || !strings.Contains(view(t, d), "1||Dupont|M") {
+	if ts[0].Name != big || !strings.Contains(view(t, d), "1||Dupont|M") {
 		t.Fatalf("fusion par la gauche :\n%s", view(t, d))
 	}
 	if n := d.TakeNotice(); !strings.Contains(n, "fusionnés (Ctrl+Z pour annuler)") {
@@ -155,8 +156,8 @@ func TestPasteMakesAdjacentMerges(t *testing.T) {
 	undoOnce(t, d, before, "collage jointif")
 }
 
-// Un tableau déplacé contre un autre, même décalé d'une ligne, fusionne
-// avec lui (lignes alignées par rang).
+// Un tableau déplacé contre un autre, en-têtes sur la même ligne, fusionne
+// avec lui, chaque ligne de données en face de celle de la même ligne de la feuille.
 func TestMoveMakesAdjacentMerges(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
@@ -170,7 +171,7 @@ func TestMoveMakesAdjacentMerges(t *testing.T) {
 	big := ts[1].Name
 	before := dump(t, d)
 	d.TakeNotice()
-	if err := d.MoveTable(ctx, big, 1, 1); err != nil {
+	if err := d.MoveTable(ctx, big, 0, 1); err != nil {
 		t.Fatal(err)
 	}
 	check(t, d, "déplacement jointif")

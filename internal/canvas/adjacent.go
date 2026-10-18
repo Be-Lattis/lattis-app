@@ -1,50 +1,168 @@
 package canvas
 
 import (
+	"database/sql"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"slices"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // Tableaux jointifs.
 //
-// Un tableau garde toujours au moins une cellule vide à sa gauche, à sa
-// droite et sous lui. Quand une action (saisie, collage, déplacement,
-// suppression ou insertion de lignes et de colonnes, conversion…) colle
-// quelque chose contre lui, cela le rejoint à la fin de l'action, dans la
-// même étape d'annulation :
+// Décision de Louis : deux tableaux, ou un tableau et une cellule libre, ne
+// restent jamais jointifs. Un tableau garde toujours au moins une cellule
+// vide à sa gauche, à sa droite et sous lui. Quand une action (saisie,
+// collage, déplacement, suppression ou insertion de lignes et de colonnes,
+// conversion…) colle quelque chose contre lui, cela le rejoint à la fin de
+// l'action, dans la même étape d'annulation, sur les feuilles que l'action a
+// touchées seulement :
 //
-//   - un tableau juste à sa droite (colonnes adjacentes, lignes qui se
-//     recoupent) : les deux fusionnent (mergeRight), lignes alignées par rang ;
-//     le plus gros garde son nom (à égalité, celui de gauche) ;
+//   - un tableau juste à sa droite, en-têtes sur la même ligne : les deux
+//     fusionnent (mergeRight), chaque ligne de données avec celle qui est
+//     sur la même ligne de la feuille ; le plus gros garde son nom (à
+//     égalité, celui de gauche). En-têtes sur des lignes différentes, la
+//     fusion mélangerait un en-tête et des données : le tableau de droite
+//     s'écarte d'une colonne ;
+//   - un tableau juste dessous (son en-tête sur la ligne qui suit la
+//     dernière) : il descend d'une ligne, pour que son en-tête ne se lise pas
+//     comme une ligne du premier. Pas de fusion verticale, même à colonnes
+//     identiques : l'en-tête du second disparaîtrait et ce qui le citait
+//     (SOMME(B[Age])) lirait aussi les lignes du premier ;
 //   - une cellule libre juste à droite ou à gauche (lignes du tableau) :
 //     elle devient une nouvelle colonne (sur la ligne d'en-tête : son nom) ;
 //   - une cellule libre juste dessous (colonnes du tableau) : une nouvelle
 //     ligne.
 //
-// Exactement comme si elle avait été tapée là (input). Au-dessus du tableau,
-// une cellule libre reste libre (un titre) ; deux tableaux l'un sur l'autre
-// ne fusionnent pas (le dessous s'écarte, voir ensureGapBelow).
+// La cellule libre rejoint le tableau comme si elle avait été tapée là
+// (input), avec sa mise en forme ; une formule y entre par sa valeur (elle
+// ne devient pas une colonne calculée de tout le tableau) ; les formules qui
+// la citaient (Cell[G1], ou son nom si elle en avait un) citent la cellule du
+// tableau (Tableau[Col][n]).
+//
+// Exception : au-dessus du tableau, une cellule libre reste libre (c'est un
+// titre), même collée à l'en-tête.
+//
+// Un tableau filtré, ou chargé par une requête d'import (que l'actualisation
+// remplace), ne grandit ni ne fusionne de lui-même : un tableau qui le touche
+// s'écarte, une cellule qui le touche reste libre ; un message le dit.
 
 // layoutRe reconnaît une instruction qui peut changer la disposition d'une
 // feuille : ancres et colonnes des tableaux, cellules libres, lignes ajoutées
 // ou retirées d'un tableau.
 var layoutRe = regexp.MustCompile(`(?is)^\s*(INSERT\s+INTO|DELETE\s+FROM|ALTER\s+TABLE)\s+t_\d+\b|_lattis_(tables|cells|columns|range_cells)\b`)
 
+// staticRe : instructions sur ces tables qui ne changent pas la disposition
+// (texte d'une cellule, nom, formule, type ou règles d'une colonne, nom,
+// filtre ou clé d'un tableau), par exemple les formules réécrites sur
+// d'autres feuilles après un renommage.
+var staticRe = regexp.MustCompile(`(?is)^\s*UPDATE\s+_lattis_(cells\s+SET\s+raw\s*=\s*\?\s+WHERE|columns\s+SET\s+(name|formula|rules|type|fixed)\s*=|tables\s+SET\s+(name|filter|key_col)\s*=)`)
+
+var (
+	tableStmtRe  = regexp.MustCompile(`(?is)^\s*(?:INSERT\s+INTO|DELETE\s+FROM|ALTER\s+TABLE)\s+t_(\d+)\b`)
+	sheetArgRe   = regexp.MustCompile(`(?i)\bsheet\s*=\s*\?`)
+	tblArgRe     = regexp.MustCompile(`(?i)\btbl\s*=\s*\?`)
+	idArgRe      = regexp.MustCompile(`(?i)\bid\s*=\s*\?`)
+	insertColsRe = regexp.MustCompile(`(?is)^\s*INSERT\s+(?:OR\s+\w+\s+)?INTO\s+_lattis_\w+\s*\(([^)]*)\)\s*VALUES`)
+)
+
 func (t *tx) markLayout(do []stmt) {
-	if t.layout {
-		return
-	}
 	for _, s := range do {
-		if layoutRe.MatchString(s.Q) {
-			t.layout = true
-			return
+		if !layoutRe.MatchString(s.Q) || staticRe.MatchString(s.Q) {
+			continue
+		}
+		t.layout = true
+		if !t.layoutAll && !t.layoutTarget(s) {
+			t.layoutAll = true
 		}
 	}
+}
+
+// layoutTarget relève la feuille (ou le tableau) qu'une instruction de
+// disposition touche ; faux si elle ne se lit pas (toutes les feuilles
+// seront examinées).
+func (t *tx) layoutTarget(s stmt) bool {
+	if t.layoutSheets == nil {
+		t.layoutSheets, t.layoutTables = map[int64]bool{}, map[int64]bool{}
+	}
+	if m := tableStmtRe.FindStringSubmatch(s.Q); m != nil {
+		var id int64
+		fmt.Sscan(m[1], &id)
+		t.layoutTables[id] = true
+		return true
+	}
+	if m := insertColsRe.FindStringSubmatch(s.Q); m != nil {
+		cols := strings.Split(m[1], ",")
+		for i, c := range cols {
+			c = strings.TrimSpace(c)
+			if c != "sheet" && c != "tbl" && !(c == "id" && strings.Contains(s.Q, "_lattis_tables")) {
+				continue
+			}
+			found := false
+			for k := i; k < len(s.Args); k += len(cols) {
+				if v, ok := asInt(s.Args[k]); ok {
+					found = true
+					if c == "sheet" {
+						t.layoutSheets[v] = true
+					} else {
+						t.layoutTables[v] = true
+					}
+				}
+			}
+			if found {
+				return true
+			}
+		}
+		return false
+	}
+	if strings.Contains(strings.ToUpper(s.Q), "SELECT") && strings.HasPrefix(strings.ToUpper(strings.TrimSpace(s.Q)), "INSERT") {
+		return false
+	}
+	for _, x := range []struct {
+		re    *regexp.Regexp
+		sheet bool
+	}{{sheetArgRe, true}, {tblArgRe, false}, {idArgRe, false}} {
+		loc := x.re.FindStringIndex(s.Q)
+		if loc == nil {
+			continue
+		}
+		if x.re == idArgRe && !strings.Contains(s.Q, "_lattis_tables") {
+			continue
+		}
+		k := strings.Count(s.Q[:loc[1]], "?") - 1
+		if k >= len(s.Args) {
+			return false
+		}
+		v, ok := asInt(s.Args[k])
+		if !ok {
+			return false
+		}
+		if x.sheet {
+			t.layoutSheets[v] = true
+		} else {
+			t.layoutTables[v] = true
+		}
+		return true
+	}
+	return false
+}
+
+func asInt(v any) (int64, bool) {
+	switch x := v.(type) {
+	case int:
+		return int64(x), true
+	case int64:
+		return x, true
+	case int32:
+		return int64(x), true
+	}
+	return 0, false
 }
 
 // Apply et ApplyStep relèvent au passage les changements de disposition.
@@ -87,8 +205,9 @@ func (m *Model) TakeNotice() string {
 	return s
 }
 
-// joinAdjacent rattache, sur chaque feuille non protégée, ce qui touche un
-// tableau ; seulement si l'action a changé la disposition.
+// joinAdjacent rattache, sur chaque feuille non protégée que l'action a
+// touchée, ce qui touche un tableau ; seulement si l'action a changé la
+// disposition.
 func (t *tx) joinAdjacent() error {
 	if !t.layout || t.joining || t.ro {
 		return nil
@@ -109,8 +228,20 @@ func (t *tx) joinAdjacent() error {
 		sheets = append(sheets, id)
 	}
 	rs.Close()
+	touched := map[int64]bool{}
+	for id := range t.layoutSheets {
+		touched[id] = true
+	}
+	for id := range t.layoutTables {
+		var sh int64
+		if err := t.row(`SELECT sheet FROM _lattis_tables WHERE id = ?`, id).Scan(&sh); err == nil {
+			touched[sh] = true
+		} else if !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+	}
 	for _, sh := range sheets {
-		if t.guard(sh) != nil {
+		if !t.layoutAll && !touched[sh] || t.guard(sh) != nil {
 			continue
 		}
 		if err := t.joinSheet(sh); err != nil {
@@ -128,14 +259,16 @@ func (t *tx) joinSheet(sheet int64) error {
 	absorbed := map[string]*joined{} // tableau → cellules rattachées
 	var order []string
 	defer func() {
+		var notes []string
 		for _, name := range order {
 			j := absorbed[name]
 			what := "« " + clip(j.first) + " » rattaché"
 			if j.n > 1 {
 				what = fmt.Sprintf("%d cellules (« %s »…) rattachées", j.n, clip(j.first))
 			}
-			t.notes = append(t.notes, fmt.Sprintf("%s au tableau « %s » (Ctrl+Z pour annuler)", what, name))
+			notes = append(notes, fmt.Sprintf("%s au tableau « %s » (Ctrl+Z pour annuler)", what, name))
 		}
+		t.notes = append(t.notes, notes...)
 	}()
 	for range 10000 {
 		done, err := t.joinStep(sheet, func(tb Table, raw string, n int) {
@@ -154,8 +287,8 @@ func (t *tx) joinSheet(sheet int64) error {
 	return fmt.Errorf("%w : impossible de rattacher les cellules voisines des tableaux", ErrTable)
 }
 
-// joinStep rattache une seule chose collée à un tableau de la feuille ; done
-// quand il n'y a plus rien.
+// joinStep rattache (ou écarte) une seule chose collée à un tableau de la
+// feuille ; done quand il n'y a plus rien.
 func (t *tx) joinStep(sheet int64, absorbed func(tb Table, first string, n int)) (done bool, err error) {
 	tables, err := t.tables(sheet)
 	if err != nil || len(tables) == 0 {
@@ -165,13 +298,33 @@ func (t *tx) joinStep(sheet int64, absorbed func(tb Table, first string, n int))
 	if err != nil {
 		return false, err
 	}
-	// Deux tableaux côte à côte : fusion.
+	// Deux tableaux côte à côte.
 	for _, a := range tables {
 		for _, b := range tables {
-			if a.ID == b.ID || fixed[a.ID] || fixed[b.ID] || a.Right()+1 != b.Col || a.Row > b.Bottom() || b.Row > a.Bottom() {
+			if a.ID == b.ID || a.Right()+1 != b.Col || a.Row > b.Bottom() || b.Row > a.Bottom() {
 				continue
 			}
+			switch {
+			case fixed[a.ID] != "" || fixed[b.ID] != "":
+				return false, t.separate(a, b, false, fixedWhy(a, b, fixed))
+			case a.Row != b.Row:
+				return false, t.separate(a, b, false, "en-têtes sur des lignes différentes")
+			}
 			return false, t.joinTables(a, b)
+		}
+	}
+	// Deux tableaux l'un sur l'autre : l'en-tête du second se lirait comme
+	// une ligne du premier.
+	for _, a := range tables {
+		for _, b := range tables {
+			if a.ID == b.ID || b.Row != a.Bottom()+1 || a.Col > b.Right() || b.Col > a.Right() {
+				continue
+			}
+			why := "deux tableaux empilés ne fusionnent pas"
+			if fixed[a.ID] != "" || fixed[b.ID] != "" {
+				why = fixedWhy(a, b, fixed)
+			}
+			return false, t.separate(a, b, true, why)
 		}
 	}
 	cells, err := t.cells(sheet)
@@ -187,32 +340,226 @@ func (t *tx) joinStep(sheet int64, absorbed func(tb Table, first string, n int))
 		cells = slices.DeleteFunc(cells, func(c cell) bool { return marks[[2]int{c.Row, c.Col}] })
 	}
 	for _, tb := range tables {
-		if fixed[tb.ID] {
+		if fixed[tb.ID] != "" {
 			continue
 		}
 		c, ok := touching(tb, cells)
 		if !ok {
 			continue
 		}
-		if err := t.setFreeCell(sheet, c.Row, c.Col, ""); err != nil {
-			return false, err
-		}
-		var ev Event
-		if err := t.input(sheet, c.Row, c.Col, c.Raw, &ev); err != nil {
+		n, err := t.absorbCell(sheet, tb, c, len(cells))
+		if err != nil {
 			return false, err
 		}
 		if cur, err := t.table(tb.ID); err == nil {
 			tb = cur
 		}
-		// La saisie a pu emmener d'autres cellules de la même colonne ou ligne.
-		after, err := t.cells(sheet)
-		if err != nil {
-			return false, err
-		}
-		absorbed(tb, c.Raw, max(1, len(cells)-len(after)))
+		absorbed(tb, c.Raw, n)
 		return false, nil
 	}
+	// Une cellule contre un tableau qui ne grandit pas : elle reste libre,
+	// et on le dit.
+	for _, tb := range tables {
+		if fixed[tb.ID] == "" {
+			continue
+		}
+		if c, ok := touching(tb, cells); ok {
+			t.notes = append(t.notes, fmt.Sprintf("« %s » reste à côté du tableau « %s » sans le rejoindre : %s", clip(c.Raw), tb.Name, fixed[tb.ID]))
+		}
+	}
 	return true, nil
+}
+
+func fixedWhy(a, b Table, fixed map[int64]string) string {
+	if w := fixed[a.ID]; w != "" {
+		return fmt.Sprintf("« %s » %s", a.Name, strings.TrimPrefix(w, "il "))
+	}
+	return fmt.Sprintf("« %s » %s", b.Name, strings.TrimPrefix(fixed[b.ID], "il "))
+}
+
+// separate écarte b de a, contre lequel il est collé : d'une colonne vers la
+// droite (côte à côte) ou d'une ligne vers le bas (dessous), avec ce qui le
+// suit.
+func (t *tx) separate(a, b Table, below bool, why string) error {
+	if below {
+		if err := t.ensureGapBelow(b.Sheet, b.ID, b.Bottom(), b.Bottom()+1, b.Col, b.Right()); err != nil {
+			return err
+		}
+		if err := t.moveTable(b, 1, 0); err != nil {
+			return err
+		}
+		t.notes = append(t.notes, fmt.Sprintf("Tableau « %s » descendu d'une ligne, sous « %s » sans le rejoindre : %s", b.Name, a.Name, why))
+		return nil
+	}
+	if err := t.ensureGapRight(b.Sheet, b.ID, b.Right(), b.Right()+1, b.Row, b.Bottom()); err != nil {
+		return err
+	}
+	if err := t.moveTable(b, 0, 1); err != nil {
+		return err
+	}
+	t.notes = append(t.notes, fmt.Sprintf("Tableau « %s » décalé d'une colonne, à côté de « %s » sans le rejoindre : %s", b.Name, a.Name, why))
+	return nil
+}
+
+// absorbCell fait entrer la cellule libre c dans le tableau tb qu'elle
+// touche ; rend le nombre de cellules libres parties avec elle.
+func (t *tx) absorbCell(sheet int64, tb Table, c cell, before int) (int, error) {
+	raw := c.Raw
+	if isFormula(raw) {
+		// Une formule entre par sa valeur : dans le tableau, elle ferait une
+		// colonne calculée, la même pour toutes les lignes.
+		schema, err := t.schema()
+		if err != nil {
+			return 0, err
+		}
+		values, err := t.nameValuesWith(schema, true)
+		if err != nil {
+			return 0, err
+		}
+		raw = values[formula.CellKey(sheet, c.Row, c.Col)].String()
+		if raw != "" && isFormula(raw) {
+			raw = "'" + raw
+		}
+		t.notes = append(t.notes, fmt.Sprintf("La formule « %s » est entrée dans le tableau « %s » par sa valeur", clip(c.Raw), tb.Name))
+	}
+	if err := t.setFreeCell(sheet, c.Row, c.Col, ""); err != nil {
+		return 0, err
+	}
+	if strings.TrimSpace(raw) != "" {
+		var ev Event
+		if err := t.input(sheet, c.Row, c.Col, raw, &ev); err != nil {
+			return 0, err
+		}
+	}
+	cur, err := t.table(tb.ID)
+	if err != nil {
+		return 0, err
+	}
+	if err := t.adoptFree(cur); err != nil {
+		return 0, err
+	}
+	// La saisie a pu emmener d'autres cellules de la même colonne ou ligne.
+	after, err := t.cells(sheet)
+	if err != nil {
+		return 0, err
+	}
+	return max(1, before-len(after)), nil
+}
+
+// adoptFree fait suivre au tableau ce qui accompagnait les cellules libres
+// qu'il vient de recouvrir : leur mise en forme, les formules qui les
+// citaient par leur adresse ou par leur nom (Tableau[Col][n]) ; un contrôle
+// lié à l'une d'elles est signalé.
+func (t *tx) adoptFree(tb Table) error {
+	in := `sheet = ? AND row BETWEEN ? AND ? AND col BETWEEN ? AND ?`
+	area := []any{tb.Sheet, tb.Row, tb.Bottom(), tb.Col, tb.Right()}
+	// Mise en forme.
+	rs, err := t.query(`SELECT row, col, style FROM _lattis_cell_styles WHERE `+in, area...)
+	if err != nil {
+		return err
+	}
+	type styled struct {
+		row, col int
+		style    string
+	}
+	var ss []styled
+	for rs.Next() {
+		var s styled
+		if err := rs.Scan(&s.row, &s.col, &s.style); err != nil {
+			rs.Close()
+			return err
+		}
+		ss = append(ss, s)
+	}
+	rs.Close()
+	for _, s := range ss {
+		rid := int64(-1) // en-tête
+		if s.row > tb.Row {
+			ids, err := t.ridsAt(&tb, s.row, s.row)
+			if err != nil || len(ids) == 0 {
+				continue
+			}
+			rid = ids[0]
+		}
+		if err := t.putTableStyle(tb.ID, rid, tb.Cols[s.col-tb.Col].ID, s.style); err != nil {
+			return err
+		}
+	}
+	if len(ss) > 0 {
+		if err := t.deleteWhere(`_lattis_cell_styles`, in, area...); err != nil {
+			return err
+		}
+	}
+	// Adresses Cell[G1] des données : Tableau[Col][n].
+	var sheetName string
+	if err := t.row(`SELECT name FROM _lattis_sheets WHERE id = ?`, tb.Sheet).Scan(&sheetName); err != nil {
+		return err
+	}
+	headers := make([]string, len(tb.Cols))
+	for i, c := range tb.Cols {
+		headers[i] = c.Name
+	}
+	zone := Rect{R0: tb.Row, C0: tb.Col, R1: tb.Bottom(), C1: tb.Right()}
+	if err := t.cellsToTable(tb.Sheet, sheetName, zone, tb.Name, headers); err != nil {
+		return err
+	}
+	// Cellules nommées : le nom laisse la place à Tableau[Col][n].
+	rs, err = t.query(`SELECT name, row, col FROM _lattis_names WHERE `+in, area...)
+	if err != nil {
+		return err
+	}
+	type named struct {
+		name     string
+		row, col int
+	}
+	var ns []named
+	for rs.Next() {
+		var n named
+		if err := rs.Scan(&n.name, &n.row, &n.col); err != nil {
+			rs.Close()
+			return err
+		}
+		ns = append(ns, n)
+	}
+	rs.Close()
+	for _, n := range ns {
+		ref, ok := tableRef(zone, tb.Name, headers, formula.ColumnLetters(n.col)+fmt.Sprint(n.row+1))
+		if !ok {
+			t.notes = append(t.notes, fmt.Sprintf("La cellule nommée « %s » est l'en-tête du tableau « %s » : son nom ne désigne plus rien", n.name, tb.Name))
+			continue
+		}
+		if err := t.rewriteRefs(refChange{Renames: formula.Renames{Names: lowerMap(n.name, ref)}}); err != nil {
+			return err
+		}
+		if err := t.deleteWhere(`_lattis_names`, `name = ?`, n.name); err != nil {
+			return err
+		}
+		t.notes = append(t.notes, fmt.Sprintf("La cellule nommée « %s » a rejoint le tableau « %s » : les formules lisent désormais %s", n.name, tb.Name, ref))
+	}
+	// Contrôles liés : signalés.
+	cfgs, ids, err := t.configs(`_lattis_buttons`)
+	if err != nil {
+		return err
+	}
+	for _, id := range ids {
+		var bc ButtonConfig
+		if json.Unmarshal([]byte(cfgs[id]), &bc) != nil || bc.Link == "" {
+			continue
+		}
+		var bsheet int64
+		if err := t.row(`SELECT sheet FROM _lattis_buttons WHERE id = ?`, id).Scan(&bsheet); err != nil {
+			return err
+		}
+		sh, addr := SplitLink(bc.Link)
+		if sh != "" && !strings.EqualFold(sh, sheetName) || sh == "" && bsheet != tb.Sheet {
+			continue
+		}
+		r, c, ok := formula.CellRef("Cell_" + addr)
+		if ok && r >= tb.Row && r <= tb.Bottom() && c >= tb.Col && c <= tb.Right() {
+			t.notes = append(t.notes, fmt.Sprintf("Le contrôle « %s » est lié à %s, qui a rejoint le tableau « %s »", bc.Name, addr, tb.Name))
+		}
+	}
+	return nil
 }
 
 func clip(s string) string {
@@ -225,7 +572,8 @@ func clip(s string) string {
 
 // touching donne une cellule libre collée au tableau (à droite ou à gauche
 // sur ses lignes, dessous sur ses colonnes) : celle de la ligne d'en-tête
-// d'abord, pour qu'elle nomme la nouvelle colonne.
+// d'abord, pour qu'elle nomme la nouvelle colonne. Au-dessus du tableau, une
+// cellule reste libre (un titre) : c'est l'exception à la règle.
 func touching(tb Table, cells []cell) (cell, bool) {
 	var best cell
 	found := false
@@ -244,12 +592,12 @@ func touching(tb Table, cells []cell) (cell, bool) {
 
 // fixedTables : tableaux qui ne grandissent ni ne fusionnent d'eux-mêmes
 // (filtrés, ou résultats d'une requête d'import, que l'actualisation
-// remplace).
-func (t *tx) fixedTables(tables []Table) (map[int64]bool, error) {
-	out := map[int64]bool{}
+// remplace), avec la raison.
+func (t *tx) fixedTables(tables []Table) (map[int64]string, error) {
+	out := map[int64]string{}
 	for _, tb := range tables {
 		if tb.Filtered() {
-			out[tb.ID] = true
+			out[tb.ID] = "il est filtré (effacez le filtre pour l'agrandir)"
 		}
 	}
 	rs, err := t.query(`SELECT target FROM _lattis_queries WHERE target IS NOT NULL`)
@@ -262,7 +610,7 @@ func (t *tx) fixedTables(tables []Table) (map[int64]bool, error) {
 		if err := rs.Scan(&id); err != nil {
 			return nil, err
 		}
-		out[id] = true
+		out[id] = "il est chargé par une requête d'import"
 	}
 	return out, rs.Err()
 }
@@ -276,6 +624,9 @@ func (t *tx) joinTables(a, b Table) error {
 		return err
 	}
 	if bigger {
+		if err := t.rewriteRefs(tableChange(merged.Name, b.Name)); err != nil {
+			return err
+		}
 		q := `UPDATE _lattis_tables SET name = ? WHERE id = ?`
 		if err := t.apply([]stmt{st(q, b.Name, merged.ID)}, []stmt{st(q, merged.Name, merged.ID)}); err != nil {
 			return err
@@ -287,13 +638,13 @@ func (t *tx) joinTables(a, b Table) error {
 
 // growSide : une saisie juste à gauche (left) ou juste à droite d'un
 // tableau, sur ses lignes, y ajoute une colonne (sur la ligne d'en-tête :
-// son nom, sinon « Colonne n »). À gauche, le tableau s'ancre une colonne
-// plus à gauche et ses autres colonnes ne bougent pas ; à droite, ce qui
-// suit s'écarte. Les autres cellules libres de cette colonne, sur les
-// lignes du tableau, le rejoignent aussi.
+// son nom, sinon « Colonne n », n sa place). À gauche, le tableau
+// s'ancre une colonne plus à gauche et ses autres colonnes ne bougent pas ;
+// à droite, ce qui suit s'écarte. Les autres cellules libres de cette
+// colonne, sur les lignes du tableau, le rejoignent aussi.
 func (t *tx) growSide(tb Table, row, col int, raw string, ev *Event, left bool) error {
 	if tb.Filtered() && row != tb.Row {
-		return ErrFiltered{tb.Name}
+		return ErrFiltered{Table: tb.Name, Column: true}
 	}
 	taken, err := t.takeFree(tb.Sheet, func(c cell) bool {
 		return c.Col == col && c.Row >= tb.Row && c.Row <= tb.Bottom() && c.Row != row
@@ -301,7 +652,7 @@ func (t *tx) growSide(tb Table, row, col int, raw string, ev *Event, left bool) 
 	if err != nil {
 		return err
 	}
-	name := fmt.Sprintf("Colonne %d", len(tb.Cols)+1)
+	name := ""
 	if row == tb.Row {
 		name = strings.TrimSpace(raw)
 	}
@@ -309,6 +660,15 @@ func (t *tx) growSide(tb Table, row, col int, raw string, ev *Event, left bool) 
 		if c.Row == tb.Row && strings.TrimSpace(c.Raw) != "" {
 			name = strings.TrimSpace(c.Raw)
 		}
+	}
+	if name == "" {
+		// Le nom dit sa place : « Colonne 1 » à gauche, « Colonne n+1 » à
+		// droite (numéroté s'il est pris).
+		at := len(tb.Cols) + 1
+		if left {
+			at = 1
+		}
+		name = fmt.Sprintf("Colonne %d", at)
 	}
 	name = freeColumnName(tb, name)
 	i := len(tb.Cols)

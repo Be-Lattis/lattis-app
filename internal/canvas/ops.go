@@ -205,6 +205,12 @@ func (t *tx) rename(tb Table, c Column, name string) error {
 	if name == c.Name {
 		return nil
 	}
+	// Ce qui cite la colonne suit (formules, TCD, graphiques, requêtes).
+	var rc refChange
+	rc.column(tb.Name, c.Name, name)
+	if err := t.rewriteRefs(rc); err != nil {
+		return err
+	}
 	q := `UPDATE _lattis_columns SET name = ? WHERE tbl = ? AND id = ?`
 	return t.apply([]stmt{st(q, name, tb.ID, c.ID)}, []stmt{st(q, c.Name, tb.ID, c.ID)})
 }

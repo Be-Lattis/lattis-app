@@ -24,7 +24,7 @@ func (m *Model) RemoveDuplicates(ctx context.Context, table string, cols []int) 
 			return err
 		}
 		if tb.Filtered() {
-			return ErrFiltered{tb.Name}
+			return ErrFiltered{Table: tb.Name}
 		}
 		dups, err := dupQuery(tb, cols)
 		if err != nil || dups == "" {

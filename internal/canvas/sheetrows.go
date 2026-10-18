@@ -263,7 +263,7 @@ func (t *tx) clampAnchors(table string, a axis, sheet int64, lo, hi int) error {
 // insertTableRows insère n lignes vides avant la ligne de données k.
 func (t *tx) insertTableRows(tb Table, k, n int) error {
 	if tb.Filtered() {
-		return ErrFiltered{tb.Name}
+		return ErrFiltered{Table: tb.Name}
 	}
 	var before, after string
 	var err error
@@ -326,7 +326,7 @@ func (t *tx) insertTableCols(tb Table, i, n int) error {
 // deleteTableRows supprime les lignes de données a à b (corbeille d'annulation).
 func (t *tx) deleteTableRows(tb Table, a, b int) error {
 	if tb.Filtered() {
-		return ErrFiltered{tb.Name}
+		return ErrFiltered{Table: tb.Name}
 	}
 	return t.trashRows(tb, fmt.Sprintf(`SELECT id FROM %s ORDER BY _pos LIMIT %d OFFSET %d`, tb.sql(), b-a+1, a))
 }

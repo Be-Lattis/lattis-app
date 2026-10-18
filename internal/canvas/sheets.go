@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+
+	"github.com/lalamefine/lattis/internal/formula"
 )
 
 // ErrSheet signale une opération impossible sur un onglet.
@@ -170,6 +172,10 @@ func (m *Model) RenameSheet(ctx context.Context, sheet int64, name string) error
 		}
 		if k > 0 {
 			return fmt.Errorf("%w : « %s » existe déjà", ErrSheet, name)
+		}
+		// Les adresses Feuille!Cell[A1] suivent.
+		if err := t.rewriteRefs(refChange{Renames: formula.Renames{Sheets: lowerMap(old, name)}}); err != nil {
+			return err
 		}
 		q := `UPDATE _lattis_sheets SET name = ? WHERE id = ?`
 		return t.apply([]stmt{st(q, name, sheet)}, []stmt{st(q, old, sheet)})

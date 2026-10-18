@@ -131,7 +131,7 @@ func (t *tx) fill(tb *Table) error {
 // les lignes affichées.
 func (t *tx) rowID(tb Table, n int) (id int64, pos string, err error) {
 	if tb.Filtered() && n >= tb.Shown {
-		return 0, "", ErrFiltered{tb.Name}
+		return 0, "", ErrFiltered{Table: tb.Name}
 	}
 	err = t.row(`SELECT id, _pos FROM `+tb.view()+` ORDER BY _pos LIMIT 1 OFFSET ?`, n).Scan(&id, &pos)
 	return
@@ -267,7 +267,8 @@ func (t *tx) moveTable(tb Table, dRow, dCol int) error {
 	)
 }
 
-// moveCells déplace des cellules libres. Chaque cellule déplacée est une
+// moveCells déplace des cellules libres, avec leurs noms, leur mise en forme
+// et les adresses qui les citent. Chaque cellule déplacée est une
 // opération explicite (suppression puis insertion) : l'inverse est exact et
 // ne dépend pas de l'ordre de mise à jour de la clé primaire.
 func (t *tx) moveCells(sheet int64, match func(cell) bool, dRow, dCol int) error {
@@ -299,7 +300,76 @@ func (t *tx) moveCells(sheet int64, match func(cell) bool, dRow, dCol int) error
 	if err := t.moveMarks(sheet, match, dRow, dCol); err != nil {
 		return err
 	}
-	return t.moveNames(sheet, moved, dRow, dCol)
+	// Noms (même d'une cellule vide) et mise en forme suivent, et les
+	// formules qui citaient les cellules déplacées aussi.
+	var named []cell
+	rs, err := t.query(`SELECT row, col FROM _lattis_names WHERE sheet = ?`, sheet)
+	if err != nil {
+		return err
+	}
+	for rs.Next() {
+		var c cell
+		if err := rs.Scan(&c.Row, &c.Col); err != nil {
+			rs.Close()
+			return err
+		}
+		if match(c) {
+			named = append(named, c)
+		}
+	}
+	rs.Close()
+	if err := t.moveNames(sheet, named, dRow, dCol); err != nil {
+		return err
+	}
+	if err := t.moveFreeStyles(sheet, match, dRow, dCol); err != nil {
+		return err
+	}
+	return t.rewriteCellRefs(sheet, func(r, c int) (int, int, bool) {
+		if match(cell{Row: r, Col: c}) {
+			return r + dRow, c + dCol, true
+		}
+		return r, c, true
+	})
+}
+
+// moveFreeStyles déplace la mise en forme des cellules libres retenues par
+// match (deux temps : jamais deux styles à la même place).
+func (t *tx) moveFreeStyles(sheet int64, match func(cell) bool, dRow, dCol int) error {
+	rs, err := t.query(`SELECT row, col, style FROM _lattis_cell_styles WHERE sheet = ?`, sheet)
+	if err != nil {
+		return err
+	}
+	type styled struct {
+		row, col int
+		style    string
+	}
+	var ss []styled
+	for rs.Next() {
+		var s styled
+		if err := rs.Scan(&s.row, &s.col, &s.style); err != nil {
+			rs.Close()
+			return err
+		}
+		if match(cell{Row: s.row, Col: s.col}) {
+			ss = append(ss, s)
+		}
+	}
+	rs.Close()
+	if len(ss) == 0 {
+		return nil
+	}
+	del := `DELETE FROM _lattis_cell_styles WHERE sheet = ? AND row = ? AND col = ?`
+	ins := `INSERT OR REPLACE INTO _lattis_cell_styles (sheet, row, col, style) VALUES (?, ?, ?, ?)`
+	var do, undo []stmt
+	for _, s := range ss {
+		do = append(do, st(del, sheet, s.row, s.col))
+		undo = append(undo, st(del, sheet, s.row+dRow, s.col+dCol))
+	}
+	for _, s := range ss {
+		do = append(do, st(ins, sheet, s.row+dRow, s.col+dCol, s.style))
+		undo = append(undo, st(ins, sheet, s.row, s.col, s.style))
+	}
+	return t.apply(do, undo)
 }
 
 // island renvoie la zone de cellules libres contiguës (4-connexité) qui

@@ -74,7 +74,7 @@ func TestRenamesFollowReferences(t *testing.T) {
 		}
 	}
 	for _, b := range broken {
-		knownBug(t, "renommage", b)
+		t.Errorf("renommage : %s", b)
 	}
 
 	// Quoi qu'il arrive, tout revient d'une série d'annulations.
