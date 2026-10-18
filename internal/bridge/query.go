@@ -170,7 +170,7 @@ func (s *DocumentService) refreshed(ctx context.Context, out QueryRefresh, err e
 	var pe *query.ErrPassword
 	switch {
 	case errors.As(err, &pe):
-		out.NeedPassword = &query.PasswordNeed{Connection: pe.Connection, Account: pe.Account, Message: pe.Message, Stored: pe.Stored}
+		out.NeedPassword = &query.PasswordNeed{Connection: pe.Connection, Account: pe.Account, Message: pe.Message, Stored: pe.Stored, Lattis: pe.Lattis}
 	case err != nil:
 		for _, e := range strings.Split(err.Error(), "\n") {
 			out.Errors = append(out.Errors, e)
@@ -264,6 +264,9 @@ func (s *DocumentService) connection(ctx context.Context, name string) (query.Co
 func (s *DocumentService) SaveConnection(ctx context.Context, c query.Connection, password string, remember bool) (int64, error) {
 	d, err := s.current()
 	if err != nil {
+		return 0, err
+	}
+	if err := checkLattisConnection(c); err != nil {
 		return 0, err
 	}
 	def, err := query.EncodeConnection(c)
@@ -364,7 +367,7 @@ func (s *DocumentService) ConnectionTables(ctx context.Context, name string) (Ta
 	ts, err := query.DBTables(ctx, secretsOf(d), c)
 	var pe *query.ErrPassword
 	if errors.As(err, &pe) {
-		return TableList{Tables: []query.DBTable{}, NeedPassword: &query.PasswordNeed{Connection: pe.Connection, Account: pe.Account, Message: pe.Message, Stored: pe.Stored}}, nil
+		return TableList{Tables: []query.DBTable{}, NeedPassword: &query.PasswordNeed{Connection: pe.Connection, Account: pe.Account, Message: pe.Message, Stored: pe.Stored, Lattis: pe.Lattis}}, nil
 	}
 	return TableList{Tables: ts}, err
 }

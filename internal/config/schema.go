@@ -95,6 +95,13 @@ type Features struct {
 	// 18/10/2026) ; les classeurs qui en contiennent déjà les affichent et les
 	// gardent utilisables quand même.
 	HtmlTabs *bool `json:"htmlTabs,omitempty"`
+	// SharedWorkbooks : classeurs partagés sur un Serveur Lattis (connexion
+	// au serveur, menu Compte). Fonctionnalité à activer.
+	SharedWorkbooks *bool `json:"sharedWorkbooks,omitempty"`
+	// AllowUserLattisServers : l'utilisateur peut ajouter un Serveur Lattis
+	// en plus de ceux de l'organisation (connections.* de genre lattis) ;
+	// faux dans une stratégie : verrouillage.
+	AllowUserLattisServers *bool `json:"allowUserLattisServers,omitempty"`
 }
 
 // Toggle est un interrupteur.
@@ -118,6 +125,9 @@ func Defaults() Tree {
 			"mcp":                  Tree{"enabled": false},
 			"allowUserConnections": true,
 			"htmlTabs":             false,
+			"sharedWorkbooks":      false,
+			// Ajout de Serveurs Lattis par l'utilisateur.
+			"allowUserLattisServers": true,
 		},
 		"ai": Tree{"enabled": false, "provider": "anthropic", "dataSharing": "schema-only"},
 	}
@@ -208,7 +218,7 @@ func coerce(path string, v any) (any, bool) {
 }
 
 var boolPaths = []string{"allowPolicyOverride", "features.mcp.enabled", "features.allowUserConnections",
-	"features.htmlTabs", "features.luaHttp.restrict", "ai.enabled"}
+	"features.htmlTabs", "features.sharedWorkbooks", "features.allowUserLattisServers", "features.luaHttp.restrict", "ai.enabled"}
 
 func boolPath(path string) bool {
 	for _, p := range boolPaths {
@@ -231,6 +241,8 @@ var validators = []struct {
 	{"features.mcp.enabled", isBool},
 	{"features.allowUserConnections", isBool},
 	{"features.htmlTabs", isBool},
+	{"features.sharedWorkbooks", isBool},
+	{"features.allowUserLattisServers", isBool},
 	{"features.luaHttp.restrict", isBool},
 	{"features.luaHttp.allowedDomains", isStringList},
 	{"ai.enabled", isBool},
@@ -238,7 +250,7 @@ var validators = []struct {
 	{"ai.provider", isIdent},
 	{"ai.model", isIdent},
 	{"ai.dataSharing", oneOf("schema-only", "sample")},
-	{"connections.*.kind", oneOf("postgres", "mysql", "sqlserver", "web")},
+	{"connections.*.kind", oneOf("postgres", "mysql", "sqlserver", "web", "lattis")},
 	{"connections.*.auth.mode", oneOf("none", "password", "token", "integrated", "oidc")},
 	{"ai.auth.mode", oneOf("none", "token", "oidc")},
 	{"identity.providers.*.issuer", isHTTPSURL},

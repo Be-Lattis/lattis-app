@@ -84,6 +84,12 @@ export interface DBConfig {
      */
     "url"?: string;
     "header"?: string;
+
+    /**
+     * Lattis : nom affiché du serveur (« Serveur Acme »), qui remplace le
+     * genre dans les listes.
+     */
+    "label"?: string;
 }
 
 /**
@@ -117,6 +123,12 @@ export interface PasswordNeed {
      * d'autoriser ce classeur à s'en servir.
      */
     "stored": boolean;
+
+    /**
+     * Lattis : adresse du Serveur Lattis où se connecter (page de connexion
+     * au lieu d'un mot de passe).
+     */
+    "lattis"?: string;
 }
 
 /**

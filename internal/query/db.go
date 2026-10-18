@@ -23,11 +23,15 @@ const (
 	KindMySQL     = "mysql"     // MySQL ou MariaDB : Host, Port, Database, User, SSLMode
 	KindSQLServer = "sqlserver" // SQL Server : Host, Port, Instance, Database, User, SSLMode
 	KindWeb       = "web"       // API web : URL (préfixe), Header, User
+	// Serveur Lattis (classeurs partagés) : URL du serveur, Label (nom
+	// affiché lu à l'ajout dans sa découverte). Pas de mot de passe : la
+	// session du compte (voir lattis.go).
+	KindLattis = "lattis"
 )
 
 // ConnectionKinds liste les genres de connexion, dans l'ordre de
 // l'interface.
-var ConnectionKinds = []string{KindPostgres, KindMySQL, KindSQLServer, KindWeb}
+var ConnectionKinds = []string{KindPostgres, KindMySQL, KindSQLServer, KindWeb, KindLattis}
 
 // DBConfig décrit une connexion, sans mot de passe. Les champs utilisés
 // dépendent du genre (voir les constantes Kind*).
@@ -46,6 +50,9 @@ type DBConfig struct {
 	// authentification Basic).
 	URL    string `json:"url,omitempty"`
 	Header string `json:"header,omitempty"`
+	// Lattis : nom affiché du serveur (« Serveur Acme »), qui remplace le
+	// genre dans les listes.
+	Label string `json:"label,omitempty"`
 }
 
 // Connection est une connexion du classeur, décodée.
@@ -69,6 +76,8 @@ func KindLabel(kind string) string {
 		return "SQL Server"
 	case KindWeb:
 		return "Web"
+	case KindLattis:
+		return "Serveur Lattis"
 	}
 	return kind
 }
@@ -105,6 +114,8 @@ func (c Connection) Account() string {
 	switch k {
 	case KindWeb:
 		return "web://" + cfg.User + "@" + cfg.URL
+	case KindLattis:
+		return lattisAccount(cfg.URL)
 	case KindSQLServer:
 		host := fmt.Sprintf("%s:%d", cfg.Host, cfg.port(k))
 		if cfg.Instance != "" {
@@ -169,6 +180,8 @@ func checkConfig(kind string, c DBConfig) error {
 		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 			return errors.New("connexion Web : l'adresse doit commencer par http:// ou https://")
 		}
+	case KindLattis:
+		return checkLattis(c)
 	default:
 		return fmt.Errorf("type de connexion %q non pris en charge", kind)
 	}
@@ -184,6 +197,9 @@ type ErrPassword struct {
 	// Stored : un mot de passe est enregistré sur ce poste, mais ce classeur
 	// n'a pas encore l'accord de s'en servir (Secrets.Grant).
 	Stored bool
+	// Lattis : adresse du Serveur Lattis où se connecter (pas de mot de
+	// passe : la page de connexion du serveur).
+	Lattis string
 }
 
 func (e *ErrPassword) Error() string {
@@ -271,6 +287,9 @@ func infoSchemaTables(q string) func(ctx context.Context, db *sql.DB) ([]DBTable
 // connectDB ouvre et teste la connexion c, avec le mot de passe connu
 // (session, trousseau) ou sans ; *ErrPassword si le serveur le refuse.
 func connectDB(ctx context.Context, sec *Secrets, c Connection) (*sql.DB, *dialect, error) {
+	if c.Kind == KindLattis {
+		return connectLattis(ctx, c)
+	}
 	d, err := dialectOf(c.Kind)
 	if err != nil || d.open == nil {
 		return nil, nil, fmt.Errorf("connexion « %s » : type %q non pris en charge", c.Name, c.Kind)
@@ -310,6 +329,13 @@ func TestConnection(ctx context.Context, sec *Secrets, c Connection, password st
 	}
 	if c.Kind == KindWeb {
 		return testWeb(ctx, sec, c, password, remember)
+	}
+	if c.Kind == KindLattis {
+		db, _, err := connectLattis(ctx, c)
+		if err != nil {
+			return err
+		}
+		return db.Close()
 	}
 	if password == "" {
 		db, _, err := connectDB(ctx, sec, c)

@@ -25,6 +25,9 @@ import * as grid$0 from "../grid/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as query$0 from "../query/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as auth$0 from "../remote/auth/models.js";
 
 /**
  * AIEventData est un évènement d'une réponse ; Run la désigne.
@@ -241,6 +244,22 @@ export interface ImportResult {
     "tables": string[] | null;
     "warnings": string[] | null;
     "state": DocState;
+}
+
+/**
+ * LattisState est l'état des Serveurs Lattis pour l'interface.
+ */
+export interface LattisState {
+    /**
+     * Enabled : classeurs partagés activés (sinon tout est masqué).
+     */
+    "enabled": boolean;
+
+    /**
+     * AllowUserServers : l'utilisateur peut ajouter un serveur.
+     */
+    "allowUserServers": boolean;
+    "servers": auth$0.ServerState[] | null;
 }
 
 /**

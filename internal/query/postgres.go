@@ -21,13 +21,17 @@ func init() {
 		authFailed: pgAuthFailed,
 		limit:      limitClause,
 		readOnly:   true,
-		tables: infoSchemaTables(`SELECT table_schema, table_name, table_type
-			FROM information_schema.tables
-			WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
-			ORDER BY table_schema = 'public' DESC, table_schema, table_name LIMIT 2000`),
-		ident: PGIdent,
+		tables:     pgTables,
+		ident:      PGIdent,
 	}
 }
+
+// pgTables liste les tables et vues hors schémas système (PostgreSQL et
+// Serveur Lattis).
+var pgTables = infoSchemaTables(`SELECT table_schema, table_name, table_type
+	FROM information_schema.tables
+	WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
+	ORDER BY table_schema = 'public' DESC, table_schema, table_name LIMIT 2000`)
 
 // dsnValue écrit une valeur du format clé='valeur' de libpq.
 func dsnValue(s string) string {

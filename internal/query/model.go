@@ -32,6 +32,9 @@ const (
 	// Autres SGBD (connexion du même genre) : Connection, SQL.
 	SourceMySQL     = "mysql"
 	SourceSQLServer = "sqlserver"
+	// Serveur Lattis : Connection (de genre lattis), SQL, lu sur un réplica
+	// quand le serveur en annonce.
+	SourceLattis = "lattis"
 	// Fichiers de base, ouverts en lecture seule : Path, SQL.
 	SourceSQLite = "sqlite"
 	// Fichiers de données : Path (JSON : RecordPath).
@@ -45,7 +48,7 @@ const (
 // dbSource : source lue par une connexion à un SGBD.
 func dbSource(kind string) bool {
 	switch kind {
-	case SourcePostgres, SourceMySQL, SourceSQLServer:
+	case SourcePostgres, SourceMySQL, SourceSQLServer, SourceLattis:
 		return true
 	}
 	return false
@@ -219,7 +222,7 @@ func SourceLabel(s Source) string {
 		return "Tableau " + s.Table
 	case SourceQuery:
 		return "Requête " + s.Query
-	case SourcePostgres, SourceMySQL, SourceSQLServer:
+	case SourcePostgres, SourceMySQL, SourceSQLServer, SourceLattis:
 		return KindLabel(s.Kind) + " " + s.Connection
 	case SourceSQLite:
 		return "SQLite " + base(s.Path)

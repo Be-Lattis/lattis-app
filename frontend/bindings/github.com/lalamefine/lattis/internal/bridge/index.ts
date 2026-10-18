@@ -21,6 +21,7 @@ export type {
     FormulaHelp,
     GridStatus,
     ImportResult,
+    LattisState,
     MCPStatus,
     OpenResult,
     QueryRefresh,

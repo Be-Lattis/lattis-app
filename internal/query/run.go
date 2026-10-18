@@ -25,6 +25,9 @@ type PasswordNeed struct {
 	// Stored : un mot de passe est enregistré sur ce poste ; il suffit
 	// d'autoriser ce classeur à s'en servir.
 	Stored bool `json:"stored"`
+	// Lattis : adresse du Serveur Lattis où se connecter (page de connexion
+	// au lieu d'un mot de passe).
+	Lattis string `json:"lattis,omitempty"`
 }
 
 // Preview est l'aperçu d'une requête à une étape.
@@ -56,7 +59,7 @@ func labels(q Query) []string {
 func needPassword(err error) *PasswordNeed {
 	var pe *ErrPassword
 	if errors.As(err, &pe) {
-		return &PasswordNeed{Connection: pe.Connection, Account: pe.Account, Message: pe.Message, Stored: pe.Stored}
+		return &PasswordNeed{Connection: pe.Connection, Account: pe.Account, Message: pe.Message, Stored: pe.Stored, Lattis: pe.Lattis}
 	}
 	return nil
 }

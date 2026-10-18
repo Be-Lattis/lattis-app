@@ -25,6 +25,9 @@ import * as grid$0 from "../grid/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as query$0 from "../query/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as auth$0 from "../remote/auth/models.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -595,6 +598,68 @@ export function InsertSheetRows(sheet: number, at: number, n: number): $Cancella
  */
 export function KeyCheck(table: string, i: number): $CancellablePromise<string> {
     return $Call.ByID(2170940615, table, i);
+}
+
+/**
+ * LattisCancelLogin abandonne la connexion en cours à un serveur.
+ */
+export function LattisCancelLogin(url: string): $CancellablePromise<void> {
+    return $Call.ByID(3578748328, url);
+}
+
+/**
+ * LattisDeviceStart demande un code pour se connecter depuis un autre
+ * appareil (secours quand le navigateur de ce poste ne peut pas servir).
+ */
+export function LattisDeviceStart(url: string, provider: string): $CancellablePromise<auth$0.DeviceCode> {
+    return $Call.ByID(4083153105, url, provider);
+}
+
+/**
+ * LattisDeviceWait attend que le code de LattisDeviceStart soit validé.
+ */
+export function LattisDeviceWait(url: string): $CancellablePromise<auth$0.ServerState> {
+    return $Call.ByID(3322762010, url);
+}
+
+/**
+ * LattisDiscover lit la découverte d'un serveur (/.well-known/lattis.json) :
+ * nom affiché, logo, fournisseurs ; refus explicite si cette version de
+ * Lattis est trop ancienne ou si l'organisation ne permet pas ce serveur.
+ */
+export function LattisDiscover(url: string): $CancellablePromise<auth$0.ServerState> {
+    return $Call.ByID(3901567902, url);
+}
+
+/**
+ * LattisLogin connecte l'utilisateur par le navigateur du système avec le
+ * fournisseur provider ; attend son retour (LattisCancelLogin l'abandonne).
+ */
+export function LattisLogin(url: string, provider: string): $CancellablePromise<auth$0.ServerState> {
+    return $Call.ByID(1169997186, url, provider);
+}
+
+/**
+ * LattisPasswordLogin connecte un compte à mot de passe Lattis.
+ */
+export function LattisPasswordLogin(url: string, provider: string, email: string, password: string): $CancellablePromise<auth$0.ServerState> {
+    return $Call.ByID(2065163205, url, provider, email, password);
+}
+
+/**
+ * LattisSignOut ferme la session d'un serveur (jeton révoqué et oublié du
+ * trousseau) et rend l'état à jour.
+ */
+export function LattisSignOut(url: string): $CancellablePromise<$models.LattisState> {
+    return $Call.ByID(3515640600, url);
+}
+
+/**
+ * LattisState donne les serveurs connus (ceux de l'organisation, ceux où
+ * l'utilisateur s'est connecté) et l'utilisateur connecté à chacun.
+ */
+export function LattisState(): $CancellablePromise<$models.LattisState> {
+    return $Call.ByID(3668298790);
 }
 
 /**
