@@ -33,6 +33,9 @@ type DocState struct {
 	Dirty bool   `json:"dirty"`
 	Undo  string `json:"undo"` // libellé de l'action à annuler
 	Redo  string `json:"redo"`
+	// Notice : message de la dernière action pour la barre d'état (tableaux
+	// fusionnés, cellules rattachées à un tableau), vide sinon.
+	Notice string `json:"notice,omitempty"`
 }
 
 // OpenResult est le résultat d'une ouverture : soit le classeur est ouvert,
@@ -247,6 +250,9 @@ func (s *DocumentService) changed(ctx context.Context) (DocState, error) {
 	}
 	s.mu.Unlock()
 	st, err := s.State(ctx)
+	if d, derr := s.current(); derr == nil {
+		st.Notice = d.TakeNotice()
+	}
 	if app := application.Get(); app != nil && err == nil {
 		app.Event.Emit(ChangedEvent, st)
 	}

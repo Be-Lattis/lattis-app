@@ -795,10 +795,13 @@
 		entries =d.tables.map((t) => {
 			const e = old.get(t.id);
 			if (!e) return makeEntry(t);
+			// Colonnes existantes déplacées (une colonne ajoutée devant, par
+			// exemple) : l'ancien contenu ne s'affiche pas en attendant.
+			const kept = e.t.columns.every((c, i) => t.columns[i]?.name === c.name);
 			e.t = t;
 			e.last = t.row + t.rows;
 			e.lastCol = t.col + t.columns.length - 1;
-			e.cache.invalidate(t.rows);
+			e.cache.invalidate(t.rows, kept);
 			return e;
 		});
 		cells = new Map(d.cells.map((c) => [key(c.row, c.col), c.raw]));
@@ -1137,7 +1140,7 @@
 		for (const e of entries) {
 			const g = grown(e);
 			const base = `${e.t.row},${e.t.col},${e.last},${e.lastCol}`;
-			const k = `${base}|${g.last},${g.lastCol}`;
+			const k = `${base}|${g.last},${g.lastCol},${g.firstCol}`;
 			seen.set(e.t.id, k);
 			const was = grownSeen.get(e.t.id);
 			// Tableau lui-même modifié (saisie, insertion) : startAnims s'en charge.
@@ -1206,10 +1209,10 @@
 		linesHint = { t: performance.now(), rows, at, n, px, table };
 	}
 
-	/** Cadre affiché d'un tableau (prolongé quand la cellule active est juste dessous ou à droite), en pixels de la feuille. */
+	/** Cadre affiché d'un tableau (prolongé quand la cellule active est juste dessous, à droite ou à gauche), en pixels de la feuille. */
 	function tableGeo(e: Entry): Geo {
 		const g = grown(e);
-		const x = cax().offset(e.t.col);
+		const x = cax().offset(g.firstCol);
 		const y = rowTop(e.t.row);
 		return { x, y, w: cax().offset(g.lastCol + 1) - x, h: rspan(e.t.row, g.last) };
 	}
@@ -1271,7 +1274,7 @@
 		ctx.translate(a.dx, a.dy);
 		ctx.globalAlpha *= a.alpha;
 		ctx.beginPath();
-		ctx.rect(cx(e.t.col) - 1, ry(e.t.row) - 1, a.w + 2, a.h + 2);
+		ctx.rect(cx(grown(e).firstCol) - 1, ry(e.t.row) - 1, a.w + 2, a.h + 2);
 		ctx.clip();
 		return true;
 	}
@@ -1358,10 +1361,13 @@
 	/** Étendue affichée d'un tableau : une ligne ou une colonne de plus quand la
 	 * cellule active est juste dessous ou juste à droite (la saisie l'étendra),
 	 * jusqu'au tableau voisin qu'elle rejoindrait (fusion). */
-	function grown(e: Entry): { last: number; lastCol: number } {
+	function grown(e: Entry): { last: number; lastCol: number; firstCol: number } {
 		const { row, col } = active;
 		let last = e.last;
 		let lastCol = e.lastCol;
+		// Juste à gauche, sur ses lignes : la saisie y fera sa nouvelle
+		// première colonne (le tableau s'ancre une colonne plus à gauche).
+		const firstCol = col === e.t.col - 1 && row >= e.t.row && row <= e.last && !tableAt(row, col) ? e.t.col - 1 : e.t.col;
 		if (row === e.last + 1 && col >= e.t.col && col <= e.lastCol && !e.t.hidden) last++;
 		if (col === e.lastCol + 1 && row >= e.t.row && row <= e.last) {
 			lastCol++;
@@ -1371,7 +1377,7 @@
 				last = Math.max(last, next.last);
 			}
 		}
-		return { last, lastCol };
+		return { last, lastCol, firstCol };
 	}
 
 	const inTable = (e: Entry, r: number, c: number) => r >= e.t.row && r <= e.last && c >= e.t.col && c <= e.lastCol;
@@ -1703,6 +1709,10 @@
 	// Le message s'efface seul (noticeTtl) ; un nouveau message relance le délai.
 	let shownMessage = '';
 	let messageTimer: ReturnType<typeof setTimeout> | undefined;
+	/** Message venu du classeur (tableaux fusionnés, cellules rattachées). */
+	export function announce(m: string) {
+		say(m);
+	}
 	/** Efface le message de la barre d'état (changement d'onglet). */
 	export function clearMessage() {
 		clearTimeout(messageTimer);
@@ -1998,7 +2008,7 @@
 			const moved = enterTable(e, cx, ry);
 			ctx.fillStyle = e.t.query ? C.linkHead : C.head;
 			// En mouvement : l'en-tête suit le cadre animé (il se rétracte avec lui).
-			ctx.fillRect(cx(e.t.col), ry(e.t.row), moved ? tableAnim(e)!.w : spanW(e.t.col, g.lastCol), rh(e.t.row));
+			ctx.fillRect(cx(g.firstCol), ry(e.t.row), moved ? tableAnim(e)!.w : spanW(g.firstCol, g.lastCol), rh(e.t.row));
 			if (moved) ctx.restore();
 		}
 
@@ -2312,7 +2322,7 @@
 			ctx.beginPath();
 			for (const e of visible) {
 				const g = grown(e);
-				ctx.rect(cx(e.t.col), ry(e.t.row), spanW(e.t.col, g.lastCol), rspan(e.t.row, g.last));
+				ctx.rect(cx(g.firstCol), ry(e.t.row), spanW(g.firstCol, g.lastCol), rspan(e.t.row, g.last));
 			}
 			ctx.clip();
 		} else if (pivots.length) {
@@ -2359,11 +2369,11 @@
 			const fw = a ? a.w : to.w;
 			const fh = a ? a.h : to.h;
 			if (motion()) geoDrawn.set(e.t.id, { x: to.x + (a?.dx ?? 0), y: to.y + (a?.dy ?? 0), w: fw, h: fh });
-			const x = Math.round(cx(e.t.col) + (a?.dx ?? 0)) - 0.5;
+			const x = Math.round(cx(g.firstCol) + (a?.dx ?? 0)) - 0.5;
 			const y = Math.round(ry(e.t.row) + (a?.dy ?? 0)) - 0.5;
 			ctx.save();
 			if (a) ctx.globalAlpha *= a.alpha;
-			ctx.strokeStyle = g.last !== e.last || g.lastCol !== e.lastCol ? C.active : e.t.query ? C.linkBorder : C.border;
+			ctx.strokeStyle = g.last !== e.last || g.lastCol !== e.lastCol || g.firstCol !== e.t.col ? C.active : e.t.query ? C.linkBorder : C.border;
 			ctx.strokeRect(x, y, fw, fh);
 			ctx.beginPath();
 			ctx.moveTo(x, y + rh(e.t.row));
@@ -5423,9 +5433,9 @@
 		if (kind === 'column') return `${e.t.name}[${col}]`;
 		// Formule d'une autre feuille (pointage) : elle n'est dans aucun tableau d'ici.
 		const here = hold ? null : tableAt(active.row, active.col);
-		// La formule est dans le tableau, ou juste à sa droite sur une de ses
-		// lignes (elle y devient une colonne calculée, comme dans Excel).
-		const beside = !hold && !here && active.col === e.lastCol + 1 && active.row > e.t.row && active.row <= e.last;
+		// La formule est dans le tableau, ou juste à sa droite (ou à sa gauche)
+		// sur une de ses lignes (elle y devient une colonne calculée, comme dans Excel).
+		const beside = !hold && !here && (active.col === e.lastCol + 1 || active.col === e.t.col - 1) && active.row > e.t.row && active.row <= e.last;
 		const same = (here === e || beside) && active.row > e.t.row;
 		// En-tête : toute la colonne.
 		if (r === e.t.row) return `${e.t.name}[${col}]`;

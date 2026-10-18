@@ -983,8 +983,9 @@ func TestTablesMoveMergeSplit(t *testing.T) {
 		t.Fatalf("fusion :\n%s\nattendu à peu près\n%s", got, want)
 	}
 
+	// Le plus gros des deux (Pays, 3 lignes) garde son nom.
 	// Scinder : Pays et Note repartent en dessous.
-	if err := d.ExtractColumns(ctx, "Feuille1", 2, 3, 6, 0); err != nil {
+	if err := d.ExtractColumns(ctx, "Pays", 2, 3, 6, 0); err != nil {
 		t.Fatal(err)
 	}
 	check(t, d, "scission")
@@ -994,7 +995,7 @@ func TestTablesMoveMergeSplit(t *testing.T) {
 	}
 
 	// Supprimer les deux tableaux puis tout annuler.
-	if err := d.DeleteTables(ctx, []string{"Feuille1", l.Tables[1].Name}); err != nil {
+	if err := d.DeleteTables(ctx, []string{"Pays", l.Tables[1].Name}); err != nil {
 		t.Fatal(err)
 	}
 	check(t, d, "suppression")

@@ -185,10 +185,15 @@ export class RowCache {
 		return this.has(first, last);
 	}
 
-	/** Les données ont changé : tout recharger, en affichant l'ancien contenu en attendant. */
-	invalidate(rows: number) {
+	/**
+	 * Les données ont changé : tout recharger, en affichant l'ancien contenu
+	 * en attendant (sauf keepStale faux : colonnes déplacées, l'ancien
+	 * contenu serait affiché sous les mauvais en-têtes).
+	 */
+	invalidate(rows: number, keepStale = true) {
 		this.generation++;
-		for (const [k, v] of this.blocks) this.stale.set(k, v);
+		if (!keepStale) this.stale.clear();
+		else for (const [k, v] of this.blocks) this.stale.set(k, v);
 		this.blocks.clear();
 		this.inflight.clear();
 		this.queue = [];
