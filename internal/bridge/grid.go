@@ -15,7 +15,6 @@ import (
 
 	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/store"
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // DemoRows est la taille du tableau de démonstration du prototype.
@@ -33,18 +32,19 @@ type GridStatus struct {
 
 // GridService sert la grille du prototype (spike 1.1).
 type GridService struct {
-	mu     sync.Mutex
-	status GridStatus
-	db     *store.Store
-	table  *grid.Table
-	cancel context.CancelFunc
+	hostRef // hôte : bureau (Wails) ou web (platform.go)
+	mu      sync.Mutex
+	status  GridStatus
+	db      *store.Store
+	table   *grid.Table
+	cancel  context.CancelFunc
 }
 
 var errNotReady = errors.New("tableau en cours de préparation")
 
-// ServiceStartup ouvre la base de travail et prépare le tableau en tâche de
+// startup ouvre la base de travail et prépare le tableau en tâche de
 // fond : la fenêtre s'affiche tout de suite et suit l'avancement par Status.
-func (s *GridService) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
+func (s *GridService) startup(ctx context.Context) error {
 	dir, err := os.UserCacheDir()
 	if err != nil {
 		return err
@@ -172,9 +172,7 @@ func (s *GridService) ReportBench(result string) error {
 	if err := os.WriteFile(path, []byte(result+"\n"), 0o644); err != nil {
 		return err
 	}
-	if app := application.Get(); app != nil {
-		app.Quit()
-	}
+	s.sys().Window().Quit()
 	return nil
 }
 

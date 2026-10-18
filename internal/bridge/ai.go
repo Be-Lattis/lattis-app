@@ -8,7 +8,6 @@ import (
 	"github.com/lalamefine/lattis/internal/ai"
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/config"
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // Onglet IA : conversation avec un assistant qui agit sur le classeur par
@@ -19,10 +18,6 @@ import (
 
 // AIEvent porte le déroulé d'une réponse (texte au fil de l'eau, outils).
 const AIEvent = "ai:event"
-
-func init() {
-	application.RegisterEvent[AIEventData](AIEvent)
-}
 
 // AIEventData est un évènement d'une réponse ; Run la désigne.
 type AIEventData struct {
@@ -177,9 +172,7 @@ func (s *DocumentService) AISend(ctx context.Context, run int, text string) erro
 		Label:    ai.Label,
 	}
 	emit := func(e ai.Event) {
-		if app := application.Get(); app != nil {
-			app.Event.Emit(AIEvent, AIEventData{Run: run, Event: e})
-		}
+		s.sys().Emit(AIEvent, AIEventData{Run: run, Event: e})
 	}
 	err := s.ai.session.Send(command.WithGroup(ctx, "Assistant IA"), turn, text, emit)
 	if errors.Is(err, context.Canceled) {

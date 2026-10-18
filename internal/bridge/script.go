@@ -6,15 +6,10 @@ import (
 	"github.com/lalamefine/lattis/internal/api"
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/doc"
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // PrintEvent porte une ligne de sortie d'un script en cours (onglet SCRIPT).
 const PrintEvent = "script:print"
-
-func init() {
-	application.RegisterEvent[string](PrintEvent)
-}
 
 // ScriptResult est l'issue d'un script pour l'interface.
 type ScriptResult = api.ScriptResult
@@ -48,7 +43,7 @@ func (s *DocumentService) PickControlFile(title string) (string, error) {
 	if title == "" {
 		title = "Choisir un fichier"
 	}
-	return application.Get().Dialog.OpenFile().SetTitle(title).AddFilter("Tous les fichiers", "*.*").PromptForSingleSelection()
+	return s.sys().OpenFile(FileDialog{Title: title, Filters: []FileFilter{{"Tous les fichiers", "*.*"}}})
 }
 
 // CreateButton pose un bouton d'action sur une feuille.

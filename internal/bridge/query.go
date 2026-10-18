@@ -12,7 +12,6 @@ import (
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/query"
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // Requêtes d'import (Données › Obtenir des données) et connexions aux
@@ -383,21 +382,21 @@ func (s *DocumentService) TableSQL(kind, schema, table string) string {
 // PickDataFile demande un fichier source (kind : "csv", "xlsx", "json",
 // "parquet" ou "sqlite") ; "" si l'utilisateur annule.
 func (s *DocumentService) PickDataFile(kind string) (string, error) {
-	dlg := application.Get().Dialog.OpenFile().SetTitle("Obtenir des données")
+	o := FileDialog{Title: "Obtenir des données"}
 	switch kind {
 	case "xlsx":
-		dlg = dlg.AddFilter("Classeur Excel", "*.xlsx;*.xlsm")
+		o.Filters = []FileFilter{{"Classeur Excel", "*.xlsx;*.xlsm"}}
 	case "json":
-		dlg = dlg.AddFilter("JSON", "*.json;*.ndjson;*.jsonl;*.geojson")
+		o.Filters = []FileFilter{{"JSON", "*.json;*.ndjson;*.jsonl;*.geojson"}}
 	case "parquet":
-		dlg = dlg.AddFilter("Parquet", "*.parquet;*.parq")
+		o.Filters = []FileFilter{{"Parquet", "*.parquet;*.parq"}}
 	case "sqlite":
-		dlg = dlg.AddFilter("Base SQLite", "*.db;*.sqlite;*.sqlite3;*.db3")
+		o.Filters = []FileFilter{{"Base SQLite", "*.db;*.sqlite;*.sqlite3;*.db3"}}
 	default:
-		dlg = dlg.AddFilter("Texte ou CSV", "*.csv;*.tsv;*.txt")
+		o.Filters = []FileFilter{{"Texte ou CSV", "*.csv;*.tsv;*.txt"}}
 	}
-	dlg = dlg.AddFilter("Tous les fichiers", "*.*")
-	return dlg.PromptForSingleSelection()
+	o.Filters = append(o.Filters, FileFilter{"Tous les fichiers", "*.*"})
+	return s.sys().OpenFile(o)
 }
 
 // ExcelTables liste les tableaux d'un classeur .xlsx (navigateur).
