@@ -111,11 +111,11 @@ func (t *tx) copySheetName(name string) (string, error) {
 	}
 	for n := 2; ; n++ {
 		cand := fmt.Sprintf("%s (%d)", base, n)
-		var k int
-		if err := t.row(`SELECT count(*) FROM _lattis_sheets WHERE name = ?`, cand).Scan(&k); err != nil {
+		taken, err := t.sheetNameTaken(cand, 0)
+		if err != nil {
 			return "", err
 		}
-		if k == 0 {
+		if !taken {
 			return cand, nil
 		}
 	}

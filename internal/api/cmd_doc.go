@@ -174,7 +174,7 @@ func init() {
 				if err := c.Decode("params", &params); err != nil {
 					return nil, err
 				}
-				if q, err = d.PivotCTE(c, q); err != nil {
+				if q, err = d.ReadCTE(c, q); err != nil {
 					return nil, err
 				}
 				if q, err = script.Rewrite(c, d.DB().Read(), q); err != nil {

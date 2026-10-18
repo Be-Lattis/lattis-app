@@ -139,6 +139,9 @@ describe('errorSpan', () => {
 	it('repère le mot cité par SQLite', () => {
 		expect(errorSpan('SELEC * FROM Ventes', 'near "SELEC": syntax error')).toEqual({ from: 0, to: 5 });
 		expect(errorSpan('SELECT Prixx FROM Ventes', 'no such column: Prixx')).toEqual({ from: 7, to: 12 });
+		expect(errorSpan('SELECT Prixx FROM Ventes', 'Colonne inconnue : « Prixx »')).toEqual({ from: 7, to: 12 });
+		expect(errorSpan('SELEC * FROM Ventes', 'Erreur de syntaxe près de « SELEC »')).toEqual({ from: 0, to: 5 });
+		expect(errorSpan('SELECT 1 FROM Inconnue', 'Tableau inconnu : « Inconnue »')).toEqual({ from: 14, to: 22 });
 	});
 	it('rend null quand la position est inconnue', () => {
 		expect(errorSpan('SELECT 1', 'database is locked')).toBeNull();

@@ -33,6 +33,9 @@ type tx struct {
 	// keyed : colonne devenue clé pendant la transaction ("Tableau.Colonne"),
 	// pour l'annoncer quand c'est une formule qui l'a posée.
 	keyed string
+	// pasting : un collage saisit les cellules ; un en-tête collé déjà pris
+	// dans le tableau est renommé (« Produit 2 ») au lieu d'être refusé.
+	pasting bool
 	// ro : transaction de lecture ; gen : génération du Store relevée avant
 	// son ouverture (les résultats calculés peuvent être mis en cache).
 	ro  bool

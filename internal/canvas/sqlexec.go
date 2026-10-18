@@ -13,6 +13,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/order"
+	"github.com/lalamefine/lattis/internal/sqltext"
 )
 
 // Requêtes SQL d'écriture annulables (onglet SQL, db.execute en Lua).
@@ -33,8 +34,9 @@ import (
 // Restent refusés : les changements de structure (CREATE, ALTER, DROP...) et
 // les écritures dans les métadonnées _lattis_*.
 
-// ErrStructure signale une requête qui change la structure de la base.
-var ErrStructure = errors.New("les changements de structure (CREATE, ALTER, DROP…) ne sont pas encore pris en charge : seuls INSERT, UPDATE et DELETE le sont")
+// ErrStructure signale une requête qui change la structure de la base : elle
+// se fait depuis la grille.
+var ErrStructure = sqltext.ErrStructure
 
 const sqlTrash = "_lattis_sqltrash_"
 
@@ -47,7 +49,7 @@ func (m *Model) ExecSQL(ctx context.Context, q string, args ...any) (int64, erro
 		n, err = t.execSQL(q, args)
 		return err
 	})
-	return n, err
+	return n, sqltext.French(err)
 }
 
 // Exec exécute une requête d'écriture pour un script (même commande que ses
@@ -59,7 +61,7 @@ func (e *Editor) Exec(ctx context.Context, q string, args ...any) (int64, error)
 		n, err = t.execSQL(q, args)
 		return err
 	})
-	return n, err
+	return n, sqltext.French(err)
 }
 
 type captured struct {
@@ -126,6 +128,9 @@ func (t *tx) widenFor(err error) (bool, error) {
 func (t *tx) execSQLOnce(q string, args []any) (int64, error) {
 	if strings.TrimSpace(q) == "" {
 		return 0, errors.New("requête vide")
+	}
+	if err := sqltext.CheckStructure(q); err != nil {
+		return 0, err
 	}
 	if err := t.dropOrphanTrash(); err != nil {
 		return 0, err
@@ -317,28 +322,50 @@ func (t *tx) captureSQL(tables []captured) (setup, teardown []string, err error)
 		}
 		views[key] = true
 		view := quoteIdent(tb.Name)
-		names := []string{quoteIdent("_id")}
-		phys := []string{"id"}
-		used := map[string]bool{"_id": true}
+		// Une colonne calculée se lit par sa formule (WHERE "Montant HT" > 100
+		// voit ses valeurs) et ne s'écrit pas : la vue la rend, les
+		// déclencheurs l'ignorent.
+		var calc []string
 		for _, c := range tb.Cols {
+			if c.Formula != "" {
+				exprs, args, computed, err := t.columnSQL(tb.Table)
+				if err != nil {
+					return nil, nil, err
+				}
+				calc = make([]string, len(exprs))
+				for i := range exprs {
+					if computed[i] {
+						if calc[i], err = inlineSQL(exprs[i], args); err != nil {
+							return nil, nil, err
+						}
+					}
+				}
+				break
+			}
+		}
+		names := []string{quoteIdent("_id")}
+		read := []string{"id"}
+		used := map[string]bool{"_id": true}
+		set := []string{`id = new."_id"`}
+		insCols, insVals := []string{"id", "_pos"}, []string{`new."_id"`, "''"}
+		for i, c := range tb.Cols {
 			n := c.Name
 			for k := 2; used[strings.ToLower(n)]; k++ {
 				n = fmt.Sprintf("%s (%d)", c.Name, k)
 			}
 			used[strings.ToLower(n)] = true
 			names = append(names, quoteIdent(n))
-			phys = append(phys, colSQL(c.ID))
+			if calc != nil && calc[i] != "" {
+				read = append(read, calc[i])
+				continue
+			}
+			read = append(read, colSQL(c.ID))
+			set = append(set, colSQL(c.ID)+" = new."+quoteIdent(n))
+			insCols = append(insCols, colSQL(c.ID))
+			insVals = append(insVals, "new."+quoteIdent(n))
 		}
-		nw := make([]string, len(names))
-		set := make([]string, len(names))
-		for i, n := range names {
-			nw[i] = "new." + n
-			set[i] = phys[i] + " = new." + n
-		}
-		insCols := append([]string{"id", "_pos"}, phys[1:]...)
-		insVals := append([]string{nw[0], "''"}, nw[1:]...)
 		setup = append(setup,
-			fmt.Sprintf(`CREATE TEMP VIEW %s (%s) AS SELECT %s FROM main.%s`, view, strings.Join(names, ", "), strings.Join(phys, ", "), name),
+			fmt.Sprintf(`CREATE TEMP VIEW %s (%s) AS SELECT %s FROM main.%s AS %s`, view, strings.Join(names, ", "), strings.Join(read, ", "), name, name),
 			fmt.Sprintf(`CREATE TEMP TRIGGER _slt_vi_%d INSTEAD OF INSERT ON %s BEGIN
 				INSERT INTO %s (%s) VALUES (%s); END`, id, view, name, strings.Join(insCols, ", "), strings.Join(insVals, ", ")),
 			fmt.Sprintf(`CREATE TEMP TRIGGER _slt_vu_%d INSTEAD OF UPDATE ON %s BEGIN

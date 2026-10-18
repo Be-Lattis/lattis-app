@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/lalamefine/lattis/internal/sqltext"
 )
 
 // Un tableau croisé porte un nom (« TCD1 »…) : il s'interroge dans l'onglet
@@ -182,15 +184,7 @@ func (m *Model) PivotCTE(ctx context.Context, q string) (string, error) {
 			}
 			defs = append(defs, `"`+p.Cfg.Name+`" AS (`+sql+`)`)
 		}
-		if len(defs) == 0 {
-			return nil
-		}
-		trimmed := strings.TrimLeft(q, " \t\r\n")
-		if len(trimmed) >= 4 && strings.EqualFold(trimmed[:4], "WITH") {
-			out = "WITH " + strings.Join(defs, ", ") + ", " + strings.TrimLeft(trimmed[4:], " \t\r\n")
-		} else {
-			out = "WITH " + strings.Join(defs, ", ") + " " + q
-		}
+		out = sqltext.PrependWith(q, defs)
 		return nil
 	})
 	return out, err

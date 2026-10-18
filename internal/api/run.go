@@ -114,12 +114,13 @@ func runOne(ctx context.Context, host Host, name, src, entry string, event any) 
 	ctx = context.WithValue(ctx, scriptKey, name)
 	bh := &batchHost{Host: host}
 	env := script.Env{
-		Read:  d.DB().Read(),
-		Edit:  d.Editor(scriptLabel(name)),
-		Print: host.Print,
-		API:   scriptAPI{bh},
-		Entry: entry,
-		Event: event,
+		Read:    d.DB().Read(),
+		Edit:    d.Editor(scriptLabel(name)),
+		Print:   host.Print,
+		API:     scriptAPI{bh},
+		Entry:   entry,
+		Event:   event,
+		Prepare: d.ReadCTE,
 	}
 	res := script.Run(ctx, env, src, script.DefaultLimits)
 	out := ScriptResult{Output: res.Output, Writes: res.Writes, DurationMs: res.Duration.Milliseconds()}

@@ -551,7 +551,9 @@ func (t *tx) putPieces(pieces []piece, sheet int64, row, col int, move bool, ev 
 			i := c - dest.Col
 			if r == dest.Row {
 				if strings.TrimSpace(text) != "" {
-					if err := t.rename(*dest, dest.Cols[i], strings.TrimSpace(text)); err != nil {
+					// Un en-tête collé déjà pris dans le tableau devient « Produit 2 ».
+					name := freeColumnNameExcept(*dest, dest.Cols[i].ID, strings.TrimSpace(text))
+					if err := t.rename(*dest, dest.Cols[i], name); err != nil {
 						return err
 					}
 				}

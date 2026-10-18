@@ -56,11 +56,11 @@ func (m *Model) CreatePivot(ctx context.Context, cfg PivotConfig) (int64, error)
 		name := ""
 		for n := 1; ; n++ {
 			name = fmt.Sprintf("TCD %d", n)
-			var k int
-			if err := t.row(`SELECT count(*) FROM _lattis_sheets WHERE name = ?`, name).Scan(&k); err != nil {
+			taken, err := t.sheetNameTaken(name, 0)
+			if err != nil {
 				return err
 			}
-			if k == 0 {
+			if !taken {
 				break
 			}
 		}

@@ -107,22 +107,25 @@ func TestRenameRejectsBadNames(t *testing.T) {
 	// Deux en-têtes identiques rendent [Produit] ambigu dans les formules ;
 	// en SQL, le second devient « Produit (2) ».
 	for _, name := range []string{"Produit", "produit"} {
-		if _, err := h.try("columns.rename", "table", "Ventes", "column", "Prix", "name", name); err == nil {
-			knownBug(t, "colonnes-doublon", "columns.rename accepte une deuxième colonne « "+name+" » dans le tableau")
-			h.undo()
-		}
+		h.fails("existe déjà dans le tableau Ventes", "columns.rename", "table", "Ventes", "column", "Prix", "name", name)
 	}
-	h.set(1, 3, "Produit")
-	if cols := h.rows("Ventes").Columns; cols[2] == "Produit" {
-		knownBug(t, "colonnes-doublon", "saisir « Produit » dans un en-tête crée une deuxième colonne « Produit »")
+	if _, err := h.try("cells.set", "row", 1, "col", 3, "value", "PRODUIT"); err == nil || !strings.Contains(err.Error(), "existe déjà") {
+		t.Fatalf("saisir « PRODUIT » dans un en-tête : %v", err)
 	}
+	if cols := h.rows("Ventes").Columns; cols[2] == "Produit" || cols[2] == "PRODUIT" {
+		t.Fatalf("deuxième colonne « Produit » : %v", cols)
+	}
+	// Changer la casse de son propre nom reste permis.
+	h.do("columns.rename", "table", "Ventes", "column", "Produit", "name", "PRODUIT")
 	h.undo()
+	h.fails("existe déjà", "columns.insert", "table", "Ventes", "position", 1, "name", "produit")
 	h.do("sheets.add", "name", "B")
 	h.fails("", "sheets.rename", "sheet", "B", "name", "Feuille1")
-	if _, err := h.try("sheets.rename", "sheet", "B", "name", "feuille1"); err == nil {
-		knownBug(t, "feuilles-casse", "deux feuilles « Feuille1 » et « feuille1 » acceptées (Excel les refuse)")
-		h.undo()
-	}
+	h.fails("existe déjà", "sheets.rename", "sheet", "B", "name", "feuille1")
+	h.fails("existe déjà", "sheets.rename", "sheet", "B", "name", "FEUILLE1")
+	h.do("sheets.rename", "sheet", "B", "name", "Été")
+	h.fails("existe déjà", "sheets.add", "name", "été")
+	h.do("sheets.rename", "sheet", "Été", "name", "B")
 	if _, err := h.try("sheets.rename", "sheet", "B", "name", ""); err == nil {
 		t.Fatal("feuille sans nom acceptée")
 	}

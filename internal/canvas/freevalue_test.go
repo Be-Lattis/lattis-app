@@ -71,11 +71,45 @@ func TestTypedHeader(t *testing.T) {
 		{[][]string{{"Nom"}, {"Alice"}}, true},
 		{[][]string{{"Prix"}, {"3"}}, true},
 		{[][]string{{"10", "Ville"}, {"20", "Lyon"}}, true},
-		{[][]string{{"10"}, {"abc"}}, true},
+		// Une première ligne sans texte est une donnée, même au-dessus de
+		// valeurs d'autres types (liste mixte : date, heure, booléen, %…).
+		{[][]string{{"10"}, {"abc"}}, false},
+		{[][]string{{"18/10/2026"}, {"10:30"}, {"VRAI"}, {"15 %"}, {"42"}}, false},
+		{[][]string{{"10:30"}, {"abc"}}, false},
+		{[][]string{{"15 %"}, {"abc"}}, false},
+		{[][]string{{"VRAI"}, {"12"}}, false},
 		{[][]string{{"2024", "2025"}, {"3", "4"}}, false},
 	} {
 		if got := typedHeader(tt.rows); got != tt.want {
 			t.Errorf("typedHeader(%v) = %v", tt.rows, got)
+		}
+	}
+}
+
+// En-tête d'un bloc collé : texte au-dessus de valeurs typées, ou, tout en
+// texte, vote des colonnes sur la longueur des valeurs.
+func TestHasHeader(t *testing.T) {
+	for _, tt := range []struct {
+		rows [][]string
+		want bool
+	}{
+		{[][]string{{"Prix"}, {"3"}, {"4"}}, true},
+		{[][]string{{"Code", "Quand"}, {"12", "01/10/2026"}, {"x7", "hier"}, {"40", "05/09/2026"}}, true},
+		{[][]string{{"Code", "Nom"}, {"A", "x"}, {"B", "y"}, {"A", "x"}}, true},
+		{[][]string{{"Nom", "Ville"}, {"Dupont;007", "Lyon"}, {"Martin;12", "Rome"}}, true},
+		{[][]string{{"Ville", "Pays"}, {"Lyon", "FR"}, {"Rome", "IT"}}, true},
+		// Données : longueurs égales à la première, valeurs variées, première
+		// valeur répétée, en-têtes en double, deux lignes seulement.
+		{[][]string{{"Jean"}, {"Paul"}, {"Anne"}}, false},
+		{[][]string{{"Paris"}, {"Lyon"}, {"Nantes"}}, false},
+		{[][]string{{"Lyon"}, {"Rome"}, {"Lyon"}}, false},
+		{[][]string{{"Nom", "Nom"}, {"a", "b"}, {"c", "d"}}, false},
+		{[][]string{{"Produit", "produit"}, {"1", "2"}, {"3", "4"}}, true},
+		{[][]string{{"Nom"}, {"Dupont"}}, false},
+		{[][]string{{"10:30"}, {"abc"}, {"def"}}, false},
+	} {
+		if got := hasHeader(tt.rows, len(tt.rows[0])); got != tt.want {
+			t.Errorf("hasHeader(%v) = %v", tt.rows, got)
 		}
 	}
 }

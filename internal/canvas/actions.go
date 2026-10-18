@@ -67,7 +67,13 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 				c := tb.Cols[col-tb.Col]
 				name := strings.TrimSpace(raw)
 				if name == "" {
-					name = fmt.Sprintf("Colonne %d", col-tb.Col+1)
+					name = freeColumnNameExcept(tb, c.ID, fmt.Sprintf("Colonne %d", col-tb.Col+1))
+				}
+				if columnNameTaken(tb, c.ID, name) {
+					if !t.pasting {
+						return errColumnTaken(tb, name)
+					}
+					name = freeColumnNameExcept(tb, c.ID, name)
 				}
 				return t.rename(tb, c, name)
 			case inCols && inRows:
@@ -304,34 +310,37 @@ func (t *tx) birth(sheet int64, row, col int) (string, error) {
 	return name, err
 }
 
-// typedHeader : la première ligne d'un îlot saisi donne les en-têtes, sauf
-// si elle a le même type que les lignes suivantes (nombres, dates,
-// booléens) : 10 au-dessus de 20 et 30 est une donnée, pas un titre.
+// typedHeader : la première ligne d'un îlot saisi donne les en-têtes si
+// elle a au moins un texte. Une première ligne sans texte (nombre, date,
+// heure, booléen, pourcentage) est une donnée, pas un titre, même au-dessus
+// de valeurs d'autres types : 10 au-dessus de 20 et 30, ou une date en tête
+// d'une liste mixte.
 func typedHeader(rows [][]string) bool {
 	if len(rows) < 2 {
 		return true
 	}
 	seen := false
-	for c, first := range rows[0] {
+	for _, first := range rows[0] {
 		f := Infer(first)
 		if f == "" {
 			continue
 		}
-		if f == grid.Text {
+		if f == grid.Text && !isTimeOrPercent(first) {
 			return true
 		}
 		seen = true
-		var below []string
-		for _, r := range rows[1:] {
-			if strings.TrimSpace(r[c]) != "" {
-				below = append(below, r[c])
-			}
-		}
-		if len(below) > 0 && Join(f, InferAll(below)) == grid.Text {
-			return true
-		}
 	}
 	return !seen
+}
+
+// isTimeOrPercent : une heure (10:30) ou un pourcentage (15 %), valeurs
+// qu'une cellule libre reconnaît mais que Infer laisse en texte.
+func isTimeOrPercent(s string) bool {
+	if _, ok := freeTime(s); ok {
+		return true
+	}
+	_, ok := freePercent(s)
+	return ok
 }
 
 // tableName : le seul tableau d'une feuille prend le nom de la feuille, les
@@ -450,6 +459,9 @@ func (m *Model) InsertColumn(ctx context.Context, table string, i int, name stri
 		}
 		if i < 0 || i > len(tb.Cols) {
 			return errors.New("canvas: colonne hors du tableau")
+		}
+		if name = strings.TrimSpace(name); name != "" && columnNameTaken(tb, 0, name) {
+			return errColumnTaken(tb, name)
 		}
 		_, err = t.newColumn(tb, i, name)
 		return err

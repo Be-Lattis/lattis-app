@@ -291,7 +291,7 @@ func (m *Model) ReadSQL(ctx context.Context, q, home string, cols func([]string)
 	if err != nil {
 		return err
 	}
-	if q, err = m.PivotCTE(ctx, q); err != nil {
+	if q, err = m.ReadCTE(ctx, q); err != nil {
 		return err
 	}
 	rs, err := m.db.Read().QueryContext(ctx, q)
