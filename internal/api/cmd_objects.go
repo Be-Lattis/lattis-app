@@ -35,7 +35,9 @@ func (c *Call) object(table, key, kind, param string) (int64, error) {
 			return 0, err
 		}
 		var m map[string]any
-		_ = json.Unmarshal([]byte(cfg), &m)
+		if err := json.Unmarshal([]byte(cfg), &m); err != nil {
+			continue // configuration illisible : pas de nom à comparer (l'identifiant reste valable)
+		}
 		n, _ := m[key].(string)
 		if n == name {
 			return id, nil
@@ -43,6 +45,9 @@ func (c *Call) object(table, key, kind, param string) (int64, error) {
 		if loose == 0 && strings.EqualFold(n, name) {
 			loose = id
 		}
+	}
+	if err := rs.Err(); err != nil {
+		return 0, err
 	}
 	if loose != 0 {
 		return loose, nil

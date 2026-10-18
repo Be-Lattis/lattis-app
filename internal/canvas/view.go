@@ -117,10 +117,10 @@ type Layout struct {
 	RowRules []LineRules `json:"rowRules"`
 	ColRules []LineRules `json:"colRules"`
 	// Règles « formule » vérifiées par les cellules libres (voir ruleMarks).
-	RuleMarks []RuleMark  `json:"ruleMarks"`
-	Pivots   []PivotInfo  `json:"pivots"`  // tableaux croisés, calculés
-	Charts   []ChartInfo  `json:"charts"`  // graphiques, avec leurs données
-	Buttons  []ButtonInfo `json:"buttons"` // boutons d'action
+	RuleMarks []RuleMark   `json:"ruleMarks"`
+	Pivots    []PivotInfo  `json:"pivots"`  // tableaux croisés, calculés
+	Charts    []ChartInfo  `json:"charts"`  // graphiques, avec leurs données
+	Buttons   []ButtonInfo `json:"buttons"` // boutons d'action
 	// Ranges : zones « plage » (tableaux convertis), en rectangles.
 	Ranges []Rect `json:"ranges"`
 	// Structure du classeur protégée (onglets), avec ou sans mot de passe.

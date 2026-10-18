@@ -2,6 +2,8 @@ package canvas
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/formula"
@@ -85,12 +87,14 @@ func (m *Model) Dependencies(ctx context.Context, sheet int64, row, col int) (De
 			return err
 		}
 		var ids []int64
-		for rs.Next() {
+		if err := eachRow(rs, func() error {
 			var id int64
-			rs.Scan(&id)
+			err := rs.Scan(&id)
 			ids = append(ids, id)
+			return err
+		}); err != nil {
+			return err
 		}
-		rs.Close()
 		var tables []Table
 		for _, id := range ids {
 			tb, err := t.table(id)
@@ -109,14 +113,18 @@ func (m *Model) Dependencies(ctx context.Context, sheet int64, row, col int) (De
 		if err != nil {
 			return err
 		}
-		for rs.Next() {
+		if err := eachRow(rs, func() error {
 			var n string
 			var x named
-			rs.Scan(&n, &x.sheet, &x.row, &x.col)
+			if err := rs.Scan(&n, &x.sheet, &x.row, &x.col); err != nil {
+				return err
+			}
 			names[strings.ToLower(n)] = x
 			nameAt[[3]int64{x.sheet, int64(x.row), int64(x.col)}] = n
+			return nil
+		}); err != nil {
+			return err
 		}
-		rs.Close()
 		findTable := func(name string) *Table {
 			for i := range tables {
 				if strings.EqualFold(tables[i].Name, name) {
@@ -181,7 +189,10 @@ func (m *Model) Dependencies(ctx context.Context, sheet int64, row, col int) (De
 			}
 		} else {
 			subName = nameAt[[3]int64{sheet, int64(row), int64(col)}]
-			t.row(`SELECT raw FROM _lattis_cells WHERE sheet = ? AND row = ? AND col = ?`, sheet, row, col).Scan(&subRaw)
+			err := t.row(`SELECT raw FROM _lattis_cells WHERE sheet = ? AND row = ? AND col = ?`, sheet, row, col).Scan(&subRaw)
+			if err != nil && !errors.Is(err, sql.ErrNoRows) {
+				return err // cellule vide : pas de formule, rien à lire
+			}
 			d.Subject = subName
 			if isFormula(subRaw) {
 				if n, err := formula.Parse(subRaw, formula.FR); err == nil {
@@ -231,7 +242,9 @@ func (m *Model) Dependencies(ctx context.Context, sheet int64, row, col int) (De
 			var sh int64
 			var r, c int
 			var raw string
-			rs.Scan(&sh, &r, &c, &raw)
+			if err := rs.Scan(&sh, &r, &c, &raw); err != nil {
+				return err
+			}
 			if sh == sheet && r == row && c == col {
 				continue
 			}
