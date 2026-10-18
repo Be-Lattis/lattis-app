@@ -1450,6 +1450,8 @@
 		let lastCol = e.lastCol;
 		// Feuille protégée : rien à saisir, le cadre reste celui du tableau.
 		if (locked) return { last, lastCol, firstCol: e.t.col };
+		// Tableau d'une requête : il ne s'agrandit pas par la saisie.
+		if (e.t.query) return { last, lastCol, firstCol: e.t.col };
 		// Une note ou un total gardé hors du tableau ne l'étend pas.
 		if (keptOut(row, col)) return { last, lastCol, firstCol: e.t.col };
 		// Juste à gauche, sur ses lignes : la saisie y fera sa nouvelle
@@ -2362,13 +2364,13 @@
 				if (r < r0 || r > r1 || p.col + 1 < c0 || p.col > c1) return;
 				const w0 = cax().size(p.col);
 				const w1 = cax().size(p.col + 1);
-				ctx.fillStyle = C.head;
+				ctx.fillStyle = C.linkHead; // comme les tableaux d'une requête : des données calculées
 				ctx.fillRect(cx(p.col), ry(r), w0, rh(r));
 				paintFlash(fl, cx(p.col), ry(r), w0 + w1, rh(r));
 				drawText(f.field, cx(p.col), ry(r), w0, 'left', { b: true }, C.text);
 				drawText(pivotFilterText(f.values), cx(p.col + 1), ry(r), w1 - PIVOT_DROP, 'left', undefined, C.text);
 				ctx.save();
-				ctx.strokeStyle = C.border;
+				ctx.strokeStyle = C.linkBorder;
 				ctx.lineWidth = 1;
 				ctx.strokeRect(Math.round(cx(p.col)) + 0.5, Math.round(ry(r)) + 0.5, w0 + w1 - 1, rh(r) - 1);
 				ctx.restore();
@@ -2378,7 +2380,7 @@
 			// Ligne du total général : la dernière, quand il est affiché.
 			const tot = pivotTotalRow(p);
 			// En-tête et total sur fond gris, sauf remplissage choisi.
-			ctx.fillStyle = C.head;
+			ctx.fillStyle = C.linkHead; // comme les tableaux d'une requête : des données calculées
 			for (const r of tot >= 0 ? [p.row, tot] : [p.row])
 				for (let c = p.col; c <= pc1; c++) if (!styleAt(r, c, undefined)?.bg) ctx.fillRect(cx(c), ry(r), cax().size(c), rh(r));
 			// Recalculé : toute la zone (la ligne vide sous les filtres comprise) s'éclaire, sous le texte.
@@ -2398,7 +2400,7 @@
 					const st = resolveStyle(styleAt(p.row + i, c, undefined), freeCf(p.row + i, c)?.style);
 					const style = bold ? { ...st, b: st?.b ?? true } : st;
 					const ind = pivotLabelOffset(info);
-					drawText(pivotValueText(formatCell(v, undefined, st), i, j), cx(c) + ind, ry(p.row + i), cax().size(c) - ind, st?.al ?? (j > 0 && i > 0 ? 'right' : 'left'), style, C.text);
+					drawText(pivotValueText(formatCell(v, undefined, st), i, j), cx(c) + ind, ry(p.row + i), cax().size(c) - ind, st?.al ?? (j > 0 && i > 0 ? 'right' : 'left'), style, i === 0 || p.row + i === tot ? C.linkHeadText : C.text);
 				});
 			// ▾ des étiquettes des lignes : trier et filtrer le champ (Excel) ; en
 			// arborescence, un seul ▾ sur « Étiquettes de lignes » (choix du champ dans le menu).
@@ -2409,7 +2411,7 @@
 					if (c >= c0 && c <= c1) pivotDrop(cx(c) + cax().size(c), ry(p.row), rh(p.row), on);
 				});
 			ctx.save();
-			ctx.strokeStyle = C.border;
+			ctx.strokeStyle = C.linkBorder;
 			ctx.lineWidth = 1;
 			ctx.strokeRect(Math.round(cx(p.col)) + 0.5, Math.round(ry(p.row)) + 0.5, spanW(p.col, pc1) - 1, rspan(p.row, pr1) - 1);
 			// Traits sous l'en-tête et au-dessus du total.
@@ -4644,6 +4646,16 @@
 		pivots.find((p) => !p.error && (p.anchor ?? p.row) <= r1 && p.row + p.cells.length - 1 >= r0 && p.col <= c1 && p.col + p.cells[0].length - 1 >= c0);
 	// Un tableau croisé est calculé : ses cellules ne se saisissent pas (comme Excel).
 	const PIVOT_READONLY = 'Un tableau croisé ne se modifie pas cellule par cellule : double-cliquez dessus pour changer ses champs';
+	// Tableau chargé par une requête (Power Query) : ses cellules et ses bords
+	// (ligne dessous, colonnes à côté) ne se saisissent pas, l'actualisation
+	// les remplacerait.
+	const QUERY_READONLY = 'Tableau chargé par une requête : ses cellules ne se modifient pas ; changez la requête (Données › Requêtes) puis actualisez (F5)';
+	/** Tableau de requête qui contient la cellule, ou qu'elle prolongerait (dessous, à droite, à gauche). */
+	const queryAt = (r: number, c: number) =>
+		entries.find((e) => e.t.query && ((r >= e.t.row && r <= e.last + 1 && c >= e.t.col && c <= e.lastCol) || (r >= e.t.row && r <= e.last && (c === e.lastCol + 1 || c === e.t.col - 1))));
+	/** Un tableau de requête touché par la plage (sans la couvrir en entier : le supprimer reste permis). */
+	const queryIn = (r0: number, c0: number, r1: number, c1: number, whole = false) =>
+		entries.find((e) => e.t.query && e.t.row <= r1 && e.last >= r0 && e.t.col <= c1 && e.lastCol >= c0 && !(whole && e.t.row >= r0 && e.last <= r1 && e.t.col >= c0 && e.lastCol <= c1));
 
 	// Volet latéral : champs du TCD ou mise en forme du graphique.
 	let panel = $state<{ kind: 'pivot' | 'chart'; id: number } | null>(null);
@@ -5405,6 +5417,13 @@
 		if (dst.r0 < 0 || dst.c0 < 0) return;
 		if (pivotIn(dst.r0, dst.c0, dst.r1, dst.c1) || (!m.copy && pivotIn(r0, c0, r1, c1))) {
 			say(PIVOT_READONLY);
+			return;
+		}
+		// Un tableau de requête déplacé en entier reste permis ; ses cellules, non.
+		const carried = (e: Entry) => !m.copy && e.t.row >= r0 && e.last <= r1 && e.t.col >= c0 && e.lastCol <= c1;
+		const hit = entries.some((e) => e.t.query && !carried(e) && e.t.row <= dst.r1 && e.last >= dst.r0 && e.t.col <= dst.c1 && e.lastCol >= dst.c0);
+		if (hit || (!m.copy && queryIn(r0, c0, r1, c1, true))) {
+			say(QUERY_READONLY);
 			return;
 		}
 		const values = rangeValues(m.sel);
@@ -6421,6 +6440,10 @@
 			say(PIVOT_READONLY);
 			return;
 		}
+		if (queryAt(active.row, active.col)) {
+			say(QUERY_READONLY);
+			return;
+		}
 		const band = bandAt(
 			entries.map((x) => x.t),
 			active.row,
@@ -6519,6 +6542,10 @@
 	async function writeNow(row: number, col: number, raw: string, keep = false, onrefused?: (e: unknown) => void) {
 		if (pivotAt(row, col)) {
 			message = PIVOT_READONLY;
+			return;
+		}
+		if (queryAt(row, col)) {
+			message = QUERY_READONLY;
 			return;
 		}
 		const info = cellInfo(row, col);
@@ -6736,6 +6763,10 @@
 	 */
 	async function clearSelection(range = selection(), all = false) {
 		const { r0, r1, c0, c1 } = range;
+		if (queryIn(r0, c0, r1, c1, true)) {
+			say(QUERY_READONLY);
+			return;
+		}
 		const wipe = all ? source.clearCells : undefined;
 		// Les tableaux entièrement compris dans la zone sont supprimés.
 		const whole = entries.filter((e) => e.t.row >= r0 && e.last <= r1 && e.t.col >= c0 && e.lastCol <= c1);
@@ -7477,6 +7508,10 @@
 		const area = rich?.cut ? { r0: sel.r0, c0: sel.c0, r1: sel.r0 + h - 1, c1: sel.c0 + w - 1 } : pasteArea(h, w, sel);
 		if (pivotIn(area.r0, area.c0, area.r1, area.c1)) {
 			say(PIVOT_READONLY);
+			return true;
+		}
+		if (queryIn(area.r0, area.c0, area.r1, area.c1)) {
+			say(QUERY_READONLY);
 			return true;
 		}
 		const done = (m: string | void, fallback: string) => {
