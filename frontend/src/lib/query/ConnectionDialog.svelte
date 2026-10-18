@@ -4,6 +4,8 @@
 	// jeton), qui reste dans le trousseau du système (« Mémoriser ») ou en
 	// mémoire le temps de la session.
 	import { modal } from '#lib/ui/focus.js';
+	import { refusedName } from '#lib/ui/names.js';
+	import { refuseName } from '#lib/ui/nameAlert.js';
 	import Select from '#lib/ui/Select.svelte';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
@@ -30,6 +32,7 @@
 	let password = $state('');
 	let remember = $state(true);
 	let error = $state('');
+	let nameField = $state<HTMLInputElement>();
 	let tested = $state('');
 	let busy = $state(false);
 	let autoName = $state(!initial().id && !initial().name);
@@ -94,16 +97,20 @@
 	async function save() {
 		error = '';
 		if (k === 'lattis' && (!info || info.url !== c.config.url) && !(await discover())) return;
-		if (!c.name.trim()) return void (error = 'Donnez un nom à la connexion.');
+		// Nom vide ou déjà pris : la boîte l'explique, la saisie reprend dans le champ du nom.
+		if (!c.name.trim()) return void (await refuseName(nameField, { title: 'Nom de connexion invalide', message: 'Le nom de la connexion ne peut pas être vide : il la désigne dans les requêtes du classeur.\n\nDonnez-lui un nom.' }));
 		busy = true;
+		let refused: unknown = null;
 		try {
 			await DocumentService.SaveConnection(c, password, remember);
 			onsaved(c.name.trim());
 		} catch (e) {
-			error = err(e);
+			if (/la connexion « .* » existe déjà/.test(err(e))) refused = e;
+			else error = err(e);
 		} finally {
 			busy = false;
 		}
+		if (refused) await refuseName(nameField, refusedName('Nom de connexion déjà pris', refused));
 	}
 </script>
 
@@ -177,7 +184,7 @@
 						</div>
 					{/if}
 				{/if}
-				<label>Nom de la connexion <input bind:value={c.name} oninput={() => (autoName = false)} /></label>
+				<label>Nom de la connexion <input bind:this={nameField} bind:value={c.name} oninput={() => (autoName = false)} /></label>
 				{#if k !== 'lattis'}
 					<label
 						>{k === 'web' ? (c.config.user ? 'Mot de passe' : 'Jeton') : 'Mot de passe'}

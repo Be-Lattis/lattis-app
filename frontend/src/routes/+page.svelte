@@ -1634,7 +1634,10 @@
 		onpage={mode === 'doc' && htmlTabsEnabled() ? (before) => addPage(before) : undefined}
 		ondocpage={mode === 'doc' ? (before) => addDoc(before) : undefined}
 		onmove={mode === 'doc' ? (id, to) => sheetAction(() => DocumentService.MoveSheet(id, to)) : undefined}
-		onrename={mode === 'doc' ? (id, name) => sheetAction(() => DocumentService.RenameSheet(id, name)) : undefined}
+		onrename={mode === 'doc' ? async (id, name) => {
+			await DocumentService.RenameSheet(id, name);
+			await reload();
+		} : undefined}
 		ondelete={mode === 'doc' ? (id) => askDeleteSheet(id) : undefined}
 		oncopy={mode === 'doc' ? (id, to) => sheetAction(async () => selectSheet(await DocumentService.CopySheet(id, to))) : undefined}
 		oncolor={mode === 'doc' ? (id, color) => sheetAction(() => DocumentService.SetSheetColor(id, color)) : undefined}

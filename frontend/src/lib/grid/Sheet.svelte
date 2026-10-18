@@ -70,7 +70,9 @@
 	import { apply as applySuggestion, argKindAt, needsNextArg, signature, toNextArg, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
 	import { checkFormula, closeParens, editorWidth, formulaRefs, highlightParts, isFormula, movedRef, rangeRef, refRect, serverErrorPos, type FormulaError, type Rect, type RefTable } from './formulaEdit';
 	import { formulaTyping, holdFormula, insertRefAt, qualifyRef, updateHold, type FormulaHold } from './crossref';
-	import { a1Like, parseGoto, type GotoTable } from './goto';
+	import { parseGoto, type GotoTable } from './goto';
+	import { cellNameProblem, columnNameProblem, refusedName, tableNameProblem, type NameProblem } from '#lib/ui/names.js';
+	import { nameAlertOpen, refuseName } from '#lib/ui/nameAlert.js';
 	import {
 		isErrorValue,
 		valueAlignment,
@@ -1607,6 +1609,8 @@
 	let editValueText = $state('');
 	let fxText = $state('');
 	let fxInput = $state<HTMLInputElement>();
+	// Zone de nom d'une cellule libre (nom refusé : la saisie y reprend).
+	let nameInput = $state<HTMLInputElement>();
 	// Faute de syntaxe d'une formule refusée à la validation : l'éditeur reste
 	// ouvert, le caractère fautif est souligné.
 	let editErr = $state<FormulaError | null>(null);
@@ -6425,12 +6429,13 @@
 	});
 	// keep : saisie au clavier ; refusée, son texte revient dans l'éditeur
 	// (sur sa cellule) au lieu d'être perdu.
-	function write(row: number, col: number, raw: string, keep = false): Promise<void> {
-		writing = writing.catch(() => undefined).then(() => writeNow(row, col, raw, keep));
+	// onrefused : reçoit le refus du moteur (renommage depuis la zone de nom).
+	function write(row: number, col: number, raw: string, keep = false, onrefused?: (e: unknown) => void): Promise<void> {
+		writing = writing.catch(() => undefined).then(() => writeNow(row, col, raw, keep, onrefused));
 		return writing;
 	}
 
-	async function writeNow(row: number, col: number, raw: string, keep = false) {
+	async function writeNow(row: number, col: number, raw: string, keep = false, onrefused?: (e: unknown) => void) {
 		if (pivotAt(row, col)) {
 			message = PIVOT_READONLY;
 			return;
@@ -6468,7 +6473,8 @@
 			message = String(e instanceof Error ? e.message : e);
 			// Formule refusée : la saisie n'est pas perdue, l'éditeur se rouvre.
 			const k = message.indexOf('formule : ');
-			if (k >= 0) {
+			if (onrefused) onrefused(e);
+			else if (k >= 0) {
 				const msg = message.slice(k);
 				queueMicrotask(() => reopenFormula(row, col, raw, msg));
 			} else if (keep && !editing) {
@@ -6478,6 +6484,8 @@
 				anchor = { ...active };
 				startEdit(true, raw);
 				message = why;
+				// En-tête refusé (nom de colonne pris…) : la boîte l'explique.
+				if (info.kind === 'header') void refuseName(() => input, refusedName('Nom de colonne refusé', e));
 			}
 		}
 		refreshFx();
@@ -6491,8 +6499,17 @@
 	 * les parenthèses oubliées en fin de formule sont fermées d'office), ou si
 	 * la validation de la cellule (liste déroulante) refuse la valeur.
 	 */
+	/** Nom de colonne tapé dans un en-tête : pourquoi il est refusé (déjà pris dans le tableau), null s'il passe. */
+	function headerProblem(row: number, col: number, text: string): NameProblem | null {
+		const info = cellInfo(row, col);
+		if (info.kind !== 'header' || text === info.value || isFormula(text)) return null;
+		const t = info.e!.t;
+		return columnNameProblem(text, t.columns.filter((_, i) => i !== info.i).map((c) => c.name), t.name);
+	}
+
 	function commit(): boolean {
 		if (!editing) return true;
+		if (nameAlertOpen()) return false;
 		if (isFormula(editValueText)) {
 			const text = closeParens(editValueText);
 			const err = checkFormula(text);
@@ -6504,6 +6521,11 @@
 		}
 		const { row, col } = active;
 		let text = editValueText;
+		const named = headerProblem(row, col, text);
+		if (named) {
+			void refuseName(() => input, named);
+			return false;
+		}
 		if (text !== cellInfo(row, col).value) {
 			const r = refusal(row, col, text);
 			if ('message' in r) {
@@ -6798,6 +6820,12 @@
 			editErr = null;
 			const { row, col } = active;
 			let text = fxText;
+			const named = headerProblem(row, col, text);
+			if (named) {
+				e.preventDefault();
+				void refuseName(fxInput, named);
+				return;
+			}
 			if (text !== cellInfo(row, col).value) {
 				const r = refusal(row, col, text);
 				if ('message' in r) {
@@ -6845,24 +6873,31 @@
 		}
 		if (e.key !== 'Enter') return;
 		e.preventDefault();
-		const name = el.value.trim();
+		const typed = el.value;
+		const name = typed.trim();
 		// Le champ revient au nom du tableau (aller ailleurs ne le change pas
 		// toujours : même tableau, la valeur liée ne bouge pas).
 		el.value = t.name;
 		if (name !== t.name && goToName(name)) return;
-		wrap.focus();
-		if (!source.renameTable || name === t.name) return;
-		if (a1Like(name)) {
-			say(`« ${name} » est une adresse de cellule : elle ne peut pas nommer un tableau`);
+		if (!source.renameTable || name === t.name) {
+			wrap.focus();
 			return;
 		}
+		// Nom refusé : la boîte l'explique, le champ garde le texte tapé.
+		const problem = tableNameProblem(name, entries.filter((x) => x.t !== t).map((x) => x.t.name));
+		if (problem) {
+			void refuseName(el, problem, typed);
+			return;
+		}
+		el.value = typed;
 		const rename = source.renameTable;
 		writing = writing.catch(() => undefined).then(async () => {
 			try {
 				await rename(t, name);
 				message = `Tableau renommé « ${name} »`;
+				if (document.activeElement === el) wrap.focus();
 			} catch (err) {
-				message = String(err instanceof Error ? err.message : err);
+				void refuseName(el, refusedName('Nom de tableau refusé', err), typed);
 			}
 			refreshFx();
 			refreshStatus();
@@ -6891,8 +6926,22 @@
 			el.value = text;
 		}
 		const name = text.replace(/\[.*$/, '').trim();
+		const old = en.t.columns[c - en.t.col].name;
+		if (name === old) {
+			el.value = tableBox?.col ?? '';
+			wrap.focus();
+			return;
+		}
+		// Nom vide ou pris : la boîte l'explique, le champ garde le texte tapé.
+		const problem = name
+			? columnNameProblem(name, en.t.columns.filter((_, i) => i !== c - en.t.col).map((x) => x.name), en.t.name)
+			: { title: 'Nom de colonne invalide', message: 'Le nom de la colonne ne peut pas être vide.\n\nTapez un nom, ou Échap pour garder l’ancien.' };
+		if (problem) {
+			void refuseName(el, problem, text);
+			return;
+		}
 		wrap.focus();
-		if (name && name !== en.t.columns[c - en.t.col].name) write(en.t.row, c, name);
+		write(en.t.row, c, name, false, (err) => void refuseName(el, refusedName('Nom de colonne refusé', err), text));
 	}
 
 	function onNameKey(e: KeyboardEvent) {
@@ -6927,13 +6976,19 @@
 			wrap.focus();
 			return;
 		}
+		// Nom refusé : la boîte l'explique, le champ garde le texte tapé.
+		const problem = cellNameProblem(text);
+		if (problem) {
+			void refuseName(el, problem, text);
+			return;
+		}
 		const setName = source.setName;
 		writing = writing.catch(() => undefined).then(async () => {
 			try {
 				await setName(row, col, text);
 				message = text ? `Cellule nommée « ${text} »` : 'Nom retiré';
 			} catch (err) {
-				message = String(err instanceof Error ? err.message : err);
+				void refuseName(() => nameInput, refusedName('Nom de cellule refusé', err), text);
 			}
 			refreshFx();
 			refreshStatus();
@@ -7933,6 +7988,7 @@
 		{:else}
 			<input
 				class="name-box"
+				bind:this={nameInput}
 				title="Nom de la cellule : tapez un nom puis Entrée pour la nommer, ou le nom d'une cellule pour y aller"
 				value={nameBox}
 				placeholder="—"
@@ -7972,6 +8028,8 @@
 			onkeydown={onFxKey}
 			onblur={() => {
 				completion = sig = null;
+				// Boîte « nom invalide » ouverte : la saisie reprend à sa fermeture.
+				if (nameAlertOpen()) return;
 				// Formule pointée sur une autre feuille, ou clic sur un onglet : la saisie reste.
 				if ((hold || tabPress) && formulaTyping(fxText)) return;
 				fxEditing = false;
@@ -8089,10 +8147,12 @@
 						onkeydown={onEditorKey}
 						onblur={() => {
 							completion = sig = null;
+							// Boîte « nom invalide » ouverte : la saisie reprend à sa fermeture.
+							if (nameAlertOpen()) return;
 							// Clic sur un onglet de feuille : la formule est gardée pour pointer sur l'autre feuille.
 							if (tabPress && formulaTyping(editValueText)) return;
 							// Saisie refusée par la liste déroulante quand le focus part ailleurs : abandonnée, le message reste.
-							if (!commit() && !editErr) {
+							if (!commit() && !editErr && !nameAlertOpen()) {
 								editing = false;
 								schedule();
 							}
