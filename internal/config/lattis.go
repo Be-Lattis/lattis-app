@@ -29,7 +29,7 @@ type LattisServer struct {
 
 // SharedWorkbooks dit si les classeurs partagés sont activés.
 func SharedWorkbooks(c *Config) bool {
-	return c.Bool("features.sharedWorkbooks", false)
+	return c.Bool("features.sharedWorkbooks", true)
 }
 
 // AllowUserLattisServers dit si l'utilisateur peut ajouter des serveurs.

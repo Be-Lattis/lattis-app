@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boolSetting, findSetting, settingNote, settingSections } from './settings';
+import { boolSetting, findSetting, settingNote, settingSections, visibleSections } from './settings';
 
 describe('paramètres', () => {
 	it('Pages web coupés sans réglage', () => {
@@ -22,5 +22,12 @@ describe('paramètres', () => {
 		expect(f?.settings.find((s) => s.path === 'features.sharedWorkbooks')?.label).toBe('Classeurs partagés (Serveur Lattis)');
 		expect(boolSetting([], 'features.sharedWorkbooks')).toBe(false);
 		expect(findSetting([{ path: 'features.htmlTabs', value: false }], 'FEATURES.HTMLTABS')?.value).toBe(false);
+	});
+});
+
+describe('réglages des fonctionnalités à activer', () => {
+	it('cache la section IA tant que l’onglet IA est décoché', () => {
+		expect(visibleSections([]).map((s) => s.id)).not.toContain('ai');
+		expect(visibleSections([{ path: 'ai.enabled', value: true }]).map((s) => s.id)).toContain('ai');
 	});
 });

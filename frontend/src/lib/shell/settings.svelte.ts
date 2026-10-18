@@ -52,7 +52,7 @@ export function mcpAvailable(): boolean {
 
 /** Classeurs partagés (Serveur Lattis) activés : menu Compte, connexions lattis. */
 export function sharedWorkbooksEnabled(): boolean {
-	return boolSetting(userSettings.list, 'features.sharedWorkbooks');
+	return boolSetting(userSettings.list, 'features.sharedWorkbooks', true);
 }
 
 /** L'onglet IA est activé (opt-in, coupé par défaut). */

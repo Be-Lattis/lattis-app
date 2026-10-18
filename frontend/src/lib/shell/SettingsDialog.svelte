@@ -5,7 +5,7 @@
 	// redémarrer ; un réglage imposé par une stratégie est grisé.
 	import { modal } from '#lib/ui/focus.js';
 	import { onMount } from 'svelte';
-	import { findSetting, settingNote, settingSections } from './settings';
+	import { findSetting, settingNote, settingSections, visibleSections } from './settings';
 	import { loadSettings, setSetting, userSettings } from './settings.svelte.js';
 
 	interface Props {
@@ -14,7 +14,9 @@
 	let { onclose }: Props = $props();
 
 	let sectionId = $state(settingSections[0].id);
-	const section = $derived(settingSections.find((s) => s.id === sectionId) ?? settingSections[0]);
+	// Une fonctionnalité décochée cache ses réglages.
+	const sections = $derived(visibleSections(userSettings.list));
+	const section = $derived(sections.find((s) => s.id === sectionId) ?? sections[0] ?? settingSections[0]);
 	let error = $state('');
 	let busy = $state('');
 
@@ -53,8 +55,8 @@
 		<header>Paramètres</header>
 		<div class="main">
 			<nav aria-label="Sections">
-				{#each settingSections as s (s.id)}
-					<button class:on={s.id === sectionId} aria-current={s.id === sectionId ? 'page' : undefined} onclick={() => (sectionId = s.id)}>{s.title}</button>
+				{#each sections as s (s.id)}
+					<button class:on={s.id === section.id} aria-current={s.id === section.id ? 'page' : undefined} onclick={() => (sectionId = s.id)}>{s.title}</button>
 				{/each}
 			</nav>
 			<section>

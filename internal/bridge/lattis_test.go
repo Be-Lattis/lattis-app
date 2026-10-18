@@ -5,10 +5,16 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/lalamefine/lattis/internal/config"
 	"github.com/lalamefine/lattis/internal/query"
 )
 
-func TestLattisOffByDefault(t *testing.T) {
+// Fonction coupée par la configuration (elle est active par défaut).
+func TestLattisOff(t *testing.T) {
+	defer config.SetCurrent(config.Current())
+	off := config.Defaults()
+	off["features"].(config.Tree)["sharedWorkbooks"] = false
+	config.SetCurrent(config.Resolve(context.Background(), config.Options{}, &config.TreeSource{N: "essai", R: config.RankDefault, T: off}))
 	s := &DocumentService{}
 	if st := s.LattisState(); st.Enabled || len(st.Servers) != 0 {
 		t.Fatalf("LattisState = %+v", st)

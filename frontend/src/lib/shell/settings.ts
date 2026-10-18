@@ -19,12 +19,16 @@ export interface SettingDef {
 	help?: string;
 	/** Choix d'un réglage 'choice' (valeur, libellé). */
 	choices?: { value: string; label: string }[];
+	/** Réglage d'une fonctionnalité à activer : masqué tant qu'elle ne l'est pas. */
+	requires?: string;
 }
 
 export interface SettingSection {
 	id: string;
 	title: string;
 	settings: SettingDef[];
+	/** Section d'une fonctionnalité à activer (ai.enabled…) : masquée tant qu'elle ne l'est pas. */
+	requires?: string;
 }
 
 export const settingSections: SettingSection[] = [
@@ -55,6 +59,7 @@ export const settingSections: SettingSection[] = [
 	{
 		id: 'ai',
 		title: 'Assistant IA',
+		requires: 'ai.enabled',
 		settings: [
 			{
 				path: 'ai.dataSharing',
@@ -69,6 +74,16 @@ export const settingSections: SettingSection[] = [
 		]
 	}
 ];
+
+/**
+ * Sections et réglages à montrer (choix de Louis) : ceux d'une fonctionnalité
+ * à activer restent cachés tant qu'elle n'est pas cochée, puisqu'ils ne
+ * servent à rien.
+ */
+export function visibleSections(list: readonly SettingState[]): SettingSection[] {
+	const on = (path?: string) => !path || boolSetting(list, path);
+	return settingSections.filter((s) => on(s.requires)).map((s) => ({ ...s, settings: s.settings.filter((d) => on(d.requires)) }));
+}
 
 /** L'état d'un réglage (sans tenir compte de la casse du chemin). */
 export function findSetting(list: readonly SettingState[], path: string): SettingState | undefined {

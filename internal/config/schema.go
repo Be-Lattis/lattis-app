@@ -125,7 +125,7 @@ func Defaults() Tree {
 			"mcp":                  Tree{"enabled": false},
 			"allowUserConnections": true,
 			"htmlTabs":             false,
-			"sharedWorkbooks":      false,
+			"sharedWorkbooks":      true, // activé par défaut (choix de Louis, 18/10/2026)
 			// Ajout de Serveurs Lattis par l'utilisateur.
 			"allowUserLattisServers": true,
 		},

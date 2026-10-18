@@ -8,7 +8,8 @@ import (
 
 func TestLattisServers(t *testing.T) {
 	c := resolve(t, Options{}, src("défaut", RankDefault, false, Defaults()))
-	if SharedWorkbooks(c) || !AllowUserLattisServers(c) || len(LattisServers(c)) != 0 {
+	// Activés par défaut (choix de Louis, 18/10/2026).
+	if !SharedWorkbooks(c) || !AllowUserLattisServers(c) || len(LattisServers(c)) != 0 {
 		t.Fatal("valeurs par défaut des classeurs partagés")
 	}
 	policy := Tree{
