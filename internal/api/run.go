@@ -89,17 +89,24 @@ func RunScriptFrom(parent context.Context, host Host, name, src, entry string) (
 // runOne exécute un script dans ctx (qui porte déjà son groupe
 // d'annulation) ; event, s'il est donné, est passé à la fonction entry.
 func runOne(ctx context.Context, host Host, name, src, entry string, event any) (ScriptResult, error) {
+	res, _, err := runLimited(ctx, host, name, src, entry, event, script.DefaultLimits)
+	return res, err
+}
+
+// runLimited est runOne avec des bornes choisies ; il renvoie aussi la
+// valeur rendue par la fonction entry.
+func runLimited(ctx context.Context, host Host, name, src, entry string, event any, lim script.Limits) (ScriptResult, any, error) {
 	d, err := host.Doc()
 	if err != nil {
-		return ScriptResult{}, err
+		return ScriptResult{}, nil, err
 	}
 	if err := script.Check(src); err != nil {
-		return ScriptResult{Output: []string{}, Error: err.Error()}, nil
+		return ScriptResult{Output: []string{}, Error: err.Error()}, nil, nil
 	}
 	running.mu.Lock()
 	if running.cancel != nil {
 		running.mu.Unlock()
-		return ScriptResult{}, ErrBusy
+		return ScriptResult{}, nil, ErrBusy
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	running.cancel = cancel
@@ -122,7 +129,7 @@ func runOne(ctx context.Context, host Host, name, src, entry string, event any) 
 		Event:   event,
 		Prepare: d.ReadCTE,
 	}
-	res := script.Run(ctx, env, src, script.DefaultLimits)
+	res := script.Run(ctx, env, src, lim)
 	out := ScriptResult{Output: res.Output, Writes: res.Writes, DurationMs: res.Duration.Milliseconds()}
 	if out.Output == nil {
 		out.Output = []string{}
@@ -134,7 +141,14 @@ func runOne(ctx context.Context, host Host, name, src, entry string, event any) 
 		bh.dirty = true
 	}
 	bh.flush(context.Background())
-	return out, nil
+	return out, res.Return, nil
+}
+
+// Busy dit si un script tourne.
+func Busy() bool {
+	running.mu.Lock()
+	defer running.mu.Unlock()
+	return running.cancel != nil
 }
 
 // StopScript arrête le script en cours (bouton Arrêter).

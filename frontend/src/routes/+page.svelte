@@ -164,8 +164,14 @@
 			sheetId = 1;
 			mode = 'doc';
 			await reload();
+			workbookReady();
 		}
 		await loadRecent();
+	}
+
+	/** Classeur ouvert et affiché : ses écouteurs « open » (scripts Lua) s'exécutent, sans être attendus. */
+	function workbookReady() {
+		DocumentService.WorkbookReady().catch((e) => (notice = err(e)));
 	}
 
 	/** Récupère les données lisibles d'un classeur endommagé, dans un nouveau classeur. */
@@ -191,13 +197,19 @@
 	/** Ferme le classeur ; modifié, il demande d'abord s'il faut l'enregistrer. */
 	async function closeDoc(save?: boolean) {
 		closing = false;
+		// Écouteurs « before_close » des scripts : ils peuvent garder le classeur ouvert.
+		if (mode === 'doc' && save === undefined && !(await DocumentService.BeforeClose())) return;
 		if (mode === 'doc' && docState.dirty && save === undefined) {
 			closing = true;
 			return;
 		}
 		if (save) {
 			docState = await DocumentService.Save(false);
-			if (docState.dirty) return; // enregistrement abandonné
+			if (docState.dirty) {
+				// Enregistrement abandonné (ou refusé par un script : before_save).
+				if (docState.notice) notice = docState.notice;
+				return;
+			}
 		}
 		sheet?.closeOverlays();
 		await DocumentService.CloseDocument();
@@ -519,7 +531,8 @@
 				case 'saveAs':
 					if (mode !== 'doc') return;
 					docState = await DocumentService.Save(a === 'saveAs');
-					if (!docState.dirty) notice = `Enregistré : ${docState.path}`;
+					if (docState.notice) notice = docState.notice;
+					else if (!docState.dirty) notice = `Enregistré : ${docState.path}`;
 					await loadRecent();
 					break;
 				case 'import': {
@@ -600,6 +613,7 @@
 				mode = 'doc';
 				await reload();
 				notice = 'Modifications récupérées : pensez à enregistrer.';
+				workbookReady();
 			} else {
 				orphans = orphans.filter((x) => x.dir !== o.dir);
 				if (orphans.length > 0) return;

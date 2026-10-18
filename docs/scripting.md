@@ -66,6 +66,30 @@ db.execute([[INSERT INTO Archives (Client, Total)
 - Refusés : les changements de structure (`CREATE`, `ALTER`, `DROP`) et les écritures dans les
   tables internes `_lattis_*`.
 
+## Évènements du classeur
+
+`events.on(évènement, fonction, script)` abonne une fonction globale d'un script de la
+bibliothèque à un évènement du classeur ; l'abonnement est enregistré dans le classeur
+(`_lattis_info`, clé `events`). Code : `internal/api/events.go` (exécution),
+`internal/bridge/events.go` (déclenchement depuis l'interface). Détails et exemple :
+[scripting-lua.md § 8](scripting-lua.md#8-évènements-du-classeur).
+
+| Évènement | Quand |
+|---|---|
+| `open` | classeur ouvert et affiché |
+| `before_save`, `save` | avant (renvoyer `false` annule) et après l'enregistrement |
+| `before_close` | avant la fermeture du classeur ou de la fenêtre (renvoyer `false` annule) |
+| `sheet` | autre onglet affiché |
+| `selection` | sélection changée, après un quart de seconde d'immobilité |
+| `change` | cellules modifiées par l'utilisateur (saisie, collage, effacement, déplacement, ligne de tableau) |
+| `sheet_add`, `sheet_delete` | feuille ajoutée ou copiée, supprimée |
+| `recalc` | formules recalculées (F9) |
+
+Seules les actions de l'utilisateur les déclenchent (jamais un script, donc pas de
+récursion) ; les écouteurs tournent un à la fois sans retenir l'interface, ce qu'ils
+modifient forme une étape d'annulation, une erreur est signalée une fois.
+`events.enable(false)` les coupe pour la session ; `events.off`, `events.list`.
+
 ## Bac à sable et limites
 
 - Disponibles : `print`, les fonctions de base (`pairs`, `pcall`, `tostring`...), `string`, `table`,

@@ -155,4 +155,10 @@ describe('commandes de l’application (api.gen.ts)', () => {
 		expect(only('sheets.ajouter("x")').text).toBe('ajouter');
 		expect(only('ui.select()').message).toMatch(/argument/);
 	});
+
+	it('connaît les évènements du classeur et la variable event', () => {
+		expect(messages('function saisie(e) print(e.address, event.value) end\nevents.on("change", saisie)\nevents.enable(false)\nprint(#events.list())')).toEqual([]);
+		expect(reference.find((e) => e.name === 'events.on')?.category).toBe('events');
+		expect(only('events.on()').message).toMatch(/argument/);
+	});
 });

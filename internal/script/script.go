@@ -77,6 +77,9 @@ type Result struct {
 	Writes   int           `json:"writes"` // lignes ajoutées, modifiées ou supprimées
 	Duration time.Duration `json:"duration"`
 	Err      error         `json:"-"`
+	// Return : première valeur renvoyée par la fonction Entry, convertie
+	// comme un argument de commande (nil sans Entry ou sans valeur).
+	Return any `json:"-"`
 }
 
 // Raisons d'arrêt.
@@ -116,6 +119,7 @@ func Run(ctx context.Context, env Env, src string, lim Limits) Result {
 	if err == nil {
 		err = L.PCall(0, 0, nil)
 	}
+	var ret any
 	if err == nil && env.Entry != "" {
 		fn, ok := L.GetGlobal(env.Entry).(*lua.LFunction)
 		if !ok {
@@ -127,10 +131,13 @@ func Run(ctx context.Context, env Env, src string, lim Limits) Result {
 				L.Push(arg)
 				n = 1
 			}
-			err = L.PCall(n, 0, nil)
+			if err = L.PCall(n, 1, nil); err == nil {
+				ret = fromLua(L.Get(-1), 0)
+				L.Pop(1)
+			}
 		}
 	}
-	res := Result{Output: r.output, Writes: r.writes, Duration: time.Since(start)}
+	res := Result{Output: r.output, Writes: r.writes, Duration: time.Since(start), Return: ret}
 	if err != nil {
 		if cause := context.Cause(ctx); cause != nil {
 			if errors.Is(cause, context.Canceled) {

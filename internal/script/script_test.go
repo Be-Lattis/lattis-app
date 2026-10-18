@@ -3,6 +3,7 @@ package script
 import (
 	"context"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -287,5 +288,32 @@ func TestExecute(t *testing.T) {
 	}
 	if got := f.view(t); got != before {
 		t.Fatalf("après Ctrl+Z :\n%s\nattendu :\n%s", got, before)
+	}
+}
+
+// La valeur renvoyée par la fonction Entry est rendue (false : un écouteur
+// before_save ou before_close annule l'action) ; event porte l'argument.
+func TestEntryReturn(t *testing.T) {
+	f := open(t)
+	src := `function non(e) return event.ok end
+function rien() end
+function deux() return {n = 2}, "ignoré" end`
+	for _, c := range []struct {
+		entry string
+		event any
+		want  any
+	}{
+		{"non", map[string]any{"ok": false}, false},
+		{"non", map[string]any{"ok": true}, true},
+		{"rien", nil, nil},
+		{"deux", nil, map[string]any{"n": int64(2)}},
+	} {
+		res := Run(context.Background(), Env{Read: f.db.Read(), Entry: c.entry, Event: c.event}, src, DefaultLimits)
+		if res.Err != nil || fmt.Sprint(res.Return) != fmt.Sprint(c.want) {
+			t.Fatalf("%s : %#v %v", c.entry, res.Return, res.Err)
+		}
+	}
+	if res := Run(context.Background(), Env{Read: f.db.Read()}, src, DefaultLimits); res.Return != nil {
+		t.Fatalf("sans Entry : %#v", res.Return)
 	}
 }

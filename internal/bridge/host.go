@@ -166,11 +166,22 @@ func (h host) SaveDoc(ctx context.Context, path string) error {
 }
 
 // SetSelection reçoit la feuille affichée, la sélection de la grille et la
-// vue (l'interface l'appelle à chaque changement) : ui.selection la lit.
+// vue (l'interface l'appelle à chaque changement) : ui.selection la lit, et
+// les évènements sheet et selection du classeur en partent (events.go).
 func (s *DocumentService) SetSelection(sel api.Selection) {
 	s.ui.mu.Lock()
+	prev := s.ui.sel
 	s.ui.sel = sel
 	s.ui.mu.Unlock()
+	s.ev.mu.Lock()
+	known := s.ev.last
+	s.ev.last = sel
+	s.ev.mu.Unlock()
+	// La sélection posée par un script (ui.select) a déjà remplacé ui.sel :
+	// rapportée par l'interface, elle ne déclenche rien.
+	if prev != sel {
+		s.selectionChanged(known, sel)
+	}
 }
 
 // DialogAnswer donne la réponse à une boîte de dialogue (ok faux : fermée

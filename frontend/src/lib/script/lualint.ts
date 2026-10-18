@@ -269,6 +269,8 @@ class Parser {
 	/** Globales affectées par le script : nom → première affectation. */
 	userGlobals = new Map<string, { from: number; to: number }>();
 	private userFuncs: string[] = [];
+	/** Noms globaux appelés dans le script (f(), f"x", f{}). */
+	private calledGlobals = new Set<string>();
 	diags: LintDiagnostic[] = [];
 
 	constructor(private src: string) {
@@ -406,15 +408,12 @@ class Parser {
 		for (const p of this.pending) p.run(ug);
 		for (const [name, at] of this.userGlobals) {
 			if (globals.has(name)) this.warn('warning', at.from, at.to, `cette affectation remplace « ${name} », prédéfini`);
-			else
-				this.warn(
-					'info',
-					at.from,
-					at.to,
-					this.userFuncs.includes(name)
-						? `fonction globale « ${name} » : préférez « local function ${name} »`
-						: `variable globale « ${name} » : préférez « local ${name} = ... »`
-				);
+			// Une fonction globale que le script n'appelle pas lui-même reste sans
+			// remarque : c'est ce qu'appellent un bouton, un contrôle ou un
+			// évènement du classeur (controls.on, events.on).
+			else if (!this.userFuncs.includes(name))
+				this.warn('info', at.from, at.to, `variable globale « ${name} » : préférez « local ${name} = ... »`);
+			else if (this.calledGlobals.has(name)) this.warn('info', at.from, at.to, `fonction globale « ${name} » : préférez « local function ${name} »`);
 		}
 	}
 
@@ -815,6 +814,7 @@ class Parser {
 				// Le nom appelé est lu, et ses arguments vérifiés, quel que soit l'usage du résultat.
 				for (const f of pending) f();
 				if (fnPath) this.checkArity(fnPath, callee, args);
+				if (fnPath && !fnPath.includes('.')) this.calledGlobals.add(fnPath);
 			} else break;
 		}
 		return e;

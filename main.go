@@ -128,7 +128,7 @@ func main() {
 		},
 	})
 
-	app.Window.NewWithOptions(application.WebviewWindowOptions{
+	win := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:            "Lattis",
 		Width:            1280,
 		Height:           800,
@@ -146,6 +146,10 @@ func main() {
 			InvisibleTitleBarHeight: 32,
 		},
 	})
+
+	// Fermer la fenêtre passe par les écouteurs before_close du classeur
+	// (évènements des scripts Lua), qui peuvent l'annuler.
+	bridge.GuardClose(documents, win)
 
 	// macOS : un .lattis ouvert depuis le Finder arrive par un événement,
 	// au lancement comme pendant que l'application tourne.

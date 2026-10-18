@@ -369,6 +369,49 @@ export const apiReference: RefEntry[] = [
 		args: [0, 0]
 	},
 	{
+		name: "events.enable",
+		category: "events",
+		signature: "events.enable(on) → true si les évènements étaient activés",
+		summary: "Active (true) ou coupe (false) les évènements du classeur pour la session, comme Application.EnableEvents d'Excel ; renvoie l'état précédent.",
+		details: "Coupés, aucun écouteur des évènements du classeur ne s'exécute ; les évènements des contrôles (controls.on) ne sont pas concernés. Ouvrir un classeur les réactive. Paramètres — on : true : activer ; false : couper.",
+		example: "local avant = events.enable(false)\n-- … travail sans déclencher d'écouteur …\nevents.enable(avant)",
+		args: [1, 1]
+	},
+	{
+		name: "events.enabled",
+		category: "events",
+		signature: "events.enabled() → booléen",
+		summary: "Dit si les évènements du classeur sont activés (events.enable).",
+		args: [0, 0]
+	},
+	{
+		name: "events.list",
+		category: "events",
+		signature: "events.list([event]) → { {event, script, function}, ... }",
+		summary: "Liste les écouteurs des évènements du classeur, dans l'ordre où ils s'exécutent.",
+		details: "Évènements : \"open\" (classeur ouvert : {path, title}) ; \"before_save\" (avant l'enregistrement (Ctrl+S, Enregistrer sous) : {path, as} ; renvoyer false l'annule) ; \"save\" (après l'enregistrement : {path}) ; \"before_close\" (avant la fermeture du classeur ou de la fenêtre : {path, dirty} ; renvoyer false l'annule) ; \"sheet\" (onglet affiché changé : {sheet, sheet_id, previous, previous_id}) ; \"selection\" (sélection changée, une fois la souris ou le clavier au repos : {sheet, sheet_id, row, col, row2, col2, address, table, column}) ; \"change\" (cellules modifiées par l'utilisateur (saisie, collage, effacement, déplacement, ligne de tableau ajoutée ou supprimée) : {sheet, sheet_id, row, col, row2, col2, address, table, column, value, old, source}) ; \"sheet_add\" (feuille ajoutée (ou copiée) : {sheet, sheet_id}) ; \"sheet_delete\" (feuille supprimée : {sheet, sheet_id}) ; \"recalc\" (formules recalculées (F9, Recalculer) : {}). Chaque table porte aussi event (le nom de l'évènement) ; lignes et colonnes se comptent à partir de 1, comme ui.selection. value et old (valeur affichée après et avant) ne sont donnés que pour une seule cellule saisie. Seules les actions de l'utilisateur déclenchent ces évènements : ce qu'un script (écouteur compris) modifie, sélectionne ou affiche n'en déclenche aucun, si bien qu'un écouteur ne se relance jamais lui-même. Un écouteur est une fonction globale d'un script enregistré de la bibliothèque, appelée avec la table de l'évènement (aussi dans la variable globale event) ; il est enregistré dans le classeur et survit au script. Les écouteurs d'un évènement s'exécutent dans l'ordre où ils ont été abonnés ; tout ce qu'ils modifient s'annule d'un coup (Ctrl+Z). Un écouteur en erreur est signalé une fois dans la barre d'état et la console, sans bloquer l'interface. before_save et before_close ont 5 secondes au plus (hors boîtes de dialogue) ; une erreur ne bloque ni l'enregistrement ni la fermeture. Paramètres — event : évènement (absent : tous).",
+		example: "for _, l in ipairs(events.list()) do\n  print(l.event, l.script, l[\"function\"])\nend",
+		args: [0, 1]
+	},
+	{
+		name: "events.off",
+		category: "events",
+		signature: "events.off([event], [handler], [script]) → nombre d'écouteurs retirés",
+		summary: "Désabonne des écouteurs des évènements du classeur et renvoie leur nombre : tous, ou ceux d'un évènement, d'une fonction, d'un script.",
+		details: "Paramètres — event : évènement (absent : tous) ; handler : fonction (ou son nom ; absente : toutes) ; script : script (absent : tous). Arguments dans l'ordre, ou une table d'arguments nommés : events.off{event = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "events.off(\"selection\") -- plus rien n'écoute la sélection",
+		args: [0, 3]
+	},
+	{
+		name: "events.on",
+		category: "events",
+		signature: "events.on(event, handler, [script]) → true si l'écouteur est nouveau",
+		summary: "Abonne une fonction d'un script à un évènement du classeur (ouverture, enregistrement, fermeture, changement d'onglet, de sélection, saisie…) ; elle sera appelée à chaque évènement avec une table qui le décrit.",
+		details: "Évènements : \"open\" (classeur ouvert : {path, title}) ; \"before_save\" (avant l'enregistrement (Ctrl+S, Enregistrer sous) : {path, as} ; renvoyer false l'annule) ; \"save\" (après l'enregistrement : {path}) ; \"before_close\" (avant la fermeture du classeur ou de la fenêtre : {path, dirty} ; renvoyer false l'annule) ; \"sheet\" (onglet affiché changé : {sheet, sheet_id, previous, previous_id}) ; \"selection\" (sélection changée, une fois la souris ou le clavier au repos : {sheet, sheet_id, row, col, row2, col2, address, table, column}) ; \"change\" (cellules modifiées par l'utilisateur (saisie, collage, effacement, déplacement, ligne de tableau ajoutée ou supprimée) : {sheet, sheet_id, row, col, row2, col2, address, table, column, value, old, source}) ; \"sheet_add\" (feuille ajoutée (ou copiée) : {sheet, sheet_id}) ; \"sheet_delete\" (feuille supprimée : {sheet, sheet_id}) ; \"recalc\" (formules recalculées (F9, Recalculer) : {}). Chaque table porte aussi event (le nom de l'évènement) ; lignes et colonnes se comptent à partir de 1, comme ui.selection. value et old (valeur affichée après et avant) ne sont donnés que pour une seule cellule saisie. Seules les actions de l'utilisateur déclenchent ces évènements : ce qu'un script (écouteur compris) modifie, sélectionne ou affiche n'en déclenche aucun, si bien qu'un écouteur ne se relance jamais lui-même. Un écouteur est une fonction globale d'un script enregistré de la bibliothèque, appelée avec la table de l'évènement (aussi dans la variable globale event) ; il est enregistré dans le classeur et survit au script. Les écouteurs d'un évènement s'exécutent dans l'ordre où ils ont été abonnés ; tout ce qu'ils modifient s'annule d'un coup (Ctrl+Z). Un écouteur en erreur est signalé une fois dans la barre d'état et la console, sans bloquer l'interface. before_save et before_close ont 5 secondes au plus (hors boîtes de dialogue) ; une erreur ne bloque ni l'enregistrement ni la fermeture. handler est la fonction elle-même ou son nom ; script, par défaut le script en cours (il doit être enregistré dans la bibliothèque). Abonner deux fois la même fonction ne change rien. Paramètres — event : \"open\", \"before_save\", \"save\", \"before_close\", \"sheet\", \"selection\", \"change\", \"sheet_add\", \"sheet_delete\" ou \"recalc\" ; handler : fonction globale du script (ou son nom) ; script : script de la fonction (absent : le script en cours). Arguments dans l'ordre, ou une table d'arguments nommés : events.on{event = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "scripts.save(\"Évènements\", [==[\nfunction saisie(e)\n  -- e.sheet, e.address, e.value, e.old : la cellule saisie\n  if e.value ~= nil then\n    print(e.address .. \" : \" .. tostring(e.old) .. \" → \" .. tostring(e.value))\n  end\nend\nfunction avant_fermeture(e)\n  return ui.confirm(\"Fermer le classeur ?\") -- false : la fermeture est annulée\nend\n]==])\nevents.on(\"change\", \"saisie\", \"Évènements\")\nevents.on(\"before_close\", \"avant_fermeture\", \"Évènements\")",
+		args: [1, 3]
+	},
+	{
 		name: "formulas.functions",
 		category: "workbook",
 		signature: "formulas.functions()",

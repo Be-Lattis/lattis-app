@@ -48,7 +48,7 @@ export function AddFavorite(name: string, sql: string): $CancellablePromise<numb
 
 /**
  * AddPage ajoute un onglet page HTML avant l'onglet before (0 : à la fin)
- * et renvoie son identifiant. Les Onglets HTML sont une fonctionnalité à
+ * et renvoie son identifiant. Les pages web sont une fonctionnalité à
  * activer (Fichier › Paramètres › Fonctionnalités, features.htmlTabs).
  */
 export function AddPage(before: number): $CancellablePromise<number> {
@@ -91,6 +91,14 @@ export function ApplyLineStyle(sheet: number, rows: boolean, i0: number, i1: num
  */
 export function ApplyStyle(sheet: number, r0: number, c0: number, r1: number, c1: number, patch: { [_ in string]?: any } | null): $CancellablePromise<$models.DocState> {
     return $Call.ByID(2797992075, sheet, r0, c0, r1, c1, patch);
+}
+
+/**
+ * BeforeClose exécute les écouteurs before_close ; faux si l'un d'eux
+ * annule la fermeture (il a renvoyé false).
+ */
+export function BeforeClose(): $CancellablePromise<boolean> {
+    return $Call.ByID(2577805335);
 }
 
 /**
@@ -338,7 +346,7 @@ export function DismissKeyHint(table: string): $CancellablePromise<$models.DocSt
 }
 
 /**
- * DocControl lit un contrôle d'un Onglet Document et la valeur de sa
+ * DocControl lit un contrôle d'un document et la valeur de sa
  * cellule liée.
  */
 export function DocControl(id: number): $CancellablePromise<api$0.ControlState> {
@@ -706,7 +714,7 @@ export function PlaceChart(id: number, row: number, col: number, offX: number, o
 
 /**
  * PlacePivot pose sur la feuille un tableau croisé de configuration cfg
- * (collé depuis un Onglet Document).
+ * (collé depuis un document).
  */
 export function PlacePivot(sheet: number, row: number, col: number, cfg: canvas$0.PivotConfig): $CancellablePromise<$models.DocState> {
     return $Call.ByID(4069234803, sheet, row, col, cfg);
@@ -1124,7 +1132,8 @@ export function SetRules(table: string, i: number, rules: canvas$0.Rule[] | null
 
 /**
  * SetSelection reçoit la feuille affichée, la sélection de la grille et la
- * vue (l'interface l'appelle à chaque changement) : ui.selection la lit.
+ * vue (l'interface l'appelle à chaque changement) : ui.selection la lit, et
+ * les évènements sheet et selection du classeur en partent (events.go).
  */
 export function SetSelection(sel: api$0.Selection): $CancellablePromise<void> {
     return $Call.ByID(1169873088, sel);
@@ -1288,6 +1297,14 @@ export function UnprotectWorkbook(password: string): $CancellablePromise<$models
  */
 export function Window(sheet: number, table: number, first: number, count: number): $CancellablePromise<grid$0.Window> {
     return $Call.ByID(448852098, sheet, table, first, count);
+}
+
+/**
+ * WorkbookReady est appelé par l'interface quand un classeur ouvert est
+ * affiché : ses écouteurs open s'exécutent (une fois par classeur).
+ */
+export function WorkbookReady(): $CancellablePromise<void> {
+    return $Call.ByID(2672234365);
 }
 
 /**

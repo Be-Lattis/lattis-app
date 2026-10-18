@@ -195,3 +195,31 @@ end`)
 		t.Fatal("bouton sans script exécuté sans erreur")
 	}
 }
+
+// Les écouteurs des évènements du classeur voyagent avec lui : après
+// réouverture, open s'exécute, et ce qu'il modifie s'annule d'un coup.
+func TestWorkbookEventsSurviveReopen(t *testing.T) {
+	h := newHost(t)
+	commandes(h)
+	h.do("scripts.save", "name", "Accueil", "source", `
+function ouvrir(e)
+  db.execute([[UPDATE Commandes SET Nombre = Nombre + 10]])
+  print("ouvert", e.event, e.title)
+end`)
+	h.lua(`events.on("open", "ouvrir", "Accueil")`)
+	h.reopen(path(t, "evenements.lattis"))
+	ls := h.do("events.list").([]api.WorkbookListenerView)
+	if len(ls) != 1 || ls[0] != (api.WorkbookListenerView{Event: "open", Script: "Accueil", Function: "ouvrir"}) {
+		t.Fatalf("écouteurs %+v", ls)
+	}
+	res, err := api.FireEvent(h, api.EventOpen, map[string]any{"path": "", "title": "evenements"})
+	if err != nil || res.Error != "" || res.Ran != 1 || strings.Join(res.Output, ";") != "ouvert\topen\tevenements" {
+		t.Fatalf("open : %+v %v", res, err)
+	}
+	h.wantColumn("Commandes", "Nombre", "13", "11", "12")
+	if st := h.state(); st.Undo != "Évènement « open »" {
+		t.Fatalf("étape %q", st.Undo)
+	}
+	h.undo()
+	h.wantColumn("Commandes", "Nombre", "3", "1", "2")
+}

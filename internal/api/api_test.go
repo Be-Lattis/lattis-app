@@ -253,14 +253,14 @@ func sample(t *testing.T) *fakeHost {
 	return h
 }
 
-// Les exemples des sections 5 à 7 du guide tournent aussi.
+// Les exemples des sections 5 à 8 du guide tournent aussi.
 func TestGuideExamplesRun(t *testing.T) {
 	b, err := os.ReadFile("../../docs/scripting-lua.md")
 	if err != nil {
 		t.Fatal(err)
 	}
 	doc := strings.ReplaceAll(string(b), "\r\n", "\n")
-	doc = doc[strings.Index(doc, "## 5. Piloter"):strings.Index(doc, "## 8. Annuler")]
+	doc = doc[strings.Index(doc, "## 5. Piloter"):strings.Index(doc, "## 9. Annuler")]
 	blocks := regexp.MustCompile("(?s)```lua\n(.*?)```").FindAllStringSubmatch(doc, -1)
 	if len(blocks) < 4 {
 		t.Fatalf("%d exemples seulement", len(blocks))

@@ -73,8 +73,9 @@ type DocumentService struct {
 	sheet int64 // feuille affichée : Cell_A1 de l'onglet SQL s'y lit
 	ui    uiState
 	mcp   mcpState
-	demo  *demoRun // classeur de démonstration demandé au lancement
-	pq    pqState  // base de travail des requêtes d'import (query.go)
+	demo  *demoRun  // classeur de démonstration demandé au lancement
+	pq    pqState   // base de travail des requêtes d'import (query.go)
+	ev    eventLoop // évènements du classeur (events.go)
 
 	// Classeur à ouvrir au lancement (association de fichiers, launch.go).
 	launch launchState
@@ -119,6 +120,7 @@ func (s *DocumentService) replace(d *doc.Document) {
 	old := s.doc
 	s.doc, s.tables, s.memo = d, map[int64]*grid.Table{}, nil
 	s.mu.Unlock()
+	s.resetEvents()
 	if old != nil {
 		old.Close()
 	}
@@ -223,6 +225,14 @@ func (s *DocumentService) Save(ctx context.Context, as bool) (DocState, error) {
 	if err != nil {
 		return DocState{}, err
 	}
+	if s.listening(api.EventBeforeSave) {
+		r := s.fireSync(api.EventBeforeSave, map[string]any{"path": d.Path(), "as": as || d.Path() == ""})
+		if r.Cancelled {
+			st, err := s.State(ctx)
+			st.Notice = "Enregistrement annulé par un script (évènement before_save)"
+			return st, err
+		}
+	}
 	path := ""
 	if as || d.Path() == "" {
 		name := "Classeur.lattis"
@@ -246,6 +256,9 @@ func (s *DocumentService) Save(ctx context.Context, as bool) (DocState, error) {
 		return DocState{}, err
 	}
 	addRecent(d.Path())
+	if s.listening(api.EventSave) {
+		s.fireAsync(api.EventSave, map[string]any{"path": d.Path()})
+	}
 	return s.changed(ctx)
 }
 
@@ -375,11 +388,13 @@ func (s *DocumentService) SetCell(ctx context.Context, sheet int64, row, col int
 	if err != nil {
 		return canvas.Event{}, err
 	}
+	w := s.watchChange(sheet, row, col, row, col, "edit")
 	ev, err := d.SetCell(ctx, sheet, row, col, raw)
 	if err != nil {
 		return ev, err
 	}
 	_, err = s.changed(ctx)
+	s.fireChange(w)
 	return ev, err
 }
 
@@ -433,11 +448,21 @@ func (s *DocumentService) DeleteSheetColumns(ctx context.Context, sheet int64, c
 }
 
 func (s *DocumentService) InsertRow(ctx context.Context, table string, n int) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.InsertRow(ctx, table, n) })
+	w := s.watchTableRow("", 0, "insert_row")
+	st, err := s.act(ctx, func(d *doc.Document) error { return d.InsertRow(ctx, table, n) })
+	if err == nil {
+		s.fireTableRow(w, table, n)
+	}
+	return st, err
 }
 
 func (s *DocumentService) DeleteRow(ctx context.Context, table string, n int) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.DeleteRow(ctx, table, n) })
+	w := s.watchTableRow(table, n, "delete_row")
+	st, err := s.act(ctx, func(d *doc.Document) error { return d.DeleteRow(ctx, table, n) })
+	if err == nil {
+		s.fireTableRow(w, table, n)
+	}
+	return st, err
 }
 
 func (s *DocumentService) InsertColumn(ctx context.Context, table string, i int, name string) (DocState, error) {
@@ -534,11 +559,17 @@ func (s *DocumentService) Paste(ctx context.Context, sheet int64, row, col int, 
 	if err != nil {
 		return canvas.Event{}, err
 	}
+	width := 1
+	for _, r := range block {
+		width = max(width, len(r))
+	}
+	w := s.watchChange(sheet, row, col, row+max(len(block), 1)-1, col+width-1, "paste")
 	ev, err := d.Paste(ctx, sheet, row, col, block)
 	if err != nil {
 		return ev, err
 	}
 	_, err = s.changed(ctx)
+	s.fireChange(w)
 	return ev, err
 }
 
@@ -553,6 +584,7 @@ func (s *DocumentService) AddSheet(ctx context.Context) (int64, error) {
 		return 0, err
 	}
 	_, err = s.changed(ctx)
+	s.fireSheet(api.EventSheetAdd, id)
 	return id, err
 }
 
@@ -567,6 +599,7 @@ func (s *DocumentService) InsertSheet(ctx context.Context, before int64) (int64,
 		return 0, err
 	}
 	_, err = s.changed(ctx)
+	s.fireSheet(api.EventSheetAdd, id)
 	return id, err
 }
 
@@ -581,7 +614,15 @@ func (s *DocumentService) RenameSheet(ctx context.Context, sheet int64, name str
 }
 
 func (s *DocumentService) DeleteSheet(ctx context.Context, sheet int64) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.DeleteSheet(ctx, sheet) })
+	var data map[string]any
+	if s.listening(api.EventSheetDelete) {
+		data = api.SheetEventData(host{s}, sheet)
+	}
+	st, err := s.act(ctx, func(d *doc.Document) error { return d.DeleteSheet(ctx, sheet) })
+	if err == nil && data != nil {
+		s.fireAsync(api.EventSheetDelete, data)
+	}
+	return st, err
 }
 
 // CopySheet copie un onglet (tableaux, cellules, mise en forme, objets) et
@@ -596,6 +637,7 @@ func (s *DocumentService) CopySheet(ctx context.Context, sheet int64, to int) (i
 		return 0, err
 	}
 	_, err = s.changed(ctx)
+	s.fireSheet(api.EventSheetAdd, id)
 	return id, err
 }
 
@@ -792,10 +834,14 @@ func (s *DocumentService) ExtractColumns(ctx context.Context, name string, i0, i
 
 // Recalc renouvelle AUJOURDHUI, MAINTENANT et ALEA (F9).
 func (s *DocumentService) Recalc(ctx context.Context) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error {
+	st, err := s.act(ctx, func(d *doc.Document) error {
 		d.Recalc()
 		return nil
 	})
+	if err == nil && s.listening(api.EventRecalc) {
+		s.fireAsync(api.EventRecalc, map[string]any{})
+	}
+	return st, err
 }
 
 // RemoveDuplicates supprime les lignes en double d'un tableau ; renvoie leur nombre.
@@ -1028,14 +1074,24 @@ func (s *DocumentService) UnprotectWorkbook(ctx context.Context, password string
 // ClearCells vide entièrement les cellules libres d'une plage (valeurs,
 // mise en forme, fusions, notes, validations).
 func (s *DocumentService) ClearCells(ctx context.Context, sheet int64, r0, c0, r1, c1 int) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.ClearCells(ctx, sheet, r0, c0, r1, c1) })
+	w := s.watchChange(sheet, r0, c0, r1, c1, "clear")
+	st, err := s.act(ctx, func(d *doc.Document) error { return d.ClearCells(ctx, sheet, r0, c0, r1, c1) })
+	if err == nil {
+		s.fireChange(w)
+	}
+	return st, err
 }
 
 // ClearRange efface une zone en une seule étape d'annulation (tableaux
 // entièrement compris supprimés ; all : mise en forme des cellules libres
 // comprise, comme Supprimer).
 func (s *DocumentService) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int, all bool) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.ClearRange(ctx, sheet, r0, c0, r1, c1, all) })
+	w := s.watchChange(sheet, r0, c0, r1, c1, "clear")
+	st, err := s.act(ctx, func(d *doc.Document) error { return d.ClearRange(ctx, sheet, r0, c0, r1, c1, all) })
+	if err == nil {
+		s.fireChange(w)
+	}
+	return st, err
 }
 
 // Transfer copie ou déplace (move) une zone d'une feuille vers une autre
@@ -1046,11 +1102,17 @@ func (s *DocumentService) Transfer(ctx context.Context, from int64, src canvas.R
 	if err != nil {
 		return canvas.Event{}, err
 	}
+	source := "copy"
+	if move {
+		source = "move"
+	}
+	w := s.watchChange(to, dst.R0, dst.C0, dst.R1, dst.C1, source)
 	ev, err := d.Transfer(ctx, from, src, to, dst, move, values)
 	if err != nil {
 		return ev, err
 	}
 	_, err = s.changed(ctx)
+	s.fireChange(w)
 	return ev, err
 }
 

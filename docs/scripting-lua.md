@@ -262,7 +262,7 @@ local t0 = os.clock()
 print(string.format("%.3f s", os.clock() - t0))
 ```
 
-Absents volontairement (voir [§ 6](#6-sécurité-et-limites)) : `io`, `require`, `load`,
+Absents volontairement (voir [§ 10](#10-sécurité-et-limites)) : `io`, `require`, `load`,
 `loadstring`, `dofile`, `debug`, `coroutine`, `string.dump`, `collectgarbage`, et le reste
 de `os` (`os.execute`, `os.remove`, `os.getenv`...).
 
@@ -644,7 +644,85 @@ buttons.create(3, 6, "Archiver", "Relances", "archiver")
 
 ---
 
-## 8. Annuler un script
+## 8. Évènements du classeur
+
+Un script peut **réagir à ce que fait l'utilisateur** : ouvrir le classeur, l'enregistrer,
+le fermer, changer d'onglet, déplacer la sélection, saisir dans une cellule… C'est
+l'équivalent de `Workbook_Open`, `Worksheet_Change`, `SelectionChange`, `SheetActivate`,
+`BeforeSave` ou `BeforeClose` d'Excel. Comme pour un contrôle (`controls.on`), on
+**abonne** une fonction globale d'un script de la bibliothèque à un évènement ;
+l'abonnement est enregistré dans le classeur et voyage avec le fichier.
+
+```lua
+scripts.save("Évènements", [==[
+function saisie(e)
+  if e.sheet == "Commandes" and e.value ~= nil then
+    ui.notify(e.address .. " : " .. tostring(e.old) .. " → " .. tostring(e.value))
+  end
+end
+
+function horodater(e)
+  cells.set{sheet = "Accueil", row = 1, col = 2, value = os.date("%d/%m/%Y %H:%M")}
+end
+
+function avant_fermeture(e)
+  if e.dirty then
+    return ui.confirm("Le classeur n'est pas enregistré. Fermer quand même ?")
+  end
+end
+]==])
+events.on("change", "saisie", "Évènements")
+events.on("before_save", "horodater", "Évènements")
+events.on("before_close", "avant_fermeture", "Évènements")
+```
+
+| Évènement | Quand | Table reçue (en plus de `event`) |
+|---|---|---|
+| `open` | le classeur vient d'être ouvert et affiché | `path`, `title` |
+| `before_save` | avant l'enregistrement (Ctrl+S, Enregistrer sous) ; **renvoyer `false` l'annule** | `path`, `as` (vrai : un fichier sera demandé) |
+| `save` | après l'enregistrement | `path` |
+| `before_close` | avant la fermeture du classeur ou de la fenêtre ; **renvoyer `false` l'annule** | `path`, `dirty` |
+| `sheet` | un autre onglet est affiché | `sheet`, `sheet_id`, `previous`, `previous_id` |
+| `selection` | la sélection a changé et ne bouge plus depuis un quart de seconde | `sheet`, `sheet_id`, `row`, `col`, `row2`, `col2`, `address`, `table`, `column` |
+| `change` | des cellules ont été modifiées par l'utilisateur | comme `selection`, plus `source`, et `value`, `old` pour une seule cellule |
+| `sheet_add` | une feuille a été ajoutée, insérée ou copiée | `sheet`, `sheet_id` |
+| `sheet_delete` | une feuille a été supprimée | `sheet`, `sheet_id` |
+| `recalc` | les formules ont été recalculées (F9, Recalculer) | — |
+
+- Lignes et colonnes se comptent **à partir de 1**, comme `ui.selection()` ; `address`
+  est la plage en clair (`"B3"` ou `"B3:D5"`), `table` et `column` désignent le tableau et
+  la colonne de la cellule en haut à gauche, s'il y en a un.
+- `source` dit d'où vient la modification : `"edit"` (saisie), `"paste"`, `"clear"`,
+  `"move"` ou `"copy"` (glisser, couper-coller), `"insert_row"` ou `"delete_row"` (ligne
+  d'un tableau, avec `table` et `line`, son rang à partir de 1). `value` et `old`, les
+  valeurs affichées après et avant, ne sont données que pour une seule cellule.
+- **Seules les actions de l'utilisateur** déclenchent ces évènements : ce qu'un script
+  modifie, sélectionne ou enregistre n'en déclenche aucun. Un écouteur de `change` qui
+  écrit dans la feuille, ou un écouteur de `selection` qui sélectionne, ne se relance donc
+  jamais lui-même. Un évènement qui survient pendant qu'un script tourne n'est pas traité.
+- Les écouteurs d'un évènement s'exécutent l'un après l'autre, dans l'ordre où ils ont été
+  abonnés, **sans retenir l'interface** : on continue à saisir pendant qu'ils tournent.
+  Tout ce qu'ils modifient forme **une étape d'annulation** (`Évènement « change »`),
+  distincte de la saisie qui les a déclenchés.
+- Un écouteur en erreur est **signalé une fois** (barre d'état et console de l'onglet
+  SCRIPT), puis l'erreur n'est plus répétée pendant la session. Il arrête les écouteurs
+  suivants du même évènement, mais **n'empêche jamais** d'enregistrer ni de fermer.
+- `before_save` et `before_close` ont **5 secondes** au plus (hors boîtes de dialogue) ;
+  les autres évènements ont les bornes habituelles d'un script (§ 10).
+- `events.enable(false)` coupe tous les évènements du classeur pour la session (comme
+  `Application.EnableEvents = False`) et renvoie l'état précédent ; `events.enable(true)`
+  les rétablit, et ouvrir un classeur les réactive. Les évènements des contrôles ne sont
+  pas concernés.
+- `events.list()` liste les abonnements, `events.off("change")` les retire (tous, ou ceux
+  d'un évènement, d'une fonction, d'un script).
+- Un classeur reçu d'ailleurs exécute ses écouteurs `open` dès son ouverture : ils tournent
+  dans le même bac à sable que tout script (§ 10), sans accès aux fichiers ni aux
+  programmes, et une requête HTTP vers un site encore inconnu demande toujours votre
+  accord.
+
+---
+
+## 9. Annuler un script
 
 **Tout ce qu'un script a fait forme une seule étape d'annulation**, nommée d'après le script
 (`Script « Relances »`). Un Ctrl+Z après l'exécution efface d'un coup toutes ses
@@ -662,7 +740,7 @@ La sélection et la feuille affichée ne font pas partie de l'annulation.
 
 ---
 
-## 9. Sécurité et limites
+## 10. Sécurité et limites
 
 Un script ne peut ni geler l'application, ni toucher à autre chose que le classeur ouvert.
 
@@ -686,7 +764,7 @@ s'annule par Ctrl+Z.
 
 ---
 
-## 10. Recettes
+## 11. Recettes
 
 ### Totaux par client dans la sortie
 
@@ -791,7 +869,7 @@ print(erreurs .. " erreur(s)")
 
 ---
 
-## 11. Messages d'erreur fréquents
+## 12. Messages d'erreur fréquents
 
 | Message | Cause | Solution |
 |---|---|---|
@@ -811,11 +889,11 @@ print(erreurs .. " erreur(s)")
 
 ---
 
-## 12. Ce qui n'existe pas encore
+## 13. Ce qui n'existe pas encore
 
 Pour éviter de chercher : il n'y a pas aujourd'hui de fonction pour créer un tableau d'un
 coup (passez par `cells.paste` avec une ligne d'en-têtes), modifier la formule d'une colonne
 calculée autrement qu'en la saisissant (`cells.set` sur sa première cellule), lancer un script
-automatiquement (à l'ouverture, sur modification...), lancer un script depuis un autre
-script, ni importer un module Lua externe. Les fichiers (ouvrir, enregistrer, importer,
+depuis un autre script (les évènements du classeur, § 8, en lancent à l'ouverture, à la
+saisie…), ni importer un module Lua externe. Les fichiers (ouvrir, enregistrer, importer,
 exporter) restent hors de portée des scripts ; le serveur MCP, lui, y a accès.
