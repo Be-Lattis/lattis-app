@@ -410,15 +410,11 @@ func (s pgServer) CanCreateWorkbooks(ctx context.Context) (bool, error) {
 			}
 			return err
 		}
-		var sum struct {
-			Can *bool `json:"can_create_workbooks"`
-		}
+		var sum protocol.LoginSummary
 		if err := json.Unmarshal(raw, &sum); err != nil {
 			return fmt.Errorf("lattis.login_summary : %w", err)
 		}
-		if sum.Can != nil {
-			can = *sum.Can
-		}
+		can = sum.CanCreate()
 		return nil
 	})
 	return can, err

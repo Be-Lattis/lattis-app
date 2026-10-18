@@ -13,6 +13,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/lalamefine/lattis/protocol"
 )
 
 // PKCE (RFC 7636) : vérificateur aléatoire et défi S256.
@@ -71,16 +73,10 @@ func (u User) key() string {
 	return "utilisateur"
 }
 
-// Tokens est une réponse de /oauth/token.
+// Tokens est une réponse de /oauth/token (protocol.TokenResponse), avec
+// l'utilisateur et l'échéance.
 type Tokens struct {
-	AccessToken  string `json:"access_token"`
-	TokenType    string `json:"token_type"`
-	ExpiresIn    int64  `json:"expires_in"`
-	RefreshToken string `json:"refresh_token"`
-	IDToken      string `json:"id_token"`
-	Scope        string `json:"scope"`
-	// PGRole : rôle PostgreSQL de l'utilisateur (contrat de lattisd).
-	PGRole string `json:"pg_role"`
+	protocol.TokenResponse
 	// User : extension facultative de lattisd (sinon lue dans les
 	// revendications du jeton d'accès, puis du jeton d'identité).
 	User *tokenUser `json:"user,omitempty"`

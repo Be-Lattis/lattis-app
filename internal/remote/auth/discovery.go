@@ -28,124 +28,41 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/lalamefine/lattis/protocol"
 )
 
-// Chemins de lattisd (spécification du serveur, §11).
+// Chemins de lattisd, client et scope par défaut, documents de découverte :
+// ceux du paquet protocol, partagé avec le serveur.
 const (
-	PathDiscovery = "/.well-known/lattis.json"
-	PathAuthorize = "/oauth/authorize"
-	PathToken     = "/oauth/token"
-	PathDevice    = "/oauth/device"
-	PathRevoke    = "/oauth/revoke"
+	PathDiscovery = protocol.PathDiscovery
+	PathAuthorize = protocol.PathAuthorize
+	PathToken     = protocol.PathToken
+	PathDevice    = protocol.PathDevice
+	PathRevoke    = protocol.PathRevoke
+	// ClientID : client public de l'application de bureau.
+	ClientID = protocol.DesktopClientID
+	// Scope demandé quand la découverte n'en donne pas.
+	Scope = protocol.DefaultScope
+	// ProviderPassword : genre du fournisseur « mot de passe Lattis ».
+	ProviderPassword = protocol.ProviderPassword
+	// DefaultDatabase : base des classeurs quand la découverte ne la nomme pas.
+	DefaultDatabase = protocol.DefaultDatabase
 )
 
-// ClientID est l'identifiant de client public de l'application de bureau
-// (hypothèse, voir docs/collaboration/connexion.md).
-const ClientID = "lattis-desktop"
-
-// Scope demandé quand la découverte n'en donne pas : celui que pg_hba
-// annonce (lattisd émet toujours un jeton de rafraîchissement).
-const Scope = "openid lattis"
-
-// ProviderPassword est le genre du fournisseur « mot de passe Lattis ».
-const ProviderPassword = "password"
-
-// Discovery est le document /.well-known/lattis.json.
-type Discovery struct {
-	// Name : nom affiché de la source (« Serveur Acme »).
-	Name string `json:"name"`
-	// Logo : adresse (absolue ou relative au serveur) ou URI data: d'une
-	// image ; ramené à une URI data: par Discover.
-	Logo string `json:"logo,omitempty"`
-	// Version de lattisd.
-	Version string `json:"version,omitempty"`
-	// MinClientVersion : version minimale de Lattis acceptée.
-	MinClientVersion string `json:"min_client_version,omitempty"`
-	// Edition : admin ou web.
-	Edition string `json:"edition,omitempty"`
-	// AccessMode : invitation ou open.
-	AccessMode string `json:"access_mode,omitempty"`
-	// Issuer : émetteur des jetons, comparé au paramètre iss du retour
-	// (RFC 9207).
-	Issuer string `json:"issuer,omitempty"`
-	// ClientID, Scope : client public et scope à demander (ClientID et
-	// Scope par défaut).
-	ClientID string `json:"client_id,omitempty"`
-	Scope    string `json:"scope,omitempty"`
-	// Points OAuth (chemins Path* du serveur par défaut).
-	AuthorizationEndpoint string     `json:"authorization_endpoint,omitempty"`
-	TokenEndpoint         string     `json:"token_endpoint,omitempty"`
-	RevocationEndpoint    string     `json:"revocation_endpoint,omitempty"`
-	DeviceEndpoint        string     `json:"device_authorization_endpoint,omitempty"`
-	// PreviewEndpoint : « Voir en tant que… » (POST, jeton d'accès ;
-	// contrat client de lattisd, §7).
-	PreviewEndpoint string `json:"preview_endpoint,omitempty"`
-	Providers             []Provider `json:"providers"`
-	Postgres              Postgres   `json:"postgres"`
-}
-
-// Provider est un fournisseur d'identité actif, dans l'ordre du serveur.
-type Provider struct {
-	// ID : identifiant passé à /oauth/authorize (paramètre provider).
-	ID string `json:"id"`
-	// Kind : password, google, google_workspace, microsoft, keycloak, oidc.
-	Kind  string `json:"kind"`
-	Label string `json:"label"`
-	// Icon : image (comme Discovery.Logo) ; lattisd envoie le genre
-	// (« password »), qui n'est pas une image : vide après Discover, et
-	// l'interface prend l'icône du genre.
-	Icon string `json:"icon,omitempty"`
-}
-
-// Postgres décrit les points de connexion PostgreSQL annoncés.
-type Postgres struct {
-	// RW : parent.
-	RW Endpoint `json:"rw"`
-	// RO : réplicas en lecture (vide : tout passe par RW).
-	RO []Endpoint `json:"ro,omitempty"`
-	// Port : port par défaut des points qui n'en donnent pas.
-	Port     int    `json:"port,omitempty"`
-	SSLMode  string `json:"sslmode,omitempty"`
-	Database string `json:"database,omitempty"`
-}
-
-// Endpoint est un point de connexion PostgreSQL, « hôte » ou « hôte:port ».
-// Dans la découverte : un objet {"host", "port"} (contrat de lattisd) ou un
-// texte.
-type Endpoint string
-
-func (e *Endpoint) UnmarshalJSON(b []byte) error {
-	var s string
-	if json.Unmarshal(b, &s) == nil {
-		*e = Endpoint(s)
-		return nil
-	}
-	var o struct {
-		Host string `json:"host"`
-		Port int    `json:"port"`
-	}
-	if err := json.Unmarshal(b, &o); err != nil {
-		return fmt.Errorf("point de connexion PostgreSQL illisible : %s", b)
-	}
-	if o.Port > 0 {
-		*e = Endpoint(net.JoinHostPort(o.Host, strconv.Itoa(o.Port)))
-	} else {
-		*e = Endpoint(o.Host)
-	}
-	return nil
-}
+type (
+	// Discovery est le document /.well-known/lattis.json.
+	Discovery = protocol.Discovery
+	// Provider est un fournisseur d'identité actif, dans l'ordre du serveur.
+	Provider = protocol.Provider
+	// Postgres décrit les points de connexion PostgreSQL annoncés.
+	Postgres = protocol.Postgres
+	// Endpoint est un point de connexion PostgreSQL, « hôte » ou « hôte:port ».
+	Endpoint = protocol.Endpoint
+)
 
 // Strings donne des points sous forme de textes.
-func Strings(eps []Endpoint) []string {
-	out := make([]string, len(eps))
-	for i, e := range eps {
-		out[i] = string(e)
-	}
-	return out
-}
-
-// DefaultDatabase : base des classeurs quand la découverte ne la nomme pas.
-const DefaultDatabase = "lattis"
+func Strings(eps []Endpoint) []string { return protocol.Strings(eps) }
 
 // ErrClientTooOld refuse une application plus ancienne que la version
 // minimale annoncée par le serveur.
