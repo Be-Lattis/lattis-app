@@ -12,8 +12,9 @@ import (
 // SortTable trie les lignes d'un tableau selon la colonne i, comme le tri
 // d'Excel : l'ordre des lignes change pour de bon (les clés d'ordre sont
 // réécrites), les cellules vides et les saisies en erreur vont à la fin, et
-// les égalités gardent l'ordre précédent. Une colonne calculée ne se trie
-// pas (pour l'instant) : son calcul dépend de l'ordre.
+// les égalités gardent l'ordre précédent. Une colonne calculée se trie sur
+// ses valeurs du moment (comme Excel : une formule qui dépend de l'ordre
+// des lignes est recalculée dans le nouvel ordre).
 func (m *Model) SortTable(ctx context.Context, table string, i int, desc bool) error {
 	return m.Do(ctx, "Trier", func(t *tx) error {
 		// Tri local permis sur un tableau publié en lecture seule (classeur
@@ -26,8 +27,11 @@ func (m *Model) SortTable(ctx context.Context, table string, i int, desc bool) e
 			return fmt.Errorf("colonne %d hors du tableau", i)
 		}
 		c := tb.Cols[i]
+		src := tb.sql()
 		if c.Formula != "" {
-			return fmt.Errorf("« %s » est une colonne calculée : triez sur une colonne saisie", c.Name)
+			if src, c, err = t.computedView(tb, c); err != nil {
+				return err
+			}
 		}
 		col := colSQL(c.ID)
 		if c.Type == grid.Text {
@@ -49,7 +53,7 @@ func (m *Model) SortTable(ctx context.Context, table string, i int, desc bool) e
 				st(`INSERT INTO ` + trash + ` SELECT id, _pos FROM ` + tb.sql()),
 				st(`CREATE TABLE ` + rank + ` (id INTEGER PRIMARY KEY, k TEXT NOT NULL)`),
 				st(`INSERT INTO ` + rank + ` SELECT id, printf('%012dV', row_number() OVER (ORDER BY ` +
-					colSQL(c.ID) + ` IS NULL, ` + col + ` ` + dir + `, _pos)) FROM ` + tb.sql()),
+					colSQL(c.ID) + ` IS NULL, ` + col + ` ` + dir + `, _pos)) FROM ` + src),
 				// Index de _pos retiré pendant la réécriture : le reconstruire d'un
 				// coup est bien plus rapide que de le tenir à jour ligne à ligne.
 				st(`DROP INDEX ` + tb.sql() + `_pos`),

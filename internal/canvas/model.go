@@ -60,6 +60,9 @@ type tx struct {
 	// noLegend : « Ajouter au tableau », une saisie sous le tableau n'est pas
 	// lue comme une note ou un total (voir legend.go).
 	noLegend bool
+	// inComputedFilter : calcul d'un filtre de colonne calculée en cours
+	// (computedCond), qui relit les tableaux : pas de récursion.
+	inComputedFilter bool
 }
 
 func (t *tx) apply(do, undo []stmt) error { return t.Apply(do, undo) }

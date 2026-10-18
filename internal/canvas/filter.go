@@ -86,15 +86,29 @@ func (t *tx) loadFilter(tb *Table) error {
 		if f.Errors {
 			conds = append(conds, fmt.Sprintf(`id IN (SELECT rid FROM _lattis_invalid WHERE tbl = %d AND col = %d)`, tb.ID, c.ID))
 		}
-		if f.Values != nil && c.Formula == "" {
+		if f.Values != nil {
 			lits := make([]string, len(f.Values))
 			for i, v := range f.Values {
 				lits[i] = sqlLiteral(v)
 			}
-			conds = append(conds, fmt.Sprintf(`%s IN (%s)`, textExpr(c), strings.Join(lits, ", ")))
+			in := func(c Column) (string, error) {
+				return fmt.Sprintf(`%s IN (%s)`, textExpr(c), strings.Join(lits, ", ")), nil
+			}
+			if c.Formula == "" {
+				w, _ := in(c)
+				conds = append(conds, w)
+			} else if w, err := t.computedCond(*tb, c, in); err == nil && w != "" {
+				conds = append(conds, w)
+			}
 		}
-		if len(f.Conds) > 0 && c.Formula == "" {
-			if w, err := condsSQL(*tb, c, f); err == nil && w != "" {
+		if len(f.Conds) > 0 {
+			cond := func(c Column) (string, error) { return condsSQL(*tb, c, f) }
+			if c.Formula != "" {
+				cond = func(cc Column) (string, error) {
+					return t.computedCond(*tb, c, func(cc Column) (string, error) { return condsSQL(*tb, cc, f) })
+				}
+			}
+			if w, err := cond(c); err == nil && w != "" {
 				conds = append(conds, w)
 			}
 		}
@@ -144,14 +158,15 @@ func (m *Model) SetFilter(ctx context.Context, table string, i int, f *ColumnFil
 			return fmt.Errorf("colonne %d hors du tableau", i)
 		}
 		c := tb.Cols[i]
-		if f != nil && f.Values != nil && c.Formula != "" {
-			return fmt.Errorf("la colonne calculée « %s » ne se filtre pas par valeurs", c.Name)
-		}
 		if f != nil && len(f.Conds) > 0 {
+			cc := c
 			if c.Formula != "" {
-				return fmt.Errorf("la colonne calculée « %s » ne se filtre pas par condition", c.Name)
+				cc.Type = t.computedResult(tb, c)
+				if cc.Type == "" {
+					cc.Type = grid.Text
+				}
 			}
-			if _, err := condsSQL(tb, c, *f); err != nil {
+			if _, err := condsSQL(tb, cc, *f); err != nil {
 				return err
 			}
 		}
@@ -225,11 +240,15 @@ func (m *Model) FilterValues(ctx context.Context, table string, i int) ([]Filter
 			return fmt.Errorf("colonne %d hors du tableau", i)
 		}
 		c := tb.Cols[i]
+		src := tb.sql()
 		if c.Formula != "" {
-			return nil
+			// Colonne calculée : ses valeurs, lues dans la vue calculée.
+			if src, c, err = t.computedView(tb, c); err != nil {
+				return err
+			}
 		}
 		col := colSQL(c.ID)
-		rs, err := t.query(`SELECT `+textExpr(c)+` AS v, count(*) FROM `+tb.sql()+
+		rs, err := t.query(`SELECT `+textExpr(c)+` AS v, count(*) FROM `+src+
 			` GROUP BY v ORDER BY min(`+col+`) IS NOT NULL, min(`+col+`) LIMIT ?`, MaxFilterValues)
 		if err != nil {
 			return err

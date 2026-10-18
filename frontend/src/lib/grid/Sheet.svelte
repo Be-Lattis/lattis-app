@@ -4119,7 +4119,7 @@
 		closeMenus();
 		const f = e.t.columns[i]?.filter;
 		const keep = f?.values ? new Set(f.values) : null;
-		const lists = !e.t.columns[i]?.formula && !!source.filterValues;
+		const lists = !!source.filterValues;
 		const checksKey = !!source.keyCheck && e.t.key !== i;
 		// Le menu s'ouvre tout de suite (tri, filtres, type) ; la liste des
 		// valeurs et le contrôle de la clé, longs sur un grand tableau,
@@ -8413,7 +8413,7 @@
 							clearSelection();
 						}}>Effacer le contenu</button
 					>
-					{#if cols && !col?.formula && (source.sortTable || source.setFilter)}
+					{#if cols && (source.sortTable || source.setFilter)}
 						<hr />
 						{#if source.sortTable}
 							{@const lab = sortLabels(col?.type ?? 'text', col?.result)}
@@ -8843,8 +8843,8 @@
 			{@const d = filterDlg}
 			{@const shown = filterShown()}
 			{@const fcol = d.e.t.columns[d.i]}
-			{@const kind = filterKind(fcol?.type ?? 'text')}
-			{@const filterable = !!source.setFilter && !fcol?.formula}
+			{@const kind = filterKind(((fcol?.formula ? fcol?.result : fcol?.type) || 'text') as ColumnType)}
+			{@const filterable = !!source.setFilter}
 			{@const typed = !!source.setType && !fcol?.formula}
 			<!-- Menu ▾ de la colonne (comme Excel) : tri, filtres, type de données, clé. -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -8884,8 +8884,9 @@
 					<button class="sort" onclick={() => applyFilter(true)}>Effacer le filtre de « {fcol.name} »</button>
 				{/if}
 				{#if fcol?.formula}
-					<p class="menu-note">Colonne calculée : elle se trie mais ne se filtre pas ; son type suit sa formule.</p>
-				{:else if filterable}
+					<p class="menu-note">Colonne calculée : triée et filtrée sur ses valeurs ; son type suit sa formule.</p>
+				{/if}
+				{#if filterable}
 					<!-- Filtres par condition, comme le sous-menu d'Excel. -->
 					<button class="sort cond-menu" class:on={d.sub} aria-expanded={d.sub} onclick={() => (d.sub = !d.sub)}>
 						{kindTitle(kind)}<span class="sp"></span>{d.sub ? '▾' : '▸'}
