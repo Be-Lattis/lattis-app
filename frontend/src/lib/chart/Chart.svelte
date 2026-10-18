@@ -74,10 +74,16 @@
 	// le graphique se remplit après une modification, pas après une
 	// navigation). L'échelle suit tout de suite les nouvelles valeurs.
 	let shownSeries = $state.raw<Series[]>(untrack(() => (animate && grow && !reducedMotion() ? lerpSeries(null, target, 0) : target)));
+	// Graphique tout juste affiché (retour sur sa feuille, ouverture) : les
+	// données qui arrivent dans la seconde sont celles de la navigation, pas
+	// une modification ; elles s'affichent sans glisser (sauf graphique né).
+	const mountedAt = performance.now();
+	const NAV_SETTLE = 1000;
 	$effect(() => {
 		const to = target;
 		const from = untrack(() => shownSeries);
-		if (!animate || reducedMotion() || sameSeries(from, to)) {
+		const settling = !untrack(() => grow) && performance.now() - mountedAt < NAV_SETTLE;
+		if (!animate || settling || reducedMotion() || sameSeries(from, to)) {
 			shownSeries = to;
 			return;
 		}
