@@ -6,7 +6,13 @@ package doc
 
 import (
 	"context"
+	"database/sql"
 	"errors"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/lalamefine/lattis/internal/archive"
 	"github.com/lalamefine/lattis/internal/canvas"
@@ -25,27 +31,54 @@ type Document struct {
 	savedProt int64
 	// id est l'identifiant aléatoire du classeur (_lattis_info, SecretScope).
 	id string
+	// backup : copie de sauvegarde à faire du fichier ouvert avant de
+	// l'écraser, s'il était d'un format plus ancien (vide sinon).
+	backup string
 }
 
-func wrap(ctx context.Context, a *archive.Doc) (*Document, error) {
-	if err := meta.Migrate(ctx, a.DB); err != nil {
-		a.Close()
+// wrap migre la base et assemble le document. En cas d'échec, keep garde le
+// répertoire de travail (récupération : rien ne doit être perdu).
+func wrap(ctx context.Context, a *archive.Doc, keep bool) (*Document, error) {
+	fail := func(err error) (*Document, error) {
+		if keep {
+			a.Release()
+		} else {
+			a.Close()
+		}
 		return nil, err
+	}
+	from, err := meta.MigrateFrom(ctx, a.DB)
+	if err != nil {
+		return fail(err)
 	}
 	bus := command.New(a.DB)
 	var id string
-	if err := a.DB.Read().QueryRowContext(ctx, `SELECT value FROM _lattis_info WHERE key = 'id'`).Scan(&id); err != nil {
-		a.Close()
-		return nil, err
+	err = a.DB.Read().QueryRowContext(ctx, `SELECT value FROM _lattis_info WHERE key = 'id'`).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) { // perdu (classeur récupéré) : un nouveau
+		err = a.DB.Write(ctx, func(tx *sql.Tx) error {
+			return tx.QueryRowContext(ctx, `INSERT INTO _lattis_info (key, value) VALUES ('id', lower(hex(randomblob(16)))) RETURNING value`).Scan(&id)
+		})
+	}
+	if err != nil {
+		return fail(err)
 	}
 	d := &Document{Model: canvas.New(a.DB, bus), Bus: bus, arc: a, id: id}
 	top, err := d.top(ctx)
 	if err != nil {
-		a.Close()
-		return nil, err
+		return fail(err)
 	}
 	d.saved = top
+	if from > 0 && from < meta.Version && a.Path != "" {
+		d.backup = backupName(a.Path, from)
+	}
 	return d, nil
+}
+
+// backupName : « Ventes.lattis » au format 12 → « Ventes (format 12).lattis »,
+// un classeur que la version de Lattis qui l'a écrit sait encore ouvrir.
+func backupName(path string, format int) string {
+	ext := filepath.Ext(path)
+	return fmt.Sprintf("%s (format %d)%s", strings.TrimSuffix(path, ext), format, ext)
 }
 
 // New crée un classeur vide, jamais enregistré.
@@ -54,7 +87,7 @@ func New(ctx context.Context) (*Document, error) {
 	if err != nil {
 		return nil, err
 	}
-	d, err := wrap(ctx, a)
+	d, err := wrap(ctx, a, false)
 	if err != nil {
 		return nil, err
 	}
@@ -63,28 +96,64 @@ func New(ctx context.Context) (*Document, error) {
 
 // Open ouvre un classeur. Si une session précédente de ce fichier a été
 // interrompue, l'erreur est un *archive.RecoverableError : proposer Recover
-// ou archive.Discard.
+// ou archive.Discard. Un fichier illisible donne un *archive.OpenError (s'il
+// est endommagé : proposer Salvage). Le fichier n'est jamais modifié.
 func Open(ctx context.Context, path string) (*Document, error) {
 	a, err := archive.Open(path, canvas.Register)
 	if err != nil {
 		return nil, err
 	}
-	return wrap(ctx, a)
+	d, err := wrap(ctx, a, false)
+	if err != nil {
+		var tooNew meta.ErrTooNew
+		switch {
+		case errors.As(err, &tooNew):
+			return nil, &archive.OpenError{Path: path, Reason: err.Error(), Err: archive.ErrFormat}
+		case errors.Is(err, meta.ErrForeign):
+			return nil, &archive.OpenError{Path: path, Reason: err.Error(), Err: archive.ErrFormat}
+		}
+		return nil, archive.Damaged(path, err)
+	}
+	return d, nil
 }
 
 // Recover rouvre le répertoire de travail d'une session interrompue, avec
-// toutes ses modifications validées et son historique d'annulation.
+// toutes ses modifications validées et son historique d'annulation. En cas
+// d'échec, la session reste proposée.
 func Recover(ctx context.Context, o archive.Orphan) (*Document, error) {
 	a, err := archive.Recover(o, canvas.Register)
 	if err != nil {
 		return nil, err
 	}
-	d, err := wrap(ctx, a)
+	d, err := wrap(ctx, a, true)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("récupération impossible : %w", err)
 	}
 	d.saved = -1 // les modifications récupérées ne sont pas enregistrées
 	return d, nil
+}
+
+// Salvage tire d'un classeur endommagé ses données lisibles, dans un
+// nouveau classeur jamais enregistré (voir archive.Salvage).
+func Salvage(ctx context.Context, path string) (*Document, archive.Report, error) {
+	schema := func(db string) error {
+		s, err := store.Open(db)
+		if err != nil {
+			return err
+		}
+		defer s.Close()
+		return meta.Migrate(ctx, s)
+	}
+	a, rep, err := archive.Salvage(path, schema, canvas.Register)
+	if err != nil {
+		return nil, rep, err
+	}
+	d, err := wrap(ctx, a, false)
+	if err != nil {
+		return nil, rep, err
+	}
+	d.saved = -1
+	return d, rep, nil
 }
 
 // DB donne la base du document.
@@ -132,12 +201,66 @@ func (d *Document) Save(ctx context.Context, path string) error {
 	if (path == "" || path == d.arc.Path) && d.arc.Path != "" && top == d.saved && prot == d.savedProt {
 		return nil
 	}
+	// Premier enregistrement d'un classeur migré par-dessus son fichier : la
+	// version d'origine est d'abord copiée à côté (une version plus ancienne
+	// de Lattis ne pourra plus lire le fichier réécrit).
+	if d.backup != "" && (path == "" || samePath(path, d.arc.Path)) {
+		if err := backupFile(d.arc.Path, d.backup); err != nil {
+			return fmt.Errorf("copie de sauvegarde de l'ancien format impossible, rien n'a été enregistré : %w", err)
+		}
+		d.backup = ""
+	}
 	if err := d.arc.Save(ctx, path); err != nil {
 		return err
 	}
 	d.saved, d.savedProt = top, prot
+	d.backup = "" // enregistré ailleurs : le fichier d'origine reste tel quel
 	return nil
 }
+
+func samePath(a, b string) bool {
+	a, _ = filepath.Abs(a)
+	b, _ = filepath.Abs(b)
+	return strings.EqualFold(a, b)
+}
+
+// backupFile copie src en dst, sans écraser une sauvegarde existante.
+func backupFile(src, dst string) error {
+	if _, err := os.Stat(dst); err == nil {
+		return nil
+	}
+	in, err := os.Open(src)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil // fichier d'origine disparu : rien à garder
+	}
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	tmp := dst + ".tmp"
+	out, err := os.Create(tmp)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(out, in)
+	if err == nil {
+		err = out.Sync()
+	}
+	if cerr := out.Close(); err == nil {
+		err = cerr
+	}
+	if err == nil {
+		err = os.Rename(tmp, dst)
+	}
+	if err != nil {
+		os.Remove(tmp)
+	}
+	return err
+}
+
+// Backup donne la copie de sauvegarde que le prochain enregistrement fera
+// du fichier d'origine, d'un format plus ancien (vide : aucune).
+func (d *Document) Backup() string { return d.backup }
 
 // MarkSaved considère l'état courant comme enregistré, sans écrire de
 // fichier (classeur de démonstration : rien à proposer à la fermeture).
