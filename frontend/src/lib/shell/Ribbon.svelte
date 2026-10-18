@@ -13,7 +13,7 @@
 	import { ZOOM_LEVELS, zoomLabel } from '#lib/grid/zoom.js';
 	import Select from '#lib/ui/Select.svelte';
 	import { estimate, fit, groupWidth, type GroupShape, type Measure, type Mode } from './fit';
-	import { aiEnabled } from './settings.svelte.js';
+	import { aiEnabled, sharedWorkbooksEnabled } from './settings.svelte.js';
 	import type { IconName } from '#lib/icons/icons.js';
 	import { MORE_KINDS, type ChartKind } from '#lib/chart/kinds.js';
 	import { COMMAND_TIPS, TAB_TIPS, assignKeyTips, keyChars, keyOf, matchTip } from '#lib/ui/keytips.js';
@@ -69,7 +69,7 @@
 
 	export type FileAction = 'new' | 'open' | 'save' | 'saveAs' | 'import' | 'export' | 'exportXlsx' | 'print' | 'pdf' | 'close' | 'demo' | 'mcp' | 'settings' | 'help';
 
-	export type DataAction = 'csv' | 'xlsx' | 'json' | 'parquet' | 'sqlite' | 'postgres' | 'mysql' | 'sqlserver' | 'web' | 'table' | 'queries' | 'refreshAll';
+	export type DataAction = 'csv' | 'xlsx' | 'json' | 'parquet' | 'sqlite' | 'postgres' | 'mysql' | 'sqlserver' | 'lattis' | 'web' | 'table' | 'queries' | 'refreshAll';
 
 	interface Props {
 		view: View;
@@ -405,7 +405,8 @@
 						items: [
 							{ label: 'PostgreSQL', run: data('postgres') },
 							{ label: 'MySQL / MariaDB', run: data('mysql') },
-							{ label: 'SQL Server', run: data('sqlserver') }
+							{ label: 'SQL Server', run: data('sqlserver') },
+							...(sharedWorkbooksEnabled() ? [{ label: 'Serveur Lattis', run: data('lattis') }] : [])
 						]
 					},
 					{ label: 'Web', icon: 'web', run: data('web'), hint: 'Nouvelle requête à partir d’une API web qui répond en JSON (lecture seule)' },

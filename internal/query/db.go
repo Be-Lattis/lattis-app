@@ -203,6 +203,9 @@ type ErrPassword struct {
 }
 
 func (e *ErrPassword) Error() string {
+	if e.Lattis != "" {
+		return fmt.Sprintf("connexion « %s » : %s", e.Connection, e.Message)
+	}
 	return fmt.Sprintf("connexion « %s » : mot de passe requis (%s)", e.Connection, e.Message)
 }
 

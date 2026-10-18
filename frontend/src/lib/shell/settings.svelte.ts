@@ -26,6 +26,11 @@ export function htmlTabsEnabled(): boolean {
 	return boolSetting(userSettings.list, 'features.htmlTabs');
 }
 
+/** Classeurs partagés (Serveur Lattis) activés : menu Compte, connexions lattis. */
+export function sharedWorkbooksEnabled(): boolean {
+	return boolSetting(userSettings.list, 'features.sharedWorkbooks');
+}
+
 /** L'onglet IA est activé (opt-in, coupé par défaut). */
 export function aiEnabled(): boolean {
 	return boolSetting(userSettings.list, 'ai.enabled');

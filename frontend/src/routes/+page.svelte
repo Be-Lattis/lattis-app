@@ -33,6 +33,7 @@
 	import DocPage from '#lib/doc/DocPage.svelte';
 	import type { DocFormat } from '#lib/doc/format.js';
 	import QueryHost from '#lib/query/QueryHost.svelte';
+	import LattisHost from '#lib/remote/LattisHost.svelte';
 	import type { ButtonConfig } from '#lib/grid/buttons.js';
 	import type { UICommand } from '#bindings/internal/bridge/models.js';
 	import { typeLabel, type ColumnType } from '#lib/grid/format.js';
@@ -1401,6 +1402,7 @@
 	{#if settingsOpen}
 		<SettingsDialog onclose={() => (settingsOpen = false)} />
 	{/if}
+	<LattisHost />
 	{#if protecting}
 		{@const p = protecting}
 		<div class="modal-back">

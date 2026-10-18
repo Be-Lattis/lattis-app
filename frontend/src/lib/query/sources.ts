@@ -4,10 +4,14 @@
 import type { Connection, Header } from '#bindings/internal/query/models.js';
 
 /** Genres de connexion (Connection.kind). */
-export type ConnKind = 'postgres' | 'mysql' | 'sqlserver' | 'web';
+export type ConnKind = 'postgres' | 'mysql' | 'sqlserver' | 'web' | 'lattis';
 
-/** SGBD lus par une connexion du même genre (Source.kind = Connection.kind). */
-export const DB_KINDS: ConnKind[] = ['postgres', 'mysql', 'sqlserver'];
+/**
+ * SGBD lus par une connexion du même genre (Source.kind = Connection.kind).
+ * lattis : Serveur Lattis (classeurs partagés), proposé seulement quand la
+ * fonction est activée (sharedWorkbooks).
+ */
+export const DB_KINDS: ConnKind[] = ['postgres', 'mysql', 'sqlserver', 'lattis'];
 
 /** Fichiers de base lus par une requête SQL (Source.path + Source.sql). */
 export const FILE_DB_KINDS = ['sqlite'];
@@ -19,7 +23,8 @@ export const CONN_LABELS: Record<ConnKind, string> = {
 	postgres: 'PostgreSQL',
 	mysql: 'MySQL / MariaDB',
 	sqlserver: 'SQL Server',
-	web: 'Web (API)'
+	web: 'Web (API)',
+	lattis: 'Serveur Lattis'
 };
 
 export const DEFAULT_PORT: Partial<Record<ConnKind, number>> = { postgres: 5432, mysql: 3306, sqlserver: 1433 };
@@ -37,8 +42,14 @@ export const SOURCE_KINDS = [
 	{ value: 'postgres', label: 'PostgreSQL' },
 	{ value: 'mysql', label: 'MySQL / MariaDB' },
 	{ value: 'sqlserver', label: 'SQL Server' },
-	{ value: 'web', label: 'Web (API JSON)' }
+	{ value: 'web', label: 'Web (API JSON)' },
+	{ value: 'lattis', label: 'Serveur Lattis' }
 ];
+
+/** Types de source proposés : sans Serveur Lattis quand les classeurs partagés sont coupés. */
+export function sourceKinds(shared: boolean, current?: string) {
+	return SOURCE_KINDS.filter((k) => k.value !== 'lattis' || shared || current === 'lattis');
+}
 
 export const isDbKind = (k: string | undefined): k is ConnKind => DB_KINDS.includes(k as ConnKind);
 
@@ -49,15 +60,17 @@ export function newConnection(kind: ConnKind): Connection {
 	if (kind === 'mysql') Object.assign(config, { host: 'localhost', port: 3306, user: 'root' });
 	if (kind === 'sqlserver') Object.assign(config, { host: 'localhost', port: 1433 });
 	if (kind === 'web') Object.assign(config, { url: 'https://', header: 'Authorization' });
+	if (kind === 'lattis') Object.assign(config, { url: 'https://' });
 	return { id: 0, name: '', kind, config, remembered: false };
 }
 
-/** Description d'une connexion (volet, listes). */
+/** Description d'une connexion (volet, listes) ; le nom affiché d'un Serveur Lattis remplace le genre. */
 export function describe(c: Connection): string {
 	const k = c.kind as ConnKind;
 	const cfg = c.config ?? {};
 	const label = CONN_LABELS[k] ?? c.kind;
 	if (k === 'web') return `${label} ${cfg.url ?? ''}`;
+	if (k === 'lattis') return `${cfg.label || label} ${hostOf(cfg.url ?? '')}`;
 	const host = k === 'sqlserver' && cfg.instance ? `${cfg.host}\\${cfg.instance}` : `${cfg.host}:${cfg.port || DEFAULT_PORT[k] || ''}`;
 	return `${label} ${cfg.user ? cfg.user + '@' : ''}${host}${cfg.database ? '/' + cfg.database : ''}`;
 }
@@ -65,14 +78,18 @@ export function describe(c: Connection): string {
 /** Nom proposé pour une nouvelle connexion. */
 export function suggestName(c: Connection): string {
 	const cfg = c.config ?? {};
-	if (c.kind === 'web') {
-		try {
-			return new URL(cfg.url ?? '').host;
-		} catch {
-			return '';
-		}
-	}
+	if (c.kind === 'lattis') return cfg.label || (hostOf(cfg.url ?? '') === cfg.url ? '' : hostOf(cfg.url ?? ''));
+	if (c.kind === 'web') return hostOf(cfg.url ?? '') === cfg.url ? '' : hostOf(cfg.url ?? '');
 	return cfg.database || cfg.host || '';
+}
+
+/** Hôte d'une adresse ; l'adresse telle quelle si elle est illisible. */
+function hostOf(url: string): string {
+	try {
+		return new URL(url).host;
+	} catch {
+		return url;
+	}
 }
 
 /** Connexion complète (champs obligatoires remplis). */
@@ -86,6 +103,8 @@ export function connectionReady(c: Connection): boolean {
 			return !!cfg.host?.trim();
 		case 'web':
 			return /^https?:\/\/[^/]+/i.test(cfg.url?.trim() ?? '');
+		case 'lattis':
+			return /^https:\/\/[^/]+/i.test(cfg.url?.trim() ?? '') || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(cfg.url?.trim() ?? '');
 	}
 	return false;
 }

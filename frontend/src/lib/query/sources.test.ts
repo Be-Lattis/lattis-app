@@ -1,5 +1,5 @@
 import { describe as group, expect, it } from 'vitest';
-import { connectionReady, describe, headersText, newConnection, parseHeaders, suggestName } from './sources';
+import { connectionReady, describe, headersText, newConnection, parseHeaders, sourceKinds, suggestName } from './sources';
 
 group('sources des requêtes', () => {
 	it('décrit les connexions de chaque genre', () => {
@@ -21,6 +21,23 @@ group('sources des requêtes', () => {
 		const my = newConnection('mysql');
 		expect(connectionReady(my)).toBe(true);
 		expect(connectionReady(newConnection('postgres'))).toBe(false);
+	});
+
+	it('Serveur Lattis : nom affiché à la place du genre, masqué sans la fonction', () => {
+		const l = newConnection('lattis');
+		expect(connectionReady(l)).toBe(false);
+		l.config.url = 'https://lattis.acme.fr';
+		expect(connectionReady(l)).toBe(true);
+		expect(describe(l)).toBe('Serveur Lattis lattis.acme.fr');
+		expect(suggestName(l)).toBe('lattis.acme.fr');
+		l.config.label = 'Serveur Acme';
+		expect(describe(l)).toBe('Serveur Acme lattis.acme.fr');
+		expect(suggestName(l)).toBe('Serveur Acme');
+		expect(connectionReady({ ...l, config: { url: 'http://lattis.acme.fr' } })).toBe(false);
+		expect(connectionReady({ ...l, config: { url: 'http://localhost:8090' } })).toBe(true);
+		expect(sourceKinds(false).some((k) => k.value === 'lattis')).toBe(false);
+		expect(sourceKinds(true).some((k) => k.value === 'lattis')).toBe(true);
+		expect(sourceKinds(false, 'lattis').some((k) => k.value === 'lattis')).toBe(true);
 	});
 
 	it('lit et écrit les en-têtes HTTP', () => {

@@ -19,6 +19,8 @@ describe('paramètres', () => {
 		const f = settingSections.find((s) => s.id === 'features');
 		expect(f?.title).toBe('Fonctionnalités');
 		expect(f?.settings.map((s) => s.path)).toContain('features.htmlTabs');
+		expect(f?.settings.find((s) => s.path === 'features.sharedWorkbooks')?.label).toBe('Classeurs partagés (Serveur Lattis)');
+		expect(boolSetting([], 'features.sharedWorkbooks')).toBe(false);
 		expect(findSetting([{ path: 'features.htmlTabs', value: false }], 'FEATURES.HTMLTABS')?.value).toBe(false);
 	});
 });

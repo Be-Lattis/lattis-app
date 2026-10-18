@@ -10,6 +10,10 @@
 	import type { Connection } from '#bindings/internal/query/models.js';
 	import { clone } from './steps';
 	import { CONN_LABELS, DEFAULT_PORT, connectionReady, newConnection, suggestName, type ConnKind } from './sources';
+	import type { ServerState } from '#bindings/internal/remote/auth/models.js';
+	import { lattis, loadLattis, requestLogin } from '#lib/remote/lattis.svelte.js';
+	import { userName } from '#lib/remote/lattis.js';
+	import { onMount } from 'svelte';
 
 	interface Props {
 		connection?: Connection | null;
@@ -33,6 +37,32 @@
 	const k = $derived(c.kind as ConnKind);
 	const server = $derived(k === 'postgres' || k === 'mysql' || k === 'sqlserver');
 
+	// Serveur Lattis : une adresse ; la découverte donne le nom affiché (qui
+	// remplace « PostgreSQL » dans les listes), le logo et la version minimale.
+	// Avec une stratégie qui verrouille l'ajout, seuls les serveurs de
+	// l'organisation sont proposés.
+	let info = $state<ServerState | null>(null);
+	const managed = $derived((lattis.state.servers ?? []).filter((s) => s.managed));
+	async function discover(): Promise<boolean> {
+		error = tested = '';
+		busy = true;
+		try {
+			info = await DocumentService.LattisDiscover(c.config.url ?? '');
+			c.config.url = info.url;
+			c.config.label = info.name;
+			return true;
+		} catch (e) {
+			info = null;
+			error = err(e);
+			return false;
+		} finally {
+			busy = false;
+		}
+	}
+	async function signIn() {
+		if (info && (await requestLogin(info.url))) info = await DocumentService.LattisDiscover(info.url);
+	}
+
 
 	$effect(() => {
 		if (autoName && !c.id) c.name = suggestName(c);
@@ -53,8 +83,17 @@
 		}
 	}
 
+	onMount(() => {
+		if (k !== 'lattis') return;
+		loadLattis().then(() => {
+			if (!lattis.state.allowUserServers && !c.config.url?.replace(/^https:\/\/$/, '') && managed.length) c.config.url = managed[0].url;
+			if (connectionReady(c)) discover();
+		});
+	});
+
 	async function save() {
 		error = '';
+		if (k === 'lattis' && (!info || info.url !== c.config.url) && !(await discover())) return;
 		if (!c.name.trim()) return void (error = 'Donnez un nom à la connexion.');
 		busy = true;
 		try {
@@ -82,7 +121,7 @@
 			if (e.key === 'Escape') oncancel();
 		}}
 	>
-		<header>{k === 'web' ? 'Connexion à une API web' : `Base de données ${CONN_LABELS[k] ?? ''}`}</header>
+		<header>{k === 'web' ? 'Connexion à une API web' : k === 'lattis' ? 'Serveur Lattis' : `Base de données ${CONN_LABELS[k] ?? ''}`}</header>
 		<div class="body">
 			<div class="grid">
 				{#if server}
@@ -110,16 +149,48 @@
 					<label class="wide">Adresse de l’API <input bind:value={c.config.url} placeholder="https://api.exemple.fr/v1" /></label>
 					<label>En-tête du jeton <input bind:value={c.config.header} placeholder="Authorization" /></label>
 					<label>Utilisateur (Basic) <input bind:value={c.config.user} placeholder="vide : jeton seul" /></label>
+				{:else if k === 'lattis'}
+					{#if lattis.state.allowUserServers}
+						<div class="wide row">
+							<label class="grow">Adresse du serveur <input bind:value={c.config.url} placeholder="https://lattis.acme.fr" onchange={() => (info = null)} /></label>
+							<button class="ico verify" onclick={discover} disabled={busy || !connectionReady(c)}><Icon name="plug" size={14} />Vérifier</button>
+						</div>
+					{:else}
+						<label class="wide"
+							>Serveur de votre organisation <Select
+								value={c.config.url ?? ''}
+								options={managed.map((s) => ({ value: s.url, label: s.name }))}
+								width="100%"
+								onchange={(v) => ((c.config.url = v), discover())}
+							/></label
+						>
+					{/if}
+					{#if info}
+						<div class="wide server">
+							{#if info.logo}<img src={info.logo} alt="" />{:else}<Icon name="database" size={20} />{/if}
+							<div class="grow">
+								<strong>{info.name}</strong>
+								<span class="muted">{info.version ? `version ${info.version}` : ''}{info.accessMode === 'invitation' ? ' · sur invitation' : ''}</span>
+								<span class="muted">{info.user ? `Connecté : ${userName(info.user)}` : 'Non connecté'}</span>
+							</div>
+							{#if !info.user}<button class="ico" onclick={signIn}><Icon name="user" size={14} />Se connecter…</button>{/if}
+						</div>
+					{/if}
 				{/if}
 				<label>Nom de la connexion <input bind:value={c.name} oninput={() => (autoName = false)} /></label>
-				<label
-					>{k === 'web' ? (c.config.user ? 'Mot de passe' : 'Jeton') : 'Mot de passe'}
-					<input type="password" bind:value={password} autocomplete="off" placeholder={c.remembered ? '(mémorisé)' : ''} /></label
-				>
-				<label class="check"><input type="checkbox" bind:checked={remember} /> Mémoriser dans le trousseau du système</label>
+				{#if k !== 'lattis'}
+					<label
+						>{k === 'web' ? (c.config.user ? 'Mot de passe' : 'Jeton') : 'Mot de passe'}
+						<input type="password" bind:value={password} autocomplete="off" placeholder={c.remembered ? '(mémorisé)' : ''} /></label
+					>
+					<label class="check"><input type="checkbox" bind:checked={remember} /> Mémoriser dans le trousseau du système</label>
+				{/if}
 			</div>
 			<p class="muted">
-				{#if k === 'web'}
+				{#if k === 'lattis'}
+					Aucun mot de passe n’est enregistré : la connexion utilise votre session sur le serveur (menu Compte de la barre de titre), et ce que vos droits
+					vous permettent d’y lire. Comme source de requête, elle ne sert qu’à lire (sur un réplica quand le serveur en annonce).
+				{:else if k === 'web'}
 					Le jeton n’est jamais enregistré dans le classeur ; il n’est envoyé qu’aux adresses qui commencent par celle de la connexion
 					({c.config.header || 'Authorization'}{!c.config.user && (c.config.header || 'Authorization').toLowerCase() === 'authorization' ? ' : Bearer ajouté à un jeton seul' : ''}).
 				{:else}
@@ -177,8 +248,33 @@
 		flex-direction: column;
 		gap: 2px;
 	}
-	label.wide {
+	label.wide,
+	div.wide {
 		grid-column: 1 / -1;
+	}
+	.row {
+		display: flex;
+		align-items: flex-end;
+		gap: 6px;
+	}
+	.server {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 6px 8px;
+		border: 1px solid #e5e7eb;
+		border-radius: 3px;
+		background: #fafbfb;
+		--icon-accent: #217346;
+	}
+	.server img {
+		width: 24px;
+		height: 24px;
+		object-fit: contain;
+	}
+	.server .grow {
+		display: flex;
+		flex-direction: column;
 	}
 	label.check {
 		flex-direction: row;

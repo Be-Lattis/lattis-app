@@ -10,7 +10,8 @@
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import type { Connection, DBTable, PasswordNeed, Source, XLSXTable } from '#bindings/internal/query/models.js';
 	import { clone } from './steps';
-	import { CONN_LABELS, FILE_DB_KINDS, FILE_KINDS, SOURCE_KINDS, describe, headersText, isDbKind, parseHeaders, type ConnKind } from './sources';
+	import { CONN_LABELS, FILE_DB_KINDS, FILE_KINDS, describe, headersText, isDbKind, parseHeaders, sourceKinds, type ConnKind } from './sources';
+	import { sharedWorkbooksEnabled } from '#lib/shell/settings.svelte.js';
 	import { count } from '#lib/sql/result.js';
 
 	interface Props {
@@ -160,7 +161,7 @@
 	>
 		<header>Source</header>
 		<div class="body">
-			<label class="field">Type de source <Select value={s.kind} options={SOURCE_KINDS} width="100%" onchange={changeKind} /></label>
+			<label class="field">Type de source <Select value={s.kind} options={sourceKinds(sharedWorkbooksEnabled(), source.kind)} width="100%" onchange={changeKind} /></label>
 			{#if isFile}
 				<div class="field">
 					Fichier

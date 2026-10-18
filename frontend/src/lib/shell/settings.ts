@@ -39,6 +39,12 @@ export const settingSections: SettingSection[] = [
 				help: 'Permet d’ajouter des pages web : une page HTML, CSS et JavaScript qui lit et modifie le classeur, ou une page d’un site. Les classeurs qui en contiennent déjà s’ouvrent et s’utilisent normalement.'
 			},
 			{
+				path: 'features.sharedWorkbooks',
+				kind: 'bool',
+				label: 'Classeurs partagés (Serveur Lattis)',
+				help: 'Permet de se connecter à un Serveur Lattis de votre organisation (menu Compte de la barre de titre) et de l’ajouter comme source de données. Les classeurs partagés y vivent ; la connexion se fait par votre compte (Google, Microsoft, Keycloak…) ou un mot de passe Lattis.'
+			},
+			{
 				path: 'ai.enabled',
 				kind: 'bool',
 				label: 'Onglet IA (assistant)',

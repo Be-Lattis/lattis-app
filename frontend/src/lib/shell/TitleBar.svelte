@@ -15,6 +15,7 @@
 	import { System, Window } from '@wailsio/runtime';
 	import Icon from '#lib/icons/Icon.svelte';
 	import type { IconName } from '#lib/icons/icons.js';
+	import AccountMenu from '#lib/remote/AccountMenu.svelte';
 
 	interface QuickAction {
 		label: string;
@@ -74,6 +75,7 @@
 		<span class="name">{title}</span>{#if dirty}<span class="muted" title="Modifications non enregistrées">&nbsp;•</span>{/if}
 		<span class="muted">{title ? '\u00a0– Lattis' : 'Lattis'}</span>
 	</div>
+	<AccountMenu />
 	{#if !mac}
 		<div class="controls">
 			<button class="ctl min" title="Réduire" onclick={minimise}><Icon name="win-minimize" size={16} /></button>

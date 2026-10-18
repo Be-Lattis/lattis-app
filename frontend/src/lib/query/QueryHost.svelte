@@ -18,6 +18,8 @@
 	import PasswordDialog from './PasswordDialog.svelte';
 	import { newQuery } from './steps';
 	import { CONN_LABELS, describe, isDbKind, type ConnKind } from './sources';
+	import { requestLogin } from '#lib/remote/lattis.svelte.js';
+	import { sharedWorkbooksEnabled } from '#lib/shell/settings.svelte.js';
 
 	interface Props {
 		/** Le classeur a changé ; sheet : feuille à afficher (tableau chargé). */
@@ -46,6 +48,8 @@
 	}
 
 	function askPassword(need: PasswordNeed): Promise<boolean> {
+		// Serveur Lattis : pas de mot de passe, la page de connexion du serveur.
+		if (need.lattis) return requestLogin(need.lattis);
 		return new Promise((resolve) => {
 			pwNeed = {
 				need,
@@ -74,7 +78,7 @@
 	// « Nouvelle connexion… » : toutes les sources, comme Données › Obtenir des
 	// données. Une base de données s'enregistre comme connexion ; les autres
 	// ouvrent l'éditeur de requête sur la source choisie.
-	const SOURCES: { group: string; items: { what: DataAction; label: string; icon: IconName }[] }[] = [
+	const SOURCES: { group: string; items: { what: DataAction; label: string; icon: IconName }[] }[] = $derived([
 		{
 			group: 'Fichier',
 			items: [
@@ -90,7 +94,8 @@
 			items: [
 				{ what: 'postgres', label: 'PostgreSQL', icon: 'database' },
 				{ what: 'mysql', label: 'MySQL / MariaDB', icon: 'database' },
-				{ what: 'sqlserver', label: 'SQL Server', icon: 'database' }
+				{ what: 'sqlserver', label: 'SQL Server', icon: 'database' },
+				...(sharedWorkbooksEnabled() ? [{ what: 'lattis' as DataAction, label: 'Serveur Lattis', icon: 'database' as IconName }] : [])
 			]
 		},
 		{
@@ -100,7 +105,7 @@
 				{ what: 'table', label: 'Tableau du classeur', icon: 'sheet' }
 			]
 		}
-	];
+	]);
 	let picking = $state(false);
 
 	async function newSource(what: DataAction) {
@@ -306,7 +311,9 @@
 				<span class="muted">{describe(c)}{c.remembered ? (c.kind === 'web' ? ' · jeton mémorisé' : ' · mot de passe mémorisé') : ''}</span>
 				<div class="acts">
 					<button onclick={() => newConnection(c).then((n) => (n ? load() : undefined))}><Icon name="edit" size={14} />Modifier</button>
-					<button onclick={() => forget(c)}><Icon name="key" size={14} />{c.kind === 'web' ? 'Oublier le jeton' : 'Oublier le mot de passe'}</button>
+					{#if c.kind !== 'lattis'}
+						<button onclick={() => forget(c)}><Icon name="key" size={14} />{c.kind === 'web' ? 'Oublier le jeton' : 'Oublier le mot de passe'}</button>
+					{/if}
 					<button class="delete" onclick={() => removeConn(c)}><Icon name="trash" size={14} />Supprimer</button>
 				</div>
 			</div>
