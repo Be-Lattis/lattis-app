@@ -25,6 +25,8 @@
 	import { hiddenLines, mergeAt, mergeList, parseList, skipHidden, validate, type MergeRange } from './sheetfmt';
 	import { expandRange, extendCorner, isSingleCell, mergeRect, rangeOf, stepCell } from './mergesel';
 	import { findKey, findZone, inZone, nextHit, type Zone } from './findzone';
+	import { edgeScroll, frameStep } from './autoscroll';
+	import { blocksReach, boxesReach } from './objextent';
 	import FormatDialog, { type FormatTab } from './FormatDialog.svelte';
 	import TextToColumns from './TextToColumns.svelte';
 	import type { TextColumnsOptions, TextColumnsPreview } from './textcols';
@@ -58,7 +60,7 @@
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
 	import PivotPanel from './PivotPanel.svelte';
 	import SheetButtons from './SheetButtons.svelte';
-	import type { ButtonConfig, ControlKind, SheetButton } from './buttons';
+	import { BUTTON_H, BUTTON_W, type ButtonConfig, type ControlKind, type SheetButton } from './buttons';
 	import { applyRules, computeStats, mergeStats, parseRules, prepareStats, reqKey, statsReq, todaySerial, type CfOut, type Rule, type RuleEnv, type RuleStats, type Stats, type StatsReq } from './rules';
 	import { formatLocs, groupKey, rectLocs, type Loc, type RuleChanges, type SheetRules } from './cfmodel';
 	import { ICON_SETS, drawCfIcon } from './cficons';
@@ -1527,19 +1529,30 @@
 			usedRow = Math.max(usedRow, r);
 			usedCol = Math.max(usedCol, c);
 		}
-		// Graphiques : la barre de défilement va jusqu'à leur bord.
-		for (const ch of charts) {
-			const b = chartBox(ch);
-			usedRow = Math.max(usedRow, rax().indexAt(b.y + b.h));
-			usedCol = Math.max(usedCol, cax().indexAt(b.x + b.w));
-		}
+		// Objets posés sur la feuille (graphiques et cartes, boutons et
+		// contrôles) : la barre de défilement va jusqu'à leur bord, qu'ils
+		// soient sélectionnés ou non (objextent.ts) ; de même pour les
+		// tableaux croisés et les tableaux déversés.
+		const boxes = [...charts.map(chartBox), ...buttons.map(buttonBox)];
+		const reach = boxesReach(boxes, (y) => rax().indexAt(y), (x) => cax().indexAt(x));
+		const blocks = blocksReach([
+			...pivots.map((p) => ({ row: p.row, col: p.col, rows: p.cells.length, cols: p.cells[0]?.length ?? 0 })),
+			...spills.map((s) => ({ row: s.row, col: s.col, rows: s.rows.length, cols: s.rows[0]?.length ?? 0 }))
+		]);
+		usedRow = Math.max(usedRow, reach.row, blocks.row);
+		usedCol = Math.max(usedCol, reach.col, blocks.col);
 		const lastVisible = rax().indexAt(vs.top + vs.view);
 		// Comme Excel : la barre s'arrête à la zone utilisée (ou à l'écran affiché) ;
 		// molette, flèches et sélection vont au-delà et l'agrandissent.
 		const rows = Math.min(SHEET_ROWS, Math.max(usedRow + 1, lastVisible + 1, holdRows, scrollHoldRows));
 		extentRows = Math.min(SHEET_ROWS, usedRow + 1);
 		const cw = Math.max(0, viewW - MARGIN);
-		const lastVisibleCol = cax().indexAt(scroller.scrollLeft + cw);
+		// Volet ouvert à droite (graphique, carte, tableau croisé…) : la zone
+		// qui défile garde la largeur qu'elle aura volet fermé. Sinon, en
+		// quittant l'objet, le volet se ferme, la grille s'élargit et le
+		// navigateur ramène la barre en arrière : la feuille sautait.
+		const side = wrap ? Math.max(0, (wrap.parentElement?.clientWidth ?? 0) - wrap.clientWidth) / zoomK() : 0;
+		const lastVisibleCol = cax().indexAt(scroller.scrollLeft + cw + side);
 		extentCols = Math.min(SHEET_COLS, Math.max(usedCol + 1, lastVisibleCol + 1, holdCols, scrollHoldCols));
 		vs.content = rowTop(rows);
 		vs.to(vs.top);
@@ -4281,6 +4294,16 @@
 		};
 	}
 
+	/** Position et taille d'un bouton ou contrôle, en pixels de la feuille (comme SheetButtons). */
+	function buttonBox(b: SheetButton) {
+		return {
+			x: cax().offset(b.col) + (b.config.offX ?? 0),
+			y: rowTop(b.row) + (b.config.offY ?? 0),
+			w: b.config.width || BUTTON_W,
+			h: b.config.height || BUTTON_H
+		};
+	}
+
 	let chartGesture = $state<{ id: number; box: { x: number; y: number; w: number; h: number } } | null>(null);
 
 	/** Déplace (dir vide) ou redimensionne (n, s, e, w et coins) un graphique. */
@@ -5901,6 +5924,106 @@
 		const sel = selection();
 		nameBox = !singleSelection() ? `${sel.r1 - sel.r0 + 1}L × ${sel.c1 - sel.c0 + 1}C` : cellName(active.row, active.col);
 		schedule();
+	}
+
+	// --- Défilement automatique pendant un glisser (autoscroll.ts) ----------
+
+	// Dernière position de la souris pendant un glisser (coordonnées de l'écran).
+	let dragPtr: { x: number; y: number; ctrl: boolean; meta: boolean; shift: boolean } | null = null;
+	let autoFrame = 0;
+	let autoLast = 0;
+
+	/** Un glisser qui suit la souris sur les cellules est-il en cours ? */
+	const cellDrag = () => dragging || !!filling || !!moving || !!refDrag || !!refMove || !!headerDrag;
+
+	/** Zone qui défile, en pixels locaux (hors marge, bandeau et volets figés). */
+	function scrollArea() {
+		return {
+			left: MARGIN + cax().offset(fCols()),
+			top: TOP_H + rowTop(fRows()),
+			right: scroller.clientWidth,
+			bottom: scroller.clientHeight
+		};
+	}
+
+	/** Défilement voulu (pixels par image, signés) pour la souris p (coordonnées de l'écran). */
+	function dragScroll(p: { x: number; y: number }) {
+		const r = scroller.getBoundingClientRect();
+		const k = zoomK();
+		const a = scrollArea();
+		// Rien à défiler en largeur si les colonnes figées prennent tout.
+		const dx = headerDrag === 'rows' ? 0 : edgeScroll((p.x - r.left) / k, a.left, a.right);
+		const dy = headerDrag === 'cols' ? 0 : edgeScroll((p.y - r.top) / k, a.top, a.bottom);
+		return { dx: scroller.scrollLeft <= 0 && dx < 0 ? 0 : dx, dy: vs.top <= 0 && dy < 0 ? 0 : dy };
+	}
+
+	/**
+	 * Rejoue le glisser à la souris ramenée sur la zone des cellules (au bord
+	 * qui défile) : hors de la grille, la sélection suit la ligne ou la
+	 * colonne du bord, comme Excel.
+	 */
+	function dragAt(p: NonNullable<typeof dragPtr>, dir: { dx: number; dy: number }) {
+		const r = scroller.getBoundingClientRect();
+		const k = zoomK();
+		const a = scrollArea();
+		let x = (p.x - r.left) / k;
+		let y = (p.y - r.top) / k;
+		// Dans le sens du défilement, la souris est ramenée sur la zone qui
+		// défile (pas sur les volets figés) ; sinon sur la grille.
+		x = clamp(x, dir.dx < 0 ? a.left : MARGIN, scroller.clientWidth - 1);
+		y = clamp(y, dir.dy < 0 ? a.top : TOP_H, scroller.clientHeight - 1);
+		if (headerDrag === 'rows') x = Math.min(x, MARGIN - 1);
+		if (headerDrag === 'cols') y = Math.min(y, TOP_H - 1);
+		onMouseMove(new MouseEvent('mousemove', { clientX: r.left + x * k, clientY: r.top + y * k, ctrlKey: p.ctrl, metaKey: p.meta, shiftKey: p.shift, buttons: 1 }));
+	}
+
+	/** Souris pendant un glisser, sur toute la fenêtre : hors de la grille, la sélection continue et la feuille défile. */
+	function onDragMove(e: MouseEvent) {
+		if (!cellDrag() || !scroller) return;
+		dragPtr = { x: e.clientX, y: e.clientY, ctrl: e.ctrlKey, meta: e.metaKey, shift: e.shiftKey };
+		const dir = dragScroll(dragPtr);
+		// Hors de la grille (ou sur un graphique) : la grille ne reçoit pas l'évènement.
+		if (!(e.target instanceof Node && scroller.contains(e.target))) dragAt(dragPtr, dir);
+		if ((dir.dx || dir.dy) && !autoFrame) {
+			autoLast = performance.now();
+			autoFrame = requestAnimationFrame(autoTick);
+		}
+	}
+
+	function stopAutoScroll() {
+		cancelAnimationFrame(autoFrame);
+		autoFrame = 0;
+		dragPtr = null;
+	}
+
+	function autoTick(now: number) {
+		autoFrame = 0;
+		if (!cellDrag() || !dragPtr || !scroller) return stopAutoScroll();
+		const dir = dragScroll(dragPtr);
+		if (!dir.dx && !dir.dy) return;
+		const dt = now - autoLast;
+		autoLast = now;
+		holdWhileScrolling();
+		const dy = frameStep(dir.dy, dt);
+		const dx = frameStep(dir.dx, dt);
+		if (dy) {
+			// Vers le bas, la feuille s'agrandit d'autant (comme à la molette).
+			if (dy > 0) vs.content = Math.min(rax().total, Math.max(vs.content, vs.top + dy + 2 * vs.view));
+			vs.by(dy);
+			updateExtent();
+			scroller.scrollTop = vs.toNative();
+		}
+		if (dx) {
+			if (dx > 0 && spacer) {
+				const want = cax().indexAt(scroller.scrollLeft + dx + viewW) + 2;
+				spacer.style.width = `${MARGIN + cax().offset(Math.min(SHEET_COLS, Math.max(extentCols, want)))}px`;
+			}
+			scroller.scrollLeft += dx;
+			updateExtent();
+		}
+		dragAt(dragPtr, dir);
+		schedule();
+		autoFrame = requestAnimationFrame(autoTick);
 	}
 
 	function onDblClick(e: MouseEvent) {
@@ -7578,6 +7701,7 @@
 		resize();
 		scroller.addEventListener('wheel', onWheel, { passive: false });
 		const up = (ev?: MouseEvent) => {
+			stopAutoScroll();
 			if (refDrag) nextArg();
 			refDrag = null;
 			if (refMove) dropRefMark();
@@ -7616,6 +7740,7 @@
 			writing = writing.catch(() => undefined).then(() => setWidth(col, width).then(() => undefined, (err) => say(String(err?.message ?? err))));
 		};
 		window.addEventListener('mouseup', up);
+		window.addEventListener('mousemove', onDragMove);
 		const timer = setInterval(refreshStatus, 250);
 		window.addEventListener('copy', onCopy);
 		window.addEventListener('keydown', onGlobalKey);
@@ -7628,6 +7753,8 @@
 			ro.disconnect();
 			scroller.removeEventListener('wheel', onWheel);
 			window.removeEventListener('mouseup', up);
+			window.removeEventListener('mousemove', onDragMove);
+			stopAutoScroll();
 			clearInterval(timer);
 			window.removeEventListener('copy', onCopy);
 			window.removeEventListener('keydown', onGlobalKey);
