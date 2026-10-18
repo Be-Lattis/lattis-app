@@ -38,6 +38,9 @@
 	import ShareDialog from '#lib/remote/ShareDialog.svelte';
 	import OpenRemoteDialog from '#lib/remote/OpenRemoteDialog.svelte';
 	import ShareBanner from '#lib/remote/ShareBanner.svelte';
+	import ConflictPanel from '#lib/remote/ConflictPanel.svelte';
+	import { refusedNotice } from '#lib/remote/share.js';
+	import type { Conflict } from '#bindings/internal/remote/collab/models.js';
 	import { canRepublish } from '#lib/remote/share.js';
 	import { requestLogin } from '#lib/remote/lattis.svelte.js';
 	import type { State as ShareState } from '#bindings/internal/remote/workbook/models.js';
@@ -126,6 +129,56 @@
 	// Classeur partagé sur un Serveur Lattis : état (bandeau, Fichier ›
 	// Republier), boîtes Partager / Republier et Ouvrir depuis un serveur.
 	let share = $state<ShareState | null>(null);
+	// Classeur collaboratif : volet Conflits (ouvert de lui-même quand un
+	// conflit apparaît).
+	let conflictsOpen = $state(false);
+	let conflicts = $state<Conflict[]>([]);
+	let conflictBusy = $state(false);
+	let lastConflicts = 0;
+	$effect(() => {
+		const n = share?.conflicts ?? 0;
+		if (n > lastConflicts) conflictsOpen = true;
+		lastConflicts = n;
+		if (conflictsOpen || n) loadConflicts();
+	});
+
+	async function loadConflicts() {
+		try {
+			conflicts = (await DocumentService.ShareConflicts()) ?? [];
+		} catch (e) {
+			notice = err(e);
+		}
+	}
+
+	async function resolveConflict(c: Conflict, mine: boolean) {
+		conflictBusy = true;
+		try {
+			docState = await DocumentService.ShareResolve(c.id, mine);
+			await reload();
+			await loadConflicts();
+			notice = mine ? 'Votre valeur est renvoyée au serveur' : 'Valeur du collègue reprise';
+			if (!conflicts.length) conflictsOpen = false;
+		} catch (e) {
+			notice = err(e);
+		} finally {
+			conflictBusy = false;
+		}
+	}
+
+	/** Volet Conflits : va sur la cellule en conflit. */
+	async function gotoConflict(c: Conflict) {
+		if (!c.found) return;
+		view = 'grid';
+		if (c.sheet !== sheetId) {
+			sheet?.closeOverlays();
+			sheetId = c.sheet;
+			await reload();
+		}
+		await tick();
+		await new Promise((r) => requestAnimationFrame(r));
+		sheet?.selectRange(c.row, c.col, c.row, c.col);
+		sheet?.focus();
+	}
 	let shareDlg = $state<{ republish: boolean } | null>(null);
 	let openRemote = $state(false);
 	let shareReloading = $state(false);
@@ -724,11 +777,13 @@
 			if (ev.widened) return `Colonne ${ev.widened} passée de ${typeLabel(ev.from as ColumnType)} à ${typeLabel(ev.to as ColumnType)} (Ctrl+Z pour annuler)`;
 			if (ev.invalid) return 'Valeur hors type : cellule marquée en erreur';
 		},
+		editing: (row, col, on) => DocumentService.ShareEditing(sheetId, row, col, on),
 		undo: () => DocumentService.Undo().then(reload),
 		redo: () => DocumentService.Redo().then(reload),
 		async paste(row, col, block) {
 			const ev = await DocumentService.Paste(sheetId, row, col, block);
 			await reload();
+			if (ev.refusedCount) return refusedNotice(ev);
 			if (ev.created && ev.headless) return `Tableau « ${ev.created} » créé sans en-têtes : clic droit › « Utiliser la 1re ligne comme en-têtes » si besoin`;
 			if (ev.created) return `Tableau « ${ev.created} » créé (${count(block.length - 1)})`;
 		},
@@ -739,6 +794,7 @@
 		async transfer(from, src, dst, move, values) {
 			const ev = await DocumentService.Transfer(from, src, sheetId, dst, move, values);
 			await reload();
+			if (ev.refusedCount) return refusedNotice(ev);
 			if (ev.created) return `Tableau « ${ev.created} » créé`;
 			if (ev.widened) return `Colonne ${ev.widened} passée de ${typeLabel(ev.from as ColumnType)} à ${typeLabel(ev.to as ColumnType)} (Ctrl+Z pour annuler)`;
 		},
@@ -1216,7 +1272,7 @@
 	/>
 
 	{#if mode === 'doc'}
-		<ShareBanner {share} busy={shareReloading} onreload={reloadShare} onlogin={() => share && requestLogin(share.server)} />
+		<ShareBanner {share} busy={shareReloading} onreload={reloadShare} onlogin={() => share && requestLogin(share.server)} onconflicts={() => (conflictsOpen = true)} />
 	{/if}
 
 	<main>
@@ -1455,6 +1511,9 @@
 		{/if}
 		{#if helpState.open}
 			<HelpPanel />
+		{/if}
+		{#if mode === 'doc' && conflictsOpen && share?.mode === 'collaborative'}
+			<ConflictPanel {conflicts} busy={conflictBusy} onresolve={resolveConflict} ongoto={gotoConflict} onclose={() => (conflictsOpen = false)} />
 		{/if}
 	</main>
 

@@ -410,6 +410,14 @@ export interface Event {
      * Keyed : colonne devenue clé pour une formule (« Tableau.Colonne »).
      */
     "keyed": string;
+
+    /**
+     * Refused : valeurs collées écartées car hors du type figé d'un tableau
+     * partagé (« Colonne : « valeur » », au plus quelques-unes) ;
+     * RefusedCount : leur nombre (§9).
+     */
+    "refused"?: string[] | null;
+    "refusedCount"?: number;
 }
 
 /**

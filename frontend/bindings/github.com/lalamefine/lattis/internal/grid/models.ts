@@ -139,6 +139,17 @@ export interface Stats {
 }
 
 /**
+ * SyncMark marque une cellule d'un classeur collaboratif : Kind « pending »
+ * (en attente de confirmation du serveur) ou « conflict ». Col -1 : toute
+ * la ligne.
+ */
+export interface SyncMark {
+    "row": number;
+    "col": number;
+    "kind": string;
+}
+
+/**
  * Type est le type logique d'une colonne, tel qu'affiché à l'utilisateur.
  */
 export enum Type {
@@ -179,6 +190,12 @@ export interface Window {
      * cellules de la fenêtre.
      */
     "marks": Mark[] | null;
+
+    /**
+     * Sync : cellules d'un tableau partagé dont la modification attend le
+     * serveur, ou en conflit (classeur collaboratif ; rempli par le pont).
+     */
+    "sync"?: SyncMark[] | null;
 
     /**
      * temps passé côté Go, pour les mesures

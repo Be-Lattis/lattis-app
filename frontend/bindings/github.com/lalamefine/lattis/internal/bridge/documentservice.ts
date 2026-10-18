@@ -30,6 +30,9 @@ import * as query$0 from "../query/models.js";
 import * as auth$0 from "../remote/auth/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as collab$0 from "../remote/collab/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as workbook$0 from "../remote/workbook/models.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -1344,6 +1347,23 @@ export function ShareCheck(): $CancellablePromise<workbook$0.Check> {
 }
 
 /**
+ * ShareConflicts liste les conflits du classeur collaboratif ouvert
+ * (volet Conflits).
+ */
+export function ShareConflicts(): $CancellablePromise<collab$0.Conflict[] | null> {
+    return $Call.ByID(976589620);
+}
+
+/**
+ * ShareEditing note la cellule de feuille en cours de saisie (on faux :
+ * saisie terminée ou abandonnée) : une modification reçue du serveur pour
+ * elle attend la validation, qui peut produire un conflit (§6.3).
+ */
+export function ShareEditing(sheet: number, row: number, col: number, on: boolean): $CancellablePromise<void> {
+    return $Call.ByID(2788069455, sheet, row, col, on);
+}
+
+/**
  * ShareOpen ouvre un classeur du serveur : chargé en entier dans son cache
  * local (un fichier .lattis du dossier cache de l'utilisateur, rouvert et
  * actualisé s'il existe), qui reste consultable hors ligne.
@@ -1376,6 +1396,14 @@ export function ShareReload(): $CancellablePromise<$models.DocState> {
  */
 export function ShareRepublish(tables: number[] | null): $CancellablePromise<workbook$0.State> {
     return $Call.ByID(740882395, tables);
+}
+
+/**
+ * ShareResolve règle un conflit : mine, « Garder la mienne » (renvoyée,
+ * conditionnée à la valeur du serveur) ; sinon « Garder la sienne ».
+ */
+export function ShareResolve(id: number, mine: boolean): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2071380643, id, mine);
 }
 
 /**
