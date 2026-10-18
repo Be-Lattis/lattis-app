@@ -227,6 +227,16 @@ func Start(ctx context.Context, grid *GridService, docs *DocumentService) error 
 // SCRIPT, boutons, pages web et serveur MCP masqués sinon).
 func (s *DocumentService) Platform() Platform { return s.sys().Platform() }
 
+var errNoMCPWeb = errors.New("le serveur MCP local n'existe pas dans la version web")
+
+// mcpRefused refuse le serveur MCP en web et sans scripting.
+func (s *DocumentService) mcpRefused() error {
+	if s.sys().Platform().Web {
+		return errNoMCPWeb
+	}
+	return s.scripting()
+}
+
 // scripting refuse Lua, boutons, pages web et MCP quand l'hôte ne les
 // permet pas (version web sans web_scripting, § 12.4).
 func (s *DocumentService) scripting() error {

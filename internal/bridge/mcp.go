@@ -29,10 +29,10 @@ type MCPStatus struct {
 	Error   string   `json:"error"`
 }
 
-// startup démarre le serveur MCP s'il est activé (et si l'hôte permet le
-// scripting : pas de serveur MCP en web sans web_scripting).
+// startup démarre le serveur MCP s'il est activé. Jamais en web : un
+// serveur MCP local à la machine de lattisd ne servirait pas l'utilisateur.
 func (s *DocumentService) startup(ctx context.Context) error {
-	if !s.sys().Platform().Scripting {
+	if s.mcpRefused() != nil {
 		return nil
 	}
 	if st, err := mcp.LoadSettings(); err == nil && st.Enabled {
@@ -87,7 +87,7 @@ func (s *DocumentService) MCPState() (MCPStatus, error) {
 
 // SetMCPEnabled active ou désactive le serveur MCP (réglage gardé).
 func (s *DocumentService) SetMCPEnabled(on bool) (MCPStatus, error) {
-	if err := s.scripting(); on && err != nil {
+	if err := s.mcpRefused(); on && err != nil {
 		return MCPStatus{}, err
 	}
 	st, err := mcp.LoadSettings()

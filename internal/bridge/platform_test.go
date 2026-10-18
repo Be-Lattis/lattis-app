@@ -24,8 +24,8 @@ func TestScriptingOptIn(t *testing.T) {
 	if _, err := s.AddPage(ctx, 0); !errors.Is(err, errNoScripting) {
 		t.Fatalf("AddPage sans scripting : %v", err)
 	}
-	if _, err := s.SetMCPEnabled(true); !errors.Is(err, errNoScripting) {
-		t.Fatalf("SetMCPEnabled sans scripting : %v", err)
+	if _, err := s.SetMCPEnabled(true); !errors.Is(err, errNoMCPWeb) {
+		t.Fatalf("SetMCPEnabled en web : %v", err)
 	}
 	if s.listening("open") {
 		t.Fatal("écouteurs Lua actifs sans scripting")
