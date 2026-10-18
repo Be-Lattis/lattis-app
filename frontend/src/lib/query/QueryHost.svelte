@@ -177,8 +177,20 @@
 		return refresh(id);
 	}
 
+	/**
+	 * Actualise toutes les requêtes (Ctrl+F5) ; renvoie le bilan pour la barre
+	 * d'état (ok faux : erreur ou abandon, déjà signalés).
+	 */
+	export async function refreshAll(): Promise<{ ok: boolean; count: number }> {
+		const msg = await refresh(null);
+		return { ok: !msg, count: lastCount };
+	}
+
+	let lastCount = 0;
+
 	/** Actualise une requête (id) ou toutes (null), mot de passe demandé au besoin. */
 	async function refresh(id: number | null): Promise<string> {
+		lastCount = 0;
 		busy = id === null ? 'Actualisation de toutes les requêtes…' : 'Actualisation…';
 		try {
 			const run = () => (id === null ? DocumentService.RefreshAllQueries() : DocumentService.RefreshQuery(id));
@@ -189,6 +201,7 @@
 			}
 			const loads = r.loads ?? [];
 			const errors = r.errors ?? [];
+			lastCount = loads.length;
 			await load();
 			onchanged(loads.length === 1 && id !== null ? loads[0].sheet : undefined);
 			if (errors.length) {

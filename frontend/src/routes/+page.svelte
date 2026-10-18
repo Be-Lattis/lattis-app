@@ -32,7 +32,7 @@
 	import type { UICommand } from '#bindings/internal/bridge/models.js';
 	import { typeLabel, type ColumnType } from '#lib/grid/format.js';
 	import type { Fetched } from '#lib/grid/cache.js';
-	import { shortcutOf } from '#lib/grid/shortcuts.js';
+	import { isReloadKey, shortcutOf } from '#lib/grid/shortcuts.js';
 	import { clampZoom } from '#lib/grid/zoom.js';
 	import ZoomBar from '#lib/shell/ZoomBar.svelte';
 	import BusyBar from '#lib/shell/BusyBar.svelte';
@@ -302,6 +302,40 @@
 	// Tuiles des cartes : par le classeur, soumises à l'autorisation de l'hôte.
 	setTileFetcher((z, x, y) => DocumentService.Call('charts.tile', { z, x, y }) as Promise<string>);
 
+	/**
+	 * F5 : dans un tableau chargé par une requête, la relance ; ailleurs,
+	 * recalcule (le recalcul vaut pour tout le classeur). Ctrl+F5, Maj+F5 et
+	 * Données › Actualiser tout : toutes les requêtes, puis le recalcul.
+	 */
+	let refreshing = false;
+	async function refreshKey(all: boolean) {
+		if (mode !== 'doc' || refreshing) return;
+		refreshing = true;
+		sheet?.clearMessage(); // sinon il masquerait le bilan de l'actualisation
+		try {
+			if (all) {
+				const r = (await queryHost?.refreshAll()) ?? { ok: true, count: 0 };
+				if (!r.ok) return; // erreur ou abandon : QueryHost l'a dit
+				await DocumentService.Recalc();
+				await reload();
+				notice = r.count ? `Tout actualisé : ${r.count} requête${r.count > 1 ? 's' : ''}, formules recalculées` : 'Formules recalculées (aucune requête chargée à actualiser)';
+				return;
+			}
+			const t = view === 'grid' ? sheet?.tableHere() : undefined;
+			if (t?.query && queryHost) {
+				await queryHost.refreshOne(t.query.id); // message : QueryHost
+				return;
+			}
+			await DocumentService.Recalc();
+			await reload();
+			notice = t ? `Tableau « ${t.name} » recalculé, avec ce qui en dépend` : 'Formules recalculées';
+		} catch (e) {
+			notice = err(e);
+		} finally {
+			refreshing = false;
+		}
+	}
+
 	onMount(() => {
 		const off = Events.On('doc:changed', () => {
 			if (mode === 'doc') reload().then(keepSheet);
@@ -346,6 +380,19 @@
 			}
 		};
 		window.addEventListener('keydown', keys);
+		// F5 et Ctrl+R ne rechargent jamais la page de l'application (fenêtre
+		// WebView2 ou navigateur) ; F5 actualise (refreshKey). En capture : rien
+		// ne peut l'arrêter avant.
+		const noReload = (e: KeyboardEvent) => {
+			if (!isReloadKey(e)) return;
+			e.preventDefault();
+			const sc = shortcutOf(e);
+			if ((sc !== 'refresh' && sc !== 'refreshAll') || e.repeat) return;
+			const t = e.target as HTMLElement | null;
+			if (t && (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName))) return; // saisie en cours
+			refreshKey(sc === 'refreshAll');
+		};
+		window.addEventListener('keydown', noReload, true);
 		// Un texte ou un lien lâché hors d'une zone prévue ne doit jamais faire
 		// quitter la page de l'application (la fenêtre afficherait une erreur).
 		const noDrop = (e: DragEvent) => e.preventDefault();
@@ -355,6 +402,7 @@
 			off();
 			offUI();
 			window.removeEventListener('keydown', keys);
+			window.removeEventListener('keydown', noReload, true);
 			window.removeEventListener('dragover', noDrop);
 			window.removeEventListener('drop', noDrop);
 		};
@@ -921,7 +969,7 @@
 		sheetOwnProtected={!!activeInfo?.protected}
 		workbookProtected={mode === 'doc' && !!layout?.workbookProtected}
 		onprotect={mode === 'doc' ? (what) => toggleProtect(what) : undefined}
-		ondata={mode === 'doc' ? (what) => queryHost?.data(what) : undefined}
+		ondata={mode === 'doc' ? (what) => (what === 'refreshAll' ? refreshKey(true) : queryHost?.data(what)) : undefined}
 		onformat={mode === 'doc' ? (tab) => sheet?.openFormat(tab) : undefined}
 		onmerge={mode === 'doc' ? () => sheet?.mergeActive(true) : undefined}
 		onwrap={mode === 'doc' ? () => sheet?.toggleWrap() : undefined}

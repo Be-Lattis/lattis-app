@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cellLines, copyFillBlock, copyFillPlan, fillBlock, insertAt, shortcutOf, timeText, todayText } from './shortcuts';
+import { cellLines, copyFillBlock, copyFillPlan, fillBlock, insertAt, isReloadKey, shortcutOf, timeText, todayText } from './shortcuts';
 
 const key = (key: string, mods: Partial<{ ctrl: boolean; shift: boolean; alt: boolean; code: string }> = {}) => ({
 	key,
@@ -26,6 +26,18 @@ describe('raccourcis', () => {
 		expect(shortcutOf(key('F4'))).toBe('repeat');
 		expect(shortcutOf(key('F11', { shift: true }))).toBe('insertSheet');
 		expect(shortcutOf(key('End'))).toBe('endMode');
+		expect(shortcutOf(key('F5'))).toBe('refresh');
+		expect(shortcutOf(key('F5', { ctrl: true }))).toBe('refreshAll');
+		expect(shortcutOf(key('F5', { shift: true }))).toBe('refreshAll');
+		expect(shortcutOf(key('F5', { alt: true }))).toBeNull();
+	});
+	it('touches qui rechargeraient la page', () => {
+		expect(isReloadKey(key('F5'))).toBe(true);
+		expect(isReloadKey(key('F5', { ctrl: true }))).toBe(true);
+		expect(isReloadKey(key('r', { ctrl: true }))).toBe(true);
+		expect(isReloadKey(key('R', { ctrl: true, shift: true }))).toBe(true);
+		expect(isReloadKey(key('r'))).toBe(false);
+		expect(isReloadKey(key('F9'))).toBe(false);
 	});
 	it('touches ordinaires', () => {
 		expect(shortcutOf(key('d'))).toBeNull();
