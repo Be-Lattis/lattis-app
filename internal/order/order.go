@@ -14,6 +14,7 @@ package order
 import (
 	"errors"
 	"fmt"
+	"math/rand/v2"
 	"strings"
 )
 
@@ -39,6 +40,43 @@ func Between(a, b string) (string, error) {
 		return before(b), nil
 	}
 	return midpoint(a, b), nil
+}
+
+// Distinct renvoie une clé strictement comprise entre a et b qui se
+// termine par suffix (une clé valable, voir Suffix). Deux postes qui
+// insèrent au même endroit en même temps obtiendraient la même clé avec
+// Between ; avec deux suffixes différents, leurs clés diffèrent et l'ordre
+// est le même partout (classeur collaboratif).
+func Distinct(a, b, suffix string) (string, error) {
+	if suffix == "" || !valid(suffix) {
+		return "", ErrOrder
+	}
+	// m + suffix reste sous b dès que m n'est pas un préfixe de b ; sinon
+	// on cherche entre a et m (une borne strictement plus courte).
+	hi := b
+	for {
+		m, err := Between(a, hi)
+		if err != nil {
+			return "", err
+		}
+		if hi == "" || !strings.HasPrefix(hi, m) {
+			return m + suffix, nil
+		}
+		hi = m
+	}
+}
+
+// SuffixLen : longueur des suffixes de Suffix (62^4, près de 15 millions).
+const SuffixLen = 4
+
+// Suffix tire un suffixe aléatoire pour Distinct.
+func Suffix() string {
+	b := make([]byte, SuffixLen)
+	for i := range b {
+		b[i] = Digits[rand.IntN(base)]
+	}
+	b[len(b)-1] = Digits[1+rand.IntN(base-1)] // jamais de 0 final
+	return string(b)
 }
 
 // after donne une clé juste après a, pour ajouter en fin : la clé s'allonge

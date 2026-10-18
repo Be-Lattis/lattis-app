@@ -53,6 +53,20 @@ type Fake struct {
 	levels map[string]string
 	// Clock donne la date des modifications (lattis_updated_at).
 	Clock func() time.Time
+	// Legacy imite un serveur sans la migration 0008 : changes_since sans
+	// skip (ses propres écritures reviennent), pas de since_covered.
+	Legacy bool
+	// purged : plus grand xid des pierres tombales purgées (sync_horizon).
+	purged int64
+	// checks : filtres d'écriture (WITH CHECK) imposés par Forbid.
+	checks []check
+}
+
+// check refuse (42501) l'écriture de value dans la colonne col d'un
+// tableau.
+type check struct {
+	workbook, table, col string
+	value                any
 }
 
 func (f *Fake) call(name string) error {

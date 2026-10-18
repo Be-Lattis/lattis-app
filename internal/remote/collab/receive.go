@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -17,8 +18,11 @@ import (
 // Receive lit les changements des tableaux publiés depuis leur point de
 // reprise (lattis.changes_since, une lecture cohérente sur rw) et les
 // applique hors du journal d'annulation, avec le nouveau point de reprise
-// dans la même transaction locale. only : tableaux locaux à relire (nil :
-// tous).
+// dans la même transaction locale. Les écritures de ce poste n'en
+// reviennent pas (skip : ses transactions, notées à l'envoi). Un point de
+// reprise que les pierres tombales ne couvrent plus
+// (lattis.since_covered) fait recharger le tableau en entier. only :
+// tableaux locaux à relire (nil : tous).
 func (e *Engine) Receive(ctx context.Context, only map[int64]bool) (Report, error) {
 	e.run.Lock()
 	defer e.run.Unlock()
@@ -35,10 +39,15 @@ func (e *Engine) receive(ctx context.Context, only map[int64]bool) (Report, erro
 	if err != nil {
 		return rep, err
 	}
+	sent, err := readSkip(ctx, e.db.Read())
+	if err != nil {
+		return rep, err
+	}
 	var batches []canvas.RemoteTable
 	since := map[int64]string{}
+	reloaded := 0
 	err = srv.Delta(ctx, func(r workbook.Reader) error {
-		batches, since = nil, map[int64]string{}
+		batches, since, reloaded = nil, map[int64]string{}, 0
 		// Point de reprise lu au début de la lecture : une transaction
 		// validée après lui sera relue la prochaine fois (contrat §6).
 		sp, err := r.SyncPoint(ctx)
@@ -51,10 +60,28 @@ func (e *Engine) receive(ctx context.Context, only map[int64]bool) (Report, erro
 			}
 			t := tables[tbl]
 			rt := canvas.RemoteTable{Table: tbl}
-			if err := r.Changes(ctx, info.WorkbookID, t.remote, t.since, func(c workbook.Change) error {
-				rt.Rows = append(rt.Rows, t.toLocal(c))
-				return nil
-			}); err != nil {
+			// Serveur sans since_covered (known faux) : le point de reprise
+			// est supposé couvert.
+			covered, _, err := r.Covered(ctx, t.since)
+			if err != nil {
+				return fmt.Errorf("tableau « %s » : %w", t.remote.Name, err)
+			}
+			if covered {
+				err = r.Changes(ctx, info.WorkbookID, t.remote, t.since, skipSince(sent, t.since), func(c workbook.Change) error {
+					rt.Rows = append(rt.Rows, t.toLocal(c))
+					return nil
+				})
+			} else {
+				// Des suppressions ont pu être purgées depuis since : tout le
+				// tableau est relu, les lignes absentes sont supprimées.
+				rt.Full = true
+				reloaded++
+				err = r.Rows(ctx, info.Schema, t.remote, func(id, pos, author string, vals []any) error {
+					rt.Rows = append(rt.Rows, t.rowToLocal(id, pos, author, vals))
+					return nil
+				})
+			}
+			if err != nil {
 				return fmt.Errorf("tableau « %s » : %w", t.remote.Name, err)
 			}
 			batches = append(batches, rt)
@@ -71,13 +98,118 @@ func (e *Engine) receive(ctx context.Context, only map[int64]bool) (Report, erro
 				return err
 			}
 		}
-		return nil
+		return pruneSkip(ctx, tx)
 	})
+	rep.Reloaded = reloaded
 	rep.Applied = applied
 	if len(applied.Failed) > 0 {
 		rep.notice(fmt.Sprintf("%d ligne(s) reçue(s) du serveur n'ont pas pu être appliquées : %s", len(applied.Failed), applied.Failed[0]))
 	}
 	return rep, err
+}
+
+// --- Échos ----------------------------------------------------------------------------
+
+// skipKey : transactions du serveur de ce poste (xid8 en texte, JSON),
+// dans _lattis_info, écartées des changements reçus (contrat client §6 :
+// changes_since … skip). Gardées tant qu'un point de reprise peut les
+// précéder.
+const skipKey = "sync_skip"
+
+// maxSkip borne la liste (les plus récentes sont gardées).
+const maxSkip = 2000
+
+func readSkip(ctx context.Context, q interface {
+	QueryRowContext(ctx context.Context, q string, args ...any) *sql.Row
+}) ([]string, error) {
+	var raw string
+	err := q.QueryRowContext(ctx, `SELECT value FROM _lattis_info WHERE key = ?`, skipKey).Scan(&raw)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	if json.Unmarshal([]byte(raw), &out) != nil {
+		return nil, nil // illisible : les échos reviennent, sans effet
+	}
+	return out, nil
+}
+
+func writeSkip(ctx context.Context, tx *sql.Tx, xs []string) error {
+	if len(xs) > maxSkip {
+		xs = xs[len(xs)-maxSkip:]
+	}
+	raw, _ := json.Marshal(xs)
+	_, err := tx.ExecContext(ctx, `INSERT INTO _lattis_info (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value`, skipKey, string(raw))
+	return err
+}
+
+// addSkip note une transaction d'écriture de ce poste.
+func addSkip(ctx context.Context, tx *sql.Tx, xid string) error {
+	xs, err := readSkip(ctx, tx)
+	if err != nil {
+		return err
+	}
+	if slices.Contains(xs, xid) {
+		return nil
+	}
+	return writeSkip(ctx, tx, append(xs, xid))
+}
+
+// pruneSkip oublie les transactions antérieures à tous les points de
+// reprise (elles ne peuvent plus revenir).
+func pruneSkip(ctx context.Context, tx *sql.Tx) error {
+	xs, err := readSkip(ctx, tx)
+	if err != nil || len(xs) == 0 {
+		return err
+	}
+	rs, err := tx.QueryContext(ctx, `SELECT coalesce(since, '') FROM _lattis_remote_tables WHERE published = 1 AND remote_id IS NOT NULL`)
+	if err != nil {
+		return err
+	}
+	var all []string
+	for rs.Next() {
+		var s string
+		if err := rs.Scan(&s); err != nil {
+			rs.Close()
+			return err
+		}
+		if s == "" {
+			rs.Close()
+			return nil // tableau jamais lu : tout peut revenir
+		}
+		all = append(all, s)
+	}
+	rs.Close()
+	if err := rs.Err(); err != nil {
+		return err
+	}
+	keep := xs[:0:0]
+	for _, x := range xs {
+		for _, s := range all {
+			if workbook.XidAfter(x, s) {
+				keep = append(keep, x)
+				break
+			}
+		}
+	}
+	if len(keep) == len(xs) {
+		return nil
+	}
+	return writeSkip(ctx, tx, keep)
+}
+
+// skipSince garde les transactions postérieures à since (contrat §6).
+func skipSince(xs []string, since string) []string {
+	var out []string
+	for _, x := range xs {
+		if workbook.XidAfter(x, since) {
+			out = append(out, x)
+		}
+	}
+	return out
 }
 
 // Sync envoie la file puis lit les changements de tous les tableaux

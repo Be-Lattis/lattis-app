@@ -5,11 +5,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/order"
 )
 
 // Classeur collaboratif (docs/collaboration/synchronisation.md) : les
@@ -32,6 +34,10 @@ type RemoteRow struct {
 type RemoteTable struct {
 	Table int64
 	Rows  []RemoteRow
+	// Full : Rows est tout le tableau (rechargé en entier) ; une ligne
+	// locale absente est supprimée, sauf si une modification locale l'attend
+	// (Keep).
+	Full bool
 }
 
 // Keep donne, par tableau et lattis_id, les cellules à ne pas remplacer
@@ -123,8 +129,16 @@ func (t *tx) applyRemote(rt RemoteTable, keep Keep, out *RemoteApplied) (bool, e
 	if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM ` + tb.sql()).Scan(&next); err != nil {
 		return false, err
 	}
+	rows := rt.Rows
+	if rt.Full {
+		gone, err := t.missingRows(tb.ID, rt.Rows, keep)
+		if err != nil {
+			return false, err
+		}
+		rows = append(slices.Clip(rows), gone...)
+	}
 	changed := false
-	for _, r := range rt.Rows {
+	for _, r := range rows {
 		if keep.Has(tb.ID, r.ID, -1) {
 			out.Kept++
 			continue
@@ -252,6 +266,33 @@ func (t *tx) applyRemote(rt RemoteTable, keep Keep, out *RemoteApplied) (bool, e
 	return true, nil
 }
 
+// missingRows rend, pour un tableau rechargé en entier, les lignes locales
+// absentes du serveur (à supprimer), hors de celles qu'une modification
+// locale attend (Keep : ajoutée et pas encore envoyée, modifiée, en
+// conflit).
+func (t *tx) missingRows(tbl int64, rows []RemoteRow, keep Keep) ([]RemoteRow, error) {
+	seen := make(map[string]bool, len(rows))
+	for _, r := range rows {
+		seen[r.ID] = true
+	}
+	rs, err := t.query(`SELECT lattis_id FROM _lattis_row_ids WHERE tbl = ? ORDER BY rid`, tbl)
+	if err != nil {
+		return nil, err
+	}
+	defer rs.Close()
+	var out []RemoteRow
+	for rs.Next() {
+		var id string
+		if err := rs.Scan(&id); err != nil {
+			return nil, err
+		}
+		if !seen[id] && len(keep[tbl][id]) == 0 {
+			out = append(out, RemoteRow{ID: id, Deleted: true})
+		}
+	}
+	return out, rs.Err()
+}
+
 // remoteSets prépare la mise à jour des valeurs d'une ligne reçue ; rend
 // aussi le nombre de cellules gardées.
 func remoteSets(tb Table, cols map[int64]Column, r RemoteRow, keep Keep) ([]string, []any, int) {
@@ -316,6 +357,19 @@ func typeArticle(t grid.Type) string {
 		return "une date"
 	}
 	return "un texte"
+}
+
+// rowKey donne la clé d'ordre (_pos) d'une nouvelle ligne entre a et b.
+// Dans un tableau publié d'un classeur partagé, la clé reçoit un suffixe
+// aléatoire (order.Distinct) : deux postes qui ajoutent une ligne au même
+// endroit en même temps n'ont pas la même clé, et l'ordre des lignes est le
+// même sur tous les postes (le serveur départage les clés égales par
+// lattis_id, le classeur local ne le peut pas).
+func (t *tx) rowKey(tb Table, a, b string) (string, error) {
+	if t.frozenTypes(tb.ID) {
+		return order.Distinct(a, b, order.Suffix())
+	}
+	return order.Between(a, b)
 }
 
 // frozenTypes : le tableau est publié dans un classeur partagé, ses types

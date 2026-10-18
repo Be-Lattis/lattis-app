@@ -7,6 +7,7 @@ import (
 	_ "github.com/ncruces/go-sqlite3/embed"
 	"math/rand/v2"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -161,5 +162,36 @@ func TestSpreadSQL(t *testing.T) {
 				t.Errorf("%d/%d : %q, attendu %q", n, count, got, keys[n-1])
 			}
 		}
+	}
+}
+
+func TestDistinct(t *testing.T) {
+	cases := []struct{ a, b string }{
+		{"", ""}, {"", "V"}, {"V", ""}, {"V", "W"}, {"V", "V1"}, {"V1", "W"},
+		{"1", "2"}, {"", "1"}, {"z", ""}, {"", "01"}, {"V", "Vz"}, {"a", "a01"},
+		{"a", "a0V"}, {"a1", "a11"}, {"Vzz", "W"},
+	}
+	for _, c := range cases {
+		seen := map[string]bool{}
+		for range 50 {
+			s := Suffix()
+			if !valid(s) || len(s) != SuffixLen {
+				t.Fatalf("suffixe %q", s)
+			}
+			k, err := Distinct(c.a, c.b, s)
+			if err != nil {
+				t.Fatalf("Distinct(%q, %q) : %v", c.a, c.b, err)
+			}
+			if !valid(k) || (c.a != "" && k <= c.a) || (c.b != "" && k >= c.b) || !strings.HasSuffix(k, s) {
+				t.Fatalf("Distinct(%q, %q, %q) = %q", c.a, c.b, s, k)
+			}
+			seen[k] = true
+		}
+		if len(seen) < 45 {
+			t.Fatalf("Distinct(%q, %q) : %d clés différentes sur 50", c.a, c.b, len(seen))
+		}
+	}
+	if _, err := Distinct("a", "b", "10"); err == nil {
+		t.Fatal("suffixe finissant par 0 accepté")
 	}
 }

@@ -12,7 +12,6 @@ import (
 	"github.com/lalamefine/lattis/internal/grid"
 
 	"github.com/lalamefine/lattis/internal/command"
-	"github.com/lalamefine/lattis/internal/order"
 	"github.com/lalamefine/lattis/internal/sqltext"
 )
 
@@ -411,9 +410,9 @@ func (t *tx) placeNewRows(tb Table) error {
 	if err := t.row(`SELECT coalesce(max(_pos), '') FROM ` + tb.sql() + ` WHERE _pos <> ''`).Scan(&last); err != nil {
 		return err
 	}
-	// Ajouts en fin : order.Between incrémente la dernière clé, qui reste courte.
+	// Ajouts en fin : rowKey incrémente la dernière clé, qui reste courte.
 	for _, id := range ids {
-		key, err := order.Between(last, "")
+		key, err := t.rowKey(tb, last, "")
 		if err != nil {
 			return err
 		}

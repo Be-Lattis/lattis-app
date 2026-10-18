@@ -539,8 +539,8 @@ func (s *DocumentService) ShareOpen(ctx context.Context, server, id, title strin
 	}
 	// Cache d'un classeur collaboratif : gardé tel quel (sa file d'envoi
 	// aussi), mis à jour par les changements depuis son point de reprise à
-	// la connexion ; rechargé en entier seulement s'il n'a rien en attente
-	// et date d'avant la purge des pierres tombales du serveur.
+	// la connexion (un tableau dont le point de reprise n'est plus couvert
+	// par les pierres tombales du serveur est relu en entier).
 	if fresh || !keepCollabCache(ctx, d) {
 		if _, err := workbook.Load(ctx, srv, d.DB(), src, fresh); err != nil {
 			d.Close()
@@ -569,22 +569,14 @@ func (s *DocumentService) ShareOpen(ctx context.Context, server, id, title strin
 	return OpenResult{State: st}, err
 }
 
-// collabCacheAge : au-delà, un cache collaboratif sans rien en attente est
-// rechargé en entier (le serveur garde les pierres tombales 30 jours).
-const collabCacheAge = 25 * 24 * time.Hour
-
 // keepCollabCache dit si le cache local d'un classeur collaboratif se
 // rouvre tel quel (synchronisé par ses deltas) plutôt que d'être rechargé.
+// Toujours, file d'envoi comprise : un point de reprise trop ancien (des
+// pierres tombales purgées depuis) fait recharger ses tableaux à la
+// réception (lattis.since_covered, collab.Engine.Receive).
 func keepCollabCache(ctx context.Context, d *doc.Document) bool {
 	info := d.Share.Info()
-	if info == nil || info.Mode != workbook.Collaborative {
-		return false
-	}
-	var pending int
-	if err := d.DB().Read().QueryRowContext(ctx, `SELECT count(*) FROM _lattis_outbox WHERE state = 'pending'`).Scan(&pending); err != nil {
-		return false
-	}
-	return pending > 0 || time.Since(info.Synced) < collabCacheAge
+	return info != nil && info.Mode == workbook.Collaborative
 }
 
 // ShareReload recharge la version publiée du classeur partagé ouvert

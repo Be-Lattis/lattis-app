@@ -155,6 +155,18 @@ func (t *rtable) toLocal(c workbook.Change) canvas.RemoteRow {
 	return r
 }
 
+// rowToLocal convertit une ligne lue en entier (Reader.Rows : valeurs
+// dans l'ordre des colonnes du serveur) pour canvas.ApplyRemote.
+func (t *rtable) rowToLocal(id, pos, author string, vals []any) canvas.RemoteRow {
+	r := canvas.RemoteRow{ID: id, Pos: pos, Author: author, Values: map[int64]any{}}
+	for i, c := range t.remote.Columns {
+		if c.LocalID != 0 && i < len(vals) {
+			r.Values[c.LocalID] = vals[i]
+		}
+	}
+	return r
+}
+
 // --- File d'envoi ------------------------------------------------------------------
 
 // entry est une entrée de la file, décodée.
