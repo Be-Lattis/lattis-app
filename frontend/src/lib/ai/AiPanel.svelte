@@ -22,7 +22,7 @@
 	import Markdown from '#lib/help/Markdown.svelte';
 	import AiConnect from './AiConnect.svelte';
 	import ExternalActivity from './ExternalActivity.svelte';
-	import { changesLabel, contextLabel, costLabel, replyText, segments, stepsLabel, suggestionsFor, type ChatContext, type Reply, type TableInfo } from './chat';
+	import { changesLabel, contextLabel, costLabel, replyError, replyText, retryDelay, retryLabel, segments, stepsLabel, suggestionsFor, type ChatContext, type Reply, type TableInfo } from './chat';
 	import { openOutside } from './links';
 	import { chat, load, refreshStatus, reset, send, stop, undoRun } from './state.svelte.js';
 
@@ -132,6 +132,31 @@
 	}
 
 	const ask = (text: string) => send(text, context ?? { sheet: '', table: '', selection: '' });
+
+	// Réessayer après une erreur (quota, coupure) : renvoie le même message, une
+	// fois écoulé le délai que l'erreur demande (« retry in 37.9s »). Clé : la
+	// réponse (run), ou -1 pour l'erreur d'avant toute réponse (barre du bas).
+	let now = $state(Date.now());
+	const waits = new Map<number, number>();
+	function retryLeft(key: number, err: string): number {
+		if (!waits.has(key)) waits.set(key, Date.now() + retryDelay(err) * 1000);
+		return Math.max(0, Math.ceil((waits.get(key)! - now) / 1000));
+	}
+	$effect(() => {
+		if (!chat.error) waits.delete(-1);
+	});
+	$effect(() => {
+		const t = setInterval(() => (now = Date.now()), 1000);
+		return () => clearInterval(t);
+	});
+	function retry(i: number) {
+		const u = chat.items[i - 1];
+		if (u?.role === 'user') ask(u.text);
+	}
+	function retryDraft() {
+		waits.delete(-1);
+		ask(chat.draft);
+	}
 
 	async function undo(r: number) {
 		chat.error = '';
@@ -297,7 +322,7 @@
 							{#if it.done}
 								<div class="foot">
 									{#if it.undone}
-										<span class="badge">Réponse annulée</span>
+										<span class="badge">{it.changes === 1 ? 'Modification annulée' : 'Modifications annulées'}</span>
 									{:else if it.changes}
 										<span class="badge changes">{changesLabel(it.changes)}</span>
 										<button
@@ -306,6 +331,10 @@
 											title={it.undo && it.run === lastRun ? 'Annule tout ce que cette réponse a modifié' : 'D’autres modifications ont suivi : utilisez Ctrl+Z'}
 											onclick={() => undo(it.run)}><Icon name="undo" size={13} />Annuler cette réponse</button
 										>
+									{/if}
+									{#if it.run === lastRun && !it.undone && replyError(it.parts)}
+										{@const left = retryLeft(it.run, replyError(it.parts))}
+										<button class="small" disabled={chat.busy || left > 0} title="Renvoie le même message" onclick={() => retry(i)}><Icon name="redo" size={13} />{retryLabel(left)}</button>
 									{/if}
 									<span class="spacer"></span>
 									{#if replyText(it.parts)}
@@ -320,7 +349,14 @@
 				{/each}
 			</div>
 
-			{#if chat.error}<p class="error bar">{chat.error}</p>{/if}
+			{#if chat.error}
+				{@const left = retryLeft(-1, chat.error)}
+				<p class="error bar">
+					{chat.error}
+					{#if chat.draft.trim()}<button class="small" disabled={chat.busy || left > 0} onclick={retryDraft}><Icon name="redo" size={13} />{retryLabel(left)}</button>{/if}
+				</p>
+			{/if}
+
 			<footer>
 				{#if ctxText && hasDoc}<p class="context" title="Joint à chaque message : l’assistant sait ce que vous regardez">{ctxText}</p>{/if}
 				<div class="compose">

@@ -10,6 +10,9 @@ import {
 	failedBeforeReply,
 	markUndone,
 	maxRun,
+	replyError,
+	retryDelay,
+	retryLabel,
 	replay,
 	replyText,
 	segments,
@@ -156,5 +159,21 @@ describe('Markdown des réponses', () => {
 		expect(h.t === 'p' && h.text.map((x) => x.t)).toEqual(['text', 'link']);
 		// Titres de niveau 4 et plus : ramenés au niveau 3.
 		expect(parse('#### Détail', true)[0]).toMatchObject({ t: 'h', level: 3 });
+	});
+});
+
+describe('Réessayer', () => {
+	it('lit le délai demandé par une erreur de quota', () => {
+		expect(retryDelay('429 RESOURCE_EXHAUSTED … Please retry in 37.9s.')).toBe(38);
+		expect(retryDelay('rate limited, retry after 20 seconds')).toBe(20);
+		expect(retryDelay('Retry-After: 5')).toBe(5);
+		expect(retryDelay('retry in 1500ms')).toBe(2);
+		expect(retryDelay('clé refusée')).toBe(0);
+	});
+	it('trouve l’erreur qui termine une réponse', () => {
+		expect(replyError([{ kind: 'text', text: 'ok' }, { kind: 'notice', text: 'quota', error: true }])).toBe('quota');
+		expect(replyError([{ kind: 'notice', text: 'quota', error: true }, { kind: 'text', text: 'ok' }])).toBe('');
+		expect(retryLabel(12)).toBe('Réessayer dans 12 s');
+		expect(retryLabel(0)).toBe('Réessayer');
 	});
 });

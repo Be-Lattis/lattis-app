@@ -286,3 +286,25 @@ export function suggestionsFor(tables: readonly TableInfo[], context?: ChatConte
 export function modelLabel(m: { name: string; note?: string }): string {
 	return m.note ? `${m.name} (${m.note})` : m.name;
 }
+
+/** Erreur qui a terminé une réponse (dernier avis en erreur), sinon ''. */
+export function replyError(parts: readonly Part[]): string {
+	const last = parts.at(-1);
+	return last?.kind === 'notice' && last.error ? last.text : '';
+}
+
+/**
+ * Délai d'attente demandé par une erreur de quota (« Please retry in
+ * 37.9s », « retry after 20 seconds », « réessayez dans 30 s »), en
+ * secondes entières ; 0 sans délai.
+ */
+export function retryDelay(text: string): number {
+	const m = /(?:retry(?:\s+(?:in|after))?|réessayez\s+dans|retry-after:?)\s*([\d.,]+)\s*(ms|s|sec|secs|second|seconds|seconde|secondes)?\b/i.exec(text);
+	if (!m) return 0;
+	const n = Number(m[1].replace(',', '.'));
+	if (!Number.isFinite(n) || n <= 0) return 0;
+	return Math.ceil(m[2]?.toLowerCase() === 'ms' ? n / 1000 : n);
+}
+
+/** Libellé du bouton « Réessayer », avec le temps qui reste (secondes). */
+export const retryLabel = (left: number) => (left > 0 ? `Réessayer dans ${left} s` : 'Réessayer');
