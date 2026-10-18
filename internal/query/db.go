@@ -390,6 +390,15 @@ func sqlType(name string) grid.Type {
 	return grid.Text
 }
 
+// SQLType donne le type Lattis d'un type SQL tel que le rend
+// DatabaseTypeName (INT8, NUMERIC, TEXT…) ; "" : à inférer des valeurs.
+func SQLType(name string) grid.Type { return sqlType(name) }
+
+// StorageValue ramène une valeur lue par database/sql au stockage d'une
+// colonne de type t, comme le chargement d'une requête (relevés des
+// tableaux liés aux données d'entreprise).
+func StorageValue(v any, t grid.Type) any { return dbValue(v, t) }
+
 // dbValue ramène une valeur lue par un pilote au stockage de son type
 // Lattis.
 func dbValue(v any, t grid.Type) any {

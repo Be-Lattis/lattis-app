@@ -94,7 +94,7 @@ func (m *Model) ApplyRemote(ctx context.Context, tables []RemoteTable, keep func
 		}
 		t := &tx{Tx: &command.Tx{Tx: sqlTx, Ctx: ctx}, m: m}
 		for _, rt := range tables {
-			changed, err := t.applyRemote(rt, k, &out)
+			changed, err := t.applyRemote(publishedIDs, rt, k, &out)
 			if err != nil {
 				return err
 			}
@@ -110,7 +110,17 @@ func (m *Model) ApplyRemote(ctx context.Context, tables []RemoteTable, keep func
 	return out, err
 }
 
-func (t *tx) applyRemote(rt RemoteTable, keep Keep, out *RemoteApplied) (bool, error) {
+// rowIDs désigne la table des identifiants partagés des lignes : celle des
+// tableaux publiés (_lattis_row_ids, avec l'auteur), ou celle des tableaux
+// liés à une donnée d'entreprise (_lattis_data_rows, voir dataset.go).
+type rowIDs struct {
+	table  string
+	author bool
+}
+
+var publishedIDs = rowIDs{table: "_lattis_row_ids", author: true}
+
+func (t *tx) applyRemote(idt rowIDs, rt RemoteTable, keep Keep, out *RemoteApplied) (bool, error) {
 	tb, err := t.table(rt.Table)
 	if errors.Is(err, sql.ErrNoRows) {
 		return false, nil // tableau supprimé en local entre-temps
@@ -131,7 +141,7 @@ func (t *tx) applyRemote(rt RemoteTable, keep Keep, out *RemoteApplied) (bool, e
 	}
 	rows := rt.Rows
 	if rt.Full {
-		gone, err := t.missingRows(tb.ID, rt.Rows, keep)
+		gone, err := t.missingRows(idt, tb.ID, rt.Rows, keep)
 		if err != nil {
 			return false, err
 		}
@@ -144,7 +154,7 @@ func (t *tx) applyRemote(rt RemoteTable, keep Keep, out *RemoteApplied) (bool, e
 			continue
 		}
 		var rid int64
-		err := t.row(`SELECT rid FROM _lattis_row_ids WHERE tbl = ? AND lattis_id = ?`, tb.ID, r.ID).Scan(&rid)
+		err := t.row(`SELECT rid FROM `+idt.table+` WHERE tbl = ? AND lattis_id = ?`, tb.ID, r.ID).Scan(&rid)
 		known := err == nil
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return changed, err
@@ -157,7 +167,7 @@ func (t *tx) applyRemote(rt RemoteTable, keep Keep, out *RemoteApplied) (bool, e
 				return changed, err
 			}
 			if n == 0 {
-				if _, err := t.ExecContext(t.Ctx, `DELETE FROM _lattis_row_ids WHERE tbl = ? AND rid = ?`, tb.ID, rid); err != nil {
+				if _, err := t.ExecContext(t.Ctx, `DELETE FROM `+idt.table+` WHERE tbl = ? AND rid = ?`, tb.ID, rid); err != nil {
 					return changed, err
 				}
 				known = false
@@ -172,7 +182,7 @@ func (t *tx) applyRemote(rt RemoteTable, keep Keep, out *RemoteApplied) (bool, e
 				`DELETE FROM ` + tb.sql() + ` WHERE id = ?`,
 				`DELETE FROM _lattis_invalid WHERE tbl = ` + itoa64(tb.ID) + ` AND rid = ?`,
 				`DELETE FROM _lattis_styles WHERE tbl = ` + itoa64(tb.ID) + ` AND rid = ?`,
-				`DELETE FROM _lattis_row_ids WHERE tbl = ` + itoa64(tb.ID) + ` AND rid = ?`,
+				`DELETE FROM ` + idt.table + ` WHERE tbl = ` + itoa64(tb.ID) + ` AND rid = ?`,
 			} {
 				if _, err := t.ExecContext(t.Ctx, q, rid); err != nil {
 					return changed, err
@@ -225,8 +235,10 @@ func (t *tx) applyRemote(rt RemoteTable, keep Keep, out *RemoteApplied) (bool, e
 					changed = true
 				}
 			}
-			if _, err := t.ExecContext(t.Ctx, `UPDATE _lattis_row_ids SET lattis_author = ? WHERE tbl = ? AND rid = ? AND lattis_author IS NOT ?`, remoteAuthor(r.Author), tb.ID, rid, remoteAuthor(r.Author)); err != nil {
-				return changed, err
+			if idt.author {
+				if _, err := t.ExecContext(t.Ctx, `UPDATE _lattis_row_ids SET lattis_author = ? WHERE tbl = ? AND rid = ? AND lattis_author IS NOT ?`, remoteAuthor(r.Author), tb.ID, rid, remoteAuthor(r.Author)); err != nil {
+					return changed, err
+				}
 			}
 		default:
 			names := []string{"id", "_pos"}
@@ -241,7 +253,11 @@ func (t *tx) applyRemote(rt RemoteTable, keep Keep, out *RemoteApplied) (bool, e
 				out.Failed = append(out.Failed, fmt.Sprintf("%s : %v", tb.Name, err))
 				continue
 			}
-			if _, err := t.ExecContext(t.Ctx, `INSERT INTO _lattis_row_ids (tbl, rid, lattis_id, lattis_author) VALUES (?, ?, ?, ?)`, tb.ID, next, r.ID, remoteAuthor(r.Author)); err != nil {
+			ins, args := `INSERT INTO `+idt.table+` (tbl, rid, lattis_id) VALUES (?, ?, ?)`, []any{tb.ID, next, r.ID}
+			if idt.author {
+				ins, args = `INSERT INTO _lattis_row_ids (tbl, rid, lattis_id, lattis_author) VALUES (?, ?, ?, ?)`, append(args, remoteAuthor(r.Author))
+			}
+			if _, err := t.ExecContext(t.Ctx, ins, args...); err != nil {
 				return changed, err
 			}
 			next++
@@ -270,12 +286,12 @@ func (t *tx) applyRemote(rt RemoteTable, keep Keep, out *RemoteApplied) (bool, e
 // absentes du serveur (à supprimer), hors de celles qu'une modification
 // locale attend (Keep : ajoutée et pas encore envoyée, modifiée, en
 // conflit).
-func (t *tx) missingRows(tbl int64, rows []RemoteRow, keep Keep) ([]RemoteRow, error) {
+func (t *tx) missingRows(idt rowIDs, tbl int64, rows []RemoteRow, keep Keep) ([]RemoteRow, error) {
 	seen := make(map[string]bool, len(rows))
 	for _, r := range rows {
 		seen[r.ID] = true
 	}
-	rs, err := t.query(`SELECT lattis_id FROM _lattis_row_ids WHERE tbl = ? ORDER BY rid`, tbl)
+	rs, err := t.query(`SELECT lattis_id FROM `+idt.table+` WHERE tbl = ? ORDER BY rid`, tbl)
 	if err != nil {
 		return nil, err
 	}

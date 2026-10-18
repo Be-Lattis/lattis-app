@@ -384,6 +384,31 @@ CREATE TABLE _lattis_capabilities (
 	restrictions TEXT
 ) STRICT;
 `,
+	// 28 → 29 : tableaux liés à une donnée d'entreprise (requête sur une vue
+	// donnees.* d'un Serveur Lattis, internal/bridge/data_sync.go), tenus à
+	// jour par relevés incrémentaux hors du journal d'annulation.
+	//
+	// _lattis_data_rows : identifiant de chaque ligne dans la donnée
+	// (lattis_id du tableau source) par sa clé locale (rid = id de t_<tbl>) ;
+	// à part de _lattis_row_ids, propre aux tableaux publiés (une même ligne
+	// peut être dans un tableau publié et dans le tableau lié qui le lit).
+	//
+	// _lattis_data_sync : donnée et point de reprise (xid8 en texte) du
+	// dernier relevé de chaque tableau lié.
+	`
+CREATE TABLE _lattis_data_rows (
+	tbl       INTEGER NOT NULL,
+	rid       INTEGER NOT NULL,
+	lattis_id TEXT NOT NULL,
+	PRIMARY KEY (tbl, rid),
+	UNIQUE (tbl, lattis_id)
+) STRICT, WITHOUT ROWID;
+CREATE TABLE _lattis_data_sync (
+	tbl     INTEGER PRIMARY KEY,
+	dataset TEXT NOT NULL,
+	since   TEXT NOT NULL
+) STRICT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

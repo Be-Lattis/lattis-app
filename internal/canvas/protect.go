@@ -348,6 +348,8 @@ var syncState = map[string]bool{
 	"_lattis_outbox":        true,
 	"_lattis_conflicts":     true,
 	"_lattis_capabilities":  true,
+	"_lattis_data_rows":     true,
+	"_lattis_data_sync":     true,
 }
 
 // historyGuard encadre une annulation ou un rétablissement (command.Bus.Guard) :

@@ -24,9 +24,12 @@ import (
 // lecture seule (tableau d'une requête), formules, tableaux croisés et
 // graphiques s'en servent comme d'un autre tableau, et hors ligne la
 // dernière copie reste. Tant que le classeur est ouvert, watchData écoute le
-// canal du classeur source et lattis_data : à chaque changement, la requête
-// est actualisée (toute la donnée relue) ; un partage retiré garde la copie
-// et le signale.
+// canal du classeur source et lattis_data : à chaque changement, seules les
+// lignes changées ou supprimées depuis le dernier relevé sont lues et
+// appliquées, hors du journal d'annulation (data_sync.go) ; un partage
+// retiré garde la copie et le signale. Un classeur d'un serveur annonce
+// les données qu'il utilise (« Utilisée par ») et retire l'annonce quand le
+// tableau lié ou sa requête est supprimé (dataChanged).
 
 // DataCatalog lit le catalogue des données d'entreprise d'un serveur.
 func (s *DocumentService) DataCatalog(ctx context.Context, server string) (protocol.DataCatalog, error) {
@@ -56,7 +59,7 @@ type DataInsert struct {
 // InsertDataset insère une donnée d'entreprise comme tableau lié (Insérer ›
 // Donnée d'entreprise) : connexion au serveur (créée au besoin), requête,
 // premier chargement à la cellule donnée ; dans un classeur du même serveur,
-// le lien est annoncé (« Utilisée par »).
+// le lien est annoncé (« Utilisée par », voir dataChanged).
 func (s *DocumentService) InsertDataset(ctx context.Context, in DataInsert) (QueryRefresh, error) {
 	d, err := s.current()
 	if err != nil {
@@ -102,14 +105,9 @@ func (s *DocumentService) InsertDataset(ctx context.Context, in DataInsert) (Que
 	if err != nil {
 		return QueryRefresh{}, err
 	}
-	out, err := s.RefreshQuery(ctx, id)
-	if err == nil && out.NeedPassword == nil && len(out.Errors) == 0 {
-		if info := d.Share.Info(); info != nil && info.Server == server && info.CanDesign() {
-			srv.LinkDataset(ctx, ds.ID, info.WorkbookID) // « Utilisée par » : sans effet bloquant
-		}
-		s.watchData(d)
-	}
-	return out, err
+	// Chargé : changed (dans RefreshQuery) annonce le lien au serveur du
+	// classeur (« Utilisée par ») et relance le suivi (dataChanged).
+	return s.RefreshQuery(ctx, id)
 }
 
 // datasetSQL : la requête d'une donnée, colonnes exposées dans l'ordre.
@@ -163,7 +161,14 @@ func (s *DocumentService) lattisConnection(ctx context.Context, d *doc.Document,
 type dataWatch struct {
 	mu     sync.Mutex
 	cancel context.CancelFunc
+	// doc, used : classeur suivi et données qu'il utilise (serveur et
+	// donnée, voir dataUses), pour annoncer les liens qui changent.
+	doc  *doc.Document
+	used map[dataUse]bool
 }
+
+// dataUse : une donnée d'un serveur utilisée par le classeur.
+type dataUse struct{ server, dataset string }
 
 // linkedData : requêtes du classeur qui lisent une donnée d'entreprise, par
 // serveur.
@@ -173,34 +178,141 @@ type linkedData struct {
 	dataset string
 }
 
+// linkedDatasets : requêtes chargées (tableau présent) qui lisent une donnée
+// d'entreprise, par serveur. Une requête dont le tableau est supprimé n'est
+// plus suivie (et son lien est retiré, voir dataChanged).
 func (s *DocumentService) linkedDatasets(ctx context.Context, d *doc.Document) (map[string][]linkedData, error) {
 	defs, err := d.Queries(ctx)
 	if err != nil {
 		return nil, err
 	}
-	conns, err := s.Connections(ctx)
-	if err != nil {
-		return nil, err
-	}
-	urls := map[string]string{}
-	for _, c := range conns {
-		if c.Kind == query.KindLattis {
-			if u, err := auth.NormalizeURL(c.Config.URL); err == nil {
-				urls[c.Name] = u
-			}
-		}
-	}
 	out := map[string][]linkedData{}
+	var qs []query.Query
 	for _, def := range defs {
+		if def.Table == "" || !strings.Contains(def.Source, `"dataset"`) {
+			continue
+		}
 		q, err := query.Decode(def)
 		if err != nil || q.Source.Kind != query.SourceLattis || q.Source.Dataset == "" {
 			continue
 		}
-		if u := urls[q.Source.Connection]; u != "" {
+		qs = append(qs, q)
+	}
+	if len(qs) == 0 {
+		return out, nil
+	}
+	// Connexions lues sans le trousseau (Connections) : appelé à chaque
+	// modification.
+	conns, err := d.Connections(ctx)
+	if err != nil {
+		return nil, err
+	}
+	urls := map[string]string{}
+	for _, def := range conns {
+		c, err := query.DecodeConnection(def)
+		if err != nil || c.Kind != query.KindLattis {
+			continue
+		}
+		if u, err := auth.NormalizeURL(c.Config.URL); err == nil {
+			urls[strings.ToLower(c.Name)] = u
+		}
+	}
+	for _, q := range qs {
+		if u := urls[strings.ToLower(q.Source.Connection)]; u != "" {
 			out[u] = append(out[u], linkedData{query: q.ID, name: q.Name, dataset: q.Source.Dataset})
 		}
 	}
 	return out, nil
+}
+
+// dataUses : données utilisées par le classeur d (requêtes chargées) ; nil
+// si le classeur ne se lit pas.
+func (s *DocumentService) dataUses(ctx context.Context, d *doc.Document) map[dataUse]bool {
+	links, err := s.linkedDatasets(ctx, d)
+	if err != nil {
+		return nil
+	}
+	out := map[dataUse]bool{}
+	for server, list := range links {
+		for _, l := range list {
+			out[dataUse{server, l.dataset}] = true
+		}
+	}
+	return out
+}
+
+// dataChanged suit, après chaque modification du classeur d, les données
+// qu'il utilise : une donnée insérée, ou dont le tableau lié ou la requête
+// est supprimé (ou rétabli par Annuler), relance le suivi et, dans un
+// classeur d'un serveur qu'on peut modifier, est annoncée à ce serveur ou
+// retirée (link_dataset, unlink_dataset : « Utilisée par »).
+func (s *DocumentService) dataChanged(d *doc.Document) {
+	if d == nil {
+		return
+	}
+	ctx := context.Background()
+	s.data.mu.Lock()
+	known := s.data.doc == d
+	s.data.mu.Unlock()
+	if !known {
+		return
+	}
+	now := s.dataUses(ctx, d)
+	if now == nil {
+		return // lecture impossible : rien ne change
+	}
+	s.data.mu.Lock()
+	if s.data.doc != d {
+		s.data.mu.Unlock()
+		return
+	}
+	before := s.data.used
+	same := len(before) == len(now)
+	for u := range now {
+		same = same && before[u]
+	}
+	s.data.used = now
+	s.data.mu.Unlock()
+	if same {
+		return
+	}
+	s.watchData(d)
+	info := d.Share.Info()
+	if info == nil || !info.CanDesign() {
+		return
+	}
+	var link, unlink []string
+	for u := range now {
+		if !before[u] && u.server == info.Server {
+			link = append(link, u.dataset)
+		}
+	}
+	for u := range before {
+		if !now[u] && u.server == info.Server {
+			unlink = append(unlink, u.dataset)
+		}
+	}
+	if len(link)+len(unlink) == 0 {
+		return
+	}
+	go s.announceData(info.Server, info.WorkbookID, link, unlink)
+}
+
+// announceData annonce au serveur les données que le classeur workbookID
+// utilise désormais (link) ou plus (unlink). Sans effet bloquant :
+// « Utilisée par » est une information.
+func (s *DocumentService) announceData(server, workbookID string, link, unlink []string) {
+	ctx := context.Background()
+	srv, _, _, err := remoteServer(ctx, server)
+	if err != nil {
+		return
+	}
+	for _, id := range link {
+		srv.LinkDataset(ctx, id, workbookID)
+	}
+	for _, id := range unlink {
+		srv.UnlinkDataset(ctx, id, workbookID)
+	}
 }
 
 // dataRetry : nouvel essai après une coupure du suivi.
@@ -208,11 +320,19 @@ var dataRetry = 30 * time.Second
 
 // watchData (re)lance le suivi des données d'entreprise du classeur d.
 func (s *DocumentService) watchData(d *doc.Document) {
+	var used map[dataUse]bool
+	if d != nil {
+		used = s.dataUses(context.Background(), d)
+	}
 	s.data.mu.Lock()
 	if s.data.cancel != nil {
 		s.data.cancel()
 		s.data.cancel = nil
 	}
+	if s.data.doc != d || used != nil {
+		s.data.used = used
+	}
+	s.data.doc = d
 	if d == nil {
 		s.data.mu.Unlock()
 		return
@@ -262,7 +382,8 @@ func (s *DocumentService) followDataOnce(ctx context.Context, d *doc.Document, s
 	for _, ds := range cat.Datasets {
 		byID[ds.ID] = ds
 	}
-	// Catalogue relu (republication, vue refaite) : nouveaux table_id.
+	// Catalogue relu (republication, vue refaite) : nouveaux table_id,
+	// colonnes.
 	reread := func() {
 		if c, err := srv.DataCatalog(ctx); err == nil {
 			mu.Lock()
@@ -285,16 +406,20 @@ func (s *DocumentService) followDataOnce(ctx context.Context, d *doc.Document, s
 		}
 		bySource[ds.Channel] = append(bySource[ds.Channel], l)
 	}
-	refresh := func(ls []linkedData) {
-		if cur, err := s.current(); err != nil || cur != d {
-			return
-		}
+	// relève les données ls ; full : tout relire (vue refaite, republication).
+	relieve := func(ls []linkedData, full bool) {
 		for _, l := range ls {
-			s.RefreshQuery(ctx, l.query)
+			mu.Lock()
+			ds, ok := byID[l.dataset]
+			mu.Unlock()
+			if ok {
+				s.syncDataset(ctx, d, srv, l, ds, full)
+			}
 		}
 	}
-	// Une coupure a pu faire manquer des changements : tout relire en ligne.
-	refresh(list)
+	// Une coupure a pu faire manquer des changements : relevé depuis le
+	// dernier point de reprise (tout relire s'il n'est plus couvert).
+	relieve(list, false)
 	return srv.ListenData(ctx, channels, nil, func(channel, payload string) {
 		if channel == protocol.DataChannel {
 			switch {
@@ -307,6 +432,7 @@ func (s *DocumentService) followDataOnce(ctx context.Context, d *doc.Document, s
 				}
 			case payload == protocol.DataCatalogChanged:
 			default:
+				// Vue refaite : colonnes ou audience ont pu changer.
 				var hit []linkedData
 				for _, l := range list {
 					if l.dataset == payload {
@@ -316,22 +442,22 @@ func (s *DocumentService) followDataOnce(ctx context.Context, d *doc.Document, s
 				if len(hit) > 0 {
 					reread()
 				}
-				refresh(hit)
+				relieve(hit, true)
 			}
 			return
 		}
-		if strings.HasPrefix(payload, protocol.DataVersion) {
+		version := strings.HasPrefix(payload, protocol.DataVersion)
+		if version {
 			reread()
 		}
 		var hit []linkedData
 		mu.Lock()
-		defer mu.Unlock()
 		for _, l := range bySource[channel] {
-			ds := byID[l.dataset]
-			if payload == ds.TableID || strings.HasPrefix(payload, protocol.DataVersion) {
+			if version || payload == byID[l.dataset].TableID {
 				hit = append(hit, l)
 			}
 		}
-		refresh(hit)
+		mu.Unlock()
+		relieve(hit, version)
 	})
 }

@@ -48,6 +48,44 @@ type DataRows struct {
 	Since   string
 }
 
+// DataRow est une ligne d'une donnée pour un tableau lié : identifiant
+// (lattis_id), clé d'ordre (lattis_pos) et valeurs des colonnes exposées,
+// telles que les rend database/sql avec le pilote pgx (nombres décimaux en
+// texte, dates en time.Time…), pour être converties comme le premier
+// chargement de la requête.
+type DataRow struct {
+	ID, Pos string
+	Values  []any
+}
+
+// DataDelta est le relevé d'une donnée depuis un point de reprise.
+type DataDelta struct {
+	// Columns, Types : colonnes exposées (sans lattis_*) et nom de leur type
+	// PostgreSQL en majuscules (INT8, NUMERIC, TEXT…, comme
+	// DatabaseTypeName de database/sql).
+	Columns []string
+	Types   []string
+	// Rows : lignes modifiées depuis since, ou toutes (Full), par lattis_pos.
+	Rows []DataRow
+	// Deleted : lignes supprimées depuis since (vide si Full).
+	Deleted []string
+	// Full : toute la donnée relue (since vide ou plus couvert).
+	Full bool
+	// Count : lignes visibles dans la vue, pour vérifier la copie locale (une
+	// ligne sortie de l'audience par une modification ne laisse pas de
+	// pierre tombale).
+	Count int
+	// Since : prochain point de reprise (sync_point pris avant la lecture).
+	Since string
+}
+
+// DataResult est le résultat d'une requête de l'onglet SQL sur le serveur.
+type DataResult struct {
+	Columns   []string
+	Rows      [][]any
+	Truncated bool
+}
+
 // Data est l'API des données d'entreprise.
 type Data interface {
 	DataCatalog(ctx context.Context) (protocol.DataCatalog, error)
@@ -69,6 +107,16 @@ type Data interface {
 	// ReadDataset lit toutes les lignes d'une donnée (sur un réplica s'il y
 	// en a un), après sync_point().
 	ReadDataset(ctx context.Context, sqlName string) (DataRows, error)
+	// DatasetDelta lit ce qui a changé dans une donnée depuis since (relevé
+	// d'un tableau lié) : lignes modifiées (lattis_xid ≥ since), supprimées
+	// (dataset_tombstones), dans une même lecture cohérente. since vide, ou
+	// que les pierres tombales ne couvrent plus (since_covered) : toutes les
+	// lignes (Full).
+	DatasetDelta(ctx context.Context, id, sqlName, since string) (DataDelta, error)
+	// DataQuery exécute une requête de lecture de l'utilisateur (onglet SQL :
+	// vues donnees.*) dans une transaction en lecture seule ; au plus limit
+	// lignes.
+	DataQuery(ctx context.Context, q string, limit int) (DataResult, error)
 	// ListenData écoute les canaux donnés (LISTEN) et appelle fn(canal,
 	// charge) à chaque notification, jusqu'à l'annulation de ctx ou une
 	// coupure ; ready est appelé une fois l'écoute posée.

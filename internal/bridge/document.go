@@ -332,6 +332,10 @@ func (s *DocumentService) changed(ctx context.Context) (DocState, error) {
 	s.mu.Unlock()
 	// Classeur collaboratif : ce qui vient d'être fait part au serveur.
 	s.kickShare()
+	// Données d'entreprise insérées ou supprimées : suivi et « Utilisée par ».
+	if d, err := s.current(); err == nil {
+		s.dataChanged(d)
+	}
 	st, err := s.State(ctx)
 	if d, derr := s.current(); derr == nil {
 		st.Notice = d.TakeNotice()

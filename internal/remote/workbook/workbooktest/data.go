@@ -22,6 +22,8 @@ type fdataset struct {
 	inherit                                          bool
 	audience                                         []protocol.DataAudience
 	links                                            []string
+	// gone : lignes sorties de l'audience (DataHide).
+	gone map[string]bool
 }
 
 type fdata struct {
