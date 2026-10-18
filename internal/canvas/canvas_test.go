@@ -953,6 +953,12 @@ func TestTablesMoveMergeSplit(t *testing.T) {
 	if err := d.RenameTable(ctx, "Tableau1", "feuille1"); !errors.Is(err, ErrTable) {
 		t.Fatalf("nom pris : %v", err)
 	}
+	// Une adresse de cellule n'est pas un nom de tableau (zone de nom, formules).
+	for _, a1 := range []string{"F10", "ab12", "ZZZZ999", "R1C1"} {
+		if err := d.RenameTable(ctx, "Tableau1", a1); !errors.Is(err, ErrTable) {
+			t.Fatalf("nom %s comme une adresse : %v", a1, err)
+		}
+	}
 	if err := d.RenameTable(ctx, "Tableau1", "Pays"); err != nil {
 		t.Fatal(err)
 	}

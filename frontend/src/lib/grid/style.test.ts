@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clearPatch, formatNumber, isNumericText, mergeStyles, painterPatch, parseStyle, resolveStyle, styledNumber, STYLE_KEYS } from './style';
+import { clearPatch, formatNumber, formatStat, isNumericText, mergeStyles, painterPatch, parseStyle, resolveStyle, styledNumber, STYLE_KEYS } from './style';
 
 describe('mise en forme', () => {
 	it('lit et fusionne les styles', () => {
@@ -43,5 +43,19 @@ describe('mise en forme', () => {
 		expect(styledNumber('12,5 %', { dp: 0, nf: '%' })).toBe('13 %');
 		expect(styledNumber('Total', { nf: '0,00' })).toBe('Total');
 		expect(styledNumber('3', undefined)).toBe('3');
+	});
+});
+
+describe('barre d’état', () => {
+	const nb = (s: string) => s.replace(/[  ]/g, ' ');
+	it('arrondit la moyenne, avec le séparateur de milliers', () => {
+		expect(formatStat(30.238333333333)).toBe('30,2383');
+		expect(nb(formatStat(1200))).toBe('1 200');
+		expect(formatStat(0.0000123456)).toBe('0,00001235');
+	});
+	it('suit le format de la cellule active', () => {
+		expect(formatStat(30.238333, { dp: 2 })).toBe('30,24');
+		expect(nb(formatStat(1234.5, { nf: '€' }))).toBe('1 234,50 €');
+		expect(formatStat(0.256, { nf: '%' })).toMatch(/^25,6\s?%$/);
 	});
 });

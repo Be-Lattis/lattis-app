@@ -109,6 +109,20 @@ const fixed2 = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximu
 const percent = new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFractionDigits: 2 });
 const euro = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
 
+/**
+ * Moyenne ou somme de la barre d'état, comme Excel : au format de la
+ * cellule active quand il en a un (décimales, €, %), sinon arrondie à
+ * quatre décimales (plus pour un très petit nombre), avec le séparateur
+ * de milliers.
+ */
+export function formatStat(v: number, st?: CellStyle): string {
+	const f = st ? formatNumber(st.nf, v, st.dp, st.ng) : null;
+	if (f !== null) return f;
+	const a = Math.abs(v);
+	const digits = a === 0 || a >= 0.01 ? 4 : Math.min(10, 3 - Math.floor(Math.log10(a)));
+	return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: digits }).format(v);
+}
+
 /** Texte d'un nombre selon le format choisi (null : pas de format). */
 export function formatNumber(nf: CellStyle['nf'], v: number, dp?: number, ng = false): string | null {
 	if (nf === 'date' || nf === 'time' || nf === 'text') return null;

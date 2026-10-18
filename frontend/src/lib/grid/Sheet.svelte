@@ -16,12 +16,12 @@
 	import { DEFAULT_NAME_HINT, isDefaultTableName } from './defaultname';
 	import { ease, flashAlpha, lerpBar, motionAt, progress, reducedMotion, sameBar, shiftAxis, tableMotions, zeroBar, type AxisLike, type BarSpan, type Geo, type LinesShift, type Motion } from './anim';
 	import { followClip, overlaps, parseTSV, pasteArea, richClip, sameClipText, tileBlock, toTSV, type Clip, type Rect as ClipRect } from './clipboard';
-	import { isNumericText, painterPatch, parseStyle, resolveStyle, type CellStyle, type StyleLayer } from './style';
+	import { formatStat, isNumericText, painterPatch, parseStyle, resolveStyle, type CellStyle, type StyleLayer } from './style';
 	import { formatCell } from './numfmt';
 	import { autoHeight, cellFont, fontPx, lineHeight, wrapLines } from './textwrap';
 	import { AutoRows } from './rowfit';
 	import { stepZoom } from './zoom';
-	import { panes, reveal, toGrid, type Pane } from './panes';
+	import { panes, reveal, revealWhole, toGrid, type Pane } from './panes';
 	import { hiddenLines, mergeAt, mergeList, parseList, skipHidden, validate, type MergeRange } from './sheetfmt';
 	import { expandRange, extendCorner, isSingleCell, mergeRect, rangeOf, stepCell } from './mergesel';
 	import FormatDialog, { type FormatTab } from './FormatDialog.svelte';
@@ -66,6 +66,7 @@
 	import { apply as applySuggestion, argKindAt, signature, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
 	import { checkFormula, closeParens, editorWidth, formulaRefs, highlightParts, isFormula, movedRef, rangeRef, refRect, serverErrorPos, type FormulaError, type Rect, type RefTable } from './formulaEdit';
 	import { formulaTyping, holdFormula, insertRefAt, qualifyRef, updateHold, type FormulaHold } from './crossref';
+	import { a1Like, parseGoto, type GotoTable } from './goto';
 	import {
 		isErrorValue,
 		valueAlignment,
@@ -909,11 +910,26 @@
 		measurer.font = bold ? FONT_BOLD : FONT;
 		return measurer.measureText(s).width;
 	}
+	/**
+	 * Largeur du contenu de l'en-tête de la colonne i d'un tableau (nom en
+	 * gras, badge du type, ▾, entonnoir, clé), sans les marges : le nom n'est
+	 * pas coupé au-delà (headIcons et le dessin de l'en-tête).
+	 */
+	function headerWidth(e: Entry, i: number): number {
+		const col = e.t.columns[i];
+		const icon = (col.filter ? '⧩ ' : '') + (typeIconName(col.type) ? ' ▾' : typeIcon(col.type) + ' ▾') + (e.t.key === i ? '🔑 ' : '');
+		measurer ??= document.createElement('canvas').getContext('2d');
+		if (measurer) measurer.font = FONT_SMALL;
+		const iconW = (measurer?.measureText(icon).width ?? 0) + (typeIconName(col.type) ? 13 : 0);
+		return textWidth(col.name, true) + iconW + 4;
+	}
 	function rebuildAxis(override?: { col: number; width: number }) {
 		const widths = new Map<number, number>();
 		for (const e of entries) {
 			e.t.columns.forEach((c, i) => {
-				if (!widths.has(e.t.col + i)) widths.set(e.t.col + i, defaultWidth(c.type));
+				// Largeur selon le type, élargie pour que l'en-tête (nom, badge
+				// du type et ▾) ne soit pas coupé.
+				if (!widths.has(e.t.col + i)) widths.set(e.t.col + i, Math.max(defaultWidth(c.type), Math.min(MAX_FIT, Math.ceil(headerWidth(e, i)) + 14)));
 			});
 		}
 		// Tableaux croisés : largeur d'après le texte affiché (« Somme de Commande »).
@@ -3572,8 +3588,6 @@
 		});
 	}
 
-	const statFmt = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 10 });
-
 	// Totaux d'une grande sélection (ou de lignes pas encore chargées) :
 	// calculés en SQL par le moteur, en tâche de fond ; la barre d'état les
 	// affiche dès qu'ils arrivent. statsEpoch change avec les données.
@@ -3585,9 +3599,11 @@
 	function statsText(count: number, nums: number, sum: number): string {
 		if (count === 0) return '';
 		const parts = [];
-		if (nums) parts.push(`Moyenne : ${statFmt.format(sum / nums)}`);
+		// Comme Excel : au format de la cellule active, sinon arrondies.
+		const st = styleAt(active.row, active.col);
+		if (nums) parts.push(`Moyenne : ${formatStat(sum / nums, st)}`);
 		parts.push(`Nb : ${count.toLocaleString('fr-FR')}`);
-		if (nums) parts.push(`Somme : ${statFmt.format(sum)}`);
+		if (nums) parts.push(`Somme : ${formatStat(sum, st)}`);
 		return parts.join('   ');
 	}
 
@@ -4902,17 +4918,11 @@
 	function ensureVisible(row: number, col: number) {
 		updateExtent();
 		// Sous les volets figés : la case ne doit pas rester cachée dessous.
-		const top = rowTop(row);
-		const t = reveal(top, top + rh(row), vs.top, vs.view, rowTop(fRows()));
+		// Comme Excel, la case est montrée entière, et la première ligne ou
+		// colonne montrée n'est pas coupée (ni contre les volets figés).
+		const t = revealWhole(row, rax(), vs.top, vs.view, rowTop(fRows()));
 		if (t !== vs.top) vs.to(t);
-		const x0 = cax().offset(col);
-		const fw = cax().offset(fCols());
-		let l = reveal(x0, x0 + cax().size(col), scroller.scrollLeft, viewW - MARGIN, fw);
-		if (fw && l > scroller.scrollLeft) {
-			// Volets figés : pas de colonne coupée contre la partie figée.
-			const c = cax().indexAt(l + fw);
-			if (cax().offset(c) < l + fw && c < col) l = cax().offset(c + 1) - fw;
-		}
+		const l = revealWhole(col, cax(), scroller.scrollLeft, viewW - MARGIN, cax().offset(fCols()));
 		if (l !== scroller.scrollLeft) scroller.scrollLeft = l;
 		syncNative();
 	}
@@ -5051,12 +5061,7 @@
 		for (const e of entries) {
 			if (c < e.t.col || c > e.lastCol) continue;
 			const i = c - e.t.col;
-			const col = e.t.columns[i];
-			const icon = (col.filter ? '⧩ ' : '') + (typeIconName(col.type) ? ' ▾' : typeIcon(col.type) + ' ▾') + (e.t.key === i ? '🔑 ' : '');
-			measurer ??= document.createElement('canvas').getContext('2d');
-			if (measurer) measurer.font = FONT_SMALL;
-			const iconW = (measurer?.measureText(icon).width ?? 0) + (typeIconName(col.type) ? 13 : 0);
-			w = Math.max(w, textWidth(col.name, true) + iconW + 4);
+			w = Math.max(w, headerWidth(e, i));
 			const d = visibleData(e, first, last);
 			if (d) for (let k = d.first; k <= d.last; k++) w = Math.max(w, textWidth(e.cache.row(k)?.text[i] ?? ''));
 		}
@@ -6401,7 +6406,23 @@
 
 	// --- Zone de nom ------------------------------------------------------------
 
-	/** Nom du tableau : Entrée le renomme. */
+	const gotoTable = (e: Entry): GotoTable => ({ name: e.t.name, row: e.t.row, col: e.t.col, last: e.last, lastCol: e.lastCol, columns: e.t.columns.map((c) => c.name) });
+
+	/**
+	 * Zone de nom, comme Excel : une adresse (F10, Cell[F10], A1:C3), un
+	 * tableau ou une de ses cellules (Ventes[Prix][3]) y va ; faux sinon.
+	 */
+	function goToName(text: string): boolean {
+		const cur = tableAt(active.row, active.col);
+		const g = parseGoto(text, entries.map(gotoTable), cur ? gotoTable(cur) : undefined);
+		if (!g) return false;
+		wrap.focus();
+		if (g.r0 === g.r1 && g.c0 === g.c1) moveTo(g.r0, g.c0);
+		else selectRange(g.r0, g.c0, g.r1, g.c1);
+		return true;
+	}
+
+	/** Nom du tableau : une adresse y va (comme Excel), un autre nom renomme le tableau. */
 	function onTableNameKey(e: KeyboardEvent) {
 		e.stopPropagation();
 		const el = e.currentTarget as HTMLInputElement;
@@ -6414,8 +6435,14 @@
 		if (e.key !== 'Enter') return;
 		e.preventDefault();
 		const name = el.value.trim();
+		if (name !== t.name && goToName(name)) return;
+		el.value = t.name;
 		wrap.focus();
 		if (!source.renameTable || name === t.name) return;
+		if (a1Like(name)) {
+			say(`« ${name} » est une adresse de cellule : elle ne peut pas nommer un tableau`);
+			return;
+		}
 		const rename = source.renameTable;
 		writing = writing.catch(() => undefined).then(async () => {
 			try {
@@ -6442,7 +6469,11 @@
 		if (e.key !== 'Enter') return;
 		e.preventDefault();
 		const c = active.col;
-		const name = el.value.replace(/\[.*$/, '').trim();
+		const text = el.value.trim();
+		// Une autre cellule (Prix[3], Ventes[Prix][2], Cell[F10], A1:C3) : y
+		// aller ; un nom seul (même « Q1 ») renomme la colonne.
+		if (text !== tableBox?.col && /[[:]/.test(text) && goToName(text)) return;
+		const name = text.replace(/\[.*$/, '').trim();
 		wrap.focus();
 		if (name && name !== en.t.columns[c - en.t.col].name) write(en.t.row, c, name);
 	}
@@ -6467,15 +6498,8 @@
 				return;
 			}
 		}
-		// Une adresse (B3 ou Cell_B3) : y aller.
-		const addr = /^(?:cell_|cell\[)?([a-z]{1,3})([1-9][0-9]*)\]?$/i.exec(text);
-		if (addr) {
-			let c = 0;
-			for (const ch of addr[1].toUpperCase()) c = c * 26 + ch.charCodeAt(0) - 64;
-			wrap.focus();
-			moveTo(Number(addr[2]) - 1, c - 1);
-			return;
-		}
+		// Une adresse (B3, Cell[B3], A1:C3) ou un tableau : y aller.
+		if (goToName(text)) return;
 		const { row, col } = active;
 		if (tableAt(row, col)) {
 			say('Seule une cellule libre peut être nommée ; un tableau se référence par son nom : ' + tableAt(row, col)!.t.name);

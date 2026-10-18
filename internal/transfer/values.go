@@ -192,7 +192,7 @@ func columnNames(headers []string, width int) []string {
 // en haut à gauche (comme à la saisie), sinon TableauN ; jamais un nom pris.
 func tableName(sheet string, row, col int, taken map[string]bool) string {
 	if row == 0 && col == 0 {
-		if n := identifier(sheet); n != "" && !taken[n] {
+		if n := identifier(sheet); n != "" && !taken[n] && !canvas.A1Like(n) {
 			taken[n] = true
 			return n
 		}

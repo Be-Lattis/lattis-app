@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -15,12 +16,25 @@ import (
 // (renommer, déplacer, fusionner, scinder).
 var ErrTable = errors.New("tableau")
 
+// a1Name : une adresse de cellule de la grille (colonnes A à ZZZZ, lignes 1
+// à 999 999 999), ou une adresse L1C1.
+var a1Name = regexp.MustCompile(`^(?i:[a-z]{1,4}[1-9][0-9]{0,8}|r[1-9][0-9]*c[1-9][0-9]*)$`)
+
+// A1Like dit si un nom se lit comme une adresse de cellule (F10, AB12,
+// R1C1) : refusé pour un tableau, comme dans Excel, car la zone de nom y
+// irait et les formules ne sauraient pas lequel des deux on veut dire.
+func A1Like(name string) bool { return a1Name.MatchString(name) }
+
 // RenameTable renomme un tableau. Comme dans Excel, le nom est un
-// identifiant (lettres, chiffres, _), pour s'écrire tel quel dans une formule.
+// identifiant (lettres, chiffres, _), pour s'écrire tel quel dans une
+// formule, et pas une adresse de cellule.
 func (m *Model) RenameTable(ctx context.Context, old, name string) error {
 	name = strings.TrimSpace(name)
 	if name == "" || identifier(name) != name {
 		return fmt.Errorf("%w : « %s » n'est pas un nom de tableau (lettres, chiffres et _, sans espace)", ErrTable, name)
+	}
+	if A1Like(name) {
+		return fmt.Errorf("%w : « %s » est une adresse de cellule, ambiguë comme nom de tableau (essayez « %s_ »)", ErrTable, name, name)
 	}
 	return m.Do(ctx, "Renommer le tableau", func(t *tx) error {
 		tb, err := t.editTable(old)

@@ -298,6 +298,8 @@ func (t *tx) freeTableName(name string) (string, error) {
 	base := identifier(name)
 	if base == "" {
 		base = "Requête"
+	} else if A1Like(base) {
+		base += "_" // pas une adresse de cellule
 	}
 	cand := base
 	for n := 2; ; n++ {
