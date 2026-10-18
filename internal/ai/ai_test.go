@@ -355,8 +355,8 @@ func TestAnthropicTurn(t *testing.T) {
 	if _, err := p.Turn(context.Background(), Credentials{Key: "sk-faux", Endpoint: srv.URL}, req, func(Event) {}); err == nil || !strings.Contains(err.Error(), "clé d'API refusée") {
 		t.Fatalf("err %v", err)
 	}
-	// Sans clé.
-	if _, err := p.Turn(context.Background(), Credentials{Endpoint: srv.URL}, req, func(Event) {}); !errors.Is(err, ErrNoKey) {
+	// Sans clé ni passerelle (une passerelle sans clé authentifie elle-même).
+	if _, err := p.Turn(context.Background(), Credentials{}, req, func(Event) {}); !errors.Is(err, ErrNoKey) {
 		t.Fatalf("err %v", err)
 	}
 	// Usage lu dans le flux (début et fin du message).
