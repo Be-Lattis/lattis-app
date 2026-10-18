@@ -100,8 +100,7 @@ Débogage (journal dans la console, lignes « 21:42:07.315 [DOC] … ») :
   --log=cat,…       seulement ces catégories : doc, edit, script, event, calc, sql
                     (sans niveau donné : -v, ou -vv avec sql)
   --log-file=f      écrit aussi le journal à la fin du fichier f
-  --sql, --no-sql   journal SQL seul, quel que soit le niveau ; actif par défaut avec
-                    go run / wails dev
+  --sql, --no-sql   journal SQL seul, quel que soit le niveau (sinon à partir de -vv)
 
 Presets de --demo :
 `)

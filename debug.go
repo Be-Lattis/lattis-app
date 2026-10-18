@@ -23,7 +23,7 @@ type debugOpts struct{ level int }
 //	--sql, --no-sql                journal SQL seul, quel que soit le niveau
 //
 // LATTIS_VERBOSE=n donne le niveau sans option. Le journal SQL suit le
-// niveau (à partir de -vv) ; hors version livrée, il est actif par défaut.
+// niveau (à partir de -vv), même en développement.
 func parseDebug(args []string) (debugOpts, []string, error) {
 	var o debugOpts
 	if v, err := strconv.Atoi(os.Getenv("LATTIS_VERBOSE")); err == nil {

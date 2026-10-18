@@ -20,14 +20,17 @@ import (
 // Journal SQL : chaque requête jouée contre le SQLite local (classeur, base
 // de travail de Power Query, fichier SQLite source) est écrite dans le
 // journal de débogage (trace : sortie d'erreur et --log-file), avec sa durée
-// et la connexion. Actif par défaut hors version livrée (go run, wails dev),
-// sinon avec -vv ou --sql ; LATTIS_SQL=1 ou 0 force ; --log sans sql le
-// coupe. À -vvv, les paramètres des requêtes préparées suivent la requête.
+// et la connexion. Actif avec -vv ou --sql, jamais par
+// défaut (même en développement) ; LATTIS_SQL=1 ou 0 force ; --log sans
+// sql le coupe. À -vvv, les paramètres des requêtes préparées suivent la requête.
 // Une requête répétée à l'identique (insertion ligne à ligne d'un import)
 // n'est écrite qu'une fois, suivie du nombre de répétitions.
 //
 // Le journal enveloppe le pilote (database/sql) : le traçage de SQLite ne
 // voit pas les requêtes sans paramètre que le pilote exécute directement.
+
+// defaultSQLLog : journal SQL coupé sans option.
+const defaultSQLLog = false
 
 var sqlLog atomic.Bool
 
@@ -47,8 +50,8 @@ func SetSQLLog(on bool) { sqlLog.Store(on) }
 // SQLLog dit si le journal SQL est actif.
 func SQLLog() bool { return sqlLog.Load() }
 
-// DefaultSQLLog dit si le journal SQL est actif sans option : hors version
-// livrée, ou imposé par LATTIS_SQL.
+// DefaultSQLLog dit si le journal SQL est actif sans option : seulement
+// imposé par LATTIS_SQL.
 func DefaultSQLLog() bool {
 	switch os.Getenv("LATTIS_SQL") {
 	case "1", "true", "oui":
