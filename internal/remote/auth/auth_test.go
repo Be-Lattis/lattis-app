@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"path/filepath"
@@ -79,7 +80,7 @@ func TestDiscover(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if d.Name != "Serveur Acme" || d.Postgres.RW != "pg.acme.test" || len(d.Postgres.RO) != 1 || d.Postgres.Database != DefaultDatabase {
+	if d.Name != "Serveur Acme" || d.Postgres.RW != "pg.acme.test:5432" || len(d.Postgres.RO) != 1 || d.Postgres.RO[0] != "pg-ro.acme.test:6432" || d.Postgres.Database != DefaultDatabase {
 		t.Fatalf("découverte = %+v", d)
 	}
 	if !strings.HasPrefix(d.Logo, "data:image/png;base64,") {
@@ -91,7 +92,7 @@ func TestDiscover(t *testing.T) {
 	if !strings.HasPrefix(d.Providers[0].Icon, "data:image/svg+xml;base64,") {
 		t.Errorf("icône Google = %q", d.Providers[0].Icon)
 	}
-	if d.Providers[1].Icon != "" {
+	if d.Providers[1].Icon != "" || d.Providers[2].Icon != "" {
 		t.Errorf("icône d'un autre hôte gardée : %q", d.Providers[1].Icon)
 	}
 
@@ -121,7 +122,7 @@ func TestLoginPKCEAndRestore(t *testing.T) {
 	if st.User == nil || st.User.Email != "alice@acme.fr" || st.User.PGRole != "alice@acme.fr" || st.User.DisplayName != "Alice" {
 		t.Fatalf("utilisateur = %+v", st.User)
 	}
-	if f.authorize.Get("provider") != "google" || f.authorize.Get("scope") != Scope {
+	if f.authorize.Get("provider") != "google" || f.authorize.Get("scope") != "openid lattis" {
 		t.Errorf("paramètres d'autorisation = %v", f.authorize)
 	}
 	acct := "lattis://" + Host(f.url()) + "/alice@acme.fr"
@@ -152,7 +153,7 @@ func TestLoginPKCEAndRestore(t *testing.T) {
 		t.Fatalf("reconnexion : %q, %v", tok3, err)
 	}
 	user, disc, err := m2.Session(ctx, f.url())
-	if err != nil || user.PGRole != "alice@acme.fr" || disc.Postgres.RW != "pg.acme.test" {
+	if err != nil || user.PGRole != "alice@acme.fr" || disc.Postgres.RW != "pg.acme.test:5432" {
 		t.Fatalf("Session = %+v, %+v, %v", user, disc, err)
 	}
 
@@ -292,7 +293,7 @@ func TestCancelLogin(t *testing.T) {
 }
 
 func TestLoopbackIgnoresForeignState(t *testing.T) {
-	lb, err := startLoopback("bon", "Serveur Acme")
+	lb, err := startLoopback("bon", "", "Serveur Acme")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -350,5 +351,41 @@ func TestPKCE(t *testing.T) {
 	p := NewPKCE()
 	if len(p.Verifier) < 43 || p.Challenge != S256(p.Verifier) {
 		t.Fatalf("PKCE = %+v", p)
+	}
+}
+
+func TestContractChecks(t *testing.T) {
+	// iss du retour différent de l'émetteur annoncé (RFC 9207) : refusé.
+	f := newFakeLattisd(t)
+	f.iss = "https://pirate.example"
+	m := newManager(t, f, memStore{}, "", nil)
+	if _, err := m.Login(context.Background(), f.url(), "google"); err == nil || !strings.Contains(err.Error(), "autre émetteur") {
+		t.Fatalf("iss étranger : %v", err)
+	}
+	// Point OAuth sur un autre hôte : découverte refusée.
+	g := newFakeLattisd(t)
+	g.endpoint = "https://pirate.example/oauth/token"
+	if _, err := Discover(context.Background(), http.DefaultClient, g.url(), "1.0.0"); err == nil || !strings.Contains(err.Error(), "autre hôte") {
+		t.Fatalf("point OAuth étranger : %v", err)
+	}
+	// Points PostgreSQL sous forme de texte (tolérés).
+	var p Postgres
+	if err := json.Unmarshal([]byte(`{"rw":"pg:5433","ro":["r1",{"host":"r2"}]}`), &p); err != nil || p.RW != "pg:5433" || Strings(p.RO)[0] != "r1" || p.RO[1] != "r2" {
+		t.Fatalf("Postgres = %+v, %v", p, err)
+	}
+}
+
+func TestInvalidate(t *testing.T) {
+	f := newFakeLattisd(t)
+	m := newManager(t, f, memStore{}, "", nil)
+	ctx := context.Background()
+	if _, err := m.Login(ctx, f.url(), "google"); err != nil {
+		t.Fatal(err)
+	}
+	tok1, _ := m.Token(ctx, f.url())
+	m.Invalidate(f.url())
+	tok2, err := m.Token(ctx, f.url())
+	if err != nil || tok1 == tok2 {
+		t.Fatalf("jeton non renouvelé après refus : %v", err)
 	}
 }

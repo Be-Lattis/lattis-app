@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 )
@@ -136,7 +137,7 @@ func (t Target) dsn(eps []string, usage string) (string, error) {
 	}
 	return strings.Join([]string{
 		"host=" + hosts, "port=" + ports,
-		"dbname=" + quote(db), "user=" + quote(t.User),
+		"dbname=" + quote(db),
 		"sslmode=" + quote(ssl), "connect_timeout=10",
 		"application_name=" + quote(AppName(t.Version, usage)),
 	}, " "), nil
@@ -152,13 +153,16 @@ func (t Target) ConnConfig(eps []string, usage string) (*pgx.ConnConfig, error) 
 	if err != nil {
 		return nil, err
 	}
-	setToken(cfg, t.Token)
+	setToken(cfg, t.User, t.Token)
 	return cfg, nil
 }
 
-// setToken branche le jeton (les points de secours, Fallbacks, partagent
-// la configuration).
-func setToken(cfg *pgx.ConnConfig, tok TokenFunc) {
+// setToken branche l'utilisateur et le jeton (les points de secours,
+// Fallbacks, partagent la configuration). Le rôle contient souvent « @ » :
+// il va dans cfg.User, jamais dans une chaîne de connexion (contrat de
+// lattisd, §3).
+func setToken(cfg *pgx.ConnConfig, user string, tok TokenFunc) {
+	cfg.User = user
 	cfg.OAuthTokenProvider = tok
 }
 
@@ -216,7 +220,7 @@ func (t Target) pool(ctx context.Context, eps []string, usage string, max int32)
 	if err != nil {
 		return nil, err
 	}
-	setToken(cfg.ConnConfig, t.Token)
+	setToken(cfg.ConnConfig, t.User, t.Token)
 	cfg.MaxConns = max
 	cfg.MinConns = 0
 	return pgxpool.NewWithConfig(ctx, cfg)
@@ -254,4 +258,15 @@ func (p *Pools) Close() {
 	if p.RO != nil {
 		p.RO.Close()
 	}
+}
+
+// AuthFailed reconnaît un refus d'authentification de PostgreSQL (jeton
+// expiré, autre rôle, compte désactivé) : rafraîchir le jeton puis
+// réessayer une fois (contrat de lattisd, §3).
+func AuthFailed(err error) bool {
+	var pe *pgconn.PgError
+	if errors.As(err, &pe) {
+		return pe.Code == "28000" || pe.Code == "28P01"
+	}
+	return err != nil && strings.Contains(err.Error(), "OAuth authentication failed")
 }

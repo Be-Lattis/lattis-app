@@ -342,7 +342,14 @@ func (m *Manager) prepare(ctx context.Context, raw, provider string, kind string
 }
 
 func (m *Manager) client(s *server) *client {
-	return &client{hc: m.opts.HTTP, server: s.url, name: s.label(), now: m.opts.Now}
+	c := &client{hc: m.opts.HTTP, server: s.url, name: s.label(), now: m.opts.Now,
+		clientID: ClientID, scope: Scope,
+		authURL: s.url + PathAuthorize, tokenURL: s.url + PathToken, revokeURL: s.url + PathRevoke, deviceURL: s.url + PathDevice}
+	if d := s.disc; d != nil {
+		c.clientID, c.scope, c.issuer = d.ClientID, d.Scope, d.Issuer
+		c.authURL, c.tokenURL, c.revokeURL, c.deviceURL = d.AuthorizationEndpoint, d.TokenEndpoint, d.RevocationEndpoint, d.DeviceEndpoint
+	}
+	return c
 }
 
 // begin note une connexion en cours (annulable) ; une connexion précédente
@@ -399,7 +406,7 @@ func (m *Manager) Login(ctx context.Context, raw, provider string) (ServerState,
 	defer done()
 	state := randomString(16)
 	p := NewPKCE()
-	lb, err := startLoopback(state, c.name)
+	lb, err := startLoopback(state, c.issuer, c.name)
 	if err != nil {
 		return ServerState{}, fmt.Errorf("écoute locale impossible (%v) : connectez-vous depuis un autre appareil", err)
 	}
@@ -627,6 +634,24 @@ func (m *Manager) renew(ctx context.Context, c *client, sess *session) (string, 
 	}
 	nu := t.user()
 	return sess.access, &nu, nil
+}
+
+// Invalidate oublie le jeton d'accès d'un serveur (refusé par PostgreSQL) :
+// le prochain Token le renouvelle.
+func (m *Manager) Invalidate(raw string) {
+	u, err := NormalizeURL(raw)
+	if err != nil {
+		return
+	}
+	m.mu.Lock()
+	sess := m.get(u).sess
+	m.mu.Unlock()
+	if sess == nil {
+		return
+	}
+	sess.mu.Lock()
+	sess.access = ""
+	sess.mu.Unlock()
 }
 
 // drop ferme une session refusée par le serveur.

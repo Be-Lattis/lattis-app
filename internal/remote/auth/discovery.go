@@ -43,9 +43,9 @@ const (
 // (hypothèse, voir docs/collaboration/connexion.md).
 const ClientID = "lattis-desktop"
 
-// Scope demandé : celui que pg_hba annonce (« openid lattis ») et
-// offline_access pour recevoir un jeton de rafraîchissement.
-const Scope = "openid lattis offline_access"
+// Scope demandé quand la découverte n'en donne pas : celui que pg_hba
+// annonce (lattisd émet toujours un jeton de rafraîchissement).
+const Scope = "openid lattis"
 
 // ProviderPassword est le genre du fournisseur « mot de passe Lattis ».
 const ProviderPassword = "password"
@@ -64,9 +64,21 @@ type Discovery struct {
 	// Edition : admin ou web.
 	Edition string `json:"edition,omitempty"`
 	// AccessMode : invitation ou open.
-	AccessMode string     `json:"access_mode,omitempty"`
-	Providers  []Provider `json:"providers"`
-	Postgres   Postgres   `json:"postgres"`
+	AccessMode string `json:"access_mode,omitempty"`
+	// Issuer : émetteur des jetons, comparé au paramètre iss du retour
+	// (RFC 9207).
+	Issuer string `json:"issuer,omitempty"`
+	// ClientID, Scope : client public et scope à demander (ClientID et
+	// Scope par défaut).
+	ClientID string `json:"client_id,omitempty"`
+	Scope    string `json:"scope,omitempty"`
+	// Points OAuth (chemins Path* du serveur par défaut).
+	AuthorizationEndpoint string     `json:"authorization_endpoint,omitempty"`
+	TokenEndpoint         string     `json:"token_endpoint,omitempty"`
+	RevocationEndpoint    string     `json:"revocation_endpoint,omitempty"`
+	DeviceEndpoint        string     `json:"device_authorization_endpoint,omitempty"`
+	Providers             []Provider `json:"providers"`
+	Postgres              Postgres   `json:"postgres"`
 }
 
 // Provider est un fournisseur d'identité actif, dans l'ordre du serveur.
@@ -76,19 +88,57 @@ type Provider struct {
 	// Kind : password, google, google_workspace, microsoft, keycloak, oidc.
 	Kind  string `json:"kind"`
 	Label string `json:"label"`
-	// Icon : comme Discovery.Logo (vide : icône du genre).
+	// Icon : image (comme Discovery.Logo) ; lattisd envoie le genre
+	// (« password »), qui n'est pas une image : vide après Discover, et
+	// l'interface prend l'icône du genre.
 	Icon string `json:"icon,omitempty"`
 }
 
 // Postgres décrit les points de connexion PostgreSQL annoncés.
 type Postgres struct {
-	// RW : parent (hôte, ou hôte:port).
-	RW string `json:"rw"`
+	// RW : parent.
+	RW Endpoint `json:"rw"`
 	// RO : réplicas en lecture (vide : tout passe par RW).
-	RO       []string `json:"ro,omitempty"`
-	Port     int      `json:"port,omitempty"`
-	SSLMode  string   `json:"sslmode,omitempty"`
-	Database string   `json:"database,omitempty"`
+	RO []Endpoint `json:"ro,omitempty"`
+	// Port : port par défaut des points qui n'en donnent pas.
+	Port     int    `json:"port,omitempty"`
+	SSLMode  string `json:"sslmode,omitempty"`
+	Database string `json:"database,omitempty"`
+}
+
+// Endpoint est un point de connexion PostgreSQL, « hôte » ou « hôte:port ».
+// Dans la découverte : un objet {"host", "port"} (contrat de lattisd) ou un
+// texte.
+type Endpoint string
+
+func (e *Endpoint) UnmarshalJSON(b []byte) error {
+	var s string
+	if json.Unmarshal(b, &s) == nil {
+		*e = Endpoint(s)
+		return nil
+	}
+	var o struct {
+		Host string `json:"host"`
+		Port int    `json:"port"`
+	}
+	if err := json.Unmarshal(b, &o); err != nil {
+		return fmt.Errorf("point de connexion PostgreSQL illisible : %s", b)
+	}
+	if o.Port > 0 {
+		*e = Endpoint(net.JoinHostPort(o.Host, strconv.Itoa(o.Port)))
+	} else {
+		*e = Endpoint(o.Host)
+	}
+	return nil
+}
+
+// Strings donne des points sous forme de textes.
+func Strings(eps []Endpoint) []string {
+	out := make([]string, len(eps))
+	for i, e := range eps {
+		out[i] = string(e)
+	}
+	return out
 }
 
 // DefaultDatabase : base des classeurs quand la découverte ne la nomme pas.
@@ -190,6 +240,23 @@ func Discover(ctx context.Context, hc *http.Client, server, clientVersion string
 	if d.Postgres.Database == "" {
 		d.Postgres.Database = DefaultDatabase
 	}
+	if d.ClientID == "" {
+		d.ClientID = ClientID
+	}
+	if d.Scope == "" {
+		d.Scope = Scope
+	}
+	for _, ep := range []struct {
+		v    *string
+		path string
+	}{{&d.AuthorizationEndpoint, PathAuthorize}, {&d.TokenEndpoint, PathToken}, {&d.RevocationEndpoint, PathRevoke}, {&d.DeviceEndpoint, PathDevice}} {
+		if *ep.v == "" {
+			*ep.v = server + ep.path
+		} else if !sameOrigin(server, *ep.v) {
+			// Le navigateur et les jetons ne vont qu'au serveur choisi.
+			return nil, fmt.Errorf("%s annonce un point OAuth sur un autre hôte (%s) : refusé", Host(server), *ep.v)
+		}
+	}
 	if d.MinClientVersion != "" && !VersionAtLeast(clientVersion, d.MinClientVersion) {
 		return &d, &ErrClientTooOld{Server: d.Name, Min: d.MinClientVersion, Have: clientVersion}
 	}
@@ -210,6 +277,9 @@ func fetchImage(ctx context.Context, hc *http.Client, server, ref string) string
 	ref = strings.TrimSpace(ref)
 	if ref == "" {
 		return ""
+	}
+	if !strings.HasPrefix(ref, "/") && !strings.Contains(ref, "://") && !strings.HasPrefix(ref, "data:") {
+		return "" // nom d'icône (le genre du fournisseur), pas une image
 	}
 	if strings.HasPrefix(ref, "data:") {
 		if len(ref) <= maxImage*4/3+64 && imageType(strings.TrimPrefix(strings.SplitN(ref, ";", 2)[0], "data:")) {
@@ -243,6 +313,13 @@ func fetchImage(ctx context.Context, hc *http.Client, server, ref string) string
 		return ""
 	}
 	return "data:" + ct + ";base64," + base64.StdEncoding.EncodeToString(b)
+}
+
+// sameOrigin : même schéma et même hôte (port compris) que le serveur.
+func sameOrigin(server, raw string) bool {
+	a, err1 := url.Parse(server)
+	b, err2 := url.Parse(raw)
+	return err1 == nil && err2 == nil && strings.EqualFold(a.Scheme, b.Scheme) && strings.EqualFold(a.Host, b.Host)
 }
 
 func imageType(ct string) bool {

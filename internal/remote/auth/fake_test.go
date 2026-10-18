@@ -32,6 +32,8 @@ type fakeLattisd struct {
 	issued     int
 	authorize  url.Values // dernière requête /oauth/authorize
 	withUser   bool       // réponse de /oauth/token avec l'objet user
+	iss        string     // iss renvoyé au retour ("" : l'émetteur)
+	endpoint   string     // token_endpoint annoncé ("" : celui du serveur)
 }
 
 type authCode struct {
@@ -71,19 +73,30 @@ func (f *fakeLattisd) url() string { return f.srv.URL }
 func (f *fakeLattisd) discovery(w http.ResponseWriter, r *http.Request) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	tokenEP := f.srv.URL + PathToken
+	if f.endpoint != "" {
+		tokenEP = f.endpoint
+	}
 	json.NewEncoder(w).Encode(map[string]any{
-		"name":               "Serveur Acme",
-		"logo":               "/logo.png",
-		"version":            "0.1.0",
-		"min_client_version": f.minClient,
-		"edition":            "admin",
-		"access_mode":        "invitation",
+		"name":                   "Serveur Acme",
+		"logo":                   "/logo.png",
+		"version":                "0.1.0",
+		"min_client_version":     f.minClient,
+		"edition":                "admin",
+		"access_mode":            "invitation",
+		"issuer":                 f.srv.URL,
+		"client_id":              ClientID,
+		"scope":                  "openid lattis",
+		"authorization_endpoint": f.srv.URL + PathAuthorize,
+		"token_endpoint":         tokenEP,
+		"revocation_endpoint":    f.srv.URL + PathRevoke,
 		"providers": []map[string]any{
 			{"id": "google", "kind": "google", "label": "Google", "icon": "/icons/google.svg"},
 			{"id": "acme", "kind": "keycloak", "label": "Keycloak (Acme)", "icon": "https://ailleurs.example/i.png"},
-			{"id": "password", "kind": "password", "label": "Mot de passe Lattis"},
+			{"id": "password", "kind": "password", "label": "Mot de passe Lattis", "icon": "password"},
 		},
-		"postgres": map[string]any{"rw": "pg.acme.test", "ro": []string{"pg-ro.acme.test"}, "port": 5432, "sslmode": "verify-full"},
+		"postgres": map[string]any{"database": "lattis", "sslmode": "verify-full",
+			"rw": map[string]any{"host": "pg.acme.test", "port": 5432}, "ro": []map[string]any{{"host": "pg-ro.acme.test", "port": 6432}}},
 	})
 }
 
@@ -100,7 +113,7 @@ func (f *fakeLattisd) authorizeH(w http.ResponseWriter, r *http.Request) {
 	f.authorize = q
 	redirect := q.Get("redirect_uri")
 	ru, err := url.Parse(redirect)
-	if q.Get("client_id") != ClientID || q.Get("response_type") != "code" || q.Get("code_challenge_method") != "S256" ||
+	if q.Get("client_id") != ClientID || q.Get("scope") != "openid lattis" || q.Get("response_type") != "code" || q.Get("code_challenge_method") != "S256" ||
 		err != nil || ru.Scheme != "http" || ru.Hostname() != "127.0.0.1" || ru.Path != CallbackPath || q.Get("code_challenge") == "" {
 		http.Error(w, "requête d'autorisation invalide", http.StatusBadRequest)
 		return
@@ -113,6 +126,10 @@ func (f *fakeLattisd) authorizeH(w http.ResponseWriter, r *http.Request) {
 		code := fmt.Sprintf("code-%d", len(f.codes)+1)
 		f.codes[code] = authCode{challenge: q.Get("code_challenge"), redirect: redirect, provider: q.Get("provider")}
 		back.Set("code", code)
+	}
+	back.Set("iss", f.srv.URL)
+	if f.iss != "" {
+		back.Set("iss", f.iss)
 	}
 	http.Redirect(w, r, redirect+"?"+back.Encode(), http.StatusFound)
 }
@@ -132,7 +149,8 @@ func (f *fakeLattisd) issue(w http.ResponseWriter, email string) {
 	f.refresh[rt] = email
 	name := strings.Split(email, "@")[0]
 	resp := map[string]any{
-		"access_token":  jwt(map[string]any{"sub": "u-" + name, "email": email, "name": strings.ToUpper(name[:1]) + name[1:], "pg_role": email, "n": f.issued}),
+		"access_token":  jwt(map[string]any{"sub": "u-" + name, "email": email, "name": strings.ToUpper(name[:1]) + name[1:], "n": f.issued}),
+		"pg_role":       email,
 		"token_type":    "Bearer",
 		"expires_in":    f.expiresIn,
 		"refresh_token": rt,

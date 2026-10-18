@@ -35,8 +35,9 @@ type loopback struct {
 	result   chan callbackResult
 }
 
-// startLoopback ouvre l'écoute locale ; state est comparé au retour.
-func startLoopback(state, server string) (*loopback, error) {
+// startLoopback ouvre l'écoute locale ; state est comparé au retour, et
+// iss à issuer quand le serveur le renvoie (RFC 9207).
+func startLoopback(state, issuer, server string) (*loopback, error) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return nil, err
@@ -56,6 +57,9 @@ func startLoopback(state, server string) (*loopback, error) {
 		}
 		var res callbackResult
 		switch {
+		case q.Get("iss") != "" && issuer != "" && strings.TrimRight(q.Get("iss"), "/") != strings.TrimRight(issuer, "/"):
+			res.err = fmt.Errorf("réponse d'un autre émetteur (%s au lieu de %s) : connexion refusée", q.Get("iss"), issuer)
+			page(w, http.StatusBadRequest, "Connexion refusée", res.err.Error())
 		case q.Get("error") != "":
 			res.err = newLoginError(q.Get("error"), q.Get("error_description"), q.Get("reason"), server)
 			page(w, http.StatusOK, "Connexion refusée", res.err.Error())

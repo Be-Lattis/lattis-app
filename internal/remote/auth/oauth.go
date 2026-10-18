@@ -79,6 +79,8 @@ type Tokens struct {
 	RefreshToken string `json:"refresh_token"`
 	IDToken      string `json:"id_token"`
 	Scope        string `json:"scope"`
+	// PGRole : rôle PostgreSQL de l'utilisateur (contrat de lattisd).
+	PGRole string `json:"pg_role"`
 	// User : extension facultative de lattisd (sinon lue dans les
 	// revendications du jeton d'accès, puis du jeton d'identité).
 	User *tokenUser `json:"user,omitempty"`
@@ -95,9 +97,12 @@ type tokenUser struct {
 
 // user tire l'utilisateur de la réponse.
 func (t *Tokens) user() User {
-	var u User
+	u := User{PGRole: t.PGRole}
 	if t.User != nil {
 		u = User{ID: t.User.ID, Email: t.User.Email, DisplayName: t.User.DisplayName, PGRole: t.User.PGRole}
+		if u.PGRole == "" {
+			u.PGRole = t.PGRole
+		}
 	}
 	for _, jwt := range []string{t.AccessToken, t.IDToken} {
 		c := jwtClaims(jwt)
@@ -226,12 +231,20 @@ type client struct {
 	server string // adresse normalisée
 	name   string // nom affiché (messages)
 	now    func() time.Time
+	// Lus dans la découverte (valeurs par défaut sinon).
+	clientID, scope, issuer      string
+	authURL, tokenURL, revokeURL string
+	deviceURL                    string
 }
 
 // post envoie un formulaire et décode la réponse JSON dans out ; une
 // réponse d'erreur OAuth devient *LoginError.
-func (c *client) post(ctx context.Context, path string, form url.Values, out any) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.server+path, strings.NewReader(form.Encode()))
+func (c *client) post(ctx context.Context, endpoint string, form url.Values, out any) error {
+	path := endpoint
+	if u, err := url.Parse(endpoint); err == nil {
+		path = u.Path
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(form.Encode()))
 	if err != nil {
 		return err
 	}
@@ -271,9 +284,9 @@ func (c *client) label() string {
 
 // token appelle /oauth/token.
 func (c *client) token(ctx context.Context, form url.Values) (*Tokens, error) {
-	form.Set("client_id", ClientID)
+	form.Set("client_id", c.clientID)
 	var t Tokens
-	if err := c.post(ctx, PathToken, form, &t); err != nil {
+	if err := c.post(ctx, c.tokenURL, form, &t); err != nil {
 		return nil, err
 	}
 	if t.AccessToken == "" {
@@ -294,16 +307,20 @@ func (c *client) token(ctx context.Context, form url.Values) (*Tokens, error) {
 func (c *client) authorizeURL(provider, redirect, state string, p PKCE) string {
 	q := url.Values{}
 	q.Set("response_type", "code")
-	q.Set("client_id", ClientID)
+	q.Set("client_id", c.clientID)
 	q.Set("redirect_uri", redirect)
-	q.Set("scope", Scope)
+	q.Set("scope", c.scope)
 	q.Set("state", state)
 	q.Set("code_challenge", p.Challenge)
 	q.Set("code_challenge_method", "S256")
 	if provider != "" {
 		q.Set("provider", provider)
 	}
-	return c.server + PathAuthorize + "?" + q.Encode()
+	sep := "?"
+	if strings.Contains(c.authURL, "?") {
+		sep = "&"
+	}
+	return c.authURL + sep + q.Encode()
 }
 
 // exchange échange un code d'autorisation.
@@ -323,7 +340,7 @@ func (c *client) password(ctx context.Context, provider, email, password string)
 		"grant_type": {"password"},
 		"username":   {email},
 		"password":   {password},
-		"scope":      {Scope},
+		"scope":      {c.scope},
 	}
 	if provider != "" {
 		f.Set("provider", provider)
@@ -348,7 +365,7 @@ func (c *client) refresh(ctx context.Context, refreshToken string) (*Tokens, err
 // revoke révoque un jeton (RFC 7009) ; une erreur est sans conséquence
 // pour la déconnexion locale.
 func (c *client) revoke(ctx context.Context, token, hint string) error {
-	return c.post(ctx, PathRevoke, url.Values{"token": {token}, "token_type_hint": {hint}, "client_id": {ClientID}}, nil)
+	return c.post(ctx, c.revokeURL, url.Values{"token": {token}, "token_type_hint": {hint}, "client_id": {c.clientID}}, nil)
 }
 
 // DeviceCode est une demande de connexion depuis un autre appareil
@@ -374,12 +391,12 @@ type deviceResponse struct {
 
 // device demande un code (POST /oauth/device).
 func (c *client) device(ctx context.Context, provider string) (*DeviceCode, error) {
-	f := url.Values{"client_id": {ClientID}, "scope": {Scope}}
+	f := url.Values{"client_id": {c.clientID}, "scope": {c.scope}}
 	if provider != "" {
 		f.Set("provider", provider)
 	}
 	var r deviceResponse
-	if err := c.post(ctx, PathDevice, f, &r); err != nil {
+	if err := c.post(ctx, c.deviceURL, f, &r); err != nil {
 		return nil, err
 	}
 	if r.DeviceCode == "" || r.UserCode == "" || r.VerificationURI == "" {

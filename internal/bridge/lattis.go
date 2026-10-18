@@ -73,14 +73,26 @@ func lattisOpen(ctx context.Context, server, usage string) (*sql.DB, error) {
 	if _, err := m.Token(ctx, server); err != nil {
 		return nil, err
 	}
-	return lattisTarget(m, server, user, disc).OpenDB(usage)
+	t := lattisTarget(m, server, user, disc)
+	db, err := t.OpenDB(usage)
+	if err != nil {
+		return nil, err
+	}
+	// Jeton refusé par PostgreSQL : rafraîchi, puis un seul nouvel essai
+	// (contrat de lattisd, §3).
+	if err := db.PingContext(ctx); pgpool.AuthFailed(err) {
+		db.Close()
+		m.Invalidate(server)
+		return t.OpenDB(usage)
+	}
+	return db, nil
 }
 
 // lattisTarget décrit la base du serveur pour pgpool (OAUTHBEARER).
 func lattisTarget(m *auth.Manager, server string, user auth.User, disc *auth.Discovery) pgpool.Target {
 	pg := disc.Postgres
 	return pgpool.Target{
-		RW: pg.RW, RO: pg.RO, Port: pg.Port, Database: pg.Database, SSLMode: pg.SSLMode,
+		RW: string(pg.RW), RO: auth.Strings(pg.RO), Port: pg.Port, Database: pg.Database, SSLMode: pg.SSLMode,
 		User:    user.PGRole,
 		Token:   func(ctx context.Context) (string, error) { return m.Token(ctx, server) },
 		Version: Version,
