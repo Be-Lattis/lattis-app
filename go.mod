@@ -5,6 +5,7 @@ go 1.26.0
 require (
 	github.com/anthropics/anthropic-sdk-go v1.82.0
 	github.com/go-sql-driver/mysql v1.10.1
+	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/microsoft/go-mssqldb v1.11.2
 	github.com/ncruces/go-sqlite3 v0.35.6
@@ -29,7 +30,6 @@ require (
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/golang-sql/civil v0.0.0-20220223132316-b832511892a9 // indirect
 	github.com/golang-sql/sqlexp v0.1.0 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/invopop/jsonschema v0.14.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect

@@ -18,6 +18,7 @@ import (
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/meta"
+	"github.com/lalamefine/lattis/internal/remote/oplog"
 	"github.com/lalamefine/lattis/internal/store"
 )
 
@@ -52,6 +53,9 @@ func wrap(ctx context.Context, a *archive.Doc, keep bool) (*Document, error) {
 		return fail(err)
 	}
 	bus := command.New(a.DB)
+	// Tableaux publiés sur un Serveur Lattis : leurs écritures vont dans la
+	// file d'envoi (rien à faire tant qu'aucun ne l'est).
+	bus.Recorder = oplog.New(a.DB)
 	var id string
 	err = a.DB.Read().QueryRowContext(ctx, `SELECT value FROM _lattis_info WHERE key = 'id'`).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) { // perdu (classeur récupéré) : un nouveau

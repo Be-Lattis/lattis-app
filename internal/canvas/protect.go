@@ -319,6 +319,16 @@ func (t *tx) protection() (Protection, error) {
 
 // --- Annulation : empreinte de ce qui est protégé ----------------------------
 
+// syncState : tables de la synchronisation avec un Serveur Lattis, hors de
+// l'empreinte des feuilles protégées.
+var syncState = map[string]bool{
+	"_lattis_remote_tables": true,
+	"_lattis_row_ids":       true,
+	"_lattis_outbox":        true,
+	"_lattis_conflicts":     true,
+	"_lattis_capabilities":  true,
+}
+
 // historyGuard encadre une annulation ou un rétablissement (command.Bus.Guard) :
 // l'empreinte de ce qui est protégé ne doit pas changer.
 func (m *Model) historyGuard(ctx context.Context, sqlTx *sql.Tx) (func() error, error) {
@@ -414,7 +424,9 @@ func (t *tx) prints() (map[int64]string, map[int64]string, error) {
 	}
 	rs.Close()
 	for _, n := range tnames {
-		if n == "_lattis_protection" || n == "_lattis_journal" || n == "_lattis_sheets" || strings.HasPrefix(n, sqlTrash) {
+		// L'état de la synchronisation (identifiants partagés des lignes,
+		// droits, conflits) n'est pas du contenu : il change hors du journal.
+		if n == "_lattis_protection" || n == "_lattis_journal" || n == "_lattis_sheets" || strings.HasPrefix(n, sqlTrash) || syncState[n] {
 			continue
 		}
 		crs, err := t.query(`SELECT name FROM pragma_table_info(?)`, n)

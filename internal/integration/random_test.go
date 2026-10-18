@@ -21,11 +21,26 @@ func TestRandomEditsKeepInvariants(t *testing.T) {
 	}
 }
 
-func randomSession(t *testing.T, seed int64, n int) {
+func randomSession(t *testing.T, seed int64, n int) { randomSessionOn(t, seed, n, false) }
+
+// randomSessionOn : avec shared, le tableau Ventes est publié et la file
+// d'envoi rejouée doit donner son contenu après chaque action (voir
+// oplog_test.go).
+func randomSessionOn(t *testing.T, seed int64, n int, published bool) {
 	h := newHost(t)
 	r := rand.New(rand.NewSource(seed))
 	start := h.snapshot()
 	ventes(h)
+	var s *shared
+	if published {
+		s = publish(h, "Ventes")
+	}
+	synced := func(what string) {
+		t.Helper()
+		if s != nil {
+			s.check(what)
+		}
+	}
 	h.set(10, 1, "=SOMME(Ventes[Total])")
 	h.set(12, 1, "=NBVAL(Ventes[Produit])")
 	words := []string{"Café", "Thé", "Miel", "Sel", "Riz"}
@@ -96,6 +111,7 @@ func randomSession(t *testing.T, seed int64, n int) {
 		what := ops[r.Intn(len(ops))]()
 		log = append(log, what)
 		checkGridMatchesSQL(t, h, strings.Join(log, " ; "))
+		synced(strings.Join(log, " ; "))
 	}
 
 	want := h.snapshot()
@@ -103,6 +119,7 @@ func randomSession(t *testing.T, seed int64, n int) {
 	sameSnapshot(t, "après réouverture", want, h.snapshot())
 	for h.state().Undo != "" {
 		h.undo()
+		synced("tout annuler")
 	}
 	sameSnapshot(t, "tout annulé", start, h.snapshot())
 }

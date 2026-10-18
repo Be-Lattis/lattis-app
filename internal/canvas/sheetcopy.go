@@ -284,7 +284,7 @@ func (t *tx) copyObjects(table string, from, to int64, edit func(map[string]any)
 // invalides, styles) sur la feuille sheet et renvoie le nom de la copie.
 func (t *tx) copyTable(tb Table, sheet int64) (string, error) {
 	var id int64
-	if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_tables`).Scan(&id); err != nil {
+	if err := t.row(nextTableID).Scan(&id); err != nil {
 		return "", err
 	}
 	name, err := t.copyTableName(tb.Name)
