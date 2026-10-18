@@ -69,12 +69,15 @@ export interface ColumnCheck {
 
 /**
  * Drift est un tableau dont les règles ou les droits ont changé hors de
- * Lattis ; ForeignPolicies : règles posées à la main.
+ * Lattis ; ForeignPolicies : règles posées à la main ; ForeignGrants : rôles
+ * (PUBLIC compris) qui ont reçu des droits à la main (serveur, migration 0011).
+ * Recompiler ne retire ni les unes ni les autres.
  */
 export interface Drift {
     "table_id": string;
     "name": string;
     "foreign_policies": string[] | null;
+    "foreign_grants": string[] | null;
 }
 
 /**
