@@ -87,9 +87,21 @@ Options :
   --demo plan.yaml  classeur de démonstration décrit en YAML (voir plus bas)
   --seed n          graine du générateur de la démonstration (1 par défaut ; l'emporte
                     sur le seed d'un fichier YAML)
-  --sql, --no-sql   écrit (ou non) dans la console chaque requête SQL jouée contre le
-                    SQLite local, avec sa durée ; actif par défaut avec go run / wails dev
   -h, --help        affiche cette aide, sans ouvrir la fenêtre
+
+Débogage (journal dans la console, lignes « 21:42:07.315 [DOC] … ») :
+  -v                ce que fait l'application : classeurs (ouverture, enregistrement,
+                    sessions à récupérer), modifications et annulations, scripts Lua,
+                    évènements du classeur, chacun avec sa durée
+  -vv               en plus, chaque requête SQL jouée contre le SQLite local
+  -vvv              en plus, paramètres des requêtes, données des évènements, recalculs
+                    des noms, journal interne de Wails
+  --verbose=n       niveau 0 à 3 (comme -v, -vv, -vvv)
+  --log=cat,…       seulement ces catégories : doc, edit, script, event, calc, sql
+                    (sans niveau donné : -v, ou -vv avec sql)
+  --log-file=f      écrit aussi le journal à la fin du fichier f
+  --sql, --no-sql   journal SQL seul, quel que soit le niveau ; actif par défaut avec
+                    go run / wails dev
 
 Presets de --demo :
 `)
@@ -126,6 +138,8 @@ Fichier YAML de --demo (format complet : docs/demo.md ; exemple : docs/demo/exem
 Variables d'environnement :
   LATTIS_BENCH=fichier    mesure le défilement de la grille et écrit le rapport dans fichier
   LATTIS_SQL=1 ou 0       force le journal SQL (comme --sql / --no-sql)
+  LATTIS_VERBOSE=n        niveau du journal de débogage (comme --verbose=n)
+  LATTIS_WORK_DIR=dossier sessions de travail (récupération) dans ce dossier
 `)
 	return b.String()
 }

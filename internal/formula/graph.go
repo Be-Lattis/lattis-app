@@ -3,6 +3,9 @@ package formula
 import (
 	"slices"
 	"strings"
+	"time"
+
+	"github.com/lalamefine/lattis/internal/trace"
 )
 
 // Deps donne les cellules nommées et les tableaux dont dépend une formule.
@@ -131,6 +134,9 @@ func (ns *Names) order() (order, cyclic []string) {
 // Recalc recalcule les noms dans l'ordre des dépendances. Une référence
 // circulaire donne #CIRC! à tous les noms qui en dépendent.
 func (ns *Names) Recalc(env *Env) {
+	if trace.On(3, trace.Calc) {
+		defer trace.Since(3, trace.Calc, time.Now(), nil, "%d nom(s) recalculé(s)", len(ns.Formulas))
+	}
 	ns.Values = map[string]Value{}
 	env.Names = ns.Values
 	order, cyclic := ns.order()

@@ -22,8 +22,10 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/lalamefine/lattis/internal/store"
+	"github.com/lalamefine/lattis/internal/trace"
 )
 
 // Schema crée la table du journal.
@@ -140,7 +142,14 @@ func New(db *store.Store) *Bus { return &Bus{db: db, Depth: DefaultDepth} }
 // Do exécute une action. Si fn échoue, rien n'est appliqué. Une action qui
 // ne change rien n'entre pas dans l'historique. Renvoie le numéro de la
 // commande (0 si rien n'a changé).
-func (b *Bus) Do(ctx context.Context, name string, fn func(*Tx) error) (int64, error) {
+func (b *Bus) Do(ctx context.Context, name string, fn func(*Tx) error) (seq int64, err error) {
+	if trace.On(1, trace.Edit) && groupOf(ctx) == nil {
+		defer trace.Since(1, trace.Edit, time.Now(), &err, "%s", name)
+	}
+	return b.do(ctx, name, fn)
+}
+
+func (b *Bus) do(ctx context.Context, name string, fn func(*Tx) error) (int64, error) {
 	if g := groupOf(ctx); g != nil {
 		return g.append(ctx, b, fn)
 	}
@@ -402,7 +411,12 @@ func (b *Bus) trim(ctx context.Context, tx *sql.Tx) error {
 }
 
 // Undo annule la dernière action et renvoie son nom.
-func (b *Bus) Undo(ctx context.Context) (string, error) {
+func (b *Bus) Undo(ctx context.Context) (name string, err error) {
+	defer func(start time.Time) { trace.Since(1, trace.Edit, start, &err, "annuler « %s »", name) }(time.Now())
+	return b.undo(ctx)
+}
+
+func (b *Bus) undo(ctx context.Context) (string, error) {
 	var name string
 	err := b.db.Write(ctx, func(tx *sql.Tx) error {
 		var seq int64
@@ -447,7 +461,12 @@ func (b *Bus) Undo(ctx context.Context) (string, error) {
 }
 
 // Redo rétablit la dernière action annulée et renvoie son nom.
-func (b *Bus) Redo(ctx context.Context) (string, error) {
+func (b *Bus) Redo(ctx context.Context) (name string, err error) {
+	defer func(start time.Time) { trace.Since(1, trace.Edit, start, &err, "rétablir « %s »", name) }(time.Now())
+	return b.redo(ctx)
+}
+
+func (b *Bus) redo(ctx context.Context) (string, error) {
 	var name string
 	err := b.db.Write(ctx, func(tx *sql.Tx) error {
 		var seq int64

@@ -12,17 +12,19 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/lalamefine/lattis/internal/trace"
 	"github.com/ncruces/go-sqlite3"
 	sqlite "github.com/ncruces/go-sqlite3/driver"
 )
 
 // Journal SQL : chaque requête jouée contre le SQLite local (classeur, base
-// de travail de Power Query, fichier SQLite source) est écrite dans la
-// console (sortie d'erreur), avec sa durée et la connexion. Actif par
-// défaut hors version livrée (go run, wails dev), sinon avec --sql ;
-// LATTIS_SQL=1 ou 0 force. Une requête répétée à l'identique (insertion
-// ligne à ligne d'un import) n'est écrite qu'une fois, suivie du nombre de
-// répétitions.
+// de travail de Power Query, fichier SQLite source) est écrite dans le
+// journal de débogage (trace : sortie d'erreur et --log-file), avec sa durée
+// et la connexion. Actif par défaut hors version livrée (go run, wails dev),
+// sinon avec -vv ou --sql ; LATTIS_SQL=1 ou 0 force ; --log sans sql le
+// coupe. À -vvv, les paramètres des requêtes préparées suivent la requête.
+// Une requête répétée à l'identique (insertion ligne à ligne d'un import)
+// n'est écrite qu'une fois, suivie du nombre de répétitions.
 //
 // Le journal enveloppe le pilote (database/sql) : le traçage de SQLite ne
 // voit pas les requêtes sans paramètre que le pilote exécute directement.
@@ -45,6 +47,20 @@ func SetSQLLog(on bool) { sqlLog.Store(on) }
 // SQLLog dit si le journal SQL est actif.
 func SQLLog() bool { return sqlLog.Load() }
 
+// DefaultSQLLog dit si le journal SQL est actif sans option : hors version
+// livrée, ou imposé par LATTIS_SQL.
+func DefaultSQLLog() bool {
+	switch os.Getenv("LATTIS_SQL") {
+	case "1", "true", "oui":
+		return true
+	case "0", "false", "non":
+		return false
+	}
+	return defaultSQLLog
+}
+
+func logging() bool { return sqlLog.Load() && trace.Allowed(trace.SQL) }
+
 // maxLogSQL borne la longueur d'une requête écrite.
 const maxLogSQL = 4000
 
@@ -56,32 +72,59 @@ var last struct {
 	total  time.Duration
 }
 
+// stamp : l'heure, comme les autres lignes du journal de débogage.
+func stamp() string { return time.Now().Format("15:04:05.000") }
+
 func flushRepeat() {
 	if last.repeat > 0 {
-		fmt.Fprintf(os.Stderr, "[SQL %s]   … répétée %d fois de plus (%s au total)\n", last.kind, last.repeat, fmtDur(last.total))
+		fmt.Fprintf(trace.Writer(), "%s [SQL %s]   … répétée %d fois de plus (%s au total)\n", stamp(), last.kind, last.repeat, fmtDur(last.total))
 	}
 	last.repeat, last.total = 0, 0
 }
 
-func fmtDur(d time.Duration) string {
-	switch {
-	case d >= time.Second:
-		return fmt.Sprintf("%.2f s", d.Seconds())
-	case d >= time.Millisecond:
-		return fmt.Sprintf("%.1f ms", float64(d.Microseconds())/1000)
+func fmtDur(d time.Duration) string { return trace.Dur(d) }
+
+// fmtArgs écrit les paramètres d'une requête (-vvv), bornés.
+func fmtArgs(args []driver.NamedValue) string {
+	if len(args) == 0 || trace.Level() < 3 {
+		return ""
 	}
-	return fmt.Sprintf("%d µs", d.Microseconds())
+	var b strings.Builder
+	b.WriteString("\n  paramètres :")
+	for i, a := range args {
+		if i == 20 {
+			fmt.Fprintf(&b, " … (%d en tout)", len(args))
+			break
+		}
+		v := fmt.Sprintf("%v", a.Value)
+		if s, ok := a.Value.(string); ok {
+			if len(s) > 80 {
+				s = s[:80] + "…"
+			}
+			v = fmt.Sprintf("%q", s)
+		}
+		if a.Name != "" {
+			fmt.Fprintf(&b, " :%s=%s", a.Name, v)
+		} else {
+			fmt.Fprintf(&b, " ?%d=%s", a.Ordinal, v)
+		}
+	}
+	return b.String()
 }
 
 // logSQL écrit une requête jouée (kind : connexion), avec sa durée.
-func logSQL(kind, q string, d time.Duration, err error) {
-	if !sqlLog.Load() {
+func logSQL(kind, q string, d time.Duration, err error) { logSQLArgs(kind, q, nil, d, err) }
+
+// logSQLArgs : logSQL, avec les paramètres de la requête (écrits à -vvv).
+func logSQLArgs(kind, q string, args []driver.NamedValue, d time.Duration, err error) {
+	if !logging() {
 		return
 	}
+	params := fmtArgs(args)
 	q = strings.TrimSpace(q)
 	logMu.Lock()
 	defer logMu.Unlock()
-	if q == last.sql && kind == last.kind && err == nil {
+	if q == last.sql && kind == last.kind && err == nil && params == "" {
 		last.repeat++
 		last.total += d
 		return
@@ -94,16 +137,16 @@ func logSQL(kind, q string, d time.Duration, err error) {
 		shown = shown[:maxLogSQL] + fmt.Sprintf(" … (%d caractères)", len(shown))
 	}
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[SQL %s %s] %s\n  ERREUR : %v\n", kind, fmtDur(d), shown, err)
+		fmt.Fprintf(trace.Writer(), "%s [SQL %s %s] %s%s\n  ERREUR : %v\n", stamp(), kind, fmtDur(d), shown, params, err)
 		return
 	}
-	fmt.Fprintf(os.Stderr, "[SQL %s %s] %s\n", kind, fmtDur(d), shown)
+	fmt.Fprintf(trace.Writer(), "%s [SQL %s %s] %s%s\n", stamp(), kind, fmtDur(d), shown, params)
 }
 
 // logSQLRows écrit une lecture terminée : durée jusqu'à la dernière ligne et
 // nombre de lignes lues.
-func logSQLRows(kind, q string, d time.Duration, rows int) {
-	logSQL(kind+fmt.Sprintf(" %d ligne(s)", rows), q, d, nil)
+func logSQLRows(kind, q string, args []driver.NamedValue, d time.Duration, rows int) {
+	logSQLArgs(kind+fmt.Sprintf(" %d ligne(s)", rows), q, args, d, nil)
 }
 
 // OpenDB ouvre une base SQLite (dsn du pilote) dont les requêtes passent par
@@ -200,7 +243,7 @@ type logStmt struct {
 func (s *logStmt) ExecContext(ctx context.Context, args []driver.NamedValue) (driver.Result, error) {
 	start := clock()
 	r, err := s.Stmt.(driver.StmtExecContext).ExecContext(ctx, args)
-	logSQL(s.kind, s.q, since(start), err)
+	logSQLArgs(s.kind, s.q, args, since(start), err)
 	if s.onWrite != nil {
 		s.onWrite(s.q)
 	}
@@ -210,12 +253,12 @@ func (s *logStmt) ExecContext(ctx context.Context, args []driver.NamedValue) (dr
 func (s *logStmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
 	start := clock()
 	r, err := s.Stmt.(driver.StmtQueryContext).QueryContext(ctx, args)
-	if err != nil || !sqlLog.Load() {
-		logSQL(s.kind, s.q, since(start), err)
+	if err != nil || !logging() {
+		logSQLArgs(s.kind, s.q, args, since(start), err)
 		return r, err
 	}
 	// Lecture : journalisée à sa fin (Close), durée et nombre de lignes compris.
-	return &logRows{Rows: r, start: start, kind: s.kind, q: s.q}, nil
+	return &logRows{Rows: r, start: start, kind: s.kind, q: s.q, args: args}, nil
 }
 
 // logRows mesure une lecture jusqu'à sa dernière ligne.
@@ -224,6 +267,7 @@ type logRows struct {
 	start int64
 	kind  string
 	q     string
+	args  []driver.NamedValue
 	n     int
 	done  bool
 }
@@ -240,7 +284,7 @@ func (r *logRows) Close() error {
 	err := r.Rows.Close()
 	if !r.done {
 		r.done = true
-		logSQLRows(r.kind, r.q, since(r.start), r.n)
+		logSQLRows(r.kind, r.q, r.args, since(r.start), r.n)
 	}
 	return err
 }

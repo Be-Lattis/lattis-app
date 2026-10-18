@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/script"
+	"github.com/lalamefine/lattis/internal/trace"
 	"github.com/lalamefine/lattis/internal/trust"
 )
 
@@ -109,7 +111,23 @@ func runOne(ctx context.Context, host Host, name, src, entry string, event any) 
 
 // runLimited est runOne avec des bornes choisies ; il renvoie aussi la
 // valeur rendue par la fonction entry.
-func runLimited(ctx context.Context, host Host, name, src, entry string, event any, lim script.Limits) (ScriptResult, any, error) {
+func runLimited(ctx context.Context, host Host, name, src, entry string, event any, lim script.Limits) (res ScriptResult, ret any, err error) {
+	if trace.On(1, trace.Script) {
+		defer func(start time.Time) {
+			msg := scriptLabel(name)
+			if entry != "" {
+				msg += ", fonction " + entry
+			}
+			if res.Error != "" {
+				msg += " : " + res.Error
+			}
+			trace.Since(1, trace.Script, start, &err, "%s", msg)
+		}(time.Now())
+	}
+	return runScript(ctx, host, name, src, entry, event, lim)
+}
+
+func runScript(ctx context.Context, host Host, name, src, entry string, event any, lim script.Limits) (ScriptResult, any, error) {
 	d, err := host.Doc()
 	if err != nil {
 		return ScriptResult{}, nil, err

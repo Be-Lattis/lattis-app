@@ -5,6 +5,7 @@
 package doc
 
 import (
+	"cmp"
 	"context"
 	"database/sql"
 	"errors"
@@ -14,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"github.com/lalamefine/lattis/internal/archive"
 	"github.com/lalamefine/lattis/internal/canvas"
@@ -22,6 +24,7 @@ import (
 	"github.com/lalamefine/lattis/internal/remote/oplog"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 	"github.com/lalamefine/lattis/internal/store"
+	"github.com/lalamefine/lattis/internal/trace"
 )
 
 // Document est un classeur ouvert.
@@ -118,7 +121,8 @@ func backupName(path string, format int) string {
 }
 
 // New crée un classeur vide, jamais enregistré.
-func New(ctx context.Context) (*Document, error) {
+func New(ctx context.Context) (_ *Document, err error) {
+	defer trace.Since(1, trace.Doc, time.Now(), &err, "nouveau classeur")
 	a, err := archive.New(canvas.Register)
 	if err != nil {
 		return nil, err
@@ -140,7 +144,8 @@ func New(ctx context.Context) (*Document, error) {
 // interrompue, l'erreur est un *archive.RecoverableError : proposer Recover
 // ou archive.Discard. Un fichier illisible donne un *archive.OpenError (s'il
 // est endommagé : proposer Salvage). Le fichier n'est jamais modifié.
-func Open(ctx context.Context, path string) (*Document, error) {
+func Open(ctx context.Context, path string) (_ *Document, err error) {
+	defer trace.Since(1, trace.Doc, time.Now(), &err, "ouverture de %s", path)
 	a, err := archive.Open(path, canvas.Register)
 	if err != nil {
 		return nil, err
@@ -169,7 +174,8 @@ func Open(ctx context.Context, path string) (*Document, error) {
 // Recover rouvre le répertoire de travail d'une session interrompue, avec
 // toutes ses modifications validées et son historique d'annulation. En cas
 // d'échec, la session reste proposée.
-func Recover(ctx context.Context, o archive.Orphan) (*Document, error) {
+func Recover(ctx context.Context, o archive.Orphan) (_ *Document, err error) {
+	defer trace.Since(1, trace.Doc, time.Now(), &err, "récupération de la session %s (%s)", o.Dir, o.Source)
 	a, err := archive.Recover(o, canvas.Register)
 	if err != nil {
 		return nil, err
@@ -235,7 +241,8 @@ func (d *Document) Dirty(ctx context.Context) (bool, error) {
 }
 
 // Save enregistre dans path (vide : le fichier courant).
-func (d *Document) Save(ctx context.Context, path string) error {
+func (d *Document) Save(ctx context.Context, path string) (err error) {
+	defer trace.Since(1, trace.Doc, time.Now(), &err, "enregistrement dans %s", cmp.Or(path, d.arc.Path))
 	if path == "" && d.arc.Path == "" {
 		return errors.New("choisir un fichier pour enregistrer")
 	}
@@ -355,4 +362,7 @@ func (d *Document) MarkSaved(ctx context.Context) error {
 func (d *Document) Pristine() bool { return d.arc.Pristine() }
 
 // Close ferme le classeur (les modifications non enregistrées sont perdues).
-func (d *Document) Close() error { return d.arc.Close() }
+func (d *Document) Close() error {
+	trace.Logf(1, trace.Doc, "fermeture de %s", cmp.Or(d.arc.Path, "Classeur sans titre"))
+	return d.arc.Close()
+}

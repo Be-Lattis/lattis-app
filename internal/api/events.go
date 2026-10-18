@@ -14,6 +14,7 @@ import (
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/script"
+	"github.com/lalamefine/lattis/internal/trace"
 )
 
 // Évènements du classeur, l'équivalent de Workbook_Open, Worksheet_Change,
@@ -186,8 +187,13 @@ func FireEvent(host Host, event string, data map[string]any) (EventResult, error
 		return res, err
 	}
 	if Busy() {
+		trace.Logf(1, trace.Event, "%s ignoré : un script tourne déjà", event)
 		res.Skipped = true
 		return res, nil
+	}
+	trace.Logf(1, trace.Event, "%s : %d écouteur(s)", event, len(ls))
+	if trace.On(3, trace.Event) {
+		trace.Logf(3, trace.Event, "%s : données %v", event, data)
 	}
 	list, err := d.Scripts(contextBG)
 	if err != nil {

@@ -41,6 +41,7 @@ import (
 	"time"
 
 	"github.com/lalamefine/lattis/internal/store"
+	"github.com/lalamefine/lattis/internal/trace"
 	"github.com/ncruces/go-sqlite3"
 )
 
@@ -62,7 +63,7 @@ const (
 	// checkoutName garde, dans un dossier de travail de développement, le
 	// dépôt de sources dont il dépend (voir devRoot).
 	checkoutName = "checkout.txt"
-	sqliteMagic   = "SQLite format 3\x00"
+	sqliteMagic  = "SQLite format 3\x00"
 )
 
 var (
@@ -892,6 +893,7 @@ func Orphans() ([]Orphan, error) {
 		return nil, err
 	}
 	var out []Orphan
+	var busy, purged int
 	for _, e := range entries {
 		dir := filepath.Join(root, e.Name())
 		if !e.IsDir() {
@@ -899,6 +901,7 @@ func Orphans() ([]Orphan, error) {
 		}
 		lock, err := lockDir(dir)
 		if err != nil {
+			busy++
 			continue // document ouvert par un processus vivant
 		}
 		db, err := os.Stat(filepath.Join(dir, dbName))
@@ -906,6 +909,7 @@ func Orphans() ([]Orphan, error) {
 		if err != nil || perr == nil {
 			lock.Close()
 			os.RemoveAll(dir)
+			purged++
 			continue
 		}
 		src, _ := os.ReadFile(filepath.Join(dir, sourceName))
@@ -917,6 +921,7 @@ func Orphans() ([]Orphan, error) {
 		lock.Close()
 		out = append(out, Orphan{Dir: dir, Source: string(src), Modified: mod, Workbook: id})
 	}
+	trace.Logf(1, trace.Doc, "sessions dans %s : %d proposée(s) en récupération, %d sans modification supprimée(s), %d ouverte(s) ailleurs", root, len(out), purged, busy)
 	return out, nil
 }
 
