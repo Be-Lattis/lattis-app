@@ -779,23 +779,26 @@ func (s *DocumentService) SetZoom(ctx context.Context, sheet int64, pct int) (Do
 	return s.act(ctx, func(d *doc.Document) error { return d.SetZoom(ctx, sheet, pct) })
 }
 
-// Find cherche un texte dans une feuille (cellules dans l'ordre de lecture).
-func (s *DocumentService) Find(ctx context.Context, sheet int64, text string) ([]canvas.Match, error) {
+// Find cherche un texte dans une feuille (cellules dans l'ordre de lecture),
+// limité à la zone in quand elle est donnée (la sélection) ; nil : toute la
+// feuille.
+func (s *DocumentService) Find(ctx context.Context, sheet int64, text string, in *canvas.Rect) ([]canvas.Match, error) {
 	d, err := s.current()
 	if err != nil {
 		return nil, err
 	}
-	return d.Find(ctx, sheet, text)
+	return d.FindIn(ctx, sheet, text, in)
 }
 
-// Replace remplace un texte dans toute la feuille et renvoie le nombre de
-// cellules modifiées.
-func (s *DocumentService) Replace(ctx context.Context, sheet int64, text, by string) (int, error) {
+// Replace remplace un texte dans la zone in (la sélection, ou la cellule
+// trouvée), ou dans toute la feuille si elle est nil, et renvoie le nombre
+// de cellules modifiées.
+func (s *DocumentService) Replace(ctx context.Context, sheet int64, text, by string, in *canvas.Rect) (int, error) {
 	d, err := s.current()
 	if err != nil {
 		return 0, err
 	}
-	n, err := d.Replace(ctx, sheet, text, by)
+	n, err := d.ReplaceIn(ctx, sheet, text, by, in)
 	if err == nil && n > 0 {
 		s.changed(ctx)
 	}

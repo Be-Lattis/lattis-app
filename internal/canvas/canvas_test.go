@@ -794,6 +794,27 @@ func TestFindReplace(t *testing.T) {
 	if ms, _ := d.Find(ctx, 1, "100%"); len(ms) != 0 {
 		t.Fatalf("%% non protégé : %v", ms)
 	}
+	// Dans une zone (la sélection) : seules ses cellules, en-têtes compris.
+	if ms, err := d.FindIn(ctx, 1, "paris", &Rect{R0: 1, C0: 1, R1: 6, C1: 3}); err != nil || fmt.Sprint(ms) != "[{1 1}]" {
+		t.Fatalf("FindIn colonne B = %v, %v", ms, err)
+	}
+	if ms, _ := d.FindIn(ctx, 1, "paris", &Rect{R0: 2, C0: 0, R1: 6, C1: 0}); fmt.Sprint(ms) != "[{3 0} {6 0}]" {
+		t.Fatalf("FindIn A3:A7 = %v", ms)
+	}
+	if ms, _ := d.FindIn(ctx, 1, "ville", &Rect{R0: 1, C0: 0, R1: 3, C1: 1}); len(ms) != 0 {
+		t.Fatalf("en-tête hors zone trouvé : %v", ms)
+	}
+	// Remplacer dans une zone : une étape d'annulation, le reste intact.
+	if n, err := d.ReplaceIn(ctx, 1, "paris", "Nice", &Rect{R0: 3, C0: 0, R1: 6, C1: 0}); err != nil || n != 2 {
+		t.Fatalf("ReplaceIn = %d, %v", n, err)
+	}
+	if got := view(t, d); !strings.Contains(got, "Paris|paris centre") || !strings.Contains(got, "'voir Nice") {
+		t.Fatalf("feuille après ReplaceIn :\n%s", got)
+	}
+	d.bus.Undo(ctx)
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation de ReplaceIn incomplète :\n%s", diff(before, got))
+	}
 	n, err := d.Replace(ctx, 1, "paris", "Marseille")
 	if err != nil || n != 4 {
 		t.Fatalf("Replace = %d, %v", n, err)

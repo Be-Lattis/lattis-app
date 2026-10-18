@@ -24,6 +24,9 @@
 	import { panes, reveal, revealWhole, toGrid, type Pane } from './panes';
 	import { hiddenLines, mergeAt, mergeList, parseList, skipHidden, validate, type MergeRange } from './sheetfmt';
 	import { expandRange, extendCorner, isSingleCell, mergeRect, rangeOf, stepCell } from './mergesel';
+	import { findKey, findZone, inZone, nextHit, type Zone } from './findzone';
+	import { edgeScroll, frameStep } from './autoscroll';
+	import { blocksReach, boxesReach } from './objextent';
 	import FormatDialog, { type FormatTab } from './FormatDialog.svelte';
 	import TextToColumns from './TextToColumns.svelte';
 	import type { TextColumnsOptions, TextColumnsPreview } from './textcols';
@@ -57,7 +60,7 @@
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
 	import PivotPanel from './PivotPanel.svelte';
 	import SheetButtons from './SheetButtons.svelte';
-	import type { ButtonConfig, ControlKind, SheetButton } from './buttons';
+	import { BUTTON_H, BUTTON_W, type ButtonConfig, type ControlKind, type SheetButton } from './buttons';
 	import { applyRules, computeStats, mergeStats, parseRules, prepareStats, reqKey, statsReq, todaySerial, type CfOut, type Rule, type RuleEnv, type RuleStats, type Stats, type StatsReq } from './rules';
 	import { formatLocs, groupKey, rectLocs, type Loc, type RuleChanges, type SheetRules } from './cfmodel';
 	import { ICON_SETS, drawCfIcon } from './cficons';
@@ -366,9 +369,10 @@
 		setLinesHidden?(rows: boolean, i0: number, i1: number, hide: boolean): Promise<unknown>;
 		/** Fige les volets (0, 0 : les libère). */
 		setFreeze?(rows: number, cols: number): Promise<unknown>;
-		find?(text: string): Promise<{ row: number; col: number }[]>;
-		/** Remplace partout ; renvoie le nombre de cellules modifiées. */
-		replace?(text: string, by: string): Promise<number>;
+		/** Cherche un texte dans la zone (la sélection), ou dans toute la feuille (null). */
+		find?(text: string, zone: Zone | null): Promise<{ row: number; col: number }[]>;
+		/** Remplace dans la zone (null : partout) ; renvoie le nombre de cellules modifiées. */
+		replace?(text: string, by: string, zone: Zone | null): Promise<number>;
 		/** Remplace les règles de mise en forme conditionnelle d'une colonne. */
 		/** Actualise la requête d'import qui charge le tableau. */
 		refreshTable?(table: SheetTable): Promise<unknown>;
@@ -1525,19 +1529,30 @@
 			usedRow = Math.max(usedRow, r);
 			usedCol = Math.max(usedCol, c);
 		}
-		// Graphiques : la barre de défilement va jusqu'à leur bord.
-		for (const ch of charts) {
-			const b = chartBox(ch);
-			usedRow = Math.max(usedRow, rax().indexAt(b.y + b.h));
-			usedCol = Math.max(usedCol, cax().indexAt(b.x + b.w));
-		}
+		// Objets posés sur la feuille (graphiques et cartes, boutons et
+		// contrôles) : la barre de défilement va jusqu'à leur bord, qu'ils
+		// soient sélectionnés ou non (objextent.ts) ; de même pour les
+		// tableaux croisés et les tableaux déversés.
+		const boxes = [...charts.map(chartBox), ...buttons.map(buttonBox)];
+		const reach = boxesReach(boxes, (y) => rax().indexAt(y), (x) => cax().indexAt(x));
+		const blocks = blocksReach([
+			...pivots.map((p) => ({ row: p.row, col: p.col, rows: p.cells.length, cols: p.cells[0]?.length ?? 0 })),
+			...spills.map((s) => ({ row: s.row, col: s.col, rows: s.rows.length, cols: s.rows[0]?.length ?? 0 }))
+		]);
+		usedRow = Math.max(usedRow, reach.row, blocks.row);
+		usedCol = Math.max(usedCol, reach.col, blocks.col);
 		const lastVisible = rax().indexAt(vs.top + vs.view);
 		// Comme Excel : la barre s'arrête à la zone utilisée (ou à l'écran affiché) ;
 		// molette, flèches et sélection vont au-delà et l'agrandissent.
 		const rows = Math.min(SHEET_ROWS, Math.max(usedRow + 1, lastVisible + 1, holdRows, scrollHoldRows));
 		extentRows = Math.min(SHEET_ROWS, usedRow + 1);
 		const cw = Math.max(0, viewW - MARGIN);
-		const lastVisibleCol = cax().indexAt(scroller.scrollLeft + cw);
+		// Volet ouvert à droite (graphique, carte, tableau croisé…) : la zone
+		// qui défile garde la largeur qu'elle aura volet fermé. Sinon, en
+		// quittant l'objet, le volet se ferme, la grille s'élargit et le
+		// navigateur ramène la barre en arrière : la feuille sautait.
+		const side = wrap ? Math.max(0, (wrap.parentElement?.clientWidth ?? 0) - wrap.clientWidth) / zoomK() : 0;
+		const lastVisibleCol = cax().indexAt(scroller.scrollLeft + cw + side);
 		extentCols = Math.min(SHEET_COLS, Math.max(usedCol + 1, lastVisibleCol + 1, holdCols, scrollHoldCols));
 		vs.content = rowTop(rows);
 		vs.to(vs.top);
@@ -2080,7 +2095,7 @@
 		}
 
 		// Recherche : toutes les occurrences visibles, en léger (l'active reste encadrée).
-		if (finder && matches.length && matchText === finder.text) {
+		if (finder && matches.length && matchKey === findKey(finder.text, finder.zone)) {
 			ctx.fillStyle = C.found;
 			for (const m of matches)
 				if (m.row >= r0 && m.row <= r1 && m.col >= c0 && m.col <= c1) ctx.fillRect(cx(m.col), ry(m.row), cax().size(m.col), rh(m.row));
@@ -2560,6 +2575,12 @@
 		ctx.strokeStyle = C.active;
 		ctx.lineWidth = 2;
 		ctx.strokeRect(cx(0) + selBox.x + 0.5, ry(0) + selBox.y + 0.5, selBox.w - 1, selBox.h - 1);
+		// Rechercher dans la sélection : la cellule trouvée, encadrée (la sélection ne bouge pas).
+		if (finder?.zone && finder.at && inZone(finder.at, finder.zone)) {
+			const f = finder.at;
+			ctx.lineWidth = 2;
+			ctx.strokeRect(cx(f.col) + 2, ry(f.row) + 2, cax().size(f.col) - 4, rh(f.row) - 4);
+		}
 		if (ar.r1 >= r0 - 1 && ar.r0 <= r1 + 1) {
 			ctx.strokeStyle = C.active;
 			ctx.lineWidth = 1;
@@ -3705,6 +3726,7 @@
 	}
 
 	function refreshStatus() {
+		syncFinderZone();
 		if (message !== shownMessage) {
 			shownMessage = message;
 			clearTimeout(messageTimer);
@@ -4269,6 +4291,16 @@
 			y: rowTop(ch.row) + (ch.config.offY ?? 0),
 			w: ch.config.width ?? CHART_W,
 			h: ch.config.height ?? CHART_H
+		};
+	}
+
+	/** Position et taille d'un bouton ou contrôle, en pixels de la feuille (comme SheetButtons). */
+	function buttonBox(b: SheetButton) {
+		return {
+			x: cax().offset(b.col) + (b.config.offX ?? 0),
+			y: rowTop(b.row) + (b.config.offY ?? 0),
+			w: b.config.width || BUTTON_W,
+			h: b.config.height || BUTTON_H
 		};
 	}
 
@@ -5894,6 +5926,106 @@
 		schedule();
 	}
 
+	// --- Défilement automatique pendant un glisser (autoscroll.ts) ----------
+
+	// Dernière position de la souris pendant un glisser (coordonnées de l'écran).
+	let dragPtr: { x: number; y: number; ctrl: boolean; meta: boolean; shift: boolean } | null = null;
+	let autoFrame = 0;
+	let autoLast = 0;
+
+	/** Un glisser qui suit la souris sur les cellules est-il en cours ? */
+	const cellDrag = () => dragging || !!filling || !!moving || !!refDrag || !!refMove || !!headerDrag;
+
+	/** Zone qui défile, en pixels locaux (hors marge, bandeau et volets figés). */
+	function scrollArea() {
+		return {
+			left: MARGIN + cax().offset(fCols()),
+			top: TOP_H + rowTop(fRows()),
+			right: scroller.clientWidth,
+			bottom: scroller.clientHeight
+		};
+	}
+
+	/** Défilement voulu (pixels par image, signés) pour la souris p (coordonnées de l'écran). */
+	function dragScroll(p: { x: number; y: number }) {
+		const r = scroller.getBoundingClientRect();
+		const k = zoomK();
+		const a = scrollArea();
+		// Rien à défiler en largeur si les colonnes figées prennent tout.
+		const dx = headerDrag === 'rows' ? 0 : edgeScroll((p.x - r.left) / k, a.left, a.right);
+		const dy = headerDrag === 'cols' ? 0 : edgeScroll((p.y - r.top) / k, a.top, a.bottom);
+		return { dx: scroller.scrollLeft <= 0 && dx < 0 ? 0 : dx, dy: vs.top <= 0 && dy < 0 ? 0 : dy };
+	}
+
+	/**
+	 * Rejoue le glisser à la souris ramenée sur la zone des cellules (au bord
+	 * qui défile) : hors de la grille, la sélection suit la ligne ou la
+	 * colonne du bord, comme Excel.
+	 */
+	function dragAt(p: NonNullable<typeof dragPtr>, dir: { dx: number; dy: number }) {
+		const r = scroller.getBoundingClientRect();
+		const k = zoomK();
+		const a = scrollArea();
+		let x = (p.x - r.left) / k;
+		let y = (p.y - r.top) / k;
+		// Dans le sens du défilement, la souris est ramenée sur la zone qui
+		// défile (pas sur les volets figés) ; sinon sur la grille.
+		x = clamp(x, dir.dx < 0 ? a.left : MARGIN, scroller.clientWidth - 1);
+		y = clamp(y, dir.dy < 0 ? a.top : TOP_H, scroller.clientHeight - 1);
+		if (headerDrag === 'rows') x = Math.min(x, MARGIN - 1);
+		if (headerDrag === 'cols') y = Math.min(y, TOP_H - 1);
+		onMouseMove(new MouseEvent('mousemove', { clientX: r.left + x * k, clientY: r.top + y * k, ctrlKey: p.ctrl, metaKey: p.meta, shiftKey: p.shift, buttons: 1 }));
+	}
+
+	/** Souris pendant un glisser, sur toute la fenêtre : hors de la grille, la sélection continue et la feuille défile. */
+	function onDragMove(e: MouseEvent) {
+		if (!cellDrag() || !scroller) return;
+		dragPtr = { x: e.clientX, y: e.clientY, ctrl: e.ctrlKey, meta: e.metaKey, shift: e.shiftKey };
+		const dir = dragScroll(dragPtr);
+		// Hors de la grille (ou sur un graphique) : la grille ne reçoit pas l'évènement.
+		if (!(e.target instanceof Node && scroller.contains(e.target))) dragAt(dragPtr, dir);
+		if ((dir.dx || dir.dy) && !autoFrame) {
+			autoLast = performance.now();
+			autoFrame = requestAnimationFrame(autoTick);
+		}
+	}
+
+	function stopAutoScroll() {
+		cancelAnimationFrame(autoFrame);
+		autoFrame = 0;
+		dragPtr = null;
+	}
+
+	function autoTick(now: number) {
+		autoFrame = 0;
+		if (!cellDrag() || !dragPtr || !scroller) return stopAutoScroll();
+		const dir = dragScroll(dragPtr);
+		if (!dir.dx && !dir.dy) return;
+		const dt = now - autoLast;
+		autoLast = now;
+		holdWhileScrolling();
+		const dy = frameStep(dir.dy, dt);
+		const dx = frameStep(dir.dx, dt);
+		if (dy) {
+			// Vers le bas, la feuille s'agrandit d'autant (comme à la molette).
+			if (dy > 0) vs.content = Math.min(rax().total, Math.max(vs.content, vs.top + dy + 2 * vs.view));
+			vs.by(dy);
+			updateExtent();
+			scroller.scrollTop = vs.toNative();
+		}
+		if (dx) {
+			if (dx > 0 && spacer) {
+				const want = cax().indexAt(scroller.scrollLeft + dx + viewW) + 2;
+				spacer.style.width = `${MARGIN + cax().offset(Math.min(SHEET_COLS, Math.max(extentCols, want)))}px`;
+			}
+			scroller.scrollLeft += dx;
+			updateExtent();
+		}
+		dragAt(dragPtr, dir);
+		schedule();
+		autoFrame = requestAnimationFrame(autoTick);
+	}
+
 	function onDblClick(e: MouseEvent) {
 		if (hold) return; // pointage d'une formule d'une autre feuille
 		const b = boundaryAt(e);
@@ -6782,51 +6914,110 @@
 
 	// --- Rechercher / remplacer -------------------------------------------------
 
-	let finder = $state<{ replace: boolean; text: string; by: string; info: string } | null>(null);
+	// Comme Excel, une sélection de plusieurs cellules borne la recherche
+	// (zone) : elle reste affichée et la cellule trouvée (at) y est
+	// encadrée ; une seule cellule : toute la feuille, la cellule active va
+	// sur chaque occurrence.
+	let finder = $state<{ replace: boolean; text: string; by: string; info: string; zone: Zone | null; at: { row: number; col: number } | null } | null>(null);
 	let findInput = $state<HTMLInputElement>();
 	let matches: { row: number; col: number }[] = [];
-	let matchText = '';
+	// Recherche des occurrences en mémoire (texte et zone, findKey).
+	let matchKey = '';
 	// Barre ouverte ou fermée : redessiner le surlignage des occurrences.
 	$effect(() => {
 		void finder;
 		schedule();
 	});
 
+	/** Zone de recherche : la sélection si elle compte plusieurs cellules, sinon null (toute la feuille). */
+	const searchZone = () => findZone(selection(), singleSelection());
+
+	/** Suit la sélection : zone affichée dans la barre, cellule trouvée oubliée hors zone. */
+	function syncFinderZone() {
+		if (!finder) return;
+		const z = searchZone();
+		const old = finder.zone;
+		if (findKey('', z) !== findKey('', old)) finder.zone = z;
+		if (finder.at && (z ? !inZone(finder.at, z) : finder.at.row !== active.row || finder.at.col !== active.col)) finder.at = null;
+	}
+
 	/** Ouvre la barre de recherche (replace : avec le champ Remplacer par). */
 	export function openFinder(replace: boolean) {
 		if (!source.find) return;
-		finder = { replace, text: finder?.text ?? '', by: finder?.by ?? '', info: '' };
+		finder = { replace, text: finder?.text ?? '', by: finder?.by ?? '', info: '', zone: searchZone(), at: null };
 		requestAnimationFrame(() => findInput?.select());
+	}
+
+	/** Occurrences du texte cherché dans la zone (relues si le texte ou la zone a changé). */
+	async function findAll(zone: Zone | null) {
+		if (!finder || !source.find) return;
+		const k = findKey(finder.text, zone);
+		if (k !== matchKey) {
+			matches = await source.find(finder.text, zone);
+			matchKey = k;
+		}
 	}
 
 	async function findNext(back = false) {
 		if (!finder || !source.find || !finder.text) return;
-		if (finder.text !== matchText) {
-			matches = await source.find(finder.text);
-			matchText = finder.text;
-		}
+		const zone = searchZone();
+		finder.zone = zone;
+		await findAll(zone);
+		if (!finder) return;
 		if (matches.length === 0) {
-			finder.info = 'Aucune cellule trouvée';
+			finder.at = null;
+			finder.info = zone ? 'Aucune cellule trouvée dans la sélection' : 'Aucune cellule trouvée';
+			schedule();
 			return;
 		}
-		const { row, col } = active;
-		const after = (m: { row: number; col: number }) => m.row > row || (m.row === row && m.col > col);
-		const before = (m: { row: number; col: number }) => m.row < row || (m.row === row && m.col < col);
-		const i = back ? matches.findLastIndex(before) : matches.findIndex(after);
-		const k = i >= 0 ? i : back ? matches.length - 1 : 0;
-		moveTo(matches[k].row, matches[k].col);
+		// Dans la sélection : à partir de la dernière cellule trouvée (la
+		// sélection ne bouge pas) ; sur la feuille : de la cellule active.
+		const from = zone ? (finder.at && inZone(finder.at, zone) ? finder.at : null) : active;
+		const k = nextHit(matches, from, back);
+		const m = matches[k];
+		if (zone) {
+			finder.at = { row: m.row, col: m.col };
+			ensureVisible(m.row, m.col);
+			schedule();
+		} else {
+			moveTo(m.row, m.col);
+			finder.at = { row: active.row, col: active.col };
+		}
 		finder.info = `${k + 1} sur ${matches.length}${matches.length >= 5000 ? '+' : ''}`;
+	}
+
+	/** Remplace la cellule trouvée (si elle contient le texte), puis passe à la suivante (Excel). */
+	async function replaceOne() {
+		if (!finder || !source.replace || !finder.text) return;
+		const zone = searchZone();
+		await findAll(zone);
+		if (!finder) return;
+		const at = zone ? finder.at : active;
+		if (at && inZone(at, zone) && matches.some((m) => m.row === at.row && m.col === at.col)) {
+			try {
+				await source.replace(finder.text, finder.by, { r0: at.row, c0: at.col, r1: at.row, c1: at.col });
+			} catch (e) {
+				finder.info = String(e instanceof Error ? e.message : e);
+				return;
+			}
+			matchKey = '';
+		}
+		await findNext();
 	}
 
 	async function replaceAll() {
 		if (!finder || !source.replace || !finder.text) return;
 		const { text, by } = finder;
+		const zone = searchZone();
 		try {
-			const n = await source.replace(text, by);
-			finder.info = n ? `${n} cellule${n > 1 ? 's' : ''} remplacée${n > 1 ? 's' : ''} (Ctrl+Z pour annuler)` : 'Aucune cellule trouvée';
-			matchText = '';
+			const n = await source.replace(text, by, zone);
+			if (!finder) return;
+			const where = zone ? ' dans la sélection' : '';
+			finder.info = n ? `${n} cellule${n > 1 ? 's' : ''} remplacée${n > 1 ? 's' : ''}${where} (Ctrl+Z pour annuler)` : `Aucune cellule trouvée${where}`;
+			finder.at = null;
+			matchKey = '';
 		} catch (e) {
-			finder.info = String(e instanceof Error ? e.message : e);
+			if (finder) finder.info = String(e instanceof Error ? e.message : e);
 		}
 	}
 
@@ -7510,6 +7701,7 @@
 		resize();
 		scroller.addEventListener('wheel', onWheel, { passive: false });
 		const up = (ev?: MouseEvent) => {
+			stopAutoScroll();
 			if (refDrag) nextArg();
 			refDrag = null;
 			if (refMove) dropRefMark();
@@ -7548,6 +7740,7 @@
 			writing = writing.catch(() => undefined).then(() => setWidth(col, width).then(() => undefined, (err) => say(String(err?.message ?? err))));
 		};
 		window.addEventListener('mouseup', up);
+		window.addEventListener('mousemove', onDragMove);
 		const timer = setInterval(refreshStatus, 250);
 		window.addEventListener('copy', onCopy);
 		window.addEventListener('keydown', onGlobalKey);
@@ -7560,6 +7753,8 @@
 			ro.disconnect();
 			scroller.removeEventListener('wheel', onWheel);
 			window.removeEventListener('mouseup', up);
+			window.removeEventListener('mousemove', onDragMove);
+			stopAutoScroll();
 			clearInterval(timer);
 			window.removeEventListener('copy', onCopy);
 			window.removeEventListener('keydown', onGlobalKey);
@@ -7897,9 +8092,13 @@
 				{#if finder.replace}
 					<span>Remplacer par</span>
 					<input bind:value={finder.by} onkeydown={onFinderKey} spellcheck="false" />
+					<button onclick={replaceOne} title="Remplace la cellule trouvée, puis passe à la suivante">Remplacer</button>
 					<button onclick={replaceAll}>Remplacer tout</button>
 				{:else if source.replace}
 					<button class="link" onclick={() => finder && (finder.replace = true)}>Remplacer…</button>
+				{/if}
+				{#if finder.zone}
+					<span class="zone" title="La sélection borne la recherche ; sélectionnez une seule cellule pour chercher dans toute la feuille">Dans la sélection</span>
 				{/if}
 				<span class="muted">{finder.info}</span>
 				<button onclick={() => {
@@ -8845,6 +9044,14 @@
 	}
 	.finder .muted {
 		color: #6b7280;
+	}
+	.finder .zone {
+		padding: 1px 7px;
+		border-radius: 10px;
+		background: #d3e7dc;
+		color: #14532d;
+		font-size: 0.92em;
+		white-space: nowrap;
 	}
 	.bench {
 		padding: 4px 10px;

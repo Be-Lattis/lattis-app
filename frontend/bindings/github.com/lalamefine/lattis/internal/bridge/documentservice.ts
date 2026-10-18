@@ -509,10 +509,12 @@ export function FilterValues(table: string, i: number): $CancellablePromise<canv
 }
 
 /**
- * Find cherche un texte dans une feuille (cellules dans l'ordre de lecture).
+ * Find cherche un texte dans une feuille (cellules dans l'ordre de lecture),
+ * limité à la zone in quand elle est donnée (la sélection) ; nil : toute la
+ * feuille.
  */
-export function Find(sheet: number, text: string): $CancellablePromise<canvas$0.Match[] | null> {
-    return $Call.ByID(2209243769, sheet, text);
+export function Find(sheet: number, text: string, $in: canvas$0.Rect | null): $CancellablePromise<canvas$0.Match[] | null> {
+    return $Call.ByID(2209243769, sheet, text, $in);
 }
 
 /**
@@ -1020,11 +1022,12 @@ export function RenameTable(old: string, name: string): $CancellablePromise<$mod
 }
 
 /**
- * Replace remplace un texte dans toute la feuille et renvoie le nombre de
- * cellules modifiées.
+ * Replace remplace un texte dans la zone in (la sélection, ou la cellule
+ * trouvée), ou dans toute la feuille si elle est nil, et renvoie le nombre
+ * de cellules modifiées.
  */
-export function Replace(sheet: number, text: string, by: string): $CancellablePromise<number> {
-    return $Call.ByID(2674593386, sheet, text, by);
+export function Replace(sheet: number, text: string, by: string, $in: canvas$0.Rect | null): $CancellablePromise<number> {
+    return $Call.ByID(2674593386, sheet, text, by, $in);
 }
 
 /**
