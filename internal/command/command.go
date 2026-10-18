@@ -56,6 +56,9 @@ func S(q string, args ...any) Stmt { return Stmt{q, args} }
 // corbeille d'une colonne supprimée).
 type Step struct {
 	Do, Undo, Purge []Stmt
+	// Ops : opérations logiques enregistrées par Tx.Record pendant la
+	// transaction dont c'est la dernière étape (l'annulation les inverse).
+	Ops []Op
 }
 
 // Tx est la transaction d'une commande en cours de construction.
@@ -63,6 +66,8 @@ type Tx struct {
 	*sql.Tx
 	Ctx   context.Context
 	steps []Step
+	ops   []Op    // opérations logiques enregistrées (Record)
+	cap   Capture // suivi des opérations logiques (nil sans Recorder)
 }
 
 // Apply exécute do et enregistre l'opération avec son inverse.
@@ -70,7 +75,7 @@ func (t *Tx) Apply(do, undo []Stmt) error { return t.ApplyStep(Step{Do: do, Undo
 
 // ApplyStep exécute s.Do et enregistre l'opération.
 func (t *Tx) ApplyStep(s Step) error {
-	if err := run(t.Ctx, t.Tx, s.Do); err != nil {
+	if err := run(t.Ctx, t.Tx, s.Do, t.cap); err != nil {
 		return err
 	}
 	t.steps = append(t.steps, s)
@@ -83,10 +88,15 @@ func (t *Tx) Query(q string, args ...any) (*sql.Rows, error) {
 }
 func (t *Tx) Row(q string, args ...any) *sql.Row { return t.QueryRowContext(t.Ctx, q, args...) }
 
-func run(ctx context.Context, tx *sql.Tx, stmts []Stmt) error {
+func run(ctx context.Context, tx *sql.Tx, stmts []Stmt, c Capture) error {
 	for _, s := range stmts {
 		if _, err := tx.ExecContext(ctx, s.Q, s.Args...); err != nil {
 			return fmt.Errorf("%s : %w", s.Q, err)
+		}
+		if c != nil {
+			if err := c.Statement(s.Q); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -96,6 +106,9 @@ func run(ctx context.Context, tx *sql.Tx, stmts []Stmt) error {
 type Bus struct {
 	db    *store.Store
 	Depth int
+	// Recorder, s'il est fixé, relève les opérations logiques de chaque
+	// transaction (classeurs partagés : voir internal/remote/oplog).
+	Recorder Recorder
 	// Guard, s'il est fixé, encadre chaque annulation et rétablissement :
 	// appelé dans la transaction avant de rejouer les instructions, il rend
 	// une vérification appelée après ; une erreur de l'une ou l'autre défait
@@ -133,13 +146,17 @@ func (b *Bus) Do(ctx context.Context, name string, fn func(*Tx) error) (int64, e
 	}
 	var seq int64
 	err := b.db.Write(ctx, func(sqlTx *sql.Tx) error {
-		t := &Tx{Tx: sqlTx, Ctx: ctx}
+		t, err := b.begin(ctx, sqlTx)
+		if err != nil {
+			return err
+		}
 		if err := fn(t); err != nil {
 			return err
 		}
 		if len(t.steps) == 0 {
-			return nil
+			return t.finish(Commit{Kind: KindDo})
 		}
+		t.keepOps()
 		// Une nouvelle action efface ce qui pouvait être rétabli.
 		if _, err := sqlTx.ExecContext(ctx, `DELETE FROM _lattis_journal WHERE undone = 1`); err != nil {
 			return err
@@ -153,9 +170,43 @@ func (b *Bus) Do(ctx context.Context, name string, fn func(*Tx) error) (int64, e
 			return err
 		}
 		seq, _ = r.LastInsertId()
-		return b.trim(ctx, sqlTx)
+		if err := b.trim(ctx, sqlTx); err != nil {
+			return err
+		}
+		return t.finish(Commit{Seq: seq, Kind: KindDo, New: true})
 	})
 	return seq, err
+}
+
+// begin ouvre la transaction d'une commande, suivie par le Recorder.
+func (b *Bus) begin(ctx context.Context, sqlTx *sql.Tx) (*Tx, error) {
+	t := &Tx{Tx: sqlTx, Ctx: ctx}
+	if b.Recorder != nil {
+		c, err := b.Recorder.Begin(ctx, sqlTx)
+		if err != nil {
+			return nil, err
+		}
+		t.cap = c
+	}
+	return t, nil
+}
+
+// keepOps range les opérations enregistrées dans la dernière étape, pour
+// que l'annulation et le rétablissement les retrouvent dans le journal.
+func (t *Tx) keepOps() {
+	if len(t.ops) > 0 && len(t.steps) > 0 {
+		last := &t.steps[len(t.steps)-1]
+		last.Ops = append(last.Ops, t.ops...)
+	}
+}
+
+// finish termine le suivi des opérations logiques de la transaction.
+func (t *Tx) finish(c Commit) error {
+	if t.cap == nil {
+		return nil
+	}
+	c.Ops = t.ops
+	return t.cap.Finish(c)
 }
 
 // Append ajoute des opérations à la dernière commande seq, qui doit être en
@@ -206,16 +257,20 @@ func (g *Group) append(ctx context.Context, b *Bus, fn func(*Tx) error) (int64, 
 func (b *Bus) appendTo(ctx context.Context, seq int64, name string, fn func(*Tx) error) (int64, error) {
 	out := seq
 	err := b.db.Write(ctx, func(sqlTx *sql.Tx) error {
-		t := &Tx{Tx: sqlTx, Ctx: ctx}
+		t, err := b.begin(ctx, sqlTx)
+		if err != nil {
+			return err
+		}
 		if err := fn(t); err != nil {
 			return err
 		}
 		if len(t.steps) == 0 {
-			return nil
+			return t.finish(Commit{Kind: KindDo})
 		}
+		t.keepOps()
 		var last int64
 		var data string
-		err := sqlTx.QueryRowContext(ctx, `SELECT seq, steps FROM _lattis_journal WHERE undone = 0 ORDER BY seq DESC LIMIT 1`).Scan(&last, &data)
+		err = sqlTx.QueryRowContext(ctx, `SELECT seq, steps FROM _lattis_journal WHERE undone = 0 ORDER BY seq DESC LIMIT 1`).Scan(&last, &data)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return err
 		}
@@ -232,7 +287,10 @@ func (b *Bus) appendTo(ctx context.Context, seq int64, name string, fn func(*Tx)
 				return err
 			}
 			out, _ = r.LastInsertId()
-			return b.trim(ctx, sqlTx)
+			if err := b.trim(ctx, sqlTx); err != nil {
+				return err
+			}
+			return t.finish(Commit{Seq: out, Kind: KindDo, New: true})
 		}
 		steps, err := decodeSteps(data)
 		if err != nil {
@@ -242,8 +300,10 @@ func (b *Bus) appendTo(ctx context.Context, seq int64, name string, fn func(*Tx)
 		if err != nil {
 			return err
 		}
-		_, err = sqlTx.ExecContext(ctx, `UPDATE _lattis_journal SET steps = ? WHERE seq = ?`, enc, seq)
-		return err
+		if _, err = sqlTx.ExecContext(ctx, `UPDATE _lattis_journal SET steps = ? WHERE seq = ?`, enc, seq); err != nil {
+			return err
+		}
+		return t.finish(Commit{Seq: seq, Kind: KindDo})
 	})
 	return out, err
 }
@@ -274,7 +334,7 @@ func (b *Bus) trim(ctx context.Context, tx *sql.Tx) error {
 			return err
 		}
 		for _, s := range steps {
-			if err := run(ctx, tx, s.Purge); err != nil {
+			if err := run(ctx, tx, s.Purge, nil); err != nil {
 				return err
 			}
 		}
@@ -302,9 +362,18 @@ func (b *Bus) Undo(ctx context.Context) (string, error) {
 		if err != nil {
 			return err
 		}
+		t, err := b.begin(ctx, tx)
+		if err != nil {
+			return err
+		}
+		for i := len(steps) - 1; i >= 0; i-- {
+			for j := len(steps[i].Ops) - 1; j >= 0; j-- {
+				t.ops = append(t.ops, steps[i].Ops[j].Inverse())
+			}
+		}
 		err = b.guarded(ctx, tx, "d'annuler", name, func() error {
 			for i := len(steps) - 1; i >= 0; i-- {
-				if err := run(ctx, tx, steps[i].Undo); err != nil {
+				if err := run(ctx, tx, steps[i].Undo, t.cap); err != nil {
 					return err
 				}
 			}
@@ -313,8 +382,10 @@ func (b *Bus) Undo(ctx context.Context) (string, error) {
 		if err != nil {
 			return err
 		}
-		_, err = tx.ExecContext(ctx, `UPDATE _lattis_journal SET undone = 1 WHERE seq = ?`, seq)
-		return err
+		if _, err = tx.ExecContext(ctx, `UPDATE _lattis_journal SET undone = 1 WHERE seq = ?`, seq); err != nil {
+			return err
+		}
+		return t.finish(Commit{Seq: seq, Kind: KindUndo})
 	})
 	return name, err
 }
@@ -336,9 +407,16 @@ func (b *Bus) Redo(ctx context.Context) (string, error) {
 		if err != nil {
 			return err
 		}
+		t, err := b.begin(ctx, tx)
+		if err != nil {
+			return err
+		}
+		for _, s := range steps {
+			t.ops = append(t.ops, s.Ops...)
+		}
 		err = b.guarded(ctx, tx, "de rétablir", name, func() error {
 			for _, s := range steps {
-				if err := run(ctx, tx, s.Do); err != nil {
+				if err := run(ctx, tx, s.Do, t.cap); err != nil {
 					return err
 				}
 			}
@@ -347,8 +425,10 @@ func (b *Bus) Redo(ctx context.Context) (string, error) {
 		if err != nil {
 			return err
 		}
-		_, err = tx.ExecContext(ctx, `UPDATE _lattis_journal SET undone = 0 WHERE seq = ?`, seq)
-		return err
+		if _, err = tx.ExecContext(ctx, `UPDATE _lattis_journal SET undone = 0 WHERE seq = ?`, seq); err != nil {
+			return err
+		}
+		return t.finish(Commit{Seq: seq, Kind: KindRedo})
 	})
 	return name, err
 }
@@ -387,6 +467,7 @@ type jsonStep struct {
 	D []jsonStmt `json:"d"`
 	U []jsonStmt `json:"u"`
 	P []jsonStmt `json:"p,omitempty"`
+	O []Op       `json:"o,omitempty"`
 }
 
 func encodeStmts(ss []Stmt) ([]jsonStmt, error) {
@@ -472,6 +553,7 @@ func encodeSteps(steps []Step) (string, error) {
 		if js[i].P, err = encodeStmts(s.Purge); err != nil {
 			return "", err
 		}
+		js[i].O = s.Ops
 	}
 	b, err := json.Marshal(js)
 	return string(b), err
@@ -496,6 +578,7 @@ func decodeSteps(data string) ([]Step, error) {
 		if out[i].Purge, err = decodeStmts(s.P); err != nil {
 			return nil, err
 		}
+		out[i].Ops = s.O
 	}
 	return out, nil
 }

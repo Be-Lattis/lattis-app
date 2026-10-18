@@ -310,6 +310,79 @@ CREATE TABLE _lattis_info (
 ) STRICT;
 INSERT INTO _lattis_info (key, value) VALUES ('id', lower(hex(randomblob(16))));
 `,
+	// 27 → 28 : classeurs partagés sur un Serveur Lattis (journal logique,
+	// voir docs/collaboration/journal-logique.md). Rien ne change pour un
+	// tableau non publié : ces tables restent vides.
+	//
+	// _lattis_remote_tables : tableau local ↔ table du serveur ; published
+	// fait relever ses opérations logiques (internal/remote/oplog). columns :
+	// JSON des colonnes ↔ colonnes du serveur et de leurs types figés ;
+	// since : xid8 (en texte) de la dernière lecture des changements.
+	//
+	// _lattis_row_ids : identifiant partagé (lattis_id, UUIDv7) et auteur
+	// de chaque ligne d'un tableau publié, par sa clé locale (rid = id de
+	// t_<tbl>). Une table à part plutôt que deux colonnes de t_<id> : les
+	// reconstructions de tableaux (type, colonnes, conversions, copies), le
+	// SQL des utilisateurs (SELECT *) et les exports ne voient que les
+	// colonnes c_<id>, et un classeur non partagé n'est pas touché.
+	//
+	// _lattis_outbox : file des étapes à envoyer, dans l'ordre de id. seq :
+	// commande du journal (NULL quand elle n'y est plus) ; kind : do, undo,
+	// redo ; batch : parties d'une même transaction du serveur (id de la
+	// première) ; ops : JSON des command.Op.
+	//
+	// _lattis_conflicts : conflits en attente de décision (cellule, valeur
+	// locale, valeur du serveur, auteur, date).
+	//
+	// _lattis_capabilities : niveau effectif par tableau (tbl = 0 : le
+	// classeur, avec le rôle), filtres et restrictions connus (JSON).
+	`
+CREATE TABLE _lattis_remote_tables (
+	tbl         INTEGER PRIMARY KEY,
+	published   INTEGER NOT NULL DEFAULT 0,
+	remote_name TEXT,
+	remote_id   TEXT,
+	columns     TEXT,
+	since       TEXT
+) STRICT;
+CREATE TABLE _lattis_row_ids (
+	tbl           INTEGER NOT NULL,
+	rid           INTEGER NOT NULL,
+	lattis_id     TEXT NOT NULL UNIQUE,
+	lattis_author TEXT,
+	PRIMARY KEY (tbl, rid)
+) STRICT, WITHOUT ROWID;
+CREATE TABLE _lattis_outbox (
+	id      INTEGER PRIMARY KEY AUTOINCREMENT,
+	seq     INTEGER,
+	kind    TEXT NOT NULL CHECK (kind IN ('do', 'undo', 'redo')),
+	batch   INTEGER NOT NULL,
+	ops     TEXT NOT NULL,
+	state   TEXT NOT NULL DEFAULT 'pending' CHECK (state IN ('pending', 'sent', 'conflict', 'rejected')),
+	error   TEXT,
+	created TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+) STRICT;
+CREATE INDEX _lattis_outbox_seq ON _lattis_outbox(seq);
+CREATE INDEX _lattis_outbox_state ON _lattis_outbox(state, id);
+CREATE TABLE _lattis_conflicts (
+	id      INTEGER PRIMARY KEY,
+	outbox  INTEGER,
+	tbl     INTEGER NOT NULL,
+	row_id  TEXT NOT NULL,
+	col     INTEGER NOT NULL,
+	local   TEXT,
+	server  TEXT,
+	author  TEXT,
+	at      TEXT
+) STRICT;
+CREATE TABLE _lattis_capabilities (
+	tbl          INTEGER PRIMARY KEY,
+	level        TEXT NOT NULL,
+	role         TEXT,
+	filters      TEXT,
+	restrictions TEXT
+) STRICT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

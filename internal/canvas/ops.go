@@ -330,7 +330,7 @@ func (t *tx) retype(tb Table, i int, to grid.Type) (Table, error) {
 // données, types inférés colonne par colonne.
 func (t *tx) createTable(sheet int64, name string, row, col int, headers []string, data [][]string) (Table, error) {
 	var id int64
-	if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_tables`).Scan(&id); err != nil {
+	if err := t.row(nextTableID).Scan(&id); err != nil {
 		return Table{}, err
 	}
 	tb := Table{ID: id, Sheet: sheet, Name: name, Row: row, Col: col, Rows: len(data)}
@@ -372,6 +372,12 @@ func (t *tx) createTable(sheet int64, name string, row, col int, headers []strin
 	}
 	return tb, t.apply(do, undo)
 }
+
+// nextTableID donne l'identifiant d'un nouveau tableau. Celui d'un tableau
+// publié sur un Serveur Lattis ne resert jamais, même supprimé : son
+// identifiant le désigne dans la file d'envoi et sur le serveur, et
+// l'annulation peut le rétablir.
+const nextTableID = `SELECT max(coalesce((SELECT max(id) FROM _lattis_tables), 0), coalesce((SELECT max(tbl) FROM _lattis_remote_tables), 0)) + 1`
 
 func marks(n int) string { return strings.TrimSuffix(strings.Repeat("?, ", n), ", ") }
 

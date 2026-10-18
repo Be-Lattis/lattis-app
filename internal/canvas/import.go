@@ -240,7 +240,7 @@ func (t *tx) importTable(sheet int64, it *ImportTable) (Table, error) {
 		return Table{}, fmt.Errorf("import : le tableau %s existe déjà", it.Name)
 	}
 	var id int64
-	if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_tables`).Scan(&id); err != nil {
+	if err := t.row(nextTableID).Scan(&id); err != nil {
 		return Table{}, err
 	}
 	tb := Table{ID: id, Sheet: sheet, Name: it.Name, Row: it.Row, Col: it.Col, Rows: it.Count}

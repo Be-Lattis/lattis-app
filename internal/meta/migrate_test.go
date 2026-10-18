@@ -159,3 +159,57 @@ func TestMigrateRefuses(t *testing.T) {
 		t.Fatal("base étrangère modifiée")
 	}
 }
+
+// TestMigrateCollaboration : le format 28 ajoute les tables des classeurs
+// partagés, vides ; les tableaux existants ne changent pas (leurs
+// identifiants partagés ne sont posés qu'à la publication).
+func TestMigrateCollaboration(t *testing.T) {
+	ctx := context.Background()
+	db := open(t)
+	if err := MigrateTo(ctx, db, 27); err != nil {
+		t.Fatal(err)
+	}
+	exec(t, db,
+		`INSERT INTO _lattis_tables (id, sheet, name, row, col) VALUES (1, 1, 'Ventes', 0, 0)`,
+		`CREATE TABLE t_1 (id INTEGER PRIMARY KEY, _pos TEXT NOT NULL, c_1 REAL) STRICT`,
+		`INSERT INTO t_1 (_pos, c_1) VALUES ('a', 1.5)`,
+	)
+	before := tableSQL(t, db, "t_1")
+	if err := Migrate(ctx, db); err != nil {
+		t.Fatal(err)
+	}
+	if got := tableSQL(t, db, "t_1"); got != before {
+		t.Fatalf("tableau modifié par la migration : %s", got)
+	}
+	for _, name := range []string{"_lattis_remote_tables", "_lattis_row_ids", "_lattis_outbox", "_lattis_conflicts", "_lattis_capabilities"} {
+		var n int
+		if err := db.Read().QueryRow(`SELECT count(*) FROM ` + name).Scan(&n); err != nil || n != 0 {
+			t.Fatalf("%s : %d lignes, %v", name, n, err)
+		}
+	}
+	err := db.Write(ctx, func(tx *sql.Tx) error {
+		_, err := tx.Exec(`INSERT INTO _lattis_outbox (kind, batch, ops, state) VALUES ('do', 1, '[]', 'perdu')`)
+		return err
+	})
+	if err == nil {
+		t.Fatal("état de la file d'envoi inconnu accepté")
+	}
+	exec(t, db,
+		`INSERT INTO _lattis_row_ids (tbl, rid, lattis_id) VALUES (1, 1, '0192aaaa-0000-7000-8000-000000000001')`)
+	err = db.Write(ctx, func(tx *sql.Tx) error {
+		_, err := tx.Exec(`INSERT INTO _lattis_row_ids (tbl, rid, lattis_id) VALUES (1, 2, '0192aaaa-0000-7000-8000-000000000001')`)
+		return err
+	})
+	if err == nil {
+		t.Fatal("identifiant partagé en double accepté")
+	}
+}
+
+func tableSQL(t *testing.T, db *store.Store, name string) string {
+	t.Helper()
+	var q string
+	if err := db.Read().QueryRow(`SELECT sql FROM sqlite_master WHERE name = ?`, name).Scan(&q); err != nil {
+		t.Fatal(err)
+	}
+	return q
+}

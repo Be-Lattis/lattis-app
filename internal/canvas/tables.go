@@ -394,7 +394,7 @@ func (t *tx) extractColumns(tb Table, i0, i1 int, sheet int64, row, col int) err
 		}
 	}
 	var id int64
-	if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_tables`).Scan(&id); err != nil {
+	if err := t.row(nextTableID).Scan(&id); err != nil {
 		return err
 	}
 	newName, err := t.tableName(sheet, row, col)
