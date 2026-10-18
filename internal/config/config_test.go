@@ -468,7 +468,7 @@ func TestSetUser(t *testing.T) {
 		t.Fatal("réglage non pris en compte")
 	}
 	st := UserSettings(c)
-	if len(st) != 1 || st[0].Value != true || st[0].Locked || st[0].Fixed || st[0].Source != file {
+	if len(st) != len(UserEditable) || st[0].Value != true || st[0].Locked || st[0].Fixed || st[0].Source != file {
 		t.Fatalf("UserSettings = %+v", st)
 	}
 	// Les autres clés du fichier sont gardées.
@@ -485,6 +485,17 @@ func TestSetUser(t *testing.T) {
 	}
 	if _, err := l.SetUser(ctx, "features.htmlTabs", "peut-être"); err == nil {
 		t.Fatal("valeur invalide acceptée")
+	}
+	// Onglet IA : fournisseur et modèle sont des identifiants, le partage
+	// une valeur connue.
+	if c, err = l.SetUser(ctx, "ai.model", "claude-sonnet-5-5"); err != nil || c.String("ai.model", "") != "claude-sonnet-5-5" {
+		t.Fatalf("ai.model : %v", err)
+	}
+	if _, err := l.SetUser(ctx, "ai.model", "a b"); err == nil {
+		t.Fatal("ai.model invalide accepté")
+	}
+	if _, err := l.SetUser(ctx, "ai.dataSharing", "tout"); err == nil {
+		t.Fatal("ai.dataSharing invalide accepté")
 	}
 	// Fichier illisible : pas écrasé.
 	os.WriteFile(file, []byte(`{cassé`), 0o600)

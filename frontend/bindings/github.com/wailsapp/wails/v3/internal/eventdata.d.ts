@@ -12,6 +12,7 @@ import type * as bridge$0 from "../../../../lalamefine/lattis/internal/bridge/mo
 declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
+            "ai:event": bridge$0.AIEventData;
             "doc:changed": bridge$0.DocState;
             "doc:open-file": string;
             "script:print": string;

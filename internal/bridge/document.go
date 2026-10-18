@@ -76,6 +76,7 @@ type DocumentService struct {
 	demo  *demoRun  // classeur de démonstration demandé au lancement
 	pq    pqState   // base de travail des requêtes d'import (query.go)
 	ev    eventLoop // évènements du classeur (events.go)
+	ai    aiState   // conversation de l'onglet IA (ai.go)
 
 	// Classeur à ouvrir au lancement (association de fichiers, launch.go).
 	launch launchState

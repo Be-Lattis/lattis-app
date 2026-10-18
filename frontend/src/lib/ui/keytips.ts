@@ -12,6 +12,7 @@ export const TAB_TIPS: Record<string, string> = {
 	Formules: 'M',
 	Révision: 'R',
 	Affichage: 'W',
+	'Assistant ✦': 'I',
 	SQL: 'Q',
 	SCRIPT: 'L',
 	Aide: 'Y'
