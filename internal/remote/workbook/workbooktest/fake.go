@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -31,6 +32,9 @@ type ErrPrivilege struct{ Msg string }
 
 func (e ErrPrivilege) Error() string { return "ERROR: " + e.Msg + " (SQLSTATE 42501)" }
 
+// SQLState rend le code de l'erreur (comme pgconn.PgError).
+func (e ErrPrivilege) SQLState() string { return "42501" }
+
 // Fake est un serveur en mémoire, partagé par plusieurs utilisateurs
 // (As).
 type Fake struct {
@@ -43,6 +47,12 @@ type Fake struct {
 	// Fail, s'il est fixé, fait échouer l'appel de ce nom (save_meta,
 	// finish_publish…) : la transaction est défaite.
 	Fail string
+	// xid : dernière transaction validée (lattis_xid, sync_point).
+	xid int64
+	// levels : niveau imposé à un utilisateur sur un tableau (SetLevel).
+	levels map[string]string
+	// Clock donne la date des modifications (lattis_updated_at).
+	Clock func() time.Time
 }
 
 func (f *Fake) call(name string) error {
@@ -73,16 +83,31 @@ type table struct {
 	localID int64
 	cols    []workbook.RemoteColumn
 	rows    []row
+	tombs   []tomb
 }
 
 type row struct {
 	id, pos, author string
 	vals            []any // par colonne, valeurs PostgreSQL (ToRemote)
+	// xid : transaction de la dernière modification ; by, at : son auteur
+	// et sa date.
+	xid int64
+	by  string
+	at  time.Time
+}
+
+// tomb est une pierre tombale (lattis.tombstones).
+type tomb struct {
+	id  string
+	xid int64
+	by  string
+	at  time.Time
 }
 
 // New crée un serveur vide.
 func New() *Fake {
-	return &Fake{books: map[string]*book{}, listeners: map[string][]chan string{}, Calls: map[string]int{}}
+	return &Fake{books: map[string]*book{}, listeners: map[string][]chan string{}, Calls: map[string]int{}, xid: 1000,
+		levels: map[string]string{}, Clock: time.Now}
 }
 
 // As rend le serveur vu par un utilisateur (rôle PostgreSQL).
@@ -193,6 +218,10 @@ func (s *schema) clone() *schema {
 		tc := *t
 		tc.cols = slices.Clone(t.cols)
 		tc.rows = slices.Clone(t.rows)
+		tc.tombs = slices.Clone(t.tombs)
+		for i := range tc.rows {
+			tc.rows[i].vals = slices.Clone(t.rows[i].vals)
+		}
 		c.tables = append(c.tables, &tc)
 	}
 	return c
@@ -268,16 +297,34 @@ func (s *session) caps(id string) (workbook.Capabilities, error) {
 	if len(s.roles(b)) == 0 {
 		return workbook.Capabilities{}, ErrPrivilege{"aucun accès à ce classeur"}
 	}
-	c := workbook.Capabilities{WorkbookID: b.id, Mode: b.mode, Version: b.version, Schema: b.schema, Channel: "wb_" + b.slug,
+	c := workbook.Capabilities{WorkbookID: b.id, Title: b.title, Mode: b.mode, Version: b.version, Schema: b.schema, Channel: "wb_" + b.slug,
 		Roles: slices.Clone(s.roles(b)), CanDesign: s.has(b, "owner", "designer"), CanManage: s.has(b, "owner"), Tables: map[string]workbook.TableAccess{}}
-	level := "reader"
-	if b.mode == workbook.Collaborative && s.has(b, "owner", "designer", "editor") {
-		level = "editor"
-	}
 	for _, t := range b.schemas[b.schema].tables {
-		c.Tables[t.id] = workbook.TableAccess{Name: t.name, Level: level}
+		c.Tables[t.id] = workbook.TableAccess{Name: t.name, Level: s.level(b, t)}
 	}
 	return c, nil
+}
+
+// level est le niveau de l'utilisateur sur un tableau : lecteur dans un
+// classeur figé ; sinon éditeur (propriétaire, concepteur, éditeur),
+// participant ou lecteur selon ses rôles, sauf niveau imposé (SetLevel).
+func (s *session) level(b *book, t *table) string {
+	if len(s.roles(b)) == 0 {
+		return "none"
+	}
+	if b.mode != workbook.Collaborative {
+		return "reader"
+	}
+	if lv, ok := s.f.levels[b.id+"\x00"+s.user+"\x00"+t.name]; ok {
+		return lv
+	}
+	switch {
+	case s.has(b, "owner", "designer", "editor"):
+		return "editor"
+	case s.has(b, "participant"):
+		return "participant"
+	}
+	return "reader"
 }
 
 func (s *session) Capabilities(ctx context.Context, id string) (workbook.Capabilities, error) {
@@ -304,6 +351,7 @@ func (s *session) Publish(ctx context.Context, fn func(workbook.Publisher) error
 		return err
 	}
 	notes := p.notes
+	s.f.xid++
 	s.f.mu.Unlock()
 	for _, n := range notes {
 		s.f.notify(n[0], n[1])
@@ -569,7 +617,7 @@ func (p *publisher) Copy(ctx context.Context, schemaName, name string, cols []st
 		}
 		ids[id] = true
 		pos, _ := v[1].(string)
-		r := row{id: id, pos: pos, author: p.s.user, vals: make([]any, len(t.cols))}
+		r := row{id: id, pos: pos, author: p.s.user, vals: make([]any, len(t.cols)), xid: p.s.f.xid + 1, by: p.s.user, at: p.s.f.Clock()}
 		for i, j := range at {
 			r.vals[j] = v[2+i]
 		}
@@ -654,7 +702,9 @@ func (r *reader) Capabilities(ctx context.Context, id string) (workbook.Capabili
 	return r.s.caps(id)
 }
 
-func (r *reader) SyncPoint(ctx context.Context) (string, error) { return "1000", nil }
+func (r *reader) SyncPoint(ctx context.Context) (string, error) {
+	return strconv.FormatInt(r.s.f.xid+1, 10), nil
+}
 
 func (r *reader) schema(name string) (*schema, error) {
 	for _, b := range r.s.f.books {

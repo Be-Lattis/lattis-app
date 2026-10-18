@@ -31,11 +31,14 @@ type Document struct {
 	// Share : partage sur un Serveur Lattis (classeur local si
 	// Share.Info() est nil).
 	Share *workbook.Link
+	// Oplog relève les opérations des tableaux publiés (file d'envoi) ;
+	// TakeSkipped après une annulation dans un classeur collaboratif.
+	Oplog *oplog.Recorder
 	arc   *archive.Doc
 	// Changements de partage (publication, rechargement : hors journal)
 	// depuis l'ouverture, et au moment de l'enregistrement.
 	shareGen, savedShare atomic.Int64
-	saved int64 // dernière commande appliquée au moment de l'enregistrement
+	saved                int64 // dernière commande appliquée au moment de l'enregistrement
 	// Changements de protection (hors journal) au moment de l'enregistrement.
 	savedProt int64
 	// id est l'identifiant aléatoire du classeur (_lattis_info, SecretScope).
@@ -82,7 +85,7 @@ func wrap(ctx context.Context, a *archive.Doc, keep bool) (*Document, error) {
 	if err != nil {
 		return fail(err)
 	}
-	d := &Document{Model: canvas.New(a.DB, bus), Bus: bus, Share: share, arc: a, id: id}
+	d := &Document{Model: canvas.New(a.DB, bus), Bus: bus, Share: share, Oplog: rec, arc: a, id: id}
 	d.Model.SetSharing(share)
 	top, err := d.top(ctx)
 	if err != nil {

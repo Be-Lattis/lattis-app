@@ -36,6 +36,10 @@ type tx struct {
 	// pasting : un collage saisit les cellules ; un en-tête collé déjà pris
 	// dans le tableau est renommé (« Produit 2 ») au lieu d'être refusé.
 	pasting bool
+	// collect : collage ou recopie ; une valeur hors du type figé d'un
+	// tableau publié est écartée et listée (Event.Refused) au lieu de
+	// refuser toute l'action (§9).
+	collect bool
 	// ro : transaction de lecture ; gen : génération du Store relevée avant
 	// son ouverture (les résultats calculés peuvent être mis en cache).
 	ro  bool

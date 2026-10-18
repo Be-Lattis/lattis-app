@@ -30,13 +30,38 @@ func PG(dial Dialer) Server { return pgServer{dial} }
 
 type pgServer struct{ dial Dialer }
 
+// with exécute fn sur une connexion de l'usage donné. Une lecture qui peut
+// aller sur un réplica (ro) et qui reçoit un refus de droits (42501) est
+// refaite (contrat client de lattisd, §3.1) : une session ouverte sur un
+// réplica pendant qu'il rejoue la création d'un classeur peut garder une
+// vue périmée des rôles et refuser à tort ; la connexion fautive est fermée
+// (le pool ne la redonne pas), un nouvel essai a lieu sur une nouvelle
+// connexion, puis un dernier sur rw. Les lectures sont sans effet de bord :
+// les refaire est sûr.
 func (s pgServer) with(ctx context.Context, usage string, fn func(*pgx.Conn) error) error {
+	err := s.once(ctx, usage, fn)
+	if usage != usageLoad || !Privilege(err) {
+		return err
+	}
+	if err = s.once(ctx, usage, fn); !Privilege(err) {
+		return err
+	}
+	return s.once(ctx, usageListen, fn) // rw
+}
+
+func (s pgServer) once(ctx context.Context, usage string, fn func(*pgx.Conn) error) error {
 	c, release, err := s.dial(ctx, usage)
 	if err != nil {
 		return err
 	}
 	defer release()
-	return fn(c)
+	err = fn(c)
+	if Privilege(err) && usage == usageLoad {
+		// Fermée avant d'être rendue : le pool la jette au lieu de la
+		// réutiliser.
+		c.Close(context.WithoutCancel(ctx))
+	}
+	return err
 }
 
 func (s pgServer) Workbooks(ctx context.Context) ([]Listing, error) {

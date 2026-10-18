@@ -18,11 +18,13 @@ package oplog
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
+	"sync/atomic"
 
 	"github.com/google/uuid"
 
@@ -46,6 +48,9 @@ type Recorder struct {
 	// l'étape (err : tableau publié en lecture seule). Classeur partagé :
 	// voir internal/remote/workbook.
 	Gate func(op command.Op) (send bool, err error)
+	// skipped : cellules laissées à la valeur d'un collègue par une
+	// annulation (TakeSkipped).
+	skipped atomic.Int64
 }
 
 // New crée le Recorder d'un document ; le brancher sur son bus
@@ -720,7 +725,13 @@ func (w *writer) add(op command.Op) error {
 			}
 			w.fwd = f
 		}
-		w.fwd.condition(&op)
+		seen := op.Old
+		if w.fwd.condition(&op) && !SameValue(seen, op.Old) {
+			// Un collègue a modifié la cellule depuis (modification reçue,
+			// appliquée en local) : elle n'est ni annulée ni rétablie (§7),
+			// elle garde la valeur du collègue ; le reste de l'étape l'est.
+			return w.keep(op, seen)
+		}
 	}
 	w.buf = append(w.buf, op)
 	if len(w.buf) >= chunk {
@@ -811,15 +822,82 @@ func loadForward(ctx context.Context, tx *sql.Tx, seq int64, kind string) (*forw
 	return f, rs.Err()
 }
 
-func (f *forward) condition(op *command.Op) {
+// condition remplace la valeur vue par ce que la commande avait écrit ;
+// faux si la commande n'avait pas écrit cette cellule (commande antérieure
+// à la publication).
+func (f *forward) condition(op *command.Op) bool {
 	switch op.Kind {
 	case command.OpSet:
 		if v, ok := f.cells[cellKey{op.Table, op.Row, op.Col}]; ok {
 			op.Old = v
+			return true
 		}
 	case command.OpMove:
 		if p, ok := f.pos[rowKey{op.Table, op.Row}]; ok {
 			op.Old = p
+			return true
 		}
 	}
+	return false
+}
+
+// keep remet une cellule (ou la position d'une ligne) qu'une annulation
+// allait écraser à la valeur qu'un collègue y a mise, et le compte
+// (TakeSkipped). Rien ne part au serveur pour elle.
+func (w *writer) keep(op command.Op, seen any) error {
+	var rid int64
+	err := w.s.tx.QueryRowContext(w.s.ctx, `SELECT rid FROM _lattis_row_ids WHERE tbl = ? AND lattis_id = ?`, op.Table, op.Row).Scan(&rid)
+	if err == sql.ErrNoRows {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	set := `_pos`
+	if op.Kind == command.OpSet {
+		set = "c_" + strconv.FormatInt(op.Col, 10)
+	}
+	if b, ok := seen.([]byte); ok {
+		seen = string(b)
+	}
+	if _, err := w.s.tx.ExecContext(w.s.ctx, `UPDATE `+tableName(op.Table)+` SET `+set+` = ? WHERE id = ?`, seen, rid); err != nil {
+		return err
+	}
+	w.s.r.skipped.Add(1)
+	return nil
+}
+
+// TakeSkipped rend (et remet à zéro) le nombre de cellules qu'une
+// annulation ou un rétablissement n'a pas touchées parce qu'un collègue les
+// avait modifiées depuis (§7 : message en barre d'état).
+func (r *Recorder) TakeSkipped() int { return int(r.skipped.Swap(0)) }
+
+// SameValue compare deux valeurs d'une cellule, lues de SQLite ou de la file
+// d'envoi (JSON) : nombres par valeur, textes, vide.
+func SameValue(a, b any) bool {
+	na, oka := normValue(a)
+	nb, okb := normValue(b)
+	return oka == okb && na == nb
+}
+
+func normValue(v any) (string, bool) {
+	switch x := v.(type) {
+	case nil:
+		return "", false
+	case int64:
+		return "n:" + strconv.FormatFloat(float64(x), 'g', -1, 64), true
+	case float64:
+		return "n:" + strconv.FormatFloat(x, 'g', -1, 64), true
+	case json.Number:
+		f, err := x.Float64()
+		if err != nil {
+			return "s:" + x.String(), true
+		}
+		return "n:" + strconv.FormatFloat(f, 'g', -1, 64), true
+	case []byte:
+		return "s:" + string(x), true
+	case string:
+		return "s:" + x, true
+	}
+	return fmt.Sprintf("?:%v", v), true
 }

@@ -54,8 +54,20 @@ type Window struct {
 	Styles  []InvalidCell `json:"styles"`  // mise en forme des cellules (Raw : style JSON)
 	// Règles « formule » de mise en forme conditionnelle vérifiées par les
 	// cellules de la fenêtre.
-	Marks  []Mark `json:"marks"`
-	Micros int64  `json:"micros"` // temps passé côté Go, pour les mesures
+	Marks []Mark `json:"marks"`
+	// Sync : cellules d'un tableau partagé dont la modification attend le
+	// serveur, ou en conflit (classeur collaboratif ; rempli par le pont).
+	Sync   []SyncMark `json:"sync,omitempty"`
+	Micros int64      `json:"micros"` // temps passé côté Go, pour les mesures
+}
+
+// SyncMark marque une cellule d'un classeur collaboratif : Kind « pending »
+// (en attente de confirmation du serveur) ou « conflict ». Col -1 : toute
+// la ligne.
+type SyncMark struct {
+	Row  int    `json:"row"`
+	Col  int    `json:"col"`
+	Kind string `json:"kind"`
 }
 
 // Mark : la règle Rule (rang dans la liste de la colonne) s'applique à la
@@ -165,6 +177,13 @@ func (t *Table) WithInvalid(tableID int64, colIDs []int64) *Table {
 		t.colIDs[id] = i
 	}
 	return t
+}
+
+// ColIndex donne la colonne affichée d'une colonne du classeur (voir
+// WithInvalid).
+func (t *Table) ColIndex(id int64) (int, bool) {
+	i, ok := t.colIDs[id]
+	return i, ok
 }
 
 // ErrRange signale une fenêtre ou une colonne hors du tableau.

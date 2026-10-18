@@ -115,6 +115,7 @@ func (m *Model) Paste(ctx context.Context, sheet int64, row, col int, block [][]
 		if h*w > MaxPasteCells {
 			return ErrPasteTooBig{h * w}
 		}
+		t.collect = true
 		// Bloc entièrement dans les données d'un tableau : ses lignes sont
 		// lues une fois, sans relire les tableaux de la feuille à chaque
 		// cellule (sur un grand tableau, plusieurs minutes pour quelques

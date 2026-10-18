@@ -27,6 +27,11 @@ type Event struct {
 	Headless bool `json:"headless"`
 	// Keyed : colonne devenue clé pour une formule (« Tableau.Colonne »).
 	Keyed string `json:"keyed"`
+	// Refused : valeurs collées écartées car hors du type figé d'un tableau
+	// partagé (« Colonne : « valeur » », au plus quelques-unes) ;
+	// RefusedCount : leur nombre (§9).
+	Refused      []string `json:"refused,omitempty"`
+	RefusedCount int      `json:"refusedCount,omitempty"`
 }
 
 // SetCell traite une saisie validée dans la cellule (row, col) d'une feuille,
@@ -194,6 +199,11 @@ func (t *tx) setCellAt(tb Table, rid int64, i int, raw string, ev *Event) (Table
 		return tb, t.setValue(tb, rid, c, nil, "")
 	}
 	v, perr := grid.Parse(c.Type, raw)
+	if perr != nil && t.frozenTypes(tb.ID) {
+		// Tableau publié d'un classeur partagé : type figé, la valeur hors
+		// type n'est pas gardée en erreur (rien ne partirait au serveur).
+		return tb, t.refuse(tb, c, raw, ev)
+	}
 	if c.Fixed {
 		if perr != nil {
 			ev.Invalid = true
