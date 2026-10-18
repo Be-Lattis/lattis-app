@@ -197,7 +197,23 @@ func (t *tx) setCellAt(tb Table, rid int64, i int, raw string, ev *Event) (Table
 	if strings.TrimSpace(raw) == "" {
 		return tb, t.setValue(tb, rid, c, nil, "")
 	}
+	// Apostrophe de tête ('123, '007) : du texte, comme dans Excel ; elle force
+	// le type et n'est pas gardée dans la valeur (choix de Louis).
+	typed := raw
+	forced := strings.HasPrefix(raw, "'") && len(raw) > 1
+	if forced {
+		raw = raw[1:]
+	}
+	infer := func() grid.Type {
+		if forced {
+			return grid.Text
+		}
+		return Infer(raw)
+	}
 	v, perr := grid.Parse(c.Type, raw)
+	if forced && c.Type != grid.Text {
+		v, perr = nil, errForcedText
+	}
 	if perr != nil && t.frozenTypes(tb.ID) {
 		// Tableau publié d'un classeur partagé : type figé, la valeur hors
 		// type n'est pas gardée en erreur (rien ne partirait au serveur).
@@ -206,7 +222,7 @@ func (t *tx) setCellAt(tb Table, rid int64, i int, raw string, ev *Event) (Table
 	if c.Fixed {
 		if perr != nil {
 			ev.Invalid = true
-			return tb, t.setValue(tb, rid, c, nil, raw)
+			return tb, t.setValue(tb, rid, c, nil, typed)
 		}
 		return tb, t.setValue(tb, rid, c, v, "")
 	}
@@ -219,9 +235,9 @@ func (t *tx) setCellAt(tb Table, rid int64, i int, raw string, ev *Event) (Table
 	to := c.Type
 	switch {
 	case others == 0:
-		to = Infer(raw) // colonne vide : elle prend le type de sa première valeur
+		to = infer() // colonne vide : elle prend le type de sa première valeur
 	case perr != nil:
-		to = Join(c.Type, Infer(raw))
+		to = Join(c.Type, infer())
 		ev.Widened, ev.From, ev.To = tb.Name+"."+c.Name, c.Type, to
 	}
 	if to != c.Type {
@@ -234,6 +250,10 @@ func (t *tx) setCellAt(tb Table, rid int64, i int, raw string, ev *Event) (Table
 	}
 	return tb, t.setValue(tb, rid, tb.Cols[i], v, "")
 }
+
+// errForcedText : saisie forcée en texte par une apostrophe, dans une colonne
+// d'un autre type.
+var errForcedText = errors.New("texte forcé par une apostrophe")
 
 // appendRows ajoute n lignes vides en fin de tableau et décale ce qui est dessous.
 func (t *tx) appendRows(tb Table, n int) error {

@@ -206,3 +206,44 @@ func TestComputedResult(t *testing.T) {
 		t.Fatalf("types des résultats : %q", got)
 	}
 }
+
+// Dans un tableau aussi, l'apostrophe de tête force le texte sans être gardée.
+func TestTableApostropheText(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Code", "Qté"}, {"A1", "1"}, {"B2", "2"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.SetCell(ctx, 1, 1, 0, "'007"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.SetCell(ctx, 1, 2, 1, "'3"); err != nil {
+		t.Fatal(err)
+	}
+	if v := sqlText(t, d, `SELECT c_1 FROM t_1 ORDER BY _pos LIMIT 1`); v != "007" {
+		t.Fatalf("texte forcé : %q", v)
+	}
+	if v := sqlText(t, d, `SELECT c_2 FROM t_1 ORDER BY _pos LIMIT 1 OFFSET 1`); v != "3" {
+		t.Fatalf("colonne de nombres : %q", v)
+	}
+	if typ := sqlText(t, d, `SELECT type FROM _lattis_columns WHERE tbl = 1 AND id = 2`); typ != "text" {
+		t.Fatalf("type de la colonne : %q", typ)
+	}
+}
+
+// Des cellules libres '1, '2 qui font naître un tableau : du texte, sans apostrophe.
+func TestBirthApostropheText(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	for r, v := range []string{"Code", "'001", "'002"} {
+		if _, err := d.SetCell(ctx, 1, r, 0, v); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if ts := tablesOf(t, d); len(ts) != 1 {
+		t.Fatalf("tableau : %+v", ts)
+	}
+	if v := sqlText(t, d, `SELECT group_concat(c_1, '|') FROM (SELECT c_1 FROM t_1 ORDER BY _pos)`); v != "001|002" {
+		t.Fatalf("valeurs : %q", v)
+	}
+}
