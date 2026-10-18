@@ -115,7 +115,7 @@ Toutes vérifiées contre PostgreSQL 18 avec les migrations de la branche serveu
 | Niveau dans un classeur figé | `my_capabilities` rend `reader` pour tous les tableaux, propriétaire compris. Le client se fonde sur les rôles (`owner`, `designer`) pour laisser l'auteur préparer la version suivante. | — (cohérent avec « lecture seule pour tous » côté serveur). |
 | ~~Titre~~ | Réglé (migration 0007) : `my_capabilities` donne `title`, que le chargement préfère (à défaut, celui de `my_workbooks`, puis celui déjà noté, pour un serveur plus ancien). | — |
 | Identifiants des tableaux d'une version à l'autre | Une republication recrée les tableaux : nouveaux `table_id`, nouveaux `column_id`. Le client relie par `local_id`. | À garder en tête pour les références serveur (restrictions, `role_grants` par tableau) qui ne survivraient pas à une republication. |
-| Invitations | Pas d'écran Partager dans l'application (étape 6) : le propriétaire invite par `lattis.invite` (ou l'administration de `lattisd`). | Étape 6. |
+| ~~Invitations~~ | Réglé (étape 6) : écran Partager (voir `droits.md`). | — |
 | Délai de grâce | Un lecteur ouvert sur l'ancienne version peut la lire `republish_grace` secondes ; au-delà, son schéma disparaît. Le client recharge sur notification (bandeau) ; une lecture après suppression échoue avec l'erreur de PostgreSQL. | Message dédié côté client si besoin. |
 
 ## 6. Essais
@@ -139,7 +139,7 @@ LATTIS_PG_TEST=1 LATTIS_TEST_PG_URL=postgres://postgres:pg@127.0.0.1:55433/postg
 
 - ~~Synchronisation des classeurs collaboratifs (étape 5)~~ : faite, voir `synchronisation.md`.
 - Mise en page partagée par objets (étape 7) et accord à la première exécution d'un script publié (§11 : aujourd'hui, l'accord par empreinte du source d'`internal/trust` s'applique).
-- Écran Partager (invitations, rôles) : étape 6.
+- ~~Écran Partager (invitations, rôles)~~ : fait, voir `droits.md`.
 - Graphiques ou TCD d'un auteur qui citent un de ses tableaux privés : publiés tels quels, ils s'affichent en erreur chez les lecteurs (non filtrés).
 - Les réglages locaux d'un lecteur sur un tableau publié (filtre, mise en forme) ne survivent pas à un rechargement.
 - Version web : `ShareOpen` écrit le cache dans le dossier de cache du moteur ; à revoir quand `lattisd` embarquera le moteur (le classeur y est déjà sur le serveur).

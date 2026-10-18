@@ -61,9 +61,9 @@ Le Recorder (`oplog`) conditionne déjà l'annulation à « ce que j'avais écri
 | Refus d'une partie de l'étape | Un `INSERT` refusé par une règle `WITH CHECK` (filtre d'écriture) lève une erreur qui défait toute la transaction ; le client refuse alors toute l'étape. | Points de sauvegarde par opération côté client (coût), ou une fonction serveur d'écriture par lot qui rend un statut par opération. |
 | `why_not` et l'ordre | Un `move` refusé (clé d'ordre changée) est rendu comme « modified » sans comparer `lattis_pos` : le client relit la ligne et prend l'ordre du serveur. | — |
 | Clés d'ordre égales | Deux postes qui insèrent au même endroit produisent la même clé ; le serveur départage par `lattis_id`, le classeur local (`_pos` seul) non. | Départage local par `lattis_id` à l'affichage (§16, point 4). |
-| Droits qui changent | Pas de notification de changement de droits : les niveaux (`_lattis_capabilities`) sont lus au chargement ; un refus du serveur est traité, mais la grille ne grise pas avant. | Une charge `*acl` sur le canal, puis relecture de `my_capabilities`. |
+| ~~Droits qui changent~~ | Réglé : notification `*acl` (migration 0008 du serveur), capacités relues à la connexion et sur notification, grille grisée avant tout refus (voir `droits.md`). | — |
 | Pierres tombales | Purgées après 30 jours : un cache sans rien en attente et chargé depuis plus de 25 jours est rechargé en entier à l'ouverture ; un cache plus vieux avec une file en attente est gardé (la file part, les suppressions anciennes peuvent manquer). | Une fonction qui dit si `since` est encore couvert par les pierres tombales. |
 | Structure et mise en page | `*meta` ignoré ; structure d'un tableau publié refusée en local. | Étape 7 (§6.4). |
 | `datetime` | Lu en texte ISO, jamais écrit depuis l'application (pas de type local). | — |
 
-Côté application, restent : départage des clés d'ordre égales, grisé des lignes d'autrui pour un participant (§8.1, étape 6), notification de droits, édition hors ligne (la file est prête).
+Côté application, restent : départage des clés d'ordre égales, édition hors ligne (la file est prête).
