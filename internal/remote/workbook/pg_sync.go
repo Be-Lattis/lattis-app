@@ -18,7 +18,7 @@ import (
 func (s pgServer) Delta(ctx context.Context, fn func(Reader) error) error {
 	return s.with(ctx, usageListen, func(c *pgx.Conn) error {
 		return pgx.BeginTxFunc(ctx, c, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly}, func(tx pgx.Tx) error {
-			return fn(pgReader{tx: tx, v8: new(int8)})
+			return fn(pgReader{tx: tx, v8: new(sync8)})
 		})
 	})
 }
@@ -112,13 +112,18 @@ func (w pgWriter) Update(ctx context.Context, schema, table, id string, col Remo
 		return Wrote{}, err
 	}
 	c, typ := pgx.Identifier{col.Name}.Sanitize(), pgType(col.Type)
+	return w.exec(ctx, `UPDATE `+pgx.Identifier{schema, table}.Sanitize()+` SET `+c+` = $1::`+typ+
+		` WHERE lattis_id = $2::uuid AND `+c+` IS NOT DISTINCT FROM $3::`+typ, []any{n, id, o})
+}
+
+// exec exécute une écriture et rend le nombre de lignes touchées.
+func (w pgWriter) exec(ctx context.Context, q string, args []any) (Wrote, error) {
 	var out Wrote
-	err = w.write(ctx, `UPDATE `+pgx.Identifier{schema, table}.Sanitize()+` SET `+c+` = $1::`+typ+
-		` WHERE lattis_id = $2::uuid AND `+c+` IS NOT DISTINCT FROM $3::`+typ+` RETURNING old.lattis_xid::text`, []any{n, id, o},
-		func(br pgx.BatchResults) (err error) {
-			out.Rows, err = returning(br, &out.Prev)
-			return err
-		})
+	err := w.write(ctx, q, args, func(br pgx.BatchResults) error {
+		tag, err := br.Exec()
+		out.Rows = tag.RowsAffected()
+		return err
+	})
 	return out, err
 }
 
@@ -145,24 +150,11 @@ func (w pgWriter) Insert(ctx context.Context, schema, table, id, pos string, col
 }
 
 func (w pgWriter) Delete(ctx context.Context, schema, table, id string) (Wrote, error) {
-	var out Wrote
-	err := w.write(ctx, `DELETE FROM `+pgx.Identifier{schema, table}.Sanitize()+` WHERE lattis_id = $1::uuid`, []any{id},
-		func(br pgx.BatchResults) error {
-			tag, err := br.Exec()
-			out.Rows = tag.RowsAffected()
-			return err
-		})
-	return out, err
+	return w.exec(ctx, `DELETE FROM `+pgx.Identifier{schema, table}.Sanitize()+` WHERE lattis_id = $1::uuid`, []any{id})
 }
 
 func (w pgWriter) Move(ctx context.Context, schema, table, id, old, pos string) (Wrote, error) {
-	var out Wrote
-	err := w.write(ctx, `UPDATE `+pgx.Identifier{schema, table}.Sanitize()+` SET lattis_pos = $1 WHERE lattis_id = $2::uuid AND lattis_pos = $3 RETURNING old.lattis_xid::text`, []any{pos, id, old},
-		func(br pgx.BatchResults) (err error) {
-			out.Rows, err = returning(br, &out.Prev)
-			return err
-		})
-	return out, err
+	return w.exec(ctx, `UPDATE `+pgx.Identifier{schema, table}.Sanitize()+` SET lattis_pos = $1 WHERE lattis_id = $2::uuid AND lattis_pos = $3`, []any{pos, id, old})
 }
 
 func (w pgWriter) Xact(ctx context.Context) (string, error) {
@@ -238,38 +230,58 @@ func decodeRow(raw []byte) (map[string]any, error) {
 	return m, err
 }
 
-// sync8Query dit si le serveur a la migration 0008 (changes_since avec
-// skip, since_covered) ; lu une fois par transaction (avec SyncPoint).
-const sync8Query = `to_regprocedure('lattis.since_covered(xid8)') IS NOT NULL`
+// sync8Query lit ce que le serveur sait de la migration 0008 ; lu une fois
+// par transaction (avec SyncPoint) :
+//   - since_covered existe ;
+//   - changes_since(…, skip) ne masque pas l'écriture d'un autre recouverte
+//     par le poste (lattis_other_xid, version finale de 0008). Sans cela,
+//     skip n'est pas passé : les échos reviennent, sans effet, plutôt que
+//     de perdre une valeur d'un collègue.
+const sync8Query = `to_regprocedure('lattis.since_covered(xid8)') IS NOT NULL,
+	coalesce((SELECT prosrc LIKE '%lattis_other_xid%' FROM pg_catalog.pg_proc
+		WHERE oid = to_regprocedure('lattis.changes_since(uuid,uuid,xid8,xid8[])')), false)`
 
-func (r pgReader) has8(ctx context.Context) (bool, error) {
-	if r.v8 != nil && *r.v8 != 0 {
-		return *r.v8 > 0, nil
-	}
-	var ok bool
-	if err := r.tx.QueryRow(ctx, `SELECT `+sync8Query).Scan(&ok); err != nil {
-		return false, err
-	}
-	r.note8(ok)
-	return ok, nil
+// sync8 : fonctions de la migration 0008 du serveur.
+type sync8 struct {
+	read    bool // lu dans cette transaction
+	covered bool // lattis.since_covered
+	skip    bool // changes_since(…, skip) avec lattis_other_xid
 }
 
-func (r pgReader) note8(ok bool) {
-	if r.v8 == nil {
-		return
+func (r pgReader) has8(ctx context.Context) (sync8, error) {
+	if r.v8 != nil && r.v8.read {
+		return *r.v8, nil
 	}
-	*r.v8 = -1
-	if ok {
-		*r.v8 = 1
+	var s sync8
+	if err := r.tx.QueryRow(ctx, `SELECT `+sync8Query).Scan(&s.covered, &s.skip); err != nil {
+		return sync8{}, err
 	}
+	r.note8(s)
+	return s, nil
+}
+
+func (r pgReader) note8(s sync8) {
+	if r.v8 != nil {
+		s.read = true
+		*r.v8 = s
+	}
+}
+
+// Probe rend la fin de l'instantané de la transaction
+// (pg_snapshot_xmax) : toute transaction d'identifiant inférieur est
+// validée ou en cours à son début (voir Reader.Probe).
+func (r pgReader) Probe(ctx context.Context) (string, error) {
+	var s string
+	err := r.tx.QueryRow(ctx, `SELECT pg_snapshot_xmax(pg_current_snapshot())::text`).Scan(&s)
+	return s, err
 }
 
 func (r pgReader) Covered(ctx context.Context, since string) (bool, bool, error) {
 	if since == "" || since == "0" {
 		return true, true, nil
 	}
-	ok, err := r.has8(ctx)
-	if err != nil || !ok {
+	s, err := r.has8(ctx)
+	if err != nil || !s.covered {
 		return true, false, err
 	}
 	var covered bool
@@ -283,11 +295,11 @@ func (r pgReader) Changes(ctx context.Context, workbookID string, t RemoteTable,
 	}
 	q, args := `SELECT row_data::text, deleted FROM lattis.changes_since($1::uuid, $2::uuid, $3::xid8)`, []any{workbookID, t.ID, since}
 	if len(skip) > 0 {
-		ok, err := r.has8(ctx)
+		s, err := r.has8(ctx)
 		if err != nil {
 			return err
 		}
-		if ok {
+		if s.skip {
 			q, args = `SELECT row_data::text, deleted FROM lattis.changes_since($1::uuid, $2::uuid, $3::xid8, $4::text[]::xid8[])`, append(args, skip)
 		}
 	}

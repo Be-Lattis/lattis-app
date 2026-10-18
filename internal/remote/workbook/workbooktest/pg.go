@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/lalamefine/lattis/internal/remote/pgpool"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 )
 
@@ -62,6 +63,12 @@ func PGSetup(t *testing.T) *PGEnv {
 		}
 	})
 	const pw = "lattis-service-test"
+	// Rôles communs à tout le serveur PostgreSQL : les paquets d'essais (ceux
+	// de be-lattis-server compris, internal/testpg, même verrou) s'amorcent
+	// l'un après l'autre, sinon « tuple concurrently updated ». Le verrou
+	// tombe avec la connexion si un essai s'arrête avant de le rendre.
+	_, err = conn.Exec(ctx, `SELECT pg_advisory_lock(7357)`)
+	must(t, err)
 	for _, q := range []string{
 		`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'lattis_service') THEN CREATE ROLE lattis_service LOGIN CREATEROLE; END IF; END $$`,
 		`ALTER ROLE lattis_service PASSWORD '` + pw + `'`,
@@ -71,6 +78,8 @@ func PGSetup(t *testing.T) *PGEnv {
 		_, err := conn.Exec(ctx, q)
 		must(t, err)
 	}
+	_, err = conn.Exec(ctx, `SELECT pg_advisory_unlock(7357)`)
+	must(t, err)
 	env := &PGEnv{Super: withDB(t, admin, name, "", "")}
 	svc, err := pgx.Connect(ctx, withDB(t, admin, name, "lattis_service", pw))
 	must(t, err)
@@ -130,14 +139,24 @@ func (e *PGEnv) User(t *testing.T, name string) (string, string) {
 	return role, id
 }
 
-// As rend le serveur vu par un utilisateur (une connexion par appel).
-func (e *PGEnv) As(role string) workbook.Server {
+// As rend le serveur vu par un utilisateur (une connexion par appel), sans
+// identifiant de poste.
+func (e *PGEnv) As(role string) workbook.Server { return e.AsDevice(role, "") }
+
+// AsDevice rend le serveur vu par un utilisateur depuis un poste : comme
+// pgpool, lattis.device est posé sur les connexions de rw (écritures,
+// deltas, LISTEN).
+func (e *PGEnv) AsDevice(role, device string) workbook.Server {
 	return workbook.PG(func(ctx context.Context, usage string) (*pgx.Conn, func(), error) {
 		c, err := pgx.Connect(ctx, e.Super)
 		if err != nil {
 			return nil, nil, err
 		}
-		if _, err := c.Exec(ctx, "SET application_name = 'Lattis/test/"+usage+"'; SET SESSION AUTHORIZATION "+pgx.Identifier{role}.Sanitize()); err != nil {
+		q := "SET application_name = 'Lattis/test/" + usage + "'; SET SESSION AUTHORIZATION " + pgx.Identifier{role}.Sanitize()
+		if device != "" && !pgpool.ReadUsage(usage) {
+			q += "; " + pgpool.DeviceSQL(device)
+		}
+		if _, err := c.Exec(ctx, q); err != nil {
 			c.Close(ctx)
 			return nil, nil, err
 		}

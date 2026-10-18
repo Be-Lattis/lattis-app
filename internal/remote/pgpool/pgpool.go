@@ -76,7 +76,16 @@ type Target struct {
 	User    string
 	Token   TokenFunc
 	Version string
+	// Device : identifiant stable du poste (config.DeviceID), posé sur
+	// chaque connexion du pool rw (SET lattis.device, contrat client §6) :
+	// l'auteur d'une écriture est le rôle et le poste, sinon deux postes du
+	// même utilisateur passent pour un seul et l'un ne reçoit pas ce que
+	// l'autre a écrit (échos). Vide : non posé.
+	Device string
 }
+
+// DeviceSQL écrit l'instruction qui pose l'identifiant du poste.
+func DeviceSQL(device string) string { return "SET lattis.device = " + literal(device) }
 
 // hostsPorts sépare une liste d'hôtes (hôte ou hôte:port, IPv6 entre
 // crochets) en listes host= et port= de libpq.
@@ -223,6 +232,14 @@ func (t Target) pool(ctx context.Context, eps []string, usage string, max int32)
 	setToken(cfg.ConnConfig, t.User, t.Token)
 	cfg.MaxConns = max
 	cfg.MinConns = 0
+	if usage == UsageWrite && t.Device != "" {
+		// Pool rw : écritures, deltas et LISTEN.
+		q := DeviceSQL(t.Device)
+		cfg.AfterConnect = func(ctx context.Context, c *pgx.Conn) error {
+			_, err := c.Exec(ctx, q)
+			return err
+		}
+	}
 	return pgxpool.NewWithConfig(ctx, cfg)
 }
 

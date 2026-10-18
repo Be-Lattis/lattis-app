@@ -44,18 +44,46 @@ func TestForeignChangeUnderOwnWrite(t *testing.T) {
 	alice.mustSet(0, 1, "5")
 	alice.send()
 	// Bob écrit la même ligne sans avoir reçu la modification d'Alice : sa
-	// transaction devient la dernière de la ligne, écartée comme écho ; la
-	// ligne est relue à l'envoi.
+	// transaction devient la dernière de la ligne, mais la ligne revient
+	// quand même (lattis_other_xid), sans relecture à l'envoi.
 	bob.mustSet(0, 2, "9")
 	if r := bob.send(); r.Sent != 1 || r.Conflicts != 0 {
 		t.Fatalf("envoi : %+v", r)
 	}
-	eq(t, "Bob après envoi", bob.col("Quantité"), []string{"5", "10", "1"})
-	bob.receive()
+	eq(t, "Bob après envoi", bob.col("Quantité"), []string{"3", "10", "1"})
+	if r := bob.receive(); !r.Changed() {
+		t.Fatalf("réception : %+v", r)
+	}
 	eq(t, "Bob Quantité", bob.col("Quantité"), []string{"5", "10", "1"})
 	eq(t, "Bob Prix", bob.col("Prix"), []string{"9.0", "2.0", "3.25"})
 	alice.receive()
 	eq(t, "Alice Prix", alice.col("Prix"), []string{"9.0", "2.0", "3.25"})
+}
+
+// Deux postes du même utilisateur sont deux auteurs (SET lattis.device) :
+// l'écriture de l'un, recouverte par l'autre avant de l'avoir reçue,
+// revient à ce dernier.
+func TestSameUserTwoDevices(t *testing.T) {
+	f, _, bob, id := setup(t)
+	bob.e.SetServer(f.AsDevice("bob", "poste-1"))
+	bob2 := newClient(t, "bob2", openAs(t, f, id, "bob"), f.AsDevice("bob", "poste-2"))
+	bob.mustSet(0, 1, "6")
+	bob.send()
+	bob2.mustSet(0, 2, "8")
+	if r := bob2.send(); r.Sent != 1 {
+		t.Fatalf("envoi : %+v", r)
+	}
+	bob2.receive()
+	eq(t, "Bob, poste 2", bob2.col("Quantité"), []string{"6", "10", "1"})
+	bob.receive()
+	eq(t, "Bob, poste 1", bob.col("Prix"), []string{"8.0", "2.0", "3.25"})
+	// Même poste : son écho reste écarté.
+	before := f.Calls["changes_rows"]
+	bob2.mustSet(0, 2, "7")
+	bob2.send()
+	if r := bob2.receive(); r.Changed() || f.Calls["changes_rows"] != before {
+		t.Fatalf("écho du poste 2 : %+v", r)
+	}
 }
 
 func TestOwnInsertAuthor(t *testing.T) {
@@ -123,6 +151,47 @@ func TestSinceNotCovered(t *testing.T) {
 	}
 	alice.receive()
 	eq(t, "Alice", alice.col("Produit"), []string{"Café", "Thé", "Tisane"})
+}
+
+// Une transaction longue, commencée avant la purge, retient sync_point
+// (pg_snapshot_xmin) sous l'horizon des pierres tombales : le tableau est
+// rechargé une fois, pas à chaque réception tant qu'elle dure (témoin de
+// couverture, Reader.Probe).
+func TestSinceHeldByLongTransaction(t *testing.T) {
+	ctx := context.Background()
+	f, alice, bob, _ := setup(t)
+	release := f.Hold()
+	must(t, alice.d.DeleteRow(ctx, "Ventes", 2))
+	alice.send()
+	f.PurgeTombstones()
+	if r := bob.receive(); r.Reloaded != 1 {
+		t.Fatalf("réception : %+v", r)
+	}
+	eq(t, "Bob", bob.col("Produit"), []string{"Café", "Thé"})
+	for i := range 2 {
+		if r := bob.receive(); r.Reloaded != 0 {
+			t.Fatalf("réception %d pendant la transaction longue : %+v", i+2, r)
+		}
+	}
+	// Nouvelle purge d'une suppression que Bob n'a pas lue : rechargé.
+	alice.mustSet(0, 1, "4")
+	must(t, alice.d.DeleteRow(ctx, "Ventes", 1))
+	alice.send()
+	f.PurgeTombstones()
+	if r := bob.receive(); r.Reloaded != 1 {
+		t.Fatalf("après une nouvelle purge : %+v", r)
+	}
+	eq(t, "Bob après la purge", bob.col("Quantité"), []string{"4"})
+	release()
+	bob.receive()
+	if r := bob.receive(); r.Reloaded != 0 {
+		t.Fatalf("après la transaction longue : %+v", r)
+	}
+	var n int
+	must(t, bob.d.DB().Read().QueryRow(`SELECT count(*) FROM _lattis_info WHERE key = 'sync_probe'`).Scan(&n))
+	if n != 0 {
+		t.Fatal("témoin de couverture gardé alors que le point de reprise est couvert")
+	}
 }
 
 func TestSinceCoveredUnknown(t *testing.T) {

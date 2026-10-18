@@ -96,6 +96,7 @@ func lattisTarget(m *auth.Manager, server string, user auth.User, disc *auth.Dis
 		User:    user.PGRole,
 		Token:   func(ctx context.Context) (string, error) { return m.Token(ctx, server) },
 		Version: Version,
+		Device:  config.DeviceID(),
 	}
 }
 

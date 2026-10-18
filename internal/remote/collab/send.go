@@ -87,14 +87,6 @@ func (e *Engine) send(ctx context.Context) (Report, error) {
 	if err != nil {
 		return rep, err
 	}
-	sent, err := readSkip(ctx, e.db.Read())
-	if err != nil {
-		return rep, err
-	}
-	mine := map[string]bool{}
-	for _, x := range sent {
-		mine[x] = true
-	}
 	for ctx.Err() == nil {
 		entries, err := e.nextBatch(ctx)
 		if err != nil {
@@ -103,12 +95,9 @@ func (e *Engine) send(ctx context.Context) (Report, error) {
 		if len(entries) == 0 {
 			break
 		}
-		o, err := e.sendBatch(ctx, srv, info, tables, entries, mine)
+		o, err := e.sendBatch(ctx, srv, info, tables, entries)
 		if err != nil {
 			return rep, err
-		}
-		if o.xid != "" {
-			mine[o.xid] = true
 		}
 		if err := e.finish(ctx, srv, info, tables, o, &rep); err != nil {
 			return rep, err
@@ -195,9 +184,8 @@ func (o *outcome) reject(it item, msg string) {
 // rendue est une coupure (rien n'est noté) ; un refus du serveur est dans
 // le résultat. Chaque écriture a son point de sauvegarde : une opération
 // refusée par une erreur SQL (filtre d'écriture d'un participant, droits)
-// est seule refusée, le reste de l'étape s'applique. mine : transactions
-// du serveur de ce poste (échos à écarter).
-func (e *Engine) sendBatch(ctx context.Context, srv workbook.Server, info *workbook.Info, tables map[int64]*rtable, entries []entry, mine map[string]bool) (*outcome, error) {
+// est seule refusée, le reste de l'étape s'applique.
+func (e *Engine) sendBatch(ctx context.Context, srv workbook.Server, info *workbook.Info, tables map[int64]*rtable, entries []entry) (*outcome, error) {
 	o := newOutcome(entries)
 	var items []item
 	for ei, en := range entries {
@@ -289,13 +277,9 @@ func (e *Engine) sendBatch(ctx context.Context, srv workbook.Server, info *workb
 				continue
 			}
 			if wr.Rows > 0 {
-				// La ligne portait l'écriture d'un autre, peut-être pas encore
-				// reçue : elle ne reviendra pas par changes_since (notre
-				// transaction en est désormais la dernière, écartée comme
-				// écho), elle est relue.
-				if wr.Prev != "" && !mine[wr.Prev] && workbook.XidAfter(wr.Prev, it.t.since) {
-					o.refetch(op.Table, op.Row)
-				}
+				// Si la ligne portait l'écriture d'un autre pas encore reçue,
+				// elle reviendra par changes_since malgré skip : le serveur
+				// garde lattis_other_xid.
 				continue
 			}
 			why, err := w.WhyNot(ctx, info.WorkbookID, it.t.remote, op.Row)
