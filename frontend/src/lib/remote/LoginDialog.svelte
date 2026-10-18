@@ -29,8 +29,6 @@
 	/** Connexion en cours : navigateur ouvert, ou code à saisir ailleurs. */
 	let waiting = $state<{ provider: Provider; device?: DeviceCode } | null>(null);
 	let otherDevice = $state(false);
-	let email = $state('');
-	let password = $state('');
 	let now = $state(Date.now());
 	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
 	const rows = $derived(loginRows(server?.providers));
@@ -81,21 +79,6 @@
 		} finally {
 			busy = false;
 			waiting = null;
-		}
-	}
-
-	async function signInPassword(p: Provider) {
-		if (!server) return;
-		error = '';
-		busy = true;
-		try {
-			await DocumentService.LattisPasswordLogin(server.url, p.id, email, password);
-			ondone(true);
-		} catch (e) {
-			error = err(e);
-			password = '';
-		} finally {
-			busy = false;
 		}
 	}
 
@@ -184,23 +167,7 @@
 				<p class="muted">{hostOf(server.url)}{server.version ? ` · version ${server.version}` : ''}{server.accessMode === 'invitation' ? ' · sur invitation' : ''}</p>
 				<div class="rows">
 					{#each rows as r (r.provider.id)}
-						{#if r.kind === 'password'}
-							{@const p = r.provider}
-							<form
-								class="password"
-								onsubmit={(e) => {
-									e.preventDefault();
-									signInPassword(p);
-								}}
-							>
-								<div class="ptitle">{@render glyph(p)}<span>{p.label}</span></div>
-								<label>Adresse <input type="email" autocomplete="username" bind:value={email} disabled={busy} /></label>
-								<label>Mot de passe <input type="password" autocomplete="current-password" bind:value={password} disabled={busy} /></label>
-								<button class="primary" type="submit" disabled={busy || !email.trim() || !password}>Se connecter</button>
-							</form>
-						{:else}
-							<button class="provider" onclick={() => signIn(r.provider)} disabled={busy}>{@render glyph(r.provider)}<span>{providerButton(r.provider)}</span></button>
-						{/if}
+						<button class="provider" onclick={() => signIn(r.provider)} disabled={busy}>{@render glyph(r.provider)}<span>{providerButton(r.provider)}</span></button>
 					{/each}
 				</div>
 				{#if rows.some((r) => r.kind === 'button')}
@@ -306,7 +273,6 @@
 		justify-content: center;
 		object-fit: contain;
 	}
-	form.password,
 	form.url {
 		display: flex;
 		flex-direction: column;
@@ -321,12 +287,6 @@
 	}
 	form button {
 		align-self: flex-end;
-	}
-	.ptitle {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		font-weight: 600;
 	}
 	label {
 		display: flex;

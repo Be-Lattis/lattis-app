@@ -139,15 +139,6 @@ func (s *DocumentService) LattisLogin(ctx context.Context, url, provider string)
 	return m.Login(ctx, url, provider)
 }
 
-// LattisPasswordLogin connecte un compte à mot de passe Lattis.
-func (s *DocumentService) LattisPasswordLogin(ctx context.Context, url, provider, email, password string) (auth.ServerState, error) {
-	m, err := lattisOn()
-	if err != nil {
-		return auth.ServerState{}, err
-	}
-	return m.PasswordLogin(ctx, url, provider, email, password)
-}
-
 // LattisDeviceStart demande un code pour se connecter depuis un autre
 // appareil (secours quand le navigateur de ce poste ne peut pas servir).
 func (s *DocumentService) LattisDeviceStart(ctx context.Context, url, provider string) (auth.DeviceCode, error) {

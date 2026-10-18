@@ -208,25 +208,6 @@ func TestLoginRefused(t *testing.T) {
 	}
 }
 
-func TestPasswordLogin(t *testing.T) {
-	f := newFakeLattisd(t)
-	m := newManager(t, f, memStore{}, "", nil)
-	ctx := context.Background()
-	if _, err := m.PasswordLogin(ctx, f.url(), "password", "bob@acme.fr", "faux"); err == nil || !strings.Contains(err.Error(), "mot de passe incorrect") {
-		t.Fatalf("mauvais mot de passe : %v", err)
-	}
-	if _, err := m.PasswordLogin(ctx, f.url(), "password", "eve@acme.fr", "x"); err == nil || !strings.Contains(err.Error(), "désactivé") {
-		t.Fatalf("compte désactivé : %v", err)
-	}
-	if _, err := m.PasswordLogin(ctx, f.url(), "google", "bob@acme.fr", "secret"); err == nil {
-		t.Fatal("mot de passe accepté pour Google")
-	}
-	st, err := m.PasswordLogin(ctx, f.url(), "password", " bob@acme.fr ", "secret")
-	if err != nil || st.User.Email != "bob@acme.fr" {
-		t.Fatalf("connexion : %+v, %v", st, err)
-	}
-}
-
 func TestDeviceFlow(t *testing.T) {
 	f := newFakeLattisd(t)
 	m := newManager(t, f, memStore{}, "", nil)
@@ -337,9 +318,6 @@ func TestPolicy(t *testing.T) {
 	}
 	if _, err := m.Login(ctx, f.url(), "google"); err == nil || !strings.Contains(err.Error(), "impose") {
 		t.Fatalf("autre fournisseur accepté : %v", err)
-	}
-	if _, err := m.PasswordLogin(ctx, f.url(), "password", "bob@acme.fr", "secret"); err != nil {
-		t.Fatal(err)
 	}
 }
 

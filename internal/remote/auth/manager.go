@@ -425,22 +425,6 @@ func (m *Manager) Login(ctx context.Context, raw, provider string) (ServerState,
 	return m.establish(s, t)
 }
 
-// PasswordLogin connecte un compte à mot de passe Lattis.
-func (m *Manager) PasswordLogin(ctx context.Context, raw, provider, email, password string) (ServerState, error) {
-	if strings.TrimSpace(email) == "" || password == "" {
-		return ServerState{}, errors.New("saisissez votre adresse et votre mot de passe")
-	}
-	s, c, err := m.prepare(ctx, raw, provider, ProviderPassword)
-	if err != nil {
-		return ServerState{}, err
-	}
-	t, err := c.password(ctx, provider, strings.TrimSpace(email), password)
-	if err != nil {
-		return ServerState{}, err
-	}
-	return m.establish(s, t)
-}
-
 // StartDevice demande un code de connexion depuis un autre appareil.
 func (m *Manager) StartDevice(ctx context.Context, raw, provider string) (*DeviceCode, error) {
 	s, c, err := m.prepare(ctx, raw, provider, "")

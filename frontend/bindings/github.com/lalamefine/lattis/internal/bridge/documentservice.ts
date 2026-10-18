@@ -643,13 +643,6 @@ export function LattisLogin(url: string, provider: string): $CancellablePromise<
 }
 
 /**
- * LattisPasswordLogin connecte un compte à mot de passe Lattis.
- */
-export function LattisPasswordLogin(url: string, provider: string, email: string, password: string): $CancellablePromise<auth$0.ServerState> {
-    return $Call.ByID(2065163205, url, provider, email, password);
-}
-
-/**
  * LattisSignOut ferme la session d'un serveur (jeton révoqué et oublié du
  * trousseau) et rend l'état à jour.
  */

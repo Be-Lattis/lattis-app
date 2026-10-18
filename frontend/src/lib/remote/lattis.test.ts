@@ -16,7 +16,7 @@ function server(name: string, user: ServerState['user'] = null): ServerState {
 describe('page de connexion', () => {
 	it('un bouton par fournisseur, dans l’ordre du serveur, le mot de passe en formulaire', () => {
 		const rows = loginRows(providers);
-		expect(rows.map((r) => r.kind)).toEqual(['button', 'button', 'password', 'button']);
+		expect(rows.map((r) => r.kind)).toEqual(['button', 'button', 'button', 'button']);
 		expect(rows.map((r) => r.provider.id)).toEqual(['google', 'acme', 'password', 'ms']);
 		expect(providerButton(providers[1])).toBe('Continuer avec Keycloak (Acme)');
 		expect(providerButton({ id: 'x', kind: 'oidc', label: '' })).toBe('Continuer avec x');

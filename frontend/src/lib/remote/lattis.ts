@@ -5,21 +5,23 @@ import type { Provider, ServerState, User } from '#bindings/internal/remote/auth
 
 export const PASSWORD = 'password';
 
-/** Libellé du bouton d'un fournisseur : « Continuer avec Google ». */
+/** Libellé du bouton d'un fournisseur : « Continuer avec Google », « Continuer avec un mot de passe ». */
 export function providerButton(p: Provider): string {
+	if (p.kind === PASSWORD && (!p.label || p.label === p.id)) return 'Continuer avec un mot de passe';
 	return `Continuer avec ${p.label || p.id}`;
 }
 
-/** Une rangée de la page de connexion : un bouton, ou le formulaire du mot de passe. */
-export type LoginRow = { kind: 'button'; provider: Provider } | { kind: 'password'; provider: Provider };
+/** Une rangée de la page de connexion : le bouton d'un fournisseur. */
+export type LoginRow = { kind: 'button'; provider: Provider };
 
 /**
  * Rangées de la page de connexion, dans l'ordre du serveur : un bouton par
- * fournisseur, le formulaire adresse + mot de passe à la place du
- * fournisseur « password ».
+ * fournisseur. Le mot de passe se saisit lui aussi dans le navigateur, sur
+ * la page de lattisd (choix de Louis : la fenêtre de Lattis ne voit jamais
+ * le mot de passe).
  */
 export function loginRows(providers: readonly Provider[] | null | undefined): LoginRow[] {
-	return (providers ?? []).map((p) => (p.kind === PASSWORD ? { kind: 'password', provider: p } : { kind: 'button', provider: p }));
+	return (providers ?? []).map((p) => ({ kind: 'button', provider: p }));
 }
 
 /** Icône intégrée d'un genre de fournisseur, quand le serveur n'en donne pas. */

@@ -9,7 +9,7 @@
 | Fonctionnalité à activer : Fichier › Paramètres › Fonctionnalités › « Classeurs partagés (Serveur Lattis) » (`features.sharedWorkbooks`, coupée par défaut). Coupée, tout est masqué (menu Compte, source « Serveur Lattis », commandes) et le pont refuse les appels. | `internal/config`, `frontend/src/lib/shell/settings.ts` |
 | Connexion de genre `lattis` (un seul champ : l'adresse du serveur) ; le nom affiché lu à l'ajout (`config.label`) remplace « PostgreSQL » dans les listes. Utilisable comme source de requête en lecture seule (sur un réplica quand il y en a). | `internal/query/lattis.go`, `ConnectionDialog.svelte`, `sources.ts` |
 | Découverte `GET <url>/.well-known/lattis.json`, refus explicite si l'application est plus ancienne que `min_client_version`. | `internal/remote/auth/discovery.go` |
-| Page de connexion : un bouton par fournisseur, dans l'ordre du serveur, avec son icône ; formulaire adresse + mot de passe pour le fournisseur `password` ; messages clairs pour les refus. | `frontend/src/lib/remote/LoginDialog.svelte` |
+| Page de connexion : un bouton par fournisseur, dans l'ordre du serveur, avec son icône ; le fournisseur `password` aussi passe par le navigateur (la page de connexion de `lattisd`, décision de Louis du 18/10/2026 : la fenêtre de Lattis ne voit jamais le mot de passe) ; messages clairs pour les refus. | `frontend/src/lib/remote/LoginDialog.svelte` |
 | OAuth 2.0 code d'autorisation + PKCE (S256), navigateur du système, redirection en boucle locale `http://127.0.0.1:<port>/callback` (RFC 8252) ; « device code » (RFC 8628) en secours. | `internal/remote/auth/oauth.go`, `loopback.go`, `manager.go` |
 | Jeton de rafraîchissement au trousseau du système (`internal/query/secrets.go`, compte `lattis://<hôte>/<utilisateur>`, sans accord par classeur : la session est celle du poste) ; jeton d'accès en mémoire, renouvelé 60 s avant son expiration et à la première connexion après redémarrage ; rotation prise en compte ; refus du renouvellement = session fermée. | `internal/remote/auth/manager.go`, `internal/query/lattis.go` (`LattisTokens`) |
 | Menu Compte (barre de titre) : utilisateur connecté par serveur, connexion, déconnexion (révocation au mieux, oubli au trousseau). | `frontend/src/lib/remote/AccountMenu.svelte` |
@@ -46,9 +46,8 @@ Le contrat client de `lattisd` (`be-lattis-server`, branche `claude/socle-lattis
 
 | Point | Côté application | À trancher |
 |---|---|---|
-| Mot de passe Lattis | La spécification de l'application met adresse et mot de passe dans la page de Lattis ; l'application envoie `POST token_endpoint` avec `grant_type=password`, `username`, `password`, `scope`, `provider`. Le contrat ne prévoit que le code d'autorisation (le formulaire est chez `lattisd`). | Soit `lattisd` accepte ce grant pour le fournisseur `password` et le client de bureau, soit on traite `password` comme les autres (bouton → navigateur) : retirer le formulaire de `LoginDialog.svelte` et `Manager.PasswordLogin`. |
 | Device code (secours) | `POST device_authorization_endpoint` (par défaut `/oauth/device`, §11 de la spécification), RFC 8628. | Le contrat ne l'annonce pas encore : à ajouter à la découverte (`device_authorization_endpoint`) et au serveur. |
-| Codes de refus | `error=access_denied` avec `reason` ∈ `denied_tenant`, `not_invited`, `account_disabled` (alias `tenant_not_allowed`, `invitation_required`, `user_disabled`) au retour ou dans le corps JSON ; `invalid_grant` pour un mot de passe faux. | Le contrat ne fixe pas la forme du refus : confirmer le paramètre `reason` (aligné sur les étiquettes de `lattis_auth_logins_total`). |
+| Codes de refus | `error=access_denied` avec `reason` ∈ `denied_tenant`, `not_invited`, `account_disabled` (alias `tenant_not_allowed`, `invitation_required`, `user_disabled`) au retour ou dans le corps JSON. | Le contrat ne fixe pas la forme du refus : confirmer le paramètre `reason` (aligné sur les étiquettes de `lattis_auth_logins_total`). |
 | `client_id` | Celui de la découverte, `lattis-desktop` par défaut. | — |
 | Révocation | `token_type_hint=refresh_token` et `client_id` sont ajoutés (RFC 7009), sans effet si le serveur les ignore. | — |
 | `nonce` | Non envoyé (facultatif ; le jeton d'identité n'est pas vérifié par le client, qui ne s'en sert que pour l'affichage). | — |
@@ -63,12 +62,11 @@ Le contrat client de `lattisd` (`be-lattis-server`, branche `claude/socle-lattis
 | `denied_tenant` (`tenant_not_allowed`, `tenant_denied`) | compte hors d'une organisation autorisée |
 | `not_invited` (`invitation_required`) | serveur sur invitation |
 | `account_disabled` (`user_disabled`, `disabled`) | compte désactivé |
-| `invalid_grant` (mot de passe) | adresse ou mot de passe incorrect |
 | `invalid_grant` (rafraîchissement) | session expirée : reconnexion demandée |
 
 ## Ce qui reste
 
-- Côté serveur : trancher les écarts ci-dessus (grant `password`, device code, forme des refus).
+- Côté serveur : trancher les écarts ci-dessus (device code, forme des refus).
 - Pool `rw` / `ro` (`pgpool.Open`, `Acquire`) : utilisé par la publication, l'ouverture et l'écoute des republications (`publication.md`, `internal/bridge/sharing.go`) ; la synchronisation (étape 5) reprendra la connexion `LISTEN` dédiée (reconnexion avec reprise des deltas). `SELECT lattis.login_summary()` (contrat §4) n'est pas encore appelé.
 - Réutiliser ce module pour le module OIDC de la configuration d'entreprise (étape 6 de `configuration-entreprise.md`), avec `lattisd` comme émetteur unique.
 - Version web : la connexion passera par le cookie de session de `lattisd` ; le navigateur du système et la boucle locale n'y ont pas cours.

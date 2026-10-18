@@ -333,21 +333,6 @@ func (c *client) exchange(ctx context.Context, code, redirect, verifier string) 
 	})
 }
 
-// password connecte un compte à mot de passe Lattis (grant password,
-// réservé au fournisseur password du client de bureau).
-func (c *client) password(ctx context.Context, provider, email, password string) (*Tokens, error) {
-	f := url.Values{
-		"grant_type": {"password"},
-		"username":   {email},
-		"password":   {password},
-		"scope":      {c.scope},
-	}
-	if provider != "" {
-		f.Set("provider", provider)
-	}
-	return c.token(ctx, f)
-}
-
 // refresh renouvelle les jetons (le serveur fait tourner le jeton de
 // rafraîchissement : le nouveau remplace l'ancien).
 func (c *client) refresh(ctx context.Context, refreshToken string) (*Tokens, error) {
