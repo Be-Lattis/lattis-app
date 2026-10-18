@@ -9,6 +9,8 @@
 	import Icon from '#lib/icons/Icon.svelte';
 	import { dismiss } from '#lib/grid/dismiss.js';
 	import { cycle, modal } from '#lib/ui/focus.js';
+	import { sheetNameProblem, refusedName } from '#lib/ui/names.js';
+	import { nameAlertOpen, refuseName } from '#lib/ui/nameAlert.js';
 	import { TAB_COLORS, moveTarget, tabWindow, textOn, visibleSheets, type TabSheet } from './sheets.js';
 
 	type Sheet = TabSheet;
@@ -26,7 +28,8 @@
 		ondocpage?: (before?: number) => void;
 		/** Place la feuille id au rang to (0 : première). */
 		onmove?: (id: number, to: number) => void;
-		onrename?: (id: number, name: string) => void;
+		/** Renomme la feuille ; un refus (exception) rouvre la saisie après la boîte « nom invalide ». */
+		onrename?: (id: number, name: string) => unknown;
 		ondelete?: (id: number) => void;
 		/** Copie la feuille id et place la copie au rang to. */
 		oncopy?: (id: number, to: number) => void;
@@ -88,6 +91,9 @@
 
 	let renaming = $state<number | null>(null);
 	let draft = $state('');
+	let renameInput = $state<HTMLInputElement>();
+	// Renommage envoyé, réponse attendue : ni second envoi ni abandon.
+	let renameBusy = false;
 	let menu = $state<{ id: number; x: number } | null>(null);
 	let colors = $state(false);
 	// Dialogues « Déplacer ou copier » et « Afficher ».
@@ -148,9 +154,34 @@
 		draft = s.name;
 	}
 
-	function finish(save: boolean) {
-		if (renaming !== null && save && draft.trim()) onrename?.(renaming, draft.trim());
-		renaming = null;
+	/**
+	 * Fin du renommage : Échap (save faux) abandonne ; sinon un nom refusé
+	 * (vide, déjà pris, refus du moteur) ouvre la boîte « nom invalide » et
+	 * la saisie reprend sur le texte tapé, sélectionné.
+	 */
+	async function finish(save: boolean) {
+		const id = renaming;
+		if (id === null || renameBusy || nameAlertOpen()) return;
+		const cur = sheets.find((s) => s.id === id);
+		const name = draft.trim();
+		if (!save || !onrename || !cur || name === cur.name) {
+			renaming = null;
+			return;
+		}
+		const problem = sheetNameProblem(name, sheets.filter((s) => s.id !== id).map((s) => s.name));
+		if (problem) {
+			await refuseName(() => renameInput, problem);
+			return;
+		}
+		renameBusy = true;
+		try {
+			await onrename(id, name);
+			renaming = null;
+		} catch (e) {
+			await refuseName(() => renameInput, refusedName('Nom de feuille refusé', e));
+		} finally {
+			renameBusy = false;
+		}
 	}
 
 	const index = $derived(shown.findIndex((s) => s.id === active));
@@ -228,11 +259,17 @@
 			<!-- svelte-ignore a11y_autofocus -->
 			<input
 				class="rename"
+				bind:this={renameInput}
 				bind:value={draft}
+				aria-label="Nouveau nom de la feuille"
 				autofocus
+				onfocus={(e) => e.currentTarget.select()}
 				onkeydown={(e) => {
 					e.stopPropagation();
-					if (e.key === 'Enter') finish(true);
+					if (e.key === 'Enter') {
+						e.preventDefault();
+						finish(true);
+					}
 					if (e.key === 'Escape') finish(false);
 				}}
 				onblur={() => finish(true)}

@@ -28,6 +28,8 @@
 	import { DEFAULT_NAME_HINT, isDefaultTableName } from '#lib/grid/defaultname.js';
 	import { example, isReadOnly, type ExampleKind } from '#lib/sql/examples.js';
 	import { dismiss } from '#lib/grid/dismiss.js';
+	import { favoriteNameProblem, refusedName, tableNameProblem } from '#lib/ui/names.js';
+	import { nameAlertOpen, refuseName } from '#lib/ui/nameAlert.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { count, toTSV } from '#lib/sql/result.js';
 	import { tick } from 'svelte';
@@ -66,21 +68,36 @@
 
 	// Renommage d'un tableau dans la liste des objets (double-clic, F2, clic droit).
 	let tblRen = $state<{ name: string; draft: string } | null>(null);
+	let tblRenInput = $state<HTMLInputElement>();
+	// Renommage envoyé, réponse attendue : ni second envoi ni abandon.
+	let tblRenBusy = false;
 	function startTblRen(o: SqlObject) {
 		if (!onrename || isReadOnly(o)) return;
 		objMenu = null;
 		tblRen = { name: o.name, draft: o.name };
 	}
+	/** Fin du renommage : un nom refusé ouvre la boîte « nom invalide » et la saisie reprend sur le texte tapé. */
 	async function commitTblRen() {
 		const r = tblRen;
-		tblRen = null;
-		if (!r || !onrename) return;
+		if (!r || tblRenBusy || nameAlertOpen()) return;
 		const to = r.draft.trim();
-		if (!to || to === r.name) return;
+		if (!onrename || to === r.name) {
+			tblRen = null;
+			return;
+		}
+		const problem = tableNameProblem(to, objects.filter((o) => !isReadOnly(o) && o.name !== r.name).map((o) => o.name));
+		if (problem) {
+			await refuseName(() => tblRenInput, problem);
+			return;
+		}
+		tblRenBusy = true;
 		try {
 			await onrename(r.name, to);
+			tblRen = null;
 		} catch (e) {
-			error = String(e instanceof Error ? e.message : e);
+			await refuseName(() => tblRenInput, refusedName('Nom de tableau refusé', e));
+		} finally {
+			tblRenBusy = false;
 		}
 	}
 	function focusAll(node: HTMLInputElement) {
@@ -211,6 +228,8 @@
 	const starred = $derived(favList.find((f) => same(f.sql, sql)));
 	// Favori en cours de renommage.
 	let renaming = $state<{ id: number; name: string } | null>(null);
+	let favRenInput = $state<HTMLInputElement>();
+	let favRenBusy = false;
 	let favError = $state('');
 
 	async function addFavorite(text: string) {
@@ -227,16 +246,28 @@
 		}
 	}
 
+	/** Fin du renommage d'un favori : nom vide ou refusé, la boîte l'explique et la saisie reprend. */
 	async function commitRename() {
 		const r = renaming;
-		renaming = null;
-		if (!favorites || !r || !r.name.trim()) return;
-		const f = favorites.list.find((x) => x.id === r.id);
-		if (f && f.name === r.name.trim()) return;
+		if (!r || favRenBusy || nameAlertOpen()) return;
+		const f = favorites?.list.find((x) => x.id === r.id);
+		if (!favorites || (f && f.name === r.name.trim())) {
+			renaming = null;
+			return;
+		}
+		const problem = favoriteNameProblem(r.name);
+		if (problem) {
+			await refuseName(() => favRenInput, problem);
+			return;
+		}
+		favRenBusy = true;
 		try {
 			await favorites.rename(r.id, r.name);
+			renaming = null;
 		} catch (e) {
-			favError = String(e instanceof Error ? e.message : e);
+			await refuseName(() => favRenInput, refusedName('Nom de favori refusé', e));
+		} finally {
+			favRenBusy = false;
 		}
 	}
 
@@ -313,13 +344,17 @@
 								<span>{open === o.sqlName ? '▾' : '▸'}</span>
 								<input
 									class="rename"
+									bind:this={tblRenInput}
 									bind:value={tblRen.draft}
 									use:focusAll
 									aria-label="Nouveau nom du tableau"
 									onkeydown={(e) => {
 										e.stopPropagation();
-										if (e.key === 'Enter') commitTblRen();
-										if (e.key === 'Escape') tblRen = null;
+										if (e.key === 'Enter') {
+											e.preventDefault();
+											commitTblRen();
+										}
+										if (e.key === 'Escape' && !tblRenBusy) tblRen = null;
 									}}
 									onblur={commitTblRen}
 								/>
@@ -416,12 +451,15 @@
 							<input
 								class="fav-name"
 								aria-label="Nom du favori"
+								bind:this={favRenInput}
 								bind:value={renaming.name}
 								use:select
 								onblur={commitRename}
 								onkeydown={(e) => {
-									if (e.key === 'Enter') commitRename();
-									else if (e.key === 'Escape') renaming = null;
+									if (e.key === 'Enter') {
+										e.preventDefault();
+										commitRename();
+									} else if (e.key === 'Escape' && !favRenBusy) renaming = null;
 								}}
 							/>
 						{:else}

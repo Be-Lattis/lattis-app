@@ -29,6 +29,8 @@
 	import { bracketMatching } from '@codemirror/language';
 	import { autocompletion, closeBrackets, completionKeymap } from '@codemirror/autocomplete';
 	import { dismiss } from '#lib/grid/dismiss.js';
+	import { refusedName, scriptNameProblem } from '#lib/ui/names.js';
+	import { nameAlertOpen, refuseName } from '#lib/ui/nameAlert.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { luaTools } from './luaeditor';
 	import ScriptReference from './ScriptReference.svelte';
@@ -192,14 +194,22 @@ end
 	}
 
 	async function doSave() {
+		// Nom vide ou pris : la boîte l'explique, la saisie reprend dans le champ du nom.
+		const problem = scriptNameProblem(current.name, scripts.filter((x) => x.id !== current.id).map((x) => x.name));
+		if (problem) {
+			await refuseName(nameField, problem);
+			return;
+		}
 		try {
 			current.source = view?.state.doc.toString() ?? current.source;
-			current.id = await save(current.id, current.name, current.source);
+			current.id = await save(current.id, current.name.trim(), current.source);
 			dirty = false;
 			status = 'Script enregistré dans le classeur';
 			error = '';
 		} catch (e) {
-			error = String(e instanceof Error ? e.message : e);
+			const m = String(e instanceof Error ? e.message : e);
+			if (/^script : /.test(m)) await refuseName(nameField, refusedName('Nom de script refusé', e));
+			else error = m;
 		}
 	}
 
@@ -239,23 +249,41 @@ end
 	// Menu du clic droit sur un script : renommer, dupliquer, supprimer.
 	let menu = $state<{ s: Script; x: number; y: number } | null>(null);
 	let renaming = $state<number | null>(null);
+	let renameInput = $state<HTMLInputElement>();
+	// Nom du script ouvert (barre d'outils) : un nom refusé à l'enregistrement y ramène la saisie.
+	let nameField = $state<HTMLInputElement>();
+	// Renommage envoyé, réponse attendue : ni second envoi ni abandon.
+	let renameBusy = false;
 
 	function onItemMenu(ev: MouseEvent, s: Script) {
 		ev.preventDefault();
 		menu = { s, x: ev.clientX, y: ev.clientY };
 	}
 
+	/** Fin du renommage : un nom vide, pris ou refusé ouvre la boîte « nom invalide » et la saisie reprend sur le texte tapé. */
 	async function renameTo(s: Script, name: string) {
-		renaming = null;
+		if (renameBusy || nameAlertOpen()) return;
 		name = name.trim();
-		if (!name || name === s.name) return;
+		if (name === s.name) {
+			renaming = null;
+			return;
+		}
+		const problem = scriptNameProblem(name, scripts.filter((x) => x.id !== s.id).map((x) => x.name));
+		if (problem) {
+			await refuseName(() => renameInput, problem);
+			return;
+		}
+		renameBusy = true;
 		try {
 			await save(s.id, name, s.id === current.id ? (view?.state.doc.toString() ?? s.source) : s.source);
+			renaming = null;
 			if (s.id === current.id) current.name = name;
 			status = `Script renommé « ${name} »`;
 			error = '';
 		} catch (e) {
-			error = String(e instanceof Error ? e.message : e);
+			await refuseName(() => renameInput, refusedName('Nom de script refusé', e));
+		} finally {
+			renameBusy = false;
 		}
 	}
 
@@ -334,12 +362,16 @@ end
 				<!-- svelte-ignore a11y_autofocus -->
 				<input
 					class="rename"
+					bind:this={renameInput}
 					value={s.name}
+					aria-label="Nouveau nom du script"
 					autofocus
 					onfocus={(e) => e.currentTarget.select()}
 					onkeydown={(e) => {
-						if (e.key === 'Enter') renameTo(s, e.currentTarget.value);
-						else if (e.key === 'Escape') renaming = null;
+						if (e.key === 'Enter') {
+							e.preventDefault();
+							renameTo(s, e.currentTarget.value);
+						} else if (e.key === 'Escape' && !renameBusy) renaming = null;
 					}}
 					onblur={(e) => renameTo(s, e.currentTarget.value)}
 					spellcheck="false"
@@ -366,7 +398,7 @@ end
 	{/if}
 	<section class="main">
 		<div class="toolbar">
-			<input class="name" bind:value={current.name} oninput={() => (dirty = true)} spellcheck="false" />
+			<input class="name" bind:this={nameField} aria-label="Nom du script" bind:value={current.name} oninput={() => (dirty = true)} spellcheck="false" />
 			<!-- Boutons par groupes : un groupe passe à la ligne en entier. -->
 			<span class="grp">
 				<button class="run" onclick={doRun} disabled={running} title="Exécuter (Ctrl+Entrée)"><Icon name="play" size={14} />Exécuter</button>
