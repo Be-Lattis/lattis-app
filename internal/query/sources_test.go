@@ -414,7 +414,7 @@ func TestReadGuards(t *testing.T) {
 // Un serveur injoignable donne une erreur qui nomme la connexion (pas une
 // demande de mot de passe).
 func TestUnreachableServers(t *testing.T) {
-	sec := NewSecrets(false)
+	sec := NewSecrets(false, "")
 	for _, kind := range []string{KindMySQL, KindSQLServer, KindPostgres} {
 		c := Connection{Name: "Hors ligne", Kind: kind, Config: DBConfig{Host: "127.0.0.1", Port: 1, Database: "x", User: "u"}}
 		err := TestConnection(ctx, sec, c, "", false)

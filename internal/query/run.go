@@ -22,6 +22,9 @@ type PasswordNeed struct {
 	Connection string `json:"connection"`
 	Account    string `json:"account"`
 	Message    string `json:"message"`
+	// Stored : un mot de passe est enregistré sur ce poste ; il suffit
+	// d'autoriser ce classeur à s'en servir.
+	Stored bool `json:"stored"`
 }
 
 // Preview est l'aperçu d'une requête à une étape.
@@ -53,7 +56,7 @@ func labels(q Query) []string {
 func needPassword(err error) *PasswordNeed {
 	var pe *ErrPassword
 	if errors.As(err, &pe) {
-		return &PasswordNeed{Connection: pe.Connection, Account: pe.Account, Message: pe.Message}
+		return &PasswordNeed{Connection: pe.Connection, Account: pe.Account, Message: pe.Message, Stored: pe.Stored}
 	}
 	return nil
 }

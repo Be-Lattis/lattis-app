@@ -62,17 +62,9 @@ func queryEnv(d *doc.Document) query.Env {
 	return query.Env{Model: d.Model, Secrets: query.DefaultSecrets, Workbook: d.SecretScope()}
 }
 
-// saveDoc enregistre d dans path ; les mots de passe de ses connexions
-// suivent le classeur dans son (nouveau) fichier (query.Secrets.Rebind).
+// saveDoc enregistre d dans path.
 func saveDoc(ctx context.Context, d *doc.Document, path string) error {
-	from := d.SecretScope()
-	if err := d.Save(ctx, path); err != nil {
-		return err
-	}
-	// Un trousseau en panne n'empêche rien : les mots de passe restent
-	// connus pour la session, comme à leur saisie.
-	_ = query.DefaultSecrets.Rebind(from, d.SecretScope())
-	return nil
+	return d.Save(ctx, path)
 }
 
 // secretsOf rend les mots de passe propres au classeur d (voir query.Secrets).
@@ -178,7 +170,7 @@ func (s *DocumentService) refreshed(ctx context.Context, out QueryRefresh, err e
 	var pe *query.ErrPassword
 	switch {
 	case errors.As(err, &pe):
-		out.NeedPassword = &query.PasswordNeed{Connection: pe.Connection, Account: pe.Account, Message: pe.Message}
+		out.NeedPassword = &query.PasswordNeed{Connection: pe.Connection, Account: pe.Account, Message: pe.Message, Stored: pe.Stored}
 	case err != nil:
 		for _, e := range strings.Split(err.Error(), "\n") {
 			out.Errors = append(out.Errors, e)
@@ -323,6 +315,20 @@ func (s *DocumentService) SetConnectionPassword(ctx context.Context, name, passw
 	return s.TestConnection(ctx, c, password, remember)
 }
 
+// AllowConnectionPassword autorise ce classeur à se servir du mot de passe
+// enregistré sur ce poste pour une connexion (« Autoriser », retenu).
+func (s *DocumentService) AllowConnectionPassword(ctx context.Context, name string) error {
+	c, err := s.connection(ctx, name)
+	if err != nil {
+		return err
+	}
+	d, err := s.current()
+	if err != nil {
+		return err
+	}
+	return secretsOf(d).Grant(c.Account())
+}
+
 // ForgetConnectionPassword oublie le mot de passe d'une connexion (session
 // et trousseau).
 func (s *DocumentService) ForgetConnectionPassword(ctx context.Context, name string) error {
@@ -358,7 +364,7 @@ func (s *DocumentService) ConnectionTables(ctx context.Context, name string) (Ta
 	ts, err := query.DBTables(ctx, secretsOf(d), c)
 	var pe *query.ErrPassword
 	if errors.As(err, &pe) {
-		return TableList{Tables: []query.DBTable{}, NeedPassword: &query.PasswordNeed{Connection: pe.Connection, Account: pe.Account, Message: pe.Message}}, nil
+		return TableList{Tables: []query.DBTable{}, NeedPassword: &query.PasswordNeed{Connection: pe.Connection, Account: pe.Account, Message: pe.Message, Stored: pe.Stored}}, nil
 	}
 	return TableList{Tables: ts}, err
 }

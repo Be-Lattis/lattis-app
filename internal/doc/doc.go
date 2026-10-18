@@ -6,12 +6,7 @@ package doc
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
-	"path/filepath"
-	"runtime"
-	"strings"
 
 	"github.com/lalamefine/lattis/internal/archive"
 	"github.com/lalamefine/lattis/internal/canvas"
@@ -28,8 +23,8 @@ type Document struct {
 	saved int64 // dernière commande appliquée au moment de l'enregistrement
 	// Changements de protection (hors journal) au moment de l'enregistrement.
 	savedProt int64
-	// token désigne le classeur tant qu'il n'a pas de fichier (SecretScope).
-	token string
+	// id est l'identifiant aléatoire du classeur (_lattis_info, SecretScope).
+	id string
 }
 
 func wrap(ctx context.Context, a *archive.Doc) (*Document, error) {
@@ -38,12 +33,12 @@ func wrap(ctx context.Context, a *archive.Doc) (*Document, error) {
 		return nil, err
 	}
 	bus := command.New(a.DB)
-	tok := make([]byte, 16)
-	if _, err := rand.Read(tok); err != nil {
+	var id string
+	if err := a.DB.Read().QueryRowContext(ctx, `SELECT value FROM _lattis_info WHERE key = 'id'`).Scan(&id); err != nil {
 		a.Close()
 		return nil, err
 	}
-	d := &Document{Model: canvas.New(a.DB, bus), Bus: bus, arc: a, token: hex.EncodeToString(tok)}
+	d := &Document{Model: canvas.New(a.DB, bus), Bus: bus, arc: a, id: id}
 	top, err := d.top(ctx)
 	if err != nil {
 		a.Close()
@@ -98,23 +93,12 @@ func (d *Document) DB() *store.Store { return d.arc.DB }
 // Path est le fichier .lattis (vide si jamais enregistré).
 func (d *Document) Path() string { return d.arc.Path }
 
-// SecretScope désigne le classeur pour les mots de passe de ses connexions
-// (query.Secrets.For) : son fichier, en chemin absolu (sans casse sous
-// Windows), ou, jamais enregistré, un jeton de session. C'est une donnée de
-// ce poste : un classeur reçu ne peut pas se faire passer pour un autre.
+// SecretScope désigne le classeur pour l'accord d'utiliser les mots de
+// passe enregistrés sur ce poste (query.Secrets.For) : son identifiant
+// aléatoire, créé avec lui et gardé dans le fichier (un classeur reçu en a
+// un autre, que l'utilisateur n'a jamais autorisé).
 func (d *Document) SecretScope() string {
-	p := d.arc.Path
-	if p == "" {
-		return "session:" + d.token
-	}
-	if abs, err := filepath.Abs(p); err == nil {
-		p = abs
-	}
-	p = filepath.Clean(p)
-	if runtime.GOOS == "windows" {
-		p = strings.ToLower(p)
-	}
-	return "fichier:" + p
+	return "classeur:" + d.id
 }
 
 // top donne le numéro de la dernière commande appliquée (0 si aucune).

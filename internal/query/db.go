@@ -181,6 +181,9 @@ type ErrPassword struct {
 	Connection string
 	Account    string
 	Message    string
+	// Stored : un mot de passe est enregistré sur ce poste, mais ce classeur
+	// n'a pas encore l'accord de s'en servir (Secrets.Grant).
+	Stored bool
 }
 
 func (e *ErrPassword) Error() string {
@@ -273,6 +276,10 @@ func connectDB(ctx context.Context, sec *Secrets, c Connection) (*sql.DB, *diale
 		return nil, nil, fmt.Errorf("connexion « %s » : type %q non pris en charge", c.Name, c.Kind)
 	}
 	pw, _ := sec.Get(c.Account())
+	if pw == "" && sec.Pending(c.Account()) {
+		// Mot de passe enregistré, pas encore autorisé pour ce classeur.
+		return nil, nil, &ErrPassword{Connection: c.Name, Account: c.Account(), Message: "mot de passe enregistré à autoriser", Stored: true}
+	}
 	db, err := d.open(c.Config, pw)
 	if err != nil {
 		return nil, nil, fmt.Errorf("connexion « %s » : %w", c.Name, err)

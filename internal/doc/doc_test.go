@@ -173,15 +173,15 @@ func TestSecretScope(t *testing.T) {
 	d2, err := New(ctx)
 	must(t, err)
 	defer d2.Close()
-	s0 := d.SecretScope()
-	if !strings.HasPrefix(s0, "session:") || s0 == d2.SecretScope() {
-		t.Fatalf("portées de session %q et %q", s0, d2.SecretScope())
+	// Chaque classeur a son identifiant aléatoire, gardé dans le fichier.
+	s1 := d.SecretScope()
+	if !strings.HasPrefix(s1, "classeur:") || len(s1) < 30 || s1 == d2.SecretScope() {
+		t.Fatalf("identifiants %q et %q", s1, d2.SecretScope())
 	}
 	path := filepath.Join(t.TempDir(), "a.lattis")
 	must(t, d.Save(ctx, path))
-	s1 := d.SecretScope()
-	if !strings.HasPrefix(s1, "fichier:") || s1 == s0 {
-		t.Fatalf("portée après enregistrement %q", s1)
+	if d.SecretScope() != s1 {
+		t.Fatalf("identifiant changé à l'enregistrement : %q", d.SecretScope())
 	}
 	must(t, d.Close())
 	d, err = Open(ctx, path)

@@ -111,6 +111,12 @@ export interface PasswordNeed {
     "connection": string;
     "account": string;
     "message": string;
+
+    /**
+     * Stored : un mot de passe est enregistré sur ce poste ; il suffit
+     * d'autoriser ce classeur à s'en servir.
+     */
+    "stored": boolean;
 }
 
 /**

@@ -36,7 +36,7 @@ func newSession(t *testing.T) *Session {
 	return s
 }
 
-func env(d *doc.Document) Env { return Env{Model: d.Model, Secrets: NewSecrets(false)} }
+func env(d *doc.Document) Env { return Env{Model: d.Model, Secrets: NewSecrets(false, "")} }
 
 // addTable crée un tableau sur une nouvelle feuille.
 func addTable(t *testing.T, d *doc.Document, name string, headers []string, types []grid.Type, rows ...[]any) {
@@ -345,52 +345,49 @@ func TestQueryDefinitionsUndo(t *testing.T) {
 	}
 }
 
-// Un mot de passe est lié au classeur qui l'a reçu : un autre classeur qui
-// vise le même compte ne s'en sert pas ; il suit le classeur enregistré sous
-// un nouveau fichier.
+// Un mot de passe est gardé par compte, sur ce poste ; un classeur ne s'en
+// sert qu'avec l'accord de l'utilisateur (Grant), retenu par classeur.
+// Saisir le mot de passe dans un classeur vaut accord pour lui.
 func TestSecretsPerWorkbook(t *testing.T) {
-	root := NewSecrets(false)
-	a, b := root.For("fichier:a.lattis"), root.For("fichier:b.lattis")
+	grants := filepath.Join(t.TempDir(), "accords.json")
+	root := NewSecrets(false, grants)
+	a, b := root.For("classeur:a"), root.For("classeur:b")
 	if err := a.Set("pg://louis@db/ventes", "secret", true); err != nil {
 		t.Fatal(err)
 	}
 	if pw, ok := a.Get("pg://louis@db/ventes"); !ok || pw != "secret" {
 		t.Fatal("mot de passe perdu")
 	}
+	// Un autre classeur : pas sans accord, mais l'interface peut le proposer.
 	if _, ok := b.Get("pg://louis@db/ventes"); ok {
-		t.Fatal("un autre classeur réutilise le mot de passe")
+		t.Fatal("un autre classeur réutilise le mot de passe sans accord")
 	}
-	if _, ok := root.Get("pg://louis@db/ventes"); ok {
-		t.Fatal("mot de passe visible hors de son classeur")
+	if !b.Pending("pg://louis@db/ventes") || a.Pending("pg://louis@db/ventes") {
+		t.Fatal("accord à demander mal signalé")
 	}
-	// Classeur jamais enregistré, puis enregistré : le mot de passe suit.
-	tmp := root.For("session:1")
-	if err := tmp.Set("web://@api", "jeton", true); err != nil {
+	if err := b.Grant("pg://louis@db/ventes"); err != nil {
 		t.Fatal(err)
 	}
-	if !tmp.Remembered("web://@api") {
-		t.Fatal("« Mémoriser » oublié avant l'enregistrement")
+	if pw, ok := b.Get("pg://louis@db/ventes"); !ok || pw != "secret" {
+		t.Fatal("accord donné, mot de passe refusé")
 	}
-	if err := root.Rebind("session:1", "fichier:c.lattis"); err != nil {
-		t.Fatal(err)
-	}
-	if pw, ok := root.For("fichier:c.lattis").Get("web://@api"); !ok || pw != "jeton" {
-		t.Fatal("mot de passe non repris à l'enregistrement")
-	}
-	if _, ok := root.For("fichier:c.lattis").Get("pg://louis@db/ventes"); ok {
-		t.Fatal("mot de passe d'un autre classeur repris")
+	// Les accords sont retenus sur le poste (nouveau coffre, même fichier).
+	again := NewSecrets(false, grants)
+	again.For("classeur:a").Set("pg://louis@db/ventes", "secret", false)
+	if !again.For("classeur:b").Granted("pg://louis@db/ventes") || again.For("classeur:c").Granted("pg://louis@db/ventes") {
+		t.Fatal("accords non relus")
 	}
 	// Env.Workbook choisit la vue du classeur.
-	if pw, ok := (Env{Secrets: root, Workbook: "fichier:a.lattis"}).secrets().Get("pg://louis@db/ventes"); !ok || pw != "secret" {
+	if pw, ok := (Env{Secrets: root, Workbook: "classeur:a"}).secrets().Get("pg://louis@db/ventes"); !ok || pw != "secret" {
 		t.Fatal("Env.Workbook ignoré")
 	}
-	if _, ok := (Env{Secrets: root, Workbook: "fichier:b.lattis"}).secrets().Get("pg://louis@db/ventes"); ok {
-		t.Fatal("Env d'un autre classeur : mot de passe réutilisé")
+	if _, ok := (Env{Secrets: root, Workbook: "classeur:z"}).secrets().Get("pg://louis@db/ventes"); ok {
+		t.Fatal("Env d'un classeur non autorisé : mot de passe réutilisé")
 	}
 }
 
 func TestSecrets(t *testing.T) {
-	s := NewSecrets(false)
+	s := NewSecrets(false, "")
 	if _, ok := s.Get("a"); ok {
 		t.Fatal("mot de passe inventé")
 	}

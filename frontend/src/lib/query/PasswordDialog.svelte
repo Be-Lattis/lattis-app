@@ -1,6 +1,9 @@
 <script lang="ts">
 	// Mot de passe d'une connexion, demandé quand le serveur le réclame :
 	// essayé, puis gardé pour la session (et dans le trousseau si coché).
+	// S'il est déjà enregistré sur ce poste (need.stored), il suffit
+	// d'autoriser ce classeur à s'en servir (accord retenu sur ce poste).
+	import { untrack } from 'svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import type { PasswordNeed } from '#bindings/internal/query/models.js';
 
@@ -14,6 +17,22 @@
 	let remember = $state(true);
 	let error = $state('');
 	let busy = $state(false);
+	// Mot de passe enregistré : « Autoriser » d'abord ; « Saisir un autre
+	// mot de passe » revient à la saisie.
+	let typing = $state(untrack(() => !need.stored));
+
+	async function allow() {
+		busy = true;
+		error = '';
+		try {
+			await DocumentService.AllowConnectionPassword(need.connection);
+			ondone(true);
+		} catch (e) {
+			error = String(e instanceof Error ? e.message : e);
+		} finally {
+			busy = false;
+		}
+	}
 
 	async function ok() {
 		busy = true;
@@ -45,21 +64,34 @@
 		onkeydown={(e) => {
 			e.stopPropagation();
 			if (e.key === 'Escape') ondone(false);
-			if (e.key === 'Enter') ok();
+			if (e.key === 'Enter') (typing ? ok() : allow());
 		}}
 	>
 		<header>Connexion « {need.connection} »</header>
-		<div class="body">
-			<p>{need.message === 'mot de passe refusé' ? 'Le serveur a refusé le mot de passe.' : 'Le serveur demande un mot de passe.'} <span class="muted">{need.account}</span></p>
-			<label>Mot de passe <input type="password" bind:value={password} autocomplete="off" use:focus /></label>
-			<label class="check"><input type="checkbox" bind:checked={remember} /> Mémoriser dans le trousseau du système</label>
-			<p class="muted">Il n'est jamais enregistré dans le classeur.</p>
-		</div>
-		{#if error}<p class="error">{error}</p>{/if}
-		<footer>
-			<button class="primary" onclick={ok} disabled={busy}>OK</button>
-			<button onclick={() => ondone(false)}>Annuler</button>
-		</footer>
+		{#if !typing}
+			<div class="body">
+				<p>Ce classeur veut se connecter avec votre mot de passe enregistré sur cet ordinateur. <span class="muted">{need.account}</span></p>
+				<p class="muted">Autorisez-le si vous connaissez ce classeur : l'accord est retenu pour lui sur ce poste. Un classeur reçu d'une source inconnue ne devrait pas l'avoir.</p>
+			</div>
+			{#if error}<p class="error">{error}</p>{/if}
+			<footer>
+				<button class="primary" onclick={allow} disabled={busy}>Autoriser</button>
+				<button onclick={() => (typing = true)}>Saisir un autre mot de passe</button>
+				<button onclick={() => ondone(false)}>Refuser</button>
+			</footer>
+		{:else}
+			<div class="body">
+				<p>{need.message === 'mot de passe refusé' ? 'Le serveur a refusé le mot de passe.' : 'Le serveur demande un mot de passe.'} <span class="muted">{need.account}</span></p>
+				<label>Mot de passe <input type="password" bind:value={password} autocomplete="off" use:focus /></label>
+				<label class="check"><input type="checkbox" bind:checked={remember} /> Mémoriser sur cet ordinateur (trousseau du système)</label>
+				<p class="muted">Il n'est jamais enregistré dans le classeur.</p>
+			</div>
+			{#if error}<p class="error">{error}</p>{/if}
+			<footer>
+				<button class="primary" onclick={ok} disabled={busy}>OK</button>
+				<button onclick={() => ondone(false)}>Annuler</button>
+			</footer>
+		{/if}
 	</div>
 </div>
 

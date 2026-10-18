@@ -550,6 +550,9 @@ func fetchWeb(ctx context.Context, sec *Secrets, conn *Connection, raw string, h
 		}
 		if secret == "" {
 			secret, _ = sec.Get(conn.Account())
+			if secret == "" && sec.Pending(conn.Account()) {
+				return nil, &ErrPassword{Connection: conn.Name, Account: conn.Account(), Message: "secret enregistré à autoriser", Stored: true}
+			}
 		}
 		if secret != "" {
 			authHeader = webAuth(req, conn.Config, secret)

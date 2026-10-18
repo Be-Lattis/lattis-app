@@ -62,6 +62,14 @@ export function AddSheet(): $CancellablePromise<number> {
 }
 
 /**
+ * AllowConnectionPassword autorise ce classeur à se servir du mot de passe
+ * enregistré sur ce poste pour une connexion (« Autoriser », retenu).
+ */
+export function AllowConnectionPassword(name: string): $CancellablePromise<void> {
+    return $Call.ByID(4160221378, name);
+}
+
+/**
  * AllowHTTPHost autorise un hôte pour le classeur et renvoie la liste.
  */
 export function AllowHTTPHost(h: string): $CancellablePromise<string[] | null> {

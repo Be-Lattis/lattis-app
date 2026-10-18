@@ -299,6 +299,16 @@ CREATE TABLE _lattis_range_cells (
 	`
 ALTER TABLE _lattis_tables ADD COLUMN no_key_hint INTEGER NOT NULL DEFAULT 0;
 `,
+	// 26 → 27 : informations du classeur ; « id » est son identifiant
+	// aléatoire, qui le désigne sur ce poste pour l'accord d'utiliser un mot
+	// de passe enregistré (query.Secrets).
+	`
+CREATE TABLE _lattis_info (
+	key   TEXT NOT NULL PRIMARY KEY,
+	value TEXT NOT NULL
+) STRICT;
+INSERT INTO _lattis_info (key, value) VALUES ('id', lower(hex(randomblob(16))));
+`,
 }
 
 // Version est la version du format que ce programme écrit.
