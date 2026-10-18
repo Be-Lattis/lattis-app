@@ -84,7 +84,7 @@ func TestTextToColumnsTable(t *testing.T) {
 	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Personne", "Ville"}, {"Dupont;12;03/04/2024", "Lyon"}, {"Martin;7,5;05/06/2023", "Rome"}, {"Durand", "Paris"}}); err != nil {
 		t.Fatal(err)
 	}
-	if err := d.PromoteHeader(ctx, "Feuille1"); err != nil {
+	if err := promoteIfData(ctx, d, "Feuille1"); err != nil {
 		t.Fatal(err)
 	}
 	// Un objet à droite du tableau : il doit être poussé.
@@ -138,7 +138,7 @@ func TestTextToColumnsTableHeaderAndFormats(t *testing.T) {
 	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Code,Montant,Ignoré"}, {"007,\"1,234.5\",x"}, {"012,10,y"}}); err != nil {
 		t.Fatal(err)
 	}
-	if err := d.PromoteHeader(ctx, "Feuille1"); err != nil {
+	if err := promoteIfData(ctx, d, "Feuille1"); err != nil {
 		t.Fatal(err)
 	}
 	before := dump(t, d)
@@ -176,7 +176,7 @@ func TestTextToColumnsPartialRows(t *testing.T) {
 	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Valeur"}, {"1-2"}, {"3-4"}, {"5"}}); err != nil {
 		t.Fatal(err)
 	}
-	if err := d.PromoteHeader(ctx, "Feuille1"); err != nil {
+	if err := promoteIfData(ctx, d, "Feuille1"); err != nil {
 		t.Fatal(err)
 	}
 	// Seule la deuxième ligne de données : les autres gardent leur valeur, et

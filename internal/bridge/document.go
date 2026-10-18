@@ -447,7 +447,7 @@ func (s *DocumentService) Query(ctx context.Context, q string) (grid.QueryResult
 		return grid.QueryResult{}, err
 	}
 	// Les tableaux croisés cités s'interrogent comme des vues.
-	if q, err = d.PivotCTE(ctx, q); err != nil {
+	if q, err = d.ReadCTE(ctx, q); err != nil {
 		return grid.QueryResult{}, err
 	}
 	return grid.Query(ctx, d.DB().Read(), q, QueryLimit)
@@ -471,7 +471,7 @@ func (s *DocumentService) QueryToSheet(ctx context.Context, q, name string, head
 	if q, err = d.CellSQL(ctx, q, s.activeSheet()); err != nil {
 		return QuerySheet{}, err
 	}
-	if q, err = d.PivotCTE(ctx, q); err != nil {
+	if q, err = d.ReadCTE(ctx, q); err != nil {
 		return QuerySheet{}, err
 	}
 	res, err := d.QueryToSheet(ctx, q, name, headers)

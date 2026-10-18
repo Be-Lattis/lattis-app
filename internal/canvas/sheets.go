@@ -69,11 +69,11 @@ func (t *tx) addNamedSheet(prefix string) (int64, error) {
 	}
 	for n := start; ; n++ {
 		name = fmt.Sprintf("%s%d", prefix, n)
-		var k int
-		if err := t.row(`SELECT count(*) FROM _lattis_sheets WHERE name = ?`, name).Scan(&k); err != nil {
+		taken, err := t.sheetNameTaken(name, 0)
+		if err != nil {
 			return 0, err
 		}
-		if k == 0 {
+		if !taken {
 			break
 		}
 	}
@@ -81,6 +81,27 @@ func (t *tx) addNamedSheet(prefix string) (int64, error) {
 		[]stmt{st(`INSERT INTO _lattis_sheets (id, name, pos, gridlines) VALUES (?, ?, ?, 0)`, id, name, pos)},
 		[]stmt{st(`DELETE FROM _lattis_sheets WHERE id = ?`, id)},
 	)
+}
+
+// sheetNameTaken indique si une autre feuille que except porte déjà ce nom,
+// sans tenir compte des majuscules (accents compris : « Été » et « été »),
+// comme Excel.
+func (t *tx) sheetNameTaken(name string, except int64) (bool, error) {
+	rs, err := t.query(`SELECT name FROM _lattis_sheets WHERE id <> ?`, except)
+	if err != nil {
+		return false, err
+	}
+	defer rs.Close()
+	for rs.Next() {
+		var n string
+		if err := rs.Scan(&n); err != nil {
+			return false, err
+		}
+		if strings.EqualFold(n, name) {
+			return true, nil
+		}
+	}
+	return false, rs.Err()
 }
 
 // sheetOrder donne les onglets dans l'ordre affiché.
@@ -164,12 +185,12 @@ func (m *Model) RenameSheet(ctx context.Context, sheet int64, name string) error
 		if old == name {
 			return nil
 		}
-		var k int
-		if err := t.row(`SELECT count(*) FROM _lattis_sheets WHERE name = ? AND id <> ?`, name, sheet).Scan(&k); err != nil {
+		taken, err := t.sheetNameTaken(name, sheet)
+		if err != nil {
 			return err
 		}
-		if k > 0 {
-			return fmt.Errorf("%w : « %s » existe déjà", ErrSheet, name)
+		if taken {
+			return fmt.Errorf("%w : « %s » existe déjà (les noms de feuilles ne tiennent pas compte des majuscules)", ErrSheet, name)
 		}
 		q := `UPDATE _lattis_sheets SET name = ? WHERE id = ?`
 		return t.apply([]stmt{st(q, name, sheet)}, []stmt{st(q, old, sheet)})

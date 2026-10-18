@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/lalamefine/lattis/internal/canvas"
 )
@@ -123,6 +124,19 @@ ui.show_sheet(f.name)`,
 					return nil, err
 				}
 				var id int64
+				// Nom déjà pris (sans tenir compte des majuscules) : refusé
+				// avant d'ajouter la feuille.
+				if name, _ := c.Str("name"); strings.TrimSpace(name) != "" {
+					list, err := sheetList(c, d)
+					if err != nil {
+						return nil, err
+					}
+					for _, s := range list {
+						if strings.EqualFold(s.Name, strings.TrimSpace(name)) {
+							return nil, fmt.Errorf("%w : « %s » existe déjà (les noms de feuilles ne tiennent pas compte des majuscules)", canvas.ErrSheet, strings.TrimSpace(name))
+						}
+					}
+				}
 				if c.Has("before") {
 					b, err := c.sheet("before")
 					if err != nil {

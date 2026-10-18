@@ -482,8 +482,8 @@ func asText(v any) string {
 }
 
 // pasteTable colle un tableau (première ligne : en-têtes) sur la feuille
-// affichée et le nomme. Si le collage n'a pas reconnu la ligne d'en-têtes
-// (données toutes en texte), l'anomalie est signalée et l'en-tête promu.
+// affichée et le nomme ; la ligne d'en-têtes doit être reconnue, même
+// quand les données sont toutes du texte.
 func (h *host) pasteTable(name string, row, col int, rows ...[]any) {
 	h.t.Helper()
 	h.paste(row, col, rows...)
@@ -497,8 +497,7 @@ func (h *host) pasteTable(name string, row, col int, rows ...[]any) {
 		h.t.Fatalf("pas de tableau collé en L%dC%d", row, col)
 	}
 	if first := fmt.Sprint(rows[0][0]); tb.Columns[0].Name != first {
-		knownBug(h.t, "collage-entetes", fmt.Sprintf("cells.paste : la ligne d'en-têtes %v n'est pas reconnue quand les données sont toutes du texte (colonnes « %s »…)", rows[0], tb.Columns[0].Name))
-		h.do("tables.promote_header", "table", tb.Name)
+		h.t.Fatalf("cells.paste : la ligne d'en-têtes %v n'est pas reconnue (colonnes « %s »…)", rows[0], tb.Columns[0].Name)
 	}
 	if tb.Name != name {
 		h.do("tables.rename", "table", tb.Name, "name", name)

@@ -1,11 +1,14 @@
 package integration
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // commandes pose un tableau aux types variés : texte, entier, décimal,
@@ -157,8 +160,67 @@ func TestSQLJoinsAndComputedColumns(t *testing.T) {
 	h.set(2, 6, `=[Montant HT]*1,2`)
 	h.wantColumn("Commandes", "TTC", "144.6", "96", "48.3")
 	if got := h.value(`SELECT sum(TTC) FROM Commandes`); got != "288.9" {
-		knownBug(t, "sql-colonne-calculee", "une colonne calculée est vide en SQL (SELECT sum(TTC) donne « "+got+" ») : ni l'onglet SQL, ni db.query, ni les scripts ne voient ses valeurs")
+		t.Fatalf("une colonne calculée est vide en SQL : SELECT sum(TTC) donne « %s »", got)
 	}
+	// Un script la lit aussi.
+	if res := h.lua(`print(db.value("SELECT sum(TTC) FROM Commandes"))`); res.Error != "" || strings.Join(res.Output, "") != "288.9" {
+		t.Fatalf("script : %+v", res)
+	}
+	// Onglet SQL : la requête arrive traduite en noms internes (t_1, c_6).
+	ctx := context.Background()
+	all, err := h.d.AllTables(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var q string
+	for _, tn := range all {
+		if tn.Name == "Commandes" {
+			q = `SELECT sum(` + tn.ColumnSQL[5] + `) FROM ` + tn.SQL
+		}
+	}
+	if q, err = h.d.ReadCTE(ctx, q); err != nil {
+		t.Fatal(err)
+	}
+	r, err := grid.Query(ctx, h.d.DB().Read(), q, 10)
+	if err != nil || len(r.Rows) != 1 || fmt.Sprint(r.Rows[0][0]) != "288.9" {
+		t.Fatalf("noms internes : %v %v", r.Rows, err)
+	}
+	// Formule qui parcourt son propre tableau, et colonne calculée lue dans
+	// une jointure et dans une sous-requête.
+	h.set(1, 7, "Part")
+	h.set(2, 7, `=[TTC]/SOMME(Commandes[TTC])`)
+	if got := h.value(`SELECT round(sum(Part), 6) FROM Commandes`); got != "1" {
+		t.Fatalf("part du total : %q", got)
+	}
+	if got := h.value(`SELECT group_concat(c.Ville || ':' || o.TTC, ',') FROM Commandes o JOIN Clients c ON c.Client = o.Client WHERE o.TTC > (SELECT min(TTC) FROM Commandes)`); got != "Lyon:144.6,Nantes:96.0" {
+		t.Fatalf("jointure sur une colonne calculée : %q", got)
+	}
+	// Une écriture filtre aussi sur une colonne calculée.
+	if n := h.do("db.execute", "sql", `DELETE FROM Commandes WHERE TTC < 50`); text(n) != "1" {
+		t.Fatalf("DELETE … WHERE TTC < 50 : %v lignes", n)
+	}
+	h.undo()
+	// Une colonne calculée ne s'écrit pas : UPDATE la laisse à sa formule.
+	h.do("db.execute", "sql", `UPDATE Commandes SET TTC = 0`)
+	h.wantColumn("Commandes", "TTC", "144.6", "96", "48.3")
+}
+
+// Les changements de structure sont refusés avec un message clair, et les
+// erreurs de SQLite arrivent en français.
+func TestSQLStructureAndFrenchErrors(t *testing.T) {
+	h := newHost(t)
+	commandes(h)
+	for _, q := range []string{`DROP TABLE Commandes`, `ALTER TABLE Commandes ADD COLUMN x`, `CREATE TABLE x (a)`} {
+		h.fails("se font depuis la grille", "db.query", "sql", q)
+		h.fails("se font depuis la grille", "db.execute", "sql", q)
+	}
+	if got := h.value(`SELECT count(*) FROM Commandes`); got != "3" {
+		t.Fatalf("Commandes touché : %s lignes", got)
+	}
+	h.fails("Tableau inconnu : « Inconnue »", "db.query", "sql", `SELECT * FROM Inconnue`)
+	h.fails("Colonne inconnue : « Prixx »", "db.query", "sql", `SELECT Prixx FROM Commandes`)
+	h.fails("Erreur de syntaxe près de « SELEC »", "db.query", "sql", `SELEC 1`)
+	h.fails("Tableau inconnu", "db.execute", "sql", `DELETE FROM Inconnue`)
 }
 
 // Le filtre ne cache des lignes qu'à l'affichage : le SQL les voit toutes,

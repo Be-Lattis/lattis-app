@@ -3,6 +3,7 @@ package canvas
 import (
 	"context"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/lalamefine/lattis/internal/grid"
 )
@@ -121,6 +122,8 @@ func (m *Model) Paste(ctx context.Context, sheet int64, row, col int, block [][]
 		if done, err := t.pasteInto(sheet, row, col, block, w, &ev); done || err != nil {
 			return err
 		}
+		t.pasting = true
+		defer func() { t.pasting = false }()
 		for r := range h {
 			for c := range w {
 				if err := t.input(sheet, row+r, col+c, cell(r, c), &ev); err != nil {
@@ -209,30 +212,73 @@ func (t *tx) areaFree(sheet int64, r0, c0, r1, c1 int) (bool, error) {
 }
 
 // hasHeader : comme Excel, la première ligne d'un bloc collé est un en-tête si
-// elle n'a que des textes, tous remplis, et qu'au moins une colonne a dessous
-// des valeurs d'un autre type (nombres, dates, booléens). Un bloc entièrement
-// textuel est pris comme des données.
+// elle n'a que des textes, tous remplis, et qu'une colonne
+// a dessous des valeurs d'un autre type (nombres, dates, booléens, heures,
+// pourcentages), même mêlées de textes. Quand tout est du texte, chaque
+// colonne vote, comme la détection d'en-tête des CSV : des valeurs de même
+// longueur dessous (codes, villes de 4 lettres…) et un premier texte d'une
+// autre longueur votent pour, la même longueur contre ; un premier texte
+// répété plus bas, ou deux premiers textes égaux, sont des données. Un bloc
+// de deux lignes tout en texte reste des données.
 func hasHeader(block [][]string, w int) bool {
 	if len(block) < 2 {
 		return false
 	}
+	seen, dup := map[string]bool{}, false
 	for c := range w {
-		if c >= len(block[0]) || strings.TrimSpace(block[0][c]) == "" || Infer(block[0][c]) != grid.Text {
+		if c >= len(block[0]) {
 			return false
 		}
+		h := strings.TrimSpace(block[0][c])
+		if h == "" || Infer(h) != grid.Text || isTimeOrPercent(h) {
+			return false
+		}
+		dup = dup || seen[strings.ToLower(h)]
+		seen[strings.ToLower(h)] = true
 	}
+	votes := 0
 	for c := range w {
+		h := strings.TrimSpace(block[0][c])
 		var below []string
 		for _, r := range block[1:] {
-			if c < len(r) {
-				below = append(below, r[c])
+			if c < len(r) && strings.TrimSpace(r[c]) != "" {
+				below = append(below, strings.TrimSpace(r[c]))
 			}
+		}
+		if len(below) == 0 {
+			continue
+		}
+		typed := false
+		for _, v := range below {
+			if strings.EqualFold(v, h) {
+				return false
+			}
+			typed = typed || Infer(v) != grid.Text || isTimeOrPercent(v)
 		}
 		if InferAll(below) != grid.Text {
 			return true
 		}
+		if typed {
+			votes++
+			continue
+		}
+		if len(below) < 2 {
+			continue
+		}
+		n := utf8.RuneCountInString(below[0])
+		same := true
+		for _, v := range below[1:] {
+			same = same && utf8.RuneCountInString(v) == n
+		}
+		switch {
+		case !same:
+		case utf8.RuneCountInString(h) != n:
+			votes++
+		default:
+			votes--
+		}
 	}
-	return false
+	return votes > 0 && !dup
 }
 
 // PromoteHeader prend la première ligne de données comme en-têtes (noms des

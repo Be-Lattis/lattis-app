@@ -194,11 +194,11 @@ func (t *tx) newSheet(name string) (int64, error) {
 	}
 	base := name
 	for n := 2; ; n++ {
-		var k int
-		if err := t.row(`SELECT count(*) FROM _lattis_sheets WHERE name = ?`, name).Scan(&k); err != nil {
+		taken, err := t.sheetNameTaken(name, 0)
+		if err != nil {
 			return 0, err
 		}
-		if k == 0 {
+		if !taken {
 			break
 		}
 		name = fmt.Sprintf("%s (%d)", base, n)
@@ -234,11 +234,8 @@ func (t *tx) importTable(sheet int64, it *ImportTable) (Table, error) {
 	defs := []string{"id INTEGER PRIMARY KEY", "_pos TEXT NOT NULL"}
 	names := []string{"id", "_pos"}
 	meta := []stmt{st(`INSERT INTO _lattis_tables (id, sheet, name, row, col) VALUES (?, ?, ?, ?, ?)`, id, sheet, it.Name, it.Row, it.Col)}
-	for i, h := range it.Headers {
-		c := Column{ID: int64(i + 1), Name: strings.TrimSpace(h), Type: it.Types[i]}
-		if c.Name == "" {
-			c.Name = fmt.Sprintf("Colonne %d", i+1)
-		}
+	for i, h := range uniqueColumnNames(it.Headers) {
+		c := Column{ID: int64(i + 1), Name: h, Type: it.Types[i]}
 		switch c.Type {
 		case grid.Integer, grid.Decimal, grid.Text, grid.Boolean, grid.Date:
 		default:

@@ -58,6 +58,21 @@ func TestEachRowReportsScanErrors(t *testing.T) {
 	}
 }
 
+// promoteIfData prend la première ligne comme en-têtes si le collage ne l'a
+// pas reconnue (colonnes « Colonne n »).
+func promoteIfData(ctx context.Context, d *fixture, table string) error {
+	all, err := d.AllTables(ctx)
+	if err != nil {
+		return err
+	}
+	for _, tn := range all {
+		if tn.Name == table && len(tn.Columns) > 0 && strings.HasPrefix(tn.Columns[0], "Colonne ") {
+			return d.PromoteHeader(ctx, table)
+		}
+	}
+	return nil
+}
+
 func view(t *testing.T, d *fixture) string {
 	t.Helper()
 	v, err := d.View(context.Background(), 1)
@@ -759,10 +774,10 @@ func TestStyles(t *testing.T) {
 func TestFindReplace(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
-	if _, err := d.Paste(ctx, 1, 1, 0, [][]string{{"Ville", "Note"}, {"Paris", "paris centre"}, {"Lyon", "1"}, {"PARIS", ""}}); err != nil {
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Ville", "Note"}, {"Paris", "paris centre"}, {"Lyon", "1"}, {"PARIS", ""}}); err != nil {
 		t.Fatal(err)
 	}
-	if err := d.PromoteHeader(ctx, "Feuille1"); err != nil {
+	if err := promoteIfData(ctx, d, "Feuille1"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := d.SetCell(ctx, 1, 6, 0, "voir Paris"); err != nil {
@@ -829,10 +844,10 @@ func TestRules(t *testing.T) {
 func TestFilter(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
-	if _, err := d.Paste(ctx, 1, 1, 0, [][]string{{"Ville", "Pays"}, {"Lyon", "FR"}, {"Rome", "IT"}, {"Paris", "FR"}, {"Nice", ""}}); err != nil {
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Ville", "Pays"}, {"Lyon", "FR"}, {"Rome", "IT"}, {"Paris", "FR"}, {"Nice", ""}}); err != nil {
 		t.Fatal(err)
 	}
-	if err := d.PromoteHeader(ctx, "Feuille1"); err != nil {
+	if err := promoteIfData(ctx, d, "Feuille1"); err != nil {
 		t.Fatal(err)
 	}
 	before := dump(t, d)
@@ -856,7 +871,7 @@ func TestFilter(t *testing.T) {
 		t.Fatal(err)
 	}
 	var got string
-	d.read(ctx, func(t *tx) error { return t.row(`SELECT c_1 FROM t_1 WHERE id = 4`).Scan(&got) })
+	d.read(ctx, func(t *tx) error { return t.row(`SELECT c_1 FROM t_1 WHERE id = 3`).Scan(&got) })
 	if got != "Paris 2" {
 		t.Fatalf("saisie sur la ligne filtrée : %q", got)
 	}
@@ -955,10 +970,10 @@ func TestTablesMoveMergeSplit(t *testing.T) {
 	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Ville", "Pop"}, {"Lyon", "520"}, {"Paris", "2100"}}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := d.Paste(ctx, 1, 1, 5, [][]string{{"Pays", "Note"}, {"FR", "x"}, {"IT", "y"}, {"DE", "z"}}); err != nil {
+	if _, err := d.Paste(ctx, 1, 0, 5, [][]string{{"Pays", "Note"}, {"FR", "x"}, {"IT", "y"}, {"DE", "z"}}); err != nil {
 		t.Fatal(err)
 	}
-	if err := d.PromoteHeader(ctx, "Tableau1"); err != nil {
+	if err := promoteIfData(ctx, d, "Tableau1"); err != nil {
 		t.Fatal(err)
 	}
 	if err := d.SetFilter(ctx, "Tableau1", 0, nil); err != nil {
@@ -1159,7 +1174,7 @@ func TestRemoveDuplicates(t *testing.T) {
 	if _, err := d.Paste(ctx, 1, 1, 0, [][]string{{"Ville", "Pays"}, {"Lyon", "FR"}, {"lyon", "FR"}, {"Rome", "IT"}, {"Lyon", "BE"}, {"Rome", "IT"}}); err != nil {
 		t.Fatal(err)
 	}
-	if err := d.PromoteHeader(ctx, "Feuille1"); err != nil {
+	if err := promoteIfData(ctx, d, "Feuille1"); err != nil {
 		t.Fatal(err)
 	}
 	before := dump(t, d)
@@ -1245,7 +1260,7 @@ func TestSetKey(t *testing.T) {
 	if _, err := d.Paste(ctx, 1, 1, 0, [][]string{{"Code", "Ville", "Pays"}, {"LY", "Lyon", "FR"}, {"PA", "Paris", "FR"}, {"RO", "Rome", ""}}); err != nil {
 		t.Fatal(err)
 	}
-	if err := d.PromoteHeader(ctx, "Feuille1"); err != nil {
+	if err := promoteIfData(ctx, d, "Feuille1"); err != nil {
 		t.Fatal(err)
 	}
 	before := dump(t, d)

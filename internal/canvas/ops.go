@@ -200,6 +200,54 @@ func (t *tx) dropColumn(tb Table, c Column, pos int) error {
 	}})
 }
 
+// columnNameTaken indique si une autre colonne du tableau que except porte
+// déjà ce nom, sans tenir compte des majuscules : Ventes[Produit] serait
+// ambigu dans les formules, comme en SQL.
+func columnNameTaken(tb Table, except int64, name string) bool {
+	for _, c := range tb.Cols {
+		if c.ID != except && strings.EqualFold(c.Name, name) {
+			return true
+		}
+	}
+	return false
+}
+
+// freeColumnNameExcept rend name, ou « name 2 », « name 3 »… s'il est pris dans
+// le tableau par une autre colonne que except (création automatique :
+// collage, conversion).
+func freeColumnNameExcept(tb Table, except int64, name string) string {
+	cand := name
+	for n := 2; columnNameTaken(tb, except, cand); n++ {
+		cand = fmt.Sprintf("%s %d", name, n)
+	}
+	return cand
+}
+
+// errColumnTaken : message d'une colonne renommée en doublon.
+func errColumnTaken(tb Table, name string) error {
+	return fmt.Errorf("la colonne « %s » existe déjà dans le tableau %s (les noms de colonnes ne tiennent pas compte des majuscules) : choisissez un autre nom", name, tb.Name)
+}
+
+// uniqueColumnNames complète (« Colonne n ») et rend uniques des en-têtes
+// d'un nouveau tableau : le second « Produit » devient « Produit 2 ».
+func uniqueColumnNames(headers []string) []string {
+	out := make([]string, len(headers))
+	seen := map[string]bool{}
+	for i, h := range headers {
+		h = strings.TrimSpace(h)
+		if h == "" {
+			h = fmt.Sprintf("Colonne %d", i+1)
+		}
+		cand := h
+		for n := 2; seen[strings.ToLower(cand)]; n++ {
+			cand = fmt.Sprintf("%s %d", h, n)
+		}
+		seen[strings.ToLower(cand)] = true
+		out[i] = cand
+	}
+	return out
+}
+
 // rename change le nom affiché d'une colonne.
 func (t *tx) rename(tb Table, c Column, name string) error {
 	if name == c.Name {
@@ -283,15 +331,12 @@ func (t *tx) createTable(sheet int64, name string, row, col int, headers []strin
 	defs := []string{"id INTEGER PRIMARY KEY", "_pos TEXT NOT NULL"}
 	names := []string{"id", "_pos"}
 	do := []stmt{st(`INSERT INTO _lattis_tables (id, sheet, name, row, col) VALUES (?, ?, ?, ?, ?)`, id, sheet, name, row, col)}
-	for i, h := range headers {
+	for i, h := range uniqueColumnNames(headers) {
 		raws := make([]string, len(data))
 		for r := range data {
 			raws[r] = data[r][i]
 		}
 		c := Column{ID: int64(i + 1), Name: h, Type: InferAll(raws)}
-		if strings.TrimSpace(c.Name) == "" {
-			c.Name = fmt.Sprintf("Colonne %d", i+1)
-		}
 		tb.Cols = append(tb.Cols, c)
 		defs = append(defs, colSQL(c.ID)+" "+sqlType(c.Type))
 		names = append(names, colSQL(c.ID))

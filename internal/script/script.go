@@ -24,6 +24,8 @@ import (
 	"time"
 
 	lua "github.com/yuin/gopher-lua"
+
+	"github.com/lalamefine/lattis/internal/sqltext"
 )
 
 // Editor écrit dans les tableaux ; *canvas.Editor le réalise. vals associe
@@ -53,6 +55,9 @@ type Env struct {
 	// {control, event, value, old}), converti comme du JSON ; il est aussi
 	// la variable globale event du script. nil : appel sans argument.
 	Event any
+	// Prepare complète une requête de lecture avant la traduction des noms
+	// (facultatif) : valeurs des colonnes calculées, tableaux croisés.
+	Prepare func(ctx context.Context, q string) (string, error)
 }
 
 // Limits borne un script.
@@ -223,6 +228,15 @@ func (r *runner) closeRows() {
 func (r *runner) exec(L *lua.LState, fn string) (*sql.Rows, []string, map[string]bool) {
 	q := L.CheckString(1)
 	cat := r.catalog(L)
+	if err := sqltext.CheckStructure(q); err != nil {
+		L.RaiseError("db.%s : %v", fn, err)
+	}
+	if r.env.Prepare != nil {
+		var err error
+		if q, err = r.env.Prepare(r.ctx, q); err != nil {
+			L.RaiseError("db.%s : %s", fn, sqlError(err))
+		}
+	}
 	rs, err := r.env.Read.QueryContext(r.ctx, cat.rewrite(q), args(L, 2)...)
 	if err != nil {
 		L.RaiseError("db.%s : %s", fn, sqlError(err))
@@ -513,7 +527,7 @@ func toLua(v any, asBool bool) lua.LValue {
 // sqlError retire de l'erreur la clause WITH ajoutée par rewrite, que
 // l'utilisateur n'a pas écrite.
 func sqlError(err error) string {
-	s := err.Error()
+	s := sqltext.French(err).Error()
 	if i := strings.Index(s, "WITH \""); i >= 0 {
 		s = s[:i]
 	}

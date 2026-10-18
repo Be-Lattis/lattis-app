@@ -286,3 +286,35 @@ func TestExtractAndPromote(t *testing.T) {
 		t.Fatalf("en-têtes : %+v", tb)
 	}
 }
+
+// Une liste mixte (date, heure, booléen, pourcentage, nombre) n'a pas
+// d'en-tête : sa première valeur reste une donnée, la colonne s'appelle
+// « Colonne 1 » (audit n° 3, M10).
+func TestMixedListHasNoHeader(t *testing.T) {
+	h := newHost(t)
+	for i, v := range []any{"18/10/2026", "10:30", "VRAI", "15 %", 42} {
+		h.set(2+i, 2, v)
+	}
+	tbs := h.sheet("").Tables
+	if len(tbs) != 1 {
+		t.Fatalf("tableaux : %+v", tbs)
+	}
+	if tb := tbs[0]; tb.Columns[0].Name != "Colonne 1" || tb.Row != 1 || tb.Rows != 5 {
+		t.Fatalf("liste mixte : %+v", tb)
+	}
+}
+
+// Deux en-têtes collés identiques : le second devient « Produit 2 » ; un
+// en-tête collé sur un tableau qui a déjà ce nom aussi.
+func TestPastedDuplicateHeaders(t *testing.T) {
+	h := newHost(t)
+	h.paste(1, 1, []any{"Produit", "produit"}, []any{1, 2}, []any{3, 4})
+	tb := h.sheet("").Tables[0]
+	if tb.Columns[0].Name != "Produit" || tb.Columns[1].Name != "produit 2" {
+		t.Fatalf("en-têtes collés : %+v", tb.Columns)
+	}
+	h.paste(1, 1, []any{"Prix", "PRIX"})
+	if got := h.sheet("").Tables[0].Columns[1].Name; got != "PRIX 2" {
+		t.Fatalf("en-tête collé sur le tableau : %q", got)
+	}
+}
