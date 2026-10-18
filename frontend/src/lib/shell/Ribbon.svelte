@@ -16,7 +16,7 @@
 	import type { IconName } from '#lib/icons/icons.js';
 	import { MORE_KINDS, type ChartKind } from '#lib/chart/kinds.js';
 	import { COMMAND_TIPS, TAB_TIPS, assignKeyTips, keyChars, keyOf, matchTip } from '#lib/ui/keytips.js';
-	import { cycle, focusRegion, isTextField, modalOpen, tabbables } from '#lib/ui/focus.js';
+	import { cycle, focusRegion, isTextField, modalOpen, regionOf, tabbables } from '#lib/ui/focus.js';
 
 	export type View = 'grid' | 'sql' | 'script';
 	export type FormatTab = 'number' | 'align' | 'font' | 'border' | 'fill';
@@ -694,10 +694,22 @@
 		}
 		select(t as typeof tab);
 		await tick();
-		await new Promise((r) => requestAnimationFrame(r)); // le ruban s'est compacté (fit)
+		// Le ruban se compacte (fit) puis se remesure : deux images plus tard, il est en place.
+		for (let i = 0; i < 2; i++) await new Promise((r) => requestAnimationFrame(r));
 		const tips = tipsAt('cmds');
 		kt = tips.length ? { level: 'cmds', typed: '', tips } : null;
 	}
+
+	// Le ruban se recompacte parfois juste après le changement d'onglet (fit
+	// remesuré) : les boutons sont remplacés, les KeyTips sont recalculées.
+	$effect(() => {
+		if (kt?.level !== 'cmds' || !groupsEl) return;
+		const mo = new MutationObserver(() => {
+			if (kt?.level === 'cmds') kt = { level: 'cmds', typed: '', tips: tipsAt('cmds') };
+		});
+		mo.observe(groupsEl, { childList: true, subtree: true });
+		return () => mo.disconnect();
+	});
 
 	function runTip(t: Tip, level: 'tabs' | 'cmds') {
 		if (level === 'tabs') return openTab(t.el);
@@ -734,6 +746,8 @@
 		}
 		const k = keyOf(e.key);
 		if (!k) return;
+		// Ruban recompacté entre-temps (boutons remplacés) : codes recalculés.
+		if (kt.tips.some((t) => !t.el.isConnected)) kt = { level: kt.level, typed: '', tips: tipsAt(kt.level) };
 		const typed = kt.typed + k;
 		const m = matchTip(
 			kt.tips.map((t) => t.tip),
@@ -808,7 +822,8 @@
 		if (ti < 0 && ci < 0) return;
 		if (e.key === 'Escape') {
 			e.preventDefault();
-			if (returnTo?.isConnected && !headerEl.contains(returnTo)) returnTo.focus();
+			// Comme Excel : retour à la feuille (ou à la page affichée), là où on était.
+			if (returnTo?.isConnected && regionOf(returnTo) === 'grid') returnTo.focus();
 			else focusRegion('grid');
 			return;
 		}
