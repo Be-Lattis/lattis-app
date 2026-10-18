@@ -10,6 +10,7 @@ Décision de Louis, 18/10/2026 : l'application Lattis prend l'icône « Grille e
 | `be-lattis-logo-clair.svg` | Logo de l'entreprise sur fond clair |
 | `be-lattis-logo-sombre.svg` | Logo de l'entreprise sur fond sombre |
 | `be-lattis-symbole.svg` | Symbole seul (avatar, favicon, petits formats) |
+| `be-lattis-symbole.png`, `be-lattis-logo.png` | Rendus PNG transparents (1024 × 1024 ; 1500 × 400, texte en Sora) |
 
 Dérivés de l'icône, à régénérer après toute retouche :
 
