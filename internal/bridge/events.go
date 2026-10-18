@@ -66,6 +66,9 @@ func (s *DocumentService) resetEvents() {
 }
 
 func (s *DocumentService) listening(event string) bool {
+	if s.scripting() != nil {
+		return false // sans scripting, aucun écouteur Lua ne tourne
+	}
 	return api.Listening(host{s}, event)
 }
 

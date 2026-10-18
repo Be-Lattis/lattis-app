@@ -15,6 +15,9 @@ import (
 // et renvoie son identifiant. Les pages web sont une fonctionnalité à
 // activer (Fichier › Paramètres › Fonctionnalités, features.htmlTabs).
 func (s *DocumentService) AddPage(ctx context.Context, before int64) (int64, error) {
+	if err := s.scripting(); err != nil {
+		return 0, err
+	}
 	if !config.Current().Bool("features.htmlTabs", false) {
 		return 0, errors.New("les pages web sont désactivés : activez-les dans Fichier › Paramètres › Fonctionnalités")
 	}
@@ -68,6 +71,9 @@ func (s *DocumentService) PivotData(ctx context.Context, cfg canvas.PivotConfig)
 // RunFunction exécute le script name de la bibliothèque (onglet SCRIPT),
 // ou seulement sa fonction entry : bouton d'un onglet Document.
 func (s *DocumentService) RunFunction(ctx context.Context, name, entry string) (ScriptResult, error) {
+	if err := s.scripting(); err != nil {
+		return ScriptResult{}, err
+	}
 	d, err := s.current()
 	if err != nil {
 		return ScriptResult{}, err
@@ -102,6 +108,9 @@ func (s *DocumentService) SavePage(ctx context.Context, sheet int64, source stri
 // postMessage du cadre isolé) : les commandes des scripts et du serveur MCP,
 // sauf fichiers, annulation et scripts.run (api.PageCall).
 func (s *DocumentService) PageCall(ctx context.Context, name string, args map[string]any) (any, error) {
+	if err := s.scripting(); err != nil {
+		return nil, err
+	}
 	return api.PageCall(ctx, host{s}, name, args)
 }
 

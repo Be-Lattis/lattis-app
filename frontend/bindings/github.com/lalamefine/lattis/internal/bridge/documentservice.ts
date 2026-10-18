@@ -776,6 +776,15 @@ export function PlacePivot(sheet: number, row: number, col: number, cfg: canvas$
 }
 
 /**
+ * Platform décrit l'hôte à l'interface : version web (pas de boutons de
+ * fenêtre, fichiers envoyés et téléchargés) et scripting permis (onglet
+ * SCRIPT, boutons, pages web et serveur MCP masqués sinon).
+ */
+export function Platform(): $CancellablePromise<$models.Platform> {
+    return $Call.ByID(2235937389);
+}
+
+/**
  * PreviewQuery calcule l'aperçu d'une requête (pas forcément enregistrée)
  * après ses upto premières étapes (-1 : toutes). fresh relit les sources.
  */

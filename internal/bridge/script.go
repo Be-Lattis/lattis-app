@@ -18,6 +18,9 @@ type ScriptResult = api.ScriptResult
 // modifie (écritures, feuilles, tableaux…) forme une seule étape
 // d'annulation, nommée d'après le script.
 func (s *DocumentService) RunScript(ctx context.Context, name, src string) (ScriptResult, error) {
+	if err := s.scripting(); err != nil {
+		return ScriptResult{}, err
+	}
 	return api.RunScript(host{s}, name, src, "")
 }
 
@@ -26,6 +29,9 @@ func (s *DocumentService) StopScript() { api.StopScript() }
 
 // RunButton exécute l'action d'un bouton (clic dans la grille).
 func (s *DocumentService) RunButton(ctx context.Context, id int64) (ScriptResult, error) {
+	if err := s.scripting(); err != nil {
+		return ScriptResult{}, err
+	}
 	return api.RunButton(host{s}, id)
 }
 
@@ -34,6 +40,9 @@ func (s *DocumentService) RunButton(ctx context.Context, id int64) (ScriptResult
 // s'exécutent, en une seule étape d'annulation. value et old sont la
 // nouvelle et l'ancienne valeur affichée de la cellule liée.
 func (s *DocumentService) FireControl(ctx context.Context, id int64, event, value, old string) (ScriptResult, error) {
+	if s.scripting() != nil {
+		return ScriptResult{}, nil // sans scripting : le contrôle garde sa valeur, sans action
+	}
 	return api.FireControl(host{s}, id, event, value, old)
 }
 

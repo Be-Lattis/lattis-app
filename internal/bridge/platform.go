@@ -221,3 +221,17 @@ func Start(ctx context.Context, grid *GridService, docs *DocumentService) error 
 	}
 	return docs.startup(ctx)
 }
+
+// Platform décrit l'hôte à l'interface : version web (pas de boutons de
+// fenêtre, fichiers envoyés et téléchargés) et scripting permis (onglet
+// SCRIPT, boutons, pages web et serveur MCP masqués sinon).
+func (s *DocumentService) Platform() Platform { return s.sys().Platform() }
+
+// scripting refuse Lua, boutons, pages web et MCP quand l'hôte ne les
+// permet pas (version web sans web_scripting, § 12.4).
+func (s *DocumentService) scripting() error {
+	if !s.sys().Platform().Scripting {
+		return errNoScripting
+	}
+	return nil
+}

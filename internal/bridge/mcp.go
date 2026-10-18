@@ -87,6 +87,9 @@ func (s *DocumentService) MCPState() (MCPStatus, error) {
 
 // SetMCPEnabled active ou désactive le serveur MCP (réglage gardé).
 func (s *DocumentService) SetMCPEnabled(on bool) (MCPStatus, error) {
+	if err := s.scripting(); on && err != nil {
+		return MCPStatus{}, err
+	}
 	st, err := mcp.LoadSettings()
 	if err != nil {
 		return MCPStatus{}, err
