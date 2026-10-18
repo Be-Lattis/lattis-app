@@ -362,6 +362,24 @@ export type ScriptResult = api$0.ScriptResult;
 export type Setting = config$0.UserSetting;
 
 /**
+ * ShareRequest est une demande de publication.
+ */
+export interface ShareRequest {
+    "server": string;
+    "title": string;
+
+    /**
+     * Mode : frozen (figé) ou collaborative.
+     */
+    "mode": string;
+
+    /**
+     * Tables : tableaux publiés ; les autres restent privés.
+     */
+    "tables": number[] | null;
+}
+
+/**
  * TableList liste les tables et vues d'une connexion (navigateur).
  * needPassword est rempli si le serveur demande un mot de passe.
  */

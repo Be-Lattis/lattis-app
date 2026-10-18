@@ -73,6 +73,7 @@ type DocumentService struct {
 	pq    pqState   // base de travail des requêtes d'import (query.go)
 	ev    eventLoop // évènements du classeur (events.go)
 	ai    aiState   // conversation de l'onglet IA (ai.go)
+	share shareState // classeur partagé : suivi du serveur (sharing.go)
 
 	// Classeur à ouvrir au lancement (association de fichiers, launch.go).
 	launch launchState
@@ -97,6 +98,7 @@ func (s *DocumentService) current() (*doc.Document, error) {
 // récupération au prochain lancement.
 func (s *DocumentService) ServiceShutdown() error {
 	s.stopMCP()
+	s.stopShare()
 	s.closeQuerySession()
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -118,6 +120,12 @@ func (s *DocumentService) replace(d *doc.Document) {
 	s.doc, s.tables, s.memo = d, map[int64]*grid.Table{}, nil
 	s.mu.Unlock()
 	s.resetEvents()
+	// Classeur partagé : suivi de son serveur (republications, connexion).
+	if d != nil {
+		s.watchShare(d)
+	} else {
+		s.stopShare()
+	}
 	if old != nil {
 		old.Close()
 	}

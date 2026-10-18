@@ -1022,6 +1022,18 @@ export interface TableInfo {
      */
     "queryId": number;
     "queryName": string;
+
+    /**
+     * Classeur partagé : "published" (tableau publié sur le serveur) ou
+     * "private" (resté local) ; vide pour un classeur local.
+     */
+    "shared"?: string;
+
+    /**
+     * ReadOnly : pourquoi le tableau publié ne se modifie pas (« Classeur
+     * publié en lecture seule », « Hors ligne, lecture seule »), vide sinon.
+     */
+    "readOnly"?: string;
 }
 
 /**

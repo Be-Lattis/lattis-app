@@ -30,6 +30,7 @@ export type {
     SalvageResult,
     ScriptResult,
     Setting,
+    ShareRequest,
     TableList,
     UICommand,
     XLSXExport

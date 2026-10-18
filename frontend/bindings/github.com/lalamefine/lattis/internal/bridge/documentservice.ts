@@ -28,6 +28,9 @@ import * as query$0 from "../query/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as auth$0 from "../remote/auth/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as workbook$0 from "../remote/workbook/models.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -1321,6 +1324,74 @@ export function SetZoom(sheet: number, pct: number): $CancellablePromise<$models
  */
 export function Settings(): $CancellablePromise<$models.Setting[] | null> {
     return $Call.ByID(2324248331);
+}
+
+/**
+ * ShareAcceptText convertit en texte la colonne i d'un tableau en y
+ * gardant ses saisies invalides telles quelles (« Accepter comme texte »),
+ * puis refait les vérifications.
+ */
+export function ShareAcceptText(table: string, i: number): $CancellablePromise<workbook$0.Check> {
+    return $Call.ByID(16795562, table, i);
+}
+
+/**
+ * ShareCheck fait les vérifications avant publication sur tous les
+ * tableaux du classeur (noms, types figés, saisies invalides).
+ */
+export function ShareCheck(): $CancellablePromise<workbook$0.Check> {
+    return $Call.ByID(1819546503);
+}
+
+/**
+ * ShareOpen ouvre un classeur du serveur : chargé en entier dans son cache
+ * local (un fichier .lattis du dossier cache de l'utilisateur, rouvert et
+ * actualisé s'il existe), qui reste consultable hors ligne.
+ */
+export function ShareOpen(server: string, id: string, title: string): $CancellablePromise<$models.OpenResult> {
+    return $Call.ByID(2745915401, server, id, title);
+}
+
+/**
+ * SharePublish publie le classeur ouvert sur un Serveur Lattis (Fichier ›
+ * Partager sur un serveur…). Un classeur déjà enregistré est réenregistré
+ * (son manifeste dit le partage).
+ */
+export function SharePublish(req: $models.ShareRequest): $CancellablePromise<workbook$0.State> {
+    return $Call.ByID(2009562440, req);
+}
+
+/**
+ * ShareReload recharge la version publiée du classeur partagé ouvert
+ * (bandeau « Nouvelle version disponible ») : les ajouts locaux (tableaux
+ * privés, cellules libres, feuilles) sont gardés.
+ */
+export function ShareReload(): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(747820492);
+}
+
+/**
+ * ShareRepublish publie une nouvelle version du classeur figé ouvert
+ * (Fichier › Republier) ; tables nil : les tableaux déjà publiés.
+ */
+export function ShareRepublish(tables: number[] | null): $CancellablePromise<workbook$0.State> {
+    return $Call.ByID(740882395, tables);
+}
+
+/**
+ * ShareState décrit le partage du classeur ouvert (classeur local :
+ * Shared faux).
+ */
+export function ShareState(): $CancellablePromise<workbook$0.State> {
+    return $Call.ByID(83171638);
+}
+
+/**
+ * ShareWorkbooks liste les classeurs accessibles sur un serveur (Fichier ›
+ * Ouvrir depuis un serveur) ; brouillons écartés.
+ */
+export function ShareWorkbooks(server: string): $CancellablePromise<workbook$0.Listing[] | null> {
+    return $Call.ByID(886684258, server);
 }
 
 /**

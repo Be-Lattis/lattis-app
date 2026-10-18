@@ -179,6 +179,9 @@ func (s *DocumentService) LattisCancelLogin(url string) {
 // LattisSignOut ferme la session d'un serveur (jeton révoqué et oublié du
 // trousseau) et rend l'état à jour.
 func (s *DocumentService) LattisSignOut(ctx context.Context, url string) (LattisState, error) {
+	if n, err := auth.NormalizeURL(url); err == nil {
+		closeSharePools(n)
+	}
 	if err := lattisManager().SignOut(ctx, url); err != nil {
 		return s.LattisState(), err
 	}
