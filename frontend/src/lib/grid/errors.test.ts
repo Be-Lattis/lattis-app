@@ -22,6 +22,9 @@ describe('explication des erreurs', () => {
 	});
 	it('autres codes', () => {
 		expect(explainError('#DIV/0!')).toContain('division');
+		// Audit n° 3, B1 : une boucle n'est pas annoncée comme un tableau supprimé.
+		expect(explainError('#CIRC!', '=SOMME([X])')).toContain('référence circulaire');
+		expect(explainError('#CIRC!')).not.toContain('supprimé');
 		expect(explainError('#XYZ')).toBe('');
 	});
 });

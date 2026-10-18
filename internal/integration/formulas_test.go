@@ -102,7 +102,7 @@ func TestReferencesInsideTable(t *testing.T) {
 	h.set(2, 7, "=[Qté]+[Cumul][-1]")
 	want := []string{"1", "3", "8", "18"}
 	if got := h.column("T", "Cumul"); strings.Join(got, "|") != strings.Join(want, "|") {
-		knownBug(t, "cumul", "une colonne qui lit sa propre ligne précédente ([Cumul][-1]) donne #REF! dès la 3e ligne : "+strings.Join(got, " | "))
+		t.Errorf("une colonne qui lit sa propre ligne précédente ([Cumul][-1]) : %s", strings.Join(got, " | "))
 	}
 }
 
@@ -116,10 +116,10 @@ func TestEmptyCellReference(t *testing.T) {
 	h.wantVal(3, 1, "FAUX")
 	h.set(15, 5, "")
 	if got := h.val(1, 1); got != "1" {
-		knownBug(t, "cellule-vide", "=Cell[E15]+1 sur une cellule vide donne "+got+" au lieu de 1")
+		t.Errorf("=Cell[E15]+1 sur une cellule vide donne %s au lieu de 1", got)
 	}
 	if got := h.val(3, 1); got != "VRAI" {
-		knownBug(t, "cellule-vide", "=ESTVIDE(Cell[E15]) sur une cellule vide donne "+got)
+		t.Errorf("=ESTVIDE(Cell[E15]) sur une cellule vide donne %s", got)
 	}
 }
 

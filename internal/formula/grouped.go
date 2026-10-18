@@ -216,7 +216,7 @@ func (c *compiler) grouped(s scanCall, t *Table, sc scope) (string, bool) {
 	}
 	// Le parcours, sans dépendance à la ligne : les critères qui en dépendent
 	// sont remplacés par NULL et désignés dans spec.
-	sub := &compiler{schema: c.schema, names: c.names, visiting: map[*Column]bool{}, hoist: c.hoist}
+	sub := c.sub()
 	spec := make([]byte, len(s.params))
 	head := []string{sub.param(s.name), "", fmt.Sprint(len(s.params))}
 	for i, p := range s.params {
@@ -284,6 +284,9 @@ func (a *groupAggFn) Value(ctx sqlite3.Context) {
 
 func registerGrouped(c *sqlite3.Conn) error {
 	if err := registerRankCumul(c); err != nil {
+		return err
+	}
+	if err := registerSeq(c); err != nil {
 		return err
 	}
 	if err := c.CreateWindowFunction("slt_group", -1, sqlite3.DETERMINISTIC, func() sqlite3.AggregateFunction { return &groupAggFn{} }); err != nil {
@@ -429,7 +432,7 @@ func (c *compiler) rankPrecomputed(s scanCall, t *Table, sc scope) (string, bool
 	if !rowDependent(s.params[0]) || len(s.params) > 1 && rowDependent(s.params[1]) {
 		return "", false
 	}
-	sub := &compiler{schema: c.schema, names: c.names, visiting: map[*Column]bool{}, hoist: c.hoist}
+	sub := c.sub()
 	al := sub.newAlias()
 	col := sub.expr(s.cols[0], scope{table: sc.table}.inArray(t, al))
 	id := c.hoist(Compiled{fmt.Sprintf("(SELECT slt_rankidx(%s) FROM %s AS %s)", col, t.SQL, al), sub.args})
@@ -449,7 +452,7 @@ func (c *compiler) cumulPrecomputed(arg Node, sc scope) (string, bool) {
 	if c.hoist == nil || sc.arr != nil {
 		return "", false
 	}
-	sub := &compiler{schema: c.schema, names: c.names, visiting: map[*Column]bool{}, hoist: c.hoist}
+	sub := c.sub()
 	al := sub.newAlias()
 	val := sub.expr(arg, scope{table: sc.table, alias: al})
 	id := c.hoist(Compiled{fmt.Sprintf("(SELECT slt_cumidx(%s.id, %s ORDER BY %s._pos) FROM %s AS %s)", al, val, al, sc.table.SQL, al), sub.args})

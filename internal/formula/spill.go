@@ -435,7 +435,12 @@ type Spill struct {
 }
 
 // CompileSpill compile un tableau dynamique pour la lecture par la grille.
-func CompileSpill(n Node, s *Schema, names map[string]Value) (Spill, Value) {
+func CompileSpill(n Node, s *Schema, names map[string]Value) (sp Spill, fail Value) {
+	defer func() {
+		if r := recover(); r != nil { // voir compiler.top
+			sp, fail = Spill{}, Err(ErrValue)
+		}
+	}()
 	c := &compiler{schema: s, names: names, visiting: map[*Column]bool{}}
 	r, e := c.spill(n, scope{})
 	if e != 0 {

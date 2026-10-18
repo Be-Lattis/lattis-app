@@ -222,6 +222,7 @@ func textCell(s string) xcell {
 var excelErrors = map[string]string{
 	"#DIV/0!": "#DIV/0!", "#N/A": "#N/A", "#VALEUR!": "#VALUE!", "#REF!": "#REF!",
 	"#NOM?": "#NAME?", "#NOMBRE!": "#NUM!", "#NUL!": "#NULL!",
+	"#CIRC!": "#REF!", // Excel n'a pas de code pour une référence circulaire
 }
 
 func errorCell(s string) xcell {

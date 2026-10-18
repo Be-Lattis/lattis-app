@@ -14,7 +14,7 @@ import (
 // formes Cell_A1 et Feuille2.Cell_B3 restent lues. En interne, l'adresse est
 // un nom « Cell_A1 » (ou « Feuille2.Cell_B3 »). La valeur de la cellule
 // remplace la référence avant le calcul ; les références circulaires donnent
-// #REF!.
+// #CIRC!.
 
 // CellText écrit un nom dans une formule : les adresses de cellules dans la
 // nomenclature Cell[A1] / Feuille!Cell[A1], les autres noms tels quels.
@@ -263,6 +263,9 @@ func (c *compiler) relative(n Call, k int, sc scope) string {
 	}
 	if k == 0 {
 		return c.column(t, &t.Cols[i], sc.alias)
+	}
+	if v := c.recRef(t, &t.Cols[i], k, sc); v != "" {
+		return v // [Cumul][-1] dans le pas du calcul de Cumul
 	}
 	a := c.newAlias()
 	val := c.column(t, &t.Cols[i], a)

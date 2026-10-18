@@ -34,28 +34,102 @@ type compiler struct {
 	// base décale la numérotation des paramètres (?base+1…), pour assembler
 	// plusieurs expressions compilées dans une même requête.
 	base int
+
+	// run : état partagé avec les sous-compilateurs (agrégats précalculés).
+	run *compileRun
+
+	// rec : compilation du pas d'une colonne qui lit ses propres lignes
+	// voisines ([Cumul][-1], voir selfColumn) ; seqs : ces colonnes déjà
+	// précalculées (numéro du précalcul), partagé avec les sous-compilateurs.
+	rec  *recStep
+	seqs map[*Column]float64
+}
+
+// maxDepth borne l'imbrication d'une compilation : au-delà, la formule donne
+// #CIRC! au lieu de faire déborder la pile (une boucle non détectée).
+const maxDepth = 1000 // la limite d'imbrication des expressions de SQLite
+
+// compileRun : état d'une compilation, partagé avec ses sous-compilateurs.
+type compileRun struct {
+	// depth compte l'imbrication : garde de dernier recours contre une
+	// récursion sans fin (voir maxDepth).
+	depth int
+	// circ : une référence circulaire a été rencontrée ; toute la formule
+	// donne alors #CIRC!, même si une fonction en ignorerait l'erreur
+	// (NB.SI, SIERREUR), comme Excel signale la boucle quoi qu'il arrive.
+	circ bool
+}
+
+func (c *compiler) state() *compileRun {
+	if c.run == nil {
+		c.run = &compileRun{}
+	}
+	return c.run
+}
+
+// circular note une référence circulaire et rend son erreur.
+func (c *compiler) circular() string {
+	c.state().circ = true
+	return errSQL(ErrCirc)
+}
+
+// sub donne un sous-compilateur (agrégat précalculé à part) qui garde les
+// colonnes en cours de compilation : une colonne calculée qui agrège sa
+// propre colonne (SOMME(T[X]) dans X) reste une référence circulaire.
+func (c *compiler) sub() *compiler {
+	visiting := make(map[*Column]bool, len(c.visiting))
+	for k, v := range c.visiting {
+		visiting[k] = v
+	}
+	if c.seqs == nil {
+		c.seqs = map[*Column]float64{}
+	}
+	return &compiler{schema: c.schema, names: c.names, visiting: visiting, hoist: c.hoist, run: c.state(), seqs: c.seqs}
 }
 
 // CompileHoisted est Compile avec des agrégats calculés à part (voir hoist).
 func CompileHoisted(n Node, s *Schema, names map[string]Value, table *Table, alias string, hoist func(Compiled) Value) Compiled {
 	c := &compiler{schema: s, names: names, visiting: map[*Column]bool{}, hoist: hoist}
-	sql := c.expr(n, scope{table: table, alias: alias})
-	return Compiled{sql, c.args}
+	return c.top(n, scope{table: table, alias: alias})
 }
 
 // CompileHoistedFrom est CompileHoisted avec des paramètres numérotés à
 // partir de base+1.
 func CompileHoistedFrom(n Node, s *Schema, names map[string]Value, table *Table, alias string, hoist func(Compiled) Value, base int) Compiled {
 	c := &compiler{schema: s, names: names, visiting: map[*Column]bool{}, hoist: hoist, base: base}
-	sql := c.expr(n, scope{table: table, alias: alias})
-	return Compiled{sql, c.args}
+	return c.top(n, scope{table: table, alias: alias})
+}
+
+// CompileColumnFrom est CompileHoistedFrom pour la formule de la colonne
+// calculée i du tableau table : la colonne est déjà « en cours », pour que
+// toute lecture de sa propre valeur soit une référence circulaire (même à
+// travers une fonction qui ignore les erreurs, comme NB.SI).
+func CompileColumnFrom(table *Table, i int, s *Schema, names map[string]Value, alias string, hoist func(Compiled) Value, base int) Compiled {
+	col := &table.Cols[i]
+	c := &compiler{schema: s, names: names, visiting: map[*Column]bool{col: true}, hoist: hoist, base: base}
+	return c.top(col.Formula, scope{table: table, alias: alias})
 }
 
 // Compile traduit une formule évaluée dans le contexte d'une ligne de table
 // (alias alias), ou hors de tout tableau si table est nil.
 func Compile(n Node, s *Schema, names map[string]Value, table *Table, alias string) Compiled {
 	c := &compiler{schema: s, names: names, visiting: map[*Column]bool{}}
-	sql := c.expr(n, scope{table: table, alias: alias})
+	return c.top(n, scope{table: table, alias: alias})
+}
+
+// top compile une formule entière. Une formule fautive donne une erreur de
+// cellule, jamais l'arrêt de l'application : une panique de la compilation
+// (ou d'un agrégat précalculé) donne #VALEUR!.
+func (c *compiler) top(n Node, sc scope) (out Compiled) {
+	defer func() {
+		if r := recover(); r != nil {
+			out = Compiled{SQL: errSQL(ErrValue)}
+		}
+	}()
+	sql := c.expr(n, sc)
+	if c.state().circ {
+		return Compiled{SQL: errSQL(ErrCirc)}
+	}
 	return Compiled{sql, c.args}
 }
 
@@ -87,6 +161,16 @@ func (c *compiler) param(v any) string {
 }
 
 func (c *compiler) expr(n Node, sc scope) string {
+	r := c.state()
+	if r.depth >= maxDepth {
+		return c.circular()
+	}
+	r.depth++
+	defer func() { r.depth-- }()
+	return c.node(n, sc)
+}
+
+func (c *compiler) node(n Node, sc scope) string {
 	switch n := n.(type) {
 	case nil:
 		return "NULL"
@@ -105,6 +189,9 @@ func (c *compiler) expr(n Node, sc scope) string {
 		}
 		v, ok := c.names[key]
 		if !ok {
+			if c.schema.emptyCell(key) {
+				return "NULL" // cellule vide
+			}
 			return errSQL(ErrName)
 		}
 		return c.param(ToSQL(v))
@@ -197,8 +284,13 @@ func (c *compiler) column(t *Table, col *Column, alias string) string {
 		}
 		return ref
 	}
+	// Une colonne qui lit ses lignes voisines est précalculée, même en cours
+	// de compilation (sa propre formule lit [Cumul][-1]).
+	if seq, ok := c.selfColumn(t, col); ok {
+		return fmt.Sprintf("slt_seqof(%s, %s.id)", c.param(seq), alias)
+	}
 	if c.visiting[col] {
-		return errSQL(ErrRef)
+		return c.circular() // la colonne dépend de sa propre valeur
 	}
 	c.visiting[col] = true
 	defer delete(c.visiting, col)
@@ -229,7 +321,7 @@ func (c *compiler) call(n Call, sc scope) string {
 		// Le sous-compilateur précalcule à son tour ce qu'il peut : une
 		// colonne calculée par SOMME.SI lue par MOYENNE garde ses totaux
 		// groupés au lieu d'un parcours par ligne.
-		sub := &compiler{schema: c.schema, names: c.names, visiting: map[*Column]bool{}, hoist: c.hoist}
+		sub := c.sub()
 		sql := sub.callBody(fn, n, scope{table: sc.table})
 		return c.param(ToSQL(c.hoist(Compiled{sql, sub.args})))
 	}
@@ -415,6 +507,9 @@ func (c *compiler) special(fn string, n Call, sc scope) string {
 	case "PREVIOUS", "NEXT":
 		if sc.table == nil || sc.alias == "" {
 			return errSQL(ErrRef)
+		}
+		if v, ok := c.recPrevious(n, sc); ok {
+			return v // PRECEDENT([Solde]) dans le pas du calcul de Solde
 		}
 		al := c.newAlias()
 		where := fmt.Sprintf("%s._pos < %s._pos", al, sc.alias)

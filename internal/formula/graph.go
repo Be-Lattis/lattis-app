@@ -129,13 +129,13 @@ func (ns *Names) order() (order, cyclic []string) {
 }
 
 // Recalc recalcule les noms dans l'ordre des dépendances. Une référence
-// circulaire donne #REF! à tous les noms qui en dépendent.
+// circulaire donne #CIRC! à tous les noms qui en dépendent.
 func (ns *Names) Recalc(env *Env) {
 	ns.Values = map[string]Value{}
 	env.Names = ns.Values
 	order, cyclic := ns.order()
 	for _, n := range cyclic {
-		ns.Values[n] = Err(ErrRef)
+		ns.Values[n] = Err(ErrCirc)
 	}
 	for _, n := range order {
 		ns.Values[n] = Eval(ns.Formulas[n], env)

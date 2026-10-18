@@ -579,7 +579,7 @@ func TestNames(t *testing.T) {
 	for _, c := range l.Cells {
 		vals[c.Raw] = c.Value
 	}
-	if vals["=Taux*100"] != "20" || vals["=Inconnu+1"] != "#NOM?" || vals["=B+1"] != "#REF!" {
+	if vals["=Taux*100"] != "20" || vals["=Inconnu+1"] != "#NOM?" || vals["=B+1"] != "#CIRC!" {
 		t.Fatalf("valeurs : %v", vals)
 	}
 	exprs, args, _, err := d.ColumnExprs(ctx, 1)
@@ -1596,7 +1596,7 @@ func TestCellAddresses(t *testing.T) {
 	set(4, 2, "z")
 	set(5, 2, "=[@x]+Cell_G1")
 	v := values()
-	if v["Cell_C1"] != "20" || v["Cell_A3"] != "60" || v["Cell_E1"] != "#REF!" || v["Cell_G1"] != "#REF!" {
+	if v["Cell_C1"] != "20" || v["Cell_A3"] != "60" || v["Cell_E1"] != "#CIRC!" || v["Cell_G1"] != "#CIRC!" {
 		t.Fatalf("valeurs : %v", v)
 	}
 	if _, err := d.ExecSQL(ctx, `SELECT 1`); err != nil {

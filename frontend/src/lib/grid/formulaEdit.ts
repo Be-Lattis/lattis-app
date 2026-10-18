@@ -34,7 +34,7 @@ class SyntaxErr extends Error {
 	}
 }
 
-const ERRORS = ['#DIV/0!', '#VALEUR!', '#N/A', '#REF!', '#NOM?', '#NOMBRE!', '#VALUE!', '#NAME?', '#NUM!'];
+const ERRORS = ['#DIV/0!', '#VALEUR!', '#N/A', '#REF!', '#NOM?', '#NOMBRE!', '#CIRC!', '#VALUE!', '#NAME?', '#NUM!'];
 const A1_RANGE = /^(?:(?:[\p{L}\w]+|'(?:[^']|'')+')!)?\$?[A-Za-z]{1,3}\$?\d+:\$?[A-Za-z]{1,3}\$?\d+/u;
 const A1 = /^([A-Za-z]{1,3})([1-9][0-9]{0,6})$/;
 const isLetter = (c: string) => /\p{L}/u.test(c);
