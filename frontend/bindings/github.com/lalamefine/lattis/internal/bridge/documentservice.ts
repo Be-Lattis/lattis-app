@@ -412,6 +412,14 @@ export function DeleteSheetRows(sheet: number, r0: number, r1: number): $Cancell
 }
 
 /**
+ * DeleteSheets supprime plusieurs onglets (sélection de plusieurs onglets)
+ * en une seule étape d'annulation ; une feuille au moins doit rester.
+ */
+export function DeleteSheets(sheets: number[] | null): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(118903757, sheets);
+}
+
+/**
  * DeleteTables supprime des tableaux entiers.
  */
 export function DeleteTables(names: string[] | null): $CancellablePromise<$models.DocState> {
@@ -891,6 +899,15 @@ export function Open(path: string): $CancellablePromise<$models.OpenResult> {
  */
 export function OpenDemo(): $CancellablePromise<$models.DemoResult> {
     return $Call.ByID(3355681729);
+}
+
+/**
+ * OrderSheets range les onglets dans l'ordre order (toutes les feuilles,
+ * masquées comprises), en une seule étape d'annulation : glisser plusieurs
+ * onglets sélectionnés.
+ */
+export function OrderSheets(order: number[] | null): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(721871734, order);
 }
 
 /**

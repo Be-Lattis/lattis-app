@@ -11,6 +11,7 @@ import (
 	"github.com/lalamefine/lattis/internal/api"
 	"github.com/lalamefine/lattis/internal/archive"
 	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
@@ -1223,4 +1224,45 @@ func remember[T any](ctx context.Context, s *DocumentService, kind, table string
 	}
 	s.mu.Unlock()
 	return v, nil
+}
+
+// DeleteSheets supprime plusieurs onglets (sélection de plusieurs onglets)
+// en une seule étape d'annulation ; une feuille au moins doit rester.
+func (s *DocumentService) DeleteSheets(ctx context.Context, sheets []int64) (DocState, error) {
+	var events []map[string]any
+	if s.listening(api.EventSheetDelete) {
+		for _, id := range sheets {
+			events = append(events, api.SheetEventData(host{s}, id))
+		}
+	}
+	gctx := command.WithGroup(ctx, "Supprimer les feuilles")
+	st, err := s.act(ctx, func(d *doc.Document) error {
+		for _, id := range sheets {
+			if err := d.DeleteSheet(gctx, id); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err == nil {
+		for _, e := range events {
+			s.fireAsync(api.EventSheetDelete, e)
+		}
+	}
+	return st, err
+}
+
+// OrderSheets range les onglets dans l'ordre order (toutes les feuilles,
+// masquées comprises), en une seule étape d'annulation : glisser plusieurs
+// onglets sélectionnés.
+func (s *DocumentService) OrderSheets(ctx context.Context, order []int64) (DocState, error) {
+	gctx := command.WithGroup(ctx, "Déplacer les feuilles")
+	return s.act(ctx, func(d *doc.Document) error {
+		for i, id := range order {
+			if err := d.MoveSheet(gctx, id, i); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }

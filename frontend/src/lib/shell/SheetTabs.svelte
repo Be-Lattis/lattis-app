@@ -31,6 +31,10 @@
 		/** Renomme la feuille ; un refus (exception) rouvre la saisie après la boîte « nom invalide ». */
 		onrename?: (id: number, name: string) => unknown;
 		ondelete?: (id: number) => void;
+		/** Supprime plusieurs feuilles (onglets sélectionnés par Ctrl+clic ou Maj+clic). */
+		ondeletemany?: (ids: number[]) => void;
+		/** Range toutes les feuilles dans cet ordre (glisser plusieurs onglets). */
+		onorder?: (ids: number[]) => void;
 		/** Copie la feuille id et place la copie au rang to. */
 		oncopy?: (id: number, to: number) => void;
 		/** Couleur d'onglet (« #rrggbb », vide : aucune). */
@@ -51,7 +55,7 @@
 		onrefused?: (msg: string) => void;
 	}
 
-	let { sheets, active, onselect, onadd: add, oninsert: insert, onpage: page, ondocpage: docPage, onmove: move, onrename: rename, ondelete: del, oncopy: copy, oncolor: color, onhide: hide, hscroll, onhscroll, onhhold, onprotect, locked = false, onrefused }: Props = $props();
+	let { sheets, active, onselect, onadd: add, oninsert: insert, onpage: page, ondocpage: docPage, onmove: move, onrename: rename, ondelete: del, ondeletemany: delMany, onorder: order, oncopy: copy, oncolor: color, onhide: hide, hscroll, onhscroll, onhhold, onprotect, locked = false, onrefused }: Props = $props();
 	const LOCKED = 'La structure du classeur est protégée : ôtez la protection (Révision › Ôter la protection du classeur) pour ajouter, supprimer, renommer ou déplacer des feuilles';
 	const onadd = $derived(locked ? undefined : add);
 	const oninsert = $derived(locked ? undefined : insert);
@@ -62,6 +66,8 @@
 	const onmove = $derived(locked ? undefined : move);
 	const onrename = $derived(locked ? undefined : rename);
 	const ondelete = $derived(locked ? undefined : del);
+	const ondeletemany = $derived(locked ? undefined : delMany);
+	const onorder = $derived(locked ? undefined : order);
 	const oncopy = $derived(locked ? undefined : copy);
 	const oncolor = $derived(locked ? undefined : color);
 	const onhide = $derived(locked ? undefined : hide);
@@ -213,6 +219,43 @@
 	const hiddenTabs = $derived(shown.length - vis.length);
 	let listing = $state(false);
 
+	// Plusieurs onglets sélectionnés (Ctrl+clic, Maj+clic, comme Excel) : ils
+	// se glissent et se suppriment ensemble. Vide : l'onglet actif seul.
+	let picked = $state<Set<number>>(new Set());
+	const group = $derived(picked.size > 1 ? picked : null);
+	$effect(() => {
+		// Feuilles disparues ou masquées : retirées de la sélection.
+		if (picked.size && [...picked].some((id) => !shown.some((s) => s.id === id))) picked = new Set([...picked].filter((id) => shown.some((s) => s.id === id)));
+	});
+	function pick(e: MouseEvent, s: Sheet) {
+		if (e.ctrlKey || e.metaKey) {
+			const p = new Set(picked.size ? picked : [active]);
+			if (p.has(s.id) && p.size > 1) p.delete(s.id);
+			else p.add(s.id);
+			picked = p;
+			return;
+		}
+		if (e.shiftKey) {
+			const a = shown.findIndex((x) => x.id === active);
+			const b = shown.findIndex((x) => x.id === s.id);
+			if (a >= 0 && b >= 0) picked = new Set(shown.slice(Math.min(a, b), Math.max(a, b) + 1).map((x) => x.id));
+			return;
+		}
+		picked = new Set();
+		onselect(s.id);
+	}
+	/** Ordre de toutes les feuilles après le dépôt du groupe g avant la feuille before (null : à la fin). */
+	function groupOrder(g: Set<number>, before: number | null): number[] {
+		const order = sheets.map((s) => s.id);
+		const moved = order.filter((id) => g.has(id));
+		const others = order.filter((id) => !g.has(id));
+		// Déposé sur un onglet du groupe : avant le premier onglet qui n'en est pas, après lui.
+		let at = before === null ? -1 : order.indexOf(before);
+		while (at >= 0 && at < order.length && g.has(order[at])) at++;
+		const k = at < 0 || at >= order.length ? others.length : others.indexOf(order[at]);
+		return [...others.slice(0, k), ...moved, ...others.slice(k)];
+	}
+
 	// Glisser un onglet : au-delà de quelques pixels, l'onglet suit la souris et
 	// un trait marque où il sera déposé (drop : rang d'insertion dans sheets).
 	let drag = $state<{ id: number; x0: number; moved: boolean; drop: number } | null>(null);
@@ -240,6 +283,11 @@
 		const d = drag;
 		drag = null;
 		if (!d?.moved || d.drop < 0) return;
+		if (group?.has(d.id) && onorder) {
+			const next = groupOrder(group, vis[d.drop]?.id ?? shown[range.to + 1]?.id ?? null);
+			if (next.some((id, i) => id !== sheets[i]?.id)) onorder(next);
+			return;
+		}
 		// Rang parmi toutes les feuilles (les masquées gardent leur place).
 		const order = sheets.map((s) => s.id);
 		// Déposé après le dernier onglet visible : avant le premier caché (ou en dernier).
@@ -290,7 +338,8 @@
 				onpointermove={dragMove}
 				onpointerup={dragEnd}
 				onpointercancel={() => (drag = null)}
-				onclick={() => onselect(s.id)}
+				class:picked={!!group?.has(s.id)}
+				onclick={(e) => pick(e, s)}
 				ondblclick={() => startRename(s)}
 				oncontextmenu={(e) => {
 					e.preventDefault();
@@ -404,6 +453,18 @@
 					ondocpage?.(id);
 				}}><span class="ic"><Icon name="document" size={16} /></span>Insérer un document</button
 			>
+			{#if group?.has(m.id)}
+				<button
+					role="menuitem"
+					disabled={group.size >= shown.length || !ondeletemany}
+					onclick={() => {
+						const ids = [...(group ?? [])];
+						closeMenu();
+						picked = new Set();
+						ondeletemany?.(ids);
+					}}><span class="ic"><Icon name="trash" size={16} /></span>Supprimer les {group.size} feuilles</button
+				>
+			{/if}
 			<button
 				role="menuitem"
 				disabled={shown.length <= 1 || !ondelete}
@@ -570,6 +631,11 @@
 {/if}
 
 <style>
+	/* Onglet d'une sélection de plusieurs feuilles (Ctrl+clic, Maj+clic). */
+	.sheet.picked:not(.on) {
+		background: #e3efe7;
+		box-shadow: inset 0 -2px 0 #217346;
+	}
 	.hbar {
 		margin-left: auto;
 		flex: 0 1 38%;

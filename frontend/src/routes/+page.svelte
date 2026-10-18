@@ -245,6 +245,8 @@
 	// protection qui en a un).
 	// Suppression d'une feuille qui contient quelque chose : confirmée avec la liste de ce qui part.
 	let deleting = $state<{ id: number; name: string; items: string[] } | null>(null);
+	// Plusieurs onglets sélectionnés à supprimer (une seule étape d'annulation).
+	let deletingMany = $state<number[] | null>(null);
 	let protecting = $state<{ what: 'sheet' | 'workbook'; id: number; name: string; off: boolean } | null>(null);
 	let pw1 = $state('');
 	let pw2 = $state('');
@@ -1714,6 +1716,8 @@
 			await reload();
 		} : undefined}
 		ondelete={mode === 'doc' ? (id) => askDeleteSheet(id) : undefined}
+		ondeletemany={mode === 'doc' ? (ids) => (deletingMany = ids) : undefined}
+		onorder={mode === 'doc' ? (ids) => sheetAction(() => DocumentService.OrderSheets(ids)) : undefined}
 		oncopy={mode === 'doc' ? (id, to) => sheetAction(async () => selectSheet(await DocumentService.CopySheet(id, to))) : undefined}
 		oncolor={mode === 'doc' ? (id, color) => sheetAction(() => DocumentService.SetSheetColor(id, color)) : undefined}
 		onhide={mode === 'doc' ? (id, hidden) => sheetAction(async () => {
@@ -1835,6 +1839,28 @@
 					<button type="button" onclick={() => (protecting = null)}>Annuler</button>
 				</div>
 			</form>
+		</div>
+	{/if}
+	{#if deletingMany}
+		{@const ids = deletingMany}
+		<div class="modal-back">
+			<div class="modal" role="dialog" aria-modal="true" aria-label="Supprimer les feuilles" use:modal={() => (deletingMany = null)}>
+				<p>Supprimer ces {ids.length} feuilles et tout ce qu'elles contiennent ?</p>
+				<ul class="delete-list">
+					{#each ids as id (id)}<li>{layout?.sheets?.find((s) => s.id === id)?.name ?? id}</li>{/each}
+				</ul>
+				<p class="hint">Ctrl+Z les rend toutes, avec leur contenu.</p>
+				<div class="actions">
+					<button
+						class="primary danger"
+						onclick={() => {
+							deletingMany = null;
+							sheetAction(() => DocumentService.DeleteSheets(ids));
+						}}>Supprimer</button
+					>
+					<button onclick={() => (deletingMany = null)}>Annuler</button>
+				</div>
+			</div>
 		</div>
 	{/if}
 	{#if deleting}
