@@ -530,12 +530,12 @@
 					<p>Règles ou droits changés hors de Lattis (à la main, dans PostgreSQL) :</p>
 					<ul class="plain">
 						{#each view.drift ?? [] as d (d.table_id)}
-							<li><strong>{d.name}</strong>{#if d.foreign_policies?.length} · règles ajoutées : <code>{d.foreign_policies.join(', ')}</code>{/if}</li>
+							<li><strong>{d.name}</strong>{#if d.foreign_policies?.length} · règles ajoutées : <code>{d.foreign_policies.join(', ')}</code>{/if}{#if d.foreign_grants?.length} · droits donnés à : <code>{d.foreign_grants.join(', ')}</code>{/if}{#if !d.foreign_policies?.length && !d.foreign_grants?.length} · règles générées retirées ou modifiées{/if}</li>
 						{/each}
 					</ul>
 					{#if manage || view.canDesign}
 						<div class="actions"><button class="primary" disabled={busy} onclick={recompile}>Recompiler les droits</button></div>
-						<p class="muted">Recompiler remet les règles générées par Lattis ; les règles ajoutées à la main restent (à retirer dans PostgreSQL) et ne sont plus signalées ici.</p>
+						<p class="muted">Recompiler remet les règles générées par Lattis. Il ne retire ni les règles ni les droits ajoutés à la main : ils restent signalés ici tant qu’ils ne sont pas retirés dans PostgreSQL.</p>
 					{/if}
 				{/if}
 			{/if}

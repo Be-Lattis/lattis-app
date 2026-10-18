@@ -175,11 +175,14 @@ type Level struct {
 }
 
 // Drift est un tableau dont les règles ou les droits ont changé hors de
-// Lattis ; ForeignPolicies : règles posées à la main.
+// Lattis ; ForeignPolicies : règles posées à la main ; ForeignGrants : rôles
+// (PUBLIC compris) qui ont reçu des droits à la main (serveur, migration 0011).
+// Recompiler ne retire ni les unes ni les autres.
 type Drift struct {
 	TableID         string   `json:"table_id"`
 	Name            string   `json:"name"`
 	ForeignPolicies []string `json:"foreign_policies"`
+	ForeignGrants   []string `json:"foreign_grants"`
 }
 
 // Commandes d'une restriction.
