@@ -87,7 +87,7 @@ func TestExemple(t *testing.T) {
 	d, res := build(t, path, 0)
 	check(t, d)
 	got := strings.Join(shape(t, d), " ")
-	for _, w := range []string{"Ateliers/Ateliers:6x7", "Ateliers/graphique", "Réparations/Réparations:400x11", "Réparations/TCD", "Par mois/ParMois:12x4", "Par mois/graphique", "Par type/ParType:6x3"} {
+	for _, w := range []string{"Ateliers/Ateliers:6x8", "Ateliers/graphique", "Réparations/Réparations:400x11", "Réparations/TCD", "Par mois/ParMois:12x4", "Par mois/graphique", "Par type/ParType:6x3"} {
 		if !strings.Contains(got, w) {
 			t.Errorf("exemple : %s absent de %s", w, got)
 		}

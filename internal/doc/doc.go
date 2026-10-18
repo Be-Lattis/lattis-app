@@ -88,6 +88,8 @@ func wrap(ctx context.Context, a *archive.Doc, keep bool) (*Document, error) {
 	if err != nil {
 		return fail(err)
 	}
+	// Sessions regroupées par classeur à la récupération (archive.Orphan).
+	a.SetWorkbook(id)
 	d := &Document{Model: canvas.New(a.DB, bus), Bus: bus, Share: share, Oplog: rec, arc: a, id: id}
 	d.Model.SetSharing(share)
 	top, err := d.top(ctx)
@@ -125,7 +127,13 @@ func New(ctx context.Context) (*Document, error) {
 	if err != nil {
 		return nil, err
 	}
-	return d, nil // vide : rien à perdre tant qu'on n'a rien saisi
+	// Vide : rien à perdre tant qu'on n'a rien saisi, rien à proposer en
+	// récupération si le processus s'arrête d'ici là.
+	if err := a.MarkPristine(ctx); err != nil {
+		d.Close()
+		return nil, err
+	}
+	return d, nil
 }
 
 // Open ouvre un classeur. Si une session précédente de ce fichier a été
@@ -149,6 +157,12 @@ func Open(ctx context.Context, path string) (*Document, error) {
 		return nil, archive.Damaged(path, err)
 	}
 	d.claimLegacy(ctx)
+	// Copie de travail du fichier, sans modification : rien à proposer en
+	// récupération si le processus s'arrête avant la première.
+	if err := a.MarkPristine(ctx); err != nil {
+		d.Close()
+		return nil, err
+	}
 	return d, nil
 }
 
@@ -330,9 +344,15 @@ func (d *Document) MarkSaved(ctx context.Context) error {
 	if err == nil {
 		d.saved, d.savedProt = top, d.ProtectionChanges()
 		d.savedShare.Store(d.shareGen.Load())
+		// Rien à proposer en récupération tant qu'il n'est pas modifié.
+		err = d.arc.MarkPristine(ctx)
 	}
 	return err
 }
+
+// Pristine dit si le répertoire de travail est marqué « rien à récupérer »
+// (aucune écriture depuis la création, l'ouverture ou l'enregistrement).
+func (d *Document) Pristine() bool { return d.arc.Pristine() }
 
 // Close ferme le classeur (les modifications non enregistrées sont perdues).
 func (d *Document) Close() error { return d.arc.Close() }

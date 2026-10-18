@@ -115,7 +115,7 @@ Fichier YAML de --demo (format complet : docs/demo.md ; exemple : docs/demo/exem
             - {name: Montant, formula: "=[Quantité]*[Prix]"}
       cells: [{cell: J1, value: Total}, {cell: K1, value: "=SOMME(Commandes[Montant])"}]
       charts: [{cell: J3, source: Commandes, kind: bar, x: Région, series: [Montant]}]
-  Générateurs (gen) : sequence, code, int, decimal, date, bool, pick et cycle (values), constant,
+  Générateurs (gen) : sequence, code, int, decimal, date, bool, pick et cycle (values), constant, regex (pattern),
     firstname, lastname, person, company, email, phone, city, postcode, region, latitude,
     longitude, population (of : colonne ville), product, category, price (of : colonne produit).
   Un onglet peut aussi porter pivots, controls, rules, styles, widths, ou être une requête

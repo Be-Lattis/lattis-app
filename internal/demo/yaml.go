@@ -88,6 +88,7 @@ type yColumn struct {
 	Digits   int      `yaml:"digits"`
 	Domain   string   `yaml:"domain"`
 	Blank    float64  `yaml:"blank"`
+	Pattern  string   `yaml:"pattern"` // gen: regex
 }
 
 type yCell struct {
@@ -516,7 +517,7 @@ var yTypes = map[string]grid.Type{
 // Générateurs de valeurs et type par défaut de leur colonne.
 var yGens = map[string]grid.Type{
 	"sequence": grid.Integer, "code": grid.Text, "int": grid.Integer, "decimal": grid.Decimal, "date": grid.Date,
-	"bool": grid.Boolean, "pick": grid.Text, "cycle": grid.Text, "constant": grid.Text,
+	"bool": grid.Boolean, "pick": grid.Text, "cycle": grid.Text, "constant": grid.Text, "regex": grid.Text,
 	"firstname": grid.Text, "lastname": grid.Text, "person": grid.Text, "company": grid.Text,
 	"email": grid.Text, "phone": grid.Text,
 	"city": grid.Text, "postcode": grid.Text, "region": grid.Text,
@@ -525,7 +526,7 @@ var yGens = map[string]grid.Type{
 }
 
 // genNames : liste des générateurs pour les messages.
-const genNames = "sequence, code, int, decimal, date, bool, pick, cycle, constant, firstname, lastname, person, company, email, phone, city, postcode, region, latitude, longitude, population, product, category, price"
+const genNames = "sequence, code, int, decimal, date, bool, pick, cycle, constant, regex, firstname, lastname, person, company, email, phone, city, postcode, region, latitude, longitude, population, product, category, price"
 
 func (f *yfile) table(path []any, yt yTable) (TableSpec, error) {
 	t := TableSpec{Name: strings.TrimSpace(yt.Name), Rows: yt.Rows}
@@ -754,6 +755,15 @@ func (f *yfile) generator(path []any, yc yColumn, of, rows int) (func(g *Gen, i 
 			vals[k] = plainValue(v)
 		}
 		return func(g *Gen, i int, _ []any) any { return vals[i%len(vals)] }, nil
+	case "regex":
+		if yc.Pattern == "" {
+			return nil, f.errf(path, "colonne « %s » : regex demande une expression (pattern)", yc.Name)
+		}
+		re, err := compileRegexGen(yc.Pattern)
+		if err != nil {
+			return nil, f.errf(pathOf(path, "pattern"), "colonne « %s » : %v", yc.Name, err)
+		}
+		return func(g *Gen, i int, _ []any) any { return g.Regex(re) }, nil
 	case "constant":
 		v := plainValue(yc.Value)
 		return func(g *Gen, i int, _ []any) any { return v }, nil
