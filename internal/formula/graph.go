@@ -48,7 +48,7 @@ func Deps(n Node) (names, tables []string) {
 					add(&tables, t)
 				}
 				args = args[2:] // le 2e argument est un nom de colonne
-			case IsSpill(n) && len(args) > 0:
+			case NamesSource(n) && len(args) > 0:
 				// FILTRE(Ventes; …) : la source nommée est un tableau ;
 				// GROUPER.PAR(…; …; SOMME) nomme une fonction.
 				if t, ok := args[0].(Name); ok {

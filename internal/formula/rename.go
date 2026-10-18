@@ -147,8 +147,15 @@ func renameBody(body string, loc Locale, r Renames, self string) (string, bool) 
 	for i := 0; i < len(toks); {
 		tk := toks[i]
 		switch tk.kind {
-		case tLParen:
+		case tLParen, tLBrace:
+			// { } : les « ; » d'une constante matricielle ne comptent pas
+			// parmi les arguments de la fonction.
 			stack = append(stack, renameFrame{})
+			i++
+		case tRBrace:
+			if len(stack) > 0 {
+				stack = stack[:len(stack)-1]
+			}
 			i++
 		case tSep:
 			if f := top(); f != nil {
@@ -193,7 +200,7 @@ func renameBody(body string, loc Locale, r Renames, self string) (string, bool) 
 				fn := strings.ToUpper(tk.text)
 				isSpill := false
 				if def, ok := lookupFunc(tk.text); ok {
-					fn, isSpill = def.EN, def.kind == spill
+					fn, isSpill = def.EN, NamesSource(Call{Fn: def.EN})
 				}
 				stack = append(stack, renameFrame{fn: fn, spill: isSpill})
 				i += 2

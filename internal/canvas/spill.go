@@ -47,7 +47,8 @@ func (t *tx) spillFreeRaw(sheet int64, raw string) (rows [][]string, ok bool, er
 // spillRows calcule un tableau dynamique (formule déjà rattachée à sa
 // feuille) avec les valeurs des noms et cellules names.
 func (t *tx) spillRows(n formula.Node, schema *formula.Schema, names map[string]formula.Value) ([][]formula.Value, formula.Value) {
-	sp, e := formula.CompileSpill(n, schema, names)
+	hoist, _ := t.hoister()
+	sp, e := formula.CompileSpillHoisted(n, schema, names, hoist)
 	if e.IsErr() {
 		return nil, e
 	}

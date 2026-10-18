@@ -126,7 +126,7 @@ func ConvertA1(n Node, l Locator) (Node, error) {
 			switch {
 			case m.Fn == "REFERENCE" || m.Fn == "REFERENCE.APPROX":
 				names = 2
-			case m.Fn == "EXISTS" || IsSpill(m):
+			case m.Fn == "EXISTS" || NamesSource(m):
 				names = 1
 			}
 			args := make([]Node, len(m.Args))

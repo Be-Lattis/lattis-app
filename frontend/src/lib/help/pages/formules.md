@@ -31,7 +31,15 @@ Une formule tapée dans une colonne de tableau s'applique à toutes ses lignes :
 
 ## Résultats qui se déversent
 
-Certaines fonctions renvoient plusieurs valeurs ([FILTRE](fonction:FILTRE), [TRIER](fonction:TRIER), [UNIQUE](fonction:UNIQUE), [SEQUENCE](fonction:SEQUENCE), [REQUETE](fonction:REQUETE)…) : le résultat se déverse sur les cellules voisines, comme les tableaux dynamiques d'Excel. Si la place est prise, la formule affiche `#DEVERSEMENT!`.
+Certaines fonctions renvoient plusieurs valeurs ([FILTRE](fonction:FILTRE), [TRIER](fonction:TRIER), [UNIQUE](fonction:UNIQUE), [SEQUENCE](fonction:SEQUENCE), [FRACTIONNER.TEXTE](fonction:FRACTIONNER.TEXTE), [REQUETE](fonction:REQUETE)…) : le résultat se déverse sur les cellules voisines, comme les tableaux dynamiques d'Excel. Si la place est prise, la formule affiche `#DEVERSEMENT!`. Dans un agrégat, elles fournissent leurs valeurs : `=NBVAL(FRACTIONNER.TEXTE(Cell[A1]; ","))` compte les morceaux d'un texte.
+
+`=FRACTIONNER.TEXTE("Nom=Dupont;Ville=Paris"; "="; ";")` découpe un texte en lignes (au `;`) puis en colonnes (au `=`) ; les lignes plus courtes sont complétées par `#N/A`, ou par le dernier argument. Pour se déverser, le texte ne doit pas dépendre de la ligne d'un tableau : une cellule, ou une valeur comme `Ventes[Notes][2]`.
+
+Une **constante matricielle** s'écrit entre accolades : `{1;2;3}` (une colonne), `{"a"."b"}` (une ligne), `{1.2;3.4}`. Elle se déverse comme un tableau dynamique et sert notamment à donner plusieurs délimiteurs : `=FRACTIONNER.TEXTE(Cell[A1]; {",";" "})`.
+
+## Noms intermédiaires
+
+[LET](fonction:LET) nomme des valeurs, calculées une fois, utilisables dans les valeurs suivantes et dans le calcul final : `=LET(ht; [Prix]*[Qté]; tva; ht*0,2; ht+tva)`. Un nom ne peut être ni une adresse de cellule (`A1`, `Cell[A1]`) ni un nom de fonction.
 
 ## Valeurs d'erreur
 

@@ -310,6 +310,19 @@ func TestSpill(t *testing.T) {
 		`=SEQUENCE(2;3;10;10)`:           `Valeur1|Valeur2|Valeur3 / 10|20|30 / 40|50|60`,
 		`=SEQUENCE(2;1;DATE(2026;1;31))`: `Valeur / 31/01/2026 / 01/02/2026`,
 		`=LET(n;2;SEQUENCE(n;1;0;0,5))`:  `Valeur / 0 / 0,5`,
+		// FRACTIONNER.TEXTE : lignes puis colonnes, complétées par #N/A.
+		`=FRACTIONNER.TEXTE("a,b,c;d;e,f";",";";")`:        `Valeur1|Valeur2|Valeur3 / a|b|c / d|#N/A|#N/A / e|f|#N/A`,
+		`=FRACTIONNER.TEXTE("a,,b;;c";",";";";VRAI;0;"-")`: `Valeur1|Valeur2 / a|b / c|-`,
+		`=FRACTIONNER.TEXTE("a,,b;;c";",";";")`:            `Valeur1|Valeur2|Valeur3 / a||b / |#N/A|#N/A / c|#N/A|#N/A`,
+		`=FRACTIONNER.TEXTE("1X2x3";"x";;FAUX;1)`:          `Valeur1|Valeur2|Valeur3 / 1|2|3`,
+		`=FRACTIONNER.TEXTE("1X2x3";"x")`:                  `Valeur1|Valeur2 / 1X2|3`,
+		`=FRACTIONNER.TEXTE("a b,c";{" ";","};";";;;0)`:    `Valeur1|Valeur2|Valeur3 / a|b|c`,
+		`=FRACTIONNER.TEXTE("k=1|k2=2";"=";"|";;;0)`:       `Valeur1|Valeur2 / k|1 / k2|2`,
+		`=FRACTIONNER.TEXTE("a;b";;";")`:                   `Valeur / a / b`,
+		`=TRIER(FRACTIONNER.TEXTE("b;c;a";;";"))`:          `Valeur / a / b / c`,
+		`=LET(s;"x-y";FRACTIONNER.TEXTE(s;"-"))`:           `Valeur1|Valeur2 / x|y`,
+		`={1.2;3.4}`:                                       `Valeur1|Valeur2 / 1|2 / 3|4`,
+		`={"a";VRAI;#N/A;-1,5}`:                            `Valeur / a / VRAI / #N/A / -1,5`,
 	} {
 		n := mustParse(t, src, FR)
 		cols, rows, e := EvalSpill(n, &Env{Schema: f.schema, Data: f.data})

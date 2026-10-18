@@ -2,7 +2,7 @@
 
 *Bibliothèque livrée le 16/10/2026 (phase 4), d'après le catalogue du 15/10/2026 (`analyse/catalogue-fonctions.md`, dossier du projet). Code : `internal/formula`.*
 
-117 fonctions, chacune sous son nom français et son nom anglais (le nom anglais est stocké dans l'AST). Toutes sont vérifiées par `testdata/conformite.txt` sur les **deux backends** (évaluateur Go et SQL compilé), sauf `REQUETE` (SQL seulement). `TestCatalogueNames` vérifie qu'aucun nom ne désigne deux fonctions et `TestFonctionsDocumentees` que chaque fonction figure ici.
+118 fonctions, chacune sous son nom français et son nom anglais (le nom anglais est stocké dans l'AST). Toutes sont vérifiées par `testdata/conformite.txt` sur les **deux backends** (évaluateur Go et SQL compilé), sauf `REQUETE` (SQL seulement). `TestCatalogueNames` vérifie qu'aucun nom ne désigne deux fonctions et `TestFonctionsDocumentees` que chaque fonction figure ici.
 
 L'aide détaillée de chaque fonction (description, arguments nommés et décrits, exemple) est dans `internal/formula/docs.go` : elle alimente l'infobulle de saisie (argument en cours en gras, comme Excel), l'autocomplétion et le dialogue « Insérer une fonction ». `TestFunctionDocs` vérifie que chaque fonction y figure, que ses arguments correspondent à son nombre d'arguments et que son exemple s'analyse.
 
@@ -38,7 +38,7 @@ Les plages se lisent comme une colonne dans les agrégats (`SOMME`, `MOYENNE`, `
 | SIERREUR, SI.NON.DISP | IFERROR, IFNA | ✅ |
 | ESTVIDE, ESTNUM, ESTTEXTE, ESTLOGIQUE, ESTERREUR, ESTNA | ISBLANK, ISNUMBER, ISTEXT, ISLOGICAL, ISERROR, ISNA | ✅ une date est un nombre |
 | CHOISIR | CHOOSE | ✅ #VALEUR! hors des rangs |
-| LET | LET | ⚠️ `LET(ht; [Prix]*[Qté]; ht*1,2)` : chaque nom est remplacé par son expression avant le calcul (identique pour les deux backends) ; une valeur est donc recalculée à chaque usage du nom, ce qui ne se voit qu'avec ALEA. Un nom ne peut pas être une adresse de cellule |
+| LET | LET | ✅ `LET(ht; [Prix]*[Qté]; ht*1,2)` : une valeur peut utiliser les noms précédents, un LET imbriqué peut masquer un nom. Chaque nom est remplacé par son expression avant le calcul (identique pour les deux backends) ; le résultat est celui d'une valeur calculée une fois : les ALEA d'une valeur reçoivent leur rang de tirage à la définition du nom, `LET(x; ALEA(); x-x)` vaut 0. Un nom ne peut être ni une adresse de cellule (`A1`, `Cell[A1]`) ni un nom de fonction ; une forme fautive (nombre pair d'arguments, nom invalide) est refusée à la saisie, comme dans Excel |
 
 ## Mathématiques
 
@@ -76,6 +76,7 @@ Un agrégat accepte une **expression sur les colonnes** d'un tableau, calculée 
 | TROUVE, CHERCHE | FIND, SEARCH | ✅ CHERCHE sans casse, avec `*`, `?`, `~` |
 | TEXTE | TEXT | ⚠️ formats courants : `0`, `#`, `0,00`, `# ##0,00`, `#,##0.00`, `0 %`, sections `pos;nég;zéro`, texte entre guillemets ; dates `jj/mm/aaaa`, `jjjj`, `mmm`, `mmmm`, `aa`, `hh:mm:ss` (codes anglais acceptés). Résultat en locale française |
 | CNUM | VALUE | ✅ `1 234,5`, `12%`, dates |
+| FRACTIONNER.TEXTE | TEXTSPLIT | ⚠️ `FRACTIONNER.TEXTE("a,b;c"; ","; ";")` se déverse (lignes complétées par #N/A ou `remplir_avec`) ; plusieurs délimiteurs en constante matricielle (`{",";" "}`), le plus long l'emportant à une même position ; `respect_casse` 1 : sans casse ; un résultat vide donne #VALEUR! (#CALC! dans Excel). Le moteur SQL fixe la forme du résultat à la compilation : texte et délimiteurs doivent ne pas dépendre de la ligne (littéraux, cellules, valeurs précalculées) pour se déverser ou passer par TRIER, PRENDRE… ; sur la valeur d'une ligne (`NB(FRACTIONNER.TEXTE([Tags]; ","))` dans une colonne calculée), il ne sert qu'aux agrégats. Délimiteurs : un texte ou une constante matricielle, pas une plage |
 
 ## Dates
 
@@ -148,6 +149,8 @@ Une colonne peut lire ses propres lignes voisines : `[Mvt]+PRECEDENT([Solde]; 0)
 | SEQUENCE | SEQUENCE | ⚠️ le nombre de colonnes doit être écrit dans la formule (il fixe la forme du résultat) ; 1 000 000 valeurs au plus |
 
 Leur résultat se déverse sur la feuille : `EvalSpill` (Go) et `CompileSpill` (requête SQL ordonnée et en-têtes) le fournissent. Dans une cellule, un tableau dynamique vaut #VALEUR! ; dans un agrégat, il fournit ses valeurs : `SOMME(FILTRE(Ventes[Montant]; Ventes[Qté]>1))`.
+
+**Constantes matricielles.** `{1;2;3}` (une colonne), `{"a"."b"}` (une ligne ; `\` est aussi accepté entre colonnes), `{1.2;3.4}` ; en anglais `{1;2;3}` et `{"a","b"}`. Elles ne contiennent que des littéraux (nombres, textes, VRAI, FAUX, erreurs) et se lisent comme un tableau dynamique : `={1;2;3}` se déverse, `SOMME({1;2;3})` vaut 6, `FRACTIONNER.TEXTE(Cell[A1]; {",";";"})` découpe à chaque délimiteur. Ailleurs (dans un calcul sur une valeur), une constante vaut #VALEUR!.
 
 ## Performances
 

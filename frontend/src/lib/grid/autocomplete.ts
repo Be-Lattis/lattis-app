@@ -110,7 +110,8 @@ export interface CallAt {
  * Fonction dont le curseur est dans les parenthèses, et argument en cours :
  * les séparateurs sont comptés au niveau de cet appel, sans tenir compte des
  * chaînes, des appels imbriqués, des noms de colonnes entre crochets
- * ([Prix (€)]) ni des noms de feuilles entre apostrophes. La ligne ou la clé
+ * ([Prix (€)]), des noms de feuilles entre apostrophes ni des constantes
+ * matricielles ({",";";"} : un seul argument). La ligne ou la clé
  * de Tableau[Colonne][clé] est une expression, qui peut contenir un appel.
  */
 export function callAt(text: string, caret: number, sep = ';'): CallAt | null {
@@ -118,7 +119,7 @@ export function callAt(text: string, caret: number, sep = ';'): CallAt | null {
 	const before = text.slice(0, caret);
 	// Pile des parenthèses (avec le nom de la fonction, vide pour un simple
 	// regroupement) et des crochets de clé.
-	const stack: { kind: '(' | '['; name: string; index: number }[] = [];
+	const stack: { kind: '(' | '[' | '{'; name: string; index: number }[] = [];
 	for (let i = 0; i < before.length; i++) {
 		const c = before[i];
 		if (c === '"' || c === "'") {
@@ -137,8 +138,11 @@ export function callAt(text: string, caret: number, sep = ';'): CallAt | null {
 		} else if (c === '(') {
 			const name = /[\p{L}_][\p{L}\p{N}_.]*$/u.exec(before.slice(0, i))?.[0] ?? '';
 			stack.push({ kind: '(', name, index: 0 });
-		} else if (c === ')' || c === ']') {
-			const k = c === ')' ? '(' : '[';
+		} else if (c === '{') {
+			// Constante matricielle {",";";"} : ses « ; » séparent des lignes.
+			stack.push({ kind: '{', name: '', index: 0 });
+		} else if (c === ')' || c === ']' || c === '}') {
+			const k = c === ')' ? '(' : c === ']' ? '[' : '{';
 			while (stack.length && stack[stack.length - 1].kind !== k) stack.pop();
 			stack.pop();
 		} else if (c === sep && stack.length) {
@@ -176,6 +180,7 @@ const numbered = (name: string, n: number) => name.replace(/1$/, String(n));
  */
 export function signatureParts(fn: FunctionDoc, index: number): { parts: SigPart[]; arg: ArgInfo | null } {
 	const args = fn.args ?? [];
+	if (pairsForm(fn) && args.length === 3) return pairsParts(fn, args, index);
 	const rep = Math.min(fn.repeat ?? 0, args.length);
 	const off = args.length - rep;
 	// Occurrence (2, 3…) et position dans le groupe répété de l'argument en cours.
@@ -206,6 +211,45 @@ export function signatureParts(fn: FunctionDoc, index: number): { parts: SigPart
 		push('…', false);
 	}
 	parts.push({ text: ')' });
+	return { parts, arg };
+}
+
+/** LET : des paires nom; valeur qui se répètent, puis le calcul (args : nom1, valeur1, calcul). */
+const pairsForm = (fn: FunctionDoc) => fold(fn.name) === 'let' || fold(fn.other) === 'let';
+
+/**
+ * Signature de LET : LET(nom1; valeur1; [nom2; valeur2]; …; calcul). Après la
+ * première paire, un argument de rang pair est le nom suivant ou le calcul
+ * (les deux en gras, comme le « calcul_ou_nom2 » d'Excel).
+ */
+function pairsParts(fn: FunctionDoc, args: ArgInfo[], index: number): { parts: SigPart[]; arg: ArgInfo | null } {
+	const [nom, valeur, calcul] = args;
+	const k = index < 2 ? 2 : Math.floor(index / 2) + 1; // paire en cours (2, 3…)
+	const nameOrCalc = index >= 2 && index % 2 === 0;
+	const value = index >= 3 && index % 2 === 1;
+	const nk = numbered(nom.name, k);
+	const parts: SigPart[] = [{ text: fn.name + '(' }];
+	const push = (text: string, on: boolean) => {
+		if (parts.length > 1) parts.push({ text: '; ' });
+		parts.push(on ? { text, on } : { text });
+	};
+	push(nom.name, index === 0);
+	push(valeur.name, index === 1);
+	if (k > 2) push('…', false);
+	push('[', false);
+	parts.push(nameOrCalc ? { text: nk, on: true } : { text: nk });
+	parts.push({ text: '; ' });
+	const vk = numbered(valeur.name, k);
+	parts.push(value ? { text: vk, on: true } : { text: vk });
+	parts.push({ text: ']' });
+	push('…', false);
+	push(calcul.name, nameOrCalc);
+	parts.push({ text: ')' });
+	let arg: ArgInfo | null = null;
+	if (index === 0) arg = nom;
+	else if (index === 1) arg = valeur;
+	else if (value) arg = { ...valeur, name: vk };
+	else arg = { ...calcul, name: `${calcul.name} ou ${nk}`, desc: `${calcul.desc} Ou un nom de plus (${nk}), suivi de sa valeur.` };
 	return { parts, arg };
 }
 
@@ -240,6 +284,8 @@ export function needsNextArg(text: string, caret: number, cat: Catalog): boolean
 	const rep = Math.min(s.fn.repeat ?? 0, args.length);
 	const off = args.length - rep;
 	const i = s.index;
+	// LET : après une valeur vient un nom ou le calcul ; après le calcul, rien.
+	if (pairsForm(s.fn)) return i % 2 === 1 || i === 0;
 	if (i < args.length - 1) return !args[i + 1].optional;
 	// Groupe répété (plage_critères2; critère2) : le reste du groupe suit.
 	return rep > 1 && i >= off && (i - off) % rep < rep - 1;

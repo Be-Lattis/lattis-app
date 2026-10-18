@@ -3,6 +3,7 @@ package formula
 import (
 	"encoding/binary"
 	"math"
+	"strings"
 
 	"github.com/ncruces/go-sqlite3"
 )
@@ -286,6 +287,23 @@ func Register(c *sqlite3.Conn) error {
 		default:
 			result(ctx, fromArg(arg[1]))
 		}
+	}); err != nil {
+		return err
+	}
+	// slt_tsplitn(args…) : les rangs des valeurs de FRACTIONNER.TEXTE, en
+	// tableau JSON pour json_each ; slt_tsplit(i, args…) : la valeur n° i.
+	if err := c.CreateFunction("slt_tsplitn", -1, det, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
+		n := tsplitCount(args(arg))
+		ctx.ResultText("[" + strings.Repeat("0,", n-1) + "0]")
+	}); err != nil {
+		return err
+	}
+	if err := c.CreateFunction("slt_tsplit", -1, det, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
+		if len(arg) == 0 {
+			result(ctx, Err(ErrValue))
+			return
+		}
+		result(ctx, tsplitAt(arg[0].Int(), args(arg[1:])))
 	}); err != nil {
 		return err
 	}

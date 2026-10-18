@@ -1203,6 +1203,46 @@ func TestSpill(t *testing.T) {
 	}
 }
 
+// FRACTIONNER.TEXTE se déverse depuis une cellule libre, et suit le texte
+// qu'il découpe (une adresse A1 tapée par habitude est convertie).
+func TestSpillTextSplit(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.SetCell(ctx, 1, 0, 0, "a,b;c"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.SetCell(ctx, 1, 2, 0, `=FRACTIONNER.TEXTE(A1;",";";")`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.SetCell(ctx, 1, 2, 4, `=LET(n;NBVAL(FRACTIONNER.TEXTE(Cell[A1];{",";";"}));n*10)`); err != nil {
+		t.Fatal(err)
+	}
+	cell := func(row, col int) CellInfo {
+		l, _ := d.Layout(ctx, 1)
+		for _, c := range l.Cells {
+			if c.Row == row && c.Col == col {
+				return c
+			}
+		}
+		return CellInfo{}
+	}
+	if c := cell(2, 0); fmt.Sprint(c.Spill) != "[[a b] [c #N/A]]" || c.Error {
+		t.Fatalf("déversement : %+v", c)
+	}
+	if c := cell(2, 4); c.Value != "30" {
+		t.Fatalf("NBVAL : %+v", c)
+	}
+	if _, err := d.SetCell(ctx, 1, 0, 0, "x,y,z"); err != nil {
+		t.Fatal(err)
+	}
+	if c := cell(2, 0); fmt.Sprint(c.Spill) != "[[x y z]]" {
+		t.Fatalf("après changement du texte : %+v", c)
+	}
+	if c := cell(2, 4); c.Value != "30" {
+		t.Fatalf("NBVAL après changement : %+v", c)
+	}
+}
+
 func TestRemoveDuplicates(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)

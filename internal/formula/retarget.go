@@ -36,7 +36,7 @@ func RetargetTables(n Node, names map[string]string) (Node, bool) {
 			start := 0
 			// Tableau nommé en premier argument (voir Deps).
 			named := (n.Fn == "REFERENCE" || n.Fn == "REFERENCE.APPROX") && len(args) == 3 ||
-				n.Fn == "EXISTS" && len(args) == 2 || IsSpill(n) && len(args) > 0
+				n.Fn == "EXISTS" && len(args) == 2 || NamesSource(n) && len(args) > 0
 			if named {
 				switch a := args[0].(type) {
 				case Name:

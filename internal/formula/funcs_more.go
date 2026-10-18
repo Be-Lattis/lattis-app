@@ -201,9 +201,12 @@ func cmpFloat(a, b float64) int {
 
 // expandLet remplace LET(nom1; valeur1; …; calcul) par son calcul, où chaque
 // nom est remplacé par l'expression de sa valeur : les deux backends
-// l'évaluent alors comme n'importe quelle formule. Une valeur est donc
-// recalculée à chaque usage du nom (sans effet visible, sauf pour ALEA).
-func expandLet(c Call) (Node, bool) {
+// l'évaluent alors comme n'importe quelle formule. Le résultat est celui
+// d'une valeur calculée une fois : les tirages d'ALEA d'une valeur reçoivent
+// leur rang ici (next donne le rang suivant de la formule ; nil : pas de
+// rang, pour la seule forme du calcul), si bien qu'un nom utilisé deux fois
+// donne deux fois le même nombre.
+func expandLet(c Call, next func() int) (Node, bool) {
 	if len(c.Args) < 3 || len(c.Args)%2 == 0 {
 		return nil, false
 	}
@@ -213,19 +216,51 @@ func expandLet(c Call) (Node, bool) {
 		if !ok {
 			return nil, false
 		}
-		bind[name] = substNames(c.Args[i+1], bind)
+		v := substNames(c.Args[i+1], bind)
+		if next != nil {
+			v = pinRands(v, next)
+		}
+		bind[name] = v
 	}
 	return substNames(c.Args[len(c.Args)-1], bind), true
 }
 
+// pinRands donne un rang fixe aux tirages d'ALEA (et ALEA.ENTRE.BORNES) qui
+// n'en ont pas encore, dans l'ordre de la formule.
+func pinRands(n Node, next func() int) Node {
+	switch n := n.(type) {
+	case Unary:
+		return Unary{Op: n.Op, X: pinRands(n.X, next)}
+	case Binary:
+		return Binary{Op: n.Op, L: pinRands(n.L, next), R: pinRands(n.R, next)}
+	case Call:
+		out := n
+		if (n.Fn == "RAND" || n.Fn == "RANDBETWEEN") && n.rank == 0 {
+			out.rank = next() + 1
+		}
+		out.Args = make([]Node, len(n.Args))
+		for i, a := range n.Args {
+			out.Args[i] = pinRands(a, next)
+		}
+		return out
+	}
+	return n
+}
+
 // letName lit un nom de LET : un identifiant qui n'est ni une adresse de
-// cellule ni une référence à une autre feuille.
+// cellule, ni une référence à une autre feuille, ni un nom de fonction.
 func letName(n Node) (string, bool) {
 	nm, ok := n.(Name)
 	if !ok || nm.Name == "" || strings.ContainsAny(nm.Name, ".!#") {
 		return "", false
 	}
 	if _, _, ok := CellRef(nm.Name); ok {
+		return "", false
+	}
+	if _, _, _, ok := A1Address(nm.Name); ok {
+		return "", false // B2, AB12 : une adresse à la Excel
+	}
+	if _, ok := lookupFunc(nm.Name); ok {
 		return "", false
 	}
 	return strings.ToLower(nm.Name), true
@@ -263,7 +298,7 @@ func substNames(n Node, bind map[string]Node) Node {
 				}
 				args[i] = substNames(a, inner)
 			}
-			return Call{Fn: n.Fn, Args: args, Origin: n.Origin}
+			return Call{Fn: n.Fn, Args: args, Origin: n.Origin, rank: n.rank}
 		}
 		skip := 0
 		switch n.Fn {
@@ -279,7 +314,7 @@ func substNames(n Node, bind map[string]Node) Node {
 				args[i] = substNames(a, bind)
 			}
 		}
-		return Call{Fn: n.Fn, Args: args, Origin: n.Origin}
+		return Call{Fn: n.Fn, Args: args, Origin: n.Origin, rank: n.rank}
 	}
 	return n
 }

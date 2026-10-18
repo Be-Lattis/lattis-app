@@ -21,16 +21,31 @@ import (
 
 // IsSpill dit si une formule rend un tableau dynamique.
 func IsSpill(n Node) bool {
+	if _, ok := n.(ArrayLit); ok {
+		return true // constante matricielle
+	}
 	c, ok := n.(Call)
 	if !ok {
 		return false
 	}
 	if c.Fn == "LET" {
-		body, ok := expandLet(c)
+		body, ok := expandLet(c, nil)
 		return ok && IsSpill(body)
 	}
 	fn, ok := lookupFunc(c.Fn)
 	return ok && fn.kind == spill
+}
+
+// NamesSource dit si le premier argument d'un tableau dynamique est sa
+// source, un tableau nommé (FILTRE(Ventes; …)) : pas pour SEQUENCE et
+// FRACTIONNER.TEXTE, dont le premier argument est une valeur, ni pour LET,
+// dont il est un nom local.
+func NamesSource(c Call) bool {
+	switch c.Fn {
+	case "SEQUENCE", "TEXTSPLIT", "LET":
+		return false
+	}
+	return IsSpill(c)
 }
 
 // sortKey donne une clé d'ordre et d'égalité commune aux deux backends :
@@ -176,6 +191,7 @@ type rel struct {
 	values [][]Value
 	base   *Table
 	rows   []int
+	long   bool // valeurs sans forme connue : seulement pour un agrégat (voir funcs_split.go)
 }
 
 // EvalSpill évalue un tableau dynamique : en-têtes et lignes.
@@ -183,6 +199,9 @@ func EvalSpill(n Node, env *Env) ([]string, [][]Value, Value) {
 	r, e := env.spill(n)
 	if e.IsErr() {
 		return nil, nil, e
+	}
+	if r.long {
+		return nil, nil, Err(ErrValue)
 	}
 	return r.cols, r.values, Value{}
 }
@@ -200,6 +219,10 @@ func (env *Env) spill(n Node) (rel, Value) {
 		}
 		return r, Value{}
 	}
+	if a, ok := n.(ArrayLit); ok {
+		vals := arrayValues(a)
+		return rel{cols: seqHeaders(len(vals[0])), values: vals}, Value{}
+	}
 	c, ok := n.(Call)
 	if !ok || !IsSpill(c) {
 		return rel{}, Err(ErrValue)
@@ -215,8 +238,10 @@ func (env *Env) spill(n Node) (rel, Value) {
 		return env.groupBy(c)
 	case "SEQUENCE":
 		return env.sequence(c)
+	case "TEXTSPLIT":
+		return env.textSplit(c)
 	case "LET":
-		body, _ := expandLet(c)
+		body, _ := expandLet(c, env.nextRand)
 		return env.spill(body)
 	}
 	if c.Fn == "QUERY" {
@@ -225,6 +250,9 @@ func (env *Env) spill(n Node) (rel, Value) {
 	src, e := env.spill(c.Args[0])
 	if e.IsErr() {
 		return rel{}, e
+	}
+	if src.long {
+		return rel{}, Err(ErrValue)
 	}
 	switch c.Fn {
 	case "FILTER":
@@ -436,18 +464,28 @@ type Spill struct {
 
 // CompileSpill compile un tableau dynamique pour la lecture par la grille.
 func CompileSpill(n Node, s *Schema, names map[string]Value) (sp Spill, fail Value) {
+	return CompileSpillHoisted(n, s, names, nil)
+}
+
+// CompileSpillHoisted est CompileSpill avec des valeurs calculées à part
+// (voir compiler.hoist) : FRACTIONNER.TEXTE(Ventes[Note][2]; ",") connaît
+// alors son texte, donc sa forme, à la compilation.
+func CompileSpillHoisted(n Node, s *Schema, names map[string]Value, hoist func(Compiled) Value) (sp Spill, fail Value) {
 	defer func() {
 		if r := recover(); r != nil { // voir compiler.top
 			sp, fail = Spill{}, Err(ErrValue)
 		}
 	}()
-	c := &compiler{schema: s, names: names, visiting: map[*Column]bool{}}
+	c := &compiler{schema: s, names: names, visiting: map[*Column]bool{}, hoist: hoist}
 	r, e := c.spill(n, scope{})
 	if e != 0 {
 		return Spill{}, Err(e)
 	}
 	if r.query {
 		return Spill{SQL: r.sql(), Args: c.args}, Value{}
+	}
+	if r.long {
+		return Spill{}, Err(ErrValue)
 	}
 	vs := make([]string, len(r.cols))
 	for i := range vs {
@@ -468,6 +506,7 @@ type sqlRel struct {
 	order string // clé d'ordre de _n
 	from  string // requête dérivée (base nil)
 	query bool   // REQUETE : colonnes inconnues
+	long  bool   // valeurs sans forme connue (colonne v1) : seulement pour un agrégat
 }
 
 func (r sqlRel) sql() string {
@@ -502,6 +541,9 @@ func (c *compiler) spill(n Node, sc scope) (sqlRel, ErrCode) {
 		}
 		return r, 0
 	}
+	if a, ok := n.(ArrayLit); ok {
+		return c.constRel(arrayValues(a))
+	}
 	call, ok := n.(Call)
 	if !ok || !IsSpill(call) {
 		return sqlRel{}, ErrValue
@@ -515,8 +557,10 @@ func (c *compiler) spill(n Node, sc scope) (sqlRel, ErrCode) {
 	switch call.Fn {
 	case "SEQUENCE":
 		return c.sequence(call, sc)
+	case "TEXTSPLIT":
+		return c.textSplit(call, sc)
 	case "LET":
-		body, _ := expandLet(call)
+		body, _ := expandLet(call, c.nextRand)
 		return c.spill(body, sc)
 	case "QUERY":
 		q, ok := call.Args[0].(StrLit)
@@ -542,7 +586,7 @@ func (c *compiler) spill(n Node, sc scope) (sqlRel, ErrCode) {
 	if e != 0 {
 		return sqlRel{}, e
 	}
-	if src.query {
+	if src.query || src.long {
 		return sqlRel{}, ErrValue
 	}
 	k := len(src.cols)
@@ -626,9 +670,15 @@ func orderSQL(key, dir string) string {
 // spillAggregate compile un agrégat sur un tableau dynamique : toutes ses
 // valeurs, ligne par ligne.
 func (c *compiler) spillAggregate(fn string, n Node, sc scope) string {
+	before := len(c.args)
 	r, e := c.spill(n, sc)
 	if e != 0 || r.query {
-		return errSQL(ErrValue)
+		// Paramètres d'une compilation abandonnée : la requête ne les cite pas.
+		c.args = c.args[:before]
+		if e == 0 {
+			e = ErrValue
+		}
+		return errSQL(e)
 	}
 	var parts []string
 	for i := range r.cols {

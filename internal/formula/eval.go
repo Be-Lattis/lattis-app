@@ -447,11 +447,21 @@ func (env *Env) scan(sc scanCall) Value {
 	return s.result()
 }
 
+// nextRand donne le rang du prochain tirage d'ALEA de la formule.
+func (env *Env) nextRand() int {
+	if env.rands == nil {
+		env.rands = new(int)
+	}
+	k := *env.rands
+	*env.rands++
+	return k
+}
+
 // special évalue les fonctions propres à chaque backend.
 func (env *Env) special(fn string, n Call) Value {
 	switch fn {
 	case "LET":
-		body, ok := expandLet(n)
+		body, ok := expandLet(n, env.nextRand)
 		if !ok {
 			return Err(ErrValue)
 		}
@@ -514,11 +524,10 @@ func (env *Env) special(fn string, n Call) Value {
 	case "NOW":
 		return DateSerial(env.Schema.nowSerial())
 	case "RAND", "RANDBETWEEN":
-		if env.rands == nil {
-			env.rands = new(int)
+		k := n.rank - 1 // rang fixé par LET
+		if n.rank == 0 {
+			k = env.nextRand()
 		}
-		k := *env.rands
-		*env.rands++
 		var row int64
 		if env.Table != nil {
 			row = int64(env.Row + 1)

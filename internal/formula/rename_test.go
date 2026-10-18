@@ -38,6 +38,11 @@ func TestRenameRefs(t *testing.T) {
 		{rename, FR, "", "=Feuille1.Cell_B3", "='Mes données'!Cell[B3]"},
 		// Un nom posé par LET n'est pas la cellule nommée.
 		{rename, FR, "", "=LET(Taux; 2; Taux*3)", "=LET(Taux; 2; Taux*3)"},
+		// Les « ; » d'une constante matricielle ne sont pas des arguments.
+		{rename, FR, "", "=LET(a; {1;2}; Taux; 3; SOMME(a)*Taux)", "=LET(a; {1;2}; Taux; 3; SOMME(a)*Taux)"},
+		// Le premier argument de FRACTIONNER.TEXTE est une valeur, pas un tableau.
+		{rename, FR, "", `=FRACTIONNER.TEXTE(Taux; {",";";"})`, `=FRACTIONNER.TEXTE(Coef; {",";";"})`},
+		{rename, FR, "", `=FILTRE(Ventes; Ventes[Qté]>2)`, `=FILTRE(Achats; Achats[Quantité]>2)`},
 		// Rien à changer : le texte reste tel quel.
 		{rename, FR, "", "=  Autre[Qté] + $B$2", "=  Autre[Qté] + $B$2"},
 		{rename, FR, "", `="Ventes[Qté]"`, `="Ventes[Qté]"`},

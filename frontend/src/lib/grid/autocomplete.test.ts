@@ -139,6 +139,32 @@ describe('autocomplétion des formules', () => {
 		expect(show(ifs, 4)).toBe('SOMME.SI.ENS(plage_somme; plage_critères1; critère1; [plage_critères2; **critère2**]; …)');
 		expect(show(ifs, 5)).toBe('SOMME.SI.ENS(plage_somme; plage_critères1; critère1; …; [**plage_critères3**; critère3]; …)');
 		expect(show({ name: 'PI', other: 'PI', arity: '', args: [] }, 0)).toBe('PI()');
+
+		// LET : paires nom; valeur répétées, puis le calcul.
+		const let_: FunctionDoc = {
+			name: 'LET',
+			other: 'LET',
+			arity: '',
+			args: [
+				{ name: 'nom1', desc: 'n' },
+				{ name: 'valeur1', desc: 'v' },
+				{ name: 'calcul', desc: 'Le calcul.' }
+			]
+		};
+		expect(show(let_, 0)).toBe('LET(**nom1**; valeur1; [nom2; valeur2]; …; calcul)');
+		expect(show(let_, 1)).toBe('LET(nom1; **valeur1**; [nom2; valeur2]; …; calcul)');
+		expect(show(let_, 2)).toBe('LET(nom1; valeur1; [**nom2**; valeur2]; …; **calcul**)');
+		expect(signatureParts(let_, 2).arg?.name).toBe('calcul ou nom2');
+		expect(show(let_, 3)).toBe('LET(nom1; valeur1; [nom2; **valeur2**]; …; calcul)');
+		expect(show(let_, 4)).toBe('LET(nom1; valeur1; …; [**nom3**; valeur3]; …; **calcul**)');
+		expect(signatureParts(let_, 5).arg?.name).toBe('valeur3');
+	});
+
+	it('ne compte pas les « ; » d’une constante matricielle', () => {
+		const at = (s: string) => callAt(s, s.length);
+		expect(at('=FRACTIONNER.TEXTE(Cell[A1]; {",";";"')).toEqual({ name: 'FRACTIONNER.TEXTE', index: 1 });
+		expect(at('=FRACTIONNER.TEXTE(Cell[A1]; {",";";"}; ')).toEqual({ name: 'FRACTIONNER.TEXTE', index: 2 });
+		expect(at('=SOMME({1;2;3}; ')).toEqual({ name: 'SOMME', index: 1 });
 	});
 });
 
@@ -178,6 +204,14 @@ describe('argument suivant après un pointage', () => {
 		expect(needsNextArg('=SOMME(Cell[A1]', 15, cat)).toBe(false);
 		expect(needsNextArg('=SOMME.SI.ENS(a; b; c; d', 24, cat)).toBe(true); // critère2 suit plage2
 		expect(needsNextArg('=SOMME.SI.ENS(a; b; c; d; e', 27, cat)).toBe(false);
+		// LET : après une valeur vient un nom ou le calcul ; le calcul peut être le dernier.
+		const withLet = {
+			...cat,
+			functions: [...cat.functions, { name: 'LET', other: 'LET', arity: '', args: [{ name: 'nom1', desc: '' }, { name: 'valeur1', desc: '' }, { name: 'calcul', desc: '' }] }]
+		} as unknown as Catalog;
+		expect(needsNextArg('=LET(x; Cell[A1]', 16, withLet)).toBe(true);
+		expect(needsNextArg('=LET(x; 1; Cell[A1]', 19, withLet)).toBe(false);
+		expect(needsNextArg('=LET(x; 1; y; Cell[A1]', 22, withLet)).toBe(true);
 	});
 	it('saute un « ; » déjà là, sinon en ajoute un', () => {
 		expect(toNextArg('=SI([A])', 7)).toEqual({ text: '=SI([A]; )', caret: 9 });

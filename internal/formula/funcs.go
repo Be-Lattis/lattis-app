@@ -222,6 +222,7 @@ var funcs = []funcDef{
 	{"GROUPBY", "GROUPER.PAR", 3, 3, spill, nil},
 	{"QUERY", "REQUETE", 1, 1, spill, nil},
 	{"SEQUENCE", "SEQUENCE", 1, 4, spill, nil},
+	{"TEXTSPLIT", "FRACTIONNER.TEXTE", 2, 6, spill, nil},
 }
 
 var funcIndex = func() map[string]funcDef {

@@ -388,7 +388,13 @@
 =LET(x;1;LET(x;10;x)+x)	11
 =LET(n;SOMME(Ventes[Qté]);n/2)	5,5
 =LET(x;1;Cell[A1])	1
-=LET(Cell_A1;1;2)	#VALEUR!
+=LET(a;1;b;a+1;c;b*10;a+b+c)	23
+=LET(x;2;LET(y;x*3;LET(x;10;x+y)))	16
+=LET(mot;"abc";NBCAR(mot)&mot)	3abc
+=LET(x;ALEA();x-x)	0
+=LET(x;ALEA();y;x*2;y-2*x)	0
+=LET(x;ALEA.ENTRE.BORNES(1;1000000);x=x)	VRAI
+=LET(x;ALEA();x=ALEA())	FAUX
 =SOMME(SEQUENCE(4))	10
 =SOMME(SEQUENCE(3;2))	21
 =JOINDRE.TEXTE(",";VRAI;SEQUENCE(3;1;10;5))	10,15,20
@@ -399,8 +405,43 @@
 =SOMME(LET(n;3;SEQUENCE(n)))	6
 =SEQUENCE(3)	#VALEUR!
 
+# Constantes matricielles et FRACTIONNER.TEXTE (dans un agrégat : valeurs ligne après ligne)
+=SOMME({1;2;3})	6
+=SOMME({1.2;3.4})	10
+=MAX({-1.-5})	-1
+=JOINDRE.TEXTE("|";VRAI;{"a"."b";"c"."d"})	a|b|c|d
+={1;2}+1	#VALEUR!
+=FRACTIONNER.TEXTE("a";",")	#VALEUR!
+=JOINDRE.TEXTE("|";FAUX;FRACTIONNER.TEXTE("a,b,,c";","))	a|b||c
+=JOINDRE.TEXTE("|";FAUX;FRACTIONNER.TEXTE("a,b,,c,";",";;VRAI))	a|b|c
+=JOINDRE.TEXTE("|";FAUX;FRACTIONNER.TEXTE("a,b;c";",";";";;;"-"))	a|b|c|-
+=JOINDRE.TEXTE("|";FAUX;FRACTIONNER.TEXTE("a,b;c";",";";"))	#N/A
+=NBVAL(FRACTIONNER.TEXTE("a,b;c;;d,e,f";",";";";VRAI;0;""))	9
+=JOINDRE.TEXTE("|";FAUX;FRACTIONNER.TEXTE("a;b;c";;";"))	a|b|c
+=JOINDRE.TEXTE("|";FAUX;FRACTIONNER.TEXTE("1x2X3";"x"))	1|2X3
+=JOINDRE.TEXTE("|";FAUX;FRACTIONNER.TEXTE("1x2X3";"x";;;1))	1|2|3
+=JOINDRE.TEXTE("|";FAUX;FRACTIONNER.TEXTE("a, b;c";{",";";"}))	a| b|c
+=JOINDRE.TEXTE("|";FAUX;FRACTIONNER.TEXTE("a--b-c";{"-"."--"}))	a|b|c
+=JOINDRE.TEXTE("|";FAUX;FRACTIONNER.TEXTE("élan ÉTÉ été";"é";;;1))	|lan |T| |t|
+=JOINDRE.TEXTE("|";VRAI;FRACTIONNER.TEXTE(Cell[A3]&"-"&Cell[A1];"-"))	x|1
+=JOINDRE.TEXTE("|";FAUX;FRACTIONNER.TEXTE(Ventes[Produit][2];"u"))	So|ris
+=JOINDRE.TEXTE("|";FAUX;LET(t;"k=v;k2=v2";FRACTIONNER.TEXTE(t;"=";";")))	k|v|k2|v2
+=JOINDRE.TEXTE("|";FAUX;FRACTIONNER.TEXTE(",,";",";;VRAI))	#VALEUR!
+=JOINDRE.TEXTE("|";FAUX;FRACTIONNER.TEXTE("a";""))	#VALEUR!
+=JOINDRE.TEXTE("|";FAUX;FRACTIONNER.TEXTE("a,b";",";;;2))	#VALEUR!
+=JOINDRE.TEXTE("|";FAUX;FRACTIONNER.TEXTE(1/0;","))	#DIV/0!
+=SOMME(PRENDRE(FRACTIONNER.TEXTE("1,2";",");1))	0
+=JOINDRE.TEXTE("|";FAUX;TRIER(FRACTIONNER.TEXTE("b;a;c";;";")))	a|b|c
+locale EN
+=SUM({1,2;3,4})	10
+=TEXTJOIN("|",FALSE,TEXTSPLIT("a-b;c-d","-",";"))	a|b|c|d
+locale FR
+
 @ Ventes 1
 =LET(ht;[@Prix]*[@Qté];ht*2)	102
+=JOINDRE.TEXTE("|";FAUX;FRACTIONNER.TEXTE([Produit]&"/"&[Qté];"/"))	Clavier|2
+=NBVAL(FRACTIONNER.TEXTE([Produit];"v"))	2
+=SOMME(PRENDRE(FRACTIONNER.TEXTE([Produit];"v");1))	#VALEUR!
 =CHOISIR([@Qté];"un";"deux")	deux
 =ESTVIDE(PRECEDENT([@Qté]))	VRAI
 =PRECEDENT([@Qté];0)	0

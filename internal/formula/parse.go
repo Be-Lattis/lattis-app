@@ -79,6 +79,17 @@ type (
 		Fn     string // nom anglais canonique
 		Args   []Node
 		Origin string // formule Excel d'origine si la fonction a été convertie
+
+		// rank fixe le rang du tirage d'ALEA (rang + 1 ; 0 : rang suivant de
+		// la formule). Posé par LET sur les valeurs de ses noms, pour qu'un
+		// nom utilisé deux fois donne le même tirage (voir expandLet).
+		rank int
+	}
+	// ArrayLit est une constante matricielle : {1;2;3} ou {"a"."b"} en
+	// français, {1;2;3} ou {"a","b"} en anglais (« ; » sépare les lignes).
+	// Ses éléments sont des littéraux (NumLit, StrLit, BoolLit, ErrLit).
+	ArrayLit struct {
+		Rows [][]Node
 	}
 )
 
@@ -94,6 +105,7 @@ func (RowRange) node()  {}
 func (Unary) node()     {}
 func (Binary) node()    {}
 func (Call) node()      {}
+func (ArrayLit) node()  {}
 
 // --- Lexer ------------------------------------------------------------------
 
@@ -111,6 +123,9 @@ const (
 	tRParen
 	tSep
 	tRange
+	tLBrace   // { d'une constante matricielle
+	tRBrace   // }
+	tArraySep // séparateur de constante matricielle qui n'est pas tSep : « ; » en anglais (lignes), « . » ou « \ » en français (colonnes)
 )
 
 type token struct {
@@ -222,6 +237,18 @@ func lex(src string, loc Locale) ([]token, error) {
 			continue
 		case c == loc.sep():
 			toks = append(toks, token{kind: tSep, pos: start})
+			i++
+			continue
+		case c == '{' || c == '}':
+			kind := tLBrace
+			if c == '}' {
+				kind = tRBrace
+			}
+			toks = append(toks, token{kind: kind, pos: start})
+			i++
+			continue
+		case loc == EN && c == ';', loc == FR && (c == '.' || c == '\\'):
+			toks = append(toks, token{kind: tArraySep, text: string(c), pos: start})
 			i++
 			continue
 		case strings.ContainsRune("+-*/^&%", c):
@@ -442,6 +469,8 @@ func (p *parser) primary() (Node, error) {
 		}
 	case tRange:
 		return Range{t.text}, nil
+	case tLBrace:
+		return p.array(t)
 	case tRef:
 		ref := parseRef("", t.text)
 		// [Col][ligne] : une autre ligne du tableau de la formule.
@@ -518,6 +547,94 @@ func (p *parser) primary() (Node, error) {
 		return Name{t.text}, nil
 	}
 	return nil, p.missing(t)
+}
+
+// array lit une constante matricielle, après « { » : des littéraux, les
+// colonnes séparées par « . » (ou « \ ») en français et « , » en anglais,
+// les lignes par « ; ». Toutes les lignes ont le même nombre de valeurs.
+func (p *parser) array(open token) (Node, error) {
+	colSep, rowSep := tArraySep, tSep
+	if p.loc == EN {
+		colSep, rowSep = tSep, tArraySep
+	}
+	var rows [][]Node
+	var row []Node
+	for {
+		t := p.next()
+		neg := false
+		if t.kind == tOp && (t.text == "-" || t.text == "+") {
+			neg = t.text == "-"
+			if t = p.next(); t.kind != tNum {
+				return nil, &SyntaxError{t.pos, "une constante matricielle ne contient que des nombres, des textes, VRAI, FAUX ou des erreurs"}
+			}
+		}
+		var v Node
+		switch t.kind {
+		case tNum:
+			if neg {
+				v = NumLit{-t.num}
+			} else {
+				v = NumLit{t.num}
+			}
+		case tStr:
+			v = StrLit{t.text}
+		case tErr:
+			for code, name := range errNames {
+				if name == t.text {
+					v = ErrLit{code}
+				}
+			}
+		case tIdent:
+			// En français, le « . » qui suit VRAI ou FAUX est lu avec le mot
+			// (les noms de fonction en contiennent) : c'est le séparateur.
+			word, dot := t.text, false
+			if p.loc == FR && strings.HasSuffix(word, ".") && strings.Count(word, ".") == 1 {
+				word, dot = strings.TrimSuffix(word, "."), true
+			}
+			switch strings.ToUpper(word) {
+			case "VRAI", "TRUE":
+				v = BoolLit{true}
+			case "FAUX", "FALSE":
+				v = BoolLit{false}
+			}
+			if v != nil && dot {
+				row = append(row, v)
+				continue
+			}
+		case tEOF:
+			return nil, &SyntaxError{open.pos, "il manque une accolade fermante « } »"}
+		}
+		if v == nil {
+			return nil, &SyntaxError{t.pos, "une constante matricielle ne contient que des nombres, des textes, VRAI, FAUX ou des erreurs"}
+		}
+		row = append(row, v)
+		switch s := p.next(); s.kind {
+		case colSep:
+		case rowSep:
+			rows = append(rows, row)
+			row = nil
+		case tRBrace:
+			rows = append(rows, row)
+			for _, r := range rows {
+				if len(r) != len(rows[0]) {
+					return nil, &SyntaxError{open.pos, "toutes les lignes d'une constante matricielle doivent avoir le même nombre de valeurs"}
+				}
+			}
+			return ArrayLit{Rows: rows}, nil
+		case tEOF:
+			return nil, &SyntaxError{open.pos, "il manque une accolade fermante « } »"}
+		default:
+			return nil, &SyntaxError{s.pos, fmt.Sprintf("séparateur attendu dans la constante matricielle : « %s » entre colonnes, « ; » entre lignes", arrayColSep(p.loc))}
+		}
+	}
+}
+
+// arrayColSep : séparateur des colonnes d'une constante matricielle.
+func arrayColSep(loc Locale) string {
+	if loc == EN {
+		return ","
+	}
+	return "."
 }
 
 // word donne le texte d'un jeton tel qu'il a été tapé (pour les messages).
@@ -691,6 +808,21 @@ func (p *parser) call(name token) (Node, error) {
 	if len(c.Args) < fn.Min || fn.Max >= 0 && len(c.Args) > fn.Max {
 		return nil, &SyntaxError{name.pos, fmt.Sprintf("%s attend %s", fn.name(FR), fn.arity())}
 	}
+	if c.Fn == "LET" {
+		// Comme Excel, une forme fautive est refusée à la saisie.
+		if len(c.Args)%2 == 0 {
+			return nil, &SyntaxError{name.pos, "LET attend des paires nom" + string(p.loc.sep()) + " valeur, puis le calcul : le nombre d'arguments doit être impair"}
+		}
+		for i := 0; i+1 < len(c.Args); i += 2 {
+			if _, ok := letName(c.Args[i]); !ok {
+				what := "manquant"
+				if c.Args[i] != nil {
+					what = "« " + strings.TrimPrefix(Format(c.Args[i], p.loc), "=") + " » invalide"
+				}
+				return nil, &SyntaxError{name.pos, fmt.Sprintf("LET : nom n° %d %s ; un nom est un identifiant, ni une adresse de cellule ni un nom de fonction", i/2+1, what)}
+			}
+		}
+	}
 	return c, nil
 }
 
@@ -765,6 +897,20 @@ func format(b *strings.Builder, n Node, loc Locale) {
 		b.WriteString(n.String())
 	case RowRange:
 		b.WriteString(n.Ref.Table + "[" + n.Ref.Col + "]" + fmt.Sprintf("[%d:%d]", n.From, n.To))
+	case ArrayLit:
+		b.WriteByte('{')
+		for i, r := range n.Rows {
+			if i > 0 {
+				b.WriteByte(';')
+			}
+			for j, v := range r {
+				if j > 0 {
+					b.WriteString(arrayColSep(loc))
+				}
+				format(b, v, loc)
+			}
+		}
+		b.WriteByte('}')
 	case Unary:
 		if n.Op == "%" {
 			sub(n.X, 7)

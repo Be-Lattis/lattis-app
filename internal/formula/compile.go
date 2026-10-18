@@ -477,11 +477,17 @@ func (c *compiler) scan(s scanCall, sc scope) string {
 	return fmt.Sprintf("slt_scanfin(%s, %s)", h, full)
 }
 
+// nextRand donne le rang du prochain tirage d'ALEA de la formule.
+func (c *compiler) nextRand() int {
+	c.rands++
+	return c.rands - 1
+}
+
 // special compile les fonctions propres à chaque backend.
 func (c *compiler) special(fn string, n Call, sc scope) string {
 	switch fn {
 	case "LET":
-		body, ok := expandLet(n)
+		body, ok := expandLet(n, c.nextRand)
 		if !ok {
 			return errSQL(ErrValue)
 		}
@@ -549,8 +555,11 @@ func (c *compiler) special(fn string, n Call, sc scope) string {
 		if sc.table != nil && sc.alias != "" {
 			row = sc.alias + ".id"
 		}
-		r := fmt.Sprintf("slt_rand(%s, %s, %d)", c.param(int64(c.schema.seed())), row, c.rands)
-		c.rands++
+		k := n.rank - 1 // rang fixé par LET
+		if n.rank == 0 {
+			k = c.nextRand()
+		}
+		r := fmt.Sprintf("slt_rand(%s, %s, %d)", c.param(int64(c.schema.seed())), row, k)
 		if fn == "RAND" {
 			return r
 		}
