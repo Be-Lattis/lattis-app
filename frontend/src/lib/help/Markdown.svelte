@@ -1,18 +1,20 @@
 <script lang="ts">
 	// Rendu des blocs d'une page d'aide (markdown.ts), sans HTML injecté. Les
-	// liens mènent à d'autres pages de l'aide (go).
+	// liens mènent à d'autres pages de l'aide (go). Aussi utilisé pour les
+	// réponses de l'assistant (lib/ai) : anchors faux, pas d'identifiants de titres.
 	import type { Block, Inline } from './markdown';
 
-	let { blocks, go }: { blocks: Block[]; go: (target: string) => void } = $props();
+	let { blocks, go, anchors = true }: { blocks: Block[]; go: (target: string) => void; anchors?: boolean } = $props();
+	const hid = (id: string) => (anchors ? `aide-${id}` : undefined);
 </script>
 
 {#snippet line(parts: Inline[])}{#each parts as x, i (i)}{#if x.t === 'b'}<strong>{x.text}</strong>{:else if x.t === 'i'}<em>{x.text}</em>{:else if x.t === 'code'}<code>{x.text}</code>{:else if x.t === 'link'}<button class="link" onclick={() => go(x.href)}>{x.text}</button>{:else}{x.text}{/if}{/each}{/snippet}
 
 {#each blocks as b, i (i)}
 	{#if b.t === 'h'}
-		{#if b.level === 1}<h1 id="aide-{b.id}">{@render line(b.text)}</h1>
-		{:else if b.level === 2}<h2 id="aide-{b.id}">{@render line(b.text)}</h2>
-		{:else}<h3 id="aide-{b.id}">{@render line(b.text)}</h3>{/if}
+		{#if b.level === 1}<h1 id={hid(b.id)}>{@render line(b.text)}</h1>
+		{:else if b.level === 2}<h2 id={hid(b.id)}>{@render line(b.text)}</h2>
+		{:else}<h3 id={hid(b.id)}>{@render line(b.text)}</h3>{/if}
 	{:else if b.t === 'p'}
 		<p>{@render line(b.text)}</p>
 	{:else if b.t === 'ul'}

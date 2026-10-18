@@ -47,14 +47,6 @@ export function AIForgetKey(provider: string): $CancellablePromise<$models.AISta
 }
 
 /**
- * AILogin connecte le compte du fournisseur (navigateur) et rend la main
- * quand la connexion est finie.
- */
-export function AILogin(provider: string): $CancellablePromise<$models.AIStatus> {
-    return $Call.ByID(2983422769, provider);
-}
-
-/**
  * AIReset commence une nouvelle conversation.
  */
 export function AIReset(): $CancellablePromise<void> {
@@ -64,17 +56,19 @@ export function AIReset(): $CancellablePromise<void> {
 /**
  * AISend envoie un message à l'assistant et rend la main quand sa réponse
  * est finie ; le déroulé arrive par l'évènement ai:event, marqué de run
- * (numéro choisi par l'interface). Tout ce que l'assistant modifie pendant la réponse
- * forme une seule étape d'annulation.
+ * (numéro choisi par l'interface). view : ce que l'utilisateur regarde
+ * (feuille, tableau, sélection), joint au message. Tout ce que l'assistant
+ * modifie pendant la réponse forme une seule étape d'annulation.
  */
-export function AISend(run: number, text: string): $CancellablePromise<void> {
-    return $Call.ByID(3524804018, run, text);
+export function AISend(run: number, text: string, view: $models.AIContext): $CancellablePromise<void> {
+    return $Call.ByID(3524804018, run, text, view);
 }
 
 /**
- * AISetKey enregistre la clé d'API d'un fournisseur dans le trousseau. Si
- * le trousseau la refuse, elle sert quand même pendant la session et
- * l'erreur le dit.
+ * AISetKey vérifie la clé d'API d'un fournisseur auprès de lui, puis
+ * l'enregistre dans le trousseau ; erreur claire si elle est refusée
+ * (clé invalide, crédits épuisés…). Réseau injoignable : elle est
+ * enregistrée quand même et l'erreur le dit.
  */
 export function AISetKey(provider: string, key: string): $CancellablePromise<$models.AIStatus> {
     return $Call.ByID(2329077411, provider, key);
@@ -92,6 +86,22 @@ export function AIState(): $CancellablePromise<$models.AIStatus> {
  */
 export function AIStop(): $CancellablePromise<void> {
     return $Call.ByID(781899428);
+}
+
+/**
+ * AITranscript rend la conversation à réafficher (ouverture d'un classeur,
+ * interface rechargée), dans l'ordre.
+ */
+export function AITranscript(): $CancellablePromise<$models.AILogEntry[] | null> {
+    return $Call.ByID(783189670);
+}
+
+/**
+ * AIUndoRun annule les modifications de la réponse run si ce sont les
+ * dernières étapes du journal ; sinon erreur.
+ */
+export function AIUndoRun(run: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3658268603, run);
 }
 
 /**
@@ -694,10 +704,46 @@ export function LocateRow(table: string, id: number): $CancellablePromise<canvas
 }
 
 /**
+ * MCPAnswer répond à une demande d'accord (mcp:confirm).
+ */
+export function MCPAnswer(id: number, allow: boolean): $CancellablePromise<void> {
+    return $Call.ByID(2955312300, id, allow);
+}
+
+/**
+ * MCPClients décrit Claude Desktop et Claude Code sur ce poste.
+ */
+export function MCPClients(): $CancellablePromise<$models.MCPClients> {
+    return $Call.ByID(2101040430);
+}
+
+/**
+ * MCPConfigureCode active le serveur et lance « claude mcp add ».
+ */
+export function MCPConfigureCode(): $CancellablePromise<$models.MCPClients> {
+    return $Call.ByID(2986448191);
+}
+
+/**
+ * MCPConfigureDesktop active le serveur MCP et ajoute « lattis » à la
+ * configuration de Claude Desktop.
+ */
+export function MCPConfigureDesktop(): $CancellablePromise<$models.MCPClients> {
+    return $Call.ByID(2062371202);
+}
+
+/**
  * MCPState décrit le serveur MCP.
  */
 export function MCPState(): $CancellablePromise<$models.MCPStatus> {
     return $Call.ByID(1343995807);
+}
+
+/**
+ * MCPUndoSeries annule une série d'actions d'un client MCP.
+ */
+export function MCPUndoSeries(series: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2726581701, series);
 }
 
 /**

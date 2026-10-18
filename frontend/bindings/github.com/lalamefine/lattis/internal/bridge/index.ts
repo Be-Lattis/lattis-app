@@ -9,7 +9,9 @@ export {
 };
 
 export type {
+    AIContext,
     AIEventData,
+    AILogEntry,
     AIProvider,
     AIStatus,
     DamagedFile,
@@ -22,6 +24,7 @@ export type {
     GridStatus,
     ImportResult,
     LattisState,
+    MCPClients,
     MCPStatus,
     OpenResult,
     Platform,

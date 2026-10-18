@@ -33,6 +33,26 @@ import * as auth$0 from "../remote/auth/models.js";
 import * as workbook$0 from "../remote/workbook/models.js";
 
 /**
+ * AIContext : ce que l'utilisateur regarde, joint à chaque message.
+ */
+export interface AIContext {
+    /**
+     * feuille active ("" : aucune)
+     */
+    "sheet": string;
+
+    /**
+     * tableau sous le curseur ("" sinon)
+     */
+    "table": string;
+
+    /**
+     * sélection lisible : « Commandes[Montant][3:10] » ou « B2:D5 » ("" sinon)
+     */
+    "selection": string;
+}
+
+/**
  * AIEventData est un évènement d'une réponse ; Run la désigne.
  */
 export interface AIEventData {
@@ -55,6 +75,41 @@ export interface AIEventData {
      */
     "id"?: string;
     "error"?: boolean;
+
+    /**
+     * l'outil modifie le classeur
+     */
+    "write"?: boolean;
+
+    /**
+     * feuille ou tableau visé
+     */
+    "target"?: string;
+
+    /**
+     * kind "usage" : usage du tour
+     */
+    "usage"?: ai$0.Usage | null;
+
+    /**
+     * kind "done" : appels d'outils d'écriture réussis
+     */
+    "changes"?: number;
+
+    /**
+     * kind "done" : la réponse peut être annulée (AIUndoRun)
+     */
+    "undo"?: boolean;
+}
+
+/**
+ * AILogEntry est une entrée de la conversation à réafficher : un message de
+ * l'utilisateur ou un évènement d'une réponse.
+ */
+export interface AILogEntry {
+    "run": number;
+    "user"?: string;
+    "event"?: AIEventData | null;
 }
 
 /**
@@ -80,12 +135,17 @@ export interface AIProvider {
      * KeyHint : début attendu d'une clé (« sk-ant- »), pour l'aide.
      */
     "keyHint"?: string;
-    "hasKey": boolean;
 
     /**
-     * Account : connexion par compte, sans clé (nil : non proposée).
+     * NeedsKey : une clé d'API est nécessaire (faux pour le modèle local).
      */
-    "account"?: ai$0.Account | null;
+    "needsKey": boolean;
+
+    /**
+     * Local : modèle local (réglage ai.localUrl).
+     */
+    "local": boolean;
+    "hasKey": boolean;
 }
 
 /**
@@ -109,6 +169,16 @@ export interface AIStatus {
     "providers": AIProvider[] | null;
     "busy": boolean;
     "messages": number;
+
+    /**
+     * cumul de la conversation
+     */
+    "usage": ai$0.Usage;
+
+    /**
+     * réglage ai.keepConversation
+     */
+    "keepConversation": boolean;
 }
 
 /**
@@ -275,6 +345,40 @@ export interface LattisState {
      */
     "allowUserServers": boolean;
     "servers": auth$0.ServerState[] | null;
+}
+
+/**
+ * MCPClients décrit Claude Desktop et Claude Code sur ce poste.
+ */
+export interface MCPClients {
+    "desktopInstalled": boolean;
+    "desktopConfigured": boolean;
+
+    /**
+     * chemin de claude_desktop_config.json
+     */
+    "desktopConfig": string;
+
+    /**
+     * commande claude trouvée
+     */
+    "codeFound": boolean;
+    "codeConfigured": boolean;
+
+    /**
+     * commande « claude mcp add … » à copier
+     */
+    "codeCommand": string;
+
+    /**
+     * nom du client connecté récemment, "" sinon
+     */
+    "connected": string;
+
+    /**
+     * réglage mcp.confirmWrites
+     */
+    "confirmWrites": boolean;
 }
 
 /**

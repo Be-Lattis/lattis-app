@@ -55,7 +55,7 @@ export function sharedWorkbooksEnabled(): boolean {
 	return boolSetting(userSettings.list, 'features.sharedWorkbooks', true);
 }
 
-/** L'onglet IA est activé (opt-in, coupé par défaut). */
+/** L'Assistant IA est activé (opt-in, coupé par défaut). */
 export function aiEnabled(): boolean {
 	return boolSetting(userSettings.list, 'ai.enabled');
 }
