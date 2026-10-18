@@ -1,6 +1,10 @@
 package bridge
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestIsWorkbook(t *testing.T) {
 	for p, want := range map[string]bool{
@@ -25,5 +29,24 @@ func TestLaunchFileOnce(t *testing.T) {
 	}
 	if got := s.LaunchFile(); got != "" {
 		t.Fatalf("second LaunchFile() = %q, attendu vide", got)
+	}
+}
+
+func TestLaunchArg(t *testing.T) {
+	dir := t.TempDir()
+	book := filepath.Join(dir, "Budget.lattis")
+	if err := os.WriteFile(book, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if p, ok := LaunchArg(book); !ok || p != book {
+		t.Fatalf("classeur existant : %q %v", p, ok)
+	}
+	if p, ok := LaunchArg(filepath.Join(dir, "Absent.lattis")); !ok || p != "" {
+		t.Fatalf("classeur absent : %q %v", p, ok)
+	}
+	for _, a := range []string{"--demo", "med", dir, ""} {
+		if _, ok := LaunchArg(a); ok {
+			t.Fatalf("%q pris pour un classeur", a)
+		}
 	}
 }

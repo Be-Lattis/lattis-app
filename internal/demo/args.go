@@ -69,7 +69,7 @@ func Usage() string {
 	b.WriteString(`Lattis : tableur relationnel local-first.
 
 Usage :
-  lattis                       ouvre l'application
+  lattis [classeur.lattis]     ouvre l'application, et ce classeur s'il est donné
   lattis --demo [preset]       ouvre un classeur de démonstration (fausses données)
   lattis mcp                   relais stdio vers le serveur MCP de l'application ouverte
                                  (pour les clients MCP qui lancent un programme)

@@ -1,6 +1,7 @@
 package bridge
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -24,6 +25,28 @@ const Extension = ".lattis"
 // IsWorkbook dit si path désigne un classeur Lattis (d'après son extension).
 func IsWorkbook(path string) bool {
 	return strings.EqualFold(filepath.Ext(path), Extension)
+}
+
+// LaunchArg reconnaît un argument de ligne de commande qui désigne un
+// classeur : un chemin en .lattis, ou un fichier qui existe ; ok faux pour
+// une option ou un autre mot (preset de --demo…). Le chemin rendu est
+// absolu, "" si le .lattis n'existe pas.
+func LaunchArg(a string) (path string, ok bool) {
+	if a == "" || strings.HasPrefix(a, "-") {
+		return "", false
+	}
+	st, err := os.Stat(a)
+	switch {
+	case err == nil && st.Mode().IsRegular():
+	case IsWorkbook(a):
+		return "", true
+	default:
+		return "", false
+	}
+	if abs, err := filepath.Abs(a); err == nil {
+		a = abs
+	}
+	return a, true
 }
 
 // launchState est le classeur à ouvrir au lancement : passé en argument
