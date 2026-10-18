@@ -19,7 +19,9 @@ func TestControlConfigCheck(t *testing.T) {
 		{ButtonConfig{Kind: "input", Link: "C1"}, ""},
 		{ButtonConfig{Kind: "textarea", Link: "C1", Label: "Notes…"}, ""},
 		{ButtonConfig{Kind: "file", Link: "A1"}, ""},
-		{ButtonConfig{Kind: "file"}, "cellule liée invalide"},
+		{ButtonConfig{Kind: "file"}, ""}, // cellule liée facultative : valeur gardée dans le contrôle
+		{ButtonConfig{Kind: "select", OptionsFrom: "Clients[Ville]"}, ""},
+		{ButtonConfig{Kind: "select", OptionsFrom: "Clients"}, "colonne des choix invalide"},
 		{ButtonConfig{Kind: "input", Link: "1A"}, "cellule liée invalide"},
 		{ButtonConfig{Kind: "radio", Link: "A1"}, "inconnu"},
 		{ButtonConfig{Label: "OK", Name: strings.Repeat("x", 65)}, "nom trop long"},

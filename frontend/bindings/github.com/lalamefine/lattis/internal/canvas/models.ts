@@ -41,14 +41,26 @@ export interface ButtonConfig {
     "script": string;
 
     /**
-     * Link : cellule liée d'une case à cocher ou d'une liste (« B3 »).
+     * Link : cellule liée d'une case à cocher ou d'une liste (« B3 ») ;
+     * facultative : sans elle, la valeur est gardée dans Value.
      */
     "link"?: string;
+
+    /**
+     * Value : valeur d'un contrôle sans cellule liée.
+     */
+    "value"?: string;
 
     /**
      * Options : choix d'une liste déroulante.
      */
     "options"?: string[] | null;
+
+    /**
+     * OptionsFrom : colonne de tableau dont les valeurs distinctes sont les
+     * choix de la liste (« Clients[Ville] »), à la place d'Options.
+     */
+    "optionsFrom"?: string;
 
     /**
      * Couleurs (« #rrggbb », vide : par défaut) : fond normal, survolé,
@@ -103,6 +115,12 @@ export interface ButtonInfo {
     "row": number;
     "col": number;
     "config": ButtonConfig;
+
+    /**
+     * Choices : choix d'une liste alimentée par une colonne (OptionsFrom),
+     * relus à chaque lecture.
+     */
+    "choices"?: string[] | null;
 }
 
 /**

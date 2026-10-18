@@ -12,7 +12,7 @@
 	// ailleurs (cellule, onglet) le désélectionne.
 	import { dismiss } from './dismiss.js';
 	import { resizePanel } from '#lib/ui/resize.js';
-	import { BUTTON_H, BUTTON_W, CONTROL_KINDS, VALUE_KINDS, baseName, controlTitle, handlerLabel, handlers, scriptFunctions, type ButtonConfig, type ControlKind, type SheetButton } from './buttons';
+	import { BUTTON_H, BUTTON_W, CONTROL_KINDS, VALUE_KINDS, baseName, choicesOf, controlTitle, handlerLabel, handlers, scriptFunctions, type ButtonConfig, type ControlKind, type SheetButton } from './buttons';
 	import { a1Address } from './formulaEdit';
 	import { colLetters } from './cfmodel';
 
@@ -54,9 +54,11 @@
 		setCell?: (row: number, col: number, raw: string) => Promise<unknown>;
 		/** Change à chaque mise à jour de la feuille : les contrôles relisent leur cellule. */
 		tick?: number;
+		/** Colonnes des tableaux (« Clients[Ville] ») qui peuvent donner les choix d'une liste. */
+		columnRefs?: string[];
 	}
 
-	let { buttons, geo, view, active, scripts, onrun, onfire, pickFile, oncreate, onset, onplace, ondelete, onwheel, say, done, zoom = 1, cellValue, setCell, tick = 0, dock }: Props = $props();
+	let { buttons, geo, view, active, scripts, onrun, onfire, pickFile, oncreate, onset, onplace, ondelete, onwheel, say, done, zoom = 1, cellValue, setCell, tick = 0, dock, columnRefs = [] }: Props = $props();
 	// Menus et dialogues (position: fixed) : le zoom du calque est annulé.
 	const unzoom = $derived(zoom === 1 ? undefined : 1 / zoom);
 
@@ -93,6 +95,8 @@
 	const linkOf = (b: SheetButton) => (b.config.link ? a1Address(b.config.link) : null);
 	/** Valeur de la cellule liée (relue à chaque mise à jour de la feuille : tick). */
 	function linked(b: SheetButton, _tick: number): string {
+		// Sans cellule liée, la valeur est gardée dans le contrôle.
+		if (!b.config.link) return b.config.value ?? '';
 		const at = linkOf(b);
 		return at && cellValue ? cellValue(at.row, at.col) : '';
 	}
@@ -110,7 +114,7 @@
 			return;
 		}
 		const at = linkOf(b);
-		if (!at || !setCell) return;
+		if (b.config.link && (!at || !setCell)) return;
 		const old = linked(b, tick);
 		let v = value ?? '';
 		if (kind === 'checkbox') v = isTrue(old) ? 'FAUX' : 'VRAI';
@@ -126,7 +130,8 @@
 		}
 		if (v === old && kind !== 'checkbox') return;
 		try {
-			await setCell(at.row, at.col, v);
+			if (at && setCell) await setCell(at.row, at.col, v);
+			else await onset?.(b.id, { ...b.config, value: v });
 		} catch (err) {
 			fail(err);
 			return;
@@ -284,6 +289,9 @@
 		fn: string;
 		link: string;
 		options: string;
+		/** Choix saisis (list) ou tirés d'une colonne de tableau (column). */
+		src: 'list' | 'column';
+		optionsFrom: string;
 		custom: boolean;
 		color: string;
 		hoverColor: string;
@@ -323,7 +331,11 @@
 	let library = $state<{ name: string; source: string }[]>([]);
 	const functions = $derived(editor ? scriptFunctions(library.find((s) => s.name === editor!.script)?.source ?? '') : []);
 
-	/** Ouvre la fenêtre de création (b absent : nouveau contrôle du genre kind à la cellule active). */
+	/**
+	 * Ouvre le volet de réglage d'un contrôle. Sans b, un nouveau contrôle du
+	 * genre kind est d'abord posé à la cellule active (visible tout de suite) :
+	 * le volet sert ensuite à le régler, chaque changement s'applique aussitôt.
+	 */
 	export async function openEditor(b?: SheetButton, kind: ControlKind = '') {
 		menu = null;
 		try {
@@ -333,6 +345,18 @@
 			return;
 		}
 		const at = active();
+		if (!b) {
+			const cfg: ButtonConfig = { kind: kind || undefined, label: DEFAULT_LABEL[kind], script: '', options: kind === 'select' ? ['Choix 1', 'Choix 2'] : undefined };
+			try {
+				const id = await oncreate?.(at.row, at.col, cfg);
+				if (typeof id !== 'number') return;
+				b = { id, row: at.row, col: at.col, config: { ...cfg, name: '' } };
+				selected = id;
+			} catch (err) {
+				fail(err);
+				return;
+			}
+		}
 		const c = b?.config;
 		editor = {
 			id: b?.id ?? null,
@@ -344,9 +368,11 @@
 			// Sans script dans la bibliothèque : bouton créé sans action.
 			script: c ? c.script : '',
 			fn: c?.function ?? '',
-			// Cellule liée par défaut : celle à droite du contrôle.
-			link: c?.link ?? colLetters(at.col + 1) + (at.row + 1),
+			// Cellule liée facultative : sans elle, la valeur est gardée dans le contrôle.
+			link: c?.link ?? '',
 			options: (c?.options ?? ['Choix 1', 'Choix 2']).join('\n'),
+			src: c?.optionsFrom ? 'column' : 'list',
+			optionsFrom: c?.optionsFrom ?? columnRefs[0] ?? '',
 			custom: !!(c?.color || c?.hoverColor || c?.activeColor || c?.textColor),
 			color: c?.color ?? '#f3f4f6',
 			hoverColor: c?.hoverColor ?? '#e3efe7',
@@ -364,34 +390,72 @@
 		});
 	}
 
-	async function save() {
+	// Chaque changement du volet s'applique aussitôt (après une courte pause de frappe).
+	let applyTimer: ReturnType<typeof setTimeout> | undefined;
+	let applied = '';
+	const draftKey = (e: Draft) => JSON.stringify({ ...e, error: '' });
+	$effect(() => {
+		const e = editor;
+		if (!e || e.id === null) return;
+		const k = draftKey(e);
+		if (!applied) {
+			applied = k;
+			return;
+		}
+		if (k === applied) return;
+		clearTimeout(applyTimer);
+		applyTimer = setTimeout(() => {
+			applied = k;
+			save(false);
+		}, 400);
+	});
+
+	function closeEditor() {
+		clearTimeout(applyTimer);
+		const e = editor;
+		if (e && e.id !== null && draftKey(e) !== applied) save(false);
+		editor = null;
+		applied = '';
+		done();
+	}
+
+	async function save(close = true) {
 		const e = editor;
 		if (!e) return;
+		e.error = '';
 		if ((e.kind === '' || e.kind === 'checkbox') && !e.label.trim()) {
 			e.error = 'Donnez un libellé au contrôle';
 			return;
 		}
-		if (e.kind && !a1Address(e.link.trim().toUpperCase())) {
-			e.error = 'Cellule liée invalide (« B3 » par exemple)';
+		if (e.kind && e.link.trim() && !a1Address(e.link.trim().toUpperCase())) {
+			e.error = 'Cellule liée invalide (« B3 » par exemple) ; laissez vide pour garder la valeur dans le contrôle';
+			return;
+		}
+		if (e.kind === 'select' && e.src === 'column' && !e.optionsFrom) {
+			e.error = 'Choisissez la colonne qui donne les choix';
 			return;
 		}
 		const old = e.id === null ? undefined : buttons.find((x) => x.id === e.id)?.config;
 		const cfg: ButtonConfig = {
-			...(old ? { offX: old.offX, offY: old.offY, width: old.width, height: old.height, listeners: old.listeners, hidden: old.hidden } : {}),
+			...(old ? { offX: old.offX, offY: old.offY, width: old.width, height: old.height, listeners: old.listeners, hidden: old.hidden, value: old.value } : {}),
 			name: e.name.trim() || undefined,
 			kind: e.kind || undefined,
 			label: e.label.trim(),
 			script: e.script,
 			function: (e.script && e.fn) || undefined,
-			link: e.kind ? e.link.trim().toUpperCase() : undefined,
-			options: e.kind === 'select' ? e.options.split('\n').map((o) => o.trim()).filter(Boolean) : undefined,
+			link: e.kind && e.link.trim() ? e.link.trim().toUpperCase() : undefined,
+			options: e.kind === 'select' && e.src === 'list' ? e.options.split('\n').map((o) => o.trim()).filter(Boolean) : undefined,
+			optionsFrom: e.kind === 'select' && e.src === 'column' ? e.optionsFrom : undefined,
 			...(e.custom ? { color: e.color, hoverColor: e.hoverColor, activeColor: e.activeColor, textColor: e.textColor } : {})
 		};
 		try {
 			if (e.id === null) await oncreate?.(e.row, e.col, cfg);
 			else await onset?.(e.id, cfg);
-			editor = null;
-			done();
+			if (close) {
+				editor = null;
+				applied = '';
+				done();
+			}
 		} catch (err) {
 			e.error = String((err as Error)?.message ?? err);
 		}
@@ -432,8 +496,8 @@
 				onchange={(ev) => activate(b, (ev.currentTarget as HTMLSelectElement).value)}
 				aria-label={b.config.label || 'Liste déroulante'}
 			>
-				{#if !b.config.options?.includes(value)}<option value={value}>{value}</option>{/if}
-				{#each b.config.options ?? [] as o (o)}<option value={o}>{o}</option>{/each}
+				{#if !choicesOf(b).includes(value)}<option value={value}>{value}</option>{/if}
+				{#each choicesOf(b) as o (o)}<option value={o}>{o}</option>{/each}
 			</select>
 		{:else if kind === 'input'}
 			<input
@@ -511,25 +575,16 @@
 		aria-label="Contrôle"
 		onkeydown={(ev) => {
 				ev.stopPropagation();
-				if (ev.key === 'Escape') {
-					editor = null;
-					done();
-				} else if (ev.key === 'Enter' && (ev.target as HTMLElement).tagName !== 'TEXTAREA') {
+				if (ev.key === 'Escape') closeEditor();
+				else if (ev.key === 'Enter' && (ev.target as HTMLElement).tagName !== 'TEXTAREA') {
 					ev.preventDefault();
-					save();
+					closeEditor();
 				}
 			}}
 		>
 			<header>
 				<span>{e.id === null ? `Insérer : ${KINDS[e.kind].toLowerCase()}` : `Modifier : ${KINDS[e.kind].toLowerCase()}`}</span>
-				<button
-					class="x"
-					title="Fermer sans enregistrer"
-					onclick={() => {
-						editor = null;
-						done();
-					}}>✕</button
-				>
+				<button class="x" title="Fermer" onclick={closeEditor}>✕</button>
 			</header>
 			<!-- Bouton d'un côté (Insertion › Bouton), contrôles liés à une cellule de l'autre (Insertion › Input). -->
 			{#if e.kind !== ''}
@@ -543,10 +598,24 @@
 			<label>Nom (pour les scripts)<input type="text" bind:value={e.name} placeholder="automatique" /></label>
 			{#if e.kind !== 'select'}<label>{LABEL_CAPTION[e.kind]}<input type="text" bind:value={e.label} use:focusSelect onfocus={pickable('label')} /></label>{/if}
 			{#if e.kind}
-				<label>Cellule liée<input type="text" bind:value={e.link} placeholder="B3" onfocus={pickable('link')} /></label>
+				<label>Cellule liée (facultative)<input type="text" bind:value={e.link} placeholder="aucune : valeur gardée dans le contrôle" onfocus={pickable('link')} /></label>
 			{/if}
 			{#if e.kind === 'select'}
-				<label>Choix (un par ligne)<textarea rows="5" bind:value={e.options} onfocus={pickable('options')}></textarea></label>
+				<div class="src">
+					<label class="check"><input type="radio" bind:group={e.src} value="list" /> Choix saisis</label>
+					<label class="check"><input type="radio" bind:group={e.src} value="column" disabled={!columnRefs.length} /> Colonne d’un tableau</label>
+				</div>
+				{#if e.src === 'column'}
+					<label
+						>Choix tirés de (valeurs distinctes, mises à jour avec le tableau)
+						<select bind:value={e.optionsFrom}>
+							{#each columnRefs as r (r)}<option value={r}>{r}</option>{/each}
+							{#if e.optionsFrom && !columnRefs.includes(e.optionsFrom)}<option value={e.optionsFrom}>{e.optionsFrom} (introuvable)</option>{/if}
+						</select>
+					</label>
+				{:else}
+					<label>Choix (un par ligne)<textarea rows="5" bind:value={e.options} onfocus={pickable('options')}></textarea></label>
+				{/if}
 			{/if}
 			<p class="hint">Champ actif : un clic dans le classeur y met {pick?.field === 'link' ? 'l’adresse de la cellule' : 'la valeur de la cellule'}.</p>
 			<label
@@ -594,14 +663,21 @@
 			</p>
 			{#if e.error}<p class="error">{e.error}</p>{/if}
 			<div class="actions">
-				<button class="primary" onclick={save}>{e.id === null ? 'Insérer' : 'Enregistrer'}</button>
-				<button
-					onclick={() => {
-						editor = null;
-						done();
-					}}>Annuler</button
-				>
+				<button class="primary" onclick={closeEditor}>OK</button>
+				{#if e.id !== null}
+					{@const id = e.id}
+					<button
+						onclick={() => {
+							const b = buttons.find((x) => x.id === id);
+							clearTimeout(applyTimer);
+							editor = null;
+							applied = '';
+							if (b) remove(b);
+						}}>Supprimer</button
+					>
+				{/if}
 			</div>
+			<p class="hint">Les réglages s’appliquent aussitôt au contrôle.</p>
 	</aside>
 {/if}
 
@@ -633,6 +709,11 @@
 		color: #6b7280;
 		cursor: pointer;
 		padding: 2px 6px;
+	}
+	.src {
+		display: flex;
+		gap: 12px;
+		margin: 2px 16px 0;
 	}
 	.hint {
 		margin: 2px 16px 0;

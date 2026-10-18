@@ -12,6 +12,11 @@ import * as canvas$0 from "../canvas/models.js";
 export interface ControlState {
     "config": canvas$0.ButtonConfig;
     "value": string;
+
+    /**
+     * Choices : choix d'une liste alimentée par une colonne.
+     */
+    "choices"?: string[] | null;
     "error": string;
 }
 

@@ -23,10 +23,14 @@ export interface ButtonConfig {
 	/** Script de la bibliothèque ; vide : aucune action. */
 	script: string;
 	function?: string;
-	/** Cellule liée (« B3 ») d'un contrôle autre qu'un bouton : sa valeur y est écrite. */
+	/** Cellule liée (« B3 ») d'un contrôle autre qu'un bouton : sa valeur y est écrite ; facultative. */
 	link?: string;
+	/** Valeur d'un contrôle sans cellule liée (gardée dans le contrôle). */
+	value?: string;
 	/** Choix d'une liste déroulante. */
 	options?: string[];
+	/** Colonne de tableau qui donne les choix d'une liste (« Clients[Ville] »), à la place d'options. */
+	optionsFrom?: string;
 	/** Couleurs (« #rrggbb ») : fond normal, survolé, enfoncé, texte. */
 	color?: string;
 	hoverColor?: string;
@@ -47,6 +51,13 @@ export interface SheetButton {
 	row: number;
 	col: number;
 	config: ButtonConfig;
+	/** Choix d'une liste alimentée par une colonne (optionsFrom), relus avec la feuille. */
+	choices?: string[] | null;
+}
+
+/** Choix affichés d'une liste : ceux de sa colonne, ou ceux saisis. */
+export function choicesOf(b: { config: ButtonConfig; choices?: string[] | null }): string[] {
+	return b.config.optionsFrom ? (b.choices ?? []) : (b.config.options ?? []);
 }
 
 export const BUTTON_W = 120;
@@ -86,7 +97,7 @@ export function handlerLabel(h: { script: string; function?: string }): string {
 /** Info-bulle d'un contrôle : nom, cellule liée, action et écouteurs. */
 export function controlTitle(cfg: ButtonConfig): string {
 	const lines = [cfg.name ?? ''];
-	if (cfg.kind) lines.push(`Cellule liée : ${cfg.link ?? ''}`);
+	if (cfg.kind) lines.push(cfg.link ? `Cellule liée : ${cfg.link}` : 'Valeur gardée dans le contrôle');
 	const all = [...handlers(cfg, 'click'), ...handlers(cfg, 'change')];
 	if (!all.length) lines.push(cfg.kind ? '' : 'Aucune action liée');
 	for (const h of all) lines.push(`${h.action ? 'Action' : 'Écouteur'} (${controlEvent(cfg.kind)}) : ${handlerLabel(h)}`);

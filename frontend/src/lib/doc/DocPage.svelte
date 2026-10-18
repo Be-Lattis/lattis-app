@@ -574,29 +574,22 @@
 		markSelected();
 	}
 
+	// L'action d'abord : elle lit le menu (sa position), que la fermeture efface.
 	function act(fn: () => void) {
-		closeMenu();
 		fn();
+		closeMenu();
 	}
 
 	/**
 	 * Insertion › Input : un contrôle inséré tout de suite (le volet s'ouvre
-	 * pour le régler). Sa valeur est gardée par défaut dans le document même
-	 * (cellule A1, A3, A5… de l'onglet, hors de toute feuille de données) ;
-	 * le volet peut la lier à une cellule d'une feuille.
+	 * pour le régler). Sans cellule liée, sa valeur est gardée dans le
+	 * contrôle ; le volet peut la lier à une cellule d'une feuille.
 	 */
 	export async function insertControl(kind: ControlKind = 'input') {
 		if (!guard() || !controls) return;
 		const api = controls;
 		const at = range()!.index;
-		const used = new Set<string>();
-		for (const node of quill!.root.querySelectorAll<HTMLElement>('.ql-lattis-control')) {
-			const v = JSON.parse(node.dataset.config ?? '{}') as { id?: number };
-			if (v.id) await api.load(v.id).then((st) => used.add((st.config.link ?? '').toUpperCase()), () => {});
-		}
-		let row = 1;
-		while (used.has(`A${row}`)) row += 2;
-		const cfg: ButtonConfig = { kind, label: '', script: '', link: `A${row}`, options: kind === 'select' ? ['Choix 1', 'Choix 2'] : undefined };
+		const cfg: ButtonConfig = { kind, label: '', script: '', options: kind === 'select' ? ['Choix 1', 'Choix 2'] : undefined };
 		try {
 			const id = await api.create(cfg);
 			quill!.insertEmbed(at, CONTROL_BLOT, { id }, 'user');
@@ -781,6 +774,8 @@
 	const fns = $derived(btn?.script ? scriptFunctions(scripts.find((s) => s.name === btn.script)?.source ?? '') : []);
 	const setButton = (patch: Partial<DocButtonConfig>) => panel && btn && replaceEmbed(panel.index, BUTTON_BLOT, { ...btn, ...patch });
 	const setChart = (cfg: ChartConfig) => panel && replaceEmbed(panel.index, CHART_BLOT, cfg);
+	// Colonnes des tableaux qui peuvent donner les choix d'une liste.
+	const colRefs = $derived(tables.filter((t) => t.kind !== 'pivot').flatMap((t) => t.columns.map((c) => `${t.name}[${c}]`)));
 	const pivot = $derived(panel?.kind === 'pivot' ? (panelValue as unknown as PivotConfig | null) : null);
 	const pivotFields = (src: string) => {
 		const t = tables.find((x) => x.name.toLowerCase() === src.toLowerCase());
@@ -878,8 +873,8 @@
 		</div>
 	{:else if panel?.kind === 'control'}
 		{@const p = panel}
-		{@const at = p.cfg.link ? (p.cfg.link.lastIndexOf('!') >= 0 ? [p.cfg.link.slice(0, p.cfg.link.lastIndexOf('!')).replace(/^'(.*)'$/, '$1').replace(/''/g, "'"), p.cfg.link.slice(p.cfg.link.lastIndexOf('!') + 1)] : ['', p.cfg.link]) : ['', 'A1']}
-		{@const setLink = (sheet: string, cell: string) => (p.cfg.link = sheet ? `${/^[\p{L}_][\p{L}\p{N}_]*$/u.test(sheet) ? sheet : `'${sheet.replace(/'/g, "''")}'`}!${cell.trim().toUpperCase()}` : cell.trim().toUpperCase())}
+		{@const at = p.cfg.link ? (p.cfg.link.lastIndexOf('!') >= 0 ? [p.cfg.link.slice(0, p.cfg.link.lastIndexOf('!')).replace(/^'(.*)'$/, '$1').replace(/''/g, "'"), p.cfg.link.slice(p.cfg.link.lastIndexOf('!') + 1)] : [name, p.cfg.link]) : ['', '']}
+		{@const setLink = (sheet: string, cell: string) => (p.cfg.link = !sheet ? '' : sheet === name ? (cell.trim() || 'A1').toUpperCase() : `${/^[\p{L}_][\p{L}\p{N}_]*$/u.test(sheet) ? sheet : `'${sheet.replace(/'/g, "''")}'`}!${(cell.trim() || 'A1').toUpperCase()}`)}
 		{@const cfns = p.cfg.script ? scriptFunctions(scripts.find((s) => s.name === p.cfg.script)?.source ?? '') : []}
 		<aside class="side form" use:resizePanel={{ key: 'doc-control' }}>
 			<header><span>{p.id === null ? 'Insérer' : 'Modifier'} : {CONTROL_KINDS[p.cfg.kind ?? 'input'].toLowerCase()}</span><button class="x" title="Fermer" onclick={() => openPanel(null)}>✕</button></header>
@@ -897,14 +892,27 @@
 				<label
 					>Valeur gardée dans
 					<select value={at[0]} disabled={!!locked} onchange={(e) => setLink((e.currentTarget as HTMLSelectElement).value, at[1])}>
-						<option value="">ce document</option>
+						<option value="">le contrôle (aucune cellule liée)</option>
 						{#each sheets as s (s)}<option value={s}>la feuille {s}</option>{/each}
 						{#if at[0] && !sheets.includes(at[0])}<option value={at[0]}>{at[0]} (introuvable)</option>{/if}
 					</select>
 				</label>
-				<label>Cellule<input type="text" value={at[1]} disabled={!!locked} onchange={(e) => setLink(at[0], (e.currentTarget as HTMLInputElement).value)} /></label>
+				{#if at[0]}<label>Cellule<input type="text" value={at[1]} disabled={!!locked} onchange={(e) => setLink(at[0], (e.currentTarget as HTMLInputElement).value)} /></label>{/if}
 			</div>
 			{#if p.cfg.kind === 'select'}
+				<div class="link">
+					<label class="radio"><input type="radio" checked={!p.cfg.optionsFrom} disabled={!!locked} onchange={() => (p.cfg.optionsFrom = '')} /> Choix saisis</label>
+					<label class="radio"><input type="radio" checked={!!p.cfg.optionsFrom} disabled={!!locked || !colRefs.length} onchange={() => (p.cfg.optionsFrom = colRefs[0])} /> Colonne d’un tableau</label>
+				</div>
+			{/if}
+			{#if p.cfg.kind === 'select' && p.cfg.optionsFrom}
+				<label
+					>Choix tirés de (valeurs distinctes)
+					<select bind:value={p.cfg.optionsFrom} disabled={!!locked}>
+						{#each colRefs as r (r)}<option value={r}>{r}</option>{/each}
+					</select>
+				</label>
+			{:else if p.cfg.kind === 'select'}
 				<label
 					>Choix (un par ligne)
 					<textarea rows="4" disabled={!!locked} value={(p.cfg.options ?? []).join('\n')} onchange={(e) => (p.cfg.options = (e.currentTarget as HTMLTextAreaElement).value.split('\n').map((x) => x.trim()).filter(Boolean))}></textarea>
@@ -1250,6 +1258,11 @@
 	.link {
 		display: flex;
 		gap: 8px;
+	}
+	.link label.radio {
+		flex-direction: row;
+		align-items: center;
+		gap: 4px;
 	}
 	.link label:first-child {
 		flex: 1;

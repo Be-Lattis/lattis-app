@@ -553,7 +553,7 @@
 			return out.length ? out[out.length - 1] : '';
 		},
 		pickFile: (title) => DocumentService.PickControlFile(title),
-		createButton: (row, col, cfg: ButtonConfig) => DocumentService.CreateButton(sheetId, row, col, cfg).then(reload),
+		createButton: (row, col, cfg: ButtonConfig) => DocumentService.CreateButton(sheetId, row, col, cfg).then(async (id) => (await reload(), id)),
 		setButton: (id, cfg: ButtonConfig) => DocumentService.SetButton(id, cfg).then(reload),
 		placeButton: (id, row, col, offX, offY, w, h) => DocumentService.PlaceButton(id, row, col, offX, offY, w, h).then(reload),
 		deleteButton: (id) => DocumentService.DeleteButton(id).then(reload),

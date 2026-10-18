@@ -5,12 +5,14 @@
 	// valeur est relue à chaque modification du classeur (live.stamp).
 	import { untrack } from 'svelte';
 	import type { ButtonConfig } from '#lib/grid/buttons.js';
-	import { baseName } from '#lib/grid/buttons.js';
+	import { baseName, choicesOf } from '#lib/grid/buttons.js';
 
 	export interface ControlState {
 		config: ButtonConfig;
 		value: string;
 		error: string;
+		/** Choix d'une liste alimentée par une colonne de tableau. */
+		choices?: string[] | null;
 	}
 
 	interface Props {
@@ -51,6 +53,7 @@
 
 	let input = $state<HTMLInputElement | HTMLTextAreaElement>();
 	const kind = $derived(st?.config.kind ?? '');
+	const opts = $derived(st ? choicesOf({ config: st.config, choices: st.choices }) : []);
 	const isTrue = (v: string) => /^(vrai|true|1)$/i.test(v.trim());
 
 	async function commit(v: string) {
@@ -82,7 +85,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<span class="dctl" {style} title={st ? `${st.config.name ?? ''} · cellule liée : ${st.config.link ?? ''}${st.error ? ' · ' + st.error : ''} · clic droit : modifier` : ''} onmousedown={(e) => e.stopPropagation()}>
+<span class="dctl" {style} title={st ? `${st.config.name ?? ''} · ${st.config.link ? 'cellule liée : ' + st.config.link : 'valeur gardée dans le contrôle'}${st.error ? ' · ' + st.error : ''} · clic droit : modifier` : ''} onmousedown={(e) => e.stopPropagation()}>
 	{#if missing}
 		<span class="gone">Contrôle supprimé</span>
 	{:else if !st}
@@ -95,8 +98,8 @@
 		<label class="chk"><input type="checkbox" checked={isTrue(st.value)} disabled={locked} onchange={(e) => commit((e.currentTarget as HTMLInputElement).checked ? 'VRAI' : 'FAUX')} />{st.config.label}</label>
 	{:else if kind === 'select'}
 		<select value={st.value} disabled={locked} onchange={(e) => commit((e.currentTarget as HTMLSelectElement).value)}>
-			{#if !(st.config.options ?? []).includes(st.value)}<option value={st.value}>{st.value}</option>{/if}
-			{#each st.config.options ?? [] as o (o)}<option value={o}>{o}</option>{/each}
+			{#if !opts.includes(st.value)}<option value={st.value}>{st.value}</option>{/if}
+			{#each opts as o (o)}<option value={o}>{o}</option>{/each}
 		</select>
 	{:else if kind === 'file'}
 		<button class="file" disabled={locked} onclick={chooseFile}>{st.value ? baseName(st.value) : st.config.label || 'Choisir un fichier…'}</button>

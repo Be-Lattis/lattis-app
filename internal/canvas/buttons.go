@@ -32,10 +32,16 @@ type ButtonConfig struct {
 	// Script est le nom d'un script de la bibliothèque (onglet SCRIPT) ;
 	// vide : aucune action.
 	Script string `json:"script"`
-	// Link : cellule liée d'une case à cocher ou d'une liste (« B3 »).
+	// Link : cellule liée d'une case à cocher ou d'une liste (« B3 ») ;
+	// facultative : sans elle, la valeur est gardée dans Value.
 	Link string `json:"link,omitempty"`
+	// Value : valeur d'un contrôle sans cellule liée.
+	Value string `json:"value,omitempty"`
 	// Options : choix d'une liste déroulante.
 	Options []string `json:"options,omitempty"`
+	// OptionsFrom : colonne de tableau dont les valeurs distinctes sont les
+	// choix de la liste (« Clients[Ville] »), à la place d'Options.
+	OptionsFrom string `json:"optionsFrom,omitempty"`
 	// Couleurs (« #rrggbb », vide : par défaut) : fond normal, survolé,
 	// enfoncé, et texte.
 	Color       string `json:"color,omitempty"`
@@ -101,6 +107,9 @@ type ButtonInfo struct {
 	Row    int          `json:"row"`
 	Col    int          `json:"col"`
 	Config ButtonConfig `json:"config"`
+	// Choices : choix d'une liste alimentée par une colonne (OptionsFrom),
+	// relus à chaque lecture.
+	Choices []string `json:"choices,omitempty"`
 }
 
 // ErrButton signale un bouton impossible.
@@ -132,14 +141,25 @@ func (c *ButtonConfig) check() error {
 				opts = append(opts, o)
 			}
 		}
-		if len(opts) == 0 {
+		c.Options = opts
+		c.OptionsFrom = strings.TrimSpace(c.OptionsFrom)
+		if c.OptionsFrom != "" {
+			if _, _, ok := SplitColumnRef(c.OptionsFrom); !ok {
+				return fmt.Errorf("%w : colonne des choix invalide (« Clients[Ville] » par exemple)", ErrButton)
+			}
+		} else if len(opts) == 0 {
 			return fmt.Errorf("%w : la liste n'a aucun choix", ErrButton)
 		}
-		c.Options = opts
 	default:
 		return fmt.Errorf("%w : type « %s » inconnu", ErrButton, c.Kind)
 	}
-	if c.Kind != "" {
+	if c.Kind == "select" && c.OptionsFrom == "" {
+		c.OptionsFrom = ""
+	}
+	if c.Kind != "select" {
+		c.OptionsFrom = ""
+	}
+	if c.Kind != "" && c.Link != "" {
 		if _, cell := SplitLink(c.Link); cell == "" || !validCell(cell) {
 			return fmt.Errorf("%w : cellule liée invalide (« B3 » ou « Feuille1!B3 » par exemple)", ErrButton)
 		}
@@ -378,6 +398,7 @@ func (t *tx) button(id int64) (ButtonInfo, error) {
 	}
 	err := json.Unmarshal([]byte(cfg), &b.Config)
 	b.Config.Name = controlName(id, b.Config)
+	b.Choices = t.choicesOf(b.Config)
 	return b, err
 }
 
@@ -446,7 +467,62 @@ func (t *tx) buttons(sheet int64) ([]ButtonInfo, error) {
 		b.Config.Name = controlName(b.ID, b.Config)
 		out = append(out, b)
 	}
-	return out, rs.Err()
+	if err := rs.Err(); err != nil {
+		return nil, err
+	}
+	rs.Close()
+	for i := range out {
+		out[i].Choices = t.choicesOf(out[i].Config)
+	}
+	return out, nil
+}
+
+// SplitColumnRef sépare « Tableau[Colonne] ».
+func SplitColumnRef(ref string) (table, col string, ok bool) {
+	i := strings.Index(ref, "[")
+	if i <= 0 || !strings.HasSuffix(ref, "]") {
+		return "", "", false
+	}
+	table, col = strings.TrimSpace(ref[:i]), strings.TrimSpace(ref[i+1:len(ref)-1])
+	return table, col, table != "" && col != ""
+}
+
+// MaxChoices borne les choix d'une liste alimentée par une colonne.
+const MaxChoices = 1000
+
+// choicesOf donne les valeurs distinctes (non vides, triées) de la colonne
+// qui alimente une liste ; nil si elle n'en a pas ou si la colonne manque.
+func (t *tx) choicesOf(c ButtonConfig) []string {
+	if c.Kind != "select" || c.OptionsFrom == "" {
+		return nil
+	}
+	name, col, ok := SplitColumnRef(c.OptionsFrom)
+	if !ok {
+		return nil
+	}
+	tb, err := t.tableByName(name)
+	if err != nil {
+		return nil
+	}
+	for _, k := range tb.Cols {
+		if !strings.EqualFold(k.Name, col) || k.Formula != "" {
+			continue
+		}
+		rs, err := t.query(`SELECT DISTINCT `+textExpr(k)+` AS v FROM `+tb.sql()+` WHERE v <> '' ORDER BY v COLLATE NOCASE LIMIT ?`, MaxChoices)
+		if err != nil {
+			return nil
+		}
+		defer rs.Close()
+		out := []string{}
+		for rs.Next() {
+			var v string
+			if rs.Scan(&v) == nil {
+				out = append(out, v)
+			}
+		}
+		return out
+	}
+	return nil
 }
 
 // buttonRows donne l'inverse de la suppression des boutons d'une feuille.

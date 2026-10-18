@@ -7152,6 +7152,7 @@
 					cellValue={(r, c) => shownValue(r, c)}
 					setCell={(r, c, raw) => write(r, c, raw)}
 					tick={controlsTick}
+					columnRefs={sources.flatMap((t) => t.columns.map((c) => `${t.name}[${c}]`))}
 					dock={() => {
 						const r = wrap.getBoundingClientRect();
 						return { top: Math.round(r.top), bottom: Math.round(window.innerHeight - r.bottom) };

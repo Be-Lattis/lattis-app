@@ -34,6 +34,7 @@ type ControlView struct {
 	Link        string            `json:"link,omitempty"`
 	Value       any               `json:"value,omitempty"`
 	Options     []string          `json:"options,omitempty"`
+	OptionsFrom string            `json:"optionsFrom,omitempty"`
 	Script      string            `json:"script,omitempty"`
 	Function    string            `json:"function,omitempty"`
 	Color       string            `json:"color,omitempty"`
@@ -121,8 +122,12 @@ func linkedCell(ctx context.Context, d *doc.Document, b canvas.ButtonInfo) (shee
 // linkedValue lit la valeur affichée de la cellule liée d'un contrôle.
 func linkedValue(ctx context.Context, d *doc.Document, b canvas.ButtonInfo) (string, error) {
 	sheet, row, col, ok, err := linkedCell(ctx, d, b)
-	if !ok || err != nil {
+	if err != nil {
 		return "", err
+	}
+	if !ok {
+		// Sans cellule liée : la valeur est gardée dans le contrôle.
+		return b.Config.Value, nil
 	}
 	l, err := d.Layout(ctx, sheet)
 	if err != nil {
@@ -140,7 +145,7 @@ func describeControl(ctx context.Context, d *doc.Document, b canvas.ButtonInfo, 
 	v := ControlView{
 		ID: b.ID, Name: c.Name, Kind: kindName(c.Kind), Label: c.Label, Sheet: sheets[b.Sheet],
 		Row: b.Row + 1, Col: b.Col + 1, Width: c.Width, Height: c.Height,
-		Link: c.Link, Options: c.Options, Script: c.Script, Function: c.Function,
+		Link: c.Link, Options: c.Options, OptionsFrom: c.OptionsFrom, Script: c.Script, Function: c.Function,
 		Color: c.Color, HoverColor: c.HoverColor, ActiveColor: c.ActiveColor, TextColor: c.TextColor,
 		Hidden: c.Hidden, Listeners: c.Listeners,
 	}
@@ -152,6 +157,9 @@ func describeControl(ctx context.Context, d *doc.Document, b canvas.ButtonInfo, 
 	}
 	if v.Listeners == nil {
 		v.Listeners = []canvas.Listener{}
+	}
+	if c.OptionsFrom != "" {
+		v.Options = b.Choices
 	}
 	if c.Kind != "" {
 		s, err := linkedValue(ctx, d, b)
@@ -302,6 +310,8 @@ func controlProps(cfg *canvas.ButtonConfig, props map[string]any) (controlEdit, 
 			cfg.Label, err = str(k, v)
 		case "link":
 			cfg.Link, err = str(k, v)
+		case "optionsFrom":
+			cfg.OptionsFrom, err = str(k, v)
 		case "script":
 			cfg.Script, err = str(k, v)
 			if err == nil && cfg.Script == "" {
@@ -386,21 +396,7 @@ func (c *Call) setControlValue(b canvas.ButtonInfo, v any) error {
 		return fmt.Errorf("un bouton n'a pas de valeur")
 	}
 	d, _ := c.Doc()
-	sheet, row, col, ok, err := linkedCell(c, d, b)
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return fmt.Errorf("contrôle « %s » sans cellule liée", b.Config.Name)
-	}
-	old, err := linkedValue(c, d, b)
-	if err != nil {
-		return err
-	}
-	if _, err := d.SetCell(c, sheet, row, col, cellInput(b.Config.Kind, v)); err != nil {
-		return err
-	}
-	now, err := linkedValue(c, d, b)
+	old, now, err := writeControl(c, d, b, cellInput(b.Config.Kind, v))
 	if err != nil || now == old {
 		return err
 	}
@@ -575,11 +571,42 @@ func FireControl(host Host, id int64, event, value, old string) (ScriptResult, e
 	return res, drain(ctx, host, q, &res)
 }
 
+// writeControl donne une nouvelle valeur à un contrôle : dans sa cellule
+// liée, ou dans le contrôle lui-même s'il n'en a pas ; renvoie l'ancienne et
+// la nouvelle valeur affichée.
+func writeControl(ctx context.Context, d *doc.Document, b canvas.ButtonInfo, raw string) (old, now string, err error) {
+	if old, err = linkedValue(ctx, d, b); err != nil {
+		return
+	}
+	sheet, row, col, ok, err := linkedCell(ctx, d, b)
+	if err != nil {
+		return
+	}
+	if ok {
+		if _, err = d.SetCell(ctx, sheet, row, col, raw); err != nil {
+			return
+		}
+	} else {
+		cfg := b.Config
+		cfg.Value = raw
+		if err = d.SetButton(ctx, b.ID, cfg); err != nil {
+			return
+		}
+	}
+	if b, err = d.Button(ctx, b.ID); err != nil {
+		return
+	}
+	now, err = linkedValue(ctx, d, b)
+	return
+}
+
 // ControlState est un contrôle d'un Onglet Document pour l'interface : sa
 // configuration et la valeur affichée de sa cellule liée.
 type ControlState struct {
 	Config canvas.ButtonConfig `json:"config"`
 	Value  string              `json:"value"`
+	// Choices : choix d'une liste alimentée par une colonne.
+	Choices []string `json:"choices,omitempty"`
 	Error  string              `json:"error"`
 }
 
@@ -593,7 +620,7 @@ func ControlOf(host Host, id int64) (ControlState, error) {
 	if err != nil {
 		return ControlState{}, err
 	}
-	st := ControlState{Config: b.Config}
+	st := ControlState{Config: b.Config, Choices: b.Choices}
 	if st.Value, err = linkedValue(contextBG, d, b); err != nil {
 		st.Error = err.Error()
 	}
@@ -612,21 +639,7 @@ func SetControlValue(host Host, id int64, raw string) (ScriptResult, error) {
 	if err != nil {
 		return ScriptResult{}, err
 	}
-	sheet, row, col, ok, err := linkedCell(contextBG, d, b)
-	if err != nil {
-		return ScriptResult{}, err
-	}
-	if !ok {
-		return ScriptResult{}, fmt.Errorf("contrôle « %s » sans cellule liée", b.Config.Name)
-	}
-	old, err := linkedValue(contextBG, d, b)
-	if err != nil {
-		return ScriptResult{}, err
-	}
-	if _, err := d.SetCell(contextBG, sheet, row, col, raw); err != nil {
-		return ScriptResult{}, err
-	}
-	now, err := linkedValue(contextBG, d, b)
+	old, now, err := writeControl(contextBG, d, b, raw)
 	if err != nil || now == old {
 		return ScriptResult{Output: []string{}}, err
 	}
@@ -746,7 +759,7 @@ print(c.kind, c.link, c.value)`,
 			Params: []Param{
 				{Name: "kind", Type: String, Desc: `"button", "checkbox", "select", "input", "textarea" ou "file"`},
 				pRow, pCol,
-				{Name: "props", Type: Object, Desc: "propriétés : {label = …, link = \"B3\", options = {…}, …}", Optional: true},
+				{Name: "props", Type: Object, Desc: "propriétés : {label = …, link = \"B3\" (facultatif : sans cellule liée, la valeur est gardée dans le contrôle), options = {…} ou optionsFrom = \"Clients[Ville]\" (choix tirés d'une colonne), …}", Optional: true},
 				pSheet,
 			},
 			Write: true,
