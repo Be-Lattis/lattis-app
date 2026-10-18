@@ -13,7 +13,7 @@ function generalValue(v: unknown): string {
 
 /** Vrai pour le libellé d'une erreur de formule (« #DIV/0! »…). */
 export function isErrorValue(v: unknown): boolean {
-	return typeof v === 'string' && /^#(DIV\/0!|VALEUR!|N\/A|REF!|NOM\?|NOMBRE!)$/.test(v);
+	return typeof v === 'string' && /^#(DIV\/0!|VALEUR!|N\/A|REF!|NOM\?|NOMBRE!|CIRC!)$/.test(v);
 }
 
 /** Alignement d'une valeur calculée : nombres à droite, booléens et erreurs centrés. */

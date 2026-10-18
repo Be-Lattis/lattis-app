@@ -230,9 +230,12 @@ func TestSheetCopy(t *testing.T) {
 	if got := fmt_(h.getOn("Mars", 8, 1).Value); got != "40" {
 		t.Fatalf("modifier la copie a changé l'original : %s", got)
 	}
-	got := fmt_(h.getOn(copy, 8, 1).Value)
-	if got == "40" {
-		knownBug(t, "copie-feuille", "la formule libre de la feuille copiée lit toujours le tableau d'origine ("+h.getOn(copy, 8, 1).Raw+")")
+	// Comme Excel, la formule de la copie vise la copie du tableau.
+	if c := h.getOn(copy, 8, 1); fmt_(c.Value) != "383" || c.Raw != "=SOMME("+ct[0].Name+"[Total])" {
+		t.Errorf("la formule de la feuille copiée doit lire la copie du tableau : %s = %v", c.Raw, c.Value)
+	}
+	if f := h.sheet(copy).Tables[0].Columns[3].Formula; f != "=[Prix]*[Qté]" {
+		t.Errorf("colonne calculée copiée : %s", f)
 	}
 	// Supprimer une feuille emporte ses tableaux, en une seule étape
 	// d'annulation ; le classeur garde au moins une feuille.

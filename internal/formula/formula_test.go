@@ -93,7 +93,7 @@ func TestNamesGraph(t *testing.T) {
 	if got := f.names.Affected(nil, []string{"TVA"}); !slices.Equal(got, []string{"ca_ttc", "tva"}) && !slices.Equal(got, []string{"tva", "ca_ttc"}) {
 		t.Fatalf("Affected(TVA) = %v", got)
 	}
-	if v := f.names.Values["boucle2"]; v.String() != "#REF!" {
+	if v := f.names.Values["boucle2"]; v.String() != "#CIRC!" {
 		t.Fatalf("cycle : %v", v)
 	}
 }

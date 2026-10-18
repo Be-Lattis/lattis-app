@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/lalamefine/lattis/internal/formula"
 )
 
 // CopySheet copie un onglet (Déplacer ou copier… › Créer une copie) et place
@@ -65,6 +67,9 @@ func (t *tx) copySheet(sheet int64, to int) (int64, error) {
 		}
 		renamed[strings.ToLower(tb.Name)] = n
 	}
+	if err := t.retargetCopy(id, renamed); err != nil {
+		return 0, err
+	}
 	if err := t.copyObjects(`_lattis_pivots`, sheet, id, func(cfg map[string]any) error {
 		remapSource(cfg, renamed)
 		n, err := t.pivotName()
@@ -92,6 +97,63 @@ func (t *tx) copySheet(sheet int64, to int) (int64, error) {
 		return 0, err
 	}
 	return id, t.moveSheet(id, to)
+}
+
+// retargetCopy fait viser aux formules de la feuille copiée sheet (cellules
+// libres et colonnes calculées de ses tableaux) les copies des tableaux
+// (renamed : ancien nom en minuscules → nom de la copie), comme Excel : la
+// formule =SOMME(Ventes[Total]) de la copie lit Ventes_2. Les formules qui
+// visent d'autres tableaux ne changent pas.
+func (t *tx) retargetCopy(sheet int64, renamed map[string]string) error {
+	if len(renamed) == 0 {
+		return nil
+	}
+	type edit struct {
+		q        string
+		old, neu string
+		key      []any
+	}
+	var edits []edit
+	collect := func(q, upd string, loc formula.Locale) error {
+		rs, err := t.query(q, sheet)
+		if err != nil {
+			return err
+		}
+		defer rs.Close()
+		for rs.Next() {
+			var a, b int64
+			var raw string
+			if err := rs.Scan(&a, &b, &raw); err != nil {
+				return err
+			}
+			n, err := formula.Parse(raw, loc)
+			if err != nil {
+				continue
+			}
+			if x, ok := formula.RetargetTables(n, renamed); ok {
+				edits = append(edits, edit{upd, raw, formula.Format(x, loc), []any{a, b}})
+			}
+		}
+		return rs.Err()
+	}
+	if err := collect(`SELECT row, col, raw FROM _lattis_cells WHERE sheet = ? AND raw LIKE '=%'`,
+		`UPDATE _lattis_cells SET raw = ? WHERE sheet = `+fmt.Sprint(sheet)+` AND row = ? AND col = ?`, formula.FR); err != nil {
+		return err
+	}
+	if err := collect(`SELECT c.tbl, c.id, c.formula FROM _lattis_columns c JOIN _lattis_tables tb ON tb.id = c.tbl
+		WHERE tb.sheet = ? AND c.formula IS NOT NULL AND c.formula <> ''`,
+		`UPDATE _lattis_columns SET formula = ? WHERE tbl = ? AND id = ?`, formula.EN); err != nil {
+		return err
+	}
+	var do, undo []stmt
+	for _, e := range edits {
+		do = append(do, st(e.q, append([]any{e.neu}, e.key...)...))
+		undo = append(undo, st(e.q, append([]any{e.old}, e.key...)...))
+	}
+	if len(do) == 0 {
+		return nil
+	}
+	return t.apply(do, undo)
 }
 
 // remapSource fait lire à un objet copié la copie de son tableau source.

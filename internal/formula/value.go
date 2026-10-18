@@ -34,6 +34,10 @@ const (
 	ErrRef
 	ErrName
 	ErrNum
+	// ErrCirc : référence circulaire (une formule qui dépend de sa propre
+	// valeur). Excel affiche 0 et un avertissement ; Lattis l'affiche dans
+	// la cellule, avec une explication. Exportée en #REF! vers Excel.
+	ErrCirc
 )
 
 var errNames = map[ErrCode]string{
@@ -43,6 +47,7 @@ var errNames = map[ErrCode]string{
 	ErrRef:   "#REF!",
 	ErrName:  "#NOM?",
 	ErrNum:   "#NOMBRE!",
+	ErrCirc:  "#CIRC!",
 }
 
 // Noms anglais acceptés à la saisie.

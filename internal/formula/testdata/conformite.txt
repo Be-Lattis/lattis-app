@@ -91,7 +91,7 @@
 =TVA	0,2
 =CA	280,99
 =CA_TTC	337,188
-=Boucle1	#REF!
+=Boucle1	#CIRC!
 =CA_TTC-CA	56,198
 
 @ Ventes 1

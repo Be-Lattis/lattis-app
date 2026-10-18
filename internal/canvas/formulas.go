@@ -175,9 +175,16 @@ func (t *tx) schema() (*formula.Schema, error) {
 		ids = append(ids, id)
 	}
 	rs.Close()
-	s := &formula.Schema{}
+	s := &formula.Schema{Sheets: map[string]bool{}}
 	if t.m != nil {
 		s.Now, s.Seed = t.m.volatile()
+	}
+	sheets, err := t.sheetIDs()
+	if err != nil {
+		return nil, err
+	}
+	for name := range sheets {
+		s.Sheets[name] = true // déjà en minuscules
 	}
 	for _, id := range ids {
 		tb, err := t.table(id)
@@ -272,8 +279,7 @@ func (t *tx) columnSQL(tb Table) (exprs []string, args []any, computed []bool, e
 				computed = append(computed, false)
 				continue
 			}
-			fc := ft.Cols[len(exprs)]
-			cc := formula.CompileHoistedFrom(fc.Formula, schema, names, ft, tb.sql(), hoist, len(args))
+			cc := formula.CompileColumnFrom(ft, len(exprs), schema, names, tb.sql(), hoist, len(args))
 			exprs = append(exprs, cc.SQL)
 			args = append(args, cc.Args...)
 			computed = append(computed, true)

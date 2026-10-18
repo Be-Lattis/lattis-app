@@ -116,7 +116,7 @@ Une date est un **numéro de série** comme dans Excel (le 1er janvier 2026 vaut
 | CUMUL | RUNNINGSUM | 🆕 somme cumulée dans l'ordre du tableau |
 | RANG | RANK | ✅ forme Excel `RANG(valeur; T[Col]; [ordre])`, et 🆕 `RANG([Score])` |
 
-⚠️ Une colonne qui se lit elle-même par PRECEDENT (`[Mvt]+PRECEDENT([Solde])`) est circulaire (#REF!) : utilisez `CUMUL([Mvt])`.
+Une colonne peut lire ses propres lignes voisines : `[Mvt]+PRECEDENT([Solde]; 0)` ou `[Mvt]+[Solde][-1]` donnent un solde cumulé, calculé ligne après ligne dans l'ordre du tableau (`[Reste][+1]` remonte depuis la dernière ligne). Lire sa propre ligne, toute sa colonne (`SOMME(T[Solde])` dans Solde), ou ses voisines dans les deux sens, est une référence circulaire : la cellule affiche `#CIRC!`, avec une explication dans la barre d'état (exportée en `#REF!` vers Excel).
 
 ## Tableaux dynamiques
 

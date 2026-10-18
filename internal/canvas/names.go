@@ -127,7 +127,7 @@ func (t *tx) moveNames(sheet int64, moved []cell, dRow, dCol int) error {
 // alias « Feuille.Cell_A1 ») : une saisie est convertie selon son type
 // inféré, une formule est calculée en SQL dans l'ordre des dépendances (y
 // compris celles des colonnes calculées des tableaux cités) ; une référence
-// circulaire donne #REF!.
+// circulaire donne #CIRC!.
 func (t *tx) nameValues(schema *formula.Schema) (map[string]formula.Value, error) {
 	return cached(t, "names", func() (map[string]formula.Value, error) { return t.nameValuesRaw(schema) })
 }
@@ -170,7 +170,7 @@ func (t *tx) nameValuesWith(schema *formula.Schema, allCells bool) (map[string]f
 	values := map[string]formula.Value{}
 	order, cyclic := ns.Order()
 	for _, n := range cyclic {
-		values[n] = formula.Err(formula.ErrRef)
+		values[n] = formula.Err(formula.ErrCirc)
 	}
 	for _, n := range order {
 		hoist, _ := t.hoister()

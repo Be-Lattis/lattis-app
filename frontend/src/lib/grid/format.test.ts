@@ -38,6 +38,7 @@ describe('valeurs calculées', () => {
 	it('reconnaissent les erreurs', () => {
 		expect(isErrorValue('#N/A')).toBe(true);
 		expect(isErrorValue('#NOM?')).toBe(true);
+		expect(isErrorValue('#CIRC!')).toBe(true);
 		expect(isErrorValue('#hashtag')).toBe(false);
 	});
 });

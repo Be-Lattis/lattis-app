@@ -52,6 +52,28 @@ type Schema struct {
 	// à chaque lecture de la grille.
 	Now  time.Time
 	Seed uint64
+
+	// Sheets : noms des feuilles (en minuscules). Une adresse Feuille!Cell[A1]
+	// d'une feuille connue qui n'a pas de valeur est une cellule vide ; d'une
+	// feuille inconnue, #NOM?. Sans liste, toute adresse est une cellule vide.
+	Sheets map[string]bool
+}
+
+// emptyCell indique si key (en minuscules) est l'adresse d'une cellule libre
+// d'une feuille existante : absente des valeurs, elle est vide (0 dans un
+// calcul, ESTVIDE vrai), comme dans Excel.
+func (s *Schema) emptyCell(key string) bool {
+	if k := strings.LastIndex(key, "#"); k > 0 {
+		key = key[:k] // cell_a1#2 : adresse rattachée à la feuille 2
+	}
+	sheet, addr := "", key
+	if k := strings.LastIndex(key, "."); k >= 0 {
+		sheet, addr = key[:k], key[k+1:]
+	}
+	if _, _, ok := CellRef(addr); !ok {
+		return false
+	}
+	return sheet == "" || s == nil || s.Sheets == nil || s.Sheets[sheet]
 }
 
 func (s *Schema) Table(name string) (*Table, bool) {
@@ -185,6 +207,9 @@ func Eval(n Node, env *Env) Value {
 		if v, ok := env.Names[strings.ToLower(n.Name)]; ok {
 			return v
 		}
+		if env.Schema.emptyCell(strings.ToLower(n.Name)) {
+			return Value{} // cellule vide
+		}
 		return Err(ErrName)
 	case Range:
 		return Err(ErrRef) // les plages A1 n'existent que pour la conversion
@@ -273,7 +298,7 @@ func (env *Env) cell(t *Table, row, i int) Value {
 	}
 	key := [2]any{t, i}
 	if env.visiting[key] {
-		return Err(ErrRef) // référence circulaire entre colonnes calculées
+		return Err(ErrCirc) // référence circulaire entre colonnes calculées
 	}
 	if env.visiting == nil {
 		env.visiting = map[[2]any]bool{}

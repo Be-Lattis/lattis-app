@@ -45,6 +45,8 @@ export function explainError(code: string, formula = '', cellText?: (row: number
 			return '#DIV/0! : division par zéro (ou par une cellule vide).';
 		case '#REF!':
 			return '#REF! : référence invalide, le tableau ou la colonne a été supprimé ou renommé.';
+		case '#CIRC!':
+			return "#CIRC! : référence circulaire, la formule dépend de sa propre valeur (par exemple SOMME(Tableau[X]) dans la colonne X). Faites-la lire d'autres cellules ou colonnes ; pour un total cumulé, lisez la ligne précédente : [Cumul][-1].";
 		case '#N/A':
 			return '#N/A : valeur introuvable (REFERENCE, EQUIV…) ; vérifiez la clé cherchée.';
 		case '#NOMBRE!':
