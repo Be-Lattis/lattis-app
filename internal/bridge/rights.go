@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -38,11 +40,16 @@ type RightsColumn struct {
 // (arborescence classeur → feuilles → tableaux) et les droits de
 // l'utilisateur dessus.
 type RightsTable struct {
-	Table        int64                  `json:"table"`
-	Name         string                 `json:"name"`
-	RemoteID     string                 `json:"remoteId"`
-	Sheet        int64                  `json:"sheet"`
-	SheetName    string                 `json:"sheetName"`
+	Table     int64  `json:"table"`
+	Name      string `json:"name"`
+	RemoteID  string `json:"remoteId"`
+	Sheet     int64  `json:"sheet"`
+	SheetName string `json:"sheetName"`
+	// SheetKey : feuille du tableau pour le serveur (workbook.SheetKey ;
+	// vide : inconnue, publié avant la migration 0009, ou liste complète
+	// non lue). Égale à SheetKey(Sheet), un niveau posé sur la feuille vaut
+	// pour le tableau.
+	SheetKey     string                 `json:"sheetKey"`
 	Level        string                 `json:"level"`
 	Filtered     bool                   `json:"filtered"`
 	Restrictions []workbook.Restriction `json:"restrictions"`
@@ -67,6 +74,13 @@ type RightsView struct {
 	ACL *workbook.ACL `json:"acl"`
 	// Drift : écarts détectés par le serveur (propriétaire ou concepteur).
 	Drift []workbook.Drift `json:"drift"`
+	// Members : membres du classeur et leurs rôles (lattis.workbook_members,
+	// propriétaire ou concepteur, en ligne ; nil : serveur sans la
+	// migration 0009, liste tirée de ACL).
+	Members []workbook.WorkbookMember `json:"members"`
+	// CustomInvite : le serveur invite à un rôle personnalisé (migration
+	// 0009).
+	CustomInvite bool `json:"customInvite"`
 	// Error : le serveur n'a pas répondu (droits locaux seulement).
 	Error string `json:"error,omitempty"`
 }
@@ -150,6 +164,15 @@ func (s *DocumentService) ShareRights(ctx context.Context, remote bool) (RightsV
 			return v, nil
 		}
 		v.ACL = &acl
+		sheetKeys(v.Tables, acl)
+	}
+	switch m, err := srv.Members(ctx, info.WorkbookID); {
+	case errors.Is(err, workbook.ErrUnsupported):
+	case err != nil:
+		v.Error = rightsError(err)
+		return v, nil
+	default:
+		v.Members, v.CustomInvite = m, v.Collaborative
 	}
 	if v.Collaborative {
 		drift, err := srv.Drift(ctx, info.WorkbookID)
@@ -160,6 +183,18 @@ func (s *DocumentService) ShareRights(ctx context.Context, remote bool) (RightsV
 		v.Drift = drift
 	}
 	return v, nil
+}
+
+// sheetKeys note la feuille de chaque tableau pour le serveur (liste
+// complète des droits).
+func sheetKeys(tables []RightsTable, acl workbook.ACL) {
+	keys := map[string]string{}
+	for _, t := range acl.Tables {
+		keys[t.TableID] = t.SheetID
+	}
+	for i := range tables {
+		tables[i].SheetKey = keys[tables[i].RemoteID]
+	}
 }
 
 // rightsError rend un refus du serveur lisible (le message de la fonction
@@ -176,10 +211,15 @@ func rightsError(err error) string {
 	return msg
 }
 
-// rightsDo fait un changement de droits sur le serveur du classeur ouvert,
-// puis relit les droits de l'utilisateur (ils ont pu changer : interface
-// prévenue) et rend la nouvelle liste.
+// rightsDo fait un changement de droits sur le serveur du classeur ouvert
+// (propriétaires), puis relit les droits de l'utilisateur (ils ont pu
+// changer : interface prévenue) et rend la nouvelle liste.
 func (s *DocumentService) rightsDo(ctx context.Context, fn func(srv workbook.Server, info *workbook.Info) error) (RightsView, error) {
+	return s.rightsDoAs(ctx, false, fn)
+}
+
+// rightsDoAs : rightsDo ; design : concepteurs admis aussi.
+func (s *DocumentService) rightsDoAs(ctx context.Context, design bool, fn func(srv workbook.Server, info *workbook.Info) error) (RightsView, error) {
 	d, err := s.current()
 	if err != nil {
 		return RightsView{}, err
@@ -188,7 +228,10 @@ func (s *DocumentService) rightsDo(ctx context.Context, fn func(srv workbook.Ser
 	if info == nil {
 		return RightsView{}, errors.New("ce classeur n'est pas partagé : Fichier › Partager sur un serveur…")
 	}
-	if !info.CanManage() {
+	switch {
+	case design && !info.CanDesign():
+		return RightsView{}, errors.New("réservé aux propriétaires et concepteurs du classeur")
+	case !design && !info.CanManage():
 		return RightsView{}, errors.New("seuls les propriétaires du classeur gèrent ses droits")
 	}
 	srv, _, _, err := remoteServer(ctx, info.Server)
@@ -205,7 +248,8 @@ func (s *DocumentService) rightsDo(ctx context.Context, fn func(srv workbook.Ser
 }
 
 // ShareInvite invite une adresse au classeur ouvert avec des rôles fournis
-// (reader, participant, editor, designer, owner).
+// (reader, participant, editor, designer, owner) et, si le serveur le
+// permet (RightsView.CustomInvite), des rôles personnalisés par leur nom.
 func (s *DocumentService) ShareInvite(ctx context.Context, email string, roles []string) (RightsView, error) {
 	email = strings.TrimSpace(email)
 	if !strings.Contains(email, "@") {
@@ -253,10 +297,11 @@ func (s *DocumentService) ShareGrantRole(ctx context.Context, roleID, userID str
 }
 
 // ShareSetLevels pose des niveaux (et filtres) dans une seule transaction.
-// Un niveau sur une feuille est posé sur chacun de ses tableaux publiés :
-// le serveur ne connaît pas encore les feuilles (sheet_id vide, voir
-// droits.md) ; l'interface envoie alors NodeKind « sheet » et l'identifiant
-// local de la feuille.
+// L'interface envoie un niveau de feuille avec NodeKind « sheet » et
+// l'identifiant local de la feuille : si le serveur connaît la feuille de
+// chacun de ses tableaux publiés (migration 0009, SheetKey), le niveau est
+// posé sur la feuille (set_level('sheet', …), hérité par ses tableaux) ;
+// sinon sur chacun de ses tableaux publiés (tableaux publiés avant 0009).
 func (s *DocumentService) ShareSetLevels(ctx context.Context, levels []workbook.Level) (RightsView, error) {
 	d, err := s.current()
 	if err != nil {
@@ -266,29 +311,73 @@ func (s *DocumentService) ShareSetLevels(ctx context.Context, levels []workbook.
 	if err != nil {
 		return RightsView{}, err
 	}
+	sheets := false
+	for _, l := range levels {
+		if l.NodeKind == workbook.NodeSheet {
+			sheets = true
+		} else if err := workbook.CheckLevel(l); err != nil {
+			return RightsView{}, err
+		}
+	}
+	return s.rightsDo(ctx, func(srv workbook.Server, info *workbook.Info) error {
+		if sheets {
+			acl, err := srv.ACL(ctx, info.WorkbookID)
+			if err != nil {
+				return err
+			}
+			sheetKeys(local.Tables, acl)
+		}
+		out, err := sheetLevels(levels, local.Tables)
+		if err != nil {
+			return err
+		}
+		return srv.SetLevels(ctx, out)
+	})
+}
+
+// sheetLevels traduit les niveaux de feuille (identifiant local) : sur la
+// feuille du serveur si tous ses tableaux publiés y sont rattachés, sinon
+// sur chacun d'eux.
+func sheetLevels(levels []workbook.Level, tables []RightsTable) ([]workbook.Level, error) {
 	var out []workbook.Level
 	for _, l := range levels {
 		if l.NodeKind != workbook.NodeSheet {
 			out = append(out, l)
 			continue
 		}
-		n := 0
-		for _, t := range local.Tables {
+		var on []RightsTable
+		for _, t := range tables {
 			if fmt.Sprint(t.Sheet) == l.NodeID && t.RemoteID != "" {
-				out = append(out, workbook.Level{RoleID: l.RoleID, NodeKind: workbook.NodeTable, NodeID: t.RemoteID, Level: l.Level})
-				n++
+				on = append(on, t)
 			}
 		}
-		if n == 0 {
-			return RightsView{}, errors.New("aucun tableau publié sur cette feuille")
+		if len(on) == 0 {
+			return nil, errors.New("aucun tableau publié sur cette feuille")
+		}
+		key := ""
+		if id, err := strconv.ParseInt(l.NodeID, 10, 64); err == nil {
+			key = workbook.SheetKey(id)
+		}
+		if key != "" && !slices.ContainsFunc(on, func(t RightsTable) bool { return t.SheetKey != key }) {
+			out = append(out, workbook.Level{RoleID: l.RoleID, NodeKind: workbook.NodeSheet, NodeID: key, Level: l.Level})
+			continue
+		}
+		for _, t := range on {
+			out = append(out, workbook.Level{RoleID: l.RoleID, NodeKind: workbook.NodeTable, NodeID: t.RemoteID, Level: l.Level})
 		}
 	}
 	for _, l := range out {
 		if err := workbook.CheckLevel(l); err != nil {
-			return RightsView{}, err
+			return nil, err
 		}
 	}
-	return s.rightsDo(ctx, func(srv workbook.Server, _ *workbook.Info) error { return srv.SetLevels(ctx, out) })
+	return out, nil
+}
+
+// ShareRecompile recompile les droits du classeur (lattis.compile_acl :
+// propriétaires et concepteurs) : remet d'aplomb les écarts.
+func (s *DocumentService) ShareRecompile(ctx context.Context) (RightsView, error) {
+	return s.rightsDoAs(ctx, true, func(srv workbook.Server, info *workbook.Info) error { return srv.Recompile(ctx, info.WorkbookID) })
 }
 
 // ShareAddRestriction ajoute une restriction.

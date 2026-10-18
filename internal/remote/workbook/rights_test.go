@@ -3,6 +3,7 @@ package workbook_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -196,6 +197,12 @@ func TestPostgresACL(t *testing.T) {
 		t.Fatalf("écarts : %+v", d)
 	}
 
+	if has0009() {
+		rights0009(t, env, as, info.WorkbookID, rt, carol, carolID)
+	} else if _, err := as.Members(ctx, info.WorkbookID); !errors.Is(err, workbook.ErrUnsupported) {
+		t.Fatalf("membres sans 0009 : %v", err)
+	}
+
 	// Invitations.
 	inv, err := as.Invite(ctx, info.WorkbookID, "dan@example.test", []string{"reader"})
 	must(t, err)
@@ -226,6 +233,68 @@ func TestPostgresACL(t *testing.T) {
 func has0008() bool {
 	m, _ := filepath.Glob(filepath.Join(os.Getenv("LATTIS_SERVER_SCHEMA"), "0008_*.sql"))
 	return len(m) > 0
+}
+
+func has0009() bool {
+	m, _ := filepath.Glob(filepath.Join(os.Getenv("LATTIS_SERVER_SCHEMA"), "0009_*.sql"))
+	return len(m) > 0
+}
+
+// rights0009 : retours du serveur sur les droits (migration 0009) : feuille
+// des tableaux (create_table), niveau de feuille, lecture filtrée détaillée,
+// membres, invitation à un rôle personnalisé, recompilation.
+func rights0009(t *testing.T, env *pgEnv, as workbook.Server, wb, rt, carol, carolID string) {
+	t.Helper()
+	ctx := context.Background()
+	// Recompiler (avant tout set_level, qui recompile aussi) : l'empreinte
+	// est reprise, plus d'écart ; la règle posée à la main reste dans
+	// PostgreSQL mais n'est plus signalée (droits.md §4).
+	must(t, as.Recompile(ctx, wb))
+	d, err := as.Drift(ctx, wb)
+	must(t, err)
+	if len(d) != 0 {
+		t.Fatalf("écarts après recompilation : %+v", d)
+	}
+	acl, err := as.ACL(ctx, wb)
+	must(t, err)
+	if acl.Tables[0].SheetID != "1" {
+		t.Fatalf("feuille de Ventes : %+v", acl.Tables)
+	}
+	// Carol (Nord, filtre de lecture) : read_filtered, pas write_filtered.
+	caps, err := env.as(carol).Capabilities(ctx, wb)
+	must(t, err)
+	if a := caps.Tables[rt]; a.SheetID != "1" || a.ReadFiltered == nil || !*a.ReadFiltered || a.WriteFiltered == nil || *a.WriteFiltered {
+		t.Fatalf("capacités de Carol : %+v", a)
+	}
+	// Niveau posé sur la feuille : hérité par Ventes.
+	dave, daveID := env.user(t, "dave")
+	sud, err := as.CreateRole(ctx, wb, "Sud")
+	must(t, err)
+	must(t, as.SetLevels(ctx, []workbook.Level{{RoleID: sud, NodeKind: workbook.NodeSheet, NodeID: "1", Level: "reader"}}))
+	must(t, as.GrantRole(ctx, sud, daveID))
+	caps, err = env.as(dave).Capabilities(ctx, wb)
+	must(t, err)
+	if a := caps.Tables[rt]; a.Level != workbook.LevelReader {
+		t.Fatalf("niveau de feuille pour Dave : %+v", a)
+	}
+	// Membres (propriétaire), rôles par nom.
+	members, err := as.Members(ctx, wb)
+	must(t, err)
+	i := slices.IndexFunc(members, func(m workbook.WorkbookMember) bool { return m.UserID == carolID })
+	if i < 0 || !slices.Contains(members[i].Roles, "Nord") || members[i].PGRole != carol {
+		t.Fatalf("membres : %+v", members)
+	}
+	if _, err := env.as(dave).Members(ctx, wb); !workbook.Privilege(err) {
+		t.Fatalf("membres lus par Dave : %v", err)
+	}
+	// Invitation à un rôle personnalisé, par son nom (sans casse).
+	inv, err := as.Invite(ctx, wb, "erin@example.test", []string{"sud"})
+	must(t, err)
+	must(t, as.RevokeInvitation(ctx, inv))
+	if err := env.as(dave).Recompile(ctx, wb); !workbook.Privilege(err) {
+		t.Fatalf("recompilation par Dave : %v", err)
+	}
+	must(t, as.DropRole(ctx, sud))
 }
 
 func quoteIdent(s string) string { return `"` + strings.ReplaceAll(s, `"`, `""`) + `"` }

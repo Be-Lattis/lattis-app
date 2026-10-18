@@ -17,5 +17,6 @@ export type {
     RestrictionRule,
     Role,
     State,
-    TableCheck
+    TableCheck,
+    WorkbookMember
 } from "./models.js";

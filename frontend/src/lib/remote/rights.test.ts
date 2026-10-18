@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ACL, Role } from '#bindings/internal/remote/workbook/models.js';
 import type { RightsTable, RightsView } from '#bindings/internal/bridge/models.js';
-import { checkFreeFilter, conditionSQL, filterSQL, members, ownerCount, parseFilter, rightsObjects, sheetLevel, tableLevel, tree, type Condition } from './rights';
+import { checkFreeFilter, conditionSQL, filterSQL, members, ownerCount, parentLevel, parseFilter, rightsObjects, serverSheet, sheetLevel, tableLevel, tree, type Condition } from './rights';
 
 const types = { Produit: 'text', Quantité: 'integer', Prix: 'decimal', Livré: 'date', Payé: 'boolean', Commercial: 'text' };
 
@@ -11,6 +11,7 @@ const table = (o: Partial<RightsTable>): RightsTable => ({
 	remoteId: 't1',
 	sheet: 1,
 	sheetName: 'Feuille1',
+	sheetKey: '',
 	level: 'editor',
 	filtered: false,
 	restrictions: [],
@@ -82,6 +83,24 @@ describe('niveaux hérités', () => {
 		expect(sheetLevel(same, wb, sheets[0])).toMatchObject({ own: 'participant', mixed: false });
 		const mixed = role({ grants: [{ node_kind: 'table', node_id: 't1', level: 'editor', read_filter: '', write_filter: '' }] });
 		expect(sheetLevel(mixed, wb, sheets[0])).toMatchObject({ own: undefined, mixed: true, effective: 'mixed' });
+		expect(serverSheet(sheets[0])).toBeUndefined();
+	});
+	it('feuille connue du serveur (sheet_id) : son niveau, hérité par ses tableaux', () => {
+		const sheets = tree([table({ remoteId: 't1', sheetKey: '1' }), table({ table: 2, remoteId: 't2', name: 'B', sheetKey: '1' })]);
+		expect(serverSheet(sheets[0])).toBe('1');
+		const r = role({
+			grants: [
+				{ node_kind: 'workbook', node_id: wb, level: 'none', read_filter: '', write_filter: '' },
+				{ node_kind: 'sheet', node_id: '1', level: 'reader', read_filter: '', write_filter: '' },
+				{ node_kind: 'table', node_id: 't2', level: 'editor', read_filter: '', write_filter: '' }
+			]
+		});
+		expect(sheetLevel(r, wb, sheets[0])).toEqual({ own: 'reader', effective: 'reader', mixed: false });
+		expect(tableLevel(r, wb, 't1', '1')).toEqual({ effective: 'reader' });
+		expect(tableLevel(r, wb, 't2', '1').own).toBe('editor');
+		expect(parentLevel(r, wb, '1')).toBe('reader');
+		expect(parentLevel(r, wb, '')).toBe('none');
+		expect(sheetLevel(role({ grants: [] }), wb, sheets[0])).toEqual({ own: undefined, effective: 'none', mixed: false });
 	});
 });
 
@@ -105,6 +124,17 @@ describe('membres', () => {
 		]);
 		expect(ownerCount(acl)).toBe(1);
 	});
+	it('liste du serveur (workbook_members) : rôles par nom rendus en identifiants', () => {
+		const list = [
+			{ user_id: 'b', email: 'bob@x', display_name: '', pg_role: 'bob@x', roles: ['participant', 'nord'] },
+			{ user_id: 'a', email: 'alice@x', display_name: 'Alice', pg_role: 'alice@x', roles: ['owner'] }
+		];
+		expect(members(acl, list)).toEqual([
+			{ userId: 'a', email: 'alice@x', name: 'Alice', roles: ['o'] },
+			{ userId: 'b', email: 'bob@x', name: '', roles: ['p', 'n'] }
+		]);
+		expect(members(null, list)[1].roles).toEqual(['participant', 'nord']);
+	});
 });
 
 describe("objets de l'onglet SQL", () => {
@@ -120,6 +150,8 @@ describe("objets de l'onglet SQL", () => {
 		tables: [table({ level: 'participant', filtered: true, restrictions: [{ table_id: '', command: 'delete', label: 'Pas les dossiers clos' }] })],
 		acl: null,
 		drift: [],
+		members: null,
+		customInvite: false,
 		...o
 	});
 	it('propriétaire : rôles et règles générés', () => {

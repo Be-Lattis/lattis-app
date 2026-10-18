@@ -9,8 +9,8 @@ import (
 )
 
 // Droits d'un classeur par l'API SQL du serveur (contrat client de lattisd,
-// §5 et §7 ; schema/0005_advanced_rights.sql, 0006_admin.sql). Écritures
-// sur rw, une transaction par appel.
+// §5 et §7 ; schema/0005_advanced_rights.sql, 0006_admin.sql,
+// 0009_droits.sql). Écritures sur rw, une transaction par appel.
 
 func (s pgServer) tx(ctx context.Context, fn func(pgx.Tx) error) error {
 	return s.with(ctx, usageWrite, func(c *pgx.Conn) error {
@@ -125,4 +125,19 @@ func (s pgServer) Drift(ctx context.Context, workbookID string) ([]Drift, error)
 	out := []Drift{}
 	err := s.jsonCall(ctx, `SELECT lattis.check_drift($1::uuid)::text`, &out, workbookID)
 	return out, err
+}
+
+// Members : lattis.workbook_members (migration 0009) ; fonction absente
+// (42883) : ErrUnsupported.
+func (s pgServer) Members(ctx context.Context, workbookID string) ([]WorkbookMember, error) {
+	out := []WorkbookMember{}
+	err := s.jsonCall(ctx, `SELECT lattis.workbook_members($1::uuid)::text`, &out, workbookID)
+	if code, ok := Rejected(err); ok && code == "42883" {
+		return nil, ErrUnsupported
+	}
+	return out, err
+}
+
+func (s pgServer) Recompile(ctx context.Context, workbookID string) error {
+	return s.exec(ctx, `SELECT lattis.compile_acl($1::uuid)`, workbookID)
 }

@@ -34,7 +34,7 @@ const (
 )
 
 // Rights est la gestion des droits d'un classeur (propriétaires du
-// classeur, sauf Drift : concepteurs aussi). Chaque appel est une
+// classeur, sauf Drift, Members et Recompile : concepteurs aussi). Chaque appel est une
 // transaction du serveur ; le serveur recompile les règles (compile_acl)
 // et journalise.
 type Rights interface {
@@ -42,8 +42,10 @@ type Rights interface {
 	// leurs membres, les restrictions, les invitations en attente et les
 	// tableaux (lattis.workbook_acl).
 	ACL(ctx context.Context, workbookID string) (ACL, error)
-	// Invite invite une adresse avec des rôles fournis (lattis.invite) ;
-	// un utilisateur déjà connu reçoit les rôles tout de suite.
+	// Invite invite une adresse (lattis.invite) avec des rôles fournis et,
+	// sur un serveur qui a la migration 0009, des noms de rôles
+	// personnalisés (sans casse) ; un utilisateur déjà connu reçoit les
+	// rôles tout de suite, une adresse inconnue un compte en attente.
 	Invite(ctx context.Context, workbookID, email string, roles []string) (string, error)
 	RevokeInvitation(ctx context.Context, id string) error
 	// CreateRole crée un rôle personnalisé, sans droit tant qu'aucun niveau
@@ -63,6 +65,28 @@ type Rights interface {
 	// Drift liste les tableaux dont les règles ou droits ont changé hors de
 	// Lattis (lattis.check_drift).
 	Drift(ctx context.Context, workbookID string) ([]Drift, error)
+	// Members liste les membres du classeur et leurs rôles
+	// (lattis.workbook_members : propriétaires et concepteurs) ;
+	// ErrUnsupported sur un serveur sans la migration 0009.
+	Members(ctx context.Context, workbookID string) ([]WorkbookMember, error)
+	// Recompile recompile les droits du classeur sans rien changer
+	// (lattis.compile_acl : propriétaires et concepteurs) : remet d'aplomb
+	// les écarts (les règles ajoutées à la main restent).
+	Recompile(ctx context.Context, workbookID string) error
+}
+
+// ErrUnsupported : le serveur ne propose pas cette fonction (migration
+// manquante) ; l'appelant garde l'ancien comportement.
+var ErrUnsupported = errors.New("fonction absente de ce serveur (mise à jour de lattisd nécessaire)")
+
+// WorkbookMember est un membre du classeur (lattis.workbook_members) :
+// Roles nomme ses rôles, fournis (owner, reader…) ou personnalisés (nom).
+type WorkbookMember struct {
+	UserID      string   `json:"user_id"`
+	Email       string   `json:"email"`
+	DisplayName string   `json:"display_name"`
+	PGRole      string   `json:"pg_role"`
+	Roles       []string `json:"roles"`
 }
 
 // ACL est la liste des droits d'un classeur (lattis.workbook_acl).
@@ -84,8 +108,8 @@ type ACLWorkbook struct {
 	Schema  string `json:"schema"`
 }
 
-// ACLTable est un tableau du classeur ; SheetID est la feuille du serveur
-// (toujours vide aujourd'hui : voir droits.md, écarts).
+// ACLTable est un tableau du classeur ; SheetID est sa feuille pour le
+// serveur (SheetKey ; vide : publié sans feuille, avant la migration 0009).
 type ACLTable struct {
 	TableID string `json:"table_id"`
 	Name    string `json:"name"`

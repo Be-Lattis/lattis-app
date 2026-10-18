@@ -12,12 +12,13 @@ import (
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 )
 
-// Droits d'un classeur (schema/0005_advanced_rights.sql, 0006_admin.sql et
-// 0008_sync.sql du serveur) : rôles fournis et personnalisés, niveaux par
-// nœud hérités (classeur → tableau ; la feuille n'est pas connue du
-// serveur), filtres (gardés, non évalués : la RLS se vérifie contre
-// PostgreSQL), restrictions, invitations, écarts, « Voir en tant que… »,
-// notification « *acl ». Les utilisateurs du faux serveur ont pour
+// Droits d'un classeur (schema/0005_advanced_rights.sql, 0006_admin.sql,
+// 0008_sync.sql et 0009_droits.sql du serveur) : rôles fournis et
+// personnalisés, niveaux par nœud hérités (classeur → feuille → tableau ;
+// la feuille est celle donnée à create_table), filtres (gardés, non
+// évalués : la RLS se vérifie contre PostgreSQL), restrictions,
+// invitations (rôles personnalisés par leur nom), membres, recompilation,
+// écarts, « Voir en tant que… », notification « *acl ». Les utilisateurs du faux serveur ont pour
 // identifiant leur nom et pour adresse <nom>@example.test.
 
 // ErrInvalid imite un refus de paramètre (22023).
@@ -88,12 +89,16 @@ func (f *Fake) userRoles(b *book, user string) []*frole {
 	return out
 }
 
-// effective : niveau d'un rôle sur un tableau (tableau, sinon classeur).
+// effective : niveau d'un rôle sur un tableau (tableau, sinon sa feuille,
+// sinon classeur).
 func effective(b *book, r *frole, t *table) workbook.Grant {
 	if r.builtin == "owner" || r.builtin == "designer" {
 		return workbook.Grant{Level: workbook.LevelEditor}
 	}
 	if g, ok := r.grants["table/"+t.id]; ok {
+		return g
+	}
+	if g, ok := r.grants["sheet/"+t.sheet]; ok && t.sheet != "" {
 		return g
 	}
 	if g, ok := r.grants["workbook/"+b.id]; ok {
@@ -123,6 +128,37 @@ func (s *session) book(id string) (*book, error) {
 		return nil, errors.New("classeur inconnu")
 	}
 	return b, nil
+}
+
+// filters : lecture et écriture filtrées pour l'utilisateur
+// (my_capabilities.read_filtered et write_filtered, migration 0009) :
+// filtres de ses rôles et restrictions qui le visent (« tous les rôles » :
+// hors propriétaires et concepteurs).
+func (s *session) filters(b *book, t *table) (read, write bool) {
+	if b.mode != workbook.Collaborative {
+		return false, false
+	}
+	mine := s.f.userRoles(b, s.user)
+	for _, r := range mine {
+		g := effective(b, r, t)
+		read = read || g.ReadFilter != ""
+		write = write || g.WriteFilter != ""
+	}
+	full := s.has(b, "owner", "designer")
+	for _, x := range s.f.acl(b).restrictions {
+		if x.TableID != t.id {
+			continue
+		}
+		hit := len(x.AppliesTo) == 0 && !full
+		for _, m := range mine {
+			hit = hit || slices.Contains(x.AppliesTo, m.id)
+		}
+		if hit {
+			read = read || x.Command == "select" || x.Command == "all"
+			write = write || x.Command != "select"
+		}
+	}
+	return read, write
 }
 
 // owner vérifie que l'utilisateur est propriétaire du classeur.
@@ -192,7 +228,7 @@ func (s *session) ACL(ctx context.Context, workbookID string) (workbook.ACL, err
 		out.Invitations = []workbook.Invitation{}
 	}
 	for _, t := range b.schemas[b.schema].tables {
-		out.Tables = append(out.Tables, workbook.ACLTable{TableID: t.id, Name: t.name})
+		out.Tables = append(out.Tables, workbook.ACLTable{TableID: t.id, Name: t.name, SheetID: t.sheet})
 	}
 	users := make([]string, 0, len(b.roles))
 	for u := range b.roles {
@@ -237,22 +273,41 @@ func (s *session) Invite(ctx context.Context, workbookID, mail string, roles []s
 		s.f.mu.Unlock()
 		return "", ErrInvalid{"au moins un rôle"}
 	}
+	a := s.f.acl(b)
+	var custom []*frole
 	for _, r := range roles {
-		if !slices.Contains(builtins, r) {
+		if slices.Contains(builtins, r) {
+			continue
+		}
+		i := slices.IndexFunc(a.roles, func(x *frole) bool { return x.builtin == "" && strings.EqualFold(x.name, r) })
+		if i < 0 || s.f.Before09 {
 			s.f.mu.Unlock()
 			return "", ErrInvalid{fmt.Sprintf("rôle « %s » inexistant sur ce classeur", r)}
 		}
+		custom = append(custom, a.roles[i])
 	}
 	mail = strings.ToLower(strings.TrimSpace(mail))
 	id := uuid.NewString()
 	user, ok := strings.CutSuffix(mail, "@example.test")
 	if ok && s.f.known(user) {
 		for _, r := range roles {
-			if !slices.Contains(b.roles[user], r) {
+			if slices.Contains(builtins, r) && !slices.Contains(b.roles[user], r) {
 				b.roles[user] = append(b.roles[user], r)
 			}
 		}
+		for _, r := range custom {
+			if !slices.Contains(r.members, user) {
+				r.members = append(r.members, user)
+			}
+		}
 	} else {
+		if ok && !s.f.Before09 {
+			// Compte en attente : grant_role vaut ensuite pour lui.
+			if s.f.pending == nil {
+				s.f.pending = map[string]bool{}
+			}
+			s.f.pending[user] = true
+		}
 		a := s.f.acl(b)
 		a.invitations = append(a.invitations, workbook.Invitation{ID: id, Email: mail, Roles: slices.Clone(roles), ExpiresAt: "2099-01-01T00:00:00Z"})
 	}
@@ -357,7 +412,7 @@ func (s *session) GrantRole(ctx context.Context, roleID, userID string) error {
 		return err
 	}
 	b, r, err := s.role(roleID)
-	if err == nil && !s.f.known(userID) {
+	if err == nil && !s.f.known(userID) && !s.f.pending[userID] {
 		err = errors.New("utilisateur inconnu")
 	}
 	if err != nil {
@@ -465,9 +520,6 @@ func (s *session) SetLevels(ctx context.Context, levels []workbook.Level) error 
 		}
 		if err == nil && (r.builtin == "owner" || r.builtin == "designer") {
 			err = ErrInvalid{"propriétaires et concepteurs ont tous les droits"}
-		}
-		if err == nil && l.NodeKind == workbook.NodeSheet {
-			err = errors.New("feuille inconnue du serveur") // sheet_id toujours NULL côté serveur
 		}
 		if err == nil && l.NodeKind == workbook.NodeTable && !slices.ContainsFunc(rb.schemas[rb.schema].tables, func(t *table) bool { return t.id == l.NodeID }) {
 			err = errors.New("tableau inconnu")
@@ -667,4 +719,67 @@ func (s *session) customRoles(b *book) []string {
 	}
 	slices.Sort(out)
 	return out
+}
+
+// Members : lattis.workbook_members (migration 0009), pour propriétaires et
+// concepteurs ; rôles par nom (fournis : owner…, personnalisés : nom).
+func (s *session) Members(ctx context.Context, workbookID string) ([]workbook.WorkbookMember, error) {
+	s.f.mu.Lock()
+	defer s.f.mu.Unlock()
+	if err := s.begin("workbook_members"); err != nil {
+		return nil, err
+	}
+	if s.f.Before09 {
+		return nil, workbook.ErrUnsupported
+	}
+	b, err := s.book(workbookID)
+	if err != nil {
+		return nil, err
+	}
+	if !s.has(b, "owner", "designer") {
+		return nil, ErrPrivilege{"réservé aux propriétaires et concepteurs du classeur"}
+	}
+	by := map[string][]string{}
+	for u, rs := range b.roles {
+		for _, r := range rs {
+			by[u] = append(by[u], r)
+		}
+	}
+	for _, r := range s.f.acl(b).roles {
+		if r.builtin == "" {
+			for _, u := range r.members {
+				by[u] = append(by[u], r.name)
+			}
+		}
+	}
+	out := []workbook.WorkbookMember{}
+	for u, rs := range by {
+		if len(rs) == 0 {
+			continue
+		}
+		slices.Sort(rs)
+		out = append(out, workbook.WorkbookMember{UserID: u, Email: email(u), DisplayName: u, PGRole: u, Roles: rs})
+	}
+	slices.SortFunc(out, func(x, y workbook.WorkbookMember) int { return strings.Compare(x.Email, y.Email) })
+	return out, nil
+}
+
+// Recompile : lattis.compile_acl ; l'empreinte des droits est reprise, les
+// écarts disparaissent (même les règles ajoutées à la main, qui restent).
+func (s *session) Recompile(ctx context.Context, workbookID string) error {
+	s.f.mu.Lock()
+	defer s.f.mu.Unlock()
+	if err := s.begin("compile_acl"); err != nil {
+		return err
+	}
+	b, err := s.book(workbookID)
+	if err != nil {
+		return err
+	}
+	if !s.has(b, "owner", "designer") {
+		return ErrPrivilege{"droits insuffisants"}
+	}
+	a := s.f.acl(b)
+	a.drift = nil
+	return nil
 }

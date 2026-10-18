@@ -13,8 +13,8 @@ export interface ACL {
 }
 
 /**
- * ACLTable est un tableau du classeur ; SheetID est la feuille du serveur
- * (toujours vide aujourd'hui : voir droits.md, écarts).
+ * ACLTable est un tableau du classeur ; SheetID est sa feuille pour le
+ * serveur (SheetKey ; vide : publié sans feuille, avant la migration 0009).
  */
 export interface ACLTable {
     "table_id": string;
@@ -256,4 +256,16 @@ export interface TableCheck {
      * accepter comme texte).
      */
     "invalid": number;
+}
+
+/**
+ * WorkbookMember est un membre du classeur (lattis.workbook_members) :
+ * Roles nomme ses rôles, fournis (owner, reader…) ou personnalisés (nom).
+ */
+export interface WorkbookMember {
+    "user_id": string;
+    "email": string;
+    "display_name": string;
+    "pg_role": string;
+    "roles": string[] | null;
 }

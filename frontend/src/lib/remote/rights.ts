@@ -3,7 +3,7 @@
 // DocumentService.ShareRights (internal/bridge/rights.go) ; les niveaux, les
 // filtres et les restrictions suivent l'API SQL du serveur
 // (docs/collaboration/droits.md).
-import type { ACL, Grant, Role } from '#bindings/internal/remote/workbook/models.js';
+import type { ACL, Grant, Role, WorkbookMember } from '#bindings/internal/remote/workbook/models.js';
 import type { RightsTable, RightsView } from '#bindings/internal/bridge/models.js';
 
 export const LEVELS = ['none', 'reader', 'participant', 'editor'] as const;
@@ -47,8 +47,19 @@ export interface MemberRow {
 	roles: string[];
 }
 
-/** Membres du classeur (une ligne par personne), triés par adresse. */
-export function members(acl: ACL | null | undefined): MemberRow[] {
+/**
+ * Membres du classeur (une ligne par personne), triés par adresse : liste
+ * du serveur (lattis.workbook_members, rôles par nom, rendus en
+ * identifiants par la liste des rôles de acl) quand elle est là, sinon
+ * tirée des membres de chaque rôle de acl (serveur sans la migration 0009).
+ */
+export function members(acl: ACL | null | undefined, list?: readonly WorkbookMember[] | null): MemberRow[] {
+	if (list) {
+		const idOf = (name: string) => acl?.roles?.find((r) => (r.builtin ? r.builtin === name : r.name.toLowerCase() === name.toLowerCase()))?.id ?? name;
+		return list
+			.map((m) => ({ userId: m.user_id, email: m.email, name: m.display_name || '', roles: (m.roles ?? []).map(idOf) }))
+			.sort((a, b) => a.email.localeCompare(b.email));
+	}
 	const by = new Map<string, MemberRow>();
 	for (const r of acl?.roles ?? []) {
 		for (const m of r.members ?? []) {
@@ -104,22 +115,47 @@ export interface NodeLevel {
 	write?: string;
 }
 
-/** Niveau d'un rôle sur un tableau : le sien, sinon celui du classeur. */
-export function tableLevel(role: Role, workbookId: string, remoteId: string): NodeLevel {
+/**
+ * Niveau qu'hérite un tableau : celui de sa feuille du serveur (sheetKey,
+ * migration 0009) si elle en a un, sinon celui du classeur.
+ */
+export function parentLevel(role: Role, workbookId: string, sheetKey?: string): string {
+	if (fullRights(role)) return 'editor';
+	return (sheetKey ? grantOf(role, 'sheet', sheetKey)?.level : undefined) ?? workbookLevel(role, workbookId);
+}
+
+/** Niveau d'un rôle sur un tableau : le sien, sinon celui de sa feuille, sinon celui du classeur. */
+export function tableLevel(role: Role, workbookId: string, remoteId: string, sheetKey?: string): NodeLevel {
 	if (fullRights(role)) return { effective: 'editor' };
 	const g = grantOf(role, 'table', remoteId);
 	if (g) return { own: g.level, effective: g.level, read: g.read_filter || undefined, write: g.write_filter || undefined };
-	return { effective: workbookLevel(role, workbookId) };
+	return { effective: parentLevel(role, workbookId, sheetKey) };
 }
 
 /**
- * Niveau d'un rôle sur une feuille. Le serveur ne connaît pas les feuilles
- * (droits.md, écarts) : un niveau de feuille est posé sur chacun de ses
- * tableaux ; il s'affiche quand tous ses tableaux ont le même niveau propre,
- * « mixte » sinon.
+ * Feuille connue du serveur pour tous ses tableaux publiés (create_table
+ * avec sheet_id, migration 0009) : son identifiant pour le serveur ;
+ * undefined sinon (tableaux publiés avant 0009).
+ */
+export function serverSheet(sheet: SheetNode): string | undefined {
+	const key = String(sheet.sheet);
+	return sheet.tables.length > 0 && sheet.tables.every((t) => t.sheetKey === key) ? key : undefined;
+}
+
+/**
+ * Niveau d'un rôle sur une feuille. Feuille connue du serveur
+ * (serverSheet) : son niveau propre, sinon celui du classeur. Sinon le
+ * niveau d'une feuille est posé sur chacun de ses tableaux ; il s'affiche
+ * quand tous ses tableaux ont le même niveau propre, « mixte » sinon.
  */
 export function sheetLevel(role: Role, workbookId: string, sheet: SheetNode): NodeLevel & { mixed: boolean } {
-	const levels = sheet.tables.map((t) => tableLevel(role, workbookId, t.remoteId));
+	const key = serverSheet(sheet);
+	if (key !== undefined) {
+		if (fullRights(role)) return { effective: 'editor', mixed: false };
+		const own = grantOf(role, 'sheet', key)?.level;
+		return { own, effective: own ?? workbookLevel(role, workbookId), mixed: false };
+	}
+	const levels = sheet.tables.map((t) => tableLevel(role, workbookId, t.remoteId, t.sheetKey));
 	const own = levels.map((l) => l.own);
 	const same = own.every((o) => o === own[0]);
 	const eff = levels.map((l) => l.effective);
@@ -382,7 +418,7 @@ export function rightsObjects(v: RightsView | null | undefined): RightsObject[] 
 		const lines = fullRights(r)
 			? ['Tous les droits (structure, mise en page, scripts' + (r.builtin === 'owner' ? ', droits' : '') + ')']
 			: (acl.tables ?? []).map((t) => {
-					const l = tableLevel(r, acl.workbook.id, t.table_id);
+					const l = tableLevel(r, acl.workbook.id, t.table_id, t.sheet_id || undefined);
 					return policyLine(nameOf(t.table_id), l.effective, l.read, l.write);
 				});
 		const n = r.members?.length ?? 0;

@@ -122,7 +122,7 @@ func capabilities(ctx context.Context, q querier, id string) (Capabilities, erro
 
 func (s pgServer) Publish(ctx context.Context, fn func(Publisher) error) error {
 	return s.with(ctx, usageWrite, func(c *pgx.Conn) error {
-		return pgx.BeginFunc(ctx, c, func(tx pgx.Tx) error { return fn(pgPublisher{tx}) })
+		return pgx.BeginFunc(ctx, c, func(tx pgx.Tx) error { return fn(pgPublisher{tx: tx, v9: new(int8)}) })
 	})
 }
 
@@ -157,7 +157,30 @@ func (s pgServer) Listen(ctx context.Context, channel string, ready func(), fn f
 	})
 }
 
-type pgPublisher struct{ tx pgx.Tx }
+// pgPublisher : v9 retient si le serveur a la migration 0009
+// (create_table avec la feuille ; 0 : pas encore lu, 1 : oui, -1 : non).
+type pgPublisher struct {
+	tx pgx.Tx
+	v9 *int8
+}
+
+// sheet9Query dit si le serveur a la migration 0009 (create_table reçoit
+// la feuille du tableau).
+const sheet9Query = `SELECT to_regprocedure('lattis.create_table(uuid,text,jsonb,text)') IS NOT NULL`
+
+func (p pgPublisher) has9(ctx context.Context) (bool, error) {
+	if *p.v9 == 0 {
+		var ok bool
+		if err := p.tx.QueryRow(ctx, sheet9Query).Scan(&ok); err != nil {
+			return false, err
+		}
+		*p.v9 = -1
+		if ok {
+			*p.v9 = 1
+		}
+	}
+	return *p.v9 > 0, nil
+}
 
 func (p pgPublisher) CreateWorkbook(ctx context.Context, title, mode string) (string, error) {
 	var id string
@@ -192,13 +215,21 @@ func columnsJSON(localID int64, cols []ColumnSpec) ([]byte, error) {
 	return json.Marshal(out)
 }
 
-func (p pgPublisher) CreateTable(ctx context.Context, id, schema, name string, localID int64, cols []ColumnSpec) (string, []RemoteColumn, error) {
+func (p pgPublisher) CreateTable(ctx context.Context, id, schema, name string, localID int64, sheet string, cols []ColumnSpec) (string, []RemoteColumn, error) {
 	js, err := columnsJSON(localID, cols)
 	if err != nil {
 		return "", nil, err
 	}
+	v9, err := p.has9(ctx)
+	if err != nil {
+		return "", nil, err
+	}
 	var tid string
-	if err := p.tx.QueryRow(ctx, `SELECT lattis.create_table($1::uuid, $2, $3::jsonb)::text`, id, name, string(js)).Scan(&tid); err != nil {
+	q, args := `SELECT lattis.create_table($1::uuid, $2, $3::jsonb)::text`, []any{id, name, string(js)}
+	if v9 && sheet != "" {
+		q, args = `SELECT lattis.create_table($1::uuid, $2, $3::jsonb, $4)::text`, append(args, sheet)
+	}
+	if err := p.tx.QueryRow(ctx, q, args...).Scan(&tid); err != nil {
 		return "", nil, err
 	}
 	rc, err := readColumns(ctx, p.tx, schema, tid)

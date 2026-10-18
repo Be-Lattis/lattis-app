@@ -35,9 +35,10 @@ type Request struct {
 
 // localTable est un tableau à publier, lu dans le classeur.
 type localTable struct {
-	id   int64
-	name string
-	cols []localColumn
+	id    int64
+	name  string
+	sheet int64
+	cols  []localColumn
 }
 
 type localColumn struct {
@@ -168,7 +169,7 @@ func publish(ctx context.Context, srv Server, db *store.Store, info *Info, ids [
 			schema = caps.Schema
 		}
 		for _, t := range tables {
-			tid, rcols, err := p.CreateTable(ctx, info.WorkbookID, schema, t.name, t.id, t.specs())
+			tid, rcols, err := p.CreateTable(ctx, info.WorkbookID, schema, t.name, t.id, SheetKey(t.sheet), t.specs())
 			if err != nil {
 				return fmt.Errorf("tableau « %s » : %w", t.name, err)
 			}
@@ -265,11 +266,24 @@ func spread(ctx context.Context, db *store.Store, ids []int64) error {
 	})
 }
 
+// SheetKey est l'identifiant d'une feuille pour le serveur
+// (lattis_meta_tables.sheet_id, set_level('sheet', …)) : son identifiant
+// local dans la mise en page publiée, en décimal, comme table_local_id.
+// Une feuille venue du serveur garde cet identifiant au chargement (seules
+// les feuilles ajoutées en local sont renumérotées) : la clé vaut pour tous
+// les postes.
+func SheetKey(sheet int64) string {
+	if sheet <= 0 {
+		return ""
+	}
+	return strconv.FormatInt(sheet, 10)
+}
+
 func readTables(ctx context.Context, q txOrDB, ids []int64) ([]localTable, error) {
 	var out []localTable
 	for _, id := range ids {
 		t := localTable{id: id}
-		if err := q.QueryRowContext(ctx, `SELECT name FROM _lattis_tables WHERE id = ?`, id).Scan(&t.name); err != nil {
+		if err := q.QueryRowContext(ctx, `SELECT name, coalesce(sheet, 0) FROM _lattis_tables WHERE id = ?`, id).Scan(&t.name, &t.sheet); err != nil {
 			return nil, fmt.Errorf("tableau %d : %w", id, err)
 		}
 		rs, err := q.QueryContext(ctx, `SELECT id, name, type FROM _lattis_columns WHERE tbl = ? AND coalesce(formula, '') = '' ORDER BY pos`, id)

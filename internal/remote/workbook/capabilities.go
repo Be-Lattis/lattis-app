@@ -18,8 +18,9 @@ var errUnchanged = errors.New("droits inchangés")
 
 // writeCapabilities note les droits (_lattis_capabilities) : tbl 0 pour le
 // classeur (niveau, rôles fournis, rôles personnalisés en JSON dans
-// filters), un niveau par tableau publié avec « filtered » (filters) et les
-// restrictions qui visent l'utilisateur (JSON).
+// filters), un niveau par tableau publié avec « filtered » (filters : la
+// lecture est filtrée, voir TableAccess.ReadsFiltered) et les restrictions
+// qui visent l'utilisateur (JSON).
 func writeCapabilities(ctx context.Context, tx *sql.Tx, info *Info, caps *Capabilities, local map[string]int64) error {
 	if _, err := tx.ExecContext(ctx, `DELETE FROM _lattis_capabilities`); err != nil {
 		return err
@@ -49,7 +50,7 @@ func writeCapabilities(ctx context.Context, tx *sql.Tx, info *Info, caps *Capabi
 			continue
 		}
 		var filt, rs any
-		if a.Filtered {
+		if a.ReadsFiltered(restr[rid]) {
 			filt = "filtered"
 		}
 		if r := restr[rid]; len(r) > 0 {
@@ -62,6 +63,26 @@ func writeCapabilities(ctx context.Context, tx *sql.Tx, info *Info, caps *Capabi
 		}
 	}
 	return nil
+}
+
+// ReadsFiltered dit si la lecture du tableau est filtrée pour
+// l'utilisateur (« Vue filtrée par vos droits ») : read_filtered du serveur
+// (migration 0009 : filtre de lecture ou restriction select/all qui le
+// vise, hors propriétaires et concepteurs) ; avant, filtered (filtre de
+// lecture ou d'écriture) ou une restriction select/all de mine.
+func (a TableAccess) ReadsFiltered(mine []Restriction) bool {
+	if a.ReadFiltered != nil {
+		return *a.ReadFiltered
+	}
+	if a.Filtered {
+		return true
+	}
+	for _, r := range mine {
+		if r.Command == "select" || r.Command == "all" {
+			return true
+		}
+	}
+	return false
 }
 
 // capabilitiesSnapshot rend le contenu de _lattis_capabilities (pour

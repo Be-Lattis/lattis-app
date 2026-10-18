@@ -110,13 +110,8 @@ func (l *Link) Reload(ctx context.Context) error {
 				restricted[id] = r
 			}
 		}
-		// Lecture filtrée : filtre d'un rôle, ou restriction de lecture.
+		// Lecture filtrée (writeCapabilities, TableAccess.ReadsFiltered).
 		filtered[id] = filt != ""
-		for _, r := range restricted[id] {
-			if r.Command == "select" || r.Command == "all" {
-				filtered[id] = true
-			}
-		}
 	}
 	rs.Close()
 	l.mu.Lock()

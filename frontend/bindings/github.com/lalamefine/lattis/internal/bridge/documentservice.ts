@@ -1412,7 +1412,8 @@ export function ShareGrantRole(roleID: string, userID: string, on: boolean): $Ca
 
 /**
  * ShareInvite invite une adresse au classeur ouvert avec des rôles fournis
- * (reader, participant, editor, designer, owner).
+ * (reader, participant, editor, designer, owner) et, si le serveur le
+ * permet (RightsView.CustomInvite), des rôles personnalisés par leur nom.
  */
 export function ShareInvite(email: string, roles: string[] | null): $CancellablePromise<$models.RightsView> {
     return $Call.ByID(3874681680, email, roles);
@@ -1442,6 +1443,14 @@ export function SharePreview(userID: string, table: number): $CancellablePromise
  */
 export function SharePublish(req: $models.ShareRequest): $CancellablePromise<workbook$0.State> {
     return $Call.ByID(2009562440, req);
+}
+
+/**
+ * ShareRecompile recompile les droits du classeur (lattis.compile_acl :
+ * propriétaires et concepteurs) : remet d'aplomb les écarts.
+ */
+export function ShareRecompile(): $CancellablePromise<$models.RightsView> {
+    return $Call.ByID(2945778325);
 }
 
 /**
@@ -1487,10 +1496,11 @@ export function ShareRights(remote: boolean): $CancellablePromise<$models.Rights
 
 /**
  * ShareSetLevels pose des niveaux (et filtres) dans une seule transaction.
- * Un niveau sur une feuille est posé sur chacun de ses tableaux publiés :
- * le serveur ne connaît pas encore les feuilles (sheet_id vide, voir
- * droits.md) ; l'interface envoie alors NodeKind « sheet » et l'identifiant
- * local de la feuille.
+ * L'interface envoie un niveau de feuille avec NodeKind « sheet » et
+ * l'identifiant local de la feuille : si le serveur connaît la feuille de
+ * chacun de ses tableaux publiés (migration 0009, SheetKey), le niveau est
+ * posé sur la feuille (set_level('sheet', …), hérité par ses tableaux) ;
+ * sinon sur chacun de ses tableaux publiés (tableaux publiés avant 0009).
  */
 export function ShareSetLevels(levels: workbook$0.Level[] | null): $CancellablePromise<$models.RightsView> {
     return $Call.ByID(1124447680, levels);

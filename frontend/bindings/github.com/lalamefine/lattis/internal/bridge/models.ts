@@ -378,6 +378,14 @@ export interface RightsTable {
     "remoteId": string;
     "sheet": number;
     "sheetName": string;
+
+    /**
+     * SheetKey : feuille du tableau pour le serveur (workbook.SheetKey ;
+     * vide : inconnue, publié avant la migration 0009, ou liste complète
+     * non lue). Égale à SheetKey(Sheet), un niveau posé sur la feuille vaut
+     * pour le tableau.
+     */
+    "sheetKey": string;
     "level": string;
     "filtered": boolean;
     "restrictions": workbook$0.Restriction[] | null;
@@ -410,6 +418,19 @@ export interface RightsView {
      * Drift : écarts détectés par le serveur (propriétaire ou concepteur).
      */
     "drift": workbook$0.Drift[] | null;
+
+    /**
+     * Members : membres du classeur et leurs rôles (lattis.workbook_members,
+     * propriétaire ou concepteur, en ligne ; nil : serveur sans la
+     * migration 0009, liste tirée de ACL).
+     */
+    "members": workbook$0.WorkbookMember[] | null;
+
+    /**
+     * CustomInvite : le serveur invite à un rôle personnalisé (migration
+     * 0009).
+     */
+    "customInvite": boolean;
 
     /**
      * Error : le serveur n'a pas répondu (droits locaux seulement).

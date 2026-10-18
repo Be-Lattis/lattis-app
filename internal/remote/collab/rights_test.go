@@ -136,7 +136,7 @@ func TestRightsReaderAndRevoked(t *testing.T) {
 
 func TestRightsCustomRoleFilterRestriction(t *testing.T) {
 	ctx := context.Background()
-	f, _, bob, id := setup(t)
+	f, alice, bob, id := setup(t)
 	as := f.As("alice")
 	rt := aclTableID(t, as, id)
 	nord, err := as.CreateRole(ctx, id, "Nord")
@@ -186,7 +186,25 @@ func TestRightsCustomRoleFilterRestriction(t *testing.T) {
 	if r := bob.d.Share.Restrictions(tableID(t, bob.d)); len(r) != 1 || r[0].Label != "Petites quantités" {
 		t.Fatalf("restrictions : %+v", r)
 	}
+	// « Tous les rôles » ne vise pas la propriétaire (read_filtered).
+	refresh(t, alice)
+	if _, filt := alice.access(); filt {
+		t.Fatal("restriction pour tous : vue filtrée pour la propriétaire")
+	}
 	must(t, as.DropRestriction(ctx, rid))
+	// Filtre d'écriture seul : la lecture n'est pas filtrée.
+	must(t, as.SetLevels(ctx, []workbook.Level{{RoleID: nord, NodeKind: workbook.NodeTable, NodeID: rt, Level: "editor", WriteFilter: `"Quantité" < 100`}}))
+	refresh(t, bob)
+	if _, filt := bob.access(); filt {
+		t.Fatal("filtre d'écriture seul : vue filtrée")
+	}
+	// Serveur sans la migration 0009 : « filtered » (lecture ou écriture).
+	f.Before09 = true
+	refresh(t, bob)
+	if _, filt := bob.access(); !filt {
+		t.Fatal("serveur sans 0009 : filtre non vu")
+	}
+	f.Before09 = false
 	must(t, as.DropRole(ctx, nord))
 	refresh(t, bob)
 	if lv, _ := bob.access(); lv != workbook.LevelNone {
@@ -195,6 +213,39 @@ func TestRightsCustomRoleFilterRestriction(t *testing.T) {
 	// Bob ne gère pas les droits.
 	if _, err := f.As("bob").ACL(ctx, id); !workbook.Privilege(err) {
 		t.Fatalf("ACL par Bob : %v", err)
+	}
+}
+
+// Niveau posé sur une feuille (migration 0009 : create_table reçoit la
+// feuille) : hérité par ses tableaux, sauf niveau propre du tableau.
+func TestRightsSheetLevel(t *testing.T) {
+	ctx := context.Background()
+	f, _, bob, id := setup(t)
+	as := f.As("alice")
+	rt := aclTableID(t, as, id)
+	acl, err := as.ACL(ctx, id)
+	must(t, err)
+	if acl.Tables[0].SheetID != "1" {
+		t.Fatalf("feuille du tableau : %+v", acl.Tables)
+	}
+	nord, err := as.CreateRole(ctx, id, "Nord")
+	must(t, err)
+	must(t, as.RevokeRole(ctx, roleID(t, as, id, "editor"), "bob"))
+	must(t, as.GrantRole(ctx, nord, "bob"))
+	must(t, as.SetLevels(ctx, []workbook.Level{{RoleID: nord, NodeKind: workbook.NodeSheet, NodeID: "1", Level: "reader"}}))
+	refresh(t, bob)
+	if lv, _ := bob.access(); lv != workbook.LevelReader {
+		t.Fatalf("niveau de feuille : %q", lv)
+	}
+	must(t, as.SetLevels(ctx, []workbook.Level{{RoleID: nord, NodeKind: workbook.NodeTable, NodeID: rt, Level: "editor"}}))
+	refresh(t, bob)
+	if lv, _ := bob.access(); lv != workbook.LevelEditor {
+		t.Fatalf("niveau propre du tableau : %q", lv)
+	}
+	caps, err := f.As("bob").Capabilities(ctx, id)
+	must(t, err)
+	if a := caps.Tables[rt]; a.SheetID != "1" || a.ReadFiltered == nil || *a.ReadFiltered {
+		t.Fatalf("capacités : %+v", a)
 	}
 }
 
@@ -211,8 +262,36 @@ func TestRightsInvitations(t *testing.T) {
 	}
 	must(t, as.RevokeInvitation(ctx, inv))
 	if _, err := as.Invite(ctx, id, "dan@example.test", []string{"Nord"}); err == nil {
-		t.Fatal("rôle personnalisé accepté à l'invitation")
+		t.Fatal("rôle personnalisé inexistant accepté à l'invitation")
 	}
+	// Rôle personnalisé par son nom (migration 0009) : adresse inconnue,
+	// invitation et compte en attente (grant_role vaut ensuite) ; adresse
+	// connue, rôle donné tout de suite.
+	nord, err := as.CreateRole(ctx, id, "Nord")
+	must(t, err)
+	_, err = as.Invite(ctx, id, "dan@example.test", []string{"nord"})
+	must(t, err)
+	must(t, as.GrantRole(ctx, nord, "dan"))
+	f.As("frank")
+	_, err = as.Invite(ctx, id, "frank@example.test", []string{"NORD", "reader"})
+	must(t, err)
+	members, err := as.Members(ctx, id)
+	must(t, err)
+	i := slices.IndexFunc(members, func(m workbook.WorkbookMember) bool { return m.UserID == "frank" })
+	if i < 0 || !slices.Equal(members[i].Roles, []string{"Nord", "reader"}) {
+		t.Fatalf("membres : %+v", members)
+	}
+	if _, err := f.As("bob").Members(ctx, id); !workbook.Privilege(err) {
+		t.Fatalf("membres lus par un éditeur : %v", err)
+	}
+	f.Before09 = true
+	if _, err := as.Invite(ctx, id, "gina@example.test", []string{"Nord"}); err == nil {
+		t.Fatal("serveur sans 0009 : rôle personnalisé accepté")
+	}
+	if _, err := as.Members(ctx, id); !errors.Is(err, workbook.ErrUnsupported) {
+		t.Fatalf("serveur sans 0009 : membres %v", err)
+	}
+	f.Before09 = false
 	// Utilisateur déjà connu : rôle donné tout de suite.
 	f.As("erin")
 	_, err = as.Invite(ctx, id, "erin@example.test", []string{"reader"})
@@ -286,6 +365,14 @@ func TestRightsDriftAndPreview(t *testing.T) {
 	}
 	if _, err := f.As("bob").Drift(ctx, id); err == nil {
 		t.Fatal("écarts lus par un éditeur")
+	}
+	// Recompiler (compile_acl) : empreinte reprise, plus d'écart.
+	must(t, as.Recompile(ctx, id))
+	if d, _ := as.Drift(ctx, id); len(d) != 0 {
+		t.Fatalf("écarts après recompilation : %+v", d)
+	}
+	if err := f.As("bob").Recompile(ctx, id); !workbook.Privilege(err) {
+		t.Fatalf("recompilation par un éditeur : %v", err)
 	}
 	p := as.(workbook.Previewer)
 	res, err := p.Preview(ctx, id, "bob", aclTableID(t, as, id))

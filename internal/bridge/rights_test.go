@@ -63,13 +63,27 @@ func TestShareRights(t *testing.T) {
 			nord = r.ID
 		}
 	}
-	// Niveau d'une feuille : posé sur chacun de ses tableaux.
+	// Niveau d'une feuille : la feuille est connue du serveur (create_table
+	// avec sheet_id), le niveau y est posé.
+	if v.Tables[0].SheetKey != "1" {
+		t.Fatalf("feuille du serveur : %+v", v.Tables[0])
+	}
 	v, err = a.ShareSetLevels(ctx, []workbook.Level{{RoleID: nord, NodeKind: workbook.NodeSheet, NodeID: "1", Level: "reader"}})
 	mustShare(t, err)
 	for _, r := range v.ACL.Roles {
-		if r.ID == nord && !slices.ContainsFunc(r.Grants, func(g workbook.Grant) bool { return g.NodeKind == "table" && g.NodeID == v.Tables[0].RemoteID && g.Level == "reader" }) {
+		if r.ID == nord && !slices.ContainsFunc(r.Grants, func(g workbook.Grant) bool { return g.NodeKind == "sheet" && g.NodeID == "1" && g.Level == "reader" }) {
 			t.Fatalf("niveaux de Nord : %+v", r.Grants)
 		}
+	}
+	// Invitation à un rôle personnalisé (par son nom, sans casse) ; membres
+	// lus par workbook_members.
+	v, err = a.ShareInvite(ctx, "carol@example.test", []string{"nord"})
+	mustShare(t, err)
+	if !v.CustomInvite || len(v.ACL.Invitations) != 1 || !slices.Equal(v.ACL.Invitations[0].Roles, []string{"nord"}) {
+		t.Fatalf("invitation à Nord : %+v %+v", v.CustomInvite, v.ACL.Invitations)
+	}
+	if len(v.Members) != 2 || v.Members[1].UserID != "bob" || !slices.Equal(v.Members[1].Roles, []string{"participant"}) {
+		t.Fatalf("membres : %+v", v.Members)
 	}
 	if _, err := a.ShareSetLevels(ctx, []workbook.Level{{RoleID: nord, NodeKind: workbook.NodeTable, NodeID: v.Tables[0].RemoteID, Level: "reader", ReadFilter: "1; DROP TABLE x"}}); err == nil || strings.Contains(err.Error(), "SQLSTATE") {
 		t.Fatalf("filtre refusé : %v", err)
@@ -83,6 +97,13 @@ func TestShareRights(t *testing.T) {
 	mustShare(t, err)
 	if !slices.Equal(p.Columns, []string{"Produit", "Prix", "Auteur"}) || len(p.Rows) != 2 || p.Rows[0][0] != "Café" || p.Rows[0][2] != "alice" {
 		t.Fatalf("aperçu : %+v", p)
+	}
+	// Écarts : « Recompiler les droits » appelle compile_acl.
+	fake.SetDrift(info.WorkbookID, []workbook.Drift{{TableID: v.Tables[0].RemoteID, Name: "Tableau1"}})
+	v, err = a.ShareRecompile(ctx)
+	mustShare(t, err)
+	if fake.Calls["compile_acl"] != 1 || len(v.Drift) != 0 {
+		t.Fatalf("recompilation : %d appel(s), écarts %+v", fake.Calls["compile_acl"], v.Drift)
 	}
 
 	// Bob (participant) : lignes d'Alice verrouillées, refus clair.
@@ -130,5 +151,25 @@ func TestShareRights(t *testing.T) {
 	mustShare(t, err)
 	if len(w.Locked) != 0 {
 		t.Fatalf("lignes verrouillées pour un éditeur : %v", w.Locked)
+	}
+}
+
+// TestSheetLevels : niveau de feuille posé sur la feuille quand le serveur
+// la connaît pour tous ses tableaux, sinon sur chacun d'eux (tableaux
+// publiés avant la migration 0009).
+func TestSheetLevels(t *testing.T) {
+	sheet := []workbook.Level{{RoleID: "r", NodeKind: workbook.NodeSheet, NodeID: "2", Level: "editor"}}
+	tables := []RightsTable{{Sheet: 2, RemoteID: "a", SheetKey: "2"}, {Sheet: 2, RemoteID: "b", SheetKey: "2"}, {Sheet: 3, RemoteID: "c", SheetKey: "3"}}
+	out, err := sheetLevels(sheet, tables)
+	if err != nil || len(out) != 1 || out[0].NodeKind != "sheet" || out[0].NodeID != "2" {
+		t.Fatalf("feuille connue : %+v %v", out, err)
+	}
+	tables[1].SheetKey = ""
+	out, err = sheetLevels(sheet, tables)
+	if err != nil || len(out) != 2 || out[0].NodeKind != "table" || out[0].NodeID != "a" || out[1].NodeID != "b" || out[1].Level != "editor" {
+		t.Fatalf("feuille inconnue : %+v %v", out, err)
+	}
+	if _, err := sheetLevels([]workbook.Level{{RoleID: "r", NodeKind: workbook.NodeSheet, NodeID: "9", Level: "editor"}}, tables); err == nil {
+		t.Fatal("feuille sans tableau publié")
 	}
 }

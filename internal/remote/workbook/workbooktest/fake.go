@@ -60,6 +60,12 @@ type Fake struct {
 	// Legacy imite un serveur sans la migration 0008 : changes_since sans
 	// skip (ses propres écritures reviennent), pas de since_covered.
 	Legacy bool
+	// Before09 imite un serveur sans la migration 0009 : create_table sans
+	// feuille, invite sans rôles personnalisés, pas de workbook_members,
+	// my_capabilities sans sheet_id, read_filtered ni write_filtered.
+	Before09 bool
+	// pending : adresses invitées inconnues, comptes en attente (0009).
+	pending map[string]bool
 	// purged : plus grand xid des pierres tombales purgées (sync_horizon).
 	purged int64
 	// checks : filtres d'écriture (WITH CHECK) imposés par Forbid.
@@ -99,6 +105,7 @@ type table struct {
 	id      string
 	name    string
 	localID int64
+	sheet   string // sheet_id (0009)
 	cols    []workbook.RemoteColumn
 	rows    []row
 	tombs   []tomb
@@ -332,7 +339,12 @@ func (s *session) caps(id string) (workbook.Capabilities, error) {
 		CustomRoles: s.customRoles(b), Restrictions: s.myRestrictions(b)}
 	for _, t := range b.schemas[b.schema].tables {
 		lv, filt := s.levelOf(b, t)
-		c.Tables[t.id] = workbook.TableAccess{Name: t.name, Level: lv, Filtered: filt}
+		a := workbook.TableAccess{Name: t.name, Level: lv, Filtered: filt}
+		if !s.f.Before09 {
+			rf, wf := s.filters(b, t)
+			a.SheetID, a.ReadFiltered, a.WriteFiltered = t.sheet, &rf, &wf
+		}
+		c.Tables[t.id] = a
 	}
 	return c, nil
 }
@@ -534,7 +546,7 @@ func checkName(name, what string) (string, error) {
 
 var types = map[string]bool{"text": true, "integer": true, "decimal": true, "date": true, "datetime": true, "boolean": true}
 
-func (p *publisher) CreateTable(ctx context.Context, id, schemaName, name string, localID int64, cols []workbook.ColumnSpec) (string, []workbook.RemoteColumn, error) {
+func (p *publisher) CreateTable(ctx context.Context, id, schemaName, name string, localID int64, sheet string, cols []workbook.ColumnSpec) (string, []workbook.RemoteColumn, error) {
 	if err := p.s.f.call("create_table"); err != nil {
 		return "", nil, err
 	}
@@ -562,6 +574,9 @@ func (p *publisher) CreateTable(ctx context.Context, id, schemaName, name string
 		return "", nil, errors.New("colonnes : liste non vide attendue")
 	}
 	t := &table{id: uuid.NewString(), name: name, localID: localID}
+	if !p.s.f.Before09 {
+		t.sheet = sheet
+	}
 	seen := map[string]bool{}
 	for i, c := range cols {
 		n, err := checkName(c.Name, "colonne")

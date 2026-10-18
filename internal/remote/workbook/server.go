@@ -61,8 +61,17 @@ type TableAccess struct {
 	Name  string `json:"name"`
 	Level string `json:"level"` // none, reader, participant, editor
 	// Filtered : un filtre de lecture ou d'écriture d'un de ses rôles
-	// s'applique au tableau (« Vue filtrée par vos droits »).
+	// s'applique au tableau (gardé par le serveur pour compatibilité).
 	Filtered bool `json:"filtered"`
+	// SheetID : feuille du tableau pour le serveur (SheetKey de la feuille
+	// locale à la publication ; vide : inconnue). Migration 0009.
+	SheetID string `json:"sheet_id"`
+	// ReadFiltered : un filtre de lecture ou une restriction select/all me
+	// vise (« Vue filtrée par vos droits ») ; WriteFiltered : un filtre
+	// d'écriture ou une restriction insert/update/delete/all. nil : serveur
+	// sans la migration 0009 (voir ReadsFiltered).
+	ReadFiltered  *bool `json:"read_filtered"`
+	WriteFiltered *bool `json:"write_filtered"`
 }
 
 // Restriction est une restriction qui vise l'utilisateur
@@ -260,8 +269,10 @@ type Publisher interface {
 	Capabilities(ctx context.Context, id string) (Capabilities, error)
 	// CreateTable crée un tableau dans le schéma où l'on publie (schema :
 	// le brouillon ou la version de travail) et rend son identifiant et ses
-	// colonnes (identifiants du serveur).
-	CreateTable(ctx context.Context, id, schema, name string, localID int64, cols []ColumnSpec) (string, []RemoteColumn, error)
+	// colonnes (identifiants du serveur). sheet : feuille du tableau
+	// (SheetKey), notée par un serveur qui a la migration 0009 (niveaux par
+	// feuille), ignorée par les autres.
+	CreateTable(ctx context.Context, id, schema, name string, localID int64, sheet string, cols []ColumnSpec) (string, []RemoteColumn, error)
 	// Copy copie des lignes dans "<schéma>"."<tableau>" (COPY) ; cols
 	// commence par lattis_id et lattis_pos.
 	Copy(ctx context.Context, schema, table string, cols []string, rows CopySource) (int64, error)

@@ -25,7 +25,9 @@
 		levelLabel,
 		members,
 		ownerCount,
+		parentLevel,
 		roleLabel,
+		serverSheet,
 		sheetLevel,
 		tableLevel,
 		tree,
@@ -48,7 +50,7 @@
 
 	const acl = $derived(view?.acl ?? null);
 	const manage = $derived(!!view?.canManage);
-	const people = $derived(members(acl));
+	const people = $derived(members(acl, view?.members));
 	const roles = $derived(acl?.roles ?? []);
 	const sheets = $derived(tree(view?.tables));
 	const wbId = $derived(acl?.workbook.id ?? '');
@@ -120,7 +122,7 @@
 		const l: LevelChange = { roleId: role.id, nodeKind: kind, nodeId, level, readFilter: '', writeFilter: '' };
 		if (kind === 'table') {
 			// Les filtres du tableau suivent son niveau propre.
-			const cur = tableLevel(role, wbId, nodeId);
+			const cur = tableLevel(role, wbId, nodeId, tables.find((t) => t.remoteId === nodeId)?.sheetKey);
 			if (level) {
 				l.readFilter = cur.read ?? '';
 				l.writeFilter = cur.write ?? '';
@@ -131,14 +133,14 @@
 
 	function openFilters(t: RightsTable) {
 		if (!role) return;
-		const cur = tableLevel(role, wbId, t.remoteId);
+		const cur = tableLevel(role, wbId, t.remoteId, t.sheetKey);
 		editing = { table: t, read: cur.read ?? '', write: cur.write ?? '', readErr: '', writeErr: '' };
 	}
 
 	function saveFilters() {
 		const e = editing;
 		if (!e || !role || e.read === null || e.write === null) return;
-		const cur = tableLevel(role, wbId, e.table.remoteId);
+		const cur = tableLevel(role, wbId, e.table.remoteId, e.table.sheetKey);
 		const level = cur.own ?? cur.effective;
 		run(() => DocumentService.ShareSetLevels([{ roleId: role.id, nodeKind: 'table', nodeId: e.table.remoteId, level, readFilter: e.read ?? '', writeFilter: e.write ?? '' }]), 'Filtres enregistrés').then(() => {
 			if (!error) editing = null;
@@ -192,11 +194,9 @@
 	const cell = (v: unknown) => (v === null || v === undefined ? '' : String(v));
 
 	// --- Écarts ------------------------------------------------------------------------------
-	/** Recompile les droits (un niveau reposé tel quel) : remet d'aplomb les écarts. */
+	/** Recompile les droits (lattis.compile_acl) : remet d'aplomb les écarts. */
 	function recompile() {
-		const r = roles.find((x) => !fullRights(x));
-		if (!r) return;
-		run(() => DocumentService.ShareSetLevels([{ roleId: r.id, nodeKind: 'workbook', nodeId: wbId, level: workbookLevel(r, wbId), readFilter: '', writeFilter: '' }]), 'Droits recompilés').then(load);
+		run(() => DocumentService.ShareRecompile(), 'Droits recompilés');
 	}
 
 	const TABS: { id: Tab; label: string; manage: boolean }[] = [
@@ -249,9 +249,18 @@
 					{#each INVITE_ROLES.filter((r) => view?.collaborative || r === 'reader' || r === 'owner' || r === 'designer') as r (r)}
 						<label><input type="checkbox" bind:group={inviteRoles} value={r} disabled={busy} />{BUILTIN_LABELS[r]}</label>
 					{/each}
+					{#if view.customInvite}
+						{#each roles.filter((r) => !r.builtin) as r (r.id)}
+							<label title="Rôle personnalisé"><input type="checkbox" bind:group={inviteRoles} value={r.name} disabled={busy} />{r.name}</label>
+						{/each}
+					{/if}
 					<button class="primary" type="submit" disabled={busy || !inviteEmail.includes('@') || !inviteRoles.length}>Inviter</button>
 				</form>
-				<p class="muted">Une personne déjà connue du serveur reçoit ses rôles tout de suite ; sinon à sa première connexion. Les rôles personnalisés se donnent ensuite, ci-dessous.</p>
+				<p class="muted">
+					Une personne déjà connue du serveur reçoit ses rôles tout de suite ; sinon à sa première connexion.{view.customInvite
+						? ''
+						: ' Les rôles personnalisés se donnent ensuite, ci-dessous (ce serveur ne les propose pas à l’invitation).'}
+				</p>
 				<table class="members">
 					<thead>
 						<tr>
@@ -374,12 +383,12 @@
 											<td></td>
 										</tr>
 										{#each s.tables as t (t.table)}
-											{@const tl = tableLevel(role, wbId, t.remoteId)}
+											{@const tl = tableLevel(role, wbId, t.remoteId, t.sheetKey)}
 											<tr class="table">
 												<td>· {t.name}</td>
 												<td>
 													<select aria-label="Niveau sur le tableau {t.name}" value={tl.own ?? ''} disabled={busy} onchange={(e) => setLevel('table', t.remoteId, (e.currentTarget as HTMLSelectElement).value)}>
-														<option value="">hérité ({levelLabel(workbookLevel(role, wbId))})</option>
+														<option value="">hérité ({levelLabel(parentLevel(role, wbId, t.sheetKey))})</option>
 														{#each LEVELS as l (l)}<option value={l}>{levelLabel(l)}</option>{/each}
 													</select>
 												</td>
@@ -425,7 +434,9 @@
 								</tbody>
 							</table>
 							<p class="muted">
-								Un nœud sans niveau propre hérite de son parent. Le niveau d’une feuille est posé sur chacun de ses tableaux (le serveur ne connaît pas encore les feuilles).
+								Un nœud sans niveau propre hérite de son parent.{sheets.some((s) => !serverSheet(s))
+									? ' Feuille marquée « mixte » ou publiée avant que le serveur connaisse les feuilles : son niveau est posé sur chacun de ses tableaux.'
+									: ''}
 								Participant : tout lire, ajouter des lignes, modifier et supprimer les siennes.
 							</p>
 						{/if}
@@ -479,8 +490,8 @@
 					</div>
 				{/if}
 			{:else if tab === 'preview'}
-				{#if !manage}
-					<p class="muted">La liste des membres est réservée aux propriétaires du classeur : demandez-leur « Voir en tant que… ».</p>
+				{#if !manage && !view.members}
+					<p class="muted">Ce serveur réserve la liste des membres aux propriétaires du classeur : demandez-leur « Voir en tant que… ».</p>
 				{:else}
 					<div class="grid">
 						<span>Membre</span>
@@ -522,9 +533,9 @@
 							<li><strong>{d.name}</strong>{#if d.foreign_policies?.length} · règles ajoutées : <code>{d.foreign_policies.join(', ')}</code>{/if}</li>
 						{/each}
 					</ul>
-					{#if manage}
+					{#if manage || view.canDesign}
 						<div class="actions"><button class="primary" disabled={busy} onclick={recompile}>Recompiler les droits</button></div>
-						<p class="muted">Recompiler remet les règles générées par Lattis ; les règles ajoutées à la main restent (à retirer dans PostgreSQL).</p>
+						<p class="muted">Recompiler remet les règles générées par Lattis ; les règles ajoutées à la main restent (à retirer dans PostgreSQL) et ne sont plus signalées ici.</p>
 					{/if}
 				{/if}
 			{/if}
