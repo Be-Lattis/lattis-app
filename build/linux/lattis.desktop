@@ -1,10 +1,12 @@
 [Desktop Entry]
 Type=Application
-Name=lattis
-Exec=lattis
+Name=Lattis
+Exec=lattis %f
 Icon=lattis
-Categories=Development;
+Categories=Office;Spreadsheet;
+Comment=Tableur relationnel local-first
 Terminal=false
-Keywords=wails
+Keywords=tableur;spreadsheet;sql;
 Version=1.0
 StartupNotify=false
+MimeType=application/x-lattis;

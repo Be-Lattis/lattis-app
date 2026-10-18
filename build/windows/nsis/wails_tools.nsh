@@ -228,12 +228,15 @@ RequestExecutionLevel "${REQUEST_EXECUTION_LEVEL}"
 
 !macro wails.associateFiles
     ; Create file associations
-    
+    ; Classeurs Lattis : icone de l'executable, ouverture par lattis.exe "chemin".
+    !insertmacro APP_ASSOCIATE "lattis" "Lattis.Classeur" "Classeur Lattis" "$INSTDIR\${PRODUCT_EXECUTABLE},0" "Ouvrir avec ${INFO_PRODUCTNAME}" "$\"$INSTDIR\${PRODUCT_EXECUTABLE}$\" $\"%1$\""
+    System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
 !macroend
 
 !macro wails.unassociateFiles
     ; Delete app associations
-    
+    !insertmacro APP_UNASSOCIATE "lattis" "Lattis.Classeur"
+    System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
 !macroend
 
 !macro CUSTOM_PROTOCOL_ASSOCIATE PROTOCOL DESCRIPTION ICON COMMAND

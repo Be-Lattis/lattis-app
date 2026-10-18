@@ -26,5 +26,49 @@
 		<string>true</string>
 		<key>NSHumanReadableCopyright</key>
 		<string>© 2026 Lattis</string>
+		<!-- Classeurs .lattis : type déclaré par l'application, ouvert par
+		     elle (événement « ouvrir le fichier », main.go). -->
+		<key>CFBundleDocumentTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeName</key>
+				<string>Classeur Lattis</string>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>LSHandlerRank</key>
+				<string>Owner</string>
+				<key>CFBundleTypeIconFile</key>
+				<string>icons</string>
+				<key>LSItemContentTypes</key>
+				<array>
+					<string>fr.triboulin.lattis.workbook</string>
+				</array>
+			</dict>
+		</array>
+		<key>UTExportedTypeDeclarations</key>
+		<array>
+			<dict>
+				<key>UTTypeIdentifier</key>
+				<string>fr.triboulin.lattis.workbook</string>
+				<key>UTTypeDescription</key>
+				<string>Classeur Lattis</string>
+				<key>UTTypeIconFile</key>
+				<string>icons</string>
+				<key>UTTypeConformsTo</key>
+				<array>
+					<string>public.data</string>
+					<string>public.content</string>
+				</array>
+				<key>UTTypeTagSpecification</key>
+				<dict>
+					<key>public.filename-extension</key>
+					<array>
+						<string>lattis</string>
+					</array>
+					<key>public.mime-type</key>
+					<string>application/x-lattis</string>
+				</dict>
+			</dict>
+		</array>
 	</dict>
 </plist>

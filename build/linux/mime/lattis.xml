@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Type MIME des classeurs Lattis (archive ZIP d'extension .lattis), installé
+     dans /usr/share/mime/packages par les paquets deb et rpm. -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-lattis">
+    <comment>Lattis workbook</comment>
+    <comment xml:lang="fr">Classeur Lattis</comment>
+    <sub-class-of type="application/zip"/>
+    <generic-icon name="x-office-spreadsheet"/>
+    <glob pattern="*.lattis" weight="60"/>
+  </mime-type>
+</mime-info>

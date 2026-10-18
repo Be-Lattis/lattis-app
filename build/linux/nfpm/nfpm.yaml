@@ -12,17 +12,34 @@ priority: "extra"
 maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
 description: "Tableur relationnel local-first"
 vendor: "Lattis"
-homepage: "https://wails.io"
+homepage: "https://github.com/lalamefine/lattis"
 license: "MIT"
 release: "1"
 
 contents:
+  # Paquet de distribution : /usr/bin (et non /usr/local, réservé à l'administrateur).
   - src: "./bin/lattis"
-    dst: "/usr/local/bin/lattis"
+    dst: "/usr/bin/lattis"
   - src: "./build/appicon.png"
     dst: "/usr/share/icons/hicolor/128x128/apps/lattis.png"
+  - src: "./build/appicon.png"
+    dst: "/usr/share/pixmaps/lattis.png"
   - src: "./build/linux/lattis.desktop"
     dst: "/usr/share/applications/lattis.desktop"
+  # Type MIME application/x-lattis (*.lattis), associé à Lattis par le .desktop.
+  - src: "./build/linux/mime/lattis.xml"
+    dst: "/usr/share/mime/packages/lattis.xml"
+
+# Signature des paquets par nfpm, quand NFPM_SIGNING_KEY_FILE désigne une clé
+# GPG privée en armure ASCII (phrase de passe : NFPM_PASSPHRASE). Vide : non
+# signés. Voir docs/release/signature.md.
+deb:
+  signature:
+    key_file: "${NFPM_SIGNING_KEY_FILE}"
+    type: origin
+rpm:
+  signature:
+    key_file: "${NFPM_SIGNING_KEY_FILE}"
 
 # Default dependencies for the GTK4 + WebKitGTK 6.0 stack (Ubuntu 24.04+ / Debian 13+)
 depends:
@@ -46,9 +63,9 @@ overrides:
 # scripts section to ensure desktop database is updated after install
 scripts:
   postinstall: "./build/linux/nfpm/scripts/postinstall.sh"
-  # You can also add preremove, postremove if needed
+  # Après désinstallation : mêmes mises à jour (type MIME et .desktop retirés).
+  postremove: "./build/linux/nfpm/scripts/postremove.sh"
   # preremove: "./build/linux/nfpm/scripts/preremove.sh"
-  # postremove: "./build/linux/nfpm/scripts/postremove.sh"
 
 # If you build your app with -tags gtk3 (legacy WebKit2GTK 4.1 stack — supported through v3.0.x, removed in v3.1),
 # replace the depends/overrides above with these:
