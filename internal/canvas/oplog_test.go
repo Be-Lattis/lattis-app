@@ -23,7 +23,7 @@ func TestMesureOplog(t *testing.T) {
 	}
 	store.SetSQLLog(false)
 	ctx := context.Background()
-	block := make([][]string, 5000)
+	block := make([][]string, 500)
 	for i := range block {
 		block[i] = []string{"Collé " + strconv.Itoa(i), "Brest", strconv.Itoa(i%997) + ",5"}
 	}

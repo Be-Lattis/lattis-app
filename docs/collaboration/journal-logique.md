@@ -131,7 +131,7 @@ Toutes passent par `Model.Do` ou `Editor` (`Bus.Append`), donc par le relevé. C
 
 ## 6. Performances
 
-Sur un tableau **non publié**, le Recorder ne change rien de mesurable (une requête par transaction). Sur un tableau **publié**, le coût est proportionnel au nombre de lignes écrites : relecture des lignes touchées dans les deux états, puis encodage des opérations (environ 60 octets par opération dans la file). Mesures (100 000 lignes, poste de développement) :
+Sur un tableau **non publié**, le Recorder ne change rien de mesurable (une requête par transaction). Sur un tableau **publié**, le coût est proportionnel au nombre de lignes écrites : relecture des lignes touchées dans les deux états, puis encodage des opérations (environ 60 octets par opération dans la file). Mesures (100 000 lignes, poste de développement, tableau créé par collage ; le test charge désormais le tableau par import pour aller jusqu'à 1 M de lignes, le collage de 1 M de lignes en un tableau épuisant déjà la mémoire de SQLite sans journal logique) :
 
 | Opération | Sans Recorder | Non publié | Publié |
 |---|---|---|---|
@@ -149,5 +149,5 @@ Un grand collage dans un tableau existant est déjà refusé au-delà de quelque
 - **Récepteur** (§6.3) : appliquer les changements reçus **hors journal** (`store.Write` direct) dans `t_<id>`, `_pos`, `_lattis_row_ids` (avec `lattis_author`) ; les déclencheurs notent ces lignes mais le Recorder les oublie au début de la transaction suivante du bus. Recalcul par `Store.TakeTouched` (les noms `t_<id>` des requêtes du récepteur suffisent).
 - **Publication** (§5.3) : remplir `_lattis_remote_tables` (nom, `table_id`, colonnes, `since`) ; répartir les clés `_pos` (`order.Spread`) avant publication ; `oplog.Publish` pose déjà les identifiants.
 - **Structure et mise en page** (§6.4, étape 7) : appeler `Tx.Record` avec des `meta` dans les opérations de mise en page ; faire passer les opérations de structure par le serveur avant l'application locale. Une requête actualisée (Power Query) remplace son tableau par un nouveau : à republier ou à réécrire en place.
-- **Sécurité (C2)** : l'autorisateur SQLite en préparation doit laisser passer les écritures faites **par un déclencheur** (4ᵉ argument non vide) dans la table temporaire `_lattis_cap`, sinon le SQL des utilisateurs sur un tableau publié échouerait (même remarque que pour les tables `_slt_*` existantes de `ExecSQL`).
+- **Sécurité (C2)** : l'autorisateur SQLite (`internal/store/authorizer.go`) laisse passer les instructions faites par un déclencheur (`inner`) : les écritures des déclencheurs de relevé dans la table temporaire `_lattis_cap` passent pendant le SQL des utilisateurs (vérifié par les étapes SQL et script du test structurel). À garder si l'autorisateur se resserre.
 - **Types figés** (§9) : refuser l'élargissement de type sur un tableau publié (aujourd'hui une saisie hors type produit un `column.retype`).
