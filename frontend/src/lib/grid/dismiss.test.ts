@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { dismiss, dismissPanel, distance } from './dismiss';
+import { dismiss, dismissPanel, distance, inside } from './dismiss';
 
 describe('distance au menu', () => {
 	const r = { left: 10, top: 10, right: 110, bottom: 60 };
@@ -93,5 +93,15 @@ describe('fermeture des panneaux ancrés (filtre, règles, note…)', () => {
 		fire('mousemove', { clientX: 900, clientY: 900, target: {} });
 		fire('blur');
 		expect(close).not.toHaveBeenCalled();
+	});
+});
+
+describe('menus dans la fenêtre', () => {
+	it('remonte et décale à gauche un menu qui déborde', () => {
+		expect(inside({ left: 100, top: 700, right: 300, bottom: 900 }, 1000, 800)).toEqual({ dx: 0, dy: 104 });
+		expect(inside({ left: 900, top: 10, right: 1100, bottom: 200 }, 1000, 800)).toEqual({ dx: 104, dy: 0 });
+		// Jamais au-delà du haut ou de la gauche.
+		expect(inside({ left: 2, top: 20, right: 1200, bottom: 900 }, 1000, 800)).toEqual({ dx: 0, dy: 16 });
+		expect(inside({ left: 10, top: 10, right: 200, bottom: 200 }, 1000, 800)).toEqual({ dx: 0, dy: 0 });
 	});
 });
