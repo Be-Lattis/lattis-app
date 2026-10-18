@@ -12,7 +12,9 @@
   Sans certificat, le script n'échoue pas : il signale que les fichiers
   restent non signés (sauf -Require).
 
-  Azure Trusted Signing passe par l'action azure/trusted-signing-action dans
+  SSL.com eSigner passe par l'empreinte : eSigner CKA charge le certificat
+  cloud dans le magasin de l'utilisateur (release.yml). Azure Trusted Signing
+  passe par l'action azure/trusted-signing-action dans
   .github/workflows/release.yml (voir docs/release/signature.md).
 
 .EXAMPLE

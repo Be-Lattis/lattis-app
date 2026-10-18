@@ -26,6 +26,10 @@ on:
         description: Version des paquets (ex. v0.2.0-test)
         required: true
         default: v0.0.0-test
+      sign:
+        description: Signer les paquets Windows (avec eSigner, chaque essai consomme 4 signatures du forfait)
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -43,7 +47,14 @@ jobs:
       WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
       WINDOWS_TIMESTAMP_URL: ${{ vars.WINDOWS_TIMESTAMP_URL }}
       WINDOWS_PUBLISHER_DISPLAY_NAME: ${{ vars.WINDOWS_PUBLISHER_DISPLAY_NAME }}
-      # Azure Trusted Signing (à la place du .pfx).
+      # SSL.com eSigner (certificat OV/IV dans le HSM cloud de SSL.com).
+      ESIGNER_USERNAME: ${{ secrets.ESIGNER_USERNAME }}
+      ESIGNER_PASSWORD: ${{ secrets.ESIGNER_PASSWORD }}
+      ESIGNER_TOTP_SECRET: ${{ secrets.ESIGNER_TOTP_SECRET }}
+      ESIGNER_MODE: ${{ vars.ESIGNER_MODE }}
+      ESIGNER_CKA_VERSION: '1.1.2'
+      SIGN_INPUT: ${{ github.event_name == 'push' || inputs.sign }}
+      # Azure Trusted Signing (à la place du .pfx ou d'eSigner).
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
@@ -73,26 +84,66 @@ jobs:
         shell: bash
         run: build/release/set-version.sh "$VERSION"
 
+      # Ordre de préférence : .pfx, SSL.com eSigner, Azure Trusted Signing.
+      # Les deux premiers passent par signtool (build/windows/sign.ps1), qui
+      # signe aussi le désinstalleur NSIS ; eSigner présente le certificat cloud
+      # dans le magasin Windows (eSigner CKA), signtool le prend par empreinte.
       - name: Mode de signature
         id: mode
         run: |
-          if ($env:WINDOWS_CERT_PFX_BASE64) {
+          if ($env:SIGN_INPUT -ne 'true') {
+            Write-Output '::warning::Lancement manuel sans signature (case « sign » décochée) : paquets Windows non signés.'
+            'mode=none' | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
+          } elseif ($env:WINDOWS_CERT_PFX_BASE64) {
             $pfx = Join-Path $env:RUNNER_TEMP 'lattis-codesign.pfx'
             [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERT_PFX_BASE64))
             "WINDOWS_CERT_PATH=$pfx" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
             'mode=pfx' | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
+          } elseif ($env:ESIGNER_USERNAME -and $env:ESIGNER_PASSWORD -and $env:ESIGNER_TOTP_SECRET) {
+            'mode=esigner' | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
           } elseif ($env:AZURE_CLIENT_ID -and $env:AZURE_SIGNING_ACCOUNT -and $env:AZURE_SIGNING_PROFILE -and $env:WINDOWS_PUBLISHER) {
             'mode=azure' | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
           } else {
-            Write-Output '::warning::Aucun certificat Windows (WINDOWS_CERT_PFX_BASE64 ou Azure Trusted Signing) : lattis.exe, l''installeur et le MSIX ne sont pas signés.'
+            Write-Output '::warning::Aucun certificat Windows (WINDOWS_CERT_PFX_BASE64, SSL.com eSigner ou Azure Trusted Signing) : lattis.exe, l''installeur et le MSIX ne sont pas signés.'
             'mode=none' | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
           }
+
+      # eSigner CKA (Cloud Key Adapter) : fournisseur de clés Windows qui
+      # présente le certificat du HSM de SSL.com comme un jeton USB virtuel.
+      # Chaque fichier signé consomme une signature du forfait eSigner (4 par
+      # run : lattis.exe, désinstalleur, installeur, MSIX).
+      - name: SSL.com eSigner CKA
+        if: steps.mode.outputs.mode == 'esigner'
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'esigner-cka'
+          $zip = Join-Path $env:RUNNER_TEMP 'esigner-cka.zip'
+          $setupDir = Join-Path $env:RUNNER_TEMP 'esigner-cka-setup'
+          Invoke-WebRequest -OutFile $zip "https://github.com/SSLcom/eSignerCKA/releases/download/v$env:ESIGNER_CKA_VERSION/SSL.COM-eSigner-CKA_$env:ESIGNER_CKA_VERSION.zip"
+          Expand-Archive -Force $zip $setupDir
+          $setup = Get-ChildItem $setupDir -Recurse -Filter '*.exe' | Select-Object -First 1
+          if (-not $setup) { throw 'Installeur eSigner CKA introuvable dans l''archive.' }
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          Start-Process -Wait -FilePath $setup.FullName -ArgumentList '/CURRENTUSER', '/VERYSILENT', '/SUPPRESSMSGBOXES', "/DIR=`"$dir`""
+          $tool = Join-Path $dir 'eSignerCKATool.exe'
+          if (-not (Test-Path $tool)) { throw "eSignerCKATool.exe absent de $dir" }
+          "ESIGNER_CKA_DIR=$dir" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          $mode = if ($env:ESIGNER_MODE) { $env:ESIGNER_MODE } else { 'product' }
+          & $tool config -mode $mode -user $env:ESIGNER_USERNAME -pass $env:ESIGNER_PASSWORD -totp $env:ESIGNER_TOTP_SECRET -key (Join-Path $dir 'master.key') -r
+          if ($LASTEXITCODE -ne 0) { throw "eSignerCKATool config a échoué (code $LASTEXITCODE)" }
+          & $tool unload | Out-Null
+          & $tool load
+          if ($LASTEXITCODE -ne 0) { throw "eSignerCKATool load a échoué (code $LASTEXITCODE)" }
+          $cert = Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert | Sort-Object NotAfter -Descending | Select-Object -First 1
+          if (-not $cert) { throw 'Aucun certificat de signature de code chargé par eSigner CKA (identifiants, secret TOTP, certificat émis ?).' }
+          Write-Output "Certificat eSigner : $($cert.Subject) (empreinte $($cert.Thumbprint), valide jusqu'au $($cert.NotAfter.ToString('yyyy-MM-dd')))"
+          "WINDOWS_CERT_THUMBPRINT=$($cert.Thumbprint)" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          if (-not $env:WINDOWS_TIMESTAMP_URL) { 'WINDOWS_TIMESTAMP_URL=http://ts.ssl.com' | Out-File -Append -Encoding utf8 $env:GITHUB_ENV }
 
       - name: Construction de lattis.exe
         run: wails3 build
 
-      - name: Signature de lattis.exe (.pfx)
-        if: steps.mode.outputs.mode == 'pfx'
+      - name: Signature de lattis.exe (signtool)
+        if: steps.mode.outputs.mode == 'pfx' || steps.mode.outputs.mode == 'esigner'
         run: wails3 task windows:sign:exe
       - name: Signature de lattis.exe (Azure Trusted Signing)
         if: steps.mode.outputs.mode == 'azure'
@@ -110,12 +161,13 @@ jobs:
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
 
-      # Avec le .pfx, makensis signe aussi l'installeur et le désinstalleur, et
-      # build-msix.ps1 signe le paquet (Publisher = sujet du certificat).
+      # Avec le .pfx ou eSigner, makensis signe aussi l'installeur et le
+      # désinstalleur, et build-msix.ps1 signe le paquet (Publisher = sujet du
+      # certificat).
       - name: Installeur NSIS
         run: wails3 task windows:package:nsis
       - name: Paquet MSIX
-        run: wails3 task windows:package:msix ${{ steps.mode.outputs.mode != 'pfx' && 'SIGN=false' || '' }}
+        run: wails3 task windows:package:msix ${{ (steps.mode.outputs.mode == 'none' || steps.mode.outputs.mode == 'azure') && 'SIGN=false' || '' }}
 
       - name: Signature de l'installeur et du MSIX (Azure Trusted Signing)
         if: steps.mode.outputs.mode == 'azure'
@@ -171,9 +223,21 @@ jobs:
           name: lattis-windows-msix-non-signe
           path: dist-unsigned/
           if-no-files-found: ignore
+      - name: Journaux eSigner CKA
+        if: failure() && steps.mode.outputs.mode == 'esigner'
+        uses: actions/upload-artifact@v4
+        with:
+          name: esigner-cka-logs
+          path: ${{ runner.temp }}/esigner-cka/log*
+          if-no-files-found: ignore
       - name: Nettoyage du certificat
         if: always()
-        run: Remove-Item -Force (Join-Path $env:RUNNER_TEMP 'lattis-codesign.pfx') -ErrorAction SilentlyContinue
+        run: |
+          Remove-Item -Force (Join-Path $env:RUNNER_TEMP 'lattis-codesign.pfx') -ErrorAction SilentlyContinue
+          if ($env:ESIGNER_CKA_DIR -and (Test-Path (Join-Path $env:ESIGNER_CKA_DIR 'eSignerCKATool.exe'))) {
+            & (Join-Path $env:ESIGNER_CKA_DIR 'eSignerCKATool.exe') unload | Out-Null
+            Remove-Item -Force (Join-Path $env:ESIGNER_CKA_DIR 'master.key') -ErrorAction SilentlyContinue
+          }
 
   macos:
     name: macOS (.dmg universel)

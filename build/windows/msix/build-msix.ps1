@@ -12,7 +12,8 @@
   4. signature (sign.ps1) : PFX, empreinte ou rien.
 
   Le Publisher du manifeste doit être le sujet exact du certificat de
-  signature : avec -CertPath, il est lu dans le certificat ; sinon il vient de
+  signature : avec -CertPath ou -Thumbprint (certificat du magasin : jeton,
+  SSL.com eSigner CKA), il est lu dans le certificat ; sinon il vient de
   -Publisher ou de WINDOWS_PUBLISHER (Azure Trusted Signing : sujet du profil
   de certificat), et vaut « CN=Lattis » à défaut (paquet de test non signé).
 
@@ -65,6 +66,16 @@ if ($CertPath -and -not $NoSign) {
   }
   $Publisher = $cert.Subject
   $cert.Dispose()
+} elseif ($Thumbprint -and -not $NoSign) {
+  $cert = @('Cert:\CurrentUser\My', 'Cert:\LocalMachine\My') |
+    ForEach-Object { Get-Item (Join-Path $_ $Thumbprint) -ErrorAction SilentlyContinue } |
+    Select-Object -First 1
+  if ($cert) {
+    if ($Publisher -and $Publisher -ne $cert.Subject) {
+      Write-Warning "Publisher « $Publisher » remplacé par le sujet du certificat « $($cert.Subject) »."
+    }
+    $Publisher = $cert.Subject
+  }
 }
 if (-not $Publisher) { $Publisher = 'CN=Lattis' }
 
