@@ -6,6 +6,7 @@ Lattis s'utilise comme un tableur : une grille sans fin, un ruban en haut, les o
 
 Tapez quelques lignes n'importe où sur la feuille : une ligne d'en-têtes, puis des valeurs. Lattis reconnaît l'îlot de données et en fait un **tableau** : l'en-tête est mis en valeur, chaque colonne reçoit un type, et le tableau prend un nom (Tableau1, Tableau2…) que vous pouvez changer dans la zone du nom du tableau, à gauche de la barre de formule (tapez le nouveau nom, puis Entrée).
 
+- Il faut au moins deux colonnes sur deux lignes (trois cases remplies d'un carré de 2 × 2) : une liste d'une seule colonne, ou une ligne seule, reste en cellules libres.
 - Une ligne tapée juste sous un tableau l'agrandit ; une colonne tapée juste à droite aussi.
 - Un bloc collé depuis Excel ou un autre logiciel devient un tableau. Sans ligne d'en-têtes, clic droit › « Utiliser la 1re ligne comme en-têtes ».
 - Glissez un tableau à côté d'un autre pour les fusionner.

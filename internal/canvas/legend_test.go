@@ -199,10 +199,12 @@ func TestLegendPaste(t *testing.T) {
 func TestLegendCommands(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
-	// Titre pris pour en-tête (titre, puis une seule colonne tapée dessous).
-	mustSet(t, d, 1, 0, 0, "Ventes 2026")
-	mustSet(t, d, 1, 1, 0, "Produit")
-	mustSet(t, d, 1, 2, 0, "Pommes")
+	// Titre pris pour en-tête (titre, puis une seule colonne dessous : un
+	// tableau d'avant la règle du carré de 2 × 2, ou relu).
+	must(t, d.Do(ctx, "Saisie", func(x *tx) error {
+		_, err := x.createTable(1, "Feuille1", 0, 0, []string{"Ventes 2026"}, [][]string{{"Produit"}, {"Pommes"}})
+		return err
+	}))
 	if got, want := layoutOf(t, d), "Feuille1@A1:Ventes 2026×2"; got != want {
 		t.Fatalf("\n got %s\nwant %s", got, want)
 	}

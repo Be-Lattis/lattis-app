@@ -268,7 +268,7 @@ func TestTransferTableMergeAndPush(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
 	fillCells(t, d, 0, 0, []string{"A", "B"}, []string{"1", "2"})
-	fillCells(t, d, 0, 5, []string{"C"}, []string{"3"})
+	column(t, d, 0, 5, "C", "3")
 	start := dump(t, d)
 	// C à droite de B : fusion.
 	if _, err := d.Transfer(ctx, 1, Rect{0, 5, 1, 5}, 1, Rect{0, 2, 0, 2}, true, nil); err != nil {
@@ -363,11 +363,7 @@ func TestMoveOutOfTable(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
 	// Une liste : en-tête « Colonne 1 » posé au-dessus.
-	for r, v := range []string{"10", "20"} {
-		if _, err := d.SetCell(ctx, 1, 2+r, 1, v); err != nil {
-			t.Fatal(err)
-		}
-	}
+	column(t, d, 2, 1, "10", "20")
 	if ts := tablesOf(t, d); len(ts) != 1 || ts[0].Row != 1 {
 		t.Fatalf("liste : %+v", ts)
 	}

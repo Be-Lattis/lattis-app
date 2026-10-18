@@ -142,12 +142,13 @@ func TestScenario(t *testing.T) {
 			"Souris")},
 		{"entier dans une colonne décimale", set(2, 1, "8"), ""},
 		{"deuxième tableau sous la ligne grisée", set(4, 0, "Ville"), ""},
+		{"son deuxième en-tête", set(4, 1, "CP"), ""},
 		{"naissance du deuxième tableau", set(5, 0, "Paris"), lines(
 			"[Produit]|[Prix]",
 			"Clavier|12.5",
 			"Souris|8",
 			"",
-			"[Ville]",
+			"[Ville]|[CP]",
 			"Paris")},
 		{"insertion au milieu : le tableau du dessous descend", func(ctx context.Context, d *fixture) error {
 			return d.InsertRow(ctx, "Feuille1", 1)
@@ -157,7 +158,7 @@ func TestScenario(t *testing.T) {
 			"",
 			"Souris|8",
 			"",
-			"[Ville]",
+			"[Ville]|[CP]",
 			"Paris")},
 		{"remplir la ligne insérée", set(2, 0, "Écran"), ""},
 		{"colonne grisée : ajout de colonne par l'en-tête", set(0, 2, "Stock"), ""},
@@ -169,7 +170,7 @@ func TestScenario(t *testing.T) {
 			"Écran||10",
 			"Souris|8|beaucoup",
 			"",
-			"[Ville]",
+			"[Ville]|[CP]",
 			"Paris")},
 		{"renommer une colonne", set(0, 0, "Article"), ""},
 		{"supprimer la colonne Prix", func(ctx context.Context, d *fixture) error {
@@ -180,7 +181,7 @@ func TestScenario(t *testing.T) {
 			"Écran|10",
 			"Souris|beaucoup",
 			"",
-			"[Ville]",
+			"[Ville]|[CP]",
 			"Paris")},
 		{"insérer une colonne au milieu", func(ctx context.Context, d *fixture) error {
 			return d.InsertColumn(ctx, "Feuille1", 1, "Date")
@@ -194,22 +195,23 @@ func TestScenario(t *testing.T) {
 			"Souris||beaucoup",
 			"",
 			"",
-			"[Ville]",
+			"[Ville]|[CP]",
 			"Paris")},
 		{"fixer le type de Ville", func(ctx context.Context, d *fixture) error { return d.FixType(ctx, "Tableau1", 0) }, ""},
-		{"colonne grisée du deuxième tableau", set(6, 1, "75000"), ""},
+		{"code postal dans le deuxième tableau", set(6, 1, "75000"), ""},
 		{"ligne grisée du deuxième tableau", set(7, 0, "Lyon"), ""},
 		{"note libre isolée", set(10, 4, "note"), ""},
 		{"tableau à droite du premier", set(0, 5, "Code"), ""},
+		{"son deuxième en-tête", set(0, 6, "Lib"), ""},
 		{"naissance du tableau de droite", set(1, 5, "A1"), ""},
 		{"colonne grisée : le tableau de droite se décale", set(0, 3, "Payé"), ""},
 		{"booléen dans la colonne Payé", set(1, 3, "VRAI"), lines(
-			"[Article]|[Date]|[Stock]|[Payé]||[Code]",
+			"[Article]|[Date]|[Stock]|[Payé]||[Code]|[Lib]",
 			"Clavier|2026-10-15|3|1||A1",
 			"Souris||beaucoup",
 			"",
 			"",
-			"[Ville]|[Colonne 2]",
+			"[Ville]|[CP]",
 			"Paris|75000",
 			"Lyon",
 			"",
@@ -262,7 +264,7 @@ func TestFixedTypeMarksInvalid(t *testing.T) {
 	for _, c := range []struct {
 		r, c int
 		s    string
-	}{{0, 0, "Qté"}, {1, 0, "1"}, {2, 0, "2"}} {
+	}{{0, 0, "Qté"}, {0, 1, "Note"}, {1, 0, "1"}, {2, 0, "2"}} {
 		if _, err := d.SetCell(ctx, 1, c.r, c.c, c.s); err != nil {
 			t.Fatal(err)
 		}
@@ -290,6 +292,7 @@ func TestWideningEvent(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
 	d.SetCell(ctx, 1, 0, 0, "Prix")
+	d.SetCell(ctx, 1, 0, 1, "Note") // deux colonnes : le tableau naît à la ligne suivante
 	d.SetCell(ctx, 1, 1, 0, "3")
 	ev, err := d.SetCell(ctx, 1, 2, 0, "3,5")
 	if err != nil || ev.Widened != "Feuille1.Prix" || ev.From != grid.Integer || ev.To != grid.Decimal {
@@ -301,6 +304,11 @@ func TestWideningEvent(t *testing.T) {
 func TestTypeMix(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
+	// Deux colonnes : le tableau naît dès la première valeur (Note remplie,
+	// pour que « abc » plus bas soit une ligne de données, pas une note).
+	for r, v := range []string{"Note", "a", "b", "c", "d"} {
+		d.SetCell(ctx, 1, r, 1, v)
+	}
 	for r, v := range []string{"Age", "31", "27", "45"} {
 		d.SetCell(ctx, 1, r, 0, v)
 	}
@@ -308,7 +316,7 @@ func TestTypeMix(t *testing.T) {
 		t.Fatalf("colonne en entier : %+v, %v", mix, err)
 	}
 	if ev, _ := d.SetCell(ctx, 1, 4, 0, "abc"); ev.To != grid.Text {
-		t.Fatalf("pas d'élargissement : %+v", ev)
+		t.Fatalf("pas d'élargissement : %+v\n%s", ev, view(t, d))
 	}
 	mix, err := d.TypeMix(ctx, "Feuille1", 0)
 	if err != nil || mix != (Mix{Type: grid.Integer, Off: 1, Total: 4}) {
@@ -1705,10 +1713,7 @@ func TestSheetRowsCols(t *testing.T) {
 	}
 	// Tableau en (2,0) : x = 1, 2, 3 ; cellules libres A1 = 5 et E1 = Cell_A1*2 ;
 	// une cellule libre sous le tableau en A8.
-	set(2, 0, "x")
-	set(3, 0, "1")
-	set(4, 0, "2")
-	set(5, 0, "3")
+	column(t, d, 2, 0, "x", "1", "2", "3")
 	set(0, 2, "5")
 	set(0, 4, "=Cell_C1*2")
 	set(7, 0, "bas")
@@ -2046,5 +2051,18 @@ func TestPivotMoveCopy(t *testing.T) {
 	d.bus.Undo(ctx)
 	if got := dump(t, d); got != before {
 		t.Fatalf("annulation :\n%s", diff(before, got))
+	}
+}
+
+// column pose une liste d'une colonne (en-tête compris) qui devient un
+// tableau : collée, puisqu'une colonne saisie seule reste libre (dense).
+func column(t *testing.T, d *fixture, row, col int, vals ...string) {
+	t.Helper()
+	b := make([][]string, len(vals))
+	for i, v := range vals {
+		b[i] = []string{v}
+	}
+	if _, err := d.Paste(context.Background(), 1, row, col, b); err != nil {
+		t.Fatal(err)
 	}
 }

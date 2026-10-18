@@ -37,10 +37,7 @@ func TestRangesAndA1(t *testing.T) {
 	set(0, 0, "1")
 	set(0, 1, "2")
 	set(0, 2, "3")
-	set(4, 0, "x")
-	set(5, 0, "1")
-	set(6, 0, "2")
-	set(7, 0, "3")
+	column(t, d, 4, 0, "x", "1", "2", "3")
 	var table string
 	d.read(ctx, func(x *tx) error { return x.row(`SELECT name FROM _lattis_tables`).Scan(&table) })
 	set(0, 4, "=SOMME(A1:C1)")

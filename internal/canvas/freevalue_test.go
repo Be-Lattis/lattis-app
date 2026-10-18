@@ -11,16 +11,25 @@ import (
 	"github.com/lalamefine/lattis/internal/formula"
 )
 
-// Une liste de nombres saisie l'un sous l'autre devient un tableau sans
-// en-tête : 10 reste une donnée (audit n° 4).
+// Une liste de nombres saisie l'un sous l'autre, sur deux colonnes, devient
+// un tableau sans en-tête : 10 reste une donnée (audit n° 4). Une seule
+// colonne reste libre : il faut un carré de 2 × 2 rempli (dense).
 func TestBirthWithoutHeader(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
-	for i, v := range []string{"10", "20", "30"} {
-		if _, err := d.SetCell(ctx, 1, 3+i, 1, v); err != nil {
-			t.Fatal(err)
+	typeAt := func(row, col int, vals ...string) {
+		t.Helper()
+		for i, v := range vals {
+			if _, err := d.SetCell(ctx, 1, row+i, col, v); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
+	typeAt(3, 1, "10", "20", "30")
+	if l, _ := d.Layout(ctx, 1); len(l.Tables) != 0 {
+		t.Fatalf("une colonne seule : %+v", l.Tables)
+	}
+	typeAt(3, 2, "1", "2", "3")
 	l, _ := d.Layout(ctx, 1)
 	if len(l.Tables) != 1 {
 		t.Fatalf("tableaux : %+v", l.Tables)
@@ -37,21 +46,15 @@ func TestBirthWithoutHeader(t *testing.T) {
 		t.Fatalf("somme : %+v", l.Cells)
 	}
 	// Un en-tête texte au-dessus de nombres reste un en-tête.
-	for i, v := range []string{"Montant", "5", "7"} {
-		if _, err := d.SetCell(ctx, 1, 10+i, 1, v); err != nil {
-			t.Fatal(err)
-		}
-	}
+	typeAt(10, 1, "Montant", "5", "7")
+	typeAt(10, 2, "Qté", "1", "2")
 	l, _ = d.Layout(ctx, 1)
 	if tb := l.Tables[1]; tb.Row != 10 || tb.Rows != 2 || tb.Columns[0].Name != "Montant" {
 		t.Fatalf("avec en-tête : %+v", tb)
 	}
 	// Tout en haut, sans place pour l'en-tête : les cellules restent libres.
-	for i, v := range []string{"1", "2"} {
-		if _, err := d.SetCell(ctx, 1, i, 8, v); err != nil {
-			t.Fatal(err)
-		}
-	}
+	typeAt(0, 8, "1", "2")
+	typeAt(0, 9, "3", "4")
 	l, _ = d.Layout(ctx, 1)
 	if len(l.Tables) != 2 {
 		t.Fatalf("liste en ligne 1 : %+v", l.Tables)
@@ -235,6 +238,9 @@ func TestTableApostropheText(t *testing.T) {
 func TestBirthApostropheText(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
+	if _, err := d.SetCell(ctx, 1, 0, 1, "Lib"); err != nil {
+		t.Fatal(err)
+	}
 	for r, v := range []string{"Code", "'001", "'002"} {
 		if _, err := d.SetCell(ctx, 1, r, 0, v); err != nil {
 			t.Fatal(err)
@@ -245,5 +251,26 @@ func TestBirthApostropheText(t *testing.T) {
 	}
 	if v := sqlText(t, d, `SELECT group_concat(c_1, '|') FROM (SELECT c_1 FROM t_1 ORDER BY _pos)`); v != "001|002" {
 		t.Fatalf("valeurs : %q", v)
+	}
+}
+
+// Une zone devient un tableau d'elle-même si elle remplit au moins trois
+// cases d'un carré de 2 × 2.
+func TestDense(t *testing.T) {
+	for _, c := range []struct {
+		g    [][]string
+		want bool
+	}{
+		{[][]string{{"Nom"}, {"Alice"}, {"Bob"}}, false},
+		{[][]string{{"Nom", "Âge", "Ville"}}, false},
+		{[][]string{{"Nom", ""}, {"", "Alice"}}, false},
+		{[][]string{{"Nom", "Âge"}, {"Alice", ""}}, true},
+		{[][]string{{"Nom", "Âge"}, {"", " "}, {"Alice", "31"}}, false},
+		{[][]string{{"", "Nom"}, {"Alice", "31"}}, true},
+		{[][]string{{"Nom"}, {"Alice", "31"}}, true},
+	} {
+		if got := dense(c.g); got != c.want {
+			t.Errorf("dense(%q) = %v", c.g, got)
+		}
 	}
 }

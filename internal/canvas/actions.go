@@ -16,6 +16,27 @@ import (
 // de cellules libres devient un tableau.
 const MinRows = 2
 
+// dense dit si une zone (lignes de cellules) remplit au moins trois cases
+// d'un même carré de 2 × 2 : la condition pour qu'elle devienne d'elle-même
+// un tableau. Une colonne ou une ligne seule, ou des cellules en escalier,
+// restent des cellules libres.
+func dense(g [][]string) bool {
+	filled := func(r, c int) int {
+		if c < len(g[r]) && strings.TrimSpace(g[r][c]) != "" {
+			return 1
+		}
+		return 0
+	}
+	for r := 0; r+1 < len(g); r++ {
+		for c := 0; c+1 < max(len(g[r]), len(g[r+1])); c++ {
+			if filled(r, c)+filled(r, c+1)+filled(r+1, c)+filled(r+1, c+1) >= 3 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // Event décrit ce qu'une saisie a provoqué, pour l'afficher à l'utilisateur.
 type Event struct {
 	Created string    `json:"created"` // tableau créé
@@ -204,7 +225,8 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 				return t.markOut(sheet, row, col, outNote)
 			}
 		}
-		name, err := t.birth(sheet, row, col)
+		// Collage cellule par cellule : comme avant, deux lignes suffisent.
+		name, err := t.birthOf(sheet, row, col, !t.pasting)
 		if name != "" {
 			ev.Created = name
 		}
@@ -339,6 +361,13 @@ func (t *tx) newColumn(tb Table, pos int, name string) (Table, error) {
 // cellules libres d'au moins MinRows lignes. La première ligne de la zone
 // donne les en-têtes.
 func (t *tx) birth(sheet int64, row, col int) (string, error) {
+	return t.birthOf(sheet, row, col, false)
+}
+
+// birthOf est birth ; typed (saisie) : la zone doit aussi remplir un carré
+// de 2 × 2 (dense), une liste d'une seule colonne reste libre. Un tableau
+// déplacé ou relu (notes, titres) renaît sans cette condition.
+func (t *tx) birthOf(sheet int64, row, col int, typed bool) (string, error) {
 	cells, err := t.cells(sheet)
 	if err != nil {
 		return "", err
@@ -394,6 +423,9 @@ func (t *tx) birth(sheet int64, row, col int) (string, error) {
 		return "", nil
 	}
 	grid2 := read(r0, r1, c0, c1)
+	if typed && !dense(grid2) {
+		return "", nil
+	}
 	headers, data, top := grid2[0], grid2[1:], r0
 	if !typedHeader(grid2) {
 		// Une liste de valeurs (10, 20, 30) : la première ligne reste une

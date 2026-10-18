@@ -184,7 +184,7 @@ func TestRangeStaysRange(t *testing.T) {
 		t.Fatalf("collage contre la plage : tableau créé %+v", ts)
 	}
 	// Loin de la plage, la règle habituelle.
-	if _, err := typeBlock(d, 0, 10, [][]string{{"Nom"}, {"Dupont"}}); err != nil {
+	if _, err := typeBlock(d, 0, 10, [][]string{{"Nom", "Ville"}, {"Dupont", "Lyon"}}); err != nil {
 		t.Fatal(err)
 	}
 	if ts := tablesOf(t, d); len(ts) != 1 || ts[0].Col != 10 {
@@ -309,7 +309,7 @@ func TestRangeSheetCopyDelete(t *testing.T) {
 	if r := rangesOf(t, d, 1); len(r) != 0 {
 		t.Fatalf("après Supprimer : %+v", r)
 	}
-	if _, err := typeBlock(d, 1, 0, [][]string{{"Nom"}, {"Dupont"}}); err != nil {
+	if _, err := typeBlock(d, 1, 0, [][]string{{"Nom", "Ville"}, {"Dupont", "Lyon"}}); err != nil {
 		t.Fatal(err)
 	}
 	if ts := tablesOf(t, d); len(ts) != 1 {

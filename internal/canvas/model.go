@@ -1,7 +1,8 @@
 // Package canvas est le modèle « canevas ↔ tables » (validé au spike 1.2,
 // voir docs/decisions/0001-jalon-m1.md).
 //
-// Une feuille est un canevas libre ; une zone contiguë d'au moins deux lignes
+// Une feuille est un canevas libre ; une zone contiguë qui remplit au moins
+// trois cases d'un carré de 2 × 2 (voir dense)
 // y devient un tableau, stocké dans une vraie table SQLite STRICT. Les
 // métadonnées (feuilles, ancres, colonnes, types, cellules libres, saisies
 // invalides) vivent dans les tables _lattis_* (internal/meta).

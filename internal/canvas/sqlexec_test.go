@@ -38,7 +38,7 @@ func sqlFixture(t *testing.T) *fixture {
 		{2, 0, "Martin"}, {2, 1, "80,5"}, {2, 2, "faux"},
 		{3, 0, "Durand"}, {3, 1, "40"}, {3, 2, "faux"},
 		// Un deuxième tableau juste sous la ligne grisée du premier.
-		{5, 0, "Produit"}, {6, 0, "Vis"},
+		{5, 0, "Produit"}, {5, 1, "Prix"}, {6, 0, "Vis"},
 	} {
 		if _, err := d.SetCell(ctx, 1, s.row, s.col, s.raw); err != nil {
 			t.Fatal(err)

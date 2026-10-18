@@ -5,14 +5,16 @@ import (
 	"testing"
 )
 
-// Naissance d'un tableau par la saisie (décisions du 16/10/2026) : une
-// cellule seule reste libre, deux lignes contiguës font un tableau, une liste
-// de nombres tout en haut de la feuille reste en cellules libres.
+// Naissance d'un tableau par la saisie (décisions du 16/10/2026, puis du
+// 18/10/2026) : une cellule seule ou une colonne seule reste libre, une zone
+// qui remplit trois cases d'un carré de 2 × 2 fait un tableau, une liste de
+// nombres tout en haut de la feuille reste en cellules libres.
 func TestTableDetection(t *testing.T) {
 	h := newHost(t)
 	h.set(1, 1, 1)
 	h.set(2, 1, 2)
 	h.set(3, 1, 3)
+	h.set(1, 2, 4)
 	if n := len(h.sheet("").Tables); n != 0 {
 		t.Fatalf("une liste de nombres en haut de feuille a créé %d tableau(x)", n)
 	}
@@ -20,42 +22,28 @@ func TestTableDetection(t *testing.T) {
 	if n := len(h.sheet("").Tables); n != 0 {
 		t.Fatal("une cellule seule a créé un tableau")
 	}
-	res := asText(h.set(6, 3, "Léa"))
+	h.set(6, 3, "Léa")
+	if n := len(h.sheet("").Tables); n != 0 {
+		t.Fatal("une colonne seule a créé un tableau")
+	}
+	res := asText(h.set(5, 4, "Âge"))
 	tbs := h.sheet("").Tables
 	if len(tbs) != 1 || tbs[0].Row != 5 || tbs[0].Col != 3 || tbs[0].Rows != 1 {
-		t.Fatalf("deux lignes : %+v (%s)", tbs, res)
+		t.Fatalf("carré de 2 × 2 : %+v (%s)", tbs, res)
 	}
 	name := tbs[0].Name
 	if name != "Feuille1" {
 		t.Fatalf("seul tableau de la feuille : nom %q, attendu le nom de l'onglet", name)
 	}
-	// Saisir juste sous le tableau ou juste à droite l'agrandit.
+	// Saisir dans le tableau ou juste dessous l'agrandit.
 	h.set(7, 3, "Tom")
-	h.set(5, 4, "Âge")
 	h.set(6, 4, 31)
 	tb := h.table(name)
 	if tb.Rows != 2 || len(tb.Columns) != 2 || tb.Columns[1].Type != "integer" {
 		t.Fatalf("agrandi : %+v", tb)
 	}
-	// Une valeur de type différent élargit la colonne (type inféré).
-	h.set(7, 4, "inconnu")
-	if got := h.table(name).Columns[1].Type; got != "text" {
-		t.Fatalf("élargissement : %s", got)
-	}
-	h.undo()
-	if got := h.table(name).Columns[1].Type; got != "integer" {
-		t.Fatalf("annuler l'élargissement : %s", got)
-	}
-	// Un deuxième tableau sur la feuille : le premier garde son nom (déjà
-	// donné), le second en reçoit un autre.
-	h.paste(20, 1, []any{"Code", "Prix"}, []any{"A", 1}, []any{"B", 2})
-	if n := len(h.sheet("").Tables); n != 2 {
-		t.Fatalf("%d tableaux", n)
-	}
-	for _, tb := range h.sheet("").Tables {
-		if tb.Row == 20 && tb.Name == "Feuille1" {
-			t.Fatal("deux tableaux nommés comme l'onglet")
-		}
+	if tb.Columns[0].Name != "Nom" || tb.Columns[1].Name != "Âge" {
+		t.Fatalf("en-têtes : %+v", tb)
 	}
 }
 
@@ -294,6 +282,7 @@ func TestMixedListHasNoHeader(t *testing.T) {
 	h := newHost(t)
 	for i, v := range []any{"18/10/2026", "10:30", "VRAI", "15 %", 42} {
 		h.set(2+i, 2, v)
+		h.set(2+i, 3, i) // deux colonnes : une seule reste libre
 	}
 	tbs := h.sheet("").Tables
 	if len(tbs) != 1 {

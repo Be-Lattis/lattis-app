@@ -29,7 +29,7 @@ Code : `spikes/canvas` (≈ 1 500 lignes hors tests), devenu `internal/canvas` e
 
 ### Règles d'îlots (implémentées et testées)
 
-- Une zone de cellules libres contiguës (4-connexité) de **2 lignes ou plus** devient un tableau à la validation de la saisie ; la première ligne donne les en-têtes (vides → « Colonne N »). Un tableau posé en haut à gauche de la feuille prend le nom de la feuille, les autres « Tableau N ».
+- Une zone de cellules libres contiguës (4-connexité) de **2 lignes ou plus** devient un tableau à la validation de la saisie (depuis le 18/10/2026 : seulement si elle remplit au moins 3 cases d'un carré de 2 × 2 ; une colonne seule reste libre, un collage garde la règle des 2 lignes) ; la première ligne donne les en-têtes (vides → « Colonne N »). Un tableau posé en haut à gauche de la feuille prend le nom de la feuille, les autres « Tableau N ».
 - Saisie dans la **ligne grisée** sous un tableau (dans ses colonnes) : nouvelle ligne. Dans la **colonne grisée** à droite (dans ses lignes) : nouvelle colonne, nommée par la saisie si elle est faite sur la ligne d'en-tête.
 - **Jamais de fusion** : quand un tableau grandit et que sa ligne (ou colonne) grisée atteindrait un autre objet, tout ce qui est dessous (ou à droite) dans sa bande descend (ou se décale), et chaque tableau déplacé dégage à son tour sa propre bande.
 - Supprimer une ligne fait rétrécir le tableau ; ce qui est dessous ne remonte pas. Vider une ligne ne coupe pas le tableau.
