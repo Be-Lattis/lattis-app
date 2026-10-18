@@ -65,6 +65,7 @@
 	import { drawIcon } from '#lib/icons/canvas.js';
 	import { apply as applySuggestion, argKindAt, signature, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
 	import { checkFormula, closeParens, editorWidth, formulaRefs, highlightParts, isFormula, movedRef, rangeRef, refRect, serverErrorPos, type FormulaError, type Rect, type RefTable } from './formulaEdit';
+	import { formulaTyping, holdFormula, insertRefAt, qualifyRef, updateHold, type FormulaHold } from './crossref';
 	import {
 		isErrorValue,
 		valueAlignment,
@@ -444,9 +445,13 @@
 		onzoom?: (z: number) => void;
 		/** Cadre de sélection animé (Affichage › Animations). */
 		animate?: boolean;
+		/** Nom de la feuille affichée (références pointées depuis une formule d'une autre feuille). */
+		sheetName?: string;
+		/** Retour à une feuille (formule pointée sur une autre feuille, validée ou abandonnée). */
+		onsheet?: (sheet: number) => void;
 	}
 
-	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', freeze, zoom = 1, onzoom, animate = true }: Props = $props();
+	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', freeze, zoom = 1, onzoom, animate = true, sheetName = '', onsheet }: Props = $props();
 
 	// Feuille sans fin pratique (choix de Louis) : au-delà des limites d'Excel,
 	// bornée par la nomenclature Cell[ZZZZ999999999] (4 lettres, 9 chiffres).
@@ -766,6 +771,11 @@
 
 	/** Recalcule la géométrie quand la mise en page change (après une saisie). */
 	function applyData(d: SheetData) {
+		// Changement de feuille pendant la saisie d'une formule : la saisie est
+		// gardée (texte, curseur, cellule et feuille d'origine), pour pointer
+		// des références sur l'autre feuille (crossref.ts).
+		const switching = placedSheet !== undefined && placedSheet !== (d.sheet ?? 0);
+		if (switching) keepFormula(placedSheet!);
 		// Changement de feuille : garder la position de la feuille quittée,
 		// retrouver celle de la nouvelle (A1 si elle n'a pas été visitée).
 		const back = sheetViews.switchTo(d.sheet ?? 1, { active: { ...active }, anchor: { ...anchor }, top: vs.top, left: scroller?.scrollLeft ?? 0 });
@@ -862,6 +872,10 @@
 		refreshFx();
 		if (back) refreshStatus();
 		schedule();
+		if (switching && hold) {
+			const sheet = d.sheet ?? 0;
+			queueMicrotask(() => placeHold(sheet));
+		}
 	}
 	const sheetViews = new SheetViews();
 
@@ -1573,6 +1587,109 @@
 	// Cellule d'un tableau : nom du tableau (modifiable) et colonne[ligne].
 	let tableBox = $state<{ name: string; col: string } | null>(null);
 	let fxEditing = $state(false);
+
+	// Pointage sur une autre feuille (comme Excel, crossref.ts) : un clic sur un
+	// onglet pendant la saisie d'une formule ne la valide pas ; sur l'autre
+	// feuille, la formule reste dans la barre de formule (hold : la saisie
+	// gardée), un clic y insère la référence au curseur, Entrée la valide dans
+	// sa cellule et Échap l'abandonne, en revenant à sa feuille.
+	let hold = $state.raw<FormulaHold | null>(null);
+	// Appui en cours sur un onglet de feuille : le départ du focus de l'éditeur ne valide pas la formule.
+	let tabPress = false;
+	$effect(() => {
+		const down = (e: PointerEvent) => {
+			tabPress = !!(e.target as Element | null)?.closest?.('.sheet-tabs');
+		};
+		const up = () => setTimeout(() => (tabPress = false));
+		window.addEventListener('pointerdown', down, true);
+		window.addEventListener('pointerup', up, true);
+		return () => {
+			window.removeEventListener('pointerdown', down, true);
+			window.removeEventListener('pointerup', up, true);
+		};
+	});
+
+	/** La feuille from est quittée : une formule en cours de saisie est gardée. */
+	function keepFormula(from: number) {
+		if (hold) {
+			// Déjà sur une autre feuille : on en change encore, la saisie suit.
+			if (fxEditing && fxInput) hold = updateHold(hold, fxText, fxInput.selectionStart, fxInput.selectionEnd);
+			return;
+		}
+		if (!editing && !fxEditing) return;
+		const el = editing ? input : fxInput;
+		const text = editing ? editValueText : fxText;
+		const h = holdFormula({ sheet: from, row: active.row, col: active.col, where: editing ? 'cell' : 'fx' }, text, el?.selectionStart ?? null, el?.selectionEnd ?? null);
+		if (!h) return;
+		hold = h;
+		editing = false;
+		editErr = null;
+		completion = sig = null;
+		lastRef = null;
+	}
+
+	/** Après un changement de feuille, la saisie gardée : dans la barre de formule, ou de retour dans sa cellule. */
+	function placeHold(sheet: number) {
+		const h = hold;
+		if (!h || sheet !== placedSheet) return;
+		if (sheet !== h.sheet) {
+			// Autre feuille : la formule dans la barre de formule, curseur gardé.
+			flushSync(() => {
+				fxText = h.text;
+				fxEditing = true;
+			});
+			fxInput?.focus();
+			fxInput?.setSelectionRange(h.start, h.end);
+			if (fxInput) onFormulaInput(fxInput, 'fx');
+			say('Formule en cours : cliquez une cellule ou une colonne pour insérer sa référence ; Entrée valide, Échap annule');
+			return;
+		}
+		// Retour à la feuille de la formule.
+		hold = null;
+		lastRef = null;
+		fxEditing = false;
+		completion = sig = null;
+		active = { row: h.row, col: h.col };
+		anchor = { ...active };
+		if (h.finish === 'cancel') {
+			refreshFx();
+			wrap.focus();
+			schedule();
+			return;
+		}
+		if (h.where === 'fx' && !h.finish) {
+			// Saisie commencée dans la barre de formule : elle y reprend.
+			flushSync(() => {
+				fxText = h.text;
+				fxEditing = true;
+			});
+			fxInput?.focus();
+			fxInput?.setSelectionRange(h.start, h.end);
+			schedule();
+			return;
+		}
+		startEdit(true, h.text);
+		if (!editing || !input) return;
+		input.setSelectionRange(h.start, h.end);
+		onFormulaInput(input, 'cell');
+		// Entrée sur l'autre feuille : validée dans sa cellule (une faute laisse l'éditeur ouvert).
+		if (h.finish === 'commit' && commit()) moveTo(h.row + 1, h.col);
+		schedule();
+	}
+
+	/** Entrée ou Échap sur l'autre feuille : retour à la feuille de la formule, qui est validée ou abandonnée. */
+	function finishHold(finish: 'commit' | 'cancel') {
+		if (!hold) return;
+		hold = { ...(fxInput ? updateHold(hold, fxText, fxInput.selectionStart, fxInput.selectionEnd) : hold), finish };
+		completion = sig = null;
+		onsheet?.(hold.sheet);
+	}
+
+	/** Reprend la saisie d'une formule restée ouverte (clic sur l'onglet affiché). */
+	export function resumeFormula() {
+		if (editing) input?.focus();
+		else if (fxEditing) fxInput?.focus();
+	}
 
 	let message = '';
 	// Le message s'efface seul (noticeTtl) ; un nouveau message relance le délai.
@@ -2303,9 +2420,7 @@
 		// Saisie d'une formule : chaque référence encadrée de sa couleur, comme
 		// dans l'éditeur (Excel).
 		if (formulaMode) {
-			const here = tableAt(active.row, active.col);
-			const tables = refTables();
-			const at = here && active.row > here.t.row ? { table: tables[entries.indexOf(here)], row: active.row } : undefined;
+			const { tables, at } = refContext();
 			ctx.save();
 			ctx.lineWidth = 2;
 			// Référence glissée : son cadre coloré suit la souris, la zone
@@ -2320,7 +2435,7 @@
 				ctx.strokeRect(x, y, spanW(k.c0, k.c1) - 2, rspan(k.r0, k.r1) - 2);
 			};
 			for (const f of formulaRefs(editing ? editValueText : fxText)) {
-				const k = refRect(f.text, tables, '', at);
+				const k = refRect(f.text, tables, sheetName, at, !!hold);
 				if (!k) continue;
 				if (refMove && f.start === refMove.start) {
 					const dr = refMove.to.row - refMove.from.row;
@@ -2401,8 +2516,9 @@
 			for (const p of arrows.pre) if (p.sheet === sheetIdOf() && once(`${rowOf(p)},${p.col}>${arrows.row},${arrows.col}`)) draw(center(rowOf(p), p.col), me, '#2b6cb0');
 			for (const d of arrows.dep) if (d.sheet === sheetIdOf() && once(`${arrows.row},${arrows.col}>${rowOf(d)},${d.col}`)) draw(me, center(rowOf(d), d.col), '#c0392b');
 		}
-		// Saisie dans la barre de formule : la cellule active l'affiche en direct.
-		if (fxEditing && !editing) {
+		// Saisie dans la barre de formule : la cellule active l'affiche en direct
+		// (pas une formule d'une autre feuille, en cours de pointage ici).
+		if (fxEditing && !editing && !hold) {
 			const x = cx(ar.c0);
 			const y = ry(ar.r0);
 			const cw = spanW(ar.c0, ar.c1);
@@ -5139,6 +5255,10 @@
 	}
 
 	function onMouseDown(e: MouseEvent) {
+		if (hold) {
+			pointAway(e);
+			return;
+		}
 		if (e.button === 0 && onFillHandle(e)) {
 			e.preventDefault();
 			if (e.detail === 2) {
@@ -5246,6 +5366,23 @@
 		dragging = true;
 	}
 
+	/**
+	 * Clic sur la grille pendant le pointage d'une formule d'une autre feuille :
+	 * la référence au curseur (ou une plage au glissé), rien d'autre ; la saisie
+	 * reste ouverte dans la barre de formule.
+	 */
+	function pointAway(e: MouseEvent) {
+		e.preventDefault();
+		const cell = boundaryAt(e) === null && rowBoundaryAt(e) === null ? cellAt(e) : null;
+		if (!cell || e.button !== 0) return;
+		if (grabRefMark(e, cell)) return;
+		if (insertRef(cell)) {
+			refDrag = { from: cell, to: cell };
+			return;
+		}
+		say('Placez le curseur de la formule après « ( », « ; » ou un opérateur pour y insérer une référence');
+	}
+
 	// Dernière référence insérée au clic : un autre clic la remplace (comme Excel).
 	let lastRef: { el: TextField; start: number; end: number; value: string } | null = null;
 
@@ -5265,10 +5402,11 @@
 		// le clic dans le tableau donne cette forme, quelle que soit la ligne.
 		if (kind === 'table') return e.t.name;
 		if (kind === 'column') return `${e.t.name}[${col}]`;
-		const here = tableAt(active.row, active.col);
+		// Formule d'une autre feuille (pointage) : elle n'est dans aucun tableau d'ici.
+		const here = hold ? null : tableAt(active.row, active.col);
 		// La formule est dans le tableau, ou juste à sa droite sur une de ses
 		// lignes (elle y devient une colonne calculée, comme dans Excel).
-		const beside = !here && active.col === e.lastCol + 1 && active.row > e.t.row && active.row <= e.last;
+		const beside = !hold && !here && active.col === e.lastCol + 1 && active.row > e.t.row && active.row <= e.last;
 		const same = (here === e || beside) && active.row > e.t.row;
 		// En-tête : toute la colonne.
 		if (r === e.t.row) return `${e.t.name}[${col}]`;
@@ -5288,21 +5426,23 @@
 	function insertRef(cell: { row: number; col: number }, text?: string): boolean {
 		const el = editing ? input : fxEditing ? fxInput : null;
 		if (!el) return false;
-		const v = el.value;
-		const pos = el.selectionStart ?? v.length;
-		let start = pos;
-		if (lastRef && lastRef.el === el && lastRef.end === pos && lastRef.value === v) start = lastRef.start;
-		else if (!/[=(;,+*/^&<>:-]$/.test(v.slice(0, pos).trimEnd())) return false;
 		if (text === undefined && editing && cell.row === active.row && cell.col === active.col) return false;
-		const ref = text ?? refFor(cell.row, cell.col, catalog ? argKindAt(v, start, catalog) : '');
-		const next = v.slice(0, start) + ref + v.slice(pos);
-		if (editing) editValueText = next;
-		else fxText = next;
-		el.value = next;
-		const end = start + ref.length;
-		el.setSelectionRange(end, end);
+		const v = el.value;
+		const s0 = el.selectionStart ?? v.length;
+		const s1 = el.selectionEnd ?? s0;
+		const last = lastRef?.el === el ? lastRef : null;
+		const at = insertRefAt(v, s0, s1, '', last);
+		if (!at) return false;
+		let ref = text ?? refFor(cell.row, cell.col, catalog ? argKindAt(v, at.start, catalog) : '');
+		// Formule d'une autre feuille : une cellule libre d'ici prend le nom de la feuille.
+		if (hold) ref = qualifyRef(ref, sheetName);
+		const r = insertRefAt(v, s0, s1, ref, last)!;
+		if (editing) editValueText = r.value;
+		else fxText = r.value;
+		el.value = r.value;
+		el.setSelectionRange(r.end, r.end);
 		el.focus();
-		lastRef = { el, start, end, value: next };
+		lastRef = { el, start: r.start, end: r.end, value: r.value };
 		return true;
 	}
 
@@ -5316,8 +5456,10 @@
 
 	/** Contexte des références : tableaux et ligne de la formule. */
 	function refContext() {
-		const here = tableAt(active.row, active.col);
 		const tables = refTables();
+		// Formule d'une autre feuille (pointage) : ni tableau ni ligne d'ici.
+		if (hold) return { tables, at: undefined };
+		const here = tableAt(active.row, active.col);
 		const at = here && active.row > here.t.row ? { table: tables[entries.indexOf(here)], row: active.row } : undefined;
 		return { tables, at };
 	}
@@ -5340,7 +5482,7 @@
 		const { tables, at } = refContext();
 		const { x, y } = toLocal(e);
 		for (const f of formulaRefs(editing ? editValueText : fxText)) {
-			const k = refRect(f.text, tables, '', at);
+			const k = refRect(f.text, tables, sheetName, at, !!hold);
 			if (!k) continue;
 			const left = screenX(k.c0);
 			const right = screenX(k.c1) + cax().size(k.c1);
@@ -5364,7 +5506,8 @@
 		const dc = m.to.col - m.from.col;
 		if (!dr && !dc) return;
 		const { tables, at } = refContext();
-		const text = movedRef(m.rect, dr, dc, tables, at);
+		const moved = movedRef(m.rect, dr, dc, tables, at);
+		const text = moved !== null && hold ? qualifyRef(moved, sheetName) : moved;
 		if (text === null) {
 			say('Cette plage ne peut pas devenir une référence : une plage couvre une seule colonne d’un tableau');
 			return;
@@ -5406,9 +5549,8 @@
 		if (!refDrag || (cell.row === refDrag.to.row && cell.col === refDrag.to.col)) return;
 		refDrag.to = cell;
 		const { from } = refDrag;
-		const here = tableAt(active.row, active.col);
-		const tables = refTables();
-		const hereT = here && active.row > here.t.row ? tables[entries.indexOf(here)] : undefined;
+		const { tables, at } = refContext();
+		const hereT = at?.table;
 		const text =
 			from.row === cell.row && from.col === cell.col
 				? refFor(cell.row, cell.col)
@@ -5505,6 +5647,7 @@
 	}
 
 	function onDblClick(e: MouseEvent) {
+		if (hold) return; // pointage d'une formule d'une autre feuille
 		const b = boundaryAt(e);
 		if (b !== null && source.setColumnWidth) {
 			autoFitColumn(b);
@@ -6176,6 +6319,13 @@
 	function onFxKey(e: KeyboardEvent) {
 		if (fxInput && completionKey(e, fxInput, (v) => (fxText = v))) return;
 		e.stopPropagation();
+		if (hold && (e.key === 'Enter' || e.key === 'Escape')) {
+			// Formule pointée sur une autre feuille : validée (Entrée) ou
+			// abandonnée (Échap) en revenant à sa feuille, comme Excel.
+			e.preventDefault();
+			finishHold(e.key === 'Enter' ? 'commit' : 'cancel');
+			return;
+		}
 		if (e.key === 'Escape') {
 			fxEditing = false;
 			editErr = null;
@@ -7076,6 +7226,11 @@
 
 	/** Redonne le focus clavier à la feuille (après un dialogue, un menu…). */
 	export function focus() {
+		// Formule pointée sur une autre feuille : la barre de formule garde la main.
+		if (hold && fxEditing) {
+			fxInput?.focus();
+			return;
+		}
 		wrap?.focus();
 	}
 </script>
@@ -7213,15 +7368,17 @@
 			}}
 			onclick={(e) => moveSig(e, 'fx')}
 			onscroll={(e) => (fxScroll = e.currentTarget.scrollLeft)}
-			readonly={!!locked}
+			readonly={!!locked && !hold}
 			onfocus={() => {
-				if (locked) say(locked);
+				if (locked && !hold) say(locked);
 				else fxEditing = true;
 			}}
 			onkeydown={onFxKey}
 			onblur={() => {
-				fxEditing = false;
 				completion = sig = null;
+				// Formule pointée sur une autre feuille, ou clic sur un onglet : la saisie reste.
+				if ((hold || tabPress) && formulaTyping(fxText)) return;
+				fxEditing = false;
 				refreshFx();
 			}}
 			spellcheck="false"
@@ -7336,6 +7493,8 @@
 						onkeydown={onEditorKey}
 						onblur={() => {
 							completion = sig = null;
+							// Clic sur un onglet de feuille : la formule est gardée pour pointer sur l'autre feuille.
+							if (tabPress && formulaTyping(editValueText)) return;
 							// Saisie refusée par la liste déroulante quand le focus part ailleurs : abandonnée, le message reste.
 							if (!commit() && !editErr) {
 								editing = false;
