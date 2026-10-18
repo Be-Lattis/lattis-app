@@ -506,8 +506,10 @@ const unquote = (s: string) => s.trim().replace(/^"(.*)"$/, '$1').replaceAll('""
 /**
  * Cellules désignées par une référence, sur la feuille affichée (null si
  * elle est ailleurs ou introuvable). here : tableau et ligne de la formule.
+ * away : la formule est sur une autre feuille (pointage inter-feuilles) ; une
+ * adresse sans nom de feuille désigne alors la feuille de la formule.
  */
-export function refRect(ref: string, tables: RefTable[], sheet: string, here?: { table: RefTable; row: number }): Rect | null {
+export function refRect(ref: string, tables: RefTable[], sheet: string, here?: { table: RefTable; row: number }, away = false): Rect | null {
 	let text = ref.trim();
 	// Feuille citée : seulement la feuille affichée.
 	const bang = /^(?:'((?:[^']|'')+)'|([\p{L}\w]+))!/u.exec(text);
@@ -515,7 +517,7 @@ export function refRect(ref: string, tables: RefTable[], sheet: string, here?: {
 		const name = bang[1]?.replaceAll("''", "'") ?? bang[2];
 		if (name.toLowerCase() !== sheet.toLowerCase()) return null;
 		text = text.slice(bang[0].length);
-	}
+	} else if (away && (/^cell\[/i.test(text) || /^\$?[A-Za-z]{1,3}\$?\d+(:|$)/.test(text))) return null;
 	const addr = (s: string) => a1Address(s.trim().replaceAll('$', ''));
 	const cell = /^cell\[([^\]]+)\]$/i.exec(text);
 	if (cell || /^\$?[A-Za-z]{1,3}\$?\d+(:\$?[A-Za-z]{1,3}\$?\d+)?$/.test(text)) {

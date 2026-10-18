@@ -743,7 +743,12 @@
 
 	async function selectSheet(id: number) {
 		view = 'grid';
-		if (mode !== 'doc' || id === sheetId) return;
+		if (mode !== 'doc') return;
+		if (id === sheetId) {
+			// Onglet déjà affiché : une formule en cours de saisie reprend.
+			sheet?.resumeFormula();
+			return;
+		}
 		// Changement d'onglet : tous les volets de droite se ferment.
 		sheet?.closeOverlays();
 		queryHost?.closePanel();
@@ -1048,6 +1053,8 @@
 						{animate}
 						onzoom={setZoom}
 						autoBench={bench ? (r) => GridService.ReportBench(r) : undefined}
+						sheetName={activeInfo?.name ?? ''}
+						onsheet={(id) => selectSheet(id).catch((e) => (notice = err(e)))}
 					/>
 				</div>
 			{/key}
