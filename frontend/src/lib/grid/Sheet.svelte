@@ -7392,9 +7392,9 @@
 		{#if kind === 'rows'}
 			<button onclick={() => sheetLines('insertRows')}>Insérer {r1 > r0 ? `${r1 - r0 + 1} lignes` : 'une ligne'}</button>
 			<button onclick={() => sheetLines('deleteRows')}>Supprimer {r1 > r0 ? 'les lignes' : 'la ligne'}</button>
-			{#if source.applyStyle}<button onclick={() => openFormat()}>Format de cellule…</button>{/if}
-			{#if source.setSheetRules}<button onclick={rulesActive}>Mise en forme conditionnelle…</button>{/if}
-			{#if source.setRowHeight}<button onclick={() => openSize(true, x, y)}>Hauteur de ligne…</button><button onclick={autoFitRows} title="Hauteur d’après le contenu (double-clic sur le bord du numéro de ligne)">Ajuster la hauteur de ligne</button>{/if}
+			{#if source.applyStyle}<button data-shed="1" onclick={() => openFormat()}>Format de cellule…</button>{/if}
+			{#if source.setSheetRules}<button data-shed="1" onclick={rulesActive}>Mise en forme conditionnelle…</button>{/if}
+			{#if source.setRowHeight}<button data-shed="2" onclick={() => openSize(true, x, y)}>Hauteur de ligne…</button><button data-shed="1" onclick={autoFitRows} title="Hauteur d’après le contenu (double-clic sur le bord du numéro de ligne)">Ajuster la hauteur de ligne</button>{/if}
 			{#if source.setLinesHidden}
 				<button onclick={() => setHidden(true, true)}>Masquer</button>
 				{#if hiddenIn(true)}<button onclick={() => unhide(true)}>Afficher</button>{/if}
@@ -7402,9 +7402,9 @@
 		{:else if kind === 'cols'}
 			<button onclick={() => sheetLines('insertCols')}>Insérer {c1 > c0 ? `${c1 - c0 + 1} colonnes` : 'une colonne'}</button>
 			<button onclick={() => sheetLines('deleteCols')}>Supprimer {c1 > c0 ? 'les colonnes' : 'la colonne'}</button>
-			{#if source.applyStyle}<button onclick={() => openFormat()}>Format de cellule…</button>{/if}
-			{#if source.setSheetRules}<button onclick={rulesActive}>Mise en forme conditionnelle…</button>{/if}
-			{#if source.setColumnWidth}<button onclick={() => openSize(false, x, y)}>Largeur de colonne…</button><button onclick={autoFitCols} title="Largeur d’après le contenu affiché (double-clic sur le bord de l’en-tête)">Ajuster la largeur de colonne</button>{/if}
+			{#if source.applyStyle}<button data-shed="1" onclick={() => openFormat()}>Format de cellule…</button>{/if}
+			{#if source.setSheetRules}<button data-shed="1" onclick={rulesActive}>Mise en forme conditionnelle…</button>{/if}
+			{#if source.setColumnWidth}<button data-shed="2" onclick={() => openSize(false, x, y)}>Largeur de colonne…</button><button data-shed="1" onclick={autoFitCols} title="Largeur d’après le contenu affiché (double-clic sur le bord de l’en-tête)">Ajuster la largeur de colonne</button>{/if}
 			{#if source.setLinesHidden}
 				<button onclick={() => setHidden(false, true)}>Masquer</button>
 				{#if hiddenIn(false)}<button onclick={() => unhide(false)}>Afficher</button>{/if}
@@ -7418,15 +7418,15 @@
 
 {#snippet noteItems()}
 	{#if noteOf(active.row, active.col)}
-		<button onclick={editNote}>Modifier la note</button>
-		<button
+		<button data-shed="1" onclick={editNote}>Modifier la note</button>
+		<button data-shed="1"
 			onclick={() => {
 				menu = freeMenu = null;
 				deleteNote();
 			}}>Supprimer la note</button
 		>
 	{:else}
-		<button onclick={editNote}>Insérer une note</button>
+		<button data-shed="1" onclick={editNote}>Insérer une note</button>
 	{/if}
 {/snippet}
 <!-- Formule colorée (références, faute soulignée), sur une seule ligne : le texte est affiché tel quel (pre-wrap). -->
@@ -7703,19 +7703,19 @@
 					<!-- Même ordre que le menu contextuel d'Excel : presse-papiers, insertion
 					     et suppression, tri et filtre, mise en forme, puis ce qui est propre
 					     à Lattis (type, clé, nom de colonne, tableau). -->
-					<button
+					<button data-shed="3"
 						onclick={() => {
 							menu = null;
 							copySelection(true);
 						}}>Couper</button
 					>
-					<button
+					<button data-shed="3"
 						onclick={() => {
 							menu = null;
 							copySelection();
 						}}>Copier</button
 					>
-					<button
+					<button data-shed="3"
 						onclick={() => {
 							menu = null;
 							pasteClipboard();
@@ -7724,11 +7724,11 @@
 					<hr />
 					{#if !m.header && !m.rowOnly}
 						<button onclick={() => menuAction(source.insertRow && (() => tableLines(m.e, 'insertRow', m.n)))}>Insérer une ligne au-dessus</button>
-						<button onclick={() => menuAction(source.insertRow && (() => tableLines(m.e, 'insertRow', m.n + 1)))}>Insérer une ligne en dessous</button>
+						<button data-shed="2" onclick={() => menuAction(source.insertRow && (() => tableLines(m.e, 'insertRow', m.n + 1)))}>Insérer une ligne en dessous</button>
 					{/if}
 					{#if cols}
-						<button onclick={() => menuAction(source.insertColumn && (() => tableLines(m.e, 'insertColumn', m.i)))}>Insérer une colonne à gauche</button>
-						<button onclick={() => menuAction(source.insertColumn && (() => tableLines(m.e, 'insertColumn', m.i + 1)))}>Insérer une colonne à droite</button>
+						<button data-shed="2" onclick={() => menuAction(source.insertColumn && (() => tableLines(m.e, 'insertColumn', m.i)))}>Insérer une colonne à gauche</button>
+						<button data-shed="2" onclick={() => menuAction(source.insertColumn && (() => tableLines(m.e, 'insertColumn', m.i + 1)))}>Insérer une colonne à droite</button>
 					{/if}
 					{#if !m.header && !m.rowOnly}
 						<button onclick={() => menuAction(source.deleteRow && (() => tableLines(m.e, 'deleteRow', m.n)))}>Supprimer la ligne</button>
@@ -7751,19 +7751,19 @@
 							<button onclick={() => menuAction(() => source.sortTable!(m.e.t, m.i, true))}>{lab[1]}</button>
 						{/if}
 						{#if source.setFilter}
-							<button onclick={() => openFilter(m.e, m.i)}>Filtrer par « {col?.name} »…</button>
+							<button data-shed="2" onclick={() => openFilter(m.e, m.i)}>Filtrer par « {col?.name} »…</button>
 						{/if}
 					{/if}
 					{#if cols && source.clearFilters && m.e.t.columns.some((c) => c.filter)}
-						<button onclick={() => menuAction(() => source.clearFilters!(m.e.t))}>Effacer le filtre du tableau</button>
+						<button data-shed="2" onclick={() => menuAction(() => source.clearFilters!(m.e.t))}>Effacer le filtre du tableau</button>
 					{/if}
 					{#if !m.rowOnly && source.applyStyle}
 						<hr />
-						<button onclick={() => openFormat()}>Format de cellule… <span class="keys">Ctrl+1</span></button>
+						<button data-shed="1" onclick={() => openFormat()}>Format de cellule… <span class="keys">Ctrl+1</span></button>
 					{/if}
 					{#if cols && source.setSheetRules}
 						{#if !source.applyStyle}<hr />{/if}
-						<button onclick={() => openRules(m.e, m.i)}>Mise en forme conditionnelle…</button>
+						<button data-shed="1" onclick={() => openRules(m.e, m.i)}>Mise en forme conditionnelle…</button>
 					{/if}
 					{#if !m.rowOnly && source.setNote}
 						{@render noteItems()}
@@ -7771,10 +7771,10 @@
 					<hr />
 					{#if cols && source.setType && !col?.formula}
 						<!-- Le menu ▾ de la colonne (tri, filtre, type, clé), sous son en-tête. -->
-						<button onclick={() => openFilter(m.e, m.i)}>Type de données et clé de « {col?.name} »…</button>
+						<button data-shed="1" onclick={() => openFilter(m.e, m.i)}>Type de données et clé de « {col?.name} »…</button>
 					{/if}
 					{#if cols}
-						<button
+						<button data-shed="1"
 							onclick={() => {
 								const t = m.e.t;
 								const c = t.col + m.i;
@@ -7785,15 +7785,15 @@
 						>
 					{/if}
 					{#if cols && source.promoteHeader && m.e.t.rows > 0}
-						<button onclick={() => menuAction(() => source.promoteHeader!(m.e.t))}>Utiliser la 1re ligne comme en-têtes</button>
+						<button data-shed="1" onclick={() => menuAction(() => source.promoteHeader!(m.e.t))}>Utiliser la 1re ligne comme en-têtes</button>
 					{/if}
 					{#if m.e.t.query && source.refreshTable}
 						{@const t = m.e.t}
 						<hr />
-						<button title="F5 dans le tableau" onclick={() => menuAction(() => source.refreshTable!(t))}>Actualiser « {t.query?.name} »</button>
+						<button data-shed="2" title="F5 dans le tableau" onclick={() => menuAction(() => source.refreshTable!(t))}>Actualiser « {t.query?.name} »</button>
 					{/if}
 					{#if source.convertToRange}
-						<button title="Le tableau devient des cellules libres, au même endroit" onclick={() => menuAction(() => source.convertToRange!(m.e.t))}>Convertir en plage</button>
+						<button data-shed="1" title="Le tableau devient des cellules libres, au même endroit" onclick={() => menuAction(() => source.convertToRange!(m.e.t))}>Convertir en plage</button>
 					{/if}
 					{#if source.deleteTables}
 						<button
@@ -7829,19 +7829,19 @@
 		{#if freeMenu}
 			{@const m = freeMenu}
 			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (freeMenu = null)}>
-				<button
+				<button data-shed="3"
 					onclick={() => {
 						freeMenu = null;
 						copySelection(true);
 					}}>Couper</button
 				>
-				<button
+				<button data-shed="3"
 					onclick={() => {
 						freeMenu = null;
 						copySelection();
 					}}>Copier</button
 				>
-				<button
+				<button data-shed="3"
 					onclick={() => {
 						freeMenu = null;
 						pasteClipboard();
@@ -7871,8 +7871,8 @@
 						<hr />
 						<button disabled={!foldTarget(info, true)} onclick={() => foldPivot(fp, 'expand')}>Développer</button>
 						<button disabled={!foldTarget(info, false)} onclick={() => foldPivot(fp, 'collapse')}>Réduire</button>
-						<button disabled={!canFoldAll(fp.rows, true)} onclick={() => foldPivot(fp, 'expandAll')}>Développer tout</button>
-						<button disabled={!canFoldAll(fp.rows, false)} onclick={() => foldPivot(fp, 'collapseAll')}>Réduire tout</button>
+						<button data-shed="2" disabled={!canFoldAll(fp.rows, true)} onclick={() => foldPivot(fp, 'expandAll')}>Développer tout</button>
+						<button data-shed="2" disabled={!canFoldAll(fp.rows, false)} onclick={() => foldPivot(fp, 'collapseAll')}>Réduire tout</button>
 					{/if}
 				{/if}
 				<hr />
@@ -7885,13 +7885,13 @@
 				{#if !m.kind}
 					{#if source.applyStyle}
 						<hr />
-						<button onclick={() => openFormat()}>Format de cellule… <span class="keys">Ctrl+1</span></button>
+						<button data-shed="1" onclick={() => openFormat()}>Format de cellule… <span class="keys">Ctrl+1</span></button>
 					{/if}
 					{#if source.setNote}{@render noteItems()}{/if}
 					{#if source.formatAsTable && inRangeZone(active.row, active.col)}
 						{@const at = { row: active.row, col: active.col }}
 						<hr />
-						<button title="La plage redevient un tableau (sa première ligne donne les en-têtes)" onclick={() => menuAction(() => source.formatAsTable!(at.row, at.col))}>Mettre sous forme de tableau</button>
+						<button data-shed="1" title="La plage redevient un tableau (sa première ligne donne les en-têtes)" onclick={() => menuAction(() => source.formatAsTable!(at.row, at.col))}>Mettre sous forme de tableau</button>
 					{/if}
 				{/if}
 			</div>

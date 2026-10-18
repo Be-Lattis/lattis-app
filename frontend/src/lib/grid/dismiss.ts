@@ -44,12 +44,84 @@ export function inside(r: { left: number; top: number; right: number; bottom: nu
 	return { dx, dy };
 }
 
+/** Degrés d'effacement d'un menu trop haut (attribut data-shed). */
+export const SHED_LEVELS = [1, 2, 3];
+
+/**
+ * Menu plus haut que la fenêtre : retire ses entrées les moins utiles, par
+ * degrés (data-shed="1" d'abord : accessible par le ruban ou rare ; puis
+ * "2" ; puis "3" : courant mais doublé d'un raccourci), jusqu'à ce qu'il
+ * rentre, puis les séparateurs devenus inutiles. Les entrées sans data-shed
+ * restent toujours. Rend vrai s'il rentre.
+ */
+function shed(node: HTMLElement, avail: number): boolean {
+	for (const el of node.querySelectorAll<HTMLElement>('[data-shed-off]')) {
+		el.style.display = '';
+		el.removeAttribute('data-shed-off');
+	}
+	const fits = () => node.getBoundingClientRect().height <= avail;
+	if (fits()) return true;
+	for (const level of SHED_LEVELS) {
+		const items = node.querySelectorAll<HTMLElement>(`[data-shed="${level}"]`);
+		if (!items.length) continue;
+		for (const el of items) hide(el);
+		tidySeparators(node);
+		if (fits()) return true;
+	}
+	return false;
+}
+
+function hide(el: HTMLElement) {
+	if (el.style.display === 'none') return;
+	el.style.display = 'none';
+	el.setAttribute('data-shed-off', '');
+}
+
+/** Masque les séparateurs en tête, en fin ou à la suite d'un autre. */
+function tidySeparators(node: HTMLElement) {
+	let prev: 'start' | 'hr' | 'item' = 'start';
+	let last: HTMLElement | null = null;
+	for (const el of node.children) {
+		if (!(el instanceof HTMLElement) || el.style.display === 'none') continue;
+		if (el.tagName === 'HR') {
+			if (prev !== 'item') hide(el);
+			else {
+				prev = 'hr';
+				last = el;
+			}
+		} else if (!el.classList.contains('menu-title')) prev = 'item';
+	}
+	if (prev === 'hr' && last) hide(last);
+}
+
 /**
  * Garde un menu ou un panneau flottant dans la fenêtre : décalé vers le haut
- * ou la gauche s'il déborde en bas ou à droite, et avec sa propre barre de
- * défilement s'il est plus haut que la fenêtre. Recalculé quand son contenu
- * change de taille.
+ * ou la gauche s'il déborde en bas ou à droite, rétréci par degrés s'il est
+ * plus haut que la fenêtre (shed), et en dernier recours avec sa propre
+ * barre de défilement. Recalculé quand son contenu change de taille.
  */
+/**
+ * Partie visible pour un nœud : la fenêtre, réduite par ses parents qui
+ * coupent ce qui dépasse (overflow autre que visible), comme la grille.
+ */
+function visibleBox(node: HTMLElement): { left: number; top: number; right: number; bottom: number } {
+	const b = { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
+	// Un nœud fixe n'est coupé par personne ; un nœud absolu, seulement à partir
+	// de son bloc conteneur.
+	const pos = getComputedStyle(node).position;
+	const first = pos === 'fixed' ? null : pos === 'absolute' ? (node.offsetParent as HTMLElement | null) : node.parentElement;
+	for (let el = first; el && el !== document.body; el = el.parentElement) {
+		const st = getComputedStyle(el);
+		if (st.overflowX === 'visible' && st.overflowY === 'visible') continue;
+		const r = el.getBoundingClientRect();
+		b.left = Math.max(b.left, r.left);
+		b.top = Math.max(b.top, r.top);
+		b.right = Math.min(b.right, r.right);
+		b.bottom = Math.min(b.bottom, r.bottom);
+	}
+	return b;
+}
+
 function keepInside(node: HTMLElement): () => void {
 	if (typeof requestAnimationFrame === 'undefined' || typeof window === 'undefined') return () => {};
 	let busy = false;
@@ -60,11 +132,18 @@ function keepInside(node: HTMLElement): () => void {
 		const r0 = node.getBoundingClientRect();
 		// Zoom ou transformation d'un parent : pixels de la fenêtre → pixels du nœud.
 		const k = node.offsetWidth ? r0.width / node.offsetWidth : 1;
-		if (r0.height > window.innerHeight - 2 * EDGE_GAP) {
-			node.style.maxHeight = `${(window.innerHeight - 2 * EDGE_GAP) / (k || 1)}px`;
+		const box = visibleBox(node);
+		const avail = box.bottom - box.top - 2 * EDGE_GAP;
+		if (r0.height > avail && !shed(node, avail)) {
+			node.style.maxHeight = `${avail / (k || 1)}px`;
 			node.style.overflowY = 'auto';
 		}
-		const { dx, dy } = inside(node.getBoundingClientRect(), window.innerWidth, window.innerHeight);
+		const r = node.getBoundingClientRect();
+		const { dx, dy } = inside(
+			{ left: r.left - box.left, top: r.top - box.top, right: r.right - box.left, bottom: r.bottom - box.top },
+			box.right - box.left,
+			box.bottom - box.top
+		);
 		if (dx || dy) node.style.translate = `${-dx / (k || 1)}px ${-dy / (k || 1)}px`;
 		requestAnimationFrame(() => (busy = false));
 	};
