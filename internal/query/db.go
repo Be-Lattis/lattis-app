@@ -93,8 +93,9 @@ func (c DBConfig) port(kind string) int {
 	return c.Port
 }
 
-// Account désigne le compte d'une connexion dans le trousseau : la même
-// base utilisée par deux classeurs partage son mot de passe.
+// Account désigne le compte d'une connexion ; le trousseau le range par
+// classeur (Secrets.For) : la même base utilisée par deux classeurs demande
+// son mot de passe à chacun.
 func (c Connection) Account() string {
 	k := c.Kind
 	if k == "" {

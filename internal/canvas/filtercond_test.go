@@ -52,7 +52,9 @@ func TestFilterConds(t *testing.T) {
 		})
 		return out
 	}
-	cond := func(op, v, to string) *ColumnFilter { return &ColumnFilter{Conds: []FilterCond{{Op: op, Value: v, To: to}}} }
+	cond := func(op, v, to string) *ColumnFilter {
+		return &ColumnFilter{Conds: []FilterCond{{Op: op, Value: v, To: to}}}
+	}
 	for _, c := range []struct {
 		i    int
 		f    *ColumnFilter
@@ -72,7 +74,7 @@ func TestFilterConds(t *testing.T) {
 		{1, cond("top", "2", ""), []string{"Lyon", "Paris"}},
 		{1, cond("bottom", "1", ""), []string{"Lille"}},
 		{1, cond("top", "10", ""), []string{"Lyon", "Lille", "Paris", "Nice"}},
-		{1, cond("above", "", ""), []string{"Paris"}},  // moyenne 133,75
+		{1, cond("above", "", ""), []string{"Paris"}}, // moyenne 133,75
 		{1, cond("below", "", ""), []string{"Lyon", "Lille", "Nice"}},
 		{1, cond("eq", "", ""), []string{"Rome 50%"}},
 		{1, cond("ne", "", ""), []string{"Lyon", "Lille", "Paris", "Nice"}},

@@ -607,7 +607,7 @@ type ControlState struct {
 	Value  string              `json:"value"`
 	// Choices : choix d'une liste alimentée par une colonne.
 	Choices []string `json:"choices,omitempty"`
-	Error  string              `json:"error"`
+	Error   string   `json:"error"`
 }
 
 // ControlOf lit un contrôle et la valeur de sa cellule liée.

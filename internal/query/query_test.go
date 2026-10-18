@@ -345,6 +345,50 @@ func TestQueryDefinitionsUndo(t *testing.T) {
 	}
 }
 
+// Un mot de passe est lié au classeur qui l'a reçu : un autre classeur qui
+// vise le même compte ne s'en sert pas ; il suit le classeur enregistré sous
+// un nouveau fichier.
+func TestSecretsPerWorkbook(t *testing.T) {
+	root := NewSecrets(false)
+	a, b := root.For("fichier:a.lattis"), root.For("fichier:b.lattis")
+	if err := a.Set("pg://louis@db/ventes", "secret", true); err != nil {
+		t.Fatal(err)
+	}
+	if pw, ok := a.Get("pg://louis@db/ventes"); !ok || pw != "secret" {
+		t.Fatal("mot de passe perdu")
+	}
+	if _, ok := b.Get("pg://louis@db/ventes"); ok {
+		t.Fatal("un autre classeur réutilise le mot de passe")
+	}
+	if _, ok := root.Get("pg://louis@db/ventes"); ok {
+		t.Fatal("mot de passe visible hors de son classeur")
+	}
+	// Classeur jamais enregistré, puis enregistré : le mot de passe suit.
+	tmp := root.For("session:1")
+	if err := tmp.Set("web://@api", "jeton", true); err != nil {
+		t.Fatal(err)
+	}
+	if !tmp.Remembered("web://@api") {
+		t.Fatal("« Mémoriser » oublié avant l'enregistrement")
+	}
+	if err := root.Rebind("session:1", "fichier:c.lattis"); err != nil {
+		t.Fatal(err)
+	}
+	if pw, ok := root.For("fichier:c.lattis").Get("web://@api"); !ok || pw != "jeton" {
+		t.Fatal("mot de passe non repris à l'enregistrement")
+	}
+	if _, ok := root.For("fichier:c.lattis").Get("pg://louis@db/ventes"); ok {
+		t.Fatal("mot de passe d'un autre classeur repris")
+	}
+	// Env.Workbook choisit la vue du classeur.
+	if pw, ok := (Env{Secrets: root, Workbook: "fichier:a.lattis"}).secrets().Get("pg://louis@db/ventes"); !ok || pw != "secret" {
+		t.Fatal("Env.Workbook ignoré")
+	}
+	if _, ok := (Env{Secrets: root, Workbook: "fichier:b.lattis"}).secrets().Get("pg://louis@db/ventes"); ok {
+		t.Fatal("Env d'un autre classeur : mot de passe réutilisé")
+	}
+}
+
 func TestSecrets(t *testing.T) {
 	s := NewSecrets(false)
 	if _, ok := s.Get("a"); ok {

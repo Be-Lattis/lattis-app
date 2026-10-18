@@ -34,6 +34,30 @@ func open(t *testing.T) *fixture {
 	return &fixture{New(db, bus), bus}
 }
 
+// eachRow rend une erreur de lecture au lieu de la prendre pour la fin du
+// résultat (le vérificateur d'intégrité ne conclut pas « aucun écart »).
+func TestEachRowReportsScanErrors(t *testing.T) {
+	d := open(t)
+	n := 0
+	err := d.read(context.Background(), func(tx *tx) error {
+		rs, err := tx.query(`SELECT 1 UNION ALL SELECT 'x'`)
+		if err != nil {
+			return err
+		}
+		return eachRow(rs, func() error {
+			var v int64
+			if err := rs.Scan(&v); err != nil {
+				return err
+			}
+			n++
+			return nil
+		})
+	})
+	if err == nil || n != 1 {
+		t.Fatalf("erreur de lecture ignorée : %v (%d lignes)", err, n)
+	}
+}
+
 func view(t *testing.T, d *fixture) string {
 	t.Helper()
 	v, err := d.View(context.Background(), 1)

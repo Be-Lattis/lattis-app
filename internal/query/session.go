@@ -22,13 +22,20 @@ import (
 type Env struct {
 	Model   *canvas.Model
 	Secrets *Secrets
+	// Workbook désigne le classeur pour ses mots de passe
+	// (doc.Document.SecretScope) : ceux d'un autre classeur ne servent pas.
+	Workbook string
 }
 
 func (e Env) secrets() *Secrets {
-	if e.Secrets == nil {
-		return DefaultSecrets
+	s := e.Secrets
+	if s == nil {
+		s = DefaultSecrets
 	}
-	return e.Secrets
+	if e.Workbook == "" {
+		return s
+	}
+	return s.For(e.Workbook)
 }
 
 // Session est une base SQLite de travail (fichier temporaire) où les

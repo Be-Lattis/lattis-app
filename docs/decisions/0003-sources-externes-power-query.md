@@ -30,6 +30,8 @@ Le mot de passe est rangé sous le service `Lattis` et le compte `postgres://uti
 
 Pourquoi go-keyring : bibliothèque connue (Zalando), sans CGO, déjà présente dans les dépendances indirectes de Wails ; un trousseau indisponible n'empêche rien (repli sur la mémoire). « Oublier le mot de passe » le retire de la mémoire et du trousseau.
 
+Mot de passe lié au classeur (audit qualité n° 3, M11, 18/10/2026) : la clé du trousseau est le compte suivi du fichier du classeur (`… | classeur fichier:<chemin absolu>`), et la mémoire de session suit la même clé. Sans cela, un classeur reçu qui vise le même serveur et le même utilisateur se servait du mot de passe sans rien demander. Le fichier est une donnée du poste, qu'un classeur ne peut pas imiter (un identifiant rangé dans le classeur, lui, se recopie). Un classeur jamais enregistré a une portée de session ; ses mots de passe passent à son fichier au premier enregistrement (et à « Enregistrer sous »). Coût accepté : un serveur partagé par deux classeurs demande son mot de passe une fois par classeur, de même qu'un classeur déplacé ou renommé ; les entrées mémorisées avant ce changement (clé sans classeur) ne sont plus lues.
+
 ## Autres sources (17/10/2026)
 
 Toutes sont en **lecture seule** ; aucune n'écrit vers l'extérieur.

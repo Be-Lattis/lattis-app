@@ -120,8 +120,50 @@ func TestProtectSheetNoPassword(t *testing.T) {
 }
 
 // Le classeur protégé refuse d'ajouter, renommer, déplacer ou supprimer des
-// feuilles, et verrouille aussi le contenu de toutes les feuilles (choix de
-// Louis, 17/10/2026).
+// feuilles ; comme Excel, le contenu des feuilles non protégées reste
+// modifiable.
+func TestProtectWorkbookStructureOnly(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	id, err := d.AddSheet(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := d.ProtectSheet(ctx, id, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.ProtectWorkbook(ctx, "clé", false); err != nil {
+		t.Fatal(err)
+	}
+	_, err = d.AddSheet(ctx)
+	protected(t, err, "")
+	protected(t, d.RenameSheet(ctx, id, "Budget"), "")
+	protected(t, d.DeleteSheet(ctx, 1), "")
+	if _, err := d.SetCell(ctx, 1, 0, 0, "contenu"); err != nil {
+		t.Fatalf("saisie refusée dans une feuille non protégée : %v", err)
+	}
+	_, err = d.SetCell(ctx, id, 0, 0, "contenu")
+	protected(t, err, "Feuille2")
+	if l, _ := d.Layout(ctx, 1); !l.WorkbookProtected || l.WorkbookSheets {
+		t.Fatalf("protection du classeur mal décrite : %+v", l)
+	}
+	// La saisie faite sous protection de la structure s'annule.
+	if _, err := d.bus.Undo(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.UnprotectWorkbook(ctx, "clé"); err != nil {
+		t.Fatal(err)
+	}
+	if p, _ := d.Protection(ctx); p.Workbook || p.WorkbookSheets || len(p.Sheets) != 1 {
+		t.Fatalf("après déprotection : %+v", p)
+	}
+	_, err = d.SetCell(ctx, id, 0, 0, "contenu")
+	protected(t, err, "Feuille2")
+}
+
+// Avec « Verrouiller aussi le contenu de toutes les feuilles », le contenu
+// de chaque feuille est refusé aussi ; ôter la protection du classeur ôte ce
+// verrou, et lui seul.
 func TestProtectWorkbook(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
@@ -129,7 +171,13 @@ func TestProtectWorkbook(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := d.ProtectWorkbook(ctx, "clé"); err != nil {
+	if err := d.ProtectSheet(ctx, id, "propre"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.SetCell(ctx, 1, 0, 0, "avant"); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.ProtectWorkbook(ctx, "clé", true); err != nil {
 		t.Fatal(err)
 	}
 	_, err = d.AddSheet(ctx)
@@ -140,10 +188,16 @@ func TestProtectWorkbook(t *testing.T) {
 	protected(t, d.DeleteSheet(ctx, id), "")
 	protected(t, d.MoveSheet(ctx, id, 0), "")
 	_, err = d.SetCell(ctx, id, 0, 0, "contenu")
-	protected(t, err, "")
+	protected(t, err, "Feuille2")
 	_, err = d.SetCell(ctx, 1, 0, 0, "contenu")
 	protected(t, err, "")
-	if l, _ := d.Layout(ctx, 1); !l.WorkbookProtected || !l.WorkbookPassword {
+	protected(t, d.ApplyStyle(ctx, 1, 0, 0, 0, 0, Style{"b": true}), "")
+	_, err = d.Paste(ctx, 1, 5, 5, [][]string{{"a", "b"}})
+	protected(t, err, "")
+	// Une saisie antérieure ne s'annule pas tant que le verrou est posé.
+	_, err = d.bus.Undo(ctx)
+	protected(t, err, "Feuille1")
+	if l, _ := d.Layout(ctx, 1); !l.WorkbookProtected || !l.WorkbookPassword || !l.WorkbookSheets {
 		t.Fatalf("protection du classeur mal décrite : %+v", l)
 	}
 	if err := d.UnprotectWorkbook(ctx, ""); !errors.Is(err, ErrPassword) {
@@ -152,12 +206,25 @@ func TestProtectWorkbook(t *testing.T) {
 	if err := d.UnprotectWorkbook(ctx, "clé"); err != nil {
 		t.Fatal(err)
 	}
+	if p, _ := d.Protection(ctx); p.Workbook || p.WorkbookSheets || len(p.Sheets) != 1 || !p.Sheets[id] {
+		t.Fatalf("après déprotection : %+v", p)
+	}
 	if err := d.RenameSheet(ctx, id, "Budget"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.SetCell(ctx, 1, 0, 0, "contenu"); err != nil {
+		t.Fatalf("contenu refusé après déprotection : %v", err)
+	}
+	// La feuille protégée pour elle-même le reste.
+	_, err = d.SetCell(ctx, id, 0, 0, "contenu")
+	protected(t, err, "Budget")
+	if err := d.UnprotectSheet(ctx, id, "propre"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := d.SetCell(ctx, id, 0, 0, "contenu"); err != nil {
 		t.Fatalf("contenu refusé après déprotection : %v", err)
 	}
+	check(t, d, "protection du classeur")
 }
 
 // Annuler ou rétablir une action antérieure ne contourne pas la protection ;
@@ -217,7 +284,7 @@ func TestProtectUndo(t *testing.T) {
 	if _, err := d.AddSheet(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if err := d.ProtectWorkbook(ctx, ""); err != nil {
+	if err := d.ProtectWorkbook(ctx, "", false); err != nil {
 		t.Fatal(err)
 	}
 	_, err = d.bus.Undo(ctx)

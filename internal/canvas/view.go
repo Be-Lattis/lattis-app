@@ -120,15 +120,17 @@ type Layout struct {
 	RowRules []LineRules `json:"rowRules"`
 	ColRules []LineRules `json:"colRules"`
 	// Règles « formule » vérifiées par les cellules libres (voir ruleMarks).
-	RuleMarks []RuleMark  `json:"ruleMarks"`
-	Pivots   []PivotInfo  `json:"pivots"`  // tableaux croisés, calculés
-	Charts   []ChartInfo  `json:"charts"`  // graphiques, avec leurs données
-	Buttons  []ButtonInfo `json:"buttons"` // boutons d'action
+	RuleMarks []RuleMark   `json:"ruleMarks"`
+	Pivots    []PivotInfo  `json:"pivots"`  // tableaux croisés, calculés
+	Charts    []ChartInfo  `json:"charts"`  // graphiques, avec leurs données
+	Buttons   []ButtonInfo `json:"buttons"` // boutons d'action
 	// Ranges : zones « plage » (tableaux convertis), en rectangles.
 	Ranges []Rect `json:"ranges"`
 	// Structure du classeur protégée (onglets), avec ou sans mot de passe.
 	WorkbookProtected bool `json:"workbookProtected"`
 	WorkbookPassword  bool `json:"workbookPassword"`
+	// … avec le contenu de toutes les feuilles verrouillé.
+	WorkbookSheets bool `json:"workbookSheets"`
 }
 
 // CellStyle est la mise en forme d'une cellule hors tableau.
@@ -173,7 +175,7 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 		if err != nil {
 			return err
 		}
-		l.WorkbookProtected, l.WorkbookPassword = prot.Workbook, prot.WorkbookPassword
+		l.WorkbookProtected, l.WorkbookPassword, l.WorkbookSheets = prot.Workbook, prot.WorkbookPassword, prot.WorkbookSheets
 		for i, s := range l.Sheets {
 			l.Sheets[i].Password, l.Sheets[i].Protected = prot.Sheets[s.ID]
 		}

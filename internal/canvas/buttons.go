@@ -252,7 +252,12 @@ func (t *tx) controlNames(except int64) ([]string, error) {
 			continue
 		}
 		var cfg ButtonConfig
-		_ = json.Unmarshal([]byte(raw), &cfg)
+		if json.Unmarshal([]byte(raw), &cfg) != nil {
+			// Configuration illisible : le contrôle garde le nom sous lequel
+			// Controls l'affiche (ce qui a pu être lu, sinon le nom par
+			// défaut), qui reste pris.
+			cfg.Label = "?"
+		}
 		out = append(out, controlName(id, cfg))
 	}
 	return out, rs.Err()

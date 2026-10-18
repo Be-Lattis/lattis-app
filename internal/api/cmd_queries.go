@@ -118,7 +118,7 @@ func init() {
 					return nil, err
 				}
 				defer s.Close()
-				pv := s.Preview(c, query.Env{Model: d.Model}, q, upto, true)
+				pv := s.Preview(c, query.Env{Model: d.Model, Workbook: d.SecretScope()}, q, upto, true)
 				pv.SQL = ""
 				return pv, nil
 			},
@@ -136,7 +136,7 @@ func init() {
 					return nil, err
 				}
 				d, _ := c.Doc()
-				l, err := query.Refresh(c, query.Env{Model: d.Model}, q.ID)
+				l, err := query.Refresh(c, query.Env{Model: d.Model, Workbook: d.SecretScope()}, q.ID)
 				return l, refreshErr(err)
 			},
 		},
@@ -156,7 +156,7 @@ func init() {
 					return nil, err
 				}
 				defer s.Close()
-				ls, err := s.RefreshAll(c, query.Env{Model: d.Model})
+				ls, err := s.RefreshAll(c, query.Env{Model: d.Model, Workbook: d.SecretScope()})
 				return ls, refreshErr(err)
 			},
 		},

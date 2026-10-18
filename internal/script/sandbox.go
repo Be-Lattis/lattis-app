@@ -3,6 +3,7 @@ package script
 import (
 	"context"
 	"runtime"
+	"runtime/metrics"
 	"time"
 
 	lua "github.com/yuin/gopher-lua"
@@ -19,7 +20,7 @@ import (
 // revanche le contexte qu'on lui donne (SetContext) : un délai ou le bouton
 // Arrêter annulent ce contexte, qui est aussi transmis aux requêtes SQL en
 // cours. gopher-lua ne bornant pas la mémoire, un chien de garde surveille
-// le tas du processus.
+// le tas du processus (voir watchHeap).
 
 // baseAllowed sont les fonctions de base gardées.
 var baseAllowed = map[string]bool{
@@ -96,11 +97,34 @@ func keepOnly(t *lua.LTable, allowed map[string]bool, extra ...string) {
 	}
 }
 
+// heapObjects est la mémoire des objets du tas, vivants ou pas encore
+// balayés : l'équivalent de runtime.MemStats.HeapAlloc.
+const heapObjects = "/memory/classes/heap/objects:bytes"
+
+// heapBytes lit heapObjects. runtime/metrics ne suspend pas le programme,
+// contrairement à runtime.ReadMemStats (un « stop the world » à chaque
+// lecture, ici 50 fois par seconde pendant tout le script).
+func heapBytes(s []metrics.Sample) uint64 {
+	metrics.Read(s)
+	if s[0].Value.Kind() != metrics.KindUint64 {
+		return 0
+	}
+	return s[0].Value.Uint64()
+}
+
 // watchHeap annule le script quand le tas grossit de plus de limit octets.
+//
+// Go ne compte pas la mémoire par goroutine et gopher-lua n'a ni allocateur
+// ni crochet d'allocation à brancher : la mesure reste celle du tas du
+// processus, rapportée à ce qu'il était au lancement du script. Pour ne pas
+// arrêter un script qui produit beaucoup de déchets sans rien garder (ni
+// accuser un script d'objets morts que le ramasse-miettes n'a pas encore
+// repris), un dépassement est confirmé après un ramassage complet ; il est
+// rare (au-delà de la borne seulement), seule la lecture courante doit être
+// légère.
 func watchHeap(ctx context.Context, cancel context.CancelCauseFunc, limit uint64) {
-	var ms runtime.MemStats
-	runtime.ReadMemStats(&ms)
-	base := ms.HeapAlloc
+	s := []metrics.Sample{{Name: heapObjects}}
+	base := heapBytes(s)
 	t := time.NewTicker(20 * time.Millisecond)
 	defer t.Stop()
 	for {
@@ -108,8 +132,11 @@ func watchHeap(ctx context.Context, cancel context.CancelCauseFunc, limit uint64
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			runtime.ReadMemStats(&ms)
-			if ms.HeapAlloc > base+limit {
+			if heapBytes(s) <= base+limit {
+				continue
+			}
+			runtime.GC()
+			if heapBytes(s) > base+limit {
 				cancel(ErrMemory)
 				return
 			}

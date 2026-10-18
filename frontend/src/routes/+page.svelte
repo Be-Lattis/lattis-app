@@ -109,6 +109,8 @@
 	let pw1 = $state('');
 	let pw2 = $state('');
 	let pwError = $state('');
+	// Protéger le classeur : verrouiller aussi le contenu de toutes les feuilles.
+	let lockSheets = $state(false);
 
 	// Démo.
 	let demo = $state<{ name: string; rows: number; columns: { name: string; type: ColumnType }[]; sqlName: string; sqlColumns: string[] } | null>(null);
@@ -843,7 +845,8 @@
 				.catch((e) => (notice = err(e)));
 		}, 400);
 	}
-	const bookLocked = $derived(mode === 'doc' && !!layout?.workbookProtected);
+	// Le contenu des feuilles n'est verrouillé par le classeur que si on l'a choisi en le protégeant.
+	const bookLocked = $derived(mode === 'doc' && !!layout?.workbookProtected && !!layout?.workbookSheets);
 	const sheetLocked = $derived(mode === 'doc' && (!!activeInfo?.protected || bookLocked));
 	const lockedMsg = $derived(
 		activeInfo?.protected
@@ -865,13 +868,14 @@
 			return;
 		}
 		pw1 = pw2 = pwError = '';
+		lockSheets = false;
 		protecting = { what, id, name, off: on };
 	}
 
-	async function applyProtect(what: 'sheet' | 'workbook', id: number, name: string, off: boolean, pw: string) {
+	async function applyProtect(what: 'sheet' | 'workbook', id: number, name: string, off: boolean, pw: string, sheets = false) {
 		try {
 			if (what === 'sheet') await (off ? DocumentService.UnprotectSheet(id, pw) : DocumentService.ProtectSheet(id, pw));
-			else await (off ? DocumentService.UnprotectWorkbook(pw) : DocumentService.ProtectWorkbook(pw));
+			else await (off ? DocumentService.UnprotectWorkbook(pw) : DocumentService.ProtectWorkbook(pw, sheets));
 			protecting = null;
 			await reload();
 			notice =
@@ -881,7 +885,9 @@
 						: `Feuille « ${name} » protégée`
 					: off
 						? 'Protection du classeur ôtée'
-						: 'Structure du classeur protégée';
+						: sheets
+							? 'Classeur protégé : structure et contenu de toutes les feuilles'
+							: 'Structure du classeur protégée';
 		} catch (e) {
 			if (protecting) pwError = err(e);
 			else notice = err(e);
@@ -895,7 +901,7 @@
 			pwError = 'Les deux mots de passe ne correspondent pas';
 			return;
 		}
-		applyProtect(p.what, p.id, p.name, p.off, pw1);
+		applyProtect(p.what, p.id, p.name, p.off, pw1, p.what === 'workbook' && lockSheets);
 	}
 
 	/** Supprimer une feuille : tout son contenu part avec elle (un Ctrl+Z rend tout) ; demandé d'abord si elle n'est pas vide. */
@@ -1296,8 +1302,16 @@
 					<p class="muted">
 						{p.what === 'sheet'
 							? 'Saisie, collage, mise en forme, lignes et colonnes, tri, objets et requêtes SQL d’écriture seront refusés sur cette feuille. Lecture, copie et filtres restent permis.'
-							: 'Ajouter, supprimer, renommer ou déplacer des feuilles sera refusé.'}
+							: lockSheets
+								? 'Ajouter, supprimer, renommer ou déplacer des feuilles sera refusé, ainsi que toute modification du contenu des feuilles.'
+								: 'Ajouter, supprimer, renommer ou déplacer des feuilles sera refusé. Le contenu des feuilles non protégées reste modifiable.'}
 					</p>
+					{#if p.what === 'workbook'}
+						<label class="check">
+							<input type="checkbox" bind:checked={lockSheets} />
+							Verrouiller aussi le contenu de toutes les feuilles
+						</label>
+					{/if}
 				{/if}
 				<label>
 					Mot de passe{p.off ? '' : ' (facultatif)'}
@@ -1584,6 +1598,11 @@
 	}
 	.modal.protect .muted {
 		margin-top: -6px;
+	}
+	.modal.protect label.check {
+		flex-direction: row;
+		align-items: center;
+		gap: 6px;
 	}
 	.error {
 		color: #b42318;

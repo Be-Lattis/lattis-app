@@ -154,7 +154,7 @@ func (h host) SaveDoc(ctx context.Context, path string) error {
 	if err != nil {
 		return err
 	}
-	if err := d.Save(ctx, path); err != nil {
+	if err := saveDoc(ctx, d, path); err != nil {
 		return err
 	}
 	addRecent(d.Path())

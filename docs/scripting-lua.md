@@ -485,7 +485,9 @@ sheets.protect("Synthèse", "secret")
 ```
 
 De même, la structure du classeur protégée (`sheets.protect_workbook`) refuse
-`sheets.add`, `sheets.rename`, `sheets.move` et `sheets.delete`.
+`sheets.add`, `sheets.rename`, `sheets.move` et `sheets.delete`. Le contenu des
+feuilles non protégées reste modifiable, sauf avec `sheets.protect_workbook(mot_de_passe, true)`,
+qui le verrouille aussi jusqu'à `sheets.unprotect_workbook`.
 
 ---
 

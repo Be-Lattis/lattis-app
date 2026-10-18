@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/lalamefine/lattis/internal/archive"
@@ -162,6 +163,35 @@ func m2Child() {
 
 // La protection, hors de l'historique, marque le classeur modifié et se
 // retrouve à la réouverture (empreinte du mot de passe comprise).
+// La portée des mots de passe : un jeton tant que le classeur n'a pas de
+// fichier, puis son fichier, stable d'une ouverture à l'autre.
+func TestSecretScope(t *testing.T) {
+	useRoot(t)
+	ctx := context.Background()
+	d, err := New(ctx)
+	must(t, err)
+	d2, err := New(ctx)
+	must(t, err)
+	defer d2.Close()
+	s0 := d.SecretScope()
+	if !strings.HasPrefix(s0, "session:") || s0 == d2.SecretScope() {
+		t.Fatalf("portées de session %q et %q", s0, d2.SecretScope())
+	}
+	path := filepath.Join(t.TempDir(), "a.lattis")
+	must(t, d.Save(ctx, path))
+	s1 := d.SecretScope()
+	if !strings.HasPrefix(s1, "fichier:") || s1 == s0 {
+		t.Fatalf("portée après enregistrement %q", s1)
+	}
+	must(t, d.Close())
+	d, err = Open(ctx, path)
+	must(t, err)
+	defer d.Close()
+	if d.SecretScope() != s1 {
+		t.Fatalf("portée à la réouverture %q, attendu %q", d.SecretScope(), s1)
+	}
+}
+
 func TestProtectionSaved(t *testing.T) {
 	useRoot(t)
 	ctx := context.Background()
@@ -170,7 +200,7 @@ func TestProtectionSaved(t *testing.T) {
 	must(t, err)
 	must(t, d.Save(ctx, path))
 	must(t, d.ProtectSheet(ctx, 1, "secret"))
-	must(t, d.ProtectWorkbook(ctx, ""))
+	must(t, d.ProtectWorkbook(ctx, "", false))
 	if dirty, _ := d.Dirty(ctx); !dirty {
 		t.Fatal("protection posée mais classeur vu comme enregistré")
 	}

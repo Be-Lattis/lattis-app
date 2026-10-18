@@ -720,10 +720,11 @@ export function ProtectSheet(sheet: number, password: string): $CancellablePromi
 }
 
 /**
- * ProtectWorkbook protège la structure du classeur (onglets).
+ * ProtectWorkbook protège la structure du classeur (onglets) ; sheets
+ * verrouille aussi le contenu de toutes les feuilles.
  */
-export function ProtectWorkbook(password: string): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(4052942421, password);
+export function ProtectWorkbook(password: string, sheets: boolean): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(4052942421, password, sheets);
 }
 
 /**

@@ -2,6 +2,8 @@ package canvas
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"regexp"
 	"slices"
@@ -24,7 +26,10 @@ func (m *Model) Dump(ctx context.Context) (string, error) {
 			return fmt.Errorf("%s : %w", q, err)
 		}
 		defer rs.Close()
-		cols, _ := rs.Columns()
+		cols, err := rs.Columns()
+		if err != nil {
+			return err
+		}
 		vals := make([]any, len(cols))
 		ptrs := make([]any, len(cols))
 		for i := range vals {
@@ -122,7 +127,21 @@ func (m *Model) tableColumns(ctx context.Context) ([]tableCols, error) {
 
 var isoDate = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
 
-// Check vérifie les invariants du modèle et renvoie la liste des écarts.
+// eachRow appelle scan pour chaque ligne de rs, puis le ferme ; rend la
+// première erreur (de scan ou de lecture) : une lecture interrompue n'est
+// jamais prise pour une fin de résultat.
+func eachRow(rs *sql.Rows, scan func() error) error {
+	defer rs.Close()
+	for rs.Next() {
+		if err := scan(); err != nil {
+			return err
+		}
+	}
+	return rs.Err()
+}
+
+// Check vérifie les invariants du modèle et renvoie la liste des écarts. Une
+// erreur de lecture est rendue comme telle, jamais comme « aucun écart ».
 func (m *Model) Check(ctx context.Context) ([]string, error) {
 	var problems []string
 	bad := func(format string, args ...any) { problems = append(problems, fmt.Sprintf(format, args...)) }
@@ -136,12 +155,14 @@ func (m *Model) Check(ctx context.Context) ([]string, error) {
 			return err
 		}
 		var sheets []int64
-		for rs.Next() {
+		if err := eachRow(rs, func() error {
 			var id int64
-			rs.Scan(&id)
+			err := rs.Scan(&id)
 			sheets = append(sheets, id)
+			return err
+		}); err != nil {
+			return err
 		}
-		rs.Close()
 
 		var all []Table
 		for _, sh := range sheets {
@@ -175,7 +196,9 @@ func (m *Model) Check(ctx context.Context) ([]string, error) {
 			if tb.Key != 0 {
 				known[tb.sql()+"_key"] = true
 				var k int
-				t.row(`SELECT count(*) FROM sqlite_schema WHERE type = 'index' AND name = ?`, tb.sql()+"_key").Scan(&k)
+				if err := t.row(`SELECT count(*) FROM sqlite_schema WHERE type = 'index' AND name = ?`, tb.sql()+"_key").Scan(&k); err != nil {
+					return err
+				}
 				if k != 1 {
 					bad("%s : index de la clé absent", tb.Name)
 				}
@@ -186,12 +209,14 @@ func (m *Model) Check(ctx context.Context) ([]string, error) {
 				return err
 			}
 			got := map[string]string{}
-			for rs.Next() {
+			if err := eachRow(rs, func() error {
 				var n, typ string
-				rs.Scan(&n, &typ)
+				err := rs.Scan(&n, &typ)
 				got[n] = typ
+				return err
+			}); err != nil {
+				return err
 			}
-			rs.Close()
 			want := map[string]string{"id": "INTEGER", "_pos": "TEXT"}
 			for _, c := range tb.Cols {
 				want[colSQL(c.ID)] = sqlType(c.Type)
@@ -200,13 +225,17 @@ func (m *Model) Check(ctx context.Context) ([]string, error) {
 				bad("%s : colonnes SQL %v, attendu %v", tb.Name, got, want)
 			}
 			var idx int
-			t.row(`SELECT count(*) FROM sqlite_schema WHERE type = 'index' AND name = ?`, tb.sql()+"_pos").Scan(&idx)
+			if err := t.row(`SELECT count(*) FROM sqlite_schema WHERE type = 'index' AND name = ?`, tb.sql()+"_pos").Scan(&idx); err != nil {
+				return err
+			}
 			if idx != 1 {
 				bad("%s : index _pos absent", tb.Name)
 			}
 			// Clés d'ordre valides et uniques.
 			var dup, invalidPos int
-			t.row(`SELECT count(*) - count(DISTINCT _pos), count(*) FILTER (WHERE _pos = '' OR _pos LIKE '%0') FROM `+tb.sql()).Scan(&dup, &invalidPos)
+			if err := t.row(`SELECT count(*) - count(DISTINCT _pos), count(*) FILTER (WHERE _pos = '' OR _pos LIKE '%0') FROM `+tb.sql()).Scan(&dup, &invalidPos); err != nil {
+				return err
+			}
 			if dup > 0 || invalidPos > 0 {
 				bad("%s : %d clés d'ordre en double, %d invalides", tb.Name, dup, invalidPos)
 			}
@@ -223,7 +252,9 @@ func (m *Model) Check(ctx context.Context) ([]string, error) {
 				default:
 					continue
 				}
-				t.row(`SELECT count(*) FROM ` + tb.sql() + ` WHERE ` + col + ` IS NOT NULL AND ` + q).Scan(&n)
+				if err := t.row(`SELECT count(*) FROM ` + tb.sql() + ` WHERE ` + col + ` IS NOT NULL AND ` + q).Scan(&n); err != nil {
+					return err
+				}
 				if n > 0 {
 					bad("%s.%s : %d valeurs hors type", tb.Name, c.Name, n)
 				}
@@ -234,20 +265,25 @@ func (m *Model) Check(ctx context.Context) ([]string, error) {
 				return err
 			}
 			var inv [][2]int64
-			for rs.Next() {
+			if err := eachRow(rs, func() error {
 				var r, c int64
-				rs.Scan(&r, &c)
+				err := rs.Scan(&r, &c)
 				inv = append(inv, [2]int64{r, c})
+				return err
+			}); err != nil {
+				return err
 			}
-			rs.Close()
 			for _, p := range inv {
 				if !slices.ContainsFunc(tb.Cols, func(c Column) bool { return c.ID == p[1] }) {
 					bad("%s : saisie invalide sur une colonne absente", tb.Name)
 					continue
 				}
 				var v any
-				if err := t.row(`SELECT `+colSQL(p[1])+` FROM `+tb.sql()+` WHERE id = ?`, p[0]).Scan(&v); err != nil {
+				err := t.row(`SELECT `+colSQL(p[1])+` FROM `+tb.sql()+` WHERE id = ?`, p[0]).Scan(&v)
+				if errors.Is(err, sql.ErrNoRows) {
 					bad("%s : saisie invalide sur une ligne absente", tb.Name)
+				} else if err != nil {
+					return err
 				} else if v != nil {
 					bad("%s : saisie invalide sur une cellule non vide", tb.Name)
 				}
@@ -257,16 +293,22 @@ func (m *Model) Check(ctx context.Context) ([]string, error) {
 		if err != nil {
 			return err
 		}
-		for rs.Next() {
+		if err := eachRow(rs, func() error {
 			var n string
-			rs.Scan(&n)
+			if err := rs.Scan(&n); err != nil {
+				return err
+			}
 			if !known[n] && !strings.HasPrefix(n, "_lattis_trash") {
 				bad("objet SQL orphelin : %s", n)
 			}
+			return nil
+		}); err != nil {
+			return err
 		}
-		rs.Close()
 		var orphans int
-		t.row(`SELECT count(*) FROM _lattis_columns WHERE tbl NOT IN (SELECT id FROM _lattis_tables)`).Scan(&orphans)
+		if err := t.row(`SELECT count(*) FROM _lattis_columns WHERE tbl NOT IN (SELECT id FROM _lattis_tables)`).Scan(&orphans); err != nil {
+			return err
+		}
 		if orphans > 0 {
 			bad("%d colonnes sans tableau", orphans)
 		}
@@ -306,8 +348,10 @@ func (m *Model) View(ctx context.Context, sheet int64) (string, error) {
 				ptrs[i] = &vals[i]
 			}
 			r := tb.Row + 1
-			for rs.Next() {
-				rs.Scan(ptrs...)
+			if err := eachRow(rs, func() error {
+				if err := rs.Scan(ptrs...); err != nil {
+					return err
+				}
 				for i, v := range normalize(vals) {
 					s := ""
 					if v != nil {
@@ -316,8 +360,10 @@ func (m *Model) View(ctx context.Context, sheet int64) (string, error) {
 					put(r, tb.Col+i, s)
 				}
 				r++
+				return nil
+			}); err != nil {
+				return err
 			}
-			rs.Close()
 		}
 		cells, err := t.cells(sheet)
 		if err != nil {

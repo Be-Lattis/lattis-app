@@ -641,10 +641,11 @@ export const apiReference: RefEntry[] = [
 	{
 		name: "sheets.protect_workbook",
 		category: "sheets",
-		signature: "sheets.protect_workbook([password])",
+		signature: "sheets.protect_workbook([password], [sheets])",
 		summary: "Protège la structure du classeur, comme Révision › Protéger le classeur : ajouter, supprimer, renommer ou déplacer des feuilles est ensuite refusé.",
-		details: "Le contenu des feuilles reste modifiable (voir sheets.protect). Le mot de passe est facultatif. Protéger ne s'annule pas. Paramètres — password : mot de passe pour ôter la protection. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
-		args: [0, 1]
+		details: "Comme Excel, le contenu des feuilles non protégées reste modifiable (voir sheets.protect), sauf avec sheets = true : le contenu de toutes les feuilles est alors verrouillé aussi, jusqu'à sheets.unprotect_workbook, qui ôte ce verrou et lui seul (les feuilles protégées une à une le restent). Le mot de passe est facultatif. Protéger ne s'annule pas. Paramètres — password : mot de passe pour ôter la protection ; sheets : verrouiller aussi le contenu de toutes les feuilles. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.protect_workbook{password = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "sheets.protect_workbook(\"secret\", true)\nsheets.unprotect_workbook(\"secret\")",
+		args: [0, 2]
 	},
 	{
 		name: "sheets.rename",
@@ -692,7 +693,7 @@ export const apiReference: RefEntry[] = [
 		name: "sheets.unprotect_workbook",
 		category: "sheets",
 		signature: "sheets.unprotect_workbook([password])",
-		summary: "Ôte la protection de la structure du classeur (avec son mot de passe s'il y en a un).",
+		summary: "Ôte la protection de la structure du classeur (avec son mot de passe s'il y en a un), et le verrou du contenu des feuilles posé avec elle.",
 		details: "Paramètres — password : mot de passe donné en protégeant. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		args: [0, 1]
 	},

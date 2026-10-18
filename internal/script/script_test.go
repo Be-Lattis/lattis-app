@@ -214,6 +214,36 @@ func TestStop(t *testing.T) {
 	}
 }
 
+// Le chien de garde arrête un script qui garde de plus en plus de mémoire,
+// mais pas un script qui en jette autant qu'il en prend.
+func TestMemoryLimit(t *testing.T) {
+	f := open(t)
+	lim := DefaultLimits
+	lim.MaxHeap = 64 << 20
+	lim.Timeout = 20 * time.Second
+	res := Run(context.Background(), Env{Read: f.db.Read()}, `
+		local t = {}
+		local i = 0
+		while true do
+			i = i + 1
+			t[i] = string.rep("x", 1024) .. i
+		end`, lim)
+	if !errors.Is(res.Err, ErrMemory) {
+		t.Fatalf("mémoire : %v", res.Err)
+	}
+	// Des déchets : bien plus que la borne au total, presque rien de gardé.
+	res = Run(context.Background(), Env{Read: f.db.Read()}, `
+		local n = 0
+		for i = 1, 400000 do
+			local s = string.rep("y", 1024) .. i
+			n = n + #s
+		end
+		print(n > 0)`, lim)
+	if res.Err != nil {
+		t.Fatalf("déchets pris pour une fuite : %v", res.Err)
+	}
+}
+
 func TestErrorLine(t *testing.T) {
 	f := open(t)
 	res := f.run(t, "local a = 1\nerror('raté')")
