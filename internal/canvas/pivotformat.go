@@ -23,6 +23,9 @@ func (t *tx) pivotFormats(cfg PivotConfig, cells [][]string) ([]string, error) {
 		return nil, nil // déjà signalé par le calcul
 	}
 	labels := max(1, len(p.rows))
+	if cfg.compact() {
+		labels = 1 // une seule colonne d'étiquettes (arborescence)
+	}
 	out := make([]string, len(cells[0]))
 	byValue := make([]string, len(cfg.Values))
 	for vi, v := range cfg.Values {

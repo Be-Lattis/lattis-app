@@ -1,23 +1,40 @@
+<script lang="ts" module>
+	import type { PivotInfo as Info } from '#bindings/internal/canvas/models.js';
+	// Dernier résultat de chaque tableau inséré, hors état plié.
+	const recent = new Map<string, Info>();
+	function identity(cfg: object): string {
+		const { collapsed: _a, expanded: _b, collapseAll: _c, width: _d, ...rest } = cfg as Record<string, unknown>;
+		return JSON.stringify(rest);
+	}
+</script>
+
 <script lang="ts">
 	// Tableau croisé d'un onglet Document : recalculé à chaque
 	// modification du classeur (live.stamp), mis en forme comme sur la
-	// feuille (en-tête, nombres, ligne de total).
+	// feuille (en-tête, nombres, ligne de total) ; avec plusieurs champs en
+	// lignes, en arborescence avec ses −/+ (pivottree.ts).
 	import { untrack } from 'svelte';
 	import type { PivotInfo } from '#bindings/internal/canvas/models.js';
 	import type { PivotConfig } from '#lib/grid/Sheet.svelte';
 	import type { CellStyle } from '#lib/grid/style.js';
 	import { formatCell } from '#lib/grid/numfmt.js';
+	import { pivotLabelOffset, setFolded, type PivotRowInfo } from '#lib/grid/pivottree.js';
 
 	interface Props {
 		config: PivotConfig;
 		live: { stamp: number; animate: boolean };
 		load: (cfg: PivotConfig) => Promise<PivotInfo>;
 		selected?: boolean;
+		/** Nouvelle configuration de l'élément inséré (groupe plié ou déplié par −/+). */
+		onconfig?: (cfg: PivotConfig) => void;
 	}
 
-	let { config, live, load, selected = false }: Props = $props();
+	let { config, live, load, selected = false, onconfig }: Props = $props();
 
-	let info = $state.raw<PivotInfo | null>(null);
+	// Plier un groupe remplace l'élément inséré (nouveau composant) : il
+	// reprend le dernier résultat du même tableau le temps du calcul, sans
+	// clignoter.
+	let info = $state.raw<PivotInfo | null>(untrack(() => recent.get(identity(config))) ?? null);
 	// Éclat discret de tout le tableau quand son résultat change (Affichage › Animations).
 	let flash = $state(false);
 
@@ -27,14 +44,15 @@
 		untrack(() => {
 			load(cfg).then(
 				(r) => {
-					const changed = !!info && JSON.stringify(info.cells) !== JSON.stringify(r.cells);
+					const changed = !!info && JSON.stringify(info.cells) !== JSON.stringify(r.cells) && JSON.stringify(info.config) === JSON.stringify(r.config);
 					info = r;
+					recent.set(identity(cfg), r);
 					if (changed && live.animate) {
 						flash = false;
 						requestAnimationFrame(() => (flash = true));
 					}
 				},
-				(e) => (info = { id: 0, row: 0, col: 0, config: cfg as never, cells: [], formats: [], error: String(e instanceof Error ? e.message : e) })
+				(e) => (info = { id: 0, row: 0, col: 0, config: cfg as never, cells: [], rows: null, formats: [], error: String(e instanceof Error ? e.message : e) })
 			);
 		});
 	});
@@ -49,6 +67,11 @@
 		})
 	);
 	const rows = $derived(info?.cells ?? []);
+	/** Arborescence : description de chaque ligne sous l'en-tête (null : à plat). */
+	const tree = $derived((info?.rows ?? null) as PivotRowInfo[] | null);
+	function toggle(r: PivotRowInfo) {
+		if (r.path && onconfig) onconfig(setFolded(config, r.path, !r.collapsed));
+	}
 	const total = $derived(!config.noGrandTotal && rows.length > 2);
 	const num = (s: string) => s !== '' && !isNaN(Number(s));
 	function shown(text: string, j: number): string {
@@ -73,13 +96,36 @@
 			</thead>
 			<tbody>
 				{#each rows.slice(1) as r, i (i)}
-					<tr class:total={total && i === rows.length - 2}>
-						{#each r as c, j (j)}<td class:num={num(c)}>{shown(c, j)}</td>{/each}
+					{@const t = tree?.[i]}
+					<tr class:total={total && i === rows.length - 2} class:group={!!t && (t.group || t.subtotal)}>
+						{#each r as c, j (j)}
+							{#if j === 0 && t}
+								<td class="label" style:padding-left="{10 + pivotLabelOffset(t)}px">
+									{#if t.group}
+										<button
+											class="fold"
+											style:left="{6 + t.depth * 14}px"
+											title={t.collapsed ? 'Développer' : 'Réduire'}
+											aria-label={(t.collapsed ? 'Développer ' : 'Réduire ') + c}
+											aria-expanded={!t.collapsed}
+											disabled={!onconfig}
+											onmousedown={(e) => e.stopPropagation()}
+											onclick={(e) => {
+												e.stopPropagation();
+												toggle(t);
+											}}>{t.collapsed ? '+' : '−'}</button
+										>
+									{/if}{c}
+								</td>
+							{:else}
+								<td class:num={num(c)}>{shown(c, j)}</td>
+							{/if}
+						{/each}
 					</tr>
 				{/each}
 			</tbody>
 		</table>
-	{:else}
+	{:else if info}
 		<div class="muted">Tableau croisé de « {config.source} » : choisissez des champs (clic droit › Modifier…).</div>
 	{/if}
 </div>
@@ -137,6 +183,34 @@
 	.num {
 		text-align: right;
 		font-variant-numeric: tabular-nums;
+	}
+	td.label {
+		position: relative;
+	}
+	tr.group td {
+		font-weight: 600;
+	}
+	.fold {
+		position: absolute;
+		top: 50%;
+		transform: translateY(-50%);
+		width: 11px;
+		height: 11px;
+		padding: 0;
+		border: 1px solid #8a9199;
+		border-radius: 2px;
+		background: #fff;
+		color: #374151;
+		font: 600 10px/9px system-ui, sans-serif;
+		text-align: center;
+		cursor: pointer;
+	}
+	.fold:hover:not(:disabled) {
+		border-color: #217346;
+		color: #217346;
+	}
+	.fold:disabled {
+		cursor: default;
 	}
 	tr.total td {
 		font-weight: 600;

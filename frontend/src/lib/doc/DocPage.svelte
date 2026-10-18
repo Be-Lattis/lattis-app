@@ -184,7 +184,9 @@
 				},
 				live
 			};
-			const comp = kind === 'pivot' ? mount(DocPivot, { target: node, props: { ...props, load: loadPivot } }) : mount(DocChart, { target: node, props: { ...props, load: loadChart } });
+			// −/+ d'un tableau croisé : nouvelle configuration de l'élément (annulable).
+			const onconfig = (cfg: PivotConfig) => (locked ? onnotice?.(locked) : replaceEmbed(indexOf(node), PIVOT_BLOT, cfg));
+			const comp = kind === 'pivot' ? mount(DocPivot, { target: node, props: { ...props, load: loadPivot, onconfig } }) : mount(DocChart, { target: node, props: { ...props, load: loadChart } });
 			mounted.set(node, { comp, kind, p });
 		}
 		for (const [node, m] of mounted) {

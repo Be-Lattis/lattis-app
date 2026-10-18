@@ -93,6 +93,13 @@
 	});
 
 	function change(c: PivotConfig) {
+		// Autres champs en lignes : les groupes pliés ne désignent plus les mêmes lignes.
+		if (JSON.stringify(c.rowFields ?? []) !== JSON.stringify(draft.rowFields ?? [])) {
+			c = { ...c };
+			delete c.collapsed;
+			delete c.expanded;
+			delete c.collapseAll;
+		}
 		draft = c;
 		dirty = true;
 		clearTimeout(timer);
@@ -540,6 +547,17 @@
 
 	<footer>
 		<label class="opt"><input type="checkbox" checked={!draft.noGrandTotal} onchange={(e) => change({ ...clone(draft), noGrandTotal: !(e.currentTarget as HTMLInputElement).checked || undefined })} /> Totaux généraux</label>
+		{#if (draft.rowFields?.length ?? 0) > 1}
+			<!-- Plusieurs champs en lignes : arborescence, sous-totaux des groupes (Excel). -->
+			<label class="opt subtotals"
+				>Sous-totaux
+				<select value={draft.subtotals ?? ''} onchange={(e) => change({ ...clone(draft), subtotals: (e.currentTarget as HTMLSelectElement).value || undefined })}>
+					<option value="">En haut du groupe</option>
+					<option value="bottom">En bas du groupe</option>
+					<option value="none">Aucun</option>
+				</select>
+			</label>
+		{/if}
 		<div class="update">
 			<label class="opt"><input type="checkbox" checked={defer} onchange={(e) => setDefer((e.currentTarget as HTMLInputElement).checked)} /> Différer la mise à jour</label>
 			<button class="primary apply" disabled={!defer || !dirty} onclick={flush} title="Appliquer les changements au tableau croisé"><Icon name="refresh" size={14} />Mettre à jour</button>
@@ -1016,6 +1034,10 @@
 	.opt input {
 		margin: 0;
 		accent-color: #217346;
+	}
+	.subtotals select {
+		margin-left: auto;
+		font: inherit;
 	}
 	.update {
 		display: flex;

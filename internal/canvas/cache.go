@@ -35,12 +35,30 @@ func (t *tx) spillFree(sheet int64, raw string) ([][]string, bool, formula.Value
 	return r.rows, r.ok, r.err
 }
 
-func (t *tx) pivotCells(cfg PivotConfig) ([][]string, error) {
+// pivotFlat calcule un TCD à plat (une colonne par champ des lignes) : la
+// vue SQL et les graphiques le lisent ainsi.
+func (t *tx) pivotFlat(cfg PivotConfig) ([][]string, error) {
+	cfg = cfg.flat()
 	// Un TCD ne lit que son tableau source (pas de colonne calculée comme champ).
 	if tb, err := t.tableByName(cfg.Source); err == nil {
 		return cachedOn(t, keyOf("pivot:", cfg), []string{tb.sql()}, func() ([][]string, error) { return t.pivotCellsRaw(cfg) })
 	}
 	return cached(t, keyOf("pivot:", cfg), func() ([][]string, error) { return t.pivotCellsRaw(cfg) })
+}
+
+// pivotCells calcule un TCD tel qu'affiché : en arborescence avec plusieurs
+// champs en lignes (rows : une description par ligne sous l'en-tête), à plat
+// sinon (rows nil).
+func (t *tx) pivotCells(cfg PivotConfig) ([][]string, []PivotRowInfo, error) {
+	calc := func() (pivotView, error) { return t.pivotViewRaw(cfg) }
+	var v pivotView
+	var err error
+	if tb, terr := t.tableByName(cfg.Source); terr == nil {
+		v, err = cachedOn(t, keyOf("pivotview:", cfg), []string{tb.sql()}, calc)
+	} else {
+		v, err = cached(t, keyOf("pivotview:", cfg), calc)
+	}
+	return v.cells, v.rows, err
 }
 
 // chartDeps donne les tableaux que lit un graphique, ou faux s'il peut en

@@ -48,6 +48,16 @@ type PivotConfig struct {
 	Sort map[string]string `json:"sort,omitempty"`
 	// NoGrandTotal masque la ligne et la colonne de total général.
 	NoGrandTotal bool `json:"noGrandTotal,omitempty"`
+	// Subtotals place les sous-totaux des groupes (plusieurs champs en
+	// lignes) : "" sur la ligne du groupe (en haut), "bottom" sur une ligne
+	// « Total X » sous le groupe, "none" aucun.
+	Subtotals string `json:"subtotals,omitempty"`
+	// Groupes pliés (−/+), désignés par leurs étiquettes du premier champ au
+	// leur : Collapsed liste les groupes pliés ; avec CollapseAll, tous le
+	// sont sauf ceux d'Expanded (Réduire tout). Par défaut, tout est déplié.
+	CollapseAll bool       `json:"collapseAll,omitempty"`
+	Collapsed   [][]string `json:"collapsed,omitempty"`
+	Expanded    [][]string `json:"expanded,omitempty"`
 
 	// Ancien format (un champ de lignes, une valeur) : relu puis converti.
 	Rows  string `json:"rows,omitempty"`
