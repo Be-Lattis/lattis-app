@@ -34,6 +34,7 @@
 	import { count, toTSV } from '#lib/sql/result.js';
 	import { tick } from 'svelte';
 	import type { RightsObject } from '#lib/remote/rights.js';
+	import { dataExample, dataTarget, pgIdent, type DataGroup } from '#lib/remote/data.js';
 
 	interface Result {
 		columns: string[] | null;
@@ -61,10 +62,16 @@
 		rights?: RightsObject[];
 		/** Propriétaire : ouvre l'écran Partager (modifier les droits). */
 		onrights?: () => void;
+		/** Données d'entreprise lisibles des serveurs connectés (vues donnees.*), un groupe par serveur. */
+		data?: DataGroup[];
+		/** Exécute une requête sur un serveur (vues donnees.*, SQL de PostgreSQL) ; absent : pas de données d'entreprise. */
+		rundata?: (server: string, sql: string) => Promise<Result>;
 	}
 
-	let { objects, run, exec, ongoto, favorites, tosheet, onrename, rights = [], onrights }: Props = $props();
+	let { objects, run, exec, ongoto, favorites, tosheet, onrename, rights = [], onrights, data = [], rundata }: Props = $props();
 	let rightsOpen = $state<string | null>(null);
+	// Vue donnees.* dépliée (serveur et nom).
+	let dataOpen = $state<string | null>(null);
 
 	// Renommage d'un tableau dans la liste des objets (double-clic, F2, clic droit).
 	let tblRen = $state<{ name: string; draft: string } | null>(null);
@@ -146,6 +153,20 @@
 		editor?.showError('');
 		const at = Date.now();
 		try {
+			// Vues donnees.* : la requête part au serveur qui les a (SQL de
+			// PostgreSQL, lecture seule) ; elle ne cite pas les tableaux du classeur.
+			const target = rundata ? dataTarget(text, data) : null;
+			if (target && rundata) {
+				sent = text;
+				const r = await rundata(target.server, text);
+				result = r;
+				ran = '';
+				copied = false;
+				headers = r.columns ?? [];
+				remember({ sql: text, at, rows: (r.rows ?? []).length, micros: r.micros });
+				running = false;
+				return;
+			}
 			// ALTER TABLE … RENAME TO … : le renommage du classeur (références comprises).
 			const ren = onrename ? alterRename(text) : null;
 			if (ren && onrename) {
@@ -397,6 +418,41 @@
 						{/if}
 					</div>
 				{/each}
+				{#if rundata}
+					{#each data as g (g.server)}
+						{#if g.views.length}
+							<div class="rights-head"><span title={g.server}>Données d'entreprise · {g.label}</span></div>
+							{#each g.views as v (v.name)}
+								{@const key = g.server + ' ' + v.name}
+								<div class="obj">
+									<button
+										class="obj-head"
+										onclick={() => (dataOpen = dataOpen === key ? null : key)}
+										ondblclick={() => {
+											cursor = -1;
+											editor?.load(dataExample(v));
+										}}
+										title={`${v.label}${v.description ? ' — ' + v.description : ''} : vue du serveur en lecture seule, limitée aux lignes de votre audience (double-clic : exemple SELECT)`}
+									>
+										<span>{dataOpen === key ? '▾' : '▸'}</span>
+										<strong>donnees.{v.name}</strong>
+										<span class="muted">{v.label}</span>
+									</button>
+									{#if dataOpen === key}
+										<ul>
+											{#each v.columns as c (c.name)}
+												<li>
+													<button class="col" title="Insérer dans la requête" onclick={() => editor?.insert(pgIdent(c.name))}>{c.name}</button>
+													<span class="muted">{typeLabel(c.type)}</span>
+												</li>
+											{/each}
+										</ul>
+									{/if}
+								</div>
+							{/each}
+						{/if}
+					{/each}
+				{/if}
 				{#if rights.length}
 					<div class="rights-head">
 						<span>Droits (serveur)</span>

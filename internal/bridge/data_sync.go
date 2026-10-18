@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/lalamefine/lattis/internal/canvas"
@@ -146,4 +147,26 @@ func followable(q query.Query, ds protocol.Dataset) bool {
 	sql := strings.TrimSpace(q.Source.SQL)
 	return strings.HasPrefix(sql, "SELECT ") &&
 		strings.HasSuffix(sql, " FROM "+protocol.DataSchema+"."+pgx.Identifier{ds.SQLName}.Sanitize()+" ORDER BY lattis_pos")
+}
+
+// QueryData exécute une requête de lecture de l'onglet SQL sur un Serveur
+// Lattis : vues donnees.* des données d'entreprise que l'utilisateur peut
+// lire (filtrées par leur audience), dans une transaction en lecture seule
+// sous son identité. Le SQL est celui de PostgreSQL, sans les tableaux du
+// classeur.
+func (s *DocumentService) QueryData(ctx context.Context, server, q string) (grid.QueryResult, error) {
+	q = strings.TrimRight(strings.TrimSpace(q), "; \t\r\n")
+	if q == "" {
+		return grid.QueryResult{}, grid.ErrEmptyQuery
+	}
+	srv, _, _, err := remoteServer(ctx, server)
+	if err != nil {
+		return grid.QueryResult{}, err
+	}
+	start := time.Now()
+	r, err := srv.DataQuery(ctx, q, QueryLimit)
+	if err != nil {
+		return grid.QueryResult{}, errors.New(remoteMessage(err))
+	}
+	return grid.QueryResult{Columns: r.Columns, Rows: r.Rows, Truncated: r.Truncated, Micros: time.Since(start).Microseconds()}, nil
 }

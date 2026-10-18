@@ -52,7 +52,8 @@
 	import type { Conflict } from '#bindings/internal/remote/collab/models.js';
 	import { canRepublish } from '#lib/remote/share.js';
 	import { lattis, loadLattis, requestLogin, shareRights } from '#lib/remote/lattis.svelte.js';
-	import { hostOf } from '#lib/remote/lattis.js';
+	import { connected, hostOf } from '#lib/remote/lattis.js';
+	import { dataGroup, type DataCatalog, type DataGroup } from '#lib/remote/data.js';
 	import type { State as ShareState } from '#bindings/internal/remote/workbook/models.js';
 	import type { ButtonConfig } from '#lib/grid/buttons.js';
 	import type { UICommand } from '#bindings/internal/bridge/models.js';
@@ -240,6 +241,31 @@
 		DocumentService.ShareRights(!!sh.canManage && sh.online)
 			.then((v) => (rightsObjs = rightsObjects(v)))
 			.catch(() => (rightsObjs = []));
+	});
+	// Onglet SQL : vues donnees.* des données d'entreprise lisibles sur les
+	// serveurs connectés (un groupe par serveur), interrogées sur le serveur.
+	let dataGroups = $state<DataGroup[]>([]);
+	$effect(() => {
+		if (view !== 'sql' || mode !== 'doc') {
+			dataGroups = [];
+			return;
+		}
+		let stale = false;
+		(async () => {
+			await loadLattis();
+			if (!lattis.state.enabled) return;
+			const groups = await Promise.all(
+				connected(lattis.state.servers).map((sv) =>
+					DocumentService.DataCatalog(sv.url)
+						.then((c) => dataGroup(sv.url, sv.name || hostOf(sv.url), c as unknown as DataCatalog))
+						.catch(() => null)
+				)
+			);
+			if (!stale) dataGroups = groups.filter((g): g is DataGroup => !!g && g.views.length > 0);
+		})();
+		return () => {
+			stale = true;
+		};
 	});
 	let openRemote = $state(false);
 	// Données d'entreprise : insertion (cellule visée) et partage d'un tableau.
@@ -1596,7 +1622,7 @@
 				{/key}
 			{/if}
 			{#if view === 'sql'}
-				<div class="pane" data-region="grid"><SqlView {objects} rights={rightsObjs} onrights={canRights && share?.canManage ? () => (rightsOpen = true) : undefined} run={query} exec={mode === 'doc' ? (q) => DocumentService.Execute(q) : undefined} ongoto={gotoObject}
+				<div class="pane" data-region="grid"><SqlView {objects} data={dataGroups} rundata={mode === 'doc' ? (server, q) => DocumentService.QueryData(server, q) : undefined} rights={rightsObjs} onrights={canRights && share?.canManage ? () => (rightsOpen = true) : undefined} run={query} exec={mode === 'doc' ? (q) => DocumentService.Execute(q) : undefined} ongoto={gotoObject}
 						onrename={mode === 'doc'
 							? async (from, to) => {
 									docState = await DocumentService.RenameTable(from, to);

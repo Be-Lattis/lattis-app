@@ -697,7 +697,7 @@ export function InsertColumn(table: string, i: number, name: string): $Cancellab
  * InsertDataset insère une donnée d'entreprise comme tableau lié (Insérer ›
  * Donnée d'entreprise) : connexion au serveur (créée au besoin), requête,
  * premier chargement à la cellule donnée ; dans un classeur du même serveur,
- * le lien est annoncé (« Utilisée par »).
+ * le lien est annoncé (« Utilisée par », voir dataChanged).
  */
 export function InsertDataset($in: $models.DataInsert): $CancellablePromise<$models.QueryRefresh> {
     return $Call.ByID(2398319309, $in);
@@ -1138,6 +1138,17 @@ export function Queries(): $CancellablePromise<query$0.Query[] | null> {
  */
 export function Query(q: string): $CancellablePromise<grid$0.QueryResult> {
     return $Call.ByID(1193263682, q);
+}
+
+/**
+ * QueryData exécute une requête de lecture de l'onglet SQL sur un Serveur
+ * Lattis : vues donnees.* des données d'entreprise que l'utilisateur peut
+ * lire (filtrées par leur audience), dans une transaction en lecture seule
+ * sous son identité. Le SQL est celui de PostgreSQL, sans les tableaux du
+ * classeur.
+ */
+export function QueryData(server: string, q: string): $CancellablePromise<grid$0.QueryResult> {
+    return $Call.ByID(1099607346, server, q);
 }
 
 /**

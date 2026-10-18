@@ -362,3 +362,19 @@ func TestDatasetUnlink(t *testing.T) {
 	mustShare(t, err)
 	waitUsed("requête supprimée", false)
 }
+
+func TestQueryData(t *testing.T) {
+	f := newDataFixture(t, nil)
+	f.s.watchData(nil)
+	r, err := f.s.QueryData(context.Background(), dataServer, "SELECT * FROM donnees.clients;")
+	mustShare(t, err)
+	if strings.Join(r.Columns, ",") != "Nom,CA,Actif" || len(r.Rows) != 2 || r.Rows[0][0] != "Dupont" {
+		t.Fatalf("résultat : %+v", r)
+	}
+	if _, err := f.s.QueryData(context.Background(), dataServer, "SELECT * FROM donnees.inconnue"); err == nil || !strings.Contains(err.Error(), "inconnue") {
+		t.Fatalf("vue inconnue : %v", err)
+	}
+	if _, err := f.s.QueryData(context.Background(), dataServer, "  ; "); err == nil {
+		t.Fatal("requête vide acceptée")
+	}
+}
