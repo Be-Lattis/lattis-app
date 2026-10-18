@@ -44,6 +44,38 @@ function save(key: string, w: number | undefined) {
 	}
 }
 
+/** Animations voulues : Affichage › Animations (gardé sur ce poste) et pas de mouvement réduit demandé par le système. */
+export function animationsOn(): boolean {
+	try {
+		if (localStorage.getItem('lattis.animations') === 'off') return false;
+	} catch {
+		// stockage indisponible : animations par défaut
+	}
+	return !(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
+
+/** Le volet arrive par la droite (demande de Louis), comme ceux d'Excel. */
+function slideIn(node: HTMLElement) {
+	if (typeof node.animate !== 'function' || !animationsOn()) return;
+	node.animate([{ transform: 'translateX(32px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 180, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
+}
+
+/**
+ * Le volet repart par la droite : une copie figée, posée par-dessus à sa
+ * place, glisse et s'efface pendant que la page reprend la largeur libérée.
+ */
+function slideOut(node: HTMLElement) {
+	if (typeof node.animate !== 'function' || !node.isConnected || !animationsOn()) return;
+	const r = node.getBoundingClientRect();
+	if (!r.width || !r.height) return;
+	const ghost = node.cloneNode(true) as HTMLElement;
+	Object.assign(ghost.style, { position: 'fixed', left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, margin: '0', zIndex: '1000', pointerEvents: 'none' });
+	ghost.setAttribute('aria-hidden', 'true');
+	document.body.appendChild(ghost);
+	const a = ghost.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateX(32px)', opacity: 0 }], { duration: 160, easing: 'cubic-bezier(0.4, 0, 1, 1)' });
+	a.onfinish = a.oncancel = () => ghost.remove();
+}
+
 /** Action Svelte : donne à un volet de droite la largeur commune et le rend redimensionnable par son bord gauche. */
 export function resizePanel(node: HTMLElement, opts: Options) {
 	if (opts.off) return {};
@@ -60,6 +92,7 @@ export function resizePanel(node: HTMLElement, opts: Options) {
 		node.style.flexBasis = w;
 	};
 	apply();
+	slideIn(node);
 
 	const onEdge = (e: PointerEvent) => e.clientX - node.getBoundingClientRect().left <= EDGE;
 	let drag: { x: number; w: number } | null = null;
@@ -116,6 +149,7 @@ export function resizePanel(node: HTMLElement, opts: Options) {
 			apply();
 		},
 		destroy() {
+			slideOut(node);
 			node.removeEventListener('pointermove', move);
 			node.removeEventListener('pointerdown', down);
 			node.removeEventListener('mousedown', edgeDown);
