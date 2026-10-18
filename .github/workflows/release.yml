@@ -2,7 +2,10 @@ name: Release
 
 # Installeurs signés (phase 8) : sur un tag v*, construit et signe les paquets
 # Windows (NSIS + MSIX), macOS (.dmg universel notarisé) et Linux (AppImage,
-# .deb, .rpm), puis les dépose dans une release GitHub en brouillon.
+# .deb, .rpm), puis les publie dans une release GitHub, avec les notes tirées
+# des commits depuis le tag précédent (variable de dépôt RELEASE_DRAFT=true :
+# release laissée en brouillon). Un tag avec un tiret (v1.2.0-beta.1) donne
+# une pré-version. Créer le tag : scripts/release.sh v1.2.0.
 # Chaque signature est sautée proprement si son secret manque : les paquets
 # sortent alors non signés, avec un avertissement dans le journal.
 # Secrets attendus : docs/release/signature.md.
@@ -280,7 +283,7 @@ jobs:
         run: rm -f "$RUNNER_TEMP/lattis-gpg.asc"
 
   release:
-    name: Release GitHub (brouillon)
+    name: Release GitHub
     needs: [windows, macos, linux]
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
@@ -289,6 +292,10 @@ jobs:
       LINUX_GPG_PASSPHRASE: ${{ secrets.LINUX_GPG_PASSPHRASE }}
       GH_TOKEN: ${{ github.token }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # tags et historique : notes depuis le tag précédent
+          path: src
       - uses: actions/download-artifact@v4
         with:
           pattern: lattis-*
@@ -310,9 +317,14 @@ jobs:
           done
           gpg --batch --armor --export > lattis-release-key.asc
           rm -rf "$GNUPGHOME"
-      - name: Release en brouillon
+      - name: Notes de version
+        run: src/scripts/release-notes.sh "${GITHUB_REF_NAME}" src > notes.md && cat notes.md
+      - name: Release
+        env:
+          RELEASE_DRAFT: ${{ vars.RELEASE_DRAFT }}
         run: |
           tag="${GITHUB_REF_NAME}"
-          pre=""
-          case "$tag" in *-*) pre="--prerelease" ;; esac
-          gh release create "$tag" dist/* --repo "$GITHUB_REPOSITORY" --draft $pre --generate-notes --title "Lattis ${tag#v}"
+          opts=""
+          case "$tag" in *-*) opts="--prerelease" ;; esac
+          [ "$RELEASE_DRAFT" = "true" ] && opts="$opts --draft"
+          gh release create "$tag" dist/* --repo "$GITHUB_REPOSITORY" $opts --notes-file notes.md --title "Lattis ${tag#v}"
