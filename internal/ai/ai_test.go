@@ -419,12 +419,13 @@ func TestKeysMemory(t *testing.T) {
 
 func TestCatalog(t *testing.T) {
 	c := Catalog()
-	if len(c) < 5 || c[0].ID != "anthropic" || !c[0].Available || c[0].DefaultModel == "" {
+	if len(c) == 0 || c[0].ID != "anthropic" || !c[0].Available || c[0].DefaultModel == "" {
 		t.Fatalf("%+v", c)
 	}
-	for _, p := range c[1:] {
-		if p.Available {
-			t.Errorf("%s annoncé disponible", p.ID)
+	// Seuls les fournisseurs branchés sont proposés.
+	for _, p := range c {
+		if !p.Available {
+			t.Errorf("%s proposé sans être branché", p.ID)
 		}
 	}
 }

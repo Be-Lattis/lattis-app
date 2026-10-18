@@ -153,7 +153,7 @@ type Model struct {
 var (
 	regMu     sync.RWMutex
 	providers = map[string]Provider{}
-	// planned : fournisseurs annoncés, pas encore branchés.
+	// planned : fournisseurs prévus, pas encore branchés (non proposés).
 	planned = []Info{
 		{ID: "mistral", Name: "Mistral AI", KeyURL: "https://console.mistral.ai/api-keys"},
 		{ID: "openai", Name: "OpenAI (GPT)", KeyURL: "https://platform.openai.com/api-keys"},
@@ -176,7 +176,8 @@ func Lookup(id string) Provider {
 	return providers[id]
 }
 
-// Catalog liste les fournisseurs : les branchés d'abord, puis les annoncés.
+// Catalog liste les fournisseurs branchés, seuls proposés (choix de Louis :
+// pas de fournisseur annoncé mais pas encore intégré dans l'interface).
 func Catalog() []Info {
 	regMu.RLock()
 	defer regMu.RUnlock()
@@ -185,12 +186,6 @@ func Catalog() []Info {
 		out = append(out, p.Info())
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
-	for _, p := range planned {
-		if _, ok := providers[p.ID]; !ok {
-			p.Models = []Model{}
-			out = append(out, p)
-		}
-	}
 	return out
 }
 
