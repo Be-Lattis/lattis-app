@@ -7,7 +7,7 @@
 	// qui sert aussi à la mesure automatique (LATTIS_BENCH).
 	import { describe, installErrorReporting, reportError } from '#lib/shell/errors.js';
 	import { onMount, tick, untrack } from 'svelte';
-	import { noticeTtl } from '#lib/shell/notice.js';
+	import { isProblem, noticeTtl } from '#lib/shell/notice.js';
 	import { Events } from '@wailsio/runtime';
 	import { DocumentService, GridService } from '#bindings/internal/bridge/index.js';
 	import type { DamagedFile, DocState, FormulaHelp } from '#bindings/internal/bridge/models.js';
@@ -1793,7 +1793,11 @@
 		</div>
 	{/if}
 	<footer class="statusbar" data-region="status" aria-label="Barre d'état">
-		{#if notice || sheetStatus?.message}<span class="message">{sheetStatus?.message || notice}</span>{/if}
+		{#if notice || sheetStatus?.message}
+			{@const msg = sheetStatus?.message || notice}
+			<!-- Deux niveaux : compte rendu de l'action (vert clair), avertissement (bulle orange). -->
+			<span class="message" class:warn={isProblem(msg)} role={isProblem(msg) ? 'alert' : 'status'}>{msg}</span>
+		{/if}
 		<span class="spacer"></span>
 		{#if sheetStatus}
 			{#if sheetStatus.stats}<span class="stats">{sheetStatus.stats}</span>{/if}
@@ -1893,10 +1897,17 @@
 		overflow: hidden;
 	}
 	.message {
-		background: #fff7e0;
-		color: #7a4b00;
+		color: #b6ecc8;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.message.warn {
+		background: #ffb02e;
+		color: #3d2600;
+		font-weight: 600;
 		padding: 1px 8px;
 		border-radius: 3px;
+		box-shadow: 0 0 0 1px #e08a00;
 	}
 	.spacer {
 		flex: 1;
