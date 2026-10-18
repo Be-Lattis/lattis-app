@@ -84,7 +84,7 @@ func TestPolicyLocks(t *testing.T) {
 func TestNullRemovesAndCaseInsensitiveMerge(t *testing.T) {
 	c := resolve(t, Options{},
 		src("machine", RankMachine, true, Tree{"connections": Tree{
-			"erp":   Tree{"kind": "sqlserver", "config": Tree{"host": "prod"}},
+			"erp":    Tree{"kind": "sqlserver", "config": Tree{"host": "prod"}},
 			"ventes": Tree{"kind": "web"},
 		}}),
 		src("env", RankEnv, false, Tree{"CONNECTIONS": Tree{"ERP": Tree{"config": Tree{"host": "staging"}}, "ventes": nil}}),
