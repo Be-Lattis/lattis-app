@@ -271,10 +271,14 @@ export interface TableInfo {
 	kind?: string;
 }
 
+// Cas d'usage courant (choix de Louis) : une feuille dont les tableaux sont
+// mal reconnus (en-tête, titre ou total pris dedans, limites, types).
+export const REPAIR_SUGGESTION = 'Réparer les tableaux de cette feuille';
+
 const DEFAULT_SUGGESTIONS = [
+	REPAIR_SUGGESTION,
 	'Que contient ce classeur ?',
 	'Propose une analyse de mes données',
-	'Vérifie les types de colonnes et propose des clés',
 	'Crée un tableau croisé pertinent avec un graphique'
 ];
 
@@ -289,6 +293,7 @@ export function suggestionsFor(tables: readonly TableInfo[], context?: ChatConte
 	const fmt = (n: number) => `${n.toLocaleString('fr-FR')} ligne${n > 1 ? 's' : ''}`;
 	const out: string[] = [];
 	if (context?.table && context.selection) out.push(`Explique la sélection ${contextLabel(context).replace(/^.*, sélection /, '')} de ${context.table}`);
+	out.push(REPAIR_SUGGESTION);
 	const [big, second] = list;
 	out.push(`Analyser ${big.name} (${fmt(big.rows)})`);
 	out.push(`Vérifier les types de ${(second ?? big).name}`);

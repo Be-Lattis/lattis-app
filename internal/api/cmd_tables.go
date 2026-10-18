@@ -356,6 +356,19 @@ end`,
 			d, _ := c.Doc()
 			return d.TextToColumns(c, t.Sheet.ID, t.Row+1, t.Row+t.Rows, t.Col+i, o)
 		}),
+		tableCmd("tables.header_to_title", "En-tête en titre", "L'en-tête du tableau était un titre : il devient une cellule libre au-dessus, et la première ligne de données devient l'en-tête.", true,
+			func(c *Call, t tableRef) (any, error) {
+				d, _ := c.Doc()
+				return nil, d.HeaderToTitle(c, t.Name)
+			}),
+		tableCmd("tables.last_row_out", "Sortir la dernière ligne", "La dernière ligne de données sort du tableau : elle reste juste dessous en cellules libres, gardées hors du tableau (une note, ou un total si elle commence par « Total »).", true,
+			func(c *Call, t tableRef) (any, error) {
+				d, _ := c.Doc()
+				if t.Total < 1 {
+					return nil, fmt.Errorf("le tableau « %s » n'a pas de ligne de données", t.Name)
+				}
+				return nil, d.RowToNote(c, t.Name, t.Total-1)
+			}),
 		tableCmd("tables.promote_header", "Ligne d'en-tête", "Prend la première ligne de données comme ligne d'en-têtes.", true,
 			func(c *Call, t tableRef) (any, error) {
 				d, _ := c.Doc()

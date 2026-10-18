@@ -805,6 +805,14 @@ export const apiReference: RefEntry[] = [
 		args: [1, 1]
 	},
 	{
+		name: "tables.header_to_title",
+		category: "tables",
+		signature: "tables.header_to_title(table)",
+		summary: "L'en-tête du tableau était un titre : il devient une cellule libre au-dessus, et la première ligne de données devient l'en-tête.",
+		details: "Paramètres — table : nom du tableau. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		args: [1, 1]
+	},
+	{
 		name: "tables.insert_row",
 		category: "tables",
 		signature: "tables.insert_row(table, [row])",
@@ -819,6 +827,14 @@ export const apiReference: RefEntry[] = [
 		summary: "Dit si une colonne peut devenir la clé du tableau : renvoie \"\" si oui, sinon la raison.",
 		details: "Paramètres — table : nom du tableau ; column : colonne (nom ou rang à partir de 1). Arguments dans l'ordre, ou une table d'arguments nommés : tables.key_check{table = …}.",
 		args: [1, 2]
+	},
+	{
+		name: "tables.last_row_out",
+		category: "tables",
+		signature: "tables.last_row_out(table)",
+		summary: "La dernière ligne de données sort du tableau : elle reste juste dessous en cellules libres, gardées hors du tableau (une note, ou un total si elle commence par « Total »).",
+		details: "Paramètres — table : nom du tableau. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		args: [1, 1]
 	},
 	{
 		name: "tables.list",
