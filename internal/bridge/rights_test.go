@@ -144,6 +144,13 @@ func TestShareRights(t *testing.T) {
 	_, err = b.ShareOpen(ctx, "https://lattis.example.test", info.WorkbookID, "")
 	mustShare(t, err)
 	waitShare(t, hb, "Bob en ligne", func(s workbook.State) bool { return s.Online })
+	// Ouverture notée sur le serveur (« dernier lecteur »).
+	for i := 0; i < 100 && fake.RecordedOpens() == 0; i++ {
+		time.Sleep(20 * time.Millisecond)
+	}
+	if fake.RecordedOpens() == 0 {
+		t.Fatal("ouverture non notée (record_open)")
+	}
 	l, err := b.Layout(ctx, 1)
 	mustShare(t, err)
 	if len(l.Tables) != 1 || l.Tables[0].Access != "participant" {

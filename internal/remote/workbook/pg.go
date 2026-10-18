@@ -421,3 +421,15 @@ func (s pgServer) CanCreateWorkbooks(ctx context.Context) (bool, error) {
 	})
 	return can, err
 }
+
+func (s pgServer) RecordOpen(ctx context.Context, id string) error {
+	// Sur rw (usageWrite), hors transaction : une fonction absente n'y laisse
+	// pas de transaction en échec.
+	return s.with(ctx, usageWrite, func(c *pgx.Conn) error {
+		_, err := c.Exec(ctx, `SELECT lattis.record_open($1::uuid)`, id)
+		if code, ok := Rejected(err); ok && code == "42883" {
+			return nil // serveur d'avant record_open
+		}
+		return err
+	})
+}

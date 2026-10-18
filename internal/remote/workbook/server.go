@@ -129,6 +129,10 @@ type Server interface {
 	// de classeurs », propriétaire du serveur, ou publication ouverte à tous).
 	// Vrai pour un serveur qui ne connaît pas encore ce droit.
 	CanCreateWorkbooks(ctx context.Context) (bool, error)
+	// RecordOpen note que l'utilisateur a ouvert le classeur id (« dernier
+	// lecteur » de l'administration du serveur) ; sans effet sur un serveur
+	// d'avant cette fonction.
+	RecordOpen(ctx context.Context, id string) error
 	// Capabilities lit les droits sur un classeur (version courante).
 	Capabilities(ctx context.Context, id string) (Capabilities, error)
 	// Publish exécute fn dans une seule transaction (tout ou rien).

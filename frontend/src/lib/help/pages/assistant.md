@@ -43,7 +43,7 @@ Le fournisseur **Modèle local** utilise un modèle installé sur ce poste (Olla
 - Les étapes de l'assistant (lecture d'un tableau, ajout d'une colonne…) se regroupent dans une ligne **N étapes**, dépliée pendant la réponse puis repliée ; un clic la rouvre. Le nom d'une étape soulignée mène à la feuille ou au tableau concerné.
 - Une étape en échec que l'assistant a corrigée ensuite s'affiche en gris ; seule une erreur restée sans suite est en rouge.
 - `Échap` arrête la réponse en cours ; la flèche haut, dans une zone de saisie vide, rappelle le message précédent ; le bouton de copie, sous une réponse, la met dans le presse-papiers.
-- **Nouvelle conversation** (en-tête du volet) repart de zéro.
+- **Nouvelle** (en-tête du volet) commence une nouvelle conversation ; la précédente reste dans la liste des conversations (☰), d'où elle se reprend ou se supprime.
 
 Le réglage **Garder la conversation dans le classeur** (Fichier › Paramètres › Assistant IA) l'enregistre avec le classeur ; sinon, elle s'efface quand on ferme le classeur ou qu'on en ouvre un autre.
 

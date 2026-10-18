@@ -928,3 +928,16 @@ func (s *session) CanCreateWorkbooks(ctx context.Context) (bool, error) {
 func (s *session) canCreate() bool {
 	return s.f.Creators == nil || s.f.Creators[s.user] || s.f.serverOwners[s.user]
 }
+
+func (s *session) RecordOpen(ctx context.Context, id string) error {
+	s.f.mu.Lock()
+	defer s.f.mu.Unlock()
+	return s.begin("record_open")
+}
+
+// RecordedOpens compte les appels de record_open.
+func (f *Fake) RecordedOpens() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.Calls["record_open"]
+}

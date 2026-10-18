@@ -163,6 +163,7 @@ func (s *DocumentService) watchShare(d *doc.Document) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	s.share.cancel = cancel
+	go recordOpens(ctx, info)
 	if info.Mode == workbook.Collaborative {
 		// Classeur collaboratif : envoi de la file, réception des changements
 		// des autres, conflits (docs/collaboration/synchronisation.md).
@@ -618,4 +619,26 @@ func (s *DocumentService) ShareReload(ctx context.Context) (DocState, error) {
 		return DocState{}, err
 	}
 	return s.State(ctx)
+}
+
+// recordOpenEvery : un classeur du serveur resté ouvert est noté ouvert au
+// plus une fois par heure (« dernier lecteur », contrat de lattisd §5).
+var recordOpenEvery = time.Hour
+
+// recordOpens note l'ouverture du classeur partagé sur son serveur, dès
+// qu'il est joignable, puis toutes les recordOpenEvery tant que ctx court.
+func recordOpens(ctx context.Context, info *workbook.Info) {
+	for {
+		wait := shareRetry
+		if srv, _, _, err := remoteServer(ctx, info.Server); err == nil {
+			if err := srv.RecordOpen(ctx, info.WorkbookID); err == nil {
+				wait = recordOpenEvery
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(wait):
+		}
+	}
 }
