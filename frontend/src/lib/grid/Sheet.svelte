@@ -64,7 +64,7 @@
 	import CondFormat, { type CondHost, type CondView } from './CondFormat.svelte';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { drawIcon } from '#lib/icons/canvas.js';
-	import { apply as applySuggestion, argKindAt, signature, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
+	import { apply as applySuggestion, argKindAt, needsNextArg, signature, toNextArg, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
 	import { checkFormula, closeParens, editorWidth, formulaRefs, highlightParts, isFormula, movedRef, rangeRef, refRect, serverErrorPos, type FormulaError, type Rect, type RefTable } from './formulaEdit';
 	import { formulaTyping, holdFormula, insertRefAt, qualifyRef, updateHold, type FormulaHold } from './crossref';
 	import { a1Like, parseGoto, type GotoTable } from './goto';
@@ -5426,6 +5426,18 @@
 				return;
 			}
 		}
+		// Coin en haut à gauche (entre la marge et le bandeau) : toute la
+		// feuille, toutes les lignes et toutes les colonnes, comme dans Excel.
+		{
+			const { x, y } = toLocal(e);
+			if (e.button === 0 && x < MARGIN && y < TOP_H) {
+				e.preventDefault();
+				if (editing && !commit()) return;
+				wrap.focus();
+				selectRows(0, lastRow());
+				return;
+			}
+		}
 		const hd = boundaryAt(e) === null && rowBoundaryAt(e) === null ? headerAt(e) : null;
 		if (hd && e.button !== 1) {
 			e.preventDefault();
@@ -5579,6 +5591,25 @@
 		el.focus();
 		lastRef = { el, start: r.start, end: r.end, value: r.value };
 		return true;
+	}
+
+	/**
+	 * Référence pointée (clic ou glissé terminé) : si la fonction attend encore
+	 * un argument obligatoire, la saisie passe au suivant (« ; »), comme le
+	 * ferait l'utilisateur (choix de Louis) ; pas après le dernier argument.
+	 */
+	function nextArg() {
+		const el = editing ? input : fxEditing ? fxInput : null;
+		if (!el || !catalog) return;
+		const caret = el.selectionEnd ?? el.value.length;
+		if (!needsNextArg(el.value, caret, catalog)) return;
+		const r = toNextArg(el.value, caret);
+		if (editing) editValueText = r.text;
+		else fxText = r.text;
+		el.value = r.text;
+		el.setSelectionRange(r.caret, r.caret);
+		lastRef = null; // le clic suivant ajoute une référence, il ne remplace plus celle-ci
+		onFormulaInput(el, editing ? 'cell' : 'fx');
 	}
 
 	// Glissé en mode formule depuis une référence insérée : la plage couverte.
@@ -6273,6 +6304,14 @@
 	/** Hauteur de l'éditeur : une ligne de plus par saut de ligne (Alt+Entrée). */
 	function editorHeight(s: string): number {
 		return 18 * s.split('\n').length + 4;
+	}
+
+	/**
+	 * Formule validable (bouton « Valider ») : sans faute, ou presque, quand il
+	 * ne manque que des parenthèses fermantes, que la validation ajoute.
+	 */
+	function formulaReady(text: string): boolean {
+		return !checkFormula(closeParens(text));
 	}
 
 	/** Montre une faute de formule dans l'éditeur ouvert : message, caractère sélectionné. */
@@ -7367,6 +7406,7 @@
 		resize();
 		scroller.addEventListener('wheel', onWheel, { passive: false });
 		const up = (ev?: MouseEvent) => {
+			if (refDrag) nextArg();
 			refDrag = null;
 			if (refMove) dropRefMark();
 			if (dragging && painter) applyPainter();
@@ -7522,6 +7562,21 @@
 			</div>
 		{/each}
 	{/if}
+	{#if isFormula(where === 'cell' ? editValueText : fxText)}
+		{@const ok = formulaReady(where === 'cell' ? editValueText : fxText)}
+		<div class="sig-foot">
+			<button
+				class="validate"
+				disabled={!ok}
+				title={ok ? 'Valider la formule (Entrée)' : 'La formule a une faute : corrigez-la pour la valider'}
+				onmousedown={(e) => {
+					// Le focus reste dans l'éditeur : la validation passe par Entrée.
+					e.preventDefault();
+					(where === 'cell' ? input : fxInput)?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+				}}>Valider</button
+			>
+		</div>
+	{/if}
 {/snippet}
 
 <div class="sheet-root">
@@ -7604,7 +7659,7 @@
 		</div>
 	</div>
 	{#if bench}<div class="bench">{bench}</div>{/if}
-	{#if completion?.where === 'fx' || sig?.where === 'fx'}
+	{#if completion?.where === 'fx' || sig?.where === 'fx' || (fxEditing && isFormula(fxText))}
 		<div class="suggest fx-suggest">{@render suggestions('fx')}</div>
 	{/if}
 
@@ -8517,7 +8572,7 @@
 				</div>
 			</div>
 		{/if}
-		{#if editing && (completion?.where === 'cell' || sig?.where === 'cell')}
+		{#if editing && (completion?.where === 'cell' || sig?.where === 'cell' || isFormula(editValueText))}
 			<div
 				class="suggest"
 				style:left="{suggestPos.x}px"
@@ -8762,6 +8817,30 @@
 	.fx-suggest {
 		left: 300px;
 		top: 30px;
+	}
+	.sig-foot {
+		display: flex;
+		padding: 5px 10px;
+		border-top: 1px solid #e3e5e8;
+	}
+	.sig-foot:first-child {
+		border-top: none;
+	}
+	.validate {
+		font: inherit;
+		font-size: 12px;
+		padding: 2px 12px;
+		border: 1px solid #1b5e3a;
+		border-radius: 3px;
+		background: #217346;
+		color: #fff;
+		cursor: pointer;
+	}
+	.validate:disabled {
+		border-color: #d4d7db;
+		background: #eef0f2;
+		color: #9aa1a9;
+		cursor: default;
 	}
 	.sig {
 		padding: 5px 10px;

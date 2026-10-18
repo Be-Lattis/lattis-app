@@ -355,3 +355,65 @@ func TestClearRange(t *testing.T) {
 		t.Fatal("mise en forme restée")
 	}
 }
+
+// Glisser des cellules d'un tableau sur le côté (choix de Louis) : elles
+// refont un tableau ; le tableau d'origine vidé, jamais personnalisé,
+// disparaît ; un tableau nommé perd ses dernières lignes devenues vides.
+func TestMoveOutOfTable(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	// Une liste : en-tête « Colonne 1 » posé au-dessus.
+	for r, v := range []string{"10", "20"} {
+		if _, err := d.SetCell(ctx, 1, 2+r, 1, v); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if ts := tablesOf(t, d); len(ts) != 1 || ts[0].Row != 1 {
+		t.Fatalf("liste : %+v", ts)
+	}
+	before := dump(t, d)
+	if _, err := d.Transfer(ctx, 1, Rect{2, 1, 3, 1}, 1, Rect{2, 3, 3, 3}, true, [][]string{{"10"}, {"20"}}); err != nil {
+		t.Fatal(err)
+	}
+	ts := tablesOf(t, d)
+	if len(ts) != 1 || ts[0].Col != 3 || ts[0].Rows != 2 {
+		t.Fatalf("après le glisser : %+v", ts)
+	}
+	undoOnce(t, d, before, "glisser hors du tableau")
+
+	// Un tableau nommé : il garde ses colonnes, ses lignes vides du bas partent.
+	d2 := open(t)
+	if _, err := d2.Paste(ctx, 1, 0, 0, [][]string{{"Prix"}, {"1"}, {"2"}, {"3"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d2.Transfer(ctx, 1, Rect{2, 0, 3, 0}, 1, Rect{2, 3, 3, 3}, true, [][]string{{"2"}, {"3"}}); err != nil {
+		t.Fatal(err)
+	}
+	ts = tablesOf(t, d2)
+	if len(ts) != 2 || ts[0].Name == "" || ts[0].Rows != 1 {
+		t.Fatalf("tableau nommé : %+v", ts)
+	}
+}
+
+// Effacer les dernières lignes d'un tableau les supprime (choix de Louis) ;
+// une ligne vidée au milieu reste.
+func TestClearBottomRows(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Prix"}, {"1"}, {"2"}, {"3"}, {"4"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.ClearRange(ctx, 1, 2, 0, 2, 0, false); err != nil {
+		t.Fatal(err)
+	}
+	if ts := tablesOf(t, d); ts[0].Rows != 4 {
+		t.Fatalf("ligne du milieu : %+v", ts)
+	}
+	if err := d.ClearRange(ctx, 1, 3, 0, 4, 0, false); err != nil {
+		t.Fatal(err)
+	}
+	// Lignes 3 et 4 vidées, et la 2 l'était déjà : il reste la 1.
+	if ts := tablesOf(t, d); len(ts) != 1 || ts[0].Rows != 1 {
+		t.Fatalf("lignes du bas : %+v", ts)
+	}
+}

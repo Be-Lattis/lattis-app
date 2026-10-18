@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { apply, argKindAt, callAt, signature, signatureParts, suggest, type Catalog, type FunctionDoc } from './autocomplete';
+import { apply, argKindAt, callAt, needsNextArg, toNextArg, signature, signatureParts, suggest, type Catalog, type FunctionDoc } from './autocomplete';
 
 const cat: Catalog = {
 	functions: [
@@ -157,5 +157,30 @@ describe('argKindAt', () => {
 		expect(argKindAt('=EXISTE(', 8, kinds)).toBe('table');
 		expect(argKindAt('=SOMME(A; ', 10, kinds)).toBe('column');
 		expect(argKindAt('=1+', 3, kinds)).toBe('');
+	});
+});
+
+describe('argument suivant après un pointage', () => {
+	const cat = {
+		functions: [
+			{ name: 'REFERENCE', other: 'REFERENCE', arity: '2', args: [{ name: 'colonne', desc: '' }, { name: 'clé', desc: '' }] },
+			{ name: 'SI', other: 'IF', arity: '2-3', args: [{ name: 'test', desc: '' }, { name: 'si_vrai', desc: '' }, { name: 'si_faux', desc: '', optional: true }] },
+			{ name: 'SOMME', other: 'SUM', arity: '1+', args: [{ name: 'valeur1', desc: '' }], repeat: 1 },
+			{ name: 'SOMME.SI.ENS', other: 'SUMIFS', arity: '3+', args: [{ name: 'plage_somme', desc: '' }, { name: 'plage1', desc: '' }, { name: 'critère1', desc: '' }], repeat: 2 }
+		],
+		tables: []
+	} as unknown as Catalog;
+	it('passe à un argument obligatoire, jamais après le dernier', () => {
+		expect(needsNextArg('=REFERENCE(T[Col]', 17, cat)).toBe(true);
+		expect(needsNextArg('=REFERENCE(T[Col]; [Id]', 23, cat)).toBe(false);
+		expect(needsNextArg('=SI([A]', 7, cat)).toBe(true);
+		expect(needsNextArg('=SI([A]; [B]', 12, cat)).toBe(false); // si_faux est facultatif
+		expect(needsNextArg('=SOMME(Cell[A1]', 15, cat)).toBe(false);
+		expect(needsNextArg('=SOMME.SI.ENS(a; b; c; d', 24, cat)).toBe(true); // critère2 suit plage2
+		expect(needsNextArg('=SOMME.SI.ENS(a; b; c; d; e', 27, cat)).toBe(false);
+	});
+	it('saute un « ; » déjà là, sinon en ajoute un', () => {
+		expect(toNextArg('=SI([A])', 7)).toEqual({ text: '=SI([A]; )', caret: 9 });
+		expect(toNextArg('=SI([A]; 1)', 7)).toEqual({ text: '=SI([A]; 1)', caret: 9 });
 	});
 });

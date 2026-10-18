@@ -3,6 +3,7 @@ package canvas
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 )
@@ -427,7 +428,71 @@ func (t *tx) lift(sheet int64, src Rect, p payload) error {
 			return err
 		}
 	}
+	for id := range cur {
+		if err := t.tidyBottom(id, true); err != nil {
+			return err
+		}
+	}
 	return nil
+}
+
+// defaultColumnName : nom donné d'office à une colonne (jamais renommée).
+var defaultColumnName = regexp.MustCompile(`^Colonne \d+$`)
+
+// tidyBottom range un tableau dont des cellules viennent d'être emportées
+// ou effacées (choix de Louis) : ses dernières lignes devenues vides sont
+// supprimées (il en garde une). Avec drop (cellules emportées), vidé et
+// jamais personnalisé (colonnes « Colonne n », sans formule), il disparaît,
+// ce qui libère la place autour.
+func (t *tx) tidyBottom(id int64, drop bool) error {
+	tb, err := t.table(id)
+	if err != nil || tb.Filtered() {
+		return err
+	}
+	conds := []string{"NOT EXISTS (SELECT 1 FROM _lattis_invalid WHERE tbl = ? AND rid = d.id)"}
+	plain := true
+	for _, c := range tb.Cols {
+		if c.Formula != "" {
+			plain = false
+			continue
+		}
+		if !defaultColumnName.MatchString(c.Name) {
+			plain = false
+		}
+		conds = append(conds, fmt.Sprintf("coalesce(CAST(d.%s AS TEXT), '') = ''", colSQL(c.ID)))
+	}
+	rows, err := t.query(fmt.Sprintf(`SELECT %s FROM %s AS d ORDER BY _pos DESC`, strings.Join(conds, " AND "), tb.sql()), tb.ID)
+	if err != nil {
+		return err
+	}
+	empty := 0
+	for rows.Next() {
+		var e bool
+		if err := rows.Scan(&e); err != nil {
+			rows.Close()
+			return err
+		}
+		if !e {
+			break
+		}
+		empty++
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	switch {
+	case empty == 0:
+		return nil
+	case empty == tb.Rows && plain && drop:
+		return t.deleteTable(tb)
+	case empty == tb.Rows:
+		empty-- // un tableau nommé garde une ligne
+	}
+	if empty == 0 {
+		return nil
+	}
+	return t.deleteTableRows(tb, tb.Rows-empty, tb.Rows-1)
 }
 
 // placeTables recopie ou déplace les tableaux et colonnes entières de la
@@ -731,6 +796,10 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 							}
 						}
 					}
+				}
+				// Les dernières lignes devenues vides partent (choix de Louis).
+				if err := t.tidyBottom(tb.ID, false); err != nil {
+					return err
 				}
 			}
 		}

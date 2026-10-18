@@ -99,6 +99,10 @@
 		if (mode === 'doc') DocumentService.SetActiveSheet(sheetId).catch(() => {});
 	});
 	let orphans = $state<Orphan[]>([]);
+	// Écran de récupération : les 3 plus récents d'abord, les autres sur demande.
+	const ORPHANS_SHOWN = 3;
+	let allOrphans = $state(false);
+	const sortedOrphans = $derived([...orphans].sort((a, b) => String(b.modified).localeCompare(String(a.modified))));
 	let help = $state<FormulaHelp | null>(null);
 	let scripts = $state<Script[]>([]);
 	// Contenu de l'onglet page HTML ou Document affiché (null : une feuille).
@@ -1222,7 +1226,8 @@
 			<div class="splash">
 				<h1>Récupération</h1>
 				<p>Lattis s'est fermé sans enregistrer. Ces classeurs ont des modifications récupérables :</p>
-				{#each orphans as o (o.dir)}
+				<div class="orphans">
+				{#each allOrphans ? sortedOrphans : sortedOrphans.slice(0, ORPHANS_SHOWN) as o (o.dir)}
 					<div class="orphan">
 						<div>
 							<strong>{o.source ? o.source.split(/[\\/]/).pop() : 'Classeur sans titre'}</strong>
@@ -1232,6 +1237,10 @@
 						<button class="ico discard" onclick={() => recover(o, false)}><Icon name="trash" size={14} />Abandonner</button>
 					</div>
 				{/each}
+				</div>
+				{#if !allOrphans && orphans.length > ORPHANS_SHOWN}
+					<button class="link" onclick={() => (allOrphans = true)}>Voir les {orphans.length - ORPHANS_SHOWN} plus anciens</button>
+				{/if}
 				{#if recoverError}<p class="error">{recoverError}</p>{/if}
 			</div>
 		{:else if mode === 'closed'}
@@ -1739,6 +1748,14 @@
 		font-weight: 600;
 		color: #217346;
 		margin: 0 0 8px;
+	}
+	/* Beaucoup de récupérations : la liste défile, l'écran garde son titre. */
+	.orphans {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		max-height: 55vh;
+		overflow-y: auto;
 	}
 	.orphan {
 		display: flex;
