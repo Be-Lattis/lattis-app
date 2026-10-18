@@ -9,6 +9,7 @@ export {
 };
 
 export type {
+    DamagedFile,
     DemoProgress,
     DemoResult,
     DialogRequest,
@@ -21,6 +22,7 @@ export type {
     OpenResult,
     QueryRefresh,
     QuerySheet,
+    SalvageResult,
     ScriptResult,
     Setting,
     TableList,

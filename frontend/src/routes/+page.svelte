@@ -9,7 +9,7 @@
 	import { noticeTtl } from '#lib/shell/notice.js';
 	import { Events } from '@wailsio/runtime';
 	import { DocumentService, GridService } from '#bindings/internal/bridge/index.js';
-	import type { DocState, FormulaHelp } from '#bindings/internal/bridge/models.js';
+	import type { DamagedFile, DocState, FormulaHelp } from '#bindings/internal/bridge/models.js';
 	import type { Layout, RuleChanges } from '#bindings/internal/canvas/models.js';
 	import type { Type } from '#bindings/internal/grid/models.js';
 	import type { Orphan } from '#bindings/internal/archive/models.js';
@@ -101,6 +101,10 @@
 	let recent = $state<string[]>([]);
 	// Fermer un classeur modifié : enregistrer d'abord ?
 	let closing = $state(false);
+	// Fichier endommagé à l'ouverture : proposer d'en récupérer les données.
+	let damaged = $state<DamagedFile | null>(null);
+	// Échec d'une récupération de session : l'écran de récupération reste.
+	let recoverError = $state('');
 	// Boîtes de dialogue ouvertes par un script ou un assistant (ui.dialog…), la plus ancienne d'abord.
 	let dialogs = $state<DialogSpec[]>([]);
 	let mcpOpen = $state(false);
@@ -150,7 +154,10 @@
 		const r = await DocumentService.Open(path);
 		if (r.recoverable) {
 			orphans = [r.recoverable];
+			recoverError = '';
 			mode = 'recover';
+		} else if (r.damaged) {
+			damaged = r.damaged;
 		} else if (!r.cancelled) {
 			view = 'grid';
 			sheetId = 1;
@@ -158,6 +165,26 @@
 			await reload();
 		}
 		await loadRecent();
+	}
+
+	/** Récupère les données lisibles d'un classeur endommagé, dans un nouveau classeur. */
+	async function salvage(path: string | null) {
+		damaged = null;
+		// Écran de récupération vidé (session abandonnée, puis fichier endommagé) : un classeur neuf.
+		const fallback = () => (mode === 'recover' && orphans.length === 0 ? startDoc() : undefined);
+		if (!path) return fallback();
+		let r;
+		try {
+			r = await DocumentService.Salvage(path);
+		} catch (e) {
+			notice = err(e);
+			return fallback();
+		}
+		view = 'grid';
+		sheetId = 1;
+		mode = 'doc';
+		await reload();
+		notice = r.report;
 	}
 
 	/** Ferme le classeur ; modifié, il demande d'abord s'il faut l'enregistrer. */
@@ -532,16 +559,26 @@
 	}
 
 	async function recover(o: Orphan, keep: boolean) {
+		recoverError = '';
+		try {
+			if (keep) await DocumentService.Recover(o.dir);
+			else await DocumentService.Discard(o.dir);
+		} catch (e) {
+			// La session reste proposée : rien n'est perdu, l'utilisateur choisit.
+			recoverError = err(e);
+			return;
+		}
 		try {
 			if (keep) {
-				await DocumentService.Recover(o.dir);
 				mode = 'doc';
 				await reload();
 				notice = 'Modifications récupérées : pensez à enregistrer.';
 			} else {
-				await DocumentService.Discard(o.dir);
 				orphans = orphans.filter((x) => x.dir !== o.dir);
-				if (orphans.length === 0) await startDoc();
+				if (orphans.length > 0) return;
+				// Session d'un fichier abandonnée : le fichier tel qu'enregistré.
+				if (o.source) await openPath(o.source).catch(() => startDoc());
+				else await startDoc();
 			}
 		} catch (e) {
 			failure = err(e);
@@ -1068,6 +1105,7 @@
 						<button class="ico discard" onclick={() => recover(o, false)}><Icon name="trash" size={14} />Abandonner</button>
 					</div>
 				{/each}
+				{#if recoverError}<p class="error">{recoverError}</p>{/if}
 			</div>
 		{:else if mode === 'closed'}
 			<div class="splash">
@@ -1404,6 +1442,19 @@
 					<button class="primary" onclick={() => closeDoc(true).catch((e) => (notice = err(e)))}>Enregistrer</button>
 					<button onclick={() => closeDoc(false).catch((e) => (notice = err(e)))}>Ne pas enregistrer</button>
 					<button onclick={() => (closing = false)}>Annuler</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+	{#if damaged}
+		{@const file = damaged}
+		<div class="modal-back">
+			<div class="modal" role="dialog" aria-modal="true">
+				<p>{file.message}.</p>
+				<p>Lattis peut en récupérer les données lisibles dans un nouveau classeur sans titre. Le fichier endommagé n'est pas modifié.</p>
+				<div class="actions">
+					<button class="primary" onclick={() => salvage(file.path).catch((e) => (notice = err(e)))}>Récupérer les données</button>
+					<button onclick={() => salvage(null).catch((e) => (failure = err(e)))}>Annuler</button>
 				</div>
 			</div>
 		</div>

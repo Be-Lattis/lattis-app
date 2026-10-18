@@ -24,6 +24,14 @@ import * as grid$0 from "../grid/models.js";
 import * as query$0 from "../query/models.js";
 
 /**
+ * DamagedFile décrit un classeur endommagé.
+ */
+export interface DamagedFile {
+    "path": string;
+    "message": string;
+}
+
+/**
  * DemoProgress est l'avancement de la fabrication du classeur de démonstration.
  */
 export interface DemoProgress {
@@ -177,6 +185,12 @@ export interface MCPStatus {
 export interface OpenResult {
     "state": DocState;
     "recoverable"?: archive$0.Orphan | null;
+
+    /**
+     * Damaged : fichier endommagé dont on peut tenter de récupérer les
+     * données (Salvage) ; les autres fichiers illisibles sont une erreur.
+     */
+    "damaged"?: DamagedFile | null;
     "cancelled": boolean;
 }
 
@@ -198,6 +212,18 @@ export interface QuerySheet {
     "sheet": number;
     "table": string;
     "state": DocState;
+}
+
+/**
+ * SalvageResult est le résultat d'une récupération de données.
+ */
+export interface SalvageResult {
+    "state": DocState;
+
+    /**
+     * résumé pour l'utilisateur
+     */
+    "report": string;
 }
 
 /**

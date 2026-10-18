@@ -43,7 +43,22 @@ type DocState struct {
 type OpenResult struct {
 	State       DocState        `json:"state"`
 	Recoverable *archive.Orphan `json:"recoverable,omitempty"`
-	Cancelled   bool            `json:"cancelled"`
+	// Damaged : fichier endommagé dont on peut tenter de récupérer les
+	// données (Salvage) ; les autres fichiers illisibles sont une erreur.
+	Damaged   *DamagedFile `json:"damaged,omitempty"`
+	Cancelled bool         `json:"cancelled"`
+}
+
+// DamagedFile décrit un classeur endommagé.
+type DamagedFile struct {
+	Path    string `json:"path"`
+	Message string `json:"message"`
+}
+
+// SalvageResult est le résultat d'une récupération de données.
+type SalvageResult struct {
+	State  DocState `json:"state"`
+	Report string   `json:"report"` // résumé pour l'utilisateur
 }
 
 // DocumentService expose un classeur à l'interface (phase 2).
@@ -136,6 +151,10 @@ func (s *DocumentService) Open(ctx context.Context, path string) (OpenResult, er
 	if errors.As(err, &rec) {
 		return OpenResult{Recoverable: &rec.Orphan}, nil
 	}
+	var bad *archive.OpenError
+	if errors.As(err, &bad) && bad.Salvage {
+		return OpenResult{Damaged: &DamagedFile{Path: path, Message: err.Error()}}, nil
+	}
 	if err != nil {
 		return OpenResult{}, err
 	}
@@ -143,6 +162,23 @@ func (s *DocumentService) Open(ctx context.Context, path string) (OpenResult, er
 	addRecent(path)
 	st, err := s.State(ctx)
 	return OpenResult{State: st}, err
+}
+
+// Salvage récupère les données lisibles d'un classeur endommagé dans un
+// nouveau classeur sans titre (le fichier endommagé n'est pas modifié).
+func (s *DocumentService) Salvage(ctx context.Context, path string) (SalvageResult, error) {
+	d, rep, err := doc.Salvage(ctx, path)
+	if err != nil {
+		return SalvageResult{}, fmt.Errorf("récupération impossible : %w", err)
+	}
+	s.replace(d)
+	msg := fmt.Sprintf("Données récupérées : %d ligne(s) dans %d table(s)", rep.Rows, rep.Tables)
+	if len(rep.Damaged) > 0 {
+		msg += fmt.Sprintf(", %d table(s) incomplète(s)", len(rep.Damaged))
+	}
+	msg += ". Enregistrer sous un nouveau nom, puis vérifier le contenu."
+	st, err := s.State(ctx)
+	return SalvageResult{State: st, Report: msg}, err
 }
 
 // Recover rouvre une session interrompue (répertoire de travail dir).
