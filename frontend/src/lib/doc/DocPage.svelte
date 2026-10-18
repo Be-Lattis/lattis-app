@@ -900,9 +900,12 @@
 				{#if at[0]}<label>Cellule<input type="text" value={at[1]} disabled={!!locked} onchange={(e) => setLink(at[0], (e.currentTarget as HTMLInputElement).value)} /></label>{/if}
 			</div>
 			{#if p.cfg.kind === 'select'}
-				<div class="link">
-					<label class="radio"><input type="radio" checked={!p.cfg.optionsFrom} disabled={!!locked} onchange={() => (p.cfg.optionsFrom = '')} /> Choix saisis</label>
-					<label class="radio"><input type="radio" checked={!!p.cfg.optionsFrom} disabled={!!locked || !colRefs.length} onchange={() => (p.cfg.optionsFrom = colRefs[0])} /> Colonne d’un tableau</label>
+				<div class="field">
+					<span>Source des choix</span>
+					<div class="seg" role="radiogroup" aria-label="Source des choix">
+						<button type="button" role="radio" aria-checked={!p.cfg.optionsFrom} class:on={!p.cfg.optionsFrom} disabled={!!locked} onclick={() => (p.cfg.optionsFrom = '')}>Saisis</button>
+						<button type="button" role="radio" aria-checked={!!p.cfg.optionsFrom} class:on={!!p.cfg.optionsFrom} disabled={!!locked || !colRefs.length} onclick={() => (p.cfg.optionsFrom = p.cfg.optionsFrom || colRefs[0])}>Colonne d’un tableau</button>
+					</div>
 				</div>
 			{/if}
 			{#if p.cfg.kind === 'select' && p.cfg.optionsFrom}
@@ -1216,11 +1219,11 @@
 		box-sizing: border-box;
 	}
 	.form {
-		width: 280px;
+		width: 430px;
 		box-sizing: border-box;
 	}
 	.panelbox {
-		width: 310px;
+		width: 460px;
 		flex: none;
 		overflow: hidden;
 	}
@@ -1259,10 +1262,33 @@
 		display: flex;
 		gap: 8px;
 	}
-	.link label.radio {
-		flex-direction: row;
-		align-items: center;
-		gap: 4px;
+	.field {
+		display: flex;
+		flex-direction: column;
+		gap: 3px;
+		color: #4b5563;
+	}
+	.seg {
+		display: flex;
+		border: 1px solid #c9cdd2;
+		border-radius: 3px;
+		overflow: hidden;
+	}
+	.seg button {
+		flex: 1;
+		justify-content: center;
+		border: none;
+		border-radius: 0;
+		padding: 4px 8px;
+		white-space: nowrap;
+	}
+	.seg button + button {
+		border-left: 1px solid #c9cdd2;
+	}
+	.seg button.on {
+		background: #e2efe7;
+		color: #1b5e3a;
+		font-weight: 600;
 	}
 	.link label:first-child {
 		flex: 1;

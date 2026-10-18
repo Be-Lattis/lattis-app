@@ -217,7 +217,7 @@
 
 <style>
 	.panel {
-		width: 280px;
+		width: 430px;
 		flex: none;
 		display: flex;
 		flex-direction: column;

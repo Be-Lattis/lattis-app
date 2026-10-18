@@ -345,7 +345,7 @@
 		right: 0;
 		bottom: 0;
 		z-index: 20;
-		width: 300px;
+		width: 450px;
 		display: flex;
 		flex-direction: column;
 		gap: 6px;

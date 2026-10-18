@@ -601,13 +601,24 @@
 				<label>Cellule liée (facultative)<input type="text" bind:value={e.link} placeholder="aucune : valeur gardée dans le contrôle" onfocus={pickable('link')} /></label>
 			{/if}
 			{#if e.kind === 'select'}
-				<div class="src">
-					<label class="check"><input type="radio" bind:group={e.src} value="list" /> Choix saisis</label>
-					<label class="check"><input type="radio" bind:group={e.src} value="column" disabled={!columnRefs.length} /> Colonne d’un tableau</label>
+				<div class="field">
+					<span>Source des choix</span>
+					<div class="seg" role="radiogroup" aria-label="Source des choix">
+						<button type="button" role="radio" aria-checked={e.src === 'list'} class:on={e.src === 'list'} onclick={() => (e.src = 'list')}>Saisis</button>
+						<button
+							type="button"
+							role="radio"
+							aria-checked={e.src === 'column'}
+							class:on={e.src === 'column'}
+							disabled={!columnRefs.length}
+							title={columnRefs.length ? 'Valeurs distinctes d’une colonne de tableau, à jour avec lui' : 'Aucun tableau dans le classeur'}
+							onclick={() => (e.src = 'column')}>Colonne d’un tableau</button
+						>
+					</div>
 				</div>
 				{#if e.src === 'column'}
 					<label
-						>Choix tirés de (valeurs distinctes, mises à jour avec le tableau)
+						>Colonne (valeurs distinctes)
 						<select bind:value={e.optionsFrom}>
 							{#each columnRefs as r (r)}<option value={r}>{r}</option>{/each}
 							{#if e.optionsFrom && !columnRefs.includes(e.optionsFrom)}<option value={e.optionsFrom}>{e.optionsFrom} (introuvable)</option>{/if}
@@ -688,7 +699,7 @@
 		right: 0;
 		z-index: 30;
 		pointer-events: auto;
-		width: 300px;
+		width: 450px;
 		box-sizing: border-box;
 		overflow-y: auto;
 		background: #fff;
@@ -710,10 +721,41 @@
 		cursor: pointer;
 		padding: 2px 6px;
 	}
-	.src {
+	/* Choix exclusif sur une ligne (contrôle segmenté), comme un champ du volet. */
+	.field {
 		display: flex;
-		gap: 12px;
-		margin: 2px 16px 0;
+		flex-direction: column;
+		gap: 3px;
+		padding: 5px 16px;
+		color: #374151;
+	}
+	.seg {
+		display: flex;
+		border: 1px solid #c9cdd2;
+		border-radius: var(--float-radius, 4px);
+		overflow: hidden;
+	}
+	.seg button {
+		flex: 1;
+		font: inherit;
+		padding: 4px 8px;
+		border: none;
+		background: #fff;
+		color: #374151;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+	.seg button + button {
+		border-left: 1px solid #c9cdd2;
+	}
+	.seg button.on {
+		background: #e2efe7;
+		color: #1b5e3a;
+		font-weight: 600;
+	}
+	.seg button:disabled {
+		color: #9ca3af;
+		cursor: default;
 	}
 	.hint {
 		margin: 2px 16px 0;

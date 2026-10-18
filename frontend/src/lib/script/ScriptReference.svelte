@@ -74,7 +74,7 @@
 
 <style>
 	.ref {
-		width: 320px;
+		width: 470px;
 		flex-shrink: 0;
 		display: flex;
 		flex-direction: column;
