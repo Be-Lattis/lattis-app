@@ -274,7 +274,7 @@
 				onclick={() => {
 					addMenu = null;
 					onadd?.();
-				}}>Nouvelle feuille</button
+				}}><span class="ic"><Icon name="sheet" size={16} /></span>Nouvelle feuille</button
 			>
 			<button
 				role="menuitem"
@@ -282,7 +282,7 @@
 				onclick={() => {
 					addMenu = null;
 					onpage?.();
-				}}>Nouvel Onglet HTML</button
+				}}><span class="ic"><Icon name="web" size={16} /></span>Nouvel Onglet HTML</button
 			>
 			<button
 				role="menuitem"
@@ -290,7 +290,7 @@
 				onclick={() => {
 					addMenu = null;
 					ondocpage?.();
-				}}>Nouvel Onglet Document</button
+				}}><span class="ic"><Icon name="document" size={16} /></span>Nouvel Onglet Document</button
 			>
 		</div>
 	{/if}
@@ -327,7 +327,7 @@
 					const id = m.id;
 					closeMenu();
 					oninsert?.(id);
-				}}>Insérer une feuille</button
+				}}><span class="ic"><Icon name="sheet" size={16} /></span>Insérer une feuille</button
 			>
 			<button
 				role="menuitem"
@@ -336,7 +336,7 @@
 					const id = m.id;
 					closeMenu();
 					onpage?.(id);
-				}}>Insérer un Onglet HTML</button
+				}}><span class="ic"><Icon name="web" size={16} /></span>Insérer un Onglet HTML</button
 			>
 			<button
 				role="menuitem"
@@ -345,7 +345,7 @@
 					const id = m.id;
 					closeMenu();
 					ondocpage?.(id);
-				}}>Insérer un Onglet Document</button
+				}}><span class="ic"><Icon name="document" size={16} /></span>Insérer un Onglet Document</button
 			>
 			<button
 				role="menuitem"
@@ -354,7 +354,7 @@
 					const id = m.id;
 					closeMenu();
 					ondelete?.(id);
-				}}>Supprimer</button
+				}}><span class="ic"><Icon name="trash" size={16} /></span>Supprimer</button
 			>
 			<button
 				role="menuitem"
@@ -362,7 +362,7 @@
 				onclick={() => {
 					closeMenu();
 					if (ms) startRename(ms);
-				}}>Renommer</button
+				}}><span class="ic"><Icon name="rename" size={16} /></span>Renommer</button
 			>
 			<button
 				role="menuitem"
@@ -372,7 +372,7 @@
 					closeMenu();
 					const i = sheets.findIndex((x) => x.id === id);
 					moving = { id, before: sheets[i + 1]?.id ?? null, copy: !onmove };
-				}}>Déplacer ou copier…</button
+				}}><span class="ic"><Icon name="move-sheet" size={16} /></span>Déplacer ou copier…</button
 			>
 			<hr />
 			<button
@@ -382,11 +382,12 @@
 					const id = m.id;
 					closeMenu();
 					onprotect?.(id);
-				}}>{ms?.protected ? 'Ôter la protection de la feuille…' : 'Protéger la feuille…'}</button
+				}}
+				><span class="ic"><Icon name={ms?.protected ? 'unlock' : 'lock-sheet'} size={16} /></span>{ms?.protected ? 'Ôter la protection de la feuille…' : 'Protéger la feuille…'}</button
 			>
 			<div class="sub-wrap" role="none" onmouseenter={() => oncolor && (colors = true)} onmouseleave={() => (colors = false)}>
 				<button role="menuitem" aria-haspopup="true" aria-expanded={colors} disabled={!oncolor} onclick={() => (colors = true)}
-					><span>Couleur d'onglet</span><span class="arrow">▸</span></button
+					><span class="ic"><Icon name="tab-color" size={16} /></span><span class="label">Couleur d'onglet</span><span class="arrow">▸</span></button
 				>
 				{#if colors && oncolor}
 					<div class="menu colors" role="menu" aria-label="Couleur d'onglet">
@@ -413,7 +414,7 @@
 								const id = m.id;
 								closeMenu();
 								oncolor?.(id, '');
-							}}>Aucune couleur</button
+							}}><span class="ic"><Icon name="no-color" size={16} /></span>Aucune couleur</button
 						>
 					</div>
 				{/if}
@@ -427,7 +428,7 @@
 					const id = m.id;
 					closeMenu();
 					onhide?.(id, true);
-				}}>Masquer</button
+				}}><span class="ic"><Icon name="hide" size={16} /></span>Masquer</button
 			>
 			<button
 				role="menuitem"
@@ -435,7 +436,7 @@
 				onclick={() => {
 					closeMenu();
 					unhiding = hiddenSheets[0]?.id ?? null;
-				}}>Afficher…</button
+				}}><span class="ic"><Icon name="show" size={16} /></span>Afficher…</button
 			>
 		</div>
 	{/if}
@@ -696,14 +697,29 @@
 		min-width: 140px;
 	}
 	.menu button {
-		display: block;
+		display: flex;
+		align-items: center;
+		gap: 8px;
 		width: 100%;
 		text-align: left;
-		padding: 6px 14px;
+		padding: 6px 14px 6px 10px;
 		background: none;
 		border: none;
 		font: inherit;
+		white-space: nowrap;
 		cursor: pointer;
+		--icon-accent: #217346;
+	}
+	/* Colonne d'icônes de largeur fixe : les libellés restent alignés. */
+	.ic {
+		flex: none;
+		display: flex;
+		width: 16px;
+		color: #4b5563;
+	}
+	.menu button:disabled .ic {
+		color: inherit;
+		--icon-accent: currentColor;
 	}
 	.menu button:hover:not(:disabled) {
 		background: #e3efe7;
@@ -719,9 +735,8 @@
 	.sub-wrap {
 		position: relative;
 	}
-	.sub-wrap > button {
-		display: flex;
-		justify-content: space-between;
+	.sub-wrap .label {
+		flex: 1;
 	}
 	.arrow {
 		color: #6b7280;
