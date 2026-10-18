@@ -14,7 +14,8 @@ import (
 // Onglet IA : conversation avec un assistant qui agit sur le classeur par
 // les commandes de internal/api (voir internal/ai). Opt-in (ai.enabled) ;
 // fournisseur, modèle et partage des données dans la configuration de
-// l'utilisateur ; clés d'API dans le trousseau du système.
+// l'utilisateur ; connexion par compte (sans clé) quand le fournisseur la
+// permet, sinon clés d'API dans le trousseau du système.
 
 // AIEvent porte le déroulé d'une réponse (texte au fil de l'eau, outils).
 const AIEvent = "ai:event"
@@ -40,6 +41,8 @@ type aiState struct {
 type AIProvider struct {
 	ai.Info
 	HasKey bool `json:"hasKey"`
+	// Account : connexion par compte, sans clé (nil : non proposée).
+	Account *ai.Account `json:"account,omitempty"`
 }
 
 // AIStatus décrit l'onglet IA.
@@ -72,6 +75,10 @@ func (s *DocumentService) AIState() AIStatus {
 		p := AIProvider{Info: info}
 		if info.Available {
 			_, p.HasKey = ai.DefaultKeys.Get(info.ID)
+			if ap, ok := ai.Lookup(info.ID).(ai.AccountProvider); ok {
+				acc := ap.Account()
+				p.Account = &acc
+			}
 		}
 		st.Providers = append(st.Providers, p)
 		if info.ID == st.Provider && st.Model == "" {
@@ -98,6 +105,17 @@ func (s *DocumentService) AISetKey(provider, key string) (AIStatus, error) {
 	return s.AIState(), err
 }
 
+// AILogin connecte le compte du fournisseur (navigateur) et rend la main
+// quand la connexion est finie.
+func (s *DocumentService) AILogin(ctx context.Context, provider string) (AIStatus, error) {
+	ap, ok := ai.Lookup(provider).(ai.AccountProvider)
+	if !ok {
+		return s.AIState(), errors.New("ce fournisseur ne propose pas de connexion par compte")
+	}
+	err := ap.Login(context.WithoutCancel(ctx))
+	return s.AIState(), err
+}
+
 // AIForgetKey oublie la clé d'API d'un fournisseur.
 func (s *DocumentService) AIForgetKey(provider string) (AIStatus, error) {
 	err := ai.DefaultKeys.Delete(provider)
@@ -118,9 +136,13 @@ func (s *DocumentService) AISend(ctx context.Context, run int, text string) erro
 	if p == nil {
 		return errors.New("fournisseur pas encore disponible : " + id)
 	}
+	// Clé du trousseau d'abord ; sinon le compte connecté, s'il y en a un.
 	key, ok := ai.DefaultKeys.Get(id)
 	if !ok {
-		return ai.ErrNoKey
+		ap, isAcc := p.(ai.AccountProvider)
+		if !isAcc || !ap.Account().Connected {
+			return ai.ErrNoKey
+		}
 	}
 	model := c.String("ai.model", "")
 	if model == "" {

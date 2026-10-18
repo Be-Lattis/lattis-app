@@ -38,6 +38,14 @@ export function AIForgetKey(provider: string): $CancellablePromise<$models.AISta
 }
 
 /**
+ * AILogin connecte le compte du fournisseur (navigateur) et rend la main
+ * quand la connexion est finie.
+ */
+export function AILogin(provider: string): $CancellablePromise<$models.AIStatus> {
+    return $Call.ByID(2983422769, provider);
+}
+
+/**
  * AIReset commence une nouvelle conversation.
  */
 export function AIReset(): $CancellablePromise<void> {

@@ -40,10 +40,19 @@ func (anthropicProvider) Info() Info {
 }
 
 func (p anthropicProvider) Turn(ctx context.Context, cred Credentials, req Request, emit func(Event)) (Reply, error) {
-	if cred.Key == "" {
-		return Reply{}, ErrNoKey
+	// Variables d'environnement ignorées : seule la clé du trousseau ou le
+	// compte connecté comptent.
+	opts := []option.RequestOption{option.WithoutEnvironmentDefaults()}
+	account := cred.Key == ""
+	if account {
+		cfg, _, ok := anthropicProfile()
+		if !ok {
+			return Reply{}, ErrNoKey
+		}
+		opts = append(opts, option.WithConfigQuiet(cfg))
+	} else {
+		opts = append(opts, option.WithAPIKey(cred.Key))
 	}
-	opts := []option.RequestOption{option.WithoutEnvironmentDefaults(), option.WithAPIKey(cred.Key)}
 	if cred.Endpoint != "" {
 		opts = append(opts, option.WithBaseURL(cred.Endpoint))
 	}
@@ -95,7 +104,7 @@ func (p anthropicProvider) Turn(ctx context.Context, cred Credentials, req Reque
 		}
 	}
 	if err := stream.Err(); err != nil {
-		return Reply{}, anthropicError(err)
+		return Reply{}, anthropicError(err, account)
 	}
 
 	out := Message{Role: Assistant, Provider: "anthropic", Native: msg.ToParam()}
@@ -154,8 +163,10 @@ func (anthropicProvider) messages(msgs []Message) []anthropic.MessageParam {
 	return out
 }
 
+var _ AccountProvider = anthropicProvider{}
+
 // anthropicError rend une erreur de l'API lisible par l'utilisateur.
-func anthropicError(err error) error {
+func anthropicError(err error, account bool) error {
 	var apierr *anthropic.Error
 	if !errors.As(err, &apierr) {
 		if errors.Is(err, context.Canceled) {
@@ -165,7 +176,10 @@ func anthropicError(err error) error {
 	}
 	switch apierr.StatusCode {
 	case 401:
-		return errors.New("clé d'API refusée par Anthropic : vérifiez-la (bouton « Clé d'API »)")
+		if account {
+			return errors.New("connexion au compte Anthropic refusée ou expirée : reconnectez-vous (bouton « Compte »)")
+		}
+		return errors.New("clé d'API refusée par Anthropic : vérifiez-la (bouton « Compte »)")
 	case 403:
 		return errors.New("accès refusé par Anthropic (droits de la clé ou de l'organisation)")
 	case 404:

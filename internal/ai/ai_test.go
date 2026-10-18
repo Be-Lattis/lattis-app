@@ -1,10 +1,13 @@
 package ai
 
 import (
+	"os"
+
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/anthropics/anthropic-sdk-go/config"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -291,7 +294,7 @@ func TestAnthropicTurn(t *testing.T) {
 		b, _ := io.ReadAll(r.Body)
 		json.Unmarshal(b, &body)
 		beta = r.Header.Get("anthropic-beta")
-		if r.Header.Get("X-Api-Key") != "sk-test" {
+		if r.Header.Get("X-Api-Key") != "sk-test" && r.Header.Get("Authorization") != "Bearer jeton-compte" {
 			w.WriteHeader(401)
 			io.WriteString(w, `{"type":"error","error":{"type":"authentication_error","message":"bad key"}}`)
 			return
@@ -355,8 +358,45 @@ func TestAnthropicTurn(t *testing.T) {
 	if _, err := p.Turn(context.Background(), Credentials{Key: "sk-faux", Endpoint: srv.URL}, req, func(Event) {}); err == nil || !strings.Contains(err.Error(), "clé d'API refusée") {
 		t.Fatalf("err %v", err)
 	}
-	if _, err := p.Turn(context.Background(), Credentials{}, req, func(Event) {}); !errors.Is(err, ErrNoKey) {
+	// Sans clé ni compte connecté.
+	dir := t.TempDir()
+	t.Setenv("ANTHROPIC_CONFIG_DIR", dir)
+	t.Setenv("ANTHROPIC_PROFILE", "")
+	os.Unsetenv("ANTHROPIC_PROFILE")
+	if _, err := p.Turn(context.Background(), Credentials{Endpoint: srv.URL}, req, func(Event) {}); !errors.Is(err, ErrNoKey) {
 		t.Fatalf("err %v", err)
+	}
+	if acc := p.(AccountProvider).Account(); acc.Connected {
+		t.Fatalf("compte inventé : %+v", acc)
+	}
+	// Compte connecté (profil rangé par « ant auth login ») : jeton porteur.
+	writeProfile(t, dir, "jeton-compte")
+	if acc := p.(AccountProvider).Account(); !acc.Connected || acc.Name != "louis@exemple.fr" {
+		t.Fatalf("compte : %+v", acc)
+	}
+	if _, err := p.Turn(context.Background(), Credentials{Endpoint: srv.URL}, req, func(Event) {}); err != nil {
+		t.Fatal(err)
+	}
+	// Une clé enregistrée reste prioritaire.
+	if _, err := p.Turn(context.Background(), Credentials{Key: "sk-test", Endpoint: srv.URL}, req, func(Event) {}); err != nil {
+		t.Fatal(err)
+	}
+	// Jeton refusé : message propre au compte.
+	writeProfile(t, dir, "jeton-expire")
+	if _, err := p.Turn(context.Background(), Credentials{Endpoint: srv.URL}, req, func(Event) {}); err == nil || !strings.Contains(err.Error(), "reconnectez-vous") {
+		t.Fatalf("err %v", err)
+	}
+}
+
+// writeProfile range un profil Anthropic comme le fait « ant auth login ».
+func writeProfile(t *testing.T, dir, token string) {
+	t.Helper()
+	cfg := &config.Config{AuthenticationInfo: config.NewUserOAuthAuthentication("")}
+	if err := config.SaveProfile(dir, "default", cfg); err != nil {
+		t.Fatal(err)
+	}
+	if err := config.WriteCredentials(config.ProfileCredentialsPath(dir, "default"), config.Credentials{AccessToken: token, AccountEmail: "louis@exemple.fr"}); err != nil {
+		t.Fatal(err)
 	}
 }
 

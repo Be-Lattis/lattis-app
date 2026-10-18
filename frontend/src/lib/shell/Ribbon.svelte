@@ -942,6 +942,7 @@
 		--icon-accent: #fde68a;
 	}
 	.tab.ai :global(svg) {
+		display: inline-block;
 		vertical-align: -2px;
 	}
 	.tab.ai.on {

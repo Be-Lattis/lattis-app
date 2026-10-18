@@ -92,6 +92,8 @@ type Reply struct {
 
 // Credentials : de quoi joindre le fournisseur.
 type Credentials struct {
+	// Key : clé d'API ; vide : le compte connecté (AccountProvider), s'il y
+	// en a un.
 	Key string
 	// Endpoint : adresse imposée (passerelle de l'entreprise, ai.endpoint) ;
 	// vide : l'adresse publique du fournisseur.
@@ -104,6 +106,27 @@ type Provider interface {
 	// Turn envoie la conversation et rend la réponse du modèle, en émettant
 	// son texte au fil de l'eau (Event de type EventText).
 	Turn(ctx context.Context, cred Credentials, req Request, emit func(Event)) (Reply, error)
+}
+
+// AccountProvider est un fournisseur qui permet de se connecter avec son
+// compte, sans copier de clé d'API. Une clé enregistrée reste prioritaire.
+type AccountProvider interface {
+	Account() Account
+	// Login lance la connexion (navigateur) et rend la main quand elle est
+	// finie.
+	Login(ctx context.Context) error
+}
+
+// Account décrit la connexion par compte d'un fournisseur.
+type Account struct {
+	// Connected : un compte est connecté sur ce poste.
+	Connected bool `json:"connected"`
+	// Name : profil ou organisation connectée, pour l'affichage.
+	Name string `json:"name,omitempty"`
+	// CanLogin : l'outil de connexion est installé sur ce poste.
+	CanLogin bool `json:"canLogin"`
+	// Tool : outil de connexion (« ant »), pour l'aide.
+	Tool string `json:"tool,omitempty"`
 }
 
 // Info décrit un fournisseur pour l'interface.
@@ -172,4 +195,4 @@ func Catalog() []Info {
 }
 
 // ErrNoKey : aucune clé d'API pour ce fournisseur.
-var ErrNoKey = errors.New("aucune clé d'API enregistrée pour ce fournisseur")
+var ErrNoKey = errors.New("ni compte connecté ni clé d'API enregistrée pour ce fournisseur")

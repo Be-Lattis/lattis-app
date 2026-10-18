@@ -75,6 +75,11 @@ export interface AIProvider {
      */
     "keyHint"?: string;
     "hasKey": boolean;
+
+    /**
+     * Account : connexion par compte, sans clé (nil : non proposée).
+     */
+    "account"?: ai$0.Account | null;
 }
 
 /**

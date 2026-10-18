@@ -1,8 +1,9 @@
 <script lang="ts">
 	// Onglet IA : conversation avec l'assistant (internal/ai). En haut, le
 	// fournisseur et le modèle (d'autres fournisseurs viendront : ils sont
-	// listés, grisés) ; la clé d'API se saisit ici et va dans le trousseau du
-	// système. L'assistant agit sur le classeur ; tout ce qu'il modifie pendant
+	// listés, grisés). Connexion par le compte du fournisseur quand il le permet
+	// (Anthropic : « ant auth login »), sinon par une clé d'API gardée dans le
+	// trousseau du système. L'assistant agit sur le classeur ; tout ce qu'il modifie pendant
 	// une réponse s'annule d'un coup (Ctrl+Z).
 	import { onMount, tick } from 'svelte';
 	import Icon from '#lib/icons/Icon.svelte';
@@ -62,10 +63,26 @@
 		keyDraft = '';
 		if (!keyError) keyOpen = false;
 	}
+	let loggingIn = $state(false);
+	let loginError = $state('');
+	async function login() {
+		if (!provider) return;
+		loggingIn = true;
+		loginError = '';
+		try {
+			chat.status = await DocumentService.AILogin(provider.id);
+			keyOpen = false;
+		} catch (e) {
+			loginError = String(e instanceof Error ? e.message : e);
+			await refreshStatus();
+		} finally {
+			loggingIn = false;
+		}
+	}
 	async function forgetKey() {
 		if (!provider) return;
 		chat.status = await DocumentService.AIForgetKey(provider.id);
-		keyOpen = true;
+		keyOpen = !chat.status?.providers?.find((p) => p.id === provider?.id)?.account?.connected;
 	}
 	async function choose(path: 'ai.provider' | 'ai.model', value: string) {
 		error = '';
@@ -89,7 +106,7 @@
 			send(chat.draft);
 		}
 	}
-	const needKey = $derived(!!provider?.available && !provider.hasKey);
+	const needKey = $derived(!!provider?.available && !provider.hasKey && !provider.account?.connected);
 	const sharingLabel = $derived(st?.dataSharing === 'sample' ? 'Structure et lignes d’exemple' : 'Structure seulement');
 </script>
 
@@ -122,7 +139,7 @@
 				<Icon name="lock" size={14} />{sharingLabel}
 			</button>
 			{#if provider?.available}
-				<button title="Clé d’API de {provider.name}" onclick={() => (keyOpen = !keyOpen)}><Icon name="key" size={16} />Clé d’API</button>
+				<button title="Connexion à {provider.name} : compte ou clé d’API" onclick={() => (keyOpen = !keyOpen)}><Icon name="key" size={16} />Compte</button>
 			{/if}
 			<button title="Effacer la conversation" disabled={chat.busy || !chat.items.length} onclick={reset}><Icon name="new-file" size={16} />Nouvelle conversation</button>
 		{/if}
@@ -136,6 +153,30 @@
 	{:else if st}
 		{#if needKey || keyOpen}
 			<section class="key">
+				{#if provider?.account}
+					{@const acc = provider.account}
+					{#if acc.connected}
+						<p>
+							<Icon name="unlock" size={16} /> Connecté à votre compte Anthropic{acc.name ? ` (${acc.name})` : ''}, sans clé à copier.
+							{#if provider.hasKey}La clé d’API enregistrée reste utilisée en priorité : oubliez-la pour passer par le compte.{/if}
+						</p>
+					{:else if acc.canLogin}
+						<p>Connectez-vous avec votre compte de la console Anthropic : le navigateur s’ouvre, et rien n’est à copier.</p>
+						<div class="row">
+							<button class="primary" disabled={loggingIn} onclick={login}
+								><Icon name="unlock" size={16} />{loggingIn ? 'Connexion dans le navigateur…' : 'Se connecter avec Anthropic'}</button
+							>
+						</div>
+					{:else}
+						<p>
+							Pour vous connecter avec votre compte Anthropic sans clé, installez l’outil « {acc.tool} » d’Anthropic et lancez
+							<code>{acc.tool} auth login</code>.
+							<button class="link" onclick={refreshStatus}>Vérifier la connexion</button>
+						</p>
+					{/if}
+					{#if loginError}<p class="error">{loginError}</p>{/if}
+					<p class="or">ou, avec une clé d’API :</p>
+				{/if}
 				{#if provider?.hasKey}
 					<p>Une clé d’API de {provider.name} est enregistrée dans le trousseau du système.</p>
 					<div class="row">
@@ -144,8 +185,8 @@
 					</div>
 				{:else if provider}
 					<p>
-						Pour converser avec {provider.name}, saisissez votre clé d’API personnelle. Elle est gardée dans le trousseau du système, jamais
-						dans le classeur.
+						{provider.account ? 'Saisissez' : `Pour converser avec ${provider.name}, saisissez`} votre clé d’API personnelle. Elle est gardée dans
+						le trousseau du système, jamais dans le classeur.
 						{#if provider.keyUrl}<button class="link" onclick={() => openOutside(provider.keyUrl!)}>Créer une clé</button>{/if}
 					</p>
 					<form
@@ -157,6 +198,7 @@
 					>
 						<input type="password" autocomplete="off" spellcheck="false" placeholder={provider.keyHint ? `${provider.keyHint}…` : 'Clé d’API'} bind:value={keyDraft} onkeydown={(e) => e.stopPropagation()} />
 						<button class="primary" type="submit" disabled={!keyDraft.trim()}><Icon name="key" size={16} />Enregistrer</button>
+						{#if provider.account?.connected}<button type="button" onclick={() => (keyOpen = false)}>Fermer</button>{/if}
 					</form>
 				{/if}
 				{#if keyError}<p class="error">{keyError}</p>{/if}
@@ -206,7 +248,7 @@
 				bind:this={input}
 				bind:value={chat.draft}
 				rows="3"
-				placeholder={needKey ? 'Enregistrez d’abord une clé d’API' : 'Votre message (Entrée pour envoyer, Maj+Entrée pour aller à la ligne)'}
+				placeholder={needKey ? 'Connectez-vous d’abord (compte ou clé d’API)' : 'Votre message (Entrée pour envoyer, Maj+Entrée pour aller à la ligne)'}
 				disabled={needKey}
 				onkeydown={onKey}
 			></textarea>
@@ -296,6 +338,19 @@
 	}
 	.key p {
 		margin: 0 0 8px;
+	}
+	.key p :global(svg) {
+		display: inline-block;
+		vertical-align: -3px;
+	}
+	.key .or {
+		margin-top: 10px;
+		color: #6b7280;
+	}
+	.key code {
+		padding: 0 3px;
+		border-radius: 3px;
+		background: #fef3c7;
 	}
 	.row {
 		display: flex;
