@@ -1,0 +1,141 @@
+# Exemple de plan de démonstration : lattis --demo docs/demo/exemple.yaml
+# Un réseau d'ateliers de réparation de vélos. Format : docs/demo.md.
+# Ce fichier est vérifié par les tests (internal/demo, TestExemple).
+
+seed: 7
+
+sheets:
+  # Onglet Document : texte, graphique et tableau croisé vivants, bouton, champ.
+  - name: Lisez-moi
+    doc:
+      - h1: Ateliers Vélo Express
+      - p: Plan de démonstration écrit en **YAML** ; chaque onglet montre une partie du format.
+      - bullet: "**Ateliers** : tableau à clé, coordonnées, carte."
+      - bullet: "**Réparations** : générateurs de valeurs, REFERENCE, mise en forme conditionnelle."
+      - bullet: "**Par mois** : requête SQL actualisable (F5) ; **Par type** : requête façon Power Query."
+      - h2: Réparations par atelier
+      - chart: {source: ParAtelier, kind: bar, x: Atelier, series: [Heures], title: Heures de réparation par atelier, legend: none, height: 260}
+      - pivot: {source: Réparations, rowFields: [Type], values: [{field: N°, agg: count, label: Réparations}, {field: Durée (h), agg: sum, label: Heures}]}
+      - p: "Seuil d'une grosse réparation (€) :"
+        control: {kind: input, label: Seuil, link: "Réparations!N1", width: 100}
+      - p: "Combien de réparations dépassent ce seuil ?"
+        button: {label: Compter, script: Outils, function: compter}
+
+  # Une feuille : tableau à clé, colonnes calculées, carte.
+  - name: Ateliers
+    tables:
+      - name: Ateliers
+        rows: 6
+        key: Ville
+        columns:
+          - {name: Ville, gen: cycle, values: [Paris, Lyon, Nantes, Bordeaux, Lille, Strasbourg]}
+          - {name: Région, gen: region, of: Ville}
+          - {name: Latitude, gen: latitude, of: Ville}
+          - {name: Longitude, gen: longitude, of: Ville}
+          - {name: Ouverture, gen: date, from: 2018-01-01, to: 2023-12-31}
+          - {name: Réparations, type: integer, formula: "=NB.SI(Réparations[Atelier]; [Ville])"}
+          - {name: Montant, formula: "=SOMME.SI(Réparations[Atelier]; [Ville]; Réparations[Montant])"}
+    charts:
+      - {cell: I1, source: Ateliers, kind: map, x: Ville, series: [Latitude, Longitude, Montant], title: Ateliers, width: 480, height: 380}
+
+  # Générateurs, formules, cellules libres, contrôle, règles, styles.
+  - name: Réparations
+    tables:
+      - name: Réparations
+        rows: 400
+        key: N°
+        columns:
+          - {name: N°, gen: code, prefix: R, digits: 5}
+          - {name: Date, gen: date, from: 2025-01-01, to: 2025-12-31, ordered: true}
+          - {name: Atelier, gen: pick, values: [Paris, Lyon, Nantes, Bordeaux, Lille, Strasbourg], skew: true}
+          - {name: Client, gen: person}
+          - {name: Courriel, gen: email, of: Client, domain: exemple.fr}
+          - {name: Type, gen: pick, values: [Crevaison, Freins, Transmission, Révision, Roue voilée, Électrique]}
+          - {name: Durée (h), type: decimal, gen: decimal, min: 0.5, max: 4, decimals: 1, skew: true}
+          - {name: Pièces, type: decimal, gen: decimal, min: 0, max: 180, skew: true, blank: 0.2}
+          - {name: Payé, gen: bool, p: 0.9}
+          - {name: Montant, type: decimal, formula: "=ARRONDI([Durée (h)]*45+[Pièces]; 2)"}
+          - {name: Région, type: text, formula: "=REFERENCE(Ateliers[Région]; [Atelier])"}
+    cells:
+      - {cell: M1, value: Seuil}
+      - {cell: N1, value: 150}
+      - {cell: M3, value: Au-dessus du seuil}
+      - {cell: N3, value: '=NB.SI(Réparations[Montant]; ">"&N1)'}
+    widths: {M: 160}
+    styles:
+      - {range: "M1:M3", style: {b: true}}
+    controls:
+      - {cell: O1, kind: select, options: ["100", "150", "250"], link: N1, width: 90}
+    rules:
+      - table: Réparations
+        column: Montant
+        rules:
+          - {op: bar, bar: {color: "#63c384"}}
+      - table: Réparations
+        column: Payé
+        rules:
+          - {op: formula, value: "=NON([Payé])", style: {bg: "#fde2e1", fg: "#b42318"}}
+    pivots:
+      - {cell: Q1, name: ParAtelier, source: Réparations, rowFields: [Atelier], values: [{field: N°, agg: count, label: Réparations}, {field: Durée (h), agg: sum, label: Heures}]}
+
+  # Requête SQL sur le classeur : {{Tableau}} et {{Tableau[Colonne]}}.
+  - name: Par mois
+    query:
+      table: ParMois
+      sql: |
+        SELECT substr({{Réparations[Date]}}, 1, 7) AS "Mois",
+               count(*) AS "Réparations",
+               round(sum({{Réparations[Montant]}}), 2) AS "Montant",
+               round(sum(sum({{Réparations[Montant]}})) OVER (ORDER BY substr({{Réparations[Date]}}, 1, 7)), 2) AS "Cumul"
+        FROM {{Réparations}}
+        GROUP BY 1
+        ORDER BY 1
+    charts:
+      - {cell: F1, source: ParMois, kind: combo, x: Mois, series: [Montant, Cumul], seriesKinds: [bar, line], secondary: [false, true], title: Montant mensuel et cumul}
+
+  # Requête d'import : une source et des étapes (comme Power Query).
+  - name: Par type
+    query:
+      table: ParType
+      source: {kind: table, table: Réparations}
+      steps:
+        - {op: group, columns: [Type], aggs: [{name: Réparations, op: count}, {name: Heures, op: sum, column: Durée (h)}]}
+        - {op: sort, sort: [{column: Heures, desc: true}]}
+    charts:
+      - {cell: E1, source: ParType, kind: funnel, x: Type, series: [Heures], title: Heures par type}
+
+  # Page HTML : lit le classeur par lattis.call.
+  - name: Page
+    html: |
+      <!doctype html>
+      <html lang="fr"><head><meta charset="utf-8"></head>
+      <body style="font: 14px system-ui; margin: 24px">
+        <h1>Réparations</h1>
+        <p>Total : <b id="total">…</b> €</p>
+        <script>
+          async function maj() {
+            const r = await lattis.call("db.query", {sql: 'SELECT round(sum(Montant), 2) FROM "Réparations"'});
+            document.getElementById("total").textContent = r.rows[0][0];
+          }
+          lattis.on("change", maj);
+          maj();
+        </script>
+      </body></html>
+
+# Scripts de la bibliothèque (onglet SCRIPT), autorisés sur ce poste.
+scripts:
+  - name: Outils
+    source: |
+      function compter()
+        local seuil = cells.get{sheet = "Réparations", row = 1, col = 14}.value
+        local n = db.value([[SELECT count(*) FROM "Réparations" WHERE Montant > ?]], tonumber(seuil) or 0)
+        ui.alert(n .. " réparation(s) au-dessus de " .. seuil .. " €")
+      end
+
+      function saisie(e)
+        if e.table == "Réparations" then ui.notify("Modifié : " .. e.address) end
+      end
+
+# Écouteurs des évènements du classeur (events.on).
+events:
+  - {event: change, script: Outils, function: saisie}

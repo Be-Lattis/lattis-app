@@ -3,6 +3,8 @@ package demo
 import (
 	"fmt"
 	"math"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/canvas"
@@ -23,11 +25,41 @@ type TableSpec struct {
 	Key int
 }
 
-// SheetSpec est un onglet à générer.
+// SheetSpec est un onglet à générer : une feuille (tableaux, cellules
+// libres et objets posés dessus), le résultat d'une requête (Query), un
+// onglet Document (Doc) ou une page HTML (HTML).
 type SheetSpec struct {
 	Name   string
 	Tables []TableSpec
 	Cells  []canvas.ImportCell // cellules libres (libellés, formules)
+
+	// Objets posés sur la feuille (voir objects.go).
+	Pivots   []PivotPlacement
+	Charts   []ChartSpec
+	Controls []ControlSpec
+	Rules    []RuleSpec
+	Styles   []StyleSpec
+	Widths   []WidthSpec
+
+	// Query : la feuille reçoit le tableau chargé par cette requête
+	// (actualisable par F5), à la place de Tables.
+	Query *QuerySpec
+	// Doc : onglet Document, fait de ces blocs.
+	Doc []DocBlock
+	// HTML : page HTML (source complète).
+	HTML string
+}
+
+// Kind donne le genre de l'onglet : "" (feuille), canvas.KindDoc ou
+// canvas.KindHTML.
+func (s SheetSpec) Kind() string {
+	switch {
+	case s.Doc != nil:
+		return canvas.KindDoc
+	case s.HTML != "":
+		return canvas.KindHTML
+	}
+	return ""
 }
 
 // PivotSpec est un tableau croisé posé sur son propre onglet, avec des
@@ -44,10 +76,18 @@ type ChartSpec struct {
 	Config   canvas.ChartConfig
 }
 
-// Plan décrit un classeur de démonstration.
+// Plan décrit un classeur de démonstration. Les onglets gardent l'ordre
+// de Sheets ; ceux de Pivots (un TCD par onglet) viennent après.
 type Plan struct {
 	Sheets []SheetSpec
 	Pivots []PivotSpec
+	// Scripts de la bibliothèque (onglet SCRIPT), autorisés sur ce poste
+	// quand le classeur est fabriqué par New.
+	Scripts []ScriptSpec
+	// Events : écouteurs des évènements du classeur (events.on).
+	Events []canvas.Listener
+	// Seed : graine d'un plan lu d'un fichier (0 : celle des options).
+	Seed uint64
 }
 
 // Rows est le nombre total de lignes de données du plan.
@@ -77,6 +117,41 @@ type Preset struct {
 	Name        string
 	Description string
 	Plan        func() Plan
+	// File : plan lu d'un fichier YAML (chemin absolu) au lieu de Plan.
+	File string
+}
+
+// Load donne le plan du preset (lu de son fichier s'il en a un).
+func (p Preset) Load() (Plan, error) {
+	if p.File != "" {
+		return LoadFile(p.File)
+	}
+	return p.Plan(), nil
+}
+
+// IsPlanFile dit si name désigne un fichier de plan (extension .yaml ou .yml).
+func IsPlanFile(name string) bool {
+	ext := strings.ToLower(filepath.Ext(name))
+	return ext == ".yaml" || ext == ".yml"
+}
+
+// Resolve trouve un preset par son nom, ou, pour un chemin en .yaml ou
+// .yml, le fichier de plan (qui doit exister ; il est lu par Load).
+func Resolve(name string) (Preset, error) {
+	if p, ok := Lookup(name); ok {
+		return p, nil
+	}
+	if !IsPlanFile(name) {
+		return Preset{}, UnknownPresetError{name}
+	}
+	abs, err := filepath.Abs(name)
+	if err != nil {
+		return Preset{}, err
+	}
+	if st, err := os.Stat(abs); err != nil || st.IsDir() {
+		return Preset{}, fmt.Errorf("fichier de démonstration introuvable : %s", name)
+	}
+	return Preset{Name: abs, Description: "plan " + filepath.Base(abs), File: abs}, nil
 }
 
 // DefaultPreset est le preset choisi quand --demo n'en nomme aucun.
@@ -91,10 +166,10 @@ func Presets() []Preset {
 		}
 	}
 	return append(out,
-		Preset{"sml", "100 lignes × 10 colonnes, 1 onglet", func() Plan { return Plan{Sheets: []SheetSpec{small()}} }},
-		Preset{"med", "sml + 2 onglets d'environ 1K × 10 + 1 onglet avec un TCD et 2 graphiques", med},
-		Preset{"big", "med + 8 onglets de 5 à 50 colonnes et 100 à 100K lignes", big},
-		Preset{"refs", "5 tableaux sur 3 onglets reliés par de nombreuses REFERENCE et formules", refs},
+		Preset{"sml", "100 lignes × 10 colonnes, 1 onglet", func() Plan { return Plan{Sheets: []SheetSpec{small()}} }, ""},
+		Preset{"med", "vitrine : document, ventes, carte, TCD en arborescence, requêtes SQL et d'import, scripts, page HTML (10 onglets)", med, ""},
+		Preset{"big", "med + 8 onglets de 5 à 50 colonnes et 100 à 100K lignes", big, ""},
+		Preset{"refs", "5 tableaux sur 3 onglets reliés par de nombreuses REFERENCE et formules", refs, ""},
 	)
 }
 
@@ -156,7 +231,7 @@ func sized(rows, cols int) Preset {
 			}
 		}
 		return Plan{Sheets: []SheetSpec{s}}
-	}}
+	}, ""}
 }
 
 // one : un onglet portant le nom de son unique tableau.
@@ -165,31 +240,6 @@ func one(th Theme, rows, cols int) SheetSpec {
 }
 
 func small() SheetSpec { return one(Commandes, 100, 10) }
-
-func med() Plan {
-	return Plan{
-		Sheets: []SheetSpec{small(), one(Clients, 1_000, 10), one(Employes, 1_200, 10)},
-		Pivots: []PivotSpec{{
-			Sheet: "Analyse",
-			Config: canvas.PivotConfig{
-				Name:      "SalairesParService",
-				Source:    Employes.Name,
-				RowFields: []string{"Service"},
-				Values:    []canvas.PivotValue{{Field: "Salaire brut", Agg: "avg"}, {Field: "Matricule", Agg: "count"}},
-			},
-			Charts: []ChartSpec{
-				{Row: 1, Col: 5, Config: canvas.ChartConfig{
-					Source: "SalairesParService", Kind: "bar", X: "Service", Series: []string{"Moyenne de Salaire brut"},
-					Title: "Salaire brut moyen par service", Legend: "none",
-				}},
-				{Row: 16, Col: 5, Config: canvas.ChartConfig{
-					Source: Employes.Name, Kind: "scatter", X: "Ancienneté", Series: []string{"Salaire brut"},
-					Title: "Salaire selon l'ancienneté", XTitle: "Ancienneté (ans)", YTitle: "Salaire brut (€)", Legend: "none",
-				}},
-			},
-		}},
-	}
-}
 
 // BigSheets est le nombre d'onglets ajoutés par big à med.
 const BigSheets = 8

@@ -835,11 +835,15 @@
 		// Document créé ou ouvert : le curseur dans le texte, à la fin (sous le
 		// titre d'un nouveau document) ; le focus ne reste pas sur le bouton du
 		// ruban ou l'onglet cliqué, où la frappe se perdait et où Espace
-		// recréait un document.
+		// recréait un document. La vue reste en haut : un long document
+		// s'ouvre sur son début, pas sur sa fin.
 		const raf = requestAnimationFrame(() => {
 			if (quill !== q) return;
-			q.focus();
-			q.setSelection(Math.max(0, q.getLength() - 1), 0);
+			q.focus({ preventScroll: true });
+			const end = Math.max(0, q.getLength() - 1);
+			q.setSelection(end, 0, 'silent');
+			lastRange = { index: end, length: 0 };
+			report();
 		});
 		return () => {
 			cancelAnimationFrame(raf);

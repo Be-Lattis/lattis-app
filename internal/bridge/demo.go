@@ -35,8 +35,10 @@ type demoRun struct {
 // option --demo) ; seed 0 : graine par défaut.
 func (s *DocumentService) SetDemo(preset string, seed uint64) {
 	s.demo = &demoRun{preset: preset, seed: seed}
-	if p, ok := demo.Lookup(preset); ok {
-		s.demo.cells = p.Plan().Cells()
+	if p, err := demo.Resolve(preset); err == nil {
+		if plan, err := p.Load(); err == nil {
+			s.demo.cells = plan.Cells()
+		}
 	}
 }
 
