@@ -133,6 +133,12 @@ function lex(src: string, base: number, sep: string): Tok[] {
 			push('op', c, start);
 			continue;
 		}
+		// « != » vaut « <> » (différent de).
+		if (c === '!' && src[i + 1] === '=') {
+			i += 2;
+			push('op', '<>', start);
+			continue;
+		}
 		if (c === '<' || c === '>' || c === '=') {
 			let op = c;
 			const n = src[i + 1];

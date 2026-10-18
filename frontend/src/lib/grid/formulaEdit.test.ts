@@ -114,3 +114,9 @@ describe('références relatives et marqueurs déplacés', () => {
 		expect(movedRef({ r0: 0, c0: 0, r1: 0, c1: 0 }, -1, 0, [t], here)).toBeNull();
 	});
 });
+
+describe('« != » pour « <> »', () => {
+	it('est accepté comme comparaison', () => {
+		expect(checkFormula('=SI(A1!=B1;1;0)')).toBeNull();
+	});
+});

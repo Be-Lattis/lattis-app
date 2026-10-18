@@ -25,9 +25,12 @@ func parseCriterion(v Value) criterion {
 	}
 	s := v.Str
 	op := "="
-	for _, o := range []string{"<=", ">=", "<>", "<", ">", "="} {
+	for _, o := range []string{"<=", ">=", "<>", "!=", "<", ">", "="} {
 		if strings.HasPrefix(s, o) {
 			op, s = o, s[len(o):]
+			if op == "!=" {
+				op = "<>"
+			}
 			break
 		}
 	}

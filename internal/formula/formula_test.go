@@ -297,6 +297,7 @@ func TestSpill(t *testing.T) {
 	}
 	for src, want := range map[string]string{
 		`=FILTRE(Clients;Clients[Ville]<>"Lyon")`:                  `Id|Nom|Ville / 1|Dupont|Paris / 3|Durand|Nice`,
+		`=FILTRE(Clients;Clients[Ville]!="Lyon")`:                  `Id|Nom|Ville / 1|Dupont|Paris / 3|Durand|Nice`,
 		`=TRIER(Clients;3)`:                                        `Id|Nom|Ville / 2|Martin|Lyon / 3|Durand|Nice / 1|Dupont|Paris`,
 		`=TRIER(Ventes[Prix];1;-1)`:                                `Prix / 199,99 / 25,5 / 10 / `,
 		`=UNIQUE(Ventes[Payé])`:                                    `Payé / VRAI / FAUX / `,

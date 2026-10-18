@@ -228,6 +228,11 @@ func lex(src string, loc Locale) ([]token, error) {
 			toks = append(toks, token{kind: tOp, text: string(c), pos: start})
 			i++
 			continue
+		case c == '!' && i+1 < len(rs) && rs[i+1] == '=':
+			// « != » s'écrit aussi pour « <> » (différent de).
+			toks = append(toks, token{kind: tOp, text: "<>", pos: start})
+			i += 2
+			continue
 		case c == '<' || c == '>' || c == '=':
 			op := string(c)
 			if i+1 < len(rs) && (c == '<' && (rs[i+1] == '>' || rs[i+1] == '=') || c == '>' && rs[i+1] == '=') {
