@@ -52,7 +52,7 @@
 	import { besideGutter, gutterOwner } from './gutter';
 	import Select from '#lib/ui/Select.svelte';
 	import Chart from '#lib/chart/Chart.svelte';
-	import { SINGLE_SERIES, type ChartKind, type MapGuess } from '#lib/chart/kinds.js';
+	import { SINGLE_SERIES, chartFields, type ChartKind, type MapGuess } from '#lib/chart/kinds.js';
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
 	import PivotPanel from './PivotPanel.svelte';
 	import SheetButtons from './SheetButtons.svelte';
@@ -4383,13 +4383,8 @@
 		}
 		const cols = e.t.columns;
 		const num = (c: Column) => c.type === 'integer' || c.type === 'decimal' || (c.type === 'formula' && c.formula !== undefined);
-		const cur = cols[targetCol(e)];
-		// Nuage de points : X est une colonne de nombres (l'active, sinon la première).
-		const x = kind === 'scatter' ? (cur && num(cur) ? cur : (cols.find(num) ?? cols[0])) : cur && !num(cur) ? cur : (cols.find((c) => !num(c)) ?? cols[0]);
-		let series = cols.filter((c) => c !== x && num(c)).map((c) => c.name);
-		if (SINGLE_SERIES.has(kind)) series = series.slice(-1);
-		// Fréquences : la colonne active si elle est numérique, sinon la première.
-		if (kind === 'histogram' && series.length) series = [cur && num(cur) && cur !== x ? cur.name : series[0]];
+		const { x: xName, series } = chartFields(kind, cols.map((c) => ({ name: c.name, numeric: num(c) })), targetCol(e));
+		const x = cols.find((c) => c.name === xName) ?? cols[0];
 		if (kind === 'map') {
 			// Carte : un carré grisé, en attente de ses coordonnées ; le volet
 			// s'ouvre avec les colonnes repérées par le classeur.

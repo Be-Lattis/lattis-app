@@ -36,7 +36,7 @@
 		| 'input'
 		| `block:${'normal' | 'h1' | 'h2' | 'h3' | 'bullet' | 'ordered' | 'quote' | 'code'}`
 		| `align:${'left' | 'center' | 'right' | 'justify'}`
-		| `chart:${'bar' | 'line' | 'pie' | 'scatter'}`;
+		| `chart:${ChartKind}`;
 
 	interface Command {
 		label: string;
@@ -550,7 +550,8 @@
 					{ label: 'Barres', icon: 'chart-bar', run: dc('chart:bar'), hint: 'Graphique en barres d’un tableau du classeur, inséré dans le texte' },
 					{ label: 'Courbes', icon: 'chart-line', run: dc('chart:line'), hint: 'Graphique en courbes d’un tableau du classeur' },
 					{ label: 'Secteurs', icon: 'chart-pie', run: dc('chart:pie'), hint: 'Graphique en secteurs d’un tableau du classeur' },
-					{ label: 'Nuage de points', icon: 'chart-scatter', run: dc('chart:scatter'), hint: 'Nuage de points d’un tableau du classeur' }
+					{ label: 'Nuage de points', icon: 'chart-scatter', run: dc('chart:scatter'), hint: 'Nuage de points d’un tableau du classeur' },
+					{ label: 'Autres graphiques', icon: 'chart-more', run: openItems, hint: 'Combiné, 3D, carte, cascade, compartimentage, radar, entonnoir, boîte à moustaches, fréquences, jauge', items: MORE_KINDS.map((k) => ({ label: k.label, run: dc(`chart:${k.kind}`) })) }
 				]
 			},
 			{

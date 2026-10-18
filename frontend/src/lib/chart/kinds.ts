@@ -70,6 +70,25 @@ export const SECONDARY = new Set<string>(['bar', 'line', 'area', 'scatter', 'com
 /** Lignes lues une à une (pas de regroupement par catégorie). */
 export const RAW_ROWS = new Set<string>(['map', 'histogram', 'boxplot']);
 
+/**
+ * Axe X et séries d'un nouveau graphique d'un tableau (grille et Onglet
+ * Document, même règle) : X est la colonne active si elle n'est pas
+ * numérique (un nuage de points : si elle l'est), sinon la première qui
+ * convient ; les séries sont les autres colonnes de nombres (la dernière
+ * seule pour un graphique à une série ; pour les fréquences, l'active).
+ */
+export function chartFields(kind: string, cols: { name: string; numeric: boolean }[], cur = -1): { x: string; series: string[] } {
+	const c = cols[cur];
+	const x =
+		kind === 'scatter'
+			? c?.numeric ? c : (cols.find((k) => k.numeric) ?? cols[0])
+			: c && !c.numeric ? c : (cols.find((k) => !k.numeric) ?? cols[0]);
+	let series = cols.filter((k) => k !== x && k.numeric).map((k) => k.name);
+	if (SINGLE_SERIES.has(kind)) series = series.slice(-1);
+	if (kind === 'histogram' && series.length) series = [c?.numeric && c !== x ? c.name : series[0]];
+	return { x: x?.name ?? '', series };
+}
+
 /** Forme d'une série d'un graphique combiné : la première en barres, les autres en courbes. */
 export function seriesShape(kinds: string[] | undefined, k: number): 'bar' | 'line' | 'area' {
 	const s = kinds?.[k];

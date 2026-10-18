@@ -12,6 +12,7 @@
 	import type { ChartInfo, PivotInfo } from '#bindings/internal/canvas/models.js';
 	import type { ChartConfig, PivotConfig } from '#lib/grid/Sheet.svelte';
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
+	import { MORE_KINDS, chartFields } from '#lib/chart/kinds.js';
 	import PivotPanel from '#lib/grid/PivotPanel.svelte';
 	import { dismiss } from '#lib/grid/dismiss.js';
 	import { resizePanel } from '#lib/ui/resize.js';
@@ -413,13 +414,13 @@
 
 	function defaultChart(t: DocTable, kind: string): ChartConfig {
 		const num = (i: number) => /^(int|integer|decimal|real|number)/i.test(t.types[i] ?? '');
-		// Axe X : la première colonne de texte (sinon la première) ; séries : les nombres.
-		const xi = Math.max(0, t.columns.findIndex((_, i) => !num(i)));
-		const numeric = t.columns.filter((_, i) => i !== xi && num(i));
-		const series = (numeric.length ? numeric : t.columns.filter((_, i) => i !== xi).slice(0, 1)).slice(0, 3);
 		// Carte : carré grisé, coordonnées à choisir dans le volet.
 		if (kind === 'map') return { source: t.name, kind, x: '', series: [], mapDraft: true, title: t.name } as ChartConfig;
-		return { source: t.name, kind, x: t.columns[xi] ?? '', series, title: t.name } as ChartConfig;
+		// Même règle que sur une feuille (chartFields) ; sans colonne de nombres,
+		// la deuxième colonne, à compléter dans le volet.
+		const f = chartFields(kind, t.columns.map((name, i) => ({ name, numeric: num(i) })));
+		const series = f.series.length ? f.series : t.columns.filter((c) => c !== f.x).slice(0, 1);
+		return { source: t.name, kind, x: f.x, series, title: t.name } as ChartConfig;
 	}
 
 	/** Insère un tableau croisé d'un tableau du classeur (champs à choisir dans le volet). */
@@ -543,6 +544,8 @@
 
 	type Menu = { x: number; y: number; kind: 'chart' | 'pivot' | 'button' | 'control' | 'text'; index: number };
 	let menu = $state<Menu | null>(null);
+	// « Autres graphiques » déplié dans le menu contextuel.
+	let moreCharts = $state(false);
 	let clip = $state(docClip.item);
 
 	async function copyItem(kind: 'chart' | 'pivot' | 'button' | 'control', index: number, cut: boolean) {
@@ -576,6 +579,7 @@
 
 	function closeMenu() {
 		menu = null;
+		moreCharts = false;
 		markSelected();
 	}
 
@@ -1045,6 +1049,12 @@
 			<button disabled={!!locked} onclick={() => act(() => insertChart('line'))}><Icon name="chart-line" size={14} />Graphique en courbes</button>
 			<button disabled={!!locked} onclick={() => act(() => insertChart('pie'))}><Icon name="chart-pie" size={14} />Graphique en secteurs</button>
 			<button disabled={!!locked} onclick={() => act(() => insertChart('scatter'))}><Icon name="chart-scatter" size={14} />Nuage de points</button>
+			<button disabled={!!locked} onclick={(e) => { e.stopPropagation(); moreCharts = !moreCharts; }}><Icon name="chart-more" size={14} />Autres graphiques {moreCharts ? '▾' : '▸'}</button>
+			{#if moreCharts}
+				{#each MORE_KINDS as k (k.kind)}
+					<button class="sub" disabled={!!locked} title={k.hint} onclick={() => act(() => insertChart(k.kind))}><Icon name={k.icon} size={14} />{k.label}</button>
+				{/each}
+			{/if}
 			<button disabled={!!locked} onclick={() => act(insertPivot)}><Icon name="pivot-table" size={14} />Tableau croisé dynamique</button>
 			<button disabled={!!locked} onclick={() => act(insertButton)}><Icon name="button" size={14} />Bouton</button>
 			{#if controls}<button disabled={!!locked} onclick={() => act(() => insertControl('input'))}><Icon name="text-input" size={14} />Champ (texte, case, liste, fichier)…</button>{/if}
@@ -1094,6 +1104,9 @@
 		border: none;
 		border-radius: 0;
 		gap: 8px;
+	}
+	.menu button.sub {
+		padding-left: 28px;
 	}
 	.menu button:hover:not(:disabled) {
 		background: #e8f1ec;
