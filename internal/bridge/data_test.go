@@ -211,8 +211,8 @@ func TestDatasetIncremental(t *testing.T) {
 	}
 	f.fake.DataHide(f.ds.ID, "r4")
 	f.sync(t, false)
-	if _, full := f.srv.last(); !full {
-		t.Fatal("ligne sortie de l'audience : relecture complète attendue")
+	if _, full := f.srv.last(); full {
+		t.Fatal("ligne sortie de l'audience : relevé incrémental attendu (dataset_changed_ids)")
 	}
 	if got := f.rows(t); got != "Dupont SA:12:1" {
 		t.Fatalf("après la sortie de l'audience : %s", got)

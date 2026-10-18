@@ -67,13 +67,12 @@ type DataDelta struct {
 	Types   []string
 	// Rows : lignes modifiées depuis since, ou toutes (Full), par lattis_pos.
 	Rows []DataRow
-	// Deleted : lignes supprimées depuis since (vide si Full).
+	// Deleted : lignes supprimées ou sorties de l'audience depuis since
+	// (vide si Full).
 	Deleted []string
 	// Full : toute la donnée relue (since vide ou plus couvert).
 	Full bool
-	// Count : lignes visibles dans la vue, pour vérifier la copie locale (une
-	// ligne sortie de l'audience par une modification ne laisse pas de
-	// pierre tombale).
+	// Count : lignes visibles dans la vue, pour vérifier la copie locale (relevé manqué).
 	Count int
 	// Since : prochain point de reprise (sync_point pris avant la lecture).
 	Since string

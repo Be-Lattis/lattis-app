@@ -60,6 +60,10 @@ func (s *session) DatasetDelta(ctx context.Context, id, sqlName, since string) (
 	}
 	for _, r := range t.sorted() {
 		if ds.gone[r.id] {
+			// dataset_changed_ids : changée depuis since, hors de la vue.
+			if !out.Full && r.xid >= from {
+				out.Deleted = append(out.Deleted, r.id)
+			}
 			continue
 		}
 		out.Count++

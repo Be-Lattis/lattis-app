@@ -19,13 +19,14 @@ import (
 // §9 : « comme un tableau collaboratif »). Au lieu de relire toute la
 // donnée à chaque notification, seules les lignes changées depuis le
 // dernier point de reprise (lattis_xid ≥ since) et les suppressions
-// (dataset_tombstones) sont lues, puis appliquées hors du journal
+// (dataset_tombstones), avec les lignes sorties de
+// l'audience (dataset_changed_ids), sont lues, puis appliquées hors du journal
 // d'annulation (canvas.ApplyDataset) : une donnée qui change sur le serveur
 // ne crée pas d'étape Annuler. Tout est relu, toujours hors du journal,
 // quand le point de reprise manque ou n'est plus couvert (pierres tombales
 // purgées), quand la vue est refaite (colonnes, audience, republication),
-// ou quand la copie locale n'a plus le nombre de lignes de la vue (ligne
-// sortie de l'audience). La requête est actualisée comme avant (une étape
+// ou quand la copie locale n'a plus le nombre de lignes de la vue (relevé
+// manqué). La requête est actualisée comme avant (une étape
 // d'annulation) seulement quand le tableau ne peut pas suivre : étapes
 // Power Query ou SQL modifiés, colonnes changées de nom ou de type.
 

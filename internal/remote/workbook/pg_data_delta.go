@@ -3,7 +3,6 @@ package workbook
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -92,9 +91,15 @@ func (s pgServer) DatasetDelta(ctx context.Context, id, sqlName, since string) (
 				out.Count = len(out.Rows)
 				return nil
 			}
-			// dataset_tombstones prend les suppressions d'xid > p_since : depuis
-			// since compris, comme les lignes (voir xidBefore).
-			ts, err := tx.Query(ctx, `SELECT row_id::text FROM lattis.dataset_tombstones($1::uuid, $2::xid8)`, id, xidBefore(since))
+			// Suppressions depuis since compris (dataset_tombstones, ≥ depuis la
+			// migration 0021), puis lignes changées du tableau source que la vue
+			// ne montre plus : sorties de l'audience, retirées aussi.
+			seen := make(map[string]bool, len(out.Rows))
+			for _, r := range out.Rows {
+				seen[r.ID] = true
+			}
+			ts, err := tx.Query(ctx, `SELECT row_id::text FROM lattis.dataset_tombstones($1::uuid, $2::xid8)
+				UNION SELECT row_id::text FROM lattis.dataset_changed_ids($1::uuid, $2::xid8)`, id, since)
 			if err != nil {
 				return err
 			}
@@ -104,7 +109,9 @@ func (s pgServer) DatasetDelta(ctx context.Context, id, sqlName, since string) (
 					ts.Close()
 					return err
 				}
-				out.Deleted = append(out.Deleted, rid)
+				if !seen[rid] {
+					out.Deleted = append(out.Deleted, rid)
+				}
 			}
 			ts.Close()
 			if err := ts.Err(); err != nil {
@@ -114,15 +121,6 @@ func (s pgServer) DatasetDelta(ctx context.Context, id, sqlName, since string) (
 		})
 	})
 	return out, err
-}
-
-// xidBefore rend l'xid8 qui précède x ("0" pour 0 ou une valeur illisible).
-func xidBefore(x string) string {
-	n, err := strconv.ParseUint(x, 10, 64)
-	if err != nil || n == 0 {
-		return "0"
-	}
-	return strconv.FormatUint(n-1, 10)
 }
 
 // dataValue ramène une valeur lue par pgx à ce que rend database/sql avec le
