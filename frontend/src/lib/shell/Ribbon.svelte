@@ -727,8 +727,8 @@
 		{/each}
 		<span class="sep"></span>
 		{#if aiEnabled() || view === 'ai'}
-			<button class="tab special ai" data-label="IA" class:on={tab === 'IA'} {disabled} onclick={() => select('IA')} title="Assistant IA"
-				><Icon name="sparkle" size={14} /><span>IA</span></button
+			<button class="tab ai" data-label="Assistant ✦" class:on={tab === 'IA'} {disabled} onclick={() => select('IA')} title="Assistant IA"
+				>Assistant <Icon name="sparkle" size={13} /></button
 			>
 		{/if}
 		<button class="tab special" data-label="SQL" class:on={tab === 'SQL'} {disabled} onclick={() => select('SQL')}>SQL</button>
@@ -936,19 +936,15 @@
 	.special {
 		letter-spacing: 0.04em;
 	}
+	/* L'étoile suit le texte sur la même ligne : la barre garde sa hauteur. */
 	.tab.ai {
-		display: inline-flex;
-		align-items: center;
-		gap: 4px;
-		flex-wrap: wrap;
-		justify-content: center;
 		--icon-accent: #fde68a;
+	}
+	.tab.ai :global(svg) {
+		vertical-align: -2px;
 	}
 	.tab.ai.on {
 		--icon-accent: #d97706;
-	}
-	.tab.ai::after {
-		flex-basis: 100%;
 	}
 	.sep {
 		flex: 1;
