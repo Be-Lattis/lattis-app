@@ -4,7 +4,7 @@ Le workflow `.github/workflows/release.yml` construit, sur chaque tag `v*`, les 
 
 | Système | Fichiers produits | Signature | À fournir |
 |---|---|---|---|
-| Windows | `Lattis-windows-x64-setup.exe` (NSIS), `Lattis-windows-x64.msix` (publié seulement signé : non signé, Windows refuse de l'installer) | Authenticode SHA-256 horodaté (signtool) : `lattis.exe`, installeur (et désinstalleur avec eSigner ou le `.pfx`), paquet MSIX | Un certificat de signature de code : SSL.com eSigner (recommandé), Azure Trusted Signing **ou** `.pfx` |
+| Windows | `Lattis-windows-x64-setup.exe` (NSIS), `Lattis-windows-x64.msix` (publié seulement signé : non signé, Windows refuse de l'installer) | Authenticode SHA-256 horodaté (signtool) : `lattis.exe`, installeur (et désinstalleur avec le `.pfx`), paquet MSIX | Un certificat de signature de code : Azure Trusted Signing **ou** certificat OV/EV |
 | macOS | `Lattis-macos-universal.dmg` (arm64 + Intel) | Developer ID + hardened runtime, notarisation Apple, ticket agrafé à l'app et au `.dmg` | Adhésion Apple Developer Program, certificat « Developer ID Application » (.p12), clé API App Store Connect (.p8) |
 | Linux | `Lattis-linux-x64.AppImage`, `Lattis-linux-x64.deb`, `Lattis-linux-x64.rpm` | Signature GPG intégrée aux `.deb`/`.rpm` ; signature détachée `.asc` de chaque fichier de la release et de `SHA256SUMS.txt` | Facultatif : une clé GPG |
 
@@ -14,61 +14,21 @@ Tous les paquets associent l'extension **`.lattis`** à Lattis (double-clic : le
 
 ### Ce qu'il faut choisir
 
-Depuis juin 2023, les autorités de certification ne délivrent plus de certificat de signature de code (OV comme EV) dont la clé privée soit exportable en `.pfx` : la clé vit sur un jeton matériel ou dans un HSM en ligne. Le comparatif des autorités et le choix motivé sont dans [choix-autorite.md](choix-autorite.md). Le workflow accepte trois sources, dans cet ordre de préférence ; la première dont les secrets existent est utilisée, sinon les paquets sortent non signés comme avant :
+Depuis juin 2023, les autorités de certification ne délivrent plus de certificat de signature de code (OV comme EV) dont la clé privée soit exportable en `.pfx` : la clé vit sur un jeton matériel ou dans un HSM en ligne. Deux voies réalistes :
 
-1. **`.pfx`** (`WINDOWS_CERT_PFX_BASE64`) : ancien certificat exportable, ou certificat de test.
-2. **SSL.com eSigner** (`ESIGNER_*`), **recommandé** : certificat OV (société) ou IV (personne physique) conservé dans le HSM cloud de SSL.com. Sur le runner, eSigner CKA présente ce certificat dans le magasin Windows comme un jeton USB virtuel ; signtool l'utilise par son empreinte. Tout est signé : `lattis.exe`, désinstalleur et installeur NSIS, MSIX (Publisher lu dans le certificat). Coût ≈ 129 $/an de certificat + 180 $/an de forfait eSigner (20 signatures/mois). Chaque run signé consomme **4 signatures** ; pour un essai manuel sans les consommer, décocher « sign » dans Actions → Release → Run workflow.
-3. **Azure Trusted Signing** (« Artifact Signing » depuis 2026), conservé en alternative : environ 10 $/mois, mais réservé aux organisations des États-Unis, du Canada, de l'UE et du Royaume-Uni ayant au moins trois ans d'historique vérifiable, et aux particuliers des États-Unis et du Canada.
-   - Créer une inscription d'application (Entra ID) avec un secret client, et lui donner le rôle **Trusted Signing Certificate Profile Signer** sur le compte de signature.
-   - Noter le **sujet** du certificat du profil (portail Azure, profil de certificat → « Subject name », de la forme `CN=Nom, O=Nom, L=Ville, S=Région, C=FR`) : il devient l'éditeur (Publisher) du MSIX, qui doit lui être identique au caractère près.
-   - Limite : le désinstalleur NSIS (embarqué dans l'installeur) n'est pas signé ; l'installeur, `lattis.exe` et le MSIX le sont.
-
-Un certificat sur jeton matériel physique sert à signer **en local** (voir § 5, `WINDOWS_CERT_THUMBPRINT`).
+- **Azure Trusted Signing** (recommandé pour la CI ; Microsoft l'a renommé « Artifact Signing », mêmes principes). Abonnement Azure, compte Trusted Signing (offre Basic, environ 10 $/mois), validation d'identité par Microsoft, profil de certificat « Public Trust ». Vérifier l'éligibilité au moment de l'inscription : elle a longtemps été réservée aux organisations ayant au moins trois ans d'existence vérifiable, et aux développeurs individuels de certains pays seulement.
+  - Créer une inscription d'application (Entra ID) avec un secret client, et lui donner le rôle **Trusted Signing Certificate Profile Signer** sur le compte de signature.
+  - Noter le **sujet** du certificat du profil (portail Azure, profil de certificat → « Subject name », de la forme `CN=Nom, O=Nom, L=Ville, S=Région, C=FR`) : il devient l'éditeur (Publisher) du MSIX, qui doit lui être identique au caractère près.
+  - Limite : avec Trusted Signing, le désinstalleur NSIS (embarqué dans l'installeur) n'est pas signé ; l'installeur, `lattis.exe` et le MSIX le sont.
+- **Certificat OV ou EV d'une autorité** (Sectigo, DigiCert, Certum, SSL.com…). Sur jeton matériel, il sert à signer **en local** (voir § 5, `WINDOWS_CERT_THUMBPRINT`) ; la CI ne peut pas l'utiliser. Si l'autorité fournit malgré tout un `.pfx` (ancien certificat encore valide, offre particulière), la CI le prend en charge directement. Les HSM en ligne des autorités (SSL.com eSigner, DigiCert KeyLocker…) demanderaient leur propre étape dans le workflow, non écrite ici.
 
 Le MSIX signé avec un certificat public s'installe d'un double-clic (Windows 10 1903 ou plus récent). SmartScreen peut afficher un avertissement tant que l'éditeur n'a pas acquis de réputation, y compris avec un certificat EV.
 
-### SSL.com eSigner : les démarches, pas à pas
-
-Ce que Louis fait lui-même (personne ne peut le faire à sa place : compte, identité, paiement) :
-
-1. **Créer le compte** sur [ssl.com](https://secure.ssl.com/users/new). Noter le **nom d'utilisateur** et le **mot de passe** : ce sont ceux que la CI utilisera.
-2. **Commander le certificat**, durée 1 an (validité maximale actuelle) :
-   - Lattis porté par une société ou une entreprise individuelle immatriculée : **OV Code Signing** ([achat](https://www.ssl.com/certificates/code-signing/buy/)) ; l'éditeur affiché sera le nom de la société.
-   - Sinon, en nom propre : **IV Code Signing** ([fiche](https://ssl.com/products/software-integrity/code-signing/iv/)) ; l'éditeur affiché sera « Louis Triboulin ».
-   - Stockage de la clé : **eSigner Cloud Signing** (pas de YubiKey). Ne pas prendre la validation express (599 $).
-   - Payer par carte (129 $ HT).
-3. **Fournir les pièces de validation** dans le tableau de bord de la commande (3 à 5 jours ouvrés) :
-   - OV : lien vers l'immatriculation dans un registre public (fiche [annuaire-entreprises.data.gouv.fr](https://annuaire-entreprises.data.gouv.fr) ou extrait Kbis), adresse et téléphone de l'entreprise vérifiables ; si l'entreprise a moins de 3 ans, scan recto verso de la pièce d'identité du demandeur. SSL.com peut rappeler au numéro public de l'entreprise.
-   - IV : scan recto verso de la carte d'identité ou du passeport (le numéro peut être masqué ; nom, adresse, année de naissance et photo visibles) et une photo du demandeur.
-4. **Activer eSigner** une fois le certificat émis : dans la commande, définir le code PIN eSigner, puis afficher le **QR code** de l'authentification à deux facteurs. Sous le QR code figure le **secret TOTP** (texte en base32) : le copier dans un gestionnaire de mots de passe, c'est lui que la CI utilise pour produire ses codes à usage unique. Scanner aussi le QR code dans une application d'authentification pour signer à la main si besoin.
-5. **Désactiver le « Malware Blocker »** d'eSigner s'il est proposé dans les réglages du certificat : signtool ne transmet que l'empreinte des fichiers, et le blocage fait échouer la signature (`SignerSign() failed … 0x80090003`).
-6. **Souscrire le forfait eSigner** IV/OV **Tier 1 annuel** (180 $/an, 20 signatures par mois, report des signatures non utilisées). Les 30 premiers jours sont gratuits et illimités : on peut tester avant de payer.
-7. **Créer les trois secrets GitHub** (ci-dessous), puis lancer Actions → **Release** → Run workflow : le journal du job Windows doit afficher « Certificat eSigner : CN=… » et la vérification des signatures doit passer.
-
-Tout le reste est déjà en place dans le workflow (installation d'eSigner CKA, signature, éditeur du MSIX, nettoyage).
-
 ### Secrets et variables GitHub
 
-Dans le dépôt : **Settings → Secrets and variables → Actions**, ou en ligne de commande depuis le dossier du dépôt (`gh` demande la valeur sans l'afficher) :
+Dans le dépôt : **Settings → Secrets and variables → Actions**.
 
-```sh
-gh secret set ESIGNER_USERNAME
-gh secret set ESIGNER_PASSWORD
-gh secret set ESIGNER_TOTP_SECRET
-```
-
-Voie SSL.com eSigner (utilisée si `WINDOWS_CERT_PFX_BASE64` est absent) :
-
-| Nom | Type | Contenu |
-|---|---|---|
-| `ESIGNER_USERNAME` | secret | Nom d'utilisateur du compte SSL.com |
-| `ESIGNER_PASSWORD` | secret | Mot de passe du compte SSL.com |
-| `ESIGNER_TOTP_SECRET` | secret | Secret TOTP d'eSigner (texte affiché sous le QR code, étape 4) |
-| `ESIGNER_MODE` | variable, facultative | `product` par défaut ; `sandbox` pour un compte de test sur sandbox.ssl.com |
-
-Le Publisher du MSIX est lu dans le certificat chargé : rien d'autre à déclarer. L'horodatage passe par `http://ts.ssl.com` (sauf `WINDOWS_TIMESTAMP_URL`). La version d'eSigner CKA téléchargée est fixée par `ESIGNER_CKA_VERSION` dans `release.yml` ([versions publiées](https://github.com/SSLcom/eSignerCKA/releases)). En cas d'échec, les journaux d'eSigner CKA sont déposés en artefact `esigner-cka-logs`.
-
-Voie `.pfx` (prioritaire si présente) :
+Voie `.pfx` :
 
 | Secret | Contenu |
 |---|---|
@@ -77,7 +37,7 @@ Voie `.pfx` (prioritaire si présente) :
 
 Le Publisher du MSIX est alors lu dans le certificat : rien d'autre à déclarer.
 
-Voie Azure Trusted Signing (utilisée seulement sans `.pfx` ni secrets eSigner) :
+Voie Azure Trusted Signing (utilisée seulement si `WINDOWS_CERT_PFX_BASE64` est absent) :
 
 | Nom | Type | Contenu |
 |---|---|---|
@@ -89,12 +49,12 @@ Voie Azure Trusted Signing (utilisée seulement sans `.pfx` ni secrets eSigner) 
 | `AZURE_SIGNING_PROFILE` | variable | Nom du profil de certificat |
 | `WINDOWS_PUBLISHER` | variable | Sujet exact du certificat du profil (`CN=…, O=…, C=FR`) |
 
-Facultatif, dans tous les cas :
+Facultatif, dans les deux cas :
 
 | Variable | Contenu |
 |---|---|
 | `WINDOWS_PUBLISHER_DISPLAY_NAME` | Nom d'éditeur affiché par le MSIX (« Lattis » par défaut) |
-| `WINDOWS_TIMESTAMP_URL` | Serveur d'horodatage RFC 3161 des voies `.pfx` et eSigner (`http://timestamp.digicert.com` pour le `.pfx`, `http://ts.ssl.com` pour eSigner, par défaut) |
+| `WINDOWS_TIMESTAMP_URL` | Serveur d'horodatage RFC 3161 de la voie `.pfx` (`http://timestamp.digicert.com` par défaut) |
 
 L'étape Trusted Signing utilise l'action `azure/trusted-signing-action@v0.5.1` ; si Microsoft l'a renommée ou a publié une version plus récente, mettre à jour les deux occurrences dans `release.yml`.
 
@@ -211,7 +171,7 @@ wails3 task release
 
 ## Fichiers concernés
 
-- `.github/workflows/release.yml` : le workflow (le workflow `ci.yml` n'est pas modifié) ; choix de l'autorité Windows : [choix-autorite.md](choix-autorite.md).
+- `.github/workflows/release.yml` : le workflow (le workflow `ci.yml` n'est pas modifié).
 - `build/release/set-version.sh` : report de la version du tag.
 - Windows : `build/windows/sign.ps1`, `build/windows/sdk-tools.ps1`, `build/windows/new-test-cert.ps1`, `build/windows/msix/build-msix.ps1` et `AppxManifest.xml` (identité `fr.triboulin.lattis`, association `.lattis`, alias `lattis` en ligne de commande pour `lattis mcp` et `lattis config`, écriture des fichiers dans le vrai `%AppData%`), `build/windows/nsis/` (association `.lattis`, signature de l'installeur et du désinstalleur), `build/windows/Taskfile.yml`.
 - macOS : `build/darwin/sign-notarize.sh`, `build/darwin/entitlements.plist`, `build/darwin/Info.plist` (type de document `fr.triboulin.lattis.workbook`), `build/darwin/Taskfile.yml`.

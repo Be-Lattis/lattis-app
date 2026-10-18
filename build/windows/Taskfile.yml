@@ -7,7 +7,7 @@ vars:
   # Signature : variables d'environnement lues par build/windows/sign.ps1 et
   # build/windows/msix/build-msix.ps1 (voir docs/release/signature.md) :
   #   WINDOWS_CERT_PATH + WINDOWS_CERT_PASSWORD  certificat .pfx
-  #   WINDOWS_CERT_THUMBPRINT                    ou certificat du magasin (jeton, SSL.com eSigner CKA)
+  #   WINDOWS_CERT_THUMBPRINT                    ou certificat du magasin (jeton EV)
   #   WINDOWS_TIMESTAMP_URL                      horodatage (DigiCert par défaut)
   #   WINDOWS_PUBLISHER                          éditeur MSIX sans .pfx (Trusted Signing)
 

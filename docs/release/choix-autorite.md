@@ -17,16 +17,14 @@ Prix hors taxes, relevés en octobre 2026 ; les prix des revendeurs sont indiqu�
 | Sectigo | À partir de **≈ 429 $/an** (via revendeurs) | Pas de service cloud propre accessible à une petite structure : jeton USB, ou HSM cloud que l'on héberge soi-même. | Oui en local avec jeton. | OV classique, 3 à 5 jours. |
 | GlobalSign | ≈ **434 $/an** + Azure Key Vault Premium (≈ 5 $/mois) | Via AzureSignTool et une clé dans Azure Key Vault (guide officiel pour Jenkins seulement). | `.exe` oui ; MSIX non documenté avec AzureSignTool. | OV classique ; mise en place lourde. |
 
-## Recommandation : SSL.com eSigner
+## Décision (octobre 2026)
 
-1. **C'est la moins chère des autorités qui prévoient officiellement la signature cloud depuis la CI** sans HSM à héberger ni contournement (l'autre est DigiCert KeyLocker, ≈ 400 $/an) : eSigner CKA s'installe en silence sur le runner Windows et présente le certificat comme un jeton matériel. Le workflow le passe à signtool par son empreinte, exactement comme un jeton EV en local.
-2. **Tous les fichiers sont signés**, MSIX et désinstalleur NSIS compris, par la même chaîne `build/windows/sign.ps1` que la voie `.pfx`. Azure Artifact Signing laisse le désinstalleur non signé.
-3. **Elle est accessible maintenant**, que Lattis soit porté par une société récente (OV, avec la pièce d'identité du demandeur) ou par Louis en nom propre (IV). Azure Artifact Signing, moins cher, reste fermé aux particuliers français et aux organisations de moins de 3 ans.
-4. **Le coût reste raisonnable** (≈ 309 $/an) et prévisible : 240 signatures par an couvrent 60 releases. Les essais manuels du workflow consomment aussi 4 signatures : la case « sign » du lancement manuel permet de les décocher.
+Les certificats payants sont jugés trop chers pour Lattis, qui passe sous licence libre (MPL-2.0). Retenu, et inscrit à la feuille de route :
 
-Azure Artifact Signing reste dans le workflow comme alternative : si la structure devient éligible, il suffit de retirer les secrets eSigner et de renseigner ceux d'Azure. Si Lattis devient open source, SignPath Foundation (gratuit) et Certum Open Source (49 €) seraient à reconsidérer.
+- **SignPath Foundation** : signature gratuite des projets open source admis, depuis GitHub Actions, avec un certificat de confiance (`.exe` et MSIX).
+- **Microsoft Store** pour le MSIX : compte développeur gratuit, et Microsoft re-signe lui-même le paquet après certification, sans avertissement SmartScreen.
 
-Mise en place et secrets à créer : [signature.md](signature.md).
+En attendant, le workflow garde les voies `.pfx` et Azure Trusted Signing ([signature.md](signature.md)) ; sans secret, les paquets Windows sortent non signés. Une intégration SSL.com eSigner (eSigner CKA + signtool) a été écrite puis retirée ; elle reste dans l'historique git si l'on y revient. Plan B si SignPath refuse le projet : Certum Open Source (49 €/an).
 
 ## Sources
 
