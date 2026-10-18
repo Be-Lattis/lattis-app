@@ -305,7 +305,7 @@
 				commands: [
 					{
 						label: 'Mise en forme conditionnelle',
-						icon: 'warning',
+						icon: 'conditional-format',
 						menu: true,
 						run: onrules ? () => onrules(anchor.x, anchor.y) : undefined,
 						hint: 'Mise en évidence des cellules, barres de données, nuances de couleurs, jeux d’icônes, gestionnaire des règles'
@@ -378,7 +378,7 @@
 				commands: [
 					{ label: 'Bouton', icon: 'button', run: onbutton ? () => onbutton('') : undefined, hint: 'Bouton d’action à la cellule active : un clic exécute un script de l’onglet SCRIPT (ou rien)' },
 					{
-						label: 'Input',
+						label: 'Champ',
 						icon: 'text-input',
 						run: onbutton ? () => onbutton('input') : undefined,
 						hint: 'Contrôle lié à une cellule, qui peut aussi lancer une action : champ texte, zone de texte, case à cocher, liste déroulante ou fichier (choix du type dans la fenêtre)'
@@ -438,7 +438,7 @@
 		Formules: [
 			{ title: 'Bibliothèque', commands: [{ label: 'Insérer une fonction', icon: 'function', run: onformula ? () => onformula('insert') : undefined, hint: 'Choisir une fonction et commencer la formule dans la cellule active' }, { label: 'Somme automatique', icon: 'autosum', run: onformula ? () => onformula('sum') : undefined, hint: 'SOMME de la colonne du tableau au-dessus' }, { label: 'REFERENCE', icon: 'reference', run: onformula ? () => onformula('reference') : undefined, hint: 'REFERENCE(Tableau[Colonne]; clé) : la RECHERCHEV de Lattis' }] },
 			{ title: 'Audit', commands: [{ label: 'Afficher les liens', icon: 'dependency-graph', run: onaudit ? () => onaudit('show') : undefined, hint: 'Flèches des liens de toutes les cellules sélectionnées : bleues depuis ce que lisent leurs formules, rouges vers les formules qui les lisent' }, { label: 'Masquer les liens', icon: 'win-close', run: onaudit ? () => onaudit('clear') : undefined, hint: 'Retirer les flèches des liens (Échap)' }] },
-			{ title: 'Calcul', commands: [{ label: 'Calculer', icon: 'function', run: onrecalc, hint: 'Recalculer les formules et renouveler AUJOURDHUI, MAINTENANT et ALEA (F9, ou F5 hors d’un tableau importé)' }] }
+			{ title: 'Calcul', commands: [{ label: 'Calculer', icon: 'calculate', run: onrecalc, hint: 'Recalculer les formules et renouveler AUJOURDHUI, MAINTENANT et ALEA (F9, ou F5 hors d’un tableau importé)' }] }
 		],
 		Révision: [
 			{
@@ -476,7 +476,7 @@
 						on: Math.abs(zoom - 1) > 0.001,
 						hint: `Zoom de la feuille : ${zoomLabel(zoom)} (Ctrl+molette, ou le curseur de la barre d’état)`,
 						items: ZOOM_LEVELS.map((z) => ({ label: zoomLabel(z), run: onzoom ? () => onzoom(z) : undefined, on: Math.abs(zoom - z) < 0.001 }))
-					}, { label: '100 %', icon: 'zoom', run: onzoom ? () => onzoom(1) : undefined, hint: 'Revenir au zoom 100 %' }] },
+					}, { label: '100 %', icon: 'zoom-100', run: onzoom ? () => onzoom(1) : undefined, hint: 'Revenir au zoom 100 %' }] },
 			...(onbench ? [{ title: 'Mesures (prototype)', commands: [{ label: 'Mesurer la grille', icon: 'stopwatch' as IconName, run: () => onbench() }] }] : [])
 		]
 	});
@@ -557,7 +557,7 @@
 				title: 'Contrôles',
 				commands: [
 					{ label: 'Bouton', icon: 'button', run: dc('button'), hint: 'Bouton dans le texte : un clic exécute un script de l’onglet SCRIPT (ou l’une de ses fonctions)' },
-					{ label: 'Input', icon: 'text-input', run: dc('input'), hint: 'Contrôle lié à une cellule d’une feuille : champ texte, zone de texte, case à cocher, liste déroulante ou fichier, pilotable par les scripts (controls.*)' }
+					{ label: 'Champ', icon: 'text-input', run: dc('input'), hint: 'Contrôle lié à une cellule d’une feuille : champ texte, zone de texte, case à cocher, liste déroulante ou fichier, pilotable par les scripts (controls.*)' }
 				]
 			},
 			{

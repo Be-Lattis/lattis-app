@@ -51,7 +51,7 @@ describe('évènements des contrôles', () => {
 		);
 	});
 
-	it('Insertion › Input propose les contrôles liés à une cellule, sans le bouton', () => {
+	it('Insertion › Champ propose les contrôles liés à une cellule, sans le bouton', () => {
 		expect(VALUE_KINDS.map((k) => CONTROL_KINDS[k])).toEqual(['Champ texte', 'Zone de texte', 'Case à cocher', 'Liste déroulante', 'Fichier']);
 	});
 

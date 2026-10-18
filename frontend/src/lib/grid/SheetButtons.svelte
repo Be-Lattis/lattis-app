@@ -597,7 +597,7 @@
 				<span>{e.id === null ? `Insérer : ${KINDS[e.kind].toLowerCase()}` : `Modifier : ${KINDS[e.kind].toLowerCase()}`}</span>
 				<button class="x" title="Fermer" onclick={closeVolet}>✕</button>
 			</header>
-			<!-- Bouton d'un côté (Insertion › Bouton), contrôles liés à une cellule de l'autre (Insertion › Input). -->
+			<!-- Bouton d'un côté (Insertion › Bouton), contrôles liés à une cellule de l'autre (Insertion › Champ). -->
 			{#if e.kind !== ''}
 				<label
 					>Type

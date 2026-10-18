@@ -4,6 +4,16 @@ import { iconNames, icons } from './icons.js';
 const allowed = new Set(['path', 'rect', 'circle', 'ellipse']);
 
 describe('icônes', () => {
+	it('des commandes voisines du ruban ont chacune leur icône', () => {
+		// Insérer une fonction / Calculer, Zoom / 100 %, Mise en forme conditionnelle / avertissement.
+		for (const [a, b] of [
+			['function', 'calculate'],
+			['zoom', 'zoom-100'],
+			['conditional-format', 'warning']
+		] as const)
+			expect(icons[a]).not.toBe(icons[b]);
+	});
+
 	it.each(iconNames)('%s : SVG sûr et bien formé', (name) => {
 		const svg = icons[name];
 		const tags = [...svg.matchAll(/<\/?([a-z]+)/g)].map((m) => m[1]);

@@ -73,7 +73,7 @@ export const CONTROL_KINDS: Record<ControlKind, string> = {
 	file: 'Fichier'
 };
 
-/** Contrôles liés à une cellule (Insertion › Input), dans l'ordre du choix du type. */
+/** Contrôles liés à une cellule (Insertion › Champ), dans l'ordre du choix du type. */
 export const VALUE_KINDS: ControlKind[] = ['input', 'textarea', 'checkbox', 'select', 'file'];
 
 /** Évènement qui déclenche l'action d'un contrôle : un clic pour un bouton, un changement de valeur sinon. */

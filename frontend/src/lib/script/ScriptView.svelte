@@ -326,7 +326,9 @@ end
 <div class="script">
 	<aside class="library">
 		<h2>Scripts du classeur</h2>
+		<!-- Action à part, au-dessus de la liste (pas un script de la liste). -->
 		<button class="new" onclick={fresh}><Icon name="new-file" size={14} />Nouveau script</button>
+		<div class="items" role="list">
 		{#each scripts as s (s.id)}
 			{#if renaming === s.id}
 				<!-- svelte-ignore a11y_autofocus -->
@@ -346,7 +348,8 @@ end
 				<button class="item" class:on={s.id === current.id} onclick={() => open(s)} oncontextmenu={(e) => onItemMenu(e, s)}>{s.name}</button>
 			{/if}
 		{/each}
-		{#if scripts.length === 0}<p class="muted">Aucun script enregistré.</p>{/if}
+		{#if scripts.length === 0}<p class="empty">Aucun script enregistré dans ce classeur. Écrivez un script à droite, puis Enregistrer (Ctrl+S).</p>{/if}
+		</div>
 	</aside>
 	{#if menu}
 		{@const m = menu}
@@ -364,10 +367,16 @@ end
 	<section class="main">
 		<div class="toolbar">
 			<input class="name" bind:value={current.name} oninput={() => (dirty = true)} spellcheck="false" />
-			<button class="run" onclick={doRun} disabled={running}><Icon name="play" size={14} />Exécuter</button>
-			<button class="stop" onclick={() => stop()} disabled={!running}><Icon name="stop" size={14} />Arrêter</button>
-			<button onclick={doSave}><Icon name="save" size={14} />Enregistrer{dirty ? ' •' : ''}</button>
-			<button class="delete" onclick={doRemove} disabled={!current.id}><Icon name="trash" size={14} />Supprimer</button>
+			<!-- Boutons par groupes : un groupe passe à la ligne en entier. -->
+			<span class="grp">
+				<button class="run" onclick={doRun} disabled={running} title="Exécuter (Ctrl+Entrée)"><Icon name="play" size={14} />Exécuter</button>
+				<button class="stop" onclick={() => stop()} disabled={!running}><Icon name="stop" size={14} />Arrêter</button>
+			</span>
+			<span class="grp">
+				<button onclick={doSave} title="Enregistrer le script (Ctrl+S)"><Icon name="save" size={14} />Enregistrer{dirty ? ' •' : ''}</button>
+				<button class="delete" onclick={doRemove} disabled={!current.id}><Icon name="trash" size={14} />Supprimer</button>
+			</span>
+			<span class="grp">
 			<button onclick={() => (showRef = !showRef)} aria-pressed={showRef}><Icon name="book" size={14} />Référence</button>
 			{#if controls}
 				<span class="pick-anchor">
@@ -378,13 +387,14 @@ end
 				</span>
 			{/if}
 			{#if network}<button onclick={() => (netOpen = true)} title="Hôtes que les scripts et pages HTML du classeur peuvent joindre en HTTP"><Icon name="web" size={14} />Accès réseau</button>{/if}
-			<span class="muted">Ctrl+Entrée : exécuter · Ctrl+S : enregistrer le script</span>
+			</span>
 		</div>
 		<div class="editor" bind:this={host}></div>
 		<div class="output">
 			<div class="out-head">
 				<span>Sortie</span>
 				{#if status}<span class="muted">{status}</span>{/if}
+				<span class="muted keys">Ctrl+Entrée : exécuter · Ctrl+S : enregistrer le script</span>
 			</div>
 			<pre>{output.join('\n')}{#if error}<span class="error">{(output.length ? '\n' : '') + error}</span>{/if}</pre>
 		</div>
@@ -465,8 +475,38 @@ end
 	.library .new {
 		display: flex;
 		align-items: center;
+		justify-content: center;
 		gap: 6px;
 		color: #217346;
+		--icon-accent: #217346;
+		border: 1px solid #c9cdd2;
+		background: #fff;
+		padding: 5px 8px;
+		margin: 0 2px 8px;
+	}
+	.library .new:hover {
+		background: #e3efe7;
+		border-color: #8fbc9f;
+	}
+	.items {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		padding-top: 8px;
+		border-top: 1px solid #e3e5e8;
+	}
+	.empty {
+		margin: 4px 8px;
+		color: #6b7280;
+		font-size: 12px;
+		line-height: 1.4;
+	}
+	.grp {
+		display: inline-flex;
+		gap: 8px;
+	}
+	.out-head .keys {
+		margin-left: auto;
 	}
 	.main {
 		flex: 1;
@@ -482,8 +522,7 @@ end
 		padding: 6px 10px;
 		border-bottom: 1px solid #e3e5e8;
 	}
-	.toolbar button,
-	.toolbar .muted {
+	.toolbar button {
 		white-space: nowrap;
 	}
 	.toolbar button {
@@ -521,7 +560,9 @@ end
 		font-weight: 600;
 		border: 1px solid transparent;
 		padding: 3px 6px;
-		width: 220px;
+		flex: 1 1 160px;
+		min-width: 120px;
+		max-width: 260px;
 	}
 	.name:focus {
 		border-color: #217346;

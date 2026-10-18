@@ -67,6 +67,10 @@ export const icons = {
 	filter: '<path class="a" d="M4 5h16l-6 7.5V19l-4 2v-8.5z"/>',
 	search: '<circle cx="10.5" cy="10.5" r="6"/><path class="a" d="m15 15 5.5 5.5"/>',
 	zoom: '<circle cx="10.5" cy="10.5" r="6"/><path class="a" d="m15 15 5.5 5.5"/><path d="M8 10.5h5M10.5 8v5"/>',
+	// Zoom 100 % : la loupe, « 1:1 » dedans (taille réelle).
+	'zoom-100': '<circle cx="10.5" cy="10.5" r="6.5"/><path class="a" d="m15.3 15.3 5.2 5.2"/><path stroke-width="1.3" d="M7.6 9.2l1-.9v4.9M12.4 9.2l1-.9v4.9M10.6 9.4v.01M10.6 12.2v.01"/>',
+	// Mise en forme conditionnelle : des cellules et leurs barres de données.
+	'conditional-format': '<rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><path d="M3.5 9.2h17M3.5 14.8h17"/><rect class="af" x="6" y="5.25" width="11" height="2.25" rx=".5"/><rect class="af" x="6" y="10.9" width="5.5" height="2.25" rx=".5"/><rect class="af" x="6" y="16.5" width="8.5" height="2.25" rx=".5"/>',
 	'insert-row': '<rect x="3.5" y="3.5" width="17" height="5" rx="1"/><rect x="3.5" y="15.5" width="17" height="5" rx="1"/><path class="a" d="M12 9.5v5M9.5 12h5"/>',
 	'delete-row': '<rect x="3.5" y="3.5" width="17" height="5" rx="1"/><rect x="3.5" y="15.5" width="17" height="5" rx="1"/><path class="a" d="m10 10 4 4m0-4-4 4"/>',
 	'insert-column': '<rect x="3.5" y="3.5" width="5" height="17" rx="1"/><rect x="15.5" y="3.5" width="5" height="17" rx="1"/><path class="a" d="M12 9.5v5M9.5 12h5"/>',
@@ -107,7 +111,9 @@ export const icons = {
 
 	// Formules
 	function: '<path d="M12.5 4.5H11a2.5 2.5 0 0 0-2.5 2.2L7 18.3a2.5 2.5 0 0 1-2.5 2.2H4M5.5 10h6"/><path class="a" d="m14 11 6 8m0-8-6 8"/>',
-	autosum: '<path d="M18 6.5V4H6l6.5 8L6 20h12v-2.5"/>',
+	// Calculer (F9) : une calculatrice, pour ne pas confondre avec fx (Insérer une fonction).
+	calculate: '<rect x="5" y="2.5" width="14" height="19" rx="2"/><rect class="a" x="7.5" y="5" width="9" height="4" rx=".75"/><path stroke-width="2" d="M8.75 12.75h.01M12 12.75h.01M15.25 12.75h.01M8.75 16.25h.01M12 16.25h.01M15.25 16.25h.01"/>',
+	autosum:'<path d="M18 6.5V4H6l6.5 8L6 20h12v-2.5"/>',
 	reference: '<rect x="3.5" y="5" width="8.5" height="14" rx="1.5"/><path d="M3.5 9.5H12M3.5 14H12"/><path class="a" d="M14.5 12H21M18 9l3 3-3 3"/>',
 	precedents: '<circle class="af" cx="5" cy="5" r="2"/><path class="a" d="m6.5 6.5 8 8M14.5 9.5v5h-5"/><rect x="14" y="14.5" width="7" height="6" rx="1"/>',
 	dependents: '<rect x="3" y="3.5" width="7" height="6" rx="1"/><path class="a" d="m10 9.5 8.5 8.5M18.5 13v5h-5"/><circle class="af" cx="19.5" cy="19.5" r="2"/>',

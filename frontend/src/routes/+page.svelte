@@ -769,6 +769,9 @@
 		sheetId = id;
 		await reload();
 		sheet?.focus();
+		// Onglet Document : le curseur dans le texte (DocPage le met aussi en
+		// place à son montage, une fois le contenu chargé).
+		if (activeDoc) docPage?.focus();
 	}
 
 	// --- Protection (Révision) ----------------------------------------------

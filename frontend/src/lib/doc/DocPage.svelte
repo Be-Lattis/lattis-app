@@ -586,7 +586,7 @@
 	}
 
 	/**
-	 * Insertion › Input : un contrôle inséré tout de suite (le volet s'ouvre
+	 * Insertion › Champ : un contrôle inséré tout de suite (le volet s'ouvre
 	 * pour le régler). Sans cellule liée, sa valeur est gardée dans le
 	 * contrôle ; le volet peut la lier à une cellule d'une feuille.
 	 */
@@ -766,7 +766,17 @@
 		q.root.addEventListener('contextmenu', onContext);
 		window.addEventListener('keydown', onKey, true);
 		report();
+		// Document créé ou ouvert : le curseur dans le texte, à la fin (sous le
+		// titre d'un nouveau document) ; le focus ne reste pas sur le bouton du
+		// ruban ou l'onglet cliqué, où la frappe se perdait et où Espace
+		// recréait un document.
+		const raf = requestAnimationFrame(() => {
+			if (quill !== q) return;
+			q.focus();
+			q.setSelection(Math.max(0, q.getLength() - 1), 0);
+		});
 		return () => {
+			cancelAnimationFrame(raf);
 			window.removeEventListener('keydown', onKey, true);
 			flush();
 			for (const m of mounted.values()) unmount(m.comp);
@@ -1037,7 +1047,7 @@
 			<button disabled={!!locked} onclick={() => act(() => insertChart('scatter'))}><Icon name="chart-scatter" size={14} />Nuage de points</button>
 			<button disabled={!!locked} onclick={() => act(insertPivot)}><Icon name="pivot-table" size={14} />Tableau croisé dynamique</button>
 			<button disabled={!!locked} onclick={() => act(insertButton)}><Icon name="button" size={14} />Bouton</button>
-			{#if controls}<button disabled={!!locked} onclick={() => act(() => insertControl('input'))}><Icon name="text-input" size={14} />Input (champ, case, liste, fichier)…</button>{/if}
+			{#if controls}<button disabled={!!locked} onclick={() => act(() => insertControl('input'))}><Icon name="text-input" size={14} />Champ (texte, case, liste, fichier)…</button>{/if}
 			<button disabled={!!locked} onclick={() => act(() => command('image'))}><Icon name="image" size={14} />Image…</button>
 			<button disabled={!!locked} onclick={() => act(() => command('link'))}><Icon name="link" size={14} />Lien…</button>
 		{:else}
