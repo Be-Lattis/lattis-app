@@ -7,6 +7,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/script"
+	"github.com/lalamefine/lattis/internal/trust"
 )
 
 // ScriptResult est l'issue d'un script.
@@ -60,12 +61,25 @@ func scriptLabel(name string) string {
 	return "Script « " + name + " »"
 }
 
-// RunScript exécute un script Lua (entry : fonction appelée ensuite, vide
-// pour le script seul). Tout ce qu'il modifie forme une seule étape
-// d'annulation, nommée d'après le script. Les évènements des contrôles
-// qu'il provoque (controls.set d'une valeur…) sont traités à sa fin, dans
-// la même étape.
+// RunScript exécute un script Lua lancé par l'utilisateur depuis l'onglet
+// SCRIPT, où il voit son code (entry : fonction appelée ensuite, vide pour
+// le script seul) : cette version est autorisée sur ce poste (consent.go).
+// Tout ce qu'il modifie forme une seule étape d'annulation, nommée d'après
+// le script. Les évènements des contrôles qu'il provoque (controls.set
+// d'une valeur…) sont traités à sa fin, dans la même étape.
 func RunScript(host Host, name, src, entry string) (ScriptResult, error) {
+	if name != "" {
+		if err := trust.Default().AllowScript(trust.Hash(src), name); err != nil {
+			return ScriptResult{}, err
+		}
+	}
+	return RunScriptFrom(context.Background(), host, name, src, entry)
+}
+
+// RunLibraryScript exécute un script de la bibliothèque du classeur sans
+// que l'utilisateur en voie le code (bouton d'un onglet Document) : sa
+// version doit être autorisée sur ce poste (consent.go).
+func RunLibraryScript(host Host, name, src, entry string) (ScriptResult, error) {
 	return RunScriptFrom(context.Background(), host, name, src, entry)
 }
 
@@ -102,6 +116,14 @@ func runLimited(ctx context.Context, host Host, name, src, entry string, event a
 	}
 	if err := script.Check(src); err != nil {
 		return ScriptResult{Output: []string{}, Error: err.Error()}, nil, nil
+	}
+	// Script de la bibliothèque : sa version doit être autorisée sur ce
+	// poste (consent.go).
+	if err := allowScript(ctx, host, d, name, src); err != nil {
+		if errors.Is(err, ErrScriptNotAllowed) {
+			return ScriptResult{Output: []string{}, Error: err.Error()}, nil, nil
+		}
+		return ScriptResult{}, nil, err
 	}
 	running.mu.Lock()
 	if running.cancel != nil {

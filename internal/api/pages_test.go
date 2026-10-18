@@ -79,8 +79,16 @@ func TestPageCall(t *testing.T) {
 	if _, err := PageCall(ctx, h, "db.execute", map[string]any{"sql": `UPDATE Commandes SET Montant = 0`}); err != nil {
 		t.Fatal(err)
 	}
-	// Fichiers, annulation et scripts restent à l'utilisateur.
-	for _, name := range []string{"doc.save", "doc.undo", "scripts.run", "doc.open"} {
+	// Liste autorisée : chaque nom est une commande ; fichiers, annulation,
+	// code, structure et protections restent à l'utilisateur.
+	for name := range pageAllowed {
+		if registry[name] == nil {
+			t.Errorf("commande autorisée aux pages inconnue : %s", name)
+		}
+	}
+	for _, name := range []string{"doc.save", "doc.undo", "scripts.run", "doc.open",
+		"scripts.save", "pages.set", "pages.add", "events.on", "controls.on", "buttons.set", "buttons.create",
+		"sheets.delete", "sheets.unprotect", "sheets.protect_workbook", "queries.save", "connections.list", "tables.delete"} {
 		if _, err := PageCall(ctx, h, name, nil); err == nil || !strings.Contains(err.Error(), "non disponible") {
 			t.Fatalf("%s accepté : %v", name, err)
 		}

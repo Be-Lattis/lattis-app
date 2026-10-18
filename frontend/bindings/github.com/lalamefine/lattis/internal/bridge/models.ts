@@ -163,6 +163,12 @@ export interface DialogRequest {
      * vide : pas de bouton Annuler
      */
     "cancel"?: string;
+
+    /**
+     * Code : code affiché sur demande (bouton « Voir le code ») ; accord
+     * d'exécution d'un script (consent.go).
+     */
+    "code"?: string;
 }
 
 /**
@@ -274,6 +280,24 @@ export interface OpenResult {
      */
     "damaged"?: DamagedFile | null;
     "cancelled": boolean;
+}
+
+/**
+ * Platform décrit l'hôte à l'interface (DocumentService.Platform).
+ */
+export interface Platform {
+    /**
+     * Web : application dans le navigateur (pas de fenêtre, fichiers
+     * envoyés et téléchargés).
+     */
+    "web": boolean;
+
+    /**
+     * Scripting : Lua, boutons, pages web et serveur MCP permis. Toujours
+     * vrai sur le bureau ; en web, réglage du serveur (web_scripting) lu à
+     * l'ouverture de la session.
+     */
+    "scripting": boolean;
 }
 
 /**

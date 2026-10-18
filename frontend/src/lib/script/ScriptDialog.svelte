@@ -19,6 +19,15 @@
 		fields: DialogField[] | null;
 		ok: string;
 		cancel?: string;
+		/** Code affiché sur demande (accord d'exécution d'un script reçu). */
+		code?: string;
+	}
+
+	/** Libellé du bouton qui montre ou cache le code. */
+	export function codeLabel(code: string, shown: boolean): string {
+		if (shown) return 'Masquer le code';
+		const n = code.replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n').length;
+		return `Voir le code (${n} ligne${n > 1 ? 's' : ''})`;
 	}
 
 	/** Valeurs de départ des champs. */
@@ -92,11 +101,13 @@
 	const fields = $derived(spec.fields ?? []);
 	let values = $state<Record<string, unknown>>({});
 	let error = $state('');
+	let showCode = $state(false);
 	let box = $state<HTMLDivElement>();
 
 	$effect.pre(() => {
 		values = initialValues(spec.fields ?? []);
 		error = '';
+		showCode = false;
 	});
 	$effect(() => {
 		void spec.id;
@@ -162,8 +173,12 @@
 				{/if}
 			</div>
 		{/each}
+		{#if spec.code && showCode}<pre class="code" aria-label="Code du script">{spec.code}</pre>{/if}
 		{#if error}<p class="error">{error}</p>{/if}
 		<div class="actions">
+			{#if spec.code}
+				<button class="see" aria-expanded={showCode} onclick={() => (showCode = !showCode)}>{codeLabel(spec.code, showCode)}</button>
+			{/if}
 			<button class="primary" onclick={ok}>{spec.ok || 'OK'}</button>
 			{#if spec.cancel}<button onclick={() => onanswer(null)}>{spec.cancel}</button>{/if}
 		</div>
@@ -263,6 +278,20 @@
 		border: 1px solid #c4c8cc;
 		background: #fff;
 		cursor: pointer;
+	}
+	.actions button.see {
+		margin-right: auto;
+	}
+	.code {
+		margin: 6px 16px 0;
+		padding: 6px 8px;
+		max-height: 40vh;
+		overflow: auto;
+		background: #f6f8fa;
+		border: 1px solid #e3e5e8;
+		font: 12px Consolas, 'Cascadia Mono', monospace;
+		white-space: pre;
+		user-select: text;
 	}
 	.actions button.primary {
 		background: #217346;

@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"github.com/lalamefine/lattis/internal/api"
-	"github.com/wailsapp/wails/v3/pkg/application"
-	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
 // Évènements du classeur (internal/api/events.go) déclenchés par les
@@ -68,6 +66,9 @@ func (s *DocumentService) resetEvents() {
 }
 
 func (s *DocumentService) listening(event string) bool {
+	if s.scripting() != nil {
+		return false // sans scripting, aucun écouteur Lua ne tourne
+	}
 	return api.Listening(host{s}, event)
 }
 
@@ -253,26 +254,4 @@ func (s *DocumentService) BeforeClose(ctx context.Context) bool {
 		host{s}.Notify("Fermeture annulée par un script (évènement before_close)")
 	}
 	return !r.Cancelled
-}
-
-// GuardClose fait passer la fermeture de la fenêtre par les écouteurs
-// before_close du classeur ouvert : la fermeture attend leur réponse, et
-// n'a lieu que s'ils la laissent faire.
-func GuardClose(s *DocumentService, w *application.WebviewWindow) {
-	w.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
-		if s.ev.closeOK.Load() || !s.listening(api.EventBeforeClose) {
-			return
-		}
-		e.Cancel()
-		if s.ev.closing.Swap(true) {
-			return // les écouteurs tournent déjà
-		}
-		go func() {
-			defer s.ev.closing.Store(false)
-			if s.BeforeClose(context.Background()) {
-				s.ev.closeOK.Store(true)
-				w.Close()
-			}
-		}()
-	})
 }

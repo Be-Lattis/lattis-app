@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/transfer"
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // ImportResult décrit un import : feuilles et tableaux créés, et ce qui n'a
@@ -27,12 +26,14 @@ func (s *DocumentService) Import(ctx context.Context, path string) (ImportResult
 		return ImportResult{}, err
 	}
 	if path == "" {
-		p, err := application.Get().Dialog.OpenFile().
-			SetTitle("Importer des données").
-			AddFilter("CSV ou classeur Excel", "*.csv;*.tsv;*.txt;*.xlsx;*.xlsm").
-			AddFilter("CSV", "*.csv;*.tsv;*.txt").
-			AddFilter("Classeur Excel", "*.xlsx;*.xlsm").
-			PromptForSingleSelection()
+		p, err := s.sys().OpenFile(FileDialog{
+			Title: "Importer des données",
+			Filters: []FileFilter{
+				{"CSV ou classeur Excel", "*.csv;*.tsv;*.txt;*.xlsx;*.xlsm"},
+				{"CSV", "*.csv;*.tsv;*.txt"},
+				{"Classeur Excel", "*.xlsx;*.xlsm"},
+			},
+		})
 		if err != nil {
 			return ImportResult{}, err
 		}
@@ -61,21 +62,15 @@ func (s *DocumentService) ExportCSV(ctx context.Context, table string) (string, 
 	if err != nil {
 		return "", err
 	}
-	dlg := application.Get().Dialog.SaveFile().
-		SetMessage("Exporter le tableau "+table).
-		SetFilename(table+".csv").
-		AddFilter("CSV", "*.csv")
-	if d.Path() != "" {
-		dlg = dlg.SetDirectory(filepath.Dir(d.Path()))
-	}
-	p, err := dlg.PromptForSingleSelection()
-	if err != nil || p == "" {
-		return "", err
-	}
-	if !strings.HasSuffix(strings.ToLower(p), ".csv") {
-		p += ".csv"
-	}
-	return p, transfer.ExportCSVFile(ctx, d.Model, table, p, transfer.ExcelFR)
+	return s.sys().SaveFile(FileDialog{
+		Title:     "Exporter le tableau " + table,
+		Filename:  table + ".csv",
+		Directory: docDir(d.Path()),
+		Filters:   []FileFilter{{"CSV", "*.csv"}},
+		Ext:       ".csv",
+	}, func(p string) error {
+		return transfer.ExportCSVFile(ctx, d.Model, table, p, transfer.ExcelFR)
+	})
 }
 
 // PrintHTML rend la plage utilisée d'une feuille en HTML imprimable
@@ -107,20 +102,24 @@ func (s *DocumentService) ExportXLSX(ctx context.Context) (XLSXExport, error) {
 		base := filepath.Base(d.Path())
 		name = strings.TrimSuffix(base, filepath.Ext(base)) + ".xlsx"
 	}
-	dlg := application.Get().Dialog.SaveFile().
-		SetMessage("Exporter le classeur au format Excel").
-		SetFilename(name).
-		AddFilter("Classeur Excel", "*.xlsx")
-	if d.Path() != "" {
-		dlg = dlg.SetDirectory(filepath.Dir(d.Path()))
-	}
-	p, err := dlg.PromptForSingleSelection()
-	if err != nil || p == "" {
-		return XLSXExport{}, err
-	}
-	if !strings.HasSuffix(strings.ToLower(p), ".xlsx") {
-		p += ".xlsx"
-	}
-	n, err := transfer.ExportXLSXFile(ctx, d.Model, p)
+	var n int
+	p, err := s.sys().SaveFile(FileDialog{
+		Title:     "Exporter le classeur au format Excel",
+		Filename:  name,
+		Directory: docDir(d.Path()),
+		Filters:   []FileFilter{{"Classeur Excel", "*.xlsx"}},
+		Ext:       ".xlsx",
+	}, func(p string) (err error) {
+		n, err = transfer.ExportXLSXFile(ctx, d.Model, p)
+		return err
+	})
 	return XLSXExport{Path: p, Clipped: n}, err
+}
+
+// docDir est le dossier du classeur enregistré, "" sinon.
+func docDir(path string) string {
+	if path == "" {
+		return ""
+	}
+	return filepath.Dir(path)
 }

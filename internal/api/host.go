@@ -53,6 +53,9 @@ type Dialog struct {
 	Fields  []Field `json:"fields"`
 	OK      string  `json:"ok"`               // libellé du bouton de validation
 	Cancel  string  `json:"cancel,omitempty"` // vide : pas de bouton Annuler
+	// Code : code affiché sur demande (bouton « Voir le code ») ; accord
+	// d'exécution d'un script (consent.go).
+	Code string `json:"code,omitempty"`
 }
 
 // Types de champs d'une boîte de dialogue.

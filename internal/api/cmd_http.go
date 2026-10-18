@@ -23,9 +23,11 @@ import (
 // Sécurité : un classeur ne joint un hôte qu'avec l'accord de
 // l'utilisateur. Avant la première requête vers un hôte, une boîte de
 // dialogue le lui demande (Autoriser / Refuser, « mémoriser pour ce
-// classeur ») ; la réponse vaut pour la session, ou est rangée dans le
-// classeur (canvas.HTTPHosts), où l'onglet SCRIPT › Accès réseau permet de la
-// revoir. Une redirection vers un autre hôte est soumise à la même règle.
+// classeur ») ; la réponse vaut pour la session, ou est rangée sur ce
+// poste, hors du fichier, pour ce classeur (doc.Document.AllowHTTPHost,
+// internal/trust) : un classeur reçu ne s'autorise rien lui-même, et
+// l'onglet SCRIPT › Accès réseau permet de revoir la liste. Une
+// redirection vers un autre hôte est soumise à la même règle.
 // Le serveur MCP ne peut pas consulter l'utilisateur (WithoutPrompt) : il
 // n'atteint que les hôtes déjà autorisés. Aucune commande ne permet à un
 // script d'autoriser un hôte lui-même.
@@ -138,11 +140,7 @@ func (c *Call) allowHost(host string) error {
 		return fmt.Errorf("%w : accès à « %s » refusé par l'utilisateur", ErrHostNotAllowed, h)
 	}
 	if remember, _ := vals["remember"].(bool); remember {
-		if err := d.AllowHTTPHost(c, h); err != nil {
-			return err
-		}
-		c.Host.Changed(c)
-		return nil
+		return d.AllowHTTPHost(c, h)
 	}
 	d.SetSessionHost(h, true)
 	return nil

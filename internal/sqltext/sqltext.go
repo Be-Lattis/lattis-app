@@ -141,6 +141,8 @@ var rules = []rule{
 	{regexp.MustCompile(`^(?:aggregate functions are not allowed in the GROUP BY clause)$`), "Les fonctions d'agrégat ne vont pas dans GROUP BY", false},
 	{regexp.MustCompile(`^(?:LIMIT|OFFSET) clause should come after (\w+) not before$`), "LIMIT se place après $1", true},
 	{regexp.MustCompile(`^datatype mismatch$`), "Type de valeur incompatible", true},
+	// Autorisateur des requêtes de l'utilisateur (store.UserConn).
+	{regexp.MustCompile(`^(?:authorization denied:\s*)?not authorized$`), "Requête refusée : le SQL lit et modifie les tableaux du classeur, mais pas ses tables internes (_lattis_…), ni sa structure, ni un autre fichier (ATTACH), ni les réglages (PRAGMA)", false},
 }
 
 // French traduit en français une erreur de SQLite (no such table, no such

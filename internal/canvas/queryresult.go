@@ -8,6 +8,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/store"
 )
 
 // MaxResultRows borne les lignes d'un résultat SQL envoyé vers une feuille.
@@ -23,7 +24,12 @@ func (m *Model) QueryToSheet(ctx context.Context, q, name string, headers []stri
 	if strings.TrimSpace(q) == "" {
 		return ImportResult{}, grid.ErrEmptyQuery
 	}
-	rs, err := m.db.Read().QueryContext(ctx, q)
+	conn, err := store.UserConn(ctx, m.db.Read())
+	if err != nil {
+		return ImportResult{}, err
+	}
+	defer store.ReleaseUserConn(conn)
+	rs, err := conn.QueryContext(ctx, q)
 	if err != nil {
 		return ImportResult{}, err
 	}
@@ -296,7 +302,13 @@ func (m *Model) ReadSQL(ctx context.Context, q, home string, cols func([]string)
 	if q, err = m.ReadCTE(ctx, q); err != nil {
 		return err
 	}
-	rs, err := m.db.Read().QueryContext(ctx, q)
+	// Requête rangée dans le classeur : sous l'autorisateur (store.UserConn).
+	conn, err := store.UserConn(ctx, m.db.Read())
+	if err != nil {
+		return err
+	}
+	defer store.ReleaseUserConn(conn)
+	rs, err := conn.QueryContext(ctx, q)
 	if err != nil {
 		return err
 	}

@@ -9,8 +9,8 @@ import (
 	"github.com/lalamefine/lattis/internal/canvas"
 )
 
-// Un onglet page HTML et les hôtes HTTP autorisés s'enregistrent dans le
-// fichier .lattis et reviennent à la réouverture.
+// Un onglet page HTML s'enregistre dans le fichier .lattis ; les hôtes HTTP
+// autorisés, rangés sur ce poste, reviennent à la réouverture.
 func TestPageAndHostsSaved(t *testing.T) {
 	useRoot(t)
 	ctx := context.Background()

@@ -31,8 +31,9 @@ import (
 // déclencheurs INSTEAD OF écrivent dans la table t_<id>. Une ligne ajoutée
 // par la vue reçoit sa position (_pos) en fin de tableau.
 //
-// Restent refusés : les changements de structure (CREATE, ALTER, DROP...) et
-// les écritures dans les métadonnées _lattis_*.
+// Restent refusés : les changements de structure (CREATE, ALTER, DROP...),
+// les métadonnées _lattis_*, ATTACH et les PRAGMA (autorisateur de
+// store.AsUser).
 
 // ErrStructure signale une requête qui change la structure de la base : elle
 // se fait depuis la grille.
@@ -150,7 +151,14 @@ func (t *tx) execSQLOnce(q string, args []any) (int64, error) {
 	if err := t.exec(setup); err != nil {
 		return 0, err
 	}
-	if _, err := t.ExecContext(t.Ctx, q, args...); err != nil {
+	// La requête de l'utilisateur passe sous l'autorisateur (ni ATTACH, ni
+	// structure, ni tables internes : store.AsUser) ; les déclencheurs et
+	// vues posés ci-dessus restent ceux du moteur.
+	err = t.m.db.AsUser(func() error {
+		_, err := t.ExecContext(t.Ctx, q, args...)
+		return err
+	})
+	if err != nil {
 		// La requête n'a rien écrit (instruction atomique) : on défait la capture.
 		t.exec(teardown)
 		for _, tb := range tables {

@@ -708,8 +708,8 @@ export function Page(sheet: number): $CancellablePromise<string> {
 
 /**
  * PageCall exécute une commande demandée par une page HTML (pont
- * postMessage du cadre isolé) : les commandes des scripts et du serveur MCP,
- * sauf fichiers, annulation et scripts.run (api.PageCall).
+ * postMessage du cadre isolé) : les commandes de la liste autorisée aux
+ * pages (api.PageCall).
  */
 export function PageCall(name: string, args: { [_ in string]?: any } | null): $CancellablePromise<any> {
     return $Call.ByID(65243337, name, args);
@@ -773,6 +773,15 @@ export function PlaceChart(id: number, row: number, col: number, offX: number, o
  */
 export function PlacePivot(sheet: number, row: number, col: number, cfg: canvas$0.PivotConfig): $CancellablePromise<$models.DocState> {
     return $Call.ByID(4069234803, sheet, row, col, cfg);
+}
+
+/**
+ * Platform décrit l'hôte à l'interface : version web (pas de boutons de
+ * fenêtre, fichiers envoyés et téléchargés) et scripting permis (onglet
+ * SCRIPT, boutons, pages web et serveur MCP masqués sinon).
+ */
+export function Platform(): $CancellablePromise<$models.Platform> {
+    return $Call.ByID(2235937389);
 }
 
 /**

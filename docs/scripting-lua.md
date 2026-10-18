@@ -757,10 +757,29 @@ Un script ne peut ni geler l'application, ni toucher à autre chose que le class
 Une boucle infinie comme `while true do end` est donc arrêtée au bout de 30 secondes, ou
 dès qu'on clique sur Arrêter.
 
-Le bac à sable n'ouvre aucun accès aux fichiers, aux programmes, au réseau ni aux variables
+Le bac à sable n'ouvre aucun accès aux fichiers, aux programmes ni aux variables
 d'environnement, et ne permet pas de charger du code (`require`, `load`, `dofile`...). Un
 script reçu avec un classeur ne peut agir que sur ce classeur, et tout ce qu'il écrit
 s'annule par Ctrl+Z.
+
+### Classeurs reçus
+
+Un classeur peut venir de quelqu'un d'autre (courriel, partage, et bientôt Serveur Lattis).
+Ce qu'il contient ne s'accorde jamais de droit lui-même : les accords de l'utilisateur sont
+rangés **sur ce poste**, dans le dossier de configuration (`Lattis/accords.json`), jamais
+dans le fichier.
+
+| Protection | Comportement |
+|---|---|
+| Accord des scripts | Un script du classeur lancé sans que vous voyiez son code (bouton, contrôle, évènement du classeur, bouton d'un onglet Document, `scripts_run` du serveur MCP) ne s'exécute que si **cette version** (empreinte de son code) est autorisée sur ce poste. Un script écrit, enregistré ou lancé depuis l'onglet SCRIPT de ce poste l'est d'office : un classeur créé ici ne demande rien. Sinon, sa première exécution demande **Autoriser / Refuser**, avec **Voir le code** et « Autoriser aussi les autres scripts de ce classeur ». Un script modifié ailleurs redemande. Un refus vaut jusqu'à la fermeture de Lattis. Le serveur MCP n'exécute que des versions déjà autorisées. |
+| Requêtes SQL | `db.query`, `db.execute`, l'onglet SQL, les pages HTML et le serveur MCP ne lisent et n'écrivent que les tableaux : pas les tables internes `_lattis_*` (journal, accords…), ni un autre fichier (`ATTACH`), ni la structure (`CREATE`, `DROP`, `ALTER`, temporaires compris), ni les transactions, ni les `PRAGMA` (sauf `table_info` et ceux qui décrivent les tables). Erreur : *Requête refusée : le SQL lit et modifie les tableaux du classeur, mais pas ses tables internes…* |
+| Réseau | Avant la première requête vers un hôte, Lattis demande l'autorisation. « Mémoriser pour ce classeur » range l'hôte sur ce poste, pour ce classeur (onglet SCRIPT › Accès réseau) : le même classeur ouvert ailleurs redemande. Les hôtes qu'une version précédente enregistrait dans le fichier ne sont repris que pour les classeurs récents de ce poste au moment de la mise à jour. |
+| Pages HTML | Une page n'appelle (`lattis.call`) qu'une **liste autorisée** de commandes : lecture, valeurs (`cells.set`, `db.execute`…), boîtes de dialogue, réseau (avec accord), actions des boutons (avec l'accord des scripts). Ni fichiers, ni annulation, ni code (scripts, pages, écouteurs), ni structure, ni protections. |
+| Mots de passe | Un mot de passe enregistré au trousseau ne sert à un classeur qu'avec votre accord pour ce classeur : un classeur reçu qui vise le même serveur le demande. |
+
+Les classeurs déjà présents sur ce poste avant cette protection : à la première ouverture
+de Lattis qui la contient, les classeurs de la liste des récents gardent leurs scripts et
+leurs hôtes autorisés ; pour les autres, chaque script demande une fois l'accord.
 
 ---
 

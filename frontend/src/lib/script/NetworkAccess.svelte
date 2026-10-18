@@ -63,7 +63,7 @@
 	>
 		<h2>Accès réseau du classeur</h2>
 		<p class="muted">
-			Avant la première requête HTTP vers un hôte (http.get, http.post… dans un script ou une page HTML), Lattis vous demande l’autorisation. Les hôtes autorisés avec « Mémoriser pour ce classeur » sont listés ici et enregistrés avec le classeur. Le serveur MCP n’atteint que ces hôtes.
+			Avant la première requête HTTP vers un hôte (http.get, http.post… dans un script ou une page HTML), Lattis vous demande l’autorisation. Les hôtes autorisés avec « Mémoriser pour ce classeur » sont listés ici : ils sont mémorisés sur ce poste, pas dans le fichier (un classeur reçu redemande toujours). Le serveur MCP n’atteint que ces hôtes.
 		</p>
 		{#if hosts.length}
 			<ul>

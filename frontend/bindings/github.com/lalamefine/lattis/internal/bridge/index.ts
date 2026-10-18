@@ -23,6 +23,7 @@ export type {
     ImportResult,
     MCPStatus,
     OpenResult,
+    Platform,
     QueryRefresh,
     QuerySheet,
     SalvageResult,

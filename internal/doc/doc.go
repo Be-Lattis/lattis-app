@@ -118,6 +118,7 @@ func Open(ctx context.Context, path string) (*Document, error) {
 		}
 		return nil, archive.Damaged(path, err)
 	}
+	d.claimLegacy(ctx)
 	return d, nil
 }
 

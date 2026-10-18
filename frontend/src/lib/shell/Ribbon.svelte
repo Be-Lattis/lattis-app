@@ -13,7 +13,8 @@
 	import { ZOOM_LEVELS, zoomLabel } from '#lib/grid/zoom.js';
 	import Select from '#lib/ui/Select.svelte';
 	import { estimate, fit, groupWidth, type GroupShape, type Measure, type Mode } from './fit';
-	import { aiEnabled } from './settings.svelte.js';
+	import { aiEnabled, mcpAvailable, scriptingEnabled } from './settings.svelte.js';
+	import { keyLabel } from '#lib/web/platform.js';
 	import type { IconName } from '#lib/icons/icons.js';
 	import { MORE_KINDS, type ChartKind } from '#lib/chart/kinds.js';
 	import { COMMAND_TIPS, TAB_TIPS, assignKeyTips, keyChars, keyOf, matchTip } from '#lib/ui/keytips.js';
@@ -370,7 +371,7 @@
 			{
 				title: 'Contrôles',
 				commands: [
-					{ label: 'Bouton', icon: 'button', run: onbutton ? () => onbutton('') : undefined, hint: 'Bouton d’action à la cellule active : un clic exécute un script de l’onglet SCRIPT (ou rien)' },
+					...(scriptingEnabled() ? [{ label: 'Bouton', icon: 'button' as const, run: onbutton ? () => onbutton('') : undefined, hint: 'Bouton d’action à la cellule active : un clic exécute un script de l’onglet SCRIPT (ou rien)' }] : []),
 					{
 						label: 'Champ',
 						icon: 'text-input',
@@ -550,7 +551,7 @@
 			{
 				title: 'Contrôles',
 				commands: [
-					{ label: 'Bouton', icon: 'button', run: dc('button'), hint: 'Bouton dans le texte : un clic exécute un script de l’onglet SCRIPT (ou l’une de ses fonctions)' },
+					...(scriptingEnabled() ? [{ label: 'Bouton', icon: 'button' as const, run: dc('button'), hint: 'Bouton dans le texte : un clic exécute un script de l’onglet SCRIPT (ou l’une de ses fonctions)' }] : []),
 					{ label: 'Champ', icon: 'text-input', run: dc('input'), hint: 'Contrôle lié à une cellule d’une feuille : champ texte, zone de texte, case à cocher, liste déroulante ou fichier, pilotable par les scripts (controls.*)' }
 				]
 			},
@@ -954,7 +955,7 @@
 				<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 				<div class="file-menu" use:dismiss={() => (fileOpen = false)}>
 					{#each [['new', 'Nouveau', 'Ctrl+N'], ['open', 'Ouvrir…', 'Ctrl+O']] as [a, label, keys] (a)}
-						<button onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keys}</span></button>
+						<button onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 					<div class="recent-wrap" role="presentation" onmouseenter={() => (recentOpen = true)} onmouseleave={() => (recentOpen = false)}>
 						<button disabled={!recent.length} onclick={() => (recentOpen = !recentOpen)}><span>Récents</span><span class="keys">▸</span></button>
@@ -967,8 +968,8 @@
 						{/if}
 					</div>
 					<hr />
-					{#each [['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ['import', 'Importer (CSV, Excel)…', ''], ['export', 'Exporter le tableau en CSV…', ''], ['exportXlsx', 'Exporter le classeur (.xlsx)…', ''], ['pdf', 'Exporter en PDF…', ''], ['print', 'Imprimer…', 'Ctrl+P'], ['close', 'Fermer', 'Ctrl+W'], ['mcp', 'Serveur MCP (assistants)…', ''], ['settings', 'Paramètres…', ''], ['help', 'Aide', 'F1'], ...(import.meta.env.DEV ? [['demo', 'Démo : 1 M de lignes', '']] : [])] as [a, label, keys] (a)}
-						<button disabled={disabled && a !== 'import' && a !== 'demo' && a !== 'mcp' && a !== 'settings' && a !== 'help'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keys}</span></button>
+					{#each [['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ['import', 'Importer (CSV, Excel)…', ''], ['export', 'Exporter le tableau en CSV…', ''], ['exportXlsx', 'Exporter le classeur (.xlsx)…', ''], ['pdf', 'Exporter en PDF…', ''], ['print', 'Imprimer…', 'Ctrl+P'], ['close', 'Fermer', 'Ctrl+W'], ['mcp', 'Serveur MCP (assistants)…', ''], ['settings', 'Paramètres…', ''], ['help', 'Aide', 'F1'], ...(import.meta.env.DEV ? [['demo', 'Démo : 1 M de lignes', '']] : [])].filter(([a]) => a !== 'mcp' || mcpAvailable()) as [a, label, keys] (a)}
+						<button disabled={disabled && a !== 'import' && a !== 'demo' && a !== 'mcp' && a !== 'settings' && a !== 'help'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 				</div>
 			{/if}
@@ -983,7 +984,9 @@
 			>
 		{/if}
 		<button class="tab special" data-label="SQL" class:on={tab === 'SQL'} aria-pressed={tab === 'SQL'} aria-keyshortcuts="Alt+{TAB_TIPS.SQL}" data-region-focus={tab === 'SQL' ? '' : undefined} {disabled} onclick={() => select('SQL')}>SQL</button>
+		{#if scriptingEnabled() || view === 'script'}
 		<button class="tab special" data-label="SCRIPT" class:on={tab === 'SCRIPT'} aria-pressed={tab === 'SCRIPT'} aria-keyshortcuts="Alt+{TAB_TIPS.SCRIPT}" data-region-focus={tab === 'SCRIPT' ? '' : undefined} {disabled} onclick={() => select('SCRIPT')}>SCRIPT</button>
+		{/if}
 		<button class="tab help" title="Aide (F1)" aria-label="Aide" onclick={() => onfile('help')}>?</button>
 	</nav>
 	{#if !isView(tab) && (!folded || peek)}
