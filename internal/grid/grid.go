@@ -57,8 +57,11 @@ type Window struct {
 	Marks []Mark `json:"marks"`
 	// Sync : cellules d'un tableau partagé dont la modification attend le
 	// serveur, ou en conflit (classeur collaboratif ; rempli par le pont).
-	Sync   []SyncMark `json:"sync,omitempty"`
-	Micros int64      `json:"micros"` // temps passé côté Go, pour les mesures
+	Sync []SyncMark `json:"sync,omitempty"`
+	// Locked : lignes de la fenêtre en lecture seule pour un participant
+	// (lignes d'autres membres, §8.1 ; rempli par le pont).
+	Locked []int `json:"locked,omitempty"`
+	Micros int64 `json:"micros"` // temps passé côté Go, pour les mesures
 }
 
 // SyncMark marque une cellule d'un classeur collaboratif : Kind « pending »

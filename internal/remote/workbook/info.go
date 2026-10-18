@@ -36,6 +36,11 @@ type Info struct {
 	Synced time.Time `json:"synced"`
 }
 
+// CanManage : propriétaire (gère les droits : écran « Partager »).
+func (i *Info) CanManage() bool {
+	return i != nil && slices.Contains(i.Roles, "owner")
+}
+
 // CanDesign : propriétaire ou concepteur (publie, republie).
 func (i *Info) CanDesign() bool {
 	return i != nil && (slices.Contains(i.Roles, "owner") || slices.Contains(i.Roles, "designer"))

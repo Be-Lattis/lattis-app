@@ -49,12 +49,28 @@ type Capabilities struct {
 	CanDesign bool                   `json:"can_design"`
 	CanManage bool                   `json:"can_manage"`
 	Tables    map[string]TableAccess `json:"tables"`
+	// CustomRoles : rôles personnalisés de l'utilisateur (noms).
+	CustomRoles []string `json:"custom_roles"`
+	// Restrictions : restrictions qui visent l'utilisateur (§8.2).
+	Restrictions []Restriction `json:"restrictions"`
 }
 
 // TableAccess est le niveau effectif sur un tableau du serveur.
 type TableAccess struct {
 	Name  string `json:"name"`
 	Level string `json:"level"` // none, reader, participant, editor
+	// Filtered : un filtre de lecture ou d'écriture d'un de ses rôles
+	// s'applique au tableau (« Vue filtrée par vos droits »).
+	Filtered bool `json:"filtered"`
+}
+
+// Restriction est une restriction qui vise l'utilisateur
+// (my_capabilities.restrictions) : commande (select, insert, update,
+// delete, all) et libellé ; le prédicat n'est connu que du propriétaire.
+type Restriction struct {
+	TableID string `json:"table_id"`
+	Command string `json:"command"`
+	Label   string `json:"label"`
 }
 
 // ColumnSpec décrit une colonne à créer (lattis.create_table).
@@ -117,6 +133,9 @@ type Server interface {
 	// Write exécute fn dans une transaction d'écriture sur rw : une étape
 	// de la file d'envoi (tout ou rien).
 	Write(ctx context.Context, fn func(Writer) error) error
+	// Rights : gestion des droits d'un classeur (écran « Partager »,
+	// propriétaires ; voir rights.go).
+	Rights
 }
 
 // Change est une ligne modifiée ou supprimée depuis un point de reprise

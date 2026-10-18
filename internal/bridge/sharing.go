@@ -246,6 +246,9 @@ func (s *DocumentService) kickShare() {
 // syncMarks ajoute à une fenêtre de la grille les cellules en attente du
 // serveur ou en conflit (classeur collaboratif).
 func (s *DocumentService) syncMarks(ctx context.Context, t *grid.Table, table int64, w *grid.Window) error {
+	if err := s.lockedRows(ctx, table, w); err != nil {
+		return err
+	}
 	eng := s.collab()
 	if eng == nil || len(w.IDs) == 0 {
 		return nil

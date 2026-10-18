@@ -77,6 +77,9 @@ type Discovery struct {
 	TokenEndpoint         string     `json:"token_endpoint,omitempty"`
 	RevocationEndpoint    string     `json:"revocation_endpoint,omitempty"`
 	DeviceEndpoint        string     `json:"device_authorization_endpoint,omitempty"`
+	// PreviewEndpoint : « Voir en tant que… » (POST, jeton d'accès ;
+	// contrat client de lattisd, §7).
+	PreviewEndpoint string `json:"preview_endpoint,omitempty"`
 	Providers             []Provider `json:"providers"`
 	Postgres              Postgres   `json:"postgres"`
 }

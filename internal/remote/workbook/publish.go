@@ -491,31 +491,3 @@ func insertRowIDs(ctx context.Context, tx *sql.Tx, tbl int64, ids map[int64]stri
 	}
 	return nil
 }
-
-// writeCapabilities note les droits (_lattis_capabilities) : tbl 0 pour le
-// classeur (rôles), un niveau par tableau publié.
-func writeCapabilities(ctx context.Context, tx *sql.Tx, info *Info, caps *Capabilities, local map[string]int64) error {
-	if _, err := tx.ExecContext(ctx, `DELETE FROM _lattis_capabilities`); err != nil {
-		return err
-	}
-	level := "editor"
-	if !info.CanDesign() {
-		level = "reader"
-	}
-	if _, err := tx.ExecContext(ctx, `INSERT INTO _lattis_capabilities (tbl, level, role) VALUES (0, ?, ?)`, level, strings.Join(info.Roles, ",")); err != nil {
-		return err
-	}
-	if caps == nil {
-		return nil
-	}
-	for rid, a := range caps.Tables {
-		id, ok := local[rid]
-		if !ok {
-			continue
-		}
-		if _, err := tx.ExecContext(ctx, `INSERT INTO _lattis_capabilities (tbl, level) VALUES (?, ?) ON CONFLICT (tbl) DO UPDATE SET level = excluded.level`, id, a.Level); err != nil {
-			return err
-		}
-	}
-	return nil
-}

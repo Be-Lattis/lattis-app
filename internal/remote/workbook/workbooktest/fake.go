@@ -53,6 +53,10 @@ type Fake struct {
 	levels map[string]string
 	// Clock donne la date des modifications (lattis_updated_at).
 	Clock func() time.Time
+	// acls : droits de chaque classeur (rights.go) ; users : utilisateurs
+	// connus (As).
+	acls  map[string]*bookACL
+	users map[string]bool
 }
 
 func (f *Fake) call(name string) error {
@@ -111,7 +115,15 @@ func New() *Fake {
 }
 
 // As rend le serveur vu par un utilisateur (rôle PostgreSQL).
-func (f *Fake) As(user string) workbook.Server { return &session{f: f, user: user} }
+func (f *Fake) As(user string) workbook.Server {
+	f.mu.Lock()
+	if f.users == nil {
+		f.users = map[string]bool{}
+	}
+	f.users[user] = true
+	f.mu.Unlock()
+	return &session{f: f, user: user}
+}
 
 // SetDown rend le serveur injoignable (ou de nouveau joignable) ; les
 // écoutes en cours sont coupées.
@@ -294,37 +306,30 @@ func (s *session) caps(id string) (workbook.Capabilities, error) {
 	if b == nil {
 		return workbook.Capabilities{}, errors.New("classeur inconnu")
 	}
-	if len(s.roles(b)) == 0 {
+	if len(s.f.userRoles(b, s.user)) == 0 {
 		return workbook.Capabilities{}, ErrPrivilege{"aucun accès à ce classeur"}
 	}
+	roles := slices.Clone(s.roles(b))
+	if roles == nil {
+		roles = []string{}
+	}
 	c := workbook.Capabilities{WorkbookID: b.id, Title: b.title, Mode: b.mode, Version: b.version, Schema: b.schema, Channel: "wb_" + b.slug,
-		Roles: slices.Clone(s.roles(b)), CanDesign: s.has(b, "owner", "designer"), CanManage: s.has(b, "owner"), Tables: map[string]workbook.TableAccess{}}
+		Roles: roles, CanDesign: s.has(b, "owner", "designer"), CanManage: s.has(b, "owner"), Tables: map[string]workbook.TableAccess{},
+		CustomRoles: s.customRoles(b), Restrictions: s.myRestrictions(b)}
 	for _, t := range b.schemas[b.schema].tables {
-		c.Tables[t.id] = workbook.TableAccess{Name: t.name, Level: s.level(b, t)}
+		lv, filt := s.levelOf(b, t)
+		c.Tables[t.id] = workbook.TableAccess{Name: t.name, Level: lv, Filtered: filt}
 	}
 	return c, nil
 }
 
 // level est le niveau de l'utilisateur sur un tableau : lecteur dans un
-// classeur figé ; sinon éditeur (propriétaire, concepteur, éditeur),
-// participant ou lecteur selon ses rôles, sauf niveau imposé (SetLevel).
+// classeur figé ; sinon l'union des niveaux de ses rôles (fournis :
+// éditeur pour propriétaire, concepteur et éditeur ; participant ; lecteur ;
+// personnalisés : niveaux posés), sauf niveau imposé (SetLevel).
 func (s *session) level(b *book, t *table) string {
-	if len(s.roles(b)) == 0 {
-		return "none"
-	}
-	if b.mode != workbook.Collaborative {
-		return "reader"
-	}
-	if lv, ok := s.f.levels[b.id+"\x00"+s.user+"\x00"+t.name]; ok {
-		return lv
-	}
-	switch {
-	case s.has(b, "owner", "designer", "editor"):
-		return "editor"
-	case s.has(b, "participant"):
-		return "participant"
-	}
-	return "reader"
+	lv, _ := s.levelOf(b, t)
+	return lv
 }
 
 func (s *session) Capabilities(ctx context.Context, id string) (workbook.Capabilities, error) {

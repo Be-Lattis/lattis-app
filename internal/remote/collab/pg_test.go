@@ -193,11 +193,13 @@ func TestPostgresRights(t *testing.T) {
 	ctx := context.Background()
 	dave, alice := p.dave, p.alice
 
-	// Participant : la ligne d'Alice est refusée par la RLS (0 ligne,
-	// why_not « forbidden »), la cellule reprend la valeur du serveur.
-	dave.mustSet(0, 1, "99")
-	r := dave.send()
-	if r.Rejected != 1 || len(r.Notices) == 0 || !strings.Contains(r.Notices[0], "Droits insuffisants") {
+	// Participant : la ligne d'Alice est refusée en local (contrôle
+	// préalable, §8.1) ; rien ne part. Le refus du serveur (RLS, why_not
+	// « forbidden ») reste couvert par TestRightsRefusal.
+	if err := dave.set(0, 1, "99"); err == nil || !strings.Contains(err.Error(), "participant") {
+		t.Fatalf("participant : %v", err)
+	}
+	if r := dave.send(); r.Sent != 0 || r.Rejected != 0 {
 		t.Fatalf("participant : %+v", r)
 	}
 	eq(t, "Dave", dave.col("Quantité"), []string{"3", "10", "1"})
@@ -229,7 +231,7 @@ func TestPostgresRights(t *testing.T) {
 	table = "Ventes"
 	p.env.Exec(t, `REVOKE UPDATE ON `+pgx.Identifier{schema, table}.Sanitize()+` FROM `+pgx.Identifier{group}.Sanitize())
 	p.bob.mustSet(1, 0, "Thé vert")
-	r = p.bob.send()
+	r := p.bob.send()
 	if r.Rejected != 1 || p.bob.states()["rejected"] != 1 {
 		t.Fatalf("refus du tableau : %+v %v", r, p.bob.states())
 	}

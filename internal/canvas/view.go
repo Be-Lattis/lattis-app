@@ -86,6 +86,17 @@ type TableInfo struct {
 	// ReadOnly : pourquoi le tableau publié ne se modifie pas (« Classeur
 	// publié en lecture seule », « Hors ligne, lecture seule »), vide sinon.
 	ReadOnly string `json:"readOnly,omitempty"`
+	// Classeur collaboratif (§8.1) : niveau de l'utilisateur sur le tableau
+	// publié (reader, participant, editor, none ; vide sinon) et lecture
+	// filtrée par ses droits (« Vue filtrée par vos droits »).
+	Access   string `json:"access,omitempty"`
+	Filtered bool   `json:"filtered,omitempty"`
+}
+
+// SharingAccess est la partie facultative de Sharing qui donne les droits
+// d'un classeur collaboratif (workbook.Link).
+type SharingAccess interface {
+	TableAccess(tbl int64) (level string, filtered bool)
 }
 
 // CellInfo est une cellule libre.
@@ -195,6 +206,9 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 				ti.Shared = s.TableShare(tb.ID)
 				if err := s.TableLock(tb.ID); err != nil {
 					ti.ReadOnly = err.Error()
+				}
+				if a, ok := s.(SharingAccess); ok {
+					ti.Access, ti.Filtered = a.TableAccess(tb.ID)
 				}
 			}
 			if err := t.row(`SELECT id, name FROM _lattis_queries WHERE target = ? ORDER BY id LIMIT 1`, tb.ID).Scan(&ti.QueryID, &ti.QueryName); err != nil && !errors.Is(err, sql.ErrNoRows) {

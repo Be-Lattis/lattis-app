@@ -42,10 +42,18 @@ func Watch(ctx context.Context, srv Server, link *Link, retry time.Duration, cha
 			if caps, err := srv.Capabilities(ctx, info.WorkbookID); err == nil {
 				link.SetNewVersion(caps.Version)
 			}
+			// Rôles (propriétaire ou concepteur : préparer la version
+			// suivante) relus à chaque (re)connexion.
+			RefreshCapabilities(ctx, srv, link)
 			changed()
 		}, func(p string) {
 			if v, ok := VersionNotice(p); ok && link.SetNewVersion(v) {
 				changed()
+			}
+			if p == NoticeACL {
+				if ch, err := RefreshCapabilities(ctx, srv, link); err == nil && ch {
+					changed()
+				}
 			}
 		})
 		if ctx.Err() != nil {

@@ -5,6 +5,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/lalamefine/lattis/internal/remote/workbook"
 )
 
 // worker fait le travail du suivi (envoi, réception) hors du fil de
@@ -20,6 +22,8 @@ type worker struct {
 	// reprise après une coupure).
 	due       map[int64]bool
 	full      bool
+	// acl : droits à relire (notification *acl ; aussi à chaque connexion).
+	acl       bool
 	listening bool
 	timer     *time.Timer
 }
@@ -54,6 +58,14 @@ func (w *worker) disconnected(reason string) {
 // notified : un tableau a changé sur le serveur ; sa lecture attend
 // Debounce pour regrouper une rafale.
 func (w *worker) notified(ctx context.Context, payload string) {
+	if payload == workbook.NoticeACL {
+		// Droits changés (§8.1) : capacités relues au prochain cycle.
+		w.mu.Lock()
+		w.acl = true
+		w.mu.Unlock()
+		w.poke()
+		return
+	}
 	if strings.HasPrefix(payload, "*") {
 		return // *meta (mise en page, étape 7), *version (classeur figé)
 	}
@@ -83,8 +95,8 @@ func (w *worker) loop(ctx context.Context) {
 // cycle envoie la file, puis lit les changements dus.
 func (w *worker) cycle(ctx context.Context) {
 	w.mu.Lock()
-	full, due, listening := w.full, w.due, w.listening
-	w.full, w.due = false, map[int64]bool{}
+	full, due, listening, acl := w.full, w.due, w.listening, w.acl
+	w.full, w.due, w.acl = false, map[int64]bool{}, false
 	if w.timer != nil {
 		w.timer.Stop()
 		w.timer = nil
@@ -97,6 +109,14 @@ func (w *worker) cycle(ctx context.Context) {
 	if !w.e.link.Online() {
 		w.e.link.SetOnline(true, "")
 		ev.State = true
+	}
+	if full || acl {
+		// Droits relus avant l'envoi : une écriture devenue interdite est
+		// refusée en local (grille grisée, message) plutôt qu'au serveur.
+		if changed, err := w.e.RefreshRights(ctx); err == nil && changed {
+			ev.State = true
+			ev.Notices = append(ev.Notices, RightsNotice)
+		}
 	}
 	rep, err := w.e.Send(ctx)
 	if err == nil {
@@ -123,7 +143,7 @@ func (w *worker) cycle(ctx context.Context) {
 		ev.State = true
 	}
 	ev.Data = rep.Changed()
-	ev.Notices = rep.Notices
+	ev.Notices = append(ev.Notices, rep.Notices...)
 	if ev.Data || ev.State || len(ev.Notices) > 0 {
 		w.changed(ev)
 	}
