@@ -56,6 +56,8 @@ type Store struct {
 	pendingRows map[string]bool
 	pendingMeta bool
 	busy        atomic.Bool
+	// writeConn : connexion SQLite de l'écrivain (autorisateur, AsUser).
+	writeConn atomic.Pointer[sqlite3.Conn]
 }
 
 var (
@@ -202,7 +204,16 @@ type job struct {
 // appelé sur chaque nouvelle connexion (fonctions SQL personnalisées).
 func Open(path string, extra ...func(*sqlite3.Conn) error) (*Store, error) {
 	s := &Store{jobs: make(chan job), done: make(chan struct{})}
-	write, err := openDB("file:"+path, "écriture", setup(false, extra), s.noteWrite)
+	initWrite := setup(false, extra)
+	write, err := openDB("file:"+path, "écriture", func(c *sqlite3.Conn) error {
+		if err := initWrite(c); err != nil {
+			return err
+		}
+		// Une seule connexion d'écriture à la fois (SetMaxOpenConns(1)) : la
+		// dernière ouverte est celle des écritures (AsUser).
+		s.writeConn.Store(c)
+		return nil
+	}, s.noteWrite)
 	if err != nil {
 		return nil, err
 	}

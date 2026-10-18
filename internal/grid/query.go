@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/lalamefine/lattis/internal/sqltext"
+	"github.com/lalamefine/lattis/internal/store"
 )
 
 // QueryResult est le résultat d'une requête de l'onglet SQL.
@@ -45,7 +46,14 @@ func queryArgs(ctx context.Context, db *sql.DB, q string, limit int, args ...any
 	start := time.Now()
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	rs, err := db.QueryContext(ctx, q, args...)
+	// Requête de l'utilisateur : sous l'autorisateur (ni ATTACH, ni tables
+	// internes _lattis_*, voir store.UserConn).
+	conn, err := store.UserConn(ctx, db)
+	if err != nil {
+		return QueryResult{}, err
+	}
+	defer store.ReleaseUserConn(conn)
+	rs, err := conn.QueryContext(ctx, q, args...)
 	if err != nil {
 		return QueryResult{}, err
 	}
