@@ -32,6 +32,7 @@
 	import { freeDisplay } from './freecell';
 	import { bandAt, bandLabel, bandRefusal, hiddenBand } from './hidden';
 	import { pivotLayer } from './pivotformat';
+	import { canFoldAll, foldAll, foldTarget, pivotBoxHit, pivotBoxLeft, pivotLabelOffset, PIVOT_BOX, setFolded, type PivotRowInfo } from './pivottree';
 	import { fillSeries } from './fill';
 	import {
 		condArgs,
@@ -118,11 +119,29 @@
 		/** Tri des étiquettes d'un champ : 'asc' ou 'desc' (absent : ordre de la source). */
 		sort?: Record<string, 'asc' | 'desc'>;
 		noGrandTotal?: boolean;
+		/** Sous-totaux des groupes (plusieurs champs en lignes) : '' en haut (ligne du groupe), 'bottom', 'none'. */
+		subtotals?: string;
+		/** Groupes pliés (−/+), par leurs étiquettes ; collapseAll : tout plié sauf expanded. */
+		collapseAll?: boolean;
+		collapsed?: (string[] | null)[] | null;
+		expanded?: (string[] | null)[] | null;
 	}
 
 	/** Ligne du total général d'un TCD (la dernière), -1 quand il est masqué (« Totaux généraux » décoché ; sans champ en lignes, le total est la seule ligne). */
 	function pivotTotalRow(p: { row: number; cells: string[][]; config: PivotConfig }): number {
 		return p.config.noGrandTotal && p.config.rowFields?.length ? -1 : p.row + p.cells.length - 1;
+	}
+
+	/** Description de la ligne r d'un TCD en arborescence (undefined : en-tête, ou TCD à plat). */
+	function pivotRowOf(p: { row: number; rows?: PivotRowInfo[] | null }, r: number): PivotRowInfo | undefined {
+		return r > p.row ? (p.rows?.[r - p.row - 1] ?? undefined) : undefined;
+	}
+
+	/** Ligne d'un TCD en gras : en-tête, total général, groupes et sous-totaux de l'arborescence (comme Excel). */
+	function pivotBold(p: { row: number; cells: string[][]; config: PivotConfig; rows?: PivotRowInfo[] | null }, r: number): boolean {
+		if (r === p.row || r === pivotTotalRow(p)) return true;
+		const info = pivotRowOf(p, r);
+		return !!info && (!!info.group || !!info.subtotal);
 	}
 
 	export interface SheetPivot {
@@ -134,6 +153,8 @@
 		anchor?: number;
 		config: PivotConfig;
 		cells: string[][]; // en-tête, groupes, total
+		/** Arborescence (plusieurs champs en lignes) : une description par ligne sous l'en-tête. */
+		rows?: PivotRowInfo[] | null;
 		/** Format de nombre par défaut de chaque colonne (style JSON, voir pivotformat.ts). */
 		formats?: string[] | null;
 		error: string;
@@ -870,7 +891,7 @@
 			p.cells[0]?.forEach((_, j) => {
 				const c = p.col + j;
 				if (widths.has(c)) return;
-				const w = Math.max(...p.cells.map((r, i) => textWidth(r[j] ?? '', i === 0 || i === p.cells.length - 1)));
+				const w = Math.max(...p.cells.map((r, i) => textWidth(r[j] ?? '', pivotBold(p, p.row + i)) + (j === 0 ? pivotLabelOffset(pivotRowOf(p, p.row + i)) : 0)));
 				widths.set(c, clamp(Math.ceil(w) + 14, DEF_W, MAX_FIT));
 			});
 		}
@@ -2087,19 +2108,25 @@
 			}
 			for (let i = Math.max(0, r0 - p.row); i < p.cells.length && p.row + i <= r1; i++)
 				p.cells[i].forEach((v, j) => {
-					if (!v) return;
 					const c = p.col + j;
-					const bold = i === 0 || p.row + i === tot;
+					// Arborescence : retrait du niveau et case −/+ des groupes (colonne des étiquettes).
+					const info = j === 0 ? pivotRowOf(p, p.row + i) : undefined;
+					if (info?.group) pivotFoldBox(cx(c) + pivotBoxLeft(info.depth), ry(p.row + i), rh(p.row + i), !!info.collapsed);
+					if (!v) return;
+					const bold = pivotBold(p, p.row + i);
 					// Mise en forme posée sur les cellules du TCD, leurs lignes ou colonnes (format de nombre, décimales, police…).
 					const st = resolveStyle(styleAt(p.row + i, c, undefined), lineRule(p.row + i, c, ruleValue(v), v));
 					const style = bold ? { ...st, b: st?.b ?? true } : st;
-					drawText(formatCell(v, undefined, st), cx(c), ry(p.row + i), cax().size(c), st?.al ?? (j > 0 && i > 0 ? 'right' : 'left'), style, C.text);
+					const ind = pivotLabelOffset(info);
+					drawText(formatCell(v, undefined, st), cx(c) + ind, ry(p.row + i), cax().size(c) - ind, st?.al ?? (j > 0 && i > 0 ? 'right' : 'left'), style, C.text);
 				});
-			// ▾ des étiquettes des lignes : trier et filtrer le champ (Excel).
+			// ▾ des étiquettes des lignes : trier et filtrer le champ (Excel) ; en
+			// arborescence, un seul ▾ sur « Étiquettes de lignes » (choix du champ dans le menu).
 			if (p.row >= r0 && p.row <= r1)
-				(p.config.rowFields ?? []).forEach((f, j) => {
+				(p.rows ? (p.config.rowFields ?? []).slice(0, 1) : (p.config.rowFields ?? [])).forEach((f, j) => {
 					const c = p.col + j;
-					if (c >= c0 && c <= c1) pivotDrop(cx(c) + cax().size(c), ry(p.row), rh(p.row), pivotFiltered(p, f));
+					const on = p.rows ? (p.config.rowFields ?? []).some((x) => pivotFiltered(p, x)) : pivotFiltered(p, f);
+					if (c >= c0 && c <= c1) pivotDrop(cx(c) + cax().size(c), ry(p.row), rh(p.row), on);
 				});
 			ctx.save();
 			ctx.strokeStyle = C.border;
@@ -2605,6 +2632,57 @@
 		ctx.textBaseline = 'middle';
 		ctx.fillText(filtered ? '⧩' : '▾', x + size / 2, top + size / 2 + 0.5);
 		ctx.restore();
+	}
+
+	/** Case −/+ d'un groupe de TCD en arborescence (x : son bord gauche), comme Excel. */
+	function pivotFoldBox(x: number, y: number, h: number, folded: boolean) {
+		const s = PIVOT_BOX;
+		const left = Math.round(x) + 0.5;
+		const top = Math.round(y + (h - s) / 2) + 0.5;
+		ctx.save();
+		ctx.fillStyle = C.strip;
+		ctx.fillRect(left, top, s - 1, s - 1);
+		ctx.strokeStyle = C.icon;
+		ctx.lineWidth = 1;
+		ctx.strokeRect(left, top, s - 1, s - 1);
+		ctx.beginPath();
+		const mid = top + (s - 1) / 2;
+		ctx.moveTo(left + 2, mid);
+		ctx.lineTo(left + s - 3, mid);
+		if (folded) {
+			const cxm = left + (s - 1) / 2;
+			ctx.moveTo(cxm, top + 2);
+			ctx.lineTo(cxm, top + s - 3);
+		}
+		ctx.stroke();
+		ctx.restore();
+	}
+
+	/** Le clic tombe-t-il sur une case −/+ de TCD ? Plie ou déplie alors le groupe (une étape d'annulation). */
+	function togglePivotFold(ev: MouseEvent, cell: { row: number; col: number }): boolean {
+		const p = pivotAt(cell.row, cell.col);
+		if (!p?.rows || cell.col !== p.col || !source.setPivot) return false;
+		const info = pivotRowOf(p, cell.row);
+		if (!pivotBoxHit(info, toLocal(ev).x - screenX(cell.col)) || !info?.path) return false;
+		moveTo(cell.row, cell.col);
+		const set = source.setPivot;
+		const cfg = setFolded(p.config, info.path, !info.collapsed);
+		menuAction(() => set(p.id, cfg));
+		return true;
+	}
+
+	/** Développer, Réduire (le groupe de la cellule active), Développer tout, Réduire tout. */
+	function foldPivot(p: SheetPivot, what: 'expand' | 'collapse' | 'expandAll' | 'collapseAll') {
+		const set = source.setPivot;
+		if (!set) return;
+		let cfg: PivotConfig;
+		if (what === 'expandAll' || what === 'collapseAll') cfg = foldAll(p.config, what === 'collapseAll');
+		else {
+			const path = foldTarget(pivotRowOf(p, active.row), what === 'expand');
+			if (!path) return;
+			cfg = setFolded(p.config, path, what === 'collapse');
+		}
+		menuAction(() => set(p.id, cfg));
 	}
 
 	/** Valeur affichée d'un filtre de rapport : « (Tous) », la valeur, ou « (Plusieurs éléments) ». */
@@ -3484,6 +3562,8 @@
 		field: string;
 		/** filter : filtre de rapport ; rows : étiquette d'un champ des lignes (tri en plus). */
 		kind: 'filter' | 'rows';
+		/** Arborescence : champs des lignes au choix (un seul ▾ sur « Étiquettes de lignes »). */
+		fields?: string[];
 		x: number;
 		y: number;
 		values: PanelValue[];
@@ -3502,25 +3582,38 @@
 		let field: string | undefined;
 		let kind: 'filter' | 'rows' = 'filter';
 		if (cell.row - a < filters.length && cell.col === p.col + 1) field = filters[cell.row - a].field;
-		else if (cell.row === p.row && cell.col - p.col < (p.config.rowFields?.length ?? 0)) {
+		else if (cell.row === p.row && cell.col - p.col < (p.rows ? Math.min(1, p.config.rowFields?.length ?? 0) : (p.config.rowFields?.length ?? 0))) {
 			field = p.config.rowFields![cell.col - p.col];
 			kind = 'rows';
 		}
 		if (field === undefined) return false;
 		moveTo(cell.row, cell.col);
 		closeMenus();
-		const kept = (kind === 'filter' ? filters : (p.config.items ?? [])).find((x) => x.field === field)?.values ?? [];
-		const keep = kept.length ? new Set(kept) : null;
 		pivotDlg = {
 			p,
 			field,
 			kind,
+			// Arborescence : un seul ▾ pour tous les champs des lignes (« Sélectionner un champ », Excel).
+			fields: kind === 'rows' && p.rows ? [...(p.config.rowFields ?? [])] : undefined,
 			x: Math.max(4, Math.min(toView(screenX(cell.col)), toView(scroller.clientWidth) - 280)),
 			y: toView(screenY(cell.row) + rh(cell.row)),
 			values: [],
 			loading: !!source.pivotFieldValues,
 			search: ''
 		};
+		loadPivotValues();
+		return true;
+	}
+
+	/** Charge les valeurs du champ du menu ▾ ouvert (cochées : celles gardées). */
+	function loadPivotValues() {
+		const d = pivotDlg;
+		if (!d) return;
+		const { p, field, kind } = d;
+		const kept = (kind === 'filter' ? (p.config.filters ?? []) : (p.config.items ?? [])).find((x) => x.field === field)?.values ?? [];
+		const keep = kept.length ? new Set(kept) : null;
+		d.values = [];
+		d.loading = !!source.pivotFieldValues;
 		const mine = () => pivotDlg?.p.id === p.id && pivotDlg.field === field;
 		source.pivotFieldValues?.(p.config.source, field).then(
 			(vals) => {
@@ -3533,7 +3626,6 @@
 				say(String(err instanceof Error ? err.message : err));
 			}
 		);
-		return true;
 	}
 
 	/** Enregistre la configuration du TCD du menu ▾ (annulable comme un changement du volet). */
@@ -4038,14 +4130,16 @@
 		if (pv && source.createChart) {
 			// Graphique d'un tableau croisé : X = premier champ de lignes, séries = mesures.
 			const head = pv.cells[0];
-			const nk = Math.max(1, pv.config.rowFields?.length ?? 0);
+			// En arborescence, une seule colonne d'étiquettes ; le graphique lit le TCD à plat (premier champ).
+			const nk = pv.rows ? 1 : Math.max(1, pv.config.rowFields?.length ?? 0);
+			const x = pv.rows ? (pv.config.rowFields?.[0] ?? head[0]) : head[0];
 			let series = head.slice(nk).filter((h) => !h.startsWith('Total'));
 			if (SINGLE_SERIES.has(kind)) series = series.slice(0, 1);
 			const create = source.createChart;
 			const name = pv.config.name ?? '';
 			const before = new Set(charts.map((c) => c.id));
 			writing = writing.catch(() => undefined).then(() =>
-				create(freeChartSpot(pv.row, pv.col + head.length + 1).row, pv.col + head.length + 1, { source: name, kind, x: head[0], series }).then(
+				create(freeChartSpot(pv.row, pv.col + head.length + 1).row, pv.col + head.length + 1, { source: name, kind, x, series }).then(
 					() => {
 						say(`Graphique du tableau croisé « ${name} » inséré`);
 						selectNewChart(before);
@@ -4822,7 +4916,7 @@
 		for (const p of pivots) {
 			const j = c - p.col;
 			if (p.error || j < 0 || j >= (p.cells[0]?.length ?? 0)) continue;
-			p.cells.forEach((r, i) => (w = Math.max(w, textWidth(r[j] ?? '', i === 0 || p.row + i === pivotTotalRow(p)))));
+			p.cells.forEach((r, i) => (w = Math.max(w, textWidth(r[j] ?? '', pivotBold(p, p.row + i)) + (j === 0 ? pivotLabelOffset(pivotRowOf(p, p.row + i)) : 0))));
 		}
 		return w ? clamp(Math.ceil(w) + 14, 24, MAX_FIT) : DEF_W;
 	}
@@ -5143,6 +5237,10 @@
 		if (e.button === 0 && buttonsLayer?.pickCell(cell.row, cell.col, shownValue(cell.row, cell.col))) return;
 		if (e.button === 0 && openTypeMenu(e, cell)) return;
 		if (e.button === 0 && openPivotMenu(e, cell)) return;
+		if (e.button === 0 && togglePivotFold(e, cell)) {
+			wrap.focus();
+			return;
+		}
 		wrap.focus();
 		moveTo(cell.row, cell.col, e.shiftKey);
 		dragging = true;
@@ -5413,7 +5511,10 @@
 			return;
 		}
 		const cell = cellAt(e);
-		if (cell && pivotAt(cell.row, cell.col)) {
+		const pv = cell && pivotAt(cell.row, cell.col);
+		if (cell && pv) {
+			// Double clic sur −/+ : deux bascules, pas le volet.
+			if (pv.rows && cell.col === pv.col && pivotBoxHit(pivotRowOf(pv, cell.row), toLocal(e).x - screenX(cell.col))) return;
 			pivotActive();
 			return;
 		}
@@ -7431,6 +7532,17 @@
 					>
 				{/if}
 				{@render linesItems(m.kind, m.x, m.y)}
+				{#if !m.kind && source.setPivot}
+					{@const fp = pivotAt(active.row, active.col)}
+					{#if fp?.rows}
+						{@const info = pivotRowOf(fp, active.row)}
+						<hr />
+						<button disabled={!foldTarget(info, true)} onclick={() => foldPivot(fp, 'expand')}>Développer</button>
+						<button disabled={!foldTarget(info, false)} onclick={() => foldPivot(fp, 'collapse')}>Réduire</button>
+						<button disabled={!canFoldAll(fp.rows, true)} onclick={() => foldPivot(fp, 'expandAll')}>Développer tout</button>
+						<button disabled={!canFoldAll(fp.rows, false)} onclick={() => foldPivot(fp, 'collapseAll')}>Réduire tout</button>
+					{/if}
+				{/if}
 				<hr />
 				<button
 					onclick={() => {
@@ -7635,7 +7747,23 @@
 					if (ev.key === 'Enter' && !(ev.target instanceof HTMLButtonElement)) applyPivotFilter();
 				}}
 			>
-				<div class="menu-title">« {d.field} »{d.kind === 'filter' ? ' · filtre du rapport' : ''}</div>
+				{#if d.fields && d.fields.length > 1}
+					<label class="pick-field"
+						>Champ :
+						<select
+							value={d.field}
+							onchange={(ev) => {
+								d.field = (ev.currentTarget as HTMLSelectElement).value;
+								d.search = '';
+								loadPivotValues();
+							}}
+						>
+							{#each d.fields as f (f)}<option value={f}>{f}</option>{/each}
+						</select>
+					</label>
+				{:else}
+					<div class="menu-title">« {d.field} »{d.kind === 'filter' ? ' · filtre du rapport' : ''}</div>
+				{/if}
 				{#if d.kind === 'rows'}
 					<button class="sort" class:on={d.p.config.sort?.[d.field] === 'asc'} onclick={() => sortPivot('asc')}>Trier de A à Z</button>
 					<button class="sort" class:on={d.p.config.sort?.[d.field] === 'desc'} onclick={() => sortPivot('desc')}>Trier de Z à A</button>
@@ -8606,6 +8734,20 @@
 	}
 	.menu-title.default-name {
 		color: #c42b1c; /* DEFAULT_NAME_COLOR */
+	}
+	/* Menu ▾ d'un TCD en arborescence : choix du champ des lignes (Excel). */
+	.pick-field {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 4px 14px;
+		font-size: 11px;
+		color: #6b7280;
+	}
+	.pick-field select {
+		flex: 1;
+		font: inherit;
+		color: #1f2328;
 	}
 	.menu button {
 		display: block;

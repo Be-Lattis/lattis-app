@@ -604,6 +604,22 @@ export interface PivotConfig {
     "noGrandTotal"?: boolean;
 
     /**
+     * Subtotals place les sous-totaux des groupes (plusieurs champs en
+     * lignes) : "" sur la ligne du groupe (en haut), "bottom" sur une ligne
+     * « Total X » sous le groupe, "none" aucun.
+     */
+    "subtotals"?: string;
+
+    /**
+     * Groupes pliés (−/+), désignés par leurs étiquettes du premier champ au
+     * leur : Collapsed liste les groupes pliés ; avec CollapseAll, tous le
+     * sont sauf ceux d'Expanded (Réduire tout). Par défaut, tout est déplié.
+     */
+    "collapseAll"?: boolean;
+    "collapsed"?: (string[] | null)[] | null;
+    "expanded"?: (string[] | null)[] | null;
+
+    /**
      * Ancien format (un champ de lignes, une valeur) : relu puis converti.
      */
     "rows"?: string;
@@ -634,12 +650,55 @@ export interface PivotInfo {
     "cells": (string[] | null)[] | null;
 
     /**
+     * Rows décrit chaque ligne sous l'en-tête quand le TCD s'affiche en
+     * arborescence (plusieurs champs en lignes) : niveau, groupe −/+,
+     * sous-total. Absent avec un seul champ en lignes.
+     */
+    "rows": PivotRowInfo[] | null;
+
+    /**
      * Formats : format de nombre par défaut de chaque colonne (style JSON,
      * vide : aucun) : celui de la colonne source, ou deux décimales pour une
      * moyenne ou des décimaux. La mise en forme des cellules l'emporte.
      */
     "formats": string[] | null;
     "error": string;
+}
+
+/**
+ * PivotRowInfo décrit une ligne affichée d'un tableau croisé en
+ * arborescence (sous l'en-tête, dans l'ordre de Cells).
+ */
+export interface PivotRowInfo {
+    /**
+     * Depth est le niveau dans la hiérarchie (0 : premier champ des lignes).
+     */
+    "depth": number;
+
+    /**
+     * Group : ligne d'un groupe (champ qui n'est pas le dernier), avec −/+.
+     */
+    "group"?: boolean;
+
+    /**
+     * Collapsed : groupe plié (ses lignes ne s'affichent pas).
+     */
+    "collapsed"?: boolean;
+
+    /**
+     * Subtotal : ligne « Total X » d'un groupe (sous-totaux en bas).
+     */
+    "subtotal"?: boolean;
+
+    /**
+     * Total : ligne du total général.
+     */
+    "total"?: boolean;
+
+    /**
+     * Path : étiquettes du groupe ou de la ligne, du premier champ au sien.
+     */
+    "path"?: string[] | null;
 }
 
 /**

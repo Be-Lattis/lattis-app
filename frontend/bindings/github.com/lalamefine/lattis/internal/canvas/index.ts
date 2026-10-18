@@ -30,6 +30,7 @@ export type {
     PivotConfig,
     PivotFilter,
     PivotInfo,
+    PivotRowInfo,
     PivotValue,
     QueryLoad,
     RangeRules,

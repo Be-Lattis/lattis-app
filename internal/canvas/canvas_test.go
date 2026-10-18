@@ -1273,7 +1273,8 @@ func TestPivotFields(t *testing.T) {
 		}
 		return fmt.Sprint(l.Pivots[0].Cells)
 	}
-	want := "[[Pays Ville Somme de Ventes Somme de Ventes (% du total) Nombre] [FR Lyon 50 50 % 2] [FR Paris 30 30 % 1] [IT Rome 20 20 % 1] [Total  100 100 % 4]]"
+	// Deux champs en lignes : arborescence (sous-totaux de Pays en haut).
+	want := "[[Étiquettes de lignes Somme de Ventes Somme de Ventes (% du total) Nombre] [FR 80 80 % 3] [Lyon 50 50 % 2] [Paris 30 30 % 1] [IT 20 20 % 1] [Rome 20 20 % 1] [Total 100 100 % 4]]"
 	if got := cells(); got != want {
 		t.Fatalf("lignes et valeurs :\n%s\n%s", got, want)
 	}
@@ -1305,7 +1306,7 @@ func TestPivotFields(t *testing.T) {
 		Items: []PivotFilter{{Field: "Ville", Values: []string{"Lyon", "Paris"}}}, Sort: map[string]string{"Ville": "desc"}}); err != nil {
 		t.Fatal(err)
 	}
-	if got := cells(); got != "[[Pays Ville Somme de Ventes] [FR Paris 30] [FR Lyon 50] [Total  80]]" {
+	if got := cells(); got != "[[Étiquettes de lignes Somme de Ventes] [FR 80] [Paris 30] [Lyon 50] [Total 80]]" {
 		t.Fatalf("étiquettes filtrées et triées : %s", got)
 	}
 	if err := d.SetPivot(ctx, id, PivotConfig{Source: "Feuille1", RowFields: []string{"Pays"}, Cols: "Ville", Values: []PivotValue{{Field: "Ventes", Agg: "sum"}},

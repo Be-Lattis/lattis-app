@@ -17,6 +17,10 @@ type PivotInfo struct {
 	Config PivotConfig `json:"config"`
 	// Cells : en-tête (1 ligne), groupes, puis la ligne de total.
 	Cells [][]string `json:"cells"`
+	// Rows décrit chaque ligne sous l'en-tête quand le TCD s'affiche en
+	// arborescence (plusieurs champs en lignes) : niveau, groupe −/+,
+	// sous-total. Absent avec un seul champ en lignes.
+	Rows []PivotRowInfo `json:"rows"`
 	// Formats : format de nombre par défaut de chaque colonne (style JSON,
 	// vide : aucun) : celui de la colonne source, ou deux décimales pour une
 	// moyenne ou des décimaux. La mise en forme des cellules l'emporte.
@@ -162,12 +166,12 @@ func (t *tx) pivots(sheet int64) ([]PivotInfo, error) {
 		if out[i].Error != "" {
 			continue
 		}
-		cells, err := t.pivotCells(out[i].Config)
+		cells, rows, err := t.pivotCells(out[i].Config)
 		if err != nil {
 			out[i].Error = strings.TrimPrefix(err.Error(), ErrPivot.Error()+" : ")
 			continue
 		}
-		out[i].Cells = cells
+		out[i].Cells, out[i].Rows = cells, rows
 		if out[i].Formats, err = t.pivotFormats(out[i].Config, cells); err != nil {
 			return nil, err
 		}
@@ -200,11 +204,11 @@ func (t *tx) pivotRows(sheet int64) ([]stmt, error) {
 func (m *Model) PivotData(ctx context.Context, cfg PivotConfig) PivotInfo {
 	out := PivotInfo{Config: cfg.normalized(), Cells: [][]string{}, Formats: []string{}}
 	err := m.read(ctx, func(t *tx) error {
-		cells, err := t.pivotCells(out.Config)
+		cells, rows, err := t.pivotCells(out.Config)
 		if err != nil {
 			return err
 		}
-		out.Cells = cells
+		out.Cells, out.Rows = cells, rows
 		out.Formats, err = t.pivotFormats(out.Config, cells)
 		return err
 	})
@@ -292,7 +296,7 @@ func (m *Model) CopyPivot(ctx context.Context, id, sheet int64, row, col int) (i
 // (filtres de rapport compris) ne recouvre ni un tableau ni un autre
 // tableau croisé (skip : celui qu'on déplace).
 func (t *tx) pivotFree(sheet int64, row, col int, cfg PivotConfig, skip int64) error {
-	cells, err := t.pivotCells(cfg)
+	cells, _, err := t.pivotCells(cfg)
 	if err != nil {
 		return err
 	}

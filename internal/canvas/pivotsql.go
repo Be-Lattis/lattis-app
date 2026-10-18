@@ -200,7 +200,7 @@ func (m *Model) PivotCTE(ctx context.Context, q string) (string, error) {
 // sans la ligne de total général.
 func (t *tx) pivotBody(raw PivotConfig) ([][]string, error) {
 	cfg := raw.normalized()
-	cells, err := t.pivotCells(cfg)
+	cells, err := t.pivotFlat(cfg)
 	if err != nil {
 		return nil, err
 	}
