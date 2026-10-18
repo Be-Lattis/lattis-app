@@ -641,7 +641,13 @@
 		const k = key(r, c);
 		const f = shown.get(k);
 		const raw = cells.get(k);
-		if (f === undefined && raw === undefined) return undefined;
+		if (f === undefined && raw === undefined) {
+			// Cellule d'un tableau croisé : sa valeur calculée (mise en forme
+			// conditionnelle posée sur le TCD).
+			const p = pivots.length ? pivotAt(r, c) : undefined;
+			const text = p && r >= p.row ? (p.cells[r - p.row]?.[c - p.col] ?? '') : '';
+			return text ? { v: ruleValue(text), text, error: false } : undefined;
+		}
 		const text = f ? f.text : freeDisplay(raw!, undefined).text;
 		return { v: ruleValue(text), text, error: !!f?.error };
 	}
@@ -732,12 +738,6 @@
 		const own = cellRules.get(k);
 		if (!own && !sheetRowRules.size && !sheetColRules.size) return undefined;
 		return cfAt(r, c, freeValue(r, c) ?? { v: null, text: '', error: false }, own ? { rules: own, loc: { k: 'cell', r, c }, mark: freeMark(r, c) } : undefined);
-	}
-
-	/** Style des règles de la ligne ou de la colonne entière d'une cellule (tableaux croisés). */
-	function lineRule(r: number, c: number, v: unknown, text: string, bad = false): CellStyle | undefined {
-		if (!sheetRowRules.size && !sheetColRules.size) return undefined;
-		return cfAt(r, c, { v, text, error: bad })?.style;
 	}
 
 	/** Barre de données dans la cellule (x, y, w, h). */
@@ -2395,7 +2395,7 @@
 					if (!v) return;
 					const bold = pivotBold(p, p.row + i);
 					// Mise en forme posée sur les cellules du TCD, leurs lignes ou colonnes (format de nombre, décimales, police…).
-					const st = resolveStyle(styleAt(p.row + i, c, undefined), lineRule(p.row + i, c, ruleValue(v), v));
+					const st = resolveStyle(styleAt(p.row + i, c, undefined), freeCf(p.row + i, c)?.style);
 					const style = bold ? { ...st, b: st?.b ?? true } : st;
 					const ind = pivotLabelOffset(info);
 					drawText(pivotValueText(formatCell(v, undefined, st), i, j), cx(c) + ind, ry(p.row + i), cax().size(c) - ind, st?.al ?? (j > 0 && i > 0 ? 'right' : 'left'), style, C.text);
