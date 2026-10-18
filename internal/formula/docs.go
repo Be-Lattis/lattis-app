@@ -324,9 +324,9 @@ var docs = map[string]funcDoc{
 		0, `=RANG([Score])`},
 
 	// Recherche
-	"REFERENCE": {catLookup, "Renvoie la valeur d'une colonne d'un autre tableau pour la ligne dont la clé est donnée (la RECHERCHEV de Lattis).",
-		docArgs(docArg("colonne", "Colonne à renvoyer, avec son tableau : Tableau[Colonne] (le tableau doit avoir une clé)."),
-			docArg("clé", "Valeur de la clé cherchée, souvent une colonne de la ligne ([IdClient]).")),
+	"REFERENCE": {catLookup, "Renvoie la valeur d'une colonne d'un autre tableau pour la ligne dont la clé est donnée (la RECHERCHEV de Lattis) ; sans clé, pour la ligne de ce rang.",
+		docArgs(docArg("colonne", "Colonne à renvoyer, avec son tableau : Tableau[Colonne]."),
+			docArg("clé", "Valeur de la clé cherchée, souvent une colonne de la ligne ([IdClient]) ; si le tableau n'a pas de clé, rang de la ligne (1 = première).")),
 		0, `=REFERENCE(Clients[Ville]; [IdClient])`},
 	"REFERENCE.APPROX": {catLookup, "Renvoie la valeur de la ligne dont la clé est la plus grande inférieure ou égale à la valeur (tranches, barèmes).",
 		docArgs(docArg("colonne", "Colonne à renvoyer, avec son tableau de barème trié sur sa clé : Tableau[Colonne]."),

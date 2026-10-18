@@ -4781,8 +4781,18 @@
 	let links = $state<Link[]>([]);
 	/** Cellules analysées au plus par « Afficher les liens » (la sélection peut être une colonne entière). */
 	const MAX_LINK_CELLS = 400;
+	// Sélection dont les liens sont affichés : ils partent dès qu'elle change.
+	let linksOf = '';
+	const selKey = () => `${sheetIdOf()}:${active.row},${active.col}:${anchor.row},${anchor.col}`;
+	$effect(() => {
+		const k = selKey();
+		if (k !== linksOf && untrack(() => links.length)) {
+			links = [];
+			schedule();
+		}
+	});
 
-	/** Formules › Afficher les liens (toute la sélection) ou Masquer les liens. */
+	/** Formules › Afficher les liens (toute la sélection) ; clear : les retire (Échap). */
 	export async function auditActive(kind: 'show' | 'clear') {
 		if (kind === 'clear' || !source.dependencies) {
 			links = [];
@@ -4816,13 +4826,14 @@
 				}
 			}
 			links = found;
+			linksOf = selKey();
 			say(
 				found.length === 0
 					? 'Aucun lien : la sélection ne contient ni formule ni cellule lue par une formule'
 					: `Liens de ${found.length} cellule(s) : ${pre} antécédent(s), ${dep} dépendant(s)` +
 							(away ? ` (${away} sur d'autres feuilles)` : '') +
 							(cut ? ` · ${MAX_LINK_CELLS} premières cellules seulement` : '') +
-							' · Échap ou Masquer les liens pour les retirer'
+							' · ils partent avec la sélection (ou Échap)'
 			);
 			schedule();
 		} catch (err) {

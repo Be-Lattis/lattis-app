@@ -64,6 +64,7 @@ func TestMergeRewritesReferences(t *testing.T) {
 	mustSet(t, d, 1, 6, 0, "=SOMME("+b+"[Pop])")
 	mustSet(t, d, 1, 7, 0, "="+b+"[Pop][2]*2")
 	mustSet(t, d, 1, 8, 0, "=SOMME("+b+"[Double])")
+	must(t, d.SetKey(ctx, b, 0))
 	mustSet(t, d, 1, 9, 0, `=REFERENCE(`+b+`[Pop]; 20)`)
 	_, err = d.CreatePivot(ctx, PivotConfig{Source: b, RowFields: []string{"Prix"}, Values: []PivotValue{{Field: "Pop", Agg: "sum"}}})
 	must(t, err)
@@ -312,6 +313,7 @@ func TestMergeKeepsKey(t *testing.T) {
 	_, err = d.Paste(ctx, 1, 0, 2, [][]string{{"Code", "Val"}, {"x", "1"}, {"y", "2"}})
 	must(t, err)
 	b := tablesOf(t, d)[1].Name
+	must(t, d.SetKey(ctx, b, 0))
 	mustSet(t, d, 1, 6, 0, `=REFERENCE(`+b+`[Val]; "y")`)
 	before := dump(t, d)
 	must(t, d.DeleteSheetColumns(ctx, 1, 1, 1))

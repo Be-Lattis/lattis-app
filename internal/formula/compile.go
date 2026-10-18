@@ -562,6 +562,9 @@ func (c *compiler) special(fn string, n Call, sc scope) string {
 // reference compile REFERENCE(T; Col; clé) en deux sous-requêtes indexées sur
 // la colonne clé (EXISTS pour distinguer « absent » de « vide »).
 func (c *compiler) reference(n Call, sc scope) string {
+	if ix, ok := rankReference(c.schema, n); ok {
+		return c.expr(ix, sc)
+	}
 	t, i, e := refTarget(c.schema, n)
 	if e.IsErr() {
 		return errSQL(e.Err)

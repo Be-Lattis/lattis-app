@@ -103,7 +103,7 @@ func (t *tx) prepareFormula(sheet int64, src string) (formula.Node, error) {
 }
 
 // referenceTargets donne les tableaux dont une formule lit la colonne clé
-// (REFERENCE, REFERENCE.APPROCHEE, EXISTE).
+// (REFERENCE.APPROCHEE, EXISTE).
 func referenceTargets(n formula.Node) []string { return formula.KeyTargets(n) }
 
 // ErrKey signale une colonne qui ne peut pas servir de clé.

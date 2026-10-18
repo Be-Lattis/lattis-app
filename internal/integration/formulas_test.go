@@ -41,7 +41,7 @@ func TestReferenceNomenclature(t *testing.T) {
 		{"=Cell[A1]+Cell[C1]", "30"},                     // feuille de la formule
 		{"=SOMME(Cell[A1:E1])", "60"},                    // plage de cellules
 		{"=Ventes[Prix][1+Ventes[Qté][4]/10]", "2,8"},    // index calculé
-		{"=REFERENCE(Ventes; \"Prix\"; \"Thé\")", "2,8"}, // recherche
+		{"=REFERENCE(Ventes; \"Prix\"; 2)", "2,8"},     // sans clé : par rang
 		{"=SI(Ventes[Prix][1]>3; \"cher\"; \"ok\")", "cher"},
 		{"=SOMME.SI(Ventes[Qté]; \">2\")", "15"},
 		{"=NB.SI(Ventes[Produit]; \"C*\")", "2"},

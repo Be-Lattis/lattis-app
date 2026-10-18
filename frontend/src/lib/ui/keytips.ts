@@ -13,7 +13,8 @@ export const TAB_TIPS: Record<string, string> = {
 	Révision: 'R',
 	Affichage: 'W',
 	SQL: 'Q',
-	SCRIPT: 'L'
+	SCRIPT: 'L',
+	Aide: 'Y'
 };
 
 /** Codes d'Excel repris pour les commandes qui ont un équivalent (onglet Accueil surtout). */

@@ -533,8 +533,12 @@ func (env *Env) special(fn string, n Call) Value {
 }
 
 // reference : REFERENCE(Tableau; Colonne; clé) cherche la ligne dont la
-// colonne clé du tableau vaut clé, et renvoie sa valeur dans Colonne.
+// colonne clé du tableau vaut clé, et renvoie sa valeur dans Colonne. Sans
+// clé, clé est le rang de la ligne (1 = première, comme Tableau[Col][k]).
 func (env *Env) reference(n Call) Value {
+	if ix, ok := rankReference(env.Schema, n); ok {
+		return Eval(ix, env)
+	}
 	t, col, err := refTarget(env.Schema, n)
 	if err.IsErr() {
 		return err
@@ -550,6 +554,28 @@ func (env *Env) reference(n Call) Value {
 		}
 	}
 	return Err(ErrNA)
+}
+
+// rankReference : REFERENCE sur un tableau sans clé, relue en
+// INDEX(Tableau[Col]; rang) (choix de Louis, 18/10/2026).
+func rankReference(s *Schema, n Call) (Node, bool) {
+	if len(n.Args) != 3 {
+		return nil, false
+	}
+	tn, ok1 := nameOf(n.Args[0])
+	cn, ok2 := nameOf(n.Args[1])
+	if !ok1 || !ok2 {
+		return nil, false
+	}
+	t, ok := s.Table(tn)
+	if !ok || t.Key != "" {
+		return nil, false
+	}
+	col, ok := t.col(cn)
+	if !ok {
+		return nil, false
+	}
+	return Call{Fn: "INDEX", Args: []Node{Ref{Table: t.Name, Col: t.Cols[col].Name}, n.Args[2]}}, true
 }
 
 // refTarget lit les deux premiers arguments de REFERENCE.

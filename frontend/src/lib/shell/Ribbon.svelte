@@ -12,7 +12,7 @@
 	import { ZOOM_LEVELS, zoomLabel } from '#lib/grid/zoom.js';
 	import Select from '#lib/ui/Select.svelte';
 	import { estimate, fit, groupWidth, type GroupShape, type Measure, type Mode } from './fit';
-	import { webPagesEnabled } from './settings.svelte.js';
+	import { htmlTabsEnabled } from './settings.svelte.js';
 	import type { IconName } from '#lib/icons/icons.js';
 	import { MORE_KINDS, type ChartKind } from '#lib/chart/kinds.js';
 	import { COMMAND_TIPS, TAB_TIPS, assignKeyTips, keyChars, keyOf, matchTip } from '#lib/ui/keytips.js';
@@ -66,7 +66,7 @@
 	}
 	const FONTS_W = 134; // largeur des listes Police et Taille (fit.ts)
 
-	export type FileAction = 'new' | 'open' | 'save' | 'saveAs' | 'import' | 'export' | 'exportXlsx' | 'print' | 'pdf' | 'close' | 'demo' | 'mcp' | 'settings';
+	export type FileAction = 'new' | 'open' | 'save' | 'saveAs' | 'import' | 'export' | 'exportXlsx' | 'print' | 'pdf' | 'close' | 'demo' | 'mcp' | 'settings' | 'help';
 
 	export type DataAction = 'csv' | 'xlsx' | 'json' | 'parquet' | 'sqlite' | 'postgres' | 'mysql' | 'sqlserver' | 'web' | 'table' | 'queries' | 'refreshAll';
 
@@ -227,7 +227,8 @@
 	const tabGroup: Group = $derived({
 		title: 'Onglets',
 		commands: [
-			{ label: 'Onglet HTML', icon: 'web', run: onpage, hint: 'Nouvel Onglet HTML : une page (HTML, CSS et JavaScript) qui lit et modifie le classeur' + (webPagesEnabled() ? ', ou une page web externe' : '') },
+			// Onglets HTML : à activer dans Fichier › Paramètres › Fonctionnalités.
+			...(htmlTabsEnabled() ? [{ label: 'Onglet HTML', icon: 'web' as const, run: onpage, hint: 'Nouvel Onglet HTML : une page (HTML, CSS et JavaScript) qui lit et modifie le classeur, ou une page web externe' }] : []),
 			{ label: 'Onglet Document', icon: 'document', run: ondocpage, hint: 'Nouvel Onglet Document : texte mis en forme, avec graphiques, tableaux croisés et boutons de scripts' }
 		]
 	});
@@ -440,7 +441,7 @@
 		],
 		Formules: [
 			{ title: 'Bibliothèque', commands: [{ label: 'Insérer une fonction', icon: 'function', run: onformula ? () => onformula('insert') : undefined, hint: 'Choisir une fonction et commencer la formule dans la cellule active' }, { label: 'Somme automatique', icon: 'autosum', run: onformula ? () => onformula('sum') : undefined, hint: 'SOMME de la colonne du tableau au-dessus' }, { label: 'REFERENCE', icon: 'reference', run: onformula ? () => onformula('reference') : undefined, hint: 'REFERENCE(Tableau[Colonne]; clé) : la RECHERCHEV de Lattis' }] },
-			{ title: 'Audit', commands: [{ label: 'Afficher les liens', icon: 'dependency-graph', run: onaudit ? () => onaudit('show') : undefined, hint: 'Flèches des liens de toutes les cellules sélectionnées : bleues depuis ce que lisent leurs formules, rouges vers les formules qui les lisent' }, { label: 'Masquer les liens', icon: 'win-close', run: onaudit ? () => onaudit('clear') : undefined, hint: 'Retirer les flèches des liens (Échap)' }] },
+			{ title: 'Audit', commands: [{ label: 'Afficher les liens', icon: 'dependency-graph', run: onaudit ? () => onaudit('show') : undefined, hint: 'Flèches des liens de toutes les cellules sélectionnées : bleues depuis ce que lisent leurs formules, rouges vers les formules qui les lisent ; elles partent dès que la sélection change' }] },
 			{ title: 'Calcul', commands: [{ label: 'Calculer', icon: 'calculate', run: onrecalc, hint: 'Recalculer les formules et renouveler AUJOURDHUI, MAINTENANT et ALEA (F9, ou F5 hors d’un tableau importé)' }] }
 		],
 		Révision: [
@@ -593,7 +594,7 @@
 	// Sur une feuille protégée, seules les commandes qui ne la modifient pas
 	// restent actives (lecture, copie, filtres, affichage) ; un tableau croisé
 	// crée une feuille : refusé quand la structure du classeur est protégée.
-	const READ_ONLY = new Set(['Annuler', 'Rétablir', 'Copier', 'Rechercher', 'Filtrer', 'Erreurs seulement', 'Afficher les liens', 'Masquer les liens', 'Calculer', 'Quadrillage', 'En-têtes A1', 'Animations', 'Figer les volets', 'Zoom', '100 %', 'Mesurer la grille', 'Tableau croisé', 'Protéger la feuille', 'Protéger le classeur', 'Ôter la protection', 'Ôter la protection du classeur', 'Texte/CSV', 'Classeur Excel', 'Autres fichiers', 'Base de données', 'Web', 'À partir du tableau', 'Requêtes et connexions', 'Actualiser tout']);
+	const READ_ONLY = new Set(['Annuler', 'Rétablir', 'Copier', 'Rechercher', 'Filtrer', 'Erreurs seulement', 'Afficher les liens', 'Calculer', 'Quadrillage', 'En-têtes A1', 'Animations', 'Figer les volets', 'Zoom', '100 %', 'Mesurer la grille', 'Tableau croisé', 'Protéger la feuille', 'Protéger le classeur', 'Ôter la protection', 'Ôter la protection du classeur', 'Texte/CSV', 'Classeur Excel', 'Autres fichiers', 'Base de données', 'Web', 'À partir du tableau', 'Requêtes et connexions', 'Actualiser tout']);
 	const ribbons: Record<string, Group[]> = $derived(
 		Object.fromEntries(
 			Object.entries(allRibbons).map(([k, gs]) => [
@@ -669,7 +670,8 @@
 
 	function tipsAt(level: 'tabs' | 'cmds'): Tip[] {
 		const els = level === 'tabs' ? tabEls() : cmdEls();
-		const codes = level === 'tabs' ? els.map((el) => TAB_TIPS[el.dataset.label ?? ''] ?? keyChars(el.dataset.label ?? '')[0] ?? '') : assignKeyTips(els.map(tipLabel), COMMAND_TIPS);
+		const tabName = (el: HTMLElement) => el.dataset.label ?? el.getAttribute('aria-label') ?? '';
+		const codes = level === 'tabs' ? els.map((el) => TAB_TIPS[tabName(el)] ?? keyChars(tabName(el))[0] ?? '') : assignKeyTips(els.map(tipLabel), COMMAND_TIPS);
 		return els.map((el, i) => {
 			const r = el.getBoundingClientRect();
 			return { el, tip: codes[i], x: r.left + r.width / 2, y: r.bottom - (level === 'tabs' ? 10 : 8) };
@@ -685,9 +687,9 @@
 
 	async function openTab(el: HTMLElement) {
 		const t = el.dataset.label ?? '';
-		if (t === 'Fichier' || t === 'SQL' || t === 'SCRIPT') {
+		if (!t || t === 'Fichier' || t === 'SQL' || t === 'SCRIPT') {
 			kt = null;
-			el.click(); // Fichier : son menu prend le focus (ouvert au clavier)
+			el.click(); // Fichier : son menu prend le focus (ouvert au clavier) ; ? : l'aide
 			return;
 		}
 		select(t as typeof tab);
@@ -898,8 +900,8 @@
 						{/if}
 					</div>
 					<hr />
-					{#each [['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ['import', 'Importer (CSV, Excel)…', ''], ['export', 'Exporter le tableau en CSV…', ''], ['exportXlsx', 'Exporter le classeur (.xlsx)…', ''], ['pdf', 'Exporter en PDF…', ''], ['print', 'Imprimer…', 'Ctrl+P'], ['close', 'Fermer', 'Ctrl+W'], ['mcp', 'Serveur MCP (assistants)…', ''], ['settings', 'Paramètres…', ''], ...(import.meta.env.DEV ? [['demo', 'Démo : 1 M de lignes', '']] : [])] as [a, label, keys] (a)}
-						<button disabled={disabled && a !== 'import' && a !== 'demo' && a !== 'mcp' && a !== 'settings'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keys}</span></button>
+					{#each [['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ['import', 'Importer (CSV, Excel)…', ''], ['export', 'Exporter le tableau en CSV…', ''], ['exportXlsx', 'Exporter le classeur (.xlsx)…', ''], ['pdf', 'Exporter en PDF…', ''], ['print', 'Imprimer…', 'Ctrl+P'], ['close', 'Fermer', 'Ctrl+W'], ['mcp', 'Serveur MCP (assistants)…', ''], ['settings', 'Paramètres…', ''], ['help', 'Aide', 'F1'], ...(import.meta.env.DEV ? [['demo', 'Démo : 1 M de lignes', '']] : [])] as [a, label, keys] (a)}
+						<button disabled={disabled && a !== 'import' && a !== 'demo' && a !== 'mcp' && a !== 'settings' && a !== 'help'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keys}</span></button>
 					{/each}
 				</div>
 			{/if}
@@ -910,6 +912,7 @@
 		<span class="sep"></span>
 		<button class="tab special" data-label="SQL" class:on={tab === 'SQL'} aria-pressed={tab === 'SQL'} aria-keyshortcuts="Alt+{TAB_TIPS.SQL}" data-region-focus={tab === 'SQL' ? '' : undefined} {disabled} onclick={() => select('SQL')}>SQL</button>
 		<button class="tab special" data-label="SCRIPT" class:on={tab === 'SCRIPT'} aria-pressed={tab === 'SCRIPT'} aria-keyshortcuts="Alt+{TAB_TIPS.SCRIPT}" data-region-focus={tab === 'SCRIPT' ? '' : undefined} {disabled} onclick={() => select('SCRIPT')}>SCRIPT</button>
+		<button class="tab help" title="Aide (F1)" aria-label="Aide" onclick={() => onfile('help')}>?</button>
 	</nav>
 	{#if tab !== 'SQL' && tab !== 'SCRIPT'}
 		<div class="groups" class:off={disabled} use:observe>
@@ -1150,6 +1153,20 @@
 	}
 	.special {
 		letter-spacing: 0.04em;
+	}
+	.tab.help {
+		align-self: center;
+		width: 22px;
+		height: 22px;
+		margin: 0 0 0 6px;
+		padding: 0;
+		border: 1px solid rgba(255, 255, 255, 0.6);
+		border-radius: 50%;
+		font-weight: 600;
+		color: #fff;
+	}
+	.tab.help::after {
+		content: none;
 	}
 	.sep {
 		flex: 1;

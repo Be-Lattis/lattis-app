@@ -27,7 +27,7 @@
 	import type { ControlInfo } from '#lib/script/controls.js';
 	import McpPanel from '#lib/shell/McpPanel.svelte';
 	import SettingsDialog from '#lib/shell/SettingsDialog.svelte';
-	import { loadSettings } from '#lib/shell/settings.svelte.js';
+	import { htmlTabsEnabled, loadSettings } from '#lib/shell/settings.svelte.js';
 	import HtmlPage from '#lib/page/HtmlPage.svelte';
 	import DocPage from '#lib/doc/DocPage.svelte';
 	import type { DocFormat } from '#lib/doc/format.js';
@@ -43,6 +43,9 @@
 	import BusyBar from '#lib/shell/BusyBar.svelte';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { setTileFetcher } from '#lib/chart/tiles.js';
+	import HelpPanel from '#lib/help/HelpPanel.svelte';
+	import { functionAt, viewTarget } from '#lib/help/help.js';
+	import { helpState, openHelp } from '#lib/help/state.svelte.js';
 
 	type Mode = 'starting' | 'recover' | 'doc' | 'demo' | 'closed';
 
@@ -421,6 +424,24 @@
 			cycleRegions(e.shiftKey);
 		};
 		window.addEventListener('keydown', regions, true);
+		// F1 : l'aide. Dans une formule en cours de saisie, la page de la
+		// fonction sous le curseur (la saisie garde le focus) ; ailleurs, la
+		// page de ce qui est affiché (SQL, SCRIPT, onglet HTML ou Document).
+		const helpKey = (e: KeyboardEvent) => {
+			if (e.key !== 'F1' || e.ctrlKey || e.altKey || e.metaKey) return;
+			e.preventDefault();
+			e.stopPropagation();
+			const el = document.activeElement;
+			if (el instanceof HTMLElement && el.closest('.help')) return;
+			if ((el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) && /^\s*=/.test(el.value)) {
+				const f = functionAt(el.value, el.selectionStart ?? el.value.length, help?.functions ?? []);
+				openHelp(f ? `fonction:${f.name}` : 'formules', false);
+				return;
+			}
+			const editing = el instanceof HTMLElement && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName));
+			openHelp(viewTarget(view, activePage ? (activeDoc ? 'doc' : 'html') : ''), !editing);
+		};
+		window.addEventListener('keydown', helpKey, true);
 		// Un texte ou un lien lâché hors d'une zone prévue ne doit jamais faire
 		// quitter la page de l'application (la fenêtre afficherait une erreur).
 		const noDrop = (e: DragEvent) => e.preventDefault();
@@ -432,12 +453,14 @@
 			window.removeEventListener('keydown', keys);
 			window.removeEventListener('keydown', noReload, true);
 			window.removeEventListener('keydown', regions, true);
+			window.removeEventListener('keydown', helpKey, true);
 			window.removeEventListener('dragover', noDrop);
 			window.removeEventListener('drop', noDrop);
 		};
 	});
 
 	async function file(a: FileAction) {
+		if (a === 'help') return openHelp();
 		notice = '';
 		try {
 			switch (a) {
@@ -1009,7 +1032,7 @@
 		ondedup={mode === 'doc' ? () => sheet?.dedupActive() : undefined}
 		ontextcols={mode === 'doc' ? () => sheet?.textToColumnsActive() : undefined}
 		onbutton={mode === 'doc' ? (kind) => sheet?.insertButton(kind) : undefined}
-		onpage={mode === 'doc' ? () => addPage() : undefined}
+		onpage={mode === 'doc' && htmlTabsEnabled() ? () => addPage() : undefined}
 		ondocpage={mode === 'doc' ? () => addDoc() : undefined}
 		context={activePage && view === 'grid' ? (activeDoc ? 'doc' : 'html') : 'sheet'}
 		ondoc={docCommand}
@@ -1266,6 +1289,9 @@
 				onnotice={(m) => (notice = m)}
 			/>
 		{/if}
+		{#if helpState.open}
+			<HelpPanel />
+		{/if}
 	</main>
 
 	<SheetTabs
@@ -1274,7 +1300,7 @@
 		onselect={selectSheet}
 		onadd={mode === 'doc' ? () => sheetAction(async () => selectSheet(await DocumentService.AddSheet())) : undefined}
 		oninsert={mode === 'doc' ? (before) => sheetAction(async () => selectSheet(await DocumentService.InsertSheet(before))) : undefined}
-		onpage={mode === 'doc' ? (before) => addPage(before) : undefined}
+		onpage={mode === 'doc' && htmlTabsEnabled() ? (before) => addPage(before) : undefined}
 		ondocpage={mode === 'doc' ? (before) => addDoc(before) : undefined}
 		onmove={mode === 'doc' ? (id, to) => sheetAction(() => DocumentService.MoveSheet(id, to)) : undefined}
 		onrename={mode === 'doc' ? (id, name) => sheetAction(() => DocumentService.RenameSheet(id, name)) : undefined}

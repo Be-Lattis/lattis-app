@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { boolSetting, findSetting, settingNote, settingSections } from './settings';
 
 describe('paramètres', () => {
-	it('pages web externes coupées sans réglage', () => {
-		expect(boolSetting([], 'features.webPages')).toBe(false);
-		expect(boolSetting([{ path: 'features.webPages', value: true }], 'features.webPages')).toBe(true);
-		expect(boolSetting([{ path: 'features.webpages', value: 'oui' }], 'features.webPages')).toBe(false);
+	it('Onglets HTML coupés sans réglage', () => {
+		expect(boolSetting([], 'features.htmlTabs')).toBe(false);
+		expect(boolSetting([{ path: 'features.htmlTabs', value: true }], 'features.htmlTabs')).toBe(true);
+		expect(boolSetting([{ path: 'features.htmltabs', value: 'oui' }], 'features.htmlTabs')).toBe(false);
 	});
 
 	it('réglage verrouillé ou fixé ailleurs', () => {
@@ -18,7 +18,7 @@ describe('paramètres', () => {
 	it('liste déclarative', () => {
 		const f = settingSections.find((s) => s.id === 'features');
 		expect(f?.title).toBe('Fonctionnalités');
-		expect(f?.settings.map((s) => s.path)).toContain('features.webPages');
-		expect(findSetting([{ path: 'features.webPages', value: false }], 'FEATURES.WEBPAGES')?.value).toBe(false);
+		expect(f?.settings.map((s) => s.path)).toContain('features.htmlTabs');
+		expect(findSetting([{ path: 'features.htmlTabs', value: false }], 'FEATURES.HTMLTABS')?.value).toBe(false);
 	});
 });

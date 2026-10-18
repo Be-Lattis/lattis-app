@@ -413,30 +413,30 @@ func TestCLISignAndCheck(t *testing.T) {
 	}
 }
 
-func TestWebPagesSetting(t *testing.T) {
+func TestHtmlTabsSetting(t *testing.T) {
 	c := resolve(t, Options{}, src("défaut", RankDefault, false, Defaults()))
-	if v, ok := c.Lookup("features.webPages"); !ok || v != false {
-		t.Fatalf("features.webPages par défaut = %v, %v", v, ok)
+	if v, ok := c.Lookup("features.htmlTabs"); !ok || v != false {
+		t.Fatalf("features.htmlTabs par défaut = %v, %v", v, ok)
 	}
 	c = resolve(t, Options{},
 		src("défaut", RankDefault, false, Defaults()),
-		src("env", RankEnv, false, Tree{"features": Tree{"webPages": "1"}}),
+		src("env", RankEnv, false, Tree{"features": Tree{"htmlTabs": "1"}}),
 	)
-	if !c.Bool("features.webPages", false) {
-		t.Fatal("features.webPages = \"1\" non converti")
+	if !c.Bool("features.htmlTabs", false) {
+		t.Fatal("features.htmlTabs = \"1\" non converti")
 	}
 	c = resolve(t, Options{},
 		src("défaut", RankDefault, false, Defaults()),
-		src("user", RankUser, false, Tree{"features": Tree{"webPages": "peut-être"}}),
+		src("user", RankUser, false, Tree{"features": Tree{"htmlTabs": "peut-être"}}),
 	)
-	if c.Bool("features.webPages", true) || len(c.Warnings) != 1 {
+	if c.Bool("features.htmlTabs", true) || len(c.Warnings) != 1 {
 		t.Fatalf("valeur invalide gardée : %v", c.Warnings)
 	}
 	var s Settings
 	c = resolve(t, Options{}, src("défaut", RankDefault, false, Defaults()),
-		src("user", RankUser, false, Tree{"features": Tree{"webPages": true}}))
-	if err := c.Decode("", &s); err != nil || s.Features.WebPages == nil || !*s.Features.WebPages {
-		t.Fatalf("Settings.Features.WebPages = %v, %v", s.Features.WebPages, err)
+		src("user", RankUser, false, Tree{"features": Tree{"htmlTabs": true}}))
+	if err := c.Decode("", &s); err != nil || s.Features.HtmlTabs == nil || !*s.Features.HtmlTabs {
+		t.Fatalf("Settings.Features.HtmlTabs = %v, %v", s.Features.HtmlTabs, err)
 	}
 }
 
@@ -456,15 +456,15 @@ func TestSetUser(t *testing.T) {
 			return out
 		},
 	}
-	if l.Load(ctx).Bool("features.webPages", true) {
-		t.Fatal("features.webPages activé par défaut")
+	if l.Load(ctx).Bool("features.htmlTabs", true) {
+		t.Fatal("features.htmlTabs activé par défaut")
 	}
 	// Fichier et dossier créés ; la configuration courante suit.
-	c, err := l.SetUser(ctx, "features.webPages", true)
+	c, err := l.SetUser(ctx, "features.htmlTabs", true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !c.Bool("features.webPages", false) || !Current().Bool("features.webPages", false) {
+	if !c.Bool("features.htmlTabs", false) || !Current().Bool("features.htmlTabs", false) {
 		t.Fatal("réglage non pris en compte")
 	}
 	st := UserSettings(c)
@@ -472,23 +472,23 @@ func TestSetUser(t *testing.T) {
 		t.Fatalf("UserSettings = %+v", st)
 	}
 	// Les autres clés du fichier sont gardées.
-	os.WriteFile(file, []byte(`{"organization":"ACME","features":{"webPages":true,"mcp":{"enabled":true}}}`), 0o600)
-	if c, err = l.SetUser(ctx, "features.webPages", false); err != nil {
+	os.WriteFile(file, []byte(`{"organization":"ACME","features":{"htmlTabs":true,"mcp":{"enabled":true}}}`), 0o600)
+	if c, err = l.SetUser(ctx, "features.htmlTabs", false); err != nil {
 		t.Fatal(err)
 	}
-	if c.Bool("features.webPages", true) || c.String("organization", "") != "ACME" || !c.Bool("features.mcp.enabled", false) {
+	if c.Bool("features.htmlTabs", true) || c.String("organization", "") != "ACME" || !c.Bool("features.mcp.enabled", false) {
 		t.Fatalf("fichier mal réécrit : %v", c.Explain())
 	}
 	// Clé hors de la liste, valeur invalide : refusées.
 	if _, err := l.SetUser(ctx, "features.mcp.enabled", true); err == nil {
 		t.Fatal("clé hors de la liste acceptée")
 	}
-	if _, err := l.SetUser(ctx, "features.webPages", "peut-être"); err == nil {
+	if _, err := l.SetUser(ctx, "features.htmlTabs", "peut-être"); err == nil {
 		t.Fatal("valeur invalide acceptée")
 	}
 	// Fichier illisible : pas écrasé.
 	os.WriteFile(file, []byte(`{cassé`), 0o600)
-	if _, err := l.SetUser(ctx, "features.webPages", true); err == nil {
+	if _, err := l.SetUser(ctx, "features.htmlTabs", true); err == nil {
 		t.Fatal("fichier cassé écrasé")
 	}
 	if b, _ := os.ReadFile(file); string(b) != `{cassé` {
@@ -496,8 +496,8 @@ func TestSetUser(t *testing.T) {
 	}
 	os.Remove(file)
 	// Stratégie : verrouillé, refusé, rien d'écrit.
-	policy = Tree{"features": Tree{"webPages": false}}
-	if _, err := l.SetUser(ctx, "features.webPages", true); err == nil {
+	policy = Tree{"features": Tree{"htmlTabs": false}}
+	if _, err := l.SetUser(ctx, "features.htmlTabs", true); err == nil {
 		t.Fatal("réglage verrouillé modifié")
 	}
 	if st := UserSettings(l.Load(ctx)); !st[0].Locked {

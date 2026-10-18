@@ -162,7 +162,7 @@ func TestConvertXLOOKUPAndIndexMatch(t *testing.T) {
 
 func TestKeyTargetsAndSuggestion(t *testing.T) {
 	n := mustParse(t, `=SI(EXISTE(Clients;1);REFERENCE.APPROCHEE(Baremes;Taux;[@Prix]);REFERENCE(Produits;Nom;1))`, FR)
-	if got := KeyTargets(n); !slices.Equal(got, []string{"Clients", "Baremes", "Produits"}) {
+	if got := KeyTargets(n); !slices.Equal(got, []string{"Clients", "Baremes"}) {
 		t.Fatalf("KeyTargets = %v", got)
 	}
 	if Suggestion("decaler") == "" || Suggestion("SOMME") != "" {
