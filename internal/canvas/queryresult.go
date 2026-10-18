@@ -115,6 +115,8 @@ func freeTableName(name string, taken map[string]bool) string {
 	base := identifier(name)
 	if base == "" {
 		base = "Requête"
+	} else if A1Like(base) {
+		base += "_" // pas une adresse de cellule
 	}
 	isTaken := func(n string) bool { return taken[strings.ToLower(n)] }
 	if !isTaken(base) {

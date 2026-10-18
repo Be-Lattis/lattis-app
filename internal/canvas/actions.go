@@ -385,7 +385,8 @@ func (t *tx) tableName(sheet int64, row, col int) (string, error) {
 		return "", err
 	}
 	if others == 0 {
-		if name := identifier(sheetName); name != "" {
+		// Une feuille nommée comme une adresse (« Q1 ») ne donne pas son nom.
+		if name := identifier(sheetName); name != "" && !A1Like(name) {
 			if ok, err := free(name); ok || err != nil {
 				return name, err
 			}

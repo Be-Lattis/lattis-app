@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { pivotLayer } from './pivotformat';
+import { pivotLayer, pivotValueText } from './pivotformat';
+
+describe('valeurs entières du TCD', () => {
+	it('séparateur de milliers sur un nombre ou un total sans format', () => {
+		expect(pivotValueText('1200', 9, 2)).toBe('1 200');
+		expect(pivotValueText('4 020,07', 9, 1)).toBe('4 020,07');
+		expect(pivotValueText('85', 3, 2)).toBe('85');
+		// Étiquettes (colonne 0) et en-têtes (ligne 0) : tels quels (années…).
+		expect(pivotValueText('2024', 3, 0)).toBe('2024');
+		expect(pivotValueText('2024', 0, 1)).toBe('2024');
+		// Déjà formaté : inchangé.
+		expect(pivotValueText('4 020,07', 9, 1)).toBe('4 020,07');
+	});
+});
 import { resolveStyle, styledNumber } from './style';
 
 describe('format des valeurs de TCD', () => {

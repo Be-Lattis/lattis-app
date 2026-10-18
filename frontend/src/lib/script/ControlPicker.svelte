@@ -60,7 +60,7 @@
 				<span class="sheet">{c.sheet}</span>
 			</button>
 		{:else}
-			<p class="empty">{error || (controls.length ? 'Aucun contrôle ne correspond.' : 'Aucun contrôle dans le classeur : Insertion › Bouton ou Input.')}</p>
+			<p class="empty">{error || (controls.length ? 'Aucun contrôle ne correspond.' : 'Aucun contrôle dans le classeur : Insertion › Bouton ou Champ.')}</p>
 		{/each}
 	</div>
 	{#if onsheet}

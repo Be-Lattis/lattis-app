@@ -6,6 +6,12 @@
 // aux icônes parlantes (gras, alignement, bordures…) perdent leurs libellés
 // en premier : ceux dont le libellé dit tout (Styles, Cellules, Édition) les
 // gardent tant que c'est possible.
+//
+// Les largeurs suivent les styles de Ribbon.svelte (marges, icônes, polices :
+// 11 px sous une grande icône et pour les titres, 12 px à côté d'une petite) ;
+// les libellés ne passent jamais à la ligne, la largeur estimée est donc
+// celle du ruban. measure donne la largeur réelle d'un texte (canevas) ; à
+// défaut, une largeur moyenne par caractère.
 
 export type Mode = 'large' | 'small' | 'icon' | 'collapsed';
 export const MODES: Mode[] = ['large', 'small', 'icon', 'collapsed'];
@@ -13,49 +19,60 @@ export const MODES: Mode[] = ['large', 'small', 'icon', 'collapsed'];
 export interface GroupShape {
 	title: string;
 	/**
-	 * Libellés des commandes ; null pour une commande de taille fixe
-	 * (couleur), un nombre pour un élément de largeur fixe (listes Police
-	 * et Taille), qui occupe une colonne entière.
+	 * Libellés des commandes (avec leur « ▾ ») ; null pour une commande de
+	 * taille fixe (couleur), un nombre pour un élément de largeur fixe
+	 * (listes Police et Taille), qui occupe une colonne entière.
 	 */
 	labels: (string | null | number)[];
 	/** Icônes assez parlantes pour se passer de libellé en premier. */
 	iconOk?: boolean;
 }
 
-const CHAR = 6.4; // largeur moyenne d'un caractère à 11-12 px
-const GROUP_PAD = 17; // marges et séparateur d'un groupe
-const FIXED = 40; // commande de taille fixe (couleur avec son ▾)
+/** Largeur d'un texte en px à la taille de police size (Segoe UI). */
+export type Measure = (s: string, size: number) => number;
 
-const text = (s: string) => Math.ceil(s.length * CHAR);
+/** Estimation sans canevas : largeur moyenne d'un caractère de Segoe UI. */
+export const estimate: Measure = (s, size) => s.length * size * 0.48;
+
+// Mesures des styles de Ribbon.svelte.
+const GROUP_PAD = 17; // .group : padding 0 8 et séparateur
+const TITLE_PAD = 24; // .title : padding 0 12
+const GAP = 2; // .commands : gap
+const LARGE_MIN = 54; // .cmd : min-width
+const CMD_PAD = 14; // .cmd : padding 0 6 et bordure
+const SMALL_ICON = 16 + 6; // petite icône et son écart au libellé
+const FIXED = 56; // commande de couleur (bouton de 54 px et sa bordure)
 
 /** Largeur estimée d'un groupe dans un mode. */
-export function groupWidth(g: GroupShape, mode: Mode): number {
-	const title = text(g.title) + 16;
-	if (mode === 'collapsed') return Math.max(64, title) + GROUP_PAD;
+export function groupWidth(g: GroupShape, mode: Mode, measure: Measure = estimate): number {
+	const text = (s: string, size: number) => Math.ceil(measure(s, size));
+	const title = text(g.title, 11) + TITLE_PAD;
+	if (mode === 'collapsed') return Math.max(LARGE_MIN, text(g.title + ' ▾', 11) + CMD_PAD) + GROUP_PAD;
 	let w = 0;
 	const fixed = g.labels.filter((l): l is number => typeof l === 'number');
 	const labels = g.labels.filter((l): l is string | null => typeof l !== 'number');
-	for (const f of fixed) w += f + 2;
+	for (const f of fixed) w += f + GAP;
 	if (mode === 'large') {
-		for (const l of labels) w += (l === null ? FIXED : Math.max(54, text(l) + 14)) + 2;
+		for (const l of labels) w += (l === null ? FIXED : Math.max(LARGE_MIN, text(l, 11) + CMD_PAD)) + GAP;
 	} else {
 		// Colonnes de trois commandes.
 		for (let i = 0; i < labels.length; i += 3) {
 			let col = 0;
 			for (const l of labels.slice(i, i + 3)) {
-				const cw = l === null ? FIXED : mode === 'icon' ? 28 : 28 + text(l) + 8;
+				const cw = l === null ? FIXED : mode === 'icon' ? SMALL_ICON - 6 + CMD_PAD : SMALL_ICON + text(l, 12) + CMD_PAD;
 				col = Math.max(col, cw);
 			}
-			w += col + 2;
+			w += col + GAP;
 		}
 	}
-	return Math.max(w, title) + GROUP_PAD;
+	return Math.max(w - GAP, title) + GROUP_PAD;
 }
 
 /** Modes des groupes pour tenir dans width (le plus large possible). */
-export function fit(groups: GroupShape[], width: number): Mode[] {
+export function fit(groups: GroupShape[], width: number, measure: Measure = estimate): Mode[] {
 	const modes: Mode[] = groups.map(() => 'large');
-	const total = () => groups.reduce((s, g, i) => s + groupWidth(g, modes[i]), 0);
+	const gw = (i: number, m: Mode) => groupWidth(groups[i], m, measure);
+	const total = () => groups.reduce((s, _, i) => s + gw(i, modes[i]), 0);
 	for (let level = 1; level < MODES.length && total() > width; level++) {
 		// Sans libellés (icônes seules) : les groupes aux icônes parlantes d'abord.
 		const passes = MODES[level] === 'icon' ? [true, false] : [null];
@@ -64,7 +81,7 @@ export function fit(groups: GroupShape[], width: number): Mode[] {
 				if (iconOk !== null && !!groups[i].iconOk !== iconOk) continue;
 				// Petites icônes : sautées quand elles ne font rien gagner (un long
 				// libellé seul est plus étroit en grand qu'en petit).
-				if (MODES[level] === 'small' && groupWidth(groups[i], 'small') >= groupWidth(groups[i], modes[i])) continue;
+				if (MODES[level] === 'small' && gw(i, 'small') >= gw(i, modes[i])) continue;
 				if (MODES.indexOf(modes[i]) < level) modes[i] = MODES[level];
 			}
 		}

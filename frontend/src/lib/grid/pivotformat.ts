@@ -24,3 +24,18 @@ export function pivotLayer(pivots: FormattedPivot[], r: number, c: number): Styl
 	}
 	return undefined;
 }
+
+const grouped = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
+
+/**
+ * Texte d'une valeur de TCD (ligne i > 0, colonne j > 0) déjà passée par
+ * son format : un entier sans format (un nombre, un total) prend le
+ * séparateur de milliers (« 1 200 »), comme les sommes décimales. Le
+ * séparateur est une espace insécable ordinaire : l'espace fine
+ * d'Intl ne se voit plus en gras (ligne du total).
+ */
+export function pivotValueText(text: string, i: number, j: number): string {
+	if (!(i > 0 && j > 0)) return text;
+	const t = /^-?\d{4,15}$/.test(text) ? grouped.format(Number(text)) : text;
+	return t.replace(/ /g, ' ');
+}
