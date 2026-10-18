@@ -145,6 +145,9 @@ func (h host) OpenDoc(ctx context.Context, path string) error {
 	if res.Recoverable != nil {
 		return errors.New("une session interrompue de ce classeur attend d'être récupérée : ouvrez-le dans Lattis")
 	}
+	if res.Damaged != nil {
+		return errors.New(res.Damaged.Message + " ; ouvrez-le dans Lattis pour en récupérer les données")
+	}
 	h.s.changed(ctx)
 	return nil
 }

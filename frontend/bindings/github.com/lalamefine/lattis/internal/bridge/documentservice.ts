@@ -899,6 +899,14 @@ export function RunScript(name: string, src: string): $CancellablePromise<$model
 }
 
 /**
+ * Salvage récupère les données lisibles d'un classeur endommagé dans un
+ * nouveau classeur sans titre (le fichier endommagé n'est pas modifié).
+ */
+export function Salvage(path: string): $CancellablePromise<$models.SalvageResult> {
+    return $Call.ByID(2624757607, path);
+}
+
+/**
  * Save enregistre ; as (ou un classeur jamais enregistré) demande le fichier.
  */
 export function Save($as: boolean): $CancellablePromise<$models.DocState> {
