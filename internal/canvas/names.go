@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"maps"
 	"regexp"
 	"strings"
 
@@ -146,39 +147,78 @@ func (t *tx) nameValuesRaw(schema *formula.Schema) (map[string]formula.Value, er
 // formule enregistrée ne cite d'adresse (requêtes de l'onglet SQL).
 func (t *tx) nameValuesWith(schema *formula.Schema, allCells bool) (map[string]formula.Value, error) {
 	ns := &formula.Names{Formulas: map[string]formula.Node{}, Extra: map[string][]string{}}
-	rs, err := t.query(`SELECT n.name, n.sheet, coalesce(c.raw, '') FROM _lattis_names n
+	rs, err := t.query(`SELECT n.name, n.sheet, n.row, n.col, c.raw FROM _lattis_names n
 		LEFT JOIN _lattis_cells c ON c.sheet = n.sheet AND c.row = n.row AND c.col = n.col`)
 	if err != nil {
 		return nil, err
 	}
+	onEmpty := false // une cellule nommée sans saisie (TCD, déversement…)
 	for rs.Next() {
-		var name, raw string
+		var name string
+		var raw sql.NullString
 		var sheet int64
-		if err := rs.Scan(&name, &sheet, &raw); err != nil {
+		var row, col int
+		if err := rs.Scan(&name, &sheet, &row, &col, &raw); err != nil {
 			rs.Close()
 			return nil, err
 		}
-		ns.Formulas[strings.ToLower(name)] = formula.QualifyCells(literal(raw), sheet)
+		if !raw.Valid {
+			// Rien de saisi : la cellule affiche peut-être un TCD ou un
+			// déversement ; le nom lit sa valeur (vide sinon).
+			ns.Formulas[strings.ToLower(name)] = formula.Name{Name: formula.CellKey(sheet, row, col)}
+			onEmpty = true
+			continue
+		}
+		ns.Formulas[strings.ToLower(name)] = formula.QualifyCells(literal(raw.String), sheet)
 	}
 	rs.Close()
-	cited := allCells
+	cited := allCells || onEmpty
 	if !cited {
 		if err := t.row(`SELECT EXISTS (SELECT 1 FROM _lattis_cells WHERE raw LIKE '%cell%')
 			OR EXISTS (SELECT 1 FROM _lattis_columns WHERE formula LIKE '%cell%')`).Scan(&cited); err != nil {
 			return nil, err
 		}
 	}
+	var spills map[string]spillAnchor
 	if cited {
-		if err := t.cellFormulas(ns, schema); err != nil {
+		if spills, err = t.cellFormulas(ns, schema); err != nil {
 			return nil, err
 		}
 	}
+	// Déversements : les formules qui lisent une cellule qu'ils peuvent
+	// recouvrir sont calculées après eux.
+	var base, added map[string][]string
+	if len(spills) > 0 {
+		base = maps.Clone(ns.Extra)
+		added = spillDeps(ns, spills)
+	}
+	// Cellules occupées par un tableau croisé : leurs valeurs affichées (une
+	// saisie à la même place, calculée ensuite, l'emporte).
 	values := map[string]formula.Value{}
-	order, cyclic := ns.Order()
+	if cited {
+		areas, err := t.pivotAreas()
+		if err != nil {
+			return nil, err
+		}
+		if len(areas) > 0 {
+			pivotValues(values, ns, schema, areas)
+		}
+	}
+	order, cyclic := orderWithSpills(ns, base, added)
 	for _, n := range cyclic {
 		values[n] = formula.Err(formula.ErrCirc)
 	}
+	var spill *spillState
 	for _, n := range order {
+		if a, ok := spills[n]; ok {
+			// Tableau dynamique : l'ancre vaut la première valeur, les
+			// cellules recouvertes les suivantes.
+			if spill == nil {
+				spill = &spillState{tables: map[int64][]Table{}}
+			}
+			t.spillValues(values, a, schema, spill)
+			continue
+		}
 		hoist, _ := t.hoister()
 		c := formula.CompileHoisted(ns.Formulas[n], schema, values, nil, "", hoist)
 		var v any
@@ -193,33 +233,38 @@ func (t *tx) nameValuesWith(schema *formula.Schema, allCells bool) (map[string]f
 
 // cellFormulas ajoute aux noms les cellules libres de toutes les feuilles,
 // et les dépendances qui passent par les colonnes calculées des tableaux.
-func (t *tx) cellFormulas(ns *formula.Names, schema *formula.Schema) error {
+// Elle rend les cellules dont la formule est un tableau dynamique (par clé) :
+// une formule qui lit une cellule vide qu'un déversement peut recouvrir est
+// calculée après lui.
+func (t *tx) cellFormulas(ns *formula.Names, schema *formula.Schema) (map[string]spillAnchor, error) {
 	sheetNames := map[int64]string{}
 	rs, err := t.query(`SELECT id, name FROM _lattis_sheets`)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for rs.Next() {
 		var id int64
 		var name string
 		if err := rs.Scan(&id, &name); err != nil {
 			rs.Close()
-			return err
+			return nil, err
 		}
 		sheetNames[id] = strings.ToLower(name)
 	}
 	rs.Close()
 	rs, err = t.query(`SELECT sheet, row, col, raw FROM _lattis_cells`)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	var spills map[string]spillAnchor
+	filled := map[int64]map[[2]int]bool{} // cellules saisies, par feuille
 	for rs.Next() {
 		var sheet int64
 		var row, col int
 		var raw string
 		if err := rs.Scan(&sheet, &row, &col, &raw); err != nil {
 			rs.Close()
-			return err
+			return nil, err
 		}
 		n := literal(raw)
 		if isFormula(raw) {
@@ -230,8 +275,22 @@ func (t *tx) cellFormulas(ns *formula.Names, schema *formula.Schema) error {
 		key := formula.CellKey(sheet, row, col)
 		ns.Formulas[key] = formula.QualifyCells(n, sheet)
 		ns.Formulas[sheetNames[sheet]+"."+strings.ToLower(formula.CellName(row, col))] = formula.Name{Name: key}
+		if filled[sheet] == nil {
+			filled[sheet] = map[[2]int]bool{}
+		}
+		filled[sheet][[2]int{row, col}] = true
+		if isFormula(raw) && formula.IsSpill(n) {
+			if spills == nil {
+				spills = map[string]spillAnchor{}
+			}
+			spills[key] = spillAnchor{key: key, node: ns.Formulas[key], sheet: sheet, sheetName: sheetNames[sheet], row: row, col: col}
+		}
 	}
 	rs.Close()
+	for k, a := range spills {
+		a.filled = filled[a.sheet]
+		spills[k] = a
+	}
 	// Noms lus par les colonnes calculées de chaque tableau, et tableaux
 	// qu'elles citent (fermeture transitive ensuite).
 	reads := map[string][]string{}
@@ -261,7 +320,7 @@ func (t *tx) cellFormulas(ns *formula.Names, schema *formula.Schema) error {
 			tables = append(tables, cites[tb]...)
 		}
 	}
-	return nil
+	return spills, nil
 }
 
 // literal donne le nœud d'une saisie : formule analysée, ou valeur reconnue

@@ -30,19 +30,37 @@ func (t *tx) spillFreeRaw(sheet int64, raw string) (rows [][]string, ok bool, er
 	if err != nil {
 		return nil, true, formula.Err(formula.ErrValue)
 	}
-	sp, e := formula.CompileSpill(n, schema, names)
+	vals, e := t.spillRows(n, schema, names)
 	if e.IsErr() {
 		return nil, true, e
 	}
+	for _, r := range vals {
+		row := make([]string, len(r))
+		for i, v := range r {
+			row[i] = v.String()
+		}
+		rows = append(rows, row)
+	}
+	return rows, true, formula.Value{}
+}
+
+// spillRows calcule un tableau dynamique (formule déjà rattachée à sa
+// feuille) avec les valeurs des noms et cellules names.
+func (t *tx) spillRows(n formula.Node, schema *formula.Schema, names map[string]formula.Value) ([][]formula.Value, formula.Value) {
+	sp, e := formula.CompileSpill(n, schema, names)
+	if e.IsErr() {
+		return nil, e
+	}
 	rs, err := t.query(`SELECT * FROM (`+sp.SQL+`) LIMIT ?`, append(sp.Args, MaxSpillRows)...)
 	if err != nil {
-		return nil, true, formula.Err(formula.ErrValue)
+		return nil, formula.Err(formula.ErrValue)
 	}
 	defer rs.Close()
 	cols, err := rs.Columns()
 	if err != nil {
-		return nil, true, formula.Err(formula.ErrValue)
+		return nil, formula.Err(formula.ErrValue)
 	}
+	var rows [][]formula.Value
 	for rs.Next() {
 		vals := make([]any, len(cols))
 		ptrs := make([]any, len(cols))
@@ -50,18 +68,18 @@ func (t *tx) spillFreeRaw(sheet int64, raw string) (rows [][]string, ok bool, er
 			ptrs[i] = &vals[i]
 		}
 		if err := rs.Scan(ptrs...); err != nil {
-			return nil, true, formula.Err(formula.ErrValue)
+			return nil, formula.Err(formula.ErrValue)
 		}
-		row := make([]string, len(cols))
+		row := make([]formula.Value, len(cols))
 		for i, v := range vals {
-			row[i] = formula.FromResult(v).String()
+			row[i] = formula.FromResult(v)
 		}
 		rows = append(rows, row)
 	}
 	if rs.Err() != nil {
-		return nil, true, formula.Err(formula.ErrValue)
+		return nil, formula.Err(formula.ErrValue)
 	}
-	return rows, true, formula.Value{}
+	return rows, formula.Value{}
 }
 
 // spillBlocked indique si le déversement de rows depuis (row, col) recouvre

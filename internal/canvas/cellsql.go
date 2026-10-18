@@ -113,7 +113,13 @@ func (m *Model) CellSQL(ctx context.Context, q string, sheet int64) (string, err
 				return orig
 			}
 			r, c, _ := formula.CellRef("cell_" + addr)
-			v := values[formula.CellKey(on, r, c)]
+			v, ok := values[formula.CellKey(on, r, c)]
+			if !ok {
+				// Cellule d'un TCD qu'aucune formule ne cite.
+				if areas, err := t.pivotAreas(); err == nil {
+					v, _ = pivotValueAt(areas, on, r, c)
+				}
+			}
 			if v.IsErr() {
 				failed = fmt.Errorf("%s vaut %s", formula.CellText(formula.CellName(r, c)), v.String())
 				return orig
