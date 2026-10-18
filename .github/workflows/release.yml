@@ -10,8 +10,13 @@ name: Release
 # sortent alors non signés, avec un avertissement dans le journal.
 # Secrets attendus : docs/release/signature.md.
 #
-# Lancement manuel (Actions → Release → Run workflow) : mêmes paquets, en
-# artefacts du run seulement, sans release.
+# Fichiers publiés sous des noms stables, sans version (Lattis-windows-x64-
+# setup.exe, Lattis-macos-universal.dmg, Lattis-linux-x64.AppImage…), plus
+# SHA256SUMS.txt et latest.json : le site pointe sur
+# releases/latest/download/<nom> (docs/release/publier.md).
+#
+# Lancement manuel (Actions → Release → Run workflow) : mêmes paquets, sommes
+# et latest.json, en artefacts du run seulement (release-essai), sans release.
 on:
   push:
     tags: ['v*']
@@ -136,17 +141,36 @@ jobs:
           $files | Get-AuthenticodeSignature | Format-Table Path, Status, @{ n = 'Signataire'; e = { $_.SignerCertificate.Subject } } -AutoSize | Out-String -Width 300
           if ($bad) { throw 'Signature invalide : ' + ($bad.Path -join ', ') }
 
+      # Noms stables, sans version : le site renvoie vers
+      # releases/latest/download/<nom> (docs/release/publier.md).
+      # Un MSIX non signé ne s'installe pas (Windows exige une signature de
+      # confiance) : il n'est publié que signé ; sinon il reste dans l'artefact
+      # lattis-windows-msix-non-signe du run, pour essai.
       - name: Fichiers de la release
+        env:
+          SIGN_MODE: ${{ steps.mode.outputs.mode }}
         run: |
-          $v = $env:VERSION -replace '^v', ''
-          New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item bin\lattis-amd64-installer.exe "dist\Lattis-$v-windows-x64-setup.exe"
-          Copy-Item (Get-ChildItem bin\*.msix | Select-Object -First 1).FullName "dist\Lattis-$v-windows-x64.msix"
-          Get-ChildItem dist
+          New-Item -ItemType Directory -Force dist, dist-unsigned | Out-Null
+          Copy-Item bin\lattis-amd64-installer.exe dist\Lattis-windows-x64-setup.exe
+          $msix = (Get-ChildItem bin\*.msix | Select-Object -First 1).FullName
+          if ($env:SIGN_MODE -ne 'none') {
+            Copy-Item $msix dist\Lattis-windows-x64.msix
+          } else {
+            Write-Output '::warning::MSIX non signé : absent de la release (seulement en artefact du run).'
+            Copy-Item $msix dist-unsigned\Lattis-windows-x64.msix
+          }
+          Get-ChildItem dist, dist-unsigned
       - uses: actions/upload-artifact@v4
         with:
-          name: lattis-windows
+          name: release-windows
           path: dist/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: steps.mode.outputs.mode == 'none'
+        with:
+          name: lattis-windows-msix-non-signe
+          path: dist-unsigned/
+          if-no-files-found: ignore
       - name: Nettoyage du certificat
         if: always()
         run: Remove-Item -Force (Join-Path $env:RUNNER_TEMP 'lattis-codesign.pfx') -ErrorAction SilentlyContinue
@@ -215,14 +239,14 @@ jobs:
 
       - name: Fichiers de la release
         run: |
-          v="${VERSION#v}"
           mkdir -p dist
-          cp bin/lattis.dmg "dist/Lattis-$v-macos-universal.dmg"
+          cp bin/lattis.dmg dist/Lattis-macos-universal.dmg
           ls -l dist
       - uses: actions/upload-artifact@v4
         with:
-          name: lattis-macos
+          name: release-macos
           path: dist/
+          if-no-files-found: error
       - name: Nettoyage du trousseau et de la clé
         if: always()
         run: |
@@ -267,17 +291,16 @@ jobs:
           wails3 task linux:release
       - name: Fichiers de la release
         run: |
-          v="${VERSION#v}"
-          num="${v%%[-+]*}"
           mkdir -p dist
-          cp bin/lattis-*.AppImage "dist/Lattis-$v-linux-x86_64.AppImage"
-          cp bin/lattis.deb "dist/lattis_${num}_amd64.deb"
-          cp bin/lattis.rpm "dist/lattis-${num}-1.x86_64.rpm"
+          cp bin/lattis-x86_64.AppImage dist/Lattis-linux-x64.AppImage
+          cp bin/lattis.deb dist/Lattis-linux-x64.deb
+          cp bin/lattis.rpm dist/Lattis-linux-x64.rpm
           ls -l dist
       - uses: actions/upload-artifact@v4
         with:
-          name: lattis-linux
+          name: release-linux
           path: dist/
+          if-no-files-found: error
       - name: Nettoyage de la clé
         if: always()
         run: rm -f "$RUNNER_TEMP/lattis-gpg.asc"
@@ -285,12 +308,14 @@ jobs:
   release:
     name: Release GitHub
     needs: [windows, macos, linux]
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
     env:
       LINUX_GPG_PRIVATE_KEY: ${{ secrets.LINUX_GPG_PRIVATE_KEY }}
       LINUX_GPG_PASSPHRASE: ${{ secrets.LINUX_GPG_PASSPHRASE }}
       GH_TOKEN: ${{ github.token }}
+      # Lancement manuel : tout est préparé (sommes, latest.json, notes) et
+      # déposé en artefact « release-essai » du run, sans créer de release.
+      PUBLISH: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -298,33 +323,64 @@ jobs:
           path: src
       - uses: actions/download-artifact@v4
         with:
-          pattern: lattis-*
+          pattern: release-*
           path: dist
           merge-multiple: true
-      - name: Sommes de contrôle et signatures GPG
+      - name: Fichiers attendus
         working-directory: dist
         run: |
-          sha256sum * > SHA256SUMS.txt
+          ls -l
+          for f in Lattis-windows-x64-setup.exe Lattis-macos-universal.dmg Lattis-linux-x64.AppImage Lattis-linux-x64.deb Lattis-linux-x64.rpm; do
+            [ -s "$f" ] || { echo "::error::$f manquant"; exit 1; }
+          done
+      - name: Sommes de contrôle, latest.json et signatures GPG
+        working-directory: dist
+        run: |
+          sha256sum Lattis-* > SHA256SUMS.txt
           cat SHA256SUMS.txt
+          ../src/scripts/release-manifest.sh "$VERSION" . "$GITHUB_REPOSITORY" > latest.json
+          cat latest.json
           if [ -z "$LINUX_GPG_PRIVATE_KEY" ]; then
             echo "::warning::Pas de clé GPG : SHA256SUMS.txt et les fichiers ne sont pas signés."
             exit 0
           fi
           export GNUPGHOME="$(mktemp -d)"
           printf '%s\n' "$LINUX_GPG_PRIVATE_KEY" | gpg --batch --import
-          for f in *; do
+          for f in Lattis-* SHA256SUMS.txt; do
             gpg --batch --yes --pinentry-mode loopback --passphrase "$LINUX_GPG_PASSPHRASE" --armor --detach-sign --output "$f.asc" "$f"
           done
           gpg --batch --armor --export > lattis-release-key.asc
           rm -rf "$GNUPGHOME"
       - name: Notes de version
-        run: src/scripts/release-notes.sh "${GITHUB_REF_NAME}" src > notes.md && cat notes.md
+        run: |
+          if [ "$PUBLISH" = true ]; then ref="$GITHUB_REF_NAME"; else ref=HEAD; fi
+          src/scripts/release-notes.sh "$ref" src > notes.md
+          cat notes.md
+      - name: Essai (sans release)
+        if: env.PUBLISH != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-essai
+          path: |
+            dist/
+            notes.md
+      # Release publique, marquée « latest » : releases/latest/download/<nom>
+      # pointe alors sur ses fichiers. Un tag avec un tiret (v1.2.0-beta.1)
+      # donne une pré-version, que releases/latest ignore. Workflow relancé sur
+      # un tag déjà publié : les fichiers sont remplacés (--clobber).
       - name: Release
+        if: env.PUBLISH == 'true'
         env:
           RELEASE_DRAFT: ${{ vars.RELEASE_DRAFT }}
         run: |
-          tag="${GITHUB_REF_NAME}"
-          opts=""
-          case "$tag" in *-*) opts="--prerelease" ;; esac
-          [ "$RELEASE_DRAFT" = "true" ] && opts="$opts --draft"
-          gh release create "$tag" dist/* --repo "$GITHUB_REPOSITORY" $opts --notes-file notes.md --title "Lattis ${tag#v}"
+          tag="$GITHUB_REF_NAME"
+          opts="--latest"
+          case "$tag" in *-*) opts="--prerelease --latest=false" ;; esac
+          if [ "$RELEASE_DRAFT" = true ]; then opts="$opts --draft"; fi
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "La release $tag existe déjà : fichiers remplacés."
+            gh release upload "$tag" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$tag" dist/* --repo "$GITHUB_REPOSITORY" $opts --verify-tag --notes-file notes.md --title "Lattis ${tag#v}"
+          fi
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json url,isDraft,isPrerelease,assets --jq '{url, isDraft, isPrerelease, assets: [.assets[].name]}'

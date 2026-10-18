@@ -1,12 +1,12 @@
 # Installeurs signés : ce qu'il faut fournir
 
-Le workflow `.github/workflows/release.yml` construit, sur chaque tag `v*`, les installeurs de Lattis pour les trois systèmes et les dépose dans une release GitHub **en brouillon** (à relire puis publier à la main). Chaque signature dépend d'un secret : s'il manque, l'étape correspondante est sautée avec un avertissement dans le journal et le paquet sort non signé. On peut donc lancer une release dès maintenant et ajouter les certificats un par un.
+Le workflow `.github/workflows/release.yml` construit, sur chaque tag `v*`, les installeurs de Lattis pour les trois systèmes et les publie dans une release GitHub (publique ; brouillon seulement avec la variable `RELEASE_DRAFT`, voir [publier.md](publier.md)). Chaque signature dépend d'un secret : s'il manque, l'étape correspondante est sautée avec un avertissement dans le journal et le paquet sort non signé. On peut donc lancer une release dès maintenant et ajouter les certificats un par un.
 
 | Système | Fichiers produits | Signature | À fournir |
 |---|---|---|---|
-| Windows | `Lattis-<v>-windows-x64-setup.exe` (NSIS), `Lattis-<v>-windows-x64.msix` | Authenticode SHA-256 horodaté (signtool) : `lattis.exe`, installeur (et désinstalleur avec le `.pfx`), paquet MSIX | Un certificat de signature de code : Azure Trusted Signing **ou** certificat OV/EV |
-| macOS | `Lattis-<v>-macos-universal.dmg` (arm64 + Intel) | Developer ID + hardened runtime, notarisation Apple, ticket agrafé à l'app et au `.dmg` | Adhésion Apple Developer Program, certificat « Developer ID Application » (.p12), clé API App Store Connect (.p8) |
-| Linux | `Lattis-<v>-linux-x86_64.AppImage`, `lattis_<v>_amd64.deb`, `lattis-<v>-1.x86_64.rpm` | Signature GPG intégrée aux `.deb`/`.rpm` ; signature détachée `.asc` de chaque fichier de la release et de `SHA256SUMS.txt` | Facultatif : une clé GPG |
+| Windows | `Lattis-windows-x64-setup.exe` (NSIS), `Lattis-windows-x64.msix` (publié seulement signé : non signé, Windows refuse de l'installer) | Authenticode SHA-256 horodaté (signtool) : `lattis.exe`, installeur (et désinstalleur avec le `.pfx`), paquet MSIX | Un certificat de signature de code : Azure Trusted Signing **ou** certificat OV/EV |
+| macOS | `Lattis-macos-universal.dmg` (arm64 + Intel) | Developer ID + hardened runtime, notarisation Apple, ticket agrafé à l'app et au `.dmg` | Adhésion Apple Developer Program, certificat « Developer ID Application » (.p12), clé API App Store Connect (.p8) |
+| Linux | `Lattis-linux-x64.AppImage`, `Lattis-linux-x64.deb`, `Lattis-linux-x64.rpm` | Signature GPG intégrée aux `.deb`/`.rpm` ; signature détachée `.asc` de chaque fichier de la release et de `SHA256SUMS.txt` | Facultatif : une clé GPG |
 
 Tous les paquets associent l'extension **`.lattis`** à Lattis (double-clic : le classeur s'ouvre). L'ancienne extension `.slitable` n'est plus lue par l'application depuis le renommage ; elle n'est donc associée nulle part.
 

@@ -12,7 +12,7 @@ priority: "extra"
 maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
 description: "Tableur relationnel local-first"
 vendor: "Lattis"
-homepage: "https://github.com/lalamefine/lattis"
+homepage: "https://github.com/Be-Lattis/lattis-app"
 license: "MIT"
 release: "1"
 

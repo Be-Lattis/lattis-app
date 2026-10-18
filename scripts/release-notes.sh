@@ -20,11 +20,11 @@ cat <<'TXT'
 
 | Système | Fichier |
 |---|---|
-| Windows 10 et 11 | `.msix` (recommandé) ou installeur `.exe` |
-| macOS (Apple Silicon et Intel) | `.dmg` |
-| Linux | `.AppImage`, `.deb` ou `.rpm` |
+| Windows 10 et 11 | `Lattis-windows-x64-setup.exe` (installeur) ou `Lattis-windows-x64.msix` (quand il est publié, signé) |
+| macOS (Apple Silicon et Intel) | `Lattis-macos-universal.dmg` |
+| Linux | `Lattis-linux-x64.AppImage`, `Lattis-linux-x64.deb` ou `Lattis-linux-x64.rpm` |
 
-`SHA256SUMS.txt` donne l'empreinte de chaque fichier (et sa signature `.asc` quand la clé GPG est configurée).
+`SHA256SUMS.txt` donne l'empreinte de chaque fichier (et sa signature `.asc` quand la clé GPG est configurée) ; `latest.json` les décrit pour le site.
 TXT
 if [ -n "$prev" ]; then
 	echo

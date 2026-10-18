@@ -38,8 +38,10 @@ if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
 	exit 1
 fi
 if [ $tests = 1 ]; then
-	echo "Tests (go test ./...)…"
-	go test ./... >/dev/null
+	# Mêmes paquets que la CI : le paquet principal embarque frontend/dist,
+	# absent d'une copie propre (go test ./... y échouerait sans build).
+	echo "Tests (go test ./internal/... ./engine/... ./protocol/...)…"
+	go test ./internal/... ./engine/... ./protocol/... >/dev/null
 fi
 
 git tag -a "$tag" -m "Lattis ${tag#v}"
