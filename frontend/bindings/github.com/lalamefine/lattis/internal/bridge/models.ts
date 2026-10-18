@@ -353,6 +353,57 @@ export interface LattisState {
 }
 
 /**
+ * MCPClients décrit les clients d'Anthropic qui peuvent piloter Lattis : la
+ * voie « abonnement Claude » (Pro, Max, Team), où l'on discute dans Claude
+ * et où Lattis montre ce qui est fait.
+ */
+export interface MCPClients {
+    "desktopInstalled": boolean;
+    "desktopConfigured": boolean;
+
+    /**
+     * chemin de claude_desktop_config.json
+     */
+    "desktopConfig": string;
+
+    /**
+     * commande claude trouvée
+     */
+    "codeFound": boolean;
+    "codeConfigured": boolean;
+
+    /**
+     * commande « claude mcp add … » à copier
+     */
+    "codeCommand": string;
+
+    /**
+     * client vu récemment (nom affiché), "" sinon
+     */
+    "connected": string;
+    "confirmWrites": boolean;
+}
+
+/**
+ * MCPSeriesState dit si une série peut être annulée d'un clic.
+ */
+export interface MCPSeriesState {
+    "id": number;
+    "client": string;
+
+    /**
+     * étapes du journal encore en place
+     */
+    "writes": number;
+    "undo": boolean;
+
+    /**
+     * pourquoi pas, sinon ""
+     */
+    "reason": string;
+}
+
+/**
  * MCPStatus décrit le serveur MCP pour le menu Fichier.
  */
 export interface MCPStatus {

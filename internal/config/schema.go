@@ -21,6 +21,7 @@ type Settings struct {
 	Identity            Identity                     `json:"identity,omitempty"`
 	Connections         map[string]ManagedConnection `json:"connections,omitempty"`
 	AI                  AI                           `json:"ai,omitempty"`
+	MCP                 MCP                          `json:"mcp,omitempty"`
 	Features            Features                     `json:"features,omitempty"`
 }
 
@@ -89,6 +90,14 @@ type AI struct {
 	LocalURL string `json:"localUrl,omitempty"`
 }
 
+// MCP règle le serveur MCP intégré vu de l'utilisateur (l'activation, le
+// port et le jeton sont dans mcp.json, voir internal/mcp).
+type MCP struct {
+	// ConfirmWrites : chaque outil qui modifie le classeur attend l'accord
+	// de l'utilisateur dans Lattis (« Demander avant de modifier »).
+	ConfirmWrites *bool `json:"confirmWrites,omitempty"`
+}
+
 // Features active ou coupe des fonctions.
 type Features struct {
 	MCP                  Toggle  `json:"mcp,omitempty"`
@@ -135,11 +144,12 @@ func Defaults() Tree {
 		},
 		"ai": Tree{"enabled": false, "provider": "anthropic", "dataSharing": "schema-only",
 			"localUrl": "http://localhost:11434/v1"}, // Ollama
+		"mcp": Tree{"confirmWrites": false},
 	}
 }
 
 var topLevel = []string{"version", "organization", "configUrl", "remote", "allowPolicyOverride",
-	"identity", "connections", "ai", "features"}
+	"identity", "connections", "ai", "mcp", "features"}
 
 func knownTopLevel(k string) bool {
 	for _, t := range topLevel {
@@ -224,7 +234,7 @@ func coerce(path string, v any) (any, bool) {
 
 var boolPaths = []string{"allowPolicyOverride", "features.mcp.enabled", "features.allowUserConnections",
 	"features.htmlTabs", "features.sharedWorkbooks", "features.allowUserLattisServers", "features.luaHttp.restrict", "ai.enabled",
-	"ai.keepConversation"}
+	"ai.keepConversation", "mcp.confirmWrites"}
 
 func boolPath(path string) bool {
 	for _, p := range boolPaths {
@@ -258,6 +268,7 @@ var validators = []struct {
 	{"ai.model", isIdent},
 	{"ai.dataSharing", oneOf("schema-only", "sample")},
 	{"ai.keepConversation", isBool},
+	{"mcp.confirmWrites", isBool},
 	{"connections.*.kind", oneOf("postgres", "mysql", "sqlserver", "web", "lattis")},
 	{"connections.*.auth.mode", oneOf("none", "password", "token", "integrated", "oidc")},
 	{"ai.auth.mode", oneOf("none", "token", "oidc")},
