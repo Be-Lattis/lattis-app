@@ -4513,6 +4513,8 @@
 		links = [];
 		selChart = null;
 		panel = null;
+		// Volet d'un contrôle : fermé aussi (ses réglages restent appliqués).
+		buttonsLayer?.closeEditor();
 	}
 
 	/** Erreur de formule de la cellule (code et formule), ou null. */

@@ -742,7 +742,9 @@
 	async function selectSheet(id: number) {
 		view = 'grid';
 		if (mode !== 'doc' || id === sheetId) return;
+		// Changement d'onglet : tous les volets de droite se ferment.
 		sheet?.closeOverlays();
+		queryHost?.closePanel();
 		sheetId = id;
 		await reload();
 		sheet?.focus();
@@ -1123,6 +1125,13 @@
 			{/if}
 			{#if view === 'sql'}
 				<div class="pane"><SqlView {objects} run={query} exec={mode === 'doc' ? (q) => DocumentService.Execute(q) : undefined} ongoto={gotoObject}
+						onrename={mode === 'doc'
+							? async (from, to) => {
+									docState = await DocumentService.RenameTable(from, to);
+									await reload();
+									notice = `Tableau « ${from} » renommé en « ${to} » (Ctrl+Z pour annuler)`;
+								}
+							: undefined}
 						tosheet={mode === 'doc'
 							? async (q, name, headers, link, columns) => {
 									if (!link) {

@@ -20,6 +20,7 @@
 	// Les requêtes d'écriture (INSERT, UPDATE, DELETE) partent telles quelles au
 	// backend, qui les rend annulables (Ctrl+Z).
 	import { formatValue, typeLabel } from '#lib/grid/format.js';
+	import { alterRename } from '#lib/sql/rename.js';
 	import SqlEditor from '#lib/sql/SqlEditor.svelte';
 	import { Catalog, displayHeaders, quote, translate, type SqlObject } from '#lib/sql/names.js';
 	import { load, record, save, search, when, type HistoryEntry } from '#lib/sql/history.js';
@@ -51,9 +52,37 @@
 		 * absent : pas d'envoi (démonstration).
 		 */
 		tosheet?: (sql: string, name: string, headers: string[], link: boolean, columns: string[]) => Promise<void>;
+		/** Renomme un tableau (même commande que la grille) ; absent : pas de renommage. */
+		onrename?: (from: string, to: string) => Promise<void>;
 	}
 
-	let { objects, run, exec, ongoto, favorites, tosheet }: Props = $props();
+	let { objects, run, exec, ongoto, favorites, tosheet, onrename }: Props = $props();
+
+	// Renommage d'un tableau dans la liste des objets (double-clic, F2, clic droit).
+	let tblRen = $state<{ name: string; draft: string } | null>(null);
+	function startTblRen(o: SqlObject) {
+		if (!onrename || isReadOnly(o)) return;
+		objMenu = null;
+		tblRen = { name: o.name, draft: o.name };
+	}
+	async function commitTblRen() {
+		const r = tblRen;
+		tblRen = null;
+		if (!r || !onrename) return;
+		const to = r.draft.trim();
+		if (!to || to === r.name) return;
+		try {
+			await onrename(r.name, to);
+		} catch (e) {
+			error = String(e instanceof Error ? e.message : e);
+		}
+	}
+	function focusAll(node: HTMLInputElement) {
+		requestAnimationFrame(() => {
+			node.focus();
+			node.select();
+		});
+	}
 
 	const catalog = $derived(new Catalog(objects));
 	let panel = $state<'objects' | 'favorites' | 'history'>('objects');
@@ -94,6 +123,16 @@
 		editor?.showError('');
 		const at = Date.now();
 		try {
+			// ALTER TABLE … RENAME TO … : le renommage du classeur (références comprises).
+			const ren = onrename ? alterRename(text) : null;
+			if (ren && onrename) {
+				await onrename(ren.from, ren.to);
+				result = { columns: ['Tableau renommé'], rows: [[`${ren.from} → ${ren.to}`]], truncated: false, micros: 0 };
+				headers = ['Tableau renommé (Ctrl+Z pour annuler)'];
+				remember({ sql: text, at, rows: 0, micros: 0 });
+				running = false;
+				return;
+			}
 			if (exec && isWrite(text)) {
 				sent = text;
 				const r = await exec(text);
@@ -263,14 +302,38 @@
 			<div class="list">
 				{#each objects as o (o.sqlName)}
 					<div class="obj">
+						{#if tblRen && tblRen.name === o.name}
+							<div class="obj-head">
+								<span>{open === o.sqlName ? '▾' : '▸'}</span>
+								<input
+									class="rename"
+									bind:value={tblRen.draft}
+									use:focusAll
+									aria-label="Nouveau nom du tableau"
+									onkeydown={(e) => {
+										e.stopPropagation();
+										if (e.key === 'Enter') commitTblRen();
+										if (e.key === 'Escape') tblRen = null;
+									}}
+									onblur={commitTblRen}
+								/>
+							</div>
+						{:else}
 						<button
 							class="obj-head"
 							onclick={() => (open = open === o.sqlName ? null : o.sqlName)}
+							ondblclick={() => startTblRen(o)}
+							onkeydown={(e) => {
+								if (e.key === 'F2') {
+									e.preventDefault();
+									startTblRen(o);
+								}
+							}}
 							oncontextmenu={(e) => {
 								e.preventDefault();
 								objMenu = { o, x: e.clientX, y: e.clientY };
 							}}
-							title="Clic droit : exemples SELECT, INSERT, UPDATE, DELETE, voir sur la feuille"
+							title={onrename && !isReadOnly(o) ? 'Double-clic ou F2 : renommer ; clic droit : exemples SELECT, INSERT, UPDATE, DELETE, voir sur la feuille' : 'Clic droit : exemples SELECT, INSERT, UPDATE, DELETE, voir sur la feuille'}
 						>
 							<span>{open === o.sqlName ? '▾' : '▸'}</span>
 							{#if !isReadOnly(o) && isDefaultTableName(o.name)}
@@ -280,6 +343,7 @@
 							{/if}
 							<span class="muted">{isReadOnly(o) ? 'tableau croisé' : 'tableau'} · {count(o.rows)}</span>
 						</button>
+						{/if}
 						{#if open === o.sqlName}
 							<ul>
 								{#each o.columns as c (c.sql)}
@@ -303,6 +367,9 @@
 						<button role="menuitem" title="Remplace la requête par un exemple de suppression" onclick={() => showExample(m.o, 'delete')}>DELETE</button>
 					{/if}
 					<hr />
+					{#if onrename && !isReadOnly(m.o)}
+						<button role="menuitem" onclick={() => startTblRen(m.o)}>Renommer… (F2)</button>
+					{/if}
 					<button
 						role="menuitem"
 						onclick={() => {
@@ -434,6 +501,15 @@
 </div>
 
 <style>
+	.rename {
+		flex: 1;
+		min-width: 0;
+		font: inherit;
+		font-weight: 600;
+		padding: 1px 4px;
+		border: 1px solid #217346;
+		border-radius: 3px;
+	}
 	.result-bar {
 		display: flex;
 		align-items: center;

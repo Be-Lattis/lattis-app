@@ -410,7 +410,13 @@
 		}, 400);
 	});
 
-	function closeEditor() {
+	/** Ferme le volet (changement d'onglet) ; ce qui a été réglé reste appliqué. */
+	export function closeEditor() {
+		if (!editor) return;
+		closeVolet();
+	}
+
+	function closeVolet() {
 		clearTimeout(applyTimer);
 		const e = editor;
 		if (e && e.id !== null && draftKey(e) !== applied) save(false);
@@ -575,16 +581,16 @@
 		aria-label="Contrôle"
 		onkeydown={(ev) => {
 				ev.stopPropagation();
-				if (ev.key === 'Escape') closeEditor();
+				if (ev.key === 'Escape') closeVolet();
 				else if (ev.key === 'Enter' && (ev.target as HTMLElement).tagName !== 'TEXTAREA') {
 					ev.preventDefault();
-					closeEditor();
+					closeVolet();
 				}
 			}}
 		>
 			<header>
 				<span>{e.id === null ? `Insérer : ${KINDS[e.kind].toLowerCase()}` : `Modifier : ${KINDS[e.kind].toLowerCase()}`}</span>
-				<button class="x" title="Fermer" onclick={closeEditor}>✕</button>
+				<button class="x" title="Fermer" onclick={closeVolet}>✕</button>
 			</header>
 			<!-- Bouton d'un côté (Insertion › Bouton), contrôles liés à une cellule de l'autre (Insertion › Input). -->
 			{#if e.kind !== ''}
@@ -674,7 +680,7 @@
 			</p>
 			{#if e.error}<p class="error">{e.error}</p>{/if}
 			<div class="actions">
-				<button class="primary" onclick={closeEditor}>OK</button>
+				<button class="primary" onclick={closeVolet}>OK</button>
 				{#if e.id !== null}
 					{@const id = e.id}
 					<button

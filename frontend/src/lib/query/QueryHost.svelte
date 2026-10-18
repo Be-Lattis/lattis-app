@@ -173,6 +173,11 @@
 	}
 
 	/** Actualise la requête qui charge un tableau (menu du clic droit sur le tableau). */
+	/** Ferme le volet des requêtes et connexions (changement d'onglet). */
+	export function closePanel() {
+		panel = false;
+	}
+
 	export function refreshOne(id: number): Promise<string> {
 		return refresh(id);
 	}
