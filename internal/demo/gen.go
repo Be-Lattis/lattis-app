@@ -161,15 +161,25 @@ func Rows(cols []Column, count int, seed uint64, stream string, yield func([]any
 var (
 	prenoms = []string{"Louis", "Emma", "Gabriel", "Jade", "Léo", "Louise", "Raphaël", "Alice", "Arthur", "Chloé", "Jules", "Lina", "Adam", "Rose", "Hugo", "Anna", "Maël", "Léa", "Paul", "Manon", "Nathan", "Inès", "Lucas", "Camille", "Tom", "Sarah", "Noah", "Juliette", "Sacha", "Zoé", "Théo", "Margaux", "Ethan", "Clara", "Victor", "Mila"}
 	noms    = []string{"Martin", "Bernard", "Dubois", "Thomas", "Robert", "Richard", "Petit", "Durand", "Leroy", "Moreau", "Simon", "Laurent", "Lefebvre", "Michel", "Garcia", "David", "Bertrand", "Roux", "Vincent", "Fournier", "Morel", "Girard", "André", "Mercier", "Dupont", "Lambert", "Bonnet", "François", "Martinez", "Legrand", "Garnier", "Faure", "Rousseau", "Blanc", "Guérin", "Muller"}
-	villes  = []struct{ Nom, CP, Region string }{
-		{"Paris", "75011", "Île-de-France"}, {"Lyon", "69003", "Auvergne-Rhône-Alpes"}, {"Marseille", "13008", "Provence-Alpes-Côte d'Azur"},
-		{"Toulouse", "31000", "Occitanie"}, {"Nice", "06000", "Provence-Alpes-Côte d'Azur"}, {"Nantes", "44000", "Pays de la Loire"},
-		{"Strasbourg", "67000", "Grand Est"}, {"Montpellier", "34000", "Occitanie"}, {"Bordeaux", "33000", "Nouvelle-Aquitaine"},
-		{"Lille", "59000", "Hauts-de-France"}, {"Rennes", "35000", "Bretagne"}, {"Reims", "51100", "Grand Est"},
-		{"Dijon", "21000", "Bourgogne-Franche-Comté"}, {"Angers", "49000", "Pays de la Loire"}, {"Grenoble", "38000", "Auvergne-Rhône-Alpes"},
-		{"Brest", "29200", "Bretagne"}, {"Tours", "37000", "Centre-Val de Loire"}, {"Limoges", "87000", "Nouvelle-Aquitaine"},
-		{"Clermont-Ferrand", "63000", "Auvergne-Rhône-Alpes"}, {"Rouen", "76000", "Normandie"}, {"Caen", "14000", "Normandie"},
-		{"Metz", "57000", "Grand Est"}, {"Besançon", "25000", "Bourgogne-Franche-Comté"}, {"Orléans", "45000", "Centre-Val de Loire"},
+	// Villes : nom, code postal, région, coordonnées (degrés) et population.
+	villes = []struct {
+		Nom, CP, Region string
+		Lat, Lon        float64
+		Pop             int
+	}{
+		{"Paris", "75011", "Île-de-France", 48.8566, 2.3522, 2103778}, {"Lyon", "69003", "Auvergne-Rhône-Alpes", 45.764, 4.8357, 520774},
+		{"Marseille", "13008", "Provence-Alpes-Côte d'Azur", 43.2965, 5.3698, 877215}, {"Toulouse", "31000", "Occitanie", 43.6047, 1.4442, 504078},
+		{"Nice", "06000", "Provence-Alpes-Côte d'Azur", 43.7102, 7.262, 348085}, {"Nantes", "44000", "Pays de la Loire", 47.2184, -1.5536, 323204},
+		{"Strasbourg", "67000", "Grand Est", 48.5734, 7.7521, 291313}, {"Montpellier", "34000", "Occitanie", 43.6108, 3.8767, 302454},
+		{"Bordeaux", "33000", "Nouvelle-Aquitaine", 44.8378, -0.5792, 261804}, {"Lille", "59000", "Hauts-de-France", 50.6292, 3.0573, 236710},
+		{"Rennes", "35000", "Bretagne", 48.1173, -1.6778, 225081}, {"Reims", "51100", "Grand Est", 49.2583, 4.0317, 180318},
+		{"Dijon", "21000", "Bourgogne-Franche-Comté", 47.322, 5.0415, 159346}, {"Angers", "49000", "Pays de la Loire", 47.4784, -0.5632, 157555},
+		{"Grenoble", "38000", "Auvergne-Rhône-Alpes", 45.1885, 5.7245, 157477}, {"Brest", "29200", "Bretagne", 48.3904, -4.4861, 139926},
+		{"Tours", "37000", "Centre-Val de Loire", 47.3941, 0.6848, 137658}, {"Limoges", "87000", "Nouvelle-Aquitaine", 45.8336, 1.2611, 129754},
+		{"Clermont-Ferrand", "63000", "Auvergne-Rhône-Alpes", 45.7772, 3.087, 147865}, {"Rouen", "76000", "Normandie", 49.4432, 1.0999, 114083},
+		{"Caen", "14000", "Normandie", 49.1829, -0.3707, 108398},
+		{"Metz", "57000", "Grand Est", 49.1193, 6.1757, 120874}, {"Besançon", "25000", "Bourgogne-Franche-Comté", 47.2378, 6.0241, 119198},
+		{"Orléans", "45000", "Centre-Val de Loire", 47.903, 1.9093, 116344},
 	}
 	produits = []struct {
 		Nom, Categorie string

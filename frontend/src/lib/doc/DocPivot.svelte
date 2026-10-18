@@ -73,10 +73,12 @@
 		if (r.path && onconfig) onconfig(setFolded(config, r.path, !r.collapsed));
 	}
 	const total = $derived(!config.noGrandTotal && rows.length > 2);
-	const num = (s: string) => s !== '' && !isNaN(Number(s));
+	// Les valeurs arrivent écrites à la française (« 217731,43 »).
+	const value = (s: string) => (/^-?\d+([.,]\d+)?(e[-+]?\d+)?$/i.test(s) ? Number(s.replace(',', '.')) : NaN);
+	const num = (s: string) => s !== '' && !isNaN(value(s));
 	function shown(text: string, j: number): string {
 		if (!num(text)) return text;
-		return formatCell(text, Number(text), styles[j]);
+		return formatCell(text, value(text), styles[j]);
 	}
 </script>
 

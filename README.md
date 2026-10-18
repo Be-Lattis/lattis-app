@@ -84,9 +84,10 @@ Le détail est dans [docs/mesures/performances-1M.md](docs/mesures/performances-
 ## Essayer
 
 ```bash
-go run . --demo med      # classeur de démonstration : commandes, clients, employés, TCD et graphiques
+go run . --demo med      # vitrine : document, carte, jauge, TCD en arborescence, requête SQL, scripts, page HTML
 go run . --demo refs     # 5 tableaux reliés par des REFERENCE, SOMME.SI, NB.SI
 go run . --demo 1Mx10    # un million de lignes
+go run . --demo docs/demo/exemple.yaml   # classeur décrit par un fichier YAML (docs/demo.md)
 go run . --help          # toutes les options
 ```
 
@@ -120,14 +121,14 @@ go run . --sql                                  # journal des requêtes SQL dans
 
 ### Données de démonstration
 
-`--demo [preset]` ouvre un classeur neuf rempli de fausses données plausibles. Le générateur est déterministe : la même `--seed` donne le même classeur. Sans preset, c'est `med` qui s'ouvre ; un preset inconnu affiche la liste.
+`--demo [preset]` ouvre un classeur neuf rempli de fausses données plausibles. Le générateur est déterministe : la même `--seed` donne le même classeur. Sans preset, c'est `med` qui s'ouvre ; un preset inconnu affiche la liste. `--demo plan.yaml` fabrique le classeur décrit par un fichier YAML (onglets, tableaux et générateurs de colonnes, formules, TCD, graphiques, contrôles, requêtes, documents, pages, scripts) : format dans [docs/demo.md](docs/demo.md), exemple dans [docs/demo/exemple.yaml](docs/demo/exemple.yaml) ; `--seed` l'emporte sur la graine du fichier.
 
 | Preset | Contenu |
 | --- | --- |
 | `1Kx10`, `10Kx10`, `100Kx10`, `1Mx10`, `10Mx10` | 1 onglet de commandes, de 1 000 à 10 M lignes × 10 colonnes |
 | `1Kx100`, `10Kx100`, `100Kx100`, `1Mx100`, `10Mx100` | 1 onglet de relevés météo (stations et capteurs), × 100 colonnes |
 | `sml` | 100 lignes × 10 colonnes, 1 onglet |
-| `med` | `sml`, plus Clients (1 000 × 10), Employés (1 200 × 10) et un onglet Analyse (un TCD et 2 graphiques) |
+| `med` | la vitrine (10 onglets) : un Document « À découvrir » (texte, graphique et TCD vivants, bouton Lua, champ lié), Ventes (2 000 commandes à clé, REFERENCE, mise en forme conditionnelle, liste qui pilote des formules, boutons), Villes (carte OpenStreetMap), Synthèse (TCD en arborescence avec sous-totaux, compartimentage, radar), Ventes mensuelles (requête SQL avec fonctions de fenêtre, actualisable par F5 ; combiné, jauge, cascade), Impayés (requête façon Power Query), une page HTML, Clients, Employés et Analyse |
 | `big` | `med`, plus 8 onglets de 5 à 50 colonnes et de 100 à 100 000 lignes |
 | `refs` | 5 tableaux sur 3 onglets reliés par des `REFERENCE` en chaîne, `SOMME.SI` et `NB.SI` |
 

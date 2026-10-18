@@ -11,7 +11,15 @@ import (
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/trust"
 )
+
+// Les scripts des démonstrations sont autorisés dans un magasin en mémoire,
+// pas dans celui du poste.
+func TestMain(m *testing.M) {
+	trust.Use(trust.New("", nil))
+	os.Exit(m.Run())
+}
 
 func build(t *testing.T, preset string, seed uint64) (*doc.Document, Result) {
 	t.Helper()
@@ -121,7 +129,7 @@ func TestFormes(t *testing.T) {
 	want := map[string]string{
 		"sml":    "[Commandes/Commandes:100x10]",
 		"1Kx100": "[Relevés/Relevés:1000x100]",
-		"med":    "[Commandes/Commandes:100x10 Clients/Clients:1000x10 Employés/Employés:1200x10 Analyse/TCD Analyse/graphique Analyse/graphique]",
+		"med":    "[Ventes/Commandes:2000x15 Villes/Villes:24x9 Villes/graphique Synthèse/TCD Synthèse/TCD Synthèse/graphique Synthèse/graphique Ventes mensuelles/VentesMensuelles:24x8 Ventes mensuelles/graphique Ventes mensuelles/graphique Ventes mensuelles/graphique Impayés/ImpayésParVendeur:8x3 Impayés/graphique Clients/Clients:1000x10 Employés/Employés:1200x10 Analyse/TCD Analyse/graphique Analyse/graphique Analyse/graphique]",
 		"refs":   "[Référentiel/Catégories:7x4 Référentiel/Produits:24x9 Clients/Clients:150x8 Ventes/Commandes:600x7 Ventes/Lignes:2000x9]",
 	}
 	for p, w := range want {
@@ -135,11 +143,12 @@ func TestFormes(t *testing.T) {
 func TestBigPlan(t *testing.T) {
 	p, _ := Lookup("big")
 	plan := p.Plan()
-	if len(plan.Sheets) != 3+BigSheets || len(plan.Pivots) != 1 {
+	base := len(med().Sheets)
+	if len(plan.Sheets) != base+BigSheets || len(plan.Pivots) != 1 {
 		t.Fatalf("%d onglets, %d TCD", len(plan.Sheets), len(plan.Pivots))
 	}
 	var got []string
-	for _, s := range plan.Sheets[3:] {
+	for _, s := range plan.Sheets[base:] {
 		got = append(got, fmt.Sprintf("%dx%d", s.Tables[0].Rows, len(s.Tables[0].Cols)))
 	}
 	if g := strings.Join(got, " "); g != "100x26 268x5 720x50 1931x10 5179x36 13895x13 37276x7 100000x19" {
