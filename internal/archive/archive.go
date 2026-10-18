@@ -59,6 +59,9 @@ const (
 	// workbookName garde l'identifiant du classeur (_lattis_info, clé id) :
 	// les sessions d'un même classeur sont regroupées à la récupération.
 	workbookName = "workbook.txt"
+	// checkoutName garde, dans un dossier de travail de développement, le
+	// dépôt de sources dont il dépend (voir devRoot).
+	checkoutName = "checkout.txt"
 	sqliteMagic   = "SQLite format 3\x00"
 )
 
@@ -160,11 +163,72 @@ var Root = func() (string, error) {
 	if testing.Testing() {
 		return testRoot()
 	}
+	if dir := os.Getenv(WorkEnv); dir != "" {
+		return dir, nil
+	}
 	dir, err := os.UserCacheDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "Lattis", "work"), nil
+	base := filepath.Join(dir, "Lattis")
+	if exe, err := os.Executable(); err == nil {
+		if src := checkout(exe); src != "" {
+			return devRoot(base, src)
+		}
+	}
+	return filepath.Join(base, "work"), nil
+}
+
+// WorkEnv désigne un autre dossier des répertoires de travail (lancement de
+// test, mesure) : ses sessions ne sont proposées en récupération qu'à un
+// lancement qui le désigne aussi.
+const WorkEnv = "LATTIS_WORK_DIR"
+
+// checkout donne le dépôt de sources d'où vient l'exécutable (go.mod dans son
+// dossier ou au-dessus : bin/lattis.exe d'un wails3 build, d'un wails3 dev,
+// d'un worktree), vide pour une version installée.
+func checkout(exe string) string {
+	dir := filepath.Dir(exe)
+	for range 2 {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir
+		}
+		dir = filepath.Dir(dir)
+	}
+	return ""
+}
+
+// devRoot : un dossier de travail par dépôt de sources, pour qu'un lancement
+// de développement ou de test (un worktree par agent, tué en fin de
+// vérification) ne laisse pas ses sessions dans les récupérations de la
+// version installée ni d'un autre dépôt. Les dossiers des dépôts disparus
+// (worktree supprimé) sont effacés au passage.
+func devRoot(base, src string) (string, error) {
+	abs, err := filepath.Abs(src)
+	if err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256([]byte(strings.ToLower(abs)))
+	parent := filepath.Join(base, "work-dev")
+	root := filepath.Join(parent, hex.EncodeToString(sum[:8]))
+	if entries, err := os.ReadDir(parent); err == nil {
+		for _, e := range entries {
+			d := filepath.Join(parent, e.Name())
+			if !e.IsDir() || d == root {
+				continue
+			}
+			if b, err := os.ReadFile(filepath.Join(d, checkoutName)); err == nil {
+				if _, err := os.Stat(strings.TrimSpace(string(b))); errors.Is(err, os.ErrNotExist) {
+					os.RemoveAll(d)
+				}
+			}
+		}
+	}
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		return "", err
+	}
+	os.WriteFile(filepath.Join(root, checkoutName), []byte(abs), 0o644)
+	return root, nil
 }
 
 var testRoot = sync.OnceValues(func() (string, error) {
