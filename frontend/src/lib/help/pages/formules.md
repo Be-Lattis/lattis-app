@@ -39,11 +39,17 @@ Certaines fonctions renvoient plusieurs valeurs ([FILTRE](fonction:FILTRE), [TRI
 | --- | --- |
 | `#VALEUR!` | Argument du mauvais type, ou colonnes de deux tableaux mêlées |
 | `#DIV/0!` | Division par zéro |
-| `#N/A` | Valeur introuvable (RECHERCHEX, EQUIV, REFERENCE…) |
+| `#N/A` | Valeur introuvable (RECHERCHEX, EQUIV, REFERENCE, COMMUNE…) |
 | `#NOM?` | Fonction, tableau ou colonne inconnu |
 | `#REF!` | Cellule ou plage supprimée |
 | `#CIRC!` | Référence circulaire : la formule dépend d'elle-même |
 | `#NOMBRE!` | Nombre hors domaine (racine d'un négatif…) |
+
+## Commune d'un point GPS
+
+[COMMUNE](fonction:COMMUNE) donne la commune française qui contient un point : `=COMMUNE([Latitude]; [Longitude])`, ou son code INSEE (`"code"`), ses codes postaux (`"cp"`), son département (`"departement"`) ou sa région (`"region"`). Le calcul se fait sans connexion, sur les contours des communes embarqués dans Lattis (métropole et outre-mer), et reste rapide sur une colonne de 100 000 lignes. Un point en mer ou hors de France donne `#N/A`. Les contours étant simplifiés, un point à quelques dizaines de mètres d'une limite peut tomber chez la commune voisine.
+
+*Contient des données IGN et INSEE (contours des communes ADMIN EXPRESS, millésime 2026, diffusés par Etalab) et des codes postaux de La Poste via geo.api.gouv.fr, sous Licence Ouverte / Etalab 2.0.*
 
 ## Recalcul
 

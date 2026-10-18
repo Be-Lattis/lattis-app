@@ -2,7 +2,7 @@
 
 *Bibliothèque livrée le 16/10/2026 (phase 4), d'après le catalogue du 15/10/2026 (`analyse/catalogue-fonctions.md`, dossier du projet). Code : `internal/formula`.*
 
-116 fonctions, chacune sous son nom français et son nom anglais (le nom anglais est stocké dans l'AST). Toutes sont vérifiées par `testdata/conformite.txt` sur les **deux backends** (évaluateur Go et SQL compilé), sauf `REQUETE` (SQL seulement). `TestCatalogueNames` vérifie qu'aucun nom ne désigne deux fonctions et `TestFonctionsDocumentees` que chaque fonction figure ici.
+117 fonctions, chacune sous son nom français et son nom anglais (le nom anglais est stocké dans l'AST). Toutes sont vérifiées par `testdata/conformite.txt` sur les **deux backends** (évaluateur Go et SQL compilé), sauf `REQUETE` (SQL seulement). `TestCatalogueNames` vérifie qu'aucun nom ne désigne deux fonctions et `TestFonctionsDocumentees` que chaque fonction figure ici.
 
 L'aide détaillée de chaque fonction (description, arguments nommés et décrits, exemple) est dans `internal/formula/docs.go` : elle alimente l'infobulle de saisie (argument en cours en gras, comme Excel), l'autocomplétion et le dialogue « Insérer une fonction ». `TestFunctionDocs` vérifie que chaque fonction y figure, que ses arguments correspondent à son nombre d'arguments et que son exemple s'analyse.
 
@@ -107,6 +107,23 @@ Une date est un **numéro de série** comme dans Excel (le 1er janvier 2026 vaut
 | RECHERCHEH | HLOOKUP | ❌ refusée à la saisie avec un message |
 
 `Suggestion(nom)` donne l'infobulle d'une fonction absente (DECALER, INDIRECT, LAMBDA…). `KeyTargets` liste les tableaux qui doivent avoir une clé (REFERENCE, REFERENCE.APPROCHEE, EXISTE) : le classeur la pose à l'enregistrement de la formule.
+
+## Géographie
+
+| Français | Anglais | |
+|---|---|---|
+| COMMUNE | MUNICIPALITY | 🆕 `COMMUNE(latitude; longitude; [info])` : la commune française qui contient un point GPS, **hors ligne** |
+
+`info` : `"nom"` (par défaut), `"code"` (code INSEE, texte : `"2A004"`, `"01001"`), `"cp"` (codes postaux, plusieurs séparés par des virgules pour les grandes villes : Paris, Lyon, Marseille sont des communes entières, sans arrondissements), `"departement"`, `"code_departement"`, `"region"`, `"code_region"` (casse, accents et séparateurs indifférents ; noms anglais `name`, `insee`, `postcode`, `department` acceptés). Les coordonnées sont des degrés décimaux WGS84 (GPS), en nombre ou en texte (`"48,853"` comme `"48.853"`).
+
+- `#N/A` : point en mer ou hors de France, cellule vide, ou information absente (pas de région pour Saint-Martin, Saint-Barthélemy, Saint-Pierre-et-Miquelon et les collectivités du Pacifique) ;
+- `#VALEUR!` : coordonnée qui n'est pas un nombre (texte, booléen, date), latitude hors de ±90 ou longitude hors de ±180, `info` inconnue.
+
+Couverture : les 34 900 communes du COG 2026 de la métropole, de la Corse, des DROM (971 à 976) et des collectivités d'outre-mer (975, 977, 978, 984, 986 à 989). La réponse est celle du contour qui contient le point (test pair-impair) ; les contours sont simplifiés (≈ 50 m par Etalab, puis 40 m) : un point à moins de quelques dizaines de mètres d'une limite peut tomber chez la voisine. Un point juste hors de tout contour (plage, jetée, port) prend la commune dont la limite est la plus proche, jusqu'à 1 km ; au-delà, `#N/A`.
+
+Données : `internal/geo/communes.bin.gz` (4,3 Mo, embarqué), chargé au premier appel (≈ 0,13 s, ≈ 30 Mo en mémoire), puis ≈ 1 à 2 µs par point. Sur une colonne calculée de 100 000 lignes : ≈ 0,25 s en SQL (`slt_fn`), ≈ 0,1 s dans l'évaluateur Go. Le fichier est refait par `go generate ./internal/geo` (sources et format décrits dans `internal/geo/gen/main.go`).
+
+*Contient des données IGN et INSEE (contours des communes ADMIN EXPRESS, diffusés par Etalab : [contours administratifs](https://etalab-datasets.geo.data.gouv.fr/contours-administratifs/2026/geojson/), millésime 2026) et des codes postaux de La Poste via [geo.api.gouv.fr](https://geo.api.gouv.fr), Licence Ouverte / Etalab 2.0.*
 
 ## Calculs entre lignes
 

@@ -477,3 +477,15 @@ locale FR
 
 @ Ventes 1
 =SOMME([Prix][1:2])+[Qté]	37,5
+
+# Géographie : COMMUNE (contours embarqués, internal/geo)
+@
+=COMMUNE(48,853;2,3499)	Paris
+=COMMUNE("48,853";"2.3499";"code")	75056
+=COMMUNE(45,7578;4,832;"departement")	Rhône
+=COMMUNE(43,2951;5,374;"region")	Provence-Alpes-Côte d'Azur
+=COMMUNE(-20,8821;55,4507;"code_departement")	974
+=COMMUNE(46;-5)	#N/A
+=COMMUNE(40,4168;-3,7038)	#N/A
+=COMMUNE("abc";2)	#VALEUR!
+=ESTNA(COMMUNE(0;0))	VRAI

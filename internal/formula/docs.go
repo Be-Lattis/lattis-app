@@ -54,6 +54,7 @@ const (
 	catRows   = "Calculs entre lignes"
 	catLookup = "Recherche"
 	catSpill  = "Tableaux dynamiques"
+	catGeo    = "Géographie"
 )
 
 // Arguments qui reviennent souvent.
@@ -365,6 +366,15 @@ var docs = map[string]funcDoc{
 			docArg("no_index_lig", "Numéro de la ligne à renvoyer."),
 			docOpt("valeur_proche", "FAUX pour une correspondance exacte.")),
 		0, `=REFERENCE(Clients[Nom]; [IdClient])`},
+
+	// Géographie
+	"MUNICIPALITY": {catGeo, "Renvoie la commune française (métropole et outre-mer) qui contient un point GPS : nom, code INSEE, code postal, département ou région ; " +
+		"#N/A en mer ou hors de France. Calcul hors ligne sur des contours simplifiés (à quelques dizaines de mètres près). " +
+		"Contient des données IGN et INSEE, Licence Ouverte / Etalab 2.0.",
+		docArgs(docArg("latitude", "Latitude en degrés décimaux (48,853 ou \"48.853\"), colonne de la ligne ([Lat]) ou cellule."),
+			docArg("longitude", "Longitude en degrés décimaux (2,3499 ; négative à l'ouest de Greenwich)."),
+			docOpt("info", "\"nom\" (par défaut), \"code\" (code INSEE), \"cp\" (codes postaux, séparés par des virgules), \"departement\", \"code_departement\", \"region\" ou \"code_region\".")),
+		0, `=COMMUNE([Latitude]; [Longitude]; "code")`},
 
 	// Tableaux dynamiques
 	"FILTER": {catSpill, "Renvoie les lignes d'un tableau ou d'une colonne qui remplissent une condition ; le résultat se déverse sur la feuille.",

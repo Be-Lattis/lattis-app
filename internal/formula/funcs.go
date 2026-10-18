@@ -209,6 +209,9 @@ var funcs = []funcDef{
 	{"XLOOKUP", "RECHERCHEX", 3, 6, special, nil},
 	{"HLOOKUP", "RECHERCHEH", 3, 4, special, nil},
 
+	// Géographie (contours des communes embarqués, voir funcs_geo.go)
+	{"MUNICIPALITY", "COMMUNE", 2, 3, scalar, fnMunicipality},
+
 	// Tableaux dynamiques
 	{"FILTER", "FILTRE", 2, 3, spill, nil},
 	{"SORT", "TRIER", 1, 4, spill, nil},
