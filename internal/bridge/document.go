@@ -203,7 +203,7 @@ func (s *DocumentService) Save(ctx context.Context, as bool) (DocState, error) {
 		}
 		path = p
 	}
-	if err := d.Save(ctx, path); err != nil {
+	if err := saveDoc(ctx, d, path); err != nil {
 		return DocState{}, err
 	}
 	addRecent(d.Path())

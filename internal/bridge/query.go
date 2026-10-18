@@ -59,7 +59,25 @@ func (s *DocumentService) closeQuerySession() {
 }
 
 func queryEnv(d *doc.Document) query.Env {
-	return query.Env{Model: d.Model, Secrets: query.DefaultSecrets}
+	return query.Env{Model: d.Model, Secrets: query.DefaultSecrets, Workbook: d.SecretScope()}
+}
+
+// saveDoc enregistre d dans path ; les mots de passe de ses connexions
+// suivent le classeur dans son (nouveau) fichier (query.Secrets.Rebind).
+func saveDoc(ctx context.Context, d *doc.Document, path string) error {
+	from := d.SecretScope()
+	if err := d.Save(ctx, path); err != nil {
+		return err
+	}
+	// Un trousseau en panne n'empêche rien : les mots de passe restent
+	// connus pour la session, comme à leur saisie.
+	_ = query.DefaultSecrets.Rebind(from, d.SecretScope())
+	return nil
+}
+
+// secretsOf rend les mots de passe propres au classeur d (voir query.Secrets).
+func secretsOf(d *doc.Document) *query.Secrets {
+	return query.DefaultSecrets.For(d.SecretScope())
 }
 
 // Queries liste les requêtes du classeur.
@@ -229,7 +247,7 @@ func (s *DocumentService) Connections(ctx context.Context) ([]query.Connection, 
 		if err != nil {
 			continue
 		}
-		c.Remembered = query.DefaultSecrets.Remembered(c.Account())
+		c.Remembered = secretsOf(d).Remembered(c.Account())
 		out = append(out, c)
 	}
 	return out, nil
@@ -265,7 +283,7 @@ func (s *DocumentService) SaveConnection(ctx context.Context, c query.Connection
 		return 0, err
 	}
 	if password != "" {
-		if err := query.DefaultSecrets.Set(c.Account(), password, remember); err != nil {
+		if err := secretsOf(d).Set(c.Account(), password, remember); err != nil {
 			return id, fmt.Errorf("connexion enregistrée, mais le trousseau du système a refusé le mot de passe (gardé pour cette session) : %w", err)
 		}
 	}
@@ -284,7 +302,11 @@ func (s *DocumentService) TestConnection(ctx context.Context, c query.Connection
 	if c.Kind == "" {
 		c.Kind = query.KindPostgres
 	}
-	if err := query.TestConnection(ctx, query.DefaultSecrets, c, password, remember); err != nil {
+	d, err := s.current()
+	if err != nil {
+		return "", err
+	}
+	if err := query.TestConnection(ctx, secretsOf(d), c, password, remember); err != nil {
 		return err.Error(), nil
 	}
 	return "", nil
@@ -308,7 +330,11 @@ func (s *DocumentService) ForgetConnectionPassword(ctx context.Context, name str
 	if err != nil {
 		return err
 	}
-	return query.DefaultSecrets.Forget(c.Account())
+	d, err := s.current()
+	if err != nil {
+		return err
+	}
+	return secretsOf(d).Forget(c.Account())
 }
 
 // TableList liste les tables et vues d'une connexion (navigateur).
@@ -325,7 +351,11 @@ func (s *DocumentService) ConnectionTables(ctx context.Context, name string) (Ta
 	if err != nil {
 		return TableList{}, err
 	}
-	ts, err := query.DBTables(ctx, query.DefaultSecrets, c)
+	d, err := s.current()
+	if err != nil {
+		return TableList{}, err
+	}
+	ts, err := query.DBTables(ctx, secretsOf(d), c)
 	var pe *query.ErrPassword
 	if errors.As(err, &pe) {
 		return TableList{Tables: []query.DBTable{}, NeedPassword: &query.PasswordNeed{Connection: pe.Connection, Account: pe.Account, Message: pe.Message}}, nil
