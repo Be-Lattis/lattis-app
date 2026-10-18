@@ -217,6 +217,24 @@ export interface AIStatus {
 export type AIUsage = ai$0.Usage;
 
 /**
+ * About décrit l'application pour la fenêtre « À propos » : version,
+ * licence, code source ; en édition web, le code source du serveur qui sert
+ * la session (AGPL-3.0 §13).
+ */
+export interface About {
+    "version": string;
+    "license": string;
+    "source": string;
+
+    /**
+     * Server, ServerSource : serveur de la session web et son code source
+     * (vides sur le bureau).
+     */
+    "server"?: string;
+    "serverSource"?: string;
+}
+
+/**
  * DamagedFile décrit un classeur endommagé.
  */
 export interface DamagedFile {

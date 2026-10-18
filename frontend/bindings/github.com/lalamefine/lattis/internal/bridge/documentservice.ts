@@ -142,6 +142,13 @@ export function AIUndoRun(run: number): $CancellablePromise<$models.DocState> {
 }
 
 /**
+ * About rend la fiche « À propos ».
+ */
+export function About(): $CancellablePromise<$models.About> {
+    return $Call.ByID(4109777687);
+}
+
+/**
  * AddDoc ajoute un onglet Document avant l'onglet before (0 : à la
  * fin) et renvoie son identifiant.
  */

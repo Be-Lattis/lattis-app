@@ -9,8 +9,8 @@ info:
   productName: "Lattis" # The name of the application
   productIdentifier: "fr.triboulin.lattis" # The unique product identifier
   description: "Tableur relationnel local-first" # The application description
-  copyright: "© 2026 Lattis" # Copyright text
-  comments: "Some Product Comments" # Comments
+  copyright: "© 2026 Lattis. Licence MPL-2.0 ; « Lattis » et son logo sont des marques réservées." # Copyright text
+  comments: "Logiciel libre sous licence Mozilla Public License 2.0 : https://github.com/Be-Lattis/lattis-app" # Comments
   version: "0.1.0" # The application version
   # cfBundleIconName: "appicon" # The macOS icon name in Assets.car icon bundles (optional)
   #                               # Should match the name of your .icon file without the extension

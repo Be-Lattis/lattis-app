@@ -43,6 +43,7 @@
 	import OpenRemoteDialog from '#lib/remote/OpenRemoteDialog.svelte';
 	import DataCatalogDialog from '#lib/remote/DataCatalogDialog.svelte';
 	import DataShareDialog from '#lib/remote/DataShareDialog.svelte';
+	import AboutDialog from '#lib/shell/AboutDialog.svelte';
 	import ShareBanner from '#lib/remote/ShareBanner.svelte';
 	import ConflictPanel from '#lib/remote/ConflictPanel.svelte';
 	import RightsDialog from '#lib/remote/RightsDialog.svelte';
@@ -140,6 +141,7 @@
 	let dialogs = $state<DialogSpec[]>([]);
 	let mcpOpen = $state(false);
 	let settingsOpen = $state(false);
+	let aboutOpen = $state(false);
 	// Classeur partagé sur un Serveur Lattis : état (bandeau, Fichier ›
 	// Republier), boîtes Partager / Republier et Ouvrir depuis un serveur.
 	let share = $state<ShareState | null>(null);
@@ -745,6 +747,10 @@
 
 	async function file(a: FileAction) {
 		if (a === 'help') return openHelp();
+		if (a === 'about') {
+			aboutOpen = true;
+			return;
+		}
 		notice = '';
 		try {
 			switch (a) {
@@ -1749,6 +1755,9 @@
 	{/if}
 	<!-- Accord demandé avant une écriture de Claude Desktop / Code (mcp.confirmWrites). -->
 	<McpConfirm />
+	{#if aboutOpen}
+		<AboutDialog onclose={() => (aboutOpen = false)} />
+	{/if}
 	{#if settingsOpen}
 		<SettingsDialog onclose={() => (settingsOpen = false)} onmcp={() => { settingsOpen = false; mcpOpen = true; }} />
 	{/if}

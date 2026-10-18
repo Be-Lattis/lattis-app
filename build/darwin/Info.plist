@@ -25,7 +25,7 @@
 		<key>NSHighResolutionCapable</key>
 		<string>true</string>
 		<key>NSHumanReadableCopyright</key>
-		<string>© 2026 Lattis</string>
+		<string>© 2026 Lattis. Licence MPL-2.0.</string>
 		<!-- Liens lattis://open?… (lien vers un classeur partagé, contrat de
 		     lattisd §8) : ouverts par l'application (main.go). -->
 		<key>CFBundleURLTypes</key>

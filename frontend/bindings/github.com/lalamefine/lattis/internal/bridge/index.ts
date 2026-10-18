@@ -16,6 +16,7 @@ export type {
     AIProvider,
     AIStatus,
     AIUsage,
+    About,
     DamagedFile,
     DataAudienceEntry,
     DataInsert,

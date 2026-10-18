@@ -161,3 +161,9 @@ frontend/             SvelteKit en SPA (adapter-static) ; feuille dans src/lib/g
 ```
 
 Les bindings TypeScript (`frontend/bindings`) sont générés par `wails3 generate bindings` (fait par `wails3 build`) et importés via `#bindings/...`.
+
+## Licence
+
+Lattis est un logiciel libre, sous [Mozilla Public License 2.0](LICENSE) : vous pouvez l'utiliser, l'étudier, le modifier et le redistribuer. Les fichiers modifiés restent sous MPL-2.0 et leur code doit être publié avec la version distribuée ; le reste d'une application qui intègre Lattis peut garder sa propre licence.
+
+Le nom « Lattis », « Be-Lattis » et le logo ne font pas partie de cette licence : voir [TRADEMARKS.md](TRADEMARKS.md). Les composants et données de tiers sont listés dans [NOTICE.md](NOTICE.md). Le Serveur Lattis, logiciel distinct, est sous licence AGPL-3.0 ([lattis-server](https://github.com/Be-Lattis/lattis-server)).

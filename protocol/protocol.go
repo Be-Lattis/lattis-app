@@ -67,6 +67,9 @@ type Discovery struct {
 	TokenEndpoint         string `json:"token_endpoint,omitempty"`
 	RevocationEndpoint    string `json:"revocation_endpoint,omitempty"`
 	DeviceEndpoint        string `json:"device_authorization_endpoint,omitempty"`
+	// SourceURL : code source du serveur (AGPL-3.0 §13 : offert aux
+	// utilisateurs réseau, affiché dans « À propos » de l'édition web).
+	SourceURL string `json:"source_url,omitempty"`
 	// PreviewEndpoint : « Voir en tant que… » (POST, jeton d'accès ; §7).
 	PreviewEndpoint string     `json:"preview_endpoint,omitempty"`
 	Providers       []Provider `json:"providers"`
