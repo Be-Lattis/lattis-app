@@ -3,8 +3,10 @@
 	import { panelKeys } from '#lib/ui/focus.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	// Panneau « Référence » de l'onglet SCRIPT : les fonctions disponibles dans
-	// un script Lua, par catégorie, avec recherche. Un clic déplie une entrée ;
-	// Insérer place son exemple dans l'éditeur. Données : reference.ts.
+	// un script Lua, en accordéon (une section repliable par module), avec
+	// recherche : elle filtre les fonctions et ouvre les sections qui en ont.
+	// Un clic déplie une entrée ; Insérer place son exemple dans l'éditeur.
+	// Données : reference.ts.
 	import { categories, reference, search, type RefEntry } from './reference';
 
 	interface Props {
@@ -19,11 +21,22 @@
 	let openName = $state<string | null>(null);
 
 	const results = $derived(search(query));
+	const searching = $derived(!!query.trim());
+	// Sections (modules) : toutes, ou celles qui ont des résultats pendant la recherche.
 	const groups = $derived(
-		query.trim()
-			? [{ id: 'results', label: `${results.length} résultat(s)`, entries: results }]
-			: categories.map((c) => ({ id: c.id, label: c.label, entries: reference.filter((e) => e.category === c.id) }))
+		categories
+			.map((c) => ({ id: c.id, label: c.label, entries: (searching ? results : reference).filter((e) => e.category === c.id) }))
+			.filter((g) => g.entries.length > 0)
 	);
+	// Sections ouvertes à la main (hors recherche, où toutes celles qui ont des résultats s'ouvrent).
+	let openCats = $state<Set<string>>(new Set());
+	const isOpen = (id: string) => searching || openCats.has(id);
+	function toggleCat(id: string) {
+		const s = new Set(openCats);
+		if (s.has(id)) s.delete(id);
+		else s.add(id);
+		openCats = s;
+	}
 
 	function toggle(e: RefEntry) {
 		openName = openName === e.name ? null : e.name;
@@ -50,33 +63,87 @@
 		spellcheck="false"
 	/>
 	<div class="list">
+		{#if searching}<p class="count">{results.length} résultat(s)</p>{/if}
 		{#each groups as g (g.id)}
-			<h3>{g.label}</h3>
-			{#each g.entries as e (e.name)}
-				<div class="entry" class:open={openName === e.name}>
-					<button class="title" onclick={() => toggle(e)} aria-expanded={openName === e.name}>
-						<code>{e.name}</code>
-						<span class="summary">{e.summary}</span>
-					</button>
-					{#if openName === e.name}
-						<div class="body">
-							<code class="sig">{e.signature}</code>
-							{#if e.deprecated}<p class="note">Ancien nom : préférez <code>{e.deprecated}</code>.</p>{/if}
-							{#if e.details}<p>{e.details}</p>{/if}
-							{#if e.example}
-								<pre>{e.example}</pre>
-								<button class="insert" onclick={() => insert(e.example!)}><Icon name="paste" size={14} />Insérer l’exemple</button>
+			<section class="cat">
+				<button class="cat-head" aria-expanded={isOpen(g.id)} disabled={searching} onclick={() => toggleCat(g.id)}>
+					<span class="chev" class:open={isOpen(g.id)}><Icon name="chevron-down" size={12} /></span>
+					<span class="cat-label">{g.label}</span>
+					<span class="cat-n">{g.entries.length}</span>
+				</button>
+				{#if isOpen(g.id)}
+					{#each g.entries as e (e.name)}
+						<div class="entry" class:open={openName === e.name}>
+							<button class="title" onclick={() => toggle(e)} aria-expanded={openName === e.name}>
+								<code>{e.name}</code>
+								<span class="summary">{e.summary}</span>
+							</button>
+							{#if openName === e.name}
+								<div class="body">
+									<code class="sig">{e.signature}</code>
+									{#if e.deprecated}<p class="note">Ancien nom : préférez <code>{e.deprecated}</code>.</p>{/if}
+									{#if e.details}<p>{e.details}</p>{/if}
+									{#if e.example}
+										<pre>{e.example}</pre>
+										<button class="insert" onclick={() => insert(e.example!)}><Icon name="paste" size={14} />Insérer l’exemple</button>
+									{/if}
+								</div>
 							{/if}
 						</div>
-					{/if}
-				</div>
-			{/each}
+					{/each}
+				{/if}
+			</section>
 		{/each}
 		{#if query.trim() && results.length === 0}<p class="muted">Aucune fonction ne correspond.</p>{/if}
 	</div>
 </aside>
 
 <style>
+	.count {
+		font-size: 11px;
+		color: #6b7280;
+		margin: 4px 4px 2px;
+	}
+	.cat {
+		border-bottom: 1px solid #eceef0;
+	}
+	.cat-head {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		width: 100%;
+		border: none;
+		background: none;
+		font: inherit;
+		padding: 7px 4px;
+		cursor: pointer;
+		color: #374151;
+		text-align: left;
+	}
+	.cat-head:disabled {
+		cursor: default;
+		color: #374151;
+	}
+	.cat-head:hover:not(:disabled) {
+		background: #eef0f2;
+	}
+	.cat-label {
+		flex: 1;
+		font-size: 12px;
+		font-weight: 600;
+	}
+	.cat-n {
+		font-size: 11px;
+		color: #6b7280;
+	}
+	.chev {
+		display: inline-flex;
+		transform: rotate(-90deg);
+		transition: transform 0.12s;
+	}
+	.chev.open {
+		transform: none;
+	}
 	.ref {
 		flex-shrink: 0;
 		display: flex;
@@ -126,12 +193,6 @@
 		flex: 1;
 		overflow: auto;
 		padding: 0 8px 12px;
-	}
-	h3 {
-		font-size: 11px;
-		font-weight: 600;
-		color: #6b7280;
-		margin: 12px 4px 4px;
 	}
 	.entry {
 		border-radius: 3px;
