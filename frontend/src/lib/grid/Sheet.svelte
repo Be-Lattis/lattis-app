@@ -5415,6 +5415,18 @@
 				return;
 			}
 		}
+		// Coin en haut à gauche (entre la marge et le bandeau) : toute la
+		// feuille, toutes les lignes et toutes les colonnes, comme dans Excel.
+		{
+			const { x, y } = toLocal(e);
+			if (e.button === 0 && x < MARGIN && y < TOP_H) {
+				e.preventDefault();
+				if (editing && !commit()) return;
+				wrap.focus();
+				selectRows(0, lastRow());
+				return;
+			}
+		}
 		const hd = boundaryAt(e) === null && rowBoundaryAt(e) === null ? headerAt(e) : null;
 		if (hd && e.button !== 1) {
 			e.preventDefault();
