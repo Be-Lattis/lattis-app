@@ -308,8 +308,9 @@ func TestOplogRandomEdits(t *testing.T) {
 }
 
 // TestOplogUndoIsConditioned : l'annulation d'une saisie est conditionnée à
-// la valeur saisie, même si la valeur locale a changé entre-temps sans
-// passer par le journal (modification reçue d'un collègue).
+// la valeur saisie ; si la valeur locale a changé entre-temps sans passer
+// par le journal (modification reçue d'un collègue), la cellule n'est pas
+// annulée et garde la valeur du collègue (§7), le reste de l'étape l'est.
 func TestOplogUndoIsConditioned(t *testing.T) {
 	h := newHost(t)
 	ctx := context.Background()
@@ -325,6 +326,24 @@ func TestOplogUndoIsConditioned(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	before, err := oplog.Entries(ctx, h.d.DB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.undo()
+	if n := h.d.Oplog.TakeSkipped(); n != 1 {
+		t.Fatalf("cellules gardées : %d", n)
+	}
+	var v float64
+	if err := h.d.DB().Read().QueryRow(`SELECT c_2 FROM t_1 WHERE id = 1`).Scan(&v); err != nil || v != 11 {
+		t.Fatalf("cellule du collègue : %v (%v)", v, err)
+	}
+	if es, _ := oplog.Entries(ctx, h.d.DB()); len(es) != len(before) {
+		t.Fatalf("rien ne part pour une cellule gardée : %+v", es[len(before):])
+	}
+	// Sans écriture d'un collègue : condition « la cellule vaut toujours ce
+	// que j'y ai mis ».
+	h.set(2, 2, 12)
 	h.undo()
 	es, err := oplog.Entries(ctx, h.d.DB())
 	if err != nil {
@@ -336,7 +355,7 @@ func TestOplogUndoIsConditioned(t *testing.T) {
 		t.Fatalf("annulation : %+v %v", last, err)
 	}
 	op := ops[0]
-	if op.Kind != command.OpSet || fmt.Sprint(op.Old) != "10" || fmt.Sprint(op.New) != "3.5" {
-		t.Fatalf("annulation : %+v, attendu set 10 → 3.5", op)
+	if op.Kind != command.OpSet || fmt.Sprint(op.Old) != "12" || fmt.Sprint(op.New) != "11" {
+		t.Fatalf("annulation : %+v, attendu set 12 → 11", op)
 	}
 }

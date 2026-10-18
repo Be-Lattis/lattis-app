@@ -17,7 +17,20 @@ export interface Fetched {
 	styles?: { row: number; col: number; raw: string }[] | null;
 	/** Règles « formule » de mise en forme conditionnelle vérifiées (rule : rang dans la colonne). */
 	marks?: { row: number; col: number; rule: number }[] | null;
+	/**
+	 * Classeur collaboratif : cellules dont la modification attend le
+	 * serveur (pending) ou en conflit (conflict) ; col -1 : toute la ligne.
+	 */
+	sync?: { row: number; col: number; kind: string }[] | null;
 	micros: number;
+}
+
+/** Marque de synchronisation d'une cellule (classeur collaboratif). */
+export type SyncKind = 'pending' | 'conflict';
+
+/** Marque d'une cellule : la sienne, sinon celle de toute sa ligne (col -1). */
+export function syncAt(sync: Map<number, SyncKind> | undefined, col: number): SyncKind | undefined {
+	return sync?.get(col) ?? sync?.get(-1);
 }
 
 export type Fetcher = (first: number, count: number) => Promise<Fetched>;
@@ -30,6 +43,8 @@ export interface Block {
 	sty: (Map<number, string> | undefined)[];
 	/** Règles « formule » vraies : colonne × 1000 + rang de la règle. */
 	marks: (Set<number> | undefined)[];
+	/** Marques de synchronisation (classeur collaboratif) : colonne → marque. */
+	sync?: (Map<number, SyncKind> | undefined)[];
 }
 
 export interface Stats {
@@ -71,6 +86,7 @@ export class RowCache {
 				bad?: Map<number, string>;
 				sty?: Map<number, string>;
 				marks?: Set<number>;
+				sync?: Map<number, SyncKind>;
 		  }
 		| undefined {
 		const k = Math.floor(row / BLOCK);
@@ -85,7 +101,8 @@ export class RowCache {
 			text: b.text[i],
 			bad: b.bad[i],
 			sty: b.sty[i],
-			marks: b.marks?.[i]
+			marks: b.marks?.[i],
+			sync: b.sync?.[i]
 		};
 	}
 
@@ -143,8 +160,10 @@ export class RowCache {
 			for (const x of w.styles ?? []) (sty[x.row] ??= new Map()).set(x.col, x.raw);
 			const marks: (Set<number> | undefined)[] = [];
 			for (const x of w.marks ?? []) (marks[x.row] ??= new Set()).add(x.col * 1000 + x.rule);
+			const sync: (Map<number, SyncKind> | undefined)[] = [];
+			for (const x of w.sync ?? []) (sync[x.row] ??= new Map()).set(x.col, x.kind === 'conflict' ? 'conflict' : 'pending');
 			this.stale.delete(b);
-			this.blocks.set(b, { ids: w.ids ?? [], cells, text, bad, sty, marks });
+			this.blocks.set(b, { ids: w.ids ?? [], cells, text, bad, sty, marks, sync });
 			this.evict(b);
 			this.error = null;
 		} catch (e) {

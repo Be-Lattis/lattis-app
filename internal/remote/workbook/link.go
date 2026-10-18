@@ -13,6 +13,9 @@ import (
 var (
 	ErrReadOnly = errors.New("Classeur publié en lecture seule")
 	ErrOffline  = errors.New("Hors ligne, lecture seule")
+	// ErrStructure refuse un changement de structure d'un tableau publié
+	// d'un classeur collaboratif (§6.4 : par le serveur, à venir).
+	ErrStructure = errors.New("La structure d'un tableau partagé (colonnes, types, suppression) ne se modifie pas encore depuis l'application")
 )
 
 // Link est l'état d'un classeur partagé ouvert : ce qui vient du serveur
@@ -39,6 +42,9 @@ type Link struct {
 	online     bool
 	offline    string // raison de la coupure (affichage)
 	newVersion int
+	// Collaboratif : étapes en attente d'envoi et conflits ouverts
+	// (SetQueue, tenus par la synchronisation).
+	pending, conflicts int
 }
 
 // Attach lit l'état de partage d'un classeur ouvert (hors ligne tant que la
@@ -198,6 +204,12 @@ func (l *Link) Gate(op command.Op) (bool, error) {
 			}
 			return false, err
 		}
+		// Collaboratif : la structure d'un tableau publié (colonnes, type,
+		// suppression) passe par les fonctions du serveur (§6.4, pas encore
+		// faites) ; la changer en local désaccorderait les deux copies.
+		if !frozen && op.Kind == command.OpMeta && l.published[op.Table] {
+			return false, ErrStructure
+		}
 	}
 	// Figé : rien ne part, l'auteur republie la version entière.
 	return !frozen, nil
@@ -225,6 +237,22 @@ type State struct {
 	// NewVersion : version publiée plus récente que celle chargée (0 sinon).
 	NewVersion int `json:"newVersion,omitempty"`
 	Published  int `json:"published"`
+	// Pending : étapes pas encore confirmées par le serveur ; Conflicts :
+	// conflits en attente de décision (classeur collaboratif).
+	Pending   int `json:"pending,omitempty"`
+	Conflicts int `json:"conflicts,omitempty"`
+}
+
+// SetQueue note les étapes en attente d'envoi et les conflits ouverts
+// (classeur collaboratif) ; vrai si cela change l'état.
+func (l *Link) SetQueue(pending, conflicts int) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.pending == pending && l.conflicts == conflicts {
+		return false
+	}
+	l.pending, l.conflicts = pending, conflicts
+	return true
 }
 
 // State décrit l'état de partage.
@@ -238,6 +266,7 @@ func (l *Link) State() State {
 		Shared: true, Server: l.info.Server, ServerName: l.info.ServerName, WorkbookID: l.info.WorkbookID,
 		Title: l.info.Title, Mode: l.info.Mode, Version: l.info.Version, Roles: append([]string{}, l.info.Roles...),
 		CanDesign: l.info.CanDesign(), Online: l.online, Offline: l.offline, NewVersion: l.newVersion, Published: len(l.published),
+		Pending: l.pending, Conflicts: l.conflicts,
 	}
 	switch {
 	case !l.online:

@@ -111,9 +111,9 @@ Toutes vérifiées contre PostgreSQL 18 avec les migrations de la branche serveu
 |---|---|---|
 | Identifiant local du tableau | `create_table` lit `p_columns -> 0 ->> 'table_local_id'` (dans le premier élément des colonnes), non documenté dans le contrat. Le client le met dans chaque élément. | Un paramètre `local_id` de `create_table`, ou le documenter. |
 | `lattis_meta_tables.sheet_id` | Toujours `NULL` (`create_table` ne le reçoit pas). Le client garde les feuilles dans l'objet de mise en page. | À prévoir pour les droits par feuille (§8.1) et la mise en page partagée (étape 7). |
-| Notifications pendant une republication | `compile_acl` pose les déclencheurs de notification sur la **version de travail** aussi : les écritures de la republication notifient `*meta` et des identifiants de tableaux sur le canal du classeur, que les lecteurs reçoivent avant `*version:<n>`. Le client ignore tout sauf `*version:` pour un classeur figé. | Ne pas notifier depuis le schéma de travail (ou un canal distinct). |
+| ~~Notifications pendant une republication~~ | Réglé côté serveur (migration `0007_publication.sql`, branche `claude/jalon-6-replicas`) : la version de travail ne notifie plus, les lecteurs ne reçoivent que `*version:<n>`. Le client garde son filtre (`VersionNotice`) pour un serveur plus ancien ; `TestPostgresFrozenLifecycle` vérifie, quand la migration est là, qu'un lecteur ne reçoit que `*version:<n>`. | — |
 | Niveau dans un classeur figé | `my_capabilities` rend `reader` pour tous les tableaux, propriétaire compris. Le client se fonde sur les rôles (`owner`, `designer`) pour laisser l'auteur préparer la version suivante. | — (cohérent avec « lecture seule pour tous » côté serveur). |
-| Titre | `my_capabilities` ne donne pas le titre ; il vient de `my_workbooks` à l'ouverture et est gardé au rechargement. | Ajouter `title` à `my_capabilities`. |
+| ~~Titre~~ | Réglé (migration 0007) : `my_capabilities` donne `title`, que le chargement préfère (à défaut, celui de `my_workbooks`, puis celui déjà noté, pour un serveur plus ancien). | — |
 | Identifiants des tableaux d'une version à l'autre | Une republication recrée les tableaux : nouveaux `table_id`, nouveaux `column_id`. Le client relie par `local_id`. | À garder en tête pour les références serveur (restrictions, `role_grants` par tableau) qui ne survivraient pas à une republication. |
 | Invitations | Pas d'écran Partager dans l'application (étape 6) : le propriétaire invite par `lattis.invite` (ou l'administration de `lattisd`). | Étape 6. |
 | Délai de grâce | Un lecteur ouvert sur l'ancienne version peut la lire `republish_grace` secondes ; au-delà, son schéma disparaît. Le client recharge sur notification (bandeau) ; une lecture après suppression échoue avec l'erreur de PostgreSQL. | Message dédié côté client si besoin. |
@@ -126,7 +126,7 @@ Toutes vérifiées contre PostgreSQL 18 avec les migrations de la branche serveu
 
 ```sh
 docker run -d --name lattis-pg -e POSTGRES_PASSWORD=pg -p 55433:5432 postgres:18
-mkdir schema && for f in 0001_catalog 0002_server_api 0003_workbooks 0004_collaborative; do
+mkdir schema && for f in 0001_catalog 0002_server_api 0003_workbooks 0004_collaborative 0005_advanced_rights 0006_admin 0007_publication; do
   git -C ../be-lattis-server show claude/socle-lattisd:schema/$f.sql > schema/$f.sql; done
 LATTIS_PG_TEST=1 LATTIS_TEST_PG_URL=postgres://postgres:pg@127.0.0.1:55433/postgres?sslmode=disable \
   LATTIS_SERVER_SCHEMA=$PWD/schema go test ./internal/remote/workbook -run Postgres -v
@@ -137,7 +137,7 @@ LATTIS_PG_TEST=1 LATTIS_TEST_PG_URL=postgres://postgres:pg@127.0.0.1:55433/postg
 
 ## 7. Reste à faire
 
-- Synchronisation des classeurs collaboratifs (étape 5) : envoyeur et récepteur ; `since` est déjà noté par tableau.
+- ~~Synchronisation des classeurs collaboratifs (étape 5)~~ : faite, voir `synchronisation.md`.
 - Mise en page partagée par objets (étape 7) et accord à la première exécution d'un script publié (§11 : aujourd'hui, l'accord par empreinte du source d'`internal/trust` s'applique).
 - Écran Partager (invitations, rôles) : étape 6.
 - Graphiques ou TCD d'un auteur qui citent un de ses tableaux privés : publiés tels quels, ils s'affichent en erreur chez les lecteurs (non filtrés).

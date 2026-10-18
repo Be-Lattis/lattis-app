@@ -14,6 +14,7 @@ import (
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/remote/collab"
 )
 
 // ChangedEvent est émis après chaque modification du document : l'interface
@@ -312,6 +313,8 @@ func (s *DocumentService) changed(ctx context.Context) (DocState, error) {
 		}
 	}
 	s.mu.Unlock()
+	// Classeur collaboratif : ce qui vient d'être fait part au serveur.
+	s.kickShare()
 	st, err := s.State(ctx)
 	if d, derr := s.current(); derr == nil {
 		st.Notice = d.TakeNotice()
@@ -369,7 +372,12 @@ func (s *DocumentService) Window(ctx context.Context, sheet, table int64, first,
 	if err != nil {
 		return grid.Window{}, err
 	}
-	return t.Window(ctx, first, count)
+	w, err := t.Window(ctx, first, count)
+	if err != nil {
+		return w, err
+	}
+	// Classeur collaboratif : marques « en attente » et « conflit ».
+	return w, s.syncMarks(ctx, t, table, &w)
 }
 
 // RangeStats résume des cellules d'un tableau pour la barre d'état
@@ -418,6 +426,9 @@ func (s *DocumentService) Undo(ctx context.Context) (DocState, error) {
 	if _, err := d.Bus.Undo(ctx); err != nil {
 		return DocState{}, err
 	}
+	// Classeur collaboratif : cellules modifiées par un collègue depuis,
+	// laissées à sa valeur (§7).
+	d.Notify(collab.UndoNotice(d.Oplog, false))
 	return s.changed(ctx)
 }
 
@@ -429,6 +440,7 @@ func (s *DocumentService) Redo(ctx context.Context) (DocState, error) {
 	if _, err := d.Bus.Redo(ctx); err != nil {
 		return DocState{}, err
 	}
+	d.Notify(collab.UndoNotice(d.Oplog, true))
 	return s.changed(ctx)
 }
 

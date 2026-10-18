@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Check, State } from '#bindings/internal/remote/workbook/models.js';
-import { banner, blocking, canRepublish, defaultSelection, inferredColumns, modeLabel, remoteTypeLabel, rolesLabel } from './share';
+import type { Conflict } from '#bindings/internal/remote/collab/models.js';
+import { syncAt } from '#lib/grid/cache.js';
+import { banner, blocking, canRepublish, conflictText, defaultSelection, inferredColumns, modeLabel, refusedNotice, remoteTypeLabel, rolesLabel, whenLabel } from './share';
 
 const check: Check = {
 	tables: [
@@ -43,6 +45,36 @@ describe('partage', () => {
 		expect(banner(state({ online: false, offline: 'dial tcp : refusé' }))).toEqual({ kind: 'offline', text: 'Hors ligne, lecture seule (dial tcp : refusé)' });
 		expect(banner(state({ online: false, offline: 'connectez-vous à Acme (menu Compte de la barre de titre)' }))?.action).toBe('login');
 		expect(banner(state({ canDesign: true }))).toBeNull();
+	});
+
+	it('classeur collaboratif : conflits, file d’attente hors ligne', () => {
+		const collab = (s: Partial<State>) => state({ mode: 'collaborative', roles: ['editor'], ...s });
+		expect(banner(collab({}))).toBeNull();
+		expect(banner(collab({ conflicts: 2 }))).toEqual({ kind: 'conflict', text: '2 conflits : cellules modifiées par un collègue entre-temps', action: 'conflicts', actionLabel: 'Voir' });
+		expect(banner(collab({ online: false, pending: 3 }))?.text).toBe("Hors ligne, lecture seule — 3 modifications en attente d'envoi");
+	});
+
+	it('décrit un conflit', () => {
+		const now = new Date(2026, 9, 18, 15, 0);
+		const at = new Date(2026, 9, 18, 10, 42).toISOString();
+		const c: Conflict = { id: 1, table: 'Ventes', column: 'Prix', type: 'decimal', mine: 1200, theirs: 1100, author: 'Alice', at, sheet: 1, row: 3, col: 2, found: true };
+		expect(conflictText(c, now)).toMatch(/^Modifié par Alice à 10:42 : 1\s100,00 \(vous : 1\s200,00\)$/);
+		expect(conflictText({ ...c, author: '', at: '', theirs: null }, now)).toMatch(/^Modifié : \(vide\) \(vous : 1\s200,00\)$/);
+		expect(whenLabel(new Date(2026, 9, 1, 9, 5).toISOString(), now)).toBe('le 01/10/2026 à 09:05');
+		expect(whenLabel('', now)).toBe('');
+	});
+
+	it('liste les valeurs refusées d’un collage', () => {
+		expect(refusedNotice({})).toBe('');
+		expect(refusedNotice({ refused: ['Quantité : « abc »'], refusedCount: 1 })).toBe('1 valeur hors du type figé non collée (tableau partagé) : Quantité : « abc »');
+		expect(refusedNotice({ refused: ['A : « x »'], refusedCount: 30 })).toMatch(/^30 valeurs .* …$/);
+	});
+
+	it('marque une cellule en attente ou en conflit', () => {
+		const m = new Map<number, 'pending' | 'conflict'>([[2, 'conflict'], [-1, 'pending']]);
+		expect(syncAt(m, 2)).toBe('conflict');
+		expect(syncAt(m, 0)).toBe('pending');
+		expect(syncAt(undefined, 0)).toBeUndefined();
 	});
 
 	it('propose Republier à l’auteur d’un classeur figé', () => {

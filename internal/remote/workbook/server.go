@@ -11,6 +11,7 @@ package workbook
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -36,15 +37,18 @@ type Listing struct {
 // Capabilities sont les droits de l'utilisateur sur un classeur
 // (lattis.my_capabilities(id)).
 type Capabilities struct {
-	WorkbookID string                 `json:"workbook_id"`
-	Mode       string                 `json:"mode"`
-	Version    int                    `json:"version"`
-	Schema     string                 `json:"schema"`
-	Channel    string                 `json:"channel"`
-	Roles      []string               `json:"roles"`
-	CanDesign  bool                   `json:"can_design"`
-	CanManage  bool                   `json:"can_manage"`
-	Tables     map[string]TableAccess `json:"tables"`
+	WorkbookID string `json:"workbook_id"`
+	// Title : titre du classeur (serveur à partir de la migration 0007 ;
+	// vide avant).
+	Title     string                 `json:"title"`
+	Mode      string                 `json:"mode"`
+	Version   int                    `json:"version"`
+	Schema    string                 `json:"schema"`
+	Channel   string                 `json:"channel"`
+	Roles     []string               `json:"roles"`
+	CanDesign bool                   `json:"can_design"`
+	CanManage bool                   `json:"can_manage"`
+	Tables    map[string]TableAccess `json:"tables"`
 }
 
 // TableAccess est le niveau effectif sur un tableau du serveur.
@@ -105,6 +109,87 @@ type Server interface {
 	// notification, jusqu'à l'annulation de ctx ou une coupure (erreur).
 	// ready est appelé une fois l'écoute posée.
 	Listen(ctx context.Context, channel string, ready func(), fn func(payload string)) error
+	// Delta exécute fn dans une transaction de lecture cohérente
+	// (REPEATABLE READ) sur rw : lecture des changements d'un classeur
+	// collaboratif (contrat client de lattisd, §6). Read peut lire un
+	// réplica en retard ; Delta, jamais.
+	Delta(ctx context.Context, fn func(Reader) error) error
+	// Write exécute fn dans une transaction d'écriture sur rw : une étape
+	// de la file d'envoi (tout ou rien).
+	Write(ctx context.Context, fn func(Writer) error) error
+}
+
+// Change est une ligne modifiée ou supprimée depuis un point de reprise
+// (lattis.changes_since), ou relue par Reader.RowsByID.
+type Change struct {
+	ID      string // lattis_id
+	Deleted bool
+	Pos     string // lattis_pos
+	Author  string // lattis_author
+	// UpdatedBy, UpdatedAt : dernier modificateur (lattis_updated_*).
+	UpdatedBy string
+	UpdatedAt string
+	// Values : valeurs par nom de colonne du serveur, converties en valeurs
+	// de stockage locales (FromJSON) ; une colonne absente de la ligne n'y
+	// est pas.
+	Values map[string]any
+}
+
+// Raisons d'un refus d'écriture (lattis.why_not).
+const (
+	WhyModified  = "modified"  // ligne modifiée entre-temps (Row : valeur actuelle)
+	WhyDeleted   = "deleted"   // ligne supprimée entre-temps
+	WhyForbidden = "forbidden" // droits insuffisants (ligne invisible ou non modifiable)
+	WhyMissing   = "missing"   // ligne inconnue du serveur
+)
+
+// WhyNot explique une écriture qui n'a touché aucune ligne
+// (lattis.why_not).
+type WhyNot struct {
+	Reason string
+	// Row : la ligne actuelle (WhyModified).
+	Row *Change
+	// By, At : auteur et date de la modification ou de la suppression.
+	By, At string
+}
+
+// Writer est la transaction d'une étape de la file d'envoi. Les valeurs
+// sont des valeurs de stockage locales (entier, réel, texte, json.Number),
+// converties au type de la colonne du serveur (ToRemote). Chaque appel
+// rend le nombre de lignes touchées : 0 est un conflit ou un refus
+// (WhyNot), pas une erreur ; une erreur défait toute la transaction.
+type Writer interface {
+	// Update : UPDATE … SET col = new WHERE lattis_id = id AND col IS NOT
+	// DISTINCT FROM old.
+	Update(ctx context.Context, schema, table, id string, col RemoteColumn, old, new any) (int64, error)
+	// Insert : INSERT (lattis_id, lattis_pos, cols…) ; une ligne déjà
+	// présente (renvoi après une coupure) n'est pas une erreur : 0.
+	Insert(ctx context.Context, schema, table, id, pos string, cols []RemoteColumn, vals []any) (int64, error)
+	// Delete : DELETE … WHERE lattis_id = id.
+	Delete(ctx context.Context, schema, table, id string) (int64, error)
+	// Move : UPDATE … SET lattis_pos = pos WHERE lattis_id = id AND
+	// lattis_pos = old.
+	Move(ctx context.Context, schema, table, id, old, pos string) (int64, error)
+	// WhyNot explique une écriture sans effet (lattis.why_not) ; t donne
+	// les colonnes pour relire la ligne actuelle.
+	WhyNot(ctx context.Context, workbookID string, t RemoteTable, id string) (WhyNot, error)
+}
+
+// Rejected dit si err est un refus du serveur (erreur SQL : droits,
+// contrainte, valeur) plutôt qu'une coupure, et rend son code SQLSTATE.
+// Un refus ne se règle pas en renvoyant la même étape.
+func Rejected(err error) (string, bool) {
+	var s interface{ SQLState() string }
+	if errors.As(err, &s) {
+		return s.SQLState(), true
+	}
+	return "", false
+}
+
+// Privilege dit si err est un refus de droits (42501).
+func Privilege(err error) bool {
+	code, ok := Rejected(err)
+	return ok && code == "42501"
 }
 
 // CopySource fournit les lignes d'une copie (pgx.CopyFromSource).
@@ -145,4 +230,11 @@ type Reader interface {
 	// lattis_id) ; vals suit t.Columns, converties en valeurs locales
 	// (voir FromRemote).
 	Rows(ctx context.Context, schema string, t RemoteTable, fn func(id, pos, author string, vals []any) error) error
+	// Changes lit les lignes modifiées ou supprimées d'un tableau depuis
+	// since (lattis.changes_since, filtré par les droits de l'utilisateur).
+	// Une ligne peut revenir deux fois : l'application est idempotente.
+	Changes(ctx context.Context, workbookID string, t RemoteTable, since string, fn func(Change) error) error
+	// RowsByID relit des lignes par leur identifiant (absentes : invisibles ou
+	// supprimées) : remise à l'état du serveur après un refus.
+	RowsByID(ctx context.Context, schema string, t RemoteTable, ids []string, fn func(Change) error) error
 }

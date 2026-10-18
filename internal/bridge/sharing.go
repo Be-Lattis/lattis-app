@@ -15,6 +15,7 @@ import (
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/remote/auth"
+	"github.com/lalamefine/lattis/internal/remote/collab"
 	"github.com/lalamefine/lattis/internal/remote/pgpool"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 )
@@ -128,6 +129,22 @@ func remoteServer(ctx context.Context, raw string) (workbook.Server, auth.User, 
 type shareState struct {
 	mu     sync.Mutex
 	cancel context.CancelFunc
+	// sync : synchronisation du classeur collaboratif ouvert doc (nil
+	// sinon).
+	sync *collab.Engine
+	doc  *doc.Document
+}
+
+// collab rend la synchronisation du classeur collaboratif ouvert (nil :
+// classeur local ou figé).
+func (s *DocumentService) collab() *collab.Engine {
+	cur, err := s.current()
+	s.share.mu.Lock()
+	defer s.share.mu.Unlock()
+	if err != nil || cur != s.share.doc {
+		return nil
+	}
+	return s.share.sync
 }
 
 // watchShare suit le serveur du classeur d (écoute des republications,
@@ -138,6 +155,7 @@ func (s *DocumentService) watchShare(d *doc.Document) {
 		s.share.cancel()
 		s.share.cancel = nil
 	}
+	s.share.sync, s.share.doc = nil, nil
 	info := d.Share.Info()
 	if info == nil {
 		s.share.mu.Unlock()
@@ -145,6 +163,15 @@ func (s *DocumentService) watchShare(d *doc.Document) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	s.share.cancel = cancel
+	if info.Mode == workbook.Collaborative {
+		// Classeur collaboratif : envoi de la file, réception des changements
+		// des autres, conflits (docs/collaboration/synchronisation.md).
+		eng := collab.New(d.DB(), d.Model, d.Share)
+		s.share.sync, s.share.doc = eng, d
+		s.share.mu.Unlock()
+		go s.followCollab(ctx, d, eng, info)
+		return
+	}
 	s.share.mu.Unlock()
 	go func() {
 		for ctx.Err() == nil {
@@ -164,6 +191,39 @@ func (s *DocumentService) watchShare(d *doc.Document) {
 	}()
 }
 
+// followCollab suit un classeur collaboratif tant que ctx court : à
+// chaque (re)connexion, la file part et les changements des autres sont
+// lus ; sur notification, ceux du tableau notifié.
+func (s *DocumentService) followCollab(ctx context.Context, d *doc.Document, eng *collab.Engine, info *workbook.Info) {
+	for ctx.Err() == nil {
+		srv, _, _, err := remoteServer(ctx, info.Server)
+		if err != nil {
+			d.Share.SetOnline(false, err.Error())
+			s.emitShare(d)
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(shareRetry):
+			}
+			continue
+		}
+		eng.Follow(ctx, srv, shareRetry, func(ev collab.Event) {
+			if cur, err := s.current(); err != nil || cur != d {
+				return
+			}
+			if len(ev.Notices) > 0 {
+				d.Notify(strings.Join(ev.Notices, " ; "))
+			}
+			if ev.Data || len(ev.Notices) > 0 {
+				s.changed(context.Background())
+			}
+			if ev.State {
+				s.emitShare(d)
+			}
+		})
+	}
+}
+
 // stopShare arrête le suivi du serveur (fermeture du classeur).
 func (s *DocumentService) stopShare() {
 	s.share.mu.Lock()
@@ -172,6 +232,93 @@ func (s *DocumentService) stopShare() {
 		s.share.cancel()
 		s.share.cancel = nil
 	}
+	s.share.sync, s.share.doc = nil, nil
+}
+
+// kickShare demande l'envoi de la file du classeur collaboratif ouvert
+// (après une modification locale).
+func (s *DocumentService) kickShare() {
+	if eng := s.collab(); eng != nil {
+		eng.Kick()
+	}
+}
+
+// syncMarks ajoute à une fenêtre de la grille les cellules en attente du
+// serveur ou en conflit (classeur collaboratif).
+func (s *DocumentService) syncMarks(ctx context.Context, t *grid.Table, table int64, w *grid.Window) error {
+	eng := s.collab()
+	if eng == nil || len(w.IDs) == 0 {
+		return nil
+	}
+	marks, err := eng.Marks(ctx, table, w.IDs)
+	if err != nil || len(marks) == 0 {
+		return err
+	}
+	for i, rid := range w.IDs {
+		for col, kind := range marks[rid] {
+			switch {
+			case col < 0:
+				w.Sync = append(w.Sync, grid.SyncMark{Row: i, Col: -1, Kind: kind})
+			case col > 0:
+				if c, ok := t.ColIndex(col); ok {
+					w.Sync = append(w.Sync, grid.SyncMark{Row: i, Col: c, Kind: kind})
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// ShareConflicts liste les conflits du classeur collaboratif ouvert
+// (volet Conflits).
+func (s *DocumentService) ShareConflicts(ctx context.Context) ([]collab.Conflict, error) {
+	eng := s.collab()
+	if eng == nil {
+		return []collab.Conflict{}, nil
+	}
+	return eng.Conflicts(ctx)
+}
+
+// ShareResolve règle un conflit : mine, « Garder la mienne » (renvoyée,
+// conditionnée à la valeur du serveur) ; sinon « Garder la sienne ».
+func (s *DocumentService) ShareResolve(ctx context.Context, id int64, mine bool) (DocState, error) {
+	eng := s.collab()
+	if eng == nil {
+		return DocState{}, collab.ErrNotCollaborative
+	}
+	if err := eng.Resolve(ctx, id, mine); err != nil {
+		return DocState{}, err
+	}
+	if d, err := s.current(); err == nil {
+		eng.Counts(ctx)
+		s.emitShare(d)
+	}
+	return s.changed(ctx)
+}
+
+// ShareEditing note la cellule de feuille en cours de saisie (on faux :
+// saisie terminée ou abandonnée) : une modification reçue du serveur pour
+// elle attend la validation, qui peut produire un conflit (§6.3).
+func (s *DocumentService) ShareEditing(ctx context.Context, sheet int64, row, col int, on bool) error {
+	eng := s.collab()
+	if eng == nil {
+		return nil
+	}
+	if !on {
+		eng.SetEditing(0, 0, 0)
+		return nil
+	}
+	d, err := s.current()
+	if err != nil {
+		return err
+	}
+	tbl, rid, c, ok, err := d.TableCell(ctx, sheet, row, col)
+	if err != nil || !ok {
+		eng.SetEditing(0, 0, 0)
+		return err
+	}
+	eng.SetEditing(tbl, rid, c)
+	return nil
 }
 
 // emitShare prévient l'interface d'un changement d'état de partage du
@@ -367,6 +514,10 @@ func (s *DocumentService) ShareOpen(ctx context.Context, server, id, title strin
 	src := workbook.Source{Server: server, ServerName: name, User: user.PGRole, WorkbookID: id, Title: title}
 	// Déjà ouvert : rechargé sur place.
 	if cur, err := s.current(); err == nil && cur.Path() != "" && samePath(cur.Path(), path) {
+		if keepCollabCache(ctx, cur) {
+			st, err := s.State(ctx) // collaboratif : déjà suivi, à jour par ses deltas
+			return OpenResult{State: st}, err
+		}
 		if _, err := workbook.Load(ctx, srv, cur.DB(), src, false); err != nil {
 			return OpenResult{}, err
 		}
@@ -386,9 +537,15 @@ func (s *DocumentService) ShareOpen(ctx context.Context, server, id, title strin
 			return OpenResult{}, err
 		}
 	}
-	if _, err := workbook.Load(ctx, srv, d.DB(), src, fresh); err != nil {
-		d.Close()
-		return OpenResult{}, err
+	// Cache d'un classeur collaboratif : gardé tel quel (sa file d'envoi
+	// aussi), mis à jour par les changements depuis son point de reprise à
+	// la connexion ; rechargé en entier seulement s'il n'a rien en attente
+	// et date d'avant la purge des pierres tombales du serveur.
+	if fresh || !keepCollabCache(ctx, d) {
+		if _, err := workbook.Load(ctx, srv, d.DB(), src, fresh); err != nil {
+			d.Close()
+			return OpenResult{}, err
+		}
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		d.Close()
@@ -410,6 +567,24 @@ func (s *DocumentService) ShareOpen(ctx context.Context, server, id, title strin
 	st, err := s.State(ctx)
 	st.Notice = d.TakeOpenNotice()
 	return OpenResult{State: st}, err
+}
+
+// collabCacheAge : au-delà, un cache collaboratif sans rien en attente est
+// rechargé en entier (le serveur garde les pierres tombales 30 jours).
+const collabCacheAge = 25 * 24 * time.Hour
+
+// keepCollabCache dit si le cache local d'un classeur collaboratif se
+// rouvre tel quel (synchronisé par ses deltas) plutôt que d'être rechargé.
+func keepCollabCache(ctx context.Context, d *doc.Document) bool {
+	info := d.Share.Info()
+	if info == nil || info.Mode != workbook.Collaborative {
+		return false
+	}
+	var pending int
+	if err := d.DB().Read().QueryRowContext(ctx, `SELECT count(*) FROM _lattis_outbox WHERE state = 'pending'`).Scan(&pending); err != nil {
+		return false
+	}
+	return pending > 0 || time.Since(info.Synced) < collabCacheAge
 }
 
 // ShareReload recharge la version publiée du classeur partagé ouvert

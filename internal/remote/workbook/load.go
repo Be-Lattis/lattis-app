@@ -77,7 +77,12 @@ func Load(ctx context.Context, srv Server, db *store.Store, src Source, fresh bo
 			Server: src.Server, ServerName: src.ServerName, WorkbookID: src.WorkbookID, Schema: caps.Schema, Channel: caps.Channel,
 			Mode: caps.Mode, Version: caps.Version, Roles: caps.Roles, User: src.User, Synced: time.Now().UTC(),
 		}
-		info.Title = src.Title
+		// Titre : celui du serveur (my_capabilities), à défaut celui de la
+		// liste, à défaut celui déjà noté (serveur d'avant la migration 0007).
+		info.Title = caps.Title
+		if info.Title == "" {
+			info.Title = src.Title
+		}
 		if old, err := ReadInfo(ctx, db.Read()); err == nil && old != nil && old.WorkbookID == src.WorkbookID && info.Title == "" {
 			info.Title = old.Title
 		}

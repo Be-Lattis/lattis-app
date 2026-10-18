@@ -88,6 +88,13 @@ export interface State {
      */
     "newVersion"?: number;
     "published": number;
+
+    /**
+     * Pending : étapes pas encore confirmées par le serveur ; Conflicts :
+     * conflits en attente de décision (classeur collaboratif).
+     */
+    "pending"?: number;
+    "conflicts"?: number;
 }
 
 /**

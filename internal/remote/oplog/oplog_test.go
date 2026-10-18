@@ -29,6 +29,7 @@ type fixture struct {
 	db   *store.Store
 	bus  *command.Bus
 	m    *oplogtest.Mirror
+	rec  *oplog.Recorder
 }
 
 // open crée un classeur avec le tableau 1 (t_1 : c_1 texte, c_2 réel), trois
@@ -84,7 +85,8 @@ func (f *fixture) reopen() {
 		f.t.Fatal(err)
 	}
 	f.db, f.bus = db, command.New(db)
-	f.bus.Recorder = oplog.New(db)
+	f.rec = oplog.New(db)
+	f.bus.Recorder = f.rec
 }
 
 // do applique des instructions (et leurs inverses) en une commande.
@@ -216,8 +218,10 @@ func TestUndoRedo(t *testing.T) {
 	f.check("deuxième annulation")
 
 	// Une valeur reçue d'un collègue (hors journal) entre la saisie et son
-	// annulation : l'annulation reste conditionnée à la valeur saisie.
-	f.do([]command.Stmt{S(`UPDATE t_1 SET c_2 = 20 WHERE id = 3`)}, []command.Stmt{S(`UPDATE t_1 SET c_2 = 7 WHERE id = 3`)})
+	// annulation : la cellule n'est pas annulée, elle garde la valeur du
+	// collègue (§7) ; le reste de l'étape l'est.
+	f.do([]command.Stmt{S(`UPDATE t_1 SET c_2 = 20 WHERE id = 3`), S(`UPDATE t_1 SET c_1 = 'Lait' WHERE id = 3`)},
+		[]command.Stmt{S(`UPDATE t_1 SET c_2 = 7 WHERE id = 3`), S(`UPDATE t_1 SET c_1 = 'Sucre' WHERE id = 3`)})
 	n := f.count()
 	err := f.db.Write(ctx, func(tx *sql.Tx) error {
 		_, err := tx.Exec(`UPDATE t_1 SET c_2 = 21 WHERE id = 3`)
@@ -230,7 +234,24 @@ func TestUndoRedo(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, ops = f.since(n)
-	if len(ops) != 1 || ops[0].Old != json.Number("20") || ops[0].New != json.Number("7") {
+	if len(ops) != 1 || ops[0].Col != 1 || ops[0].Old != "Lait" || ops[0].New != "Sucre" {
+		t.Fatalf("annulation après une modification reçue : %+v", ops)
+	}
+	if k := f.rec.TakeSkipped(); k != 1 {
+		t.Fatalf("cellules gardées : %d", k)
+	}
+	var v int64
+	if err := f.db.Read().QueryRow(`SELECT c_2 FROM t_1 WHERE id = 3`).Scan(&v); err != nil || v != 21 {
+		t.Fatalf("cellule du collègue : %d (%v)", v, err)
+	}
+	// Une annulation sans écriture d'un collègue garde la condition « la
+	// cellule vaut toujours ce que j'y ai mis ».
+	f.do([]command.Stmt{S(`UPDATE t_1 SET c_2 = 30 WHERE id = 3`)}, []command.Stmt{S(`UPDATE t_1 SET c_2 = 21 WHERE id = 3`)})
+	n = f.count()
+	if _, err := f.bus.Undo(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if _, ops = f.since(n); len(ops) != 1 || ops[0].Old != json.Number("30") || ops[0].New != json.Number("21") {
 		t.Fatalf("annulation conditionnée : %+v", ops)
 	}
 	// L'écriture hors journal n'est pas renvoyée par la commande suivante.

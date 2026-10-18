@@ -67,7 +67,7 @@ Le contrat client de `lattisd` (`be-lattis-server`, branche `claude/socle-lattis
 ## Ce qui reste
 
 - Côté serveur : trancher les écarts ci-dessus (device code, forme des refus).
-- Pool `rw` / `ro` (`pgpool.Open`, `Acquire`) : utilisé par la publication, l'ouverture et l'écoute des republications (`publication.md`, `internal/bridge/sharing.go`) ; la synchronisation (étape 5) reprendra la connexion `LISTEN` dédiée (reconnexion avec reprise des deltas). `SELECT lattis.login_summary()` (contrat §4) n'est pas encore appelé.
+- Pool `rw` / `ro` (`pgpool.Open`, `Acquire`) : utilisé par la publication, l'ouverture et l'écoute des republications (`publication.md`, `internal/bridge/sharing.go`) ; la synchronisation (étape 5, `synchronisation.md`) reprend la connexion `LISTEN` dédiée, avec reprise des deltas à chaque reconnexion. Réplicas (contrat §3.1, branche `claude/jalon-6-replicas`) : une lecture servie par `ro` qui reçoit un `42501` inattendu (réplica qui rejoue la création d'un classeur avec un cache des rôles périmé) est refaite sur une nouvelle connexion, la fautive étant fermée pour que le pool ne la redonne pas, puis sur `rw` (`workbook.pgServer.with`, `TestPostgresReplicaRetry`) ; les deltas restent sur `rw`. `SELECT lattis.login_summary()` (contrat §4) n'est pas encore appelé.
 - Réutiliser ce module pour le module OIDC de la configuration d'entreprise (étape 6 de `configuration-entreprise.md`), avec `lattisd` comme émetteur unique.
 - Version web : la connexion passera par le cookie de session de `lattisd` ; le navigateur du système et la boucle locale n'y ont pas cours.
 - Essais d'intégration contre un vrai `lattisd` + PostgreSQL 18 (`LATTIS_PG_TEST=1`).

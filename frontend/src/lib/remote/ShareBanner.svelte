@@ -1,7 +1,7 @@
 <script lang="ts">
-	// Bandeau du classeur partagé ouvert (§5.4, §10) : « Nouvelle version
+	// Bandeau du classeur partagé ouvert (§5.4, §7, §10) : « Nouvelle version
 	// disponible » (Recharger), « Hors ligne, lecture seule », « Classeur
-	// publié en lecture seule ».
+	// publié en lecture seule », conflits d'un classeur collaboratif (Voir).
 	import Icon from '#lib/icons/Icon.svelte';
 	import type { State } from '#bindings/internal/remote/workbook/models.js';
 	import { banner } from './share';
@@ -11,19 +11,22 @@
 		busy?: boolean;
 		onreload: () => void;
 		onlogin: () => void;
+		onconflicts?: () => void;
 	}
-	let { share, busy = false, onreload, onlogin }: Props = $props();
+	let { share, busy = false, onreload, onlogin, onconflicts }: Props = $props();
 	const b = $derived(banner(share));
 </script>
 
 {#if b}
 	<div class="banner {b.kind}" role="status">
-		<Icon name={b.kind === 'new' ? 'refresh' : 'lock'} size={14} />
+		<Icon name={b.kind === 'new' ? 'refresh' : b.kind === 'conflict' ? 'warning' : 'lock'} size={14} />
 		<span class="text">{b.text}</span>
 		{#if b.action === 'reload'}
 			<button disabled={busy} onclick={onreload}>{busy ? 'Rechargement…' : b.actionLabel}</button>
 		{:else if b.action === 'login'}
 			<button onclick={onlogin}>{b.actionLabel}</button>
+		{:else if b.action === 'conflicts' && onconflicts}
+			<button onclick={onconflicts}>{b.actionLabel}</button>
 		{/if}
 	</div>
 {/if}
@@ -43,6 +46,11 @@
 	.banner.new {
 		background: #e8f3ec;
 		color: #14532d;
+	}
+	.banner.conflict {
+		background: #fdf0e3;
+		color: #7c3a03;
+		--icon-accent: #d97706;
 	}
 	.banner.offline {
 		background: #fdf3e1;

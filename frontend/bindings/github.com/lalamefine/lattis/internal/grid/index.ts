@@ -14,5 +14,6 @@ export type {
     RuleStats,
     RuleStatsReq,
     Stats,
+    SyncMark,
     Window
 } from "./models.js";

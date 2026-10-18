@@ -9,9 +9,11 @@ import (
 
 // VersionNotice lit une notification de republication (« *version:<n> »,
 // lattis.finish_publish). Le canal porte aussi « *meta » et les
-// identifiants des tableaux modifiés (classeur collaboratif, et écritures
-// de la version de travail pendant une republication) : sans intérêt pour
-// un classeur figé.
+// identifiants des tableaux modifiés (classeur collaboratif : voir
+// internal/remote/collab) ; un classeur figé ne reçoit que « *version:<n> »
+// (depuis la migration 0007 du serveur, la version de travail d'une
+// republication ne notifie plus ; un serveur plus ancien le faisait, d'où
+// le filtre ici).
 func VersionNotice(payload string) (int, bool) {
 	s, ok := strings.CutPrefix(payload, "*version:")
 	if !ok {

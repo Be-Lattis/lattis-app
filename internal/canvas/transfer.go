@@ -122,6 +122,7 @@ func (m *Model) Transfer(ctx context.Context, from int64, src Rect, to int64, ds
 				return err
 			}
 		}
+		t.collect = true
 		return t.transfer(from, src, to, dst, move, values, &ev)
 	})
 	return ev, err

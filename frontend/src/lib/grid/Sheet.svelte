@@ -10,7 +10,7 @@
 	// éditeur DOM superposé à la cellule active, barre de formule.
 	import { flushSync, onMount, untrack } from 'svelte';
 	import { noticeTtl } from '#lib/shell/notice.js';
-	import { RowCache, percentile, type Fetched } from './cache';
+	import { RowCache, percentile, syncAt, type Fetched, type SyncKind } from './cache';
 	import { VScroll, clamp } from './scroll';
 	import { Axis } from './axis';
 	import { DEFAULT_NAME_HINT, isDefaultTableName } from './defaultname';
@@ -326,6 +326,12 @@
 		 * tableau en valeur. values : le bloc affiché de la source.
 		 */
 		transfer?(from: number, src: ClipRect, dst: ClipRect, move: boolean, values: string[][]): Promise<string | void>;
+		/**
+		 * Classeur collaboratif : saisie commencée (on) ou terminée dans la
+		 * cellule (row, col) ; une modification reçue d'un collègue pour elle
+		 * attend la validation.
+		 */
+		editing?(row: number, col: number, on: boolean): Promise<unknown>;
 		insertRow?(table: SheetTable, n: number): Promise<unknown>;
 		deleteRow?(table: SheetTable, n: number): Promise<unknown>;
 		insertColumn?(table: SheetTable, i: number): Promise<unknown>;
@@ -541,7 +547,10 @@
 		spill: '#5b9bd5',
 		found: 'rgba(250, 204, 21, 0.30)',
 		frozen: '#9aa0a6',
-		note: '#c0392b'
+		note: '#c0392b',
+		// Classeur collaboratif : modification en attente du serveur, conflit.
+		pending: '#7f93b2',
+		conflict: '#d97706'
 	};
 
 	// --- Tableaux posés sur la feuille ------------------------------------
@@ -2148,6 +2157,8 @@
 					if (cf?.bar) drawBar(cf.bar, x, y, cw, rh(r), `t${e.t.id}:${row.id}:${col.name}`, r, c);
 					if (cs) borders(cs, x, y, cw, rh(r));
 					if (cs?.nt) noteCorner(x + cw, y, cs);
+					const sk = syncAt(row.sync, i);
+					if (sk) syncCorner(x + cw, y + rh(r), sk);
 					let s = row.text[i];
 					if (calcCols?.[i]) {
 						const fk = `t${e.t.id}:${row.id}:${col.name}`;
@@ -3052,6 +3063,21 @@
 		ctx.restore();
 		pendingBorders = [];
 		colorBorders = new Map();
+	}
+
+	/**
+	 * Classeur collaboratif : petit triangle dans le coin bas droit d'une
+	 * cellule dont la modification attend le serveur (gris bleu) ou en
+	 * conflit (orange).
+	 */
+	function syncCorner(xr: number, yb: number, kind: SyncKind) {
+		ctx.fillStyle = kind === 'conflict' ? C.conflict : C.pending;
+		ctx.beginPath();
+		ctx.moveTo(xr - 1, yb - 1);
+		ctx.lineTo(xr - 7, yb - 1);
+		ctx.lineTo(xr - 1, yb - 7);
+		ctx.closePath();
+		ctx.fill();
 	}
 
 	/** Petit triangle d'angle d'une cellule en erreur (le détail est dans la barre d'état). */
@@ -6158,6 +6184,23 @@
 	// la précédente (une saisie fait naître un tableau, la suivante le remplit).
 	// Une écriture qui échoue ne bloque jamais les suivantes (catch).
 	let writing: Promise<void> = Promise.resolve();
+
+	// Classeur collaboratif : la cellule en cours de saisie est signalée à la
+	// source, et libérée une fois la saisie écrite (ou abandonnée).
+	let editingAt: { row: number; col: number } | null = null;
+	$effect(() => {
+		const on = editing;
+		if (!source.editing) return;
+		if (on && !editingAt) {
+			editingAt = { row: active.row, col: active.col };
+			source.editing(editingAt.row, editingAt.col, true).catch(() => undefined);
+		} else if (!on && editingAt) {
+			const at = editingAt;
+			editingAt = null;
+			const done = source.editing;
+			writing = writing.catch(() => undefined).then(() => done(at.row, at.col, false).then(() => undefined, () => undefined));
+		}
+	});
 	// keep : saisie au clavier ; refusée, son texte revient dans l'éditeur
 	// (sur sa cellule) au lieu d'être perdu.
 	function write(row: number, col: number, raw: string, keep = false): Promise<void> {
