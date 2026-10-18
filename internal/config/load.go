@@ -34,6 +34,9 @@ type Loader struct {
 	CacheFile string
 	// Client remplace le client HTTP (tests).
 	Client *http.Client
+	// UserFile remplace le config.json de l'utilisateur écrit par SetUser
+	// (tests ; Local doit alors le lire).
+	UserFile string
 
 	mu            sync.Mutex
 	url           string
@@ -218,6 +221,7 @@ func SetCurrent(c *Config) { current.Store(c) }
 // et lance le rafraîchissement de la configuration distante.
 func Init(ctx context.Context, setFlags []string) *Loader {
 	l := &Loader{SetFlags: setFlags}
+	active.Store(l)
 	SetCurrent(l.Load(ctx))
 	l.StartRefresh(ctx, nil)
 	return l

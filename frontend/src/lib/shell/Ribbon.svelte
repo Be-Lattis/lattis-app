@@ -12,6 +12,7 @@
 	import { ZOOM_LEVELS, zoomLabel } from '#lib/grid/zoom.js';
 	import Select from '#lib/ui/Select.svelte';
 	import { estimate, fit, groupWidth, type GroupShape, type Measure, type Mode } from './fit';
+	import { webPagesEnabled } from './settings.svelte.js';
 	import type { IconName } from '#lib/icons/icons.js';
 	import { MORE_KINDS, type ChartKind } from '#lib/chart/kinds.js';
 
@@ -63,7 +64,7 @@
 	}
 	const FONTS_W = 134; // largeur des listes Police et Taille (fit.ts)
 
-	export type FileAction = 'new' | 'open' | 'save' | 'saveAs' | 'import' | 'export' | 'exportXlsx' | 'print' | 'pdf' | 'close' | 'demo' | 'mcp';
+	export type FileAction = 'new' | 'open' | 'save' | 'saveAs' | 'import' | 'export' | 'exportXlsx' | 'print' | 'pdf' | 'close' | 'demo' | 'mcp' | 'settings';
 
 	export type DataAction = 'csv' | 'xlsx' | 'json' | 'parquet' | 'sqlite' | 'postgres' | 'mysql' | 'sqlserver' | 'web' | 'table' | 'queries' | 'refreshAll';
 
@@ -224,7 +225,7 @@
 	const tabGroup: Group = $derived({
 		title: 'Onglets',
 		commands: [
-			{ label: 'Onglet HTML', icon: 'web', run: onpage, hint: 'Nouvel Onglet HTML : une page (HTML, CSS et JavaScript) qui lit et modifie le classeur, ou une page web externe' },
+			{ label: 'Onglet HTML', icon: 'web', run: onpage, hint: 'Nouvel Onglet HTML : une page (HTML, CSS et JavaScript) qui lit et modifie le classeur' + (webPagesEnabled() ? ', ou une page web externe' : '') },
 			{ label: 'Onglet Document', icon: 'document', run: ondocpage, hint: 'Nouvel Onglet Document : texte mis en forme, avec graphiques, tableaux croisés et boutons de scripts' }
 		]
 	});
@@ -572,7 +573,8 @@
 		Révision: sheetRibbons.Révision.filter((g) => g.title === 'Protéger'),
 		Affichage: [{ title: 'Afficher', commands: sheetRibbons.Affichage[0].commands.filter((c) => c.label === 'Animations') }]
 	});
-	// Onglet page HTML : la page a ses propres commandes (Modifier, Page web…).
+	// Onglet page HTML : la page a ses propres commandes (Modifier, et Page
+	// web… si Fichier › Paramètres › Fonctionnalités le permet).
 	const htmlRibbons: Record<string, Group[]> = $derived({
 		Accueil: sheetRibbons.Accueil.filter((g) => g.title === 'Annuler'),
 		Insertion: [tabGroup],
@@ -709,8 +711,8 @@
 						{/if}
 					</div>
 					<hr />
-					{#each [['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ['import', 'Importer (CSV, Excel)…', ''], ['export', 'Exporter le tableau en CSV…', ''], ['exportXlsx', 'Exporter le classeur (.xlsx)…', ''], ['pdf', 'Exporter en PDF…', ''], ['print', 'Imprimer…', 'Ctrl+P'], ['close', 'Fermer', 'Ctrl+W'], ['mcp', 'Serveur MCP (assistants)…', ''], ...(import.meta.env.DEV ? [['demo', 'Démo : 1 M de lignes', '']] : [])] as [a, label, keys] (a)}
-						<button disabled={disabled && a !== 'import' && a !== 'demo' && a !== 'mcp'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keys}</span></button>
+					{#each [['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ['import', 'Importer (CSV, Excel)…', ''], ['export', 'Exporter le tableau en CSV…', ''], ['exportXlsx', 'Exporter le classeur (.xlsx)…', ''], ['pdf', 'Exporter en PDF…', ''], ['print', 'Imprimer…', 'Ctrl+P'], ['close', 'Fermer', 'Ctrl+W'], ['mcp', 'Serveur MCP (assistants)…', ''], ['settings', 'Paramètres…', ''], ...(import.meta.env.DEV ? [['demo', 'Démo : 1 M de lignes', '']] : [])] as [a, label, keys] (a)}
+						<button disabled={disabled && a !== 'import' && a !== 'demo' && a !== 'mcp' && a !== 'settings'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keys}</span></button>
 					{/each}
 				</div>
 			{/if}

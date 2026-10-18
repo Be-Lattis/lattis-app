@@ -3,8 +3,8 @@
 	// (bridge.ts), et son éditeur (HTML, CSS, JavaScript) avec un aperçu.
 	// Afficher / Modifier basculent entre les deux ; Ctrl+S enregistre (une
 	// étape d'annulation), Ctrl+Entrée met l'aperçu à jour sans enregistrer.
-	// Ou une page web externe : son adresse (« Page web… »), affichée dans un
-	// cadre, sans pont vers le classeur.
+	// Ou une page web externe : son adresse (« Page web… », si les paramètres
+	// le permettent), affichée dans un cadre, sans pont vers le classeur.
 	import { onMount, untrack } from 'svelte';
 	import { EditorState } from '@codemirror/state';
 	import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view';
@@ -14,6 +14,7 @@
 	import { html } from '@codemirror/lang-html';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { buildSrcdoc, eventOf, pageUrl, parseCall, replyOf, urlSource } from './bridge';
+	import { webPagesEnabled } from '#lib/shell/settings.svelte.js';
 
 	interface Props {
 		/** Nom de l'onglet (titre de la barre). */
@@ -61,9 +62,14 @@
 	const url = $derived(editing ? null : pageUrl(shown));
 	let asking = $state<string | null>(null);
 
+	// Pointer l'onglet vers une page web externe : seulement si Fichier ›
+	// Paramètres › Fonctionnalités le permet (coupé par défaut). Une page web
+	// déjà posée s'affiche dans tous les cas.
+	const webPages = $derived(webPagesEnabled());
+
 	async function setUrl() {
 		const u = (asking ?? '').trim();
-		if (!u) return;
+		if (!u || !webPages) return;
 		asking = null;
 		const src = urlSource(u);
 		try {
@@ -207,7 +213,9 @@
 			<span class="muted">Ctrl+S : enregistrer · Ctrl+Entrée : aperçu · lattis.call("sheets.list"), lattis.query(sql), lattis.on("change", f)</span>
 		{:else}
 			<button onclick={startEdit} disabled={!!locked} title={locked || 'Modifier le HTML, le CSS et le JavaScript de la page'}><Icon name="edit" size={14} />{url ? 'Page HTML' : 'Modifier'}</button>
-			{#if asking !== null}
+			{#if !webPages}
+				<!-- « Page web… » coupée (Fichier › Paramètres › Fonctionnalités) : une page web déjà posée s'affiche quand même. -->
+			{:else if asking !== null}
 				<!-- svelte-ignore a11y_autofocus -->
 				<input
 					class="url"

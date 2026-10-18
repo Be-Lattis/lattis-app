@@ -26,6 +26,8 @@
 	import PickBanner from '#lib/script/PickBanner.svelte';
 	import type { ControlInfo } from '#lib/script/controls.js';
 	import McpPanel from '#lib/shell/McpPanel.svelte';
+	import SettingsDialog from '#lib/shell/SettingsDialog.svelte';
+	import { loadSettings } from '#lib/shell/settings.svelte.js';
 	import HtmlPage from '#lib/page/HtmlPage.svelte';
 	import DocPage from '#lib/doc/DocPage.svelte';
 	import type { DocFormat } from '#lib/doc/format.js';
@@ -99,6 +101,7 @@
 	// Boîtes de dialogue ouvertes par un script ou un assistant (ui.dialog…), la plus ancienne d'abord.
 	let dialogs = $state<DialogSpec[]>([]);
 	let mcpOpen = $state(false);
+	let settingsOpen = $state(false);
 	// Données › Obtenir des données : requêtes d'import (lib/query).
 	let queryHost = $state<ReturnType<typeof QueryHost>>();
 	// Révision › Protéger : boîte du mot de passe (protéger, ou ôter une
@@ -341,6 +344,7 @@
 	}
 
 	onMount(() => {
+		loadSettings();
 		const off = Events.On('doc:changed', (e: { data?: DocState }) => {
 			// Tableaux fusionnés, cellules rattachées : annoncé après la
 			// relecture, pour passer après le message de l'action elle-même.
@@ -493,6 +497,9 @@
 					break;
 				case 'mcp':
 					mcpOpen = true;
+					break;
+				case 'settings':
+					settingsOpen = true;
 					break;
 			}
 		} catch (e) {
@@ -1278,6 +1285,9 @@
 	{/each}
 	{#if mcpOpen}
 		<McpPanel onclose={() => (mcpOpen = false)} />
+	{/if}
+	{#if settingsOpen}
+		<SettingsDialog onclose={() => (settingsOpen = false)} />
 	{/if}
 	{#if protecting}
 		{@const p = protecting}

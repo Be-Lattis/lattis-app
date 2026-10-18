@@ -87,6 +87,10 @@ type Features struct {
 	MCP                  Toggle  `json:"mcp,omitempty"`
 	LuaHTTP              LuaHTTP `json:"luaHttp,omitempty"`
 	AllowUserConnections *bool   `json:"allowUserConnections,omitempty"`
+	// WebPages : un Onglet HTML peut afficher une page web externe (l'option
+	// « Page web… »). Coupée par défaut ; les classeurs qui en contiennent
+	// déjà les affichent quand même.
+	WebPages *bool `json:"webPages,omitempty"`
 }
 
 // Toggle est un interrupteur.
@@ -109,6 +113,7 @@ func Defaults() Tree {
 		"features": Tree{
 			"mcp":                  Tree{"enabled": false},
 			"allowUserConnections": true,
+			"webPages":             false,
 		},
 		"ai": Tree{"enabled": false, "dataSharing": "schema-only"},
 	}
@@ -199,7 +204,7 @@ func coerce(path string, v any) (any, bool) {
 }
 
 var boolPaths = []string{"allowPolicyOverride", "features.mcp.enabled", "features.allowUserConnections",
-	"features.luaHttp.restrict", "ai.enabled"}
+	"features.webPages", "features.luaHttp.restrict", "ai.enabled"}
 
 func boolPath(path string) bool {
 	for _, p := range boolPaths {
@@ -221,6 +226,7 @@ var validators = []struct {
 	{"allowPolicyOverride", isBool},
 	{"features.mcp.enabled", isBool},
 	{"features.allowUserConnections", isBool},
+	{"features.webPages", isBool},
 	{"features.luaHttp.restrict", isBool},
 	{"features.luaHttp.allowedDomains", isStringList},
 	{"ai.enabled", isBool},
