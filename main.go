@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"errors"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	"runtime"
 
 	"github.com/lalamefine/lattis/internal/bridge"
+	"github.com/lalamefine/lattis/internal/config"
 	"github.com/lalamefine/lattis/internal/console"
 	"github.com/lalamefine/lattis/internal/demo"
 	"github.com/lalamefine/lattis/internal/mcp"
@@ -35,12 +37,30 @@ func main() {
 		return
 	}
 
+	// « lattis config » : configuration effective (provenance, stratégies),
+	// validation et signature des fichiers de configuration d'entreprise.
+	if len(os.Args) > 1 && os.Args[1] == "config" {
+		console.Attach()
+		os.Exit(config.Run(os.Args[2:], os.Stdout, os.Stderr))
+	}
+
+	// Configuration en cascade (stratégie, environnement, Registre, fichiers,
+	// configuration distante en cache) : résolue sans réseau avant la
+	// fenêtre ; la configuration distante se rafraîchit en arrière-plan.
+	sets, cliArgs, err := config.SplitSetFlags(os.Args[1:])
+	if err != nil {
+		console.Attach()
+		fmt.Fprintf(os.Stderr, "lattis : %v\n", err)
+		os.Exit(2)
+	}
+	config.Init(context.Background(), sets)
+
 	documents := &bridge.DocumentService{}
 	// -h, --help : l'aide dans le terminal, sans ouvrir la fenêtre ; une
 	// option inconnue l'affiche aussi, avec l'erreur.
 	// --sql / --no-sql : journal des requêtes SQL dans la console.
 	var args []string
-	for _, a := range os.Args[1:] {
+	for _, a := range cliArgs {
 		switch a {
 		case "--sql", "-sql":
 			store.SetSQLLog(true)
