@@ -60,6 +60,7 @@ type DocumentService struct {
 	mcp   mcpState
 	demo  *demoRun // classeur de démonstration demandé au lancement
 	pq    pqState  // base de travail des requêtes d'import (query.go)
+	ai    aiState  // conversation de l'onglet IA (ai.go)
 }
 
 var (

@@ -14,9 +14,11 @@ export interface SettingState {
 
 export interface SettingDef {
 	path: string;
-	kind: 'bool';
+	kind: 'bool' | 'choice';
 	label: string;
 	help?: string;
+	/** Choix d'un réglage 'choice' (valeur, libellé). */
+	choices?: { value: string; label: string }[];
 }
 
 export interface SettingSection {
@@ -35,6 +37,28 @@ export const settingSections: SettingSection[] = [
 				kind: 'bool',
 				label: 'Onglets HTML',
 				help: 'Permet d’ajouter des Onglets HTML : une page HTML, CSS et JavaScript qui lit et modifie le classeur, ou une page d’un site. Les classeurs qui en contiennent déjà s’ouvrent et s’utilisent normalement.'
+			},
+			{
+				path: 'ai.enabled',
+				kind: 'bool',
+				label: 'Onglet IA (assistant)',
+				help: 'Ajoute l’onglet IA, à gauche de SQL : un assistant qui aide à construire une analyse et agit sur le classeur. Il faut une clé d’API personnelle du fournisseur choisi, gardée dans le trousseau du système.'
+			}
+		]
+	},
+	{
+		id: 'ai',
+		title: 'Assistant IA',
+		settings: [
+			{
+				path: 'ai.dataSharing',
+				kind: 'choice',
+				label: 'Données transmises à l’assistant',
+				choices: [
+					{ value: 'schema-only', label: 'Structure seulement (noms, types, nombre de lignes et de valeurs distinctes)' },
+					{ value: 'sample', label: 'Structure et quelques lignes d’exemple' }
+				],
+				help: 'L’assistant ne reçoit jamais tout le contenu du classeur. Le fournisseur reçoit aussi vos messages.'
 			}
 		]
 	}

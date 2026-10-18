@@ -25,3 +25,8 @@ export async function setSetting(path: string, value: unknown) {
 export function htmlTabsEnabled(): boolean {
 	return boolSetting(userSettings.list, 'features.htmlTabs');
 }
+
+/** L'onglet IA est activé (opt-in, coupé par défaut). */
+export function aiEnabled(): boolean {
+	return boolSetting(userSettings.list, 'ai.enabled');
+}

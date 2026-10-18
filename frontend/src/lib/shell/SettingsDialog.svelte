@@ -71,6 +71,21 @@
 								/>
 								<span>{d.label}</span>
 							</label>
+						{:else if d.kind === 'choice'}
+							<p class="label" class:off={st?.locked}>{d.label}</p>
+							{#each d.choices ?? [] as c (c.value)}
+								<label class="choice" class:off={st?.locked}>
+									<input
+										type="radio"
+										name={d.path}
+										value={c.value}
+										checked={st?.value === c.value}
+										disabled={!st || st.locked || busy === d.path}
+										onchange={() => change(d.path, c.value)}
+									/>
+									<span>{c.label}</span>
+								</label>
+							{/each}
 						{/if}
 						{#if d.help}<p class="muted">{d.help}</p>{/if}
 						{#if note}<p class="note">{note}</p>{/if}
@@ -160,8 +175,17 @@
 		gap: 8px;
 		font-weight: 600;
 	}
-	label.off {
+	label.off,
+	.label.off {
 		color: #6b7280;
+	}
+	.label {
+		margin: 0 0 4px;
+		font-weight: 600;
+	}
+	label.choice {
+		font-weight: normal;
+		margin: 2px 0 2px 8px;
 	}
 	p {
 		margin: 4px 0 0 24px;

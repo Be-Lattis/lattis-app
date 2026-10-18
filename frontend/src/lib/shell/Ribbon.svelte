@@ -1,7 +1,8 @@
 <script lang="ts">
 	// Ruban façon Excel : onglets en haut, groupes de commandes en dessous.
-	// SQL et SCRIPT sont des onglets à part entière : ils prennent la place de
-	// la grille (précédence sur GRID). Les commandes pas encore réalisées sont
+	// IA, SQL et SCRIPT sont des onglets à part entière : ils prennent la place
+	// de la grille (précédence sur GRID). IA n'apparaît que s'il est activé
+	// (Fichier › Paramètres › Fonctionnalités). Les commandes pas encore réalisées sont
 	// affichées désactivées, pour montrer l'organisation cible.
 
 	import { untrack } from 'svelte';
@@ -12,11 +13,11 @@
 	import { ZOOM_LEVELS, zoomLabel } from '#lib/grid/zoom.js';
 	import Select from '#lib/ui/Select.svelte';
 	import { estimate, fit, groupWidth, type GroupShape, type Measure, type Mode } from './fit';
-	import { htmlTabsEnabled } from './settings.svelte.js';
+	import { aiEnabled, htmlTabsEnabled } from './settings.svelte.js';
 	import type { IconName } from '#lib/icons/icons.js';
 	import { MORE_KINDS, type ChartKind } from '#lib/chart/kinds.js';
 
-	export type View = 'grid' | 'sql' | 'script';
+	export type View = 'grid' | 'ai' | 'sql' | 'script';
 	export type FormatTab = 'number' | 'align' | 'font' | 'border' | 'fill';
 	export type FreezeAction = 'cell' | 'row' | 'col' | 'none';
 	/** Onglet affiché : feuille (grille), page HTML ou Document ; le ruban ne montre que ce qui s'y applique. */
@@ -206,7 +207,9 @@
 	}
 
 	const tabs = ['Accueil', 'Insertion', 'Données', 'Formules', 'Révision', 'Affichage'] as const;
-	let tab = $state<(typeof tabs)[number] | 'SQL' | 'SCRIPT'>('Accueil');
+	let tab = $state<(typeof tabs)[number] | 'IA' | 'SQL' | 'SCRIPT'>('Accueil');
+	/** Onglets qui remplacent la grille (pas de groupes de commandes). */
+	const isView = (t: string) => t === 'IA' || t === 'SQL' || t === 'SCRIPT';
 	// Largeur disponible pour les groupes : ils se compactent pour y tenir.
 	let groupsW = $state(2000);
 	let openGroup = $state<{ title: string; x: number; y: number } | null>(null);
@@ -586,7 +589,7 @@
 	// Onglets du ruban qui ont des commandes pour l'onglet affiché.
 	const shownTabs = $derived(tabs.filter((t) => (allRibbons[t]?.length ?? 0) > 0));
 	$effect(() => {
-		if (tab !== 'SQL' && tab !== 'SCRIPT' && !shownTabs.includes(tab)) tab = 'Accueil';
+		if (!isView(tab) && !shownTabs.includes(tab as (typeof tabs)[number])) tab = 'Accueil';
 	});
 
 	// Sur une feuille protégée, seules les commandes qui ne la modifient pas
@@ -621,7 +624,7 @@
 	};
 	type ShapesArr = GroupShape[];
 	const shapes = $derived(
-		tab === 'SQL' || tab === 'SCRIPT'
+		isView(tab)
 			? []
 			: (ribbons[tab] ?? []).map((g) => ({ title: g.title, iconOk: g.iconOk, labels: [...(g.fonts ? [FONTS_W] : []), ...g.commands.map((c) => (c.color ? null : c.items || c.menu ? c.label + ' ▾' : c.label))] }))
 	);
@@ -630,7 +633,7 @@
 	// ruban ni remesurer (sinon les boutons changent de taille).
 	const shapesKey = $derived(JSON.stringify(shapes));
 	const modesKey = $derived(
-		tab === 'SQL' || tab === 'SCRIPT' ? '' : fit(JSON.parse(shapesKey), (groupsW - 12) / ratio, measure).join(',')
+		isView(tab) ? '' : fit(JSON.parse(shapesKey), (groupsW - 12) / ratio, measure).join(',')
 	);
 	const modes: Mode[] = $derived(modesKey ? (modesKey.split(',') as Mode[]) : []);
 	$effect(() => {
@@ -647,15 +650,16 @@
 
 	function select(t: typeof tab) {
 		tab = t;
-		onview(t === 'SQL' ? 'sql' : t === 'SCRIPT' ? 'script' : 'grid');
+		onview(t === 'IA' ? 'ai' : t === 'SQL' ? 'sql' : t === 'SCRIPT' ? 'script' : 'grid');
 	}
 
 	$effect(() => {
 		// Revenir à la grille depuis la page (onglet de feuille) remet un onglet de ruban.
-		if (view === 'grid' && (tab === 'SQL' || tab === 'SCRIPT')) tab = 'Accueil';
+		if (view === 'grid' && isView(tab)) tab = 'Accueil';
 		// Vue changée sans le ruban (retour de la pipette de l'onglet SCRIPT).
 		else if (view === 'script' && tab !== 'SCRIPT') tab = 'SCRIPT';
 		else if (view === 'sql' && tab !== 'SQL') tab = 'SQL';
+		else if (view === 'ai' && tab !== 'IA') tab = 'IA';
 	});
 </script>
 
@@ -722,10 +726,15 @@
 			<button class="tab" data-label={t} class:on={tab === t} {disabled} onclick={() => select(t)}>{t}</button>
 		{/each}
 		<span class="sep"></span>
+		{#if aiEnabled() || view === 'ai'}
+			<button class="tab special ai" data-label="IA" class:on={tab === 'IA'} {disabled} onclick={() => select('IA')} title="Assistant IA"
+				><Icon name="sparkle" size={14} /><span>IA</span></button
+			>
+		{/if}
 		<button class="tab special" data-label="SQL" class:on={tab === 'SQL'} {disabled} onclick={() => select('SQL')}>SQL</button>
 		<button class="tab special" data-label="SCRIPT" class:on={tab === 'SCRIPT'} {disabled} onclick={() => select('SCRIPT')}>SCRIPT</button>
 	</nav>
-	{#if tab !== 'SQL' && tab !== 'SCRIPT'}
+	{#if !isView(tab)}
 		<div class="groups" class:off={disabled} use:observe>
 			{#each ribbons[tab] ?? [] as g, gi (g.title)}
 				{@const mode = modes[gi] ?? 'large'}
@@ -926,6 +935,20 @@
 	}
 	.special {
 		letter-spacing: 0.04em;
+	}
+	.tab.ai {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		flex-wrap: wrap;
+		justify-content: center;
+		--icon-accent: #fde68a;
+	}
+	.tab.ai.on {
+		--icon-accent: #d97706;
+	}
+	.tab.ai::after {
+		flex-basis: 100%;
 	}
 	.sep {
 		flex: 1;

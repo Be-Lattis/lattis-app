@@ -20,6 +20,7 @@
 	import { count } from '#lib/sql/result.js';
 	import { printSheet } from '#lib/shell/print.js';
 	import SqlView, { type Favorite } from '#lib/shell/SqlView.svelte';
+	import AiView from '#lib/ai/AiView.svelte';
 	import TitleBar from '#lib/shell/TitleBar.svelte';
 	import ScriptView, { type Script } from '#lib/script/ScriptView.svelte';
 	import ScriptDialog, { type DialogSpec } from '#lib/script/ScriptDialog.svelte';
@@ -27,7 +28,7 @@
 	import type { ControlInfo } from '#lib/script/controls.js';
 	import McpPanel from '#lib/shell/McpPanel.svelte';
 	import SettingsDialog from '#lib/shell/SettingsDialog.svelte';
-	import { htmlTabsEnabled, loadSettings } from '#lib/shell/settings.svelte.js';
+	import { aiEnabled, htmlTabsEnabled, loadSettings } from '#lib/shell/settings.svelte.js';
 	import HtmlPage from '#lib/page/HtmlPage.svelte';
 	import DocPage from '#lib/doc/DocPage.svelte';
 	import type { DocFormat } from '#lib/doc/format.js';
@@ -251,6 +252,12 @@
 	}
 
 	/** Commandes de l'interface venues d'un script ou du serveur MCP (internal/bridge/host.go). */
+	// Onglet IA désactivé (Fichier › Paramètres) pendant qu'il est affiché :
+	// retour à la grille.
+	$effect(() => {
+		if (view === 'ai' && !aiEnabled()) untrack(() => (view = 'grid'));
+	});
+
 	async function uiCommand(c: UICommand) {
 		switch (c.kind) {
 			case 'select': {
@@ -1163,7 +1170,9 @@
 					</div>
 				{/key}
 			{/if}
-			{#if view === 'sql'}
+			{#if view === 'ai'}
+				<div class="pane"><AiView hasDoc={mode === 'doc'} onsettings={() => (settingsOpen = true)} /></div>
+			{:else if view === 'sql'}
 				<div class="pane"><SqlView {objects} run={query} exec={mode === 'doc' ? (q) => DocumentService.Execute(q) : undefined} ongoto={gotoObject}
 						onrename={mode === 'doc'
 							? async (from, to) => {

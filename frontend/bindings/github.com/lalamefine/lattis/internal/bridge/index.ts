@@ -9,6 +9,9 @@ export {
 };
 
 export type {
+    AIEventData,
+    AIProvider,
+    AIStatus,
     DemoProgress,
     DemoResult,
     DialogRequest,
