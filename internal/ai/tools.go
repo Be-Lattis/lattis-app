@@ -3,10 +3,13 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/api"
+	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/mcp"
 )
 
@@ -23,8 +26,8 @@ import (
 //
 // Les commandes qui suppriment un tableau ou une feuille, touchent aux
 // fichiers, au réseau, aux scripts ou à la protection ne sont pas proposées,
-// ni celles de l'interface (ui.*) : afficher une feuille quitterait l'onglet
-// IA pendant la réponse.
+// ni celles de l'interface (ui.*) : l'interface montre elle-même ce que l'assistant
+// touche (« Aller à »).
 // Tout ce que l'assistant modifie pendant une réponse forme une seule étape
 // d'annulation (Ctrl+Z), posée par l'appelant (internal/bridge).
 
@@ -53,8 +56,13 @@ var structureCommands = []string{
 
 var sampleCommands = []string{"tables.rows", "columns.values", "db.query", "sheets.get", "cells.get"}
 
-// profileTool : profil d'un tableau (cardinalités), propre à l'assistant.
-const profileTool = "tables_profile"
+// Outils propres à l'assistant, permis même sans partage des données :
+// profil d'un tableau (cardinalités, type du résultat des colonnes
+// calculées) et erreurs des colonnes calculées, comptées par code.
+const (
+	profileTool = "tables_profile"
+	errorsTool  = "formulas_errors"
+)
 
 // commands donne les commandes permises pour ce partage.
 func commands(sharing string) map[string]*api.Command {
@@ -89,12 +97,42 @@ func Tools(sharing string) []Tool {
 	}
 	out = append(out, Tool{
 		Name:        profileTool,
-		Description: "Profil d'un tableau sans en montrer les valeurs : pour chaque colonne, son type, son nombre de valeurs distinctes et de cellules vides, et le nombre de lignes.",
+		Description: "Profil d'un tableau sans en montrer les valeurs : pour chaque colonne, son type, son nombre de valeurs distinctes et de cellules vides (et, pour une colonne calculée, le type de son résultat : nombre, texte, date, booléen), et le nombre de lignes.",
+		Schema: map[string]any{"type": "object", "properties": map[string]any{
+			"table": map[string]any{"type": "string", "description": "nom du tableau"},
+		}, "required": []string{"table"}},
+	}, Tool{
+		Name:        errorsTool,
+		Description: "Vérifie les colonnes calculées d'un tableau sans en montrer les valeurs : pour chacune, sa formule, le type de son résultat (majoritaire) et le nombre de cellules en erreur par code (#DIV/0!, #REF!, #NOM?, #VALEUR!, #N/A, #NOMBRE!, #CIRC!). À utiliser après avoir écrit une formule.",
 		Schema: map[string]any{"type": "object", "properties": map[string]any{
 			"table": map[string]any{"type": "string", "description": "nom du tableau"},
 		}, "required": []string{"table"}},
 	})
 	return out
+}
+
+// IsWrite dit si un outil de l'assistant modifie le classeur.
+func IsWrite(name string) bool {
+	c := commandOf(name)
+	return c != nil && c.Write
+}
+
+// Target donne la feuille ou le tableau visé par un appel d'outil (vide
+// sinon) : le nouveau nom pour un renommage ou une création de feuille.
+func Target(name string, input json.RawMessage) string {
+	var args map[string]any
+	_ = json.Unmarshal(input, &args)
+	keys := []string{"table", "sheet"}
+	switch name {
+	case "sheets_rename", "tables_rename", "sheets_add":
+		keys = []string{"name", "table", "sheet"}
+	}
+	for _, k := range keys {
+		if v, ok := args[k].(string); ok && v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 // Exec rend l'exécuteur des outils pour host, avec ce partage.
@@ -107,8 +145,11 @@ func Exec(host api.Host, sharing string) Executor {
 				return "paramètres illisibles : " + err.Error(), true
 			}
 		}
-		if name == profileTool {
+		switch name {
+		case profileTool:
 			return profile(ctx, host, args)
+		case errorsTool:
+			return formulaErrors(ctx, host, args)
 		}
 		cmd := allowed[name]
 		if cmd == nil {
@@ -188,20 +229,9 @@ func profile(ctx context.Context, host api.Host, args map[string]any) (string, b
 	if table == "" {
 		return "paramètre table manquant", true
 	}
-	info, err := api.Invoke(ctx, host, "tables.get", map[string]any{"table": table})
+	t, err := columnsOf(ctx, host, table)
 	if err != nil {
 		return err.Error(), true
-	}
-	b, _ := json.Marshal(info)
-	var t struct {
-		Columns []struct {
-			Name    string `json:"name"`
-			Type    string `json:"type"`
-			Formula string `json:"formula,omitempty"`
-		} `json:"columns"`
-	}
-	if err := json.Unmarshal(b, &t); err != nil || len(t.Columns) == 0 {
-		return "colonnes du tableau introuvables", true
 	}
 	sel := []string{"COUNT(*)"}
 	for _, c := range t.Columns {
@@ -212,7 +242,7 @@ func profile(ctx context.Context, host api.Host, args map[string]any) (string, b
 	if err != nil {
 		return err.Error(), true
 	}
-	b, _ = json.Marshal(res)
+	b, _ := json.Marshal(res)
 	var r struct {
 		Rows [][]any `json:"rows"`
 	}
@@ -226,6 +256,8 @@ func profile(ctx context.Context, host api.Host, args map[string]any) (string, b
 		Formula  string `json:"formula,omitempty"`
 		Distinct any    `json:"distinct"`
 		Empty    any    `json:"empty"`
+		// Result : type du résultat d'une colonne calculée.
+		Result string `json:"result,omitempty"`
 	}
 	out := struct {
 		Table   string `json:"table"`
@@ -233,7 +265,144 @@ func profile(ctx context.Context, host api.Host, args map[string]any) (string, b
 		Columns []col  `json:"columns"`
 	}{Table: table, Rows: row[0]}
 	for i, c := range t.Columns {
-		out.Columns = append(out.Columns, col{c.Name, c.Type, c.Formula, row[1+2*i], row[2+2*i]})
+		cl := col{Name: c.Name, Type: c.Type, Formula: c.Formula, Distinct: row[1+2*i], Empty: row[2+2*i]}
+		if c.Formula != "" {
+			if st, err := resultStats(ctx, host, table, c.Name); err == nil {
+				cl.Result = st.result
+			}
+		}
+		out.Columns = append(out.Columns, cl)
+	}
+	return encode(out, false), false
+}
+
+type columnInfo struct {
+	Name    string `json:"name"`
+	Type    string `json:"type"`
+	Formula string `json:"formula,omitempty"`
+}
+
+// columnsOf lit les colonnes d'un tableau (tables.get).
+func columnsOf(ctx context.Context, host api.Host, table string) (struct{ Columns []columnInfo }, error) {
+	var t struct{ Columns []columnInfo }
+	info, err := api.Invoke(ctx, host, "tables.get", map[string]any{"table": table})
+	if err != nil {
+		return t, err
+	}
+	b, _ := json.Marshal(info)
+	if err := json.Unmarshal(b, &t); err != nil || len(t.Columns) == 0 {
+		return t, errors.New("colonnes du tableau introuvables")
+	}
+	return t, nil
+}
+
+// Les résultats des formules qui n'ont pas d'équivalent SQLite (erreur,
+// booléen, date) sont rangés en petits BLOB marqués (internal/formula,
+// sqlfuncs.go) : 0xE5, une lettre (E, B, D), puis le code d'erreur, la
+// valeur ou le numéro de série. Ils se comptent par typeof et hex, sans
+// lire aucune valeur.
+const (
+	blobError = "E545" // 0xE5 'E'
+	blobBool  = "E542" // 0xE5 'B'
+	blobDate  = "E544" // 0xE5 'D'
+)
+
+type colStats struct {
+	result string           // type majoritaire du résultat (« nombre », « texte »…)
+	errors map[string]int64 // cellules en erreur, par code
+}
+
+// resultStats compte les résultats d'une colonne par type et les erreurs
+// par code, par une requête d'agrégat.
+func resultStats(ctx context.Context, host api.Host, table, column string) (colStats, error) {
+	q := quoteIdent(column)
+	sql := "SELECT typeof(" + q + "), CASE WHEN typeof(" + q + ") = 'blob' AND length(" + q + ") = 3 THEN hex(" + q + ") " +
+		"WHEN typeof(" + q + ") = 'blob' THEN substr(hex(" + q + "), 1, 4) ELSE '' END, COUNT(*) FROM " + quoteIdent(table) + " GROUP BY 1, 2"
+	res, err := api.Invoke(ctx, host, "db.query", map[string]any{"sql": sql})
+	if err != nil {
+		return colStats{}, err
+	}
+	b, _ := json.Marshal(res)
+	var r struct {
+		Rows [][]any `json:"rows"`
+	}
+	if err := json.Unmarshal(b, &r); err != nil {
+		return colStats{}, err
+	}
+	st := colStats{errors: map[string]int64{}}
+	kinds := map[string]int64{}
+	for _, row := range r.Rows {
+		if len(row) != 3 {
+			continue
+		}
+		typ, _ := row[0].(string)
+		h, _ := row[1].(string)
+		n, _ := row[2].(float64)
+		kind := ""
+		switch {
+		case typ == "integer" || typ == "real":
+			kind = "nombre"
+		case typ == "text":
+			kind = "texte"
+		case strings.HasPrefix(h, blobError) && len(h) == 6:
+			code, err := strconv.ParseUint(h[4:], 16, 8)
+			name := formula.ErrCode(code).String()
+			if err != nil || name == "" {
+				name = "#VALEUR!"
+			}
+			st.errors[name] += int64(n)
+		case strings.HasPrefix(h, blobBool):
+			kind = "booléen"
+		case strings.HasPrefix(h, blobDate):
+			kind = "date"
+		}
+		if kind != "" {
+			kinds[kind] += int64(n)
+		}
+	}
+	var best int64
+	for k, n := range kinds {
+		if n > best || (n == best && k < st.result) {
+			st.result, best = k, n
+		}
+	}
+	return st, nil
+}
+
+// formulaErrors : pour chaque colonne calculée du tableau, type du
+// résultat et erreurs par code ; aucune valeur ne quitte le classeur.
+func formulaErrors(ctx context.Context, host api.Host, args map[string]any) (string, bool) {
+	table, _ := args["table"].(string)
+	if table == "" {
+		return "paramètre table manquant", true
+	}
+	t, err := columnsOf(ctx, host, table)
+	if err != nil {
+		return err.Error(), true
+	}
+	type col struct {
+		Name    string           `json:"name"`
+		Formula string           `json:"formula"`
+		Result  string           `json:"result,omitempty"`
+		Errors  map[string]int64 `json:"errors"`
+	}
+	out := struct {
+		Table   string `json:"table"`
+		Columns []col  `json:"columns"`
+		Note    string `json:"note,omitempty"`
+	}{Table: table, Columns: []col{}}
+	for _, c := range t.Columns {
+		if c.Formula == "" {
+			continue
+		}
+		st, err := resultStats(ctx, host, table, c.Name)
+		if err != nil {
+			return err.Error(), true
+		}
+		out.Columns = append(out.Columns, col{Name: c.Name, Formula: c.Formula, Result: st.result, Errors: st.errors})
+	}
+	if len(out.Columns) == 0 {
+		out.Note = "aucune colonne calculée dans ce tableau"
 	}
 	return encode(out, false), false
 }
@@ -245,6 +414,8 @@ func Label(name string, input json.RawMessage) string {
 	label := ""
 	if name == profileTool {
 		label = "Profil du tableau"
+	} else if name == errorsTool {
+		label = "Vérifier les formules"
 	} else if c := commandOf(name); c != nil {
 		label = c.Label
 		if label == "" {
@@ -273,9 +444,11 @@ func commandOf(tool string) *api.Command {
 	return nil
 }
 
-// System est la consigne de l'assistant.
+// System est la consigne de l'assistant. Elle ne change pas d'un tour à
+// l'autre (le fournisseur la garde en cache) : le contexte de l'interface
+// voyage dans les messages (Compose).
 func System(sharing string) string {
-	data := "Vous ne voyez pas les valeurs des cellules : seulement la structure (feuilles, tableaux, noms et types des colonnes, nombre de lignes) et les cardinalités (outil tables_profile). Ne demandez pas à l'utilisateur de vous coller ses données ; raisonnez sur la structure."
+	data := "Vous ne voyez pas les valeurs des cellules : seulement la structure (feuilles, tableaux, noms et types des colonnes, nombre de lignes), les cardinalités (outil tables_profile) et le nombre d'erreurs des colonnes calculées (outil formulas_errors). Ne demandez pas à l'utilisateur de vous coller ses données ; raisonnez sur la structure."
 	if sharing == Sample {
 		data = fmt.Sprintf("Vous voyez la structure du classeur et pouvez lire quelques lignes d'exemple (au plus %d par lecture) et les valeurs distinctes d'une colonne ; vous ne voyez jamais tout le contenu.", SampleRows)
 	}
@@ -283,9 +456,15 @@ func System(sharing string) string {
 		`Vous aidez l'utilisateur à construire une analyse pertinente : choisir les bons types, les clés, les colonnes calculées, les tableaux croisés dynamiques et les graphiques, et à comprendre ses données.
 
 Conventions : les feuilles, tableaux et colonnes se désignent par leur nom ; les lignes et colonnes de la feuille se comptent à partir de 1. Commencez par tables_list (et tables_profile au besoin) pour connaître le classeur avant de proposer quoi que ce soit.
-Formules : elles commencent par = et utilisent des fonctions proches d'Excel en français (outil formulas_functions). Dans un tableau, [Colonne] désigne la valeur de la ligne courante, [Colonne][-1] la ligne précédente, Tableau[Colonne] toute la colonne d'un autre tableau, Tableau[Colonne][n] une valeur ; Cell[A1] une cellule fixe de la feuille. Une formule saisie dans une cellule de données d'un tableau fait de toute la colonne une colonne calculée : pour en ajouter une, columns_insert puis cells_set de la formule dans la première ligne de données (position du tableau : tables_get).
+Contexte : chaque message de l'utilisateur peut commencer par une ligne « [Contexte : feuille active « … », tableau « … », sélection …] » que Lattis ajoute d'elle-même : c'est ce que l'utilisateur regarde quand il écrit. « Ce tableau », « cette colonne », « la sélection » s'y rapportent. Une ligne « [Remarque : …] » vient aussi de Lattis (par exemple quand l'utilisateur a annulé vos modifications : tenez-en compte, ce que vous aviez fait n'existe plus). Ne recopiez pas ces lignes dans vos réponses.
+
+Formules : elles commencent par = et utilisent des fonctions proches d'Excel en français (outil formulas_functions), arguments séparés par ; et décimales avec une virgule. Dans un tableau, [Colonne] désigne la valeur de la ligne courante, [Colonne][-1] la ligne précédente, Tableau[Colonne] toute la colonne d'un autre tableau, Tableau[Colonne][n] la valeur de la n-ième ligne ; Cell[A1] une cellule libre de la feuille. Une formule saisie dans une cellule de données d'un tableau fait de toute la colonne une colonne calculée : pour en ajouter une, columns_insert puis cells_set de la formule dans la première ligne de données (position du tableau : tables_get). Après avoir écrit une formule, vérifiez-la avec formulas_errors.
+Exemples :
+- colonne calculée « Montant TTC » dans Commandes : =ARRONDI([Montant HT]*1,2; 2)
+- ville du client dans Commandes, cherchée dans le tableau Clients par sa clé (Clients doit avoir une clé, tables_set_key sur IdClient) : =REFERENCE(Clients[Ville]; [IdClient])
+- total des commandes de chaque client, colonne calculée de Clients : =SOMME.SI(Commandes[IdClient]; [IdClient]; Commandes[Montant HT])
 ` + data + `
 
-Chaque outil qui modifie le classeur s'applique tout de suite ; tout ce que vous modifiez pendant une réponse s'annule d'un coup (Ctrl+Z). Ne supprimez rien que l'utilisateur n'a pas demandé. Quand une demande est ambiguë ou touche beaucoup de données, proposez d'abord ce que vous comptez faire.
-Répondez en français, brièvement, en texte simple (listes à puces permises, pas de tableaux Markdown).`
+Chaque outil qui modifie le classeur s'applique tout de suite ; tout ce que vous modifiez pendant une réponse s'annule d'un coup (Ctrl+Z, ou « Annuler cette réponse »). Ne supprimez rien que l'utilisateur n'a pas demandé. Quand une demande est ambiguë ou touche beaucoup de données, proposez d'abord ce que vous comptez faire.
+Répondez en français, brièvement. Markdown simple permis (gras, listes, titres courts) ; pas de tableaux larges.`
 }

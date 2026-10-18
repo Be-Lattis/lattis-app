@@ -47,14 +47,6 @@ export function AIForgetKey(provider: string): $CancellablePromise<$models.AISta
 }
 
 /**
- * AILogin connecte le compte du fournisseur (navigateur) et rend la main
- * quand la connexion est finie.
- */
-export function AILogin(provider: string): $CancellablePromise<$models.AIStatus> {
-    return $Call.ByID(2983422769, provider);
-}
-
-/**
  * AIReset commence une nouvelle conversation.
  */
 export function AIReset(): $CancellablePromise<void> {
@@ -64,24 +56,26 @@ export function AIReset(): $CancellablePromise<void> {
 /**
  * AISend envoie un message à l'assistant et rend la main quand sa réponse
  * est finie ; le déroulé arrive par l'évènement ai:event, marqué de run
- * (numéro choisi par l'interface). Tout ce que l'assistant modifie pendant la réponse
- * forme une seule étape d'annulation.
+ * (numéro choisi par l'interface), et se termine par un évènement done.
+ * view (feuille, tableau, sélection) part avec le message, devant le texte
+ * tapé ; l'affichage ne garde que le texte tapé.
  */
-export function AISend(run: number, text: string): $CancellablePromise<void> {
-    return $Call.ByID(3524804018, run, text);
+export function AISend(run: number, text: string, view: $models.AIContext): $CancellablePromise<void> {
+    return $Call.ByID(3524804018, run, text, view);
 }
 
 /**
- * AISetKey enregistre la clé d'API d'un fournisseur dans le trousseau. Si
- * le trousseau la refuse, elle sert quand même pendant la session et
- * l'erreur le dit.
+ * AISetKey vérifie la clé d'API d'un fournisseur auprès de lui, puis
+ * l'enregistre dans le trousseau. Une clé refusée n'est pas enregistrée ;
+ * fournisseur injoignable : elle l'est quand même, et l'erreur le dit. Si
+ * le trousseau la refuse, elle sert pendant la session et l'erreur le dit.
  */
 export function AISetKey(provider: string, key: string): $CancellablePromise<$models.AIStatus> {
     return $Call.ByID(2329077411, provider, key);
 }
 
 /**
- * AIState décrit l'onglet IA : réglages, fournisseurs, clés présentes.
+ * AIState décrit l'assistant : réglages, fournisseurs, clés présentes.
  */
 export function AIState(): $CancellablePromise<$models.AIStatus> {
     return $Call.ByID(3228412177);
@@ -92,6 +86,24 @@ export function AIState(): $CancellablePromise<$models.AIStatus> {
  */
 export function AIStop(): $CancellablePromise<void> {
     return $Call.ByID(781899428);
+}
+
+/**
+ * AITranscript donne la conversation à réafficher (ouverture d'un
+ * classeur, interface rechargée), avec, pour chaque réponse, la
+ * possibilité de l'annuler telle qu'elle est maintenant.
+ */
+export function AITranscript(): $CancellablePromise<$models.AILogEntry[] | null> {
+    return $Call.ByID(783189670);
+}
+
+/**
+ * AIUndoRun annule les modifications de la réponse run si ce sont les
+ * dernières étapes du journal ; le modèle en est prévenu au message
+ * suivant.
+ */
+export function AIUndoRun(run: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3658268603, run);
 }
 
 /**

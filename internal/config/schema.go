@@ -218,7 +218,8 @@ func coerce(path string, v any) (any, bool) {
 }
 
 var boolPaths = []string{"allowPolicyOverride", "features.mcp.enabled", "features.allowUserConnections",
-	"features.htmlTabs", "features.sharedWorkbooks", "features.allowUserLattisServers", "features.luaHttp.restrict", "ai.enabled"}
+	"features.htmlTabs", "features.sharedWorkbooks", "features.allowUserLattisServers", "features.luaHttp.restrict", "ai.enabled",
+	"ai.keepConversation"}
 
 func boolPath(path string) bool {
 	for _, p := range boolPaths {
@@ -250,6 +251,7 @@ var validators = []struct {
 	{"ai.provider", isIdent},
 	{"ai.model", isIdent},
 	{"ai.dataSharing", oneOf("schema-only", "sample")},
+	{"ai.keepConversation", isBool},
 	{"connections.*.kind", oneOf("postgres", "mysql", "sqlserver", "web", "lattis")},
 	{"connections.*.auth.mode", oneOf("none", "password", "token", "integrated", "oidc")},
 	{"ai.auth.mode", oneOf("none", "token", "oidc")},

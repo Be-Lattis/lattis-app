@@ -145,6 +145,9 @@ func (h host) SaveDoc(ctx context.Context, path string) error {
 	if err != nil {
 		return err
 	}
+	if err := h.s.storeConversation(ctx, d); err != nil {
+		return err
+	}
 	if err := saveDoc(ctx, d, path); err != nil {
 		return err
 	}

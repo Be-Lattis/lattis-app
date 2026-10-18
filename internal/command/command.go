@@ -230,6 +230,9 @@ type Group struct {
 	Name string
 	mu   sync.Mutex
 	seq  int64
+	// seqs : numéros des étapes du journal créées par le groupe, dans
+	// l'ordre (plusieurs si une action de l'utilisateur s'est intercalée).
+	seqs []int64
 }
 
 type groupKey struct{}
@@ -249,9 +252,25 @@ func (g *Group) append(ctx context.Context, b *Bus, fn func(*Tx) error) (int64, 
 	defer g.mu.Unlock()
 	seq, err := b.appendTo(ctx, g.seq, g.Name, fn)
 	if err == nil && seq != 0 {
+		if seq != g.seq {
+			g.seqs = append(g.seqs, seq)
+		}
 		g.seq = seq
 	}
 	return seq, err
+}
+
+// GroupSeqs donne les numéros des étapes du journal créées jusqu'ici par le
+// groupe que porte ctx (nil hors groupe) : l'assistant IA s'en sert pour
+// annuler une réponse, ou voir que l'utilisateur l'a annulée.
+func GroupSeqs(ctx context.Context) []int64 {
+	g := groupOf(ctx)
+	if g == nil {
+		return nil
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return append([]int64(nil), g.seqs...)
 }
 
 func (b *Bus) appendTo(ctx context.Context, seq int64, name string, fn func(*Tx) error) (int64, error) {

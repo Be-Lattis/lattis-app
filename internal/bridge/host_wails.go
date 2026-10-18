@@ -20,6 +20,7 @@ func init() {
 	defaultHost = wailsHost{}
 	// Évènements typés pour les liaisons générées (eventdata.d.ts).
 	application.RegisterEvent[AIEventData](AIEvent)
+	application.RegisterEvent[application.Void](AIResetEvent)
 	application.RegisterEvent[DocState](ChangedEvent)
 	application.RegisterEvent[UICommand](UIEvent)
 	application.RegisterEvent[string](OpenFileEvent)

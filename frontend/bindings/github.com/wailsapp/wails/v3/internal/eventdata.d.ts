@@ -13,6 +13,7 @@ declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
             "ai:event": bridge$0.AIEventData;
+            "ai:reset": void;
             "doc:changed": bridge$0.DocState;
             "doc:open-file": string;
             "script:print": string;
