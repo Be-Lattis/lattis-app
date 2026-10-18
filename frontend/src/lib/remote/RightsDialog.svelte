@@ -27,6 +27,7 @@
 		memberCount,
 		members,
 		ownerCount,
+		isPipeline,
 		parentLevel,
 		roleLabel,
 		serverSheet,
@@ -318,7 +319,7 @@
 						{#each people as p (p.userId)}
 							<tr>
 								<td>
-									<strong>{p.name || p.email}</strong>{#if p.name}<br /><span class="muted">{p.email}</span>{/if}
+									<strong>{p.name || p.email}</strong>{#if isPipeline(p.email)}<span class="pipe" title="Membre technique d’un pipeline d’ingestion : il disparaît avec la suppression du pipeline, côté serveur">pipeline</span>{/if}{#if p.name}<br /><span class="muted">{p.email}</span>{/if}
 									{#if p.teams.length}<br /><span class="via" title="Membre du classeur par son équipe : ses rôles d’équipe se changent dans « Équipes » ci-dessous">via équipe {p.teams.join(', ')}</span>{/if}
 								</td>
 								{#each roles as r (r.id)}
@@ -330,7 +331,7 @@
 											type="checkbox"
 											aria-label="{roleLabel(r)} pour {p.email}"
 											checked={on}
-											disabled={busy || lastOwner}
+											disabled={busy || lastOwner || isPipeline(p.email)}
 											title={lastOwner ? 'Un classeur garde au moins un propriétaire' : on ? 'Rôle donné en personne' : ''}
 											onchange={(e) => toggleRole(r, p.userId, (e.currentTarget as HTMLInputElement).checked)}
 										/>
@@ -338,7 +339,7 @@
 									</td>
 								{/each}
 								<td>
-									{#if p.personal.length && !(p.personal.some((id) => roles.find((r) => r.id === id)?.builtin === 'owner') && ownerCount(acl) <= 1)}
+									{#if p.personal.length && !isPipeline(p.email) && !(p.personal.some((id) => roles.find((r) => r.id === id)?.builtin === 'owner') && ownerCount(acl) <= 1)}
 										<button class="link" disabled={busy} onclick={() => removeMember(p.userId, p.personal)} title={p.teams.length ? 'Retire ses rôles en personne ; ceux de son équipe restent' : ''}>Retirer</button>
 									{/if}
 								</td>
@@ -907,6 +908,14 @@
 	.muted {
 		color: #6b7280;
 		font-size: 12px;
+	}
+	.pipe {
+		background: #ede9fe;
+		color: #5b21b6;
+		border-radius: 3px;
+		font-size: 11px;
+		padding: 0 5px;
+		margin-left: 6px;
 	}
 	.via {
 		color: #1d4ed8;

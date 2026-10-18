@@ -124,6 +124,12 @@ export function teamRows(acl: ACL | null | undefined, teams: readonly Team[] | n
 }
 
 /** « 3 membres », « 1 membre ». */
+// isPipeline : membre technique d'un pipeline d'ingestion du serveur
+// (adresse pipeline+…@lattis.invalid) ; retiré avec le pipeline, pas à la main.
+export function isPipeline(email: string | undefined): boolean {
+	return !!email && email.toLowerCase().endsWith('@lattis.invalid');
+}
+
 export function memberCount(n: number): string {
 	return `${n} membre${n > 1 ? 's' : ''}`;
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ACL, Role } from '#bindings/internal/remote/workbook/models.js';
 import type { RightsTable, RightsView } from '#bindings/internal/bridge/models.js';
-import { checkFreeFilter, conditionSQL, filterSQL, memberCount, members, ownerCount, teamRows, parentLevel, parseFilter, rightsObjects, serverSheet, sheetLevel, tableLevel, tree, type Condition } from './rights';
+import { checkFreeFilter, isPipeline, conditionSQL, filterSQL, memberCount, members, ownerCount, teamRows, parentLevel, parseFilter, rightsObjects, serverSheet, sheetLevel, tableLevel, tree, type Condition } from './rights';
 
 const types = { Produit: 'text', Quantité: 'integer', Prix: 'decimal', Livré: 'date', Payé: 'boolean', Commercial: 'text' };
 
@@ -209,5 +209,13 @@ describe("objets de l'onglet SQL", () => {
 	it('autres membres : leurs droits', () => {
 		expect(rightsObjects(view({}))).toEqual([{ name: 'Vos droits', kind: 'Participant, Nord', lines: ['Ventes : Participant (vue filtrée, restriction « Pas les dossiers clos »)'] }]);
 		expect(rightsObjects(view({ shared: false }))).toEqual([]);
+	});
+});
+
+describe('membres techniques', () => {
+	it('repère les pipelines d’ingestion', () => {
+		expect(isPipeline('pipeline+ventes@lattis.invalid')).toBe(true);
+		expect(isPipeline('alice@exemple.fr')).toBe(false);
+		expect(isPipeline(undefined)).toBe(false);
 	});
 });
