@@ -72,9 +72,12 @@ type Auth struct {
 	Scopes   []string `json:"scopes,omitempty"`
 }
 
-// AI règle l'onglet IA (après la v1).
+// AI règle l'onglet IA (opt-in : coupé par défaut).
 type AI struct {
-	Enabled  *bool  `json:"enabled,omitempty"`
+	Enabled *bool `json:"enabled,omitempty"`
+	// Provider : fournisseur du modèle (anthropic ; d'autres viendront, voir
+	// internal/ai).
+	Provider string `json:"provider,omitempty"`
 	Endpoint string `json:"endpoint,omitempty"`
 	Model    string `json:"model,omitempty"`
 	Auth     Auth   `json:"auth,omitempty"`
@@ -116,7 +119,7 @@ func Defaults() Tree {
 			"allowUserConnections": true,
 			"htmlTabs":             false,
 		},
-		"ai": Tree{"enabled": false, "dataSharing": "schema-only"},
+		"ai": Tree{"enabled": false, "provider": "anthropic", "dataSharing": "schema-only"},
 	}
 }
 
@@ -232,6 +235,8 @@ var validators = []struct {
 	{"features.luaHttp.allowedDomains", isStringList},
 	{"ai.enabled", isBool},
 	{"ai.endpoint", isHTTPSURL},
+	{"ai.provider", isIdent},
+	{"ai.model", isIdent},
 	{"ai.dataSharing", oneOf("schema-only", "sample")},
 	{"connections.*.kind", oneOf("postgres", "mysql", "sqlserver", "web")},
 	{"connections.*.auth.mode", oneOf("none", "password", "token", "integrated", "oidc")},
@@ -253,6 +258,21 @@ func validatorFor(path string) validator {
 func isBool(v any) error {
 	if _, ok := v.(bool); !ok {
 		return errors.New("booléen attendu (true ou false)")
+	}
+	return nil
+}
+
+// isIdent : identifiant court (fournisseur, modèle) : lettres, chiffres,
+// « - », « _ », « . », « : », « / » et « @ ».
+func isIdent(v any) error {
+	s, ok := v.(string)
+	if !ok || s == "" || len(s) > 100 {
+		return errors.New("identifiant attendu")
+	}
+	for _, r := range s {
+		if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || strings.ContainsRune("-_.:/@", r)) {
+			return errors.New("identifiant attendu (lettres, chiffres, - _ . : / @)")
+		}
 	}
 	return nil
 }

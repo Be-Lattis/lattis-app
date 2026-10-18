@@ -200,6 +200,8 @@ export const icons = {
 	'win-close': '<path d="m6.5 6.5 11 11m0-11-11 11"/>',
 
 	// Logo : un tableau dont la colonne de gauche est une base
+	// Onglet IA : l'étoile propre à l'assistant.
+	sparkle: '<path class="af" d="M10 3.5c.7 4.4 2.6 6.3 7 7-4.4.7-6.3 2.6-7 7-.7-4.4-2.6-6.3-7-7 4.4-.7 6.3-2.6 7-7z"/><path class="a" d="M18 14.5c.3 1.9 1.1 2.7 3 3-1.9.3-2.7 1.1-3 3-.3-1.9-1.1-2.7-3-3 1.9-.3 2.7-1.1 3-3z"/>',
 	logo: '<rect class="af" x="2.5" y="2.5" width="19" height="19" rx="4"/><path class="c" d="M7 8.5h10M7 12h10M7 15.5h10M11 8.5v7"/><path class="c" stroke-width="2" d="M7 6.5v11"/>'
 } as const satisfies Record<string, string>;
 

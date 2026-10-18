@@ -6,7 +6,7 @@
 import * as canvas$0 from "../canvas/models.js";
 
 /**
- * ControlState est un contrôle d'un Onglet Document pour l'interface : sa
+ * ControlState est un contrôle d'un document pour l'interface : sa
  * configuration et la valeur affichée de sa cellule liée.
  */
 export interface ControlState {

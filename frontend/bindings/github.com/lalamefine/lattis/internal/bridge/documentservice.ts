@@ -31,6 +31,61 @@ import * as query$0 from "../query/models.js";
 import * as $models from "./models.js";
 
 /**
+ * AIForgetKey oublie la clé d'API d'un fournisseur.
+ */
+export function AIForgetKey(provider: string): $CancellablePromise<$models.AIStatus> {
+    return $Call.ByID(1381214596, provider);
+}
+
+/**
+ * AILogin connecte le compte du fournisseur (navigateur) et rend la main
+ * quand la connexion est finie.
+ */
+export function AILogin(provider: string): $CancellablePromise<$models.AIStatus> {
+    return $Call.ByID(2983422769, provider);
+}
+
+/**
+ * AIReset commence une nouvelle conversation.
+ */
+export function AIReset(): $CancellablePromise<void> {
+    return $Call.ByID(4258659995);
+}
+
+/**
+ * AISend envoie un message à l'assistant et rend la main quand sa réponse
+ * est finie ; le déroulé arrive par l'évènement ai:event, marqué de run
+ * (numéro choisi par l'interface). Tout ce que l'assistant modifie pendant la réponse
+ * forme une seule étape d'annulation.
+ */
+export function AISend(run: number, text: string): $CancellablePromise<void> {
+    return $Call.ByID(3524804018, run, text);
+}
+
+/**
+ * AISetKey enregistre la clé d'API d'un fournisseur dans le trousseau. Si
+ * le trousseau la refuse, elle sert quand même pendant la session et
+ * l'erreur le dit.
+ */
+export function AISetKey(provider: string, key: string): $CancellablePromise<$models.AIStatus> {
+    return $Call.ByID(2329077411, provider, key);
+}
+
+/**
+ * AIState décrit l'onglet IA : réglages, fournisseurs, clés présentes.
+ */
+export function AIState(): $CancellablePromise<$models.AIStatus> {
+    return $Call.ByID(3228412177);
+}
+
+/**
+ * AIStop interrompt la réponse en cours.
+ */
+export function AIStop(): $CancellablePromise<void> {
+    return $Call.ByID(781899428);
+}
+
+/**
  * AddDoc ajoute un onglet Document avant l'onglet before (0 : à la
  * fin) et renvoie son identifiant.
  */
@@ -48,7 +103,7 @@ export function AddFavorite(name: string, sql: string): $CancellablePromise<numb
 
 /**
  * AddPage ajoute un onglet page HTML avant l'onglet before (0 : à la fin)
- * et renvoie son identifiant. Les Onglets HTML sont une fonctionnalité à
+ * et renvoie son identifiant. Les pages web sont une fonctionnalité à
  * activer (Fichier › Paramètres › Fonctionnalités, features.htmlTabs).
  */
 export function AddPage(before: number): $CancellablePromise<number> {
@@ -338,7 +393,7 @@ export function DismissKeyHint(table: string): $CancellablePromise<$models.DocSt
 }
 
 /**
- * DocControl lit un contrôle d'un Onglet Document et la valeur de sa
+ * DocControl lit un contrôle d'un document et la valeur de sa
  * cellule liée.
  */
 export function DocControl(id: number): $CancellablePromise<api$0.ControlState> {
@@ -706,7 +761,7 @@ export function PlaceChart(id: number, row: number, col: number, offX: number, o
 
 /**
  * PlacePivot pose sur la feuille un tableau croisé de configuration cfg
- * (collé depuis un Onglet Document).
+ * (collé depuis un document).
  */
 export function PlacePivot(sheet: number, row: number, col: number, cfg: canvas$0.PivotConfig): $CancellablePromise<$models.DocState> {
     return $Call.ByID(4069234803, sheet, row, col, cfg);

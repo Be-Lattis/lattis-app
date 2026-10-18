@@ -3,6 +3,9 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as ai$0 from "../ai/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as api$0 from "../api/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -22,6 +25,85 @@ import * as grid$0 from "../grid/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as query$0 from "../query/models.js";
+
+/**
+ * AIEventData est un évènement d'une réponse ; Run la désigne.
+ */
+export interface AIEventData {
+    "run": number;
+    "kind": string;
+    "text"?: string;
+
+    /**
+     * nom de l'outil
+     */
+    "tool"?: string;
+
+    /**
+     * libellé lisible de l'appel
+     */
+    "label"?: string;
+
+    /**
+     * identifiant de l'appel
+     */
+    "id"?: string;
+    "error"?: boolean;
+}
+
+/**
+ * AIProvider est un fournisseur pour l'interface.
+ */
+export interface AIProvider {
+    "id": string;
+    "name": string;
+
+    /**
+     * Available : branché dans cette version.
+     */
+    "available": boolean;
+    "models": ai$0.Model[] | null;
+    "defaultModel": string;
+
+    /**
+     * KeyURL : page où l'utilisateur crée sa clé d'API.
+     */
+    "keyUrl"?: string;
+
+    /**
+     * KeyHint : début attendu d'une clé (« sk-ant- »), pour l'aide.
+     */
+    "keyHint"?: string;
+    "hasKey": boolean;
+
+    /**
+     * Account : connexion par compte, sans clé (nil : non proposée).
+     */
+    "account"?: ai$0.Account | null;
+}
+
+/**
+ * AIStatus décrit l'onglet IA.
+ */
+export interface AIStatus {
+    "enabled": boolean;
+
+    /**
+     * Locked : coupé ou imposé par une stratégie de l'organisation.
+     */
+    "locked": boolean;
+    "provider": string;
+    "model": string;
+    "dataSharing": string;
+
+    /**
+     * passerelle de l'entreprise (ai.endpoint)
+     */
+    "managed": boolean;
+    "providers": AIProvider[] | null;
+    "busy": boolean;
+    "messages": number;
+}
 
 /**
  * DamagedFile décrit un classeur endommagé.
