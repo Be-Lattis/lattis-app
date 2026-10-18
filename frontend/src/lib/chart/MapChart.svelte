@@ -3,6 +3,8 @@
 	// fond OpenStreetMap. Séries : latitude, longitude, valeur. La vue
 	// s'ajuste aux points (zoom entier, tuiles de 256 px). Sans tuiles
 	// (refus, hors ligne), un fond neutre garde les points à leur place.
+	// Tant que ses coordonnées ne sont pas choisies (mapDraft), la carte
+	// n'est qu'un carré grisé : ni tuiles ni points.
 	import { untrack } from 'svelte';
 	import { PALETTE, tickLabel } from './scale';
 	import { fitView, heatColor, heatGrid, project, viewTiles } from './shapes';
@@ -13,7 +15,7 @@
 		series: { name: string; values: (number | null)[] }[];
 		width: number;
 		height: number;
-		style?: { title?: string; mapMode?: string; colors?: string[]; labels?: boolean };
+		style?: { title?: string; mapMode?: string; colors?: string[]; labels?: boolean; mapDraft?: boolean };
 	}
 
 	let { labels, series, width, height, style = {} }: Props = $props();
@@ -25,7 +27,9 @@
 	const heat = $derived(style.mapMode === 'heat');
 	const color = $derived(style.colors?.[0] || PALETTE[0]);
 
+	const draft = $derived(!!style.mapDraft);
 	const pts = $derived.by(() => {
+		if (draft) return [];
 		const lat = series[0]?.values ?? [];
 		const lon = series[1]?.values ?? [];
 		const val = series[2]?.values;
@@ -38,7 +42,7 @@
 		return out;
 	});
 	const view = $derived(fitView(pts, w, h, heat ? 32 : 20));
-	const tiles = $derived(viewTiles(view, w, h));
+	const tiles = $derived(draft ? [] : viewTiles(view, w, h));
 	const placed = $derived(
 		pts.map((p) => {
 			const q = project(p.lat, p.lon, view.z);
@@ -79,6 +83,17 @@
 	const offline = $derived(tiles.length > 0 && tiles.every((t) => images[`${t.z}/${t.x}/${t.y}`] === null));
 </script>
 
+{#if draft}
+<svg {width} {height} viewBox="0 0 {width} {height}" role="img" aria-label="Carte : coordonnées à choisir">
+	<rect {width} {height} fill="#e5e7eb" />
+	<rect x="0.5" y="0.5" width={width - 1} height={height - 1} fill="none" stroke="#c4c8cd" stroke-dasharray="4 3" />
+	<g transform="translate({width / 2} {height / 2 - 18})" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linejoin="round">
+		<path d="M -16 -10 L -6 -14 L 6 -10 L 16 -14 L 16 10 L 6 14 L -6 10 L -16 14 Z M -6 -14 L -6 10 M 6 -10 L 6 14" />
+	</g>
+	<text x={width / 2} y={height / 2 + 16} text-anchor="middle" class="draft">Carte</text>
+	<text x={width / 2} y={height / 2 + 34} text-anchor="middle" class="small muted">Choisissez les coordonnées dans le volet</text>
+</svg>
+{:else}
 <svg {width} {height} viewBox="0 0 {width} {height}" role="img" aria-label={style.title || 'Carte'}>
 	<defs>
 		<clipPath id="map-{uid}"><rect x="0" y={top} width={w} height={h} /></clipPath>
@@ -124,6 +139,7 @@
 		<text x={w / 2} y={top + h / 2} text-anchor="middle" class="small halo">Aucun point : latitude et longitude attendues</text>
 	{/if}
 </svg>
+{/if}
 
 <style>
 	svg {
@@ -147,6 +163,14 @@
 	.attr {
 		font-size: 10px;
 		fill: #374151;
+	}
+	.draft {
+		font-size: 14px;
+		font-weight: 600;
+		fill: #6b7280;
+	}
+	.muted {
+		fill: #6b7280;
 	}
 	.grat {
 		stroke: #dde2e6;

@@ -63,15 +63,21 @@ func (t *tx) chartDeps(source string) ([]string, bool) {
 }
 
 type chartResult struct {
-	labels []string
-	series []ChartSeries
+	labels  []string
+	series  []ChartSeries
+	invalid int       // carte : coordonnées illisibles ignorées
+	guess   *MapGuess // carte en attente : colonnes repérées
 }
 
-func (t *tx) chartData(cfg ChartConfig) ([]string, []ChartSeries, error) {
-	key := keyOf("chart:", ChartConfig{Source: cfg.Source, Kind: cfg.Kind, X: cfg.X, Series: cfg.Series})
+// fill reporte les données dans un graphique.
+func (r chartResult) fill(c *ChartInfo) {
+	c.Labels, c.Series, c.Invalid, c.Guess = r.labels, r.series, r.invalid, r.guess
+}
+
+func (t *tx) chartData(cfg ChartConfig) (chartResult, error) {
+	key := keyOf("chart:", ChartConfig{Source: cfg.Source, Kind: cfg.Kind, X: cfg.X, Series: cfg.Series, MapCoords: cfg.MapCoords, MapDraft: cfg.MapDraft})
 	calc := func() (chartResult, error) {
-		l, s, err := t.chartDataRaw(cfg)
-		return chartResult{l, s}, err
+		return t.chartDataRaw(cfg)
 	}
 	var r chartResult
 	var err error
@@ -80,5 +86,5 @@ func (t *tx) chartData(cfg ChartConfig) ([]string, []ChartSeries, error) {
 	} else {
 		r, err = cached(t, key, calc)
 	}
-	return r.labels, r.series, err
+	return r, err
 }

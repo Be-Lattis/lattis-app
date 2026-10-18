@@ -396,7 +396,8 @@
 	export function insertChart(kind: string) {
 		if (!guard()) return;
 		// Un tableau croisé (déjà agrégé) se prête le mieux à un graphique.
-		const t = tables.find((x) => x.kind === 'pivot') ?? tables[0];
+		// Une carte lit les lignes d'un tableau (coordonnées).
+		const t = kind === 'map' ? (tables.find((x) => x.kind !== 'pivot') ?? tables[0]) : (tables.find((x) => x.kind === 'pivot') ?? tables[0]);
 		if (!t) {
 			onnotice?.('Aucun tableau dans le classeur : créez-en un sur une feuille pour le représenter ici.');
 			return;
@@ -414,6 +415,8 @@
 		const xi = Math.max(0, t.columns.findIndex((_, i) => !num(i)));
 		const numeric = t.columns.filter((_, i) => i !== xi && num(i));
 		const series = (numeric.length ? numeric : t.columns.filter((_, i) => i !== xi).slice(0, 1)).slice(0, 3);
+		// Carte : carré grisé, coordonnées à choisir dans le volet.
+		if (kind === 'map') return { source: t.name, kind, x: '', series: [], mapDraft: true, title: t.name } as ChartConfig;
 		return { source: t.name, kind, x: t.columns[xi] ?? '', series, title: t.name } as ChartConfig;
 	}
 
@@ -774,6 +777,22 @@
 	const fns = $derived(btn?.script ? scriptFunctions(scripts.find((s) => s.name === btn.script)?.source ?? '') : []);
 	const setButton = (patch: Partial<DocButtonConfig>) => panel && btn && replaceEmbed(panel.index, BUTTON_BLOT, { ...btn, ...patch });
 	const setChart = (cfg: ChartConfig) => panel && replaceEmbed(panel.index, CHART_BLOT, cfg);
+	// Carte du volet : colonnes repérées (en attente) et coordonnées illisibles.
+	let mapInfo = $state.raw<ChartInfo | null>(null);
+	$effect(() => {
+		const c = chart;
+		void live.stamp;
+		if (!c || c.kind !== 'map') {
+			mapInfo = null;
+			return;
+		}
+		let on = true;
+		untrack(() => loadChart(c)).then(
+			(r) => on && (mapInfo = r),
+			() => on && (mapInfo = null)
+		);
+		return () => (on = false);
+	});
 	// Colonnes des tableaux qui peuvent donner les choix d'une liste.
 	const colRefs = $derived(tables.filter((t) => t.kind !== 'pivot').flatMap((t) => t.columns.map((c) => `${t.name}[${c}]`)));
 	const pivot = $derived(panel?.kind === 'pivot' ? (panelValue as unknown as PivotConfig | null) : null);
@@ -839,7 +858,7 @@
 				</label>
 				<button class="danger" disabled={!!locked} onclick={() => panel && deleteEmbed(panel.index)}><Icon name="trash" size={14} />Supprimer le graphique</button>
 			</div>
-			<ChartPanel config={chart} columns={tbl?.columns ?? []} onchange={setChart} onclose={() => openPanel(null)} resizable={false} />
+			<ChartPanel config={chart} guess={mapInfo?.guess} invalid={mapInfo?.invalid} columns={tbl?.columns ?? []} onchange={setChart} onclose={() => openPanel(null)} resizable={false} />
 		</div>
 	{:else if panel?.kind === 'pivot' && pivot}
 		<div class="side panelbox" use:resizePanel={{ key: 'doc-side', min: 260 }}>

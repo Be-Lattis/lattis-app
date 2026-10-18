@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { boxGroups, boxStats, fitView, gaugeValue, heatColor, heatGrid, histogramBins, niceStep, pie3d, project, quantile, shade, squarify, viewTiles, waterfallSteps } from './shapes';
-import { KINDS, MORE_KINDS, guessLatLon, seriesShape } from './kinds';
+import { KINDS, MORE_KINDS, mapChoice, mapComplete, mapPatch, seriesShape } from './kinds';
 import { ticks } from './scale';
 import { loadTile, setTileFetcher } from './tiles';
 
@@ -205,9 +205,27 @@ describe('types', () => {
 		expect(seriesShape(['line', 'area'], 1)).toBe('area');
 		expect(seriesShape(['pie'], 0)).toBe('bar');
 	});
-	it('colonnes de carte devinées', () => {
-		expect(guessLatLon(['Ville', 'Latitude', 'Longitude'])).toEqual({ lat: 'Latitude', lon: 'Longitude' });
-		expect(guessLatLon(['lat', 'lng', 'Pop'])).toEqual({ lat: 'lat', lon: 'lng' });
-		expect(guessLatLon(['Ville', 'Pop'])).toEqual({ lat: undefined, lon: undefined });
+	it('carte : choix proposé tant que rien n’est choisi, dessin à la validation', () => {
+		const guess = { mode: 'pair', lat: 'Lat', lon: 'Lon', coord: 'Pos', name: 'Ville' };
+		// Insérée : en attente, colonnes repérées affichées, rien de dessiné.
+		const c = mapChoice({ x: '', series: [], mapDraft: true }, guess);
+		expect(c).toEqual({ coords: 'pair', cols: ['Lat', 'Lon'], value: '', name: 'Ville', draft: true });
+		expect(mapPatch(c, false)).toEqual({ mapCoords: 'pair', series: ['Lat', 'Lon'], x: 'Ville', mapDraft: true });
+		expect(mapPatch(c, true)).toEqual({ mapCoords: 'pair', series: ['Lat', 'Lon'], x: 'Ville', mapDraft: undefined });
+		// Une colonne : la colonne repérée pour ce mode.
+		const s = mapChoice({ x: '', series: [], mapDraft: true, mapCoords: 'single' }, guess);
+		expect(s.cols).toEqual(['Pos']);
+		expect(mapChoice({ x: '', series: [], mapDraft: true }, { mode: 'single', coord: 'Pos' }).coords).toBe('single');
+		// Choix incomplet ou en double : pas de dessin.
+		expect(mapPatch({ ...c, cols: ['Lat', ''] }, true).mapDraft).toBe(true);
+		expect(mapPatch({ ...c, cols: ['Lat', 'Lat'] }, true).mapDraft).toBe(true);
+		expect(mapComplete({ ...c, cols: ['Lat', 'Lat'] })).toBe(false);
+		// Carte dessinée : la valeur suit les coordonnées ; un changement de mode incomplet la remet en attente.
+		const d = mapChoice({ x: 'Ville', series: ['Pos', 'Pop'], mapCoords: 'single' });
+		expect(d).toEqual({ coords: 'single', cols: ['Pos'], value: 'Pop', name: 'Ville', draft: false });
+		expect(mapPatch({ ...d, coords: 'pair', cols: ['', ''] }, false)).toEqual({ mapCoords: 'pair', series: ['', '', 'Pop'], x: 'Ville', mapDraft: true });
+		expect(mapPatch({ ...d, value: '' }, false).series).toEqual(['Pos']);
+		// Anciennes cartes (sans mode) : deux colonnes.
+		expect(mapChoice({ x: 'Ville', series: ['Lat', 'Lon', 'Pop'] })).toEqual({ coords: 'pair', cols: ['Lat', 'Lon'], value: 'Pop', name: 'Ville', draft: false });
 	});
 });

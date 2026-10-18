@@ -24,6 +24,7 @@ export type {
     LineRules,
     LineStyle,
     Listener,
+    MapGuess,
     Match,
     Mix,
     NameInfo,

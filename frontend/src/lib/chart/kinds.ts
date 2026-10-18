@@ -76,11 +76,53 @@ export function seriesShape(kinds: string[] | undefined, k: number): 'bar' | 'li
 	return s === 'bar' || s === 'line' || s === 'area' ? s : k === 0 ? 'bar' : 'line';
 }
 
-/** Colonnes d'une carte, devinées d'après leur nom : latitude, longitude. */
-export function guessLatLon(names: string[]): { lat?: string; lon?: string } {
-	const find = (re: RegExp) => names.find((n) => re.test(n.trim()));
-	return {
-		lat: find(/^(lat|latitude|lat\.)$/i) ?? find(/lat/i),
-		lon: find(/^(lon|lng|long|longitude|lon\.)$/i) ?? find(/(lon|lng)/i)
-	};
+/** Colonnes de coordonnées repérées par le classeur pour une carte (canvas.MapGuess). */
+export interface MapGuess {
+	mode: string;
+	lat?: string;
+	lon?: string;
+	coord?: string;
+	name?: string;
+}
+
+/** Choix de coordonnées d'une carte : deux colonnes (latitude, longitude) ou une seule. */
+export interface MapChoice {
+	coords: 'pair' | 'single';
+	cols: string[];
+	value: string;
+	name: string;
+	draft: boolean;
+}
+
+/**
+ * Choix affiché par le volet : celui de la carte, ou, quand elle attend ses
+ * coordonnées sans qu'aucune soit choisie, les colonnes repérées par le
+ * classeur. Séries : [latitude, longitude, valeur] ou [coordonnées, valeur].
+ */
+export function mapChoice(cfg: { x: string; series: string[]; mapCoords?: string; mapDraft?: boolean }, guess?: MapGuess | null): MapChoice {
+	const draft = !!cfg.mapDraft;
+	const fresh = draft && !cfg.series.some(Boolean);
+	const coords = cfg.mapCoords === 'single' || (!cfg.mapCoords && fresh && guess?.mode === 'single') ? 'single' : 'pair';
+	const nc = coords === 'single' ? 1 : 2;
+	const own = cfg.series.slice(0, nc);
+	const cols =
+		draft && !own.some(Boolean) && guess
+			? coords === 'single'
+				? [guess.coord ?? '']
+				: [guess.lat ?? '', guess.lon ?? '']
+			: Array.from({ length: nc }, (_, i) => own[i] ?? '');
+	return { coords, cols, value: cfg.series[nc] ?? '', name: cfg.x || (draft ? (guess?.name ?? '') : ''), draft };
+}
+
+/** Choix complet : chaque colonne de coordonnées choisie, sans doublon. */
+export const mapComplete = (c: MapChoice) => c.cols.every(Boolean) && new Set(c.cols).size === c.cols.length;
+
+/**
+ * Réglages d'une carte pour un choix. validate : l'utilisateur confirme, la
+ * carte se dessine si le choix est complet. Une carte déjà dessinée le reste
+ * tant que son choix est complet ; incomplet, elle repasse en attente.
+ */
+export function mapPatch(c: MapChoice, validate: boolean): { mapCoords: 'pair' | 'single'; series: string[]; x: string; mapDraft: true | undefined } {
+	const drawn = mapComplete(c) && (validate || !c.draft);
+	return { mapCoords: c.coords, series: [...c.cols, ...(c.value ? [c.value] : [])], x: c.name, mapDraft: drawn ? undefined : true };
 }
