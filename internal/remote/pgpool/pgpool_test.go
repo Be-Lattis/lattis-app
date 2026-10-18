@@ -21,6 +21,7 @@ type fakePG struct {
 	mu       sync.Mutex
 	startups []map[string]string
 	appNames []string // application_name posés par SET
+	devices  []string // lattis.device posés par SET
 	tokens   []string
 }
 
@@ -113,6 +114,11 @@ func (f *fakePG) serve(c net.Conn) {
 				f.appNames = append(f.appNames, v)
 				f.mu.Unlock()
 				b.Send(&pgproto3.ParameterStatus{Name: "application_name", Value: v})
+				b.Send(&pgproto3.CommandComplete{CommandTag: []byte("SET")})
+			} else if v, ok := strings.CutPrefix(q.String, "SET lattis.device = "); ok {
+				f.mu.Lock()
+				f.devices = append(f.devices, strings.ReplaceAll(strings.Trim(v, "'"), "''", "'"))
+				f.mu.Unlock()
 				b.Send(&pgproto3.CommandComplete{CommandTag: []byte("SET")})
 			} else {
 				b.Send(&pgproto3.EmptyQueryResponse{})
@@ -226,5 +232,37 @@ func TestPools(t *testing.T) {
 	defer p2.Close()
 	if p2.RO != nil {
 		t.Fatal("pool ro sans réplica")
+	}
+	if len(rw.devices) != 0 {
+		t.Fatalf("lattis.device posé sans identifiant de poste : %v", rw.devices)
+	}
+}
+
+// Identifiant du poste (contrat client §6) : posé sur chaque connexion du
+// pool rw (écritures, deltas), jamais sur les réplicas.
+func TestPoolsDevice(t *testing.T) {
+	rw := newFakePG(t, "j")
+	ro := newFakePG(t, "j")
+	ctx := context.Background()
+	tg := target(rw.addr(), ro.addr(), func(context.Context) (string, error) { return "j", nil })
+	tg.Device = "poste-d'Alice"
+	p, err := Open(ctx, tg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+	for _, u := range []string{UsageWrite, UsagePivot} {
+		c, err := p.Acquire(ctx, u)
+		if err != nil {
+			t.Fatal(err)
+		}
+		c.Release()
+	}
+	rw.mu.Lock()
+	defer rw.mu.Unlock()
+	ro.mu.Lock()
+	defer ro.mu.Unlock()
+	if len(rw.devices) != 1 || rw.devices[0] != "poste-d'Alice" || len(ro.devices) != 0 {
+		t.Fatalf("lattis.device : rw %v, ro %v", rw.devices, ro.devices)
 	}
 }
