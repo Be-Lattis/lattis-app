@@ -1,3 +1,23 @@
+<script lang="ts" module>
+	import type { ControlInfo } from './controls';
+
+	// État de l'éditeur gardé pendant la pipette (« Choisir sur la feuille ») :
+	// l'onglet SCRIPT est démonté le temps de cliquer sur la grille.
+	interface Draft {
+		script: { id: number; name: string; source: string };
+		anchor: number;
+		head: number;
+		dirty: boolean;
+		output: string[];
+		status: string;
+		error: string;
+		showRef: boolean;
+		controls: ControlInfo[];
+		result: Promise<number | null>;
+	}
+	let draft: Draft | null = null;
+</script>
+
 <script lang="ts">
 	// Onglet SCRIPT : bibliothèque de scripts Lua du classeur, éditeur,
 	// exécution avec sortie en direct et bouton Arrêter. Les écritures d'un
@@ -7,12 +27,15 @@
 	import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view';
 	import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 	import { bracketMatching } from '@codemirror/language';
-	import { closeBrackets } from '@codemirror/autocomplete';
+	import { autocompletion, closeBrackets, completionKeymap } from '@codemirror/autocomplete';
 	import { dismiss } from '#lib/grid/dismiss.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { luaTools } from './luaeditor';
 	import ScriptReference from './ScriptReference.svelte';
 	import NetworkAccess, { type HostAccess } from './NetworkAccess.svelte';
+	import ControlPicker from './ControlPicker.svelte';
+	import { controlCompletions, controlRef } from './controls';
+	import { finishPick, picker, startPick } from './pick.svelte';
 
 	export interface Script {
 		id: number;
@@ -35,10 +58,103 @@
 		subscribe?: (fn: (line: string) => void) => () => void;
 		/** Hôtes HTTP autorisés pour le classeur (bouton Accès réseau). */
 		network?: HostAccess;
+		/** Contrôles du classeur (controls.list) : complétion des noms et bouton Pointer un contrôle. */
+		controls?: () => Promise<ControlInfo[]>;
+		/** Pipette : true affiche la grille pour y cliquer un contrôle, false revient à l'onglet SCRIPT. */
+		showSheet?: (on: boolean) => void;
 	}
 
-	let { scripts, save, remove, run, stop, subscribe, network }: Props = $props();
+	let { scripts, save, remove, run, stop, subscribe, network, controls, showSheet }: Props = $props();
 	let netOpen = $state(false);
+
+	// Contrôles du classeur, relus au plus toutes les 2 secondes (ils changent
+	// quand un script en ajoute ou qu'on en pose sur une feuille).
+	let known: ControlInfo[] = [];
+	let knownAt = 0;
+	async function listControls(): Promise<ControlInfo[]> {
+		if (!controls) return [];
+		if (Date.now() - knownAt > 2000) {
+			known = (await controls()) ?? [];
+			knownAt = Date.now();
+		}
+		return known;
+	}
+	let pickerOpen = $state(false);
+	let pickerList = $state<ControlInfo[]>([]);
+	let pickerError = $state('');
+	// Fermée par le clic ailleurs (dismissPanel) juste avant le clic sur le bouton : elle reste fermée.
+	let pickerClosedAt = 0;
+	function closePicker() {
+		pickerOpen = false;
+		pickerClosedAt = Date.now();
+	}
+	async function openPicker() {
+		if (pickerOpen || Date.now() - pickerClosedAt < 300) return closePicker();
+		pickerError = '';
+		pickerOpen = true;
+		try {
+			knownAt = 0;
+			pickerList = await listControls();
+		} catch (e) {
+			pickerError = String(e instanceof Error ? e.message : e);
+		}
+	}
+
+	// Insère la désignation d'un contrôle (« "Nom" ») à la place de la sélection.
+	function insertRef(c: ControlInfo) {
+		pickerOpen = false;
+		if (!view) return;
+		const ref = controlRef(c);
+		const { from, to } = view.state.selection.main;
+		view.dispatch({ changes: { from, to, insert: ref }, selection: { anchor: from + ref.length }, scrollIntoView: true });
+		view.focus();
+	}
+
+	// Pipette : garde l'éditeur, montre la grille ; au retour, insère le nom.
+	function chooseOnSheet() {
+		pickerOpen = false;
+		if (!view || !showSheet) return;
+		const sel = view.state.selection.main;
+		const result = startPick();
+		draft = {
+			script: { ...current, source: view.state.doc.toString() },
+			anchor: sel.anchor,
+			head: sel.head,
+			dirty,
+			output,
+			status,
+			error,
+			showRef,
+			controls: pickerList,
+			result
+		};
+		const back = showSheet;
+		void result.then(() => back(false));
+		back(true);
+	}
+
+	async function restoreDraft(d: Draft) {
+		draft = null;
+		current = { ...d.script };
+		setSource(d.script.source);
+		dirty = d.dirty;
+		output = d.output;
+		status = d.status;
+		error = d.error;
+		showRef = d.showRef;
+		const n = view?.state.doc.length ?? 0;
+		view?.dispatch({ selection: { anchor: Math.min(d.anchor, n), head: Math.min(d.head, n) }, scrollIntoView: true });
+		// Revenu à la main sur l'onglet SCRIPT : la pipette est annulée.
+		if (picker.active) finishPick(null);
+		const id = await d.result;
+		if (id === null) return void view?.focus();
+		let c = d.controls.find((x) => x.id === id);
+		if (!c) {
+			knownAt = 0;
+			c = (await listControls().catch(() => [] as ControlInfo[])).find((x) => x.id === id);
+		}
+		insertRef(c ?? { id, name: '', kind: '', label: '', sheet: '' });
+	}
 
 	const EXAMPLE = `-- Exemple : la liste des tableaux du classeur et leurs colonnes.
 -- db.query, db.rows, db.insert, db.execute… : voir le bouton « Référence ».
@@ -182,7 +298,9 @@ end
 					bracketMatching(),
 					closeBrackets(),
 					luaTools(),
+					autocompletion({ override: [controlCompletions(listControls)], icons: false, activateOnTyping: true }),
 					keymap.of([
+						...completionKeymap,
 						{ key: 'Mod-Enter', run: () => (doRun(), true) },
 						{ key: 'Mod-s', run: () => (doSave(), true) },
 						indentWithTab,
@@ -200,6 +318,7 @@ end
 				]
 			})
 		});
+		if (draft) void restoreDraft(draft);
 		return () => view?.destroy();
 	});
 </script>
@@ -250,6 +369,14 @@ end
 			<button onclick={doSave}><Icon name="save" size={14} />Enregistrer{dirty ? ' •' : ''}</button>
 			<button class="delete" onclick={doRemove} disabled={!current.id}><Icon name="trash" size={14} />Supprimer</button>
 			<button onclick={() => (showRef = !showRef)} aria-pressed={showRef}><Icon name="book" size={14} />Référence</button>
+			{#if controls}
+				<span class="pick-anchor">
+					<button onclick={openPicker} aria-expanded={pickerOpen} title="Insérer au curseur le nom d'un bouton, d'un champ ou d'un autre contrôle du classeur"><Icon name="pick-control" size={14} />Pointer un contrôle</button>
+					{#if pickerOpen}
+						<ControlPicker controls={pickerList} error={pickerError} pick={insertRef} onsheet={showSheet ? chooseOnSheet : undefined} close={closePicker} />
+					{/if}
+				</span>
+			{/if}
 			{#if network}<button onclick={() => (netOpen = true)} title="Hôtes que les scripts et pages HTML du classeur peuvent joindre en HTTP"><Icon name="web" size={14} />Accès réseau</button>{/if}
 			<span class="muted">Ctrl+Entrée : exécuter · Ctrl+S : enregistrer le script</span>
 		</div>
@@ -385,6 +512,9 @@ end
 	.toolbar button:disabled {
 		opacity: 0.5;
 		cursor: default;
+	}
+	.pick-anchor {
+		position: relative;
 	}
 	.name {
 		font: inherit;
