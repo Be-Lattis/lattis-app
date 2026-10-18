@@ -135,7 +135,7 @@ func (m *Model) SetRules(ctx context.Context, table string, i int, rules []Rule)
 		return err
 	}
 	return m.Do(ctx, "Mise en forme conditionnelle", func(t *tx) error {
-		tb, err := t.editTable(table)
+		tb, err := t.viewTable(table)
 		if err != nil {
 			return err
 		}

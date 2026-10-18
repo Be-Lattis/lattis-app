@@ -1,0 +1,249 @@
+package workbook
+
+import (
+	"context"
+	"errors"
+	"sync"
+
+	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/store"
+)
+
+// Messages des refus d'écriture sur un tableau publié (§5.4, §10).
+var (
+	ErrReadOnly = errors.New("Classeur publié en lecture seule")
+	ErrOffline  = errors.New("Hors ligne, lecture seule")
+)
+
+// Link est l'état d'un classeur partagé ouvert : ce qui vient du serveur
+// (Info), les tableaux publiés, et la connexion (en ligne ou non). Il
+// décide des écritures sur les tableaux publiés, pour la grille
+// (canvas.Sharing) comme pour tout ce qui passe par le bus de commandes
+// (oplog.Recorder.Gate : SQL, scripts, API, MCP, annulation).
+//
+// Règles :
+//   - classeur local, ou tableau privé (non publié) : tout est permis ;
+//   - hors ligne : les tableaux publiés sont en lecture seule (§10) ;
+//   - figé : lecture seule, sauf pour son auteur (propriétaire ou
+//     concepteur), qui prépare la prochaine version en local puis
+//     republie ; le tri reste permis à tous (local, jamais renvoyé) ;
+//   - collaboratif : selon le niveau du tableau (lecteur : lecture seule),
+//     les opérations partent dans la file d'envoi.
+type Link struct {
+	db *store.Store
+
+	mu         sync.RWMutex
+	info       *Info
+	published  map[int64]bool
+	levels     map[int64]string // collaboratif : niveau par tableau local
+	online     bool
+	offline    string // raison de la coupure (affichage)
+	newVersion int
+}
+
+// Attach lit l'état de partage d'un classeur ouvert (hors ligne tant que la
+// connexion au serveur n'est pas confirmée par SetOnline).
+func Attach(ctx context.Context, db *store.Store) (*Link, error) {
+	l := &Link{db: db}
+	return l, l.Reload(ctx)
+}
+
+// Reload relit l'état de partage dans la base (après une publication ou un
+// chargement).
+func (l *Link) Reload(ctx context.Context) error {
+	info, err := ReadInfo(ctx, l.db.Read())
+	if err != nil {
+		return err
+	}
+	pub := map[int64]bool{}
+	rs, err := l.db.Read().QueryContext(ctx, `SELECT tbl FROM _lattis_remote_tables WHERE published = 1`)
+	if err != nil {
+		return err
+	}
+	for rs.Next() {
+		var id int64
+		if err := rs.Scan(&id); err != nil {
+			rs.Close()
+			return err
+		}
+		pub[id] = true
+	}
+	rs.Close()
+	if err := rs.Err(); err != nil {
+		return err
+	}
+	levels := map[int64]string{}
+	rs, err = l.db.Read().QueryContext(ctx, `SELECT tbl, level FROM _lattis_capabilities WHERE tbl <> 0`)
+	if err != nil {
+		return err
+	}
+	for rs.Next() {
+		var id int64
+		var lv string
+		if err := rs.Scan(&id, &lv); err != nil {
+			rs.Close()
+			return err
+		}
+		levels[id] = lv
+	}
+	rs.Close()
+	l.mu.Lock()
+	l.info, l.published, l.levels = info, pub, levels
+	if info != nil && l.newVersion <= info.Version {
+		l.newVersion = 0
+	}
+	l.mu.Unlock()
+	return rs.Err()
+}
+
+// Info rend une copie de la description du classeur partagé (nil : local).
+func (l *Link) Info() *Info {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	if l.info == nil {
+		return nil
+	}
+	c := *l.info
+	return &c
+}
+
+// SetOnline note l'état de la connexion au serveur (reason : pourquoi hors
+// ligne).
+func (l *Link) SetOnline(on bool, reason string) {
+	l.mu.Lock()
+	l.online = on
+	if on {
+		reason = ""
+	}
+	l.offline = reason
+	l.mu.Unlock()
+}
+
+// Online dit si le serveur répond.
+func (l *Link) Online() bool {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	return l.online
+}
+
+// SetNewVersion note qu'une version plus récente est publiée (bandeau
+// « Nouvelle version disponible ») ; sans effet si elle n'est pas plus
+// récente que la version chargée.
+func (l *Link) SetNewVersion(v int) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.info == nil || v <= l.info.Version || v <= l.newVersion {
+		return false
+	}
+	l.newVersion = v
+	return true
+}
+
+// TableShare dit si un tableau est publié (canvas.Sharing).
+func (l *Link) TableShare(tbl int64) string {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	switch {
+	case l.info == nil:
+		return ""
+	case l.published[tbl]:
+		return "published"
+	}
+	return "private"
+}
+
+// TableLock refuse la modification d'un tableau publié en lecture seule
+// (canvas.Sharing).
+func (l *Link) TableLock(tbl int64) error {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	return l.lock(tbl)
+}
+
+func (l *Link) lock(tbl int64) error {
+	if l.info == nil || !l.published[tbl] {
+		return nil
+	}
+	if !l.online {
+		return ErrOffline
+	}
+	switch l.info.Mode {
+	case Frozen:
+		if l.info.CanDesign() {
+			return nil
+		}
+		return ErrReadOnly
+	default:
+		switch l.levels[tbl] {
+		case "reader", "none":
+			return ErrReadOnly
+		}
+		return nil
+	}
+}
+
+// Gate décide d'une opération relevée sur un tableau publié
+// (oplog.Recorder.Gate).
+func (l *Link) Gate(op command.Op) (bool, error) {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	if l.info == nil {
+		return true, nil // tableau publié hors d'un classeur partagé (essais du journal)
+	}
+	frozen := l.info.Mode == Frozen
+	if op.Table != 0 {
+		if err := l.lock(op.Table); err != nil {
+			if frozen && op.Kind == command.OpMove {
+				return false, nil // tri local
+			}
+			return false, err
+		}
+	}
+	// Figé : rien ne part, l'auteur republie la version entière.
+	return !frozen, nil
+}
+
+// State est l'état de partage pour l'interface.
+type State struct {
+	Shared     bool     `json:"shared"`
+	Server     string   `json:"server"`
+	ServerName string   `json:"serverName"`
+	WorkbookID string   `json:"workbookId"`
+	Title      string   `json:"title"`
+	Mode       string   `json:"mode"`
+	Version    int      `json:"version"`
+	Roles      []string `json:"roles"`
+	// CanDesign : propriétaire ou concepteur (Fichier › Republier).
+	CanDesign bool `json:"canDesign"`
+	Online    bool `json:"online"`
+	// Offline : raison de la coupure, vide en ligne.
+	Offline string `json:"offline,omitempty"`
+	// ReadOnly : message du bandeau quand les tableaux publiés ne se
+	// modifient pas (« Hors ligne, lecture seule », « Classeur publié en
+	// lecture seule »), vide sinon.
+	ReadOnly string `json:"readOnly,omitempty"`
+	// NewVersion : version publiée plus récente que celle chargée (0 sinon).
+	NewVersion int `json:"newVersion,omitempty"`
+	Published  int `json:"published"`
+}
+
+// State décrit l'état de partage.
+func (l *Link) State() State {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	if l.info == nil {
+		return State{Roles: []string{}}
+	}
+	s := State{
+		Shared: true, Server: l.info.Server, ServerName: l.info.ServerName, WorkbookID: l.info.WorkbookID,
+		Title: l.info.Title, Mode: l.info.Mode, Version: l.info.Version, Roles: append([]string{}, l.info.Roles...),
+		CanDesign: l.info.CanDesign(), Online: l.online, Offline: l.offline, NewVersion: l.newVersion, Published: len(l.published),
+	}
+	switch {
+	case !l.online:
+		s.ReadOnly = ErrOffline.Error()
+	case l.info.Mode == Frozen && !s.CanDesign:
+		s.ReadOnly = ErrReadOnly.Error()
+	}
+	return s
+}

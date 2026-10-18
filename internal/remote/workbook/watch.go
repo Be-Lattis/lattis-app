@@ -1,0 +1,66 @@
+package workbook
+
+import (
+	"context"
+	"strconv"
+	"strings"
+	"time"
+)
+
+// VersionNotice lit une notification de republication (« *version:<n> »,
+// lattis.finish_publish). Le canal porte aussi « *meta » et les
+// identifiants des tableaux modifiés (classeur collaboratif, et écritures
+// de la version de travail pendant une republication) : sans intérêt pour
+// un classeur figé.
+func VersionNotice(payload string) (int, bool) {
+	s, ok := strings.CutPrefix(payload, "*version:")
+	if !ok {
+		return 0, false
+	}
+	v, err := strconv.Atoi(s)
+	return v, err == nil
+}
+
+// Watch suit un classeur partagé ouvert jusqu'à l'annulation de ctx :
+// écoute de son canal (LISTEN), version publiée vérifiée à chaque
+// (re)connexion, passage hors ligne quand le serveur ne répond plus et
+// nouvel essai toutes les retry. changed est appelé à chaque changement
+// d'état (en ligne, hors ligne, nouvelle version).
+func Watch(ctx context.Context, srv Server, link *Link, retry time.Duration, changed func()) {
+	info := link.Info()
+	if info == nil {
+		return
+	}
+	if changed == nil {
+		changed = func() {}
+	}
+	for ctx.Err() == nil {
+		err := srv.Listen(ctx, info.Channel, func() {
+			link.SetOnline(true, "")
+			if caps, err := srv.Capabilities(ctx, info.WorkbookID); err == nil {
+				link.SetNewVersion(caps.Version)
+			}
+			changed()
+		}, func(p string) {
+			if v, ok := VersionNotice(p); ok && link.SetNewVersion(v) {
+				changed()
+			}
+		})
+		if ctx.Err() != nil {
+			return
+		}
+		reason := "serveur injoignable"
+		if err != nil {
+			reason = err.Error()
+		}
+		if link.Online() || link.State().Offline != reason {
+			link.SetOnline(false, reason)
+			changed()
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(retry):
+		}
+	}
+}

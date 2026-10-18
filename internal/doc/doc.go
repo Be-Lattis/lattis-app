@@ -13,20 +13,28 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 
 	"github.com/lalamefine/lattis/internal/archive"
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/meta"
 	"github.com/lalamefine/lattis/internal/remote/oplog"
+	"github.com/lalamefine/lattis/internal/remote/workbook"
 	"github.com/lalamefine/lattis/internal/store"
 )
 
 // Document est un classeur ouvert.
 type Document struct {
 	*canvas.Model
-	Bus   *command.Bus
+	Bus *command.Bus
+	// Share : partage sur un Serveur Lattis (classeur local si
+	// Share.Info() est nil).
+	Share *workbook.Link
 	arc   *archive.Doc
+	// Changements de partage (publication, rechargement : hors journal)
+	// depuis l'ouverture, et au moment de l'enregistrement.
+	shareGen, savedShare atomic.Int64
 	saved int64 // dernière commande appliquée au moment de l'enregistrement
 	// Changements de protection (hors journal) au moment de l'enregistrement.
 	savedProt int64
@@ -54,8 +62,16 @@ func wrap(ctx context.Context, a *archive.Doc, keep bool) (*Document, error) {
 	}
 	bus := command.New(a.DB)
 	// Tableaux publiés sur un Serveur Lattis : leurs écritures vont dans la
-	// file d'envoi (rien à faire tant qu'aucun ne l'est).
-	bus.Recorder = oplog.New(a.DB)
+	// file d'envoi (rien à faire tant qu'aucun ne l'est), ou sont refusées
+	// quand ils sont en lecture seule (classeur figé, hors ligne).
+	share, err := workbook.Attach(ctx, a.DB)
+	if err != nil {
+		return fail(err)
+	}
+	rec := oplog.New(a.DB)
+	rec.Gate = share.Gate
+	bus.Recorder = rec
+	a.Remote = func(ctx context.Context) (*archive.Remote, error) { return workbook.Manifest(ctx, a.DB.Read()) }
 	var id string
 	err = a.DB.Read().QueryRowContext(ctx, `SELECT value FROM _lattis_info WHERE key = 'id'`).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) { // perdu (classeur récupéré) : un nouveau
@@ -66,7 +82,8 @@ func wrap(ctx context.Context, a *archive.Doc, keep bool) (*Document, error) {
 	if err != nil {
 		return fail(err)
 	}
-	d := &Document{Model: canvas.New(a.DB, bus), Bus: bus, arc: a, id: id}
+	d := &Document{Model: canvas.New(a.DB, bus), Bus: bus, Share: share, arc: a, id: id}
+	d.Model.SetSharing(share)
 	top, err := d.top(ctx)
 	if err != nil {
 		return fail(err)
@@ -187,7 +204,7 @@ func (d *Document) top(ctx context.Context) (int64, error) {
 // (annuler jusqu'à l'état enregistré le rend de nouveau « propre »).
 func (d *Document) Dirty(ctx context.Context) (bool, error) {
 	top, err := d.top(ctx)
-	return top != d.saved || d.ProtectionChanges() != d.savedProt, err
+	return top != d.saved || d.ProtectionChanges() != d.savedProt || d.shareGen.Load() != d.savedShare.Load(), err
 }
 
 // Save enregistre dans path (vide : le fichier courant).
@@ -203,7 +220,8 @@ func (d *Document) Save(ctx context.Context, path string) error {
 	// Rien de changé depuis le dernier enregistrement dans ce fichier (le même
 	// critère que la question à la fermeture) : le réécrire prendrait des
 	// secondes sur un gros classeur et bloquerait les saisies.
-	if (path == "" || path == d.arc.Path) && d.arc.Path != "" && top == d.saved && prot == d.savedProt {
+	share := d.shareGen.Load()
+	if (path == "" || path == d.arc.Path) && d.arc.Path != "" && top == d.saved && prot == d.savedProt && share == d.savedShare.Load() {
 		return nil
 	}
 	// Premier enregistrement d'un classeur migré par-dessus son fichier : la
@@ -219,6 +237,7 @@ func (d *Document) Save(ctx context.Context, path string) error {
 		return err
 	}
 	d.saved, d.savedProt = top, prot
+	d.savedShare.Store(share)
 	d.backup = "" // enregistré ailleurs : le fichier d'origine reste tel quel
 	return nil
 }
@@ -263,6 +282,14 @@ func backupFile(src, dst string) error {
 	return err
 }
 
+// ShareChanged note un changement de partage fait hors du journal
+// (publication, chargement depuis le serveur) : l'état de partage est relu
+// et le classeur est à enregistrer.
+func (d *Document) ShareChanged(ctx context.Context) error {
+	d.shareGen.Add(1)
+	return d.Share.Reload(ctx)
+}
+
 // Backup donne la copie de sauvegarde que le prochain enregistrement fera
 // du fichier d'origine, d'un format plus ancien (vide : aucune).
 func (d *Document) Backup() string { return d.backup }
@@ -273,6 +300,7 @@ func (d *Document) MarkSaved(ctx context.Context) error {
 	top, err := d.top(ctx)
 	if err == nil {
 		d.saved, d.savedProt = top, d.ProtectionChanges()
+		d.savedShare.Store(d.shareGen.Load())
 	}
 	return err
 }

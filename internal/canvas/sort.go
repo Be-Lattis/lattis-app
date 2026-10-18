@@ -16,7 +16,9 @@ import (
 // pas (pour l'instant) : son calcul dépend de l'ordre.
 func (m *Model) SortTable(ctx context.Context, table string, i int, desc bool) error {
 	return m.Do(ctx, "Trier", func(t *tx) error {
-		tb, err := t.editTable(table)
+		// Tri local permis sur un tableau publié en lecture seule (classeur
+		// figé, §5.4) ; ailleurs, le journal logique décide.
+		tb, err := t.viewTable(table)
 		if err != nil {
 			return err
 		}

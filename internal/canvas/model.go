@@ -92,7 +92,25 @@ type Model struct {
 	// Message de la dernière action pour la barre d'état (TakeNotice).
 	noticeMu sync.Mutex
 	notice   string
+
+	// Partage sur un Serveur Lattis (nil : classeur local), voir SetSharing.
+	sharing Sharing
 }
+
+// Sharing décide, dans un classeur partagé sur un Serveur Lattis, quels
+// tableaux sont publiés et lesquels se modifient (internal/remote/workbook).
+type Sharing interface {
+	// TableLock refuse la modification d'un tableau publié en lecture
+	// seule (classeur figé, hors ligne, droits) ; nil : permise.
+	TableLock(tbl int64) error
+	// TableShare : "published", "private" (tableau resté local d'un
+	// classeur partagé) ou "" (classeur local).
+	TableShare(tbl int64) string
+}
+
+// SetSharing branche le partage du classeur (à l'ouverture, avant tout
+// usage du modèle).
+func (m *Model) SetSharing(s Sharing) { m.sharing = s }
 
 // New relie le modèle à la base (déjà migrée) et au bus de commandes (dont
 // il garde les annulations : voir protect.go).

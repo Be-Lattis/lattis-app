@@ -308,6 +308,43 @@ func (b *Bus) appendTo(ctx context.Context, seq int64, name string, fn func(*Tx)
 	return out, err
 }
 
+// Forget vide l'historique dans la transaction tx (corbeilles des commandes
+// gardées purgées), quand le classeur a été remplacé hors du bus (classeur
+// partagé rechargé depuis le serveur) : ses commandes ne s'annuleraient
+// plus.
+func Forget(ctx context.Context, tx *sql.Tx) error {
+	rs, err := tx.QueryContext(ctx, `SELECT steps FROM _lattis_journal WHERE undone = 0 ORDER BY seq DESC`)
+	if err != nil {
+		return err
+	}
+	var all []string
+	for rs.Next() {
+		var s string
+		if err := rs.Scan(&s); err != nil {
+			rs.Close()
+			return err
+		}
+		all = append(all, s)
+	}
+	rs.Close()
+	if err := rs.Err(); err != nil {
+		return err
+	}
+	for _, data := range all {
+		steps, err := decodeSteps(data)
+		if err != nil {
+			return err
+		}
+		for _, s := range steps {
+			if err := run(ctx, tx, s.Purge, nil); err != nil {
+				return err
+			}
+		}
+	}
+	_, err = tx.ExecContext(ctx, `DELETE FROM _lattis_journal`)
+	return err
+}
+
 // trim fait sortir de l'historique les commandes au-delà de Depth.
 func (b *Bus) trim(ctx context.Context, tx *sql.Tx) error {
 	rs, err := tx.QueryContext(ctx, `SELECT seq, steps FROM _lattis_journal WHERE undone = 0 ORDER BY seq DESC LIMIT -1 OFFSET ?`, b.Depth)

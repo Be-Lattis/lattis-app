@@ -80,6 +80,12 @@ type TableInfo struct {
 	// tableau) : identifiant et nom, 0 et vide sinon.
 	QueryID   int64  `json:"queryId"`
 	QueryName string `json:"queryName"`
+	// Classeur partagé : "published" (tableau publié sur le serveur) ou
+	// "private" (resté local) ; vide pour un classeur local.
+	Shared string `json:"shared,omitempty"`
+	// ReadOnly : pourquoi le tableau publié ne se modifie pas (« Classeur
+	// publié en lecture seule », « Hors ligne, lecture seule »), vide sinon.
+	ReadOnly string `json:"readOnly,omitempty"`
 }
 
 // CellInfo est une cellule libre.
@@ -185,6 +191,12 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 		}
 		for _, tb := range tables {
 			ti := TableInfo{ID: tb.ID, Name: tb.Name, SQL: tb.sql(), Row: tb.Row, Col: tb.Col, Rows: tb.Shown, Total: tb.Rows, Source: tb.view(), Key: -1}
+			if s := t.m.sharing; s != nil {
+				ti.Shared = s.TableShare(tb.ID)
+				if err := s.TableLock(tb.ID); err != nil {
+					ti.ReadOnly = err.Error()
+				}
+			}
 			if err := t.row(`SELECT id, name FROM _lattis_queries WHERE target = ? ORDER BY id LIMIT 1`, tb.ID).Scan(&ti.QueryID, &ti.QueryName); err != nil && !errors.Is(err, sql.ErrNoRows) {
 				return err
 			}

@@ -244,6 +244,40 @@ func (m *Model) SetType(ctx context.Context, table string, i int, to grid.Type) 
 		if err != nil {
 			return err
 		}
+		return t.setType(tb, i, to)
+	})
+}
+
+// AcceptAsText convertit la colonne i en texte et y met ses saisies
+// invalides telles qu'elles ont été tapées (vérifications avant de publier
+// sur un Serveur Lattis : « accepter comme texte »).
+func (m *Model) AcceptAsText(ctx context.Context, table string, i int) error {
+	return m.Do(ctx, "Accepter comme texte", func(t *tx) error {
+		tb, err := t.editTable(table)
+		if err != nil {
+			return err
+		}
+		if err := t.setType(tb, i, grid.Text); err != nil {
+			return err
+		}
+		c := tb.Cols[i]
+		col := colSQL(c.ID)
+		trash := fmt.Sprintf("_lattis_trash_text_%d_%d_%d", tb.ID, c.ID, time.Now().UnixNano())
+		return t.ApplyStep(command.Step{Do: []stmt{
+			st(`CREATE TABLE `+trash+` AS SELECT rid, raw FROM _lattis_invalid WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
+			st(`UPDATE ` + tb.sql() + ` SET ` + col + ` = ` + trash + `.raw FROM ` + trash + ` WHERE ` + trash + `.rid = ` + tb.sql() + `.id`),
+			st(`DELETE FROM _lattis_invalid WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
+		}, Undo: []stmt{
+			st(`UPDATE ` + tb.sql() + ` SET ` + col + ` = NULL WHERE id IN (SELECT rid FROM ` + trash + `)`),
+			st(`INSERT INTO _lattis_invalid (tbl, rid, col, raw) SELECT ?, rid, ?, raw FROM `+trash, tb.ID, c.ID),
+			st(`DROP TABLE ` + trash),
+		}, Purge: []stmt{st(`DROP TABLE IF EXISTS ` + trash)}})
+	})
+}
+
+// setType change le type de la colonne i (voir SetType).
+func (t *tx) setType(tb Table, i int, to grid.Type) error {
+	{
 		if i < 0 || i >= len(tb.Cols) {
 			return fmt.Errorf("colonne %d hors du tableau", i)
 		}
@@ -276,5 +310,5 @@ func (m *Model) SetType(ctx context.Context, table string, i int, to grid.Type) 
 			st(fix, c.Fixed, tb.ID, c.ID),
 		)
 		return t.ApplyStep(command.Step{Do: do, Undo: undo, Purge: []stmt{st(`DROP TABLE IF EXISTS ` + trash)}})
-	})
+	}
 }

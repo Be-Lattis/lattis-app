@@ -155,8 +155,29 @@ func (t *tx) guardWorkbook() error {
 	return nil
 }
 
-// editTable lit un tableau à modifier : refusé si sa feuille est protégée.
+// editTable lit un tableau à modifier : refusé si sa feuille est protégée,
+// ou si c'est un tableau publié en lecture seule (classeur partagé).
 func (t *tx) editTable(name string) (Table, error) {
+	tb, err := t.viewTable(name)
+	if err == nil {
+		err = t.lockTable(tb.ID)
+	}
+	return tb, err
+}
+
+// lockTable refuse la modification d'un tableau publié en lecture seule.
+func (t *tx) lockTable(id int64) error {
+	if t.m != nil && t.m.sharing != nil {
+		return t.m.sharing.TableLock(id)
+	}
+	return nil
+}
+
+// viewTable lit un tableau dont on change la présentation locale (tri,
+// mise en forme conditionnelle, clé proposée) : refusé si sa feuille est
+// protégée, permis sur un tableau publié en lecture seule (rien n'en est
+// renvoyé au serveur, §5.4).
+func (t *tx) viewTable(name string) (Table, error) {
 	tb, err := t.tableByName(name)
 	if err == nil {
 		err = t.guard(tb.Sheet)

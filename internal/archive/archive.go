@@ -33,6 +33,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -110,6 +112,23 @@ type Manifest struct {
 	FormatVersion int
 	Application   string
 	Saved         time.Time
+	// Remote : classeur partagé sur un Serveur Lattis (nil sinon). La base
+	// fait foi (_lattis_info, clé remote) ; le manifeste le dit sans ouvrir
+	// la base.
+	Remote *Remote
+}
+
+// Remote est la section remote du manifeste d'un classeur partagé
+// (spécification de l'application collaborative, §5.1).
+type Remote struct {
+	Server     string
+	WorkbookID string
+	Schema     string
+	Mode       string // frozen ou collaborative
+	Version    int
+	// Since : dernier point de synchronisation (xid8) par tableau publié
+	// (identifiant local).
+	Since map[string]string
 }
 
 // Doc est un document ouvert.
@@ -117,7 +136,10 @@ type Doc struct {
 	Path string // archive .lattis (vide pour un nouveau document jamais enregistré)
 	Dir  string // répertoire de travail
 	DB   *store.Store
-	lock *os.File
+	// Remote, s'il est fixé, est écrit dans le manifeste au prochain
+	// enregistrement (classeur partagé).
+	Remote func(ctx context.Context) (*Remote, error)
+	lock   *os.File
 }
 
 // Root est le dossier des répertoires de travail. Il est surchargeable pour
@@ -451,7 +473,14 @@ func (d *Doc) save(ctx context.Context, path string) error {
 	}
 	tmpName := tmp.Name()
 	defer os.Remove(tmpName)
-	if err := writeZip(tmp, snap); err != nil {
+	var remote *Remote
+	if d.Remote != nil {
+		if remote, err = d.Remote(ctx); err != nil {
+			tmp.Close()
+			return err
+		}
+	}
+	if err := writeZip(tmp, snap, remote); err != nil {
 		tmp.Close()
 		return err
 	}
@@ -538,13 +567,16 @@ func rename(src, dst string) error {
 	return err
 }
 
-func writeZip(w io.Writer, snap string) error {
+func writeZip(w io.Writer, snap string, remote *Remote) error {
 	zw := zip.NewWriter(w)
 	mw, err := zw.Create(manifestName)
 	if err != nil {
 		return err
 	}
 	fmt.Fprintf(mw, "format_version: %d\napplication: Lattis\nsaved: %s\n", FormatVersion, time.Now().UTC().Format(time.RFC3339))
+	if remote != nil {
+		io.WriteString(mw, remote.yaml())
+	}
 	dw, err := zw.CreateHeader(&zip.FileHeader{Name: dbName, Method: zip.Store, Modified: time.Now()})
 	if err != nil {
 		return err
@@ -560,6 +592,54 @@ func writeZip(w io.Writer, snap string) error {
 	return zw.Close()
 }
 
+// yaml écrit la section remote du manifeste (chaînes entre guillemets,
+// échappées comme en Go : un sous-ensemble du YAML). Une version plus
+// ancienne de Lattis, qui ne lit que les clés de premier niveau qu'elle
+// connaît, l'ignore.
+func (r *Remote) yaml() string {
+	var b strings.Builder
+	b.WriteString("remote:\n")
+	fmt.Fprintf(&b, "  server: %s\n", strconv.Quote(r.Server))
+	fmt.Fprintf(&b, "  workbook_id: %s\n", strconv.Quote(r.WorkbookID))
+	fmt.Fprintf(&b, "  schema: %s\n", strconv.Quote(r.Schema))
+	fmt.Fprintf(&b, "  mode: %s\n", strconv.Quote(r.Mode))
+	fmt.Fprintf(&b, "  version: %d\n", r.Version)
+	if len(r.Since) > 0 {
+		b.WriteString("  since:\n")
+		keys := make([]string, 0, len(r.Since))
+		for k := range r.Since {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			fmt.Fprintf(&b, "    %s: %s\n", strconv.Quote(k), strconv.Quote(r.Since[k]))
+		}
+	}
+	return b.String()
+}
+
+// ReadManifest lit le manifeste d'une archive .lattis sans l'ouvrir.
+func ReadManifest(path string) (Manifest, error) {
+	zr, err := zip.OpenReader(path)
+	if err != nil {
+		return Manifest{}, corruptErr(path, "l'archive est incomplète ou altérée (fichier tronqué ?)", true)
+	}
+	defer zr.Close()
+	for _, f := range zr.File {
+		if f.Name == manifestName {
+			return readManifest(f)
+		}
+	}
+	return Manifest{}, fmt.Errorf("%w : manifeste absent", ErrFormat)
+}
+
+func unquote(v string) string {
+	if s, err := strconv.Unquote(v); err == nil {
+		return s
+	}
+	return v
+}
+
 func readManifest(f *zip.File) (Manifest, error) {
 	r, err := f.Open()
 	if err != nil {
@@ -568,19 +648,46 @@ func readManifest(f *zip.File) (Manifest, error) {
 	defer r.Close()
 	var m Manifest
 	sc := bufio.NewScanner(r)
+	section := ""
 	for sc.Scan() {
-		k, v, ok := strings.Cut(sc.Text(), ":")
+		line := sc.Text()
+		k, v, ok := strings.Cut(line, ":")
 		if !ok {
 			continue
 		}
-		v = strings.TrimSpace(v)
-		switch strings.TrimSpace(k) {
-		case "format_version":
-			fmt.Sscan(v, &m.FormatVersion)
-		case "application":
-			m.Application = v
-		case "saved":
-			m.Saved, _ = time.Parse(time.RFC3339, v)
+		indent := len(line) - len(strings.TrimLeft(line, " "))
+		k, v = strings.TrimSpace(k), strings.TrimSpace(v)
+		switch {
+		case indent == 0:
+			section = ""
+			switch k {
+			case "format_version":
+				fmt.Sscan(v, &m.FormatVersion)
+			case "application":
+				m.Application = v
+			case "saved":
+				m.Saved, _ = time.Parse(time.RFC3339, v)
+			case "remote":
+				section = "remote"
+				m.Remote = &Remote{}
+			}
+		case section == "remote" && indent <= 2:
+			switch k {
+			case "server":
+				m.Remote.Server = unquote(v)
+			case "workbook_id":
+				m.Remote.WorkbookID = unquote(v)
+			case "schema":
+				m.Remote.Schema = unquote(v)
+			case "mode":
+				m.Remote.Mode = unquote(v)
+			case "version":
+				fmt.Sscan(v, &m.Remote.Version)
+			case "since":
+				m.Remote.Since = map[string]string{}
+			}
+		case section == "remote" && m.Remote.Since != nil:
+			m.Remote.Since[unquote(k)] = unquote(v)
 		}
 	}
 	if m.FormatVersion == 0 {

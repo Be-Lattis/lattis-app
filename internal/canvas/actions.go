@@ -62,6 +62,14 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 		for _, tb := range tables {
 			inCols := col >= tb.Col && col <= tb.Right()
 			inRows := row >= tb.Row && row <= tb.Bottom()
+			if inCols && inRows {
+				// Tableau publié en lecture seule (classeur partagé) : refusé
+				// tout de suite, l'en-tête compris (un renommage de colonne
+				// n'écrit aucune ligne).
+				if err := t.lockTable(tb.ID); err != nil {
+					return err
+				}
+			}
 			switch {
 			case inCols && row == tb.Row:
 				c := tb.Cols[col-tb.Col]

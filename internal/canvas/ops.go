@@ -373,6 +373,28 @@ func (t *tx) createTable(sheet int64, name string, row, col int, headers []strin
 	return tb, t.apply(do, undo)
 }
 
+// TableSchema donne les instructions qui créent la table de données d'un
+// tableau (comme createTable : STRICT, index de l'ordre, index unique de la
+// clé key si elle n'est pas 0). Sert au chargement d'un classeur partagé
+// depuis un Serveur Lattis, qui reçoit les métadonnées toutes faites.
+func TableSchema(id int64, cols []Column, key int64) []string {
+	tb := Table{ID: id, Cols: cols}
+	defs := []string{"id INTEGER PRIMARY KEY", "_pos TEXT NOT NULL"}
+	for _, c := range cols {
+		defs = append(defs, colSQL(c.ID)+" "+sqlType(c.Type))
+	}
+	out := []string{
+		`CREATE TABLE ` + tb.sql() + ` (` + strings.Join(defs, ", ") + `) STRICT`,
+		`CREATE INDEX ` + tb.sql() + `_pos ON ` + tb.sql() + `(_pos)`,
+	}
+	for _, c := range cols {
+		if key != 0 && c.ID == key {
+			out = append(out, `CREATE UNIQUE INDEX `+tb.sql()+`_key ON `+tb.sql()+`(`+keyExpr(c.ID, c.Type)+`)`)
+		}
+	}
+	return out
+}
+
 // nextTableID donne l'identifiant d'un nouveau tableau. Celui d'un tableau
 // publié sur un Serveur Lattis ne resert jamais, même supprimé : son
 // identifiant le désigne dans la file d'envoi et sur le serveur, et

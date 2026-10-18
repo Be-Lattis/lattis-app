@@ -40,6 +40,12 @@ type Recorder struct {
 	// armed : des objets temporaires de relevé ont pu être posés sur la
 	// connexion d'écriture (Begin les remet en ordre).
 	armed bool
+	// Gate, s'il est fixé, décide de chaque opération relevée sur un
+	// tableau publié : la garder dans la file d'envoi (send), l'écarter
+	// (classeur figé : rien n'est renvoyé au serveur), ou refuser toute
+	// l'étape (err : tableau publié en lecture seule). Classeur partagé :
+	// voir internal/remote/workbook.
+	Gate func(op command.Op) (send bool, err error)
 }
 
 // New crée le Recorder d'un document ; le brancher sur son bus
@@ -697,6 +703,15 @@ type writer struct {
 }
 
 func (w *writer) add(op command.Op) error {
+	if g := w.s.r.Gate; g != nil {
+		send, err := g(op)
+		if err != nil {
+			return err
+		}
+		if !send {
+			return nil
+		}
+	}
 	if w.c.Kind != command.KindDo && w.c.Seq != 0 && (op.Kind == command.OpSet || op.Kind == command.OpMove) {
 		if w.fwd == nil {
 			f, err := loadForward(w.s.ctx, w.s.tx, w.c.Seq, w.c.Kind)
