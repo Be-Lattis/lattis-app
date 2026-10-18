@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resizePanel } from '#lib/ui/resize.js';
+	import HelpLink from '#lib/help/HelpLink.svelte';
 	// Volet « Mise en forme du graphique » : chaque réglage s'applique tout de
 	// suite (aperçu direct, Ctrl+Z pour revenir en arrière).
 	import type { ChartConfig } from '#lib/grid/Sheet.svelte';
@@ -93,6 +94,7 @@
 <aside class="panel" use:resizePanel={{ key: 'chart', off: !resizable }}>
 	<header>
 		<strong>Graphique</strong>
+		<HelpLink target="graphiques" label="Aide sur les graphiques" />
 		<button class="x" title="Fermer le volet" onclick={onclose}>✕</button>
 	</header>
 

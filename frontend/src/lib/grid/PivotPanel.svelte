@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resizePanel } from '#lib/ui/resize.js';
+	import HelpLink from '#lib/help/HelpLink.svelte';
 	// Volet « Champs de tableau croisé dynamique », comme Excel : la liste des
 	// champs du tableau source (recherche, cases à cocher, icône du type) et
 	// quatre zones (Filtres, Colonnes, Lignes, Valeurs). Les champs se glissent
@@ -447,6 +448,7 @@
 				{#if isDefaultTableName(config.source)}<span class="default-name" title={DEFAULT_NAME_HINT}>{config.source}</span>{:else}{config.source}{/if}
 			</span>
 		</div>
+		<HelpLink target="tcd" label="Aide sur les tableaux croisés" />
 		<button class="icon-btn" title="Fermer le volet" aria-label="Fermer le volet" onclick={onclose}><Icon name="win-close" size={16} /></button>
 	</header>
 

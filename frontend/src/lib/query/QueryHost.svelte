@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resizePanel } from '#lib/ui/resize.js';
+	import HelpLink from '#lib/help/HelpLink.svelte';
 	// Données › Obtenir des données : tout ce qui touche aux requêtes d'import
 	// (équivalent de Power Query) et aux connexions, hors de la grille. La page
 	// n'appelle que data() et reçoit onchanged (classeur modifié, feuille à
@@ -279,6 +280,7 @@
 	<aside class="panel" use:resizePanel={{ key: 'queries' }}>
 		<header>
 			<strong>Requêtes et connexions</strong>
+			<HelpLink target="connexions" label="Aide sur les requêtes et connexions" />
 			<button class="x" title="Fermer le volet" onclick={() => (panel = false)}>✕</button>
 		</header>
 		{#if busy}<p class="muted">{busy}</p>{/if}

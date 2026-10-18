@@ -12,6 +12,7 @@
 	// ailleurs (cellule, onglet) le désélectionne.
 	import { dismiss } from './dismiss.js';
 	import { resizePanel } from '#lib/ui/resize.js';
+	import HelpLink from '#lib/help/HelpLink.svelte';
 	import { BUTTON_H, BUTTON_W, CONTROL_KINDS, VALUE_KINDS, baseName, choicesOf, controlTitle, handlerLabel, handlers, scriptFunctions, type ButtonConfig, type ControlKind, type SheetButton } from './buttons';
 	import { a1Address } from './formulaEdit';
 	import { pickCapture, picker } from '#lib/script/pick.svelte.js';
@@ -595,6 +596,7 @@
 		>
 			<header>
 				<span>{e.id === null ? `Insérer : ${KINDS[e.kind].toLowerCase()}` : `Modifier : ${KINDS[e.kind].toLowerCase()}`}</span>
+				<HelpLink target="controles" label="Aide sur les boutons et contrôles" />
 				<button class="x" title="Fermer" onclick={closeVolet}>✕</button>
 			</header>
 			<!-- Bouton d'un côté (Insertion › Bouton), contrôles liés à une cellule de l'autre (Insertion › Champ). -->
