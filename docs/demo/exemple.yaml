@@ -33,6 +33,7 @@ sheets:
           - {name: Latitude, gen: latitude, of: Ville}
           - {name: Longitude, gen: longitude, of: Ville}
           - {name: Ouverture, gen: date, from: 2018-01-01, to: 2023-12-31}
+          - {name: Siret, gen: regex, pattern: '\d{3} \d{3} \d{3} 000[1-9]\d'}
           - {name: Réparations, type: integer, formula: "=NB.SI(Réparations[Atelier]; [Ville])"}
           - {name: Montant, formula: "=SOMME.SI(Réparations[Atelier]; [Ville]; Réparations[Montant])"}
     charts:
@@ -47,7 +48,6 @@ sheets:
         columns:
           - {name: N°, gen: code, prefix: R, digits: 5}
           - {name: Date, gen: date, from: 2025-01-01, to: 2025-12-31, ordered: true}
-          - {name: Cadre, gen: regex, pattern: 'WD[A-Z]{2}\d{6}'}
           - {name: Atelier, gen: pick, values: [Paris, Lyon, Nantes, Bordeaux, Lille, Strasbourg], skew: true}
           - {name: Client, gen: person}
           - {name: Courriel, gen: email, of: Client, domain: exemple.fr}
