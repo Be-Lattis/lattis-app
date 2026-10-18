@@ -7,7 +7,8 @@
 	// clé gardée en mémoire seulement faute de trousseau, par exemple). Modèle
 	// local : son adresse au lieu d'une clé. « Abonnement Claude » : Claude
 	// Desktop ou Claude Code pilotent Lattis par le serveur MCP (ClaudeSetup).
-	// Passerelle de l'entreprise (ai.endpoint) : rien à choisir.
+	// Passerelle de l'entreprise (ai.endpoint) : rien à choisir, sinon la clé
+	// personnelle qu'elle demande (sauf ai.auth.mode = none).
 	import Icon from '#lib/icons/Icon.svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import { findSetting } from '#lib/shell/settings.js';
@@ -69,7 +70,7 @@
 		keyOk = keyError = '';
 		try {
 			chat.status = await DocumentService.AISetKey(provider.id, keyDraft.trim());
-			keyOk = 'Clé valide : elle est enregistrée dans le trousseau du système.';
+			keyOk = st?.managed ? 'Clé enregistrée dans le trousseau du système.' : 'Clé valide : elle est enregistrée dans le trousseau du système.';
 			keyDraft = '';
 		} catch (e) {
 			// Clé refusée, crédits épuisés… ; ou réseau injoignable / trousseau
@@ -119,8 +120,36 @@
 	</header>
 
 	{#if st?.managed}
-		<p class="ok"><Icon name="unlock" size={14} /> Connecté par la passerelle de votre organisation.</p>
-		<p class="muted">Le fournisseur et le modèle sont choisis par votre organisation : il n’y a pas de clé à saisir.</p>
+		<p class="muted">Le fournisseur et le modèle sont choisis par votre organisation, qui fait passer l’assistant par sa passerelle.</p>
+		{#if st.gatewayNoKey}
+			<p class="ok"><Icon name="unlock" size={14} /> Connecté par la passerelle de votre organisation : il n’y a pas de clé à saisir.</p>
+		{:else if provider?.hasKey}
+			<p class="ok"><Icon name="unlock" size={14} /> Votre clé personnelle pour la passerelle est enregistrée dans le trousseau du système.</p>
+			<div class="row">
+				<button onclick={forgetKey}><Icon name="trash" size={14} />Oublier la clé</button>
+			</div>
+		{:else if provider}
+			<p>Collez la clé personnelle que votre organisation vous a remise pour sa passerelle.</p>
+			<div class="row">
+				<input
+					class="grow"
+					type="password"
+					autocomplete="off"
+					spellcheck="false"
+					aria-label="Clé personnelle"
+					placeholder="Clé personnelle"
+					bind:value={keyDraft}
+					onkeydown={(e) => {
+						keep(e);
+						if (e.key === 'Enter') saveKey();
+					}}
+				/>
+				<button onclick={paste} title="Coller depuis le presse-papiers"><Icon name="paste" size={14} />Coller</button>
+				<button class="primary" disabled={!keyDraft.trim() || checking} onclick={saveKey}><Icon name="key" size={14} />Enregistrer</button>
+			</div>
+		{/if}
+		{#if keyOk}<p class="ok" role="status"><Icon name="unlock" size={14} /> {keyOk}</p>{/if}
+		{#if keyError}<p class="error" role="alert">{keyError}</p>{/if}
 	{:else if st}
 		<div class="ways" role="tablist" aria-label="Voie de connexion">
 			<button role="tab" aria-selected={way === 'key'} class:on={way === 'key'} onclick={() => (way = 'key')}>

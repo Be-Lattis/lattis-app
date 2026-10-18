@@ -165,6 +165,11 @@ export interface AIStatus {
      * passerelle de l'entreprise (ai.endpoint)
      */
     "managed": boolean;
+
+    /**
+     * passerelle sans clé personnelle (ai.auth.mode = none)
+     */
+    "gatewayNoKey": boolean;
     "providers": AIProvider[] | null;
     "busy": boolean;
     "messages": number;

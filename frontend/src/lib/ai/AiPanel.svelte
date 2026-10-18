@@ -63,7 +63,7 @@
 	let input = $state<HTMLTextAreaElement>();
 
 	// Prêt à converser dans Lattis : passerelle, clé enregistrée, ou modèle sans clé.
-	const ready = $derived(!!st && (st.managed || !!provider?.hasKey || !!(provider && (provider.local || provider.needsKey === false))));
+	const ready = $derived(!!st && (st.managed ? st.gatewayNoKey || !!provider?.hasKey : !!provider?.hasKey || !!(provider && (provider.local || provider.needsKey === false))));
 	// Connecté : prêt, ou Claude Desktop / Code pilotent Lattis (MCP).
 	const connected = $derived(ready || !!mcpClient);
 	const showConnect = $derived(!!st?.enabled && (connectOpen || !connected));

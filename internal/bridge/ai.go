@@ -104,14 +104,15 @@ type AIProvider struct {
 type AIStatus struct {
 	Enabled bool `json:"enabled"`
 	// Locked : coupé ou imposé par une stratégie de l'organisation.
-	Locked      bool         `json:"locked"`
-	Provider    string       `json:"provider"`
-	Model       string       `json:"model"`
-	DataSharing string       `json:"dataSharing"`
-	Managed     bool         `json:"managed"` // passerelle de l'entreprise (ai.endpoint)
-	Providers   []AIProvider `json:"providers"`
-	Busy        bool         `json:"busy"`
-	Messages    int          `json:"messages"`
+	Locked       bool         `json:"locked"`
+	Provider     string       `json:"provider"`
+	Model        string       `json:"model"`
+	DataSharing  string       `json:"dataSharing"`
+	Managed      bool         `json:"managed"`      // passerelle de l'entreprise (ai.endpoint)
+	GatewayNoKey bool         `json:"gatewayNoKey"` // passerelle sans clé personnelle (ai.auth.mode = none)
+	Providers    []AIProvider `json:"providers"`
+	Busy         bool         `json:"busy"`
+	Messages     int          `json:"messages"`
 	// Usage : cumul des jetons et du coût de la conversation.
 	Usage AIUsage `json:"usage"`
 	// KeepConversation : la conversation est gardée avec le classeur
@@ -129,6 +130,7 @@ func (s *DocumentService) AIState() AIStatus {
 		Model:            c.String("ai.model", ""),
 		DataSharing:      c.String("ai.dataSharing", ai.SchemaOnly),
 		Managed:          c.String("ai.endpoint", "") != "",
+		GatewayNoKey:     gatewayNoKey(c),
 		Messages:         s.ai.session.Len(),
 		Usage:            s.ai.session.Usage(),
 		KeepConversation: c.Bool("ai.keepConversation", false),
@@ -150,6 +152,13 @@ func (s *DocumentService) AIState() AIStatus {
 	st.Busy = s.ai.cancel != nil
 	s.ai.mu.Unlock()
 	return st
+}
+
+// gatewayNoKey : une passerelle d'entreprise (ai.endpoint) authentifie
+// elle-même (ai.auth.mode = none) ; sinon chacun y présente sa clé
+// personnelle, gardée dans le trousseau (configuration-entreprise.md).
+func gatewayNoKey(c *config.Config) bool {
+	return c.String("ai.endpoint", "") != "" && c.String("ai.auth.mode", "") == "none"
 }
 
 // refreshModels lit en arrière-plan la liste des modèles d'un fournisseur
@@ -196,7 +205,9 @@ func (s *DocumentService) AISetKey(ctx context.Context, provider, key string) (A
 		return s.AIState(), errors.New("clé vide : collez la clé d'API")
 	}
 	var warn string
-	if kc, ok := p.(ai.KeyChecker); ok {
+	// À travers une passerelle, la clé est celle de l'organisation : la
+	// passerelle n'a pas forcément la liste des modèles qui sert à vérifier.
+	if kc, ok := p.(ai.KeyChecker); ok && config.Current().String("ai.endpoint", "") == "" {
 		cred := ai.Credentials{Key: key, Endpoint: config.Current().String("ai.endpoint", "")}
 		if err := kc.CheckKey(context.WithoutCancel(ctx), cred); err != nil {
 			if !errors.Is(err, ai.ErrUnreachable) {
@@ -241,7 +252,7 @@ func (s *DocumentService) AISend(ctx context.Context, run int, text string, view
 	}
 	info := p.Info()
 	key, ok := ai.DefaultKeys.Get(id)
-	if !ok && info.NeedsKey {
+	if !ok && info.NeedsKey && !gatewayNoKey(c) {
 		return ai.ErrNoKey
 	}
 	model := c.String("ai.model", "")

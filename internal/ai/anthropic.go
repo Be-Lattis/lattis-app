@@ -46,10 +46,15 @@ func (anthropicProvider) Info() Info {
 // anthropicClient prépare le client : seule la clé donnée compte (variables
 // d'environnement et profils de l'outil « ant » ignorés).
 func anthropicClient(cred Credentials) (anthropic.Client, error) {
-	if cred.Key == "" {
+	// Sans clé : seulement à travers une passerelle d'entreprise qui
+	// authentifie elle-même (ai.auth.mode = none).
+	if cred.Key == "" && cred.Endpoint == "" {
 		return anthropic.Client{}, ErrNoKey
 	}
-	opts := []option.RequestOption{option.WithoutEnvironmentDefaults(), option.WithAPIKey(cred.Key)}
+	opts := []option.RequestOption{option.WithoutEnvironmentDefaults()}
+	if cred.Key != "" {
+		opts = append(opts, option.WithAPIKey(cred.Key))
+	}
 	if cred.Endpoint != "" {
 		opts = append(opts, option.WithBaseURL(cred.Endpoint))
 	}
