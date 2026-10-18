@@ -13,11 +13,17 @@
 // même archive et disparaît si le processus meurt, ce qui permet de
 // reconnaître au démarrage un répertoire orphelin et de proposer sa
 // récupération.
+//
+// L'archive ouverte n'est jamais modifiée : on travaille sur la copie
+// extraite, et seul un enregistrement réussi la remplace. Un fichier
+// illisible donne un *OpenError au message destiné à l'utilisateur ; s'il
+// est endommagé, Salvage en tire les données lisibles (salvage.go).
 package archive
 
 import (
 	"archive/zip"
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"database/sql"
@@ -42,14 +48,61 @@ const (
 	manifestName  = "manifest.yaml"
 	lockName      = "lattis.lock"
 	sourceName    = "source.txt" // chemin de l'archive d'origine, pour la récupération
+	sqliteMagic   = "SQLite format 3\x00"
 )
 
 var (
 	// ErrAlreadyOpen signale une archive déjà ouverte (par ce processus ou un autre).
-	ErrAlreadyOpen = errors.New("archive déjà ouverte")
-	// ErrFormat signale une archive illisible ou d'une version trop récente.
+	ErrAlreadyOpen = errors.New("ce classeur est déjà ouvert")
+	// ErrFormat signale un fichier qui n'est pas un classeur Lattis, ou d'un
+	// format trop récent.
 	ErrFormat = errors.New("archive .lattis invalide")
+	// ErrCorrupt signale un classeur endommagé (archive tronquée, base
+	// altérée) : Salvage peut en tirer les données lisibles.
+	ErrCorrupt = errors.New("classeur endommagé")
 )
+
+// OpenError est un fichier que Lattis refuse d'ouvrir. Reason est le message
+// pour l'utilisateur ; Salvage dit si Salvage peut en tirer des données.
+type OpenError struct {
+	Path    string
+	Reason  string
+	Salvage bool
+	Err     error // ErrFormat ou ErrCorrupt
+}
+
+func (e *OpenError) Error() string {
+	return fmt.Sprintf("impossible d'ouvrir « %s » : %s", filepath.Base(e.Path), e.Reason)
+}
+
+func (e *OpenError) Unwrap() error { return e.Err }
+
+func formatErr(path, reason string) error {
+	return &OpenError{Path: path, Reason: reason, Err: ErrFormat}
+}
+
+func corruptErr(path, reason string, salvage bool) error {
+	return &OpenError{Path: path, Reason: reason, Salvage: salvage, Err: ErrCorrupt}
+}
+
+// Damaged traduit une erreur de SQLite qui signale une base altérée
+// (SQLITE_CORRUPT, SQLITE_NOTADB) en *OpenError ; les autres restent telles
+// quelles.
+func Damaged(path string, err error) error {
+	var oe *OpenError
+	if errors.As(err, &oe) {
+		if oe.Path != path { // contrôle fait sur la copie extraite
+			c := *oe
+			c.Path = path
+			return &c
+		}
+		return err
+	}
+	if errors.Is(err, sqlite3.CORRUPT) || errors.Is(err, sqlite3.NOTADB) {
+		return corruptErr(path, "la base de données du classeur est endommagée", true)
+	}
+	return err
+}
 
 // Manifest est le manifeste YAML : volontairement minimal, tout le reste vit
 // dans SQLite, transactionnel avec les données.
@@ -118,20 +171,26 @@ func New(extra ...func(*sqliteConn) error) (*Doc, error) {
 	if err != nil {
 		return nil, err
 	}
-	return openDir(dir, "", extra)
+	d, err := openDir(dir, "", nil, extra)
+	if err != nil {
+		os.RemoveAll(dir)
+	}
+	return d, err
 }
 
 // Open ouvre une archive : extraction dans le répertoire de travail, puis
 // ouverture de la base. Si un répertoire orphelin existe pour cette archive
-// (session précédente interrompue), Open renvoie ErrRecoverable : l'appelant
-// propose Recover ou Discard.
+// (session précédente interrompue), Open renvoie un *RecoverableError :
+// l'appelant propose Recover ou Discard. Un fichier illisible donne un
+// *OpenError, sans rien laisser dans le dossier de travail.
 func Open(path string, extra ...func(*sqliteConn) error) (*Doc, error) {
 	dir, err := workDir(path)
 	if err != nil {
 		return nil, err
 	}
 	if _, err := os.Stat(filepath.Join(dir, dbName)); err == nil {
-		// Un répertoire existe déjà : document ouvert ailleurs, ou orphelin.
+		// Un répertoire existe déjà : document ouvert ailleurs, ou orphelin
+		// (proposé même si le fichier a disparu ou s'est abîmé depuis).
 		lock, err := lockDir(dir)
 		if err != nil {
 			return nil, err
@@ -139,17 +198,37 @@ func Open(path string, extra ...func(*sqliteConn) error) (*Doc, error) {
 		lock.Close() // relâché : c'est à l'utilisateur de choisir
 		return nil, &RecoverableError{Orphan{Dir: dir, Source: path}}
 	}
-	if err := extract(path, dir); err != nil {
-		os.RemoveAll(dir)
+	if err := sniff(path); err != nil {
 		return nil, err
 	}
-	return openDir(dir, path, extra)
-}
-
-func openDir(dir, path string, extra []func(*sqliteConn) error) (*Doc, error) {
+	// Verrou pris avant l'extraction : un répertoire en cours d'extraction
+	// n'est jamais pris pour un orphelin.
 	lock, err := lockDir(dir)
 	if err != nil {
 		return nil, err
+	}
+	if err := extract(path, dir); err != nil {
+		lock.Close()
+		os.RemoveAll(dir)
+		return nil, err
+	}
+	d, err := openDir(dir, path, lock, extra)
+	if err != nil {
+		os.RemoveAll(dir)
+		return nil, Damaged(path, err)
+	}
+	return d, nil
+}
+
+// openDir ouvre la base du répertoire de travail ; lock : verrou déjà pris
+// (nil : le prendre). En cas d'échec, le verrou est relâché et le
+// répertoire laissé tel quel.
+func openDir(dir, path string, lock *os.File, extra []func(*sqliteConn) error) (*Doc, error) {
+	if lock == nil {
+		var err error
+		if lock, err = lockDir(dir); err != nil {
+			return nil, err
+		}
 	}
 	if err := os.WriteFile(filepath.Join(dir, sourceName), []byte(path), 0o644); err != nil {
 		lock.Close()
@@ -163,61 +242,161 @@ func openDir(dir, path string, extra []func(*sqliteConn) error) (*Doc, error) {
 	return &Doc{Path: path, Dir: dir, DB: db, lock: lock}, nil
 }
 
-// extract lit l'archive et copie la base dans le répertoire de travail.
+// sniff reconnaît, avant toute extraction, les fichiers qui ne sont pas une
+// archive : vide, base SQLite nue, autre format.
+func sniff(path string) error {
+	f, err := os.Open(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("fichier introuvable : %s", path)
+	}
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	if st, err := f.Stat(); err == nil && st.IsDir() {
+		return formatErr(path, "c'est un dossier, pas un classeur")
+	}
+	head := make([]byte, len(sqliteMagic))
+	n, _ := io.ReadFull(f, head)
+	head = head[:n]
+	switch {
+	case n == 0:
+		return formatErr(path, "le fichier est vide (0 octet)")
+	case bytes.HasPrefix(head, []byte(sqliteMagic)):
+		return formatErr(path, "c'est une base SQLite, pas un classeur Lattis (l'importer comme source de données)")
+	case !bytes.HasPrefix(head, []byte("PK")):
+		return formatErr(path, "ce n'est pas un classeur Lattis (format de fichier inconnu)")
+	}
+	return nil
+}
+
+// extract lit l'archive et copie la base dans le répertoire de travail. La
+// base est écrite sous un nom provisoire puis renommée : un arrêt pendant
+// l'extraction ne laisse pas de base tronquée à « récupérer ».
 func extract(path, dir string) error {
 	zr, err := zip.OpenReader(path)
 	if err != nil {
-		return fmt.Errorf("%w : %v", ErrFormat, err)
+		return corruptErr(path, "l'archive est incomplète ou altérée (fichier tronqué ?)", true)
 	}
 	defer zr.Close()
-	var found bool
+	var db *zip.File
 	for _, f := range zr.File {
 		switch f.Name {
 		case manifestName:
-			m, err := readManifest(f)
-			if err != nil {
-				return err
-			}
-			if m.FormatVersion > FormatVersion {
-				return fmt.Errorf("%w : format %d, cette version lit jusqu'au format %d", ErrFormat, m.FormatVersion, FormatVersion)
+			// Manifeste illisible ou absent : toléré, la base fait foi (sa
+			// version est vérifiée à la migration). Seule une archive d'un
+			// format plus récent est refusée.
+			if m, err := readManifest(f); err == nil && m.FormatVersion > FormatVersion {
+				return formatErr(path, fmt.Sprintf("il a été enregistré par une version plus récente de Lattis (archive au format %d, cette version lit jusqu'au format %d) : mettre Lattis à jour pour l'ouvrir", m.FormatVersion, FormatVersion))
 			}
 		case dbName:
-			found = true
-			if err := os.MkdirAll(dir, 0o755); err != nil {
-				return err
-			}
-			if err := copyZipFile(f, filepath.Join(dir, dbName)); err != nil {
-				return err
-			}
+			db = f
 		}
 	}
-	if !found {
-		return fmt.Errorf("%w : %s absent", ErrFormat, dbName)
+	if db == nil {
+		return formatErr(path, "l'archive ne contient pas de base de données ("+dbName+") : ce n'est pas un classeur Lattis")
 	}
-	return nil
+	part := filepath.Join(dir, dbName+".part")
+	if err := copyZipFile(db, part); err != nil {
+		os.Remove(part)
+		var re readErr
+		if errors.As(err, &re) {
+			return corruptErr(path, "la base de données de l'archive est altérée", true)
+		}
+		return err
+	}
+	if err := checkDB(part); err != nil {
+		os.Remove(part)
+		return Damaged(path, err)
+	}
+	return os.Rename(part, filepath.Join(dir, dbName))
+}
+
+// readErr marque une erreur de lecture de l'archive (et non d'écriture de
+// la copie : disque plein…).
+type readErr struct{ error }
+
+func (e readErr) Unwrap() error { return e.error }
+
+type tagReader struct{ r io.Reader }
+
+func (t tagReader) Read(p []byte) (int, error) {
+	n, err := t.r.Read(p)
+	if err != nil && err != io.EOF {
+		err = readErr{err}
+	}
+	return n, err
 }
 
 func copyZipFile(f *zip.File, dst string) error {
 	r, err := f.Open()
 	if err != nil {
-		return err
+		return readErr{err}
 	}
 	defer r.Close()
 	w, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	if _, err := io.Copy(w, r); err != nil {
+	if _, err := io.Copy(w, tagReader{r}); err != nil {
 		w.Close()
 		return err
 	}
 	return w.Close()
 }
 
+// dbHeader lit l'en-tête SQLite : taille de page et, s'il est fiable, le
+// nombre de pages annoncé (0 sinon).
+func dbHeader(h []byte) (pageSize, pages int64, ok bool) {
+	if len(h) < 100 || !bytes.HasPrefix(h, []byte(sqliteMagic)) {
+		return 0, 0, false
+	}
+	pageSize = int64(h[16])<<8 | int64(h[17])
+	if pageSize == 1 {
+		pageSize = 65536
+	}
+	if pageSize < 512 || pageSize > 65536 || pageSize&(pageSize-1) != 0 {
+		return 0, 0, false
+	}
+	be32 := func(o int) int64 { return int64(h[o])<<24 | int64(h[o+1])<<16 | int64(h[o+2])<<8 | int64(h[o+3]) }
+	// Le nombre de pages de l'en-tête n'est valable que si le compteur de
+	// modifications et « version-valid-for » concordent.
+	if be32(24) == be32(92) {
+		pages = be32(28)
+	}
+	return pageSize, pages, true
+}
+
+// checkDB contrôle, sans l'ouvrir, que le fichier est une base SQLite
+// entière : en-tête valide, taille au moins égale à celle annoncée.
+func checkDB(path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	h := make([]byte, 100)
+	n, _ := io.ReadFull(f, h)
+	pageSize, pages, ok := dbHeader(h[:n])
+	if !ok {
+		return corruptErr(path, "la base de données du classeur est illisible (en-tête invalide)", false)
+	}
+	st, err := f.Stat()
+	if err != nil {
+		return err
+	}
+	if want := pages * pageSize; st.Size() < want {
+		return corruptErr(path, fmt.Sprintf("la base de données du classeur est tronquée (%d octets sur %d)", st.Size(), want), true)
+	}
+	return nil
+}
+
 // Save enregistre le document dans path (Enregistrer sous si path diffère).
 // Instantané cohérent par VACUUM INTO (la base en WAL est répartie sur trois
 // fichiers), ZIP sans compression (rapide sur une grosse base), écriture
-// dans un fichier temporaire à côté de la cible puis renommage atomique.
+// dans un fichier temporaire à côté de la cible, mis sur disque (fsync) et
+// relu, puis renommage atomique : jusque-là, l'ancien fichier reste intact,
+// même si le processus est tué.
 func (d *Doc) Save(ctx context.Context, path string) error {
 	if path == "" {
 		path = d.Path
@@ -225,6 +404,29 @@ func (d *Doc) Save(ctx context.Context, path string) error {
 	if path == "" {
 		return errors.New("aucun chemin d'enregistrement")
 	}
+	if err := d.save(ctx, path); err != nil {
+		if _, serr := os.Stat(path); serr == nil {
+			return fmt.Errorf("enregistrement impossible, « %s » n'a pas été modifié : %w", filepath.Base(path), err)
+		}
+		return fmt.Errorf("enregistrement impossible : %w", err)
+	}
+	if path != d.Path {
+		d.Path = path
+		os.WriteFile(filepath.Join(d.Dir, sourceName), []byte(path), 0o644)
+	}
+	return nil
+}
+
+// beforeRename est appelé juste avant le renommage (tests : enregistrement
+// interrompu).
+var beforeRename = func(tmp string) error { return nil }
+
+const (
+	tempPrefix = ".lattis-"
+	tempSuffix = ".tmp"
+)
+
+func (d *Doc) save(ctx context.Context, path string) error {
 	snap := filepath.Join(d.Dir, "snapshot.sqlite")
 	os.Remove(snap)
 	defer os.Remove(snap)
@@ -237,7 +439,13 @@ func (d *Doc) Save(ctx context.Context, path string) error {
 	if err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".lattis-*.tmp")
+	st, err := os.Stat(snap)
+	if err != nil {
+		return err
+	}
+	dir := filepath.Dir(path)
+	cleanTemps(dir)
+	tmp, err := os.CreateTemp(dir, tempPrefix+"*"+tempSuffix)
 	if err != nil {
 		return err
 	}
@@ -254,14 +462,80 @@ func (d *Doc) Save(ctx context.Context, path string) error {
 	if err := tmp.Close(); err != nil {
 		return err
 	}
-	if err := os.Rename(tmpName, path); err != nil {
+	if err := verifyZip(tmpName, st.Size()); err != nil {
 		return err
 	}
-	if path != d.Path {
-		d.Path = path
-		os.WriteFile(filepath.Join(d.Dir, sourceName), []byte(path), 0o644)
+	// Mêmes droits que le fichier remplacé (CreateTemp crée en 0600).
+	mode := os.FileMode(0o644)
+	if old, err := os.Stat(path); err == nil {
+		mode = old.Mode().Perm()
+	}
+	os.Chmod(tmpName, mode)
+	if err := beforeRename(tmpName); err != nil {
+		return err
+	}
+	if err := rename(tmpName, path); err != nil {
+		return err
+	}
+	syncDir(dir)
+	return nil
+}
+
+// staleTemp : âge à partir duquel un fichier temporaire d'enregistrement est
+// celui d'un enregistrement interrompu (processus tué avant le renommage).
+var staleTemp = time.Hour
+
+// cleanTemps supprime les fichiers temporaires d'enregistrements interrompus.
+func cleanTemps(dir string) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	for _, e := range entries {
+		n := e.Name()
+		if e.IsDir() || !strings.HasPrefix(n, tempPrefix) || !strings.HasSuffix(n, tempSuffix) {
+			continue
+		}
+		if info, err := e.Info(); err == nil && time.Since(info.ModTime()) > staleTemp {
+			os.Remove(filepath.Join(dir, n))
+		}
+	}
+}
+
+// verifyZip relit l'archive écrite avant qu'elle remplace l'ancienne :
+// manifeste et base présents, base de la taille de l'instantané.
+func verifyZip(path string, size int64) error {
+	zr, err := zip.OpenReader(path)
+	if err != nil {
+		return fmt.Errorf("archive écrite illisible : %w", err)
+	}
+	defer zr.Close()
+	var man, db bool
+	for _, f := range zr.File {
+		switch f.Name {
+		case manifestName:
+			man = true
+		case dbName:
+			db = f.UncompressedSize64 == uint64(size)
+		}
+	}
+	if !man || !db {
+		return errors.New("archive écrite incomplète")
 	}
 	return nil
+}
+
+// rename remplace dst par src. Sous Windows, un antivirus ou un outil de
+// synchronisation qui lit dst le bloque un instant : on réessaie.
+func rename(src, dst string) error {
+	var err error
+	for i := range 8 {
+		if err = os.Rename(src, dst); err == nil {
+			return nil
+		}
+		time.Sleep(time.Duration(i+1) * 25 * time.Millisecond)
+	}
+	return err
 }
 
 func writeZip(w io.Writer, snap string) error {
@@ -324,6 +598,14 @@ func (d *Doc) Close() error {
 	return errors.Join(err, os.RemoveAll(d.Dir))
 }
 
+// Release ferme le document en gardant son répertoire de travail (échec
+// d'une récupération : les modifications restent récupérables).
+func (d *Doc) Release() error {
+	err := d.DB.Close()
+	d.lock.Close()
+	return err
+}
+
 // --- Récupération après crash --------------------------------------------------
 
 // Orphan est un répertoire de travail dont le processus a disparu.
@@ -342,7 +624,8 @@ func (e *RecoverableError) Error() string {
 }
 
 // Orphans liste les répertoires de travail abandonnés (verrou libre), à
-// proposer en récupération au démarrage.
+// proposer en récupération au démarrage. Un répertoire sans base (extraction
+// interrompue) n'a rien à récupérer : il est supprimé.
 func Orphans() ([]Orphan, error) {
 	root, err := Root()
 	if err != nil {
@@ -361,15 +644,16 @@ func Orphans() ([]Orphan, error) {
 		if !e.IsDir() {
 			continue
 		}
-		db, err := os.Stat(filepath.Join(dir, dbName))
-		if err != nil {
-			continue
-		}
 		lock, err := lockDir(dir)
 		if err != nil {
 			continue // document ouvert par un processus vivant
 		}
+		db, err := os.Stat(filepath.Join(dir, dbName))
 		lock.Close()
+		if err != nil {
+			os.RemoveAll(dir)
+			continue
+		}
 		src, _ := os.ReadFile(filepath.Join(dir, sourceName))
 		mod := db.ModTime()
 		if wal, err := os.Stat(filepath.Join(dir, dbName+"-wal")); err == nil && wal.ModTime().After(mod) {
@@ -381,9 +665,14 @@ func Orphans() ([]Orphan, error) {
 }
 
 // Recover rouvre un répertoire orphelin tel quel : la base SQLite rejoue son
-// WAL, et toutes les écritures validées avant l'interruption sont là.
+// WAL, et toutes les écritures validées avant l'interruption sont là. En cas
+// d'échec, le répertoire reste en place : rien n'est perdu.
 func Recover(o Orphan, extra ...func(*sqliteConn) error) (*Doc, error) {
-	return openDir(o.Dir, o.Source, extra)
+	d, err := openDir(o.Dir, o.Source, nil, extra)
+	if err != nil {
+		return nil, fmt.Errorf("récupération impossible : %w", err)
+	}
+	return d, nil
 }
 
 // Discard supprime un répertoire orphelin.

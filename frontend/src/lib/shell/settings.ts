@@ -35,14 +35,14 @@ export const settingSections: SettingSection[] = [
 			{
 				path: 'features.htmlTabs',
 				kind: 'bool',
-				label: 'Onglets HTML',
-				help: 'Permet d’ajouter des Onglets HTML : une page HTML, CSS et JavaScript qui lit et modifie le classeur, ou une page d’un site. Les classeurs qui en contiennent déjà s’ouvrent et s’utilisent normalement.'
+				label: 'Pages web',
+				help: 'Permet d’ajouter des pages web : une page HTML, CSS et JavaScript qui lit et modifie le classeur, ou une page d’un site. Les classeurs qui en contiennent déjà s’ouvrent et s’utilisent normalement.'
 			},
 			{
 				path: 'ai.enabled',
 				kind: 'bool',
 				label: 'Onglet IA (assistant)',
-				help: 'Ajoute l’onglet IA, à gauche de SQL : un assistant qui aide à construire une analyse et agit sur le classeur. Il faut une clé d’API personnelle du fournisseur choisi, gardée dans le trousseau du système.'
+				help: 'Ajoute l’onglet IA, à gauche de SQL : un assistant qui aide à construire une analyse et agit sur le classeur. Il faut se connecter au compte du fournisseur, ou enregistrer une clé d’API personnelle, gardée dans le trousseau du système.'
 			}
 		]
 	},

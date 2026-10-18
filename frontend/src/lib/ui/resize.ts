@@ -1,6 +1,6 @@
 // Volets qui se déplient à droite (graphique, tableau croisé, contrôles,
-// requêtes, référence Lua, volets des Onglets Document) : tous ont la même
-// largeur par défaut, bornée à la moitié de la fenêtre (et rebornée quand la
+// requêtes, référence Lua, aide, volets des Documents) : tous ont la même
+// largeur par défaut (500 px, choix de Louis), bornée à la moitié de la fenêtre (et rebornée quand la
 // fenêtre change). Leur bord gauche se tire pour les élargir ou les
 // rétrécir, comme les volets d'Excel ; la largeur choisie est gardée sur ce
 // poste, par volet, sous la même borne. Un double-clic sur le bord revient à
@@ -9,9 +9,8 @@
 /** Zone de prise du bord gauche, en pixels. */
 export const EDGE = 5;
 
-/** Largeur de référence d'un volet ; la largeur par défaut en vaut trois. */
-export const BASE_WIDTH = 450;
-export const DEFAULT_WIDTH = 3 * BASE_WIDTH;
+/** Largeur par défaut d'un volet. */
+export const DEFAULT_WIDTH = 500;
 /** Part maximale de la fenêtre qu'un volet peut prendre. */
 export const MAX_SHARE = 0.5;
 /** Largeur minimale d'un volet. */
@@ -24,7 +23,8 @@ export function panelWidth(w: number | undefined, viewport: number, min = MIN_WI
 
 type Options = { key: string; min?: number; /** Volet inclus dans un autre, qui se redimensionne à sa place. */ off?: boolean };
 
-const storeKey = (key: string) => `lattis.panel.${key}`;
+// « panel2 » : les largeurs tirées avant l'harmonisation à 500 px sont oubliées.
+const storeKey = (key: string) => `lattis.panel2.${key}`;
 
 function load(key: string): number | undefined {
 	try {
@@ -47,6 +47,8 @@ function save(key: string, w: number | undefined) {
 /** Action Svelte : donne à un volet de droite la largeur commune et le rend redimensionnable par son bord gauche. */
 export function resizePanel(node: HTMLElement, opts: Options) {
 	if (opts.off) return {};
+	// Région du volet pour F6 (focus.ts).
+	node.dataset.region ??= 'panel';
 	let { key, min = MIN_WIDTH } = opts;
 	// Largeur tirée par l'utilisateur, undefined : largeur par défaut.
 	let chosen = load(key);

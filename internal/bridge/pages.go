@@ -12,11 +12,11 @@ import (
 )
 
 // AddPage ajoute un onglet page HTML avant l'onglet before (0 : à la fin)
-// et renvoie son identifiant. Les Onglets HTML sont une fonctionnalité à
+// et renvoie son identifiant. Les pages web sont une fonctionnalité à
 // activer (Fichier › Paramètres › Fonctionnalités, features.htmlTabs).
 func (s *DocumentService) AddPage(ctx context.Context, before int64) (int64, error) {
 	if !config.Current().Bool("features.htmlTabs", false) {
-		return 0, errors.New("les Onglets HTML sont désactivés : activez-les dans Fichier › Paramètres › Fonctionnalités")
+		return 0, errors.New("les pages web sont désactivés : activez-les dans Fichier › Paramètres › Fonctionnalités")
 	}
 	d, err := s.current()
 	if err != nil {
@@ -133,7 +133,7 @@ func (s *DocumentService) hosts(ctx context.Context, fn func(*doc.Document) erro
 	return s.HTTPHosts(ctx)
 }
 
-// DocControl lit un contrôle d'un Onglet Document et la valeur de sa
+// DocControl lit un contrôle d'un document et la valeur de sa
 // cellule liée.
 func (s *DocumentService) DocControl(ctx context.Context, id int64) (api.ControlState, error) {
 	return api.ControlOf(host{s}, id)
@@ -151,7 +151,7 @@ func (s *DocumentService) MovePivot(ctx context.Context, id, sheet int64, row, c
 }
 
 // PlacePivot pose sur la feuille un tableau croisé de configuration cfg
-// (collé depuis un Onglet Document).
+// (collé depuis un document).
 func (s *DocumentService) PlacePivot(ctx context.Context, sheet int64, row, col int, cfg canvas.PivotConfig) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error {
 		_, err := d.PlacePivot(ctx, sheet, row, col, cfg)

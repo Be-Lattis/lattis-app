@@ -80,6 +80,7 @@
 	// Boîte de dialogue ouverte par un script (ui.dialog, ui.alert,
 	// ui.confirm, ui.prompt) ou par un assistant via le serveur MCP. Le
 	// script attend la réponse : Entrée valide, Échap annule.
+	import { modal } from '#lib/ui/focus.js';
 	import { tick } from 'svelte';
 
 	interface Props {
@@ -126,7 +127,7 @@
 
 <div class="back">
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-	<div class="dialog" role="dialog" aria-modal="true" aria-label={spec.title} tabindex="-1" bind:this={box} onkeydown={onkey}>
+	<div class="dialog" role="dialog" aria-modal="true" aria-label={spec.title} tabindex="-1" bind:this={box} use:modal onkeydown={onkey}>
 		<header>{spec.title}</header>
 		{#if spec.message}<p class="message">{spec.message}</p>{/if}
 		{#each fields as f (f.name)}

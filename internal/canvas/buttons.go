@@ -119,7 +119,7 @@ func (c *ButtonConfig) check() error {
 	c.Name = strings.TrimSpace(c.Name)
 	c.Label, c.Script, c.Function = strings.TrimSpace(c.Label), strings.TrimSpace(c.Script), strings.TrimSpace(c.Function)
 	// Cellule liée : « B3 » sur la feuille du contrôle, ou « Feuille!B3 »
-	// (contrôle d'un Onglet Document) ; seule l'adresse passe en majuscules.
+	// (contrôle d'un document) ; seule l'adresse passe en majuscules.
 	sheetPart, cellPart := SplitLink(strings.TrimSpace(c.Link))
 	c.Link = strings.ToUpper(cellPart)
 	if sheetPart != "" {

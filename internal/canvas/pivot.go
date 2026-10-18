@@ -277,7 +277,7 @@ func (m *Model) CopyPivot(ctx context.Context, id, sheet int64, row, col int) (i
 }
 
 // PlacePivot pose en (row, col) de la feuille un tableau croisé de
-// configuration cfg (collé depuis un Onglet Document), sous un nouveau nom ;
+// configuration cfg (collé depuis un document), sous un nouveau nom ;
 // renvoie son identifiant.
 func (m *Model) PlacePivot(ctx context.Context, sheet int64, row, col int, cfg PivotConfig) (int64, error) {
 	if row < 0 || col < 0 {

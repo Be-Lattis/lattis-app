@@ -90,7 +90,7 @@ type Features struct {
 	MCP                  Toggle  `json:"mcp,omitempty"`
 	LuaHTTP              LuaHTTP `json:"luaHttp,omitempty"`
 	AllowUserConnections *bool   `json:"allowUserConnections,omitempty"`
-	// HtmlTabs : les Onglets HTML (pages HTML, CSS et JavaScript, ou page web
+	// HtmlTabs : les pages web (pages HTML, CSS et JavaScript, ou page web
 	// externe) sont proposés. Fonctionnalité à activer (choix de Louis,
 	// 18/10/2026) ; les classeurs qui en contiennent déjà les affichent et les
 	// gardent utilisables quand même.

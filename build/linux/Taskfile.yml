@@ -170,13 +170,34 @@ tasks:
     dir: build
     cmds:
       - mkdir -p {{.ROOT_DIR}}/build/linux/appimage
-      - wails3 generate .desktop -name "{{.APP_NAME}}" -exec "{{.EXEC}}" -icon "{{.ICON}}" -outputfile "{{.ROOT_DIR}}/build/linux/{{.APP_NAME}}.desktop" -categories "{{.CATEGORIES}}"
+      - wails3 generate .desktop -name "{{.DISPLAY_NAME}}" -comment "{{.COMMENT}}" -exec "{{.EXEC}}" -icon "{{.ICON}}" -outputfile "{{.ROOT_DIR}}/build/linux/{{.APP_NAME}}.desktop" -categories "{{.CATEGORIES}}" -mimetype "{{.MIMETYPE}}" -keywords "{{.KEYWORDS}}"
     vars:
       APP_NAME: '{{.APP_NAME}}'
-      EXEC: '{{.APP_NAME}}'
+      DISPLAY_NAME: 'Lattis'
+      COMMENT: 'Tableur relationnel local-first'
+      # %f : le classeur ouvert depuis le gestionnaire de fichiers (main.go).
+      EXEC: '{{.APP_NAME}} %f'
       ICON: '{{.APP_NAME}}'
-      CATEGORIES: 'Development;'
+      CATEGORIES: 'Office;Spreadsheet;'
+      # Type déclaré par build/linux/mime/lattis.xml (paquets deb et rpm).
+      MIMETYPE: 'application/x-lattis;'
+      KEYWORDS: 'tableur;spreadsheet;sql;'
       OUTPUTFILE: '{{.ROOT_DIR}}/build/linux/{{.APP_NAME}}.desktop'
+
+  release:
+    summary: Builds the Linux release (AppImage, .deb, .rpm)
+    desc: |
+      bin/lattis-<arch>.AppImage, bin/lattis.deb et bin/lattis.rpm. Les paquets
+      .deb et .rpm sont signés par nfpm quand NFPM_SIGNING_KEY_FILE désigne une
+      clé GPG privée (armure ASCII) et NFPM_PASSPHRASE sa phrase de passe.
+      Voir docs/release/signature.md.
+    platforms: [linux]
+    cmds:
+      - task: build
+      - task: generate:dotdesktop
+      - task: create:appimage
+      - task: generate:deb
+      - task: generate:rpm
 
   run:
     cmds:

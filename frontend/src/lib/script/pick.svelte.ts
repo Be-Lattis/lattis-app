@@ -1,5 +1,5 @@
 // Pipette de l'onglet SCRIPT : « Choisir sur la feuille » bascule sur la
-// grille ; un clic sur un contrôle (feuille ou Onglet Document) le désigne,
+// grille ; un clic sur un contrôle (feuille ou Document) le désigne,
 // Échap annule. Les contrôles appellent pickCapture sur pointerdown,
 // mousedown et click (phase de capture) : pendant la pipette, le clic ne
 // déclenche ni l'action du contrôle ni sa sélection.

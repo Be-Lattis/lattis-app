@@ -17,6 +17,7 @@
 	import PivotPanel from '#lib/grid/PivotPanel.svelte';
 	import { dismiss } from '#lib/grid/dismiss.js';
 	import { resizePanel } from '#lib/ui/resize.js';
+	import { panelKeys } from '#lib/ui/focus.js';
 	import HelpLink from '#lib/help/HelpLink.svelte';
 	import { printSheet } from '#lib/shell/print.js';
 	import Icon from '#lib/icons/Icon.svelte';
@@ -562,7 +563,7 @@
 
 	/**
 	 * Collage d'un graphique ou d'un tableau croisé copié sur une feuille ou
-	 * dans un Onglet Document (objFromText) : inséré dans le texte, à la place
+	 * dans un document (objFromText) : inséré dans le texte, à la place
 	 * de la sélection. Faux : autre chose, collé comme du texte.
 	 */
 	function pasteObject(text: string, at: { index: number; length: number }): boolean {
@@ -915,7 +916,7 @@
 	</div>
 	{#if panel?.kind === 'chart' && chart}
 		{@const tbl = tables.find((t) => t.name.toLowerCase() === chart.source.toLowerCase())}
-		<div class="side panelbox" use:resizePanel={{ key: 'doc-side', min: 260 }}>
+		<div class="side panelbox" use:resizePanel={{ key: 'doc-side', min: 260 }} use:panelKeys={() => openPanel(null)}>
 			<div class="srcbox">
 				<label
 					>Tableau source
@@ -940,7 +941,7 @@
 			<ChartPanel config={chart} guess={mapInfo?.guess} invalid={mapInfo?.invalid} columns={tbl?.columns ?? []} onchange={setChart} onclose={() => openPanel(null)} resizable={false} />
 		</div>
 	{:else if panel?.kind === 'pivot' && pivot}
-		<div class="side panelbox" use:resizePanel={{ key: 'doc-side', min: 260 }}>
+		<div class="side panelbox" use:resizePanel={{ key: 'doc-side', min: 260 }} use:panelKeys={() => openPanel(null)}>
 			<div class="srcbox">
 				<label
 					>Tableau source
@@ -974,8 +975,8 @@
 		{@const at = p.cfg.link ? (p.cfg.link.lastIndexOf('!') >= 0 ? [p.cfg.link.slice(0, p.cfg.link.lastIndexOf('!')).replace(/^'(.*)'$/, '$1').replace(/''/g, "'"), p.cfg.link.slice(p.cfg.link.lastIndexOf('!') + 1)] : [name, p.cfg.link]) : ['', '']}
 		{@const setLink = (sheet: string, cell: string) => (p.cfg.link = !sheet ? '' : sheet === name ? (cell.trim() || 'A1').toUpperCase() : `${/^[\p{L}_][\p{L}\p{N}_]*$/u.test(sheet) ? sheet : `'${sheet.replace(/'/g, "''")}'`}!${(cell.trim() || 'A1').toUpperCase()}`)}
 		{@const cfns = p.cfg.script ? scriptFunctions(scripts.find((s) => s.name === p.cfg.script)?.source ?? '') : []}
-		<aside class="side form" use:resizePanel={{ key: 'doc-control' }}>
-			<header><span>{p.id === null ? 'Insérer' : 'Modifier'} : {CONTROL_KINDS[p.cfg.kind ?? 'input'].toLowerCase()}</span><HelpLink target="controles" label="Aide sur les boutons et contrôles" /><button class="x" title="Fermer" onclick={() => openPanel(null)}>✕</button></header>
+		<aside class="side form" use:resizePanel={{ key: 'doc-control' }} use:panelKeys={() => openPanel(null)}>
+			<header><span>{p.id === null ? 'Insérer' : 'Modifier'} : {CONTROL_KINDS[p.cfg.kind ?? 'input'].toLowerCase()}</span><HelpLink target="controles" label="Aide sur les boutons et contrôles" /><button class="x" title="Fermer (Échap)" aria-label="Fermer le volet" onclick={() => openPanel(null)}>✕</button></header>
 			<label
 				>Type
 				<select bind:value={p.cfg.kind} disabled={!!locked}>
@@ -1042,8 +1043,8 @@
 			</div>
 		</aside>
 	{:else if panel?.kind === 'button' && btn}
-		<aside class="side form" use:resizePanel={{ key: 'doc-control' }}>
-			<header><span>Bouton</span><HelpLink target="controles" label="Aide sur les boutons et contrôles" /><button class="x" title="Fermer" onclick={() => openPanel(null)}>✕</button></header>
+		<aside class="side form" use:resizePanel={{ key: 'doc-control' }} use:panelKeys={() => openPanel(null)}>
+			<header><span>Bouton</span><HelpLink target="controles" label="Aide sur les boutons et contrôles" /><button class="x" title="Fermer (Échap)" aria-label="Fermer le volet" onclick={() => openPanel(null)}>✕</button></header>
 			<label>Libellé<input type="text" value={btn.label} disabled={!!locked} onchange={(e) => setButton({ label: (e.currentTarget as HTMLInputElement).value })} /></label>
 			<label
 				>Script
@@ -1073,8 +1074,8 @@
 		</aside>
 	{:else if panel?.kind === 'link'}
 		{@const p = panel}
-		<aside class="side form" use:resizePanel={{ key: 'doc-link' }}>
-			<header><span>Lien</span><button class="x" title="Fermer" onclick={() => openPanel(null)}>✕</button></header>
+		<aside class="side form" use:resizePanel={{ key: 'doc-link' }} use:panelKeys={() => openPanel(null)}>
+			<header><span>Lien</span><button class="x" title="Fermer (Échap)" aria-label="Fermer le volet" onclick={() => openPanel(null)}>✕</button></header>
 			<label
 				>Adresse
 				<!-- svelte-ignore a11y_autofocus -->

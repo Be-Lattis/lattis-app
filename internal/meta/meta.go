@@ -13,6 +13,7 @@ package meta
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/lalamefine/lattis/internal/command"
@@ -318,23 +319,59 @@ var Version = len(migrations)
 type ErrTooNew struct{ Found int }
 
 func (e ErrTooNew) Error() string {
-	return fmt.Sprintf("document au format %d, cette version de Lattis lit jusqu'au format %d", e.Found, Version)
+	return fmt.Sprintf("ce classeur a été enregistré par une version plus récente de Lattis (format %d, cette version lit jusqu'au format %d) : mettre Lattis à jour pour l'ouvrir", e.Found, Version)
+}
+
+// ErrForeign signale une base SQLite qui n'est pas un classeur Lattis
+// (version 0, mais déjà des tables).
+var ErrForeign = errors.New("cette base de données n'est pas un classeur Lattis")
+
+// MigrateTo met une base neuve au format v (classeurs d'un format ancien,
+// pour les tests de migration).
+func MigrateTo(ctx context.Context, db *store.Store, v int) error {
+	return db.Write(ctx, func(tx *sql.Tx) error {
+		for i := range v {
+			if _, err := tx.ExecContext(ctx, migrations[i]); err != nil {
+				return err
+			}
+		}
+		_, err := tx.ExecContext(ctx, fmt.Sprintf(`PRAGMA user_version = %d`, v))
+		return err
+	})
 }
 
 // Migrate met la base à la version courante.
 func Migrate(ctx context.Context, db *store.Store) error {
-	return db.Write(ctx, func(tx *sql.Tx) error {
+	_, err := MigrateFrom(ctx, db)
+	return err
+}
+
+// MigrateFrom met la base à la version courante et donne sa version
+// d'origine (0 : base neuve). Toutes les étapes passent dans une seule
+// transaction : un échec laisse la base telle qu'elle était.
+func MigrateFrom(ctx context.Context, db *store.Store) (from int, err error) {
+	err = db.Write(ctx, func(tx *sql.Tx) error {
 		var v int
 		if err := tx.QueryRowContext(ctx, `PRAGMA user_version`).Scan(&v); err != nil {
 			return err
 		}
+		from = v
 		if v > Version {
 			return ErrTooNew{v}
 		}
 		fresh := v == 0
+		if fresh {
+			var n int
+			if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM sqlite_master`).Scan(&n); err != nil {
+				return err
+			}
+			if n > 0 {
+				return ErrForeign
+			}
+		}
 		for ; v < Version; v++ {
 			if _, err := tx.ExecContext(ctx, migrations[v]); err != nil {
-				return fmt.Errorf("migration %d → %d : %w", v, v+1, err)
+				return fmt.Errorf("migration du format %d au format %d : %w", v, v+1, err)
 			}
 		}
 		// Nouveau classeur : feuille sans quadrillage, comme le veut Louis (les
@@ -347,4 +384,5 @@ func Migrate(ctx context.Context, db *store.Store) error {
 		_, err := tx.ExecContext(ctx, fmt.Sprintf(`PRAGMA user_version = %d`, Version))
 		return err
 	})
+	return from, err
 }

@@ -406,8 +406,8 @@ export const apiReference: RefEntry[] = [
 		name: "pages.add",
 		category: "sheets",
 		signature: "pages.add([name], [source], [before], [kind]) → {id, name, kind}",
-		summary: "Ajoute un onglet page HTML (HTML, CSS et JavaScript affichés dans un cadre isolé), ou Document (kind = \"doc\" : texte riche), et renvoie {id, name, kind}.",
-		details: "La page parle au classeur avec lattis.call(\"commande\", {arguments}), qui renvoie une promesse (les mêmes commandes que les scripts : sheets.list, db.query, cells.set…), et lattis.on(\"change\", fonction), appelée quand le classeur change. Sans source, la page reçoit un modèle d'exemple. Sans before, l'onglet s'ajoute à la fin. Paramètres — name : nom de l'onglet (Page1… par défaut) ; source : contenu HTML de la page ; before : feuille devant laquelle l'insérer ; kind : \"html\" (défaut) ou \"doc\" : onglet Document, dont le contenu est un Delta Quill en JSON. Arguments dans l'ordre, ou une table d'arguments nommés : pages.add{name = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		summary: "Ajoute une page web (HTML, CSS et JavaScript affichés dans un cadre isolé), ou un document (kind = \"doc\" : texte riche), et renvoie {id, name, kind}.",
+		details: "La page parle au classeur avec lattis.call(\"commande\", {arguments}), qui renvoie une promesse (les mêmes commandes que les scripts : sheets.list, db.query, cells.set…), et lattis.on(\"change\", fonction), appelée quand le classeur change. Sans source, la page reçoit un modèle d'exemple. Sans before, l'onglet s'ajoute à la fin. Paramètres — name : nom de l'onglet (Page1… par défaut) ; source : contenu HTML de la page ; before : feuille devant laquelle l'insérer ; kind : \"html\" (défaut) ou \"doc\" : document, dont le contenu est un Delta Quill en JSON. Arguments dans l'ordre, ou une table d'arguments nommés : pages.add{name = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		example: "local p = pages.add(\"Tableau de bord\", [[\n\u003ch1\u003eCommandes\u003c/h1\u003e\n\u003cp\u003eTotal : \u003cb id=\"total\"\u003e…\u003c/b\u003e\u003c/p\u003e\n\u003cscript\u003e\n  async function maj() {\n    const r = await lattis.call(\"db.query\", {sql: \"SELECT sum(Montant) AS t FROM Commandes\"});\n    document.getElementById(\"total\").textContent = r.rows[0][0];\n  }\n  lattis.on(\"change\", maj);\n  maj();\n\u003c/script\u003e\n]])\nprint(p.name, p.kind)",
 		args: [0, 4]
 	},
@@ -415,8 +415,8 @@ export const apiReference: RefEntry[] = [
 		name: "pages.get",
 		category: "sheets",
 		signature: "pages.get([sheet]) → texte HTML",
-		summary: "Renvoie le contenu HTML d'un onglet page HTML.",
-		details: "Paramètres — sheet : onglet page HTML (nom ou identifiant) ; absent : l'onglet affiché.",
+		summary: "Renvoie le contenu HTML d'une page web.",
+		details: "Paramètres — sheet : page web (nom ou identifiant) ; absent : l'onglet affiché.",
 		example: "for _, f in ipairs(sheets.list()) do\n  if f.kind == \"html\" then print(f.name, #pages.get(f.name) .. \" caractères\") end\nend",
 		args: [0, 1]
 	},
@@ -424,8 +424,8 @@ export const apiReference: RefEntry[] = [
 		name: "pages.set",
 		category: "sheets",
 		signature: "pages.set(sheet, source)",
-		summary: "Remplace le contenu HTML d'un onglet page HTML.",
-		details: "Paramètres — sheet : onglet page HTML (nom ou identifiant) ; source : nouveau contenu HTML. Arguments dans l'ordre, ou une table d'arguments nommés : pages.set{sheet = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		summary: "Remplace le contenu HTML d'une page web.",
+		details: "Paramètres — sheet : page web (nom ou identifiant) ; source : nouveau contenu HTML. Arguments dans l'ordre, ou une table d'arguments nommés : pages.set{sheet = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		example: "local p = pages.add()\npages.set(p.name, \"\u003ch1\u003eBonjour\u003c/h1\u003e\")",
 		args: [1, 2]
 	},
@@ -617,7 +617,7 @@ export const apiReference: RefEntry[] = [
 		category: "sheets",
 		signature: "sheets.list() → { {id, name, protected, kind}, ... }",
 		summary: "Liste les feuilles du classeur, dans l'ordre des onglets.",
-		details: "protected vaut true pour une feuille protégée (Révision › Protéger la feuille) ; kind vaut \"html\" pour un onglet page HTML, \"doc\" pour un onglet Document (absent pour une feuille).",
+		details: "protected vaut true pour une feuille protégée (Révision › Protéger la feuille) ; kind vaut \"html\" pour une page web, \"doc\" pour un document (absent pour une feuille).",
 		example: "for _, f in ipairs(sheets.list()) do\n  print(f.id, f.name)\nend",
 		args: [0, 0]
 	},

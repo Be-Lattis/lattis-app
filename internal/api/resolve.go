@@ -18,7 +18,7 @@ type sheetRef struct {
 	Name string `json:"name"`
 	// Protected : feuille protégée (ses modifications sont refusées).
 	Protected bool `json:"protected,omitempty"`
-	// Kind : "html" pour un onglet page HTML, "doc" pour un onglet Document, vide pour une feuille.
+	// Kind : "html" pour une page web, "doc" pour un document, vide pour une feuille.
 	Kind string `json:"kind,omitempty"`
 }
 

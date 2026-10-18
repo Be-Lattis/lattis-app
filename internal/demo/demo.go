@@ -63,7 +63,7 @@ func BuildPlan(ctx context.Context, m *canvas.Model, p Plan, opt Options) (Resul
 	for _, s := range p.Sheets {
 		is := canvas.ImportSheet{Name: s.Name, Cells: s.Cells}
 		for _, t := range s.Tables {
-			it := canvas.ImportTable{Name: t.Name, Row: t.Row, Col: t.Col, Count: t.Rows}
+			it := canvas.ImportTable{Name: t.Name, Row: t.Row, Col: t.Col, Count: t.Rows, Key: t.Key}
 			for _, c := range t.Cols {
 				it.Headers = append(it.Headers, c.Name)
 				it.Types = append(it.Types, c.Type)

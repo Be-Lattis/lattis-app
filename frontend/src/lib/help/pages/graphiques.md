@@ -27,4 +27,4 @@ Une carte lit soit deux colonnes (latitude, longitude), soit une seule colonne q
 
 ## Copier un graphique
 
-Un graphique copié se colle sur une autre feuille ou dans un [onglet Document](onglets), où il reste branché sur ses données.
+Un graphique copié se colle sur une autre feuille ou dans un [document](onglets), où il reste branché sur ses données.

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resizePanel } from '#lib/ui/resize.js';
+	import { panelKeys } from '#lib/ui/focus.js';
 	import HelpLink from '#lib/help/HelpLink.svelte';
 	// Volet « Champs de tableau croisé dynamique », comme Excel : la liste des
 	// champs du tableau source (recherche, cases à cocher, icône du type) et
@@ -439,7 +440,7 @@
 	const fieldType = (name: string) => flds.find((f) => f.name === name)?.type ?? '';
 </script>
 
-<aside class="panel" bind:this={panelEl} use:resizePanel={{ key: 'pivot', off: !resizable }} aria-label="Champs de tableau croisé dynamique">
+<aside class="panel" bind:this={panelEl} use:resizePanel={{ key: 'pivot', off: !resizable }} use:panelKeys={onclose} aria-label="Champs de tableau croisé dynamique">
 	<header>
 		<div class="titles">
 			<strong>Champs de tableau croisé dynamique</strong>
@@ -571,7 +572,7 @@
 
 {#if menu}
 	{@const m = menu}
-	<div class="pivot-menu" role="menu" tabindex="-1" aria-label={m.title} bind:this={menuEl} style={posStyle(m.pos)} use:dismiss={() => closeMenu(focusIn(menuEl))} onkeydown={menuKey}>
+	<div class="pivot-menu" role="menu" tabindex="-1" data-own-keys aria-label={m.title} bind:this={menuEl} style={posStyle(m.pos)} use:dismiss={() => closeMenu(focusIn(menuEl))} onkeydown={menuKey}>
 		<div class="menu-title">{m.title}</div>
 		{#each m.items as it, k (k)}
 			{#if it.sep}

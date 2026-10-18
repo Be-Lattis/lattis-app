@@ -9,7 +9,7 @@
 	import { noticeTtl } from '#lib/shell/notice.js';
 	import { Events } from '@wailsio/runtime';
 	import { DocumentService, GridService } from '#bindings/internal/bridge/index.js';
-	import type { DocState, FormulaHelp } from '#bindings/internal/bridge/models.js';
+	import type { DamagedFile, DocState, FormulaHelp } from '#bindings/internal/bridge/models.js';
 	import type { Layout, RuleChanges } from '#bindings/internal/canvas/models.js';
 	import type { Type } from '#bindings/internal/grid/models.js';
 	import type { Orphan } from '#bindings/internal/archive/models.js';
@@ -38,6 +38,7 @@
 	import { typeLabel, type ColumnType } from '#lib/grid/format.js';
 	import type { Fetched } from '#lib/grid/cache.js';
 	import { isReloadKey, shortcutOf } from '#lib/grid/shortcuts.js';
+	import { cycleRegions, modal, modalOpen } from '#lib/ui/focus.js';
 	import { clampZoom } from '#lib/grid/zoom.js';
 	import ZoomBar from '#lib/shell/ZoomBar.svelte';
 	import BusyBar from '#lib/shell/BusyBar.svelte';
@@ -94,7 +95,7 @@
 	let scripts = $state<Script[]>([]);
 	// Contenu de l'onglet page HTML ou Document affiché (null : une feuille).
 	let pageSource = $state<{ sheet: number; source: string } | null>(null);
-	// Onglet Document affiché : son éditeur, et la mise en forme à la sélection (ruban).
+	// Document affiché : son éditeur, et la mise en forme à la sélection (ruban).
 	let docPage = $state<ReturnType<typeof DocPage>>();
 	let docFmt = $state<DocFormat | null>(null);
 	// Requêtes favorites de l'onglet SQL, enregistrées dans le classeur.
@@ -102,6 +103,10 @@
 	let recent = $state<string[]>([]);
 	// Fermer un classeur modifié : enregistrer d'abord ?
 	let closing = $state(false);
+	// Fichier endommagé à l'ouverture : proposer d'en récupérer les données.
+	let damaged = $state<DamagedFile | null>(null);
+	// Échec d'une récupération de session : l'écran de récupération reste.
+	let recoverError = $state('');
 	// Boîtes de dialogue ouvertes par un script ou un assistant (ui.dialog…), la plus ancienne d'abord.
 	let dialogs = $state<DialogSpec[]>([]);
 	let mcpOpen = $state(false);
@@ -151,7 +156,10 @@
 		const r = await DocumentService.Open(path);
 		if (r.recoverable) {
 			orphans = [r.recoverable];
+			recoverError = '';
 			mode = 'recover';
+		} else if (r.damaged) {
+			damaged = r.damaged;
 		} else if (!r.cancelled) {
 			view = 'grid';
 			sheetId = 1;
@@ -159,6 +167,26 @@
 			await reload();
 		}
 		await loadRecent();
+	}
+
+	/** Récupère les données lisibles d'un classeur endommagé, dans un nouveau classeur. */
+	async function salvage(path: string | null) {
+		damaged = null;
+		// Écran de récupération vidé (session abandonnée, puis fichier endommagé) : un classeur neuf.
+		const fallback = () => (mode === 'recover' && orphans.length === 0 ? startDoc() : undefined);
+		if (!path) return fallback();
+		let r;
+		try {
+			r = await DocumentService.Salvage(path);
+		} catch (e) {
+			notice = err(e);
+			return fallback();
+		}
+		view = 'grid';
+		sheetId = 1;
+		mode = 'doc';
+		await reload();
+		notice = r.report;
 	}
 
 	/** Ferme le classeur ; modifié, il demande d'abord s'il faut l'enregistrer. */
@@ -370,6 +398,11 @@
 		const offUI = Events.On('ui:command', (e: { data: UICommand }) => {
 			uiCommand(e.data).catch((x) => (notice = err(x)));
 		});
+		// Classeur ouvert depuis le système pendant que l'application tourne
+		// (macOS : double-clic sur un .lattis dans le Finder).
+		const offOpen = Events.On('doc:open-file', (e: { data: string }) => {
+			openPath(e.data).catch((x) => (notice = err(x)));
+		});
 		(async () => {
 			try {
 				bench = await GridService.BenchRequested();
@@ -377,6 +410,15 @@
 				loadRecent();
 				const preset = await DocumentService.DemoRequested();
 				if (preset) return await startPresetDemo(preset);
+				// Classeur passé par l'association de fichiers (double-clic sur un .lattis).
+				const launch = await DocumentService.LaunchFile();
+				if (launch) {
+					try {
+						return await openPath(launch);
+					} catch (e) {
+						notice = err(e); // fichier illisible : on démarre comme d'habitude
+					}
+				}
 				orphans = (await DocumentService.Orphans()) ?? [];
 				if (orphans.length > 0) mode = 'recover';
 				else await startDoc();
@@ -420,6 +462,16 @@
 			refreshKey(sc === 'refreshAll');
 		};
 		window.addEventListener('keydown', noReload, true);
+		// F6 (Maj+F6 : en arrière) : ruban, barre de formule, grille, volet,
+		// onglets, barre d'état. En capture : les éditeurs ne la gardent pas.
+		const regions = (e: KeyboardEvent) => {
+			if (e.key !== 'F6' || e.ctrlKey || e.altKey || e.metaKey) return;
+			e.preventDefault();
+			if (modalOpen()) return;
+			e.stopPropagation();
+			cycleRegions(e.shiftKey);
+		};
+		window.addEventListener('keydown', regions, true);
 		// F1 : l'aide. Dans une formule en cours de saisie, la page de la
 		// fonction sous le curseur (la saisie garde le focus) ; ailleurs, la
 		// page de ce qui est affiché (SQL, SCRIPT, onglet HTML ou Document).
@@ -446,8 +498,10 @@
 		return () => {
 			off();
 			offUI();
+			offOpen();
 			window.removeEventListener('keydown', keys);
 			window.removeEventListener('keydown', noReload, true);
+			window.removeEventListener('keydown', regions, true);
 			window.removeEventListener('keydown', helpKey, true);
 			window.removeEventListener('dragover', noDrop);
 			window.removeEventListener('drop', noDrop);
@@ -539,16 +593,26 @@
 	}
 
 	async function recover(o: Orphan, keep: boolean) {
+		recoverError = '';
+		try {
+			if (keep) await DocumentService.Recover(o.dir);
+			else await DocumentService.Discard(o.dir);
+		} catch (e) {
+			// La session reste proposée : rien n'est perdu, l'utilisateur choisit.
+			recoverError = err(e);
+			return;
+		}
 		try {
 			if (keep) {
-				await DocumentService.Recover(o.dir);
 				mode = 'doc';
 				await reload();
 				notice = 'Modifications récupérées : pensez à enregistrer.';
 			} else {
-				await DocumentService.Discard(o.dir);
 				orphans = orphans.filter((x) => x.dir !== o.dir);
-				if (orphans.length === 0) await startDoc();
+				if (orphans.length > 0) return;
+				// Session d'un fichier abandonnée : le fichier tel qu'enregistré.
+				if (o.source) await openPath(o.source).catch(() => startDoc());
+				else await startDoc();
 			}
 		} catch (e) {
 			failure = err(e);
@@ -809,7 +873,7 @@
 		sheetId = id;
 		await reload();
 		sheet?.focus();
-		// Onglet Document : le curseur dans le texte (DocPage le met aussi en
+		// Document : le curseur dans le texte (DocPage le met aussi en
 		// place à son montage, une fois le contenu chargé).
 		if (activeDoc) docPage?.focus();
 	}
@@ -823,7 +887,7 @@
 	const addPage = (before = 0) => sheetAction(async () => selectSheet(await DocumentService.AddPage(before)));
 	const addDoc = (before = 0) => sheetAction(async () => selectSheet(await DocumentService.AddDoc(before)));
 
-	// Onglet Document en PDF : la fenêtre d'impression, imprimante « Microsoft Print to PDF ».
+	// Document en PDF : la fenêtre d'impression, imprimante « Microsoft Print to PDF ».
 	function exportDocPdf() {
 		notice = 'Exporter en PDF : choisissez l’imprimante « Microsoft Print to PDF » (ou « Enregistrer au format PDF »)';
 		docPage?.print(`${docState.title} – ${activeInfo?.name ?? ''}`);
@@ -1027,8 +1091,6 @@
 		ondedup={mode === 'doc' ? () => sheet?.dedupActive() : undefined}
 		ontextcols={mode === 'doc' ? () => sheet?.textToColumnsActive() : undefined}
 		onbutton={mode === 'doc' ? (kind) => sheet?.insertButton(kind) : undefined}
-		onpage={mode === 'doc' && htmlTabsEnabled() ? () => addPage() : undefined}
-		ondocpage={mode === 'doc' ? () => addDoc() : undefined}
 		context={activePage && view === 'grid' ? (activeDoc ? 'doc' : 'html') : 'sheet'}
 		ondoc={docCommand}
 		docState={activeDoc && docFmt ? docFmt : undefined}
@@ -1075,6 +1137,7 @@
 						<button class="ico discard" onclick={() => recover(o, false)}><Icon name="trash" size={14} />Abandonner</button>
 					</div>
 				{/each}
+				{#if recoverError}<p class="error">{recoverError}</p>{/if}
 			</div>
 		{:else if mode === 'closed'}
 			<div class="splash">
@@ -1095,7 +1158,7 @@
 			</div>
 		{:else if data}
 			{#key mode}
-				<div class="pane" class:hidden={view !== 'grid' || !!activePage}>
+				<div class="pane" data-region="grid" class:hidden={view !== 'grid' || !!activePage}>
 					<Sheet
 						bind:this={sheet}
 						{data}
@@ -1122,7 +1185,7 @@
 			{#if view === 'grid' && activePage}
 				{#key activePage.sheet}
 					{@const pageId = activePage.sheet}
-					<div class="pane">
+					<div class="pane" data-region="grid">
 						{#if activeDoc}
 						<DocPage
 							bind:this={docPage}
@@ -1194,9 +1257,9 @@
 				{/key}
 			{/if}
 			{#if view === 'ai'}
-				<div class="pane"><AiView hasDoc={mode === 'doc'} onsettings={() => (settingsOpen = true)} /></div>
+				<div class="pane" data-region="grid"><AiView hasDoc={mode === 'doc'} onsettings={() => (settingsOpen = true)} /></div>
 			{:else if view === 'sql'}
-				<div class="pane"><SqlView {objects} run={query} exec={mode === 'doc' ? (q) => DocumentService.Execute(q) : undefined} ongoto={gotoObject}
+				<div class="pane" data-region="grid"><SqlView {objects} run={query} exec={mode === 'doc' ? (q) => DocumentService.Execute(q) : undefined} ongoto={gotoObject}
 						onrename={mode === 'doc'
 							? async (from, to) => {
 									docState = await DocumentService.RenameTable(from, to);
@@ -1235,7 +1298,7 @@
 							: undefined}
 					/></div>
 			{:else if view === 'script'}
-				<div class="pane">
+				<div class="pane" data-region="grid">
 					{#if mode === 'doc'}
 						<ScriptView
 							{scripts}
@@ -1330,6 +1393,7 @@
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<form
 				class="modal protect"
+				use:modal
 				aria-label="Protection"
 				onkeydown={(e) => {
 					e.stopPropagation();
@@ -1385,7 +1449,7 @@
 	{#if deleting}
 		{@const d = deleting}
 		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true" aria-label="Supprimer la feuille">
+			<div class="modal" role="dialog" aria-modal="true" aria-label="Supprimer la feuille" use:modal={() => (deleting = null)}>
 				<p>Supprimer la feuille « {d.name} » et tout ce qu'elle contient ?</p>
 				<ul class="delete-list">
 					{#each d.items as it (it)}<li>{it}</li>{/each}
@@ -1407,7 +1471,7 @@
 	{/if}
 	{#if closing}
 		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true">
+			<div class="modal" role="dialog" aria-modal="true" aria-label="Enregistrer les modifications" use:modal={() => (closing = false)}>
 				<p>Enregistrer les modifications de « {docState.title} » avant de le fermer ?</p>
 				<div class="actions">
 					<button class="primary" onclick={() => closeDoc(true).catch((e) => (notice = err(e)))}>Enregistrer</button>
@@ -1417,7 +1481,20 @@
 			</div>
 		</div>
 	{/if}
-	<footer class="statusbar">
+	{#if damaged}
+		{@const file = damaged}
+		<div class="modal-back">
+			<div class="modal" role="dialog" aria-modal="true" aria-label="Classeur endommagé" use:modal={() => salvage(null).catch((e) => (failure = err(e)))}>
+				<p>{file.message}.</p>
+				<p>Lattis peut en récupérer les données lisibles dans un nouveau classeur sans titre. Le fichier endommagé n'est pas modifié.</p>
+				<div class="actions">
+					<button class="primary" onclick={() => salvage(file.path).catch((e) => (notice = err(e)))}>Récupérer les données</button>
+					<button onclick={() => salvage(null).catch((e) => (failure = err(e)))}>Annuler</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+	<footer class="statusbar" data-region="status" aria-label="Barre d'état">
 		{#if notice || sheetStatus?.message}<span class="message">{sheetStatus?.message || notice}</span>{/if}
 		<span class="spacer"></span>
 		{#if sheetStatus}
@@ -1457,6 +1534,7 @@
 	/* Coins des surfaces flottantes (menus, boîtes de dialogue, panneaux de filtre…) : légèrement arrondis. */
 	:global(:root) {
 		--float-radius: 6px;
+		--focus-ring: #0f6cbd;
 	}
 	:global(html, body) {
 		margin: 0;
@@ -1469,6 +1547,16 @@
 	.app :global(.cm-editor),
 	.app :global(pre) {
 		user-select: text;
+	}
+	/* Focus clavier visible partout (boutons, entrées de menu, liens,
+	   éléments atteignables) ; les composants qui ont leur propre marque
+	   (bordure d'un champ, fond d'une entrée) la gardent. */
+	:global(:is(button, a[href], summary, [role^='menuitem'], [role='option'], [role='tab'], [tabindex='0']):focus-visible) {
+		outline: 2px solid var(--focus-ring);
+		outline-offset: -2px;
+	}
+	:global([role='grid']:focus-visible) {
+		outline: none; /* la grille montre sa cellule active */
 	}
 	.app {
 		user-select: none;

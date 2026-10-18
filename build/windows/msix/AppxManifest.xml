@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Manifeste du paquet MSIX de Lattis : modèle rempli par build-msix.ps1.
+  Les jetons @…@ sont remplacés à l'empaquetage :
+    @VERSION@    version x.y.z.0 (build/config.yml, ou -Version)
+    @ARCH@       x64 ou arm64
+    @PUBLISHER@  sujet exact du certificat de signature (CN=…, O=…, C=…)
+    @PUBLISHER_DISPLAY_NAME@  nom de l'éditeur affiché
+  Le Publisher doit être identique, caractère pour caractère, au sujet du
+  certificat qui signe le paquet, sinon Windows refuse de l'installer.
+-->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  xmlns:desktop6="http://schemas.microsoft.com/appx/manifest/desktop/windows10/6"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap uap3 desktop desktop6 rescap">
+
+  <Identity
+    Name="fr.triboulin.lattis"
+    Publisher="@PUBLISHER@"
+    Version="@VERSION@"
+    ProcessorArchitecture="@ARCH@" />
+
+  <Properties>
+    <DisplayName>Lattis</DisplayName>
+    <PublisherDisplayName>@PUBLISHER_DISPLAY_NAME@</PublisherDisplayName>
+    <Description>Tableur relationnel local-first</Description>
+    <Logo>Assets\StoreLogo.png</Logo>
+    <!-- Fichiers écrits dans %AppData% / %LocalAppData% (récents, réglages,
+         sessions à récupérer, profil WebView2) : au vrai emplacement, comme
+         l'installeur NSIS, et non dans le cache privé du paquet. -->
+    <desktop6:FileSystemWriteVirtualization>disabled</desktop6:FileSystemWriteVirtualization>
+  </Properties>
+
+  <Dependencies>
+    <!-- 1903 : minimum pour désactiver la virtualisation des fichiers. -->
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.18362.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="fr-FR" />
+  </Resources>
+
+  <Applications>
+    <Application Id="Lattis" Executable="lattis.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="Lattis"
+        Description="Tableur relationnel local-first"
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" ShortName="Lattis" />
+      </uap:VisualElements>
+
+      <Extensions>
+        <!-- Double-clic sur un classeur : lattis.exe "chemin\du\classeur.lattis". -->
+        <uap:Extension Category="windows.fileTypeAssociation">
+          <uap:FileTypeAssociation Name="lattis">
+            <uap:DisplayName>Classeur Lattis</uap:DisplayName>
+            <uap:Logo>Assets\FileIcon.png</uap:Logo>
+            <uap:InfoTip>Classeur Lattis</uap:InfoTip>
+            <uap:SupportedFileTypes>
+              <uap:FileType ContentType="application/x-lattis">.lattis</uap:FileType>
+            </uap:SupportedFileTypes>
+          </uap:FileTypeAssociation>
+        </uap:Extension>
+
+        <!-- « lattis » dans un terminal : lattis mcp (relais MCP pour Claude
+             Desktop…), lattis config. -->
+        <uap3:Extension Category="windows.appExecutionAlias" Executable="lattis.exe" EntryPoint="Windows.FullTrustApplication">
+          <uap3:AppExecutionAlias>
+            <desktop:ExecutionAlias Alias="lattis.exe" />
+          </uap3:AppExecutionAlias>
+        </uap3:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+    <rescap:Capability Name="unvirtualizedResources" />
+  </Capabilities>
+</Package>

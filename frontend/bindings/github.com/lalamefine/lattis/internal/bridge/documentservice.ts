@@ -103,7 +103,7 @@ export function AddFavorite(name: string, sql: string): $CancellablePromise<numb
 
 /**
  * AddPage ajoute un onglet page HTML avant l'onglet before (0 : à la fin)
- * et renvoie son identifiant. Les Onglets HTML sont une fonctionnalité à
+ * et renvoie son identifiant. Les pages web sont une fonctionnalité à
  * activer (Fichier › Paramètres › Fonctionnalités, features.htmlTabs).
  */
 export function AddPage(before: number): $CancellablePromise<number> {
@@ -393,7 +393,7 @@ export function DismissKeyHint(table: string): $CancellablePromise<$models.DocSt
 }
 
 /**
- * DocControl lit un contrôle d'un Onglet Document et la valeur de sa
+ * DocControl lit un contrôle d'un document et la valeur de sa
  * cellule liée.
  */
 export function DocControl(id: number): $CancellablePromise<api$0.ControlState> {
@@ -590,6 +590,13 @@ export function KeyCheck(table: string, i: number): $CancellablePromise<string> 
 }
 
 /**
+ * LaunchFile donne, une seule fois, le classeur à ouvrir au lancement, ou "".
+ */
+export function LaunchFile(): $CancellablePromise<string> {
+    return $Call.ByID(3854994751);
+}
+
+/**
  * Layout donne la mise en page d'une feuille (tableaux et cellules libres).
  */
 export function Layout(sheet: number): $CancellablePromise<canvas$0.Layout> {
@@ -754,7 +761,7 @@ export function PlaceChart(id: number, row: number, col: number, offX: number, o
 
 /**
  * PlacePivot pose sur la feuille un tableau croisé de configuration cfg
- * (collé depuis un Onglet Document).
+ * (collé depuis un document).
  */
 export function PlacePivot(sheet: number, row: number, col: number, cfg: canvas$0.PivotConfig): $CancellablePromise<$models.DocState> {
     return $Call.ByID(4069234803, sheet, row, col, cfg);
@@ -922,6 +929,15 @@ export function Replace(sheet: number, text: string, by: string): $CancellablePr
 }
 
 /**
+ * RequestOpen demande l'ouverture d'un classeur. Avant que l'interface ait
+ * lu le classeur de lancement, il le devient ; ensuite, l'interface est
+ * prévenue par OpenFileEvent.
+ */
+export function RequestOpen(path: string): $CancellablePromise<void> {
+    return $Call.ByID(2080541887, path);
+}
+
+/**
  * RuleStats donne les statistiques de colonnes d'un tableau pour la mise
  * en forme conditionnelle (10 premiers, moyenne, doublons, barres de
  * données, nuances, icônes), calculées en SQL et gardées en cache.
@@ -952,6 +968,14 @@ export function RunFunction(name: string, entry: string): $CancellablePromise<$m
  */
 export function RunScript(name: string, src: string): $CancellablePromise<$models.ScriptResult> {
     return $Call.ByID(1194755280, name, src);
+}
+
+/**
+ * Salvage récupère les données lisibles d'un classeur endommagé dans un
+ * nouveau classeur sans titre (le fichier endommagé n'est pas modifié).
+ */
+export function Salvage(path: string): $CancellablePromise<$models.SalvageResult> {
+    return $Call.ByID(2624757607, path);
 }
 
 /**

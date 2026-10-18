@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Contrôle d'un Onglet Document (champ texte, zone de texte, case, liste,
+	// Contrôle d'un document (champ texte, zone de texte, case, liste,
 	// fichier) : c'est un contrôle du classeur (scripts : controls.*,
 	// évènements), lié à une cellule d'une feuille (« Feuille1!B3 ») ; sa
 	// valeur est relue à chaque modification du classeur (live.stamp).

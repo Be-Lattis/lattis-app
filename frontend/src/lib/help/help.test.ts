@@ -72,7 +72,7 @@ describe('searchHelp', () => {
 		expect(searchHelp(index, 'clés').some((h) => h.target === 'prise-en-main#cles')).toBe(true);
 		expect(searchHelp(index, 'db.query')[0].target).toBe('lua:db.query');
 		expect(searchHelp(index, 'enregistrer sous').some((h) => h.title === 'F12')).toBe(true);
-		expect(searchHelp(index, 'onglets html').some((h) => h.target.startsWith('parametres'))).toBe(true);
+		expect(searchHelp(index, 'pages web').some((h) => h.target.startsWith('parametres'))).toBe(true);
 	});
 	it('exige tous les mots', () => {
 		expect(searchHelp(index, 'somme zzzz')).toEqual([]);

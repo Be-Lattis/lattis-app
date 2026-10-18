@@ -3,7 +3,7 @@
 	// (bridge.ts), et son éditeur (HTML, CSS, JavaScript) avec un aperçu.
 	// Afficher / Modifier basculent entre les deux ; Ctrl+S enregistre (une
 	// étape d'annulation), Ctrl+Entrée met l'aperçu à jour sans enregistrer.
-	// Ou une page web externe : son adresse (« Page web… », si les paramètres
+	// Ou une page web externe : son adresse (« Site web… », si les paramètres
 	// le permettent), affichée dans un cadre, sans pont vers le classeur.
 	import { onMount, untrack } from 'svelte';
 	import { EditorState } from '@codemirror/state';
@@ -214,7 +214,7 @@
 		{:else}
 			<button onclick={startEdit} disabled={!!locked} title={locked || 'Modifier le HTML, le CSS et le JavaScript de la page'}><Icon name="edit" size={14} />{url ? 'Page HTML' : 'Modifier'}</button>
 			{#if !htmlTabs}
-				<!-- Onglets HTML coupés (Fichier › Paramètres › Fonctionnalités) : la page déjà posée s'affiche quand même. -->
+				<!-- Pages web coupés (Fichier › Paramètres › Fonctionnalités) : la page déjà posée s'affiche quand même. -->
 			{:else if asking !== null}
 				<!-- svelte-ignore a11y_autofocus -->
 				<input
@@ -234,7 +234,7 @@
 				<button
 					onclick={() => (locked ? onnotice?.(locked) : (asking = url ?? 'https://'))}
 					disabled={!!locked}
-					title={locked || 'Afficher une page web externe dans cet onglet'}><Icon name="web" size={14} />Page web…</button
+					title={locked || 'Afficher une page web externe dans cet onglet'}><Icon name="web" size={14} />Site web…</button
 				>
 			{/if}
 			<button onclick={() => reloads++} title="Recharger la page"><Icon name="refresh" size={14} />Recharger</button>

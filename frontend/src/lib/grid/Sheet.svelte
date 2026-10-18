@@ -403,7 +403,7 @@
 		movePivot?(id: number, row: number, col: number): Promise<unknown>;
 		/** Tableau croisé entier copié puis collé : une copie en (row, col). */
 		copyPivot?(id: number, row: number, col: number): Promise<unknown>;
-		/** Pose un tableau croisé de cette configuration (collé depuis un Onglet Document). */
+		/** Pose un tableau croisé de cette configuration (collé depuis un document). */
 		placePivot?(row: number, col: number, cfg: PivotConfig): Promise<unknown>;
 		/** Supprime les lignes en double ; renvoie leur nombre. */
 		removeDuplicates?(table: SheetTable, cols: number[]): Promise<number>;
@@ -5866,6 +5866,12 @@
 		// Touche maintenue : le cadre suit sans animation.
 		if (e.repeat) noAnimUntil = performance.now() + 150;
 		if (editing) return;
+		// Maj+F10 ou touche Menu : menu contextuel de la cellule active (ou du graphique sélectionné).
+		if ((e.shiftKey && e.key === 'F10' && !e.ctrlKey && !e.altKey) || e.key === 'ContextMenu') {
+			e.preventDefault();
+			keyContextMenu();
+			return;
+		}
 		if (e.key === 'Escape' && painter) painter = null;
 		if (e.key === 'Escape' && links.length) {
 			links = [];
@@ -6802,7 +6808,7 @@
 		}
 		const plain = !source.transfer || !!pv;
 		clipRange = { ...sel, sheet: sheetId(), cut, text, values, plain, pivot };
-		// Un tableau croisé entier se colle aussi dans un Onglet Document.
+		// Un tableau croisé entier se colle aussi dans un document.
 		rememberObj(text, pivot && pv ? { kind: 'pivot', config: $state.snapshot(pv.config) as never } : null);
 		schedule();
 		return text;
@@ -6906,8 +6912,8 @@
 	function pasteText(text: string): boolean {
 		if (!source.paste) return false;
 		const sel = selection();
-		// Graphique (d'une feuille ou d'un Onglet Document) ; tableau croisé
-		// d'un Onglet Document, posé à la cellule active par sa configuration.
+		// Graphique (d'une feuille ou d'un document) ; tableau croisé
+		// d'un document, posé à la cellule active par sa configuration.
 		const obj = objFromText(text);
 		if (obj?.kind === 'chart') {
 			pasteChart(obj.config as unknown as ChartConfig);
@@ -7139,6 +7145,25 @@
 				(err) => say(String(err?.message ?? err))
 			)
 		);
+	}
+
+	const pointAt = (clientX: number, clientY: number) => ({ clientX, clientY, preventDefault() {}, stopPropagation() {} }) as unknown as MouseEvent;
+
+	/** Menu contextuel ouvert au clavier : posé sur la cellule active, ou sur le graphique sélectionné. */
+	function keyContextMenu() {
+		const el = selChart !== null ? wrap.querySelector<HTMLElement>('.chart.selected') : null;
+		const ch = el ? charts.find((c) => c.id === selChart) : undefined;
+		if (el && ch) {
+			const r = el.getBoundingClientRect();
+			onChartMenu(pointAt(r.left + Math.min(r.width / 2, 40), r.top + Math.min(r.height / 2, 20)), ch);
+			return;
+		}
+		ensureVisible(active.row, active.col);
+		const k = zoomK();
+		const r = scroller.getBoundingClientRect();
+		const x = screenX(active.col) + Math.min(cax().size(active.col), 60) / 2;
+		const y = screenY(active.row) + rh(active.row) / 2;
+		onContextMenu(pointAt(r.left + x * k, r.top + y * k));
 	}
 
 	function onContextMenu(ev: MouseEvent) {
@@ -7483,7 +7508,7 @@
 {/snippet}
 
 <div class="sheet-root">
-	<div class="formula-bar">
+	<div class="formula-bar" data-region="formula">
 		{#if tableBox}
 			<div class="name-box split">
 				<input
@@ -7524,6 +7549,8 @@
 		{/if}
 		<input
 			class="fx-input"
+			data-region-focus
+			aria-label="Barre de formule"
 			class:hl={fxHl}
 			bind:this={fxInput}
 			bind:value={fxText}
@@ -7566,7 +7593,7 @@
 
 	<div class="body">
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-	<div class="wrap" bind:this={wrap} tabindex="0" role="grid" onkeydown={onKeyDown}>
+	<div class="wrap" bind:this={wrap} tabindex="0" role="grid" aria-label="Feuille {sheetName}" aria-keyshortcuts="Shift+F10" data-region-focus onkeydown={onKeyDown}>
 		<!-- Calque zoomé (zoom.ts) : grille, graphiques, boutons, éditeur et notes ; menus et dialogues hors du calque. -->
 		<div class="zoom" style:zoom={zoom === 1 ? undefined : zoom}>
 			<canvas bind:this={canvas}></canvas>

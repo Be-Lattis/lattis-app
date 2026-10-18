@@ -90,7 +90,7 @@ func ControlValue(kind, shown string) any {
 
 // linkedCell donne la cellule liée d'un contrôle (ok faux : aucune), et sa
 // feuille : celle du contrôle, ou celle nommée (« Feuille1!B3 », contrôle
-// d'un Onglet Document).
+// d'un document).
 func linkedCell(ctx context.Context, d *doc.Document, b canvas.ButtonInfo) (sheet int64, row, col int, ok bool, err error) {
 	if b.Config.Link == "" {
 		return 0, 0, 0, false, nil
@@ -600,7 +600,7 @@ func writeControl(ctx context.Context, d *doc.Document, b canvas.ButtonInfo, raw
 	return
 }
 
-// ControlState est un contrôle d'un Onglet Document pour l'interface : sa
+// ControlState est un contrôle d'un document pour l'interface : sa
 // configuration et la valeur affichée de sa cellule liée.
 type ControlState struct {
 	Config canvas.ButtonConfig `json:"config"`
@@ -628,7 +628,7 @@ func ControlOf(host Host, id int64) (ControlState, error) {
 }
 
 // SetControlValue écrit raw dans la cellule liée du contrôle id (saisie dans
-// un Onglet Document : une étape d'annulation) puis, si la valeur affichée a
+// un document : une étape d'annulation) puis, si la valeur affichée a
 // changé, déclenche son action et ses écouteurs (change).
 func SetControlValue(host Host, id int64, raw string) (ScriptResult, error) {
 	d, err := host.Doc()

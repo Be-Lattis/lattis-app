@@ -43,6 +43,9 @@ type ImportTable struct {
 	// lignes écrites après chaque morceau.
 	Selects  []string
 	Progress func(rows int)
+	// Key : colonne clé (1 = la première ; 0 : sans clé), posée avant les
+	// formules (REFERENCE cherche par la clé ; sans clé, par le rang).
+	Key int
 }
 
 // ImportCell est une cellule libre importée.
@@ -128,6 +131,17 @@ func (m *Model) Import(ctx context.Context, action string, sheets []ImportSheet)
 				}
 				tables = append(tables, made{tb.ID, &s.Tables[i]})
 				res.Tables = append(res.Tables, tb.Name)
+			}
+		}
+		for _, mk := range tables {
+			if k := mk.it.Key; k > 0 && k <= len(mk.it.Headers) {
+				tb, err := t.table(mk.id)
+				if err != nil {
+					return err
+				}
+				if err := t.ensureKey(tb.Name, tb.Cols[k-1].Name); err != nil {
+					return err
+				}
 			}
 		}
 		// Les formules viennent quand tous les tableaux existent : elles

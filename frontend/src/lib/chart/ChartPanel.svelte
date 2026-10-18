@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resizePanel } from '#lib/ui/resize.js';
+	import { panelKeys } from '#lib/ui/focus.js';
 	import HelpLink from '#lib/help/HelpLink.svelte';
 	// Volet « Mise en forme du graphique » : chaque réglage s'applique tout de
 	// suite (aperçu direct, Ctrl+Z pour revenir en arrière).
@@ -91,11 +92,11 @@
 	}
 </script>
 
-<aside class="panel" use:resizePanel={{ key: 'chart', off: !resizable }}>
+<aside class="panel" use:resizePanel={{ key: 'chart', off: !resizable }} use:panelKeys={onclose} aria-label="Graphique">
 	<header>
 		<strong>Graphique</strong>
 		<HelpLink target="graphiques" label="Aide sur les graphiques" />
-		<button class="x" title="Fermer le volet" onclick={onclose}>✕</button>
+		<button class="x" title="Fermer le volet (Échap)" aria-label="Fermer le volet" onclick={onclose}>✕</button>
 	</header>
 
 	<section>

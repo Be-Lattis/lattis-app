@@ -162,11 +162,11 @@ func (m *Model) SetPage(ctx context.Context, sheet int64, source string) error {
 	})
 }
 
-// DocControlBlot est le nom, dans le Delta d'un Onglet Document, des
+// DocControlBlot est le nom, dans le Delta d'un document, des
 // contrôles insérés ({"lattisControl": {"id": …}}).
 const DocControlBlot = "lattisControl"
 
-// docControlIDs liste les contrôles cités par le contenu d'un Onglet Document.
+// docControlIDs liste les contrôles cités par le contenu d'un document.
 func docControlIDs(source string) map[int64]bool {
 	var d struct {
 		Ops []struct {
@@ -190,7 +190,7 @@ func docControlIDs(source string) map[int64]bool {
 	return ids
 }
 
-// dropDocControls supprime les contrôles d'un Onglet Document que son
+// dropDocControls supprime les contrôles d'un document que son
 // contenu ne cite plus (effacés du texte) ; l'annulation les rend.
 func (t *tx) dropDocControls(sheet int64, source string) error {
 	keep := docControlIDs(source)

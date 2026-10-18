@@ -3,6 +3,7 @@
 	// (liste déclarative settingSections). Un réglage changé est écrit tout de
 	// suite dans le config.json de l'utilisateur et s'applique sans
 	// redémarrer ; un réglage imposé par une stratégie est grisé.
+	import { modal } from '#lib/ui/focus.js';
 	import { onMount } from 'svelte';
 	import { findSetting, settingNote, settingSections } from './settings';
 	import { loadSettings, setSetting, userSettings } from './settings.svelte.js';
@@ -43,6 +44,7 @@
 		aria-modal="true"
 		aria-label="Paramètres"
 		tabindex="-1"
+		use:modal
 		onkeydown={(e) => {
 			e.stopPropagation();
 			if (e.key === 'Escape') onclose();
