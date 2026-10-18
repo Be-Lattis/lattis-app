@@ -66,7 +66,7 @@ func main() {
 	cache := flag.String("cache", filepath.Join(os.TempDir(), "lattis-geo"), "dossier des téléchargements (hors du dépôt)")
 	out := flag.String("out", "communes.bin.gz", "fichier produit")
 	tol := flag.Float64("tol", 40, "tolérance de Douglas-Peucker, en mètres")
-	q := flag.Int("q", 10, "pas de quantification, en 1e-5 degré (10 ≈ 1 m)")
+	q := flag.Int("q", 10, "pas de quantification, en 1e-5 degré (10 = 1e-4 degré ≈ 11 m)")
 	flag.Parse()
 	if err := os.MkdirAll(*cache, 0o755); err != nil {
 		log.Fatal(err)
