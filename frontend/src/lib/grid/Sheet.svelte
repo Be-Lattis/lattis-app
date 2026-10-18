@@ -1235,11 +1235,18 @@
 		if (animBusy) schedule();
 	}
 
+	// Ouverture d'une feuille : les mises en page qui suivent de près (données
+	// relues, tableaux, graphiques) appartiennent encore à la navigation, et
+	// la feuille s'affiche d'un coup, sans tableaux qui se déplient.
+	const NAV_SETTLE = 1000;
+	let navAt = -Infinity;
 	/**
 	 * Animations d'une nouvelle mise en page (après rebuildAxis et rebuildRows) :
 	 * insertion ou suppression demandée, tableaux déplacés, agrandis ou nés.
 	 */
 	function startAnims(nav: boolean, known: Set<number>, oldCharts: Set<number>, now: number) {
+		if (nav) navAt = now;
+		else if (now - navAt < NAV_SETTLE) nav = true;
 		const hint = linesHint && now - linesHint.t < 3000 ? linesHint : null;
 		linesHint = null;
 		if (nav || !motion()) {
