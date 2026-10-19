@@ -8,6 +8,9 @@
 // Les tables utilisateur s'appellent t_<id> et leurs colonnes c_<id> : un nom
 // affiché peut changer, contenir des accents, des espaces ou un mot réservé
 // sans toucher au schéma SQL.
+//
+// Le format est décrit pour les outils tiers dans docs/format-lattis.md : à
+// tenir à jour avec chaque migration.
 package meta
 
 import (
