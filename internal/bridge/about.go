@@ -1,5 +1,10 @@
 package bridge
 
+// Version est la version de l'application (« À propos », client MCP,
+// Serveur Lattis), injectée au build : -ldflags "-X
+// github.com/lalamefine/lattis/internal/bridge.Version=…" ; "dev" sinon.
+var Version = "dev"
+
 // About décrit l'application pour la fenêtre « À propos » : version,
 // licence, code source ; en édition web, le code source du serveur qui sert
 // la session (AGPL-3.0 §13).

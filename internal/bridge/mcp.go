@@ -14,9 +14,6 @@ import (
 	"github.com/lalamefine/lattis/internal/mcp"
 )
 
-// Version est la version de l'application annoncée au client MCP.
-var Version = "dev"
-
 type mcpState struct {
 	mu  sync.Mutex
 	ln  *mcp.Listener

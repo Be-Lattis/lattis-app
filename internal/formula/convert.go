@@ -1,9 +1,6 @@
 package formula
 
 import (
-	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -18,7 +15,8 @@ type Resolver interface {
 }
 
 // KeyNeed signale qu'une colonne sert désormais de clé à REFERENCE : son
-// unicité doit être vérifiée et un index UNIQUE posé (voir EnsureKey).
+// unicité doit être vérifiée et un index UNIQUE posé sur KeyExpr (le moteur
+// le fait dans canvas, tx.ensureKey).
 type KeyNeed struct {
 	Table, Column string
 }
@@ -263,36 +261,13 @@ func Suggestion(fn string) string {
 	return suggestions[strings.ToUpper(fn)]
 }
 
-// ErrNotUnique signale une colonne qui ne peut pas servir de clé.
-var ErrNotUnique = errors.New("valeurs en double")
-
-// EnsureKey vérifie qu'une colonne est unique (sans tenir compte de la casse,
-// comme la recherche) et pose l'index UNIQUE qui accélère REFERENCE et
-// refusera ensuite les doublons.
-func EnsureKey(ctx context.Context, tx *sql.Tx, s *Schema, need KeyNeed) error {
-	t, ok := s.Table(need.Table)
-	if !ok {
-		return fmt.Errorf("tableau %s introuvable", need.Table)
+// KeyExpr donne l'expression de l'index UNIQUE d'une colonne clé (col : son
+// nom SQL) : sans tenir compte de la casse pour un texte ou une date (rangée
+// en texte), comme la recherche de REFERENCE. Le moteur (canvas) et les
+// tests de ce paquet posent la clé avec elle.
+func KeyExpr(col string, t grid.Type) string {
+	if t == grid.Text || t == grid.Date {
+		return col + " COLLATE NOCASE"
 	}
-	i, ok := t.col(need.Column)
-	if !ok || t.Cols[i].Formula != nil {
-		return fmt.Errorf("colonne %s inutilisable comme clé", need.Column)
-	}
-	c := t.Cols[i]
-	expr := c.SQL
-	if c.Type == grid.Text {
-		expr += " COLLATE NOCASE"
-	}
-	var total, distinct int
-	if err := tx.QueryRowContext(ctx, `SELECT count(`+c.SQL+`), count(DISTINCT `+expr+`) FROM `+t.SQL).Scan(&total, &distinct); err != nil {
-		return err
-	}
-	if total != distinct {
-		return fmt.Errorf("%s.%s : %d %w", t.Name, c.Name, total-distinct, ErrNotUnique)
-	}
-	if _, err := tx.ExecContext(ctx, `CREATE UNIQUE INDEX IF NOT EXISTS `+t.SQL+`_key ON `+t.SQL+`(`+expr+`)`); err != nil {
-		return err
-	}
-	t.Key = c.Name
-	return nil
+	return col
 }

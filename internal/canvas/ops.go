@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/order"
 )
@@ -302,14 +303,8 @@ func rebuildStmts(tb Table, physical []Column, colID int64, from, to grid.Type) 
 	return append(out, st(`UPDATE _lattis_columns SET type = ? WHERE tbl = ? AND id = ?`, string(to), tb.ID, colID))
 }
 
-// keyExpr est l'expression de l'index de la clé : sans tenir compte de la
-// casse pour un texte, comme la recherche.
-func keyExpr(id int64, t grid.Type) string {
-	if t == grid.Text || t == grid.Date {
-		return colSQL(id) + " COLLATE NOCASE"
-	}
-	return colSQL(id)
-}
+// keyExpr est l'expression de l'index de la clé (formula.KeyExpr).
+func keyExpr(id int64, t grid.Type) string { return formula.KeyExpr(colSQL(id), t) }
 
 // retype change le type de stockage d'une colonne (reconstruction).
 func (t *tx) retype(tb Table, i int, to grid.Type) (Table, error) {

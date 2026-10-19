@@ -106,7 +106,7 @@ Code : `spikes/formula` (≈ 2 200 lignes hors tests). Critère de sortie : `tes
 
 ## Spike 1.4 : archive .lattis et Lua
 
-Code : `spikes/archive` (devenu `internal/archive` en phase 2) et `spikes/script`. Critères de sortie : un `while true do end` est interrompu sans geler la grille ; un processus tué puis relancé propose la récupération. **Les deux sont atteints** (`TestInfiniteLoopTimeout`, `TestCrashRecovery`).
+Code : `spikes/archive` (devenu `internal/archive` en phase 2) et `spikes/script` (devenu `internal/script` ; le spike, retiré du dépôt, reste dans l'historique : commit 1405181). Critères de sortie : un `while true do end` est interrompu sans geler la grille ; un processus tué puis relancé propose la récupération. **Les deux sont atteints** (`TestInfiniteLoopTimeout`, `TestCrashRecovery`).
 
 ### Archive
 
