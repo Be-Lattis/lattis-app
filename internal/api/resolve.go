@@ -218,6 +218,9 @@ type Column struct {
 	Formula string `json:"formula,omitempty"`
 	Errors  int    `json:"errors,omitempty"`
 	Key     bool   `json:"key,omitempty"`
+	// Ref : « Tableau[Clé] » d'une colonne de référence (validation tirée
+	// de la clé d'un autre tableau, décision 0016) ; tables.get seulement.
+	Ref string `json:"ref,omitempty"`
 }
 
 // Table décrit un tableau.

@@ -68,6 +68,27 @@ func (s *DocumentService) LocateRow(ctx context.Context, table string, id int64)
 	return d.LocateRow(ctx, table, id)
 }
 
+// ReferenceRow : la ligne visée par une cellule de colonne de référence
+// (validation tirée de la clé d'un tableau) qui vaut value, pour « Basculer
+// sur ». Table vide : src n'est pas la colonne clé d'un tableau.
+func (s *DocumentService) ReferenceRow(ctx context.Context, src, value string) (canvas.KeyRow, error) {
+	d, err := s.current()
+	if err != nil {
+		return canvas.KeyRow{}, err
+	}
+	return d.ReferenceRow(ctx, src, value)
+}
+
+// Citations : colonnes de référence qui citent la valeur value de la clé du
+// tableau table (nombre de lignes, première ligne).
+func (s *DocumentService) Citations(ctx context.Context, table, value string) ([]canvas.Citation, error) {
+	d, err := s.current()
+	if err != nil {
+		return nil, err
+	}
+	return d.Citations(ctx, table, value)
+}
+
 // PivotData calcule un tableau croisé sans le poser sur une feuille
 // (tableaux croisés insérés dans un onglet Document).
 func (s *DocumentService) PivotData(ctx context.Context, cfg canvas.PivotConfig) (canvas.PivotInfo, error) {

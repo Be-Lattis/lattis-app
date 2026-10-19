@@ -277,6 +277,14 @@ export function ChooseSheetValue(sheet: number, value: string, all: boolean): $C
 }
 
 /**
+ * Citations : colonnes de référence qui citent la valeur value de la clé du
+ * tableau table (nombre de lignes, première ligne).
+ */
+export function Citations(table: string, value: string): $CancellablePromise<canvas$0.Citation[] | null> {
+    return $Call.ByID(267226024, table, value);
+}
+
+/**
  * ClearCells vide entièrement les cellules libres d'une plage (valeurs,
  * mise en forme, fusions, notes, validations).
  */
@@ -1527,6 +1535,15 @@ export function Redo(): $CancellablePromise<$models.DocState> {
  */
 export function ReferenceQuery(q: string, name: string, columns: string[] | null, headers: string[] | null): $CancellablePromise<$models.QueryRefresh> {
     return $Call.ByID(835221209, q, name, columns, headers);
+}
+
+/**
+ * ReferenceRow : la ligne visée par une cellule de colonne de référence
+ * (validation tirée de la clé d'un tableau) qui vaut value, pour « Basculer
+ * sur ». Table vide : src n'est pas la colonne clé d'un tableau.
+ */
+export function ReferenceRow(src: string, value: string): $CancellablePromise<canvas$0.KeyRow> {
+    return $Call.ByID(178625425, src, value);
 }
 
 /**

@@ -28,6 +28,16 @@ La liste se saisit (**Valeurs saisies**, une par ligne) ou se tire d'une **Plage
 
 La liste d'une plage est relue à chaque ouverture de la liste déroulante et à chaque saisie : valeurs distinctes, dans l'ordre de la plage, sans les cellules vides. La référence suit le renommage du tableau, de la colonne ou de la feuille, et l'insertion ou la suppression de lignes et de colonnes. Si la source disparaît (tableau supprimé, lignes de la plage supprimées), la liste déroulante et le dialogue le signalent, et les saisies sont refusées jusqu'à ce que la validation soit corrigée.
 
+### Colonnes de référence : basculer d'un tableau à l'autre
+
+Quand la plage est la **colonne clé** d'un autre tableau (celle marquée 🔑, par exemple `Espèces[Nom]`), la colonne validée devient une **référence** vers ce tableau, comme une clé étrangère : la barre d'état le signale.
+
+- **Basculer sur** : `Ctrl+clic` sur une cellule de la colonne, le petit bouton ↗ à côté de sa flèche de liste, ou clic droit › Basculer sur « Espèces » › Pie, va à la ligne citée (sur sa feuille), qui s'éclaire un instant. Si la valeur n'existe pas dans le tableau visé, l'entrée est grisée et le dit.
+- **Revenir** : `Alt+Gauche`, ou « ← Revenir à… » dans la barre d'état, ramène à la cellule de départ (plusieurs sauts se défont un à un).
+- **Lignes qui citent** : clic droit sur une cellule de la colonne clé du tableau visé › Lignes qui citent « Pie » (3) filtre le tableau qui cite sur cette valeur et va à sa première ligne.
+
+Rien d'autre n'est enregistré : retirer la validation (ou `Ctrl+Z`) ou la clé du tableau visé défait la référence, et elle suit le renommage du tableau et de sa colonne clé. Les valeurs absentes ne sont pas bloquées par une contrainte de la base : c'est la validation qui les refuse à la saisie.
+
 Les validations ne sont pas exportées vers Excel (.xlsx), ni lues à l'import.
 
 ## Notes

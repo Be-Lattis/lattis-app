@@ -25,6 +25,7 @@
 	import { visibleSheet } from '#lib/shell/sheets.js';
 	import { choiceStatus, choiceStep, type ChoiceActions } from '#lib/shell/choice.js';
 	import { tabChoiceNotice } from '#lib/grid/tabchoice.js';
+	import { popBack, pushBack, type RefSpot } from '#lib/grid/reflink.js';
 	import { count } from '#lib/sql/result.js';
 	import { printSheet } from '#lib/shell/print.js';
 	import { withSaveProgress } from '#lib/shell/saveprogress.js';
@@ -323,6 +324,66 @@
 			sheet?.selectRange(spot.row, spot.col, spot.row, last);
 			if (spot.hidden) notice = `Ligne masquée par le filtre de ${spot.table}`;
 			sheet?.focus();
+		} catch (e) {
+			notice = err(e);
+		}
+	}
+
+	// Colonnes de référence (décision 0016) : « Basculer sur » va à la ligne
+	// citée en notant l'endroit d'où l'on part ; Alt+← ou « Revenir à… » de
+	// la barre d'état y ramène.
+	let refBack = $state<RefSpot[]>([]);
+	$effect(() => {
+		void workbook;
+		refBack = [];
+	});
+
+	/** Basculer sur la ligne id de table (filter : sa colonne d'abord filtrée sur la valeur, « Lignes qui citent »). */
+	async function followReference(to: { table: string; id: number; key?: string; filter?: { column: string; value: string } }, from: { row: number; col: number; label: string }) {
+		if (mode !== 'doc') return;
+		try {
+			const t = help?.tables?.find((x) => x.name === to.table);
+			if (to.filter && t) {
+				const i = (t.columns ?? []).indexOf(to.filter.column);
+				if (i >= 0) await DocumentService.SetFilter(to.table, i, { values: [to.filter.value] });
+			}
+			const spot = await DocumentService.LocateRow(to.table, to.id);
+			refBack = pushBack(refBack, { sheet: sheetId, ...from });
+			view = 'grid';
+			if (spot.sheet !== sheetId || to.filter) {
+				sheet?.closeOverlays();
+				sheetId = spot.sheet;
+				await reload();
+			}
+			await tick();
+			await new Promise((r) => requestAnimationFrame(r));
+			const k = to.key && t ? Math.max(0, (t.columns ?? []).indexOf(to.key)) : 0;
+			sheet?.selectRange(spot.row, spot.col + k, spot.row, spot.col + k);
+			sheet?.flashRow(spot.row, spot.col, spot.col + Math.max(1, spot.cols) - 1);
+			sheet?.focus();
+			notice = spot.hidden ? `Ligne masquée par le filtre de ${spot.table}` : to.filter ? `${to.table} filtré sur ${to.filter.column} = ${to.filter.value} (Alt+← pour revenir)` : `Alt+← pour revenir à ${from.label}`;
+		} catch (e) {
+			notice = err(e);
+		}
+	}
+
+	/** Alt+← : revenir à l'endroit d'avant le dernier « Basculer sur ». */
+	async function refGoBack() {
+		const { spot, rest } = popBack(refBack);
+		if (!spot) return;
+		refBack = rest;
+		try {
+			if (spot.sheet !== sheetId) {
+				sheet?.closeOverlays();
+				sheetId = spot.sheet;
+				await reload();
+			}
+			await tick();
+			await new Promise((r) => requestAnimationFrame(r));
+			sheet?.selectRange(spot.row, spot.col, spot.row, spot.col);
+			sheet?.flashRow(spot.row, spot.col, spot.col);
+			sheet?.focus();
+			notice = '';
 		} catch (e) {
 			notice = err(e);
 		}
@@ -1523,6 +1584,8 @@
 			const l = await DocumentService.ValidationList(sheetId, src);
 			return { values: l.values ?? [], error: l.error || undefined };
 		},
+		referenceRow: (src, value) => DocumentService.ReferenceRow(src, value),
+		citations: async (table, value) => (await DocumentService.Citations(table, value)) ?? [],
 		createChart: (row, col, cfg) => DocumentService.CreateChart(sheetId, row, col, cfg).then(reload),
 		setChart: (id, cfg) => DocumentService.SetChart(id, cfg).then(reload),
 		moveChart: (id, row, col) => DocumentService.MoveChart(id, row, col).then(reload),
@@ -2179,7 +2242,7 @@
 						bind:this={sheet}
 						{data}
 						source={mode === 'demo' ? demoSource : docSource}
-						sources={(help?.tables ?? []).map((t) => ({ name: t.name, columns: t.columns ?? [], types: t.types ?? [], kind: t.kind }))}
+						sources={(help?.tables ?? []).map((t) => ({ name: t.name, columns: t.columns ?? [], types: t.types ?? [], kind: t.kind, key: t.key }))}
 						catalog={mode === 'doc' && help
 							? { functions: help.functions ?? [], tables: (help.tables ?? []).filter((t) => t.kind !== 'pivot'), names: (layout?.names ?? []).map((n) => n.name) }
 							: undefined}
@@ -2197,6 +2260,8 @@
 						sheetName={activeInfo?.name ?? ''}
 						onsheet={(id) => selectSheet(id).catch((e) => (notice = err(e)))}
 						onrowlink={mode === 'doc' ? gotoRow : undefined}
+						onreflink={mode === 'doc' ? followReference : undefined}
+						onrefback={mode === 'doc' ? refGoBack : undefined}
 						onsharedata={mode === 'doc' && sharedWorkbooksEnabled() ? (t) => (dataShare = t) : undefined}
 						onaddshared={mode === 'doc' && share?.mode === 'collaborative' ? (t) => void addToShared(t) : undefined}
 						{sourceTables}
@@ -2817,6 +2882,11 @@
 				<button class="details" onclick={() => (exportOpen = true)}>Détails</button>
 			{/if}
 		{/if}
+		{#if refBack.length && mode === 'doc' && view === 'grid'}
+			{@const b = refBack[refBack.length - 1]}
+			<!-- Après « Basculer sur » (colonne de référence) : retour à la cellule de départ. -->
+			<button class="offer-act back" title="Revenir à la cellule d'où vous avez basculé (Alt+←)" onclick={() => void refGoBack()}>← Revenir à {b.label}</button>
+		{/if}
 		{#if mergeOffer && mode === 'doc'}
 			{@const g = mergeOffer}
 			<!-- Bulle d'information, une seule fois (§4.1) : « Plus tard » la ferme, la puce reste sous les onglets. -->
@@ -2980,6 +3050,11 @@
 		border-radius: 3px;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+	.offer-act.back {
+		margin-left: 0;
+		text-decoration: none;
+		font-weight: 600;
 	}
 	.offer-act {
 		flex: none;

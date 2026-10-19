@@ -8,6 +8,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ### Nouveautés
 
+- Colonnes de référence : une validation des données tirée de la colonne clé d'un autre tableau (`Espèces[Nom]`) fait de la colonne une référence vers ce tableau. `Ctrl+clic` sur une cellule, son bouton ↗ ou clic droit › Basculer sur « Espèces » › Pie va à la ligne citée ; `Alt+←` ou « ← Revenir à… » dans la barre d'état ramène à la cellule de départ ; sur la clé, clic droit › Lignes qui citent « Pie » filtre le tableau qui cite et va à sa première ligne. Les scripts lisent la référence dans `tables.get` (`ref`).
 - Carte de points : réglage « Taille des points » dans le volet (de ×0,25 à ×4), qui multiplie la taille donnée par la colonne Valeur.
 - Révision › Protéger la structure : sur la feuille, tout est verrouillé sauf la saisie dans les tableaux (valeurs, collage de valeurs, lignes ajoutées, insérées ou supprimées, tri, filtre) ; cellules libres, mise en forme, colonnes, tableaux, objets et onglet sont refusés (boutons grisés) ; mot de passe facultatif ; Ctrl+Z ne la contourne pas (format 35).
 - Révision › Protéger le classeur : choix « Onglets seulement », « Onglets et structure de toutes les feuilles (saisie dans les tableaux seulement) » ou « Onglets et contenu de toutes les feuilles ».

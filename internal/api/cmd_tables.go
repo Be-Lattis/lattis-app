@@ -101,8 +101,23 @@ func init() {
 				return out, nil
 			},
 		},
-		tableCmd("tables.get", "", "Décrit un tableau : feuille, position, nombre de lignes et colonnes (type, formule, clé).", false,
-			func(c *Call, t tableRef) (any, error) { return describeTable(t.TableInfo, t.Sheet.Name), nil }),
+		tableCmd("tables.get", "", "Décrit un tableau : feuille, position, nombre de lignes et colonnes (type, formule, clé, référence : ref = \"Tableau[Clé]\" pour une colonne dont la validation est tirée de la clé d'un autre tableau).", false,
+			func(c *Call, t tableRef) (any, error) {
+				out := describeTable(t.TableInfo, t.Sheet.Name)
+				d, _ := c.Doc()
+				refs, err := d.References(c)
+				if err != nil {
+					return nil, err
+				}
+				for _, r := range refs {
+					for i := range out.Columns {
+						if r.Table == out.Name && r.Column == out.Columns[i].Name {
+							out.Columns[i].Ref = r.Target + "[" + r.Key + "]"
+						}
+					}
+				}
+				return out, nil
+			}),
 		&Command{
 			Name:    "tables.rows",
 			Summary: "Lit des lignes d'un tableau telles qu'elles s'affichent (filtre et colonnes calculées compris).",

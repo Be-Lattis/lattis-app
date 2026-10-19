@@ -286,6 +286,12 @@ export interface ChartConfig {
     "colorBy"?: string;
 
     /**
+     * MapScale : carte de points, facteur de taille des points (0 ou absent :
+     * 1 ; la valeur règle déjà la taille relative).
+     */
+    "mapScale"?: number;
+
+    /**
      * Bins : histogramme de fréquences, nombre de classes (0 : automatique).
      */
     "bins"?: number;
@@ -406,6 +412,17 @@ export interface ChoiceCandidate {
      * valeurs distinctes (non vides)
      */
     "values": number;
+}
+
+/**
+ * Citation : lignes d'un tableau qui citent une valeur de clé (Lignes qui
+ * citent…) ; First est la première d'entre elles (identifiant, LocateRow).
+ */
+export interface Citation {
+    "table": string;
+    "column": string;
+    "count": number;
+    "first": number;
 }
 
 export interface ColWidth {
@@ -677,6 +694,23 @@ export interface HeaderFooter {
     "left"?: string;
     "center"?: string;
     "right"?: string;
+}
+
+/**
+ * KeyRow : la ligne du tableau dont la clé vaut value.
+ */
+export interface KeyRow {
+    /**
+     * nom exact du tableau
+     */
+    "table": string;
+
+    /**
+     * sa colonne clé ("" : pas de clé)
+     */
+    "key": string;
+    "found": boolean;
+    "id"?: number;
 }
 
 /**

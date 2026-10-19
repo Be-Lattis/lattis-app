@@ -931,7 +931,7 @@ export const apiReference: RefEntry[] = [
 		name: "tables.get",
 		category: "tables",
 		signature: "tables.get(table)",
-		summary: "Décrit un tableau : feuille, position, nombre de lignes et colonnes (type, formule, clé).",
+		summary: "Décrit un tableau : feuille, position, nombre de lignes et colonnes (type, formule, clé, référence : ref = \"Tableau[Clé]\" pour une colonne dont la validation est tirée de la clé d'un autre tableau).",
 		details: "Paramètres — table : nom du tableau.",
 		args: [1, 1]
 	},

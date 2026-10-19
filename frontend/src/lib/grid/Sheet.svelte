@@ -52,6 +52,7 @@
 	import { pivotLayer, pivotValueText } from './pivotformat';
 	import { canFoldAll, foldAll, foldTarget, pivotBoxHit, pivotBoxLeft, pivotLabelOffset, PIVOT_BOX, setFolded, type PivotRowInfo } from './pivottree';
 	import { fillSeries, shiftTableColumns } from './fill';
+	import { citeLabel, refMessage, refTarget, type Citation, type KeyRow } from './reflink';
 	import {
 		condArgs,
 		condLabel,
@@ -499,6 +500,10 @@
 		 * affichée : valeurs distinctes dans l'ordre de la source, ou l'erreur.
 		 */
 		validationList?(src: string): Promise<DvList>;
+		/** Colonne de référence (validation tirée de la clé d'un tableau) : la ligne citée par value. */
+		referenceRow?(src: string, value: string): Promise<KeyRow>;
+		/** Clé d'un tableau : les colonnes de référence qui citent value (lignes, première ligne). */
+		citations?(table: string, value: string): Promise<Citation[]>;
 		/** Valeurs distinctes d'une colonne (filtre). */
 		filterValues?(table: SheetTable, i: number): Promise<{ text: string; count: number }[]>;
 		/** Filtre d'une colonne (null : retire le filtre de la colonne). */
@@ -618,7 +623,7 @@
 		/** Fonctions et tableaux du classeur, pour l'aide à la saisie des formules. */
 		catalog?: Catalog;
 		/** Tableaux et tableaux croisés de toutes les feuilles (sources de graphiques et de TCD). */
-		sources?: { name: string; columns: string[]; types: string[]; kind?: string }[];
+		sources?: { name: string; columns: string[]; types: string[]; kind?: string; key?: number }[];
 		onstatus?: (s: SheetStatus) => void;
 		/** Lance la mesure dès l'ouverture et transmet le résultat (mode LATTIS_BENCH). */
 		autoBench?: (result: string) => void;
@@ -647,6 +652,14 @@
 		onsheet?: (sheet: number) => void;
 		/** Point de carte cliqué : aller à la ligne id du tableau (éventuellement sur une autre feuille). */
 		onrowlink?: (table: string, id: number) => void;
+		/**
+		 * « Basculer sur » (colonne de référence) ou « Lignes qui citent » :
+		 * aller à la ligne id du tableau (filter : filtrer d'abord sa colonne
+		 * sur la valeur), en notant l'endroit d'où l'on part pour Alt+←.
+		 */
+		onreflink?: (to: { table: string; id: number; key?: string; filter?: { column: string; value: string } }, from: { row: number; col: number; label: string }) => void;
+		/** Alt+← : revenir à l'endroit d'où l'on a basculé. */
+		onrefback?: () => void;
 		/** Partager le tableau au Data Lake Lattis (clic droit sur un tableau). */
 		onsharedata?: (table: string) => void;
 		/** Classeur partagé en direct : clic droit sur un tableau qui n'est que sur ce poste › « Ajouter au classeur partagé ». */
@@ -663,7 +676,7 @@
 		onplacing?: (p: { hint: string; create: boolean } | null) => void;
 	}
 
-	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', freeze, zoom = 1, onzoom, animate = true, sheetName = '', onsheet, onrowlink, onask, onsharedata, onaddshared, sourceTables = [], onpushsource, pageBreaks, onplacing }: Props = $props();
+	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', freeze, zoom = 1, onzoom, animate = true, sheetName = '', onsheet, onrowlink, onreflink, onrefback, onask, onsharedata, onaddshared, sourceTables = [], onpushsource, pageBreaks, onplacing }: Props = $props();
 
 	// Feuille sans fin pratique (choix de Louis) : au-delà des limites d'Excel,
 	// bornée par la nomenclature Cell[ZZZZ999999999] (4 lettres, 9 chiffres).
@@ -2344,6 +2357,7 @@
 			ctx.restore();
 		}
 		if (incomplete) missingFrames++;
+		drawJumpFlash(t0);
 		if (motion())
 			viewNow = {
 				r0: rax().indexAt(main.y0 - TOP_H + main.top),
@@ -3101,6 +3115,20 @@
 				ctx.lineTo(b.x + b.w / 2, b.y + b.h / 2 + 3);
 				ctx.closePath();
 				ctx.fill();
+				// Colonne de référence : petit bouton ↗ « Basculer sur » (aussi Ctrl+clic).
+				if (!many && refAt(active.row, active.col)) {
+					const l = linkButton();
+					ctx.fillStyle = C.strip;
+					ctx.fillRect(l.x, l.y, l.w, l.h);
+					ctx.strokeStyle = C.stripLine;
+					ctx.strokeRect(l.x + 0.5, l.y + 0.5, l.w - 1, l.h - 1);
+					ctx.save();
+					ctx.font = FONT_SMALL;
+					ctx.textAlign = 'center';
+					ctx.fillStyle = C.stripText;
+					ctx.fillText('↗', l.x + l.w / 2, l.y + l.h / 2 + 1);
+					ctx.restore();
+				}
 			}
 			tableHintBox = null;
 			if (!editing && !many && asTableHint()) {
@@ -4576,6 +4604,123 @@
 		if (v !== cellInfo(m.row, m.col).value) write(m.row, m.col, v);
 	}
 
+	// --- Colonnes de référence (décision 0016) ---------------------------------
+
+	/** La cellule cite la clé d'un tableau (validation tirée de sa colonne clé) et a une valeur : la référence. */
+	function refAt(r: number, c: number): { src: string; table: string; key: string; value: string } | null {
+		if (!onreflink || !source.referenceRow) return null;
+		const src = dvSrcAt(r, c);
+		const t = refTarget(src, sources);
+		const value = t ? shownText(r, c).trim() : '';
+		return t && src && value ? { src, ...t, value } : null;
+	}
+
+	/** Adresse de la cellule pour « Revenir à » : Feuille!C5. */
+	const spotLabel = (r: number, c: number) => (sheetName ? `${sheetName}!` : '') + addrA1(r, c);
+
+	/** Basculer sur la ligne citée par la cellule (Ctrl+clic, clic droit, bouton ↗). */
+	async function followRef(r: number, c: number) {
+		const ref = refAt(r, c);
+		if (!ref) return;
+		try {
+			const k = await source.referenceRow!(ref.src, ref.value);
+			if (!k.found || k.id === undefined) {
+				say(`« ${ref.value} » n’existe pas dans ${k.table || ref.table}`);
+				return;
+			}
+			onreflink?.({ table: k.table, id: k.id, key: k.key }, { row: r, col: c, label: spotLabel(r, c) });
+		} catch (err) {
+			say(String((err as Error)?.message ?? err));
+		}
+	}
+
+	// Entrées du clic droit : « Basculer sur » (cellule d'une référence),
+	// « Lignes qui citent » (cellule de la clé d'un tableau), relues à
+	// l'ouverture du menu.
+	let refItems = $state<{
+		row: number;
+		col: number;
+		go?: { table: string; value: string; found?: boolean };
+		cite?: { table: string; value: string; list: Citation[] | null };
+	} | null>(null);
+
+	function loadRefItems(r: number, c: number) {
+		refItems = null;
+		const ref = refAt(r, c);
+		if (ref) {
+			const at = { row: r, col: c, go: { table: ref.table, value: ref.value } as { table: string; value: string; found?: boolean } };
+			refItems = at;
+			source.referenceRow!(ref.src, ref.value).then(
+				(k) => {
+					if (refItems?.row === r && refItems.col === c) refItems = { ...refItems, go: { table: k.table || ref.table, value: ref.value, found: k.found } };
+				},
+				() => undefined
+			);
+			return;
+		}
+		const e = tableAt(r, c);
+		if (!e || r <= e.t.row || e.t.key !== c - e.t.col || !source.citations || !onreflink) return;
+		const value = shownText(r, c).trim();
+		if (!value) return;
+		const table = e.t.name;
+		refItems = { row: r, col: c, cite: { table, value, list: null } };
+		source.citations(table, value).then(
+			(list) => {
+				// Aucune colonne ne cite ce tableau : pas d'entrée.
+				if (refItems?.row !== r || refItems.col !== c) return;
+				refItems = list?.length ? { ...refItems, cite: { table, value, list } } : null;
+			},
+			() => (refItems = null)
+		);
+	}
+
+	/** Lignes qui citent : le tableau qui cite est filtré sur la valeur, la première ligne sélectionnée. */
+	function openCitation(r: number, c: number, ci: Citation, value: string) {
+		menu = null;
+		refItems = null;
+		onreflink?.({ table: ci.table, id: ci.first, key: ci.column, filter: { column: ci.column, value } }, { row: r, col: c, label: spotLabel(r, c) });
+	}
+
+	/** Bouton ↗ de la cellule active d'une référence, juste après la flèche de la liste. */
+	function linkButton() {
+		const b = dropButton();
+		return { ...b, x: b.x + b.w + 1 };
+	}
+
+	// Ligne atteinte par « Basculer sur » ou « Revenir » : éclat bref.
+	const JUMP_FLASH_MS = 1200;
+	let jumpFlash: { r: number; c0: number; c1: number; t: number } | null = null;
+	let jumpTimer: ReturnType<typeof setTimeout> | undefined;
+
+	/** Éclaire brièvement les cellules c0 à c1 de la ligne r (la ligne atteinte). */
+	export function flashRow(r: number, c0: number, c1: number) {
+		jumpFlash = { r, c0, c1, t: performance.now() };
+		clearTimeout(jumpTimer);
+		// Sans animation : l'éclat reste puis s'efface d'un coup.
+		jumpTimer = setTimeout(() => {
+			jumpFlash = null;
+			schedule();
+		}, JUMP_FLASH_MS);
+		schedule();
+	}
+
+	function drawJumpFlash(now: number) {
+		const f = jumpFlash;
+		if (!f) return;
+		const a = motion() ? 1 - Math.min(1, (now - f.t) / JUMP_FLASH_MS) : 1;
+		if (a <= 0) return;
+		const x = screenX(f.c0);
+		const w = cax().offset(f.c1 + 1) - cax().offset(f.c0);
+		ctx.save();
+		ctx.beginPath();
+		ctx.rect(MARGIN, TOP_H, viewW - MARGIN, viewH - TOP_H);
+		ctx.clip();
+		ctx.fillStyle = `rgba(255, 196, 0, ${(0.35 * a).toFixed(3)})`;
+		ctx.fillRect(x, screenY(f.r), w, rh(f.r));
+		ctx.restore();
+		if (motion()) animBusy = true;
+	}
+
 	// Dialogue : valeurs saisies (text) ou plage source (src), aperçu des
 	// valeurs de la plage (relu à chaque changement de la référence).
 	let validDlg = $state<{ target: string; mode: 'list' | 'range'; text: string; src: string; error: string; preview: DvList | null; loading: boolean } | null>(null);
@@ -4639,7 +4784,13 @@
 		applyStyle({ dv });
 		if (!dv) say('Validation retirée');
 		else if (Array.isArray(dv)) say(`Liste déroulante : ${dv.length} valeur${dv.length > 1 ? 's' : ''} permise${dv.length > 1 ? 's' : ''} (Alt+↓ pour l’ouvrir)`);
-		else say(`Liste déroulante tirée de ${dv.src}, relue à chaque ouverture (Alt+↓ pour l’ouvrir)`);
+		else {
+			// Tirée de la clé d'un tableau : la colonne en devient une référence (décision 0016).
+			const t = onreflink && source.referenceRow ? refTarget(dv.src, sources) : null;
+			const e = tableAt(active.row, active.col);
+			if (t) say(refMessage(e ? e.t.columns[active.col - e.t.col].name : d.target, t.table));
+			else say(`Liste déroulante tirée de ${dv.src}, relue à chaque ouverture (Alt+↓ pour l’ouvrir)`);
+		}
 	}
 
 	// « Sélectionner » : le dialogue se retire, la plage source se désigne
@@ -7321,6 +7472,23 @@
 				else openList();
 				return;
 			}
+			const l = linkButton();
+			if (x >= l.x && x <= l.x + l.w && y >= l.y && y <= l.y + l.h && refAt(active.row, active.col)) {
+				e.preventDefault();
+				void followRef(active.row, active.col);
+				return;
+			}
+		}
+		// Ctrl+clic sur une cellule d'une colonne de référence : basculer sur la ligne citée.
+		if (e.button === 0 && (e.ctrlKey || e.metaKey) && !e.shiftKey && !editing && !formulaMode) {
+			const cell = cellAt(e);
+			if (cell && refAt(cell.row, cell.col)) {
+				e.preventDefault();
+				wrap.focus();
+				moveTo(cell.row, cell.col);
+				void followRef(cell.row, cell.col);
+				return;
+			}
 		}
 		if (selChart !== null) {
 			selChart = null;
@@ -8098,6 +8266,12 @@
 		if (e.altKey && e.key === 'ArrowDown' && listOf(row, col)) {
 			e.preventDefault();
 			openList();
+			return;
+		}
+		// Alt+← : revenir d'où l'on a basculé (colonne de référence), comme un navigateur.
+		if (e.altKey && !ctrl && !e.shiftKey && e.key === 'ArrowLeft' && onrefback) {
+			e.preventDefault();
+			onrefback();
 			return;
 		}
 		if (ctrl && (e.key === 'z' || e.key === 'Z') && source.undo) {
@@ -9819,6 +9993,7 @@
 			const r = wrap.getBoundingClientRect();
 			const te = hd?.kind === 'rows' ? entries.find((x) => hd.row > x.t.row && hd.row <= x.last) : undefined;
 			freeMenu = null;
+			refItems = null;
 			if (te && hd?.kind === 'rows') menu = { x: ev.clientX - r.left, y: ev.clientY - r.top, e: te, n: hd.row - te.t.row - 1, i: 0, header: false, rowOnly: true };
 			else if (hd) freeMenu = { x: ev.clientX - r.left, y: ev.clientY - r.top, kind: hd.kind };
 			return;
@@ -9827,6 +10002,7 @@
 		const e = tableAt(cell.row, cell.col) ?? groupBandAt(cell.row, cell.col);
 		if (!inSelection(cell.row, cell.col)) moveTo(cell.row, cell.col);
 		const r = wrap.getBoundingClientRect();
+		loadRefItems(cell.row, cell.col);
 		if (!e) {
 			freeMenu = { x: ev.clientX - r.left, y: ev.clientY - r.top };
 			return;
@@ -10181,6 +10357,44 @@
 		>
 	{:else}
 		<button data-shed="1" onclick={editNote}>Insérer une note</button>
+	{/if}
+{/snippet}
+
+{#snippet refMenuItems()}
+	<!-- Colonne de référence : basculer sur la ligne citée ; clé d'un tableau : les lignes qui la citent. -->
+	{#if refItems?.go}
+		{@const g = refItems.go}
+		{@const at = { row: refItems.row, col: refItems.col }}
+		<button
+			disabled={g.found === false}
+			title={g.found === false ? `« ${g.value} » n’existe pas dans ${g.table}` : `Va à la ligne « ${g.value} » du tableau « ${g.table} » (Alt+← pour revenir)`}
+			onclick={() => {
+				menu = freeMenu = null;
+				refItems = null;
+				void followRef(at.row, at.col);
+			}}>Basculer sur « {clip(g.table)} » › {clip(g.value)} <span class="keys">Ctrl+clic</span></button
+		>
+		<hr />
+	{:else if refItems?.cite?.list?.length}
+		{@const ci = refItems.cite}
+		{@const list = ci.list ?? []}
+		{@const at = { row: refItems.row, col: refItems.col }}
+		{#if list.length === 1}
+			<button
+				disabled={!list[0].count}
+				title={list[0].count ? `Filtre « ${list[0].table} » sur ${list[0].column} = ${ci.value} et va à la première ligne (Alt+← pour revenir)` : undefined}
+				onclick={() => openCitation(at.row, at.col, list[0], ci.value)}>{citeLabel(clip(ci.value), list)}</button
+			>
+		{:else}
+			<Submenu label={citeLabel(clip(ci.value), list)}>
+				{#each list as c (c.table + '[' + c.column + ']')}
+					<button disabled={!c.count} title="Filtre « {c.table} » sur {c.column} = {ci.value} et va à la première ligne (Alt+← pour revenir)" onclick={() => openCitation(at.row, at.col, c, ci.value)}
+						>{clip(c.table)} ({c.count})</button
+					>
+				{/each}
+			</Submenu>
+		{/if}
+		<hr />
 	{/if}
 {/snippet}
 <!-- Formule colorée (références, faute soulignée), sur une seule ligne : le texte est affiché tel quel (pre-wrap). -->
@@ -10607,6 +10821,7 @@
 					<!-- Groupes du menu contextuel d'Excel : presse-papiers ; insertion et
 					     suppression ; tri et filtre ; mise en forme ; puis ce qui est propre à
 					     Lattis : la colonne (type, clé, nom), le tableau (sous-menu), l'assistant. -->
+					{#if !m.rowOnly && !m.header}{@render refMenuItems()}{/if}
 					<button data-shed="3"
 						onclick={() => {
 							menu = null;
@@ -10813,6 +11028,7 @@
 			{@const m = freeMenu}
 			{@const below = groupCandidate()}
 			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (freeMenu = null)}>
+				{#if !m.kind}{@render refMenuItems()}{/if}
 				{#if below}
 					<!-- Ligne juste au-dessus de l'en-tête d'un tableau : ses cases peuvent devenir les groupes d'en-têtes. -->
 					<button title="Les cases de cette ligne, fusionnées ou non, deviennent les groupes d'en-têtes du tableau « {below.t.name} »" onclick={() => { freeMenu = null; menuAction(() => source.setTwoLevel!(below.t, true)); }}>Intégrer comme groupes d'en-têtes du tableau</button>
