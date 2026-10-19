@@ -3022,6 +3022,18 @@
 				ctx.fillRect(cx(t.c0), ry(a), spanW(t.c0, t.c1), rspan(a, b));
 			}
 		}
+		// Plage source d'une validation en cours de pointage : toute la colonne
+		// (ou la plage) teintée et encadrée, comme une colonne calculée en cours
+		// d'édition.
+		if (dvPick && dvPickRef) {
+			const k = refRect(dvPickRef, refContext().tables, sheetName);
+			if (k && k.r1 >= r0 - 1 && k.r0 <= r1 + 1) {
+				const a = Math.max(k.r0, r0);
+				const b = Math.min(k.r1, r1);
+				ctx.fillStyle = C.calc;
+				ctx.fillRect(cx(k.c0), ry(a), spanW(k.c0, k.c1), rspan(a, b));
+			}
+		}
 		// Saisie d'une formule : chaque référence encadrée de sa couleur, comme
 		// dans l'éditeur (Excel).
 		if (formulaMode) {

@@ -14,6 +14,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ### Changements
 
+- Validation des données › Plage › Sélectionner : la colonne pointée (ou la plage) est teintée en entier, comme une colonne calculée en cours de saisie.
 - Assistant › Connexion : « Application de bureau… » ouvre la fenêtre du serveur MCP (celle de Fichier › Paramètres), au lieu d'un panneau dans le volet.
 - Insertion › Autres graphiques : chaque type a son icône dans le menu.
 - Windows : le navigateur propose « Ouvrir Lattis ? » (et non plus « Ouvrir Tableur relationnel local-first ? ») pour un lien vers un classeur partagé ; le Gestionnaire des tâches affiche aussi « Lattis ».
