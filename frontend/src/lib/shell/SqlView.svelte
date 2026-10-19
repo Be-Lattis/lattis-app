@@ -124,6 +124,48 @@
 	let sql = $state('');
 	let result = $state<Result | null>(null);
 	let headers = $state<string[]>([]);
+
+	// Partage éditeur / résultat : poignée à glisser, hauteur retenue d'une session à l'autre.
+	const CODE_H = 180;
+	const SPLIT_KEY = 'lattis.sql.editorHeight';
+	let codeH = $state(readCodeH());
+	function readCodeH(): number {
+		try {
+			const v = Number(localStorage.getItem(SPLIT_KEY));
+			return v >= 60 ? v : CODE_H;
+		} catch {
+			return CODE_H;
+		}
+	}
+	function setCodeH(h: number) {
+		codeH = Math.round(Math.max(60, Math.min(h, window.innerHeight - 160)));
+		try {
+			localStorage.setItem(SPLIT_KEY, String(codeH));
+		} catch {
+			// stockage indisponible : la hauteur vaut pour la session
+		}
+	}
+	function startSplit(e: PointerEvent) {
+		if (e.button !== 0) return;
+		e.preventDefault();
+		const bar = e.currentTarget as HTMLElement;
+		try {
+			bar.setPointerCapture(e.pointerId);
+		} catch {
+			// pointeur déjà relâché
+		}
+		const y0 = e.clientY;
+		const h0 = codeH;
+		const move = (ev: PointerEvent) => setCodeH(h0 + ev.clientY - y0);
+		const up = () => {
+			bar.removeEventListener('pointermove', move);
+			bar.removeEventListener('pointerup', up);
+			bar.removeEventListener('pointercancel', up);
+		};
+		bar.addEventListener('pointermove', move);
+		bar.addEventListener('pointerup', up);
+		bar.addEventListener('pointercancel', up);
+	}
 	let sent = $state('');
 	let error = $state('');
 	let running = $state(false);
@@ -587,9 +629,27 @@
 			{/if}
 			<span class="muted hint" title="Les instructions sont séparées par « ; » ou une ligne vide. 1 000 lignes au plus.">Ctrl+Entrée : exécuter la sélection, sinon l'instruction sous le curseur · Ctrl+Espace : noms · Alt+↑↓ : historique</span>
 		</div>
-		<div class="code">
+		<div class="code" style:height="{codeH}px">
 			<SqlEditor bind:this={editor} bind:value={sql} {catalog} onrun={execute} onhistory={step} />
 		</div>
+		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+		<div
+			class="split"
+			role="separator"
+			aria-orientation="horizontal"
+			aria-label="Hauteur de l'éditeur"
+			aria-valuenow={codeH}
+			tabindex="0"
+			title="Glisser pour partager la place entre la requête et le résultat (double-clic : taille d'origine)"
+			onpointerdown={startSplit}
+			ondblclick={() => setCodeH(CODE_H)}
+			onkeydown={(e) => {
+				if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+					e.preventDefault();
+					setCodeH(codeH + (e.key === 'ArrowUp' ? -20 : 20));
+				}
+			}}
+		></div>
 		<div class="result">
 			{#if error}
 				<p class="error">{error}</p>
@@ -999,11 +1059,37 @@
 		--icon-accent: currentColor;
 	}
 	.code {
-		height: 180px;
 		min-height: 60px;
-		border-bottom: 1px solid #e3e5e8;
-		resize: vertical;
+		flex-shrink: 0;
 		overflow: hidden;
+	}
+	/* Poignée entre la requête et le résultat : 7 px à attraper, un trait au repos. */
+	.split {
+		flex-shrink: 0;
+		height: 7px;
+		cursor: row-resize;
+		background: linear-gradient(#e3e5e8, #e3e5e8) center / 100% 1px no-repeat;
+		position: relative;
+	}
+	.split::after {
+		content: '';
+		position: absolute;
+		left: 50%;
+		top: 2px;
+		width: 36px;
+		height: 3px;
+		margin-left: -18px;
+		border-radius: 2px;
+		background: #c5c9ce;
+	}
+	.split:hover,
+	.split:focus-visible {
+		background: #d7eadf;
+		outline: none;
+	}
+	.split:hover::after,
+	.split:focus-visible::after {
+		background: #217346;
 	}
 	.result {
 		flex: 1;
