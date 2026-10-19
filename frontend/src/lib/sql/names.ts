@@ -277,6 +277,7 @@ export function translate(src: string, catalog: Catalog): Translation {
 		if (r.role === 'table') repl.set(r.token, r.table!.sqlName);
 		else if (r.role === 'column') repl.set(r.token, r.column!.sql);
 	}
+	expandStars(a, repl);
 	const headers = selectHeaders(a, repl);
 	let out = '';
 	a.tokens.forEach((t, i) => {
@@ -285,6 +286,66 @@ export function translate(src: string, catalog: Catalog): Translation {
 		if (h !== undefined) out += ` AS ${quoteAlways(h)}`;
 	});
 	return { sql: out, scope: a.scope };
+}
+
+// Une lecture (SELECT, WITH) liste les colonnes au lieu de « * » ou « Tableau.* » :
+// le résultat a les noms affichés, sans les colonnes techniques (_pos),
+// même dans un UNION de tableaux aux noms internes semblables.
+function expandStars(a: Analysis, repl: Map<number, string>): void {
+	const t = a.tokens;
+	const sig = t.map((_, i) => i).filter((i) => t[i].kind !== 'ws' && t[i].kind !== 'comment');
+	if (sig.length === 0 || !kw(t[sig[0]], 'SELECT', 'WITH')) return;
+	const byToken = new Map(a.resolved.map((r) => [r.token, r]));
+	const list = (o: SqlObject, prefix: string) =>
+		[...(o.kind === 'pivot' ? [] : [`${prefix}id`]), ...o.columns.map((c) => `${prefix}${c.sql} AS ${quoteAlways(c.name)}`)].join(', ');
+	for (let k = 0; k < sig.length; k++) {
+		if (t[sig[k]].text !== '*') continue;
+		const prev = t[sig[k - 1]];
+		const next = t[sig[k + 1]];
+		if (!next || !(next.text === ',' || kw(next, 'FROM'))) continue;
+		if (prev?.text === '.') {
+			// Tableau.* ou alias.*
+			const r = byToken.get(sig[k - 2]);
+			if (!r?.table) continue;
+			const q = r.role === 'alias' ? t[sig[k - 2]].text : r.table.sqlName;
+			repl.set(sig[k - 2], '');
+			repl.set(sig[k - 1], '');
+			repl.set(sig[k], list(r.table, q + '.'));
+			continue;
+		}
+		if (!(kw(prev, 'SELECT', 'DISTINCT', 'ALL') || prev?.text === ',')) continue;
+		// Tableaux du FROM de ce SELECT : tous connus, sans sous-requête.
+		let j = k + 1;
+		let depth = 0;
+		while (j < sig.length && !(depth === 0 && kw(t[sig[j]], 'FROM'))) {
+			if (t[sig[j]].text === '(') depth++;
+			else if (t[sig[j]].text === ')' && --depth < 0) break;
+			j++;
+		}
+		if (j >= sig.length || !kw(t[sig[j]], 'FROM')) continue;
+		const from: { o: SqlObject; q: string }[] = [];
+		let ok = true;
+		for (j++; j < sig.length; j++) {
+			const x = t[sig[j]];
+			if (x.text === ')' || x.text === ';' || kw(x, ...clauseEnd.filter((w) => w !== 'ON' && w !== 'USING'))) break;
+			if (x.text === '(') {
+				// USING (…) ou ON f(…) : sauter ; sous-requête : abandonner.
+				if (kw(t[sig[j + 1]], 'SELECT', 'WITH', 'VALUES')) {
+					ok = false;
+					break;
+				}
+				for (let d = 1; d > 0 && ++j < sig.length; ) d += t[sig[j]].text === '(' ? 1 : t[sig[j]].text === ')' ? -1 : 0;
+				continue;
+			}
+			const r = byToken.get(sig[j]);
+			if (r?.role === 'table' && t[sig[j + 1]]?.text !== '.') {
+				const al = byToken.get(sig[j + 1]) ?? byToken.get(sig[j + 2]);
+				from.push({ o: r.table!, q: al?.role === 'alias' && al.table === r.table ? t[al.token].text : r.table!.sqlName });
+			} else if (isName(x) && !r && (kw(t[sig[j - 1]], 'FROM', 'JOIN') || t[sig[j - 1]].text === ',')) ok = false; // tableau inconnu (CTE…)
+		}
+		if (!ok || from.length === 0) continue;
+		repl.set(sig[k], from.map((f) => list(f.o, from.length > 1 ? f.q + '.' : '')).join(', '));
+	}
 }
 
 // Pour chaque élément sans alias du premier SELECT, dont un nom a été traduit,

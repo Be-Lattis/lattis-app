@@ -72,7 +72,7 @@ describe('translate', () => {
 		expect(tr('SELECT count(*) n, sum(Montant) AS total, upper(Date) FROM "Ventes 2026"')).toBe(
 			'SELECT count(*) n, sum(c_1) AS total, upper(c_2) AS "upper(Date)" FROM t_2'
 		);
-		expect(tr('SELECT DISTINCT * FROM Clients')).toBe('SELECT DISTINCT * FROM t_1');
+		expect(tr('SELECT DISTINCT * FROM Clients')).toBe('SELECT DISTINCT id, c_0 AS "Code", c_1 AS "Nom client", c_2 AS "Ville" FROM t_1');
 		expect(tr('SELECT Ville AS v FROM Clients GROUP BY Ville ORDER BY count(*) DESC')).toBe('SELECT c_2 AS v FROM t_1 GROUP BY c_2 ORDER BY count(*) DESC');
 	});
 
@@ -99,6 +99,30 @@ describe('analyze', () => {
 			['"Ventes 2026"', 'table'],
 			['v', 'alias']
 		]);
+	});
+});
+
+describe('SELECT *', () => {
+	it('liste les colonnes affichées, garde id, sans _pos', () => {
+		expect(tr('SELECT * FROM Clients')).toBe('SELECT id, c_0 AS "Code", c_1 AS "Nom client", c_2 AS "Ville" FROM t_1');
+	});
+	it("garde les noms d'origine dans un UNION", () => {
+		expect(tr('SELECT *, 2021 AS Année FROM Clients UNION SELECT *, 2022 FROM "Ventes 2026"')).toBe(
+			'SELECT id, c_0 AS "Code", c_1 AS "Nom client", c_2 AS "Ville", 2021 AS Année FROM t_1 UNION SELECT id, c_0 AS "Code", c_1 AS "Montant", c_2 AS "Date", 2022 FROM t_2'
+		);
+	});
+	it('préfixe dans une jointure et sait Tableau.*', () => {
+		expect(tr('SELECT c.*, v.Montant FROM Clients c JOIN "Ventes 2026" v USING (c_0)')).toBe(
+			'SELECT c.id, c.c_0 AS "Code", c.c_1 AS "Nom client", c.c_2 AS "Ville", v.c_1 AS "v.Montant" FROM t_1 c JOIN t_2 v USING (c_0)'
+		);
+		expect(tr('SELECT * FROM Clients, "Ventes 2026" v')).toBe(
+			'SELECT t_1.id, t_1.c_0 AS "Code", t_1.c_1 AS "Nom client", t_1.c_2 AS "Ville", v.id, v.c_0 AS "Code", v.c_1 AS "Montant", v.c_2 AS "Date" FROM t_1, t_2 v'
+		);
+	});
+	it('laisse * pour une sous-requête, un tableau inconnu ou une écriture', () => {
+		expect(tr('SELECT * FROM (SELECT Ville FROM Clients)')).toBe('SELECT * FROM (SELECT c_2 FROM t_1)');
+		expect(tr('WITH x AS (SELECT 1) SELECT * FROM x')).toBe('WITH x AS (SELECT 1) SELECT * FROM x');
+		expect(tr('SELECT count(*) FROM Clients')).toBe('SELECT count(*) FROM t_1');
 	});
 });
 
