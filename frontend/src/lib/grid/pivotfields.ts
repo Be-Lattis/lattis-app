@@ -145,6 +145,50 @@ export function removeField(cfg: PivotConfig, field: string): PivotConfig {
 	return tidy(c);
 }
 
+/**
+ * Change le tableau source (« Changer la source… », comme Excel) : les
+ * champs qui existent dans la nouvelle source sont gardés (sous leur nom
+ * exact), les autres retirés de toutes les zones avec leur tri et leurs
+ * valeurs gardées ; les groupes pliés repartent dépliés. Un rapport vidé
+ * compte les lignes.
+ */
+export function changeSource(cfg: PivotConfig, source: string, fields: PivotField[]): PivotConfig {
+	const c = clone(cfg);
+	const names = new Map(fields.filter((f) => f.type !== 'formula').map((f) => [f.name.toLowerCase(), f.name]));
+	const keep = (f: string) => names.get(f.toLowerCase());
+	c.source = source;
+	c.rowFields = (c.rowFields ?? []).map(keep).filter((f): f is string => !!f);
+	c.cols = c.cols ? keep(c.cols) : undefined;
+	c.values = (c.values ?? []).flatMap((v) => {
+		if (!v.field) return [v];
+		const f = keep(v.field);
+		return f ? [{ ...v, field: f }] : [];
+	});
+	const kept = (list?: { field: string; values: string[] }[]) =>
+		(list ?? []).flatMap((x) => {
+			const f = keep(x.field);
+			return f ? [{ ...x, field: f }] : [];
+		});
+	c.filters = kept(c.filters);
+	c.items = kept(c.items);
+	if (!c.items.length) delete c.items;
+	if (c.sort) {
+		const sort: Record<string, 'asc' | 'desc'> = {};
+		for (const [f, d] of Object.entries(c.sort)) {
+			const k = keep(f);
+			if (k) sort[k] = d;
+		}
+		c.sort = sort;
+		if (!Object.keys(sort).length) delete c.sort;
+	}
+	delete c.collapseAll;
+	delete c.collapsed;
+	delete c.expanded;
+	tidy(c);
+	if (isEmpty(c)) c.values = [{ agg: 'count' }];
+	return c;
+}
+
 /** Un champ peut-il aller dans cette zone ? (Nombre de lignes : Valeurs seulement.) */
 export const accepts = (z: Zone, field: string) => z === 'values' || field !== ROW_COUNT;
 

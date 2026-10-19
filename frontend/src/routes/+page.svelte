@@ -1965,7 +1965,7 @@
 						bind:this={sheet}
 						{data}
 						source={mode === 'demo' ? demoSource : docSource}
-						sources={(help?.tables ?? []).map((t) => ({ name: t.name, columns: t.columns ?? [], types: t.types ?? [] }))}
+						sources={(help?.tables ?? []).map((t) => ({ name: t.name, columns: t.columns ?? [], types: t.types ?? [], kind: t.kind }))}
 						catalog={mode === 'doc' && help
 							? { functions: help.functions ?? [], tables: (help.tables ?? []).filter((t) => t.kind !== 'pivot'), names: (layout?.names ?? []).map((n) => n.name) }
 							: undefined}

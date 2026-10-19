@@ -72,7 +72,8 @@
 	import type { BoxStatsIn } from '#lib/chart/shapes.js';
 	import { svgToPng } from '#lib/chart/image.js';
 	import PivotPanel from './PivotPanel.svelte';
-	import { panelAtCell } from './pivotfields';
+	import { panelAtCell, changeSource } from './pivotfields';
+	import { brokenPivotAt, pivotsCleared } from './pivotzone';
 	import SheetButtons from './SheetButtons.svelte';
 	import { BUTTON_H, BUTTON_W, type ButtonConfig, type ControlKind, type SheetButton } from './buttons';
 	import { applyRules, computeStats, mergeStats, parseRules, prepareStats, reqKey, statsReq, todaySerial, type CfOut, type Rule, type RuleEnv, type RuleStats, type Stats, type StatsReq } from './rules';
@@ -570,7 +571,7 @@
 		/** Fonctions et tableaux du classeur, pour l'aide à la saisie des formules. */
 		catalog?: Catalog;
 		/** Tableaux et tableaux croisés de toutes les feuilles (sources de graphiques et de TCD). */
-		sources?: { name: string; columns: string[]; types: string[] }[];
+		sources?: { name: string; columns: string[]; types: string[]; kind?: string }[];
 		onstatus?: (s: SheetStatus) => void;
 		/** Lance la mesure dès l'ouverture et transmet le résultat (mode LATTIS_BENCH). */
 		autoBench?: (result: string) => void;
@@ -5386,6 +5387,8 @@
 		pivots.find((p) => !p.error && (p.anchor ?? p.row) <= r1 && p.row + p.cells.length - 1 >= r0 && p.col <= c1 && p.col + p.cells[0].length - 1 >= c0);
 	// Un tableau croisé est calculé : ses cellules ne se saisissent pas (comme Excel).
 	const PIVOT_READONLY = 'Un tableau croisé ne se modifie pas cellule par cellule : double-cliquez dessus pour changer ses champs';
+	// Suppr sur une partie d'un tableau croisé (Excel refuse aussi).
+	const PIVOT_PARTIAL = 'Une partie d’un tableau croisé ne s’efface pas : sélectionnez-le en entier pour le supprimer, ou clic droit › Supprimer le tableau croisé';
 	// Tableau chargé par une requête (Power Query) : ses cellules ne se
 	// saisissent pas, l'actualisation les remplacerait. Ses bords (ligne
 	// dessous, colonnes à côté) : le moteur décide (un total, une note ou une
@@ -5416,6 +5419,35 @@
 
 	// Volet latéral : champs du TCD ou mise en forme du graphique.
 	let panel = $state<{ kind: 'pivot' | 'chart'; id: number } | null>(null);
+	/** TCD dont le volet s'ouvre sur la liste des sources (« Changer la source… »). */
+	let pivotSourcePick = $state<number | null>(null);
+
+	/** Supprime un tableau croisé, en erreur ou non (volet, clic droit). */
+	function removePivot(p: SheetPivot) {
+		if (panel?.kind === 'pivot' && panel.id === p.id) panel = null;
+		const del = source.deletePivot;
+		void menuAction(del && (() => del(p.id))).then((ok) => ok && say(`Tableau croisé « ${p.config.name ?? ''} » supprimé (Ctrl+Z pour annuler)`));
+	}
+
+	/** Tableaux qui peuvent devenir la source d'un TCD (pas un TCD). */
+	const pivotSources = (p: SheetPivot) => sources.filter((s) => s.kind !== 'pivot' && s.name !== p.config.name).map((s) => s.name);
+
+	/** Rattache un TCD à un autre tableau source : les champs présents y sont gardés. */
+	function repointPivot(p: SheetPivot, name: string) {
+		const set = source.setPivot;
+		pivotSourcePick = null;
+		const cfg = changeSource($state.snapshot(p.config) as PivotConfig, name, sourceColumns(name).map((c) => ({ name: c.name, type: c.type })));
+		void menuAction(set && (() => set(p.id, cfg)), true);
+	}
+
+	/** « Changer la source… » : ouvre le volet du TCD sur la liste des sources. */
+	function pickPivotSource(p: SheetPivot) {
+		freeMenu = null;
+		active = { row: p.anchor ?? p.row, col: p.col };
+		anchor = { ...active };
+		pivotSourcePick = p.id;
+		panel = { kind: 'pivot', id: p.id };
+	}
 	let openPivotOnLoad = false;
 	let pivotPanelAt = '';
 
@@ -5950,7 +5982,9 @@
 		nameBox = cellName(active.row, active.col);
 		const err = errorAt(active.row, active.col);
 		if (err) message = explainError(err.code, err.formula, (r, c) => shown.get(key(r, c))?.text ?? cells.get(key(r, c))) || message;
-		const pv = pivotAt(active.row, active.col);
+		// Un TCD en erreur (source introuvable) ouvre aussi son volet sur la
+		// cellule de son message : le supprimer ou changer sa source.
+		const pv = pivotAt(active.row, active.col) ?? brokenPivotAt(pivots, active.row, active.col);
 		// Le volet du TCD reste ouvert quand le TCD rétrécit sous la cellule
 		// active (filtre, champ retiré) : il se ferme quand on la déplace.
 		// Graphique sélectionné (même posé sur le TCD, ou relu après son
@@ -7788,6 +7822,15 @@
 			say(QUERY_READONLY);
 			return;
 		}
+		// Tableaux croisés : pris en entier (ou en erreur), supprimés avec le
+		// reste ; touchés en partie seulement, rien ne s'efface (Excel).
+		const pv = pivotsCleared(pivots, range);
+		if (pv.partial) {
+			say(PIVOT_PARTIAL);
+			return;
+		}
+		const pivotGone = pv.gone.length === 1 ? `Tableau croisé « ${pv.gone[0].config.name ?? ''} » supprimé (Ctrl+Z pour annuler)` : pv.gone.length ? `${pv.gone.length} tableaux croisés supprimés (Ctrl+Z pour annuler)` : '';
+		if (panel?.kind === 'pivot' && pv.gone.some((p) => p.id === panel!.id)) panel = null;
 		const wipe = all ? source.clearCells : undefined;
 		// Les tableaux entièrement compris dans la zone sont supprimés.
 		const whole = entries.filter((e) => e.t.row >= r0 && e.last <= r1 && e.t.col >= c0 && e.lastCol <= c1);
@@ -7800,6 +7843,7 @@
 					() => {
 						if (tables.length > 1) say(`${tables.length} tableaux supprimés (Ctrl+Z pour annuler)`);
 						else if (tables.length) say(`Tableau « ${tables[0].name} » supprimé (Ctrl+Z pour annuler)`);
+						else if (pivotGone) say(pivotGone);
 						else if (all) say('Cellules supprimées (Ctrl+Z pour annuler)');
 						refreshFx();
 						schedule();
@@ -7826,6 +7870,19 @@
 		if (n > 1000) {
 			say('Effacement limité à 1 000 cellules pour l’instant');
 			return;
+		}
+		if (pv.gone.length && source.deletePivot) {
+			const del = source.deletePivot;
+			const ids = pv.gone.map((p) => p.id);
+			writing = writing.catch(() => undefined).then(async () => {
+				try {
+					for (const id of ids) await del(id);
+					say(pivotGone);
+				} catch (err) {
+					say(String((err as Error)?.message ?? err));
+				}
+			});
+			await writing;
 		}
 		if (whole.length && source.deleteTables) {
 			const del = source.deleteTables;
@@ -9874,6 +9931,17 @@
 						</Submenu>
 					{/if}
 				{/if}
+				{#if !m.kind && source.deletePivot}
+					<!-- Tout tableau croisé, même en erreur (source introuvable) : il se supprime ; en erreur, il se rattache à un autre tableau. -->
+					{@const dp = pivotAt(active.row, active.col) ?? brokenPivotAt(pivots, active.row, active.col)}
+					{#if dp}
+						<hr />
+						{#if dp.error && source.setPivot && pivotSources(dp).length}
+							<button title="Rattacher le tableau croisé à un autre tableau : les champs qui y existent sont gardés" onclick={() => pickPivotSource(dp)}>Changer la source…</button>
+						{/if}
+						<button onclick={() => removePivot(dp)}>Supprimer le tableau croisé</button>
+					{/if}
+				{/if}
 				{#if !m.kind}
 					{@const join = !!source.joinTable && keptOut(active.row, active.col)}
 					{@const asTable = !!source.formatAsTable && inRangeZone(active.row, active.col)}
@@ -10590,12 +10658,15 @@
 				customLists={source.customLists}
 				setCustomLists={source.setCustomLists}
 				onchange={(cfg) => menuAction(source.setPivot && (() => source.setPivot!(pv.id, cfg)), true)}
-				ondelete={() => {
-					panel = null;
-					menuAction(source.deletePivot && (() => source.deletePivot!(pv.id)));
-				}}
+				ondelete={() => removePivot(pv)}
+				sources={pv.error && source.setPivot ? pivotSources(pv) : []}
+				onsource={(name) => repointPivot(pv, name)}
+				pickSource={pivotSourcePick === pv.id}
 				{locked}
-				onclose={() => (panel = null)}
+				onclose={() => {
+					panel = null;
+					pivotSourcePick = null;
+				}}
 			/>
 			{/key}
 		{/if}

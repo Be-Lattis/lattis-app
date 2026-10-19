@@ -61,6 +61,14 @@
 		/** Rend faux si l'écriture est refusée : le brouillon revient alors à la configuration. */
 		onchange: (cfg: PivotConfig) => unknown;
 		ondelete: () => void;
+		/**
+		 * TCD en erreur (source introuvable) : les tableaux qui peuvent devenir
+		 * sa source, et le changement de source (« Changer la source… »).
+		 */
+		sources?: string[];
+		onsource?: (source: string) => unknown;
+		/** Ouvert par « Changer la source… » : la liste des sources prend le focus. */
+		pickSource?: boolean;
 		onclose: () => void;
 		/** Feuille protégée : le message, et les champs grisés. */
 		locked?: string;
@@ -69,7 +77,12 @@
 		setCustomLists?: (lists: CustomList[]) => Promise<unknown>;
 	}
 
-	let { config, fields, error = '', filterValues, onchange, ondelete, onclose, resizable = true, locked = '', customLists, setCustomLists }: Props = $props();
+	let { config, fields, error = '', filterValues, onchange, ondelete, sources = [], onsource, pickSource = false, onclose, resizable = true, locked = '', customLists, setCustomLists }: Props = $props();
+
+	let sourceEl = $state<HTMLElement>();
+	$effect(() => {
+		if (pickSource && sourceEl) untrack(() => sourceEl!.querySelector<HTMLElement>('button, select, input')?.focus());
+	});
 
 	/** Tri personnalisé… d'un champ des lignes ou des colonnes : son dialogue ouvert. */
 	let customField = $state<string | null>(null);
@@ -580,6 +593,13 @@
 
 	{#if error}
 		<p class="error" role="alert"><Icon name="warning" size={16} /><span>{error}</span></p>
+		{#if onsource && sources.length}
+			<!-- Comme « Changer la source de données » d'Excel : les champs présents dans le nouveau tableau sont gardés. -->
+			<div class="source" bind:this={sourceEl}>
+				<span>Changer la source :</span>
+				<Select value="" options={[{ value: '', label: 'Choisir un tableau…' }, ...sources.map((n) => ({ value: n, label: n }))]} onchange={(n) => n && onsource(n)} title="Tableau source du tableau croisé" />
+			</div>
+		{/if}
 	{:else if isEmpty(draft)}
 		<p class="note">Le rapport est vide : cochez des champs ci-dessus, ou glissez-les dans les zones. Les nombres vont en Valeurs, le reste en Lignes.</p>
 	{:else if !draft.values?.length}
@@ -1066,6 +1086,11 @@
 		background: #fff8e6;
 		border-color: #f0d48a;
 		color: #7a5b00;
+	}
+	.source {
+		display: flex;
+		gap: 6px;
+		align-items: center;
 	}
 	.error {
 		display: flex;

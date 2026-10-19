@@ -125,17 +125,35 @@ func (m *Model) DeletePivot(ctx context.Context, id int64) error {
 		if err := t.guardObject(`_lattis_pivots`, id); err != nil {
 			return err
 		}
-		var sheet int64
-		var row, col int
-		var cfg string
-		if err := t.row(`SELECT sheet, row, col, config FROM _lattis_pivots WHERE id = ?`, id).Scan(&sheet, &row, &col, &cfg); err != nil {
-			return err
-		}
-		return t.apply(
-			[]stmt{st(`DELETE FROM _lattis_pivots WHERE id = ?`, id)},
-			[]stmt{st(`INSERT INTO _lattis_pivots (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, id, sheet, row, col, cfg)},
-		)
+		return t.deletePivot(id)
 	})
+}
+
+// deletePivot retire un tableau croisé (annulable).
+func (t *tx) deletePivot(id int64) error {
+	var sheet int64
+	var row, col int
+	var cfg string
+	if err := t.row(`SELECT sheet, row, col, config FROM _lattis_pivots WHERE id = ?`, id).Scan(&sheet, &row, &col, &cfg); err != nil {
+		return err
+	}
+	return t.apply(
+		[]stmt{st(`DELETE FROM _lattis_pivots WHERE id = ?`, id)},
+		[]stmt{st(`INSERT INTO _lattis_pivots (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, id, sheet, row, col, cfg)},
+	)
+}
+
+// pivotRect : la zone d'un tableau croisé calculé sur sa feuille, filtres de
+// rapport compris ; en erreur, sa seule cellule (celle du message).
+func pivotRect(p PivotInfo) Rect {
+	if p.Error != "" || len(p.Cells) == 0 {
+		return Rect{p.Row, p.Col, p.Row, p.Col}
+	}
+	h := len(p.Cells)
+	if n := len(p.Config.Filters); n > 0 {
+		h += n + 1
+	}
+	return Rect{p.Row, p.Col, p.Row + h - 1, p.Col + len(p.Cells[0]) - 1}
 }
 
 // pivots donne les tableaux croisés d'une feuille, calculés.

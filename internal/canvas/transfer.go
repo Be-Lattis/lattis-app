@@ -887,6 +887,9 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 				}
 			}
 		}
+		if err := t.clearPivots(sheet, zone); err != nil {
+			return err
+		}
 		if all {
 			return t.clearFree(sheet, r0, c0, r1, c1)
 		}
@@ -895,4 +898,24 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 		}
 		return t.deleteWhere(`_lattis_cells`, `sheet = ? AND row BETWEEN ? AND ? AND col BETWEEN ? AND ?`, sheet, r0, r1, c0, c1)
 	})
+}
+
+// clearPivots supprime les tableaux croisés effacés avec la zone, comme
+// Excel : un TCD pris en entier (filtres de rapport compris), ou un TCD en
+// erreur (source introuvable, colonne disparue) dont la cellule s'y trouve.
+// Une partie seulement d'un TCD sain reste (l'interface l'a refusée).
+func (t *tx) clearPivots(sheet int64, zone Rect) error {
+	ps, err := t.pivots(sheet)
+	if err != nil {
+		return err
+	}
+	for _, p := range ps {
+		if r := pivotRect(p); !(zone.has(r.R0, r.C0) && zone.has(r.R1, r.C1)) {
+			continue
+		}
+		if err := t.deletePivot(p.ID); err != nil {
+			return err
+		}
+	}
+	return nil
 }
