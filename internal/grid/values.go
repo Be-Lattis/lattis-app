@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 )
 
 // Type est le type logique d'une colonne, tel qu'affiché à l'utilisateur.
@@ -78,29 +77,6 @@ func Parse(t Type, raw string) (any, error) {
 	default:
 		return raw, nil
 	}
-}
-
-// ParseDate lit une date saisie à la française : jj/mm/aaaa, ISO aaaa-mm-jj,
-// ou jj/mm (année en cours, comme Excel).
-func ParseDate(s string) (time.Time, bool) {
-	s = strings.TrimSpace(s)
-	for _, layout := range []string{"02/01/2006", "2/1/2006", "2006-01-02"} {
-		if d, err := time.Parse(layout, s); err == nil {
-			return d, true
-		}
-	}
-	for _, layout := range []string{"02/01", "2/1"} {
-		// La date est recomposée avec l'année en cours.
-		if d, err := time.Parse(layout, s); err == nil {
-			y := time.Now().Year()
-			out := time.Date(y, d.Month(), d.Day(), 0, 0, 0, 0, time.UTC)
-			if out.Day() != d.Day() {
-				return time.Time{}, false // 29/02 d'une année non bissextile
-			}
-			return out, true
-		}
-	}
-	return time.Time{}, false
 }
 
 // decimalRe est la forme d'un décimal saisi, après numberText (ni « inf »

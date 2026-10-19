@@ -1,6 +1,7 @@
 package formula
 
 import (
+	"github.com/lalamefine/lattis/internal/grid"
 	"fmt"
 	"math"
 	"strings"
@@ -73,13 +74,17 @@ var dateLayouts = []string{
 }
 
 // ParseDate lit une date écrite en texte : ISO (stockage des colonnes date)
-// ou jj/mm/aaaa (saisie française).
+// ou jj/mm/aaaa (saisie française), et les formes de grid.ParseFullDate.
 func ParseDate(s string) (float64, bool) {
 	s = strings.TrimSpace(s)
 	for _, l := range dateLayouts {
 		if t, err := time.Parse(l, s); err == nil {
 			return TimeSerial(t), true
 		}
+	}
+	// Formes courtes et mois en lettres (19/10/26, 19-10-2026, 19 oct. 2026).
+	if t, ok := grid.ParseFullDate(s); ok {
+		return TimeSerial(t), true
 	}
 	return 0, false
 }
