@@ -5,13 +5,16 @@
 	// la correspondance des colonnes, ce que devient le résultat et les anciens
 	// onglets, un aperçu des premières lignes, puis Regrouper (une seule étape
 	// d'annulation). Les avertissements (colonne appariée, clé retirée,
-	// formules à reprendre) sont en orange, comme dans la barre d'état.
+	// formules à reprendre) sont en orange, comme dans la barre d'état. Avant
+	// de valider, le volet dit ce que deviennent les formules qui citaient
+	// les anciens onglets : reprises sur le tableau commun filtré (avant →
+	// après) ou à reprendre à la main (§8).
 	import { untrack } from 'svelte';
 	import type { MergePlan, MergePreview } from '#bindings/internal/canvas/models.js';
 	import { resizePanel } from '#lib/ui/resize.js';
 	import { panelKeys } from '#lib/ui/focus.js';
 	import PanelHeader from '#lib/ui/PanelHeader.svelte';
-	import { cellText, oldLabel, previewWarnings, withTables } from './mergesheets';
+	import { cellText, oldHint, oldLabel, previewWarnings, refCounts, withTables } from './mergesheets';
 
 	interface Props {
 		/** Plan de départ (groupe détecté, ou sélection d'onglets). */
@@ -105,6 +108,8 @@
 
 	const warnings = $derived(view ? previewWarnings(view) : []);
 	const effectiveOld = $derived(old || view?.old || 'delete');
+	const counts = $derived(view ? refCounts(view) : '');
+	const hint = $derived(oldHint(view, effectiveOld));
 
 	function toggle(t: string) {
 		const s = new Set(checked);
@@ -240,6 +245,7 @@
 			{#each ['delete', 'hide'] as o (o)}
 				<label class="check"><input type="radio" name="old" value={o} checked={effectiveOld === o} onchange={() => (old = o as 'delete' | 'hide')} /> {oldLabel(o)}</label>
 			{/each}
+			{#if hint}<p class="hint">{hint}</p>{/if}
 		</fieldset>
 	</section>
 
@@ -249,11 +255,22 @@
 			{#each warnings as w (w)}<li>{w}</li>{/each}
 		</ul>
 	{/if}
-	{#if view?.pending?.length}
+	{#if counts}
+		<p class="counts">{counts}</p>
+	{/if}
+	{#if view?.rewritten?.length}
 		<details>
-			<summary>Formules à reprendre ({view.pending.length})</summary>
+			<summary>Formules reprises ({view.rewritten.length})</summary>
 			<ul class="pending">
-				{#each view.pending as p, i (i)}<li><strong>{p.where}</strong> <code>{p.formula}</code></li>{/each}
+				{#each view.rewritten as r, i (i)}<li><strong>{r.where}</strong> <code>{r.formula}</code> → <code>{r.after}</code></li>{/each}
+			</ul>
+		</details>
+	{/if}
+	{#if view?.pending?.length}
+		<details open>
+			<summary>À reprendre à la main ({view.pending.length})</summary>
+			<ul class="pending">
+				{#each view.pending as p, i (i)}<li><strong>{p.where}</strong> <code>{p.formula}</code>{#if p.why}<span class="why"> : {p.why}</span>{/if}</li>{/each}
 			</ul>
 		</details>
 	{/if}
@@ -411,6 +428,21 @@
 		color: #4b5563;
 	}
 	.pending code {
+		font-size: 11px;
+	}
+	.pending li {
+		margin-bottom: 3px;
+	}
+	.why {
+		color: #92400e;
+	}
+	.counts {
+		margin: 0;
+		font-weight: 600;
+	}
+	.hint {
+		margin: 4px 0 0;
+		color: #92400e;
 		font-size: 11px;
 	}
 	.acts {

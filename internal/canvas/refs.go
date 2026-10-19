@@ -457,6 +457,12 @@ func renameChartConfig(m map[string]any, rc refChange, headers map[string]map[st
 	changed = renameField(m, "x", cols, src) || changed
 	changed = renameFieldList(m, "series", cols, src) || changed
 	changed = renameField(m, "colorBy", cols, src) || changed
+	filters, _ := m["filters"].([]any)
+	for _, v := range filters {
+		if f, ok := v.(map[string]any); ok {
+			changed = renameField(f, "field", cols, src) || changed
+		}
+	}
 	if n := rc.Table(src); n != src {
 		m["source"], changed = n, true
 	}

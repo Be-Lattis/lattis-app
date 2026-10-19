@@ -77,7 +77,13 @@
 		if (!src || name === config.source) return;
 		const f = chartFields(config.kind, src.columns);
 		if (!f.series.length) return;
-		set({ source: name, x: f.x, series: f.series, colors: BY_CATEGORY.has(config.kind) ? config.colors : undefined, secondary: undefined, seriesKinds: undefined });
+		set({ source: name, x: f.x, series: f.series, colors: BY_CATEGORY.has(config.kind) ? config.colors : undefined, secondary: undefined, seriesKinds: undefined, filters: undefined });
+	}
+	// Filtres du graphique (posés par Regrouper des onglets : Mois = Janvier) : montrés, retirables.
+	const filters = $derived((config.filters ?? []).filter((f) => f.values?.length));
+	function dropFilter(i: number) {
+		const next = filters.filter((_, j) => j !== i);
+		set({ filters: next.length ? next : undefined });
 	}
 	// Secteurs, anneau, entonnoir, compartimentage : une couleur par catégorie.
 	const byCategory = $derived(BY_CATEGORY.has(config.kind));
@@ -240,6 +246,12 @@
 				<Select value={config.source} options={sources.map((s) => ({ value: s.name, label: s.pivot ? `${s.name} (TCD)` : s.name }))} onchange={setSource} />
 			</label>
 		{/if}
+		{#each filters as f, i (f.field)}
+			<div class="line filter" title="Le graphique ne lit que les lignes où {f.field} vaut {(f.values ?? []).join(' ou ')}">
+				<span>Filtre</span>
+				<span class="fv">{f.field} = {(f.values ?? []).join(', ')} <button type="button" title="Retirer le filtre : toutes les lignes du tableau" disabled={!!locked} onclick={() => dropFilter(i)}>✕</button></span>
+			</div>
+		{/each}
 		<label class="line">Axe X
 			<Select value={config.x} options={columns.map((c) => ({ value: c, label: c }))} onchange={(x) => set({ x, ...reorderSeries(config, config.series.filter((s) => s !== x)) })} />
 		</label>
@@ -548,6 +560,18 @@
 	.hint + .line,
 	.line + .hint {
 		margin-bottom: 6px;
+	}
+	.filter .fv {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+	}
+	.filter button {
+		border: 1px solid #c9cdd2;
+		background: #fff;
+		border-radius: 3px;
+		cursor: pointer;
+		padding: 0 5px;
 	}
 	.draft {
 		display: flex;

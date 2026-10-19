@@ -372,9 +372,10 @@ func TestMergeSheetsKey(t *testing.T) {
 	}
 }
 
-// Une synthèse qui cite les tableaux : à reprendre (lot 2), les anciens
-// onglets sont alors gardés masqués, leurs tableaux renommés (les formules
-// suivent et continuent de marcher).
+// Une synthèse qui cite des lignes précises des tableaux : à reprendre (pas
+// d'équivalent sur une partie du tableau commun), les anciens onglets sont
+// alors gardés masqués, leurs tableaux renommés (les formules suivent et
+// continuent de marcher).
 func TestMergeSheetsPending(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
@@ -382,7 +383,7 @@ func TestMergeSheetsPending(t *testing.T) {
 	b := sheetWith(t, d, "Ventes 2024", [][]string{{"Client", "Montant"}, {"B", "20"}})
 	syn := sheetWith(t, d, "Synthèse", nil)
 	ta, tb := tableOn(t, d, a), tableOn(t, d, b)
-	if _, err := d.SetCell(ctx, syn, 0, 0, "=SOMME("+ta+"[Montant])+SOMME("+tb+"[Montant])"); err != nil {
+	if _, err := d.SetCell(ctx, syn, 0, 0, "="+ta+"[Montant][1]+SOMME("+tb+"[Montant])"); err != nil {
 		t.Fatal(err)
 	}
 	gs := similar(t, d)
@@ -393,7 +394,7 @@ func TestMergeSheetsPending(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(p.Pending) != 1 || p.Pending[0].Kind != "cell" || p.Pending[0].Where != "Synthèse A1" || p.Old != MergeOldHide {
+	if len(p.Pending) != 1 || p.Pending[0].Kind != "cell" || p.Pending[0].Where != "Synthèse A1" || p.Old != MergeOldHide || len(p.Rewritten) != 0 {
 		t.Fatalf("à reprendre : %+v (%s)", p.Pending, p.Old)
 	}
 	if p.Plan.Category.Name != "Année" || p.Rows[1][0] != int64(2024) {

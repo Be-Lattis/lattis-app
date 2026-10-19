@@ -224,6 +224,8 @@
 		bins?: number;
 		/** Lit aussi les lignes masquées par le filtre du tableau. */
 		hidden?: boolean;
+		/** Ne lit que les lignes dont la colonne field affiche l'une des valeurs (Regrouper des onglets : Mois = Janvier). */
+		filters?: { field: string; values: string[] | null }[] | null;
 		/** Courbes : cellule vide en intervalle (défaut), à zéro (zero) ou reliée (span). */
 		blanks?: string;
 		offX?: number;

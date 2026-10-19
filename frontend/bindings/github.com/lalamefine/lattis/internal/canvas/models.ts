@@ -282,6 +282,14 @@ export interface ChartConfig {
     "hidden"?: boolean;
 
     /**
+     * Filters : graphique tiré d'un tableau, ne lit que les lignes dont la
+     * colonne field affiche l'une des valeurs (comme le filtre de rapport
+     * d'un TCD) ; posé par Regrouper des onglets sur un graphique qui lisait
+     * un ancien onglet (Mois = Janvier).
+     */
+    "filters"?: PivotFilter[] | null;
+
+    /**
      * Blanks : courbes et aires, cellule vide en intervalle ("", comme
      * Excel), à zéro ("zero") ou reliée aux points voisins ("span").
      */
@@ -900,6 +908,12 @@ export interface MergePreview {
     "key": string;
     "keyKept": boolean;
     "keyNote": string;
+
+    /**
+     * Rewritten : ce qui sera repris sur le tableau commun filtré ; Pending :
+     * ce qui reste à reprendre à la main.
+     */
+    "rewritten": PendingRef[] | null;
     "pending": PendingRef[] | null;
 
     /**
@@ -931,6 +945,7 @@ export interface MergeResult {
     "old": string;
     "keyKept": boolean;
     "keyNote": string;
+    "rewritten": PendingRef[] | null;
     "pending": PendingRef[] | null;
     "notes": string[] | null;
     "notice": string;
@@ -1041,12 +1056,14 @@ export interface PageSetup {
 }
 
 /**
- * PendingRef est ce qui citait un ancien tableau et reste à reprendre à la
- * main (formule, colonne calculée, TCD, graphique, requête).
+ * PendingRef est ce qui citait un ancien tableau (formule, colonne
+ * calculée, règle de mise en forme, TCD, graphique, Document, contrôle,
+ * requête) : repris (After, la formule ou l'objet d'après) ou à reprendre à
+ * la main (Why, pourquoi).
  */
 export interface PendingRef {
     /**
-     * cell, column, pivot, chart, query
+     * cell, column, rule, pivot, chart, document, control, query
      */
     "kind": string;
     "sheet": number;
@@ -1055,6 +1072,8 @@ export interface PendingRef {
     "col": number;
     "where": string;
     "formula": string;
+    "after"?: string;
+    "why"?: string;
 }
 
 /**

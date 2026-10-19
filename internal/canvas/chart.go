@@ -64,6 +64,11 @@ type ChartConfig struct {
 	// d'Excel « Afficher les données des lignes masquées ») ; par défaut, un
 	// graphique ne montre que les lignes affichées.
 	Hidden bool `json:"hidden,omitempty"`
+	// Filters : graphique tiré d'un tableau, ne lit que les lignes dont la
+	// colonne field affiche l'une des valeurs (comme le filtre de rapport
+	// d'un TCD) ; posé par Regrouper des onglets sur un graphique qui lisait
+	// un ancien onglet (Mois = Janvier).
+	Filters []PivotFilter `json:"filters,omitempty"`
 	// Blanks : courbes et aires, cellule vide en intervalle ("", comme
 	// Excel), à zéro ("zero") ou reliée aux points voisins ("span").
 	Blanks string `json:"blanks,omitempty"`
@@ -322,12 +327,43 @@ func (t *tx) chartDataRaw(cfg ChartConfig) (chartResult, error) {
 }
 
 // chartSource : lignes lues par un graphique, celles qu'affiche le filtre du
-// tableau (toutes avec Hidden).
+// tableau (toutes avec Hidden), parmi celles que retiennent ses propres
+// filtres (Filters ; une colonne introuvable n'en retient aucune).
 func chartSource(cfg ChartConfig, tb Table) string {
-	if cfg.Hidden {
+	var conds []string
+	where := tb.where
+	if tb.choice != nil {
+		// Un filtre du graphique sur la colonne de l'onglet à choix l'emporte
+		// sur le choix de l'onglet (Janvier reste Janvier quand l'onglet
+		// montre Mars).
+		for _, f := range cfg.Filters {
+			if strings.EqualFold(f.Field, tb.choice.Col.Name) && len(f.Values) > 0 {
+				where = tb.userWhere
+			}
+		}
+	}
+	if !cfg.Hidden && where != "" {
+		conds = append(conds, "("+where+")")
+	}
+	for _, f := range cfg.Filters {
+		if len(f.Values) == 0 {
+			continue
+		}
+		k := colIndex(tb, f.Field)
+		if k < 0 {
+			conds = append(conds, "0")
+			continue
+		}
+		lits := make([]string, len(f.Values))
+		for i, v := range f.Values {
+			lits[i] = sqlLiteral(v)
+		}
+		conds = append(conds, textExpr(tb.Cols[k])+" IN ("+strings.Join(lits, ", ")+")")
+	}
+	if len(conds) == 0 {
 		return tb.sql()
 	}
-	return tb.view()
+	return "(SELECT * FROM " + tb.sql() + " WHERE " + strings.Join(conds, " AND ") + ") AS " + tb.sql()
 }
 
 // numericSQL : la valeur v si c'est un nombre, NULL sinon (un texte dans

@@ -208,12 +208,21 @@ func maskMerge(v canvas.MergeResult) canvas.MergeResult {
 	if v.KeyNote != "" {
 		v.KeyNote = "Pas de clé : une même valeur de clé est dans plusieurs onglets"
 	}
-	pending := make([]canvas.PendingRef, len(v.Pending))
-	for i, p := range v.Pending {
-		p.Formula = masked
-		pending[i] = p
+	refs := func(list []canvas.PendingRef) []canvas.PendingRef {
+		out := make([]canvas.PendingRef, len(list))
+		for i, p := range list {
+			p.Formula = masked
+			if p.After != "" {
+				p.After = masked
+			}
+			if p.Why != "" {
+				p.Why = masked
+			}
+			out[i] = p
+		}
+		return out
 	}
-	v.Pending = pending
+	v.Pending, v.Rewritten = refs(v.Pending), refs(v.Rewritten)
 	notes := make([]string, 0, len(v.Notes))
 	for _, n := range v.Notes {
 		if strings.HasPrefix(n, "Pas de clé") {

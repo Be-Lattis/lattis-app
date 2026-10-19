@@ -3,7 +3,6 @@ package canvas
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -22,10 +21,11 @@ import (
 // en tête (Mois, Année, Ville…) tirée des noms d'onglets. Une seule étape
 // d'annulation ; les lignes ne passent pas par le journal (comme Import).
 //
-// Premier lot : les formules, TCD et graphiques qui citaient les anciens
-// tableaux ne sont pas réécrits (lot 2) ; ils sont listés « à reprendre »,
-// et les anciens onglets sont alors gardés masqués plutôt que supprimés
-// (décision de Louis, §12.1).
+// Ce qui citait les anciens tableaux (formules, TCD, graphiques) est repris
+// sur le tableau commun filtré par la catégorie (lot 2, mergerefs.go) ; ce
+// qui n'a pas d'équivalent exact est listé « à reprendre », et les anciens
+// onglets sont alors gardés masqués plutôt que supprimés (décision de
+// Louis, §12.1).
 
 // ErrMerge signale un regroupement impossible.
 var ErrMergeSheets = errors.New("regrouper des onglets")
@@ -71,16 +71,20 @@ type MergePlan struct {
 	Slicer bool `json:"slicer,omitempty"`
 }
 
-// PendingRef est ce qui citait un ancien tableau et reste à reprendre à la
-// main (formule, colonne calculée, TCD, graphique, requête).
+// PendingRef est ce qui citait un ancien tableau (formule, colonne
+// calculée, règle de mise en forme, TCD, graphique, Document, contrôle,
+// requête) : repris (After, la formule ou l'objet d'après) ou à reprendre à
+// la main (Why, pourquoi).
 type PendingRef struct {
-	Kind      string `json:"kind"` // cell, column, pivot, chart, query
+	Kind      string `json:"kind"` // cell, column, rule, pivot, chart, document, control, query
 	Sheet     int64  `json:"sheet"`
 	SheetName string `json:"sheetName"`
 	Row       int    `json:"row"`
 	Col       int    `json:"col"`
 	Where     string `json:"where"`
 	Formula   string `json:"formula"`
+	After     string `json:"after,omitempty"`
+	Why       string `json:"why,omitempty"`
 }
 
 // MergePreview est l'aperçu d'un regroupement, pour le dialogue.
@@ -93,10 +97,13 @@ type MergePreview struct {
 	// Key : colonne clé ; KeyKept : gardée sur le tableau commun ; KeyNote :
 	// pourquoi elle ne l'est pas (« Pas de clé : F-001 est dans Janvier et
 	// dans Février »).
-	Key     string       `json:"key"`
-	KeyKept bool         `json:"keyKept"`
-	KeyNote string       `json:"keyNote"`
-	Pending []PendingRef `json:"pending"`
+	Key     string `json:"key"`
+	KeyKept bool   `json:"keyKept"`
+	KeyNote string `json:"keyNote"`
+	// Rewritten : ce qui sera repris sur le tableau commun filtré ; Pending :
+	// ce qui reste à reprendre à la main.
+	Rewritten []PendingRef `json:"rewritten"`
+	Pending   []PendingRef `json:"pending"`
 	// Old : ce que deviennent les anciens onglets si rien n'est choisi.
 	Old   string   `json:"old"`
 	Notes []string `json:"notes"`
@@ -116,6 +123,7 @@ type MergeResult struct {
 	Old       string       `json:"old"`
 	KeyKept   bool         `json:"keyKept"`
 	KeyNote   string       `json:"keyNote"`
+	Rewritten []PendingRef `json:"rewritten"`
 	Pending   []PendingRef `json:"pending"`
 	Notes     []string     `json:"notes"`
 	Notice    string       `json:"notice"`
@@ -384,15 +392,20 @@ func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 	}
 	// Colonnes calculées (§7, étape 4) : gardées en formule si elle est la
 	// même partout (noms des tableaux reportés), sinon en valeurs.
+	// Une formule qui lit son tableau entier par son nom (SOMME(Janvier[X]),
+	// le total du mois) changerait de sens sur le tableau commun (le total de
+	// l'année) : la colonne garde ses valeurs.
 	retarget := map[string]string{}
+	whole := map[string]formula.Filtered{}
 	for _, s := range j.srcs {
 		retarget[strings.ToLower(s.tb.Name)] = j.plan.Name
+		whole[strings.ToLower(s.tb.Name)] = formula.Filtered{}
 	}
 	j.formulas = make([]string, len(j.cols))
 	j.valued = make([]bool, len(j.cols))
 	for i, c := range j.cols {
 		var fs []string
-		some, all := false, true
+		some, all, cites := false, true, false
 		for _, s := range j.srcs {
 			k := s.from[i]
 			if k < 0 {
@@ -406,6 +419,9 @@ func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 			}
 			some = true
 			if n, err := formula.Parse(f, formula.EN); err == nil {
+				if _, c, _ := formula.FilterTables(n, whole); c {
+					cites = true
+				}
 				if x, ok := formula.RetargetTables(n, retarget); ok {
 					n = x
 				}
@@ -415,11 +431,39 @@ func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 		}
 		switch {
 		case !some:
+		case cites:
+			j.valued[i] = true
+			j.notes = append(j.notes, fmt.Sprintf("« %s » : la formule lit tout le tableau de son onglet, la colonne garde ses valeurs", c.Name))
 		case all && len(slices.Compact(slices.Clone(fs))) == 1:
 			j.formulas[i] = fs[0]
 		default:
 			j.valued[i] = true
 			j.notes = append(j.notes, fmt.Sprintf("« %s » : la formule n'est pas la même dans tous les onglets, la colonne garde ses valeurs", c.Name))
+		}
+		// Valeurs gardées : le type est celui des résultats (une part en
+		// décimal dans une colonne d'abord saisie en entiers), quand il se
+		// devine pour chaque onglet.
+		if j.valued[i] {
+			typ, known := grid.Type(""), true
+			for _, s := range j.srcs {
+				k := s.from[i]
+				if k < 0 {
+					continue
+				}
+				sc := s.tb.Cols[k]
+				r := sc.Type
+				if sc.Formula != "" {
+					r = t.computedResult(s.tb, sc)
+				}
+				if r == "" {
+					known = false
+					break
+				}
+				typ = Join(typ, r)
+			}
+			if known && typ != "" {
+				j.cols[i].Type = typ
+			}
 		}
 	}
 	// Clé : la colonne du résultat qui porte la clé des sources.
@@ -648,134 +692,6 @@ func (t *tx) deletableSheets(j *mergeJob) (map[int64]bool, error) {
 	return out, nil
 }
 
-// pendingRefs liste ce qui cite un tableau source hors des feuilles qui
-// partent (gone) : à reprendre à la main au premier lot (§8 : lot 2).
-func (t *tx) pendingRefs(j *mergeJob, gone map[int64]bool) ([]PendingRef, error) {
-	out := []PendingRef{}
-	src := map[string]bool{}
-	srcID := map[int64]bool{}
-	for _, s := range j.srcs {
-		src[strings.ToLower(s.tb.Name)] = true
-		srcID[s.tb.ID] = true
-	}
-	sheetNames := map[int64]string{}
-	rs, err := t.query(`SELECT id, name FROM _lattis_sheets`)
-	if err != nil {
-		return nil, err
-	}
-	for rs.Next() {
-		var id int64
-		var n string
-		if err := rs.Scan(&id, &n); err != nil {
-			rs.Close()
-			return nil, err
-		}
-		sheetNames[id] = n
-	}
-	rs.Close()
-	cites := func(n formula.Node, own string) bool {
-		for _, r := range refsOf(n, own) {
-			if src[strings.ToLower(r.table)] {
-				return true
-			}
-		}
-		return false
-	}
-	// Formules des cellules libres.
-	rs, err = t.query(`SELECT sheet, row, col, raw FROM _lattis_cells WHERE raw LIKE '=%' ORDER BY sheet, row, col`)
-	if err != nil {
-		return nil, err
-	}
-	for rs.Next() {
-		var p PendingRef
-		if err := rs.Scan(&p.Sheet, &p.Row, &p.Col, &p.Formula); err != nil {
-			rs.Close()
-			return nil, err
-		}
-		if gone[p.Sheet] {
-			continue
-		}
-		if n, err := formula.Parse(p.Formula, formula.FR); err == nil && cites(n, "") {
-			p.Kind, p.SheetName = "cell", sheetNames[p.Sheet]
-			p.Where = p.SheetName + " " + formula.ColumnLetters(p.Col) + fmt.Sprint(p.Row+1)
-			out = append(out, p)
-		}
-	}
-	rs.Close()
-	// Colonnes calculées des autres tableaux.
-	rs, err = t.query(`SELECT t.id, t.sheet, t.name, c.name, c.formula FROM _lattis_columns c JOIN _lattis_tables t ON t.id = c.tbl
-		WHERE c.formula IS NOT NULL AND c.formula <> '' ORDER BY t.id, c.pos`)
-	if err != nil {
-		return nil, err
-	}
-	for rs.Next() {
-		var id int64
-		var p PendingRef
-		var table, col, f string
-		if err := rs.Scan(&id, &p.Sheet, &table, &col, &f); err != nil {
-			rs.Close()
-			return nil, err
-		}
-		if srcID[id] || gone[p.Sheet] {
-			continue
-		}
-		if n, err := formula.Parse(f, formula.EN); err == nil && cites(n, table) {
-			p.Kind, p.SheetName = "column", sheetNames[p.Sheet]
-			p.Where = table + "[" + col + "]"
-			p.Formula = "=" + strings.TrimPrefix(formula.Format(n, formula.FR), "=")
-			out = append(out, p)
-		}
-	}
-	rs.Close()
-	// TCD et graphiques.
-	for _, o := range []struct{ table, kind, label string }{{`_lattis_pivots`, "pivot", "Tableau croisé"}, {`_lattis_charts`, "chart", "Graphique"}} {
-		rs, err := t.query(`SELECT sheet, row, col, config FROM ` + o.table + ` ORDER BY id`)
-		if err != nil {
-			return nil, err
-		}
-		for rs.Next() {
-			var p PendingRef
-			var cfg string
-			if err := rs.Scan(&p.Sheet, &p.Row, &p.Col, &cfg); err != nil {
-				rs.Close()
-				return nil, err
-			}
-			var m map[string]any
-			if gone[p.Sheet] || json.Unmarshal([]byte(cfg), &m) != nil {
-				continue
-			}
-			if source, _ := m["source"].(string); src[strings.ToLower(source)] {
-				p.Kind, p.SheetName = o.kind, sheetNames[p.Sheet]
-				p.Where = fmt.Sprintf("%s %s%d", p.SheetName, formula.ColumnLetters(p.Col), p.Row+1)
-				p.Formula = o.label + " sur « " + source + " »"
-				out = append(out, p)
-			}
-		}
-		rs.Close()
-	}
-	// Requêtes d'import qui lisent un tableau source.
-	rs, err = t.query(`SELECT name, source FROM _lattis_queries ORDER BY id`)
-	if err != nil {
-		return nil, err
-	}
-	for rs.Next() {
-		var name, source string
-		if err := rs.Scan(&name, &source); err != nil {
-			rs.Close()
-			return nil, err
-		}
-		var m map[string]any
-		if json.Unmarshal([]byte(source), &m) != nil {
-			continue
-		}
-		if tbl, _ := m["table"].(string); src[strings.ToLower(tbl)] {
-			out = append(out, PendingRef{Kind: "query", Where: "Requête « " + name + " »", Formula: "lit « " + tbl + " »"})
-		}
-	}
-	rs.Close()
-	return out, rs.Err()
-}
-
 // MergePreview prépare l'aperçu d'un regroupement (lecture pure) : plan
 // complété, 20 premières lignes, clé, formules à reprendre.
 func (m *Model) MergePreview(ctx context.Context, plan MergePlan) (MergePreview, error) {
@@ -812,9 +728,11 @@ func (m *Model) MergePreview(ctx context.Context, plan MergePlan) (MergePreview,
 		if err != nil {
 			return err
 		}
-		if p.Pending, err = t.pendingRefs(j, gone); err != nil {
+		refs, err := t.planMergeRefs(j, gone)
+		if err != nil {
 			return err
 		}
+		p.Rewritten, p.Pending = refs.rewritten, refs.pending
 		p.Old = j.plan.Old
 		if p.Old == "" {
 			p.Old = MergeOldDelete
@@ -886,7 +804,7 @@ func (m *Model) MergeSheets(ctx context.Context, plan MergePlan) (MergeResult, e
 }
 
 func (t *tx) mergeSheets(plan MergePlan) (MergeResult, error) {
-	res := MergeResult{Pending: []PendingRef{}, Notes: []string{}}
+	res := MergeResult{Rewritten: []PendingRef{}, Pending: []PendingRef{}, Notes: []string{}}
 	// 1. Garde-fous.
 	j, err := t.prepareMerge(plan)
 	if err != nil {
@@ -903,11 +821,12 @@ func (t *tx) mergeSheets(plan MergePlan) (MergeResult, error) {
 	if err != nil {
 		return res, err
 	}
-	pending, err := t.pendingRefs(j, gone)
+	refs, err := t.planMergeRefs(j, gone)
 	if err != nil {
 		return res, err
 	}
-	res.Pending = pending
+	pending := refs.pending
+	res.Rewritten, res.Pending = refs.rewritten, pending
 	res.Old = j.plan.Old
 	if res.Old == "" {
 		res.Old = MergeOldDelete
@@ -1105,6 +1024,12 @@ func (t *tx) mergeSheets(plan MergePlan) (MergeResult, error) {
 			res.Notes = append(res.Notes, fmt.Sprintf("%s citai%s les anciens tableaux : à reprendre", plural(len(pending), "Une formule ou un objet", fmt.Sprintf("%d formules ou objets", len(pending))), plural(len(pending), "t", "ent")))
 		}
 	}
+	// 6. Références (§8) : reprises sur le tableau commun filtré, une fois
+	// les anciens tableaux supprimés ou renommés (un ancien tableau peut
+	// porter le nom du tableau commun).
+	if err := t.applyMergeRefs(refs.ups); err != nil {
+		return res, err
+	}
 	// Nouvelle feuille, placée où était le premier onglet regroupé.
 	sheet, err := t.newSheet(j.plan.Sheet)
 	if err != nil {
@@ -1199,8 +1124,11 @@ func (t *tx) mergeSheets(plan MergePlan) (MergeResult, error) {
 	if keyNote != "" {
 		res.Notice += " ; " + keyNote
 	}
-	if len(pending) > 0 {
-		res.Notice += fmt.Sprintf(" ; %s à reprendre", plural(len(pending), "une formule", fmt.Sprintf("%d formules", len(pending))))
+	if n := len(res.Rewritten); n > 0 || len(pending) > 0 {
+		res.Notice += " ; " + refCounts(n, len(pending))
+	}
+	if h := summaryHint(j, res.Rewritten); h != "" {
+		res.Notes = append(res.Notes, h)
 	}
 	for _, k := range kept {
 		res.Notice += " ; " + k
@@ -1230,4 +1158,20 @@ func dedupe(vals []string) []string {
 		}
 	}
 	return out
+}
+
+// refCounts : « 14 formules reprises, 2 à reprendre à la main ».
+func refCounts(done, left int) string {
+	var parts []string
+	if done > 0 {
+		parts = append(parts, plural(done, "une formule reprise", fmt.Sprintf("%d formules reprises", done)))
+	}
+	if left > 0 {
+		what := plural(left, "une à reprendre à la main", fmt.Sprintf("%d à reprendre à la main", left))
+		if done == 0 {
+			what = plural(left, "une formule à reprendre à la main", fmt.Sprintf("%d formules à reprendre à la main", left))
+		}
+		parts = append(parts, what)
+	}
+	return strings.Join(parts, ", ")
 }

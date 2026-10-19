@@ -80,11 +80,26 @@ Les onglets vont ensemble quand au moins les deux tiers de leurs colonnes se ret
 2. **Colonne de catégorie** : son nom, pré-rempli selon les noms d'onglets (Mois, Année, Trimestre, Ville, la partie commune comme « Lot », sinon Catégorie) et toujours modifiable, son type, et la valeur tirée de chaque onglet, à corriger au besoin. Elle se place en tête du tableau, avec une liste déroulante de ses valeurs ;
 3. **Colonnes** : la correspondance (✓ présente, ∅ absente, « Montant € → Montant » appariée) et le type final ; une colonne qui passe en texte est signalée ;
 4. **Après** : le nom du tableau et de la nouvelle feuille, et ce que deviennent les anciens onglets : **supprimés** (par défaut) ou **gardés masqués**, leurs tableaux renommés `Janvier_ancien` ;
-5. **Aperçu** : les premières lignes et le nombre total de lignes.
+5. **Aperçu** : les premières lignes et le nombre total de lignes, puis le bilan des formules qui citaient les anciens onglets : « 14 formules reprises, 2 à reprendre à la main », avec la liste (feuille, cellule, formule avant → après).
 
 **Regrouper** fait tout en une seule étape : `Ctrl+Z` rend les onglets d'origine. La mise en forme et les saisies en erreur suivent leurs lignes. La **clé** est gardée si aucune valeur ne se répète d'un onglet à l'autre ; sinon le tableau commun n'a pas de clé (les valeurs restent), et Lattis le dit avec un exemple : « Pas de clé : F-001 est dans Janvier et dans Février ».
 
-Les formules, tableaux croisés et graphiques qui citaient les anciens tableaux (une feuille « Synthèse » avec `SOMME(Janvier[Montant])`) ne sont pas encore réécrits : le volet les liste « à reprendre », et les anciens onglets sont alors gardés masqués pour que ces formules continuent de marcher. Le regroupement est refusé sur une feuille protégée, sur un tableau filtré (retirez d'abord le filtre), chargé par une requête ou partagé sur un serveur.
+Ce qui citait les anciens tableaux est **repris** sur le tableau commun, limité au mois (à l'année, à la ville) de l'ancien onglet, dans la même étape d'annulation et avec les mêmes valeurs. Une feuille « Synthèse » qui faisait `SOMME(Janvier[Montant])`, `SOMME(Février[Montant])`… se reprend ainsi :
+
+| Avant | Après |
+|---|---|
+| `SOMME(Janvier[Montant])` | `SOMME.SI.ENS(Ventes[Montant]; Ventes[Mois]; "=Janvier")` |
+| `MOYENNE`, `MAX`, `MIN` d'une colonne (ou d'un calcul sur les colonnes, `SOMME(Janvier[Prix]*Janvier[Qté])`) | `MOYENNE.SI.ENS`, `MAX.SI.ENS`, `MIN.SI.ENS`, `SOMME.SI.ENS` |
+| `NBVAL(Janvier[Client])` | `NB.SI.ENS(Ventes[Client]; "<>"; Ventes[Mois]; "=Janvier")` |
+| `SOMME.SI`, `NB.SI`, `SOMME.SI.ENS`… | la même, en `.SI.ENS`, avec le critère du mois en plus |
+| `LIGNES(Janvier)` | `NB.SI.ENS(Ventes[Mois]; "=Janvier")` |
+| `NB`, `MEDIANE`, plusieurs colonnes dans `MAX` ou `MOYENNE`, `UNIQUE(Janvier[Client])`… | la colonne filtrée : `FILTRE(Ventes[X]; Ventes[Mois]="Janvier")` |
+| un tableau croisé sur Janvier | le même sur Ventes, avec un filtre de rapport Mois = Janvier |
+| un graphique sur Janvier | le même sur Ventes, avec un filtre Mois = Janvier (montré dans son volet, retirable) |
+
+Les colonnes calculées des autres tableaux et les règles de mise en forme conditionnelle suivent les mêmes règles. Reste **à reprendre à la main**, avec la raison : une ligne précise (`Janvier[Montant][3]`), `REFERENCE`, `RECHERCHEV` et `EXISTE` (ils cherchent une clé dans un tableau nommé), `SOUS.TOTAL`, le tableau entier (`FILTRE(Janvier; …)`), une liste de contrôle tirée d'un ancien tableau, une requête ; le texte SQL et les scripts Lua ne sont pas repérés. Dans ce cas, les anciens onglets sont gardés masqués par défaut pour que ces formules continuent de marcher ; sinon ils sont supprimés. Sans colonne de catégorie, rien ne distingue plus les onglets : tout reste à reprendre. Après coup, une synthèse par mois gagne à devenir un tableau croisé Mois × Montant, qui suit seul les nouvelles lignes.
+
+Le regroupement est refusé sur une feuille protégée, sur un tableau filtré (retirez d'abord le filtre), chargé par une requête ou partagé sur un serveur.
 
 ## Formules
 

@@ -4,7 +4,7 @@
 // proposer, couleurs des traits sous les onglets, plan de départ du volet
 // Regrouper. Sans composant, testé par vitest.
 
-import type { MergePlan, MergePreview, SheetGroup } from '#bindings/internal/canvas/models.js';
+import type { MergePlan, MergePreview, PendingRef, SheetGroup } from '#bindings/internal/canvas/models.js';
 
 /** Couleurs des traits sous les onglets semblables : un groupe, une couleur (la première est l'accent). */
 export const GROUP_COLORS = ['#217346', '#0f6cbd', '#b4009e', '#ca5010', '#5c2e91', '#038387'];
@@ -134,10 +134,43 @@ export function previewWarnings(p: MergePreview): string[] {
 	if (p.refused) out.push(`Impossible de regrouper : ${p.refused}`);
 	if (p.keyNote) out.push(p.keyNote);
 	const n = p.pending?.length ?? 0;
-	if (n) out.push(`${n === 1 ? 'Une formule ou un objet cite' : `${nf(n)} formules ou objets citent`} les anciens tableaux : à reprendre à la main${p.old === 'hide' ? ' (les anciens onglets sont gardés masqués)' : ''}`);
+	if (n) out.push(`${n === 1 ? 'Une formule ou un objet cite' : `${nf(n)} formules ou objets citent`} les anciens tableaux sans équivalent exact : à reprendre à la main${p.old === 'hide' ? ' (les anciens onglets sont gardés masqués)' : ''}`);
 	// Onglets qui ne partiront pas malgré « Supprimer » : ils contiennent autre chose.
 	out.push(...(p.kept ?? []));
 	return out;
+}
+
+/**
+ * Bilan de la reprise des formules (§8), comme la barre d'état après le
+ * regroupement : « 14 formules reprises, 2 à reprendre à la main » ; vide si
+ * rien ne cite les anciens tableaux.
+ */
+export function refCounts(p: Pick<MergePreview, 'rewritten' | 'pending'>): string {
+	const done = p.rewritten?.length ?? 0;
+	const left = p.pending?.length ?? 0;
+	const parts: string[] = [];
+	if (done) parts.push(done === 1 ? 'une formule reprise' : `${nf(done)} formules reprises`);
+	if (left) {
+		if (done) parts.push(left === 1 ? 'une à reprendre à la main' : `${nf(left)} à reprendre à la main`);
+		else parts.push(left === 1 ? 'une formule à reprendre à la main' : `${nf(left)} formules à reprendre à la main`);
+	}
+	const s = parts.join(', ');
+	return s && s[0].toUpperCase() + s.slice(1);
+}
+
+/** Une ligne de la liste : « Synthèse A1 : =SOMME(Janvier[Montant]) → =SOMME.SI.ENS(…) », ou la raison si elle reste à reprendre. */
+export function refLine(r: PendingRef): string {
+	if (r.after) return `${r.where} : ${r.formula} → ${r.after}`;
+	return `${r.where} : ${r.formula}${r.why ? ` (${r.why})` : ''}`;
+}
+
+/** Sous le choix des anciens onglets : pourquoi ils sont gardés masqués par défaut (décision 12.1). */
+export function oldHint(p: MergePreview | null, chosen: string): string {
+	const n = p?.pending?.length ?? 0;
+	if (!p || !n) return '';
+	const what = n === 1 ? 'une formule ou un objet les cite encore' : `${nf(n)} formules ou objets les citent encore`;
+	if (chosen === 'delete') return `Supprimés quand même : ${what}, ${n === 1 ? 'qui ne trouvera plus son tableau' : 'qui ne trouveront plus leur tableau'}`;
+	return `Gardés masqués : ${what}`;
 }
 
 /** Ce que deviennent les anciens onglets. */

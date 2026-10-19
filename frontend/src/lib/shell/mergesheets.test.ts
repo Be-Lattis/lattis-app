@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MergePreview, SheetGroup } from '#bindings/internal/canvas/models.js';
-import { cellText, chipLabel, futureTab, initialPlan, offerText, pickOffer, planForSheets, previewWarnings, proposedName, sheetRange, tabMarks, withTables } from './mergesheets';
+import { cellText, chipLabel, futureTab, initialPlan, offerText, oldHint, pickOffer, planForSheets, previewWarnings, proposedName, refCounts, refLine, sheetRange, tabMarks, withTables } from './mergesheets';
 
 const months = ['Janvier', 'Février', 'Mars'];
 
@@ -96,11 +96,38 @@ describe('plan du volet Regrouper', () => {
 		const p = { keyNote: 'Pas de clé : F-001 est dans Janvier et dans Février', pending: [{ kind: 'cell' }, { kind: 'cell' }], old: 'hide', refused: '' } as unknown as MergePreview;
 		expect(previewWarnings(p)).toEqual([
 			'Pas de clé : F-001 est dans Janvier et dans Février',
-			'2 formules ou objets citent les anciens tableaux : à reprendre à la main (les anciens onglets sont gardés masqués)'
+			'2 formules ou objets citent les anciens tableaux sans équivalent exact : à reprendre à la main (les anciens onglets sont gardés masqués)'
 		]);
 		expect(previewWarnings({ refused: 'feuille protégée', pending: [] } as unknown as MergePreview)).toEqual(['Impossible de regrouper : feuille protégée']);
 		const kept = '« Janvier » gardée : elle contient aussi le tableau Remises (à supprimer à la main si besoin)';
 		expect(previewWarnings({ refused: '', pending: [], kept: [kept] } as unknown as MergePreview)).toEqual([kept]);
+	});
+
+	it('fait le bilan des formules reprises et à reprendre (§8)', () => {
+		const ref = (n: number) => Array.from({ length: n }, () => ({ kind: 'cell' }));
+		const counts = (done: number, left: number) => refCounts({ rewritten: ref(done), pending: ref(left) } as unknown as MergePreview);
+		expect(counts(14, 2)).toBe('14 formules reprises, 2 à reprendre à la main');
+		expect(counts(1, 1)).toBe('Une formule reprise, une à reprendre à la main');
+		expect(counts(3, 0)).toBe('3 formules reprises');
+		expect(counts(0, 2)).toBe('2 formules à reprendre à la main');
+		expect(counts(0, 0)).toBe('');
+		expect(refCounts({ rewritten: null, pending: null } as unknown as MergePreview)).toBe('');
+		expect(refCounts({ rewritten: ref(1200), pending: [] } as unknown as MergePreview)).toBe('1\u202f200 formules reprises');
+	});
+
+	it('écrit chaque formule reprise (avant → après) ou à reprendre (raison)', () => {
+		expect(refLine({ kind: 'cell', where: 'Synthèse A1', formula: '=SOMME(Janvier[Montant])', after: '=SOMME.SI.ENS(Ventes[Montant]; Ventes[Mois]; "=Janvier")' } as never)).toBe(
+			'Synthèse A1 : =SOMME(Janvier[Montant]) → =SOMME.SI.ENS(Ventes[Montant]; Ventes[Mois]; "=Janvier")'
+		);
+		expect(refLine({ kind: 'cell', where: 'Synthèse A2', formula: '=Janvier[Montant][3]', why: 'une ligne précise' } as never)).toBe('Synthèse A2 : =Janvier[Montant][3] (une ligne précise)');
+	});
+
+	it('explique ce que deviennent les anciens onglets (décision 12.1)', () => {
+		const p = (n: number) => ({ pending: Array.from({ length: n }, () => ({ kind: 'cell' })), old: n ? 'hide' : 'delete' }) as unknown as MergePreview;
+		expect(oldHint(p(0), 'delete')).toBe('');
+		expect(oldHint(null, 'hide')).toBe('');
+		expect(oldHint(p(2), 'hide')).toBe('Gardés masqués : 2 formules ou objets les citent encore');
+		expect(oldHint(p(1), 'delete')).toBe('Supprimés quand même : une formule ou un objet les cite encore, qui ne trouvera plus son tableau');
 	});
 
 	it('affiche les cases de l’aperçu', () => {
