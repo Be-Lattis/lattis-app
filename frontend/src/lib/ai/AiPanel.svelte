@@ -304,7 +304,8 @@
 		{#if source === 'claude' && mcpClient}
 			<div class="external"><ExternalActivity {ongoto} /></div>
 		{:else}
-			<div class="list" bind:this={list}>
+			<!-- Lecteurs d'écran : la réponse est annoncée une fois finie (aria-busy pendant qu'elle arrive). -->
+			<div class="list" role="log" aria-live="polite" aria-busy={chat.busy} aria-label="Conversation avec l’assistant" bind:this={list}>
 				{#if !chat.items.length}
 					<div class="empty">
 						<p>
