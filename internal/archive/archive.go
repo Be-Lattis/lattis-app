@@ -254,7 +254,8 @@ var testRoot = sync.OnceValues(func() (string, error) {
 })
 
 // workDir donne le répertoire de travail d'une archive : un nom dérivé de
-// son chemin absolu, pour qu'une deuxième ouverture tombe sur le même verrou.
+// son chemin canonique (PathKey), pour qu'une deuxième ouverture, par un
+// autre chemin vers le même fichier, tombe sur le même verrou.
 func workDir(path string) (string, error) {
 	root, err := Root()
 	if err != nil {
@@ -262,14 +263,26 @@ func workDir(path string) (string, error) {
 	}
 	key := "new-" + time.Now().Format("20060102-150405.000000000")
 	if path != "" {
-		abs, err := filepath.Abs(path)
-		if err != nil {
-			return "", err
-		}
-		sum := sha256.Sum256([]byte(strings.ToLower(abs)))
-		key = hex.EncodeToString(sum[:8])
+		key = hashKey(PathKey(path))
 	}
 	return filepath.Join(root, key), nil
+}
+
+// existingWorkDir donne le répertoire de travail déjà présent pour path :
+// le sien, ou celui qu'une version précédente lui a donné (legacyKey).
+func existingWorkDir(path, dir string) string {
+	if _, err := os.Stat(filepath.Join(dir, dbName)); err == nil {
+		return dir
+	}
+	if root, err := Root(); err == nil {
+		old := filepath.Join(root, legacyKey(path))
+		if old != dir {
+			if _, err := os.Stat(filepath.Join(old, dbName)); err == nil {
+				return old
+			}
+		}
+	}
+	return ""
 }
 
 // lockDir crée le répertoire et prend son verrou.
@@ -311,23 +324,23 @@ func Open(path string, extra ...func(*sqliteConn) error) (*Doc, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err := os.Stat(filepath.Join(dir, dbName)); err == nil {
+	if old := existingWorkDir(path, dir); old != "" {
 		// Un répertoire existe déjà : document ouvert ailleurs, ou orphelin
 		// (proposé même si le fichier a disparu ou s'est abîmé depuis).
-		lock, err := lockDir(dir)
+		lock, err := lockDir(old)
 		if err != nil {
 			return nil, err
 		}
-		if _, err := os.Stat(filepath.Join(dir, pristineName)); err == nil {
+		if _, err := os.Stat(filepath.Join(old, pristineName)); err == nil {
 			// Session sans modification : rien à proposer, on rouvre le fichier.
 			lock.Close()
-			if err := os.RemoveAll(dir); err != nil {
+			if err := os.RemoveAll(old); err != nil {
 				return nil, err
 			}
 		} else {
-			id := workbookID(dir)
+			id := workbookID(old)
 			lock.Close() // relâché : c'est à l'utilisateur de choisir
-			return nil, &RecoverableError{Orphan{Dir: dir, Source: path, Workbook: id}}
+			return nil, &RecoverableError{Orphan{Dir: old, Source: path, Workbook: id}}
 		}
 	}
 	if err := sniff(path); err != nil {
@@ -689,13 +702,6 @@ func (d *Doc) saveTo(ctx context.Context, path string, force bool) error {
 		writeStamp(d.Dir, s)
 	}
 	return nil
-}
-
-// samePath : même fichier, à la casse près (comme workDir).
-func samePath(a, b string) bool {
-	a, _ = filepath.Abs(a)
-	b, _ = filepath.Abs(b)
-	return strings.EqualFold(a, b)
 }
 
 // beforeRename est appelé juste avant le renommage (tests : enregistrement

@@ -352,11 +352,9 @@ func (d *Document) save(ctx context.Context, path string, force bool) (err error
 	return nil
 }
 
-func samePath(a, b string) bool {
-	a, _ = filepath.Abs(a)
-	b, _ = filepath.Abs(b)
-	return strings.EqualFold(a, b)
-}
+// samePath : même fichier (archive.SamePath : liens résolus, casse ignorée
+// seulement là où le système l'ignore).
+func samePath(a, b string) bool { return archive.SamePath(a, b) }
 
 // backupFile copie src en dst, sans écraser une sauvegarde existante.
 func backupFile(src, dst string) error {

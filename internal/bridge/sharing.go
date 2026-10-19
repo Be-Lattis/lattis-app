@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/lalamefine/lattis/internal/archive"
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/remote/auth"
@@ -495,11 +496,9 @@ func (s *DocumentService) ShareWorkbooks(ctx context.Context, server string) ([]
 	return out, nil
 }
 
-func samePath(a, b string) bool {
-	a, _ = filepath.Abs(a)
-	b, _ = filepath.Abs(b)
-	return strings.EqualFold(a, b)
-}
+// samePath : même fichier (archive.SamePath : liens résolus, casse ignorée
+// seulement là où le système l'ignore).
+func samePath(a, b string) bool { return archive.SamePath(a, b) }
 
 // shareCachePath donne le fichier local (cache) d'un classeur du serveur.
 func shareCachePath(server, id string) (string, error) {
