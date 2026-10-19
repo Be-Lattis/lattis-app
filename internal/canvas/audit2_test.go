@@ -43,6 +43,34 @@ func TestClearSplitKeepsName(t *testing.T) {
 	undoOnce(t, d, before, "coupe")
 }
 
+// Audit 2 I6 : collé ou tapé, un tableau croisé à coin vide et des dates en
+// en-tête donnent les mêmes en-têtes.
+func TestPasteHeaderLikeTyping(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		block [][]string
+		want  string
+	}{
+		{"coin vide", [][]string{{"", "Jan", "Fév"}, {"Nord", "1", "2"}, {"Sud", "3", "4"}}, "Feuille1@A1:Colonne 1|Jan|Fév×2"},
+		{"dates en en-tête", [][]string{{"Pays", "01/01/2024", "01/02/2024"}, {"France", "1", "2"}, {"Italie", "3", "4"}}, "Feuille1@A1:Pays|01/01/2024|01/02/2024×2"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d := open(t)
+			if _, err := d.Paste(context.Background(), 1, 0, 0, tc.block); err != nil {
+				t.Fatal(err)
+			}
+			if got := layoutOf(t, d); got != tc.want {
+				t.Fatalf("collé :\n got %s\nwant %s", got, tc.want)
+			}
+			d = open(t)
+			typeIn(t, d, 0, 0, tc.block)
+			if got := layoutOf(t, d); got != tc.want {
+				t.Fatalf("tapé :\n got %s\nwant %s", got, tc.want)
+			}
+		})
+	}
+}
+
 // Audit 2 I4 : Suppr sur un total gardé à part retire la marque « hors
 // tableau » (et le gras qu'elle avait donné).
 func TestClearRemovesOutMark(t *testing.T) {

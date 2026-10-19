@@ -140,8 +140,13 @@ func (t *tx) pasteIslands(sheet int64, row, col int, block [][]string, w int, ev
 		p := &plan{r0: top, c0: z.c0, c1: z.c1, last: last}
 		if head {
 			p.headers = make([]string, width)
-			for j, v := range body[0] {
-				p.headers[j] = strings.TrimSpace(v)
+			for j := range p.headers {
+				if j < len(body[0]) {
+					p.headers[j] = strings.TrimSpace(body[0][j])
+				}
+				if p.headers[j] == "" {
+					p.headers[j] = "Colonne " + itoa(j+1) // coin vide
+				}
 			}
 			p.data = body[1:]
 		} else {

@@ -216,17 +216,24 @@ func hasHeader(block [][]string, w int) bool {
 		return false
 	}
 	seen, dup, text := map[string]bool{}, false, false
+	// Coin vide d'un tableau croisé copié d'Excel ( | Jan | Fév, puis Nord |
+	// 1 | 2) : la 1re colonne, des textes dessous, n'a pas de nom (audit 2 I6).
+	corner := w > 1 && len(block[0]) > 0 && strings.TrimSpace(block[0][0]) == "" && textValues(block[1:], 0)
 	for c := range w {
 		if c >= len(block[0]) {
 			return false
 		}
 		h := strings.TrimSpace(block[0][c])
-		// Une année (Pays | 2024 | 2025) nomme une colonne comme un texte,
-		// pourvu que la ligne ait aussi un vrai texte.
-		if h == "" || (Infer(h) != grid.Text || isTimeOrPercent(h)) && !yearLike(h) {
+		if c == 0 && corner {
+			continue
+		}
+		// Une année ou une date (Pays | 2024 | 2025, Pays | 01/01/2024) nomme
+		// une colonne comme un texte, pourvu que la ligne ait aussi un vrai
+		// texte.
+		if h == "" || (Infer(h) != grid.Text || isTimeOrPercent(h)) && !yearLike(h) && Infer(h) != grid.Date {
 			return false
 		}
-		text = text || !yearLike(h)
+		text = text || !yearLike(h) && Infer(h) != grid.Date
 		dup = dup || seen[strings.ToLower(h)]
 		seen[strings.ToLower(h)] = true
 	}
@@ -236,6 +243,9 @@ func hasHeader(block [][]string, w int) bool {
 	votes := 0
 	for c := range w {
 		h := strings.TrimSpace(block[0][c])
+		if h == "" {
+			continue // coin vide
+		}
 		var below []string
 		for _, r := range block[1:] {
 			if c < len(r) && strings.TrimSpace(r[c]) != "" {
@@ -276,6 +286,22 @@ func hasHeader(block [][]string, w int) bool {
 		}
 	}
 	return votes > 0 && !dup
+}
+
+// textValues : les valeurs de la colonne c des lignes sont des textes (au
+// moins une).
+func textValues(rows [][]string, c int) bool {
+	n := 0
+	for _, r := range rows {
+		if c >= len(r) || strings.TrimSpace(r[c]) == "" {
+			continue
+		}
+		if v := strings.TrimSpace(r[c]); Infer(v) != grid.Text || isTimeOrPercent(v) {
+			return false
+		}
+		n++
+	}
+	return n > 0
 }
 
 // yearLike : un entier entre 1900 et 2100, en-tête de colonne courant.
