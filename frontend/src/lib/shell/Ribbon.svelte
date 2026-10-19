@@ -1730,7 +1730,11 @@
 		border-top: 1px solid #e5e7eb;
 		margin: 4px 0;
 	}
+	/* Récent du serveur : nuage puis nom, à gauche (pas écartés par space-between). */
 	.file-menu .name {
+		flex: 1;
+		margin-left: 6px;
+		text-align: left;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
