@@ -391,9 +391,33 @@ const (
 	Standard
 )
 
+// Neutralize désarme un texte qu'un tableur prendrait pour une formule à
+// l'ouverture du CSV (injection de formules : =, +, -, @, tabulation,
+// retour chariot en tête) en le préfixant d'une apostrophe, comme Excel
+// pour un texte saisi. Les nombres ne passent pas par là : -5 reste -5.
+func Neutralize(s string) string {
+	if s != "" && strings.ContainsRune("=+-@\t\r", rune(s[0])) {
+		return "'" + s
+	}
+	return s
+}
+
+// isText : valeur écrite comme un texte (ni nombre, ni booléen, ni vide).
+func isText(v any) bool {
+	switch v := v.(type) {
+	case string, canvas.Invalid:
+		return true
+	case formula.Value:
+		return v.Kind != formula.Number && v.Kind != formula.Bool && v.Kind != formula.Empty
+	}
+	return false
+}
+
 // ExportCSV écrit un tableau en CSV : une ligne d'en-têtes, puis les
 // lignes dans l'ordre d'affichage. Les colonnes calculées donnent leur
-// valeur, les saisies en erreur leur texte d'origine.
+// valeur, les saisies en erreur leur texte d'origine. Pour Excel (ExcelFR),
+// les textes qui commencent comme une formule sont neutralisés
+// (Neutralize) ; le CSV standard garde les valeurs exactes.
 func ExportCSV(ctx context.Context, m *canvas.Model, table string, w io.Writer, style CSVStyle) error {
 	bw := bufio.NewWriterSize(w, 64<<10)
 	if style == ExcelFR {
@@ -406,16 +430,23 @@ func ExportCSV(ctx context.Context, m *canvas.Model, table string, w io.Writer, 
 	}
 	var cols []canvas.ExportColumn
 	var rec []string
+	text := func(s string) string { return s }
+	if style == ExcelFR {
+		text = Neutralize
+	}
 	err := m.ExportTable(ctx, table, func(c []canvas.ExportColumn) error {
 		cols = c
 		rec = make([]string, len(c))
 		for i, col := range c {
-			rec[i] = col.Name
+			rec[i] = text(col.Name)
 		}
 		return cw.Write(rec)
 	}, func(row []any) error {
 		for i, v := range row {
 			rec[i] = exportText(v, cols[i].Type, style)
+			if isText(v) {
+				rec[i] = text(rec[i])
+			}
 		}
 		return cw.Write(rec)
 	})

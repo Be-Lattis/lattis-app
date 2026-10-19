@@ -13,7 +13,8 @@ import (
 // ExportSheetCSV écrit une feuille entière en CSV pour Excel en français
 // (séparateur ;, UTF-8 avec BOM) : de A1 à la dernière cellule utilisée,
 // tableaux, tableaux croisés et cellules libres à leur place, valeurs telles
-// que la grille les affiche.
+// que la grille les affiche ; un texte qui commence comme une formule est
+// neutralisé (Neutralize).
 func ExportSheetCSV(ctx context.Context, m *canvas.Model, sheet int64, w io.Writer) error {
 	l, err := m.Layout(ctx, sheet)
 	if err != nil {
@@ -49,6 +50,9 @@ func ExportSheetCSV(ctx context.Context, m *canvas.Model, sheet int64, w io.Writ
 			rec[c] = ""
 			if x, ok := sh.cells[[2]int{r, c}]; ok && x.kind != 0 {
 				rec[c] = printText(x)
+				if x.kind == 's' {
+					rec[c] = Neutralize(rec[c])
+				}
 			}
 		}
 		if err := cw.Write(rec); err != nil {
