@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 )
 
 // openaiTestProvider : un fournisseur neuf (cache des modèles vide).
@@ -280,7 +281,45 @@ func TestOpenAIMistralIDs(t *testing.T) {
 	}
 }
 
+// Erreur passagère (503, 429 avec un Retry-After court) : nouvelle
+// tentative ; un Retry-After long (quota) est rendu tout de suite (M6).
+func TestOpenAIRetry(t *testing.T) {
+	defer func(w []time.Duration) { openaiRetryWait = w }(openaiRetryWait)
+	openaiRetryWait = []time.Duration{time.Millisecond, time.Millisecond}
+	calls := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		switch calls {
+		case 1:
+			w.WriteHeader(503)
+		case 2:
+			w.Header().Set("Retry-After", "0")
+			w.WriteHeader(429)
+		default:
+			sse(w, `{"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}`)
+		}
+	}))
+	defer srv.Close()
+	r, err := openaiTestProvider(t, "openai").Turn(context.Background(), Credentials{Key: "k", Endpoint: srv.URL}, Request{Model: "m"}, func(Event) {})
+	if err != nil || calls != 3 || len(r.Message.Content) == 0 {
+		t.Fatalf("%d appels, %v", calls, err)
+	}
+	calls = 0
+	srv2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		w.Header().Set("Retry-After", "60")
+		w.WriteHeader(429)
+		io.WriteString(w, `{"message":"Requests rate limit exceeded"}`)
+	}))
+	defer srv2.Close()
+	if _, err := openaiTestProvider(t, "mistral").Turn(context.Background(), Credentials{Key: "k", Endpoint: srv2.URL}, Request{Model: "m"}, func(Event) {}); err == nil || calls != 1 {
+		t.Fatalf("%d appels, %v", calls, err)
+	}
+}
+
 func TestOpenAIErrors(t *testing.T) {
+	defer func(w []time.Duration) { openaiRetryWait = w }(openaiRetryWait)
+	openaiRetryWait = nil
 	for _, tc := range []struct {
 		id     string
 		status int

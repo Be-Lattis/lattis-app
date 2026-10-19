@@ -241,5 +241,19 @@ func anthropicError(err error) error {
 	case 529, 503:
 		return errors.New("Claude est surchargé : réessayez dans un moment")
 	}
-	return fmt.Errorf("erreur de Claude (%d) : %s", apierr.StatusCode, apierr.Error())
+	// Autres erreurs : une phrase courte, puis le message du fournisseur
+	// (sans l'enveloppe JSON ni la requête).
+	detail := apierr.Error()
+	var body struct {
+		Error struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if json.Unmarshal([]byte(apierr.RawJSON()), &body) == nil && body.Error.Message != "" {
+		detail = body.Error.Message
+	}
+	if apierr.StatusCode == 400 {
+		return fmt.Errorf("requête refusée par Claude (détail : %s)", detail)
+	}
+	return fmt.Errorf("erreur de Claude (%d) (détail : %s)", apierr.StatusCode, detail)
 }

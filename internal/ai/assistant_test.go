@@ -42,6 +42,7 @@ func TestAnthropicErrors(t *testing.T) {
 		{400, "invalid_request_error", "prompt is too long: 1200000 tokens > 1000000 maximum", "Nouvelle conversation", ""},
 		{401, "authentication_error", "invalid x-api-key", "Connexion", "Compte"},
 		{429, "rate_limit_error", "slow down", "limite d'utilisation", ""},
+		{400, "invalid_request_error", "messages.1: tool_use ids must be unique", "requête refusée par Claude (détail : messages.1: tool_use ids must be unique)", "{"},
 	}
 	for _, c := range cases {
 		answer = func(w http.ResponseWriter) { apiError(w, c.status, c.typ, c.msg) }

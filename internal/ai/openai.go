@@ -62,9 +62,63 @@ const modelsTTL = 5 * time.Minute
 // vérification d'une clé).
 const openaiListTimeout = 15 * time.Second
 
-// openaiHTTP : pas de délai global, la réponse arrive en flux (et un modèle
-// local peut mettre longtemps à se charger) ; le contexte l'interrompt.
-var openaiHTTP = &http.Client{}
+// openaiHTTP : pas de délai global, la réponse arrive en flux ; le contexte
+// l'interrompt. Les en-têtes de la réponse doivent arriver en quelques
+// minutes (un modèle local peut mettre longtemps à se charger) : un proxy
+// qui garde la connexion ouverte sans répondre ne bloque pas la réponse
+// jusqu'à Échap.
+var openaiHTTP = &http.Client{Transport: openaiTransport()}
+
+func openaiTransport() http.RoundTripper {
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	t.ResponseHeaderTimeout = 3 * time.Minute
+	return t
+}
+
+// openaiRetryWait : attentes avant chaque nouvelle tentative sur une erreur
+// passagère (429, 5xx, coupure avant la réponse) ; au-delà, l'erreur est
+// rendue (l'interface propose « Réessayer »).
+var openaiRetryWait = []time.Duration{time.Second, 3 * time.Second}
+
+// openaiRetryMax : un Retry-After plus long n'est pas attendu (quota).
+const openaiRetryMax = 10 * time.Second
+
+// post envoie une requête, avec de nouvelles tentatives sur une erreur
+// passagère.
+func (p *openaiProvider) post(ctx context.Context, cred Credentials, path string, body []byte) (*http.Response, error) {
+	for attempt := 0; ; attempt++ {
+		hreq, err := p.newRequest(ctx, cred, http.MethodPost, path, body)
+		if err != nil {
+			return nil, err
+		}
+		hreq.Header.Set("Accept", "text/event-stream")
+		resp, err := openaiHTTP.Do(hreq)
+		// Modèle local injoignable : il n'est pas lancé, l'attente n'y fait rien.
+		if attempt >= len(openaiRetryWait) || ctx.Err() != nil || (err != nil && p.local) {
+			return resp, err
+		}
+		wait := openaiRetryWait[attempt]
+		if err == nil {
+			if resp.StatusCode != http.StatusTooManyRequests && resp.StatusCode < 500 {
+				return resp, nil
+			}
+			if ra := resp.Header.Get("Retry-After"); ra != "" {
+				d, perr := time.ParseDuration(strings.TrimSpace(ra) + "s")
+				if perr != nil || d > openaiRetryMax {
+					return resp, nil
+				}
+				wait = max(wait, d)
+			}
+			io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<16))
+			resp.Body.Close()
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(wait):
+		}
+	}
+}
 
 type openaiProvider struct {
 	id   string
@@ -369,12 +423,7 @@ func (p *openaiProvider) Turn(ctx context.Context, cred Credentials, req Request
 	if err != nil {
 		return Reply{}, err
 	}
-	hreq, err := p.newRequest(ctx, cred, http.MethodPost, "/chat/completions", b)
-	if err != nil {
-		return Reply{}, err
-	}
-	hreq.Header.Set("Accept", "text/event-stream")
-	resp, err := openaiHTTP.Do(hreq)
+	resp, err := p.post(ctx, cred, "/chat/completions", b)
 	if err != nil {
 		return Reply{}, p.netError(ctx, cred, err)
 	}
