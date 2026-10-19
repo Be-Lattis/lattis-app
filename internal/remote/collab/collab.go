@@ -49,6 +49,23 @@ type Engine struct {
 	marks   markCache
 	// kicker : réveil du suivi (Follow) pour un envoi (Kick).
 	kicker chan struct{}
+	// retry : délais des nouveaux essais de connexion (SetBackoff ; nil :
+	// le délai fixe passé à Follow).
+	retry *workbook.Backoff
+}
+
+// SetBackoff règle les nouveaux essais de connexion du suivi (délais
+// croissants, Wake pour essayer tout de suite).
+func (e *Engine) SetBackoff(b *workbook.Backoff) {
+	e.mu.Lock()
+	e.retry = b
+	e.mu.Unlock()
+}
+
+func (e *Engine) backoff() *workbook.Backoff {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.retry
 }
 
 // cell désigne une cellule d'un tableau (ligne par sa clé locale).

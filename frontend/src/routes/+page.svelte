@@ -68,7 +68,7 @@
 	import { refusedNotice } from '#lib/remote/share.js';
 	import { pushSummary, type SourceLink } from '#lib/remote/source.js';
 	import type { Conflict } from '#bindings/internal/remote/collab/models.js';
-	import { canRepublish, rolesLabel } from '#lib/remote/share.js';
+	import { canRepublish, detachQuestion, RETRY_NOTICE, rolesLabel, serverLabel } from '#lib/remote/share.js';
 	import { lattis, loadLattis, requestLogin, shareRights } from '#lib/remote/lattis.svelte.js';
 	import { connected, hostOf } from '#lib/remote/lattis.js';
 	import { dataGroup, type DataCatalog, type DataGroup } from '#lib/remote/data.js';
@@ -404,6 +404,9 @@
 		}
 	}
 	let shareReloading = $state(false);
+	// Serveur injoignable : « Réessayer » en cours ; question avant « Détacher du serveur ».
+	let shareRetrying = $state(false);
+	let detachAsk = $state<string[] | null>(null);
 	// Données › Obtenir des données : requêtes d'import (lib/query).
 	let queryHost = $state<ReturnType<typeof QueryHost>>();
 	// Révision › Protéger : boîte du mot de passe (protéger, ou ôter une
@@ -581,6 +584,47 @@
 		};
 	});
 
+	/** Serveur injoignable : nouvel essai tout de suite (bandeau, Fichier › Réessayer la connexion). */
+	async function retryShare() {
+		if (shareRetrying || !share?.shared) return;
+		shareRetrying = true;
+		notice = RETRY_NOTICE;
+		try {
+			await DocumentService.ShareRetry();
+			// La réponse arrive par share:changed ; sans elle, le serveur ne répond toujours pas.
+			for (let i = 0; i < 20 && share && !share.online; i++) await new Promise((r) => setTimeout(r, 200));
+			if (share?.online) notice = `Connecté à ${serverLabel(share)}`;
+			else if (share) notice = `${serverLabel(share)} ne répond toujours pas : Lattis réessaiera de lui-même`;
+		} catch (e) {
+			notice = err(e);
+		} finally {
+			shareRetrying = false;
+		}
+	}
+
+	/** « Travailler sur une copie locale » : copie sans lien avec le serveur, enregistrée puis ouverte. */
+	async function shareLocalCopy() {
+		try {
+			await opened(await DocumentService.ShareLocalCopy());
+		} catch (e) {
+			notice = err(e);
+		}
+	}
+
+	/** « Détacher du serveur » (propriétaire) : d'abord expliquer, puis faire. */
+	function askDetach() {
+		if (share?.shared && share.canManage) detachAsk = detachQuestion(share, !!docState.remote);
+	}
+
+	async function shareDetach() {
+		detachAsk = null;
+		try {
+			await opened(await DocumentService.ShareDetach());
+		} catch (e) {
+			notice = err(e);
+		}
+	}
+
 	/** Bandeau « Nouvelle version disponible » : recharge la version publiée (ajouts locaux gardés). */
 	async function reloadShare() {
 		shareReloading = true;
@@ -651,7 +695,9 @@
 		} catch (e) {
 			if (!r.path) throw e;
 			await openPath(r.path);
-			notice = `Copie locale ouverte : ${err(e)}`;
+			// Détail technique dans le bandeau (« Détails ») et dans la console.
+			console.warn('serveur injoignable', err(e));
+			notice = `Le serveur ${serverLabel({ server, serverName: r.serverName ?? '' })} ne répond pas : copie locale ouverte`;
 			return;
 		}
 		await openedRemote(res);
@@ -1226,6 +1272,12 @@
 				case 'republish':
 					if (mode !== 'doc') return;
 					shareDlg = { republish: a === 'republish' };
+					break;
+				case 'reconnect':
+					if (mode === 'doc') await retryShare();
+					break;
+				case 'detach':
+					if (mode === 'doc') askDetach();
 					break;
 				case 'close':
 					await closeDoc();
@@ -1987,6 +2039,8 @@
 		merged={!!sheetStatus?.merged}
 		shared={mode === 'doc' && !!share?.shared}
 		republish={mode === 'doc' && canRepublish(share)}
+		reconnect={mode === 'doc' && !!share?.shared && !share.online}
+		detach={mode === 'doc' && !!share?.shared && !!share.canManage}
 		rights={canRights}
 		pageSetup={layout?.pageSetup}
 		onpage={mode === 'doc' ? pageCmd : undefined}
@@ -1995,7 +2049,17 @@
 	/>
 
 	{#if mode === 'doc'}
-		<ShareBanner {share} busy={shareReloading} onreload={reloadShare} onlogin={() => share && requestLogin(share.server)} onconflicts={() => (conflictsOpen = true)} />
+		<ShareBanner
+			{share}
+			busy={shareReloading}
+			retrying={shareRetrying}
+			onreload={reloadShare}
+			onlogin={() => share && requestLogin(share.server)}
+			onconflicts={() => (conflictsOpen = true)}
+			onretry={retryShare}
+			oncopy={shareLocalCopy}
+			ondetach={askDetach}
+		/>
 	{/if}
 
 	<!-- Une erreur d’un composant ne remplace plus tout par un écran 500 : elle est journalisée (pile, dernières actions) et l’on peut réessayer. -->
@@ -2482,6 +2546,21 @@
 		/>
 	{/if}
 	<LattisHost />
+	{#if detachAsk}
+		{@const q = detachAsk}
+		<div class="modal-back">
+			<div class="modal" role="dialog" aria-modal="true" aria-label="Détacher du serveur" use:modal={() => (detachAsk = null)}>
+				<p>Détacher ce classeur du serveur ?</p>
+				{#each q as line, i (i)}
+					<p class="muted">{line}</p>
+				{/each}
+				<div class="actions">
+					<button class="primary" onclick={shareDetach}>Détacher</button>
+					<button onclick={() => (detachAsk = null)}>Annuler</button>
+				</div>
+			</div>
+		</div>
+	{/if}
 	{#if linkAsk}
 		{@const a = linkAsk}
 		<div class="modal-back">

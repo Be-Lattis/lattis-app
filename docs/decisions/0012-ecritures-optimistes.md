@@ -27,7 +27,7 @@ Le choix d'alors (synchronisation.md §2.9, ancienne version) : un changement de
 
 - Après un refus, l'historique d'annulation qui touche le tableau est effacé (comme après une structure reçue) : l'étape refusée n'est plus annulable, et les précédentes non plus. Plus simple et plus sûr que de retirer une étape au milieu du journal.
 - Pendant le court délai entre la modification et son refus, un collègue ne voit rien (rien n'est parti) ; l'auteur voit sa modification, puis la voit défaite avec le message.
-- Hors ligne, un classeur collaboratif reste en lecture seule (§10) : la structure n'est pas mise en file hors ligne (`ErrOffline`, vérifié en local, sans attente).
+- Hors ligne, un classeur collaboratif reste en lecture seule (§10) : la structure n'est pas mise en file hors ligne (`ErrOffline`, vérifié en local, sans attente). *Remplacé par la décision 0014 : hors ligne, tout, structure comprise, attend dans la file.*
 
 ## Ce qui reste serveur d'abord
 

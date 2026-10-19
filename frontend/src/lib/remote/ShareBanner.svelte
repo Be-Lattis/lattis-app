@@ -1,47 +1,78 @@
 <script lang="ts">
 	// Bandeau du classeur partagé ouvert (§5.4, §7, §10) : « Nouvelle version
-	// disponible » (Recharger), « Hors ligne, lecture seule », « Classeur
-	// publié en lecture seule », conflits d'un classeur collaboratif (Voir).
+	// disponible » (Recharger), serveur injoignable (texte lisible, erreur
+	// technique dans « Détails » ; Réessayer, Travailler sur une copie
+	// locale, Détacher du serveur pour le propriétaire), « Classeur publié
+	// en lecture seule », conflits d'un classeur collaboratif (Voir).
 	import Icon from '#lib/icons/Icon.svelte';
 	import type { State } from '#bindings/internal/remote/workbook/models.js';
-	import { banner } from './share';
+	import { banner, type BannerAction } from './share';
 
 	interface Props {
 		share: State | null;
 		busy?: boolean;
+		/** Nouvel essai de connexion en cours (« Réessayer »). */
+		retrying?: boolean;
 		onreload: () => void;
 		onlogin: () => void;
 		onconflicts?: () => void;
+		onretry?: () => void;
+		oncopy?: () => void;
+		ondetach?: () => void;
 	}
-	let { share, busy = false, onreload, onlogin, onconflicts }: Props = $props();
+	let { share, busy = false, retrying = false, onreload, onlogin, onconflicts, onretry, oncopy, ondetach }: Props = $props();
 	const b = $derived(banner(share));
+	let details = $state(false);
+
+	const handlers = $derived<Record<BannerAction, (() => void) | undefined>>({
+		reload: onreload,
+		login: onlogin,
+		conflicts: onconflicts,
+		retry: onretry,
+		copy: oncopy,
+		detach: ondetach
+	});
+
+	function label(a: BannerAction, text: string): string {
+		if (a === 'reload' && busy) return 'Rechargement…';
+		if (a === 'retry' && retrying) return 'Connexion…';
+		return text;
+	}
 </script>
 
 {#if b}
 	<div class="banner {b.kind}" role="status">
-		<Icon name={b.kind === 'new' ? 'refresh' : b.kind === 'conflict' ? 'warning' : 'lock'} size={14} />
-		<span class="text">{b.text}</span>
-		{#if b.action === 'reload'}
-			<button disabled={busy} onclick={onreload}>{busy ? 'Rechargement…' : b.actionLabel}</button>
-		{:else if b.action === 'login'}
-			<button onclick={onlogin}>{b.actionLabel}</button>
-		{:else if b.action === 'conflicts' && onconflicts}
-			<button onclick={onconflicts}>{b.actionLabel}</button>
+		<div class="line">
+			<Icon name={b.kind === 'new' ? 'refresh' : b.kind === 'conflict' ? 'warning' : b.kind === 'offline' ? 'cloud-off' : 'lock'} size={14} />
+			<span class="text" title={b.detail ? `${b.text}\n\n${b.detail}` : b.text}>{b.text}</span>
+			{#if b.detail}
+				<button class="link" aria-expanded={details} onclick={() => (details = !details)}>{details ? 'Masquer les détails' : 'Détails'}</button>
+			{/if}
+			{#each b.actions ?? [] as a (a.action)}
+				{#if handlers[a.action]}
+					<button disabled={(a.action === 'reload' && busy) || (a.action === 'retry' && retrying)} onclick={handlers[a.action]}>{label(a.action, a.label)}</button>
+				{/if}
+			{/each}
+		</div>
+		{#if details && b.detail}
+			<div class="detail">{b.detail}</div>
 		{/if}
 	</div>
 {/if}
 
 <style>
 	.banner {
-		display: flex;
-		align-items: center;
-		gap: 8px;
 		padding: 3px 12px;
 		font-size: 12px;
 		border-bottom: 1px solid #e3e5e8;
 		background: #f3f6f4;
 		color: #374151;
 		--icon-accent: #217346;
+	}
+	.line {
+		display: flex;
+		align-items: center;
+		gap: 8px;
 	}
 	.banner.new {
 		background: #e8f3ec;
@@ -63,6 +94,15 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
+	.detail {
+		margin: 2px 0 2px 22px;
+		font-family: ui-monospace, Consolas, monospace;
+		font-size: 11px;
+		white-space: pre-wrap;
+		word-break: break-word;
+		user-select: text;
+		opacity: 0.85;
+	}
 	button {
 		font: inherit;
 		padding: 1px 10px;
@@ -70,6 +110,14 @@
 		border-radius: 3px;
 		background: #fff;
 		cursor: pointer;
+		white-space: nowrap;
+	}
+	button.link {
+		border: none;
+		background: none;
+		padding: 1px 4px;
+		color: inherit;
+		text-decoration: underline;
 	}
 	button:disabled {
 		opacity: 0.55;

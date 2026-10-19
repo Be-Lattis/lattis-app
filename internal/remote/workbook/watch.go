@@ -39,6 +39,12 @@ func VersionNotice(payload string) (int, bool) {
 // nouvel essai toutes les retry. changed est appelé à chaque changement
 // d'état (en ligne, hors ligne, nouvelle version).
 func Watch(ctx context.Context, srv Server, link *Link, retry time.Duration, changed func()) {
+	WatchWith(ctx, srv, link, NewBackoff(retry, retry), changed)
+}
+
+// WatchWith suit le classeur comme Watch, les nouveaux essais réglés par b
+// (délais croissants, Wake pour essayer tout de suite).
+func WatchWith(ctx context.Context, srv Server, link *Link, b *Backoff, changed func()) {
 	info := link.Info()
 	if info == nil {
 		return
@@ -48,6 +54,7 @@ func Watch(ctx context.Context, srv Server, link *Link, retry time.Duration, cha
 	}
 	for ctx.Err() == nil {
 		err := srv.Listen(ctx, info.Channel, func() {
+			b.Reset()
 			link.SetOnline(true, "")
 			if caps, err := srv.Capabilities(ctx, info.WorkbookID); err == nil {
 				link.SetNewVersion(caps.Version)
@@ -78,10 +85,8 @@ func Watch(ctx context.Context, srv Server, link *Link, retry time.Duration, cha
 			link.SetOnline(false, reason)
 			changed()
 		}
-		select {
-		case <-ctx.Done():
+		if !b.Wait(ctx) {
 			return
-		case <-time.After(retry):
 		}
 	}
 }

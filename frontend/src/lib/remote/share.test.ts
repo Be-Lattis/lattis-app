@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Check, State } from '#bindings/internal/remote/workbook/models.js';
 import type { Conflict } from '#bindings/internal/remote/collab/models.js';
 import { syncAt } from '#lib/grid/cache.js';
-import { banner, blocking, canRepublish, conflictText, defaultSelection, inferredColumns, modeLabel, refusedNotice, remoteTypeLabel, rolesLabel, whenLabel } from './share';
+import { banner, blocking, detachQuestion, offlineText, serverLabel, canRepublish, conflictText, defaultSelection, inferredColumns, modeLabel, refusedNotice, remoteTypeLabel, rolesLabel, whenLabel } from './share';
 
 const check: Check = {
 	tables: [
@@ -41,17 +41,53 @@ describe('partage', () => {
 		expect(banner(null)).toBeNull();
 		expect(banner(state({ shared: false }))).toBeNull();
 		expect(banner(state({ readOnly: 'Classeur publié en lecture seule' }))).toEqual({ kind: 'readonly', text: 'Classeur publié en lecture seule — version 3 sur Serveur Acme' });
-		expect(banner(state({ newVersion: 4, readOnly: 'Classeur publié en lecture seule' }))).toMatchObject({ kind: 'new', action: 'reload', text: 'Nouvelle version disponible (version 4)' });
-		expect(banner(state({ online: false, offline: 'dial tcp : refusé' }))).toEqual({ kind: 'offline', text: 'Hors ligne, lecture seule (dial tcp : refusé)' });
-		expect(banner(state({ online: false, offline: 'connectez-vous à Acme (menu Compte de la barre de titre)' }))?.action).toBe('login');
+		expect(banner(state({ newVersion: 4, readOnly: 'Classeur publié en lecture seule' }))).toMatchObject({ kind: 'new', actions: [{ action: 'reload' }], text: 'Nouvelle version disponible (version 4)' });
+		expect(banner(state({ online: false, offline: 'dial tcp : refusé' }))).toEqual({
+			kind: 'offline',
+			text: 'Le serveur Serveur Acme ne répond pas : ce classeur partagé est en lecture seule.',
+			detail: 'dial tcp : refusé',
+			actions: [
+				{ action: 'retry', label: 'Réessayer' },
+				{ action: 'copy', label: 'Travailler sur une copie locale' }
+			]
+		});
+		const login = banner(state({ online: false, offline: 'connectez-vous à Acme (menu Compte de la barre de titre)' }));
+		expect(login?.actions?.[0].action).toBe('login');
+		expect(login?.text).toBe('Connexion à Serveur Acme requise : ce classeur partagé est en lecture seule.');
 		expect(banner(state({ canDesign: true }))).toBeNull();
 	});
 
 	it('classeur collaboratif : conflits, file d’attente hors ligne', () => {
 		const collab = (s: Partial<State>) => state({ mode: 'collaborative', roles: ['editor'], ...s });
 		expect(banner(collab({}))).toBeNull();
-		expect(banner(collab({ conflicts: 2 }))).toEqual({ kind: 'conflict', text: '2 conflits : cellules modifiées par un collègue entre-temps', action: 'conflicts', actionLabel: 'Voir' });
-		expect(banner(collab({ online: false, pending: 3 }))?.text).toBe("Hors ligne, lecture seule — 3 modifications en attente d'envoi");
+		expect(banner(collab({ conflicts: 2 }))).toEqual({ kind: 'conflict', text: '2 conflits : cellules modifiées par un collègue entre-temps', actions: [{ action: 'conflicts', label: 'Voir' }] });
+		expect(banner(collab({ online: false, pending: 3 }))?.text).toBe('Le serveur Serveur Acme ne répond pas. Hors ligne : vos modifications seront envoyées au retour du serveur (3 modifications en attente).');
+	});
+
+	it('serveur arrêté : texte lisible, détails à part, sorties proposées', () => {
+		// Le cas de Louis : son serveur de développement arrêté.
+		const raw = 'Get "http://localhost:8080/.well-known/lattis.json": dial tcp [::1]:8080: connectex: No connection could be made because the target machine actively refused it.';
+		const owner = state({ server: 'http://localhost:8080', serverName: '', mode: 'collaborative', roles: ['owner'], canManage: true, canDesign: true, online: false, offline: raw });
+		expect(serverLabel(owner)).toBe('localhost:8080');
+		const b = banner(owner)!;
+		expect(b.text).toBe('Le serveur localhost:8080 ne répond pas. Hors ligne : vos modifications seront envoyées au retour du serveur.');
+		expect(b.text).not.toContain('dial tcp');
+		expect(b.detail).toBe(raw);
+		expect(b.actions?.map((a) => a.action)).toEqual(['retry', 'copy', 'detach']);
+		expect(offlineText({ ...owner, mode: 'frozen' })).toBe('Le serveur localhost:8080 ne répond pas : ce classeur partagé est en lecture seule.');
+		// Un éditeur ne détache pas : copie locale seulement.
+		expect(banner({ ...owner, roles: ['editor'], canManage: false })?.actions?.map((a) => a.action)).toEqual(['retry', 'copy']);
+	});
+
+	it('explique le détachement', () => {
+		const s = state({ server: 'http://localhost:8080', serverName: '', title: 'Nids', mode: 'collaborative', canManage: true, pending: 2 });
+		const q = detachQuestion(s, true);
+		expect(q[0]).toBe('« Nids » deviendra un classeur local ordinaire : il ne se synchronisera plus avec localhost:8080.');
+		expect(q.join(' ')).toContain('Le classeur du serveur n’est pas modifié');
+		expect(q.join(' ')).toContain('2 modifications pas encore envoyées au serveur resteront dans ce classeur local');
+		expect(q.join(' ')).toContain('choisir où enregistrer');
+		expect(q[q.length - 1]).toBe('Ce détachement ne s’annule pas.');
+		expect(detachQuestion({ ...s, pending: 0 }, false).join(' ')).not.toMatch(/en attente|pas encore envoyée|choisir/);
 	});
 
 	it('décrit un conflit', () => {

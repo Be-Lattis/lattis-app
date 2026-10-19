@@ -363,15 +363,17 @@ func TestOfflineQueue(t *testing.T) {
 		t.Fatal("envoi sans serveur : erreur attendue")
 	}
 	bob.d.Share.SetOnline(false, "serveur injoignable")
-	if err := bob.set(2, 1, "32"); !errors.Is(err, workbook.ErrOffline) {
+	// Hors ligne, le classeur collaboratif reste modifiable (décision
+	// 0014) : la saisie attend dans la file.
+	if err := bob.set(2, 1, "32"); err != nil {
 		t.Fatalf("saisie hors ligne : %v", err)
 	}
-	if bob.states()["pending"] != 2 {
+	if bob.states()["pending"] != 3 {
 		t.Fatalf("file : %v", bob.states())
 	}
 	marks, err := bob.e.Marks(ctx, tableID(t, bob.d), []int64{1, 2, 3})
 	must(t, err)
-	if len(marks) != 2 {
+	if len(marks) != 3 {
 		t.Fatalf("marques en attente : %+v", marks)
 	}
 	// Pendant la coupure, Alice modifie la seconde cellule.
@@ -382,12 +384,12 @@ func TestOfflineQueue(t *testing.T) {
 	bob.d.Share.SetOnline(true, "")
 	r, err := bob.e.Sync(ctx)
 	must(t, err)
-	if r.Sent != 1 || r.Conflicts != 1 {
+	if r.Sent != 2 || r.Conflicts != 1 {
 		t.Fatalf("reconnexion : %+v", r)
 	}
-	eq(t, "Bob", bob.col("Quantité"), []string{"30", "31", "1"})
+	eq(t, "Bob", bob.col("Quantité"), []string{"30", "31", "32"})
 	alice.receive()
-	eq(t, "Alice", alice.col("Quantité"), []string{"30", "40", "1"})
+	eq(t, "Alice", alice.col("Quantité"), []string{"30", "40", "32"})
 	marks, _ = bob.e.Marks(ctx, tableID(t, bob.d), []int64{1, 2, 3})
 	if len(marks) != 1 {
 		t.Fatalf("marques après envoi : %+v", marks)
@@ -507,7 +509,9 @@ func TestFollowNotifications(t *testing.T) {
 	if bob.d.Share.Online() {
 		t.Fatal("Bob devrait être hors ligne")
 	}
-	if st := bob.d.Share.State(); st.ReadOnly != workbook.ErrOffline.Error() {
+	// Classeur collaboratif : pas en lecture seule hors ligne (décision
+	// 0014), le bandeau dit seulement la coupure.
+	if st := bob.d.Share.State(); st.ReadOnly != "" || st.Offline == "" {
 		t.Fatalf("bandeau : %+v", st)
 	}
 }

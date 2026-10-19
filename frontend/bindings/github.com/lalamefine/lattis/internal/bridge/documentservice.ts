@@ -2000,6 +2000,16 @@ export function ShareDataset(req: $models.DataShare): $CancellablePromise<string
 }
 
 /**
+ * ShareDetach fait du classeur partagé ouvert un classeur local ordinaire
+ * (propriétaire ; l'interface a demandé confirmation). Un classeur ouvert
+ * depuis le serveur est d'abord enregistré ailleurs (boîte Enregistrer
+ * sous).
+ */
+export function ShareDetach(): $CancellablePromise<$models.OpenResult> {
+    return $Call.ByID(40662258);
+}
+
+/**
  * ShareDropRestriction retire une restriction.
  */
 export function ShareDropRestriction(id: string): $CancellablePromise<$models.RightsView> {
@@ -2037,6 +2047,14 @@ export function ShareGrantRole(roleID: string, principal: string, on: boolean): 
  */
 export function ShareInvite(email: string, roles: string[] | null): $CancellablePromise<$models.RightsView> {
     return $Call.ByID(3874681680, email, roles);
+}
+
+/**
+ * ShareLocalCopy enregistre une copie locale du classeur partagé ouvert,
+ * détachée du serveur (boîte Enregistrer sous), puis l'ouvre.
+ */
+export function ShareLocalCopy(): $CancellablePromise<$models.OpenResult> {
+    return $Call.ByID(838626917);
 }
 
 /**
@@ -2096,6 +2114,15 @@ export function ShareRepublish(tables: number[] | null): $CancellablePromise<wor
  */
 export function ShareResolve(id: number, mine: boolean): $CancellablePromise<$models.DocState> {
     return $Call.ByID(2071380643, id, mine);
+}
+
+/**
+ * ShareRetry essaie tout de suite de joindre le serveur du classeur partagé
+ * ouvert (bandeau « Réessayer », Fichier › Réessayer la connexion) ; la
+ * réponse arrive par l'évènement share:changed.
+ */
+export function ShareRetry(): $CancellablePromise<void> {
+    return $Call.ByID(1732191225);
 }
 
 /**

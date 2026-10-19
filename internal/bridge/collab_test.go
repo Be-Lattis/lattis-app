@@ -3,7 +3,6 @@ package bridge
 import (
 	"context"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -57,17 +56,19 @@ func TestShareCollaborativeWorkbook(t *testing.T) {
 	}
 	waitShare(t, hb, "Bob en ligne", func(s workbook.State) bool { return s.Online })
 
-	// Saisie de Bob : marquée en attente tant que le serveur est coupé…
+	// Saisie de Bob hors ligne : permise (décision 0014), en attente tant
+	// que le serveur est coupé…
 	fake.SetDown(true)
 	waitShare(t, hb, "Bob hors ligne", func(s workbook.State) bool { return !s.Online })
-	if _, err := b.SetCell(ctx, 1, 1, 1, "5"); err == nil || !strings.Contains(err.Error(), "Hors ligne") {
-		t.Fatalf("saisie hors ligne : %v", err)
-	}
-	fake.SetDown(false)
-	waitShare(t, hb, "Bob de retour", func(s workbook.State) bool { return s.Online })
 	_, err = b.SetCell(ctx, 1, 1, 1, "5")
 	mustShare(t, err)
-	// … puis envoyée (Kick) : Alice la reçoit.
+	if st := b.ShareState(); st.ReadOnly != "" || st.Pending != 1 {
+		t.Fatalf("hors ligne : %+v", st)
+	}
+	fake.SetDown(false)
+	b.ShareRetry()
+	waitShare(t, hb, "Bob de retour", func(s workbook.State) bool { return s.Online })
+	// … puis envoyée à la reconnexion : Alice la reçoit.
 	waitFor(t, "saisie de Bob sur le serveur", func() bool {
 		v, _, _, ok := fake.Value(info.WorkbookID, "Feuille1", rowAt(t, ad, tbl, 0), "Prix")
 		return ok && v == 5.0

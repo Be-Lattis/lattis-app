@@ -1,6 +1,7 @@
 package bridge
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/remote/auth"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
+	"github.com/lalamefine/lattis/internal/trace"
 )
 
 // Classeur ouvert depuis un Serveur Lattis : son fichier local n'est qu'un
@@ -43,6 +45,27 @@ func remoteDoc(d *doc.Document) *workbook.State {
 		st.Title = remoteTitle
 	}
 	return &st
+}
+
+// keepCollabQueue enregistre, avant sa fermeture, le cache d'un classeur
+// collaboratif du serveur qui a des modifications pas encore envoyées
+// (file d'envoi, conflits) : hors ligne, elles partiront à la prochaine
+// ouverture une fois le serveur revenu, même si l'utilisateur a répondu
+// « Ne pas enregistrer » (en ligne, elles seraient déjà parties ; le
+// cache n'est pas un fichier de l'utilisateur). Décision 0014.
+func keepCollabQueue(d *doc.Document) {
+	r := remoteDoc(d)
+	if r == nil || r.Mode != workbook.Collaborative || d.ReadOnly() {
+		return
+	}
+	ctx := context.Background()
+	pending, conflicts, err := workbook.Unsent(ctx, d.DB().Read())
+	if err != nil || pending+conflicts == 0 {
+		return
+	}
+	if err := saveDoc(ctx, d, ""); err != nil {
+		trace.Logf(1, trace.Doc, "cache de « %s » non enregistré (%d étape(s) en attente) : %v", r.Title, pending, err)
+	}
 }
 
 // serverLabel : nom du serveur, sinon son hôte.

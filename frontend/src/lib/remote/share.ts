@@ -62,34 +62,91 @@ export function inferredColumns(t: TableCheck): string[] {
 
 export type BannerKind = 'new' | 'offline' | 'readonly' | 'conflict';
 
+/** Bouton d'un bandeau. */
+export type BannerAction = 'reload' | 'login' | 'conflicts' | 'retry' | 'copy' | 'detach';
+
 export interface Banner {
 	kind: BannerKind;
 	text: string;
-	/** Bouton du bandeau. */
-	action?: 'reload' | 'login' | 'conflicts';
-	actionLabel?: string;
+	/** Détail technique (infobulle, « Détails ») : l'erreur de connexion telle quelle. */
+	detail?: string;
+	/** Boutons du bandeau, dans l'ordre. */
+	actions?: { action: BannerAction; label: string }[];
+}
+
+/** Hôte d'une adresse (« localhost:8080 »), sinon l'adresse. */
+function hostOf(url: string): string {
+	try {
+		return new URL(url).host || url;
+	} catch {
+		return url;
+	}
+}
+
+/** Nom du serveur d'un classeur partagé : son nom, sinon son hôte. */
+export function serverLabel(s: Pick<State, 'server' | 'serverName'>): string {
+	return s.serverName?.trim() || hostOf(s.server ?? '');
+}
+
+/** Coupure due à une session à rouvrir (plutôt qu'à un serveur arrêté). */
+function needsLogin(reason: string | undefined): boolean {
+	return /connexion requise|connectez-vous|se connecter|session expirée/i.test(reason ?? '');
+}
+
+/**
+ * Texte du bandeau hors ligne : lisible, sans l'erreur technique (dans
+ * Banner.detail). Classeur collaboratif : modifiable hors ligne, la file
+ * part au retour du serveur (décision 0014) ; figé : lecture seule.
+ */
+export function offlineText(s: State): string {
+	const where = serverLabel(s);
+	const n = s.pending ?? 0;
+	const waiting = n ? ` (${n} modification${n > 1 ? 's' : ''} en attente)` : '';
+	const why = needsLogin(s.offline) ? `Connexion à ${where} requise` : `Le serveur ${where} ne répond pas`;
+	if (s.mode === COLLABORATIVE) return `${why}. Hors ligne : vos modifications seront envoyées au retour du serveur${waiting}.`;
+	return `${why} : ce classeur partagé est en lecture seule.`;
 }
 
 /** Bandeau du classeur partagé ouvert (null : rien à dire). */
 export function banner(s: State | null | undefined): Banner | null {
 	if (!s?.shared) return null;
 	if (!s.online) {
-		const login = /connexion requise|connectez-vous|se connecter|session expirée/i.test(s.offline ?? '');
-		const waiting = s.pending ? ` — ${s.pending} modification${s.pending > 1 ? 's' : ''} en attente d'envoi` : '';
-		return {
-			kind: 'offline',
-			text: 'Hors ligne, lecture seule' + (s.offline ? ` (${s.offline})` : '') + waiting,
-			...(login ? { action: 'login' as const, actionLabel: 'Se connecter…' } : {})
-		};
+		const actions: NonNullable<Banner['actions']> = [
+			needsLogin(s.offline) ? { action: 'login', label: 'Se connecter…' } : { action: 'retry', label: 'Réessayer' },
+			{ action: 'copy', label: 'Travailler sur une copie locale' }
+		];
+		if (s.canManage) actions.push({ action: 'detach', label: 'Détacher du serveur…' });
+		return { kind: 'offline', text: offlineText(s), ...(s.offline ? { detail: s.offline } : {}), actions };
 	}
-	if (s.newVersion) return { kind: 'new', text: `Nouvelle version disponible (version ${s.newVersion})`, action: 'reload', actionLabel: 'Recharger' };
+	if (s.newVersion) return { kind: 'new', text: `Nouvelle version disponible (version ${s.newVersion})`, actions: [{ action: 'reload', label: 'Recharger' }] };
 	if (s.conflicts) {
 		const n = s.conflicts;
-		return { kind: 'conflict', text: `${n} conflit${n > 1 ? 's' : ''} : cellule${n > 1 ? 's' : ''} modifiée${n > 1 ? 's' : ''} par un collègue entre-temps`, action: 'conflicts', actionLabel: 'Voir' };
+		return { kind: 'conflict', text: `${n} conflit${n > 1 ? 's' : ''} : cellule${n > 1 ? 's' : ''} modifiée${n > 1 ? 's' : ''} par un collègue entre-temps`, actions: [{ action: 'conflicts', label: 'Voir' }] };
 	}
 	if (s.readOnly) return { kind: 'readonly', text: `${s.readOnly} — version ${s.version}${s.serverName ? ` sur ${s.serverName}` : ''}` };
 	return null;
 }
+
+/**
+ * Question avant « Détacher du serveur » : ce qui se passe, en clair.
+ * cached : classeur ouvert depuis le serveur (sa copie est dans le cache :
+ * il faudra choisir où l'enregistrer).
+ */
+export function detachQuestion(s: State, cached: boolean): string[] {
+	const where = serverLabel(s);
+	const out = [
+		`« ${s.title} » deviendra un classeur local ordinaire : il ne se synchronisera plus avec ${where}.`,
+		'Le classeur du serveur n’est pas modifié : les autres membres le gardent tel quel, et vous pourrez le rouvrir depuis le serveur.'
+	];
+	const n = s.pending ?? 0;
+	if (n) out.push(`${n} modification${n > 1 ? 's' : ''} pas encore envoyée${n > 1 ? 's' : ''} au serveur ${n > 1 ? 'resteront' : 'restera'} dans ce classeur local, sans partir.`);
+	if (cached) out.push('Vous allez choisir où enregistrer le classeur local (sa copie actuelle n’est qu’un cache de Lattis).');
+	out.push('Ce détachement ne s’annule pas.');
+	return out;
+}
+
+/** Message de la barre d'état après « Réessayer ». */
+export const RETRY_NOTICE = 'Nouvel essai de connexion…';
 
 /** Heure (aujourd'hui) ou date et heure d'une modification, en français ; "" si inconnue. */
 export function whenLabel(at: string, now = new Date()): string {

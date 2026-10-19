@@ -20,6 +20,7 @@ import (
 	"github.com/lalamefine/lattis/internal/remote/collab"
 	"github.com/lalamefine/lattis/internal/remote/pgpool"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
+	"github.com/lalamefine/lattis/internal/trace"
 )
 
 // Classeurs partagés (docs/collaboration/publication.md) : Fichier ›
@@ -40,9 +41,14 @@ const ShareEvent = "share:changed"
 // optimiste, décision 0012).
 const SyncEvent = "share:sync"
 
-// shareRetry : délai entre deux essais de connexion au serveur d'un
-// classeur partagé hors ligne.
-var shareRetry = 30 * time.Second
+// shareRetry : délai du premier nouvel essai de connexion au serveur d'un
+// classeur partagé hors ligne ; les suivants attendent deux fois plus à
+// chaque échec, jusqu'à shareRetryMax fois ce délai (5 s → 2 min).
+var shareRetry = 5 * time.Second
+
+// shareRetryMax : plafond des délais entre essais, en multiple de
+// shareRetry.
+const shareRetryMax = 24
 
 // shareServer donne le serveur d'un classeur partagé (pour les essais : un
 // faux serveur ; nil : le vrai, par la session de l'utilisateur).
@@ -142,6 +148,9 @@ type shareState struct {
 	// sinon).
 	sync *collab.Engine
 	doc  *doc.Document
+	// retry : nouveaux essais de connexion du classeur suivi (délais
+	// croissants ; ShareRetry les fait partir tout de suite).
+	retry *workbook.Backoff
 }
 
 // collab rend la synchronisation du classeur collaboratif ouvert (nil :
@@ -165,7 +174,7 @@ func (s *DocumentService) watchShare(d *doc.Document) {
 		s.share.cancel = nil
 	}
 	unbindCollab(s.share.doc)
-	s.share.sync, s.share.doc = nil, nil
+	s.share.sync, s.share.doc, s.share.retry = nil, nil, nil
 	info := d.Share.Info()
 	if info == nil {
 		s.share.mu.Unlock()
@@ -173,6 +182,8 @@ func (s *DocumentService) watchShare(d *doc.Document) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	s.share.cancel = cancel
+	retry := workbook.NewBackoff(shareRetry, shareRetryMax*shareRetry)
+	s.share.retry = retry
 	go func() {
 		defer recoverPanic("classeur partagé")
 		recordOpens(ctx, info)
@@ -181,6 +192,10 @@ func (s *DocumentService) watchShare(d *doc.Document) {
 		// Classeur collaboratif : envoi de la file, réception des changements
 		// des autres, conflits (docs/collaboration/synchronisation.md).
 		eng := collab.New(d.DB(), d.Model, d.Share)
+		eng.SetBackoff(retry)
+		// File gardée dans le classeur (modifications faites hors ligne) :
+		// comptée dès l'ouverture, pour la barre d'état.
+		eng.Counts(ctx)
 		s.share.sync, s.share.doc = eng, d
 		// Structure des tableaux partagés (§6.4) : faite sur le serveur avant
 		// la validation locale ; index du serveur (API).
@@ -189,7 +204,7 @@ func (s *DocumentService) watchShare(d *doc.Document) {
 		s.share.mu.Unlock()
 		go func() {
 			defer recoverPanic("classeur partagé")
-			s.followCollab(ctx, d, eng, info)
+			s.followCollab(ctx, d, eng, info, retry)
 		}()
 		return
 	}
@@ -199,33 +214,53 @@ func (s *DocumentService) watchShare(d *doc.Document) {
 		for ctx.Err() == nil {
 			srv, _, _, err := remoteServer(ctx, info.Server)
 			if err != nil {
-				d.Share.SetOnline(false, err.Error())
-				s.emitShare(d)
-				select {
-				case <-ctx.Done():
+				s.shareDown(d, info, err)
+				if !retry.Wait(ctx) {
 					return
-				case <-time.After(shareRetry):
 				}
 				continue
 			}
-			workbook.Watch(ctx, srv, d.Share, shareRetry, func() { s.emitShare(d) })
+			workbook.WatchWith(ctx, srv, d.Share, retry, func() { s.emitShare(d) })
 		}
 	}()
+}
+
+// shareDown note que le serveur du classeur d ne répond pas (session ou
+// annuaire injoignables) : l'interface n'est prévenue, et le journal ne
+// reçoit une ligne, que si la raison change ; les essais suivants, de plus
+// en plus espacés, restent silencieux.
+func (s *DocumentService) shareDown(d *doc.Document, info *workbook.Info, err error) {
+	reason := err.Error()
+	if !d.Share.Online() && d.Share.State().Offline == reason {
+		return
+	}
+	trace.Logf(1, trace.Doc, "serveur %s injoignable (classeur partagé « %s ») : %s", info.Server, info.Title, reason)
+	d.Share.SetOnline(false, reason)
+	s.emitShare(d)
+}
+
+// ShareRetry essaie tout de suite de joindre le serveur du classeur partagé
+// ouvert (bandeau « Réessayer », Fichier › Réessayer la connexion) ; la
+// réponse arrive par l'évènement share:changed.
+func (s *DocumentService) ShareRetry() {
+	s.share.mu.Lock()
+	r := s.share.retry
+	s.share.mu.Unlock()
+	if r != nil {
+		r.Wake()
+	}
 }
 
 // followCollab suit un classeur collaboratif tant que ctx court : à
 // chaque (re)connexion, la file part et les changements des autres sont
 // lus ; sur notification, ceux du tableau notifié.
-func (s *DocumentService) followCollab(ctx context.Context, d *doc.Document, eng *collab.Engine, info *workbook.Info) {
+func (s *DocumentService) followCollab(ctx context.Context, d *doc.Document, eng *collab.Engine, info *workbook.Info, retry *workbook.Backoff) {
 	for ctx.Err() == nil {
 		srv, _, _, err := remoteServer(ctx, info.Server)
 		if err != nil {
-			d.Share.SetOnline(false, err.Error())
-			s.emitShare(d)
-			select {
-			case <-ctx.Done():
+			s.shareDown(d, info, err)
+			if !retry.Wait(ctx) {
 				return
-			case <-time.After(shareRetry):
 			}
 			continue
 		}
@@ -257,7 +292,7 @@ func (s *DocumentService) stopShare() {
 		s.share.cancel = nil
 	}
 	unbindCollab(s.share.doc)
-	s.share.sync, s.share.doc = nil, nil
+	s.share.sync, s.share.doc, s.share.retry = nil, nil, nil
 }
 
 // unbindCollab débranche la synchronisation d'un classeur qui n'est plus
@@ -272,8 +307,21 @@ func unbindCollab(d *doc.Document) {
 // kickShare demande l'envoi de la file du classeur collaboratif ouvert
 // (après une modification locale).
 func (s *DocumentService) kickShare() {
-	if eng := s.collab(); eng != nil {
-		eng.Kick()
+	eng := s.collab()
+	if eng == nil {
+		return
+	}
+	eng.Kick()
+	// Hors ligne, le suivi ne tourne pas : la file est comptée ici pour la
+	// barre d'état (« Hors ligne — 3 en attente »).
+	if d, err := s.current(); err == nil && !d.Share.Online() {
+		if _, _, st, sy, err := eng.Counts(context.Background()); err == nil {
+			if st {
+				s.emitShare(d)
+			} else if sy {
+				s.emitSync(d)
+			}
+		}
 	}
 }
 
@@ -735,11 +783,13 @@ var recordOpenEvery = time.Hour
 // recordOpens note l'ouverture du classeur partagé sur son serveur, dès
 // qu'il est joignable, puis toutes les recordOpenEvery tant que ctx court.
 func recordOpens(ctx context.Context, info *workbook.Info) {
+	retry := workbook.NewBackoff(shareRetry, shareRetryMax*shareRetry)
 	for {
-		wait := shareRetry
+		wait := retry.Next()
 		if srv, _, _, err := remoteServer(ctx, info.Server); err == nil {
 			if err := srv.RecordOpen(ctx, info.WorkbookID); err == nil {
 				wait = recordOpenEvery
+				retry.Reset()
 			}
 		}
 		select {

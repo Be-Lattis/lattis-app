@@ -41,7 +41,10 @@ var (
 //
 // Règles :
 //   - classeur local, ou tableau privé (non publié) : tout est permis ;
-//   - hors ligne : les tableaux publiés sont en lecture seule (§10) ;
+//   - hors ligne : les tableaux publiés d'un classeur figé sont en lecture
+//     seule (§10) ; ceux d'un classeur collaboratif restent modifiables
+//     selon les derniers droits connus, la file part à la reconnexion
+//     (décision 0014) ;
 //   - figé : lecture seule, sauf pour son auteur (propriétaire ou
 //     concepteur), qui prépare la prochaine version en local puis
 //     republie ; le tri reste permis à tous (local, jamais renvoyé) ;
@@ -211,7 +214,10 @@ func (l *Link) lock(tbl int64) error {
 	if l.info == nil || !l.published[tbl] {
 		return nil
 	}
-	if !l.online {
+	// Hors ligne : un classeur figé est en lecture seule ; un classeur
+	// collaboratif reste modifiable avec les derniers droits connus, tout
+	// part par la file à la reconnexion (décision 0014).
+	if !l.online && l.info.Mode == Frozen {
 		return ErrOffline
 	}
 	switch l.info.Mode {
@@ -385,14 +391,14 @@ type State struct {
 }
 
 // SetQueue note les étapes en attente d'envoi et les conflits ouverts
-// (classeur collaboratif). state : l'état de partage change (conflits, ou
-// file hors ligne : bandeau) ; sync : la file change (barre d'état,
-// SyncStatus), sans relire la mise en page.
+// (classeur collaboratif). state : l'état de partage change (conflits :
+// bandeau) ; sync : la file change (barre d'état, SyncStatus, y compris
+// hors ligne : « Hors ligne — 3 en attente »), sans relire la mise en page.
 func (l *Link) SetQueue(pending, conflicts int) (state, sync bool) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	sync = l.pending != pending
-	state = l.conflicts != conflicts || (sync && !l.online)
+	state = l.conflicts != conflicts
 	l.pending, l.conflicts = pending, conflicts
 	return state, sync
 }
@@ -444,7 +450,7 @@ func (l *Link) State() State {
 	}
 	s.Link = protocol.WorkbookLink(s.Server, s.WorkbookID)
 	switch {
-	case !l.online:
+	case !l.online && l.info.Mode == Frozen:
 		s.ReadOnly = ErrOffline.Error()
 	case l.info.Mode == Frozen && !s.CanDesign:
 		s.ReadOnly = ErrReadOnly.Error()

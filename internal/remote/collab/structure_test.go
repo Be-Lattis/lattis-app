@@ -300,11 +300,8 @@ func TestStructureRefusedByServer(t *testing.T) {
 	if err := bob.d.InsertColumn(ctx, "Ventes", 1, "Bob"); !errors.Is(err, workbook.ErrDesign) {
 		t.Fatalf("éditeur : %v", err)
 	}
-	// Hors ligne : refusé.
-	alice.d.Share.SetOnline(false, "coupure")
-	if err := alice.d.InsertColumn(ctx, "Ventes", 1, "X"); !errors.Is(err, workbook.ErrOffline) {
-		t.Fatalf("hors ligne : %v", err)
-	}
+	// Hors ligne : la structure aussi attend dans la file (décision 0014 ;
+	// voir TestOfflineStructure).
 }
 
 // TestStructureRefusedDropsDependents : refusé par le serveur, un

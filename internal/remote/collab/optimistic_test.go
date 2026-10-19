@@ -2,7 +2,6 @@ package collab_test
 
 import (
 	"context"
-	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -135,12 +134,14 @@ func TestOptimisticSyncStatus(t *testing.T) {
 	if state || !sync || alice.d.Share.Sync().Pending != 0 {
 		t.Fatalf("après l'envoi : state %v, sync %v, %+v", state, sync, alice.d.Share.Sync())
 	}
-	// Hors ligne : la file change aussi l'état de partage (bandeau).
+	// Hors ligne : la file ne change que la barre d'état (le classeur
+	// reste modifiable, décision 0014 : pas de relecture de la mise en page
+	// à chaque saisie).
 	alice.d.Share.SetOnline(false, "coupure")
-	if state, sync := alice.d.Share.SetQueue(3, 0); !state || !sync {
+	if state, sync := alice.d.Share.SetQueue(3, 0); state || !sync {
 		t.Fatalf("hors ligne : state %v, sync %v", state, sync)
 	}
-	if s := alice.d.Share.Sync(); s.Online || s.Pending != 3 || !strings.Contains(alice.d.Share.State().ReadOnly, "Hors ligne") {
+	if s := alice.d.Share.Sync(); s.Online || s.Pending != 3 || alice.d.Share.State().Offline != "coupure" {
 		t.Fatalf("hors ligne : %+v", s)
 	}
 }

@@ -42,6 +42,19 @@ Dans un classeur collaboratif (partagé en direct sur un Serveur Lattis), un tab
 - **Voir en tant que…** : depuis la ligne d'un membre ou d'un rôle, ou dans son onglet, montre ce que ce membre peut faire sur un tableau et les lignes qu'il voit, lues sur le serveur sous son identité (règles comprises).
 - **Écarts** : règles changées hors de Lattis, directement dans PostgreSQL ; **Recompiler les droits** remet celles de Lattis.
 
+## Serveur injoignable : travailler hors ligne, ou se détacher
+
+Quand le serveur d'un classeur partagé ne répond plus (serveur arrêté, réseau coupé), un bandeau orange s'affiche sous le ruban, par exemple « Le serveur localhost:8080 ne répond pas ». **Détails** montre l'erreur technique (aussi en infobulle et dans le journal).
+
+- **Classeur collaboratif** : il reste modifiable. Saisies, lignes ajoutées ou supprimées, colonnes ajoutées ou renommées attendent sur votre poste (petit triangle gris dans le coin des cellules, « Hors ligne — 3 en attente » dans la barre d'état), même si vous fermez Lattis : elles sont gardées avec le classeur. Au retour du serveur, elles partent dans l'ordre où vous les avez faites. Une cellule modifiée entre-temps par un collègue devient un **conflit** (volet Conflits : garder la vôtre ou la sienne) ; ce que le serveur refuse (droits retirés pendant la coupure, colonne devenue intouchable, ligne supprimée par un collègue) est défait sur votre poste, avec un message.
+- **Classeur figé** : il reste consultable, en lecture seule, jusqu'au retour du serveur.
+
+Lattis réessaie de lui-même, de moins en moins souvent (de quelques secondes à deux minutes) ; le bandeau disparaît dès que le serveur répond. Les boutons du bandeau :
+
+- **Réessayer** (aussi Fichier › **Réessayer la connexion**) : essaie tout de suite.
+- **Travailler sur une copie locale** : enregistre le classeur sous le nom de votre choix comme un classeur ordinaire, sans lien avec le serveur, puis l'ouvre. Les modifications pas encore envoyées sont dans la copie (le message le dit) ; elles restent aussi en attente dans le classeur partagé, qui n'est pas touché.
+- **Détacher du serveur…** (propriétaire du classeur ; aussi dans Fichier, en ligne comme hors ligne) : ce classeur devient un classeur local ordinaire, qui ne se synchronise plus. Le classeur du serveur n'est pas modifié (les autres membres le gardent, vous pouvez le rouvrir depuis le serveur). Un classeur ouvert depuis le serveur n'est qu'une copie dans le cache de Lattis : Lattis demande où l'enregistrer, puis retire le cache. Le détachement ne s'annule pas, et une confirmation le rappelle.
+
 ## Partager un tableau au Data Lake Lattis
 
 Clic droit sur un tableau › **Partager au Data Lake Lattis…** rend le tableau lisible depuis d'autres classeurs du Serveur Lattis (Insertion › Data Lake Lattis, onglet SQL), selon une audience : personnes, équipes, avec un filtre des lignes pour chacune. Si le classeur n'est pas publié, la boîte propose deux façons de faire :

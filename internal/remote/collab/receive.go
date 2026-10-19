@@ -527,6 +527,9 @@ func (e *Engine) Follow(ctx context.Context, srv workbook.Server, retry time.Dur
 	go w.loop(ctx)
 	for ctx.Err() == nil {
 		err := srv.Listen(ctx, info.Channel, func() {
+			if b := e.backoff(); b != nil {
+				b.Reset()
+			}
 			w.connected()
 		}, func(p string) {
 			w.notified(ctx, p)
@@ -539,6 +542,12 @@ func (e *Engine) Follow(ctx context.Context, srv workbook.Server, retry time.Dur
 			reason = err.Error()
 		}
 		w.disconnected(reason)
+		if b := e.backoff(); b != nil {
+			if !b.Wait(ctx) {
+				return
+			}
+			continue
+		}
 		select {
 		case <-ctx.Done():
 			return

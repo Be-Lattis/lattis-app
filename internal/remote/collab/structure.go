@@ -89,7 +89,8 @@ func (t *rtable) column(local int64) (int, bool) {
 
 // Structure vérifie les changements de structure d'une transaction locale
 // (oplog.StructureFunc) avant sa validation, sans appel au serveur :
-// tableau verrouillé, propriétaire ou concepteur, en ligne. Acceptés, ils
+// tableau verrouillé, propriétaire ou concepteur (en ligne ou non : hors
+// ligne, ils attendent dans la file, décision 0014). Acceptés, ils
 // partent par la file d'envoi (oplog.OpStructure), faits sur le serveur
 // par Send avant les données de leur étape (sendStructure). Classeur
 // figé : rien (l'auteur prépare la version suivante en local).
@@ -106,9 +107,10 @@ func (e *Engine) Structure(ctx context.Context, tx *sql.Tx, kind string, changes
 	if !info.CanDesign() {
 		return workbook.ErrDesign
 	}
-	if e.server() == nil || !e.link.Online() {
-		return workbook.ErrOffline
-	}
+	// Hors ligne (ou serveur pas encore joint depuis l'ouverture) : permis
+	// aussi, le changement attend dans la file et part à la reconnexion,
+	// avant les données qui le suivent ; un refus du serveur le défait
+	// alors comme en ligne (décision 0014).
 	return nil
 }
 

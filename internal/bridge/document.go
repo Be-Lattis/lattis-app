@@ -143,6 +143,7 @@ func (s *DocumentService) ServiceShutdown() error {
 	if s.doc == nil {
 		return nil
 	}
+	keepCollabQueue(s.doc)
 	if dirty, _ := s.doc.Dirty(context.Background()); dirty {
 		// Garder le répertoire de travail (récupération au prochain
 		// lancement), mais libérer le fichier pour les autres postes.
@@ -173,6 +174,7 @@ func (s *DocumentService) replace(d *doc.Document) {
 	s.stopCoEdit()
 	s.startCoEdit(d)
 	if old != nil {
+		keepCollabQueue(old)
 		old.Close()
 	}
 	// Conversation de l'assistant : propre au classeur.

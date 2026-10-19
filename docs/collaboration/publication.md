@@ -20,8 +20,8 @@
 | L'auteur (propriétaire ou concepteur) modifie sa copie d'un classeur figé (prochaine version) ; **Fichier › Republier** publie la nouvelle version (même chemin, dans la version de travail) | `workbook.Republish`, `DocumentService.ShareRepublish` |
 | Suivi du serveur pendant que le classeur est ouvert : `LISTEN` sur le canal, version vérifiée à chaque (re)connexion, bandeau **« Nouvelle version disponible »** (bouton Recharger) sur `*version:<n>` | `workbook.Watch`, `DocumentService.watchShare`, évènement `share:changed`, `ShareBanner.svelte` |
 | **Rechargement** d'une nouvelle version : mise en page et données remplacées ; ce que l'utilisateur a ajouté en local (tableaux privés, cellules libres, feuilles…) est gardé, renuméroté ou renommé si la nouvelle version a pris ses identifiants ou ses noms ; l'historique d'annulation est vidé | `workbook.Load(…, fresh=false)` |
-| **Hors ligne** : le cache se rouvre sans serveur, bandeau « Hors ligne, lecture seule » (avec « Se connecter… » quand la session manque), aucune écriture sur les tableaux publiés ; nouvel essai toutes les 30 s | `Link.SetOnline`, `Watch` |
-| Classeur collaboratif : publié par le même chemin ; ouvert, ses tableaux se modifient selon le niveau (`my_capabilities`) et les opérations vont dans la file d'envoi (synchronisation : étape 5) ; hors ligne, lecture seule | `Link.Gate` |
+| **Hors ligne** : le cache se rouvre sans serveur ; bandeau « Le serveur … ne répond pas : ce classeur partagé est en lecture seule » (classeur figé : aucune écriture sur les tableaux publiés ; collaboratif : modifiable, décision 0014), erreur technique dans « Détails », boutons Réessayer (ou « Se connecter… » quand la session manque), Travailler sur une copie locale, Détacher du serveur (propriétaire) ; nouveaux essais espacés de 5 s à 2 min | `Link.SetOnline`, `WatchWith`, `workbook.Backoff`, `ShareBanner.svelte` |
+| Classeur collaboratif : publié par le même chemin ; ouvert, ses tableaux se modifient selon le niveau (`my_capabilities`) et les opérations vont dans la file d'envoi (synchronisation : étape 5) ; hors ligne aussi, selon les derniers droits connus (décision 0014) | `Link.Gate` |
 
 ## 2. Choix de conception
 
@@ -43,7 +43,7 @@ Le découpage en objets par feuille, graphique, etc. (et `lattis_meta_tables.she
 
 Le relevé du journal logique (`oplog`) voit déjà toute écriture sur un tableau publié, quel que soit son chemin. On lui donne une porte (`Recorder.Gate`) que tient `workbook.Link` : pour chaque opération, la garder dans la file (collaboratif en ligne), l'écarter (classeur figé : rien ne part, le tri reste local) ou refuser l'étape entière. La grille et les opérations de structure (renommer une colonne n'écrit aucune ligne) demandent en plus `canvas.Sharing.TableLock` pour refuser tout de suite, avec le même message. Les écritures du chargement passent hors du bus : elles ne sont ni relevées ni refusées.
 
-Règles (`Link.lock`) : classeur local ou tableau privé → permis ; hors ligne → « Hors ligne, lecture seule » ; figé → « Classeur publié en lecture seule » sauf propriétaire ou concepteur ; collaboratif → selon le niveau du tableau (lecteur : lecture seule).
+Règles (`Link.lock`) : classeur local ou tableau privé → permis ; figé hors ligne → « Hors ligne, lecture seule » (collaboratif hors ligne : comme en ligne, la file attend le serveur, décision 0014) ; figé → « Classeur publié en lecture seule » sauf propriétaire ou concepteur ; collaboratif → selon le niveau du tableau (lecteur : lecture seule).
 
 ### 2.4 Rechargement
 
