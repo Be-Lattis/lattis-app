@@ -82,6 +82,8 @@ Sur un tableau de **1 000 000 de lignes** (poste de développement, Windows 10) 
 
 Le détail est dans [docs/mesures/performances-1M.md](docs/mesures/performances-1M.md) et dans l'[audit des gros jeux de données](docs/audit-performance-gros-jeux.md).
 
+**Limites connues** sur un million de lignes et plus : trier un tableau large prend de 10 s à plusieurs minutes, changer le type d'une colonne ou supprimer une colonne reconstruit la table (quelques secondes à une minute), un `UPDATE` SQL sur toutes les lignes prend 20 à 70 s, et l'enregistrement d'un classeur modifié réécrit tout le fichier (14 s pour 2,2 Go). L'état de chaque point est tenu dans l'[audit des gros jeux de données](docs/audit-performance-gros-jeux.md#état-au-19-octobre).
+
 ## Essayer
 
 ```bash

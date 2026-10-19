@@ -26,6 +26,28 @@
 | 16 | Copier une grande plage | — | — | — | **Bug** : les lignes non chargées partent vides dans le presse-papiers. Refus de collage tardif | Lire les valeurs côté moteur |
 | 17 | Ouverture de la démo | 9,8 s | 56 s | 41 s | `count(*)` dans `fill` | Garder le nombre de lignes en cache |
 
+## État au 19 octobre
+
+Relevé d'après l'historique (audit 6, I9). Les chiffres du tableau ci-dessus n'ont pas été remesurés.
+
+| # | État | Commit |
+|---|---|---|
+| 1, 2 | Contrôle par EXISTS, types en un seul parcours, tableau gardé quand seules ses valeurs changent. **À remesurer** | c834242 |
+| 3 | **Corrigé** : TCD et graphiques gardés en cache tant que leur tableau source ne change pas | 11a6e90 |
+| 4 | **Corrigé** : lignes lues et écrites au fil de l'eau, mémoire constante | 209cdb9 |
+| 5 | Ouvert | — |
+| 6 | **Ouvert** : le tri réécrit encore `_pos` sur chaque ligne large ; la piste (table étroite de positions, ou reconstruction puis renommage) touche le modèle des tableaux | — |
+| 7 | **Corrigé** : colonnes qui ne peuvent pas contenir le texte sautées | 10ac41c |
+| 8 | Ouvert | — |
+| 9 | Annulation en quelques secondes (corbeille indexée) ; la suppression elle-même reconstruit encore la table | b09b272 |
+| 10 | **Corrigé** : agrégat direct, sans ordonner les lignes | ab9b081 |
+| 11, 12 | Ouverts (11 : à remesurer) | — |
+| 13 | Recherche des doublons faite une seule fois | 67a910d |
+| 15 | **Corrigé** : classeur inchangé jamais réécrit ; espace disque vérifié et avancement affiché pour un classeur modifié | 10ac41c, audit 6 (I2) |
+| 16 | **Corrigé** : les lignes jamais affichées sont lues avant d'écrire le presse-papiers | 02bf2da |
+| 14 | Normal : le premier calcul reste, les suivants viennent du cache (point 3) | — |
+| 17 | Ouvert | — |
+
 ## Ce qui est déjà rapide
 
 - Défilement : 1 à 9 ms ; 28 ms pour 2000 lignes en 1M×100.
