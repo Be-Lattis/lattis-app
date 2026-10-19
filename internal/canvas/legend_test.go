@@ -2,6 +2,7 @@ package canvas
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -249,5 +250,138 @@ func TestHeaderToTitleAutoNames(t *testing.T) {
 	must(t, d.HeaderToTitle(ctx, "T"))
 	if got, want := layoutOf(t, d), "T@A1:Nom|Âge×1"; got != want {
 		t.Fatalf("\n got %s\nwant %s", got, want)
+	}
+}
+
+// queryTable charge en A1 de la feuille 1 le tableau « Q » d'une requête
+// (Produit, Montant) ; rows : ses lignes. Rend de quoi l'actualiser.
+func queryTable(t *testing.T, d *fixture, rows [][]any) func(rows [][]any) {
+	t.Helper()
+	ctx := context.Background()
+	id, err := d.SaveQuery(ctx, QueryDef{Name: "Q", Source: `{"kind":"table","table":"X"}`})
+	must(t, err)
+	load := func(rows [][]any) {
+		t.Helper()
+		it := resultTable("", []string{"Produit", "Montant"}, rows)
+		it.At = &QueryAnchor{Sheet: 1}
+		_, err := d.LoadQuery(ctx, id, it)
+		must(t, err)
+	}
+	load(rows)
+	return load
+}
+
+// Audit 2, I10 : sous un tableau chargé par une requête, un total, une note
+// ou une remarque à côté d'une ligne restent permis (cellules gardées à
+// part) ; une nouvelle ligne ou colonne est refusée, avec le message de
+// l'interface. L'actualisation ne recouvre pas ce qui est gardé à part.
+func TestQueryTableLegend(t *testing.T) {
+	ctx := context.Background()
+	rows := [][]any{{"Pommes", int64(120)}, {"Poires", int64(80)}}
+	d := open(t)
+	refresh := queryTable(t, d, rows)
+	if got, want := layoutOf(t, d), "Q@A1:Produit|Montant×2"; got != want {
+		t.Fatalf("chargé :\n got %s\nwant %s", got, want)
+	}
+
+	// Note et formule de total dessous.
+	d3 := open(t)
+	refresh3 := queryTable(t, d3, rows)
+	mustSet(t, d3, 1, 3, 0, "Source : ERP")
+	mustSet(t, d3, 1, 3, 1, "=SOMME([Montant])")
+	if got, want := layoutOf(t, d3), "Q@A1:Produit|Montant×2 A4*=Source : ERP B4*==SOMME(Q[Montant])"; got != want {
+		t.Fatalf("note et formule :\n got %s\nwant %s", got, want)
+	}
+	if v := cellOn(t, d3, 1, 3, 1).Value; v != "200" {
+		t.Fatalf("total : %q", v)
+	}
+
+	// « Total » dessous, puis sa valeur à droite (une donnée, gardée sur la
+	// ligne du total) ; remarque à côté d'une ligne.
+	mustSet(t, d, 1, 3, 0, "Total")
+	mustSet(t, d, 1, 3, 1, "245")
+	mustSet(t, d, 1, 1, 2, "← à vérifier")
+	if got, want := layoutOf(t, d), "Q@A1:Produit|Montant×2 C2*=← à vérifier A4*=Total B4*=245"; got != want {
+		t.Fatalf("légende :\n got %s\nwant %s", got, want)
+	}
+
+	// Agrandir le tableau : refusé, rien ne change.
+	before := dump(t, d)
+	for _, c := range []struct {
+		row, col int
+		raw      string
+	}{
+		{0, 2, "Prix"}, // en-tête à droite : nouvelle colonne
+		{2, 2, "12"},   // à droite d'une ligne : nouvelle colonne
+	} {
+		_, err := d.SetCell(ctx, 1, c.row, c.col, c.raw)
+		if !errors.Is(err, ErrQueryTable) || err.Error() != "Tableau chargé par une requête : ses cellules ne se modifient pas ; changez la requête (Données › Requêtes) puis actualisez (F5)" {
+			t.Fatalf("%s en %d,%d : %v", c.raw, c.row, c.col, err)
+		}
+		if got := dump(t, d); got != before {
+			t.Fatalf("refus incomplet :\n%s", diff(before, got))
+		}
+	}
+	d2 := open(t)
+	queryTable(t, d2, rows)
+	before2 := dump(t, d2)
+	if _, err := d2.SetCell(ctx, 1, 3, 0, "Prunes"); !errors.Is(err, ErrQueryTable) {
+		t.Fatalf("nouvelle ligne : %v", err)
+	}
+	// Collé contre le tableau (cellule par cellule) : refusé aussi.
+	if _, err := d2.Paste(ctx, 1, 3, 0, [][]string{{"Prunes", "45"}}); !errors.Is(err, ErrQueryTable) {
+		t.Fatalf("collage dessous : %v", err)
+	}
+	if got := dump(t, d2); got != before2 {
+		t.Fatalf("refus incomplet :\n%s", diff(before2, got))
+	}
+
+	// Actualisation avec une ligne de plus : le tableau grandit, la légende
+	// descend avec son bas (le total reste collé), la remarque reste.
+	refresh(append(rows, []any{"Prunes", int64(45)}))
+	if got, want := layoutOf(t, d), "Q@A1:Produit|Montant×3 C2*=← à vérifier A5*=Total B5*=245"; got != want {
+		t.Fatalf("actualisé :\n got %s\nwant %s", got, want)
+	}
+	// Une ligne de moins : le total remonte contre le bas.
+	refresh(rows[:1])
+	if got, want := layoutOf(t, d), "Q@A1:Produit|Montant×1 C2*=← à vérifier A3*=Total B3*=245"; got != want {
+		t.Fatalf("raccourci :\n got %s\nwant %s", got, want)
+	}
+	// La formule de total suit le bas sans être recouverte, et se recalcule.
+	refresh3(append(rows, []any{"Prunes", int64(45)}))
+	if got, want := layoutOf(t, d3), "Q@A1:Produit|Montant×3 A5*=Source : ERP B5*==SOMME(Q[Montant])"; got != want {
+		t.Fatalf("formule actualisée :\n got %s\nwant %s", got, want)
+	}
+	if v := cellOn(t, d3, 1, 4, 1).Value; v != "245" {
+		t.Fatalf("total actualisé : %q", v)
+	}
+}
+
+// « Sortir cette ligne du tableau (total ou note) » sur la dernière ligne
+// d'un tableau de requête : la ligne reste dessous, à part, en une étape ;
+// la barre d'état prévient que l'actualisation la remettra. Actualisé, le
+// tableau la reprend et la ligne gardée à part descend (rien n'est écrasé).
+func TestQueryRowToNote(t *testing.T) {
+	ctx := context.Background()
+	rows := [][]any{{"Pommes", int64(120)}, {"Total", int64(120)}}
+	d := open(t)
+	refresh := queryTable(t, d, rows)
+	before := dump(t, d)
+	d.TakeNotice()
+	if err := d.RowToNote(ctx, "Q", 0); !errors.Is(err, ErrNotLastRow) {
+		t.Fatalf("ligne du milieu : %v", err)
+	}
+	must(t, d.RowToNote(ctx, "Q", 1))
+	if got, want := layoutOf(t, d), "Q@A1:Produit|Montant×1 A3*=Total B3*=120"; got != want {
+		t.Fatalf("ligne sortie :\n got %s\nwant %s", got, want)
+	}
+	if n := d.TakeNotice(); !strings.Contains(n, "actualisation de la requête « Q »") {
+		t.Fatalf("message : %q", n)
+	}
+	undoOnce(t, d, before, "ligne sortie")
+	must(t, d.RowToNote(ctx, "Q", 1))
+	refresh(rows)
+	if got, want := layoutOf(t, d), "Q@A1:Produit|Montant×2 A4*=Total B4*=120"; got != want {
+		t.Fatalf("actualisé :\n got %s\nwant %s", got, want)
 	}
 }

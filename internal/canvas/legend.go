@@ -114,6 +114,50 @@ func (t *tx) outCells(sheet int64) (map[[2]int]bool, error) {
 	return out, rs.Err()
 }
 
+// ErrQueryTable : un tableau chargé par une requête ne s'agrandit pas à la
+// main (ni ligne ni colonne) : l'actualisation le remplacerait. Même texte
+// que le refus de l'interface (QUERY_READONLY, Sheet.svelte).
+var ErrQueryTable = errors.New("Tableau chargé par une requête : ses cellules ne se modifient pas ; changez la requête (Données › Requêtes) puis actualisez (F5)")
+
+// queryLoaded : le tableau id est chargé par une requête d'import.
+func (t *tx) queryLoaded(id int64) (bool, error) {
+	var n int
+	err := t.row(`SELECT count(*) FROM _lattis_queries WHERE target = ?`, id).Scan(&n)
+	return n > 0, err
+}
+
+// refuseQuery refuse l'agrandissement d'un tableau chargé par une requête.
+func (t *tx) refuseQuery(tb Table) error {
+	q, err := t.queryLoaded(tb.ID)
+	if err == nil && q {
+		err = ErrQueryTable
+	}
+	return err
+}
+
+// outKindInRow donne l'allure (note, total) d'une cellule déjà gardée hors
+// du tableau sur la ligne row, dans ses colonnes ; "" s'il n'y en a pas.
+func (t *tx) outKindInRow(tb Table, row int) (string, error) {
+	rs, err := t.query(`SELECT style FROM _lattis_cell_styles WHERE sheet = ? AND row = ? AND col BETWEEN ? AND ? ORDER BY col`, tb.Sheet, row, tb.Col, tb.Right())
+	if err != nil {
+		return "", err
+	}
+	defer rs.Close()
+	for rs.Next() {
+		var style string
+		if err := rs.Scan(&style); err != nil {
+			return "", err
+		}
+		if s := parseStyle(style); s[outKey] == true {
+			if s["b"] == true {
+				return outTotal, nil
+			}
+			return outNote, nil
+		}
+	}
+	return "", rs.Err()
+}
+
 // footKind dit si une saisie dans la ligne juste sous le tableau est une
 // note ou un total plutôt qu'une nouvelle ligne (vide : une ligne) ; why
 // l'explique.
@@ -417,9 +461,12 @@ func (m *Model) HeaderToTitle(ctx context.Context, table string) error {
 // ErrNotLastRow : seule la dernière ligne d'un tableau peut en sortir.
 var ErrNotLastRow = errors.New("seule la dernière ligne du tableau peut en sortir (déplacez-la en bas d'abord)")
 
-// RowToNote : « Sortir la ligne du tableau » ; la dernière ligne de données
-// devient des cellules libres juste dessous, gardées hors du tableau (une
-// note, ou un total si elle commence par « Total »).
+// RowToNote : « Sortir cette ligne du tableau (total ou note) » ; la
+// dernière ligne de données devient des cellules libres juste dessous,
+// gardées hors du tableau (une note, ou un total si elle commence par
+// « Total »). Sur un tableau chargé par une requête aussi : la barre d'état
+// prévient que l'actualisation la remettra dans le tableau (la ligne gardée
+// à part descend alors d'une ligne, rien n'est écrasé : LoadQuery).
 func (m *Model) RowToNote(ctx context.Context, table string, n int) error {
 	return m.Do(ctx, "Sortir la ligne du tableau", func(t *tx) error {
 		tb, err := t.editTable(table)
@@ -462,12 +509,24 @@ func (m *Model) RowToNote(ctx context.Context, table string, n int) error {
 			if strings.TrimSpace(v) == "" {
 				continue
 			}
-			if err := t.setFreeCell(tb.Sheet, row, tb.Col+i, textRaw(v)); err != nil {
+			// Un nombre (une date…) reste un nombre : un total sorti du
+			// tableau se calcule encore. Un texte reste un texte.
+			if tb.Cols[i].Type == grid.Text || tb.Cols[i].Type == "" {
+				v = textRaw(v)
+			}
+			if err := t.setFreeCell(tb.Sheet, row, tb.Col+i, v); err != nil {
 				return err
 			}
 			if err := t.markOut(tb.Sheet, row, tb.Col+i, kind); err != nil {
 				return err
 			}
+		}
+		var qname string
+		switch err := t.row(`SELECT name FROM _lattis_queries WHERE target = ?`, tb.ID).Scan(&qname); {
+		case err == nil:
+			t.notes = append(t.notes, fmt.Sprintf("Ligne sortie du tableau « %s » ; l'actualisation de la requête « %s » l'y remettra (la ligne gardée à part descendra d'une ligne) : filtrez-la dans la requête pour l'en retirer pour de bon", tb.Name, qname))
+		case !errors.Is(err, sql.ErrNoRows):
+			return err
 		}
 		return nil
 	})

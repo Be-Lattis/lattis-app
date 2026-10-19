@@ -291,6 +291,11 @@ func (m *Model) LoadQuery(ctx context.Context, id int64, it ImportTable) (QueryL
 				res.Warnings = append(res.Warnings, fmt.Sprintf("%s[%s] : %s", tb.Name, c.Name, err))
 			}
 		}
+		if old != nil {
+			if err := t.followLegend(*old, tb); err != nil {
+				return err
+			}
+		}
 		if err := t.settle(sheet, tb.ID); err != nil {
 			return err
 		}
@@ -307,6 +312,49 @@ func (m *Model) LoadQuery(ctx context.Context, id int64, it ImportTable) (QueryL
 		return nil
 	})
 	return res, err
+}
+
+// followLegend : à l'actualisation, ce qui accompagne le tableau suit son
+// nouveau bord au lieu d'être recouvert (total ou note gardés dessous,
+// cellules et tableaux plus bas ou à droite). Plus long ou plus large, la
+// bande dessous (ou à droite) s'écarte comme quand un tableau grandit ;
+// plus court, les cellules gardées à part collées sous l'ancien bas
+// remontent contre le nouveau.
+func (t *tx) followLegend(old, tb Table) error {
+	if tb.Bottom() > old.Bottom() {
+		if err := t.ensureGapBelow(tb.Sheet, tb.ID, old.Bottom(), tb.Bottom(), tb.Col, max(tb.Right(), old.Right())); err != nil {
+			return err
+		}
+	}
+	if tb.Right() > old.Right() {
+		if err := t.ensureGapRight(tb.Sheet, tb.ID, old.Right(), tb.Right(), tb.Top(), tb.Bottom()); err != nil {
+			return err
+		}
+	}
+	if d := old.Bottom() - tb.Bottom(); d > 0 {
+		outs, err := t.outCells(tb.Sheet)
+		if err != nil {
+			return err
+		}
+		in := func(r, c int) bool { return outs[[2]int{r, c}] && c >= old.Col && c <= old.Right() }
+		last := old.Bottom()
+		for {
+			found := false
+			for c := old.Col; c <= old.Right(); c++ {
+				found = found || in(last+1, c)
+			}
+			if !found {
+				break
+			}
+			last++
+		}
+		if last > old.Bottom() {
+			return t.moveCells(tb.Sheet, func(c cell) bool {
+				return c.Row > old.Bottom() && c.Row <= last && in(c.Row, c.Col)
+			}, -d, 0)
+		}
+	}
+	return nil
 }
 
 // freeTableName donne un nom de tableau libre tiré de name (identifiant :

@@ -4716,13 +4716,14 @@
 		pivots.find((p) => !p.error && (p.anchor ?? p.row) <= r1 && p.row + p.cells.length - 1 >= r0 && p.col <= c1 && p.col + p.cells[0].length - 1 >= c0);
 	// Un tableau croisé est calculé : ses cellules ne se saisissent pas (comme Excel).
 	const PIVOT_READONLY = 'Un tableau croisé ne se modifie pas cellule par cellule : double-cliquez dessus pour changer ses champs';
-	// Tableau chargé par une requête (Power Query) : ses cellules et ses bords
-	// (ligne dessous, colonnes à côté) ne se saisissent pas, l'actualisation
-	// les remplacerait.
+	// Tableau chargé par une requête (Power Query) : ses cellules ne se
+	// saisissent pas, l'actualisation les remplacerait. Ses bords (ligne
+	// dessous, colonnes à côté) : le moteur décide (un total, une note ou une
+	// remarque restent à part ; une nouvelle ligne ou colonne est refusée, avec
+	// le même message, ErrQueryTable).
 	const QUERY_READONLY = 'Tableau chargé par une requête : ses cellules ne se modifient pas ; changez la requête (Données › Requêtes) puis actualisez (F5)';
-	/** Tableau de requête qui contient la cellule, ou qu'elle prolongerait (dessous, à droite, à gauche). */
-	const queryAt = (r: number, c: number) =>
-		entries.find((e) => e.t.query && ((r >= e.t.row && r <= e.last + 1 && c >= e.t.col && c <= e.lastCol) || (r >= e.t.row && r <= e.last && (c === e.lastCol + 1 || c === e.t.col - 1))));
+	/** Tableau de requête qui contient la cellule. */
+	const queryAt = (r: number, c: number) => entries.find((e) => e.t.query && r >= e.t.row && r <= e.last && c >= e.t.col && c <= e.lastCol);
 	/** Un tableau de requête touché par la plage (sans la couvrir en entier : le supprimer reste permis). */
 	const queryIn = (r0: number, c0: number, r1: number, c1: number, whole = false) =>
 		entries.find((e) => e.t.query && e.t.row <= r1 && e.last >= r0 && e.t.col <= c1 && e.lastCol >= c0 && !(whole && e.t.row >= r0 && e.last <= r1 && e.t.col >= c0 && e.lastCol <= c1));
@@ -8502,7 +8503,7 @@
 			{@const refresh = !!m.e.t.query && !!source.refreshTable}
 			{@const share = cols && !!onsharedata && !m.e.t.query}
 			{@const twoLevel = cols && !!source.setTwoLevel && !m.e.t.query}
-			{@const tableItems = toTitle || twoLevel || toNote || refresh || share || !!source.convertToRange || !!source.deleteTables}
+			{@const tableItems = toTitle || twoLevel || refresh || share || !!source.convertToRange || !!source.deleteTables}
 			{#snippet sortItems()}
 				{#if cols && source.sortTable}
 					{@const lab = sortLabels(col?.type ?? 'text', col?.result)}
@@ -8574,6 +8575,10 @@
 								clearSelection();
 							}}>Effacer le contenu</button
 						>
+						{#if toNote}
+							<!-- Seulement sur la dernière ligne de données (le moteur refuse les autres). -->
+							<button title="La ligne reste juste sous le tableau, gardée à part comme total ou note (Ctrl+Z pour annuler)" onclick={() => menuAction(() => source.rowToNote!(m.e.t, m.n))}>Sortir cette ligne du tableau (total ou note)</button>
+						{/if}
 					{/if}
 					{#if sortCount}
 						<hr />
@@ -8626,9 +8631,6 @@
 										: 'Les noms « Groupe.Nom » montrent leur groupe dans une bande au-dessus de l’en-tête ; la ligne au-dessus du tableau (cellules fusionnées ou non) donne les groupes'}
 									onclick={() => menuAction(() => source.setTwoLevel!(m.e.t, !on))}><span class="check">{on ? '✓' : ''}</span>En-têtes sur deux lignes</button
 								>
-							{/if}
-							{#if toNote}
-								<button title="La ligne reste sous le tableau, comme note ou total, sans en faire partie" onclick={() => menuAction(() => source.rowToNote!(m.e.t, m.n))}>Sortir la dernière ligne (note)</button>
 							{/if}
 							{#if refresh}
 								{@const t = m.e.t}

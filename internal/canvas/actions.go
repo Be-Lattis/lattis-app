@@ -140,6 +140,23 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 						return t.keepOut(tb, row, col, raw, kind, why)
 					}
 				}
+				// Tableau d'une requête : une note ou un total dessous restent
+				// permis (ci-dessus), une nouvelle ligne non (l'actualisation
+				// l'écraserait). Sur la ligne d'un total déjà gardé à part, la
+				// saisie le complète (« Total » puis 245).
+				if q, err := t.queryLoaded(tb.ID); err != nil || q {
+					if err != nil {
+						return err
+					}
+					kind, err := t.outKindInRow(tb, row)
+					if err != nil {
+						return err
+					}
+					if kind == "" || t.noLegend {
+						return ErrQueryTable
+					}
+					return t.keepOut(tb, row, col, raw, kind, "sur la ligne gardée à part sous un tableau de requête")
+				}
 				outs, err := t.outCells(sheet)
 				if err != nil {
 					return err
@@ -171,6 +188,9 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 			case inRows && col == tb.Col-1 && !empty && !inAny(tables, row, col) && !rightOfAny(tables, tb, row, col):
 				// Juste à gauche : nouvelle première colonne. Juste à droite d'un autre
 				// tableau, c'est lui qui la prend (et les deux fusionnent).
+				if err := t.refuseQuery(tb); err != nil {
+					return err
+				}
 				if err := t.growSide(tb, row, col, raw, ev, true); err != nil || row != tb.Bottom() {
 					return err
 				}
@@ -179,6 +199,9 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 				// Juste à droite : nouvelle dernière colonne. Un tableau juste
 				// après (lignes qui se recoupent) : la saisie comble l'écart
 				// et les deux tableaux fusionnent.
+				if err := t.refuseQuery(tb); err != nil {
+					return err
+				}
 				var next *Table
 				for i := range tables {
 					if o := tables[i]; o.Col == col+1 && o.Row <= tb.Bottom() && tb.Row <= o.Bottom() {
