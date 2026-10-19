@@ -395,11 +395,11 @@
 			{
 				title: 'Graphiques',
 				commands: [
-					{ label: 'Barres', icon: 'chart-bar', run: onchart ? () => onchart('bar') : undefined, hint: 'Graphique en barres du tableau actif' },
+					{ label: 'Histogramme', icon: 'chart-bar', run: onchart ? () => onchart('bar') : undefined, hint: 'Histogramme (barres verticales) du tableau actif' },
 					{ label: 'Courbes', icon: 'chart-line', run: onchart ? () => onchart('line') : undefined, hint: 'Graphique en courbes du tableau actif' },
 					{ label: 'Secteurs', icon: 'chart-pie', run: onchart ? () => onchart('pie') : undefined, hint: 'Graphique en secteurs du tableau actif' },
 					{ label: 'Nuage de points', icon: 'chart-scatter', run: onchart ? () => onchart('scatter') : undefined, hint: 'Nuage de points du tableau actif' },
-					{ label: 'Autres graphiques', icon: 'chart-more', run: onchart ? openItems : undefined, hint: 'Combiné, 3D, carte, cascade, compartimentage, radar, entonnoir, boîte à moustaches, fréquences, jauge', items: MORE_KINDS.map((k) => ({ label: k.label, run: onchart ? () => onchart(k.kind) : undefined })) }
+					{ label: 'Autres graphiques', icon: 'chart-more', run: onchart ? openItems : undefined, hint: MORE_KINDS.map((k) => k.label).join(', '), items: MORE_KINDS.map((k) => ({ label: k.label, run: onchart ? () => onchart(k.kind) : undefined })) }
 				]
 			},
 			{
@@ -664,11 +664,11 @@
 			{
 				title: 'Graphiques',
 				commands: [
-					{ label: 'Barres', icon: 'chart-bar', run: dc('chart:bar'), hint: 'Graphique en barres d’un tableau du classeur, inséré dans le texte' },
+					{ label: 'Histogramme', icon: 'chart-bar', run: dc('chart:bar'), hint: 'Histogramme (barres verticales) d’un tableau du classeur, inséré dans le texte' },
 					{ label: 'Courbes', icon: 'chart-line', run: dc('chart:line'), hint: 'Graphique en courbes d’un tableau du classeur' },
 					{ label: 'Secteurs', icon: 'chart-pie', run: dc('chart:pie'), hint: 'Graphique en secteurs d’un tableau du classeur' },
 					{ label: 'Nuage de points', icon: 'chart-scatter', run: dc('chart:scatter'), hint: 'Nuage de points d’un tableau du classeur' },
-					{ label: 'Autres graphiques', icon: 'chart-more', run: openItems, hint: 'Combiné, 3D, carte, cascade, compartimentage, radar, entonnoir, boîte à moustaches, fréquences, jauge', items: MORE_KINDS.map((k) => ({ label: k.label, run: dc(`chart:${k.kind}`) })) }
+					{ label: 'Autres graphiques', icon: 'chart-more', run: openItems, hint: MORE_KINDS.map((k) => k.label).join(', '), items: MORE_KINDS.map((k) => ({ label: k.label, run: dc(`chart:${k.kind}`) })) }
 				]
 			},
 			{
