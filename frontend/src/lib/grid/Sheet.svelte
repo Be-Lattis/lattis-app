@@ -1505,6 +1505,12 @@
 	const inTable = (e: Entry, r: number, c: number) => r >= e.t.row && r <= e.last && c >= e.t.col && c <= e.lastCol;
 	const tableAt = (r: number, c: number) => entries.find((e) => inTable(e, r, c));
 	/** Tableau aux en-têtes sur deux lignes dont la bande des groupes (ligne row - 1) contient la cellule. */
+	/** Tableau dont l'en-tête est juste sous la sélection (sans groupes d'en-têtes) : sa ligne du dessus peut devenir ses groupes. */
+	function groupCandidate(): Entry | undefined {
+		if (!source.setTwoLevel) return undefined;
+		const sel = selection();
+		return entries.find((e) => !e.t.twoLevel && !e.t.query && e.t.row - 1 >= sel.r0 && e.t.row - 1 <= sel.r1 && e.t.col <= sel.c1 && e.lastCol >= sel.c0);
+	}
 	const groupBandAt = (r: number, c: number) => entries.find((e) => e.t.twoLevel && r === e.t.row - 1 && c >= e.t.col && c <= e.lastCol);
 	const topRow = tableTop;
 	/** Tableau de la cellule, sa bande des groupes comprise (zone de nom, gouttière, ruban). */
@@ -9109,7 +9115,13 @@
 		{/if}
 		{#if freeMenu}
 			{@const m = freeMenu}
+			{@const below = groupCandidate()}
 			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (freeMenu = null)}>
+				{#if below}
+					<!-- Ligne juste au-dessus de l'en-tête d'un tableau : ses cases peuvent devenir les groupes d'en-têtes. -->
+					<button title="Les cases de cette ligne, fusionnées ou non, deviennent les groupes d'en-têtes du tableau « {below.t.name} »" onclick={() => { freeMenu = null; menuAction(() => source.setTwoLevel!(below.t, true)); }}>Intégrer comme groupes d'en-têtes du tableau</button>
+					<hr />
+				{/if}
 				<button data-shed="3"
 					onclick={() => {
 						freeMenu = null;
