@@ -15,6 +15,8 @@
 
 export type Mode = 'large' | 'small' | 'icon' | 'collapsed';
 export const MODES: Mode[] = ['large', 'small', 'icon', 'collapsed'];
+/** Forme d'une commande dans un groupe compact. */
+export type Size = 'icon' | 'small' | 'big';
 
 export interface GroupShape {
 	title: string;
@@ -34,11 +36,20 @@ export interface GroupShape {
 	 */
 	widest?: Mode;
 	/**
-	 * Groupe compact : icons commandes en petites icônes seules (en colonnes
-	 * de trois) avant les commandes de labels, qui gardent leur forme du mode
-	 * (grand bouton, petite icône à libellé) ; en mode icônes, tout est icône.
+	 * Groupe compact : forme de chaque commande de labels (même ordre ; les
+	 * listes et couleurs n'en ont pas) au mode large — 'icon' petite icône
+	 * seule, 'small' petite icône à libellé, 'big' grand bouton — comme Excel
+	 * (Presse-papiers, Alignement, Édition…). Les petites s'empilent en
+	 * colonnes de trois ; en mode small les grandes deviennent petites (avec
+	 * libellé), en mode icônes tout est icône. Sans sizes : tout en grand.
 	 */
-	icons?: number;
+	sizes?: Size[];
+	/**
+	 * Petites icônes rangées ligne par ligne sur cols colonnes (Nombre,
+	 * Paragraphe, comme Excel et Word), sous une liste de largeur combo qui
+	 * prend toute la première ligne : même forme jusqu'au repli en menu.
+	 */
+	rows?: { cols: number; combo?: number };
 }
 
 /** Largeur d'un texte en px à la taille de police size (Segoe UI). */
@@ -61,28 +72,34 @@ export function groupWidth(g: GroupShape, mode: Mode, measure: Measure = estimat
 	const text = (s: string, size: number) => Math.ceil(measure(s, size));
 	const title = text(g.title, 11) + TITLE_PAD;
 	if (mode === 'collapsed') return Math.max(LARGE_MIN, text(g.title + ' ▾', 11) + CMD_PAD) + GROUP_PAD;
-	let w = 0;
 	const iconCol = SMALL_ICON - 6 + CMD_PAD;
-	if (g.icons) {
-		if (mode === 'icon') return groupWidth({ ...g, icons: 0, labels: [...g.labels, ...Array<string>(g.icons).fill('')] }, mode, measure);
-		w += Math.ceil(g.icons / 3) * (iconCol + GAP);
-	}
-	const fixed = g.labels.filter((l): l is number => typeof l === 'number');
-	const labels = g.labels.filter((l): l is string | null => typeof l !== 'number');
-	for (const f of fixed) w += f + GAP;
-	if (mode === 'large') {
-		for (const l of labels) w += (l === null ? FIXED : Math.max(LARGE_MIN, text(l, 11) + CMD_PAD)) + GAP;
-	} else {
-		// Colonnes de trois commandes.
-		for (let i = 0; i < labels.length; i += 3) {
-			let col = 0;
-			for (const l of labels.slice(i, i + 3)) {
-				const cw = l === null ? FIXED : mode === 'icon' ? iconCol : SMALL_ICON + text(l, 12) + CMD_PAD;
-				col = Math.max(col, cw);
-			}
-			w += col + GAP;
+	if (g.rows) return Math.max(g.rows.cols * (iconCol + GAP) - GAP, g.rows.combo ?? 0, title) + GROUP_PAD;
+	// Colonnes de trois petites commandes ; un grand bouton, une liste ou une
+	// couleur (sur trois lignes) prend une colonne à lui.
+	let w = 0;
+	let col = 0;
+	let n = 0;
+	const flush = () => {
+		if (n) w += col + GAP;
+		col = n = 0;
+	};
+	g.labels.forEach((l, i) => {
+		if (typeof l === 'number' || l === null) {
+			flush();
+			w += (l ?? FIXED) + GAP;
+			return;
 		}
-	}
+		let size: Size = mode === 'icon' ? 'icon' : (g.sizes?.[i] ?? (mode === 'large' ? 'big' : 'small'));
+		if (size === 'big' && mode === 'small') size = 'small';
+		if (size === 'big') {
+			flush();
+			w += Math.max(LARGE_MIN, text(l, 11) + CMD_PAD) + GAP;
+			return;
+		}
+		col = Math.max(col, size === 'icon' ? iconCol : SMALL_ICON + text(l, 12) + CMD_PAD);
+		if (++n === 3) flush();
+	});
+	flush();
 	return Math.max(w - GAP, title) + GROUP_PAD;
 }
 

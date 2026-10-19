@@ -44,10 +44,12 @@ describe('KeyTips du ruban', () => {
 		const labels = [
 			'Annuler', 'Rétablir', 'Coller', 'Couper', 'Copier', 'Reproduire', 'Police', 'Taille de police (points)', 'Gras', 'Italique', 'Souligné', 'Couleur de police', 'Couleur de police ▾',
 			'Couleur de remplissage', 'Couleur de remplissage ▾', 'Police …', 'Toutes', 'Contour', 'Aucune', 'Bordures …', 'Haut', 'Milieu', 'Bas', 'Gauche', 'Centrer', 'Droite',
-			'Renvoyer à la ligne', 'Fusionner et centrer', 'Alignement …', '0,00', 'Monétaire', 'Pourcentage', 'Ajouter une décimale', 'Réduire les décimales', 'Date',
-			'Standard', 'Nombre …', 'Mise en forme conditionnelle', 'Mettre sous forme de tableau', 'Insérer', 'Supprimer', 'Format', 'Somme automatique', 'Remplissage', 'Effacer', 'Trier et filtrer', 'Rechercher', 'Remplacer'
+			'Renvoyer à la ligne', 'Fusionner et centrer', 'Alignement …', 'Format de nombre', 'Monétaire', 'Pourcentage', 'Date', '0,00', 'Ajouter une décimale', 'Réduire les décimales',
+			'Nombre …', 'Mise en forme conditionnelle', 'Mettre sous forme de tableau', 'Insérer', 'Supprimer', 'Format', 'Somme automatique', 'Remplissage', 'Effacer', 'Trier et filtrer', 'Rechercher', 'Remplacer'
 		];
 		const tips = assignKeyTips(labels, COMMAND_TIPS);
+		// Liste des formats de nombre : N, comme Excel.
+		expect(tips[labels.indexOf('Format de nombre')]).toBe('N');
 		expect(tips.every((t) => /^[A-Z0-9]{1,2}$/.test(t))).toBe(true);
 		prefixFree(tips);
 	});
@@ -55,7 +57,7 @@ describe('KeyTips du ruban', () => {
 		const insertion = assignKeyTips(['Tableau croisé dynamique', 'Tableau', 'Data Lake Lattis', 'Histogramme', 'Courbes', 'Secteurs', 'Nuage de points', 'Autres graphiques ▾', 'Bouton', 'Champ'], COMMAND_TIPS);
 		expect(insertion.slice(0, 2)).toEqual(['V', 'T']);
 		prefixFree(insertion);
-		const donnees = assignKeyTips(['Texte/CSV', 'Classeur Excel', 'Autres fichiers ▾', 'Base de données ▾', 'Web', 'À partir du tableau', 'Requêtes et connexions', 'Actualiser tout', 'Trier A → Z', 'Trier Z → A', 'Filtrer', 'Effacer', 'Erreurs seulement', 'Supprimer les doublons', 'Convertir', 'Validation des données'], COMMAND_TIPS);
+		const donnees = assignKeyTips(['Texte/CSV', 'Classeur Excel', 'Autres fichiers ▾', 'Base de données ▾', 'Web', 'À partir du tableau', 'Actualiser tout', 'Requêtes et connexions', 'Trier A → Z', 'Trier Z → A', 'Filtrer', 'Effacer', 'Erreurs seulement', 'Convertir', 'Supprimer les doublons', 'Validation des données'], COMMAND_TIPS);
 		prefixFree(donnees);
 		const formules = assignKeyTips(['Insérer une fonction', 'Somme automatique', 'REFERENCE', 'Afficher les liens', 'Supprimer les flèches', 'Calculer'], COMMAND_TIPS);
 		expect(formules[4]).toBe('AA');

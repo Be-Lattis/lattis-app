@@ -44,6 +44,7 @@ export const COMMAND_TIPS: Record<string, string> = {
 	'Renvoyer à la ligne': 'W',
 	'Fusionner et centrer': 'M',
 	'Alignement …': 'FA',
+	'Format de nombre': 'N',
 	Monétaire: 'AN',
 	Pourcentage: 'P',
 	'Ajouter une décimale': '0',
