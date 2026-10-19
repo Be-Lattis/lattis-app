@@ -7812,6 +7812,12 @@
 		}
 		const cell = cellAt(e);
 		const pv = cell && pivotAt(cell.row, cell.col);
+		if (cell && pv && pivotHandAt(pv, cell.row, cell.col) >= 0) {
+			// Colonne saisie à droite du TCD (en-tête vert compris) : elle se
+			// modifie comme une cellule, au lieu d'ouvrir le volet des champs.
+			startEdit(false);
+			return;
+		}
 		if (cell && pv) {
 			// Double clic sur −/+ : deux bascules, pas le volet.
 			if (pv.rows && cell.col === pv.col && pivotBoxHit(pivotRowOf(pv, cell.row), toLocal(e).x - screenX(cell.col))) return;
