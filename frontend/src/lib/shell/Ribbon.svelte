@@ -57,7 +57,7 @@
 		color?: 'fg' | 'bg'; // commande avec un choix de couleur
 		on?: boolean; // commande à bascule, enfoncée
 		/** Commande à menu (▾) : ses choix (raccourci affiché à droite ; drapeaux hérités de la commande, sinon les leurs). */
-		items?: { label: string; run?: () => void; on?: boolean; keys?: string; ro?: boolean; local?: boolean }[];
+		items?: { label: string; icon?: IconName; run?: () => void; on?: boolean; keys?: string; ro?: boolean; local?: boolean }[];
 		/** Commande qui ouvre son propre menu (▾ affiché, voir anchor). */
 		menu?: boolean;
 		/** Forme dans un groupe compact (par défaut petite icône seule) : 'small' petite icône à libellé, 'big' grand bouton (Coller, Fusionner et centrer). */
@@ -528,7 +528,7 @@
 						run: onchart ? () => onchart(k) : undefined,
 						hint: `${kindInfo(k)!.label} du tableau actif${k === 'bar' ? ' : barres verticales (Alt+F1)' : ''}`
 					})),
-					{ label: 'Autres graphiques', icon: 'chart-more', run: onchart ? openItems : undefined, hint: moreHint, items: MORE_KINDS.map((k) => ({ label: k.label, run: onchart ? () => onchart(k.kind) : undefined })) }
+					{ label: 'Autres graphiques', icon: 'chart-more', run: onchart ? openItems : undefined, hint: moreHint, items: MORE_KINDS.map((k) => ({ label: k.label, icon: k.icon, run: onchart ? () => onchart(k.kind) : undefined })) }
 				])
 			},
 			{
@@ -869,7 +869,7 @@
 				title: 'Graphiques',
 				commands: [
 					...(['bar', 'line', 'pie', 'scatter'] as const).map((k) => ({ label: kindInfo(k)!.label, icon: kindInfo(k)!.icon, run: dc(`chart:${k}`), hint: `${kindInfo(k)!.label} d’un tableau du classeur, inséré dans le texte` })),
-					{ label: 'Autres graphiques', icon: 'chart-more', run: ondoc ? openItems : undefined, hint: moreHint, items: MORE_KINDS.map((k) => ({ label: k.label, run: dc(`chart:${k.kind}`) })) }
+					{ label: 'Autres graphiques', icon: 'chart-more', run: ondoc ? openItems : undefined, hint: moreHint, items: MORE_KINDS.map((k) => ({ label: k.label, icon: k.icon, run: dc(`chart:${k.kind}`) })) }
 				]
 			},
 			{
@@ -1412,7 +1412,7 @@
 													it.run?.();
 												}}
 											>
-												<Icon name={c.icon} size={18} />
+												<Icon name={it.icon ?? c.icon} size={18} />
 												<span class="label">{it.label}</span>
 											</button>
 										{/each}
@@ -1539,7 +1539,7 @@
 						onclick={() => {
 							dropMenu = null;
 							it.run?.();
-						}}><span class="check" aria-hidden="true">{it.on ? '✓' : ''}</span><span class="item">{it.label}</span>{#if it.keys}<span class="keys">{keyLabel(it.keys)}</span>{/if}</button
+						}}>{#if it.icon}<span class="ico" aria-hidden="true"><Icon name={it.icon} size={16} /></span>{:else}<span class="check" aria-hidden="true">{it.on ? '✓' : ''}</span>{/if}<span class="item">{it.label}</span>{#if it.keys}<span class="keys">{keyLabel(it.keys)}</span>{/if}</button
 					>
 				{/each}
 			</div>
@@ -2084,6 +2084,13 @@
 	.drop-menu .check {
 		width: 18px;
 		color: #217346;
+	}
+	.drop-menu .ico {
+		display: inline-flex;
+		align-items: center;
+		width: 18px;
+		margin-right: 6px;
+		--icon-accent: #217346;
 	}
 	.drop-menu .item {
 		flex: 1;
