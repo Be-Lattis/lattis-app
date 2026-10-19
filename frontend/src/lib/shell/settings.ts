@@ -42,19 +42,19 @@ export const settingSections: SettingSection[] = [
 				path: 'features.htmlTabs',
 				kind: 'bool',
 				label: 'Pages web',
-				help: 'Permet d’ajouter des pages web : une page HTML, CSS et JavaScript qui lit et modifie le classeur, ou une page d’un site. Les classeurs qui en contiennent déjà s’ouvrent et s’utilisent normalement.'
+				help: "Permet d'ajouter des pages web : une page HTML, CSS et JavaScript qui lit et modifie le classeur, ou une page d'un site. Les classeurs qui en contiennent déjà s'ouvrent et s'utilisent normalement."
 			},
 			{
 				path: 'features.sharedWorkbooks',
 				kind: 'bool',
 				label: 'Classeurs partagés (Serveur Lattis)',
-				help: 'Permet de se connecter à un Serveur Lattis de votre organisation (menu Compte de la barre de titre) et de l’ajouter comme source de données. Les classeurs partagés y vivent ; la connexion se fait par votre compte (Google, Microsoft, Keycloak…) ou un mot de passe Lattis.'
+				help: "Permet de se connecter à un Serveur Lattis de votre organisation (menu Compte de la barre de titre) et de l'ajouter comme source de données. Les classeurs partagés y vivent ; la connexion se fait par votre compte (Google, Microsoft, Keycloak…) ou un mot de passe Lattis."
 			},
 			{
 				path: 'ai.enabled',
 				kind: 'bool',
 				label: 'Assistant IA',
-				help: 'Le bouton « Assistant ✦ », en haut à droite du ruban (Alt+I), ouvre un volet à droite de la grille : un assistant qui aide à construire une analyse et agit sur le classeur, chaque réponse s’annulant d’un coup. Il faut une clé d’API d’un fournisseur (Anthropic, Mistral, OpenAI…), gardée dans le trousseau du système, un modèle installé sur ce poste, ou Claude Desktop avec un abonnement Claude.'
+				help: "Le bouton « Assistant ✦ », en haut à droite du ruban (Alt+I), ouvre un volet à droite de la grille : un assistant qui aide à construire une analyse et agit sur le classeur, chaque réponse s'annulant d'un coup. Il faut une clé d'API d'un fournisseur (Anthropic, Mistral, OpenAI…), gardée dans le trousseau du système, un modèle installé sur ce poste, ou Claude Desktop avec un abonnement Claude."
 			}
 		]
 	},
@@ -66,11 +66,11 @@ export const settingSections: SettingSection[] = [
 			{
 				path: 'ai.dataSharing',
 				kind: 'choice',
-				label: 'Données transmises à l’assistant',
+				label: "Données transmises à l'assistant",
 				choices: [
 					{ value: 'schema-only', label: 'Structure seulement (noms, types, nombre de lignes et de valeurs distinctes)' },
-					{ value: 'sample', label: 'Structure et quelques lignes d’exemple (20 au plus par lecture)' },
-					{ value: 'full', label: 'Tout le classeur (l’assistant peut lire toutes les valeurs)' }
+					{ value: 'sample', label: "Structure et quelques lignes d'exemple (20 au plus par lecture)" },
+					{ value: 'full', label: "Tout le classeur (l'assistant peut lire toutes les valeurs)" }
 				],
 				help: 'Vaut aussi pour Claude Desktop et Claude Code par le serveur MCP. Le fournisseur reçoit en plus vos messages, la feuille active et la sélection ; avec un modèle local, rien ne quitte le poste.'
 			},
@@ -78,14 +78,14 @@ export const settingSections: SettingSection[] = [
 				path: 'ai.keepConversation',
 				kind: 'bool',
 				label: 'Garder la conversation dans le classeur',
-				help: 'La conversation est enregistrée avec le classeur et réapparaît à sa prochaine ouverture : elle voyage avec le fichier, y compris les résultats de requêtes montrés et les lignes lues par l’assistant. Elle n’est enregistrée que si le classeur a aussi été modifié. Sinon, elle s’efface quand on ferme le classeur ou qu’on en ouvre un autre.'
+				help: "La conversation est enregistrée avec le classeur et réapparaît à sa prochaine ouverture : elle voyage avec le fichier, y compris les résultats de requêtes montrés et les lignes lues par l'assistant. Elle n'est enregistrée que si le classeur a aussi été modifié. Sinon, elle s'efface quand on ferme le classeur ou qu'on en ouvre un autre."
 			},
 			{
 				path: 'ai.localUrl',
 				kind: 'text',
 				label: 'Adresse du modèle local',
 				placeholder: 'http://localhost:11434/v1',
-				help: 'Fournisseur « Modèle local » : l’adresse d’Ollama, LM Studio ou d’un autre serveur compatible OpenAI sur ce poste. Aucune donnée ne quitte l’ordinateur.'
+				help: "Fournisseur « Modèle local » : l'adresse d'Ollama, LM Studio ou d'un autre serveur compatible OpenAI sur ce poste. Aucune donnée ne quitte l'ordinateur."
 			}
 		]
 	}

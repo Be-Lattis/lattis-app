@@ -19,7 +19,7 @@ export function mcpConfigs(s: McpInfo): McpConfig[] {
 	return [
 		{
 			label: 'Claude Desktop (et clients stdio)',
-			hint: 'À ajouter dans claude_desktop_config.json : le client lance Lattis en relais vers l’application ouverte.',
+			hint: "À ajouter dans claude_desktop_config.json : le client lance Lattis en relais vers l'application ouverte.",
 			text: JSON.stringify(desktop, null, 2)
 		},
 		{

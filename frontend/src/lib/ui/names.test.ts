@@ -89,7 +89,7 @@ describe('scriptNameProblem et favoriteNameProblem', () => {
 
 describe('refusedName', () => {
 	it('retire le préfixe technique du moteur', () => {
-		expect(refusedName('Nom de tableau refusé', new Error('tableau : « Ventes » existe déjà')).message).toBe('« Ventes » existe déjà.\n\nChoisissez un nom qui n’est pas encore utilisé dans le classeur.');
+		expect(refusedName('Nom de tableau refusé', new Error('tableau : « Ventes » existe déjà')).message).toBe("« Ventes » existe déjà.\n\nChoisissez un nom qui n'est pas encore utilisé dans le classeur.");
 		expect(refusedName('x', new Error('la colonne « Prix » existe déjà dans le tableau Ventes : choisissez un autre nom')).message).not.toContain('\n');
 		expect(refusedName('x', 'onglet : nom vide').message).toBe('Nom vide');
 		expect(refusedName('x', new Error('nom « 1a » refusé : mot réservé')).message).toBe('« 1a » : mot réservé');

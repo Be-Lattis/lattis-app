@@ -36,7 +36,7 @@ function identifierFault(name: string, extra = ''): string {
 	return '';
 }
 
-const TABLE_RULE = 'Un nom de tableau commence par une lettre (ou _) et ne contient que des lettres, des chiffres et _, sans espace : il s’écrit tel quel dans les formules (exemple : Ventes_2024).';
+const TABLE_RULE = "Un nom de tableau commence par une lettre (ou _) et ne contient que des lettres, des chiffres et _, sans espace : il s'écrit tel quel dans les formules (exemple : Ventes_2024).";
 
 /**
  * Nom de tableau (zone de nom, onglet SQL) : identifiant, pas une adresse
@@ -50,16 +50,16 @@ export function tableNameProblem(raw: string, others: Iterable<string> = []): Na
 	if (fault) return { title, message: `« ${name} » : ${fault}.\n\n${TABLE_RULE}` };
 	if (a1Name(name)) return { title, message: `« ${name} » est une adresse de cellule : la zone de nom et les formules ne sauraient pas lequel des deux on veut dire.\n\nEssayez par exemple « ${name}_ » ou « T_${name} ».` };
 	const other = taken(name, others);
-	if (other) return { title: 'Nom de tableau déjà pris', message: `Un autre tableau s’appelle déjà « ${other} » (les majuscules ne comptent pas).\n\nChoisissez un nom qui n’est pas encore utilisé dans le classeur.` };
+	if (other) return { title: 'Nom de tableau déjà pris', message: `Un autre tableau s'appelle déjà « ${other} » (les majuscules ne comptent pas).\n\nChoisissez un nom qui n'est pas encore utilisé dans le classeur.` };
 	return null;
 }
 
 /** Nom de feuille (onglet) : non vide et libre parmi others (sans tenir compte des majuscules). */
 export function sheetNameProblem(raw: string, others: Iterable<string> = []): NameProblem | null {
 	const name = raw.trim();
-	if (!name) return { title: 'Nom de feuille invalide', message: 'Le nom de la feuille ne peut pas être vide.\n\nTapez un nom, ou Échap pour garder l’ancien.' };
+	if (!name) return { title: 'Nom de feuille invalide', message: "Le nom de la feuille ne peut pas être vide.\n\nTapez un nom, ou Échap pour garder l'ancien." };
 	const other = taken(name, others);
-	if (other) return { title: 'Nom de feuille déjà pris', message: `Une autre feuille s’appelle déjà « ${other} » (les majuscules ne comptent pas).\n\nChoisissez un nom qui n’est pas encore utilisé dans le classeur.` };
+	if (other) return { title: 'Nom de feuille déjà pris', message: `Une autre feuille s'appelle déjà « ${other} » (les majuscules ne comptent pas).\n\nChoisissez un nom qui n'est pas encore utilisé dans le classeur.` };
 	return null;
 }
 
@@ -89,15 +89,15 @@ export function columnNameProblem(raw: string, others: Iterable<string> = [], ta
 /** Nom de script : non vide et libre parmi others. */
 export function scriptNameProblem(raw: string, others: Iterable<string> = []): NameProblem | null {
 	const name = raw.trim();
-	if (!name) return { title: 'Nom de script invalide', message: 'Le nom du script ne peut pas être vide.\n\nTapez un nom, ou Échap pour garder l’ancien.' };
-	for (const o of others) if (o.trim() === name) return { title: 'Nom de script déjà pris', message: `Un autre script s’appelle déjà « ${o} ».\n\nChoisissez un autre nom.` };
+	if (!name) return { title: 'Nom de script invalide', message: "Le nom du script ne peut pas être vide.\n\nTapez un nom, ou Échap pour garder l'ancien." };
+	for (const o of others) if (o.trim() === name) return { title: 'Nom de script déjà pris', message: `Un autre script s'appelle déjà « ${o} ».\n\nChoisissez un autre nom.` };
 	return null;
 }
 
 /** Nom de requête favorite : non vide. */
 export function favoriteNameProblem(raw: string): NameProblem | null {
 	if (raw.trim()) return null;
-	return { title: 'Nom de favori invalide', message: 'Le nom de la requête favorite ne peut pas être vide.\n\nTapez un nom, ou Échap pour garder l’ancien.' };
+	return { title: 'Nom de favori invalide', message: "Le nom de la requête favorite ne peut pas être vide.\n\nTapez un nom, ou Échap pour garder l'ancien." };
 }
 
 /**
@@ -110,6 +110,6 @@ export function refusedName(title: string, e: unknown): NameProblem {
 	m = m.replace(/^nom « (.*) » refusé : /s, '« $1 » : ');
 	if (!m) return { title, message: 'Le nom a été refusé.' };
 	m = m.charAt(0).toLocaleUpperCase('fr') + m.slice(1);
-	if (/existe déjà|déjà utilisé/.test(m) && !/choisissez/i.test(m)) m += '.\n\nChoisissez un nom qui n’est pas encore utilisé dans le classeur.';
+	if (/existe déjà|déjà utilisé/.test(m) && !/choisissez/i.test(m)) m += ".\n\nChoisissez un nom qui n'est pas encore utilisé dans le classeur.";
 	return { title, message: m };
 }

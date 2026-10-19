@@ -2,7 +2,7 @@
 	import type { ControlInfo } from './controls';
 
 	// État de l'éditeur gardé pendant la pipette (« Choisir sur la feuille ») :
-	// l'onglet SCRIPT est démonté le temps de cliquer sur la grille.
+	// l'onglet Script est démonté le temps de cliquer sur la grille.
 	interface Draft {
 		script: { id: number; name: string; source: string };
 		anchor: number;
@@ -24,7 +24,7 @@
 </script>
 
 <script lang="ts">
-	// Onglet SCRIPT : bibliothèque de scripts Lua du classeur, éditeur,
+	// Onglet Script : bibliothèque de scripts Lua du classeur, éditeur,
 	// exécution avec sortie en direct et bouton Arrêter. Les écritures d'un
 	// script forment une seule étape d'annulation. Référence : docs/scripting.md.
 	import { onMount } from 'svelte';
@@ -68,7 +68,7 @@
 		network?: HostAccess;
 		/** Contrôles du classeur (controls.list) : complétion des noms et bouton Pointer un contrôle. */
 		controls?: () => Promise<ControlInfo[]>;
-		/** Pipette : true affiche la grille pour y cliquer un contrôle, false revient à l'onglet SCRIPT. */
+		/** Pipette : true affiche la grille pour y cliquer un contrôle, false revient à l'onglet Script. */
 		showSheet?: (on: boolean) => void;
 	}
 
@@ -152,7 +152,7 @@
 		showRef = d.showRef;
 		const n = view?.state.doc.length ?? 0;
 		view?.dispatch({ selection: { anchor: Math.min(d.anchor, n), head: Math.min(d.head, n) }, scrollIntoView: true });
-		// Revenu à la main sur l'onglet SCRIPT : la pipette est annulée.
+		// Revenu à la main sur l'onglet Script : la pipette est annulée.
 		if (picker.active) finishPick(null);
 		const id = await d.result;
 		if (id === null) return void view?.focus();

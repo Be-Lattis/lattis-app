@@ -265,7 +265,7 @@ ui.show_sheet(f.name)`,
 			Name:    "buttons.create",
 			Label:   "Insérer un bouton",
 			Summary: "Pose un bouton d'action sur une feuille ; un clic exécute un script de la bibliothèque, ou l'une de ses fonctions. Renvoie l'identifiant du bouton.",
-			Details: "script est le nom d'un script enregistré (onglet SCRIPT). Avec function, le script est chargé puis la fonction globale de ce nom est appelée : un même script peut servir plusieurs boutons. Tout ce que fait un clic s'annule en une fois.",
+			Details: "script est le nom d'un script enregistré (onglet Script). Avec function, le script est chargé puis la fonction globale de ce nom est appelée : un même script peut servir plusieurs boutons. Tout ce que fait un clic s'annule en une fois.",
 			Params: []Param{
 				pRow, pCol,
 				{Name: "label", Type: String, Desc: "texte du bouton"},

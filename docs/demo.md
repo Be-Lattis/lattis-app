@@ -16,7 +16,7 @@ Le fichier est lu dès le lancement : une erreur s'affiche avec le fichier et la
 ```yaml
 seed: 7          # graine du générateur (facultative ; --seed l'emporte, 1 par défaut)
 sheets: [...]    # les onglets, dans l'ordre
-scripts: [...]   # scripts Lua de la bibliothèque (onglet SCRIPT)
+scripts: [...]   # scripts Lua de la bibliothèque (onglet Script)
 events: [...]    # écouteurs des évènements du classeur
 ```
 

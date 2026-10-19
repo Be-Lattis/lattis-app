@@ -92,7 +92,7 @@ events.on("before_close", "avant_fermeture", "Évènements")`,
 					}
 				}
 				if !found {
-					return nil, fmt.Errorf("script « %s » introuvable : enregistrez-le dans la bibliothèque (onglet SCRIPT)", l.Script)
+					return nil, fmt.Errorf("script « %s » introuvable : enregistrez-le dans la bibliothèque (onglet Script)", l.Script)
 				}
 				ls, err := d.WorkbookListeners(c)
 				if err != nil {

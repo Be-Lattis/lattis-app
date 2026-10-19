@@ -8,7 +8,7 @@ import (
 	"github.com/lalamefine/lattis/internal/doc"
 )
 
-// PrintEvent porte une ligne de sortie d'un script en cours (onglet SCRIPT).
+// PrintEvent porte une ligne de sortie d'un script en cours (onglet Script).
 const PrintEvent = "script:print"
 
 // ScriptResult est l'issue d'un script pour l'interface.

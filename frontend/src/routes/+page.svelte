@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Classeur façon Excel : ruban en haut, feuille (ou onglet SQL / SCRIPT) au
+	// Classeur façon Excel : ruban en haut, feuille (ou onglet SQL / Script) au
 	// centre, onglets de feuilles et barre d'état en bas.
 	//
 	// Deux modes : un classeur (DocumentService : saisie libre, tableaux qui
@@ -852,7 +852,7 @@
 		window.addEventListener('keydown', regions, true);
 		// F1 : l'aide. Dans une formule en cours de saisie, la page de la
 		// fonction sous le curseur (la saisie garde le focus) ; ailleurs, la
-		// page de ce qui est affiché (SQL, SCRIPT, onglet HTML ou Document).
+		// page de ce qui est affiché (SQL, Script, onglet HTML ou Document).
 		const helpKey = (e: KeyboardEvent) => {
 			if (e.key !== 'F1' || e.ctrlKey || e.altKey || e.metaKey) return;
 			e.preventDefault();
@@ -1291,7 +1291,7 @@
 	// --- Assistant IA (volet de droite, lib/ai) ------------------------------
 
 	// Zone des volets du classeur (aide, requêtes, conflits, assistant), logée
-	// à droite : la grille (et les vues SQL, SCRIPT) se loge à sa gauche.
+	// à droite : la grille (et les vues SQL, Script) se loge à sa gauche.
 	let dockWidth = $state(0);
 	// Ce que l'utilisateur regarde, joint à chaque message et affiché au-dessus
 	// de la saisie : feuille active, tableau et sélection (comme la zone

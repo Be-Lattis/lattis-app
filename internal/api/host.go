@@ -27,7 +27,7 @@ type Host interface {
 	Dialog(ctx context.Context, d Dialog) (values map[string]any, ok bool, err error)
 	// Notify affiche un message dans la barre d'état.
 	Notify(msg string)
-	// Print reçoit une ligne de sortie d'un script (console de l'onglet SCRIPT).
+	// Print reçoit une ligne de sortie d'un script (console de l'onglet Script).
 	Print(line string)
 
 	// Classeur (serveur MCP seulement).

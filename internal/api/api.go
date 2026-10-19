@@ -1,10 +1,10 @@
 // Package api est la couche de commandes de Lattis commune aux scripts Lua
-// (onglet SCRIPT, boutons d'action) et au serveur MCP (internal/mcp).
+// (onglet Script, boutons d'action) et au serveur MCP (internal/mcp).
 //
 // Chaque commande a un nom ("sheets.rename"), des paramètres décrits une
 // fois pour toutes et une fonction Go. Le script la voit comme
 // sheets.rename("Feuil1", "Ventes"), le serveur MCP comme l'outil
-// sheets_rename avec son schéma JSON, et la référence de l'onglet SCRIPT
+// sheets_rename avec son schéma JSON, et la référence de l'onglet Script
 // (frontend/src/lib/script/api.gen.ts) en est générée.
 //
 // Les modifications passent par le bus de commandes : chaque appel MCP est

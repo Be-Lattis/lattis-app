@@ -62,13 +62,13 @@ describe('syntaxe', () => {
 	});
 
 	it('suit les règles de gopher-lua', () => {
-		expect(only('break').message).toContain('en dehors d’une boucle');
+		expect(only('break').message).toContain("en dehors d'une boucle");
 		expect(only('while true do break print(1) end').message).toContain('dernière instruction');
 		expect(only('local function f() return ... end').message).toContain('...');
 		expect(only('goto fin\nprint(1)').message).toContain('::fin::');
 		expect(only('::a:: ::a::').message).toContain('déjà définie');
 		expect(only('do goto a local x = 1 ::a:: print(x) end').message).toContain('portée de la variable locale « x »');
-		expect(only('f() = 1').message).toContain('résultat d’un appel');
+		expect(only('f() = 1').message).toContain("résultat d'un appel");
 		expect(only('local goto = 1').message).toContain('mot réservé');
 	});
 });
@@ -78,16 +78,16 @@ describe('avertissements', () => {
 		const d = only('local r = db.qury("SELECT 1")');
 		expect(d.severity).toBe('warning');
 		expect(d.text).toBe('qury');
-		expect(d.message).toBe('db.qury n’existe pas : voulez-vous dire db.query ?');
+		expect(d.message).toBe("db.qury n'existe pas : voulez-vous dire db.query ?");
 	});
 
 	it('signale ce que le bac à sable retire', () => {
-		expect(only('local f = io.open("x")').message).toContain('« io » n’est pas disponible');
-		expect(only('os.execute("ls")').message).toContain('os.execute n’est pas disponible');
-		expect(only('local m = require("x")').message).toContain('« require » n’est pas disponible');
+		expect(only('local f = io.open("x")').message).toContain("« io » n'est pas disponible");
+		expect(only('os.execute("ls")').message).toContain("os.execute n'est pas disponible");
+		expect(only('local m = require("x")').message).toContain("« require » n'est pas disponible");
 	});
 
-	it('vérifie le nombre d’arguments', () => {
+	it("vérifie le nombre d'arguments", () => {
 		const d = only('db.update("Commandes", {Client = "x"})');
 		expect(d.text).toBe('db.update');
 		expect(d.message).toBe('db.update attend 3 arguments, 2 donnés : db.update(tableau, _id, { colonne = valeur })');
@@ -105,7 +105,7 @@ describe('avertissements', () => {
 	it('signale un nom jamais défini, avec une suggestion', () => {
 		const d = only('prnt("x")');
 		expect(d.text).toBe('prnt');
-		expect(d.message).toBe('« prnt » n’est pas défini : voulez-vous dire « print » ?');
+		expect(d.message).toBe("« prnt » n'est pas défini : voulez-vous dire « print » ?");
 		expect(only('for i, v in ipair({}) do end').message).toContain('« ipairs »');
 	});
 
@@ -124,7 +124,7 @@ describe('avertissements', () => {
 		expect(only('function aide() end\naide()').message).toContain('local function aide');
 	});
 
-	it('signale le remplacement d’un nom prédéfini', () => {
+	it("signale le remplacement d'un nom prédéfini", () => {
 		const d = only('print = nil');
 		expect(d.severity).toBe('warning');
 		expect(d.message).toContain('remplace « print »');
@@ -134,7 +134,7 @@ describe('avertissements', () => {
 		expect(only('local n = table.getn({})').message).toContain('#t');
 	});
 
-	it('n’avertit pas sur les exemples de la référence', () => {
+	it("n'avertit pas sur les exemples de la référence", () => {
 		for (const e of reference) if (e.example) expect(messages(e.example), e.name).toEqual([]);
 	});
 });
@@ -149,7 +149,7 @@ describe('recherche dans la référence', () => {
 	});
 });
 
-describe('commandes de l’application (api.gen.ts)', () => {
+describe("commandes de l'application (api.gen.ts)", () => {
 	it('connaît sheets, ui, buttons…', () => {
 		expect(messages('sheets.add("Synthèse")\nui.select(1, 1, 3, 2)\nlocal s = ui.selection()\nprint(s.sheet)\nbuttons.create{row = 1, col = 1, label = "Go", script = "X"}')).toEqual([]);
 		expect(only('sheets.ajouter("x")').text).toBe('ajouter');

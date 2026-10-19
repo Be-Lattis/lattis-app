@@ -40,18 +40,18 @@ const groups: ShortcutGroup[] = [
 		id: 'clavier',
 		title: 'Ruban, menus et fenêtres',
 		items: [
-			{ keys: 'Alt / F10', label: 'Lettres d’accès (KeyTips) du ruban ; Échap revient en arrière' },
+			{ keys: 'Alt / F10', label: "Lettres d'accès (KeyTips) du ruban ; Échap revient en arrière" },
 			{ keys: 'Ctrl+F1', label: 'Réduire ou épingler le ruban (aussi : double-clic sur un onglet du ruban)' },
 			{ keys: 'Alt puis F', label: 'Menu Fichier' },
 			...Object.entries(TAB_TIPS)
 				.filter(([t]) => t !== 'Fichier' && t !== 'Aide')
 				.map(([t, k]) => ({ keys: `Alt puis ${k}`, label: `Onglet ${t} du ruban (ou Alt+${k})` })),
-			{ keys: 'Flèches', label: 'Dans le ruban : onglet ou commande voisine ; Bas descend aux commandes, Haut remonte à l’onglet' },
-			{ keys: 'F6 / Maj+F6', label: 'Région suivante, précédente : ruban, barre de formule, grille, volet, onglets, barre d’état' },
+			{ keys: 'Flèches', label: "Dans le ruban : onglet ou commande voisine ; Bas descend aux commandes, Haut remonte à l'onglet" },
+			{ keys: 'F6 / Maj+F6', label: "Région suivante, précédente : ruban, barre de formule, grille, volet, onglets, barre d'état" },
 			{ keys: 'Maj+F10 / Menu', label: 'Menu contextuel de la cellule active (ou du graphique sélectionné)' },
 			{ keys: 'Haut / Bas', label: 'Dans un menu : entrée précédente, suivante (Origine, Fin : la première, la dernière)' },
 			{ keys: 'Lettre', label: 'Dans un menu : entrée suivante qui commence par cette lettre' },
-			{ keys: 'Entrée / Espace', label: 'Dans un menu : choisir l’entrée' },
+			{ keys: 'Entrée / Espace', label: "Dans un menu : choisir l'entrée" },
 			{ keys: 'Tab / Maj+Tab', label: 'Dans une boîte de dialogue : champ suivant, précédent' },
 			{ keys: 'Échap', label: 'Fermer le menu, la boîte de dialogue ou le volet ; le focus revient où il était' }
 		]
@@ -63,7 +63,7 @@ const groups: ShortcutGroup[] = [
 			{ keys: 'Ctrl+Pg.Suiv', label: 'Feuille suivante' },
 			{ keys: 'Ctrl+Pg.Préc', label: 'Feuille précédente' },
 			{ keys: 'Maj+F11', label: 'Insérer une feuille' },
-			{ keys: 'Gauche / Droite', label: 'Sur un onglet de feuille (F6) : onglet voisin ; Entrée l’affiche' }
+			{ keys: 'Gauche / Droite', label: "Sur un onglet de feuille (F6) : onglet voisin ; Entrée l'affiche" }
 		]
 	},
 	{
@@ -115,7 +115,7 @@ const groups: ShortcutGroup[] = [
 			{ keys: 'Ctrl+B / Ctrl+I / Ctrl+U', label: 'Gras, italique, souligné' },
 			{ keys: 'Ctrl+1', label: 'Format de cellule' },
 			{ keys: 'Ctrl++ / Ctrl+-', label: 'Insérer, supprimer des lignes ou colonnes' },
-			{ keys: 'Ctrl+Maj+L', label: 'Filtre de la colonne (efface les filtres s’il y en a)' }
+			{ keys: 'Ctrl+Maj+L', label: "Filtre de la colonne (efface les filtres s'il y en a)" }
 		]
 	},
 	{
@@ -129,14 +129,14 @@ const groups: ShortcutGroup[] = [
 	},
 	{
 		id: 'editeurs',
-		title: 'Onglets SQL, SCRIPT et HTML',
+		title: 'Onglets SQL, Script et HTML',
 		items: [
-			{ keys: 'Ctrl+Entrée', label: 'SQL : exécuter la sélection, sinon l’instruction sous le curseur' },
+			{ keys: 'Ctrl+Entrée', label: "SQL : exécuter la sélection, sinon l'instruction sous le curseur" },
 			{ keys: 'Ctrl+Espace', label: 'SQL : noms des tableaux et colonnes' },
 			{ keys: 'Alt+Haut / Alt+Bas', label: 'SQL : historique des requêtes' },
-			{ keys: 'Ctrl+Entrée', label: 'SCRIPT : exécuter le script' },
-			{ keys: 'Ctrl+S', label: 'SCRIPT, HTML : enregistrer' },
-			{ keys: 'Ctrl+Entrée', label: 'HTML : mettre l’aperçu à jour' }
+			{ keys: 'Ctrl+Entrée', label: 'Script : exécuter le script' },
+			{ keys: 'Ctrl+S', label: 'Script, HTML : enregistrer' },
+			{ keys: 'Ctrl+Entrée', label: "HTML : mettre l'aperçu à jour" }
 		]
 	}
 ];

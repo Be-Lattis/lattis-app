@@ -15,7 +15,7 @@ import (
 // contrôle, écouteur d'évènement, bouton d'un onglet Document, scripts.run
 // par son nom) ne s'exécute que si sa version (empreinte du source) est
 // autorisée sur ce poste (internal/trust). Un script enregistré ou lancé
-// depuis l'onglet SCRIPT de ce poste l'est d'office (doc.SaveScript,
+// depuis l'onglet Script de ce poste l'est d'office (doc.SaveScript,
 // RunScript) : un classeur créé ici ne demande jamais rien. Sinon (classeur
 // reçu, script modifié ailleurs, et plus tard script publié sur un Serveur
 // Lattis), la première exécution de chaque version demande « Autoriser /
@@ -52,7 +52,7 @@ func allowScript(ctx context.Context, host Host, d *doc.Document, name, src stri
 			return false, fmt.Errorf("%w : « %s » a été refusé pour cette session", ErrScriptNotAllowed, name)
 		}
 		if !CanPrompt(ctx) {
-			return false, fmt.Errorf("%w : cette version de « %s » n'a pas encore été autorisée sur ce poste ; seul l'utilisateur peut l'autoriser dans Lattis (à sa première exécution, ou en le lançant depuis l'onglet SCRIPT)", ErrScriptNotAllowed, name)
+			return false, fmt.Errorf("%w : cette version de « %s » n'a pas encore été autorisée sur ce poste ; seul l'utilisateur peut l'autoriser dans Lattis (à sa première exécution, ou en le lançant depuis l'onglet Script)", ErrScriptNotAllowed, name)
 		}
 		return false, nil
 	}

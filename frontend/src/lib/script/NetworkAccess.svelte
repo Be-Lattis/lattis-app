@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Onglet SCRIPT › Accès réseau : les hôtes que les scripts et les pages
+	// Onglet Script › Accès réseau : les hôtes que les scripts et les pages
 	// HTML du classeur joignent sans redemander (module http). Un hôte
 	// retiré redemandera l'autorisation à la prochaine requête.
 	import { modal } from '#lib/ui/focus.js';

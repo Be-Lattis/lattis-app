@@ -226,7 +226,7 @@ func Start(ctx context.Context, grid *GridService, docs *DocumentService) error 
 
 // Platform décrit l'hôte à l'interface : version web (pas de boutons de
 // fenêtre, fichiers envoyés et téléchargés) et scripting permis (onglet
-// SCRIPT, boutons, pages web et serveur MCP masqués sinon).
+// Script, boutons, pages web et serveur MCP masqués sinon).
 func (s *DocumentService) Platform() Platform { return s.sys().Platform() }
 
 var errNoMCPWeb = errors.New("le serveur MCP local n'existe pas dans la version web")

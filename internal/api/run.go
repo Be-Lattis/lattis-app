@@ -64,7 +64,7 @@ func scriptLabel(name string) string {
 }
 
 // RunScript exécute un script Lua lancé par l'utilisateur depuis l'onglet
-// SCRIPT, où il voit son code (entry : fonction appelée ensuite, vide pour
+// Script, où il voit son code (entry : fonction appelée ensuite, vide pour
 // le script seul) : cette version est autorisée sur ce poste (consent.go).
 // Tout ce qu'il modifie forme une seule étape d'annulation, nommée d'après
 // le script. Les évènements des contrôles qu'il provoque (controls.set

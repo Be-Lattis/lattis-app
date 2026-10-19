@@ -690,7 +690,7 @@
 				{/if}
 			{/if}
 			<p class="note">
-				{#if !library.length}Aucun script dans la bibliothèque (onglet SCRIPT) : le contrôle est créé sans action, à lier plus tard.{:else if e.kind === 'input' || e.kind === 'textarea'}Le texte est écrit dans la cellule liée en quittant la zone{e.kind === 'input' ? ' ou avec Entrée' : ' ou avec Ctrl+Entrée'}, puis l’action s’exécute.{:else if e.kind === 'file'}Le chemin du fichier choisi est écrit dans la cellule liée, puis l’action s’exécute.{:else if e.kind}La valeur est écrite dans la cellule liée, puis l’action s’exécute ; tout s’annule d’un coup (Ctrl+Z).{:else}Un clic sur le bouton exécute l’action ; tout ce qu’elle modifie s’annule d’un coup (Ctrl+Z).{/if}
+				{#if !library.length}Aucun script dans la bibliothèque (onglet Script) : le contrôle est créé sans action, à lier plus tard.{:else if e.kind === 'input' || e.kind === 'textarea'}Le texte est écrit dans la cellule liée en quittant la zone{e.kind === 'input' ? ' ou avec Entrée' : ' ou avec Ctrl+Entrée'}, puis l’action s’exécute.{:else if e.kind === 'file'}Le chemin du fichier choisi est écrit dans la cellule liée, puis l’action s’exécute.{:else if e.kind}La valeur est écrite dans la cellule liée, puis l’action s’exécute ; tout s’annule d’un coup (Ctrl+Z).{:else}Un clic sur le bouton exécute l’action ; tout ce qu’elle modifie s’annule d’un coup (Ctrl+Z).{/if}
 			</p>
 			{#if e.error}<p class="error">{e.error}</p>{/if}
 			<div class="actions">
@@ -811,7 +811,7 @@
 	.action:active {
 		background: var(--btn-active, #d5e8db);
 	}
-	/* Pipette de l'onglet SCRIPT : les contrôles se désignent d'un clic. */
+	/* Pipette de l'onglet Script : les contrôles se désignent d'un clic. */
 	.action.picking,
 	.action.picking :global(*) {
 		cursor: crosshair;

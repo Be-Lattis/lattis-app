@@ -10,8 +10,8 @@ describe('configurations MCP', () => {
 	});
 });
 
-describe('demandes d’accord', () => {
-	it('file d’attente dans l’ordre d’arrivée', () => {
+describe("demandes d'accord", () => {
+	it("file d'attente dans l'ordre d'arrivée", () => {
 		const r = (id: number) => ({ id, client: 'Claude Desktop', label: `Action ${id}`, tool: 'sheets_add' });
 		let q = pushConfirm([], r(1));
 		q = pushConfirm(q, r(2));

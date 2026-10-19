@@ -405,7 +405,7 @@
 			{
 				title: 'Contrôles',
 				commands: [
-					...(scriptingEnabled() ? [{ label: 'Bouton', icon: 'button' as const, run: onbutton ? () => onbutton('') : undefined, hint: 'Bouton d’action à la cellule active : un clic exécute un script de l’onglet SCRIPT (ou rien)' }] : []),
+					...(scriptingEnabled() ? [{ label: 'Bouton', icon: 'button' as const, run: onbutton ? () => onbutton('') : undefined, hint: 'Bouton d’action à la cellule active : un clic exécute un script de l’onglet Script (ou rien)' }] : []),
 					{
 						label: 'Champ',
 						icon: 'text-input',
@@ -674,7 +674,7 @@
 			{
 				title: 'Contrôles',
 				commands: [
-					...(scriptingEnabled() ? [{ label: 'Bouton', icon: 'button' as const, run: dc('button'), hint: 'Bouton dans le texte : un clic exécute un script de l’onglet SCRIPT (ou l’une de ses fonctions)' }] : []),
+					...(scriptingEnabled() ? [{ label: 'Bouton', icon: 'button' as const, run: dc('button'), hint: 'Bouton dans le texte : un clic exécute un script de l’onglet Script (ou l’une de ses fonctions)' }] : []),
 					{ label: 'Champ', icon: 'text-input', run: dc('input'), hint: 'Contrôle lié à une cellule d’une feuille : champ texte, zone de texte, case à cocher, liste déroulante ou fichier, pilotable par les scripts (controls.*)' }
 				]
 			},
@@ -1130,7 +1130,7 @@
 		{/if}
 		<button class="tab special" data-label="SQL" class:on={tab === 'SQL'} aria-pressed={tab === 'SQL'} aria-keyshortcuts="Alt+{TAB_TIPS.SQL}" data-region-focus={tab === 'SQL' ? '' : undefined} {disabled} onclick={() => select('SQL')}>SQL</button>
 		{#if scriptingEnabled() || view === 'script'}
-		<button class="tab special" data-label="SCRIPT" class:on={tab === 'SCRIPT'} aria-pressed={tab === 'SCRIPT'} aria-keyshortcuts="Alt+{TAB_TIPS.SCRIPT}" data-region-focus={tab === 'SCRIPT' ? '' : undefined} {disabled} onclick={() => select('SCRIPT')}>SCRIPT</button>
+		<button class="tab special" data-label="Script" class:on={tab === 'SCRIPT'} aria-pressed={tab === 'SCRIPT'} aria-keyshortcuts="Alt+{TAB_TIPS.SCRIPT}" data-region-focus={tab === 'SCRIPT' ? '' : undefined} {disabled} onclick={() => select('SCRIPT')}>Script</button>
 		{/if}
 		<button class="tab help" title="Aide (F1)" aria-label="Aide" onclick={() => onfile('help')}>?</button>
 	</nav>

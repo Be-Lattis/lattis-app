@@ -33,7 +33,7 @@ describe('announcement', () => {
 	const s = { addr: 'B3', value: '1', table: 'Ventes', column: 'Prix' };
 	it('mode modification en priorité', () => expect(announcement(s, true, 'Sélection …')).toBe('Modification de B3'));
 	it('sélection ensuite', () => expect(announcement(s, false, 'Sélection A1:B2, 2 lignes sur 2 colonnes')).toBe('Sélection A1:B2, 2 lignes sur 2 colonnes'));
-	it('nom du tableau à l’entrée seulement', () => {
+	it("nom du tableau à l'entrée seulement", () => {
 		expect(announcement(s, false, '', undefined)).toBe('Tableau Ventes');
 		expect(announcement(s, false, '', 'Ventes')).toBe('');
 	});

@@ -1,4 +1,4 @@
-// Hôtes HTTP autorisés pour un classeur (onglet SCRIPT › Accès réseau).
+// Hôtes HTTP autorisés pour un classeur (onglet Script › Accès réseau).
 
 /**
  * Hôte saisi par l'utilisateur, tel que le rangent les scripts : en

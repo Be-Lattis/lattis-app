@@ -5,7 +5,7 @@
 //   - Scripts : un script de la bibliothèque d'un classeur (bouton, contrôle,
 //     évènement, onglet Document, scripts.run par nom) ne s'exécute que si
 //     sa version (empreinte SHA-256 du source) a été autorisée sur ce
-//     poste. Un script enregistré ou lancé depuis l'onglet SCRIPT de ce
+//     poste. Un script enregistré ou lancé depuis l'onglet Script de ce
 //     poste l'est d'office : un classeur créé ici ne demande rien ; un
 //     classeur reçu, ou un script modifié ailleurs, demande « Autoriser /
 //     Refuser / Voir le code » à la première exécution de chaque version.

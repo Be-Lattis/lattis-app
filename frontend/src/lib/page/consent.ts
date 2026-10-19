@@ -10,7 +10,7 @@ import { pageUrl } from './bridge';
 
 /** Mise en garde commune aux accords d'exécution (voir api.TrustWarning pour les scripts). */
 export const PAGE_WARNING =
-	'N’autorisez que si vous faites confiance à la personne qui vous a fourni ce classeur. ' +
+	"N'autorisez que si vous faites confiance à la personne qui vous a fourni ce classeur. " +
 	'Dans le doute, choisissez « Ne pas exécuter » : le reste du classeur reste utilisable.';
 
 /** Versions de pages que l'utilisateur a choisi de ne pas exécuter pendant la session. */
@@ -22,8 +22,8 @@ let ids = -1;
 export function pageConsent(name: string, source: string): DialogSpec {
 	const url = pageUrl(source);
 	const what = url
-		? `L’onglet « ${name} » affiche le site externe ${url}, qui n’a encore jamais été autorisé dans ce classeur sur ce poste (classeur reçu, ou onglet modifié ailleurs). Ce site s’exécute dans l’onglet, sans accès au classeur.`
-		: `L’onglet « ${name} » contient une page web (HTML et JavaScript) qui n’a encore jamais été autorisée sur ce poste (classeur reçu, ou page modifiée ailleurs). ` +
+		? `L'onglet « ${name} » affiche le site externe ${url}, qui n'a encore jamais été autorisé dans ce classeur sur ce poste (classeur reçu, ou onglet modifié ailleurs). Ce site s'exécute dans l'onglet, sans accès au classeur.`
+		: `L'onglet « ${name} » contient une page web (HTML et JavaScript) qui n'a encore jamais été autorisée sur ce poste (classeur reçu, ou page modifiée ailleurs). ` +
 			'Une page peut lire et modifier le classeur, lancer les actions de ses boutons, vous poser des questions et, avec votre accord, contacter des sites web.';
 	return {
 		id: ids--,

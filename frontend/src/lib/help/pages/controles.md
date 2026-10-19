@@ -20,7 +20,7 @@ Comme les contrôles de formulaire d'Excel, les contrôles se posent librement s
 - le **nom** du contrôle, pour les scripts (automatique si vide) ;
 - son **libellé** ;
 - la **cellule liée** : un clic sur la feuille la remplit pendant que le champ a le focus ;
-- l'**action** : une fonction d'un script de la bibliothèque (onglet SCRIPT).
+- l'**action** : une fonction d'un script de la bibliothèque (onglet Script).
 
 Un contrôle peut être créé sans action et lié plus tard. Tout ce qu'une action modifie s'annule d'un seul `Ctrl+Z`.
 

@@ -44,12 +44,12 @@ func TestScriptConsentRefused(t *testing.T) {
 	if res, _ := RunButton(h, id); !strings.Contains(res.Error, "pour cette session") || len(h.dialogs) != 1 {
 		t.Fatalf("question reposée : %+v, %d questions", res, len(h.dialogs))
 	}
-	// Lancé depuis l'onglet SCRIPT (code sous les yeux) : autorisé.
+	// Lancé depuis l'onglet Script (code sous les yeux) : autorisé.
 	if _, err := RunScript(h, "Action", src, "go"); err != nil {
 		t.Fatal(err)
 	}
 	if res, err := RunButton(h, id); err != nil || res.Error != "" {
-		t.Fatalf("après exécution depuis l'onglet SCRIPT : %+v %v", res, err)
+		t.Fatalf("après exécution depuis l'onglet Script : %+v %v", res, err)
 	}
 }
 

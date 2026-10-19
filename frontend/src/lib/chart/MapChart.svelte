@@ -408,7 +408,7 @@
 		<rect x={w - 98} y={top + h - 16} width="98" height="16" fill="#fff" fill-opacity="0.75" />
 		<text x={w - 4} y={top + h - 4} text-anchor="end" class="attr">© OpenStreetMap</text>
 	{:else if offline}
-		<text x={w - 6} y={top + h - 6} text-anchor="end" class="attr"><title>Le fond de carte vient de tile.openstreetmap.org : autorisez cet hôte (onglet SCRIPT › Accès réseau) ou vérifiez la connexion.</title>Fond de carte indisponible</text>
+		<text x={w - 6} y={top + h - 6} text-anchor="end" class="attr"><title>Le fond de carte vient de tile.openstreetmap.org : autorisez cet hôte (onglet Script › Accès réseau) ou vérifiez la connexion.</title>Fond de carte indisponible</text>
 	{/if}
 	{#if !pts.length}
 		<text x={w / 2} y={top + h / 2} text-anchor="middle" class="small halo">Aucun point : latitude et longitude attendues</text>

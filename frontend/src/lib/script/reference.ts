@@ -1,4 +1,4 @@
-// Référence des fonctions disponibles dans les scripts Lua (onglet SCRIPT).
+// Référence des fonctions disponibles dans les scripts Lua (onglet Script).
 //
 // La liste suit ce que le bac à sable expose réellement (internal/script :
 // script.go pour db, sandbox.go pour les bibliothèques gardées). Le panneau
@@ -74,7 +74,7 @@ end`,
 		name: 'db.rows',
 		category: 'db',
 		signature: 'for ligne in db.rows(sql, ...) do ... end',
-		summary: 'Parcourt les lignes d’une requête une à une, sans limite de nombre.',
+		summary: "Parcourt les lignes d'une requête une à une, sans limite de nombre.",
 		details: 'Mêmes règles que db.query, mais les lignes ne sont pas toutes gardées en mémoire : à préférer pour les gros tableaux.',
 		example: `local total = 0
 for l in db.rows("SELECT Montant FROM Commandes") do
@@ -87,7 +87,7 @@ print("Total :", total)`,
 		name: 'db.value',
 		category: 'db',
 		signature: 'db.value(sql, ...) → valeur ou nil',
-		summary: 'Renvoie la première colonne de la première ligne, ou nil s’il n’y a aucune ligne.',
+		summary: "Renvoie la première colonne de la première ligne, ou nil s'il n'y a aucune ligne.",
 		example: `local nb = db.value([[SELECT count(*) FROM Commandes WHERE NOT "Payé"]])
 print(nb .. " commande(s) non payée(s)")`,
 		args: [1, null]
@@ -113,7 +113,7 @@ end`,
 		signature: 'db.insert(tableau, { colonne = valeur }) → _id',
 		summary: 'Ajoute une ligne en fin de tableau et renvoie sa clé _id.',
 		details:
-			'Les valeurs sont traitées comme une frappe dans la grille : une colonne au type inféré s’élargit, une colonne au type fixé marque la saisie invalide, "" laisse la cellule vide. true et false s’écrivent vrai et faux ; une date se donne en texte ("16/10/2026"). Les noms de tableau et de colonne doivent être exacts (majuscules et accents compris).',
+			'Les valeurs sont traitées comme une frappe dans la grille : une colonne au type inféré s\'élargit, une colonne au type fixé marque la saisie invalide, "" laisse la cellule vide. true et false s\'écrivent vrai et faux ; une date se donne en texte ("16/10/2026"). Les noms de tableau et de colonne doivent être exacts (majuscules et accents compris).',
 		example: `local id = db.insert("Commandes", {Client = "Petit", Montant = 15, ["Payé"] = false})
 print("Ligne ajoutée :", id)`,
 		args: [2, 2]
@@ -123,7 +123,7 @@ print("Ligne ajoutée :", id)`,
 		category: 'db',
 		signature: 'db.update(tableau, _id, { colonne = valeur })',
 		summary: 'Modifie les colonnes données de la ligne _id ; les autres ne bougent pas.',
-		details: 'Mêmes règles d’écriture que db.insert. "" efface la cellule.',
+		details: 'Mêmes règles d\'écriture que db.insert. "" efface la cellule.',
 		example: `for l in db.rows("SELECT _id FROM Commandes WHERE Client = ?", "Durand") do
   db.update("Commandes", l._id, {["Payé"] = true})
 end`,
@@ -133,7 +133,7 @@ end`,
 		name: 'db.delete',
 		category: 'db',
 		signature: 'db.delete(tableau, _id)',
-		summary: 'Supprime la ligne _id ; le tableau rétrécit d’une ligne.',
+		summary: "Supprime la ligne _id ; le tableau rétrécit d'une ligne.",
 		example: `local id = db.value("SELECT _id FROM Commandes WHERE Montant = 0")
 if id then db.delete("Commandes", id) end`,
 		args: [2, 2]
@@ -144,7 +144,7 @@ if id then db.delete("Commandes", id) end`,
 		signature: 'db.execute(sql, ...) → nombre de lignes touchées',
 		summary: 'Exécute un INSERT, UPDATE ou DELETE avec les noms affichés.',
 		details:
-			'Annulable comme le reste du script. Les colonnes sont typées strictement : une valeur du mauvais type fait échouer toute la requête (un booléen s’écrit 1 ou 0, une date \'aaaa-mm-jj\'). Refusés pour l’instant : CREATE, ALTER, DROP et les tables internes _lattis_*.',
+			'Annulable comme le reste du script. Les colonnes sont typées strictement : une valeur du mauvais type fait échouer toute la requête (un booléen s\'écrit 1 ou 0, une date \'aaaa-mm-jj\'). Refusés pour l\'instant : CREATE, ALTER, DROP et les tables internes _lattis_*.',
 		example: `local n = db.execute([[UPDATE Commandes SET "Payé" = 1 WHERE Client = ?]], "Durand")
 print(n .. " ligne(s) modifiée(s)")`,
 		args: [1, null]
@@ -162,7 +162,7 @@ print(n .. " ligne(s) modifiée(s)")`,
 		name: 'type',
 		category: 'base',
 		signature: 'type(v) → "nil" | "boolean" | "number" | "string" | "table" | "function"',
-		summary: 'Renvoie le type d’une valeur, sous forme de texte.',
+		summary: "Renvoie le type d'une valeur, sous forme de texte.",
 		example: `print(type(42), type("a"), type(nil), type({}))`,
 		args: [1, 1]
 	},
@@ -178,7 +178,7 @@ print(n .. " ligne(s) modifiée(s)")`,
 		name: 'tonumber',
 		category: 'base',
 		signature: 'tonumber(v [, base]) → nombre ou nil',
-		summary: 'Convertit un texte en nombre ; renvoie nil si ce n’est pas un nombre.',
+		summary: "Convertit un texte en nombre ; renvoie nil si ce n'est pas un nombre.",
 		details: 'Le séparateur décimal est le point : tonumber("80,5") donne nil.',
 		example: `print(tonumber("80.5") + 1, tonumber("ff", 16), tonumber("abc"))`,
 		args: [1, 2]
@@ -187,7 +187,7 @@ print(n .. " ligne(s) modifiée(s)")`,
 		name: 'ipairs',
 		category: 'base',
 		signature: 'for i, v in ipairs(liste) do ... end',
-		summary: 'Parcourt une liste dans l’ordre (indices 1, 2, 3...) jusqu’au premier trou.',
+		summary: "Parcourt une liste dans l'ordre (indices 1, 2, 3...) jusqu'au premier trou.",
 		example: `for i, nom in ipairs({"Durand", "Martin"}) do
   print(i, nom)
 end`,
@@ -197,7 +197,7 @@ end`,
 		name: 'pairs',
 		category: 'base',
 		signature: 'for cle, v in pairs(t) do ... end',
-		summary: 'Parcourt toutes les clés d’une table, sans ordre garanti.',
+		summary: "Parcourt toutes les clés d'une table, sans ordre garanti.",
 		example: `for cle, v in pairs({Durand = 160, Martin = 80.5}) do
   print(cle, v)
 end`,
@@ -207,7 +207,7 @@ end`,
 		name: 'next',
 		category: 'base',
 		signature: 'next(t [, cle]) → cle, valeur',
-		summary: 'Renvoie la clé suivante d’une table ; next(t) == nil teste si elle est vide.',
+		summary: "Renvoie la clé suivante d'une table ; next(t) == nil teste si elle est vide.",
 		example: `print(next({}) == nil)`,
 		args: [1, 2]
 	},
@@ -223,7 +223,7 @@ end`,
 		name: 'unpack',
 		category: 'base',
 		signature: 'unpack(liste [, i [, j]]) → v1, v2, ...',
-		summary: 'Renvoie les éléments d’une liste comme valeurs séparées.',
+		summary: "Renvoie les éléments d'une liste comme valeurs séparées.",
 		example: `print(math.max(unpack({3, 9, 1})))`,
 		args: [1, 3]
 	},
@@ -231,7 +231,7 @@ end`,
 		name: 'pcall',
 		category: 'base',
 		signature: 'pcall(f, ...) → ok, résultat ou message',
-		summary: 'Appelle f en rattrapant son erreur ; ok vaut false en cas d’erreur.',
+		summary: "Appelle f en rattrapant son erreur ; ok vaut false en cas d'erreur.",
 		example: `local ok, err = pcall(db.insert, "Inconnu", {})
 if not ok then print("Erreur :", err) end`,
 		args: [1, null]
@@ -240,7 +240,7 @@ if not ok then print("Erreur :", err) end`,
 		name: 'xpcall',
 		category: 'base',
 		signature: 'xpcall(f, gestionnaire) → ok, résultat',
-		summary: 'Comme pcall, mais passe le message d’erreur à une fonction de traitement.',
+		summary: "Comme pcall, mais passe le message d'erreur à une fonction de traitement.",
 		example: `print(xpcall(function() error("oups") end, function(m) return "rattrapé : " .. m end))`,
 		args: [2, 2]
 	},
@@ -276,7 +276,7 @@ print(compteur.Durand, compteur.Martin)`,
 		name: 'getmetatable',
 		category: 'base',
 		signature: 'getmetatable(v) → métatable ou nil',
-		summary: 'Renvoie la métatable d’une valeur.',
+		summary: "Renvoie la métatable d'une valeur.",
 		args: [1, 1]
 	},
 	{
@@ -367,7 +367,7 @@ print(("  texte  "):match("^%s*(.-)%s*$"))`,
 		name: 'string.gmatch',
 		category: 'string',
 		signature: 'for m in s:gmatch(motif) do ... end',
-		summary: 'Parcourt toutes les correspondances d’un motif.',
+		summary: "Parcourt toutes les correspondances d'un motif.",
 		example: `for mot in ("a;b;c"):gmatch("[^;]+") do print(mot) end`,
 		args: [2, 2]
 	},
@@ -407,7 +407,7 @@ print(propre)`,
 		name: 'string.char',
 		category: 'string',
 		signature: 'string.char(code, ...) → texte',
-		summary: 'Construit un texte à partir de codes d’octets.',
+		summary: "Construit un texte à partir de codes d'octets.",
 		example: `print(string.char(72, 105))`,
 		args: [0, null]
 	},
@@ -448,7 +448,7 @@ print(l[1].n)`,
 		name: 'table.concat',
 		category: 'table',
 		signature: 'table.concat(liste [, séparateur [, i [, j]]]) → texte',
-		summary: 'Assemble les éléments d’une liste en un texte.',
+		summary: "Assemble les éléments d'une liste en un texte.",
 		example: `print(table.concat({"a", "b", "c"}, ", "))`,
 		args: [1, 4]
 	},
@@ -456,14 +456,14 @@ print(l[1].n)`,
 		name: 'table.maxn',
 		category: 'table',
 		signature: 'table.maxn(t) → nombre',
-		summary: 'Renvoie le plus grand indice numérique d’une table.',
+		summary: "Renvoie le plus grand indice numérique d'une table.",
 		args: [1, 1]
 	},
 	{ name: 'table.getn', category: 'table', signature: 'table.getn(t)', summary: 'Ancien équivalent de #t.', deprecated: '#t', args: [1, 1] },
 
 	// --- Maths ------------------------------------------------------------------
-	{ name: 'math.floor', category: 'math', signature: 'math.floor(x)', summary: 'Arrondit à l’entier inférieur ; math.floor(a / b) fait une division entière.', example: `print(math.floor(7 / 2), math.floor(-2.5))`, args: [1, 1] },
-	{ name: 'math.ceil', category: 'math', signature: 'math.ceil(x)', summary: 'Arrondit à l’entier supérieur.', example: `print(math.ceil(2.1))`, args: [1, 1] },
+	{ name: 'math.floor', category: 'math', signature: 'math.floor(x)', summary: "Arrondit à l'entier inférieur ; math.floor(a / b) fait une division entière.", example: `print(math.floor(7 / 2), math.floor(-2.5))`, args: [1, 1] },
+	{ name: 'math.ceil', category: 'math', signature: 'math.ceil(x)', summary: "Arrondit à l'entier supérieur.", example: `print(math.ceil(2.1))`, args: [1, 1] },
 	{
 		name: 'math.abs',
 		category: 'math',
@@ -475,11 +475,11 @@ print(l[1].n)`,
 	{ name: 'math.min', category: 'math', signature: 'math.min(x, ...)', summary: 'Plus petite des valeurs.', example: `print(math.min(3, 9, 1))`, args: [1, null] },
 	{ name: 'math.max', category: 'math', signature: 'math.max(x, ...)', summary: 'Plus grande des valeurs.', example: `print(math.max(3, 9, 1))`, args: [1, null] },
 	{ name: 'math.sqrt', category: 'math', signature: 'math.sqrt(x)', summary: 'Racine carrée.', example: `print(math.sqrt(16))`, args: [1, 1] },
-	{ name: 'math.pow', category: 'math', signature: 'math.pow(x, y)', summary: 'Puissance ; s’écrit aussi x ^ y.', example: `print(math.pow(2, 10), 2 ^ 10)`, args: [2, 2] },
+	{ name: 'math.pow', category: 'math', signature: 'math.pow(x, y)', summary: "Puissance ; s'écrit aussi x ^ y.", example: `print(math.pow(2, 10), 2 ^ 10)`, args: [2, 2] },
 	{ name: 'math.exp', category: 'math', signature: 'math.exp(x)', summary: 'Exponentielle.', args: [1, 1] },
 	{ name: 'math.log', category: 'math', signature: 'math.log(x)', summary: 'Logarithme népérien.', args: [1, 1] },
 	{ name: 'math.log10', category: 'math', signature: 'math.log10(x)', summary: 'Logarithme décimal.', args: [1, 1] },
-	{ name: 'math.fmod', category: 'math', signature: 'math.fmod(x, y)', summary: 'Reste de la division (signe de x) ; voir aussi l’opérateur %.', example: `print(math.fmod(7, 3), -7 % 3)`, args: [2, 2] },
+	{ name: 'math.fmod', category: 'math', signature: 'math.fmod(x, y)', summary: "Reste de la division (signe de x) ; voir aussi l'opérateur %.", example: `print(math.fmod(7, 3), -7 % 3)`, args: [2, 2] },
 	{ name: 'math.modf', category: 'math', signature: 'math.modf(x) → entier, fraction', summary: 'Sépare partie entière et partie décimale.', example: `print(math.modf(3.75))`, args: [1, 1] },
 	{
 		name: 'math.random',
@@ -490,7 +490,7 @@ print(l[1].n)`,
 		args: [0, 2]
 	},
 	{ name: 'math.randomseed', category: 'math', signature: 'math.randomseed(x)', summary: 'Initialise le générateur de math.random.', example: `math.randomseed(os.time())`, args: [1, 1] },
-	{ name: 'math.huge', category: 'math', signature: 'math.huge', summary: 'L’infini (valeur, pas une fonction).' },
+	{ name: 'math.huge', category: 'math', signature: 'math.huge', summary: "L'infini (valeur, pas une fonction)." },
 	{ name: 'math.pi', category: 'math', signature: 'math.pi', summary: 'Le nombre π (valeur, pas une fonction).' },
 	{ name: 'math.sin', category: 'math', signature: 'math.sin(x)', summary: 'Sinus (x en radians).', args: [1, 1] },
 	{ name: 'math.cos', category: 'math', signature: 'math.cos(x)', summary: 'Cosinus (x en radians).', args: [1, 1] },
@@ -524,7 +524,7 @@ print(db.value([[SELECT count(*) FROM Commandes WHERE "Échéance" < ?]], aujour
 		name: 'os.time',
 		category: 'os',
 		signature: 'os.time([{year, month, day, hour, min, sec}]) → secondes',
-		summary: 'Renvoie l’heure actuelle, ou celle de la date donnée, en secondes.',
+		summary: "Renvoie l'heure actuelle, ou celle de la date donnée, en secondes.",
 		example: `local echeance = os.time({year = 2026, month = 12, day = 31, hour = 0})
 print(math.floor(os.difftime(echeance, os.time()) / 86400) .. " jour(s) avant la fin de l'année")`,
 		args: [0, 1]
@@ -540,7 +540,7 @@ print(math.floor(os.difftime(echeance, os.time()) / 86400) .. " jour(s) avant la
 		name: 'os.clock',
 		category: 'os',
 		signature: 'os.clock() → secondes',
-		summary: 'Temps processeur écoulé : sert à mesurer la durée d’un traitement.',
+		summary: "Temps processeur écoulé : sert à mesurer la durée d'un traitement.",
 		example: `local t0 = os.clock()
 local n = db.value("SELECT count(*) FROM Commandes")
 print(string.format("%d ligne(s) en %.3f s", n, os.clock() - t0))`,
@@ -561,7 +561,7 @@ local remise = nil or 0`
 		name: 'if',
 		category: 'syntaxe',
 		signature: 'if cond then ... elseif cond then ... else ... end',
-		summary: 'Condition. Différent s’écrit ~= ; and, or et not sont les opérateurs logiques.',
+		summary: "Condition. Différent s'écrit ~= ; and, or et not sont les opérateurs logiques.",
 		example: `local montant = 80
 if montant >= 100 then
   print("gros")
@@ -576,7 +576,7 @@ end`
 		category: 'syntaxe',
 		signature: 'for i = début, fin [, pas] do ... end',
 		summary: 'Boucle numérique ; for ... in sert aux itérateurs (ipairs, pairs, db.rows).',
-		details: 'break sort de la boucle ; il n’y a pas de continue.',
+		details: "break sort de la boucle ; il n'y a pas de continue.",
 		example: `for i = 1, 3 do print(i) end
 for i = 10, 1, -3 do print(i) end`
 	},
@@ -584,7 +584,7 @@ for i = 10, 1, -3 do print(i) end`
 		name: 'for in',
 		category: 'syntaxe',
 		signature: 'for i, v in ipairs(liste) do ... end  |  for k, v in pairs(t) do ... end',
-		summary: 'Parcourt une liste dans l’ordre (ipairs) ou toutes les clés d’une table (pairs, ordre quelconque).',
+		summary: "Parcourt une liste dans l'ordre (ipairs) ou toutes les clés d'une table (pairs, ordre quelconque).",
 		example: `for i, nom in ipairs({"Durand", "Martin"}) do print(i, nom) end
 for _, t in ipairs(db.tables()) do print(t.name) end`
 	},
@@ -614,7 +614,7 @@ print(ttc(100), ttc(100, 0.055))`
 		category: 'syntaxe',
 		signature: '{ v1, v2 }  |  { cle = valeur, ["clé"] = valeur }',
 		summary: 'La seule structure de données : liste (indices à partir de 1) ou dictionnaire.',
-		details: '#t donne la longueur d’une liste. Une clé avec accent ou espace s’écrit t["Payé"].',
+		details: '#t donne la longueur d\'une liste. Une clé avec accent ou espace s\'écrit t["Payé"].',
 		example: `local noms = {"Durand", "Martin"}
 local ligne = {Client = "Durand", ["Payé"] = true}
 print(#noms, noms[1], ligne.Client, ligne["Payé"])`
@@ -661,10 +661,10 @@ export const globals: Set<string> = new Set([
 
 /** Ce qui existe en Lua mais que le bac à sable retire, avec la raison affichée. */
 export const unavailable: Record<string, string> = {
-	io: 'pas d’accès aux fichiers dans un script',
+	io: "pas d'accès aux fichiers dans un script",
 	require: 'pas de chargement de module dans un script',
-	dofile: 'pas d’accès aux fichiers dans un script',
-	loadfile: 'pas d’accès aux fichiers dans un script',
+	dofile: "pas d'accès aux fichiers dans un script",
+	loadfile: "pas d'accès aux fichiers dans un script",
 	load: 'pas de chargement de code dans un script',
 	loadstring: 'pas de chargement de code dans un script',
 	debug: 'bibliothèque debug non disponible',
@@ -677,10 +677,10 @@ export const unavailable: Record<string, string> = {
 	newproxy: 'non disponible dans un script',
 	'os.execute': 'pas de lancement de programme dans un script',
 	'os.exit': 'non disponible dans un script',
-	'os.getenv': 'pas d’accès aux variables d’environnement',
-	'os.remove': 'pas d’accès aux fichiers dans un script',
-	'os.rename': 'pas d’accès aux fichiers dans un script',
-	'os.tmpname': 'pas d’accès aux fichiers dans un script',
+	'os.getenv': "pas d'accès aux variables d'environnement",
+	'os.remove': "pas d'accès aux fichiers dans un script",
+	'os.rename': "pas d'accès aux fichiers dans un script",
+	'os.tmpname': "pas d'accès aux fichiers dans un script",
 	'os.setlocale': 'non disponible dans un script',
 	'string.dump': 'non disponible dans un script'
 };

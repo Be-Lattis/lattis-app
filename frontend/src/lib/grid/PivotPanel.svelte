@@ -457,8 +457,8 @@
 
 <aside class="panel" bind:this={panelEl} use:resizePanel={{ key: 'pivot', off: !resizable }} use:panelKeys={onclose} aria-label="Champs de tableau croisé dynamique">
 	<PanelHeader title="Champs de tableau croisé dynamique" help="tcd" helpLabel="Aide sur les tableaux croisés" {onclose}>
-		<span class="sub" title="Le TCD s'interroge dans l'onglet SQL sous ce nom et sert de source aux graphiques">
-			{config.name ?? 'TCD'} · source :
+		<span class="sub" title="Le tableau croisé dynamique s'interroge dans l'onglet SQL sous ce nom et sert de source aux graphiques">
+			{config.name ?? 'Tableau croisé dynamique'} · source :
 			{#if isDefaultTableName(config.source)}<span class="default-name" title={DEFAULT_NAME_HINT}>{config.source}</span>{:else}{config.source}{/if}
 		</span>
 	</PanelHeader>

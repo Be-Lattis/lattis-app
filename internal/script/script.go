@@ -1,4 +1,4 @@
-// Package script exécute les scripts Lua d'un classeur (onglet SCRIPT).
+// Package script exécute les scripts Lua d'un classeur (onglet Script).
 //
 // Un script lit le classeur en SQL avec les noms affichés des tableaux et
 // des colonnes (db.query, db.rows, db.value), et l'écrit ligne par ligne

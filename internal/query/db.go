@@ -320,7 +320,7 @@ func connectDB(ctx context.Context, sec *Secrets, c Connection) (*sql.DB, *diale
 			}
 			return nil, nil, &ErrPassword{Connection: c.Name, Account: c.Account(), Message: msg}
 		}
-		return nil, nil, fmt.Errorf("connexion « %s » : %w", c.Name, err)
+		return nil, nil, fmt.Errorf("connexion « %s » : %w", c.Name, driverFrench(err))
 	}
 	return db, d, nil
 }
@@ -365,7 +365,7 @@ func TestConnection(ctx context.Context, sec *Secrets, c Connection, password st
 		if d.authFailed(err) {
 			return &ErrPassword{Connection: c.Name, Account: c.Account(), Message: "mot de passe refusé"}
 		}
-		return fmt.Errorf("connexion « %s » : %w", c.Name, err)
+		return fmt.Errorf("connexion « %s » : %w", c.Name, driverFrench(err))
 	}
 	return sec.Set(c.Account(), password, remember)
 }

@@ -31,7 +31,7 @@ Le volet **Requêtes et connexions** (Données › Requêtes et connexions) list
 
 ## Classeur reçu : accord des sources
 
-Une requête est écrite dans le classeur. Pour qu'un classeur reçu ne puisse pas, à l'actualisation, joindre un serveur inconnu ou copier un fichier de votre poste, Lattis demande votre accord la première fois qu'une requête veut lire un fichier ou joindre un hôte (API web, serveur de base de données). L'accord vaut pour la session, ou pour ce classeur sur ce poste avec « Mémoriser ». Les sources d'une requête écrite dans l'éditeur, et les fichiers que vous y choisissez, sont accordés d'office. Les hôtes accordés se revoient dans l'onglet SCRIPT › Accès réseau.
+Une requête est écrite dans le classeur. Pour qu'un classeur reçu ne puisse pas, à l'actualisation, joindre un serveur inconnu ou copier un fichier de votre poste, Lattis demande votre accord la première fois qu'une requête veut lire un fichier ou joindre un hôte (API web, serveur de base de données). L'accord vaut pour la session, ou pour ce classeur sur ce poste avec « Mémoriser ». Les sources d'une requête écrite dans l'éditeur, et les fichiers que vous y choisissez, sont accordés d'office. Les hôtes accordés se revoient dans l'onglet Script › Accès réseau.
 
 ## Connexions aux bases
 

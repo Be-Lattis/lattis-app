@@ -309,7 +309,7 @@
 					{ label: 'Source…', icon: 'database', hint: 'Modifier la source de la requête', run: () => (sourceOpen = true) },
 					{ label: 'Voir le SQL', icon: 'script', hint: 'Afficher le SQL de l’aperçu', on: showSQL, run: () => (showSQL = !showSQL) },
 					{ label: 'Défaire', icon: 'undo', hint: 'Retirer la dernière action sur les étapes (Ctrl+Z)', off: !canUndo, run: undoStep },
-					{ label: 'Refaire', icon: 'redo', hint: 'Remettre l’action défaite (Ctrl+Y)', off: !canRedo, run: redoStep }
+					{ label: 'Rétablir', icon: 'redo', hint: 'Remettre l’action défaite (Ctrl+Y)', off: !canRedo, run: redoStep }
 				]
 			},
 			{ title: 'Gérer les colonnes', big: [op('select', 'choose-columns'), op('remove', 'delete-column')] },

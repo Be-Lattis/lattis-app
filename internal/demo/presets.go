@@ -81,7 +81,7 @@ type ChartSpec struct {
 type Plan struct {
 	Sheets []SheetSpec
 	Pivots []PivotSpec
-	// Scripts de la bibliothèque (onglet SCRIPT), autorisés sur ce poste
+	// Scripts de la bibliothèque (onglet Script), autorisés sur ce poste
 	// quand le classeur est fabriqué par New.
 	Scripts []ScriptSpec
 	// Events : écouteurs des évènements du classeur (events.on).

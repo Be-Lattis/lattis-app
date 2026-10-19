@@ -955,7 +955,7 @@ controls.set("Statut", {value = "Payés"}) -- filtrer s'exécute à la fin du sc
 					found = found || s.Name == l.Script
 				}
 				if !found {
-					return nil, fmt.Errorf("script « %s » introuvable : enregistrez-le dans la bibliothèque (onglet SCRIPT)", l.Script)
+					return nil, fmt.Errorf("script « %s » introuvable : enregistrez-le dans la bibliothèque (onglet Script)", l.Script)
 				}
 				cfg := b.Config
 				for _, x := range cfg.Listeners {

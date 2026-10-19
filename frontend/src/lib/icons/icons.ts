@@ -85,7 +85,7 @@ export const icons = {
 	'pivot-table': '<rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><path d="M3.5 8.5h17M8.5 3.5v17"/><path class="a" d="M12 12.5h2.5A2.5 2.5 0 0 1 17 15v2.5M10.5 11l1.5 1.5-1.5 1.5M15.5 16l1.5 1.5 1.5-1.5"/>',
 	'text-input': '<rect x="2.5" y="7" width="19" height="10" rx="1.5"/><path class="a" d="M8 9.5v5M6.5 9.5h3M6.5 14.5h3"/>',
 	button: '<rect x="2.5" y="6" width="19" height="10" rx="3"/><path class="af" d="M12.5 11.5v9.5l2.4-2.3 1.7 3.6 1.7-.8-1.7-3.5h3.4z"/>',
-	// Pointer un contrôle (onglet SCRIPT) : une mire sur un bouton.
+	// Pointer un contrôle (onglet Script) : une mire sur un bouton.
 	'pick-control': '<rect x="2.5" y="8" width="13" height="8" rx="2.5"/><circle class="a" cx="16" cy="12" r="4.5"/><path class="a" d="M16 4.5v3M16 16.5v3M23.5 12h-3M11.5 12h-3"/>',
 	'chart-bar': '<path d="M3.5 20.5h17"/><rect class="af" x="5.5" y="13" width="3" height="7.5" rx=".5"/><rect class="af" x="10.5" y="6" width="3" height="14.5" rx=".5"/><rect class="af" x="15.5" y="10" width="3" height="10.5" rx=".5"/>',
 	'chart-line': '<path d="M4 4v16h16"/><path class="a" d="m7 15 4-4 3 3 6-7"/>',
@@ -135,7 +135,7 @@ export const icons = {
 	headings: '<rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><path d="M3.5 9h17M9 3.5v17"/><path class="a" stroke-width="1.6" d="M12.5 7.5l1.25-3 1.25 3M13 6.5h1.5M5.5 12.5l1-1v5"/>',
 	stopwatch: '<circle cx="12" cy="13.5" r="7.5"/><path class="a" d="M12 13.5v-4"/><path d="M10 2.5h4M12 2.5V6M18.5 6.5 20 5"/>',
 
-	// Onglets SQL et SCRIPT, structure des tableaux
+	// Onglets SQL et Script, structure des tableaux
 	database: '<ellipse cx="12" cy="6" rx="7.5" ry="2.75"/><path d="M4.5 6v12c0 1.5 3.4 2.75 7.5 2.75s7.5-1.25 7.5-2.75V6"/><path class="a" d="M4.5 12c0 1.5 3.4 2.75 7.5 2.75s7.5-1.25 7.5-2.75"/>',
 	script: '<path d="M8.5 7 3.5 12l5 5M15.5 7l5 5-5 5"/><path class="a" d="m13.5 4.5-3 15"/>',
 	play: '<path class="af" d="M7 4.5v15l12.5-7.5z"/>',

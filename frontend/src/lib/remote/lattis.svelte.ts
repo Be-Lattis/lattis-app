@@ -47,7 +47,7 @@ export async function requestLogin(url: string): Promise<boolean> {
 
 /**
  * Classeur partagé ouvert dont l'utilisateur gère les droits (propriétaire)
- * ou les consulte (concepteur) : le menu Compte propose « Gérer l’accès… »
+ * ou les consulte (concepteur) : le menu Compte propose « Gérer l'accès… »
  * (écran des droits), ouvert par open ; null sinon.
  */
 export const shareRights = $state<{ current: { title: string; open: () => void } | null }>({ current: null });

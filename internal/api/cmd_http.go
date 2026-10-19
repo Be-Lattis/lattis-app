@@ -27,7 +27,7 @@ import (
 // classeur ») ; la réponse vaut pour la session, ou est rangée sur ce
 // poste, hors du fichier, pour ce classeur (doc.Document.AllowHTTPHost,
 // internal/trust) : un classeur reçu ne s'autorise rien lui-même, et
-// l'onglet SCRIPT › Accès réseau permet de revoir la liste. Une
+// l'onglet Script › Accès réseau permet de revoir la liste. Une
 // redirection vers un autre hôte est soumise à la même règle.
 // Le serveur MCP ne peut pas consulter l'utilisateur (WithoutPrompt) : il
 // n'atteint que les hôtes déjà autorisés. Aucune commande ne permet à un
@@ -112,10 +112,10 @@ func (c *Call) allowHostFor(host, message string) error {
 			return true, nil
 		}
 		if known {
-			return false, fmt.Errorf("%w : l'accès à « %s » a été refusé pour cette session (onglet SCRIPT › Accès réseau pour l'autoriser)", ErrHostNotAllowed, h)
+			return false, fmt.Errorf("%w : l'accès à « %s » a été refusé pour cette session (onglet Script › Accès réseau pour l'autoriser)", ErrHostNotAllowed, h)
 		}
 		if !CanPrompt(c) {
-			return false, fmt.Errorf("%w : « %s » n'est pas autorisé pour ce classeur ; seul l'utilisateur peut l'autoriser dans Lattis (en répondant à la demande d'un script, ou onglet SCRIPT › Accès réseau)", ErrHostNotAllowed, h)
+			return false, fmt.Errorf("%w : « %s » n'est pas autorisé pour ce classeur ; seul l'utilisateur peut l'autoriser dans Lattis (en répondant à la demande d'un script, ou onglet Script › Accès réseau)", ErrHostNotAllowed, h)
 		}
 		return false, nil
 	}
@@ -340,7 +340,7 @@ func (c *Call) optionsParam(name string) (map[string]any, error) {
 
 const httpReturns = "{status, ok, url, headers, body, json}"
 
-const httpDetails = "La réponse : status (200, 404…), ok (true pour un statut 2xx), url (adresse finale, après les redirections), headers (noms en minuscules), body (texte) et json (le corps décodé quand la réponse est du JSON). Un statut d'erreur (404, 500…) n'est pas une erreur Lua : testez ok ; une panne réseau ou un délai dépassé en est une (pcall pour la rattraper). Avant la première requête vers un hôte, Lattis demande l'autorisation à l'utilisateur (mémorisable pour le classeur ; onglet SCRIPT › Accès réseau pour la revoir) ; le serveur MCP n'atteint que les hôtes déjà autorisés. Délai : 15 s par défaut (timeout, 120 s au plus), sans compter dans la durée maximale du script ; réponse de 10 Mo au plus ; 10 redirections au plus ; le bouton Arrêter interrompt la requête."
+const httpDetails = "La réponse : status (200, 404…), ok (true pour un statut 2xx), url (adresse finale, après les redirections), headers (noms en minuscules), body (texte) et json (le corps décodé quand la réponse est du JSON). Un statut d'erreur (404, 500…) n'est pas une erreur Lua : testez ok ; une panne réseau ou un délai dépassé en est une (pcall pour la rattraper). Avant la première requête vers un hôte, Lattis demande l'autorisation à l'utilisateur (mémorisable pour le classeur ; onglet Script › Accès réseau pour la revoir) ; le serveur MCP n'atteint que les hôtes déjà autorisés. Délai : 15 s par défaut (timeout, 120 s au plus), sans compter dans la durée maximale du script ; réponse de 10 Mo au plus ; 10 redirections au plus ; le bouton Arrêter interrompt la requête."
 
 var pOptions = Param{Name: "options", Type: Object, Optional: true, Desc: "{headers = {nom = valeur}, timeout = secondes}"}
 

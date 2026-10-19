@@ -90,7 +90,7 @@ CREATE TABLE _lattis_names (
 ) STRICT;
 CREATE UNIQUE INDEX _lattis_names_cell ON _lattis_names(sheet, row, col);
 `,
-	// 4 → 5 : bibliothèque de scripts Lua du classeur (onglet SCRIPT).
+	// 4 → 5 : bibliothèque de scripts Lua du classeur (onglet Script).
 	`
 CREATE TABLE _lattis_scripts (
 	id     INTEGER PRIMARY KEY,

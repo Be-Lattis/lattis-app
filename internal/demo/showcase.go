@@ -336,7 +336,7 @@ func med() Plan {
 		{Kind: "bullet", Text: "**Ventes mensuelles** : tableau produit par une requête SQL (GROUP BY, fonctions de fenêtre) ; **F5** dans le tableau la relance. Graphique combiné, jauge, cascade."},
 		{Kind: "bullet", Text: "**Impayés** : requête d'import façon Power Query (filtre, regroupement, tri), actualisable elle aussi."},
 		{Kind: "bullet", Text: "**Tableau de bord** : page HTML qui lit le classeur ; **Clients**, **Employés**, **Analyse** : tableaux plus gros, TCD, nuage de points, fréquences."},
-		{Kind: "bullet", Text: "En haut, l'onglet **SQL** interroge les tableaux par leur nom ; l'onglet **SCRIPT** montre le code des boutons et de l'écouteur de saisie."},
+		{Kind: "bullet", Text: "En haut, l'onglet **SQL** interroge les tableaux par leur nom ; l'onglet **Script** montre le code des boutons et de l'écouteur de saisie."},
 		{Kind: "h2", Text: "Vos ventes en direct"},
 		{Kind: "p", Text: "Objectif de chiffre d'affaires (€ HT) :", Control: &canvas.ButtonConfig{Name: "Objectif", Kind: "input", Label: "Objectif", Link: "Ventes!R9", Width: 120}},
 		{Kind: "p", Text: "*Modifiez-le : l'indicateur « Objectif atteint » de l'onglet Ventes suit.*"},

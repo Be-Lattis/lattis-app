@@ -14,10 +14,10 @@ export interface OpInfo {
 }
 
 export const OPS: OpInfo[] = [
-	{ op: 'select', label: 'Choisir les colonnes', group: 'Colonnes', hint: 'Garder certaines colonnes, dans l’ordre voulu' },
+	{ op: 'select', label: 'Choisir les colonnes', group: 'Colonnes', hint: "Garder certaines colonnes, dans l'ordre voulu" },
 	{ op: 'remove', label: 'Supprimer les colonnes', group: 'Colonnes', hint: 'Retirer des colonnes' },
 	{ op: 'rename', label: 'Renommer', group: 'Colonnes', hint: 'Renommer une colonne' },
-	{ op: 'type', label: 'Type de données', group: 'Colonnes', hint: 'Changer le type d’une colonne (une valeur non convertible devient vide)' },
+	{ op: 'type', label: 'Type de données', group: 'Colonnes', hint: "Changer le type d'une colonne (une valeur non convertible devient vide)" },
 	{ op: 'filter', label: 'Filtrer les lignes', group: 'Lignes', hint: 'Garder les lignes qui vérifient des conditions' },
 	{ op: 'sort', label: 'Trier', group: 'Lignes', hint: 'Trier les lignes' },
 	{ op: 'distinct', label: 'Supprimer les doublons', group: 'Lignes', hint: 'Garder une ligne par valeur (de toutes les colonnes ou de certaines)' },
@@ -26,12 +26,12 @@ export const OPS: OpInfo[] = [
 	{ op: 'replace', label: 'Remplacer les valeurs', group: 'Transformer', hint: 'Remplacer une valeur par une autre' },
 	{ op: 'transform', label: 'Format', group: 'Transformer', hint: 'SUPPRESPACE, MAJUSCULE, minuscule' },
 	{ op: 'addcolumn', label: 'Colonne personnalisée', group: 'Transformer', hint: 'Nouvelle colonne calculée par une expression SQLite ([Colonne] désigne une colonne)' },
-	{ op: 'index', label: 'Colonne d’index', group: 'Transformer', hint: 'Numéroter les lignes' },
+	{ op: 'index', label: "Colonne d'index", group: 'Transformer', hint: 'Numéroter les lignes' },
 	{ op: 'group', label: 'Regrouper par', group: 'Transformer', hint: 'Regrouper les lignes et calculer des agrégats' },
 	{ op: 'unpivot', label: 'Dépivoter', group: 'Transformer', hint: 'Transformer des colonnes en lignes (attribut, valeur)' },
-	{ op: 'pivot', label: 'Pivoter', group: 'Transformer', hint: 'Transformer les valeurs d’une colonne en colonnes' },
+	{ op: 'pivot', label: 'Pivoter', group: 'Transformer', hint: "Transformer les valeurs d'une colonne en colonnes" },
 	{ op: 'merge', label: 'Fusionner', group: 'Combiner', hint: 'Joindre une autre requête ou un tableau par des colonnes communes' },
-	{ op: 'append', label: 'Ajouter', group: 'Combiner', hint: 'Mettre à la suite les lignes d’une autre requête ou d’un tableau' }
+	{ op: 'append', label: 'Ajouter', group: 'Combiner', hint: "Mettre à la suite les lignes d'une autre requête ou d'un tableau" }
 ];
 
 export const TYPES: [string, string][] = [
@@ -54,7 +54,7 @@ export const CMPS: [string, string][] = [
 	['begins', 'commence par'],
 	['ends', 'se termine par'],
 	['empty', 'est vide'],
-	['notempty', 'n’est pas vide']
+	['notempty', "n'est pas vide"]
 ];
 
 export const AGGS: [string, string][] = [

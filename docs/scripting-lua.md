@@ -1,7 +1,7 @@
 # Scripter un classeur en Lua
 
 Ce guide s'adresse à quelqu'un qui découvre Lua ou les scripts de Lattis. Il présente
-d'abord l'onglet SCRIPT, puis les bases du langage, puis l'API `db` qui lit et écrit le
+d'abord l'onglet Script, puis les bases du langage, puis l'API `db` qui lit et écrit le
 classeur, et se termine par des recettes complètes.
 
 La référence courte de l'API est dans [scripting.md](scripting.md). Le code se trouve dans
@@ -18,9 +18,9 @@ Tous les exemples supposent un tableau `Commandes` comme celui-ci :
 
 ---
 
-## 1. L'onglet SCRIPT
+## 1. L'onglet Script
 
-L'onglet SCRIPT a trois zones :
+L'onglet Script a trois zones :
 
 - **À gauche, la bibliothèque** : les scripts enregistrés dans le classeur. Un clic ouvre un
   script ; le clic droit propose *Renommer*, *Dupliquer* et *Supprimer*. *+ Nouveau script*
@@ -495,7 +495,7 @@ qui le verrouille aussi jusqu'à `sheets.unprotect_workbook`.
 
 Au-delà de `db`, un script dispose des **commandes de l'application** : les mêmes que
 celles du serveur MCP (voir [mcp.md](mcp.md)). La liste complète, avec un exemple pour
-chacune, est dans le panneau **Référence** de l'onglet SCRIPT.
+chacune, est dans le panneau **Référence** de l'onglet Script.
 
 Conventions :
 
@@ -705,7 +705,7 @@ events.on("before_close", "avant_fermeture", "Évènements")
   Tout ce qu'ils modifient forme **une étape d'annulation** (`Évènement « change »`),
   distincte de la saisie qui les a déclenchés.
 - Un écouteur en erreur est **signalé une fois** (barre d'état et console de l'onglet
-  SCRIPT), puis l'erreur n'est plus répétée pendant la session. Il arrête les écouteurs
+  Script), puis l'erreur n'est plus répétée pendant la session. Il arrête les écouteurs
   suivants du même évènement, mais **n'empêche jamais** d'enregistrer ni de fermer.
 - `before_save` et `before_close` ont **5 secondes** au plus (hors boîtes de dialogue) ;
   les autres évènements ont les bornes habituelles d'un script (§ 10).
@@ -771,9 +771,9 @@ dans le fichier.
 
 | Protection | Comportement |
 |---|---|
-| Accord des scripts | Un script du classeur lancé sans que vous voyiez son code (bouton, contrôle, évènement du classeur, bouton d'un onglet Document, `scripts_run` du serveur MCP) ne s'exécute que si **cette version** (empreinte de son code) est autorisée sur ce poste. Un script écrit, enregistré ou lancé depuis l'onglet SCRIPT de ce poste l'est d'office : un classeur créé ici ne demande rien. Sinon, sa première exécution demande **Autoriser / Refuser**, avec **Voir le code** et « Autoriser aussi les autres scripts de ce classeur » : n'autorisez que si vous faites confiance à la personne qui vous a fourni ce classeur. Un script modifié ailleurs redemande. Un refus vaut jusqu'à la fermeture de Lattis. Le serveur MCP n'exécute que des versions déjà autorisées. |
+| Accord des scripts | Un script du classeur lancé sans que vous voyiez son code (bouton, contrôle, évènement du classeur, bouton d'un onglet Document, `scripts_run` du serveur MCP) ne s'exécute que si **cette version** (empreinte de son code) est autorisée sur ce poste. Un script écrit, enregistré ou lancé depuis l'onglet Script de ce poste l'est d'office : un classeur créé ici ne demande rien. Sinon, sa première exécution demande **Autoriser / Refuser**, avec **Voir le code** et « Autoriser aussi les autres scripts de ce classeur » : n'autorisez que si vous faites confiance à la personne qui vous a fourni ce classeur. Un script modifié ailleurs redemande. Un refus vaut jusqu'à la fermeture de Lattis. Le serveur MCP n'exécute que des versions déjà autorisées. |
 | Requêtes SQL | `db.query`, `db.execute`, l'onglet SQL, les pages HTML et le serveur MCP ne lisent et n'écrivent que les tableaux : pas les tables internes `_lattis_*` (journal, accords…), ni un autre fichier (`ATTACH`), ni la structure (`CREATE`, `DROP`, `ALTER`, temporaires compris), ni les transactions, ni les `PRAGMA` (sauf `table_info` et ceux qui décrivent les tables). Erreur : *Requête refusée : le SQL lit et modifie les tableaux du classeur, mais pas ses tables internes…* |
-| Réseau | Avant la première requête vers un hôte, Lattis demande l'autorisation. « Mémoriser pour ce classeur » range l'hôte sur ce poste, pour ce classeur (onglet SCRIPT › Accès réseau) : le même classeur ouvert ailleurs redemande. Les hôtes qu'une version précédente enregistrait dans le fichier ne sont repris que pour les classeurs récents de ce poste au moment de la mise à jour. |
+| Réseau | Avant la première requête vers un hôte, Lattis demande l'autorisation. « Mémoriser pour ce classeur » range l'hôte sur ce poste, pour ce classeur (onglet Script › Accès réseau) : le même classeur ouvert ailleurs redemande. Les hôtes qu'une version précédente enregistrait dans le fichier ne sont repris que pour les classeurs récents de ce poste au moment de la mise à jour. |
 | Accord des pages web | Une page web (onglet HTML) ne s'exécute à l'affichage de son onglet que si **cette version** (empreinte de son HTML) est autorisée sur ce poste. Une page créée ou modifiée ici l'est d'office. Sinon, l'onglet demande **Autoriser / Ne pas exécuter**, avec **Voir le code** ; « Ne pas exécuter » laisse un message et un bouton **Décider…**. N'autorisez que si vous faites confiance à la personne qui vous a fourni ce classeur. |
 | Déclencheurs SQL | Lattis ne range aucun déclencheur (`TRIGGER`) dans le fichier. Un déclencheur écrit hors de Lattis est supprimé à l'ouverture, avant toute écriture, avec un message dans la barre d'état ; enregistrez le classeur pour qu'il disparaisse aussi du fichier. Vues et index inconnus restent. |
 | Pages HTML | Une page n'appelle (`lattis.call`) qu'une **liste autorisée** de commandes : lecture, valeurs (`cells.set`, `db.execute`…), boîtes de dialogue, réseau (avec accord), actions des boutons (avec l'accord des scripts). Ni fichiers, ni annulation, ni code (scripts, pages, écouteurs), ni structure, ni protections. |

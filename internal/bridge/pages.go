@@ -78,7 +78,7 @@ func (s *DocumentService) PivotData(ctx context.Context, cfg canvas.PivotConfig)
 	return d.PivotData(ctx, cfg), nil
 }
 
-// RunFunction exécute le script name de la bibliothèque (onglet SCRIPT),
+// RunFunction exécute le script name de la bibliothèque (onglet Script),
 // ou seulement sa fonction entry : bouton d'un onglet Document.
 func (s *DocumentService) RunFunction(ctx context.Context, name, entry string) (ScriptResult, error) {
 	if err := s.scripting(); err != nil {
@@ -97,7 +97,7 @@ func (s *DocumentService) RunFunction(ctx context.Context, name, entry string) (
 			return api.RunLibraryScript(host{s}, sc.Name, sc.Source, entry)
 		}
 	}
-	return ScriptResult{}, fmt.Errorf("script « %s » introuvable (onglet SCRIPT)", name)
+	return ScriptResult{}, fmt.Errorf("script « %s » introuvable (onglet Script)", name)
 }
 
 // Page donne le contenu d'un onglet page HTML.
@@ -143,7 +143,7 @@ func (s *DocumentService) PageCall(ctx context.Context, name string, args map[st
 }
 
 // HTTPHosts liste les hôtes que les scripts et pages du classeur peuvent
-// joindre sans redemander (onglet SCRIPT › Accès réseau).
+// joindre sans redemander (onglet Script › Accès réseau).
 func (s *DocumentService) HTTPHosts(ctx context.Context) ([]string, error) {
 	d, err := s.current()
 	if err != nil {

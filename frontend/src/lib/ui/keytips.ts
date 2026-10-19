@@ -64,7 +64,7 @@ export const COMMAND_TIPS: Record<string, string> = {
 	Marges: 'M',
 	Orientation: 'O',
 	Taille: 'SZ',
-	'Zone d’impression': 'R',
+	"Zone d'impression": 'R',
 	'Sauts de page': 'B',
 	'Imprimer les titres': 'I',
 	Largeur: 'W',

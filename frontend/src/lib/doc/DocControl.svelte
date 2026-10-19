@@ -129,7 +129,7 @@
 		font: 13px 'Segoe UI', system-ui, sans-serif;
 		user-select: none;
 	}
-	/* Pipette de l'onglet SCRIPT : les contrôles se désignent d'un clic. */
+	/* Pipette de l'onglet Script : les contrôles se désignent d'un clic. */
 	.dctl.picking,
 	.dctl.picking :global(*) {
 		cursor: crosshair;

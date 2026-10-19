@@ -1,8 +1,8 @@
 # Scripts Lua
 
-L'onglet **SCRIPT** automatise le classeur en Lua (version 5.1) : lire et écrire les tableaux, piloter les feuilles, poser des questions à l'utilisateur, réagir aux contrôles.
+L'onglet **Script** automatise le classeur en Lua (version 5.1) : lire et écrire les tableaux, piloter les feuilles, poser des questions à l'utilisateur, réagir aux contrôles.
 
-## L'onglet SCRIPT
+## L'onglet Script
 
 - **À gauche, la bibliothèque** : les scripts rangés dans le classeur (ils voyagent avec le fichier `.lattis`). Clic droit : renommer, dupliquer, supprimer.
 - **Au centre, l'éditeur**, qui vérifie le script pendant la frappe : erreurs de syntaxe en rouge, noms inconnus et mauvais nombres d'arguments en jaune.

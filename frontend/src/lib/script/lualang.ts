@@ -1,4 +1,4 @@
-// Coloration syntaxique des scripts Lua (onglet SCRIPT) : mots-clés, chaînes
+// Coloration syntaxique des scripts Lua (onglet Script) : mots-clés, chaînes
 // (longues comprises), nombres, commentaires, et les noms de l'API Lattis
 // (db, sheets, print…) tirés de la référence, dans les couleurs de l'éditeur SQL.
 

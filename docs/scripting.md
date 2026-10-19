@@ -1,7 +1,7 @@
 # Scripts Lua : référence de l'API
 
 Code : `internal/script` (moteur et bac à sable), `internal/canvas/editor.go` (écritures).
-Pour découvrir Lua et l'onglet SCRIPT, avec des exemples complets : [scripting-lua.md](scripting-lua.md).
+Pour découvrir Lua et l'onglet Script, avec des exemples complets : [scripting-lua.md](scripting-lua.md).
 Le langage est Lua 5.1 (gopher-lua).
 
 ## Lire le classeur

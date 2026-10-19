@@ -3,7 +3,7 @@
 	import { panelKeys } from '#lib/ui/focus.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	import PanelHeader from '#lib/ui/PanelHeader.svelte';
-	// Panneau « Référence » de l'onglet SCRIPT : les fonctions disponibles dans
+	// Panneau « Référence » de l'onglet Script : les fonctions disponibles dans
 	// un script Lua, en accordéon (une section repliable par module), avec
 	// recherche : elle filtre les fonctions et ouvre les sections qui en ont.
 	// Un clic déplie une entrée ; Insérer place son exemple dans l'éditeur.

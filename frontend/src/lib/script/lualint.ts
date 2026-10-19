@@ -1,4 +1,4 @@
-// Linter des scripts Lua (onglet SCRIPT).
+// Linter des scripts Lua (onglet Script).
 //
 // Analyse le texte à chaque frappe, sans passer par le backend :
 // - erreurs de syntaxe, avec la grammaire de gopher-lua (Lua 5.1 plus goto),
@@ -109,7 +109,7 @@ function tokenize(src: string): Token[] {
 				const word = src.slice(start, j);
 				const prev = out[out.length - 1];
 				const hint = prev?.value === '.' ? `écrivez [${JSON.stringify(word)}] au lieu de .${word}` : 'utilisez un nom sans accent';
-				throw new LintError(`un nom Lua ne peut pas contenir d’accent (« ${word} ») : ${hint}`, start, j);
+				throw new LintError(`un nom Lua ne peut pas contenir d'accent (« ${word} ») : ${hint}`, start, j);
 			}
 			const word = src.slice(start, i);
 			out.push({ type: keywords.has(word) ? 'kw' : 'name', value: word, from: start, to: i, nl });
@@ -189,14 +189,14 @@ function tokenize(src: string): Token[] {
 function badChar(src: string, i: number): LintError {
 	const c = String.fromCodePoint(src.codePointAt(i)!);
 	const at = (msg: string, len = c.length) => new LintError(msg, i, i + len);
-	if (c === '!' && src[i + 1] === '=') return at('« différent » s’écrit ~= en Lua, pas !=', 2);
-	if (c === '!') return at('« non » s’écrit not en Lua, pas !');
-	if (c === '~') return at('« ~ » seul n’existe pas : « différent » s’écrit ~=');
-	if (c === '&') return at('« et » s’écrit and en Lua, pas &&', src[i + 1] === '&' ? 2 : 1);
-	if (c === '|') return at('« ou » s’écrit or en Lua, pas ||', src[i + 1] === '|' ? 2 : 1);
+	if (c === '!' && src[i + 1] === '=') return at("« différent » s'écrit ~= en Lua, pas !=", 2);
+	if (c === '!') return at("« non » s'écrit not en Lua, pas !");
+	if (c === '~') return at("« ~ » seul n'existe pas : « différent » s'écrit ~=");
+	if (c === '&') return at("« et » s'écrit and en Lua, pas &&", src[i + 1] === '&' ? 2 : 1);
+	if (c === '|') return at("« ou » s'écrit or en Lua, pas ||", src[i + 1] === '|' ? 2 : 1);
 	if ('«»“”‘’'.includes(c)) return at(`guillemet typographique « ${c} » : utilisez " ou '`);
-	if (c === '`') return at('« ` » n’existe pas en Lua : utilisez " ou \'');
-	if (isLetter(c)) return at(`un nom Lua ne peut pas contenir d’accent (« ${c} ») : utilisez un nom sans accent`);
+	if (c === '`') return at('« ` » n\'existe pas en Lua : utilisez " ou \'');
+	if (isLetter(c)) return at(`un nom Lua ne peut pas contenir d'accent (« ${c} ») : utilisez un nom sans accent`);
 	return at(`caractère inattendu « ${c} »`);
 }
 
@@ -324,7 +324,7 @@ class Parser {
 		}
 		const line = this.lineOf(open.from);
 		let msg = `« end » attendu pour fermer ${opener[kw] ?? `« ${kw} »`} de la ligne ${line}, trouvé ${this.describe(this.tok)}`;
-		if (this.tok.type === 'name' && this.tok.value === 'continue') msg = 'Lua n’a pas de « continue » : mettez la suite de la boucle dans un if';
+		if (this.tok.type === 'name' && this.tok.value === 'continue') msg = "Lua n'a pas de « continue » : mettez la suite de la boucle dans un if";
 		this.fail(msg);
 	}
 	private name(what: string): Token {
@@ -424,7 +424,7 @@ class Parser {
 				if (t.value === 'return') {
 					if (!this.atBlockEnd() && !this.is(';')) this.exprList();
 				} else if (this.fn.loops === 0) {
-					this.fail('« break » en dehors d’une boucle', t);
+					this.fail("« break » en dehors d'une boucle", t);
 				}
 				this.accept(';');
 				if (!this.atBlockEnd()) this.fail(`« ${t.value} » doit être la dernière instruction de son bloc (avant « end », « else » ou « until »)`, this.tok);
@@ -533,7 +533,7 @@ class Parser {
 		if (t.type === 'op' && t.value === '::') {
 			this.next();
 			const nm = this.name('étiquette');
-			this.expect('::', 'pour fermer l’étiquette');
+			this.expect('::', "pour fermer l'étiquette");
 			this.label(nm);
 			return;
 		}
@@ -610,10 +610,10 @@ class Parser {
 			const targets = [e];
 			while (this.accept(',')) targets.push(this.suffixed());
 			for (const tg of targets) {
-				if (tg.kind === 'call') this.fail('on ne peut pas affecter une valeur au résultat d’un appel de fonction', this.toks[this.p - 1]);
+				if (tg.kind === 'call') this.fail("on ne peut pas affecter une valeur au résultat d'un appel de fonction", this.toks[this.p - 1]);
 				if (tg.kind !== 'name' && tg.kind !== 'index') this.fail('cette expression ne peut pas recevoir de valeur', start);
 			}
-			this.expect('=', 'dans l’affectation');
+			this.expect('=', "dans l'affectation");
 			this.exprList();
 			for (const tg of targets) {
 				if (tg.kind === 'name') {
@@ -630,10 +630,10 @@ class Parser {
 		}
 		const t = this.tok;
 		if (t.type === 'op' && '+-*/%^.'.includes(t.value) && this.peek().value === '=' && this.peek().from === t.to)
-			this.fail(`Lua n’a pas d’opérateur « ${t.value}= » : écrivez x = x ${t.value === '.' ? '..' : t.value} valeur`, t);
-		if (t.type === 'op' && t.value === '..' && this.peek().value === '=') this.fail('Lua n’a pas d’opérateur « ..= » : écrivez s = s .. valeur', t);
+			this.fail(`Lua n'a pas d'opérateur « ${t.value}= » : écrivez x = x ${t.value === '.' ? '..' : t.value} valeur`, t);
+		if (t.type === 'op' && t.value === '..' && this.peek().value === '=') this.fail("Lua n'a pas d'opérateur « ..= » : écrivez s = s .. valeur", t);
 		if (e.kind === 'name' && this.src.slice(e.from, e.to) === 'continue')
-			this.fail('Lua n’a pas de « continue » : mettez la suite de la boucle dans un if', start);
+			this.fail("Lua n'a pas de « continue » : mettez la suite de la boucle dans un if", start);
 		if (t.type === 'op' && t.value === '==') this.fail('« == » compare deux valeurs ; pour affecter, utilisez un seul =', t);
 		this.fail(`instruction incomplète : un appel de fonction ou une affectation (=) est attendu${t.type !== 'eof' ? `, trouvé ${this.describe(t)}` : ''}`, t.type === 'eof' ? start : t);
 	}
@@ -662,11 +662,11 @@ class Parser {
 			const prio = binPriority[op.value];
 			if (!prio || prio[0] <= limit) {
 				if (op.type === 'op' && op.value === '/' && this.peek().value === '/' && this.peek().from === op.to)
-					this.fail('Lua 5.1 n’a pas d’opérateur « // » : utilisez math.floor(a / b)', op);
+					this.fail("Lua 5.1 n'a pas d'opérateur « // » : utilisez math.floor(a / b)", op);
 				break;
 			}
 			this.next();
-			if (op.value === '/' && this.is('/') && this.tok.from === op.to) this.fail('Lua 5.1 n’a pas d’opérateur « // » : utilisez math.floor(a / b)', op);
+			if (op.value === '/' && this.is('/') && this.tok.from === op.to) this.fail("Lua 5.1 n'a pas d'opérateur « // » : utilisez math.floor(a / b)", op);
 			const right = this.expr(prio[1]);
 			left = { kind: 'other', from: left.from, to: right.to, onRead: [] };
 		}
@@ -693,7 +693,7 @@ class Parser {
 				break;
 			case 'op':
 				if (t.value === '...') {
-					if (!this.fn.vararg) this.fail('« ... » n’est utilisable que dans une fonction déclarée avec « ... » dans ses paramètres', t);
+					if (!this.fn.vararg) this.fail("« ... » n'est utilisable que dans une fonction déclarée avec « ... » dans ses paramètres", t);
 					this.next();
 					return { kind: 'vararg', from: t.from, to: t.to, onRead: [] };
 				}
@@ -743,11 +743,11 @@ class Parser {
 		this.later((ug) => {
 			if (ug.has(name) || globals.has(name)) return;
 			if (unavailable[name]) {
-				this.warn('warning', t.from, t.to, `« ${name} » n’est pas disponible : ${unavailable[name]}`);
+				this.warn('warning', t.from, t.to, `« ${name} » n'est pas disponible : ${unavailable[name]}`);
 				return;
 			}
 			const hint = suggest(name, [...globals, ...ug]);
-			this.warn('warning', t.from, t.to, `« ${name} » n’est pas défini${hint ? ` : voulez-vous dire « ${hint} » ?` : ' (variable jamais affectée ni déclarée avec local)'}`);
+			this.warn('warning', t.from, t.to, `« ${name} » n'est pas défini${hint ? ` : voulez-vous dire « ${hint} » ?` : ' (variable jamais affectée ni déclarée avec local)'}`);
 		});
 	}
 
@@ -787,7 +787,7 @@ class Parser {
 				for (const f of e.onRead) f();
 				this.next();
 				this.expr();
-				const close = this.expect(']', 'pour fermer l’index');
+				const close = this.expect(']', "pour fermer l'index");
 				e = { kind: 'index', from: e.from, to: close.to, onRead: [] };
 			} else if (s.type === 'op' && s.value === ':') {
 				for (const f of e.onRead) f();
@@ -805,7 +805,7 @@ class Parser {
 			} else if (s.type === 'string' || (s.type === 'op' && (s.value === '(' || s.value === '{'))) {
 				// gopher-lua l'accepte (Lua 5.1 le refuse) : f()(g)() à l'exécution.
 				if (s.value === '(' && s.nl && this.toks[this.p - 1].value === ')')
-					this.warn('warning', s.from, s.to, 'ce « ( » en début de ligne prolonge l’appel de la ligne précédente ; ajoutez « ; » à la fin de la ligne précédente si ce n’est pas voulu');
+					this.warn('warning', s.from, s.to, "ce « ( » en début de ligne prolonge l'appel de la ligne précédente ; ajoutez « ; » à la fin de la ligne précédente si ce n'est pas voulu");
 				const fnPath = e.path;
 				const pending = e.onRead;
 				const args = this.args(false);
@@ -821,7 +821,7 @@ class Parser {
 	}
 
 	private unexpected(t: Token): string {
-		if (t.type === 'eof') return 'expression attendue, mais le script s’arrête là';
+		if (t.type === 'eof') return "expression attendue, mais le script s'arrête là";
 		if (t.type === 'kw') {
 			if (t.value === 'end') return '« end » inattendu : une expression manque avant, ou il y a un « end » en trop';
 			return `expression attendue, trouvé le mot réservé « ${t.value} »`;
@@ -846,7 +846,7 @@ class Parser {
 		if (!this.is(')')) list = this.exprList();
 		if (!this.is(')')) {
 			const line = this.lineOf(open.from);
-			this.fail(`« ) » attendu pour fermer l’appel ouvert ligne ${line} (séparez les arguments par des virgules), trouvé ${this.describe(this.tok)}`);
+			this.fail(`« ) » attendu pour fermer l'appel ouvert ligne ${line} (séparez les arguments par des virgules), trouvé ${this.describe(this.tok)}`);
 		}
 		const close = this.next();
 		const last = list[list.length - 1];
@@ -863,11 +863,11 @@ class Parser {
 				return;
 			}
 			if (unavailable[full]) {
-				this.warn('warning', key.from, key.to, `${full} n’est pas disponible : ${unavailable[full]}`);
+				this.warn('warning', key.from, key.to, `${full} n'est pas disponible : ${unavailable[full]}`);
 				return;
 			}
 			const hint = suggest(key.value, [...libraries[lib]]);
-			this.warn('warning', key.from, key.to, `${full} n’existe pas${hint ? ` : voulez-vous dire ${lib}.${hint} ?` : ''}`);
+			this.warn('warning', key.from, key.to, `${full} n'existe pas${hint ? ` : voulez-vous dire ${lib}.${hint} ?` : ''}`);
 		});
 	}
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Liste filtrable des contrôles du classeur (onglet SCRIPT › Pointer un
+	// Liste filtrable des contrôles du classeur (onglet Script › Pointer un
 	// contrôle) : un clic insère son nom au curseur ; « Choisir sur la
 	// feuille » lance la pipette.
 	import { dismissPanel } from '#lib/grid/dismiss.js';

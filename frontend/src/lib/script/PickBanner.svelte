@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Bandeau de la pipette (onglet SCRIPT › Pointer un contrôle › Choisir sur
+	// Bandeau de la pipette (onglet Script › Pointer un contrôle › Choisir sur
 	// la feuille), affiché par-dessus les feuilles tant qu'elle est active.
 	import { finishPick, picker } from './pick.svelte';
 </script>

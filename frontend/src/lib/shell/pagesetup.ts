@@ -180,7 +180,7 @@ export const HF_CODES: { code: string; label: string }[] = [
 	{ code: '&[Pages]', label: 'Nombre de pages' },
 	{ code: '&[Date]', label: 'Date' },
 	{ code: '&[Heure]', label: 'Heure' },
-	{ code: '&[Chemin]&[Fichier]', label: 'Chemin d’accès' },
+	{ code: '&[Chemin]&[Fichier]', label: "Chemin d'accès" },
 	{ code: '&[Fichier]', label: 'Nom du fichier' },
 	{ code: '&[Onglet]', label: 'Nom de la feuille' }
 ];
@@ -269,7 +269,7 @@ export function pageAction(p: PageSetup, a: PageAction, here: { row: number; col
 			return { setup: c, label: 'Taille' };
 		case 'area':
 			c.area = a.clear ? null : { ...here.sel };
-			return { setup: c, label: 'Zone d’impression' };
+			return { setup: c, label: "Zone d'impression" };
 		case 'break': {
 			const n = a.op === 'insert' ? withBreak(p, here.row, here.col) : a.op === 'remove' ? withoutBreak(p, here.row, here.col) : hasBreaks(p) ? withoutBreaks(p) : null;
 			if (n) return { setup: n, label: a.op === 'reset' ? 'Rétablir les sauts de page' : 'Saut de page' };
@@ -278,9 +278,9 @@ export function pageAction(p: PageSetup, a: PageAction, here: { row: number; col
 			return { notice: 'Aucun saut de page manuel' };
 		}
 		case 'fit':
-			return { setup: withFit(p, a.wide, a.n), label: 'Mise à l’échelle' };
+			return { setup: withFit(p, a.wide, a.n), label: "Mise à l'échelle" };
 		case 'scale':
-			return { setup: withScale(p, a.pct), label: 'Mise à l’échelle' };
+			return { setup: withScale(p, a.pct), label: "Mise à l'échelle" };
 		case 'print':
 			c[a.what] = a.on;
 			return { setup: c, label: a.what === 'gridlines' ? 'Imprimer le quadrillage' : 'Imprimer les en-têtes' };

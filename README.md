@@ -46,7 +46,7 @@ L'onglet **SQL** liste les objets du classeur et exécute vos requêtes sur les 
 
 ![L'éditeur de scripts : coloration, linter en direct, référence de l'API](docs/captures/script-lua.png)
 
-L'onglet **SCRIPT** offre un vrai éditeur : coloration syntaxique, linter en direct (variables non définies, fautes de frappe dans l'API, `end` manquant) et une référence intégrée. Il donne accès à l'API `db.query`, `db.update`, `sheets.*`, `ui.*`… Les scripts tournent dans un bac à sable, et tout ce qu'ils modifient s'annule en un Ctrl+Z. Ceux d'un classeur reçu demandent votre accord à leur première exécution. → [Guide du scripting](docs/scripting-lua.md)
+L'onglet **Script** offre un vrai éditeur : coloration syntaxique, linter en direct (variables non définies, fautes de frappe dans l'API, `end` manquant) et une référence intégrée. Il donne accès à l'API `db.query`, `db.update`, `sheets.*`, `ui.*`… Les scripts tournent dans un bac à sable, et tout ce qu'ils modifient s'annule en un Ctrl+Z. Ceux d'un classeur reçu demandent votre accord à leur première exécution. → [Guide du scripting](docs/scripting-lua.md)
 
 ### Importer et transformer les données (façon Power Query)
 

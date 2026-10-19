@@ -26,7 +26,7 @@ describe('KeyTips du ruban', () => {
 		const two = assignKeyTips(['Trier A → Z', 'Trier Z → A', 'Filtrer']);
 		expect(two).toEqual(['TA', 'TZ', 'F']);
 	});
-	it('codes préférés (ceux d’Excel) quand ils sont libres', () => {
+	it("codes préférés (ceux d'Excel) quand ils sont libres", () => {
 		const labels = ['Coller', 'Couper', 'Copier', 'Reproduire', 'Gras', 'Italique', 'Souligné', 'Centrer', 'Couleur'];
 		const tips = assignKeyTips(labels, COMMAND_TIPS);
 		expect(tips.slice(0, 7)).toEqual(['V', 'X', 'C', 'FP', '1', '2', '3']);

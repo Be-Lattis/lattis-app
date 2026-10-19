@@ -19,7 +19,7 @@ describe('mise en page', () => {
 		expect(pageAction(p, { kind: 'margins', preset: 'narrow' }, here)).toMatchObject({ setup: { margins: MARGINS.narrow }, label: 'Marges' });
 		expect(pageAction(p, { kind: 'paper', paper: 'A4' }, here)).toMatchObject({ setup: { paper: '' } });
 		const a = pageAction(p, { kind: 'area', clear: false }, here);
-		expect(a).toMatchObject({ setup: { area: here.sel }, label: 'Zone d’impression' });
+		expect(a).toMatchObject({ setup: { area: here.sel }, label: "Zone d'impression" });
 		expect(pageAction(p, { kind: 'break', op: 'insert' }, here)).toMatchObject({ setup: { rowBreaks: [4], colBreaks: [2] } });
 		expect(pageAction(p, { kind: 'break', op: 'remove' }, here)).toHaveProperty('notice');
 		expect(pageAction(p, { kind: 'break', op: 'reset' }, here)).toHaveProperty('notice');
@@ -28,7 +28,7 @@ describe('mise en page', () => {
 		expect(p).toEqual(emptySetup());
 	});
 
-	it('ajuste en pages ou met à l’échelle, l’un excluant l’autre', () => {
+	it("ajuste en pages ou met à l'échelle, l'un excluant l'autre", () => {
 		let p = withScale(emptySetup(), 80);
 		expect(p.scale).toBe(80);
 		expect(scaleLabel(p)).toBe('80 %');

@@ -17,7 +17,7 @@ import (
 // dans le classeur : comme un script ou une page, un classeur reçu ne
 // joint un hôte ou ne lit un fichier du poste qu'avec l'accord de
 // l'utilisateur. Les hôtes suivent la règle des scripts (même liste,
-// onglet SCRIPT › Accès réseau) ; les fichiers sont accordés par classeur
+// onglet Script › Accès réseau) ; les fichiers sont accordés par classeur
 // sur ce poste (internal/trust). Une requête enregistrée depuis l'éditeur
 // de ce poste accorde d'office ses sources (GrantSource) : seul un
 // classeur reçu, ou une source modifiée ailleurs, demande.

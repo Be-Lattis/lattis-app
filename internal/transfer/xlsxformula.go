@@ -10,12 +10,14 @@ import (
 	"github.com/lalamefine/lattis/internal/formula"
 )
 
-// Conversion des formules Excel : Lattis n'a pas d'adresses A1. Une
-// référence à la cellule de la même ligne d'un tableau devient [@Colonne],
-// une plage qui couvre une colonne de tableau devient Tableau[Colonne], et
-// la plage d'une RECHERCHEV qui commence à la première colonne d'un tableau
-// devient ce tableau (converti ensuite en REFERENCE par le moteur de
-// formules). Tout le reste est refusé : la colonne garde alors ses valeurs.
+// Conversion des formules Excel. Lattis ne garde pas les adresses A1 telles
+// quelles (la saisie les accepte et les réécrit en Cell[A1] ou
+// Tableau[Colonne][k], voir canvas.prepareFormula). Ici, une référence à la
+// cellule de la même ligne d'un tableau devient [@Colonne], une plage qui
+// couvre une colonne de tableau devient Tableau[Colonne], et la plage d'une
+// RECHERCHEV qui commence à la première colonne d'un tableau devient ce
+// tableau (converti ensuite en REFERENCE par le moteur de formules). Tout
+// le reste est refusé : la colonne garde alors ses valeurs.
 
 // ref est une référence A1 : une cellule, une plage ou des colonnes
 // entières. Les parties relatives sont gardées en décalage par rapport à la

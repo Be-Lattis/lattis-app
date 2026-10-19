@@ -26,7 +26,7 @@ describe('paramètres', () => {
 });
 
 describe('réglages des fonctionnalités à activer', () => {
-	it('cache la section IA tant que l’onglet IA est décoché', () => {
+	it("cache la section IA tant que l'onglet IA est décoché", () => {
 		expect(visibleSections([]).map((s) => s.id)).not.toContain('ai');
 		expect(visibleSections([{ path: 'ai.enabled', value: true }]).map((s) => s.id)).toContain('ai');
 	});

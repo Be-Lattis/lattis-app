@@ -29,7 +29,7 @@ type ButtonConfig struct {
 	// Label : texte d'un bouton ou d'une case ; texte indicatif d'une zone de
 	// saisie ; texte du bouton d'un sélecteur de fichier.
 	Label string `json:"label"`
-	// Script est le nom d'un script de la bibliothèque (onglet SCRIPT) ;
+	// Script est le nom d'un script de la bibliothèque (onglet Script) ;
 	// vide : aucune action.
 	Script string `json:"script"`
 	// Link : cellule liée d'une case à cocher ou d'une liste (« B3 ») ;

@@ -103,7 +103,7 @@ confirmation ou une saisie.
 
 Les outils `http_*` (et un script lancé par `scripts_run` qui appelle `http.get`…) ne
 joignent que les hôtes que l'utilisateur a déjà autorisés pour ce classeur : en répondant
-« Autoriser » à la demande d'un script lancé dans Lattis, ou dans l'onglet SCRIPT ›
+« Autoriser » à la demande d'un script lancé dans Lattis, ou dans l'onglet Script ›
 Accès réseau. Vers un autre hôte, la requête est refusée avec le message « hôte non
 autorisé : « api.exemple.fr » n'est pas autorisé pour ce classeur ; seul l'utilisateur
 peut l'autoriser dans Lattis… » : un assistant ne peut pas accorder lui-même l'accès au
@@ -143,6 +143,6 @@ d'écriture, `scripts_run`, `buttons_run`, `doc_undo`, `doc_redo`, `doc_new`, `d
 
 Les commandes sont définies une seule fois, dans `internal/api` (nom, paramètres, aide,
 exemple, fonction Go). Le serveur (`internal/mcp`) en tire les outils et leurs schémas, les
-scripts (`internal/script`) leurs fonctions Lua, et la référence de l'onglet SCRIPT
+scripts (`internal/script`) leurs fonctions Lua, et la référence de l'onglet Script
 (`frontend/src/lib/script/api.gen.ts`) est générée par
 `go test ./internal/api -run TestReference -update`. Ajouter une commande l'ajoute partout.

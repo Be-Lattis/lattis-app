@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// Catégories de la référence de l'onglet SCRIPT, par espace de noms.
+// Catégories de la référence de l'onglet Script, par espace de noms.
 var luaCategory = map[string]string{
 	"sheets": "sheets", "cells": "cells", "tables": "tables", "columns": "columns",
 	"ui": "ui", "charts": "objects", "pivots": "objects", "buttons": "objects", "controls": "controls",

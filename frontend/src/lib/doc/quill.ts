@@ -4,7 +4,7 @@
 //   DocChart.svelte dans le nœud du bloc ;
 // - un tableau croisé dynamique (bloc), recalculé comme les graphiques
 //   (DocPivot.svelte) ;
-// - un bouton (dans la ligne) qui exécute un script de l'onglet SCRIPT, ou
+// - un bouton (dans la ligne) qui exécute un script de l'onglet Script, ou
 //   l'une de ses fonctions.
 // Leur configuration est la valeur de l'objet dans le Delta enregistré.
 

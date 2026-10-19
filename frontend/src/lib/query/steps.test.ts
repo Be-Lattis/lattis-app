@@ -17,7 +17,7 @@ describe('étapes de requête', () => {
 		expect(defaultStep('select', cols).columns).toEqual(['Ville', 'Montant']);
 		expect(defaultStep('pivot', cols, 'Ville').valueColumn).toBe('Montant');
 	});
-	it('insère après l’étape choisie et déplace', () => {
+	it("insère après l'étape choisie et déplace", () => {
 		const a = { op: 'top', count: 1 };
 		const b = { op: 'top', count: 2 };
 		const c = { op: 'top', count: 3 };
@@ -38,7 +38,7 @@ describe('étapes de requête', () => {
 	});
 });
 
-describe('menu des colonnes de l’aperçu', () => {
+describe("menu des colonnes de l'aperçu", () => {
 	const names = ['A', 'B', 'C', 'D'];
 	it('clic, Ctrl et Maj choisissent les colonnes', () => {
 		expect(clickColumns(names, [], '', 'B', {})).toEqual({ selected: ['B'], anchor: 'B' });
@@ -48,7 +48,7 @@ describe('menu des colonnes de l’aperçu', () => {
 		expect(clickColumns(names, ['D'], 'D', 'B', { shift: true })).toEqual({ selected: ['B', 'C', 'D'], anchor: 'D' });
 		expect(clickColumns(names, ['A'], 'C', 'D', { shift: true, ctrl: true })).toEqual({ selected: ['A', 'C', 'D'], anchor: 'C' });
 	});
-	it('ajoute les étapes sans boîte, dans l’ordre des colonnes', () => {
+	it("ajoute les étapes sans boîte, dans l'ordre des colonnes", () => {
 		const three = [...cols, { name: 'Date', type: 'date' }] as Column[];
 		expect(quickSteps('remove', three, ['Date', 'Ville'])).toEqual([{ op: 'remove', columns: ['Ville', 'Date'] }]);
 		expect(quickSteps('keep', three, ['Montant'])).toEqual([{ op: 'select', columns: ['Montant'] }]);
