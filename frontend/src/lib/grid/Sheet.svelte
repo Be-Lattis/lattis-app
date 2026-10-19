@@ -79,6 +79,7 @@
 	import PivotPanel from './PivotPanel.svelte';
 	import { panelAtCell, changeSource } from './pivotfields';
 	import { brokenPivotAt, pivotsCleared } from './pivotzone';
+	import { midEllipsis } from './midellipsis';
 	import { handAlign, handEditText, handKeptNote, handStart, pivotHandAt } from './pivothand';
 	import { placeAt, placedMessage, placeHint, placeKey, placesOnClick, type Placement } from './pivotplace';
 	import SheetButtons from './SheetButtons.svelte';
@@ -674,6 +675,9 @@
 	const MIN_MARGIN = 28;
 	const GUTTER_PAD = 14;
 	const GUTTER_MAX = 160; // clés longues : coupées au-delà
+	// Clés : la gouttière ne passe pas 50 px (choix de Louis, 19/10) ; une clé
+	// plus longue est coupée par le milieu (début…fin, midellipsis.ts).
+	const GUTTER_KEY_MAX = 50;
 	const keyWidths = new Map<string, number>(); // tableau → clé la plus large vue
 	let extentRows = 1;
 	let keyGrew = false; // une clé plus large a été dessinée pendant cette image
@@ -3348,8 +3352,9 @@
 			const e = mine ? cur : gutterOwner(blocks, r, c0)?.e;
 			if (e) {
 				ctx.fillStyle = mine || !cur ? C.stripText : C.stripLine;
-				const label = rowLabel(e, r);
+				let label = rowLabel(e, r);
 				if (e.t.key !== undefined) {
+					label = midEllipsis(label, GUTTER_KEY_MAX - GUTTER_PAD, (s) => ctx.measureText(s).width);
 					const kw = ctx.measureText(label).width;
 					if (kw > (keyWidths.get(e.t.name) ?? 0)) {
 						keyWidths.set(e.t.name, kw);
