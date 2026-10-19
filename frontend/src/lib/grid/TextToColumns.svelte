@@ -385,18 +385,23 @@
 </div>
 
 <style>
+	/* Toute la fenêtre : le ruban et les onglets ne restent pas cliquables sous une boîte modale. */
 	.back {
-		position: absolute;
+		position: fixed;
 		inset: 0;
-		z-index: 20;
+		z-index: var(--z-dialog);
 		display: flex;
 		align-items: flex-start;
 		justify-content: center;
 		padding-top: 40px;
-		background: rgba(0, 0, 0, 0.08);
+		background: var(--backdrop);
 	}
 	.dlg {
 		position: relative;
+		display: flex;
+		flex-direction: column;
+		/* Fenêtre basse : le corps défile, OK et Annuler restent visibles. */
+		max-height: calc(100vh - 64px);
 		background: #fff;
 		border: 1px solid #c9cdd2;
 		border-radius: var(--float-radius);
@@ -412,9 +417,14 @@
 		font-weight: 600;
 		border-bottom: 1px solid #d4d7db;
 	}
+	.head,
+	.foot {
+		flex-shrink: 0;
+	}
 	.body {
 		padding: 10px 14px;
-		min-height: 330px;
+		min-height: min(330px, calc(100vh - 200px));
+		overflow: auto;
 		display: flex;
 		flex-direction: column;
 		gap: 6px;
