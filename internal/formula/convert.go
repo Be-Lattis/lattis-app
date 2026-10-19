@@ -265,8 +265,13 @@ func Suggestion(fn string) string {
 // nom SQL) : sans tenir compte de la casse pour un texte ou une date (rangée
 // en texte), comme la recherche de REFERENCE. Le moteur (canvas) et les
 // tests de ce paquet posent la clé avec elle.
+// Un texte vide compte comme la chaîne vide (demande de Louis) : une seule
+// case vide est permise dans une clé texte, comme une valeur.
 func KeyExpr(col string, t grid.Type) string {
-	if t == grid.Text || t == grid.Date {
+	switch t {
+	case grid.Text:
+		return "coalesce(" + col + ", '') COLLATE NOCASE"
+	case grid.Date:
 		return col + " COLLATE NOCASE"
 	}
 	return col

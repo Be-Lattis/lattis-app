@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // ErrComputed signale une saisie de valeur dans une colonne calculée.
@@ -248,7 +249,11 @@ func (t *tx) ensureKey(table, column string) error {
 	}
 	expr := keyExpr(c.ID, c.Type)
 	var total, distinct int
-	if err := t.row(`SELECT count(`+colSQL(c.ID)+`), count(DISTINCT `+expr+`) FROM `+tb.sql()).Scan(&total, &distinct); err != nil {
+	counted := colSQL(c.ID)
+	if c.Type == grid.Text {
+		counted = "*" // une case vide compte (chaîne vide)
+	}
+	if err := t.row(`SELECT count(`+counted+`), count(DISTINCT `+expr+`) FROM `+tb.sql()).Scan(&total, &distinct); err != nil {
 		return err
 	}
 	if total != distinct {

@@ -3,6 +3,8 @@ package canvas
 import (
 	"context"
 	"fmt"
+
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // KeyCheck dit si la colonne i peut devenir la clé du tableau (identifiant de
@@ -31,6 +33,17 @@ func (t *tx) keyCheck(tb Table, i int) (string, error) {
 	var total, filled, distinct int
 	if err := t.row(`SELECT count(*), count(`+colSQL(c.ID)+`), count(DISTINCT `+keyExpr(c.ID, c.Type)+`) FROM `+tb.sql()).Scan(&total, &filled, &distinct); err != nil {
 		return "", err
+	}
+	// Texte : une case vide vaut la chaîne vide, une valeur comme une autre
+	// (une seule permise) ; ailleurs, toutes les cases doivent être remplies.
+	if c.Type == grid.Text {
+		if empty := total - filled; empty > 1 && distinct == total-empty+1 {
+			return fmt.Sprintf("%d cellules vides (une seule peut l'être)", empty), nil
+		}
+		if distinct < total {
+			return fmt.Sprintf("%d valeur(s) en double", total-distinct), nil
+		}
+		return "", nil
 	}
 	if filled < total {
 		return fmt.Sprintf("%d cellule(s) vide(s)", total-filled), nil

@@ -1362,7 +1362,7 @@ func TestSetKey(t *testing.T) {
 		t.Fatal(err)
 	}
 	before := dump(t, d)
-	for i, want := range []string{"", "", "1 cellule(s) vide(s)"} {
+	for i, want := range []string{"", "", "1 valeur(s) en double"} {
 		if why, _ := d.KeyCheck(ctx, "Feuille1", i); why != want && !(i == 1 && why == "") {
 			t.Fatalf("colonne %d : %q", i, why)
 		}
@@ -2127,5 +2127,36 @@ func column(t *testing.T, d *fixture, row, col int, vals ...string) {
 	}
 	if _, err := d.Paste(context.Background(), 1, row, col, b); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// Une case vide d'une colonne texte vaut la chaîne vide : une seule est
+// permise dans la clé (Occupation : O, vide, N, NSP).
+func TestKeyAllowsOneEmptyText(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Occupation", "Libellé"}, {"O", "Occupé"}, {"", "Inconnu"}, {"N", "Non"}, {"NSP", "Ne sait pas"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := promoteIfData(ctx, d, "Feuille1"); err != nil {
+		t.Fatal(err)
+	}
+	if why, _ := d.KeyCheck(ctx, "Feuille1", 0); why != "" {
+		t.Fatalf("une seule case vide refusée : %q", why)
+	}
+	if err := d.SetKey(ctx, "Feuille1", 0); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "clé avec une case vide")
+	// Une deuxième case vide est un doublon : refusée par l'index.
+	if _, err := d.SetCell(ctx, 1, 4, 0, ""); err == nil {
+		t.Fatal("deuxième case vide acceptée dans la clé")
+	}
+	d.bus.Undo(ctx)
+	if _, err := d.SetCell(ctx, 1, 4, 0, ""); err != nil {
+		t.Fatal(err)
+	}
+	if why, _ := d.KeyCheck(ctx, "Feuille1", 0); why != "2 cellules vides (une seule peut l'être)" {
+		t.Fatalf("deux cases vides : %q", why)
 	}
 }

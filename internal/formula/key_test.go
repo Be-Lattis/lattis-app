@@ -45,7 +45,7 @@ func EnsureKey(ctx context.Context, tx *sql.Tx, s *Schema, need KeyNeed) error {
 
 func TestKeyExpr(t *testing.T) {
 	for typ, want := range map[grid.Type]string{
-		grid.Text:    "c_1 COLLATE NOCASE",
+		grid.Text:    "coalesce(c_1, '') COLLATE NOCASE",
 		grid.Date:    "c_1 COLLATE NOCASE",
 		grid.Integer: "c_1",
 		grid.Decimal: "c_1",
