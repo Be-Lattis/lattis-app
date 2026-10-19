@@ -277,6 +277,12 @@ export interface ChartConfig {
      * graphique ne montre que les lignes affichées.
      */
     "hidden"?: boolean;
+
+    /**
+     * Blanks : courbes et aires, cellule vide en intervalle ("", comme
+     * Excel), à zéro ("zero") ou reliée aux points voisins ("span").
+     */
+    "blanks"?: string;
 }
 
 /**

@@ -17,6 +17,7 @@ func TestChartNewKinds(t *testing.T) {
 		{Source: "Feuille1", Kind: "map", X: "Pays", Series: []string{"Ventes"}},
 		{Source: "Feuille1", Kind: "map", X: "Pays", Series: []string{"Ventes", "Coût"}, MapMode: "relief"},
 		{Source: "Feuille1", Kind: "histogram", X: "Pays", Series: []string{"Ventes"}, Bins: 500},
+		{Source: "Feuille1", Kind: "line", X: "Pays", Series: []string{"Ventes"}, Blanks: "trou"},
 	}
 	for _, c := range bad {
 		if _, err := d.CreateChart(ctx, 1, 0, 5, c); err == nil {

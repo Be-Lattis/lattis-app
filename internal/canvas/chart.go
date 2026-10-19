@@ -64,6 +64,9 @@ type ChartConfig struct {
 	// d'Excel « Afficher les données des lignes masquées ») ; par défaut, un
 	// graphique ne montre que les lignes affichées.
 	Hidden bool `json:"hidden,omitempty"`
+	// Blanks : courbes et aires, cellule vide en intervalle ("", comme
+	// Excel), à zéro ("zero") ou reliée aux points voisins ("span").
+	Blanks string `json:"blanks,omitempty"`
 }
 
 // MapView : vue d'une carte, centre (degrés) et niveau de zoom (fractionnaire,
@@ -194,6 +197,9 @@ func checkChart(cfg ChartConfig) error {
 	}
 	if cfg.MapMode != "" && cfg.MapMode != "points" && cfg.MapMode != "heat" {
 		return fmt.Errorf("%w : mode de carte %q inconnu (points ou heat)", ErrChart, cfg.MapMode)
+	}
+	if cfg.Blanks != "" && cfg.Blanks != "gap" && cfg.Blanks != "zero" && cfg.Blanks != "span" {
+		return fmt.Errorf("%w : cellules vides %q inconnues (gap, zero ou span)", ErrChart, cfg.Blanks)
 	}
 	if cfg.Bins < 0 || cfg.Bins > 200 {
 		return fmt.Errorf("%w : nombre de classes entre 1 et 200", ErrChart)
