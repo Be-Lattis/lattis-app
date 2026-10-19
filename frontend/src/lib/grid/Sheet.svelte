@@ -40,6 +40,7 @@
 	import { bandAt, bandLabel, bandOpen, bandRefusal, hiddenBand } from './hidden';
 	import { choiceHiddenCols, type TabChoice } from '#lib/shell/choice.js';
 	import { tabChoiceItem, type ChoiceCandidate, type TabChoiceItem } from './tabchoice';
+	import { ReadRecovery, readFailNotice } from './readfail';
 	import { followLabel } from '#lib/shell/mergesheets.js';
 	import { editMode, viewKey } from './readonlyedit';
 	import { bandMerges, groupSpans, headerLabel, isSingle, spanAt, splitGroup, tableTop } from './twolevel';
@@ -376,6 +377,8 @@
 
 	export interface SheetSource {
 		window(table: SheetTable, first: number, count: number): Promise<Fetched>;
+		/** Relit la mise en page de la feuille (tableau rechargé après une lecture refusée). */
+		reload?(): Promise<unknown>;
 		/** Totaux de la barre d'état calculés en SQL : lignes first…first+count-1, colonnes cols. */
 		rangeStats?(table: SheetTable, first: number, count: number, cols: number[]): Promise<{ count: number; nums: number; sum: number }>;
 		/**
@@ -936,6 +939,29 @@
 
 	// Dernière erreur de lecture d'un tableau signalée (une fois par mise en page).
 	let fetchError = '';
+	// Tableaux rechargés après une lecture refusée (une fois par période).
+	const recovery = new ReadRecovery();
+
+	/**
+	 * Lecture d'un tableau refusée (le bloc n'est pas redemandé, cache.ts) :
+	 * la mise en page est relue et le tableau rechargé, une fois, avec un
+	 * message en français ; le détail technique va dans la console (le moteur
+	 * l'écrit aussi dans son journal).
+	 */
+	function readFailed(e: Entry, err: string) {
+		console.warn(`[grille] lecture du tableau « ${e.t.name} » (${e.t.rows} lignes affichées) refusée : ${err}`);
+		if (recovery.take(e.t.id, Date.now())) {
+			fetchError = err;
+			say(readFailNotice(e.t.name));
+			if (source.reload) void source.reload().catch(() => {});
+			else e.cache.invalidate(e.t.rows);
+			return;
+		}
+		if (err !== fetchError) {
+			fetchError = err;
+			say(readFailNotice(e.t.name));
+		}
+	}
 
 	function makeEntry(t: SheetTable): Entry {
 		const e: Entry = {
@@ -947,12 +973,10 @@
 				t.rows,
 				(c, v) => formatColumnValue(e.t.columns[c], v),
 				(first, count) => {
-					// Lecture refusée : un seul message (le bloc n'est pas redemandé, cache.ts).
+					// Lecture refusée : un tableau quitté (bloc en route au
+					// changement d'onglet) ne dit rien ; sinon rechargé.
 					const err = e.cache.error;
-					if (err && err !== fetchError) {
-						fetchError = err;
-						say(`Lecture du tableau « ${e.t.name} » impossible : ${err}`);
-					}
+					if (err && entries.includes(e)) readFailed(e, err);
 					// Bloc arrivé : ses lignes se mesurent (hauteur automatique) au prochain dessin.
 					if (first !== undefined && count) autoRows.forget(e.t.row + 1 + first, count);
 					schedule();
@@ -991,6 +1015,7 @@
 		const placedBefore = placedSheet === (d.sheet ?? 0) ? placed() : null;
 		// Navigation (ouverture, autre feuille) : rien ne s'anime.
 		const nav = placedSheet !== (d.sheet ?? 0);
+		if (nav) recovery.reset();
 		// Recherche : occurrences relues après une saisie, un Ctrl+Z, une actualisation ou sur une autre feuille.
 		matchKey = '';
 		if (nav && finder) {

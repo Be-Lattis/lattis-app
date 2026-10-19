@@ -117,4 +117,15 @@ describe('RowCache après ajout de lignes', () => {
 		for (let i = 0; i < 20; i++) await tick();
 		expect(calls).toBe(4);
 	});
+
+	it('oublie l’erreur d’un bloc demandé avant la dernière modification', async () => {
+		let fail: (e: Error) => void = () => {};
+		const pending = (): Promise<Fetched> => new Promise((_, reject) => (fail = reject));
+		const cache = new RowCache(pending, 500, String, () => {}, 100, 1);
+		cache.want(0, 0);
+		cache.invalidate(10); // mise en page relue pendant la lecture
+		fail(new Error('grid: hors du tableau'));
+		for (let i = 0; i < 5; i++) await tick();
+		expect(cache.error).toBeNull();
+	});
 });

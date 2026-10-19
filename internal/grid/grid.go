@@ -15,6 +15,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -101,6 +103,13 @@ type Table struct {
 	anchors []string
 	rows    int
 
+	// deps : tables t_N que lit la source (la table, et celles d'un filtre
+	// qui en lit d'autres) ; filtered : la source est une requête filtrée.
+	// Versions relevées au chargement (voir Fresh).
+	deps                        []string
+	filtered                    bool
+	rowsVer, valuesVer, dataVer int64
+
 	selectWindow string
 	exprs        []string           // expression SQL de chaque colonne affichée
 	stats        map[statsKey]Stats // résumés déjà calculés (Stats)
@@ -154,19 +163,28 @@ func (t *Table) WithComputed(on bool) *Table {
 	return t
 }
 
-// Refresh dit ce que deviennent les lectures du tableau après des
-// écritures (voir store.TakeTouched) : faux s'il faut le recharger (ses
-// lignes ont changé) ; sinon ses totaux en cache sont oubliés quand ses
-// valeurs ont pu changer (les siennes, ou celles que lisent ses colonnes
-// calculées), et le reste sert encore.
-func (t *Table) Refresh(content, structure map[string]bool, all bool) bool {
-	if all || structure[t.sqlName] {
+// Fresh dit si le tableau chargé lit encore ce que contient la base (voir
+// store.GridVersion) : faux s'il faut le recharger, parce que ses lignes,
+// leur ordre ou sa définition (colonnes, filtre, choix de l'onglet) ont pu
+// changer, ou, pour un tableau filtré, ses valeurs (une saisie fait entrer
+// ou sortir une ligne du filtre), ou, pour un tableau à colonnes calculées
+// qui lisent ailleurs, une donnée du classeur (agrégats calculés au
+// chargement). Sinon ses totaux en cache sont oubliés quand ses valeurs ont
+// pu changer, et le reste sert encore.
+//
+// Les versions viennent du Store, relevées avant le chargement : rien ne
+// dépend de l'appel d'une fonction après chaque écriture, ni du texte de la
+// source (une source filtrée est une sous-requête, pas le nom t_N).
+func (t *Table) Fresh() bool {
+	rows, values, data := t.db.GridVersion(t.deps)
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if rows != t.rowsVer || (t.filtered && values != t.valuesVer) || (t.computed && data != t.dataVer) {
 		return false
 	}
-	if content[t.sqlName] || (t.computed && (len(content) > 0 || len(structure) > 0)) {
-		t.mu.Lock()
+	if values != t.valuesVer || data != t.dataVer {
 		t.stats, t.cf = nil, nil
-		t.mu.Unlock()
+		t.valuesVer, t.dataVer = values, data
 	}
 	return true
 }
@@ -192,6 +210,9 @@ func (t *Table) ColIndex(id int64) (int, bool) {
 // ErrRange signale une fenêtre ou une colonne hors du tableau.
 var ErrRange = errors.New("grid: hors du tableau")
 
+// dataTable : nom SQL d'un tableau du classeur (t_N), dans une source.
+var dataTable = regexp.MustCompile(`\bt_\d+\b`)
+
 // NewTable relie un tableau existant ; sqlCols donne le nom SQL de chaque
 // colonne (nil : c_0, c_1…). Load doit être appelé avant les lectures.
 func NewTable(db *store.Store, sqlName, name string, cols []Column, sqlCols []string) *Table {
@@ -202,13 +223,24 @@ func NewTable(db *store.Store, sqlName, name string, cols []Column, sqlCols []st
 			names[i] = colName(i)
 		}
 	}
+	var deps []string
+	for _, n := range dataTable.FindAllString(sqlName, -1) {
+		if !slices.Contains(deps, n) {
+			deps = append(deps, n)
+		}
+	}
+	if len(deps) == 0 {
+		deps = []string{sqlName}
+	}
 	return &Table{
-		db:      db,
-		sqlName: sqlName,
-		name:    name,
-		cols:    cols,
-		sqlCols: names,
-		exprs:   names,
+		db:       db,
+		sqlName:  sqlName,
+		name:     name,
+		cols:     cols,
+		sqlCols:  names,
+		exprs:    names,
+		deps:     deps,
+		filtered: strings.ContainsAny(sqlName, " ("),
 		selectWindow: fmt.Sprintf(`SELECT id, %s FROM %s WHERE _pos >= ? ORDER BY _pos LIMIT ? OFFSET ?`,
 			strings.Join(names, ", "), sqlName),
 	}
@@ -220,6 +252,9 @@ func colName(i int) string { return fmt.Sprintf("c_%d", i) }
 
 // Load relève les ancres et le nombre de lignes.
 func (t *Table) Load(ctx context.Context) error {
+	// Versions relevées avant la lecture : une écriture validée pendant
+	// qu'on lit les fait avancer, le tableau sera relu (Fresh).
+	rowsVer, valuesVer, dataVer := t.db.GridVersion(t.deps)
 	rs, err := t.db.Read().QueryContext(ctx, `SELECT _pos FROM `+t.sqlName+` ORDER BY _pos`)
 	if err != nil {
 		return err
@@ -242,6 +277,8 @@ func (t *Table) Load(ctx context.Context) error {
 	}
 	t.mu.Lock()
 	t.anchors, t.rows = anchors, n
+	t.rowsVer, t.valuesVer, t.dataVer = rowsVer, valuesVer, dataVer
+	t.stats, t.cf = nil, nil
 	t.mu.Unlock()
 	return nil
 }

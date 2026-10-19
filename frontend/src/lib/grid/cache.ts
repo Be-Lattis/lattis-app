@@ -177,8 +177,12 @@ export class RowCache {
 			this.evict(b);
 			this.error = null;
 		} catch (e) {
-			if (gen === this.generation) this.failed.add(b);
-			this.error = e instanceof Error ? e.message : String(e);
+			// Erreur d'avant la dernière modification : le bloc est déjà
+			// redemandé, elle ne dit plus rien.
+			if (gen === this.generation) {
+				this.failed.add(b);
+				this.error = e instanceof Error ? e.message : String(e);
+			}
 		} finally {
 			if (gen === this.generation) this.inflight.delete(b);
 		}

@@ -55,7 +55,17 @@ type Store struct {
 	pending     map[string]bool
 	pendingRows map[string]bool
 	pendingMeta bool
-	busy        atomic.Bool
+	// Lecture par la grille (GridVersion, gridver.go) : gridGen avance à
+	// chaque écriture qui peut changer la définition d'un tableau lu
+	// (colonnes, filtre, choix de l'onglet, suivi, saisies invalides) ;
+	// dataGen à chaque écriture de données (tableaux, cellules libres,
+	// noms). pendingGrid, pendingData : la tâche en cours en a fait.
+	gridGen, dataGen         int64
+	pendingGrid, pendingData bool
+	// seen : (opération, table) déjà relevés par noteRow dans la tâche en
+	// cours (une fois suffit : settle fait encore avancer les versions).
+	seen map[rowKey]bool
+	busy atomic.Bool
 	// writeConn : connexion SQLite de l'écrivain (autorisateur, AsUser).
 	writeConn atomic.Pointer[sqlite3.Conn]
 	// unmark : appelé avant la prochaine tâche de l'écrivain (voir Mark).
@@ -69,11 +79,15 @@ var (
 	// (canvas/choice.go : il filtre les tableaux de la feuille, comme un
 	// filtre ; sans lui, une grille gardait le nombre de lignes de l'ancienne
 	// valeur et redemandait sans fin des lignes « hors du tableau »).
-	tableMeta = regexp.MustCompile(`_lattis_(columns|tables|invalid)\b|_lattis_sheets\s+SET\s+choice\b`)
+	// Toute écriture de _lattis_sheets qui nomme la colonne choice compte
+	// (UPDATE … SET choice, mais aussi une feuille rétablie avec son choix,
+	// INSERT INTO _lattis_sheets (…, choice)) ; les lignes écrites sont en
+	// plus relevées par noteRow (gridver.go), quel que soit le texte.
+	tableMeta = regexp.MustCompile(`_lattis_(columns|tables|invalid|capabilities)\b|(?s)_lattis_sheets\b.*\bchoice\b`)
 	// Structure des tableaux (noms, colonnes, types) : ce que lit tout calcul
 	// sur un tableau (voir Version ; les saisies invalides n'en sont pas) ;
 	// le choix de l'onglet aussi (TCD et graphiques de la feuille filtrés).
-	schemaMeta = regexp.MustCompile(`_lattis_(columns|tables)\b|_lattis_sheets\s+SET\s+choice\b`)
+	schemaMeta = regexp.MustCompile(`_lattis_(columns|tables)\b|(?s)_lattis_sheets\b.*\bchoice\b`)
 )
 
 // noteWrite relève les tableaux qu'une requête de l'écrivain peut modifier.
@@ -92,8 +106,14 @@ func (s *Store) noteWrite(q string) {
 	valuesOnly := strings.HasPrefix(head, "UPDATE") && !strings.Contains(head, "_POS")
 	s.tmu.Lock()
 	defer s.tmu.Unlock()
+	if len(names) > 0 {
+		s.dataGen++
+		s.pendingData = true
+	}
 	if meta {
 		s.touchedAll = true
+		s.gridGen++
+		s.pendingGrid = true
 		if schemaMeta.MatchString(q) {
 			s.metaGen++
 			s.pendingMeta = true
@@ -177,9 +197,16 @@ func (s *Store) settle() {
 	if s.pendingMeta {
 		s.metaGen++
 	}
+	if s.pendingGrid {
+		s.gridGen++
+	}
+	if s.pendingData {
+		s.dataGen++
+	}
 	clear(s.pending)
 	clear(s.pendingRows)
-	s.pendingMeta = false
+	clear(s.seen)
+	s.pendingMeta, s.pendingGrid, s.pendingData = false, false, false
 }
 
 // Quiet donne la génération si aucune écriture ne tourne (-1 sinon) : un
@@ -220,6 +247,11 @@ func Open(path string, extra ...func(*sqlite3.Conn) error) (*Store, error) {
 		// Une seule connexion d'écriture à la fois (SetMaxOpenConns(1)) : la
 		// dernière ouverte est celle des écritures (AsUser).
 		s.writeConn.Store(c)
+		// Lignes écrites, quel que soit le texte de la requête
+		// (déclencheurs, vues, RETURNING…) : voir noteRow.
+		c.UpdateHook(func(op sqlite3.AuthorizerActionCode, schema, table string, _ int64) {
+			s.noteRow(op, schema, table)
+		})
 		return nil
 	}, s.noteWrite)
 	if err != nil {

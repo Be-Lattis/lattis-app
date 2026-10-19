@@ -1323,6 +1323,7 @@
 
 	const docSource: SheetSource = {
 		window: (t, first, count) => DocumentService.Window(sheetId, t.id, first, count) as Promise<Fetched>,
+		reload: () => reload(),
 		async setCell(row, col, raw, _target, key) {
 			const ev = await (key ? DocumentService.SetCellKeyed(sheetId, row, col, raw, key) : DocumentService.SetCell(sheetId, row, col, raw));
 			// Relire tout de suite (l'événement doc:changed sert aux changements venus

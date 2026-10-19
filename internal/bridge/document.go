@@ -2,12 +2,15 @@ package bridge
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/lalamefine/lattis/internal/api"
 	"github.com/lalamefine/lattis/internal/archive"
@@ -475,8 +478,11 @@ func (s *DocumentService) changed(ctx context.Context) (DocState, error) {
 		content, structure, all = d.DB().TakeTouched()
 	}
 	s.mu.Lock()
+	// Tableaux de la grille : chacun sait, par les versions du Store, s'il
+	// lit encore ce que contient la base (gridTable le vérifie aussi avant
+	// chaque lecture, même sans appel à changed) ; on libère ici les autres.
 	for id, t := range s.tables {
-		if !t.Refresh(content, structure, all) {
+		if !t.Fresh() {
 			delete(s.tables, id)
 		}
 	}
@@ -521,28 +527,64 @@ func (s *DocumentService) gridTable(ctx context.Context, sheet, table int64) (*g
 	}
 	s.mu.Lock()
 	t := s.tables[table]
+	// Écriture passée depuis le chargement (quelle qu'elle soit, et même si
+	// changed n'a pas été appelé : script, serveur, autre fenêtre) : relu.
+	if t != nil && !t.Fresh() {
+		delete(s.tables, table)
+		t = nil
+	}
 	s.mu.Unlock()
-	if t == nil {
+	if t != nil {
+		return t, nil
+	}
+	ti, ok, err := s.tableInfo(ctx, d, sheet, table)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, grid.ErrRange
+	}
+	if t, err = api.LoadGrid(ctx, d, ti); err != nil {
+		return nil, err
+	}
+	s.mu.Lock()
+	s.tables[table] = t
+	s.mu.Unlock()
+	return t, nil
+}
+
+// tableInfo décrit le tableau table tel que la mise en page de sa feuille
+// le montre. La grille donne la feuille affichée ; un bloc demandé juste
+// avant un changement d'onglet arrive avec la nouvelle : le tableau est
+// alors cherché sur sa propre feuille.
+func (s *DocumentService) tableInfo(ctx context.Context, d *doc.Document, sheet, table int64) (canvas.TableInfo, bool, error) {
+	find := func(sheet int64) (canvas.TableInfo, bool, error) {
 		l, err := d.Layout(ctx, sheet)
 		if err != nil {
-			return nil, err
+			return canvas.TableInfo{}, false, err
 		}
 		for _, ti := range l.Tables {
-			if ti.ID != table {
-				continue
+			if ti.ID == table {
+				return ti, true, nil
 			}
-			if t, err = api.LoadGrid(ctx, d, ti); err != nil {
-				return nil, err
-			}
-			s.mu.Lock()
-			s.tables[table] = t
-			s.mu.Unlock()
 		}
-		if t == nil {
-			return nil, grid.ErrRange
-		}
+		return canvas.TableInfo{}, false, nil
 	}
-	return t, nil
+	ti, ok, err := find(sheet)
+	if ok || err != nil {
+		return ti, ok, err
+	}
+	var own int64
+	switch err := d.DB().Read().QueryRowContext(ctx, `SELECT sheet FROM _lattis_tables WHERE id = ?`, table).Scan(&own); {
+	case errors.Is(err, sql.ErrNoRows):
+		return ti, false, nil
+	case err != nil:
+		return ti, false, err
+	}
+	if own == sheet {
+		return ti, false, nil
+	}
+	return find(own)
 }
 
 // Window lit des lignes d'un tableau (lecture par fenêtres).
@@ -552,6 +594,29 @@ func (s *DocumentService) Window(ctx context.Context, sheet, table int64, first,
 		return grid.Window{}, err
 	}
 	w, err := t.Window(ctx, first, count)
+	if errors.Is(err, grid.ErrRange) && first >= 0 && count > 0 {
+		// Lignes au-delà de la fin du tableau chargé : la mise en page de
+		// l'interface en annonce plus. Relu une fois avant de refuser.
+		before := t.Info().Rows
+		s.mu.Lock()
+		if s.tables[table] == t {
+			delete(s.tables, table)
+		}
+		s.mu.Unlock()
+		if t, err = s.gridTable(ctx, sheet, table); err != nil {
+			return grid.Window{}, err
+		}
+		w, err = t.Window(ctx, first, count)
+		if err != nil {
+			// Le détail reste dans le journal ; l'interface dit seulement
+			// que le tableau sera rechargé (readfail.ts).
+			info := t.Info()
+			slog.Warn("lecture d'un tableau de la grille hors de ses lignes", "table", info.Name, "sql", info.SQLName,
+				"feuille", sheet, "premiere", first, "nombre", count, "lignes avant", before, "lignes relues", info.Rows, "err", err)
+			writeErrorLog(fmt.Sprintf("=== %s · grille, lecture du tableau « %s »\nlignes %d à %d demandées (feuille %d), %d lignes au chargement, %d après relecture : %v\nsource : %s\n",
+				time.Now().Format("2006-01-02 15:04:05"), info.Name, first, first+count-1, sheet, before, info.Rows, err, info.SQLName))
+		}
+	}
 	if err != nil {
 		return w, err
 	}
