@@ -232,7 +232,7 @@
 	}
 
 	// Ordre d'Excel.
-	const tabs = ['Accueil', 'Insertion', 'Mise en page', 'Formules', 'Données', 'Révision', 'Affichage'] as const;
+	const tabs = ['Accueil', 'Insertion', 'Formules', 'Données', 'Révision', 'Affichage'] as const;
 	let tab = $state<(typeof tabs)[number] | 'SQL' | 'SCRIPT'>('Accueil');
 	/** Onglets qui remplacent la grille (pas de groupes de commandes). */
 	const isView = (t: string) => t === 'SQL' || t === 'SCRIPT';
@@ -801,7 +801,18 @@
 		Révision: sheetRibbons.Révision.filter((g) => g.title === 'Protéger'),
 		Affichage: docRibbons.Affichage
 	});
-	const allRibbons: Record<string, Group[]> = $derived(context === 'doc' ? docRibbons : context === 'html' ? htmlRibbons : sheetRibbons);
+	// Mise en page : des groupes de l'onglet Affichage (demande de Louis), sans
+	// refaire ses cases « Afficher » (quadrillage, en-têtes) : seulement l'impression.
+	const sheetWithPage: Record<string, Group[]> = $derived({
+		...sheetRibbons,
+		Affichage: [
+			...sheetRibbons.Affichage,
+			...(sheetRibbons['Mise en page'] ?? []).map((g) =>
+				g.title === 'Options de la feuille' ? { ...g, title: 'Impression', commands: g.commands.filter((c) => c.label.startsWith('Imprimer')) } : g
+			)
+		]
+	});
+	const allRibbons: Record<string, Group[]> = $derived(context === 'doc' ? docRibbons : context === 'html' ? htmlRibbons : sheetWithPage);
 	// Onglets du ruban qui ont des commandes pour l'onglet affiché.
 	const shownTabs = $derived(tabs.filter((t) => (allRibbons[t]?.length ?? 0) > 0));
 	$effect(() => {

@@ -2,7 +2,7 @@
 
 Fichier › Imprimer / PDF (`Ctrl+P`) imprime la feuille active. Pour un PDF, choisissez l'imprimante « Microsoft Print to PDF » (ou « Enregistrer au format PDF ») dans la fenêtre d'impression. Ce qui s'imprime se règle dans l'onglet **Mise en page** du ruban (`Alt+P`), comme dans Excel. Les réglages appartiennent à la feuille : ils s'enregistrent avec le classeur, s'annulent par `Ctrl+Z` et suivent une copie de la feuille.
 
-## Groupe Mise en page
+## Groupe Mise en page (onglet Affichage)
 
 | Commande | Effet |
 | --- | --- |

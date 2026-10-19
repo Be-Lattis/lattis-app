@@ -695,7 +695,7 @@ export const apiReference: RefEntry[] = [
 		name: "sheets.page_setup",
 		category: "sheets",
 		signature: "sheets.page_setup([sheet]) → {paper, orientation, margins = {top, bottom, left, right, header, footer}, scale, fit_wide, fit_tall, print_area, title_rows, title_cols, row_breaks, col_breaks, gridlines, headings, center_h, center_v, order, black_white, first_page, header = {left, center, right}, footer}",
-		summary: "Lit la mise en page d'une feuille (onglet Mise en page) : papier, orientation, marges, échelle, zone d'impression, titres, sauts de page, en-tête et pied de page.",
+		summary: "Lit la mise en page d'une feuille (Affichage › Mise en page) : papier, orientation, marges, échelle, zone d'impression, titres, sauts de page, en-tête et pied de page.",
 		details: "Lignes et colonnes à partir de 1, marges en centimètres. scale vaut 100 par défaut ; fit_wide et fit_tall (0 : automatique) ajustent la feuille à un nombre de pages en largeur et en hauteur. row_breaks : lignes qui commencent une page (saut manuel avant elles). order : \"down\" (vers le bas, puis à droite) ou \"across\". En-tête et pied de page : codes \u0026[Page], \u0026[Pages], \u0026[Date], \u0026[Heure], \u0026[Fichier], \u0026[Chemin], \u0026[Onglet]. Paramètres — sheet : feuille (nom ou identifiant) ; absente : la feuille affichée.",
 		example: "local p = sheets.page_setup()\nprint(p.orientation, p.print_area)",
 		args: [0, 1]

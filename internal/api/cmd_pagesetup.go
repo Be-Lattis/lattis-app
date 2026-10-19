@@ -9,7 +9,7 @@ import (
 	"github.com/lalamefine/lattis/internal/canvas"
 )
 
-// PageSetupView est la mise en page d'une feuille (onglet Mise en page),
+// PageSetupView est la mise en page d'une feuille (Affichage › Mise en page),
 // lignes et colonnes à partir de 1, plages en adresses A1, marges en cm.
 type PageSetupView struct {
 	Paper       string         `json:"paper"`
@@ -223,7 +223,7 @@ func init() {
 	register(
 		&Command{
 			Name:    "sheets.page_setup",
-			Summary: "Lit la mise en page d'une feuille (onglet Mise en page) : papier, orientation, marges, échelle, zone d'impression, titres, sauts de page, en-tête et pied de page.",
+			Summary: "Lit la mise en page d'une feuille (Affichage › Mise en page) : papier, orientation, marges, échelle, zone d'impression, titres, sauts de page, en-tête et pied de page.",
 			Details: "Lignes et colonnes à partir de 1, marges en centimètres. scale vaut 100 par défaut ; fit_wide et fit_tall (0 : automatique) ajustent la feuille à un nombre de pages en largeur et en hauteur. row_breaks : lignes qui commencent une page (saut manuel avant elles). order : \"down\" (vers le bas, puis à droite) ou \"across\". En-tête et pied de page : codes &[Page], &[Pages], &[Date], &[Heure], &[Fichier], &[Chemin], &[Onglet].",
 			Returns: "{paper, orientation, margins = {top, bottom, left, right, header, footer}, scale, fit_wide, fit_tall, print_area, title_rows, title_cols, row_breaks, col_breaks, gridlines, headings, center_h, center_v, order, black_white, first_page, header = {left, center, right}, footer}",
 			Params:  []Param{pSheet},
