@@ -35,7 +35,8 @@
 	import { dismiss, dismissPanel } from './dismiss';
 	import { explainError } from './errors';
 	import { freeDisplay } from './freecell';
-	import { bandAt, bandLabel, bandRefusal, hiddenBand } from './hidden';
+	import { bandAt, bandLabel, bandOpen, bandRefusal, hiddenBand } from './hidden';
+	import { choiceHiddenCols, type TabChoice } from '#lib/shell/choice.js';
 	import { bandMerges, groupSpans, headerLabel, isSingle, spanAt, splitGroup, tableTop } from './twolevel';
 	import { grown as growFrame, type Grown } from './grown';
 	import { pivotLayer, pivotValueText } from './pivotformat';
@@ -306,12 +307,21 @@
 		access?: string;
 		/** Lecture filtrée par les droits de l'utilisateur (« Vue filtrée par vos droits »). */
 		filtered?: boolean;
+		/**
+		 * Le tableau suit l'onglet à choix (il a la colonne de catégorie, rang
+		 * choiceCol) : ses lignes masquées sont celles des autres valeurs, et
+		 * on peut y saisir (la ligne reçoit la valeur choisie).
+		 */
+		follows?: boolean;
+		choiceCol?: number;
 		columns: Column[];
 	}
 
 	export interface SheetData {
 		/** Feuille affichée. */
 		sheet?: number;
+		/** Onglet à choix de la feuille (colonne de catégorie masquée sur une valeur). */
+		choice?: TabChoice | null;
 		tables: SheetTable[];
 		/** value : résultat d'une formule (sinon raw est affiché). */
 		cells: { row: number; col: number; raw: string; value?: string; error?: boolean; spill?: string[][] }[];
@@ -984,7 +994,10 @@
 		merges = mergeList(freeStyles);
 		boxes = [...merges, ...bandMerges(d.tables, isSplit)];
 		hiddenRows = hiddenLines(sheetRowStyles);
-		hiddenCols = hiddenLines(sheetColStyles);
+		styleHiddenCols = hiddenLines(sheetColStyles);
+		// Onglet à choix sur une valeur : la colonne de catégorie (la même
+		// partout) n'est pas affichée ; elle revient avec « (Toutes) ».
+		hiddenCols = new Set([...styleHiddenCols, ...choiceHiddenCols(d.choice, d.tables, d.cells)]);
 		sheetRowRules = new Map((d.rowRules ?? []).map((s) => [s.index, parseRules(s.rules) ?? []]));
 		sheetColRules = new Map((d.colRules ?? []).map((s) => [s.index, parseRules(s.rules) ?? []]));
 		colStyles = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseStyle(c.style))]));
@@ -1078,6 +1091,9 @@
 	let boxes: MergeRange[] = [];
 	let hiddenRows = new Set<number>();
 	let hiddenCols = new Set<number>();
+	// Colonnes masquées par l'utilisateur (Masquer) : repères et Afficher ;
+	// hiddenCols y ajoute la colonne de catégorie d'un onglet à choix.
+	let styleHiddenCols = new Set<number>();
 	// Hauteurs automatiques (voir rowfit.ts) : cellules libres à chaque mise en
 	// page, lignes de tableau à mesure qu'elles s'affichent.
 	const autoRows = new AutoRows();
@@ -2348,7 +2364,7 @@
 			ctx.fillStyle = C.icon;
 			ctx.textAlign = 'left';
 			ctx.textBaseline = 'middle';
-			ctx.fillText(bandLabel(e.t.hidden ?? 0), cx(e.t.col) + 6, ry(top) + rh(top) / 2);
+			ctx.fillText(bandLabel(e.t.hidden ?? 0, bandOpen(e.t) ? data?.choice?.name : undefined), cx(e.t.col) + 6, ry(top) + rh(top) / 2);
 			ctx.restore();
 		}
 
@@ -3056,7 +3072,7 @@
 			ctx.fillRect(cx(c), TOP_H - 2, cax().size(c), 2);
 		}
 		// Colonnes masquées : même repère, un clic les réaffiche.
-		for (const [i0, i1] of hiddenRuns(hiddenCols)) {
+		for (const [i0, i1] of hiddenRuns(styleHiddenCols)) {
 			if (i1 < c0 - 1 || i0 > c1 + 1) continue;
 			const x = Math.round(cx(i0));
 			if (x <= MARGIN) continue;
@@ -3952,7 +3968,7 @@
 	function hiddenIn(rows: boolean): boolean {
 		const { r0, r1, c0, c1 } = selection();
 		const [i0, i1] = rows ? [r0, r1] : [c0, c1];
-		for (const i of rows ? hiddenRows : hiddenCols) if (i >= i0 - 1 && i <= i1 + 1) return true;
+		for (const i of rows ? hiddenRows : styleHiddenCols) if (i >= i0 - 1 && i <= i1 + 1) return true;
 		return false;
 	}
 
@@ -3968,7 +3984,7 @@
 		if (!set) return;
 		const { r0, r1, c0, c1 } = selection();
 		let [i0, i1] = rows ? [r0, r1] : [c0, c1];
-		const hidden = rows ? hiddenRows : hiddenCols;
+		const hidden = rows ? hiddenRows : styleHiddenCols;
 		while (i0 > 0 && hidden.has(i0 - 1)) i0--;
 		while (hidden.has(i1 + 1)) i1++;
 		menuAction(() => set(rows, i0, i1, false));
@@ -7093,7 +7109,7 @@
 		const ended = endArmed;
 		if (!['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) endArmed = false;
 		const sc = shortcutOf(e);
-		if (sc === 'nextSheet' || sc === 'prevSheet' || sc === 'insertSheet') return; // onglets : la page s'en charge
+		if (sc === 'nextSheet' || sc === 'prevSheet' || sc === 'insertSheet' || sc === 'nextChoice' || sc === 'prevChoice') return; // onglets : la page s'en charge
 		if (sc === 'refresh' || sc === 'refreshAll') return; // F5 : la page s'en charge (tableHere)
 		if (sc === 'endMode') {
 			endArmed = !ended;
@@ -7263,7 +7279,9 @@
 			active.row,
 			active.col
 		);
-		if (band) {
+		// Onglet à choix : les lignes des autres valeurs se remplissent comme
+		// un onglet neuf (la ligne saisie reçoit la valeur choisie).
+		if (band && !bandOpen(band)) {
 			say(bandRefusal(band.name));
 			return;
 		}

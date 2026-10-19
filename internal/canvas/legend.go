@@ -564,7 +564,7 @@ func (m *Model) RowToNote(ctx context.Context, table string, n int) error {
 			return err
 		}
 		if tb.Filtered() {
-			return ErrFiltered{Table: tb.Name}
+			return tb.errFiltered(false)
 		}
 		if n != tb.Rows-1 || n < 0 {
 			return ErrNotLastRow

@@ -50,6 +50,9 @@ func (f *ColumnFilter) empty() bool {
 type ErrFiltered struct {
 	Table  string
 	Column bool // c'est une colonne qu'on ajoutait
+	// Choice : seul le choix de l'onglet masque des lignes (« Année :
+	// 2025 ») ; « Effacer le filtre » n'y peut rien.
+	Choice string
 }
 
 func (e ErrFiltered) Error() string {
@@ -57,26 +60,71 @@ func (e ErrFiltered) Error() string {
 	if e.Column {
 		what = "une colonne"
 	}
+	if e.Choice != "" {
+		return fmt.Sprintf("Le tableau « %s » suit le choix de l'onglet (%s) : choisissez « (Toutes) » dans la flèche de l'onglet pour y ajouter %s ici", e.Table, e.Choice, what)
+	}
 	return fmt.Sprintf("Le tableau « %s » est filtré : effacez le filtre pour y ajouter %s", e.Table, what)
+}
+
+// errFiltered : ErrFiltered du tableau, qui dit si c'est le choix de
+// l'onglet qui masque ses lignes.
+func (t Table) errFiltered(column bool) error {
+	e := ErrFiltered{Table: t.Name, Column: column}
+	if t.choiceOnly() && t.choice != nil {
+		e.Choice = t.choice.Col.Name + " : " + t.choice.Value
+	}
+	return e
 }
 
 // sqlLiteral écrit un texte en littéral SQL.
 func sqlLiteral(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
 
 // loadFilter lit le filtre du tableau et calcule la condition et le nombre de
-// lignes affichées.
+// lignes affichées. Le choix de l'onglet (choice.go) s'y ajoute : un tableau
+// de la feuille qui a la colonne de catégorie n'affiche que la valeur
+// choisie, en plus du filtre de l'utilisateur.
 func (t *tx) loadFilter(tb *Table) error {
 	var raw sql.NullString
 	if err := t.row(`SELECT filter FROM _lattis_tables WHERE id = ?`, tb.ID).Scan(&raw); err != nil {
 		return err
 	}
-	tb.Filter, tb.where, tb.Shown = nil, "", tb.Rows
-	if !raw.Valid || raw.String == "" {
+	tb.Filter, tb.where, tb.userWhere, tb.choice, tb.Shown = nil, "", "", nil, tb.Rows
+	var conds []string
+	ch, err := t.sheetChoice(tb.Sheet)
+	if err != nil {
+		return err
+	}
+	if ch != nil {
+		if c, ok := choiceColumn(*tb, ch.Name); ok {
+			tb.choice = &tableChoice{Col: c, Value: ch.Value, All: ch.All}
+			if !ch.All {
+				conds = append(conds, choiceCond(c, ch.Value))
+			}
+		}
+	}
+	if raw.Valid && raw.String != "" {
+		if err := json.Unmarshal([]byte(raw.String), &tb.Filter); err != nil {
+			tb.Filter = nil // filtre illisible : ignoré
+		} else if user := t.userConds(tb); len(user) > 0 {
+			tb.userWhere = strings.Join(user, " AND ")
+			conds = append(conds, user...)
+		}
+	}
+	if len(conds) == 0 {
 		return nil
 	}
-	if err := json.Unmarshal([]byte(raw.String), &tb.Filter); err != nil {
-		return nil // filtre illisible : ignoré
-	}
+	tb.where = strings.Join(conds, " AND ")
+	n, err := cached(t, "fcount:"+tb.view(), func() (int, error) {
+		var n int
+		err := t.row(`SELECT count(*) FROM ` + tb.view()).Scan(&n)
+		return n, err
+	})
+	tb.Shown = n
+	return err
+}
+
+// userConds : conditions SQL du filtre de l'utilisateur (tb.Filter).
+func (t *tx) userConds(tb *Table) []string {
 	var conds []string
 	for _, c := range tb.Cols {
 		f, ok := tb.Filter[strconv.FormatInt(c.ID, 10)]
@@ -113,17 +161,7 @@ func (t *tx) loadFilter(tb *Table) error {
 			}
 		}
 	}
-	if len(conds) == 0 {
-		return nil
-	}
-	tb.where = strings.Join(conds, " AND ")
-	n, err := cached(t, "fcount:"+tb.view(), func() (int, error) {
-		var n int
-		err := t.row(`SELECT count(*) FROM ` + tb.view()).Scan(&n)
-		return n, err
-	})
-	tb.Shown = n
-	return err
+	return conds
 }
 
 // view est la source SQL des lignes affichées (filtrées) du tableau.
@@ -143,8 +181,26 @@ func (t Table) visibleSQL() string {
 	return "(SELECT * FROM " + t.sql() + " WHERE " + t.where + ")"
 }
 
-// Filtered indique si un filtre masque des lignes (ou pourrait en masquer).
+// Filtered indique si un filtre masque des lignes (ou pourrait en masquer) :
+// celui de l'utilisateur ou le choix de l'onglet.
 func (t Table) Filtered() bool { return t.where != "" }
+
+// userFiltered : le filtre de l'utilisateur masque des lignes. Le choix de
+// l'onglet n'en est pas un : on ajoute des lignes à un tableau qui le suit,
+// elles reçoivent la valeur choisie.
+func (t Table) userFiltered() bool { return t.userWhere != "" }
+
+// choiceOnly : seul le choix de l'onglet masque des lignes.
+func (t Table) choiceOnly() bool { return t.where != "" && t.userWhere == "" }
+
+// userVisibleSQL est visibleSQL sans le choix de l'onglet : ce que voit
+// SOUS.TOTAL dans une formule d'une autre feuille.
+func (t Table) userVisibleSQL() string {
+	if t.userWhere == "" {
+		return ""
+	}
+	return "(SELECT * FROM " + t.sql() + " WHERE " + t.userWhere + ")"
+}
 
 // SetFilter remplace le filtre de la colonne i (nil : retire le filtre de la
 // colonne).

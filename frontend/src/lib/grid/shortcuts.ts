@@ -12,6 +12,8 @@ export type Shortcut =
 	| 'toggleFilter' // Ctrl+Maj+L
 	| 'nextSheet' // Ctrl+Pg.Suiv
 	| 'prevSheet' // Ctrl+Pg.Préc
+	| 'nextChoice' // Ctrl+Alt+Pg.Suiv : valeur suivante de l'onglet à choix
+	| 'prevChoice' // Ctrl+Alt+Pg.Préc : valeur précédente
 	| 'repeat' // F4
 	| 'insertSheet' // Maj+F11
 	| 'endMode' // Fin (puis flèche)
@@ -57,6 +59,10 @@ export function shortcutOf(e: Keys): Shortcut | null {
 	// changer d'onglet (version web).
 	if (e.altKey && !ctrl && !e.shiftKey && k === 'PageDown') return 'nextSheet';
 	if (e.altKey && !ctrl && !e.shiftKey && k === 'PageUp') return 'prevSheet';
+	// Onglet à choix : valeur suivante ou précédente (Ctrl+Pg.Suiv reste le
+	// changement d'onglet).
+	if (e.altKey && ctrl && !e.shiftKey && k === 'PageDown') return 'nextChoice';
+	if (e.altKey && ctrl && !e.shiftKey && k === 'PageUp') return 'prevChoice';
 	if (ctrl || e.altKey) return null;
 	if (e.shiftKey && (k === ' ' || e.code === 'Space')) return 'selectRow';
 	if (e.shiftKey && k === 'F11') return 'insertSheet';

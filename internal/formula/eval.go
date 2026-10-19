@@ -57,6 +57,29 @@ type Schema struct {
 	// d'une feuille connue qui n'a pas de valeur est une cellule vide ; d'une
 	// feuille inconnue, #NOM?. Sans liste, toute adresse est une cellule vide.
 	Sheets map[string]bool
+
+	// Choices : valeur choisie de chaque onglet à choix (par feuille), que
+	// rend ONGLET.CHOIX() ; vide pour « (Toutes) », absente : #N/A. Sheet :
+	// feuille de la formule libre en cours (0 : inconnue) ; une colonne
+	// calculée lit la feuille de son tableau.
+	Choices map[int64]Value
+	Sheet   int64
+}
+
+// choice rend la valeur de ONGLET.CHOIX() pour une formule du tableau t
+// (nil : formule libre).
+func (s *Schema) choice(t *Table) Value {
+	if s == nil {
+		return Err(ErrNA)
+	}
+	sheet := s.Sheet
+	if t != nil && t.Sheet != 0 {
+		sheet = t.Sheet
+	}
+	if v, ok := s.Choices[sheet]; ok && sheet != 0 {
+		return v
+	}
+	return Err(ErrNA)
 }
 
 // emptyCell indique si key (en minuscules) est l'adresse d'une cellule libre
@@ -530,6 +553,8 @@ func (env *Env) special(fn string, n Call) Value {
 		return DateSerial(math.Floor(env.Schema.nowSerial()))
 	case "NOW":
 		return DateSerial(env.Schema.nowSerial())
+	case "SHEETCHOICE":
+		return env.Schema.choice(env.Table)
 	case "RAND", "RANDBETWEEN":
 		k := n.rank - 1 // rang fixé par LET
 		if n.rank == 0 {

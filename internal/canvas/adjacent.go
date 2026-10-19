@@ -665,7 +665,9 @@ func touching(tb Table, cells []cell) (cell, bool) {
 func (t *tx) fixedTables(tables []Table) (map[int64]string, error) {
 	out := map[int64]string{}
 	for _, tb := range tables {
-		if tb.Filtered() {
+		if tb.choiceOnly() {
+			out[tb.ID] = "il suit le choix de l'onglet (choisissez « (Toutes) » pour l'agrandir)"
+		} else if tb.Filtered() {
 			out[tb.ID] = "il est filtré (effacez le filtre pour l'agrandir)"
 		}
 	}
@@ -713,7 +715,7 @@ func (t *tx) joinTables(a, b Table) error {
 // colonne, sur les lignes du tableau, le rejoignent aussi.
 func (t *tx) growSide(tb Table, row, col int, raw string, ev *Event, left bool) error {
 	if tb.Filtered() && row != tb.Row {
-		return ErrFiltered{Table: tb.Name, Column: true}
+		return tb.errFiltered(true)
 	}
 	taken, err := t.takeFree(tb.Sheet, func(c cell) bool {
 		return c.Col == col && c.Row >= tb.Row && c.Row <= tb.Bottom() && c.Row != row

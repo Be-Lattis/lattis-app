@@ -94,7 +94,7 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 		// l'autre) : la ligne dessous l'emporte, comme l'aperçu (audit 2 M1).
 		slices.SortStableFunc(tables, func(a, b Table) int {
 			under := func(tb Table) int {
-				if col >= tb.Col && col <= tb.Right() && row == tb.Bottom()+1 && !tb.Filtered() {
+				if col >= tb.Col && col <= tb.Right() && row == tb.Bottom()+1 && !tb.userFiltered() {
 					return 0
 				}
 				return 1
@@ -168,8 +168,10 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 						return t.keepOut(tb, row, col, raw, kind, why)
 					}
 				}
-				if tb.Filtered() {
-					return ErrFiltered{Table: tb.Name}
+				// Le choix de l'onglet n'est pas un filtre : la ligne ajoutée
+				// reçoit la valeur choisie (insertRow).
+				if tb.userFiltered() {
+					return tb.errFiltered(false)
 				}
 				// Tableau d'une requête : une note ou un total dessous restent
 				// permis (ci-dessus), une nouvelle ligne non (l'actualisation
@@ -201,16 +203,18 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 				if err != nil {
 					return err
 				}
-				if err := t.appendRows(tb, 1); err != nil {
+				ids, err := t.appendRowIDs(tb, 1)
+				if err != nil {
 					return err
 				}
 				tb.Rows++
 				for _, c := range taken {
-					if err := t.setCell(tb, tb.Rows-1, c.Col-tb.Col, c.Raw, ev); err != nil {
+					if tb, err = t.setCellAt(tb, ids[0], c.Col-tb.Col, c.Raw, ev); err != nil {
 						return err
 					}
 				}
-				return t.setCell(tb, tb.Rows-1, col-tb.Col, raw, ev)
+				_, err = t.setCellAt(tb, ids[0], col-tb.Col, raw, ev)
+				return err
 			case (inRows && (col == tb.Col-1 || col == tb.Right()+1)) && row != tb.Row && !empty && !t.noLegend &&
 				noteRe.MatchString(raw) && !inAny(tables, row, col):
 				// « ← à vérifier » à côté d'une ligne : une remarque, pas une
@@ -328,6 +332,22 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 // une colonne au type fixé. Une colonne encore vide prend le type de sa
 // première valeur.
 func (t *tx) setCell(tb Table, n, i int, raw string, ev *Event) error {
+	// Lignes masquées par le seul choix de l'onglet : elles gardent leur
+	// place et servent de lignes à remplir, comme sous un onglet neuf. Une
+	// saisie y ajoute les lignes qui manquent jusqu'à elle (avec la valeur
+	// choisie) ; une case vidée n'y fait rien.
+	if n >= tb.Shown && tb.choiceOnly() {
+		if strings.TrimSpace(raw) == "" {
+			return nil
+		}
+		if _, err := t.appendRowIDs(tb, n-tb.Shown+1); err != nil {
+			return err
+		}
+		var err error
+		if tb, err = t.table(tb.ID); err != nil {
+			return err
+		}
+	}
 	rid, _, err := t.rowID(tb, n)
 	if err != nil {
 		return err
@@ -413,22 +433,31 @@ var errForcedText = errors.New("texte forcé par une apostrophe")
 
 // appendRows ajoute n lignes vides en fin de tableau et décale ce qui est dessous.
 func (t *tx) appendRows(tb Table, n int) error {
+	_, err := t.appendRowIDs(tb, n)
+	return err
+}
+
+// appendRowIDs est appendRows qui rend les clés des lignes ajoutées.
+func (t *tx) appendRowIDs(tb Table, n int) ([]int64, error) {
 	var last string
 	var maxID int64
 	if err := t.row(`SELECT coalesce(max(_pos), ''), coalesce(max(id), 0) FROM `+tb.sql()).Scan(&last, &maxID); err != nil {
-		return err
+		return nil, err
 	}
+	ids := make([]int64, 0, n)
 	for k := range n {
 		pos, err := t.rowKey(tb, last, "")
 		if err != nil {
-			return err
+			return nil, err
 		}
-		if err := t.insertRow(tb, maxID+int64(k)+1, pos); err != nil {
-			return err
+		id := maxID + int64(k) + 1
+		if err := t.insertRow(tb, id, pos); err != nil {
+			return nil, err
 		}
+		ids = append(ids, id)
 		last = pos
 	}
-	return t.ensureGapBelow(tb.Sheet, tb.ID, tb.Bottom(), tb.Bottom()+n, tb.Col, tb.Right())
+	return ids, t.ensureGapBelow(tb.Sheet, tb.ID, tb.Bottom(), tb.Bottom()+n, tb.Col, tb.Right())
 }
 
 // newColumn ajoute une colonne au rang pos et décale ce qui est à droite.
@@ -652,10 +681,12 @@ func (m *Model) InsertRow(ctx context.Context, table string, n int) error {
 		if err != nil {
 			return err
 		}
-		if tb.Filtered() {
-			return ErrFiltered{Table: tb.Name}
+		// Sous le choix de l'onglet, les rangs sont ceux des lignes affichées
+		// et la ligne insérée reçoit la valeur choisie.
+		if tb.userFiltered() {
+			return tb.errFiltered(false)
 		}
-		if n < 0 || n > tb.Rows {
+		if n < 0 || n > tb.Shown {
 			return errors.New("canvas: ligne hors du tableau")
 		}
 		var before, after string
@@ -664,8 +695,16 @@ func (m *Model) InsertRow(ctx context.Context, table string, n int) error {
 				return err
 			}
 		}
-		if n < tb.Rows {
+		if n < tb.Shown {
 			if _, after, err = t.rowID(tb, n); err != nil {
+				return err
+			}
+		}
+		if tb.Filtered() {
+			// Lignes masquées par le choix de l'onglet entre deux lignes
+			// affichées : la nouvelle clé se prend juste après before, parmi
+			// toutes les lignes (pas de clé d'ordre en double).
+			if err := t.row(`SELECT coalesce(min(_pos), '') FROM `+tb.sql()+` WHERE _pos > ?`, before).Scan(&after); err != nil {
 				return err
 			}
 		}

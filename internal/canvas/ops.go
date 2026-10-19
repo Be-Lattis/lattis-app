@@ -73,12 +73,16 @@ func (t *tx) setValue(tb Table, rid int64, c Column, v any, invalid string) erro
 	return t.apply(write(v, invalid), write(old, oldInvalid))
 }
 
-// insertRow ajoute une ligne vide de clé id à la position pos.
+// insertRow ajoute une ligne vide de clé id à la position pos. Sous un
+// onglet à choix, elle reçoit la valeur choisie (choice.go).
 func (t *tx) insertRow(tb Table, id int64, pos string) error {
-	return t.apply(
+	if err := t.apply(
 		[]stmt{st(`INSERT INTO `+tb.sql()+` (id, _pos) VALUES (?, ?)`, id, pos)},
 		[]stmt{st(`DELETE FROM `+tb.sql()+` WHERE id = ?`, id)},
-	)
+	); err != nil {
+		return err
+	}
+	return t.imposeChoice(tb, id)
 }
 
 // deleteRow supprime une ligne ; l'inverse la réinsère à l'identique (même

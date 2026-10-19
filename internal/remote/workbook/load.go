@@ -163,6 +163,12 @@ func (l *loader) run(tx *sql.Tx) error {
 			return err
 		}
 	}
+	// Colonnes propres au poste (localColumns : choix des onglets à choix),
+	// remises après la nouvelle mise en page.
+	choices, err := localChoices(l.ctx, tx)
+	if err != nil {
+		return err
+	}
 	// Ordre inverse de la liste : les lignes qui citent une feuille ou un
 	// tableau partent avant eux (clés étrangères).
 	for _, name := range slices.Backward(layoutTables) {
@@ -215,6 +221,11 @@ func (l *loader) run(tx *sql.Tx) error {
 	}
 	if err := l.restoreLocal(); err != nil {
 		return err
+	}
+	for id, c := range choices {
+		if err := l.exec(`UPDATE _lattis_sheets SET choice = ? WHERE id = ? AND choice IS NULL`, c, id); err != nil {
+			return err
+		}
 	}
 	if err := l.loadScripts(); err != nil {
 		return err
@@ -843,4 +854,28 @@ func (l *loader) loadScripts() error {
 		}
 	}
 	return nil
+}
+
+// localChoices lit le choix des onglets à choix (colonne propre au poste,
+// voir localColumns), par feuille ; rien pour un format plus ancien.
+func localChoices(ctx context.Context, tx *sql.Tx) (map[int64]string, error) {
+	cols, err := tableColumns(ctx, tx, "_lattis_sheets")
+	if err != nil || !slices.Contains(cols, "choice") {
+		return nil, err
+	}
+	rs, err := tx.QueryContext(ctx, `SELECT id, choice FROM _lattis_sheets WHERE choice IS NOT NULL`)
+	if err != nil {
+		return nil, err
+	}
+	defer rs.Close()
+	out := map[int64]string{}
+	for rs.Next() {
+		var id int64
+		var c string
+		if err := rs.Scan(&id, &c); err != nil {
+			return nil, err
+		}
+		out[id] = c
+	}
+	return out, rs.Err()
 }

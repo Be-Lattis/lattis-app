@@ -27,6 +27,13 @@ var layoutTables = []string{
 	"_lattis_buttons", "_lattis_pages", "_lattis_range_cells", "_lattis_page_setup",
 }
 
+// localColumns : colonnes des tables de la liste qui restent sur le poste.
+// Le choix d'un onglet à choix (année, mois affichés) est propre à chacun :
+// il n'est ni publié ni écrasé par une nouvelle version (loader.run le
+// remet) ; le choix par personne, synchronisé, viendra plus tard (lot 5 de
+// docs/conception/regrouper-onglets-semblables.md).
+var localColumns = map[string]bool{"_lattis_sheets.choice": true}
+
 // Hors de la liste, volontairement : les données des tableaux (tables du
 // serveur), les scripts (publish_script), les saisies invalides (refusées à
 // la publication), la protection, les requêtes favorites, les connexions et
@@ -78,6 +85,7 @@ func dumpLayout(ctx context.Context, q txOrDB, format int, published map[int64]b
 		if len(cols) == 0 {
 			continue // format plus ancien
 		}
+		cols = slices.DeleteFunc(cols, func(c string) bool { return localColumns[name+"."+c] })
 		order := make([]string, len(cols))
 		for i := range cols {
 			order[i] = strconv.Itoa(i + 1)

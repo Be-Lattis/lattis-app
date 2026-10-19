@@ -460,6 +460,13 @@ CREATE TABLE _lattis_hand_kept (
 	PRIMARY KEY (owner, k, h)
 ) STRICT;
 `,
+	// 32 → 33 : onglet à choix (canvas/choice.go, conception
+	// regrouper-onglets-semblables §6.3) : catégorie de la feuille (colonne
+	// source, nom de repli) et dernière valeur choisie, en JSON ; NULL : pas
+	// de choix. Gardé sur le poste dans un classeur partagé (non publié).
+	`
+ALTER TABLE _lattis_sheets ADD COLUMN choice TEXT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

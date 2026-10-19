@@ -312,7 +312,9 @@ func (t *tx) schemaRaw() (*formula.Schema, error) {
 		if err != nil {
 			return nil, err
 		}
-		ft := &formula.Table{Name: tb.Name, SQL: tb.sql(), Visible: tb.visibleSQL(), Sheet: tb.Sheet}
+		// Formules des autres feuilles : SOUS.TOTAL suit le filtre de
+		// l'utilisateur, pas le choix de l'onglet (voir schemaFor).
+		ft := &formula.Table{Name: tb.Name, SQL: tb.sql(), Visible: tb.userVisibleSQL(), Sheet: tb.Sheet}
 		for _, c := range tb.Cols {
 			fc := formula.Column{Name: c.Name, SQL: colSQL(c.ID), Type: c.Type}
 			if c.Formula != "" {
@@ -327,7 +329,64 @@ func (t *tx) schemaRaw() (*formula.Schema, error) {
 		}
 		s.Tables = append(s.Tables, ft)
 	}
+	// ONGLET.CHOIX() : valeur choisie de chaque onglet à choix.
+	for _, id := range sheets {
+		ch, err := t.sheetChoice(id)
+		if err != nil {
+			return nil, err
+		}
+		if ch != nil {
+			if s.Choices == nil {
+				s.Choices = map[int64]formula.Value{}
+			}
+			s.Choices[id] = choiceValue(ch)
+		}
+	}
 	return s, nil
+}
+
+// schemaFor est le schéma vu par une formule libre de la feuille sheet : les
+// tableaux de la feuille qui suivent son onglet à choix n'y montrent que la
+// valeur choisie (SOMME(Ventes[Montant]) posé sous le tableau donne le total
+// de l'année affichée, comme dans l'ancien onglet « 2025 »), et SOUS.TOTAL y
+// suit aussi le filtre de l'utilisateur. Les autres feuilles voient tout.
+func (t *tx) schemaFor(sheet int64) (*formula.Schema, error) {
+	return cached(t, fmt.Sprintf("schema:%d", sheet), func() (*formula.Schema, error) {
+		base, err := t.schema()
+		if err != nil {
+			return nil, err
+		}
+		s := *base
+		s.Sheet = sheet
+		ch, err := t.sheetChoice(sheet)
+		if err != nil || ch == nil || ch.All {
+			return &s, err
+		}
+		tables, err := t.choiceTables(sheet)
+		if err != nil {
+			return nil, err
+		}
+		if len(tables) == 0 {
+			return &s, nil
+		}
+		follow := map[string]Table{}
+		for _, tb := range tables {
+			follow[strings.ToLower(tb.Name)] = tb
+		}
+		s.Tables = make([]*formula.Table, len(base.Tables))
+		for i, ft := range base.Tables {
+			tb, ok := follow[strings.ToLower(ft.Name)]
+			if !ok {
+				s.Tables[i] = ft
+				continue
+			}
+			c := *ft
+			c.SQL = "(SELECT * FROM " + tb.sql() + " WHERE " + choiceCond(tb.choice.Col, tb.choice.Value) + ")"
+			c.Visible = tb.visibleSQL()
+			s.Tables[i] = &c
+		}
+		return &s, nil
+	})
 }
 
 // evalFree calcule une cellule libre avec formule (moteur SQL : agrégats et
@@ -337,7 +396,12 @@ func (t *tx) evalFreeRaw(sheet int64, raw string) formula.Value {
 	if err != nil {
 		return formula.Err(formula.ErrName)
 	}
-	schema, err := t.schema()
+	base, err := t.schema()
+	if err != nil {
+		return formula.Err(formula.ErrValue)
+	}
+	// Tableaux de la feuille filtrés par son onglet à choix (schemaFor).
+	schema, err := t.schemaFor(sheet)
 	if err != nil {
 		return formula.Err(formula.ErrValue)
 	}
@@ -345,7 +409,7 @@ func (t *tx) evalFreeRaw(sheet int64, raw string) formula.Value {
 		return formula.Err(formula.ErrName)
 	}
 	n = formula.QualifyCells(n, sheet)
-	names, err := t.nameValues(schema)
+	names, err := t.nameValues(base)
 	if err != nil {
 		return formula.Err(formula.ErrValue)
 	}

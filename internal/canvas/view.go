@@ -35,6 +35,8 @@ type SheetInfo struct {
 	// Kind : "html" pour un onglet page HTML, "doc" pour un onglet Document (voir pages.go), vide pour une
 	// feuille.
 	Kind string `json:"kind"`
+	// Choice : onglet à choix (« Ventes · 2025 ▾ », choice.go), absent sinon.
+	Choice *SheetChoice `json:"choice,omitempty"`
 }
 
 // ColumnInfo décrit une colonne de tableau pour l'interface.
@@ -102,6 +104,11 @@ type TableInfo struct {
 	// filtrée par ses droits (« Vue filtrée par vos droits »).
 	Access   string `json:"access,omitempty"`
 	Filtered bool   `json:"filtered,omitempty"`
+	// Follows : le tableau suit le choix de l'onglet (il a la colonne de
+	// catégorie, rang ChoiceCol) ; Rows ne compte alors que les lignes de la
+	// valeur choisie, les autres gardent leur place (lignes à remplir).
+	Follows   bool `json:"follows,omitempty"`
+	ChoiceCol int  `json:"choiceCol,omitempty"`
 }
 
 // SharingAccess est la partie facultative de Sharing qui donne les droits
@@ -201,6 +208,11 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 			l.Sheets = append(l.Sheets, s)
 		}
 		rs.Close()
+		for i := range l.Sheets {
+			if l.Sheets[i].Choice, err = t.sheetChoice(l.Sheets[i].ID); err != nil {
+				return err
+			}
+		}
 		prot, err := t.protection()
 		if err != nil {
 			return err
@@ -233,6 +245,9 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 			for i, c := range tb.Cols {
 				if c.ID == tb.Key {
 					ti.Key = i
+				}
+				if tb.choice != nil && c.ID == tb.choice.Col.ID {
+					ti.Follows, ti.ChoiceCol = true, i
 				}
 			}
 			if ti.KeyHint, err = t.keyHint(tb); err != nil {

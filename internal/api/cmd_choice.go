@@ -1,0 +1,132 @@
+package api
+
+import "fmt"
+
+// Onglet à choix (canvas/choice.go) : une feuille porte une catégorie
+// (« Année ») et une valeur choisie sur son onglet (« Ventes · 2025 ▾ »),
+// qui filtre ses tableaux qui ont cette colonne.
+
+// SheetChoiceView décrit l'onglet à choix d'une feuille.
+type SheetChoiceView struct {
+	Name   string   `json:"name"`
+	Type   string   `json:"type"`
+	Table  string   `json:"table,omitempty"`
+	Value  string   `json:"value"`
+	All    bool     `json:"all"`
+	Values []string `json:"values"`
+}
+
+func init() {
+	register(
+		&Command{
+			Name:    "sheets.choice",
+			Summary: "Décrit l'onglet à choix d'une feuille : catégorie (colonne), valeur choisie et valeurs proposées ; nil si la feuille n'en a pas.",
+			Details: "Le choix filtre les tableaux de la feuille qui ont la colonne de catégorie (all : « (Toutes) », aucun filtre). Le SQL et les scripts voient toujours toutes les lignes.",
+			Returns: "{name, type, table, value, all, values} ou nil",
+			Params:  []Param{pSheet},
+			Example: `local c = sheets.choice("Feuille1")
+if c then print(c.name .. " : " .. c.value) end`,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				d, _ := c.Doc()
+				ch, err := d.SheetChoice(c, s.ID)
+				if err != nil || ch == nil {
+					return nil, err
+				}
+				vals, err := d.SheetChoiceValues(c, s.ID)
+				if err != nil {
+					return nil, err
+				}
+				out := SheetChoiceView{Name: ch.Name, Type: string(ch.Type), Table: ch.Table, Value: ch.Value, All: ch.All, Values: []string{}}
+				for _, v := range vals {
+					out.Values = append(out.Values, v.Text)
+				}
+				return out, nil
+			},
+		},
+		&Command{
+			Name:    "sheets.set_choice",
+			Label:   "Choix de l'onglet",
+			Summary: "Règle l'onglet à choix d'une feuille sur une valeur (l'année, le mois, la ville affichés) ; sans valeur, sur « (Toutes) ».",
+			Details: "C'est de la navigation, comme changer d'onglet : pas d'étape d'annulation. La feuille doit déjà avoir un onglet à choix (sheets.choose_by).",
+			Params:  []Param{{Name: "sheet", Type: Ref, Desc: "feuille à choix"}, {Name: "value", Type: Value, Desc: "valeur à afficher ; absente : toutes", Optional: true}},
+			Write:   true,
+			Example: `sheets.choose_by("Commandes", "Client")
+sheets.set_choice("Feuille1", "Durand")`,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				d, _ := c.Doc()
+				if !c.Has("value") {
+					return nil, d.ChooseSheetValue(c, s.ID, "", true)
+				}
+				return nil, d.ChooseSheetValue(c, s.ID, raw(c.Raw("value")), false)
+			},
+		},
+		&Command{
+			Name:    "sheets.choose_by",
+			Label:   "Choisir par",
+			Summary: "Fait d'une feuille un onglet à choix par une colonne d'un de ses tableaux (« Choisir par… ») : la flèche de l'onglet choisit la valeur affichée.",
+			Details: "Tous les tableaux de la feuille qui ont une colonne de ce nom suivent le choix. Sans valeur, l'onglet montre toutes les valeurs.",
+			Params: []Param{
+				{Name: "table", Type: Ref, Desc: "tableau de la colonne"},
+				{Name: "column", Type: String, Desc: "colonne de catégorie (Année, Mois, Ville…)"},
+				{Name: "value", Type: Value, Desc: "valeur affichée d'abord ; absente : toutes", Optional: true},
+			},
+			Write:   true,
+			Example: `sheets.choose_by("Commandes", "Client", "Durand")`,
+			Run: func(c *Call) (any, error) {
+				tb, err := c.table("table")
+				if err != nil {
+					return nil, err
+				}
+				col, err := c.Str("column")
+				if err != nil {
+					return nil, err
+				}
+				d, _ := c.Doc()
+				return nil, d.SetSheetChoice(c, tb.Sheet.ID, tb.Name, col, raw(c.Raw("value")))
+			},
+		},
+		&Command{
+			Name:    "sheets.new_choice",
+			Label:   "Nouvelle valeur de l'onglet",
+			Summary: "Ajoute une valeur à l'onglet à choix (« Nouvelle année… ») et l'affiche : la feuille paraît vide, prête à être remplie.",
+			Params:  []Param{{Name: "sheet", Type: Ref, Desc: "feuille à choix"}, {Name: "value", Type: Value, Desc: "nouvelle valeur (2026, Décembre…)"}},
+			Write:   true,
+			Example: `sheets.choose_by("Commandes", "Client")
+sheets.new_choice("Feuille1", "Petit")`,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				if !c.Has("value") {
+					return nil, fmt.Errorf("value : valeur attendue")
+				}
+				d, _ := c.Doc()
+				return nil, d.NewSheetChoiceValue(c, s.ID, raw(c.Raw("value")))
+			},
+		},
+		&Command{
+			Name:    "sheets.clear_choice",
+			Label:   "Ne plus choisir",
+			Summary: "Retire l'onglet à choix d'une feuille : ses tableaux montrent de nouveau toutes leurs lignes.",
+			Params:  []Param{pSheet},
+			Write:   true,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				d, _ := c.Doc()
+				return nil, d.ClearSheetChoice(c, s.ID)
+			},
+		},
+	)
+}

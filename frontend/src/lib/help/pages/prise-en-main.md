@@ -65,6 +65,22 @@ Une formule commence par `=` et désigne les colonnes par leur nom. Tapée dans 
 
 Voir [Formules](formules) pour les références et la liste des fonctions. Pendant la saisie, `F1` ouvre la page de la fonction sous le curseur.
 
+## Onglet à choix (une année, un mois, une ville à la fois)
+
+Au lieu d'un onglet par année, gardez un seul tableau avec une colonne Année et faites de sa feuille un **onglet à choix** : clic droit sur l'onglet › **Choisir par** › la colonne (Lattis propose celles qui ont peu de valeurs différentes). L'onglet devient « Ventes · Année ▾ » ; sa petite flèche (ou `Alt+↓` sur l'onglet) déroule la liste des valeurs :
+
+- **une valeur** (2025) : tous les tableaux de la feuille qui ont une colonne de ce nom n'affichent que ses lignes, et la colonne Année, la même partout, est masquée. Les tableaux sans cette colonne (une liste de tarifs) ne changent pas. Les tableaux croisés de la feuille ne comptent que cette année, comme un filtre de rapport imposé ; `SOUS.TOTAL`, les graphiques et la recherche suivent comme ils suivent un filtre ;
+- **(Toutes les années)** : plus rien n'est masqué, la colonne réapparaît ;
+- **Nouvelle année…** propose la suivante (2026 après 2025, Décembre après Novembre, Lot 4 après Lot 3), l'ajoute à la liste déroulante de la colonne et l'affiche : la feuille paraît vide, prête à être remplie, comme un onglet neuf. `Ctrl+Z` l'annule.
+
+Une ligne tapée sous le tableau, ou dans la bande grisée des lignes des autres années, reçoit d'office l'année affichée ; de même pour une ligne collée ou insérée. Le choix n'est pas un filtre : « Effacer le filtre » le laisse, et vos filtres ▾ s'y ajoutent. `Ctrl+Alt+Pg.Suiv` et `Ctrl+Alt+Pg.Préc` passent à l'année suivante ou précédente ; la barre d'état rappelle « Année : 2025 (choix de l'onglet) ».
+
+Les formules libres **de la feuille** voient ses tableaux filtrés : `=SOMME(Ventes[Montant])` posé sous le tableau donne le total de l'année affichée, comme dans l'ancien onglet « 2025 ». Celles des autres feuilles, l'onglet SQL et les scripts voient toutes les lignes. `=ONGLET.CHOIX()` rend la valeur choisie, pour une synthèse qui suit l'onglet : `=SOMME.SI.ENS(Ventes[Montant]; Ventes[Année]; ONGLET.CHOIX())`.
+
+Changer d'année est de la navigation, comme changer d'onglet : ce n'est pas une étape d'annulation, mais la dernière valeur choisie est gardée dans le fichier et revient à l'ouverture (si elle n'a plus aucune ligne, l'onglet montre la dernière valeur, sauf juste après « Nouvelle année… »). Renommer la colonne renomme la catégorie : l'onglet suit. Clic droit › Choisir par › « Ne plus choisir par… » retire le choix (annulable). Dans un classeur partagé, le choix reste sur votre poste : il n'est pas envoyé aux autres.
+
+Scripts : `sheets.choice()`, `sheets.set_choice("Ventes", 2025)`, `sheets.choose_by("Ventes", "Année")`, `sheets.new_choice("Ventes", 2026)` (voir [Lua](lua)).
+
 ## Enregistrer
 
 Un classeur est un seul fichier `.lattis` (une base SQLite et sa description). `Ctrl+S` enregistre. Fermer le classeur ou la fenêtre de Lattis avec des modifications non enregistrées demande d'abord s'il faut les enregistrer ; si Lattis s'arrête sans enregistrer (panne, arrêt forcé), les modifications sont proposées à la récupération au démarrage suivant (voir [Fichiers et récupération](fichiers)).

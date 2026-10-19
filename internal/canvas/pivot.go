@@ -40,7 +40,7 @@ const (
 // CreatePivot crée un tableau croisé sur une nouvelle feuille, comme Excel,
 // et renvoie l'identifiant de la feuille.
 func (m *Model) CreatePivot(ctx context.Context, cfg PivotConfig) (int64, error) {
-	cfg = cfg.normalized()
+	cfg = cfg.normalized().stored()
 	var sheet int64
 	err := m.Do(ctx, "Tableau croisé dynamique", func(t *tx) error {
 		if err := t.guardWorkbook(); err != nil {
@@ -92,7 +92,7 @@ func (m *Model) CreatePivot(ctx context.Context, cfg PivotConfig) (int64, error)
 
 // SetPivot change la configuration d'un tableau croisé.
 func (m *Model) SetPivot(ctx context.Context, id int64, cfg PivotConfig) error {
-	cfg = cfg.normalized()
+	cfg = cfg.normalized().stored()
 	return m.Do(ctx, "Modifier le tableau croisé", func(t *tx) error {
 		if err := t.guardObject(`_lattis_pivots`, id); err != nil {
 			return err
@@ -162,6 +162,11 @@ func (t *tx) pivots(sheet int64) ([]PivotInfo, error) {
 		out = append(out, p)
 	}
 	rs.Close()
+	for i := range out {
+		if err := t.pivotChoice(sheet, &out[i].Config); err != nil {
+			return nil, err
+		}
+	}
 	for i := range out {
 		if out[i].Error != "" {
 			continue
@@ -300,6 +305,7 @@ func (m *Model) PlacePivot(ctx context.Context, sheet int64, row, col int, cfg P
 
 // placePivot insère un tableau croisé à une place libre, sous un nouveau nom.
 func (t *tx) placePivot(sheet int64, row, col int, cfg PivotConfig) (int64, error) {
+	cfg = cfg.stored()
 	if err := t.pivotFree(sheet, row, col, cfg.normalized(), 0); err != nil {
 		return 0, err
 	}

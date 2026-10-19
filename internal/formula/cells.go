@@ -213,7 +213,7 @@ func External(src, own string) bool {
 			return walk(v.L) || walk(v.R)
 		case Call:
 			switch v.Fn {
-			case "RAND", "RANDBETWEEN", "RANDARRAY", "NOW", "TODAY":
+			case "RAND", "RANDBETWEEN", "RANDARRAY", "NOW", "TODAY", "SHEETCHOICE":
 				return true
 			}
 			for _, a := range v.Args {

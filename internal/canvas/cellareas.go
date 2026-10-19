@@ -97,6 +97,11 @@ func (t *tx) pivotAreasRaw() ([]pivotArea, error) {
 		list = append(list, p)
 	}
 	rs.Close()
+	for i := range list {
+		if err := t.pivotChoice(list[i].a.sheet, &list[i].cfg); err != nil {
+			return nil, err
+		}
+	}
 	var out []pivotArea
 	for _, p := range list {
 		cells, _, err := t.pivotCells(p.cfg)

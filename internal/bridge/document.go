@@ -966,6 +966,51 @@ func (s *DocumentService) SetFreeze(ctx context.Context, sheet int64, rows, cols
 	return s.act(ctx, func(d *doc.Document) error { return d.SetFreeze(ctx, sheet, rows, cols) })
 }
 
+// --- Onglet à choix (canvas/choice.go) ---------------------------------------
+
+// SheetChoiceValues donne les valeurs proposées par la flèche d'un onglet à
+// choix (lignes de chacune ; 0 : valeur ajoutée sans ligne encore).
+func (s *DocumentService) SheetChoiceValues(ctx context.Context, sheet int64) ([]canvas.FilterValue, error) {
+	d, err := s.current()
+	if err != nil {
+		return nil, err
+	}
+	return d.SheetChoiceValues(ctx, sheet)
+}
+
+// SheetChoiceCandidates donne les colonnes des tableaux de la feuille que
+// « Choisir par… » propose (peu de valeurs différentes).
+func (s *DocumentService) SheetChoiceCandidates(ctx context.Context, sheet int64) ([]canvas.ChoiceCandidate, error) {
+	d, err := s.current()
+	if err != nil {
+		return nil, err
+	}
+	return d.SheetChoiceCandidates(ctx, sheet)
+}
+
+// ChooseSheetBy fait de la feuille un onglet à choix par une colonne d'un de
+// ses tableaux (value vide : toutes les valeurs) ; annulable.
+func (s *DocumentService) ChooseSheetBy(ctx context.Context, sheet int64, table, column, value string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetSheetChoice(ctx, sheet, table, column, value) })
+}
+
+// ChooseSheetValue règle l'onglet à choix sur une valeur (all : toutes) ;
+// de la navigation, hors du journal d'annulation.
+func (s *DocumentService) ChooseSheetValue(ctx context.Context, sheet int64, value string, all bool) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.ChooseSheetValue(ctx, sheet, value, all) })
+}
+
+// NewSheetChoiceValue ajoute une valeur à l'onglet à choix et l'affiche
+// (« Nouvelle année… ») ; annulable.
+func (s *DocumentService) NewSheetChoiceValue(ctx context.Context, sheet int64, value string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.NewSheetChoiceValue(ctx, sheet, value) })
+}
+
+// ClearSheetChoice retire l'onglet à choix de la feuille ; annulable.
+func (s *DocumentService) ClearSheetChoice(ctx context.Context, sheet int64) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.ClearSheetChoice(ctx, sheet) })
+}
+
 // SetZoom fixe le zoom de la feuille, en pour cent (10 à 400) ; hors du
 // journal d'annulation.
 func (s *DocumentService) SetZoom(ctx context.Context, sheet int64, pct int) (DocState, error) {

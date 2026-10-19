@@ -1,6 +1,8 @@
 // Onglets de feuilles : feuilles visibles, rang d'un déplacement ou d'une
 // copie (dialogue « Déplacer ou copier »), couleurs d'onglet.
 
+import type { TabChoice } from './choice.js';
+
 export interface TabSheet {
 	id: number;
 	name: string;
@@ -11,6 +13,8 @@ export interface TabSheet {
 	hidden?: boolean;
 	/** « html » : onglet page HTML (icône dans l'onglet). */
 	kind?: string;
+	/** Onglet à choix (« Ventes · 2025 ▾ ») : catégorie et valeur choisie. */
+	choice?: TabChoice | null;
 }
 
 /** Couleurs d'onglet proposées (couleurs standard d'Excel). */

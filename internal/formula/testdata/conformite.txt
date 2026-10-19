@@ -262,6 +262,8 @@
 =SERIE.JOUR.OUVRE(DATE(2026;5;11);-1)	08/05/2026
 =AUJOURDHUI()	15/10/2026
 =MAINTENANT()	15/10/2026 14:30
+# Onglet à choix : la fixture n'en a pas (valeurs choisies : formula_test.go).
+=ONGLET.CHOIX()	#N/A
 =MAX(Ventes[Date])	28/02/2026
 =MIN(Ventes[Date])	31/12/2025
 =NB(Ventes[Date])	3

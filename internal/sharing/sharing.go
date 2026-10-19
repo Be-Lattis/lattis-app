@@ -77,6 +77,8 @@ var Structure = []string{
 	"columns.delete", "charts.delete", "pivots.delete", "tables.duplicates", "tables.remove_duplicates",
 	"tables.clear_filters", "cells.note", "sheets.hide_lines", "tables.extract_columns", "sheets.replace",
 	"cells.dependencies",
+	// Onglet à choix (« Choisir par… », « Nouvelle année… », valeur affichée).
+	"sheets.choose_by", "sheets.set_choice", "sheets.new_choice", "sheets.clear_choice",
 }
 
 // Reads : lectures de valeurs, permises à partir du mode sample (bornées
@@ -93,6 +95,9 @@ var values = map[string]bool{
 	"queries.preview": true, "sheets.find": true, "pages.get": true,
 	"scripts.run": true, "buttons.run": true, "controls.fire": true,
 	"doc.export_csv": true, "doc.export_xlsx": true, "doc.export_ods": true,
+
+	// Valeurs de la colonne de catégorie d'un onglet à choix.
+	"sheets.choice": true,
 }
 
 // IsRead dit si une commande est une lecture de valeurs bornée en sample.

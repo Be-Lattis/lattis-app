@@ -563,6 +563,12 @@ func (c *compiler) special(fn string, n Call, sc scope) string {
 		return c.param(ToSQL(DateSerial(math.Floor(c.schema.nowSerial()))))
 	case "NOW":
 		return c.param(ToSQL(DateSerial(c.schema.nowSerial())))
+	case "SHEETCHOICE":
+		v := c.schema.choice(sc.table)
+		if v.IsErr() {
+			return errSQL(v.Err)
+		}
+		return c.param(ToSQL(v))
 	case "RAND", "RANDBETWEEN":
 		row := "0"
 		if sc.table != nil && sc.alias != "" {

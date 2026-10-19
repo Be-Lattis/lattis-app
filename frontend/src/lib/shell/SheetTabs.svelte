@@ -14,6 +14,7 @@
 	import { sheetNameProblem, refusedName } from '#lib/ui/names.js';
 	import { nameAlertOpen, refuseName } from '#lib/ui/nameAlert.js';
 	import { TAB_COLORS, moveTarget, tabWindow, textOn, visibleSheets, type TabSheet } from './sheets.js';
+	import { allLabel, choiceLabel, choiceStatus, newLabel, nextChoice, type ChoiceActions } from './choice.js';
 
 	type Sheet = TabSheet;
 	interface Props {
@@ -59,9 +60,57 @@
 		locked?: boolean;
 		/** Action refusée (structure protégée) : message pour la barre d'état. */
 		onrefused?: (msg: string) => void;
+		/** Onglet à choix (« Ventes · 2025 ▾ ») : liste des valeurs, « Choisir par… » (absent : pas de flèche). */
+		onchoice?: ChoiceActions;
 	}
 
-	let { sheets, active, onselect, onadd: add, oninsert: insert, onpage: page, ondocpage: docPage, onmove: move, onrename: rename, ondelete: del, ondeletemany: delMany, onorder: order, oncopy: copy, oncolor: color, oncolormany: colorMany, onhide: hide, onhidemany: hideMany, hscroll, onhscroll, onhhold, onprotect, locked = false, onrefused }: Props = $props();
+	let { sheets, active, onselect, onadd: add, oninsert: insert, onpage: page, ondocpage: docPage, onmove: move, onrename: rename, ondelete: del, ondeletemany: delMany, onorder: order, oncopy: copy, oncolor: color, oncolormany: colorMany, onhide: hide, onhidemany: hideMany, hscroll, onhscroll, onhhold, onprotect, locked = false, onrefused, onchoice }: Props = $props();
+
+	// --- Onglet à choix (choice.ts) ---------------------------------------------
+	/** Libellé de l'onglet : « Ventes · 2025 » pour un onglet à choix. */
+	const label = (s: Sheet) => (s.choice ? choiceLabel(s.name, s.choice) : s.name);
+	// Liste de la flèche : valeurs (null : en cours de lecture).
+	let choiceMenu = $state<{ id: number; x: number; values: { text: string; count: number }[] | null } | null>(null);
+	// « Nouvelle année… » : valeur proposée (suite de la série), modifiable.
+	let adding = $state<{ id: number; name: string; draft: string } | null>(null);
+	// « Choisir par… » : colonnes proposées pour l'onglet du menu (null : en cours de lecture).
+	let candidates = $state<{ table: string; column: string; values: number }[] | null>(null);
+
+	async function openChoice(s: Sheet, el: HTMLElement | null) {
+		if (!onchoice || !s.choice) return;
+		menu = null;
+		const m = { id: s.id, x: el?.offsetLeft ?? 0, values: null as { text: string; count: number }[] | null };
+		choiceMenu = m;
+		try {
+			const values = await onchoice.values(s.id);
+			if (choiceMenu?.id === s.id) choiceMenu = { ...choiceMenu, values };
+		} catch (e) {
+			choiceMenu = null;
+			onrefused?.(String((e as Error)?.message ?? e));
+		}
+	}
+
+	function choose(id: number, value: string, all: boolean) {
+		choiceMenu = null;
+		if (id !== active) onselect(id);
+		onchoice?.choose(id, value, all);
+	}
+
+	function startAdding(id: number) {
+		const s = sheets.find((x) => x.id === id);
+		const values = (choiceMenu?.values ?? []).map((v) => v.text);
+		choiceMenu = null;
+		if (!s?.choice) return;
+		adding = { id, name: s.choice.name, draft: nextChoice(values) };
+	}
+
+	function confirmAdding() {
+		const a = adding;
+		adding = null;
+		if (!a || !a.draft.trim()) return;
+		if (a.id !== active) onselect(a.id);
+		onchoice?.add(a.id, a.draft.trim());
+	}
 	const LOCKED = 'La structure du classeur est protégée : ôtez la protection (Révision › Ôter la protection du classeur) pour ajouter, supprimer, renommer ou déplacer des feuilles';
 	const onadd = $derived(locked ? undefined : add);
 	const oninsert = $derived(locked ? undefined : insert);
@@ -138,9 +187,17 @@
 		node.focus();
 	};
 
-	/** Flèches sur un onglet (atteint par Tab ou F6) : onglet voisin ; Entrée ou Espace l'affiche. */
+	/** Flèches sur un onglet (atteint par Tab ou F6) : onglet voisin ; Entrée ou Espace l'affiche ; Alt+↓ ouvre la liste d'un onglet à choix. */
 	function tabKeys(e: KeyboardEvent) {
 		const t = e.target as HTMLElement;
+		if (t.classList?.contains('sheet') && e.altKey && !e.ctrlKey && e.key === 'ArrowDown') {
+			const s = sheets.find((x) => String(x.id) === t.dataset.sheet);
+			if (s?.choice && onchoice) {
+				e.preventDefault();
+				openChoice(s, t);
+			}
+			return;
+		}
 		if (!t.classList?.contains('sheet') || e.ctrlKey || e.altKey || e.metaKey) return;
 		const all = tabEls.filter((el) => el?.isConnected);
 		const i = all.indexOf(t as HTMLButtonElement);
@@ -209,7 +266,7 @@
 	function tabWidth(s: Sheet, on: boolean): number {
 		if (!measurer) return 100;
 		measurer.font = `${on ? '600 ' : ''}13px 'Segoe UI', system-ui, -apple-system, sans-serif`;
-		return Math.ceil(measurer.measureText(s.name).width) + 37 + (s.protected || locked ? 16 : 0);
+		return Math.ceil(measurer.measureText(label(s)).width) + 37 + (s.protected || locked ? 16 : 0) + (s.choice ? 18 : 0);
 	}
 	const range = $derived.by(() => {
 		if (!width) return { from: 0, to: shown.length - 1 };
@@ -335,7 +392,9 @@
 			<button
 				bind:this={tabEls[si]}
 				class="sheet"
-				data-label={s.name}
+				class:choice={!!s.choice}
+				data-sheet={s.id}
+				data-label={label(s) + (s.choice ? ' ▾' : '')}
 				data-region-focus={s.id === active ? '' : undefined}
 				aria-current={s.id === active ? 'page' : undefined}
 				class:on={s.id === active}
@@ -352,12 +411,33 @@
 				ondblclick={() => startRename(s)}
 				oncontextmenu={(e) => {
 					e.preventDefault();
-					if (del || rename || insert || onprotect || copy || color || hide) {
+					if (del || rename || insert || onprotect || copy || color || hide || onchoice) {
 						menu = { id: s.id, x: (e.currentTarget as HTMLElement).offsetLeft };
+						choiceMenu = null;
+						candidates = null;
+						if (onchoice && !s.kind) {
+							const id = s.id;
+							onchoice
+								.candidates(id)
+								.then((c) => {
+									if (menu?.id === id) candidates = c;
+								})
+								.catch(() => (candidates = []));
+						}
 					}
 				}}
-				title={(s.protected ? 'Feuille protégée. ' : '') + (locked ? 'Classeur protégé' : onmove ? 'Double-clic pour renommer, glisser pour déplacer' : 'Double-clic pour renommer')}
-				>{#if s.protected || locked}<span class="lock" aria-label={s.protected ? 'Feuille protégée' : 'Classeur protégé'}><Icon name="lock" size={12} /></span>{/if}{#if s.kind === 'html'}<span class="kind" aria-label="Page web"><Icon name="web" size={12} /></span>{:else if s.kind === 'doc'}<span class="kind" aria-label="Document"><Icon name="document" size={12} /></span>{/if}{s.name}</button
+				title={(s.choice ? choiceStatus(s.choice) + (onchoice ? ' — Alt+↓ : choisir. ' : '. ') : '') + (s.protected ? 'Feuille protégée. ' : '') + (locked ? 'Classeur protégé' : onmove ? 'Double-clic pour renommer, glisser pour déplacer' : 'Double-clic pour renommer')}
+				>{#if s.protected || locked}<span class="lock" aria-label={s.protected ? 'Feuille protégée' : 'Classeur protégé'}><Icon name="lock" size={12} /></span>{/if}{#if s.kind === 'html'}<span class="kind" aria-label="Page web"><Icon name="web" size={12} /></span>{:else if s.kind === 'doc'}<span class="kind" aria-label="Document"><Icon name="document" size={12} /></span>{/if}{label(s)}{#if s.choice}<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+					<span
+						class="choice-arrow"
+						class:off={!onchoice}
+						aria-hidden="true"
+						onpointerdown={(e) => e.stopPropagation()}
+						onclick={(e) => {
+							e.stopPropagation();
+							openChoice(s, tabEls[si]);
+						}}>▾</span
+					>{/if}</button
 			>
 		{/if}
 	{/each}
@@ -555,6 +635,41 @@
 					}}><span class="ic"><Icon name="no-color" size={16} /></span>Aucune couleur</button
 				>
 			</Submenu>
+			{#if onchoice && !ms?.kind}
+				<!-- Onglet à choix : une colonne d'un tableau de la feuille choisit ce qu'elle montre. -->
+				<Submenu label="Choisir par" disabled={many} title={many ? ONE : 'Une flèche sur l’onglet choisit la valeur affichée (année, mois, ville…)'}>
+					{#snippet icon()}<span class="ic"><Icon name="filter" size={16} /></span>{/snippet}
+					{#if candidates === null}
+						<div class="menu-note">Lecture des colonnes…</div>
+					{:else if candidates.length === 0}
+						<div class="menu-note">Aucune colonne de tableau de cette feuille n’a peu de valeurs différentes</div>
+					{:else}
+						{#each candidates as c (c.table + '\u0000' + c.column)}
+							<button
+								role="menuitem"
+								title="{c.values} valeur{c.values > 1 ? 's' : ''} différente{c.values > 1 ? 's' : ''}"
+								onclick={() => {
+									const id = m.id;
+									closeMenu();
+									onchoice?.by(id, c.table, c.column);
+								}}
+								><span class="ic">{#if ms?.choice && ms.choice.name.toLowerCase() === c.column.toLowerCase()}●{/if}</span>{c.column}<span class="menu-hint">{c.table}</span></button
+							>
+						{/each}
+					{/if}
+					{#if ms?.choice}
+						<hr />
+						<button
+							role="menuitem"
+							onclick={() => {
+								const id = m.id;
+								closeMenu();
+								onchoice?.clear(id);
+							}}><span class="ic"></span>Ne plus choisir par « {clip(ms.choice.name)} »</button
+						>
+					{/if}
+				</Submenu>
+			{/if}
 			<hr />
 			<button
 				role="menuitem"
@@ -580,7 +695,51 @@
 			>
 		</div>
 	{/if}
+	{#if choiceMenu}
+		{@const cm = choiceMenu}
+		{@const cs = sheets.find((x) => x.id === cm.id)}
+		{#if cs?.choice}
+			{@const ch = cs.choice}
+			<div class="menu choice-menu" role="menu" aria-label="Choix de l’onglet « {cs.name} »" style:left="{cm.x}px" use:dismiss={() => (choiceMenu = null)}>
+				<div class="menu-title">{ch.name}</div>
+				<button role="menuitemradio" aria-checked={ch.all} use:focus onclick={() => choose(cm.id, '', true)}><span class="ic">{ch.all ? '●' : ''}</span>{allLabel(ch.name)}</button>
+				{#if cm.values === null}
+					<div class="menu-note">Lecture des valeurs…</div>
+				{:else}
+					<div class="choice-values">
+						{#each cm.values as v (v.text)}
+							<button
+								role="menuitemradio"
+								aria-checked={!ch.all && ch.value === v.text}
+								title={v.count ? `${v.count.toLocaleString('fr-FR')} ligne${v.count > 1 ? 's' : ''}` : 'Aucune ligne encore'}
+								onclick={() => choose(cm.id, v.text, false)}
+								><span class="ic">{!ch.all && ch.value === v.text ? '●' : ''}</span>{v.text}{#if !v.count}<span class="menu-hint">vide</span>{/if}</button
+							>
+						{/each}
+					</div>
+				{/if}
+				<hr />
+				<button role="menuitem" disabled={cm.values === null} onclick={() => startAdding(cm.id)}><span class="ic"><Icon name="plus" size={16} /></span>{newLabel(ch.name)}</button>
+			</div>
+		{/if}
+	{/if}
 </div>
+
+{#if adding}
+	{@const ad = adding}
+	<div class="modal-back" role="presentation" onclick={(e) => e.target === e.currentTarget && (adding = null)}>
+		<div class="dialog" role="dialog" aria-modal="true" aria-label={newLabel(ad.name)} tabindex="-1" use:modal onkeydown={(e) => dialogKeys(e, confirmAdding, () => (adding = null))}>
+			<h2>{newLabel(ad.name).replace('…', '')}</h2>
+			<p>La valeur s’ajoute à la liste de « {ad.name} » et l’onglet l’affiche : la feuille paraît vide, prête à être remplie. Ctrl+Z l’annule.</p>
+			<label for="choice-new">{ad.name} :</label>
+			<input id="choice-new" bind:value={adding.draft} use:focus onfocus={(e) => e.currentTarget.select()} />
+			<div class="actions">
+				<button class="primary" disabled={!ad.draft.trim()} onclick={confirmAdding}>OK</button>
+				<button onclick={() => (adding = null)}>Annuler</button>
+			</div>
+		</div>
+	</div>
+{/if}
 
 {#if moving}
 	{@const mv = moving}
@@ -963,6 +1122,47 @@
 		background: #217346;
 		border-color: #217346;
 		color: #fff;
+	}
+	/* Onglet à choix : la flèche ouvre la liste des valeurs (« Ventes · 2025 ▾ »). */
+	.choice-arrow {
+		display: inline-block;
+		margin: 0 -10px 0 4px;
+		padding: 0 4px;
+		border-radius: 3px;
+		color: #6b7280;
+		font-size: 11px;
+	}
+	.choice-arrow:hover:not(.off) {
+		background: rgba(0, 0, 0, 0.08);
+		color: #111827;
+	}
+	.sheet.choice.on .choice-arrow {
+		color: #217346;
+	}
+	.choice-menu {
+		min-width: 180px;
+	}
+	.choice-values {
+		max-height: 50vh;
+		overflow-y: auto;
+	}
+	.menu-note {
+		padding: 6px 14px 6px 10px;
+		color: #6b7280;
+		font-style: italic;
+		white-space: normal;
+		max-width: 260px;
+	}
+	.menu-hint {
+		margin-left: auto;
+		padding-left: 12px;
+		color: #9aa0a6;
+		font-size: 11px;
+	}
+	.dialog input {
+		font: inherit;
+		padding: 3px 6px;
+		border: 1px solid #d4d7db;
 	}
 	.kind {
 		display: inline-flex;

@@ -29,10 +29,23 @@ export function bandAt<T extends FilteredTable>(tables: T[], r: number, c: numbe
 	});
 }
 
-/** Libellé de la bande. */
-export function bandLabel(n: number): string {
+/**
+ * Libellé de la bande ; category : lignes masquées par le seul choix de
+ * l'onglet (onglet à choix), qu'on remplit comme un onglet neuf.
+ */
+export function bandLabel(n: number, category?: string): string {
 	const s = n > 1 ? 's' : '';
+	if (category) return `⧩ ${n.toLocaleString('fr-FR')} ligne${s} d'autres valeurs de « ${category} » (choix de l'onglet) : saisir ici ajoute une ligne`;
 	return `⧩ ${n.toLocaleString('fr-FR')} ligne${s} masquée${s} par le filtre`;
+}
+
+/**
+ * La bande accepte la saisie : le tableau suit l'onglet à choix et aucun
+ * filtre de l'utilisateur ne s'y ajoute (la ligne saisie reçoit la valeur
+ * choisie, à la suite des lignes affichées).
+ */
+export function bandOpen(t: { follows?: boolean; columns: readonly { filter?: unknown }[] }): boolean {
+	return !!t.follows && !t.columns.some((c) => c.filter);
 }
 
 /** Message affiché quand une saisie vise la bande. */

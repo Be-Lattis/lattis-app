@@ -40,6 +40,11 @@ type Table struct {
 	Filter map[string]ColumnFilter
 	Shown  int
 	where  string
+	// userWhere : condition du seul filtre de l'utilisateur (where y ajoute
+	// le choix de l'onglet) ; choice : le tableau suit le choix de l'onglet
+	// (il a la colonne de catégorie, voir choice.go), nil sinon.
+	userWhere string
+	choice    *tableChoice
 }
 
 // Top est la première ligne occupée : la bande des groupes, sinon l'en-tête.
@@ -142,7 +147,7 @@ func (t *tx) fill(tb *Table) error {
 // les lignes affichées.
 func (t *tx) rowID(tb Table, n int) (id int64, pos string, err error) {
 	if tb.Filtered() && n >= tb.Shown {
-		return 0, "", ErrFiltered{Table: tb.Name}
+		return 0, "", tb.errFiltered(false)
 	}
 	err = t.row(`SELECT id, _pos FROM `+tb.view()+` ORDER BY _pos LIMIT 1 OFFSET ?`, n).Scan(&id, &pos)
 	return

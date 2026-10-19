@@ -258,6 +258,22 @@ export function ChartData(cfg: canvas$0.ChartConfig): $CancellablePromise<canvas
 }
 
 /**
+ * ChooseSheetBy fait de la feuille un onglet à choix par une colonne d'un de
+ * ses tableaux (value vide : toutes les valeurs) ; annulable.
+ */
+export function ChooseSheetBy(sheet: number, table: string, column: string, value: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(59684339, sheet, table, column, value);
+}
+
+/**
+ * ChooseSheetValue règle l'onglet à choix sur une valeur (all : toutes) ;
+ * de la navigation, hors du journal d'annulation.
+ */
+export function ChooseSheetValue(sheet: number, value: string, all: boolean): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2506972115, sheet, value, all);
+}
+
+/**
  * ClearCells vide entièrement les cellules libres d'une plage (valeurs,
  * mise en forme, fusions, notes, validations).
  */
@@ -286,6 +302,13 @@ export function ClearKey(table: string): $CancellablePromise<$models.DocState> {
  */
 export function ClearRange(sheet: number, r0: number, c0: number, r1: number, c1: number, all: boolean): $CancellablePromise<$models.DocState> {
     return $Call.ByID(866897828, sheet, r0, c0, r1, c1, all);
+}
+
+/**
+ * ClearSheetChoice retire l'onglet à choix de la feuille ; annulable.
+ */
+export function ClearSheetChoice(sheet: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1515701793, sheet);
 }
 
 /**
@@ -1036,6 +1059,14 @@ export function New(): $CancellablePromise<$models.DocState> {
  */
 export function NewQueryName(base: string): $CancellablePromise<string> {
     return $Call.ByID(1241451847, base);
+}
+
+/**
+ * NewSheetChoiceValue ajoute une valeur à l'onglet à choix et l'affiche
+ * (« Nouvelle année… ») ; annulable.
+ */
+export function NewSheetChoiceValue(sheet: number, value: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2372964153, sheet, value);
 }
 
 /**
@@ -2012,6 +2043,22 @@ export function ShareState(): $CancellablePromise<workbook$0.State> {
  */
 export function ShareWorkbooks(server: string): $CancellablePromise<workbook$0.Listing[] | null> {
     return $Call.ByID(886684258, server);
+}
+
+/**
+ * SheetChoiceCandidates donne les colonnes des tableaux de la feuille que
+ * « Choisir par… » propose (peu de valeurs différentes).
+ */
+export function SheetChoiceCandidates(sheet: number): $CancellablePromise<canvas$0.ChoiceCandidate[] | null> {
+    return $Call.ByID(1893571928, sheet);
+}
+
+/**
+ * SheetChoiceValues donne les valeurs proposées par la flèche d'un onglet à
+ * choix (lignes de chacune ; 0 : valeur ajoutée sans ligne encore).
+ */
+export function SheetChoiceValues(sheet: number): $CancellablePromise<canvas$0.FilterValue[] | null> {
+    return $Call.ByID(2689810288, sheet);
 }
 
 /**

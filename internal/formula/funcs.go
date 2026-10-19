@@ -175,6 +175,8 @@ var funcs = []funcDef{
 	// Dates
 	{"TODAY", "AUJOURDHUI", 0, 0, special, nil},
 	{"NOW", "MAINTENANT", 0, 0, special, nil},
+	// Onglet à choix (canvas/choice.go) : la valeur choisie sur l'onglet.
+	{"SHEETCHOICE", "ONGLET.CHOIX", 0, 0, special, nil},
 	{"DATE", "DATE", 3, 3, scalar, fnDate},
 	{"YEAR", "ANNEE", 1, 1, scalar, datePart(func(t timeT) int { return t.Year() })},
 	{"MONTH", "MOIS", 1, 1, scalar, datePart(func(t timeT) int { return int(t.Month()) })},

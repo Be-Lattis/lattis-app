@@ -19,6 +19,7 @@
 	import Ribbon, { type DocCommand, type FileAction, type View } from '#lib/shell/Ribbon.svelte';
 	import SheetTabs from '#lib/shell/SheetTabs.svelte';
 	import { visibleSheet } from '#lib/shell/sheets.js';
+	import { choiceStatus, choiceStep, type ChoiceActions } from '#lib/shell/choice.js';
 	import { count } from '#lib/sql/result.js';
 	import { printSheet } from '#lib/shell/print.js';
 	import { withSaveProgress } from '#lib/shell/saveprogress.js';
@@ -908,6 +909,9 @@
 				e.preventDefault();
 				const k = tabs.findIndex((t) => t.id === sheetId) + (sc === 'nextSheet' ? 1 : -1);
 				if (k >= 0 && k < tabs.length) selectSheet(tabs[k].id);
+			} else if ((sc === 'nextChoice' || sc === 'prevChoice') && mode === 'doc') {
+				e.preventDefault();
+				stepChoice(sc === 'nextChoice' ? 1 : -1);
 			} else if (sc === 'insertSheet' && mode === 'doc') {
 				e.preventDefault();
 				if (layout?.workbookProtected) notice = 'La structure du classeur est protégée : ôtez la protection pour insérer une feuille';
@@ -1324,6 +1328,8 @@
 						readOnly: t.readOnly || undefined,
 						access: t.access || undefined,
 						filtered: t.filtered || undefined,
+						follows: t.follows || undefined,
+						choiceCol: t.follows ? (t.choiceCol ?? 0) : undefined,
 						columns: (t.columns ?? []).map((c) => ({
 							name: c.name,
 							type: (c.formula ? 'formula' : c.type) as ColumnType,
@@ -1340,6 +1346,7 @@
 					};
 					}),
 					sheet: sheetId,
+					choice: layout.sheets?.find((s) => s.id === sheetId)?.choice ?? null,
 					cells: (layout.cells ?? []).map((c) => ({ ...c, spill: c.spill?.map((r) => r ?? []) })),
 					widths: layout.widths ?? [],
 					heights: layout.heights ?? [],
@@ -1382,7 +1389,43 @@
 	const query = (sql: string) => (mode === 'demo' ? GridService.Query(sql) : DocumentService.Query(sql));
 	const data = $derived(mode === 'demo' ? demoData : docData);
 	const title = $derived(mode === 'demo' ? 'Démo : 1 M de lignes' : mode === 'recover' ? 'Récupération' : docState.title);
-	const tabs = $derived(mode === 'demo' ? (demo ? [{ id: 1, name: demo.name }] : []) : (layout?.sheets ?? []).map((s) => ({ id: s.id, name: s.name, protected: s.protected, color: s.color, hidden: s.hidden, kind: s.kind })));
+	const tabs = $derived(mode === 'demo' ? (demo ? [{ id: 1, name: demo.name }] : []) : (layout?.sheets ?? []).map((s) => ({ id: s.id, name: s.name, protected: s.protected, color: s.color, hidden: s.hidden, kind: s.kind, choice: s.choice ?? null })));
+
+	// --- Onglet à choix (« Ventes · 2025 ▾ », lib/shell/choice.ts) ----------
+	/** Lignes d'autres valeurs masquées sur la feuille affichée (barre d'état). */
+	function choiceHidden(): number {
+		return (layout?.tables ?? []).filter((t) => t.follows).reduce((n, t) => n + t.total - t.rows, 0);
+	}
+	const choiceActions: ChoiceActions = {
+		values: async (id) => (await DocumentService.SheetChoiceValues(id)) ?? [],
+		choose: (id, value, all) =>
+			sheetAction(async () => {
+				await DocumentService.ChooseSheetValue(id, value, all);
+				await reload();
+				const c = layout?.sheets?.find((s) => s.id === id)?.choice;
+				if (c && id === sheetId) notice = choiceStatus(c, choiceHidden());
+			}),
+		add: (id, value) => sheetAction(() => DocumentService.NewSheetChoiceValue(id, value)),
+		candidates: async (id) => (await DocumentService.SheetChoiceCandidates(id)) ?? [],
+		by: (id, table, column) =>
+			sheetAction(async () => {
+				await DocumentService.ChooseSheetBy(id, table, column, '');
+				if (id !== sheetId) await selectSheet(id);
+				notice = `Onglet à choix par « ${column} » : la flèche ▾ de l’onglet choisit la valeur affichée (Alt+↓)`;
+			}),
+		clear: (id) => sheetAction(() => DocumentService.ClearSheetChoice(id))
+	};
+	/** Ctrl+Alt+Pg.Suiv / Pg.Préc : valeur suivante ou précédente de l'onglet à choix affiché. */
+	async function stepChoice(d: 1 | -1) {
+		const c = layout?.sheets?.find((s) => s.id === sheetId)?.choice;
+		if (!c) {
+			notice = 'Cette feuille n’a pas d’onglet à choix (clic droit sur l’onglet › Choisir par)';
+			return;
+		}
+		const values = (await choiceActions.values(sheetId)).map((v) => v.text);
+		const next = choiceStep(values, c, d);
+		if (next !== null) await choiceActions.choose(sheetId, next, false);
+	}
 
 	// --- Assistant IA (volet de droite, lib/ai) ------------------------------
 
@@ -2057,6 +2100,7 @@
 		onprotect={mode === 'doc' ? (id) => toggleProtect('sheet', id) : undefined}
 		locked={mode === 'doc' && !!layout?.workbookProtected}
 		onrefused={(m) => (notice = m)}
+		onchoice={mode === 'doc' ? choiceActions : undefined}
 	/>
 	{#each dialogs.slice(0, 1) as d (d.id)}
 		<ScriptDialog spec={d} onanswer={(v) => answerDialog(d, v)} />

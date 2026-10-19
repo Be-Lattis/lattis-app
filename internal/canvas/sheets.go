@@ -214,6 +214,7 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 		var n int
 		var name, color string
 		var pos, grid, heads, hidden, frows, fcols, zoom int
+		var choice sql.NullString
 		if err := t.row(`SELECT count(*) FROM _lattis_sheets`).Scan(&n); err != nil {
 			return err
 		}
@@ -238,7 +239,7 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 				return err
 			}
 		}
-		if err := t.row(`SELECT name, pos, gridlines, headings, color, hidden, freeze_rows, freeze_cols, zoom FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&name, &pos, &grid, &heads, &color, &hidden, &frows, &fcols, &zoom); err != nil {
+		if err := t.row(`SELECT name, pos, gridlines, headings, color, hidden, freeze_rows, freeze_cols, zoom, choice FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&name, &pos, &grid, &heads, &color, &hidden, &frows, &fcols, &zoom, &choice); err != nil {
 			return err
 		}
 		cells, err := t.cells(sheet)
@@ -272,6 +273,10 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 		}
 		do = append(do, st(`DELETE FROM _lattis_protection WHERE sheet = ?`, sheet))
 		pivots = append(pivots, prot...)
+		var choiceArg any // catégorie de l'onglet à choix, rendue avec la feuille
+		if choice.Valid {
+			choiceArg = choice.String
+		}
 		for _, tbl := range sheetPositioned {
 			rows, err := t.snapshot(tbl, sheet)
 			if err != nil {
@@ -282,7 +287,7 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 		}
 		return t.apply(
 			append(do, st(`DELETE FROM _lattis_sheets WHERE id = ?`, sheet)),
-			append([]stmt{st(`INSERT INTO _lattis_sheets (id, name, pos, gridlines, headings, color, hidden, freeze_rows, freeze_cols, zoom) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, sheet, name, pos, grid, heads, color, hidden, frows, fcols, zoom)}, pivots...),
+			append([]stmt{st(`INSERT INTO _lattis_sheets (id, name, pos, gridlines, headings, color, hidden, freeze_rows, freeze_cols, zoom, choice) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, sheet, name, pos, grid, heads, color, hidden, frows, fcols, zoom, choiceArg)}, pivots...),
 		)
 	})
 }

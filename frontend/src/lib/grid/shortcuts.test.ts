@@ -23,6 +23,9 @@ describe('raccourcis', () => {
 		expect(shortcutOf(key('L', { ctrl: true, shift: true }))).toBe('toggleFilter');
 		expect(shortcutOf(key('PageDown', { ctrl: true }))).toBe('nextSheet');
 		expect(shortcutOf(key('PageUp', { ctrl: true }))).toBe('prevSheet');
+		// Onglet à choix : valeur suivante ou précédente.
+		expect(shortcutOf(key('PageDown', { ctrl: true, alt: true }))).toBe('nextChoice');
+		expect(shortcutOf(key('PageUp', { ctrl: true, alt: true }))).toBe('prevChoice');
 		expect(shortcutOf(key('F4'))).toBe('repeat');
 		expect(shortcutOf(key('F11', { shift: true }))).toBe('insertSheet');
 		expect(shortcutOf(key('End'))).toBe('endMode');

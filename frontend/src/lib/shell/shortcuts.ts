@@ -63,7 +63,10 @@ const groups: ShortcutGroup[] = [
 			{ keys: 'Ctrl+Pg.Suiv', label: 'Feuille suivante' },
 			{ keys: 'Ctrl+Pg.Préc', label: 'Feuille précédente' },
 			{ keys: 'Maj+F11', label: 'Insérer une feuille' },
-			{ keys: 'Gauche / Droite', label: "Sur un onglet de feuille (F6) : onglet voisin ; Entrée l'affiche" }
+			{ keys: 'Gauche / Droite', label: "Sur un onglet de feuille (F6) : onglet voisin ; Entrée l'affiche" },
+			{ keys: 'Alt+Bas', label: 'Sur un onglet à choix (« Ventes · 2025 ▾ ») : ouvrir la liste des valeurs' },
+			{ keys: 'Ctrl+Alt+Pg.Suiv', label: "Onglet à choix : valeur suivante (l'année d'après)" },
+			{ keys: 'Ctrl+Alt+Pg.Préc', label: 'Onglet à choix : valeur précédente' }
 		]
 	},
 	{

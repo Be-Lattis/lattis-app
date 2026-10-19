@@ -205,6 +205,29 @@ func TestMigrateCollaboration(t *testing.T) {
 	}
 }
 
+// TestMigrateSheetChoice : le format 33 ajoute le choix des onglets à choix
+// (_lattis_sheets.choice, NULL : pas de choix) sans toucher aux feuilles.
+func TestMigrateSheetChoice(t *testing.T) {
+	ctx := context.Background()
+	db := open(t)
+	if err := MigrateTo(ctx, db, 32); err != nil {
+		t.Fatal(err)
+	}
+	exec(t, db, `INSERT INTO _lattis_sheets (id, name, pos, zoom) VALUES (2, 'Ventes', 1, 120)`)
+	if err := Migrate(ctx, db); err != nil {
+		t.Fatal(err)
+	}
+	if version(t, db) < 33 {
+		t.Fatalf("format %d", version(t, db))
+	}
+	var n int
+	var zoom int
+	if err := db.Read().QueryRow(`SELECT count(*), max(zoom) FROM _lattis_sheets WHERE choice IS NULL`).Scan(&n, &zoom); err != nil || n != 2 || zoom != 120 {
+		t.Fatalf("feuilles : %d, zoom %d, %v", n, zoom, err)
+	}
+	exec(t, db, `UPDATE _lattis_sheets SET choice = '{"name":"Année","value":"2025"}' WHERE id = 2`)
+}
+
 func tableSQL(t *testing.T, db *store.Store, name string) string {
 	t.Helper()
 	var q string

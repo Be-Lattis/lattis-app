@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bandAt, bandLabel, hiddenBand } from './hidden';
+import { bandAt, bandLabel, bandOpen, hiddenBand } from './hidden';
 
 describe('lignes masquées par un filtre', () => {
 	// En-tête en ligne 2, 8 lignes affichées (3 à 10), 92 masquées (11 à 102).
@@ -18,5 +18,11 @@ describe('lignes masquées par un filtre', () => {
 	it('libellé', () => {
 		expect(bandLabel(1)).toBe('⧩ 1 ligne masquée par le filtre');
 		expect(bandLabel(92)).toBe('⧩ 92 lignes masquées par le filtre');
+		expect(bandLabel(2, 'Année')).toBe("⧩ 2 lignes d'autres valeurs de « Année » (choix de l'onglet) : saisir ici ajoute une ligne");
+	});
+	it("onglet à choix : la bande accepte la saisie, sauf sous un filtre de l'utilisateur", () => {
+		expect(bandOpen({ follows: true, columns: [{}, {}] })).toBe(true);
+		expect(bandOpen({ follows: true, columns: [{}, { filter: { values: ['A'] } }] })).toBe(false);
+		expect(bandOpen({ columns: [{}] })).toBe(false);
 	});
 });

@@ -43,7 +43,18 @@ func (t *tx) allPivots() ([]pivotRow, error) {
 		}
 		out = append(out, p)
 	}
-	return out, rs.Err()
+	if err := rs.Err(); err != nil {
+		return nil, err
+	}
+	rs.Close()
+	// Onglet à choix de la feuille du TCD : son filtre imposé (graphiques et
+	// vue SQL du TCD comme son affichage).
+	for i := range out {
+		if err := t.pivotChoice(out[i].Sheet, &out[i].Cfg); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
 }
 
 func (t *tx) pivotByName(name string) (PivotConfig, bool, error) {

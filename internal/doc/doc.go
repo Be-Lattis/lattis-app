@@ -129,6 +129,10 @@ func wrap(ctx context.Context, a *archive.Doc, keep bool) (*Document, error) {
 	a.SetWorkbook(id)
 	d := &Document{Model: canvas.New(a.DB, bus), Bus: bus, Share: share, Oplog: rec, arc: a, id: id}
 	d.Model.SetSharing(share)
+	// Onglets à choix : la dernière valeur choisie, sauf si elle n'a plus
+	// rien à montrer (décision 12.2, canvas/choice.go). Sans incidence sur
+	// le reste : un échec laisse les choix tels quels.
+	_ = d.Model.SettleChoices(ctx)
 	top, err := d.top(ctx)
 	if err != nil {
 		return fail(err)

@@ -368,6 +368,19 @@ export interface ChartSeries {
     "values": (number | null)[] | null;
 }
 
+/**
+ * ChoiceCandidate est une colonne proposée par « Choisir par… ».
+ */
+export interface ChoiceCandidate {
+    "table": string;
+    "column": string;
+
+    /**
+     * valeurs distinctes (non vides)
+     */
+    "values": number;
+}
+
 export interface ColWidth {
     "col": number;
     "width": number;
@@ -903,6 +916,12 @@ export interface PivotConfig {
     "expanded"?: (string[] | null)[] | null;
 
     /**
+     * Choice : filtre imposé par l'onglet à choix de la feuille du TCD
+     * (choice.go), posé à la lecture, jamais enregistré (stored le retire).
+     */
+    "choice"?: PivotFilter | null;
+
+    /**
      * Ancien format (un champ de lignes, une valeur) : relu puis converti.
      */
     "rows"?: string;
@@ -1152,6 +1171,27 @@ export interface ScriptInfo {
 }
 
 /**
+ * SheetChoice décrit l'onglet à choix d'une feuille.
+ */
+export interface SheetChoice {
+    /**
+     * Name : nom de la catégorie (celui de sa colonne source) ; Type : type
+     * de cette colonne ; Table : tableau de la colonne source.
+     */
+    "name": string;
+    "type": grid$0.Type;
+    "table"?: string;
+
+    /**
+     * Value : valeur choisie (texte affiché) ; All : « (Toutes) », aucun
+     * filtre (la colonne réapparaît).
+     */
+    "value": string;
+    "all": boolean;
+    "fresh"?: boolean;
+}
+
+/**
  * SheetInfo décrit un onglet.
  */
 export interface SheetInfo {
@@ -1200,6 +1240,11 @@ export interface SheetInfo {
      * feuille.
      */
     "kind": string;
+
+    /**
+     * Choice : onglet à choix (« Ventes · 2025 ▾ », choice.go), absent sinon.
+     */
+    "choice"?: SheetChoice | null;
 }
 
 /**
@@ -1323,6 +1368,14 @@ export interface TableInfo {
      */
     "access"?: string;
     "filtered"?: boolean;
+
+    /**
+     * Follows : le tableau suit le choix de l'onglet (il a la colonne de
+     * catégorie, rang ChoiceCol) ; Rows ne compte alors que les lignes de la
+     * valeur choisie, les autres gardent leur place (lignes à remplir).
+     */
+    "follows"?: boolean;
+    "choiceCol"?: number;
 }
 
 /**

@@ -59,10 +59,21 @@ type PivotConfig struct {
 	Collapsed   [][]string `json:"collapsed,omitempty"`
 	Expanded    [][]string `json:"expanded,omitempty"`
 
+	// Choice : filtre imposé par l'onglet à choix de la feuille du TCD
+	// (choice.go), posé à la lecture, jamais enregistré (stored le retire).
+	Choice *PivotFilter `json:"choice,omitempty"`
+
 	// Ancien format (un champ de lignes, une valeur) : relu puis converti.
 	Rows  string `json:"rows,omitempty"`
 	Value string `json:"value,omitempty"`
 	Agg   string `json:"agg,omitempty"`
+}
+
+// stored : la configuration telle qu'on l'enregistre (sans le filtre de
+// l'onglet à choix, qui se repose à chaque lecture).
+func (c PivotConfig) stored() PivotConfig {
+	c.Choice = nil
+	return c
 }
 
 // normalized convertit l'ancien format.
@@ -153,6 +164,9 @@ func (t *tx) pivotPlan(raw PivotConfig) (pivotPlan, error) {
 		shown[strings.ToLower(f)] = true
 	}
 	all := append([]PivotFilter{}, cfg.Filters...)
+	if cfg.Choice != nil {
+		all = append(all, *cfg.Choice)
+	}
 	for _, f := range cfg.Items {
 		if shown[strings.ToLower(f.Field)] {
 			all = append(all, f)

@@ -605,6 +605,32 @@ export const apiReference: RefEntry[] = [
 		args: [0, 2]
 	},
 	{
+		name: "sheets.choice",
+		category: "sheets",
+		signature: "sheets.choice([sheet]) → {name, type, table, value, all, values} ou nil",
+		summary: "Décrit l'onglet à choix d'une feuille : catégorie (colonne), valeur choisie et valeurs proposées ; nil si la feuille n'en a pas.",
+		details: "Le choix filtre les tableaux de la feuille qui ont la colonne de catégorie (all : « (Toutes) », aucun filtre). Le SQL et les scripts voient toujours toutes les lignes. Paramètres — sheet : feuille (nom ou identifiant) ; absente : la feuille affichée.",
+		example: "local c = sheets.choice(\"Feuille1\")\nif c then print(c.name .. \" : \" .. c.value) end",
+		args: [0, 1]
+	},
+	{
+		name: "sheets.choose_by",
+		category: "sheets",
+		signature: "sheets.choose_by(table, column, [value])",
+		summary: "Fait d'une feuille un onglet à choix par une colonne d'un de ses tableaux (« Choisir par… ») : la flèche de l'onglet choisit la valeur affichée.",
+		details: "Tous les tableaux de la feuille qui ont une colonne de ce nom suivent le choix. Sans valeur, l'onglet montre toutes les valeurs. Paramètres — table : tableau de la colonne ; column : colonne de catégorie (Année, Mois, Ville…) ; value : valeur affichée d'abord ; absente : toutes. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.choose_by{table = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "sheets.choose_by(\"Commandes\", \"Client\", \"Durand\")",
+		args: [1, 3]
+	},
+	{
+		name: "sheets.clear_choice",
+		category: "sheets",
+		signature: "sheets.clear_choice([sheet])",
+		summary: "Retire l'onglet à choix d'une feuille : ses tableaux montrent de nouveau toutes leurs lignes.",
+		details: "Paramètres — sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		args: [0, 1]
+	},
+	{
 		name: "sheets.color",
 		category: "sheets",
 		signature: "sheets.color(sheet, [color])",
@@ -692,6 +718,15 @@ export const apiReference: RefEntry[] = [
 		args: [1, 2]
 	},
 	{
+		name: "sheets.new_choice",
+		category: "sheets",
+		signature: "sheets.new_choice(sheet, value)",
+		summary: "Ajoute une valeur à l'onglet à choix (« Nouvelle année… ») et l'affiche : la feuille paraît vide, prête à être remplie.",
+		details: "Paramètres — sheet : feuille à choix ; value : nouvelle valeur (2026, Décembre…). Arguments dans l'ordre, ou une table d'arguments nommés : sheets.new_choice{sheet = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "sheets.choose_by(\"Commandes\", \"Client\")\nsheets.new_choice(\"Feuille1\", \"Petit\")",
+		args: [1, 2]
+	},
+	{
 		name: "sheets.page_setup",
 		category: "sheets",
 		signature: "sheets.page_setup([sheet]) → {paper, orientation, margins = {top, bottom, left, right, header, footer}, scale, fit_wide, fit_tall, print_area, title_rows, title_cols, row_breaks, col_breaks, gridlines, headings, center_h, center_v, order, black_white, first_page, header = {left, center, right}, footer}",
@@ -734,6 +769,15 @@ export const apiReference: RefEntry[] = [
 		summary: "Remplace un texte dans toute une feuille et renvoie le nombre de cellules modifiées.",
 		details: "Paramètres — text : texte cherché ; by : texte de remplacement ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.replace{text = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		args: [1, 3]
+	},
+	{
+		name: "sheets.set_choice",
+		category: "sheets",
+		signature: "sheets.set_choice(sheet, [value])",
+		summary: "Règle l'onglet à choix d'une feuille sur une valeur (l'année, le mois, la ville affichés) ; sans valeur, sur « (Toutes) ».",
+		details: "C'est de la navigation, comme changer d'onglet : pas d'étape d'annulation. La feuille doit déjà avoir un onglet à choix (sheets.choose_by). Paramètres — sheet : feuille à choix ; value : valeur à afficher ; absente : toutes. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.set_choice{sheet = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "sheets.choose_by(\"Commandes\", \"Client\")\nsheets.set_choice(\"Feuille1\", \"Durand\")",
+		args: [1, 2]
 	},
 	{
 		name: "sheets.set_column_width",

@@ -275,6 +275,8 @@ var docs = map[string]funcDoc{
 		nil, 0, `=AUJOURDHUI()-[Date]`},
 	"NOW": {catDate, "Renvoie la date et l'heure actuelles, fixées à l'ouverture et renouvelées par F9.",
 		nil, 0, `=MAINTENANT()`},
+	"SHEETCHOICE": {catLookup, "Renvoie la valeur choisie sur l'onglet à choix de la feuille (l'année, le mois ou la ville affichés : « Ventes · 2025 ▾ »), vide pour « (Toutes) », #N/A sur une feuille sans choix.",
+		nil, 0, `=SOMME.SI.ENS(Ventes[Montant]; Ventes[Année]; ONGLET.CHOIX())`},
 	"DATE": {catDate, "Construit une date à partir de l'année, du mois et du jour.",
 		docArgs(docArg("année", "Année sur quatre chiffres."), docArg("mois", "Mois (1 à 12 ; au-delà, déborde sur l'année suivante)."),
 			docArg("jour", "Jour du mois (au-delà, déborde sur le mois suivant).")),

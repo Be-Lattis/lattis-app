@@ -18,7 +18,12 @@ func (t *tx) spillFreeRaw(sheet int64, raw string) (rows [][]string, ok bool, er
 	if err != nil || !formula.IsSpill(n) {
 		return nil, false, formula.Value{}
 	}
-	schema, err := t.schema()
+	base, err := t.schema()
+	if err != nil {
+		return nil, true, formula.Err(formula.ErrValue)
+	}
+	// Tableaux de la feuille filtrés par son onglet à choix (schemaFor).
+	schema, err := t.schemaFor(sheet)
 	if err != nil {
 		return nil, true, formula.Err(formula.ErrValue)
 	}
@@ -26,7 +31,7 @@ func (t *tx) spillFreeRaw(sheet int64, raw string) (rows [][]string, ok bool, er
 		return nil, true, formula.Err(formula.ErrName)
 	}
 	n = formula.QualifyCells(n, sheet)
-	names, err := t.nameValues(schema)
+	names, err := t.nameValues(base)
 	if err != nil {
 		return nil, true, formula.Err(formula.ErrValue)
 	}
