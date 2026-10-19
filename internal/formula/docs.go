@@ -71,6 +71,8 @@ var (
 // argMatrix : la colonne lue par CENTILE, QUARTILE…
 var argMatrix = docArg("matrice", "Colonne entière (Tableau[Colonne]), plage ou expression sur les colonnes d'un tableau.")
 
+var argAngle = docArg("angle", "Angle en radians (RADIANS convertit des degrés).")
+
 // Arguments des fonctions financières.
 var (
 	argRate = docArg("taux", "Taux d'intérêt par période (4%/12 pour 4 % par an en mensualités).")
@@ -156,6 +158,34 @@ var docs = map[string]funcDoc{
 		docArgs(argNum), 0, `=LN([Valeur])`},
 	"LOG10": {catMath, "Renvoie le logarithme en base 10 d'un nombre positif.",
 		docArgs(argNum), 0, `=LOG10([Valeur])`},
+	"LOG": {catMath, "Renvoie le logarithme d'un nombre positif dans la base voulue (10 si omise).",
+		docArgs(argNum, docOpt("base", "Base du logarithme, positive et différente de 1 (10 si omise).")), 0, `=LOG(8; 2)`},
+	"SIN": {catMath, "Renvoie le sinus d'un angle exprimé en radians.",
+		docArgs(argAngle), 0, `=SIN(RADIANS([Angle]))`},
+	"COS": {catMath, "Renvoie le cosinus d'un angle exprimé en radians.",
+		docArgs(argAngle), 0, `=COS(RADIANS([Angle]))`},
+	"TAN": {catMath, "Renvoie la tangente d'un angle exprimé en radians.",
+		docArgs(argAngle), 0, `=TAN(PI()/4)`},
+	"ASIN": {catMath, "Renvoie l'arc sinus d'un nombre entre -1 et 1, en radians.",
+		docArgs(argNum), 0, `=DEGRES(ASIN([Pente]))`},
+	"ACOS": {catMath, "Renvoie l'arc cosinus d'un nombre entre -1 et 1, en radians.",
+		docArgs(argNum), 0, `=DEGRES(ACOS([Ratio]))`},
+	"ATAN": {catMath, "Renvoie l'arc tangente d'un nombre, en radians.",
+		docArgs(argNum), 0, `=DEGRES(ATAN([Pente]))`},
+	"RADIANS": {catMath, "Convertit des degrés en radians.",
+		docArgs(docArg("angle", "Angle en degrés.")), 0, `=RADIANS(180)`},
+	"DEGREES": {catMath, "Convertit des radians en degrés.",
+		docArgs(docArg("angle", "Angle en radians.")), 0, `=DEGRES(PI())`},
+	"MROUND": {catMath, "Arrondit un nombre au multiple le plus proche (au plus loin de zéro pour la moitié).",
+		docArgs(docArg("nombre", "Nombre à arrondir."), docArg("multiple", "Multiple visé, du même signe que le nombre (#NOMBRE! sinon).")),
+		0, `=ARRONDI.AU.MULTIPLE([Prix]; 0,05)`},
+	"QUOTIENT": {catMath, "Renvoie la partie entière d'une division.",
+		docArgs(docArg("numérateur", "Nombre à diviser."), docArg("dénominateur", "Nombre par lequel diviser (#DIV/0! si 0).")),
+		0, `=QUOTIENT([Minutes]; 60)`},
+	"ISEVEN": {catMath, "Renvoie VRAI si la partie entière d'un nombre est paire.",
+		docArgs(argNum), 0, `=EST.PAIR([Numéro])`},
+	"ISODD": {catMath, "Renvoie VRAI si la partie entière d'un nombre est impaire.",
+		docArgs(argNum), 0, `=EST.IMPAIR([Numéro])`},
 	"PI": {catMath, "Renvoie le nombre pi (3,14159…).",
 		nil, 0, `=PI()*[Rayon]^2`},
 	"RAND": {catMath, "Renvoie un nombre aléatoire entre 0 et 1, fixe jusqu'au prochain recalcul (F9).",

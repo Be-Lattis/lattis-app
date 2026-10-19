@@ -49,6 +49,11 @@ Les plages se lisent comme une colonne dans les agrégats (`SOMME`, `MOYENNE`, `
 | MOD | MOD | ✅ signe du diviseur |
 | PLAFOND, PLANCHER | CEILING, FLOOR | ✅ précision facultative (1 si omise) ; nombre positif et précision négative : #NOMBRE! |
 | PUISSANCE, RACINE, EXP, LN, LOG10, PI | POWER, SQRT, EXP, LN, LOG10, PI | ✅ #NOMBRE! hors domaine |
+| LOG | LOG | ✅ base 10 si omise ; base 1 : #DIV/0! |
+| SIN, COS, TAN, ASIN, ACOS, ATAN, RADIANS, DEGRES | SIN, COS, TAN, ASIN, ACOS, ATAN, RADIANS, DEGREES | ✅ angles en radians |
+| ARRONDI.AU.MULTIPLE | MROUND | ✅ au plus loin de zéro pour la moitié (sur 15 chiffres, comme ARRONDI) ; signes contraires : #NOMBRE! ; multiple 0 : 0 |
+| QUOTIENT | QUOTIENT | ✅ partie entière de la division |
+| EST.PAIR, EST.IMPAIR | ISEVEN, ISODD | ✅ sur la partie entière ; un booléen donne #VALEUR! |
 | ALEA, ALEA.ENTRE.BORNES | RAND, RANDBETWEEN | ⚠️ tirage stable par ligne, renouvelé avec `Schema.Seed` (F9) et non à chaque lecture |
 
 ## Finances
