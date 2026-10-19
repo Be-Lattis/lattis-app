@@ -215,7 +215,7 @@ Libellés liés aux champs, ordre du focus, contraste de la palette (§4.1), mes
 
 | Avec | Comportement |
 |---|---|
-| **Renommer une colonne** | Le formulaire suit : la définition cite les colonnes par leur `local_id`, pas par leur nom. Le libellé du champ ne change pas |
+| **Renommer une colonne** | Le formulaire suit : la définition cite les colonnes par leur `column_id` du serveur, pas par leur nom. Le libellé du champ ne change pas |
 | **Supprimer une colonne** | L'application prévient avant : « Espèce est un champ du formulaire Nids ». Le serveur retire le champ ; si le champ était obligatoire ou portait une valeur posée par le serveur, il **met le formulaire en pause** et envoie `*form:<id>` |
 | **Ajouter une colonne** | Elle n'entre pas dans le formulaire. La barre d'état propose « L'ajouter au formulaire Nids ? » |
 | **Convertir le type d'une colonne** | Le champ suit le nouveau type. Une valeur par défaut ou des bornes devenues incompatibles mettent le formulaire en pause |
@@ -276,13 +276,13 @@ Libellés liés aux champs, ordre du focus, contraste de la palette (§4.1), mes
   },
   "fields": [
     {"kind": "section", "title": "Où ?", "description": "…"},
-    {"column": "<local_id>", "label": "Commune", "help": "…", "placeholder": "…",
+    {"column": "<column_id>", "label": "Commune", "help": "…", "placeholder": "…",
      "required": true, "widget": "list", "default": {"token": "today"},
      "min": null, "max": null, "step": null, "max_length": 200, "format": "email",
-     "list": {"values": ["…"]} | {"table_id": "…", "column": "<local_id>"} | null}
+     "list": {"values": ["…"]} | {"table_id": "…", "column": "<column_id>"} | null}
   ],
   "server_values": [
-    {"column": "<local_id>", "value": {"token": "received_at" | "respondent" | "form_title" | "next_number"} | {"fixed": "Terrain"}}
+    {"column": "<column_id>", "value": {"token": "received_at" | "respondent" | "form_title" | "next_number"} | {"fixed": "Terrain"}}
   ]
 }
 ```
@@ -301,12 +301,12 @@ Libellés liés aux champs, ordre du focus, contraste de la palette (§4.1), mes
 | `form_stats(form_id, days int DEFAULT 30) → {"total", "by_day": [{"day", "n"}], "last_at", "throttled"}` | Propriétaire ou concepteur | `42501`, `P0002` |
 | `form_preview_url(form_id) → text` : lien signé valable 10 min, réponses non enregistrées | idem | — |
 | `form_audience_add(form_id, principal)` / `form_audience_add_by_email(form_id, email)` / `form_audience_remove(form_id, principal)` | idem | `P0002` adresse sans compte (ou compte en attente, à trancher) |
-| `submit_form(form_id, values jsonb, respondent jsonb) → {"row_id", "edit_token"}` : **réservée à lattisd** (`SECURITY DEFINER`, `EXECUTE` retiré à `PUBLIC`) ; contrôle l'état, l'audience, les dates, le plafond, une réponse par personne, les types, les listes, les bornes, les champs obligatoires et la clé ; pose les valeurs du serveur, le numéro (`max + 1` sous verrou) et `lattis_pos` (à la fin) ; insère sous l'identité du formulaire (RLS, déclencheurs, `NOTIFY` du tableau) ; écrit `form_submissions` | lattisd | `22023` avec `DETAIL` = `{"fields": {"<local_id>": "raison"}}` ; `23505` clé déjà prise ; `55000` fermé, pas encore ouvert ou plein ; `42501` hors audience ; `P0001` déjà répondu |
+| `submit_form(form_id, values jsonb, respondent jsonb) → {"row_id", "edit_token"}` : **réservée à lattisd** (`SECURITY DEFINER`, `EXECUTE` retiré à `PUBLIC`) ; contrôle l'état, l'audience, les dates, le plafond, une réponse par personne, les types, les listes, les bornes, les champs obligatoires et la clé ; pose les valeurs du serveur, le numéro (`max + 1` sous verrou) et `lattis_pos` (à la fin) ; insère sous l'identité du formulaire (RLS, déclencheurs, `NOTIFY` du tableau) ; écrit `form_submissions` | lattisd | `22023` avec `DETAIL` = `{"fields": {"<column_id>": "raison"}}` ; `23505` clé déjà prise ; `55000` fermé, pas encore ouvert ou plein ; `42501` hors audience ; `P0001` déjà répondu |
 | `update_submission(form_id, row_id \| edit_token, values jsonb)` : mêmes contrôles, dans la fenêtre de modification, `UPDATE` conditionné à `lattis_updated_by` = identité du formulaire | lattisd | idem, plus `55000` « modifiée depuis par l'équipe » |
 | `my_form_submissions(form_id) → jsonb` : réponses du répondant connecté | lattisd | — |
 | `form_page(code) → jsonb` : définition publique et listes résolues | lattisd | `P0002` (inconnu et interdit donnent la même réponse) |
 
-**Suivi de la structure** : `rename_column` n'a rien à faire (la définition cite les `local_id`). `drop_column`, `alter_column_type`, la clé et `drop_table` doivent mettre à jour les définitions, mettre en pause quand c'est nécessaire (`pause_reason`) et envoyer `*form:<id>`.
+**Suivi de la structure** : `rename_column` n'a rien à faire (la définition cite les `column_id`). `drop_column`, `alter_column_type`, la clé et `drop_table` doivent mettre à jour les définitions, mettre en pause quand c'est nécessaire (`pause_reason`) et envoyer `*form:<id>`.
 
 **Notification** : `*form:<id>` sur le canal du classeur quand un formulaire est créé, modifié, change d'état (pause automatique comprise) ou est supprimé. Les réponses ne notifient que l'identifiant du tableau, comme toute écriture.
 
@@ -359,3 +359,13 @@ Libellés liés aux champs, ordre du focus, contraste de la palette (§4.1), mes
 En phase 9 :
 
 > **Partager un tableau comme formulaire** (demande de Louis, 19/10/2026) : clic droit sur un tableau d'un classeur collaboratif › « Partager comme formulaire… » (sinon, message et action pour publier d'abord). Le concepteur fait un champ par colonne (types, listes de validation, clé numérotée par le serveur, valeurs posées par le serveur) et règle une personnalisation limitée (titre, introduction, logo, bannière, palette, sections, bouton, remerciement, langue). Trois modes d'accès : membres, personnes ou équipes, public avec protections. La page `/f/<code>` est servie par lattisd ; les réponses deviennent des lignes écrites sous une identité technique et arrivent en direct par la synchronisation. Étude : `conception/partager-comme-formulaire.md`. Client M + S + S ; serveur M à L.
+
+## 14. Relecture du fil serveur (19/10) et choix retenus
+
+- **Identité du formulaire** (Q1, d'accord) : `SECURITY DEFINER` ne peut pas faire `SET ROLE` ; lattisd se connecte donc sous l'identité du formulaire, comme les pipelines, et `submit_form` vérifie `session_user`.
+- **Niveau interne « insertion seulement »** dans `compile_acl` : `INSERT`, plus `UPDATE` et `SELECT` limités par RLS sur `lattis_updated_by` pour `update_submission` (modifier sa réponse).
+- **Colonnes citées par `column_id`** (choix côté appli) : `local_id` peut être nul pour une colonne créée côté serveur ; la définition cite donc l'identifiant de `lattis_meta_columns`. L'application connaît déjà la correspondance colonne locale ↔ `column_id` (publication et synchronisation). Les exemples du §10.2 sont à lire avec `column_id`.
+- **Suppression d'un tableau** : `drop_table` supprime ses formulaires (réponses gardées dans le tableau jusqu'à sa suppression, journal `form_submissions` purgé) et envoie `*form:<id>` ; il n'est pas refusé comme pour une source du Data Lake ou un pipeline, puisque supprimer le tableau prive le formulaire de sa raison d'être. L'application prévient avant : « Ce tableau alimente N formulaires : ils seront supprimés ».
+- **Numérotation** (`next_number`) : verrou consultatif par tableau, puis `max + 1`.
+- **Pause automatique** : calculée en fenêtre glissante sur `form_submissions`, valable avec plusieurs lattisd.
+- Estimation côté serveur : M à L.
