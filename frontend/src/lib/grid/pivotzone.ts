@@ -10,6 +10,8 @@ export interface PivotPlace {
 	anchor?: number;
 	cells: string[][] | null;
 	error: string;
+	/** Colonnes saisies à droite (les dernières de cells, voir pivothand.ts). */
+	hand?: unknown[] | null;
 }
 
 export interface Range {
@@ -42,6 +44,8 @@ export function pivotsCleared<P extends PivotPlace>(pivots: P[], z: Range): { go
 		const q = pivotZone(p);
 		if (q.r0 > z.r1 || q.r1 < z.r0 || q.c0 > z.c1 || q.c1 < z.c0) continue;
 		if (q.r0 >= z.r0 && q.r1 <= z.r1 && q.c0 >= z.c0 && q.c1 <= z.c1) gone.push(p);
+		// Seulement ses colonnes saisies : leurs valeurs s'effacent (le moteur s'en charge).
+		else if (!p.error && p.hand?.length && z.c0 > q.c1 - p.hand.length) continue;
 		else partial ??= p;
 	}
 	return { gone, partial };

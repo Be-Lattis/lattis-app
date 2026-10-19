@@ -176,7 +176,8 @@ func (t *tx) nameValuesWith(schema *formula.Schema, allCells bool) (map[string]f
 	cited := allCells || onEmpty
 	if !cited {
 		if err := t.row(`SELECT EXISTS (SELECT 1 FROM _lattis_cells WHERE raw LIKE '%cell%')
-			OR EXISTS (SELECT 1 FROM _lattis_columns WHERE formula LIKE '%cell%')`).Scan(&cited); err != nil {
+			OR EXISTS (SELECT 1 FROM _lattis_columns WHERE formula LIKE '%cell%')
+			OR EXISTS (SELECT 1 FROM _lattis_pivots WHERE config LIKE '%"hand"%' AND config LIKE '%cell%')`).Scan(&cited); err != nil {
 			return nil, err
 		}
 	}
@@ -202,7 +203,12 @@ func (t *tx) nameValuesWith(schema *formula.Schema, allCells bool) (map[string]f
 			return nil, err
 		}
 		if len(areas) > 0 {
-			pivotValues(values, ns, schema, areas)
+			// Cellules lues par les formules des colonnes saisies des TCD.
+			extra, err := t.pivotHandDeps()
+			if err != nil {
+				return nil, err
+			}
+			pivotValues(values, ns, schema, areas, extra)
 		}
 	}
 	order, cyclic := orderWithSpills(ns, base, added)

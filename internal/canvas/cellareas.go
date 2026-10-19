@@ -104,9 +104,22 @@ func (t *tx) pivotAreasRaw() ([]pivotArea, error) {
 	}
 	var out []pivotArea
 	for _, p := range list {
-		cells, _, err := t.pivotCells(p.cfg)
+		cells, rows, err := t.pivotCells(p.cfg)
 		if err != nil {
 			continue // TCD en erreur : seul le message s'affiche
+		}
+		// Colonnes saisies à droite (pivothand.go) : leurs formules sont
+		// calculées sans les cellules libres (en cours de calcul ici).
+		if len(p.cfg.Hand) > 0 && len(cells) > 0 {
+			extra, err := t.pivotHandCells(p.id, p.a.sheet, p.cfg, cells, rows, nil)
+			if err != nil {
+				return nil, err
+			}
+			wide := make([][]string, len(cells))
+			for i, r := range cells {
+				wide[i] = append(slices.Clip(r), extra[i]...)
+			}
+			cells = wide
 		}
 		a := p.a
 		a.cells, a.filters, a.top = cells, p.cfg.Filters, a.row
@@ -134,7 +147,7 @@ func pivotValueAt(areas []pivotArea, sheet int64, row, col int) (formula.Value, 
 // pivotValues range dans values la valeur des cellules de TCD que citent
 // les formules (clés et alias « feuille.cell_a1 ») ; une cellule saisie à la
 // même place, calculée ensuite, l'emporte.
-func pivotValues(values map[string]formula.Value, ns *formula.Names, schema *formula.Schema, areas []pivotArea) {
+func pivotValues(values map[string]formula.Value, ns *formula.Names, schema *formula.Schema, areas []pivotArea, extra []string) {
 	ids := map[string]int64{}
 	for _, a := range areas {
 		ids[a.sheetName] = a.sheet
@@ -159,6 +172,9 @@ func pivotValues(values map[string]formula.Value, ns *formula.Names, schema *for
 		for _, d := range deps {
 			put(d)
 		}
+	}
+	for _, d := range extra {
+		put(d)
 	}
 	// Colonnes calculées des tableaux.
 	for _, ft := range schema.Tables {

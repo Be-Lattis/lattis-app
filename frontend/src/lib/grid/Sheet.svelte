@@ -78,6 +78,7 @@
 	import PivotPanel from './PivotPanel.svelte';
 	import { panelAtCell, changeSource } from './pivotfields';
 	import { brokenPivotAt, pivotsCleared } from './pivotzone';
+	import { handAlign, handEditText, handKeptNote, handStart, pivotHandAt } from './pivothand';
 	import { placeAt, placedMessage, placeHint, placeKey, placesOnClick, type Placement } from './pivotplace';
 	import SheetButtons from './SheetButtons.svelte';
 	import { BUTTON_H, BUTTON_W, type ButtonConfig, type ControlKind, type SheetButton } from './buttons';
@@ -191,6 +192,11 @@
 		/** Format de nombre par défaut de chaque colonne (style JSON, voir pivotformat.ts). */
 		formats?: string[] | null;
 		error: string;
+		/** Colonnes saisies à droite (les dernières de cells, voir pivothand.ts) : nom, formule (« = » compris). */
+		hand?: { name: string; formula?: string }[] | null;
+		/** Lignes dont les valeurs saisies sont mises de côté ; handNote : pourquoi elles le sont toutes. */
+		handKept?: number;
+		handNote?: string;
 	}
 
 	export interface ChartConfig {
@@ -2675,9 +2681,14 @@
 			// Ligne du total général : la dernière, quand il est affiché.
 			const tot = pivotTotalRow(p);
 			// En-tête et total sur fond gris, sauf remplissage choisi.
-			ctx.fillStyle = C.linkHead; // comme les tableaux d'une requête : des données calculées
+			// Colonnes saisies à droite (pivothand.ts) : en-tête vert, comme un tableau ordinaire.
+			const hs = handStart(p);
 			for (const r of tot >= 0 ? [p.row, tot] : [p.row])
-				for (let c = p.col; c <= pc1; c++) if (!styleAt(r, c, undefined)?.bg) ctx.fillRect(cx(c), ry(r), cax().size(c), rh(r));
+				for (let c = p.col; c <= pc1; c++)
+					if (!styleAt(r, c, undefined)?.bg) {
+						ctx.fillStyle = r === p.row && c >= hs ? C.head : C.linkHead; // comme les tableaux d'une requête : des données calculées
+						ctx.fillRect(cx(c), ry(r), cax().size(c), rh(r));
+					}
 			for (let i = Math.max(0, r0 - p.row); i < p.cells.length && p.row + i <= r1; i++)
 				p.cells[i].forEach((v, j) => {
 					const c = p.col + j;
@@ -2692,7 +2703,7 @@
 					const ind = pivotLabelOffset(info);
 					// Recalculé : seules les cellules dont la valeur change s'éclairent.
 					paintFlash(flashOf(`p${p.id}:${i},${j}`, v, p.row + i, c), cx(c), ry(p.row + i), cax().size(c), rh(p.row + i));
-					drawText(pivotValueText(formatCell(v, undefined, st), i, j), cx(c) + ind, ry(p.row + i), cax().size(c) - ind, st?.al ?? (j > 0 && i > 0 ? 'right' : 'left'), style, i === 0 || p.row + i === tot ? C.linkHeadText : C.text);
+					drawText(pivotValueText(formatCell(v, undefined, st), i, j), cx(c) + ind, ry(p.row + i), cax().size(c) - ind, st?.al ?? (c >= hs && i > 0 ? handAlign(v) : j > 0 && i > 0 ? 'right' : 'left'), style, i === 0 && c >= hs ? C.headText : i === 0 || p.row + i === tot ? C.linkHeadText : C.text);
 				});
 			// ▾ des étiquettes des lignes : trier et filtrer le champ (Excel) ; en
 			// arborescence, un seul ▾ sur « Étiquettes de lignes » (choix du champ dans le menu).
@@ -2711,6 +2722,11 @@
 			for (const y of tot >= 0 ? [ry(p.row + 1), ry(tot)] : [ry(p.row + 1)]) {
 				ctx.moveTo(Math.round(cx(p.col)), Math.round(y) + 0.5);
 				ctx.lineTo(Math.round(cx(p.col)) + spanW(p.col, pc1), Math.round(y) + 0.5);
+			}
+			// Trait entre le TCD calculé et ses colonnes saisies.
+			if (hs > p.col && hs <= pc1) {
+				ctx.moveTo(Math.round(cx(hs)) + 0.5, Math.round(ry(p.row)));
+				ctx.lineTo(Math.round(cx(hs)) + 0.5, Math.round(ry(p.row)) + rspan(p.row, pr1));
 			}
 			ctx.stroke();
 			ctx.restore();
@@ -8036,7 +8052,9 @@
 		if (ro) return ro;
 		// Participant (classeur collaboratif) : les lignes des autres membres.
 		if (lockedRowAt(r, c)) return NOT_YOURS;
-		if (pivotAt(r, c)) return PIVOT_READONLY;
+		// Tableau croisé : seules ses colonnes saisies à droite se modifient.
+		const pv = pivotAt(r, c);
+		if (pv && pivotHandAt(pv, r, c) < 0) return PIVOT_READONLY;
 		if (queryAt(r, c)) return QUERY_READONLY;
 		return '';
 	}
@@ -8044,7 +8062,9 @@
 	/** Texte de la cellule dans l'éditeur et la barre de formule (un tableau croisé : sa valeur affichée). */
 	function editText(r: number, c: number): string {
 		const v = cellInfo(r, c).value;
-		return v === '' && pivotAt(r, c) ? shownValue(r, c) : v;
+		const p = v === '' ? pivotAt(r, c) : undefined;
+		// Colonne saisie à formule : sa formule (pivothand.ts).
+		return p ? handEditText(p, r, c, shownValue(r, c)) : v;
 	}
 
 	function startEdit(byTyping: boolean, initial?: string) {
@@ -8198,7 +8218,8 @@
 	}
 
 	async function writeNow(row: number, col: number, raw: string, keep = false, onrefused?: (e: unknown) => void, key?: KeyChoice) {
-		if (pivotAt(row, col)) {
+		const pv = pivotAt(row, col);
+		if (pv && pivotHandAt(pv, row, col) < 0) {
 			message = PIVOT_READONLY;
 			return;
 		}
@@ -11405,6 +11426,8 @@
 				customLists={source.customLists}
 				setCustomLists={source.setCustomLists}
 				onchange={(cfg) => menuAction(source.setPivot && (() => source.setPivot!(pv.id, cfg)), true)}
+				handNote={handKeptNote(pv.handKept, pv.handNote)}
+				onforgethand={pv.handKept && source.forgetHandKept ? () => menuAction(() => source.forgetHandKept!({ name: pv.config.name ?? '' } as SheetTable), true) : undefined}
 				ondelete={() => removePivot(pv)}
 				sources={pv.error && source.setPivot ? pivotSources(pv) : []}
 				onsource={(name) => repointPivot(pv, name)}

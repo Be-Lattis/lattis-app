@@ -6,7 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
+
+	"github.com/lalamefine/lattis/internal/formula"
 )
 
 // PivotInfo est un tableau croisé posé sur une feuille, avec son résultat.
@@ -26,6 +29,12 @@ type PivotInfo struct {
 	// moyenne ou des décimaux. La mise en forme des cellules l'emporte.
 	Formats []string `json:"formats"`
 	Error   string   `json:"error"`
+	// Hand : colonnes saisies à droite du TCD (pivothand.go), les dernières
+	// de Cells ; HandKept : lignes dont les valeurs saisies sont mises de
+	// côté (étiquettes absentes) ; HandNote : pourquoi elles le sont toutes.
+	Hand     []PivotHandInfo `json:"hand,omitempty"`
+	HandKept int             `json:"handKept,omitempty"`
+	HandNote string          `json:"handNote,omitempty"`
 }
 
 // ErrPivot signale un tableau croisé impossible.
@@ -104,18 +113,34 @@ func (m *Model) SetPivot(ctx context.Context, id int64, cfg PivotConfig) error {
 		if err := t.row(`SELECT config FROM _lattis_pivots WHERE id = ?`, id).Scan(&old); err != nil {
 			return err
 		}
-		if cfg.Name == "" {
-			var prev PivotConfig
-			if json.Unmarshal([]byte(old), &prev) == nil {
+		var prev PivotConfig
+		var sheet int64
+		if err := t.row(`SELECT sheet FROM _lattis_pivots WHERE id = ?`, id).Scan(&sheet); err != nil {
+			return err
+		}
+		if json.Unmarshal([]byte(old), &prev) == nil {
+			if cfg.Name == "" {
 				cfg.Name = prev.Name
 			}
+			// Colonnes saisies : elles ne se changent que par la feuille
+			// (pivothand.go) ; le volet renvoie une configuration sans elles.
+			cfg.Hand = prev.Hand
 		}
 		b, err := json.Marshal(cfg)
 		if err != nil {
 			return err
 		}
+		w0 := t.pivotWidth(sheet, prev)
 		q := `UPDATE _lattis_pivots SET config = ? WHERE id = ?`
-		return t.apply([]stmt{st(q, string(b), id)}, []stmt{st(q, old, id)})
+		if err := t.apply([]stmt{st(q, string(b), id)}, []stmt{st(q, old, id)}); err != nil {
+			return err
+		}
+		// Plus large (une valeur, un champ en colonnes…) : ses colonnes
+		// saisies restent à son bord droit, ce qu'il touche s'écarte.
+		if t.pivotWidth(sheet, cfg) > w0 {
+			return t.makeRoom(sheet, id)
+		}
+		return nil
 	})
 }
 
@@ -135,6 +160,10 @@ func (t *tx) deletePivot(id int64) error {
 	var row, col int
 	var cfg string
 	if err := t.row(`SELECT sheet, row, col, config FROM _lattis_pivots WHERE id = ?`, id).Scan(&sheet, &row, &col, &cfg); err != nil {
+		return err
+	}
+	// Valeurs saisies à côté : oubliées avec lui (son numéro peut resservir).
+	if err := t.forgetPivotHand(id); err != nil {
 		return err
 	}
 	return t.apply(
@@ -185,7 +214,10 @@ func (t *tx) pivots(sheet int64) ([]PivotInfo, error) {
 			return nil, err
 		}
 	}
+	var names map[string]formula.Value // cellules libres, si une formule de colonne saisie en lit
 	for i := range out {
+		hand := out[i].Config.Hand
+		out[i].Config.Hand = nil // dans Hand (le volet ne les change pas)
 		if out[i].Error != "" {
 			continue
 		}
@@ -196,6 +228,18 @@ func (t *tx) pivots(sheet int64) ([]PivotInfo, error) {
 		}
 		out[i].Cells, out[i].Rows = cells, rows
 		if out[i].Formats, err = t.pivotFormats(out[i].Config, cells); err != nil {
+			return nil, err
+		}
+		if names == nil && slices.ContainsFunc(hand, func(h PivotHandCol) bool { return h.Formula != "" }) {
+			schema, err := t.schema()
+			if err != nil {
+				return nil, err
+			}
+			if names, err = t.nameValues(schema); err != nil {
+				return nil, err
+			}
+		}
+		if err := t.pivotHandAttach(&out[i], sheet, hand, names); err != nil {
 			return nil, err
 		}
 	}
@@ -309,8 +353,11 @@ func (m *Model) CopyPivot(ctx context.Context, id, sheet int64, row, col int) (i
 			return err
 		}
 		var err error
-		nid, err = t.placePivot(sheet, row, col, cfg)
-		return err
+		if nid, err = t.placePivot(sheet, row, col, cfg); err != nil {
+			return err
+		}
+		// Les valeurs saisies à côté sont copiées avec ses colonnes.
+		return t.copyPivotHand(id, nid)
 	})
 	return nid, err
 }

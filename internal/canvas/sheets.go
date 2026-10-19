@@ -272,6 +272,10 @@ func (t *tx) deleteSheet(sheet int64) error {
 			return err
 		}
 		pivots = append(append(pivots, charts...), buttons...)
+		// Valeurs saisies à droite de ses tableaux croisés (pivothand.go).
+		if err := t.forgetSheetPivotsHand(sheet); err != nil {
+			return err
+		}
 		// Mise en forme, largeurs et hauteurs de la feuille.
 		do := []stmt{st(`DELETE FROM _lattis_pivots WHERE sheet = ?`, sheet), st(`DELETE FROM _lattis_charts WHERE sheet = ?`, sheet), st(`DELETE FROM _lattis_buttons WHERE sheet = ?`, sheet)}
 		// Protection de la feuille : supprimée avec elle, rendue par l'annulation.

@@ -64,6 +64,11 @@ type PivotConfig struct {
 	Collapsed   [][]string `json:"collapsed,omitempty"`
 	Expanded    [][]string `json:"expanded,omitempty"`
 
+	// Hand : colonnes saisies à droite du TCD (pivothand.go, décision 0008) :
+	// leurs noms et formules ; les valeurs sont rangées par étiquettes de
+	// lignes dans _lattis_hand_kept (owner « pivot:<id> »).
+	Hand []PivotHandCol `json:"hand,omitempty"`
+
 	// Choice : filtre imposé par l'onglet à choix de la feuille du TCD
 	// (choice.go), posé à la lecture, jamais enregistré (stored le retire).
 	Choice *PivotFilter `json:"choice,omitempty"`

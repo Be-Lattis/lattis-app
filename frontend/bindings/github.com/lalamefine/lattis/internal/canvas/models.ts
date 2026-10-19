@@ -1264,6 +1264,13 @@ export interface PivotConfig {
     "expanded"?: (string[] | null)[] | null;
 
     /**
+     * Hand : colonnes saisies à droite du TCD (pivothand.go, décision 0008) :
+     * leurs noms et formules ; les valeurs sont rangées par étiquettes de
+     * lignes dans _lattis_hand_kept (owner « pivot:<id> »).
+     */
+    "hand"?: PivotHandCol[] | null;
+
+    /**
      * Choice : filtre imposé par l'onglet à choix de la feuille du TCD
      * (choice.go), posé à la lecture, jamais enregistré (stored le retire).
      */
@@ -1283,6 +1290,37 @@ export interface PivotConfig {
 export interface PivotFilter {
     "field": string;
     "values": string[] | null;
+}
+
+/**
+ * PivotHandCol est une colonne saisie d'un tableau croisé.
+ */
+export interface PivotHandCol {
+    /**
+     * H : numéro stable (les valeurs le citent ; un renommage ne le change pas).
+     */
+    "h": number;
+    "name": string;
+
+    /**
+     * Formula : formule de la colonne (anglais canonique, comme une colonne
+     * calculée) ; vide :
+     * valeurs saisies.
+     */
+    "formula"?: string;
+}
+
+/**
+ * PivotHandInfo décrit une colonne saisie affichée (les dernières colonnes
+ * de PivotInfo.Cells).
+ */
+export interface PivotHandInfo {
+    "name": string;
+
+    /**
+     * Formula : formule de la colonne en français, « = » compris (vide : valeurs).
+     */
+    "formula"?: string;
 }
 
 /**
@@ -1313,6 +1351,15 @@ export interface PivotInfo {
      */
     "formats": string[] | null;
     "error": string;
+
+    /**
+     * Hand : colonnes saisies à droite du TCD (pivothand.go), les dernières
+     * de Cells ; HandKept : lignes dont les valeurs saisies sont mises de
+     * côté (étiquettes absentes) ; HandNote : pourquoi elles le sont toutes.
+     */
+    "hand"?: PivotHandInfo[] | null;
+    "handKept"?: number;
+    "handNote"?: string;
 }
 
 /**

@@ -48,6 +48,17 @@ Le ▾ d'une étiquette de lignes (ou le menu ▾ d'une puce des zones Lignes et
 
 Le TCD suit les changements du volet après un court délai, en une seule étape d'annulation. Il suit aussi les données du tableau source. Le volet se rouvre d'un clic dans le TCD.
 
+## Ajouter des colonnes à droite
+
+Tapez un nom dans la cellule juste à droite de l'en-tête du TCD : il gagne une **colonne saisie**, dans son cadre, avec un en-tête vert (le reste du TCD garde son bleu de données calculées). Ses cellules se modifient comme des cellules ordinaires :
+
+- **Une valeur** se tape ligne par ligne (une note, un objectif, un commentaire). Elle suit son étiquette de ligne : quand le TCD change (données du tableau source, tri, filtre, champs), elle reste à côté de la même étiquette. Une étiquette qui disparaît laisse ses valeurs **de côté** ; elles reviennent avec elle. Le volet des champs dit combien de lignes sont mises de côté, et **Oublier les valeurs mises de côté** les efface (Ctrl+Z pour annuler). Retirer tous les champs en Lignes met toutes les valeurs de côté ; elles reviennent quand le champ revient. Changer de champ en Lignes aussi : les valeurs sont rangées par champ et par étiquette.
+- **Une formule** (commençant par =) vaut pour toute la colonne, comme une colonne calculée : `=[Nombre]*2` lit la valeur de la ligne dans la colonne « Nombre » du TCD (ou d'une autre colonne saisie), `=[Nombre]/SOMME(TCD1[Nombre])` compare à la colonne entière (lignes de détail seulement), et une adresse comme `=B3` ou `=A20*[Nombre]` lit une cellule de la feuille. Une formule se calcule aussi sur les lignes de total. Une valeur tapée dans une colonne à formule est refusée ; effacer une de ses cellules efface la formule (les valeurs saisies avant reviennent).
+- Les lignes de **total** et de sous-total ne reçoivent pas de valeur.
+- Renommer : retapez l'en-tête. Retirer la colonne : effacez son en-tête (Suppr sur toute la colonne, ou en-tête effacé), ses valeurs partent avec elle (Ctrl+Z pour annuler).
+
+Les colonnes saisies restent au bord droit du TCD quand il s'élargit (une valeur ou un champ en colonnes de plus), et poussent ce qui est à côté, comme le TCD lui-même. Elles se déplacent avec lui ; une copie du TCD copie aussi leurs valeurs. Une formule ailleurs les lit par leur adresse (`=E5`), et la vue SQL du TCD les contient.
+
 ## Utiliser un tableau croisé ailleurs
 
 Un TCD a un nom (affiché en haut du volet) : il s'interroge dans l'[onglet SQL](sql) comme une table, et sert de source aux [graphiques](graphiques). La fonction [GROUPER.PAR](fonction:GROUPER.PAR) donne un regroupement simple directement dans une formule.

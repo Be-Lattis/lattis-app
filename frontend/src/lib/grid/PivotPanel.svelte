@@ -82,9 +82,12 @@
 		 */
 		tabChoice?: (field: string) => TabChoiceItem;
 		ontabchoice?: (field: string, item: TabChoiceItem) => unknown;
+		/** Colonnes saisies à droite du TCD : valeurs mises de côté (note), et leur oubli. */
+		handNote?: string;
+		onforgethand?: () => unknown;
 	}
 
-	let { config, fields, error = '', filterValues, onchange, ondelete, sources = [], onsource, pickSource = false, onclose, resizable = true, locked = '', customLists, setCustomLists, tabChoice, ontabchoice }: Props = $props();
+	let { config, fields, error = '', filterValues, onchange, ondelete, sources = [], onsource, pickSource = false, onclose, resizable = true, locked = '', customLists, setCustomLists, tabChoice, ontabchoice, handNote = '', onforgethand }: Props = $props();
 
 	let sourceEl = $state<HTMLElement>();
 	$effect(() => {
@@ -631,6 +634,13 @@
 	{:else if !draft.values?.length}
 		<p class="note">Ajoutez un champ en Valeurs pour calculer des totaux (somme, nombre, moyenne…).</p>
 	{/if}
+	{#if handNote}
+		<!-- Colonnes saisies à droite du TCD (décision 0008) : valeurs d'étiquettes absentes. -->
+		<p class="pending" role="note">
+			{handNote}
+			{#if onforgethand}<button class="link" title="Effacer ces valeurs (Ctrl+Z pour annuler)" onclick={() => onforgethand()}>Oublier les valeurs mises de côté</button>{/if}
+		</p>
+	{/if}
 
 	<footer>
 		<label class="opt"><input type="checkbox" checked={!draft.noGrandTotal} onchange={(e) => change({ ...clone(draft), noGrandTotal: !(e.currentTarget as HTMLInputElement).checked || undefined })} /> Totaux généraux</label>
@@ -1112,6 +1122,17 @@
 		background: #fff8e6;
 		border-color: #f0d48a;
 		color: #7a5b00;
+	}
+	.pending .link {
+		display: block;
+		margin-top: 4px;
+		padding: 0;
+		border: none;
+		background: none;
+		color: #217346;
+		text-decoration: underline;
+		cursor: pointer;
+		font: inherit;
 	}
 	.source {
 		display: flex;

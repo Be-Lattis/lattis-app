@@ -86,6 +86,10 @@ func (m *Model) SetCell(ctx context.Context, sheet int64, row, col int, raw stri
 
 // input applique une saisie dans la transaction en cours.
 func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
+	// Colonnes saisies à droite d'un tableau croisé (pivothand.go).
+	if done, err := t.pivotHandInput(sheet, row, col, raw); done || err != nil {
+		return err
+	}
 	{
 		tables, err := t.tables(sheet)
 		if err != nil {

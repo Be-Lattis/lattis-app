@@ -1042,6 +1042,9 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 		case dropped > 1:
 			t.notes = append(t.notes, fmt.Sprintf("%d lignes vides supprimées (Ctrl+Z pour annuler)", dropped))
 		}
+		if err := t.clearPivotHand(sheet, zone); err != nil {
+			return err
+		}
 		if err := t.clearPivots(sheet, zone); err != nil {
 			return err
 		}

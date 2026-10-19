@@ -23,6 +23,11 @@ describe('Suppr sur un tableau croisé', () => {
 	});
 	it('en partie : refusé', () => {
 		expect(pivotsCleared([ok], { r0: 3, c0: 1, r1: 3, c1: 1 }).partial).toBe(ok);
+		// Colonnes saisies à droite : effacées sans toucher au TCD.
+		const hand = { ...ok, hand: [{}] };
+		const hc = hand.col + hand.cells![0].length - 1;
+		expect(pivotsCleared([hand], { r0: 0, c0: hc, r1: 9, c1: hc })).toEqual({ gone: [], partial: undefined });
+		expect(pivotsCleared([hand], { r0: 4, c0: hc - 1, r1: 4, c1: hc }).partial).toBe(hand);
 		// Sans ses filtres de rapport : encore une partie.
 		expect(pivotsCleared([ok], { r0: 3, c0: 1, r1: 5, c1: 2 }).partial).toBe(ok);
 	});

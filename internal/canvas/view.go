@@ -483,7 +483,7 @@ func (m *Model) AllTables(ctx context.Context) ([]TableNames, error) {
 			return err
 		}
 		for _, p := range ps {
-			_, cols, nrows, err := t.pivotQuery(p.Cfg)
+			_, cols, nrows, err := t.pivotQueryHand(p.ID, p.Sheet, p.Cfg)
 			if err != nil {
 				continue
 			}

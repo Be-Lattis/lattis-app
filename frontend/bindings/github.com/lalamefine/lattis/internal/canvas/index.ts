@@ -49,6 +49,8 @@ export type {
     PendingRef,
     PivotConfig,
     PivotFilter,
+    PivotHandCol,
+    PivotHandInfo,
     PivotInfo,
     PivotRowInfo,
     PivotValue,

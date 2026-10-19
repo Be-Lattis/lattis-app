@@ -25,7 +25,7 @@ import (
 // (_lattis_hand_kept) ; elles reviennent si sa clé revient.
 //
 // Le propriétaire (owner) désigne le résultat : « query:<id> ». Les tableaux
-// croisés (« pivot:<id> ») restent à faire : voir la décision.
+// croisés (« pivot:<id> ») ont leur propre code : pivothand.go.
 
 // handRow : clé de jointure « rang de la ligne ».
 const handRow = "#"
@@ -1012,6 +1012,20 @@ func (m *Model) SetHandKey(ctx context.Context, table, column string) (int, erro
 func (m *Model) ForgetHandKept(ctx context.Context, table string) (int, error) {
 	n := 0
 	err := m.Do(ctx, "Oublier les valeurs mises de côté", func(t *tx) error {
+		// Tableau croisé (pivothand.go) : les étiquettes absentes du TCD.
+		if _, err := t.tableByName(table); err != nil {
+			p, ok, perr := t.pivotHandByName(table)
+			if perr != nil {
+				return perr
+			}
+			if ok {
+				if err := t.guardObject(`_lattis_pivots`, p.ID); err != nil {
+					return err
+				}
+				n, err = t.forgetPivotKept(p.ID, p.Cfg)
+				return err
+			}
+		}
 		_, hi, err := t.handTable(table)
 		if err != nil {
 			return err

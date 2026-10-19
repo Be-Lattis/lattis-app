@@ -100,6 +100,12 @@ func (t *tx) pivotQuery(raw PivotConfig) (string, []string, int, error) {
 	if err != nil {
 		return "", nil, 0, err
 	}
+	return pivotValuesQuery(cells)
+}
+
+// pivotValuesQuery écrit les cellules d'un TCD (en-tête, lignes) en requête
+// VALUES : voir pivotQuery.
+func pivotValuesQuery(cells [][]string) (string, []string, int, error) {
 	header := cells[0]
 	// Les valeurs déjà calculées deviennent des lignes VALUES : la vue reflète
 	// exactement le TCD affiché (pourcentages compris).
@@ -189,7 +195,7 @@ func (m *Model) PivotCTE(ctx context.Context, q string) (string, error) {
 			if !used[strings.ToLower(p.Cfg.Name)] {
 				continue
 			}
-			sql, _, _, err := t.pivotQuery(p.Cfg)
+			sql, _, _, err := t.pivotQueryHand(p.ID, p.Sheet, p.Cfg)
 			if err != nil {
 				return err
 			}
