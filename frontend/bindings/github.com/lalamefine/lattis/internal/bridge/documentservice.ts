@@ -802,6 +802,72 @@ export function ForgetQueryCache(): $CancellablePromise<void> {
 }
 
 /**
+ * FormAddColumn ajoute au tableau une colonne pour une valeur posée par le
+ * serveur (« Ajouter une colonne Reçu le ») par les opérations de
+ * structure du classeur partagé, l'envoie au serveur et rend la
+ * description du tableau à jour.
+ */
+export function FormAddColumn(table: string, name: string, typ: string): $CancellablePromise<$models.FormInfo> {
+    return $Call.ByID(2438080673, table, name, typ);
+}
+
+/**
+ * FormDrop supprime un formulaire (les lignes reçues restent).
+ */
+export function FormDrop(server: string, id: string): $CancellablePromise<void> {
+    return $Call.ByID(4141589765, server, id);
+}
+
+/**
+ * FormImage envoie le logo ou la bannière (kind) d'un formulaire, lus
+ * dans le frontend (data : contenu en base64, name : nom du fichier pour
+ * le type) ; rend l'identifiant de l'image.
+ */
+export function FormImage(server: string, id: string, kind: string, name: string, data: string): $CancellablePromise<string> {
+    return $Call.ByID(1472472181, server, id, kind, name, data);
+}
+
+/**
+ * FormInfo lit de quoi faire un formulaire du tableau table du classeur
+ * ouvert.
+ */
+export function FormInfo(table: string): $CancellablePromise<$models.FormInfo> {
+    return $Call.ByID(1757749460, table);
+}
+
+/**
+ * FormPreviewURL rend le lien d'aperçu (10 minutes, réponses non
+ * enregistrées).
+ */
+export function FormPreviewURL(server: string, id: string): $CancellablePromise<string> {
+    return $Call.ByID(1592220517, server, id);
+}
+
+/**
+ * FormSave crée le formulaire (brouillon) ou l'enregistre, puis modifie
+ * son audience.
+ */
+export function FormSave(req: $models.FormSave): $CancellablePromise<$models.FormSaved> {
+    return $Call.ByID(2076402373, req);
+}
+
+/**
+ * FormSaveQR enregistre le QR code d'un formulaire (généré sur le poste)
+ * dans un fichier choisi : ext « svg » (data : le texte SVG) ou « png »
+ * (data : base64). Rend le fichier écrit, vide si l'utilisateur a annulé.
+ */
+export function FormSaveQR(name: string, ext: string, data: string): $CancellablePromise<string> {
+    return $Call.ByID(1329953770, name, ext, data);
+}
+
+/**
+ * FormSetState ouvre, met en pause ou ferme un formulaire.
+ */
+export function FormSetState(server: string, id: string, state: string, names: { [_ in string]?: string } | null): $CancellablePromise<void> {
+    return $Call.ByID(818616493, server, id, state, names);
+}
+
+/**
  * FormatAsTable refait un tableau de la plage qui contient la cellule.
  */
 export function FormatAsTable(sheet: number, row: number, col: number): $CancellablePromise<$models.DocState> {

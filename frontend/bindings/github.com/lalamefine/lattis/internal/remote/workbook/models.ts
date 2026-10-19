@@ -81,6 +81,163 @@ export interface Drift {
 }
 
 /**
+ * Form est un formulaire du classeur (lattis.list_forms). Les chiffres, la
+ * définition, la version et l'audience ne sont donnés qu'aux propriétaires
+ * et concepteurs (Manageable).
+ */
+export interface Form {
+    "id": string;
+    "code": string;
+    "url": string;
+    "table_id": string;
+    "title": string;
+    "state": string;
+    "pause_reason": string;
+    "access": string;
+    "responses": number;
+    "last_response_at": string;
+    "manageable": boolean;
+    "version"?: number;
+    "definition"?: FormDefinition | null;
+    "audience"?: FormAudienceEntry[] | null;
+    "max_per_respondent"?: number | null;
+}
+
+/**
+ * FormAppearance est la personnalisation du §4 ; Logo et Banner sont des
+ * identifiants d'images (POST /api/forms/<id>/images), vides : aucune
+ * (logo : celui du serveur).
+ */
+export interface FormAppearance {
+    "title": string;
+    "intro": string;
+    "logo"?: string;
+    "banner"?: string;
+    "accent": string;
+    "submit_label": string;
+    "thanks": string;
+    "another": boolean;
+    "closed_message": string;
+    "privacy": string;
+    "paged": boolean;
+}
+
+/**
+ * FormAudienceEntry est une personne ou une équipe de l'audience.
+ */
+export interface FormAudienceEntry {
+    "principal": string;
+
+    /**
+     * user, team
+     */
+    "kind": string;
+    "name": string;
+}
+
+/**
+ * FormDefinition est la définition d'un formulaire (definition jsonb, §10.2).
+ */
+export interface FormDefinition {
+    "format": number;
+    "lang": string;
+    "appearance": FormAppearance;
+    "fields": FormField[] | null;
+    "server_values": FormServerValue[] | null;
+}
+
+/**
+ * FormField est un champ (Column), un intertitre (Kind « section » : Title,
+ * Description) ou une position (Kind « position » : Latitude et
+ * Longitude, ou Column texte). Param : nom court du paramètre de
+ * pré-remplissage par l'adresse (§3.3 bis), Locked : « verrouillé par le
+ * lien ». Hidden : valeur par défaut non modifiable, champ invisible.
+ */
+export interface FormField {
+    "kind"?: string;
+    "title"?: string;
+    "description"?: string;
+    "column"?: string;
+    "latitude"?: string;
+    "longitude"?: string;
+    "label"?: string;
+    "help"?: string;
+    "placeholder"?: string;
+    "required"?: boolean;
+    "widget"?: string;
+    "default"?: FormValue | null;
+    "min"?: number | null;
+    "max"?: number | null;
+    "step"?: number | null;
+    "max_length"?: number | null;
+    "format"?: string;
+    "unit"?: string;
+    "list"?: FormList | null;
+    "param"?: string;
+    "locked"?: boolean;
+    "hidden"?: boolean;
+}
+
+/**
+ * FormList est la liste d'un champ : valeurs fixes (copiées ; CopiedAt et
+ * Source si elles viennent d'une plage locale, pour « Mettre à jour »), ou
+ * colonne d'un tableau publié du même classeur, relue par le serveur.
+ */
+export interface FormList {
+    "values"?: string[] | null;
+    "table_id"?: string;
+    "column"?: string;
+    "copied_at"?: string;
+    "source"?: string;
+}
+
+/**
+ * FormServerValue est une valeur posée par le serveur sur une colonne.
+ */
+export interface FormServerValue {
+    "column": string;
+    "value": FormValue;
+}
+
+/**
+ * FormSpec décrit un formulaire à créer (p de lattis.create_form) :
+ * définition, accès, audience (personnes et équipes par identifiant), et
+ * options (lot 3 : dates, plafond, réponses par personne, modification).
+ */
+export interface FormSpec {
+    "definition": FormDefinition;
+    "access": string;
+    "audience": string[] | null;
+    "opens_at"?: string | null;
+    "closes_at"?: string | null;
+
+    /**
+     * MaxResponses : plafond (nil : sans plafond).
+     */
+    "max_responses"?: number | null;
+
+    /**
+     * MaxPerRespondent : réponses par personne (nil : sans limite, 1 : une
+     * seule, n), §15 réponse 5.
+     */
+    "max_per_respondent"?: number | null;
+
+    /**
+     * Edit : none, until_close ou une durée (« 7 days »).
+     */
+    "edit"?: string;
+}
+
+/**
+ * FormValue est une valeur par défaut ou posée par le serveur : un jeton
+ * (Token*) ou une valeur fixe.
+ */
+export interface FormValue {
+    "token"?: string;
+    "fixed"?: any;
+}
+
+/**
  * Grant est le niveau propre d'un rôle sur un nœud ; les filtres ne se
  * posent que sur un tableau.
  */

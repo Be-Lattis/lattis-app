@@ -494,6 +494,131 @@ export interface FileQuestion {
 }
 
 /**
+ * FormChoice est la colonne de catégorie de l'onglet à choix (§3.3).
+ */
+export interface FormChoice {
+    "column": string;
+    "value": string;
+}
+
+/**
+ * FormColumn est une colonne publiée du tableau.
+ */
+export interface FormColumn {
+    "id": number;
+    "name": string;
+    "columnId": string;
+
+    /**
+     * Type : type du serveur (text, integer, decimal, date, datetime, boolean).
+     */
+    "type": string;
+
+    /**
+     * Key : clé du tableau ; Auto : clé d'entiers numérotée (posée par le
+     * serveur, absente du formulaire).
+     */
+    "key": boolean;
+    "auto": boolean;
+
+    /**
+     * AvgLength : longueur moyenne des valeurs (texte long proposé au-delà
+     * de 80) ; Format : format de nombre de la colonne (unité).
+     */
+    "avgLength": number;
+    "format": string;
+    "list": FormList | null;
+}
+
+/**
+ * FormInfo dit si le tableau peut avoir un formulaire et donne de quoi le
+ * concevoir.
+ */
+export interface FormInfo {
+    /**
+     * Reason : FormLocal… ("" : possible) ; Message : le texte du §2.2.
+     */
+    "reason": string;
+    "message": string;
+    "table": string;
+    "server": string;
+    "serverName": string;
+    "workbookId": string;
+    "tableId": string;
+
+    /**
+     * Public : le serveur permet le lien public (forms_public).
+     */
+    "public": boolean;
+    "columns": FormColumn[] | null;
+    "choice": FormChoice | null;
+
+    /**
+     * Restricted : colonnes interdites d'ajout par une restriction de tous
+     * les rôles (le formulaire en est bloqué aussi, §8) ; leurs libellés.
+     */
+    "restricted": string[] | null;
+
+    /**
+     * Forms : formulaires du tableau (gérés, ou ouverts au membre).
+     */
+    "forms": workbook$0.Form[] | null;
+    "teams": DataTeam[] | null;
+}
+
+/**
+ * FormList est la liste de validation d'une colonne : valeurs fixes
+ * (Fixed), ou tirées d'une plage (Source) ; une source qui est la colonne
+ * d'un tableau publié du classeur donne TableID et ColumnID (le serveur la
+ * relit), sinon la liste est copiée.
+ */
+export interface FormList {
+    "values": string[] | null;
+    "fixed": boolean;
+    "source": string;
+    "tableId": string;
+    "columnId": string;
+    "error": string;
+}
+
+/**
+ * FormSave est l'enregistrement d'un formulaire : création (ID vide) ou
+ * modification de la version Version ; Add et Remove modifient l'audience.
+ */
+export interface FormSave {
+    "server": string;
+    "workbookId": string;
+    "tableId": string;
+    "id": string;
+    "version": number;
+    "spec": workbook$0.FormSpec;
+    "add": DataAudienceEntry[] | null;
+    "remove": string[] | null;
+
+    /**
+     * Names : noms des colonnes par column_id, pour dire les refus du
+     * serveur avec les noms de l'utilisateur.
+     */
+    "names": { [_ in string]?: string } | null;
+}
+
+/**
+ * FormSaved est le formulaire enregistré.
+ */
+export interface FormSaved {
+    "id": string;
+    "code": string;
+    "url": string;
+    "version": number;
+
+    /**
+     * Refused : entrées d'audience refusées (adresse sans compte) ; le reste
+     * est enregistré.
+     */
+    "refused": string[] | null;
+}
+
+/**
  * FormulaHelp sert l'aide à la saisie des formules : fonctions (en
  * français) et tableaux du classeur avec leurs colonnes.
  */
