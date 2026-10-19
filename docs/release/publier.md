@@ -67,7 +67,7 @@ Produit par `scripts/release-manifest.sh` (utilisable en local : `scripts/releas
 
 ## Notes de version
 
-`scripts/release-notes.sh v1.2.0` les produit (aussi en local, pour relire avant de taguer) : la liste des commits depuis le tag précédent, sans les fusions ni les régénérations de liaisons, puis le tableau des fichiers à télécharger. La première version dit simplement « Première version publique de Lattis ».
+`scripts/release-notes.sh v1.2.0` les produit (aussi en local, pour relire avant de taguer) : la section `## 1.2.0 (JJ/MM/AAAA)` de `CHANGELOG.md` telle qu'elle est au tag, puis le tableau des fichiers à télécharger. Avant de taguer, renommer « Non publié » en `## 1.2.0 (JJ/MM/AAAA)` dans `CHANGELOG.md` et rouvrir un « Non publié » vide (la façon de tenir le journal est rappelée en tête du fichier). Sans section pour cette version, les notes reprennent la liste des commits depuis le tag précédent, sans les fusions ni les régénérations de liaisons ; la première version dit alors simplement « Première version publique de Lattis ».
 
 ## Brouillon ou publication directe
 
