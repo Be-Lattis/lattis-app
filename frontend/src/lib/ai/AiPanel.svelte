@@ -76,7 +76,7 @@
 	});
 	const canSend = $derived(!!st?.enabled && hasDoc && ready);
 	const lastRun = $derived(chat.items.findLast((x) => x.role === 'assistant')?.run);
-	const suggestions = $derived(suggestionsFor(tables, context));
+	const suggestions = $derived(suggestionsFor(tables, context, st?.dataSharing));
 	const ctxText = $derived(contextLabel(context));
 	const cost = $derived(costLabel(st?.usage?.cost));
 	const shared = $derived(sharingLabel(st?.dataSharing));

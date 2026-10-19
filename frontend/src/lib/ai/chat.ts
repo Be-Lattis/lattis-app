@@ -326,14 +326,19 @@ const DEFAULT_SUGGESTIONS = [
 /**
  * Suggestions tirées du classeur : le plus grand tableau à analyser, les
  * types d'un autre à vérifier, la sélection en cours ; repli sur des
- * phrases générales quand le classeur n'a pas de tableau.
+ * phrases générales quand le classeur n'a pas de tableau. Sans partage des
+ * données (sharing « schema-only », par défaut), rien qui suppose de voir
+ * les valeurs : des tableaux croisés à proposer plutôt que la sélection à
+ * expliquer.
  */
-export function suggestionsFor(tables: readonly TableInfo[], context?: ChatContext | null): string[] {
+export function suggestionsFor(tables: readonly TableInfo[], context?: ChatContext | null, sharing = 'schema-only'): string[] {
 	const list = tables.filter((t) => t.kind !== 'pivot').toSorted((a, b) => b.rows - a.rows);
 	if (!list.length) return DEFAULT_SUGGESTIONS;
 	const fmt = (n: number) => `${n.toLocaleString('fr-FR')} ligne${n > 1 ? 's' : ''}`;
+	const blind = sharing !== 'sample' && sharing !== 'full';
 	const out: string[] = [];
-	if (context?.table && context.selection) out.push(`Explique la sélection ${contextLabel(context).replace(/^.*, sélection /, '')} de ${context.table}`);
+	if (context?.table && context.selection && !blind) out.push(`Explique la sélection ${contextLabel(context).replace(/^.*, sélection /, '')} de ${context.table}`);
+	else if (context?.table && blind) out.push(`Propose des tableaux croisés pour ${context.table}`);
 	out.push(REPAIR_SUGGESTION);
 	const [big, second] = list;
 	out.push(`Analyser ${big.name} (${fmt(big.rows)})`);
