@@ -93,7 +93,7 @@
 	import { drawIcon } from '#lib/icons/canvas.js';
 	import { apply as applySuggestion, argKindAt, needsNextArg, signature, toNextArg, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
 	import { checkFormula, closeParens, editorWidth, formulaRefs, highlightParts, isFormula, movedRef, pointedRef, rangeRef, refRect, serverErrorPos, type FormulaError, type Rect, type RefTable } from './formulaEdit';
-	import { formulaTyping, fxLeave, holdFormula, insertRefAt, qualifyRef, updateHold, type FormulaHold } from './crossref';
+	import { editorLeave, formulaTyping, fxLeave, holdFormula, insertRefAt, qualifyRef, updateHold, type FormulaHold } from './crossref';
 	import { parseGoto, type GotoTable } from './goto';
 	import { cellNameProblem, columnNameProblem, refusedName, tableNameProblem, type NameProblem } from '#lib/ui/names.js';
 	import { nameAlertOpen, refuseName } from '#lib/ui/nameAlert.js';
@@ -8445,6 +8445,20 @@
 		return true;
 	}
 
+	/**
+	 * La saisie de la cellule passe dans la barre de formule (clic dans la
+	 * barre, comme Excel) : même texte, rien de validé ; le curseur est celui
+	 * que le clic place dans la barre.
+	 */
+	function handToFx() {
+		fxText = editValueText;
+		editing = false;
+		editErr = null;
+		lastRef = null;
+		fxEditing = true;
+		schedule();
+	}
+
 	// Sélection au début de la saisie (startEdit ne garde que la cellule active).
 	let editRange: { sel: Range; anchor: { row: number; col: number } } | null = null;
 
@@ -10319,19 +10333,34 @@
 						oncut={(e) => editRO && e.preventDefault()}
 						ondrop={(e) => editRO && e.preventDefault()}
 						onkeydown={onEditorKey}
-						onblur={() => {
+						onblur={(e) => {
 							completion = sig = null;
-							// Lecture seule : le focus parti ailleurs referme l'éditeur, sans rien écrire.
-							if (editRO) {
+							// Départ du focus (crossref.ts, editorLeave) : lecture seule refermée,
+							// boîte « nom invalide » ou onglet de feuille pressé (saisie gardée),
+							// barre de formule cliquée (la saisie y passe), retour de pointage
+							// (le focus revient), sinon validée.
+							const action = editorLeave({
+								readOnly: !!editRO,
+								alertOpen: nameAlertOpen(),
+								toFx: !!fxInput && e.relatedTarget === fxInput,
+								tabPress,
+								returning: performance.now() < keepEditorUntil,
+								text: editValueText
+							});
+							if (action === 'close') {
 								closeReadOnly(false);
 								return;
 							}
-							// Boîte « nom invalide » ouverte : la saisie reprend à sa fermeture.
-							if (nameAlertOpen()) return;
-							// Clic sur un onglet de feuille : la formule est gardée pour pointer sur l'autre feuille.
-							if (tabPress && formulaTyping(editValueText)) return;
-							// Retour de pointage sur une autre feuille : la saisie continue.
-							if (performance.now() < keepEditorUntil && formulaTyping(editValueText)) {
+							if (action === 'keep') return;
+							if (action === 'fx') {
+								// Clic dans la barre de formule (après avoir pointé une référence,
+								// par exemple) : la saisie continue dans la barre, au point du clic,
+								// sans être validée ; avant, elle était validée et le focus rendu à
+								// la grille, et il fallait cliquer deux fois.
+								handToFx();
+								return;
+							}
+							if (action === 'refocus') {
 								const el = input;
 								const at = [el?.selectionStart ?? 0, el?.selectionEnd ?? 0];
 								requestAnimationFrame(() => {

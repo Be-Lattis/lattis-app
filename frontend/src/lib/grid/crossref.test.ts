@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formulaTyping, fxLeave, holdFormula, insertRefAt, qualifyRef, sheetPrefix, updateHold } from './crossref';
+import { editorLeave, formulaTyping, fxLeave, holdFormula, insertRefAt, qualifyRef, sheetPrefix, updateHold } from './crossref';
 import { checkFormula, formulaRefs, refRect, type RefTable } from './formulaEdit';
 
 const at = { sheet: 2, row: 4, col: 1, where: 'cell' as const };
@@ -130,6 +130,38 @@ describe('fxLeave (barre de formule quittée)', () => {
 	it('onglet de feuille : une formule est gardée pour pointer, un texte est validé', () => {
 		expect(fxLeave({ ...base, pointing: true, text: '=SOMME(' })).toBe('keep');
 		expect(fxLeave({ ...base, pointing: true })).toBe('commit');
+	});
+});
+
+describe('editorLeave (éditeur de cellule quitté)', () => {
+	const base = { readOnly: false, alertOpen: false, toFx: false, tabPress: false, returning: false, text: '=Suividesnids[NID suivi][1]+Cell[B2]' };
+
+	it('clic dans la barre de formule après avoir pointé : la saisie y passe, sans validation, en un seul clic (demande de Louis)', () => {
+		expect(editorLeave({ ...base, toFx: true })).toBe('fx');
+		expect(editorLeave({ ...base, toFx: true, text: 'Bonjour' })).toBe('fx');
+		// Même pendant le retour d'un pointage sur une autre feuille.
+		expect(editorLeave({ ...base, toFx: true, returning: true })).toBe('fx');
+	});
+
+	it('clic ailleurs (grille, ruban, zone de nom) : la saisie est validée', () => {
+		expect(editorLeave(base)).toBe('commit');
+		expect(editorLeave({ ...base, text: 'Bonjour' })).toBe('commit');
+	});
+
+	it('lecture seule : refermé, même vers la barre de formule', () => {
+		expect(editorLeave({ ...base, readOnly: true })).toBe('close');
+		expect(editorLeave({ ...base, readOnly: true, toFx: true })).toBe('close');
+	});
+
+	it('boîte « nom invalide » : la saisie reste', () => {
+		expect(editorLeave({ ...base, alertOpen: true, toFx: true })).toBe('keep');
+	});
+
+	it('onglet de feuille pendant une formule : gardée ; retour de pointage : le focus revient', () => {
+		expect(editorLeave({ ...base, tabPress: true })).toBe('keep');
+		expect(editorLeave({ ...base, tabPress: true, text: 'Bonjour' })).toBe('commit');
+		expect(editorLeave({ ...base, returning: true, text: '=SOMME(' })).toBe('refocus');
+		expect(editorLeave({ ...base, returning: true, text: 'Bonjour' })).toBe('commit');
 	});
 });
 

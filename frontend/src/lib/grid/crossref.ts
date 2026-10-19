@@ -94,3 +94,22 @@ export function fxLeave(o: { editing: boolean; stillFocused: boolean; alertOpen:
 	if (o.pointing && formulaTyping(o.text)) return 'keep';
 	return 'commit';
 }
+
+/**
+ * Départ du focus de l'éditeur de cellule, comme Excel : un clic dans la
+ * barre de formule y fait passer la saisie (texte et curseur au clic, rien
+ * de validé, demande de Louis : un seul clic après avoir pointé une
+ * référence) ; ailleurs, la saisie est validée, sauf une boîte « nom
+ * invalide » ouverte (elle reprend à sa fermeture), un onglet de feuille
+ * pressé pendant une formule (pointage sur l'autre feuille) ou le retour
+ * d'un tel pointage (le focus revient à l'éditeur). En lecture seule,
+ * l'éditeur se referme.
+ */
+export function editorLeave(o: { readOnly: boolean; alertOpen: boolean; toFx: boolean; tabPress: boolean; returning: boolean; text: string }): 'close' | 'keep' | 'fx' | 'refocus' | 'commit' {
+	if (o.readOnly) return 'close';
+	if (o.alertOpen) return 'keep';
+	if (o.toFx) return 'fx';
+	if (o.tabPress && formulaTyping(o.text)) return 'keep';
+	if (o.returning && formulaTyping(o.text)) return 'refocus';
+	return 'commit';
+}

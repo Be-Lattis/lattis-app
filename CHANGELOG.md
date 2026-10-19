@@ -46,6 +46,7 @@ Aucune version n'est encore publiée. Voici, regroupé par jour, ce que contient
 
 **Corrections**
 
+- Saisie dans une cellule : un clic dans la barre de formule (après avoir pointé une référence, par exemple) y fait continuer la saisie au point cliqué, sans la valider, au lieu de valider la cellule et de demander un second clic.
 - Supprimer ou effacer la dernière ligne d'un tableau retire aussi les lignes vides restées au-dessus d'elle (« N lignes vides retirées en bas du tableau », Ctrl+Z les rend), y compris sous un onglet à choix, où le bas est celui des lignes de la valeur choisie ; une ligne insérée vide exprès reste.
 - Glisser la bordure de la sélection dans un tableau croisé le déplace en entier (Ctrl : le copie) au lieu d'afficher « Un tableau croisé ne se modifie pas cellule par cellule » ; couper-coller un TCD entier sur un tableau l'écarte au lieu d'être refusé.
 - Tableau posé depuis l'onglet SQL : l'actualisation (F5) garde ses en-têtes et ne fait plus apparaître `_pos` ni les noms internes (c_1…) ; un résultat copié n'est plus pris pour celui d'une ancienne requête dont le tableau a été supprimé.
