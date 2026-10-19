@@ -271,7 +271,17 @@ func (t *tx) ensureKey(table, column string) error {
 }
 
 // schema décrit tous les tableaux du classeur pour le moteur de formules.
+// Une lecture le garde pour la génération du Store (Recalc l'oublie avec
+// l'instant et la graine) : la mise en page d'une feuille calcule chaque
+// formule libre, et relire tous les tableaux pour chacune rendait le
+// passage à une autre feuille très lent (environ 1 ms par formule avec une
+// dizaine de tableaux, plus avec davantage). Le moteur de formules ne le
+// modifie pas.
 func (t *tx) schema() (*formula.Schema, error) {
+	return cached(t, "schema", t.schemaRaw)
+}
+
+func (t *tx) schemaRaw() (*formula.Schema, error) {
 	rs, err := t.query(`SELECT id FROM _lattis_tables ORDER BY id`)
 	if err != nil {
 		return nil, err
