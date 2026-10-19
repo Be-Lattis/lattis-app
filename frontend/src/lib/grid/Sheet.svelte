@@ -36,7 +36,7 @@
 	import { explainError } from './errors';
 	import { freeDisplay } from './freecell';
 	import { bandAt, bandLabel, bandRefusal, hiddenBand } from './hidden';
-	import { groupSpans, headerLabel, spanAt, splitGroup } from './twolevel';
+	import { bandMerges, groupSpans, headerLabel, spanAt, splitGroup, tableTop } from './twolevel';
 	import { grown as growFrame, type Grown } from './grown';
 	import { pivotLayer, pivotValueText } from './pivotformat';
 	import { canFoldAll, foldAll, foldTarget, pivotBoxHit, pivotBoxLeft, pivotLabelOffset, PIVOT_BOX, setFolded, type PivotRowInfo } from './pivottree';
@@ -966,6 +966,7 @@
 		sheetRowStyles = new Map((d.rowStyles ?? []).map((s) => [s.index, parseStyle(s.style) ?? {}]));
 		sheetColStyles = new Map((d.colStyles ?? []).map((s) => [s.index, parseStyle(s.style) ?? {}]));
 		merges = mergeList(freeStyles);
+		boxes = [...merges, ...bandMerges(d.tables)];
 		hiddenRows = hiddenLines(sheetRowStyles);
 		hiddenCols = hiddenLines(sheetColStyles);
 		sheetRowRules = new Map((d.rowRules ?? []).map((s) => [s.index, parseRules(s.rules) ?? []]));
@@ -1057,6 +1058,8 @@
 	// Format de cellule : fusions, lignes et colonnes masquées (voir sheetfmt.ts)
 	// et hauteurs automatiques (renvoyer à la ligne, grande police).
 	let merges: MergeRange[] = [];
+	// Fusions et groupes de la bande des tableaux (boxOf).
+	let boxes: MergeRange[] = [];
 	let hiddenRows = new Set<number>();
 	let hiddenCols = new Set<number>();
 	// Hauteurs automatiques (voir rowfit.ts) : cellules libres à chaque mise en
@@ -1133,10 +1136,12 @@
 
 	/** Fusion qui couvre une cellule (cellules libres seulement). */
 	const mergeOf = (r: number, c: number) => (merges.length ? mergeAt(merges, r, c) : undefined);
+	/** Fusion, ou groupe de la bande d'un tableau sur plusieurs colonnes : une seule cellule pour le curseur, les flèches et la sélection. */
+	const boxOf = (r: number, c: number) => (boxes.length ? mergeAt(boxes, r, c) : undefined);
 
 	/** Cellule (r, c), ou le haut à gauche de sa fusion. */
 	function snapMerge(r: number, c: number) {
-		const g = mergeOf(r, c);
+		const g = boxOf(r, c);
 		return g ? { row: g.row, col: g.col } : { row: r, col: c };
 	}
 
@@ -1354,8 +1359,10 @@
 	function tableGeo(e: Entry): Geo {
 		const g = grown(e);
 		const x = cax().offset(g.firstCol);
-		const y = rowTop(e.t.row);
-		return { x, y, w: cax().offset(g.lastCol + 1) - x, h: rspan(e.t.row, g.last) };
+		// La bande des groupes fait partie du cadre.
+		const top = topRow(e.t);
+		const y = rowTop(top);
+		return { x, y, w: cax().offset(g.lastCol + 1) - x, h: rspan(top, g.last) };
 	}
 
 	// ox : bord gauche du cadre animé par rapport à sa place finale (cadre qui
@@ -1418,7 +1425,7 @@
 		ctx.translate(a.dx, a.dy);
 		ctx.globalAlpha *= a.alpha;
 		ctx.beginPath();
-		ctx.rect(cx(grown(e).firstCol) + a.ox - 1, ry(e.t.row) - 1, a.w + 2, a.h + 2);
+		ctx.rect(cx(grown(e).firstCol) + a.ox - 1, ry(topRow(e.t)) - 1, a.w + 2, a.h + 2);
 		ctx.clip();
 		return true;
 	}
@@ -1484,7 +1491,7 @@
 	}
 
 	function activeRect() {
-		const g = mergeOf(active.row, active.col);
+		const g = boxOf(active.row, active.col);
 		return g ? mergeRect(g) : { r0: active.row, r1: active.row, c0: active.col, c1: active.col };
 	}
 
@@ -1499,8 +1506,9 @@
 	const tableAt = (r: number, c: number) => entries.find((e) => inTable(e, r, c));
 	/** Tableau aux en-têtes sur deux lignes dont la bande des groupes (ligne row - 1) contient la cellule. */
 	const groupBandAt = (r: number, c: number) => entries.find((e) => e.t.twoLevel && r === e.t.row - 1 && c >= e.t.col && c <= e.lastCol);
-	/** Première ligne d'un tableau : sa bande des groupes, sinon son en-tête. */
-	const topRow = (t: SheetTable) => (t.twoLevel ? t.row - 1 : t.row);
+	const topRow = tableTop;
+	/** Tableau de la cellule, sa bande des groupes comprise (zone de nom, gouttière, ruban). */
+	const ownerAt = (r: number, c: number) => tableAt(r, c) ?? groupBandAt(r, c);
 	/** Ligne de données d'un autre membre, en lecture seule pour un participant (§8.1). */
 	function lockedRowAt(r: number, c: number): boolean {
 		const e = tableAt(r, c);
@@ -2515,7 +2523,7 @@
 			ctx.beginPath();
 			for (const e of visible) {
 				const g = grown(e);
-				ctx.rect(cx(g.firstCol), ry(e.t.row), spanW(g.firstCol, g.lastCol), rspan(e.t.row, g.last));
+				ctx.rect(cx(g.firstCol), ry(topRow(e.t)), spanW(g.firstCol, g.lastCol), rspan(topRow(e.t), g.last));
 			}
 			ctx.clip();
 		} else if (pivots.length) {
@@ -2564,14 +2572,15 @@
 			const fh = a ? a.h : to.h;
 			if (motion()) geoDrawn.set(e.t.id, { x: to.x + (a?.dx ?? 0) + (a?.ox ?? 0), y: to.y + (a?.dy ?? 0), w: fw, h: fh });
 			const x = Math.round(cx(g.firstCol) + (a?.dx ?? 0) + (a?.ox ?? 0)) - 0.5;
-			const y = Math.round(ry(e.t.row) + (a?.dy ?? 0)) - 0.5;
+			const y = Math.round(ry(topRow(e.t)) + (a?.dy ?? 0)) - 0.5;
+			const under = Math.round(ry(e.t.row + 1) + (a?.dy ?? 0)) - 0.5;
 			ctx.save();
 			if (a) ctx.globalAlpha *= a.alpha;
 			ctx.strokeStyle = g.last !== e.last || g.lastCol !== e.lastCol || g.firstCol !== e.t.col ? C.active : e.t.query ? C.linkBorder : C.border;
 			ctx.strokeRect(x, y, fw, fh);
 			ctx.beginPath();
-			ctx.moveTo(x, y + rh(e.t.row));
-			ctx.lineTo(x + fw, y + rh(e.t.row));
+			ctx.moveTo(x, under);
+			ctx.lineTo(x + fw, under);
 			ctx.stroke();
 			// Classeur collaboratif : lecture filtrée par les droits (§8.1).
 			if (e.t.filtered) {
@@ -2643,7 +2652,7 @@
 		// Tableau actif qui ne touche pas la gouttière : ses numéros de ligne (ou
 		// sa clé) en petit, juste à gauche de sa première colonne, là où la
 		// cellule voisine est vide.
-		const act = a1 ? undefined : (tableAt(active.row, active.col) ?? entries.find((e) => grown(e).last !== e.last));
+		const act = a1 ? undefined : (ownerAt(active.row, active.col) ?? entries.find((e) => grown(e).last !== e.last));
 		if (act && besideGutter({ row: act.t.row, last: act.last, col: act.t.col, lastCol: act.lastCol }, c0, c1)) {
 			const x = cx(act.t.col);
 			const gw = cax().size(act.t.col - 1);
@@ -2863,6 +2872,8 @@
 		for (const e of a1 ? [] : visible) {
 			// En-tête encore visible (ou dans les lignes figées) : pas de rappel.
 			if (e.t.row >= r0 || e.last < r0 || e.t.row < fRows()) continue;
+			// Groupes d'en-têtes : en petit au-dessus des sous-en-têtes, sur toutes leurs colonnes.
+			const gh = e.t.twoLevel ? 10 : 0;
 			for (let c = Math.max(c0, e.t.col); c <= Math.min(c1, e.lastCol); c++) {
 				const x = cx(c);
 				ctx.save();
@@ -2872,16 +2883,42 @@
 				ctx.fillStyle = c >= k0 && c <= k1 ? C.activeStrip : e.t.query ? C.linkHead : C.head;
 				ctx.fillRect(x, 0, cax().size(c), TOP_H);
 				// Boutons ▾, type et entonnoir, cliquables comme dans l'en-tête.
-				const iw = headIcons(e, c - e.t.col, x, 0, cax().size(c), TOP_H);
+				const iw = headIcons(e, c - e.t.col, x, gh, cax().size(c), TOP_H - gh);
 				ctx.beginPath();
 				ctx.rect(Math.max(x, MARGIN), 0, Math.max(0, cax().size(c) - iw - 10), TOP_H);
 				ctx.clip();
-				ctx.font = FONT_BOLD;
+				ctx.font = gh ? '600 11px "Segoe UI", system-ui, -apple-system, sans-serif' : FONT_BOLD;
 				ctx.fillStyle = e.t.query ? C.linkHeadText : C.headText;
 				ctx.textAlign = 'left';
-				ctx.fillText(e.t.columns[c - e.t.col].name, x + 6, TOP_H / 2);
+				ctx.fillText(headerLabel(e.t.columns[c - e.t.col].name, e.t.twoLevel), x + 6, (gh + TOP_H) / 2);
 				ctx.restore();
 			}
+			if (!gh) continue;
+			ctx.save();
+			ctx.beginPath();
+			ctx.rect(MARGIN, 0, w - MARGIN, gh);
+			ctx.clip();
+			for (const s of groupSpans(e.t.columns.map((k) => k.name))) {
+				const a = e.t.col + s.i0;
+				const b = e.t.col + s.i1;
+				if (b < c0 || a > c1) continue;
+				const x = cx(a);
+				const sw = cax().offset(b + 1) - cax().offset(a);
+				ctx.strokeStyle = e.t.query ? C.linkBorder : C.border;
+				ctx.lineWidth = 1;
+				ctx.beginPath();
+				ctx.moveTo(Math.round(x) - 0.5, 0);
+				ctx.lineTo(Math.round(x) - 0.5, gh);
+				ctx.moveTo(x, gh - 0.5);
+				ctx.lineTo(x + sw, gh - 0.5);
+				ctx.stroke();
+				if (!s.group) continue;
+				ctx.font = '600 ' + FONT_TINY;
+				ctx.fillStyle = e.t.query ? C.linkHeadText : C.headText;
+				ctx.textAlign = 'center';
+				ctx.fillText(ellipsize(s.group, sw - 8), Math.max(MARGIN, x) / 2 + Math.min(x + sw, w) / 2, gh / 2 + 1);
+			}
+			ctx.restore();
 		}
 		// Petits traits aux séparations de colonnes : on voit où redimensionner.
 		ctx.beginPath();
@@ -2919,7 +2956,7 @@
 		ctx.textAlign = 'right';
 		// Numéros : ceux du tableau de la sélection (ou de celui qu'elle
 		// prolonge) ; ceux des autres tableaux, plus discrets.
-		const cur = tableAt(active.row, active.col) ?? entries.find((e) => grown(e).last !== e.last);
+		const cur = ownerAt(active.row, active.col) ?? entries.find((e) => grown(e).last !== e.last);
 		const curLast = cur ? grown(cur).last : -1;
 		const blocks = visible.map((e) => ({ row: e.t.row, last: e.last, col: e.t.col, lastCol: e.lastCol, e }));
 		for (let r = r0; r <= r1; r++) {
@@ -3025,7 +3062,9 @@
 	 * centrée et en gras comme l'en-tête (vide pour une colonne sans groupe).
 	 */
 	function drawGroupBands(L: Layer) {
-		const { r0, r1, c0, c1, cx, ry, spanW } = L;
+		const { r0, r1, c0, c1, cx, ry, spanW, s0, s1, k0, k1 } = L;
+		const many = !singleSelection();
+		const ar = activeRect();
 		for (const e of L.visible) {
 			const r = e.t.row - 1;
 			if (!e.t.twoLevel || r < r0 || r > r1 || !rh(r)) continue;
@@ -3039,6 +3078,11 @@
 				if (sw <= 0) continue;
 				ctx.fillStyle = e.t.query ? C.linkHead : C.head;
 				ctx.fillRect(x, y, sw, rh(r));
+				// Dans la sélection (sauf la cellule active) : surlignée comme l'en-tête.
+				if (many && r >= s0 && r <= s1 && b >= k0 && a <= k1 && !(ar.r0 === r && ar.c0 === a)) {
+					ctx.fillStyle = C.select;
+					ctx.fillRect(cx(Math.max(a, k0)), y, spanW(Math.max(a, k0), Math.min(b, k1)), rh(r));
+				}
 				ctx.strokeStyle = e.t.query ? C.linkBorder : C.border;
 				ctx.lineWidth = 1;
 				ctx.strokeRect(Math.round(x) - 0.5, Math.round(y) - 0.5, sw, rh(r));
@@ -4051,10 +4095,15 @@
 	function cellName(r: number, c: number): string {
 		const named = names.get(key(r, c));
 		if (named) return named;
-		const e = tableAt(r, c);
+		const e = ownerAt(r, c);
 		// Cellule libre : lettre et numéro seulement (A1) ; Cell_A1 dans une formule.
 		if (!e) return addrA1(r, c);
 		const k = e.t.columns[c - e.t.col];
+		if (r < e.t.row) {
+			const s = spanAt(e.t.columns.map((x) => x.name), c - e.t.col);
+			const n = s ? s.i1 - s.i0 + 1 : 1;
+			return s?.group ? `${e.t.name} · groupe d'en-têtes « ${s.group} » (${n} colonne${n > 1 ? 's' : ''})` : `${e.t.name} · groupe d'en-têtes (vide)`;
+		}
 		const col = `${e.t.name}[${k.name}]`;
 		if (r === e.t.row) {
 			const errs = k.errors ? ` · ${k.errors} erreur${k.errors > 1 ? 's' : ''}` : '';
@@ -4077,14 +4126,14 @@
 			}
 		}
 		const stats = entries[0]?.cache.stats ?? { roundTrip: [], server: [] };
-		const here = tableAt(active.row, active.col);
+		const here = ownerAt(active.row, active.col);
 		onstatus?.({
 			note: !!noteOf(active.row, active.col),
 			filters: !!here?.t.columns.some((c) => c.filter),
 			errorsOnly: !!here?.t.columns[active.col - here.t.col]?.filter?.errors,
 			readOnly: here?.t.readOnly,
 			// Une cellule libre : son adresse est déjà dans la zone de nom.
-			cell: tableAt(active.row, active.col) || names.has(key(active.row, active.col)) ? cellName(active.row, active.col) : '',
+			cell: here || names.has(key(active.row, active.col)) ? cellName(active.row, active.col) : '',
 			message,
 			fetch: `bloc p50 ${ms(percentile(stats.roundTrip, 0.5))}`,
 			draw: `rendu ${ms(percentile(drawTimes, 0.5))}`,
@@ -4453,7 +4502,7 @@
 
 	/** Ctrl+Maj+L : efface les filtres du tableau actif, sinon ouvre celui de la colonne. */
 	function toggleFilters() {
-		const e = tableAt(active.row, active.col);
+		const e = ownerAt(active.row, active.col);
 		if (e && source.clearFilters && e.t.columns.some((c) => c.filter)) {
 			const clear = source.clearFilters;
 			menuAction(() => clear(e.t));
@@ -4568,7 +4617,7 @@
 		selectionLocs,
 		selection: () => selection(),
 		activeTable: () => {
-			const e = tableAt(active.row, active.col);
+			const e = ownerAt(active.row, active.col);
 			return e ? sheetRules().tables.find((t) => t.id === e.t.id) : undefined;
 		},
 		async apply(ch: RuleChanges) {
@@ -5008,7 +5057,7 @@
 	 * ce tableau-là, comme s'il était sélectionné.
 	 */
 	function targetTable(): Entry | undefined {
-		const here = tableAt(active.row, active.col);
+		const here = ownerAt(active.row, active.col);
 		if (here) return here;
 		const sel = selectionLines();
 		if (!sel.rows && !sel.cols) return undefined;
@@ -5487,9 +5536,11 @@
 		if (pv) panel = { kind: 'pivot', id: pv.id };
 		else if (panel?.kind === 'pivot' && !openPivotOnLoad && at !== pivotPanelAt) panel = null;
 		pivotPanelAt = at;
-		const e = tableAt(active.row, active.col);
+		const e = ownerAt(active.row, active.col);
 		const label = (r: number, c: number) => {
 			const k = e!.t.columns[c - e!.t.col];
+			// Bande des groupes : le groupe, qu'on renomme ici comme une colonne.
+			if (r < e!.t.row) return splitGroup(k.name).group;
 			return r === e!.t.row ? k.name : `${k.name}[${r - e!.t.row}]`;
 		};
 		const sel = selection();
@@ -5629,7 +5680,7 @@
 
 	/** Bord de la cellule active dans le sens du déplacement (au-delà de sa fusion). */
 	function mergeEdge(dr: number, dc: number) {
-		const g = mergeOf(active.row, active.col);
+		const g = boxOf(active.row, active.col);
 		if (!g) return { row: active.row, col: active.col };
 		return { row: dr > 0 ? g.row + g.rows - 1 : active.row, col: dc > 0 ? g.col + g.cols - 1 : active.col };
 	}
@@ -5637,7 +5688,7 @@
 	// Saisie d'une ligne avec Tab : Entrée revient sous la cellule de départ, comme Excel.
 	let tabStart: number | null = null;
 	/** Cellule voisine de la cellule active (une fusion compte pour une cellule). */
-	const step = (dr: number, dc: number) => stepCell(active.row, active.col, dr, dc, merges, SHEET_ROWS - 1, SHEET_COLS - 1);
+	const step = (dr: number, dc: number) => stepCell(active.row, active.col, dr, dc, boxes, SHEET_ROWS - 1, SHEET_COLS - 1);
 	function tabMove(back: boolean) {
 		const start = tabStart ?? active.col;
 		const n = step(0, back ? -1 : 1);
@@ -5664,7 +5715,7 @@
 		if (extend) anchor = { row, col };
 		else {
 			// Cellules fusionnées : la cellule en haut à gauche, comme Excel.
-			const g = mergeOf(row, col);
+			const g = boxOf(row, col);
 			if (g) {
 				row = g.row;
 				col = g.col;
@@ -5842,7 +5893,7 @@
 	/** Position (écran) du coin bas droit de la sélection. */
 	function fillHandle() {
 		let { r1, c1 } = selection();
-		const g = mergeOf(r1, c1);
+		const g = boxOf(r1, c1);
 		if (g) {
 			r1 = g.row + g.rows - 1;
 			c1 = g.col + g.cols - 1;
@@ -6759,7 +6810,7 @@
 				moveTo(r, c, ext);
 			} else if (ext) {
 				// Le bord de la plage (agrandie aux fusions) avance d'une cellule.
-				const k = extendCorner(active, anchor, dr, dc, merges, SHEET_ROWS - 1, SHEET_COLS - 1);
+				const k = extendCorner(active, anchor, dr, dc, boxes, SHEET_ROWS - 1, SHEET_COLS - 1);
 				moveTo(k.row, k.col, true);
 			} else {
 				const n = step(dr, dc);
@@ -6881,7 +6932,7 @@
 			return;
 		}
 		// Tableau publié en lecture seule (classeur partagé figé, hors ligne).
-		const ro = tableAt(active.row, active.col)?.t.readOnly;
+		const ro = ownerAt(active.row, active.col)?.t.readOnly;
 		if (ro) {
 			say(ro);
 			return;
@@ -6944,7 +6995,7 @@
 		// voisines sont vides, puis passe à la ligne ; une fusion le fait au moins
 		// aussi grand qu'elle.
 		const row = active.row;
-		const g = mergeOf(active.row, active.col);
+		const g = boxOf(active.row, active.col);
 		const longest = Math.max(...input.value.split('\n').map((l) => textWidth(l)));
 		const empty = (c: number) => !tableAt(row, c) && !cells.has(key(row, c));
 		const last = g ? g.col + g.cols - 1 : active.col;
@@ -7123,7 +7174,7 @@
 	function commitAll() {
 		const r = editRange;
 		const sel = r?.sel;
-		if (!r || !sel || isSingleCell(sel, active, merges) || !source.paste) {
+		if (!r || !sel || isSingleCell(sel, active, boxes) || !source.paste) {
 			commit();
 			return;
 		}
@@ -7428,7 +7479,7 @@
 	 * tableau ou une de ses cellules (Ventes[Prix][3]) y va ; faux sinon.
 	 */
 	function goToName(text: string): boolean {
-		const cur = tableAt(active.row, active.col);
+		const cur = ownerAt(active.row, active.col);
 		const g = parseGoto(text, entries.map(gotoTable), cur ? gotoTable(cur) : undefined);
 		if (!g) return false;
 		wrap.focus();
@@ -7441,7 +7492,7 @@
 	function onTableNameKey(e: KeyboardEvent) {
 		e.stopPropagation();
 		const el = e.currentTarget as HTMLInputElement;
-		const t = tableAt(active.row, active.col)?.t;
+		const t = ownerAt(active.row, active.col)?.t;
 		if (e.key === 'Escape' || !t) {
 			el.value = t?.name ?? '';
 			wrap.focus();
@@ -7484,7 +7535,7 @@
 	function onColumnNameKey(e: KeyboardEvent) {
 		e.stopPropagation();
 		const el = e.currentTarget as HTMLInputElement;
-		const en = tableAt(active.row, active.col);
+		const en = ownerAt(active.row, active.col);
 		if (e.key === 'Escape' || !en) {
 			el.value = tableBox?.col ?? '';
 			wrap.focus();
@@ -7494,6 +7545,12 @@
 		e.preventDefault();
 		const c = active.col;
 		const text = el.value.trim();
+		// Bande des groupes : renomme le groupe (toutes ses colonnes).
+		if (active.row < en.t.row) {
+			wrap.focus();
+			if (text !== tableBox?.col) write(active.row, c, text, false, (err) => void refuseName(el, refusedName("Groupe d'en-têtes refusé", err), text));
+			return;
+		}
 		// Une autre cellule (Prix[3], Ventes[Prix][2], Cell[F10], A1:C3) : y
 		// aller ; un nom seul (même « Q1 ») renomme la colonne.
 		if (text !== tableBox?.col && /[[:]/.test(text)) {
@@ -7696,11 +7753,11 @@
 
 	function selection() {
 		// Agrandie aux fusions qu'elle touche, entières (comme Excel).
-		return expandRange(rangeOf(active, anchor), merges);
+		return expandRange(rangeOf(active, anchor), boxes);
 	}
 
 	/** La sélection n'est-elle que la cellule active (ou sa fusion) ? */
-	const singleSelection = () => isSingleCell(selection(), active, merges);
+	const singleSelection = () => isSingleCell(selection(), active, boxes);
 
 	// Zone copiée ou coupée : cadre pointillé, sur sa feuille. Collée dans
 	// Lattis, elle emporte formules, mise en forme et tableaux (transfer) ;
@@ -8463,7 +8520,7 @@
 	 */
 	export function aiContext(): { table: string; selection: string } {
 		const sel = selection();
-		const e = tableAt(active.row, active.col);
+		const e = ownerAt(active.row, active.col);
 		const a1 = (r0: number, c0: number, r1: number, c1: number) => (r0 === r1 && c0 === c1 ? addrA1(r0, c0) : `${addrA1(r0, c0)}:${addrA1(r1, c1)}`);
 		if (!e) return { table: '', selection: a1(sel.r0, sel.c0, sel.r1, sel.c1) };
 		// Sélection débordant du tableau : la cellule active seulement.
@@ -8480,7 +8537,7 @@
 
 	/** Tableau de la cellule active, s'il y en a un (F5). */
 	export function tableHere(): SheetTable | undefined {
-		return tableAt(active.row, active.col)?.t;
+		return ownerAt(active.row, active.col)?.t;
 	}
 
 	/** Redonne le focus clavier à la feuille (après un dialogue, un menu…). */

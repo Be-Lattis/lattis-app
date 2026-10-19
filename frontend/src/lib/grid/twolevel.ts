@@ -38,3 +38,29 @@ export function groupSpans(names: readonly string[]): GroupSpan[] {
 export function spanAt(names: readonly string[], i: number): GroupSpan | undefined {
 	return groupSpans(names).find((s) => s.i0 <= i && i <= s.i1);
 }
+
+/** Ce qu'il faut d'un tableau pour placer sa bande. */
+export interface BandTable {
+	row: number; // ligne d'en-tête
+	col: number;
+	twoLevel?: boolean;
+	columns: readonly { name: string }[];
+}
+
+/** Première ligne d'un tableau : sa bande des groupes, sinon son en-tête. */
+export function tableTop(t: { row: number; twoLevel?: boolean }): number {
+	return t.twoLevel ? t.row - 1 : t.row;
+}
+
+/**
+ * Groupes sur plusieurs colonnes, au format des fusions de la feuille : le
+ * curseur, les flèches et la sélection les passent comme une cellule fusionnée.
+ */
+export function bandMerges(tables: readonly BandTable[]): { row: number; col: number; rows: number; cols: number }[] {
+	const out: { row: number; col: number; rows: number; cols: number }[] = [];
+	for (const t of tables) {
+		if (!t.twoLevel || t.row < 1) continue;
+		for (const s of groupSpans(t.columns.map((k) => k.name))) if (s.i1 > s.i0) out.push({ row: t.row - 1, col: t.col + s.i0, rows: 1, cols: s.i1 - s.i0 + 1 });
+	}
+	return out;
+}
