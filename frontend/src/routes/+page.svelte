@@ -322,6 +322,8 @@
 		scripts = (await DocumentService.Scripts()) ?? [];
 		favorites = (await DocumentService.Favorites()) ?? [];
 		share = await DocumentService.ShareState().catch(() => null);
+		// Volet Requêtes ouvert : ses listes suivent (Ctrl+Z, assistant, MCP, autre classeur).
+		queryHost?.reloadLists();
 	}
 
 	/** Bandeau « Nouvelle version disponible » : recharge la version publiée (ajouts locaux gardés). */
@@ -345,6 +347,7 @@
 		view = 'grid';
 		sheetId = 1;
 		mode = 'doc';
+		queryHost?.closePanel();
 		await reload();
 		await keepSheet();
 		if (r.state.notice) notice = r.state.notice;
@@ -395,6 +398,7 @@
 			view = 'grid';
 			sheetId = 1;
 			mode = 'doc';
+			queryHost?.closePanel(); // volet du classeur quitté
 			await reload();
 			// Déclencheurs inconnus supprimés (sécurité), lecture seule, verrou impossible.
 			if (r.state.notice) notice = r.state.notice;
@@ -481,6 +485,7 @@
 		mode = 'doc';
 		view = 'grid';
 		sheetId = 1;
+		queryHost?.closePanel();
 		await DocumentService.New();
 		await reload();
 	}
@@ -1255,10 +1260,9 @@
 			sheet?.resumeFormula();
 			return;
 		}
-		// Changement d'onglet : tous les volets de droite se ferment, sauf
-		// celui de l'assistant (il agit souvent sur une autre feuille).
+		// Changement d'onglet : les volets de la feuille (TCD, graphique) se
+		// ferment ; ceux du classeur (assistant, requêtes) restent, comme dans Excel.
 		sheet?.closeOverlays();
-		queryHost?.closePanel();
 		sheetId = id;
 		await reload();
 		sheet?.focus();

@@ -180,9 +180,14 @@
 	}
 
 	/** Actualise la requête qui charge un tableau (menu du clic droit sur le tableau). */
-	/** Ferme le volet des requêtes et connexions (changement d'onglet). */
+	/** Ferme le volet des requêtes et connexions (autre classeur ouvert ou créé). */
 	export function closePanel() {
 		panel = false;
+	}
+
+	/** Classeur relu (Ctrl+Z, assistant, MCP, autre poste) : le volet ouvert relit ses listes. */
+	export function reloadLists() {
+		if (panel || editing) load().catch(() => {});
 	}
 
 	export function refreshOne(id: number): Promise<string> {
@@ -255,7 +260,7 @@
 			await DocumentService.DeleteQuery(q.id);
 			await load();
 			onchanged();
-			onnotice(`Requête « ${q.name} » supprimée${q.table ? ` (le tableau ${q.table} reste sur sa feuille)` : ''}`);
+			onnotice(`Requête « ${q.name} » supprimée${q.table ? ` ; le tableau ${q.table} reste sur sa feuille` : ''} (Ctrl+Z pour annuler)`);
 		} catch (e) {
 			onnotice(err(e));
 		}
@@ -266,6 +271,7 @@
 			await DocumentService.DeleteConnection(c.id);
 			await load();
 			onchanged();
+			onnotice(`Connexion « ${c.name} » supprimée (Ctrl+Z pour annuler)`);
 		} catch (e) {
 			onnotice(err(e));
 		}
