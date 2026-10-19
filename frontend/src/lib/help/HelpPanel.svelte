@@ -17,6 +17,7 @@
 	import { slug } from './markdown';
 	import Markdown from './Markdown.svelte';
 	import { closeHelp, helpState } from './state.svelte';
+	import { reportIssue } from '#lib/shell/report.js';
 
 	// over : posée au-dessus d'une boîte modale, hors de la zone des volets.
 	let { over = false }: { over?: boolean } = $props();
@@ -115,6 +116,7 @@
 		<button class="icon" title="Page précédente" aria-label="Page précédente" disabled={!history.length} onclick={back}>←</button>
 		<Icon name="book" size={16} />
 		<strong>Aide</strong>
+		<button class="link report" title="Ouvre la page de création d'un ticket sur GitHub (version préremplie)" onclick={reportIssue}>Signaler un problème</button>
 		<button class="icon close" title="Fermer l’aide (Échap)" aria-label="Fermer l’aide" onclick={close}>✕</button>
 	</header>
 	<div class="search">
@@ -267,6 +269,18 @@
 	}
 	header strong {
 		flex: 1;
+	}
+	.report {
+		border: none;
+		background: none;
+		padding: 2px 4px;
+		color: #217346;
+		font: inherit;
+		font-size: 12px;
+		cursor: pointer;
+	}
+	.report:hover {
+		text-decoration: underline;
 	}
 	.icon {
 		border: none;

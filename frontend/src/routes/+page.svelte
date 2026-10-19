@@ -8,6 +8,7 @@
 	import { describe, installErrorReporting, reportError } from '#lib/shell/errors.js';
 	import { onMount, tick, untrack } from 'svelte';
 	import { isProblem, noticeTtl } from '#lib/shell/notice.js';
+	import { reportIssue } from '#lib/shell/report.js';
 	import { Events } from '@wailsio/runtime';
 	import { DocumentService, GridService } from '#bindings/internal/bridge/index.js';
 	import type { DamagedFile, DocState, FileQuestion, FormulaHelp, OpenResult } from '#bindings/internal/bridge/models.js';
@@ -957,6 +958,7 @@
 
 	async function file(a: FileAction) {
 		if (a === 'help') return openHelp();
+		if (a === 'report') return reportIssue();
 		if (a === 'about') {
 			aboutOpen = true;
 			return;
