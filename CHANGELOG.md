@@ -9,6 +9,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 ### Changements
 
 - Insertion › Autres graphiques : chaque type a son icône dans le menu.
+- Windows : le navigateur propose « Ouvrir Lattis ? » (et non plus « Ouvrir Tableur relationnel local-first ? ») pour un lien vers un classeur partagé ; le Gestionnaire des tâches affiche aussi « Lattis ».
 
 ## 0.1.0-beta.1 (19/10/2026)
 
