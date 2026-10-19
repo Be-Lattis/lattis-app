@@ -628,6 +628,7 @@
 				// (deux icônes d'imprimante : l'icône seule ne dit pas laquelle).
 				widest: 'small',
 				commands: [
+					{ label: 'Imprimer / PDF…', icon: 'printer', run: () => onfile('print'), hint: 'Imprimer la feuille ou l’enregistrer en PDF (Ctrl+P)' },
 					{ label: 'Afficher le quadrillage', icon: 'border-all', on: gridlines, run: ongridlines ? () => ongridlines(!gridlines) : undefined, hint: gridlines ? 'Masquer le quadrillage de la feuille à l’écran' : 'Afficher le quadrillage de la feuille à l’écran' },
 					{ label: 'Imprimer le quadrillage', icon: 'printer', on: !!ps.gridlines, run: pg({ kind: 'print', what: 'gridlines', on: !ps.gridlines }), hint: 'Imprimer le quadrillage de toutes les cellules' },
 					{ label: 'Afficher les en-têtes', icon: 'headings', on: headings, run: onheadings ? () => onheadings(!headings) : undefined, hint: headings ? 'Lettres et numéros seulement pendant la saisie d’une formule' : 'Toujours afficher les lettres de colonnes et numéros de lignes' },
