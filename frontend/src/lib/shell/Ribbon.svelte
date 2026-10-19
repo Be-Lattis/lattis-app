@@ -423,10 +423,11 @@
 						items: [
 							{ label: 'PostgreSQL', run: data('postgres') },
 							{ label: 'MySQL / MariaDB', run: data('mysql') },
-							{ label: 'SQL Server', run: data('sqlserver') },
-							...(sharedWorkbooksEnabled() ? [{ label: 'Serveur Lattis', run: data('lattis') }] : [])
+							{ label: 'SQL Server', run: data('sqlserver') }
 						]
 					},
+					// Serveur Lattis : bouton à lui, à côté des bases de données (comme les sources propres d'Excel).
+					...(sharedWorkbooksEnabled() ? [{ label: 'Serveur Lattis', icon: 'link' as const, run: data('lattis'), hint: 'Nouvelle requête sur un tableau ou une donnée d’entreprise d’un Serveur Lattis (lecture seule)' }] : []),
 					{ label: 'Web', icon: 'web', run: data('web'), hint: 'Nouvelle requête à partir d’une API web qui répond en JSON (lecture seule)' },
 					{ label: 'À partir du tableau', icon: 'sheet', run: data('table'), hint: 'Nouvelle requête à partir d’un tableau du classeur' }
 				]
@@ -601,7 +602,7 @@
 	// Sur une feuille protégée, seules les commandes qui ne la modifient pas
 	// restent actives (lecture, copie, filtres, affichage) ; un tableau croisé
 	// crée une feuille : refusé quand la structure du classeur est protégée.
-	const READ_ONLY = new Set(['Annuler', 'Rétablir', 'Copier', 'Rechercher', 'Filtrer', 'Erreurs seulement', 'Afficher les liens', 'Calculer', 'Quadrillage', 'En-têtes A1', 'Animations', 'Figer les volets', 'Zoom', '100 %', 'Mesurer la grille', 'Tableau croisé', 'Protéger la feuille', 'Protéger le classeur', 'Ôter la protection', 'Ôter la protection du classeur', 'Texte/CSV', 'Classeur Excel', 'Autres fichiers', 'Base de données', 'Web', 'À partir du tableau', 'Requêtes et connexions', 'Actualiser tout']);
+	const READ_ONLY = new Set(['Annuler', 'Rétablir', 'Copier', 'Rechercher', 'Filtrer', 'Erreurs seulement', 'Afficher les liens', 'Calculer', 'Quadrillage', 'En-têtes A1', 'Animations', 'Figer les volets', 'Zoom', '100 %', 'Mesurer la grille', 'Tableau croisé', 'Protéger la feuille', 'Protéger le classeur', 'Ôter la protection', 'Ôter la protection du classeur', 'Texte/CSV', 'Classeur Excel', 'Autres fichiers', 'Base de données', 'Serveur Lattis', 'Web', 'À partir du tableau', 'Requêtes et connexions', 'Actualiser tout']);
 	const ribbons: Record<string, Group[]> = $derived(
 		Object.fromEntries(
 			Object.entries(allRibbons).map(([k, gs]) => [
