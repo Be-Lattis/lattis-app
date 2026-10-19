@@ -10235,6 +10235,18 @@
 								startEdit(false);
 							}}>Renommer la colonne</button
 						>
+						{#if source.applyStyle && !col?.formula}
+							<!-- Validation des données de toute la colonne (ses lignes de données). -->
+							<button data-shed="1"
+								onclick={() => {
+									const e = m.e;
+									const c = e.t.col + m.i;
+									menu = null;
+									selectRange(e.t.row + 1, c, Math.max(e.last, e.t.row + 1), c);
+									openValidation();
+								}}>Validation des données…</button
+							>
+						{/if}
 						{#if source.setTabChoice && col}
 							{@const tc = tabChoiceFor(m.e.t.name, col.name, { formula: !!col.formula })}
 							<button data-shed="1" title={tc.title} disabled={tc.disabled} onclick={() => runTabChoice(m.e.t.name, col.name, tc)}>{tc.label}</button>
