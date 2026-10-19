@@ -628,6 +628,29 @@ export function cellRefText(row: number, col: number, tables: RefTable[], here?:
 	return `${t.name}[${name}][${row - t.row}]`;
 }
 
+/**
+ * Référence d'une cellule pointée au clic pendant la saisie d'une formule
+ * écrite en at (null : formule d'une autre feuille). Une formule dans un
+ * tableau, ou juste à sa droite ou à sa gauche sur une de ses lignes (elle
+ * y devient une colonne calculée), lit sa ligne ([Col], [Col][-1]). Une
+ * formule de cellule libre veut une valeur : une cellule de données donne
+ * Tableau[Col][n], cette seule valeur (n : rang de la ligne, 1 = première,
+ * même si le tableau a une clé, choix de Louis), jamais toute la colonne ;
+ * seul l'en-tête donne Tableau[Col] (qui se déverse sous une cellule libre).
+ */
+export function pointedRef(row: number, col: number, tables: RefTable[], at: { row: number; col: number } | null): string {
+	const inside = (t: RefTable, c: number) => c >= t.col && c < t.col + t.columns.length;
+	const home = at
+		? tables.find(
+				(t) =>
+					at.row > t.row &&
+					at.row <= t.row + t.rows &&
+					(inside(t, at.col) || at.col === t.col + t.columns.length || at.col === t.col - 1)
+			)
+		: undefined;
+	return cellRefText(row, col, tables, home && at ? { table: home, row: at.row } : undefined);
+}
+
 function colLetters(c: number): string {
 	let s = '';
 	for (c++; c > 0; c = Math.floor((c - 1) / 26)) s = String.fromCharCode(65 + ((c - 1) % 26)) + s;

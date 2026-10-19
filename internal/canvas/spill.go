@@ -12,10 +12,16 @@ const MaxSpillRows = 10000
 const ErrSpillText = "#DEVERSEMENT!"
 
 // spillFree calcule une cellule libre dont la formule est un tableau dynamique
-// (FILTRE, TRIER, UNIQUE…). ok est faux si la formule n'en est pas un.
+// (FILTRE, TRIER, UNIQUE…) ou une colonne entière d'un tableau
+// (=Ventes[Montant], voir formula.IsFreeSpill). ok est faux si la formule
+// n'en est pas un.
 func (t *tx) spillFreeRaw(sheet int64, raw string) (rows [][]string, ok bool, errV formula.Value) {
 	n, err := formula.Parse(raw, formula.FR)
-	if err != nil || !formula.IsSpill(n) {
+	if err != nil {
+		return nil, false, formula.Value{}
+	}
+	_, column := n.(formula.Ref)
+	if !column && !formula.IsSpill(n) {
 		return nil, false, formula.Value{}
 	}
 	base, err := t.schema()
@@ -26,6 +32,9 @@ func (t *tx) spillFreeRaw(sheet int64, raw string) (rows [][]string, ok bool, er
 	schema, err := t.schemaFor(sheet)
 	if err != nil {
 		return nil, true, formula.Err(formula.ErrValue)
+	}
+	if column && !formula.IsFreeSpill(n, schema) {
+		return nil, false, formula.Value{} // [Col], colonne inconnue (#REF!)
 	}
 	if n, _, err = formula.Convert(n, schema, noRanges{}, raw); err != nil {
 		return nil, true, formula.Err(formula.ErrName)

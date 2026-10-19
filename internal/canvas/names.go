@@ -280,7 +280,7 @@ func (t *tx) cellFormulas(ns *formula.Names, schema *formula.Schema) (map[string
 			filled[sheet] = map[[2]int]bool{}
 		}
 		filled[sheet][[2]int{row, col}] = true
-		if isFormula(raw) && formula.IsSpill(n) {
+		if isFormula(raw) && formula.IsFreeSpill(n, schema) {
 			if spills == nil {
 				spills = map[string]spillAnchor{}
 			}

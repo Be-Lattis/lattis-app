@@ -10,7 +10,7 @@ Pendant la saisie, Lattis propose les fonctions, les tableaux et les colonnes, a
 | --- | --- |
 | `[Colonne]` | Dans un tableau : la valeur de la colonne pour la ligne de la formule |
 | `[Colonne][2]` | La valeur de la colonne à la 2e ligne du même tableau |
-| `Tableau[Colonne]` | Toute la colonne (dans un agrégat, ou hors du tableau) |
+| `Tableau[Colonne]` | Toute la colonne (dans un agrégat, ou hors du tableau) ; seule dans une cellule libre (`=Ventes[Prix]`), ses valeurs se déversent dessous |
 | `Tableau[Colonne][2]` | Une valeur, par le rang de sa ligne (1 = première ligne de données) |
 | `Tableau[Colonne][1:3]` | Les lignes 1 à 3 d'une colonne |
 | `Cell[A1]` | La cellule libre A1 de la feuille |
@@ -19,7 +19,7 @@ Pendant la saisie, Lattis propose les fonctions, les tableaux et les colonnes, a
 
 Les rangs suivent l'ordre d'affichage : trier un tableau change la ligne désignée, comme dans Excel. Pour chercher une ligne par sa clé, utilisez [REFERENCE](fonction:REFERENCE).
 
-En mode formule, un clic sur une cellule insère sa référence ; un glissé insère une plage.
+En mode formule, un clic sur une cellule insère sa référence ; un glissé insère une plage. Depuis une cellule libre, un clic sur une cellule d'un tableau insère cette seule valeur (`Bilan[TEST][2]`, par le rang de sa ligne) ; un clic sur l'en-tête, ou un glissé sur toute la colonne, insère la colonne entière (`Bilan[TEST]`).
 
 ## Adresses à la Excel
 
@@ -31,7 +31,7 @@ Une formule tapée dans une colonne de tableau s'applique à toutes ses lignes :
 
 ## Résultats qui se déversent
 
-Certaines fonctions renvoient plusieurs valeurs ([FILTRE](fonction:FILTRE), [TRIER](fonction:TRIER), [UNIQUE](fonction:UNIQUE), [SEQUENCE](fonction:SEQUENCE), [FRACTIONNER.TEXTE](fonction:FRACTIONNER.TEXTE), [REQUETE](fonction:REQUETE)…) : le résultat se déverse sur les cellules voisines, comme les tableaux dynamiques d'Excel. Si la place est prise, la formule affiche `#DEVERSEMENT!`. Dans un agrégat, elles fournissent leurs valeurs : `=NBVAL(FRACTIONNER.TEXTE(Cell[A1]; ","))` compte les morceaux d'un texte.
+Certaines fonctions renvoient plusieurs valeurs ([FILTRE](fonction:FILTRE), [TRIER](fonction:TRIER), [UNIQUE](fonction:UNIQUE), [SEQUENCE](fonction:SEQUENCE), [FRACTIONNER.TEXTE](fonction:FRACTIONNER.TEXTE), [REQUETE](fonction:REQUETE)…) : le résultat se déverse sur les cellules voisines, comme les tableaux dynamiques d'Excel. Une colonne entière seule dans une cellule libre (`=Ventes[Prix]`) se déverse de même, dans l'ordre des lignes du tableau. Si la place est prise, la formule affiche `#DEVERSEMENT!`. Dans un agrégat, elles fournissent leurs valeurs : `=NBVAL(FRACTIONNER.TEXTE(Cell[A1]; ","))` compte les morceaux d'un texte.
 
 `=FRACTIONNER.TEXTE("Nom=Dupont;Ville=Paris"; "="; ";")` découpe un texte en lignes (au `;`) puis en colonnes (au `=`) ; les lignes plus courtes sont complétées par `#N/A`, ou par le dernier argument. Pour se déverser, le texte ne doit pas dépendre de la ligne d'un tableau : une cellule, ou une valeur comme `Ventes[Notes][2]`.
 

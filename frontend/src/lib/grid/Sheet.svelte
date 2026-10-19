@@ -87,7 +87,7 @@
 	import { selectionLabel, type CellSpeech } from './a11y';
 	import { drawIcon } from '#lib/icons/canvas.js';
 	import { apply as applySuggestion, argKindAt, needsNextArg, signature, toNextArg, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
-	import { checkFormula, closeParens, editorWidth, formulaRefs, highlightParts, isFormula, movedRef, rangeRef, refRect, serverErrorPos, type FormulaError, type Rect, type RefTable } from './formulaEdit';
+	import { checkFormula, closeParens, editorWidth, formulaRefs, highlightParts, isFormula, movedRef, pointedRef, rangeRef, refRect, serverErrorPos, type FormulaError, type Rect, type RefTable } from './formulaEdit';
 	import { formulaTyping, fxLeave, holdFormula, insertRefAt, qualifyRef, updateHold, type FormulaHold } from './crossref';
 	import { parseGoto, type GotoTable } from './goto';
 	import { cellNameProblem, columnNameProblem, refusedName, tableNameProblem, type NameProblem } from '#lib/ui/names.js';
@@ -6945,7 +6945,7 @@
 	 * Référence d'une cellule dans une formule (nomenclature de Lattis) :
 	 * Cell[A1] pour une cellule libre ; dans le tableau de la formule, [Col]
 	 * pour sa ligne et [Col][k] pour une autre ; ailleurs Tableau[Col][k]
-	 * (k : la clé si le tableau en a une, sinon le rang) ; un en-tête donne
+	 * (k : le rang de la ligne, même si le tableau a une clé) ; un en-tête donne
 	 * Tableau[Col], toute la colonne.
 	 */
 	function refFor(r: number, c: number, kind: '' | 'table' | 'column' = ''): string {
@@ -6957,24 +6957,11 @@
 		// le clic dans le tableau donne cette forme, quelle que soit la ligne.
 		if (kind === 'table') return e.t.name;
 		if (kind === 'column') return `${e.t.name}[${col}]`;
-		// Formule d'une autre feuille (pointage) : elle n'est dans aucun tableau d'ici.
-		const here = hold ? null : tableAt(active.row, active.col);
-		// La formule est dans le tableau, ou juste à sa droite (ou à sa gauche)
-		// sur une de ses lignes (elle y devient une colonne calculée, comme dans Excel).
-		const beside = !hold && !here && (active.col === e.lastCol + 1 || active.col === e.t.col - 1) && active.row > e.t.row && active.row <= e.last;
-		const same = (here === e || beside) && active.row > e.t.row;
-		// En-tête : toute la colonne.
-		if (r === e.t.row) return `${e.t.name}[${col}]`;
-		// Même ligne du tableau de la formule : la valeur de la ligne.
-		if (same && r === active.row) return `[${col}]`;
-		// Une autre ligne du tableau de la formule : relative ([Col][-1],
-		// [Col][+2]) ; d'un autre tableau : par son rang (1 = première ligne de
-		// données), même si le tableau a une clé (choix de Louis).
-		if (same) {
-			const k = r - active.row;
-			return `[${col}][${k > 0 ? '+' : ''}${k}]`;
-		}
-		return `${e.t.name}[${col}][${r - e.t.row}]`;
+		// Formule d'une autre feuille (pointage) : elle n'est dans aucun tableau
+		// d'ici. Sinon [Col] / [Col][-1] dans le tableau de la formule (ou à côté),
+		// Tableau[Col][n] depuis une cellule libre : une valeur, pas la colonne
+		// (demande de Louis) ; l'en-tête seul donne Tableau[Col] (voir pointedRef).
+		return pointedRef(r, c, refTables(), hold ? null : active);
 	}
 
 	/** Pendant la saisie d'une formule, insère la référence de la cellule cliquée au curseur. */

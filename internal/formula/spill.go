@@ -36,6 +36,23 @@ func IsSpill(n Node) bool {
 	return ok && fn.kind == spill
 }
 
+// IsFreeSpill dit si la formule d'une cellule libre se déverse : un tableau
+// dynamique, ou une colonne entière d'un tableau (=Ventes[Montant]), dont les
+// valeurs descendent sous la cellule comme dans Excel. Une colonne entière
+// n'a pas de valeur unique : calculée comme une valeur, elle donnait
+// #VALEUR!. Ailleurs (argument, colonne calculée), Ventes[Montant] reste une
+// colonne. Une colonne inconnue de s ne se déverse pas (elle vaut #REF!).
+func IsFreeSpill(n Node, s *Schema) bool {
+	if r, ok := n.(Ref); ok {
+		if r.Table == "" || r.Row {
+			return false
+		}
+		_, _, ok := sourceOf(r, s, nil)
+		return ok
+	}
+	return IsSpill(n)
+}
+
 // NamesSource dit si le premier argument d'un tableau dynamique est sa
 // source, un tableau nommé (FILTRE(Ventes; …)) : pas pour SEQUENCE et
 // FRACTIONNER.TEXTE, dont le premier argument est une valeur, ni pour LET,

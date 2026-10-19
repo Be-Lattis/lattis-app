@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cellRefText, checkFormula, closeParens, movedRef, editorWidth, formulaRefs, highlightParts, rangeRef, refRect, serverErrorPos, type RefTable } from './formulaEdit';
+import { cellRefText, checkFormula, closeParens, movedRef, pointedRef, editorWidth, formulaRefs, highlightParts, rangeRef, refRect, serverErrorPos, type RefTable } from './formulaEdit';
 
 describe('closeParens', () => {
 	it('ferme les parenthèses oubliées', () => {
@@ -116,6 +116,36 @@ describe('références relatives et marqueurs déplacés', () => {
 		// Hors du tableau : la même hauteur, sur les mêmes lignes.
 		expect(movedRef({ r0: 0, c0: 0, r1: 5, c1: 0 }, 3, 4, [t], here, { row: 3, col: 4 })).toBe('Cell[E1:E6]');
 		expect(movedRef({ r0: 0, c0: 0, r1: 0, c1: 0 }, -1, 0, [t], here)).toBeNull();
+	});
+});
+
+describe('pointedRef : référence pointée au clic', () => {
+	// Bilan (TEST clé 1/2/3, année) en A1:B4.
+	const bilan: RefTable = { name: 'Bilan', row: 0, col: 0, columns: ['TEST', 'année'], rows: 3, keyed: false, keyRow: (k) => Number(k) - 1 };
+	const tables = [bilan];
+	it('depuis une cellule libre : la valeur d’une cellule, pas toute la colonne', () => {
+		expect(pointedRef(2, 0, tables, { row: 1, col: 4 })).toBe('Bilan[TEST][2]');
+		expect(pointedRef(1, 1, tables, { row: 6, col: 0 })).toBe('Bilan[année][1]');
+		// Formule d'une autre feuille (pointage) : de même.
+		expect(pointedRef(3, 0, tables, null)).toBe('Bilan[TEST][3]');
+	});
+	it('l’en-tête donne toute la colonne', () => {
+		expect(pointedRef(0, 0, tables, { row: 1, col: 4 })).toBe('Bilan[TEST]');
+	});
+	it('dans le tableau, ou juste à côté sur une de ses lignes : relatif à la ligne', () => {
+		expect(pointedRef(2, 0, tables, { row: 2, col: 1 })).toBe('[TEST]');
+		expect(pointedRef(3, 0, tables, { row: 2, col: 2 })).toBe('[TEST][+1]');
+		expect(pointedRef(1, 1, tables, { row: 2, col: 2 })).toBe('[année][-1]');
+		// À côté de l'en-tête ou sous le tableau : cellule libre.
+		expect(pointedRef(2, 0, tables, { row: 0, col: 2 })).toBe('Bilan[TEST][2]');
+		expect(pointedRef(2, 0, tables, { row: 4, col: 2 })).toBe('Bilan[TEST][2]');
+	});
+	it('une cellule libre pointée : Cell[A1]', () => {
+		expect(pointedRef(5, 3, tables, { row: 1, col: 4 })).toBe('Cell[D6]');
+	});
+	it('plusieurs cellules glissées : une plage, toute la colonne si elle est entière', () => {
+		expect(rangeRef({ r0: 1, c0: 0, r1: 2, c1: 0 }, tables)).toBe('Bilan[TEST][1:2]');
+		expect(rangeRef({ r0: 1, c0: 0, r1: 3, c1: 0 }, tables)).toBe('Bilan[TEST]');
 	});
 });
 
