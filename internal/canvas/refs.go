@@ -67,7 +67,7 @@ func (t *tx) rewriteRefs(rc refChange) error {
 		return nil
 	}
 	steps := []func(refChange) error{t.rewriteCellFormulas, t.rewriteColumnFormulas, t.rewriteLineRules,
-		t.rewriteCellRules, t.rewritePivots, t.rewriteCharts, t.rewriteButtons, t.rewriteQueries, t.rewriteDocObjects}
+		t.rewriteCellRules, t.rewritePivots, t.rewriteCharts, t.rewriteButtons, t.rewriteQueries, t.rewriteDocObjects, t.rewriteSortOrders}
 	for _, f := range steps {
 		if err := f(rc); err != nil {
 			return err
@@ -368,6 +368,15 @@ func renamePivotConfig(m map[string]any, rc refChange) bool {
 			neu[n] = v
 		}
 		m["sort"] = neu
+	}
+	if orders, ok := m["orders"].(map[string]any); ok {
+		neu := map[string]any{}
+		for k, v := range orders {
+			n := rc.Column(src, k)
+			changed = changed || n != k
+			neu[n] = v
+		}
+		m["orders"] = neu
 	}
 	return changed
 }

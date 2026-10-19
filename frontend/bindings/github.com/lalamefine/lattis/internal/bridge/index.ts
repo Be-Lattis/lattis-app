@@ -17,6 +17,7 @@ export type {
     AIStatus,
     AIUsage,
     About,
+    ColumnOrderInfo,
     DamagedFile,
     DataAudienceEntry,
     DataInsert,

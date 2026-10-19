@@ -470,6 +470,26 @@ export interface ColumnSpan {
 }
 
 /**
+ * CustomList est une liste personnalisée nommée (Builtin : prédéfinie).
+ */
+export interface CustomList {
+    "name": string;
+    "values": string[] | null;
+    "builtin"?: boolean;
+}
+
+/**
+ * CustomOrder est un ordre personnalisé : Values dans l'ordre voulu (List :
+ * la liste nommée d'où il vient, qui le fournit quand Values est vide) ;
+ * Desc renverse l'ordre de la liste (les autres valeurs restent après).
+ */
+export interface CustomOrder {
+    "list"?: string;
+    "values": string[] | null;
+    "desc"?: boolean;
+}
+
+/**
  * DepTarget est un antécédent ou un dépendant d'une cellule : une colonne de
  * tableau (Column vide : le tableau entier) ou une cellule (nommée ou non).
  */
@@ -1059,6 +1079,13 @@ export interface PivotConfig {
      * "asc" ou "desc" (absent : ordre de la source, première apparition).
      */
     "sort"?: { [_ in string]?: string } | null;
+
+    /**
+     * Orders donne à un champ un ordre personnalisé (Tri personnalisé…),
+     * qui l'emporte sur Sort : les valeurs de la liste d'abord, les autres
+     * ensuite (ordre croissant), les vides toujours à la fin.
+     */
+    "orders"?: { [_ in string]?: CustomOrder } | null;
 
     /**
      * NoGrandTotal masque la ligne et la colonne de total général.

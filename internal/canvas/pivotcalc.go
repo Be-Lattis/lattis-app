@@ -2,6 +2,7 @@ package canvas
 
 import (
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 
@@ -46,6 +47,10 @@ type PivotConfig struct {
 	// Sort ordonne les étiquettes d'un champ des lignes ou des colonnes :
 	// "asc" ou "desc" (absent : ordre de la source, première apparition).
 	Sort map[string]string `json:"sort,omitempty"`
+	// Orders donne à un champ un ordre personnalisé (Tri personnalisé…),
+	// qui l'emporte sur Sort : les valeurs de la liste d'abord, les autres
+	// ensuite (ordre croissant), les vides toujours à la fin.
+	Orders map[string]CustomOrder `json:"orders,omitempty"`
 	// NoGrandTotal masque la ligne et la colonne de total général.
 	NoGrandTotal bool `json:"noGrandTotal,omitempty"`
 	// Subtotals place les sous-totaux des groupes (plusieurs champs en
@@ -157,6 +162,18 @@ func (t *tx) pivotPlan(raw PivotConfig) (pivotPlan, error) {
 		}
 		p.vals = append(p.vals, c)
 	}
+	// Ordres personnalisés donnés par le nom d'une liste.
+	for k, o := range p.cfg.Orders {
+		if len(o.Values) == 0 && o.List != "" {
+			r, err := t.resolveOrder(o)
+			if err != nil {
+				return p, fmt.Errorf("%w : %v", ErrPivot, err)
+			}
+			orders := maps.Clone(p.cfg.Orders)
+			orders[k] = r
+			p.cfg.Orders = orders
+		}
+	}
 	// Filtres d'étiquettes : seulement ceux des champs encore en lignes ou en
 	// colonnes (un champ déplacé ailleurs ne filtre plus par son ▾).
 	shown := map[string]bool{strings.ToLower(cfg.Cols): cfg.Cols != ""}
@@ -196,6 +213,9 @@ func pivotText(c *Column) string { return textExpr(*c) }
 // pivotOrder est le tri des étiquettes d'un champ (ORDER BY, valeurs
 // d'origine : 9 avant 10), ou "" pour l'ordre de la source.
 func (p pivotPlan) pivotOrder(c *Column) string {
+	if k, ok := foldKey(p.cfg.Orders, c.Name); ok && len(p.cfg.Orders[k].Values) > 0 {
+		return OrderBy(pivotText(c), "min("+colSQL(c.ID)+")", p.cfg.Orders[k])
+	}
 	switch p.cfg.Sort[c.Name] {
 	case "asc":
 		return "min(" + colSQL(c.ID) + ") ASC"
@@ -206,7 +226,7 @@ func (p pivotPlan) pivotOrder(c *Column) string {
 }
 
 // sorted : un champ au moins a un tri choisi.
-func (p pivotPlan) sorted() bool { return len(p.cfg.Sort) > 0 }
+func (p pivotPlan) sorted() bool { return len(p.cfg.Sort) > 0 || len(p.cfg.Orders) > 0 }
 
 func pivotLabel(v PivotValue) string {
 	if l := strings.TrimSpace(v.Label); l != "" {

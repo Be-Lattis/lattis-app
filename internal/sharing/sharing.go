@@ -58,7 +58,7 @@ var Structure = []string{
 	// libres) ; hors partage complet, sans les valeurs (Filter).
 	"sheets.get",
 	// Construction de l'analyse.
-	"sheets.add", "sheets.rename", "sheets.color", "tables.rename", "tables.sort",
+	"sheets.add", "sheets.rename", "sheets.color", "tables.rename", "tables.sort", "tables.sort_custom", "tables.set_sort_lists",
 	"columns.insert", "columns.rename", "columns.set_type", "columns.fix_type", "columns.set_rules",
 	"tables.set_key", "tables.keep_row_numbers", "cells.set", "cells.style", "cells.name",
 	// Mise en forme : styles de lignes et colonnes entières, fusion, largeurs
@@ -98,6 +98,8 @@ var Reads = []string{"tables.rows", "columns.values", "db.query", "cells.get", "
 var values = map[string]bool{
 	"tables.rows": true, "columns.values": true, "db.query": true, "cells.get": true, "cells.read": true,
 	"queries.preview": true, "sheets.find": true, "pages.get": true,
+	// Ordres personnalisés et listes du classeur : des valeurs des colonnes.
+	"columns.sort_order": true, "tables.sort_lists": true,
 	"scripts.run": true, "buttons.run": true, "controls.fire": true,
 	"doc.export_csv": true, "doc.export_xlsx": true, "doc.export_ods": true,
 

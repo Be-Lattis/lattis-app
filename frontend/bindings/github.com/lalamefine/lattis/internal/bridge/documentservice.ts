@@ -328,6 +328,13 @@ export function CloseRequestSeen(): $CancellablePromise<void> {
 }
 
 /**
+ * ColumnOrder rend l'ordre personnalisé enregistré de la colonne i.
+ */
+export function ColumnOrder(table: string, i: number): $CancellablePromise<$models.ColumnOrderInfo> {
+    return $Call.ByID(2751805676, table, i);
+}
+
+/**
  * ConnectionTables liste les tables d'une connexion du classeur
  * (PostgreSQL, MySQL, SQL Server ; vide pour une connexion Web).
  */
@@ -407,6 +414,13 @@ export function CreatePivot(cfg: canvas$0.PivotConfig): $CancellablePromise<numb
  */
 export function CreateTableSource(req: $models.TableSourceRequest): $CancellablePromise<$models.TableSourceLink> {
     return $Call.ByID(1115385315, req);
+}
+
+/**
+ * CustomLists rend les listes personnalisées (prédéfinies puis du classeur).
+ */
+export function CustomLists(): $CancellablePromise<canvas$0.CustomList[] | null> {
+    return $Call.ByID(3279163430);
 }
 
 /**
@@ -1654,6 +1668,13 @@ export function SetControlValue(id: number, raw: string): $CancellablePromise<$m
 }
 
 /**
+ * SetCustomLists remplace les listes personnalisées du classeur.
+ */
+export function SetCustomLists(lists: canvas$0.CustomList[] | null): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2632848766, lists);
+}
+
+/**
  * SetDemo demande, au lancement, un classeur de démonstration (main.go,
  * option --demo) ; seed 0 : graine par défaut.
  */
@@ -2098,6 +2119,14 @@ export function SimilarSheets(): $CancellablePromise<canvas$0.SheetGroup[] | nul
  */
 export function SortTable(table: string, i: number, desc: boolean): $CancellablePromise<$models.DocState> {
     return $Call.ByID(3731472066, table, i, desc);
+}
+
+/**
+ * SortTableCustom trie un tableau selon la colonne i dans un ordre
+ * personnalisé, enregistré pour la colonne.
+ */
+export function SortTableCustom(table: string, i: number, order: canvas$0.CustomOrder): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2066029449, table, i, order);
 }
 
 /**

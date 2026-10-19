@@ -16,6 +16,8 @@ export type {
     ColumnInfo,
     ColumnRules,
     ColumnSpan,
+    CustomList,
+    CustomOrder,
     DepTarget,
     Dependencies,
     Event,

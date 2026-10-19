@@ -276,6 +276,14 @@ func TestTableStepsMergeAppendPivot(t *testing.T) {
 		{Op: OpUnpivot, Columns: []string{"Mois", "Tags"}, Name: "Champ", ValueName: "Val"},
 		{Op: OpSort, Sort: []SortKey{{Column: "Client"}, {Column: "Champ"}, {Column: "Val"}}},
 	}, "[Client:text Champ:text Val:text] [[A Mois fev] [A Mois jan] [A Tags x-1] [A Tags z-3] [B Mois jan] [B Tags y-2] [C Mois fev]]")
+	check("tri personnalisé", []Step{
+		{Op: OpSelect, Columns: []string{"Client", "Montant"}},
+		{Op: OpSort, Sort: []SortKey{{Column: "Client", Order: []string{"b", "A"}}, {Column: "Montant"}}},
+	}, "[Client:text Montant:integer] [[B 5] [A 7] [A 10] [C 1]]")
+	check("tri personnalisé à rebours, nombres", []Step{
+		{Op: OpSelect, Columns: []string{"Client", "Montant"}},
+		{Op: OpSort, Sort: []SortKey{{Column: "Montant", Order: []string{"5", "10"}, Desc: true}}},
+	}, "[Client:text Montant:integer] [[A 10] [B 5] [C 1] [A 7]]")
 	check("fractionner, personnalisée, index", []Step{
 		{Op: OpSplit, Column: "Tags", Delimiter: "-", Parts: 2},
 		{Op: OpAddColumn, Name: "Double", Expr: "[Montant] * 2 + [Tags.2]"},

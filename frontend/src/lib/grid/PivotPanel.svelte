@@ -19,6 +19,8 @@
 	import { DEFAULT_NAME_HINT, isDefaultTableName } from './defaultname';
 	import { dismiss, dismissPanel } from './dismiss.js';
 	import { searchValues, valuesFilter, type PanelValue } from './filtercond.js';
+	import CustomSort from './CustomSort.svelte';
+	import { withoutField, type CustomList, type CustomOrder } from './customsort';
 	import {
 		AGGS,
 		FORMATS,
@@ -62,9 +64,25 @@
 		onclose: () => void;
 		/** Feuille protégée : le message, et les champs grisés. */
 		locked?: string;
+		/** Listes personnalisées (Tri personnalisé…) : lecture et enregistrement. */
+		customLists?: () => Promise<CustomList[]>;
+		setCustomLists?: (lists: CustomList[]) => Promise<unknown>;
 	}
 
-	let { config, fields, error = '', filterValues, onchange, ondelete, onclose, resizable = true, locked = '' }: Props = $props();
+	let { config, fields, error = '', filterValues, onchange, ondelete, onclose, resizable = true, locked = '', customLists, setCustomLists }: Props = $props();
+
+	/** Tri personnalisé… d'un champ des lignes ou des colonnes : son dialogue ouvert. */
+	let customField = $state<string | null>(null);
+
+	/** Tri d'un champ : asc, desc, ou un ordre personnalisé (null : ordre de la source). */
+	function sortField(field: string, how: 'asc' | 'desc' | CustomOrder | null) {
+		const c: PivotConfig = { ...draft, sort: withoutField(draft.sort, field), orders: withoutField(draft.orders, field) };
+		if (how === 'asc' || how === 'desc') c.sort = { ...c.sort, [field]: how };
+		else if (how) c.orders = { ...c.orders, [field]: how };
+		if (!c.sort) delete c.sort;
+		if (!c.orders) delete c.orders;
+		change(c);
+	}
 
 	const flds = $derived<PivotField[]>(fields.map((f) => ({ name: f.name, type: f.type ?? (f.numeric ? 'decimal' : 'text') })));
 	const ZONE_ICONS: Record<Zone, IconName> = { filters: 'filter', cols: 'pivot-columns', rows: 'pivot-rows', values: 'autosum' };
@@ -322,6 +340,14 @@
 			items.push({ label: 'Choisir les valeurs…', disabled: !filterValues, run: () => openFilter(i) });
 			const f = draft.filters![i];
 			items.push({ label: 'Effacer le filtre', disabled: !f.values.length, run: () => change(setFilter(draft, f.field, [])) });
+			items.push({ label: '', sep: true });
+		} else if (field !== ROW_COUNT) {
+			// Champ des lignes ou des colonnes : tri de ses étiquettes (les vides toujours à la fin).
+			const custom = !!draft.orders?.[field];
+			items.push({ label: 'Trier de A à Z', checked: !custom && draft.sort?.[field] === 'asc', run: () => sortField(field, 'asc') });
+			items.push({ label: 'Trier de Z à A', checked: !custom && draft.sort?.[field] === 'desc', run: () => sortField(field, 'desc') });
+			items.push({ label: 'Tri personnalisé…', checked: custom, disabled: !filterValues, run: () => (customField = field) });
+			items.push({ label: 'Ordre de la source', checked: !custom && !draft.sort?.[field], run: () => sortField(field, null) });
 			items.push({ label: '', sep: true });
 		}
 		for (const m of moveCommands(draft, zone, i)) {
@@ -582,6 +608,23 @@
 	</footer>
 	</fieldset>
 </aside>
+
+{#if customField !== null && filterValues}
+	{@const field = customField}
+	{@const values = filterValues}
+	<CustomSort
+		{field}
+		loadValues={async () => (await values(field)).map((v) => v.text)}
+		loadOrder={async () => draft.orders?.[field] ?? null}
+		loadLists={customLists}
+		saveLists={setCustomLists}
+		onapply={(o) => {
+			customField = null;
+			sortField(field, o);
+		}}
+		onclose={() => (customField = null)}
+	/>
+{/if}
 
 {#if menu}
 	{@const m = menu}

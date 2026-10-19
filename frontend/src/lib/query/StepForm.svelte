@@ -234,9 +234,21 @@
 					<div class="row">
 						<span class="conj">{i === 0 ? 'Trier par' : 'Puis par'}</span>
 						<Select bind:value={k.column} options={names} width="170px" />
-						<Select value={k.desc ? 1 : 0} options={[{ value: 0, label: 'Croissant' }, { value: 1, label: 'Décroissant' }]} width="120px" onchange={(v) => (k.desc = v === 1 || undefined)} />
+						<Select value={k.desc ? 1 : 0} options={[{ value: 0, label: k.order?.length ? 'Dans l’ordre' : 'Croissant' }, { value: 1, label: k.order?.length ? 'À rebours' : 'Décroissant' }]} width="120px" onchange={(v) => (k.desc = v === 1 || undefined)} />
 						{#if (s.sort ?? []).length > 1}<button class="x" title="Retirer" onclick={() => (s.sort = (s.sort ?? []).filter((_, j) => j !== i))}>✕</button>{/if}
 					</div>
+					<!-- Tri personnalisé : ces valeurs d'abord, dans cet ordre (sans casse), puis les autres. -->
+					<label class="field order"
+						>Ordre personnalisé (facultatif, valeurs séparées par « ; »)
+						<input
+							value={(k.order ?? []).join('; ')}
+							placeholder="Haute; Moyenne; Basse"
+							onchange={(e) => {
+								const vals = (e.currentTarget as HTMLInputElement).value.split(';').map((x) => x.trim()).filter((x) => x !== '');
+								k.order = vals.length ? vals : undefined;
+							}}
+						/></label
+					>
 				{/each}
 				<button class="ico" onclick={() => (s.sort = [...(s.sort ?? []), { column: cols[0]?.name ?? '' }])}><Icon name="plus" size={14} />Ajouter un niveau</button>
 			{:else if s.op === 'top'}

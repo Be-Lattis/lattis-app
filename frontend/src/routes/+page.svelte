@@ -1291,6 +1291,13 @@
 		setRowHeight: (row, height) => DocumentService.SetRowHeight(sheetId, row, height).then(reload),
 		setName: (row, col, name) => DocumentService.SetName(sheetId, row, col, name).then(reload),
 		sortTable: (t, i, desc) => DocumentService.SortTable(t.name, i, desc).then(reload),
+		sortTableCustom: (t, i, order) => DocumentService.SortTableCustom(t.name, i, order).then(reload),
+		columnOrder: async (t, i) => {
+			const o = (await DocumentService.ColumnOrder(t.name, i)).order;
+			return o ? { ...o, values: o.values ?? [] } : null;
+		},
+		customLists: async () => ((await DocumentService.CustomLists()) ?? []).map((l) => ({ ...l, values: l.values ?? [] })),
+		setCustomLists: (lists) => DocumentService.SetCustomLists(lists).then(reload),
 		refreshTable: (t) => queryHost?.refreshOne(t.query!.id) ?? Promise.resolve(),
 		setRules: (t, i, rules) => DocumentService.SetRules(t.name, i, rules).then(reload),
 		setLineRules: (rows, i0, i1, rules) => DocumentService.SetLineRules(sheetId, rows, i0, i1, rules).then(reload),
@@ -1774,6 +1781,7 @@
 		onredo={() => DocumentService.Redo().then(reload).catch((e) => (notice = err(e)))}
 		onbench={mode === 'demo' ? () => sheet?.runBench() : undefined}
 		onsort={mode === 'doc' ? (desc) => sheet?.sortActive(desc) : undefined}
+		onsortcustom={mode === 'doc' ? () => sheet?.sortCustomActive() : undefined}
 		oncells={mode === 'doc' ? (op) => sheet?.cellsActive(op) : undefined}
 		onstyle={mode === 'doc' ? (patch) => (activeDoc ? docPage?.applyStyle(patch) : sheet?.applyStyle(patch)) : undefined}
 		onfind={mode === 'doc' ? (replace) => sheet?.openFinder(replace) : undefined}

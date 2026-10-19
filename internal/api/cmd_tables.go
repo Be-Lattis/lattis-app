@@ -266,6 +266,79 @@ end`,
 				return nil, d.SortTable(c, t.Name, i, desc)
 			},
 		},
+		columnCmd(&Command{Name: "tables.sort_custom", Label: "Tri personnalisé",
+			Summary: "Trie un tableau selon une colonne dans un ordre personnalisé (liste de valeurs ou liste nommée, comme « Mois » ou « Jours »).",
+			Details: "Les valeurs de la liste viennent d'abord, dans son ordre (à rebours avec descending), comparées au texte affiché sans tenir compte de la casse ; " +
+				"les autres suivent dans l'ordre croissant, les cellules vides à la fin. L'ordre est enregistré pour la colonne et ré-appliqué à l'actualisation " +
+				"d'un tableau chargé par une requête. Listes prédéfinies : Jours, Jours abrégés, Mois, Mois abrégés ; les autres se définissent avec tables.set_sort_lists.",
+			Params: []Param{{Name: "values", Type: Array, Items: String, Desc: "valeurs dans l'ordre voulu", Optional: true},
+				{Name: "list", Type: String, Desc: "nom d'une liste personnalisée (à la place de values)", Optional: true},
+				{Name: "descending", Type: Boolean, Desc: "liste à rebours", Optional: true}},
+			Write: true, Example: `tables.sort_custom("Commandes", "Client", {"Martin", "Durand"})
+tables.sort_custom("Commandes", "Client", nil, "Jours", true) -- liste nommée, à rebours`},
+			func(c *Call, t tableRef, i int) (any, error) {
+				var o canvas.CustomOrder
+				if c.Has("values") {
+					var vals []any
+					if err := c.Decode("values", &vals); err != nil {
+						return nil, err
+					}
+					for _, v := range vals {
+						o.Values = append(o.Values, raw(v))
+					}
+				}
+				if c.Has("list") {
+					l, err := c.Str("list")
+					if err != nil {
+						return nil, err
+					}
+					o.List = l
+				}
+				o.Desc, _ = c.Bool("descending")
+				d, _ := c.Doc()
+				return nil, d.SortTableCustom(c, t.Name, i, o)
+			}),
+		columnCmd(&Command{Name: "columns.sort_order", Summary: "Rend l'ordre personnalisé enregistré d'une colonne (nil : aucun).",
+			Returns: "{list, values = {...}, desc, applied} : applied si c'est le dernier tri du tableau"},
+			func(c *Call, t tableRef, i int) (any, error) {
+				d, _ := c.Doc()
+				o, ok, applied, err := d.ColumnOrder(c, t.Name, i)
+				if err != nil || !ok {
+					return nil, err
+				}
+				return map[string]any{"list": o.List, "values": o.Values, "desc": o.Desc, "applied": applied}, nil
+			}),
+		&Command{
+			Name:    "tables.sort_lists",
+			Summary: "Liste les listes personnalisées de tri : prédéfinies (Jours, Mois…) puis celles du classeur.",
+			Returns: "{ {name, values = {...}, builtin}, ... }",
+			Run: func(c *Call) (any, error) {
+				d, err := c.Doc()
+				if err != nil {
+					return nil, err
+				}
+				return d.CustomLists(c)
+			},
+		},
+		&Command{
+			Name:    "tables.set_sort_lists",
+			Label:   "Listes personnalisées",
+			Summary: "Remplace les listes personnalisées du classeur (les listes prédéfinies ne changent pas).",
+			Params:  []Param{{Name: "lists", Type: Array, Items: Object, Desc: "listes : { {name = \"Tailles\", values = {\"S\", \"M\", \"L\"}}, ... }"}},
+			Write:   true,
+			Example: `tables.set_sort_lists({ {name = "Tailles", values = {"S", "M", "L", "XL"}} })`,
+			Run: func(c *Call) (any, error) {
+				var lists []canvas.CustomList
+				if err := c.Decode("lists", &lists); err != nil {
+					return nil, err
+				}
+				d, err := c.Doc()
+				if err != nil {
+					return nil, err
+				}
+				return nil, d.SetCustomLists(c, lists)
+			},
+		},
 		&Command{
 			Name:    "tables.insert_row",
 			Label:   "Insérer une ligne",

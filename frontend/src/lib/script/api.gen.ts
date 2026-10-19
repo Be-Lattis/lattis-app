@@ -255,6 +255,14 @@ export const apiReference: RefEntry[] = [
 		args: [1, 3]
 	},
 	{
+		name: "columns.sort_order",
+		category: "columns",
+		signature: "columns.sort_order(table, column) → {list, values = {...}, desc, applied} : applied si c'est le dernier tri du tableau",
+		summary: "Rend l'ordre personnalisé enregistré d'une colonne (nil : aucun).",
+		details: "Paramètres — table : nom du tableau ; column : colonne (nom ou rang à partir de 1). Arguments dans l'ordre, ou une table d'arguments nommés : columns.sort_order{table = …}.",
+		args: [1, 2]
+	},
+	{
 		name: "columns.type_mix",
 		category: "columns",
 		signature: "columns.type_mix(table, column) → {type, off, total}",
@@ -1016,6 +1024,15 @@ export const apiReference: RefEntry[] = [
 		args: [1, 2]
 	},
 	{
+		name: "tables.set_sort_lists",
+		category: "tables",
+		signature: "tables.set_sort_lists(lists)",
+		summary: "Remplace les listes personnalisées du classeur (les listes prédéfinies ne changent pas).",
+		details: "Paramètres — lists : listes : { {name = \"Tailles\", values = {\"S\", \"M\", \"L\"}}, ... }. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "tables.set_sort_lists({ {name = \"Tailles\", values = {\"S\", \"M\", \"L\", \"XL\"}} })",
+		args: [1, 1]
+	},
+	{
 		name: "tables.similar",
 		category: "tables",
 		signature: "tables.similar() → { {id, tables = { {table, sheet, sheetName, rows, key, hidden}, ... }, columns = { {name, type, from, paired, text}, ... }, category = {kind, column, type, values, labels, common}, key, name, score, propose, identical, dismissed, summary, notes}, ... }",
@@ -1032,6 +1049,22 @@ export const apiReference: RefEntry[] = [
 		details: "Paramètres — table : nom du tableau ; column : colonne (nom ou rang à partir de 1) ; descending : ordre décroissant. Arguments dans l'ordre, ou une table d'arguments nommés : tables.sort{table = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		example: "tables.sort(\"Commandes\", \"Montant\", true)",
 		args: [1, 3]
+	},
+	{
+		name: "tables.sort_custom",
+		category: "tables",
+		signature: "tables.sort_custom(table, column, [values], [list], [descending])",
+		summary: "Trie un tableau selon une colonne dans un ordre personnalisé (liste de valeurs ou liste nommée, comme « Mois » ou « Jours »).",
+		details: "Les valeurs de la liste viennent d'abord, dans son ordre (à rebours avec descending), comparées au texte affiché sans tenir compte de la casse ; les autres suivent dans l'ordre croissant, les cellules vides à la fin. L'ordre est enregistré pour la colonne et ré-appliqué à l'actualisation d'un tableau chargé par une requête. Listes prédéfinies : Jours, Jours abrégés, Mois, Mois abrégés ; les autres se définissent avec tables.set_sort_lists. Paramètres — table : nom du tableau ; column : colonne (nom ou rang à partir de 1) ; values : valeurs dans l'ordre voulu ; list : nom d'une liste personnalisée (à la place de values) ; descending : liste à rebours. Arguments dans l'ordre, ou une table d'arguments nommés : tables.sort_custom{table = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "tables.sort_custom(\"Commandes\", \"Client\", {\"Martin\", \"Durand\"})\ntables.sort_custom(\"Commandes\", \"Client\", nil, \"Jours\", true) -- liste nommée, à rebours",
+		args: [1, 5]
+	},
+	{
+		name: "tables.sort_lists",
+		category: "tables",
+		signature: "tables.sort_lists() → { {name, values = {...}, builtin}, ... }",
+		summary: "Liste les listes personnalisées de tri : prédéfinies (Jours, Mois…) puis celles du classeur.",
+		args: [0, 0]
 	},
 	{
 		name: "tables.text_to_columns",

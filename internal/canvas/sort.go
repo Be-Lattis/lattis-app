@@ -3,6 +3,7 @@ package canvas
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/lalamefine/lattis/internal/command"
@@ -23,51 +24,100 @@ func (m *Model) SortTable(ctx context.Context, table string, i int, desc bool) e
 		if err != nil {
 			return err
 		}
-		if i < 0 || i >= len(tb.Cols) {
-			return fmt.Errorf("colonne %d hors du tableau", i)
+		if err := t.sortRows(tb, i, desc, nil); err != nil {
+			return err
 		}
-		c := tb.Cols[i]
-		src := tb.sql()
-		if c.Formula != "" {
-			if src, c, err = t.computedView(tb, c); err != nil {
-				return err
-			}
-		}
-		col := colSQL(c.ID)
-		if c.Type == grid.Text {
-			col += " COLLATE NOCASE"
-		}
-		dir := "ASC"
-		if desc {
-			dir = "DESC"
-		}
-		stamp := time.Now().UnixNano()
-		trash := fmt.Sprintf("_lattis_trash_sort_%d_%d", tb.ID, stamp)
-		rank := fmt.Sprintf("_lattis_rank_%d_%d", tb.ID, stamp)
-		// Nouvelles clés : le rang écrit sur 12 chiffres, suivi d'une lettre
-		// (une clé ne finit jamais par 0) ; l'ordre lexicographique est celui
-		// du rang, et l'on peut toujours insérer entre deux clés.
-		return t.ApplyStep(command.Step{
-			Do: []stmt{
-				st(`CREATE TABLE ` + trash + ` (id INTEGER PRIMARY KEY, pos TEXT NOT NULL)`),
-				st(`INSERT INTO ` + trash + ` SELECT id, _pos FROM ` + tb.sql()),
-				st(`CREATE TABLE ` + rank + ` (id INTEGER PRIMARY KEY, k TEXT NOT NULL)`),
-				st(`INSERT INTO ` + rank + ` SELECT id, printf('%012dV', row_number() OVER (ORDER BY ` +
-					colSQL(c.ID) + ` IS NULL, ` + col + ` ` + dir + `, _pos)) FROM ` + src),
-				// Index de _pos retiré pendant la réécriture : le reconstruire d'un
-				// coup est bien plus rapide que de le tenir à jour ligne à ligne.
-				st(`DROP INDEX ` + tb.sql() + `_pos`),
-				st(`UPDATE ` + tb.sql() + ` SET _pos = r.k FROM ` + rank + ` AS r WHERE r.id = ` + tb.sql() + `.id`),
-				st(`CREATE INDEX ` + tb.sql() + `_pos ON ` + tb.sql() + `(_pos)`),
-				st(`DROP TABLE ` + rank),
-			},
-			Undo: []stmt{
-				st(`DROP INDEX ` + tb.sql() + `_pos`),
-				st(`UPDATE ` + tb.sql() + ` SET _pos = o.pos FROM ` + trash + ` AS o WHERE o.id = ` + tb.sql() + `.id`),
-				st(`CREATE INDEX ` + tb.sql() + `_pos ON ` + tb.sql() + `(_pos)`),
-				st(`DROP TABLE ` + trash),
-			},
-			Purge: []stmt{st(`DROP TABLE IF EXISTS ` + trash)},
-		})
+		// Un tri ordinaire remplace le tri personnalisé ré-appliqué à
+		// l'actualisation.
+		return t.setAppliedOrder(tb.Name, "")
 	})
+}
+
+// sortRows réécrit l'ordre des lignes du tableau selon la colonne i ; order
+// (non nil) est un ordre personnalisé : ses valeurs d'abord, dans l'ordre
+// de la liste (inverse avec desc), puis les autres dans l'ordre naturel
+// croissant, les vides à la fin.
+func (t *tx) sortRows(tb Table, i int, desc bool, order []string) error {
+	if i < 0 || i >= len(tb.Cols) {
+		return fmt.Errorf("colonne %d hors du tableau", i)
+	}
+	c := tb.Cols[i]
+	src := tb.sql()
+	var err error
+	if c.Formula != "" {
+		if src, c, err = t.computedView(tb, c); err != nil {
+			return err
+		}
+	}
+	col := colSQL(c.ID)
+	if c.Type == grid.Text {
+		col += " COLLATE NOCASE"
+	}
+	dir := "ASC"
+	if desc {
+		dir = "DESC"
+	}
+	stamp := time.Now().UnixNano()
+	trash := fmt.Sprintf("_lattis_trash_sort_%d_%d", tb.ID, stamp)
+	rank := fmt.Sprintf("_lattis_rank_%d_%d", tb.ID, stamp)
+	var do, after []stmt
+	by := colSQL(c.ID) + ` IS NULL, ` + col + ` ` + dir + `, _pos`
+	from := src
+	if order != nil {
+		// Table d'ordre (valeur repliée → rang) jointe au tableau : un
+		// seul passage, rapide sur un grand tableau, quelle que soit la
+		// longueur de la liste.
+		ord := fmt.Sprintf("_lattis_order_%d_%d", tb.ID, stamp)
+		do = append(do, st(`CREATE TABLE `+ord+` (v TEXT PRIMARY KEY, r INTEGER NOT NULL) WITHOUT ROWID`))
+		do = append(do, orderInserts(ord, order)...)
+		after = append(after, st(`DROP TABLE `+ord))
+		from = src + ` LEFT JOIN ` + ord + ` AS o ON o.v = ` + FoldFunc + `(` + textExpr(c) + `)`
+		by = colSQL(c.ID) + ` IS NULL, o.r IS NULL, o.r ` + dir + `, ` + col + ` ASC, _pos`
+	}
+	do = append(do,
+		st(`CREATE TABLE `+trash+` (id INTEGER PRIMARY KEY, pos TEXT NOT NULL)`),
+		st(`INSERT INTO `+trash+` SELECT id, _pos FROM `+tb.sql()),
+		st(`CREATE TABLE `+rank+` (id INTEGER PRIMARY KEY, k TEXT NOT NULL)`),
+		// Nouvelles clés : le rang écrit sur 12 chiffres, suivi d'une
+		// lettre (une clé ne finit jamais par 0) ; l'ordre lexicographique
+		// est celui du rang, et l'on peut toujours insérer entre deux clés.
+		st(`INSERT INTO `+rank+` SELECT id, printf('%012dV', row_number() OVER (ORDER BY `+by+`)) FROM `+from),
+	)
+	do = append(do, after...)
+	do = append(do,
+		// Index de _pos retiré pendant la réécriture : le reconstruire d'un
+		// coup est bien plus rapide que de le tenir à jour ligne à ligne.
+		st(`DROP INDEX `+tb.sql()+`_pos`),
+		st(`UPDATE `+tb.sql()+` SET _pos = r.k FROM `+rank+` AS r WHERE r.id = `+tb.sql()+`.id`),
+		st(`CREATE INDEX `+tb.sql()+`_pos ON `+tb.sql()+`(_pos)`),
+		st(`DROP TABLE `+rank),
+	)
+	return t.ApplyStep(command.Step{
+		Do: do,
+		Undo: []stmt{
+			st(`DROP INDEX ` + tb.sql() + `_pos`),
+			st(`UPDATE ` + tb.sql() + ` SET _pos = o.pos FROM ` + trash + ` AS o WHERE o.id = ` + tb.sql() + `.id`),
+			st(`CREATE INDEX ` + tb.sql() + `_pos ON ` + tb.sql() + `(_pos)`),
+			st(`DROP TABLE ` + trash),
+		},
+		Purge: []stmt{st(`DROP TABLE IF EXISTS ` + trash)},
+	})
+}
+
+// orderInserts remplit la table d'ordre : chaque valeur repliée (FoldFunc)
+// et son rang ; un doublon après repli garde son premier rang.
+func orderInserts(table string, values []string) []stmt {
+	const chunk = 400
+	var out []stmt
+	for lo := 0; lo < len(values); lo += chunk {
+		hi := min(lo+chunk, len(values))
+		marks := make([]string, 0, hi-lo)
+		args := make([]any, 0, 2*(hi-lo))
+		for k := lo; k < hi; k++ {
+			marks = append(marks, "(?, ?)")
+			args = append(args, Fold(values[k]), k)
+		}
+		out = append(out, st(`INSERT OR IGNORE INTO `+table+` (v, r) VALUES `+strings.Join(marks, ", "), args...))
+	}
+	return out
 }

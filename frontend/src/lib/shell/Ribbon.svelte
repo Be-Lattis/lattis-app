@@ -120,6 +120,8 @@
 		onredo: () => void;
 		onbench?: () => void;
 		onsort?: (desc: boolean) => void;
+		/** Tri personnalisé… de la colonne active (ordre des valeurs choisi). */
+		onsortcustom?: () => void;
 		/** Mise en forme de la sélection ('toggle' bascule gras, italique, souligné). */
 		onstyle?: (patch: Record<string, unknown>) => void;
 		onfind?: (replace: boolean) => void;
@@ -209,7 +211,7 @@
 		onpagebreaks?: (on: boolean) => void;
 	}
 
-	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ondedup, ontextcols, onpivot, oninsertdata, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks }: Props = $props();
+	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ondedup, ontextcols, onpivot, oninsertdata, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks }: Props = $props();
 	const fmt = (tab: FormatTab) => (onformat ? () => onformat(tab) : undefined);
 	const lines = (rows: boolean, hide: boolean) => (onlines ? () => onlines(rows, hide) : undefined);
 	const frz = (what: FreezeAction) => (onfreeze ? () => onfreeze(what) : undefined);
@@ -494,6 +496,7 @@
 						items: [
 							{ label: 'Trier de A à Z', local: true, run: onsort ? () => onsort(false) : undefined },
 							{ label: 'Trier de Z à A', local: true, run: onsort ? () => onsort(true) : undefined },
+							{ label: 'Tri personnalisé…', local: true, run: onsortcustom },
 							{ label: 'Filtrer', ro: true, keys: 'Ctrl+Maj+L', run: flt('filter') },
 							{ label: 'Effacer les filtres', ro: true, run: filters ? flt('clear') : undefined }
 						]
@@ -683,6 +686,7 @@
 				commands: [
 					{ label: 'Trier A → Z', icon: 'sort-asc', local: true, run: onsort ? () => onsort(false) : undefined, hint: 'Trier le tableau par la colonne active, croissant' },
 					{ label: 'Trier Z → A', icon: 'sort-desc', local: true, run: onsort ? () => onsort(true) : undefined, hint: 'Trier le tableau par la colonne active, décroissant' },
+					{ label: 'Tri personnalisé…', icon: 'sort', local: true, run: onsortcustom, hint: 'Trier le tableau par la colonne active dans un ordre choisi (Jours, Mois, ordre libre)' },
 					{ label: 'Filtrer', icon: 'filter', size: 'big', ro: true, run: flt('filter'), hint: 'Filtrer le tableau par la colonne active (Ctrl+Maj+L)' },
 					{ label: 'Effacer', icon: 'clear-format', size: 'small', ro: true, run: filters ? flt('clear') : undefined, hint: filters ? 'Effacer les filtres du tableau actif' : 'Effacer : le tableau de la cellule active n’est pas filtré' },
 					{ label: 'Erreurs seulement', icon: 'warning', size: 'small', ro: true, on: errorsOnly, run: flt('errors'), hint: errorsOnly ? 'Afficher de nouveau toutes les lignes de la colonne active' : 'Afficher seulement les saisies hors type de la colonne active' }

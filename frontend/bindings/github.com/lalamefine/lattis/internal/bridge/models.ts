@@ -249,6 +249,15 @@ export interface About {
 }
 
 /**
+ * ColumnOrderInfo est l'ordre personnalisé enregistré d'une colonne (Order
+ * nil : aucun) ; Applied : c'est le dernier tri du tableau.
+ */
+export interface ColumnOrderInfo {
+    "order": canvas$0.CustomOrder | null;
+    "applied": boolean;
+}
+
+/**
  * DamagedFile décrit un classeur endommagé.
  */
 export interface DamagedFile {

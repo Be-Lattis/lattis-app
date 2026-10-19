@@ -30,6 +30,8 @@
 	import { blocksReach, boxesReach } from './objextent';
 	import FormatDialog, { type FormatTab } from './FormatDialog.svelte';
 	import TextToColumns from './TextToColumns.svelte';
+	import CustomSort from './CustomSort.svelte';
+	import { withoutField, type CustomList, type CustomOrder } from './customsort';
 	import { handQuestion, keyQuestion, type KeyChoice, type KeyQuestion } from './keychoice';
 	import type { TextColumnsOptions, TextColumnsPreview } from './textcols';
 	import { dismiss, dismissPanel } from './dismiss';
@@ -141,6 +143,8 @@
 		items?: { field: string; values: string[] }[];
 		/** Tri des étiquettes d'un champ : 'asc' ou 'desc' (absent : ordre de la source). */
 		sort?: Record<string, 'asc' | 'desc'>;
+		/** Ordre personnalisé d'un champ (Tri personnalisé…), qui l'emporte sur sort. */
+		orders?: Record<string, CustomOrder>;
 		noGrandTotal?: boolean;
 		/** Sous-totaux des groupes (plusieurs champs en lignes) : '' en haut (ligne du groupe), 'bottom', 'none'. */
 		subtotals?: string;
@@ -432,6 +436,14 @@
 		/** Nomme une cellule libre (vide : retire le nom). */
 		setName?(row: number, col: number, name: string): Promise<unknown>;
 		sortTable?(table: SheetTable, i: number, desc: boolean): Promise<unknown>;
+		/** Tri personnalisé selon la colonne i (ordre enregistré pour la colonne, une étape d'annulation). */
+		sortTableCustom?(table: SheetTable, i: number, order: CustomOrder): Promise<unknown>;
+		/** Ordre personnalisé enregistré de la colonne i (null : aucun). */
+		columnOrder?(table: SheetTable, i: number): Promise<CustomOrder | null>;
+		/** Listes personnalisées : prédéfinies (Jours, Mois…) puis celles du classeur. */
+		customLists?(): Promise<CustomList[]>;
+		/** Remplace les listes personnalisées du classeur. */
+		setCustomLists?(lists: CustomList[]): Promise<unknown>;
 		/** Met en forme le rectangle sélectionné (une valeur vide retire la propriété). */
 		applyStyle?(r0: number, c0: number, r1: number, c1: number, patch: Record<string, unknown>): Promise<unknown>;
 		/** Met en forme des lignes (rows) ou des colonnes entières de la feuille, comme Excel. */
@@ -4666,7 +4678,65 @@
 	function sortPivot(dir: 'asc' | 'desc') {
 		const d = pivotDlg;
 		if (!d) return;
-		savePivot({ ...d.p.config, sort: { ...d.p.config.sort, [d.field]: dir } });
+		const cfg: PivotConfig = { ...d.p.config, sort: { ...d.p.config.sort, [d.field]: dir }, orders: withoutField(d.p.config.orders, d.field) };
+		if (!cfg.orders) delete cfg.orders;
+		savePivot(cfg);
+	}
+
+	// --- Tri personnalisé… ------------------------------------------------------
+
+	/** Dialogue « Tri personnalisé » ouvert : champ, valeurs, ordre enregistré et application. */
+	let customDlg = $state<{
+		field: string;
+		loadValues: () => Promise<string[]>;
+		loadOrder?: () => Promise<CustomOrder | null>;
+		apply: (o: CustomOrder) => void;
+	} | null>(null);
+
+	/** Tri personnalisé… d'une colonne de tableau (menus ▾ et clic droit, ruban Données). */
+	function openCustomSort(e: Entry, i: number) {
+		const run = source.sortTableCustom;
+		if (!run) return;
+		const t = e.t;
+		menu = null;
+		filterDlg = null;
+		customDlg = {
+			field: t.columns[i]?.name ?? '',
+			loadValues: async () => ((await source.filterValues?.(t, i)) ?? []).map((v) => v.text),
+			loadOrder: source.columnOrder ? () => source.columnOrder!(t, i) : undefined,
+			apply: (o) => {
+				menuAction(() => run(t, i, o)).then((ok) => ok && say('Tri personnalisé appliqué (Ctrl+Z pour annuler)'));
+			}
+		};
+	}
+
+	/** Tri personnalisé… du champ du menu ▾ d'un TCD : enregistré dans sa configuration. */
+	function openPivotCustomSort() {
+		const d = pivotDlg;
+		if (!d || !source.setPivot) return;
+		const { p, field } = d;
+		const set = source.setPivot;
+		pivotDlg = null;
+		customDlg = {
+			field,
+			loadValues: async () => ((await source.pivotFieldValues?.(p.config.source, field)) ?? []).map((v) => v.text),
+			loadOrder: async () => p.config.orders?.[field] ?? null,
+			apply: (o) => {
+				const cfg: PivotConfig = { ...p.config, orders: { ...p.config.orders, [field]: o }, sort: withoutField(p.config.sort, field) };
+				if (!cfg.sort) delete cfg.sort;
+				menuAction(() => set(p.id, cfg));
+			}
+		};
+	}
+
+	/** Tri personnalisé de la colonne active (ruban : Trier et filtrer). */
+	export function sortCustomActive() {
+		const e = targetTable();
+		if (!e || !source.sortTableCustom) {
+			say('Placez la cellule active dans la colonne d’un tableau pour trier');
+			return;
+		}
+		openCustomSort(e, targetCol(e));
 	}
 
 	/** OK : valeurs cochées gardées (toutes : plus de filtre) ; clear : efface le filtre et le tri du champ. */
@@ -4690,6 +4760,7 @@
 				const { [d.field]: _, ...sort } = cfg.sort;
 				cfg.sort = Object.keys(sort).length ? sort : undefined;
 			}
+			if (clear && cfg.orders) cfg.orders = withoutField(cfg.orders, d.field);
 		}
 		savePivot(cfg);
 	}
@@ -9453,7 +9524,7 @@
 			{@const cols = !m.rowOnly}
 			{@const rowItems = !m.header && !m.rowOnly}
 			{@const filtered = cols && !!source.clearFilters && m.e.t.columns.some((c) => c.filter)}
-			{@const sortCount = (cols && source.sortTable ? 2 : 0) + (cols && source.setFilter ? 1 : 0) + (filtered ? 1 : 0)}
+			{@const sortCount = (cols && source.sortTable ? 2 : 0) + (cols && source.sortTableCustom ? 1 : 0) + (cols && source.setFilter ? 1 : 0) + (filtered ? 1 : 0)}
 			{@const toTitle = cols && !!source.headerToTitle && m.e.t.rows > 0}
 			{@const toNote = rowItems && !!source.rowToNote && m.n === m.e.t.rows - 1}
 			{@const refresh = !!m.e.t.query && !!source.refreshTable}
@@ -9466,6 +9537,9 @@
 					{@const lab = sortLabels(col?.type ?? 'text', col?.result)}
 					<button onclick={() => menuAction(() => source.sortTable!(m.e.t, m.i, false))}>{lab[0]}</button>
 					<button onclick={() => menuAction(() => source.sortTable!(m.e.t, m.i, true))}>{lab[1]}</button>
+				{/if}
+				{#if cols && source.sortTableCustom}
+					<button onclick={() => openCustomSort(m.e, m.i)}>Tri personnalisé…</button>
 				{/if}
 				{#if cols && source.setFilter}
 					<button onclick={() => openFilter(m.e, m.i)}>Filtrer la colonne…</button>
@@ -9848,6 +9922,24 @@
 				<button onclick={() => removeChart(m.ch.id)}>Supprimer le graphique</button>
 			</div>
 		{/if}
+		{#if customDlg}
+			{@const d = customDlg}
+			<CustomSort
+				field={d.field}
+				loadValues={d.loadValues}
+				loadOrder={d.loadOrder}
+				loadLists={source.customLists}
+				saveLists={source.setCustomLists}
+				onapply={(o) => {
+					customDlg = null;
+					d.apply(o);
+				}}
+				onclose={() => {
+					customDlg = null;
+					wrap.focus();
+				}}
+			/>
+		{/if}
 		{#if ttcDlg && source.textColumnsPreview && source.textToColumns}
 			{@const d = ttcDlg}
 			{@const pv = source.textColumnsPreview}
@@ -10025,6 +10117,9 @@
 				{#if d.kind === 'rows'}
 					<button class="sort" class:on={d.p.config.sort?.[d.field] === 'asc'} onclick={() => sortPivot('asc')}>Trier de A à Z</button>
 					<button class="sort" class:on={d.p.config.sort?.[d.field] === 'desc'} onclick={() => sortPivot('desc')}>Trier de Z à A</button>
+					{#if source.pivotFieldValues}
+						<button class="sort" class:on={!!d.p.config.orders?.[d.field]} onclick={openPivotCustomSort}>Tri personnalisé…</button>
+					{/if}
 					<hr />
 				{/if}
 				{#if d.kind === 'filter' ? d.p.config.filters?.some((f) => f.field === d.field && f.values.length) : pivotFiltered(d.p, d.field)}
@@ -10103,6 +10198,9 @@
 							menuAction(() => source.sortTable!(d.e.t, d.i, true));
 						}}>{sortLabels(fcol?.type ?? 'text', fcol?.result)[1]}</button
 					>
+					{#if source.sortTableCustom}
+						<button class="sort" onclick={() => openCustomSort(d.e, d.i)}>Tri personnalisé…</button>
+					{/if}
 					<hr />
 				{/if}
 				{#if fcol?.filter}
@@ -10402,6 +10500,8 @@
 				fields={sourceColumns(pv.config.source)}
 				error={pv.error}
 				filterValues={source.pivotFieldValues ? (f) => source.pivotFieldValues!(pv.config.source, f) : undefined}
+				customLists={source.customLists}
+				setCustomLists={source.setCustomLists}
 				onchange={(cfg) => menuAction(source.setPivot && (() => source.setPivot!(pv.id, cfg)), true)}
 				ondelete={() => {
 					panel = null;

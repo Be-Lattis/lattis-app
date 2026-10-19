@@ -325,6 +325,10 @@ func (m *Model) LoadQuery(ctx context.Context, id int64, it ImportTable) (QueryL
 			if err := t.followLegend(*old, tb); err != nil {
 				return err
 			}
+			// Dernier tri personnalisé du tableau, ré-appliqué.
+			if err := t.reapplyOrder(tb.ID); err != nil {
+				return err
+			}
 		}
 		if err := t.settle(sheet, tb.ID); err != nil {
 			return err

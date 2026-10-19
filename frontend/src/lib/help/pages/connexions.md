@@ -19,7 +19,7 @@ Données › Obtenir des données importe des données dans un tableau, à la ma
 L'éditeur montre un aperçu des données et la liste des **étapes appliquées**. Les commandes de son ruban ajoutent une étape :
 
 - **Colonnes** : choisir, supprimer, renommer, changer le type ;
-- **Lignes** : filtrer, trier, supprimer les doublons, garder les premières lignes ;
+- **Lignes** : filtrer, trier (avec, au besoin, un ordre personnalisé : les valeurs listées d'abord, dans cet ordre), supprimer les doublons, garder les premières lignes ;
 - **Transformer** : fractionner, remplacer des valeurs, format (SUPPRESPACE, MAJUSCULE…), colonne personnalisée, colonne d'index, regrouper, pivoter, dépivoter ;
 - **Combiner** : fusionner (joindre) ou ajouter les lignes d'une autre requête ou d'un tableau.
 

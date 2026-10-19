@@ -195,6 +195,13 @@ export interface Query {
 export interface SortKey {
     "column": string;
     "desc"?: boolean;
+
+    /**
+     * Order : ordre personnalisé (Tri personnalisé) : ces valeurs d'abord,
+     * dans cet ordre (à rebours avec Desc), sans tenir compte de la casse,
+     * puis les autres dans l'ordre croissant.
+     */
+    "order"?: string[] | null;
 }
 
 /**

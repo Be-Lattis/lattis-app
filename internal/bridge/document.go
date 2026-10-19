@@ -920,6 +920,46 @@ func (s *DocumentService) SortTable(ctx context.Context, table string, i int, de
 	return s.act(ctx, func(d *doc.Document) error { return d.SortTable(ctx, table, i, desc) })
 }
 
+// SortTableCustom trie un tableau selon la colonne i dans un ordre
+// personnalisé, enregistré pour la colonne.
+func (s *DocumentService) SortTableCustom(ctx context.Context, table string, i int, order canvas.CustomOrder) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SortTableCustom(ctx, table, i, order) })
+}
+
+// ColumnOrderInfo est l'ordre personnalisé enregistré d'une colonne (Order
+// nil : aucun) ; Applied : c'est le dernier tri du tableau.
+type ColumnOrderInfo struct {
+	Order   *canvas.CustomOrder `json:"order"`
+	Applied bool                `json:"applied"`
+}
+
+// ColumnOrder rend l'ordre personnalisé enregistré de la colonne i.
+func (s *DocumentService) ColumnOrder(ctx context.Context, table string, i int) (ColumnOrderInfo, error) {
+	d, err := s.current()
+	if err != nil {
+		return ColumnOrderInfo{}, err
+	}
+	o, ok, applied, err := d.ColumnOrder(ctx, table, i)
+	if err != nil || !ok {
+		return ColumnOrderInfo{}, err
+	}
+	return ColumnOrderInfo{Order: &o, Applied: applied}, nil
+}
+
+// CustomLists rend les listes personnalisées (prédéfinies puis du classeur).
+func (s *DocumentService) CustomLists(ctx context.Context) ([]canvas.CustomList, error) {
+	d, err := s.current()
+	if err != nil {
+		return nil, err
+	}
+	return d.CustomLists(ctx)
+}
+
+// SetCustomLists remplace les listes personnalisées du classeur.
+func (s *DocumentService) SetCustomLists(ctx context.Context, lists []canvas.CustomList) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetCustomLists(ctx, lists) })
+}
+
 // ApplyStyle met en forme un rectangle de la feuille (patch : propriétés à
 // poser, une valeur vide les retire).
 func (s *DocumentService) ApplyStyle(ctx context.Context, sheet int64, r0, c0, r1, c1 int, patch map[string]any) (DocState, error) {

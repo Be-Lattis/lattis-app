@@ -414,8 +414,18 @@ func (r *run) step(p *pipeline, s Step) (string, []Column, error) {
 				return "", nil, err
 			}
 			e := qi(cols[i].Name)
-			if cols[i].Type == grid.Text || cols[i].Type == "" {
+			text := cols[i].Type == grid.Text || cols[i].Type == ""
+			if text {
 				e += " COLLATE NOCASE"
+			}
+			if len(k.Order) > 0 {
+				v := qi(cols[i].Name)
+				if !text {
+					v = "CAST(" + v + " AS TEXT)"
+				}
+				// Les vides à la fin, puis la liste, puis les autres.
+				by = append(by, qi(cols[i].Name)+" IS NULL", canvas.OrderBy(v, e, canvas.CustomOrder{Values: k.Order, Desc: k.Desc}))
+				continue
 			}
 			if k.Desc {
 				e += " DESC"

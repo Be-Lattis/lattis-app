@@ -42,6 +42,19 @@ Chaque colonne a un type, deviné d'après ce que vous tapez :
 
 Une valeur qui ne correspond plus au type élargit la colonne quand c'est possible (un décimal dans une colonne d'entiers la passe en décimal, et la barre d'état le signale) ; sinon la cellule est marquée en erreur. Le type se change dans le menu de l'en-tête de colonne.
 
+## Trier et filtrer
+
+Le ▾ de l'en-tête d'une colonne (ou le clic droit, ou Données › Trier et filtrer) trie le tableau par cette colonne : de A à Z, de Z à A, ou dans un **ordre personnalisé**. Le tri change l'ordre des lignes pour de bon ; les cellules vides vont toujours à la fin. Le même menu filtre la colonne par valeurs (« (Vides) » en fin de liste) ou par condition.
+
+### Tri personnalisé
+
+**Tri personnalisé…** ouvre la liste des valeurs de la colonne, à ranger dans l'ordre voulu, comme les listes personnalisées d'Excel : glissez-les, utilisez les boutons Monter, Descendre, En premier, En dernier, ou au clavier `Alt+↑` / `Alt+↓` (`Alt+Début` / `Alt+Fin`). Choisissez **Dans cet ordre** ou **À rebours**, puis OK. Les valeurs se comparent sans tenir compte de la casse ; celles qui ne sont pas dans l'ordre suivent dans l'ordre croissant, et les vides restent à la fin.
+
+- **Listes prédéfinies** : Jours (lundi… dimanche), Jours abrégés, Mois (janvier… décembre), Mois abrégés. Quand les valeurs de la colonne correspondent à une liste, elle est proposée d'emblée.
+- **Listes du classeur** : cochez « Enregistrer cet ordre comme liste personnalisée » et nommez-la (Tailles, Priorités…) ; elle est alors proposée pour toute autre colonne ou champ de tableau croisé, et voyage avec le fichier.
+- L'ordre est **gardé pour la colonne** : il est repris au prochain Tri personnalisé, et un tableau chargé par une requête est trié de nouveau dans cet ordre à chaque actualisation (tant qu'un tri ordinaire ne l'a pas remplacé). Les valeurs de l'ordre absentes des données y restent, pour quand elles apparaîtront.
+- `Ctrl+Z` annule le tri en une étape. Dans les scripts : `tables.sort_custom`, `tables.sort_lists`, `tables.set_sort_lists`, `columns.sort_order`.
+
 ## Clés
 
 Une **clé** est une colonne dont les valeurs sont uniques et toutes remplies : un code client, une référence produit. Elle identifie chaque ligne, s'affiche dans la marge à la place des numéros et sert aux recherches de [REFERENCE](fonction:REFERENCE).

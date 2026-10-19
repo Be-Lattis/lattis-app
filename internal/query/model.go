@@ -109,6 +109,10 @@ type Agg struct {
 type SortKey struct {
 	Column string `json:"column"`
 	Desc   bool   `json:"desc,omitempty"`
+	// Order : ordre personnalisé (Tri personnalisé) : ces valeurs d'abord,
+	// dans cet ordre (à rebours avec Desc), sans tenir compte de la casse,
+	// puis les autres dans l'ordre croissant.
+	Order []string `json:"order,omitempty"`
 }
 
 // Opérations des étapes.

@@ -37,6 +37,17 @@ func Register(c *sqlite3.Conn) error {
 	}); err != nil {
 		return err
 	}
+	// slt_fold(t) : texte replié pour comparer les valeurs d'un ordre
+	// personnalisé (customsort.go).
+	if err := c.CreateFunction(FoldFunc, 1, sqlite3.DETERMINISTIC|sqlite3.INNOCUOUS, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
+		if arg[0].Type() == sqlite3.NULL {
+			ctx.ResultNull()
+			return
+		}
+		ctx.ResultText(Fold(arg[0].Text()))
+	}); err != nil {
+		return err
+	}
 	return c.CreateFunction("slt_text", 2, sqlite3.DETERMINISTIC|sqlite3.INNOCUOUS, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		v := value(arg[0])
 		if v == nil {
