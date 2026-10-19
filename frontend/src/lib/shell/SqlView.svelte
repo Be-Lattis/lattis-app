@@ -49,6 +49,8 @@
 		run: (sql: string) => Promise<Result>;
 		/** Requête d'écriture ; absent : lecture seule (classeur de démonstration). */
 		exec?: (sql: string) => Promise<{ changed: number; micros: number }>;
+		/** Arrête la requête en cours (bouton Arrêter) ; une écriture arrêtée ne modifie rien. */
+		stop?: () => void;
 		ongoto: (table: string) => void;
 		/** Requêtes favorites, enregistrées dans le classeur ; absent : pas de favoris (démonstration). */
 		favorites?: Favorites;
@@ -70,7 +72,7 @@
 		rundata?: (server: string, sql: string) => Promise<Result>;
 	}
 
-	let { objects, run, exec, ongoto, favorites, tosheet, onrename, rights = [], onrights, data = [], rundata }: Props = $props();
+	let { objects, run, exec, stop, ongoto, favorites, tosheet, onrename, rights = [], onrights, data = [], rundata }: Props = $props();
 	let rightsOpen = $state<string | null>(null);
 	// Vue donnees.* dépliée (serveur et nom).
 	let dataOpen = $state<string | null>(null);
@@ -572,6 +574,9 @@
 	<section class="main">
 		<div class="toolbar">
 			<button class="run" onclick={() => editor?.runCurrent()} disabled={running} title="Exécute la sélection, sinon l'instruction sous le curseur (Ctrl+Entrée)"><Icon name="play" size={14} />Exécuter</button>
+			{#if stop && running}
+				<button class="stop" onclick={() => stop()} title="Arrête la requête en cours ; une écriture arrêtée ne modifie rien"><Icon name="stop" size={14} />Arrêter</button>
+			{/if}
 			{#if favorites}
 				<button
 					class="fav-btn"
@@ -977,6 +982,21 @@
 	}
 	.run:disabled {
 		opacity: 0.6;
+	}
+	.stop {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		font: inherit;
+		white-space: nowrap;
+		flex-shrink: 0;
+		background: #fff;
+		color: #c0392b;
+		border: 1px solid #c0392b;
+		border-radius: 3px;
+		padding: 3px 11px;
+		cursor: pointer;
+		--icon-accent: currentColor;
 	}
 	.code {
 		height: 180px;

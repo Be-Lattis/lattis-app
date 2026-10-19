@@ -31,7 +31,7 @@ Le résultat d'une requête se copie dans un nouveau tableau, ou s'y **référen
 
 ## Modifier les données
 
-Les requêtes `INSERT`, `UPDATE` et `DELETE` modifient les tableaux comme une saisie ; elles s'annulent avec `Ctrl+Z`.
+Les requêtes `INSERT`, `UPDATE` et `DELETE` modifient les tableaux comme une saisie ; elles s'annulent avec `Ctrl+Z`. Pendant une requête, le bouton **Arrêter** l'interrompt ; une lecture s'arrête d'elle-même au bout de 30 s, une écriture au bout de 2 min (elle bloque les saisies tant qu'elle dure). Une écriture arrêtée ne modifie rien.
 
 ## Une requête dans une formule
 

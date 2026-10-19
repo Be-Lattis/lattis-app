@@ -536,7 +536,8 @@ export function ExcelTables(path: string): $CancellablePromise<query$0.XLSXTable
 /**
  * Execute exécute une requête d'écriture (INSERT, UPDATE, DELETE) sur le
  * classeur, avec les noms affichés des tableaux. Elle forme une étape
- * d'annulation ; les changements de structure sont refusés.
+ * d'annulation ; les changements de structure sont refusés. Elle s'arrête
+ * avec StopSQL ou au bout de SQLWriteTimeout.
  */
 export function Execute(q: string): $CancellablePromise<$models.ExecResult> {
     return $Call.ByID(1682621773, q);
@@ -1877,6 +1878,14 @@ export function SortTable(table: string, i: number, desc: boolean): $Cancellable
  */
 export function State(): $CancellablePromise<$models.DocState> {
     return $Call.ByID(2337286659);
+}
+
+/**
+ * StopSQL arrête les requêtes en cours de l'onglet SQL (bouton Arrêter) :
+ * une écriture arrêtée n'a rien modifié.
+ */
+export function StopSQL(): $CancellablePromise<void> {
+    return $Call.ByID(1557424562);
 }
 
 /**

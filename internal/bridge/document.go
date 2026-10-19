@@ -94,6 +94,7 @@ type DocumentService struct {
 	ai    aiState    // conversation de l'onglet IA (ai.go)
 	share shareState // classeur partagé : suivi du serveur (sharing.go)
 	data  dataWatch  // données du Data Lake liées : suivi en direct (data.go)
+	sql   sqlRuns    // requêtes en cours de l'onglet SQL (execute.go)
 
 	// Classeur à ouvrir au lancement (association de fichiers, launch.go).
 	launch launchState
@@ -665,7 +666,10 @@ func (s *DocumentService) Query(ctx context.Context, q string) (grid.QueryResult
 	if q, err = d.ReadCTE(ctx, q); err != nil {
 		return grid.QueryResult{}, err
 	}
-	return grid.Query(ctx, d.DB().Read(), q, QueryLimit)
+	qctx, done := s.sqlContext(ctx, 0) // délai de grid.Query
+	defer done()
+	res, err := grid.Query(qctx, d.DB().Read(), q, QueryLimit)
+	return res, sqlErr(qctx, err)
 }
 
 // QuerySheet décrit un résultat SQL posé sur une nouvelle feuille.
@@ -689,7 +693,10 @@ func (s *DocumentService) QueryToSheet(ctx context.Context, q, name string, head
 	if q, err = d.ReadCTE(ctx, q); err != nil {
 		return QuerySheet{}, err
 	}
-	res, err := d.QueryToSheet(ctx, q, name, headers)
+	qctx, done := s.sqlContext(ctx, SQLWriteTimeout)
+	res, err := d.QueryToSheet(qctx, q, name, headers)
+	err = sqlErr(qctx, err)
+	done()
 	if err != nil {
 		return QuerySheet{}, err
 	}
