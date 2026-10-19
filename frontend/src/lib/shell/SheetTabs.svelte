@@ -1221,18 +1221,32 @@
 		border-color: #217346;
 		color: #fff;
 	}
-	/* Onglet à choix : « Ventes │ 2025 ▾ », la partie droite occupe toute la
-	   hauteur jusqu'au bord de l'onglet, séparée du nom par un trait vertical,
-	   et ouvre la liste des valeurs. */
+	/* Onglet à choix : « Ventes · 2025 ▾ » d'un seul tenant. La partie droite,
+	   sur la même ligne de texte que le nom, occupe toute la hauteur de
+	   l'onglet (rembourrage vertical débordant, coupé par l'onglet) jusqu'à son
+	   bord droit ; un trait vertical la sépare du nom, avec un point médian
+	   posé en son milieu, pour qu'on lise un seul onglet. */
+	.sheet.choice {
+		overflow: hidden;
+	}
 	.choice-arrow {
-		display: inline-flex;
-		align-items: center;
-		height: 100%;
-		vertical-align: top;
-		margin: 0 -18px 0 10px;
-		padding: 0 10px;
+		position: relative;
+		display: inline;
+		margin: -20px -18px -20px 10px;
+		padding: 20px 10px 20px 10px;
 		border-left: 1px solid rgba(0, 0, 0, 0.18);
 		cursor: pointer;
+	}
+	.choice-arrow::before {
+		content: '·';
+		position: absolute;
+		left: 0;
+		top: 50%;
+		transform: translate(-50%, -50%);
+		font-weight: 700;
+		font-size: 15px;
+		line-height: 1;
+		pointer-events: none;
 	}
 	.choice-arrow:hover:not(.off) {
 		background: rgba(0, 0, 0, 0.08);
