@@ -60,8 +60,18 @@ func TestToolsFullSharing(t *testing.T) {
 			t.Errorf("%s proposé", n)
 		}
 	}
-	if schema := toolNames(Tools(SchemaOnly)); schema["sheets_find"] || schema["cells_dependencies"] {
-		t.Error("lectures du partage complet proposées sans partage")
+	// sheets_find (positions d'un texte cherché) : à partir de l'échantillon ;
+	// cells_dependencies (noms et positions) et les demandes courantes (I8) :
+	// dans tous les partages.
+	schema := toolNames(Tools(SchemaOnly))
+	if schema["sheets_find"] || !toolNames(Tools(Sample))["sheets_find"] {
+		t.Error("sheets_find")
+	}
+	for _, n := range []string{"cells_dependencies", "columns_delete", "charts_delete", "pivots_delete", "tables_duplicates", "tables_remove_duplicates",
+		"tables_clear_filters", "cells_note", "sheets_hide_lines", "tables_extract_columns", "sheets_replace", layoutTool} {
+		if !schema[n] {
+			t.Errorf("%s absent sans partage", n)
+		}
 	}
 	if !strings.Contains(System(Full), "tout le classeur") || strings.Contains(System(SchemaOnly), "tout le classeur") {
 		t.Error("consigne")

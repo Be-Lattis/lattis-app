@@ -70,8 +70,8 @@ func callTool(t *testing.T, s *Server, name, args string) (string, bool) {
 func TestToolsBySharing(t *testing.T) {
 	mode := sharing.SchemaOnly
 	s := valuesServer(t, &mode)
-	reads := []string{"tables_rows", "db_query", "cells_read", "cells_get", "columns_values"}
-	hidden := []string{"scripts_run", "buttons_run", "controls_fire", "doc_export_csv", "doc_export_xlsx", "sheets_find", "queries_preview", "pages_get"}
+	reads := []string{"tables_rows", "db_query", "cells_read", "cells_get", "columns_values", "sheets_find"}
+	hidden := []string{"scripts_run", "buttons_run", "controls_fire", "doc_export_csv", "doc_export_xlsx", "queries_preview", "pages_get"}
 	always := []string{"tables_list", "sheets_get", "cells_set", "db_execute", "doc_save", "ui_select", "queries_list"}
 
 	tools := toolList(t, s)

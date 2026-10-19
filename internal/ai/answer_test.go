@@ -23,8 +23,16 @@ func TestShowResult(t *testing.T) {
 	if len(shown) != 1 || shown[0].Title != "Meilleur client" || len(shown[0].Rows) != 1 || shown[0].Rows[0][0] == "" {
 		t.Fatalf("montré : %+v", shown)
 	}
-	if best := shown[0].Rows[0][0]; strings.Contains(res, best) || !strings.Contains(res, "1 ligne") {
+	// Ni valeur ni nombre de lignes (M1).
+	if best := shown[0].Rows[0][0]; strings.Contains(res, best) || strings.Contains(res, "1 ligne") || !strings.Contains(res, "Résultat montré") {
 		t.Fatalf("rendu au modèle : %s", res)
+	}
+	// Nombre de requêtes borné par réponse (M1).
+	exec := Exec(h, SchemaOnly)
+	for i := range MaxBlindShows + 1 {
+		if _, isErr := exec(ctx, showTool, json.RawMessage(q)); isErr != (i == MaxBlindShows) {
+			t.Fatalf("requête %d : erreur %v", i+1, isErr)
+		}
 	}
 	if h.changed != before {
 		t.Fatal("classeur modifié")

@@ -69,14 +69,20 @@ var Structure = []string{
 	"tables.from_range", "tables.to_range", "tables.promote_header", "tables.header_to_title", "tables.last_row_out", "tables.two_level_headers",
 	"tables.insert_row", "tables.delete_row", "tables.move", "tables.text_to_columns", "cells.text_to_columns", "cells.paste", "cells.clear",
 	"pivots.create", "pivots.set", "charts.create", "charts.set", "charts.place",
+	// Demandes courantes : supprimer une colonne, un graphique, un tableau
+	// croisé, les doublons ; filtres, notes, lignes masquées, colonnes
+	// sorties vers un nouveau tableau, remplacement d'un texte (sans le
+	// nombre de cellules modifiées hors partage : Filter) ; dépendances
+	// d'une formule (noms et positions) avant de toucher à un tableau.
+	"columns.delete", "charts.delete", "pivots.delete", "tables.duplicates", "tables.remove_duplicates",
+	"tables.clear_filters", "cells.note", "sheets.hide_lines", "tables.extract_columns", "sheets.replace",
+	"cells.dependencies",
 }
 
 // Reads : lectures de valeurs, permises à partir du mode sample (bornées
-// en sample).
-var Reads = []string{"tables.rows", "columns.values", "db.query", "cells.get", "cells.read"}
-
-// FullReads : lectures que l'assistant intégré n'a qu'en partage complet.
-var FullReads = []string{"sheets.find", "cells.dependencies"}
+// en sample). sheets.find rend des positions, mais le texte cherché les
+// rend parlantes.
+var Reads = []string{"tables.rows", "columns.values", "db.query", "cells.get", "cells.read", "sheets.find"}
 
 // values : commandes qui rendent des valeurs du classeur, permettent de les
 // retrouver (recherche, script, page) ou de les écrire dans un fichier
@@ -149,6 +155,11 @@ func Args(cmd string, args map[string]any, mode string) map[string]any {
 func Filter(cmd string, res any, mode string) any {
 	if mode == Full {
 		return res
+	}
+	if cmd == "sheets.replace" && mode == SchemaOnly {
+		// Le nombre de cellules modifiées dirait si le texte cherché est
+		// dans la feuille.
+		return "remplacement fait (le nombre de cellules modifiées n'est pas transmis sans partage des données)"
 	}
 	switch v := res.(type) {
 	case api.SheetView:

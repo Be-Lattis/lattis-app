@@ -15,10 +15,10 @@ import (
 // doit être classée ici avant d'être proposée hors partage complet.
 func TestEveryReadClassified(t *testing.T) {
 	neutral := []string{
-		"cells.dependencies", "controls.get", "controls.list", "controls.listeners",
+		"controls.get", "controls.list", "controls.listeners",
 		"doc.new", "doc.open", "doc.redo", "doc.save", "doc.state", "doc.undo",
 		"events.enable", "events.enabled", "events.list", "http.get", "http.post", "http.request",
-		"scripts.check", "scripts.list", "tables.duplicates",
+		"scripts.check", "scripts.list",
 		"ui.alert", "ui.confirm", "ui.dialog", "ui.notify", "ui.prompt", "ui.select", "ui.select_cells",
 		"ui.select_object", "ui.selection", "ui.show_sheet", "ui.show_view",
 	}
@@ -30,7 +30,7 @@ func TestEveryReadClassified(t *testing.T) {
 			t.Errorf("%s : lecture non classée (Structure, values ou neutre)", c.Name)
 		}
 	}
-	for _, list := range [][]string{Structure, Reads, FullReads} {
+	for _, list := range [][]string{Structure, Reads} {
 		for _, n := range list {
 			if api.Lookup(n) == nil {
 				t.Errorf("commande inconnue : %s", n)
@@ -68,6 +68,17 @@ func TestExposed(t *testing.T) {
 
 // Hors partage complet, sheets.get ne rend que la disposition : positions
 // et nature des cellules, pas leur contenu.
+// sheets.replace : le nombre de cellules modifiées dirait si le texte est
+// dans la feuille ; rendu en échantillon et au-delà seulement.
+func TestReplaceCount(t *testing.T) {
+	if r, ok := Filter("sheets.replace", 3, SchemaOnly).(string); !ok || strings.Contains(r, "3") {
+		t.Fatalf("schema-only : %v", r)
+	}
+	if Filter("sheets.replace", 3, Sample) != 3 {
+		t.Fatal("sample")
+	}
+}
+
 func TestLayoutOnly(t *testing.T) {
 	src := api.SheetView{
 		Cells:  []api.CellView{{Row: 1, Col: 1, Raw: "Salaire de Léa"}, {Row: 2, Col: 1, Raw: "=SOMME(A1:A3)", Value: "42"}, {Row: 3, Col: 1, Raw: "1 200,5"}},

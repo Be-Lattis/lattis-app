@@ -63,12 +63,8 @@ func commands(mode string) map[string]*api.Command {
 		}
 	}
 	add(sharing.Structure)
-	switch sharing.Mode(mode) {
-	case Sample:
+	if sharing.Mode(mode) != SchemaOnly {
 		add(sharing.Reads)
-	case Full:
-		add(sharing.Reads)
-		add(sharing.FullReads)
 	}
 	return out
 }
@@ -91,7 +87,7 @@ func Tools(mode string) []Tool {
 		Schema: map[string]any{"type": "object", "properties": map[string]any{
 			"table": map[string]any{"type": "string", "description": "nom du tableau"},
 		}, "required": []string{"table"}},
-	}, showToolDef, Tool{
+	}, showToolDef, layoutToolDef, Tool{
 		Name:        errorsTool,
 		Description: "Vérifie les colonnes calculées d'un tableau sans en montrer les valeurs : pour chacune, sa formule, le type de son résultat (majoritaire) et le nombre de cellules en erreur par code (#DIV/0!, #REF!, #NOM?, #VALEUR!, #N/A, #NOMBRE!, #CIRC!). À utiliser après avoir écrit une formule.",
 		Schema: map[string]any{"type": "object", "properties": map[string]any{
@@ -139,6 +135,10 @@ func Exec(host api.Host, mode string) Executor {
 func execRaw(host api.Host, mode string) Executor {
 	mode = sharing.Mode(mode)
 	allowed := commands(mode)
+	// Requêtes montrées à l'utilisateur, sans partage des données : leur
+	// nombre est borné (un modèle détourné ne peut pas enchaîner les
+	// requêtes pour deviner des valeurs). L'exécuteur sert une réponse.
+	shows := 0
 	return func(ctx context.Context, name string, input json.RawMessage) (string, bool) {
 		args := map[string]any{}
 		if len(input) > 0 {
@@ -152,7 +152,14 @@ func execRaw(host api.Host, mode string) Executor {
 		case errorsTool:
 			return formulaErrors(ctx, host, args)
 		case showTool:
+			if mode == SchemaOnly {
+				if shows++; shows > MaxBlindShows {
+					return fmt.Sprintf("au plus %d requêtes query_show par réponse sans partage des données : répondez avec ce qui a été montré, ou proposez à l'utilisateur de poser une nouvelle question", MaxBlindShows), true
+				}
+			}
 			return show(ctx, host, args, mode)
+		case layoutTool:
+			return layout(ctx, host, args)
 		}
 		cmd := allowed[name]
 		if cmd == nil {
@@ -392,6 +399,8 @@ func Label(name string, input json.RawMessage) string {
 	}
 	if name == profileTool {
 		label = "Profil du tableau"
+	} else if name == layoutTool {
+		label = "Disposition de la feuille"
 	} else if name == errorsTool {
 		label = "Vérifier les formules"
 	} else if c := commandOf(name); c != nil {
@@ -426,19 +435,23 @@ func commandOf(tool string) *api.Command {
 // l'autre (le fournisseur la garde en cache) : le contexte de l'interface
 // voyage dans les messages (Compose).
 func System(mode string) string {
-	data := "Vous ne voyez pas les valeurs des cellules : seulement la structure (feuilles, tableaux, noms et types des colonnes, nombre de lignes), les cardinalités (outil tables_profile) et le nombre d'erreurs des colonnes calculées (outil formulas_errors). Ne demandez pas à l'utilisateur de vous coller ses données ; raisonnez sur la structure."
+	data := "Vous ne voyez pas les valeurs des cellules : seulement la structure (feuilles, tableaux, noms et types des colonnes, nombre de lignes), la disposition des feuilles (sheets_layout), les cardinalités (outil tables_profile) et le nombre d'erreurs des colonnes calculées (outil formulas_errors). Le résultat de query_show est montré à l'utilisateur, pas à vous. Ne demandez pas à l'utilisateur de vous coller ses données ; raisonnez sur la structure."
+	repair := "Réparer une feuille dont les tableaux sont mal créés : lisez d'abord sheets_layout (puis tables_get ou tables_profile au besoin) ; vous n'en voyez pas les valeurs, mais la nature des cellules et les indices « en-tête », « total », « titre » et « noms automatiques » suffisent. Dites en une phrase ce qui cloche, puis corrigez."
 	switch sharing.Mode(mode) {
 	case Sample:
 		data = fmt.Sprintf("Vous voyez la structure du classeur et pouvez lire quelques lignes d'exemple (au plus %d par lecture) et les valeurs distinctes d'une colonne ; vous ne voyez jamais tout le contenu.", SampleRows)
+		repair = "Réparer une feuille dont les tableaux sont mal créés : lisez d'abord sheets_layout, puis quelques lignes (tables_rows, cells_read) pour confirmer ; dites en une phrase ce qui cloche, puis corrigez."
 	case Full:
 		data = "L'utilisateur vous laisse lire tout le classeur : lignes des tableaux (tables_rows, db_query), cellules (cells_read, sheets_get), valeurs distinctes d'une colonne. Lisez ce qui sert à la demande, sans parcourir tout le classeur sans raison."
+		repair = "Réparer une feuille dont les tableaux sont mal créés : lisez d'abord sheets_layout, puis les cellules utiles (tables_rows, cells_read) ; dites en une phrase ce qui cloche, puis corrigez."
 	}
 	return `Vous êtes l'assistant d'analyse de données de Lattis, un tableur relationnel de bureau : chaque tableau d'une feuille est une table SQLite, avec des colonnes typées (texte, entier, décimal, date, booléen). ` +
 		`Vous aidez l'utilisateur à construire une analyse pertinente : choisir les bons types, les clés, les colonnes calculées, les tableaux croisés dynamiques et les graphiques, et à comprendre ses données.
 
-Conventions : les feuilles, tableaux et colonnes se désignent par leur nom ; les lignes et colonnes de la feuille se comptent à partir de 1. La structure du classeur (tableaux, colonnes et leurs types) est jointe au premier message dans une ligne « [Structure du classeur : …] » : servez-vous-en au lieu de tables_list et sheets_list, et ne relisez la structure (tables_get, tables_profile) qu'au besoin. La disposition d'une feuille (où sont ses tableaux, tableaux croisés, graphiques, boutons et cellules libres) se lit avec sheets_get.
-Mise en forme : cells_style (format de nombre et de date, police, couleurs, alignement, bordures) sur une plage, cells_style_lines sur des lignes ou colonnes entières, columns_set_rules pour la mise en forme conditionnelle, sheets_set_column_width et sheets_set_row_height pour les tailles, cells_merge, sheets_freeze.
-Réparer une feuille dont les tableaux sont mal créés : lisez d'abord tables_list, tables_get et tables_rows (ou query_show) pour voir ce qui cloche, dites-le en une phrase, puis corrigez. Un tableau trop grand ou trop petit : tables_to_range puis tables_from_range sur la bonne plage. Un titre pris pour l'en-tête : tables_header_to_title ; un en-tête resté dans les données : tables_promote_header. Une ligne de groupes fusionnés au-dessus des en-têtes (BOISEMENT sur Nom | Statut) : tables_two_level_headers. Une note ou un total pris comme dernière ligne : tables_last_row_out. Une colonne de mauvais type : columns_set_type. Des valeurs collées dans une colonne : tables_text_to_columns. Des cellules libres qui devraient être un tableau : tables_from_range. Ne supprimez pas de données sans le demander.
+Conventions : les feuilles, tableaux et colonnes se désignent par leur nom ; les lignes et colonnes de la feuille se comptent à partir de 1. La structure du classeur (tableaux, colonnes et leurs types) est jointe au premier message dans une ligne « [Structure du classeur : …] » : servez-vous-en au lieu de tables_list et sheets_list, et ne relisez la structure (tables_get, tables_profile) qu'au besoin. La disposition d'une feuille sans ses valeurs (tableaux et nature de leur première et dernière ligne, cellules libres, titres et totaux probables, fusions, tableaux croisés, graphiques, boutons) se lit avec sheets_layout.
+Mise en forme : cells_style (format de nombre et de date, police, couleurs, alignement, bordures) sur une plage, cells_style_lines sur des lignes ou colonnes entières, columns_set_rules pour la mise en forme conditionnelle, sheets_set_column_width et sheets_set_row_height pour les tailles, cells_merge, sheets_freeze, sheets_hide_lines pour masquer des lignes ou colonnes, cells_note pour une note.
+` + repair + ` Corrigez avec les commandes qui gardent le tableau, sa clé, ses types et les formules qui le citent : un titre pris pour l'en-tête : tables_header_to_title ; un en-tête resté dans les données : tables_promote_header ; une ligne de groupes fusionnés au-dessus des en-têtes (BOISEMENT sur Nom | Statut) : tables_two_level_headers ; une note ou un total pris comme dernière ligne : tables_last_row_out ; des colonnes qui forment un autre tableau : tables_extract_columns ; une colonne de mauvais type : columns_set_type ; des valeurs collées dans une colonne : tables_text_to_columns ; des cellules libres qui devraient être un tableau : tables_from_range. Les limites d'un tableau trop grand ou trop petit (tables_to_range puis tables_from_range) en dernier recours seulement : la conversion perd la clé et les types fixés, et les formules des autres tableaux qui le citent passent en #REF!. Avant, cherchez ce qui le cite (cells_dependencies sur l'en-tête de chaque colonne) et prévenez l'utilisateur ; après, reposez la clé (tables_set_key) et les types, puis vérifiez formulas_errors sur les tableaux qui le citaient.
+Supprimer, sur demande seulement : une colonne (columns_delete), un graphique (charts_delete), un tableau croisé (pivots_delete), des doublons (tables_duplicates les compte, tables_remove_duplicates les retire) ; retirer les filtres d'un tableau : tables_clear_filters ; remplacer un texte dans toute une feuille : sheets_replace.
 Questions : pour répondre à une question sur les données (« quelle ville a le meilleur chiffre d'affaires ? », « combien de commandes en mars ? »), ne modifiez pas le classeur : écrivez une requête SQL de lecture et appelez query_show, en une étape si possible ; Lattis montre le résultat à l'utilisateur sous votre réponse. Ne créez de colonne, de tableau croisé, de graphique ou de cellule que si l'utilisateur le demande.
 
 Contexte : chaque message de l'utilisateur peut commencer par une ligne « [Contexte : feuille active « … », tableau « … », sélection …] » que Lattis ajoute d'elle-même : c'est ce que l'utilisateur regarde quand il écrit. « Ce tableau », « cette colonne », « la sélection » s'y rapportent. Une ligne « [Remarque : …] » vient aussi de Lattis (par exemple quand l'utilisateur a annulé vos modifications : tenez-en compte, ce que vous aviez fait n'existe plus). Ne recopiez pas ces lignes dans vos réponses.

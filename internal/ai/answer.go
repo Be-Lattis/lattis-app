@@ -23,6 +23,10 @@ const showTool = "query_show"
 // ShowRows borne les lignes montrées à l'utilisateur.
 const ShowRows = 50
 
+// MaxBlindShows borne les requêtes query_show d'une réponse sans partage
+// des données.
+const MaxBlindShows = 10
+
 // EventResult : résultat d'une requête montré à l'utilisateur.
 const EventResult = "result"
 
@@ -116,7 +120,9 @@ func show(ctx context.Context, host api.Host, args map[string]any, mode string) 
 			}
 		}
 	}
-	return fmt.Sprintf("Résultat montré à l'utilisateur : %d ligne(s), colonnes %s. Vous n'en voyez pas les valeurs : dites en une phrase ce que montre le résultat, sans inventer de valeur.", r.Total, strings.Join(cols, ", ")), false
+	// Ni valeurs ni nombre de lignes : un nombre de lignes répond déjà à
+	// une question sur les valeurs (WHERE substr("Email", 1, 1) = 'a').
+	return fmt.Sprintf("Résultat montré à l'utilisateur, colonnes %s. Vous n'en voyez ni les valeurs ni le nombre de lignes : dites en une phrase ce que montre le résultat, sans inventer de valeur.", strings.Join(cols, ", ")), false
 }
 
 // Structure décrit le classeur (tableaux, feuilles, colonnes et leurs
