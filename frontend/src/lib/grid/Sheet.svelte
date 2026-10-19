@@ -23,7 +23,7 @@
 	import { stepZoom } from './zoom';
 	import { panes, reveal, revealWhole, toGrid, type Pane } from './panes';
 	import { hiddenLines, mergeAt, mergeList, parseList, skipHidden, validate, type MergeRange } from './sheetfmt';
-	import { expandRange, extendCorner, isSingleCell, mergeRect, rangeOf, stepCell } from './mergesel';
+	import { expandRange, extendCorner, intersect, isSingleCell, mergeRect, rangeOf, stepCell, wholeLines, type CellRange } from './mergesel';
 	import { jumpLine, lineSpans, type Area, type Span } from './jump';
 	import { findKey, findZone, inZone, nextHit, type Zone } from './findzone';
 	import { edgeScroll, frameStep } from './autoscroll';
@@ -2312,12 +2312,14 @@
 
 		// Plage sélectionnée.
 		// Comme Excel, la cellule active (ou sa fusion) reste blanche.
+		// Fusion active à cheval sur des lignes entières sélectionnées : seule sa
+		// partie sélectionnée est réservée (le reste n'est pas à surligner).
 		if (!singleSelection()) {
-			const a = activeRect();
+			const a = intersect(activeRect(), { r0: s0, r1: s1, c0: k0, c1: k1 });
 			ctx.fillStyle = C.select;
 			ctx.beginPath();
 			ctx.rect(cx(k0), ry(s0), spanW(k0, k1), rspan(s0, s1));
-			ctx.rect(cx(a.c0), ry(a.r0), spanW(a.c0, a.c1), rspan(a.r0, a.r1));
+			if (a) ctx.rect(cx(a.c0), ry(a.r0), spanW(a.c0, a.c1), rspan(a.r0, a.r1));
 			ctx.fill('evenodd');
 		}
 
@@ -3157,11 +3159,16 @@
 			// Le fond couvre le quadrillage à l'intérieur de la fusion seulement.
 			ctx.fillStyle = st?.bg ?? C.bg;
 			ctx.fillRect(Math.round(x), Math.round(y), gw - 1, gh - 1);
-			// Dans la sélection (sauf la fusion active) : surlignée comme les autres cellules.
+			// Dans la sélection (sauf la fusion active) : surlignée comme les autres
+			// cellules ; traversée par des lignes ou colonnes entières, sur leur
+			// partie seulement (comme Excel).
 			const isActive = active.row === g.row && active.col === g.col;
-			if (many && !isActive && g.row >= s0 && gr1 <= s1 && g.col >= k0 && gc1 <= k1) {
+			const part = many && !isActive ? intersect({ r0: g.row, r1: gr1, c0: g.col, c1: gc1 }, { r0: s0, r1: s1, c0: k0, c1: k1 }) : null;
+			if (part) {
+				const px = cx(part.c0);
+				const py = ry(part.r0);
 				ctx.fillStyle = C.select;
-				ctx.fillRect(Math.round(x), Math.round(y), gw - 1, gh - 1);
+				ctx.fillRect(Math.round(px), Math.round(py), spanW(part.c0, part.c1) - (part.c1 === gc1 ? 1 : 0), rspan(part.r0, part.r1) - (part.r1 === gr1 ? 1 : 0));
 			}
 			const f = shown.get(k);
 			const raw = f ? f.text : cells.get(k);
@@ -3238,7 +3245,9 @@
 			ctx.fillStyle = hs.bg;
 			ctx.fillRect(x, y, w, rh(hr - 1));
 		}
-		if (many && L.s0 <= hr && L.s1 >= hr - 1 && c >= L.k0 && c <= L.k1 && !(ar.r0 === hr - 1 && ar.c0 === c)) {
+		// Partie de la bande : surlignée quand sa ligne est dans la sélection (la
+		// ligne d'en-tête seule, choisie dans la gouttière, ne la prend pas).
+		if (many && L.s0 <= hr - 1 && L.s1 >= hr - 1 && c >= L.k0 && c <= L.k1 && !(ar.r0 === hr - 1 && ar.c0 === c)) {
 			ctx.fillStyle = C.select;
 			ctx.fillRect(x, y, w, rh(hr - 1));
 		}
@@ -6293,28 +6302,37 @@
 
 	// Sélection de lignes ou colonnes entières (marge ou bandeau) : tant que la
 	// sélection n'a pas changé, la mise en forme vaut pour les lignes ou
-	// colonnes entières.
-	let wholeSel: { kind: 'rows' | 'cols'; anchor: { row: number; col: number }; active: { row: number; col: number } } | null = null;
+	// colonnes entières. Elles restent exactement celles choisies (range), sans
+	// s'agrandir aux fusions qui les traversent, comme Excel (voir wholeLines) ;
+	// from : la ligne (colonne) où le clic a commencé, d'où partent le glisser
+	// et Maj+clic (la cellule active, elle, est le haut de sa fusion).
+	let wholeSel: { kind: 'rows' | 'cols'; from: number; range: CellRange; anchor: { row: number; col: number }; active: { row: number; col: number } } | null = null;
 	function wholeKind(): 'rows' | 'cols' | null {
 		const w = wholeSel;
 		if (!w) return null;
 		const same = (a: { row: number; col: number }, b: { row: number; col: number }) => a.row === b.row && a.col === b.col;
 		return same(w.anchor, anchor) && same(w.active, active) ? w.kind : null;
 	}
+	/** Début d'un Maj+clic ou d'un glisser dans la gouttière (rows) ou le bandeau. */
+	function wholeFrom(kind: 'rows' | 'cols'): number {
+		return wholeKind() === kind ? wholeSel!.from : kind === 'rows' ? active.row : active.col;
+	}
 
-	/** Lignes r0 à r1 entières ; la cellule active est au début de r0 (comme Excel). */
-	function selectRows(r0: number, r1: number) {
-		active = snapMerge(r0, 0);
-		anchor = { row: r1, col: lastCol() };
-		wholeSel = { kind: 'rows', anchor: { ...anchor }, active: { ...active } };
+	/** Lignes from à to entières ; la cellule active est au début de from (comme Excel). */
+	function selectRows(from: number, to: number) {
+		const w = wholeLines('rows', from, to, lastCol(), boxes);
+		active = w.active;
+		anchor = { row: to, col: lastCol() };
+		wholeSel = { kind: 'rows', from, range: w.range, anchor: { ...anchor }, active: { ...active } };
 		refreshFx();
 		refreshStatus();
 		schedule();
 	}
-	function selectCols(c0: number, c1: number) {
-		active = snapMerge(0, c0);
-		anchor = { row: lastRow(), col: c1 };
-		wholeSel = { kind: 'cols', anchor: { ...anchor }, active: { ...active } };
+	function selectCols(from: number, to: number) {
+		const w = wholeLines('cols', from, to, lastRow(), boxes);
+		active = w.active;
+		anchor = { row: lastRow(), col: to };
+		wholeSel = { kind: 'cols', from, range: w.range, anchor: { ...anchor }, active: { ...active } };
 		refreshFx();
 		refreshStatus();
 		schedule();
@@ -6420,8 +6438,8 @@
 			wrap.focus();
 			// Clic droit dans la sélection : on la garde.
 			if (e.button === 2 && (hd.kind === 'rows' ? inSelection(hd.row, active.col) : inSelection(active.row, hd.col))) return;
-			if (hd.kind === 'rows') selectRows(e.shiftKey ? active.row : hd.row, hd.row);
-			else selectCols(e.shiftKey ? active.col : hd.col, hd.col);
+			if (hd.kind === 'rows') selectRows(e.shiftKey ? wholeFrom('rows') : hd.row, hd.row);
+			else selectCols(e.shiftKey ? wholeFrom('cols') : hd.col, hd.col);
 			headerDrag = e.button === 0 ? hd.kind : null;
 			return;
 		}
@@ -6771,10 +6789,10 @@
 			const p = toLocal(e);
 			if (headerDrag === 'rows') {
 				const row = clamp(rowAtY(p.y), 0, SHEET_ROWS - 1);
-				selectRows(active.row, row);
+				selectRows(wholeFrom('rows'), row);
 			} else {
 				const col = colAtX(Math.max(MARGIN, p.x));
-				selectCols(active.col, col);
+				selectCols(wholeFrom('cols'), col);
 			}
 			return;
 		}
@@ -6957,7 +6975,11 @@
 					refreshFx();
 					refreshStatus();
 					schedule();
-				} else selectRows(active.row, active.row);
+				} else {
+					// Cellule fusionnée : toutes ses lignes (Excel).
+					const ar = activeRect();
+					selectRows(ar.r0, ar.r1);
+				}
 				return true;
 			}
 			case 'toggleFilter':
@@ -8098,7 +8120,9 @@
 
 	// --- Presse-papiers -----------------------------------------------------
 
-	function selection() {
+	function selection(): CellRange {
+		// Lignes ou colonnes entières : exactement celles choisies (Excel).
+		if (wholeKind()) return { ...wholeSel!.range };
 		// Agrandie aux fusions qu'elle touche, entières (comme Excel).
 		return expandRange(rangeOf(active, anchor), boxes);
 	}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { expandRange, extendCorner, isSingleCell, rangeOf, stepCell } from './mergesel';
+import { expandRange, extendCorner, intersect, isSingleCell, mergeRect, rangeOf, stepCell, wholeLines } from './mergesel';
 import type { MergeRange } from './sheetfmt';
+import { bandMerges } from './twolevel';
 
 // B2:C3 (lignes 1-2, colonnes 1-2) et D3:D5 (lignes 2-4, colonne 3).
 const merges: MergeRange[] = [
@@ -91,5 +92,39 @@ describe('Maj + flèche autour des fusions', () => {
 	it('ne bouge pas au bord de la feuille', () => {
 		const a = { row: 0, col: 0 };
 		expect(extendCorner(a, a, -1, 0, merges, MAX, MAX)).toEqual(a);
+	});
+});
+
+describe('lignes et colonnes entières (gouttière, bandeau) et fusions', () => {
+	// Tableau à deux lignes en A2 (bande en ligne 0, en-tête en ligne 1) :
+	// ARBRE sur un niveau (A1:A2), groupe Nid sur B1:C1, DECOUVREUR (D1:D2).
+	const band = bandMerges([{ row: 1, col: 0, twoLevel: true, columns: [{ name: 'ARBRE' }, { name: 'Nid.Haut' }, { name: 'Nid.Diam' }, { name: 'DECOUVREUR' }] }]);
+	// Et une fusion verticale libre, A10:A13 (lignes 9 à 12).
+	const all: MergeRange[] = [...band, { row: 9, col: 0, rows: 4, cols: 1 }];
+	const LAST = 50;
+
+	it("la ligne d'en-tête seule, sans la bande (le clic n'était pas agrandi à la fusion comme une plage)", () => {
+		// Avant : la plage de la ligne 1 agrandie aux fusions prenait la bande.
+		expect(expandRange({ r0: 1, r1: 1, c0: 0, c1: LAST }, all)).toEqual({ r0: 0, r1: 1, c0: 0, c1: LAST });
+		const w = wholeLines('rows', 1, 1, LAST, all);
+		expect(w.range).toEqual({ r0: 1, r1: 1, c0: 0, c1: LAST });
+		// La cellule active : la fusion ARBRE, par son haut.
+		expect(w.active).toEqual({ row: 0, col: 0 });
+	});
+	it('une ligne au milieu d’une fusion verticale : cette ligne seule', () => {
+		expect(wholeLines('rows', 10, 10, LAST, all)).toEqual({ active: { row: 9, col: 0 }, range: { r0: 10, r1: 10, c0: 0, c1: LAST } });
+	});
+	it('glisser vers le haut : de la ligne de départ à celle atteinte', () => {
+		expect(wholeLines('rows', 11, 8, LAST, all).range).toEqual({ r0: 8, r1: 11, c0: 0, c1: LAST });
+	});
+	it('une colonne d’un groupe : cette colonne seule, pas tout le groupe', () => {
+		expect(expandRange({ r0: 0, r1: LAST, c0: 2, c1: 2 }, all).c0).toBe(1);
+		const w = wholeLines('cols', 2, 2, LAST, all);
+		expect(w.range).toEqual({ r0: 0, r1: LAST, c0: 2, c1: 2 });
+		expect(w.active).toEqual({ row: 0, col: 1 });
+	});
+	it('surlignage : la partie sélectionnée d’une fusion', () => {
+		expect(intersect(mergeRect(all[all.length - 1]), { r0: 10, r1: 11, c0: 0, c1: LAST })).toEqual({ r0: 10, r1: 11, c0: 0, c1: 0 });
+		expect(intersect({ r0: 0, r1: 1, c0: 0, c1: 0 }, { r0: 5, r1: 6, c0: 0, c1: LAST })).toBeNull();
 	});
 });

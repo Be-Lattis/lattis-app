@@ -104,3 +104,27 @@ export function extendCorner(active: Cell, corner: Cell, dr: number, dc: number,
 	}
 	return { row, col };
 }
+
+/**
+ * Lignes (ou colonnes) entières de from à to, choisies par la gouttière ou
+ * le bandeau (ou Maj+Espace) : exactement celles-là, comme Excel. Une fusion
+ * qui les traverse n'agrandit pas la sélection (sinon un clic sur la ligne
+ * d'en-tête d'un tableau à deux lignes prenait aussi la bande, et l'on ne
+ * pouvait ni masquer ni régler une seule de ces lignes). from est la ligne
+ * (colonne) où le glisser a commencé : la cellule active est sa première
+ * cellule, ou le haut à gauche de sa fusion.
+ */
+export function wholeLines(kind: 'rows' | 'cols', from: number, to: number, last: number, merges: readonly MergeRange[]): { active: Cell; range: CellRange } {
+	const i0 = Math.min(from, to);
+	const i1 = Math.max(from, to);
+	const range = kind === 'rows' ? { r0: i0, r1: i1, c0: 0, c1: last } : { r0: 0, r1: last, c0: i0, c1: i1 };
+	const start = kind === 'rows' ? { row: from, col: 0 } : { row: 0, col: from };
+	const g = mergeAt(merges as MergeRange[], start.row, start.col);
+	return { active: g ? { row: g.row, col: g.col } : start, range };
+}
+
+/** Partie commune de deux plages (null : aucune). */
+export function intersect(a: CellRange, b: CellRange): CellRange | null {
+	const r = { r0: Math.max(a.r0, b.r0), r1: Math.min(a.r1, b.r1), c0: Math.max(a.c0, b.c0), c1: Math.min(a.c1, b.c1) };
+	return r.r0 <= r.r1 && r.c0 <= r.c1 ? r : null;
+}
