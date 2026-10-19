@@ -29,6 +29,10 @@ Un clic sur une colonne de l'aperçu la sélectionne ; `Ctrl+Z` retire la derni�
 
 Le volet **Requêtes et connexions** (Données › Requêtes et connexions) liste les requêtes du classeur : modifier, actualiser, supprimer. `F5` dans un tableau chargé par une requête la relance ; `Ctrl+F5` ou Données › Actualiser tout relance toutes les requêtes puis recalcule les formules.
 
+## Classeur reçu : accord des sources
+
+Une requête est écrite dans le classeur. Pour qu'un classeur reçu ne puisse pas, à l'actualisation, joindre un serveur inconnu ou copier un fichier de votre poste, Lattis demande votre accord la première fois qu'une requête veut lire un fichier ou joindre un hôte (API web, serveur de base de données). L'accord vaut pour la session, ou pour ce classeur sur ce poste avec « Mémoriser ». Les sources d'une requête écrite dans l'éditeur, et les fichiers que vous y choisissez, sont accordés d'office. Les hôtes accordés se revoient dans l'onglet SCRIPT › Accès réseau.
+
 ## Connexions aux bases
 
 Une **connexion** décrit un serveur (PostgreSQL, MySQL / MariaDB, SQL Server, ou une API web) : hôte, port, base, utilisateur. Elle est rangée dans le classeur et sert à plusieurs requêtes.

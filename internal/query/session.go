@@ -25,6 +25,9 @@ type Env struct {
 	// Workbook désigne le classeur pour ses mots de passe
 	// (doc.Document.SecretScope) : ceux d'un autre classeur ne servent pas.
 	Workbook string
+	// Allow vérifie chaque accès d'une source hors du classeur (hôte joint,
+	// fichier lu) avant qu'il ait lieu ; nil : tout est permis.
+	Allow AllowFunc
 }
 
 func (e Env) secrets() *Secrets {
@@ -235,6 +238,13 @@ func (r *run) load(src Source) (loaded, error) {
 	if old, ok := r.s.cache[k]; ok {
 		r.s.db.ExecContext(r.ctx, `DROP TABLE IF EXISTS `+qi(old.table))
 		delete(r.s.cache, k)
+	}
+	if a, ok, err := SourceAccess(src, r.connection); err != nil {
+		return loaded{}, err
+	} else if ok {
+		if err := r.allow(a); err != nil {
+			return loaded{}, err
+		}
 	}
 	var l loaded
 	var err error

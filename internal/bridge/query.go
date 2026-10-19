@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/lalamefine/lattis/internal/api"
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/query"
@@ -57,8 +58,30 @@ func (s *DocumentService) closeQuerySession() {
 	}
 }
 
-func queryEnv(d *doc.Document) query.Env {
-	return query.Env{Model: d.Model, Secrets: query.DefaultSecrets, Workbook: d.SecretScope()}
+// queryEnv : sources lues avec l'accord de l'utilisateur (api.AllowSource).
+func (s *DocumentService) queryEnv(d *doc.Document) query.Env {
+	return query.Env{Model: d.Model, Secrets: query.DefaultSecrets, Workbook: d.SecretScope(),
+		Allow: func(ctx context.Context, a query.Access) error { return api.AllowSource(ctx, host{s}, d, a) }}
+}
+
+// grantSources accorde les sources d'une requête écrite dans l'éditeur de
+// ce poste : elles ne redemandent pas d'accord à l'actualisation.
+func grantSources(ctx context.Context, d *doc.Document, q query.Query) {
+	conns := func(name string) (query.Connection, error) {
+		def, err := d.Connections(ctx)
+		if err != nil {
+			return query.Connection{}, err
+		}
+		for _, c := range def {
+			if strings.EqualFold(c.Name, name) {
+				return query.DecodeConnection(c)
+			}
+		}
+		return query.Connection{}, fmt.Errorf("connexion « %s » introuvable", name)
+	}
+	if a, ok, err := query.SourceAccess(q.Source, conns); err == nil && ok {
+		api.GrantSource(ctx, d, a)
+	}
 }
 
 // saveDoc enregistre d dans path.
@@ -108,6 +131,7 @@ func (s *DocumentService) SaveQuery(ctx context.Context, q query.Query) (int64, 
 	if err != nil {
 		return 0, err
 	}
+	grantSources(ctx, d, q)
 	_, err = s.changed(ctx)
 	return id, err
 }
@@ -153,7 +177,7 @@ func (s *DocumentService) PreviewQuery(ctx context.Context, q query.Query, upto 
 	if err != nil {
 		return query.Preview{}, err
 	}
-	return sess.Preview(ctx, queryEnv(d), q, upto, fresh), nil
+	return sess.Preview(ctx, s.queryEnv(d), q, upto, fresh), nil
 }
 
 // QueryRefresh est le résultat d'une actualisation : tableaux chargés, ou
@@ -193,7 +217,7 @@ func (s *DocumentService) RefreshQuery(ctx context.Context, id int64) (QueryRefr
 	if err != nil {
 		return QueryRefresh{}, err
 	}
-	l, err := sess.Refresh(ctx, queryEnv(d), id)
+	l, err := sess.Refresh(ctx, s.queryEnv(d), id)
 	out := QueryRefresh{}
 	if err == nil {
 		out.Loads = []canvas.QueryLoad{l}
@@ -208,7 +232,7 @@ func (s *DocumentService) RefreshAllQueries(ctx context.Context) (QueryRefresh, 
 	if err != nil {
 		return QueryRefresh{}, err
 	}
-	ls, err := sess.RefreshAll(ctx, queryEnv(d))
+	ls, err := sess.RefreshAll(ctx, s.queryEnv(d))
 	return s.refreshed(ctx, QueryRefresh{Loads: ls}, err)
 }
 
@@ -399,7 +423,14 @@ func (s *DocumentService) PickDataFile(kind string) (string, error) {
 		o.Filters = []FileFilter{{"Texte ou CSV", "*.csv;*.tsv;*.txt"}}
 	}
 	o.Filters = append(o.Filters, FileFilter{"Tous les fichiers", "*.*"})
-	return s.sys().OpenFile(o)
+	p, err := s.sys().OpenFile(o)
+	if p != "" && err == nil {
+		// Choisi ici : l'aperçu et l'actualisation ne redemandent pas.
+		if d, derr := s.current(); derr == nil {
+			api.GrantSource(context.Background(), d, query.Access{Path: p})
+		}
+	}
+	return p, err
 }
 
 // ExcelTables liste les tableaux d'un classeur .xlsx (navigateur).

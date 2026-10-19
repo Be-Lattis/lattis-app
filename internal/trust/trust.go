@@ -18,7 +18,10 @@
 //   - Réseau : les hôtes que les scripts et les pages HTML d'un classeur
 //     peuvent joindre, par classeur (son identifiant aléatoire,
 //     doc.Document.SecretScope), comme les accords des mots de passe
-//     (query.Secrets).
+//     (query.Secrets). Les sources des requêtes Power Query (API web,
+//     bases de données) suivent la même règle.
+//   - Fichiers : les fichiers que les requêtes d'un classeur peuvent lire,
+//     par classeur.
 //
 // Les accords sont rangés dans le dossier de configuration de
 // l'utilisateur (Lattis/accords.json). À la première ouverture de ce
@@ -59,6 +62,8 @@ type fileData struct {
 	Pages map[string]ScriptGrant `json:"pages,omitempty"`
 	// Hosts : hôtes autorisés, par classeur.
 	Hosts map[string][]string `json:"hotes,omitempty"`
+	// Files : fichiers que les requêtes peuvent lire, par classeur.
+	Files map[string][]string `json:"fichiers,omitempty"`
 	// Legacy : classeurs récents au moment de la création du fichier, dont
 	// les accords enregistrés dans le classeur sont repris à la réouverture.
 	Legacy []string `json:"anciens,omitempty"`
@@ -143,7 +148,7 @@ func (s *Store) load() {
 		return
 	}
 	s.loaded = true
-	s.data = fileData{Scripts: map[string]ScriptGrant{}, Pages: map[string]ScriptGrant{}, Hosts: map[string][]string{}}
+	s.data = fileData{Scripts: map[string]ScriptGrant{}, Pages: map[string]ScriptGrant{}, Hosts: map[string][]string{}, Files: map[string][]string{}}
 	if s.path == "" {
 		return
 	}
@@ -173,6 +178,9 @@ func (s *Store) load() {
 	}
 	if d.Hosts != nil {
 		s.data.Hosts = d.Hosts
+	}
+	if d.Files != nil {
+		s.data.Files = d.Files
 	}
 	s.data.Legacy = d.Legacy
 }
@@ -347,6 +355,39 @@ func (s *Store) ForgetHost(workbook, host string) error {
 		delete(s.data.Hosts, workbook)
 	} else {
 		s.data.Hosts[workbook] = list
+	}
+	return s.save()
+}
+
+// --- Fichiers des requêtes ---------------------------------------------------
+
+// FileAllowed dit si les requêtes du classeur peuvent lire le fichier path.
+func (s *Store) FileAllowed(workbook, path string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.load()
+	return slices.Contains(s.data.Files[workbook], cleanPath(path))
+}
+
+// AllowFiles autorise les requêtes du classeur à lire ces fichiers.
+func (s *Store) AllowFiles(workbook string, paths ...string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.load()
+	changed := false
+	for _, p := range paths {
+		if strings.TrimSpace(p) == "" {
+			continue
+		}
+		p = cleanPath(p)
+		if slices.Contains(s.data.Files[workbook], p) {
+			continue
+		}
+		s.data.Files[workbook] = append(s.data.Files[workbook], p)
+		changed = true
+	}
+	if !changed {
+		return nil
 	}
 	return s.save()
 }

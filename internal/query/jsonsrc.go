@@ -452,7 +452,8 @@ func (r *run) loadWeb(src Source) (loaded, error) {
 		}
 		conn = &c
 	}
-	body, err := fetchWeb(r.ctx, r.env.secrets(), conn, src.URL, src.Headers, "")
+	allow := func(host string) error { return r.allow(Access{Host: host}) }
+	body, err := fetchWeb(r.ctx, r.env.secrets(), conn, src.URL, src.Headers, "", allow)
 	if err != nil {
 		return loaded{}, err
 	}
@@ -527,7 +528,8 @@ func (e *httpError) Error() string { return fmt.Sprintf("%s : HTTP %s%s", e.Host
 
 // fetchWeb lit une adresse (GET). conn (facultative) fournit le secret ;
 // password non vide remplace celui qui est connu (test de la connexion).
-func fetchWeb(ctx context.Context, sec *Secrets, conn *Connection, raw string, headers []Header, password string) ([]byte, error) {
+// allow (facultative) vérifie l'hôte d'une redirection vers un autre hôte.
+func fetchWeb(ctx context.Context, sec *Secrets, conn *Connection, raw string, headers []Header, password string, allow func(host string) error) ([]byte, error) {
 	u, err := webURL(raw)
 	if err != nil {
 		return nil, err
@@ -563,6 +565,11 @@ func fetchWeb(ctx context.Context, sec *Secrets, conn *Connection, raw string, h
 		CheckRedirect: func(next *http.Request, via []*http.Request) error {
 			if len(via) >= 10 {
 				return errors.New("trop de redirections")
+			}
+			if !strings.EqualFold(next.URL.Host, via[len(via)-1].URL.Host) && allow != nil {
+				if err := allow(next.URL.Host); err != nil {
+					return err
+				}
 			}
 			// Le secret ne suit pas une redirection vers un autre hôte.
 			if authHeader != "" && !strings.EqualFold(next.URL.Host, via[0].URL.Host) {
@@ -608,7 +615,7 @@ func fetchWeb(ctx context.Context, sec *Secrets, conn *Connection, raw string, h
 // (vide : le secret connu). Seul un refus (401, 403) ou une panne réseau
 // est une erreur : l'adresse de base d'une API peut répondre 404.
 func testWeb(ctx context.Context, sec *Secrets, c Connection, password string, remember bool) error {
-	_, err := fetchWeb(ctx, sec, &c, c.Config.URL, nil, password)
+	_, err := fetchWeb(ctx, sec, &c, c.Config.URL, nil, password, nil)
 	var he *httpError
 	if err != nil && !errors.As(err, &he) {
 		return err
