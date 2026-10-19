@@ -6,6 +6,23 @@
 import * as canvas$0 from "../canvas/models.js";
 
 /**
+ * ExportReport est le compte rendu d'un export.
+ */
+export interface ExportReport {
+    "sheets": SheetReport[] | null;
+
+    /**
+     * Scripts : scripts du classeur, non exportés.
+     */
+    "scripts": number;
+
+    /**
+     * Clipped : cellules au-delà des limites d'Excel, non exportées.
+     */
+    "clipped": number;
+}
+
+/**
  * PageBreaks sont les sauts de page d'une feuille, pour la grille (traits
  * pointillés) : début de chaque page après la première, sauts manuels, et
  * zone imprimée.
@@ -27,4 +44,84 @@ export interface PageBreaks {
      * rien à imprimer
      */
     "empty": boolean;
+}
+
+/**
+ * SheetReport est le compte rendu d'une feuille.
+ */
+export interface SheetReport {
+    "name": string;
+
+    /**
+     * Kind : "html" (page) ou "doc" (document) : onglet exporté vide.
+     */
+    "kind"?: string;
+
+    /**
+     * tableaux exportés
+     */
+    "tables": number;
+
+    /**
+     * Translated : formules exportées comme formules (cellules et colonnes
+     * calculées).
+     */
+    "translated": number;
+
+    /**
+     * Formulas : formules de cellules exportées par leur valeur ; Columns :
+     * colonnes calculées exportées par leurs valeurs ; Functions : les
+     * fonctions en cause (noms français).
+     */
+    "formulas": number;
+    "columns": number;
+    "functions"?: string[] | null;
+
+    /**
+     * tableaux croisés, exportés en valeurs
+     */
+    "pivots": number;
+
+    /**
+     * graphiques, non exportés
+     */
+    "charts": number;
+
+    /**
+     * règles de mise en forme conditionnelle, non exportées
+     */
+    "rules": number;
+
+    /**
+     * notes de cellules, non exportées
+     */
+    "notes": number;
+
+    /**
+     * validations (listes de valeurs), non exportées
+     */
+    "lists": number;
+
+    /**
+     * boutons et contrôles, non exportés
+     */
+    "buttons": number;
+
+    /**
+     * Queries : tableaux chargés par une requête, exportés en valeurs (sans
+     * la requête).
+     */
+    "queries": number;
+
+    /**
+     * TwoLevel : tableaux aux en-têtes sur deux lignes, exportés sur une
+     * (« Groupe.Sous »).
+     */
+    "twoLevel": number;
+
+    /**
+     * protection de la feuille, non exportée
+     */
+    "protected": boolean;
+    "clipped": number;
 }

@@ -1681,7 +1681,7 @@ export function ShareAddRestriction(r: workbook$0.RestrictionRule): $Cancellable
 /**
  * ShareCanPublish dit si le compte connecté à server peut y créer un
  * classeur (rôle « créateur de classeurs », propriétaire du serveur, ou
- * publication ouverte à tous) : sinon, Partager sur un serveur ne propose
+ * publication ouverte à tous) : sinon, Publier sur un serveur ne propose
  * pas de publier.
  */
 export function ShareCanPublish(server: string): $CancellablePromise<boolean> {
@@ -1781,7 +1781,7 @@ export function SharePreview(userID: string, table: number): $CancellablePromise
 
 /**
  * SharePublish publie le classeur ouvert sur un Serveur Lattis (Fichier ›
- * Partager sur un serveur…). Un classeur déjà enregistré est réenregistré
+ * Publier sur un serveur…). Un classeur déjà enregistré est réenregistré
  * (son manifeste dit le partage).
  */
 export function SharePublish(req: $models.ShareRequest): $CancellablePromise<workbook$0.State> {

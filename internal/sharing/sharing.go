@@ -51,7 +51,7 @@ const (
 // rendent pas de valeurs (ou dont Filter retire les valeurs).
 var Structure = []string{
 	// Lecture de la structure.
-	"sheets.list", "tables.list", "tables.get", "formulas.functions", "queries.list", "connections.list",
+	"sheets.list", "sheets.page_setup", "tables.list", "tables.get", "formulas.functions", "queries.list", "connections.list",
 	"columns.type_preview", "columns.type_mix", "tables.key_check", "buttons.list",
 	// Disposition des feuilles (où sont tableaux, TCD, graphiques, cellules
 	// libres) ; hors partage complet, sans les valeurs (Filter).
