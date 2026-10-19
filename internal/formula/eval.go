@@ -400,10 +400,7 @@ func (env *Env) aggregate(fn string, args []Node) Value {
 			acc.AddValue(Eval(a, env))
 		}
 	}
-	if fn == "TEXTJOIN" {
-		return acc.TextResult(leadV[0], leadV[1])
-	}
-	return acc.Result()
+	return acc.Final(leadV)
 }
 
 // scan exécute une fonction de parcours (voir scan.go).

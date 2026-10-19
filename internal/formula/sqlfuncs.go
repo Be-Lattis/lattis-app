@@ -323,7 +323,7 @@ func Register(c *sqlite3.Conn) error {
 		return err
 	}
 	// slt_final('SUM', a, b, ...) : combine états partiels et valeurs directes
-	// (précédés des arguments ordinaires de JOINDRE.TEXTE).
+	// (précédés des arguments ordinaires de JOINDRE.TEXTE ou de VAN).
 	if err := c.CreateFunction("slt_final", -1, det, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		fn := arg[0].Text()
 		acc := Agg{Fn: fn}
@@ -337,11 +337,7 @@ func Register(c *sqlite3.Conn) error {
 			}
 			acc.AddValue(fromArg(a))
 		}
-		if fn == "TEXTJOIN" && len(lead) == 2 {
-			result(ctx, acc.TextResult(lead[0], lead[1]))
-			return
-		}
-		result(ctx, acc.Result())
+		result(ctx, acc.Final(lead))
 	}); err != nil {
 		return err
 	}

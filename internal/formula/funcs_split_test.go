@@ -16,6 +16,7 @@ func TestLetSyntax(t *testing.T) {
 		`=LET(Cell[B2];1;2)`:  "nom n° 1",
 		`=LET(x;1;SOMME;2;3)`: "nom n° 2",
 		`=LET(texte;1;2)`:     "nom de fonction", // TEXTE
+		`=LET(taux;1;2)`:      "nom de fonction", // TAUX, comme dans Excel
 		`=LET(1;1;2)`:         "nom n° 1",
 		`=LET("x";1;2)`:       "nom n° 1",
 		`=LET(;1;2)`:          "manquant",
@@ -26,7 +27,7 @@ func TestLetSyntax(t *testing.T) {
 			t.Errorf("%s : erreur « %s » attendue, obtenu %v", src, msg, err)
 		}
 	}
-	for _, src := range []string{`=LET(x;1;x)`, `=LET(prix_ht;1;taux;0,2;prix_ht*(1+taux))`, `=LET(x;{1;2};SOMME(x))`} {
+	for _, src := range []string{`=LET(x;1;x)`, `=LET(prix_ht;1;tva;0,2;prix_ht*(1+tva))`, `=LET(x;{1;2};SOMME(x))`} {
 		if _, err := Parse(src, FR); err != nil {
 			t.Errorf("%s : %v", src, err)
 		}

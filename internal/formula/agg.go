@@ -31,7 +31,7 @@ type Agg struct {
 
 func (a *Agg) keepsVals() bool {
 	switch a.Fn {
-	case "MEDIAN", "STDEV", "STDEVP", "STDEV.S", "STDEV.P", "VAR", "VARP", "VAR.S", "VAR.P", "MODE", "MODE.SNGL":
+	case "MEDIAN", "STDEV", "STDEVP", "STDEV.S", "STDEV.P", "VAR", "VARP", "VAR.S", "VAR.P", "MODE", "MODE.SNGL", "NPV":
 		return true
 	}
 	return false
@@ -274,6 +274,24 @@ func (a *Agg) Result() Value {
 		return number(v)
 	}
 	return Err(ErrName)
+}
+
+// Final donne le résultat, avec les arguments ordinaires placés avant les
+// valeurs (voir aggLead).
+func (a *Agg) Final(lead []Value) Value {
+	if len(lead) < aggLead[a.Fn] {
+		return Err(ErrValue)
+	}
+	switch a.Fn {
+	case "TEXTJOIN":
+		return a.TextResult(lead[0], lead[1])
+	case "NPV":
+		if a.Err != 0 {
+			return Err(a.Err)
+		}
+		return npv(lead[0], a.Vals)
+	}
+	return a.Result()
 }
 
 // TextResult donne le résultat de JOINDRE.TEXTE(délimiteur; ignorer_vides; …).

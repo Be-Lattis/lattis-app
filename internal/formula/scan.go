@@ -46,6 +46,14 @@ func roles(rs ...role) []role { return rs }
 func colParam(n int) ([]role, bool) { return roles(column, param), n == 2 }
 func twoCols(n int) ([]role, bool)  { return roles(column, column), n == 2 }
 
+// optParam donne le paramètre facultatif n° i, vide s'il est absent.
+func optParam(p []Value, i int) Value {
+	if i < len(p) {
+		return p[i]
+	}
+	return Value{}
+}
+
 // pairRoles : (plage; critère) répétés, après un préfixe.
 func pairRoles(prefix ...role) func(int) ([]role, bool) {
 	return func(n int) ([]role, bool) {
@@ -104,6 +112,8 @@ var scans = map[string]scanDef{
 	"CORREL":         {roles: twoCols, make: func([]Value) scanner { return &pairStats{fn: "CORREL"} }},
 	"SLOPE":          {roles: twoCols, make: func([]Value) scanner { return &pairStats{fn: "SLOPE"} }},
 	"INTERCEPT":      {roles: twoCols, make: func([]Value) scanner { return &pairStats{fn: "INTERCEPT"} }},
+	"IRR": {roles: func(n int) ([]role, bool) { return roles(column, param)[:n], true },
+		make: func(p []Value) scanner { return &irr{guess: optParam(p, 0)} }, ordered: true},
 
 	"NETWORKDAYS": {roles: func(n int) ([]role, bool) { return roles(param, param, column)[:n], true },
 		make: func(p []Value) scanner { return newWorkdays(p, false) }},

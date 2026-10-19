@@ -55,6 +55,7 @@ const (
 	catLookup = "Recherche"
 	catSpill  = "Tableaux dynamiques"
 	catGeo    = "Géographie"
+	catFin    = "Finances"
 )
 
 // Arguments qui reviennent souvent.
@@ -69,6 +70,14 @@ var (
 
 // argMatrix : la colonne lue par CENTILE, QUARTILE…
 var argMatrix = docArg("matrice", "Colonne entière (Tableau[Colonne]), plage ou expression sur les colonnes d'un tableau.")
+
+// Arguments des fonctions financières.
+var (
+	argRate = docArg("taux", "Taux d'intérêt par période (4%/12 pour 4 % par an en mensualités).")
+	argNper = docArg("npm", "Nombre total de périodes (20*12 pour 20 ans de mensualités).")
+	argFv   = docOpt("vc", "Valeur future, le solde voulu après le dernier paiement (0 si omise).")
+	argType = docOpt("type", "0 ou omis : paiement en fin de période ; 1 : en début de période.")
+)
 
 // docs : documentation de chaque fonction, par nom anglais (canonique).
 var docs = map[string]funcDoc{
@@ -354,6 +363,43 @@ var docs = map[string]funcDoc{
 	"SUMPRODUCT": {catAgg, "Multiplie les colonnes ligne à ligne et additionne les produits ; accepte une expression.",
 		docArgs(docArg("matrice1", "Colonne d'un tableau, ou expression sur ses colonnes ((Ventes[Qté]>1)*Ventes[Prix]). Toutes du même tableau.")),
 		1, `=SOMMEPROD(Ventes[Prix]; Ventes[Qté])`},
+
+	// Finances
+	"PMT": {catFin, "Renvoie le montant du remboursement périodique d'un emprunt à taux constant (négatif : une somme versée).",
+		docArgs(argRate, argNper, docArg("va", "Valeur actuelle : le capital emprunté."), argFv, argType),
+		0, `=VPM(4%/12; 20*12; 200000)`},
+	"PV": {catFin, "Renvoie la valeur actuelle d'une suite de paiements constants (le capital qu'ils remboursent).",
+		docArgs(argRate, argNper, docArg("vpm", "Paiement de chaque période (négatif s'il est versé)."), argFv, argType),
+		0, `=VA(4%/12; 240; -1200)`},
+	"FV": {catFin, "Renvoie la valeur future d'un placement à versements et taux constants.",
+		docArgs(argRate, argNper, docArg("vpm", "Versement de chaque période (négatif s'il est versé)."),
+			docOpt("va", "Valeur actuelle : la somme placée au départ (0 si omise)."), argType),
+		0, `=VC(3%/12; 10*12; -100; -1000)`},
+	"NPER": {catFin, "Renvoie le nombre de périodes nécessaires pour rembourser un emprunt ou atteindre un montant.",
+		docArgs(argRate, docArg("vpm", "Paiement de chaque période (négatif s'il est versé)."),
+			docArg("va", "Valeur actuelle : le capital emprunté."), argFv, argType),
+		0, `=NPM(4%/12; -1200; 200000)`},
+	"RATE": {catFin, "Renvoie le taux d'intérêt par période d'un emprunt ou d'un placement (calcul itératif).",
+		docArgs(argNper, docArg("vpm", "Paiement de chaque période (négatif s'il est versé)."),
+			docArg("va", "Valeur actuelle : le capital emprunté."), argFv, argType,
+			docOpt("estimation", "Taux de départ du calcul (10 % si omis).")),
+		0, `=TAUX(240; -1200; 200000)*12`},
+	"IPMT": {catFin, "Renvoie la part d'intérêts d'un remboursement, pour une période donnée.",
+		docArgs(argRate, docArg("pér", "Numéro de la période, de 1 à npm."), argNper,
+			docArg("va", "Valeur actuelle : le capital emprunté."), argFv, argType),
+		0, `=INTPER(4%/12; [Mois]; 240; 200000)`},
+	"PPMT": {catFin, "Renvoie la part de capital d'un remboursement, pour une période donnée.",
+		docArgs(argRate, docArg("pér", "Numéro de la période, de 1 à npm."), argNper,
+			docArg("va", "Valeur actuelle : le capital emprunté."), argFv, argType),
+		0, `=PRINCPER(4%/12; [Mois]; 240; 200000)`},
+	"NPV": {catFin, "Renvoie la valeur actuelle nette de flux de trésorerie périodiques, actualisés dès la première période (dans l'ordre du tableau).",
+		docArgs(docArg("taux", "Taux d'actualisation par période."),
+			docArg("valeur1", "Flux, ou colonne entière de flux (Tableau[Colonne]), dans l'ordre des périodes.")),
+		1, `=VAN(8%; Flux[Montant])`},
+	"IRR": {catFin, "Renvoie le taux de rentabilité interne d'une suite de flux (le premier, souvent l'investissement, n'est pas actualisé).",
+		docArgs(docArg("valeurs", "Colonne de flux (Tableau[Colonne]) dans l'ordre des périodes, avec au moins un flux positif et un négatif."),
+			docOpt("estimation", "Taux de départ du calcul (10 % si omis).")),
+		0, `=TRI(Flux[Montant])`},
 
 	// Calculs entre lignes
 	"PREVIOUS": {catRows, "Renvoie la valeur d'une expression à la ligne précédente du tableau (dans son ordre).",

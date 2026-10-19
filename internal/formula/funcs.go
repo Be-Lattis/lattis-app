@@ -42,12 +42,12 @@ func (f funcDef) arity() string {
 }
 
 // aggLead donne le nombre d'arguments ordinaires placés avant les valeurs
-// agrégées (JOINDRE.TEXTE(délimiteur; ignorer_vides; textes…)).
-var aggLead = map[string]int{"TEXTJOIN": 2}
+// agrégées (JOINDRE.TEXTE(délimiteur; ignorer_vides; textes…), VAN(taux; …)).
+var aggLead = map[string]int{"TEXTJOIN": 2, "NPV": 1}
 
 // aggOrdered : agrégats dont le résultat dépend de l'ordre des valeurs (ordre
 // d'affichage du tableau).
-var aggOrdered = map[string]bool{"TEXTJOIN": true, "MODE": true, "MODE.SNGL": true}
+var aggOrdered = map[string]bool{"TEXTJOIN": true, "MODE": true, "MODE.SNGL": true, "NPV": true}
 
 // Catalogue des fonctions (voir analyse/catalogue-fonctions.md). Le nom
 // anglais est le nom canonique, stocké dans l'AST.
@@ -215,6 +215,17 @@ var funcs = []funcDef{
 	{"MAXIFS", "MAX.SI.ENS", 3, -1, scan, nil},
 	{"MINIFS", "MIN.SI.ENS", 3, -1, scan, nil},
 	{"SUMPRODUCT", "SOMMEPROD", 1, -1, scan, nil},
+
+	// Finances (voir funcs_finance.go)
+	{"PMT", "VPM", 3, 5, scalar, fnPmt},
+	{"PV", "VA", 3, 5, scalar, fnPv},
+	{"FV", "VC", 3, 5, scalar, fnFv},
+	{"NPER", "NPM", 3, 5, scalar, fnNper},
+	{"RATE", "TAUX", 3, 6, scalar, fnRate},
+	{"IPMT", "INTPER", 4, 6, scalar, fnIpmtPpmt(false)},
+	{"PPMT", "PRINCPER", 4, 6, scalar, fnIpmtPpmt(true)},
+	{"NPV", "VAN", 2, -1, aggregate, nil},
+	{"IRR", "TRI", 1, 2, scan, nil},
 
 	// Calculs entre lignes, dans l'ordre du tableau
 	{"PREVIOUS", "PRECEDENT", 1, 2, special, nil},

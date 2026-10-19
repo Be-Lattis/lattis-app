@@ -51,6 +51,18 @@ Les plages se lisent comme une colonne dans les agrégats (`SOMME`, `MOYENNE`, `
 | PUISSANCE, RACINE, EXP, LN, LOG10, PI | POWER, SQRT, EXP, LN, LOG10, PI | ✅ #NOMBRE! hors domaine |
 | ALEA, ALEA.ENTRE.BORNES | RAND, RANDBETWEEN | ⚠️ tirage stable par ligne, renouvelé avec `Schema.Seed` (F9) et non à chaque lecture |
 
+## Finances
+
+Conventions d'Excel : une somme versée est négative, une somme reçue positive ; `type` 0 (défaut) pour un paiement en fin de période, 1 en début de période. Le taux est celui d'une période : `4%/12` pour 4 % par an en mensualités.
+
+| Français | Anglais | |
+|---|---|---|
+| VPM, VA, VC, NPM | PMT, PV, FV, NPER | ✅ formules fermées d'Excel, taux nul compris ; `npm` nul, ou NPM sans solution : #NOMBRE! |
+| TAUX | RATE | ⚠️ méthode de Newton depuis `estimation` (10 % si omise), 100 itérations au plus (20 dans Excel) : peut trouver un taux là où Excel renvoie #NOMBRE! |
+| INTPER, PRINCPER | IPMT, PPMT | ✅ période hors de 1 à npm : #NOMBRE! ; INTPER + PRINCPER = VPM |
+| VAN | NPV | ✅ `VAN(8%; Flux[Montant])` : flux actualisés dès la fin de la première période, **dans l'ordre d'affichage** du tableau ; valeurs directes converties comme dans SOMME (`"abc"` : #VALEUR!) |
+| TRI | IRR | ⚠️ `TRI(Flux[Montant]; [estimation])` sur une colonne, une plage ou une expression sur colonnes, dans l'ordre d'affichage ; il faut un flux positif et un négatif (sinon #NOMBRE!) ; Newton, 100 itérations au plus |
+
 ## Agrégats
 
 | Français | Anglais | |
@@ -183,4 +195,5 @@ Ces précalculs, comme les agrégats sortis de la requête, sont à recalculer q
 - `Schema.Now` et `Schema.Seed` : fixés à l'ouverture, renouvelés par F9 (ruban Formules, Calculer).
 - `IsSpill`, `CompileSpill` : une cellule libre déverse son tableau dynamique (10 000 lignes au plus) ; une cellule ou un tableau sur le chemin donne #DEVERSEMENT!.
 - `Suggestion` : infobulle de #NOM?.
+- Nom de cellule : comme dans Excel, il peut reprendre le nom d'une fonction (`Taux`, `Date`), écrite, elle, avec ses parenthèses ; seuls les agrégats que GROUPER.PAR prend écrits seuls (`SOMME`, `MOYENNE`…) sont refusés (`BareFunction`). Un nom de LET, lui, ne peut pas être un nom de fonction.
 - `SOUS.TOTAL` : ne compte que les lignes que le filtre de la grille laisse affichées (`Table.Visible`).
