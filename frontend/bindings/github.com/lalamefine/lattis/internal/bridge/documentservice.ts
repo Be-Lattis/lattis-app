@@ -389,6 +389,14 @@ export function DeleteColumn(table: string, i: number): $CancellablePromise<$mod
 }
 
 /**
+ * DeleteColumnSpans supprime des colonnes de plusieurs tableaux (colonnes
+ * entières de la feuille qui les traversent), en une étape.
+ */
+export function DeleteColumnSpans(spans: canvas$0.ColumnSpan[] | null): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2623295148, spans);
+}
+
+/**
  * DeleteConnection supprime une connexion qu'aucune requête n'utilise.
  */
 export function DeleteConnection(id: number): $CancellablePromise<$models.DocState> {
@@ -1896,11 +1904,11 @@ export function StopScript(): $CancellablePromise<void> {
 }
 
 /**
- * SuppressColumn : Suppr sur une colonne entière d'un tableau (vide au
- * milieu : le tableau se coupe en deux).
+ * SuppressColumns : Suppr sur les colonnes entières i à j d'un tableau, en
+ * une étape (vides au milieu : le tableau se coupe en deux).
  */
-export function SuppressColumn(table: string, i: number): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(2882515755, table, i);
+export function SuppressColumns(table: string, i: number, j: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3489092488, table, i, j);
 }
 
 /**

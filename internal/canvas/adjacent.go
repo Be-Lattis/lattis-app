@@ -842,7 +842,11 @@ func (t *tx) headerOver(sheet int64, tables []Table, cells []cell, fixed map[int
 			continue
 		}
 		names := make([]string, len(under))
+		notes, biggest := len(t.notes), under[0]
 		for i, tb := range under {
+			if tb.Rows*len(tb.Cols) > biggest.Rows*len(biggest.Cols) {
+				biggest = tb
+			}
 			names[i] = "« " + tb.Name + " »"
 			if err := t.toRange(tb); err != nil {
 				return false, err
@@ -872,10 +876,14 @@ func (t *tx) headerOver(sheet int64, tables []Table, cells []cell, fixed map[int
 		if err != nil {
 			return false, err
 		}
-		// La note de Mettre sous forme de tableau est remplacée par celle-ci.
-		if n := len(t.notes); n > 0 && strings.HasPrefix(t.notes[n-1], "Plage mise sous forme") {
-			t.notes = t.notes[:n-1]
+		// Les notes de la plage sont remplacées par celle-ci ; le nouveau
+		// tableau prend le nom du plus gros des tableaux qu'il réunit.
+		t.notes = t.notes[:notes]
+		kept := []string{name}
+		if err := t.keepName(kept, 0, biggest.Name); err != nil {
+			return false, err
 		}
+		name = kept[0]
 		t.notes = append(t.notes, fmt.Sprintf("Ligne d'en-têtes posée sur %s : un seul tableau « %s », leurs en-têtes redeviennent des données (Ctrl+Z pour annuler)", strings.Join(names, ", "), name))
 		return true, nil
 	}

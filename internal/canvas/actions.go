@@ -718,30 +718,98 @@ func (m *Model) FixType(ctx context.Context, table string, i int) error {
 	})
 }
 
-// SuppressColumn : Suppr sur une colonne entière du tableau. Vide et au
-// milieu, elle coupe le tableau en deux (une colonne vide sépare deux
-// tableaux) ; sinon elle est supprimée (DeleteColumn).
+// SuppressColumn : Suppr sur une colonne entière du tableau (voir
+// SuppressColumns).
 func (m *Model) SuppressColumn(ctx context.Context, table string, i int) error {
-	return m.Do(ctx, "Supprimer une colonne", func(t *tx) error {
+	return m.SuppressColumns(ctx, table, i, i)
+}
+
+// SuppressColumns : Suppr sur les colonnes entières i à j du tableau, en une
+// seule étape d'annulation. Vides et au milieu, elles coupent le tableau en
+// deux (des colonnes vides séparent deux tableaux) ; sinon elles sont
+// supprimées (un tableau garde au moins une colonne).
+func (m *Model) SuppressColumns(ctx context.Context, table string, i, j int) error {
+	label := "Supprimer une colonne"
+	if j > i {
+		label = "Supprimer les colonnes"
+	}
+	return m.Do(ctx, label, func(t *tx) error {
 		tb, err := t.editTable(table)
 		if err != nil {
 			return err
 		}
-		if i < 0 || i >= len(tb.Cols) || len(tb.Cols) == 1 {
+		if i < 0 || j < i || j >= len(tb.Cols) || j-i+1 >= len(tb.Cols) {
 			return errors.New("canvas: colonne impossible à supprimer")
 		}
-		if c := tb.Cols[i]; i > 0 && i < len(tb.Cols)-1 && c.Formula == "" && !tb.Filtered() {
-			empty, err := t.columnEmpty(tb, c)
+		if i > 0 && j < len(tb.Cols)-1 && !tb.Filtered() {
+			empty, err := t.columnsEmpty(tb, i, j)
 			if err != nil {
 				return err
 			}
 			if empty {
-				return t.splitAt(tb, i)
+				return t.splitAt(tb, i, j)
 			}
 		}
-		if err := t.dropColumn(tb, tb.Cols[i], i); err != nil {
-			return err
+		return t.deleteColumnsAt(tb, i, j)
+	})
+}
+
+// columnsEmpty : les colonnes i à j du tableau sont vides et non calculées.
+func (t *tx) columnsEmpty(tb Table, i, j int) (bool, error) {
+	for k := i; k <= j; k++ {
+		c := tb.Cols[k]
+		if c.Formula != "" {
+			return false, nil
 		}
-		return t.trimAfterDrop(tb.ID)
+		if empty, err := t.columnEmpty(tb, c); err != nil || !empty {
+			return false, err
+		}
+	}
+	return true, nil
+}
+
+// deleteColumnsAt supprime les colonnes i à j du tableau, puis il se
+// resserre (trimAfterDrop).
+func (t *tx) deleteColumnsAt(tb Table, i, j int) error {
+	idx := make([]int, 0, j-i+1)
+	for k := i; k <= j; k++ {
+		idx = append(idx, k)
+	}
+	if err := t.dropColumns(tb, idx); err != nil {
+		return err
+	}
+	return t.trimAfterDrop(tb.ID)
+}
+
+// ColumnSpan désigne les colonnes From à To (rangs à partir de 0) d'un
+// tableau.
+type ColumnSpan struct {
+	Table string `json:"table"`
+	From  int    `json:"from"`
+	To    int    `json:"to"`
+}
+
+// DeleteColumnSpans supprime des colonnes de plusieurs tableaux (colonnes
+// entières de la feuille qui les traversent), en une seule étape
+// d'annulation. Un tableau garde au moins une colonne.
+func (m *Model) DeleteColumnSpans(ctx context.Context, spans []ColumnSpan) error {
+	label := "Supprimer une colonne"
+	if len(spans) > 1 || len(spans) == 1 && spans[0].To > spans[0].From {
+		label = "Supprimer les colonnes"
+	}
+	return m.Do(ctx, label, func(t *tx) error {
+		for _, s := range spans {
+			tb, err := t.editTable(s.Table)
+			if err != nil {
+				return err
+			}
+			if s.From < 0 || s.To < s.From || s.To >= len(tb.Cols) || s.To-s.From+1 >= len(tb.Cols) {
+				return fmt.Errorf("%w : le tableau « %s » garde au moins une colonne", ErrTable, tb.Name)
+			}
+			if err := t.deleteColumnsAt(tb, s.From, s.To); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 }

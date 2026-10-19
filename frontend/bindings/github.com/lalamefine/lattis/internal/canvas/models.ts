@@ -438,6 +438,16 @@ export interface ColumnRules {
 }
 
 /**
+ * ColumnSpan désigne les colonnes From à To (rangs à partir de 0) d'un
+ * tableau.
+ */
+export interface ColumnSpan {
+    "table": string;
+    "from": number;
+    "to": number;
+}
+
+/**
  * DepTarget est un antécédent ou un dépendant d'une cellule : une colonne de
  * tableau (Column vide : le tableau entier) ou une cellule (nommée ou non).
  */

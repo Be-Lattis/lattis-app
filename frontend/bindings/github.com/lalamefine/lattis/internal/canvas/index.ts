@@ -14,6 +14,7 @@ export type {
     ColumnFilter,
     ColumnInfo,
     ColumnRules,
+    ColumnSpan,
     DepTarget,
     Dependencies,
     Event,

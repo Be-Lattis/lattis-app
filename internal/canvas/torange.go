@@ -1129,23 +1129,24 @@ func (m *Model) PasteRange(ctx context.Context, sheet int64, row, col int, block
 	return m.Paste(ctx, sheet, row, col, block)
 }
 
-// splitAt coupe le tableau tb en deux autour de sa colonne i, vide : à
-// gauche et à droite deux tableaux, la colonne redevient une colonne vide de
-// la feuille. Les formules qui citaient tb citent le tableau de leur colonne
-// (passage par une plage). Un côté dont l'en-tête n'est fait que de
-// « Colonne n » (un tableau absorbé) prend sa 1re ligne pour en-tête.
-func (t *tx) splitAt(tb Table, i int) error {
+// splitAt coupe le tableau tb en deux autour de ses colonnes i à j, vides :
+// à gauche et à droite deux tableaux, les colonnes redeviennent des colonnes
+// vides de la feuille. Les formules qui citaient tb citent le tableau de
+// leur colonne (passage par une plage) ; le plus large des deux (à égalité,
+// celui de gauche) garde le nom de tb. Un côté dont l'en-tête n'est fait que
+// de « Colonne n » (un tableau absorbé) prend sa 1re ligne pour en-tête.
+func (t *tx) splitAt(tb Table, i, j int) error {
+	notes := len(t.notes)
 	if err := t.toRange(tb); err != nil {
 		return err
 	}
-	gap := tb.Col + i
-	in := `sheet = ? AND col = ? AND row BETWEEN ? AND ?`
+	in := `sheet = ? AND col BETWEEN ? AND ? AND row BETWEEN ? AND ?`
 	for _, tbl := range []string{"_lattis_cells", rangeTable} {
-		if err := t.deleteWhere(tbl, in, tb.Sheet, gap, tb.Row, tb.Bottom()); err != nil {
+		if err := t.deleteWhere(tbl, in, tb.Sheet, tb.Col+i, tb.Col+j, tb.Row, tb.Bottom()); err != nil {
 			return err
 		}
 	}
-	for _, side := range [][2]int{{0, i - 1}, {i + 1, len(tb.Cols) - 1}} {
+	for _, side := range [][2]int{{0, i - 1}, {j + 1, len(tb.Cols) - 1}} {
 		auto := true
 		for k := side[0]; k <= side[1]; k++ {
 			auto = auto && autoColRe.MatchString(tb.Cols[k].Name)
@@ -1157,16 +1158,79 @@ func (t *tx) splitAt(tb Table, i int) error {
 		}
 	}
 	var names []string
-	for _, c := range []int{tb.Col, gap + 1} {
+	for _, c := range []int{tb.Col, tb.Col + j + 1} {
 		name, err := t.formatAsTable(tb.Sheet, tb.Row, c)
 		if err != nil {
 			return err
 		}
-		if n := len(t.notes); n > 0 && strings.HasPrefix(t.notes[n-1], "Plage mise sous forme") {
-			t.notes = t.notes[:n-1]
-		}
-		names = append(names, "« "+name+" »")
+		names = append(names, name)
 	}
-	t.notes = append(t.notes, fmt.Sprintf("Tableau « %s » coupé en deux à la colonne vide : %s (Ctrl+Z pour annuler)", tb.Name, strings.Join(names, " et ")))
+	// Seule la note de la coupe reste (pas celles de la plage).
+	t.notes = t.notes[:notes]
+	keep := 0
+	if len(tb.Cols)-1-j > i {
+		keep = 1
+	}
+	if err := t.keepName(names, keep, tb.Name); err != nil {
+		return err
+	}
+	what := "à la colonne vide"
+	if j > i {
+		what = "aux colonnes vides"
+	}
+	t.notes = append(t.notes, fmt.Sprintf("Tableau « %s » coupé en deux %s : « %s » et « %s » (Ctrl+Z pour annuler)", tb.Name, what, names[0], names[1]))
 	return nil
+}
+
+// keepName donne le nom old au tableau names[keep], qui remplace un tableau
+// disparu (coupe, ligne d'en-tête posée) ; un autre de names qui l'aurait
+// pris d'office est renommé. names est mis à jour.
+func (t *tx) keepName(names []string, keep int, old string) error {
+	if names[keep] == old {
+		return nil
+	}
+	retitle := func(from, to string) error {
+		var id int64
+		if err := t.row(`SELECT id FROM _lattis_tables WHERE name = ?`, from).Scan(&id); err != nil {
+			return err
+		}
+		if err := t.rewriteRefs(tableChange(from, to)); err != nil {
+			return err
+		}
+		q := `UPDATE _lattis_tables SET name = ? WHERE id = ?`
+		return t.apply([]stmt{st(q, to, id)}, []stmt{st(q, from, id)})
+	}
+	for k, n := range names {
+		if k == keep || !strings.EqualFold(n, old) {
+			continue
+		}
+		fresh, err := t.freshName()
+		if err != nil {
+			return err
+		}
+		if err := retitle(n, fresh); err != nil {
+			return err
+		}
+		names[k] = fresh
+	}
+	var taken int
+	if err := t.row(`SELECT count(*) FROM _lattis_tables WHERE name = ? COLLATE NOCASE`, old).Scan(&taken); err != nil || taken > 0 {
+		return err
+	}
+	if err := retitle(names[keep], old); err != nil {
+		return err
+	}
+	names[keep] = old
+	return nil
+}
+
+// freshName : premier nom « TableauN » libre.
+func (t *tx) freshName() (string, error) {
+	for n := 1; ; n++ {
+		name := fmt.Sprintf("Tableau%d", n)
+		var k int
+		if err := t.row(`SELECT count(*) FROM _lattis_tables WHERE name = ?`, name).Scan(&k); err != nil || k == 0 {
+			return name, err
+		}
+	}
 }

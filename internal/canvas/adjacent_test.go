@@ -331,7 +331,8 @@ func TestHeaderRowOverTables(t *testing.T) {
 	if got := view(t, d); !strings.Contains(got, "MARIZ_01|Autour||Lionel|05||2|RAS") || !strings.Contains(got, "MARIZ_02|Buse||Paul|7||3|Nid vide") {
 		t.Fatalf("en-têtes descendus :\n%s", got)
 	}
-	if l, _ := d.Layout(ctx, 1); len(l.Cells) != 1 || l.Cells[0].Raw != "=NBVAL(Feuille1[ORNITHOLOGUE][2])" || l.Cells[0].Value != "1" {
+	// Le plus gros des tableaux réunis (à égalité, le premier) donne son nom.
+	if l, _ := d.Layout(ctx, 1); len(l.Cells) != 1 || l.Cells[0].Raw != "=NBVAL(T1[ORNITHOLOGUE][2])" || l.Cells[0].Value != "1" {
 		t.Fatalf("formule qui citait T2 : %+v", l.Cells)
 	}
 	undoOnce(t, d, before, "en-têtes descendus")

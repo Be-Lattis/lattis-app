@@ -756,9 +756,10 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 		// Colonnes vidées (choix de Louis) : une colonne sans donnée dont
 		// l'en-tête est dans la zone, ou la dernière à droite devenue vide,
 		// quitte le tableau. Un en-tête qui ne peut pas partir dit pourquoi.
-		dropCleared := func(tb Table) error {
+		// split : le tableau a été coupé en deux (il n'existe plus).
+		dropCleared := func(tb Table) (split bool, err error) {
 			if tb.Filtered() || len(tb.Cols) < 2 {
-				return nil
+				return false, nil
 			}
 			var idx []int
 			for c := max(c0, tb.Col); c <= min(c1, tb.Right()); c++ {
@@ -770,13 +771,22 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 				}
 				empty, err := t.columnEmpty(tb, col)
 				if err != nil {
-					return err
+					return false, err
 				}
 				switch {
 				case empty && col.Formula == "" && header && i > 0 && i < len(tb.Cols)-1:
-					// Colonne vide au milieu, en-tête effacé : le tableau se
+					// Colonnes vides au milieu, en-têtes effacés : le tableau se
 					// coupe en deux de part et d'autre (choix de Louis).
-					return t.splitAt(tb, i)
+					j := i
+					for j+1 < len(tb.Cols)-1 && tb.Col+j+1 <= c1 {
+						if more, err := t.columnsEmpty(tb, j+1, j+1); err != nil {
+							return false, err
+						} else if !more {
+							break
+						}
+						j++
+					}
+					return true, t.splitAt(tb, i, j)
 				case empty && col.Formula == "":
 					idx = append(idx, i)
 				case header && col.Formula != "":
@@ -786,13 +796,13 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 				}
 			}
 			if len(idx) == 0 {
-				return nil
+				return false, nil
 			}
 			if len(idx) == len(tb.Cols) {
 				t.notes = append(t.notes, fmt.Sprintf("Le tableau « %s » garde au moins une colonne", tb.Name))
 				idx = idx[1:]
 			}
-			return t.dropColumns(tb, idx)
+			return false, t.dropColumns(tb, idx)
 		}
 		cells := 0
 		for _, tb := range tables {
@@ -808,7 +818,7 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 					last = min(last, tb.Row+tb.Shown)
 				}
 				if first > last {
-					if err := dropCleared(tb); err != nil {
+					if _, err := dropCleared(tb); err != nil {
 						return err
 					}
 					continue
@@ -842,8 +852,12 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 						}
 					}
 				}
-				if err := dropCleared(tb); err != nil {
-					return err
+				// Coupé en deux : l'ancien tableau n'existe plus (audit 2 I3).
+				if split, err := dropCleared(tb); err != nil || split {
+					if err != nil {
+						return err
+					}
+					continue
 				}
 				// Les dernières lignes devenues vides partent (choix de Louis).
 				if err := t.tidyBottom(tb.ID, false); err != nil {

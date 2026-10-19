@@ -390,8 +390,10 @@
 		deleteRow?(table: SheetTable, n: number): Promise<unknown>;
 		insertColumn?(table: SheetTable, i: number): Promise<unknown>;
 		deleteColumn?(table: SheetTable, i: number): Promise<unknown>;
-		/** Suppr sur une colonne entière : vide au milieu, le tableau se coupe en deux. */
-		suppressColumn?(table: SheetTable, i: number): Promise<unknown>;
+		/** Suppr sur les colonnes entières i à j, en une étape : vides au milieu, le tableau se coupe en deux. */
+		suppressColumns?(table: SheetTable, i: number, j: number): Promise<unknown>;
+		/** Supprime des colonnes de plusieurs tableaux (colonnes de la feuille), en une étape. */
+		deleteColumnSpans?(spans: { table: string; from: number; to: number }[]): Promise<unknown>;
 		/** Nombre de valeurs qui ne se convertiraient pas au type to. */
 		convertPreview?(table: SheetTable, i: number, to: ColumnType): Promise<number>;
 		setType?(table: SheetTable, i: number, to: ColumnType): Promise<unknown>;
@@ -5129,7 +5131,11 @@
 			}
 			writing = writing.catch(() => undefined).then(async () => {
 				try {
-					for (const e of cut) for (let c = Math.min(c1, e.lastCol); c >= Math.max(c0, e.t.col); c--) await tableLines(e, 'deleteColumn', c - e.t.col);
+					// Une seule étape d'annulation pour toutes les colonnes.
+					if (source.deleteColumnSpans) {
+						for (const e of cut) hintLines(false, Math.max(c0, e.t.col), -(Math.min(c1, e.lastCol) - Math.max(c0, e.t.col) + 1), e.t.id);
+						await source.deleteColumnSpans(cut.map((e) => ({ table: e.t.name, from: Math.max(c0, e.t.col) - e.t.col, to: Math.min(c1, e.lastCol) - e.t.col })));
+					} else for (const e of cut) for (let c = Math.min(c1, e.lastCol); c >= Math.max(c0, e.t.col); c--) await tableLines(e, 'deleteColumn', c - e.t.col);
 					schedule();
 				} catch (err) {
 					say(String((err as Error)?.message ?? err));
@@ -5147,7 +5153,11 @@
 		// De droite à gauche : les numéros des colonnes restantes ne bougent pas.
 		writing = writing.catch(() => undefined).then(async () => {
 			try {
-				for (let c = c1; c >= c0; c--) await (c0 === c1 && source.suppressColumn ? source.suppressColumn(e.t, c - e.t.col) : tableLines(e, 'deleteColumn', c - e.t.col));
+				// Une seule étape d'annulation ; des colonnes vides au milieu coupent le tableau.
+				if (source.suppressColumns) {
+					hintLines(false, c0, -(c1 - c0 + 1), e.t.id);
+					await source.suppressColumns(e.t, c0 - e.t.col, c1 - e.t.col);
+				} else for (let c = c1; c >= c0; c--) await tableLines(e, 'deleteColumn', c - e.t.col);
 				schedule();
 			} catch (err) {
 				say(String((err as Error)?.message ?? err));

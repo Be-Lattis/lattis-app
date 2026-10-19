@@ -1402,8 +1402,14 @@ func (s *DocumentService) OrderSheets(ctx context.Context, order []int64) (DocSt
 	})
 }
 
-// SuppressColumn : Suppr sur une colonne entière d'un tableau (vide au
-// milieu : le tableau se coupe en deux).
-func (s *DocumentService) SuppressColumn(ctx context.Context, table string, i int) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.SuppressColumn(ctx, table, i) })
+// SuppressColumns : Suppr sur les colonnes entières i à j d'un tableau, en
+// une étape (vides au milieu : le tableau se coupe en deux).
+func (s *DocumentService) SuppressColumns(ctx context.Context, table string, i, j int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SuppressColumns(ctx, table, i, j) })
+}
+
+// DeleteColumnSpans supprime des colonnes de plusieurs tableaux (colonnes
+// entières de la feuille qui les traversent), en une étape.
+func (s *DocumentService) DeleteColumnSpans(ctx context.Context, spans []canvas.ColumnSpan) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.DeleteColumnSpans(ctx, spans) })
 }
