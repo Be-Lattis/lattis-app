@@ -87,6 +87,11 @@ func (s span) positions() int {
 	return r * c
 }
 
+// cells dit si le parcours lit des cellules libres (et non des lignes de
+// tableau) : leurs textes sont des libellés, ignorés par les fonctions
+// numériques comme dans Excel (décision 0013).
+func (s span) cells() bool { return s.table == nil && len(s.ranges) > 0 }
+
 // index donne le rang d'une plage dans s.ranges, ou -1.
 func (s span) index(r CellRange) int {
 	for i, x := range s.ranges {

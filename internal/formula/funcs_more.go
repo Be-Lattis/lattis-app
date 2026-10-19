@@ -149,6 +149,7 @@ type kth struct {
 	largest bool
 	vals    []Value
 	err     Value
+	numRule
 }
 
 func newKth(largest bool) func([]Value) scanner {
@@ -156,7 +157,7 @@ func newKth(largest bool) func([]Value) scanner {
 }
 
 func (s *kth) add(cols []Value) {
-	switch v := cols[0]; v.Kind {
+	switch v := s.coerce(cols[0]); v.Kind {
 	case Number, Date:
 		s.vals = append(s.vals, v)
 	case Error:

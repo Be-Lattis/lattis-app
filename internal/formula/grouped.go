@@ -99,7 +99,7 @@ func (g *grouped) add(cols []Value) {
 		k := tupleKey(c)
 		acc, ok := g.groups[k]
 		if !ok {
-			acc = &cond{value: t.value, agg: Agg{Fn: t.agg.Fn}}
+			acc = &cond{value: t.value, agg: newAgg(t.agg.Fn, t.agg.rule)}
 			g.groups[k] = acc
 		}
 		acc.addValue(cols)
@@ -139,7 +139,7 @@ func (g *grouped) lookup(crits []Value) (Value, bool) {
 		}
 		combos = next
 	}
-	out := &cond{value: g.tmpl.value, agg: Agg{Fn: g.tmpl.agg.Fn}}
+	out := &cond{value: g.tmpl.value, agg: newAgg(g.tmpl.agg.Fn, g.tmpl.agg.rule)}
 	for _, c := range combos {
 		if acc, ok := g.groups[tupleKey(c)]; ok {
 			out.count += acc.count
@@ -218,7 +218,7 @@ func (c *compiler) grouped(s scanCall, t *Table, sc scope) (string, bool) {
 	// sont remplacés par NULL et désignés dans spec.
 	sub := c.sub()
 	spec := make([]byte, len(s.params))
-	head := []string{sub.param(s.name), "", fmt.Sprint(len(s.params))}
+	head := []string{sub.param(c.schema.rule(false).key(s.name)), "", fmt.Sprint(len(s.params))}
 	for i, p := range s.params {
 		spec[i] = 'c'
 		if isIn(i, rowDep) {
@@ -253,13 +253,14 @@ type groupAggFn struct{ g *grouped }
 func (a *groupAggFn) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	np := arg[2].Int()
 	if a.g == nil {
-		def, ok := scans[arg[0].Text()]
+		name, rule := splitKey(arg[0].Text())
+		def, ok := scans[name]
 		if !ok || def.crit == nil {
 			return
 		}
 		spec := arg[1].Text()
 		params := args(arg[3 : 3+np])
-		tmpl, ok := def.make(params).(*cond)
+		tmpl, ok := newScanner(def, params, rule).(*cond)
 		if !ok {
 			return
 		}
@@ -368,7 +369,7 @@ type cumulAgg struct {
 func (a *cumulAgg) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	if a.x == nil {
 		a.x = &cumulIndex{sums: map[int64]float64{}, errs: map[int64]ErrCode{}}
-		a.acc = Agg{Fn: "SUM"}
+		a.acc = aggOf(arg[2].Text())
 	}
 	a.acc.AddRange(fromArg(arg[1]))
 	id := arg[0].Int64()
@@ -402,7 +403,7 @@ func registerRankCumul(c *sqlite3.Conn) error {
 	}); err != nil {
 		return err
 	}
-	if err := c.CreateWindowFunction("slt_cumidx", 2, sqlite3.DETERMINISTIC|sqlite3.INNOCUOUS, func() sqlite3.AggregateFunction { return &cumulAgg{} }); err != nil {
+	if err := c.CreateWindowFunction("slt_cumidx", 3, sqlite3.DETERMINISTIC|sqlite3.INNOCUOUS, func() sqlite3.AggregateFunction { return &cumulAgg{} }); err != nil {
 		return err
 	}
 	// slt_cumof(numéro, identifiant de ligne) : CUMUL, ou NULL (calcul direct).
@@ -455,7 +456,8 @@ func (c *compiler) cumulPrecomputed(arg Node, sc scope) (string, bool) {
 	sub := c.sub()
 	al := sub.newAlias()
 	val := sub.expr(arg, scope{table: sc.table, alias: al})
-	id := c.hoist(Compiled{fmt.Sprintf("(SELECT slt_cumidx(%s.id, %s ORDER BY %s._pos) FROM %s AS %s)", al, val, al, sc.table.SQL, al), sub.args})
+	key := sub.param(c.schema.rule(false).key("SUM"))
+	id := c.hoist(Compiled{fmt.Sprintf("(SELECT slt_cumidx(%s.id, %s, %s ORDER BY %s._pos) FROM %s AS %s)", al, val, key, al, sc.table.SQL, al), sub.args})
 	if id.Kind != Number {
 		return "", false
 	}

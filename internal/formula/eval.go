@@ -64,6 +64,20 @@ type Schema struct {
 	// calculée lit la feuille de son tableau.
 	Choices map[int64]Value
 	Sheet   int64
+
+	// Numbers : langue des nombres écrits en texte qu'une fonction numérique
+	// lit dans une colonne (« 1,234 » vaut 1,234 en français et 1234 en
+	// anglais, voir TextNumber) ; français par défaut.
+	Numbers Locale
+}
+
+// rule donne la lecture des textes d'une plage : colonne de tableau, ou
+// cellules libres (cells).
+func (s *Schema) rule(cells bool) numRule {
+	if s == nil {
+		return numRule{cells: cells}
+	}
+	return numRule{loc: s.Numbers, cells: cells}
 }
 
 // choice rend la valeur de ONGLET.CHOIX() pour une formule du tableau t
@@ -371,7 +385,7 @@ func (env *Env) call(n Call) Value {
 // nombres, une expression sur colonnes est évaluée ligne à ligne (même
 // règle), une autre valeur est convertie.
 func (env *Env) aggregate(fn string, args []Node) Value {
-	acc := Agg{Fn: fn}
+	acc := newAgg(fn, env.Schema.rule(false))
 	lead := aggLead[fn]
 	var leadV []Value
 	for k, a := range args {
@@ -384,7 +398,9 @@ func (env *Env) aggregate(fn string, args []Node) Value {
 				acc.AddValue(Err(e))
 				continue
 			}
+			acc.rule.cells = sp.cells()
 			env.eachSpan(sp, func(sub *Env) { acc.AddRange(Eval(a, sub)) })
+			acc.rule.cells = false
 			continue
 		}
 		if r, ok := a.(Ref); ok && !r.Row {
@@ -435,7 +451,8 @@ func (env *Env) scan(sc scanCall) Value {
 	for i, p := range sc.params {
 		params[i] = Eval(p, env)
 	}
-	s := sc.def.make(params)
+	sp, isSpan, spErr := spanOf(sc.cols, env.Schema, env.Table)
+	s := newScanner(sc.def, params, env.Schema.rule(isSpan && sp.cells()))
 	if len(sc.cols) == 0 {
 		return s.result()
 	}
@@ -446,9 +463,9 @@ func (env *Env) scan(sc scanCall) Value {
 		}
 		s.add(vals)
 	}
-	if sp, ok, e := spanOf(sc.cols, env.Schema, env.Table); ok {
-		if e != 0 {
-			return Err(e)
+	if isSpan {
+		if spErr != 0 {
+			return Err(spErr)
 		}
 		env.eachSpan(sp, row)
 		return s.result()
@@ -542,7 +559,7 @@ func (env *Env) special(fn string, n Call) Value {
 		if env.Table == nil {
 			return Err(ErrRef)
 		}
-		acc := Agg{Fn: "SUM"}
+		acc := newAgg("SUM", env.Schema.rule(false))
 		for r := 0; r <= env.Row && r < len(env.Data[env.Table]); r++ {
 			sub := *env
 			sub.Row = r

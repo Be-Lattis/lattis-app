@@ -121,7 +121,9 @@ func parseNumber(s string) (float64, bool) {
 }
 
 // ToNumber convertit une valeur pour un calcul : vide = 0, VRAI = 1, texte
-// numérique accepté, autre texte = #VALEUR!.
+// qui écrit un nombre accepté (TextNumber : « 1 234,5 », « 12 € »,
+// « 15 % », « 1,234.5 »… ; langue française pour le cas ambigu), autre
+// texte = #VALEUR!.
 func ToNumber(v Value) (float64, Value) {
 	switch v.Kind {
 	case Number, Date:
@@ -134,7 +136,7 @@ func ToNumber(v Value) (float64, Value) {
 		}
 		return 0, Value{}
 	case Text:
-		if f, ok := parseNumber(v.Str); ok {
+		if f, ok := TextNumber(v.Str, FR); ok {
 			return f, Value{}
 		}
 		return 0, Err(ErrValue)

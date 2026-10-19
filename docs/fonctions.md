@@ -74,7 +74,7 @@ Conventions d'Excel : une somme versée est négative, une somme reçue positive
 |---|---|---|
 | SOMME, MOYENNE, NB, NBVAL, NB.VIDE, MIN, MAX | SUM, AVERAGE, COUNT, COUNTA, COUNTBLANK, MIN, MAX | ✅ somme compensée : la somme d'un million de parts vaut 1 |
 | MEDIANE, ECARTYPE, PRODUIT | MEDIAN, STDEV, PRODUCT | ✅ |
-| GRANDE.VALEUR, PETITE.VALEUR | LARGE, SMALL | ✅ sur une colonne ou une expression sur colonnes ; textes et vides ignorés ; k hors limites : #NOMBRE! |
+| GRANDE.VALEUR, PETITE.VALEUR | LARGE, SMALL | ✅ sur une colonne ou une expression sur colonnes ; vides ignorés, textes convertis (voir ci-dessous) ; k hors limites : #NOMBRE! |
 | ECARTYPE.STANDARD, ECARTYPEP, ECARTYPE.PEARSON | STDEV.S, STDEVP, STDEV.P | ✅ échantillon (n−1) ou population (n) ; moins de 2 valeurs (échantillon) ou aucune : #DIV/0! |
 | VAR, VAR.S, VAR.P.N | VAR, VAR.S, VAR.P | ⚠️ `VAR.P` est accepté en français et mène à VAR.P.N (même calcul que l'ancienne VAR.P d'Excel, dont le nom anglais VARP n'est pas repris : une infobulle l'indique) |
 | MODE, MODE.SIMPLE | MODE, MODE.SNGL | ✅ à égalité, la première valeur dans l'ordre du tableau ; aucune valeur répétée : #N/A |
@@ -87,6 +87,8 @@ Conventions d'Excel : une somme versée est négative, une somme reçue positive
 | SOUS.TOTAL | SUBTOTAL | ⚠️ codes 1 à 11 et 101 à 111, écrits en toutes lettres ; ne tient pas encore compte du filtre de la grille |
 
 Un agrégat accepte une **expression sur les colonnes** d'un tableau, calculée ligne à ligne : `SOMME(Ventes[Prix]*Ventes[Qté])`. Des colonnes de deux tableaux dans la même expression donnent #VALEUR!.
+
+⚠️ **Texte dans une colonne** (décision 0013, différence voulue avec Excel, qui ignore ces textes) : les fonctions qui attendent des nombres (agrégats ci-dessus, valeurs des familles `.SI` / `.SI.ENS`, `SOMMEPROD`, `GRANDE.VALEUR`, `CENTILE`, `QUARTILE`, `COEFFICIENT.CORRELATION`, `PENTE`, `ORDONNEE.ORIGINE`, `VAN`, `TRI`, `CUMUL`) lisent un texte d'une colonne de tableau comme le nombre qu'il écrit — « 12 », « 1 234,5 », « 12 € », « $12 », « 15 % » (0,15), « (12) » (−12), « 1,5e3 », et les écritures étrangères « 1,234.56 », « 1.234,56 », « 1'234.5 » — et **un texte qui n'écrit pas de nombre compte pour 0**. Ainsi `MOYENNE` de « 12 » et « abc » vaut 6 (« abc » entre au dénominateur) et `MIN` peut tomber à 0. Les vides (et "") restent ignorés ; `NB` compte les nombres et les textes convertibles, pas « abc » (`NBVAL − NB` donne le nombre de textes non numériques). Un seul séparateur suivi de trois chiffres (« 1,234 », « 1.234 ») suit la langue : en français « 1,234 » vaut 1,234 et « 1.234 » vaut 1234. Les plages de cellules libres (`Cell[A1:A10]`) gardent la règle d'Excel (textes ignorés : ce sont des libellés). Une valeur passée directement (`SOMME("12 €"; 1)`) ou un opérateur (`"12 €"*2`) convertit avec les mêmes règles, mais « abc » y donne #VALEUR!, comme dans Excel ; donc `SOMME(Ventes[Note]*2)` donne #VALEUR! si une ligne vaut « abc ».
 
 ## Texte
 

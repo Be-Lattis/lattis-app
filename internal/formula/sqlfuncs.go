@@ -325,9 +325,8 @@ func Register(c *sqlite3.Conn) error {
 	// slt_final('SUM', a, b, ...) : combine états partiels et valeurs directes
 	// (précédés des arguments ordinaires de JOINDRE.TEXTE ou de VAN).
 	if err := c.CreateFunction("slt_final", -1, det, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
-		fn := arg[0].Text()
-		acc := Agg{Fn: fn}
-		lead := args(arg[1:min(1+aggLead[fn], len(arg))])
+		acc := aggOf(arg[0].Text())
+		lead := args(arg[1:min(1+aggLead[acc.Fn], len(arg))])
 		for _, a := range arg[1+len(lead):] {
 			if a.Type() == sqlite3.BLOB {
 				if p, ok := decodeAgg(a.RawBlob()); ok {
@@ -449,13 +448,14 @@ func Register(c *sqlite3.Conn) error {
 				return
 			}
 		}
-		def, ok := scans[arg[0].Text()]
+		name, rule := splitKey(arg[0].Text())
+		def, ok := scans[name]
 		if !ok {
 			result(ctx, Err(ErrName))
 			return
 		}
 		np := arg[1].Int()
-		result(ctx, def.make(args(arg[2:2+np])).result())
+		result(ctx, newScanner(def, args(arg[2:2+np]), rule).result())
 	})
 }
 
@@ -464,11 +464,12 @@ type scanAgg struct{ s scanner }
 func (a *scanAgg) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	np := arg[1].Int()
 	if a.s == nil {
-		def, ok := scans[arg[0].Text()]
+		name, rule := splitKey(arg[0].Text())
+		def, ok := scans[name]
 		if !ok {
 			return
 		}
-		a.s = def.make(args(arg[2 : 2+np]))
+		a.s = newScanner(def, args(arg[2:2+np]), rule)
 	}
 	a.s.add(args(arg[2+np:]))
 }
@@ -485,7 +486,7 @@ type partAgg struct{ acc Agg }
 
 func (p *partAgg) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	if p.acc.Fn == "" {
-		p.acc.Fn = arg[0].Text()
+		p.acc = aggOf(arg[0].Text())
 	}
 	p.acc.AddRange(fromArg(arg[1]))
 }

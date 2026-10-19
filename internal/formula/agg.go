@@ -6,10 +6,14 @@ import (
 	"strings"
 )
 
-// Agg accumule un agrégat. Comme dans Excel, une colonne entière ne compte
-// que ses nombres (texte, booléens et vides ignorés), alors qu'une valeur
-// passée directement est convertie (« 3 » compte, « abc » donne #VALEUR!).
-// Une erreur rencontrée est propagée, sauf par NB, NBVAL et NB.VIDE.
+// Agg accumule un agrégat. Une colonne de tableau compte ses nombres, et ses
+// textes comme les nombres qu'ils écrivent (« 12 € », « 1 234,5 »), un texte
+// qui n'écrit pas de nombre comptant pour 0 (décision 0013) ; NB ne compte
+// que les nombres et les textes convertibles. Booléens et vides sont ignorés.
+// Une plage de cellules libres suit Excel : ses textes sont ignorés. Une
+// valeur passée directement est convertie (« 3 » compte, « abc » donne
+// #VALEUR!). Une erreur rencontrée est propagée, sauf par NB, NBVAL et
+// NB.VIDE.
 //
 // Fn est le nom anglais de l'agrégat : SUM, AVERAGE, COUNT, COUNTA,
 // COUNTBLANK, MIN, MAX, MEDIAN, MODE, STDEV, STDEVP, VAR, VARP (et leurs
@@ -27,6 +31,17 @@ type Agg struct {
 	Vals     []float64 // nombres gardés pour MEDIANE et les écarts types
 	Items    []string  // textes de JOINDRE.TEXTE ("" pour une valeur vide)
 	Err      ErrCode
+
+	rule numRule // lecture des textes (langue, cellules libres)
+}
+
+// newAgg prépare l'agrégat d'une plage lue selon la règle r.
+func newAgg(fn string, r numRule) Agg { return Agg{Fn: fn, rule: r} }
+
+// aggOf prépare l'agrégat nommé par une clé SQL (numRule.key).
+func aggOf(key string) Agg {
+	fn, r := splitKey(key)
+	return newAgg(fn, r)
 }
 
 func (a *Agg) keepsVals() bool {
@@ -104,6 +119,15 @@ func (a *Agg) AddRange(v Value) {
 	switch {
 	case v.Kind == Number || v.Kind == Date:
 		a.num(v.Num, v.Kind == Date)
+	case v.Kind == Text:
+		if n := a.rule.coerce(v); n.Kind == Number {
+			// NB ne compte que les textes qui écrivent un nombre.
+			if a.Fn != "COUNT" {
+				a.num(n.Num, false)
+			} else if _, ok := TextNumber(v.Str, a.rule.loc); ok {
+				a.N++
+			}
+		}
 	case v.IsErr() && a.countsErrors():
 		a.Err = v.Err
 	}
@@ -132,17 +156,29 @@ func (a *Agg) AddValue(v Value) {
 	case "COUNTA":
 		return
 	case "COUNT":
-		if _, e := ToNumber(v); !v.IsErr() && !e.IsErr() {
+		if _, e := a.toNumber(v); !v.IsErr() && !e.IsErr() {
 			a.N++
 		}
 		return
 	}
-	f, e := ToNumber(v)
+	f, e := a.toNumber(v)
 	if e.IsErr() {
 		a.Err = e.Err
 		return
 	}
 	a.num(f, v.Kind == Date)
+}
+
+// toNumber convertit une valeur passée directement : un texte se lit selon
+// la langue de l'agrégat (#VALEUR! s'il n'écrit pas de nombre).
+func (a *Agg) toNumber(v Value) (float64, Value) {
+	if v.Kind == Text {
+		if f, ok := TextNumber(v.Str, a.rule.loc); ok {
+			return f, Value{}
+		}
+		return 0, Err(ErrValue)
+	}
+	return ToNumber(v)
 }
 
 // Merge combine deux accumulateurs (agrégat sur plusieurs arguments).

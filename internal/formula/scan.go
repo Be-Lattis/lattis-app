@@ -155,12 +155,15 @@ type cond struct {
 }
 
 func newCond(fn string, params []Value, cols []int, value int) *cond {
-	c := &cond{cols: cols, value: value, agg: Agg{Fn: fn}}
+	c := &cond{cols: cols, value: value, agg: newAgg(fn, numRule{})}
 	for _, p := range params {
 		c.crits = append(c.crits, parseCriterion(p))
 	}
 	return c
 }
+
+// setRule : la colonne agrégée lit ses textes selon r.
+func (c *cond) setRule(r numRule) { c.agg.rule = r }
 
 func (c *cond) add(cols []Value) {
 	for i, cr := range c.crits {
@@ -197,6 +200,7 @@ func (c *cond) result() Value {
 type sumProduct struct {
 	agg Agg
 	err Value
+	numRule
 }
 
 func (s *sumProduct) add(cols []Value) {
@@ -205,7 +209,7 @@ func (s *sumProduct) add(cols []Value) {
 	}
 	p := 1.0
 	for _, v := range cols {
-		switch v.Kind {
+		switch v = s.coerce(v); v.Kind {
 		case Error:
 			s.err = v
 			return

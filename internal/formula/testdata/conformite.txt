@@ -2,7 +2,8 @@
 # Exécutée sur les deux backends (évaluateur Go et SQL compilé), qui doivent
 # tous deux donner le résultat attendu.
 # Directives : « @ Tableau n » évalue les lignes suivantes sur la ligne n du
-# tableau (colonnes calculées) ; « @ » revient hors tableau ; « locale EN » / « locale FR ».
+# tableau (colonnes calculées) ; « @ » revient hors tableau ; « locale EN » / « locale FR » ;
+# « nombres EN » / « nombres FR » : langue des nombres écrits en texte (Schema.Numbers).
 # Données : voir fixture() dans conformance_test.go.
 
 # Arithmétique et sémantique Excel
@@ -61,14 +62,15 @@
 =MIN(3;1;2)	1
 =MAX(3;1;2)	3
 
-# Agrégats sur colonnes : texte, vides et booléens ignorés, erreurs propagées
+# Agrégats sur colonnes : vides et booléens ignorés, textes convertis (« abc » compte
+# pour 0, NB ne compte que les convertibles ; décision 0013), erreurs propagées
 =SOMME(Ventes[Montant])	280,99
 =SOMME(Ventes[Prix])	235,49
 =MOYENNE(Ventes[Prix])	78,4966666666667
 =NB(Ventes[Prix])	3
 =NBVAL(Ventes[Note])	2
-=NB(Ventes[Note])	0
-=SOMME(Ventes[Note])	0
+=NB(Ventes[Note])	1
+=SOMME(Ventes[Note])	12
 =MAX(Ventes[Qté])	5
 =MIN(Ventes[Prix])	10
 =SOMME(Ventes[Montant];10)	290,99
@@ -435,7 +437,7 @@
 =JOINDRE.TEXTE("|";FAUX;FRACTIONNER.TEXTE("a";""))	#VALEUR!
 =JOINDRE.TEXTE("|";FAUX;FRACTIONNER.TEXTE("a,b";",";;;2))	#VALEUR!
 =JOINDRE.TEXTE("|";FAUX;FRACTIONNER.TEXTE(1/0;","))	#DIV/0!
-=SOMME(PRENDRE(FRACTIONNER.TEXTE("1,2";",");1))	0
+=SOMME(PRENDRE(FRACTIONNER.TEXTE("1,2";",");1))	3
 =JOINDRE.TEXTE("|";FAUX;TRIER(FRACTIONNER.TEXTE("b;a;c";;";")))	a|b|c
 locale EN
 =SUM({1,2;3,4})	10
@@ -469,6 +471,7 @@ locale FR
 @ Ventes 2
 =PRECEDENT([@Qté])	2
 =CUMUL([@Montant])	81
+=CUMUL([@Note])	12
 =PRECEDENT([@Montant])+[@Montant]	81
 =SUIVANT([@Date])	31/12/2025
 =SOMME.SI(Ventes[Client];[@Client];Ventes[Montant])	30
@@ -542,7 +545,7 @@ locale FR
 =ECARTYPE.PEARSON(2;4;4;4;5;5;7;9)	2
 =ECARTYPEP(2;4;4;4;5;5;7;9)	2
 =ECARTYPE.PEARSON(Ventes[Prix])	86,1414922606341
-=ECARTYPE.PEARSON(Ventes[Note])	#DIV/0!
+=ECARTYPE.PEARSON(Ventes[Note])	6
 =VAR(2;4;4;4;5;5;7;9)	4,57142857142857
 =VAR.S(1;2;3;4)	1,66666666666667
 =VAR.P.N(2;4;4;4;5;5;7;9)	4
@@ -571,7 +574,7 @@ locale FR
 =CENTILE(Ventes[Qté];1)	5
 =CENTILE(Ventes[Qté];1,1)	#NOMBRE!
 =CENTILE(Ventes[Qté];-0,1)	#NOMBRE!
-=CENTILE(Ventes[Note];0,5)	#NOMBRE!
+=CENTILE(Ventes[Note];0,5)	6
 =CENTILE(Ventes[Qté];"0,5")	2,5
 =CENTILE(Ventes[Qté];"x")	#VALEUR!
 =CENTILE(Ventes[NomClient];0,5)	#N/A
@@ -590,7 +593,7 @@ locale FR
 =COEFFICIENT.CORRELATION(Etapes[Valeur];Etapes[Valeur])	1
 =COEFFICIENT.CORRELATION(Ventes[Prix];Ventes[Qté])	-0,900415011044277
 =COEFFICIENT.CORRELATION(Ventes[Prix];Clients[Id])	#VALEUR!
-=COEFFICIENT.CORRELATION(Ventes[Note];Ventes[Qté])	#DIV/0!
+=COEFFICIENT.CORRELATION(Ventes[Note];Ventes[Qté])	-1
 =PENTE(Cell[B1:B3];Cell[A1:A3])	10
 =ORDONNEE.ORIGINE(Cell[B1:B3];Cell[A1:A3])	0
 =PENTE(Ventes[Qté];Ventes[Qté]*2)	0,5
@@ -651,7 +654,7 @@ locale FR
 =VAN(-1;1)	#DIV/0!
 =VAN(10%;"abc")	#VALEUR!
 =VAN("x";1)	#VALEUR!
-=VAN(10%;Ventes[Note])	0
+=VAN(10%;Ventes[Note])	10,9090909090909
 =VAN(10%;Ventes[NomClient])	#N/A
 =ARRONDI(TRI(Etapes[Valeur]-15);10)	1,3027756377
 =ARRONDI(TRI(Etapes[Valeur]-15;0,5);10)	1,3027756377
@@ -895,3 +898,84 @@ locale FR
 =[Qté]*LIGNES(Ventes)	8
 =SOMME(Ventes[Qté]*COLONNES(Ventes))	99
 @
+
+# Nombres écrits dans une colonne de texte (décision 0013) : Textes[Val] vaut
+# « 12 », « 1 234,5 », « 12 € », « 15 % », « abc », vide, "" ; « abc » compte
+# pour 0, vide et "" sont ignorés.
+@
+locale FR
+nombres FR
+=SOMME(Textes[Val])	1258,65
+=MOYENNE(Textes[Val])	251,73
+=NB(Textes[Val])	4
+=NBVAL(Textes[Val])	6
+=NB.VIDE(Textes[Val])	2
+=MIN(Textes[Val])	0
+=MAX(Textes[Val])	1234,5
+=PRODUIT(Textes[Val])	0
+=MEDIANE(Textes[Val])	12
+=ECARTYPE(Textes[Val])	549,417488800639
+=ECARTYPE.PEARSON(Textes[Val])	491,413941194183
+=VAR(Textes[Val])	301859,577
+=MODE(Textes[Val])	12
+=SOMME(Textes[Val];1)	1259,65
+=SOMME(Textes[Val];Cell[A1:A3])	1261,65
+=SOUS.TOTAL(9;Textes[Val])	1258,65
+=SOMME.SI(Textes[Groupe];"A";Textes[Val])	1246,5
+=SOMME.SI(Textes[Groupe];"B";Textes[Val])	12,15
+=MOYENNE.SI(Textes[Groupe];"A";Textes[Val])	415,5
+=SOMME.SI.ENS(Textes[Val];Textes[N];">2")	12,15
+=MOYENNE.SI.ENS(Textes[Val];Textes[N];"<=5")	251,73
+=MAX.SI.ENS(Textes[Val];Textes[Groupe];"B")	12
+=MIN.SI.ENS(Textes[Val];Textes[Groupe];"A")	0
+=NB.SI(Textes[Val];12)	1
+=SOMMEPROD(Textes[Val];Textes[N])	2517,6
+=GRANDE.VALEUR(Textes[Val];1)	1234,5
+=PETITE.VALEUR(Textes[Val];1)	0
+=CENTILE(Textes[Val];0,5)	12
+=QUARTILE(Textes[Val];4)	1234,5
+=SOMME(FILTRE(Textes[Val];Textes[Groupe]="B"))	12,15
+=SOMME(Textes[Val]*2)	#VALEUR!
+# Plage de cellules libres : textes ignorés comme dans Excel (Cell[A3] = "x").
+=SOMME(Cell[A1:A3])	3
+=MOYENNE(Cell[A1:A3])	1,5
+=NB(Cell[A1:A3])	2
+=MIN(Cell[A1:A3])	1
+# Valeurs directes et opérateurs : texte converti, « abc » donne #VALEUR!.
+=SOMME("12 €";1)	13
+="12 €"*2	24
+="15 %"+0	0,15
+="1,234.5"+0	1234,5
+="1.234"+0	1234
+="(12)"+0	-12
+=ARRONDI("1 234,56 €";1)	1234,6
+=ARRONDI("abc";0)	#VALEUR!
+=CNUM("1 234,5 €")	1234,5
+
+# Formats étrangers : Formats[Val] n° 1 à 12, lu ligne à ligne par SOMME.SI.
+=SOMME.SI(Formats[N];1;Formats[Val])	1234,56
+=SOMME.SI(Formats[N];2;Formats[Val])	1234,56
+=SOMME.SI(Formats[N];3;Formats[Val])	1234,5
+=SOMME.SI(Formats[N];4;Formats[Val])	1234567
+=SOMME.SI(Formats[N];5;Formats[Val])	3,5
+=SOMME.SI(Formats[N];6;Formats[Val])	1234
+=SOMME.SI(Formats[N];7;Formats[Val])	1,234
+=SOMME.SI(Formats[N];8;Formats[Val])	-12
+=SOMME.SI(Formats[N];9;Formats[Val])	12
+=SOMME.SI(Formats[N];10;Formats[Val])	1500
+=SOMME.SI(Formats[N];11;Formats[Val])	-1234,5
+=SOMME.SI(Formats[N];12;Formats[Val])	0,25
+=SOMME(Formats[Val])	1239775,104
+=NB(Formats[Val])	12
+# En anglais, seul le cas ambigu (un séparateur suivi de trois chiffres) change.
+nombres EN
+=SOMME.SI(Formats[N];1;Formats[Val])	1234,56
+=SOMME.SI(Formats[N];2;Formats[Val])	1234,56
+=SOMME.SI(Formats[N];6;Formats[Val])	1,234
+=SOMME.SI(Formats[N];7;Formats[Val])	1234
+=SOMME.SI(Formats[N];10;Formats[Val])	1500
+=SOMME.SI(Formats[N];12;Formats[Val])	0,25
+=MAX(Formats[Val])	1234567
+=SOMME(Formats[Val])	1239775,104
+=SOMME(Formats[Val];"1,234")	1241009,104
+nombres FR

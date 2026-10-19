@@ -446,7 +446,7 @@ func (env *Env) groupBy(c Call) (rel, Value) {
 		k := sortKey(key)
 		g, ok := byKey[string(k)]
 		if !ok {
-			g = &group{key: key, agg: Agg{Fn: fn}, k: k}
+			g = &group{key: key, agg: newAgg(fn, env.Schema.rule(false)), k: k}
 			byKey[string(k)] = g
 			groups = append(groups, g)
 		}
@@ -595,7 +595,7 @@ func (c *compiler) spill(n Node, sc scope) (sqlRel, ErrCode) {
 		in := sc.inArray(t, al)
 		key, val := c.expr(call.Args[0], in), c.expr(call.Args[1], in)
 		from := fmt.Sprintf("SELECT %s AS v1, slt_final(%s, slt_part(%s, %s)) AS v2, slt_sortkey(%s) AS _k FROM %s AS %s GROUP BY _k",
-			key, c.param(fn), c.param(fn), val, key, t.SQL, al)
+			key, c.param(c.schema.rule(false).key(fn)), c.param(c.schema.rule(false).key(fn)), val, key, t.SQL, al)
 		return sqlRel{cols: []string{headerOf(call.Args[0]), headerOf(call.Args[1])},
 			from: "SELECT v1, v2, row_number() OVER (ORDER BY _k IS NULL, _k) AS _n FROM (" + from + ")"}, 0
 	}
@@ -701,5 +701,5 @@ func (c *compiler) spillAggregate(fn string, n Node, sc scope) string {
 	for i := range r.cols {
 		parts = append(parts, fmt.Sprintf("SELECT v%d AS v, _n, %d AS _i FROM (%s)", i+1, i, r.sql()))
 	}
-	return fmt.Sprintf("(SELECT slt_part(%s, v ORDER BY _n, _i) FROM (%s))", c.param(fn), strings.Join(parts, " UNION ALL "))
+	return fmt.Sprintf("(SELECT slt_part(%s, v ORDER BY _n, _i) FROM (%s))", c.param(c.schema.rule(false).key(fn)), strings.Join(parts, " UNION ALL "))
 }

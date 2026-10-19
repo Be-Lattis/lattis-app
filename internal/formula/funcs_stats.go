@@ -18,6 +18,7 @@ type quantile struct {
 	exclude bool
 	vals    []float64
 	err     Value
+	numRule
 }
 
 func newQuantile(quart, exclude bool) func([]Value) scanner {
@@ -25,7 +26,7 @@ func newQuantile(quart, exclude bool) func([]Value) scanner {
 }
 
 func (q *quantile) add(cols []Value) {
-	switch v := cols[0]; v.Kind {
+	switch v := q.coerce(cols[0]); v.Kind {
 	case Number, Date:
 		q.vals = append(q.vals, v.Num)
 	case Error:
@@ -77,6 +78,7 @@ type pairStats struct {
 	xs  []float64
 	ys  []float64
 	err Value
+	numRule
 }
 
 func (s *pairStats) add(cols []Value) {
@@ -89,7 +91,7 @@ func (s *pairStats) add(cols []Value) {
 			return
 		}
 	}
-	a, b := cols[0], cols[1]
+	a, b := s.coerce(cols[0]), s.coerce(cols[1])
 	if (a.Kind == Number || a.Kind == Date) && (b.Kind == Number || b.Kind == Date) {
 		// CORREL(x; y), mais PENTE(y; x) : le premier argument est y.
 		s.ys, s.xs = append(s.ys, a.Num), append(s.xs, b.Num)

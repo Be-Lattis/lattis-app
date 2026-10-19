@@ -362,7 +362,8 @@ func hoistable(fn funcDef) bool {
 // slt_final avec les valeurs directes. visible (SOUS.TOTAL) : seulement les
 // lignes qu'un filtre laisse affichées.
 func (c *compiler) aggregate(fn string, args []Node, sc scope, visible bool) string {
-	parts := []string{c.param(fn)}
+	rule := c.schema.rule(false)
+	parts := []string{c.param(rule.key(fn))}
 	lead := aggLead[fn]
 	order := ""
 	for k, a := range args {
@@ -386,7 +387,8 @@ func (c *compiler) aggregate(fn string, args []Node, sc scope, visible bool) str
 				continue
 			}
 			val := c.expr(a, sc.inSpan(sp, al))
-			parts = append(parts, fmt.Sprintf("(SELECT slt_part(%s, %s%s) FROM %s AS %s)", c.param(fn), val, order, c.spanSource(sp, sc), al))
+			key := c.schema.rule(sp.cells()).key(fn)
+			parts = append(parts, fmt.Sprintf("(SELECT slt_part(%s, %s%s) FROM %s AS %s)", c.param(key), val, order, c.spanSource(sp, sc), al))
 			continue
 		}
 		if r, ok := a.(Ref); ok && !r.Row {
@@ -412,7 +414,7 @@ func (c *compiler) aggregate(fn string, args []Node, sc scope, visible bool) str
 		if visible && t.Visible != "" {
 			src = t.Visible
 		}
-		parts = append(parts, fmt.Sprintf("(SELECT slt_part(%s, %s%s) FROM %s AS %s)", c.param(fn), val, order, src, al))
+		parts = append(parts, fmt.Sprintf("(SELECT slt_part(%s, %s%s) FROM %s AS %s)", c.param(rule.key(fn)), val, order, src, al))
 	}
 	return "slt_final(" + strings.Join(parts, ", ") + ")"
 }
@@ -432,7 +434,7 @@ func (c *compiler) scan(s scanCall, sc scope) string {
 	if e != 0 {
 		return errSQL(e)
 	}
-	head := []string{c.param(s.name), fmt.Sprint(len(s.params))}
+	head := []string{c.param(c.schema.rule(isSpan && sp.cells()).key(s.name)), fmt.Sprint(len(s.params))}
 	for _, p := range s.params {
 		head = append(head, c.expr(p, sc))
 	}
@@ -552,7 +554,7 @@ func (c *compiler) special(fn string, n Call, sc scope) string {
 		al := c.newAlias()
 		val := c.expr(n.Args[0], scope{table: sc.table, alias: al})
 		direct := fmt.Sprintf("slt_final(%s, (SELECT slt_part(%s, %s) FROM %s AS %s WHERE %s._pos <= %s._pos))",
-			c.param("SUM"), c.param("SUM"), val, sc.table.SQL, al, al, sc.alias)
+			c.param(c.schema.rule(false).key("SUM")), c.param(c.schema.rule(false).key("SUM")), val, sc.table.SQL, al, al, sc.alias)
 		if pre, ok := c.cumulPrecomputed(n.Args[0], sc); ok {
 			// Cumuls de toutes les lignes calculés en un parcours (sinon une
 			// somme de toutes les lignes précédentes, à chaque ligne).

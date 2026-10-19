@@ -37,6 +37,12 @@ Certaines fonctions renvoient plusieurs valeurs ([FILTRE](fonction:FILTRE), [TRI
 
 Une **constante matricielle** s'écrit entre accolades : `{1;2;3}` (une colonne), `{"a"."b"}` (une ligne), `{1.2;3.4}`. Elle se déverse comme un tableau dynamique et sert notamment à donner plusieurs délimiteurs : `=FRACTIONNER.TEXTE(Cell[A1]; {",";" "})`.
 
+## Nombres écrits en texte
+
+Dans une colonne de texte, les fonctions qui attendent des nombres ([SOMME](fonction:SOMME), [MOYENNE](fonction:MOYENNE), [MIN](fonction:MIN), [MAX](fonction:MAX), [SOMME.SI](fonction:SOMME.SI), [SOMMEPROD](fonction:SOMMEPROD), les statistiques…) lisent chaque texte comme le nombre qu'il écrit : « 12 », « 1 234,5 », « 12 € », « 15 % » (0,15), « (12) » (−12), et les écritures étrangères « 1,234.56 » ou « 1'234.5 ». **Un texte qui n'est pas un nombre compte pour 0** : la moyenne de « 12 » et « abc » vaut 6. Les cellules vides restent ignorées. [NB](fonction:NB) ne compte que les textes qui sont des nombres : `=NBVAL(Ventes[Note]) - NB(Ventes[Note])` donne le nombre de textes qui n'en sont pas.
+
+Ce n'est pas le cas d'Excel, qui ignore ces textes. Une plage de cellules libres (`Cell[A1:A10]`) suit Excel : ses textes sont des libellés, ignorés. Dans un calcul direct (`=[Note]*2`), un texte qui n'est pas un nombre donne `#VALEUR!`.
+
 ## Noms intermédiaires
 
 [LET](fonction:LET) nomme des valeurs, calculées une fois, utilisables dans les valeurs suivantes et dans le calcul final : `=LET(ht; [Prix]*[Qté]; tva; ht*0,2; ht+tva)`. Un nom ne peut être ni une adresse de cellule (`A1`, `Cell[A1]`) ni un nom de fonction.
@@ -55,7 +61,7 @@ Une **constante matricielle** s'écrit entre accolades : `{1;2;3}` (une colonne)
 
 ## Statistiques et finances
 
-Les statistiques lisent une colonne entière, une plage ou une expression sur les colonnes d'un tableau ; textes, booléens et vides y sont ignorés : [ECARTYPE.STANDARD](fonction:ECARTYPE.STANDARD), [VAR](fonction:VAR), [MODE](fonction:MODE), [CENTILE](fonction:CENTILE), [QUARTILE](fonction:QUARTILE), [COEFFICIENT.CORRELATION](fonction:COEFFICIENT.CORRELATION), [PENTE](fonction:PENTE)… : `=QUARTILE(Ventes[Montant]; 3)`.
+Les statistiques lisent une colonne entière, une plage ou une expression sur les colonnes d'un tableau ; booléens et vides y sont ignorés, les textes lus comme ci-dessous : [ECARTYPE.STANDARD](fonction:ECARTYPE.STANDARD), [VAR](fonction:VAR), [MODE](fonction:MODE), [CENTILE](fonction:CENTILE), [QUARTILE](fonction:QUARTILE), [COEFFICIENT.CORRELATION](fonction:COEFFICIENT.CORRELATION), [PENTE](fonction:PENTE)… : `=QUARTILE(Ventes[Montant]; 3)`.
 
 Les fonctions financières suivent les conventions d'Excel : une somme versée est négative, et le taux est celui d'une période. La mensualité d'un emprunt de 200 000 € sur 20 ans à 4 % par an s'écrit `=VPM(4%/12; 20*12; 200000)` (−1 211,96). Voir aussi [VA](fonction:VA), [VC](fonction:VC), [NPM](fonction:NPM), [TAUX](fonction:TAUX), [INTPER](fonction:INTPER) et [PRINCPER](fonction:PRINCPER) pour un tableau d'amortissement. [VAN](fonction:VAN) et [TRI](fonction:TRI) lisent les flux d'une colonne **dans l'ordre d'affichage** du tableau : `=TRI(Flux[Montant])`.
 

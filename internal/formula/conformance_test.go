@@ -69,8 +69,19 @@ func fixture(t testing.TB) *fixtureDoc {
 		{Name: "Nom", SQL: "c_1", Type: grid.Text},
 		{Name: "Valeur", SQL: "c_2", Type: grid.Integer},
 	}}
+	// Textes et Formats : nombres écrits dans des colonnes de texte
+	// (décision 0013).
+	textes := &Table{Name: "Textes", SQL: "t_x", Cols: []Column{
+		{Name: "Val", SQL: "c_1", Type: grid.Text},
+		{Name: "Groupe", SQL: "c_2", Type: grid.Text},
+		{Name: "N", SQL: "c_3", Type: grid.Integer},
+	}}
+	formats := &Table{Name: "Formats", SQL: "t_y", Cols: []Column{
+		{Name: "Val", SQL: "c_1", Type: grid.Text},
+		{Name: "N", SQL: "c_2", Type: grid.Integer},
+	}}
 	schema := &Schema{
-		Tables: []*Table{ventes, clients, baremes, feries, etapes},
+		Tables: []*Table{ventes, clients, baremes, feries, etapes, textes, formats},
 		Now:    time.Date(2026, 10, 15, 14, 30, 0, 0, time.Local),
 		Seed:   42,
 	}
@@ -87,6 +98,13 @@ func fixture(t testing.TB) *fixtureDoc {
 			`INSERT INTO t_e VALUES (1, 'c', 'C', 30), (2, 'a', 'A', 10), (3, 'b', 'B', 20)`,
 			`CREATE TABLE t_c (id INTEGER PRIMARY KEY, _pos TEXT NOT NULL, c_1 INTEGER, c_2 TEXT, c_3 TEXT) STRICT`,
 			`INSERT INTO t_c VALUES (1, 'a', 1, 'Dupont', 'Paris'), (2, 'b', 2, 'Martin', 'Lyon'), (3, 'c', 3, 'Durand', 'Nice')`,
+			`CREATE TABLE t_x (id INTEGER PRIMARY KEY, _pos TEXT NOT NULL, c_1 TEXT, c_2 TEXT, c_3 INTEGER) STRICT`,
+			`INSERT INTO t_x VALUES (1, 'a', '12', 'A', 1), (2, 'b', '1 234,5', 'A', 2), (3, 'c', '12 €', 'B', 3),
+				(4, 'd', '15 %', 'B', 4), (5, 'e', 'abc', 'A', 5), (6, 'f', NULL, 'B', 6), (7, 'g', '', 'A', 7)`,
+			`CREATE TABLE t_y (id INTEGER PRIMARY KEY, _pos TEXT NOT NULL, c_1 TEXT, c_2 INTEGER) STRICT`,
+			`INSERT INTO t_y VALUES (1, 'a', '1,234.56', 1), (2, 'b', '1.234,56', 2), (3, 'c', '1''234.5', 3), (4, 'd', '1,234,567', 4),
+				(5, 'e', '3.5', 5), (6, 'f', '1.234', 6), (7, 'g', '1,234', 7), (8, 'h', '(12)', 8), (9, 'i', '$12', 9), (10, 'j', '1,5e3', 10),
+				(11, 'k', '-1 234,5 EUR', 11), (12, 'l', '0.250', 12)`,
 		} {
 			if _, err := tx.Exec(q); err != nil {
 				return err
@@ -177,6 +195,10 @@ func TestConformite(t *testing.T) {
 			continue
 		case strings.HasPrefix(text, "locale "):
 			loc = map[string]Locale{"FR": FR, "EN": EN}[strings.TrimPrefix(text, "locale ")]
+			continue
+		case strings.HasPrefix(text, "nombres "):
+			// Langue des nombres écrits en texte (Schema.Numbers).
+			f.schema.Numbers = map[string]Locale{"FR": FR, "EN": EN}[strings.TrimPrefix(text, "nombres ")]
 			continue
 		}
 		src, want, ok := strings.Cut(text, "\t")

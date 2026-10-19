@@ -331,11 +331,11 @@ var docs = map[string]funcDoc{
 		0, `=ENT(FRACTION.ANNEE([Naissance]; AUJOURDHUI(); 1))`},
 
 	// Agrégats
-	"SUM": {catAgg, "Additionne des nombres, des colonnes entières ou une expression sur les colonnes d'un tableau.",
+	"SUM": {catAgg, "Additionne des nombres, des colonnes entières ou une expression sur les colonnes d'un tableau. Dans une colonne de texte, « 12 € » compte pour 12 et un texte qui n'est pas un nombre pour 0.",
 		docArgs(argAgg), 1, `=SOMME(Ventes[Montant])`},
-	"AVERAGE": {catAgg, "Renvoie la moyenne des nombres (les vides sont ignorés).",
+	"AVERAGE": {catAgg, "Renvoie la moyenne des nombres (les vides sont ignorés ; dans une colonne de texte, un texte qui n'est pas un nombre compte pour 0).",
 		docArgs(argAgg), 1, `=MOYENNE(Ventes[Montant])`},
-	"COUNT": {catAgg, "Compte les valeurs numériques (dates comprises).",
+	"COUNT": {catAgg, "Compte les valeurs numériques (dates comprises), et les textes qui écrivent un nombre (« 12 € »).",
 		docArgs(argAgg), 1, `=NB(Ventes[Qté])`},
 	"COUNTA": {catAgg, "Compte les valeurs non vides.",
 		docArgs(argAgg), 1, `=NBVAL(Clients[Nom])`},

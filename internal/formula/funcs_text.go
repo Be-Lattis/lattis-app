@@ -241,12 +241,7 @@ func fnValue(a []Value) Value {
 		return Err(ErrValue)
 	}
 	s := strings.TrimSpace(v.Str)
-	if strings.HasSuffix(s, "%") {
-		if f, ok := parseNumber(strings.TrimSuffix(s, "%")); ok {
-			return Num(f / 100)
-		}
-	}
-	if f, ok := parseNumber(s); ok {
+	if f, ok := TextNumber(s, FR); ok {
 		return Num(f)
 	}
 	if f, ok := ParseDate(s); ok {
