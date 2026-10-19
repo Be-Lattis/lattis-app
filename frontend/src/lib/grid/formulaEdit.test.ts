@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cellRefText, checkFormula, closeParens, movedRef, pointedRef, editorWidth, formulaRefs, highlightParts, rangeRef, refRect, serverErrorPos, type RefTable } from './formulaEdit';
+import { cellRefText, checkFormula, closeParens, movedRef, pointedRef, previewShift, editorWidth, formulaRefs, highlightParts, rangeRef, refRect, serverErrorPos, type RefTable } from './formulaEdit';
 
 describe('closeParens', () => {
 	it('ferme les parenthèses oubliées', () => {
@@ -77,6 +77,32 @@ describe('références', () => {
 		expect(rangeRef({ r0: 6, c0: 1, r1: 5, c1: 1 }, [ventes], undefined)).toBe('Ventes[Prix][1:2]');
 		expect(rangeRef({ r0: 5, c0: 1, r1: 6, c1: 1 }, [ventes], ventes)).toBe('[Prix][1:2]');
 		expect(rangeRef({ r0: 5, c0: 1, r1: 6, c1: 2 }, [ventes], undefined)).toBeNull();
+	});
+});
+
+describe('previewShift : saisie de la barre montrée dans sa cellule', () => {
+	it('texte qui tient dans la cellule : pas de défilement', () => {
+		expect(previewShift(30, 60, 76)).toBe(0);
+		expect(previewShift(0, 0, 76)).toBe(0);
+	});
+
+	it('curseur à la fin d\'un texte plus long : la fin est visible (demande de Louis)', () => {
+		expect(previewShift(300, 300, 76)).toBe(224);
+	});
+
+	it('curseur au début ou dans la partie visible : pas de défilement', () => {
+		expect(previewShift(0, 300, 76)).toBe(0);
+		expect(previewShift(70, 300, 76)).toBe(0);
+	});
+
+	it('curseur au milieu : il touche le bord droit, sans dépasser la fin du texte', () => {
+		expect(previewShift(150, 300, 76)).toBe(74);
+		expect(previewShift(400, 300, 76)).toBe(224);
+	});
+
+	it('cellule sans largeur (colonne masquée) : rien', () => {
+		expect(previewShift(150, 300, 0)).toBe(0);
+		expect(previewShift(150, 300, -12)).toBe(0);
 	});
 });
 

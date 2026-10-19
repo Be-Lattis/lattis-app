@@ -92,7 +92,7 @@
 	import { selectionLabel, type CellSpeech } from './a11y';
 	import { drawIcon } from '#lib/icons/canvas.js';
 	import { apply as applySuggestion, argKindAt, needsNextArg, signature, toNextArg, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
-	import { checkFormula, closeParens, editorWidth, formulaRefs, highlightParts, isFormula, movedRef, pointedRef, rangeRef, refRect, serverErrorPos, type FormulaError, type Rect, type RefTable } from './formulaEdit';
+	import { checkFormula, closeParens, editorWidth, formulaRefs, highlightParts, isFormula, movedRef, pointedRef, previewShift, rangeRef, refRect, serverErrorPos, type FormulaError, type Rect, type RefTable } from './formulaEdit';
 	import { editorLeave, formulaTyping, fxLeave, holdFormula, insertRefAt, qualifyRef, updateHold, type FormulaHold } from './crossref';
 	import { parseGoto, type GotoTable } from './goto';
 	import { cellNameProblem, columnNameProblem, refusedName, tableNameProblem, type NameProblem } from '#lib/ui/names.js';
@@ -2739,7 +2739,7 @@
 			let ow = cax().size(c);
 			for (let cc = c + 1; cc <= c1 + 1; cc++) {
 				const v = cells.get(key(r, cc));
-				if ((v !== undefined && v !== '') || tableAt(r, cc) || pivotAt(r, cc) || mergeOf(r, cc)) break;
+				if ((v !== undefined && v !== '') || tableAt(r, cc) || pivotAt(r, cc) || mergeOf(r, cc) || spilledAt(r, cc)) break;
 				ow += cax().size(cc);
 			}
 			return ow;
@@ -2749,7 +2749,8 @@
 			if (r < r0 || r > r1 || c < c0 || c > c1 || !rh(r) || !cax().size(c) || mergeOf(r, c)) continue;
 			// Cellule en cours d'édition : l'éditeur montre sa saisie ; sa valeur,
 			// qui peut déborder plus loin que lui, ne se dessine pas dessous.
-			if (editing && r === active.row && c === active.col) continue;
+			// Même chose pour une saisie dans la barre de formule, montrée dans la cellule.
+			if ((editing || (fxEditing && !hold)) && r === active.row && c === active.col) continue;
 			const cf = cfOf(r, c);
 			const fstyle = resolveStyle(styleAt(r, c, undefined), cf?.style);
 			let x = cx(c);
@@ -3166,7 +3167,20 @@
 			const ch = rspan(ar.r0, ar.r1);
 			ctx.fillStyle = C.bg;
 			ctx.fillRect(x + 1, y + 1, cw - 2, ch - 2);
-			drawText(fxText, x, y, cw, 'left', undefined, C.text, w, ch);
+			// Coupée au bord de la cellule (ou de la fusion), sur fond opaque : la
+			// saisie ne passe plus sur les valeurs voisines (une formule qui déverse,
+			// demande de Louis) ; le texte défile pour garder le curseur visible.
+			ctx.font = FONT;
+			const caret = fxInput?.selectionEnd ?? fxText.length;
+			const shift = previewShift(ctx.measureText(fxText.slice(0, caret)).width, ctx.measureText(fxText).width, cw - 12);
+			ctx.save();
+			ctx.beginPath();
+			const left = Math.max(x, MARGIN);
+			const top = Math.max(y, TOP_H);
+			ctx.rect(left, top, x + cw - left, y + ch - top);
+			ctx.clip();
+			drawText(fxText, x - shift, y, cw + shift, 'left', undefined, C.text, cw + shift, ch);
+			ctx.restore();
 		}
 		// Poignée de recopie (coin bas droit de la sélection) et aperçu.
 		if (!editing && selChart === null) {
@@ -8250,6 +8264,15 @@
 		schedule();
 	}
 
+	/** Une valeur déversée (formule qui déverse) est-elle montrée en (r, c) ? */
+	function spilledAt(r: number, c: number): boolean {
+		for (const sp of spills) {
+			const v = sp.rows[r - sp.row]?.[c - sp.col];
+			if (v) return true;
+		}
+		return false;
+	}
+
 	function placeEditor() {
 		if (!input) return;
 		const x = screenX(active.col);
@@ -8262,7 +8285,9 @@
 		const row = active.row;
 		const g = boxOf(active.row, active.col);
 		const longest = Math.max(...input.value.split('\n').map((l) => textWidth(l)));
-		const empty = (c: number) => !tableAt(row, c) && !cells.has(key(row, c));
+		// Vide : ni valeur, ni tableau, ni tableau croisé, ni fusion, ni valeur
+		// déversée (l'éditeur passait sur le résultat d'une formule qui déverse).
+		const empty = (c: number) => !tableAt(row, c) && !cells.has(key(row, c)) && !pivotAt(row, c) && !mergeOf(row, c) && !spilledAt(row, c);
 		const last = g ? g.col + g.cols - 1 : active.col;
 		const width = editorWidth(longest + 16, active.col, (c) => cax().size(c), (c) => c > last && empty(c), Math.max(80, viewW - x - 4));
 		const mergedW = g ? cax().offset(g.col + g.cols) - cax().offset(g.col) : 0;
@@ -10193,8 +10218,13 @@
 			onkeyup={(e) => {
 				if (!fxLock) moveSig(e, 'fx');
 				fxScroll = e.currentTarget.scrollLeft;
+				// Curseur déplacé : l'aperçu dans la cellule le suit (previewShift).
+				if (fxEditing) schedule();
 			}}
-			onclick={(e) => !fxLock && moveSig(e, 'fx')}
+			onclick={(e) => {
+				if (!fxLock) moveSig(e, 'fx');
+				if (fxEditing) schedule();
+			}}
 			onscroll={(e) => (fxScroll = e.currentTarget.scrollLeft)}
 			class:ro={!!fxLock}
 			readonly={!!fxLock}

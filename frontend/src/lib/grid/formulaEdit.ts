@@ -611,6 +611,18 @@ export function editorWidth(textWidth: number, col: number, colWidth: (c: number
 }
 
 /**
+ * Saisie dans la barre de formule montrée dans sa cellule : le texte est
+ * coupé au bord de la cellule (il ne passe pas sur les valeurs voisines) et
+ * défile vers la gauche pour que le curseur reste visible, comme dans un
+ * champ de saisie. caretX : largeur du texte jusqu'au curseur ; textW : du
+ * texte entier ; avail : largeur visible. Renvoie le décalage (≥ 0).
+ */
+export function previewShift(caretX: number, textW: number, avail: number): number {
+	if (textW <= avail || avail <= 0) return 0;
+	return Math.min(Math.max(0, caretX - avail), textW - avail);
+}
+
+/**
  * Référence d'une cellule pour une formule du tableau here (ligne here.row),
  * comme un clic l'écrit : [Col] sur la même ligne, [Col][-1] / [Col][+2] sur
  * une autre ligne du même tableau (relatif, choix de Louis), Tableau[Col][n]
