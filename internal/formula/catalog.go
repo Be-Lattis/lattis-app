@@ -16,6 +16,13 @@ type FunctionInfo struct {
 	Example     string   `json:"example"`     // formule d'exemple, en français
 }
 
+// BareFunction indique si un nom désigne une fonction même écrit sans
+// parenthèses : l'agrégat de GROUPER.PAR (SOMME, MOYENNE…).
+func BareFunction(name string) bool {
+	_, ok := groupAgg(Name{Name: name})
+	return ok
+}
+
 // Functions liste les fonctions connues, triées par nom, pour l'aide à la
 // saisie (autocomplétion, signature).
 func Functions(loc Locale) []FunctionInfo {

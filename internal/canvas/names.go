@@ -73,10 +73,11 @@ func (t *tx) checkName(name string, sheet int64, row, col int) error {
 	if _, _, ok := formula.CellRef(name); ok {
 		return ErrName{name, "c'est une adresse de cellule"}
 	}
-	for _, f := range formula.Functions(formula.FR) {
-		if strings.EqualFold(f.Name, name) || strings.EqualFold(f.Other, name) {
-			return ErrName{name, "c'est le nom d'une fonction"}
-		}
+	// Comme dans Excel, un nom peut être celui d'une fonction (Taux, Date) :
+	// la fonction s'écrit avec ses parenthèses. Sauf pour les agrégats, que
+	// GROUPER.PAR prend écrits seuls.
+	if formula.BareFunction(name) {
+		return ErrName{name, "c'est le nom d'une fonction"}
 	}
 	var n int
 	if err := t.row(`SELECT count(*) FROM _lattis_tables WHERE name = ? COLLATE NOCASE`, name).Scan(&n); err != nil {
