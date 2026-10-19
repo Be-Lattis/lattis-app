@@ -237,8 +237,16 @@ func TestAIConversation(t *testing.T) {
 	// conversation du fichier.
 	aiConfig(false)
 	s.CloseDocument(ctx)
-	if _, err := s.Open(ctx, path); err != nil {
-		t.Fatal(err)
+	// Fermé sans enregistrer : la session peut rester à récupérer (selon
+	// l'horloge du fichier) ; on la jette, comme l'utilisateur qui rouvre le fichier.
+	res, err := s.Open(ctx, path)
+	if err == nil && res.Recoverable != nil {
+		if err = s.Discard(res.Recoverable.Dir); err == nil {
+			res, err = s.Open(ctx, path)
+		}
+	}
+	if err != nil || res.Recoverable != nil || res.Damaged != nil {
+		t.Fatalf("réouverture : %v %+v %+v", err, res.Recoverable, res.Damaged)
 	}
 	if len(s.AITranscript()) != 0 || s.AIState().Messages != 0 {
 		t.Fatal("conversation restaurée sans le réglage")
