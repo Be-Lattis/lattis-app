@@ -2008,6 +2008,8 @@
 		onorder={mode === 'doc' ? (ids) => sheetAction(() => DocumentService.OrderSheets(ids)) : undefined}
 		oncopy={mode === 'doc' ? (id, to) => sheetAction(async () => selectSheet(await DocumentService.CopySheet(id, to))) : undefined}
 		oncolor={mode === 'doc' ? (id, color) => sheetAction(() => DocumentService.SetSheetColor(id, color)) : undefined}
+		oncolormany={mode === 'doc' ? (ids, color) => sheetAction(() => DocumentService.SetSheetsColor(ids, color)) : undefined}
+		onhidemany={mode === 'doc' ? (ids) => sheetAction(() => DocumentService.SetSheetsHidden(ids, true)) : undefined}
 		onhide={mode === 'doc' ? (id, hidden) => sheetAction(async () => {
 			await DocumentService.SetSheetHidden(id, hidden);
 			if (!hidden) await selectSheet(id);

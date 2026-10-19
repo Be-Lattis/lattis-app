@@ -41,8 +41,12 @@
 		oncopy?: (id: number, to: number) => void;
 		/** Couleur d'onglet (« #rrggbb », vide : aucune). */
 		oncolor?: (id: number, color: string) => void;
+		/** Couleur de plusieurs onglets (sélection), en une étape d'annulation. */
+		oncolormany?: (ids: number[], color: string) => void;
 		/** Masque (true) ou affiche (false) une feuille. */
 		onhide?: (id: number, hidden: boolean) => void;
+		/** Masquer plusieurs feuilles (sélection), en une étape d'annulation. */
+		onhidemany?: (ids: number[]) => void;
 		/** Défilement horizontal de la grille : barre en bout de ligne, comme Excel. */
 		hscroll?: { content: number; view: number; left: number };
 		/** atEnd : la barre est au bout (la feuille s'agrandit). */
@@ -57,7 +61,7 @@
 		onrefused?: (msg: string) => void;
 	}
 
-	let { sheets, active, onselect, onadd: add, oninsert: insert, onpage: page, ondocpage: docPage, onmove: move, onrename: rename, ondelete: del, ondeletemany: delMany, onorder: order, oncopy: copy, oncolor: color, onhide: hide, hscroll, onhscroll, onhhold, onprotect, locked = false, onrefused }: Props = $props();
+	let { sheets, active, onselect, onadd: add, oninsert: insert, onpage: page, ondocpage: docPage, onmove: move, onrename: rename, ondelete: del, ondeletemany: delMany, onorder: order, oncopy: copy, oncolor: color, oncolormany: colorMany, onhide: hide, onhidemany: hideMany, hscroll, onhscroll, onhhold, onprotect, locked = false, onrefused }: Props = $props();
 	const LOCKED = 'La structure du classeur est protégée : ôtez la protection (Révision › Ôter la protection du classeur) pour ajouter, supprimer, renommer ou déplacer des feuilles';
 	const onadd = $derived(locked ? undefined : add);
 	const oninsert = $derived(locked ? undefined : insert);
@@ -73,6 +77,8 @@
 	const oncopy = $derived(locked ? undefined : copy);
 	const oncolor = $derived(locked ? undefined : color);
 	const onhide = $derived(locked ? undefined : hide);
+	const oncolormany = $derived(locked ? undefined : colorMany);
+	const onhidemany = $derived(locked ? undefined : hideMany);
 	// Onglets affichés : les feuilles masquées n'en ont pas.
 	const shown = $derived(visibleSheets(sheets));
 	const hiddenSheets = $derived(sheets.filter((s) => s.hidden));
@@ -223,6 +229,9 @@
 	// se glissent et se suppriment ensemble. Vide : l'onglet actif seul.
 	let picked = $state<Set<number>>(new Set());
 	const group = $derived(picked.size > 1 ? picked : null);
+	// Menu ouvert sur un onglet de la sélection : ses actions visent toutes les feuilles choisies.
+	const many = $derived(!!menu && !!group?.has(menu.id));
+	const ONE = 'Une feuille à la fois : sélectionnez un seul onglet';
 	$effect(() => {
 		// Feuilles disparues ou masquées : retirées de la sélection.
 		if (picked.size && [...picked].some((id) => !shown.some((s) => s.id === id))) picked = new Set([...picked].filter((id) => shown.some((s) => s.id === id)));
@@ -458,30 +467,32 @@
 				>
 			</Submenu>
 			<hr />
-			{#if group?.has(m.id)}
+			{#if many}
 				<button
 					role="menuitem"
-					disabled={group.size >= shown.length || !ondeletemany}
+					disabled={(group?.size ?? 0) >= shown.length || !ondeletemany}
 					onclick={() => {
 						const ids = [...(group ?? [])];
 						closeMenu();
 						picked = new Set();
 						ondeletemany?.(ids);
-					}}><span class="ic"><Icon name="trash" size={16} /></span>Supprimer les {group.size} feuilles</button
+					}}><span class="ic"><Icon name="trash" size={16} /></span>Supprimer les {group?.size} feuilles</button
 				>
-			{/if}
-			<button
-				role="menuitem"
-				disabled={shown.length <= 1 || !ondelete}
+			{:else}
+				<button
+					role="menuitem"
+					disabled={shown.length <= 1 || !ondelete}
 				onclick={() => {
 					const id = m.id;
 					closeMenu();
 					ondelete?.(id);
 				}}><span class="ic"><Icon name="trash" size={16} /></span>Supprimer</button
-			>
+				>
+			{/if}
 			<button
 				role="menuitem"
-				disabled={!onrename}
+				disabled={!onrename || many}
+				title={many ? ONE : undefined}
 				onclick={() => {
 					// La feuille d'abord : ms se relit sur le menu, que la fermeture efface.
 					const sheet = ms;
@@ -491,7 +502,8 @@
 			>
 			<button
 				role="menuitem"
-				disabled={!onmove && !oncopy}
+				disabled={(!onmove && !oncopy) || many}
+				title={many ? ONE : undefined}
 				onclick={() => {
 					const id = m.id;
 					closeMenu();
@@ -502,7 +514,8 @@
 			<hr />
 			<button
 				role="menuitem"
-				disabled={!onprotect}
+				disabled={!onprotect || many}
+				title={many ? ONE : undefined}
 				onclick={() => {
 					const id = m.id;
 					closeMenu();
@@ -522,8 +535,10 @@
 							aria-label="Couleur {c}"
 							onclick={() => {
 								const id = m.id;
+								const ids = many ? [...(group ?? [])] : null;
 								closeMenu();
-								oncolor?.(id, c);
+								if (ids) oncolormany?.(ids, c);
+								else oncolor?.(id, c);
 							}}
 						></button>
 					{/each}
@@ -533,21 +548,27 @@
 					disabled={!ms?.color}
 					onclick={() => {
 						const id = m.id;
+						const ids = many ? [...(group ?? [])] : null;
 						closeMenu();
-						oncolor?.(id, '');
+						if (ids) oncolormany?.(ids, '');
+						else oncolor?.(id, '');
 					}}><span class="ic"><Icon name="no-color" size={16} /></span>Aucune couleur</button
 				>
 			</Submenu>
 			<hr />
 			<button
 				role="menuitem"
-				disabled={!onhide || shown.length <= 1}
-				title={shown.length <= 1 ? 'Le classeur garde au moins une feuille visible' : undefined}
+				disabled={!onhide || shown.length <= (many ? group?.size ?? 1 : 1)}
+				title={shown.length <= (many ? group?.size ?? 1 : 1) ? 'Le classeur garde au moins une feuille visible' : undefined}
 				onclick={() => {
 					const id = m.id;
+					const ids = many ? [...(group ?? [])] : null;
 					closeMenu();
-					onhide?.(id, true);
-				}}><span class="ic"><Icon name="hide" size={16} /></span>Masquer</button
+					if (ids) {
+						picked = new Set();
+						onhidemany?.(ids);
+					} else onhide?.(id, true);
+				}}><span class="ic"><Icon name="hide" size={16} /></span>{many ? `Masquer les ${group?.size} feuilles` : 'Masquer'}</button
 			>
 			<button
 				role="menuitem"

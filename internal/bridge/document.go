@@ -828,6 +828,38 @@ func (s *DocumentService) SetSheetColor(ctx context.Context, sheet int64, color 
 	return s.act(ctx, func(d *doc.Document) error { return d.SetSheetColor(ctx, sheet, color) })
 }
 
+// SetSheetsColor colore les onglets d'une sélection de feuilles, en une étape
+// d'annulation.
+func (s *DocumentService) SetSheetsColor(ctx context.Context, sheets []int64, color string) (DocState, error) {
+	gctx := command.WithGroup(ctx, "Couleur d'onglet")
+	return s.act(ctx, func(d *doc.Document) error {
+		for _, id := range sheets {
+			if err := d.SetSheetColor(gctx, id, color); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// SetSheetsHidden masque ou affiche une sélection de feuilles, en une étape
+// d'annulation.
+func (s *DocumentService) SetSheetsHidden(ctx context.Context, sheets []int64, hidden bool) (DocState, error) {
+	label := "Masquer les feuilles"
+	if !hidden {
+		label = "Afficher les feuilles"
+	}
+	gctx := command.WithGroup(ctx, label)
+	return s.act(ctx, func(d *doc.Document) error {
+		for _, id := range sheets {
+			if err := d.SetSheetHidden(gctx, id, hidden); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 // SetSheetHidden masque ou affiche un onglet.
 func (s *DocumentService) SetSheetHidden(ctx context.Context, sheet int64, hidden bool) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.SetSheetHidden(ctx, sheet, hidden) })

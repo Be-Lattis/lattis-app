@@ -1687,6 +1687,22 @@ export function SetSheetRules(sheet: number, ch: canvas$0.RuleChanges): $Cancell
 }
 
 /**
+ * SetSheetsColor colore les onglets d'une sélection de feuilles, en une étape
+ * d'annulation.
+ */
+export function SetSheetsColor(sheets: number[] | null, color: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3179163017, sheets, color);
+}
+
+/**
+ * SetSheetsHidden masque ou affiche une sélection de feuilles, en une étape
+ * d'annulation.
+ */
+export function SetSheetsHidden(sheets: number[] | null, hidden: boolean): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(496599342, sheets, hidden);
+}
+
+/**
  * SetTwoLevel affiche (ou non) les en-têtes d'un tableau sur deux lignes
  * (groupe « Groupe.Sous » dans une bande au-dessus de l'en-tête).
  */
