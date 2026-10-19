@@ -6,6 +6,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/transfer"
 )
 
 var (
@@ -201,8 +202,8 @@ cells.set(2, 2, 3.5)`,
 		&Command{
 			Name:    "cells.paste",
 			Label:   "Coller",
-			Summary: "Écrit un bloc de valeurs à partir d'une cellule, comme un collage : une ligne d'en-têtes suivie de lignes de données crée un tableau.",
-			Params:  []Param{pRow, pCol, {Name: "values", Type: Array, Items: Array, Desc: "lignes de valeurs : { {\"Nom\", \"Âge\"}, {\"Léa\", 31} }"}, pSheet},
+			Summary: "Écrit un bloc de valeurs à partir d'une cellule, comme un collage : une ligne d'en-têtes suivie de lignes de données crée un tableau ; range = true l'écrit en plage de cellules libres.",
+			Params:  []Param{pRow, pCol, {Name: "values", Type: Array, Items: Array, Desc: "lignes de valeurs : { {\"Nom\", \"Âge\"}, {\"Léa\", 31} }"}, {Name: "range", Type: Boolean, Desc: "vrai : des cellules libres (une plage), sans créer de tableau", Optional: true}, pSheet},
 			Write:   true,
 			Example: `cells.paste(1, 1, {
   {"Produit", "Prix"},
@@ -234,7 +235,38 @@ cells.set(2, 2, 3.5)`,
 					}
 				}
 				d, _ := c.Doc()
+				asRange, err := c.Bool("range")
+				if err != nil {
+					return nil, err
+				}
+				if asRange {
+					return d.PasteRange(c, s.ID, row, col, block)
+				}
 				return d.Paste(c, s.ID, row, col, block)
+			},
+		},
+		&Command{
+			Name:    "cells.read",
+			Summary: "Lit les valeurs affichées d'une plage de la feuille, ligne par ligne : tableaux, tableaux croisés et cellules libres confondus (\"\" : cellule vide).",
+			Details: "100 000 cellules au plus ; pour tout un tableau, tables.rows ou db.query sont plus directs.",
+			Returns: "{ {valeur, ...}, ... }",
+			Params:  []Param{pRow, pCol, {Name: "row2", Type: Integer, Desc: "dernière ligne de la plage"}, {Name: "col2", Type: Integer, Desc: "dernière colonne de la plage"}, pSheet},
+			Example: `for _, ligne in ipairs(cells.read(1, 1, 10, 4)) do
+  print(table.concat(ligne, " | "))
+end`,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				var p [4]int
+				for i, n := range []string{"row", "col", "row2", "col2"} {
+					if p[i], err = c.Pos(n, 0); err != nil {
+						return nil, err
+					}
+				}
+				d, _ := c.Doc()
+				return transfer.SheetValues(c, d.Model, s.ID, p[0], p[1], p[2], p[3])
 			},
 		},
 		&Command{

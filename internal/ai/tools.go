@@ -62,7 +62,7 @@ var structureCommands = []string{
 	"pivots.create", "pivots.set", "charts.create", "charts.set", "charts.place",
 }
 
-var sampleCommands = []string{"tables.rows", "columns.values", "db.query", "sheets.get", "cells.get"}
+var sampleCommands = []string{"tables.rows", "columns.values", "db.query", "sheets.get", "cells.get", "cells.read"}
 
 // Outils propres à l'assistant, permis même sans partage des données :
 // profil d'un tableau (cardinalités, type du résultat des colonnes

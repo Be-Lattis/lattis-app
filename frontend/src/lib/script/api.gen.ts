@@ -100,11 +100,20 @@ export const apiReference: RefEntry[] = [
 	{
 		name: "cells.paste",
 		category: "cells",
-		signature: "cells.paste(row, col, values, [sheet])",
-		summary: "Écrit un bloc de valeurs à partir d'une cellule, comme un collage : une ligne d'en-têtes suivie de lignes de données crée un tableau.",
-		details: "Paramètres — row : ligne de la feuille, à partir de 1 ; col : colonne de la feuille, à partir de 1 ; values : lignes de valeurs : { {\"Nom\", \"Âge\"}, {\"Léa\", 31} } ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : cells.paste{row = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		signature: "cells.paste(row, col, values, [range], [sheet])",
+		summary: "Écrit un bloc de valeurs à partir d'une cellule, comme un collage : une ligne d'en-têtes suivie de lignes de données crée un tableau ; range = true l'écrit en plage de cellules libres.",
+		details: "Paramètres — row : ligne de la feuille, à partir de 1 ; col : colonne de la feuille, à partir de 1 ; values : lignes de valeurs : { {\"Nom\", \"Âge\"}, {\"Léa\", 31} } ; range : vrai : des cellules libres (une plage), sans créer de tableau ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : cells.paste{row = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		example: "cells.paste(1, 1, {\n  {\"Produit\", \"Prix\"},\n  {\"Café\", 3.5},\n  {\"Thé\", 2.8},\n})",
-		args: [1, 4]
+		args: [1, 5]
+	},
+	{
+		name: "cells.read",
+		category: "cells",
+		signature: "cells.read(row, col, row2, col2, [sheet]) → { {valeur, ...}, ... }",
+		summary: "Lit les valeurs affichées d'une plage de la feuille, ligne par ligne : tableaux, tableaux croisés et cellules libres confondus (\"\" : cellule vide).",
+		details: "100 000 cellules au plus ; pour tout un tableau, tables.rows ou db.query sont plus directs. Paramètres — row : ligne de la feuille, à partir de 1 ; col : colonne de la feuille, à partir de 1 ; row2 : dernière ligne de la plage ; col2 : dernière colonne de la plage ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : cells.read{row = …}.",
+		example: "for _, ligne in ipairs(cells.read(1, 1, 10, 4)) do\n  print(table.concat(ligne, \" | \"))\nend",
+		args: [1, 5]
 	},
 	{
 		name: "cells.set",

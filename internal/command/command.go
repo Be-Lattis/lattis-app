@@ -251,6 +251,9 @@ func WithGroup(ctx context.Context, name string) context.Context {
 	return context.WithValue(ctx, groupKey{}, &Group{Name: name})
 }
 
+// HasGroup dit si ctx est déjà dans un groupe d'actions.
+func HasGroup(ctx context.Context) bool { return groupOf(ctx) != nil }
+
 func groupOf(ctx context.Context) *Group {
 	g, _ := ctx.Value(groupKey{}).(*Group)
 	return g

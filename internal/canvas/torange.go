@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/formula"
 )
 
@@ -1070,4 +1071,39 @@ func (t *tx) cellsToTable(sheet int64, sheetName string, zone Rect, table string
 		return nil
 	}
 	return t.apply(do, undo)
+}
+
+// PasteRange écrit un bloc en cellules libres, sans faire de tableau : la
+// zone est marquée « plage » puis le bloc collé, en une seule étape
+// d'annulation.
+func (m *Model) PasteRange(ctx context.Context, sheet int64, row, col int, block [][]string) (Event, error) {
+	h, w := len(block), 0
+	for _, r := range block {
+		w = max(w, len(r))
+	}
+	if h == 0 || w == 0 {
+		return Event{}, nil
+	}
+	if !command.HasGroup(ctx) {
+		ctx = command.WithGroup(ctx, "Coller en plage")
+	}
+	err := m.Do(ctx, "Coller en plage", func(t *tx) error {
+		if err := t.guard(sheet); err != nil {
+			return err
+		}
+		tables, err := t.tables(sheet)
+		if err != nil {
+			return err
+		}
+		for _, tb := range tables {
+			if tb.Row <= row+h-1 && tb.Bottom() >= row && tb.Col <= col+w-1 && tb.Right() >= col {
+				return fmt.Errorf("%w : la zone recouvre le tableau « %s »", ErrTable, tb.Name)
+			}
+		}
+		return t.markRange(sheet, row, col, row+h-1, col+w-1)
+	})
+	if err != nil {
+		return Event{}, err
+	}
+	return m.Paste(ctx, sheet, row, col, block)
 }
