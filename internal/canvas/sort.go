@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/grid"
@@ -57,7 +56,7 @@ func (t *tx) sortRows(tb Table, i int, desc bool, order []string) error {
 	if desc {
 		dir = "DESC"
 	}
-	stamp := time.Now().UnixNano()
+	stamp := uniq()
 	trash := fmt.Sprintf("_lattis_trash_sort_%d_%d", tb.ID, stamp)
 	rank := fmt.Sprintf("_lattis_rank_%d_%d", tb.ID, stamp)
 	var do, after []stmt

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/lalamefine/lattis/internal/command"
 )
@@ -92,7 +91,7 @@ func (m *Model) DeleteTables(ctx context.Context, names []string) error {
 // deleteTable retire un tableau : ses lignes, saisies invalides et styles
 // partent dans des tables de corbeille que l'annulation remet en place.
 func (t *tx) deleteTable(tb Table) error {
-	trash := fmt.Sprintf("_lattis_trash_t%d_%d", tb.ID, time.Now().UnixNano())
+	trash := fmt.Sprintf("_lattis_trash_t%d_%d", tb.ID, uniq())
 	var key, filter sql.NullString
 	var follow sql.NullInt64
 	var noHint, twoLevel int
@@ -292,7 +291,7 @@ func (t *tx) mergeRight(a, b Table) (Table, error) {
 	}
 	// Mêmes lignes d'en-tête : la n-ième ligne de données de chacun est sur
 	// la même ligne de la feuille.
-	m := fmt.Sprintf("temp._slt_merge_%d", time.Now().UnixNano())
+	m := fmt.Sprintf("temp._slt_merge_%d", uniq())
 	if err := t.apply([]stmt{
 		st(`CREATE TABLE ` + m + ` AS SELECT a.id AS aid, b.id AS bid FROM
 			(SELECT id, row_number() OVER (ORDER BY _pos) AS rn FROM ` + a.sql() + `) a JOIN

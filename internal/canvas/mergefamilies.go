@@ -8,7 +8,6 @@ import (
 	"slices"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
@@ -874,7 +873,7 @@ func (t *tx) stageJob(fj *famJob) error {
 	}
 	// Table de chargement, hors journal (comme Import) : une INSERT … SELECT
 	// par source, dans l'ordre des onglets puis des lignes.
-	fj.staging = fmt.Sprintf("%smerge%d_%d", importPrefix, id, time.Now().UnixNano())
+	fj.staging = fmt.Sprintf("%smerge%d_%d", importPrefix, id, uniq())
 	if _, err := t.ExecContext(t.Ctx, `CREATE TABLE `+fj.staging+` (`+strings.Join(defs, ", ")+`) STRICT`); err != nil {
 		return err
 	}

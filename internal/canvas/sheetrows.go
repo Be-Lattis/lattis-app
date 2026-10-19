@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"strings"
-	"time"
 
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/formula"
@@ -365,7 +364,7 @@ func (t *tx) deleteTableCols(tb Table, i, j int) error {
 // identifiants : lignes, saisies invalides et styles passent dans des tables
 // de corbeille que l'annulation remet en place.
 func (t *tx) trashRows(tb Table, ids string) error {
-	trash := fmt.Sprintf("_lattis_trash_rows_%d_%d", tb.ID, time.Now().UnixNano())
+	trash := fmt.Sprintf("_lattis_trash_rows_%d_%d", tb.ID, uniq())
 	return t.ApplyStep(command.Step{
 		Do: []stmt{
 			st(`CREATE TABLE ` + trash + ` AS SELECT * FROM ` + tb.sql() + ` WHERE id IN (` + ids + `)`),

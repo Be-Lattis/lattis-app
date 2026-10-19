@@ -9,7 +9,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/lalamefine/lattis/internal/grid"
 )
@@ -773,7 +772,7 @@ func (t *tx) handAfter(hc *handCarry, tb Table, loaded int, ids map[int64]int64,
 	// Valeurs posées par une table de chargement : quelques instructions
 	// dans le journal quelle que soit la taille du tableau (le rétablissement
 	// les rejoue ; purgeImports la supprime quand plus rien ne la cite).
-	scratch := fmt.Sprintf("%shand_%d_%d", importPrefix, tb.ID, time.Now().UnixNano())
+	scratch := fmt.Sprintf("%shand_%d_%d", importPrefix, tb.ID, uniq())
 	defs := []string{"rid INTEGER PRIMARY KEY"}
 	for j := range valCols {
 		defs = append(defs, fmt.Sprintf("v%d, b%d", j, j))

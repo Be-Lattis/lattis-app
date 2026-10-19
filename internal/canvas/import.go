@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
@@ -310,7 +309,7 @@ func (t *tx) importTable(sheet int64, it *ImportTable) (Table, error) {
 		return Table{}, err
 	}
 	tb := Table{ID: id, Sheet: sheet, Name: it.Name, Row: it.Row, Col: it.Col, Rows: it.Count}
-	staging := fmt.Sprintf("%s%d_%d", importPrefix, id, time.Now().UnixNano())
+	staging := fmt.Sprintf("%s%d_%d", importPrefix, id, uniq())
 	defs := []string{"id INTEGER PRIMARY KEY", "_pos TEXT NOT NULL"}
 	names := []string{"id", "_pos"}
 	meta := []stmt{st(`INSERT INTO _lattis_tables (id, sheet, name, row, col) VALUES (?, ?, ?, ?, ?)`, id, sheet, it.Name, it.Row, it.Col)}

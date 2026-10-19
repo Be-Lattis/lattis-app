@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/grid"
@@ -33,7 +32,7 @@ func (m *Model) RemoveDuplicates(ctx context.Context, table string, cols []int) 
 		// Les doublons ne sont cherchés qu'une fois (un parcours trié du
 		// tableau) : ils vont à la corbeille, puis on les compte ; aucun :
 		// la transaction est abandonnée, sans étape d'annulation.
-		trash := fmt.Sprintf("_lattis_trash_dup_%d_%d", tb.ID, time.Now().UnixNano())
+		trash := fmt.Sprintf("_lattis_trash_dup_%d_%d", tb.ID, uniq())
 		err = t.ApplyStep(command.Step{
 			Do: []stmt{
 				st(`CREATE TABLE ` + trash + ` AS SELECT * FROM ` + tb.sql() + ` WHERE id IN (` + dups + `)`),

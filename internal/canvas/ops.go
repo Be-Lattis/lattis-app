@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/formula"
@@ -175,7 +174,7 @@ func (t *tx) addColumn(tb Table, id int64, name string, typ grid.Type, pos int) 
 // corbeille, d'où l'annulation les remet : l'inverse reste en quelques
 // instructions quelle que soit la taille du tableau.
 func (t *tx) dropColumn(tb Table, c Column, pos int) error {
-	trash := fmt.Sprintf("_lattis_trash_%d_%d_%d", tb.ID, c.ID, time.Now().UnixNano())
+	trash := fmt.Sprintf("_lattis_trash_%d_%d_%d", tb.ID, c.ID, uniq())
 	col := colSQL(c.ID)
 	rules, err := t.columnRules(tb.ID, c.ID)
 	if err != nil {
@@ -490,7 +489,7 @@ func (t *tx) dropColumns(tb Table, idx []int) error {
 		gone[tb.Cols[i].ID] = tb.Cols[i]
 		ids = append(ids, strconv.FormatInt(tb.Cols[i].ID, 10))
 	}
-	trash := fmt.Sprintf("_lattis_trash_%d_cols_%d", tb.ID, time.Now().UnixNano())
+	trash := fmt.Sprintf("_lattis_trash_%d_cols_%d", tb.ID, uniq())
 	name, tmp := tb.sql(), tb.sql()+"_rebuild"
 	in := strings.Join(ids, ", ")
 

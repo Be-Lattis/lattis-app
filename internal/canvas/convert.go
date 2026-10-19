@@ -273,7 +273,7 @@ func (m *Model) AcceptAsText(ctx context.Context, table string, i int) error {
 		}
 		c := tb.Cols[i]
 		col := colSQL(c.ID)
-		trash := fmt.Sprintf("_lattis_trash_text_%d_%d_%d", tb.ID, c.ID, time.Now().UnixNano())
+		trash := fmt.Sprintf("_lattis_trash_text_%d_%d_%d", tb.ID, c.ID, uniq())
 		return t.ApplyStep(command.Step{Do: []stmt{
 			st(`CREATE TABLE `+trash+` AS SELECT rid, raw FROM _lattis_invalid WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
 			st(`UPDATE ` + tb.sql() + ` SET ` + col + ` = ` + trash + `.raw FROM ` + trash + ` WHERE ` + trash + `.rid = ` + tb.sql() + `.id`),
@@ -302,7 +302,7 @@ func (t *tx) setType(tb Table, i int, to grid.Type) error {
 			return err
 		}
 		col := colSQL(c.ID)
-		trash := fmt.Sprintf("_lattis_trash_conv_%d_%d_%d", tb.ID, c.ID, time.Now().UnixNano())
+		trash := fmt.Sprintf("_lattis_trash_conv_%d_%d_%d", tb.ID, c.ID, uniq())
 		do := []stmt{
 			// Les valeurs qui ne passeront pas : gardées pour l'annulation…
 			st(`CREATE TABLE ` + trash + ` (id INTEGER PRIMARY KEY, v)`),

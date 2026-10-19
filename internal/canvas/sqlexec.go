@@ -7,7 +7,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/lalamefine/lattis/internal/grid"
 
@@ -437,7 +436,7 @@ func (t *tx) recordChanges(tb captured) (int64, error) {
 	if err != nil || touched == 0 {
 		return 0, err
 	}
-	trash := fmt.Sprintf("%s%d_%d", sqlTrash, tb.ID, time.Now().UnixNano())
+	trash := fmt.Sprintf("%s%d_%d", sqlTrash, tb.ID, uniq())
 	cols := strings.Join(tb.cols, ", ")
 	err = t.exec([]string{
 		`CREATE TABLE ` + trash + `_ids AS SELECT id FROM ` + ids,
