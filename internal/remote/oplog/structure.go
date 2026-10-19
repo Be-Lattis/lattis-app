@@ -3,6 +3,7 @@ package oplog
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"slices"
 	"sync"
 
@@ -14,11 +15,14 @@ import (
 // transaction du bus, la forme des tableaux publiés (nom, colonnes saisies
 // et leurs noms et types, clé) est comparée à celle d'avant, quel que soit
 // le chemin de la modification (grille, API, scripts, MCP, assistant,
-// annulation). Les changements sont confiés à la synchronisation
-// (SetStructure), qui les fait sur le serveur avant que la transaction
-// locale ne soit validée : un refus du serveur défait toute la transaction
-// locale. L'annulation d'un changement de structure est une transaction
-// comme une autre : elle envoie l'opération inverse.
+// annulation). Les changements sont vérifiés par la synchronisation
+// (SetStructure : droits, en ligne ; sans appel au serveur) puis rangés
+// dans la file d'envoi, dans l'étape de la transaction (écriture
+// optimiste, décision 0012) : la transaction locale est validée tout de
+// suite ; la synchronisation les fait sur le serveur avant les données de
+// l'étape, et défait le changement en local si le serveur le refuse.
+// L'annulation d'un changement de structure est une transaction comme une
+// autre : elle envoie l'opération inverse.
 
 // Changements de structure (Change.Action).
 const (
@@ -34,25 +38,48 @@ const (
 // Change est un changement de structure d'un tableau publié, en
 // identifiants locaux.
 type Change struct {
-	Table  int64
-	Action string
+	Table  int64  `json:"t"`
+	Action string `json:"a"`
 	// Column : colonne visée (colonnes) ; Name : nouveau nom (tableau,
 	// colonne ajoutée ou renommée), ancien nom pour une suppression ; Type :
 	// nouveau type local (grid.Type) d'une colonne ajoutée ou convertie.
-	Column int64
-	Name   string
-	Type   string
+	Column int64  `json:"c,omitempty"`
+	Name   string `json:"n,omitempty"`
+	Type   string `json:"y,omitempty"`
 	// Prev : colonne ajoutée, colonnes saisies qui la précèdent, de la plus
 	// proche à la plus lointaine (la première publiée donne sa place sur le
 	// serveur).
-	Prev []int64
+	Prev []int64 `json:"p,omitempty"`
 	// Key : nouvelle colonne clé (0 : plus de clé).
-	Key int64
+	Key int64 `json:"k,omitempty"`
 }
 
-// StructureFunc fait sur le serveur les changements de structure d'une
-// transaction du bus (kind : command.KindDo, KindUndo, KindRedo), dans la
-// transaction locale tx, avant sa validation ; une erreur la défait.
+// OpStructure : opération de la file d'envoi qui porte un changement de
+// structure d'un tableau publié (Op.Table, Op.New : Change), envoyé avant
+// les données de son étape (collab.Engine).
+const OpStructure = "structure"
+
+// StructureOp range un changement de structure dans une opération de la
+// file d'envoi.
+func StructureOp(ch Change) command.Op {
+	return command.Op{Kind: OpStructure, Table: ch.Table, New: ch}
+}
+
+// DecodeStructure relit le changement d'une opération OpStructure.
+func DecodeStructure(op command.Op) (Change, error) {
+	var ch Change
+	raw, err := json.Marshal(op.New)
+	if err != nil {
+		return ch, err
+	}
+	err = json.Unmarshal(raw, &ch)
+	return ch, err
+}
+
+// StructureFunc vérifie les changements de structure d'une transaction du
+// bus (kind : command.KindDo, KindUndo, KindRedo), dans la transaction
+// locale tx, avant sa validation ; une erreur la défait. Acceptés, ils
+// partent par la file d'envoi (OpStructure).
 type StructureFunc func(ctx context.Context, tx *sql.Tx, kind string, changes []Change) error
 
 // structure : partie du Recorder pour la structure (SetStructure).
@@ -252,9 +279,9 @@ func dropWanted(ops []command.Op, tbl int64) bool {
 }
 
 // structure compare la forme des tableaux publiés avant et après la
-// transaction et confie les changements à fn ; ops : opérations
-// enregistrées (Tx.Record).
-func (s *session) structure(fn StructureFunc, kind string, ops []command.Op) error {
+// transaction, fait vérifier les changements par fn et les range dans la
+// file d'envoi (w) ; ops : opérations enregistrées (Tx.Record).
+func (s *session) structure(fn StructureFunc, w *writer, kind string, ops []command.Op) error {
 	ids := make([]int64, 0, len(s.pub))
 	for id := range s.pub {
 		ids = append(ids, id)
@@ -282,7 +309,18 @@ func (s *session) structure(fn StructureFunc, kind string, ops []command.Op) err
 			return ErrImplicitDrop{Table: c.Name}
 		}
 	}
-	return fn(s.ctx, s.tx, kind, ch)
+	if err := fn(s.ctx, s.tx, kind, ch); err != nil {
+		return err
+	}
+	// Une entrée à part, dans l'étape de la transaction : envoyée avant ses
+	// données (une valeur saisie dans une colonne ajoutée la suppose).
+	if err := w.flush(); err != nil {
+		return err
+	}
+	for _, c := range ch {
+		w.buf = append(w.buf, StructureOp(c))
+	}
+	return w.flush()
 }
 
 // restored note un tableau supprimé du serveur (sa ligne de

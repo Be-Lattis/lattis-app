@@ -82,6 +82,9 @@
 	import { clampZoom } from '#lib/grid/zoom.js';
 	import ZoomBar from '#lib/shell/ZoomBar.svelte';
 	import BusyBar from '#lib/shell/BusyBar.svelte';
+	import SyncStatusBar from '#lib/shell/SyncStatus.svelte';
+	import { syncOf, type SyncStatus } from '#lib/shell/sync.js';
+	import { syncCall } from '#lib/shell/busy.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { groupSessions, olderLabel, sessionName } from '#lib/shell/recovery.js';
 	import { setTileFetcher } from '#lib/chart/tiles.js';
@@ -193,6 +196,12 @@
 	// Classeur partagé sur un Serveur Lattis : état (bandeau, Fichier ›
 	// Republier), boîtes Partager / Republier et Ouvrir depuis un serveur.
 	let share = $state<ShareState | null>(null);
+	// Classeur collaboratif : file d'envoi (barre d'état « Synchronisation… »),
+	// tenue par l'état de partage et par share:sync (sans relire la mise en page).
+	let syncNow = $state<SyncStatus | null>(null);
+	$effect(() => {
+		syncNow = syncOf(share);
+	});
 	// Classeur collaboratif : volet Conflits (ouvert de lui-même quand un
 	// conflit apparaît).
 	let conflictsOpen = $state(false);
@@ -229,7 +238,7 @@
 			);
 			if (!ok) return;
 			notice = `Ajout de « ${table} » au classeur partagé…`;
-			docState = await DocumentService.ShareAddTable(table);
+			docState = await syncCall(DocumentService.ShareAddTable(table));
 			notice = docState.notice || `Tableau « ${table} » ajouté au classeur partagé`;
 			share = await DocumentService.ShareState().catch(() => share);
 			await reload();
@@ -1021,6 +1030,10 @@
 			if (e?.data) share = e.data;
 			if (mode === 'doc') reload().catch(() => {});
 		});
+		// Classeur collaboratif : la file part ou change (barre d'état).
+		const offSync = Events.On('share:sync', (e: { data?: SyncStatus }) => {
+			if (e?.data) syncNow = e.data.shared ? e.data : null;
+		});
 		// Travail à plusieurs : arrivées, départs, conflits, dossier injoignable.
 		const offCoEdit = Events.On('coedit:changed', (e: { data?: CoEditState }) => {
 			if (e?.data) coedit = e.data;
@@ -1174,6 +1187,7 @@
 			offQuit();
 			offLink();
 			offShare();
+			offSync();
 			offCoEdit();
 			offSource();
 			window.removeEventListener('keydown', keys);
@@ -2681,6 +2695,7 @@
 		{:else}
 			<span>Prêt</span>
 		{/if}
+		{#if mode === 'doc'}<SyncStatusBar status={syncNow} />{/if}
 		<BusyBar />
 		<PickBanner />
 		{#if data && view === 'grid' && !activePage}<ZoomBar {zoom} onzoom={setZoom} />{/if}

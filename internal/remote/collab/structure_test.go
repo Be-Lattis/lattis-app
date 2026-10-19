@@ -124,6 +124,7 @@ func TestStructureFollowedByColleague(t *testing.T) {
 	// Colonne ajoutée : faite sur le serveur (après « Produit »), reçue par
 	// Bob ; une valeur saisie ensuite y passe.
 	must(t, alice.d.InsertColumn(ctx, "Ventes", 1, "Remise"))
+	alice.send() // écriture optimiste : faite en local, envoyée par la file
 	cols, _ := serverCols(f, id, "Ventes")
 	eq(t, "serveur après ajout", cols, []string{"Produit:text", "Remise:text", "Quantité:integer", "Prix:decimal"})
 	waitFor(t, "colonne Remise chez Bob", func() bool {
@@ -135,6 +136,7 @@ func TestStructureFollowedByColleague(t *testing.T) {
 
 	// Colonne renommée (en-tête) : les valeurs restent.
 	must(t, alice.header(3, "Tarif"))
+	alice.send()
 	cols, _ = serverCols(f, id, "Ventes")
 	eq(t, "serveur après renommage", cols, []string{"Produit:text", "Remise:text", "Quantité:integer", "Tarif:decimal"})
 	waitFor(t, "Tarif chez Bob", func() bool { return strings.Contains(strings.Join(colsOf(bob, "Ventes"), "|"), "Tarif:decimal") })
@@ -142,6 +144,7 @@ func TestStructureFollowedByColleague(t *testing.T) {
 
 	// Type changé : converti sur le serveur, relu par Bob.
 	must(t, alice.d.SetType(ctx, "Ventes", 2, grid.Decimal))
+	alice.send()
 	cols, _ = serverCols(f, id, "Ventes")
 	eq(t, "serveur après conversion", cols, []string{"Produit:text", "Remise:text", "Quantité:decimal", "Tarif:decimal"})
 	waitFor(t, "Quantité décimale chez Bob", func() bool { return strings.Contains(strings.Join(colsOf(bob, "Ventes"), "|"), "Quantité:decimal") })
@@ -149,6 +152,7 @@ func TestStructureFollowedByColleague(t *testing.T) {
 
 	// Clé : posée sur le serveur, suivie par Bob (*structure et *meta).
 	must(t, alice.d.SetKey(ctx, "Ventes", 0))
+	alice.send()
 	if _, key := serverCols(f, id, "Ventes"); key != "Produit" {
 		t.Fatalf("clé du serveur : %q", key)
 	}
@@ -156,12 +160,14 @@ func TestStructureFollowedByColleague(t *testing.T) {
 
 	// Colonne supprimée.
 	must(t, alice.d.DeleteColumn(ctx, "Ventes", 1))
+	alice.send()
 	cols, _ = serverCols(f, id, "Ventes")
 	eq(t, "serveur après suppression", cols, []string{"Produit:text", "Quantité:decimal", "Tarif:decimal"})
 	waitFor(t, "Remise supprimée chez Bob", func() bool { return !strings.Contains(strings.Join(colsOf(bob, "Ventes"), "|"), "Remise") })
 
 	// Tableau renommé : les écritures suivent le nouveau nom.
 	must(t, alice.d.RenameTable(ctx, "Ventes", "Achats"))
+	alice.send()
 	if _, _, _, tables := f.Book(id); strings.Join(tables, ",") != "Achats" {
 		t.Fatalf("tableaux du serveur : %v", tables)
 	}
@@ -177,6 +183,7 @@ func TestStructureFollowedByColleague(t *testing.T) {
 
 	// Tableau supprimé.
 	must(t, alice.d.DeleteTables(ctx, []string{"Achats"}))
+	alice.send()
 	if _, _, _, tables := f.Book(id); len(tables) != 0 {
 		t.Fatalf("tableaux du serveur après suppression : %v", tables)
 	}
@@ -219,24 +226,39 @@ func TestStructureRefusedByServer(t *testing.T) {
 	f, alice, bob, id := setup(t)
 	srv := f.As("alice")
 	tid, _ := remoteID(t, alice, "Produit")
+	before := colsOf(alice, "Ventes")
+	// Écriture optimiste (décision 0012) : le changement est fait en local
+	// tout de suite ; l'envoi le fait refuser par le serveur, il est défait
+	// en local (forme et données du serveur), avec le message du serveur.
 	refused := func(what string, err error, want string) {
 		t.Helper()
-		var re *collab.RefusedError
-		if !errors.As(err, &re) || !strings.HasPrefix(err.Error(), "Refusé par le serveur : ") || !strings.Contains(err.Error(), want) {
-			t.Fatalf("%s : %v (attendu « %s »)", what, err, want)
+		if err != nil {
+			t.Fatalf("%s : refusé en local : %v", what, err)
+		}
+		if strings.Join(colsOf(alice, "Ventes"), "|") == strings.Join(before, "|") && hasTable(alice, "Ventes") {
+			t.Fatalf("%s : pas appliqué en local avant l'envoi", what)
+		}
+		r := alice.send()
+		all := strings.Join(r.Notices, " ; ")
+		if r.Rejected != 1 || !strings.Contains(all, "Refusé par le serveur : ") || !strings.Contains(all, want) || !strings.Contains(all, "la modification a été annulée") {
+			t.Fatalf("%s : %+v (attendu « %s »)", what, r, want)
+		}
+		eq(t, what+" : Alice rétablie", colsOf(alice, "Ventes"), before)
+		eq(t, what+" : valeurs rétablies", alice.col("Prix"), []string{"4.5", "2.0", "3.25"})
+		eq(t, what+" : Produit", alice.col("Produit"), []string{"Café", "Thé", "Chocolat"})
+		if alice.states()["pending"] != 0 {
+			t.Fatalf("%s : file : %v", what, alice.states())
 		}
 	}
-	before := colsOf(alice, "Ventes")
-	state, err := alice.d.Bus.State(ctx)
-	must(t, err)
 
 	// Colonne citée par une restriction : ni renommée, ni convertie, ni
-	// supprimée ; rien ne change en local.
-	_, err = srv.AddRestriction(ctx, id, workbook.RestrictionRule{TableID: tid, Command: "select", Predicate: `"Quantité" > 0`, Label: "En stock"})
+	// supprimée.
+	_, err := srv.AddRestriction(ctx, id, workbook.RestrictionRule{TableID: tid, Command: "select", Predicate: `"Quantité" > 0`, Label: "En stock"})
 	must(t, err)
 	refused("renommage", alice.header(1, "Qté"), "la colonne « Quantité » est citée par la restriction « En stock » : modifiez d'abord ce filtre")
 	refused("conversion", alice.d.SetType(ctx, "Ventes", 1, grid.Decimal), "restriction « En stock »")
 	refused("suppression", alice.d.DeleteColumn(ctx, "Ventes", 1), "la colonne « Quantité » est citée par la restriction « En stock » : modifiez-le d'abord")
+	eq(t, "Quantité rétablie", alice.col("Quantité"), []string{"3", "10", "1"})
 
 	// Colonne citée par le filtre d'un rôle.
 	role, err := srv.CreateRole(ctx, id, "Nord")
@@ -255,21 +277,22 @@ func TestStructureRefusedByServer(t *testing.T) {
 		t.Fatalf("conversion en plage : %v", err)
 	}
 
-	// Tableau qui alimente le Data Lake.
+	// Tableau qui alimente le Data Lake : supprimé en local, il revient
+	// (reçu du serveur, toujours partagé).
 	_, err = srv.CreateDataset(ctx, workbook.DatasetSpec{WorkbookID: id, TableID: tid, Name: "Ventes publiques"})
 	must(t, err)
 	refused("suppression du tableau", alice.d.DeleteTables(ctx, []string{"Ventes"}), "le tableau « Ventes » alimente le Data Lake (« Ventes publiques ») : retirez d'abord ces données")
+	if alice.d.Share.TableShare(tableID(t, alice.d)) != "published" {
+		t.Fatal("tableau rétabli mais plus partagé")
+	}
 
-	eq(t, "Alice inchangée", colsOf(alice, "Ventes"), before)
 	cols, _ := serverCols(f, id, "Ventes")
 	eq(t, "serveur inchangé", cols, []string{"Produit:text", "Quantité:integer", "Prix:decimal"})
-	if st, err := alice.d.Bus.State(ctx); err != nil || st != state {
-		t.Fatalf("historique : %+v (avant %+v), %v", st, state, err)
-	}
 
 	// Une colonne libre se renomme toujours.
 	must(t, alice.d.InsertColumn(ctx, "Ventes", 3, "Note"))
 	must(t, alice.header(3, "Commentaire"))
+	alice.send()
 	cols, _ = serverCols(f, id, "Ventes")
 	eq(t, "serveur", cols, []string{"Produit:text", "Quantité:integer", "Prix:decimal", "Commentaire:text"})
 
@@ -284,6 +307,37 @@ func TestStructureRefusedByServer(t *testing.T) {
 	}
 }
 
+// TestStructureRefusedDropsDependents : refusé par le serveur, un
+// changement de structure emporte les changements de structure suivants du
+// même tableau encore en attente (ils le supposaient) ; les données
+// saisies entre-temps dans les colonnes publiées partent quand même.
+func TestStructureRefusedDropsDependents(t *testing.T) {
+	ctx := context.Background()
+	f, alice, _, id := setup(t)
+	tid, _ := remoteID(t, alice, "Produit")
+	_, err := f.As("alice").AddRestriction(ctx, id, workbook.RestrictionRule{TableID: tid, Command: "select", Predicate: `"Quantité" > 0`, Label: "En stock"})
+	must(t, err)
+	must(t, alice.header(1, "Qté"))                         // refusé par le serveur
+	must(t, alice.d.InsertColumn(ctx, "Ventes", 3, "Note")) // suit le renommage refusé
+	alice.mustSet(1, 2, "9")                                // Prix : colonne publiée
+	eq(t, "Alice avant l'envoi", colsOf(alice, "Ventes"), []string{"Produit:text", "Qté:integer", "Prix:decimal", "Note:text"})
+	r := alice.send()
+	all := strings.Join(r.Notices, " ; ")
+	if !strings.Contains(all, "la modification a été annulée") || !strings.Contains(all, "1 changement(s) de structure suivant(s)") {
+		t.Fatalf("rapport : %+v", r)
+	}
+	eq(t, "Alice après le refus", colsOf(alice, "Ventes"), []string{"Produit:text", "Quantité:integer", "Prix:decimal"})
+	eq(t, "Prix gardé", alice.col("Prix"), []string{"4.5", "9.0", "3.25"})
+	if v, _, _, _ := f.Value(id, "Ventes", rowID(t, alice.d, 1), "Prix"); v != 9.0 {
+		t.Fatalf("Prix sur le serveur : %v", v)
+	}
+	cols, _ := serverCols(f, id, "Ventes")
+	eq(t, "serveur", cols, []string{"Produit:text", "Quantité:integer", "Prix:decimal"})
+	if n := alice.states()["pending"]; n != 0 {
+		t.Fatalf("file : %v", alice.states())
+	}
+}
+
 func TestStructureUndo(t *testing.T) {
 	ctx := context.Background()
 	f, alice, bob, id := setup(t)
@@ -292,8 +346,10 @@ func TestStructureUndo(t *testing.T) {
 		_, err := bob.e.ReceiveStructure(ctx, nil, map[int64]bool{tableID(t, bob.d): true})
 		must(t, err)
 	}
+	// server envoie la file d'Alice et compare les colonnes du serveur.
 	server := func(want ...string) {
 		t.Helper()
+		alice.send()
 		cols, _ := serverCols(f, id, "Ventes")
 		eq(t, "serveur", cols, want)
 	}
@@ -318,42 +374,49 @@ func TestStructureUndo(t *testing.T) {
 	eq(t, "Bob sans Prix", colsOf(bob, "Ventes"), []string{"Produit:text", "Quantité:integer"})
 	_, err = alice.d.Bus.Undo(ctx)
 	must(t, err)
-	server("Produit:text", "Quantité:integer", "Prix:decimal")
 	if r := alice.send(); r.Rejected != 0 {
 		t.Fatalf("valeurs rétablies : %+v", r)
 	}
+	server("Produit:text", "Quantité:integer", "Prix:decimal")
 	if v, _, _, _ := f.Value(id, "Ventes", rowID(t, alice.d, 0), "Prix"); v != 4.5 {
 		t.Fatalf("Prix rétabli sur le serveur : %v", v)
 	}
 	reload()
 	eq(t, "Bob Prix rétabli", bob.col("Prix"), []string{"4.5", "2.0", "3.25"})
 
-	// Renommage et conversion annulés.
+	// Renommage et conversion annulés, avant même leur envoi : la file
+	// envoie l'aller puis le retour, dans l'ordre.
 	must(t, alice.header(0, "Article"))
 	must(t, alice.d.SetType(ctx, "Ventes", 1, grid.Decimal))
-	server("Article:text", "Quantité:decimal", "Prix:decimal")
 	_, err = alice.d.Bus.Undo(ctx)
 	must(t, err)
 	_, err = alice.d.Bus.Undo(ctx)
 	must(t, err)
 	server("Produit:text", "Quantité:integer", "Prix:decimal")
 
-	// Annulation refusée par le serveur : l'étape reste à annuler.
+	// Annulation refusée par le serveur : la colonne revient en local (forme
+	// du serveur), l'historique du tableau est effacé.
 	must(t, alice.d.InsertColumn(ctx, "Ventes", 3, "Zone"))
+	alice.send()
 	tid, _ := remoteID(t, alice, "Zone")
 	_, err = f.As("alice").AddRestriction(ctx, id, workbook.RestrictionRule{TableID: tid, Command: "all", Predicate: `"Zone" = 'Nord'`, Label: "Zone nord"})
 	must(t, err)
 	_, err = alice.d.Bus.Undo(ctx)
-	if err == nil || !strings.HasPrefix(err.Error(), "Annulation refusée par le serveur : la colonne « Zone » est citée par la restriction « Zone nord »") {
-		t.Fatalf("annulation refusée : %v", err)
+	must(t, err)
+	eq(t, "Zone retirée en local", colsOf(alice, "Ventes"), []string{"Produit:text", "Quantité:integer", "Prix:decimal"})
+	r := alice.send()
+	if all := strings.Join(r.Notices, " ; "); !strings.Contains(all, "Annulation refusée par le serveur : la colonne « Zone » est citée par la restriction « Zone nord »") || !strings.Contains(all, "la modification a été annulée") {
+		t.Fatalf("annulation refusée : %+v", r)
 	}
-	if st, _ := alice.d.Bus.State(ctx); st.Undo != "Insérer une colonne" {
+	eq(t, "Zone rétablie", colsOf(alice, "Ventes"), []string{"Produit:text", "Quantité:integer", "Prix:decimal", "Zone:text"})
+	if st, _ := alice.d.Bus.State(ctx); st.Undo != "" || st.Redo != "" {
 		t.Fatalf("historique après refus : %+v", st)
 	}
 	server("Produit:text", "Quantité:integer", "Prix:decimal", "Zone:text")
 
 	// Suppression du tableau annulée : rétabli sur ce poste seulement.
 	must(t, alice.d.DeleteTables(ctx, []string{"Ventes"}))
+	alice.send()
 	_, err = alice.d.Bus.Undo(ctx)
 	must(t, err)
 	if msg := collab.UndoNotice(alice.d.Oplog, false); !strings.Contains(msg, "« Ventes » est rétabli sur ce poste seulement") {
@@ -364,6 +427,30 @@ func TestStructureUndo(t *testing.T) {
 	}
 	if _, _, _, tables := f.Book(id); len(tables) != 0 {
 		t.Fatalf("serveur : %v", tables)
+	}
+}
+
+// TestStructureUndoBeforeSend : un tableau supprimé puis rétabli par
+// Ctrl+Z avant l'envoi part quand même du serveur (l'étape d'aller est
+// envoyée) ; il reste sur ce poste seulement, et le message le dit.
+func TestStructureUndoBeforeSend(t *testing.T) {
+	ctx := context.Background()
+	f, alice, _, id := setup(t)
+	must(t, alice.d.DeleteTables(ctx, []string{"Ventes"}))
+	_, err := alice.d.Bus.Undo(ctx)
+	must(t, err)
+	r := alice.send()
+	if all := strings.Join(r.Notices, " ; "); !strings.Contains(all, "« Ventes » est rétabli sur ce poste seulement") {
+		t.Fatalf("rapport : %+v", r)
+	}
+	if !hasTable(alice, "Ventes") || alice.d.Share.TableShare(tableID(t, alice.d)) == "published" {
+		t.Fatal("tableau rétabli : absent, ou encore publié")
+	}
+	if _, _, _, tables := f.Book(id); len(tables) != 0 {
+		t.Fatalf("serveur : %v", tables)
+	}
+	if alice.states()["pending"] != 0 {
+		t.Fatalf("file : %v", alice.states())
 	}
 }
 
@@ -384,6 +471,7 @@ func TestStructureReceivedClearsHistory(t *testing.T) {
 		t.Fatalf("relecture sans changement : %+v, %+v", st, r)
 	}
 	must(t, alice.header(2, "Tarif"))
+	alice.send()
 	r, err = bob.e.ReceiveStructure(ctx, nil, map[int64]bool{tableID(t, bob.d): true})
 	must(t, err)
 	if st, _ := bob.d.Bus.State(ctx); st.Undo != "" {

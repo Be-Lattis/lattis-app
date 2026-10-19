@@ -32,6 +32,7 @@ func TestStructureInsertPosition(t *testing.T) {
 			ctx := context.Background()
 			f, alice, bob, id := setup(t)
 			must(t, alice.d.InsertColumn(ctx, "Ventes", c.at, "Remise"))
+			alice.send() // écriture optimiste : envoyée par la file
 			eq(t, "Alice", colsOf(alice, "Ventes"), c.want)
 			cols, _ := serverCols(f, id, "Ventes")
 			eq(t, "serveur", cols, c.want)
@@ -62,10 +63,12 @@ func TestStructureInsertBefore26(t *testing.T) {
 	f, alice, bob, id := setup(t)
 	f.Before26 = true
 	must(t, alice.d.InsertColumn(ctx, "Ventes", 0, "Remise"))
+	alice.send()
 	eq(t, "Alice", colsOf(alice, "Ventes"), []string{"Remise:text", "Produit:text", "Quantité:integer", "Prix:decimal"})
 	cols, _ := serverCols(f, id, "Ventes")
 	eq(t, "serveur", cols, []string{"Produit:text", "Quantité:integer", "Prix:decimal", "Remise:text"})
 	must(t, alice.d.InsertColumn(ctx, "Ventes", 2, "Note"))
+	alice.send()
 	cols, _ = serverCols(f, id, "Ventes")
 	eq(t, "serveur (milieu)", cols, []string{"Produit:text", "Note:text", "Quantité:integer", "Prix:decimal", "Remise:text"})
 	if f.Calls["insert_column"] != 0 || f.Calls["add_column"] != 2 {
@@ -114,8 +117,10 @@ func TestStructureKeyByStructureNotice(t *testing.T) {
 	waitOnline(t, bob, alice)
 
 	must(t, alice.d.SetKey(ctx, "Ventes", 0))
+	alice.e.Kick() // le pont le fait après chaque action
 	waitFor(t, "clé chez Bob", func() bool { return keyOf(bob, "Ventes") == "Produit" })
 	must(t, alice.d.ClearKey(ctx, "Ventes"))
+	alice.e.Kick()
 	waitFor(t, "clé retirée chez Bob", func() bool { return keyOf(bob, "Ventes") == "" })
 	tid, _ := remoteID(t, alice, "Produit")
 	mu.Lock()

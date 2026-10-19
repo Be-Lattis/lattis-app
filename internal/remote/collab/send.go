@@ -97,6 +97,18 @@ func (e *Engine) send(ctx context.Context) (Report, error) {
 		if len(entries) == 0 {
 			break
 		}
+		// Changements de structure de l'étape : faits d'abord (les données
+		// de l'étape les supposent), puis la correspondance est relue.
+		if i := slices.IndexFunc(entries, entry.isStructure); i >= 0 {
+			if err := e.sendStructure(ctx, srv, info, entries[i], &rep); err != nil {
+				return rep, err
+			}
+			if tables, err = remoteTables(ctx, e.db.Read()); err != nil {
+				return rep, err
+			}
+			retried = false
+			continue
+		}
 		o, err := e.sendBatch(ctx, srv, info, tables, entries)
 		if errors.Is(err, errStale) && !retried {
 			// Structure changée pendant l'envoi (colonne ou tableau renommé
@@ -204,9 +216,11 @@ func (e *Engine) sendBatch(ctx context.Context, srv workbook.Server, info *workb
 		for _, op := range en.ops {
 			t := tables[op.Table]
 			if t == nil || op.Kind == command.OpMeta {
-				// Mise en page : étape 7. La structure ne passe pas par la file :
-				// elle est faite sur le serveur avant la validation locale
-				// (Engine.Structure).
+				// Mise en page : étape 7. La structure (oplog.OpStructure) est
+				// envoyée avant l'étape (sendStructure).
+				continue
+			}
+			if op.Kind == oplog.OpStructure {
 				continue
 			}
 			it := item{entry: ei, op: op, t: t}

@@ -316,6 +316,12 @@ export interface State {
      */
     "pending"?: number;
     "conflicts"?: number;
+
+    /**
+     * Sending : la file part vers le serveur (barre d'état :
+     * « Synchronisation… »).
+     */
+    "sending"?: boolean;
 }
 
 /**

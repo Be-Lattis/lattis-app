@@ -296,11 +296,12 @@ func (e *Engine) purge(ctx context.Context) error {
 }
 
 // Counts compte les étapes en attente d'envoi et les conflits ouverts, et
-// les note dans l'état de partage ; vrai si l'état a changé.
-func (e *Engine) Counts(ctx context.Context) (pending, conflicts int, changed bool, err error) {
+// les note dans l'état de partage. state : l'état de partage a changé
+// (conflits, file hors ligne) ; sync : la file a changé (barre d'état).
+func (e *Engine) Counts(ctx context.Context) (pending, conflicts int, state, sync bool, err error) {
 	err = e.db.Read().QueryRowContext(ctx, `SELECT (SELECT count(DISTINCT batch) FROM _lattis_outbox WHERE state = 'pending'), (SELECT count(*) FROM _lattis_conflicts)`).Scan(&pending, &conflicts)
 	if err == nil {
-		changed = e.link.SetQueue(pending, conflicts)
+		state, sync = e.link.SetQueue(pending, conflicts)
 	}
 	return
 }

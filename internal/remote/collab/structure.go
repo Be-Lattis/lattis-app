@@ -20,16 +20,19 @@ import (
 // Structure des tableaux publiés d'un classeur collaboratif (spécification
 // de l'application §6.4 ; fonctions du serveur §9.3, schema/0025) :
 //
-//   - envoi : le relevé du bus (oplog.Recorder.SetStructure) confie à
-//     Engine.Structure les changements de structure d'une transaction
-//     locale (tableau renommé ou supprimé, colonne ajoutée, renommée,
-//     supprimée ou convertie, clé) ; ils sont faits sur le serveur, dans
-//     une transaction, avant la validation locale. Un refus du serveur (une
-//     colonne citée par un filtre, un tableau qui alimente le Data Lake…)
-//     défait toute la transaction locale : rien n'est appliqué, le message
-//     du serveur s'affiche. L'annulation est une transaction comme une
-//     autre : elle envoie l'opération inverse (refusée de même, elle reste
-//     à annuler) ;
+//   - envoi (écriture optimiste, décision 0012) : le relevé du bus
+//     (oplog.Recorder.SetStructure) fait vérifier par Engine.Structure les
+//     changements de structure d'une transaction locale (tableau renommé ou
+//     supprimé, colonne ajoutée, renommée, supprimée ou convertie, clé) :
+//     droits et connexion, en local, sans attendre le serveur. La
+//     transaction est validée tout de suite ; les changements partent par
+//     la file d'envoi (oplog.OpStructure), faits sur le serveur dans une
+//     transaction avant les données de leur étape (sendStructure). Un refus
+//     du serveur (une colonne citée par un filtre, un tableau qui alimente
+//     le Data Lake…) défait le changement en local, hors du journal
+//     d'annulation (revertStructure : forme et données du serveur), et
+//     son message s'affiche. L'annulation est une transaction comme une
+//     autre : elle envoie l'opération inverse ;
 //   - réception : sur « *structure:<table_id> » (clé comprise depuis la
 //     migration 0026 ; « *meta » et la connexion : tous), la structure du serveur est comparée à celle que le
 //     poste connaît (_lattis_remote_tables.columns) ; le tableau local
@@ -40,7 +43,7 @@ import (
 // Voir docs/collaboration/synchronisation.md.
 
 // StructureTimeout borne l'appel au serveur d'un changement de structure
-// (la transaction locale attend sa réponse).
+// envoyé par la file, et de l'ajout d'un tableau au classeur partagé.
 var StructureTimeout = 30 * time.Second
 
 // RefusedError est un changement de structure refusé par le serveur ; Msg
@@ -84,10 +87,12 @@ func (t *rtable) column(local int64) (int, bool) {
 	return i, i >= 0
 }
 
-// Structure fait sur le serveur les changements de structure d'une
-// transaction locale (oplog.StructureFunc), avant sa validation, et note
-// la nouvelle correspondance des colonnes dans tx. Classeur figé : rien
-// (l'auteur prépare la version suivante en local).
+// Structure vérifie les changements de structure d'une transaction locale
+// (oplog.StructureFunc) avant sa validation, sans appel au serveur :
+// tableau verrouillé, propriétaire ou concepteur, en ligne. Acceptés, ils
+// partent par la file d'envoi (oplog.OpStructure), faits sur le serveur
+// par Send avant les données de leur étape (sendStructure). Classeur
+// figé : rien (l'auteur prépare la version suivante en local).
 func (e *Engine) Structure(ctx context.Context, tx *sql.Tx, kind string, changes []oplog.Change) error {
 	info := e.link.Info()
 	if info == nil || info.Mode != workbook.Collaborative || len(changes) == 0 {
@@ -101,11 +106,52 @@ func (e *Engine) Structure(ctx context.Context, tx *sql.Tx, kind string, changes
 	if !info.CanDesign() {
 		return workbook.ErrDesign
 	}
-	srv := e.server()
-	if srv == nil || !e.link.Online() {
+	if e.server() == nil || !e.link.Online() {
 		return workbook.ErrOffline
 	}
-	tables, err := remoteTables(ctx, tx)
+	return nil
+}
+
+// isStructure : l'entrée de la file porte des changements de structure.
+func (en entry) isStructure() bool {
+	return len(en.ops) > 0 && en.ops[0].Kind == oplog.OpStructure
+}
+
+// structureChanges relit les changements d'une entrée de structure.
+func (en entry) structureChanges() ([]oplog.Change, error) {
+	out := make([]oplog.Change, 0, len(en.ops))
+	for _, op := range en.ops {
+		if op.Kind != oplog.OpStructure {
+			continue
+		}
+		ch, err := oplog.DecodeStructure(op)
+		if err != nil {
+			return nil, fmt.Errorf("file d'envoi, entrée %d : %w", en.id, err)
+		}
+		out = append(out, ch)
+	}
+	return out, nil
+}
+
+// RefusedNotice : message de la barre d'état quand le serveur refuse un
+// changement de structure déjà appliqué en local (écriture optimiste) : il
+// est défait sur ce poste.
+func RefusedNotice(kind, msg string) string {
+	return (&RefusedError{Kind: kind, Msg: msg}).Error() + " — la modification a été annulée"
+}
+
+// sendStructure fait sur le serveur les changements de structure d'une
+// entrée de la file, dans une transaction du serveur, et note la nouvelle
+// correspondance. Une coupure (erreur rendue) laisse l'entrée en attente.
+// Un refus défait le changement en local, hors du journal d'annulation
+// (revertStructure), avec les changements de structure suivants des mêmes
+// tableaux, encore en attente : ils supposaient celui-ci.
+func (e *Engine) sendStructure(ctx context.Context, srv workbook.Server, info *workbook.Info, en entry, rep *Report) error {
+	changes, err := en.structureChanges()
+	if err != nil {
+		return err
+	}
+	tables, err := remoteTables(ctx, e.db.Read())
 	if err != nil {
 		return err
 	}
@@ -130,21 +176,365 @@ func (e *Engine) Structure(ctx context.Context, tx *sql.Tx, kind string, changes
 		return nil
 	})
 	if err != nil {
-		return serverError(kind, err)
+		if _, ok := workbook.Rejected(err); !ok {
+			return err // coupure : l'entrée reste en attente
+		}
+		return e.refuseStructure(ctx, srv, info, en, changes, workbook.ServerMessage(err), rep)
 	}
-	for tbl, t := range work {
-		if dropped[tbl] {
-			if err := forgetTable(ctx, tx, tbl); err != nil {
+	restored := []string{}
+	err = e.db.Write(ctx, func(tx *sql.Tx) error {
+		restored = restored[:0]
+		for tbl, t := range work {
+			if dropped[tbl] {
+				if err := forgetTable(ctx, tx, tbl); err != nil {
+					return err
+				}
+				// Rétabli entre-temps par une annulation (avant l'envoi) : il
+				// reste sur ce poste seulement.
+				var name string
+				if tx.QueryRowContext(ctx, `SELECT name FROM _lattis_tables WHERE id = ?`, tbl).Scan(&name) == nil {
+					restored = append(restored, name)
+				}
+				continue
+			}
+			if err := saveMapping(ctx, tx, tbl, t.remote.Name, t.remote.Columns); err != nil {
 				return err
 			}
-			e.link.Unpublish(tbl)
-			continue
 		}
-		if err := saveMapping(ctx, tx, tbl, t.remote.Name, t.remote.Columns); err != nil {
-			return err
+		_, err := tx.ExecContext(ctx, `UPDATE _lattis_outbox SET state = 'sent' WHERE id = ?`, en.id)
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	for tbl := range dropped {
+		e.link.Unpublish(tbl)
+	}
+	for _, name := range restored {
+		rep.notice("Le tableau « " + name + " » est rétabli sur ce poste seulement : il a été supprimé du serveur et n'est plus partagé")
+	}
+	rep.Sent++
+	return nil
+}
+
+// refuseStructure traite le refus d'une entrée de structure : elle est
+// notée refusée, avec les changements de structure suivants des mêmes
+// tableaux encore en attente, et les tableaux reprennent la forme et les
+// données du serveur en local (hors du journal d'annulation ; les données
+// en attente d'envoi restent et partent ensuite : une valeur d'une colonne
+// qui n'est plus sur le serveur est écartée).
+func (e *Engine) refuseStructure(ctx context.Context, srv workbook.Server, info *workbook.Info, en entry, changes []oplog.Change, msg string, rep *Report) error {
+	tbls := map[int64]bool{}
+	added := map[int64]bool{} // colonnes ajoutées en local, à retirer
+	for _, ch := range changes {
+		tbls[ch.Table] = true
+		if ch.Action == oplog.AddColumn {
+			added[ch.Column] = true
 		}
 	}
-	return nil
+	dropped := 0
+	err := e.db.Write(ctx, func(tx *sql.Tx) error {
+		dropped = 0
+		if _, err := tx.ExecContext(ctx, `UPDATE _lattis_outbox SET state = 'rejected', error = ? WHERE id = ?`, msg, en.id); err != nil {
+			return err
+		}
+		rs, err := tx.QueryContext(ctx, `SELECT id, ops FROM _lattis_outbox WHERE state = 'pending' AND id > ? AND ops LIKE ? ORDER BY id`, en.id, `%"k":"`+oplog.OpStructure+`"%`)
+		if err != nil {
+			return err
+		}
+		var later []int64
+		for rs.Next() {
+			var id int64
+			var data string
+			if err := rs.Scan(&id, &data); err != nil {
+				rs.Close()
+				return err
+			}
+			ops, err := command.DecodeOps(data)
+			if err != nil {
+				rs.Close()
+				return err
+			}
+			hit := false
+			for _, op := range ops {
+				if op.Kind == oplog.OpStructure && tbls[op.Table] {
+					hit = true
+					if ch, err := oplog.DecodeStructure(op); err == nil && ch.Action == oplog.AddColumn {
+						added[ch.Column] = true
+					}
+				}
+			}
+			if hit {
+				later = append(later, id)
+			}
+		}
+		rs.Close()
+		if err := rs.Err(); err != nil {
+			return err
+		}
+		for _, id := range later {
+			if _, err := tx.ExecContext(ctx, `UPDATE _lattis_outbox SET state = 'rejected', error = ? WHERE id = ?`, "abandonnée : "+msg, id); err != nil {
+				return err
+			}
+			dropped++
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	rep.Rejected++
+	note := RefusedNotice(en.kind, msg)
+	if dropped > 0 {
+		note += fmt.Sprintf(" (et %d changement(s) de structure suivant(s) du même tableau)", dropped)
+	}
+	rep.notice(note)
+	r, err := e.revertStructure(ctx, srv, info, tbls, added)
+	rep.add(r)
+	return err
+}
+
+// revertStructure redonne aux tableaux tbls la forme et les données du
+// serveur, hors du journal d'annulation : un changement de structure
+// refusé par le serveur est défait (colonnes ajoutées en local, added,
+// retirées ; colonnes supprimées recréées et relues ; noms, types et clé
+// du serveur). Un tableau supprimé en local revient comme un tableau reçu
+// (receiveArrivals). L'historique d'annulation qui touche ces tableaux est
+// effacé : ses étapes ne s'appliqueraient plus.
+func (e *Engine) revertStructure(ctx context.Context, srv workbook.Server, info *workbook.Info, tbls, added map[int64]bool) (Report, error) {
+	var rep Report
+	var server []workbook.RemoteTable
+	err := srv.Delta(ctx, func(r workbook.Reader) error {
+		var err error
+		server, err = r.Tables(ctx, info.Schema)
+		return err
+	})
+	if err != nil {
+		return rep, err
+	}
+	byID := map[string]workbook.RemoteTable{}
+	for _, t := range server {
+		byID[t.ID] = t
+	}
+	type planned struct {
+		shape  canvas.RemoteShape
+		server workbook.RemoteTable
+	}
+	var plans []planned
+	var gone []int64 // supprimés en local, à recevoir de nouveau
+	plan := func(tx *sql.Tx) ([]canvas.RemoteShape, error) {
+		plans, gone = nil, nil
+		tables, err := remoteTables(ctx, tx)
+		if err != nil {
+			return nil, err
+		}
+		for _, tbl := range sortedKeys(tbls) {
+			t := tables[tbl]
+			if t == nil {
+				continue
+			}
+			st, ok := byID[t.remote.ID]
+			if !ok {
+				plans = append(plans, planned{shape: canvas.RemoteShape{Table: tbl, Gone: true}})
+				continue
+			}
+			var n int
+			if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM _lattis_tables WHERE id = ?`, tbl).Scan(&n); err != nil {
+				return nil, err
+			}
+			if n == 0 {
+				gone = append(gone, tbl)
+				continue
+			}
+			types, err := localTypes(ctx, tx, tbl)
+			if err != nil {
+				return nil, err
+			}
+			var key int64
+			if err := tx.QueryRowContext(ctx, `SELECT coalesce(key_col, 0) FROM _lattis_tables WHERE id = ?`, tbl).Scan(&key); err != nil {
+				return nil, err
+			}
+			sh := canvas.RemoteShape{Table: tbl, Name: st.Name, KeyAt: -1}
+			for _, c := range t.remote.Columns {
+				if c.LocalID != 0 {
+					sh.Published = append(sh.Published, c.LocalID)
+				}
+			}
+			for c := range added {
+				if _, ok := types[c]; ok && !slices.Contains(sh.Published, c) {
+					sh.Published = append(sh.Published, c)
+				}
+			}
+			old := map[string]workbook.RemoteColumn{}
+			for _, c := range t.remote.Columns {
+				old[c.ID] = c
+			}
+			keyLocal := int64(0)
+			for i, c := range st.Columns {
+				sc := canvas.RemoteShapeColumn{Name: c.Name}
+				// Colonne connue : la colonne locale qui lui correspond (recréée
+				// si elle a été supprimée en local) ; inconnue (ajoutée par un
+				// collègue) : nouvelle.
+				o, known := old[c.ID]
+				lt, here := types[o.LocalID]
+				if known && o.LocalID != 0 && here {
+					sc.ID = o.LocalID
+					if workbook.RemoteType(lt) != c.Type {
+						sc.Type = workbook.LocalType(c.Type)
+					}
+				} else {
+					sc.Want, sc.Type = c.LocalID, workbook.LocalType(c.Type)
+					if known && o.LocalID != 0 {
+						sc.Want = o.LocalID
+					}
+				}
+				if c.ID == st.Key {
+					sh.KeyAt = i
+					keyLocal = sc.ID
+				}
+				sh.Columns = append(sh.Columns, sc)
+			}
+			sh.KeySet = keyLocal != key || (st.Key != "" && keyLocal == 0)
+			plans = append(plans, planned{shape: sh, server: st})
+		}
+		out := make([]canvas.RemoteShape, len(plans))
+		for i, p := range plans {
+			out[i] = p.shape
+		}
+		return out, nil
+	}
+	forgot := false
+	after := func(tx *sql.Tx, cols map[int64][]int64) error {
+		forgot = false
+		// Les étapes d'annulation qui touchent ces tableaux ne
+		// s'appliqueraient plus à leur forme rétablie.
+		touched := func(tbl int64) error {
+			var n int
+			if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM _lattis_journal WHERE steps GLOB ?`, "*t_"+strconv.FormatInt(tbl, 10)+"[^0-9]*").Scan(&n); err != nil {
+				return err
+			}
+			if n > 0 && !forgot {
+				if err := command.Forget(ctx, tx); err != nil {
+					return err
+				}
+				forgot = true
+			}
+			return nil
+		}
+		for _, p := range plans {
+			tbl := p.shape.Table
+			if p.shape.Gone {
+				if err := forgetTable(ctx, tx, tbl); err != nil {
+					return err
+				}
+			} else {
+				mapped := slices.Clone(p.server.Columns)
+				ids := cols[tbl]
+				for i := range mapped {
+					mapped[i].LocalID = 0
+					if i < len(ids) {
+						mapped[i].LocalID = ids[i]
+					}
+					mapped[i].Key = p.server.Key != "" && mapped[i].ID == p.server.Key
+				}
+				if err := saveMapping(ctx, tx, tbl, p.server.Name, mapped); err != nil {
+					return err
+				}
+			}
+			if err := touched(tbl); err != nil {
+				return err
+			}
+		}
+		// Tableau supprimé en local et refusé : oublié ici, il revient comme
+		// un tableau reçu, avec ses lignes.
+		for _, tbl := range gone {
+			if err := touched(tbl); err != nil {
+				return err
+			}
+			for _, q := range []string{
+				`DELETE FROM _lattis_remote_tables WHERE tbl = ?`,
+				`DELETE FROM _lattis_row_ids WHERE tbl = ?`,
+				`DELETE FROM _lattis_conflicts WHERE tbl = ?`,
+			} {
+				if _, err := tx.ExecContext(ctx, q, tbl); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+	changed, err := e.model.ApplyRemoteShapes(ctx, plan, after)
+	if err != nil {
+		return rep, err
+	}
+	if forgot {
+		rep.notice("historique d'annulation effacé")
+	}
+	full := map[int64]bool{}
+	for _, p := range plans {
+		if p.shape.Gone {
+			e.link.Unpublish(p.shape.Table)
+			continue
+		}
+		full[p.shape.Table] = true
+	}
+	for _, tbl := range changed {
+		if !slices.Contains(rep.Applied.Tables, tbl) {
+			rep.Applied.Tables = append(rep.Applied.Tables, tbl)
+		}
+	}
+	if len(gone) > 0 {
+		for _, tbl := range gone {
+			e.link.Unpublish(tbl)
+		}
+		r, err := e.receiveArrivals(ctx)
+		r.Notices = nil // le message du refus suffit
+		rep.add(r)
+		if err != nil {
+			return rep, err
+		}
+	}
+	if len(full) > 0 {
+		r, err := e.receive(ctx, full, full)
+		rep.add(r)
+		if err != nil {
+			return rep, err
+		}
+	}
+	return rep, nil
+}
+
+// pendingStructure : tableaux dont un changement de structure attend
+// encore le serveur. Leur réception attend son envoi : la correspondance
+// des colonnes (_lattis_remote_tables) ne le reflète pas encore.
+func pendingStructure(ctx context.Context, q interface {
+	QueryContext(ctx context.Context, q string, args ...any) (*sql.Rows, error)
+}) (map[int64]bool, error) {
+	rs, err := q.QueryContext(ctx, `SELECT ops FROM _lattis_outbox WHERE state = 'pending' AND ops LIKE ?`, `%"k":"`+oplog.OpStructure+`"%`)
+	if err != nil {
+		return nil, err
+	}
+	defer rs.Close()
+	var out map[int64]bool
+	for rs.Next() {
+		var data string
+		if err := rs.Scan(&data); err != nil {
+			return nil, err
+		}
+		ops, err := command.DecodeOps(data)
+		if err != nil {
+			return nil, err
+		}
+		for _, op := range ops {
+			if op.Kind == oplog.OpStructure {
+				if out == nil {
+					out = map[int64]bool{}
+				}
+				out[op.Table] = true
+			}
+		}
+	}
+	return out, rs.Err()
 }
 
 // structureOne fait un changement sur le serveur et le reporte dans la
@@ -365,9 +755,13 @@ func (e *Engine) syncStructure(ctx context.Context, only map[int64]bool) (Report
 		if err != nil {
 			return nil, err
 		}
+		waiting, err := pendingStructure(ctx, tx)
+		if err != nil {
+			return nil, err
+		}
 		for _, tbl := range sortedKeys(tables) {
-			if only != nil && !only[tbl] {
-				continue
+			if (only != nil && !only[tbl]) || waiting[tbl] {
+				continue // structure changée ici, pas encore envoyée
 			}
 			t := tables[tbl]
 			var local string

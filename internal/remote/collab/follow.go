@@ -20,8 +20,8 @@ type worker struct {
 	mu sync.Mutex
 	// due : tableaux notifiés à relire ; full : tout relire (connexion,
 	// reprise après une coupure).
-	due       map[int64]bool
-	full      bool
+	due  map[int64]bool
+	full bool
 	// acl : droits à relire (notification *acl ; aussi à chaque connexion).
 	acl       bool
 	listening bool
@@ -150,7 +150,21 @@ func (w *worker) cycle(ctx context.Context) {
 			ev.State = true
 		}
 	}
+	// File à envoyer : la barre d'état dit « Synchronisation… » pendant
+	// l'envoi (les modifications sont déjà faites et affichées en local).
+	if p, _, st, sy, cerr := w.e.Counts(ctx); cerr == nil {
+		ev.State = ev.State || st
+		if p > 0 && w.e.link.SetSending(true) {
+			sy = true
+		}
+		if sy {
+			w.changed(Event{Sync: true})
+		}
+	}
 	rep, err := w.e.Send(ctx)
+	if w.e.link.SetSending(false) {
+		ev.Sync = true
+	}
 	if err == nil {
 		var r Report
 		switch {
@@ -174,12 +188,13 @@ func (w *worker) cycle(ctx context.Context) {
 		ev.State = true
 		time.AfterFunc(w.retry, w.poke)
 	}
-	if _, _, changed, cerr := w.e.Counts(ctx); cerr == nil && changed {
-		ev.State = true
+	if _, _, st, sy, cerr := w.e.Counts(ctx); cerr == nil {
+		ev.State = ev.State || st
+		ev.Sync = ev.Sync || sy
 	}
 	ev.Data = rep.Changed()
 	ev.Notices = append(ev.Notices, rep.Notices...)
-	if ev.Data || ev.State || len(ev.Notices) > 0 {
+	if ev.Data || ev.State || ev.Sync || len(ev.Notices) > 0 {
 		w.changed(ev)
 	}
 }

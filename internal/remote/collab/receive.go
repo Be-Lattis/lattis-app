@@ -48,6 +48,12 @@ func (e *Engine) receive(ctx context.Context, only, full map[int64]bool) (Report
 	if err != nil {
 		return rep, err
 	}
+	// Structure changée ici et pas encore faite sur le serveur : le tableau
+	// est relu après son envoi (sa correspondance ne la reflète pas encore).
+	waiting, err := pendingStructure(ctx, e.db.Read())
+	if err != nil {
+		return rep, err
+	}
 	var batches []canvas.RemoteTable
 	since := map[int64]string{}
 	probe := ""
@@ -62,7 +68,7 @@ func (e *Engine) receive(ctx context.Context, only, full map[int64]bool) (Report
 			return err
 		}
 		for _, tbl := range sortedKeys(tables) {
-			if only != nil && !only[tbl] {
+			if (only != nil && !only[tbl]) || waiting[tbl] {
 				continue
 			}
 			t := tables[tbl]
@@ -481,6 +487,9 @@ type Event struct {
 	Data bool
 	// State : connexion, file d'attente ou conflits (bandeau, volet).
 	State bool
+	// Sync : file d'envoi en cours ou changée (barre d'état :
+	// « Synchronisation… »), sans relire la mise en page.
+	Sync bool
 	// Notices : messages pour la barre d'état.
 	Notices []string
 }

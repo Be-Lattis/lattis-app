@@ -37,6 +37,24 @@ const state = writable(false);
 /** Vrai quand une tâche longue est en cours. */
 export const busy: Readable<boolean> = { subscribe: state.subscribe };
 
+const calls = writable(0);
+/**
+ * Appels de l'interface en cours qui attendent le serveur d'un classeur
+ * partagé (syncCall) : la barre d'état dit « Synchronisation… » et pas
+ * « Traitement… » (décision 0012).
+ */
+export const syncCalls: Readable<number> = { subscribe: calls.subscribe };
+
+/** Marque un appel qui attend le serveur (voir syncCalls). */
+export async function syncCall<T>(p: Promise<T>): Promise<T> {
+	calls.update((n) => n + 1);
+	try {
+		return await p;
+	} finally {
+		calls.update((n) => n - 1);
+	}
+}
+
 let installed = false;
 
 /** Installe le suivi des appels (une fois). */

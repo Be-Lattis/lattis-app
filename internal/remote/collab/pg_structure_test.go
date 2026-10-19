@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/lalamefine/lattis/internal/grid"
-	"github.com/lalamefine/lattis/internal/remote/collab"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 )
 
@@ -62,10 +61,15 @@ func TestPostgresStructure(t *testing.T) {
 	alice, bob := p.alice, p.bob
 	tbl := func(c *client) map[int64]bool { return map[int64]bool{tableID(t, c.d): true} }
 
+	// Écriture optimiste (décision 0012) : faits en local, envoyés par la
+	// file.
 	must(t, alice.d.InsertColumn(ctx, "Ventes", 1, "Remise"))
 	must(t, alice.header(3, "Tarif"))
 	must(t, alice.d.SetType(ctx, "Ventes", 2, grid.Decimal))
 	must(t, alice.d.SetKey(ctx, "Ventes", 0))
+	if r := alice.send(); r.Rejected != 0 {
+		t.Fatalf("envoi de la structure : %+v", r)
+	}
 	eq(t, "serveur", pgColumns(t, p, "Ventes"), []string{"Produit:text", "Remise:text", "Quantité:decimal", "Tarif:decimal"})
 	_, err := bob.e.ReceiveStructure(ctx, nil, tbl(bob))
 	must(t, err)
@@ -83,17 +87,6 @@ func TestPostgresStructure(t *testing.T) {
 	bob.receive()
 	eq(t, "Bob Remise", bob.col("Remise"), []string{"5 %", "", ""})
 
-	// Colonne citée par une restriction : refus du serveur, en français.
-	tid, _ := remoteID(t, alice, "Produit")
-	_, err = p.env.As(p.aliceRole).AddRestriction(ctx, p.workbookID, workbook.RestrictionRule{TableID: tid, Command: "select", Predicate: `"Remise" IS NOT NULL OR true`, Label: "Remises"})
-	must(t, err)
-	err = alice.d.DeleteColumn(ctx, "Ventes", 1)
-	var re *collab.RefusedError
-	if !errors.As(err, &re) || !strings.Contains(err.Error(), "la colonne « Remise » est citée par la restriction « Remises »") {
-		t.Fatalf("suppression refusée : %v", err)
-	}
-	eq(t, "serveur inchangé", pgColumns(t, p, "Ventes"), []string{"Produit:text", "Remise:text", "Quantité:decimal", "Tarif:decimal"})
-
 	// Annulation : la clé, la conversion et le renommage sont défaits sur
 	// le serveur.
 	_, err = alice.d.Bus.Undo(ctx) // saisie
@@ -104,10 +97,26 @@ func TestPostgresStructure(t *testing.T) {
 	must(t, err)
 	_, err = alice.d.Bus.Undo(ctx) // renommage
 	must(t, err)
+	if r := alice.send(); r.Rejected != 0 {
+		t.Fatalf("envoi des annulations : %+v", r)
+	}
 	eq(t, "serveur après annulation", pgColumns(t, p, "Ventes"), []string{"Produit:text", "Remise:text", "Quantité:integer", "Prix:decimal"})
 	_, err = bob.e.ReceiveStructure(ctx, nil, tbl(bob))
 	must(t, err)
 	eq(t, "Bob après annulation", colsOf(bob, "Ventes"), []string{"Produit:text", "Remise:text", "Quantité:integer", "Prix:decimal"})
+
+	// Colonne citée par une restriction : supprimée en local, refusée par le
+	// serveur (texte en français), rétablie en local.
+	tid, _ := remoteID(t, alice, "Produit")
+	_, err = p.env.As(p.aliceRole).AddRestriction(ctx, p.workbookID, workbook.RestrictionRule{TableID: tid, Command: "select", Predicate: `"Remise" IS NOT NULL OR true`, Label: "Remises"})
+	must(t, err)
+	must(t, alice.d.DeleteColumn(ctx, "Ventes", 1))
+	r := alice.send()
+	if all := strings.Join(r.Notices, " ; "); r.Rejected != 1 || !strings.Contains(all, "la colonne « Remise » est citée par la restriction « Remises »") || !strings.Contains(all, "la modification a été annulée") {
+		t.Fatalf("suppression refusée : %+v", r)
+	}
+	eq(t, "serveur inchangé", pgColumns(t, p, "Ventes"), []string{"Produit:text", "Remise:text", "Quantité:integer", "Prix:decimal"})
+	eq(t, "Alice rétablie", colsOf(alice, "Ventes"), []string{"Produit:text", "Remise:text", "Quantité:integer", "Prix:decimal"})
 
 	// Éditeur : refusé en local.
 	if err := bob.d.InsertColumn(ctx, "Ventes", 1, "X"); !errors.Is(err, workbook.ErrDesign) {
@@ -121,6 +130,7 @@ func TestPostgresStructure(t *testing.T) {
 		want = []string{"Produit:text", "Remise:text", "Quantité:integer", "Prix:decimal", "Code:text"}
 	}
 	must(t, alice.d.InsertColumn(ctx, "Ventes", 0, "Code"))
+	alice.send()
 	eq(t, "serveur après insertion", pgColumns(t, p, "Ventes"), want)
 	_, err = bob.e.ReceiveStructure(ctx, nil, tbl(bob))
 	must(t, err)

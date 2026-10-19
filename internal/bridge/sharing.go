@@ -33,6 +33,13 @@ import (
 // la mise en page (tableaux en lecture seule ou non).
 const ShareEvent = "share:changed"
 
+// SyncEvent est émis quand la file d'envoi d'un classeur collaboratif
+// change ou part vers le serveur (workbook.SyncStatus) : la barre d'état
+// dit « Synchronisation… », sans relire la mise en page. Les modifications
+// sont faites et affichées en local sans attendre le serveur (écriture
+// optimiste, décision 0012).
+const SyncEvent = "share:sync"
+
 // shareRetry : délai entre deux essais de connexion au serveur d'un
 // classeur partagé hors ligne.
 var shareRetry = 30 * time.Second
@@ -234,6 +241,8 @@ func (s *DocumentService) followCollab(ctx context.Context, d *doc.Document, eng
 			}
 			if ev.State {
 				s.emitShare(d)
+			} else if ev.Sync {
+				s.emitSync(d)
 			}
 		})
 	}
@@ -426,6 +435,15 @@ func (s *DocumentService) emitShare(d *doc.Document) {
 	s.tables = map[int64]*grid.Table{} // lecture seule ou non : relire
 	s.mu.Unlock()
 	s.sys().Emit(ShareEvent, d.Share.State())
+}
+
+// emitSync prévient l'interface d'un changement de la file d'envoi du
+// classeur d s'il est toujours ouvert.
+func (s *DocumentService) emitSync(d *doc.Document) {
+	if cur, err := s.current(); err != nil || cur != d {
+		return
+	}
+	s.sys().Emit(SyncEvent, d.Share.Sync())
 }
 
 // ShareState décrit le partage du classeur ouvert (classeur local :

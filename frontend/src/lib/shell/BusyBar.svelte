@@ -2,14 +2,15 @@
 	// Barre de progression de la barre d'état (en bas à droite) pendant une
 	// tâche longue : suppression de colonnes sur un million de lignes,
 	// actualisation de requêtes, import… La durée n'étant pas connue, la
-	// barre défile.
+	// barre défile. Un appel qui attend le serveur d'un classeur partagé
+	// (syncCall) est montré par SyncStatus (« Synchronisation… »).
 	import { onMount } from 'svelte';
-	import { busy, trackCalls } from './busy';
+	import { busy, syncCalls, trackCalls } from './busy';
 
 	onMount(trackCalls);
 </script>
 
-{#if $busy}
+{#if $busy && !$syncCalls}
 	<span class="busy" role="progressbar" aria-label="Traitement en cours" aria-busy="true">
 		<span class="label">Traitement…</span>
 		<span class="track"><span class="bar"></span></span>

@@ -63,8 +63,10 @@ type Link struct {
 	offline    string // raison de la coupure (affichage)
 	newVersion int
 	// Collaboratif : étapes en attente d'envoi et conflits ouverts
-	// (SetQueue, tenus par la synchronisation).
+	// (SetQueue, tenus par la synchronisation) ; sending : la file part
+	// (SetSending).
 	pending, conflicts int
+	sending            bool
 }
 
 // Attach lit l'état de partage d'un classeur ouvert (hors ligne tant que la
@@ -377,18 +379,54 @@ type State struct {
 	// conflits en attente de décision (classeur collaboratif).
 	Pending   int `json:"pending,omitempty"`
 	Conflicts int `json:"conflicts,omitempty"`
+	// Sending : la file part vers le serveur (barre d'état :
+	// « Synchronisation… »).
+	Sending bool `json:"sending,omitempty"`
 }
 
 // SetQueue note les étapes en attente d'envoi et les conflits ouverts
-// (classeur collaboratif) ; vrai si cela change l'état.
-func (l *Link) SetQueue(pending, conflicts int) bool {
+// (classeur collaboratif). state : l'état de partage change (conflits, ou
+// file hors ligne : bandeau) ; sync : la file change (barre d'état,
+// SyncStatus), sans relire la mise en page.
+func (l *Link) SetQueue(pending, conflicts int) (state, sync bool) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	if l.pending == pending && l.conflicts == conflicts {
+	sync = l.pending != pending
+	state = l.conflicts != conflicts || (sync && !l.online)
+	l.pending, l.conflicts = pending, conflicts
+	return state, sync
+}
+
+// SetSending note que la file part vers le serveur (ou plus) ; vrai si
+// cela change.
+func (l *Link) SetSending(on bool) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.sending == on {
 		return false
 	}
-	l.pending, l.conflicts = pending, conflicts
+	l.sending = on
 	return true
+}
+
+// SyncStatus décrit la file d'envoi d'un classeur collaboratif pour la
+// barre d'état (« Synchronisation… », « Hors ligne — 3 en attente »).
+type SyncStatus struct {
+	// Shared : classeur collaboratif ouvert depuis son serveur.
+	Shared  bool `json:"shared"`
+	Online  bool `json:"online"`
+	Pending int  `json:"pending"`
+	Sending bool `json:"sending"`
+}
+
+// Sync décrit la file d'envoi (classeur collaboratif ; Shared faux sinon).
+func (l *Link) Sync() SyncStatus {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	if l.info == nil || l.info.Mode != Collaborative {
+		return SyncStatus{}
+	}
+	return SyncStatus{Shared: true, Online: l.online, Pending: l.pending, Sending: l.sending}
 }
 
 // State décrit l'état de partage.
@@ -402,7 +440,7 @@ func (l *Link) State() State {
 		Shared: true, Server: l.info.Server, ServerName: l.info.ServerName, WorkbookID: l.info.WorkbookID,
 		Title: l.info.Title, Mode: l.info.Mode, Version: l.info.Version, Roles: append([]string{}, l.info.Roles...),
 		CanDesign: l.info.CanDesign(), CanManage: l.info.CanManage(), Online: l.online, Offline: l.offline, NewVersion: l.newVersion, Published: len(l.published),
-		Pending: l.pending, Conflicts: l.conflicts,
+		Pending: l.pending, Conflicts: l.conflicts, Sending: l.sending,
 	}
 	s.Link = protocol.WorkbookLink(s.Server, s.WorkbookID)
 	switch {

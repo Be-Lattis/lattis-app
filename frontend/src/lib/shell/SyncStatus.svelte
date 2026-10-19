@@ -1,0 +1,74 @@
+<script lang="ts">
+	// Barre d'état d'un classeur du serveur (décision 0012) : les
+	// modifications sont déjà faites en local ; ici, leur envoi au serveur
+	// (« Synchronisation… », puis « Synchronisé »), ou leur attente hors
+	// ligne. Remplace « Traitement… » (BusyBar) pour ce qui part au serveur.
+	import { onDestroy } from 'svelte';
+	import { syncCalls } from './busy';
+	import { DONE_FOR, syncActive, syncLabel, type SyncStatus } from './sync';
+
+	interface Props {
+		status: SyncStatus | null;
+	}
+	let { status }: Props = $props();
+
+	let done = $state(false);
+	let wasActive = false;
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	$effect(() => {
+		const active = syncActive(status, $syncCalls);
+		if (active) {
+			done = false;
+			clearTimeout(timer);
+		} else if (wasActive && status?.online) {
+			done = true;
+			clearTimeout(timer);
+			timer = setTimeout(() => (done = false), DONE_FOR);
+		}
+		wasActive = active;
+	});
+	onDestroy(() => clearTimeout(timer));
+	const label = $derived(syncLabel(status, $syncCalls, done));
+</script>
+
+{#if label}
+	<span class="sync" class:warn={label.warn} role="status" aria-live="polite" aria-busy={label.busy} title={label.busy ? 'Vos modifications sont faites ; elles partent au serveur' : ''}>
+		{#if label.busy}<span class="spin" aria-hidden="true"></span>{/if}{label.text}
+	</span>
+{/if}
+
+<style>
+	.sync {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		flex: none;
+		color: #fff;
+	}
+	.sync.warn {
+		background: #fff4e5;
+		color: #8a4b00;
+		border-radius: 8px;
+		padding: 0 7px;
+	}
+	.spin {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		border: 2px solid rgba(255, 255, 255, 0.35);
+		border-top-color: #fff;
+		animation: spin 0.8s linear infinite;
+	}
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.spin {
+			animation: none;
+			border-color: #fff;
+			opacity: 0.7;
+		}
+	}
+</style>

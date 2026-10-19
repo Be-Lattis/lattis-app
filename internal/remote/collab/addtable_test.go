@@ -232,6 +232,7 @@ func TestAddTableRefused(t *testing.T) {
 	_, err = bob.e.AddTable(ctx, tableOf(t, bob, "Notes"))
 	must(t, err)
 	must(t, bob.d.RenameTable(ctx, "Notes", "Stock"))
+	bob.send()
 	_, err = alice.e.AddTable(ctx, tbl)
 	var refused *collab.RefusedError
 	if !errors.As(err, &refused) || !strings.Contains(refused.Error(), "Refusé par le serveur") || !strings.Contains(refused.Error(), "existe déjà") {

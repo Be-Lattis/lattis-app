@@ -283,10 +283,10 @@ func (s *session) Finish(c command.Commit) error {
 	if err := s.diff(w); err != nil {
 		return err
 	}
-	// Structure des tableaux publiés : faite sur le serveur avant la
-	// validation locale (refus : toute la transaction est défaite).
+	// Structure des tableaux publiés : vérifiée (droits, en ligne), puis
+	// rangée dans la file, envoyée avant les données de l'étape.
 	if fn != nil {
-		if err := s.structure(fn, c.Kind, c.Ops); err != nil {
+		if err := s.structure(fn, w, c.Kind, c.Ops); err != nil {
 			return err
 		}
 	}
