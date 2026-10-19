@@ -37,6 +37,7 @@
 	import { freeDisplay } from './freecell';
 	import { bandAt, bandLabel, bandRefusal, hiddenBand } from './hidden';
 	import { groupSpans, headerLabel, spanAt, splitGroup } from './twolevel';
+	import { grown as growFrame, type Grown } from './grown';
 	import { pivotLayer, pivotValueText } from './pivotformat';
 	import { canFoldAll, foldAll, foldTarget, pivotBoxHit, pivotBoxLeft, pivotLabelOffset, PIVOT_BOX, setFolded, type PivotRowInfo } from './pivottree';
 	import { fillSeries, shiftTableColumns } from './fill';
@@ -1481,32 +1482,8 @@
 	/** Étendue affichée d'un tableau : une ligne ou une colonne de plus quand la
 	 * cellule active est juste dessous ou juste à droite (la saisie l'étendra),
 	 * jusqu'au tableau voisin qu'elle rejoindrait (fusion). */
-	function grown(e: Entry): { last: number; lastCol: number; firstCol: number } {
-		const { row, col } = active;
-		let last = e.last;
-		let lastCol = e.lastCol;
-		// Feuille protégée : rien à saisir, le cadre reste celui du tableau.
-		if (locked) return { last, lastCol, firstCol: e.t.col };
-		// Tableau d'une requête : il ne s'agrandit pas par la saisie.
-		if (e.t.query) return { last, lastCol, firstCol: e.t.col };
-		// Une note ou un total gardé hors du tableau ne l'étend pas.
-		if (keptOut(row, col)) return { last, lastCol, firstCol: e.t.col };
-		// Juste à gauche, sur ses lignes : la saisie y fera sa nouvelle
-		// première colonne (le tableau s'ancre une colonne plus à gauche).
-		// Pas si la case est aussi juste à droite d'un autre tableau : c'est lui
-		// qui prendra la saisie.
-		const takenByLeft = entries.some((o) => o !== e && o.lastCol === col - 1 && row >= o.t.row && row <= o.last);
-		const firstCol = col === e.t.col - 1 && row >= e.t.row && row <= e.last && !tableAt(row, col) && !takenByLeft ? e.t.col - 1 : e.t.col;
-		if (row === e.last + 1 && col >= e.t.col && col <= e.lastCol && !e.t.hidden) last++;
-		if (col === e.lastCol + 1 && row >= e.t.row && row <= e.last) {
-			lastCol++;
-			const next = entries.find((o) => o.t.row === e.t.row && o.t.col === col + 1);
-			if (next) {
-				lastCol = next.lastCol;
-				last = Math.max(last, next.last);
-			}
-		}
-		return { last, lastCol, firstCol };
+	function grown(e: Entry): Grown {
+		return growFrame(e, { row: active.row, col: active.col, entries, locked: !!locked, keptOut, inRange: inRangeZone });
 	}
 
 	const inTable = (e: Entry, r: number, c: number) => r >= e.t.row && r <= e.last && c >= e.t.col && c <= e.lastCol;

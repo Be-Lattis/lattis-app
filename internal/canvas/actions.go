@@ -90,6 +90,17 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 		if tb, i, ok := bandAt(tables, row, col); ok {
 			return t.inputBand(tb, i, raw)
 		}
+		// Case au coin de deux tableaux (juste sous l'un, juste à côté de
+		// l'autre) : la ligne dessous l'emporte, comme l'aperçu (audit 2 M1).
+		slices.SortStableFunc(tables, func(a, b Table) int {
+			under := func(tb Table) int {
+				if col >= tb.Col && col <= tb.Right() && row == tb.Bottom()+1 && !tb.Filtered() {
+					return 0
+				}
+				return 1
+			}
+			return under(a) - under(b)
+		})
 		// Dans une plage (tableau converti), la saisie reste libre : elle
 		// n'agrandit pas un tableau voisin.
 		plain, err := t.inRange(sheet, row, col)

@@ -131,6 +131,27 @@ func TestLongListMovedBesideTable(t *testing.T) {
 	}
 }
 
+// Audit 2 M1 : une case juste sous un tableau et juste à droite d'un autre
+// va au tableau du dessus (nouvelle ligne), quel que soit l'ordre des
+// tableaux, comme l'aperçu du cadre.
+func TestCornerCellGoesBelow(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	must(t, d.Do(ctx, "Saisie", func(x *tx) error {
+		if _, err := x.createTable(1, "B", 3, 0, []string{"P", "Q"}, [][]string{{"1", "2"}, {"3", "4"}}); err != nil {
+			return err
+		}
+		_, err := x.createTable(1, "A", 0, 2, []string{"X", "Y"}, [][]string{{"5", "6"}, {"7", "8"}})
+		return err
+	}))
+	mustSet(t, d, 1, 3, 2, "9")
+	for _, ti := range tablesOf(t, d) {
+		if ti.Name == "A" && ti.Total != 3 || ti.Name == "B" && len(ti.Columns) != 2 {
+			t.Fatalf("%s", layoutOf(t, d))
+		}
+	}
+}
+
 // Audit 2 I4 : Suppr sur un total gardé à part retire la marque « hors
 // tableau » (et le gras qu'elle avait donné).
 func TestClearRemovesOutMark(t *testing.T) {
