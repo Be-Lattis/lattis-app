@@ -71,8 +71,8 @@
 	.back {
 		position: fixed;
 		inset: 0;
-		z-index: 90;
-		background: rgba(0, 0, 0, 0.25);
+		z-index: var(--z-confirm);
+		background: var(--backdrop);
 		display: flex;
 		align-items: center;
 		justify-content: center;

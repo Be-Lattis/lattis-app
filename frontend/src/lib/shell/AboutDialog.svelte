@@ -48,11 +48,11 @@
 	.back {
 		position: fixed;
 		inset: 0;
-		background: rgba(0, 0, 0, 0.25);
+		background: var(--backdrop);
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		z-index: 60;
+		z-index: calc(var(--z-dialog) + 10);
 	}
 	.dialog {
 		background: #fff;

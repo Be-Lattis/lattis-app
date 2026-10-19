@@ -123,8 +123,8 @@
 	.back {
 		position: fixed;
 		inset: 0;
-		z-index: 50;
-		background: rgba(0, 0, 0, 0.25);
+		z-index: var(--z-dialog);
+		background: var(--backdrop);
 		display: flex;
 		align-items: flex-start;
 		justify-content: center;

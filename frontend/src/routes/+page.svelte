@@ -2129,6 +2129,18 @@
 	:global(:root) {
 		--float-radius: 6px;
 		--focus-ring: #0f6cbd;
+		/* Empilement : volets, boîtes ancrées et menus, boîtes modales (au-dessus
+		   des couches de CodeMirror, jusqu'à 500 ; une boîte ouverte depuis une
+		   autre ajoute 10 par niveau), aide ouverte depuis une boîte, demandes
+		   d'accord, messages. */
+		--z-panel: 20;
+		--z-popover: 40;
+		--z-dialog: 600;
+		--z-help: 700;
+		--z-confirm: 800;
+		--z-toast: 1000;
+		/* Fond des boîtes modales. */
+		--backdrop: rgba(0, 0, 0, 0.25);
 	}
 	:global(html, body) {
 		margin: 0;
@@ -2336,11 +2348,11 @@
 	.modal-back {
 		position: fixed;
 		inset: 0;
-		z-index: 50;
+		z-index: var(--z-dialog);
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: rgba(0, 0, 0, 0.2);
+		background: var(--backdrop);
 	}
 	.modal {
 		background: #fff;

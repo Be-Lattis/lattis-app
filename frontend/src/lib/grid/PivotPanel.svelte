@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { resizePanel } from '#lib/ui/resize.js';
 	import { panelKeys } from '#lib/ui/focus.js';
-	import HelpLink from '#lib/help/HelpLink.svelte';
+	import PanelHeader from '#lib/ui/PanelHeader.svelte';
 	// Volet « Champs de tableau croisé dynamique », comme Excel : la liste des
 	// champs du tableau source (recherche, cases à cocher, icône du type) et
 	// quatre zones (Filtres, Colonnes, Lignes, Valeurs). Les champs se glissent
@@ -456,17 +456,12 @@
 </script>
 
 <aside class="panel" bind:this={panelEl} use:resizePanel={{ key: 'pivot', off: !resizable }} use:panelKeys={onclose} aria-label="Champs de tableau croisé dynamique">
-	<header>
-		<div class="titles">
-			<strong>Champs de tableau croisé dynamique</strong>
-			<span class="sub" title="Le TCD s'interroge dans l'onglet SQL sous ce nom et sert de source aux graphiques">
-				{config.name ?? 'TCD'} · source :
-				{#if isDefaultTableName(config.source)}<span class="default-name" title={DEFAULT_NAME_HINT}>{config.source}</span>{:else}{config.source}{/if}
-			</span>
-		</div>
-		<HelpLink target="tcd" label="Aide sur les tableaux croisés" />
-		<button class="icon-btn" title="Fermer le volet" aria-label="Fermer le volet" onclick={onclose}><Icon name="win-close" size={16} /></button>
-	</header>
+	<PanelHeader title="Champs de tableau croisé dynamique" help="tcd" helpLabel="Aide sur les tableaux croisés" {onclose}>
+		<span class="sub" title="Le TCD s'interroge dans l'onglet SQL sous ce nom et sert de source aux graphiques">
+			{config.name ?? 'TCD'} · source :
+			{#if isDefaultTableName(config.source)}<span class="default-name" title={DEFAULT_NAME_HINT}>{config.source}</span>{:else}{config.source}{/if}
+		</span>
+	</PanelHeader>
 	{#if locked}<p class="locked" role="note"><Icon name="lock-sheet" size={14} /><span>{locked}</span></p>{/if}
 
 	<div class="search">
@@ -734,22 +729,7 @@
 		border-radius: 3px;
 		color: #5c4400;
 	}
-	header {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 6px;
-	}
-	.titles {
-		display: flex;
-		flex-direction: column;
-		min-width: 0;
-	}
-	.titles strong {
-		font-size: 13px;
-		font-weight: 600;
-	}
-	.titles .sub {
+	.sub {
 		color: #6b7280;
 		font-size: 11px;
 		overflow: hidden;

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { resizePanel } from '#lib/ui/resize.js';
 	import { panelKeys } from '#lib/ui/focus.js';
-	import HelpLink from '#lib/help/HelpLink.svelte';
+	import PanelHeader from '#lib/ui/PanelHeader.svelte';
 	// Volet « Mise en forme du graphique » : chaque réglage s'applique tout de
 	// suite (aperçu direct, Ctrl+Z pour revenir en arrière).
 	import type { ChartConfig } from '#lib/grid/Sheet.svelte';
@@ -96,11 +96,7 @@
 </script>
 
 <aside class="panel" use:resizePanel={{ key: 'chart', off: !resizable }} use:panelKeys={onclose} aria-label="Graphique">
-	<header>
-		<strong>Graphique</strong>
-		<HelpLink target="graphiques" label="Aide sur les graphiques" />
-		<button class="x" title="Fermer le volet (Échap)" aria-label="Fermer le volet" onclick={onclose}>✕</button>
-	</header>
+	<PanelHeader title="Graphique" help="graphiques" helpLabel="Aide sur les graphiques" {onclose} />
 	{#if locked}<p class="locked" role="note"><Icon name="lock-sheet" size={14} /><span>{locked}</span></p>{/if}
 
 	<fieldset class="body" disabled={!!locked}>
@@ -312,12 +308,6 @@
 		border-radius: 3px;
 		color: #5c4400;
 	}
-	header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		font-size: 13px;
-	}
 	h3 {
 		margin: 0 0 6px;
 		font-size: 11px;
@@ -419,10 +409,6 @@
 		background: #fff;
 		border-radius: 3px;
 		cursor: pointer;
-	}
-	.x {
-		border: none;
-		background: none;
 	}
 	.hint {
 		margin: 0;

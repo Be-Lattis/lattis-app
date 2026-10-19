@@ -269,8 +269,8 @@
 	.back {
 		position: fixed;
 		inset: 0;
-		z-index: 60;
-		background: rgba(0, 0, 0, 0.25);
+		z-index: calc(var(--z-dialog) + 10);
+		background: var(--backdrop);
 		display: flex;
 		align-items: center;
 		justify-content: center;

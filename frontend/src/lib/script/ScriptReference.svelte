@@ -2,6 +2,7 @@
 	import { resizePanel } from '#lib/ui/resize.js';
 	import { panelKeys } from '#lib/ui/focus.js';
 	import Icon from '#lib/icons/Icon.svelte';
+	import PanelHeader from '#lib/ui/PanelHeader.svelte';
 	// Panneau « Référence » de l'onglet SCRIPT : les fonctions disponibles dans
 	// un script Lua, en accordéon (une section repliable par module), avec
 	// recherche : elle filtre les fonctions et ouvre les sections qui en ont.
@@ -45,8 +46,7 @@
 
 <aside class="ref" use:resizePanel={{ key: 'lua-ref' }} use:panelKeys={close} aria-label="Référence Lua">
 	<div class="head">
-		<h2>Référence Lua</h2>
-		<button class="close" onclick={close} title="Masquer la référence" aria-label="Masquer la référence">×</button>
+		<PanelHeader title="Référence Lua" help="lua" helpLabel="Aide sur les scripts Lua" onclose={close} />
 	</div>
 	<input
 		class="search"
@@ -153,30 +153,7 @@
 		background: #fafbfb;
 	}
 	.head {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 6px 8px 0 12px;
-	}
-	h2 {
-		font-size: 12px;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-		color: #6b7280;
-		margin: 4px 0;
-	}
-	.close {
-		border: none;
-		background: none;
-		font-size: 18px;
-		line-height: 1;
-		color: #6b7280;
-		cursor: pointer;
-		padding: 2px 6px;
-		border-radius: 3px;
-	}
-	.close:hover {
-		background: #e3e5e8;
+		padding: 8px 10px 0;
 	}
 	.search {
 		margin: 6px 8px;

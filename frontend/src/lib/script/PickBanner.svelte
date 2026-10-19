@@ -17,7 +17,7 @@
 		top: 8px;
 		left: 50%;
 		translate: -50% 0;
-		z-index: 1000;
+		z-index: var(--z-toast);
 		display: flex;
 		align-items: center;
 		gap: 12px;

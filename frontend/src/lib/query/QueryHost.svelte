@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { resizePanel } from '#lib/ui/resize.js';
 	import { panelKeys } from '#lib/ui/focus.js';
-	import HelpLink from '#lib/help/HelpLink.svelte';
+	import PanelHeader from '#lib/ui/PanelHeader.svelte';
 	// Données › Obtenir des données : tout ce qui touche aux requêtes d'import
 	// (équivalent de Power Query) et aux connexions, hors de la grille. La page
 	// n'appelle que data() et reçoit onchanged (classeur modifié, feuille à
@@ -290,11 +290,7 @@
 
 {#if panel}
 	<aside class="panel" use:resizePanel={{ key: 'queries' }} use:panelKeys={() => (panel = false)} aria-label="Requêtes et connexions">
-		<header>
-			<strong>Requêtes et connexions</strong>
-			<HelpLink target="connexions" label="Aide sur les requêtes et connexions" />
-			<button class="x" title="Fermer le volet (Échap)" aria-label="Fermer le volet" onclick={() => (panel = false)}>✕</button>
-		</header>
+		<PanelHeader title="Requêtes et connexions" help="connexions" helpLabel="Aide sur les requêtes et connexions" onclose={() => (panel = false)} />
 		{#if busy}<p class="muted">{busy}</p>{/if}
 		<h3>Requêtes ({queries.length})</h3>
 		{#each queries as q (q.id)}
@@ -371,12 +367,6 @@
 		box-shadow: -4px 0 12px rgba(0, 0, 0, 0.08);
 		overflow: auto;
 		font-size: 12px;
-	}
-	header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		font-size: 13px;
 	}
 	h3 {
 		margin: 6px 0 0;
@@ -473,10 +463,6 @@
 	}
 	button:disabled {
 		opacity: 0.5;
-	}
-	.x {
-		border: none;
-		background: none;
 	}
 	.add {
 		align-self: flex-start;

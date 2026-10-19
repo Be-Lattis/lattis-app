@@ -526,7 +526,7 @@
 	.editor {
 		position: fixed;
 		inset: 0;
-		z-index: 50;
+		z-index: var(--z-dialog);
 		background: #fff;
 		display: flex;
 		flex-direction: column;
@@ -685,7 +685,7 @@
 	/* Menu d'une colonne de l'aperçu (comme le menu ▾ des colonnes de la feuille). */
 	.menu {
 		position: fixed;
-		z-index: 55;
+		z-index: calc(var(--z-dialog) + 5);
 		background: #fff;
 		border: 1px solid #d4d7db;
 		border-radius: var(--float-radius);

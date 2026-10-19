@@ -259,11 +259,11 @@
 	.back {
 		position: fixed;
 		inset: 0;
-		background: rgba(0, 0, 0, 0.25);
+		background: var(--backdrop);
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		z-index: 50;
+		z-index: var(--z-dialog);
 	}
 	.dialog {
 		background: #fff;

@@ -6,6 +6,7 @@
 	import type { Conflict } from '#bindings/internal/remote/collab/models.js';
 	import { resizePanel } from '#lib/ui/resize.js';
 	import { panelKeys } from '#lib/ui/focus.js';
+	import PanelHeader from '#lib/ui/PanelHeader.svelte';
 	import { conflictText } from './share';
 
 	interface Props {
@@ -19,10 +20,7 @@
 </script>
 
 <aside class="panel" use:resizePanel={{ key: 'conflicts' }} use:panelKeys={onclose} aria-label="Conflits">
-	<header>
-		<strong>Conflits ({conflicts.length})</strong>
-		<button class="x" title="Fermer le volet (Échap)" aria-label="Fermer le volet" onclick={onclose}>✕</button>
-	</header>
+	<PanelHeader title="Conflits ({conflicts.length})" {onclose} />
 	{#if !conflicts.length}
 		<p class="muted">Aucun conflit en attente.</p>
 	{:else}
@@ -54,21 +52,6 @@
 		box-shadow: -4px 0 12px rgba(0, 0, 0, 0.08);
 		overflow: auto;
 		font-size: 12px;
-	}
-	header {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-	}
-	header strong {
-		flex: 1;
-	}
-	.x {
-		border: none;
-		background: none;
-		cursor: pointer;
-		font-size: 14px;
-		color: #5f6368;
 	}
 	.muted {
 		color: #6b7280;

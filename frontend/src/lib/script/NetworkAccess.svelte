@@ -98,9 +98,8 @@
 	.modal-back {
 		position: fixed;
 		inset: 0;
-		/* Au-dessus des panneaux de l'éditeur (barre du linter). */
-		z-index: 500;
-		background: rgba(0, 0, 0, 0.2);
+		z-index: var(--z-dialog);
+		background: var(--backdrop);
 		display: flex;
 		align-items: center;
 		justify-content: center;
