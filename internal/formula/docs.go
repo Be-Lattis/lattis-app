@@ -64,12 +64,19 @@ var (
 	argText = docArg("texte", "Texte, ou colonne de la ligne ([Nom]).")
 	argDate = docArg("date", "Date, ou texte de date (\"15/01/2026\").")
 	argVal  = docArg("valeur", "Valeur à tester.")
-	argAgg  = docArg("valeur1", "Colonne entière (Tableau[Colonne]), expression sur les colonnes d'un tableau, cellule ou valeur.")
+	argAgg  = docArg("valeur1", "Colonne entière (Tableau[Colonne]), plage (Cell[A1:B3]), tableau dynamique (FILTRE(…)) ou constante ({1;2;3}), expression sur les colonnes d'un tableau, cellule ou valeur.")
 	argCrit = docArg("critère", "Condition : 10, \"Paris\", \">=100\", \"<>Nord\", \"Dur*\" (jokers * et ?), \"\" pour vide.")
 )
 
+// argSpillSrc : la source de TRIER, PRENDRE, EXCLURE (UNIQUE a la sienne,
+// avec un exemple).
+var argSpillSrc = docArg("plage", "Colonne d'un tableau (Ventes[Client]), tableau entier (Ventes), plage de cellules (Cell[A1:A20]), constante ({1;2;3}) ou autre tableau dynamique (FILTRE(…)).")
+
 // argMatrix : la colonne lue par CENTILE, QUARTILE…
-var argMatrix = docArg("matrice", "Colonne entière (Tableau[Colonne]), plage ou expression sur les colonnes d'un tableau.")
+var argMatrix = docArg("matrice", "Colonne entière (Tableau[Colonne]), plage (Cell[A1:B3]) ou expression sur les colonnes d'un tableau ; pas un tableau dynamique ni une constante (#VALEUR!).")
+
+// argCritRange : la colonne testée par SOMME.SI, NB.SI, MOYENNE.SI.
+var argCritRange = docArg("plage", "Colonne testée (Tableau[Colonne]) ou plage (Cell[A1:A10]).")
 
 // Arguments de TEXTE.AVANT et TEXTE.APRES.
 var (
@@ -404,17 +411,17 @@ var docs = map[string]funcDoc{
 		1, `=JOINDRE.TEXTE(", "; VRAI; Clients[Nom])`},
 	"SUBTOTAL": {catAgg, "Calcule un agrégat sur les seules lignes que le filtre de la grille laisse affichées.",
 		docArgs(docArg("no_fonction", "1 MOYENNE, 2 NB, 3 NBVAL, 4 MAX, 5 MIN, 6 PRODUIT, 7 ECARTYPE, 8 ECARTYPEP, 9 SOMME, 10 VAR, 11 VAR.P (ou 101 à 111)."),
-			docArg("réf1", "Colonne entière à agréger (Tableau[Colonne]).")),
+			docArg("réf1", "Colonne entière à agréger (Tableau[Colonne]), plage (Cell[A1:B3]) ou tableau dynamique.")),
 		1, `=SOUS.TOTAL(9; Ventes[Montant])`},
 	"SUMIF": {catAgg, "Additionne les valeurs des lignes qui remplissent un critère.",
-		docArgs(docArg("plage", "Colonne testée (Tableau[Colonne])."), argCrit,
+		docArgs(argCritRange, argCrit,
 			docOpt("plage_somme", "Colonne à additionner (la plage testée si omise).")),
 		0, `=SOMME.SI(Ventes[Région]; "Nord"; Ventes[Montant])`},
 	"COUNTIF": {catAgg, "Compte les lignes qui remplissent un critère.",
-		docArgs(docArg("plage", "Colonne testée (Tableau[Colonne])."), argCrit),
+		docArgs(argCritRange, argCrit),
 		0, `=NB.SI(Ventes[Vendeur]; Cell[A1])`},
 	"AVERAGEIF": {catAgg, "Renvoie la moyenne des valeurs des lignes qui remplissent un critère.",
-		docArgs(docArg("plage", "Colonne testée (Tableau[Colonne])."), argCrit,
+		docArgs(argCritRange, argCrit,
 			docOpt("plage_moyenne", "Colonne dont on fait la moyenne (la plage testée si omise).")),
 		0, `=MOYENNE.SI(Ventes[Région]; "Nord"; Ventes[Montant])`},
 	"SUMIFS": {catAgg, "Additionne les valeurs des lignes qui remplissent tous les critères.",
@@ -437,7 +444,7 @@ var docs = map[string]funcDoc{
 			docArg("plage_critères1", "Colonne testée par le critère qui suit."), argCritN("critère1")),
 		2, `=MIN.SI.ENS(Ventes[Date]; Ventes[Client]; [Client])`},
 	"SUMPRODUCT": {catAgg, "Multiplie les colonnes ligne à ligne et additionne les produits ; accepte une expression.",
-		docArgs(docArg("matrice1", "Colonne d'un tableau, ou expression sur ses colonnes ((Ventes[Qté]>1)*Ventes[Prix]). Toutes du même tableau.")),
+		docArgs(docArg("matrice1", "Colonne d'un tableau, plage (Cell[A1:A3]) ou expression sur les colonnes ((Ventes[Qté]>1)*Ventes[Prix]). Toutes du même tableau, ou plages de même forme.")),
 		1, `=SOMMEPROD(Ventes[Prix]; Ventes[Qté])`},
 
 	// Finances
@@ -510,11 +517,11 @@ var docs = map[string]funcDoc{
 		0, `=EXISTE(Clients; [IdClient])`},
 	"MATCH": {catLookup, "Renvoie la position d'une valeur dans une colonne, dans l'ordre affiché.",
 		docArgs(docArg("valeur_cherchée", "Valeur à trouver (jokers * et ? en correspondance exacte)."),
-			docArg("colonne", "Colonne où chercher (Tableau[Colonne])."),
+			docArg("colonne", "Colonne où chercher (Tableau[Colonne]) ou plage (Cell[A1:A10])."),
 			docOpt("type", "0 : exacte ; 1 (par défaut) : plus grande valeur inférieure ou égale ; -1 : plus petite valeur supérieure ou égale.")),
 		0, `=EQUIV("Martin"; Clients[Nom]; 0)`},
 	"INDEX": {catLookup, "Renvoie la valeur d'une colonne à une position donnée (1 = première ligne).",
-		docArgs(docArg("colonne", "Colonne où lire (Tableau[Colonne])."),
+		docArgs(docArg("colonne", "Colonne où lire (Tableau[Colonne]) ou plage (Cell[A1:A10])."),
 			docArg("no_ligne", "Position de la ligne, souvent donnée par EQUIV.")),
 		0, `=INDEX(Clients[Ville]; EQUIV("Durand"; Clients[Nom]; 0))`},
 	"VLOOKUP": {catLookup, "Recherche une valeur dans la première colonne d'une plage ; convertie en REFERENCE à la saisie.",
@@ -556,35 +563,35 @@ var docs = map[string]funcDoc{
 
 	// Tableaux dynamiques
 	"FILTER": {catSpill, "Renvoie les lignes d'un tableau ou d'une colonne qui remplissent une condition ; le résultat se déverse sur la feuille.",
-		docArgs(docArg("tableau", "Tableau entier (Ventes) ou colonne (Ventes[Produit])."),
+		docArgs(docArg("tableau", "Tableau entier (Ventes) ou colonne (Ventes[Produit]), éventuellement déjà filtrés ou triés ; pas une plage de cellules ni une constante."),
 			docArg("inclure", "Condition sur les colonnes du même tableau (Ventes[Qté]>2)."),
 			docOpt("si_vide", "Résultat quand aucune ligne ne convient (résultat vide si omis).")),
 		0, `=FILTRE(Ventes; Ventes[Qté]>2; "aucune")`},
-	"SORT": {catSpill, "Trie les lignes d'un tableau ou d'une colonne ; les vides vont à la fin.",
-		docArgs(docArg("tableau", "Tableau entier ou colonne à trier."),
-			docOpt("index_tri", "Numéro de la colonne de tri (1 si omis)."),
+	"SORT": {catSpill, "Trie les lignes d'une colonne, d'un tableau ou d'une plage, textes sans tenir compte de la casse ; les vides vont à la fin.",
+		docArgs(argSpillSrc,
+			docOpt("index_tri", "Numéro de la colonne de tri, écrit dans la formule (1 si omis)."),
 			docOpt("ordre_tri", "1 : croissant (par défaut) ; -1 : décroissant."),
-			docOpt("par_colonne", "FAUX ou omis : seul le tri des lignes est pris en charge.")),
+			docOpt("par_colonne", "FAUX, 0 ou omis : trie les lignes. VRAI (trier les colonnes) n'est pas pris en charge : #VALEUR!.")),
 		0, `=TRIER(Clients[Nom]; 1; -1)`},
 	"SORTBY": {catSpill, "Trie un tableau ou une colonne selon d'autres colonnes du même tableau.",
-		docArgs(docArg("tableau", "Tableau entier ou colonne à trier."),
-			docArg("par_tableau1", "Colonne qui sert de clé de tri."),
+		docArgs(docArg("tableau", "Tableau entier (Clients) ou colonne (Clients[Nom]) à trier ; pas une plage de cellules ni une constante."),
+			docArg("par_tableau1", "Colonne du même tableau qui sert de clé de tri (Clients[Ville])."),
 			docOpt("ordre_tri1", "1 : croissant (par défaut) ; -1 : décroissant.")),
 		2, `=TRIERPAR(Clients[Nom]; Clients[Ville]; 1)`},
-	"UNIQUE": {catSpill, "Renvoie les valeurs ou lignes distinctes, dans l'ordre de première apparition.",
-		docArgs(docArg("tableau", "Tableau entier ou colonne."),
-			docOpt("par_colonne", "FAUX ou omis : seule la comparaison par lignes est prise en charge."),
-			docOpt("exactement_une_fois", "VRAI : ne garde que les valeurs présentes une seule fois.")),
-		0, `=UNIQUE(Ventes[Client])`},
-	"TAKE": {catSpill, "Renvoie les premières (ou dernières) lignes d'un tableau ou d'une colonne.",
-		docArgs(docArg("tableau", "Tableau entier ou colonne."),
+	"UNIQUE": {catSpill, "Renvoie les valeurs distinctes d'une colonne (ou les lignes distinctes d'un tableau), dans l'ordre de première apparition, textes sans tenir compte de la casse ; le résultat se déverse sur la feuille.",
+		docArgs(docArg("plage", "Colonne d'un tableau (Suividesnids[NID suivi]), tableau entier (Ventes), plage de cellules (Cell[A1:A20]), constante ({1;2;2}) ou autre tableau dynamique (FILTRE(…))."),
+			docOpt("par_colonne", "FAUX, 0 ou omis : compare les lignes. VRAI (comparer les colonnes) n'est pas pris en charge : #VALEUR!."),
+			docOpt("exactement_une_fois", "VRAI : ne garde que les valeurs (ou lignes) présentes une seule fois ; FAUX ou omis : toutes les valeurs distinctes.")),
+		0, `=UNIQUE(Suividesnids[NID suivi])`},
+	"TAKE": {catSpill, "Renvoie les premières (ou dernières) lignes d'une colonne, d'un tableau ou d'une plage.",
+		docArgs(argSpillSrc,
 			docArg("lignes", "Nombre de lignes ; négatif pour les prendre depuis la fin."),
-			docOpt("colonnes", "Non pris en charge : laissez vide.")),
+			docOpt("colonnes", "Non pris en charge : laissez vide (#VALEUR! sinon).")),
 		0, `=PRENDRE(TRIER(Ventes; 3; -1); 5)`},
-	"DROP": {catSpill, "Renvoie un tableau ou une colonne sans ses premières (ou dernières) lignes.",
-		docArgs(docArg("tableau", "Tableau entier ou colonne."),
+	"DROP": {catSpill, "Renvoie une colonne, un tableau ou une plage sans ses premières (ou dernières) lignes.",
+		docArgs(argSpillSrc,
 			docArg("lignes", "Nombre de lignes à retirer ; négatif pour les retirer à la fin."),
-			docOpt("colonnes", "Non pris en charge : laissez vide.")),
+			docOpt("colonnes", "Non pris en charge : laissez vide (#VALEUR! sinon).")),
 		0, `=EXCLURE(Ventes[Produit]; 1)`},
 	"GROUPBY": {catSpill, "Regroupe les lignes par valeur d'une colonne et agrège une autre colonne, trié par clé (passerelle vers les TCD).",
 		docArgs(docArg("champs_ligne", "Colonne qui sert de clé de regroupement (Ventes[Client])."),
@@ -635,11 +642,11 @@ var docs = map[string]funcDoc{
 		docArgs(docArg("heure", "Heures."), docArg("minute", "Minutes."), docArg("seconde", "Secondes.")),
 		0, `=TEXTE(TEMPS(9; 30; 0); "hh:mm")`},
 	"LARGE": {catAgg, "Renvoie la k-ième plus grande valeur d'une colonne.",
-		docArgs(docArg("matrice", "Colonne entière (Tableau[Colonne]) ou expression sur les colonnes d'un tableau."),
+		docArgs(argMatrix,
 			docArg("k", "Rang de la valeur (1 = la plus grande).")),
 		0, `=GRANDE.VALEUR(Ventes[Montant]; 2)`},
 	"SMALL": {catAgg, "Renvoie la k-ième plus petite valeur d'une colonne.",
-		docArgs(docArg("matrice", "Colonne entière (Tableau[Colonne]) ou expression sur les colonnes d'un tableau."),
+		docArgs(argMatrix,
 			docArg("k", "Rang de la valeur (1 = la plus petite).")),
 		0, `=PETITE.VALEUR(Ventes[Montant]; 1)`},
 }

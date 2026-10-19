@@ -135,6 +135,28 @@ func spillCount(v Value) (int, Value) {
 	return int(math.Trunc(f)), Value{}
 }
 
+// falseLit dit si un argument par_colonne (TRIER, UNIQUE) est omis, FAUX ou
+// 0 : seule la comparaison par lignes est prise en charge.
+func falseLit(n Node) bool {
+	return n == nil || n == (BoolLit{false}) || n == (NumLit{0})
+}
+
+// cellGrid donne les valeurs d'une plage de cellules libres (Cell[A1:B3]),
+// ligne par ligne, source d'un tableau dynamique (UNIQUE(Cell[A1:A20])) ;
+// faux au-delà de maxConstCells valeurs.
+func cellGrid(r CellRange, names map[string]Value, home int64) ([][]Value, bool) {
+	rows, cols := r.Size()
+	if rows*cols > maxConstCells {
+		return nil, false
+	}
+	flat := rangeValues(r, names, home)
+	out := make([][]Value, rows)
+	for i := range out {
+		out[i] = flat[i*cols : (i+1)*cols]
+	}
+	return out, true
+}
+
 // groupAgg lit la fonction de GROUPER.PAR (SOMME, MOYENNE, NB…).
 func groupAgg(n Node) (string, bool) {
 	name, ok := n.(Name)
@@ -240,6 +262,17 @@ func (env *Env) spill(n Node) (rel, Value) {
 		vals := arrayValues(a)
 		return rel{cols: seqHeaders(len(vals[0])), values: vals}, Value{}
 	}
+	if r, ok := n.(CellRange); ok {
+		var home int64
+		if env.Table != nil {
+			home = env.Table.Sheet
+		}
+		vals, ok := cellGrid(r, env.Names, home)
+		if !ok {
+			return rel{}, Err(ErrValue)
+		}
+		return rel{cols: seqHeaders(len(vals[0])), values: vals}, Value{}
+	}
 	c, ok := n.(Call)
 	if !ok || !IsSpill(c) {
 		return rel{}, Err(ErrValue)
@@ -303,7 +336,7 @@ func (env *Env) spill(n Node) (rel, Value) {
 		if e.IsErr() {
 			return rel{}, e
 		}
-		if idx < 1 || idx > len(src.cols) || len(c.Args) > 3 && c.Args[3] != nil && c.Args[3] != (BoolLit{false}) {
+		if idx < 1 || idx > len(src.cols) || len(c.Args) > 3 && !falseLit(c.Args[3]) {
 			return rel{}, Err(ErrValue)
 		}
 		keys := make([][][]byte, len(src.values))
@@ -333,7 +366,7 @@ func (env *Env) spill(n Node) (rel, Value) {
 		}
 		return sortRel(src, keys, descs), Value{}
 	case "UNIQUE":
-		if len(c.Args) > 1 && c.Args[1] != nil && c.Args[1] != (BoolLit{false}) {
+		if len(c.Args) > 1 && !falseLit(c.Args[1]) {
 			return rel{}, Err(ErrValue) // comparaison par colonnes : non prise en charge
 		}
 		once, e := Truth(arg(2))
@@ -561,6 +594,17 @@ func (c *compiler) spill(n Node, sc scope) (sqlRel, ErrCode) {
 	if a, ok := n.(ArrayLit); ok {
 		return c.constRel(arrayValues(a))
 	}
+	if r, ok := n.(CellRange); ok {
+		var home int64
+		if sc.table != nil {
+			home = sc.table.Sheet
+		}
+		vals, ok := cellGrid(r, c.names, home)
+		if !ok {
+			return sqlRel{}, ErrValue
+		}
+		return c.constRel(vals)
+	}
 	call, ok := n.(Call)
 	if !ok || !IsSpill(call) {
 		return sqlRel{}, ErrValue
@@ -634,7 +678,7 @@ func (c *compiler) spill(n Node, sc scope) (sqlRel, ErrCode) {
 			}
 			idx = int(lit.V)
 		}
-		if idx < 1 || idx > k || len(call.Args) > 3 && call.Args[3] != nil && call.Args[3] != (BoolLit{false}) {
+		if idx < 1 || idx > k || len(call.Args) > 3 && !falseLit(call.Args[3]) {
 			return sqlRel{}, ErrValue
 		}
 		order := orderSQL(fmt.Sprintf("slt_sortkey(v%d)", idx), arg(2))
@@ -652,7 +696,7 @@ func (c *compiler) spill(n Node, sc scope) (sqlRel, ErrCode) {
 		out.order = "row_number() OVER (ORDER BY " + strings.Join(keys, ", ") + ", " + src.alias + "._pos)"
 		return out, 0
 	case "UNIQUE":
-		if len(call.Args) > 1 && call.Args[1] != nil && call.Args[1] != (BoolLit{false}) {
+		if len(call.Args) > 1 && !falseLit(call.Args[1]) {
 			return sqlRel{}, ErrValue
 		}
 		var keys []string

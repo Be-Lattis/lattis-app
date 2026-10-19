@@ -177,15 +177,17 @@ Une colonne peut lire ses propres lignes voisines : `[Mvt]+PRECEDENT([Solde]; 0)
 
 | Français | Anglais | |
 |---|---|---|
-| FILTRE | FILTER | ✅ `FILTRE(Ventes; Ventes[Qté]>2; "aucune")` |
-| TRIER, TRIERPAR | SORT, SORTBY | ✅ vides en dernier, texte sans casse |
-| UNIQUE | UNIQUE | ✅ par lignes (pas par colonnes), `exactement_une_fois` géré |
-| PRENDRE, EXCLURE | TAKE, DROP | ✅ par lignes, négatif depuis la fin |
+| FILTRE | FILTER | ✅ `FILTRE(Ventes; Ventes[Qté]>2; "aucune")` ; source : un tableau ou une colonne (éventuellement déjà filtrés ou triés), pas une plage de cellules ni une constante |
+| TRIER, TRIERPAR | SORT, SORTBY | ✅ vides en dernier, texte sans casse ; `par_colonne` : FAUX, 0 ou omis seulement (VRAI : #VALEUR!) ; TRIERPAR trie un tableau ou une colonne selon des colonnes du même tableau |
+| UNIQUE | UNIQUE | ✅ `UNIQUE(plage; [par_colonne]; [exactement_une_fois])`, par exemple `UNIQUE(Suividesnids[NID suivi])` ; par lignes, texte sans casse, une cellule vide compte comme une valeur ; `par_colonne` : FAUX, 0 ou omis seulement (VRAI, comparer les colonnes : #VALEUR!) ; `exactement_une_fois` géré |
+| PRENDRE, EXCLURE | TAKE, DROP | ✅ par lignes, négatif depuis la fin ; 3e argument (`colonnes`) non pris en charge (#VALEUR!) |
 | GROUPER.PAR | GROUPBY | ⚠️ `GROUPER.PAR(Ventes[Client]; Ventes[Montant]; SOMME)`, trié par clé, sans ligne de total |
 | REQUETE | QUERY | 🆕 `REQUETE("SELECT …")`, moteur SQL seulement |
 | SEQUENCE | SEQUENCE | ⚠️ le nombre de colonnes doit être écrit dans la formule (il fixe la forme du résultat) ; 1 000 000 valeurs au plus |
 
-Leur résultat se déverse sur la feuille : `EvalSpill` (Go) et `CompileSpill` (requête SQL ordonnée et en-têtes) le fournissent. Dans une cellule, un tableau dynamique vaut #VALEUR! ; dans un agrégat, il fournit ses valeurs : `SOMME(FILTRE(Ventes[Montant]; Ventes[Qté]>1))`.
+Leur résultat se déverse sur la feuille : `EvalSpill` (Go) et `CompileSpill` (requête SQL ordonnée et en-têtes) le fournissent. Dans une cellule, un tableau dynamique vaut #VALEUR! ; dans un agrégat (`SOMME`, `NBVAL`, `JOINDRE.TEXTE`, `SOUS.TOTAL`…), il fournit ses valeurs : `SOMME(FILTRE(Ventes[Montant]; Ventes[Qté]>1))`. Les fonctions qui parcourent des colonnes (`NB.SI`, `SOMME.SI.ENS`, `GRANDE.VALEUR`, `CENTILE`, `EQUIV`, `INDEX`, `RANG`, `TRI`…) ne le lisent pas : #VALEUR! (`NB.SI(UNIQUE(Ventes[Qté]); ">1")`), comme `LIGNES(UNIQUE(…))`.
+
+**Sources.** UNIQUE, TRIER, PRENDRE et EXCLURE lisent une colonne (`Ventes[Client]`), un tableau entier (`Ventes`), une plage de cellules libres (`Cell[A1:B20]`, colonnes `Valeur1`, `Valeur2`…), une constante matricielle ou un autre tableau dynamique. FILTRE et TRIERPAR évaluent leurs conditions et clés sur les lignes d'un tableau : leur source est un tableau ou une colonne, éventuellement déjà filtrés ou triés. Une plage de lignes (`Ventes[Prix][1:3]`) n'est pas une source (#VALEUR!).
 
 **Constantes matricielles.** `{1;2;3}` (une colonne), `{"a"."b"}` (une ligne ; `\` est aussi accepté entre colonnes), `{1.2;3.4}` ; en anglais `{1;2;3}` et `{"a","b"}`. Elles ne contiennent que des littéraux (nombres, textes, VRAI, FAUX, erreurs) et se lisent comme un tableau dynamique : `={1;2;3}` se déverse, `SOMME({1;2;3})` vaut 6, `FRACTIONNER.TEXTE(Cell[A1]; {",";";"})` découpe à chaque délimiteur. Ailleurs (dans un calcul sur une valeur), une constante vaut #VALEUR!.
 

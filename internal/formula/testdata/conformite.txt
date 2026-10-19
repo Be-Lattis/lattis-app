@@ -342,6 +342,19 @@
 =JOINDRE.TEXTE(",";VRAI;EXCLURE(Etapes[Nom];1))	B,C
 =JOINDRE.TEXTE(",";VRAI;UNIQUE(Ventes[Payé]))	VRAI,FAUX
 =NBVAL(UNIQUE(Ventes[Payé]))	2
+# UNIQUE : plage de cellules, par_colonne FAUX ou 0 (VRAI non pris en charge), exactement_une_fois
+=SOMME(UNIQUE(Cell[A1:B3]))	63
+=JOINDRE.TEXTE(",";VRAI;UNIQUE(Cell[A1:A3]))	1,2,x
+=NBVAL(UNIQUE(Ventes[Payé];0))	2
+=NBVAL(UNIQUE(Ventes[Payé];FAUX))	2
+=SOMME(UNIQUE(Ventes[Qté];VRAI))	#VALEUR!
+=JOINDRE.TEXTE(",";VRAI;UNIQUE({1;2;2;3};;VRAI))	1,3
+=NBVAL(UNIQUE(Ventes[Qté];FAUX;VRAI))	4
+=JOINDRE.TEXTE(",";VRAI;TRIER(Cell[A1:A3];1;-1;0))	x,2,1
+=JOINDRE.TEXTE(",";VRAI;PRENDRE({1;2;3};-2))	2,3
+# Un tableau dynamique n'est pas une colonne parcourue (NB.SI, GRANDE.VALEUR…)
+=NB.SI(UNIQUE(Ventes[Qté]);">1")	#VALEUR!
+=GRANDE.VALEUR({1;2};1)	#VALEUR!
 =SOMME(GROUPER.PAR(Ventes[Payé];Ventes[Qté];SOMME))	11
 =JOINDRE.TEXTE(",";VRAI;FILTRE(TRIERPAR(Etapes[Nom];Etapes[Valeur];-1);Etapes[Valeur]>10))	C,B
 =JOINDRE.TEXTE(",";VRAI;FILTRE(Etapes[Nom];Etapes[Valeur]>100;"aucune"))	aucune

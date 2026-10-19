@@ -336,6 +336,7 @@ func TestSpill(t *testing.T) {
 		`=TRIER(Ventes[Prix];1;-1)`:                                `Prix / 199,99 / 25,5 / 10 / `,
 		`=UNIQUE(Ventes[Payé])`:                                    `Payé / VRAI / FAUX / `,
 		`=UNIQUE(Ventes[Payé];FAUX;VRAI)`:                          `Payé / FAUX / `,
+		`=UNIQUE(Ventes[Payé];0)`:                                  `Payé / VRAI / FAUX / `,
 		`=GROUPER.PAR(Ventes[Payé];Ventes[Montant];SOMME)`:         `Payé|Montant / FAUX|30 / VRAI|250,99 / |0`,
 		`=PRENDRE(TRIERPAR(Ventes[Produit];Ventes[Montant];-1);2)`: `Produit / Écran / Clavier`,
 		`=FILTRE(Ventes[Date];Ventes[Date]>=DATE(2026;1;1))`:       `Date / 15/01/2026 / 28/02/2026`,

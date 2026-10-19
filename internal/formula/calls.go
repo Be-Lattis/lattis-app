@@ -62,6 +62,12 @@ func scanOf(n Call, s *Schema, current *Table) scanCall {
 		if rs[i] == param {
 			sc.params = append(sc.params, a)
 		} else {
+			if IsSpill(a) {
+				// NB.SI(UNIQUE(…); …), GRANDE.VALEUR({1;2}; 1) : un tableau
+				// dynamique n'est pas parcouru comme une colonne ; #VALEUR!
+				// plutôt qu'un résultat faux (lu comme une seule valeur).
+				return scanCall{err: ErrValue}
+			}
 			sc.cols = append(sc.cols, a)
 		}
 	}

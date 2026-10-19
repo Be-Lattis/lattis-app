@@ -43,11 +43,14 @@ Aucune version n'est encore publiée. Voici, regroupé par jour, ce que contient
 - L'onglet SCRIPT s'appelle désormais Script ; « Refaire » devient « Rétablir » dans l'éditeur de requête.
 - Les erreurs de connexion courantes de PostgreSQL, MySQL et SQL Server sont en français.
 - Mémoire de SQLite bornée par classeur.
+- Aide à la saisie des fonctions revue : UNIQUE annonce `UNIQUE(plage; [par_colonne]; [exactement_une_fois])` et prend une colonne (`UNIQUE(Suividesnids[NID suivi])`), un tableau, une plage de cellules ou un autre tableau dynamique ; un clic dans la grille pendant la saisie de UNIQUE, TRIER, PRENDRE ou EXCLURE insère la colonne cliquée, et non plus le nom du tableau. Les infobulles des agrégats, des familles .SI, d'EQUIV, d'INDEX, de GRANDE.VALEUR et de SOMMEPROD citent aussi les plages de cellules.
+- UNIQUE, TRIER, PRENDRE et EXCLURE acceptent une plage de cellules libres (`UNIQUE(Cell[A1:A20])`) ; UNIQUE et TRIER acceptent 0 comme `par_colonne`, comme FAUX.
 
 **Corrections**
 
 - Saisie dans une cellule : un clic dans la barre de formule (après avoir pointé une référence, par exemple) y fait continuer la saisie au point cliqué, sans la valider, au lieu de valider la cellule et de demander un second clic.
 - Saisie dans la barre de formule : la cellule qui la montre la coupe à son bord, sur fond opaque, et la fait défiler pour garder le curseur visible ; elle ne passe plus sur les cellules voisines ni sur l'ancienne valeur (résultat déversé d'une formule, par exemple). L'éditeur de cellule ne s'élargit plus sur une valeur déversée, un tableau croisé ou une fusion voisine (il passe à la ligne), et un texte long ne déborde plus sur des valeurs déversées.
+- NB.SI, GRANDE.VALEUR, CENTILE, INDEX et les autres fonctions qui parcourent une colonne donnent #VALEUR! sur un tableau dynamique (`NB.SI(UNIQUE(Ventes[Qté]); ">1")`) au lieu d'un résultat faux (0).
 - Supprimer ou effacer la dernière ligne d'un tableau retire aussi les lignes vides restées au-dessus d'elle (« N lignes vides retirées en bas du tableau », Ctrl+Z les rend), y compris sous un onglet à choix, où le bas est celui des lignes de la valeur choisie ; une ligne insérée vide exprès reste.
 - Glisser la bordure de la sélection dans un tableau croisé le déplace en entier (Ctrl : le copie) au lieu d'afficher « Un tableau croisé ne se modifie pas cellule par cellule » ; couper-coller un TCD entier sur un tableau l'écarte au lieu d'être refusé.
 - Tableau posé depuis l'onglet SQL : l'actualisation (F5) garde ses en-têtes et ne fait plus apparaître `_pos` ni les noms internes (c_1…) ; un résultat copié n'est plus pris pour celui d'une ancienne requête dont le tableau a été supprimé.
