@@ -134,10 +134,8 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 			case plain && !(inCols && inRows) && !(inCols && row == tb.Row):
 				continue
 			case inCols && row == tb.Bottom()+1 && !empty:
-				if tb.Filtered() {
-					return ErrFiltered{Table: tb.Name}
-				}
-				// Une note ou un total sous le tableau reste à part (legend.go).
+				// Une note ou un total sous le tableau reste à part (legend.go),
+				// même sous un tableau filtré.
 				if !t.noLegend {
 					kind, why, err := t.footKind(tb, row, col, raw)
 					if err != nil {
@@ -146,6 +144,9 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 					if kind != "" {
 						return t.keepOut(tb, row, col, raw, kind, why)
 					}
+				}
+				if tb.Filtered() {
+					return ErrFiltered{Table: tb.Name}
 				}
 				// Tableau d'une requête : une note ou un total dessous restent
 				// permis (ci-dessus), une nouvelle ligne non (l'actualisation
@@ -251,7 +252,17 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 			if err != nil {
 				return err
 			}
-			return t.setFreeCell(sheet, row, col, formula.Format(n, formula.FR))
+			if err := t.setFreeCell(sheet, row, col, formula.Format(n, formula.FR)); err != nil {
+				return err
+			}
+			// Sous une note gardée hors du tableau : un total.
+			if t.noLegend {
+				return nil
+			}
+			if out, err := t.noteAbove(sheet, row, col); err != nil || !out {
+				return err
+			}
+			return t.markOut(sheet, row, col, outTotal)
 		}
 		if empty {
 			if err := t.clearOut(sheet, row, col); err != nil {
@@ -261,11 +272,15 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 		if err := t.setFreeCell(sheet, row, col, freeRaw(raw)); err != nil || empty {
 			return err
 		}
-		// Sous une note gardée hors du tableau, une autre note.
+		// Sous une note gardée hors du tableau, une autre note, ou un total
+		// (« Total » sous « Source : INSEE »).
 		if !t.noLegend {
 			if out, err := t.noteAbove(sheet, row, col); err != nil || out {
 				if err != nil {
 					return err
+				}
+				if totalLabel(raw) {
+					return t.markOut(sheet, row, col, outTotal)
 				}
 				return t.markOut(sheet, row, col, outNote)
 			}

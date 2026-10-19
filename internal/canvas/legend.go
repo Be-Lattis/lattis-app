@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/lalamefine/lattis/internal/formula"
@@ -43,6 +44,30 @@ var (
 	// autoColRe : nom de colonne donné par Lattis, pas par l'utilisateur.
 	autoColRe = regexp.MustCompile(`^Colonne \d+$`)
 )
+
+// totalLabel : libellé d'une ligne de total. « Total », « Sous-total : »,
+// « Total général », « Total HT » le sont ; un nom propre après le mot
+// (« Total Energies », « Moyenne Garonne ») est une donnée (audit 2 M5).
+func totalLabel(s string) bool {
+	loc := totalRe.FindStringIndex(s)
+	if loc == nil {
+		return false
+	}
+	rest := strings.TrimSpace(s[loc[1]:])
+	if rest == "" || strings.HasSuffix(s[:loc[1]], ":") || strings.HasPrefix(rest, ":") {
+		return true
+	}
+	word, _, _ := strings.Cut(rest, " ")
+	runes := []rune(word)
+	if !unicode.IsUpper(runes[0]) || strings.ToUpper(word) == word {
+		return true // « total des ventes », « Total HT »
+	}
+	switch strings.ToLower(word) {
+	case "général", "générale", "global", "globale", "annuel", "annuelle", "mensuel", "mensuelle", "cumulé", "cumulée":
+		return true
+	}
+	return false
+}
 
 func outStyle(kind string) Style {
 	s := Style{outKey: true}
@@ -158,6 +183,26 @@ func (t *tx) outKindInRow(tb Table, row int) (string, error) {
 	return "", rs.Err()
 }
 
+// totalLeft : sur la ligne row, une cellule à gauche de col, dans les
+// colonnes du tableau, est gardée à part comme total.
+func (t *tx) totalLeft(tb Table, row, col int) (bool, error) {
+	rs, err := t.query(`SELECT style FROM _lattis_cell_styles WHERE sheet = ? AND row = ? AND col BETWEEN ? AND ?`, tb.Sheet, row, tb.Col, col-1)
+	if err != nil {
+		return false, err
+	}
+	defer rs.Close()
+	for rs.Next() {
+		var style string
+		if err := rs.Scan(&style); err != nil {
+			return false, err
+		}
+		if s := parseStyle(style); s[outKey] == true && s["b"] == true {
+			return true, nil
+		}
+	}
+	return false, rs.Err()
+}
+
 // footKind dit si une saisie dans la ligne juste sous le tableau est une
 // note ou un total plutôt qu'une nouvelle ligne (vide : une ligne) ; why
 // l'explique.
@@ -178,11 +223,28 @@ func (t *tx) footKind(tb Table, row, col int, raw string) (kind, why string, err
 			return "", "", nil // une ligne de données en cours de saisie
 		}
 	}
+	// À droite d'un libellé de total gardé à part (« Total » puis 245) : la
+	// valeur de cette ligne de total, pas une ligne de données.
+	if total, err := t.totalLeft(tb, row, col); err != nil || total {
+		return outTotal, "valeur de la ligne de total", err
+	}
 	src := strings.TrimSpace(raw)
 	switch {
 	case isFormula(src):
 		return outTotal, "une formule sous le tableau reste à part (ligne de total)", nil
-	case totalRe.MatchString(src):
+	case totalLabel(src):
+		// Une colonne qui a déjà des valeurs de cette forme (« Total
+		// Access ») : une donnée de plus.
+		if c := tb.Cols[col-tb.Col]; c.Formula == "" && (c.Type == grid.Text || c.Type == "") {
+			word, _, _ := strings.Cut(strings.TrimSpace(src), " ")
+			var same int
+			if err := t.row(`SELECT EXISTS (SELECT 1 FROM `+tb.sql()+` WHERE lower(`+colSQL(c.ID)+`) LIKE lower(?) || '%')`, word).Scan(&same); err != nil {
+				return "", "", err
+			}
+			if same == 1 {
+				return "", "", nil
+			}
+		}
 		return outTotal, "ligne de total", nil
 	case strings.HasPrefix(src, "'"):
 		return "", "", nil
@@ -339,7 +401,7 @@ func footRows(g [][]string) (n int, kinds []string) {
 			}
 		}
 		switch {
-		case totalRe.MatchString(first):
+		case totalLabel(first):
 			kinds = append(kinds, outTotal)
 		case filledCount(g[i]) == 1 && noteRe.MatchString(first):
 			kinds = append(kinds, outNote)
@@ -499,7 +561,7 @@ func (m *Model) RowToNote(ctx context.Context, table string, n int) error {
 		kind := outNote
 		for _, v := range vals {
 			if v = strings.TrimSpace(v); v != "" {
-				if totalRe.MatchString(v) {
+				if totalLabel(v) {
 					kind = outTotal
 				}
 				break
