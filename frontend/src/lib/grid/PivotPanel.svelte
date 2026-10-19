@@ -128,8 +128,10 @@
 		if (!on) flush();
 	}
 
+	// Fermeture du volet : les changements en attente (mise à jour différée
+	// comprise) s'appliquent, au lieu d'être perdus sans prévenir.
 	onDestroy(() => {
-		if (dirty && !defer) flush();
+		if (dirty) flush();
 		clearTimeout(timer);
 	});
 
@@ -565,7 +567,7 @@
 			<label class="opt"><input type="checkbox" checked={defer} onchange={(e) => setDefer((e.currentTarget as HTMLInputElement).checked)} /> Différer la mise à jour</label>
 			<button class="primary apply" disabled={!defer || !dirty} onclick={flush} title="Appliquer les changements au tableau croisé"><Icon name="refresh" size={14} />Mettre à jour</button>
 		</div>
-		{#if defer && dirty}<p class="pending">Modifications en attente : le tableau croisé n'est pas encore à jour.</p>{/if}
+		{#if defer && dirty}<p class="pending">Modifications en attente : le tableau croisé n'est pas encore à jour (elles s'appliquent aussi à la fermeture du volet).</p>{/if}
 		<button class="delete" onclick={ondelete}><Icon name="trash" size={14} />Supprimer le tableau croisé</button>
 	</footer>
 </aside>
