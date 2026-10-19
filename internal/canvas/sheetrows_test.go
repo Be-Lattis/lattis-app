@@ -130,3 +130,28 @@ func TestNestedRowIndex(t *testing.T) {
 	}
 	t.Fatal("cellule introuvable")
 }
+
+// Supprimer une colonne resserre le tableau : les « Colonne n » restées
+// vides et les lignes du bas devenues vides partent, en une seule étape
+// d'annulation ; une colonne nommée reste, même vide.
+func TestDeleteColumnShrinks(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	must(t, d.Do(ctx, "Saisie", func(x *tx) error {
+		_, err := x.createTable(1, "T", 0, 0, []string{"ID", "Colonne 2", "Nom", "Notes"},
+			[][]string{{"1", "", "Léa", ""}, {"2", "", "Tom", ""}, {"3", "", "", ""}, {"4", "", "", ""}})
+		return err
+	}))
+	before := dump(t, d)
+	must(t, d.DeleteColumn(ctx, "T", 0))
+	check(t, d, "colonne supprimée")
+	if got, want := layoutOf(t, d), "T@A1:Nom|Notes×2"; got != want {
+		t.Fatalf("\n got %s\nwant %s", got, want)
+	}
+	if _, err := d.bus.Undo(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation incomplète :\n%s", diff(before, got))
+	}
+}

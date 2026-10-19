@@ -635,7 +635,10 @@ func (m *Model) DeleteColumn(ctx context.Context, table string, i int) error {
 		if i < 0 || i >= len(tb.Cols) || len(tb.Cols) == 1 {
 			return errors.New("canvas: colonne impossible à supprimer")
 		}
-		return t.dropColumn(tb, tb.Cols[i], i)
+		if err := t.dropColumn(tb, tb.Cols[i], i); err != nil {
+			return err
+		}
+		return t.trimAfterDrop(tb.ID)
 	})
 }
 

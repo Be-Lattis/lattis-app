@@ -336,7 +336,10 @@ func (t *tx) deleteTableCols(tb Table, i, j int) error {
 	for k := i; k <= j; k++ {
 		idx = append(idx, k)
 	}
-	return t.dropColumns(tb, idx)
+	if err := t.dropColumns(tb, idx); err != nil {
+		return err
+	}
+	return t.trimAfterDrop(tb.ID)
 }
 
 // trashRows supprime d'un tableau les lignes dont la requête ids donne les
@@ -523,4 +526,62 @@ func (t *tx) rewriteCellRefs(sheet int64, move func(r, c int) (int, int, bool)) 
 		return nil
 	}
 	return t.apply(do, undo)
+}
+
+// trimAfterDrop : après la suppression de colonnes, le tableau se resserre
+// (demande de Louis) : les colonnes restées sans nom ni valeur (« Colonne n »
+// vides) partent, puis les lignes du bas devenues vides. Une colonne nommée
+// reste, même vide ; un tableau filtré, chargé par une requête ou sans
+// aucune ligne remplie ne bouge pas.
+func (t *tx) trimAfterDrop(id int64) error {
+	tb, err := t.table(id)
+	if err != nil {
+		return err
+	}
+	if tb.Filtered() {
+		return nil
+	}
+	if fixed, err := t.fixedTables([]Table{tb}); err != nil || fixed[tb.ID] != "" {
+		return err
+	}
+	filled := func(c Column) string {
+		return fmt.Sprintf(`(coalesce(%s, '') <> '' OR EXISTS (SELECT 1 FROM _lattis_invalid i WHERE i.tbl = %d AND i.rid = %s.id AND i.col = %d))`, colSQL(c.ID), tb.ID, tb.sql(), c.ID)
+	}
+	var empty []int
+	for i, c := range tb.Cols {
+		if c.Formula != "" || !autoColRe.MatchString(c.Name) {
+			continue
+		}
+		var n int
+		if err := t.row(`SELECT count(*) FROM ` + tb.sql() + ` WHERE ` + filled(c)).Scan(&n); err != nil {
+			return err
+		}
+		if n == 0 {
+			empty = append(empty, i)
+		}
+	}
+	if len(empty) > 0 && len(empty) < len(tb.Cols) {
+		if err := t.dropColumns(tb, empty); err != nil {
+			return err
+		}
+		if tb, err = t.table(id); err != nil {
+			return err
+		}
+	}
+	var conds []string
+	for _, c := range tb.Cols {
+		if c.Formula == "" {
+			conds = append(conds, filled(c))
+		}
+	}
+	if len(conds) == 0 {
+		return nil
+	}
+	// Lignes après la dernière remplie (aucune remplie : rien ne bouge).
+	after := ` WHERE _pos > (SELECT max(_pos) FROM ` + tb.sql() + ` WHERE ` + strings.Join(conds, " OR ") + `)`
+	var tail int
+	if err := t.row(`SELECT count(*) FROM ` + tb.sql() + after).Scan(&tail); err != nil || tail == 0 {
+		return err
+	}
+	return t.trashRows(tb, `SELECT id FROM `+tb.sql()+after)
 }
