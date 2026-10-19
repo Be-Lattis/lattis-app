@@ -94,6 +94,12 @@
 	/** Tri personnalisé… d'un champ des lignes ou des colonnes : son dialogue ouvert. */
 	let customField = $state<string | null>(null);
 
+	/** Clic sur la ligne d'un champ, hors de la case, du nom et du bouton ▾ : coche ou décoche, comme la case (zone cliquable agrandie, aspect inchangé). */
+	function rowClick(e: MouseEvent, name: string) {
+		if ((e.target as HTMLElement).closest('input, label, button')) return;
+		toggle(name, !used.has(name));
+	}
+
 	/** Tri d'un champ : asc, desc, ou un ordre personnalisé (null : ordre de la source). */
 	function sortField(field: string, how: 'asc' | 'desc' | CustomOrder | null) {
 		const c: PivotConfig = { ...draft, sort: withoutField(draft.sort, field), orders: withoutField(draft.orders, field) };
@@ -529,7 +535,8 @@
 		{#each visible as f (f.name)}
 			{@const usable = isUsable(f)}
 			{@const id = `pf-${f.name}`}
-			<li class="field" class:used={used.has(f.name)} class:off={!usable} draggable={usable} ondragstart={(e) => startDrag(e, f.name)} ondragend={endDrag} title={usable ? undefined : 'Colonne calculée : elle ne sert pas encore de champ de tableau croisé'}>
+			<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions (la case reste l'élément du clavier ; le clic sur la ligne n'est qu'une cible agrandie) -->
+			<li class="field" class:used={used.has(f.name)} class:off={!usable} draggable={usable} ondragstart={(e) => startDrag(e, f.name)} ondragend={endDrag} onclick={(e) => usable && rowClick(e, f.name)} title={usable ? undefined : 'Colonne calculée : elle ne sert pas encore de champ de tableau croisé'}>
 				<input type="checkbox" {id} checked={used.has(f.name)} disabled={!usable} onchange={(e) => toggle(f.name, (e.currentTarget as HTMLInputElement).checked)} />
 				<span class="ticon"><Icon name={fieldIcon(f.type)} size={16} /></span>
 				<label for={id} class="fname">{f.name}</label>
@@ -546,7 +553,8 @@
 		{/each}
 		{#if countVisible}
 			{@const on = used.has(ROW_COUNT)}
-			<li class="field pseudo" class:used={on} draggable="true" ondragstart={(e) => startDrag(e, ROW_COUNT)} ondragend={endDrag}>
+			<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions (la case reste l'élément du clavier ; le clic sur la ligne n'est qu'une cible agrandie) -->
+			<li class="field pseudo" class:used={on} draggable="true" ondragstart={(e) => startDrag(e, ROW_COUNT)} ondragend={endDrag} onclick={(e) => rowClick(e, ROW_COUNT)}>
 				<input type="checkbox" id="pf--count" checked={on} onchange={(e) => toggle(ROW_COUNT, (e.currentTarget as HTMLInputElement).checked)} />
 				<span class="ticon"><Icon name="autosum" size={16} /></span>
 				<label for="pf--count" class="fname">Nombre de lignes</label>
