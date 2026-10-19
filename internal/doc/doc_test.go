@@ -210,7 +210,7 @@ func TestProtectionSaved(t *testing.T) {
 	must(t, err)
 	must(t, d.Save(ctx, path))
 	must(t, d.ProtectSheet(ctx, 1, "secret"))
-	must(t, d.ProtectWorkbook(ctx, "", false))
+	must(t, d.ProtectWorkbook(ctx, "", false, false))
 	if dirty, _ := d.Dirty(ctx); !dirty {
 		t.Fatal("protection posée mais classeur vu comme enregistré")
 	}

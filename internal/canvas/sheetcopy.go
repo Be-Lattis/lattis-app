@@ -369,7 +369,7 @@ func (m *Model) SetSheetColor(ctx context.Context, sheet int64, color string) er
 		return fmt.Errorf("%w : couleur « %s » invalide (#rrggbb attendu)", ErrSheet, color)
 	}
 	return m.Do(ctx, "Couleur d'onglet", func(t *tx) error {
-		if err := t.guardWorkbook(); err != nil {
+		if err := t.guardTab(sheet); err != nil {
 			return err
 		}
 		var old string
@@ -392,7 +392,7 @@ func (m *Model) SetSheetHidden(ctx context.Context, sheet int64, hidden bool) er
 		label = "Masquer la feuille"
 	}
 	return m.Do(ctx, label, func(t *tx) error {
-		if err := t.guardWorkbook(); err != nil {
+		if err := t.guardTab(sheet); err != nil {
 			return err
 		}
 		var old bool

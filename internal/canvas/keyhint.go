@@ -35,7 +35,7 @@ func (t *tx) keyHint(tb Table) (bool, error) {
 // (mémorisé dans le classeur, annulable).
 func (m *Model) DismissKeyHint(ctx context.Context, table string) error {
 	return m.Do(ctx, "Ne plus proposer de clé", func(t *tx) error {
-		tb, err := t.viewTable(table)
+		tb, err := t.sortTable(table)
 		if err != nil {
 			return err
 		}

@@ -1397,14 +1397,6 @@ export function PromoteHeader(table: string): $CancellablePromise<$models.DocSta
 }
 
 /**
- * ProtectFormat protège la mise en forme d'une feuille (la saisie reste
- * permise) ; hors de l'historique d'annulation.
- */
-export function ProtectFormat(sheet: number, password: string): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(1133989314, sheet, password);
-}
-
-/**
  * ProtectSheet protège une feuille (password vide : sans mot de passe) ;
  * hors de l'historique d'annulation, comme Excel.
  */
@@ -1413,11 +1405,19 @@ export function ProtectSheet(sheet: number, password: string): $CancellablePromi
 }
 
 /**
+ * ProtectStructure protège la structure d'une feuille (seule la saisie
+ * dans ses tableaux reste permise) ; hors de l'historique d'annulation.
+ */
+export function ProtectStructure(sheet: number, password: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2576143350, sheet, password);
+}
+
+/**
  * ProtectWorkbook protège la structure du classeur (onglets) ; sheets
  * verrouille aussi le contenu de toutes les feuilles.
  */
-export function ProtectWorkbook(password: string, sheets: boolean): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(4052942421, password, sheets);
+export function ProtectWorkbook(password: string, sheets: boolean, structure: boolean): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(4052942421, password, sheets, structure);
 }
 
 /**
@@ -2408,17 +2408,17 @@ export function UnmergeCells(sheet: number, r0: number, c0: number, r1: number, 
 }
 
 /**
- * UnprotectFormat ôte la protection de la mise en forme d'une feuille.
- */
-export function UnprotectFormat(sheet: number, password: string): $CancellablePromise<$models.DocState> {
-    return $Call.ByID(3986192359, sheet, password);
-}
-
-/**
  * UnprotectSheet ôte la protection d'une feuille.
  */
 export function UnprotectSheet(sheet: number, password: string): $CancellablePromise<$models.DocState> {
     return $Call.ByID(4209283687, sheet, password);
+}
+
+/**
+ * UnprotectStructure ôte la protection de la structure d'une feuille.
+ */
+export function UnprotectStructure(sheet: number, password: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(4290975321, sheet, password);
 }
 
 /**

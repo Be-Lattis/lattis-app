@@ -19,7 +19,7 @@ func (m *Model) SortTable(ctx context.Context, table string, i int, desc bool) e
 	return m.Do(ctx, "Trier", func(t *tx) error {
 		// Tri local permis sur un tableau publié en lecture seule (classeur
 		// figé, §5.4) ; ailleurs, le journal logique décide.
-		tb, err := t.viewTable(table)
+		tb, err := t.sortTable(table)
 		if err != nil {
 			return err
 		}

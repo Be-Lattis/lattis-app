@@ -758,6 +758,12 @@ export interface Layout {
     "workbookSheets": boolean;
 
     /**
+     * … ou avec la structure de toutes les feuilles (saisie dans les
+     * tableaux seulement).
+     */
+    "workbookStructure": boolean;
+
+    /**
      * Mise en page de la feuille (onglet Mise en page).
      */
     "pageSetup": PageSetup;
@@ -1682,11 +1688,11 @@ export interface SheetInfo {
     "password": boolean;
 
     /**
-     * FormatProtected : mise en forme protégée (Révision › Protéger la mise
-     * en forme) ; FormatPassword : avec un mot de passe.
+     * StructureProtected : structure protégée (Révision › Protéger la
+     * structure) ; StructurePassword : avec un mot de passe.
      */
-    "formatProtected": boolean;
-    "formatPassword": boolean;
+    "structureProtected": boolean;
+    "structurePassword": boolean;
 
     /**
      * Color : couleur de l'onglet (« #rrggbb », vide : aucune) ; Hidden :

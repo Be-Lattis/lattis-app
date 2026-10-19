@@ -22,10 +22,10 @@ type SheetInfo struct {
 	// Password : il faut un mot de passe pour ôter la protection.
 	Protected bool `json:"protected"`
 	Password  bool `json:"password"`
-	// FormatProtected : mise en forme protégée (Révision › Protéger la mise
-	// en forme) ; FormatPassword : avec un mot de passe.
-	FormatProtected bool `json:"formatProtected"`
-	FormatPassword  bool `json:"formatPassword"`
+	// StructureProtected : structure protégée (Révision › Protéger la
+	// structure) ; StructurePassword : avec un mot de passe.
+	StructureProtected bool `json:"structureProtected"`
+	StructurePassword  bool `json:"structurePassword"`
 	// Color : couleur de l'onglet (« #rrggbb », vide : aucune) ; Hidden :
 	// feuille masquée (absente de la barre d'onglets).
 	Color  string `json:"color"`
@@ -174,6 +174,9 @@ type Layout struct {
 	WorkbookPassword  bool `json:"workbookPassword"`
 	// … avec le contenu de toutes les feuilles verrouillé.
 	WorkbookSheets bool `json:"workbookSheets"`
+	// … ou avec la structure de toutes les feuilles (saisie dans les
+	// tableaux seulement).
+	WorkbookStructure bool `json:"workbookStructure"`
 	// Mise en page de la feuille (onglet Mise en page).
 	PageSetup PageSetup `json:"pageSetup"`
 }
@@ -226,12 +229,13 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 			return err
 		}
 		l.WorkbookProtected, l.WorkbookPassword, l.WorkbookSheets = prot.Workbook, prot.WorkbookPassword, prot.WorkbookSheets
+		l.WorkbookStructure = prot.WorkbookStructure
 		if l.PageSetup, err = t.pageSetup(sheet); err != nil {
 			return err
 		}
 		for i, s := range l.Sheets {
 			l.Sheets[i].Password, l.Sheets[i].Protected = prot.Sheets[s.ID]
-			l.Sheets[i].FormatPassword, l.Sheets[i].FormatProtected = prot.Formats[s.ID]
+			l.Sheets[i].StructurePassword, l.Sheets[i].StructureProtected = prot.Structures[s.ID]
 		}
 		tables, err := t.tables(sheet)
 		if err != nil {

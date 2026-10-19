@@ -563,7 +563,7 @@ func (t *tx) syncFormulaTables() error {
 			if err != nil {
 				return err
 			}
-			if t.guard(tb.Sheet) != nil || t.lockTable(tb.ID) != nil || t.guardWorkbook() != nil {
+			if t.guardData(tb.Sheet) != nil || t.lockTable(tb.ID) != nil || t.guardWorkbook() != nil {
 				continue // feuille protégée, tableau publié figé : F5 plus tard
 			}
 			raw := strings.TrimSpace(l.src.Formula)

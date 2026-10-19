@@ -127,7 +127,7 @@ func (t *tx) sheetOrder() ([]int64, error) {
 // moveSheet renumérote les rangs pour placer sheet au rang to ; l'annulation
 // rend les rangs d'origine.
 func (t *tx) moveSheet(sheet int64, to int) error {
-	if err := t.guardWorkbook(); err != nil {
+	if err := t.guardTab(sheet); err != nil {
 		return err
 	}
 	ids, err := t.sheetOrder()
@@ -177,7 +177,7 @@ func (m *Model) RenameSheet(ctx context.Context, sheet int64, name string) error
 		return fmt.Errorf("%w : nom vide", ErrSheet)
 	}
 	return m.Do(ctx, "Renommer la feuille", func(t *tx) error {
-		if err := t.guardWorkbook(); err != nil {
+		if err := t.guardTab(sheet); err != nil {
 			return err
 		}
 		var old string
@@ -208,7 +208,7 @@ func (m *Model) RenameSheet(ctx context.Context, sheet int64, name string) error
 // d'annulation rend tout. Le dernier onglet visible ne se supprime pas.
 func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 	return m.Do(ctx, "Supprimer la feuille", func(t *tx) error {
-		if err := t.guardWorkbook(); err != nil {
+		if err := t.guardTab(sheet); err != nil {
 			return err
 		}
 		var n int
@@ -278,9 +278,9 @@ func (t *tx) deleteSheet(sheet int64) error {
 		}
 		// Mise en forme, largeurs et hauteurs de la feuille.
 		do := []stmt{st(`DELETE FROM _lattis_pivots WHERE sheet = ?`, sheet), st(`DELETE FROM _lattis_charts WHERE sheet = ?`, sheet), st(`DELETE FROM _lattis_buttons WHERE sheet = ?`, sheet)}
-		// Protections de la feuille (contenu, mise en forme) : supprimées avec
+		// Protections de la feuille (contenu, structure) : supprimées avec
 		// elle, rendues par l'annulation.
-		for _, tbl := range []string{protTable, formatTable} {
+		for _, tbl := range []string{protTable, structTable} {
 			prot, err := t.snapshot(tbl, sheet)
 			if err != nil {
 				return err
@@ -342,7 +342,7 @@ func (m *Model) SetHeadings(ctx context.Context, sheet int64, show bool) error {
 // 0 revient à la largeur par défaut.
 func (m *Model) SetColumnWidth(ctx context.Context, sheet int64, col, width int) error {
 	return m.Do(ctx, "Largeur de colonne", func(t *tx) error {
-		if err := t.guardFormat(sheet); err != nil {
+		if err := t.guard(sheet); err != nil {
 			return err
 		}
 		var old int
@@ -368,7 +368,7 @@ func (m *Model) SetColumnWidth(ctx context.Context, sheet int64, col, width int)
 // revient à la hauteur par défaut.
 func (m *Model) SetRowHeight(ctx context.Context, sheet int64, row, height int) error {
 	return m.Do(ctx, "Hauteur de ligne", func(t *tx) error {
-		if err := t.guardFormat(sheet); err != nil {
+		if err := t.guard(sheet); err != nil {
 			return err
 		}
 		var old int

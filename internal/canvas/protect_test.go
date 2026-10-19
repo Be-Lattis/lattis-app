@@ -132,7 +132,7 @@ func TestProtectWorkbookStructureOnly(t *testing.T) {
 	if err := d.ProtectSheet(ctx, id, ""); err != nil {
 		t.Fatal(err)
 	}
-	if err := d.ProtectWorkbook(ctx, "clé", false); err != nil {
+	if err := d.ProtectWorkbook(ctx, "clé", false, false); err != nil {
 		t.Fatal(err)
 	}
 	_, err = d.AddSheet(ctx)
@@ -177,7 +177,7 @@ func TestProtectWorkbook(t *testing.T) {
 	if _, err := d.SetCell(ctx, 1, 0, 0, "avant"); err != nil {
 		t.Fatal(err)
 	}
-	if err := d.ProtectWorkbook(ctx, "clé", true); err != nil {
+	if err := d.ProtectWorkbook(ctx, "clé", true, false); err != nil {
 		t.Fatal(err)
 	}
 	_, err = d.AddSheet(ctx)
@@ -284,7 +284,7 @@ func TestProtectUndo(t *testing.T) {
 	if _, err := d.AddSheet(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if err := d.ProtectWorkbook(ctx, "", false); err != nil {
+	if err := d.ProtectWorkbook(ctx, "", false, false); err != nil {
 		t.Fatal(err)
 	}
 	_, err = d.bus.Undo(ctx)

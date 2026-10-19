@@ -139,9 +139,6 @@ func (m *Model) SetRules(ctx context.Context, table string, i int, rules []Rule)
 		if err != nil {
 			return err
 		}
-		if err := t.guardFormat(tb.Sheet); err != nil {
-			return err
-		}
 		return t.setColumnRules(tb, i, rules)
 	})
 }
@@ -198,7 +195,7 @@ func (m *Model) SetSheetRules(ctx context.Context, sheet int64, ch RuleChanges) 
 		}
 	}
 	return m.Do(ctx, "Mise en forme conditionnelle", func(t *tx) error {
-		if err := t.guardFormat(sheet); err != nil {
+		if err := t.guard(sheet); err != nil {
 			return err
 		}
 		for _, c := range ch.Columns {

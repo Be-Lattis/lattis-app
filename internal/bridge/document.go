@@ -1538,21 +1538,21 @@ func (s *DocumentService) UnprotectSheet(ctx context.Context, sheet int64, passw
 	return s.act(ctx, func(d *doc.Document) error { return d.UnprotectSheet(ctx, sheet, password) })
 }
 
-// ProtectFormat protège la mise en forme d'une feuille (la saisie reste
-// permise) ; hors de l'historique d'annulation.
-func (s *DocumentService) ProtectFormat(ctx context.Context, sheet int64, password string) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.ProtectFormat(ctx, sheet, password) })
+// ProtectStructure protège la structure d'une feuille (seule la saisie
+// dans ses tableaux reste permise) ; hors de l'historique d'annulation.
+func (s *DocumentService) ProtectStructure(ctx context.Context, sheet int64, password string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.ProtectStructure(ctx, sheet, password) })
 }
 
-// UnprotectFormat ôte la protection de la mise en forme d'une feuille.
-func (s *DocumentService) UnprotectFormat(ctx context.Context, sheet int64, password string) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.UnprotectFormat(ctx, sheet, password) })
+// UnprotectStructure ôte la protection de la structure d'une feuille.
+func (s *DocumentService) UnprotectStructure(ctx context.Context, sheet int64, password string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.UnprotectStructure(ctx, sheet, password) })
 }
 
 // ProtectWorkbook protège la structure du classeur (onglets) ; sheets
 // verrouille aussi le contenu de toutes les feuilles.
-func (s *DocumentService) ProtectWorkbook(ctx context.Context, password string, sheets bool) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.ProtectWorkbook(ctx, password, sheets) })
+func (s *DocumentService) ProtectWorkbook(ctx context.Context, password string, sheets, structure bool) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.ProtectWorkbook(ctx, password, sheets, structure) })
 }
 
 // UnprotectWorkbook ôte la protection de la structure du classeur.

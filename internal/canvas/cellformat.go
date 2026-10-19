@@ -163,7 +163,7 @@ func (m *Model) MergeCells(ctx context.Context, sheet int64, r0, c0, r1, c1 int)
 	}
 	dropped := 0
 	err := m.Do(ctx, "Fusionner et centrer", func(t *tx) error {
-		if err := t.guardFormat(sheet); err != nil {
+		if err := t.guard(sheet); err != nil {
 			return err
 		}
 		tables, err := t.tables(sheet)
@@ -234,7 +234,7 @@ func (m *Model) UnmergeCells(ctx context.Context, sheet int64, r0, c0, r1, c1 in
 		c0, c1 = c1, c0
 	}
 	return m.Do(ctx, "Annuler la fusion", func(t *tx) error {
-		if err := t.guardFormat(sheet); err != nil {
+		if err := t.guard(sheet); err != nil {
 			return err
 		}
 		tables, err := t.tables(sheet)

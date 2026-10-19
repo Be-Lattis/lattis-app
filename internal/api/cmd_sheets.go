@@ -65,8 +65,8 @@ func init() {
 		&Command{
 			Name:    "sheets.list",
 			Summary: "Liste les feuilles du classeur, dans l'ordre des onglets.",
-			Details: "protected vaut true pour une feuille protégée (Révision › Protéger la feuille), formatProtected pour une feuille dont la mise en forme est protégée ; kind vaut \"html\" pour une page web, \"doc\" pour un document (absent pour une feuille).",
-			Returns: "{ {id, name, protected, formatProtected, kind}, ... }",
+			Details: "protected vaut true pour une feuille protégée (Révision › Protéger la feuille), structureProtected pour une feuille dont la structure est protégée (seule la saisie dans ses tableaux est permise) ; kind vaut \"html\" pour une page web, \"doc\" pour un document (absent pour une feuille).",
+			Returns: "{ {id, name, protected, structureProtected, kind}, ... }",
 			Example: `for _, f in ipairs(sheets.list()) do
   print(f.id, f.name)
 end`,
@@ -339,14 +339,14 @@ sheets.unprotect("Feuille1", "secret")`,
 			},
 		},
 		&Command{
-			Name:    "sheets.protect_format",
-			Label:   "Protéger la mise en forme",
-			Summary: "Protège la mise en forme d'une feuille, comme Révision › Protéger la mise en forme : la saisie reste permise, changer la mise en forme est refusé.",
-			Details: "Sont refusés les styles (police, couleurs, bordures, alignement, format de nombre, décimales), Effacer les formats et Supprimer, la mise en forme conditionnelle, les largeurs et hauteurs, la fusion. Restent permis la saisie, le collage (valeurs seules pour une copie faite dans Lattis), l'effacement du contenu, les lignes et colonnes, le tri, les filtres, les notes et la validation. Le mot de passe est facultatif. Protéger ne s'annule pas.",
+			Name:    "sheets.protect_structure",
+			Label:   "Protéger la structure",
+			Summary: "Protège la structure d'une feuille, comme Révision › Protéger la structure : tout est verrouillé sauf la saisie dans les tableaux.",
+			Details: "Restent permis : les valeurs des cellules de données des tableaux (saisie, collage de valeurs, effacement), l'ajout de lignes sous un tableau ou leur insertion, la suppression de lignes, le tri et le filtre, db.insert, db.update et db.delete, la lecture. Sont refusés les cellules libres, la mise en forme, les colonnes et en-têtes, les tableaux eux-mêmes, les objets, les noms, les règles et la validation, les lignes et colonnes de la feuille, la mise en page, l'onglet (nom, couleur, place, suppression, onglet à choix) et les requêtes SQL d'écriture. Le mot de passe est facultatif. Protéger ne s'annule pas.",
 			Params:  []Param{pSheet, {Name: "password", Type: String, Desc: "mot de passe pour ôter la protection", Optional: true}},
 			Write:   true,
-			Example: `sheets.protect_format("Feuille1")
-print(sheets.list()[1].formatProtected) -- true`,
+			Example: `sheets.protect_structure("Feuille1")
+print(sheets.list()[1].structureProtected) -- true`,
 			Run: func(c *Call) (any, error) {
 				s, err := c.sheet("sheet")
 				if err != nil {
@@ -354,13 +354,13 @@ print(sheets.list()[1].formatProtected) -- true`,
 				}
 				pw, _ := c.Str("password")
 				d, _ := c.Doc()
-				return nil, d.ProtectFormat(c, s.ID, pw)
+				return nil, d.ProtectStructure(c, s.ID, pw)
 			},
 		},
 		&Command{
-			Name:    "sheets.unprotect_format",
-			Label:   "Ôter la protection de la mise en forme",
-			Summary: "Ôte la protection de la mise en forme d'une feuille (avec son mot de passe s'il y en a un).",
+			Name:    "sheets.unprotect_structure",
+			Label:   "Ôter la protection de la structure",
+			Summary: "Ôte la protection de la structure d'une feuille (avec son mot de passe s'il y en a un).",
 			Params:  []Param{pSheet, {Name: "password", Type: String, Desc: "mot de passe donné en protégeant", Optional: true}},
 			Write:   true,
 			Run: func(c *Call) (any, error) {
@@ -370,16 +370,17 @@ print(sheets.list()[1].formatProtected) -- true`,
 				}
 				pw, _ := c.Str("password")
 				d, _ := c.Doc()
-				return nil, d.UnprotectFormat(c, s.ID, pw)
+				return nil, d.UnprotectStructure(c, s.ID, pw)
 			},
 		},
 		&Command{
 			Name:    "sheets.protect_workbook",
 			Label:   "Protéger le classeur",
 			Summary: "Protège la structure du classeur, comme Révision › Protéger le classeur : ajouter, supprimer, renommer ou déplacer des feuilles est ensuite refusé.",
-			Details: "Comme Excel, le contenu des feuilles non protégées reste modifiable (voir sheets.protect), sauf avec sheets = true : le contenu de toutes les feuilles est alors verrouillé aussi, jusqu'à sheets.unprotect_workbook, qui ôte ce verrou et lui seul (les feuilles protégées une à une le restent). Le mot de passe est facultatif. Protéger ne s'annule pas.",
+			Details: "Comme Excel, le contenu des feuilles non protégées reste modifiable (voir sheets.protect), sauf avec sheets = true : le contenu de toutes les feuilles est alors verrouillé aussi, jusqu'à sheets.unprotect_workbook, qui ôte ce verrou et lui seul (les feuilles protégées une à une le restent). Avec structure = true, c'est la structure de toutes les feuilles qui est verrouillée : seule la saisie dans les tableaux reste permise (voir sheets.protect_structure). Le mot de passe est facultatif. Protéger ne s'annule pas.",
 			Params: []Param{{Name: "password", Type: String, Desc: "mot de passe pour ôter la protection", Optional: true},
-				{Name: "sheets", Type: Boolean, Desc: "verrouiller aussi le contenu de toutes les feuilles", Optional: true}},
+				{Name: "sheets", Type: Boolean, Desc: "verrouiller aussi le contenu de toutes les feuilles", Optional: true},
+				{Name: "structure", Type: Boolean, Desc: "verrouiller aussi la structure de toutes les feuilles (saisie dans les tableaux seulement)", Optional: true}},
 			Write: true,
 			Example: `sheets.protect_workbook("secret", true)
 sheets.unprotect_workbook("secret")`,
@@ -393,7 +394,11 @@ sheets.unprotect_workbook("secret")`,
 				if err != nil {
 					return nil, err
 				}
-				return nil, d.ProtectWorkbook(c, pw, all)
+				structure, err := c.Bool("structure")
+				if err != nil {
+					return nil, err
+				}
+				return nil, d.ProtectWorkbook(c, pw, all, structure)
 			},
 		},
 		&Command{

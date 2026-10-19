@@ -112,10 +112,10 @@ func (m *Model) Transfer(ctx context.Context, from int64, src Rect, to int64, ds
 	if move && from == to && dr == 0 && dc == 0 {
 		return ev, nil
 	}
-	// Mise en forme protégée à la destination : une copie colle les valeurs
-	// seules (comme Collage spécial › Valeurs).
+	// Structure protégée à la destination : une copie colle les valeurs
+	// seules (comme Collage spécial › Valeurs), dans ses tableaux.
 	if !move {
-		if locked, err := m.formatLocked(ctx, to); err != nil {
+		if locked, err := m.structureLocked(ctx, to); err != nil {
 			return ev, err
 		} else if locked {
 			return m.Paste(ctx, to, dst.R0, dst.C0, valuesBlock(values, src, dst))
@@ -132,14 +132,6 @@ func (m *Model) Transfer(ctx context.Context, from int64, src Rect, to int64, ds
 		if move {
 			if err := t.guard(from); err != nil {
 				return err
-			}
-		}
-		// D'une feuille à l'autre, la mise en forme part avec les cellules.
-		if move && from != to {
-			for _, s := range []int64{from, to} {
-				if err := t.guardFormat(s); err != nil {
-					return err
-				}
 			}
 		}
 		t.collect = true
@@ -165,13 +157,14 @@ func valuesBlock(values [][]string, src, dst Rect) [][]string {
 	return out
 }
 
-// formatLocked dit si la mise en forme de la feuille est protégée.
-func (m *Model) formatLocked(ctx context.Context, sheet int64) (bool, error) {
-	var n int
-	err := m.read(ctx, func(t *tx) error {
-		return t.row(`SELECT count(*) FROM _lattis_format_protection WHERE sheet = ?`, sheet).Scan(&n)
+// structureLocked dit si la structure de la feuille est protégée.
+func (m *Model) structureLocked(ctx context.Context, sheet int64) (bool, error) {
+	var locked bool
+	err := m.read(ctx, func(t *tx) (err error) {
+		locked, err = t.structureLocked(sheet)
+		return err
 	})
-	return n > 0, err
+	return locked, err
 }
 
 func (t *tx) transfer(from int64, src Rect, to int64, dst Rect, move bool, values [][]string, ev *Event) error {
@@ -933,14 +926,15 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 		label = "Supprimer"
 	}
 	return m.Do(ctx, label, func(t *tx) error {
-		guard := t.guard
+		zone := Rect{r0, c0, r1, c1}
+		// Structure protégée : Suppr dans les données d'un tableau seulement.
+		guard := func() error { return t.guardCells(sheet, zone, false) }
 		if all {
-			guard = t.guardFormat // Supprimer efface aussi la mise en forme
+			guard = func() error { return t.guard(sheet) }
 		}
-		if err := guard(sheet); err != nil {
+		if err := guard(); err != nil {
 			return err
 		}
-		zone := Rect{r0, c0, r1, c1}
 		tables, err := t.tables(sheet)
 		if err != nil {
 			return err
@@ -950,7 +944,7 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 		// quitte le tableau. Un en-tête qui ne peut pas partir dit pourquoi.
 		// split : le tableau a été coupé en deux (il n'existe plus).
 		dropCleared := func(tb Table) (split bool, err error) {
-			if tb.Filtered() || len(tb.Cols) < 2 {
+			if tb.Filtered() || len(tb.Cols) < 2 || t.dataOnly {
 				return false, nil
 			}
 			var idx []int
@@ -1038,7 +1032,7 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 					i := c - tb.Col
 					col := tb.Cols[i]
 					if col.Formula != "" {
-						if first == tb.Row+1 && last == tb.Bottom() {
+						if first == tb.Row+1 && last == tb.Bottom() && !t.dataOnly {
 							if err := t.setFormula(tb, i, ""); err != nil {
 								return err
 							}

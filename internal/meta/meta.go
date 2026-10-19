@@ -488,7 +488,9 @@ CREATE TABLE _lattis_choice_cells (
 	// 34 → 35 : protection de la mise en forme d'une feuille (Révision ›
 	// Protéger la mise en forme, canvas/protect.go) : styles, largeurs,
 	// hauteurs, fusions et règles verrouillés, la saisie reste permise.
-	// hash comme _lattis_protection ; hors du journal.
+	// hash comme _lattis_protection ; hors du journal. Elle garde depuis la
+	// structure de la feuille (Protéger la structure : saisie dans les
+	// tableaux seulement), sans changement de schéma.
 	`
 CREATE TABLE _lattis_format_protection (
 	sheet INTEGER NOT NULL PRIMARY KEY,

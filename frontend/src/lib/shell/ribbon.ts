@@ -14,8 +14,8 @@ export interface Gated {
 	ro?: boolean;
 	/** Ne change que la présentation locale (mise en forme, tri, notes) : permise sur un tableau partagé en lecture seule. */
 	local?: boolean;
-	/** Change la mise en forme (styles, largeurs, fusion, règles) : refusée quand la mise en forme de la feuille est protégée. */
-	format?: boolean;
+	/** Saisie dans les tableaux (coller, effacer le contenu, lignes, tri) : seule permise quand la structure de la feuille est protégée. */
+	data?: boolean;
 	/** Crée une feuille (tableau croisé) : refusée quand la structure du classeur est protégée. */
 	createsSheet?: boolean;
 }
@@ -27,8 +27,10 @@ export interface GateState {
 	sheetOwnProtected?: boolean;
 	/** Structure du classeur protégée. */
 	workbookProtected?: boolean;
-	/** Mise en forme de la feuille protégée (Révision › Protéger la mise en forme). */
-	formatProtected?: boolean;
+	/** Structure de la feuille protégée (Révision › Protéger la structure) : seule la saisie dans les tableaux reste permise. */
+	structureProtected?: boolean;
+	/** … par la protection du classeur (structure de toutes les feuilles). */
+	structureByBook?: boolean;
 	/** Classeur partagé : la cellule active est dans un tableau publié en lecture seule (le motif). */
 	tableReadOnly?: string;
 	/** Onglet affiché : une feuille (par défaut), un Document ou une page web. */
@@ -50,7 +52,8 @@ export function blockedBy(c: Gated, s: GateState): string {
 		const p = protectedThing(s.context);
 		return s.sheetOwnProtected ? `${p.locked} (Révision › ${p.unprotect})` : 'classeur protégé (Révision › Ôter la protection du classeur)';
 	}
-	if (c.format && s.formatProtected) return 'mise en forme protégée (Révision › Ôter la protection de la mise en forme)';
+	if (s.structureProtected && !c.data)
+		return s.structureByBook ? 'structure des feuilles protégée (Révision › Ôter la protection du classeur)' : 'structure protégée (Révision › Ôter la protection de la structure)';
 	if (c.local) return '';
 	return s.tableReadOnly ?? '';
 }
@@ -68,10 +71,10 @@ export interface GatedMenu extends Gated {
 export function gate<C extends GatedMenu>(c: C, s: GateState): C {
 	if (!c.run) return c;
 	if (c.items) {
-		const items = c.items.map((it) => gate({ ro: c.ro, local: c.local, format: c.format, createsSheet: c.createsSheet, ...it }, s));
+		const items = c.items.map((it) => gate({ ro: c.ro, local: c.local, data: c.data, createsSheet: c.createsSheet, ...it }, s));
 		const lost = c.items.findIndex((it, i) => it.run && !items[i].run);
 		if (lost >= 0 && !items.some((it) => it.run)) {
-			const why = blockedBy({ ro: c.ro, local: c.local, format: c.format, createsSheet: c.createsSheet, ...c.items[lost] }, s);
+			const why = blockedBy({ ro: c.ro, local: c.local, data: c.data, createsSheet: c.createsSheet, ...c.items[lost] }, s);
 			return { ...c, items, run: undefined, hint: `${c.label} : ${why}` } as C;
 		}
 		return { ...c, items } as C;

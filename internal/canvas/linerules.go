@@ -30,7 +30,7 @@ func (m *Model) SetLineRules(ctx context.Context, sheet int64, rows bool, i0, i1
 		return err
 	}
 	return m.Do(ctx, "Mise en forme conditionnelle", func(t *tx) error {
-		if err := t.guardFormat(sheet); err != nil {
+		if err := t.guard(sheet); err != nil {
 			return err
 		}
 		return t.setLineRules(sheet, rows, i0, i1, rules)

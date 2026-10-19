@@ -491,10 +491,13 @@ De même, la structure du classeur protégée (`sheets.protect_workbook`) refuse
 feuilles non protégées reste modifiable, sauf avec `sheets.protect_workbook(mot_de_passe, true)`,
 qui le verrouille aussi jusqu'à `sheets.unprotect_workbook`.
 
-La mise en forme protégée (`sheets.protect_format`, Révision › Protéger la mise en forme)
-refuse seulement de changer la mise en forme de la feuille (styles, largeurs et hauteurs,
-fusions, mise en forme conditionnelle) ; `cells.set`, `db.*` et le reste de la saisie
-restent permis, jusqu'à `sheets.unprotect_format`.
+La structure protégée (`sheets.protect_structure`, Révision › Protéger la structure)
+verrouille tout sauf la saisie dans les tableaux : `cells.set` et `cells.paste` dans les
+cellules de données d'un tableau (ou juste dessous, ce qui ajoute une ligne), `db.insert`,
+`db.update`, `db.delete`, le tri et le filtre restent permis ; cellules libres, mise en
+forme, colonnes, tableaux, objets, onglet et `db.execute` en écriture sont refusés, jusqu'à
+`sheets.unprotect_structure`. `sheets.protect_workbook{password = "…", structure = true}`
+pose ce verrou sur toutes les feuilles, ôté avec la protection du classeur.
 
 ---
 

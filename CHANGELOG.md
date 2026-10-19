@@ -9,7 +9,8 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 ### Nouveautés
 
 - Carte de points : réglage « Taille des points » dans le volet (de ×0,25 à ×4), qui multiplie la taille donnée par la colonne Valeur.
-- Révision › Protéger la mise en forme : sur la feuille, la saisie, le collage (valeurs seules), les lignes, le tri et les filtres restent permis, mais la police, les couleurs, les bordures, le format de nombre, les largeurs et hauteurs, la fusion et la mise en forme conditionnelle sont refusés (boutons grisés) ; mot de passe facultatif ; Ctrl+Z ne la contourne pas (format 35).
+- Révision › Protéger la structure : sur la feuille, tout est verrouillé sauf la saisie dans les tableaux (valeurs, collage de valeurs, lignes ajoutées, insérées ou supprimées, tri, filtre) ; cellules libres, mise en forme, colonnes, tableaux, objets et onglet sont refusés (boutons grisés) ; mot de passe facultatif ; Ctrl+Z ne la contourne pas (format 35).
+- Révision › Protéger le classeur : choix « Onglets seulement », « Onglets et structure de toutes les feuilles (saisie dans les tableaux seulement) » ou « Onglets et contenu de toutes les feuilles ».
 - Partager un tableau comme formulaire (Insertion › Formulaire, sur un Serveur Lattis) : une page web, pour téléphone ou ordinateur, remplit le tableau sans ouvrir le classeur ; concepteur avec aperçu (champs selon le type des colonnes, listes de validation, position GPS sur demande, valeurs posées par le serveur comme « Reçu le », sections), apparence (titre, introduction, logo, bannière, couleur, remerciement, langue), accès (membres du classeur, personnes et équipes, tout compte du serveur), brouillon, ouverture, lien, QR code et liens pré-remplis. Si le tableau n'est pas encore partagé, la boîte propose de publier le classeur ou d'ajouter le tableau au classeur partagé. Demande un serveur qui propose les formulaires.
 
 ### Changements

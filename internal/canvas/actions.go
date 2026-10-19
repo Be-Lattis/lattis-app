@@ -67,7 +67,7 @@ type Event struct {
 func (m *Model) SetCell(ctx context.Context, sheet int64, row, col int, raw string) (Event, error) {
 	var ev Event
 	err := m.Do(ctx, "Saisie", func(t *tx) error {
-		if err := t.guard(sheet); err != nil {
+		if err := t.guardCells(sheet, Rect{row, col, row, col}, true); err != nil {
 			return err
 		}
 		t.keyAsk = true
@@ -700,7 +700,7 @@ func (t *tx) tableName(sheet int64, row, col int) (string, error) {
 // lignes pour ajouter à la fin).
 func (m *Model) InsertRow(ctx context.Context, table string, n int) error {
 	return m.Do(ctx, "Insérer une ligne", func(t *tx) error {
-		tb, err := t.editTable(table)
+		tb, err := t.dataTable(table)
 		if err != nil {
 			return err
 		}
@@ -750,7 +750,7 @@ func (m *Model) InsertRow(ctx context.Context, table string, n int) error {
 // dessous ne remonte pas.
 func (m *Model) DeleteRow(ctx context.Context, table string, n int) error {
 	return m.Do(ctx, "Supprimer une ligne", func(t *tx) error {
-		tb, err := t.editTable(table)
+		tb, err := t.dataTable(table)
 		if err != nil {
 			return err
 		}

@@ -346,7 +346,7 @@ func (m *Model) ColumnOrder(ctx context.Context, table string, i int) (o CustomO
 // d'annulation.
 func (m *Model) SortTableCustom(ctx context.Context, table string, i int, o CustomOrder) error {
 	return m.Do(ctx, "Tri personnalisé", func(t *tx) error {
-		tb, err := t.viewTable(table)
+		tb, err := t.sortTable(table)
 		if err != nil {
 			return err
 		}

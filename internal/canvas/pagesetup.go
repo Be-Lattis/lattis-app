@@ -234,6 +234,11 @@ func (m *Model) SetPageSetupAs(ctx context.Context, sheet int64, p PageSetup, la
 		return fmt.Errorf("%w : %v", ErrSheet, err)
 	}
 	return m.Do(ctx, label, func(t *tx) error {
+		// Permise sur une feuille protégée (sans effet sur son contenu), pas
+		// quand sa structure l'est.
+		if err := t.guardStructure(sheet); err != nil {
+			return err
+		}
 		var n int
 		if err := t.row(`SELECT count(*) FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&n); err != nil {
 			return err

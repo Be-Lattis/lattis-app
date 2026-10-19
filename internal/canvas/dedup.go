@@ -18,7 +18,7 @@ import (
 func (m *Model) RemoveDuplicates(ctx context.Context, table string, cols []int) (int, error) {
 	n := 0
 	err := m.Do(ctx, "Supprimer les doublons", func(t *tx) error {
-		tb, err := t.editTable(table)
+		tb, err := t.dataTable(table)
 		if err != nil {
 			return err
 		}

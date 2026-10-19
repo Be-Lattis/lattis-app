@@ -57,7 +57,7 @@
 		color?: 'fg' | 'bg'; // commande avec un choix de couleur
 		on?: boolean; // commande à bascule, enfoncée
 		/** Commande à menu (▾) : ses choix (raccourci affiché à droite ; drapeaux hérités de la commande, sinon les leurs). */
-		items?: { label: string; icon?: IconName; run?: () => void; on?: boolean; keys?: string; ro?: boolean; local?: boolean; format?: boolean }[];
+		items?: { label: string; icon?: IconName; run?: () => void; on?: boolean; keys?: string; ro?: boolean; local?: boolean; data?: boolean }[];
 		/** Commande qui ouvre son propre menu (▾ affiché, voir anchor). */
 		menu?: boolean;
 		/** Forme dans un groupe compact (par défaut petite icône seule) : 'small' petite icône à libellé, 'big' grand bouton (Coller, Fusionner et centrer). */
@@ -173,10 +173,12 @@
 		sheetOwnProtected?: boolean;
 		/** Structure du classeur protégée (onglets). */
 		workbookProtected?: boolean;
-		/** Mise en forme de la feuille active protégée : les commandes de mise en forme sont grisées. */
-		formatProtected?: boolean;
-		/** Révision › Protéger (ou ôter la protection de) la feuille, sa mise en forme ou le classeur. */
-		onprotect?: (what: 'sheet' | 'format' | 'workbook') => void;
+		/** Structure de la feuille active protégée : seules les commandes de saisie dans les tableaux restent. */
+		structureProtected?: boolean;
+		/** … par la protection du classeur (structure de toutes les feuilles) : son motif renvoie au classeur. */
+		structureByBook?: boolean;
+		/** Révision › Protéger (ou ôter la protection de) la feuille, sa structure ou le classeur. */
+		onprotect?: (what: 'sheet' | 'structure' | 'workbook') => void;
 		/** Données › Obtenir des données : nouvelle requête d'import, volet des requêtes, tout actualiser. */
 		ondata?: (what: DataAction) => void;
 		/** Format de cellule (Ctrl+1) : lanceurs des groupes Police, Alignement et Nombre. */
@@ -220,7 +222,7 @@
 		onpagebreaks?: (on: boolean) => void;
 	}
 
-	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ondedup, ontextcols, onpivot, oninsertdata, onform, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, formatProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, reconnect = false, detach = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks }: Props = $props();
+	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ondedup, ontextcols, onpivot, oninsertdata, onform, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, structureProtected = false, structureByBook = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, reconnect = false, detach = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks }: Props = $props();
 	const fmt = (tab: FormatTab) => (onformat ? () => onformat(tab) : undefined);
 	const lines = (rows: boolean, hide: boolean) => (onlines ? () => onlines(rows, hide) : undefined);
 	const frz = (what: FreezeAction) => (onfreeze ? () => onfreeze(what) : undefined);
@@ -258,8 +260,6 @@
 	const flt = (w: 'filter' | 'errors' | 'clear') => (onfilter ? () => onfilter(w) : undefined);
 	/** Mise en forme seulement : permise sur un tableau partagé en lecture seule (ribbon.ts). */
 	const local = (cs: Command[]): Command[] => cs.map((c) => ({ local: true, ...c }));
-	/** Commandes de mise en forme : grisées aussi quand la mise en forme de la feuille est protégée. */
-	const formatting = (cs: Command[]): Command[] => cs.map((c) => ({ local: true, format: true, ...c }));
 	function pick(kind: 'fg' | 'bg', c: string | null) {
 		palette = null;
 		if (c) {
@@ -324,10 +324,10 @@
 				// Comme Excel : Coller en grand, les autres en petit avec leur libellé.
 				compact: true,
 				commands: [
-					{ label: 'Coller', icon: 'paste', size: 'big', run: onclip ? () => onclip('paste') : undefined, hint: 'Coller (Ctrl+V)' },
+					{ label: 'Coller', icon: 'paste', size: 'big', data: true, run: onclip ? () => onclip('paste') : undefined, hint: 'Coller (Ctrl+V)' },
 					{ label: 'Couper', icon: 'cut', size: 'small', run: onclip ? () => onclip('cut') : undefined, hint: 'Couper (Ctrl+X)' },
 					{ label: 'Copier', icon: 'copy', size: 'small', ro: true, run: onclip ? () => onclip('copy') : undefined, hint: 'Copier (Ctrl+C)' },
-					{ label: 'Reproduire', icon: 'format-painter', size: 'small', local: true, format: true, run: onpainter, hint: 'Reproduire la mise en forme de la cellule active' }
+					{ label: 'Reproduire', icon: 'format-painter', size: 'small', local: true, run: onpainter, hint: 'Reproduire la mise en forme de la cellule active' }
 				]
 			},
 			{
@@ -338,7 +338,7 @@
 				widest: 'icon',
 				launch: fmt('font'),
 				launchHint: 'Format de cellule : police (Ctrl+1)',
-				commands: formatting([
+				commands: local([
 					{ label: 'Gras', icon: 'bold', run: st({ b: 'toggle' }), hint: 'Gras (Ctrl+B)', on: !!cellStyle?.b },
 					{ label: 'Italique', icon: 'italic', run: st({ i: 'toggle' }), hint: 'Italique (Ctrl+I)', on: !!cellStyle?.i },
 					{ label: 'Souligné', icon: 'underline', run: st({ u: 'toggle' }), hint: 'Souligné (Ctrl+U)', on: !!cellStyle?.u },
@@ -353,7 +353,7 @@
 				compact: true,
 				launch: fmt('border'),
 				launchHint: 'Format de cellule : bordure (Ctrl+1)',
-				commands: formatting([
+				commands: local([
 					{ label: 'Toutes', icon: 'border-all', run: st({ border: 'all' }), hint: 'Toutes les bordures' },
 					{ label: 'Contour', icon: 'border-outline', run: st({ border: 'outline' }), hint: 'Bordure extérieure de la sélection' },
 					{ label: 'Aucune', icon: 'border-none', run: st({ border: 'none' }), hint: 'Retirer les bordures' }
@@ -368,7 +368,7 @@
 				launch: fmt('align'),
 				launchHint: 'Format de cellule : alignement (Ctrl+1)',
 				commands: [
-					...formatting([
+					...local([
 						{ label: 'Haut', icon: 'align-top', run: st({ va: 'top' }), hint: 'Aligner en haut', on: cellStyle?.va === 'top' },
 						{ label: 'Milieu', icon: 'align-middle', run: st({ va: null }), hint: 'Aligner au milieu', on: !!cellStyle && !cellStyle.va },
 						{ label: 'Bas', icon: 'align-bottom', run: st({ va: 'bottom' }), hint: 'Aligner en bas', on: cellStyle?.va === 'bottom' },
@@ -378,7 +378,7 @@
 						{ label: 'Droite', icon: 'align-right', run: st(alignPatch(cellStyle?.al, 'right')), hint: cellStyle?.al === 'right' ? 'Aligner à droite (cliquer : revenir à l’alignement standard)' : 'Aligner à droite', on: cellStyle?.al === 'right' },
 						{ label: 'Renvoyer à la ligne', icon: 'wrap-text', run: onwrap, size: 'big', hint: 'Afficher le texte sur plusieurs lignes dans la cellule', on: !!cellStyle?.wr }
 					]),
-					{ label: 'Fusionner et centrer', icon: 'merge-cells', format: true, run: onmerge, size: 'big', hint: merged ? 'Annuler la fusion des cellules' : 'Fusionner les cellules libres sélectionnées en une seule, contenu centré', on: merged }
+					{ label: 'Fusionner et centrer', icon: 'merge-cells', run: onmerge, size: 'big', hint: merged ? 'Annuler la fusion des cellules' : 'Fusionner les cellules libres sélectionnées en une seule, contenu centré', on: merged }
 				]
 			},
 			{
@@ -389,7 +389,7 @@
 				// Comme Excel : la liste des formats (Standard ▾) en haut, puis les
 				// formats en petites icônes et, en dessous, les décimales côte à côte.
 				rows: 3,
-				commands: formatting([
+				commands: local([
 					{
 						label: 'Format de nombre',
 						icon: 'number-format',
@@ -421,7 +421,6 @@
 						icon: 'conditional-format',
 						menu: true,
 						local: true,
-						format: true,
 						run: onrules ? () => onrules(anchor.x, anchor.y) : undefined,
 						hint: 'Mise en évidence des cellules, barres de données, nuances de couleurs, jeux d’icônes, gestionnaire des règles'
 					},
@@ -438,7 +437,7 @@
 						run: oncells ? openItems : undefined,
 						hint: 'Insérer une ligne ou une colonne',
 						items: [
-							{ label: 'Insérer une ligne (au-dessus)', run: cells('insertRow') },
+							{ label: 'Insérer une ligne (au-dessus)', data: true, run: cells('insertRow') },
 							{ label: 'Insérer une colonne (à gauche)', run: cells('insertColumn') }
 						]
 					},
@@ -448,7 +447,7 @@
 						run: oncells ? openItems : undefined,
 						hint: 'Supprimer la ligne ou la colonne de la cellule active',
 						items: [
-							{ label: 'Supprimer la ligne', run: cells('deleteRow') },
+							{ label: 'Supprimer la ligne', data: true, run: cells('deleteRow') },
 							{ label: 'Supprimer la colonne', run: cells('deleteColumn') }
 						]
 					},
@@ -459,7 +458,7 @@
 						run: onformat ? openItems : undefined, // ouvre ses choix
 						hint: 'Format de cellule, masquer et afficher',
 						items: [
-							{ label: 'Format de cellule…', format: true, keys: 'Ctrl+1', run: fmt('number') },
+							{ label: 'Format de cellule…', keys: 'Ctrl+1', run: fmt('number') },
 							{ label: 'Masquer les lignes', keys: 'Ctrl+9', run: lines(true, true) },
 							{ label: 'Masquer les colonnes', keys: 'Ctrl+0', run: lines(false, true) },
 							{ label: 'Afficher les lignes', run: lines(true, false) },
@@ -477,6 +476,7 @@
 					{ label: 'Somme automatique', icon: 'autosum', size: 'small', run: onformula ? () => onformula('sum') : undefined, hint: 'SOMME de la colonne du tableau au-dessus (Alt+=)' },
 					{
 						label: 'Remplissage',
+						data: true,
 						icon: 'fill-down',
 						size: 'small',
 						run: onedit ? openItems : undefined,
@@ -493,8 +493,8 @@
 						run: onstyle ? openItems : undefined,
 						hint: 'Effacer les formats, le contenu ou la note de la sélection',
 						items: [
-							{ label: 'Effacer les formats', local: true, format: true, run: st(clearPatch()) },
-							{ label: 'Effacer le contenu', keys: 'Suppr', run: ed('clearContents') },
+							{ label: 'Effacer les formats', local: true, run: st(clearPatch()) },
+							{ label: 'Effacer le contenu', keys: 'Suppr', data: true, run: ed('clearContents') },
 							{ label: 'Effacer la note', local: true, run: note && onnote ? () => onnote('delete') : undefined }
 						]
 					},
@@ -505,9 +505,9 @@
 						run: onsort || onfilter ? openItems : undefined,
 						hint: 'Trier le tableau par la colonne active, le filtrer',
 						items: [
-							{ label: 'Trier de A à Z', local: true, run: onsort ? () => onsort(false) : undefined },
-							{ label: 'Trier de Z à A', local: true, run: onsort ? () => onsort(true) : undefined },
-							{ label: 'Tri personnalisé…', local: true, run: onsortcustom },
+							{ label: 'Trier de A à Z', local: true, data: true, run: onsort ? () => onsort(false) : undefined },
+							{ label: 'Trier de Z à A', local: true, data: true, run: onsort ? () => onsort(true) : undefined },
+							{ label: 'Tri personnalisé…', local: true, data: true, run: onsortcustom },
 							{ label: 'Filtrer', ro: true, keys: 'Ctrl+Maj+L', run: flt('filter') },
 							{ label: 'Effacer les filtres', ro: true, run: filters ? flt('clear') : undefined }
 						]
@@ -697,9 +697,9 @@
 				// Filtrer en grand, Effacer et Erreurs seulement en petit à côté.
 				compact: true,
 				commands: [
-					{ label: 'Trier A → Z', icon: 'sort-asc', local: true, run: onsort ? () => onsort(false) : undefined, hint: 'Trier le tableau par la colonne active, croissant' },
-					{ label: 'Trier Z → A', icon: 'sort-desc', local: true, run: onsort ? () => onsort(true) : undefined, hint: 'Trier le tableau par la colonne active, décroissant' },
-					{ label: 'Tri personnalisé…', icon: 'sort', local: true, run: onsortcustom, hint: 'Trier le tableau par la colonne active dans un ordre choisi (Jours, Mois, ordre libre)' },
+					{ label: 'Trier A → Z', icon: 'sort-asc', local: true, data: true, run: onsort ? () => onsort(false) : undefined, hint: 'Trier le tableau par la colonne active, croissant' },
+					{ label: 'Trier Z → A', icon: 'sort-desc', local: true, data: true, run: onsort ? () => onsort(true) : undefined, hint: 'Trier le tableau par la colonne active, décroissant' },
+					{ label: 'Tri personnalisé…', icon: 'sort', local: true, data: true, run: onsortcustom, hint: 'Trier le tableau par la colonne active dans un ordre choisi (Jours, Mois, ordre libre)' },
 					{ label: 'Filtrer', icon: 'filter', size: 'big', ro: true, run: flt('filter'), hint: 'Filtrer le tableau par la colonne active (Ctrl+Maj+L)' },
 					{ label: 'Effacer', icon: 'clear-format', size: 'small', ro: true, run: filters ? flt('clear') : undefined, hint: filters ? 'Effacer les filtres du tableau actif' : 'Effacer : le tableau de la cellule active n’est pas filtré' },
 					{ label: 'Erreurs seulement', icon: 'warning', size: 'small', ro: true, on: errorsOnly, run: flt('errors'), hint: errorsOnly ? 'Afficher de nouveau toutes les lignes de la colonne active' : 'Afficher seulement les saisies hors type de la colonne active' }
@@ -711,7 +711,7 @@
 				compact: true,
 				commands: [
 					{ label: 'Convertir', icon: 'text-columns', size: 'big', run: ontextcols, hint: 'Convertir le texte en colonnes : couper le contenu de la colonne sélectionnée (séparateurs ou largeur fixe) en plusieurs colonnes' },
-					{ label: 'Supprimer les doublons', icon: 'remove-duplicates', size: 'small', run: ondedup, hint: 'Supprimer les lignes en double du tableau actif' },
+					{ label: 'Supprimer les doublons', icon: 'remove-duplicates', size: 'small', data: true, run: ondedup, hint: 'Supprimer les lignes en double du tableau actif' },
 					{ label: 'Validation des données', icon: 'validation', size: 'small', local: true, run: onvalidation, hint: 'Liste déroulante : valeurs permises dans la sélection (ou toute une colonne de tableau), les autres saisies sont refusées' },
 					{ label: 'Regrouper des onglets…', icon: 'append-queries', size: 'small', createsSheet: true, run: onmergesheets, hint: 'Réunir les tableaux de plusieurs onglets aux mêmes colonnes (un par mois, par année, par ville…) en un seul tableau, avec une colonne de catégorie' }
 				]
@@ -751,19 +751,22 @@
 					{ label: sheetOwnProtected ? prot.unprotect : prot.protect, icon: 'lock-sheet', on: sheetOwnProtected, run: onprotect ? () => onprotect('sheet') : undefined, hint: sheetOwnProtected ? prot.unprotect : `${prot.protect} : plus aucune modification de son contenu (mot de passe facultatif)` },
 					...(context === 'sheet'
 						? [
-							{
-								label: formatProtected ? 'Ôter la protection de la mise en forme' : 'Protéger la mise en forme',
-								icon: 'lock-format' as const,
-								on: formatProtected,
-								// Feuille déjà protégée en entier : la mise en forme l'est aussi.
-								run: onprotect && (formatProtected || !sheetProtected) ? () => onprotect('format') : undefined,
-								hint: formatProtected
-									? 'Ôter la protection de la mise en forme de la feuille'
-									: sheetProtected
-										? 'Protéger la mise en forme : inutile, la feuille est déjà protégée en entier'
-										: 'Protéger la mise en forme de la feuille : la saisie reste permise, styles, largeurs, fusions et mise en forme conditionnelle sont refusés (mot de passe facultatif)'
-							}
-						]
+								{
+									label: structureProtected && !structureByBook ? 'Ôter la protection de la structure' : 'Protéger la structure',
+									icon: 'lock-structure' as const,
+									on: structureProtected && !structureByBook,
+									// Feuille déjà protégée en entier, ou structure verrouillée par le classeur : rien à poser ici.
+									run: onprotect && (structureProtected ? !structureByBook : !sheetProtected) ? () => onprotect('structure') : undefined,
+									hint:
+										structureProtected && !structureByBook
+											? 'Ôter la protection de la structure de la feuille'
+											: structureByBook
+												? 'Structure de toutes les feuilles protégée avec le classeur (Révision › Ôter la protection du classeur)'
+												: sheetProtected
+													? 'Protéger la structure : inutile, la feuille est déjà protégée en entier'
+													: 'Protéger la structure : tout est verrouillé sauf la saisie dans les tableaux (cellules libres, mise en forme, colonnes, tableaux, objets et onglet) ; mot de passe facultatif'
+								}
+							]
 						: []),
 					{ label: workbookProtected ? 'Ôter la protection du classeur' : 'Protéger le classeur', icon: 'lock-book', on: workbookProtected, run: onprotect ? () => onprotect('workbook') : undefined, hint: workbookProtected ? 'Ôter la protection de la structure du classeur' : 'Protéger la structure du classeur : ajouter, supprimer, renommer ou déplacer des feuilles est refusé' }
 				])
@@ -940,7 +943,7 @@
 	// Grisage (ribbon.ts) : protection de la feuille ou du Document, du
 	// classeur, tableau partagé en lecture seule sous la cellule active.
 	const ribbons: Record<string, Group[]> = $derived.by(() => {
-		const s = { sheetProtected, sheetOwnProtected, workbookProtected, formatProtected: context === 'sheet' && formatProtected, tableReadOnly: context === 'sheet' ? tableReadOnly : undefined, context };
+		const s = { sheetProtected, sheetOwnProtected, workbookProtected, structureProtected: context === 'sheet' && structureProtected, structureByBook, tableReadOnly: context === 'sheet' ? tableReadOnly : undefined, context };
 		return Object.fromEntries(Object.entries(allRibbons).map(([k, gs]) => [k, gs.map((g) => ({ ...g, commands: g.commands.map((c) => gate(c, s)) }))]));
 	});
 
@@ -1585,7 +1588,7 @@
 			value={cellStyle?.ff ?? FONTS[0]}
 			width="{FONTS_W - 4}px"
 			title="Police"
-			disabled={!onstyle || sheetProtected || formatProtected}
+			disabled={!onstyle || sheetProtected || structureProtected}
 			options={FONTS.map((f) => ({ value: f, label: f }))}
 			onchange={(v) => onstyle?.({ ff: v === FONTS[0] ? null : v })}
 		/>
@@ -1593,7 +1596,7 @@
 			value={cellStyle?.fs ?? DEFAULT_PT}
 			width="64px"
 			title="Taille de police (points)"
-			disabled={!onstyle || sheetProtected || formatProtected}
+			disabled={!onstyle || sheetProtected || structureProtected}
 			options={SIZES.map((s) => ({ value: s, label: String(s) }))}
 			onchange={(v) => onstyle?.({ fs: v === DEFAULT_PT ? null : v })}
 		/>

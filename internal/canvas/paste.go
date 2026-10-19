@@ -61,7 +61,7 @@ func (m *Model) Paste(ctx context.Context, sheet int64, row, col int, block [][]
 		return ""
 	}
 	err := m.Do(ctx, "Coller", func(t *tx) error {
-		if err := t.guard(sheet); err != nil {
+		if err := t.guardCells(sheet, Rect{row, col, row + h - 1, col + w - 1}, true); err != nil {
 			return err
 		}
 		t.undoBirth = true

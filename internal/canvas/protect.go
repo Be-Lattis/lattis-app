@@ -20,30 +20,31 @@ package canvas
 // restent).
 //
 // La protection vit dans _lattis_protection (sheet = 0 : le classeur ;
-// sheet = -1 : le verrou du contenu de toutes les feuilles posé avec lui,
-// sans empreinte propre : c'est le mot de passe du classeur qui l'ôte),
+// sheet = -1 : le verrou du contenu de toutes les feuilles posé avec lui ;
+// sheet = -2 : celui de la structure de toutes les feuilles, qui les traite
+// comme si chacune avait Protéger la structure ; ces deux verrous n'ont pas
+// d'empreinte propre : c'est le mot de passe du classeur qui les ôte),
 // hors du journal : la poser ou l'ôter ne s'annule pas (comme Excel). Pour
 // qu'une annulation ou un rétablissement d'une action antérieure ne la
 // contourne pas, le bus de commandes compare une empreinte du contenu des
 // feuilles protégées (et de la liste des onglets si le classeur l'est)
 // avant et après : si elle change, l'annulation est refusée.
 //
-// La mise en forme d'une feuille peut aussi être protégée seule (Révision ›
-// Protéger la mise en forme, _lattis_format_protection) : la saisie, le
-// collage, l'effacement du contenu, les lignes et colonnes, le tri, les
-// filtres, les tableaux et les objets restent permis ; sont refusés les
-// styles (police, couleurs, remplissage, bordures, alignement, renvoi à la
-// ligne, format de nombre, décimales), le pinceau, « Effacer les formats »
-// et Supprimer (qui efface aussi la mise en forme), la mise en forme
-// conditionnelle, les largeurs et hauteurs, la fusion. Notes, validation et
-// masquage des lignes ne sont pas de la mise en forme (cellformat.go) et
-// restent permis. Un collage copié dans Lattis colle les valeurs seules
-// (Transfer) ; un déplacement d'une feuille à une autre est refusé (la mise
-// en forme partirait avec les cellules). La protection de la feuille, plus
-// large, l'emporte. Contre l'annulation, l'empreinte de la mise en forme
-// (styles sans notes ni validation, largeurs, hauteurs, règles) ne doit pas
-// changer, pour les seules commandes antérieures à la protection : celles
-// faites depuis ont été gardées par elle (voir historyGuard).
+// La structure d'une feuille peut aussi être protégée (Révision › Protéger
+// la structure, table _lattis_format_protection, nommée ainsi au format 35
+// pour une première version qui ne verrouillait que la mise en forme) :
+// tout est refusé (guard) sauf la saisie dans les tableaux, gardée par
+// guardData ou guardCells : valeurs des cellules de données (saisie,
+// collage de valeurs, Suppr), lignes ajoutées sous un tableau ou insérées,
+// lignes supprimées, tri et filtre, saisie par les scripts (Editor). Sont
+// refusés les cellules libres, la mise en forme, les colonnes et en-têtes,
+// les tableaux eux-mêmes, les objets, les noms, les règles, la validation,
+// les lignes et colonnes de la feuille, la mise en page et l'onglet (nom,
+// couleur, place, suppression, onglet à choix). Un collage copié dans
+// Lattis colle les valeurs seules (Transfer). Contre l'annulation,
+// l'empreinte de la feuille hors données des tableaux (structurePrint) ne
+// doit pas changer, pour les seules commandes antérieures à la protection :
+// celles faites depuis ont été gardées par elle (voir historyGuard).
 //
 // Le mot de passe, facultatif, n'est jamais stocké : seulement une empreinte
 // PBKDF2-HMAC-SHA256 salée (sel aléatoire de 16 octets).
@@ -77,12 +78,19 @@ func (e ErrProtected) Error() string {
 	return fmt.Sprintf("La feuille « %s » est protégée : ôtez la protection (Révision › Ôter la protection de la feuille) pour la modifier", e.Sheet)
 }
 
-// ErrFormatProtected refuse un changement de mise en forme d'une feuille
-// dont la mise en forme est protégée.
-type ErrFormatProtected struct{ Sheet string }
+// ErrStructureProtected refuse une modification d'une feuille dont la
+// structure est protégée, autre que la saisie dans ses tableaux ; Book :
+// par la protection du classeur (structure de toutes les feuilles).
+type ErrStructureProtected struct {
+	Sheet string
+	Book  bool
+}
 
-func (e ErrFormatProtected) Error() string {
-	return fmt.Sprintf("La mise en forme de la feuille « %s » est protégée : ôtez la protection (Révision › Ôter la protection de la mise en forme) pour la modifier", e.Sheet)
+func (e ErrStructureProtected) Error() string {
+	if e.Book {
+		return fmt.Sprintf("La structure des feuilles du classeur est protégée : seule la saisie dans les tableaux est permise sur « %s » (Révision › Ôter la protection du classeur)", e.Sheet)
+	}
+	return fmt.Sprintf("La structure de la feuille « %s » est protégée : seule la saisie dans les tableaux est permise (Révision › Ôter la protection de la structure)", e.Sheet)
 }
 
 // ErrPassword signale un mot de passe de protection incorrect.
@@ -94,6 +102,11 @@ const workbookScope = 0
 // sheetsScope désigne, dans _lattis_protection, le verrou du contenu de
 // toutes les feuilles posé avec la protection du classeur.
 const sheetsScope = -1
+
+// structScope désigne, dans _lattis_protection, le verrou de la structure
+// de toutes les feuilles posé avec la protection du classeur (seule la
+// saisie dans les tableaux reste permise) ; sans changement de format.
+const structScope = -2
 
 const pbkdf2Iter = 120_000
 
@@ -139,9 +152,76 @@ func checkPassword(stored, pw string) bool {
 }
 
 // guard refuse l'action si la feuille est protégée, ou si le classeur est
-// protégé avec le contenu de toutes ses feuilles. La seule protection de la
-// structure du classeur laisse le contenu modifiable, comme Excel.
+// protégé avec le contenu de toutes ses feuilles, ou si la structure de la
+// feuille l'est. La seule protection de la structure du classeur laisse le
+// contenu modifiable, comme Excel.
 func (t *tx) guard(sheet int64) error {
+	if err := t.guardData(sheet); err != nil {
+		return err
+	}
+	return t.guardStructure(sheet)
+}
+
+// guardStructure refuse l'action si la structure de la feuille est protégée.
+func (t *tx) guardStructure(sheet int64) error {
+	e, err := t.structureLock(sheet)
+	if err == nil && e != nil {
+		return *e
+	}
+	return err
+}
+
+// structureLock rend le refus d'une feuille dont la structure est protégée,
+// par elle-même ou par le classeur (nil : elle ne l'est pas).
+func (t *tx) structureLock(sheet int64) (*ErrStructureProtected, error) {
+	var name string
+	var own, book bool
+	err := t.row(`SELECT s.name, EXISTS (SELECT 1 FROM `+structTable+` WHERE sheet = s.id),
+		EXISTS (SELECT 1 FROM _lattis_protection WHERE sheet = ?) FROM _lattis_sheets s WHERE s.id = ?`, structScope, sheet).Scan(&name, &own, &book)
+	if errors.Is(err, sql.ErrNoRows) || err == nil && !own && !book {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &ErrStructureProtected{name, !own}, nil
+}
+
+// structureLocked dit si la structure de la feuille est protégée.
+func (t *tx) structureLocked(sheet int64) (bool, error) {
+	e, err := t.structureLock(sheet)
+	return e != nil, err
+}
+
+// guardCells garde la saisie dans la zone z : sous la protection de la
+// structure, seulement dans les données d'un tableau (below : ou juste
+// dessous, ce qui lui ajoute des lignes). La transaction ne change alors
+// plus la forme des tableaux (dataOnly).
+func (t *tx) guardCells(sheet int64, z Rect, below bool) error {
+	if err := t.guardData(sheet); err != nil {
+		return err
+	}
+	lock, err := t.structureLock(sheet)
+	if err != nil || lock == nil {
+		return err
+	}
+	tables, err := t.tables(sheet)
+	if err != nil {
+		return err
+	}
+	for _, tb := range tables {
+		if z.C0 >= tb.Col && z.C1 <= tb.Right() && z.R0 > tb.Row && (z.R1 <= tb.Bottom() || below && z.R0 <= tb.Bottom()+1) {
+			t.dataOnly = true
+			return nil
+		}
+	}
+	return *lock
+}
+
+// guardData refuse l'action si la feuille est protégée (ou le contenu de
+// toutes les feuilles) : la saisie dans les tableaux, permise sous la
+// protection de la structure, n'est gardée que par elle.
+func (t *tx) guardData(sheet int64) error {
 	var name string
 	err := t.row(`SELECT s.name FROM _lattis_protection p JOIN _lattis_sheets s ON s.id = p.sheet WHERE p.sheet = ?`, sheet).Scan(&name)
 	if err == nil {
@@ -158,46 +238,6 @@ func (t *tx) guard(sheet int64) error {
 		return ErrProtected{}
 	}
 	return nil
-}
-
-// guardFormat refuse un changement de mise en forme : feuille protégée
-// (guard), ou dont la mise en forme est protégée.
-func (t *tx) guardFormat(sheet int64) error {
-	if err := t.guard(sheet); err != nil {
-		return err
-	}
-	var name string
-	err := t.row(`SELECT s.name FROM _lattis_format_protection p JOIN _lattis_sheets s ON s.id = p.sheet WHERE p.sheet = ?`, sheet).Scan(&name)
-	if err == nil {
-		return ErrFormatProtected{name}
-	}
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil
-	}
-	return err
-}
-
-// notFormat : propriétés de style qui ne sont pas de la mise en forme
-// (notes, masquage, validation : cellformat.go).
-var notFormat = map[string]bool{"nt": true, "np": true, "hd": true, "dv": true}
-
-// isFormat dit si un correctif de style change la mise en forme.
-func isFormat(patch Style) bool {
-	for k := range patch {
-		if !notFormat[k] {
-			return true
-		}
-	}
-	return false
-}
-
-// guardStyle garde un correctif de style : guardFormat s'il change la mise
-// en forme, guard sinon (note, validation).
-func (t *tx) guardStyle(sheet int64, patch Style) error {
-	if isFormat(patch) {
-		return t.guardFormat(sheet)
-	}
-	return t.guard(sheet)
 }
 
 // guarded exécute fn si la feuille n'est pas protégée.
@@ -218,6 +258,16 @@ func (t *tx) guardWorkbook() error {
 		return ErrProtected{}
 	}
 	return nil
+}
+
+// guardTab refuse de changer l'onglet d'une feuille (nom, place, couleur,
+// masquage, suppression) si le classeur ou la structure de la feuille est
+// protégé.
+func (t *tx) guardTab(sheet int64) error {
+	if err := t.guardWorkbook(); err != nil {
+		return err
+	}
+	return t.guardStructure(sheet)
 }
 
 // editTable lit un tableau à modifier : refusé si sa feuille est protégée,
@@ -250,6 +300,26 @@ func (t *tx) viewTable(name string) (Table, error) {
 	return tb, err
 }
 
+// dataTable lit un tableau dont on change les lignes (saisie, ajout ou
+// suppression de lignes) : permis sous la protection de la structure.
+func (t *tx) dataTable(name string) (Table, error) {
+	tb, err := t.sortTable(name)
+	if err == nil {
+		err = t.lockTable(tb.ID)
+	}
+	return tb, err
+}
+
+// sortTable lit un tableau à trier (présentation locale, comme viewTable) :
+// permis sous la protection de la structure.
+func (t *tx) sortTable(name string) (Table, error) {
+	tb, err := t.tableByName(name)
+	if err == nil {
+		err = t.guardData(tb.Sheet)
+	}
+	return tb, err
+}
+
 // guardObject refuse l'action si l'objet id de la table de métadonnées
 // (graphique, bouton, tableau croisé) est sur une feuille protégée.
 func (t *tx) guardObject(table string, id int64) error {
@@ -266,54 +336,70 @@ func (t *tx) guardObject(table string, id int64) error {
 
 // ProtectSheet protège une feuille (pw vide : sans mot de passe).
 func (m *Model) ProtectSheet(ctx context.Context, sheet int64, pw string) error {
-	return m.setProtection(ctx, protTable, sheet, true, pw, false)
+	return m.setProtection(ctx, protTable, sheet, true, pw, lockTabs)
 }
 
 // UnprotectSheet ôte la protection d'une feuille ; pw doit être le mot de
 // passe donné en la protégeant, s'il y en avait un.
 func (m *Model) UnprotectSheet(ctx context.Context, sheet int64, pw string) error {
-	return m.setProtection(ctx, protTable, sheet, false, pw, false)
+	return m.setProtection(ctx, protTable, sheet, false, pw, lockTabs)
 }
 
-// ProtectFormat protège la mise en forme d'une feuille (pw vide : sans mot
-// de passe) : la saisie reste permise.
-func (m *Model) ProtectFormat(ctx context.Context, sheet int64, pw string) error {
-	return m.setProtection(ctx, formatTable, sheet, true, pw, false)
+// ProtectStructure protège la structure d'une feuille (pw vide : sans mot
+// de passe) : seule la saisie dans ses tableaux reste permise.
+func (m *Model) ProtectStructure(ctx context.Context, sheet int64, pw string) error {
+	return m.setProtection(ctx, structTable, sheet, true, pw, lockTabs)
 }
 
-// UnprotectFormat ôte la protection de la mise en forme d'une feuille.
-func (m *Model) UnprotectFormat(ctx context.Context, sheet int64, pw string) error {
-	return m.setProtection(ctx, formatTable, sheet, false, pw, false)
+// UnprotectStructure ôte la protection de la structure d'une feuille.
+func (m *Model) UnprotectStructure(ctx context.Context, sheet int64, pw string) error {
+	return m.setProtection(ctx, structTable, sheet, false, pw, lockTabs)
 }
 
 // ProtectWorkbook protège la structure du classeur (onglets) ; sheets
-// verrouille aussi le contenu de toutes les feuilles, jusqu'à ce que la
+// verrouille aussi le contenu de toutes les feuilles, structure leur
+// structure (saisie dans les tableaux seulement), jusqu'à ce que la
 // protection du classeur soit ôtée.
-func (m *Model) ProtectWorkbook(ctx context.Context, pw string, sheets bool) error {
-	return m.setProtection(ctx, protTable, workbookScope, true, pw, sheets)
+func (m *Model) ProtectWorkbook(ctx context.Context, pw string, sheets, structure bool) error {
+	lock := lockTabs
+	switch {
+	case sheets:
+		lock = lockSheets
+	case structure:
+		lock = lockStructures
+	}
+	return m.setProtection(ctx, protTable, workbookScope, true, pw, lock)
 }
+
+// Ce que verrouille la protection du classeur, en plus des onglets.
+const (
+	lockTabs       = iota // onglets seulement
+	lockSheets            // contenu de toutes les feuilles (sheet = -1)
+	lockStructures        // structure de toutes les feuilles (sheet = -2)
+)
 
 // UnprotectWorkbook ôte la protection de la structure du classeur, et le
 // verrou du contenu des feuilles posé avec elle.
 func (m *Model) UnprotectWorkbook(ctx context.Context, pw string) error {
-	return m.setProtection(ctx, protTable, workbookScope, false, pw, false)
+	return m.setProtection(ctx, protTable, workbookScope, false, pw, lockTabs)
 }
 
-// Tables des protections : feuilles et classeur, mise en forme des feuilles.
+// Tables des protections : feuilles et classeur, structure des feuilles
+// (nom du format 35, quand elle ne gardait que la mise en forme).
 const (
 	protTable   = `_lattis_protection`
-	formatTable = `_lattis_format_protection`
+	structTable = `_lattis_format_protection`
 )
 
-// setProtection écrit hors du journal (rien à annuler) dans table. sheets
-// (classeur seulement) pose aussi le verrou du contenu de toutes les
-// feuilles.
-func (m *Model) setProtection(ctx context.Context, table string, scope int64, on bool, pw string, sheets bool) error {
+// setProtection écrit hors du journal (rien à annuler) dans table. lock
+// (classeur seulement) pose aussi le verrou du contenu ou de la structure
+// de toutes les feuilles.
+func (m *Model) setProtection(ctx context.Context, table string, scope int64, on bool, pw string, lock int) error {
 	h, err := hashPassword(pw)
 	if err != nil {
 		return err
 	}
-	var top int64 // dernière commande du journal (protection de la mise en forme)
+	var top int64 // dernière commande du journal (protection de la structure)
 	err = m.db.Write(ctx, func(sqlTx *sql.Tx) error {
 		name := ""
 		if scope != workbookScope {
@@ -332,8 +418,8 @@ func (m *Model) setProtection(ctx context.Context, table string, scope int64, on
 		}
 		what := "La structure du classeur"
 		switch {
-		case table == formatTable:
-			what = fmt.Sprintf("La mise en forme de la feuille « %s »", name)
+		case table == structTable:
+			what = fmt.Sprintf("La structure de la feuille « %s »", name)
 		case scope != workbookScope:
 			what = fmt.Sprintf("La feuille « %s »", name)
 		}
@@ -344,11 +430,17 @@ func (m *Model) setProtection(ctx context.Context, table string, scope int64, on
 			if _, err := sqlTx.ExecContext(ctx, `INSERT INTO `+table+` (sheet, hash) VALUES (?, ?)`, scope, h); err != nil {
 				return err
 			}
-			if table == formatTable {
-				return sqlTx.QueryRowContext(ctx, `SELECT coalesce(max(seq), 0) FROM _lattis_journal`).Scan(&top)
+			if table == structTable || lock == lockStructures {
+				if err := sqlTx.QueryRowContext(ctx, `SELECT coalesce(max(seq), 0) FROM _lattis_journal`).Scan(&top); err != nil {
+					return err
+				}
 			}
-			if sheets && scope == workbookScope {
-				_, err := sqlTx.ExecContext(ctx, `INSERT OR REPLACE INTO _lattis_protection (sheet, hash) VALUES (?, '')`, sheetsScope)
+			if scope == workbookScope && lock != lockTabs {
+				s := int64(sheetsScope)
+				if lock == lockStructures {
+					s = structScope
+				}
+				_, err := sqlTx.ExecContext(ctx, `INSERT OR REPLACE INTO _lattis_protection (sheet, hash) VALUES (?, '')`, s)
 				return err
 			}
 			return nil
@@ -360,7 +452,7 @@ func (m *Model) setProtection(ctx context.Context, table string, scope int64, on
 			return ErrPassword
 		}
 		if table == protTable && scope == workbookScope {
-			_, err = sqlTx.ExecContext(ctx, `DELETE FROM _lattis_protection WHERE sheet IN (?, ?)`, workbookScope, sheetsScope)
+			_, err = sqlTx.ExecContext(ctx, `DELETE FROM _lattis_protection WHERE sheet IN (?, ?, ?)`, workbookScope, sheetsScope, structScope)
 		} else {
 			_, err = sqlTx.ExecContext(ctx, `DELETE FROM `+table+` WHERE sheet = ?`, scope)
 		}
@@ -369,12 +461,15 @@ func (m *Model) setProtection(ctx context.Context, table string, scope int64, on
 	if err == nil {
 		m.protMu.Lock()
 		m.protGen++
-		if table == formatTable {
-			if on {
-				m.fmtSince[scope] = top
-			} else {
-				delete(m.fmtSince, scope)
-			}
+		switch {
+		case table == structTable && on:
+			m.structSince[scope] = top
+		case table == structTable:
+			delete(m.structSince, scope)
+		case scope == workbookScope && on && lock == lockStructures:
+			m.structSince[structScope] = top
+		case scope == workbookScope && !on:
+			delete(m.structSince, structScope)
 		}
 		m.protMu.Unlock()
 	}
@@ -396,11 +491,13 @@ type Protection struct {
 	WorkbookPassword bool `json:"workbookPassword"` // … avec un mot de passe
 	// Contenu de toutes les feuilles verrouillé avec la structure du classeur.
 	WorkbookSheets bool `json:"workbookSheets"`
+	// Structure de toutes les feuilles verrouillée avec celle du classeur.
+	WorkbookStructure bool `json:"workbookStructure"`
 	// Feuilles protégées : identifiant → protégée avec un mot de passe.
 	Sheets map[int64]bool `json:"sheets"`
-	// Feuilles dont la mise en forme est protégée : identifiant → avec un
-	// mot de passe.
-	Formats map[int64]bool `json:"formats"`
+	// Feuilles dont la structure est protégée : identifiant → avec un mot de
+	// passe.
+	Structures map[int64]bool `json:"structures"`
 }
 
 // Protection lit l'état des protections.
@@ -414,26 +511,28 @@ func (m *Model) Protection(ctx context.Context) (Protection, error) {
 }
 
 func (t *tx) protection() (Protection, error) {
-	p := Protection{Sheets: map[int64]bool{}, Formats: map[int64]bool{}}
-	rs, err := t.query(`SELECT 0, sheet, hash <> '' FROM _lattis_protection UNION ALL SELECT 1, sheet, hash <> '' FROM _lattis_format_protection`)
+	p := Protection{Sheets: map[int64]bool{}, Structures: map[int64]bool{}}
+	rs, err := t.query(`SELECT 0, sheet, hash <> '' FROM _lattis_protection UNION ALL SELECT 1, sheet, hash <> '' FROM ` + structTable)
 	if err != nil {
 		return p, err
 	}
 	defer rs.Close()
 	for rs.Next() {
-		var format bool
+		var structure bool
 		var id int64
 		var pw bool
-		if err := rs.Scan(&format, &id, &pw); err != nil {
+		if err := rs.Scan(&structure, &id, &pw); err != nil {
 			return p, err
 		}
 		switch {
-		case format:
-			p.Formats[id] = pw
+		case structure:
+			p.Structures[id] = pw
 		case id == workbookScope:
 			p.Workbook, p.WorkbookPassword = true, pw
 		case id == sheetsScope:
 			p.WorkbookSheets = true
+		case id == structScope:
+			p.WorkbookStructure = true
 		default:
 			p.Sheets[id] = pw
 		}
@@ -457,25 +556,34 @@ var syncState = map[string]bool{
 
 // historyGuard encadre l'annulation ou le rétablissement de la commande seq
 // (command.Bus.Guard) : l'empreinte de ce qui est protégé ne doit pas
-// changer ; celle de la mise en forme protégée, seulement si la commande
-// est antérieure à sa protection.
+// changer ; celle d'une feuille à structure protégée (hors données des
+// tableaux), seulement si la commande est antérieure à sa protection.
 func (m *Model) historyGuard(ctx context.Context, sqlTx *sql.Tx, seq int64) (func() error, error) {
 	t := &tx{Tx: &command.Tx{Tx: sqlTx, Ctx: ctx}, m: m}
 	before, names, err := t.prints()
 	if err != nil {
 		return nil, err
 	}
-	fmts, err := m.formatGuarded(t, seq)
+	structs, err := m.structureGuarded(t, seq)
 	if err != nil {
 		return nil, err
 	}
-	fbefore := map[int64]string{}
-	for _, id := range fmts {
-		if fbefore[id], err = t.formatPrint(id); err != nil {
+	sbefore := map[int64]string{}
+	if len(structs) > 0 {
+		metas, err := t.metaTables()
+		if err != nil {
 			return nil, err
 		}
+		h := sha256.New()
+		for _, id := range structs {
+			if _, err := t.sheetPrint(h, id, metas, false); err != nil {
+				return nil, err
+			}
+			sbefore[id] = string(h.Sum(nil))
+			h.Reset()
+		}
 	}
-	if len(before) == 0 && len(fbefore) == 0 {
+	if len(before) == 0 && len(sbefore) == 0 {
 		return func() error { return nil }, nil
 	}
 	return func() error {
@@ -493,29 +601,47 @@ func (m *Model) historyGuard(ctx context.Context, sqlTx *sql.Tx, seq int64) (fun
 				}
 			}
 		}
-		for id, h := range fbefore {
-			after, err := t.formatPrint(id)
+		if len(sbefore) == 0 {
+			return nil
+		}
+		metas, err := t.metaTables()
+		if err != nil {
+			return err
+		}
+		h := sha256.New()
+		for id, want := range sbefore {
+			name, err := t.sheetPrint(h, id, metas, false)
 			if err != nil {
 				return err
 			}
-			if after != h {
-				var name string
-				if err := t.row(`SELECT coalesce(max(name), '') FROM _lattis_sheets WHERE id = ?`, id).Scan(&name); err != nil {
-					return err
+			if string(h.Sum(nil)) != want {
+				if e, err := t.structureLock(id); err == nil && e != nil {
+					return *e // par la feuille ou par le classeur
 				}
-				return ErrFormatProtected{name}
+				return ErrStructureProtected{Sheet: name}
 			}
+			h.Reset()
 		}
 		return nil
 	}, nil
 }
 
-// formatGuarded rend les feuilles à mise en forme protégée depuis une
+// structureGuarded rend les feuilles à structure protégée depuis une
 // commande postérieure ou égale à seq : rejouer seq peut contourner leur
 // protection. Une commande faite depuis la protection a été gardée par
-// elle (guardFormat) : son annulation ne rend que ce qu'elle a changé.
-func (m *Model) formatGuarded(t *tx, seq int64) ([]int64, error) {
-	rs, err := t.query(`SELECT sheet FROM _lattis_format_protection ORDER BY sheet`)
+// elle (guard) : son annulation ne rend que ce qu'elle a changé.
+func (m *Model) structureGuarded(t *tx, seq int64) ([]int64, error) {
+	// Feuilles protégées elles-mêmes (own), et toutes si le classeur
+	// verrouille leur structure.
+	p, err := t.protection()
+	if err != nil {
+		return nil, err
+	}
+	q := `SELECT sheet FROM ` + structTable + ` ORDER BY sheet`
+	if p.WorkbookStructure {
+		q = `SELECT id FROM _lattis_sheets ORDER BY id`
+	}
+	rs, err := t.query(q)
 	if err != nil {
 		return nil, err
 	}
@@ -535,77 +661,25 @@ func (m *Model) formatGuarded(t *tx, seq int64) ([]int64, error) {
 	m.protMu.Lock()
 	defer m.protMu.Unlock()
 	out := ids[:0]
+	sinceOf := func(id int64) int64 {
+		if since, ok := m.structSince[id]; ok {
+			return since
+		}
+		return m.structBase // protégée à l'ouverture
+	}
 	for _, id := range ids {
-		since, ok := m.fmtSince[id]
-		if !ok {
-			since = m.fmtBase // protégée à l'ouverture
+		since := int64(-1)
+		if _, own := p.Structures[id]; own {
+			since = sinceOf(id)
+		}
+		if p.WorkbookStructure {
+			since = max(since, sinceOf(structScope))
 		}
 		if seq <= since {
 			out = append(out, id)
 		}
 	}
 	return out, nil
-}
-
-// formatPrint calcule l'empreinte de la mise en forme d'une feuille :
-// styles (sans notes, masquage ni validation), largeurs, hauteurs, règles
-// de mise en forme conditionnelle.
-func (t *tx) formatPrint(sheet int64) (string, error) {
-	h := sha256.New()
-	var exists int
-	if err := t.row(`SELECT count(*) FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&exists); err != nil {
-		return "", err
-	}
-	fmt.Fprintf(h, "exists:%d\x1e", exists)
-	tbls := `(SELECT id FROM _lattis_tables WHERE sheet = ?)`
-	styled := []string{
-		`SELECT 'c', row, col, style FROM _lattis_cell_styles WHERE sheet = ? ORDER BY row, col`,
-		`SELECT 'r', row, 0, style FROM _lattis_row_styles WHERE sheet = ? ORDER BY row`,
-		`SELECT 'k', col, 0, style FROM _lattis_col_styles WHERE sheet = ? ORDER BY col`,
-		`SELECT 't' || tbl, rid, col, style FROM _lattis_styles WHERE tbl IN ` + tbls + ` ORDER BY tbl, rid, col`,
-	}
-	for _, q := range styled {
-		rs, err := t.query(q, sheet)
-		if err != nil {
-			return "", err
-		}
-		for rs.Next() {
-			var at string
-			var a, b int64
-			var s string
-			if err := rs.Scan(&at, &a, &b, &s); err != nil {
-				rs.Close()
-				return "", err
-			}
-			st := parseStyle(s)
-			for k := range notFormat {
-				delete(st, k)
-			}
-			if len(st) == 0 {
-				continue
-			}
-			enc, _ := encodeStyle(st)
-			fmt.Fprintf(h, "%s:%d:%d:%s\x1e", at, a, b, enc)
-		}
-		err = rs.Err()
-		rs.Close()
-		if err != nil {
-			return "", err
-		}
-	}
-	for _, q := range []string{
-		`SELECT col, width FROM _lattis_col_widths WHERE sheet = ? ORDER BY col`,
-		`SELECT row, height FROM _lattis_row_heights WHERE sheet = ? ORDER BY row`,
-		`SELECT row, rules FROM _lattis_row_rules WHERE sheet = ? ORDER BY row`,
-		`SELECT col, rules FROM _lattis_col_rules WHERE sheet = ? ORDER BY col`,
-		`SELECT tbl, id, rules FROM _lattis_columns WHERE tbl IN ` + tbls + ` AND coalesce(rules, '') <> '' ORDER BY tbl, id`,
-	} {
-		h.Write([]byte{0x1d})
-		if err := t.hashRows(h, q, sheet); err != nil {
-			return "", err
-		}
-	}
-	return string(h.Sum(nil)), nil
 }
 
 // prints calcule l'empreinte de chaque portée protégée : la liste des onglets
@@ -657,22 +731,39 @@ func (t *tx) prints() (map[int64]string, map[int64]string, error) {
 	if len(locked) == 0 {
 		return out, names, nil
 	}
-	// Tables de métadonnées et leurs colonnes (hors filtre).
-	type metaTable struct {
-		name, cols string
-		bySheet    bool
+	metas, err := t.metaTables()
+	if err != nil {
+		return nil, nil, err
 	}
+	for id := range locked {
+		if names[id], err = t.sheetPrint(h, id, metas, true); err != nil {
+			return nil, nil, err
+		}
+		out[id] = sum()
+	}
+	return out, names, nil
+}
+
+// metaTable : table de métadonnées repérée par feuille (bySheet) ou par
+// tableau, et ses colonnes (hors filtre).
+type metaTable struct {
+	name, cols string
+	bySheet    bool
+}
+
+// metaTables liste les tables de métadonnées du contenu des feuilles.
+func (t *tx) metaTables() ([]metaTable, error) {
 	var metas []metaTable
 	rs, err := t.query(`SELECT name FROM main.sqlite_schema WHERE type = 'table' AND name LIKE '\_lattis\_%' ESCAPE '\' ORDER BY name`)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	var tnames []string
 	for rs.Next() {
 		var n string
 		if err := rs.Scan(&n); err != nil {
 			rs.Close()
-			return nil, nil, err
+			return nil, err
 		}
 		tnames = append(tnames, n)
 	}
@@ -680,12 +771,12 @@ func (t *tx) prints() (map[int64]string, map[int64]string, error) {
 	for _, n := range tnames {
 		// L'état de la synchronisation (identifiants partagés des lignes,
 		// droits, conflits) n'est pas du contenu : il change hors du journal.
-		if n == protTable || n == formatTable || n == "_lattis_journal" || n == "_lattis_sheets" || strings.HasPrefix(n, sqlTrash) || syncState[n] {
+		if n == protTable || n == structTable || n == "_lattis_journal" || n == "_lattis_sheets" || strings.HasPrefix(n, sqlTrash) || syncState[n] {
 			continue
 		}
 		crs, err := t.query(`SELECT name FROM pragma_table_info(?)`, n)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		var cols []string
 		sheet, tbl := false, false
@@ -693,7 +784,7 @@ func (t *tx) prints() (map[int64]string, map[int64]string, error) {
 			var c string
 			if err := crs.Scan(&c); err != nil {
 				crs.Close()
-				return nil, nil, err
+				return nil, err
 			}
 			switch c {
 			case "sheet":
@@ -710,47 +801,62 @@ func (t *tx) prints() (map[int64]string, map[int64]string, error) {
 			metas = append(metas, metaTable{n, strings.Join(cols, ", "), sheet})
 		}
 	}
-	for id := range locked {
-		var exists int
-		var name string
-		if err := t.row(`SELECT count(*), coalesce(max(name), '') FROM _lattis_sheets WHERE id = ?`, id).Scan(&exists, &name); err != nil {
-			return nil, nil, err
-		}
-		names[id] = name
-		fmt.Fprintf(h, "exists:%d\x1e", exists)
-		for _, mt := range metas {
-			where := `sheet = ?`
-			if !mt.bySheet {
-				where = `tbl IN (SELECT id FROM _lattis_tables WHERE sheet = ?)`
-			}
-			fmt.Fprintf(h, "%s\x1d", mt.name)
-			if err := t.hashRows(h, `SELECT `+mt.cols+` FROM `+mt.name+` WHERE `+where+` ORDER BY `+mt.cols, id); err != nil {
-				return nil, nil, err
-			}
-		}
-		tables, err := t.query(`SELECT id FROM _lattis_tables WHERE sheet = ? ORDER BY id`, id)
-		if err != nil {
-			return nil, nil, err
-		}
-		var ids []int64
-		for tables.Next() {
-			var tid int64
-			if err := tables.Scan(&tid); err != nil {
-				tables.Close()
-				return nil, nil, err
-			}
-			ids = append(ids, tid)
-		}
-		tables.Close()
-		for _, tid := range ids {
-			fmt.Fprintf(h, "%s\x1d", tableSQL(tid))
-			if err := t.hashRows(h, `SELECT * FROM `+tableSQL(tid)+` ORDER BY id`); err != nil {
-				return nil, nil, err
-			}
-		}
-		out[id] = sum()
+	return metas, nil
+}
+
+// sheetPrint ajoute à h l'empreinte d'une feuille et rend son nom : ses
+// métadonnées et, avec data, les données de ses tableaux ; sans data
+// (structure protégée), son onglet (nom, couleur, masquage) mais ni les
+// données des tableaux ni leurs saisies hors type.
+func (t *tx) sheetPrint(h hash.Hash, id int64, metas []metaTable, data bool) (string, error) {
+	var exists int
+	var name string
+	if err := t.row(`SELECT count(*), coalesce(max(name), '') FROM _lattis_sheets WHERE id = ?`, id).Scan(&exists, &name); err != nil {
+		return "", err
 	}
-	return out, names, nil
+	fmt.Fprintf(h, "exists:%d\x1e", exists)
+	if !data {
+		if err := t.hashRows(h, `SELECT name, color, hidden FROM _lattis_sheets WHERE id = ?`, id); err != nil {
+			return "", err
+		}
+	}
+	for _, mt := range metas {
+		if !data && mt.name == "_lattis_invalid" {
+			continue
+		}
+		where := `sheet = ?`
+		if !mt.bySheet {
+			where = `tbl IN (SELECT id FROM _lattis_tables WHERE sheet = ?)`
+		}
+		fmt.Fprintf(h, "%s\x1d", mt.name)
+		if err := t.hashRows(h, `SELECT `+mt.cols+` FROM `+mt.name+` WHERE `+where+` ORDER BY `+mt.cols, id); err != nil {
+			return "", err
+		}
+	}
+	if !data {
+		return name, nil
+	}
+	tables, err := t.query(`SELECT id FROM _lattis_tables WHERE sheet = ? ORDER BY id`, id)
+	if err != nil {
+		return "", err
+	}
+	var ids []int64
+	for tables.Next() {
+		var tid int64
+		if err := tables.Scan(&tid); err != nil {
+			tables.Close()
+			return "", err
+		}
+		ids = append(ids, tid)
+	}
+	tables.Close()
+	for _, tid := range ids {
+		fmt.Fprintf(h, "%s\x1d", tableSQL(tid))
+		if err := t.hashRows(h, `SELECT * FROM `+tableSQL(tid)+` ORDER BY id`); err != nil {
+			return "", err
+		}
+	}
+	return name, nil
 }
 
 // hashRows ajoute à h toutes les valeurs (et leurs types) d'une requête.
