@@ -6999,6 +6999,8 @@
 	}
 
 	function ensureVisible(row: number, col: number) {
+		// Grille démontée (changement de classeur ou de mode en cours) : rien à montrer.
+		if (!scroller) return;
 		stopGlide();
 		updateExtent();
 		// Sous les volets figés : la case ne doit pas rester cachée dessous.
@@ -7411,6 +7413,7 @@
 	}
 
 	function onMouseDown(e: MouseEvent) {
+		if (!scroller) return;
 		if (hold) {
 			pointAway(e);
 			return;

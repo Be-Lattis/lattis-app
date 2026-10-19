@@ -12,4 +12,12 @@ suite('erreurs de l’interface', () => {
 		expect(describe(new TypeError('x')).message).toBe('TypeError: x');
 		expect(describe('texte')).toEqual({ message: 'texte', stack: '' });
 	});
+	it('décrit un objet qui n’est pas une Error', () => {
+		expect(describe({ message: 'refusé' }).message).toBe('refusé');
+		expect(describe({ error: new RangeError('y') }).message).toBe('RangeError: y');
+		expect(describe({ code: 3 }).message).toBe('{"code":3}');
+		const c: Record<string, unknown> = {};
+		c.self = c;
+		expect(describe(c).message).toContain('Object');
+	});
 });

@@ -20,6 +20,21 @@ export function lastActions(): string {
 /** Message et pile d'une erreur quelconque. */
 export function describe(e: unknown): { message: string; stack: string } {
 	if (e instanceof Error) return { message: `${e.name}: ${e.message}`, stack: e.stack ?? '' };
+	// Objet qui n'est pas une Error (rejet d'une liaison, évènement d'erreur…) :
+	// son message, l'erreur qu'il porte, ou son contenu, plutôt que « [object Object] ».
+	if (e && typeof e === 'object') {
+		const o = e as { error?: unknown; reason?: unknown; message?: unknown; stack?: unknown };
+		if (o.error instanceof Error) return describe(o.error);
+		if (o.reason instanceof Error) return describe(o.reason);
+		if (typeof o.message === 'string' && o.message) return { message: o.message, stack: typeof o.stack === 'string' ? o.stack : '' };
+		try {
+			const s = JSON.stringify(e);
+			if (s && s !== '{}') return { message: s.slice(0, 2000), stack: '' };
+		} catch {
+			// objet circulaire : son type, ci-dessous
+		}
+		return { message: Object.prototype.toString.call(e) + (o.constructor?.name ? ` (${o.constructor.name})` : ''), stack: '' };
+	}
 	return { message: String(e), stack: '' };
 }
 
