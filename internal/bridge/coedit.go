@@ -15,7 +15,7 @@ import (
 )
 
 // Travail à plusieurs sur un classeur d'un dossier partagé (NAS,
-// décision 0009) : chaque classeur ouvert depuis son fichier regarde le
+// décision 0011) : chaque classeur ouvert depuis son fichier regarde le
 // dossier caché « ~$nom.lattis.d » ; un autre poste qui l'ouvre propose
 // « Travailler à plusieurs » à la place de « Ouvrir quand même ».
 

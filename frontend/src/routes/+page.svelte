@@ -167,7 +167,7 @@
 	let damaged = $state<DamagedFile | null>(null);
 	// Classeur ouvert sur un autre poste (verrou ~$) : lecture seule, ou l'ouvrir quand même.
 	let locked = $state<FileQuestion | null>(null);
-	// … ou travailler à plusieurs (dossier partagé, décision 0009) : proposé à la place de « quand même ».
+	// … ou travailler à plusieurs (dossier partagé, décision 0011) : proposé à la place de « quand même ».
 	let lockedCoEdit = $state(false);
 	let joining = $state(false);
 	// Travail à plusieurs sur le classeur ouvert : présences, conflits.

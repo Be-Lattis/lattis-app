@@ -1,6 +1,6 @@
 <script lang="ts">
 	// Indicateur de la barre d'état pendant le travail à plusieurs sur un
-	// classeur d'un dossier partagé (décision 0009) : qui d'autre travaille
+	// classeur d'un dossier partagé (décision 0011) : qui d'autre travaille
 	// dessus, conflits ouverts, dossier injoignable.
 	import type { State } from '#bindings/internal/coedit/models.js';
 	import { presenceText, presenceTitle, presenceWarning } from './coedit';

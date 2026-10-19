@@ -3,7 +3,7 @@
 // serveur : chaque session écrit son propre journal, en ajout seulement,
 // dans le dossier caché « ~$nom.lattis.d » à côté du fichier, et lit ceux
 // des autres pour appliquer leurs modifications en direct. Voir
-// docs/decisions/0009-coedition-nas.md.
+// docs/decisions/0011-coedition-nas.md.
 //
 // Les opérations sont celles du journal logique des classeurs partagés
 // (internal/remote/oplog), relevées sur tous les tableaux (SetAll), et

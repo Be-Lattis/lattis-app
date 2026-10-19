@@ -168,7 +168,7 @@ type Features struct {
 	AllowUserLattisServers *bool `json:"allowUserLattisServers,omitempty"`
 	// CoEditing : travail à plusieurs sur un classeur d'un dossier
 	// partagé (NAS) ; désactivé, un classeur ouvert ailleurs s'ouvre en
-	// lecture seule ou « quand même », comme avant (décision 0009).
+	// lecture seule ou « quand même », comme avant (décision 0011).
 	CoEditing *bool `json:"coEditing,omitempty"`
 }
 
@@ -196,7 +196,7 @@ func Defaults() Tree {
 			"sharedWorkbooks":      true, // activé par défaut (choix de Louis, 18/10/2026)
 			// Ajout de Serveurs Lattis par l'utilisateur.
 			"allowUserLattisServers": true,
-			// Travail à plusieurs sur un dossier partagé (décision 0009).
+			// Travail à plusieurs sur un dossier partagé (décision 0011).
 			"coEditing": true,
 		},
 		"ai": Tree{"enabled": false, "provider": "anthropic", "dataSharing": "schema-only",
