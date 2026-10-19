@@ -46,6 +46,15 @@ export interface ChatResult {
 	rows: string[][] | null;
 	total: number;
 	truncated?: boolean;
+	/** La requête a plus de lignes que la limite de lecture : total est un minimum. */
+	more?: boolean;
+}
+
+/** Pied d'un résultat : « 50 premières lignes sur plus de 10 000 », « Aucune ligne » ; '' si tout est montré. */
+export function resultFoot(r: ChatResult): string {
+	if (!r.total) return 'Aucune ligne';
+	if (!r.truncated) return '';
+	return `${r.rows?.length ?? 0} premières lignes sur ${r.more ? 'plus de ' : ''}${r.total.toLocaleString('fr-FR')}`;
 }
 
 export type ToolPart = { kind: 'tool'; id: string; label: string; state: 'run' | 'ok' | 'error'; detail?: string; write?: boolean; target?: string };

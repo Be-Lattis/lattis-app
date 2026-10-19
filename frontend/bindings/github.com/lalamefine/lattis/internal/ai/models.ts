@@ -19,6 +19,12 @@ export interface Result {
     "rows": (string[] | null)[] | null;
     "total": number;
     "truncated"?: boolean;
+
+    /**
+     * More : la requête a plus de lignes que la limite de lecture
+     * (api.QueryLimit) ; Total est un minimum.
+     */
+    "more"?: boolean;
 }
 
 /**

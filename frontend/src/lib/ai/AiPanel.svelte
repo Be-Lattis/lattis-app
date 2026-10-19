@@ -23,7 +23,7 @@
 	import Markdown from '#lib/help/Markdown.svelte';
 	import AiConnect from './AiConnect.svelte';
 	import ExternalActivity from './ExternalActivity.svelte';
-	import { changesLabel, contextLabel, costLabel, linkHost, replyError, replyText, retryDelay, revealLinks, retryLabel, segments, stepsLabel, stoppedAtLimit, suggestionsFor, type ChatContext, type Reply, type TableInfo } from './chat';
+	import { changesLabel, contextLabel, costLabel, linkHost, replyError, replyText, resultFoot, retryDelay, revealLinks, retryLabel, segments, stepsLabel, stoppedAtLimit, suggestionsFor, type ChatContext, type Reply, type TableInfo } from './chat';
 	import { openOutside } from './links';
 	import { sharingLabel } from './sharing';
 	import { chat, conversations, deleteConversation, load, newConversation, openConversation, refreshStatus, resume, send, stop, undoRun, type Conversation } from './state.svelte.js';
@@ -350,7 +350,7 @@
 												</tbody>
 											</table>
 										</div>
-										{#if r.truncated}<p class="muted">{r.rows?.length ?? 0} premières lignes sur {r.total}</p>{:else if !r.total}<p class="muted">Aucune ligne</p>{/if}
+										{#if resultFoot(r)}<p class="muted">{resultFoot(r)}</p>{/if}
 									</figure>
 								{:else if seg.kind === 'notice'}
 									<div class="notice" class:error={seg.error} class:compact={seg.compact} title={seg.compact ? 'Les échanges précédents ont été résumés pour l’assistant ; ils restent affichés ici' : undefined}>{seg.text}</div>

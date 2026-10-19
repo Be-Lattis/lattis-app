@@ -44,6 +44,12 @@ func TestShowResult(t *testing.T) {
 	if res, isErr := Exec(h, SchemaOnly)(ctx, showTool, json.RawMessage(`{"sql":"DELETE FROM \"Ventes\""}`)); !isErr {
 		t.Fatalf("écriture acceptée : %s", res)
 	}
+	// Requête plafonnée à la limite de lecture : le total est un minimum (M8).
+	shown = nil
+	many := `{"sql":"WITH RECURSIVE n(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM n WHERE x < 10005) SELECT x FROM n"}`
+	if res, _ := Exec(h, Full)(ctx, showTool, json.RawMessage(many)); !strings.Contains(res, `"total":"plus de 10000"`) || len(shown) != 1 || !shown[0].More || !shown[0].Truncated {
+		t.Fatalf("total plafonné : %.200s / %+v", res, shown)
+	}
 	if s := Structure(context.Background(), h, SchemaOnly); !strings.Contains(s, "« Ventes »") || !strings.Contains(s, "Montant") || strings.Contains(s, "C1") {
 		t.Fatalf("structure : %s", s)
 	}

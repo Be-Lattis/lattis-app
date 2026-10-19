@@ -37,6 +37,9 @@ type Result struct {
 	Rows      [][]string `json:"rows"`
 	Total     int        `json:"total"`
 	Truncated bool       `json:"truncated,omitempty"`
+	// More : la requête a plus de lignes que la limite de lecture
+	// (api.QueryLimit) ; Total est un minimum.
+	More bool `json:"more,omitempty"`
 }
 
 type showKey struct{}
@@ -83,7 +86,7 @@ func show(ctx context.Context, host api.Host, args map[string]any, mode string) 
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return err.Error(), true
 	}
-	r := Result{Title: title, Columns: raw.Columns, Rows: [][]string{}, Total: len(raw.Rows), Truncated: raw.Truncated || len(raw.Rows) > ShowRows}
+	r := Result{Title: title, Columns: raw.Columns, Rows: [][]string{}, Total: len(raw.Rows), Truncated: raw.Truncated || len(raw.Rows) > ShowRows, More: raw.Truncated}
 	for i, row := range raw.Rows {
 		if i == ShowRows {
 			break
@@ -99,11 +102,16 @@ func show(ctx context.Context, host api.Host, args map[string]any, mode string) 
 	if f, ok := ctx.Value(showKey{}).(func(Result)); ok {
 		f(r)
 	}
+	// Total plafonné : « plus de 10 000 », pas « 10000 ».
+	var total any = r.Total
+	if r.More {
+		total = fmt.Sprintf("plus de %d", r.Total)
+	}
 	switch mode {
 	case Sample:
-		return sharing.Encode(map[string]any{"shown": "à l'utilisateur, sous votre réponse", "columns": r.Columns, "rows": r.Rows, "total": r.Total}), false
+		return sharing.Encode(map[string]any{"shown": "à l'utilisateur, sous votre réponse", "columns": r.Columns, "rows": r.Rows, "total": total}), false
 	case Full:
-		return encode(map[string]any{"shown": "à l'utilisateur, sous votre réponse", "columns": r.Columns, "rows": r.Rows, "total": r.Total, "truncated": r.Truncated}), false
+		return encode(map[string]any{"shown": "à l'utilisateur, sous votre réponse", "columns": r.Columns, "rows": r.Rows, "total": total, "truncated": r.Truncated}), false
 	}
 	// Les colonnes d'un TCD tirées des valeurs de son champ en colonnes
 	// (SELECT * FROM "TCD1") sont des valeurs.

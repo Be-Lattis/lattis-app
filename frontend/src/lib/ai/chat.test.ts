@@ -14,6 +14,7 @@ import {
 	reopenRun,
 	revealLinks,
 	replyError,
+	resultFoot,
 	retryDelay,
 	retryLabel,
 	replay,
@@ -228,6 +229,16 @@ describe('Continuer', () => {
 		items = reopenRun(items, 1);
 		expect(replyError((items[1] as Reply).parts)).toBe('');
 		expect((items[1] as Reply).parts).toHaveLength(1);
+	});
+});
+
+describe('Pied d’un résultat', () => {
+	it('dit « plus de » quand la requête dépasse la limite de lecture', () => {
+		const rows = Array.from({ length: 50 }, () => ['x']);
+		expect(resultFoot({ columns: ['a'], rows, total: 10000, truncated: true, more: true })).toBe('50 premières lignes sur plus de 10 000');
+		expect(resultFoot({ columns: ['a'], rows, total: 120, truncated: true })).toBe('50 premières lignes sur 120');
+		expect(resultFoot({ columns: ['a'], rows: [], total: 0 })).toBe('Aucune ligne');
+		expect(resultFoot({ columns: ['a'], rows: [['x']], total: 1 })).toBe('');
 	});
 });
 
