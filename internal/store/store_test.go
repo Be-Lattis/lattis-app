@@ -103,3 +103,31 @@ func TestVersion(t *testing.T) {
 		t.Fatal("aucune écriture ne tourne")
 	}
 }
+
+// Mémoire de SQLite bornée par classeur : 64 Mo de cache pour l'écriture,
+// 32 Mo par connexion de lecture, et 6 connexions de lecture au plus
+// (audit 6, M9).
+func TestCacheBudget(t *testing.T) {
+	ctx := context.Background()
+	s, err := Open(filepath.Join(t.TempDir(), "x.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	var read, write int
+	if err := s.Read().QueryRowContext(ctx, `PRAGMA cache_size`).Scan(&read); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Write(ctx, func(tx *sql.Tx) error { return tx.QueryRow(`PRAGMA cache_size`).Scan(&write) }); err != nil {
+		t.Fatal(err)
+	}
+	if read != -readCacheKiB || write != -writeCacheKiB {
+		t.Fatalf("cache : lecture %d, écriture %d", read, write)
+	}
+	if n := s.Read().Stats().MaxOpenConnections; n < minReadConns || n > maxReadConns {
+		t.Fatalf("%d connexions de lecture", n)
+	}
+	if total := readCacheKiB*maxReadConns + writeCacheKiB; total > 256<<10 {
+		t.Fatalf("plafond de %d Kio", total)
+	}
+}

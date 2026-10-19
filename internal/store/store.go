@@ -231,26 +231,46 @@ func Open(path string, extra ...func(*sqlite3.Conn) error) (*Store, error) {
 		write.Close()
 		return nil, err
 	}
-	read.SetMaxOpenConns(max(4, runtime.NumCPU()))
+	read.SetMaxOpenConns(readConns())
 
 	s.read, s.write = read, write
 	go s.writer()
 	return s, nil
 }
 
+// Mémoire de SQLite par classeur (audit 6, M9) : chaque connexion a son
+// propre cache. 64 Mo pour l'unique connexion d'écriture, 32 Mo pour
+// chacune des 4 à 6 connexions de lecture : au plus 256 Mo, au lieu de
+// 64 Mo par cœur (plus d'1 Go sur 16 cœurs).
+const (
+	writeCacheKiB = 65536
+	readCacheKiB  = 32768
+	minReadConns  = 4
+	maxReadConns  = 6
+)
+
+// readConns : connexions de lecture, une par cœur entre minReadConns et
+// maxReadConns.
+func readConns() int { return min(max(minReadConns, runtime.NumCPU()), maxReadConns) }
+
 // setup configure chaque nouvelle connexion.
 func setup(readOnly bool, extra []func(*sqlite3.Conn) error) func(*sqlite3.Conn) error {
+	cache := writeCacheKiB
+	if readOnly {
+		cache = readCacheKiB
+	}
 	return func(c *sqlite3.Conn) error {
 		pragmas := []string{
 			"PRAGMA busy_timeout=5000",
 			"PRAGMA synchronous=NORMAL",
 			"PRAGMA foreign_keys=ON",
-			// Cache de 64 Mo : un tri ou un regroupement sur 1 M de lignes reste
-			// en mémoire. Au-delà, les tris et index temporaires débordent sur
-			// disque (temp_store=FILE) : en mémoire, trier 10 M de lignes épuise
-			// la mémoire de SQLite (« out of memory », limitée à 4 Go en WASM).
+			// Cache de 64 Mo (32 Mo en lecture) : un tri ou un regroupement sur
+			// 1 M de lignes reste en mémoire. Au-delà, les tris et index
+			// temporaires débordent sur disque (temp_store=FILE) : en mémoire,
+			// trier 10 M de lignes épuise la mémoire de SQLite (« out of
+			// memory », limitée à 4 Go en WASM).
 			"PRAGMA temp_store=FILE",
-			"PRAGMA cache_size=-65536",
+			"PRAGMA cache_size=-" + strconv.Itoa(cache),
 		}
 		if readOnly {
 			pragmas = append(pragmas, "PRAGMA query_only=ON")
