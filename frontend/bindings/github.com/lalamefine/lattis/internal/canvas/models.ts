@@ -1073,6 +1073,12 @@ export interface TableInfo {
     "columns": ColumnInfo[] | null;
 
     /**
+     * En-têtes sur deux lignes : le groupe de chaque nom « Groupe.Sous »
+     * s'affiche dans une bande, ligne Row-1 (canvas/twolevel.go).
+     */
+    "twoLevel": boolean;
+
+    /**
      * Rang de la colonne clé (identifiant des lignes), -1 sans clé.
      */
     "key": number;

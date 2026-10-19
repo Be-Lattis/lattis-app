@@ -35,6 +35,7 @@
 	import { explainError } from './errors';
 	import { freeDisplay } from './freecell';
 	import { bandAt, bandLabel, bandRefusal, hiddenBand } from './hidden';
+	import { groupSpans, headerLabel, spanAt, splitGroup } from './twolevel';
 	import { pivotLayer, pivotValueText } from './pivotformat';
 	import { canFoldAll, foldAll, foldTarget, pivotBoxHit, pivotBoxLeft, pivotLabelOffset, PIVOT_BOX, setFolded, type PivotRowInfo } from './pivottree';
 	import { fillSeries, shiftTableColumns } from './fill';
@@ -253,6 +254,8 @@
 		key?: number;
 		/** Sans clé : la première colonne semble identifier chaque ligne (proposée comme clé). */
 		keyHint?: boolean;
+		/** En-têtes sur deux lignes : le groupe de chaque nom « Groupe.Sous » dans une bande, ligne row - 1. */
+		twoLevel?: boolean;
 		/** Requête d'import qui charge le tableau (source externe ou autre tableau). */
 		query?: { id: number; name: string };
 		/** Classeur partagé : tableau publié sur le serveur, ou resté privé (sur ce poste). */
@@ -413,6 +416,8 @@
 		promoteHeader?(table: SheetTable): Promise<unknown>;
 		/** Sortir l'en-tête du tableau : c'est un titre, la 1re ligne devient l'en-tête. */
 		headerToTitle?(table: SheetTable): Promise<unknown>;
+		/** En-têtes sur deux lignes (ou une) : la ligne au-dessus de l'en-tête donne les groupes. */
+		setTwoLevel?(table: SheetTable, on: boolean): Promise<unknown>;
 		/** Sortir la dernière ligne du tableau : elle reste dessous comme note ou total. */
 		rowToNote?(table: SheetTable, n: number): Promise<unknown>;
 		/** Ajouter au tableau voisin une cellule gardée hors du tableau (note, total). */
@@ -1464,6 +1469,10 @@
 
 	const inTable = (e: Entry, r: number, c: number) => r >= e.t.row && r <= e.last && c >= e.t.col && c <= e.lastCol;
 	const tableAt = (r: number, c: number) => entries.find((e) => inTable(e, r, c));
+	/** Tableau aux en-têtes sur deux lignes dont la bande des groupes (ligne row - 1) contient la cellule. */
+	const groupBandAt = (r: number, c: number) => entries.find((e) => e.t.twoLevel && r === e.t.row - 1 && c >= e.t.col && c <= e.lastCol);
+	/** Première ligne d'un tableau : sa bande des groupes, sinon son en-tête. */
+	const topRow = (t: SheetTable) => (t.twoLevel ? t.row - 1 : t.row);
 	/** Ligne de données d'un autre membre, en lecture seule pour un participant (§8.1). */
 	function lockedRowAt(r: number, c: number): boolean {
 		const e = tableAt(r, c);
@@ -2116,7 +2125,7 @@
 		const ry = (r: number) => TOP_H + rowTop(r) - top;
 		const xEnd = Math.min(w, cx(c1 + 1));
 		const spanW = (a: number, b: number) => cax().offset(b + 1) - cax().offset(a);
-		const visible = entries.filter((e) => e.last + 1 >= r0 && e.t.row <= r1 && e.lastCol + 1 >= c0 && e.t.col <= c1);
+		const visible = entries.filter((e) => e.last + 1 >= r0 && topRow(e.t) <= r1 && e.lastCol + 1 >= c0 && e.t.col <= c1);
 		// Plage sélectionnée.
 		const { r0: s0, r1: s1, c0: k0, c1: k1 } = selection();
 		return { w, h, top, r0, r1, c0, c1, cx, ry, xEnd, spanW, visible, s0, s1, k0, k1 };
@@ -2224,7 +2233,7 @@
 						ctx.font = (hs?.i ? 'italic ' : '') + FONT_BOLD;
 						ctx.fillStyle = hs?.fg ?? (e.t.query ? C.linkHeadText : C.headText);
 						ctx.textAlign = 'left';
-						const label = ellipsize(col.name, cw - iconW - 16);
+						const label = ellipsize(headerLabel(col.name, e.t.twoLevel), cw - iconW - 16);
 						ctx.fillText(label, x + 6, y + rh(r) / 2);
 						if (hs?.u) ctx.fillRect(x + 6, y + rh(r) / 2 + 7, ctx.measureText(label).width, 1);
 						ctx.restore();
@@ -2301,7 +2310,7 @@
 			return frameCf.get(k);
 		};
 		const paint = (r: number, c: number) => {
-			if (tableAt(r, c) || !rh(r) || !cax().size(c) || mergeOf(r, c)) return;
+			if (tableAt(r, c) || groupBandAt(r, c) || !rh(r) || !cax().size(c) || mergeOf(r, c)) return;
 			const cf = cfOf(r, c);
 			const fs = resolveStyle(styleAt(r, c, undefined), cf?.style);
 			if (!fs && !cf?.bar) return;
@@ -2501,6 +2510,7 @@
 		ctx.stroke();
 		ctx.restore();
 		drawMerges(L);
+		drawGroupBands(L);
 		strokeBorders();
 
 		ctx.save();
@@ -2894,6 +2904,44 @@
 			}
 			if (st) borders(st, x, y, gw, gh);
 			if (st?.nt) noteCorner(x + gw, y, st);
+		}
+	}
+
+	/**
+	 * Bandes des groupes des tableaux aux en-têtes sur deux lignes, par-dessus
+	 * le quadrillage : une cellule par groupe, fusionnée sur ses colonnes,
+	 * centrée et en gras comme l'en-tête (vide pour une colonne sans groupe).
+	 */
+	function drawGroupBands(L: Layer) {
+		const { r0, r1, c0, c1, cx, ry, spanW } = L;
+		for (const e of L.visible) {
+			const r = e.t.row - 1;
+			if (!e.t.twoLevel || r < r0 || r > r1 || !rh(r)) continue;
+			const y = ry(r);
+			for (const s of groupSpans(e.t.columns.map((k) => k.name))) {
+				const a = e.t.col + s.i0;
+				const b = e.t.col + s.i1;
+				if (b < c0 || a > c1) continue;
+				const x = cx(a);
+				const sw = spanW(a, b);
+				if (sw <= 0) continue;
+				ctx.fillStyle = e.t.query ? C.linkHead : C.head;
+				ctx.fillRect(x, y, sw, rh(r));
+				ctx.strokeStyle = e.t.query ? C.linkBorder : C.border;
+				ctx.lineWidth = 1;
+				ctx.strokeRect(Math.round(x) - 0.5, Math.round(y) - 0.5, sw, rh(r));
+				if (!s.group) continue;
+				ctx.save();
+				ctx.beginPath();
+				ctx.rect(x, y, sw, rh(r));
+				ctx.clip();
+				ctx.font = FONT_BOLD;
+				ctx.fillStyle = e.t.query ? C.linkHeadText : C.headText;
+				ctx.textAlign = 'center';
+				ctx.textBaseline = 'middle';
+				ctx.fillText(ellipsize(s.group, sw - 12), x + sw / 2, y + rh(r) / 2);
+				ctx.restore();
+			}
 		}
 	}
 
@@ -3738,9 +3786,14 @@
 	/** Ce que contient une cellule, pour l'édition et la barre de formule. */
 	function cellInfo(r: number, c: number) {
 		const e = tableAt(r, c);
-		if (!e) return { e, kind: 'free' as const, value: cells.get(key(r, c)) ?? '' };
+		if (!e) {
+			// Bande des groupes : la saisie y renomme le groupe (le moteur s'en charge).
+			const g = groupBandAt(r, c);
+			if (g) return { e, kind: 'free' as const, value: spanAt(g.t.columns.map((k) => k.name), c - g.t.col)?.group ?? '' };
+			return { e, kind: 'free' as const, value: cells.get(key(r, c)) ?? '' };
+		}
 		const i = c - e.t.col;
-		if (r === e.t.row) return { e, i, kind: 'header' as const, value: e.t.columns[i].name };
+		if (r === e.t.row) return { e, i, kind: 'header' as const, value: headerLabel(e.t.columns[i].name, e.t.twoLevel) };
 		const n = r - e.t.row - 1;
 		const row = e.cache.row(n);
 		return {
@@ -6631,7 +6684,10 @@
 		const info = cellInfo(row, col);
 		if (info.kind !== 'header' || text === info.value || isFormula(text)) return null;
 		const t = info.e!.t;
-		return columnNameProblem(text, t.columns.filter((_, i) => i !== info.i).map((c) => c.name), t.name);
+		// Deux lignes : l'en-tête se saisit sans son groupe, qui reste.
+		const group = t.twoLevel ? splitGroup(t.columns[info.i].name).group : '';
+		const full = group && text.trim() ? `${group}.${text}` : text;
+		return columnNameProblem(full, t.columns.filter((_, i) => i !== info.i).map((c) => c.name), t.name);
 	}
 
 	function commit(): boolean {
@@ -7756,14 +7812,15 @@
 			else if (hd) freeMenu = { x: ev.clientX - r.left, y: ev.clientY - r.top, kind: hd.kind };
 			return;
 		}
-		const e = tableAt(cell.row, cell.col);
+		// La bande des groupes donne le menu de l'en-tête.
+		const e = tableAt(cell.row, cell.col) ?? groupBandAt(cell.row, cell.col);
 		if (!inSelection(cell.row, cell.col)) moveTo(cell.row, cell.col);
 		const r = wrap.getBoundingClientRect();
 		if (!e) {
 			freeMenu = { x: ev.clientX - r.left, y: ev.clientY - r.top };
 			return;
 		}
-		menu = { x: ev.clientX - r.left, y: ev.clientY - r.top, e, n: cell.row - e.t.row - 1, i: cell.col - e.t.col, header: cell.row === e.t.row };
+		menu = { x: ev.clientX - r.left, y: ev.clientY - r.top, e, n: cell.row - e.t.row - 1, i: cell.col - e.t.col, header: cell.row <= e.t.row };
 	}
 
 	/** La cellule est dans une zone « plage » (tableau converti). */
@@ -8403,7 +8460,8 @@
 			{@const toNote = rowItems && !!source.rowToNote && m.n === m.e.t.rows - 1}
 			{@const refresh = !!m.e.t.query && !!source.refreshTable}
 			{@const share = cols && !!onsharedata && !m.e.t.query}
-			{@const tableItems = toTitle || toNote || refresh || share || !!source.convertToRange || !!source.deleteTables}
+			{@const twoLevel = cols && !!source.setTwoLevel && !m.e.t.query}
+			{@const tableItems = toTitle || twoLevel || toNote || refresh || share || !!source.convertToRange || !!source.deleteTables}
 			{#snippet sortItems()}
 				{#if cols && source.sortTable}
 					{@const lab = sortLabels(col?.type ?? 'text', col?.result)}
@@ -8516,6 +8574,17 @@
 						<Submenu label="Tableau">
 							{#if toTitle}
 								<button title="La 1re ligne de données devient l'en-tête ; l'en-tête actuel reste au-dessus du tableau, en titre (sauf les noms « Colonne n »)" onclick={() => menuAction(() => source.headerToTitle!(m.e.t))}>Sortir l'en-tête</button>
+							{/if}
+							{#if twoLevel}
+								{@const on = !!m.e.t.twoLevel}
+								<button
+									role="menuitemcheckbox"
+									aria-checked={on}
+									title={on
+										? 'Les noms complets « Groupe.Nom » reviennent sur une seule ligne'
+										: 'Les noms « Groupe.Nom » montrent leur groupe dans une bande au-dessus de l’en-tête ; la ligne au-dessus du tableau (cellules fusionnées ou non) donne les groupes'}
+									onclick={() => menuAction(() => source.setTwoLevel!(m.e.t, !on))}><span class="check">{on ? '✓' : ''}</span>En-têtes sur deux lignes</button
+								>
 							{/if}
 							{#if toNote}
 								<button title="La ligne reste sous le tableau, comme note ou total, sans en faire partie" onclick={() => menuAction(() => source.rowToNote!(m.e.t, m.n))}>Sortir la dernière ligne (note)</button>

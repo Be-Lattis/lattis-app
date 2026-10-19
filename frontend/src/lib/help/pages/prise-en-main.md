@@ -14,6 +14,10 @@ Tapez quelques lignes n'importe où sur la feuille : une ligne d'en-têtes, puis
 
 Tout s'annule avec `Ctrl+Z`, y compris la création d'un tableau.
 
+### En-têtes sur deux lignes
+
+Quand une ligne de groupes est posée au-dessus des en-têtes (BOISEMENT sur Nom, Statut et Parcelle), faites clic droit sur l'en-tête › Tableau › « En-têtes sur deux lignes » : ces cellules, fusionnées ou non, deviennent les groupes du tableau, affichés au-dessus des en-têtes comme dans Excel. Une colonne s'appelle alors « Groupe.Nom » : `Inventaire[BOISEMENT.Nom]` dans une formule, `"BOISEMENT.Nom"` en SQL. Tapez dans la bande des groupes pour nommer ou renommer un groupe (les formules suivent), videz-la pour le retirer. Décocher l'option garde les noms complets sur une seule ligne.
+
 ## Types de colonnes
 
 Chaque colonne a un type, deviné d'après ce que vous tapez :

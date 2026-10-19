@@ -1586,6 +1586,14 @@ export function SetSheetRules(sheet: number, ch: canvas$0.RuleChanges): $Cancell
 }
 
 /**
+ * SetTwoLevel affiche (ou non) les en-têtes d'un tableau sur deux lignes
+ * (groupe « Groupe.Sous » dans une bande au-dessus de l'en-tête).
+ */
+export function SetTwoLevel(table: string, on: boolean): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1951624906, table, on);
+}
+
+/**
  * SetType fixe le type d'une colonne (valeurs non convertibles marquées en erreur).
  */
 export function SetType(table: string, i: number, to: grid$0.Type): $CancellablePromise<$models.DocState> {
