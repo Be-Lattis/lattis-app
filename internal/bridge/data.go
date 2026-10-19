@@ -180,7 +180,7 @@ type linkedData struct {
 }
 
 // linkedDatasets : requêtes chargées (tableau présent) qui lisent une donnée
-// d'entreprise, par serveur. Une requête dont le tableau est supprimé n'est
+// du Data Lake, par serveur. Une requête dont le tableau est supprimé n'est
 // plus suivie (et son lien est retiré, voir dataChanged).
 func (s *DocumentService) linkedDatasets(ctx context.Context, d *doc.Document) (map[string][]linkedData, error) {
 	defs, err := d.Queries(ctx)
