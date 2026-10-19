@@ -23,9 +23,9 @@ import (
 // exportformula.go), sinon exportées par leur valeur ; la valeur calculée
 // accompagne toujours la formule. Mise en forme : formats de nombre et de
 // date, police, couleurs, alignement, bordures, largeurs, hauteurs, lignes
-// et colonnes masquées, fusions, volets figés. Ni graphiques, ni mise en
-// forme conditionnelle, ni notes, ni validations : le compte rendu
-// (ExportReport) dit ce qui n'est pas exporté tel quel.
+// et colonnes masquées, fusions, volets figés, mise en page (impression).
+// Ni graphiques, ni mise en forme conditionnelle, ni notes, ni validations :
+// le compte rendu (ExportReport) dit ce qui n'est pas exporté tel quel.
 
 // ExportXLSX écrit tout le classeur au format .xlsx et rend le compte rendu,
 // dont les cellules hors des limites d'Excel (1 048 576 lignes × 16 384
@@ -113,7 +113,7 @@ func writeXLSX(ctx context.Context, w io.Writer, sheets []xsheet, fm *fmts) erro
 	types.WriteString(`</Types>`)
 	// Excel recalcule à l'ouverture : les valeurs écrites ne servent qu'en
 	// attendant (et aux lecteurs qui ne calculent pas).
-	wb.WriteString(`</sheets><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>`)
+	wb.WriteString(`</sheets>` + xlsxDefinedNames(sheets) + `<calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>`)
 	fmt.Fprintf(&rels, `<Relationship Id="rId%d" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`, len(sheets)+1)
 	for _, f := range [][2]string{
 		{"[Content_Types].xml", types.String()},
@@ -191,8 +191,12 @@ func writeSheet(ctx context.Context, w io.Writer, s *xsheet, active bool, tables
 	keys := s.sortedKeys()
 	bw.WriteString(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">`)
+	pr := xlsxPageSetUpPr(s.page)
 	if c := color(s.info.Color); c != "" {
-		fmt.Fprintf(bw, `<sheetPr><tabColor rgb="FF%s"/></sheetPr>`, c)
+		pr = fmt.Sprintf(`<tabColor rgb="FF%s"/>`, c) + pr
+	}
+	if pr != "" {
+		fmt.Fprintf(bw, `<sheetPr>%s</sheetPr>`, pr)
 	}
 	maxRow, maxCol := -1, 0
 	if len(keys) > 0 {
@@ -272,6 +276,7 @@ func writeSheet(ctx context.Context, w io.Writer, s *xsheet, active bool, tables
 	if len(merges) > 0 {
 		fmt.Fprintf(bw, `<mergeCells count="%d">%s</mergeCells>`, len(merges), strings.Join(merges, ""))
 	}
+	bw.WriteString(xlsxPageXML(s.page))
 	if len(tables) > 0 {
 		fmt.Fprintf(bw, `<tableParts count="%d">`, len(tables))
 		for k := range tables {

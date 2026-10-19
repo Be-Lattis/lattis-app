@@ -84,7 +84,15 @@ func writeODS(ctx context.Context, w io.Writer, sheets []xsheet, fm *fmts) error
 			st.WriteString(x.odsCellStyle(n))
 		}
 	}
-	st.WriteString(`</office:styles><office:automatic-styles><style:page-layout style:name="pm1"/></office:automatic-styles><office:master-styles><style:master-page style:name="Default" style:page-layout-name="pm1"/></office:master-styles></office:document-styles>`)
+	// Mise en page : une page maître par feuille qui en a une.
+	var layouts, masters strings.Builder
+	for i, sh := range sheets {
+		if !sh.page.IsZero() {
+			layouts.WriteString(odsPageLayout(fmt.Sprintf("pm%d", i+2), sh.page))
+			masters.WriteString(odsMasterPage(odsMaster(i), fmt.Sprintf("pm%d", i+2), sh.page))
+		}
+	}
+	fmt.Fprintf(&st, `</office:styles><office:automatic-styles><style:page-layout style:name="pm1"/>%s</office:automatic-styles><office:master-styles><style:master-page style:name="Default" style:page-layout-name="pm1"/>%s</office:master-styles></office:document-styles>`, layouts.String(), masters.String())
 	for _, f := range [][2]string{
 		{"styles.xml", st.String()},
 		{"META-INF/manifest.xml", `<?xml version="1.0" encoding="UTF-8"?>
@@ -119,15 +127,24 @@ func odsContent(ctx context.Context, w io.Writer, sheets []xsheet, fm *fmts) err
 <office:document-content %s><office:automatic-styles>`, odsNS)
 	bw.WriteString(`<style:style style:name="ta1" style:family="table" style:master-page-name="Default"><style:table-properties table:display="true" style:writing-mode="lr-tb"/></style:style>`)
 	bw.WriteString(`<style:style style:name="ta2" style:family="table" style:master-page-name="Default"><style:table-properties table:display="false" style:writing-mode="lr-tb"/></style:style>`)
+	for i, sh := range sheets {
+		if !sh.page.IsZero() {
+			fmt.Fprintf(bw, `<style:style style:name="tp%d" style:family="table" style:master-page-name="%s"><style:table-properties table:display="%t" style:writing-mode="lr-tb"/></style:style>`, i, odsMaster(i), !sh.hidden)
+		}
+	}
+	bw.WriteString(`<style:style style:name="rob" style:family="table-row"><style:table-row-properties fo:break-before="page" style:use-optimal-row-height="true"/></style:style>`)
+	bw.WriteString(`<style:style style:name="cob" style:family="table-column"><style:table-column-properties fo:break-before="page" style:column-width="` + odsLength(defaultColPx) + `"/></style:style>`)
 	for _, px := range slices.Sorted(maps.Keys(widths)) {
 		fmt.Fprintf(bw, `<style:style style:name="co%d" style:family="table-column"><style:table-column-properties fo:break-before="auto" style:column-width="%s"/></style:style>`, px, odsLength(px))
+		fmt.Fprintf(bw, `<style:style style:name="cob%d" style:family="table-column"><style:table-column-properties fo:break-before="page" style:column-width="%s"/></style:style>`, px, odsLength(px))
 	}
 	for _, px := range slices.Sorted(maps.Keys(heights)) {
 		fmt.Fprintf(bw, `<style:style style:name="ro%d" style:family="table-row"><style:table-row-properties style:row-height="%s" fo:break-before="auto" style:use-optimal-row-height="false"/></style:style>`, px, odsLength(px))
+		fmt.Fprintf(bw, `<style:style style:name="rob%d" style:family="table-row"><style:table-row-properties style:row-height="%s" fo:break-before="page" style:use-optimal-row-height="false"/></style:style>`, px, odsLength(px))
 	}
 	bw.WriteString(`</office:automatic-styles><office:body><office:spreadsheet>`)
 	for i := range sheets {
-		if err := odsSheet(ctx, bw, &sheets[i], fm); err != nil {
+		if err := odsSheet(ctx, bw, &sheets[i], i, fm); err != nil {
 			return err
 		}
 	}
@@ -162,13 +179,40 @@ func mapKeys[K comparable, V any](m map[K]V) func(func(K) bool) {
 	}
 }
 
-func odsSheet(ctx context.Context, bw *bufio.Writer, s *xsheet, fm *fmts) error {
+// odsMaster nomme la page maître de la feuille i (mise en page propre).
+func odsMaster(i int) string { return fmt.Sprintf("Page%d", i+1) }
+
+func odsSheet(ctx context.Context, bw *bufio.Writer, s *xsheet, idx int, fm *fmts) error {
 	keys := s.sortedKeys()
 	ta := "ta1"
 	if s.hidden {
 		ta = "ta2"
 	}
-	fmt.Fprintf(bw, `<table:table table:name="%s" table:style-name="%s">`, xmlEscape(s.name), ta)
+	p := s.page
+	if !p.IsZero() {
+		ta = fmt.Sprintf("tp%d", idx)
+	}
+	ranges := ""
+	if a := p.Area; a != nil && a.R1 < ExcelRows && a.C1 < ExcelCols {
+		q := quoteSheet(s.name)
+		ranges = fmt.Sprintf(` table:print-ranges="%s"`, xmlEscape(fmt.Sprintf("%s.%s%d:%s.%s%d", q, colName(a.C0), a.R0+1, q, colName(a.C1), a.R1+1)))
+	}
+	fmt.Fprintf(bw, `<table:table table:name="%s" table:style-name="%s"%s>`, xmlEscape(s.name), ta, ranges)
+	// Sauts de page manuels et titres à répéter (lignes et colonnes).
+	rowBreak, colBreak := map[int]bool{}, map[int]bool{}
+	for _, r := range p.RowBreaks {
+		rowBreak[r] = true
+	}
+	for _, c := range p.ColBreaks {
+		colBreak[c] = true
+	}
+	titleR, titleC := [2]int{-1, -2}, [2]int{-1, -2}
+	if t := p.TitleRows; t != nil && t.To < ExcelRows {
+		titleR = [2]int{t.From, t.To}
+	}
+	if t := p.TitleCols; t != nil && t.To < ExcelCols {
+		titleC = [2]int{t.From, t.To}
+	}
 	// Colonnes : jusqu'à la dernière utilisée ou mise en forme.
 	maxCol := -1
 	for _, k := range keys {
@@ -188,10 +232,20 @@ func odsSheet(ctx context.Context, bw *bufio.Writer, s *xsheet, fm *fmts) error 
 	for c := range s.hiddenC {
 		maxCol = max(maxCol, c)
 	}
+	maxCol = max(maxCol, titleC[1])
+	for c := range colBreak {
+		maxCol = max(maxCol, c)
+	}
 	maxCol = min(maxCol, ExcelCols-1)
 	colAttrs := func(c int) string {
 		a := ""
-		if w, ok := widths[c]; ok {
+		w, ok := widths[c]
+		switch {
+		case colBreak[c] && ok:
+			a += fmt.Sprintf(` table:style-name="cob%d"`, w)
+		case colBreak[c]:
+			a += ` table:style-name="cob"`
+		case ok:
 			a += fmt.Sprintf(` table:style-name="co%d"`, w)
 		}
 		if s.hiddenC[c] {
@@ -206,17 +260,24 @@ func odsSheet(ctx context.Context, bw *bufio.Writer, s *xsheet, fm *fmts) error 
 	if maxCol < 0 {
 		bw.WriteString(`<table:table-column table:default-cell-style-name="Default"/>`)
 	}
+	inTitle := func(c int) bool { return c >= titleC[0] && c <= titleC[1] }
 	for c := 0; c <= maxCol; {
 		a := colAttrs(c)
 		n := 1
-		for c+n <= maxCol && colAttrs(c+n) == a {
+		for c+n <= maxCol && colAttrs(c+n) == a && inTitle(c+n) == inTitle(c) && !colBreak[c+n] {
 			n++
 		}
 		rep := ""
 		if n > 1 {
 			rep = fmt.Sprintf(` table:number-columns-repeated="%d"`, n)
 		}
+		if c == titleC[0] {
+			bw.WriteString(`<table:table-header-columns>`)
+		}
 		fmt.Fprintf(bw, `<table:table-column%s%s/>`, a, rep)
+		if c+n-1 == titleC[1] {
+			bw.WriteString(`</table:table-header-columns>`)
+		}
 		c += n
 	}
 	// Fusions : la cellule en haut à gauche porte l'étendue, les autres
@@ -239,14 +300,34 @@ func odsSheet(ctx context.Context, bw *bufio.Writer, s *xsheet, fm *fmts) error 
 	}
 	next := 0 // prochaine ligne à écrire
 	wrote := false
-	err := mergeRows(ctx, s, keys, s.marks(), func(r int, cols []int, cells []xcell) error {
+	// Lignes à écrire une à une : sauts et titres en plus des autres.
+	marks := s.marks()
+	for r := range rowBreak {
+		marks = append(marks, r)
+	}
+	for r := max(titleR[0], 0); r <= titleR[1]; r++ {
+		marks = append(marks, r)
+	}
+	marks = slices.DeleteFunc(marks, func(r int) bool { return r >= ExcelRows })
+	slices.Sort(marks)
+	marks = slices.Compact(marks)
+	err := mergeRows(ctx, s, keys, marks, func(r int, cols []int, cells []xcell) error {
 		if r > next {
 			fmt.Fprintf(bw, `<table:table-row table:number-rows-repeated="%d"><table:table-cell/></table:table-row>`, r-next)
 		}
 		next = r + 1
 		wrote = true
+		if r == titleR[0] {
+			bw.WriteString(`<table:table-header-rows>`)
+		}
 		bw.WriteString(`<table:table-row`)
-		if h, ok := s.heights[r]; ok {
+		h, ok := s.heights[r]
+		switch {
+		case rowBreak[r] && ok:
+			fmt.Fprintf(bw, ` table:style-name="rob%d"`, h)
+		case rowBreak[r]:
+			bw.WriteString(` table:style-name="rob"`)
+		case ok:
 			fmt.Fprintf(bw, ` table:style-name="ro%d"`, h)
 		}
 		if s.hiddenR[r] {
@@ -299,6 +380,9 @@ func odsSheet(ctx context.Context, bw *bufio.Writer, s *xsheet, fm *fmts) error 
 			bw.WriteString(`<table:table-cell/>`)
 		}
 		bw.WriteString(`</table:table-row>`)
+		if r == titleR[1] {
+			bw.WriteString(`</table:table-header-rows>`)
+		}
 		return nil
 	})
 	if err != nil {

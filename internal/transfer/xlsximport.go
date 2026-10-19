@@ -270,6 +270,9 @@ func (x *xlsxFile) plan(ctx context.Context, taken map[string]bool) ([]canvas.Im
 	out := make([]canvas.ImportSheet, len(x.sheets))
 	for si, sh := range x.sheets {
 		out[si].Name = sh.name
+		if sh.page != nil && !sh.page.IsZero() && sh.page.Check() == nil {
+			out[si].Page = sh.page
+		}
 		for _, st := range states[si] {
 			is := st.is
 			if !is.table() {

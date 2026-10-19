@@ -63,6 +63,7 @@ type ImportSheet struct {
 	Name   string // rendu unique si besoin (« Ventes (2) »)
 	Tables []ImportTable
 	Cells  []ImportCell
+	Page   *PageSetup // mise en page (nil : par défaut)
 }
 
 // ImportResult décrit ce qu'Import a créé.
@@ -134,6 +135,11 @@ func (m *Model) Import(ctx context.Context, action string, sheets []ImportSheet)
 				return err
 			}
 			res.Sheets = append(res.Sheets, id)
+			if s.Page != nil {
+				if err := t.setPageSetup(id, *s.Page); err != nil {
+					return err
+				}
+			}
 			for i := range s.Tables {
 				tb, err := t.importTable(id, &s.Tables[i])
 				if err != nil {

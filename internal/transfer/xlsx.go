@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/grid"
 )
 
@@ -24,6 +25,9 @@ import (
 type xlsxSheet struct {
 	name string
 	file *zip.File
+	// page : mise en page lue (balises après les cellules, noms
+	// d'impression du classeur).
+	page *canvas.PageSetup
 }
 
 type xlsxFile struct {
@@ -139,6 +143,11 @@ func (x *xlsxFile) load() error {
 			Name string `xml:"name,attr"`
 			ID   string `xml:"id,attr"` // r:id
 		} `xml:"sheets>sheet"`
+		Names []struct {
+			Name  string `xml:"name,attr"`
+			Local *int   `xml:"localSheetId,attr"`
+			Value string `xml:",chardata"`
+		} `xml:"definedNames>definedName"`
 	}
 	if err := x.decode(wbFile, &wb); err != nil {
 		return fmt.Errorf("%w (classeur illisible : %v)", ErrNotXLSX, err)
@@ -148,9 +157,16 @@ func (x *xlsxFile) load() error {
 	if err != nil {
 		return err
 	}
-	for _, s := range wb.Sheets {
+	pages := make([]*canvas.PageSetup, len(wb.Sheets))
+	for i, s := range wb.Sheets {
+		pages[i] = &canvas.PageSetup{}
 		if f := x.find(byID[s.ID]); f != nil {
-			x.sheets = append(x.sheets, xlsxSheet{name: s.Name, file: f})
+			x.sheets = append(x.sheets, xlsxSheet{name: s.Name, file: f, page: pages[i]})
+		}
+	}
+	for _, n := range wb.Names {
+		if n.Local != nil && *n.Local >= 0 && *n.Local < len(pages) {
+			parsePrintNames(pages[*n.Local], n.Name, n.Value)
 		}
 	}
 	if p := byType["sharedStrings"]; p != "" {
@@ -352,6 +368,10 @@ func (x *xlsxFile) scan(ctx context.Context, sh xlsxSheet, fn func(*rawCell) err
 	var buf strings.Builder
 	capture, inIS, skip := false, false, 0
 	n, rules, lists := 0, 0, 0
+	// Mise en page (après les cellules) ; relue à l'identique au second passage.
+	page := sh.page
+	var hf *canvas.HeaderFooter
+	var pr pageReader
 	for {
 		if err := d.next(); err != nil {
 			if err == io.EOF {
@@ -403,6 +423,18 @@ func (x *xlsxFile) scan(ctx context.Context, sh xlsxSheet, fn func(*rawCell) err
 				rules++
 			case "dataValidation":
 				lists++
+			default:
+				if page != nil {
+					pr.tag(page, d)
+					switch string(d.name) {
+					case "oddHeader":
+						hf, capture = &page.Header, true
+						buf.Reset()
+					case "oddFooter":
+						hf, capture = &page.Footer, true
+						buf.Reset()
+					}
+				}
 			}
 		case xmlEnd:
 			switch string(d.name) {
@@ -417,6 +449,11 @@ func (x *xlsxFile) scan(ctx context.Context, sh xlsxSheet, fn func(*rawCell) err
 				c.is = buf.String()
 			case "rPh":
 				skip--
+			case "oddHeader", "oddFooter":
+				if hf != nil {
+					*hf = parseXLSXHF(buf.String())
+					hf, capture = nil, false
+				}
 			case "c":
 				if n++; n%8192 == 0 {
 					if err := ctx.Err(); err != nil {
