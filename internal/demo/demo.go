@@ -3,6 +3,7 @@ package demo
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"sync/atomic"
 
@@ -225,10 +226,15 @@ func New(ctx context.Context, name string, opt Options) (*doc.Document, Result, 
 	}
 	res, err := BuildPlan(ctx, d.Model, plan, opt)
 	if err == nil {
+		// L'import retire déjà la feuille vide d'un classeur neuf ; sans
+		// import (requêtes seules), elle est encore là.
+		var now canvas.Layout
+		now, err = d.Layout(ctx, 0)
 		for _, s := range l.Sheets {
-			if err = d.DeleteSheet(ctx, s.ID); err != nil {
-				break
+			if err != nil || !slices.ContainsFunc(now.Sheets, func(x canvas.SheetInfo) bool { return x.ID == s.ID }) {
+				continue
 			}
+			err = d.DeleteSheet(ctx, s.ID)
 		}
 	}
 	if err == nil && len(plan.Scripts) > 0 {
