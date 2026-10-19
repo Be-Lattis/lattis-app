@@ -90,6 +90,10 @@ type aiState struct {
 	order   []int    // réponses dans l'ordre (pour repérer les annulations)
 	notes   []string // remarques à joindre au prochain message
 	gen     int      // change à chaque remise à zéro (classeur remplacé)
+	// structure : la structure du classeur telle que le modèle la connaît
+	// (relevée à la fin de chaque réponse) ; une autre au message suivant
+	// lui est jointe (ai.StructureUpdate). Vide : à joindre de nouveau.
+	structure string
 	// others : conversations mises de côté ; nextConv : dernier identifiant.
 	others   []aiConv
 	nextConv int
@@ -371,11 +375,29 @@ func (s *DocumentService) aiAnswer(ctx context.Context, run int, text *string, v
 		err = s.ai.session.Resume(gctx, turn, emit)
 	} else {
 		msg := ai.Compose(*text, ai.View{Sheet: view.Sheet, Table: view.Table, Selection: view.Selection}, notes)
-		// Premier message : la structure du classeur, pour répondre sans explorer.
+		// Premier message : la structure du classeur, pour répondre sans
+		// explorer ; ensuite, de nouveau si elle a changé hors des réponses
+		// (import, Ctrl+Z, conversation reprise).
+		st := ai.Structure(ctx, h, sharing)
+		s.ai.mu.Lock()
+		known := s.ai.structure
+		s.ai.mu.Unlock()
 		if s.ai.session.Len() == 0 {
-			msg = ai.Structure(ctx, h, sharing) + msg
+			msg = st + msg
+		} else if st != known {
+			msg = ai.StructureUpdate(st) + msg
 		}
 		err = s.ai.session.Send(gctx, turn, msg, emit)
+	}
+	// La structure que le modèle connaît désormais (ses propres
+	// modifications comprises).
+	if !ai.Unsent(err) {
+		st := ai.Structure(context.WithoutCancel(ctx), h, sharing)
+		s.ai.mu.Lock()
+		if s.ai.gen == gen {
+			s.ai.structure = st
+		}
+		s.ai.mu.Unlock()
 	}
 
 	s.ai.mu.Lock()
@@ -484,7 +506,7 @@ func (s *DocumentService) AIReset() error {
 	if err := s.ai.session.Reset(); err != nil {
 		return err
 	}
-	s.ai.log, s.ai.runs, s.ai.order, s.ai.notes = nil, nil, nil, nil
+	s.ai.log, s.ai.runs, s.ai.order, s.ai.notes, s.ai.structure = nil, nil, nil, nil, ""
 	return nil
 }
 
@@ -686,7 +708,7 @@ func (s *DocumentService) aiReplaced(d *doc.Document) {
 		s.ai.cancel = nil
 	}
 	s.ai.gen++
-	s.ai.log, s.ai.runs, s.ai.order, s.ai.notes = saved.Log, nil, nil, nil
+	s.ai.log, s.ai.runs, s.ai.order, s.ai.notes, s.ai.structure = saved.Log, nil, nil, nil, ""
 	s.ai.others = saved.Others
 	s.ai.nextConv = 0
 	for _, c := range saved.Others {
@@ -807,7 +829,7 @@ func (s *DocumentService) aiShelve() {
 		})
 	}
 	s.ai.session.Restore(nil, ai.Usage{})
-	s.ai.log, s.ai.runs, s.ai.order, s.ai.notes = nil, nil, nil, nil
+	s.ai.log, s.ai.runs, s.ai.order, s.ai.notes, s.ai.structure = nil, nil, nil, nil, ""
 }
 
 // AIConversations liste les conversations du classeur : celle en cours (si

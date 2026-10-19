@@ -125,6 +125,21 @@ func show(ctx context.Context, host api.Host, args map[string]any, mode string) 
 	return fmt.Sprintf("Résultat montré à l'utilisateur, colonnes %s. Vous n'en voyez ni les valeurs ni le nombre de lignes : dites en une phrase ce que montre le résultat, sans inventer de valeur.", strings.Join(cols, ", ")), false
 }
 
+const (
+	structureHead    = "[Structure du classeur (jointe par Lattis)"
+	structureChanged = "[Structure modifiée depuis le dernier message (jointe par Lattis, elle remplace la précédente)"
+)
+
+// StructureUpdate rend la structure st (Structure) à joindre à un message
+// quand elle a changé hors des réponses de l'assistant (import, annulation,
+// conversation reprise) ; st vide : le classeur n'a plus de tableau.
+func StructureUpdate(st string) string {
+	if st == "" {
+		return structureChanged + " : le classeur n'a plus de tableau.]\n"
+	}
+	return strings.Replace(st, structureHead, structureChanged, 1)
+}
+
 // Structure décrit le classeur (tableaux, feuilles, colonnes et leurs
 // types, nombre de lignes) pour le premier message d'une conversation ;
 // vide s'il n'y a pas de tableau ou si la lecture échoue.
@@ -146,7 +161,7 @@ func Structure(ctx context.Context, host api.Host, mode string) string {
 		return ""
 	}
 	var s strings.Builder
-	s.WriteString("[Structure du classeur (jointe par Lattis) :\n")
+	s.WriteString(structureHead + " :\n")
 	for i, t := range list {
 		if i == 40 {
 			fmt.Fprintf(&s, "- … et %d autre(s) : tables_list\n", len(list)-i)
