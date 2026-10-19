@@ -26,10 +26,16 @@ func init() {
 		authFailed: pgAuthFailed,
 		limit:      limitClause,
 		readOnly:   true,
-		tables:     pgTables,
+		tables:     lattisTables,
 		ident:      PGIdent,
 	}
 }
+
+// lattisTables liste les tables et vues d'un Serveur Lattis : les données
+// publiées (donnees, en tête) et les schémas des classeurs que
+// l'utilisateur peut lire, jamais les tables internes du serveur (lattis,
+// dont le catalogue montre les noms même quand leur contenu est refusé).
+var lattisTables = infoSchemaTables(pgTablesSQL([]string{"lattis"}, "donnees"))
 
 // lattisAccount désigne un serveur (le compte de l'utilisateur est celui de
 // la session, lattis://<hôte>/<utilisateur> au trousseau).
