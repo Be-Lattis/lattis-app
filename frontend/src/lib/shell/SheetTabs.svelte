@@ -448,7 +448,7 @@
 					}
 				}}
 				title={(s.choice ? choiceStatus(s.choice) + (onchoice ? ' — Alt+↓ : choisir. ' : '. ') : '') + (s.protected ? 'Feuille protégée. ' : '') + (locked ? 'Classeur protégé' : onmove ? 'Double-clic pour renommer, glisser pour déplacer' : 'Double-clic pour renommer')}
-				>{#if s.protected || locked}<span class="lock" aria-label={s.protected ? 'Feuille protégée' : 'Classeur protégé'}><Icon name="lock" size={12} /></span>{/if}{#if s.kind === 'html'}<span class="kind" aria-label="Page web"><Icon name="web" size={12} /></span>{:else if s.kind === 'doc'}<span class="kind" aria-label="Document"><Icon name="document" size={12} /></span>{/if}{label(s)}{#if s.choice}<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+				>{#if s.protected || locked}<span class="lock" aria-label={s.protected ? 'Feuille protégée' : 'Classeur protégé'}><Icon name="lock" size={12} /></span>{/if}{#if s.kind === 'html'}<span class="kind" aria-label="Page web"><Icon name="web" size={12} /></span>{:else if s.kind === 'doc'}<span class="kind" aria-label="Document"><Icon name="document" size={12} /></span>{/if}{s.choice ? s.name : label(s)}{#if s.choice}<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 					<span
 						class="choice-arrow"
 						class:off={!onchoice}
@@ -457,7 +457,7 @@
 						onclick={(e) => {
 							e.stopPropagation();
 							openChoice(s, tabEls[si]);
-						}}>▾</span
+						}}>{label(s).slice(s.name.length + 1)} ▾</span
 					>{/if}</button
 			>
 		{/if}
@@ -1221,14 +1221,13 @@
 		border-color: #217346;
 		color: #fff;
 	}
-	/* Onglet à choix : la flèche ouvre la liste des valeurs (« Ventes · 2025 ▾ »). */
+	/* Onglet à choix : toute la partie « · 2025 ▾ » ouvre la liste des valeurs. */
 	.choice-arrow {
 		display: inline-block;
-		margin: 0 -10px 0 4px;
+		margin: 0 -10px 0 2px;
 		padding: 0 4px;
 		border-radius: 3px;
-		color: #6b7280;
-		font-size: 11px;
+		cursor: pointer;
 	}
 	.choice-arrow:hover:not(.off) {
 		background: rgba(0, 0, 0, 0.08);

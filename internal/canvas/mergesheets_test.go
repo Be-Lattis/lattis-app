@@ -505,3 +505,41 @@ func TestMergeSheetsComputed(t *testing.T) {
 		}
 	}
 }
+
+// La feuille commune garde l'écriture des onglets (espaces compris), le
+// tableau un nom d'identifiant.
+func TestMergeSheetsSheetName(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	var tables []string
+	for i, y := range []string{"2024", "2025", "2026"} {
+		sheet := int64(1)
+		if i > 0 {
+			id, err := d.AddSheet(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			sheet = id
+			if err := d.RenameSheet(ctx, id, "Suivi des nids_"+y); err != nil {
+				t.Fatal(err)
+			}
+		} else if err := d.RenameSheet(ctx, 1, "Suivi des nids_"+y); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := d.Paste(ctx, sheet, 0, 0, [][]string{{"Nid", "Espèce"}, {"N" + y, "Milan"}}); err != nil {
+			t.Fatal(err)
+		}
+		l, err := d.Layout(ctx, sheet)
+		if err != nil || len(l.Tables) != 1 {
+			t.Fatalf("feuille %s : %v %v", y, l.Tables, err)
+		}
+		tables = append(tables, l.Tables[0].Name)
+	}
+	res, err := d.MergeSheets(ctx, MergePlan{Tables: tables, Name: "Suividesnids"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.SheetName != "Suivi des nids" || res.Table != "Suividesnids" {
+		t.Fatalf("feuille %q, tableau %q", res.SheetName, res.Table)
+	}
+}

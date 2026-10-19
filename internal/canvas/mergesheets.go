@@ -361,7 +361,21 @@ func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 	}
 	j.plan.Name = free
 	if strings.TrimSpace(plan.Sheet) == "" {
-		j.plan.Sheet = j.plan.Name
+		// La feuille garde l'écriture des onglets (« Suivi des nids_2026 »
+		// → « Suivi des nids »), le tableau un nom d'identifiant.
+		labels := make([]string, len(j.srcs))
+		for i, s := range j.srcs {
+			labels[i] = s.sheet
+		}
+		common := strings.Trim(series.Recognize(labels).Common, " _-.·")
+		switch {
+		case len([]rune(common)) >= 2 && identifier(common) == j.plan.Name:
+			j.plan.Sheet = common
+		case strings.TrimSpace(plan.Name) != "":
+			j.plan.Sheet = strings.TrimSpace(plan.Name)
+		default:
+			j.plan.Sheet = j.plan.Name
+		}
 	} else {
 		j.plan.Sheet = strings.TrimSpace(plan.Sheet)
 	}
