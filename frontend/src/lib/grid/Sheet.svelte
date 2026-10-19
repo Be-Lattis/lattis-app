@@ -24,6 +24,7 @@
 	import { panes, reveal, revealWhole, toGrid, type Pane } from './panes';
 	import { hiddenLines, mergeAt, mergeList, parseList, skipHidden, validate, type MergeRange } from './sheetfmt';
 	import { expandRange, extendCorner, isSingleCell, mergeRect, rangeOf, stepCell } from './mergesel';
+	import { jumpLine, type Span } from './jump';
 	import { findKey, findZone, inZone, nextHit, type Zone } from './findzone';
 	import { edgeScroll, frameStep } from './autoscroll';
 	import { blocksReach, boxesReach } from './objextent';
@@ -5250,41 +5251,22 @@
 		refreshStatus();
 	}
 
-	// Ctrl + flèche, comme Excel : saute au bord du bloc de données.
+	// Ctrl + flèche, comme Excel : au bord du bloc de données, ou au prochain
+	// bloc (tableaux, cellules libres, déversements, tableaux croisés).
 	function jump(row: number, col: number, dr: number, dc: number): [number, number] {
-		const filled = (r: number, c: number) => !!tableAt(r, c) || cells.has(key(r, c));
-		if (dr !== 0) {
-			const e = entries.find((e) => col >= e.t.col && col <= e.lastCol && (dr > 0 ? e.last > row : e.t.row < row));
-			const edges = entries
-				.filter((e) => col >= e.t.col && col <= e.lastCol)
-				.flatMap((e) => [e.t.row, e.last])
-				.filter((r) => (dr > 0 ? r > row : r < row))
-				.sort((a, b) => (dr > 0 ? a - b : b - a));
-			if (e || edges.length) return [edges[0] ?? row, col];
-			// Cellule libre la plus proche dans la colonne.
-			let best: number | undefined;
-			for (const k of cells.keys()) {
-				const [r, c] = k.split(',').map(Number);
-				if (c === col && (dr > 0 ? r > row : r < row) && (best === undefined || Math.abs(r - row) < Math.abs(best - row))) best = r;
-			}
-			if (best !== undefined) return [best, col];
-			// Plus rien après : Ctrl+Bas ne bouge pas (la feuille est sans fin) ;
-			// Ctrl+Haut va en haut.
-			return [dr > 0 ? row : 0, col];
-		}
-		const edges = entries
-			.filter((e) => row >= e.t.row && row <= e.last)
-			.flatMap((e) => [e.t.col, e.lastCol])
-			.filter((c) => (dc > 0 ? c > col : c < col))
-			.sort((a, b) => (dc > 0 ? a - b : b - a));
-		let best: number | undefined = edges[0];
+		const spans: Span[] = [];
+		const add = (r0: number, c0: number, r1: number, c1: number) => {
+			if (dr !== 0 && col >= c0 && col <= c1) spans.push([r0, r1]);
+			if (dc !== 0 && row >= r0 && row <= r1) spans.push([c0, c1]);
+		};
+		for (const e of entries) add(e.t.row, e.t.col, e.last, e.lastCol);
 		for (const k of cells.keys()) {
 			const [r, c] = k.split(',').map(Number);
-			if (r === row && (dc > 0 ? c > col : c < col) && (best === undefined || Math.abs(c - col) < Math.abs(best - col))) best = c;
+			add(r, c, r, c);
 		}
-		if (best !== undefined) return [row, best];
-		// Plus rien après : Ctrl+Droite ne bouge pas ; Ctrl+Gauche va en colonne A.
-		return [row, dc > 0 ? col : 0];
+		for (const sp of spills) add(sp.row, sp.col, sp.row + sp.rows.length - 1, sp.col + (sp.rows[0]?.length ?? 1) - 1);
+		for (const p of pivots) if (!p.error) add(p.anchor ?? p.row, p.col, p.row + p.cells.length - 1, p.col + (p.cells[0]?.length ?? 1) - 1);
+		return dr !== 0 ? [jumpLine(spans, row, dr), col] : [row, jumpLine(spans, col, dc)];
 	}
 
 	function cellAt(e: MouseEvent): { row: number; col: number } | null {
@@ -6367,8 +6349,14 @@
 				break;
 			case 'End':
 				if (ctrl) {
-					const last = entries.reduce((m, e) => Math.max(m, e.last), 0);
-					const lastCol = entries.reduce((m, e) => Math.max(m, e.lastCol), 0);
+					// Dernière ligne et dernière colonne utilisées (tableaux et cellules libres), comme Excel.
+					let last = entries.reduce((m, e) => Math.max(m, e.last), 0);
+					let lastCol = entries.reduce((m, e) => Math.max(m, e.lastCol), 0);
+					for (const k of cells.keys()) {
+						const [r, c] = k.split(',').map(Number);
+						last = Math.max(last, r);
+						lastCol = Math.max(lastCol, c);
+					}
 					moveTo(last, lastCol, ext);
 				}
 				break;
