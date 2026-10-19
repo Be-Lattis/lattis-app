@@ -56,12 +56,15 @@
 		fields: { name: string; numeric: boolean; type?: string }[];
 		error?: string;
 		filterValues?: (field: string) => Promise<{ text: string; count: number }[]>;
-		onchange: (cfg: PivotConfig) => void;
+		/** Rend faux si l'écriture est refusée : le brouillon revient alors à la configuration. */
+		onchange: (cfg: PivotConfig) => unknown;
 		ondelete: () => void;
 		onclose: () => void;
+		/** Feuille protégée : le message, et les champs grisés. */
+		locked?: string;
 	}
 
-	let { config, fields, error = '', filterValues, onchange, ondelete, onclose, resizable = true }: Props = $props();
+	let { config, fields, error = '', filterValues, onchange, ondelete, onclose, resizable = true, locked = '' }: Props = $props();
 
 	const flds = $derived<PivotField[]>(fields.map((f) => ({ name: f.name, type: f.type ?? (f.numeric ? 'decimal' : 'text') })));
 	const ZONE_ICONS: Record<Zone, IconName> = { filters: 'filter', cols: 'pivot-columns', rows: 'pivot-rows', values: 'autosum' };
@@ -95,6 +98,7 @@
 	});
 
 	function change(c: PivotConfig) {
+		if (locked) return;
 		// Autres champs en lignes : les groupes pliés ne désignent plus les mêmes lignes.
 		if (JSON.stringify(c.rowFields ?? []) !== JSON.stringify(draft.rowFields ?? [])) {
 			c = { ...c };
@@ -114,8 +118,13 @@
 		dirty = false;
 		// L'écriture rend le focus à la grille : il reste dans le volet.
 		const keep = document.activeElement;
-		onchange(clone(draft));
+		const sent = onchange(clone(draft));
 		if (keep instanceof HTMLElement && panelEl?.contains(keep) && keep.isConnected) keep.focus({ preventScroll: true });
+		// Écriture refusée : la configuration ne change pas, le brouillon y revient.
+		if (sent instanceof Promise)
+			sent.then((ok) => {
+				if (ok === false && !dirty) draft = clone(config);
+			});
 	}
 
 	function setDefer(on: boolean) {
@@ -153,6 +162,10 @@
 	let dragging = $state(false);
 
 	function startDrag(e: DragEvent, field: string, from?: { zone: Zone; i: number }) {
+		if (locked) {
+			e.preventDefault();
+			return;
+		}
 		drag = { field, from };
 		dragging = true;
 		closeAll();
@@ -454,6 +467,7 @@
 		<HelpLink target="tcd" label="Aide sur les tableaux croisés" />
 		<button class="icon-btn" title="Fermer le volet" aria-label="Fermer le volet" onclick={onclose}><Icon name="win-close" size={16} /></button>
 	</header>
+	{#if locked}<p class="locked" role="note"><Icon name="lock-sheet" size={14} /><span>{locked}</span></p>{/if}
 
 	<div class="search">
 		<Icon name="search" size={14} />
@@ -461,6 +475,7 @@
 		{#if search}<button class="icon-btn small" title="Effacer la recherche" aria-label="Effacer la recherche" onclick={() => (search = '')}><Icon name="win-close" size={12} /></button>{/if}
 	</div>
 
+	<fieldset class="body" disabled={!!locked}>
 	<p class="label">Choisissez les champs à inclure dans le rapport :</p>
 	<ul class="fields" class:drop-out={dragging && drag?.from} aria-label="Champs du tableau {config.source}" ondragover={overList} ondrop={dropList}>
 		{#each visible as f (f.name)}
@@ -570,6 +585,7 @@
 		{#if defer && dirty}<p class="pending">Modifications en attente : le tableau croisé n'est pas encore à jour (elles s'appliquent aussi à la fermeture du volet).</p>{/if}
 		<button class="delete" onclick={ondelete}><Icon name="trash" size={14} />Supprimer le tableau croisé</button>
 	</footer>
+	</fieldset>
 </aside>
 
 {#if menu}
@@ -699,6 +715,24 @@
 		font-size: 12px;
 		color: #1f2328;
 		--icon-accent: #217346;
+	}
+	/* Feuille protégée : le volet se lit, ses champs sont grisés. */
+	fieldset.body {
+		display: contents;
+	}
+	fieldset.body:disabled :is(.fields, .zones, footer) {
+		opacity: 0.6;
+	}
+	.locked {
+		display: flex;
+		gap: 6px;
+		align-items: flex-start;
+		margin: 0;
+		padding: 6px 8px;
+		background: #fff8e1;
+		border: 1px solid #f0d58a;
+		border-radius: 3px;
+		color: #5c4400;
 	}
 	header {
 		display: flex;

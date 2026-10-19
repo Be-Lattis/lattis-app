@@ -4385,6 +4385,7 @@
 	/** Menu « Mise en forme conditionnelle » du ruban, sous son bouton (coordonnées de la fenêtre). */
 	export function rulesMenu(x: number, y: number) {
 		if (!source.setSheetRules) return;
+		if (locked) return say(locked);
 		closeMenus();
 		cfView = { kind: 'menu', x, y };
 	}
@@ -4392,6 +4393,7 @@
 	/** Gestionnaire des règles de la sélection. */
 	export function rulesActive() {
 		if (!source.setSheetRules) return;
+		if (locked) return say(locked);
 		closeMenus();
 		cfView = { kind: 'manager' };
 	}
@@ -9434,6 +9436,7 @@
 					panel = null;
 					menuAction(source.deletePivot && (() => source.deletePivot!(pv.id)));
 				}}
+				{locked}
 				onclose={() => (panel = null)}
 			/>
 			{/key}
@@ -9451,6 +9454,7 @@
 					panel = null;
 					selChart = null;
 				}}
+				{locked}
 			/>
 		{/if}
 	{/if}

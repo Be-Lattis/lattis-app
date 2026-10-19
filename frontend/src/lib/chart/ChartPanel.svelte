@@ -21,12 +21,15 @@
 		invalid?: number;
 		onchange: (cfg: ChartConfig) => void;
 		onclose: () => void;
+		/** Feuille protégée : le message, et les champs grisés. */
+		locked?: string;
 	}
 
-	let { config, columns, guess = null, invalid = 0, onchange, onclose, resizable = true }: Props = $props();
+	let { config, columns, guess = null, invalid = 0, onchange, onclose, resizable = true, locked = '' }: Props = $props();
 
 	// Le titre et les champs texte s'appliquent à la sortie du champ.
 	function set(patch: Partial<ChartConfig>) {
+		if (locked) return;
 		onchange({ ...config, ...patch });
 	}
 	function num(s: string): number | undefined {
@@ -98,7 +101,9 @@
 		<HelpLink target="graphiques" label="Aide sur les graphiques" />
 		<button class="x" title="Fermer le volet (Échap)" aria-label="Fermer le volet" onclick={onclose}>✕</button>
 	</header>
+	{#if locked}<p class="locked" role="note"><Icon name="lock-sheet" size={14} /><span>{locked}</span></p>{/if}
 
+	<fieldset class="body" disabled={!!locked}>
 	<section>
 		<h3>Type</h3>
 		<div class="kinds">
@@ -273,6 +278,7 @@
 			</div>
 		{/if}
 	</section>
+	</fieldset>
 	<p class="hint">Glissez le graphique pour le déplacer, ses poignées pour le redimensionner. Clic droit : couper, copier, supprimer.</p>
 </aside>
 
@@ -287,6 +293,24 @@
 		background: #fafbfb;
 		overflow: auto;
 		font-size: 12px;
+	}
+	/* Feuille protégée : le volet se lit, ses champs sont grisés. */
+	fieldset.body {
+		display: contents;
+	}
+	fieldset.body:disabled section {
+		opacity: 0.6;
+	}
+	.locked {
+		display: flex;
+		gap: 6px;
+		align-items: flex-start;
+		margin: 0;
+		padding: 6px 8px;
+		background: #fff8e1;
+		border: 1px solid #f0d58a;
+		border-radius: 3px;
+		color: #5c4400;
 	}
 	header {
 		display: flex;

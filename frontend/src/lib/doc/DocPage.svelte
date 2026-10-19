@@ -955,7 +955,7 @@
 				</label>
 				<button class="danger" disabled={!!locked} onclick={() => panel && deleteEmbed(panel.index)}><Icon name="trash" size={14} />Supprimer le graphique</button>
 			</div>
-			<ChartPanel config={chart} guess={mapInfo?.guess} invalid={mapInfo?.invalid} columns={tbl?.columns ?? []} onchange={setChart} onclose={() => openPanel(null)} resizable={false} />
+			<ChartPanel config={chart} guess={mapInfo?.guess} invalid={mapInfo?.invalid} columns={tbl?.columns ?? []} onchange={setChart} onclose={() => openPanel(null)} resizable={false} {locked} />
 		</div>
 	{:else if panel?.kind === 'pivot' && pivot}
 		<div class="side panelbox" use:resizePanel={{ key: 'doc-side', min: 260 }} use:panelKeys={() => openPanel(null)}>
@@ -984,6 +984,7 @@
 					ondelete={() => panel && deleteEmbed(panel.index)}
 					onclose={() => openPanel(null)}
 					resizable={false}
+					{locked}
 				/>
 			{/key}
 		</div>
