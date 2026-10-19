@@ -1,8 +1,8 @@
 # Fonctions des formules
 
-*Bibliothèque livrée le 16/10/2026 (phase 4), d'après le catalogue du 15/10/2026 (`analyse/catalogue-fonctions.md`, dossier du projet). Code : `internal/formula`.*
+*Bibliothèque livrée le 16/10/2026 (phase 4), d'après le catalogue du 15/10/2026 (`analyse/catalogue-fonctions.md`, dossier du projet), complétée le 19/10/2026 (audit 6, I7 : statistiques, finances, mathématiques, texte, dates, position). Code : `internal/formula`.*
 
-118 fonctions, chacune sous son nom français et son nom anglais (le nom anglais est stocké dans l'AST). Toutes sont vérifiées par `testdata/conformite.txt` sur les **deux backends** (évaluateur Go et SQL compilé), sauf `REQUETE` (SQL seulement). `TestCatalogueNames` vérifie qu'aucun nom ne désigne deux fonctions et `TestFonctionsDocumentees` que chaque fonction figure ici.
+174 fonctions (dont RECHERCHEH, reconnue pour être refusée à la saisie), chacune sous son nom français et son nom anglais (le nom anglais est stocké dans l'AST). Toutes sont vérifiées par `testdata/conformite.txt` sur les **deux backends** (évaluateur Go et SQL compilé), sauf `REQUETE` (SQL seulement). `TestCatalogueNames` vérifie qu'aucun nom ne désigne deux fonctions et `TestFonctionsDocumentees` que chaque fonction figure ici.
 
 L'aide détaillée de chaque fonction (description, arguments nommés et décrits, exemple) est dans `internal/formula/docs.go` : elle alimente l'infobulle de saisie (argument en cours en gras, comme Excel), l'autocomplétion et le dialogue « Insérer une fonction ». `TestFunctionDocs` vérifie que chaque fonction y figure, que ses arguments correspondent à son nombre d'arguments et que son exemple s'analyse.
 
@@ -185,6 +185,22 @@ Une colonne peut lire ses propres lignes voisines : `[Mvt]+PRECEDENT([Solde]; 0)
 Leur résultat se déverse sur la feuille : `EvalSpill` (Go) et `CompileSpill` (requête SQL ordonnée et en-têtes) le fournissent. Dans une cellule, un tableau dynamique vaut #VALEUR! ; dans un agrégat, il fournit ses valeurs : `SOMME(FILTRE(Ventes[Montant]; Ventes[Qté]>1))`.
 
 **Constantes matricielles.** `{1;2;3}` (une colonne), `{"a"."b"}` (une ligne ; `\` est aussi accepté entre colonnes), `{1.2;3.4}` ; en anglais `{1;2;3}` et `{"a","b"}`. Elles ne contiennent que des littéraux (nombres, textes, VRAI, FAUX, erreurs) et se lisent comme un tableau dynamique : `={1;2;3}` se déverse, `SOMME({1;2;3})` vaut 6, `FRACTIONNER.TEXTE(Cell[A1]; {",";";"})` découpe à chaque délimiteur. Ailleurs (dans un calcul sur une valeur), une constante vaut #VALEUR!.
+
+## Fonctions d'Excel absentes
+
+Une fonction inconnue donne #NOM? (l'import d'un classeur Excel garde alors la valeur). Les manques connus, et ce qui les remplace :
+
+| Excel (français / anglais) | Dans Lattis |
+|---|---|
+| DECALER / OFFSET, INDIRECT | FILTRE, PRENDRE, REFERENCE |
+| RECHERCHE / LOOKUP | REFERENCE ou REFERENCE.APPROCHEE |
+| RECHERCHEH / HLOOKUP | refusée à la saisie : transposer les données, puis REFERENCE |
+| RECHERCHEV / VLOOKUP approchée, INDEX à 3 arguments | REFERENCE.APPROCHEE ; INDEX(colonne; ligne) |
+| LAMBDA, MAP, BYROW… | un script Lua |
+| VARP (VAR.P en français) | VAR.P.N, que `VAR.P` désigne aussi |
+| LIGNE(), COLONNE() sans argument | CUMUL(1) pour numéroter les lignes d'un tableau |
+| TRANSPOSE, AGREGAT / AGGREGATE, fonctions de base de données (BDSOMME…), CELLULE / CELL, INFO, LIEN_HYPERTEXTE / HYPERLINK | pas d'équivalent |
+| Fonctions financières des obligations et amortissements (PRIX, RENDEMENT, AMORLIN…), statistiques avancées (LOI.NORMALE…, PREVISION…) | pas encore |
 
 ## Performances
 

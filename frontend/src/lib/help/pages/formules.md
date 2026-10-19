@@ -53,6 +53,12 @@ Une **constante matricielle** s'écrit entre accolades : `{1;2;3}` (une colonne)
 | `#CIRC!` | Référence circulaire : la formule dépend d'elle-même |
 | `#NOMBRE!` | Nombre hors domaine (racine d'un négatif…) |
 
+## Statistiques et finances
+
+Les statistiques lisent une colonne entière, une plage ou une expression sur les colonnes d'un tableau ; textes, booléens et vides y sont ignorés : [ECARTYPE.STANDARD](fonction:ECARTYPE.STANDARD), [VAR](fonction:VAR), [MODE](fonction:MODE), [CENTILE](fonction:CENTILE), [QUARTILE](fonction:QUARTILE), [COEFFICIENT.CORRELATION](fonction:COEFFICIENT.CORRELATION), [PENTE](fonction:PENTE)… : `=QUARTILE(Ventes[Montant]; 3)`.
+
+Les fonctions financières suivent les conventions d'Excel : une somme versée est négative, et le taux est celui d'une période. La mensualité d'un emprunt de 200 000 € sur 20 ans à 4 % par an s'écrit `=VPM(4%/12; 20*12; 200000)` (−1 211,96). Voir aussi [VA](fonction:VA), [VC](fonction:VC), [NPM](fonction:NPM), [TAUX](fonction:TAUX), [INTPER](fonction:INTPER) et [PRINCPER](fonction:PRINCPER) pour un tableau d'amortissement. [VAN](fonction:VAN) et [TRI](fonction:TRI) lisent les flux d'une colonne **dans l'ordre d'affichage** du tableau : `=TRI(Flux[Montant])`.
+
 ## Commune d'un point GPS
 
 [COMMUNE](fonction:COMMUNE) donne la commune française qui contient un point : `=COMMUNE([Latitude]; [Longitude])`, ou son code INSEE (`"code"`), ses codes postaux (`"cp"`), son département (`"departement"`) ou sa région (`"region"`). Le calcul se fait sans connexion, sur les contours des communes embarqués dans Lattis (métropole et outre-mer), et reste rapide sur une colonne de 100 000 lignes. Un point en mer ou hors de France donne `#N/A`. Les contours étant simplifiés, un point à quelques dizaines de mètres d'une limite peut tomber chez la commune voisine.
