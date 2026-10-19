@@ -48,7 +48,7 @@ func (s *DocumentService) DataShareInfo(ctx context.Context, table string) (Data
 	}
 	info := d.Share.Info()
 	if info == nil {
-		out.Reason = "Seul un tableau d'un classeur publié sur un Serveur Lattis se partage au Data Lake Lattis : publiez d'abord le classeur (Fichier › Partager sur un serveur…)."
+		out.Reason = "Seul un tableau d'un classeur publié sur un Serveur Lattis se partage au Data Lake Lattis : publiez d'abord le classeur (Fichier › Publier sur un serveur…)."
 		return out, nil
 	}
 	if !info.CanDesign() {

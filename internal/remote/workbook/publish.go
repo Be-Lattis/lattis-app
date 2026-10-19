@@ -95,7 +95,7 @@ func Republish(ctx context.Context, srv Server, db *store.Store, tables []int64)
 		return nil, err
 	}
 	if info == nil {
-		return nil, errors.New("ce classeur n'est pas publié : Fichier › Partager sur un serveur…")
+		return nil, errors.New("ce classeur n'est pas publié : Fichier › Publier sur un serveur…")
 	}
 	if info.Mode != Frozen {
 		return nil, errors.New("seul un classeur figé se republie (un classeur collaboratif se synchronise)")

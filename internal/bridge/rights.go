@@ -235,7 +235,7 @@ func (s *DocumentService) rightsDoAs(ctx context.Context, design bool, fn func(s
 	}
 	info := d.Share.Info()
 	if info == nil {
-		return RightsView{}, errors.New("ce classeur n'est pas partagé : Fichier › Partager sur un serveur…")
+		return RightsView{}, errors.New("ce classeur n'est pas partagé : Fichier › Publier sur un serveur…")
 	}
 	switch {
 	case design && !info.CanDesign():

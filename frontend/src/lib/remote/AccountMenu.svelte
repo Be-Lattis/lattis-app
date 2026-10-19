@@ -65,7 +65,7 @@
 						onclick={() => {
 							open = false;
 							r.open();
-						}}><Icon name="user" size={14} />Partager « {r.title} »…</button
+						}}><Icon name="user" size={14} />Gérer l’accès à « {r.title} »…</button
 					>
 				{/if}
 				{#if lattis.state.allowUserServers}

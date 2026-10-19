@@ -21,7 +21,7 @@ import (
 )
 
 // Classeurs partagés (docs/collaboration/publication.md) : Fichier ›
-// Partager sur un serveur…, Ouvrir depuis un serveur, Republier ; état du
+// Publier sur un serveur…, Ouvrir depuis un serveur, Republier ; état du
 // classeur partagé ouvert (bandeaux « Nouvelle version disponible »,
 // « Hors ligne, lecture seule »). Tout passe par internal/remote/workbook ;
 // l'interface est prévenue par Host.Emit.
@@ -385,7 +385,7 @@ type ShareRequest struct {
 }
 
 // SharePublish publie le classeur ouvert sur un Serveur Lattis (Fichier ›
-// Partager sur un serveur…). Un classeur déjà enregistré est réenregistré
+// Publier sur un serveur…). Un classeur déjà enregistré est réenregistré
 // (son manifeste dit le partage).
 func (s *DocumentService) SharePublish(ctx context.Context, req ShareRequest) (workbook.State, error) {
 	d, err := s.current()
@@ -407,7 +407,7 @@ func (s *DocumentService) SharePublish(ctx context.Context, req ShareRequest) (w
 
 // ShareCanPublish dit si le compte connecté à server peut y créer un
 // classeur (rôle « créateur de classeurs », propriétaire du serveur, ou
-// publication ouverte à tous) : sinon, Partager sur un serveur ne propose
+// publication ouverte à tous) : sinon, Publier sur un serveur ne propose
 // pas de publier.
 func (s *DocumentService) ShareCanPublish(ctx context.Context, server string) (bool, error) {
 	srv, _, _, err := remoteServer(ctx, server)
@@ -426,7 +426,7 @@ func (s *DocumentService) ShareRepublish(ctx context.Context, tables []int64) (w
 	}
 	info := d.Share.Info()
 	if info == nil {
-		return workbook.State{}, errors.New("ce classeur n'est pas publié : Fichier › Partager sur un serveur…")
+		return workbook.State{}, errors.New("ce classeur n'est pas publié : Fichier › Publier sur un serveur…")
 	}
 	srv, _, _, err := remoteServer(ctx, info.Server)
 	if err != nil {

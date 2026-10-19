@@ -1,4 +1,4 @@
-// Classeurs partagés (Fichier › Partager sur un serveur…, Ouvrir depuis un
+// Classeurs partagés (Fichier › Publier sur un serveur…, Ouvrir depuis un
 // serveur, Republier) : logique des boîtes et du bandeau, sans composant
 // (testée par vitest). L'état vient de DocumentService.ShareState
 // (internal/remote/workbook.State), les vérifications de ShareCheck.

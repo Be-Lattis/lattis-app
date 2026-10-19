@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Fichier › Partager sur un serveur… (et Fichier › Republier) : choix du
+	// Fichier › Publier sur un serveur… (et Fichier › Republier) : choix du
 	// serveur, du titre et du mode, puis vérifications avant publication
 	// (spécification de l'application collaborative, §5.3) — types figés,
 	// saisies invalides à corriger ou à accepter comme texte, noms valides en
@@ -110,7 +110,7 @@
 		class="dialog"
 		role="dialog"
 		aria-modal="true"
-		aria-label={republish ? 'Republier le classeur' : 'Partager sur un serveur'}
+		aria-label={republish ? 'Republier le classeur' : 'Publier sur un serveur'}
 		tabindex="-1"
 		use:modal
 		onkeydown={(e) => {
@@ -118,7 +118,7 @@
 			if (e.key === 'Escape' && !busy) ondone(null);
 		}}
 	>
-		<header><Icon name="database" size={18} /><span>{republish ? 'Republier le classeur' : 'Partager sur un serveur'}</span></header>
+		<header><Icon name="database" size={18} /><span>{republish ? 'Republier le classeur' : 'Publier sur un serveur'}</span></header>
 		<div class="body">
 			{#if republish && share}
 				<p class="muted">

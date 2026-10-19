@@ -233,7 +233,7 @@
 		}
 	}
 	let shareDlg = $state<{ republish: boolean } | null>(null);
-	// Fichier › Partager… : droits du classeur publié (propriétaire ou
+	// Fichier › Gérer l’accès… : droits du classeur publié (propriétaire ou
 	// concepteur), aussi depuis le menu Compte ; onglet SQL : règles et
 	// rôles générés (lecture seule).
 	let rightsOpen = $state(false);

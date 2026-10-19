@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Fichier › Partager… (classeur publié) : droits du classeur
+	// Fichier › Gérer l’accès… (classeur publié) : droits du classeur
 	// (spécification de l'application collaborative, §8.2). Trois onglets
 	// pour les propriétaires — Membres (rôles de chacun, invitations, rôles
 	// des équipes Lattis sur un serveur qui les connaît, migration 0012), Rôles
@@ -253,7 +253,7 @@
 		class="dialog"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Partager"
+		aria-label="Gérer l’accès"
 		tabindex="-1"
 		use:modal
 		onkeydown={(e) => {
@@ -262,7 +262,7 @@
 		}}
 	>
 		<header>
-			<Icon name="user" size={18} /><span>Partager « {title} »</span>
+			<Icon name="user" size={18} /><span>Gérer l’accès à « {title} »</span>
 			<span class="muted grow">{hostOf(server)}{view && !view.collaborative ? ' · classeur figé : lecteurs seulement' : ''}</span>
 			<button class="link" disabled={busy} onclick={load} title="Relire les droits sur le serveur">Actualiser</button>
 		</header>

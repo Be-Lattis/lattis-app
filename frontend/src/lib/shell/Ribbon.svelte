@@ -157,10 +157,10 @@
 		/** Cadre de sélection animé, et sa bascule. */
 		animate?: boolean;
 		onanimate?: (on: boolean) => void;
-		/** Classeur partagé sur un Serveur Lattis (Fichier › Partager masqué), et Fichier › Republier permis. */
+		/** Classeur partagé sur un Serveur Lattis (Fichier › Publier masqué), et Fichier › Republier permis. */
 		shared?: boolean;
 		republish?: boolean;
-		/** Fichier › Partager… (droits du classeur publié : propriétaire ou concepteur). */
+		/** Fichier › Gérer l’accès… (droits du classeur publié : propriétaire ou concepteur). */
 		rights?: boolean;
 	}
 
@@ -990,7 +990,7 @@
 						<button disabled={disabled && a === 'close'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 					<hr />
-					{#each [['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ...(sharedWorkbooksEnabled() && !shared ? [['share', 'Partager sur un serveur…', '']] : []), ...(sharedWorkbooksEnabled() && rights ? [['rights', 'Partager…', '']] : []), ...(sharedWorkbooksEnabled() && republish ? [['republish', 'Republier', '']] : []), ['import', 'Importer (CSV, Excel)…', '']] as [a, label, keys] (a)}
+					{#each [['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ...(sharedWorkbooksEnabled() && !shared ? [['share', 'Publier sur un serveur…', '']] : []), ...(sharedWorkbooksEnabled() && rights ? [['rights', 'Gérer l’accès…', '']] : []), ...(sharedWorkbooksEnabled() && republish ? [['republish', 'Republier', '']] : []), ['import', 'Importer (CSV, Excel)…', '']] as [a, label, keys] (a)}
 						<button disabled={disabled && a !== 'import'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 					<hr />
