@@ -54,7 +54,18 @@ type Recorder struct {
 	// st : changements de structure confiés à la synchronisation
 	// (SetStructure, structure.go).
 	st structure
+	// all : tous les tableaux sont relevés, publiés ou non (travail à
+	// plusieurs sur un dossier partagé : SetAll, internal/coedit).
+	all atomic.Bool
 }
+
+// SetAll fait relever tous les tableaux du classeur, publiés ou non
+// (travail à plusieurs sur un dossier partagé, internal/coedit) ; leurs
+// lignes doivent déjà avoir un identifiant partagé (_lattis_row_ids).
+func (r *Recorder) SetAll(on bool) { r.all.Store(on) }
+
+// All dit si tous les tableaux sont relevés (SetAll).
+func (r *Recorder) All() bool { return r.all.Load() }
 
 // New crée le Recorder d'un document ; le brancher sur son bus
 // (Bus.Recorder).
@@ -62,7 +73,7 @@ func New(db *store.Store) *Recorder { return &Recorder{db: db} }
 
 // Begin ouvre le relevé d'une transaction du bus.
 func (r *Recorder) Begin(ctx context.Context, tx *sql.Tx) (command.Capture, error) {
-	pub, err := published(ctx, tx)
+	pub, err := published(ctx, tx, r.all.Load())
 	if err != nil {
 		return nil, err
 	}
@@ -82,9 +93,13 @@ func (r *Recorder) Begin(ctx context.Context, tx *sql.Tx) (command.Capture, erro
 	return s, nil
 }
 
-// published lit les tableaux publiés.
-func published(ctx context.Context, tx *sql.Tx) (map[int64]bool, error) {
-	rs, err := tx.QueryContext(ctx, `SELECT tbl FROM _lattis_remote_tables WHERE published = 1`)
+// published lit les tableaux publiés (all : tous les tableaux).
+func published(ctx context.Context, tx *sql.Tx, all bool) (map[int64]bool, error) {
+	q := `SELECT tbl FROM _lattis_remote_tables WHERE published = 1`
+	if all {
+		q += ` UNION SELECT id FROM _lattis_tables`
+	}
+	rs, err := tx.QueryContext(ctx, q)
 	if err != nil {
 		return nil, err
 	}
@@ -204,6 +219,11 @@ var tableRef = regexp.MustCompile(`\bt_(\d+)\b`)
 // Statement suit les instructions de structure : un tableau publié
 // reconstruit (DROP puis RENAME) ou dont les colonnes changent.
 func (s *session) Statement(q string) error {
+	if w := s.r.watchFn(); w != nil {
+		if err := w(q); err != nil {
+			return err
+		}
+	}
 	if len(s.pub) == 0 || !isDDL(q) {
 		return nil
 	}

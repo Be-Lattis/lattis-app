@@ -28,6 +28,10 @@ type RemoteRow struct {
 	// Values : valeurs de stockage locales par colonne locale ; une colonne
 	// absente garde sa valeur.
 	Values map[int64]any
+	// NoCreate : une ligne inconnue ici (supprimée en local) n'est pas
+	// créée ; seules les lignes existantes sont mises à jour (modification
+	// d'une cellule reçue d'un autre poste, internal/coedit).
+	NoCreate bool
 }
 
 // RemoteTable regroupe les lignes reçues pour un tableau publié.
@@ -240,6 +244,8 @@ func (t *tx) applyRemote(idt rowIDs, rt RemoteTable, keep Keep, out *RemoteAppli
 					return changed, err
 				}
 			}
+		case r.NoCreate:
+			continue
 		default:
 			names := []string{"id", "_pos"}
 			args := []any{next, r.Pos}

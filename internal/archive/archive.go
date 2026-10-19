@@ -136,6 +136,10 @@ type Manifest struct {
 	// fait foi (_lattis_info, clé remote) ; le manifeste le dit sans ouvrir
 	// la base.
 	Remote *Remote
+	// Journal : travail à plusieurs sur un dossier partagé
+	// (internal/coedit) ; position de chaque journal de session que le
+	// fichier contient déjà (nil : section absente).
+	Journal map[string]int64
 }
 
 // Remote est la section remote du manifeste d'un classeur partagé
@@ -162,6 +166,16 @@ type Doc struct {
 	// ReadOnly : ouvert en lecture seule (classeur verrouillé par un autre
 	// poste) ; l'enregistrer dans son fichier est refusé (ErrReadOnly).
 	ReadOnly bool
+	// Journal, s'il est fixé, donne les positions des journaux du travail à
+	// plusieurs (internal/coedit) contenues dans la base : appelé dans la
+	// file d'écriture juste avant l'instantané (aucune transaction entre
+	// les deux), le résultat va dans le manifeste (Manifest.Journal).
+	Journal func(ctx context.Context, db *sql.DB) (map[string]int64, error)
+	// Known, s'il est fixé, dit si un fichier modifié par ailleurs ne
+	// contient que des modifications déjà appliquées ici (travail à
+	// plusieurs : un collègue l'a enregistré) : l'enregistrer par-dessus ne
+	// perd rien, ChangedError n'est pas rendu.
+	Known func(m Manifest) bool
 	lock     *os.File
 	extra    []func(*sqliteConn) error
 	peer     *peerLock // verrou ~$ posé à côté du fichier (nil : aucun)
@@ -674,7 +688,7 @@ func (d *Doc) saveTo(ctx context.Context, path string, force bool) error {
 		}
 		if changed, err := d.Changed(); err != nil {
 			return err
-		} else if changed && !force {
+		} else if changed && !force && !d.known() {
 			return &ChangedError{Path: d.Path}
 		}
 	} else if h := LockedBy(path); h != nil {
@@ -704,6 +718,25 @@ func (d *Doc) saveTo(ctx context.Context, path string, force bool) error {
 	return nil
 }
 
+// known : le fichier modifié par ailleurs ne contient que ce qui est déjà
+// appliqué ici (Known).
+func (d *Doc) known() bool {
+	if d.Known == nil {
+		return false
+	}
+	m, err := ReadManifest(d.Path)
+	return err == nil && d.Known(m)
+}
+
+// BaseSum donne l'empreinte du fichier tel qu'ouvert ou enregistré en
+// dernier (vide : inconnue).
+func (d *Doc) BaseSum() string {
+	if d.base == nil {
+		return ""
+	}
+	return d.base.Sum
+}
+
 // beforeRename est appelé juste avant le renommage (tests : enregistrement
 // interrompu).
 var beforeRename = func(tmp string) error { return nil }
@@ -727,8 +760,15 @@ func (d *Doc) save(ctx context.Context, path string) error {
 	// VACUUM INTO passe par la file d'écriture : l'instantané voit toutes les
 	// écritures validées avant lui, et aucune à moitié.
 	var gen int64
+	var journal map[string]int64
 	err := d.DB.Exec(ctx, func(db *sql.DB) error {
 		gen = d.DB.Generation() + 1 // génération une fois l'instantané pris
+		if d.Journal != nil {
+			var err error
+			if journal, err = d.Journal(ctx, db); err != nil {
+				return err
+			}
+		}
 		_, err := db.ExecContext(ctx, `VACUUM INTO ?`, snap)
 		return err
 	})
@@ -764,7 +804,7 @@ func (d *Doc) save(ctx context.Context, path string) error {
 			return err
 		}
 	}
-	if err := writeZip(tmp, snap, remote, &d.prog.done); err != nil {
+	if err := writeZip(tmp, snap, remote, journal, &d.prog.done); err != nil {
 		tmp.Close()
 		return err
 	}
@@ -897,7 +937,7 @@ func rename(src, dst string) error {
 	return err
 }
 
-func writeZip(w io.Writer, snap string, remote *Remote, done *atomic.Int64) error {
+func writeZip(w io.Writer, snap string, remote *Remote, journal map[string]int64, done *atomic.Int64) error {
 	zw := zip.NewWriter(w)
 	mw, err := zw.Create(manifestName)
 	if err != nil {
@@ -906,6 +946,9 @@ func writeZip(w io.Writer, snap string, remote *Remote, done *atomic.Int64) erro
 	fmt.Fprintf(mw, "format_version: %d\napplication: Lattis\nsaved: %s\n", FormatVersion, time.Now().UTC().Format(time.RFC3339))
 	if remote != nil {
 		io.WriteString(mw, remote.yaml())
+	}
+	if journal != nil {
+		io.WriteString(mw, journalYAML(journal))
 	}
 	dw, err := zw.CreateHeader(&zip.FileHeader{Name: dbName, Method: zip.Store, Modified: time.Now()})
 	if err != nil {
@@ -944,6 +987,23 @@ func (r *Remote) yaml() string {
 		for _, k := range keys {
 			fmt.Fprintf(&b, "    %s: %s\n", strconv.Quote(k), strconv.Quote(r.Since[k]))
 		}
+	}
+	return b.String()
+}
+
+// journalYAML écrit la section journal du manifeste (travail à plusieurs
+// sur un dossier partagé) : position de chaque journal de session, noms
+// entre guillemets. Une version plus ancienne de Lattis l'ignore.
+func journalYAML(j map[string]int64) string {
+	var b strings.Builder
+	b.WriteString("journal:\n")
+	keys := make([]string, 0, len(j))
+	for k := range j {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		fmt.Fprintf(&b, "  %s: %d\n", strconv.Quote(k), j[k])
 	}
 	return b.String()
 }
@@ -1000,6 +1060,14 @@ func readManifest(f *zip.File) (Manifest, error) {
 			case "remote":
 				section = "remote"
 				m.Remote = &Remote{}
+			case "journal":
+				section = "journal"
+				m.Journal = map[string]int64{}
+			}
+		case section == "journal":
+			var n int64
+			if _, err := fmt.Sscan(v, &n); err == nil {
+				m.Journal[unquote(k)] = n
 			}
 		case section == "remote" && indent <= 2:
 			switch k {

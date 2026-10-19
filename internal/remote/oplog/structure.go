@@ -60,6 +60,25 @@ type structure struct {
 	mu     sync.Mutex
 	fn     StructureFunc
 	notice string
+	// watch voit chaque instruction des étapes du bus (SetWatch).
+	watch func(q string) error
+}
+
+// SetWatch fait voir à fn chaque instruction exécutée par une étape du bus
+// (action, annulation, rétablissement), dans sa transaction ; une erreur
+// défait toute la transaction. Travail à plusieurs sur un dossier partagé
+// (internal/coedit) : ce qui ne se décrit pas en opérations sur les lignes
+// des tableaux y est repéré. nil : rien.
+func (r *Recorder) SetWatch(fn func(q string) error) {
+	r.st.mu.Lock()
+	r.st.watch = fn
+	r.st.mu.Unlock()
+}
+
+func (r *Recorder) watchFn() func(q string) error {
+	r.st.mu.Lock()
+	defer r.st.mu.Unlock()
+	return r.st.watch
 }
 
 // SetStructure confie les changements de structure des tableaux publiés à

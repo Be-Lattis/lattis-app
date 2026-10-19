@@ -88,6 +88,16 @@ var whoAmI = sync.OnceValue(func() Holder {
 	return h
 })
 
+// Me décrit l'utilisateur et le poste de ce processus (comme dans le
+// verrou ~$).
+func Me() Holder { return whoAmI() }
+
+// ProcessAlive dit si le processus pid de ce poste existe encore.
+func ProcessAlive(pid int) bool { return processAlive(pid) }
+
+// Hide cache un fichier ou un dossier (Windows ; sans effet ailleurs).
+func Hide(path string) { hide(path) }
+
 // LockPath donne le fichier de verrou d'un classeur.
 func LockPath(path string) string {
 	return filepath.Join(filepath.Dir(path), peerPrefix+filepath.Base(path))
@@ -108,6 +118,27 @@ func (e *LockedError) Error() string {
 func LockedBy(path string) *Holder {
 	h, ok := readPeer(LockPath(path))
 	if !ok || !alive(h, LockPath(path)) {
+		return nil
+	}
+	return &h
+}
+
+// HeldBy rend le détenteur du verrou vivant de path comme LockedBy, ce
+// processus compris (travail à plusieurs : la session qui le tient doit
+// accueillir celle qui rejoint, même dans le même processus).
+func HeldBy(path string) *Holder {
+	lp := LockPath(path)
+	h, ok := readPeer(lp)
+	if !ok {
+		return nil
+	}
+	if h.PID == os.Getpid() && strings.EqualFold(h.Machine, whoAmI().Machine) {
+		if st, err := os.Stat(lp); err != nil || time.Since(st.ModTime()) > lockStale {
+			return nil
+		}
+		return &h
+	}
+	if !alive(h, lp) {
 		return nil
 	}
 	return &h

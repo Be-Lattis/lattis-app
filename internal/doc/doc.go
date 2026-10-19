@@ -57,6 +57,8 @@ type Document struct {
 	notes []string
 	// indexer : index des tableaux partagés sur le serveur (SetIndexer).
 	indexer atomic.Pointer[Indexer]
+	// coedit : travail à plusieurs sur un dossier partagé (SetCoEdit).
+	coedit atomic.Pointer[CoEditHooks]
 }
 
 // Indexer pose et retire sur le serveur les index d'un tableau partagé
@@ -198,6 +200,10 @@ const (
 	// OpenAnyway : modifiable sans prendre le verrou d'un autre ;
 	// l'enregistrement contrôle encore que le fichier n'a pas changé.
 	OpenAnyway
+	// OpenCoEdit : travail à plusieurs sur un dossier partagé
+	// (internal/coedit) ; modifiable, le verrou ~$ est pris s'il est libre
+	// (sinon une autre session le tient).
+	OpenCoEdit
 )
 
 // OpenAs ouvre un classeur comme Open, selon mode.
@@ -230,9 +236,57 @@ func OpenAs(ctx context.Context, path string, mode OpenMode) (_ *Document, err e
 		d.lockFile()
 	case OpenReadOnly:
 		a.ReadOnly = true
+	case OpenCoEdit:
+		d.TryLock()
 	}
 	return d, nil
 }
+
+// TryLock pose le verrou ~$ du fichier s'il est libre (travail à
+// plusieurs : la session qui le tenait est partie) ; sans effet s'il est
+// déjà posé par ce document ou tenu par un autre.
+func (d *Document) TryLock() {
+	if d.arc.Path == "" || d.arc.ReadOnly {
+		return
+	}
+	if err := d.arc.Lock(); err != nil {
+		var held *archive.LockedError
+		if !errors.As(err, &held) {
+			trace.Logf(2, trace.Doc, "verrou de %s : %v", d.arc.Path, err)
+		}
+	}
+}
+
+// CoEditHooks branche le travail à plusieurs sur un dossier partagé
+// (internal/coedit) sur l'enregistrement.
+type CoEditHooks struct {
+	// Before est appelé avant l'enregistrement dans le fichier courant
+	// (la file locale part dans le journal).
+	Before func(ctx context.Context) error
+	// Positions : positions des journaux contenues dans la base, prises
+	// avec l'instantané (archive.Doc.Journal).
+	Positions func(ctx context.Context, db *sql.DB) (map[string]int64, error)
+	// Known : le fichier modifié par ailleurs ne contient que ce qui est
+	// déjà appliqué ici (archive.Doc.Known).
+	Known func(m archive.Manifest) bool
+	// After est appelé après un enregistrement réussi (path : fichier
+	// écrit ; same : le fichier courant).
+	After func(ctx context.Context, path string, same bool)
+}
+
+// SetCoEdit branche (nil : débranche) le travail à plusieurs.
+func (d *Document) SetCoEdit(h *CoEditHooks) {
+	d.coedit.Store(h)
+	if h == nil {
+		d.arc.Journal, d.arc.Known = nil, nil
+		return
+	}
+	d.arc.Journal, d.arc.Known = h.Positions, h.Known
+}
+
+// BaseSum donne l'empreinte du fichier tel qu'ouvert ou enregistré en
+// dernier (vide : inconnue).
+func (d *Document) BaseSum() string { return d.arc.BaseSum() }
 
 // lockFile pose le verrou ~$ du fichier : pris par un autre (entre la
 // question et l'ouverture), le classeur passe en lecture seule ; impossible
@@ -374,12 +428,22 @@ func (d *Document) save(ctx context.Context, path string, force bool) (err error
 		}
 		d.backup = ""
 	}
+	same := path == "" || d.arc.Path != "" && samePath(path, d.arc.Path)
+	h := d.coedit.Load()
+	if h != nil && h.Before != nil && same {
+		if err := h.Before(ctx); err != nil {
+			return err
+		}
+	}
 	save := d.arc.Save
 	if force {
 		save = d.arc.SaveOver
 	}
 	if err := save(ctx, path); err != nil {
 		return err
+	}
+	if h != nil && h.After != nil {
+		h.After(ctx, d.arc.Path, same)
 	}
 	d.saved, d.savedProt = top, prot
 	d.savedShare.Store(share)
