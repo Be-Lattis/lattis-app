@@ -21,6 +21,29 @@ export function panelWidth(w: number | undefined, viewport: number, min = MIN_WI
 	return Math.round(Math.max(min, Math.min(w ?? DEFAULT_WIDTH, viewport * MAX_SHARE)));
 }
 
+/** Largeur laissée à la grille quand plusieurs volets sont ouverts ensemble. */
+export const GRID_MIN = 300;
+
+/**
+ * Largeurs de volets ouverts ensemble (assistant, requêtes, TCD…) : chacun
+ * la sienne, et si leur somme ne laisse pas gridMin à la grille, tous
+ * rétrécissent dans la même proportion, sans passer sous leur minimum.
+ */
+export function fitWidths(wanted: number[], mins: number[], viewport: number, gridMin = GRID_MIN): number[] {
+	const total = wanted.reduce((a, w) => a + w, 0);
+	const floor = mins.reduce((a, m) => a + m, 0);
+	const avail = Math.max(viewport - gridMin, floor);
+	if (total <= avail) return wanted.map(Math.round);
+	const extra = total - floor;
+	const k = extra > 0 ? (avail - floor) / extra : 0;
+	return wanted.map((w, i) => Math.floor(mins[i] + Math.max(0, w - mins[i]) * k));
+}
+
+/** Largeur qu'un volet peut prendre à côté des autres (leurs largeurs others), en laissant gridMin à la grille. */
+export function roomFor(others: number[], viewport: number, min = MIN_WIDTH, gridMin = GRID_MIN): number {
+	return Math.max(min, viewport - gridMin - others.reduce((a, w) => a + w, 0));
+}
+
 type Options = { key: string; min?: number; /** Volet inclus dans un autre, qui se redimensionne à sa place. */ off?: boolean };
 
 // « panel2 » : les largeurs tirées avant l'harmonisation à 500 px sont oubliées.
@@ -76,6 +99,40 @@ function slideOut(node: HTMLElement) {
 	a.onfinish = a.oncancel = () => ghost.remove();
 }
 
+// Volets ouverts : leurs largeurs se règlent ensemble (fitWidths), pour que
+// la grille garde toujours GRID_MIN pixels.
+type Open = { node: HTMLElement; wanted: () => number; min: () => number };
+const opened = new Set<Open>();
+
+/** Volet logé à côté de la grille (pas flottant ni masqué) : il compte dans la somme des largeurs. */
+function docked(node: HTMLElement): boolean {
+	if (!node.isConnected) return false;
+	const st = getComputedStyle(node);
+	return st.position !== 'fixed' && st.visibility !== 'hidden' && st.display !== 'none';
+}
+
+function setWidth(node: HTMLElement, w: number) {
+	node.style.width = `${w}px`;
+	node.style.flexBasis = `${w}px`;
+}
+
+/** Pose la largeur de chaque volet ouvert. */
+function layoutPanels() {
+	if (typeof window === 'undefined') return;
+	const all = [...opened];
+	const shared = all.filter((p) => docked(p.node));
+	const widths = fitWidths(
+		shared.map((p) => p.wanted()),
+		shared.map((p) => p.min()),
+		window.innerWidth
+	);
+	shared.forEach((p, i) => setWidth(p.node, widths[i]));
+	for (const p of all) if (!shared.includes(p)) setWidth(p.node, p.wanted());
+}
+
+/** Largeurs actuelles des autres volets logés. */
+const othersWidth = (node: HTMLElement) => [...opened].filter((p) => p.node !== node && docked(p.node)).map((p) => p.node.getBoundingClientRect().width);
+
 /** Action Svelte : donne à un volet de droite la largeur commune et le rend redimensionnable par son bord gauche. */
 export function resizePanel(node: HTMLElement, opts: Options) {
 	if (opts.off) return {};
@@ -86,20 +143,21 @@ export function resizePanel(node: HTMLElement, opts: Options) {
 	let chosen = load(key);
 	// Largeur bordure comprise : celle qu'on mesure est celle qu'on pose.
 	node.style.boxSizing = 'border-box';
-	const apply = () => {
-		const w = `${panelWidth(chosen, window.innerWidth, min)}px`;
-		node.style.width = w;
-		node.style.flexBasis = w;
-	};
+	const me: Open = { node, wanted: () => panelWidth(chosen, window.innerWidth, min), min: () => min };
+	opened.add(me);
+	const apply = layoutPanels;
 	apply();
+	// Volet monté avant d'être logé (styles pas encore appliqués) : on revoit l'ensemble.
+	requestAnimationFrame(layoutPanels);
 	slideIn(node);
 
 	const onEdge = (e: PointerEvent) => e.clientX - node.getBoundingClientRect().left <= EDGE;
-	let drag: { x: number; w: number } | null = null;
+	let drag: { x: number; w: number; room: number } | null = null;
 
 	function move(e: PointerEvent) {
 		if (drag) {
-			chosen = panelWidth(drag.w + (drag.x - e.clientX), window.innerWidth, min);
+			// Tiré plus large que la place laissée par les autres volets : borné.
+			chosen = Math.min(panelWidth(drag.w + (drag.x - e.clientX), window.innerWidth, min), drag.room);
 			apply();
 			e.preventDefault();
 			return;
@@ -108,7 +166,7 @@ export function resizePanel(node: HTMLElement, opts: Options) {
 	}
 	function down(e: PointerEvent) {
 		if (e.button !== 0 || !onEdge(e)) return;
-		drag = { x: e.clientX, w: node.getBoundingClientRect().width };
+		drag = { x: e.clientX, w: node.getBoundingClientRect().width, room: docked(node) ? roomFor(othersWidth(node), window.innerWidth, min) : Infinity };
 		node.setPointerCapture(e.pointerId);
 		document.body.style.userSelect = 'none';
 		// La prise du bord n'est pas un clic dans la page (qui fermerait le volet).
@@ -150,6 +208,9 @@ export function resizePanel(node: HTMLElement, opts: Options) {
 		},
 		destroy() {
 			slideOut(node);
+			opened.delete(me);
+			// Les autres volets reprennent la place libérée (après le démontage).
+			requestAnimationFrame(layoutPanels);
 			node.removeEventListener('pointermove', move);
 			node.removeEventListener('pointerdown', down);
 			node.removeEventListener('mousedown', edgeDown);

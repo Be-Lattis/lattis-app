@@ -1215,8 +1215,9 @@
 
 	// --- Assistant IA (volet de droite, lib/ai) ------------------------------
 
-	// Largeur du volet : la grille (et les vues SQL, SCRIPT) se loge à sa gauche.
-	let aiWidth = $state(0);
+	// Zone des volets du classeur (aide, requêtes, conflits, assistant), logée
+	// à droite : la grille (et les vues SQL, SCRIPT) se loge à sa gauche.
+	let dockWidth = $state(0);
 	// Ce que l'utilisateur regarde, joint à chaque message et affiché au-dessus
 	// de la saisie : feuille active, tableau et sélection (comme la zone
 	// d'adresse). Suit la grille par sheetStatus, envoyé à chaque sélection.
@@ -1527,7 +1528,7 @@
 
 	<!-- Une erreur d’un composant ne remplace plus tout par un écran 500 : elle est journalisée (pile, dernières actions) et l’on peut réessayer. -->
 	<svelte:boundary onerror={(e) => void reportError(`interface (${mode})`, e)}>
-	<main style:--ai-w={aiChat.open && aiWidth ? `${aiWidth}px` : undefined}>
+	<main style:--dock-w={dockWidth ? `${dockWidth}px` : undefined}>
 		{#if failure}
 			<div class="splash"><h1>Lattis</h1><p class="error">{failure}</p></div>
 		{:else if mode === 'recover'}
@@ -1776,32 +1777,38 @@
 				<p>{demoProgress || 'Ouverture…'}</p>
 			</div>
 		{/if}
-		{#if mode === 'doc'}
-			<QueryHost
-				bind:this={queryHost}
-				onchanged={(sh) => (sh && sh !== sheetId ? selectSheet(sh) : reload()).catch((e) => (notice = err(e)))}
-				onnotice={(m) => (notice = m)}
-			/>
-		{/if}
-		{#if aiChat.open && (mode === 'doc' || mode === 'closed')}
-			<AiPanel
-				bind:width={aiWidth}
-				hasDoc={mode === 'doc'}
-				context={aiContext}
-				tables={aiTables}
-				onsettings={() => (settingsOpen = true)}
-				ongoto={(t) => gotoTarget(t).catch((e) => (notice = err(e)))}
-				onchanged={reload}
-				onclose={() => (aiChat.open = false)}
-			/>
-		{/if}
-		{#if helpState.open}
-			<HelpPanel />
-		{/if}
-		{#if mode === 'doc' && conflictsOpen && share?.mode === 'collaborative'}
-			<ConflictPanel {conflicts} busy={conflictBusy} onresolve={resolveConflict} ongoto={gotoConflict} onclose={() => (conflictsOpen = false)} />
-		{/if}
+		<!-- Zone des volets du classeur : côte à côte, à droite de la vue, la somme de leurs largeurs bornée (resize.ts). -->
+		<div class="dock" bind:offsetWidth={dockWidth}>
+			{#if helpState.open && !helpState.over}
+				<HelpPanel />
+			{/if}
+			{#if mode === 'doc'}
+				<QueryHost
+					bind:this={queryHost}
+					onchanged={(sh) => (sh && sh !== sheetId ? selectSheet(sh) : reload()).catch((e) => (notice = err(e)))}
+					onnotice={(m) => (notice = m)}
+				/>
+			{/if}
+			{#if mode === 'doc' && conflictsOpen && share?.mode === 'collaborative'}
+				<ConflictPanel {conflicts} busy={conflictBusy} onresolve={resolveConflict} ongoto={gotoConflict} onclose={() => (conflictsOpen = false)} />
+			{/if}
+			{#if aiChat.open && (mode === 'doc' || mode === 'closed')}
+				<AiPanel
+					hasDoc={mode === 'doc'}
+					context={aiContext}
+					tables={aiTables}
+					onsettings={() => (settingsOpen = true)}
+					ongoto={(t) => gotoTarget(t).catch((e) => (notice = err(e)))}
+					onchanged={reload}
+					onclose={() => (aiChat.open = false)}
+				/>
+			{/if}
+		</div>
 	</main>
+	<!-- Aide ouverte depuis une boîte modale (F1) : au-dessus d'elle, et utilisable. -->
+	{#if helpState.open && helpState.over}
+		<HelpPanel over />
+	{/if}
 		{#snippet failed(error, reset)}
 			<main>
 				<div class="splash">
@@ -2161,8 +2168,15 @@
 	.pane {
 		position: absolute;
 		inset: 0;
-		/* Volet de l'assistant ouvert : la vue se loge à sa gauche. */
-		right: var(--ai-w, 0px);
+		/* Volets du classeur ouverts : la vue se loge à leur gauche. */
+		right: var(--dock-w, 0px);
+	}
+	.dock {
+		position: absolute;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		display: flex;
 	}
 	.hidden {
 		visibility: hidden;

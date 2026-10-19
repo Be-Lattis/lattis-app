@@ -17,6 +17,9 @@
 	import Markdown from './Markdown.svelte';
 	import { closeHelp, helpState } from './state.svelte';
 
+	// over : posée au-dessus d'une boîte modale, hors de la zone des volets.
+	let { over = false }: { over?: boolean } = $props();
+
 	let functions = $state<FunctionDoc[]>([]);
 	let loaded = $state(false);
 	DocumentService.FormulaHelp()
@@ -88,7 +91,7 @@
 {/snippet}
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<aside class="help" use:resizePanel={{ key: 'help', min: 420 }} aria-label="Aide" onkeydown={onKey}>
+<aside class="help" class:over data-modal-exempt={over ? '' : undefined} use:resizePanel={{ key: 'help', min: 420 }} aria-label="Aide" onkeydown={onKey}>
 	<header>
 		<button class="icon" title="Page précédente" aria-label="Page précédente" disabled={!history.length} onclick={back}>←</button>
 		<Icon name="book" size={16} />
@@ -216,11 +219,7 @@
 
 <style>
 	.help {
-		position: absolute;
-		top: 0;
-		right: 0;
-		bottom: 0;
-		z-index: 60;
+		position: relative;
 		display: flex;
 		flex-direction: column;
 		min-height: 0;
@@ -229,6 +228,16 @@
 		box-shadow: -4px 0 12px rgba(0, 0, 0, 0.08);
 		font-size: 13px;
 		--icon-accent: #217346;
+	}
+	/* Ouverte depuis une boîte modale : au-dessus de toute boîte, contre le bord droit. */
+	.help.over {
+		position: fixed;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		z-index: var(--z-help);
+		font: 13px 'Segoe UI', system-ui, -apple-system, sans-serif;
+		color: #1f2328;
 	}
 	header {
 		display: flex;

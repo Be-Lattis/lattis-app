@@ -519,12 +519,7 @@
 		background: #f5f6f7;
 	}
 	.ai-panel {
-		position: absolute;
-		top: 0;
-		right: 0;
-		bottom: 0;
-		/* Sous les autres volets (aide, requêtes, conflits), qui passent par-dessus. */
-		z-index: 15;
+		position: relative;
 		display: flex;
 		flex-direction: column;
 		border-left: 1px solid #d4d7db;

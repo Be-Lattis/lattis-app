@@ -4,8 +4,9 @@
 
 import { HOME } from './help';
 
-// last : dernière page affichée, où l'aide rouvre sans cible.
-export const helpState = $state({ open: false, target: HOME, seq: 0, focus: true, last: HOME });
+// last : dernière page affichée, où l'aide rouvre sans cible. over : posée
+// au-dessus d'une boîte modale (ouverte depuis elle), au lieu d'être logée.
+export const helpState = $state({ open: false, target: HOME, seq: 0, focus: true, last: HOME, over: false });
 
 /**
  * Ouvre l'aide sur une cible (« sql », « fonction:SOMME »…) ; sans cible : là
