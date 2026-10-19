@@ -136,7 +136,7 @@ Le but est que chaque formulaire ait l'air de venir de son auteur, sans ouvrir l
 | **Champs** | Libellé, texte d'aide, texte indicatif, ordre, obligatoire (§3.1) | Libellé 200 caractères, aide 500 caractères |
 | **Sections et pages** | Un **intertitre** (texte et courte description) se glisse entre les champs. Avec l'option « Une section par page », chaque section devient une page avec Suivant / Précédent et une barre d'avancement (pratique sur téléphone pour un long relevé) | 20 sections |
 | **Bouton** | Libellé du bouton Envoyer (« S'inscrire », « Enregistrer l'observation ») | 40 caractères |
-| **Remerciement** | Message après l'envoi (même mise en forme que l'introduction), bouton « Envoyer une autre réponse » (oui ou non), **lien de redirection** facultatif (« Retour au site de l'association ») | Adresse `https://` seulement ; affichée en lien, la page ne redirige pas toute seule |
+| **Remerciement** | Message après l'envoi (« Merci ! » par défaut, modifiable ; gras et italique seulement), bouton « Envoyer une autre réponse » (oui ou non) | Ni lien ni redirection (décision de Louis, 19/10) : la page dit merci et le formulaire s'arrête là |
 | **Formulaire fermé** | Message affiché quand le formulaire est fermé, plein ou pas encore ouvert | 500 caractères |
 | **Mention de protection des données** | Texte affiché au-dessus du bouton, avec un modèle pré-rempli (§9) | 1 000 caractères |
 | **Langue de la page** | Français ou anglais pour tout le texte fourni par le serveur : « obligatoire », messages d'erreur, boutons Suivant et Précédent, dates. Le texte de l'auteur reste celui qu'il a écrit | `fr`, `en` (les autres langues suivront `docs/i18n.md`) |
@@ -273,7 +273,7 @@ Libellés liés aux champs, ordre du focus, contraste de la palette (§4.1), mes
     "logo": "<image_id>", "banner": "<image_id>",
     "accent": "teal",
     "submit_label": "Enregistrer l'observation",
-    "thanks": "Merci !", "thanks_link": {"label": "Retour au site", "url": "https://…"},
+    "thanks": "Merci !",
     "another": true, "closed_message": "…", "privacy": "…",
     "paged": false
   },
@@ -290,7 +290,7 @@ Libellés liés aux champs, ordre du focus, contraste de la palette (§4.1), mes
 }
 ```
 
-`intro`, `thanks`, `privacy` et les descriptions de sections sont en Markdown réduit (gras, italique, liens `https`, listes). Le serveur le convertit en HTML échappé ; tout autre balisage reste du texte. `accent` est un nom de la palette, pas une couleur libre. Une définition invalide est refusée en `22023`, avec la raison (champ et règle).
+`intro`, `privacy` et les descriptions de sections sont en Markdown réduit (gras, italique, liens `https`, listes) ; `thanks` n'accepte que le gras et l'italique (aucun lien). Le serveur le convertit en HTML échappé ; tout autre balisage reste du texte. `accent` est un nom de la palette, pas une couleur libre. Une définition invalide est refusée en `22023`, avec la raison (champ et règle).
 
 ### 10.3 Fonctions SQL (schéma `lattis`, sous l'identité de l'utilisateur)
 
