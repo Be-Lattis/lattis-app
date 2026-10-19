@@ -269,6 +269,15 @@ export interface Source {
      * $.resultats[0].lignes ; vide : la racine ou son seul tableau).
      */
     "recordPath"?: string;
+
+    /**
+     * Formule (français, commençant par =) d'un tableau lié : feuille de ses
+     * adresses Cell_A1 sans feuille, et en-têtes des colonnes (vides :
+     * noms naturels).
+     */
+    "formula"?: string;
+    "formulaSheet"?: number;
+    "columns"?: string[] | null;
 }
 
 /**

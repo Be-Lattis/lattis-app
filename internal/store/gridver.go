@@ -101,6 +101,7 @@ func (s *Store) noteRow(op sqlite3.AuthorizerActionCode, schema, table string) {
 	case cells:
 		s.dataGen++
 		s.pendingData = true
+		s.pendingCells = true
 	default: // métadonnées, feuille ajoutée ou retirée
 		s.touchedAll = true
 		s.gridGen++

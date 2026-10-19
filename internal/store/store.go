@@ -55,6 +55,8 @@ type Store struct {
 	pending     map[string]bool
 	pendingRows map[string]bool
 	pendingMeta bool
+	// pendingCells : la tâche en cours a écrit des cellules libres.
+	pendingCells bool
 	// Lecture par la grille (GridVersion, gridver.go) : gridGen avance à
 	// chaque écriture qui peut changer la définition d'un tableau lu
 	// (colonnes, filtre, choix de l'onglet, suivi, saisies invalides) ;
@@ -177,6 +179,24 @@ func (s *Store) Version(tables ...string) string {
 
 const rowsSuffix = "#lignes"
 
+// Pending dit si la tâche d'écriture en cours a écrit l'un des tableaux
+// nommés (t_N), la structure des tableaux (colonnes, noms, types) ou, avec
+// cells, des cellules libres : un tableau lié à une formule n'est recalculé
+// que dans ce cas (voir canvas/spilltable.go).
+func (s *Store) Pending(cells bool, tables ...string) bool {
+	s.tmu.Lock()
+	defer s.tmu.Unlock()
+	if s.pendingMeta || cells && s.pendingCells {
+		return true
+	}
+	for _, n := range tables {
+		if s.pending[n] {
+			return true
+		}
+	}
+	return false
+}
+
 // RowsOf désigne, pour Version, les lignes du tableau t_N seulement
 // (ajouts, suppressions, ordre) : un calcul qui n'en lit pas les valeurs,
 // comme leur nombre, reste valable après une saisie.
@@ -206,7 +226,7 @@ func (s *Store) settle() {
 	clear(s.pending)
 	clear(s.pendingRows)
 	clear(s.seen)
-	s.pendingMeta, s.pendingGrid, s.pendingData = false, false, false
+	s.pendingMeta, s.pendingGrid, s.pendingData, s.pendingCells = false, false, false, false
 }
 
 // Quiet donne la génération si aucune écriture ne tourne (-1 sinon) : un

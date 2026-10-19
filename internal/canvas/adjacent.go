@@ -184,6 +184,10 @@ func (m *Model) run(c *command.Tx, fn func(*tx) error) (*tx, error) {
 	if err := fn(t); err != nil {
 		return t, err
 	}
+	// Tableaux liés à une formule dont les sources ont changé (spilltable.go).
+	if err := t.syncFormulaTables(); err != nil {
+		return t, err
+	}
 	if err := t.joinAdjacent(); err != nil {
 		return t, err
 	}

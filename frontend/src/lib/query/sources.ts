@@ -43,12 +43,18 @@ export const SOURCE_KINDS = [
 	{ value: 'mysql', label: 'MySQL / MariaDB' },
 	{ value: 'sqlserver', label: 'SQL Server' },
 	{ value: 'web', label: 'Web (API JSON)' },
-	{ value: 'lattis', label: 'Serveur Lattis' }
+	{ value: 'lattis', label: 'Serveur Lattis' },
+	{ value: 'formula', label: 'Formule (tableau lié)' }
 ];
 
-/** Types de source proposés : sans Serveur Lattis quand les classeurs partagés sont coupés. */
+/**
+ * Types de source proposés : sans Serveur Lattis quand les classeurs
+ * partagés sont coupés ; « Formule » seulement pour une requête qui l'est
+ * déjà (créée par clic droit › Convertir en tableau lié sur un résultat
+ * déversé).
+ */
 export function sourceKinds(shared: boolean, current?: string) {
-	return SOURCE_KINDS.filter((k) => k.value !== 'lattis' || shared || current === 'lattis');
+	return SOURCE_KINDS.filter((k) => (k.value !== 'lattis' || shared || current === 'lattis') && (k.value !== 'formula' || current === 'formula'));
 }
 
 export const isDbKind = (k: string | undefined): k is ConnKind => DB_KINDS.includes(k as ConnKind);

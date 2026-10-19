@@ -37,6 +37,15 @@ Certaines fonctions renvoient plusieurs valeurs ([FILTRE](fonction:FILTRE), [TRI
 
 Une **constante matricielle** s'écrit entre accolades : `{1;2;3}` (une colonne), `{"a"."b"}` (une ligne), `{1.2;3.4}`. Elle se déverse comme un tableau dynamique et sert notamment à donner plusieurs délimiteurs : `=FRACTIONNER.TEXTE(Cell[A1]; {",";" "})`.
 
+### Convertir un résultat déversé en tableau
+
+La zone déversée est encadrée en bleu ; son infobulle rappelle la cellule de la formule. **Clic droit** sur cette zone :
+
+- **Convertir en tableau lié** : un vrai tableau remplace le résultat. Il reste lié à la formule (gardée dans une requête du classeur, source « Formule », visible dans Données › Requêtes) et **se recalcule tout seul** quand ses sources changent : une saisie dans `Suividesnids` met aussitôt à jour le tableau tiré de `=UNIQUE(Suividesnids[NID suivi])`, et un seul Ctrl+Z défait la saisie et le recalcul. Ses colonnes calculées sont en lecture seule (en bleu) ; un nom tapé à droite de son en-tête y ajoute une **colonne saisie** (en vert) dont les valeurs suivent leur ligne quand le résultat change (par la colonne elle-même pour un `UNIQUE` d'une colonne, sinon la clé demandée), comme à côté d'une requête. F5 l'actualise aussi. Si l'on ajoute des étapes à sa requête (Données › Requêtes), il ne s'actualise plus que par F5.
+- **Convertir en tableau (valeurs)** : un tableau ordinaire garde les valeurs du moment, sans lien.
+
+Dans les deux cas, **les en-têtes** sont les textes posés juste au-dessus de la formule, s'il y en a un au-dessus de chaque colonne (un titre « Nids » au-dessus de `=UNIQUE(…)` devient l'en-tête du tableau, nommé Nids) ; sinon les noms des colonnes de la formule (« NID suivi », « Valeur » pour SEQUENCE), sur la ligne vide au-dessus de la formule (les valeurs ne bougent pas) ou, à défaut, sur la ligne de la formule (les valeurs descendent d'une ligne). Une seule étape d'annulation rend la formule.
+
 ## Nombres écrits en texte
 
 Dans une colonne de texte, les fonctions qui attendent des nombres ([SOMME](fonction:SOMME), [MOYENNE](fonction:MOYENNE), [MIN](fonction:MIN), [MAX](fonction:MAX), [SOMME.SI](fonction:SOMME.SI), [SOMMEPROD](fonction:SOMMEPROD), les statistiques…) lisent chaque texte comme le nombre qu'il écrit : « 12 », « 1 234,5 », « 12 € », « 15 % » (0,15), « (12) » (−12), et les écritures étrangères « 1,234.56 » ou « 1'234.5 ». **Un texte qui n'est pas un nombre compte pour 0** : la moyenne de « 12 » et « abc » vaut 6. Les cellules vides restent ignorées. [NB](fonction:NB) ne compte que les textes qui sont des nombres : `=NBVAL(Ventes[Note]) - NB(Ventes[Note])` donne le nombre de textes qui n'en sont pas.

@@ -115,7 +115,8 @@
 	}
 
 	function changeKind(k: string) {
-		s = { kind: k };
+		// Retour à la formule d'origine : sa feuille et ses en-têtes reviennent.
+		s = k === 'formula' && source.kind === 'formula' ? initial() : { kind: k };
 		error = '';
 		dbTables = [];
 		if (isDbKind(k) || k === 'web') loadConns().then(loadTables);
@@ -133,6 +134,11 @@
 		if (isDB && (!s.connection || !s.sql?.trim())) return void (error = 'Choisissez une connexion et une table (ou écrivez une requête SQL).');
 		if (isFileDB && !s.sql?.trim()) return void (error = 'Choisissez une table (ou écrivez une requête SQL).');
 		if (s.kind === 'sql' && !s.sql?.trim()) return void (error = 'Écrivez une requête SQL.');
+		if (s.kind === 'formula') {
+			const f = s.formula?.trim() ?? '';
+			if (!f.startsWith('=')) return void (error = 'Écrivez une formule qui commence par =.');
+			s.formula = f;
+		}
 		if (s.kind === 'web') {
 			if (!/^https?:\/\/[^/]+/i.test(s.url?.trim() ?? '')) return void (error = 'L’adresse doit commencer par http:// ou https://.');
 			s.url = s.url!.trim();
@@ -255,6 +261,9 @@
 			{:else if s.kind === 'sql'}
 				<label class="field">Requête SQL sur le classeur (lecture seule) <textarea rows="6" bind:value={s.sql} placeholder="SELECT * FROM Ventes WHERE annee = 2026"></textarea></label>
 				<p class="muted">Comme dans l'onglet SQL : la requête est relue à chaque actualisation.{s.sheet ? ` Les adresses Cell[A1] sans feuille se lisent sur « ${s.sheet} ».` : ''}</p>
+			{:else if s.kind === 'formula'}
+				<label class="field">Formule (tableau dynamique) <input bind:value={s.formula} placeholder="=UNIQUE(Ventes[Client])" /></label>
+				<p class="muted">Le tableau se recalcule quand ses sources changent (sans étapes ; avec des étapes, à l'actualisation, F5).</p>
 			{/if}
 		</div>
 		{#if error}<p class="error">{error}</p>{/if}

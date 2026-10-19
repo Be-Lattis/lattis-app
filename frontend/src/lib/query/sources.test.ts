@@ -38,6 +38,9 @@ group('sources des requêtes', () => {
 		expect(sourceKinds(false).some((k) => k.value === 'lattis')).toBe(false);
 		expect(sourceKinds(true).some((k) => k.value === 'lattis')).toBe(true);
 		expect(sourceKinds(false, 'lattis').some((k) => k.value === 'lattis')).toBe(true);
+		// Formule : seulement pour une requête qui l'est déjà (tableau lié).
+		expect(sourceKinds(true).some((k) => k.value === 'formula')).toBe(false);
+		expect(sourceKinds(false, 'formula').some((k) => k.value === 'formula')).toBe(true);
 	});
 
 	it('lit et écrit les en-têtes HTTP', () => {

@@ -368,6 +368,15 @@ export function ConvertPreview(table: string, i: number, to: grid$0.Type): $Canc
 }
 
 /**
+ * ConvertSpill remplace le résultat déversé de la formule de la cellule
+ * par un tableau : lié (recalculé quand ses sources changent) ou de
+ * valeurs, en une seule étape d'annulation.
+ */
+export function ConvertSpill(sheet: number, row: number, col: number, linked: boolean): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2708223509, sheet, row, col, linked);
+}
+
+/**
  * ConvertToRange convertit un tableau en plage de cellules libres.
  */
 export function ConvertToRange(name: string): $CancellablePromise<$models.DocState> {

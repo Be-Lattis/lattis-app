@@ -1226,6 +1226,16 @@ func (s *DocumentService) FormatAsTable(ctx context.Context, sheet int64, row, c
 	})
 }
 
+// ConvertSpill remplace le résultat déversé de la formule de la cellule
+// par un tableau : lié (recalculé quand ses sources changent) ou de
+// valeurs, en une seule étape d'annulation.
+func (s *DocumentService) ConvertSpill(ctx context.Context, sheet int64, row, col int, linked bool) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error {
+		_, err := d.ConvertSpill(ctx, sheet, row, col, linked)
+		return err
+	})
+}
+
 // MoveTable déplace un tableau (fusion s'il est posé côte à côte d'un autre).
 func (s *DocumentService) MoveTable(ctx context.Context, name string, row, col int) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.MoveTable(ctx, name, row, col) })

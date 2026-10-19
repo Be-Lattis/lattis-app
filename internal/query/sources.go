@@ -352,3 +352,36 @@ func (r *run) loadSQL(src Source) (loaded, error) {
 	}
 	return l, err
 }
+
+// workbookSource : source lue dans le classeur, relue à chaque aperçu (pas
+// de cache).
+func workbookSource(kind string) bool {
+	return kind == SourceTable || kind == SourceSQL || kind == SourceFormula
+}
+
+// loadFormula lit le résultat d'une formule de tableau dynamique du
+// classeur (tableau lié converti d'un résultat déversé).
+func (r *run) loadFormula(src Source) (loaded, error) {
+	res, err := r.env.Model.FormulaTable(r.ctx, src.FormulaSheet, src.Formula, src.Columns)
+	if err != nil {
+		return loaded{}, err
+	}
+	cols := make([]Column, len(res.Headers))
+	for i, h := range res.Headers {
+		cols[i] = Column{Name: h, Type: res.Types[i]}
+	}
+	s, err := r.begin(cols)
+	if err != nil {
+		return loaded{}, err
+	}
+	for _, row := range res.Rows {
+		if err = s.insert(row); err != nil {
+			break
+		}
+	}
+	l, err := s.finish(err)
+	if err == nil && r.limit > 0 && s.n >= r.limit {
+		l.truncated = true
+	}
+	return l, err
+}

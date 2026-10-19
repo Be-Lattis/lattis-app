@@ -43,6 +43,9 @@ const (
 	// API web (GET, réponse JSON) : URL, Headers, RecordPath, Connection
 	// (facultative, de genre web : porte le secret).
 	SourceWeb = "web"
+	// Formule de tableau dynamique du classeur (tableau lié converti d'un
+	// résultat déversé) : Formula, FormulaSheet, Columns.
+	SourceFormula = canvas.SourceFormula
 )
 
 // dbSource : source lue par une connexion à un SGBD.
@@ -87,6 +90,12 @@ type Source struct {
 	// JSON et API web : chemin du tableau des enregistrements (data.items,
 	// $.resultats[0].lignes ; vide : la racine ou son seul tableau).
 	RecordPath string `json:"recordPath,omitempty"`
+	// Formule (français, commençant par =) d'un tableau lié : feuille de ses
+	// adresses Cell_A1 sans feuille, et en-têtes des colonnes (vides :
+	// noms naturels).
+	Formula      string   `json:"formula,omitempty"`
+	FormulaSheet int64    `json:"formulaSheet,omitempty"`
+	Columns      []string `json:"columns,omitempty"`
 }
 
 // Cond est une condition d'un filtre.
@@ -244,6 +253,8 @@ func SourceLabel(s Source) string {
 		return "Web " + hostOf(s.URL)
 	case SourceSQL:
 		return "Requête SQL du classeur"
+	case SourceFormula:
+		return "Formule " + s.Formula
 	}
 	return "Source"
 }

@@ -591,6 +591,15 @@ func (t *tx) rewriteQueries(rc refChange) error {
 				return tb, true
 			}
 			return tb, false
+		case SourceFormula:
+			// Tableau lié à une formule : la formule suit les renommages
+			// comme celle d'une cellule.
+			if f, _ := s["formula"].(string); f != "" {
+				if neu, ok := formula.RenameRefs(f, formula.FR, rc.Renames, ""); ok {
+					s["formula"] = neu
+					return "", true
+				}
+			}
 		case "sql":
 			if sh, _ := s["sheet"].(string); sh != "" {
 				if n := rc.Sheet(sh); n != sh {

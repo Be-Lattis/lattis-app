@@ -215,137 +215,143 @@ func (m *Model) LoadQuery(ctx context.Context, id int64, it ImportTable) (QueryL
 		return res, err
 	}
 	err := m.Do(ctx, "Actualiser « "+qname+" »", func(t *tx) error {
-		res = QueryLoad{Warnings: []string{}}
-		var target sql.NullInt64
-		var refreshed sql.NullString
-		if err := t.row(`SELECT target, refreshed FROM _lattis_queries WHERE id = ?`, id).Scan(&target, &refreshed); err != nil {
+		return t.loadQuery(id, qname, it, &res)
+	})
+	return res, err
+}
+
+// loadQuery charge le résultat it de la requête id (nommée qname) dans la
+// transaction en cours (voir LoadQuery).
+func (t *tx) loadQuery(id int64, qname string, it ImportTable, res *QueryLoad) error {
+	*res = QueryLoad{Warnings: []string{}}
+	var target sql.NullInt64
+	var refreshed sql.NullString
+	if err := t.row(`SELECT target, refreshed FROM _lattis_queries WHERE id = ?`, id).Scan(&target, &refreshed); err != nil {
+		return err
+	}
+	if err := t.purgeImports(); err != nil {
+		return err
+	}
+	var old *Table
+	if target.Valid {
+		tb, err := t.table(target.Int64)
+		switch {
+		case err == nil:
+			old = &tb
+		case !errors.Is(err, sql.ErrNoRows):
 			return err
 		}
-		if err := t.purgeImports(); err != nil {
+	}
+	var sheet int64
+	var carry *handCarry
+	if old != nil {
+		if err := t.guard(old.Sheet); err != nil {
 			return err
 		}
-		var old *Table
-		if target.Valid {
-			tb, err := t.table(target.Int64)
-			switch {
-			case err == nil:
-				old = &tb
-			case !errors.Is(err, sql.ErrNoRows):
-				return err
-			}
+		// Colonnes saisies et calculées ajoutées à la main (hand.go).
+		var err error
+		if carry, err = t.handBefore(id, *old, it.Headers, &res.Warnings); err != nil {
+			return err
 		}
-		var sheet int64
-		var carry *handCarry
-		if old != nil {
-			if err := t.guard(old.Sheet); err != nil {
+		if err := t.deleteTable(*old); err != nil {
+			return err
+		}
+		sheet, it.Name, it.Row, it.Col = old.Sheet, old.Name, old.Row, old.Col
+	} else {
+		if err := t.guardWorkbook(); err != nil {
+			return err
+		}
+		// Plus de tableau chargé : ses colonnes saisies sont parties
+		// avec lui.
+		if err := t.clearHand(queryOwner(id)); err != nil {
+			return err
+		}
+		var err error
+		if it.At != nil {
+			if err := t.guard(it.At.Sheet); err != nil {
 				return err
 			}
-			// Colonnes saisies et calculées ajoutées à la main (hand.go).
-			var err error
-			if carry, err = t.handBefore(id, *old, it.Headers, &res.Warnings); err != nil {
+			sheet = it.At.Sheet
+			if it.Name, err = t.freeTableName(qname); err != nil {
 				return err
 			}
-			if err := t.deleteTable(*old); err != nil {
-				return err
-			}
-			sheet, it.Name, it.Row, it.Col = old.Sheet, old.Name, old.Row, old.Col
+			it.Row, it.Col = it.At.Row, it.At.Col
 		} else {
-			if err := t.guardWorkbook(); err != nil {
+			if sheet, err = t.newSheet(qname); err != nil {
 				return err
 			}
-			// Plus de tableau chargé : ses colonnes saisies sont parties
-			// avec lui.
-			if err := t.clearHand(queryOwner(id)); err != nil {
+			if it.Name, err = t.freeTableName(qname); err != nil {
 				return err
 			}
-			var err error
-			if it.At != nil {
-				if err := t.guard(it.At.Sheet); err != nil {
-					return err
-				}
-				sheet = it.At.Sheet
-				if it.Name, err = t.freeTableName(qname); err != nil {
-					return err
-				}
-				it.Row, it.Col = it.At.Row, it.At.Col
-			} else {
-				if sheet, err = t.newSheet(qname); err != nil {
-					return err
-				}
-				if it.Name, err = t.freeTableName(qname); err != nil {
-					return err
-				}
-				it.Row, it.Col = 0, 0
-			}
+			it.Row, it.Col = 0, 0
 		}
-		tb, err := t.importTable(sheet, &it)
-		if err != nil {
-			return err
-		}
-		if carry != nil {
-			loaded := len(tb.Cols)
-			ids := map[int64]int64{}
-			for _, hc := range carry.cols {
-				c := hc.c
-				next := int64(1)
-				for _, k := range tb.Cols {
-					next = max(next, k.ID+1)
-				}
-				// Un nom que le résultat prend désormais : la colonne saisie
-				// est renommée (« Note 2 »).
-				name := freeColumnName(tb, c.Name)
-				if name != c.Name {
-					res.Warnings = append(res.Warnings, fmt.Sprintf("%s : la requête rend maintenant une colonne « %s », la colonne saisie devient « %s »", tb.Name, c.Name, name))
-				}
-				if err := t.addColumn(tb, next, name, c.Type, len(tb.Cols)); err != nil {
-					return err
-				}
-				ids[hc.h] = next
-				if tb, err = t.table(tb.ID); err != nil {
-					return err
-				}
-				if c.Formula == "" {
-					continue
-				}
-				if err := t.setFormula(tb, len(tb.Cols)-1, displayFormula(c.Formula)); err != nil {
-					if !userError(err) {
-						return err
-					}
-					res.Warnings = append(res.Warnings, fmt.Sprintf("%s[%s] : %s", tb.Name, c.Name, err))
-				}
+	}
+	tb, err := t.importTable(sheet, &it)
+	if err != nil {
+		return err
+	}
+	if carry != nil {
+		loaded := len(tb.Cols)
+		ids := map[int64]int64{}
+		for _, hc := range carry.cols {
+			c := hc.c
+			next := int64(1)
+			for _, k := range tb.Cols {
+				next = max(next, k.ID+1)
 			}
+			// Un nom que le résultat prend désormais : la colonne saisie
+			// est renommée (« Note 2 »).
+			name := freeColumnName(tb, c.Name)
+			if name != c.Name {
+				res.Warnings = append(res.Warnings, fmt.Sprintf("%s : la requête rend maintenant une colonne « %s », la colonne saisie devient « %s »", tb.Name, c.Name, name))
+			}
+			if err := t.addColumn(tb, next, name, c.Type, len(tb.Cols)); err != nil {
+				return err
+			}
+			ids[hc.h] = next
 			if tb, err = t.table(tb.ID); err != nil {
 				return err
 			}
-			if err := t.handAfter(carry, tb, loaded, ids, &res.Warnings); err != nil {
-				return err
+			if c.Formula == "" {
+				continue
+			}
+			if err := t.setFormula(tb, len(tb.Cols)-1, displayFormula(c.Formula)); err != nil {
+				if !userError(err) {
+					return err
+				}
+				res.Warnings = append(res.Warnings, fmt.Sprintf("%s[%s] : %s", tb.Name, c.Name, err))
 			}
 		}
-		if old != nil {
-			if err := t.followLegend(*old, tb); err != nil {
-				return err
-			}
-			// Dernier tri personnalisé du tableau, ré-appliqué.
-			if err := t.reapplyOrder(tb.ID); err != nil {
-				return err
-			}
-		}
-		if err := t.settle(sheet, tb.ID); err != nil {
+		if tb, err = t.table(tb.ID); err != nil {
 			return err
 		}
-		var oldTarget any
-		if target.Valid {
-			oldTarget = target.Int64
-		}
-		u := `UPDATE _lattis_queries SET target = ?, refreshed = ? WHERE id = ?`
-		now := time.Now().Format("2006-01-02 15:04:05")
-		if err := t.apply([]stmt{st(u, tb.ID, now, id)}, []stmt{st(u, oldTarget, nullable(refreshed), id)}); err != nil {
+		if err := t.handAfter(carry, tb, loaded, ids, &res.Warnings); err != nil {
 			return err
 		}
-		res.Sheet, res.Table, res.Rows = sheet, tb.Name, it.Count
-		return nil
-	})
-	return res, err
+	}
+	if old != nil {
+		if err := t.followLegend(*old, tb); err != nil {
+			return err
+		}
+		// Dernier tri personnalisé du tableau, ré-appliqué.
+		if err := t.reapplyOrder(tb.ID); err != nil {
+			return err
+		}
+	}
+	if err := t.settle(sheet, tb.ID); err != nil {
+		return err
+	}
+	var oldTarget any
+	if target.Valid {
+		oldTarget = target.Int64
+	}
+	u := `UPDATE _lattis_queries SET target = ?, refreshed = ? WHERE id = ?`
+	now := time.Now().Format("2006-01-02 15:04:05")
+	if err := t.apply([]stmt{st(u, tb.ID, now, id)}, []stmt{st(u, oldTarget, nullable(refreshed), id)}); err != nil {
+		return err
+	}
+	res.Sheet, res.Table, res.Rows = sheet, tb.Name, it.Count
+	return nil
 }
 
 // followLegend : à l'actualisation, ce qui accompagne le tableau suit son

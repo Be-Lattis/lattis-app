@@ -38,6 +38,7 @@
 	import type { TextColumnsOptions, TextColumnsPreview } from './textcols';
 	import { dismiss, dismissPanel } from './dismiss';
 	import { explainError } from './errors';
+	import { spillAt, spillTip } from './spillmenu';
 	import { freeDisplay } from './freecell';
 	import { bandAt, bandLabel, bandOpen, bandRefusal, hiddenBand } from './hidden';
 	import { choiceHiddenCols, type TabChoice } from '#lib/shell/choice.js';
@@ -576,6 +577,8 @@
 		choiceCandidates?(): Promise<ChoiceCandidate[]>;
 		/** Mettre sous forme de tableau la plage (tableau converti) qui contient la cellule. */
 		formatAsTable?(row: number, col: number): Promise<unknown>;
+		/** Remplace le résultat déversé de la formule en (row, col) par un tableau : lié (recalculé) ou de valeurs. */
+		convertSpill?(row: number, col: number, linked: boolean): Promise<unknown>;
 		/** Déplace un tableau, en-tête en (row, col) ; côte à côte d'un autre : fusion. */
 		moveTable?(table: SheetTable, row: number, col: number): Promise<unknown>;
 		/** Sort les colonnes i0..i1 vers un nouveau tableau en (row, col). */
@@ -9623,6 +9626,11 @@
 		return `${m.off} valeur${n ? 's' : ''} ${what} sur ${m.total}`;
 	}
 
+	/** Résultat déversé qui couvre la cellule (menu « Convertir en tableau »). */
+	function spillUnder(row: number, col: number) {
+		return spillAt(spills, row, col);
+	}
+
 	/** Infobulle d'un en-tête de colonne : nom complet et type. */
 	let tipCell = '';
 	function updateHeaderTip(ev: MouseEvent) {
@@ -9640,6 +9648,14 @@
 		}
 		const cell = cellAt(ev);
 		const e = cell && tableAt(cell.row, cell.col);
+		// Zone déversée d'une formule : d'où elle vient, et le clic droit.
+		const sp = cell && !e && source.convertSpill ? spillUnder(cell.row, cell.col) : undefined;
+		if (sp) {
+			const id = `spill:${sp.row},${sp.col}`;
+			if (tipCell !== id) scroller.title = spillTip(sp);
+			tipCell = id;
+			return;
+		}
 		if (!cell || !e || cell.row !== e.t.row) {
 			if (tipCell) scroller.title = tipCell = '';
 			return;
@@ -10851,6 +10867,15 @@
 							<button title="Le prochain clic sur une cellule (de cette feuille ou d'une autre) y pose le coin haut gauche du tableau croisé ; Échap annule" onclick={() => startPivotMove(dp)}>Déplacer</button>
 						{/if}
 						<button onclick={() => removePivot(dp)}>Supprimer le tableau croisé</button>
+					{/if}
+				{/if}
+				{#if !m.kind && source.convertSpill}
+					{@const sp = spillUnder(active.row, active.col)}
+					{#if sp}
+						{@const at = { row: sp.row, col: sp.col }}
+						<hr />
+						<button data-shed="1" title="Un tableau chargé par la formule remplace le résultat déversé : il se recalcule quand ses sources changent (colonnes en lecture seule, colonnes saisies possibles à droite)" onclick={() => menuAction(() => source.convertSpill!(at.row, at.col, true))}>Convertir en tableau lié</button>
+						<button data-shed="1" title="Un tableau ordinaire garde les valeurs actuelles du résultat déversé, sans lien avec la formule" onclick={() => menuAction(() => source.convertSpill!(at.row, at.col, false))}>Convertir en tableau (valeurs)</button>
 					{/if}
 				{/if}
 				{#if !m.kind}

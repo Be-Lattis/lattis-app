@@ -1575,6 +1575,7 @@
 		},
 		choiceCandidates: async () => (await DocumentService.SheetChoiceCandidates(sheetId)) ?? [],
 		formatAsTable: (row, col) => DocumentService.FormatAsTable(sheetId, row, col).then(reload),
+		convertSpill: (row, col, linked) => DocumentService.ConvertSpill(sheetId, row, col, linked).then(reload),
 		moveTable: (t, row, col) => DocumentService.MoveTable(t.name, row, col).then(reload),
 		extractColumns: (t, i0, i1, row, col) => DocumentService.ExtractColumns(t.name, i0, i1, row, col).then(reload),
 		applyStyle: (r0, c0, r1, c1, patch) => DocumentService.ApplyStyle(sheetId, r0, c0, r1, c1, patch).then(reload),

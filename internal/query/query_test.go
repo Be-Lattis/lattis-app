@@ -548,3 +548,39 @@ func TestDeletedTargetNotAdopted(t *testing.T) {
 		t.Fatalf("requête après annulation : %+v %v", qs, err)
 	}
 }
+
+// Source « formule » (tableau lié converti d'un résultat déversé) : la
+// formule est recalculée à chaque actualisation, avec les en-têtes choisis ;
+// les étapes s'appliquent ensuite.
+func TestFormulaSource(t *testing.T) {
+	d := newDoc(t)
+	addTable(t, d, "Ventes", []string{"Client", "Montant"}, []grid.Type{grid.Text, grid.Integer}, []any{"A", int64(10)}, []any{"B", int64(5)}, []any{"A", int64(1)})
+	l, err := d.Layout(ctx, 0)
+	if err != nil || len(l.Sheets) == 0 {
+		t.Fatal(err)
+	}
+	sheet := l.Sheets[0].ID
+	id := save(t, d, Query{Name: "Clients", Source: Source{Kind: SourceFormula, Formula: "=UNIQUE(Ventes[Client])", FormulaSheet: sheet, Columns: []string{"Client unique"}}})
+	ld, err := Refresh(ctx, env(d), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := fmt.Sprint(dump(t, d, ld.Table)); got != "[[Client unique:text] [A] [B]]" {
+		t.Fatalf("chargé : %s", got)
+	}
+	multi := save(t, d, Query{Name: "Gros", Source: Source{Kind: SourceFormula, Formula: "=FILTRE(Ventes; Ventes[Montant]>2)", FormulaSheet: sheet}, Steps: []Step{{Op: OpSort, Sort: []SortKey{{Column: "Montant"}}}}})
+	ld, err = Refresh(ctx, env(d), multi)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := fmt.Sprint(dump(t, d, ld.Table)); got != "[[Client:text Montant:integer] [B 5] [A 10]]" {
+		t.Fatalf("plusieurs colonnes : %s", got)
+	}
+	if SourceLabel(Source{Kind: SourceFormula, Formula: "=UNIQUE(Ventes[Client])"}) != "Formule =UNIQUE(Ventes[Client])" {
+		t.Fatal("libellé")
+	}
+	bad := save(t, d, Query{Name: "Fausse", Source: Source{Kind: SourceFormula, Formula: "=1+1", FormulaSheet: sheet}})
+	if _, err := Refresh(ctx, env(d), bad); err == nil {
+		t.Fatal("formule sans tableau : erreur attendue")
+	}
+}

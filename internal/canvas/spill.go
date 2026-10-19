@@ -66,16 +66,26 @@ func (t *tx) spillRows(n formula.Node, schema *formula.Schema, names map[string]
 	if e.IsErr() {
 		return nil, e
 	}
+	_, rows, e := t.runSpill(sp)
+	return rows, e
+}
+
+// runSpill lit les lignes d'un tableau dynamique compilé ; heads : ses
+// en-têtes (ceux de la requête pour REQUETE).
+func (t *tx) runSpill(sp formula.Spill) (heads []string, rows [][]formula.Value, fail formula.Value) {
 	rs, err := t.query(`SELECT * FROM (`+sp.SQL+`) LIMIT ?`, append(sp.Args, MaxSpillRows)...)
 	if err != nil {
-		return nil, formula.Err(formula.ErrValue)
+		return nil, nil, formula.Err(formula.ErrValue)
 	}
 	defer rs.Close()
 	cols, err := rs.Columns()
 	if err != nil {
-		return nil, formula.Err(formula.ErrValue)
+		return nil, nil, formula.Err(formula.ErrValue)
 	}
-	var rows [][]formula.Value
+	heads = sp.Columns
+	if len(heads) != len(cols) {
+		heads = cols
+	}
 	for rs.Next() {
 		vals := make([]any, len(cols))
 		ptrs := make([]any, len(cols))
@@ -83,7 +93,7 @@ func (t *tx) spillRows(n formula.Node, schema *formula.Schema, names map[string]
 			ptrs[i] = &vals[i]
 		}
 		if err := rs.Scan(ptrs...); err != nil {
-			return nil, formula.Err(formula.ErrValue)
+			return nil, nil, formula.Err(formula.ErrValue)
 		}
 		row := make([]formula.Value, len(cols))
 		for i, v := range vals {
@@ -92,9 +102,9 @@ func (t *tx) spillRows(n formula.Node, schema *formula.Schema, names map[string]
 		rows = append(rows, row)
 	}
 	if rs.Err() != nil {
-		return nil, formula.Err(formula.ErrValue)
+		return nil, nil, formula.Err(formula.ErrValue)
 	}
-	return rows, formula.Value{}
+	return heads, rows, formula.Value{}
 }
 
 // spillBlocked indique si le déversement de rows depuis (row, col) recouvre
