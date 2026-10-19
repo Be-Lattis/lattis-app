@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/transfer"
 )
 
@@ -303,21 +304,39 @@ func (r *run) readInto(db *sql.DB, d *dialect, q, label string) (loaded, error) 
 
 // loadSQL lit une requête SQL sur le classeur (résultat référencé depuis
 // l'onglet SQL) : relue à chaque actualisation, jamais gardée en cache.
+//
+// Comme le résultat posé une première fois (Copier, Référencer) : les
+// colonnes techniques (_pos…) ne viennent pas (docs/decisions/0007), et une
+// colonne rendue sous son nom interne (c_N, SELECT * d'une requête
+// enregistrée sans traduction) reprend le nom affiché de son tableau, sauf
+// si une étape la cite sous ce nom (run.cites).
 func (r *run) loadSQL(src Source) (loaded, error) {
 	var s *storer
+	var idx []int
 	row := []any{}
 	err := r.env.Model.ReadSQL(r.ctx, src.SQL, src.Sheet, func(names []string) error {
-		cols := make([]Column, len(names))
-		for i, n := range names {
-			cols[i] = Column{Name: n}
+		idx = grid.Visible(names)
+		if len(idx) == 0 {
+			return errors.New("la requête ne rend que des colonnes techniques")
 		}
-		var err error
+		shown, err := r.env.Model.SQLHeaders(r.ctx, src.SQL, names)
+		if err != nil {
+			return err
+		}
+		cols := make([]Column, 0, len(idx))
+		for _, i := range idx {
+			n := names[i]
+			if !r.cites(n) {
+				n = shown[i]
+			}
+			cols = append(cols, Column{Name: n})
+		}
 		s, err = r.begin(cols)
 		return err
 	}, func(vals []any) error {
 		row = row[:0]
-		for _, v := range vals {
-			row = append(row, plain(v))
+		for _, i := range idx {
+			row = append(row, plain(vals[i]))
 		}
 		return s.insert(row)
 	})

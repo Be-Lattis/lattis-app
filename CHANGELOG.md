@@ -38,6 +38,7 @@ Aucune version n'est encore publiée. Voici, regroupé par jour, ce que contient
 
 **Corrections**
 
+- Tableau posé depuis l'onglet SQL : l'actualisation (F5) garde ses en-têtes et ne fait plus apparaître `_pos` ni les noms internes (c_1…) ; un résultat copié n'est plus pris pour celui d'une ancienne requête dont le tableau a été supprimé.
 - Volets Graphique et TCD : le focus reste dans le volet pendant un réglage ; fermer le volet d'un TCD en mise à jour différée applique les changements.
 - Raccourcis du classeur sans effet sous une boîte modale.
 - Rechercher relit les occurrences après une modification.

@@ -397,8 +397,11 @@ func TableSchema(id int64, cols []Column, key int64) []string {
 // nextTableID donne l'identifiant d'un nouveau tableau. Celui d'un tableau
 // publié sur un Serveur Lattis ne resert jamais, même supprimé : son
 // identifiant le désigne dans la file d'envoi et sur le serveur, et
-// l'annulation peut le rétablir.
-const nextTableID = `SELECT max(coalesce((SELECT max(id) FROM _lattis_tables), 0), coalesce((SELECT max(tbl) FROM _lattis_remote_tables), 0)) + 1`
+// l'annulation peut le rétablir. Celui qu'une requête d'import désigne
+// encore comme son tableau chargé (tableau supprimé avec sa feuille, ou
+// seul) non plus : un nouveau tableau, un résultat copié par exemple, serait
+// pris pour le sien et remplacé par elle à l'actualisation (F5).
+const nextTableID = `SELECT max(coalesce((SELECT max(id) FROM _lattis_tables), 0), coalesce((SELECT max(tbl) FROM _lattis_remote_tables), 0), coalesce((SELECT max(target) FROM _lattis_queries), 0)) + 1`
 
 func marks(n int) string { return strings.TrimSuffix(strings.Repeat("?, ", n), ", ") }
 

@@ -2,7 +2,11 @@ package canvas
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
+	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -300,6 +304,63 @@ func uniqueHeaders(hs []string) []string {
 		out[i] = cand
 	}
 	return out
+}
+
+// citedTable repère les noms internes de tableaux (t_12) cités dans une
+// requête.
+var citedTable = regexp.MustCompile(`(?i)\bt_(\d+)\b`)
+
+// SQLHeaders donne les en-têtes affichés des colonnes rendues par une requête
+// écrite en noms internes (requête traduite par l'onglet SQL, ou plus
+// ancienne avec SELECT *) : une colonne c_N d'un seul des tableaux cités
+// reprend son nom affiché, comme displayHeaders (frontend/src/lib/sql). Les
+// autres noms restent tels quels.
+func (m *Model) SQLHeaders(ctx context.Context, q string, names []string) ([]string, error) {
+	out := slices.Clone(names)
+	cited := map[int64]bool{}
+	for _, g := range citedTable.FindAllStringSubmatch(q, -1) {
+		if id, err := strconv.ParseInt(g[1], 10, 64); err == nil {
+			cited[id] = true
+		}
+	}
+	if len(cited) == 0 {
+		return out, nil
+	}
+	shown := map[string][]string{} // c_N en minuscules → noms affichés
+	err := m.read(ctx, func(t *tx) error {
+		for id := range cited {
+			tb, err := t.table(id)
+			if errors.Is(err, sql.ErrNoRows) {
+				continue
+			}
+			if err != nil {
+				return err
+			}
+			for _, c := range tb.Cols {
+				k := strings.ToLower(colSQL(c.ID))
+				shown[k] = append(shown[k], c.Name)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	for i, n := range out {
+		if hits := shown[strings.ToLower(n)]; len(hits) == 1 || (len(hits) > 1 && allSame(hits)) {
+			out[i] = hits[0]
+		}
+	}
+	return out, nil
+}
+
+func allSame(s []string) bool {
+	for _, x := range s[1:] {
+		if x != s[0] {
+			return false
+		}
+	}
+	return true
 }
 
 // ReadSQL exécute une requête de l'onglet SQL en lecture seule, telle qu'une

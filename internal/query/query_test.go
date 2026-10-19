@@ -419,3 +419,79 @@ func TestSQLSource(t *testing.T) {
 		t.Fatal("tableau absent : erreur attendue")
 	}
 }
+
+// Une requête SQL enregistrée en noms internes avec SELECT * (sans la
+// traduction de l'onglet SQL) se relit avec les en-têtes affichés, sans
+// _pos, à chaque actualisation ; un nom interne cité par une étape reste
+// tel quel pour elle.
+func TestSQLSourceHeaders(t *testing.T) {
+	d := newDoc(t)
+	addTable(t, d, "Nids2021", []string{"Espèce", "Nids"}, []grid.Type{grid.Text, grid.Integer}, []any{"Mésange", int64(4)})
+	addTable(t, d, "Nids2022", []string{"Espèce", "Nids"}, []grid.Type{grid.Text, grid.Integer}, []any{"Rouge-gorge", int64(2)})
+	id := save(t, d, Query{Name: "Suivi", Source: Source{Kind: SourceSQL, SQL: `SELECT *, 2021 AS Année FROM t_1 UNION SELECT *, 2022 FROM t_2 ORDER BY 1, 2`}})
+	want := "[[id:integer Espèce:text Nids:integer Année:integer] [1 Mésange 4 2021] [1 Rouge-gorge 2 2022]]"
+	for i := range 2 {
+		l, err := Refresh(ctx, env(d), id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := fmt.Sprint(dump(t, d, l.Table)); got != want {
+			t.Fatalf("actualisation %d : %s", i+1, got)
+		}
+	}
+	// Requête traduite (Référencer d'aujourd'hui) : inchangée.
+	tr := save(t, d, Query{Name: "Traduite", Source: Source{Kind: SourceSQL, SQL: `SELECT id, c_1 AS "Espèce", c_2 AS "Nids" FROM t_1`}})
+	l, err := Refresh(ctx, env(d), tr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := fmt.Sprint(dump(t, d, l.Table)); got != "[[id:integer Espèce:text Nids:integer] [1 Mésange 4]]" {
+		t.Fatalf("traduite : %s", got)
+	}
+	// Étape qui cite c_2 : le nom interne lui reste.
+	st := save(t, d, Query{Name: "Étapes", Source: Source{Kind: SourceSQL, SQL: `SELECT * FROM t_1`}, Steps: []Step{{Op: OpRename, Column: "c_2", Name: "Nombre"}}})
+	if l, err = Refresh(ctx, env(d), st); err != nil {
+		t.Fatal(err)
+	}
+	if got := fmt.Sprint(dump(t, d, l.Table)); got != "[[id:integer Espèce:text Nombre:integer] [1 Mésange 4]]" {
+		t.Fatalf("étape : %s", got)
+	}
+}
+
+// Un tableau supprimé avec sa feuille laisse sa requête sans tableau : un
+// résultat copié ensuite ne prend pas son identifiant, et donc pas sa
+// requête (F5 l'aurait remplacé par elle).
+func TestDeletedTargetNotAdopted(t *testing.T) {
+	d := newDoc(t)
+	addTable(t, d, "Nids", []string{"Espèce", "Nids"}, []grid.Type{grid.Text, grid.Integer}, []any{"Mésange", int64(4)})
+	id := save(t, d, Query{Name: "Requête1", Source: Source{Kind: SourceSQL, SQL: `SELECT * FROM t_1`}})
+	l, err := Refresh(ctx, env(d), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := d.DeleteSheet(ctx, l.Sheet); err != nil {
+		t.Fatal(err)
+	}
+	r, err := d.QueryToSheet(ctx, `SELECT c_1 AS "Espèce" FROM t_1`, "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lay, err := d.Layout(ctx, r.Sheets[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if q := lay.Tables[0].QueryID; q != 0 {
+		t.Fatalf("résultat copié lié à la requête %d", q)
+	}
+	// Annuler la suppression rend le tableau à sa requête.
+	if _, err := d.Bus.Undo(ctx); err != nil { // copie
+		t.Fatal(err)
+	}
+	if _, err := d.Bus.Undo(ctx); err != nil { // suppression de la feuille
+		t.Fatal(err)
+	}
+	qs, err := d.Queries(ctx)
+	if err != nil || len(qs) != 1 || qs[0].Table == "" {
+		t.Fatalf("requête après annulation : %+v %v", qs, err)
+	}
+}

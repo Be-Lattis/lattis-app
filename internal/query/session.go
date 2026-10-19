@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -144,6 +145,19 @@ type run struct {
 	stack []string
 	// truncated : une source a été coupée à limit lignes.
 	truncated bool
+	// steps : étapes de la requête dont la source SQL se charge (JSON en
+	// minuscules), pour cites.
+	steps string
+}
+
+// cites dit si les étapes de la requête en cours citent la colonne name
+// (mot entier) : une source SQL garde alors ce nom tel quel.
+func (r *run) cites(name string) bool {
+	if r.steps == "" || name == "" {
+		return false
+	}
+	re, err := regexp.Compile(`(^|[^\pL\pN_])` + regexp.QuoteMeta(strings.ToLower(name)) + `($|[^\pL\pN_])`)
+	return err == nil && re.MatchString(r.steps)
 }
 
 // errLimit arrête la lecture d'une source à la limite de l'aperçu.
@@ -176,6 +190,12 @@ func (r *run) compile(q Query, upto int) (*pipeline, error) {
 	}
 	r.stack = append(r.stack, q.Name)
 	defer func() { r.stack = r.stack[:len(r.stack)-1] }()
+	if q.Source.Kind == SourceSQL {
+		b, _ := json.Marshal(q.Steps)
+		saved := r.steps
+		r.steps = strings.ToLower(string(b))
+		defer func() { r.steps = saved }()
+	}
 	from, cols, err := r.from(q.Source)
 	if err != nil {
 		return nil, &StepError{-1, err}
