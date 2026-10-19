@@ -717,6 +717,28 @@ func (t *tx) putPieces(pieces []piece, sheet int64, row, col int, move bool, ev 
 	return nil
 }
 
+// tidyAfterClear range un tableau dont la cellule de la colonne col vient
+// d'être vidée par une saisie vide : sa dernière colonne « Colonne n » restée
+// vide part (une valeur tapée par erreur à droite), puis ses dernières lignes
+// vides (tidyBottom).
+func (t *tx) tidyAfterClear(tb Table, col int) error {
+	if tb.Filtered() {
+		return nil
+	}
+	if c := tb.Cols[col-tb.Col]; col == tb.Right() && len(tb.Cols) > 1 && c.Formula == "" && autoColRe.MatchString(c.Name) {
+		empty, err := t.columnEmpty(tb, c)
+		if err != nil {
+			return err
+		}
+		if empty {
+			if err := t.dropColumns(tb, []int{col - tb.Col}); err != nil {
+				return err
+			}
+		}
+	}
+	return t.tidyBottom(tb.ID, false)
+}
+
 // putFreeStyle remplace la mise en forme d'une cellule libre (vide : aucune).
 func (t *tx) putFreeStyle(sheet int64, row, col int, style string) error {
 	return t.setStyle(`_lattis_cell_styles`, `sheet = ? AND row = ? AND col = ?`, `sheet, row, col`, []any{sheet, row, col},

@@ -141,7 +141,12 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 				}
 				return t.rename(tb, c, name)
 			case inCols && inRows:
-				return t.setCell(tb, row-tb.Row-1, col-tb.Col, raw, ev)
+				if err := t.setCell(tb, row-tb.Row-1, col-tb.Col, raw, ev); err != nil || !empty || t.pasting {
+					return err
+				}
+				// Valeur effacée (Retour arrière puis Entrée) : comme Suppr, le
+				// tableau se resserre (audit 2 M3).
+				return t.tidyAfterClear(tb, col)
 			case plain && !(inCols && inRows) && !(inCols && row == tb.Row):
 				continue
 			case inCols && row == tb.Bottom()+1 && !empty:

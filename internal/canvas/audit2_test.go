@@ -152,6 +152,27 @@ func TestCornerCellGoesBelow(t *testing.T) {
 	}
 }
 
+// Audit 2 M3 : une valeur tapée par erreur à droite ou dessous, puis effacée
+// par une saisie vide, ne laisse ni colonne ni ligne vide (comme Suppr).
+func TestEmptyInputShrinks(t *testing.T) {
+	d := open(t)
+	typeIn(t, d, 0, 0, ventesRows)
+	mustSet(t, d, 1, 1, 3, "12")
+	mustSet(t, d, 1, 1, 3, "")
+	mustSet(t, d, 1, 4, 0, "Kiwis")
+	mustSet(t, d, 1, 4, 0, "")
+	if got, want := layoutOf(t, d), "Feuille1@A1:Produit|Région|Montant×3"; got != want {
+		t.Fatalf("\n got %s\nwant %s", got, want)
+	}
+	// Une colonne nommée reste, même vide.
+	mustSet(t, d, 1, 0, 3, "Prix")
+	mustSet(t, d, 1, 1, 3, "5")
+	mustSet(t, d, 1, 1, 3, "")
+	if got, want := layoutOf(t, d), "Feuille1@A1:Produit|Région|Montant|Prix×3"; got != want {
+		t.Fatalf("colonne nommée :\n got %s\nwant %s", got, want)
+	}
+}
+
 // Audit 2 I4 : Suppr sur un total gardé à part retire la marque « hors
 // tableau » (et le gras qu'elle avait donné).
 func TestClearRemovesOutMark(t *testing.T) {
