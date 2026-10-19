@@ -43,5 +43,7 @@ edit build/windows/info.json -pe 's/("file_version": ")[^"]*(")/${1}$ENV{NUM}${2
 edit build/windows/nsis/wails_tools.nsh -pe 's/(!define INFO_PRODUCTVERSION ")[^"]*(")/${1}$ENV{NUM}${2}/'
 edit build/linux/nfpm/nfpm.yaml -pe 's/^(version: ")[^"]*(")/${1}$ENV{NUM}${2}/'
 edit frontend/package.json -pe 's/^(  "version": ")[^"]*(")/${1}$ENV{FULL}${2}/'
+# « À propos » et client MCP lisent bridge.Version (« dev » hors release).
+edit internal/bridge/about.go -pe 's/^(var Version = ")[^"]*(")/${1}$ENV{FULL}${2}/'
 
 echo "version $full (numérique $num) reportée dans les fichiers de build"

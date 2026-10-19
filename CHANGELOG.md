@@ -6,7 +6,9 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
-Aucune version n'est encore publiée. Voici, regroupé par jour, ce que contient la branche `main`.
+## 0.1.0 (19/10/2026)
+
+Première version publique de Lattis. Voici, regroupé par jour, ce qu'elle contient.
 
 ### 19 octobre 2026
 
