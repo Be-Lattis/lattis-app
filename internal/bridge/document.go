@@ -1189,6 +1189,15 @@ func (s *DocumentService) SetGridlines(ctx context.Context, sheet int64, show bo
 	return s.act(ctx, func(d *doc.Document) error { return d.SetGridlines(ctx, sheet, show) })
 }
 
+// SetPageSetup remplace la mise en page d'une feuille (onglet Mise en
+// page) ; label nomme l'étape d'annulation (vide : « Mise en page »).
+func (s *DocumentService) SetPageSetup(ctx context.Context, sheet int64, p canvas.PageSetup, label string) (DocState, error) {
+	if label == "" {
+		label = "Mise en page"
+	}
+	return s.act(ctx, func(d *doc.Document) error { return d.SetPageSetupAs(ctx, sheet, p, label) })
+}
+
 // SetRowHeight fixe la hauteur d'une ligne (0 : hauteur par défaut).
 func (s *DocumentService) SetRowHeight(ctx context.Context, sheet int64, row, height int) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.SetRowHeight(ctx, sheet, row, height) })

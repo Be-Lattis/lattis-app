@@ -682,6 +682,15 @@ export const apiReference: RefEntry[] = [
 		args: [1, 2]
 	},
 	{
+		name: "sheets.page_setup",
+		category: "sheets",
+		signature: "sheets.page_setup([sheet]) → {paper, orientation, margins = {top, bottom, left, right, header, footer}, scale, fit_wide, fit_tall, print_area, title_rows, title_cols, row_breaks, col_breaks, gridlines, headings, center_h, center_v, order, black_white, first_page, header = {left, center, right}, footer}",
+		summary: "Lit la mise en page d'une feuille (onglet Mise en page) : papier, orientation, marges, échelle, zone d'impression, titres, sauts de page, en-tête et pied de page.",
+		details: "Lignes et colonnes à partir de 1, marges en centimètres. scale vaut 100 par défaut ; fit_wide et fit_tall (0 : automatique) ajustent la feuille à un nombre de pages en largeur et en hauteur. row_breaks : lignes qui commencent une page (saut manuel avant elles). order : \"down\" (vers le bas, puis à droite) ou \"across\". En-tête et pied de page : codes \u0026[Page], \u0026[Pages], \u0026[Date], \u0026[Heure], \u0026[Fichier], \u0026[Chemin], \u0026[Onglet]. Paramètres — sheet : feuille (nom ou identifiant) ; absente : la feuille affichée.",
+		example: "local p = sheets.page_setup()\nprint(p.orientation, p.print_area)",
+		args: [0, 1]
+	},
+	{
 		name: "sheets.protect",
 		category: "sheets",
 		signature: "sheets.protect([sheet], [password])",
@@ -722,6 +731,15 @@ export const apiReference: RefEntry[] = [
 		signature: "sheets.set_column_width(col, width, [sheet])",
 		summary: "Fixe la largeur (pixels) d'une colonne de la feuille ; 0 revient à la largeur par défaut.",
 		details: "Paramètres — col : colonne de la feuille, à partir de 1 ; width : largeur en pixels ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.set_column_width{col = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		args: [1, 3]
+	},
+	{
+		name: "sheets.set_page_setup",
+		category: "sheets",
+		signature: "sheets.set_page_setup(setup, [reset], [sheet])",
+		summary: "Change la mise en page d'une feuille : seuls les champs donnés changent (mêmes noms que sheets.page_setup).",
+		details: "paper : A4, A3, A5, B5, Letter, Legal, Tabloid, Executive. orientation : \"portrait\" ou \"landscape\". margins : \"normal\", \"wide\", \"narrow\" ou une table en cm. print_area : \"A1:F40\" (\"\" : toute la plage utilisée). title_rows : \"1:2\" ; title_cols : \"A:B\" (\"\" : aucun). reset = true repart des réglages par défaut. Fichier › Imprimer / PDF et les exports .xlsx et .ods s'en servent. Paramètres — setup : champs à changer ; reset : repartir des réglages par défaut ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.set_page_setup{setup = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "sheets.set_page_setup({orientation = \"landscape\", fit_wide = 1, fit_tall = 0,\n  title_rows = \"1:1\", footer = {center = \"Page \u0026[Page] sur \u0026[Pages]\"}})",
 		args: [1, 3]
 	},
 	{
