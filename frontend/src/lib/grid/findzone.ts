@@ -30,6 +30,18 @@ export function findKey(text: string, z: Zone | null, sheet = 0): string {
 }
 
 /**
+ * Cellule trouvée à repérer (ligne et colonne entières teintées) : dans la
+ * sélection, la dernière trouvée si elle y est encore ; sur la feuille,
+ * seulement tant que la cellule active est restée dessus. Rien pendant une
+ * saisie.
+ */
+export function foundCell(at: Hit | null, zone: Zone | null, active: Hit, editing = false): Hit | null {
+	if (!at || editing) return null;
+	if (zone) return inZone(at, zone) ? at : null;
+	return at.row === active.row && at.col === active.col ? at : null;
+}
+
+/**
  * Indice de l'occurrence suivante (ou précédente, back) après la cellule
  * from, dans l'ordre de lecture (ligne puis colonne), en repartant du début
  * (ou de la fin) ; from absent : la première (ou la dernière). -1 si aucune.

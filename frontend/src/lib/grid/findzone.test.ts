@@ -1,5 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { findKey, findZone, inZone, nextHit } from './findzone';
+import { findKey, findZone, foundCell, inZone, nextHit } from './findzone';
+
+describe('foundCell', () => {
+	const at = { row: 3, col: 2 };
+	it('sur la feuille : tant que la cellule active est dessus', () => {
+		expect(foundCell(at, null, { row: 3, col: 2 })).toEqual(at);
+		expect(foundCell(at, null, { row: 4, col: 2 })).toBeNull();
+	});
+	it('dans la sélection : tant que la cellule y est', () => {
+		expect(foundCell(at, { r0: 0, c0: 0, r1: 5, c1: 5 }, { row: 0, col: 0 })).toEqual(at);
+		expect(foundCell(at, { r0: 4, c0: 0, r1: 5, c1: 5 }, { row: 4, col: 0 })).toBeNull();
+	});
+	it('rien sans cellule trouvée ni pendant une saisie', () => {
+		expect(foundCell(null, null, at)).toBeNull();
+		expect(foundCell(at, null, at, true)).toBeNull();
+	});
+});
 
 describe('findZone', () => {
 	it('une seule cellule : toute la feuille', () => {

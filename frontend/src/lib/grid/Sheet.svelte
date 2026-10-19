@@ -25,7 +25,7 @@
 	import { hiddenLines, mergeAt, mergeList, parseList, skipHidden, validate, type MergeRange } from './sheetfmt';
 	import { expandRange, extendCorner, intersect, isSingleCell, mergeRect, rangeOf, stepCell, wholeLines, type CellRange } from './mergesel';
 	import { jumpLine, lineSpans, type Area, type Span } from './jump';
-	import { findKey, findZone, inZone, nextHit, type Zone } from './findzone';
+	import { findKey, findZone, foundCell, inZone, nextHit, type Zone } from './findzone';
 	import { edgeScroll, frameStep } from './autoscroll';
 	import { blocksReach, boxesReach } from './objextent';
 	import FormatDialog, { type FormatTab } from './FormatDialog.svelte';
@@ -663,6 +663,9 @@
 		error: '#c0392b',
 		spill: '#5b9bd5',
 		found: 'rgba(250, 204, 21, 0.30)',
+		// Cellule trouvée (Ctrl+F) : sa ligne et sa colonne entières, teintées ; plus marqué dans les gouttières.
+		findCross: 'rgba(250, 204, 21, 0.16)',
+		findGutter: 'rgba(250, 204, 21, 0.55)',
 		frozen: '#9aa0a6',
 		note: '#c0392b',
 		// Classeur collaboratif : modification en attente du serveur, conflit.
@@ -2182,6 +2185,7 @@
 		const dpr = (window.devicePixelRatio || 1) * zoom;
 		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 		selBox = frameNow(t0);
+		findCross = foundRect();
 		pinnedFrame = [];
 		keyHintBoxes = [];
 		hiddenMarks = [];
@@ -2345,6 +2349,14 @@
 			ctx.fillStyle = C.found;
 			for (const m of matches)
 				if (m.row >= r0 && m.row <= r1 && m.col >= c0 && m.col <= c1) ctx.fillRect(cx(m.col), ry(m.row), cax().size(m.col), rh(m.row));
+		}
+		// Cellule trouvée : sa ligne et sa colonne entières (toute la fusion), en
+		// croix sous le contenu ; les deux bandes se superposent sur la cellule.
+		if (findCross) {
+			const f = findCross;
+			ctx.fillStyle = C.findCross;
+			if (f.r1 >= r0 && f.r0 <= r1) ctx.fillRect(cx(c0), ry(f.r0), xEnd - cx(c0), rspan(f.r0, f.r1));
+			if (f.c1 >= c0 && f.c0 <= c1) ctx.fillRect(cx(f.c0), ry(r0), spanW(f.c0, f.c1), ry(r1 + 1) - ry(r0));
 		}
 
 		// Lignes masquées par un filtre : elles gardent leur place (les cellules
@@ -2995,6 +3007,12 @@
 		for (let c = Math.max(c0, k0); c <= Math.min(c1, k1); c++) {
 			ctx.fillRect(Math.max(cx(c), MARGIN), 0, cx(c + 1) - Math.max(cx(c), MARGIN), TOP_H);
 		}
+		// Colonne de la cellule trouvée (Ctrl+F).
+		if (findCross && findCross.c1 >= c0 && findCross.c0 <= c1) {
+			ctx.fillStyle = C.findGutter;
+			const x = Math.max(cx(findCross.c0), MARGIN);
+			ctx.fillRect(x, 0, cx(findCross.c1 + 1) - x, TOP_H);
+		}
 		if (a1) {
 			ctx.font = FONT_SMALL;
 			ctx.textAlign = 'center';
@@ -3104,6 +3122,11 @@
 				ctx.fillRect(0, y, MARGIN, rh(r));
 				ctx.fillStyle = C.active;
 				ctx.fillRect(MARGIN - 2, y, 2, rh(r));
+			}
+			// Ligne de la cellule trouvée (Ctrl+F).
+			if (findCross && r >= findCross.r0 && r <= findCross.r1) {
+				ctx.fillStyle = C.findGutter;
+				ctx.fillRect(0, y, MARGIN - 2, rh(r));
 			}
 			if (a1) {
 				ctx.fillStyle = r >= s0 && r <= s1 ? C.headText : C.stripText;
@@ -8035,6 +8058,17 @@
 		void finder;
 		schedule();
 	});
+
+	// Cellule trouvée, repérée à l'image en cours (ligne et colonne entières teintées).
+	let findCross: Zone | null = null;
+
+	/** Étendue de la cellule trouvée à repérer (toute sa fusion), ou null. */
+	function foundRect(): Zone | null {
+		const f = finder && foundCell(finder.at, finder.zone, active, editing);
+		if (!f) return null;
+		const g = boxOf(f.row, f.col);
+		return g ? mergeRect(g) : { r0: f.row, r1: f.row, c0: f.col, c1: f.col };
+	}
 
 	/** Zone de recherche : la sélection si elle compte plusieurs cellules, sinon null (toute la feuille). */
 	const searchZone = () => findZone(selection(), singleSelection());
