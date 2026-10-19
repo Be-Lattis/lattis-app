@@ -19,6 +19,7 @@
 	import { MORE_KINDS, type ChartKind } from '#lib/chart/kinds.js';
 	import { COMMAND_TIPS, TAB_TIPS, assignKeyTips, keyChars, keyOf, matchTip } from '#lib/ui/keytips.js';
 	import { cycle, focusRegion, isTextField, modalOpen, regionOf, tabbables } from '#lib/ui/focus.js';
+	import { cm, FIT_CHOICES, fitLabel, fitted, hasBreaks, MARGIN_LABELS, MARGINS, marginPreset, PAPERS, paperOf, SCALE_CHOICES, scaleLabel, type PageAction, type PageSetup } from './pagesetup';
 
 	export type View = 'grid' | 'sql' | 'script';
 	export type FormatTab = 'number' | 'align' | 'font' | 'border' | 'fill';
@@ -162,9 +163,15 @@
 		republish?: boolean;
 		/** Fichier › Gérer l’accès… (droits du classeur publié : propriétaire ou concepteur). */
 		rights?: boolean;
+		/** Mise en page de la feuille active, et les commandes de l'onglet Mise en page. */
+		pageSetup?: PageSetup;
+		onpage?: (a: PageAction) => void;
+		/** Sauts de page affichés dans la grille (Affichage › Sauts de page), et leur bascule. */
+		pageBreaks?: boolean;
+		onpagebreaks?: (on: boolean) => void;
 	}
 
-	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, ontextcols, onpivot, oninsertdata, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, rights = false }: Props = $props();
+	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, ontextcols, onpivot, oninsertdata, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks }: Props = $props();
 	const fmt = (tab: FormatTab) => (onformat ? () => onformat(tab) : undefined);
 	const lines = (rows: boolean, hide: boolean) => (onlines ? () => onlines(rows, hide) : undefined);
 	const frz = (what: FreezeAction) => (onfreeze ? () => onfreeze(what) : undefined);
@@ -216,7 +223,8 @@
 		onstyle?.({ [kind]: c });
 	}
 
-	const tabs = ['Accueil', 'Insertion', 'Données', 'Formules', 'Révision', 'Affichage'] as const;
+	// Ordre d'Excel.
+	const tabs = ['Accueil', 'Insertion', 'Mise en page', 'Formules', 'Données', 'Révision', 'Affichage'] as const;
 	let tab = $state<(typeof tabs)[number] | 'SQL' | 'SCRIPT'>('Accueil');
 	/** Onglets qui remplacent la grille (pas de groupes de commandes). */
 	const isView = (t: string) => t === 'SQL' || t === 'SCRIPT';
@@ -236,6 +244,15 @@
 	}
 
 	const dc = (cmd: DocCommand) => (ondoc ? () => ondoc(cmd) : undefined);
+	// Onglet Mise en page.
+	const pg = (a: PageAction) => (onpage ? () => onpage(a) : undefined);
+	const ps = $derived(pageSetup ?? { header: {}, footer: {} });
+	const mPreset = $derived(marginPreset(ps));
+	const marginHint = (k: keyof typeof MARGINS) => {
+		const m = MARGINS[k];
+		return `${MARGIN_LABELS[k]} — haut et bas : ${cm(m.top)}, gauche et droite : ${cm(m.left)}`;
+	};
+	const paperLabel = $derived(PAPERS.find((x) => x.id === paperOf(ps))?.label ?? 'A4');
 	const blockOn = (b: string) => docState?.block === b;
 	const sheetRibbons: Record<string, Group[]> = $derived({
 		Accueil: [
@@ -398,6 +415,93 @@
 				]
 			}
 		],
+		'Mise en page': [
+			{
+				title: 'Mise en page',
+				launch: pg({ kind: 'dialog', tab: 'page' }),
+				launchHint: 'Mise en page… : page, marges, en-tête et pied de page, feuille',
+				commands: [
+					{
+						label: 'Marges',
+						icon: 'page-margins',
+						run: onpage ? openItems : undefined,
+						hint: `Marges : ${mPreset === 'custom' ? 'personnalisées' : MARGIN_LABELS[mPreset]}`,
+						items: [
+							...(Object.keys(MARGINS) as (keyof typeof MARGINS)[]).map((k) => ({ label: marginHint(k), run: pg({ kind: 'margins', preset: k }), on: mPreset === k })),
+							{ label: 'Marges personnalisées…', run: pg({ kind: 'dialog', tab: 'margins' }), on: mPreset === 'custom' }
+						]
+					},
+					{
+						label: 'Orientation',
+						icon: 'page-orientation',
+						run: onpage ? openItems : undefined,
+						hint: `Orientation : ${ps.landscape ? 'paysage' : 'portrait'}`,
+						items: [
+							{ label: 'Portrait', run: pg({ kind: 'orientation', landscape: false }), on: !ps.landscape },
+							{ label: 'Paysage', run: pg({ kind: 'orientation', landscape: true }), on: !!ps.landscape }
+						]
+					},
+					{
+						label: 'Taille',
+						icon: 'page-size',
+						run: onpage ? openItems : undefined,
+						hint: `Format du papier : ${paperLabel}`,
+						items: [...PAPERS.map((x) => ({ label: `${x.label} (${x.size})`, run: pg({ kind: 'paper', paper: x.id }), on: paperOf(ps) === x.id })), { label: 'Autres tailles de papier…', run: pg({ kind: 'dialog', tab: 'page' }) }]
+					},
+					{
+						label: 'Zone d’impression',
+						icon: 'print-area',
+						run: onpage ? openItems : undefined,
+						on: !!ps.area,
+						hint: ps.area ? 'Une zone d’impression est définie : seule elle s’imprime' : 'Imprimer seulement une partie de la feuille',
+						items: [
+							{ label: 'Définir la zone d’impression', run: pg({ kind: 'area', clear: false }) },
+							{ label: 'Annuler la zone d’impression', run: ps.area ? pg({ kind: 'area', clear: true }) : undefined }
+						]
+					},
+					{
+						label: 'Sauts de page',
+						icon: 'page-break',
+						run: onpage ? openItems : undefined,
+						hint: 'Saut de page manuel au-dessus et à gauche de la cellule active (la nouvelle page commence là)',
+						items: [
+							{ label: 'Insérer un saut de page', run: pg({ kind: 'break', op: 'insert' }) },
+							{ label: 'Supprimer le saut de page', run: hasBreaks(ps) ? pg({ kind: 'break', op: 'remove' }) : undefined },
+							{ label: 'Rétablir tous les sauts de page', run: hasBreaks(ps) ? pg({ kind: 'break', op: 'reset' }) : undefined }
+						]
+					},
+					{ label: 'Imprimer les titres', icon: 'print-titles', run: pg({ kind: 'dialog', tab: 'sheet' }), on: !!(ps.titleRows || ps.titleCols), hint: 'Lignes à répéter en haut et colonnes à répéter à gauche de chaque page imprimée' }
+				]
+			},
+			{
+				title: 'Mise à l’échelle',
+				launch: pg({ kind: 'dialog', tab: 'page' }),
+				launchHint: 'Mise en page… : échelle',
+				commands: [
+					{ label: 'Largeur', icon: 'fit-width', run: onpage ? openItems : undefined, hint: `Largeur : ${fitLabel(ps.fitWide ?? 0)} (réduit la feuille pour qu’elle tienne en ce nombre de pages)`, items: FIT_CHOICES.map((n) => ({ label: fitLabel(n), run: pg({ kind: 'fit', wide: true, n }), on: (ps.fitWide ?? 0) === n })) },
+					{ label: 'Hauteur', icon: 'fit-height', run: onpage ? openItems : undefined, hint: `Hauteur : ${fitLabel(ps.fitTall ?? 0)}`, items: FIT_CHOICES.map((n) => ({ label: fitLabel(n), run: pg({ kind: 'fit', wide: false, n }), on: (ps.fitTall ?? 0) === n })) },
+					{
+						label: 'Échelle',
+						icon: 'zoom',
+						run: onpage ? openItems : undefined,
+						hint: fitted(ps) ? `${scaleLabel(ps)} : choisir une échelle arrête l’ajustement` : `Échelle d’impression : ${scaleLabel(ps)}`,
+						items: [...SCALE_CHOICES.map((n) => ({ label: `${n} %`, run: pg({ kind: 'scale', pct: n }), on: !fitted(ps) && (ps.scale || 100) === n })), { label: 'Personnalisée…', run: pg({ kind: 'dialog', tab: 'page' }) }]
+					}
+				]
+			},
+			{
+				title: 'Options de la feuille',
+				launch: pg({ kind: 'dialog', tab: 'sheet' }),
+				launchHint: 'Mise en page… : feuille',
+				iconOk: true,
+				commands: [
+					{ label: 'Afficher le quadrillage', icon: 'border-all', on: gridlines, run: ongridlines ? () => ongridlines(!gridlines) : undefined, hint: gridlines ? 'Masquer le quadrillage de la feuille à l’écran' : 'Afficher le quadrillage de la feuille à l’écran' },
+					{ label: 'Imprimer le quadrillage', icon: 'printer', on: !!ps.gridlines, run: pg({ kind: 'print', what: 'gridlines', on: !ps.gridlines }), hint: 'Imprimer le quadrillage de toutes les cellules' },
+					{ label: 'Afficher les en-têtes', icon: 'headings', on: headings, run: onheadings ? () => onheadings(!headings) : undefined, hint: headings ? 'Lettres et numéros seulement pendant la saisie d’une formule' : 'Toujours afficher les lettres de colonnes et numéros de lignes' },
+					{ label: 'Imprimer les en-têtes', icon: 'printer', on: !!ps.headings, run: pg({ kind: 'print', what: 'headings', on: !ps.headings }), hint: 'Imprimer les lettres de colonnes et les numéros de lignes' }
+				]
+			}
+		],
 		Données: [
 			{
 				title: 'Obtenir des données',
@@ -490,7 +594,7 @@
 						on: Math.abs(zoom - 1) > 0.001,
 						hint: `Zoom de la feuille : ${zoomLabel(zoom)} (Ctrl+molette, ou le curseur de la barre d’état)`,
 						items: ZOOM_LEVELS.map((z) => ({ label: zoomLabel(z), run: onzoom ? () => onzoom(z) : undefined, on: Math.abs(zoom - z) < 0.001 }))
-					}, { label: '100 %', icon: 'zoom-100', run: onzoom ? () => onzoom(1) : undefined, hint: 'Revenir au zoom 100 %' }] },
+					}, { label: '100 %', icon: 'zoom-100', run: onzoom ? () => onzoom(1) : undefined, hint: 'Revenir au zoom 100 %' }, { label: 'Sauts de page', icon: 'page-break', on: pageBreaks, run: onpagebreaks ? () => onpagebreaks(!pageBreaks) : undefined, hint: pageBreaks ? 'Masquer les sauts de page (traits pointillés) et la zone d’impression' : 'Afficher les sauts de page de l’impression (traits pointillés) et la zone d’impression' }] },
 			...(onbench ? [{ title: 'Mesures (prototype)', commands: [{ label: 'Mesurer la grille', icon: 'stopwatch' as IconName, run: () => onbench() }] }] : [])
 		]
 	});
@@ -602,7 +706,7 @@
 	// Sur une feuille protégée, seules les commandes qui ne la modifient pas
 	// restent actives (lecture, copie, filtres, affichage) ; un tableau croisé
 	// crée une feuille : refusé quand la structure du classeur est protégée.
-	const READ_ONLY = new Set(['Annuler', 'Rétablir', 'Copier', 'Rechercher', 'Filtrer', 'Erreurs seulement', 'Afficher les liens', 'Calculer', 'Quadrillage', 'En-têtes A1', 'Animations', 'Figer les volets', 'Zoom', '100 %', 'Mesurer la grille', 'Tableau croisé', 'Protéger la feuille', 'Protéger le classeur', 'Ôter la protection', 'Ôter la protection du classeur', 'Texte/CSV', 'Classeur Excel', 'Autres fichiers', 'Base de données', 'Serveur Lattis', 'Web', 'À partir du tableau', 'Requêtes et connexions', 'Actualiser tout']);
+	const READ_ONLY = new Set(['Annuler', 'Rétablir', 'Copier', 'Rechercher', 'Filtrer', 'Erreurs seulement', 'Afficher les liens', 'Calculer', 'Quadrillage', 'En-têtes A1', 'Animations', 'Figer les volets', 'Zoom', '100 %', 'Mesurer la grille', 'Tableau croisé', 'Protéger la feuille', 'Protéger le classeur', 'Ôter la protection', 'Ôter la protection du classeur', 'Texte/CSV', 'Classeur Excel', 'Autres fichiers', 'Base de données', 'Serveur Lattis', 'Web', 'À partir du tableau', 'Requêtes et connexions', 'Actualiser tout', 'Sauts de page', 'Marges', 'Orientation', 'Taille', 'Zone d’impression', 'Imprimer les titres', 'Largeur', 'Hauteur', 'Échelle', 'Afficher le quadrillage', 'Imprimer le quadrillage', 'Afficher les en-têtes', 'Imprimer les en-têtes']);
 	const ribbons: Record<string, Group[]> = $derived(
 		Object.fromEntries(
 			Object.entries(allRibbons).map(([k, gs]) => [

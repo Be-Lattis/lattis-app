@@ -244,6 +244,17 @@
 	/** Filtre d'une colonne : valeurs, erreurs, conditions (voir filtercond.ts). */
 	export type ColumnFilter = Filter;
 
+	/** Sauts de page à dessiner (DocumentService.PageBreaks) : débuts de page, sauts manuels, zone imprimée. */
+	export interface PageBreaksView {
+		rows: number[];
+		cols: number[];
+		manualRows: number[];
+		manualCols: number[];
+		area: { r0: number; c0: number; r1: number; c1: number };
+		/** Zone d'impression définie : encadrée. */
+		framed?: boolean;
+	}
+
 	export interface SheetTable {
 		id: number;
 		name: string;
@@ -528,9 +539,11 @@
 		onsharedata?: (table: string) => void;
 		/** Clic droit › « Demander à l'assistant… » (absent : entrée masquée). */
 		onask?: () => void;
+		/** Sauts de page de l'impression (traits pointillés) et zone imprimée ; absent : rien. */
+		pageBreaks?: PageBreaksView;
 	}
 
-	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', freeze, zoom = 1, onzoom, animate = true, sheetName = '', onsheet, onrowlink, onask, onsharedata }: Props = $props();
+	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', freeze, zoom = 1, onzoom, animate = true, sheetName = '', onsheet, onrowlink, onask, onsharedata, pageBreaks }: Props = $props();
 
 	// Feuille sans fin pratique (choix de Louis) : au-delà des limites d'Excel,
 	// bornée par la nomenclature Cell[ZZZZ999999999] (4 lettres, 9 chiffres).
@@ -575,6 +588,8 @@
 		grid: '#e2e4e7',
 		strip: '#f5f6f7',
 		stripLine: '#d4d7db',
+		// Sauts de page (Affichage › Sauts de page).
+		pageBreak: '#5f6368',
 		stripText: '#5f6368',
 		head: '#e3efe7',
 		// Tableaux chargés par une requête (source externe) : bleu clair, même contraste que le vert.
@@ -1922,6 +1937,7 @@
 	$effect(() => {
 		void gridlines;
 		void a1;
+		void pageBreaks;
 		untrack(() => schedule());
 	});
 
@@ -2553,6 +2569,41 @@
 				ctx.textAlign = 'right';
 				ctx.textBaseline = 'top';
 				ctx.fillText('Vue filtrée par vos droits', x + fw, y + fh + 2);
+			}
+			ctx.restore();
+		}
+		// Sauts de page (Affichage › Sauts de page) : pointillés fins, plus
+		// marqués pour un saut manuel, et la zone imprimée encadrée.
+		if (pageBreaks) {
+			const b = pageBreaks;
+			const a = b.area;
+			ctx.save();
+			ctx.strokeStyle = C.pageBreak;
+			for (const [manual, dash, lw] of [
+				[false, [3, 3], 1],
+				[true, [8, 3], 1.5]
+			] as const) {
+				ctx.beginPath();
+				ctx.setLineDash(dash as unknown as number[]);
+				ctx.lineWidth = lw;
+				for (const r of manual ? b.manualRows : b.rows)
+					if (r >= r0 && r <= r1 + 1 && (manual || !b.manualRows.includes(r))) {
+						const y = Math.round(ry(r)) - 0.5;
+						ctx.moveTo(Math.max(cx(a.c0), MARGIN), y);
+						ctx.lineTo(Math.min(cx(a.c1 + 1), xEnd), y);
+					}
+				for (const c of manual ? b.manualCols : b.cols)
+					if (c >= c0 && c <= c1 + 1 && (manual || !b.manualCols.includes(c))) {
+						const x = Math.round(cx(c)) - 0.5;
+						ctx.moveTo(x, Math.max(ry(a.r0), TOP_H));
+						ctx.lineTo(x, Math.min(ry(a.r1 + 1), h));
+					}
+				ctx.stroke();
+			}
+			if (b.framed && a.r1 >= r0 && a.r0 <= r1 + 1 && a.c1 >= c0 && a.c0 <= c1 + 1) {
+				ctx.setLineDash([3, 3]);
+				ctx.lineWidth = 1;
+				ctx.strokeRect(Math.round(cx(a.c0)) - 0.5, Math.round(ry(a.r0)) - 0.5, spanW(a.c0, a.c1), rspan(a.r0, a.r1));
 			}
 			ctx.restore();
 		}
@@ -5072,6 +5123,12 @@
 		filterDlg = cfView = dedupDlg = fnDlg = linesDlg = pivotDlg = null;
 		formatDlg = validDlg = noteDlg = sizeDlg = null;
 		noteTip = null;
+	}
+
+	/** Plage sélectionnée (lignes et colonnes de la feuille, à partir de 0). */
+	export function selectedRange(): { r0: number; c0: number; r1: number; c1: number } {
+		const s = selection();
+		return { r0: s.r0, c0: s.c0, r1: s.r1, c1: s.c1 };
 	}
 
 	/** Sélectionne une plage (scripts : ui.select ; à partir de 0). */

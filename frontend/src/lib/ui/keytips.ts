@@ -8,6 +8,7 @@ export const TAB_TIPS: Record<string, string> = {
 	Fichier: 'F',
 	Accueil: 'H',
 	Insertion: 'N',
+	'Mise en page': 'P',
 	Données: 'A',
 	Formules: 'M',
 	Révision: 'R',
@@ -58,7 +59,21 @@ export const COMMAND_TIPS: Record<string, string> = {
 	'Insérer une fonction': 'F',
 	Quadrillage: 'VG',
 	'Figer les volets': 'F',
-	Zoom: 'Q'
+	Zoom: 'Q',
+	// Mise en page
+	Marges: 'M',
+	Orientation: 'O',
+	Taille: 'SZ',
+	'Zone d’impression': 'R',
+	'Sauts de page': 'B',
+	'Imprimer les titres': 'I',
+	Largeur: 'W',
+	Hauteur: 'H',
+	Échelle: 'SC',
+	'Afficher le quadrillage': 'VG',
+	'Imprimer le quadrillage': 'PG',
+	'Afficher les en-têtes': 'VH',
+	'Imprimer les en-têtes': 'PH'
 };
 
 /** Lettres et chiffres d'un libellé, sans accents, en majuscules. */

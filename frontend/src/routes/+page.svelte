@@ -20,6 +20,9 @@
 	import { visibleSheet } from '#lib/shell/sheets.js';
 	import { count } from '#lib/sql/result.js';
 	import { printSheet } from '#lib/shell/print.js';
+	import PageSetupDialog from '#lib/shell/PageSetupDialog.svelte';
+	import { pageAction, type PageAction, type PageSetup, type PageSetupTab } from '#lib/shell/pagesetup.js';
+	import type { PageBreaks } from '#bindings/internal/transfer/models.js';
 	import SqlView, { type Favorite } from '#lib/shell/SqlView.svelte';
 	import AiPanel from '#lib/ai/AiPanel.svelte';
 	import { chat as aiChat, openAssistant } from '#lib/ai/state.svelte.js';
@@ -148,6 +151,10 @@
 	let dialogs = $state<DialogSpec[]>([]);
 	let mcpOpen = $state(false);
 	let settingsOpen = $state(false);
+	// Onglet Mise en page : boîte ouverte (onglet), sauts de page affichés dans la grille.
+	let pageDlg = $state<PageSetupTab | null>(null);
+	let showBreaks = $state(false);
+	let breaks = $state<PageBreaks | null>(null);
 	let aboutOpen = $state(false);
 	// Dernier export .xlsx / .ods : son compte rendu (lien « Détails » tant
 	// que son message est affiché) et la boîte de détails.
@@ -345,6 +352,49 @@
 		// Volet Requêtes ouvert : ses listes suivent (Ctrl+Z, assistant, MCP, autre classeur).
 		queryHost?.reloadLists();
 	}
+
+	/** Enregistre la mise en page de la feuille active (une étape d'annulation) ; les sauts de page s'affichent, comme dans Excel. */
+	async function savePage(p: PageSetup, label: string) {
+		try {
+			await DocumentService.SetPageSetup(sheetId, p, label);
+			showBreaks = true;
+			await reload();
+		} catch (e) {
+			notice = err(e);
+		}
+	}
+
+	/** Commande de l'onglet Mise en page. */
+	function pageCmd(a: PageAction) {
+		if (!layout) return;
+		if (a.kind === 'dialog') {
+			pageDlg = a.tab;
+			return;
+		}
+		const c = sheet?.activeCell() ?? { row: 0, col: 0 };
+		const sel = sheet?.selectedRange() ?? { r0: c.row, c0: c.col, r1: c.row, c1: c.col };
+		const r = pageAction(layout.pageSetup, a, { ...c, sel });
+		if (!r) return;
+		if ('notice' in r) notice = r.notice;
+		else void savePage(r.setup, r.label);
+	}
+
+	// Sauts de page de la feuille active, relus à chaque changement du classeur.
+	$effect(() => {
+		const l = layout;
+		const id = sheetId;
+		if (!showBreaks || mode !== 'doc' || !l) {
+			breaks = null;
+			return;
+		}
+		let live = true;
+		DocumentService.PageBreaks(id)
+			.then((b) => live && (breaks = b))
+			.catch(() => live && (breaks = null));
+		return () => {
+			live = false;
+		};
+	});
 
 	/** Bandeau « Nouvelle version disponible » : recharge la version publiée (ajouts locaux gardés). */
 	async function reloadShare() {
@@ -940,6 +990,8 @@
 					const charts = printNotice(layout?.charts?.length ?? 0);
 					if (charts) notice = notice && a === 'pdf' ? `${notice} ; ${charts}` : charts;
 					printSheet(await DocumentService.PrintHTML(sheetId), `${docState.title} – ${name}`);
+					// Comme Excel : après une impression, la grille montre les sauts de page.
+					showBreaks = true;
 					break;
 				}
 				case 'demo':
@@ -1540,6 +1592,10 @@
 		shared={mode === 'doc' && !!share?.shared}
 		republish={mode === 'doc' && canRepublish(share)}
 		rights={canRights}
+		pageSetup={layout?.pageSetup}
+		onpage={mode === 'doc' ? pageCmd : undefined}
+		pageBreaks={showBreaks}
+		onpagebreaks={mode === 'doc' ? (on) => (showBreaks = on) : undefined}
 	/>
 
 	{#if mode === 'doc'}
@@ -1633,6 +1689,7 @@
 						onrowlink={mode === 'doc' ? gotoRow : undefined}
 						onsharedata={mode === 'doc' && sharedWorkbooksEnabled() ? (t) => (dataShare = t) : undefined}
 						onask={mode === 'doc' ? openAssistant : undefined}
+						pageBreaks={breaks && !breaks.empty ? { rows: breaks.rows ?? [], cols: breaks.cols ?? [], manualRows: breaks.manualRows ?? [], manualCols: breaks.manualCols ?? [], area: breaks.area, framed: !!layout?.pageSetup?.area } : undefined}
 					/>
 				</div>
 			{/key}
@@ -1886,6 +1943,24 @@
 	{/if}
 	{#if exportOpen && exported}
 		<ExportReportDialog report={exported.report} format={exported.format} onclose={() => (exportOpen = false)} />
+	{/if}
+	{#if pageDlg && mode === 'doc' && layout}
+		<PageSetupDialog
+			setup={layout.pageSetup}
+			sheet={activeInfo?.name ?? ''}
+			file={docState.path ? (docState.path.split(/[\\/]/).pop() ?? '') : docState.title}
+			selection={sheet?.selectedRange()}
+			tab={pageDlg}
+			onapply={(p) => {
+				pageDlg = null;
+				void savePage(p, 'Mise en page');
+			}}
+			onprint={(p) => {
+				pageDlg = null;
+				void savePage(p, 'Mise en page').then(() => file('print'));
+			}}
+			onclose={() => (pageDlg = null)}
+		/>
 	{/if}
 	{#if settingsOpen}
 		<SettingsDialog onclose={() => (settingsOpen = false)} onmcp={() => { settingsOpen = false; mcpOpen = true; }} />

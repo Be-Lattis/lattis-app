@@ -119,6 +119,17 @@ export const icons = {
 	dependents: '<rect x="3" y="3.5" width="7" height="6" rx="1"/><path class="a" d="m10 9.5 8.5 8.5M18.5 13v5h-5"/><circle class="af" cx="19.5" cy="19.5" r="2"/>',
 	'dependency-graph': '<circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle class="a" cx="12" cy="18" r="2.5"/><path d="M8.5 6h7M7.2 8.2l3.6 7.6M16.8 8.2l-3.6 7.6"/>',
 
+	// Mise en page : une feuille de papier, et ce que chaque commande y règle.
+	'page-margins': '<rect x="5" y="2.5" width="14" height="19" rx="1.5"/><path class="a" stroke-dasharray="1.6 1.6" d="M5 6.5h14M5 17.5h14M8.5 2.5v19M15.5 2.5v19"/>',
+	'page-orientation': '<rect x="3" y="3" width="10" height="14" rx="1.2"/><rect class="a" x="8" y="12" width="13" height="9" rx="1.2"/><path d="M16 4.5a4 4 0 0 1 3.5 4M18 8.2l1.5.3.5-1.5"/>',
+	'page-size': '<rect x="3" y="2.5" width="13" height="17" rx="1.2"/><rect class="a" x="8" y="8.5" width="13" height="13" rx="1.2"/>',
+	'print-area': '<rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><path d="M3.5 9h17M3.5 14.5h17M9 3.5v17M14.5 3.5v17"/><rect class="a" stroke-width="2" x="9" y="9" width="11.5" height="11.5"/>',
+	'page-break': '<path d="M5.5 9V3.5h13V9M5.5 15v5.5h13V15"/><path class="a" stroke-dasharray="2 1.5" d="M2.5 12h19"/>',
+	'print-titles': '<rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><path d="M3.5 13h17M3.5 17h17M12 8v12.5M16.5 8v12.5"/><path class="a" stroke-width="2.4" d="M3.5 6h17M6 3.5v17"/>',
+	'fit-width': '<rect x="5" y="4.5" width="14" height="15" rx="1.5"/><path class="a" d="M2 12h20M4.5 9.5 2 12l2.5 2.5M19.5 9.5 22 12l-2.5 2.5"/>',
+	'fit-height': '<rect x="4.5" y="5" width="15" height="14" rx="1.5"/><path class="a" d="M12 2v20M9.5 4.5 12 2l2.5 2.5M9.5 19.5 12 22l2.5-2.5"/>',
+	printer: '<path d="M6.5 9V3.5h11V9M6.5 17H4a1.5 1.5 0 0 1-1.5-1.5v-5A1.5 1.5 0 0 1 4 9h16a1.5 1.5 0 0 1 1.5 1.5v5A1.5 1.5 0 0 1 20 17h-2.5"/><rect class="a" x="6.5" y="13.5" width="11" height="7.5" rx="1"/>',
+
 	// Affichage
 	'freeze-panes': '<rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><path class="a" stroke-width="2.2" d="M3.5 9h17M9 3.5v17"/>',
 	headings: '<rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><path d="M3.5 9h17M9 3.5v17"/><path class="a" stroke-width="1.6" d="M12.5 7.5l1.25-3 1.25 3M13 6.5h1.5M5.5 12.5l1-1v5"/>',

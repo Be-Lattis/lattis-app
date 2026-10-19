@@ -1,8 +1,9 @@
 // Impression et export PDF de la feuille active (Fichier › Imprimer / Exporter
-// en PDF) : le classeur rend la plage utilisée en HTML (DocumentService.
-// PrintHTML, texte déjà échappé), posé dans une zone que seule l'impression
-// montre ; la fenêtre d'impression du système (WebView2) propose aussi
-// « Microsoft Print to PDF » / « Enregistrer au format PDF ».
+// en PDF) : le classeur rend la feuille en pages HTML selon sa mise en page
+// (DocumentService.PrintHTML, texte déjà échappé : une <section> par page, à
+// la taille du papier, avec son @page), posées dans une zone que seule
+// l'impression montre ; la fenêtre d'impression du système (WebView2)
+// propose aussi « Microsoft Print to PDF » / « Enregistrer au format PDF ».
 
 const AREA = 'lattis-print';
 
@@ -28,6 +29,17 @@ export const PRINT_CSS = `
 	#${AREA} .doc-print .dchart { max-width: 100%; height: auto !important; }
 	#${AREA} .doc-print svg { max-width: 100%; height: auto; }
 	#${AREA} .print-more { font-style: italic; margin-top: 6pt; }
+	#${AREA} .lp-page { position: relative; overflow: hidden; break-after: page; box-sizing: border-box; }
+	#${AREA} .lp-page:last-child { break-after: auto; }
+	#${AREA} .lp-bw { filter: grayscale(1); }
+	#${AREA} .lp-body { position: absolute; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; overflow: hidden; }
+	#${AREA} .lp-hf { position: absolute; display: grid; grid-template-columns: 1fr auto 1fr; gap: 6pt; font-size: 9pt; white-space: pre; }
+	#${AREA} .lp-hf .c { text-align: center; }
+	#${AREA} .lp-hf .r { text-align: right; }
+	#${AREA} .lp-page td { border: none; padding: 0 4px; line-height: 1.2; vertical-align: middle; box-sizing: border-box; }
+	#${AREA} .lp-page td.t { border: 0.5pt solid #bbb; }
+	#${AREA} .lp-page table.lp-lines td { border: 0.5pt solid #999; }
+	#${AREA} .lp-page th { font-weight: 400; background: #f0f0f0; border: 0.5pt solid #999; color: #444; text-align: center; padding: 0 2px; }
 }`;
 
 /** Imprime un contenu HTML (fourni par le classeur) sous le titre donné. */
