@@ -25,12 +25,22 @@ Un classeur ouvert depuis un dossier partagé est signalé aux autres postes par
 
 ## Ajouter un tableau à un classeur partagé en direct
 
-Dans un classeur collaboratif (partagé en direct sur un Serveur Lattis), un tableau créé après la publication n'est d'abord que sur votre poste. Clic droit sur le tableau › **Ajouter au classeur partagé…** le crée dans le classeur du serveur, avec ses lignes : les autres membres le reçoivent aussitôt (à la même place sur la feuille, ou dessous si la place est prise chez eux), avec un message dans la barre d'état, et il se synchronise ensuite comme les autres tableaux partagés (saisies, conflits, droits). La même action est proposée par **Partager au Data Lake Lattis…** (« Ajouter ce tableau au classeur partagé », en premier) et dans **Gérer l'accès** › Rôles, sous la liste des tableaux.
+Dans un classeur collaboratif (partagé en direct sur un Serveur Lattis), un tableau créé après la publication n'est d'abord que sur votre poste. Clic droit sur le tableau › **Ajouter au classeur partagé…** le crée dans le classeur du serveur, avec ses lignes : les autres membres le reçoivent aussitôt (à la même place sur la feuille, ou dessous si la place est prise chez eux), avec un message dans la barre d'état, et il se synchronise ensuite comme les autres tableaux partagés (saisies, conflits, droits). La même action est proposée par **Partager au Data Lake Lattis…** (« Ajouter ce tableau au classeur partagé », en premier) et dans **Gérer l'accès** › Rôles et droits, sous la liste des tableaux.
 
 - Réservé aux propriétaires et concepteurs du classeur, et seulement en ligne : la boîte le dit sinon.
 - Les types des colonnes sont figés comme pour les autres tableaux partagés ; les colonnes calculées restent calculées sur chaque poste. Les saisies invalides sont à corriger d'abord.
 - Un refus du serveur (nom déjà pris par un autre tableau du classeur, par exemple) s'affiche dans la barre d'état et ne change rien.
 - L'ajout ne s'annule pas par `Ctrl+Z` (la boîte de confirmation le rappelle) : pour retirer le tableau du classeur partagé, **Supprimer le tableau** le supprime pour tous.
+
+## Gérer l'accès à un classeur partagé
+
+**Fichier › Gérer l'accès…** (ou le menu du compte) règle qui voit et modifie un classeur publié sur un Serveur Lattis. Chaque membre a un ou plusieurs **rôles** ; ses droits sont ceux de ses rôles réunis.
+
+- **Membres** : invitez une adresse avec ses rôles (la boîte dit ce qu'ils permettront), retirez un rôle par le ✕ de sa pastille, donnez-en un par **+ Rôle**. Sous chaque personne, une ligne dit ce qu'elle peut faire (« Voir, ajouter, modifier ses lignes »). Les rôles reçus par une équipe sont en pointillés et se changent dans **Équipes**. Le dernier propriétaire est protégé : donnez d'abord ce rôle à quelqu'un d'autre.
+- **Rôles et droits** : un tableau montre, pour chaque rôle, s'il peut **Voir**, **Ajouter des lignes**, **Modifier ses lignes** (celles qu'il a ajoutées, suppression comprise), **Modifier toutes les lignes** et changer la **Structure et droits** (✓ oui, ◐ en partie : certaines lignes ou certains tableaux, – non). Choisissez un rôle pour régler son accès au classeur, à chaque feuille et à chaque tableau : *Aucun accès*, *Voir*, *Voir, ajouter, modifier ses lignes* ou *Voir et tout modifier* ; « Comme la feuille » ou « Comme le classeur » garde l'accès du niveau au-dessus. Sous chaque tableau, les filtres se lisent en phrases (« Voit seulement les lignes où Région = « Nord » », « Modifie seulement les lignes où Commercial = la personne connectée ») ; **Limiter…** ou **Modifier** les règle. Le propriétaire a tous les droits ; le concepteur aussi, sauf les droits.
+- **Règles avancées** (propriétaires) : une règle retire un droit sur un tableau quel que soit l'accès du rôle, et se lit en une phrase (« Personne ne peut supprimer de lignes dans « Ventes », sauf les propriétaires et concepteurs. »). Partez d'un préréglage — **Interdire la suppression**, **Ajout seulement**, **Modifier seulement les lignes au statut…**, **Modifier ses lignes sans en créer** (pour un rôle qui ajoute et modifie ses lignes : il ne fait plus que modifier) — ou choisissez le tableau, les rôles, les actions interdites et l'exception éventuelle.
+- **Voir en tant que…** : depuis la ligne d'un membre ou d'un rôle, ou dans son onglet, montre ce que ce membre peut faire sur un tableau et les lignes qu'il voit, lues sur le serveur sous son identité (règles comprises).
+- **Écarts** : règles changées hors de Lattis, directement dans PostgreSQL ; **Recompiler les droits** remet celles de Lattis.
 
 ## Partager un tableau au Data Lake Lattis
 

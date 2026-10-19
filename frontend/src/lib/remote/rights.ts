@@ -267,16 +267,25 @@ const SHORT_OPS: Record<FilterOp, string> = {
 	filled: "n'est pas vide"
 };
 
-/** Règle d'un filtre en clair : « Visible si Région = « Nord » et Commercial = la personne connectée ». */
-export function filterSentence(cs: readonly Condition[]): string {
-	if (!cs.length) return 'Toutes les lignes sont visibles';
+/**
+ * Règle d'un filtre en clair : « Visible si Région = « Nord » et Commercial
+ * = la personne connectée » ; prefix et none : autre tournure (« Modifie
+ * les lignes où », filtre d'écriture ou règle avancée).
+ */
+export function filterSentence(cs: readonly Condition[], prefix = 'Visible si', none = 'Toutes les lignes sont visibles'): string {
+	if (!cs.length) return none;
+	return `${prefix} ${conditionsText(cs)}`;
+}
+
+/** Conditions en clair, sans préfixe : « Région = « Nord » et Commercial = la personne connectée ». */
+export function conditionsText(cs: readonly Condition[]): string {
 	const one = (c: Condition) => {
 		if (c.op === 'empty' || c.op === 'filled') return `${c.column} ${SHORT_OPS[c.op]}`;
 		if (c.value.kind === 'team') return `${c.column} ${c.op === '<>' ? "n'est pas" : 'est'} ${TEAM_LABEL}`;
 		const v = c.value.kind === 'me' ? ME_LABEL : c.value.value.trim() ? `« ${c.value.value.trim()} »` : '…';
 		return `${c.column} ${SHORT_OPS[c.op]} ${v}`;
 	};
-	return 'Visible si ' + cs.map(one).join(' et ');
+	return cs.map(one).join(' et ');
 }
 
 /**

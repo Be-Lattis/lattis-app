@@ -29,8 +29,10 @@
 		values?: (column: string) => Promise<string[]>;
 		/** Ce que filtre la règle, pour l'assistant (« les lignes du tableau « Ventes » que voit… ») ; absent : pas de bouton. */
 		assist?: string;
+		/** Relecture de la règle : début de phrase et phrase sans condition (par défaut « Visible si… », « Toutes les lignes sont visibles »). */
+		readback?: { prefix: string; none: string };
 	}
-	let { columns, value, disabled = false, label, onchange, teams = false, values, assist }: Props = $props();
+	let { columns, value, disabled = false, label, onchange, teams = false, values, assist, readback }: Props = $props();
 
 	const uid = Math.random().toString(36).slice(2, 8);
 	const types = $derived(Object.fromEntries(columns.map((c) => [c.name, c.type])));
@@ -210,7 +212,7 @@
 		{/each}
 		<div class="foot">
 			<button type="button" class="link" disabled={disabled || !columns.length} onclick={add}>+ Condition</button>
-			<span class="rule" aria-live="polite"><Icon name="show" size={13} />{filterSentence(conds)}</span>
+			<span class="rule" aria-live="polite"><Icon name="show" size={13} />{filterSentence(conds, readback?.prefix, readback?.none)}</span>
 		</div>
 	{:else}
 		<div class="chips" aria-label="Colonnes à insérer">

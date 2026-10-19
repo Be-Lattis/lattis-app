@@ -1,0 +1,747 @@
+/*
+ * Gérer l'accès (RightsDialog et ses onglets) : listes de membres en
+ * pastilles, matrice des droits, arborescence des niveaux, règles en
+ * phrases. Classes préfixées .ac ; les champs, boutons et le pied viennent
+ * de shareForm.css (.sf). Voir docs/audits/audit-ux-gerer-acces.md.
+ */
+.ac-section {
+	margin: 0 0 16px;
+}
+.ac-section-head {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	margin: 0 0 6px;
+}
+.ac-section-head h3 {
+	margin: 0;
+	font-size: 13px;
+	font-weight: 600;
+	color: #1f2328;
+}
+.ac-section-head .ac-count {
+	color: #6b7280;
+	font-size: 12px;
+}
+.ac-section-head .ac-grow {
+	flex: 1;
+}
+.ac-intro {
+	margin: 0 0 10px;
+	font-size: 12px;
+	color: #4b5563;
+}
+
+/* Carte d'invitation / d'ajout. */
+.ac-card {
+	border: 1px solid #e3e5e8;
+	border-radius: 6px;
+	padding: 10px 12px;
+	background: #fafbfb;
+	margin: 0 0 14px;
+}
+.ac-card-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+.ac-card-row .sf-input {
+	flex: 1 1 220px;
+	width: auto;
+	min-width: 180px;
+}
+.ac-card .sf-hint,
+.ac-card .sf-error {
+	margin-top: 6px;
+}
+
+/* Pastilles à cocher (rôles à donner, actions d'une règle). */
+.ac-toggles {
+	display: inline-flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+.ac-toggle {
+	font: inherit;
+	font-size: 12px;
+	height: 24px;
+	padding: 0 9px;
+	border: 1px solid #c9cdd2;
+	border-radius: 12px;
+	background: #fff;
+	color: #374151;
+	cursor: pointer;
+	white-space: nowrap;
+}
+.ac-toggle:hover:not(:disabled) {
+	border-color: #8fb79d;
+}
+.ac-toggle[aria-pressed='true'] {
+	background: #217346;
+	border-color: #217346;
+	color: #fff;
+}
+.ac-toggle:focus-visible {
+	outline: 2px solid rgba(33, 115, 70, 0.45);
+	outline-offset: 1px;
+}
+.ac-toggle:disabled {
+	opacity: 0.55;
+	cursor: default;
+}
+.ac-toggles.invalid .ac-toggle {
+	border-color: #e3a29b;
+}
+
+/* Lignes de membres et d'équipes. */
+.ac-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	border-top: 1px solid #eef0f2;
+}
+.ac-row {
+	display: grid;
+	grid-template-columns: 28px minmax(150px, 1fr) minmax(220px, 1.6fr) 172px;
+	gap: 4px 10px;
+	align-items: center;
+	padding: 7px 4px;
+	border-bottom: 1px solid #eef0f2;
+}
+.ac-row:hover {
+	background: #fafbfb;
+}
+.ac-avatar {
+	width: 26px;
+	height: 26px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: #e8f3ec;
+	color: #1f4d33;
+	font-weight: 600;
+	font-size: 12px;
+	--icon-accent: #217346;
+}
+.ac-avatar.team {
+	border-radius: 6px;
+	background: #eef2ff;
+	color: #3730a3;
+}
+.ac-who {
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	line-height: 1.3;
+}
+.ac-who strong {
+	font-weight: 600;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.ac-who .ac-sub {
+	font-size: 12px;
+	color: #6b7280;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.ac-roles {
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+.ac-chips {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px;
+}
+.ac-can {
+	font-size: 12px;
+	color: #4b5563;
+}
+.ac-acts {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	justify-content: flex-end;
+}
+
+/* Pastille d'un rôle. */
+.ac-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	height: 22px;
+	box-sizing: border-box;
+	padding: 0 8px;
+	border: 1px solid transparent;
+	border-radius: 11px;
+	font-size: 12px;
+	white-space: nowrap;
+	background: #f1f3f5;
+	color: #374151;
+	--icon-accent: currentColor;
+}
+.ac-chip.has-x {
+	padding-right: 2px;
+}
+.ac-chip.owner {
+	background: #dcefe3;
+	color: #14532d;
+}
+.ac-chip.designer {
+	background: #ede9fe;
+	color: #5b21b6;
+}
+.ac-chip.editor {
+	background: #dbeafe;
+	color: #1e40af;
+}
+.ac-chip.participant {
+	background: #e0f2f1;
+	color: #115e59;
+}
+.ac-chip.reader {
+	background: #f1f3f5;
+	color: #374151;
+}
+.ac-chip.custom {
+	background: #fef3c7;
+	color: #92400e;
+}
+.ac-chip.via {
+	background: #fff;
+	border: 1px dashed #c4c8cc;
+}
+.ac-chip .ac-x {
+	border: none;
+	background: none;
+	color: inherit;
+	opacity: 0.6;
+	cursor: pointer;
+	font-size: 11px;
+	line-height: 1;
+	width: 18px;
+	height: 18px;
+	border-radius: 9px;
+	padding: 0;
+}
+.ac-chip .ac-x:hover:not(:disabled),
+.ac-chip .ac-x:focus-visible {
+	opacity: 1;
+	background: rgba(0, 0, 0, 0.08);
+	outline: none;
+}
+.ac-chip .ac-x:disabled {
+	cursor: default;
+}
+.ac-tag {
+	font-size: 11px;
+	border-radius: 3px;
+	padding: 0 5px;
+	background: #ede9fe;
+	color: #5b21b6;
+	white-space: nowrap;
+}
+.ac-tag.team {
+	background: #eef2ff;
+	color: #3730a3;
+}
+.ac-tag.lock {
+	background: #fef3c7;
+	color: #92400e;
+}
+
+/* Boutons d'icône et liens. */
+.ac-icon {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	height: 26px;
+	padding: 0 7px;
+	border: 1px solid transparent;
+	border-radius: 4px;
+	background: none;
+	font: inherit;
+	font-size: 12px;
+	color: #374151;
+	cursor: pointer;
+	white-space: nowrap;
+	--icon-accent: #217346;
+}
+.ac-icon:hover:not(:disabled) {
+	border-color: #c9cdd2;
+	background: #fff;
+}
+.ac-icon:focus-visible {
+	outline: 2px solid rgba(33, 115, 70, 0.45);
+	outline-offset: 1px;
+}
+.ac-icon:disabled {
+	opacity: 0.45;
+	cursor: default;
+}
+.ac-icon.danger:hover:not(:disabled) {
+	color: #b91c1c;
+	border-color: #e3a29b;
+	background: #fdf0ef;
+}
+.ac-link {
+	border: none;
+	background: none;
+	padding: 0;
+	font: inherit;
+	font-size: 12px;
+	color: #217346;
+	cursor: pointer;
+	white-space: nowrap;
+}
+.ac-link:hover:not(:disabled) {
+	text-decoration: underline;
+}
+.ac-link:focus-visible {
+	outline: 2px solid rgba(33, 115, 70, 0.45);
+	outline-offset: 1px;
+}
+.ac-link:disabled {
+	opacity: 0.55;
+	cursor: default;
+}
+.ac-link.danger {
+	color: #b91c1c;
+}
+
+/* Marque d'une capacité : oui, en partie, non. */
+.ac-cap {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	border-radius: 10px;
+	font-size: 12px;
+	font-weight: 700;
+	line-height: 1;
+}
+.ac-cap.yes {
+	background: #dcefe3;
+	color: #166534;
+}
+.ac-cap.some {
+	background: #fef3c7;
+	color: #92400e;
+}
+.ac-cap.no {
+	color: #c4c8cc;
+	font-weight: 400;
+}
+
+/* Matrice des droits par rôle. */
+.ac-matrix {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 12px;
+}
+.ac-matrix th {
+	font-weight: 600;
+	color: #4b5563;
+	text-align: center;
+	padding: 4px 4px 6px;
+	border-bottom: 1px solid #e3e5e8;
+	vertical-align: bottom;
+	line-height: 1.2;
+}
+.ac-matrix th:first-child,
+.ac-matrix td:first-child {
+	text-align: left;
+}
+.ac-matrix td {
+	text-align: center;
+	padding: 3px 4px;
+	border-bottom: 1px solid #eef0f2;
+}
+.ac-matrix tr.on td {
+	background: #f3f8f5;
+}
+.ac-matrix tr.on td:first-child {
+	box-shadow: inset 3px 0 0 #217346;
+}
+.ac-matrix .ac-rolebtn {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	width: 100%;
+	border: none;
+	background: none;
+	padding: 3px 6px;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+	border-radius: 4px;
+}
+.ac-matrix .ac-rolebtn strong {
+	font-weight: 600;
+	font-size: 13px;
+}
+.ac-matrix .ac-rolebtn span {
+	color: #6b7280;
+	font-size: 11px;
+}
+.ac-matrix .ac-rolebtn:focus-visible {
+	outline: 2px solid rgba(33, 115, 70, 0.45);
+	outline-offset: -2px;
+}
+.ac-matrix td.ac-members {
+	color: #4b5563;
+	white-space: nowrap;
+}
+.ac-legend {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+	margin: 6px 0 0;
+	font-size: 12px;
+	color: #6b7280;
+}
+.ac-legend > span {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+}
+.ac-legend .ac-grow {
+	flex: 1;
+}
+.ac-newrole {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+.ac-newrole .sf-input {
+	width: 170px;
+	height: 26px;
+}
+.ac-newrole .sf-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	height: 26px;
+	flex: none;
+	--icon-accent: currentColor;
+}
+
+/* Détail d'un rôle : arborescence classeur → feuilles → tableaux. */
+.ac-detail {
+	margin-top: 14px;
+	border: 1px solid #e3e5e8;
+	border-radius: 6px;
+}
+.ac-detail-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 12px;
+	border-bottom: 1px solid #eef0f2;
+	background: #fafbfb;
+	border-radius: 6px 6px 0 0;
+}
+.ac-detail-head h3 {
+	margin: 0;
+	font-size: 13px;
+	flex: 1;
+	min-width: 0;
+}
+.ac-detail-body {
+	padding: 4px 12px 10px;
+}
+.ac-tree {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+.ac-node {
+	display: grid;
+	grid-template-columns: minmax(140px, 1fr) minmax(220px, 280px) minmax(150px, 1fr);
+	gap: 4px 12px;
+	align-items: center;
+	padding: 6px 0;
+	border-bottom: 1px solid #f1f3f5;
+}
+.ac-node.sheet .ac-where {
+	padding-left: 16px;
+}
+.ac-node.table .ac-where {
+	padding-left: 32px;
+}
+.ac-where {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+	font-weight: 600;
+	--icon-accent: #217346;
+}
+.ac-node.table .ac-where {
+	font-weight: 400;
+}
+.ac-where > span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.ac-level {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+}
+.ac-inherit {
+	font-size: 11px;
+	color: #6b7280;
+	white-space: nowrap;
+}
+.ac-gives {
+	font-size: 12px;
+	color: #374151;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	min-width: 0;
+}
+.ac-filters {
+	grid-column: 1 / -1;
+	padding-left: 52px;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	font-size: 12px;
+	color: #4b5563;
+}
+.ac-filters .ac-fline {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	min-width: 0;
+}
+.ac-filters .ac-fline > span {
+	min-width: 0;
+}
+.ac-filters .ac-fline.limited > span {
+	color: #92400e;
+}
+.ac-filters .ac-fline.rule > span {
+	color: #7c2d12;
+	display: inline-flex;
+	align-items: baseline;
+	gap: 4px;
+	--icon-accent: #d97706;
+}
+.ac-filters .ac-fline.rule svg {
+	flex: none;
+	align-self: center;
+}
+/* Boutons avec icône. */
+.ac-dialog .sf-btn:has(svg) {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	--icon-accent: currentColor;
+}
+.ac-dialog .sf-btn.primary:has(svg) {
+	--icon-accent: #fff;
+}
+.ac-editor {
+	grid-column: 1 / -1;
+	margin: 4px 0 4px 32px;
+	padding: 8px 10px;
+	border: 1px solid #c5dfcd;
+	border-radius: 6px;
+	background: #f9fcfa;
+}
+.ac-editor-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	justify-content: flex-end;
+	margin-top: 6px;
+}
+.ac-editor-actions .sf-hint {
+	flex: 1;
+}
+
+/* Règles avancées. */
+.ac-rules {
+	list-style: none;
+	margin: 0 0 6px;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.ac-rule {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 8px 10px;
+	border: 1px solid #e3e5e8;
+	border-left: 3px solid #d97706;
+	border-radius: 4px;
+	background: #fff;
+}
+.ac-rule > div {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+.ac-rule .ac-rule-label {
+	font-size: 11px;
+	font-weight: 600;
+	color: #92400e;
+	text-transform: none;
+}
+.ac-presets {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin: 0 0 10px;
+}
+.ac-preset {
+	font: inherit;
+	font-size: 12px;
+	padding: 4px 10px;
+	border: 1px solid #c9cdd2;
+	border-radius: 4px;
+	background: #fff;
+	cursor: pointer;
+	color: #1f2328;
+}
+.ac-preset:hover:not(:disabled) {
+	border-color: #217346;
+	background: #eef6f0;
+}
+.ac-preset.on {
+	border-color: #217346;
+	box-shadow: inset 0 0 0 1px #217346;
+	background: #f3f8f5;
+}
+.ac-preset:focus-visible {
+	outline: 2px solid rgba(33, 115, 70, 0.45);
+	outline-offset: 1px;
+}
+.ac-readback {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	margin: 12px 0 0;
+	padding: 8px 10px;
+	border-radius: 4px;
+	background: #fffaf2;
+	border: 1px solid #f1dfc0;
+	color: #7c2d12;
+	font-size: 12.5px;
+	--icon-accent: #d97706;
+}
+
+/* Voir en tant que… */
+.ac-preview-bar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	margin: 0 0 10px;
+}
+.ac-preview-bar .sf-label {
+	padding-top: 0;
+}
+.ac-verdict {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 8px 10px;
+	margin: 0 0 10px;
+	border: 1px solid #d5e8dc;
+	border-radius: 6px;
+	background: #f3f8f5;
+	font-size: 12px;
+	--icon-accent: #217346;
+}
+.ac-verdict > div {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+}
+.ac-verdict .ac-caprow {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 12px;
+}
+.ac-verdict .ac-caprow > span {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+}
+.ac-scroll {
+	overflow: auto;
+	max-height: 340px;
+	border: 1px solid #e3e5e8;
+	border-radius: 4px;
+}
+.ac-grid {
+	border-collapse: collapse;
+	font-size: 12px;
+	width: 100%;
+}
+.ac-grid th {
+	position: sticky;
+	top: 0;
+	background: #f6f7f8;
+	text-align: left;
+	font-weight: 600;
+	padding: 4px 8px;
+	border-bottom: 1px solid #e3e5e8;
+}
+.ac-grid td {
+	padding: 3px 8px;
+	border-bottom: 1px solid #f1f3f5;
+	white-space: nowrap;
+}
+
+/* Bandeau d'alerte (écarts). */
+.ac-warn {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0 0 12px;
+	padding: 6px 10px;
+	border-radius: 4px;
+	background: #fffaf2;
+	border: 1px solid #f1dfc0;
+	color: #7c2d12;
+	font-size: 12px;
+	--icon-accent: #d97706;
+}
+.ac-warn > span {
+	flex: 1;
+	min-width: 0;
+}
+
+@media (max-width: 900px) {
+	.ac-row {
+		grid-template-columns: 28px minmax(130px, 1fr) minmax(180px, 1.4fr) 164px;
+	}
+	.ac-node {
+		grid-template-columns: minmax(120px, 1fr) minmax(200px, 250px) minmax(120px, 0.8fr);
+	}
+	.ac-filters {
+		padding-left: 32px;
+	}
+}
