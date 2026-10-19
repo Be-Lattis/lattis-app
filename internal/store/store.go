@@ -65,11 +65,15 @@ type Store struct {
 var (
 	tableName = regexp.MustCompile(`\bt_\d+\b`)
 	// Métadonnées qui changent ce qu'on lit d'un tableau : colonnes, types,
-	// formules, saisies invalides, tableaux eux-mêmes.
-	tableMeta = regexp.MustCompile(`_lattis_(columns|tables|invalid)\b`)
+	// formules, saisies invalides, tableaux eux-mêmes, et le choix de l'onglet
+	// (canvas/choice.go : il filtre les tableaux de la feuille, comme un
+	// filtre ; sans lui, une grille gardait le nombre de lignes de l'ancienne
+	// valeur et redemandait sans fin des lignes « hors du tableau »).
+	tableMeta = regexp.MustCompile(`_lattis_(columns|tables|invalid)\b|_lattis_sheets\s+SET\s+choice\b`)
 	// Structure des tableaux (noms, colonnes, types) : ce que lit tout calcul
-	// sur un tableau (voir Version ; les saisies invalides n'en sont pas).
-	schemaMeta = regexp.MustCompile(`_lattis_(columns|tables)\b`)
+	// sur un tableau (voir Version ; les saisies invalides n'en sont pas) ;
+	// le choix de l'onglet aussi (TCD et graphiques de la feuille filtrés).
+	schemaMeta = regexp.MustCompile(`_lattis_(columns|tables)\b|_lattis_sheets\s+SET\s+choice\b`)
 )
 
 // noteWrite relève les tableaux qu'une requête de l'écrivain peut modifier.

@@ -95,4 +95,26 @@ describe('RowCache après ajout de lignes', () => {
 		expect(cache.row(0)?.text[0]).toBe('a');
 		expect(cache.row(1)).toBeUndefined();
 	});
+
+	it('ne redemande pas sans fin un bloc refusé, jusqu’à la prochaine modification', async () => {
+		let calls = 0;
+		let loads = 0;
+		const failing = async (): Promise<Fetched> => {
+			calls++;
+			throw new Error('grid: hors du tableau');
+		};
+		// onLoad redessine, et le dessin redemande les lignes visibles (comme la grille).
+		const cache: RowCache = new RowCache(failing, 500, String, () => {
+			if (++loads < 50) cache.want(0, 10);
+		}, 100, 1);
+		cache.want(0, 10);
+		for (let i = 0; i < 20; i++) await tick();
+		expect(calls).toBe(2); // le bloc visible et son voisin, une fois chacun
+		expect(cache.error).toBe('grid: hors du tableau');
+		cache.invalidate(500);
+		expect(cache.error).toBeNull();
+		cache.want(0, 10);
+		for (let i = 0; i < 20; i++) await tick();
+		expect(calls).toBe(4);
+	});
 });

@@ -909,6 +909,9 @@
 	let colAxis = $state.raw(new Axis(SHEET_COLS, DEF_W));
 	const key = (r: number, c: number) => `${r},${c}`;
 
+	// Dernière erreur de lecture d'un tableau signalée (une fois par mise en page).
+	let fetchError = '';
+
 	function makeEntry(t: SheetTable): Entry {
 		const e: Entry = {
 			t,
@@ -919,6 +922,12 @@
 				t.rows,
 				(c, v) => formatColumnValue(e.t.columns[c], v),
 				(first, count) => {
+					// Lecture refusée : un seul message (le bloc n'est pas redemandé, cache.ts).
+					const err = e.cache.error;
+					if (err && err !== fetchError) {
+						fetchError = err;
+						say(`Lecture du tableau « ${e.t.name} » impossible : ${err}`);
+					}
 					// Bloc arrivé : ses lignes se mesurent (hauteur automatique) au prochain dessin.
 					if (first !== undefined && count) autoRows.forget(e.t.row + 1 + first, count);
 					schedule();
@@ -944,6 +953,7 @@
 		// retrouver celle de la nouvelle (A1 si elle n'a pas été visitée).
 		const back = sheetViews.switchTo(d.sheet ?? 1, { active: { ...active }, anchor: { ...anchor }, top: vs.top, left: scroller?.scrollLeft ?? 0 });
 		const old = new Map(entries.map((e) => [e.t.id, e]));
+		fetchError = '';
 		const placedBefore = placedSheet === (d.sheet ?? 0) ? placed() : null;
 		// Navigation (ouverture, autre feuille) : rien ne s'anime.
 		const nav = placedSheet !== (d.sheet ?? 0);

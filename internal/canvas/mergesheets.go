@@ -100,6 +100,9 @@ type MergePreview struct {
 	// Old : ce que deviennent les anciens onglets si rien n'est choisi.
 	Old   string   `json:"old"`
 	Notes []string `json:"notes"`
+	// Kept : anciens onglets qui resteront même supprimés, et pourquoi
+	// (ils contiennent autre chose : voir keptSheets).
+	Kept []string `json:"kept"`
 	// Refused : le regroupement est refusé (garde-fou), et pourquoi.
 	Refused string `json:"refused"`
 }
@@ -819,6 +822,12 @@ func (m *Model) MergePreview(ctx context.Context, plan MergePlan) (MergePreview,
 				p.Old = MergeOldHide
 			}
 		}
+		p.Kept = []string{}
+		if p.Old == MergeOldDelete {
+			if p.Kept, err = t.keptSheets(j, gone); err != nil {
+				return err
+			}
+		}
 		// Les premières lignes, source après source.
 		for _, s := range j.srcs {
 			left := 20 - len(p.Rows)
@@ -1039,6 +1048,7 @@ func (t *tx) mergeSheets(plan MergePlan) (MergeResult, error) {
 	}
 	// 7. Anciens onglets : supprimés (corbeille de l'annulation), ou masqués
 	// avec leurs tableaux renommés Janvier_ancien (ce qui les cite suit).
+	var kept []string // anciens onglets gardés malgré « Supprimer » (keptSheets)
 	switch res.Old {
 	case MergeOldHide:
 		hidden := map[int64]bool{}
@@ -1070,6 +1080,9 @@ func (t *tx) mergeSheets(plan MergePlan) (MergeResult, error) {
 			}
 		}
 	default:
+		if kept, err = t.keptSheets(j, gone); err != nil {
+			return res, err
+		}
 		for _, s := range j.srcs {
 			if err := t.deleteTable(s.tb); err != nil {
 				return res, err
@@ -1085,10 +1098,9 @@ func (t *tx) mergeSheets(plan MergePlan) (MergeResult, error) {
 				if err := t.deleteSheet(s.tb.Sheet); err != nil {
 					return res, err
 				}
-			} else {
-				res.Notes = append(res.Notes, fmt.Sprintf("La feuille « %s » contient autre chose : gardée", s.sheet))
 			}
 		}
+		res.Notes = append(res.Notes, kept...)
 		if len(pending) > 0 {
 			res.Notes = append(res.Notes, fmt.Sprintf("%s citai%s les anciens tableaux : à reprendre", plural(len(pending), "Une formule ou un objet", fmt.Sprintf("%d formules ou objets", len(pending))), plural(len(pending), "t", "ent")))
 		}
@@ -1189,6 +1201,9 @@ func (t *tx) mergeSheets(plan MergePlan) (MergeResult, error) {
 	}
 	if len(pending) > 0 {
 		res.Notice += fmt.Sprintf(" ; %s à reprendre", plural(len(pending), "une formule", fmt.Sprintf("%d formules", len(pending))))
+	}
+	for _, k := range kept {
+		res.Notice += " ; " + k
 	}
 	t.notes = append(t.notes, res.Notice)
 	return res, nil

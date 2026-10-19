@@ -135,6 +135,8 @@ export function previewWarnings(p: MergePreview): string[] {
 	if (p.keyNote) out.push(p.keyNote);
 	const n = p.pending?.length ?? 0;
 	if (n) out.push(`${n === 1 ? 'Une formule ou un objet cite' : `${nf(n)} formules ou objets citent`} les anciens tableaux : à reprendre à la main${p.old === 'hide' ? ' (les anciens onglets sont gardés masqués)' : ''}`);
+	// Onglets qui ne partiront pas malgré « Supprimer » : ils contiennent autre chose.
+	out.push(...(p.kept ?? []));
 	return out;
 }
 

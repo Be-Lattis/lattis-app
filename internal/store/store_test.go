@@ -69,6 +69,19 @@ func TestTouched(t *testing.T) {
 	if _, _, all = s.TakeTouched(); !all {
 		t.Fatal("métadonnées des colonnes : tous les tableaux concernés")
 	}
+	// Le choix d'un onglet filtre ses tableaux : tous concernés ; un autre
+	// réglage de la feuille (zoom) non.
+	exec(`CREATE TABLE _lattis_sheets (id, zoom, choice)`)
+	s.TakeTouched()
+	exec(`UPDATE _lattis_sheets SET zoom = 120 WHERE id = 1`)
+	if _, _, all = s.TakeTouched(); all {
+		t.Fatal("le zoom ne concerne aucun tableau")
+	}
+	v := s.Version("t_1")
+	exec(`UPDATE _lattis_sheets SET choice = '{}' WHERE id = 1`)
+	if _, _, all = s.TakeTouched(); !all || s.Version("t_1") == v {
+		t.Fatal("choix de l'onglet : tous les tableaux concernés")
+	}
 }
 
 // Versions par tableau : une saisie ne change pas celle de ses lignes ; une

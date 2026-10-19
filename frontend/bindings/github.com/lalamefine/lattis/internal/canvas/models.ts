@@ -909,6 +909,12 @@ export interface MergePreview {
     "notes": string[] | null;
 
     /**
+     * Kept : anciens onglets qui resteront même supprimés, et pourquoi
+     * (ils contiennent autre chose : voir keptSheets).
+     */
+    "kept": string[] | null;
+
+    /**
      * Refused : le regroupement est refusé (garde-fou), et pourquoi.
      */
     "refused": string;

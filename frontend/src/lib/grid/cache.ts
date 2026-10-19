@@ -70,6 +70,10 @@ export class RowCache {
 	private queue: number[] = [];
 	readonly stats: Stats = { roundTrip: [], server: [] };
 	error: string | null = null;
+	// Blocs dont la lecture a échoué : pas redemandés avant la prochaine
+	// modification (invalidate). Sinon chaque dessin les redemandait, des
+	// dizaines de fois par seconde, sur une erreur qui ne passe pas seule.
+	private failed = new Set<number>();
 
 	constructor(
 		private fetcher: Fetcher,
@@ -126,7 +130,7 @@ export class RowCache {
 		const mid = (first + last) / 2 / BLOCK;
 		const q: number[] = [];
 		for (let b = lo; b <= hi; b++) {
-			if (!this.blocks.has(b) && !this.inflight.has(b)) q.push(b);
+			if (!this.blocks.has(b) && !this.inflight.has(b) && !this.failed.has(b)) q.push(b);
 		}
 		q.sort((a, b) => Math.abs(a - mid) - Math.abs(b - mid));
 		this.queue = q;
@@ -173,7 +177,8 @@ export class RowCache {
 			this.evict(b);
 			this.error = null;
 		} catch (e) {
-			this.error = String(e);
+			if (gen === this.generation) this.failed.add(b);
+			this.error = e instanceof Error ? e.message : String(e);
 		} finally {
 			if (gen === this.generation) this.inflight.delete(b);
 		}
@@ -221,6 +226,8 @@ export class RowCache {
 		else for (const [k, v] of this.blocks) this.stale.set(k, v);
 		this.blocks.clear();
 		this.inflight.clear();
+		this.failed.clear();
+		this.error = null;
 		this.queue = [];
 		this.rows = rows;
 	}
