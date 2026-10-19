@@ -252,6 +252,7 @@ var suggestions = map[string]string{
 	"LOOKUP":     "RECHERCHE n'existe pas dans Lattis : utilisez REFERENCE ou REFERENCE.APPROCHEE",
 	"RECHERCHE":  "RECHERCHE n'existe pas dans Lattis : utilisez REFERENCE ou REFERENCE.APPROCHEE",
 	"LAMBDA":     "LAMBDA n'existe pas dans Lattis : utilisez un script Lua",
+	"VARP":       "VARP s'écrit VAR.P (VAR.P.N en français, VAR.P y est aussi accepté)",
 	"VLOOKUP":    "RECHERCHEV est convertie en REFERENCE à la saisie (correspondance exacte seulement)",
 	"RECHERCHEV": "RECHERCHEV est convertie en REFERENCE à la saisie (correspondance exacte seulement)",
 }

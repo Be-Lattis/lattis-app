@@ -58,6 +58,12 @@ Les plages se lisent comme une colonne dans les agrégats (`SOMME`, `MOYENNE`, `
 | SOMME, MOYENNE, NB, NBVAL, NB.VIDE, MIN, MAX | SUM, AVERAGE, COUNT, COUNTA, COUNTBLANK, MIN, MAX | ✅ somme compensée : la somme d'un million de parts vaut 1 |
 | MEDIANE, ECARTYPE, PRODUIT | MEDIAN, STDEV, PRODUCT | ✅ |
 | GRANDE.VALEUR, PETITE.VALEUR | LARGE, SMALL | ✅ sur une colonne ou une expression sur colonnes ; textes et vides ignorés ; k hors limites : #NOMBRE! |
+| ECARTYPE.STANDARD, ECARTYPEP, ECARTYPE.PEARSON | STDEV.S, STDEVP, STDEV.P | ✅ échantillon (n−1) ou population (n) ; moins de 2 valeurs (échantillon) ou aucune : #DIV/0! |
+| VAR, VAR.S, VAR.P.N | VAR, VAR.S, VAR.P | ⚠️ `VAR.P` est accepté en français et mène à VAR.P.N (même calcul que l'ancienne VAR.P d'Excel, dont le nom anglais VARP n'est pas repris : une infobulle l'indique) |
+| MODE, MODE.SIMPLE | MODE, MODE.SNGL | ✅ à égalité, la première valeur dans l'ordre du tableau ; aucune valeur répétée : #N/A |
+| CENTILE, CENTILE.INCLURE, CENTILE.EXCLURE | PERCENTILE, PERCENTILE.INC, PERCENTILE.EXC | ✅ interpolation linéaire comme Excel ; k hors de [0 ; 1] (ou trop près des bornes pour .EXCLURE), colonne sans nombre : #NOMBRE! |
+| QUARTILE, QUARTILE.INCLURE, QUARTILE.EXCLURE | QUARTILE, QUARTILE.INC, QUARTILE.EXC | ✅ quart tronqué, de 0 à 4 (de 1 à 3 pour .EXCLURE) |
+| COEFFICIENT.CORRELATION, PENTE, ORDONNEE.ORIGINE | CORREL, SLOPE, INTERCEPT | ⚠️ deux colonnes (ou expressions) d'un même tableau, ou deux plages de même forme ; seules les lignes où les deux valeurs sont des nombres comptent ; variance nulle : #DIV/0! |
 | SOMME.SI, NB.SI, MOYENNE.SI | SUMIF, COUNTIF, AVERAGEIF | ✅ critères `">=100"`, `"<>Paris"`, `"Dur*"`, `""`, `"<>"` ; `"10"` trouve le nombre 10 |
 | SOMME.SI.ENS, NB.SI.ENS, MOYENNE.SI.ENS, MAX.SI.ENS, MIN.SI.ENS | SUMIFS, COUNTIFS, AVERAGEIFS, MAXIFS, MINIFS | ✅ |
 | SOMMEPROD | SUMPRODUCT | ⚠️ colonnes d'un même tableau ; accepte des expressions : `SOMMEPROD((Ventes[Qté]>1)*Ventes[Prix])` |

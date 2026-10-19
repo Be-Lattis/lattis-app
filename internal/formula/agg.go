@@ -12,7 +12,8 @@ import (
 // Une erreur rencontrée est propagée, sauf par NB, NBVAL et NB.VIDE.
 //
 // Fn est le nom anglais de l'agrégat : SUM, AVERAGE, COUNT, COUNTA,
-// COUNTBLANK, MIN, MAX, MEDIAN, STDEV, STDEVP, VAR, VARP, PRODUCT, TEXTJOIN.
+// COUNTBLANK, MIN, MAX, MEDIAN, MODE, STDEV, STDEVP, VAR, VARP (et leurs
+// formes .S et .P), PRODUCT, TEXTJOIN.
 type Agg struct {
 	Fn       string
 	Sum      float64 // somme compensée (Neumaier) : Sum + Comp
@@ -30,7 +31,7 @@ type Agg struct {
 
 func (a *Agg) keepsVals() bool {
 	switch a.Fn {
-	case "MEDIAN", "STDEV", "STDEVP", "VAR", "VARP":
+	case "MEDIAN", "STDEV", "STDEVP", "STDEV.S", "STDEV.P", "VAR", "VARP", "VAR.S", "VAR.P", "MODE", "MODE.SNGL":
 		return true
 	}
 	return false
@@ -196,6 +197,26 @@ func (a *Agg) variance(sample bool) (float64, bool) {
 	return ss / float64(n), true
 }
 
+// mode : la valeur la plus fréquente ; à égalité, celle qui apparaît la
+// première (dans l'ordre du tableau). #N/A si aucune valeur ne se répète.
+func (a *Agg) mode() Value {
+	count := map[float64]int{}
+	hits := 1
+	for _, v := range a.Vals {
+		count[v]++
+		hits = max(hits, count[v])
+	}
+	if hits < 2 {
+		return Err(ErrNA)
+	}
+	for _, v := range a.Vals {
+		if count[v] == hits {
+			return Num(v)
+		}
+	}
+	return Err(ErrNA)
+}
+
 // Result donne le résultat de l'agrégat.
 func (a *Agg) Result() Value {
 	if a.Err != 0 {
@@ -239,8 +260,11 @@ func (a *Agg) Result() Value {
 			return Num(s[len(s)/2])
 		}
 		return number((s[len(s)/2-1] + s[len(s)/2]) / 2)
-	case "STDEV", "STDEVP", "VAR", "VARP":
-		v, ok := a.variance(a.Fn == "STDEV" || a.Fn == "VAR")
+	case "MODE", "MODE.SNGL":
+		return a.mode()
+	case "STDEV", "STDEVP", "STDEV.S", "STDEV.P", "VAR", "VARP", "VAR.S", "VAR.P":
+		sample := a.Fn == "STDEV" || a.Fn == "STDEV.S" || a.Fn == "VAR" || a.Fn == "VAR.S"
+		v, ok := a.variance(sample)
 		if !ok {
 			return Err(ErrDiv0)
 		}

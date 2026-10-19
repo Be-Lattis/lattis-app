@@ -377,7 +377,7 @@ func (c *compiler) aggregate(fn string, args []Node, sc scope, visible bool) str
 		var t *Table
 		var val string
 		al := c.newAlias()
-		if fn == "TEXTJOIN" {
+		if aggOrdered[fn] {
 			order = " ORDER BY " + al + "._pos"
 		}
 		if sp, ok, e := spanOf([]Node{a}, c.schema, sc.table); ok {

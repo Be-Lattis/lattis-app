@@ -139,7 +139,8 @@ func kindOf(n formula.Node, look colLookup, depth int) grid.Type {
 				t = numJoin(t, k(a))
 			}
 			return t
-		case "AVERAGE", "AVERAGEIF", "AVERAGEIFS", "MEDIAN", "STDEV":
+		case "AVERAGE", "AVERAGEIF", "AVERAGEIFS", "MEDIAN", "STDEV", "STDEV.S", "STDEV.P", "STDEVP", "VAR", "VAR.S", "VAR.P",
+			"PERCENTILE", "PERCENTILE.INC", "PERCENTILE.EXC", "QUARTILE", "QUARTILE.INC", "QUARTILE.EXC", "CORREL", "SLOPE", "INTERCEPT":
 			return grid.Decimal
 		case "COUNT", "COUNTA", "COUNTBLANK", "COUNTIF", "COUNTIFS", "INT":
 			return grid.Integer

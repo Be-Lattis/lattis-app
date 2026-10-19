@@ -42,6 +42,10 @@ func critAfter(i int) int { return i + 1 }
 
 func roles(rs ...role) []role { return rs }
 
+// colParam : (colonne; paramètre), twoCols : deux colonnes du même tableau.
+func colParam(n int) ([]role, bool) { return roles(column, param), n == 2 }
+func twoCols(n int) ([]role, bool)  { return roles(column, column), n == 2 }
+
 // pairRoles : (plage; critère) répétés, après un préfixe.
 func pairRoles(prefix ...role) func(int) ([]role, bool) {
 	return func(n int) ([]role, bool) {
@@ -89,6 +93,18 @@ var scans = map[string]scanDef{
 		make: func(p []Value) scanner { return &approx{key: p[0]} }},
 	"LARGE": {roles: func(n int) ([]role, bool) { return roles(column, param), n == 2 }, make: newKth(true)},
 	"SMALL": {roles: func(n int) ([]role, bool) { return roles(column, param), n == 2 }, make: newKth(false)},
+
+	// Statistiques (funcs_stats.go)
+	"PERCENTILE":     {roles: colParam, make: newQuantile(false, false)},
+	"PERCENTILE.INC": {roles: colParam, make: newQuantile(false, false)},
+	"PERCENTILE.EXC": {roles: colParam, make: newQuantile(false, true)},
+	"QUARTILE":       {roles: colParam, make: newQuantile(true, false)},
+	"QUARTILE.INC":   {roles: colParam, make: newQuantile(true, false)},
+	"QUARTILE.EXC":   {roles: colParam, make: newQuantile(true, true)},
+	"CORREL":         {roles: twoCols, make: func([]Value) scanner { return &pairStats{fn: "CORREL"} }},
+	"SLOPE":          {roles: twoCols, make: func([]Value) scanner { return &pairStats{fn: "SLOPE"} }},
+	"INTERCEPT":      {roles: twoCols, make: func([]Value) scanner { return &pairStats{fn: "INTERCEPT"} }},
+
 	"NETWORKDAYS": {roles: func(n int) ([]role, bool) { return roles(param, param, column)[:n], true },
 		make: func(p []Value) scanner { return newWorkdays(p, false) }},
 	"WORKDAY": {roles: func(n int) ([]role, bool) { return roles(param, param, column)[:n], true },

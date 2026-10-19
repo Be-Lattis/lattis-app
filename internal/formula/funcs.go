@@ -45,6 +45,10 @@ func (f funcDef) arity() string {
 // agrégées (JOINDRE.TEXTE(délimiteur; ignorer_vides; textes…)).
 var aggLead = map[string]int{"TEXTJOIN": 2}
 
+// aggOrdered : agrégats dont le résultat dépend de l'ordre des valeurs (ordre
+// d'affichage du tableau).
+var aggOrdered = map[string]bool{"TEXTJOIN": true, "MODE": true, "MODE.SNGL": true}
+
 // Catalogue des fonctions (voir analyse/catalogue-fonctions.md). Le nom
 // anglais est le nom canonique, stocké dans l'AST.
 var funcs = []funcDef{
@@ -180,6 +184,25 @@ var funcs = []funcDef{
 	{"LARGE", "GRANDE.VALEUR", 2, 2, scan, nil},
 	{"SMALL", "PETITE.VALEUR", 2, 2, scan, nil},
 	{"STDEV", "ECARTYPE", 1, -1, aggregate, nil},
+	{"STDEV.S", "ECARTYPE.STANDARD", 1, -1, aggregate, nil},
+	{"STDEVP", "ECARTYPEP", 1, -1, aggregate, nil},
+	{"STDEV.P", "ECARTYPE.PEARSON", 1, -1, aggregate, nil},
+	{"VAR", "VAR", 1, -1, aggregate, nil},
+	{"VAR.S", "VAR.S", 1, -1, aggregate, nil},
+	// VARP s'appelle VAR.P en français, le nom anglais de VAR.P.N : seule la
+	// forme récente est au catalogue, et VAR.P y mène dans les deux langues.
+	{"VAR.P", "VAR.P.N", 1, -1, aggregate, nil},
+	{"MODE", "MODE", 1, -1, aggregate, nil},
+	{"MODE.SNGL", "MODE.SIMPLE", 1, -1, aggregate, nil},
+	{"PERCENTILE", "CENTILE", 2, 2, scan, nil},
+	{"PERCENTILE.INC", "CENTILE.INCLURE", 2, 2, scan, nil},
+	{"PERCENTILE.EXC", "CENTILE.EXCLURE", 2, 2, scan, nil},
+	{"QUARTILE", "QUARTILE", 2, 2, scan, nil},
+	{"QUARTILE.INC", "QUARTILE.INCLURE", 2, 2, scan, nil},
+	{"QUARTILE.EXC", "QUARTILE.EXCLURE", 2, 2, scan, nil},
+	{"CORREL", "COEFFICIENT.CORRELATION", 2, 2, scan, nil},
+	{"SLOPE", "PENTE", 2, 2, scan, nil},
+	{"INTERCEPT", "ORDONNEE.ORIGINE", 2, 2, scan, nil},
 	{"PRODUCT", "PRODUIT", 1, -1, aggregate, nil},
 	{"TEXTJOIN", "JOINDRE.TEXTE", 3, -1, aggregate, nil},
 	{"SUBTOTAL", "SOUS.TOTAL", 2, -1, special, nil},

@@ -533,3 +533,77 @@ locale FR
 =COMMUNE(40,4168;-3,7038)	#N/A
 =COMMUNE("abc";2)	#VALEUR!
 =ESTNA(COMMUNE(0;0))	VRAI
+
+# Statistiques (audit 6, I7) : textes, vides et booléens d'une colonne ignorés, erreurs propagées
+@
+=ECARTYPE.STANDARD(2;4;4;4;5;5;7;9)	2,1380899352994
+=ECARTYPE.PEARSON(2;4;4;4;5;5;7;9)	2
+=ECARTYPEP(2;4;4;4;5;5;7;9)	2
+=ECARTYPE.PEARSON(Ventes[Prix])	86,1414922606341
+=ECARTYPE.PEARSON(Ventes[Note])	#DIV/0!
+=VAR(2;4;4;4;5;5;7;9)	4,57142857142857
+=VAR.S(1;2;3;4)	1,66666666666667
+=VAR.P.N(2;4;4;4;5;5;7;9)	4
+=VAR.P(1;2;3;4)	1,25
+=VAR(Ventes[Qté])	2,91666666666667
+=VAR(Ventes[Prix])	11130,5350333333
+=VAR.P.N(Ventes[Qté])	2,1875
+=VAR(1)	#DIV/0!
+=VAR("2";4)	2
+=VAR("abc";1)	#VALEUR!
+=VAR(1;1/0)	#DIV/0!
+=VAR(-1;-3)	2
+=VAR(Ventes[NomClient])	#N/A
+=MODE(1;2;2;3;3)	2
+=MODE(3;3;2;2)	3
+=MODE(-1;-1;2)	-1
+=MODE(1;2;3)	#N/A
+=MODE.SIMPLE(Ventes[Qté])	#N/A
+=MODE(Etapes[Valeur];10)	10
+=MODE(Etapes[Valeur];30;20)	20
+=MODE(Cell[B1:B3];Cell[A1:A3];20)	20
+=MODE("1";1)	1
+=MODE(1;1/0)	#DIV/0!
+=CENTILE(Etapes[Valeur];0,5)	20
+=CENTILE(Ventes[Qté];0,25)	1,75
+=CENTILE(Ventes[Qté];1)	5
+=CENTILE(Ventes[Qté];1,1)	#NOMBRE!
+=CENTILE(Ventes[Qté];-0,1)	#NOMBRE!
+=CENTILE(Ventes[Note];0,5)	#NOMBRE!
+=CENTILE(Ventes[Qté];"0,5")	2,5
+=CENTILE(Ventes[Qté];"x")	#VALEUR!
+=CENTILE(Ventes[NomClient];0,5)	#N/A
+=CENTILE(Cell[B1:B3];0,5)	20
+=CENTILE.INCLURE(Ventes[Prix];0)	10
+=CENTILE.EXCLURE(Ventes[Qté];0,25)	1,25
+=CENTILE.EXCLURE(Ventes[Qté];0,1)	#NOMBRE!
+=QUARTILE(Ventes[Qté];1)	1,75
+=QUARTILE(Ventes[Qté];4)	5
+=QUARTILE(Ventes[Qté];5)	#NOMBRE!
+=QUARTILE(Ventes[Qté];2,9)	2,5
+=QUARTILE(Ventes[Prix]*Ventes[Qté];3)	88,2475
+=QUARTILE.INCLURE(Ventes[Qté];0)	1
+=QUARTILE.EXCLURE(Ventes[Qté];3)	4,5
+=QUARTILE.EXCLURE(Ventes[Qté];0)	#NOMBRE!
+=COEFFICIENT.CORRELATION(Etapes[Valeur];Etapes[Valeur])	1
+=COEFFICIENT.CORRELATION(Ventes[Prix];Ventes[Qté])	-0,900415011044277
+=COEFFICIENT.CORRELATION(Ventes[Prix];Clients[Id])	#VALEUR!
+=COEFFICIENT.CORRELATION(Ventes[Note];Ventes[Qté])	#DIV/0!
+=PENTE(Cell[B1:B3];Cell[A1:A3])	10
+=ORDONNEE.ORIGINE(Cell[B1:B3];Cell[A1:A3])	0
+=PENTE(Ventes[Qté];Ventes[Qté]*2)	0,5
+=ORDONNEE.ORIGINE(Ventes[Qté]+1;Ventes[Qté]*2)	1
+=PENTE(Ventes[Qté];Ventes[Qté]*0+1)	#DIV/0!
+=PENTE(Ventes[Qté];Ventes[NomClient])	#N/A
+=PENTE(1;2)	#DIV/0!
+locale EN
+=STDEV.S(2,4,4,4,5,5,7,9)	2,1380899352994
+=VAR.P(1,2,3,4)	1,25
+=PERCENTILE.INC(Etapes[Valeur],0.5)	20
+=CORREL(Etapes[Valeur],Etapes[Valeur])	1
+locale FR
+
+@ Ventes 2
+=CENTILE(Ventes[Qté];[Qté]/10)	1,9
+=RANG([Qté])-QUARTILE(Ventes[Qté];[Payé]*4)	1
+@
