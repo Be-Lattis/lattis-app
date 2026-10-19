@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -826,7 +827,7 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 			}
 			return false, t.dropColumns(tb, idx)
 		}
-		cells := 0
+		cells, dropped := 0, 0
 		for _, tb := range tables {
 			switch {
 			case !zone.meets(tb):
@@ -846,6 +847,18 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 					continue
 				}
 				ids, err := t.ridsAt(&tb, first, last)
+				if err != nil {
+					return err
+				}
+				// Lignes dont l'effacement vide quelque chose : candidates à
+				// la suppression si plus rien n'y reste (emptiedRows).
+				var cleared []Column
+				for c := max(c0, tb.Col); c <= min(c1, tb.Right()); c++ {
+					if col := tb.Cols[c-tb.Col]; col.Formula == "" {
+						cleared = append(cleared, col)
+					}
+				}
+				touched, err := t.filledRows(tb, ids, cleared)
 				if err != nil {
 					return err
 				}
@@ -874,6 +887,16 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 						}
 					}
 				}
+				// Lignes devenues vides : elles partent (demande de Louis,
+				// décision 0009), comme si elles n'avaient jamais été tapées.
+				if n, err := t.dropEmptiedRows(tb, touched); err != nil {
+					return err
+				} else if n > 0 {
+					dropped += n
+					if tb, err = t.table(tb.ID); err != nil {
+						return err
+					}
+				}
 				// Coupé en deux : l'ancien tableau n'existe plus (audit 2 I3).
 				if split, err := dropCleared(tb); err != nil || split {
 					if err != nil {
@@ -887,6 +910,12 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 				}
 			}
 		}
+		switch {
+		case dropped == 1:
+			t.notes = append(t.notes, "1 ligne vide supprimée (Ctrl+Z pour annuler)")
+		case dropped > 1:
+			t.notes = append(t.notes, fmt.Sprintf("%d lignes vides supprimées (Ctrl+Z pour annuler)", dropped))
+		}
 		if err := t.clearPivots(sheet, zone); err != nil {
 			return err
 		}
@@ -898,6 +927,110 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 		}
 		return t.deleteWhere(`_lattis_cells`, `sheet = ? AND row BETWEEN ? AND ? AND col BETWEEN ? AND ?`, sheet, r0, r1, c0, c1)
 	})
+}
+
+// filledSQL : la cellule de la colonne c de la ligne d porte quelque chose
+// (une valeur, ou une saisie hors type).
+func filledSQL(tb Table, c Column) string {
+	return fmt.Sprintf(`(coalesce(CAST(d.%s AS TEXT), '') <> '' OR EXISTS (SELECT 1 FROM _lattis_invalid i WHERE i.tbl = %d AND i.rid = d.id AND i.col = %d))`, colSQL(c.ID), tb.ID, c.ID)
+}
+
+// idList écrit des clés techniques en liste SQL (des entiers).
+func idList(ids []int64) string {
+	s := make([]string, len(ids))
+	for i, id := range ids {
+		s[i] = strconv.FormatInt(id, 10)
+	}
+	return strings.Join(s, ", ")
+}
+
+// filledRows donne, parmi ids (dans leur ordre), les lignes qui ont une
+// valeur dans l'une des colonnes cols.
+func (t *tx) filledRows(tb Table, ids []int64, cols []Column) ([]int64, error) {
+	if len(ids) == 0 || len(cols) == 0 {
+		return nil, nil
+	}
+	conds := make([]string, len(cols))
+	for i, c := range cols {
+		conds[i] = filledSQL(tb, c)
+	}
+	rs, err := t.query(fmt.Sprintf(`SELECT d.id FROM %s AS d WHERE d.id IN (%s) AND (%s)`, tb.sql(), idList(ids), strings.Join(conds, " OR ")))
+	if err != nil {
+		return nil, err
+	}
+	defer rs.Close()
+	in := map[int64]bool{}
+	for rs.Next() {
+		var id int64
+		if err := rs.Scan(&id); err != nil {
+			return nil, err
+		}
+		in[id] = true
+	}
+	if err := rs.Err(); err != nil {
+		return nil, err
+	}
+	var out []int64
+	for _, id := range ids {
+		if in[id] {
+			out = append(out, id)
+		}
+	}
+	return out, nil
+}
+
+// dropEmptiedRows supprime, parmi les lignes touched qu'un effacement vient
+// de vider, celles où plus rien n'est saisi (décision 0009) : les colonnes
+// calculées, la colonne de catégorie masquée par l'onglet à choix (sa valeur
+// est imposée) et la mise en forme ne comptent pas ; la clé, si, comme
+// toute colonne saisie. Un tableau garde au moins une ligne. Rien ne part
+// d'un tableau chargé par une requête ou publié en lecture seule : les
+// cellules restent seulement vidées. Rend le nombre de lignes supprimées.
+func (t *tx) dropEmptiedRows(tb Table, touched []int64) (int, error) {
+	if len(touched) == 0 {
+		return 0, nil
+	}
+	if t.lockTable(tb.ID) != nil {
+		return 0, nil
+	}
+	var queries int
+	if err := t.row(`SELECT count(*) FROM _lattis_queries WHERE target = ?`, tb.ID).Scan(&queries); err != nil || queries > 0 {
+		return 0, err
+	}
+	var content []Column
+	for _, c := range tb.Cols {
+		if c.Formula != "" {
+			continue
+		}
+		if ch := tb.choice; ch != nil && !ch.All && c.ID == ch.Col.ID {
+			continue
+		}
+		content = append(content, c)
+	}
+	filled, err := t.filledRows(tb, touched, content)
+	if err != nil {
+		return 0, err
+	}
+	keep := map[int64]bool{}
+	for _, id := range filled {
+		keep[id] = true
+	}
+	var empty []int64
+	for _, id := range touched {
+		if !keep[id] {
+			empty = append(empty, id)
+		}
+	}
+	if len(empty) >= tb.Rows {
+		empty = empty[1:] // le tableau garde sa première ligne
+	}
+	if len(empty) == 0 {
+		return 0, nil
+	}
+	if err := t.trashRows(tb, idList(empty)); err != nil {
+		return 0, err
+	}
+	return len(empty), nil
 }
 
 // clearPivots supprime les tableaux croisés effacés avec la zone, comme

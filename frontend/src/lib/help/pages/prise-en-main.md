@@ -10,6 +10,7 @@ Tapez quelques lignes n'importe où sur la feuille : une ligne d'en-têtes, puis
 - Une ligne tapée juste sous un tableau l'agrandit ; une colonne tapée juste à droite aussi.
 - Un bloc collé depuis Excel ou un autre logiciel devient un tableau. Sans ligne d'en-têtes, clic droit › Tableau › « Sortir l'en-tête ».
 - Glissez un tableau à côté d'un autre pour les fusionner.
+- `Suppr` sur des cellules d'un tableau : une ligne où il ne reste plus rien de saisi est supprimée, comme si elle n'avait jamais été tapée (une colonne calculée ou la colonne masquée d'un onglet à choix ne la retiennent pas ; la barre d'état dit « N lignes vides supprimées », `Ctrl+Z` les rend). Une ligne déjà vide où `Suppr` n'a rien effacé reste.
 - Ce qui n'est pas dans un tableau reste une **cellule libre**, comme dans Excel : un titre, un paramètre, un total.
 
 Tout s'annule avec `Ctrl+Z`, y compris la création d'un tableau.

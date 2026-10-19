@@ -393,7 +393,7 @@ func TestMoveOutOfTable(t *testing.T) {
 }
 
 // Effacer les dernières lignes d'un tableau les supprime (choix de Louis) ;
-// une ligne vidée au milieu reste.
+// une ligne vidée au milieu aussi, depuis la décision 0009.
 func TestClearBottomRows(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
@@ -403,13 +403,13 @@ func TestClearBottomRows(t *testing.T) {
 	if err := d.ClearRange(ctx, 1, 2, 0, 2, 0, false); err != nil {
 		t.Fatal(err)
 	}
-	if ts := tablesOf(t, d); ts[0].Rows != 4 {
+	if ts := tablesOf(t, d); ts[0].Rows != 3 {
 		t.Fatalf("ligne du milieu : %+v", ts)
 	}
-	if err := d.ClearRange(ctx, 1, 3, 0, 4, 0, false); err != nil {
+	if err := d.ClearRange(ctx, 1, 2, 0, 3, 0, false); err != nil {
 		t.Fatal(err)
 	}
-	// Lignes 3 et 4 vidées, et la 2 l'était déjà : il reste la 1.
+	// Lignes 3 et 4 vidées : il reste la 1.
 	if ts := tablesOf(t, d); len(ts) != 1 || ts[0].Rows != 1 {
 		t.Fatalf("lignes du bas : %+v", ts)
 	}
