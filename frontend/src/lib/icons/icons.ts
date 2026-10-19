@@ -52,6 +52,12 @@ export const icons = {
 	'border-all': '<rect x="4" y="4" width="16" height="16"/><path d="M12 4v16M4 12h16"/>',
 	'border-outline': '<rect class="a" x="4" y="4" width="16" height="16"/><path stroke-dasharray="1.5 2" d="M12 6v12M6 12h12"/>',
 	'border-none': '<path stroke-dasharray="1.5 2" d="M4 4h16v16H4zM12 4v16M4 12h16"/>',
+	// Effacer : une gomme posée de biais, sa trace dessous.
+	'clear-format': '<path d="M14.5 4.5 20 10l-8.5 8.5H7L4 15.5z"/><path class="a" d="M9 10l5.5 5.5"/><path d="M13 20.5h7.5"/>',
+	// Remplissage (recopier) : une cellule pleine, sa flèche vers le bas.
+	'fill-down': '<rect x="5" y="3.5" width="14" height="6" rx="1"/><rect x="5" y="14.5" width="14" height="6" rx="1"/><path class="a" d="M12 7v9.5M9 13.5l3 3 3-3"/>',
+	// Quadrillage de la feuille (à l'écran) : un réseau fin, sans cadre de bordure.
+	gridlines: '<path stroke-dasharray="2 1.5" d="M3.5 8.5h17M3.5 15.5h17M8.5 3.5v17M15.5 3.5v17"/><rect class="af" x="9.5" y="9.5" width="5" height="5" rx=".5"/>',
 	'format-painter': '<rect x="4" y="3.5" width="13" height="6" rx="1.5"/><path d="M17 6.5h2.5V12h-8v3"/><rect class="af" x="10" y="15" width="3" height="6" rx="1"/>',
 	'decimal-more': '<path d="M3.5 17.5h.01"/><path d="M8 9.5a2 2 0 1 1 4 0v5a2 2 0 1 1-4 0zM14 9.5a2 2 0 1 1 4 0v5a2 2 0 1 1-4 0z"/><path class="a" d="M17 21h5m-2-2 2 2-2 2"/>',
 	'decimal-fixed': '<path d="M3.5 17.5h.01"/><path d="M8 9.5a2 2 0 1 1 4 0v5a2 2 0 1 1-4 0zM14 9.5a2 2 0 1 1 4 0v5a2 2 0 1 1-4 0z"/><path class="a" d="M7 20.5h13"/>',
@@ -193,6 +199,8 @@ export const icons = {
 
 	// Fichier, historique
 	file: '<path d="M14 3.5H7A1.5 1.5 0 0 0 5.5 5v14A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5V8zM14 3.5V8h4.5"/>',
+	// Fichier texte délimité (CSV) : la page et ses virgules.
+	'file-csv': '<path d="M14 3.5H7A1.5 1.5 0 0 0 5.5 5v14A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5V8zM14 3.5V8h4.5"/><path class="a" d="M9 12.5v2l-.75 1.25M12.25 12.5v2l-.75 1.25M15.5 12.5v2l-.75 1.25"/>',
 	'new-file': '<path d="M14 3.5H7A1.5 1.5 0 0 0 5.5 5v14A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5V8zM14 3.5V8h4.5"/><path class="a" d="M12 11v6M9 14h6"/>',
 	open: '<path d="M3.5 18.5V6A1.5 1.5 0 0 1 5 4.5h4l2 2.5h7a1.5 1.5 0 0 1 1.5 1.5V10"/><path class="a" d="M3.5 18.5 6.3 11a1.5 1.5 0 0 1 1.4-1h13a1 1 0 0 1 .95 1.3l-2.4 7.2H3.5z"/>',
 	save: '<path d="M5 3.5h11.5l4 4V19a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 19V5A1.5 1.5 0 0 1 5 3.5z"/><path d="M7.5 3.5v4.5h8V3.5"/><path class="a" d="M7 20.5v-6h10v6"/>',

@@ -17,7 +17,25 @@ export const BROWSER_KEYS: Record<string, string> = {
 	'Ctrl+Pg.Préc': 'Alt+Pg.Préc'
 };
 
-/** Touches à afficher pour un raccourci : son équivalent en web s'il en a un. */
-export function keyLabel(keys: string, web = isWeb): string {
-	return web ? (BROWSER_KEYS[keys] ?? keys) : keys;
+const agent = typeof navigator === 'undefined' ? '' : navigator.userAgent;
+
+/** macOS : les raccourcis s'écrivent avec Cmd (la grille prend Cmd comme Ctrl). */
+export const isMac: boolean = /Mac/.test(agent);
+
+/** Bureau Windows : son imprimante PDF a un nom connu. */
+export const isWindowsDesktop: boolean = !isWeb && /Windows/.test(agent);
+
+/** Texte d'aide ou d'infobulle : Ctrl+… devient Cmd+… sur macOS. */
+export function hintKeys(text: string, mac = isMac): string {
+	return mac ? text.replace(/\bCtrl\+/g, 'Cmd+') : text;
+}
+
+/** Touches à afficher pour un raccourci : son équivalent en web s'il en a un, Cmd sur macOS. */
+export function keyLabel(keys: string, web = isWeb, mac = isMac): string {
+	return hintKeys(web ? (BROWSER_KEYS[keys] ?? keys) : keys, mac);
+}
+
+/** Comment obtenir un PDF depuis la fenêtre d'impression, selon le système. */
+export function pdfPrinterHint(windows = isWindowsDesktop): string {
+	return windows ? 'imprimante « Microsoft Print to PDF »' : 'destination « Enregistrer au format PDF »';
 }

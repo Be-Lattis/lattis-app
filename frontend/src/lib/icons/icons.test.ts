@@ -9,7 +9,15 @@ describe('icônes', () => {
 		for (const [a, b] of [
 			['function', 'calculate'],
 			['zoom', 'zoom-100'],
-			['conditional-format', 'warning']
+			['conditional-format', 'warning'],
+			// Audit 3, M2 : Effacer, Supprimer les doublons et la note ; Rechercher et Remplacer ; Quadrillage et Bordures ; les deux tris.
+			['clear-format', 'remove-duplicates'],
+			['trash', 'remove-duplicates'],
+			['search', 'replace'],
+			['gridlines', 'border-all'],
+			['sort-asc', 'sort-desc'],
+			['file-csv', 'file'],
+			['printer', 'file']
 		] as const)
 			expect(icons[a]).not.toBe(icons[b]);
 	});
