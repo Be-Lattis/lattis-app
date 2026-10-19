@@ -297,6 +297,14 @@ export function CloseDocument(): $CancellablePromise<void> {
 }
 
 /**
+ * CloseRequestSeen : l'interface a reçu la demande de fermeture de la
+ * fenêtre et pose la question.
+ */
+export function CloseRequestSeen(): $CancellablePromise<void> {
+    return $Call.ByID(2763517820);
+}
+
+/**
  * ConnectionTables liste les tables d'une connexion du classeur
  * (PostgreSQL, MySQL, SQL Server ; vide pour une connexion Web).
  */
@@ -1208,6 +1216,14 @@ export function QueryData(server: string, q: string): $CancellablePromise<grid$0
  */
 export function QueryToSheet(q: string, name: string, headers: string[] | null): $CancellablePromise<$models.QuerySheet> {
     return $Call.ByID(2558197242, q, name, headers);
+}
+
+/**
+ * QuitApp ferme la fenêtre une fois le classeur enregistré ou fermé (réponse
+ * à CloseRequestEvent).
+ */
+export function QuitApp(): $CancellablePromise<void> {
+    return $Call.ByID(419681788);
 }
 
 /**

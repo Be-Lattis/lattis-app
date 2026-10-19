@@ -140,6 +140,8 @@
 	let recent = $state<string[]>([]);
 	// Fermer un classeur modifié : enregistrer d'abord ?
 	let closing = $state(false);
+	// Fermeture de la fenêtre en cours : une fois le classeur fermé, on quitte.
+	let quitting = $state(false);
 	// Fichier endommagé à l'ouverture : proposer d'en récupérer les données.
 	let damaged = $state<DamagedFile | null>(null);
 	// Classeur ouvert sur un autre poste (verrou ~$) : lecture seule, ou l'ouvrir quand même.
@@ -487,13 +489,19 @@
 	async function resolveSave(overwrite: boolean | null) {
 		const c = conflict;
 		conflict = null;
-		if (!c || overwrite === null) return;
+		if (!c || overwrite === null) {
+			quitting = false;
+			return;
+		}
 		docState = await saving(() => DocumentService.ResolveSave(overwrite));
 		if (docState.conflict) {
 			conflict = { ...docState.conflict, close: c.close };
 			return;
 		}
-		if (docState.dirty) return; // copie annulée
+		if (docState.dirty) {
+			quitting = false; // copie annulée
+			return;
+		}
 		notice = `Enregistré : ${docState.path}`;
 		await loadRecent();
 		if (c.close) await closeDoc(false);
@@ -528,7 +536,10 @@
 	async function closeDoc(save?: boolean) {
 		closing = false;
 		// Écouteurs « before_close » des scripts : ils peuvent garder le classeur ouvert.
-		if (mode === 'doc' && save === undefined && !(await DocumentService.BeforeClose())) return;
+		if (mode === 'doc' && save === undefined && !(await DocumentService.BeforeClose())) {
+			quitting = false;
+			return;
+		}
 		if (mode === 'doc' && docState.dirty && save === undefined) {
 			closing = true;
 			return;
@@ -543,6 +554,7 @@
 			if (docState.dirty) {
 				// Enregistrement abandonné (ou refusé par un script : before_save).
 				if (docState.notice) notice = docState.notice;
+				quitting = false;
 				return;
 			}
 		}
@@ -554,7 +566,31 @@
 		sheetStatus = null;
 		view = 'grid';
 		mode = 'closed';
+		if (quitting) {
+			quitting = false;
+			await DocumentService.QuitApp();
+			return;
+		}
 		await loadRecent();
+	}
+
+	/** Croix de la fenêtre avec un classeur modifié : la question de Fichier › Fermer, puis Lattis se ferme. */
+	async function requestQuit() {
+		DocumentService.CloseRequestSeen().catch(() => {});
+		if (quitting) return; // question déjà posée
+		quitting = true;
+		try {
+			await closeDoc();
+		} catch (e) {
+			quitting = false;
+			throw e;
+		}
+	}
+
+	/** Réponse « Annuler » à la question d'enregistrement. */
+	function cancelClose() {
+		closing = false;
+		quitting = false;
 	}
 
 	async function startDoc() {
@@ -755,6 +791,10 @@
 		});
 		// Classeur ouvert depuis le système pendant que l'application tourne
 		// (macOS : double-clic sur un .lattis dans le Finder).
+		// Croix de la fenêtre (bureau) avec un classeur modifié.
+		const offQuit = Events.On('window:close-request', () => {
+			requestQuit().catch((x) => (notice = err(x)));
+		});
 		const offOpen = Events.On('doc:open-file', (e: { data: string }) => {
 			openPath(e.data).catch((x) => (notice = err(x)));
 		});
@@ -884,6 +924,7 @@
 			off();
 			offUI();
 			offOpen();
+			offQuit();
 			offLink();
 			offShare();
 			window.removeEventListener('keydown', keys);
@@ -2136,12 +2177,13 @@
 	{/if}
 	{#if closing}
 		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true" aria-label="Enregistrer les modifications" use:modal={() => (closing = false)}>
-				<p>Enregistrer les modifications de « {docState.title} » avant de le fermer ?</p>
+			<div class="modal" role="dialog" aria-modal="true" aria-label="Enregistrer les modifications" use:modal={cancelClose}>
+				<p>Enregistrer les modifications de « {docState.title} » avant {quitting ? 'de quitter Lattis' : 'de le fermer'} ?</p>
 				<div class="actions">
-					<button class="primary" onclick={() => closeDoc(true).catch((e) => (notice = err(e)))}>Enregistrer</button>
-					<button onclick={() => closeDoc(false).catch((e) => (notice = err(e)))}>Ne pas enregistrer</button>
-					<button onclick={() => (closing = false)}>Annuler</button>
+					<button class="primary" onclick={() => closeDoc(true).catch((e) => ((quitting = false), (notice = err(e))))}>Enregistrer</button>
+					<button onclick={() => closeDoc(false).catch((e) => ((quitting = false), (notice = err(e))))}>Ne pas enregistrer</button>
+					<button onclick={cancelClose}>Annuler</button>
+
 				</div>
 			</div>
 		</div>
@@ -2175,12 +2217,12 @@
 	{/if}
 	{#if conflict}
 		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true" aria-label="Classeur modifié par ailleurs" use:modal={() => (conflict = null)}>
+			<div class="modal" role="dialog" aria-modal="true" aria-label="Classeur modifié par ailleurs" use:modal={() => resolveSave(null)}>
 				<p>{conflict.message}.</p>
 				<p class="hint">« Enregistrer une copie » garde les deux versions ; « Écraser » remplace le fichier par la vôtre.</p>
 				<div class="actions">
-					<button class="primary" onclick={() => resolveSave(false).catch((e) => (notice = err(e)))}>Enregistrer une copie</button>
-					<button onclick={() => resolveSave(true).catch((e) => (notice = err(e)))}>Écraser</button>
+					<button class="primary" onclick={() => resolveSave(false).catch((e) => ((quitting = false), (notice = err(e))))}>Enregistrer une copie</button>
+					<button onclick={() => resolveSave(true).catch((e) => ((quitting = false), (notice = err(e))))}>Écraser</button>
 					<button onclick={() => resolveSave(null)}>Annuler</button>
 				</div>
 			</div>

@@ -18,6 +18,7 @@ declare module "@wailsio/runtime" {
             "doc:open-file": string;
             "script:print": string;
             "ui:command": bridge$0.UICommand;
+            "window:close-request": void;
         }
     }
 }

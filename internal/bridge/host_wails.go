@@ -5,8 +5,8 @@ package bridge
 import (
 	"context"
 	"errors"
+	"time"
 
-	"github.com/lalamefine/lattis/internal/api"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 	"github.com/zalando/go-keyring"
@@ -25,6 +25,8 @@ func init() {
 	application.RegisterEvent[UICommand](UIEvent)
 	application.RegisterEvent[string](OpenFileEvent)
 	application.RegisterEvent[string](PrintEvent)
+	application.RegisterEvent[application.Void](CloseRequestEvent)
+
 }
 
 type wailsHost struct{}
@@ -158,12 +160,18 @@ func (s *DocumentService) ServiceStartup(ctx context.Context, _ application.Serv
 	return s.startup(ctx)
 }
 
-// GuardClose fait passer la fermeture de la fenêtre par les écouteurs
-// before_close du classeur ouvert : la fermeture attend leur réponse, et
-// n'a lieu que s'ils la laissent faire.
+// GuardClose fait passer la fermeture de la fenêtre par la question
+// « Enregistrer les modifications ? » si le classeur est modifié (posée par
+// l'interface, qui appelle ensuite QuitApp), sinon par les écouteurs
+// before_close du classeur : la fermeture attend leur réponse, et n'a lieu
+// que s'ils la laissent faire.
 func GuardClose(s *DocumentService, w *application.WebviewWindow) {
 	w.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
-		if s.ev.closeOK.Load() || !s.listening(api.EventBeforeClose) {
+		switch s.windowClosing(time.Now()) {
+		case closeAllow:
+			return
+		case closeAsked:
+			e.Cancel()
 			return
 		}
 		e.Cancel()

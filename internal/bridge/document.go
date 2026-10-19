@@ -84,17 +84,18 @@ type DocumentService struct {
 	// memo garde les résultats coûteux du menu ▾ d'une colonne (valeurs du
 	// filtre, contrôle de clé, mélange de types), jusqu'à la prochaine
 	// modification de leur tableau.
-	memo  map[memoKey]memoVal
-	sheet int64 // feuille affichée : Cell_A1 de l'onglet SQL s'y lit
-	ui    uiState
-	mcp   mcpState
-	demo  *demoRun   // classeur de démonstration demandé au lancement
-	pq    pqState    // base de travail des requêtes d'import (query.go)
-	ev    eventLoop  // évènements du classeur (events.go)
-	ai    aiState    // conversation de l'onglet IA (ai.go)
-	share shareState // classeur partagé : suivi du serveur (sharing.go)
-	data  dataWatch  // données du Data Lake liées : suivi en direct (data.go)
-	sql   sqlRuns    // requêtes en cours de l'onglet SQL (execute.go)
+	memo     map[memoKey]memoVal
+	sheet    int64 // feuille affichée : Cell_A1 de l'onglet SQL s'y lit
+	ui       uiState
+	mcp      mcpState
+	demo     *demoRun     // classeur de démonstration demandé au lancement
+	pq       pqState      // base de travail des requêtes d'import (query.go)
+	ev       eventLoop    // évènements du classeur (events.go)
+	closeReq closeRequest // fermeture de la fenêtre demandée (closewin.go)
+	ai       aiState      // conversation de l'onglet IA (ai.go)
+	share    shareState   // classeur partagé : suivi du serveur (sharing.go)
+	data     dataWatch    // données du Data Lake liées : suivi en direct (data.go)
+	sql      sqlRuns      // requêtes en cours de l'onglet SQL (execute.go)
 
 	// Classeur à ouvrir au lancement (association de fichiers, launch.go).
 	launch launchState

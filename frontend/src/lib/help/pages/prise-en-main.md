@@ -58,7 +58,7 @@ Voir [Formules](formules) pour les références et la liste des fonctions. Penda
 
 ## Enregistrer
 
-Un classeur est un seul fichier `.lattis` (une base SQLite et sa description). `Ctrl+S` enregistre ; si Lattis se ferme sans enregistrer, les modifications sont proposées à la récupération au démarrage suivant.
+Un classeur est un seul fichier `.lattis` (une base SQLite et sa description). `Ctrl+S` enregistre. Fermer le classeur ou la fenêtre de Lattis avec des modifications non enregistrées demande d'abord s'il faut les enregistrer ; si Lattis s'arrête sans enregistrer (panne, arrêt forcé), les modifications sont proposées à la récupération au démarrage suivant.
 
 L'historique d'annulation n'est jamais enregistré dans le fichier : `Ctrl+Z` marche jusqu'à la fermeture du classeur, même après `Ctrl+S`, mais un fichier rouvert (ou envoyé à quelqu'un) n'a plus d'historique, ni les colonnes ou lignes supprimées.
 
