@@ -10,7 +10,7 @@ import (
 var luaCategory = map[string]string{
 	"sheets": "sheets", "cells": "cells", "tables": "tables", "columns": "columns",
 	"ui": "ui", "charts": "objects", "pivots": "objects", "buttons": "objects", "controls": "controls",
-	"doc": "workbook", "scripts": "workbook", "formulas": "workbook",
+	"doc": "workbook", "scripts": "workbook", "formulas": "workbook", "help": "workbook",
 	"queries": "workbook", "connections": "workbook",
 	"http": "http", "pages": "sheets", "events": "events",
 }

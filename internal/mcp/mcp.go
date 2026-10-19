@@ -279,7 +279,17 @@ func (s *Server) name() string {
 const instructions = `Lattis est un tableur relationnel : chaque tableau d'une feuille est une table SQLite. ` +
 	`Les feuilles se désignent par leur nom, les tableaux par leur nom, les colonnes par leur nom ; les lignes et colonnes de la feuille se comptent à partir de 1. ` +
 	`Commencez par sheets_list, sheets_get et tables_list ; lisez avec db_query (SQL avec les noms affichés) ou tables_rows, écrivez avec cells_set, cells_paste, db_execute et les outils tables_*, columns_*. ` +
-	`Chaque outil qui modifie le classeur forme une étape que l'utilisateur peut annuler (Ctrl+Z) ; scripts_run exécute du Lua avec les mêmes fonctions (db.query, sheets.add, ui.select…).`
+	`Chaque outil qui modifie le classeur forme une étape que l'utilisateur peut annuler (Ctrl+Z) ; scripts_run exécute du Lua avec les mêmes fonctions (db.query, sheets.add, ui.select…).` +
+	"\n\nAide : help_search(query) cherche dans l'aide de Lattis (la même que le volet d'aide de l'application) ; help_search(page) lit une page entière, help_search() en donne la liste. Consultez-la avant une manip que vous ne connaissez pas." +
+	"\n\nManips courantes :" +
+	"\n- Voir la disposition d'une feuille (tableaux, tableaux croisés, graphiques, cellules libres) : sheets_get ; lire une plage telle qu'affichée : cells_read." +
+	"\n- Saisir des données : cells_paste (une ligne d'en-têtes puis des lignes fait un tableau ; range = true les garde en cellules libres)." +
+	"\n- Titre pris pour l'en-tête d'un tableau : tables_header_to_title (la 1re ligne devient l'en-tête, l'ancien en titre)." +
+	"\n- Total ou note pris dans la dernière ligne : tables_last_row_out." +
+	"\n- Ligne de groupes au-dessus des en-têtes (BOISEMENT sur Nom, Statut…) : tables_two_level_headers(table, true) ; les colonnes s'appellent alors « Groupe.Sous »." +
+	"\n- Clé d'un tableau (valeurs uniques, recherches REFERENCE) : tables_key_check puis tables_set_key, ou tables_keep_row_numbers pour chercher par numéro de ligne." +
+	"\n- Colonne calculée : columns_insert puis une formule par nom de colonne (=[Prix]*[Quantité]) ; formules d'Excel traduites (RECHERCHEV devient REFERENCE)." +
+	"\n- Tableau croisé : pivots_create ; graphique : charts_create ; mise en page et impression : sheets_set_page_setup."
 
 func toolResult(v any, isErr bool) map[string]any {
 	var text string

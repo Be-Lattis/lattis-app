@@ -70,6 +70,7 @@ schéma de chaque outil (`tools/list`).
 | Requêtes d'import | `queries_list`, `queries_save`, `queries_preview`, `queries_refresh`, `queries_refresh_all`, `queries_delete`, `connections_list` (sans mot de passe : une connexion PostgreSQL qui en demande un se déverrouille depuis l'interface) |
 | Pages HTML | `pages_add`, `pages_get`, `pages_set` (onglets « page HTML » : HTML, CSS et JavaScript affichés dans un cadre isolé) |
 | Réseau | `http_get`, `http_post`, `http_request` (seulement vers un hôte déjà autorisé pour le classeur, voir ci-dessous) |
+| Aide | `help_search` : cherche dans l'aide de Lattis (les pages du volet d'aide), rend les sections pertinentes, une page entière (`page`) ou la liste des pages ; les instructions envoyées à la connexion y renvoient pour les manips courantes |
 
 Une feuille protégée (Révision › Protéger la feuille, ou `sheets_protect`) refuse toute
 écriture, outils `cells_*`, `tables_*`, `columns_*`, objets et `db_execute` compris, avec

@@ -1,0 +1,46 @@
+package api
+
+import (
+	"fmt"
+
+	"github.com/lalamefine/lattis/internal/helpdoc"
+)
+
+// Aide de l'application, cherchable : la même que le volet d'aide, pour les
+// clients MCP, l'assistant et les scripts.
+func init() {
+	register(&Command{
+		Name:    "help.search",
+		Summary: "Cherche dans l'aide de Lattis (les pages du volet d'aide) : rend les sections qui parlent des mots donnés, ou une page entière, ou la liste des pages.",
+		Details: "query : mots à chercher (par exemple « en-têtes sur deux lignes », « sortir l'en-tête », « clé », « graphique filtre ») ; page : identifiant d'une page à lire en entier (voir la liste rendue sans paramètre). Sans query ni page : la liste des pages. Les procédures décrites (menus, clics) ont souvent une commande équivalente : tables.two_level_headers, tables.header_to_title, tables.set_key…",
+		Returns: "{ {page, title, text}, ... } ou {id, title, text} ou { {id, title}, ... }",
+		Params: []Param{
+			{Name: "query", Type: String, Desc: "mots à chercher", Optional: true},
+			{Name: "page", Type: String, Desc: "identifiant d'une page (prise-en-main, formules, sql…)", Optional: true},
+		},
+		Example: `for _, s in ipairs(help.search("en-têtes sur deux lignes")) do
+  print(s.page, s.title)
+end`,
+		Run: func(c *Call) (any, error) {
+			page, err := c.Str("page")
+			if err != nil {
+				return nil, err
+			}
+			if page != "" {
+				p, ok := helpdoc.Get(page)
+				if !ok {
+					return nil, fmt.Errorf("page d'aide inconnue : %s (help.search sans paramètre donne la liste)", page)
+				}
+				return p, nil
+			}
+			q, err := c.Str("query")
+			if err != nil {
+				return nil, err
+			}
+			if q == "" {
+				return helpdoc.Pages(), nil
+			}
+			return helpdoc.Search(q, 6), nil
+		},
+	})
+}

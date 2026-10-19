@@ -1,0 +1,143 @@
+// Package helpdoc cherche dans l'aide de l'application (pages Markdown du
+// volet d'aide), découpée en sections par titre : la même aide pour
+// l'utilisateur, l'assistant, les scripts et les clients MCP.
+package helpdoc
+
+import (
+	"io/fs"
+	"path"
+	"slices"
+	"strings"
+	"sync"
+	"unicode"
+
+	"github.com/lalamefine/lattis/frontend/src/lib/help/pages"
+)
+
+// Section est une partie d'une page d'aide (sous un titre ## ou ###).
+type Section struct {
+	Page  string `json:"page"`
+	Title string `json:"title"`
+	Text  string `json:"text"`
+}
+
+// Page est une page d'aide entière.
+type Page struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+	Text  string `json:"text,omitempty"`
+}
+
+var (
+	once     sync.Once
+	pageList []Page
+	sections []Section
+)
+
+func load() {
+	files, _ := fs.Glob(pages.FS, "*.md")
+	for _, f := range files {
+		b, err := pages.FS.ReadFile(f)
+		if err != nil {
+			continue
+		}
+		id := strings.TrimSuffix(path.Base(f), ".md")
+		text := strings.ReplaceAll(string(b), "\r\n", "\n")
+		p := Page{ID: id, Title: id, Text: text}
+		cur := Section{Page: id}
+		var body strings.Builder
+		flush := func() {
+			if t := strings.TrimSpace(body.String()); t != "" || cur.Title != "" {
+				cur.Text = t
+				sections = append(sections, cur)
+			}
+			body.Reset()
+		}
+		for _, line := range strings.Split(text, "\n") {
+			switch {
+			case strings.HasPrefix(line, "# "):
+				p.Title = strings.TrimSpace(line[2:])
+				cur.Title = p.Title
+			case strings.HasPrefix(line, "## "), strings.HasPrefix(line, "### "):
+				flush()
+				cur = Section{Page: id, Title: strings.TrimSpace(strings.TrimLeft(line, "# "))}
+			default:
+				body.WriteString(line + "\n")
+			}
+		}
+		flush()
+		pageList = append(pageList, p)
+	}
+}
+
+// Pages liste les pages (sans leur texte).
+func Pages() []Page {
+	once.Do(load)
+	out := make([]Page, len(pageList))
+	for i, p := range pageList {
+		out[i] = Page{ID: p.ID, Title: p.Title}
+	}
+	return out
+}
+
+// Get rend une page entière ; faux si elle n'existe pas.
+func Get(id string) (Page, bool) {
+	once.Do(load)
+	for _, p := range pageList {
+		if p.ID == id {
+			return p, true
+		}
+	}
+	return Page{}, false
+}
+
+// accents : lettres accentuées du français et leur forme simple.
+var accents = strings.NewReplacer("à", "a", "â", "a", "ä", "a", "ç", "c", "é", "e", "è", "e", "ê", "e", "ë", "e", "î", "i", "ï", "i", "ô", "o", "ö", "o", "ù", "u", "û", "u", "ü", "u", "ÿ", "y", "œ", "oe", "æ", "ae", "’", "'")
+
+// fold met en minuscules et retire les accents.
+func fold(s string) string { return accents.Replace(strings.ToLower(s)) }
+
+// Search rend au plus max sections qui contiennent les mots de query, les
+// plus pertinentes d'abord (mots dans le titre comptés double).
+func Search(query string, max int) []Section {
+	once.Do(load)
+	words := strings.FieldsFunc(fold(query), func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '.' && r != '_' })
+	if len(words) == 0 {
+		return nil
+	}
+	type hit struct {
+		s     Section
+		score int
+	}
+	var hits []hit
+	for _, s := range sections {
+		title, text := fold(s.Title), fold(s.Text)
+		score, all := 0, true
+		for _, w := range words {
+			n := strings.Count(text, w) + 3*strings.Count(title, w)
+			if n == 0 {
+				all = false
+			}
+			score += n
+		}
+		if score == 0 {
+			continue
+		}
+		if all {
+			score += 100
+		}
+		hits = append(hits, hit{s, score})
+	}
+	slices.SortStableFunc(hits, func(a, b hit) int { return b.score - a.score })
+	out := []Section{}
+	for _, h := range hits {
+		if len(out) == max {
+			break
+		}
+		if r := []rune(h.s.Text); len(r) > 1500 {
+			h.s.Text = string(r[:1500]) + "…"
+		}
+		out = append(out, h.s)
+	}
+	return out
+}
