@@ -55,3 +55,43 @@ export function nextHit(hits: readonly Hit[], from: Hit | null, back: boolean): 
 		: hits.findIndex((m) => m.row > row || (m.row === row && m.col > col));
 	return i >= 0 ? i : back ? hits.length - 1 : 0;
 }
+
+// --- Barre Rechercher / remplacer ------------------------------------------
+
+/** Compteur affiché dans le champ : « 3 sur 12 » (« 5000+ » au-delà de la limite lue). */
+export function hitCount(k: number, total: number, limit = 5000): string {
+	return `${k + 1} sur ${total}${total >= limit ? '+' : ''}`;
+}
+
+/** Adresse A1 d'une zone (0-based) : B2:D10, ou B2 pour une seule cellule. */
+export function zoneLabel(z: Zone): string {
+	const col = (c: number) => {
+		let s = '';
+		for (let n = c + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s;
+		return s;
+	};
+	const a = col(z.c0) + (z.r0 + 1);
+	return z.r0 === z.r1 && z.c0 === z.c1 ? a : `${a}:${col(z.c1)}${z.r1 + 1}`;
+}
+
+/** Bilan de Remplacer tout. */
+export function replacedLabel(n: number, inSelection: boolean): string {
+	const where = inSelection ? ' dans la sélection' : '';
+	return n ? `${n} cellule${n > 1 ? 's' : ''} remplacée${n > 1 ? 's' : ''}${where} (Ctrl+Z pour annuler)` : `Aucune cellule trouvée${where}`;
+}
+
+export type FinderAction = 'next' | 'prev' | 'close' | 'focusFind' | 'openReplace' | null;
+
+/**
+ * Touche dans la barre : Entrée ou F3 suivant, Maj+Entrée ou Maj+F3
+ * précédent, Échap ferme, Ctrl+F revient au champ Rechercher, Ctrl+H ouvre
+ * Remplacer par (jamais la recherche du navigateur).
+ */
+export function finderAction(e: { key: string; shiftKey?: boolean; ctrlKey?: boolean; metaKey?: boolean; altKey?: boolean }): FinderAction {
+	const ctrl = !!(e.ctrlKey || e.metaKey);
+	if (e.key === 'Escape') return 'close';
+	if ((e.key === 'Enter' && !ctrl && !e.altKey) || (e.key === 'F3' && !ctrl)) return e.shiftKey ? 'prev' : 'next';
+	if (ctrl && !e.altKey && e.key.toLowerCase() === 'f') return 'focusFind';
+	if (ctrl && !e.altKey && e.key.toLowerCase() === 'h') return 'openReplace';
+	return null;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findKey, findZone, foundCell, inZone, nextHit } from './findzone';
+import { findKey, finderAction, findZone, foundCell, hitCount, inZone, nextHit, replacedLabel, zoneLabel } from './findzone';
 
 describe('foundCell', () => {
 	const at = { row: 3, col: 2 };
@@ -69,5 +69,32 @@ describe('nextHit', () => {
 		expect(nextHit(hits, null, false)).toBe(0);
 		expect(nextHit(hits, null, true)).toBe(2);
 		expect(nextHit([], null, false)).toBe(-1);
+	});
+});
+
+describe('barre Rechercher', () => {
+	it('compteur', () => {
+		expect(hitCount(2, 12)).toBe('3 sur 12');
+		expect(hitCount(0, 5000)).toBe('1 sur 5000+');
+	});
+	it('adresse de la zone', () => {
+		expect(zoneLabel({ r0: 1, c0: 1, r1: 9, c1: 3 })).toBe('B2:D10');
+		expect(zoneLabel({ r0: 0, c0: 26, r1: 0, c1: 26 })).toBe('AA1');
+	});
+	it('bilan de Remplacer tout', () => {
+		expect(replacedLabel(1, false)).toBe('1 cellule remplacée (Ctrl+Z pour annuler)');
+		expect(replacedLabel(3, true)).toBe('3 cellules remplacées dans la sélection (Ctrl+Z pour annuler)');
+		expect(replacedLabel(0, true)).toBe('Aucune cellule trouvée dans la sélection');
+	});
+	it('touches', () => {
+		expect(finderAction({ key: 'Enter' })).toBe('next');
+		expect(finderAction({ key: 'Enter', shiftKey: true })).toBe('prev');
+		expect(finderAction({ key: 'F3' })).toBe('next');
+		expect(finderAction({ key: 'F3', shiftKey: true })).toBe('prev');
+		expect(finderAction({ key: 'Escape' })).toBe('close');
+		expect(finderAction({ key: 'f', ctrlKey: true })).toBe('focusFind');
+		expect(finderAction({ key: 'H', ctrlKey: true, shiftKey: true })).toBe('openReplace');
+		expect(finderAction({ key: 'a' })).toBeNull();
+		expect(finderAction({ key: 'Enter', ctrlKey: true })).toBeNull();
 	});
 });

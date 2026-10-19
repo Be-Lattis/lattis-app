@@ -25,7 +25,7 @@
 	import { hiddenLines, mergeAt, mergeList, parseList, skipHidden, validate, type MergeRange } from './sheetfmt';
 	import { expandRange, extendCorner, intersect, isSingleCell, mergeRect, rangeOf, stepCell, wholeLines, type CellRange } from './mergesel';
 	import { jumpLine, lineSpans, type Area, type Span } from './jump';
-	import { findKey, findZone, foundCell, inZone, nextHit, type Zone } from './findzone';
+	import { findKey, finderAction, findZone, foundCell, hitCount, inZone, nextHit, replacedLabel, zoneLabel, type Zone } from './findzone';
 	import { edgeScroll, frameStep } from './autoscroll';
 	import { blocksReach, boxesReach } from './objextent';
 	import FormatDialog, { type FormatTab } from './FormatDialog.svelte';
@@ -950,6 +950,7 @@
 		matchKey = '';
 		if (nav && finder) {
 			finder.at = null;
+			finder.count = '';
 			finder.info = '';
 		}
 		const oldCharts = new Set(charts.map((c) => c.id));
@@ -8219,8 +8220,19 @@
 	// (zone) : elle reste affichée et la cellule trouvée (at) y est
 	// encadrée ; une seule cellule : toute la feuille, la cellule active va
 	// sur chaque occurrence.
-	let finder = $state<{ replace: boolean; text: string; by: string; info: string; zone: Zone | null; at: { row: number; col: number } | null } | null>(null);
+	// count : compteur du champ (« 3 sur 12 », « Aucun résultat ») ; info :
+	// bilan de Remplacer tout ou erreur, sous les champs.
+	let finder = $state<{
+		replace: boolean;
+		text: string;
+		by: string;
+		count: string;
+		info: string;
+		zone: Zone | null;
+		at: { row: number; col: number } | null;
+	} | null>(null);
 	let findInput = $state<HTMLInputElement>();
+	let replaceInput = $state<HTMLInputElement>();
 	let matches: { row: number; col: number }[] = [];
 	// Recherche des occurrences en mémoire (texte et zone, findKey).
 	let matchKey = '';
@@ -8249,15 +8261,40 @@
 		if (!finder) return;
 		const z = searchZone();
 		const old = finder.zone;
-		if (findKey('', z) !== findKey('', old)) finder.zone = z;
+		if (findKey('', z) !== findKey('', old)) {
+			finder.zone = z;
+			finder.count = '';
+		}
 		if (finder.at && (z ? !inZone(finder.at, z) : finder.at.row !== active.row || finder.at.col !== active.col)) finder.at = null;
 	}
 
 	/** Ouvre la barre de recherche (replace : avec le champ Remplacer par). */
 	export function openFinder(replace: boolean) {
 		if (!source.find) return;
-		finder = { replace, text: finder?.text ?? '', by: finder?.by ?? '', info: '', zone: searchZone(), at: null };
-		requestAnimationFrame(() => findInput?.select());
+		// Rendue tout de suite : le focus y est avant la frappe suivante.
+		flushSync(() => {
+			finder = { replace, text: finder?.text ?? '', by: finder?.by ?? '', count: '', info: '', zone: searchZone(), at: null };
+		});
+		findInput?.select();
+		// Ouverte depuis un menu qui reprend le focus en se fermant : y revenir.
+		requestAnimationFrame(() => {
+			if (findInput && !findInput.closest('.finder')?.contains(document.activeElement)) findInput.select();
+		});
+	}
+
+	/** Ferme la barre et rend la main à la grille. */
+	function closeFinder() {
+		finder = null;
+		wrap.focus();
+	}
+
+	/** Affiche ou masque la ligne Remplacer par (le focus y va à l'ouverture). */
+	function toggleReplace(open = !finder?.replace) {
+		if (!finder || !source.replace) return;
+		const f = finder;
+		flushSync(() => (f.replace = open));
+		if (open) replaceInput?.select();
+		else findInput?.focus();
 	}
 
 	/** Occurrences du texte cherché dans la zone (relues si le texte ou la zone a changé). */
@@ -8276,9 +8313,10 @@
 		finder.zone = zone;
 		await findAll(zone);
 		if (!finder) return;
+		finder.info = '';
 		if (matches.length === 0) {
 			finder.at = null;
-			finder.info = zone ? 'Aucune cellule trouvée dans la sélection' : 'Aucune cellule trouvée';
+			finder.count = 'Aucun résultat';
 			schedule();
 			return;
 		}
@@ -8295,7 +8333,7 @@
 			moveTo(m.row, m.col);
 			finder.at = { row: active.row, col: active.col };
 		}
-		finder.info = `${k + 1} sur ${matches.length}${matches.length >= 5000 ? '+' : ''}`;
+		finder.count = hitCount(k, matches.length);
 	}
 
 	/** Remplace la cellule trouvée (si elle contient le texte), puis passe à la suivante (Excel). */
@@ -8324,8 +8362,8 @@
 		try {
 			const n = await source.replace(text, by, zone);
 			if (!finder) return;
-			const where = zone ? ' dans la sélection' : '';
-			finder.info = n ? `${n} cellule${n > 1 ? 's' : ''} remplacée${n > 1 ? 's' : ''}${where} (Ctrl+Z pour annuler)` : `Aucune cellule trouvée${where}`;
+			finder.info = replacedLabel(n, !!zone);
+			finder.count = '';
 			finder.at = null;
 			matchKey = '';
 		} catch (e) {
@@ -8333,15 +8371,17 @@
 		}
 	}
 
+	/** Touches dans toute la barre (champs et boutons), voir finderAction. */
 	function onFinderKey(e: KeyboardEvent) {
 		e.stopPropagation();
-		if (e.key === 'Escape') {
-			finder = null;
-			wrap.focus();
-		} else if (e.key === 'Enter') {
-			e.preventDefault();
-			findNext(e.shiftKey);
-		}
+		const a = finderAction(e);
+		// Entrée sur un bouton : le bouton agit, pas la recherche.
+		if (!a || (e.key === 'Enter' && e.target instanceof HTMLButtonElement)) return;
+		e.preventDefault();
+		if (a === 'close') closeFinder();
+		else if (a === 'next' || a === 'prev') findNext(a === 'prev');
+		else if (a === 'focusFind') findInput?.select();
+		else if (a === 'openReplace') toggleReplace(true);
 	}
 
 	// --- Presse-papiers -----------------------------------------------------
@@ -9494,28 +9534,75 @@
 			{/if}
 		</div>
 		{#if finder}
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="finder" onkeydown={(e) => e.stopPropagation()}>
-				<span>Rechercher</span>
-				<input bind:this={findInput} bind:value={finder.text} onkeydown={onFinderKey} spellcheck="false" />
-				<button onclick={() => findNext(true)} title="Précédent (Maj+Entrée)">◀</button>
-				<button onclick={() => findNext()} title="Suivant (Entrée)">▶</button>
+			<!-- Entrée, F3, Échap, Ctrl+F et Ctrl+H dans toute la barre (onFinderKey) ;
+			     les boutons d'icône gardent le focus dans le champ (mousedown). -->
+			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+			<div class="finder" role="search" aria-label="Rechercher et remplacer" onkeydown={onFinderKey}>
+				<div class="fd-row">
+					{#if source.replace}
+						<button
+							class="fd-icon fd-toggle"
+							class:open={finder.replace}
+							onclick={() => toggleReplace()}
+							aria-expanded={finder.replace}
+							aria-controls="fd-replace"
+							aria-label={finder.replace ? 'Masquer le remplacement' : 'Afficher le remplacement'}
+							title={finder.replace ? 'Masquer le remplacement' : 'Remplacer (Ctrl+H)'}
+						><Icon name="chevron-down" size={14} /></button>
+					{/if}
+					<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+					<div class="fd-field" class:miss={finder.count === 'Aucun résultat'} onclick={() => findInput?.focus()}>
+						<Icon name="search" size={14} />
+						<input
+							bind:this={findInput}
+							bind:value={finder.text}
+							oninput={() => finder && ((finder.count = ''), (finder.info = ''))}
+							placeholder="Rechercher"
+							aria-label="Rechercher"
+							aria-describedby="fd-count"
+							spellcheck="false"
+							autocomplete="off"
+						/>
+						<span id="fd-count" class="fd-count" aria-live="polite">{finder.count}</span>
+					</div>
+					<button class="fd-icon fd-up" onmousedown={(e) => e.preventDefault()} onclick={() => findNext(true)} disabled={!finder.text} aria-label="Précédent" title="Précédent (Maj+Entrée ou Maj+F3)"
+						><Icon name="chevron-down" size={16} /></button
+					>
+					<button class="fd-icon" onmousedown={(e) => e.preventDefault()} onclick={() => findNext()} disabled={!finder.text} aria-label="Suivant" title="Suivant (Entrée ou F3)"
+						><Icon name="chevron-down" size={16} /></button
+					>
+					<button class="fd-icon fd-close" onclick={closeFinder} aria-label="Fermer la recherche" title="Fermer (Échap)"><Icon name="win-close" size={14} /></button>
+				</div>
 				{#if finder.replace}
-					<span>Remplacer par</span>
-					<input bind:value={finder.by} onkeydown={onFinderKey} spellcheck="false" />
-					<button onclick={replaceOne} title="Remplace la cellule trouvée, puis passe à la suivante">Remplacer</button>
-					<button onclick={replaceAll}>Remplacer tout</button>
-				{:else if source.replace}
-					<button class="link" onclick={() => finder && (finder.replace = true)}>Remplacer…</button>
+					<div class="fd-row fd-indent" id="fd-replace">
+						<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+						<div class="fd-field" onclick={() => replaceInput?.focus()}>
+							<Icon name="replace" size={14} />
+							<input bind:this={replaceInput} bind:value={finder.by} placeholder="Remplacer par" aria-label="Remplacer par" spellcheck="false" autocomplete="off" />
+						</div>
+					</div>
 				{/if}
-				{#if finder.zone}
-					<span class="zone" title="La sélection borne la recherche ; sélectionnez une seule cellule pour chercher dans toute la feuille">Dans la sélection</span>
+				<div class="fd-row fd-foot" class:fd-indent={!!source.replace}>
+					<span
+						class="fd-chip"
+						class:on={!!finder.zone}
+						title={finder.zone
+							? 'La sélection borne la recherche ; sélectionnez une seule cellule pour chercher dans toute la feuille'
+							: 'Toute la feuille ; sélectionnez plusieurs cellules pour borner la recherche'}
+						aria-label={finder.zone ? `Dans la sélection ${zoneLabel(finder.zone)}` : 'Dans toute la feuille'}
+					>
+						<Icon name={finder.zone ? 'print-area' : 'sheet'} size={13} />
+						<span>Dans : {finder.zone ? zoneLabel(finder.zone) : 'feuille'}</span>
+					</span>
+					{#if finder.replace}
+						<span class="fd-spacer"></span>
+						<button class="fd-btn" onclick={replaceOne} disabled={!finder.text} title="Remplace la cellule trouvée, puis passe à la suivante">Remplacer</button>
+						<button class="fd-btn primary" onclick={replaceAll} disabled={!finder.text} title="Remplace toutes les occurrences (Ctrl+Z pour annuler)">Tout remplacer</button>
+					{/if}
+				</div>
+				{#if finder.info}
+					<div class="fd-info" class:fd-indent={!!source.replace} role="status">{finder.info}</div>
 				{/if}
-				<span class="muted">{finder.info}</span>
-				<button onclick={() => {
-					finder = null;
-					wrap.focus();
-				}} title="Fermer (Échap)">✕</button>
 			</div>
 		{/if}
 		{#if menu}
@@ -10621,50 +10708,211 @@
 		padding: 4px 2px;
 	}
 	/* Barre de recherche en surimpression (la grille ne bouge pas). */
+	/* Volet compact en haut à droite : champ Rechercher (loupe, compteur),
+	   précédent / suivant, fermer ; Remplacer par repliable ; portée en
+	   pastille. Champs et boutons comme les boîtes (DataCatalogDialog). */
 	.finder {
 		position: absolute;
 		z-index: 7;
 		top: 26px;
 		right: 18px;
+		width: 380px;
+		max-width: calc(100% - 36px);
+		box-sizing: border-box;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		padding: 8px;
+		background: #fff;
+		border: 1px solid #d4d7db;
+		border-top: 2px solid #217346;
+		border-radius: var(--float-radius);
+		box-shadow:
+			0 6px 20px rgba(0, 0, 0, 0.14),
+			0 1px 3px rgba(0, 0, 0, 0.08);
+		font-size: 12px;
+		color: #1f2937;
+	}
+	.fd-row {
+		display: flex;
+		align-items: center;
+		gap: 2px;
+		min-width: 0;
+	}
+	/* Sous le champ Rechercher, alignés sur lui (après la flèche Remplacer). */
+	.fd-indent {
+		padding-left: 26px;
+	}
+	.fd-field {
+		flex: 1;
+		min-width: 0;
 		display: flex;
 		align-items: center;
 		gap: 6px;
-		padding: 5px 8px 5px 10px;
-		background: #f7f8f9;
-		border: 1px solid #d4d7db;
-		border-radius: var(--float-radius);
-		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
-	}
-	.finder input {
-		font: inherit;
-		width: 200px;
-		padding: 2px 6px;
+		height: 26px;
+		box-sizing: border-box;
+		padding: 0 7px;
+		margin-right: 4px;
 		border: 1px solid #c9cdd2;
-		border-radius: 3px;
-	}
-	.finder button {
-		font: inherit;
-		padding: 2px 8px;
-		border: 1px solid #c9cdd2;
+		border-radius: 4px;
 		background: #fff;
-		border-radius: 3px;
-		cursor: pointer;
+		color: #6b7280;
+		cursor: text;
 	}
-	.finder .link {
-		border: none;
-		background: none;
+	.fd-field:hover {
+		border-color: #a8aeb5;
+	}
+	.fd-field:focus-within {
+		border-color: #217346;
+		box-shadow: 0 0 0 2px rgba(33, 115, 70, 0.18);
 		color: #217346;
 	}
-	.finder .muted {
-		color: #6b7280;
+	.fd-field.miss {
+		border-color: #dc2626;
+		background: #fef6f6;
 	}
-	.finder .zone {
-		padding: 1px 7px;
-		border-radius: 10px;
-		background: #d3e7dc;
-		color: #14532d;
-		font-size: 0.92em;
+	.fd-field.miss:focus-within {
+		box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15);
+	}
+	.fd-field input {
+		flex: 1;
+		min-width: 0;
+		font: inherit;
+		font-size: 13px;
+		color: #111827;
+		border: none;
+		outline: none;
+		padding: 0;
+		background: transparent;
+	}
+	.fd-field input::placeholder {
+		color: #9ca3af;
+	}
+	.fd-count {
+		flex: none;
+		color: #6b7280;
+		font-size: 11px;
+		font-variant-numeric: tabular-nums;
 		white-space: nowrap;
+	}
+	.fd-field.miss .fd-count {
+		color: #b91c1c;
+	}
+	/* Boutons d'icône sans cadre, comme ceux des volets. */
+	.fd-icon {
+		flex: none;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 24px;
+		height: 24px;
+		padding: 0;
+		border: 1px solid transparent;
+		border-radius: 4px;
+		background: none;
+		color: #4b5563;
+		cursor: pointer;
+	}
+	.fd-icon:hover:not(:disabled) {
+		background: #eef6f0;
+		color: #217346;
+	}
+	.fd-icon:active:not(:disabled) {
+		background: #d3e7dc;
+	}
+	.fd-icon:disabled {
+		opacity: 0.4;
+		cursor: default;
+	}
+	.fd-icon:focus-visible,
+	.fd-btn:focus-visible {
+		outline: 2px solid #217346;
+		outline-offset: 1px;
+	}
+	.fd-up :global(svg) {
+		transform: rotate(180deg);
+	}
+	.fd-toggle {
+		margin-right: 2px;
+	}
+	.fd-toggle :global(svg) {
+		transform: rotate(-90deg);
+		transition: transform 0.12s ease;
+	}
+	.fd-toggle.open :global(svg) {
+		transform: none;
+	}
+	.fd-close {
+		margin-left: 2px;
+	}
+	.fd-close:hover:not(:disabled) {
+		background: #f3f4f6;
+		color: #111827;
+	}
+	.fd-foot {
+		gap: 6px;
+		min-height: 24px;
+	}
+	.fd-spacer {
+		flex: 1;
+	}
+	/* Portée : la feuille, ou la sélection qui borne la recherche (verte). */
+	.fd-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		min-width: 0;
+		height: 20px;
+		padding: 0 8px 0 6px;
+		border-radius: 10px;
+		background: #f3f4f6;
+		color: #4b5563;
+		font-size: 11px;
+		white-space: nowrap;
+		cursor: default;
+	}
+	.fd-chip span {
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.fd-chip.on {
+		background: #e3efe7;
+		color: #14532d;
+		--icon-accent: #217346;
+	}
+	.fd-btn {
+		flex: none;
+		font: inherit;
+		height: 24px;
+		padding: 0 10px;
+		border: 1px solid #c4c8cc;
+		border-radius: 3px;
+		background: #fff;
+		color: inherit;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+	.fd-btn:hover:not(:disabled) {
+		border-color: #217346;
+		background: #eef6f0;
+	}
+	.fd-btn.primary {
+		background: #217346;
+		border-color: #217346;
+		color: #fff;
+	}
+	.fd-btn.primary:hover:not(:disabled) {
+		background: #1a5c38;
+		border-color: #1a5c38;
+	}
+	.fd-btn:disabled {
+		opacity: 0.55;
+		cursor: default;
+	}
+	.fd-info {
+		color: #4b5563;
+		font-size: 11px;
+		line-height: 1.35;
 	}
 	.bench {
 		padding: 4px 10px;
