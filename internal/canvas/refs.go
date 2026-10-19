@@ -67,7 +67,7 @@ func (t *tx) rewriteRefs(rc refChange) error {
 		return nil
 	}
 	steps := []func(refChange) error{t.rewriteCellFormulas, t.rewriteColumnFormulas, t.rewriteLineRules,
-		t.rewriteCellRules, t.rewritePivots, t.rewriteCharts, t.rewriteButtons, t.rewriteQueries}
+		t.rewriteCellRules, t.rewritePivots, t.rewriteCharts, t.rewriteButtons, t.rewriteQueries, t.rewriteDocObjects}
 	for _, f := range steps {
 		if err := f(rc); err != nil {
 			return err
@@ -330,33 +330,7 @@ func (t *tx) rewritePivots(rc refChange) error {
 		if json.Unmarshal([]byte(cfgs[id]), &m) != nil {
 			continue
 		}
-		src, _ := m["source"].(string)
-		changed := false
-		if n := rc.Table(src); n != src {
-			m["source"], changed = n, true
-		}
-		for _, k := range []string{"cols", "rows", "value"} {
-			changed = renameField(m, k, rc.Renames, src) || changed
-		}
-		changed = renameFieldList(m, "rowFields", rc.Renames, src) || changed
-		for _, k := range []string{"values", "filters", "items"} {
-			list, _ := m[k].([]any)
-			for _, v := range list {
-				if f, ok := v.(map[string]any); ok {
-					changed = renameField(f, "field", rc.Renames, src) || changed
-				}
-			}
-		}
-		if sort, ok := m["sort"].(map[string]any); ok {
-			neu := map[string]any{}
-			for k, v := range sort {
-				n := rc.Column(src, k)
-				changed = changed || n != k
-				neu[n] = v
-			}
-			m["sort"] = neu
-		}
-		if !changed {
+		if !renamePivotConfig(m, rc) {
 			continue
 		}
 		if neu, err := encodeJSON(m); err == nil {
@@ -364,6 +338,38 @@ func (t *tx) rewritePivots(rc refChange) error {
 		}
 	}
 	return t.applyUpdates(`UPDATE _lattis_pivots SET config = ? WHERE id = ?`, ups)
+}
+
+// renamePivotConfig : tableau source et champs d'une configuration de TCD
+// (posé sur une feuille ou inséré dans un Document) ; vrai si elle change.
+func renamePivotConfig(m map[string]any, rc refChange) bool {
+	src, _ := m["source"].(string)
+	changed := false
+	if n := rc.Table(src); n != src {
+		m["source"], changed = n, true
+	}
+	for _, k := range []string{"cols", "rows", "value"} {
+		changed = renameField(m, k, rc.Renames, src) || changed
+	}
+	changed = renameFieldList(m, "rowFields", rc.Renames, src) || changed
+	for _, k := range []string{"values", "filters", "items"} {
+		list, _ := m[k].([]any)
+		for _, v := range list {
+			if f, ok := v.(map[string]any); ok {
+				changed = renameField(f, "field", rc.Renames, src) || changed
+			}
+		}
+	}
+	if sort, ok := m["sort"].(map[string]any); ok {
+		neu := map[string]any{}
+		for k, v := range sort {
+			n := rc.Column(src, k)
+			changed = changed || n != k
+			neu[n] = v
+		}
+		m["sort"] = neu
+	}
+	return changed
 }
 
 // pivotHeaders : pour chaque TCD (nom, minuscules) dont le tableau source
@@ -419,18 +425,7 @@ func (t *tx) rewriteCharts(rc refChange) error {
 		if json.Unmarshal([]byte(cfgs[id]), &m) != nil {
 			continue
 		}
-		src, _ := m["source"].(string)
-		changed := false
-		cols := rc.Renames
-		if h, ok := headers[strings.ToLower(src)]; ok {
-			cols = formula.Renames{Columns: map[string]map[string]string{strings.ToLower(src): h}}
-		}
-		changed = renameField(m, "x", cols, src) || changed
-		changed = renameFieldList(m, "series", cols, src) || changed
-		if n := rc.Table(src); n != src {
-			m["source"], changed = n, true
-		}
-		if !changed {
+		if !renameChartConfig(m, rc, headers) {
 			continue
 		}
 		if neu, err := encodeJSON(m); err == nil {
@@ -438,6 +433,74 @@ func (t *tx) rewriteCharts(rc refChange) error {
 		}
 	}
 	return t.applyUpdates(`UPDATE _lattis_charts SET config = ? WHERE id = ?`, ups)
+}
+
+// renameChartConfig : source, axe X, séries et colonne de couleur d'une
+// configuration de graphique (posé sur une feuille ou inséré dans un
+// Document) ; headers donne les en-têtes renommés des TCD. Vrai si elle change.
+func renameChartConfig(m map[string]any, rc refChange, headers map[string]map[string]string) bool {
+	src, _ := m["source"].(string)
+	changed := false
+	cols := rc.Renames
+	if h, ok := headers[strings.ToLower(src)]; ok {
+		cols = formula.Renames{Columns: map[string]map[string]string{strings.ToLower(src): h}}
+	}
+	changed = renameField(m, "x", cols, src) || changed
+	changed = renameFieldList(m, "series", cols, src) || changed
+	changed = renameField(m, "colorBy", cols, src) || changed
+	if n := rc.Table(src); n != src {
+		m["source"], changed = n, true
+	}
+	return changed
+}
+
+// rewriteDocObjects : graphiques et TCD insérés dans les onglets Document
+// (embeds du Delta Quill, {"lattisChart": {…}} et {"lattisPivot": {…}}).
+func (t *tx) rewriteDocObjects(rc refChange) error {
+	headers, err := t.pivotHeaders(rc)
+	if err != nil {
+		return err
+	}
+	rs, err := t.query(`SELECT sheet, source FROM _lattis_pages WHERE kind = ? AND (source LIKE '%"lattisChart"%' OR source LIKE '%"lattisPivot"%')`, KindDoc)
+	if err != nil {
+		return err
+	}
+	var ups []textUpdate
+	for rs.Next() {
+		var sheet int64
+		var src string
+		if err := rs.Scan(&sheet, &src); err != nil {
+			rs.Close()
+			return err
+		}
+		var delta map[string]any
+		if json.Unmarshal([]byte(src), &delta) != nil {
+			continue
+		}
+		ops, _ := delta["ops"].([]any)
+		changed := false
+		for _, op := range ops {
+			o, _ := op.(map[string]any)
+			ins, _ := o["insert"].(map[string]any)
+			if c, ok := ins["lattisChart"].(map[string]any); ok {
+				changed = renameChartConfig(c, rc, headers) || changed
+			}
+			if p, ok := ins["lattisPivot"].(map[string]any); ok {
+				changed = renamePivotConfig(p, rc) || changed
+			}
+		}
+		if !changed {
+			continue
+		}
+		if neu, err := encodeJSON(delta); err == nil {
+			ups = append(ups, textUpdate{[]any{sheet}, src, neu})
+		}
+	}
+	rs.Close()
+	if err := rs.Err(); err != nil {
+		return err
+	}
+	return t.applyUpdates(`UPDATE _lattis_pages SET source = ? WHERE sheet = ?`, ups)
 }
 
 // rewriteButtons : colonne qui donne les choix d'une liste, feuille de la
