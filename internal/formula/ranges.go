@@ -59,8 +59,8 @@ func walkCols(n Node, f func(Node)) {
 				args = args[min(2, len(args)):]
 			case "EXISTS":
 				args = args[min(1, len(args)):]
-			case "SUBTOTAL", "VLOOKUP", "XLOOKUP", "HLOOKUP":
-				return
+			case "SUBTOTAL", "VLOOKUP", "XLOOKUP", "HLOOKUP", "ROW", "COLUMN", "ROWS", "COLUMNS":
+				return // ROW… ne lisent que la forme de leur référence
 			}
 		}
 		for _, a := range args {

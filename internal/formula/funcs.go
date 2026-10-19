@@ -268,6 +268,10 @@ var funcs = []funcDef{
 	{"VLOOKUP", "RECHERCHEV", 3, 4, special, nil},
 	{"XLOOKUP", "RECHERCHEX", 3, 6, special, nil},
 	{"HLOOKUP", "RECHERCHEH", 3, 4, special, nil},
+	{"ROW", "LIGNE", 0, 1, special, nil},
+	{"COLUMN", "COLONNE", 0, 1, special, nil},
+	{"ROWS", "LIGNES", 1, 1, special, nil},
+	{"COLUMNS", "COLONNES", 1, 1, special, nil},
 
 	// Géographie (contours des communes embarqués, voir funcs_geo.go)
 	{"MUNICIPALITY", "COMMUNE", 2, 3, scalar, fnMunicipality},

@@ -494,6 +494,15 @@ func (c *compiler) special(fn string, n Call, sc scope) string {
 		return c.expr(body, sc)
 	case "REFERENCE":
 		return c.reference(n, sc)
+	case "ROW", "COLUMN", "ROWS", "COLUMNS":
+		v, t := position(fn, n, c.schema, sc.table)
+		if t != nil {
+			return "(SELECT count(*) FROM " + t.SQL + ")"
+		}
+		if v.IsErr() {
+			return errSQL(v.Err)
+		}
+		return c.param(ToSQL(v))
 	case "REFERENCE.APPROX", "EXISTS":
 		if ix, ok := rankReference(c.schema, n); ok {
 			return c.expr(ix, sc)

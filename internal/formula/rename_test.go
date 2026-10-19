@@ -43,6 +43,7 @@ func TestRenameRefs(t *testing.T) {
 		// Le premier argument de FRACTIONNER.TEXTE est une valeur, pas un tableau.
 		{rename, FR, "", `=FRACTIONNER.TEXTE(Taux; {",";";"})`, `=FRACTIONNER.TEXTE(Coef; {",";";"})`},
 		{rename, FR, "", `=FILTRE(Ventes; Ventes[Qté]>2)`, `=FILTRE(Achats; Achats[Quantité]>2)`},
+		{rename, FR, "", `=LIGNES(Ventes)+COLONNES(Ventes[Qté])`, `=LIGNES(Achats)+COLONNES(Achats[Quantité])`},
 		// Rien à changer : le texte reste tel quel.
 		{rename, FR, "", "=  Autre[Qté] + $B$2", "=  Autre[Qté] + $B$2"},
 		{rename, FR, "", `="Ventes[Qté]"`, `="Ventes[Qté]"`},

@@ -238,6 +238,8 @@ func renameBody(body string, loc Locale, r Renames, self string) (string, bool) 
 				case f != nil && whole(i) && (isLookup(f.fn) || f.fn == "EXISTS" || f.spill) && f.arg == 0:
 					f.table = tk.text
 					replace(i, r.Table(tk.text))
+				case f != nil && whole(i) && isShape(f.fn) && f.arg == 0 && !isCellName(tk.text):
+					replace(i, r.Table(tk.text)) // LIGNES(Ventes)
 				case f != nil && whole(i) && isLookup(f.fn) && f.arg == 1:
 					replace(i, r.Column(f.table, tk.text))
 				default:
@@ -265,6 +267,19 @@ func renameBody(body string, loc Locale, r Renames, self string) (string, bool) 
 }
 
 func isLookup(fn string) bool { return fn == "REFERENCE" || fn == "REFERENCE.APPROX" }
+
+// isShape : fonctions qui lisent la forme d'une référence, dont un tableau
+// entier (LIGNES(Ventes)).
+func isShape(fn string) bool { return fn == "ROWS" || fn == "COLUMNS" || fn == "ROW" || fn == "COLUMN" }
+
+// isCellName : ancienne forme Cell_A1 (ou Feuille.Cell_A1) d'une adresse.
+func isCellName(s string) bool {
+	if k := strings.LastIndex(s, "."); k >= 0 {
+		s = s[k+1:]
+	}
+	_, _, ok := CellRef(s)
+	return ok
+}
 
 func quote(s string) string { return `"` + strings.ReplaceAll(s, `"`, `""`) + `"` }
 

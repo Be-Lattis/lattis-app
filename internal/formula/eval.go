@@ -465,6 +465,12 @@ func (env *Env) special(fn string, n Call) Value {
 		return Eval(body, env)
 	case "REFERENCE":
 		return env.reference(n)
+	case "ROW", "COLUMN", "ROWS", "COLUMNS":
+		v, t := position(fn, n, env.Schema, env.Table)
+		if t != nil {
+			return Num(float64(len(env.Data[t])))
+		}
+		return v
 	case "REFERENCE.APPROX", "EXISTS":
 		if ix, ok := rankReference(env.Schema, n); ok {
 			return Eval(ix, env)

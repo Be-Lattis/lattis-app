@@ -855,3 +855,41 @@ locale FR
 =FRACTION.ANNEE([Date];DATE(2026;7;15))	0,5
 =NB.JOURS.OUVRES.INTL([Date];[Date]+6;11)	6
 @
+
+# Position (audit 6, I7) : forme de la référence
+@
+=LIGNE(Cell[B3])	3
+=COLONNE(Cell[C1])	3
+=LIGNE(Cell[A2:B3])	2
+=COLONNE(Cell[B1:C3])	2
+=LIGNES(Cell[A1:B3])	3
+=COLONNES(Cell[A1:B3])	2
+=LIGNES(Cell[B2])	1
+=LIGNES(Ventes[Prix])	4
+=LIGNES(Ventes)	4
+=LIGNES(Etapes)	3
+=COLONNES(Ventes)	9
+=COLONNES(Ventes[Prix])	1
+=COLONNE(Ventes[Prix])	2
+=COLONNE(Ventes[Inconnue])	#REF!
+=LIGNES(Ventes[Prix][2:3])	2
+=LIGNE(Ventes[Prix][2:3])	2
+=LIGNES({1;2;3})	3
+=COLONNES({1.2.3})	3
+=LIGNE()	#VALEUR!
+=LIGNES(Inconnu)	#VALEUR!
+=LIGNES(1)	#VALEUR!
+=SOMME(Ventes[Qté])/LIGNES(Ventes[Qté])	2,75
+locale EN
+=ROWS(Ventes)	4
+=COLUMN(Cell[C1])	3
+locale FR
+
+@ Ventes 1
+=LIGNES([Prix])	1
+=LIGNE([Prix])	#VALEUR!
+=COLONNE([Qté])	3
+=LIGNES(Ventes[Prix])	4
+=[Qté]*LIGNES(Ventes)	8
+=SOMME(Ventes[Qté]*COLONNES(Ventes))	99
+@

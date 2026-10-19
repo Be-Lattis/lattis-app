@@ -58,6 +58,14 @@ func Deps(n Node) (names, tables []string) {
 				if n.Fn == "GROUPBY" && len(args) == 3 {
 					args = args[:2]
 				}
+			case (n.Fn == "ROWS" || n.Fn == "COLUMNS" || n.Fn == "ROW" || n.Fn == "COLUMN") && len(args) == 1:
+				// LIGNES(Ventes) : un tableau entier, et non une cellule nommée.
+				if t, ok := args[0].(Name); ok {
+					if _, _, cell := CellRef(t.Name); !cell && !strings.ContainsAny(t.Name, ".#") {
+						add(&tables, t.Name)
+						args = nil
+					}
+				}
 			case n.Fn == "EXISTS" && len(args) == 2:
 				if t, ok := nameOf(args[0]); ok {
 					add(&tables, t)

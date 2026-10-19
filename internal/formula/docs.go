@@ -530,6 +530,19 @@ var docs = map[string]funcDoc{
 			docOpt("mode_recherche", "Sens de la recherche ; ignoré (la clé est unique).")),
 		0, `=RECHERCHEX([IdClient]; Clients[Id]; Clients[Nom]; "inconnu")`},
 
+	"ROW": {catLookup, "Renvoie le numéro de ligne d'une cellule (Cell[B3] donne 3) ; pour une colonne ou une plage de tableau, le rang de sa première ligne.",
+		docArgs(docOpt("référence", "Cellule (Cell[B3]), plage (Cell[A1:B3]) ou plage de tableau (Tableau[Colonne][2:5]). Sans elle, #VALEUR! : Lattis ne lit pas la position de la formule.")),
+		0, `=LIGNE(Cell[B3])`},
+	"COLUMN": {catLookup, "Renvoie le numéro de colonne d'une cellule (Cell[C1] donne 3) ; pour une colonne de tableau, son rang dans le tableau.",
+		docArgs(docOpt("référence", "Cellule (Cell[C1]), plage (Cell[A1:B3]) ou colonne de tableau (Tableau[Colonne]). Sans elle, #VALEUR! : Lattis ne lit pas la position de la formule.")),
+		0, `=COLONNE(Ventes[Prix])`},
+	"ROWS": {catLookup, "Renvoie le nombre de lignes d'une plage, d'une colonne ou d'un tableau.",
+		docArgs(docArg("tableau", "Plage (Cell[A1:B3]), colonne (Tableau[Colonne]), tableau entier ou constante matricielle.")),
+		0, `=LIGNES(Ventes[Produit])`},
+	"COLUMNS": {catLookup, "Renvoie le nombre de colonnes d'une plage ou d'un tableau.",
+		docArgs(docArg("tableau", "Plage (Cell[A1:B3]), tableau entier, colonne (1) ou constante matricielle.")),
+		0, `=COLONNES(Ventes)`},
+
 	// Géographie
 	"MUNICIPALITY": {catGeo, "Renvoie la commune française (métropole et outre-mer) qui contient un point GPS : nom, code INSEE, code postal, département ou région ; " +
 		"#N/A en mer ou hors de France. Calcul hors ligne sur des contours simplifiés (à quelques dizaines de mètres près). " +
