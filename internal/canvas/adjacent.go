@@ -47,7 +47,8 @@ import (
 // tableau (Tableau[Col][n]).
 //
 // Exception : au-dessus du tableau, une cellule libre reste libre (c'est un
-// titre), même collée à l'en-tête.
+// titre), même collée à l'en-tête. Mais une ligne d'en-têtes posée sur plusieurs
+// tableaux, ou plus large que le tableau, en fait un seul tableau (headerOver).
 //
 // Un tableau filtré, ou chargé par une requête d'import (que l'actualisation
 // remplace), ne grandit ni ne fusionne de lui-même : un tableau qui le touche
@@ -346,6 +347,10 @@ func (t *tx) joinStep(sheet int64, absorbed func(tb Table, first string, n int))
 	}
 	if len(outs) > 0 {
 		cells = slices.DeleteFunc(cells, func(c cell) bool { return outs[[2]int{c.Row, c.Col}] })
+	}
+	// Une ligne d'en-têtes posée sur des tableaux : un seul tableau.
+	if ok, err := t.headerOver(sheet, tables, cells, fixed); ok || err != nil {
+		return false, err
 	}
 	for _, tb := range tables {
 		if fixed[tb.ID] != "" {
@@ -756,4 +761,93 @@ func freeColumnName(tb Table, name string) string {
 		out = fmt.Sprintf("%s %d", name, n)
 	}
 	return out
+}
+
+// headerOver : une ligne de cellules libres posée juste au-dessus de
+// tableaux (une ligne d'en-têtes descendue sur eux). Quand elle les couvre
+// en entier et dépasse un seul tableau (plusieurs tableaux, ou des colonnes
+// de plus, vides dessous), elle devient l'en-tête d'un seul tableau : les
+// en-têtes actuels redeviennent des lignes de données, les colonnes vides
+// entre les tableaux en font partie. Les formules qui citaient les tableaux
+// citent le nouveau (passage par une plage, comme Convertir en plage puis
+// Mettre sous forme de tableau). Une seule cellule, ou une ligne pas plus
+// large qu'un tableau, reste un titre.
+func (t *tx) headerOver(sheet int64, tables []Table, cells []cell, fixed map[int64]string) (bool, error) {
+	at := map[[2]int]cell{}
+	for _, c := range cells {
+		if strings.TrimSpace(c.Raw) != "" {
+			at[[2]int{c.Row, c.Col}] = c
+		}
+	}
+	for _, c := range cells {
+		// Début d'une suite de cellules remplies sur la ligne.
+		if _, ok := at[[2]int{c.Row, c.Col}]; !ok {
+			continue
+		}
+		if _, left := at[[2]int{c.Row, c.Col - 1}]; left {
+			continue
+		}
+		r, c0, c1 := c.Row, c.Col, c.Col
+		formulas := false
+		for {
+			x, ok := at[[2]int{r, c1 + 1}]
+			if !ok {
+				break
+			}
+			c1++
+			formulas = formulas || isFormula(x.Raw)
+		}
+		if c1 == c0 || formulas || isFormula(c.Raw) || inAny(tables, r, c0) {
+			continue
+		}
+		var under []Table
+		width, bottom, ok := 0, r, true
+		for _, tb := range tables {
+			if tb.Row != r+1 || tb.Right() < c0 || tb.Col > c1 {
+				continue
+			}
+			if tb.Col < c0 || tb.Right() > c1 || fixed[tb.ID] != "" {
+				ok = false
+				break
+			}
+			under = append(under, tb)
+			width += len(tb.Cols)
+			bottom = max(bottom, tb.Bottom())
+		}
+		if !ok || len(under) == 0 || len(under) == 1 && width == c1-c0+1 {
+			continue
+		}
+		// Sous la ligne, hors des tableaux : rien (ni cellule, ni autre tableau).
+		for _, x := range cells {
+			if x.Row > r && x.Row <= bottom && x.Col >= c0 && x.Col <= c1 && strings.TrimSpace(x.Raw) != "" {
+				ok = false
+			}
+		}
+		for _, tb := range tables {
+			if tb.Row > r+1 && tb.Row <= bottom && tb.Col <= c1 && tb.Right() >= c0 {
+				ok = false
+			}
+		}
+		if !ok {
+			continue
+		}
+		names := make([]string, len(under))
+		for i, tb := range under {
+			names[i] = "« " + tb.Name + " »"
+			if err := t.toRange(tb); err != nil {
+				return false, err
+			}
+		}
+		name, err := t.formatAsTable(sheet, r+1, under[0].Col)
+		if err != nil {
+			return false, err
+		}
+		// La note de Mettre sous forme de tableau est remplacée par celle-ci.
+		if n := len(t.notes); n > 0 && strings.HasPrefix(t.notes[n-1], "Plage mise sous forme") {
+			t.notes = t.notes[:n-1]
+		}
+		t.notes = append(t.notes, fmt.Sprintf("Ligne d'en-têtes posée sur %s : un seul tableau « %s », leurs en-têtes redeviennent des données (Ctrl+Z pour annuler)", strings.Join(names, ", "), name))
+		return true, nil
+	}
+	return false, nil
 }

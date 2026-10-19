@@ -2,6 +2,7 @@ package canvas
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -276,5 +277,80 @@ func TestTitleAboveStaysFree(t *testing.T) {
 	l, _ := d.Layout(ctx, 1)
 	if len(l.Cells) != 1 || len(l.Tables) != 1 || colNames(l.Tables[0]) != "Nom|Ventes" {
 		t.Fatalf("titre : %+v %+v", l.Cells, l.Tables)
+	}
+}
+
+// Une ligne d'en-têtes descendue sur des tableaux séparés par des colonnes
+// vides en fait un seul tableau : leurs en-têtes (en fait des données)
+// redeviennent des lignes, les colonnes vides en font partie, en une seule
+// étape d'annulation. Plus étroite qu'un tableau, ou sur un seul tableau à
+// sa largeur, elle reste libre (un titre).
+func TestHeaderRowOverTables(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	// Les tableaux tels que la détection les a pris : leur première ligne de
+	// données en en-tête ; la ligne d'en-têtes au-dessus, libre.
+	head := []string{"NID", "ESPECE", "ID couple", "ORNITHOLOGUE", "DATE", "Poussins", "Jeunes", "Remarques"}
+	must(t, d.Do(ctx, "Saisie", func(x *tx) error {
+		for i, b := range []struct {
+			col  int
+			head []string
+			rows [][]string
+		}{
+			{0, []string{"MARIZ_01", "Autour"}, [][]string{{"MARIZ_02", "Buse"}}},
+			{3, []string{"Lionel", "05"}, [][]string{{"Paul", "07"}}},
+			{6, []string{"2", "RAS"}, [][]string{{"3", "Nid vide"}}},
+		} {
+			if _, err := x.createTable(1, fmt.Sprintf("T%d", i+1), 2, b.col, b.head, b.rows); err != nil {
+				return err
+			}
+		}
+		for c, h := range head {
+			if err := x.setFreeCell(1, 0, c, h); err != nil {
+				return err
+			}
+		}
+		return nil
+	}))
+	if _, err := d.SetCell(ctx, 1, 6, 9, `=NBVAL(T2[Lionel])`); err != nil {
+		t.Fatal(err)
+	}
+	if n := len(tablesOf(t, d)); n != 3 {
+
+		t.Fatalf("avant : %d tableaux", n)
+	}
+	before := dump(t, d)
+	if err := d.MoveCells(ctx, 1, 0, 0, 0, 7, 1, 0); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "en-têtes descendus")
+	ts := tablesOf(t, d)
+	if len(ts) != 1 || ts[0].Row != 1 || ts[0].Col != 0 || colNames(ts[0]) != strings.Join(head, "|") || ts[0].Rows != 2 {
+		t.Fatalf("en-têtes descendus : %+v", ts)
+	}
+	if got := view(t, d); !strings.Contains(got, "MARIZ_01|Autour||Lionel|05||2|RAS") || !strings.Contains(got, "MARIZ_02|Buse||Paul|7||3|Nid vide") {
+		t.Fatalf("en-têtes descendus :\n%s", got)
+	}
+	if l, _ := d.Layout(ctx, 1); len(l.Cells) != 1 || l.Cells[0].Raw != "=NBVAL(Feuille1[ORNITHOLOGUE][2])" || l.Cells[0].Value != "1" {
+		t.Fatalf("formule qui citait T2 : %+v", l.Cells)
+	}
+	undoOnce(t, d, before, "en-têtes descendus")
+
+	// Sur un seul tableau, à sa largeur : un titre, rien ne change.
+	d = open(t)
+	must(t, d.Do(ctx, "Saisie", func(x *tx) error {
+		if _, err := x.createTable(1, "Ventes", 2, 0, []string{"Nom", "Ventes"}, [][]string{{"A", "1"}}); err != nil {
+			return err
+		}
+		if err := x.setFreeCell(1, 0, 0, "Bilan"); err != nil {
+			return err
+		}
+		return x.setFreeCell(1, 0, 1, "2024")
+	}))
+	if err := d.MoveCells(ctx, 1, 0, 0, 0, 1, 1, 0); err != nil {
+		t.Fatal(err)
+	}
+	if ts := tablesOf(t, d); len(ts) != 1 || colNames(ts[0]) != "Nom|Ventes" {
+		t.Fatalf("titre sur un tableau : %+v", ts)
 	}
 }
