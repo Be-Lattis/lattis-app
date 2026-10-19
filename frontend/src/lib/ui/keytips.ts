@@ -63,7 +63,6 @@ export const COMMAND_TIPS: Record<string, string> = {
 	Tableau: 'T',
 	'Somme automatique': 'U',
 	'Insérer une fonction': 'F',
-	'Supprimer les flèches': 'AA',
 	Quadrillage: 'VG',
 	'Figer les volets': 'F',
 	Zoom: 'Q',

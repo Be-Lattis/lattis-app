@@ -716,11 +716,9 @@
 			},
 			{
 				title: 'Audit',
-				// Comme Excel : les commandes d'audit en petit avec leur libellé, l'une sous l'autre.
-				widest: 'small',
+				// Pas de « Supprimer les flèches » : un clic dans la grille (ou Échap) les efface.
 				commands: readOnly([
-					{ label: 'Afficher les liens', icon: 'dependency-graph', run: onaudit ? () => onaudit('show') : undefined, hint: 'Flèches des liens de toutes les cellules sélectionnées : bleues depuis ce que lisent leurs formules, rouges vers les formules qui les lisent ; elles partent dès que la sélection change' },
-					{ label: 'Supprimer les flèches', icon: 'trash', run: onaudit ? () => onaudit('clear') : undefined, hint: 'Retirer les flèches des liens (Échap)' }
+					{ label: 'Afficher les liens', icon: 'dependency-graph', run: onaudit ? () => onaudit('show') : undefined, hint: 'Flèches des liens de toutes les cellules sélectionnées : bleues depuis ce que lisent leurs formules, rouges vers les formules qui les lisent ; un clic dans la grille (ou Échap) les efface' }
 				])
 			},
 			{ title: 'Calcul', commands: [{ label: 'Calculer', icon: 'calculate', ro: true, run: onrecalc, hint: 'Recalculer les formules et renouveler AUJOURDHUI, MAINTENANT et ALEA (F9, ou F5 hors d’un tableau importé)' }] }

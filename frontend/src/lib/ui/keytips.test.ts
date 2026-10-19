@@ -59,8 +59,7 @@ describe('KeyTips du ruban', () => {
 		prefixFree(insertion);
 		const donnees = assignKeyTips(['Texte/CSV', 'Classeur Excel', 'Autres fichiers ▾', 'Base de données ▾', 'Web', 'À partir du tableau', 'Actualiser tout', 'Requêtes et connexions', 'Trier A → Z', 'Trier Z → A', 'Filtrer', 'Effacer', 'Erreurs seulement', 'Convertir', 'Supprimer les doublons', 'Validation des données'], COMMAND_TIPS);
 		prefixFree(donnees);
-		const formules = assignKeyTips(['Insérer une fonction', 'Somme automatique', 'REFERENCE', 'Afficher les liens', 'Supprimer les flèches', 'Calculer'], COMMAND_TIPS);
-		expect(formules[4]).toBe('AA');
+		const formules = assignKeyTips(['Insérer une fonction', 'Somme automatique', 'REFERENCE', 'Afficher les liens', 'Calculer'], COMMAND_TIPS);
 		prefixFree(formules);
 	});
 	it('touches tapées : code atteint, ou début de code', () => {
