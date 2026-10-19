@@ -4889,6 +4889,26 @@
 	/** Suppr sur des colonnes entières d'un tableau : « Supprimer la colonne » ; faux sinon. */
 	function deleteWholeColumns(): boolean {
 		const { r0, r1, c0, c1 } = selection();
+		// Colonnes entières de la feuille (lettres) : les colonnes des tableaux
+		// qu'elles traversent sont retirées de ces tableaux (rien d'autre ne
+		// bouge) ; un tableau entièrement dedans est laissé à « Effacer ».
+		if (wholeKind() === 'cols' && source.deleteColumn) {
+			const cut = entries.filter((e) => e.t.col <= c1 && e.lastCol >= c0 && !(e.t.col >= c0 && e.lastCol <= c1));
+			if (!cut.length) return false;
+			if (cut.some((e) => queryIn(e.t.row, Math.max(c0, e.t.col), e.last, Math.min(c1, e.lastCol), true))) {
+				say(QUERY_READONLY);
+				return true;
+			}
+			writing = writing.catch(() => undefined).then(async () => {
+				try {
+					for (const e of cut) for (let c = Math.min(c1, e.lastCol); c >= Math.max(c0, e.t.col); c--) await tableLines(e, 'deleteColumn', c - e.t.col);
+					schedule();
+				} catch (err) {
+					say(String((err as Error)?.message ?? err));
+				}
+			});
+			return true;
+		}
 		const e = tableAt(r0, c0);
 		// En-tête compris ou données seules (Ctrl+Espace), toutes les lignes, au moins une.
 		if (!e || !source.deleteColumn || e.last <= e.t.row || (r0 !== e.t.row && (r0 !== e.t.row + 1 || r1 === r0)) || r1 < e.last || c1 > e.lastCol || (c0 === e.t.col && c1 === e.lastCol)) return false;
@@ -8033,7 +8053,7 @@
 	<button
 		onclick={() => {
 			menu = freeMenu = null;
-			clearSelection();
+			if (!deleteWholeColumns()) clearSelection();
 		}}>Effacer le contenu</button
 	>
 	{#if source.sheetLines && kind}
