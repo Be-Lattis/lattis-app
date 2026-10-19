@@ -108,6 +108,10 @@ describe('texte sur plusieurs lignes', () => {
 		expect(cellLines('a\nb\nc', 3)).toEqual(['a', 'b', 'c']);
 		expect(cellLines('a\nb\nc', 1)).toEqual(['a …']);
 		expect(cellLines('a', 0)).toEqual(['a']);
+		// Sauts de ligne finaux ignorés.
+		expect(cellLines('a\nb\n\n', 5)).toEqual(['a', 'b']);
+		expect(cellLines('a\r\n\r\n', 1)).toEqual(['a']);
+		expect(cellLines('\na\n', 5)).toEqual(['', 'a']);
 	});
 	it('insertion au curseur', () => {
 		expect(insertAt('abcd', 2, 3, '\n')).toEqual({ value: 'ab\nd', caret: 3 });

@@ -1,6 +1,8 @@
 // Raccourcis clavier d'Excel (grille et éditeur de cellule), indépendants du
 // clavier (AZERTY ou QWERTY) quand c'est possible.
 
+import { trimTrailingBreaks } from './textwrap';
+
 export type Shortcut =
 	| 'fillDown' // Ctrl+D
 	| 'fillRight' // Ctrl+R
@@ -153,9 +155,10 @@ export function fillBlock(sel: Range, text: string): string[][] {
 /**
  * Lignes d'un texte à plusieurs lignes (Alt+Entrée) qui tiennent dans une
  * cellule de max lignes ; la dernière montrée finit par « … » s'il en reste.
+ * Les sauts de ligne finaux ne comptent pas (trimTrailingBreaks).
  */
 export function cellLines(s: string, max: number): string[] {
-	const lines = s.split(/\r?\n/);
+	const lines = trimTrailingBreaks(s).split(/\r?\n/);
 	const n = Math.max(1, max);
 	if (lines.length <= n) return lines;
 	const out = lines.slice(0, n);

@@ -3,13 +3,23 @@
 // de la grille (police et taille d'une cellule).
 
 /**
+ * Texte sans ses sauts de ligne finaux (ni les lignes vides ou faites
+ * d'espaces qui les suivent) : « Texte\n\n » s'affiche et se mesure sur une
+ * ligne. Les lignes vides du début ou du milieu restent.
+ */
+export function trimTrailingBreaks(text: string): string {
+	return text.replace(/\r?\n\s*$/, '');
+}
+
+/**
  * Lignes d'un texte pour une largeur donnée (measure : largeur d'un texte).
  * Coupe aux espaces (plusieurs espaces comptent pour un) et aux sauts de
- * ligne ; un mot plus large que la cellule est coupé.
+ * ligne ; un mot plus large que la cellule est coupé. Les sauts de ligne
+ * finaux ne comptent pas (trimTrailingBreaks).
  */
 export function wrapLines(text: string, width: number, measure: (s: string) => number): string[] {
 	const out: string[] = [];
-	for (const para of text.split('\n')) {
+	for (const para of trimTrailingBreaks(text).split('\n')) {
 		let line = '';
 		for (let w of para.split(/\s+/).filter(Boolean)) {
 			const cand = line ? line + ' ' + w : w;
@@ -64,10 +74,11 @@ export function lineHeight(px: number): number {
  * Hauteur de ligne automatique d'une cellule (comme Excel) : assez pour ses
  * lignes de texte quand elle renvoie à la ligne ou contient des sauts de
  * ligne (Alt+Entrée), ou pour une grande police ; 0 si la hauteur par
- * défaut suffit.
+ * défaut suffit. Les sauts de ligne finaux ne comptent pas.
  */
 export function autoHeight(text: string, width: number, st: { wr?: boolean; fs?: number }, measure: (s: string) => number, def: number): number {
 	const lh = lineHeight(fontPx(st.fs));
+	text = trimTrailingBreaks(text);
 	const n = !text ? 1 : st.wr ? wrapLines(text, Math.max(8, width - 12), measure).length : text.split('\n').length;
 	const h = n * lh + 4;
 	return h > def ? h : 0;
