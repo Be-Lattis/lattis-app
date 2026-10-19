@@ -2,6 +2,8 @@
 
 Un tag `v*` poussé sur GitHub lance le workflow **Release** (`.github/workflows/release.yml`) : il construit les installeurs Windows, macOS et Linux, les signe quand les secrets sont configurés (voir [signature.md](signature.md)), puis publie la release GitHub (publique, ni brouillon ni pré-version pour `vX.Y.Z`) avec les fichiers, leurs empreintes, `latest.json` et les notes de version. Sans aucun secret, tout est produit et publié quand même, non signé.
 
+Avant de taguer, relire la [liste de contrôle](checklist.md).
+
 ## Créer le tag
 
 ```bash
