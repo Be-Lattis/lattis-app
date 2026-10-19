@@ -52,7 +52,7 @@ export interface ButtonConfig {
     "label": string;
 
     /**
-     * Script est le nom d'un script de la bibliothèque (onglet SCRIPT) ;
+     * Script est le nom d'un script de la bibliothèque (onglet Script) ;
      * vide : aucune action.
      */
     "script": string;

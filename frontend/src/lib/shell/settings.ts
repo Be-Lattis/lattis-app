@@ -100,38 +100,38 @@ export const settingSections: SettingSection[] = [
 			{
 				path: 'limits.undoDepth',
 				kind: 'number',
-				label: 'Profondeur d’annulation',
+				label: "Profondeur d'annulation",
 				unit: 'commandes',
 				min: 10,
 				max: 10000,
-				help: 'Nombre de commandes que Ctrl+Z peut annuler (200 par défaut). L’historique n’est jamais enregistré dans le fichier.'
+				help: "Nombre de commandes que Ctrl+Z peut annuler (200 par défaut). L'historique n'est jamais enregistré dans le fichier."
 			},
 			{
 				path: 'limits.scriptSeconds',
 				kind: 'number',
-				label: 'Durée maximale d’un script',
+				label: "Durée maximale d'un script",
 				unit: 's',
 				min: 1,
 				max: 3600,
-				help: 'Au-delà, le script est arrêté et ce qu’il a modifié est annulé (30 s par défaut).'
+				help: "Au-delà, le script est arrêté et ce qu'il a modifié est annulé (30 s par défaut)."
 			},
 			{
 				path: 'limits.sqlReadSeconds',
 				kind: 'number',
-				label: 'Durée maximale d’une lecture SQL',
+				label: "Durée maximale d'une lecture SQL",
 				unit: 's',
 				min: 1,
 				max: 3600,
-				help: 'Requêtes de l’onglet SQL et lectures des scripts (30 s par défaut).'
+				help: "Requêtes de l'onglet SQL et lectures des scripts (30 s par défaut)."
 			},
 			{
 				path: 'limits.sqlWriteSeconds',
 				kind: 'number',
-				label: 'Durée maximale d’une écriture SQL',
+				label: "Durée maximale d'une écriture SQL",
 				unit: 's',
 				min: 1,
 				max: 3600,
-				help: 'Une écriture de l’onglet SQL bloque les saisies tant qu’elle dure ; au-delà, elle est annulée sans rien modifier (120 s par défaut).'
+				help: "Une écriture de l'onglet SQL bloque les saisies tant qu'elle dure ; au-delà, elle est annulée sans rien modifier (120 s par défaut)."
 			}
 		]
 	}

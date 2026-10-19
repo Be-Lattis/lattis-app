@@ -708,7 +708,7 @@ export function FormulaHelp(): $CancellablePromise<$models.FormulaHelp> {
 
 /**
  * HTTPHosts liste les hôtes que les scripts et pages du classeur peuvent
- * joindre sans redemander (onglet SCRIPT › Accès réseau).
+ * joindre sans redemander (onglet Script › Accès réseau).
  */
 export function HTTPHosts(): $CancellablePromise<string[] | null> {
     return $Call.ByID(2230405609);
@@ -1149,7 +1149,7 @@ export function PlacePivot(sheet: number, row: number, col: number, cfg: canvas$
 /**
  * Platform décrit l'hôte à l'interface : version web (pas de boutons de
  * fenêtre, fichiers envoyés et téléchargés) et scripting permis (onglet
- * SCRIPT, boutons, pages web et serveur MCP masqués sinon).
+ * Script, boutons, pages web et serveur MCP masqués sinon).
  */
 export function Platform(): $CancellablePromise<$models.Platform> {
     return $Call.ByID(2235937389);
@@ -1397,7 +1397,7 @@ export function RunButton(id: number): $CancellablePromise<$models.ScriptResult>
 }
 
 /**
- * RunFunction exécute le script name de la bibliothèque (onglet SCRIPT),
+ * RunFunction exécute le script name de la bibliothèque (onglet Script),
  * ou seulement sa fonction entry : bouton d'un onglet Document.
  */
 export function RunFunction(name: string, entry: string): $CancellablePromise<$models.ScriptResult> {
