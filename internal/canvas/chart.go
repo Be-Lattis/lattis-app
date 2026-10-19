@@ -2,6 +2,7 @@ package canvas
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -108,6 +109,12 @@ var ErrChart = errors.New("graphique")
 
 // MaxChartPoints borne les points d'un graphique.
 const MaxChartPoints = 2000
+
+// Taille minimale d'un graphique (pixels), à la souris comme par l'API.
+const (
+	MinChartWidth  = 160
+	MinChartHeight = 120
+)
 
 // chartKinds : types de graphiques. bar (barres verticales), column
 // (horizontales), line, area, pie, doughnut, scatter ; combo (barres et
@@ -467,8 +474,11 @@ func (t *tx) chartFromPivot(cfg ChartConfig, pc PivotConfig) ([]string, []ChartS
 // dans la cellule (px) et taille (px). Déplacer et redimensionner par
 // n'importe quel bord ne fait qu'une étape d'annulation.
 func (m *Model) PlaceChart(ctx context.Context, id int64, row, col, offX, offY, width, height int) error {
-	if row < 0 || col < 0 || width < 50 || height < 50 {
-		return fmt.Errorf("%w : position ou taille invalide", ErrChart)
+	if row < 0 || col < 0 {
+		return fmt.Errorf("%w : position hors de la feuille", ErrChart)
+	}
+	if width < MinChartWidth || height < MinChartHeight {
+		return fmt.Errorf("%w : taille minimale %d × %d pixels", ErrChart, MinChartWidth, MinChartHeight)
 	}
 	return m.Do(ctx, "Déplacer le graphique", func(t *tx) error {
 		if err := t.guardObject(`_lattis_charts`, id); err != nil {
@@ -491,6 +501,21 @@ func (m *Model) PlaceChart(ctx context.Context, id int64, row, col, offX, offY, 
 		q := `UPDATE _lattis_charts SET row = ?, col = ?, config = ? WHERE id = ?`
 		return t.apply([]stmt{st(q, row, col, string(b), id)}, []stmt{st(q, r, c, old, id)})
 	})
+}
+
+// ChartPlace donne la cellule d'ancrage et la configuration d'un graphique.
+func (m *Model) ChartPlace(ctx context.Context, id int64) (row, col int, cfg ChartConfig, err error) {
+	err = m.read(ctx, func(t *tx) error {
+		var raw string
+		if err := t.row(`SELECT row, col, config FROM _lattis_charts WHERE id = ?`, id).Scan(&row, &col, &raw); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return fmt.Errorf("%w : graphique %d introuvable", ErrChart, id)
+			}
+			return err
+		}
+		return json.Unmarshal([]byte(raw), &cfg)
+	})
+	return
 }
 
 // ChartData calcule les données d'un graphique qui n'est posé sur aucune

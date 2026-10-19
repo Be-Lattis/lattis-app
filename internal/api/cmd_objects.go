@@ -1,6 +1,7 @@
 package api
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -64,7 +65,9 @@ var (
 	pButton = Param{Name: "button", Type: Ref, Desc: "bouton (identifiant ou libellé)"}
 )
 
-const chartHelp = `config : {source, kind, x, series, title, legend, xTitle, yTitle, labels, width, height}. source est un tableau ou un tableau croisé, x la colonne des abscisses, series la liste des colonnes tracées. kind : "bar" (barres verticales), "column" (horizontales), "line", "area", "pie", "doughnut", "scatter", "combo" (barres et courbes : seriesKinds donne la forme de chaque série, "bar", "line" ou "area", et secondary les séries sur l'axe de droite), "bar3d" et "pie3d" (en perspective), "map" (carte OpenStreetMap : series = {latitude, longitude, valeur facultative}, x le nom des points ; mapMode "points" ou "heat" pour la densité), "waterfall" (cascade), "treemap" (compartimentage), "radar", "funnel" (entonnoir), "boxplot" (boîte à moustaches), "histogram" (fréquences, bins classes) ou "gauge" (jauge : dernière valeur de la première série, entre yMin et yMax). legend : "bottom", "top", "right" ou "none".`
+const chartHelp = `config : {source, kind, x, series, title, …}. source est un tableau ou un tableau croisé, x la colonne des abscisses, series la liste des colonnes tracées. kind : "bar" (histogramme : barres verticales), "column" (barres horizontales), "line", "area", "pie", "doughnut", "scatter", "combo" (barres et courbes : seriesKinds donne la forme de chaque série, "bar", "line" ou "area"), "bar3d" et "pie3d" (en perspective), "map" (carte OpenStreetMap), "waterfall" (cascade), "treemap" (compartimentage), "radar", "funnel" (entonnoir), "boxplot" (boîte à moustaches), "histogram" (fréquences, bins classes) ou "gauge" (jauge : dernière valeur de la première série, entre yMin et yMax).
+Présentation : title ; legend ("bottom", "top", "right" ou "none") ; xTitle, yTitle, y2Title (titres des axes) ; labels (étiquettes de données) ; noGrid (sans quadrillage) ; stacked (empilé : barres, aires) ; yMin, yMax (bornes de l'axe des valeurs) ; colors (couleur de chaque série, "#rrggbb" ; par catégorie pour secteurs, anneau, entonnoir et compartimentage ; hausse, baisse et total pour la cascade) ; secondary (liste de booléens : séries sur l'axe de droite) ; hidden (lit aussi les lignes masquées par le filtre du tableau) ; width, height (pixels) et offX, offY (décalage dans la cellule d'ancrage, pixels).
+Carte : series = {latitude, longitude, valeur facultative} (mapCoords "pair", par défaut) ou {coordonnées, valeur facultative} (mapCoords "single" : une cellule « 48.85, 2.35 ») ; x le nom des points ; mapMode "points" ou "heat" (densité) ; colorBy, colonne dont chaque valeur prend sa couleur ; mapView {lat, lon, zoom} fixe la vue.`
 
 const pivotHelp = `config : {source, rowFields, cols, values, filters, name, noGrandTotal, subtotals, collapsed, collapseAll, expanded}. source est un tableau, rowFields la liste des champs en lignes, cols le champ en colonnes, values une liste de {field, agg, show} (agg : "sum", "count", "countDistinct", "avg", "min" ou "max" ; show : "", "pctTotal", "pctRow" ou "pctCol"), filters une liste de {field, values}. Avec plusieurs champs en lignes, le tableau s'affiche en arborescence : subtotals place les sous-totaux des groupes ("" sur la ligne du groupe, "bottom" en dessous, "none" aucun) ; collapsed liste les groupes pliés, chacun par ses étiquettes ({"RH"}, {"RH", "Paris"}) ; collapseAll plie tout, sauf les groupes d'expanded.`
 
@@ -103,27 +106,39 @@ func init() {
 		&Command{
 			Name:    "charts.set",
 			Label:   "Modifier le graphique",
-			Summary: "Remplace la configuration d'un graphique.",
+			Summary: "Modifie la configuration d'un graphique : seuls les champs donnés changent (replace = true remplace toute la configuration).",
 			Details: chartHelp,
-			Params:  []Param{pChart, {Name: "config", Type: Object, Desc: "nouvelle configuration"}},
+			Params:  []Param{pChart, {Name: "config", Type: Object, Desc: "champs à changer"}, {Name: "replace", Type: Boolean, Desc: "remplacer toute la configuration (taille, couleurs, vue de carte… reviennent par défaut)", Optional: true}},
 			Write:   true,
+			Example: `local g = charts.create(2, 8, {source = "Commandes", kind = "bar", x = "Client", series = {"Montant"}})
+charts.set(g, {title = "Ventes par client", labels = true})`,
 			Run: func(c *Call) (any, error) {
 				id, err := c.object("_lattis_charts", "title", "graphique", "chart")
 				if err != nil {
 					return nil, err
 				}
-				var cfg canvas.ChartConfig
-				if err := c.Decode("config", &cfg); err != nil {
+				replace, err := c.Bool("replace")
+				if err != nil {
 					return nil, err
 				}
 				d, _ := c.Doc()
+				var cfg canvas.ChartConfig
+				if !replace {
+					// Mise à jour partielle : les champs donnés recouvrent la configuration en place.
+					if _, _, cfg, err = d.ChartPlace(c, id); err != nil {
+						return nil, err
+					}
+				}
+				if err := c.Decode("config", &cfg); err != nil {
+					return nil, err
+				}
 				return nil, d.SetChart(c, id, cfg)
 			},
 		},
 		&Command{
 			Name:    "charts.place",
 			Label:   "Déplacer le graphique",
-			Summary: "Déplace un graphique (coin haut gauche en row, col) et, si donnés, le redimensionne (pixels).",
+			Summary: "Déplace un graphique (coin haut gauche en row, col) et, si donnés, le redimensionne (pixels, au moins 160 × 120) ; sinon il garde sa taille.",
 			Params:  []Param{pChart, pRow, pCol, {Name: "width", Type: Integer, Desc: "largeur en pixels", Optional: true}, {Name: "height", Type: Integer, Desc: "hauteur en pixels", Optional: true}},
 			Write:   true,
 			Run: func(c *Call) (any, error) {
@@ -139,16 +154,25 @@ func init() {
 				if err != nil {
 					return nil, err
 				}
-				w, err := c.Int("width", 480)
-				if err != nil {
-					return nil, err
-				}
-				h, err := c.Int("height", 288)
-				if err != nil {
-					return nil, err
-				}
 				d, _ := c.Doc()
-				return nil, d.PlaceChart(c, id, row, col, 0, 0, w, h)
+				r0, c0, cfg, err := d.ChartPlace(c, id)
+				if err != nil {
+					return nil, err
+				}
+				w, err := c.Int("width", cmp.Or(cfg.Width, 480))
+				if err != nil {
+					return nil, err
+				}
+				h, err := c.Int("height", cmp.Or(cfg.Height, 288))
+				if err != nil {
+					return nil, err
+				}
+				// Décalage dans la cellule : gardé si le graphique reste ancré à la même cellule.
+				offX, offY := 0, 0
+				if r0 == row && c0 == col {
+					offX, offY = cfg.OffX, cfg.OffY
+				}
+				return nil, d.PlaceChart(c, id, row, col, offX, offY, w, h)
 			},
 		},
 		&Command{
