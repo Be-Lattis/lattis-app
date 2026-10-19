@@ -60,7 +60,7 @@ export function lostItems(r: ExportReport): string[] {
 	add(sheets.filter((s) => s.kind).length, 'onglet page ou document', 'onglets page ou document');
 	add(r.scripts, 'script', 'scripts');
 	add(sheets.filter((s) => s.protected).length, 'protection de feuille', 'protections de feuille');
-	add(sum(r, (s) => s.twoLevel), 'en-tête sur deux lignes (mis sur une)', 'en-têtes sur deux lignes (mis sur une)');
+	add(sum(r, (s) => s.twoLevel), "groupe d'en-têtes (dans les noms)", "groupes d'en-têtes (dans les noms)");
 	add(r.clipped, 'cellule hors des limites', 'cellules hors des limites');
 	return out;
 }
@@ -101,7 +101,7 @@ export function exportDetails(r: ExportReport): SheetDetail[] {
 		put(lost, s.lists, 'liste de validation non exportée', 'listes de validation non exportées');
 		put(lost, s.buttons, 'bouton non exporté', 'boutons non exportés');
 		put(lost, s.queries, 'tableau chargé par une requête : valeurs exportées, sans la requête', 'tableaux chargés par une requête : valeurs exportées, sans la requête');
-		put(lost, s.twoLevel, 'tableau aux en-têtes sur deux lignes : en-têtes exportés sur une (« Groupe.Sous »)', 'tableaux aux en-têtes sur deux lignes : en-têtes exportés sur une (« Groupe.Sous »)');
+		put(lost, s.twoLevel, "tableau à groupes d'en-têtes : groupes exportés dans les noms (« Groupe.Sous »)", "tableaux à groupes d'en-têtes : groupes exportés dans les noms (« Groupe.Sous »)");
 		if (s.protected) lost.push('Protection de la feuille non exportée');
 		put(lost, s.clipped, 'cellule au-delà de 1 048 576 lignes × 16 384 colonnes non exportée', 'cellules au-delà de 1 048 576 lignes × 16 384 colonnes non exportées');
 		return { name: s.name, kept, lost };

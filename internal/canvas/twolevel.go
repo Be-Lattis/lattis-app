@@ -39,9 +39,9 @@ func cleanGroup(s string) string {
 // couvrent ; un tableau en première ligne descend d'une ligne pour faire
 // place à la bande.
 func (m *Model) SetTwoLevel(ctx context.Context, table string, on bool) error {
-	label := "En-têtes sur deux lignes"
+	label := "Groupes d'en-têtes"
 	if !on {
-		label = "En-têtes sur une ligne"
+		label = "Retirer les groupes d'en-têtes"
 	}
 	return m.Do(ctx, label, func(t *tx) error {
 		tb, err := t.editTable(table)

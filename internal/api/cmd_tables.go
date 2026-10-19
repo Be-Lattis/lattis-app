@@ -382,7 +382,7 @@ end`,
 			}),
 		&Command{
 			Name:  "tables.two_level_headers",
-			Label: "En-têtes sur deux lignes",
+			Label: "Groupes d'en-têtes",
 			Summary: "Affiche (on = true) les en-têtes du tableau sur deux lignes : le nom « Groupe.Sous » d'une colonne montre son groupe dans une bande au-dessus de l'en-tête, fusionnée sur les colonnes voisines du même groupe ; les formules et le SQL gardent le nom complet (T[Groupe.Sous]). " +
 				"À l'activation, les cellules libres de la ligne au-dessus de l'en-tête (fusionnées ou non) deviennent les groupes des colonnes qu'elles couvrent ; on = false garde les noms complets sur une ligne.",
 			Params:  []Param{pTable, {Name: "on", Type: Boolean, Desc: "true : deux lignes ; false : une ligne"}},

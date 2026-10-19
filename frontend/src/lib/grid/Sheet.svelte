@@ -8918,7 +8918,7 @@
 									title={on
 										? 'Les noms complets « Groupe.Nom » reviennent sur une seule ligne'
 										: 'Les noms « Groupe.Nom » montrent leur groupe dans une bande au-dessus de l’en-tête ; la ligne au-dessus du tableau (cellules fusionnées ou non) donne les groupes'}
-									onclick={() => menuAction(() => source.setTwoLevel!(m.e.t, !on))}><span class="check">{on ? '✓' : ''}</span>En-têtes sur deux lignes</button
+									onclick={() => menuAction(() => source.setTwoLevel!(m.e.t, !on))}><span class="check">{on ? '✓' : ''}</span>{on ? "Retirer les groupes d'en-têtes" : "Intégrer la ligne du dessus comme groupes d'en-têtes"}</button
 								>
 							{/if}
 							{#if refresh}
