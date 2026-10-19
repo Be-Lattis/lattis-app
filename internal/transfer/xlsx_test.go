@@ -16,6 +16,13 @@ import (
 // feuilles sont données par leur contenu <sheetData>.
 func xlsxFixture(t *testing.T, sst []string, sheets [][2]string) string {
 	t.Helper()
+	return xlsxFixtureParts(t, sst, sheets, nil)
+}
+
+// xlsxFixtureParts : xlsxFixture avec des parties en plus (graphiques…) ;
+// une feuille dont le contenu commence par <sheetData est écrite telle quelle.
+func xlsxFixtureParts(t *testing.T, sst []string, sheets [][2]string, parts map[string]string) string {
+	t.Helper()
 	p := filepath.Join(t.TempDir(), "classeur.xlsx")
 	f, err := os.Create(p)
 	if err != nil {
@@ -38,7 +45,14 @@ func xlsxFixture(t *testing.T, sst []string, sheets [][2]string) string {
 	for i, s := range sheets {
 		fmt.Fprintf(&wbSheets, `<sheet name="%s" sheetId="%d" r:id="rId%d"/>`, s[0], i+1, i+1)
 		fmt.Fprintf(&wbRels, `<Relationship Id="rId%d" Type="%sworksheet" Target="worksheets/sheet%d.xml"/>`, i+1, rel, i+1)
-		put(fmt.Sprintf("xl/worksheets/sheet%d.xml", i+1), `<worksheet `+ns+`><sheetData>`+s[1]+`</sheetData></worksheet>`)
+		body := s[1]
+		if !strings.HasPrefix(body, "<sheetData") {
+			body = `<sheetData>` + body + `</sheetData>`
+		}
+		put(fmt.Sprintf("xl/worksheets/sheet%d.xml", i+1), `<worksheet `+ns+`>`+body+`</worksheet>`)
+	}
+	for name, body := range parts {
+		put(name, body)
 	}
 	fmt.Fprintf(&wbRels, `<Relationship Id="rS" Type="%ssharedStrings" Target="sharedStrings.xml"/>`, rel)
 	fmt.Fprintf(&wbRels, `<Relationship Id="rT" Type="%sstyles" Target="/xl/styles.xml"/>`, rel)
@@ -243,6 +257,40 @@ func TestFormatKind(t *testing.T) {
 	} {
 		if got := formatKind(code); got != want {
 			t.Errorf("%q : %d, attendu %d", code, got, want)
+		}
+	}
+}
+
+// Ce que l'import ne reprend pas est signalé : graphiques, tableaux croisés,
+// macros, commentaires, mise en forme conditionnelle, validations.
+func TestXLSXImportLost(t *testing.T) {
+	ctx := context.Background()
+	sheet := `<sheetData>` + row(1, cs("A1", 0), cs("B1", 1)) + row(2, cn("A2", "1"), cn("B2", "2")) + row(3, cn("A3", "3"), cn("B3", "4")) + `</sheetData>` +
+		`<conditionalFormatting sqref="A2:A3"><cfRule type="cellIs" priority="1" operator="greaterThan"><formula>1</formula></cfRule></conditionalFormatting>` +
+		`<dataValidations count="1"><dataValidation type="list" sqref="B2:B3"><formula1>"1,2"</formula1></dataValidation></dataValidations>`
+	path := xlsxFixtureParts(t, []string{"A", "B"}, [][2]string{{"Données", sheet}}, map[string]string{
+		"xl/charts/chart1.xml":           `<chartSpace/>`,
+		"xl/charts/chart2.xml":           `<chartSpace/>`,
+		"xl/pivotTables/pivotTable1.xml": `<pivotTableDefinition/>`,
+		"xl/vbaProject.bin":              `x`,
+		"xl/comments1.xml":               `<comments><commentList><comment ref="A1"/><comment ref="B1"/></commentList></comments>`,
+	})
+	d := open(t)
+	res, err := ImportXLSX(ctx, d.Model, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	warn := strings.Join(res.Warnings, "\n")
+	for _, w := range []string{
+		"2 graphiques non importés",
+		"1 tableau croisé dynamique importé en valeurs",
+		"Macros VBA non importées",
+		"2 commentaires non importés",
+		"Feuille « Données » : 1 règle de mise en forme conditionnelle non importée",
+		"Feuille « Données » : 1 validation de données non importée",
+	} {
+		if !strings.Contains(warn, w) {
+			t.Errorf("avertissement attendu %q dans :\n%s", w, warn)
 		}
 	}
 }

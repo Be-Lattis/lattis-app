@@ -126,12 +126,12 @@ func TestXLSXExport(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := filepath.Join(t.TempDir(), "export.xlsx")
-	clipped, err := ExportXLSXFile(ctx, d.Model, p)
+	rep, err := ExportXLSXFile(ctx, d.Model, p)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if clipped != 1 {
-		t.Fatalf("cellules coupées : %d", clipped)
+	if rep.Clipped != 1 || rep.Sheets[2].Clipped != 1 {
+		t.Fatalf("cellules coupées : %+v", rep)
 	}
 	parts := readZip(t, p)
 	contains(t, "classeur", parts["xl/workbook.xml"], `name="Données"`, `name="Notes"`, `name="Brouillon_ _2026_" sheetId="3" state="hidden"`, `fullCalcOnLoad="1"`)

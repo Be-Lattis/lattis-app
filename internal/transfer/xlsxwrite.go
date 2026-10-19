@@ -23,32 +23,32 @@ import (
 // exportformula.go), sinon exportées par leur valeur ; la valeur calculée
 // accompagne toujours la formule. Mise en forme : formats de nombre et de
 // date, police, couleurs, alignement, bordures, largeurs, hauteurs, lignes
-// et colonnes masquées, fusions, volets figés. Ni graphiques ni mise en
-// forme conditionnelle.
+// et colonnes masquées, fusions, volets figés. Ni graphiques, ni mise en
+// forme conditionnelle, ni notes, ni validations : le compte rendu
+// (ExportReport) dit ce qui n'est pas exporté tel quel.
 
-// ExportXLSX écrit tout le classeur au format .xlsx ; clipped compte les
-// cellules hors des limites d'Excel (1 048 576 lignes × 16 384 colonnes),
-// qui ne sont pas exportées.
-func ExportXLSX(ctx context.Context, m *canvas.Model, w io.Writer) (clipped int, err error) {
+// ExportXLSX écrit tout le classeur au format .xlsx et rend le compte rendu,
+// dont les cellules hors des limites d'Excel (1 048 576 lignes × 16 384
+// colonnes), qui ne sont pas exportées.
+func ExportXLSX(ctx context.Context, m *canvas.Model, w io.Writer) (ExportReport, error) {
 	sheets, fm, err := exportBook(ctx, m, toXLSX)
 	if err != nil {
-		return 0, err
+		return ExportReport{}, err
 	}
-	err = writeXLSX(ctx, w, sheets, fm)
-	for _, sh := range sheets {
-		clipped += sh.clipped
+	if err := writeXLSX(ctx, w, sheets, fm); err != nil {
+		return ExportReport{}, err
 	}
-	return clipped, err
+	return report(ctx, m, sheets), nil
 }
 
 // ExportXLSXFile écrit le classeur dans un fichier (via un fichier temporaire).
-func ExportXLSXFile(ctx context.Context, m *canvas.Model, path string) (clipped int, err error) {
+func ExportXLSXFile(ctx context.Context, m *canvas.Model, path string) (rep ExportReport, err error) {
 	err = writeAtomic(path, func(w io.Writer) error {
 		var e error
-		clipped, e = ExportXLSX(ctx, m, w)
+		rep, e = ExportXLSX(ctx, m, w)
 		return e
 	})
-	return clipped, err
+	return rep, err
 }
 
 // xlsxTable est un tableau Excel écrit (partie xl/tables/tableN.xml).

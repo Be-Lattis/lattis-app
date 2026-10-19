@@ -142,7 +142,8 @@ func init() {
 		},
 		&Command{
 			Name: "doc.export_xlsx", Summary: "Exporte tout le classeur au format Excel .xlsx : tableaux Excel, formules traduites quand Excel a un équivalent (sinon leur valeur), mise en forme.", NoLua: true,
-			Returns: "{path, clipped} (clipped : cellules au-delà des limites d'Excel, non exportées)",
+			Returns: "{path, clipped, report} (clipped : cellules au-delà des limites d'Excel, non exportées ; report : ce qui n'est pas exporté tel quel, voir Details)",
+			Details: exportReportDetails,
 			Params:  []Param{{Name: "path", Type: String, Desc: "chemin du fichier .xlsx à écrire"}},
 			Run: func(c *Call) (any, error) {
 				return exportBook(c, ".xlsx", transfer.ExportXLSXFile)
@@ -150,7 +151,8 @@ func init() {
 		},
 		&Command{
 			Name: "doc.export_ods", Summary: "Exporte tout le classeur au format OpenDocument .ods (LibreOffice) : formules traduites quand c'est possible (sinon leur valeur), mise en forme, tableaux en plages nommées.", NoLua: true,
-			Returns: "{path, clipped}",
+			Returns: "{path, clipped, report}",
+			Details: exportReportDetails,
 			Params:  []Param{{Name: "path", Type: String, Desc: "chemin du fichier .ods à écrire"}},
 			Run: func(c *Call) (any, error) {
 				return exportBook(c, ".ods", transfer.ExportODSFile)
@@ -351,7 +353,10 @@ func scriptID(c *Call, name string) (int64, error) {
 }
 
 // exportBook écrit tout le classeur (doc.export_xlsx, doc.export_ods).
-func exportBook(c *Call, ext string, export func(context.Context, *canvas.Model, string) (int, error)) (any, error) {
+// exportReportDetails décrit le compte rendu d'un export .xlsx ou .ods.
+const exportReportDetails = "report : {sheets, scripts, clipped} ; scripts : scripts du classeur, non exportés. Chaque feuille de sheets : name, kind (\"html\" ou \"doc\" : onglet page ou document, exporté vide), tables (tableaux exportés), translated (formules exportées comme formules), formulas et columns (formules de cellules et colonnes calculées exportées par leur valeur), functions (fonctions sans équivalent qui en sont la cause, noms français), pivots (tableaux croisés exportés en valeurs), charts (graphiques), rules (règles de mise en forme conditionnelle), notes, lists (validations par liste), buttons (boutons et contrôles) : non exportés ; queries (tableaux chargés par une requête : valeurs sans la requête), twoLevel (en-têtes sur deux lignes, exportés sur une), protected (protection non exportée), clipped."
+
+func exportBook(c *Call, ext string, export func(context.Context, *canvas.Model, string) (transfer.ExportReport, error)) (any, error) {
 	d, err := c.Doc()
 	if err != nil {
 		return nil, err
@@ -363,11 +368,11 @@ func exportBook(c *Call, ext string, export func(context.Context, *canvas.Model,
 	if !strings.EqualFold(filepath.Ext(p), ext) {
 		p += ext
 	}
-	n, err := export(c, d.Model, p)
+	rep, err := export(c, d.Model, p)
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"path": p, "clipped": n}, nil
+	return map[string]any{"path": p, "clipped": rep.Clipped, "report": rep}, nil
 }
 
 var _ canvas.ScriptInfo

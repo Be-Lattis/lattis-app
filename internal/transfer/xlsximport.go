@@ -1,10 +1,12 @@
 package transfer
 
 import (
+	"archive/zip"
 	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/canvas"
@@ -38,8 +40,82 @@ func ImportXLSX(ctx context.Context, m *canvas.Model, path string) (canvas.Impor
 		return canvas.ImportResult{}, err
 	}
 	res, err := m.Import(ctx, "Importer "+filepath.Base(path), sheets)
-	res.Warnings = append(warnings, res.Warnings...)
+	res.Warnings = slices.Concat(x.lost(), warnings, res.Warnings)
 	return res, err
+}
+
+// lost dit ce que le classeur contient et que l'import ne reprend pas :
+// graphiques, tableaux croisés (repris en valeurs), macros, commentaires,
+// images, mise en forme conditionnelle et validations.
+func (x *xlsxFile) lost() []string {
+	var charts, pivots, notes, images int
+	macros := false
+	for _, f := range x.zr.File {
+		name := strings.ToLower(f.Name)
+		switch {
+		case strings.HasPrefix(name, "xl/charts/chart") && strings.HasSuffix(name, ".xml"):
+			charts++
+		case strings.HasPrefix(name, "xl/pivottables/pivottable") && strings.HasSuffix(name, ".xml"):
+			pivots++
+		case name == "xl/vbaproject.bin":
+			macros = true
+		case strings.HasPrefix(name, "xl/media/"):
+			images++
+		case strings.HasPrefix(name, "xl/comments") && strings.HasSuffix(name, ".xml"):
+			notes += countTags(f, "comment")
+		}
+	}
+	var out []string
+	if charts > 0 {
+		out = append(out, plural(charts, "graphique non importé (recréez-le à partir des données importées)", "graphiques non importés (recréez-les à partir des données importées)"))
+	}
+	if pivots > 0 {
+		out = append(out, plural(pivots, "tableau croisé dynamique importé en valeurs", "tableaux croisés dynamiques importés en valeurs"))
+	}
+	if macros {
+		out = append(out, "Macros VBA non importées")
+	}
+	if notes > 0 {
+		out = append(out, plural(notes, "commentaire non importé", "commentaires non importés"))
+	}
+	if images > 0 {
+		out = append(out, plural(images, "image non importée", "images non importées"))
+	}
+	for _, sh := range x.sheets {
+		e := x.extras[sh.name]
+		if e[0] > 0 {
+			out = append(out, fmt.Sprintf("Feuille « %s » : %s", sh.name, plural(e[0], "règle de mise en forme conditionnelle non importée", "règles de mise en forme conditionnelle non importées")))
+		}
+		if e[1] > 0 {
+			out = append(out, fmt.Sprintf("Feuille « %s » : %s", sh.name, plural(e[1], "validation de données non importée", "validations de données non importées")))
+		}
+	}
+	return out
+}
+
+// plural écrit « 1 graphique… » ou « 3 graphiques… ».
+func plural(n int, one, many string) string {
+	if n == 1 {
+		return "1 " + one
+	}
+	return fmt.Sprintf("%d %s", n, many)
+}
+
+// countTags compte les balises name d'une partie XML (0 si illisible).
+func countTags(f *zip.File, name string) int {
+	r, err := f.Open()
+	if err != nil {
+		return 0
+	}
+	defer r.Close()
+	d := newXMLScanner(r)
+	n := 0
+	for d.next() == nil {
+		if d.kind == xmlStart && string(d.name) == name {
+			n++
+		}
+	}
+	return n
 }
 
 type colState struct {

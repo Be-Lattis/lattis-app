@@ -234,6 +234,15 @@ var funcIndex = func() map[string]funcDef {
 	return m
 }()
 
+// LocalName donne le nom d'une fonction (anglais ou français) dans une
+// langue ; le nom tel quel pour une fonction inconnue.
+func LocalName(name string, l Locale) string {
+	if f, ok := lookupFunc(name); ok {
+		return f.name(l)
+	}
+	return strings.ToUpper(name)
+}
+
 func lookupFunc(name string) (funcDef, bool) {
 	f, ok := funcIndex[strings.ToUpper(name)]
 	return f, ok

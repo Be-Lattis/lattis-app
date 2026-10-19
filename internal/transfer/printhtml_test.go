@@ -4,7 +4,28 @@ import (
 	"context"
 	"strings"
 	"testing"
+
+	"github.com/lalamefine/lattis/internal/canvas"
 )
+
+// Les graphiques ne sont pas imprimés : la page le dit.
+func TestPrintHTMLCharts(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Produit", "Prix"}, {"Pomme", "1,5"}, {"Poire", "2"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.CreateChart(ctx, 1, 5, 0, canvas.ChartConfig{Source: "Feuille1", Kind: "bar", X: "Produit", Series: []string{"Prix"}}); err != nil {
+		t.Fatal(err)
+	}
+	html, err := PrintHTML(ctx, d.Model, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(html, "1 graphique non imprimé") {
+		t.Errorf("graphique non signalé :\n%s", html)
+	}
+}
 
 func TestPrintHTML(t *testing.T) {
 	ctx := context.Background()

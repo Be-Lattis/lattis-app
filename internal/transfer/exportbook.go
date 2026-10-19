@@ -66,6 +66,7 @@ type xsheet struct {
 	hiddenR, hiddenC   map[int]bool
 	merges             [][4]int
 	rowStyle, colStyle map[int]canvas.Style
+	rep                SheetReport // ce qui n'est pas exporté tel quel
 }
 
 // Limites d'une feuille Excel : la feuille de Lattis va au-delà, l'export coupe.
@@ -211,8 +212,17 @@ func collectLayout(ctx context.Context, m *canvas.Model, s canvas.SheetInfo, l c
 	sh := xsheet{name: s.Name, info: s, hidden: s.Hidden, cells: map[[2]int]xcell{}, widths: l.Widths,
 		heights: map[int]int{}, rowFmt: map[int]int32{}, colFmt: map[int]int32{}, hiddenR: map[int]bool{}, hiddenC: map[int]bool{},
 		rowStyle: map[int]canvas.Style{}, colStyle: map[int]canvas.Style{}}
+	sh.rep = SheetReport{Name: s.Name, Kind: s.Kind, Protected: s.Protected, Tables: len(l.Tables),
+		Pivots: len(l.Pivots), Charts: len(l.Charts), Buttons: len(l.Buttons)}
+	rules := map[string]bool{} // règles conditionnelles (identifiants)
+	for _, lr := range slices.Concat(l.RowRules, l.ColRules) {
+		ruleList(lr.Rules, rules)
+	}
 	for _, h := range l.Heights {
 		sh.heights[h.Row] = h.Height
+	}
+	for _, ls := range slices.Concat(l.RowStyles, l.ColStyles) {
+		sh.rep.style(parseStyle(ls.Style), rules)
 	}
 	for _, ls := range l.RowStyles {
 		st := parseStyle(ls.Style)
@@ -238,6 +248,7 @@ func collectLayout(ctx context.Context, m *canvas.Model, s canvas.SheetInfo, l c
 	for _, c := range l.Styles {
 		st := parseStyle(c.Style)
 		own[[2]int{c.Row, c.Col}] = st
+		sh.rep.style(st, rules)
 		mr, _ := st["mr"].(float64)
 		mc, _ := st["mc"].(float64)
 		if mr >= 1 && mc >= 1 && mr*mc > 1 {
@@ -283,6 +294,11 @@ func collectLayout(ctx context.Context, m *canvas.Model, s canvas.SheetInfo, l c
 	}
 	for _, c := range l.Cells {
 		if len(c.Spill) > 0 {
+			// Tableau dynamique : toujours ses valeurs.
+			if b != nil {
+				_, why, _ := b.translateWhy(c.Raw, at{sheet: b.sheets[strings.ToLower(s.Name)]})
+				sh.rep.formula(false, false, why)
+			}
 			for i, row := range c.Spill {
 				for j, v := range row {
 					x := textCell(v)
@@ -302,7 +318,10 @@ func collectLayout(ctx context.Context, m *canvas.Model, s canvas.SheetInfo, l c
 			x = textCell(c.Raw)
 		}
 		if b != nil && strings.HasPrefix(c.Raw, "=") {
-			x.f, _ = b.translate(c.Raw, at{sheet: b.sheets[strings.ToLower(s.Name)]})
+			var why []string
+			var ok bool
+			x.f, why, ok = b.translateWhy(c.Raw, at{sheet: b.sheets[strings.ToLower(s.Name)]})
+			sh.rep.formula(ok, false, why)
 		}
 		x.fm = fmtAt(c.Row, c.Col, nil)
 		put(c.Row, c.Col, x)
@@ -311,6 +330,16 @@ func collectLayout(ctx context.Context, m *canvas.Model, s canvas.SheetInfo, l c
 		xt := &xtable{info: tb, rows: sh.rowStyle}
 		if b != nil {
 			xt.place = b.tables[strings.ToLower(tb.Name)]
+		}
+		if tb.QueryID != 0 {
+			sh.rep.Queries++
+		}
+		if tb.TwoLevel {
+			sh.rep.TwoLevel++
+		}
+		for _, c := range tb.Columns {
+			ruleList(c.Rules, rules)
+			sh.rep.style(parseStyle(c.Style), rules)
 		}
 		if fm != nil {
 			var cellStyles []canvas.CellStyle
@@ -324,6 +353,7 @@ func collectLayout(ctx context.Context, m *canvas.Model, s canvas.SheetInfo, l c
 					xt.own[cs.Row] = map[int]canvas.Style{}
 				}
 				xt.own[cs.Row][cs.Col] = parseStyle(cs.Style)
+				sh.rep.style(xt.own[cs.Row][cs.Col], rules)
 			}
 			for j, c := range tb.Columns {
 				sc, tc := sh.colStyle[tb.Col+j], parseStyle(c.Style)
@@ -336,13 +366,17 @@ func collectLayout(ctx context.Context, m *canvas.Model, s canvas.SheetInfo, l c
 			for _, c := range tb.Columns {
 				f := ""
 				if c.Formula != "" {
-					f, _ = b.translate(c.Formula, at{sheet: xt.place.sheet, table: xt.place})
+					var why []string
+					var ok bool
+					f, why, ok = b.translateWhy(c.Formula, at{sheet: xt.place.sheet, table: xt.place})
+					sh.rep.formula(ok, true, why)
 				}
 				xt.formulas = append(xt.formulas, f)
 			}
 		}
 		sh.tables = append(sh.tables, xt)
 	}
+	sh.rep.Rules = len(rules)
 	return sh, nil
 }
 

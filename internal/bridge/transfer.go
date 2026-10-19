@@ -104,11 +104,13 @@ func (s *DocumentService) PrintHTML(ctx context.Context, sheet int64) (string, e
 }
 
 // XLSXExport est le résultat d'un export .xlsx ou .ods : le fichier écrit
-// (vide si l'utilisateur a annulé) et le nombre de cellules hors des limites
-// d'Excel (et de LibreOffice).
+// (vide si l'utilisateur a annulé), le nombre de cellules hors des limites
+// d'Excel (et de LibreOffice) et le compte rendu de ce qui n'est pas exporté
+// tel quel (graphiques, formules en valeurs…).
 type XLSXExport struct {
-	Path    string `json:"path"`
-	Clipped int    `json:"clipped"`
+	Path    string                `json:"path"`
+	Clipped int                   `json:"clipped"`
+	Report  transfer.ExportReport `json:"report"`
 }
 
 // ExportXLSX écrit tout le classeur au format Excel .xlsx : tableaux Excel,
@@ -125,7 +127,7 @@ func (s *DocumentService) ExportODS(ctx context.Context) (XLSXExport, error) {
 	return s.exportBook(ctx, ".ods", "Exporter le classeur au format OpenDocument", FileFilter{"Classeur OpenDocument", "*.ods"}, transfer.ExportODSFile)
 }
 
-func (s *DocumentService) exportBook(ctx context.Context, ext, title string, filter FileFilter, export func(context.Context, *canvas.Model, string) (int, error)) (XLSXExport, error) {
+func (s *DocumentService) exportBook(ctx context.Context, ext, title string, filter FileFilter, export func(context.Context, *canvas.Model, string) (transfer.ExportReport, error)) (XLSXExport, error) {
 	d, err := s.current()
 	if err != nil {
 		return XLSXExport{}, err
@@ -135,7 +137,7 @@ func (s *DocumentService) exportBook(ctx context.Context, ext, title string, fil
 		base := filepath.Base(d.Path())
 		name = strings.TrimSuffix(base, filepath.Ext(base)) + ext
 	}
-	var n int
+	var rep transfer.ExportReport
 	p, err := s.sys().SaveFile(FileDialog{
 		Title:     title,
 		Filename:  name,
@@ -143,10 +145,10 @@ func (s *DocumentService) exportBook(ctx context.Context, ext, title string, fil
 		Filters:   []FileFilter{filter},
 		Ext:       ext,
 	}, func(p string) (err error) {
-		n, err = export(ctx, d.Model, p)
+		rep, err = export(ctx, d.Model, p)
 		return err
 	})
-	return XLSXExport{Path: p, Clipped: n}, err
+	return XLSXExport{Path: p, Clipped: rep.Clipped, Report: rep}, err
 }
 
 // docDir est le dossier du classeur enregistré, "" sinon.

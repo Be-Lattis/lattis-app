@@ -16,7 +16,8 @@ const MaxPrintRows = 5000
 // PrintHTML rend la plage utilisée d'une feuille en tableau HTML, pour
 // l'impression et l'export PDF (fenêtre d'impression du système) : valeurs
 // telles que la grille les affiche, en-têtes de tableaux en gras, largeurs de
-// colonnes. Version 1 : sans la mise en forme ni les graphiques.
+// colonnes. Version 1 : sans la mise en forme ni les graphiques (la page
+// dit combien ne sont pas imprimés).
 func PrintHTML(ctx context.Context, m *canvas.Model, sheet int64) (string, error) {
 	l, err := m.Layout(ctx, sheet)
 	if err != nil {
@@ -43,6 +44,7 @@ func renderPrint(sh xsheet) string {
 	fmt.Fprintf(&b, `<h1 class="print-title">%s</h1>`, xmlEscape(sh.name))
 	if len(sh.cells) == 0 {
 		b.WriteString(`<p class="print-empty">Feuille vide.</p>`)
+		b.WriteString(chartsNote(sh.rep.Charts))
 		return b.String()
 	}
 	r0, c0, r1, c1 := -1, -1, -1, -1
@@ -104,7 +106,19 @@ func renderPrint(sh xsheet) string {
 	if last < r1 {
 		fmt.Fprintf(&b, `<p class="print-more">%d lignes suivantes non imprimées : filtrez la feuille ou exportez le classeur en .xlsx.</p>`, r1-last)
 	}
+	b.WriteString(chartsNote(sh.rep.Charts))
 	return b.String()
+}
+
+// chartsNote dit que les graphiques de la feuille ne sont pas imprimés.
+func chartsNote(n int) string {
+	switch n {
+	case 0:
+		return ""
+	case 1:
+		return `<p class="print-more">1 graphique non imprimé (l'impression d'une feuille ne reprend que ses cellules).</p>`
+	}
+	return fmt.Sprintf(`<p class="print-more">%d graphiques non imprimés (l'impression d'une feuille ne reprend que ses cellules).</p>`, n)
 }
 
 // printText écrit une cellule comme la grille l'affiche (locale française).

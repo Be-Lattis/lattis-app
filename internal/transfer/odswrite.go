@@ -25,29 +25,28 @@ import (
 // styles.xml, après le contenu : ils ne sont tous connus qu'une fois les
 // tableaux lus.
 
-// ExportODS écrit tout le classeur au format .ods ; clipped compte les
-// cellules au-delà de 1 048 576 lignes × 16 384 colonnes (limites de
-// LibreOffice comme d'Excel), qui ne sont pas exportées.
-func ExportODS(ctx context.Context, m *canvas.Model, w io.Writer) (clipped int, err error) {
+// ExportODS écrit tout le classeur au format .ods et rend le compte rendu,
+// dont les cellules au-delà de 1 048 576 lignes × 16 384 colonnes (limites
+// de LibreOffice comme d'Excel), qui ne sont pas exportées.
+func ExportODS(ctx context.Context, m *canvas.Model, w io.Writer) (ExportReport, error) {
 	sheets, fm, err := exportBook(ctx, m, toODS)
 	if err != nil {
-		return 0, err
+		return ExportReport{}, err
 	}
-	err = writeODS(ctx, w, sheets, fm)
-	for _, sh := range sheets {
-		clipped += sh.clipped
+	if err := writeODS(ctx, w, sheets, fm); err != nil {
+		return ExportReport{}, err
 	}
-	return clipped, err
+	return report(ctx, m, sheets), nil
 }
 
 // ExportODSFile écrit le classeur dans un fichier (via un fichier temporaire).
-func ExportODSFile(ctx context.Context, m *canvas.Model, path string) (clipped int, err error) {
+func ExportODSFile(ctx context.Context, m *canvas.Model, path string) (rep ExportReport, err error) {
 	err = writeAtomic(path, func(w io.Writer) error {
 		var e error
-		clipped, e = ExportODS(ctx, m, w)
+		rep, e = ExportODS(ctx, m, w)
 		return e
 	})
-	return clipped, err
+	return rep, err
 }
 
 const odsNS = `xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0" xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" xmlns:number="urn:oasis:names:tc:opendocument:xmlns:datastyle:1.0" xmlns:of="urn:oasis:names:tc:opendocument:xmlns:of:1.2" office:version="1.3"`

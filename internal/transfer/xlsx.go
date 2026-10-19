@@ -11,6 +11,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/lalamefine/lattis/internal/grid"
@@ -31,6 +32,10 @@ type xlsxFile struct {
 	sst      []string
 	dates    []dateKind // par style de cellule (attribut s)
 	date1904 bool
+	// extras : par feuille lue jusqu'au bout, règles de mise en forme
+	// conditionnelle et validations (non importées).
+	mu     sync.Mutex
+	extras map[string][2]int
 }
 
 type dateKind uint8
@@ -346,10 +351,16 @@ func (x *xlsxFile) scan(ctx context.Context, sh xlsxSheet, fn func(*rawCell) err
 	row, col := -1, -1
 	var buf strings.Builder
 	capture, inIS, skip := false, false, 0
-	n := 0
+	n, rules, lists := 0, 0, 0
 	for {
 		if err := d.next(); err != nil {
 			if err == io.EOF {
+				x.mu.Lock()
+				if x.extras == nil {
+					x.extras = map[string][2]int{}
+				}
+				x.extras[sh.name] = [2]int{rules, lists}
+				x.mu.Unlock()
 				return nil
 			}
 			return fmt.Errorf("feuille %s : %w", sh.name, err)
@@ -388,6 +399,10 @@ func (x *xlsxFile) scan(ctx context.Context, sh xlsxSheet, fn func(*rawCell) err
 				skip++
 			case "t":
 				capture = inIS && skip == 0
+			case "cfRule":
+				rules++
+			case "dataValidation":
+				lists++
 			}
 		case xmlEnd:
 			switch string(d.name) {

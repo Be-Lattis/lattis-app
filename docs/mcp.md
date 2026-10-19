@@ -80,6 +80,13 @@ non protégées reste modifiable, sauf avec `sheets: true`, qui verrouille aussi
 toutes les feuilles jusqu'à `sheets_unprotect_workbook`. `doc_undo` et `doc_redo`
 refusent aussi une action qui toucherait une feuille protégée.
 
+`doc_export_xlsx` et `doc_export_ods` rendent `{path, clipped, report}` : `report` dit,
+feuille par feuille, ce qui n'est pas exporté tel quel (graphiques, tableaux croisés en
+valeurs, formules exportées par leur valeur avec les fonctions en cause comme CUMUL ou
+FILTRE, mise en forme conditionnelle, notes, validations, boutons, tableaux chargés par une
+requête, onglets page ou document, protection), plus les scripts du classeur. L'assistant
+peut ainsi prévenir l'utilisateur de ce qui manquera dans Excel ou LibreOffice.
+
 `ui_dialog`, `ui_confirm` et `ui_prompt` ouvrent une boîte de dialogue dans la fenêtre et
 attendent la réponse de l'utilisateur : l'assistant peut ainsi lui demander une
 confirmation ou une saisie.

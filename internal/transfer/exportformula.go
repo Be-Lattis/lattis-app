@@ -72,17 +72,24 @@ const rowMark = "\x00"
 // translate traduit une formule de Lattis (français, avec =) ; faux si elle
 // ne se traduit pas.
 func (b *book) translate(src string, a at) (string, bool) {
+	s, _, ok := b.translateWhy(src, a)
+	return s, ok
+}
+
+// translateWhy traduit une formule ; quand elle ne se traduit pas, why
+// nomme (en français) les fonctions sans équivalent, s'il y en a.
+func (b *book) translateWhy(src string, a at) (s string, why []string, ok bool) {
 	n, err := formula.Parse(src, formula.FR)
 	if err != nil {
-		return "", false
+		return "", nil, false
 	}
 	tr := translator{b: b, at: a, ok: true}
 	out := tr.walk(n)
 	if !tr.ok {
-		return "", false
+		return "", tr.why, false
 	}
-	s := formula.Format(out, formula.EN)[1:]
-	return b.separators(s), true
+	s = formula.Format(out, formula.EN)[1:]
+	return b.separators(s), nil, true
 }
 
 // separators réécrit les séparateurs d'arguments de formula.Format (« , »)
@@ -136,9 +143,10 @@ func (b *book) separators(s string) string {
 }
 
 type translator struct {
-	b  *book
-	at at
-	ok bool
+	b   *book
+	at  at
+	ok  bool
+	why []string // fonctions sans équivalent (noms français)
 }
 
 // raw est un morceau de formule déjà écrit (formula.Format écrit le texte
@@ -148,6 +156,12 @@ func raw(s string) formula.Node { return formula.Range{Text: s} }
 func (tr *translator) fail() formula.Node {
 	tr.ok = false
 	return raw("")
+}
+
+// failFn : la fonction fn n'a pas d'équivalent.
+func (tr *translator) failFn(fn string) formula.Node {
+	tr.why = append(tr.why, formula.LocalName(fn, formula.FR))
+	return tr.fail()
 }
 
 // Fonctions de même nom et de même sens dans Excel et LibreOffice ; la valeur
@@ -365,6 +379,7 @@ func (tr *translator) call(v formula.Call) formula.Node {
 			return tr.fail()
 		}
 		if u, ok := v.Args[1].(formula.Unary); ok && (u.Op == "-" || u.Op == "+") {
+			tr.why = append(tr.why, "ligne voisine [Colonne][-1]")
 			return tr.fail()
 		}
 		r.Row = false
@@ -380,12 +395,12 @@ func (tr *translator) call(v formula.Call) formula.Node {
 		// Excel exige la précision ; LibreOffice n'a pas le même arrondi des
 		// négatifs.
 		if len(v.Args) != 2 || tr.b.target == toODS {
-			return tr.fail()
+			return tr.failFn(v.Fn)
 		}
 		return tr.fn(v.Fn, v.Args)
 	}
 	if _, ok := exportFuncs[v.Fn]; !ok {
-		return tr.fail()
+		return tr.failFn(v.Fn)
 	}
 	return tr.fn(v.Fn, v.Args)
 }
@@ -401,7 +416,7 @@ func (tr *translator) fn(name string, args []formula.Node) formula.Node {
 		out = names[1]
 	}
 	if out == "" {
-		return tr.fail()
+		return tr.failFn(name)
 	}
 	return formula.Call{Fn: out, Args: tr.args(args)}
 }
@@ -445,14 +460,14 @@ func (tr *translator) reference(v formula.Call, approx bool) formula.Node {
 	col := tr.column(t, c)
 	if t.key < 0 {
 		if approx {
-			return tr.fail()
+			return tr.failFn(v.Fn)
 		}
 		return formula.Call{Fn: "INDEX", Args: []formula.Node{col, key}}
 	}
 	keys := tr.column(t, t.key)
 	if approx {
 		if tr.b.target == toODS {
-			return tr.fail()
+			return tr.failFn(v.Fn)
 		}
 		return formula.Call{Fn: "_xlfn.XLOOKUP", Args: []formula.Node{key, keys, col, raw("NA()"), formula.NumLit{V: -1}}}
 	}
