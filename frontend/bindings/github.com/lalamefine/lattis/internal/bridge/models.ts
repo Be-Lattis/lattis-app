@@ -33,6 +33,9 @@ import * as auth$0 from "../remote/auth/models.js";
 import * as workbook$0 from "../remote/workbook/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as transfer$0 from "../transfer/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as protocol$0 from "../../protocol/models.js";
 
 /**
@@ -791,10 +794,12 @@ export interface UICommand {
 
 /**
  * XLSXExport est le résultat d'un export .xlsx ou .ods : le fichier écrit
- * (vide si l'utilisateur a annulé) et le nombre de cellules hors des limites
- * d'Excel (et de LibreOffice).
+ * (vide si l'utilisateur a annulé), le nombre de cellules hors des limites
+ * d'Excel (et de LibreOffice) et le compte rendu de ce qui n'est pas exporté
+ * tel quel (graphiques, formules en valeurs…).
  */
 export interface XLSXExport {
     "path": string;
     "clipped": number;
+    "report": transfer$0.ExportReport;
 }

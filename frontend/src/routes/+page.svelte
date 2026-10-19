@@ -44,6 +44,8 @@
 	import DataCatalogDialog from '#lib/remote/DataCatalogDialog.svelte';
 	import DataShareDialog from '#lib/remote/DataShareDialog.svelte';
 	import AboutDialog from '#lib/shell/AboutDialog.svelte';
+	import ExportReportDialog from '#lib/shell/ExportReportDialog.svelte';
+	import { exportNotice, printNotice, type ExportReport } from '#lib/shell/exportReport.js';
 	import ShareBanner from '#lib/remote/ShareBanner.svelte';
 	import ConflictPanel from '#lib/remote/ConflictPanel.svelte';
 	import RightsDialog from '#lib/remote/RightsDialog.svelte';
@@ -143,6 +145,10 @@
 	let mcpOpen = $state(false);
 	let settingsOpen = $state(false);
 	let aboutOpen = $state(false);
+	// Dernier export .xlsx / .ods : son compte rendu (lien « Détails » tant
+	// que son message est affiché) et la boîte de détails.
+	let exported = $state<{ notice: string; report: ExportReport; format: string } | null>(null);
+	let exportOpen = $state(false);
 	// Classeur partagé sur un Serveur Lattis : état (bandeau, Fichier ›
 	// Republier), boîtes Partager / Republier et Ouvrir depuis un serveur.
 	let share = $state<ShareState | null>(null);
@@ -849,10 +855,10 @@
 					// Formules traduites quand le format a un équivalent, sinon leur valeur.
 					if (mode !== 'doc') return;
 					const r = a === 'exportOds' ? await DocumentService.ExportODS() : await DocumentService.ExportXLSX();
-					if (r.path)
-						notice =
-							`Classeur exporté : ${r.path}` +
-							(r.clipped ? ` ; ${r.clipped.toLocaleString('fr-FR')} cellule(s) au-delà de 1 048 576 lignes × 16 384 colonnes non exportée(s)` : '');
+					if (r.path) {
+						notice = exportNotice(r.path, r.report);
+						exported = { notice, report: r.report, format: a === 'exportOds' ? 'OpenDocument' : 'Excel' };
+					}
 					break;
 				}
 				case 'print':
@@ -867,6 +873,8 @@
 					}
 					const name = layout?.sheets?.find((s) => s.id === sheetId)?.name ?? '';
 					if (a === 'pdf') notice = 'Exporter en PDF : choisissez l’imprimante « Microsoft Print to PDF » (ou « Enregistrer au format PDF »)';
+					const charts = printNotice(layout?.charts?.length ?? 0);
+					if (charts) notice = notice && a === 'pdf' ? `${notice} ; ${charts}` : charts;
 					printSheet(await DocumentService.PrintHTML(sheetId), `${docState.title} – ${name}`);
 					break;
 				}
@@ -1804,6 +1812,9 @@
 	{#if aboutOpen}
 		<AboutDialog onclose={() => (aboutOpen = false)} />
 	{/if}
+	{#if exportOpen && exported}
+		<ExportReportDialog report={exported.report} format={exported.format} onclose={() => (exportOpen = false)} />
+	{/if}
 	{#if settingsOpen}
 		<SettingsDialog onclose={() => (settingsOpen = false)} onmcp={() => { settingsOpen = false; mcpOpen = true; }} />
 	{/if}
@@ -1996,6 +2007,9 @@
 			{@const msg = sheetStatus?.message || notice}
 			<!-- Deux niveaux : compte rendu de l'action (vert clair), avertissement (bulle orange). -->
 			<span class="message" class:warn={isProblem(msg)} role={isProblem(msg) ? 'alert' : 'status'}>{msg}</span>
+			{#if exported && msg === exported.notice}
+				<button class="details" onclick={() => (exportOpen = true)}>Détails</button>
+			{/if}
 		{/if}
 		<span class="spacer"></span>
 		{#if sheetStatus}
@@ -2101,6 +2115,17 @@
 		color: #b6ecc8;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+	.details {
+		flex: none;
+		background: none;
+		border: none;
+		padding: 0;
+		margin-left: -8px;
+		color: #fff;
+		font-size: 12px;
+		text-decoration: underline;
+		cursor: pointer;
 	}
 	.message.warn {
 		background: #ffb02e;
