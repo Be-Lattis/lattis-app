@@ -24,7 +24,7 @@
 	import { panes, reveal, revealWhole, toGrid, type Pane } from './panes';
 	import { hiddenLines, mergeAt, mergeList, parseList, skipHidden, validate, type MergeRange } from './sheetfmt';
 	import { expandRange, extendCorner, isSingleCell, mergeRect, rangeOf, stepCell } from './mergesel';
-	import { jumpLine, type Span } from './jump';
+	import { jumpLine, lineSpans, type Area, type Span } from './jump';
 	import { findKey, findZone, inZone, nextHit, type Zone } from './findzone';
 	import { edgeScroll, frameStep } from './autoscroll';
 	import { blocksReach, boxesReach } from './objextent';
@@ -5519,18 +5519,17 @@
 	// Ctrl + flèche, comme Excel : au bord du bloc de données, ou au prochain
 	// bloc (tableaux, cellules libres, déversements, tableaux croisés).
 	function jump(row: number, col: number, dr: number, dc: number): [number, number] {
-		const spans: Span[] = [];
-		const add = (r0: number, c0: number, r1: number, c1: number) => {
-			if (dr !== 0 && col >= c0 && col <= c1) spans.push([r0, r1]);
-			if (dc !== 0 && row >= r0 && row <= r1) spans.push([c0, c1]);
-		};
-		for (const e of entries) add(e.t.row, e.t.col, e.last, e.lastCol);
+		const areas: Area[] = [];
+		const add = (r0: number, c0: number, r1: number, c1: number) => areas.push({ r0, c0, r1, c1 });
+		// Un tableau : de sa bande des groupes à sa dernière ligne (voir jump.ts).
+		for (const e of entries) add(topRow(e.t), e.t.col, e.last, e.lastCol);
 		for (const k of cells.keys()) {
 			const [r, c] = k.split(',').map(Number);
 			add(r, c, r, c);
 		}
 		for (const sp of spills) add(sp.row, sp.col, sp.row + sp.rows.length - 1, sp.col + (sp.rows[0]?.length ?? 1) - 1);
 		for (const p of pivots) if (!p.error) add(p.anchor ?? p.row, p.col, p.row + p.cells.length - 1, p.col + (p.cells[0]?.length ?? 1) - 1);
+		const spans: Span[] = lineSpans(areas, row, col, dr !== 0);
 		return dr !== 0 ? [jumpLine(spans, row, dr), col] : [row, jumpLine(spans, col, dc)];
 	}
 

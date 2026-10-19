@@ -3,7 +3,31 @@
 // depuis une cellule vide, jusqu'à la prochaine cellule remplie. Les blocs
 // sont des intervalles [début, fin] (un tableau, une cellule libre…).
 
+//
+// Un tableau compte comme un bloc plein, de sa bande des groupes (en-têtes
+// sur deux lignes) à sa dernière ligne : Ctrl+↓ dans une colonne à trous va
+// à son bas (choix voulu : ses lignes ne sont pas toutes chargées, et un
+// tableau se lit comme un tout ; Excel s'arrêterait au trou).
+
 export type Span = [number, number];
+
+/** Rectangle occupé sur la feuille (bornes comprises). */
+export interface Area {
+	r0: number;
+	c0: number;
+	r1: number;
+	c1: number;
+}
+
+/** Blocs de la ligne (dc) ou de la colonne (dr) de la cellule (row, col) que traversent les zones. */
+export function lineSpans(areas: Iterable<Area>, row: number, col: number, vertical: boolean): Span[] {
+	const out: Span[] = [];
+	for (const a of areas) {
+		if (vertical && col >= a.c0 && col <= a.c1) out.push([a.r0, a.r1]);
+		if (!vertical && row >= a.r0 && row <= a.r1) out.push([a.c0, a.c1]);
+	}
+	return out;
+}
 
 /** Fusionne des intervalles en blocs disjoints, triés (deux intervalles qui se touchent n'en font qu'un). */
 export function runs(spans: Span[]): Span[] {

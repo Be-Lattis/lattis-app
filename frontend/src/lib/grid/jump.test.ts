@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { jumpLine, runs } from './jump';
+import { jumpLine, lineSpans, runs } from './jump';
 
 describe('Ctrl + flèche', () => {
 	// Colonne : un tableau en 2..6 (en-tête compris), des cellules libres en 9, 10, 11 et 20.
@@ -36,5 +36,23 @@ describe('Ctrl + flèche', () => {
 		expect(jumpLine(col, 2, -1)).toBe(0); // plus rien : en haut
 		expect(jumpLine(col, 15, -1)).toBe(11);
 		expect(jumpLine([], 7, -1)).toBe(0);
+	});
+	it('un tableau est un bloc plein, bande des groupes comprise (audit 2 M10)', () => {
+		// Tableau aux en-têtes sur deux lignes : bande en 1, en-tête en 2, données 3..8 ;
+		// cellule libre en 12, colonne C (2).
+		const areas = [
+			{ r0: 1, c0: 0, r1: 8, c1: 3 },
+			{ r0: 12, c0: 2, r1: 12, c1: 2 }
+		];
+		const down = lineSpans(areas, 0, 2, true);
+		expect(down).toEqual([
+			[1, 8],
+			[12, 12]
+		]);
+		expect(jumpLine(down, 0, 1)).toBe(1); // depuis au-dessus : la bande
+		expect(jumpLine(down, 4, 1)).toBe(8); // dans le tableau, même à trous : son bas
+		expect(jumpLine(down, 8, 1)).toBe(12);
+		expect(lineSpans(areas, 12, 0, false)).toEqual([[2, 2]]); // sur la ligne 12 : la cellule libre
+		expect(lineSpans(areas, 1, 0, false)).toEqual([[0, 3]]); // sur la bande : le tableau
 	});
 });
