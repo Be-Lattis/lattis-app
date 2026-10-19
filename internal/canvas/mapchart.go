@@ -92,7 +92,7 @@ func (t *tx) mapData(cfg ChartConfig, tb Table) (chartResult, error) {
 		colorAt, colorCol = len(sel), tb.Cols[ci]
 		sel = append(sel, exprs[ci])
 	}
-	q := `SELECT ` + strings.Join(sel, ", ") + ` FROM ` + tb.sql() + ` ORDER BY _pos LIMIT ?` + fmt.Sprint(len(args)+1)
+	q := `SELECT ` + strings.Join(sel, ", ") + ` FROM ` + chartSource(cfg, tb) + ` ORDER BY _pos LIMIT ?` + fmt.Sprint(len(args)+1)
 	rs, err := t.query(q, append(args, MaxChartPoints)...)
 	if err != nil {
 		return chartResult{}, err

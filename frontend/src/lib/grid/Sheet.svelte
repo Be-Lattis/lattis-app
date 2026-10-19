@@ -208,6 +208,8 @@
 		colorBy?: string;
 		/** Fréquences : nombre de classes (absent : automatique). */
 		bins?: number;
+		/** Lit aussi les lignes masquées par le filtre du tableau. */
+		hidden?: boolean;
 		offX?: number;
 		offY?: number;
 	}

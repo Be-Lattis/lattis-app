@@ -171,6 +171,7 @@
 				<label class="opt"><input type="checkbox" checked={config.legend !== 'none'} onchange={(e) => set({ legend: (e.currentTarget as HTMLInputElement).checked ? undefined : 'none' })} /> Légende des couleurs</label>
 			{/if}
 		{/if}
+		<label class="opt" title="Par défaut, comme Excel, la carte ne montre que les lignes affichées par le filtre du tableau"><input type="checkbox" checked={!!config.hidden} onchange={(e) => set({ hidden: (e.currentTarget as HTMLInputElement).checked || undefined })} /> Lignes masquées par le filtre</label>
 		<div class="line mapview">
 			<span>Vue</span>
 			{#if config.mapView}
@@ -229,6 +230,7 @@
 				</label>
 			{/each}
 		</div>
+		<label class="opt" title="Par défaut, comme Excel, le graphique ne montre que les lignes affichées par le filtre du tableau"><input type="checkbox" checked={!!config.hidden} onchange={(e) => set({ hidden: (e.currentTarget as HTMLInputElement).checked || undefined })} /> Lignes masquées par le filtre</label>
 		{#if config.kind === 'histogram'}
 			<label class="line">Classes<input value={config.bins ?? ''} onchange={(e) => set({ bins: num((e.currentTarget as HTMLInputElement).value) })} placeholder="auto" /></label>
 		{/if}

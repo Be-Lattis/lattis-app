@@ -59,6 +59,10 @@ type ChartConfig struct {
 	ColorBy string `json:"colorBy,omitempty"`
 	// Bins : histogramme de fréquences, nombre de classes (0 : automatique).
 	Bins int `json:"bins,omitempty"`
+	// Hidden : lit aussi les lignes masquées par le filtre du tableau (option
+	// d'Excel « Afficher les données des lignes masquées ») ; par défaut, un
+	// graphique ne montre que les lignes affichées.
+	Hidden bool `json:"hidden,omitempty"`
 }
 
 // MapView : vue d'une carte, centre (degrés) et niveau de zoom (fractionnaire,
@@ -269,6 +273,15 @@ func (t *tx) chartDataRaw(cfg ChartConfig) (chartResult, error) {
 	return chartResult{labels: l, series: s}, err
 }
 
+// chartSource : lignes lues par un graphique, celles qu'affiche le filtre du
+// tableau (toutes avec Hidden).
+func chartSource(cfg ChartConfig, tb Table) string {
+	if cfg.Hidden {
+		return tb.sql()
+	}
+	return tb.view()
+}
+
 // chartTable lit les données d'un graphique dans un tableau.
 func (t *tx) chartTable(cfg ChartConfig, tb Table) ([]string, []ChartSeries, error) {
 	exprs, args, _, err := t.columnSQL(tb)
@@ -309,9 +322,9 @@ func (t *tx) chartTable(cfg ChartConfig, tb Table) ([]string, []ChartSeries, err
 		if xc.Type == grid.Text {
 			key = "coalesce(" + x + ", '')"
 		}
-		q = `SELECT ` + key + ` AS k, ` + strings.Join(sums, ", ") + ` FROM ` + tb.sql() + ` GROUP BY k ORDER BY min(_pos) LIMIT ?` + fmt.Sprint(len(args)+1)
+		q = `SELECT ` + key + ` AS k, ` + strings.Join(sums, ", ") + ` FROM ` + chartSource(cfg, tb) + ` GROUP BY k ORDER BY min(_pos) LIMIT ?` + fmt.Sprint(len(args)+1)
 	} else {
-		q = `SELECT ` + x + `, ` + strings.Join(vals, ", ") + ` FROM ` + tb.sql() + ` ORDER BY _pos LIMIT ?` + fmt.Sprint(len(args)+1)
+		q = `SELECT ` + x + `, ` + strings.Join(vals, ", ") + ` FROM ` + chartSource(cfg, tb) + ` ORDER BY _pos LIMIT ?` + fmt.Sprint(len(args)+1)
 	}
 	rs, err := t.query(q, append(args, MaxChartPoints)...)
 	if err != nil {

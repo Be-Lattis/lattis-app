@@ -97,7 +97,11 @@ func (r chartResult) fill(c *ChartInfo) {
 }
 
 func (t *tx) chartData(cfg ChartConfig) (chartResult, error) {
-	key := keyOf("chart:", ChartConfig{Source: cfg.Source, Kind: cfg.Kind, X: cfg.X, Series: cfg.Series, MapCoords: cfg.MapCoords, MapDraft: cfg.MapDraft, ColorBy: cfg.ColorBy})
+	key := keyOf("chart:", ChartConfig{Source: cfg.Source, Kind: cfg.Kind, X: cfg.X, Series: cfg.Series, MapCoords: cfg.MapCoords, MapDraft: cfg.MapDraft, ColorBy: cfg.ColorBy, Bins: cfg.Bins, Hidden: cfg.Hidden})
+	// Le filtre du tableau (rangé hors du tableau) fait partie de la clé.
+	if tb, err := t.tableByName(cfg.Source); err == nil && !cfg.Hidden {
+		key += "|" + tb.where
+	}
 	calc := func() (chartResult, error) {
 		return t.chartDataRaw(cfg)
 	}
