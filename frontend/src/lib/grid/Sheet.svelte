@@ -42,6 +42,7 @@
 	import { bandAt, bandLabel, bandOpen, bandRefusal, hiddenBand } from './hidden';
 	import { choiceHiddenCols, type TabChoice } from '#lib/shell/choice.js';
 	import { tabChoiceItem, type ChoiceCandidate, type TabChoiceItem } from './tabchoice';
+	import { placeFollowBadge } from './followbadge';
 	import { ReadRecovery, readFailNotice } from './readfail';
 	import { followLabel } from '#lib/shell/mergesheets.js';
 	import { editMode, viewKey } from './readonlyedit';
@@ -2332,7 +2333,9 @@
 			ctx.beginPath();
 			ctx.rect(p.x0, p.y0, p.x1 - p.x0, p.y1 - p.y0);
 			ctx.clip();
+			curPane = p;
 			if (drawCells(layer(p))) incomplete = true;
+			curPane = null;
 			ctx.restore();
 		}
 		if (incomplete) missingFrames++;
@@ -2360,6 +2363,7 @@
 			drawMargin(layer({ ...p, left: main.left, x0: main.x0, x1: main.x1 }));
 			ctx.restore();
 		}
+		drawFollowBadges();
 		ctx.fillStyle = C.strip;
 		ctx.fillRect(0, 0, MARGIN, TOP_H);
 		ctx.beginPath();
@@ -2873,22 +2877,29 @@
 				crispLines(frame);
 			}
 			// Pastille du tableau qui suit l'onglet à choix : la valeur choisie.
-			if (e.t.follows && data?.choice && !data.choice.all) {
+			// Au-dessus du cadre s'il y a la place (bandeau du haut compris pour
+			// un tableau en ligne 1), sinon dans son coin (followbadge.ts) ;
+			// dessinée après le bandeau, dans la découpe du volet.
+			if (e.t.follows && data?.choice && !data.choice.all && curPane) {
 				const label = data.choice.value || '(vide)';
 				ctx.font = FONT_SMALL;
 				const bw = Math.ceil(ctx.measureText(label).width) + 10;
 				const bh = 13;
-				const bx = x + fw - bw;
-				const by = y - bh;
-				ctx.fillStyle = C.followBadge;
-				ctx.beginPath();
-				ctx.roundRect(bx, by, bw, bh, [4, 4, 0, 0]);
-				ctx.fill();
-				ctx.fillStyle = '#fff';
-				ctx.textAlign = 'center';
-				ctx.textBaseline = 'middle';
-				ctx.fillText(label, bx + bw / 2, by + bh / 2 + 0.5);
-				followBadges.push({ e, x0: bx, x1: bx + bw, y0: by, y1: by + bh });
+				const top = topRow(e.t);
+				let aboveFree = true;
+				for (let r = top - 1; aboveFree && r >= 0 && ry(r + 1) > y - bh; r--) {
+					if (!rh(r)) continue;
+					for (let c = e.t.col; c <= e.lastCol; c++) {
+						const v = cells.get(key(r, c));
+						if ((v !== undefined && v !== '') || tableAt(r, c) || pivotAt(r, c) || mergeOf(r, c)) {
+							aboveFree = false;
+							break;
+						}
+					}
+				}
+				const p = curPane;
+				const b = placeFollowBadge({ x, y, w: fw, bw, bh, paneTop: p.y0, strip: p.y0 === TOP_H, aboveFree });
+				followBadges.push({ e, label, radii: b.radii, x0: b.x, x1: b.x + bw, y0: b.y, y1: b.y + bh, clip: { x0: p.x0, x1: p.x1, y0: p.y0 === TOP_H ? 0 : p.y0, y1: p.y1 } });
 			}
 			// Classeur collaboratif : lecture filtrée par les droits (§8.1).
 			if (e.t.filtered) {
@@ -3733,7 +3744,29 @@
 	// pastille avec la valeur choisie (« 2025 ») ; un tableau sans pastille est
 	// le même pour toutes les valeurs. Un clic sur la pastille ouvre son menu
 	// (« Suivre l'année », à décocher).
-	let followBadges: { e: Entry; x0: number; x1: number; y0: number; y1: number }[] = [];
+	let followBadges: { e: Entry; label: string; radii: number[]; x0: number; x1: number; y0: number; y1: number; clip: { x0: number; x1: number; y0: number; y1: number } }[] = [];
+	/** Volet en cours de dessin (découpe des pastilles). */
+	let curPane: Pane | null = null;
+
+	/** Pastilles posées pendant le dessin des cadres, par-dessus le bandeau du haut. */
+	function drawFollowBadges() {
+		for (const b of followBadges) {
+			ctx.save();
+			ctx.beginPath();
+			ctx.rect(Math.max(b.clip.x0, MARGIN), b.clip.y0, b.clip.x1 - Math.max(b.clip.x0, MARGIN), b.clip.y1 - b.clip.y0);
+			ctx.clip();
+			ctx.fillStyle = C.followBadge;
+			ctx.beginPath();
+			ctx.roundRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0, b.radii);
+			ctx.fill();
+			ctx.font = FONT_SMALL;
+			ctx.fillStyle = '#fff';
+			ctx.textAlign = 'center';
+			ctx.textBaseline = 'middle';
+			ctx.fillText(b.label, (b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2 + 0.5);
+			ctx.restore();
+		}
+	}
 	let followMenu = $state<{ x: number; y: number; e: Entry } | null>(null);
 
 	function followBadgeAt(ev: MouseEvent): Entry | null {
@@ -9595,7 +9628,8 @@
 	function updateHeaderTip(ev: MouseEvent) {
 		if (followBadgeAt(ev)) {
 			const name = data?.choice?.name ?? '';
-			if (tipCell !== 'follow') scroller.title = `Ce tableau suit l'onglet à choix (${name} : ${data?.choice?.value ?? ''}) : il ne montre que ses lignes ; cliquer pour ne plus le suivre`;
+			if (tipCell !== 'follow')
+				scroller.title = `Ce tableau suit l'onglet à choix : il ne montre que ses lignes où ${name} = ${data?.choice?.value || '(vide)'} (les autres sont masquées, pas effacées ; une ligne saisie reçoit cette valeur). La flèche ▾ de l'onglet change la valeur. Cliquer sur la pastille : menu « Suivre ${followLabel(name)} », à décocher pour que ce tableau montre toutes ses lignes`;
 			tipCell = 'follow';
 			return;
 		}
