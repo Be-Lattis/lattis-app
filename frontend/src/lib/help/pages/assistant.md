@@ -42,10 +42,22 @@ Le fournisseur **Modèle local** utilise un modèle installé sur ce poste (Olla
 
 - Les étapes de l'assistant (lecture d'un tableau, ajout d'une colonne…) se regroupent dans une ligne **N étapes**, dépliée pendant la réponse puis repliée ; un clic la rouvre. Le nom d'une étape soulignée mène à la feuille ou au tableau concerné.
 - Une étape en échec que l'assistant a corrigée ensuite s'affiche en gris ; seule une erreur restée sans suite est en rouge.
-- `Échap` arrête la réponse en cours ; la flèche haut, dans une zone de saisie vide, rappelle le message précédent ; le bouton de copie, sous une réponse, la met dans le presse-papiers.
-- **Nouvelle** (en-tête du volet) commence une nouvelle conversation ; la précédente reste dans la liste des conversations (☰), d'où elle se reprend ou se supprime.
+- `Échap` arrête la réponse en cours. Arrêtée avant que le modèle ait répondu, ou en échec à ce moment-là (réseau, quota), elle disparaît et votre message revient dans la zone de saisie : le modèle ne l'a pas reçu.
+- La flèche haut, dans une zone de saisie vide, rappelle le message précédent ; le bouton de copie, sous une réponse, la met dans le presse-papiers.
+- **Réessayer**, sous une réponse interrompue par une erreur (fournisseur surchargé, coupure), la reprend là où elle s'est arrêtée, sans renvoyer votre message : ce qu'elle a déjà modifié n'est pas refait, et la réponse reste annulable d'un coup. Quand l'erreur demande d'attendre (« réessayez dans 30 s »), le bouton compte les secondes.
+- Une réponse très longue s'arrête après 100 étapes : **Continuer** la reprend de la même façon.
+- Une question sur les données (« quelle ville a le meilleur chiffre d'affaires ? ») reçoit un **résultat** sous la réponse : l'assistant écrit une requête, Lattis l'exécute sur le poste et vous montre au plus 50 lignes. En mode « Structure seulement », le résultat est pour vous seul : l'assistant n'en voit ni les valeurs ni le nombre de lignes.
+- Un lien dans une réponse affiche son domaine (« Voir le rapport (exemple.fr) ») ; un clic montre l'adresse entière et demande confirmation avant de l'ouvrir dans le navigateur.
+- **Nouvelle** (en-tête du volet) commence une nouvelle conversation ; la précédente reste dans la liste des conversations (☰), d'où elle se reprend ou se supprime (après confirmation).
+- Quand la conversation devient longue, l'assistant en résume le début pour continuer : le repère **Session compactée** marque l'endroit. Tout reste affiché dans le volet ; seul le modèle travaille désormais sur le résumé.
 
-Le réglage **Garder la conversation dans le classeur** (Fichier › Paramètres › Assistant IA) l'enregistre avec le classeur ; sinon, elle s'efface quand on ferme le classeur ou qu'on en ouvre un autre.
+## Réparer des tableaux mal reconnus
+
+La suggestion **Réparer les tableaux de cette feuille** fait relire à l'assistant la disposition de la feuille : où sont les tableaux, la nature des cellules de leur première et de leur dernière ligne (texte, nombre, date, formule, vide), les cellules libres en gras ou fusionnées, et les lignes qui ressemblent à un titre ou à un total. Il n'en lit pas les valeurs, même en mode « Structure seulement ». Il corrige ensuite avec les commandes qui gardent le tableau, sa clé et les formules qui le citent : titre pris pour l'en-tête, en-tête resté dans les données, ligne de total sortie du tableau, en-têtes sur deux lignes, colonnes à scinder.
+
+Ce que l'assistant lit dans le classeur (noms, texte des cellules) lui est présenté comme une donnée, jamais comme une consigne : une cellule qui lui « demande » de supprimer une colonne ne doit pas être suivie, et il le signale. Il ne supprime une colonne, un graphique, un tableau croisé ou des doublons que si vous le demandez.
+
+Le réglage **Garder la conversation dans le classeur** (Fichier › Paramètres › Assistant IA) l'enregistre avec le classeur ; sinon, elle s'efface quand on ferme le classeur ou qu'on en ouvre un autre. Gardée, elle voyage avec le fichier, résultats montrés et lignes lues par l'assistant compris, et n'est enregistrée que si le classeur a aussi été modifié. Si le classeur change hors des réponses (import, `Ctrl+Z`, conversation reprise plus tard), l'assistant reçoit sa structure à jour avec le message suivant.
 
 ## Annuler
 
@@ -57,7 +69,7 @@ Le réglage **Données transmises à l'assistant** (Fichier › Paramètres › 
 
 | Réglage | Ce que reçoit le fournisseur |
 | --- | --- |
-| Structure seulement (par défaut) | Noms des feuilles, tableaux et colonnes, types, nombre de lignes et de valeurs distinctes, formules, place des tableaux et des cellules sur la feuille (sans leur contenu) ; étapes des requêtes et paramètres des connexions, sans mot de passe ni valeurs des en-têtes HTTP et des filtres. Les colonnes d'un tableau croisé qui portent les valeurs d'un champ sont résumées (« 3 colonne(s) de valeurs du champ « Client » ») |
+| Structure seulement (par défaut) | Noms des feuilles, tableaux et colonnes, types, nombre de lignes et de valeurs distinctes, formules, place des tableaux et des cellules sur la feuille (sans leur contenu, avec leur nature et les indices « titre » ou « total ») ; pas le résultat des requêtes montrées, ni le nombre de cellules d'un remplacement ; étapes des requêtes et paramètres des connexions, sans mot de passe ni valeurs des en-têtes HTTP et des filtres. Les colonnes d'un tableau croisé qui portent les valeurs d'un champ sont résumées (« 3 colonne(s) de valeurs du champ « Client » ») |
 | Structure et lignes d'exemple | La même chose, plus quelques lignes à chaque lecture : 20 lignes au plus, 200 caractères par valeur |
 | Tout le classeur | Tout ce que l'assistant choisit de lire, sans limite |
 
@@ -67,11 +79,11 @@ Le réglage vaut aussi pour **Claude Desktop** et **Claude Code** par le serveur
 
 ## Coût
 
-Avec une clé d'API, chaque réponse est facturée par le fournisseur selon le nombre de jetons lus et écrits. Le pied du volet affiche une estimation du coût de la conversation (« ≈ 0,12 $ cette conversation ») ; la facture du fournisseur fait foi. Une longue suite d'étapes coûte plus cher : un modèle plus léger (Sonnet plutôt qu'Opus) suffit le plus souvent.
+Avec une clé d'API, chaque réponse est facturée par le fournisseur selon le nombre de jetons lus et écrits. Avec une clé Anthropic, le pied du volet affiche une estimation du coût de la conversation (« ≈ 0,12 $ cette conversation ») d'après les tarifs publics ; la facture du fournisseur fait foi. Rien ne s'affiche pour les autres fournisseurs ni à travers une passerelle, dont les tarifs diffèrent. Une longue suite d'étapes coûte plus cher : un modèle plus léger (Sonnet plutôt qu'Opus) suffit le plus souvent.
 
 ## Limites
 
 - L'assistant peut se tromper : relisez ce qu'il propose, et annulez une réponse qui ne convient pas.
 - En mode « Structure seulement », il ne voit pas les valeurs : il ne peut pas juger du contenu des cellules. En mode « Structure et lignes d'exemple », il n'en voit qu'une partie.
-- Une très longue conversation finit par dépasser ce que le modèle accepte : commencez alors une nouvelle conversation.
+- Une très longue conversation est résumée (« Session compactée ») : l'assistant peut alors oublier un détail des premiers échanges. Pour un nouveau sujet, commencez plutôt une nouvelle conversation.
 - Avec Claude Desktop ou Claude Code, la conversation reste dans Claude ; Lattis ne voit que les actions.
