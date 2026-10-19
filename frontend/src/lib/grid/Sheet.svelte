@@ -2750,7 +2750,20 @@
 				ctx.lineWidth = 1;
 				ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w + 1, b.h - 1);
 				const s = Math.min(14, b.h - 2);
-				drawIcon(ctx, 'table', b.x + (b.w + 2 - s) / 2, b.y + (b.h - s) / 2, s, C.icon, C.active, 1.2);
+				// Petit tableau dessiné à la main (l'icône « table » a un <rect>,
+				// que drawIcon refuse) : cadre, ligne d'en-tête pleine, quadrillage.
+				const ix = Math.round(b.x + (b.w + 2 - s) / 2) + 0.5;
+				const iy = Math.round(b.y + (b.h - s) / 2) + 0.5;
+				ctx.fillStyle = C.icon;
+				ctx.fillRect(ix, iy, s - 1, Math.round(s / 3));
+				ctx.strokeStyle = C.icon;
+				ctx.strokeRect(ix, iy, s - 1, s - 1);
+				ctx.beginPath();
+				ctx.moveTo(ix, iy + Math.round((2 * s) / 3));
+				ctx.lineTo(ix + s - 1, iy + Math.round((2 * s) / 3));
+				ctx.moveTo(ix + Math.round(s / 2), iy);
+				ctx.lineTo(ix + Math.round(s / 2), iy + s - 1);
+				ctx.stroke();
 				tableHintBox = { x: b.x, y: b.y, w: b.w + 2, h: b.h };
 			}
 		}
@@ -2876,7 +2889,7 @@
 		for (let c = c0; c <= c1; c++) {
 			const x = Math.round(cx(c + 1)) - 0.5;
 			if (x <= MARGIN) continue;
-			ctx.moveTo(x, TOP_H * 0.35);
+			ctx.moveTo(x, TOP_H * 0.75);
 			ctx.lineTo(x, TOP_H);
 		}
 		ctx.stroke();
@@ -3719,7 +3732,24 @@
 	function asTableHint(): boolean {
 		const { row, col } = active;
 		if (!source.formatAsTable || locked || !cells.has(key(row, col)) || tableAt(row, col) || keptOut(row, col) || listOf(row, col)) return false;
-		return [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dr, dc]) => cells.has(key(row + dr, col + dc)) && !tableAt(row + dr, col + dc) && !keptOut(row + dr, col + dc));
+		// Le bloc libre (4-connexité, hors tableaux et légendes) : au moins trois
+		// cellules, et pas seulement des phrases (un texte de plusieurs lignes
+		// n'est pas une liste à mettre en tableau).
+		const seen = new Set<string>();
+		const stack = [[row, col]];
+		let n = 0;
+		let short = 0;
+		while (stack.length && seen.size < 200) {
+			const [r, c] = stack.pop()!;
+			const k = key(r, c);
+			if (seen.has(k) || !cells.has(k) || tableAt(r, c) || keptOut(r, c)) continue;
+			seen.add(k);
+			n++;
+			const v = (cells.get(k) ?? '').trim();
+			if (v.split(/s+/).length <= 3 && v.length <= 40) short++;
+			stack.push([r + 1, c], [r - 1, c], [r, c + 1], [r, c - 1]);
+		}
+		return n >= 3 && short * 2 >= n;
 	}
 	function tableHintAt(ev: MouseEvent): boolean {
 		const b = tableHintBox;
