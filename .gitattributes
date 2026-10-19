@@ -1,0 +1,6 @@
+# Scripts shell : fins de ligne LF partout, y compris dans une copie de travail
+# Windows (core.autocrlf=true), pour pouvoir les lancer depuis Git Bash.
+*.sh text eol=lf
+
+# Données embarquées compressées (internal/geo) : binaire, jamais converti.
+*.bin.gz binary

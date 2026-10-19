@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" width="288" height="288">
+  <!-- Symbole de Be Lattis : losange de treillis et son nœud (voir identite-visuelle.md). -->
+  <g transform="translate(6 6)">
+    <g stroke="#217346" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <path d="M30 0 60 30 30 60 0 30Z"/>
+      <path d="M15 15 45 45M45 15 15 45" stroke-opacity="0.55"/>
+    </g>
+    <circle cx="30" cy="30" r="5" fill="#217346"/>
+  </g>
+</svg>

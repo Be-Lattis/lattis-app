@@ -1,0 +1,386 @@
+name: Release
+
+# Installeurs signés (phase 8) : sur un tag v*, construit et signe les paquets
+# Windows (NSIS + MSIX), macOS (.dmg universel notarisé) et Linux (AppImage,
+# .deb, .rpm), puis les publie dans une release GitHub, avec les notes tirées
+# des commits depuis le tag précédent (variable de dépôt RELEASE_DRAFT=true :
+# release laissée en brouillon). Un tag avec un tiret (v1.2.0-beta.1) donne
+# une pré-version. Créer le tag : scripts/release.sh v1.2.0.
+# Chaque signature est sautée proprement si son secret manque : les paquets
+# sortent alors non signés, avec un avertissement dans le journal.
+# Secrets attendus : docs/release/signature.md.
+#
+# Fichiers publiés sous des noms stables, sans version (Lattis-windows-x64-
+# setup.exe, Lattis-macos-universal.dmg, Lattis-linux-x64.AppImage…), plus
+# SHA256SUMS.txt et latest.json : le site pointe sur
+# releases/latest/download/<nom> (docs/release/publier.md).
+#
+# Lancement manuel (Actions → Release → Run workflow) : mêmes paquets, sommes
+# et latest.json, en artefacts du run seulement (release-essai), sans release.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version des paquets (ex. v0.2.0-test)
+        required: true
+        default: v0.0.0-test
+
+permissions:
+  contents: write
+
+env:
+  WAILS_VERSION: v3.0.0-beta.30
+  VERSION: ${{ github.event_name == 'push' && github.ref_name || inputs.version }}
+
+jobs:
+  windows:
+    name: Windows (NSIS + MSIX)
+    runs-on: windows-latest
+    env:
+      WINDOWS_CERT_PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
+      WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+      WINDOWS_TIMESTAMP_URL: ${{ vars.WINDOWS_TIMESTAMP_URL }}
+      WINDOWS_PUBLISHER_DISPLAY_NAME: ${{ vars.WINDOWS_PUBLISHER_DISPLAY_NAME }}
+      # Azure Trusted Signing (à la place du .pfx).
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      AZURE_SIGNING_ENDPOINT: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+      AZURE_SIGNING_ACCOUNT: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+      AZURE_SIGNING_PROFILE: ${{ vars.AZURE_SIGNING_PROFILE }}
+      WINDOWS_PUBLISHER: ${{ vars.WINDOWS_PUBLISHER }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
+      - name: NSIS
+        run: |
+          if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) {
+            if (-not (Test-Path 'C:\Program Files (x86)\NSIS\makensis.exe')) { choco install nsis -y --no-progress }
+            'C:\Program Files (x86)\NSIS' | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          }
+      - name: Version
+        shell: bash
+        run: build/release/set-version.sh "$VERSION"
+
+      - name: Mode de signature
+        id: mode
+        run: |
+          if ($env:WINDOWS_CERT_PFX_BASE64) {
+            $pfx = Join-Path $env:RUNNER_TEMP 'lattis-codesign.pfx'
+            [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERT_PFX_BASE64))
+            "WINDOWS_CERT_PATH=$pfx" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+            'mode=pfx' | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
+          } elseif ($env:AZURE_CLIENT_ID -and $env:AZURE_SIGNING_ACCOUNT -and $env:AZURE_SIGNING_PROFILE -and $env:WINDOWS_PUBLISHER) {
+            'mode=azure' | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
+          } else {
+            Write-Output '::warning::Aucun certificat Windows (WINDOWS_CERT_PFX_BASE64 ou Azure Trusted Signing) : lattis.exe, l''installeur et le MSIX ne sont pas signés.'
+            'mode=none' | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
+          }
+
+      - name: Construction de lattis.exe
+        run: wails3 build
+
+      - name: Signature de lattis.exe (.pfx)
+        if: steps.mode.outputs.mode == 'pfx'
+        run: wails3 task windows:sign:exe
+      - name: Signature de lattis.exe (Azure Trusted Signing)
+        if: steps.mode.outputs.mode == 'azure'
+        uses: azure/trusted-signing-action@v0.5.1
+        with:
+          azure-tenant-id: ${{ env.AZURE_TENANT_ID }}
+          azure-client-id: ${{ env.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ env.AZURE_CLIENT_SECRET }}
+          endpoint: ${{ env.AZURE_SIGNING_ENDPOINT }}
+          trusted-signing-account-name: ${{ env.AZURE_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ env.AZURE_SIGNING_PROFILE }}
+          files-folder: ${{ github.workspace }}\bin
+          files-folder-filter: exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      # Avec le .pfx, makensis signe aussi l'installeur et le désinstalleur, et
+      # build-msix.ps1 signe le paquet (Publisher = sujet du certificat).
+      - name: Installeur NSIS
+        run: wails3 task windows:package:nsis
+      - name: Paquet MSIX
+        run: wails3 task windows:package:msix ${{ steps.mode.outputs.mode != 'pfx' && 'SIGN=false' || '' }}
+
+      - name: Signature de l'installeur et du MSIX (Azure Trusted Signing)
+        if: steps.mode.outputs.mode == 'azure'
+        uses: azure/trusted-signing-action@v0.5.1
+        with:
+          azure-tenant-id: ${{ env.AZURE_TENANT_ID }}
+          azure-client-id: ${{ env.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ env.AZURE_CLIENT_SECRET }}
+          endpoint: ${{ env.AZURE_SIGNING_ENDPOINT }}
+          trusted-signing-account-name: ${{ env.AZURE_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ env.AZURE_SIGNING_PROFILE }}
+          files-folder: ${{ github.workspace }}\bin
+          files-folder-filter: exe,msix
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Vérification des signatures
+        if: steps.mode.outputs.mode != 'none'
+        run: |
+          $files = Get-ChildItem bin -File | Where-Object { $_.Extension -in '.exe', '.msix' }
+          $bad = $files | Get-AuthenticodeSignature | Where-Object Status -ne 'Valid'
+          $files | Get-AuthenticodeSignature | Format-Table Path, Status, @{ n = 'Signataire'; e = { $_.SignerCertificate.Subject } } -AutoSize | Out-String -Width 300
+          if ($bad) { throw 'Signature invalide : ' + ($bad.Path -join ', ') }
+
+      # Noms stables, sans version : le site renvoie vers
+      # releases/latest/download/<nom> (docs/release/publier.md).
+      # Un MSIX non signé ne s'installe pas (Windows exige une signature de
+      # confiance) : il n'est publié que signé ; sinon il reste dans l'artefact
+      # lattis-windows-msix-non-signe du run, pour essai.
+      - name: Fichiers de la release
+        env:
+          SIGN_MODE: ${{ steps.mode.outputs.mode }}
+        run: |
+          New-Item -ItemType Directory -Force dist, dist-unsigned | Out-Null
+          Copy-Item bin\lattis-amd64-installer.exe dist\Lattis-windows-x64-setup.exe
+          $msix = (Get-ChildItem bin\*.msix | Select-Object -First 1).FullName
+          if ($env:SIGN_MODE -ne 'none') {
+            Copy-Item $msix dist\Lattis-windows-x64.msix
+          } else {
+            Write-Output '::warning::MSIX non signé : absent de la release (seulement en artefact du run).'
+            Copy-Item $msix dist-unsigned\Lattis-windows-x64.msix
+          }
+          Get-ChildItem dist, dist-unsigned
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          path: dist/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: steps.mode.outputs.mode == 'none'
+        with:
+          name: lattis-windows-msix-non-signe
+          path: dist-unsigned/
+          if-no-files-found: ignore
+      - name: Nettoyage du certificat
+        if: always()
+        run: Remove-Item -Force (Join-Path $env:RUNNER_TEMP 'lattis-codesign.pfx') -ErrorAction SilentlyContinue
+
+  macos:
+    name: macOS (.dmg universel)
+    runs-on: macos-latest
+    env:
+      MACOS_CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+      MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+      MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+      MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
+      MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+      MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
+      - name: Version
+        run: build/release/set-version.sh "$VERSION"
+
+      # Trousseau temporaire : le certificat Developer ID (.p12) n'y vit que le
+      # temps du job, codesign y accède sans invite.
+      - name: Certificat Developer ID
+        run: |
+          if [ -z "$MACOS_CERT_P12_BASE64" ]; then
+            echo "::warning::Pas de certificat Developer ID (MACOS_CERT_P12_BASE64) : app signée ad hoc, ni notarisée ni agrafée."
+            echo "MACOS_SIGN_IDENTITY=" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          keychain="$RUNNER_TEMP/lattis-signing.keychain-db"
+          kpass="$(openssl rand -hex 24)"
+          printf '%s' "$MACOS_CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/lattis.p12"
+          security create-keychain -p "$kpass" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$kpass" "$keychain"
+          security import "$RUNNER_TEMP/lattis.p12" -k "$keychain" -P "$MACOS_CERT_PASSWORD" -f pkcs12 -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$kpass" "$keychain" > /dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          rm -f "$RUNNER_TEMP/lattis.p12"
+          if [ -z "$MACOS_SIGN_IDENTITY" ]; then
+            MACOS_SIGN_IDENTITY="$(security find-identity -v -p codesigning "$keychain" | sed -n 's/.*"\(Developer ID Application: .*\)"/\1/p' | head -n 1)"
+          fi
+          if [ -z "$MACOS_SIGN_IDENTITY" ]; then
+            echo "::error::Aucune identité « Developer ID Application » dans le .p12."
+            exit 1
+          fi
+          echo "MACOS_SIGN_IDENTITY=$MACOS_SIGN_IDENTITY" >> "$GITHUB_ENV"
+          echo "MACOS_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+      - name: Clé de notarisation
+        run: |
+          if [ -z "$MACOS_NOTARY_KEY" ] || [ -z "$MACOS_NOTARY_KEY_ID" ] || [ -z "$MACOS_NOTARY_ISSUER_ID" ]; then
+            echo "::warning::Pas de clé App Store Connect (MACOS_NOTARY_KEY, _KEY_ID, _ISSUER_ID) : pas de notarisation."
+            exit 0
+          fi
+          printf '%s\n' "$MACOS_NOTARY_KEY" > "$RUNNER_TEMP/AuthKey.p8"
+          echo "MACOS_NOTARY_KEY_PATH=$RUNNER_TEMP/AuthKey.p8" >> "$GITHUB_ENV"
+
+      - name: Construction, signature, notarisation
+        run: wails3 task darwin:release
+
+      - name: Fichiers de la release
+        run: |
+          mkdir -p dist
+          cp bin/lattis.dmg dist/Lattis-macos-universal.dmg
+          ls -l dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-macos
+          path: dist/
+          if-no-files-found: error
+      - name: Nettoyage du trousseau et de la clé
+        if: always()
+        run: |
+          if [ -n "${MACOS_KEYCHAIN:-}" ]; then security delete-keychain "$MACOS_KEYCHAIN" || true; fi
+          rm -f "$RUNNER_TEMP/AuthKey.p8" "$RUNNER_TEMP/lattis.p12"
+
+  linux:
+    name: Linux (AppImage, .deb, .rpm)
+    runs-on: ubuntu-24.04
+    env:
+      LINUX_GPG_PRIVATE_KEY: ${{ secrets.LINUX_GPG_PRIVATE_KEY }}
+      NFPM_PASSPHRASE: ${{ secrets.LINUX_GPG_PASSPHRASE }}
+      # nfpm : champ Maintainer des paquets.
+      GIT_COMMITTER_NAME: Lattis
+      GIT_COMMITTER_EMAIL: ${{ github.repository_owner }}@users.noreply.github.com
+      # linuxdeploy est lui-même une AppImage : sans FUSE, il s'extrait.
+      APPIMAGE_EXTRACT_AND_RUN: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Dépendances (GTK 4, WebKitGTK 6, AppImage)
+        run: sudo apt-get update && sudo apt-get install -y build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev file desktop-file-utils
+      - run: go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
+      - name: Version
+        run: build/release/set-version.sh "$VERSION"
+      - name: Clé GPG des paquets
+        run: |
+          if [ -z "$LINUX_GPG_PRIVATE_KEY" ]; then
+            echo "::warning::Pas de clé GPG (LINUX_GPG_PRIVATE_KEY) : .deb et .rpm non signés."
+            exit 0
+          fi
+          printf '%s\n' "$LINUX_GPG_PRIVATE_KEY" > "$RUNNER_TEMP/lattis-gpg.asc"
+          echo "NFPM_SIGNING_KEY_FILE=$RUNNER_TEMP/lattis-gpg.asc" >> "$GITHUB_ENV"
+      - name: Construction et paquets
+        run: |
+          desktop-file-validate build/linux/lattis.desktop
+          wails3 task linux:release
+      - name: Fichiers de la release
+        run: |
+          mkdir -p dist
+          cp bin/lattis-x86_64.AppImage dist/Lattis-linux-x64.AppImage
+          cp bin/lattis.deb dist/Lattis-linux-x64.deb
+          cp bin/lattis.rpm dist/Lattis-linux-x64.rpm
+          ls -l dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-linux
+          path: dist/
+          if-no-files-found: error
+      - name: Nettoyage de la clé
+        if: always()
+        run: rm -f "$RUNNER_TEMP/lattis-gpg.asc"
+
+  release:
+    name: Release GitHub
+    needs: [windows, macos, linux]
+    runs-on: ubuntu-24.04
+    env:
+      LINUX_GPG_PRIVATE_KEY: ${{ secrets.LINUX_GPG_PRIVATE_KEY }}
+      LINUX_GPG_PASSPHRASE: ${{ secrets.LINUX_GPG_PASSPHRASE }}
+      GH_TOKEN: ${{ github.token }}
+      # Lancement manuel : tout est préparé (sommes, latest.json, notes) et
+      # déposé en artefact « release-essai » du run, sans créer de release.
+      PUBLISH: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # tags et historique : notes depuis le tag précédent
+          path: src
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+      - name: Fichiers attendus
+        working-directory: dist
+        run: |
+          ls -l
+          for f in Lattis-windows-x64-setup.exe Lattis-macos-universal.dmg Lattis-linux-x64.AppImage Lattis-linux-x64.deb Lattis-linux-x64.rpm; do
+            [ -s "$f" ] || { echo "::error::$f manquant"; exit 1; }
+          done
+      - name: Sommes de contrôle, latest.json et signatures GPG
+        working-directory: dist
+        run: |
+          sha256sum Lattis-* > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          ../src/scripts/release-manifest.sh "$VERSION" . "$GITHUB_REPOSITORY" > latest.json
+          cat latest.json
+          if [ -z "$LINUX_GPG_PRIVATE_KEY" ]; then
+            echo "::warning::Pas de clé GPG : SHA256SUMS.txt et les fichiers ne sont pas signés."
+            exit 0
+          fi
+          export GNUPGHOME="$(mktemp -d)"
+          printf '%s\n' "$LINUX_GPG_PRIVATE_KEY" | gpg --batch --import
+          for f in Lattis-* SHA256SUMS.txt; do
+            gpg --batch --yes --pinentry-mode loopback --passphrase "$LINUX_GPG_PASSPHRASE" --armor --detach-sign --output "$f.asc" "$f"
+          done
+          gpg --batch --armor --export > lattis-release-key.asc
+          rm -rf "$GNUPGHOME"
+      - name: Notes de version
+        run: |
+          if [ "$PUBLISH" = true ]; then ref="$GITHUB_REF_NAME"; else ref=HEAD; fi
+          src/scripts/release-notes.sh "$ref" src > notes.md
+          cat notes.md
+      - name: Essai (sans release)
+        if: env.PUBLISH != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-essai
+          path: |
+            dist/
+            notes.md
+      # Release publique, marquée « latest » : releases/latest/download/<nom>
+      # pointe alors sur ses fichiers. Un tag avec un tiret (v1.2.0-beta.1)
+      # donne une pré-version, que releases/latest ignore. Workflow relancé sur
+      # un tag déjà publié : les fichiers sont remplacés (--clobber).
+      - name: Release
+        if: env.PUBLISH == 'true'
+        env:
+          RELEASE_DRAFT: ${{ vars.RELEASE_DRAFT }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          opts="--latest"
+          case "$tag" in *-*) opts="--prerelease --latest=false" ;; esac
+          if [ "$RELEASE_DRAFT" = true ]; then opts="$opts --draft"; fi
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "La release $tag existe déjà : fichiers remplacés."
+            gh release upload "$tag" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$tag" dist/* --repo "$GITHUB_REPOSITORY" $opts --verify-tag --notes-file notes.md --title "Lattis ${tag#v}"
+          fi
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json url,isDraft,isPrerelease,assets --jq '{url, isDraft, isPrerelease, assets: [.assets[].name]}'

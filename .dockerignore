@@ -1,0 +1,10 @@
+.git
+.claude
+bin
+build/bin
+frontend/node_modules
+frontend/dist
+frontend/dist-web
+frontend/.svelte-kit
+cmd/lattis-engine/dist-web
+**/*.lattis

@@ -1,0 +1,15 @@
+{
+	"fixed": {
+		"file_version": "0.1.0"
+	},
+	"info": {
+		"0409": {
+			"ProductVersion": "0.1.0",
+			"CompanyName": "Lattis",
+			"FileDescription": "Tableur relationnel local-first",
+			"LegalCopyright": "© 2026 Lattis. Licence MPL-2.0.",
+			"ProductName": "Lattis",
+			"Comments": "Logiciel libre sous licence MPL-2.0"
+		}
+	}
+}

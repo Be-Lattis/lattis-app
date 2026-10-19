@@ -1,0 +1,24 @@
+// Volet d'aide : ouvert ou non, et la cible demandée. Tout le monde peut
+// l'ouvrir (F1, Fichier › Aide, bouton « ? » du ruban et des volets) sans
+// passer par la page : HelpPanel suit cet état.
+
+import { HOME } from './help';
+
+// last : dernière page affichée, où l'aide rouvre sans cible.
+export const helpState = $state({ open: false, target: HOME, seq: 0, focus: true, last: HOME });
+
+/**
+ * Ouvre l'aide sur une cible (« sql », « fonction:SOMME »…) ; sans cible : là
+ * où elle en était. focus : la recherche prend le focus (pas quand F1 est
+ * pressé pendant une saisie, qui doit continuer).
+ */
+export function openHelp(target?: string, focus = true) {
+	helpState.target = target || helpState.last;
+	helpState.focus = focus;
+	helpState.open = true;
+	helpState.seq++;
+}
+
+export function closeHelp() {
+	helpState.open = false;
+}

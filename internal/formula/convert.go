@@ -1,0 +1,275 @@
+package formula
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"fmt"
+	"regexp"
+	"strings"
+
+	"github.com/lalamefine/lattis/internal/grid"
+)
+
+// Resolver situe une plage A1 d'une formule Excel collée : quel tableau elle
+// recouvre et à partir de quelle colonne de ce tableau.
+type Resolver interface {
+	Resolve(rangeText string) (table string, firstCol int, ok bool)
+}
+
+// KeyNeed signale qu'une colonne sert désormais de clé à REFERENCE : son
+// unicité doit être vérifiée et un index UNIQUE posé (voir EnsureKey).
+type KeyNeed struct {
+	Table, Column string
+}
+
+// ErrConvert explique pourquoi une formule Excel ne peut pas être convertie.
+type ErrConvert struct{ Msg string }
+
+func (e *ErrConvert) Error() string { return e.Msg }
+
+var ident = regexp.MustCompile(`^[\p{L}_][\p{L}\p{N}_]*$`)
+
+// Convert réécrit les fonctions Excel sans équivalent direct :
+// RECHERCHEV(clé; plage; n; FAUX) devient REFERENCE(Tableau; Colonne; clé),
+// avec la première colonne de la plage comme clé du tableau. original est la
+// formule saisie, gardée pour l'infobulle « converti depuis RECHERCHEV ».
+func Convert(n Node, s *Schema, r Resolver, original string) (Node, []KeyNeed, error) {
+	var keys []KeyNeed
+	var walk func(Node) (Node, error)
+	walk = func(n Node) (Node, error) {
+		switch m := n.(type) {
+		case Unary:
+			x, err := walk(m.X)
+			m.X = x
+			return m, err
+		case Binary:
+			l, err := walk(m.L)
+			if err != nil {
+				return nil, err
+			}
+			r, err := walk(m.R)
+			m.L, m.R = l, r
+			return m, err
+		case Call:
+			args := make([]Node, len(m.Args))
+			for i, a := range m.Args {
+				x, err := walk(a)
+				if err != nil {
+					return nil, err
+				}
+				args[i] = x
+			}
+			m.Args = args
+			var out Node
+			var need KeyNeed
+			var err error
+			switch m.Fn {
+			case "VLOOKUP":
+				out, need, err = vlookup(m, s, r, original)
+			case "XLOOKUP":
+				out, need, err = xlookup(m, s, r, original)
+			case "INDEX":
+				var ok bool
+				if out, need, ok = indexMatch(m, s, r, original); !ok {
+					return m, nil
+				}
+			case "HLOOKUP":
+				return nil, &ErrConvert{"RECHERCHEH n'existe pas dans Lattis : les tableaux sont orientés lignes. Transposez les données, puis utilisez REFERENCE"}
+			default:
+				return m, nil
+			}
+			if err == nil {
+				keys = append(keys, need)
+			}
+			return out, err
+		}
+		return n, nil
+	}
+	out, err := walk(n)
+	return out, keys, err
+}
+
+func vlookup(c Call, s *Schema, r Resolver, original string) (Node, KeyNeed, error) {
+	exact := len(c.Args) == 4 && c.Args[3] != nil && (c.Args[3] == BoolLit{false} || c.Args[3] == NumLit{0})
+	if !exact {
+		return nil, KeyNeed{}, &ErrConvert{"RECHERCHEV en correspondance approchée (4e argument omis ou VRAI) : utilisez REFERENCE.APPROCHEE, ou ajoutez FAUX pour une correspondance exacte"}
+	}
+	var table string
+	var first int
+	switch rg := c.Args[1].(type) {
+	case Range:
+		var ok bool
+		if table, first, ok = r.Resolve(rg.Text); !ok {
+			return nil, KeyNeed{}, &ErrConvert{fmt.Sprintf("la plage %s ne correspond à aucun tableau", rg.Text)}
+		}
+	case Name:
+		table = rg.Name
+	default:
+		return nil, KeyNeed{}, &ErrConvert{"le 2e argument de RECHERCHEV doit être une plage ou un tableau"}
+	}
+	t, ok := s.Table(table)
+	if !ok {
+		return nil, KeyNeed{}, &ErrConvert{fmt.Sprintf("tableau %s introuvable", table)}
+	}
+	num, ok := c.Args[2].(NumLit)
+	col := first + int(num.V) - 1
+	if !ok || num.V < 1 || col >= len(t.Cols) {
+		return nil, KeyNeed{}, &ErrConvert{"numéro de colonne hors de la plage"}
+	}
+	keyCol := t.Cols[first].Name
+	if t.Key != "" && !strings.EqualFold(t.Key, keyCol) {
+		return nil, KeyNeed{}, &ErrConvert{fmt.Sprintf("le tableau %s a déjà la clé %s ; la plage commence par %s", t.Name, t.Key, keyCol)}
+	}
+	var colArg Node = Name{t.Cols[col].Name}
+	if !ident.MatchString(t.Cols[col].Name) {
+		colArg = StrLit{t.Cols[col].Name}
+	}
+	return Call{Fn: "REFERENCE", Args: []Node{Name{t.Name}, colArg, c.Args[0]}, Origin: original},
+		KeyNeed{t.Name, keyCol}, nil
+}
+
+// columnOf situe une colonne de tableau désignée par Tableau[Col] ou par une
+// plage A1 d'une seule colonne.
+func columnOf(n Node, s *Schema, r Resolver) (*Table, string, bool) {
+	switch c := n.(type) {
+	case Ref:
+		if c.Row || c.Table == "" {
+			return nil, "", false
+		}
+		t, ok := s.Table(c.Table)
+		if !ok {
+			return nil, "", false
+		}
+		i, ok := t.col(c.Col)
+		if !ok {
+			return nil, "", false
+		}
+		return t, t.Cols[i].Name, true
+	case Range:
+		if r == nil {
+			return nil, "", false
+		}
+		tn, first, ok := r.Resolve(c.Text)
+		if !ok {
+			return nil, "", false
+		}
+		t, ok := s.Table(tn)
+		if !ok || first < 0 || first >= len(t.Cols) {
+			return nil, "", false
+		}
+		return t, t.Cols[first].Name, true
+	}
+	return nil, "", false
+}
+
+// lookupCall construit REFERENCE(Tableau; Colonne; clé), la colonne clé étant
+// key : elle doit être la clé du tableau, ou le devenir.
+func lookupCall(t *Table, key, ret string, k Node, origin, fn string) (Node, KeyNeed, error) {
+	if t.Key != "" && !strings.EqualFold(t.Key, key) {
+		return nil, KeyNeed{}, &ErrConvert{fmt.Sprintf("%s : le tableau %s a déjà la clé %s, la recherche se fait sur %s", fn, t.Name, t.Key, key)}
+	}
+	var colArg Node = Name{ret}
+	if !ident.MatchString(ret) {
+		colArg = StrLit{ret}
+	}
+	return Call{Fn: "REFERENCE", Args: []Node{Name{t.Name}, colArg, k}, Origin: origin}, KeyNeed{t.Name, key}, nil
+}
+
+// xlookup : RECHERCHEX(clé; Tableau[Clé]; Tableau[Valeur]; [si_absent])
+// devient REFERENCE(Tableau; Valeur; clé), dans SI.NON.DISP si une valeur
+// par défaut est donnée.
+func xlookup(c Call, s *Schema, r Resolver, original string) (Node, KeyNeed, error) {
+	if len(c.Args) > 4 && c.Args[4] != nil && c.Args[4] != (NumLit{0}) {
+		return nil, KeyNeed{}, &ErrConvert{"RECHERCHEX : seule la correspondance exacte est prise en charge ; pour des tranches, utilisez REFERENCE.APPROCHEE"}
+	}
+	kt, key, ok1 := columnOf(c.Args[1], s, r)
+	rt, ret, ok2 := columnOf(c.Args[2], s, r)
+	if !ok1 || !ok2 {
+		return nil, KeyNeed{}, &ErrConvert{"RECHERCHEX : les 2e et 3e arguments doivent être des colonnes de tableau (Tableau[Colonne])"}
+	}
+	if kt != rt {
+		return nil, KeyNeed{}, &ErrConvert{"RECHERCHEX : les colonnes cherchée et renvoyée doivent appartenir au même tableau"}
+	}
+	out, need, err := lookupCall(kt, key, ret, c.Args[0], original, "RECHERCHEX")
+	if err != nil {
+		return nil, KeyNeed{}, err
+	}
+	if len(c.Args) > 3 && c.Args[3] != nil {
+		out = Call{Fn: "IFNA", Args: []Node{out, c.Args[3]}}
+	}
+	return out, need, nil
+}
+
+// indexMatch reconnaît INDEX(Tableau[Valeur]; EQUIV(clé; Tableau[Clé]; 0))
+// et le réécrit en REFERENCE. Les autres INDEX restent tels quels.
+func indexMatch(c Call, s *Schema, r Resolver, original string) (Node, KeyNeed, bool) {
+	if len(c.Args) != 2 {
+		return nil, KeyNeed{}, false
+	}
+	m, ok := c.Args[1].(Call)
+	if !ok || m.Fn != "MATCH" || len(m.Args) != 3 || (m.Args[2] != NumLit{0} && m.Args[2] != BoolLit{false}) {
+		return nil, KeyNeed{}, false
+	}
+	rt, ret, ok1 := columnOf(c.Args[0], s, r)
+	kt, key, ok2 := columnOf(m.Args[1], s, r)
+	if !ok1 || !ok2 || rt != kt {
+		return nil, KeyNeed{}, false
+	}
+	out, need, err := lookupCall(kt, key, ret, m.Args[0], original, "INDEX/EQUIV")
+	return out, need, err == nil
+}
+
+// suggestions : fonctions d'Excel absentes de Lattis, et ce qu'on propose.
+var suggestions = map[string]string{
+	"OFFSET":     "DECALER n'existe pas dans Lattis : essayez FILTRE ou PRENDRE",
+	"DECALER":    "DECALER n'existe pas dans Lattis : essayez FILTRE ou PRENDRE",
+	"INDIRECT":   "INDIRECT n'existe pas dans Lattis : essayez REFERENCE ou FILTRE",
+	"HLOOKUP":    "RECHERCHEH n'existe pas dans Lattis : transposez les données, puis utilisez REFERENCE",
+	"RECHERCHEH": "RECHERCHEH n'existe pas dans Lattis : transposez les données, puis utilisez REFERENCE",
+	"LOOKUP":     "RECHERCHE n'existe pas dans Lattis : utilisez REFERENCE ou REFERENCE.APPROCHEE",
+	"RECHERCHE":  "RECHERCHE n'existe pas dans Lattis : utilisez REFERENCE ou REFERENCE.APPROCHEE",
+	"LAMBDA":     "LAMBDA n'existe pas dans Lattis : utilisez un script Lua",
+	"VLOOKUP":    "RECHERCHEV est convertie en REFERENCE à la saisie (correspondance exacte seulement)",
+	"RECHERCHEV": "RECHERCHEV est convertie en REFERENCE à la saisie (correspondance exacte seulement)",
+}
+
+// Suggestion donne l'infobulle d'une fonction inconnue (#NOM?) quand Lattis
+// propose un équivalent, ou "".
+func Suggestion(fn string) string {
+	return suggestions[strings.ToUpper(fn)]
+}
+
+// ErrNotUnique signale une colonne qui ne peut pas servir de clé.
+var ErrNotUnique = errors.New("valeurs en double")
+
+// EnsureKey vérifie qu'une colonne est unique (sans tenir compte de la casse,
+// comme la recherche) et pose l'index UNIQUE qui accélère REFERENCE et
+// refusera ensuite les doublons.
+func EnsureKey(ctx context.Context, tx *sql.Tx, s *Schema, need KeyNeed) error {
+	t, ok := s.Table(need.Table)
+	if !ok {
+		return fmt.Errorf("tableau %s introuvable", need.Table)
+	}
+	i, ok := t.col(need.Column)
+	if !ok || t.Cols[i].Formula != nil {
+		return fmt.Errorf("colonne %s inutilisable comme clé", need.Column)
+	}
+	c := t.Cols[i]
+	expr := c.SQL
+	if c.Type == grid.Text {
+		expr += " COLLATE NOCASE"
+	}
+	var total, distinct int
+	if err := tx.QueryRowContext(ctx, `SELECT count(`+c.SQL+`), count(DISTINCT `+expr+`) FROM `+t.SQL).Scan(&total, &distinct); err != nil {
+		return err
+	}
+	if total != distinct {
+		return fmt.Errorf("%s.%s : %d %w", t.Name, c.Name, total-distinct, ErrNotUnique)
+	}
+	if _, err := tx.ExecContext(ctx, `CREATE UNIQUE INDEX IF NOT EXISTS `+t.SQL+`_key ON `+t.SQL+`(`+expr+`)`); err != nil {
+		return err
+	}
+	t.Key = c.Name
+	return nil
+}

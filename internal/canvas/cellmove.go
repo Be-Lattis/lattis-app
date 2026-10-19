@@ -1,0 +1,110 @@
+package canvas
+
+import (
+	"context"
+	"fmt"
+)
+
+// MoveCells déplace les cellules libres du rectangle [r0, r1] × [c0, c1]
+// de (dr, dc), comme en glissant la bordure de la sélection dans Excel :
+// valeurs, mise en forme et noms suivent ; ce qui occupait la destination
+// est remplacé ; les adresses Cell_A1 qui visaient les cellules déplacées
+// suivent (celles qui visaient une cellule remplacée deviennent #REF!).
+func (m *Model) MoveCells(ctx context.Context, sheet int64, r0, c0, r1, c1, dr, dc int) error {
+	if dr == 0 && dc == 0 {
+		return nil
+	}
+	if r0 > r1 || c0 > c1 || r0+dr < 0 || c0+dc < 0 {
+		return fmt.Errorf("%w : déplacement hors de la feuille", ErrTable)
+	}
+	return m.Do(ctx, "Déplacer les cellules", func(t *tx) error {
+		if err := t.guard(sheet); err != nil {
+			return err
+		}
+		return t.moveFree(sheet, r0, c0, r1, c1, dr, dc)
+	})
+}
+
+// moveFree est le corps de MoveCells, dans la transaction en cours.
+func (t *tx) moveFree(sheet int64, r0, c0, r1, c1, dr, dc int) error {
+	tables, err := t.tables(sheet)
+	if err != nil {
+		return err
+	}
+	tr0, tr1, tc0, tc1 := r0+dr, r1+dr, c0+dc, c1+dc
+	for _, tb := range tables {
+		if tb.Row <= r1 && tb.Bottom() >= r0 && tb.Col <= c1 && tb.Right() >= c0 {
+			return fmt.Errorf("%w : la sélection contient une partie du tableau « %s » ; sélectionnez le tableau entier pour le déplacer", ErrTable, tb.Name)
+		}
+		// Juste à côté d'un tableau, les cellules le rejoignent à la fin de
+		// l'action (joinAdjacent) ; dessus, c'est refusé.
+		if tb.Row <= tr1 && tb.Bottom() >= tr0 && tb.Col <= tc1 && tb.Right() >= tc0 {
+			return fmt.Errorf("%w : la destination recouvre le tableau « %s »", ErrTable, tb.Name)
+		}
+	}
+	inSource := `row BETWEEN ? AND ? AND col BETWEEN ? AND ?`
+	for _, tbl := range []string{"_lattis_cells", "_lattis_cell_styles", "_lattis_names", rangeTable} {
+		// La destination est remplacée (hors cellules déplacées elles-mêmes).
+		if err := t.deleteWhere(tbl, `sheet = ? AND `+inSource+` AND NOT (`+inSource+`)`,
+			sheet, tr0, tr1, tc0, tc1, r0, r1, c0, c1); err != nil {
+			return err
+		}
+		// Deux temps : pas de collision de clé quand source et destination se recouvrent.
+		away := `UPDATE ` + tbl + ` SET row = -(row + ?) - 1, col = -(col + ?) - 1 WHERE sheet = ? AND ` + inSource
+		back := `UPDATE ` + tbl + ` SET row = -row - 1, col = -col - 1 WHERE sheet = ? AND row < 0`
+		if err := t.apply(
+			[]stmt{st(away, dr, dc, sheet, r0, r1, c0, c1), st(back, sheet)},
+			[]stmt{st(away, -dr, -dc, sheet, tr0, tr1, tc0, tc1), st(back, sheet)},
+		); err != nil {
+			return err
+		}
+	}
+	return t.rewriteCellRefs(sheet, func(r, c int) (int, int, bool) {
+		switch {
+		case r >= r0 && r <= r1 && c >= c0 && c <= c1:
+			return r + dr, c + dc, true
+		case r >= tr0 && r <= tr1 && c >= tc0 && c <= tc1:
+			return 0, 0, false
+		}
+		return r, c, true
+	})
+}
+
+// ClearCells vide les cellules libres du rectangle [r0, r1] × [c0, c1]
+// (Supprimer, sur des cellules libres) : valeurs et formules, mise en forme,
+// fusions, notes et validations, en une seule étape d'annulation. Une fusion
+// qui déborde du rectangle est défaite. Les tableaux ne sont pas touchés.
+func (m *Model) ClearCells(ctx context.Context, sheet int64, r0, c0, r1, c1 int) error {
+	if r0 > r1 || c0 > c1 {
+		return nil
+	}
+	return m.Do(ctx, "Supprimer", func(t *tx) error {
+		if err := t.guard(sheet); err != nil {
+			return err
+		}
+		return t.clearFree(sheet, r0, c0, r1, c1)
+	})
+}
+
+// clearFree est le corps de ClearCells, dans la transaction en cours.
+func (t *tx) clearFree(sheet int64, r0, c0, r1, c1 int) error {
+	merges, err := t.merges(sheet)
+	if err != nil {
+		return err
+	}
+	for _, g := range merges {
+		inside := g.Row >= r0 && g.bottom() <= r1 && g.Col >= c0 && g.right() <= c1
+		if !inside && g.overlaps(r0, c0, r1, c1) {
+			if err := t.styleFree(sheet, g.Row, g.Col, Style{"mr": nil, "mc": nil}, nil); err != nil {
+				return err
+			}
+		}
+	}
+	// Supprimer efface tout : la zone n'est plus une plage.
+	for _, tbl := range []string{"_lattis_cells", "_lattis_cell_styles", rangeTable} {
+		if err := t.deleteWhere(tbl, `sheet = ? AND row BETWEEN ? AND ? AND col BETWEEN ? AND ?`, sheet, r0, r1, c0, c1); err != nil {
+			return err
+		}
+	}
+	return nil
+}

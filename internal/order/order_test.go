@@ -1,0 +1,197 @@
+package order
+
+import (
+	"strconv"
+
+	"github.com/ncruces/go-sqlite3/driver"
+	_ "github.com/ncruces/go-sqlite3/embed"
+	"math/rand/v2"
+	"slices"
+	"strings"
+	"testing"
+)
+
+func TestBetweenBasics(t *testing.T) {
+	cases := []struct{ a, b string }{
+		{"", ""}, {"", "V"}, {"V", ""}, {"V", "W"}, {"V", "V1"}, {"V1", "W"},
+		{"1", "2"}, {"", "1"}, {"z", ""}, {"zz", ""}, {"", "01"}, {"V", "Vz"},
+		{"Vzz", "W"}, {"a1", "a11"},
+	}
+	for _, c := range cases {
+		k, err := Between(c.a, c.b)
+		if err != nil {
+			t.Fatalf("Between(%q, %q): %v", c.a, c.b, err)
+		}
+		if !valid(k) || k == "" {
+			t.Fatalf("Between(%q, %q) = %q : clé invalide", c.a, c.b, k)
+		}
+		if (c.a != "" && k <= c.a) || (c.b != "" && k >= c.b) {
+			t.Fatalf("Between(%q, %q) = %q : hors bornes", c.a, c.b, k)
+		}
+	}
+}
+
+func TestBetweenRejectsBadBounds(t *testing.T) {
+	for _, c := range []struct{ a, b string }{{"W", "V"}, {"V", "V"}, {"V0", ""}, {"", "é"}} {
+		if _, err := Between(c.a, c.b); err == nil {
+			t.Errorf("Between(%q, %q) aurait dû échouer", c.a, c.b)
+		}
+	}
+}
+
+// Insertions aléatoires en tête, en queue et au milieu : la liste doit rester
+// triée et sans doublon, et les clés rester courtes.
+func TestRandomInsertions(t *testing.T) {
+	r := rand.New(rand.NewPCG(1, 2))
+	keys := []string{}
+	for range 20_000 {
+		i := r.IntN(len(keys) + 1)
+		var a, b string
+		if i > 0 {
+			a = keys[i-1]
+		}
+		if i < len(keys) {
+			b = keys[i]
+		}
+		k, err := Between(a, b)
+		if err != nil {
+			t.Fatalf("Between(%q, %q): %v", a, b, err)
+		}
+		keys = slices.Insert(keys, i, k)
+	}
+	if !slices.IsSorted(keys) {
+		t.Fatal("clés non triées")
+	}
+	for i := 1; i < len(keys); i++ {
+		if keys[i] == keys[i-1] {
+			t.Fatalf("doublon %q", keys[i])
+		}
+	}
+	longest := 0
+	for _, k := range keys {
+		longest = max(longest, len(k))
+	}
+	if longest > 12 {
+		t.Errorf("clé la plus longue : %d caractères", longest)
+	}
+}
+
+// Le pire cas : toujours insérer au même endroit allonge les clés d'environ
+// un caractère toutes les 6 insertions (log2(62)).
+func TestRepeatedInsertSamePlace(t *testing.T) {
+	a, b := "V", "W"
+	for range 600 {
+		k, err := Between(a, b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b = k
+	}
+	if len(b) > 110 {
+		t.Errorf("clé de %d caractères après 600 insertions au même endroit", len(b))
+	}
+}
+
+func TestSpread(t *testing.T) {
+	for _, n := range []int{1, 2, 61, 62, 1000, 1_000_000} {
+		keys := Spread(n)
+		if len(keys) != n {
+			t.Fatalf("Spread(%d) : %d clés", n, len(keys))
+		}
+		if !slices.IsSorted(keys) {
+			t.Fatalf("Spread(%d) non trié", n)
+		}
+		for i, k := range keys {
+			if !valid(k) || k == "" {
+				t.Fatalf("Spread(%d)[%d] = %q invalide", n, i, k)
+			}
+			if i > 0 && k == keys[i-1] {
+				t.Fatalf("Spread(%d) doublon %q", n, k)
+			}
+		}
+		// On peut toujours insérer entre deux clés voisines.
+		if n > 1 {
+			if _, err := Between(keys[0], keys[1]); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+}
+
+// Ajouter en fin (ou en tête) des milliers de fois garde des clés courtes.
+func TestAppendKeepsKeysShort(t *testing.T) {
+	for _, dir := range []string{"fin", "tête"} {
+		k, _ := Between("", "")
+		for i := range 1_000_000 {
+			var n string
+			var err error
+			if dir == "fin" {
+				n, err = Between(k, "")
+			} else {
+				n, err = Between("", k)
+			}
+			if err != nil || !valid(n) || (dir == "fin" && n <= k) || (dir == "tête" && n >= k) {
+				t.Fatalf("%s %d : %q puis %q (%v)", dir, i, k, n, err)
+			}
+			k = n
+		}
+		if len(k) > 12 {
+			t.Fatalf("%s : clé de %d caractères après 1 000 000 ajouts : %q", dir, len(k), k)
+		}
+	}
+}
+
+// SpreadSQL donne en SQL les mêmes clés que Spread.
+func TestSpreadSQL(t *testing.T) {
+	db, err := driver.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	for _, count := range []int{1, 7, 61, 62, 1000, 123_457, 10_000_000} {
+		keys := Spread(min(count, 200_000))
+		for _, n := range []int{1, 2, count / 2, count} {
+			if n < 1 || n > len(keys) {
+				continue
+			}
+			var got string
+			if err := db.QueryRow("SELECT " + SpreadSQL(count, strconv.Itoa(n))).Scan(&got); err != nil {
+				t.Fatal(err)
+			}
+			if count <= 200_000 && got != keys[n-1] {
+				t.Errorf("%d/%d : %q, attendu %q", n, count, got, keys[n-1])
+			}
+		}
+	}
+}
+
+func TestDistinct(t *testing.T) {
+	cases := []struct{ a, b string }{
+		{"", ""}, {"", "V"}, {"V", ""}, {"V", "W"}, {"V", "V1"}, {"V1", "W"},
+		{"1", "2"}, {"", "1"}, {"z", ""}, {"", "01"}, {"V", "Vz"}, {"a", "a01"},
+		{"a", "a0V"}, {"a1", "a11"}, {"Vzz", "W"},
+	}
+	for _, c := range cases {
+		seen := map[string]bool{}
+		for range 50 {
+			s := Suffix()
+			if !valid(s) || len(s) != SuffixLen {
+				t.Fatalf("suffixe %q", s)
+			}
+			k, err := Distinct(c.a, c.b, s)
+			if err != nil {
+				t.Fatalf("Distinct(%q, %q) : %v", c.a, c.b, err)
+			}
+			if !valid(k) || (c.a != "" && k <= c.a) || (c.b != "" && k >= c.b) || !strings.HasSuffix(k, s) {
+				t.Fatalf("Distinct(%q, %q, %q) = %q", c.a, c.b, s, k)
+			}
+			seen[k] = true
+		}
+		if len(seen) < 45 {
+			t.Fatalf("Distinct(%q, %q) : %d clés différentes sur 50", c.a, c.b, len(seen))
+		}
+	}
+	if _, err := Distinct("a", "b", "10"); err == nil {
+		t.Fatal("suffixe finissant par 0 accepté")
+	}
+}
