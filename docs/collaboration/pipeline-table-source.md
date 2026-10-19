@@ -1,86 +1,68 @@
-# Source du Data Lake tirée d'un classeur local (pipeline « classeur »)
+# Tableau publié seul au Data Lake (source poussée)
 
-Contrat demandé à lattisd (be-lattis-server) pour la deuxième voie de **clic droit sur un tableau › Partager au Data Lake Lattis…** : *publier uniquement ce tableau comme nouvelle source de données liée à ce classeur*, sans publier le classeur.
+Deuxième voie de **clic droit sur un tableau › Partager au Data Lake Lattis…** : *publier uniquement ce tableau comme nouvelle source de données liée à ce classeur*, sans publier le classeur. La première voie publie tout le classeur avec la gestion des droits (Fichier › Publier sur un serveur…), puis la boîte revient pour partager le tableau comme aujourd'hui.
 
-État : le client est fait (`internal/remote/workbook/pg_source.go`, `internal/bridge/table_source.go`, boîte `frontend/src/lib/remote/TableSourceForm.svelte`) et essayé contre le faux serveur (`workbooktest/source.go`). Le serveur n'a pas encore ces fonctions : le client le détecte (`to_regprocedure('lattis.create_table_source(jsonb)')`, sinon `42883`) et le dit à l'utilisateur au lieu de proposer la voie.
+Contrat du serveur : `be-lattis-server`, migration `schema/0027_pushed_sources.sql` et `docs/contrat-client.md` §9.1. Client : `internal/remote/workbook/pg_source.go` (API SQL et envoi HTTP), `internal/bridge/table_source.go` (lien, envoi, colonnes), `frontend/src/lib/remote/TableSourceForm.svelte`, `TableSourcesList.svelte`, `source.ts`.
 
-## 1. Pourquoi l'existant ne suffit pas
+## 1. Ce que fait le serveur
 
-- `lattis.create_dataset` (migration 0018) ne partage qu'un tableau d'un classeur **publié** dont on est propriétaire ou concepteur : c'est la première voie (publier le classeur avec ses droits).
-- `lattis.create_pipeline` (migration 0020) est réservé aux **propriétaires du serveur** (`require_server_owner`), écrit dans un tableau d'un classeur **collaboratif publié**, et sa source est lue **par lattisd** (dépôt, HTTP, SFTP, SQL). Rien ne permet à un poste de pousser des lignes, ni à un publieur de données de créer un pipeline, ni de tenir un tableau hors d'un classeur publié.
+`lattis.create_pushed_source` crée, pour un publieur de données (`login_summary().can_publish_data`) :
 
-## 2. Principe proposé
+- un **classeur technique** (`lattis.workbooks.kind = 'source'`, collaboratif, publié, absent de `my_workbooks` et des listes) dont l'utilisateur est **propriétaire**, avec un seul tableau ;
+- un **pipeline** `source_kind = 'push'` (identité technique « Pipeline : <nom> », éditeur du classeur technique), mode `replace`, `append` ou `upsert` avec `key_columns` ;
+- la **donnée** du catalogue sur ce tableau (`create_dataset`), dont l'audience se règle comme toute donnée.
 
-Une source « classeur » est un pipeline de `source_kind = 'workbook'` : la source est le classeur local d'une personne, qui envoie des **instantanés complets** du tableau. lattisd garde la copie dans un **classeur porteur** qu'il crée lui-même (collaboratif, publié, sans membre humain, absent de `my_workbooks`, un par source), si bien que tout l'existant des données s'applique sans changement : vue `donnees.<sql_name>`, audience et filtres, `data_catalog`, `dataset_tombstones` / `dataset_changed_ids`, notifications sur le canal du classeur porteur, « Utilisée par », administration `/admin/pipelines` (avec les exécutions dans `lattis.pipeline_runs`).
+Tout l'existant des données s'applique : vue `donnees.<sql_name>`, `data_catalog` (`source.workbook_id` = classeur technique), tableaux liés et leurs relevés, « Utilisée par », administration des pipelines (exécutions dans `lattis.pipeline_runs`).
 
-Ce qui est partagé : les **valeurs** des colonnes cochées de ce tableau, à chaque envoi. Ce qui ne l'est pas : le classeur (autres tableaux, feuilles, formules, scripts, mise en page), les colonnes non cochées, l'historique. Le classeur n'apparaît pas sur le serveur ; seuls son titre et le nom du tableau sont notés comme origine.
+## 2. Appels du client
 
-## 3. Fonctions (schéma `lattis`, `SECURITY DEFINER`, `GRANT EXECUTE … TO PUBLIC`)
+| Besoin | Appel | Client |
+|---|---|---|
+| Le serveur sait-il faire ? | `to_regprocedure('lattis.create_pushed_source(jsonb)')` | `PushedSourcesSupported` ; sinon la voie est fermée avec la raison |
+| Créer | `create_pushed_source(p) → {pipeline_id, dataset_id, workbook_id, table_id, sql_name}` ; `p` : `name`, `description`, `folder_id`, `sql_name`, `table_name` (nom du tableau local), `columns` (`[{name, type}]`, types de `create_table`), `mode`, `key_columns`, `origin` (`{workbook: titre, workbook_local_id, table, table_local_id}`) | `CreatePushedSource` |
+| Envoyer | `POST <émetteur>/api/push/<pipeline_id>?wait=60`, `Authorization: Bearer <jeton d'accès>`, `Content-Type: text/csv`, CSV UTF-8, en-tête = noms des colonnes | `PushClient.Push` |
+| Suivre un envoi long (202) | `GET <émetteur>/api/push/<pipeline_id>` (`pending`, `last_run`) toutes les 2 s, 10 min au plus | `PushClient.PushStatus`, `bridge.waitRun` |
+| Colonnes changées en local | `add_column`, `rename_column`, `drop_column`, `alter_column_type` sur `workbook_id` / `table_id` (une transaction, `Server.Write`) | `bridge.syncColumns` |
+| Nom, description, dossier, audience | `update_dataset`, `add_data_audience…`, `remove_data_audience` | comme un tableau publié |
+| Retirer | `drop_pushed_source(pipeline_id)` (`*withdrawn:<dataset_id>`) ; inconnue : le lien est seulement oublié | `DropPushedSource` |
+| Lister | `my_pushed_sources()` | `PushedSources` (pas encore utilisé par l'interface) |
 
-### 3.1 `lattis.create_table_source(p jsonb) RETURNS jsonb`
+**Émetteur et jeton** : l'émetteur est `issuer` de la découverte (`/.well-known/lattis.json`, l'adresse du serveur si absent) ; le jeton est le jeton d'accès de la session PostgreSQL (`auth.Manager.Token`). Un `401` fait oublier le jeton (`Manager.Invalidate`) et réessayer une fois avec un jeton rafraîchi.
 
-- **Droits** : `lattis.require_data_publisher()` (publieur de données ou propriétaire du serveur). Pas de rôle sur un classeur.
-- **p** :
-  - `name` (texte, 1 à 200), `description` (texte), `folder_id` (uuid ou absent : racine), `sql_name` (absent ou vide : `lattis.dataset_sql_name(name)` ; sinon mêmes règles et même refus `23505` que `create_dataset`) ;
-  - `columns` : `[{ "name": "Produit", "type": "text" }, …]`, types de `lattis.create_table` (`text`, `integer`, `decimal`, `date`, `datetime`, `boolean`), au moins une ;
-  - `key_columns` : noms parmi `columns` (peut être vide) ;
-  - `origin` : `{ "workbook": "<identifiant aléatoire du classeur local>", "title": "Ventes 2026", "table": "Ventes" }` (affichage seulement).
-- **Effet**, dans une transaction : classeur porteur (titre = `origin.title`, mode collaboratif, publié, `kind`/drapeau « porteur » pour l'exclure de `my_workbooks`, de la création de rôles et de l'ouverture) avec un tableau (`origin.table`) et ses colonnes ; identité technique « Pipeline : <name> » comme `create_pipeline`, éditeur du classeur porteur ; ligne `lattis.pipelines` avec `source_kind = 'workbook'`, `mode = 'upsert'` si `key_columns` sinon `'replace'`, `schedule_kind = 'manual'`, `user_id` = l'identité technique, `created_by` = `lattis.actor()`, `source = {"owner": <id de l'appelant>, "origin": …}` ; donnée `lattis.datasets` sur ce tableau (`inherit_audience = true`), avec dans `data_catalog` une origine distinguable (voir 3.6). `audit_log('create_table_source', …)`. `NOTIFY lattis_data, '*catalog'`.
-- **Rend** : `{ "pipeline_id": uuid, "dataset_id": uuid, "sql_name": text }`.
-- **Refus** : `42501` (pas publieur), `22023` (nom, colonnes ou clé invalides : « colonne clé inconnue : X »), `23505` (nom SQL pris), `P0002` (dossier inconnu).
-- `CHECK (source_kind IN (…))` de `lattis.pipelines` et `pipelines_upload_manual` à étendre à `'workbook'` ; `workbook_id`, `table_id`, `table_name` pointent le classeur porteur.
+**CSV envoyé** (`bridge.sourceCSV`) : séparateur `;`, première ligne = noms des colonnes envoyées, décimales avec un point, dates `AAAA-MM-JJ`, booléens `true`/`false`, vide = NULL. Les valeurs viennent de `canvas.Model.ExportTable` (colonnes calculées : leurs résultats, pas leurs formules), converties au type de la colonne (`workbook.ToRemote`) ; une erreur de formule ou une saisie hors type part vide et est comptée (« valeurs envoyées vides »).
 
-### 3.2 Envoi : `begin_table_push`, `push_table_rows`, `finish_table_push`
+**Réponses** : `200` bilan `{status ok|warning|error, rows_read, inserted, updated, deleted, rejected, rejects[{row, column, value, error}], error}` ; `status = error` est un échec (message du pipeline) ; `warning` est réussi, avec le nombre de refus et le premier refus (ligne, colonne, valeur, raison) dans la barre d'état. `202` : suivi par `GET`. `409` (envoi précédent pas encore écrit, source suspendue), `413` (plus de 100 Mo), `403`, `404` : message en français dans la barre d'état et dans l'état de la source (`LastError`).
 
-Le client les appelle dans **une seule transaction** (tout ou rien) : `begin`, puis `push_table_rows` par paquets de 2 000 lignes, puis `finish`.
+## 3. Ce que garde le classeur
 
-`lattis.begin_table_push(p_id uuid, p jsonb) RETURNS uuid` (le run)
+`_lattis_info`, clé `table_sources` (JSON, version 2), un lien par tableau : tableau local (`tbl`, stable au renommage), serveur, `pipeline`, `dataset`, `workbookId`, `tableId`, `sqlName`, nom, `mode`, colonnes envoyées (`cols` : identifiant local, nom et type tels que le serveur les a), `keys`, envoi à l'enregistrement, dernier envoi (date, bilan, erreur, valeurs vides). Créer, modifier ou retirer le lien rend le classeur « à enregistrer » ; un bilan d'envoi, non.
 
-- **Droits** : l'appelant est `source->>'owner'` du pipeline, ou propriétaire du serveur ; sinon `42501` (« seul le créateur de la source l'alimente »). Pipeline inconnu ou pas `workbook` : `P0002`. Pipeline désactivé (`enabled = false`) : `55000`.
-- **p** : `columns` (comme 3.1, l'ordre de l'envoi), `key_columns`, `origin`, `rows` (nombre annoncé, pour la mesure).
-- **Structure** : aligne le tableau porteur sur `columns` avec les fonctions de `0025_structure.sql` (sans passer par le poste) : colonne nouvelle ajoutée, absente supprimée, type changé converti ; refus de ces fonctions remontés tels quels (colonne citée par un filtre d'audience : `2BP01`, texte en français). Clé : `key_columns` remplace celle du pipeline (`pipeline_check`). Une colonne garde son identité par son nom.
-- Pose `running_since` (une exécution à la fois, comme I6 de 0023 : `55P03` si déjà en cours), crée la ligne `pipeline_runs` (`trigger = 'workbook'`, `status = 'running'`) et une table temporaire `ON COMMIT DROP` qui reçoit les lignes.
+## 4. Quand le client envoie
 
-`lattis.push_table_rows(p_run uuid, p_rows jsonb) RETURNS void`
+- À la demande : clic droit sur le tableau › **Mettre à jour la source du Data Lake**, bouton « Mettre à jour maintenant » de la boîte, listes des sources dans Publier sur un serveur et Gérer l'accès (onglet Membres).
+- À chaque enregistrement si la case est cochée : en arrière-plan après `Ctrl+S`, bilan dans la barre d'état (évènement `data:source`).
+- Avant chaque envoi, les colonnes envoyées renommées, converties ou supprimées dans le classeur le sont sur le serveur (ajouts d'abord, suppressions ensuite) ; une colonne ajoutée à l'envoi depuis la boîte est ajoutée sur le serveur. Un refus du serveur (colonne citée par un filtre d'audience, clé du pipeline) annule l'envoi et son message s'affiche.
 
-- `p_rows` : tableau de lignes, chacune un tableau de valeurs dans l'ordre de `columns` : nombres JSON, chaînes, booléens, `null` ; dates en `"aaaa-mm-jj"`, date et heure en RFC 3339. Valeur inconvertible : la ligne est **rejetée** (comptée, gardée dans `rejects` avec son numéro et le message), l'envoi continue.
+Jamais de publication implicite : la voie « tableau seul » n'appelle aucune fonction de publication de classeur ; un classeur partagé dont on n'est pas concepteur ne la propose pas ; un tableau déjà publié avec son classeur se partage directement.
 
-`lattis.finish_table_push(p_run uuid) RETURNS jsonb`
+## 5. Ce qui manque encore
 
-- Avec clé : doublon de clé dans l'envoi → refus `23505` de tout l'envoi (« clé en double aux lignes 4 et 9 : l'envoi est refusé »). Sinon, sous l'identité technique (RLS, déclencheurs, pierres tombales, `lattis_author`) : lignes nouvelles insérées, lignes changées mises à jour (`lattis_id` gardé), lignes absentes de l'envoi supprimées ; ordre (`lattis_pos`) = ordre de l'envoi. Sans clé : tout est remplacé.
-- Termine le run (`status` `ok`, ou `warning` s'il y a des rejets), efface `running_since`, met `updated_at` de la donnée.
-- **Notifications** : canal du classeur porteur, charge `table_id` (comme une écriture ordinaire) ; si la structure a changé, `*version:<n>` (les tableaux liés relisent tout, comme après une republication). Webhook du pipeline en cas d'échec, comme les autres pipelines.
-- **Rend** : `{ "run_id", "status", "rows", "inserted", "updated", "deleted", "rejected", "rejects": [{ "row": 3, "error": "…" }] }` (au plus 100 rejets détaillés).
+Côté serveur :
 
-### 3.3 `lattis.my_table_sources() RETURNS jsonb`
+- **Changer le mode ou la clé** d'une source après sa création : `update_pipeline` est réservé aux propriétaires du serveur. L'application le refuse et propose de retirer puis republier la source. Une fonction `update_pushed_source(pipeline_id, {mode, key_columns, enabled})` pour le propriétaire de la source suffirait.
+- **Suivre un envoi long** : `GET /api/push/<id>` ne dit pas quel envoi est le dernier ; le client attend que `pending` soit faux et que `last_run` soit terminé. Rendre l'identifiant de l'exécution dans la réponse `202` (et l'accepter en paramètre du `GET`) lèverait l'ambiguïté si un autre poste envoie en même temps.
+- **Nom du classeur technique** : « Source : <nom> » ; le titre du classeur local n'est que dans `origin`. `data_catalog().source.title` montre donc « Source : … ».
 
-Les sources dont l'appelant est le créateur (toutes pour un propriétaire du serveur) : `[{ "pipeline_id", "dataset_id", "name", "sql_name", "columns": [{name,type}], "key_columns", "origin", "owner": <adresse>, "last_run": <ligne pipeline_runs ou null> }]`.
+Côté application :
 
-### 3.4 `lattis.drop_table_source(p_id uuid) RETURNS void`
+- Les colonnes suivent au moment de l'envoi, pas au moment du changement local (pas de propagation tant qu'on n'envoie pas).
+- `my_pushed_sources()` n'est pas encore montré (sources créées depuis un autre poste ou un autre classeur).
+- Le CSV est construit en mémoire (100 Mo au plus côté serveur).
 
-Créateur ou propriétaire du serveur. Retire la donnée (comme `drop_dataset` : `NOTIFY lattis_data, '*withdrawn:<dataset_id>'`, les classeurs liés gardent leur dernière copie), le pipeline (comme `drop_pipeline` : identité technique désactivée) et le classeur porteur. Inconnu : `P0002` (le client oublie alors le lien sans erreur).
+## 6. Essais
 
-### 3.5 Données existantes
+- `internal/remote/workbook/pg_source_test.go` : `PushClient` contre un faux lattisd HTTP (CSV, en-têtes et `wait` envoyés, bilan avec refus, `202`, `401` puis jeton rafraîchi, `409`, `413`, `404`).
+- `internal/bridge/table_source_test.go`, avec le faux serveur `workbooktest/source.go` (mêmes fonctions, CSV lu comme le pipeline : colonnes par nom, conversion par type, refus par valeur, modes) : choix proposé pour un classeur local ; création sans publication (aucun classeur visible, partage inchangé) ; mise à jour par clé ; lien relu après enregistrement et réouverture ; envoi à l'enregistrement ; colonne ajoutée ; mode non modifiable ; colonne renommée et supprimée en local suivies sur le serveur ; serveur sans 0027, clé non envoyée, upsert sans clé ; `409`, `413`, `202` ; bilan avec refus ; conversions.
+- `frontend/src/lib/remote/source.test.ts` : voies proposées, messages de la barre d'état (refus compris), état d'une source, nom SQL proposé.
 
-- `update_dataset`, `add_data_audience`, `add_data_audience_by_email`, `remove_data_audience` servent telles quelles pour le nom, la description, le dossier, l'audience et ses filtres : `can_manage_dataset` doit accepter le créateur de la source (aujourd'hui : propriétaire ou concepteur du classeur source, que le porteur n'a pas) en plus des propriétaires du serveur.
-- `drop_dataset` sur une donnée de source : refuser (`55000`, « retirez la source ») ou faire `drop_table_source`.
-- `admin_pipelines()` les montre avec les autres (« Classeur local : <origin.title> › <origin.table>, par <owner> ») ; « Exécuter » n'a pas de sens (`run_pipeline` refuse `source_kind = 'workbook'` : `55000`, « alimentée par un classeur local ») ; désactiver (`update_pipeline` `enabled`) suspend les envois.
-- Purge : un classeur porteur sans envoi depuis N jours peut être signalé dans l'administration (pas supprimé d'office).
-
-### 3.6 `data_catalog()`
-
-Pour une donnée de source, `source` vaut `{ "kind": "pipeline", "pipeline_id": …, "workbook_id": <porteur>, "title": <origin.title>, "table": <origin.table>, "hidden_columns": [], "inherit_audience": … }` (`kind` absent pour un tableau de classeur publié). `table_id` et `channel` sont ceux du porteur : les tableaux liés et l'onglet SQL fonctionnent sans changement côté client.
-
-## 4. Côté client (fait)
-
-- `workbook.TableSources` (interface ajoutée à `workbook.Server`) : `TableSourcesSupported`, `CreateTableSource`, `PushTableSource` (begin / paquets / finish dans une transaction), `TableSources`, `DropTableSource` ; `workbook.Unsupported(err)` reconnaît `42883`.
-- Lien gardé dans le classeur : `_lattis_info`, clé `table_sources` (JSON, version 1) : tableau local (`tbl`, stable au renommage), serveur, `pipeline`, `dataset`, `sqlName`, nom, colonnes envoyées, clé, envoi à l'enregistrement, dernier envoi (date, compte rendu, erreur). Créer ou retirer le lien rend le classeur « à enregistrer » ; un compte rendu d'envoi, non.
-- Envoi : lecture du tableau par `canvas.Model.ExportTable` (valeurs, y compris celles des colonnes calculées ; une erreur de formule ou une saisie hors type part vide et est comptée), conversion `workbook.ToRemote` au type figé de la colonne. À la demande (clic droit › Mettre à jour la source du Data Lake, boîte Partager au Data Lake, listes des boîtes Publier sur un serveur et Gérer l'accès) ou, si coché, après chaque enregistrement (en arrière-plan, compte rendu dans la barre d'état par l'évènement `data:source`).
-- Jamais de publication implicite : la voie « tableau seul » n'appelle aucune fonction de publication ; un classeur partagé dont on n'est pas concepteur ne propose pas la voie, un tableau déjà publié se partage directement.
-
-## 5. Essais
-
-- `internal/bridge/table_source_test.go` (faux serveur `workbooktest`, `Fake.NoTableSources` pour un serveur sans ce contrat) : choix proposé pour un classeur local, création sans publication (aucun classeur visible, partage inchangé, catalogue avec `kind = pipeline`), envoi avec clé (une ligne modifiée), lien relu après enregistrement et réouverture, envoi à l'enregistrement, colonne retirée, retrait ; refus : serveur ancien, clé non envoyée, clé en double (source créée, envoi refusé en entier) ; conversions des valeurs.
-- `frontend/src/lib/remote/source.test.ts` : voies proposées, messages de la barre d'état, état d'une source, nom SQL proposé.
-
-À vérifier quand le serveur aura ces fonctions : essai de `pg_source.go` contre PostgreSQL (le client n'a été essayé que contre le faux serveur), lecture d'une source par un autre classeur (Insertion › Data Lake Lattis) avec relevé des changements, refus de structure par un filtre d'audience.
+Non essayé contre un vrai serveur : le lattisd de développement en service n'a pas la migration 0027, et le reconstruire sortait du cadre de ce travail.

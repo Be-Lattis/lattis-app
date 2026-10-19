@@ -18,14 +18,18 @@ describe('shareWays', () => {
 });
 
 describe('pushSummary', () => {
-	const r = { run_id: 'r', status: 'ok', rows: 3, inserted: 1, updated: 2, deleted: 0, rejected: 0 };
+	const r = { status: 'ok', rows_read: 3, inserted: 1, updated: 2, deleted: 0, rejected: 0 };
 	it('dit ce qui a changé', () => {
-		expect(pushSummary('Ventes', r)).toBe('Source « Ventes » mise à jour : 3 lignes (1 ajoutée, 2 modifiées)');
+		expect(pushSummary('Ventes', r)).toBe('Source « Ventes » mise à jour : 3 lignes lues (1 ajoutée, 2 modifiées)');
 	});
 	it('rien de changé, valeurs vides', () => {
-		expect(pushSummary('T', { ...r, rows: 1, inserted: 0, updated: 0 }, 2)).toBe(
-			"Source « T » mise à jour : 1 ligne, rien n'a changé ; 2 valeurs envoyées vides (erreur ou saisie hors type)"
+		expect(pushSummary('T', { ...r, rows_read: 1, inserted: 0, updated: 0 }, 2)).toBe(
+			"Source « T » mise à jour : 1 ligne lue, rien n'a changé ; 2 valeurs envoyées vides (erreur ou saisie hors type)"
 		);
+	});
+	it('première valeur refusée', () => {
+		const w = { ...r, status: 'warning', updated: 0, rejected: 1, rejects: [{ row: 3, column: 'Prix', value: 'abc', error: 'nombre attendu' }] };
+		expect(pushSummary('T', w)).toBe('Source « T » mise à jour : 3 lignes lues (1 ajoutée, 1 refusée) ; ligne 3, Prix « abc » : nombre attendu');
 	});
 });
 
@@ -37,8 +41,8 @@ describe('sourceStatus', () => {
 		expect(sourceStatus({ tableName: '' }, now)).toContain('supprimé');
 	});
 	it('dernier envoi du jour', () => {
-		const s = sourceStatus({ tableName: 'T', lastPush: new Date('2026-10-19T14:05:00').toISOString(), lastResult: { run_id: '', status: 'ok', rows: 12, inserted: 0, updated: 0, deleted: 0, rejected: 0 } }, now);
-		expect(s).toMatch(/^Mise à jour aujourd’hui à 14:05 · 12 lignes$/);
+		const s = sourceStatus({ tableName: 'T', lastPush: new Date('2026-10-19T14:05:00').toISOString(), lastResult: { status: 'warning', rows_read: 12, inserted: 0, updated: 0, deleted: 0, rejected: 2 } }, now);
+		expect(s).toMatch(/^Mise à jour aujourd’hui à 14:05 · 12 lignes · 2 refusées$/);
 	});
 });
 

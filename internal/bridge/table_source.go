@@ -1,13 +1,16 @@
 package bridge
 
 import (
+	"bytes"
 	"cmp"
 	"context"
 	"database/sql"
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -21,15 +24,18 @@ import (
 )
 
 // Clic droit sur un tableau › Partager au Data Lake Lattis… › « Publier
-// uniquement ce tableau » : le tableau devient une source du Data Lake liée
-// au classeur, sans publier le classeur. Le serveur en garde une copie,
-// alimentée par un pipeline dont ce classeur est la source : le poste
-// envoie toutes les lignes des colonnes choisies (« Mettre à jour la
-// source du Data Lake », et à chaque enregistrement si demandé). Le reste
-// du classeur (autres tableaux, feuilles, formules, scripts, colonnes non
-// cochées) ne quitte pas le poste. Le lien est gardé dans le classeur
-// (_lattis_info, clé table_sources). Contrat du serveur :
-// docs/collaboration/pipeline-table-source.md.
+// uniquement ce tableau » : le tableau devient une source poussée du Data
+// Lake (contrat de lattisd §9.1, migration 0027), liée au classeur, sans
+// publier le classeur. lattisd crée un classeur technique qui ne contient
+// que ce tableau, un pipeline « push » et la donnée du catalogue ; le
+// poste envoie le contenu des colonnes choisies en CSV (POST
+// /api/push/<pipeline>), à la demande (« Mettre à jour la source du Data
+// Lake ») et à chaque enregistrement si demandé. Avant chaque envoi, les
+// colonnes renommées, converties ou supprimées dans le classeur le sont
+// aussi sur le serveur (fonctions de structure). Le reste du classeur
+// (autres tableaux, feuilles, formules, scripts, colonnes non cochées) ne
+// quitte pas le poste. Le lien est gardé dans le classeur (_lattis_info,
+// clé table_sources). Voir docs/collaboration/pipeline-table-source.md.
 
 // tableSourcesKey : clé des liens dans _lattis_info.
 const tableSourcesKey = "table_sources"
@@ -45,8 +51,16 @@ type TableSourceNotice struct {
 	Failed  bool   `json:"failed"`
 }
 
-// TableSourceLink est le lien d'un tableau du classeur avec sa source du
-// Data Lake.
+// SourceColumn est une colonne envoyée : colonne locale (stable au
+// renommage), nom et type du serveur tels que le serveur les a.
+type SourceColumn struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+	Type string `json:"type"`
+}
+
+// TableSourceLink est le lien d'un tableau du classeur avec sa source
+// poussée.
 type TableSourceLink struct {
 	// Tbl : tableau local (_lattis_tables.id, stable au renommage).
 	Tbl int64 `json:"tbl"`
@@ -56,19 +70,25 @@ type TableSourceLink struct {
 	Server    string `json:"server"`
 	Pipeline  string `json:"pipeline"`
 	Dataset   string `json:"dataset"`
-	SQLName   string `json:"sqlName"`
-	Name      string `json:"name"`
-	// Columns : colonnes envoyées (les autres ne quittent pas le poste) ;
-	// Keys : colonnes qui identifient une ligne d'un envoi à l'autre.
+	// WorkbookID, TableID : classeur technique et tableau sur le serveur
+	// (fonctions de structure).
+	WorkbookID string `json:"workbookId"`
+	TableID    string `json:"tableId"`
+	SQLName    string `json:"sqlName"`
+	Name       string `json:"name"`
+	// Mode : replace, append ou upsert (Keys) ; fixé à la création.
+	Mode string         `json:"mode"`
+	Cols []SourceColumn `json:"cols"`
+	// Columns : noms des colonnes envoyées (Cols), pour l'interface.
 	Columns []string `json:"columns"`
 	Keys    []string `json:"keys"`
 	// OnSave : envoyer à chaque enregistrement du classeur.
 	OnSave bool `json:"onSave"`
-	// LastPush : date du dernier envoi réussi (RFC 3339) ; LastResult son
-	// compte rendu ; LastError : échec du dernier essai ("" : réussi).
-	LastPush   string               `json:"lastPush,omitempty"`
-	LastResult *workbook.PushResult `json:"lastResult,omitempty"`
-	LastError  string               `json:"lastError,omitempty"`
+	// LastPush : date du dernier envoi écrit (RFC 3339) ; LastResult son
+	// bilan ; LastError : échec du dernier essai ("" : réussi).
+	LastPush   string            `json:"lastPush,omitempty"`
+	LastResult *workbook.PushRun `json:"lastResult,omitempty"`
+	LastError  string            `json:"lastError,omitempty"`
 	// Blanked : valeurs envoyées vides au dernier envoi (saisie hors type,
 	// erreur d'une formule).
 	Blanked int `json:"blanked,omitempty"`
@@ -103,19 +123,23 @@ func readSources(ctx context.Context, d *doc.Document) ([]TableSourceLink, error
 	for i := range out {
 		out[i].TableName = ""
 		_ = d.DB().Read().QueryRowContext(ctx, `SELECT name FROM _lattis_tables WHERE id = ?`, out[i].Tbl).Scan(&out[i].TableName)
+		out[i].Columns = []string{}
+		for _, c := range out[i].Cols {
+			out[i].Columns = append(out[i].Columns, c.Name)
+		}
 	}
 	return out, nil
 }
 
 // writeSources range les liens ; mark : le classeur est à enregistrer
-// (lien créé ou retiré, réglage changé), pas pour un compte rendu d'envoi.
+// (lien créé ou retiré, réglage changé), pas pour un bilan d'envoi.
 func writeSources(ctx context.Context, d *doc.Document, links []TableSourceLink, mark bool) error {
 	err := d.DB().Write(ctx, func(tx *sql.Tx) error {
 		if len(links) == 0 {
 			_, err := tx.ExecContext(ctx, `DELETE FROM _lattis_info WHERE key = ?`, tableSourcesKey)
 			return err
 		}
-		b, err := json.Marshal(tableSourcesDoc{Version: 1, Links: links})
+		b, err := json.Marshal(tableSourcesDoc{Version: 2, Links: links})
 		if err != nil {
 			return err
 		}
@@ -141,6 +165,10 @@ func updateSource(ctx context.Context, d *doc.Document, tbl int64, mark bool, fn
 		return TableSourceLink{}, errors.New("ce tableau n'est plus une source du Data Lake")
 	}
 	fn(&links[i])
+	links[i].Columns = []string{}
+	for _, c := range links[i].Cols {
+		links[i].Columns = append(links[i].Columns, c.Name)
+	}
 	return links[i], writeSources(ctx, d, links, mark)
 }
 
@@ -167,8 +195,35 @@ func tableID(ctx context.Context, d *doc.Document, table string) (int64, error) 
 	return tbl, nil
 }
 
-// unsupportedMessage : serveur sans le contrat des sources.
-const unsupportedMessage = "Ce Serveur Lattis ne reçoit pas encore de tableau sans son classeur (pipeline alimenté par un classeur local) : demandez sa mise à jour à son administrateur, ou publiez le classeur."
+// localColumn est une colonne du tableau local.
+type localColumn struct {
+	ID   int64
+	Name string
+	Type string // type du serveur (RemoteType)
+}
+
+// localColumns lit les colonnes du tableau tbl, dans l'ordre.
+func localColumns(ctx context.Context, d *doc.Document, tbl int64) ([]localColumn, error) {
+	rs, err := d.DB().Read().QueryContext(ctx, `SELECT id, name, type FROM _lattis_columns WHERE tbl = ? ORDER BY pos`, tbl)
+	if err != nil {
+		return nil, err
+	}
+	defer rs.Close()
+	var out []localColumn
+	for rs.Next() {
+		var c localColumn
+		var typ string
+		if err := rs.Scan(&c.ID, &c.Name, &typ); err != nil {
+			return nil, err
+		}
+		c.Type = workbook.RemoteType(grid.Type(typ))
+		out = append(out, c)
+	}
+	return out, rs.Err()
+}
+
+// unsupportedMessage : serveur sans les sources poussées (migration 0027).
+const unsupportedMessage = "Ce Serveur Lattis ne reçoit pas encore de tableau sans son classeur (sources poussées) : demandez sa mise à jour à son administrateur, ou publiez le classeur."
 
 // sourceError rend une erreur du serveur lisible.
 func sourceError(err error) error {
@@ -182,6 +237,37 @@ func sourceError(err error) error {
 		return errors.New(workbook.ServerMessage(err))
 	}
 	return err
+}
+
+// sharePusher remplace l'envoi HTTP (essais).
+var sharePusher func(ctx context.Context, server string) (workbook.Pusher, error)
+
+// sourcePoll : intervalle de relecture de l'état d'un envoi encore en cours (202).
+var sourcePoll = 2 * time.Second
+
+// remotePusher ouvre l'envoi HTTP vers l'émetteur du serveur (issuer de la
+// découverte), avec le jeton d'accès de la session PostgreSQL.
+func remotePusher(ctx context.Context, server string) (workbook.Pusher, error) {
+	if sharePusher != nil {
+		return sharePusher(ctx, server)
+	}
+	m, err := sessions()
+	if err != nil {
+		return nil, err
+	}
+	_, disc, err := m.Session(ctx, server)
+	if err != nil {
+		return nil, err
+	}
+	issuer := disc.Issuer
+	if issuer == "" {
+		issuer = server
+	}
+	return workbook.PushClient{
+		Issuer:     issuer,
+		Token:      func(ctx context.Context) (string, error) { return m.Token(ctx, server) },
+		Invalidate: func() { m.Invalidate(server) },
+	}, nil
 }
 
 // TableSources liste les sources du Data Lake liées au classeur ouvert.
@@ -268,7 +354,7 @@ func (s *DocumentService) TableSourceInfo(ctx context.Context, table, server str
 	if err != nil {
 		return out, err
 	}
-	ok, err := srv.TableSourcesSupported(ctx)
+	ok, err := srv.PushedSourcesSupported(ctx)
 	if err != nil {
 		return out, err
 	}
@@ -306,8 +392,10 @@ type TableSourceRequest struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	SQLName     string `json:"sqlName"`
-	// Columns : colonnes envoyées ; Keys : colonnes qui identifient une ligne.
+	// Columns : colonnes envoyées ; Mode : replace (défaut), append ou
+	// upsert (Keys : colonnes qui identifient une ligne).
 	Columns []string `json:"columns"`
+	Mode    string   `json:"mode"`
 	Keys    []string `json:"keys"`
 	OnSave  bool     `json:"onSave"`
 	Inherit bool     `json:"inherit"`
@@ -316,31 +404,40 @@ type TableSourceRequest struct {
 	Remove []string            `json:"remove"`
 }
 
-// sourceColumns vérifie les colonnes demandées (dans l'ordre du tableau)
-// et la clé.
-func sourceColumns(fields []RightsColumn, cols, keys []string) ([]string, []string, error) {
-	var out []string
+// sourceColumns vérifie les colonnes demandées (rendues dans l'ordre du
+// tableau), le mode et la clé.
+func sourceColumns(fields []localColumn, cols []string, mode string, keys []string) ([]localColumn, string, []string, error) {
+	var out []localColumn
 	for _, f := range fields {
 		if slices.Contains(cols, f.Name) {
-			out = append(out, f.Name)
+			out = append(out, f)
 		}
 	}
 	if len(out) == 0 {
-		return nil, nil, errors.New("cochez au moins une colonne à envoyer")
+		return nil, "", nil, errors.New("cochez au moins une colonne à envoyer")
 	}
 	for _, c := range cols {
-		if !slices.Contains(out, c) {
-			return nil, nil, fmt.Errorf("colonne « %s » inconnue", c)
+		if !slices.ContainsFunc(out, func(f localColumn) bool { return f.Name == c }) {
+			return nil, "", nil, fmt.Errorf("colonne « %s » inconnue", c)
 		}
 	}
-	k := []string{}
+	mode = cmp.Or(mode, workbook.PushReplace)
+	switch mode {
+	case workbook.PushReplace, workbook.PushAppend:
+		return out, mode, []string{}, nil
+	case workbook.PushUpsert:
+	default:
+		return nil, "", nil, fmt.Errorf("mode « %s » inconnu", mode)
+	}
+	if len(keys) == 0 {
+		return nil, "", nil, errors.New("la mise à jour par clé demande une colonne clé")
+	}
 	for _, c := range keys {
-		if !slices.Contains(out, c) {
-			return nil, nil, fmt.Errorf("la clé « %s » doit être une colonne envoyée", c)
+		if !slices.ContainsFunc(out, func(f localColumn) bool { return f.Name == c }) {
+			return nil, "", nil, fmt.Errorf("la clé « %s » doit être une colonne envoyée", c)
 		}
-		k = append(k, c)
 	}
-	return out, k, nil
+	return out, mode, slices.Clone(keys), nil
 }
 
 // docTitle : titre du classeur (nom du fichier), pour l'origine de la source.
@@ -358,11 +455,10 @@ func docID(ctx context.Context, d *doc.Document) string {
 	return id
 }
 
-// CreateTableSource publie le tableau seul comme source du Data Lake : la
-// copie, le pipeline et la donnée sont créés sur le serveur, le lien est
-// gardé dans le classeur, puis les lignes sont envoyées une première fois.
-// Le classeur n'est pas publié. Un premier envoi refusé laisse la source
-// créée (LastError dit pourquoi).
+// CreateTableSource publie le tableau seul comme source poussée : classeur
+// technique, pipeline et donnée créés sur le serveur, lien gardé dans le
+// classeur, puis premier envoi. Le classeur n'est pas publié. Un premier
+// envoi refusé laisse la source créée (LastError dit pourquoi).
 func (s *DocumentService) CreateTableSource(ctx context.Context, req TableSourceRequest) (TableSourceLink, error) {
 	d, err := s.current()
 	if err != nil {
@@ -378,11 +474,15 @@ func (s *DocumentService) CreateTableSource(ctx context.Context, req TableSource
 	if info.Reason != "" {
 		return TableSourceLink{}, errors.New(info.Reason)
 	}
-	cols, keys, err := sourceColumns(info.Fields, req.Columns, req.Keys)
+	tbl, err := tableID(ctx, d, req.Table)
 	if err != nil {
 		return TableSourceLink{}, err
 	}
-	tbl, err := tableID(ctx, d, req.Table)
+	all, err := localColumns(ctx, d, tbl)
+	if err != nil {
+		return TableSourceLink{}, err
+	}
+	cols, mode, keys, err := sourceColumns(all, req.Columns, req.Mode, req.Keys)
 	if err != nil {
 		return TableSourceLink{}, err
 	}
@@ -391,22 +491,20 @@ func (s *DocumentService) CreateTableSource(ctx context.Context, req TableSource
 		return TableSourceLink{}, err
 	}
 	specs := make([]workbook.ColumnSpec, len(cols))
+	scols := make([]SourceColumn, len(cols))
 	for i, c := range cols {
-		for _, f := range info.Fields {
-			if f.Name == c {
-				specs[i] = workbook.ColumnSpec{Name: c, Type: workbook.RemoteType(grid.Type(f.Type))}
-			}
-		}
+		specs[i] = workbook.ColumnSpec{Name: c.Name, Type: c.Type}
+		scols[i] = SourceColumn(c)
 	}
 	name := strings.TrimSpace(req.Name)
-	created, err := srv.CreateTableSource(ctx, workbook.TableSourceSpec{Name: name, Description: strings.TrimSpace(req.Description),
-		FolderID: req.FolderID, SQLName: strings.TrimSpace(req.SQLName), Columns: specs, KeyColumns: keys,
-		Origin: workbook.TableOrigin{Workbook: docID(ctx, d), Title: s.docTitle(ctx), Table: req.Table}})
+	created, err := srv.CreatePushedSource(ctx, workbook.PushedSourceSpec{Name: name, Description: strings.TrimSpace(req.Description),
+		FolderID: req.FolderID, SQLName: strings.TrimSpace(req.SQLName), TableName: req.Table, Columns: specs, Mode: mode, KeyColumns: keys,
+		Origin: workbook.PushedOrigin{Workbook: s.docTitle(ctx), WorkbookLocalID: docID(ctx, d), Table: req.Table, TableLocalID: strconv.FormatInt(tbl, 10)}})
 	if err != nil {
 		return TableSourceLink{}, sourceError(err)
 	}
 	link := TableSourceLink{Tbl: tbl, TableName: req.Table, Server: req.Server, Pipeline: created.PipelineID, Dataset: created.DatasetID,
-		SQLName: created.SQLName, Name: name, Columns: cols, Keys: keys, OnSave: req.OnSave}
+		WorkbookID: created.WorkbookID, TableID: created.TableID, SQLName: created.SQLName, Name: name, Mode: mode, Cols: scols, Keys: keys, OnSave: req.OnSave}
 	sourcesMu.Lock()
 	links, err := readSources(ctx, d)
 	if err == nil {
@@ -420,7 +518,7 @@ func (s *DocumentService) CreateTableSource(ctx context.Context, req TableSource
 		return link, err
 	}
 	// Créée : un premier envoi refusé est dit par LastError.
-	pushed, _ := s.pushSource(ctx, d, tbl)
+	pushed, _ := s.pushSource(ctx, d, tbl, nil)
 	return pushed, nil
 }
 
@@ -456,9 +554,11 @@ func sourceAudience(ctx context.Context, srv workbook.Server, dataset string, re
 	return nil
 }
 
-// UpdateTableSource modifie la source d'un tableau (nom, dossier,
-// audience au serveur ; colonnes, clé, envoi à l'enregistrement dans le
-// classeur), puis envoie les lignes.
+// UpdateTableSource modifie la source d'un tableau (nom, description,
+// dossier, audience ; colonnes envoyées, ajoutées ou retirées sur le
+// serveur ; envoi à l'enregistrement), puis envoie les lignes. Le mode et
+// la clé ne changent pas (le serveur ne le permet pas encore à son
+// créateur).
 func (s *DocumentService) UpdateTableSource(ctx context.Context, req TableSourceRequest) (TableSourceLink, error) {
 	d, err := s.current()
 	if err != nil {
@@ -468,33 +568,50 @@ func (s *DocumentService) UpdateTableSource(ctx context.Context, req TableSource
 	if err != nil {
 		return TableSourceLink{}, err
 	}
-	if info.Link == nil {
+	link := info.Link
+	if link == nil {
 		return TableSourceLink{}, errors.New("ce tableau n'est pas une source du Data Lake")
 	}
-	cols, keys, err := sourceColumns(info.Fields, req.Columns, req.Keys)
+	all, err := localColumns(ctx, d, link.Tbl)
 	if err != nil {
-		return TableSourceLink{}, err
+		return *link, err
 	}
-	srv, _, _, err := remoteServer(ctx, info.Link.Server)
+	mode, keys := link.Mode, link.Keys
+	if req.Mode != "" {
+		mode = req.Mode
+	}
+	if req.Keys != nil && mode == workbook.PushUpsert {
+		keys = req.Keys
+	}
+	cols, mode, keys, err := sourceColumns(all, req.Columns, mode, keys)
 	if err != nil {
-		return TableSourceLink{}, err
+		return *link, err
+	}
+	if mode != cmp.Or(link.Mode, workbook.PushReplace) || !slices.Equal(keys, link.Keys) {
+		return *link, errors.New("le mode d'écriture et la clé d'une source ne changent pas après sa création : retirez la source puis publiez-la de nouveau")
+	}
+	srv, _, _, err := remoteServer(ctx, link.Server)
+	if err != nil {
+		return *link, err
 	}
 	name := strings.TrimSpace(req.Name)
 	desc := strings.TrimSpace(req.Description)
 	folder := req.FolderID
-	if err := srv.UpdateDataset(ctx, info.Link.Dataset, workbook.DatasetChange{Name: &name, Description: &desc, FolderID: &folder,
+	if err := srv.UpdateDataset(ctx, link.Dataset, workbook.DatasetChange{Name: &name, Description: &desc, FolderID: &folder,
 		InheritAudience: &req.Inherit}); err != nil {
-		return *info.Link, sourceError(err)
+		return *link, sourceError(err)
 	}
-	if _, err := updateSource(ctx, d, info.Link.Tbl, true, func(l *TableSourceLink) {
-		l.Name, l.Columns, l.Keys, l.OnSave = name, cols, keys, req.OnSave
-	}); err != nil {
-		return *info.Link, err
+	if _, err := updateSource(ctx, d, link.Tbl, true, func(l *TableSourceLink) { l.Name, l.OnSave = name, req.OnSave }); err != nil {
+		return *link, err
 	}
-	if err := sourceAudience(ctx, srv, info.Link.Dataset, req, false); err != nil {
-		return *info.Link, err
+	if err := sourceAudience(ctx, srv, link.Dataset, req, false); err != nil {
+		return *link, err
 	}
-	return s.pushSource(ctx, d, info.Link.Tbl)
+	want := make([]int64, len(cols))
+	for i, c := range cols {
+		want[i] = c.ID
+	}
+	return s.pushSource(ctx, d, link.Tbl, want)
 }
 
 // SetTableSourceOnSave règle l'envoi à chaque enregistrement.
@@ -525,7 +642,7 @@ func (s *DocumentService) PushTableSource(ctx context.Context, table string) (Ta
 	if err != nil {
 		return TableSourceLink{}, err
 	}
-	return s.pushSource(ctx, d, tbl)
+	return s.pushSource(ctx, d, tbl, nil)
 }
 
 // DropTableSource retire la source du tableau sur le serveur (la donnée
@@ -566,10 +683,8 @@ func (s *DocumentService) dropSource(ctx context.Context, d *doc.Document, tbl i
 	if err != nil {
 		return err
 	}
-	if err := srv.DropTableSource(ctx, link.Pipeline); err != nil {
-		if code, ok := workbook.Rejected(err); !ok || code != "P0002" {
-			return sourceError(err)
-		}
+	if err := srv.DropPushedSource(ctx, link.Pipeline); err != nil && !workbook.PushNotFound(err) {
+		return sourceError(err)
 	}
 	sourcesMu.Lock()
 	defer sourcesMu.Unlock()
@@ -585,34 +700,179 @@ func (s *DocumentService) dropSource(ctx context.Context, d *doc.Document, tbl i
 	return err
 }
 
-// sourceRows lit les colonnes envoyées du tableau, converties au type du
-// serveur ; blanked compte les valeurs envoyées vides (saisie hors type,
-// erreur d'une formule, valeur inconvertible).
-func sourceRows(ctx context.Context, m *canvas.Model, table string, want []string) (cols []workbook.ColumnSpec, rows [][]any, blanked int, err error) {
-	var idx []int
-	err = m.ExportTable(ctx, table, func(h []canvas.ExportColumn) error {
-		for _, w := range want {
-			i := slices.IndexFunc(h, func(c canvas.ExportColumn) bool { return c.Name == w })
-			if i < 0 {
-				return fmt.Errorf("la colonne « %s » envoyée par la source n'existe plus : modifiez la source", w)
+// syncColumns aligne le tableau de la source sur le classeur avant un
+// envoi : une colonne envoyée renommée, convertie ou supprimée en local
+// l'est aussi sur le serveur ; want (nil : les colonnes du lien encore
+// présentes) donne les colonnes à envoyer, une colonne nouvelle est
+// ajoutée. Le tout dans une transaction (refus du serveur : rien ne
+// change, son message est rendu). Rend les colonnes à jour.
+func syncColumns(ctx context.Context, srv workbook.Server, link TableSourceLink, local []localColumn, want []int64) ([]SourceColumn, error) {
+	byID := map[int64]localColumn{}
+	for _, c := range local {
+		byID[c.ID] = c
+	}
+	if want == nil {
+		for _, c := range link.Cols {
+			if _, ok := byID[c.ID]; ok {
+				want = append(want, c.ID)
 			}
-			idx = append(idx, i)
-			cols = append(cols, workbook.ColumnSpec{Name: w, Type: workbook.RemoteType(h[i].Type)})
+		}
+	}
+	type op struct {
+		kind       string // drop, rename, type, add
+		name, to   string
+		typ        string
+		localID    int64
+		remoteName string
+	}
+	var ops []op
+	next := []SourceColumn{}
+	for _, c := range link.Cols {
+		l, ok := byID[c.ID]
+		if !ok || !slices.Contains(want, c.ID) {
+			ops = append(ops, op{kind: "drop", remoteName: c.Name})
+			continue
+		}
+		if l.Name != c.Name {
+			ops = append(ops, op{kind: "rename", remoteName: c.Name, to: l.Name})
+		}
+		if l.Type != c.Type {
+			ops = append(ops, op{kind: "type", remoteName: c.Name, typ: l.Type})
+		}
+		next = append(next, SourceColumn{ID: c.ID, Name: l.Name, Type: l.Type})
+	}
+	for _, id := range want {
+		if !slices.ContainsFunc(link.Cols, func(c SourceColumn) bool { return c.ID == id }) {
+			l := byID[id]
+			ops = append(ops, op{kind: "add", name: l.Name, typ: l.Type, localID: id})
+			next = append(next, SourceColumn(l))
+		}
+	}
+	if len(next) == 0 {
+		return nil, errors.New("aucune des colonnes envoyées par la source n'existe plus : modifiez la source ou retirez-la")
+	}
+	if len(ops) == 0 {
+		return link.Cols, nil
+	}
+	// Ajouts avant suppressions : le serveur garde au moins une colonne.
+	order := map[string]int{"rename": 0, "type": 1, "add": 2, "drop": 3}
+	slices.SortStableFunc(ops, func(a, b op) int { return order[a.kind] - order[b.kind] })
+	caps, err := srv.Capabilities(ctx, link.WorkbookID)
+	if err != nil {
+		return nil, sourceError(err)
+	}
+	var remote *workbook.RemoteTable
+	if err := srv.Delta(ctx, func(r workbook.Reader) error {
+		ts, err := r.Tables(ctx, caps.Schema)
+		for i := range ts {
+			if ts[i].ID == link.TableID {
+				remote = &ts[i]
+			}
+		}
+		return err
+	}); err != nil {
+		return nil, sourceError(err)
+	}
+	if remote == nil {
+		return nil, errors.New("le tableau de la source est introuvable sur le serveur")
+	}
+	colID := func(name string) string {
+		for _, c := range remote.Columns {
+			if c.Name == name {
+				return c.ID
+			}
+		}
+		return ""
+	}
+	// Renommages en deux temps quand deux colonnes échangent leurs noms :
+	// rare, refusé par le serveur comme nom pris ; le message le dit.
+	err = srv.Write(ctx, func(w workbook.Writer) error {
+		for _, o := range ops {
+			var err error
+			switch o.kind {
+			case "drop":
+				if id := colID(o.remoteName); id != "" {
+					err = w.DropColumn(ctx, link.WorkbookID, link.TableID, id)
+				}
+			case "rename":
+				err = w.RenameColumn(ctx, link.WorkbookID, link.TableID, colID(o.remoteName), o.to)
+			case "type":
+				err = w.AlterColumnType(ctx, link.WorkbookID, link.TableID, colID(o.remoteName), o.typ)
+			case "add":
+				_, err = w.AddColumn(ctx, link.WorkbookID, link.TableID, o.name, o.typ, "", o.localID)
+			}
+			if err != nil {
+				return err
+			}
 		}
 		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("colonnes de la source non mises à jour : %w", sourceError(err))
+	}
+	return next, nil
+}
+
+// sourceCSV écrit les colonnes envoyées du tableau en CSV (séparateur ;,
+// décimales avec un point, dates AAAA-MM-JJ, booléens true/false) ;
+// blanked compte les valeurs envoyées vides (saisie hors type, erreur
+// d'une formule, valeur inconvertible).
+func sourceCSV(ctx context.Context, m *canvas.Model, table string, cols []SourceColumn) ([]byte, int, int, error) {
+	var buf bytes.Buffer
+	w := csv.NewWriter(&buf)
+	w.Comma = ';'
+	var idx []int
+	rows, blanked := 0, 0
+	err := m.ExportTable(ctx, table, func(h []canvas.ExportColumn) error {
+		head := make([]string, len(cols))
+		for i, c := range cols {
+			j := slices.IndexFunc(h, func(x canvas.ExportColumn) bool { return x.Name == c.Name })
+			if j < 0 {
+				return fmt.Errorf("la colonne « %s » envoyée par la source n'existe plus : modifiez la source", c.Name)
+			}
+			idx = append(idx, j)
+			head[i] = c.Name
+		}
+		return w.Write(head)
 	}, func(r []any) error {
-		row := make([]any, len(idx))
-		for j, i := range idx {
-			v, ok := sourceValue(cols[j].Type, r[i])
+		rec := make([]string, len(idx))
+		for k, j := range idx {
+			v, ok := sourceValue(cols[k].Type, r[j])
 			if !ok {
 				blanked++
 			}
-			row[j] = v
+			rec[k] = csvText(v)
 		}
-		rows = append(rows, row)
-		return nil
+		rows++
+		return w.Write(rec)
 	})
-	return cols, rows, blanked, err
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	w.Flush()
+	return buf.Bytes(), rows, blanked, w.Error()
+}
+
+// csvText écrit une valeur du serveur (ToRemote) pour le CSV d'un envoi.
+func csvText(v any) string {
+	switch x := v.(type) {
+	case nil:
+		return ""
+	case string:
+		return x
+	case int64:
+		return strconv.FormatInt(x, 10)
+	case float64:
+		return strconv.FormatFloat(x, 'f', -1, 64)
+	case bool:
+		return strconv.FormatBool(x)
+	case time.Time:
+		if x.Hour() == 0 && x.Minute() == 0 && x.Second() == 0 && x.Nanosecond() == 0 {
+			return x.Format("2006-01-02")
+		}
+		return x.Format("2006-01-02 15:04:05")
+	}
+	return fmt.Sprint(v)
 }
 
 // excelEpoch : jour 0 des numéros de série de dates (30/12/1899).
@@ -655,9 +915,29 @@ func sourceValue(typ string, v any) (any, bool) {
 	return r, true
 }
 
-// pushSource envoie les lignes du tableau tbl à sa source et note le
-// résultat dans le lien (sans rendre le classeur « modifié »).
-func (s *DocumentService) pushSource(ctx context.Context, d *doc.Document, tbl int64) (TableSourceLink, error) {
+// waitRun suit un envoi encore en cours (202) jusqu'à son bilan.
+func waitRun(ctx context.Context, p workbook.Pusher, id string) (workbook.PushRun, error) {
+	for {
+		st, err := p.PushStatus(ctx, id)
+		if err != nil {
+			return workbook.PushRun{}, err
+		}
+		if r := st.LastRun; !st.Pending && r != nil && r.FinishedAt != "" && r.Status != "running" {
+			return *r, nil
+		}
+		select {
+		case <-ctx.Done():
+			return workbook.PushRun{Status: "running"}, errors.New("l'écriture de l'envoi dure encore sur le serveur : son bilan s'affichera à la prochaine mise à jour")
+		case <-time.After(sourcePoll):
+		}
+	}
+}
+
+// pushSource aligne les colonnes, envoie les lignes du tableau tbl à sa
+// source et note le bilan dans le lien (sans rendre le classeur
+// « modifié », sauf si les colonnes ont changé). want : colonnes à
+// envoyer (nil : celles du lien).
+func (s *DocumentService) pushSource(ctx context.Context, d *doc.Document, tbl int64, want []int64) (TableSourceLink, error) {
 	link, err := sourceOf(ctx, d, tbl)
 	if err != nil {
 		return TableSourceLink{}, err
@@ -665,41 +945,83 @@ func (s *DocumentService) pushSource(ctx context.Context, d *doc.Document, tbl i
 	if link == nil {
 		return TableSourceLink{}, errors.New("ce tableau n'est pas une source du Data Lake")
 	}
-	fail := func(err error) (TableSourceLink, error) {
-		l, werr := updateSource(ctx, d, tbl, false, func(l *TableSourceLink) { l.LastError = err.Error() })
+	fail := func(err error, run *workbook.PushRun) (TableSourceLink, error) {
+		l, werr := updateSource(ctx, d, tbl, false, func(l *TableSourceLink) {
+			l.LastError = err.Error()
+			if run != nil {
+				l.LastResult = run
+			}
+		})
 		if werr != nil {
 			return *link, err
 		}
 		return l, err
 	}
 	if link.TableName == "" {
-		return fail(errors.New("le tableau de cette source a été supprimé du classeur"))
+		return fail(errors.New("le tableau de cette source a été supprimé du classeur"), nil)
 	}
-	cols, rows, blanked, err := sourceRows(ctx, d.Model, link.TableName, link.Columns)
+	local, err := localColumns(ctx, d, tbl)
 	if err != nil {
-		return fail(err)
+		return fail(err, nil)
 	}
 	srv, _, _, err := remoteServer(ctx, link.Server)
 	if err != nil {
-		return fail(err)
+		return fail(err, nil)
 	}
-	res, err := srv.PushTableSource(ctx, link.Pipeline, workbook.TablePush{Columns: cols, KeyColumns: link.Keys, Rows: rows,
-		Origin: workbook.TableOrigin{Workbook: docID(ctx, d), Title: s.docTitle(ctx), Table: link.TableName}})
+	cols, err := syncColumns(ctx, srv, *link, local, want)
 	if err != nil {
-		return fail(sourceError(err))
+		return fail(err, nil)
+	}
+	if !slices.Equal(cols, link.Cols) {
+		// Les clés suivent le renommage de leur colonne.
+		keys := slices.Clone(link.Keys)
+		for i, k := range keys {
+			for _, c := range link.Cols {
+				if c.Name == k {
+					for _, n := range cols {
+						if n.ID == c.ID {
+							keys[i] = n.Name
+						}
+					}
+				}
+			}
+		}
+		if _, err := updateSource(ctx, d, tbl, true, func(l *TableSourceLink) { l.Cols, l.Keys = cols, keys }); err != nil {
+			return fail(err, nil)
+		}
+	}
+	body, _, blanked, err := sourceCSV(ctx, d.Model, link.TableName, cols)
+	if err != nil {
+		return fail(err, nil)
+	}
+	p, err := remotePusher(ctx, link.Server)
+	if err != nil {
+		return fail(err, nil)
+	}
+	run, err := p.Push(ctx, link.Pipeline, body)
+	if err == nil && run.Status == "running" {
+		wctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+		run, err = waitRun(wctx, p, link.Pipeline)
+		cancel()
+	}
+	if err != nil {
+		return fail(err, nil)
+	}
+	if run.Status == "error" {
+		return fail(errors.New(cmp.Or(run.Error, "envoi refusé par le pipeline du serveur")), &run)
 	}
 	return updateSource(ctx, d, tbl, false, func(l *TableSourceLink) {
-		r := res
+		r := run
 		l.LastPush, l.LastResult, l.LastError, l.Blanked = time.Now().UTC().Format(time.RFC3339), &r, "", blanked
 	})
 }
 
-// PushSummary écrit le compte rendu d'un envoi pour la barre d'état.
-func PushSummary(table string, r *workbook.PushResult, blanked int) string {
+// PushSummary écrit le bilan d'un envoi pour la barre d'état.
+func PushSummary(table string, r *workbook.PushRun, blanked int) string {
 	if r == nil {
 		return fmt.Sprintf("Source « %s » mise à jour", table)
 	}
-	msg := fmt.Sprintf("Source « %s » mise à jour : %d ligne%s", table, r.Rows, plural(r.Rows))
+	msg := fmt.Sprintf("Source « %s » mise à jour : %d ligne%s lue%s", table, r.RowsRead, plural(r.RowsRead), plural(r.RowsRead))
 	var parts []string
 	if r.Inserted > 0 {
 		parts = append(parts, fmt.Sprintf("%d ajoutée%s", r.Inserted, plural(r.Inserted)))
@@ -717,6 +1039,10 @@ func PushSummary(table string, r *workbook.PushResult, blanked int) string {
 		msg += " (" + strings.Join(parts, ", ") + ")"
 	} else {
 		msg += ", rien n'a changé"
+	}
+	if len(r.Rejects) > 0 {
+		x := r.Rejects[0]
+		msg += fmt.Sprintf(" ; ligne %d, %s « %s » : %s", x.Row, x.Column, x.Value, x.Error)
 	}
 	if blanked > 0 {
 		msg += fmt.Sprintf(" ; %d valeur%s envoyée%s vide%s (erreur ou saisie hors type)", blanked, plural(blanked), plural(blanked), plural(blanked))
@@ -749,8 +1075,8 @@ func (s *DocumentService) pushOnSave(d *doc.Document) {
 	}
 	go func() {
 		for _, l := range due {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-			got, err := s.pushSource(ctx, d, l.Tbl)
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+			got, err := s.pushSource(ctx, d, l.Tbl, nil)
 			cancel()
 			name := cmp.Or(got.TableName, l.TableName)
 			n := TableSourceNotice{Table: name}

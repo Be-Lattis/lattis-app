@@ -96,11 +96,17 @@ type Fake struct {
 	Creators map[string]bool
 	// pipelines : pipelines qui alimentent un tableau (AddPipeline).
 	pipelines []*fpipeline
-	// sources : sources du Data Lake tirées d'un classeur local
-	// (source.go) ; NoTableSources imite un serveur sans ce contrat
-	// (fonctions inconnues, 42883).
-	sources        []*fsource
-	NoTableSources bool
+	// sources : sources poussées du Data Lake (source.go) ;
+	// NoPushedSources imite un serveur sans la migration 0027 (fonctions
+	// inconnues, 42883). Envoi (Pusher) : PushBusy répond 409, PushSlow 202
+	// (le bilan se lit ensuite par PushStatus), MaxPush (octets) 413 ;
+	// LastPush garde le dernier CSV reçu.
+	sources         []*fsource
+	NoPushedSources bool
+	PushBusy        bool
+	PushSlow        bool
+	MaxPush         int
+	LastPush        string
 }
 
 // check refuse (42501) l'écriture de value dans la colonne col d'un
@@ -124,6 +130,9 @@ type book struct {
 	schema, staging              string
 	roles                        map[string][]string // utilisateur → rôles fournis
 	schemas                      map[string]*schema
+	// kind : « source » pour le classeur technique d'une source poussée
+	// (absent de my_workbooks) ; vide : classeur ordinaire.
+	kind string
 }
 
 type schema struct {
@@ -382,7 +391,7 @@ func (s *session) Workbooks(ctx context.Context) ([]workbook.Listing, error) {
 	}
 	out := []workbook.Listing{}
 	for _, b := range s.f.books {
-		if len(s.roles(b)) == 0 || (b.state == "draft" && !s.has(b, "owner", "designer")) {
+		if b.kind == "source" || len(s.roles(b)) == 0 || (b.state == "draft" && !s.has(b, "owner", "designer")) {
 			continue
 		}
 		out = append(out, workbook.Listing{ID: b.id, Title: b.title, Mode: b.mode, State: b.state, Version: b.version, Schema: b.schema, Roles: slices.Clone(s.roles(b))})

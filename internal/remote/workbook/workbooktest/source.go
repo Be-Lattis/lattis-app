@@ -1,9 +1,14 @@
 package workbooktest
 
 import (
+	"bytes"
 	"context"
+	"encoding/csv"
 	"fmt"
+	"io"
+	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -13,77 +18,69 @@ import (
 	"github.com/lalamefine/lattis/protocol"
 )
 
-// Sources du Data Lake tirées d'un classeur local (contrat attendu du
-// serveur : docs/collaboration/pipeline-table-source.md). Le faux serveur
-// garde la copie du tableau dans un classeur collaboratif caché (sans
-// membre : absent de my_workbooks), partagé par une donnée ordinaire : le
-// catalogue, la lecture et les relevés des tableaux liés marchent comme
-// pour un tableau publié. Un envoi notifie le canal de ce classeur.
+// Sources poussées (contrat §9.1, migration 0027 du serveur) : un classeur
+// technique (kind « source », dont le créateur est propriétaire, absent de
+// my_workbooks) qui ne contient que le tableau, un pipeline « push » et la
+// donnée du catalogue. L'envoi (Pusher) lit le CSV comme le pipeline du
+// serveur : colonnes reconnues par leur nom (sans la casse), valeurs
+// converties au type de la colonne, refus par valeur (ligne écartée), puis
+// remplacement, ajout ou mise à jour par clé ; il notifie le canal du
+// classeur technique.
 
 type fsource struct {
 	id, dataset, owner, book string
+	mode                     string
 	keys                     []string
-	origin                   workbook.TableOrigin
-	runs                     []workbook.PipelineRun
+	origin                   workbook.PushedOrigin
+	runs                     []workbook.PushRun
 }
 
-func (s *session) unsupported(name string) error {
-	if s.f.NoTableSources {
+func (s *session) noPush(name string) error {
+	if s.f.NoPushedSources {
 		return ErrServer{"42883", "function lattis." + name + " does not exist"}
 	}
 	return nil
 }
 
-func (s *session) TableSourcesSupported(ctx context.Context) (bool, error) {
+func (s *session) PushedSourcesSupported(ctx context.Context) (bool, error) {
 	s.f.mu.Lock()
 	defer s.f.mu.Unlock()
-	if err := s.begin("table_sources_supported"); err != nil {
+	if err := s.begin("pushed_sources_supported"); err != nil {
 		return false, err
 	}
-	return !s.f.NoTableSources, nil
+	return !s.f.NoPushedSources, nil
 }
 
-func (s *session) source(id string) (*fsource, error) {
-	for _, x := range s.f.sources {
-		if x.id == id {
-			if x.owner != s.user && !s.f.serverOwners[s.user] {
-				return nil, ErrPrivilege{"permission denied: seul le créateur de la source l'alimente"}
-			}
-			return x, nil
-		}
-	}
-	return nil, ErrServer{"P0002", "source inconnue"}
-}
-
-func checkKeys(cols []workbook.ColumnSpec, keys []string) error {
-	for _, k := range keys {
-		if !slices.ContainsFunc(cols, func(c workbook.ColumnSpec) bool { return c.Name == k }) {
-			return ErrServer{"22023", "colonne clé inconnue : " + k}
-		}
-	}
-	return nil
-}
-
-func (s *session) CreateTableSource(ctx context.Context, spec workbook.TableSourceSpec) (workbook.TableSourceCreated, error) {
+func (s *session) CreatePushedSource(ctx context.Context, spec workbook.PushedSourceSpec) (workbook.PushedSourceCreated, error) {
 	s.f.mu.Lock()
 	defer s.f.mu.Unlock()
-	var out workbook.TableSourceCreated
-	if err := s.begin("create_table_source"); err != nil {
+	var out workbook.PushedSourceCreated
+	if err := s.begin("create_pushed_source"); err != nil {
 		return out, err
 	}
-	if err := s.unsupported("create_table_source(jsonb)"); err != nil {
+	if err := s.noPush("create_pushed_source(jsonb)"); err != nil {
 		return out, err
 	}
-	if strings.TrimSpace(spec.Name) == "" || len(spec.Columns) == 0 {
-		return out, ErrServer{"22023", "nom et colonnes obligatoires"}
+	name := strings.TrimSpace(spec.Name)
+	if name == "" {
+		return out, ErrServer{"22023", "nom de la donnée manquant"}
 	}
-	if err := checkKeys(spec.Columns, spec.KeyColumns); err != nil {
-		return out, err
+	mode := cmpOr(spec.Mode, workbook.PushReplace)
+	if !slices.Contains([]string{workbook.PushReplace, workbook.PushAppend, workbook.PushUpsert}, mode) {
+		return out, ErrServer{"22023", "mode : replace, append ou upsert"}
+	}
+	if mode == workbook.PushUpsert && len(spec.KeyColumns) == 0 {
+		return out, ErrServer{"23514", "un pipeline upsert a des colonnes clés"}
+	}
+	for _, k := range spec.KeyColumns {
+		if !slices.ContainsFunc(spec.Columns, func(c workbook.ColumnSpec) bool { return c.Name == k }) {
+			return out, ErrServer{"22023", "colonne clé inconnue : " + k}
+		}
 	}
 	d := s.f.data()
 	sql := spec.SQLName
 	if sql == "" {
-		sql = strings.Trim(slugRe.ReplaceAllString(strings.ToLower(spec.Name), "_"), "_")
+		sql = strings.Trim(slugRe.ReplaceAllString(strings.ToLower(name), "_"), "_")
 	}
 	for _, ds := range d.datasets {
 		if ds.sqlName == sql {
@@ -91,205 +88,103 @@ func (s *session) CreateTableSource(ctx context.Context, spec workbook.TableSour
 		}
 	}
 	slug := "src_" + sql
-	b := &book{id: uuid.NewString(), slug: slug, title: spec.Origin.Title, mode: workbook.Collaborative, state: "published", version: 1, schema: "wb_" + slug,
-		roles: map[string][]string{}, schemas: map[string]*schema{}}
-	t := &table{id: uuid.NewString(), name: spec.Origin.Table, localID: 1}
+	b := &book{id: uuid.NewString(), slug: slug, title: "Source : " + name, mode: workbook.Collaborative, state: "published", version: 1,
+		schema: "wb_" + slug, roles: map[string][]string{s.user: {"owner"}}, schemas: map[string]*schema{}, kind: "source"}
+	t := &table{id: uuid.NewString(), name: cmpOr(strings.TrimSpace(spec.TableName), name), localID: 1}
 	for i, c := range spec.Columns {
-		t.cols = append(t.cols, workbook.RemoteColumn{ID: fmt.Sprintf("c%d", i+1), Name: c.Name, Type: c.Type, Position: i})
+		t.cols = append(t.cols, workbook.RemoteColumn{ID: uuid.NewString(), Name: c.Name, Type: c.Type, Position: i})
 	}
 	b.schemas[b.schema] = &schema{meta: map[string][]byte{}, tables: []*table{t}}
 	s.f.books[b.id] = b
-	src := &fsource{id: uuid.NewString(), owner: s.user, book: b.id, keys: slices.Clone(spec.KeyColumns), origin: spec.Origin}
-	ds := &fdataset{id: d.next("d0000000"), folder: spec.FolderID, name: spec.Name, desc: spec.Description, sqlName: sql,
-		workbook: b.id, table: t.id, inherit: true, pipeline: src.id}
+	src := &fsource{id: uuid.NewString(), owner: s.user, book: b.id, mode: mode, keys: slices.Clone(spec.KeyColumns), origin: spec.Origin}
+	ds := &fdataset{id: d.next("d0000000"), folder: spec.FolderID, name: name, desc: spec.Description, sqlName: sql,
+		workbook: b.id, table: t.id, inherit: true}
 	d.datasets = append(d.datasets, ds)
 	src.dataset = ds.id
 	s.f.sources = append(s.f.sources, src)
-	return workbook.TableSourceCreated{PipelineID: src.id, DatasetID: ds.id, SQLName: sql}, nil
+	if len(src.keys) > 0 {
+		s.f.pipelines = append(s.f.pipelines, &fpipeline{b.id, t.id, name, slices.Clone(src.keys)})
+	}
+	return workbook.PushedSourceCreated{PipelineID: src.id, DatasetID: ds.id, WorkbookID: b.id, TableID: t.id, SQLName: sql}, nil
 }
 
-// keyOf : valeurs des colonnes clés d'une ligne, en texte.
-func keyOf(vals []any, idx []int) string {
-	var b strings.Builder
-	for _, i := range idx {
-		fmt.Fprintf(&b, "%v\x00", vals[i])
+func cmpOr(a, b string) string {
+	if a != "" {
+		return a
 	}
-	return b.String()
+	return b
 }
 
-func (s *session) PushTableSource(ctx context.Context, id string, p workbook.TablePush) (workbook.PushResult, error) {
-	s.f.mu.Lock()
-	var out workbook.PushResult
-	if err := s.begin("push_table_source"); err != nil {
-		s.f.mu.Unlock()
-		return out, err
-	}
-	if err := s.unsupported("begin_table_push(uuid, jsonb)"); err != nil {
-		s.f.mu.Unlock()
-		return out, err
-	}
-	src, err := s.source(id)
-	if err != nil {
-		s.f.mu.Unlock()
-		return out, err
-	}
-	if err := checkKeys(p.Columns, p.KeyColumns); err != nil {
-		s.f.mu.Unlock()
-		return out, err
-	}
-	b := s.f.books[src.book]
-	t := b.schemas[b.schema].tables[0]
-	// Colonnes : celles de l'envoi, dans son ordre ; une colonne gardée
-	// garde son identifiant (et ses valeurs, converties si le type change).
-	old := t.cols
-	cols := make([]workbook.RemoteColumn, len(p.Columns))
-	for i, c := range p.Columns {
-		cols[i] = workbook.RemoteColumn{ID: uuid.NewString(), Name: c.Name, Type: c.Type, Position: i}
-		for _, o := range old {
-			if o.Name == c.Name {
-				cols[i].ID = o.ID
+// pushed : la source de l'utilisateur (propriétaire du classeur technique) ; mu tenu.
+func (f *Fake) pushed(user, id string) (*fsource, error) {
+	for _, x := range f.sources {
+		if x.id == id {
+			if b := f.books[x.book]; b == nil || !slices.Contains(b.roles[user], "owner") {
+				return nil, ErrPrivilege{"permission denied: propriétaire de la source seulement"}
 			}
+			return x, nil
 		}
 	}
-	idx := make([]int, len(p.KeyColumns))
-	for i, k := range p.KeyColumns {
-		idx[i] = slices.IndexFunc(p.Columns, func(c workbook.ColumnSpec) bool { return c.Name == k })
-	}
-	if len(idx) > 0 {
-		seen := map[string]int{}
-		for n, r := range p.Rows {
-			k := keyOf(r, idx)
-			if m, ok := seen[k]; ok {
-				s.f.mu.Unlock()
-				return out, ErrServer{"23505", fmt.Sprintf("clé en double aux lignes %d et %d : l'envoi est refusé", m+1, n+1)}
-			}
-			seen[k] = n
-		}
-	}
-	// Lignes actuelles, relues dans les colonnes de l'envoi.
-	cur := map[string]row{}
-	var order []string
-	for _, r := range t.rows {
-		vals := make([]any, len(cols))
-		for i, c := range cols {
-			for j, o := range old {
-				if o.ID == c.ID && j < len(r.vals) {
-					vals[i] = r.vals[j]
-				}
-			}
-		}
-		r.vals = vals
-		k := r.id
-		if len(idx) > 0 {
-			k = keyOf(vals, idx)
-		}
-		cur[k] = r
-		order = append(order, k)
-	}
-	s.f.xid++
-	xid, now := s.f.xid, s.f.Clock()
-	var rows []row
-	kept := map[string]bool{}
-	for n, vals := range p.Rows {
-		pos := fmt.Sprintf("p%09d", n)
-		if len(idx) > 0 {
-			k := keyOf(vals, idx)
-			if r, ok := cur[k]; ok {
-				kept[k] = true
-				same := r.pos == pos
-				for i := range vals {
-					same = same && workbook.SameRemote(r.vals[i], vals[i])
-				}
-				if !same {
-					r.pos, r.vals, r.xid, r.at, r.by = pos, slices.Clone(vals), xid, now, "pipeline"
-					out.Updated++
-				}
-				rows = append(rows, r)
-				continue
-			}
-		}
-		rows = append(rows, row{id: uuid.NewString(), pos: pos, vals: slices.Clone(vals), xid: xid, at: now, by: "pipeline"})
-		out.Inserted++
-	}
-	for _, k := range order {
-		if !kept[k] {
-			t.tombs = append(t.tombs, tomb{id: cur[k].id, xid: xid, at: now})
-			out.Deleted++
-		}
-	}
-	t.cols, t.rows = cols, rows
-	src.keys = slices.Clone(p.KeyColumns)
-	out.RunID, out.Status, out.Rows = uuid.NewString(), "ok", len(p.Rows)
-	src.runs = append(src.runs, workbook.PipelineRun{ID: out.RunID, Trigger: "workbook", Status: "ok", StartedAt: now.Format(time.RFC3339),
-		FinishedAt: now.Format(time.RFC3339), Inserted: out.Inserted, Updated: out.Updated, Deleted: out.Deleted})
-	channel, payload := "wb_"+b.slug, t.id
-	structure := len(old) != len(cols) || slices.ContainsFunc(cols, func(c workbook.RemoteColumn) bool {
-		return !slices.ContainsFunc(old, func(o workbook.RemoteColumn) bool { return o.ID == c.ID && o.Type == c.Type })
-	})
-	if structure {
-		b.version++
-	}
-	version := b.version
-	s.f.mu.Unlock()
-	if structure {
-		// Colonnes changées : relecture complète des tableaux liés, comme
-		// après une nouvelle version d'un classeur publié.
-		s.f.notify(channel, protocol.DataVersion+fmt.Sprint(version))
-		return out, nil
-	}
-	s.f.notify(channel, payload)
-	return out, nil
+	return nil, ErrServer{"P0002", "source poussée inconnue"}
 }
 
-func (s *session) TableSources(ctx context.Context) ([]workbook.TableSource, error) {
+func (f *Fake) sourceItem(x *fsource) workbook.PushedSource {
+	b := f.books[x.book]
+	item := workbook.PushedSource{PipelineID: x.id, Mode: x.mode, KeyColumns: slices.Clone(x.keys), Origin: x.origin, WorkbookID: x.book, Enabled: true}
+	if b != nil {
+		item.TableID = b.schemas[b.schema].tables[0].id
+	}
+	if _, _, ds := f.dataSource(x.dataset); ds != nil {
+		item.Name = ds.name
+		item.Datasets = append(item.Datasets, struct {
+			ID      string `json:"id"`
+			Name    string `json:"name"`
+			SQLName string `json:"sql_name"`
+		}{ds.id, ds.name, ds.sqlName})
+	}
+	if n := len(x.runs); n > 0 {
+		r := x.runs[n-1]
+		item.LastRun = &r
+	}
+	return item
+}
+
+func (s *session) PushedSources(ctx context.Context) ([]workbook.PushedSource, error) {
 	s.f.mu.Lock()
 	defer s.f.mu.Unlock()
-	if err := s.begin("my_table_sources"); err != nil {
+	if err := s.begin("my_pushed_sources"); err != nil {
 		return nil, err
 	}
-	if err := s.unsupported("my_table_sources()"); err != nil {
+	if err := s.noPush("my_pushed_sources()"); err != nil {
 		return nil, err
 	}
-	out := []workbook.TableSource{}
+	out := []workbook.PushedSource{}
 	for _, x := range s.f.sources {
-		if x.owner != s.user && !s.f.serverOwners[s.user] {
-			continue
+		if _, err := s.f.pushed(s.user, x.id); err == nil {
+			out = append(out, s.f.sourceItem(x))
 		}
-		item := workbook.TableSource{PipelineID: x.id, DatasetID: x.dataset, KeyColumns: slices.Clone(x.keys), Origin: x.origin, Owner: x.owner}
-		if _, t, ds := s.f.dataSource(x.dataset); ds != nil {
-			item.Name, item.SQLName = ds.name, ds.sqlName
-			if t != nil {
-				for _, c := range t.cols {
-					item.Columns = append(item.Columns, workbook.ColumnSpec{Name: c.Name, Type: c.Type})
-				}
-			}
-		}
-		if n := len(x.runs); n > 0 {
-			r := x.runs[n-1]
-			item.LastRun = &r
-		}
-		out = append(out, item)
 	}
 	return out, nil
 }
 
-func (s *session) DropTableSource(ctx context.Context, id string) error {
+func (s *session) DropPushedSource(ctx context.Context, id string) error {
 	s.f.mu.Lock()
-	if err := s.begin("drop_table_source"); err != nil {
+	if err := s.begin("drop_pushed_source"); err != nil {
 		s.f.mu.Unlock()
 		return err
 	}
-	if err := s.unsupported("drop_table_source(uuid)"); err != nil {
+	if err := s.noPush("drop_pushed_source(uuid)"); err != nil {
 		s.f.mu.Unlock()
 		return err
 	}
-	src, err := s.source(id)
+	src, err := s.f.pushed(s.user, id)
 	if err != nil {
 		s.f.mu.Unlock()
 		return err
 	}
 	d := s.f.data()
 	d.datasets = slices.DeleteFunc(d.datasets, func(ds *fdataset) bool { return ds.id == src.dataset })
+	s.f.pipelines = slices.DeleteFunc(s.f.pipelines, func(p *fpipeline) bool { return p.workbook == src.book })
 	delete(s.f.books, src.book)
 	s.f.sources = slices.DeleteFunc(s.f.sources, func(x *fsource) bool { return x.id == id })
 	s.f.mu.Unlock()
@@ -297,8 +192,233 @@ func (s *session) DropTableSource(ctx context.Context, id string) error {
 	return nil
 }
 
-// SourceRows rend les lignes de la copie d'une source, dans l'ordre
-// (valeurs du serveur), pour les essais.
+// Pusher rend l'envoi HTTP (POST /api/push) vu par un utilisateur.
+func (f *Fake) Pusher(user string) workbook.Pusher { return &fpusher{f: f, user: user} }
+
+type fpusher struct {
+	f    *Fake
+	user string
+}
+
+// pushConvert lit une valeur du CSV comme le pipeline (pipeline/write.go convert).
+func pushConvert(raw, typ string) (any, error) {
+	v := strings.TrimSpace(raw)
+	if v == "" {
+		return nil, nil
+	}
+	switch typ {
+	case "integer":
+		n, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("entier attendu")
+		}
+		return n, nil
+	case "decimal":
+		if strings.Count(v, ",") == 1 && !strings.Contains(v, ".") {
+			v = strings.Replace(v, ",", ".", 1)
+		}
+		x, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return nil, fmt.Errorf("nombre attendu")
+		}
+		return x, nil
+	case "boolean":
+		switch strings.ToLower(v) {
+		case "true", "vrai", "oui", "1":
+			return true, nil
+		case "false", "faux", "non", "0":
+			return false, nil
+		}
+		return nil, fmt.Errorf("booléen attendu (oui/non, vrai/faux, 1/0)")
+	case "date":
+		for _, l := range []string{"2006-01-02", "02/01/2006"} {
+			if t, err := time.Parse(l, v); err == nil {
+				return t, nil
+			}
+		}
+		return nil, fmt.Errorf("date attendue (AAAA-MM-JJ ou JJ/MM/AAAA)")
+	}
+	return raw, nil
+}
+
+func (p *fpusher) Push(ctx context.Context, id string, body []byte) (workbook.PushRun, error) {
+	f := p.f
+	f.mu.Lock()
+	f.Calls["push"]++
+	if f.down {
+		f.mu.Unlock()
+		return workbook.PushRun{}, ErrDown
+	}
+	src, err := f.pushed(p.user, id)
+	if err != nil {
+		f.mu.Unlock()
+		if code, _ := workbook.Rejected(err); code == "P0002" {
+			return workbook.PushRun{}, &workbook.PushError{Status: http.StatusNotFound, Code: "not_found", Message: "source poussée inconnue"}
+		}
+		return workbook.PushRun{}, &workbook.PushError{Status: http.StatusForbidden, Code: "forbidden", Message: "propriétaire de la source seulement"}
+	}
+	if f.PushBusy {
+		f.mu.Unlock()
+		return workbook.PushRun{}, &workbook.PushError{Status: http.StatusConflict, Code: "conflict", Message: "un envoi attend déjà d'être traité : patientez la fin de son exécution"}
+	}
+	if f.MaxPush > 0 && len(body) > f.MaxPush {
+		f.mu.Unlock()
+		return workbook.PushRun{}, &workbook.PushError{Status: http.StatusRequestEntityTooLarge, Code: "too_large", Message: "tableau trop gros (plus de 100 Mo)"}
+	}
+	f.LastPush = string(body)
+	run := f.applyPush(src, body)
+	src.runs = append(src.runs, run)
+	b := f.books[src.book]
+	channel, payload := "wb_"+b.slug, b.schemas[b.schema].tables[0].id
+	slow := f.PushSlow
+	f.mu.Unlock()
+	if run.Status != "error" {
+		f.notify(channel, payload)
+	}
+	if slow {
+		return workbook.PushRun{Status: "running"}, nil
+	}
+	return run, nil
+}
+
+// applyPush écrit le CSV dans le tableau technique (mu tenu).
+func (f *Fake) applyPush(src *fsource, body []byte) workbook.PushRun {
+	now := f.Clock()
+	run := workbook.PushRun{ID: uuid.NewString(), Trigger: "push", StartedAt: now.Format(time.RFC3339), FinishedAt: now.Format(time.RFC3339)}
+	fail := func(msg string) workbook.PushRun {
+		run.Status, run.Error = "error", msg
+		return run
+	}
+	b := f.books[src.book]
+	t := b.schemas[b.schema].tables[0]
+	cr := csv.NewReader(bytes.NewReader(bytes.TrimPrefix(body, []byte("\xef\xbb\xbf"))))
+	cr.Comma = ';'
+	cr.FieldsPerRecord = -1
+	head, err := cr.Read()
+	if err != nil {
+		return fail("CSV vide")
+	}
+	// Colonne du tableau → colonne du CSV (même nom, sans la casse).
+	src2 := make([]int, len(t.cols))
+	found := 0
+	for i, c := range t.cols {
+		src2[i] = slices.IndexFunc(head, func(h string) bool { return strings.EqualFold(strings.TrimSpace(h), c.Name) })
+		if src2[i] >= 0 {
+			found++
+		}
+	}
+	if found == 0 {
+		return fail(fmt.Sprintf("aucune colonne de la source ne correspond au tableau « %s » (en-têtes lus : %s)", t.name, strings.Join(head, ", ")))
+	}
+	keyIdx := []int{}
+	for _, k := range src.keys {
+		i := slices.IndexFunc(t.cols, func(c workbook.RemoteColumn) bool { return c.Name == k })
+		if i < 0 || src2[i] < 0 {
+			return fail(fmt.Sprintf("la colonne clé « %s » n'est pas dans la source", k))
+		}
+		keyIdx = append(keyIdx, i)
+	}
+	var rows [][]any
+	for line := 2; ; line++ {
+		rec, err := cr.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fail("CSV : " + err.Error())
+		}
+		run.RowsRead++
+		vals := make([]any, len(t.cols))
+		ok := true
+		for i, c := range t.cols {
+			if src2[i] < 0 || src2[i] >= len(rec) {
+				continue
+			}
+			v, err := pushConvert(rec[src2[i]], c.Type)
+			if err != nil {
+				run.Rejected++
+				run.Rejects = append(run.Rejects, workbook.PushReject{Row: line, Column: c.Name, Value: rec[src2[i]], Error: err.Error()})
+				ok = false
+				break
+			}
+			vals[i] = v
+		}
+		if ok {
+			rows = append(rows, vals)
+		}
+	}
+	f.xid++
+	xid := f.xid
+	key := func(v []any) string { return keyOf(v, keyIdx) }
+	switch src.mode {
+	case workbook.PushAppend:
+		for _, v := range rows {
+			t.rows = append(t.rows, row{id: uuid.NewString(), pos: fmt.Sprintf("p%09d", len(t.rows)), vals: v, xid: xid, at: now, by: "pipeline"})
+			run.Inserted++
+		}
+	case workbook.PushUpsert:
+		seen := map[string]bool{}
+		for _, v := range rows {
+			k := key(v)
+			if seen[k] {
+				return fail("clé en double : " + k)
+			}
+			seen[k] = true
+			i := slices.IndexFunc(t.rows, func(r row) bool { return key(r.vals) == k })
+			if i < 0 {
+				t.rows = append(t.rows, row{id: uuid.NewString(), pos: fmt.Sprintf("p%09d", len(t.rows)), vals: v, xid: xid, at: now, by: "pipeline"})
+				run.Inserted++
+				continue
+			}
+			same := true
+			for j := range v {
+				same = same && workbook.SameRemote(t.rows[i].vals[j], v[j])
+			}
+			if !same {
+				t.rows[i].vals, t.rows[i].xid, t.rows[i].at = v, xid, now
+				run.Updated++
+			}
+		}
+	default:
+		for _, r := range t.rows {
+			t.tombs = append(t.tombs, tomb{id: r.id, xid: xid, at: now})
+		}
+		run.Deleted = len(t.rows)
+		t.rows = nil
+		for n, v := range rows {
+			t.rows = append(t.rows, row{id: uuid.NewString(), pos: fmt.Sprintf("p%09d", n), vals: v, xid: xid, at: now, by: "pipeline"})
+		}
+		run.Inserted = len(rows)
+	}
+	run.Status = "ok"
+	if run.Rejected > 0 {
+		run.Status = "warning"
+	}
+	return run
+}
+
+func keyOf(vals []any, idx []int) string {
+	var sb strings.Builder
+	for _, i := range idx {
+		fmt.Fprintf(&sb, "%v\x00", vals[i])
+	}
+	return sb.String()
+}
+
+func (p *fpusher) PushStatus(ctx context.Context, id string) (workbook.PushedSource, error) {
+	f := p.f
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.Calls["push_status"]++
+	src, err := f.pushed(p.user, id)
+	if err != nil {
+		return workbook.PushedSource{}, &workbook.PushError{Status: http.StatusNotFound, Code: "not_found", Message: "source poussée inconnue"}
+	}
+	return f.sourceItem(src), nil
+}
+
+// SourceRows rend les colonnes et lignes du tableau d'une source poussée,
+// dans l'ordre (valeurs du serveur), pour les essais.
 func (f *Fake) SourceRows(id string) (cols []string, rows [][]any) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -309,7 +429,7 @@ func (f *Fake) SourceRows(id string) (cols []string, rows [][]any) {
 		b := f.books[x.book]
 		t := b.schemas[b.schema].tables[0]
 		for _, c := range t.cols {
-			cols = append(cols, c.Name)
+			cols = append(cols, c.Name+":"+c.Type)
 		}
 		for _, r := range t.sorted() {
 			rows = append(rows, slices.Clone(r.vals))

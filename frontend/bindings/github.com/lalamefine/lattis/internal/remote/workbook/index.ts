@@ -14,7 +14,7 @@ export type {
     Listing,
     Member,
     PushReject,
-    PushResult,
+    PushRun,
     Restriction,
     RestrictionRule,
     Role,

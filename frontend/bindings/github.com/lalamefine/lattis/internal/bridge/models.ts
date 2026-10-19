@@ -824,6 +824,16 @@ export interface ShareRequest {
 }
 
 /**
+ * SourceColumn est une colonne envoyée : colonne locale (stable au
+ * renommage), nom et type du serveur tels que le serveur les a.
+ */
+export interface SourceColumn {
+    "id": number;
+    "name": string;
+    "type": string;
+}
+
+/**
  * TableList liste les tables et vues d'une connexion (navigateur).
  * needPassword est rempli si le serveur demande un mot de passe.
  */
@@ -865,8 +875,8 @@ export interface TableSourceInfo {
 }
 
 /**
- * TableSourceLink est le lien d'un tableau du classeur avec sa source du
- * Data Lake.
+ * TableSourceLink est le lien d'un tableau du classeur avec sa source
+ * poussée.
  */
 export interface TableSourceLink {
     /**
@@ -882,12 +892,24 @@ export interface TableSourceLink {
     "server": string;
     "pipeline": string;
     "dataset": string;
+
+    /**
+     * WorkbookID, TableID : classeur technique et tableau sur le serveur
+     * (fonctions de structure).
+     */
+    "workbookId": string;
+    "tableId": string;
     "sqlName": string;
     "name": string;
 
     /**
-     * Columns : colonnes envoyées (les autres ne quittent pas le poste) ;
-     * Keys : colonnes qui identifient une ligne d'un envoi à l'autre.
+     * Mode : replace, append ou upsert (Keys) ; fixé à la création.
+     */
+    "mode": string;
+    "cols": SourceColumn[] | null;
+
+    /**
+     * Columns : noms des colonnes envoyées (Cols), pour l'interface.
      */
     "columns": string[] | null;
     "keys": string[] | null;
@@ -898,11 +920,11 @@ export interface TableSourceLink {
     "onSave": boolean;
 
     /**
-     * LastPush : date du dernier envoi réussi (RFC 3339) ; LastResult son
-     * compte rendu ; LastError : échec du dernier essai ("" : réussi).
+     * LastPush : date du dernier envoi écrit (RFC 3339) ; LastResult son
+     * bilan ; LastError : échec du dernier essai ("" : réussi).
      */
     "lastPush"?: string;
-    "lastResult"?: workbook$0.PushResult | null;
+    "lastResult"?: workbook$0.PushRun | null;
     "lastError"?: string;
 
     /**
@@ -924,9 +946,11 @@ export interface TableSourceRequest {
     "sqlName": string;
 
     /**
-     * Columns : colonnes envoyées ; Keys : colonnes qui identifient une ligne.
+     * Columns : colonnes envoyées ; Mode : replace (défaut), append ou
+     * upsert (Keys : colonnes qui identifient une ligne).
      */
     "columns": string[] | null;
+    "mode": string;
     "keys": string[] | null;
     "onSave": boolean;
     "inherit": boolean;

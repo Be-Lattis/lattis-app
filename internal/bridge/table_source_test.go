@@ -14,7 +14,7 @@ import (
 	"github.com/lalamefine/lattis/internal/remote/workbook/workbooktest"
 )
 
-// sourceHost relève les comptes rendus des envois faits à l'enregistrement.
+// sourceHost relève les bilans des envois faits à l'enregistrement.
 type sourceHost struct {
 	NoHost
 	got chan TableSourceNotice
@@ -27,19 +27,21 @@ func (h *sourceHost) Emit(event string, data any) bool {
 	return true
 }
 
-// sourceFixture : un classeur local avec le tableau Produit / Prix, et un
-// serveur de test vu par alice.
+// sourceFixture : un classeur local avec le tableau Produit / Prix / Note,
+// et un serveur de test vu par alice (API SQL et envoi HTTP).
 func sourceFixture(t *testing.T) (*workbooktest.Fake, *DocumentService, *sourceHost, string) {
 	t.Helper()
 	workRoot(t)
 	isolateRecent(t)
 	ctx := context.Background()
 	fake := workbooktest.New()
-	old := shareServer
+	old, oldPush, oldPoll := shareServer, sharePusher, sourcePoll
 	shareServer = func(ctx context.Context, server string) (workbook.Server, auth.User, string, error) {
 		return fake.As("alice"), auth.User{PGRole: "alice"}, "Serveur de test", nil
 	}
-	t.Cleanup(func() { shareServer = old })
+	sharePusher = func(ctx context.Context, server string) (workbook.Pusher, error) { return fake.Pusher("alice"), nil }
+	sourcePoll = 5 * time.Millisecond
+	t.Cleanup(func() { shareServer, sharePusher, sourcePoll = old, oldPush, oldPoll })
 	s := &DocumentService{}
 	h := &sourceHost{got: make(chan TableSourceNotice, 8)}
 	UseHost(h, nil, s)
@@ -72,18 +74,21 @@ func TestTableSourceWithoutPublishing(t *testing.T) {
 		t.Fatalf("source à créer : %+v", ti)
 	}
 
-	// Le tableau seul, sans la colonne Note, clé Produit.
+	// Le tableau seul, sans la colonne Note, mise à jour par la clé Produit.
 	link, err := s.CreateTableSource(ctx, TableSourceRequest{Server: dataServer, Table: table, Name: "Prix du jour",
-		Columns: []string{"Produit", "Prix"}, Keys: []string{"Produit"}, OnSave: true, Inherit: true})
+		Columns: []string{"Produit", "Prix"}, Mode: workbook.PushUpsert, Keys: []string{"Produit"}, OnSave: true, Inherit: true})
 	mustShare(t, err)
-	if link.LastError != "" || link.LastResult == nil || link.LastResult.Inserted != 2 || link.SQLName != "prix_du_jour" {
+	if link.LastError != "" || link.LastResult == nil || link.LastResult.Inserted != 2 || link.SQLName != "prix_du_jour" || link.WorkbookID == "" {
 		t.Fatalf("source créée : %+v", link)
 	}
+	if !strings.HasPrefix(fake.LastPush, "Produit;Prix\nCafé;4.5\n") || strings.Contains(fake.LastPush, "privé") {
+		t.Fatalf("CSV envoyé : %q", fake.LastPush)
+	}
 	cols, rows := fake.SourceRows(link.Pipeline)
-	if !slices.Equal(cols, []string{"Produit", "Prix"}) || len(rows) != 2 || rows[0][0] != "Café" || rows[0][1] != 4.5 {
+	if !slices.Equal(cols, []string{"Produit:text", "Prix:decimal"}) || len(rows) != 2 || rows[0][0] != "Café" || rows[0][1] != 4.5 {
 		t.Fatalf("copie du serveur : %v %v", cols, rows)
 	}
-	// Le classeur n'est pas publié : aucun classeur sur le serveur, pas de partage.
+	// Le classeur n'est pas publié : aucun classeur visible, pas de partage.
 	if list, _ := fake.As("alice").Workbooks(ctx); len(list) != 0 {
 		t.Fatalf("classeur publié par erreur : %+v", list)
 	}
@@ -92,7 +97,7 @@ func TestTableSourceWithoutPublishing(t *testing.T) {
 	}
 	cat, err := s.DataCatalog(ctx, dataServer)
 	mustShare(t, err)
-	if len(cat.Datasets) != 1 || cat.Datasets[0].Source == nil || cat.Datasets[0].Source.Kind != "pipeline" || cat.Datasets[0].Source.PipelineID != link.Pipeline {
+	if len(cat.Datasets) != 1 || cat.Datasets[0].Source == nil || cat.Datasets[0].Source.WorkbookID != link.WorkbookID {
 		t.Fatalf("catalogue : %+v", cat.Datasets)
 	}
 	if st, _ := s.State(ctx); !st.Dirty {
@@ -102,12 +107,12 @@ func TestTableSourceWithoutPublishing(t *testing.T) {
 		t.Fatalf("source connue de la boîte : %+v", info)
 	}
 
-	// Mettre à jour : une ligne modifiée, une ajoutée, une supprimée.
+	// Mettre à jour : une ligne modifiée.
 	_, err = s.SetCell(ctx, 1, 2, 1, "3")
 	mustShare(t, err)
 	link, err = s.PushTableSource(ctx, table)
 	mustShare(t, err)
-	if r := link.LastResult; r.Updated != 1 || r.Inserted != 0 || r.Deleted != 0 {
+	if r := link.LastResult; r.Updated != 1 || r.Inserted != 0 || r.RowsRead != 2 {
 		t.Fatalf("envoi : %+v", r)
 	}
 	if got := PushSummary(table, link.LastResult, 0); !strings.Contains(got, "1 modifiée") {
@@ -124,7 +129,7 @@ func TestTableSourceWithoutPublishing(t *testing.T) {
 	mustShare(t, err)
 	links, err := s.TableSources(ctx)
 	mustShare(t, err)
-	if len(links) != 1 || links[0].TableName != table || !links[0].OnSave || links[0].Pipeline != link.Pipeline {
+	if len(links) != 1 || links[0].TableName != table || !links[0].OnSave || links[0].Pipeline != link.Pipeline || !slices.Equal(links[0].Columns, []string{"Produit", "Prix"}) {
 		t.Fatalf("liens relus : %+v", links)
 	}
 	_, err = s.SetCell(ctx, 1, 3, 0, "Chocolat")
@@ -145,11 +150,14 @@ func TestTableSourceWithoutPublishing(t *testing.T) {
 		t.Fatalf("après l'enregistrement : %v", rows)
 	}
 
-	// Modifier : Prix n'est plus envoyé ; plus d'envoi à l'enregistrement.
-	link, err = s.UpdateTableSource(ctx, TableSourceRequest{Table: table, Name: "Produits", Columns: []string{"Produit"}, Keys: []string{"Produit"}, Inherit: true})
+	// Modifier : Note ajoutée, plus d'envoi à l'enregistrement ; le mode ne change pas.
+	link, err = s.UpdateTableSource(ctx, TableSourceRequest{Table: table, Name: "Produits", Columns: []string{"Produit", "Prix", "Note"}, Inherit: true})
 	mustShare(t, err)
-	if cols, _ := fake.SourceRows(link.Pipeline); !slices.Equal(cols, []string{"Produit"}) || link.OnSave {
-		t.Fatalf("après modification : %v %+v", cols, link)
+	if cols, _ := fake.SourceRows(link.Pipeline); !slices.Equal(cols, []string{"Produit:text", "Prix:decimal", "Note:text"}) || link.OnSave {
+		t.Fatalf("colonne ajoutée : %v %+v", cols, link)
+	}
+	if _, err := s.UpdateTableSource(ctx, TableSourceRequest{Table: table, Name: "Produits", Columns: []string{"Produit"}, Mode: workbook.PushReplace, Inherit: true}); err == nil {
+		t.Fatal("changement de mode accepté")
 	}
 
 	// Retirer : la donnée quitte le catalogue, le lien est oublié.
@@ -165,12 +173,44 @@ func TestTableSourceWithoutPublishing(t *testing.T) {
 	}
 }
 
+// Colonnes renommées, converties, supprimées en local : le serveur suit
+// avant l'envoi suivant (fonctions de structure).
+func TestTableSourceColumnsFollow(t *testing.T) {
+	fake, s, _, table := sourceFixture(t)
+	ctx := context.Background()
+	link, err := s.CreateTableSource(ctx, TableSourceRequest{Server: dataServer, Table: table, Name: "Prix", Columns: []string{"Produit", "Prix", "Note"}, Inherit: true})
+	mustShare(t, err)
+	if link.LastError != "" || link.Mode != workbook.PushReplace {
+		t.Fatalf("source : %+v", link)
+	}
+	d, err := s.current()
+	mustShare(t, err)
+	var tbl int64
+	mustShare(t, d.DB().Read().QueryRowContext(ctx, `SELECT id FROM _lattis_tables WHERE name = ?`, table).Scan(&tbl))
+	_, err = s.Call(ctx, "columns.rename", map[string]any{"table": table, "column": "Prix", "name": "Tarif"})
+	mustShare(t, err)
+	_, err = s.Call(ctx, "columns.delete", map[string]any{"table": table, "column": "Note"})
+	mustShare(t, err)
+	link, err = s.PushTableSource(ctx, table)
+	mustShare(t, err)
+	cols, rows := fake.SourceRows(link.Pipeline)
+	if !slices.Equal(cols, []string{"Produit:text", "Tarif:decimal"}) || len(rows) != 2 || rows[1][1] != 2.0 {
+		t.Fatalf("après renommage et suppression : %v %v (%+v)", cols, rows, link)
+	}
+	if !slices.Equal(link.Columns, []string{"Produit", "Tarif"}) {
+		t.Fatalf("lien : %+v", link)
+	}
+	if fake.Calls["add_column"] != 0 {
+		t.Fatalf("colonne ajoutée sans raison : %v", fake.Calls)
+	}
+}
+
 func TestTableSourceRefusals(t *testing.T) {
 	fake, s, _, table := sourceFixture(t)
 	ctx := context.Background()
 
-	// Serveur sans le contrat : la voie est fermée, avec la raison.
-	fake.NoTableSources = true
+	// Serveur sans les sources poussées : la voie est fermée, avec la raison.
+	fake.NoPushedSources = true
 	ti, err := s.TableSourceInfo(ctx, table, dataServer)
 	mustShare(t, err)
 	if ti.Reason != unsupportedMessage {
@@ -182,26 +222,59 @@ func TestTableSourceRefusals(t *testing.T) {
 	if links, _ := s.TableSources(ctx); len(links) != 0 {
 		t.Fatalf("lien gardé après un refus : %+v", links)
 	}
-	fake.NoTableSources = false
+	fake.NoPushedSources = false
 
-	// Clé hors des colonnes envoyées.
-	if _, err := s.CreateTableSource(ctx, TableSourceRequest{Server: dataServer, Table: table, Name: "x", Columns: []string{"Prix"}, Keys: []string{"Produit"}}); err == nil {
+	// Clé hors des colonnes envoyées, ou mise à jour par clé sans clé.
+	if _, err := s.CreateTableSource(ctx, TableSourceRequest{Server: dataServer, Table: table, Name: "x", Columns: []string{"Prix"}, Mode: workbook.PushUpsert, Keys: []string{"Produit"}}); err == nil {
 		t.Fatal("clé non envoyée acceptée")
 	}
+	if _, err := s.CreateTableSource(ctx, TableSourceRequest{Server: dataServer, Table: table, Name: "x", Columns: []string{"Prix"}, Mode: workbook.PushUpsert}); err == nil {
+		t.Fatal("upsert sans clé accepté")
+	}
 
-	// Clé en double : la source est créée, l'envoi refusé en entier.
-	_, err = s.SetCell(ctx, 1, 2, 0, "Café")
+	// Source en ajout à la suite.
+	link, err := s.CreateTableSource(ctx, TableSourceRequest{Server: dataServer, Table: table, Name: "Ajouts", Columns: []string{"Produit", "Prix"}, Mode: workbook.PushAppend})
 	mustShare(t, err)
-	link, err := s.CreateTableSource(ctx, TableSourceRequest{Server: dataServer, Table: table, Name: "Doublons", Columns: []string{"Produit", "Prix"}, Keys: []string{"Produit"}})
+	if link.LastError != "" || link.LastResult.Inserted != 2 {
+		t.Fatalf("source : %+v", link)
+	}
+
+	// 409 : un envoi précédent pas fini ; le message est gardé.
+	fake.PushBusy = true
+	if _, err := s.PushTableSource(ctx, table); err == nil || !strings.Contains(err.Error(), "réessayez") {
+		t.Fatalf("409 : %v", err)
+	}
+	if links, _ := s.TableSources(ctx); links[0].LastError == "" {
+		t.Fatalf("échec non noté : %+v", links[0])
+	}
+	fake.PushBusy = false
+
+	// 413 : trop gros.
+	fake.MaxPush = 5
+	if _, err := s.PushTableSource(ctx, table); err == nil || !strings.Contains(err.Error(), "trop gros") {
+		t.Fatalf("413 : %v", err)
+	}
+	fake.MaxPush = 0
+
+	// 202 : l'écriture dure, le bilan est relu par l'état de la source.
+	fake.PushSlow = true
+	link, err = s.PushTableSource(ctx, table)
 	mustShare(t, err)
-	if !strings.Contains(link.LastError, "clé en double") || link.LastPush != "" {
-		t.Fatalf("envoi refusé : %+v", link)
+	if link.LastError != "" || link.LastResult == nil || link.LastResult.Inserted != 2 || fake.Calls["push_status"] == 0 {
+		t.Fatalf("202 : %+v %v", link, fake.Calls)
 	}
-	if _, rows := fake.SourceRows(link.Pipeline); len(rows) != 0 {
-		t.Fatalf("lignes envoyées malgré le refus : %v", rows)
+	fake.PushSlow = false
+	// Ajout à la suite : premier envoi et envoi en 202 (les refusés n'ont rien écrit).
+	if _, rows := fake.SourceRows(link.Pipeline); len(rows) != 4 {
+		t.Fatalf("ajouts : %d lignes", len(rows))
 	}
-	if _, err := s.PushTableSource(ctx, table); err == nil {
-		t.Fatal("envoi d'une clé en double accepté")
+}
+
+func TestPushSummaryRejects(t *testing.T) {
+	r := &workbook.PushRun{Status: "warning", RowsRead: 3, Inserted: 2, Rejected: 1, Rejects: []workbook.PushReject{{Row: 3, Column: "Prix", Value: "abc", Error: "nombre attendu"}}}
+	got := PushSummary("T", r, 0)
+	if got != "Source « T » mise à jour : 3 lignes lues (2 ajoutées, 1 refusée) ; ligne 3, Prix « abc » : nombre attendu" {
+		t.Fatal(got)
 	}
 }
 
@@ -228,10 +301,13 @@ func TestSourceValue(t *testing.T) {
 			t.Errorf("sourceValue(%s, %v) = %v %v, attendu %v %v", c.typ, c.in, got, ok, c.want, c.ok)
 		}
 	}
-	if got, ok := sourceValue("date", "2024-02-29"); !ok || got.(time.Time).Format("2006-01-02") != "2024-02-29" {
+	got, ok := sourceValue("date", "2024-02-29")
+	if !ok || csvText(got) != "2024-02-29" {
 		t.Errorf("date : %v %v", got, ok)
 	}
-	if got := workbook.PushJSON(time.Date(2024, 2, 29, 0, 0, 0, 0, time.UTC)); got != "2024-02-29" {
-		t.Errorf("PushJSON : %v", got)
+	for v, want := range map[any]string{nil: "", true: "true", int64(12): "12", 0.1: "0.1", 1e21: "1000000000000000000000"} {
+		if got := csvText(v); got != want {
+			t.Errorf("csvText(%v) = %q, attendu %q", v, got, want)
+		}
 	}
 }

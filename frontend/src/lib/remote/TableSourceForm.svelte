@@ -14,7 +14,7 @@
 	import FilterEditor from './FilterEditor.svelte';
 	import { connected, hostOf, userName } from './lattis';
 	import { lattis, loadLattis, requestLogin } from './lattis.svelte.js';
-	import { keptKeys, pushSummary, sourceStatus, sqlNameFor, type SourceLink } from './source';
+	import { PUSH_MODES, keptKeys, pushSummary, sourceStatus, sqlNameFor, type PushMode, type SourceLink } from './source';
 
 	interface Props {
 		table: string;
@@ -48,6 +48,7 @@
 	let newFolder = $state('');
 	let sent = $state<Set<string>>(new Set());
 	let key = $state('');
+	let mode = $state<PushMode>('replace');
 	let onSave = $state(true);
 	let inherit = $state(true);
 	let current = $state<DataAudience[]>([]);
@@ -87,6 +88,7 @@
 				folder = i.dataset?.folder_id ?? '';
 				sent = new Set(l.columns ?? []);
 				key = l.keys?.[0] ?? '';
+				mode = (l.mode || 'replace') as PushMode;
 				onSave = l.onSave;
 				inherit = i.dataset?.source?.inherit_audience ?? true;
 				current = i.dataset?.audience ?? [];
@@ -135,7 +137,8 @@
 			description: description.trim(),
 			sqlName: link ? '' : sqlName.trim(),
 			columns: fields.map((f) => f.name).filter((c) => sent.has(c)),
-			keys: key ? [key] : [],
+			mode,
+			keys: mode === 'upsert' && key ? [key] : [],
 			onSave,
 			inherit,
 			add: adds.filter((a) => a.email.trim() || a.team).map(({ email, team, predicate }) => ({ email, team, predicate })),
@@ -255,14 +258,25 @@
 			<p class="muted">Une colonne non cochée ne quitte jamais le poste. Une colonne calculée est envoyée avec ses valeurs, pas sa formule.</p>
 
 			<h3>Mise à jour</h3>
-			<div class="grid">
-				<label for="src-key">Clé</label>
-				<select id="src-key" bind:value={key} disabled={busy}>
-					<option value="">(aucune : chaque mise à jour remplace toutes les lignes)</option>
-					{#each keyChoices as c (c.name)}<option value={c.name}>{c.name}</option>{/each}
-				</select>
+			<div class="modes" role="radiogroup" aria-label="Mode d'écriture">
+				{#each PUSH_MODES as m (m.mode)}
+					<label class="check"
+						><input type="radio" name="src-mode" value={m.mode} bind:group={mode} disabled={busy || !!link} />
+						<span><strong>{m.label}</strong> <span class="muted">: {m.detail}</span></span></label
+					>
+				{/each}
 			</div>
-			<p class="muted">Avec une clé, une ligne garde son identité d’une mise à jour à l’autre : les classeurs liés ne reçoivent que ce qui a changé. Deux lignes de même clé font refuser la mise à jour.</p>
+			{#if mode === 'upsert'}
+				<div class="grid">
+					<label for="src-key">Clé</label>
+					<select id="src-key" bind:value={key} disabled={busy || !!link}>
+						<option value="">(choisissez la colonne qui identifie une ligne)</option>
+						{#each keyChoices as c (c.name)}<option value={c.name}>{c.name}</option>{/each}
+					</select>
+				</div>
+			{/if}
+			{#if link}<p class="muted">Le mode et la clé sont fixés à la création : pour les changer, retirez la source puis publiez-la de nouveau.</p>{/if}
+			<p class="muted">Les valeurs refusées par le serveur (type inattendu) sont comptées et la première est dite dans la barre d'état ; le reste de l'envoi est écrit.</p>
 			<label class="check"><input type="checkbox" bind:checked={onSave} disabled={busy} /> Mettre à jour la source à chaque enregistrement du classeur</label>
 
 			<h3>Audience</h3>
@@ -332,7 +346,7 @@
 	<span class="grow"></span>
 	<button onclick={() => ondone()} disabled={busy}>{info?.reason ? 'Fermer' : 'Annuler'}</button>
 	{#if info && !info.reason}
-		<button class="primary" onclick={save} disabled={busy || !server || !name.trim() || sent.size === 0 || badFilter} title={badFilter ? "Un filtre d'audience est à corriger" : ''}
+		<button class="primary" onclick={save} disabled={busy || !server || !name.trim() || sent.size === 0 || badFilter || (mode === 'upsert' && !key)} title={badFilter ? "Un filtre d'audience est à corriger" : mode === 'upsert' && !key ? 'Choisissez la colonne clé' : ''}
 			>{busy ? 'Envoi…' : link ? 'Enregistrer et mettre à jour' : 'Publier la source'}</button
 		>
 	{/if}
@@ -384,6 +398,15 @@
 		display: flex;
 		align-items: center;
 		gap: 6px;
+	}
+	.modes {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		margin-bottom: 8px;
+	}
+	.modes .check {
+		align-items: flex-start;
 	}
 	.status {
 		margin: 0 0 8px;

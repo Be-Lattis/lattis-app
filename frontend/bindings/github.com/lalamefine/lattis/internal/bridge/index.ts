@@ -50,6 +50,7 @@ export type {
     ScriptResult,
     Setting,
     ShareRequest,
+    SourceColumn,
     TableList,
     TableSourceInfo,
     TableSourceLink,

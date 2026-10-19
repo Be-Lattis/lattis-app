@@ -290,11 +290,6 @@ type DataSource struct {
 	Table           string   `json:"table"`
 	HiddenColumns   []string `json:"hidden_columns"`
 	InheritAudience bool     `json:"inherit_audience"`
-	// Kind : « pipeline » pour un tableau envoyé par un classeur local sans
-	// le publier (PipelineID : son pipeline) ; vide : tableau d'un classeur
-	// publié.
-	Kind       string `json:"kind,omitempty"`
-	PipelineID string `json:"pipeline_id,omitempty"`
 }
 
 // DataAudience est une entrée de l'audience d'une donnée ou d'un dossier.

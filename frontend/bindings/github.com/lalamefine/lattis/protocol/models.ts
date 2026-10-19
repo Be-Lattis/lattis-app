@@ -77,14 +77,6 @@ export interface DataSource {
     "table": string;
     "hidden_columns": string[] | null;
     "inherit_audience": boolean;
-
-    /**
-     * Kind : « pipeline » pour un tableau envoyé par un classeur local sans
-     * le publier (PipelineID : son pipeline) ; vide : tableau d'un classeur
-     * publié.
-     */
-    "kind"?: string;
-    "pipeline_id"?: string;
 }
 
 /**

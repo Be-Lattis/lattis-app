@@ -1,174 +1,149 @@
 package workbook
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 )
 
-// Sources du Data Lake tirées d'un classeur local (clic droit sur un
-// tableau › Partager au Data Lake Lattis… › « Publier uniquement ce
-// tableau ») : le classeur n'est pas publié ; le serveur garde une copie du
-// tableau, alimentée par un pipeline dont le classeur local est la source
-// (le poste envoie les lignes, à la demande ou à l'enregistrement), et
-// partagée au catalogue comme toute donnée.
-//
-// Ces fonctions ne sont pas encore dans le schéma lattis du serveur :
-// contrat attendu dans docs/collaboration/pipeline-table-source.md. Un
-// serveur qui ne les a pas répond 42883 (Unsupported).
+// Sources poussées du Data Lake (contrat client de lattisd, §9.1 ;
+// migration 0027) : un tableau d'un classeur local publié seul, sans le
+// classeur (clic droit sur un tableau › Partager au Data Lake Lattis… ›
+// « Publier uniquement ce tableau »). lattisd crée un classeur technique
+// (kind = 'source', dont l'utilisateur est propriétaire) qui ne contient
+// que ce tableau, un pipeline « push » qui l'alimente et la donnée du
+// catalogue. Le poste envoie ensuite le contenu du tableau en CSV par
+// HTTP (Pusher), et adapte les colonnes du tableau technique par les
+// fonctions de structure (Writer.AddColumn…). Voir
+// docs/collaboration/pipeline-table-source.md.
 
-// TableSourceSpec décrit une source à créer (lattis.create_table_source).
-type TableSourceSpec struct {
+// Modes d'écriture d'une source poussée (lattis.pipelines.mode).
+const (
+	PushReplace = "replace" // le tableau du serveur devient celui envoyé
+	PushAppend  = "append"  // les lignes envoyées s'ajoutent
+	PushUpsert  = "upsert"  // mise à jour par clé (KeyColumns)
+)
+
+// PushedSourceSpec décrit une source à créer (lattis.create_pushed_source).
+type PushedSourceSpec struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	// FolderID : dossier du catalogue ("" : la racine).
 	FolderID string `json:"folder_id,omitempty"`
 	// SQLName vide : proposé par le serveur à partir du nom.
-	SQLName string       `json:"sql_name,omitempty"`
-	Columns []ColumnSpec `json:"columns"`
-	// KeyColumns : colonnes qui identifient une ligne d'un envoi à l'autre
-	// (vide : chaque envoi remplace toutes les lignes).
-	KeyColumns []string    `json:"key_columns"`
-	Origin     TableOrigin `json:"origin"`
+	SQLName string `json:"sql_name,omitempty"`
+	// TableName : nom du tableau sur le serveur (vide : Name).
+	TableName string       `json:"table_name,omitempty"`
+	Columns   []ColumnSpec `json:"columns"`
+	// Mode : PushReplace (vide), PushAppend ou PushUpsert (avec KeyColumns).
+	Mode       string       `json:"mode,omitempty"`
+	KeyColumns []string     `json:"key_columns"`
+	Origin     PushedOrigin `json:"origin"`
 }
 
-// TableOrigin dit d'où vient une source (catalogue, administration des
-// pipelines) : rien du contenu du classeur hors du tableau.
-type TableOrigin struct {
-	// Workbook : identifiant aléatoire du classeur local (_lattis_info, id).
-	Workbook string `json:"workbook"`
-	Title    string `json:"title"`
-	Table    string `json:"table"`
+// PushedOrigin dit d'où vient une source (affichage seulement).
+type PushedOrigin struct {
+	Workbook        string `json:"workbook"`
+	WorkbookLocalID string `json:"workbook_local_id,omitempty"`
+	Table           string `json:"table"`
+	TableLocalID    string `json:"table_local_id,omitempty"`
 }
 
-// TableSourceCreated est le résultat de lattis.create_table_source.
-type TableSourceCreated struct {
+// PushedSourceCreated est le résultat de lattis.create_pushed_source.
+type PushedSourceCreated struct {
 	PipelineID string `json:"pipeline_id"`
 	DatasetID  string `json:"dataset_id"`
+	WorkbookID string `json:"workbook_id"`
+	TableID    string `json:"table_id"`
 	SQLName    string `json:"sql_name"`
 }
 
-// TablePush est un envoi : toutes les lignes du tableau (instantané
-// complet), colonnes et clé du moment. Rows : valeurs du type du serveur
-// (ToRemote : int64, float64, bool, string, time.Time pour une date, nil).
-type TablePush struct {
-	Columns    []ColumnSpec
-	KeyColumns []string
-	Origin     TableOrigin
-	Rows       [][]any
-}
-
-// PushReject est une ligne refusée par le serveur (numéro à partir de 1).
+// PushReject est une valeur refusée par le pipeline.
 type PushReject struct {
-	Row   int    `json:"row"`
-	Error string `json:"error"`
+	Row    int    `json:"row"`
+	Column string `json:"column"`
+	Value  string `json:"value"`
+	Error  string `json:"error"`
 }
 
-// PushResult est le compte rendu d'un envoi (lattis.finish_table_push,
-// une ligne de lattis.pipeline_runs).
-type PushResult struct {
-	RunID string `json:"run_id"`
-	// Status : ok ou warning (lignes refusées).
-	Status   string       `json:"status"`
-	Rows     int          `json:"rows"`
-	Inserted int          `json:"inserted"`
-	Updated  int          `json:"updated"`
-	Deleted  int          `json:"deleted"`
-	Rejected int          `json:"rejected"`
-	Rejects  []PushReject `json:"rejects,omitempty"`
+// PushRun est une exécution du pipeline (lattis.pipeline_runs) : le bilan
+// d'un envoi. Status : ok, warning (valeurs refusées), error, ou running
+// (réponse 202 : l'écriture dure encore, voir Pusher.PushStatus).
+type PushRun struct {
+	ID         string       `json:"id,omitempty"`
+	Status     string       `json:"status"`
+	Trigger    string       `json:"trigger,omitempty"`
+	RowsRead   int          `json:"rows_read"`
+	Inserted   int          `json:"inserted"`
+	Updated    int          `json:"updated"`
+	Deleted    int          `json:"deleted"`
+	Rejected   int          `json:"rejected"`
+	Rejects    []PushReject `json:"rejects,omitempty"`
+	Error      string       `json:"error,omitempty"`
+	StartedAt  string       `json:"started_at,omitempty"`
+	FinishedAt string       `json:"finished_at,omitempty"`
 }
 
-// PipelineRun est une exécution d'un pipeline (lattis.pipeline_runs).
-type PipelineRun struct {
-	ID         string `json:"id"`
-	Trigger    string `json:"trigger"`
-	Status     string `json:"status"`
-	StartedAt  string `json:"started_at"`
-	FinishedAt string `json:"finished_at,omitempty"`
-	Inserted   int    `json:"inserted"`
-	Updated    int    `json:"updated"`
-	Deleted    int    `json:"deleted"`
-	Rejected   int    `json:"rejected"`
-	Error      string `json:"error,omitempty"`
-}
-
-// TableSource est une source du Data Lake alimentée par un classeur local
-// (lattis.my_table_sources).
-type TableSource struct {
+// PushedSource est une source poussée de l'utilisateur
+// (lattis.my_pushed_sources, GET /api/push/<id>).
+type PushedSource struct {
 	PipelineID string       `json:"pipeline_id"`
-	DatasetID  string       `json:"dataset_id"`
 	Name       string       `json:"name"`
-	SQLName    string       `json:"sql_name"`
-	Columns    []ColumnSpec `json:"columns"`
+	Mode       string       `json:"mode"`
 	KeyColumns []string     `json:"key_columns"`
-	Origin     TableOrigin  `json:"origin"`
-	// Owner : adresse de qui a créé la source (lui seul l'alimente).
-	Owner   string       `json:"owner"`
-	LastRun *PipelineRun `json:"last_run,omitempty"`
+	Origin     PushedOrigin `json:"origin"`
+	WorkbookID string       `json:"workbook_id"`
+	TableID    string       `json:"table_id"`
+	Enabled    bool         `json:"enabled"`
+	// Pending : un envoi attend d'être écrit.
+	Pending  bool `json:"pending"`
+	Datasets []struct {
+		ID      string `json:"id"`
+		Name    string `json:"name"`
+		SQLName string `json:"sql_name"`
+	} `json:"datasets"`
+	LastRun *PushRun `json:"last_run"`
 }
 
-// TableSources est l'API des sources tirées d'un classeur local.
-type TableSources interface {
-	// TableSourcesSupported dit si le serveur a le contrat (fonction
-	// lattis.create_table_source).
-	TableSourcesSupported(ctx context.Context) (bool, error)
-	// CreateTableSource crée la copie du tableau sur le serveur, le
-	// pipeline qui l'alimente et la donnée du catalogue (publieurs de
-	// données), sans ligne : le premier envoi suit.
-	CreateTableSource(ctx context.Context, spec TableSourceSpec) (TableSourceCreated, error)
-	// PushTableSource envoie toutes les lignes en une transaction (tout ou
-	// rien) : begin_table_push, push_table_rows par paquets,
-	// finish_table_push. Créateur de la source seulement.
-	PushTableSource(ctx context.Context, pipelineID string, p TablePush) (PushResult, error)
-	// TableSources liste les sources de l'utilisateur (toutes pour un
-	// propriétaire du serveur).
-	TableSources(ctx context.Context) ([]TableSource, error)
-	// DropTableSource retire la source : pipeline, donnée et copie (les
-	// classeurs qui l'utilisent gardent leur dernière copie).
-	DropTableSource(ctx context.Context, pipelineID string) error
+// PushedSources est l'API SQL des sources poussées.
+type PushedSources interface {
+	// PushedSourcesSupported dit si le serveur a la migration 0027.
+	PushedSourcesSupported(ctx context.Context) (bool, error)
+	// CreatePushedSource crée le classeur technique, le pipeline et la
+	// donnée (publieurs de données), sans ligne : le premier envoi suit.
+	CreatePushedSource(ctx context.Context, spec PushedSourceSpec) (PushedSourceCreated, error)
+	// PushedSources liste les sources poussées de l'utilisateur.
+	PushedSources(ctx context.Context) ([]PushedSource, error)
+	// DropPushedSource retire la source : donnée (*withdrawn:<id>),
+	// pipeline et classeur technique.
+	DropPushedSource(ctx context.Context, pipelineID string) error
 }
 
-// Unsupported dit si err vient d'un serveur qui n'a pas la fonction
-// appelée (42883 : undefined_function).
-func Unsupported(err error) bool {
-	code, ok := Rejected(err)
-	return ok && code == "42883"
-}
-
-// pushChunk : lignes par appel de lattis.push_table_rows.
-const pushChunk = 2000
-
-// PushJSON écrit une valeur du serveur pour la charge JSON d'un envoi :
-// dates en aaaa-mm-jj, le reste tel quel.
-func PushJSON(v any) any {
-	if t, ok := v.(time.Time); ok {
-		if t.Hour() == 0 && t.Minute() == 0 && t.Second() == 0 && t.Nanosecond() == 0 {
-			return t.Format("2006-01-02")
-		}
-		return t.Format(time.RFC3339)
-	}
-	return v
-}
-
-func (s pgServer) TableSourcesSupported(ctx context.Context) (bool, error) {
+func (s pgServer) PushedSourcesSupported(ctx context.Context) (bool, error) {
 	var ok bool
 	err := s.with(ctx, usageWrite, func(c *pgx.Conn) error {
-		return c.QueryRow(ctx, `SELECT to_regprocedure('lattis.create_table_source(jsonb)') IS NOT NULL`).Scan(&ok)
+		return c.QueryRow(ctx, `SELECT to_regprocedure('lattis.create_pushed_source(jsonb)') IS NOT NULL`).Scan(&ok)
 	})
 	return ok, err
 }
 
-func (s pgServer) CreateTableSource(ctx context.Context, spec TableSourceSpec) (TableSourceCreated, error) {
-	var out TableSourceCreated
+func (s pgServer) CreatePushedSource(ctx context.Context, spec PushedSourceSpec) (PushedSourceCreated, error) {
+	var out PushedSourceCreated
 	if spec.KeyColumns == nil {
 		spec.KeyColumns = []string{}
 	}
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var raw []byte
-		if err := tx.QueryRow(ctx, `SELECT lattis.create_table_source($1::jsonb)::text`, spec).Scan(&raw); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT lattis.create_pushed_source($1::jsonb)::text`, spec).Scan(&raw); err != nil {
 			return err
 		}
 		return json.Unmarshal(raw, &out)
@@ -176,57 +151,174 @@ func (s pgServer) CreateTableSource(ctx context.Context, spec TableSourceSpec) (
 	return out, err
 }
 
-func (s pgServer) PushTableSource(ctx context.Context, pipelineID string, p TablePush) (PushResult, error) {
-	var out PushResult
-	keys := p.KeyColumns
-	if keys == nil {
-		keys = []string{}
+func (s pgServer) PushedSources(ctx context.Context) ([]PushedSource, error) {
+	var out []PushedSource
+	err := s.jsonCall(ctx, `SELECT lattis.my_pushed_sources()::text`, &out)
+	return out, err
+}
+
+func (s pgServer) DropPushedSource(ctx context.Context, pipelineID string) error {
+	return s.exec(ctx, `SELECT lattis.drop_pushed_source($1::uuid)`, pipelineID)
+}
+
+// Pusher envoie le contenu d'un tableau à une source poussée (HTTP,
+// contrat §9.1).
+type Pusher interface {
+	// Push envoie le CSV (UTF-8, première ligne = noms des colonnes) et rend
+	// le bilan de l'exécution ; Status « running » : l'écriture dure encore
+	// (202), à suivre par PushStatus. Refus : *PushError.
+	Push(ctx context.Context, pipelineID string, csv []byte) (PushRun, error)
+	// PushStatus lit l'état de la source (dernier envoi, envoi en attente).
+	PushStatus(ctx context.Context, pipelineID string) (PushedSource, error)
+}
+
+// PushError est un refus de POST/GET /api/push (401, 403, 404, 409, 413…).
+type PushError struct {
+	Status  int
+	Code    string
+	Message string
+}
+
+func (e *PushError) Error() string {
+	switch e.Status {
+	case http.StatusConflict:
+		return "un envoi précédent n'est pas encore écrit, ou la source est suspendue : réessayez dans un moment (" + e.Message + ")"
+	case http.StatusRequestEntityTooLarge:
+		return "tableau trop gros pour le serveur : " + e.Message
+	case http.StatusUnauthorized:
+		return "session expirée sur ce serveur : reconnectez-vous"
 	}
-	head, err := json.Marshal(map[string]any{"columns": p.Columns, "key_columns": keys, "origin": p.Origin, "rows": len(p.Rows)})
+	if e.Message != "" {
+		return e.Message
+	}
+	return fmt.Sprintf("le serveur a répondu %d", e.Status)
+}
+
+// PushClient est le Pusher HTTP : émetteur (issuer de la découverte) et
+// jeton d'accès de la session PostgreSQL.
+type PushClient struct {
+	// Issuer : adresse de l'émetteur (lattisd).
+	Issuer string
+	// Token rend le jeton d'accès ; Invalidate l'oublie (refusé : 401).
+	Token      func(ctx context.Context) (string, error)
+	Invalidate func()
+	// HTTP : client (nil : délai de 20 minutes, comme lattisd).
+	HTTP *http.Client
+	// Wait : secondes d'attente du bilan avant 202 (0 : 60).
+	Wait int
+}
+
+func (c PushClient) url(id string) string {
+	return strings.TrimRight(c.Issuer, "/") + "/api/push/" + id
+}
+
+// do envoie la requête ; un jeton refusé (401) est rafraîchi une fois.
+func (c PushClient) do(ctx context.Context, method, url string, body []byte) (*http.Response, error) {
+	hc := c.HTTP
+	if hc == nil {
+		hc = &http.Client{Timeout: 20 * time.Minute}
+	}
+	for try := 0; ; try++ {
+		tok, err := c.Token(ctx)
+		if err != nil {
+			return nil, err
+		}
+		var rd io.Reader
+		if body != nil {
+			rd = bytes.NewReader(body)
+		}
+		req, err := http.NewRequestWithContext(ctx, method, url, rd)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Authorization", "Bearer "+tok)
+		if body != nil {
+			req.Header.Set("Content-Type", "text/csv; charset=utf-8")
+		}
+		res, err := hc.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		if res.StatusCode == http.StatusUnauthorized && try == 0 && c.Invalidate != nil {
+			res.Body.Close()
+			c.Invalidate()
+			continue
+		}
+		return res, nil
+	}
+}
+
+// pushError lit le corps d'une réponse en erreur ({"error", "error_description"}).
+func pushError(res *http.Response) error {
+	b, _ := io.ReadAll(io.LimitReader(res.Body, 64<<10))
+	var e struct {
+		Error       string `json:"error"`
+		Description string `json:"error_description"`
+		Message     string `json:"message"`
+	}
+	_ = json.Unmarshal(b, &e)
+	msg := e.Description
+	if msg == "" {
+		msg = e.Message
+	}
+	if msg == "" {
+		msg = strings.TrimSpace(string(b))
+	}
+	return &PushError{Status: res.StatusCode, Code: e.Error, Message: msg}
+}
+
+func (c PushClient) Push(ctx context.Context, id string, csv []byte) (PushRun, error) {
+	var out PushRun
+	wait := c.Wait
+	if wait <= 0 {
+		wait = 60
+	}
+	res, err := c.do(ctx, http.MethodPost, c.url(id)+"?wait="+strconv.Itoa(wait), csv)
 	if err != nil {
 		return out, err
 	}
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var run string
-		if err := tx.QueryRow(ctx, `SELECT lattis.begin_table_push($1::uuid, $2::jsonb)::text`, pipelineID, head).Scan(&run); err != nil {
-			return err
-		}
-		for i := 0; i < len(p.Rows); i += pushChunk {
-			chunk := p.Rows[i:min(i+pushChunk, len(p.Rows))]
-			rows := make([][]any, len(chunk))
-			for j, r := range chunk {
-				row := make([]any, len(r))
-				for k, v := range r {
-					row[k] = PushJSON(v)
-				}
-				rows[j] = row
-			}
-			b, err := json.Marshal(rows)
-			if err != nil {
-				return err
-			}
-			if _, err := tx.Exec(ctx, `SELECT lattis.push_table_rows($1::uuid, $2::jsonb)`, run, b); err != nil {
-				return err
-			}
-		}
-		var raw []byte
-		if err := tx.QueryRow(ctx, `SELECT lattis.finish_table_push($1::uuid)::text`, run).Scan(&raw); err != nil {
-			return err
-		}
-		if err := json.Unmarshal(raw, &out); err != nil {
-			return fmt.Errorf("finish_table_push : %w", err)
-		}
-		return nil
-	})
-	return out, err
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusAccepted {
+		return out, pushError(res)
+	}
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		return out, fmt.Errorf("bilan de l'envoi illisible : %w", err)
+	}
+	if res.StatusCode == http.StatusAccepted {
+		out.Status = "running"
+	}
+	return out, nil
 }
 
-func (s pgServer) TableSources(ctx context.Context) ([]TableSource, error) {
-	var out []TableSource
-	err := s.jsonCall(ctx, `SELECT lattis.my_table_sources()::text`, &out)
-	return out, err
+func (c PushClient) PushStatus(ctx context.Context, id string) (PushedSource, error) {
+	var out PushedSource
+	res, err := c.do(ctx, http.MethodGet, c.url(id), nil)
+	if err != nil {
+		return out, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return out, pushError(res)
+	}
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		return out, fmt.Errorf("état de la source illisible : %w", err)
+	}
+	return out, nil
 }
 
-func (s pgServer) DropTableSource(ctx context.Context, pipelineID string) error {
-	return s.exec(ctx, `SELECT lattis.drop_table_source($1::uuid)`, pipelineID)
+// PushNotFound dit si err est une source inconnue du serveur (404 ou P0002).
+func PushNotFound(err error) bool {
+	var pe *PushError
+	if errors.As(err, &pe) {
+		return pe.Status == http.StatusNotFound
+	}
+	code, ok := Rejected(err)
+	return ok && code == "P0002"
+}
+
+// Unsupported dit si err vient d'un serveur qui n'a pas la fonction
+// appelée (42883 : undefined_function).
+func Unsupported(err error) bool {
+	code, ok := Rejected(err)
+	return ok && code == "42883"
 }

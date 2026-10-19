@@ -1,18 +1,36 @@
 // Partager au Data Lake Lattis : choix entre publier le classeur (avec ses
-// droits) et publier le tableau seul comme source de données liée au
-// classeur (pipeline alimenté par le poste, internal/bridge/table_source.go).
+// droits) et publier le tableau seul comme source poussée liée au classeur
+// (pipeline « push » alimenté par le poste, internal/bridge/table_source.go).
 
-/** Compte rendu d'un envoi (workbook.PushResult). */
+/** Valeur refusée par le pipeline (workbook.PushReject). */
+export interface PushReject {
+	row: number;
+	column: string;
+	value: string;
+	error: string;
+}
+
+/** Bilan d'un envoi (workbook.PushRun, une exécution du pipeline). */
 export interface PushResult {
-	run_id: string;
 	status: string;
-	rows: number;
+	rows_read: number;
 	inserted: number;
 	updated: number;
 	deleted: number;
 	rejected: number;
-	rejects?: { row: number; error: string }[] | null;
+	rejects?: PushReject[] | null;
+	error?: string;
 }
+
+/** Mode d'écriture d'une source poussée (fixé à sa création). */
+export type PushMode = 'replace' | 'append' | 'upsert';
+
+/** Modes proposés, avec leur explication. */
+export const PUSH_MODES: { mode: PushMode; label: string; detail: string }[] = [
+	{ mode: 'replace', label: 'Remplacer tout', detail: 'à chaque mise à jour, la donnée devient le tableau envoyé' },
+	{ mode: 'append', label: 'Ajouter à la suite', detail: 'les lignes envoyées s’ajoutent à celles déjà reçues (journal, relevés)' },
+	{ mode: 'upsert', label: 'Mettre à jour par clé', detail: 'une ligne de même clé est modifiée, une nouvelle est ajoutée ; rien n’est supprimé' }
+];
 
 /** Lien d'un tableau avec sa source (bridge.TableSourceLink). */
 export interface SourceLink {
@@ -21,8 +39,11 @@ export interface SourceLink {
 	server: string;
 	pipeline: string;
 	dataset: string;
+	workbookId?: string;
+	tableId?: string;
 	sqlName: string;
 	name: string;
+	mode?: string;
 	columns: string[] | null;
 	keys: string[] | null;
 	onSave: boolean;
@@ -63,7 +84,7 @@ export function shareWays(choice: string, reason: string): WayChoice[] {
 			way: 'table',
 			title: 'Publier uniquement ce tableau comme source de données',
 			detail:
-				'Une nouvelle donnée du Data Lake, liée à ce classeur : seules les colonnes choisies de ce tableau sont envoyées, quand vous le demandez ou à chaque enregistrement. Le classeur reste sur votre poste, sans être mis à disposition.',
+				'Une nouvelle donnée du Data Lake, liée à ce classeur et alimentée par un pipeline : seules les colonnes choisies de ce tableau sont envoyées, quand vous le demandez ou à chaque enregistrement. Le classeur reste sur votre poste, sans être mis à disposition.',
 			disabled: ''
 		}
 	];
@@ -74,13 +95,16 @@ const plural = (n: number) => (n > 1 ? 's' : '');
 /** Message de la barre d'état après un envoi (comme bridge.PushSummary). */
 export function pushSummary(table: string, r: PushResult | null | undefined, blanked = 0): string {
 	if (!r) return `Source « ${table} » mise à jour`;
-	let msg = `Source « ${table} » mise à jour : ${r.rows} ligne${plural(r.rows)}`;
+	const n = r.rows_read ?? 0;
+	let msg = `Source « ${table} » mise à jour : ${n} ligne${plural(n)} lue${plural(n)}`;
 	const parts: string[] = [];
 	if (r.inserted) parts.push(`${r.inserted} ajoutée${plural(r.inserted)}`);
 	if (r.updated) parts.push(`${r.updated} modifiée${plural(r.updated)}`);
 	if (r.deleted) parts.push(`${r.deleted} supprimée${plural(r.deleted)}`);
 	if (r.rejected) parts.push(`${r.rejected} refusée${plural(r.rejected)}`);
 	msg += parts.length ? ` (${parts.join(', ')})` : ", rien n'a changé";
+	const x = r.rejects?.[0];
+	if (x) msg += ` ; ligne ${x.row}, ${x.column} « ${x.value} » : ${x.error}`;
 	if (blanked) {
 		const s = plural(blanked);
 		msg += ` ; ${blanked} valeur${s} envoyée${s} vide${s} (erreur ou saisie hors type)`;
@@ -98,8 +122,9 @@ export function sourceStatus(l: Pick<SourceLink, 'lastPush' | 'lastResult' | 'la
 	const when = sameDay
 		? `aujourd’hui à ${at.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
 		: `le ${at.toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}`;
-	const n = l.lastResult?.rows ?? 0;
-	return `Mise à jour ${when} · ${n} ligne${plural(n)}`;
+	const n = l.lastResult?.rows_read ?? 0;
+	const rej = l.lastResult?.rejected ?? 0;
+	return `Mise à jour ${when} · ${n} ligne${plural(n)}${rej ? ` · ${rej} refusée${plural(rej)}` : ''}`;
 }
 
 /** Nom SQL proposé pour un nom (minuscules sans accents, chiffres, _). */

@@ -377,11 +377,10 @@ export function CreatePivot(cfg: canvas$0.PivotConfig): $CancellablePromise<numb
 }
 
 /**
- * CreateTableSource publie le tableau seul comme source du Data Lake : la
- * copie, le pipeline et la donnée sont créés sur le serveur, le lien est
- * gardé dans le classeur, puis les lignes sont envoyées une première fois.
- * Le classeur n'est pas publié. Un premier envoi refusé laisse la source
- * créée (LastError dit pourquoi).
+ * CreateTableSource publie le tableau seul comme source poussée : classeur
+ * technique, pipeline et donnée créés sur le serveur, lien gardé dans le
+ * classeur, puis premier envoi. Le classeur n'est pas publié. Un premier
+ * envoi refusé laisse la source créée (LastError dit pourquoi).
  */
 export function CreateTableSource(req: $models.TableSourceRequest): $CancellablePromise<$models.TableSourceLink> {
     return $Call.ByID(1115385315, req);
@@ -2119,9 +2118,11 @@ export function UnprotectWorkbook(password: string): $CancellablePromise<$models
 }
 
 /**
- * UpdateTableSource modifie la source d'un tableau (nom, dossier,
- * audience au serveur ; colonnes, clé, envoi à l'enregistrement dans le
- * classeur), puis envoie les lignes.
+ * UpdateTableSource modifie la source d'un tableau (nom, description,
+ * dossier, audience ; colonnes envoyées, ajoutées ou retirées sur le
+ * serveur ; envoi à l'enregistrement), puis envoie les lignes. Le mode et
+ * la clé ne changent pas (le serveur ne le permet pas encore à son
+ * créateur).
  */
 export function UpdateTableSource(req: $models.TableSourceRequest): $CancellablePromise<$models.TableSourceLink> {
     return $Call.ByID(466382212, req);

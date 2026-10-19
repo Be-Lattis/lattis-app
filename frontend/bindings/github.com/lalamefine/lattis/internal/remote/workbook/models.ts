@@ -143,30 +143,33 @@ export interface Member {
 }
 
 /**
- * PushReject est une ligne refusée par le serveur (numéro à partir de 1).
+ * PushReject est une valeur refusée par le pipeline.
  */
 export interface PushReject {
     "row": number;
+    "column": string;
+    "value": string;
     "error": string;
 }
 
 /**
- * PushResult est le compte rendu d'un envoi (lattis.finish_table_push,
- * une ligne de lattis.pipeline_runs).
+ * PushRun est une exécution du pipeline (lattis.pipeline_runs) : le bilan
+ * d'un envoi. Status : ok, warning (valeurs refusées), error, ou running
+ * (réponse 202 : l'écriture dure encore, voir Pusher.PushStatus).
  */
-export interface PushResult {
-    "run_id": string;
-
-    /**
-     * Status : ok ou warning (lignes refusées).
-     */
+export interface PushRun {
+    "id"?: string;
     "status": string;
-    "rows": number;
+    "trigger"?: string;
+    "rows_read": number;
     "inserted": number;
     "updated": number;
     "deleted": number;
     "rejected": number;
     "rejects"?: PushReject[] | null;
+    "error"?: string;
+    "started_at"?: string;
+    "finished_at"?: string;
 }
 
 /**
