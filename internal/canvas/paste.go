@@ -65,7 +65,9 @@ func (m *Model) Paste(ctx context.Context, sheet int64, row, col int, block [][]
 			return err
 		}
 		t.undoBirth = true
-		free, err := t.areaFree(sheet, row-1, col-1, row+h, col+w)
+		// Zone vide : rien dans le bloc ni contre lui (la ligne grisée sous un
+		// tableau, à une ligne d'écart, ne compte pas : audit 2 I2).
+		free, err := t.areaClear(sheet, row-1, col-1, row+h, col+w)
 		if err != nil {
 			return err
 		}
@@ -173,6 +175,24 @@ func (t *tx) areaFree(sheet int64, r0, c0, r1, c1 int) (bool, error) {
 	}
 	for _, tb := range tables {
 		if tb.Row <= r1 && tb.Bottom()+1 >= r0 && tb.Col <= c1 && tb.Right()+1 >= c0 {
+			return false, nil
+		}
+	}
+	var n int
+	err = t.row(`SELECT count(*) FROM _lattis_cells WHERE sheet = ? AND row BETWEEN ? AND ? AND col BETWEEN ? AND ?`,
+		sheet, r0, r1, c0, c1).Scan(&n)
+	return n == 0, err
+}
+
+// areaClear indique si le rectangle [r0, r1] × [c0, c1] ne recouvre aucun
+// tableau (sans sa zone grisée) ni aucune cellule libre.
+func (t *tx) areaClear(sheet int64, r0, c0, r1, c1 int) (bool, error) {
+	tables, err := t.tables(sheet)
+	if err != nil {
+		return false, err
+	}
+	for _, tb := range tables {
+		if tb.Top() <= r1 && tb.Bottom() >= r0 && tb.Col <= c1 && tb.Right() >= c0 {
 			return false, nil
 		}
 	}
