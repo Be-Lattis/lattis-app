@@ -12,6 +12,7 @@
 	// ailleurs (cellule, onglet) le désélectionne.
 	import { dismiss } from './dismiss.js';
 	import { resizePanel } from '#lib/ui/resize.js';
+	import { clip as clipName } from '#lib/ui/menu.js';
 	import HelpLink from '#lib/help/HelpLink.svelte';
 	import { BUTTON_H, BUTTON_W, CONTROL_KINDS, VALUE_KINDS, baseName, choicesOf, controlTitle, handlerLabel, handlers, scriptFunctions, type ButtonConfig, type ControlKind, type SheetButton } from './buttons';
 	import { a1Address } from './formulaEdit';
@@ -553,7 +554,11 @@
 {#if menu}
 	{@const m = menu}
 	<div class="menu" style:zoom={unzoom} style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (menu = null)}>
-		<div class="menu-title" title={controlTitle(m.b.config)}>{KINDS[m.b.config.kind ?? '']} « {m.b.config.name || m.b.config.label || m.b.config.link} »</div>
+		<!-- Nom abrégé en tête (le nom entier dans l'infobulle) ; presse-papiers, le bouton, sa suppression. -->
+		<div class="menu-title" title={controlTitle(m.b.config)}>{KINDS[m.b.config.kind ?? '']} « {clipName(m.b.config.name || m.b.config.label || m.b.config.link)} »</div>
+		<button onclick={() => copy(m.b, true)}>Couper</button>
+		<button onclick={() => copy(m.b, false)}>Copier</button>
+		<hr />
 		{#if handlers(m.b.config).length}
 			<button
 				onclick={() => {
@@ -563,9 +568,6 @@
 			>
 		{/if}
 		<button onclick={() => openEditor(m.b)}>Modifier…</button>
-		<hr />
-		<button onclick={() => copy(m.b, true)}>Couper</button>
-		<button onclick={() => copy(m.b, false)}>Copier</button>
 		<button
 			onclick={() => {
 				menu = null;
@@ -574,7 +576,7 @@
 			}}>Redimensionner</button
 		>
 		<hr />
-		<button onclick={() => remove(m.b)}>Supprimer le bouton</button>
+		<button onclick={() => remove(m.b)}>Supprimer</button>
 	</div>
 {/if}
 
@@ -1002,11 +1004,15 @@
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 		padding: 4px 0;
 		min-width: 220px;
+		max-width: 320px; /* MENU_MAX_WIDTH */
 	}
 	.menu-title {
 		padding: 4px 14px;
 		font-size: 11px;
 		color: #6b7280;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 	.menu button {
 		display: block;
@@ -1017,6 +1023,9 @@
 		border: none;
 		font: inherit;
 		cursor: pointer;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 	.menu button:hover {
 		background: #e3efe7;

@@ -27,7 +27,7 @@ Connecté à un Serveur Lattis, les objets montrent aussi ses **données d'entre
 
 ## Envoyer le résultat sur une feuille
 
-Le résultat d'une requête se copie dans un nouveau tableau, ou s'y **référence** : le tableau reste alors lié à la requête et se relit par clic droit › Actualiser (ou `F5`).
+Le résultat d'une requête se copie dans un nouveau tableau, ou s'y **référence** : le tableau reste alors lié à la requête et se relit par clic droit › Tableau › Actualiser la requête (ou `F5`).
 
 ## Modifier les données
 

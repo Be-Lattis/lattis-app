@@ -55,6 +55,8 @@
 	import { SheetViews } from './sheetview';
 	import { besideGutter, gutterOwner } from './gutter';
 	import Select from '#lib/ui/Select.svelte';
+	import Submenu from '#lib/ui/Submenu.svelte';
+	import { clip, clipped } from '#lib/ui/menu.js';
 	import Chart from '#lib/chart/Chart.svelte';
 	import { encodeObj, objFromText, rememberObj } from '#lib/clip/objects.js';
 	import { SINGLE_SERIES, chartFields, type ChartKind, type MapGuess } from '#lib/chart/kinds.js';
@@ -7989,32 +7991,47 @@
 </script>
 
 {#snippet linesItems(kind: 'rows' | 'cols' | undefined, x: number, y: number)}
+	<!-- Insertion, suppression et effacement ; sur les en-têtes de la feuille, puis
+	     la mise en forme et la taille ou l'affichage des lignes ou colonnes. -->
 	{#if source.sheetLines}
 		{@const { r0, r1, c0, c1 } = selection()}
-		<hr />
 		{#if kind === 'rows'}
 			<button onclick={() => sheetLines('insertRows')}>Insérer {r1 > r0 ? `${r1 - r0 + 1} lignes` : 'une ligne'}</button>
 			<button onclick={() => sheetLines('deleteRows')}>Supprimer {r1 > r0 ? 'les lignes' : 'la ligne'}</button>
-			{#if source.applyStyle}<button data-shed="1" onclick={() => openFormat()}>Format de cellule…</button>{/if}
-			{#if source.setSheetRules}<button data-shed="1" onclick={rulesActive}>Mise en forme conditionnelle…</button>{/if}
-			{#if source.setRowHeight}<button data-shed="2" onclick={() => openSize(true, x, y)}>Hauteur de ligne…</button><button data-shed="1" onclick={autoFitRows} title="Hauteur d’après le contenu (double-clic sur le bord du numéro de ligne)">Ajuster la hauteur de ligne</button>{/if}
-			{#if source.setLinesHidden}
-				<button onclick={() => setHidden(true, true)}>Masquer</button>
-				{#if hiddenIn(true)}<button onclick={() => unhide(true)}>Afficher</button>{/if}
-			{/if}
 		{:else if kind === 'cols'}
 			<button onclick={() => sheetLines('insertCols')}>Insérer {c1 > c0 ? `${c1 - c0 + 1} colonnes` : 'une colonne'}</button>
 			<button onclick={() => sheetLines('deleteCols')}>Supprimer {c1 > c0 ? 'les colonnes' : 'la colonne'}</button>
-			{#if source.applyStyle}<button data-shed="1" onclick={() => openFormat()}>Format de cellule…</button>{/if}
-			{#if source.setSheetRules}<button data-shed="1" onclick={rulesActive}>Mise en forme conditionnelle…</button>{/if}
-			{#if source.setColumnWidth}<button data-shed="2" onclick={() => openSize(false, x, y)}>Largeur de colonne…</button><button data-shed="1" onclick={autoFitCols} title="Largeur d’après le contenu affiché (double-clic sur le bord de l’en-tête)">Ajuster la largeur de colonne</button>{/if}
-			{#if source.setLinesHidden}
-				<button onclick={() => setHidden(false, true)}>Masquer</button>
-				{#if hiddenIn(false)}<button onclick={() => unhide(false)}>Afficher</button>{/if}
-			{/if}
 		{:else}
 			<button onclick={() => openLinesDialog(true, x, y)}>Insérer…</button>
 			<button title="Vide les cellules : valeurs, mise en forme, fusions, notes et validations" onclick={() => { menu = freeMenu = null; clearSelection(selection(), true); }}>Supprimer</button>
+		{/if}
+	{/if}
+	<button
+		onclick={() => {
+			menu = freeMenu = null;
+			clearSelection();
+		}}>Effacer le contenu</button
+	>
+	{#if source.sheetLines && kind}
+		{@const rows = kind === 'rows'}
+		{#if source.applyStyle || source.setSheetRules}
+			<hr />
+			{#if source.applyStyle}<button data-shed="1" onclick={() => openFormat()}>Format de cellule…</button>{/if}
+			{#if source.setSheetRules}<button data-shed="1" onclick={rulesActive}>Mise en forme conditionnelle…</button>{/if}
+		{/if}
+		{#if (rows ? source.setRowHeight : source.setColumnWidth) || source.setLinesHidden}
+			<hr />
+			{#if rows && source.setRowHeight}
+				<button data-shed="2" onclick={() => openSize(true, x, y)}>Hauteur de ligne…</button>
+				<button data-shed="1" onclick={autoFitRows} title="Hauteur d’après le contenu (double-clic sur le bord du numéro de ligne)">Ajuster la hauteur de ligne</button>
+			{:else if !rows && source.setColumnWidth}
+				<button data-shed="2" onclick={() => openSize(false, x, y)}>Largeur de colonne…</button>
+				<button data-shed="1" onclick={autoFitCols} title="Largeur d’après le contenu affiché (double-clic sur le bord de l’en-tête)">Ajuster la largeur de colonne</button>
+			{/if}
+			{#if source.setLinesHidden}
+				<button onclick={() => setHidden(rows, true)}>Masquer</button>
+				{#if hiddenIn(rows)}<button onclick={() => unhide(rows)}>Afficher</button>{/if}
+			{/if}
 		{/if}
 	{/if}
 {/snippet}
@@ -8330,19 +8347,42 @@
 			{@const m = menu}
 			{@const col = m.e.t.columns[m.i]}
 			{@const cols = !m.rowOnly}
+			{@const rowItems = !m.header && !m.rowOnly}
+			{@const filtered = cols && !!source.clearFilters && m.e.t.columns.some((c) => c.filter)}
+			{@const sortCount = (cols && source.sortTable ? 2 : 0) + (cols && source.setFilter ? 1 : 0) + (filtered ? 1 : 0)}
+			{@const promote = cols && !!source.promoteHeader && m.e.t.rows > 0}
+			{@const toTitle = cols && m.header && !!source.headerToTitle && m.e.t.rows > 0}
+			{@const toNote = rowItems && !!source.rowToNote && m.n === m.e.t.rows - 1}
+			{@const refresh = !!m.e.t.query && !!source.refreshTable}
+			{@const share = cols && !!onsharedata && !m.e.t.query}
+			{@const tableItems = promote || toTitle || toNote || refresh || share || !!source.convertToRange || !!source.deleteTables}
+			{#snippet sortItems()}
+				{#if cols && source.sortTable}
+					{@const lab = sortLabels(col?.type ?? 'text', col?.result)}
+					<button onclick={() => menuAction(() => source.sortTable!(m.e.t, m.i, false))}>{lab[0]}</button>
+					<button onclick={() => menuAction(() => source.sortTable!(m.e.t, m.i, true))}>{lab[1]}</button>
+				{/if}
+				{#if cols && source.setFilter}
+					<button onclick={() => openFilter(m.e, m.i)}>Filtrer la colonne…</button>
+				{/if}
+				{#if filtered}
+					<button onclick={() => menuAction(() => source.clearFilters!(m.e.t))}>Effacer le filtre du tableau</button>
+				{/if}
+			{/snippet}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (menu = null)}>
-				<div class="menu-title" class:default-name={isDefaultTableName(m.e.t.name)} title={isDefaultTableName(m.e.t.name) ? DEFAULT_NAME_HINT : undefined}>{m.e.t.name}</div>
+				<!-- Les noms (tableau, colonne) n'apparaissent qu'en tête de section, abrégés ; jamais dans les libellés. -->
+				<div class="menu-title" class:default-name={isDefaultTableName(m.e.t.name)} title={isDefaultTableName(m.e.t.name) ? DEFAULT_NAME_HINT : clipped(m.e.t.name) ? m.e.t.name : undefined}>Tableau « {clip(m.e.t.name)} »</div>
 				{#if m.confirmDelete}
 					<p class="menu-note">
-						Supprimer le tableau « {m.e.t.name} » et ses {(m.e.t.rows + (m.e.t.hidden ?? 0)).toLocaleString('fr-FR')} lignes ? Ctrl+Z permettra de l’annuler.
+						Supprimer ce tableau et ses {(m.e.t.rows + (m.e.t.hidden ?? 0)).toLocaleString('fr-FR')} lignes ? Ctrl+Z permettra de l’annuler.
 					</p>
 					<button onclick={() => deleteTable(m.e.t)}>Supprimer le tableau</button>
 					<button onclick={() => (menu = { ...m, confirmDelete: false })}>Annuler</button>
 				{:else}
-					<!-- Même ordre que le menu contextuel d'Excel : presse-papiers, insertion
-					     et suppression, tri et filtre, mise en forme, puis ce qui est propre
-					     à Lattis (type, clé, nom de colonne, tableau). -->
+					<!-- Groupes du menu contextuel d'Excel : presse-papiers ; insertion et
+					     suppression ; tri et filtre ; mise en forme ; puis ce qui est propre à
+					     Lattis : la colonne (type, clé, nom), le tableau (sous-menu), l'assistant. -->
 					<button data-shed="3"
 						onclick={() => {
 							menu = null;
@@ -8362,61 +8402,57 @@
 						}}>Coller</button
 					>
 					<hr />
-					{#if !m.header && !m.rowOnly}
-						<button onclick={() => menuAction(source.insertRow && (() => tableLines(m.e, 'insertRow', m.n)))}>Insérer une ligne au-dessus</button>
-						<button data-shed="2" onclick={() => menuAction(source.insertRow && (() => tableLines(m.e, 'insertRow', m.n + 1)))}>Insérer une ligne en dessous</button>
-					{/if}
-					{#if cols}
-						<button data-shed="2" onclick={() => menuAction(source.insertColumn && (() => tableLines(m.e, 'insertColumn', m.i)))}>Insérer une colonne à gauche</button>
-						<button data-shed="2" onclick={() => menuAction(source.insertColumn && (() => tableLines(m.e, 'insertColumn', m.i + 1)))}>Insérer une colonne à droite</button>
-					{/if}
-					{#if !m.header && !m.rowOnly}
-						<button onclick={() => menuAction(source.deleteRow && (() => tableLines(m.e, 'deleteRow', m.n)))}>Supprimer la ligne</button>
-					{/if}
-					{#if !m.header && !m.rowOnly && source.rowToNote && m.n === m.e.t.rows - 1}
-						<button data-shed="2" title="La ligne reste sous le tableau, comme note ou total, sans en faire partie" onclick={() => menuAction(() => source.rowToNote!(m.e.t, m.n))}>Sortir la ligne du tableau (note)</button>
-					{/if}
-					{#if cols}
-						<button onclick={() => menuAction(source.deleteColumn && (() => tableLines(m.e, 'deleteColumn', m.i)))}>Supprimer la colonne « {col?.name} »</button>
-					{/if}
-					{#if m.rowOnly}{@render linesItems('rows', m.x, m.y)}{/if}
-					<button
-						onclick={() => {
-							menu = null;
-							clearSelection();
-						}}>Effacer le contenu</button
-					>
-					{#if cols && (source.sortTable || source.setFilter)}
-						<hr />
-						{#if source.sortTable}
-							{@const lab = sortLabels(col?.type ?? 'text', col?.result)}
-							<button onclick={() => menuAction(() => source.sortTable!(m.e.t, m.i, false))}>{lab[0]}</button>
-							<button onclick={() => menuAction(() => source.sortTable!(m.e.t, m.i, true))}>{lab[1]}</button>
+					{#if m.rowOnly}
+						{@render linesItems('rows', m.x, m.y)}
+					{:else}
+						<Submenu label="Insérer">
+							{#if rowItems}
+								<button onclick={() => menuAction(source.insertRow && (() => tableLines(m.e, 'insertRow', m.n)))}>Ligne au-dessus</button>
+								<button onclick={() => menuAction(source.insertRow && (() => tableLines(m.e, 'insertRow', m.n + 1)))}>Ligne en dessous</button>
+							{/if}
+							<button onclick={() => menuAction(source.insertColumn && (() => tableLines(m.e, 'insertColumn', m.i)))}>Colonne à gauche</button>
+							<button onclick={() => menuAction(source.insertColumn && (() => tableLines(m.e, 'insertColumn', m.i + 1)))}>Colonne à droite</button>
+						</Submenu>
+						{#if rowItems}
+							<Submenu label="Supprimer">
+								<button onclick={() => menuAction(source.deleteRow && (() => tableLines(m.e, 'deleteRow', m.n)))}>Ligne du tableau</button>
+								<button onclick={() => menuAction(source.deleteColumn && (() => tableLines(m.e, 'deleteColumn', m.i)))}>Colonne du tableau</button>
+							</Submenu>
+						{:else}
+							<button onclick={() => menuAction(source.deleteColumn && (() => tableLines(m.e, 'deleteColumn', m.i)))}>Supprimer la colonne</button>
 						{/if}
-						{#if source.setFilter}
-							<button data-shed="2" onclick={() => openFilter(m.e, m.i)}>Filtrer par « {col?.name} »…</button>
+						<button
+							onclick={() => {
+								menu = null;
+								clearSelection();
+							}}>Effacer le contenu</button
+						>
+					{/if}
+					{#if sortCount}
+						<hr />
+						{#if sortCount >= 3}
+							<Submenu label="Trier et filtrer">{@render sortItems()}</Submenu>
+						{:else}
+							{@render sortItems()}
 						{/if}
 					{/if}
-					{#if cols && source.clearFilters && m.e.t.columns.some((c) => c.filter)}
-						<button data-shed="2" onclick={() => menuAction(() => source.clearFilters!(m.e.t))}>Effacer le filtre du tableau</button>
-					{/if}
-					{#if !m.rowOnly && source.applyStyle}
+					{#if !m.rowOnly && (source.applyStyle || source.setSheetRules || source.setNote)}
 						<hr />
-						<button data-shed="1" onclick={() => openFormat()}>Format de cellule… <span class="keys">Ctrl+1</span></button>
-					{/if}
-					{#if cols && source.setSheetRules}
-						{#if !source.applyStyle}<hr />{/if}
-						<button data-shed="1" onclick={() => openRules(m.e, m.i)}>Mise en forme conditionnelle…</button>
-					{/if}
-					{#if !m.rowOnly && source.setNote}
-						{@render noteItems()}
-					{/if}
-					<hr />
-					{#if cols && source.setType && !col?.formula}
-						<!-- Le menu ▾ de la colonne (tri, filtre, type, clé), sous son en-tête. -->
-						<button data-shed="1" onclick={() => openFilter(m.e, m.i)}>Type de données et clé de « {col?.name} »…</button>
+						{#if source.applyStyle}
+							<button data-shed="1" onclick={() => openFormat()}>Format de cellule… <span class="keys">Ctrl+1</span></button>
+						{/if}
+						{#if source.setSheetRules}
+							<button data-shed="1" onclick={() => openRules(m.e, m.i)}>Mise en forme conditionnelle…</button>
+						{/if}
+						{#if source.setNote}{@render noteItems()}{/if}
 					{/if}
 					{#if cols}
+						<hr />
+						<div class="menu-title" data-shed="1" title={clipped(col?.name) ? col?.name : undefined}>Colonne « {clip(col?.name)} »</div>
+						{#if source.setType && !col?.formula}
+							<!-- Le menu ▾ de la colonne (tri, filtre, type, clé), sous son en-tête. -->
+							<button data-shed="1" onclick={() => openFilter(m.e, m.i)}>Type de données et clé…</button>
+						{/if}
 						<button data-shed="1"
 							onclick={() => {
 								const t = m.e.t;
@@ -8424,33 +8460,41 @@
 								menu = null;
 								moveTo(t.row, c);
 								startEdit(false);
-							}}>Renommer la colonne « {col?.name} »</button
+							}}>Renommer la colonne</button
 						>
 					{/if}
-					{#if cols && source.promoteHeader && m.e.t.rows > 0}
-						<button data-shed="1" onclick={() => menuAction(() => source.promoteHeader!(m.e.t))}>Utiliser la 1re ligne comme en-têtes</button>
-					{/if}
-					{#if cols && m.header && source.headerToTitle && m.e.t.rows > 0}
-						<button data-shed="1" title="L'en-tête devient un titre au-dessus du tableau ; la 1re ligne devient l'en-tête" onclick={() => menuAction(() => source.headerToTitle!(m.e.t))}>Sortir l'en-tête du tableau (c'est un titre)</button>
-					{/if}
-					{#if m.e.t.query && source.refreshTable}
-						{@const t = m.e.t}
+					{#if tableItems}
 						<hr />
-						<button data-shed="2" title="F5 dans le tableau" onclick={() => menuAction(() => source.refreshTable!(t))}>Actualiser « {t.query?.name} »</button>
-					{/if}
-					{#if cols && onsharedata && !m.e.t.query}
-						<button data-shed="2" title="Rendre ce tableau lisible depuis d'autres classeurs du serveur (catalogue des données d'entreprise)" onclick={() => { const n = m.e.t.name; menu = null; onsharedata(n); }}>Partager comme donnée d'entreprise…</button>
-					{/if}
-					{#if source.convertToRange}
-						<button data-shed="1" title="Le tableau devient des cellules libres, au même endroit" onclick={() => menuAction(() => source.convertToRange!(m.e.t))}>Convertir en plage</button>
-					{/if}
-					{#if source.deleteTables}
-						<button
-							onclick={() => {
-								if (m.e.t.rows + (m.e.t.hidden ?? 0) > CONFIRM_DELETE_ROWS) menu = { ...m, confirmDelete: true };
-								else deleteTable(m.e.t);
-							}}>Supprimer le tableau « {m.e.t.name} »</button
-						>
+						<Submenu label="Tableau">
+							{#if promote}
+								<button onclick={() => menuAction(() => source.promoteHeader!(m.e.t))}>Utiliser la 1re ligne comme en-têtes</button>
+							{/if}
+							{#if toTitle}
+								<button title="L'en-tête devient un titre au-dessus du tableau ; la 1re ligne devient l'en-tête" onclick={() => menuAction(() => source.headerToTitle!(m.e.t))}>Sortir l'en-tête (c'est un titre)</button>
+							{/if}
+							{#if toNote}
+								<button title="La ligne reste sous le tableau, comme note ou total, sans en faire partie" onclick={() => menuAction(() => source.rowToNote!(m.e.t, m.n))}>Sortir la dernière ligne (note)</button>
+							{/if}
+							{#if refresh}
+								{@const t = m.e.t}
+								<button title="Relance la requête « {t.query?.name} » (F5 dans le tableau)" onclick={() => menuAction(() => source.refreshTable!(t))}>Actualiser la requête</button>
+							{/if}
+							{#if share}
+								<button title="Rendre ce tableau lisible depuis d'autres classeurs du serveur (catalogue des données d'entreprise)" onclick={() => { const n = m.e.t.name; menu = null; onsharedata?.(n); }}>Partager comme donnée d'entreprise…</button>
+							{/if}
+							{#if source.convertToRange}
+								<button title="Le tableau devient des cellules libres, au même endroit" onclick={() => menuAction(() => source.convertToRange!(m.e.t))}>Convertir en plage</button>
+							{/if}
+							{#if source.deleteTables}
+								<hr />
+								<button
+									onclick={() => {
+										if (m.e.t.rows + (m.e.t.hidden ?? 0) > CONFIRM_DELETE_ROWS) menu = { ...m, confirmDelete: true };
+										else deleteTable(m.e.t);
+									}}>Supprimer le tableau</button
+								>
+							{/if}
+						</Submenu>
 					{/if}
 					{#if onask}
 						<hr />
@@ -8466,12 +8510,14 @@
 		{/if}
 		{#if hintMenu}
 			{@const m = hintMenu}
+			{@const name = m.e.t.columns[0]?.name}
 			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (hintMenu = null)}>
+				<div class="menu-title" title={clipped(name) ? name : undefined}>Colonne « {clip(name)} »</div>
 				<button
 					onclick={() => {
 						hintMenu = null;
 						acceptKeyHint(m.e);
-					}}>Faire de « {m.e.t.columns[0]?.name} » la clé du tableau</button
+					}}>En faire la clé du tableau</button
 				>
 				{#if source.dismissKeyHint}
 					{@const dismissHint = source.dismissKeyHint}
@@ -8521,40 +8567,42 @@
 						}}>Coller le bouton</button
 					>
 				{/if}
+				<hr />
 				{@render linesItems(m.kind, m.x, m.y)}
 				{#if !m.kind && source.setPivot}
 					{@const fp = pivotAt(active.row, active.col)}
 					{#if fp?.rows}
 						{@const info = pivotRowOf(fp, active.row)}
 						<hr />
-						<button disabled={!foldTarget(info, true)} onclick={() => foldPivot(fp, 'expand')}>Développer</button>
-						<button disabled={!foldTarget(info, false)} onclick={() => foldPivot(fp, 'collapse')}>Réduire</button>
-						<button data-shed="2" disabled={!canFoldAll(fp.rows, true)} onclick={() => foldPivot(fp, 'expandAll')}>Développer tout</button>
-						<button data-shed="2" disabled={!canFoldAll(fp.rows, false)} onclick={() => foldPivot(fp, 'collapseAll')}>Réduire tout</button>
+						<!-- Comme le sous-menu « Développer/Réduire » d'Excel. -->
+						<Submenu label="Développer / Réduire">
+							<button disabled={!foldTarget(info, true)} onclick={() => foldPivot(fp, 'expand')}>Développer</button>
+							<button disabled={!foldTarget(info, false)} onclick={() => foldPivot(fp, 'collapse')}>Réduire</button>
+							<hr />
+							<button disabled={!canFoldAll(fp.rows, true)} onclick={() => foldPivot(fp, 'expandAll')}>Développer tout</button>
+							<button disabled={!canFoldAll(fp.rows, false)} onclick={() => foldPivot(fp, 'collapseAll')}>Réduire tout</button>
+						</Submenu>
 					{/if}
 				{/if}
-				<hr />
-				<button
-					onclick={() => {
-						freeMenu = null;
-						clearSelection();
-					}}>Effacer le contenu</button
-				>
 				{#if !m.kind}
-					{#if source.applyStyle}
+					{@const join = !!source.joinTable && keptOut(active.row, active.col)}
+					{@const asTable = !!source.formatAsTable && inRangeZone(active.row, active.col)}
+					{#if source.applyStyle || source.setNote}
 						<hr />
-						<button data-shed="1" onclick={() => openFormat()}>Format de cellule… <span class="keys">Ctrl+1</span></button>
+						{#if source.applyStyle}
+							<button data-shed="1" onclick={() => openFormat()}>Format de cellule… <span class="keys">Ctrl+1</span></button>
+						{/if}
+						{#if source.setNote}{@render noteItems()}{/if}
 					{/if}
-					{#if source.setNote}{@render noteItems()}{/if}
-					{#if source.joinTable && keptOut(active.row, active.col)}
+					{#if join || asTable}
 						{@const at = { row: active.row, col: active.col }}
 						<hr />
-						<button data-shed="1" title="Cette cellule est gardée hors du tableau voisin (note, total) ; elle le rejoint" onclick={() => menuAction(() => source.joinTable!(at.row, at.col))}>Ajouter au tableau</button>
-					{/if}
-					{#if source.formatAsTable && inRangeZone(active.row, active.col)}
-						{@const at = { row: active.row, col: active.col }}
-						<hr />
-						<button data-shed="1" title="La plage redevient un tableau (sa première ligne donne les en-têtes)" onclick={() => menuAction(() => source.formatAsTable!(at.row, at.col))}>Mettre sous forme de tableau</button>
+						{#if join}
+							<button data-shed="1" title="Cette cellule est gardée hors du tableau voisin (note, total) ; elle le rejoint" onclick={() => menuAction(() => source.joinTable!(at.row, at.col))}>Ajouter au tableau</button>
+						{/if}
+						{#if asTable}
+							<button data-shed="1" title="La plage redevient un tableau (sa première ligne donne les en-têtes)" onclick={() => menuAction(() => source.formatAsTable!(at.row, at.col))}>Mettre sous forme de tableau</button>
+						{/if}
 					{/if}
 				{/if}
 				{#if onask}
@@ -8771,7 +8819,7 @@
 						</select>
 					</label>
 				{:else}
-					<div class="menu-title">« {d.field} »{d.kind === 'filter' ? ' · filtre du rapport' : ''}</div>
+					<div class="menu-title" title={clipped(d.field) ? d.field : undefined}>« {clip(d.field)} »{d.kind === 'filter' ? ' · filtre du rapport' : ''}</div>
 				{/if}
 				{#if d.kind === 'rows'}
 					<button class="sort" class:on={d.p.config.sort?.[d.field] === 'asc'} onclick={() => sortPivot('asc')}>Trier de A à Z</button>
@@ -8837,7 +8885,7 @@
 					if (ev.key === 'Enter' && !(ev.target instanceof HTMLButtonElement)) applyFilter();
 				}}
 			>
-				<div class="menu-title">« {fcol?.name} »</div>
+				<div class="menu-title" title={clipped(fcol?.name) ? fcol?.name : undefined}>« {clip(fcol?.name)} »</div>
 				{#if source.sortTable}
 					<!-- Tri en haut du panneau, comme Excel. -->
 					<button
@@ -9469,6 +9517,12 @@
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 		padding: 4px 0;
 		min-width: 240px;
+		max-width: 320px; /* MENU_MAX_WIDTH : au-delà, les libellés s'abrègent (…) */
+	}
+	.menu > .menu-title {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 	.rules {
 		position: absolute;
@@ -9802,6 +9856,13 @@
 		border: none;
 		font: inherit;
 		cursor: pointer;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.menu button:disabled {
+		color: #9aa0a6;
+		cursor: default;
 	}
 	.menu button:hover {
 		background: #e3efe7;

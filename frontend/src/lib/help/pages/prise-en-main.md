@@ -8,7 +8,7 @@ Tapez quelques lignes n'importe où sur la feuille : une ligne d'en-têtes, puis
 
 - Il faut au moins deux colonnes sur deux lignes (trois cases remplies d'un carré de 2 × 2) : une liste d'une seule colonne, ou une ligne seule, reste en cellules libres.
 - Une ligne tapée juste sous un tableau l'agrandit ; une colonne tapée juste à droite aussi.
-- Un bloc collé depuis Excel ou un autre logiciel devient un tableau. Sans ligne d'en-têtes, clic droit › « Utiliser la 1re ligne comme en-têtes ».
+- Un bloc collé depuis Excel ou un autre logiciel devient un tableau. Sans ligne d'en-têtes, clic droit › Tableau › « Utiliser la 1re ligne comme en-têtes ».
 - Glissez un tableau à côté d'un autre pour les fusionner.
 - Ce qui n'est pas dans un tableau reste une **cellule libre**, comme dans Excel : un titre, un paramètre, un total.
 

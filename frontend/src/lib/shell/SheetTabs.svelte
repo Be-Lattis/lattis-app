@@ -8,6 +8,8 @@
 	// ferme sur Échap, sur un clic ailleurs et quand la fenêtre change de taille.
 	import Icon from '#lib/icons/Icon.svelte';
 	import { dismiss } from '#lib/grid/dismiss.js';
+	import Submenu from '#lib/ui/Submenu.svelte';
+	import { clip, clipped } from '#lib/ui/menu.js';
 	import { cycle, modal } from '#lib/ui/focus.js';
 	import { sheetNameProblem, refusedName } from '#lib/ui/names.js';
 	import { nameAlertOpen, refuseName } from '#lib/ui/nameAlert.js';
@@ -101,14 +103,12 @@
 	// Renommage envoyé, réponse attendue : ni second envoi ni abandon.
 	let renameBusy = false;
 	let menu = $state<{ id: number; x: number } | null>(null);
-	let colors = $state(false);
 	// Dialogues « Déplacer ou copier » et « Afficher ».
 	let moving = $state<{ id: number; before: number | null; copy: boolean } | null>(null);
 	let unhiding = $state<number | null>(null);
 
 	function closeMenu() {
 		menu = null;
-		colors = false;
 	}
 
 	function confirmMove() {
@@ -344,7 +344,6 @@
 				oncontextmenu={(e) => {
 					e.preventDefault();
 					if (del || rename || insert || onprotect || copy || color || hide) {
-						colors = false;
 						menu = { id: s.id, x: (e.currentTarget as HTMLElement).offsetLeft };
 					}
 				}}
@@ -424,35 +423,41 @@
 		{@const m = menu}
 		{@const ms = sheets.find((x) => x.id === m.id)}
 		<div class="menu" role="menu" style:left="{m.x}px" use:dismiss={closeMenu}>
-			<button
-				role="menuitem"
-				disabled={!oninsert}
-				onclick={() => {
-					const id = m.id;
-					closeMenu();
-					oninsert?.(id);
-				}}><span class="ic"><Icon name="sheet" size={16} /></span>Insérer une feuille</button
-			>
-			{#if page}
-			<button
-				role="menuitem"
-				disabled={!onpage}
-				onclick={() => {
-					const id = m.id;
-					closeMenu();
-					onpage?.(id);
-				}}><span class="ic"><Icon name="web" size={16} /></span>Insérer une page web</button
-			>
-			{/if}
-			<button
-				role="menuitem"
-				disabled={!ondocpage}
-				onclick={() => {
-					const id = m.id;
-					closeMenu();
-					ondocpage?.(id);
-				}}><span class="ic"><Icon name="document" size={16} /></span>Insérer un document</button
-			>
+			<div class="menu-title" title={!group?.has(m.id) && clipped(ms?.name) ? ms?.name : undefined}>{group?.has(m.id) ? `${group.size} feuilles sélectionnées` : `Feuille « ${clip(ms?.name)} »`}</div>
+			<!-- Comme Excel : insérer ; la feuille (supprimer, renommer, déplacer) ; protection et couleur ; affichage. -->
+			<Submenu label="Insérer" disabled={!oninsert && !onpage && !ondocpage}>
+				{#snippet icon()}<span class="ic"><Icon name="sheet" size={16} /></span>{/snippet}
+				<button
+					role="menuitem"
+					disabled={!oninsert}
+					onclick={() => {
+						const id = m.id;
+						closeMenu();
+						oninsert?.(id);
+					}}><span class="ic"><Icon name="sheet" size={16} /></span>Feuille</button
+				>
+				{#if page}
+					<button
+						role="menuitem"
+						disabled={!onpage}
+						onclick={() => {
+							const id = m.id;
+							closeMenu();
+							onpage?.(id);
+						}}><span class="ic"><Icon name="web" size={16} /></span>Page web</button
+					>
+				{/if}
+				<button
+					role="menuitem"
+					disabled={!ondocpage}
+					onclick={() => {
+						const id = m.id;
+						closeMenu();
+						ondocpage?.(id);
+					}}><span class="ic"><Icon name="document" size={16} /></span>Document</button
+				>
+			</Submenu>
+			<hr />
 			{#if group?.has(m.id)}
 				<button
 					role="menuitem"
@@ -505,40 +510,34 @@
 				}}
 				><span class="ic"><Icon name={ms?.protected ? 'unlock' : 'lock-sheet'} size={16} /></span>{ms?.protected ? 'Ôter la protection de la feuille…' : 'Protéger la feuille…'}</button
 			>
-			<div class="sub-wrap" role="none" onmouseenter={() => oncolor && (colors = true)} onmouseleave={() => (colors = false)}>
-				<button role="menuitem" aria-haspopup="true" aria-expanded={colors} disabled={!oncolor} onclick={() => (colors = true)}
-					><span class="ic"><Icon name="tab-color" size={16} /></span><span class="label">Couleur d'onglet</span><span class="arrow">▸</span></button
-				>
-				{#if colors && oncolor}
-					<div class="menu colors" role="menu" aria-label="Couleur d'onglet">
-						<div class="swatches">
-							{#each TAB_COLORS as c (c)}
-								<button
-									class="swatch"
-									class:sel={ms?.color === c}
-									style:background={c}
-									title={c}
-									aria-label="Couleur {c}"
-									onclick={() => {
-										const id = m.id;
-										closeMenu();
-										oncolor?.(id, c);
-									}}
-								></button>
-							{/each}
-						</div>
+			<Submenu label="Couleur d'onglet" disabled={!oncolor}>
+				{#snippet icon()}<span class="ic"><Icon name="tab-color" size={16} /></span>{/snippet}
+				<div class="swatches">
+					{#each TAB_COLORS as c (c)}
 						<button
-							role="menuitem"
-							disabled={!ms?.color}
+							class="swatch"
+							class:sel={ms?.color === c}
+							style:background={c}
+							title={c}
+							aria-label="Couleur {c}"
 							onclick={() => {
 								const id = m.id;
 								closeMenu();
-								oncolor?.(id, '');
-							}}><span class="ic"><Icon name="no-color" size={16} /></span>Aucune couleur</button
-						>
-					</div>
-				{/if}
-			</div>
+								oncolor?.(id, c);
+							}}
+						></button>
+					{/each}
+				</div>
+				<button
+					role="menuitem"
+					disabled={!ms?.color}
+					onclick={() => {
+						const id = m.id;
+						closeMenu();
+						oncolor?.(id, '');
+					}}><span class="ic"><Icon name="no-color" size={16} /></span>Aucune couleur</button
+				>
+			</Submenu>
 			<hr />
 			<button
 				role="menuitem"
@@ -823,6 +822,16 @@
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 		padding: 4px 0;
 		min-width: 140px;
+		max-width: 320px; /* MENU_MAX_WIDTH */
+		--menu-item-padding: 6px 14px 6px 10px; /* entrées des sous-menus (Submenu) */
+	}
+	.menu-title {
+		padding: 4px 14px 4px 10px;
+		font-size: 11px;
+		color: #6b7280;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 	.menu button {
 		display: flex;
@@ -859,21 +868,6 @@
 		border: none;
 		border-top: 1px solid #e5e7eb;
 		margin: 4px 0;
-	}
-	.sub-wrap {
-		position: relative;
-	}
-	.sub-wrap .label {
-		flex: 1;
-	}
-	.arrow {
-		color: #6b7280;
-	}
-	.menu.colors {
-		left: 100%;
-		bottom: auto;
-		top: -4px;
-		min-width: 0;
 	}
 	.swatches {
 		display: grid;

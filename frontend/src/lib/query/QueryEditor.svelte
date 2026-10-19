@@ -12,6 +12,8 @@
 	import Icon from '#lib/icons/Icon.svelte';
 	import type { IconName } from '#lib/icons/icons.js';
 	import { dismiss } from '#lib/grid/dismiss.js';
+	import Submenu from '#lib/ui/Submenu.svelte';
+	import { clip, clipped } from '#lib/ui/menu.js';
 	import { typeIcon, typeIconName, type ColumnType } from '#lib/grid/format.js';
 	import StepForm from './StepForm.svelte';
 	import SourceForm from './SourceForm.svelte';
@@ -44,8 +46,8 @@
 	const shown = $derived(preview?.columns ?? []);
 	const chosen = $derived(shown.map((c) => c.name).filter((n) => selCols.includes(n)));
 	const onCol = $derived(shown.map((c) => selCols.includes(c.name)));
-	// Menu d'une colonne (▾ de l'en-tête ou clic droit), et son sous-menu ouvert.
-	let menu = $state<{ x: number; y: number; col: string; sub: '' | 'type' | 'format' } | null>(null);
+	// Menu d'une colonne (▾ de l'en-tête ou clic droit).
+	let menu = $state<{ x: number; y: number; col: string } | null>(null);
 	let form = $state<{ step: Step; cols: Column[]; edit: number | null } | null>(null);
 	const initialSource = () => editSource;
 	let sourceOpen = $state(initialSource());
@@ -175,7 +177,7 @@
 			selCols = [name];
 			anchor = name;
 		}
-		menu = { x, y, col: name, sub: '' };
+		menu = { x, y, col: name };
 	}
 
 	function onHeaderMenu(ev: MouseEvent, name: string) {
@@ -202,15 +204,6 @@
 	/** Garde un menu flottant dans la fenêtre. */
 	function inView(node: HTMLElement) {
 		const r = node.getBoundingClientRect();
-		if (node.classList.contains('sub')) {
-			// Sous-menu : à gauche du menu s'il déborde à droite.
-			if (r.right > window.innerWidth - 4) {
-				node.style.left = 'auto';
-				node.style.right = '100%';
-			}
-			if (r.bottom > window.innerHeight - 4) node.style.top = `${window.innerHeight - 4 - r.bottom - 5}px`;
-			return;
-		}
 		if (r.right > window.innerWidth - 4) node.style.left = `${Math.max(4, window.innerWidth - r.width - 4)}px`;
 		if (r.bottom > window.innerHeight - 4) node.style.top = `${Math.max(4, window.innerHeight - r.height - 4)}px`;
 	}
@@ -476,51 +469,39 @@
 	{@const many = chosen.length > 1 ? ` (${chosen.length} colonnes)` : ''}
 	<!-- Menu de la colonne, comme celui de Power Query : il agit sur les colonnes choisies. -->
 	<div class="menu" role="menu" tabindex="-1" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={closeMenu} use:inView>
-		<div class="menu-title">{one ? `« ${chosen[0]} »` : `${chosen.length} colonnes choisies`}</div>
-		<button role="menuitem" onclick={() => quick('remove')} onmouseenter={() => (m.sub = '')}><Icon name="delete-column" size={16} />Supprimer{many}</button>
-		<button role="menuitem" onclick={() => quick('keep')} onmouseenter={() => (m.sub = '')}><Icon name="choose-columns" size={16} />Supprimer les autres colonnes</button>
-		<button role="menuitem" onclick={() => quick('distinct')} onmouseenter={() => (m.sub = '')}><Icon name="remove-duplicates" size={16} />Supprimer les doublons</button>
+		<div class="menu-title" title={one && clipped(chosen[0]) ? chosen[0] : undefined}>{one ? `« ${clip(chosen[0])} »` : `${chosen.length} colonnes choisies`}</div>
+		<button role="menuitem" onclick={() => quick('remove')}><Icon name="delete-column" size={16} />Supprimer{many}</button>
+		<button role="menuitem" onclick={() => quick('keep')}><Icon name="choose-columns" size={16} />Supprimer les autres colonnes</button>
+		<button role="menuitem" onclick={() => quick('distinct')}><Icon name="remove-duplicates" size={16} />Supprimer les doublons</button>
 		<hr />
-		<button role="menuitem" disabled={!one} onclick={() => addStep('rename')} onmouseenter={() => (m.sub = '')}><Icon name="rename" size={16} />Renommer…</button>
-		<div class="sub-wrap">
-			<button role="menuitem" aria-haspopup="menu" aria-expanded={m.sub === 'type'} class:on={m.sub === 'type'} onclick={() => (m.sub = m.sub === 'type' ? '' : 'type')} onmouseenter={() => (m.sub = 'type')}>
-				<Icon name="convert-type" size={16} />Modifier le type<span class="sp"></span>▸
-			</button>
-			{#if m.sub === 'type'}
-				{@const cur = one ? shown.find((c) => c.name === chosen[0])?.type : undefined}
-				<div class="menu sub" role="menu" use:inView>
-					{#each TYPES as [t, label] (t)}
-						{@const ic = typeIconName(t as ColumnType)}
-						<button role="menuitemradio" aria-checked={cur === t} onclick={() => quick('type', t)}>
-							<span class="check">{cur === t ? '✓' : ''}</span><span class="type-icon">{#if ic}<Icon name={ic} size={14} />{:else}{typeIcon(t as ColumnType)}{/if}</span>{label}
-						</button>
-					{/each}
-				</div>
-			{/if}
-		</div>
-		<div class="sub-wrap">
-			<button role="menuitem" aria-haspopup="menu" aria-expanded={m.sub === 'format'} class:on={m.sub === 'format'} onclick={() => (m.sub = m.sub === 'format' ? '' : 'format')} onmouseenter={() => (m.sub = 'format')}>
-				<Icon name="text-format" size={16} />Format<span class="sp"></span>▸
-			</button>
-			{#if m.sub === 'format'}
-				<div class="menu sub" role="menu" use:inView>
-					<button role="menuitem" onclick={() => quick('transform', 'trim')}>Supprimer les espaces (SUPPRESPACE)</button>
-					<button role="menuitem" onclick={() => quick('transform', 'upper')}>MAJUSCULE</button>
-					<button role="menuitem" onclick={() => quick('transform', 'lower')}>minuscule</button>
-				</div>
-			{/if}
-		</div>
-		<button role="menuitem" disabled={!one} onclick={() => addStep('replace')} onmouseenter={() => (m.sub = '')}><Icon name="replace" size={16} />Remplacer les valeurs…</button>
-		<button role="menuitem" disabled={!one} onclick={() => addStep('split')} onmouseenter={() => (m.sub = '')}><Icon name="split-column" size={16} />Fractionner la colonne…</button>
+		<button role="menuitem" disabled={!one} onclick={() => addStep('rename')}><Icon name="rename" size={16} />Renommer…</button>
+		<Submenu label="Modifier le type">
+			{#snippet icon()}<Icon name="convert-type" size={16} />{/snippet}
+			{@const cur = one ? shown.find((c) => c.name === chosen[0])?.type : undefined}
+			{#each TYPES as [t, label] (t)}
+				{@const ic = typeIconName(t as ColumnType)}
+				<button role="menuitemradio" aria-checked={cur === t} onclick={() => quick('type', t)}>
+					<span class="check">{cur === t ? '✓' : ''}</span><span class="type-icon">{#if ic}<Icon name={ic} size={14} />{:else}{typeIcon(t as ColumnType)}{/if}</span>{label}
+				</button>
+			{/each}
+		</Submenu>
+		<Submenu label="Format">
+			{#snippet icon()}<Icon name="text-format" size={16} />{/snippet}
+			<button role="menuitem" onclick={() => quick('transform', 'trim')}>Supprimer les espaces (SUPPRESPACE)</button>
+			<button role="menuitem" onclick={() => quick('transform', 'upper')}>MAJUSCULE</button>
+			<button role="menuitem" onclick={() => quick('transform', 'lower')}>minuscule</button>
+		</Submenu>
+		<button role="menuitem" disabled={!one} onclick={() => addStep('replace')}><Icon name="replace" size={16} />Remplacer les valeurs…</button>
+		<button role="menuitem" disabled={!one} onclick={() => addStep('split')}><Icon name="split-column" size={16} />Fractionner la colonne…</button>
 		<hr />
-		<button role="menuitem" onclick={() => quick('sortAsc')} onmouseenter={() => (m.sub = '')}><Icon name="sort-asc" size={16} />Trier par ordre croissant</button>
-		<button role="menuitem" onclick={() => quick('sortDesc')} onmouseenter={() => (m.sub = '')}><Icon name="sort-desc" size={16} />Trier par ordre décroissant</button>
-		<button role="menuitem" disabled={!one} onclick={() => addStep('filter')} onmouseenter={() => (m.sub = '')}><Icon name="filter" size={16} />Filtrer les lignes…</button>
+		<button role="menuitem" onclick={() => quick('sortAsc')}><Icon name="sort-asc" size={16} />Trier par ordre croissant</button>
+		<button role="menuitem" onclick={() => quick('sortDesc')}><Icon name="sort-desc" size={16} />Trier par ordre décroissant</button>
+		<button role="menuitem" disabled={!one} onclick={() => addStep('filter')}><Icon name="filter" size={16} />Filtrer les lignes…</button>
 		<hr />
-		<button role="menuitem" onclick={() => addStep('group')} onmouseenter={() => (m.sub = '')}><Icon name="group-by" size={16} />Regrouper par…</button>
-		<button role="menuitem" onclick={() => quick('unpivot')} onmouseenter={() => (m.sub = '')}><Icon name="unpivot" size={16} />Dépivoter les colonnes</button>
-		<button role="menuitem" disabled={chosen.length >= shown.length} onclick={() => quick('unpivotOthers')} onmouseenter={() => (m.sub = '')}><Icon name="unpivot" size={16} />Dépivoter les autres colonnes</button>
-		<button role="menuitem" disabled={!one} onclick={() => addStep('pivot')} onmouseenter={() => (m.sub = '')}><Icon name="pivot-column" size={16} />Pivoter la colonne…</button>
+		<button role="menuitem" onclick={() => addStep('group')}><Icon name="group-by" size={16} />Regrouper par…</button>
+		<button role="menuitem" onclick={() => quick('unpivot')}><Icon name="unpivot" size={16} />Dépivoter les colonnes</button>
+		<button role="menuitem" disabled={chosen.length >= shown.length} onclick={() => quick('unpivotOthers')}><Icon name="unpivot" size={16} />Dépivoter les autres colonnes</button>
+		<button role="menuitem" disabled={!one} onclick={() => addStep('pivot')}><Icon name="pivot-column" size={16} />Pivoter la colonne…</button>
 	</div>
 {/if}
 {#if form}
@@ -711,18 +692,11 @@
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 		padding: 4px 0;
 		min-width: 240px;
+		max-width: 320px; /* MENU_MAX_WIDTH */
 		font-size: 12px;
 		color: #1f2328;
 		--icon-accent: #217346;
-	}
-	.menu.sub {
-		position: absolute;
-		left: 100%;
-		top: -5px;
-		min-width: 200px;
-	}
-	.sub-wrap {
-		position: relative;
+		--menu-item-padding: 5px 14px 5px 10px; /* entrées des sous-menus (Submenu) */
 	}
 	.menu-title {
 		padding: 4px 14px;
@@ -731,7 +705,6 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
-		max-width: 320px;
 	}
 	.menu button {
 		display: flex;
@@ -747,17 +720,13 @@
 		color: #1f2328;
 		white-space: nowrap;
 	}
-	.menu button:hover:not(:disabled),
-	.menu button.on {
+	.menu button:hover:not(:disabled) {
 		background: #e3efe7;
 	}
 	.menu button:disabled {
 		color: #9aa0a6;
 		opacity: 1;
 		--icon-accent: currentColor;
-	}
-	.menu .sp {
-		flex: 1;
 	}
 	.menu hr {
 		border: none;

@@ -108,7 +108,7 @@ function tidySeparators(node: HTMLElement) {
  * Partie visible pour un nœud : la fenêtre, réduite par ses parents qui
  * coupent ce qui dépasse (overflow autre que visible), comme la grille.
  */
-function visibleBox(node: HTMLElement): { left: number; top: number; right: number; bottom: number } {
+export function visibleBox(node: HTMLElement): { left: number; top: number; right: number; bottom: number } {
 	const b = { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
 	// Un nœud fixe n'est coupé par personne ; un nœud absolu, seulement à partir
 	// de son bloc conteneur.

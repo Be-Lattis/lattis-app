@@ -28,6 +28,8 @@
 	import { DEFAULT_NAME_HINT, isDefaultTableName } from '#lib/grid/defaultname.js';
 	import { example, isReadOnly, type ExampleKind } from '#lib/sql/examples.js';
 	import { dismiss } from '#lib/grid/dismiss.js';
+	import { clip, clipped } from '#lib/ui/menu.js';
+	import Submenu from '#lib/ui/Submenu.svelte';
 	import { favoriteNameProblem, refusedName, tableNameProblem } from '#lib/ui/names.js';
 	import { nameAlertOpen, refuseName } from '#lib/ui/nameAlert.js';
 	import Icon from '#lib/icons/Icon.svelte';
@@ -477,16 +479,19 @@
 			{#if objMenu}
 				{@const m = objMenu}
 				<div class="ctx" role="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (objMenu = null)}>
-					<button role="menuitem" title="Remplace la requête par un exemple de lecture" onclick={() => showExample(m.o, 'select')}>SELECT</button>
+					<div class="ctx-title" title={clipped(m.o.name) ? m.o.name : undefined}>{isReadOnly(m.o) ? 'Tableau croisé' : 'Tableau'} « {clip(m.o.name)} »</div>
 					{#if exec && !isReadOnly(m.o)}
-						<button role="menuitem" title="Remplace la requête par un exemple d'ajout de ligne" onclick={() => showExample(m.o, 'insert')}>INSERT</button>
-						<button role="menuitem" title="Remplace la requête par un exemple de modification" onclick={() => showExample(m.o, 'update')}>UPDATE</button>
-						<button role="menuitem" title="Remplace la requête par un exemple de suppression" onclick={() => showExample(m.o, 'delete')}>DELETE</button>
+						<!-- Exemples de requête : sous-menu (SELECT, INSERT, UPDATE, DELETE). -->
+						<Submenu label="Exemple de requête">
+							<button role="menuitem" title="Remplace la requête par un exemple de lecture" onclick={() => showExample(m.o, 'select')}>SELECT</button>
+							<button role="menuitem" title="Remplace la requête par un exemple d'ajout de ligne" onclick={() => showExample(m.o, 'insert')}>INSERT</button>
+							<button role="menuitem" title="Remplace la requête par un exemple de modification" onclick={() => showExample(m.o, 'update')}>UPDATE</button>
+							<button role="menuitem" title="Remplace la requête par un exemple de suppression" onclick={() => showExample(m.o, 'delete')}>DELETE</button>
+						</Submenu>
+					{:else}
+						<button role="menuitem" title="Remplace la requête par un exemple de lecture" onclick={() => showExample(m.o, 'select')}>Exemple SELECT</button>
 					{/if}
 					<hr />
-					{#if onrename && !isReadOnly(m.o)}
-						<button role="menuitem" onclick={() => startTblRen(m.o)}>Renommer… (F2)</button>
-					{/if}
 					<button
 						role="menuitem"
 						onclick={() => {
@@ -496,6 +501,9 @@
 							ongoto(name);
 						}}>Voir sur la feuille</button
 					>
+					{#if onrename && !isReadOnly(m.o)}
+						<button role="menuitem" onclick={() => startTblRen(m.o)}>Renommer… <span class="keys">F2</span></button>
+					{/if}
 				</div>
 			{/if}
 		{:else if panel === 'favorites'}
@@ -667,11 +675,20 @@
 		display: flex;
 		flex-direction: column;
 		min-width: 180px;
+		max-width: 320px; /* MENU_MAX_WIDTH */
 		padding: 4px 0;
 		background: #fff;
 		border: 1px solid #d4d7db;
 		border-radius: var(--float-radius);
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	}
+	.ctx-title {
+		padding: 4px 14px;
+		font-size: 11px;
+		color: #6b7280;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 	.ctx button {
 		text-align: left;
@@ -680,6 +697,15 @@
 		font: inherit;
 		padding: 6px 14px;
 		cursor: pointer;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.ctx .keys {
+		float: right;
+		margin-left: 16px;
+		color: #6b7280;
+		font-size: 12px;
 	}
 	.ctx button:hover {
 		background: #e3efe7;

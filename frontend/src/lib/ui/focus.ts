@@ -236,7 +236,9 @@ export function menuKeys(node: HTMLElement): () => void {
 		const a = document.activeElement as HTMLElement | null;
 		if (node.contains(a) && isTextField(a)) return; // saisie dans le menu
 		if (a?.getAttribute('aria-haspopup') === 'listbox') return; // liste déroulante (Select) : elle a ses touches
-		const items = menuItems(node);
+		// Sous-menu ouvert (Submenu) : les flèches parcourent celui qui a le focus, pas ceux qu'il contient.
+		const scope = (a && node.contains(a) ? a.parentElement?.closest<HTMLElement>('[role="menu"]') : null) ?? node;
+		const items = menuItems(scope).filter((el) => el.parentElement?.closest('[role="menu"]') === scope);
 		if (!items.length) return;
 		const cur = items.indexOf(a as HTMLElement);
 		let to = -1;

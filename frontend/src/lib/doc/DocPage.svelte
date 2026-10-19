@@ -16,6 +16,7 @@
 	import { encodeObj, objFromText, type ObjClip } from '#lib/clip/objects.js';
 	import PivotPanel from '#lib/grid/PivotPanel.svelte';
 	import { dismiss } from '#lib/grid/dismiss.js';
+	import Submenu from '#lib/ui/Submenu.svelte';
 	import { resizePanel } from '#lib/ui/resize.js';
 	import { panelKeys } from '#lib/ui/focus.js';
 	import HelpLink from '#lib/help/HelpLink.svelte';
@@ -563,8 +564,6 @@
 
 	type Menu = { x: number; y: number; kind: 'chart' | 'pivot' | 'button' | 'control' | 'text'; index: number };
 	let menu = $state<Menu | null>(null);
-	// « Autres graphiques » déplié dans le menu contextuel.
-	let moreCharts = $state(false);
 	let clip = $state(docClip.item);
 
 	/** Graphique ou tableau croisé à la position index, pour le presse-papiers (feuilles comprises). */
@@ -650,7 +649,6 @@
 
 	function closeMenu() {
 		menu = null;
-		moreCharts = false;
 		markSelected();
 	}
 
@@ -1125,20 +1123,22 @@
 			<button disabled={!!locked} onclick={() => act(() => command('cut'))}>Couper</button>
 			<button onclick={() => act(() => command('copy'))}>Copier</button>
 			<button disabled={!!locked} onclick={() => act(() => command('paste'))}>Coller</button>
-			<div class="menu-hint">Maj + clic droit : suggestions d’orthographe</div>
 			{#if clip}<button disabled={!!locked} onclick={() => act(() => pasteItem(m.index))}>Coller l’élément ({clip.type === CHART_BLOT ? 'graphique' : clip.type === PIVOT_BLOT ? 'tableau croisé' : clip.type === CONTROL_BLOT ? 'contrôle' : 'bouton'})</button>{/if}
+			<div class="menu-hint">Maj + clic droit : suggestions d’orthographe</div>
 			<hr />
 			<div class="menu-title">Insérer</div>
-			<button disabled={!!locked} onclick={() => act(() => insertChart('bar'))}><Icon name="chart-bar" size={14} />Graphique en barres</button>
-			<button disabled={!!locked} onclick={() => act(() => insertChart('line'))}><Icon name="chart-line" size={14} />Graphique en courbes</button>
-			<button disabled={!!locked} onclick={() => act(() => insertChart('pie'))}><Icon name="chart-pie" size={14} />Graphique en secteurs</button>
-			<button disabled={!!locked} onclick={() => act(() => insertChart('scatter'))}><Icon name="chart-scatter" size={14} />Nuage de points</button>
-			<button disabled={!!locked} onclick={(e) => { e.stopPropagation(); moreCharts = !moreCharts; }}><Icon name="chart-more" size={14} />Autres graphiques {moreCharts ? '▾' : '▸'}</button>
-			{#if moreCharts}
+			<!-- Les graphiques dans un sous-menu (les courants, puis les autres), comme Excel. -->
+			<Submenu label="Graphique" disabled={!!locked}>
+				{#snippet icon()}<Icon name="chart-bar" size={14} />{/snippet}
+				<button onclick={() => act(() => insertChart('bar'))}><Icon name="chart-bar" size={14} />Barres</button>
+				<button onclick={() => act(() => insertChart('line'))}><Icon name="chart-line" size={14} />Courbes</button>
+				<button onclick={() => act(() => insertChart('pie'))}><Icon name="chart-pie" size={14} />Secteurs</button>
+				<button onclick={() => act(() => insertChart('scatter'))}><Icon name="chart-scatter" size={14} />Nuage de points</button>
+				<hr />
 				{#each MORE_KINDS as k (k.kind)}
-					<button class="sub" disabled={!!locked} title={k.hint} onclick={() => act(() => insertChart(k.kind))}><Icon name={k.icon} size={14} />{k.label}</button>
+					<button title={k.hint} onclick={() => act(() => insertChart(k.kind))}><Icon name={k.icon} size={14} />{k.label}</button>
 				{/each}
-			{/if}
+			</Submenu>
 			<button disabled={!!locked} onclick={() => act(insertPivot)}><Icon name="pivot-table" size={14} />Tableau croisé dynamique</button>
 			<button disabled={!!locked} onclick={() => act(insertButton)}><Icon name="button" size={14} />Bouton</button>
 			{#if controls}<button disabled={!!locked} onclick={() => act(() => insertControl('input'))}><Icon name="text-input" size={14} />Champ (texte, case, liste, fichier)…</button>{/if}
@@ -1147,17 +1147,17 @@
 		{:else}
 			{@const label = m.kind === 'chart' ? 'Graphique' : m.kind === 'pivot' ? 'Tableau croisé' : m.kind === 'control' ? 'Contrôle' : 'Bouton'}
 			<div class="menu-title">{label}</div>
+			<button disabled={!!locked} onclick={() => act(() => copyItem(m.kind as 'chart', m.index, true))}>Couper</button>
+			<button onclick={() => act(() => copyItem(m.kind as 'chart', m.index, false))}>Copier</button>
+			<button disabled={!clip || !!locked} onclick={() => act(() => pasteItem(m.index + 1))}>Coller l’élément après</button>
+			<hr />
 			{#if m.kind === 'button'}
 				{@const b = embedAt(m.index, BUTTON_BLOT) as DocButtonConfig | null}
 				{#if b?.script}<button onclick={() => act(() => runButton(b))}>Exécuter l’action</button>{/if}
 			{/if}
 			<button onclick={() => act(() => (m.kind === 'control' ? editControl(m.index) : openPanel({ kind: m.kind as 'chart' | 'pivot' | 'button', index: m.index })))}>Modifier…</button>
 			<hr />
-			<button disabled={!!locked} onclick={() => act(() => copyItem(m.kind as 'chart', m.index, true))}>Couper</button>
-			<button onclick={() => act(() => copyItem(m.kind as 'chart', m.index, false))}>Copier</button>
-			<button disabled={!clip || !!locked} onclick={() => act(() => pasteItem(m.index + 1))}>Coller l’élément après</button>
-			<hr />
-			<button disabled={!!locked} onclick={() => act(() => deleteEmbed(m.index))}>Supprimer {m.kind === 'chart' ? 'le graphique' : m.kind === 'pivot' ? 'le tableau croisé' : m.kind === 'control' ? 'le contrôle' : 'le bouton'}</button>
+			<button disabled={!!locked} onclick={() => act(() => deleteEmbed(m.index))}>Supprimer</button>
 		{/if}
 	</div>
 {/if}
@@ -1172,15 +1172,21 @@
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 		padding: 4px 0;
 		min-width: 220px;
+		max-width: 320px; /* MENU_MAX_WIDTH */
 		font: 13px 'Segoe UI', system-ui, -apple-system, sans-serif;
+		--menu-hover: #e8f1ec; /* sous-menus (Submenu) */
 	}
 	.menu-title {
 		padding: 4px 14px;
 		font-size: 11px;
 		color: #6b7280;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 	.menu button {
 		display: flex;
+		align-items: center;
 		width: 100%;
 		text-align: left;
 		padding: 6px 14px;
@@ -1188,14 +1194,12 @@
 		border: none;
 		border-radius: 0;
 		gap: 8px;
+		white-space: nowrap;
 	}
 	.menu-hint {
 		padding: 0 14px 4px;
 		font-size: 11px;
 		color: #6b7280;
-	}
-	.menu button.sub {
-		padding-left: 28px;
 	}
 	.menu button:hover:not(:disabled) {
 		background: #e8f1ec;

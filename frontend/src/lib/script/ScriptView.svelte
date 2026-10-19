@@ -34,6 +34,7 @@
 	import { bracketMatching } from '@codemirror/language';
 	import { autocompletion, closeBrackets, completionKeymap } from '@codemirror/autocomplete';
 	import { dismiss } from '#lib/grid/dismiss.js';
+	import { clip, clipped } from '#lib/ui/menu.js';
 	import { refusedName, scriptNameProblem } from '#lib/ui/names.js';
 	import { nameAlertOpen, refuseName } from '#lib/ui/nameAlert.js';
 	import Icon from '#lib/icons/Icon.svelte';
@@ -417,6 +418,7 @@ end
 	{#if menu}
 		{@const m = menu}
 		<div class="ctx" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (menu = null)}>
+			<div class="ctx-title" title={clipped(m.s.name) ? m.s.name : undefined}>Script « {clip(m.s.name)} »</div>
 			<button
 				onclick={() => {
 					menu = null;
@@ -424,6 +426,7 @@ end
 				}}>Renommer</button
 			>
 			<button onclick={() => duplicate(m.s)}>Dupliquer</button>
+			<hr />
 			<button onclick={() => removeScript(m.s)}>Supprimer</button>
 		</div>
 	{/if}
@@ -526,11 +529,20 @@ end
 		display: flex;
 		flex-direction: column;
 		min-width: 160px;
+		max-width: 320px; /* MENU_MAX_WIDTH */
 		padding: 4px 0;
 		background: #fff;
 		border: 1px solid #d4d7db;
 		border-radius: var(--float-radius);
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	}
+	.ctx-title {
+		padding: 4px 14px;
+		font-size: 11px;
+		color: #6b7280;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 	.ctx button {
 		text-align: left;
@@ -539,9 +551,17 @@ end
 		font: inherit;
 		padding: 6px 14px;
 		cursor: pointer;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 	.ctx button:hover {
 		background: #e3efe7;
+	}
+	.ctx hr {
+		border: none;
+		border-top: 1px solid #e3e5e8;
+		margin: 4px 0;
 	}
 	.library .new {
 		display: flex;
