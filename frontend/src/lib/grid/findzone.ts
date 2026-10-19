@@ -24,9 +24,9 @@ export function inZone(h: Hit, z: Zone | null): boolean {
 	return !z || (h.row >= z.r0 && h.row <= z.r1 && h.col >= z.c0 && h.col <= z.c1);
 }
 
-/** Clé de cache d'une recherche : texte et zone. */
-export function findKey(text: string, z: Zone | null): string {
-	return z ? `${text}\u0000${z.r0},${z.c0},${z.r1},${z.c1}` : text;
+/** Clé de cache d'une recherche : feuille, texte et zone. */
+export function findKey(text: string, z: Zone | null, sheet = 0): string {
+	return `${sheet}\u0000${text}` + (z ? `\u0000${z.r0},${z.c0},${z.r1},${z.c1}` : '');
 }
 
 /**

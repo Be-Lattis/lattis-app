@@ -28,6 +28,10 @@ describe('findKey', () => {
 		expect(findKey('a', null)).not.toBe(findKey('a', { r0: 0, c0: 0, r1: 1, c1: 1 }));
 		expect(findKey('a', { r0: 0, c0: 0, r1: 1, c1: 1 })).not.toBe(findKey('a', { r0: 0, c0: 0, r1: 2, c1: 1 }));
 	});
+	it('distingue la feuille (occurrences d’une autre feuille oubliées)', () => {
+		expect(findKey('a', null, 1)).not.toBe(findKey('a', null, 2));
+		expect(findKey('a', null, 1)).toBe(findKey('a', null, 1));
+	});
 });
 
 describe('nextHit', () => {

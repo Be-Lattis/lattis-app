@@ -859,6 +859,12 @@
 		const placedBefore = placedSheet === (d.sheet ?? 0) ? placed() : null;
 		// Navigation (ouverture, autre feuille) : rien ne s'anime.
 		const nav = placedSheet !== (d.sheet ?? 0);
+		// Recherche : occurrences relues après une saisie, un Ctrl+Z, une actualisation ou sur une autre feuille.
+		matchKey = '';
+		if (nav && finder) {
+			finder.at = null;
+			finder.info = '';
+		}
 		const oldCharts = new Set(charts.map((c) => c.id));
 		entries =d.tables.map((t) => {
 			const e = old.get(t.id);
@@ -7294,7 +7300,7 @@
 	/** Occurrences du texte cherché dans la zone (relues si le texte ou la zone a changé). */
 	async function findAll(zone: Zone | null) {
 		if (!finder || !source.find) return;
-		const k = findKey(finder.text, zone);
+		const k = findKey(finder.text, zone, data.sheet ?? 0);
 		if (k !== matchKey) {
 			matches = await source.find(finder.text, zone);
 			matchKey = k;
