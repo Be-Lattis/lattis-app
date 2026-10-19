@@ -99,7 +99,7 @@ describe('plan du volet Regrouper', () => {
 			'2 formules ou objets citent les anciens tableaux sans équivalent exact : à reprendre à la main (les anciens onglets sont gardés masqués)'
 		]);
 		expect(previewWarnings({ refused: 'feuille protégée', pending: [] } as unknown as MergePreview)).toEqual(['Impossible de regrouper : feuille protégée']);
-		const kept = '« Janvier » gardée : elle contient aussi le tableau Remises (à supprimer à la main si besoin)';
+		const kept = '« Janvier » gardée (onglet en orange) : elle contient aussi le tableau Remises (à supprimer à la main si besoin)';
 		expect(previewWarnings({ refused: '', pending: [], kept: [kept] } as unknown as MergePreview)).toEqual([kept]);
 	});
 

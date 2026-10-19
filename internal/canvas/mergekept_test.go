@@ -26,12 +26,14 @@ func TestMergeSheetsKeptSheets(t *testing.T) {
 			}
 		}
 	}
+	// Une couleur déjà posée est remplacée par l'orange ; l'annulation la rend.
+	must(t, d.SetSheetColor(ctx, sheets[0], "#0070c0"))
 	plan := MergePlan{Tables: tables, Name: "Ventes", Old: MergeOldDelete}
 	p, err := d.MergePreview(ctx, plan)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(p.Kept) != 1 || !strings.Contains(p.Kept[0], "« Janvier » gardée") || !strings.Contains(p.Kept[0], "le tableau Tableau1") {
+	if len(p.Kept) != 1 || !strings.Contains(p.Kept[0], "« Janvier » gardée (onglet en orange)") || !strings.Contains(p.Kept[0], "le tableau Tableau1") {
 		t.Fatalf("aperçu, onglets gardés : %q", p.Kept)
 	}
 	res, err := d.MergeSheets(ctx, plan)
@@ -50,6 +52,19 @@ func TestMergeSheetsKeptSheets(t *testing.T) {
 	if !slices.Equal(names, []string{"Ventes", "Janvier"}) {
 		t.Fatalf("onglets : %v", names)
 	}
+	if s := l.Sheets[1]; s.Color != KeptSheetColor || s.Hidden {
+		t.Fatalf("onglet gardé : %+v", s)
+	}
+	_, err = d.bus.Undo(ctx)
+	must(t, err)
+	l, _ = d.Layout(ctx, sheets[0])
+	for _, s := range l.Sheets {
+		if s.ID == sheets[0] && s.Color != "#0070c0" {
+			t.Fatalf("couleur après annulation : %q", s.Color)
+		}
+	}
+	_, err = d.bus.Redo(ctx)
+	must(t, err)
 	if err := d.DeleteSheet(ctx, sheets[0]); err != nil {
 		t.Fatalf("suppression à la main de l'onglet gardé : %v", err)
 	}

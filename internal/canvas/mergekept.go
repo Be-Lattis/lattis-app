@@ -10,6 +10,8 @@ import (
 // (autre tableau, TCD, graphique, bouton) : elle est gardée, et le volet
 // comme la barre d'état le disent (« Janvier gardée : elle contient aussi
 // le tableau Remises »), au lieu d'un onglet laissé là sans explication.
+// Son onglet passe en orange (KeptSheetColor, flagKeptSheets) pour qu'on le
+// retrouve.
 func (t *tx) keptSheets(tables []Table, gone map[int64]bool) ([]string, error) {
 	src := map[int64]bool{}
 	for _, tb := range tables {
@@ -59,7 +61,36 @@ func (t *tx) keptSheets(tables []Table, gone map[int64]bool) ([]string, error) {
 		if len(what) == 0 {
 			what = []string{"une page"}
 		}
-		out = append(out, fmt.Sprintf("« %s » gardée : elle contient aussi %s (à supprimer à la main si besoin)", sheetName, strings.Join(what, ", ")))
+		out = append(out, fmt.Sprintf("« %s » gardée (onglet en orange) : elle contient aussi %s (à supprimer à la main si besoin)", sheetName, strings.Join(what, ", ")))
 	}
 	return out, nil
+}
+
+// KeptSheetColor : la couleur des anciens onglets gardés malgré
+// « Supprimer » (l'orange de TAB_COLORS, frontend/src/lib/shell/sheets.ts).
+const KeptSheetColor = "#ffc000"
+
+// flagKeptSheets colore en orange, dans l'étape d'annulation du
+// regroupement, les anciens onglets qui restent (même s'ils avaient déjà
+// une couleur : l'annulation la leur rend). Ils restent visibles.
+func (t *tx) flagKeptSheets(tables []Table, gone map[int64]bool) error {
+	seen := map[int64]bool{}
+	q := `UPDATE _lattis_sheets SET color = ? WHERE id = ?`
+	for _, tb := range tables {
+		if gone[tb.Sheet] || seen[tb.Sheet] {
+			continue
+		}
+		seen[tb.Sheet] = true
+		var old string
+		if err := t.row(`SELECT color FROM _lattis_sheets WHERE id = ?`, tb.Sheet).Scan(&old); err != nil {
+			return err
+		}
+		if old == KeptSheetColor {
+			continue
+		}
+		if err := t.apply([]stmt{st(q, KeptSheetColor, tb.Sheet)}, []stmt{st(q, old, tb.Sheet)}); err != nil {
+			return err
+		}
+	}
+	return nil
 }

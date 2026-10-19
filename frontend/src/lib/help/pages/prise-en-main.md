@@ -107,7 +107,7 @@ Un onglet « 2025 » porte souvent plusieurs tableaux : les ventes et les dépen
 
 - **les regrouper** (tableaux qui changent : ventes, notes du mois) : un tableau commun avec la colonne de catégorie, qui **suit** l'onglet à choix ;
 - **en garder un seul exemplaire** (proposé quand les données sont les mêmes partout : la liste de tarifs) : celui du dernier onglet, sans colonne de catégorie, le même pour toutes les années. Si un exemplaire diffère (« Tarifs change dans 2024 »), le volet le signale et propose plutôt de les regrouper, pour ne rien perdre ;
-- **les laisser sur leur onglet** (proposé pour un tableau présent dans un seul onglet) : l'onglet est alors gardé, et le volet le dit.
+- **les laisser sur leur onglet** (proposé pour un tableau présent dans un seul onglet) : l'onglet est alors gardé, visible, avec un onglet orange pour le retrouver, et le volet le dit.
 
 La feuille commune reprend la **disposition de l'onglet le plus récent** : chaque tableau commun prend la place qu'avait le sien, ce qui est en dessous descend d'autant qu'il a grandi, et les tableaux absents de cet onglet viennent ensuite, dessous. Les **cellules libres** des onglets sont reprises (case à décocher dans le volet) : un titre, un libellé ou un total identique partout n'est gardé qu'une fois ; `=SOMME(Ventes2025[Montant])` sous le tableau devient `=SOMME(Ventes[Montant])`, qui donne le total de l'année affichée ; une valeur qui change d'un onglet à l'autre (« Objectif : 5 000 » en 2024, « 6 000 » en 2025, un titre « Janvier 2025 ») devient une **cellule par année** : elle montre la valeur de l'année choisie, et ce que vous y tapez ne vaut que pour cette année (vide avec « (Toutes les années) »).
 

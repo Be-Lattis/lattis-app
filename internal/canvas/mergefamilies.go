@@ -1132,6 +1132,9 @@ func (t *tx) mergeSheets(plan MergePlan) (MergeResult, error) {
 		if kept, err = t.keptSheets(all, gone); err != nil {
 			return res, err
 		}
+		if err := t.flagKeptSheets(all, gone); err != nil {
+			return res, err
+		}
 		for _, tb0 := range all {
 			cur, err := t.table(tb0.ID)
 			if err != nil {
