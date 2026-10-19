@@ -118,7 +118,7 @@ func (s *Session) name(prefix string) string {
 func registerFuncs(c *sqlite3.Conn) error {
 	// slt_split(texte, délimiteur, k) : k-ième morceau (à partir de 1), NULL
 	// s'il n'y en a pas autant.
-	return c.CreateFunction("slt_split", 3, sqlite3.DETERMINISTIC, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	return c.CreateFunction("slt_split", 3, sqlite3.DETERMINISTIC|sqlite3.INNOCUOUS, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		if arg[0].Type() == sqlite3.NULL {
 			ctx.ResultNull()
 			return

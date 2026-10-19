@@ -260,6 +260,9 @@ func setup(readOnly bool, extra []func(*sqlite3.Conn) error) func(*sqlite3.Conn)
 		cache = readCacheKiB
 	}
 	return func(c *sqlite3.Conn) error {
+		if err := harden(c); err != nil {
+			return err
+		}
 		pragmas := []string{
 			"PRAGMA busy_timeout=5000",
 			"PRAGMA synchronous=NORMAL",
@@ -287,6 +290,24 @@ func setup(readOnly bool, extra []func(*sqlite3.Conn) error) func(*sqlite3.Conn)
 		}
 		return nil
 	}
+}
+
+// harden protège une connexion d'une base venue d'un fichier reçu (audit 6,
+// M2) : les vues, déclencheurs, index et contraintes du fichier n'appellent
+// que des fonctions sans effet de bord (trusted_schema désactivé ; les
+// fonctions slt_* sont marquées INNOCUOUS), le mode défensif interdit ce
+// qui peut corrompre la base (writable_schema, écriture directe des pages,
+// journal désactivé), et cell_size_check repère plus tôt une page altérée.
+// Aucune extension ne se charge : le moteur SQLite (WASM) n'en a pas, et
+// l'autorisateur refuse load_extension.
+func harden(c *sqlite3.Conn) error {
+	if _, err := c.Config(sqlite3.DBCONFIG_DEFENSIVE, true); err != nil {
+		return err
+	}
+	if _, err := c.Config(sqlite3.DBCONFIG_TRUSTED_SCHEMA, false); err != nil {
+		return err
+	}
+	return c.Exec("PRAGMA cell_size_check=ON")
 }
 
 // Read donne le pool de lecture. Les connexions y sont en query_only.

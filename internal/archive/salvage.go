@@ -171,8 +171,9 @@ func salvageDB(src, dst string) (Report, error) {
 	}
 	defer r.Close()
 	// writable_schema : lire une base plus courte que ne l'annonce son
-	// en-tête (tronquée) au lieu de la refuser.
-	if err := r.Exec(`PRAGMA writable_schema=ON`); err != nil {
+	// en-tête (tronquée) au lieu de la refuser ; trusted_schema désactivé :
+	// son schéma n'appelle aucune fonction à effet de bord.
+	if err := r.Exec(`PRAGMA trusted_schema=OFF; PRAGMA writable_schema=ON`); err != nil {
 		return rep, err
 	}
 	w, err := sqlite3.Open(dst)

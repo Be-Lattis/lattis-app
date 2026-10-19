@@ -27,7 +27,7 @@ func Register(c *sqlite3.Conn) error {
 	if err := formula.Register(c); err != nil {
 		return err
 	}
-	if err := c.CreateFunction("slt_convert", 3, sqlite3.DETERMINISTIC, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	if err := c.CreateFunction("slt_convert", 3, sqlite3.DETERMINISTIC|sqlite3.INNOCUOUS, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		v, ok := convert(value(arg[0]), grid.Type(arg[1].Text()), grid.Type(arg[2].Text()))
 		if !ok {
 			ctx.ResultNull()
@@ -37,7 +37,7 @@ func Register(c *sqlite3.Conn) error {
 	}); err != nil {
 		return err
 	}
-	return c.CreateFunction("slt_text", 2, sqlite3.DETERMINISTIC, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	return c.CreateFunction("slt_text", 2, sqlite3.DETERMINISTIC|sqlite3.INNOCUOUS, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		v := value(arg[0])
 		if v == nil {
 			ctx.ResultNull()

@@ -6,6 +6,8 @@ import (
 	"errors"
 	"path/filepath"
 	"testing"
+
+	"github.com/ncruces/go-sqlite3"
 )
 
 // Une panique de SQLite pendant une écriture (mémoire épuisée…) devient une
@@ -129,5 +131,59 @@ func TestCacheBudget(t *testing.T) {
 	}
 	if total := readCacheKiB*maxReadConns + writeCacheKiB; total > 256<<10 {
 		t.Fatalf("plafond de %d Kio", total)
+	}
+}
+
+// Base venue d'un fichier reçu (audit 6, M2) : une vue du fichier ne peut
+// appeler qu'une fonction sans effet de bord, le schéma ne se réécrit pas
+// (mode défensif) et cell_size_check est actif, en lecture comme en écriture.
+func TestHardened(t *testing.T) {
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "recu.db")
+	fns := func(c *sqlite3.Conn) error {
+		if err := c.CreateFunction("sure", 1, sqlite3.DETERMINISTIC|sqlite3.INNOCUOUS, func(ctx sqlite3.Context, a ...sqlite3.Value) { ctx.ResultInt(1) }); err != nil {
+			return err
+		}
+		return c.CreateFunction("risquee", 1, sqlite3.DETERMINISTIC, func(ctx sqlite3.Context, a ...sqlite3.Value) { ctx.ResultInt(2) })
+	}
+	s, err := Open(path, fns)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	if err := s.Write(ctx, func(tx *sql.Tx) error {
+		_, err := tx.Exec(`CREATE TABLE t (x); INSERT INTO t VALUES (1); CREATE VIEW ok AS SELECT sure(x) AS v FROM t; CREATE VIEW piege AS SELECT risquee(x) AS v FROM t`)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var v int
+	if err := s.Read().QueryRowContext(ctx, `SELECT v FROM ok`).Scan(&v); err != nil || v != 1 {
+		t.Fatalf("fonction INNOCUOUS dans une vue : %d, %v", v, err)
+	}
+	if err := s.Read().QueryRowContext(ctx, `SELECT v FROM piege`).Scan(&v); err == nil {
+		t.Fatal("fonction non marquée INNOCUOUS appelée depuis une vue du fichier")
+	}
+	if err := s.Read().QueryRowContext(ctx, `SELECT risquee(x) FROM t`).Scan(&v); err != nil || v != 2 {
+		t.Fatalf("appel direct : %d, %v", v, err)
+	}
+	err = s.Exec(ctx, func(db *sql.DB) error {
+		if _, err := db.ExecContext(ctx, `PRAGMA writable_schema=ON`); err != nil {
+			return err
+		}
+		_, err := db.ExecContext(ctx, `UPDATE sqlite_schema SET sql = 'CREATE TABLE t (y)' WHERE name = 't'`)
+		return err
+	})
+	if err == nil {
+		t.Fatal("schéma réécrit malgré le mode défensif")
+	}
+	for _, db := range []*sql.DB{s.Read(), s.write} {
+		var trusted, cells int
+		if err := db.QueryRowContext(ctx, `SELECT (SELECT trusted_schema FROM pragma_trusted_schema), (SELECT cell_size_check FROM pragma_cell_size_check)`).Scan(&trusted, &cells); err != nil {
+			t.Fatal(err)
+		}
+		if trusted != 0 || cells != 1 {
+			t.Fatalf("trusted_schema=%d, cell_size_check=%d", trusted, cells)
+		}
 	}
 }

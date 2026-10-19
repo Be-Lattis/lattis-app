@@ -204,7 +204,7 @@ func args(arg []sqlite3.Value) []Value {
 // le même code Go que l'évaluateur : la sémantique est définie à un seul
 // endroit.
 func Register(c *sqlite3.Conn) error {
-	const det = sqlite3.DETERMINISTIC
+	const det = sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
 	if err := registerGrouped(c); err != nil {
 		return err
 	}

@@ -192,11 +192,11 @@ func (a *seqAgg) Value(ctx sqlite3.Context) {
 }
 
 func registerSeq(c *sqlite3.Conn) error {
-	if err := c.CreateWindowFunction("slt_seqidx", 2, 0, func() sqlite3.AggregateFunction { return &seqAgg{} }); err != nil {
+	if err := c.CreateWindowFunction("slt_seqidx", 2, sqlite3.INNOCUOUS, func() sqlite3.AggregateFunction { return &seqAgg{} }); err != nil {
 		return err
 	}
 	// slt_seqof(numéro, identifiant de ligne) : la valeur précalculée.
-	return c.CreateFunction("slt_seqof", 2, 0, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	return c.CreateFunction("slt_seqof", 2, sqlite3.INNOCUOUS, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		x, _ := lookupPrecomputed(arg[0].Int64()).(seqIndex)
 		v, ok := x[arg[1].Int64()]
 		if !ok {

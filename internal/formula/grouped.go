@@ -289,12 +289,12 @@ func registerGrouped(c *sqlite3.Conn) error {
 	if err := registerSeq(c); err != nil {
 		return err
 	}
-	if err := c.CreateWindowFunction("slt_group", -1, sqlite3.DETERMINISTIC, func() sqlite3.AggregateFunction { return &groupAggFn{} }); err != nil {
+	if err := c.CreateWindowFunction("slt_group", -1, sqlite3.DETERMINISTIC|sqlite3.INNOCUOUS, func() sqlite3.AggregateFunction { return &groupAggFn{} }); err != nil {
 		return err
 	}
 	// slt_grouped(numéro, critères…) : le total de la ligne (enveloppé comme
 	// celui de slt_scan), ou NULL pour reprendre le parcours complet. Pas DETERMINISTIC : le registre change.
-	return c.CreateFunction("slt_grouped", -1, 0, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	return c.CreateFunction("slt_grouped", -1, sqlite3.INNOCUOUS, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		g, _ := lookupPrecomputed(arg[0].Int64()).(*grouped)
 		if g == nil {
 			ctx.ResultNull()
@@ -388,11 +388,11 @@ func (a *cumulAgg) Value(ctx sqlite3.Context) {
 }
 
 func registerRankCumul(c *sqlite3.Conn) error {
-	if err := c.CreateWindowFunction("slt_rankidx", 1, sqlite3.DETERMINISTIC, func() sqlite3.AggregateFunction { return &rankAgg{} }); err != nil {
+	if err := c.CreateWindowFunction("slt_rankidx", 1, sqlite3.DETERMINISTIC|sqlite3.INNOCUOUS, func() sqlite3.AggregateFunction { return &rankAgg{} }); err != nil {
 		return err
 	}
 	// slt_rankof(numéro, valeur, ordre) : RANG, rendu enveloppé comme slt_scan.
-	if err := c.CreateFunction("slt_rankof", 3, 0, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	if err := c.CreateFunction("slt_rankof", 3, sqlite3.INNOCUOUS, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		x, _ := lookupPrecomputed(arg[0].Int64()).(*rankIndex)
 		if x == nil {
 			ctx.ResultNull()
@@ -402,11 +402,11 @@ func registerRankCumul(c *sqlite3.Conn) error {
 	}); err != nil {
 		return err
 	}
-	if err := c.CreateWindowFunction("slt_cumidx", 2, sqlite3.DETERMINISTIC, func() sqlite3.AggregateFunction { return &cumulAgg{} }); err != nil {
+	if err := c.CreateWindowFunction("slt_cumidx", 2, sqlite3.DETERMINISTIC|sqlite3.INNOCUOUS, func() sqlite3.AggregateFunction { return &cumulAgg{} }); err != nil {
 		return err
 	}
 	// slt_cumof(numéro, identifiant de ligne) : CUMUL, ou NULL (calcul direct).
-	return c.CreateFunction("slt_cumof", 2, 0, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	return c.CreateFunction("slt_cumof", 2, sqlite3.INNOCUOUS, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		x, _ := lookupPrecomputed(arg[0].Int64()).(*cumulIndex)
 		if x == nil {
 			ctx.ResultNull()
