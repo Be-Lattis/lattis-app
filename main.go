@@ -9,6 +9,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"runtime"
@@ -55,9 +56,12 @@ func main() {
 	}
 	config.Init(context.Background(), sets)
 
-	// --dev (développement) : interface servie par Vite, sans rebâtir Svelte.
-	cliArgs, stopDev := devFrontend(cliArgs)
-	defer stopDev()
+	// --dev (développement) : l'interface est rebâtie puis servie depuis le disque.
+	var ui fs.FS = assets
+	cliArgs, devUI := devFrontend(cliArgs)
+	if devUI != nil {
+		ui = devUI
+	}
 
 	documents := &bridge.DocumentService{}
 	bridge.WatchPanics(documents)
@@ -138,7 +142,7 @@ func main() {
 			application.NewService(documents),
 		},
 		Assets: application.AssetOptions{
-			Handler: application.AssetFileServerFS(assets),
+			Handler: application.AssetFileServerFS(ui),
 		},
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
@@ -195,9 +199,7 @@ func main() {
 		})
 	}
 
-	err = app.Run()
-	stopDev()
-	if err != nil {
+	if err := app.Run(); err != nil {
 		log.Fatal(err)
 	}
 }

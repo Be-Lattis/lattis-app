@@ -120,7 +120,7 @@ cd frontend && npm run check && npm test
 LATTIS_BENCH=resultat.json ./bin/lattis   # mesure automatique de la grille
 go run . --demo med [--seed 42]                 # ouvre un classeur de démonstration
 go run . --sql                                  # journal des requêtes SQL dans la console
-go run . --dev                                  # interface servie par Vite (rechargement à chaud), sans npm run build
+go run . --dev                                  # rebâtit l'interface (npm run build) avant de démarrer
 ```
 
 ### Données de démonstration
