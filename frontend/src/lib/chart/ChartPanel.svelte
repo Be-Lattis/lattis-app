@@ -8,7 +8,14 @@
 	import { PALETTE } from './scale';
 	import Select from '#lib/ui/Select.svelte';
 	import Icon from '#lib/icons/Icon.svelte';
-	import { CARTESIAN, KINDS, SECONDARY, STACKABLE, mapChoice, mapComplete, mapPatch, seriesShape, type MapChoice, type MapGuess } from './kinds';
+	import { BY_CATEGORY, CARTESIAN, KINDS, SECONDARY, SINGLE_SERIES, STACKABLE, chartFields, chartNotes, mapChoice, mapComplete, mapPatch, reorderSeries, seriesShape, type MapChoice, type MapGuess } from './kinds';
+
+	/** Une source possible du graphique (tableau ou TCD) et ses colonnes. */
+	export interface ChartSource {
+		name: string;
+		pivot?: boolean;
+		columns: { name: string; numeric: boolean }[];
+	}
 
 	interface Props {
 		/** Bord gauche à tirer (faux : inclus dans un volet qui se redimensionne lui-même). */
@@ -19,13 +26,19 @@
 		guess?: MapGuess | null;
 		/** Carte : coordonnées illisibles ou hors bornes, ignorées. */
 		invalid?: number;
+		/** Données dessinées (remarques : coupure, valeurs négatives ignorées…, couleurs par catégorie). */
+		info?: { labels?: string[] | null; series?: { values: (number | null)[] | null }[] | null; xValues?: (number | null)[] | null; total?: number; truncated?: boolean; sampled?: boolean } | null;
+		/** Graphique posé sur une feuille (il se déplace aussi au clavier). */
+		onSheet?: boolean;
+		/** Tableaux et TCD du classeur : changer la source du graphique. */
+		sources?: ChartSource[];
 		onchange: (cfg: ChartConfig) => void;
 		onclose: () => void;
 		/** Feuille protégée : le message, et les champs grisés. */
 		locked?: string;
 	}
 
-	let { config, columns, guess = null, invalid = 0, onchange, onclose, resizable = true, locked = '' }: Props = $props();
+	let { config, columns, guess = null, invalid = 0, info = null, sources = [], onSheet = false, onchange, onclose, resizable = true, locked = '' }: Props = $props();
 
 	// Le titre et les champs texte s'appliquent à la sortie du champ.
 	function set(patch: Partial<ChartConfig>) {
@@ -33,8 +46,46 @@
 		onchange({ ...config, ...patch });
 	}
 	function num(s: string): number | undefined {
-		const t = s.trim().replace(',', '.');
+		// Espaces (séparateur de milliers « 1 000 ») et virgule décimale acceptés.
+		const t = s.replace(/[\s  ]/g, '').replace(',', '.');
 		return t === '' || isNaN(Number(t)) ? undefined : Number(t);
+	}
+	const notes = $derived(isMapKind(config.kind) ? [] : chartNotes(config, info));
+	function isMapKind(k: string) {
+		return k === 'map';
+	}
+	// Séries : cochées dans leur ordre (celui du dessin et de la légende), puis les autres colonnes.
+	const listed = $derived([...config.series.filter((s) => columns.includes(s)), ...columns.filter((c) => c !== config.x && !config.series.includes(c))]);
+	function setSeries(next: string[]) {
+		if (next.length) set(reorderSeries(config, next));
+	}
+	function toggleSeries(c: string, on: boolean) {
+		// Types à une seule série : cocher remplace la série dessinée.
+		if (on && SINGLE_SERIES.has(config.kind)) return setSeries([c]);
+		setSeries(on ? [...config.series, c] : config.series.filter((x) => x !== c));
+	}
+	function moveSeries(k: number, d: number) {
+		const next = [...config.series];
+		const j = k + d;
+		if (j < 0 || j >= next.length) return;
+		[next[k], next[j]] = [next[j], next[k]];
+		setSeries(next);
+	}
+	// Autre source (tableau ou TCD) : axe X et séries choisis comme à l'insertion.
+	function setSource(name: string) {
+		const src = sources.find((s) => s.name === name);
+		if (!src || name === config.source) return;
+		const f = chartFields(config.kind, src.columns);
+		if (!f.series.length) return;
+		set({ source: name, x: f.x, series: f.series, colors: BY_CATEGORY.has(config.kind) ? config.colors : undefined, secondary: undefined, seriesKinds: undefined });
+	}
+	// Secteurs, anneau, entonnoir, compartimentage : une couleur par catégorie.
+	const byCategory = $derived(BY_CATEGORY.has(config.kind));
+	const catLabels = $derived((info?.labels ?? []).slice(0, 24));
+	function setColorAt(i: number, c: string, n: number) {
+		const colors = Array.from({ length: Math.max(n, config.colors?.length ?? 0) }, (_, j) => config.colors?.[j] || PALETTE[j % PALETTE.length]);
+		colors[i] = c;
+		set({ colors });
 	}
 	const stackable = $derived(STACKABLE.has(config.kind));
 	const axes = $derived(CARTESIAN.has(config.kind));
@@ -184,24 +235,32 @@
 		<p class="hint">Carte sélectionnée : la molette zoome, glisser déplace la carte (Alt+glisser déplace le graphique), double-clic ou + / − zooment ; un clic sur un point va à sa ligne dans le tableau.</p>
 		<p class="hint">Fond de carte © OpenStreetMap (tile.openstreetmap.org), soumis à l’autorisation réseau du classeur. La valeur règle la taille des points, ou le poids de chacun dans la densité.</p>
 		{:else}
+		{#if sources.length > 1}
+			<label class="line" title="Tableau ou tableau croisé dont le graphique trace les données">Source
+				<Select value={config.source} options={sources.map((s) => ({ value: s.name, label: s.pivot ? `${s.name} (TCD)` : s.name }))} onchange={setSource} />
+			</label>
+		{/if}
 		<label class="line">Axe X
-			<Select value={config.x} options={columns.map((c) => ({ value: c, label: c }))} onchange={(x) => set({ x, series: config.series.filter((s) => s !== x) })} />
+			<Select value={config.x} options={columns.map((c) => ({ value: c, label: c }))} onchange={(x) => set({ x, ...reorderSeries(config, config.series.filter((s) => s !== x)) })} />
 		</label>
 		<div class="series">
-			{#each columns.filter((c) => c !== config.x) as c (c)}
+			{#each listed as c (c)}
 				{@const k = config.series.indexOf(c)}
 				<label>
 					<input
-						type="checkbox"
+						type={SINGLE_SERIES.has(config.kind) ? 'radio' : 'checkbox'}
 						checked={k >= 0}
-						onchange={(e) => {
-							const on = (e.currentTarget as HTMLInputElement).checked;
-							const series = on ? [...config.series, c] : config.series.filter((x) => x !== c);
-							if (series.length) set({ series, colors: undefined, secondary: undefined });
-						}}
+						title={SINGLE_SERIES.has(config.kind) ? 'Ce type ne dessine qu’une série' : undefined}
+						onchange={(e) => toggleSeries(c, (e.currentTarget as HTMLInputElement).checked)}
 					/>
 					<span>{c}</span>
-					{#if k >= 0}
+					{#if k >= 0 && config.series.length > 1}
+						<span class="order">
+							<button type="button" title="Monter la série (ordre du dessin et de la légende)" aria-label="Monter la série {c}" disabled={k === 0} onclick={(e) => (e.preventDefault(), moveSeries(k, -1))}>▲</button>
+							<button type="button" title="Descendre la série" aria-label="Descendre la série {c}" disabled={k === config.series.length - 1} onclick={(e) => (e.preventDefault(), moveSeries(k, 1))}>▼</button>
+						</span>
+					{/if}
+					{#if k >= 0 && !byCategory && config.kind !== 'waterfall'}
 						<input
 							type="color"
 							title="Couleur de la série"
@@ -234,8 +293,43 @@
 		{#if config.kind === 'histogram'}
 			<label class="line">Classes<input value={config.bins ?? ''} onchange={(e) => set({ bins: num((e.currentTarget as HTMLInputElement).value) })} placeholder="auto" /></label>
 		{/if}
+		{#if config.kind === 'line' || config.kind === 'area' || config.kind === 'combo'}
+			<label class="line" title="Comme Excel : une cellule vide coupe la courbe (intervalle), compte pour zéro, ou ses voisines sont reliées">Cellules vides
+				<Select
+					value={config.blanks || 'gap'}
+					options={[
+						{ value: 'gap', label: 'Intervalle' },
+						{ value: 'zero', label: 'Zéro' },
+						{ value: 'span', label: 'Relier les points' }
+					]}
+					onchange={(v) => set({ blanks: v === 'gap' ? undefined : v })}
+				/>
+			</label>
+		{/if}
+		{#each notes as n (n)}<p class="warn">{n}</p>{/each}
 		{/if}
 	</section>
+
+	{#if byCategory && catLabels.length}
+		<section>
+			<h3>Couleurs</h3>
+			<div class="colors">
+				{#each catLabels as l, i (i)}
+					<label title={l}><input type="color" value={config.colors?.[i] || PALETTE[i % PALETTE.length]} onchange={(e) => setColorAt(i, (e.currentTarget as HTMLInputElement).value, catLabels.length)} /><span>{l || '(vide)'}</span></label>
+				{/each}
+			</div>
+			{#if (info?.labels?.length ?? 0) > catLabels.length}<p class="hint">Les catégories suivantes reprennent la palette.</p>{/if}
+		</section>
+	{:else if config.kind === 'waterfall'}
+		<section>
+			<h3>Couleurs</h3>
+			<div class="colors">
+				{#each ['Hausse', 'Baisse', 'Total'] as l, i (i)}
+					<label><input type="color" value={config.colors?.[i] || PALETTE[i % PALETTE.length]} onchange={(e) => setColorAt(i, (e.currentTarget as HTMLInputElement).value, 3)} /><span>{l}</span></label>
+				{/each}
+			</div>
+		</section>
+	{/if}
 
 	<section>
 		<h3>Titres</h3>
@@ -277,7 +371,7 @@
 		{/if}
 	</section>
 	</fieldset>
-	<p class="hint">Glissez le graphique pour le déplacer, ses poignées pour le redimensionner. Clic droit : couper, copier, supprimer.</p>
+	<p class="hint">Glissez le graphique pour le déplacer, ses poignées pour le redimensionner. Clic droit : couper, copier, supprimer.{#if onSheet} Au clavier : flèches pour le déplacer, Maj+flèches pour le redimensionner, Tab pour passer au graphique suivant, Suppr pour le supprimer.{/if}</p>
 </aside>
 
 <style>
@@ -480,5 +574,40 @@
 	.warn {
 		margin: 4px 0 6px;
 		color: #9a3412;
+	}
+	.series .order {
+		display: inline-flex;
+		flex: none;
+	}
+	.order button {
+		font-size: 9px;
+		line-height: 1;
+		padding: 2px 3px;
+		border-color: transparent;
+		background: none;
+		color: #6b7280;
+	}
+	.order button:hover:not(:disabled) {
+		color: #217346;
+	}
+	.order button:disabled {
+		opacity: 0.3;
+		cursor: default;
+	}
+	.colors {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 2px 8px;
+	}
+	.colors label {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		min-width: 0;
+	}
+	.colors span {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 </style>

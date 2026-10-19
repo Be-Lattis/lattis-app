@@ -12,7 +12,7 @@
 	import type { ChartInfo, PivotInfo } from '#bindings/internal/canvas/models.js';
 	import type { ChartConfig, PivotConfig } from '#lib/grid/Sheet.svelte';
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
-	import { MORE_KINDS, chartFields } from '#lib/chart/kinds.js';
+	import { MORE_KINDS, chartFields, defaultChartTitle } from '#lib/chart/kinds.js';
 	import { encodeObj, objFromText, type ObjClip } from '#lib/clip/objects.js';
 	import PivotPanel from '#lib/grid/PivotPanel.svelte';
 	import { dismiss } from '#lib/grid/dismiss.js';
@@ -435,12 +435,13 @@
 	function defaultChart(t: DocTable, kind: string): ChartConfig {
 		const num = (i: number) => /^(int|integer|decimal|real|number)/i.test(t.types[i] ?? '');
 		// Carte : carré grisé, coordonnées à choisir dans le volet.
-		if (kind === 'map') return { source: t.name, kind, x: '', series: [], mapDraft: true, title: t.name } as ChartConfig;
+		if (kind === 'map') return { source: t.name, kind, x: '', series: [], mapDraft: true } as ChartConfig;
 		// Même règle que sur une feuille (chartFields) ; sans colonne de nombres,
 		// la deuxième colonne, à compléter dans le volet.
 		const f = chartFields(kind, t.columns.map((name, i) => ({ name, numeric: num(i) })));
 		const series = f.series.length ? f.series : t.columns.filter((c) => c !== f.x).slice(0, 1);
-		return { source: t.name, kind, x: f.x, series, title: t.name } as ChartConfig;
+		// Titre comme sur une feuille et dans Excel : le nom de la série quand il n'y en a qu'une.
+		return { source: t.name, kind, x: f.x, series, title: defaultChartTitle(series) } as ChartConfig;
 	}
 
 	/** Insère un tableau croisé d'un tableau du classeur (champs à choisir dans le volet). */
@@ -874,12 +875,13 @@
 	const fns = $derived(btn?.script ? scriptFunctions(scripts.find((s) => s.name === btn.script)?.source ?? '') : []);
 	const setButton = (patch: Partial<DocButtonConfig>) => panel && btn && replaceEmbed(panel.index, BUTTON_BLOT, { ...btn, ...patch });
 	const setChart = (cfg: ChartConfig) => panel && replaceEmbed(panel.index, CHART_BLOT, cfg);
-	// Carte du volet : colonnes repérées (en attente) et coordonnées illisibles.
+	// Données du graphique du volet : remarques (coupure, valeurs ignorées),
+	// couleurs par catégorie ; carte : colonnes repérées et coordonnées illisibles.
 	let mapInfo = $state.raw<ChartInfo | null>(null);
 	$effect(() => {
 		const c = chart;
 		void live.stamp;
-		if (!c || c.kind !== 'map') {
+		if (!c) {
 			mapInfo = null;
 			return;
 		}
@@ -955,7 +957,7 @@
 				</label>
 				<button class="danger" disabled={!!locked} onclick={() => panel && deleteEmbed(panel.index)}><Icon name="trash" size={14} />Supprimer le graphique</button>
 			</div>
-			<ChartPanel config={chart} guess={mapInfo?.guess} invalid={mapInfo?.invalid} columns={tbl?.columns ?? []} onchange={setChart} onclose={() => openPanel(null)} resizable={false} {locked} />
+			<ChartPanel config={chart} guess={mapInfo?.guess} invalid={mapInfo?.invalid} info={mapInfo} columns={tbl?.columns ?? []} onchange={setChart} onclose={() => openPanel(null)} resizable={false} {locked} />
 		</div>
 	{:else if panel?.kind === 'pivot' && pivot}
 		<div class="side panelbox" use:resizePanel={{ key: 'doc-side', min: 260 }} use:panelKeys={() => openPanel(null)}>

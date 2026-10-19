@@ -62,8 +62,10 @@
 	import { clip, clipped } from '#lib/ui/menu.js';
 	import Chart from '#lib/chart/Chart.svelte';
 	import { encodeObj, objFromText, rememberObj } from '#lib/clip/objects.js';
-	import { SINGLE_SERIES, chartFields, type ChartKind, type MapGuess } from '#lib/chart/kinds.js';
+	import { SINGLE_SERIES, chartFieldsFrom, defaultChartTitle, type ChartKind, type MapGuess } from '#lib/chart/kinds.js';
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
+	import type { BoxStatsIn } from '#lib/chart/shapes.js';
+	import { svgToPng } from '#lib/chart/image.js';
 	import PivotPanel from './PivotPanel.svelte';
 	import SheetButtons from './SheetButtons.svelte';
 	import { BUTTON_H, BUTTON_W, type ButtonConfig, type ControlKind, type SheetButton } from './buttons';
@@ -210,6 +212,8 @@
 		bins?: number;
 		/** Lit aussi les lignes masquées par le filtre du tableau. */
 		hidden?: boolean;
+		/** Courbes : cellule vide en intervalle (défaut), à zéro (zero) ou reliée (span). */
+		blanks?: string;
 		offX?: number;
 		offY?: number;
 	}
@@ -231,6 +235,16 @@
 		/** Carte colorée : valeurs distinctes triées, et rang de la valeur de chaque point (−1 : vide). */
 		categories?: string[] | null;
 		groups?: number[] | null;
+		/** Points de la source ; coupés aux premiers (truncated) ou courbe réduite (sampled), voir ChartExtra. */
+		total?: number;
+		truncated?: boolean;
+		sampled?: boolean;
+		xValues?: (number | null)[] | null;
+		xDate?: boolean;
+		edges?: number[] | null;
+		boxes?: ((BoxStatsIn | null)[] | null)[] | null;
+		formats?: string[] | null;
+		xFormat?: string;
 	}
 
 	export interface DepTarget {
@@ -4483,6 +4497,28 @@
 		wrap.focus();
 	}
 
+	/** Déplace le graphique sélectionné au clavier (resize : le redimensionne), de dx, dy pixels. */
+	function nudgeChart(ch: SheetChart, dx: number, dy: number, resize: boolean) {
+		if (!source.placeChart) return;
+		const b = { ...chartBox(ch) };
+		if (resize) {
+			b.w = Math.max(160, b.w + dx);
+			b.h = Math.max(120, b.h + dy);
+		} else {
+			b.x = Math.max(0, b.x + dx);
+			b.y = Math.max(0, b.y + dy);
+		}
+		const col = cax().indexAt(b.x);
+		const row = rax().indexAt(b.y);
+		const place = source.placeChart;
+		writing = writing.catch(() => undefined).then(() =>
+			place(ch.id, row, col, Math.round(b.x - cax().offset(col)), Math.round(b.y - rowTop(row)), Math.round(b.w), Math.round(b.h)).then(
+				() => undefined,
+				(err) => say(String(err?.message ?? err))
+			)
+		);
+	}
+
 	/** Colonnes du tableau source d'un graphique ou d'un TCD (autre feuille comprise). */
 	function sourceColumns(name: string): { name: string; numeric: boolean; type: string }[] {
 		const e = entries.find((x) => x.t.name.toLowerCase() === name.toLowerCase());
@@ -4603,6 +4639,20 @@
 	}
 	let chartClip = $state.raw<ChartConfig | null>(null);
 
+	/** Copie le graphique comme image PNG (à coller dans un courriel, un document). */
+	async function copyChartImage(ch: SheetChart) {
+		chartMenu = null;
+		const svg = wrap.querySelector<SVGSVGElement>('.chart.selected svg');
+		if (!svg || selChart !== ch.id) return;
+		try {
+			const blob = await svgToPng(svg);
+			await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+			say('Graphique copié comme image : collez-le dans un courriel ou un document');
+		} catch (err) {
+			say(`Copie de l’image impossible : ${err instanceof Error ? err.message : err}`);
+		}
+	}
+
 	/** Après la création d'un graphique : le nouveau est sélectionné (Excel), prêt à être déplacé, redimensionné ou mis en forme. */
 	function selectNewChart(before: Set<number>): SheetChart | undefined {
 		const ch = charts.find((c) => !before.has(c.id));
@@ -4703,7 +4753,7 @@
 			const name = pv.config.name ?? '';
 			const before = new Set(charts.map((c) => c.id));
 			writing = writing.catch(() => undefined).then(() =>
-				create(freeChartSpot(pv.row, pv.col + head.length + 1).row, pv.col + head.length + 1, { source: name, kind, x, series }).then(
+				create(freeChartSpot(pv.row, pv.col + head.length + 1).row, pv.col + head.length + 1, { source: name, kind, x, series, title: defaultChartTitle(series) }).then(
 					() => {
 						say(`Graphique du tableau croisé « ${name} » inséré`);
 						selectNewChart(before);
@@ -4720,7 +4770,11 @@
 		}
 		const cols = e.t.columns;
 		const num = (c: Column) => c.type === 'integer' || c.type === 'decimal' || (c.type === 'formula' && c.formula !== undefined);
-		const { x: xName, series } = chartFields(kind, cols.map((c) => ({ name: c.name, numeric: num(c) })), targetCol(e));
+		// Plusieurs colonnes du tableau sélectionnées : elles fixent X et les séries (comme Excel).
+		const { c0, c1 } = selection();
+		const picked: number[] = [];
+		for (let c = Math.max(c0, e.t.col); c <= Math.min(c1, e.lastCol); c++) picked.push(c - e.t.col);
+		const { x: xName, series } = chartFieldsFrom(kind, cols.map((c) => ({ name: c.name, numeric: num(c) })), picked, targetCol(e));
 		const x = cols.find((c) => c.name === xName) ?? cols[0];
 		if (kind === 'map') {
 			// Carte : un carré grisé, en attente de ses coordonnées ; le volet
@@ -4748,9 +4802,9 @@
 		const create = source.createChart;
 		const before = new Set(charts.map((c) => c.id));
 		writing = writing.catch(() => undefined).then(() =>
-			create(freeChartSpot(e.t.row, e.lastCol + 2).row, e.lastCol + 2, { source: e.t.name, kind, x: x.name, series }).then(
+			create(freeChartSpot(e.t.row, e.lastCol + 2).row, e.lastCol + 2, { source: e.t.name, kind, x: x.name, series, title: defaultChartTitle(series) }).then(
 				() => {
-					say('Graphique inséré : double-clic pour le modifier, glissez-le pour le déplacer');
+					say('Graphique inséré : cliquez dessus pour le modifier, glissez-le pour le déplacer');
 					selectNewChart(before);
 				},
 				(err) => say(String(err?.message ?? err))
@@ -6478,6 +6532,21 @@
 			if (e.key === 'Escape') {
 				selChart = null;
 				if (panel?.kind === 'chart') panel = null;
+				return;
+			}
+			// Clavier : flèches pour déplacer, Maj+flèches pour redimensionner
+			// (10 pixels), Tab et Maj+Tab pour passer au graphique suivant.
+			const step = ({ ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] } as Record<string, number[]>)[e.key];
+			if (ch && step && !e.ctrlKey && !e.altKey && !e.metaKey && !locked) {
+				e.preventDefault();
+				nudgeChart(ch, step[0] * 10, step[1] * 10, e.shiftKey);
+				return;
+			}
+			if (ch && e.key === 'Tab' && charts.length > 1) {
+				e.preventDefault();
+				const i = charts.indexOf(ch);
+				selectChart(charts[(i + (e.shiftKey ? charts.length - 1 : 1)) % charts.length]);
+				say(`Graphique ${charts.indexOf(charts.find((c) => c.id === selChart)!) + 1} sur ${charts.length}`);
 				return;
 			}
 		}
@@ -8464,9 +8533,11 @@
 			<div class="charts" style:left="{MARGIN}px" style:top="{TOP_H}px" style:width="{Math.max(0, viewW - MARGIN)}px" style:height="{Math.max(0, viewH - TOP_H)}px">
 				{#each charts as ch (ch.id)}
 					{@const box = chartBox(ch)}
-					<!-- svelte-ignore a11y_no_static_element_interactions -->
+					<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 					<div
 						class="chart"
+						role="group"
+						aria-label={ch.config.title ? `Graphique « ${ch.config.title} »` : 'Graphique'}
 						style:left="{box.x - viewPos.x}px"
 						style:top="{box.y - viewPos.y}px"
 						class:selected={selChart === ch.id}
@@ -8480,7 +8551,7 @@
 						{#if ch.error}
 							<p class="chart-error">Graphique : {ch.error}</p>
 						{:else}
-							<Chart kind={ch.config.kind} labels={ch.labels} series={ch.series} width={box.w} height={box.h} style={ch.config} animate={animate && chartTween} grow={grownCharts.has(ch.id)} interactive={selChart === ch.id} onview={(v) => setMapView(ch.id, v)} map={ch} onpoint={onrowlink && ((r) => pointToRow(ch, r))} />
+							<Chart kind={ch.config.kind} labels={ch.labels} series={ch.series} width={box.w} height={box.h} style={ch.config} animate={animate && chartTween} grow={grownCharts.has(ch.id)} interactive={selChart === ch.id} onview={(v) => setMapView(ch.id, v)} map={ch} info={ch} onpoint={onrowlink && ((r) => pointToRow(ch, r))} />
 						{/if}
 						{#if selChart === ch.id}
 							{#each ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] as dir (dir)}
@@ -8933,6 +9004,7 @@
 				<div class="menu-title">Graphique</div>
 				<button onclick={() => copyChart(m.ch, true)}>Couper</button>
 				<button onclick={() => copyChart(m.ch, false)}>Copier</button>
+				{#if m.ch.config.kind !== 'map' && !m.ch.error}<button onclick={() => copyChartImage(m.ch)}>Copier comme image</button>{/if}
 				<button
 					disabled={!chartClip}
 					onclick={() => {
@@ -9515,6 +9587,9 @@
 				config={ch.config}
 				guess={ch.guess}
 				invalid={ch.invalid}
+				info={ch}
+				onSheet
+				sources={sources.map((s) => ({ name: s.name, columns: sourceColumns(s.name) }))}
 				columns={sourceColumns(ch.config.source).map((c) => c.name)}
 				onchange={(cfg) => menuAction(source.setChart && (() => source.setChart!(ch.id, cfg)), true)}
 				onclose={() => {
