@@ -8,7 +8,17 @@ Un graphique se branche sur un tableau ou un tableau croisé, et se met à jour 
 2. Insertion › choisissez un type de graphique.
 3. Le graphique se pose sur la feuille et le volet **Graphique** s'ouvre à droite.
 
-Le graphique se déplace à la souris et se redimensionne par ses poignées. Un clic dessus rouvre le volet ; clic droit : couper, copier, supprimer.
+Si plusieurs colonnes du tableau sont sélectionnées, elles fixent le graphique, comme dans Excel : la première colonne de texte donne les catégories, les colonnes de nombres les séries.
+
+Le graphique se déplace à la souris et se redimensionne par ses poignées. Un clic dessus rouvre le volet ; clic droit : couper, copier, copier comme image (à coller dans un courriel ou un document), supprimer. Au clavier, une fois le graphique sélectionné : les flèches le déplacent, Maj+flèches le redimensionnent, Tab passe au graphique suivant, Suppr le supprime.
+
+## Données tracées
+
+Comme dans Excel, un graphique ne montre que les lignes affichées par le filtre du tableau ; la case **Lignes masquées par le filtre** du volet les reprend toutes.
+
+Un graphique trace au plus 2 000 points : au-delà, il l'indique sous le dessin (« 2 000 premiers points sur 50 000 »). Une courbe trop longue est réduite plutôt que coupée : chaque intervalle garde son premier et son dernier point, son minimum et son maximum. Les boîtes à moustaches et les fréquences sont toujours calculées sur toutes les lignes.
+
+Les valeurs reprennent le format de leur colonne (€, %, décimales, dates) sur les axes, les étiquettes et les info-bulles. Une colonne de dates en X donne un axe de temps pour les courbes et les aires, et se lit aussi dans un nuage de points.
 
 ## Types
 
@@ -17,7 +27,8 @@ Histogramme, barres horizontales, courbes, aires, secteurs, anneau, nuage de poi
 ## Le volet Graphique
 
 - **Type** : change la forme sans perdre les données choisies ; « Empilé » pour les barres et les aires.
-- **Données** : la colonne des catégories (axe horizontal) et une ou plusieurs séries de valeurs.
+- **Données** : la source (un tableau ou un TCD), la colonne des catégories (axe horizontal) et une ou plusieurs séries de valeurs, dans l'ordre choisi par les flèches ▲ ▼ ; pour les courbes, les **cellules vides** coupent la ligne (intervalle), comptent pour zéro ou sont reliées.
+- **Couleurs** : celle de chaque série, ou de chaque catégorie pour les secteurs, l'anneau, l'entonnoir et le compartimentage, et hausse, baisse et total pour la cascade.
 - **Titres** : titre du graphique et des axes.
 - **Éléments** : légende, étiquettes de données ; axe secondaire pour une série d'un graphique combiné.
 
