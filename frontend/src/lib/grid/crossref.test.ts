@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formulaTyping, holdFormula, insertRefAt, qualifyRef, sheetPrefix, updateHold } from './crossref';
+import { formulaTyping, fxLeave, holdFormula, insertRefAt, qualifyRef, sheetPrefix, updateHold } from './crossref';
 import { checkFormula, formulaRefs, refRect, type RefTable } from './formulaEdit';
 
 const at = { sheet: 2, row: 4, col: 1, where: 'cell' as const };
@@ -107,5 +107,41 @@ describe('refRect sur une autre feuille', () => {
 
 	it('sur la feuille de la formule, rien ne change', () => {
 		expect(refRect('Cell[A1]', tables, 'Clients')).toEqual({ r0: 0, c0: 0, r1: 0, c1: 0 });
+	});
+});
+
+describe('fxLeave (barre de formule quittée)', () => {
+	const base = { editing: true, stillFocused: false, alertOpen: false, pointing: false, text: 'Bonjour' };
+
+	it('clic dans la grille, le ruban ou la zone de nom : la saisie est validée (demande de Louis)', () => {
+		expect(fxLeave(base)).toBe('commit');
+		expect(fxLeave({ ...base, text: '=1+2' })).toBe('commit');
+	});
+
+	it('Échap ou Entrée déjà passés : la barre se referme sans rien valider', () => {
+		expect(fxLeave({ ...base, editing: false })).toBe('close');
+	});
+
+	it('fenêtre quittée (Alt+Tab) ou boîte « nom invalide » : la saisie reste', () => {
+		expect(fxLeave({ ...base, stillFocused: true })).toBe('keep');
+		expect(fxLeave({ ...base, alertOpen: true })).toBe('keep');
+	});
+
+	it('onglet de feuille : une formule est gardée pour pointer, un texte est validé', () => {
+		expect(fxLeave({ ...base, pointing: true, text: '=SOMME(' })).toBe('keep');
+		expect(fxLeave({ ...base, pointing: true })).toBe('commit');
+	});
+});
+
+describe('clic dans la grille pendant une formule : pointage ou validation', () => {
+	// Le clic insère la référence quand le curseur en attend une (insertRefAt non nul), sinon il valide.
+	const points = (v: string, caret = v.length) => formulaTyping(v) && insertRefAt(v, caret, caret, '') !== null;
+
+	it('après « = », un opérateur, « ( », « ; » ou « , » : pointage', () => {
+		for (const v of ['=', '=1+', '=SOMME(', '=SI(A1;', '=MAX(1,']) expect(points(v)).toBe(true);
+	});
+
+	it('après une valeur ou une référence complète, ou un texte : validation', () => {
+		for (const v of ['=1+2', '=SOMME(A1)', '=SOMME(A1', 'Bonjour', '12+']) expect(points(v)).toBe(false);
 	});
 });

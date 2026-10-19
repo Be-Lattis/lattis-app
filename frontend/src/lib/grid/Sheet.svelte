@@ -80,7 +80,7 @@
 	import { drawIcon } from '#lib/icons/canvas.js';
 	import { apply as applySuggestion, argKindAt, needsNextArg, signature, toNextArg, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
 	import { checkFormula, closeParens, editorWidth, formulaRefs, highlightParts, isFormula, movedRef, rangeRef, refRect, serverErrorPos, type FormulaError, type Rect, type RefTable } from './formulaEdit';
-	import { formulaTyping, holdFormula, insertRefAt, qualifyRef, updateHold, type FormulaHold } from './crossref';
+	import { formulaTyping, fxLeave, holdFormula, insertRefAt, qualifyRef, updateHold, type FormulaHold } from './crossref';
 	import { parseGoto, type GotoTable } from './goto';
 	import { cellNameProblem, columnNameProblem, refusedName, tableNameProblem, type NameProblem } from '#lib/ui/names.js';
 	import { nameAlertOpen, refuseName } from '#lib/ui/nameAlert.js';
@@ -6209,7 +6209,7 @@
 		}
 		if (e.button === 0 && !formulaMode && tableHintAt(e) && source.formatAsTable) {
 			e.preventDefault();
-			if (editing && !commit()) return;
+			if (!commitEditor()) return;
 			const { row, col } = active;
 			const fmt = source.formatAsTable;
 			writing = writing.catch(() => undefined).then(() => fmt(row, col).then(
@@ -6221,13 +6221,13 @@
 		}
 		if (e.button !== 1 && !formulaMode && keyHintAt(e)) {
 			e.preventDefault();
-			if (editing && !commit()) return;
+			if (!commitEditor()) return;
 			if (e.button === 0) acceptKeyHint(keyHintAt(e)!);
 			return;
 		}
 		const frozen = e.button === 0 && boundaryAt(e) === null ? frozenHeaderAt(e) : null;
 		if (frozen) {
-			if (editing) commit();
+			commitEditor();
 			if (headerButton(e, frozen.e, frozen.col, true)) {
 				e.preventDefault();
 				return;
@@ -6239,7 +6239,7 @@
 			const { x, y } = toLocal(e);
 			if (e.button === 0 && x < MARGIN && y < TOP_H) {
 				e.preventDefault();
-				if (editing && !commit()) return;
+				if (!commitEditor()) return;
 				wrap.focus();
 				selectRows(0, lastRow());
 				return;
@@ -6248,7 +6248,7 @@
 		const hd = boundaryAt(e) === null && rowBoundaryAt(e) === null ? headerAt(e) : null;
 		if (hd && e.button !== 1) {
 			e.preventDefault();
-			if (editing && !commit()) return; // saisie refusée : l'éditeur reste ouvert
+			if (!commitEditor()) return; // saisie refusée : l'éditeur reste ouvert
 			wrap.focus();
 			// Clic droit dans la sélection : on la garde.
 			if (e.button === 2 && (hd.kind === 'rows' ? inSelection(hd.row, active.col) : inSelection(active.row, hd.col))) return;
@@ -6304,7 +6304,7 @@
 			return;
 		}
 		e.preventDefault();
-		if (editing && !commit()) return; // saisie refusée : l'éditeur reste ouvert
+		if (!commitEditor()) return; // saisie refusée : l'éditeur reste ouvert
 		// Clic droit dans la sélection : elle reste (le menu porte sur elle).
 		if (e.button === 2 && inSelection(cell.row, cell.col)) return;
 		// Volet d'un contrôle ouvert, champ actif : le clic y met l'adresse ou la valeur de la cellule.
@@ -7551,42 +7551,97 @@
 			refreshFx();
 			wrap.focus();
 		} else if (e.key === 'Enter') {
+			const { row, col } = active;
+			e.preventDefault();
+			if (commitFx(true) === true) moveTo(row + 1, col);
+			return;
+		} else return;
+		e.preventDefault();
+	}
+
+	/**
+	 * Valide la saisie de la barre de formule dans la cellule active (Entrée,
+	 * clic dans la grille, focus parti ailleurs), comme l'éditeur de cellule.
+	 * 'formula' (formule fautive) ou 'refused' (valeur ou nom refusé) quand la
+	 * saisie reste ouverte ; true si validée (ou rien à valider).
+	 */
+	function commitFx(focusGrid: boolean): true | 'formula' | 'refused' {
+		if (!fxEditing) return true;
+		if (nameAlertOpen()) return 'refused';
+		const { row, col } = active;
+		// Rien de changé (focus pris puis rendu) : la barre se referme, sans vérifier la formule.
+		if (fxText !== cellInfo(row, col).value) {
 			if (isFormula(fxText)) {
 				const text = closeParens(fxText);
 				const err = checkFormula(text);
 				if (err) {
 					editErr = err;
 					say(`Formule : ${err.msg}`);
-					fxInput?.setSelectionRange(err.pos, Math.max(err.end, err.pos));
-					e.preventDefault();
-					return;
+					const el = fxInput;
+					if (el && document.activeElement === el) el.setSelectionRange(err.pos, Math.max(err.end, err.pos));
+					else
+						requestAnimationFrame(() => {
+							el?.focus();
+							el?.setSelectionRange(err.pos, Math.max(err.end, err.pos));
+						});
+					return 'formula';
 				}
 				fxText = text;
 			}
-			editErr = null;
-			const { row, col } = active;
-			let text = fxText;
-			const named = headerProblem(row, col, text);
-			if (named) {
-				e.preventDefault();
-				void refuseName(fxInput, named);
-				return;
+		}
+		editErr = null;
+		let text = fxText;
+		const named = headerProblem(row, col, text);
+		if (named) {
+			void refuseName(fxInput, named);
+			return 'refused';
+		}
+		if (text !== cellInfo(row, col).value) {
+			const r = refusal(row, col, text);
+			if ('message' in r) {
+				say(r.message);
+				return 'refused';
 			}
-			if (text !== cellInfo(row, col).value) {
-				const r = refusal(row, col, text);
-				if ('message' in r) {
-					say(r.message);
-					e.preventDefault();
-					return;
-				}
-				text = r.value;
-			}
-			fxEditing = false;
-			if (text !== cellInfo(row, col).value) write(row, col, text);
-			wrap.focus();
-			moveTo(row + 1, col);
-		} else return;
-		e.preventDefault();
+			text = r.value;
+		}
+		fxEditing = false;
+		completion = sig = null;
+		if (text !== cellInfo(row, col).value) {
+			write(row, col, text);
+			lastRepeat = () => write(active.row, active.col, text);
+		}
+		if (focusGrid) wrap.focus();
+		refreshFx();
+		return true;
+	}
+
+	/** Saisie en cours (cellule ou barre de formule) validée avant un clic dans la grille ; faux si elle reste ouverte. */
+	function commitEditor(): boolean {
+		if (editing) return commit();
+		return commitFx(true) === true;
+	}
+
+	/** Barre de formule quittée (blur) : validée, gardée ou refermée (crossref.ts, fxLeave). */
+	function leaveFx() {
+		completion = sig = null;
+		const action = fxLeave({
+			editing: fxEditing,
+			stillFocused: !!fxInput && document.activeElement === fxInput,
+			alertOpen: nameAlertOpen(),
+			pointing: !!hold || tabPress,
+			text: fxText
+		});
+		if (action === 'keep') return;
+		if (action === 'commit') {
+			const r = commitFx(false);
+			// Formule fautive : la saisie reste ouverte, le focus y revient (commitFx).
+			if (r === 'formula') return;
+			// Valeur refusée quand le focus part ailleurs : abandonnée, le message reste (comme l'éditeur de cellule).
+			if (r === 'refused' && nameAlertOpen()) return;
+		}
+		fxEditing = false;
+		editErr = null;
+		refreshFx();
 	}
 
 	// --- Zone de nom ------------------------------------------------------------
@@ -8842,15 +8897,7 @@
 				else fxEditing = true;
 			}}
 			onkeydown={onFxKey}
-			onblur={() => {
-				completion = sig = null;
-				// Boîte « nom invalide » ouverte : la saisie reprend à sa fermeture.
-				if (nameAlertOpen()) return;
-				// Formule pointée sur une autre feuille, ou clic sur un onglet : la saisie reste.
-				if ((hold || tabPress) && formulaTyping(fxText)) return;
-				fxEditing = false;
-				refreshFx();
-			}}
+			onblur={leaveFx}
 			spellcheck="false"
 		/>
 		{#if calcEdit}

@@ -80,3 +80,17 @@ export function insertRefAt(value: string, selStart: number, selEnd: number, ref
 	const next = value.slice(0, start) + ref + value.slice(to);
 	return { value: next, start, end: start + ref.length };
 }
+
+/**
+ * Départ du focus de la barre de formule, comme Excel : la saisie est validée
+ * dans sa cellule (clic dans la grille, le ruban, la zone de nom…), sauf si
+ * elle est déjà finie (Entrée, Échap : la barre se referme), si la fenêtre
+ * seule perd le focus (le champ le garde), si une boîte « nom invalide » est
+ * ouverte, ou si l'on pointe une formule sur une autre feuille (gardée).
+ */
+export function fxLeave(o: { editing: boolean; stillFocused: boolean; alertOpen: boolean; pointing: boolean; text: string }): 'keep' | 'commit' | 'close' {
+	if (!o.editing) return 'close';
+	if (o.stillFocused || o.alertOpen) return 'keep';
+	if (o.pointing && formulaTyping(o.text)) return 'keep';
+	return 'commit';
+}
