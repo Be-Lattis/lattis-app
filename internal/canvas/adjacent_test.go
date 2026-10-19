@@ -354,3 +354,60 @@ func TestHeaderRowOverTables(t *testing.T) {
 		t.Fatalf("titre sur un tableau : %+v", ts)
 	}
 }
+
+// Audit 2, C1 : un titre de trois cellules tapé au-dessus d'un seul tableau
+// plus étroit, à vrais en-têtes, reste un titre ; la formule qui cite le
+// tableau garde sa valeur. Sur un tableau dont l'en-tête ressemble à des
+// données (nombres, dates, « Colonne n »), la ligne devient son en-tête.
+func TestHeaderOverSingleTable(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	must(t, d.Do(ctx, "Saisie", func(x *tx) error {
+		_, err := x.createTable(1, "Ventes", 1, 0, []string{"Nom", "Age"}, [][]string{{"Léa", "1"}, {"Max", "2"}})
+		return err
+	}))
+	mustSet(t, d, 1, 8, 0, "=SOMME(Ventes[Age])")
+	if v := cellOn(t, d, 1, 8, 0).Value; v != "3" {
+		t.Fatalf("avant : %q", v)
+	}
+	mustSet(t, d, 1, 0, 0, "Ventes")
+	mustSet(t, d, 1, 0, 1, "2026")
+	mustSet(t, d, 1, 0, 2, "k€")
+	check(t, d, "titre")
+	if got, want := layoutOf(t, d), "Ventes@A2:Nom|Age×2 A1=Ventes B1=2026 C1=k€ A9==SOMME(Ventes[Age])"; got != want {
+		t.Fatalf("titre au-dessus :\n got %s\nwant %s", got, want)
+	}
+	if v := cellOn(t, d, 1, 8, 0).Value; v != "3" {
+		t.Fatalf("formule après le titre : %q", v)
+	}
+
+	for _, c := range []struct {
+		head []string
+		rows int
+		data string
+	}{
+		{[]string{"Léa", "31"}, 2, "Léa|31\nMax|40"},
+		{[]string{"Léa", "01/02/2024"}, 2, "Léa|01/02/2024\nMax|40"},
+		// « Colonne n » ne devient pas une ligne de données.
+		{[]string{"Colonne 1", "Colonne 2"}, 1, "Max|40"},
+	} {
+		d := open(t)
+		must(t, d.Do(ctx, "Saisie", func(x *tx) error {
+			_, err := x.createTable(1, "T", 1, 0, c.head, [][]string{{"Max", "40"}})
+			return err
+		}))
+		mustSet(t, d, 1, 0, 0, "Nom")
+		mustSet(t, d, 1, 0, 1, "Age")
+		before := dump(t, d)
+		mustSet(t, d, 1, 0, 2, "Ville")
+		check(t, d, "en-tête "+c.head[1])
+		ts := tablesOf(t, d)
+		if len(ts) != 1 || ts[0].Row != 0 || colNames(ts[0]) != "Nom|Age|Ville" || ts[0].Total != c.rows || len(ts[0].Columns) != 3 {
+			t.Fatalf("en-tête %v : %s", c.head, layoutOf(t, d))
+		}
+		if got := view(t, d); !strings.Contains(got, c.data) {
+			t.Fatalf("en-tête %v :\n%s", c.head, got)
+		}
+		undoOnce(t, d, before, "en-tête "+c.head[1])
+	}
+}

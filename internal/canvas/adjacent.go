@@ -48,7 +48,8 @@ import (
 //
 // Exception : au-dessus du tableau, une cellule libre reste libre (c'est un
 // titre), même collée à l'en-tête. Mais une ligne d'en-têtes posée sur plusieurs
-// tableaux, ou plus large que le tableau, en fait un seul tableau (headerOver).
+// tableaux, ou plus large qu'un tableau dont l'en-tête ressemble à des
+// données, en fait un seul tableau (headerOver).
 //
 // Un tableau filtré, ou chargé par une requête d'import (que l'actualisation
 // remplace), ne grandit ni ne fusionne de lui-même : un tableau qui le touche
@@ -778,7 +779,9 @@ func freeColumnName(tb Table, name string) string {
 // entre les tableaux en font partie. Les formules qui citaient les tableaux
 // citent le nouveau (passage par une plage, comme Convertir en plage puis
 // Mettre sous forme de tableau). Une seule cellule, ou une ligne pas plus
-// large qu'un tableau, reste un titre.
+// large qu'un tableau, reste un titre ; sur un seul tableau, la ligne n'en
+// devient l'en-tête que si l'en-tête actuel ressemble à des données
+// (dataHeader) : sinon c'est un titre (« Ventes | 2026 | k€ »).
 func (t *tx) headerOver(sheet int64, tables []Table, cells []cell, fixed map[int64]string) (bool, error) {
 	at := map[[2]int]cell{}
 	for _, c := range cells {
@@ -821,7 +824,7 @@ func (t *tx) headerOver(sheet int64, tables []Table, cells []cell, fixed map[int
 			width += len(tb.Cols)
 			bottom = max(bottom, tb.Bottom())
 		}
-		if !ok || len(under) == 0 || len(under) == 1 && width == c1-c0+1 {
+		if !ok || len(under) == 0 || len(under) == 1 && (width == c1-c0+1 || !dataHeader(under[0])) {
 			continue
 		}
 		// Sous la ligne, hors des tableaux : rien (ni cellule, ni autre tableau).
@@ -844,6 +847,26 @@ func (t *tx) headerOver(sheet int64, tables []Table, cells []cell, fixed map[int
 			if err := t.toRange(tb); err != nil {
 				return false, err
 			}
+			// Un nom « Colonne n » vient de Lattis, pas d'une donnée : il ne
+			// devient pas une ligne. Un en-tête qui n'avait que ceux-là laisse
+			// une ligne vide : les données remontent d'une ligne.
+			auto := true
+			for k, c := range tb.Cols {
+				if !autoColRe.MatchString(c.Name) {
+					auto = false
+					continue
+				}
+				if err := t.setFreeCell(sheet, tb.Row, tb.Col+k, ""); err != nil {
+					return false, err
+				}
+			}
+			if auto && tb.Rows > 0 {
+				if err := t.moveCells(sheet, func(c cell) bool {
+					return c.Row > tb.Row && c.Row <= tb.Bottom() && c.Col >= tb.Col && c.Col <= tb.Right()
+				}, -1, 0); err != nil {
+					return false, err
+				}
+			}
 		}
 		name, err := t.formatAsTable(sheet, r+1, under[0].Col)
 		if err != nil {
@@ -857,6 +880,20 @@ func (t *tx) headerOver(sheet int64, tables []Table, cells []cell, fixed map[int
 		return true, nil
 	}
 	return false, nil
+}
+
+// dataHeader : l'en-tête du tableau ressemble à une ligne de données (un nom
+// qui est un nombre, une date, une heure ou un pourcentage, ou un nom
+// « Colonne n » donné par Lattis) : la détection l'a pris pour un en-tête
+// faute de mieux.
+func dataHeader(tb Table) bool {
+	for _, c := range tb.Cols {
+		name := strings.TrimSpace(c.Name)
+		if autoColRe.MatchString(name) || name != "" && Infer(name) != grid.Text || isTimeOrPercent(name) {
+			return true
+		}
+	}
+	return false
 }
 
 // rightOfAny : la cellule (row, col) est juste à droite d'un autre tableau
