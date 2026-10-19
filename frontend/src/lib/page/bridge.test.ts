@@ -1,6 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { BRIDGE_SCRIPT, PAGE_CSP, buildSrcdoc, eventOf, pageUrl, parseCall, replyOf, urlSource } from './bridge';
+import { BRIDGE_SCRIPT, PAGE_CSP, buildSrcdoc, eventOf, navigationGuard, pageUrl, parseCall, replyOf, urlSource } from './bridge';
 import { hostOf } from './hosts';
+
+describe('navigationGuard', () => {
+	it('signale un chargement qui suit celui de la page', () => {
+		const frame = new EventTarget();
+		let escapes = 0;
+		const guard = navigationGuard(frame, 'a', () => escapes++);
+		frame.dispatchEvent(new Event('load')); // la page
+		expect(escapes).toBe(0);
+		frame.dispatchEvent(new Event('load')); // location.href = …
+		expect(escapes).toBe(1);
+		guard.update('b'); // nouveau contenu : un chargement attendu
+		frame.dispatchEvent(new Event('load'));
+		expect(escapes).toBe(1);
+		guard.update('b');
+		frame.dispatchEvent(new Event('load'));
+		expect(escapes).toBe(2);
+		guard.destroy();
+		frame.dispatchEvent(new Event('load'));
+		expect(escapes).toBe(2);
+	});
+});
 
 describe('buildSrcdoc', () => {
 	it('place la CSP et le pont après le doctype', () => {

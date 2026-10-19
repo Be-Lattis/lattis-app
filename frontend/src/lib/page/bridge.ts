@@ -16,6 +16,8 @@
 // protections. Une règle de sécurité du
 // contenu (CSP) coupe tout accès direct au réseau : une page ne joint un
 // site que par lattis.call("http.get", …), avec l'accord de l'utilisateur.
+// La CSP n'empêche pas le cadre de naviguer lui-même (location.href) :
+// HtmlPage le recharge aussitôt (stayHome), mais la requête est partie.
 
 /** Règle de sécurité du contenu d'une page : rien hors de la page elle-même. */
 export const PAGE_CSP =
@@ -70,6 +72,29 @@ export function buildSrcdoc(source: string): string {
 	const m = doctype.exec(source);
 	if (m) return m[0] + head + source.slice(m[0].length);
 	return '<!doctype html>' + head + source;
+}
+
+/**
+ * Garde du cadre (action Svelte) : le premier chargement après chaque
+ * nouveau document est la page ; tout autre chargement est une navigation
+ * du cadre lui-même, signalée à onescape.
+ */
+export function navigationGuard(node: EventTarget, doc: string, onescape: () => void) {
+	let loaded = false;
+	const onload = () => {
+		if (loaded) onescape();
+		loaded = true;
+	};
+	node.addEventListener('load', onload);
+	return {
+		update(next: string) {
+			if (next !== doc) {
+				doc = next;
+				loaded = false;
+			}
+		},
+		destroy: () => node.removeEventListener('load', onload)
+	};
 }
 
 /** Appel reçu d'une page. */

@@ -15,7 +15,7 @@
 	import { closeBrackets } from '@codemirror/autocomplete';
 	import { html } from '@codemirror/lang-html';
 	import Icon from '#lib/icons/Icon.svelte';
-	import { buildSrcdoc, eventOf, pageUrl, parseCall, replyOf, urlSource } from './bridge';
+	import { buildSrcdoc, eventOf, navigationGuard, pageUrl, parseCall, replyOf, urlSource } from './bridge';
 	import { htmlTabsEnabled } from '#lib/shell/settings.svelte.js';
 	import ScriptDialog, { type DialogSpec } from '#lib/script/ScriptDialog.svelte';
 	import { declinedPages, pageConsent } from './consent';
@@ -106,6 +106,25 @@
 	}
 
 	const srcdoc = $derived(buildSrcdoc(shown));
+
+	// Le cadre isolé peut naviguer lui-même (location.href = …), ce que la
+	// CSP ne bloque pas : tout chargement après celui de la page est une
+	// navigation, aussitôt annulée en recréant le cadre. Une page qui
+	// recommence sans cesse est arrêtée.
+	let escapes = $state(0);
+	const maxEscapes = 3;
+	$effect(() => {
+		shown;
+		untrack(() => (escapes = 0));
+	});
+	function stayHome(node: HTMLIFrameElement, doc: string) {
+		return navigationGuard(node, doc, () => {
+			escapes++;
+			reloads++;
+			if (escapes >= maxEscapes) error = 'La page essaie sans cesse d’ouvrir une autre adresse : elle est arrêtée.';
+			else onnotice?.(`Page « ${name} » : navigation vers une autre adresse bloquée, la page a été rechargée.`);
+		});
+	}
 	// Page web externe : l'adresse affichée (null : page HTML du classeur).
 	const url = $derived(editing ? null : pageUrl(shown));
 	let asking = $state<string | null>(null);
@@ -288,7 +307,13 @@
 					title={locked || 'Afficher une page web externe dans cet onglet'}><Icon name="web" size={14} />Site web…</button
 				>
 			{/if}
-			<button onclick={() => reloads++} title="Recharger la page"><Icon name="refresh" size={14} />Recharger</button>
+			<button
+				onclick={() => {
+					if (escapes >= maxEscapes) error = '';
+					escapes = 0;
+					reloads++;
+				}}
+				title="Recharger la page"><Icon name="refresh" size={14} />Recharger</button>
 			{#if url}
 				<button onclick={() => openOutside(url)} title="Ouvrir dans le navigateur"><Icon name="open" size={14} />{url}</button>
 				<span class="muted">Page blanche : le site refuse peut-être d’être affiché dans un cadre (ouvrez-le dans le navigateur).</span>
@@ -319,8 +344,8 @@
 			{:else if url}
 				<!-- Site externe : sa propre origine, sans pont vers le classeur. -->
 				<iframe title="Page {name}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" src={url}></iframe>
-			{:else}
-				<iframe bind:this={frame} title="Page {name}" sandbox="allow-scripts" {srcdoc}></iframe>
+			{:else if escapes < maxEscapes}
+				<iframe bind:this={frame} title="Page {name}" sandbox="allow-scripts" {srcdoc} use:stayHome={srcdoc}></iframe>
 			{/if}
 		{/key}
 	</div>
