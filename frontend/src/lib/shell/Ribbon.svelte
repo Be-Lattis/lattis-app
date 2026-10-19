@@ -842,7 +842,11 @@
 		requestAnimationFrame(() => {
 			const actual = [...groupsEl.children].reduce((s, c) => s + c.getBoundingClientRect().width, 0);
 			const est = shapes.reduce((s, g, i) => s + groupWidth(g, m[i] ?? 'large', measure), 0);
-			const r = actual && est ? actual / est : 1;
+			// Ruban qui déborde (fenêtre trop étroite même tout compacté) : les
+			// groupes rétrécis faussent la mesure, qui ferait croire à de la place
+			// (le ruban repassait en grand et ne se recompactait plus). Rapport borné.
+			if (groupsEl.scrollWidth > groupsEl.clientWidth + 1) return;
+			const r = actual && est ? Math.min(1.5, Math.max(0.7, actual / est)) : 1;
 			if (Math.abs(r - ratio) / ratio > 0.03) ratio = r;
 		});
 	});
