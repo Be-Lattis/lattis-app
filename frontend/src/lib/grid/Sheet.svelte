@@ -2781,6 +2781,16 @@
 			}
 			ctx.clip('evenodd');
 		}
+		// Pas de quadrillage dans les en-têtes des tableaux (bande des groupes
+		// comprise) : leurs bordures sont celles du cadre (headerLines), sans
+		// liseré pâle à côté quand le zoom ou l'écran tombent entre deux pixels.
+		const heads = visible.filter((e) => !tableAnim(e));
+		if (heads.length) {
+			ctx.beginPath();
+			ctx.rect(0, 0, w, h);
+			for (const e of heads) ctx.rect(cx(e.t.col), ry(topRow(e.t)), spanW(e.t.col, e.lastCol), ry(e.t.row + 1) - ry(topRow(e.t)));
+			ctx.clip('evenodd');
+		}
 		ctx.beginPath();
 		ctx.strokeStyle = C.grid;
 		ctx.lineWidth = 1;
@@ -2803,9 +2813,7 @@
 		ctx.beginPath();
 		ctx.rect(MARGIN, TOP_H, w - MARGIN, h - TOP_H);
 		ctx.clip();
-		// Bordure discrète de chaque tableau, trait sous l'en-tête.
-		ctx.strokeStyle = C.border;
-		ctx.lineWidth = 1;
+		// Bordure discrète de chaque tableau, trait sous l'en-tête, bordures des en-têtes.
 		for (const e of visible) {
 			const g = grown(e);
 			const a = tableAnim(e);
@@ -2815,15 +2823,25 @@
 			if (motion()) geoDrawn.set(e.t.id, { x: to.x + (a?.dx ?? 0) + (a?.ox ?? 0), y: to.y + (a?.dy ?? 0), w: fw, h: fh });
 			const x = Math.round(cx(g.firstCol) + (a?.dx ?? 0) + (a?.ox ?? 0)) - 0.5;
 			const y = Math.round(ry(topRow(e.t)) + (a?.dy ?? 0)) - 0.5;
-			const under = Math.round(ry(e.t.row + 1) + (a?.dy ?? 0)) - 0.5;
 			ctx.save();
 			if (a) ctx.globalAlpha *= a.alpha;
-			ctx.strokeStyle = g.last !== e.last || g.lastCol !== e.lastCol || g.firstCol !== e.t.col ? C.active : e.t.query ? C.linkBorder : C.border;
-			ctx.strokeRect(x, y, fw, fh);
-			ctx.beginPath();
-			ctx.moveTo(x, under);
-			ctx.lineTo(x + fw, under);
-			ctx.stroke();
+			// Cadre, trait sous l'en-tête et bordures par défaut des en-têtes
+			// (séparations des colonnes, trait sous la bande des groupes) :
+			// même couleur et même épaisseur, nets à tout zoom (crispLines).
+			const border = e.t.query ? C.linkBorder : C.border;
+			const fx = cx(g.firstCol) + (a?.dx ?? 0) + (a?.ox ?? 0);
+			const fy = ry(topRow(e.t)) + (a?.dy ?? 0);
+			const fu = ry(e.t.row + 1) + (a?.dy ?? 0);
+			const head = headerLines(e, L, a);
+			const grownOut = g.last !== e.last || g.lastCol !== e.lastCol || g.firstCol !== e.t.col;
+			const frame = [fx, fy, fx, fy + fh, fx + fw, fy, fx + fw, fy + fh, fx, fy, fx + fw, fy, fx, fy + fh, fx + fw, fy + fh, fx, fu, fx + fw, fu];
+			// Cadre agrandi par la cellule active : en vert foncé, par-dessus les traits des en-têtes.
+			ctx.fillStyle = border;
+			crispLines(grownOut ? head : [...frame, ...head]);
+			if (grownOut) {
+				ctx.fillStyle = C.active;
+				crispLines(frame);
+			}
 			// Pastille du tableau qui suit l'onglet à choix : la valeur choisie.
 			if (e.t.follows && data?.choice && !data.choice.all) {
 				const label = data.choice.value || '(vide)';
@@ -3398,9 +3416,7 @@
 					ctx.fillStyle = C.select;
 					ctx.fillRect(cx(Math.max(a, k0)), y, spanW(Math.max(a, k0), Math.min(b, k1)), rh(r));
 				}
-				ctx.strokeStyle = C.grid;
-				ctx.lineWidth = 1;
-				ctx.strokeRect(Math.round(x) - 0.5, Math.round(y) - 0.5, sw, rh(r));
+				// Ses bordures par défaut se tracent avec le cadre du tableau (headerLines).
 				if (st) borders(st, x, y, sw, rh(r));
 				if (st?.nt) noteCorner(x + sw, y, st);
 				if (s.group) headLabel(s.group, x, y, sw, rh(r), 6, st, e.t.query ? C.linkHeadText : C.headText, 'center');
@@ -3433,13 +3449,70 @@
 			ctx.fillStyle = C.select;
 			ctx.fillRect(x, y, w, rh(hr - 1));
 		}
-		ctx.strokeStyle = C.grid;
-		ctx.lineWidth = 1;
-		ctx.strokeRect(Math.round(x) - 0.5, Math.round(y) - 0.5, w, h2);
+		// Ses bordures par défaut se tracent avec le cadre du tableau (headerLines).
 		if (hs) borders(hs, x, y, w, h2);
 		if (hs?.nt) noteCorner(x + w, y, hs);
 		const iw = singleIcons.get(`${e.t.id}:${i}`) ?? 0;
 		headLabel(e.t.columns[i].name, x, y, w, h2, iw + 10, hs, e.t.query ? C.linkHeadText : C.headText, 'left');
+	}
+
+	/**
+	 * Bordures par défaut des en-têtes d'un tableau, comme son cadre : une
+	 * séparation entre chaque colonne de l'en-tête, et sur un tableau aux
+	 * en-têtes sur deux lignes, une entre les cellules de la bande des groupes
+	 * et un trait entre la bande et l'en-tête (sauf sous une colonne sur un
+	 * niveau, d'un seul tenant). Segments [x0, y0, x1, y1] posés sur les
+	 * limites des cellules, pour crispLines ; le cadre et le trait sous
+	 * l'en-tête sont à part. La mise en forme du ruban se trace par-dessus.
+	 */
+	function headerLines(e: Entry, L: Layer, a: TableAnim | null): number[] {
+		const out: number[] = [];
+		const hr = e.t.row;
+		const X = (c: number) => L.cx(c) + (a ? a.dx + a.colOff(c) : 0);
+		const Y = (r: number) => L.ry(r) + (a ? a.dy + a.rowOff(r) : 0);
+		// Colonnes visibles seulement (une limite de plus de chaque côté).
+		const from = Math.max(e.t.col + 1, L.c0);
+		const to = Math.min(e.lastCol, L.c1 + 1);
+		if (rh(hr) && hr >= L.r0 && hr <= L.r1) for (let c = from; c <= to; c++) out.push(X(c), Y(hr), X(c), Y(hr + 1));
+		const br = hr - 1;
+		if (!e.t.twoLevel || !rh(br) || br > L.r1 || hr < L.r0) return out;
+		for (const s of groupSpans(e.t.columns.map((k) => k.name))) {
+			const c0 = e.t.col + s.i0;
+			const c1 = e.t.col + s.i1;
+			if (c1 + 1 < L.c0 || c0 > L.c1 + 1) continue;
+			if (s.i0 > 0) out.push(X(c0), Y(br), X(c0), Y(hr));
+			if (!(s.i0 === s.i1 && singleCol(e, s.i0))) out.push(X(c0), Y(hr), X(c1 + 1), Y(hr));
+		}
+		return out;
+	}
+
+	/**
+	 * Traits nets d'un pixel de l'écran (deux à partir de 150 % : comme un
+	 * trait de 1 px agrandi), de la couleur de remplissage courante : chaque
+	 * segment [x0, y0, x1, y1] (vertical ou horizontal, posé sur une limite
+	 * de cellules) devient un rectangle aligné sur les pixels de l'écran, juste
+	 * avant la limite (à gauche ou au-dessus), comme le quadrillage, quels que
+	 * soient le zoom et la densité de l'écran. Tous les traits se remplissent
+	 * d'un coup : leurs croisements ne foncent pas et ne laissent pas de trou.
+	 */
+	function crispLines(l: number[]) {
+		if (!l.length) return;
+		const m = ctx.getTransform();
+		const lw = Math.max(1, Math.round(m.a));
+		const px = (v: number) => Math.round(v * m.a + m.e);
+		const py = (v: number) => Math.round(v * m.d + m.f);
+		ctx.save();
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
+		ctx.beginPath();
+		for (let i = 0; i < l.length; i += 4) {
+			const x0 = px(Math.min(l[i], l[i + 2]));
+			const x1 = px(Math.max(l[i], l[i + 2]));
+			const y0 = py(Math.min(l[i + 1], l[i + 3]));
+			const y1 = py(Math.max(l[i + 1], l[i + 3]));
+			ctx.rect(x0 - lw, y0 - lw, x1 - x0 + lw, y1 - y0 + lw);
+		}
+		ctx.fill();
+		ctx.restore();
 	}
 
 	/**
