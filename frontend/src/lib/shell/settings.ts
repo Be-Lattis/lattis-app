@@ -78,7 +78,7 @@ export const settingSections: SettingSection[] = [
 				path: 'ai.keepConversation',
 				kind: 'bool',
 				label: 'Garder la conversation dans le classeur',
-				help: 'La conversation est enregistrée avec le classeur et réapparaît à sa prochaine ouverture. Sinon, elle s’efface quand on ferme le classeur ou qu’on en ouvre un autre.'
+				help: 'La conversation est enregistrée avec le classeur et réapparaît à sa prochaine ouverture : elle voyage avec le fichier, y compris les résultats de requêtes montrés et les lignes lues par l’assistant. Elle n’est enregistrée que si le classeur a aussi été modifié. Sinon, elle s’efface quand on ferme le classeur ou qu’on en ouvre un autre.'
 			},
 			{
 				path: 'ai.localUrl',

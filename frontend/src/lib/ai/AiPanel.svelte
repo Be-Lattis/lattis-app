@@ -137,8 +137,11 @@
 	// Liste des conversations du classeur (bouton ☰ de l'en-tête).
 	let convOpen = $state(false);
 	let convList = $state<Conversation[]>([]);
+	// Suppression définitive : confirmée sur la ligne même.
+	let confirmDel = $state<number | null>(null);
 	async function toggleConvs() {
 		convOpen = !convOpen;
+		confirmDel = null;
 		if (convOpen) convList = await conversations().catch(() => []);
 	}
 	async function pickConv(id: number) {
@@ -146,6 +149,7 @@
 		await openConversation(id).catch((e) => (chat.error = String(e?.message ?? e)));
 	}
 	async function dropConv(id: number) {
+		confirmDel = null;
 		await deleteConversation(id).catch((e) => (chat.error = String(e?.message ?? e)));
 		convList = await conversations().catch(() => []);
 	}
@@ -269,7 +273,14 @@
 						<span class="conv-title">{c.title}</span>
 						<span class="muted">{c.current ? 'en cours' : new Date(c.updated).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span>
 					</button>
-					<button class="conv-del" title="Supprimer cette conversation" aria-label="Supprimer « {c.title} »" disabled={chat.busy} onclick={() => dropConv(c.id)}><Icon name="trash" size={13} /></button>
+					{#if confirmDel === c.id}
+						<span class="conv-confirm">
+							<button class="small danger" disabled={chat.busy} onclick={() => dropConv(c.id)}>Supprimer</button>
+							<button class="small" onclick={() => (confirmDel = null)}>Annuler</button>
+						</span>
+					{:else}
+						<button class="conv-del" title="Supprimer cette conversation" aria-label="Supprimer « {c.title} »" disabled={chat.busy} onclick={() => (confirmDel = c.id)}><Icon name="trash" size={13} /></button>
+					{/if}
 				</div>
 			{/each}
 		</div>
@@ -926,6 +937,15 @@
 	button.small {
 		padding: 1px 6px;
 		font-size: 12px;
+	}
+	button.small.danger {
+		color: #b91c1c;
+		border-color: #fca5a5;
+	}
+	.conv-confirm {
+		display: flex;
+		gap: 4px;
+		padding-right: 8px;
 	}
 	button.small.icon {
 		border-color: transparent;
