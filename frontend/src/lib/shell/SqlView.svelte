@@ -471,12 +471,13 @@
 							title={onrename && !isReadOnly(o) ? 'Double-clic ou F2 : renommer ; clic droit : exemples SELECT, INSERT, UPDATE, DELETE, voir sur la feuille' : 'Clic droit : exemples SELECT, INSERT, UPDATE, DELETE, voir sur la feuille'}
 						>
 							<span>{open === o.sqlName ? '▾' : '▸'}</span>
+							<span class="kind" title={isReadOnly(o) ? 'Tableau croisé' : 'Tableau'}><Icon name={isReadOnly(o) ? 'pivot-table' : 'table'} size={14} /></span>
 							{#if !isReadOnly(o) && isDefaultTableName(o.name)}
 								<strong class="default-name" title={DEFAULT_NAME_HINT}>{o.name}</strong>
 							{:else}
 								<strong>{o.name}</strong>
 							{/if}
-							<span class="muted">{isReadOnly(o) ? 'tableau croisé' : 'tableau'} · {count(o.rows)}</span>
+							<span class="muted count">{count(o.rows)}</span>
 						</button>
 						{/if}
 						{#if open === o.sqlName}
@@ -508,6 +509,7 @@
 										title={`${v.label}${v.description ? ' — ' + v.description : ''} : vue du serveur en lecture seule, limitée aux lignes de votre audience (double-clic : exemple SELECT)`}
 									>
 										<span>{dataOpen === key ? '▾' : '▸'}</span>
+										<span class="kind" title="Vue du Data Lake (lecture seule)"><Icon name="database" size={14} /></span>
 										<strong>donnees.{v.name}</strong>
 										<span class="muted">{v.label}</span>
 									</button>
@@ -873,8 +875,12 @@
 		font: 13px 'Segoe UI', system-ui, -apple-system, sans-serif;
 		color: #1f2328;
 	}
+	/* Le volet s'élargit avec les noms longs (jusqu'à 460 px) plutôt que de
+	   les renvoyer à la ligne. */
 	.side {
-		width: 300px;
+		width: max-content;
+		min-width: 300px;
+		max-width: 460px;
 		border-right: 1px solid #d4d7db;
 		background: #fafbfb;
 		display: flex;
@@ -973,8 +979,9 @@
 	.obj-head {
 		display: flex;
 		gap: 6px;
-		align-items: baseline;
-		flex-wrap: wrap;
+		align-items: center;
+		flex-wrap: nowrap;
+		white-space: nowrap;
 		width: 100%;
 		text-align: left;
 		background: none;
@@ -983,6 +990,21 @@
 		padding: 4px;
 		cursor: pointer;
 		border-radius: 3px;
+	}
+	.obj-head strong {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		min-width: 0;
+	}
+	.obj-head .kind {
+		display: inline-flex;
+		flex: none;
+		color: #217346;
+	}
+	.obj-head .count {
+		margin-left: auto;
+		padding-left: 8px;
+		flex: none;
 	}
 	.obj-head:hover {
 		background: #eef2ef;
