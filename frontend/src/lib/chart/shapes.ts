@@ -64,10 +64,15 @@ export interface BoxStats {
 	q3: number;
 	max: number;
 	mean: number;
-	/** Valeurs au-delà de 1,5 écart interquartile. */
+	/** Valeurs au-delà de 1,5 écart interquartile (au plus 100 de chaque côté si calculées par le classeur). */
 	outliers: number[];
 	n: number;
+	/** Nombre de valeurs extrêmes (calcul du classeur : toutes ne sont pas listées). */
+	out?: number;
 }
+
+/** Boîte telle que la donne le classeur (canvas.BoxStats : liste des extrêmes éventuellement nulle). */
+export type BoxStatsIn = Omit<BoxStats, 'outliers'> & { outliers: number[] | null };
 
 /** Quantile p (0 à 1) d'un tableau trié, interpolé comme QUARTILE.INCLURE. */
 export function quantile(sorted: number[], p: number): number {
@@ -111,6 +116,31 @@ export function boxGroups(labels: string[], series: { name: string; values: (num
 		labels: groups,
 		boxes: groups.map((g) => series.map((s) => boxStats(s.values.filter((_, i) => labels[i] === g))))
 	};
+}
+
+/** Libellés des classes d'un histogramme de fréquences, d'après leurs bornes. */
+export function binLabels(edges: number[], f: (v: number) => string = tickLabel): string[] {
+	return edges.slice(0, -1).map((e, i) => `${f(e)} – ${f(edges[i + 1])}`);
+}
+
+/**
+ * Boîtes entre deux états (animation) : chaque statistique va de
+ * l'ancienne (même libellé, même série) à la nouvelle ; une boîte nouvelle
+ * s'ouvre depuis sa médiane. Les valeurs extrêmes sont celles d'arrivée.
+ */
+export function lerpBoxes(from: (BoxStats | null)[][] | null, to: (BoxStats | null)[][], e: number, fromLabels?: string[], toLabels?: string[]): (BoxStats | null)[][] {
+	if (e >= 1) return to;
+	const at = new Map<string, number>();
+	fromLabels?.forEach((l, i) => at.has(l) || at.set(l, i));
+	const l = (a: number, b: number) => a + (b - a) * e;
+	return to.map((row, i) => {
+		const src = from?.[toLabels && fromLabels ? (at.get(toLabels[i]) ?? -1) : i];
+		return row.map((b, k) => {
+			if (!b) return null;
+			const a = src?.[k] ?? { ...b, min: b.median, q1: b.median, q3: b.median, max: b.median, mean: b.median };
+			return { ...b, min: l(a.min, b.min), q1: l(a.q1, b.q1), median: l(a.median, b.median), q3: l(a.q3, b.q3), max: l(a.max, b.max), mean: l(a.mean, b.mean) };
+		});
+	});
 }
 
 // --- Cascade ------------------------------------------------------------------

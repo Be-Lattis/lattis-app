@@ -2,6 +2,21 @@
 
 export const PALETTE = ['#4472c4', '#ed7d31', '#a5a5a5', '#ffc000', '#5b9bd5', '#70ad47', '#264478', '#9e480e'];
 
+/**
+ * Couleur d'un texte posé sur le fond bg (« #rrggbb ») : blanc sur un fond
+ * foncé, presque noir sur un fond clair (jaune, gris), d'après la
+ * luminance relative (WCAG) ; le contraste choisi est le meilleur des deux.
+ */
+export function textOn(bg: string): string {
+	const m = /^#?([0-9a-f]{6})$/i.exec(bg.trim());
+	if (!m) return '#fff';
+	const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+	const n = parseInt(m[1], 16);
+	const L = 0.2126 * lin(((n >> 16) & 255) / 255) + 0.7152 * lin(((n >> 8) & 255) / 255) + 0.0722 * lin((n & 255) / 255);
+	// Contraste avec le blanc (1,05 / (L + 0,05)) contre le noir ((L + 0,05) / 0,05).
+	return 1.05 / (L + 0.05) >= (L + 0.05) / 0.05 ? '#fff' : '#1f2328';
+}
+
 /** Graduations rondes couvrant [lo, hi] (0 inclus, sauf zero faux), environ n intervalles. */
 export function ticks(lo: number, hi: number, n = 5, zero = true): number[] {
 	if (zero) {
@@ -18,6 +33,49 @@ export function ticks(lo: number, hi: number, n = 5, zero = true): number[] {
 	do out.push(at(k++));
 	while (out[out.length - 1] < hi);
 	return out;
+}
+
+/**
+ * Règle d'Excel pour l'origine d'un axe de valeurs automatique : 0 est
+ * inclus, sauf si toutes les valeurs ont le même signe et restent
+ * resserrées (la plus petite dépasse les 5/6 de la plus grande, en valeur
+ * absolue) : 1 000 à 1 050 ne donne pas une courbe plate.
+ */
+export function autoZero(lo: number, hi: number): boolean {
+	if (lo > 0) return lo < (5 / 6) * hi;
+	if (hi < 0) return hi > (5 / 6) * lo;
+	return true;
+}
+
+const DAY_MS = 86400000;
+const EPOCH = Date.UTC(1899, 11, 30);
+const serialOf = (y: number, m: number) => (Date.UTC(y, m, 1) - EPOCH) / DAY_MS;
+
+/**
+ * Graduations d'un axe de dates (numéros de série) : tous les 1, 2, 7 ou 14
+ * jours, sinon au premier du mois tous les 1, 2, 3, 6, 12… mois ; environ
+ * n intervalles, couvrant [lo, hi].
+ */
+export function dateTicks(lo: number, hi: number, n = 5): number[] {
+	if (!(hi > lo)) return [Math.floor(lo), Math.floor(lo) + 1];
+	const span = hi - lo;
+	const day = [1, 2, 7, 14].find((d) => span / d <= n * 1.6);
+	const out: number[] = [];
+	if (day !== undefined) {
+		for (let v = Math.floor(lo / day) * day; ; v += day) {
+			out.push(v);
+			if (v >= hi) return out;
+		}
+	}
+	const k = [1, 2, 3, 6, 12, 24, 60, 120, 240, 600].find((m) => span / (m * 30.44) <= n * 1.6) ?? 1200;
+	const d = new Date(EPOCH + Math.floor(lo) * DAY_MS);
+	let i = Math.floor((d.getUTCFullYear() * 12 + d.getUTCMonth()) / k) * k;
+	for (;;) {
+		const v = serialOf(Math.floor(i / 12), i % 12);
+		out.push(v);
+		if (v >= hi) return out;
+		i += k;
+	}
 }
 
 const fmt = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 });

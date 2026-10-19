@@ -166,15 +166,31 @@ export function flashAlpha(now: number, t0: number): number {
 }
 
 /**
- * Séries d'un graphique entre deux états : chaque valeur va de l'ancienne
- * (ou de zéro pour une nouvelle) à la nouvelle ; une valeur vide le reste.
+ * Rang dans l'état de départ de chaque point d'arrivée : par libellé quand
+ * les libellés d'arrivée sont distincts (un tri ou une ligne insérée ne fait
+ * pas glisser une barre depuis la valeur d'une autre catégorie), sinon par
+ * position ; -1 : point nouveau.
  */
-export function lerpSeries<S extends { values: (number | null)[] }>(from: S[] | null, to: S[], e: number): S[] {
+export function matchPoints(fromLabels: string[] | undefined, toLabels: string[] | undefined, n: number): number[] {
+	const same = Array.from({ length: n }, (_, i) => i);
+	if (!fromLabels || !toLabels || new Set(toLabels).size !== toLabels.length) return same;
+	const at = new Map<string, number>();
+	fromLabels.forEach((l, i) => at.has(l) || at.set(l, i));
+	return same.map((i) => at.get(toLabels[i]) ?? -1);
+}
+
+/**
+ * Séries d'un graphique entre deux états : chaque valeur va de l'ancienne
+ * (même série par son nom, même point par son libellé, voir matchPoints ;
+ * zéro pour une nouvelle) à la nouvelle ; une valeur vide le reste.
+ */
+export function lerpSeries<S extends { name?: string; values: (number | null)[] }>(from: S[] | null, to: S[], e: number, fromLabels?: string[], toLabels?: string[]): S[] {
 	if (e >= 1) return to;
-	return to.map((s, k) => ({
-		...s,
-		values: s.values.map((v, i) => (v === null ? null : lerp(from?.[k]?.values[i] ?? 0, v, e)))
-	}));
+	return to.map((s, k) => {
+		const f = from?.find((x) => x.name !== undefined && x.name === s.name) ?? from?.[k];
+		const idx = matchPoints(fromLabels, toLabels, s.values.length);
+		return { ...s, values: s.values.map((v, i) => (v === null ? null : lerp(f?.values[idx[i]] ?? 0, v, e))) };
+	});
 }
 
 /** Mêmes valeurs (les graphiques ne s'animent que si leurs données changent). */

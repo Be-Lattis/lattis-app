@@ -28,7 +28,7 @@
 
 	// Données déjà lues pour la même source : un graphique remplacé (vue de
 	// carte enregistrée) renaît sans clignoter, puis se relit.
-	const dataKey = (c: ChartConfig) => JSON.stringify([c.source, c.kind, c.x, c.series, c.mapCoords, c.mapDraft, c.colorBy]);
+	const dataKey = (c: ChartConfig) => JSON.stringify([c.source, c.kind, c.x, c.series, c.mapCoords, c.mapDraft, c.colorBy, c.bins, c.hidden]);
 	let info = $state.raw<ChartInfo | null>(untrack(() => lastInfo.get(dataKey(config)) ?? null));
 	let width = $state(untrack(() => lastWidth.get(dataKey(config)) ?? 0));
 	$effect(() => {
@@ -61,7 +61,7 @@
 	{#if info?.error}
 		<div class="err">Graphique « {config.title || config.source} » : {info.error}</div>
 	{:else if info && width > 0}
-		<Chart kind={config.kind} labels={info.labels ?? []} series={(info.series ?? []) as never} {width} height={boxH || height} style={config} animate={live.animate && settled} interactive={selected} onview={(v) => onconfig?.({ ...config, mapView: v ?? undefined })} map={info} onpoint={onrow && ((r) => onrow(config.source, r))} />
+		<Chart kind={config.kind} labels={info.labels ?? []} series={(info.series ?? []) as never} {width} height={boxH || height} style={config} animate={live.animate && settled} interactive={selected} onview={(v) => onconfig?.({ ...config, mapView: v ?? undefined })} map={info} info={info as never} onpoint={onrow && ((r) => onrow(config.source, r))} />
 	{/if}
 </div>
 

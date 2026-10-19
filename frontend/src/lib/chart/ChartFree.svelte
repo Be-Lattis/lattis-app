@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Graphiques sans axes cartésiens, dessinés dans la zone (x, y, w, h) de
 	// Chart.svelte : secteurs 3D, compartimentage, radar, entonnoir, jauge.
-	import { axisFormat, shortLabel, tickLabel, ticks } from './scale';
+	import { axisFormat, shortLabel, textOn, tickLabel, ticks } from './scale';
 	import { gaugeValue, pie3d, radarPoint, ringPath, shade, squarify } from './shapes';
 
 	interface Props {
@@ -14,9 +14,11 @@
 		h: number;
 		color: (k: number) => string;
 		style: { labels?: boolean; noGrid?: boolean; yMin?: number; yMax?: number };
+		/** Format des valeurs de la première série (celui de sa colonne). */
+		fmt?: (v: number) => string;
 	}
 
-	let { kind, labels, series, x, y, w, h, color, style }: Props = $props();
+	let { kind, labels, series, x, y, w, h, color, style, fmt = tickLabel }: Props = $props();
 
 	const first = $derived(series[0]?.values ?? []);
 	const pct = new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFractionDigits: 1 });
@@ -66,14 +68,14 @@
 	{/each}
 	{#each pie.slices as s (s.i)}
 		<path d={s.top} fill={color(s.i)} stroke="#fff" stroke-width="1"><title>{labels[s.i]} : {pct.format(s.part)}</title></path>
-		{#if style.labels && s.part > 0.04}<text x={s.mid.x} y={s.mid.y + 4} text-anchor="middle" class="on-color">{pct.format(s.part)}</text>{/if}
+		{#if style.labels && s.part > 0.04}<text x={s.mid.x} y={s.mid.y + 4} text-anchor="middle" class="on-color" style:fill={textOn(color(s.i))}>{pct.format(s.part)}</text>{/if}
 	{/each}
 {:else if kind === 'treemap'}
 	{#each tilesT as t (t.i)}
-		<rect x={t.x} y={t.y} width={Math.max(0, t.w - 1)} height={Math.max(0, t.h - 1)} fill={color(t.i)}><title>{labels[t.i]} : {tickLabel(first[t.i] ?? 0)}</title></rect>
+		<rect x={t.x} y={t.y} width={Math.max(0, t.w - 1)} height={Math.max(0, t.h - 1)} fill={color(t.i)}><title>{labels[t.i]} : {fmt(first[t.i] ?? 0)}</title></rect>
 		{#if t.w > 40 && t.h > 18}
-			<text x={t.x + 5} y={t.y + 15} class="on-color">{shortLabel(labels[t.i], Math.max(3, Math.floor((t.w - 8) / 6.5)))}</text>
-			{#if style.labels && t.h > 32}<text x={t.x + 5} y={t.y + 29} class="on-color light">{tickLabel(first[t.i] ?? 0)}</text>{/if}
+			<text x={t.x + 5} y={t.y + 15} class="on-color" style:fill={textOn(color(t.i))}>{shortLabel(labels[t.i], Math.max(3, Math.floor((t.w - 8) / 6.5)))}</text>
+			{#if style.labels && t.h > 32}<text x={t.x + 5} y={t.y + 29} class="on-color light" style:fill={textOn(color(t.i))}>{fmt(first[t.i] ?? 0)}</text>{/if}
 		{/if}
 	{/each}
 {:else if kind === 'radar'}
@@ -94,7 +96,7 @@
 			{#each ps as p, i (i)}
 				{#if s.values[i] !== null}
 					<circle cx={p.x} cy={p.y} r="2.5" fill={color(k)} />
-					{#if style.labels}<text x={p.x} y={p.y - 6} text-anchor="middle" class="small">{tickLabel(s.values[i]!)}</text>{/if}
+					{#if style.labels}<text x={p.x} y={p.y - 6} text-anchor="middle" class="small">{fmt(s.values[i]!)}</text>{/if}
 				{/if}
 			{/each}
 		{/each}
@@ -105,10 +107,10 @@
 	{#each labels as l, i (i)}
 		{@const v = first[i] ?? 0}
 		{@const bw = fMax ? Math.max(2, (Math.abs(v) / fMax) * w) : 0}
-		<rect x={x + (w - bw) / 2} y={y + fBand * i + 1} width={bw} height={Math.max(1, fBand - 2)} fill={color(i)}><title>{l} : {tickLabel(v)}</title></rect>
+		<rect x={x + (w - bw) / 2} y={y + fBand * i + 1} width={bw} height={Math.max(1, fBand - 2)} fill={color(i)}><title>{l} : {fmt(v)}</title></rect>
 		{#if fBand >= 12}
 			{@const inside = bw > 90}
-			<text x={inside ? x + w / 2 : x + (w + bw) / 2 + 4} y={y + fBand * (i + 0.5) + 4} text-anchor={inside ? 'middle' : 'start'} class={inside ? 'on-color' : 'small'}>{shortLabel(l, 18)}{style.labels || inside ? ' · ' + tickLabel(v) : ''}</text>
+			<text x={inside ? x + w / 2 : x + (w + bw) / 2 + 4} y={y + fBand * (i + 0.5) + 4} text-anchor={inside ? 'middle' : 'start'} class={inside ? 'on-color' : 'small'} style:fill={inside ? textOn(color(i)) : undefined}>{shortLabel(l, 18)}{style.labels || inside ? ' · ' + fmt(v) : ''}</text>
 		{/if}
 	{/each}
 {:else if kind === 'gauge'}
@@ -117,9 +119,9 @@
 	{@const a = Math.PI * (1 + g.frac)}
 	<line x1={gC.x} y1={gC.y} x2={gC.x + gR * 0.9 * Math.cos(a)} y2={gC.y + gR * 0.9 * Math.sin(a)} stroke="#374151" stroke-width="2.5" stroke-linecap="round" />
 	<circle cx={gC.x} cy={gC.y} r="4" fill="#374151" />
-	<text x={gC.x - gR * 0.84} y={gC.y + 16} text-anchor="middle" class="small">{tickLabel(g.lo)}</text>
-	<text x={gC.x + gR * 0.84} y={gC.y + 16} text-anchor="middle" class="small">{tickLabel(g.hi)}</text>
-	<text x={gC.x} y={gC.y + 28} text-anchor="middle" class="big">{g.value === null ? '—' : tickLabel(g.value)}</text>
+	<text x={gC.x - gR * 0.84} y={gC.y + 16} text-anchor="middle" class="small">{fmt(g.lo)}</text>
+	<text x={gC.x + gR * 0.84} y={gC.y + 16} text-anchor="middle" class="small">{fmt(g.hi)}</text>
+	<text x={gC.x} y={gC.y + 28} text-anchor="middle" class="big">{g.value === null ? '—' : fmt(g.value)}</text>
 	{#if series[0]}<text x={gC.x} y={gC.y + 46} text-anchor="middle" class="small">{shortLabel(series[0].name, 24)}</text>{/if}
 {/if}
 

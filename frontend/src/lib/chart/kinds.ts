@@ -3,6 +3,10 @@
 
 import type { IconName } from '#lib/icons/icons.js';
 
+// Attention, les clés bar et column sont l'inverse du vocabulaire anglais
+// d'Excel : « bar » est l'histogramme (barres verticales, c:barChart
+// barDir="col" en DrawingML) et « column » les barres horizontales
+// (barDir="bar"). Elles sont gardées telles quelles dans les classeurs.
 export type ChartKind =
 	| 'bar'
 	| 'column'
@@ -87,6 +91,94 @@ export function chartFields(kind: string, cols: { name: string; numeric: boolean
 	if (SINGLE_SERIES.has(kind)) series = series.slice(-1);
 	if (kind === 'histogram' && series.length) series = [c?.numeric && c !== x ? c.name : series[0]];
 	return { x: x?.name ?? '', series };
+}
+
+/**
+ * Axe X et séries d'après les colonnes sélectionnées (rangs dans le
+ * tableau), comme Excel : X est la première non numérique de la sélection
+ * (pour un nuage, la première numérique ; sinon celle que donne
+ * chartFields), les séries les autres colonnes de nombres sélectionnées.
+ * Moins de deux colonnes sélectionnées, ou aucune série : chartFields.
+ */
+export function chartFieldsFrom(kind: string, cols: { name: string; numeric: boolean }[], selected: number[], cur = -1): { x: string; series: string[] } {
+	const base = chartFields(kind, cols, cur);
+	const sel = selected.map((i) => cols[i]).filter(Boolean);
+	if (sel.length < 2) return base;
+	const x = (kind === 'scatter' ? sel.find((c) => c.numeric) : sel.find((c) => !c.numeric))?.name ?? base.x;
+	let series = sel.filter((c) => c.numeric && c.name !== x).map((c) => c.name);
+	if (!series.length) return base;
+	if (SINGLE_SERIES.has(kind) || kind === 'histogram') series = series.slice(0, 1);
+	return { x, series };
+}
+
+/** Titre par défaut d'un nouveau graphique, comme Excel : le nom de la série quand il n'y en a qu'une. */
+export const defaultChartTitle = (series: string[]): string | undefined => (series.length === 1 ? series[0] : undefined);
+
+/**
+ * Nouvelle liste de séries (ajout, retrait, ordre) : couleurs, axe
+ * secondaire et formes du combiné suivent chaque série par son nom au lieu
+ * de rester à leur rang. Les couleurs des secteurs (par catégorie) et de la
+ * cascade (hausse, baisse, total) ne sont pas celles des séries : gardées.
+ */
+export function reorderSeries(
+	cfg: { kind: string; series: string[]; colors?: string[]; secondary?: boolean[]; seriesKinds?: string[] },
+	next: string[]
+): { series: string[]; colors?: string[]; secondary?: boolean[]; seriesKinds?: string[] } {
+	const old = (n: string) => cfg.series.indexOf(n);
+	const out: { series: string[]; colors?: string[]; secondary?: boolean[]; seriesKinds?: string[] } = { series: next };
+	if (!BY_CATEGORY.has(cfg.kind) && cfg.kind !== 'waterfall') {
+		out.colors = cfg.colors?.length ? next.map((n) => (old(n) >= 0 ? (cfg.colors![old(n)] ?? '') : '')) : undefined;
+		if (out.colors && !out.colors.some(Boolean)) out.colors = undefined;
+	}
+	const sec = next.map((n) => old(n) >= 0 && !!cfg.secondary?.[old(n)]);
+	out.secondary = sec.some(Boolean) ? sec : undefined;
+	if (cfg.kind === 'combo') out.seriesKinds = next.map((n, k) => (old(n) >= 0 ? seriesShape(cfg.seriesKinds, old(n)) : k === 0 ? 'bar' : 'line'));
+	return out;
+}
+
+/** Points lus au plus par graphique (canvas.MaxChartPoints). */
+export const MAX_POINTS = 2000;
+
+const int = (v: number) => v.toLocaleString('fr-FR');
+
+/** Coupure des données d'un graphique, à signaler sous le dessin et dans le volet (vide : aucune). */
+export function chartNote(info?: { total?: number; truncated?: boolean; sampled?: boolean } | null): string {
+	if (!info?.total) return '';
+	if (info.truncated) return `${int(MAX_POINTS)} premiers points sur ${int(info.total)}`;
+	if (info.sampled) return `Courbe réduite à ${int(MAX_POINTS)} points sur ${int(info.total)} (extrêmes gardés)`;
+	return '';
+}
+
+/**
+ * Remarques du volet sur les données dessinées : coupure, valeurs négatives
+ * ignorées, X non numérique d'un nuage, séries au-delà de la première.
+ */
+export function chartNotes(
+	cfg: { kind: string; series: string[] },
+	info?: { labels?: string[] | null; series?: { values: (number | null)[] | null }[] | null; xValues?: (number | null)[] | null; total?: number; truncated?: boolean; sampled?: boolean } | null
+): string[] {
+	const out: string[] = [];
+	const cut = chartNote(info);
+	if (cut) out.push(cut + '.');
+	const first = info?.series?.[0]?.values ?? [];
+	const neg = first.filter((v) => v !== null && v < 0).length;
+	if (neg && ['pie', 'doughnut', 'pie3d', 'treemap'].includes(cfg.kind)) out.push(neg === 1 ? '1 valeur négative ignorée.' : `${int(neg)} valeurs négatives ignorées.`);
+	if (neg && cfg.kind === 'funnel') out.push(neg === 1 ? '1 valeur négative prise en valeur absolue.' : `${int(neg)} valeurs négatives prises en valeur absolue.`);
+	if (cfg.kind === 'scatter' && info?.labels?.length && !info.xValues?.some((v) => v !== null)) out.push('L’axe X n’est ni un nombre ni une date : chaque point est placé à son rang.');
+	if (SINGLE_SERIES.has(cfg.kind) && cfg.series.length > 1) out.push('Ce type ne dessine que la première série.');
+	return out;
+}
+
+/** Résumé d'un graphique pour les lecteurs d'écran : type, séries, étendue. */
+export function chartSummary(kind: string, labels: string[], series: { name: string; values: (number | null)[] }[], total?: number): string {
+	const name = kindInfo(kind)?.label ?? 'Graphique';
+	const parts = [`${name}, ${series.length > 1 ? `${series.length} séries` : '1 série'}`];
+	if (labels.length) parts.push(`${int(total && total > labels.length ? total : labels.length)} points, de « ${labels[0]} » à « ${labels[labels.length - 1]} »`);
+	for (const s of series.slice(0, 6)) {
+		const vs = s.values.filter((v): v is number => v !== null);
+		if (vs.length) parts.push(`${s.name} : de ${Math.min(...vs).toLocaleString('fr-FR')} à ${Math.max(...vs).toLocaleString('fr-FR')}`);
+	}
+	return parts.join(' ; ') + '.';
 }
 
 /** Forme d'une série d'un graphique combiné : la première en barres, les autres en courbes. */

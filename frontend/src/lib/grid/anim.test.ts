@@ -103,4 +103,16 @@ describe('barres, éclat, séries', () => {
 		expect(sameSeries(a, a.map((s) => ({ ...s, values: [...s.values] })))).toBe(true);
 		expect(sameSeries(a, b)).toBe(false);
 	});
+
+	it('lerpSeries après un tri : chaque barre part de sa propre catégorie', () => {
+		const a = [{ name: 'Ventes', values: [10, 20, 30] }];
+		const b = [{ name: 'Ventes', values: [30, 10, 40] }];
+		// FR, IT, ES triés en ES, FR, puis DE ajoutée.
+		expect(lerpSeries(a, b, 0.5, ['FR', 'IT', 'ES'], ['ES', 'FR', 'DE'])[0].values).toEqual([30, 10, 20]);
+		// Libellés répétés : par position.
+		expect(lerpSeries(a, b, 0.5, ['FR', 'IT', 'ES'], ['FR', 'FR', 'IT'])[0].values).toEqual([20, 15, 35]);
+		// Série retirée devant : la suivante garde ses valeurs (par nom).
+		const two = [{ name: 'Coût', values: [1] }, { name: 'Ventes', values: [10] }];
+		expect(lerpSeries(two, [{ name: 'Ventes', values: [20] }], 0.5)[0].values).toEqual([15]);
+	});
 });
