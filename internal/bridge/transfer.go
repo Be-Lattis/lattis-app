@@ -93,14 +93,24 @@ func (s *DocumentService) ExportSheetCSV(ctx context.Context, sheet int64, name 
 	})
 }
 
-// PrintHTML rend la plage utilisée d'une feuille en HTML imprimable
-// (Fichier › Imprimer / Exporter en PDF).
+// PrintHTML rend une feuille en pages HTML imprimables, selon sa mise en
+// page (Fichier › Imprimer / Exporter en PDF).
 func (s *DocumentService) PrintHTML(ctx context.Context, sheet int64) (string, error) {
 	d, err := s.current()
 	if err != nil {
 		return "", err
 	}
-	return transfer.PrintHTML(ctx, d.Model, sheet)
+	return transfer.PrintHTML(ctx, d.Model, sheet, transfer.PrintInfo{Path: d.Path()})
+}
+
+// PageBreaks donne les sauts de page d'une feuille (traits pointillés de la
+// grille, onglet Mise en page).
+func (s *DocumentService) PageBreaks(ctx context.Context, sheet int64) (transfer.PageBreaks, error) {
+	d, err := s.current()
+	if err != nil {
+		return transfer.PageBreaks{}, err
+	}
+	return transfer.SheetPageBreaks(ctx, d.Model, sheet)
 }
 
 // XLSXExport est le résultat d'un export .xlsx ou .ods : le fichier écrit

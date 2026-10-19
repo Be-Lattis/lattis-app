@@ -67,6 +67,10 @@ type xsheet struct {
 	merges             [][4]int
 	rowStyle, colStyle map[int]canvas.Style
 	rep                SheetReport // ce qui n'est pas exporté tel quel
+	// Mise en page (impression, exports) ; tableRects : place des tableaux
+	// (impression).
+	page       canvas.PageSetup
+	tableRects []canvas.Rect
 }
 
 // Limites d'une feuille Excel : la feuille de Lattis va au-delà, l'export coupe.
@@ -211,7 +215,7 @@ func (sh *xsheet) put(r, c int, x xcell) {
 func collectLayout(ctx context.Context, m *canvas.Model, s canvas.SheetInfo, l canvas.Layout, b *book, fm *fmts) (xsheet, error) {
 	sh := xsheet{name: s.Name, info: s, hidden: s.Hidden, cells: map[[2]int]xcell{}, widths: l.Widths,
 		heights: map[int]int{}, rowFmt: map[int]int32{}, colFmt: map[int]int32{}, hiddenR: map[int]bool{}, hiddenC: map[int]bool{},
-		rowStyle: map[int]canvas.Style{}, colStyle: map[int]canvas.Style{}}
+		rowStyle: map[int]canvas.Style{}, colStyle: map[int]canvas.Style{}, page: l.PageSetup}
 	sh.rep = SheetReport{Name: s.Name, Kind: s.Kind, Protected: s.Protected, Tables: len(l.Tables),
 		Pivots: len(l.Pivots), Charts: len(l.Charts), Buttons: len(l.Buttons)}
 	rules := map[string]bool{} // règles conditionnelles (identifiants)
