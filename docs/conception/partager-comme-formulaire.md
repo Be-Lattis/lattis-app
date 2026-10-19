@@ -160,6 +160,7 @@ Tout ce qui précède est dans la définition JSON du formulaire, gardée par le
 |---|---|---|---|
 | **Membres du classeur** (par défaut) | Toute personne qui a un rôle sur le classeur, **lecteurs compris** (question 8) | Compte Lattis, par la même session de site que `/w/<id>` | Le formulaire est un droit à part, que le concepteur choisit de donner |
 | **Personnes et équipes choisies** | Adresses (une adresse inconnue reçoit un compte en attente, comme `invite`) et équipes (`list_teams`, sous-équipes comprises) | Compte Lattis | Elles **ne deviennent pas membres** du classeur et ne le voient pas dans `my_workbooks` |
+| **Tout compte du serveur** (décision de Louis, 19/10) | Toute personne qui a un compte sur ce Serveur Lattis (« Toute personne disposant d'un compte sur <nom du serveur> »), sans être membre du classeur | Compte Lattis | Entre « Personnes et équipes choisies » et « Lien public » : utile pour un formulaire interne à toute l'organisation |
 | **Lien public** | Toute personne qui a le lien | Aucune | Proposé seulement si le serveur le permet (réglage `forms_public` du propriétaire du serveur, **désactivé par défaut**) |
 
 **Position du produit sur le lien public.** Lattis est d'abord un outil interne. Un lien public met une page du serveur sur internet et laisse entrer des données que personne n'a vérifiées. On le propose parce que les inscriptions et les relevés par des bénévoles en ont besoin, mais sur décision explicite de deux personnes : le propriétaire du serveur l'autorise, puis le concepteur le choisit pour son formulaire. Les protections sont toujours actives et ne se désactivent pas :
@@ -173,7 +174,7 @@ Tout ce qui précède est dans la définition JSON du formulaire, gardée par le
 
 - **Dates** d'ouverture et de fermeture.
 - **Plafond** de réponses (« 30 places »).
-- **Une réponse par personne** : sûre en mode connecté ; en mode public, seulement par un cookie, ce que le concepteur voit écrit.
+- **Nombre de réponses par personne** (décision de Louis) : **une**, **N** (au choix du concepteur) ou **sans limite**. Sûr en mode connecté (compté par compte dans `form_submissions`) ; en mode public, seulement par un cookie, ce que le concepteur voit écrit.
 - **Modification de sa réponse** (question 5) :
   - en mode connecté, par « Mes réponses », jusqu'à la fermeture ou pendant N jours ;
   - en mode public, par un **lien secret** affiché après l'envoi, valable 7 jours.
@@ -361,7 +362,7 @@ Libellés liés aux champs, ordre du focus, contraste de la palette (§4.1), mes
 
 En phase 9 :
 
-> **Partager un tableau comme formulaire** (demande de Louis, 19/10/2026) : clic droit sur un tableau d'un classeur collaboratif › « Partager comme formulaire… » (sinon, message et action pour publier d'abord). Le concepteur fait un champ par colonne (types, listes de validation, clé numérotée par le serveur, valeurs posées par le serveur) et règle une personnalisation limitée (titre, introduction, logo, bannière, palette, sections, bouton, remerciement, langue). Trois modes d'accès : membres, personnes ou équipes, public avec protections. La page `/f/<code>` est servie par lattisd ; les réponses deviennent des lignes écrites sous une identité technique et arrivent en direct par la synchronisation. Étude : `conception/partager-comme-formulaire.md`. Client M + S + S ; serveur M à L.
+> **Partager un tableau comme formulaire** (demande de Louis, 19/10/2026) : clic droit sur un tableau d'un classeur collaboratif › « Partager comme formulaire… » (sinon, message et action pour publier d'abord). Le concepteur fait un champ par colonne (types, listes de validation, clé numérotée par le serveur, valeurs posées par le serveur) et règle une personnalisation limitée (titre, introduction, logo, bannière, palette, sections, bouton, remerciement, langue). Quatre modes d'accès : membres, personnes ou équipes, tout compte du serveur, public avec protections. Nombre de réponses par personne : une, N ou sans limite. Position GPS du répondant possible (pas de photo). Hors ligne complet sur le téléphone : lot à part, à inscrire à la feuille de route. La page `/f/<code>` est servie par lattisd ; les réponses deviennent des lignes écrites sous une identité technique et arrivent en direct par la synchronisation. Étude : `conception/partager-comme-formulaire.md`. Client M + S + S ; serveur M à L.
 
 ## 14. Relecture du fil serveur (19/10) et choix retenus
 
@@ -372,3 +373,19 @@ En phase 9 :
 - **Numérotation** (`next_number`) : verrou consultatif par tableau, puis `max + 1`.
 - **Pause automatique** : calculée en fenêtre glissante sur `form_submissions`, valable avec plusieurs lattisd.
 - Estimation côté serveur : M à L.
+
+## 15. Réponses de Louis aux questions (19/10)
+
+1. **Auteur de la ligne** : identité technique du formulaire, colonne « Répondant » en option. Retenu.
+2. **Accès par défaut** : membres du classeur. Retenu, avec un **mode de plus** : « Toute personne disposant d'un compte sur <nom du serveur> » (§5 et §13 mis à jour). Côté serveur : une audience `server_accounts` dans `lattis.forms.access`, vérifiée par `submit_form` (compte actif du serveur, rôle de connexion quelconque).
+3. **Lien public** en v1, permis par le propriétaire du serveur et coupé par défaut. Retenu.
+4. **Pas de CAPTCHA tiers** (pot de miel, délai, débits, pause automatique). Retenu.
+5. **Modifier sa réponse** : retenu, coupé par défaut par formulaire. **En plus** : le nombre de réponses par compte se règle : une, N, ou sans limite (§5). `lattis.forms` remplace `one_per_person` par `max_per_respondent` (`null` = sans limite, `1` = une seule, `n`).
+6. **Hors ligne** : le premier lot garde le brouillon local et « Réessayer » ; le hors ligne complet (plusieurs réponses en file sur le téléphone, envoi au retour du réseau) devient **un lot à part, à inscrire à la feuille de route**.
+7. **Pas de photo** (hors du périmètre). **La position doit pouvoir être envoyée** : champ « Position » (deux colonnes Latitude / Longitude, ou une colonne texte « lat, lon »), rempli par le navigateur sur demande du répondant (bouton « Ma position », jamais automatiquement), précision affichée ; il passe **au lot 1** (petit).
+8. **Lecteurs du classeur** : en mode « Membres du classeur », toute personne qui a un rôle sur le classeur peut répondre, **lecteurs compris** : être lecteur du classeur ne donne pas le droit d'écrire dans le tableau, mais le formulaire est un droit à part donné par le concepteur. En mode « Lien public » ou « Tout compte du serveur », la question ne se pose pas : tout le monde peut répondre. *(Louis n'était pas sûr de la question : c'est ce qui est retenu, à corriger s'il le souhaite.)*
+9. **Classeur figé** : refusé. Retenu.
+10. **Plusieurs formulaires par tableau** : retenu, avec une **colonne « Formulaire » en option** (titre du formulaire qui a écrit la ligne, posée par le serveur) pour les distinguer dans le tableau.
+11. **Listes copiées à l'enregistrement** avec « Mettre à jour ». Retenu.
+12. **Palette de 8 couleurs** ; CSS et HTML libres hors du périmètre. Retenu.
+13. **Français et anglais** dès le premier lot. Retenu.
