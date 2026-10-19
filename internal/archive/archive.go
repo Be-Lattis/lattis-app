@@ -7,7 +7,8 @@
 // (os.UserCacheDir, conservé entre deux redémarrages), où la base vit en WAL.
 // Enregistrer produit un instantané cohérent par VACUUM INTO, en retire
 // l'historique d'annulation et les corbeilles (scrub.go), le zippe sans
-// compression et remplace l'archive de façon atomique.
+// compression et remplace l'archive de façon atomique. L'extraction vérifie
+// l'espace libre et refuse une base démesurée (bombe ZIP, copyZipFile).
 //
 // Un verrou à côté du fichier (~$nom.lattis, peer.go) prévient un autre
 // poste qui ouvre le même classeur ; l'enregistrement refuse d'écraser un
@@ -471,6 +472,10 @@ func extract(path, dir string) error {
 		if errors.As(err, &re) {
 			return corruptErr(path, "la base de données de l'archive est altérée", true)
 		}
+		var big tooBigErr
+		if errors.As(err, &big) {
+			return formatErr(path, big.reason)
+		}
 		return err
 	}
 	if err := checkDB(part); err != nil {
@@ -496,18 +501,79 @@ func (t tagReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
+// Bombe ZIP (audit 6, M1) : Lattis écrit la base sans compression ; une
+// base compressée plus de maxRatio fois, au-delà de ratioFloor, n'est pas
+// un classeur de Lattis.
+const (
+	maxRatio   = 100
+	ratioFloor = 64 << 20
+	// headerSlack : octets tolérés après la dernière page annoncée par
+	// l'en-tête de la base.
+	headerSlack = 64 << 10
+)
+
+// tooBigErr : la base de l'archive annonce une taille démesurée ou
+// incohérente ; rien n'est extrait.
+type tooBigErr struct{ reason string }
+
+func (e tooBigErr) Error() string { return e.reason }
+
+// bomb dit pourquoi l'entrée f ne doit pas être décompressée (vide : rien).
+func bomb(f *zip.File) string {
+	size := f.UncompressedSize64
+	if size >= 1<<48 { // au-delà de ce que SQLite sait écrire
+		return fmt.Sprintf("l'archive annonce une base de %s : fichier refusé", Size(size))
+	}
+	if f.Method != zip.Store && size > ratioFloor && size/maxRatio > f.CompressedSize64 {
+		return fmt.Sprintf("la base de données de l'archive est compressée de façon anormale (%s pour %s dans le fichier) : fichier refusé", Size(size), Size(f.CompressedSize64))
+	}
+	return ""
+}
+
+// copyZipFile décompresse f dans dst, sans dépasser la taille annoncée par
+// l'archive ni celle que l'en-tête de la base déclare, après avoir vérifié
+// l'espace libre.
 func copyZipFile(f *zip.File, dst string) error {
+	if why := bomb(f); why != "" {
+		return tooBigErr{why}
+	}
+	size := f.UncompressedSize64
+	if err := needSpace(filepath.Dir(dst), size, false); err != nil {
+		return err
+	}
 	r, err := f.Open()
 	if err != nil {
 		return readErr{err}
 	}
 	defer r.Close()
+	// L'en-tête annonce le nombre de pages : une archive qui déclare bien
+	// plus est refusée avant d'écrire quoi que ce soit.
+	h := make([]byte, 100)
+	n, err := io.ReadFull(tagReader{r}, h)
+	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
+		return err
+	}
+	h = h[:n]
+	if pageSize, pages, ok := dbHeader(h); ok && pages > 0 && size > uint64(pages*pageSize)+headerSlack {
+		return tooBigErr{fmt.Sprintf("l'archive annonce une base de %s alors que la base en déclare %s : fichier refusé", Size(size), Size(uint64(pages*pageSize)))}
+	}
 	w, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	if _, err := io.Copy(w, tagReader{r}); err != nil {
+	if _, err := w.Write(h); err != nil {
 		w.Close()
+		return err
+	}
+	// archive/zip refuse déjà de lire au-delà de la taille annoncée ; la
+	// borne le garantit ici aussi (un octet de plus : la somme de contrôle
+	// n'est vérifiée qu'en lisant la fin).
+	rest := int64(size) - int64(n)
+	if c, err := io.Copy(w, io.LimitReader(tagReader{r}, rest+1)); err != nil || c > rest {
+		w.Close()
+		if err == nil {
+			err = readErr{errors.New("base plus grande que la taille annoncée")}
+		}
 		return err
 	}
 	return w.Close()

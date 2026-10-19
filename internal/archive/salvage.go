@@ -110,7 +110,7 @@ func copyRawDB(path string, w io.Writer) (int64, error) {
 	if zr, err := zip.OpenReader(path); err == nil {
 		defer zr.Close()
 		for _, f := range zr.File {
-			if f.Name != dbName {
+			if f.Name != dbName || bomb(f) != "" {
 				continue
 			}
 			r, err := f.Open()
