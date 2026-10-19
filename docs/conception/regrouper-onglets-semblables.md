@@ -162,6 +162,7 @@ Il n'y a plus qu'**un onglet**, partagé par tous les tableaux de la feuille. Le
 
 - La catégorie de la feuille et la dernière valeur choisie sont enregistrées dans `_lattis_sheets`, comme le zoom ou les volets figés. Cela demande une migration qui ajoute une colonne JSON `choice`. Changer de valeur est de la **navigation** : ce n'est pas une étape d'annulation, de même que changer d'onglet n'en est pas une. Définir ou retirer la catégorie de la feuille, en revanche, est annulable.
 - Dans un classeur partagé, le choix doit rester **propre à chaque personne** (deux collègues regardent deux années différentes). Il faudra donc le garder sur le poste et non dans les données synchronisées. C'est à prévoir dès le début, même si la fusion elle-même reste refusée sur un classeur partagé au premier lot.
+- *Fait (lot 5, en partie)* : la catégorie est publiée avec la mise en page, cellules par valeur comprises, et la valeur choisie reste sur le poste ; un membre qui ouvre le classeur voit l'onglet à choix sur la dernière année. Une catégorie posée, changée ou retirée par un concepteur après la publication part au serveur et arrive chez les autres sans toucher à leur valeur choisie. Voir `collaboration/synchronisation.md` §2.13.
 
 **En dehors de la fusion**
 
@@ -270,7 +271,7 @@ Une fonction inverse simple, « Éclater par Mois » (un onglet par valeur, en c
 | 2 | Reprise des formules, TCD et graphiques (§8), option « garder masqués », liste « à reprendre » | **M** | moyen : la réécriture de formules est bien outillée, mais les cas sont nombreux et il faut des tests d'intégration (`internal/integration`) |
 | 3 | Onglet à choix : flèche sur l'onglet, filtre de feuille appliqué aux tableaux et TCD, colonne masquée, valeur imposée aux nouvelles lignes, « Nouvelle année… », `ONGLET.CHOIX()`, « Choisir par… » sur toute feuille, migration `_lattis_sheets.choice` | **M** | moyen : le filtre de feuille doit passer partout où passe le filtre de tableau (vue de la grille, SOUS.TOTAL, TCD, graphiques, export) |
 | 4 | Feuilles à plusieurs tableaux (§6.5) : appariement par familles, tableaux identiques gardés une fois, disposition reprise de l'onglet le plus récent, cellules par année, pastille et « Suivre l'année » ; cas E (tableaux empilés sous des titres), catégorie tirée d'une cellule, suggestion à la copie d'onglet, cas F | **M** | moyen : l'appariement quand les tableaux ont bougé ou changé de nom |
-| 5 | Éclatement à l'export, fusion et choix propre à chaque personne dans un classeur partagé | **M** | moyen |
+| 5 | Éclatement à l'export, fusion et choix propre à chaque personne dans un classeur partagé (fait : catégorie publiée, choix propre à chaque poste, `collaboration/synchronisation.md` §2.13) | **M** | moyen |
 
 Les lots 1 à 3 font une fonction complète et différenciante : c'est exactement ce qu'Excel ne propose pas. Il faut sinon passer par Power Query (Ajouter des requêtes) ou par un copier-coller à la main.
 

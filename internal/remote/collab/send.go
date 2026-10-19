@@ -36,10 +36,12 @@ type Report struct {
 	Reloaded int
 	// Notices : messages pour la barre d'état.
 	Notices []string
+	// Choices : catégories d'onglets à choix reçues du serveur.
+	Choices bool
 }
 
 // Changed : des données locales ont changé (la grille est à relire).
-func (r Report) Changed() bool { return len(r.Applied.Tables) > 0 }
+func (r Report) Changed() bool { return len(r.Applied.Tables) > 0 || r.Choices }
 
 func (r *Report) notice(msg string) {
 	if msg != "" && !slices.Contains(r.Notices, msg) {
@@ -54,6 +56,7 @@ func (r *Report) add(o Report) {
 	r.Skipped += o.Skipped
 	r.Lost += o.Lost
 	r.Reloaded += o.Reloaded
+	r.Choices = r.Choices || o.Choices
 	r.Applied.Inserted += o.Applied.Inserted
 	r.Applied.Updated += o.Applied.Updated
 	r.Applied.Deleted += o.Applied.Deleted

@@ -166,6 +166,11 @@ func (w *worker) cycle(ctx context.Context) {
 		ev.Sync = true
 	}
 	if err == nil {
+		// Catégorie d'un onglet à choix posée, changée ou retirée ici par un
+		// concepteur ; à la connexion, celles changées hors ligne.
+		err = w.e.PublishChoices(ctx, full)
+	}
+	if err == nil {
 		var r Report
 		switch {
 		case full || meta:

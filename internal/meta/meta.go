@@ -463,7 +463,8 @@ CREATE TABLE _lattis_hand_kept (
 	// 32 → 33 : onglet à choix (canvas/choice.go, conception
 	// regrouper-onglets-semblables §6.3) : catégorie de la feuille (colonne
 	// source, nom de repli) et dernière valeur choisie, en JSON ; NULL : pas
-	// de choix. Gardé sur le poste dans un classeur partagé (non publié).
+	// de choix. Classeur partagé : la catégorie est publiée, la valeur
+	// choisie reste sur le poste (remote/workbook/choice.go).
 	`
 ALTER TABLE _lattis_sheets ADD COLUMN choice TEXT;
 `,

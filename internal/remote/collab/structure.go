@@ -700,8 +700,15 @@ func (e *Engine) ReceiveStructure(ctx context.Context, only, reload map[int64]bo
 func (e *Engine) receiveStructure(ctx context.Context, only, reload map[int64]bool) (Report, error) {
 	var rep Report
 	if only == nil {
-		// Tableaux ajoutés au classeur par un collègue (« *meta », connexion).
-		r, err := e.receiveArrivals(ctx)
+		// Catégories d'onglets à choix publiées par un concepteur, puis
+		// tableaux ajoutés au classeur par un collègue (« *meta »,
+		// connexion).
+		r, err := e.receiveChoices(ctx)
+		rep.add(r)
+		if err != nil {
+			return rep, err
+		}
+		r, err = e.receiveArrivals(ctx)
 		rep.add(r)
 		if err != nil {
 			return rep, err

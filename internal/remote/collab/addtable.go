@@ -134,6 +134,7 @@ func (e *Engine) receiveArrivals(ctx context.Context) (Report, error) {
 	if _, err := workbook.RefreshCapabilities(ctx, srv, e.link); err != nil {
 		return rep, err
 	}
+	e.settleChoices(ctx) // feuille reçue avec un onglet à choix
 	for _, t := range got {
 		rep.notice(ArrivedNotice(t.Name))
 		rep.Applied.Tables = append(rep.Applied.Tables, t.Table)

@@ -20,19 +20,16 @@ import (
 // tard (réglages de l'utilisateur, secrets…) n'est jamais publiée sans
 // qu'on l'y mette.
 var layoutTables = []string{
-	"_lattis_sheets", "_lattis_tables", "_lattis_columns", "_lattis_cells",
+	"_lattis_sheets", "_lattis_tables", "_lattis_columns", "_lattis_cells", "_lattis_choice_cells",
 	"_lattis_col_widths", "_lattis_row_heights", "_lattis_names",
 	"_lattis_styles", "_lattis_cell_styles", "_lattis_row_styles", "_lattis_col_styles",
 	"_lattis_row_rules", "_lattis_col_rules", "_lattis_pivots", "_lattis_charts",
 	"_lattis_buttons", "_lattis_pages", "_lattis_range_cells", "_lattis_page_setup",
 }
 
-// localColumns : colonnes des tables de la liste qui restent sur le poste.
-// Le choix d'un onglet à choix (année, mois affichés) est propre à chacun :
-// il n'est ni publié ni écrasé par une nouvelle version (loader.run le
-// remet) ; le choix par personne, synchronisé, viendra plus tard (lot 5 de
-// docs/conception/regrouper-onglets-semblables.md).
-var localColumns = map[string]bool{"_lattis_sheets.choice": true}
+// Onglets à choix : _lattis_sheets.choice est publiée sans la valeur
+// choisie (la catégorie seule, publishedChoice), qui reste propre à chaque
+// poste (voir choice.go ; loader.mergeChoices la remet).
 
 // Hors de la liste, volontairement : les données des tableaux (tables du
 // serveur), les scripts (publish_script), les saisies invalides (refusées à
@@ -85,7 +82,6 @@ func dumpLayout(ctx context.Context, q txOrDB, format int, published map[int64]b
 		if len(cols) == 0 {
 			continue // format plus ancien
 		}
-		cols = slices.DeleteFunc(cols, func(c string) bool { return localColumns[name+"."+c] })
 		order := make([]string, len(cols))
 		for i := range cols {
 			order[i] = strconv.Itoa(i + 1)
@@ -95,9 +91,12 @@ func dumpLayout(ctx context.Context, q txOrDB, format int, published map[int64]b
 			return nil, err
 		}
 		lr := &LayoutRows{Columns: cols, Rows: [][]any{}}
-		tblAt, ridAt := lr.index("tbl"), lr.index("rid")
-		if name == "_lattis_tables" {
+		tblAt, ridAt, choiceAt := lr.index("tbl"), lr.index("rid"), -1
+		switch name {
+		case "_lattis_tables":
 			tblAt = lr.index("id")
+		case "_lattis_sheets":
+			choiceAt = lr.index("choice")
 		}
 		for rs.Next() {
 			vals := make([]any, len(cols))
@@ -111,6 +110,9 @@ func dumpLayout(ctx context.Context, q txOrDB, format int, published map[int64]b
 			}
 			for i, v := range vals {
 				vals[i] = jsonValue(v)
+			}
+			if choiceAt >= 0 {
+				vals[choiceAt] = publishedChoice(vals[choiceAt], published)
 			}
 			if tblAt >= 0 && published != nil {
 				if tbl, ok := asInt(vals[tblAt]); ok && !published[tbl] {

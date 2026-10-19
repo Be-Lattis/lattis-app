@@ -34,9 +34,9 @@ import (
 //     source disparaît.
 //   - Changer de valeur est de la navigation, hors journal comme le zoom ;
 //     définir ou retirer la catégorie, et « Nouvelle année… », sont annulables.
-//   - Classeur partagé : le choix reste sur le poste (la colonne choice de
-//     _lattis_sheets n'est pas publiée avec la mise en page, voir
-//     remote/workbook) ; le choix propre à chaque personne viendra au lot 5.
+//   - Classeur partagé : la catégorie est publiée avec la mise en page, la
+//     valeur choisie reste propre à chaque poste (remote/workbook/choice.go ;
+//     une catégorie reçue sans valeur prend la dernière, SettleChoices).
 
 // MaxChoiceValues borne les colonnes proposées par « Choisir par… » (nombre
 // de valeurs distinctes).

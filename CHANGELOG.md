@@ -18,6 +18,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 - Insertion › Autres graphiques : chaque type a son icône dans le menu.
 - Windows : le navigateur propose « Ouvrir Lattis ? » (et non plus « Ouvrir Tableur relationnel local-first ? ») pour un lien vers un classeur partagé ; le Gestionnaire des tâches affiche aussi « Lattis ».
 
+### Corrections
+
+- Classeur partagé sur un Serveur Lattis : l'onglet à choix (« Suivi des nids · 2026 ▾ ») manquait chez les membres qui l'ouvraient depuis son lien. Il est maintenant publié avec le classeur et s'ouvre sur la dernière année ; chacun garde l'année qu'il regarde. Le propriétaire ou un concepteur qui pose, change ou retire « Choisir par… » après la publication le fait pour tous ; un classeur déjà publié se répare à la prochaine connexion de son propriétaire.
+
 ## 0.1.0-beta.1 (19/10/2026)
 
 Première version publique de Lattis. Voici, regroupé par jour, ce qu'elle contient.

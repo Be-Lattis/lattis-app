@@ -288,7 +288,8 @@ func layoutTableAt(name string, r *LayoutRows) int {
 
 // mergeLayout ajoute à la mise en page du serveur raw (nil : aucune) les
 // lignes du tableau tbl lues en local (local), sous l'identifiant lid, et
-// la feuille sheet si le serveur ne la connaît pas encore.
+// la feuille sheet si le serveur ne la connaît pas encore (avec sa
+// catégorie d'onglet à choix et ses cellules par valeur).
 func mergeLayout(raw []byte, local *Layout, tbl, lid, sheet int64) ([]byte, error) {
 	l := &Layout{Key: layoutKey, Format: meta.Version, Tables: map[string]*LayoutRows{}}
 	if raw != nil {
@@ -297,6 +298,7 @@ func mergeLayout(raw []byte, local *Layout, tbl, lid, sheet int64) ([]byte, erro
 			return nil, err
 		}
 	}
+	newSheet := !idSet(l.Tables["_lattis_sheets"], "id")[sheet]
 	for _, name := range layoutTables {
 		lr := local.Tables[name]
 		if lr == nil {
@@ -314,7 +316,21 @@ func mergeLayout(raw []byte, local *Layout, tbl, lid, sheet int64) ([]byte, erro
 			at := lr.index("id")
 			for _, row := range lr.Rows {
 				if id, _ := asInt(row[at]); id == sheet {
-					dst.Rows = append(dst.Rows, projectRow(lr, row, dst.Columns))
+					p := projectRow(lr, row, dst.Columns)
+					if ci := dst.index("choice"); ci >= 0 {
+						p[ci] = choiceText(mapChoice(parseChoice(p[ci]), map[int64]int64{tbl: lid}))
+					}
+					dst.Rows = append(dst.Rows, p)
+				}
+			}
+			continue
+		}
+		if name == "_lattis_choice_cells" {
+			if at, dat := lr.index("sheet"), dst.index("sheet"); newSheet && at >= 0 && dat >= 0 {
+				for _, row := range lr.Rows {
+					if id, _ := asInt(row[at]); id == sheet {
+						dst.Rows = append(dst.Rows, projectRow(lr, row, dst.Columns))
+					}
 				}
 			}
 			continue
@@ -336,14 +352,7 @@ func mergeLayout(raw []byte, local *Layout, tbl, lid, sheet int64) ([]byte, erro
 			dst.Rows = append(dst.Rows, p)
 		}
 	}
-	for _, r := range l.Tables {
-		for _, row := range r.Rows {
-			for i, v := range row {
-				row[i] = jsonValue(v)
-			}
-		}
-	}
-	return json.Marshal(l)
+	return encodeLayout(l)
 }
 
 // projectRow rend une ligne de r dans l'ordre des colonnes cols (absentes :

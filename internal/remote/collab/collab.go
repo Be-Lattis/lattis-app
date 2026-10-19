@@ -52,6 +52,9 @@ type Engine struct {
 	// retry : délais des nouveaux essais de connexion (SetBackoff ; nil :
 	// le délai fixe passé à Follow).
 	retry *workbook.Backoff
+	// choices : catégories des onglets à choix déjà examinées
+	// (workbook.ChoiceSignature, PublishChoices) ; sous run.
+	choices string
 }
 
 // SetBackoff règle les nouveaux essais de connexion du suivi (délais

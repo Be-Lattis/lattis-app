@@ -210,6 +210,12 @@ func showAllChoiceCellsRaw(ctx context.Context, tx *sql.Tx) error {
 	return nil
 }
 
+// ShowChoiceCells remet, hors journal, les cellules par valeur de chaque
+// feuille à onglet à choix sur la valeur choisie : après une mise en page
+// reçue du serveur (remote/workbook), dont les cellules libres sont celles
+// de la valeur choisie par l'auteur.
+func ShowChoiceCells(ctx context.Context, tx *sql.Tx) error { return showAllChoiceCellsRaw(ctx, tx) }
+
 // undoGuard : la garde des annulations (protection), puis les cellules par
 // valeur remises sur la valeur choisie.
 func (m *Model) undoGuard(ctx context.Context, sqlTx *sql.Tx, seq int64) (func() error, error) {

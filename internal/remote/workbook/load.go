@@ -104,8 +104,10 @@ type loader struct {
 	scripts []Script
 	fresh   bool
 
-	// Ce que l'utilisateur a ajouté en local (rechargement).
+	// Ce que l'utilisateur a ajouté en local (rechargement), et la mise en
+	// page reçue la dernière fois (vide pour un classeur neuf).
 	local map[string]*LayoutRows
+	base  *Layout
 	// Tableaux privés gardés : identifiant d'avant → identifiant d'après.
 	private map[int64]int64
 	// Feuilles ajoutées en local : identifiant d'avant → d'après.
@@ -124,6 +126,7 @@ func (l *loader) exec(q string, args ...any) error {
 func (l *loader) run(tx *sql.Tx) error {
 	l.tx = tx
 	l.private, l.sheets, l.oldPub, l.rids = map[int64]int64{}, map[int64]int64{}, map[int64]bool{}, map[int64]map[string]int64{}
+	l.base = &Layout{Tables: map[string]*LayoutRows{}}
 	if err := l.readOld(); err != nil {
 		return err
 	}
@@ -163,8 +166,8 @@ func (l *loader) run(tx *sql.Tx) error {
 			return err
 		}
 	}
-	// Colonnes propres au poste (localColumns : choix des onglets à choix),
-	// remises après la nouvelle mise en page.
+	// Choix des onglets à choix (valeur choisie propre au poste, voir
+	// choice.go), remis après la nouvelle mise en page.
 	choices, err := localChoices(l.ctx, tx)
 	if err != nil {
 		return err
@@ -222,10 +225,8 @@ func (l *loader) run(tx *sql.Tx) error {
 	if err := l.restoreLocal(); err != nil {
 		return err
 	}
-	for id, c := range choices {
-		if err := l.exec(`UPDATE _lattis_sheets SET choice = ? WHERE id = ? AND choice IS NULL`, c, id); err != nil {
-			return err
-		}
+	if err := l.mergeChoices(choices); err != nil {
+		return err
 	}
 	if err := l.loadScripts(); err != nil {
 		return err
@@ -326,6 +327,7 @@ func (l *loader) readOld() error {
 			return err
 		}
 	}
+	l.base = base
 	baseTables := idSet(base.Tables["_lattis_tables"], "id")
 	baseSheets := idSet(base.Tables["_lattis_sheets"], "id")
 	l.local = map[string]*LayoutRows{}
@@ -856,26 +858,84 @@ func (l *loader) loadScripts() error {
 	return nil
 }
 
-// localChoices lit le choix des onglets à choix (colonne propre au poste,
-// voir localColumns), par feuille ; rien pour un format plus ancien.
-func localChoices(ctx context.Context, tx *sql.Tx) (map[int64]string, error) {
+// localChoices lit la colonne choice de chaque feuille (nil : NULL) ;
+// rien pour un format plus ancien.
+func localChoices(ctx context.Context, tx *sql.Tx) (map[int64]any, error) {
 	cols, err := tableColumns(ctx, tx, "_lattis_sheets")
 	if err != nil || !slices.Contains(cols, "choice") {
 		return nil, err
 	}
-	rs, err := tx.QueryContext(ctx, `SELECT id, choice FROM _lattis_sheets WHERE choice IS NOT NULL`)
+	rs, err := tx.QueryContext(ctx, `SELECT id, choice FROM _lattis_sheets`)
 	if err != nil {
 		return nil, err
 	}
 	defer rs.Close()
-	out := map[int64]string{}
+	out := map[int64]any{}
 	for rs.Next() {
 		var id int64
-		var c string
+		var c sql.NullString
 		if err := rs.Scan(&id, &c); err != nil {
 			return nil, err
 		}
-		out[id] = c
+		out[id] = nil
+		if c.Valid {
+			out[id] = c.String
+		}
 	}
 	return out, rs.Err()
+}
+
+// mergeChoices remet le choix des onglets à choix d'avant le chargement
+// (choices, par feuille) : tel quel sur une feuille du poste, et sur une
+// feuille du serveur dont la catégorie n'a pas changé depuis la dernière
+// mise en page reçue (ou que la mise en page ne décrit pas : publiée avant
+// que les catégories le soient) ; sinon la catégorie du serveur, avec la
+// valeur choisie du poste si c'est la même (mergeChoice). Puis les
+// cellules par valeur montrent celles de la valeur choisie de chacun.
+func (l *loader) mergeChoices(choices map[int64]any) error {
+	if l.fresh || choices == nil {
+		return canvas.ShowChoiceCells(l.ctx, l.tx)
+	}
+	server := l.layout.Tables["_lattis_sheets"]
+	has := server != nil && server.index("choice") >= 0
+	local := idSet(l.local["_lattis_sheets"], "id")
+	for id, c := range choices {
+		to := id
+		if t, ok := l.sheets[id]; ok {
+			to = t
+		}
+		v := c
+		q := `UPDATE _lattis_sheets SET choice = ? WHERE id = ?`
+		switch {
+		case local[id]:
+			// Feuille du poste : son choix tel quel.
+		case !has:
+			// Mise en page sans catégories : le choix du poste.
+			if c == nil {
+				continue
+			}
+			q += ` AND choice IS NULL`
+		default:
+			sd, bd := layoutChoice(l.layout, rowOf(server, id)), layoutChoice(l.base, rowOf(l.base.Tables["_lattis_sheets"], id))
+			if defText(sd) != defText(bd) {
+				v = choiceText(mergeChoice(parseChoice(c), sd))
+			}
+		}
+		if err := l.exec(q, v, to); err != nil {
+			return err
+		}
+	}
+	return canvas.ShowChoiceCells(l.ctx, l.tx)
+}
+
+// rowOf donne le rang de la ligne d'identifiant id (-1 : aucune).
+func rowOf(r *LayoutRows, id int64) int {
+	if r == nil || r.index("id") < 0 {
+		return -1
+	}
+	at := r.index("id")
+	return slices.IndexFunc(r.Rows, func(row []any) bool {
+		v, _ := asInt(row[at])
+		return v == id
+	})
 }

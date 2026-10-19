@@ -494,6 +494,9 @@ func backupFile(src, dst string) error {
 // et le classeur est à enregistrer.
 func (d *Document) ShareChanged(ctx context.Context) error {
 	d.shareGen.Add(1)
+	// Onglets à choix reçus du serveur sans valeur choisie sur ce poste : la
+	// dernière (remote/workbook/choice.go).
+	_ = d.Model.SettleChoices(ctx)
 	return d.Share.Reload(ctx)
 }
 
