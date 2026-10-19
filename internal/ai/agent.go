@@ -20,6 +20,10 @@ const (
 	EventNotice   = "notice"    // remarque (réponse tronquée, refus…)
 	EventUsage    = "usage"     // jetons consommés par un tour du modèle
 	EventDone     = "done"      // fin de la réponse (émis par l'appelant)
+	// EventUnsent : le message n'a pas été reçu par le modèle (échec ou
+	// arrêt au premier tour) ; l'interface le rend à la saisie (émis par
+	// l'appelant, à la place de done).
+	EventUnsent = "unsent"
 )
 
 // Event est un évènement d'une réponse en cours.
@@ -155,11 +159,46 @@ func (s *Session) Send(ctx context.Context, t Turn, text string, emit func(Event
 	}
 	s.appendUser(Block{Type: TextBlock, Text: text})
 	s.mu.Unlock()
-	defer func() {
-		s.mu.Lock()
-		s.busy = false
+	defer s.idle()
+	return s.loop(ctx, t, gen, start, merged, emit)
+}
+
+// ErrNothingToResume : la dernière réponse est complète, il n'y a rien à
+// reprendre.
+var ErrNothingToResume = errors.New("rien à reprendre : la réponse précédente est complète")
+
+// Resume reprend la réponse interrompue (erreur en cours de réponse, arrêt,
+// nombre maximal d'étapes atteint) là où elle s'est arrêtée, sans nouveau
+// message de l'utilisateur : la conversation se termine par les résultats
+// des derniers appels d'outils, que le modèle reçoit à nouveau.
+func (s *Session) Resume(ctx context.Context, t Turn, emit func(Event)) error {
+	s.mu.Lock()
+	if s.busy {
 		s.mu.Unlock()
-	}()
+		return ErrBusy
+	}
+	n := len(s.history)
+	if n == 0 || s.history[n-1].Role != User {
+		s.mu.Unlock()
+		return ErrNothingToResume
+	}
+	s.busy = true
+	gen := s.gen
+	s.mu.Unlock()
+	defer s.idle()
+	return s.loop(ctx, t, gen, -1, -1, emit)
+}
+
+func (s *Session) idle() {
+	s.mu.Lock()
+	s.busy = false
+	s.mu.Unlock()
+}
+
+// loop fait répondre le modèle, outils compris. start >= 0 : point de
+// retour si le premier tour échoue (message de l'utilisateur retiré, et
+// merged blocs gardés dans le dernier message s'il l'avait rejoint).
+func (s *Session) loop(ctx context.Context, t Turn, gen, start, merged int, emit func(Event)) error {
 	// update modifie la conversation, sauf si elle a été remplacée entre
 	// temps (classeur ouvert pendant la réponse).
 	update := func(fn func()) bool {
@@ -189,7 +228,7 @@ func (s *Session) Send(ctx context.Context, t Turn, text string, emit func(Event
 			err = errors.New("le modèle a refusé de répondre à cette demande")
 		}
 		if err != nil {
-			if step == 0 {
+			if step == 0 && start >= 0 {
 				update(func() {
 					s.history = s.history[:start]
 					if merged >= 0 {

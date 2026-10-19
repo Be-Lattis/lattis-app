@@ -92,11 +92,23 @@ export function AIReset(): $CancellablePromise<void> {
 }
 
 /**
+ * AIResume reprend la réponse run là où elle s'est arrêtée (erreur en cours
+ * de réponse, arrêt, nombre maximal d'étapes), sans nouveau message : ses
+ * modifications restent une seule réponse à annuler.
+ */
+export function AIResume(run: number): $CancellablePromise<void> {
+    return $Call.ByID(2985929423, run);
+}
+
+/**
  * AISend envoie un message à l'assistant et rend la main quand sa réponse
  * est finie ; le déroulé arrive par l'évènement ai:event, marqué de run
  * (numéro choisi par l'interface), et se termine par un évènement done.
  * view (feuille, tableau, sélection) part avec le message, devant le texte
- * tapé ; l'affichage ne garde que le texte tapé.
+ * tapé ; l'affichage ne garde que le texte tapé. Un message que le modèle
+ * n'a pas reçu (échec ou arrêt au premier tour) est retiré de la
+ * conversation et de l'affichage : un évènement unsent remplace done, et
+ * l'interface le rend à la saisie.
  */
 export function AISend(run: number, text: string, view: $models.AIContext): $CancellablePromise<void> {
     return $Call.ByID(3524804018, run, text, view);

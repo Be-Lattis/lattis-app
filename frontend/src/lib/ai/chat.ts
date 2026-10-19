@@ -60,6 +60,8 @@ export type Reply = {
 	undo?: boolean;
 	/** La réponse a été annulée (« Annuler cette réponse »). */
 	undone?: boolean;
+	/** Le modèle n'a pas reçu le message (échec ou arrêt au premier tour) : il revient à la saisie. */
+	unsent?: boolean;
 };
 
 export type Item = { role: 'user'; text: string } | Reply;
@@ -118,6 +120,11 @@ export function applyEvent(items: Item[], ev: ChatEvent): Item[] {
 			out[i] = { ...finish(it), changes: ev.changes ?? 0, undo: !!ev.undo };
 			return out;
 		}
+		case 'unsent': {
+			const out = [...items];
+			out[i] = { ...it, unsent: true };
+			return out;
+		}
 		default:
 			// usage : compté dans l'état (chat.status.usage), rien à afficher ici.
 			return items;
@@ -143,6 +150,22 @@ export function endRun(items: Item[], run: number, error?: string): Item[] {
 	return out;
 }
 
+/**
+ * Rouvre la réponse run pour la reprendre (« Réessayer » après une erreur en
+ * cours de réponse, « Continuer ») : l'erreur ou l'arrêt qui la terminait
+ * disparaît, la suite s'ajoute à la même réponse.
+ */
+export function reopenRun(items: Item[], run: number): Item[] {
+	const i = replyAt(items, run);
+	if (i < 0) return items;
+	const it = items[i] as Reply;
+	const parts = [...it.parts];
+	for (let p = parts.at(-1); p?.kind === 'notice' && (p.error || p.limit); p = parts.at(-1)) parts.pop();
+	const out = [...items];
+	out[i] = { ...it, parts, done: false };
+	return out;
+}
+
 /** Marque la réponse run comme annulée. */
 export function markUndone(items: Item[], run: number): Item[] {
 	const i = replyAt(items, run);
@@ -152,10 +175,14 @@ export function markUndone(items: Item[], run: number): Item[] {
 	return out;
 }
 
-/** Une erreur avant toute réponse : le message de l'utilisateur est rendu à la saisie. */
-export function failedBeforeReply(items: Item[], run: number): boolean {
+/**
+ * Le modèle n'a pas reçu le message (évènement unsent : échec ou arrêt au
+ * premier tour), ou une erreur est arrivée avant toute réponse : le message
+ * de l'utilisateur est rendu à la saisie.
+ */
+export function failedBeforeReply(items: Item[], run: number, error = true): boolean {
 	const it = items.findLast((x) => x.role === 'assistant' && x.run === run);
-	return !!it && it.role === 'assistant' && it.parts.length === 0;
+	return !!it && it.role === 'assistant' && (!!it.unsent || (error && it.parts.length === 0));
 }
 
 /** Retire une réponse jamais commencée et le message qui l'a demandée. */

@@ -25,7 +25,7 @@
 	import { changesLabel, contextLabel, costLabel, replyError, replyText, retryDelay, retryLabel, segments, stepsLabel, stoppedAtLimit, suggestionsFor, type ChatContext, type Reply, type TableInfo } from './chat';
 	import { openOutside } from './links';
 	import { sharingLabel } from './sharing';
-	import { chat, conversations, deleteConversation, load, newConversation, openConversation, refreshStatus, send, stop, undoRun, type Conversation } from './state.svelte.js';
+	import { chat, conversations, deleteConversation, load, newConversation, openConversation, refreshStatus, resume, send, stop, undoRun, type Conversation } from './state.svelte.js';
 
 	interface Props {
 		/** Un classeur est ouvert (sinon l'assistant n'a rien sur quoi agir). */
@@ -167,9 +167,11 @@
 		const t = setInterval(() => (now = Date.now()), 1000);
 		return () => clearInterval(t);
 	});
-	function retry(i: number) {
-		const u = chat.items[i - 1];
-		if (u?.role === 'user') ask(u.text);
+	// Erreur en cours de réponse, ou « Continuer » : la même réponse reprend,
+	// sans renvoyer le message (des modifications sont peut-être déjà faites).
+	function retry(r: number) {
+		waits.delete(r);
+		resume(r);
 	}
 	function retryDraft() {
 		waits.delete(-1);
@@ -385,11 +387,11 @@
 										>
 									{/if}
 									{#if it.run === lastRun && !it.undone && stoppedAtLimit(it.parts)}
-										<button class="small" disabled={chat.busy} title="Reprend la réponse là où elle s’est arrêtée" onclick={() => ask('Continue.')}><Icon name="play" size={13} />Continuer</button>
+										<button class="small" disabled={chat.busy} title="Reprend la réponse là où elle s’est arrêtée" onclick={() => retry(it.run)}><Icon name="play" size={13} />Continuer</button>
 									{/if}
 									{#if it.run === lastRun && !it.undone && replyError(it.parts)}
 										{@const left = retryLeft(it.run, replyError(it.parts))}
-										<button class="small" disabled={chat.busy || left > 0} title="Renvoie le même message" onclick={() => retry(i)}><Icon name="redo" size={13} />{retryLabel(left)}</button>
+										<button class="small" disabled={chat.busy || left > 0} title="Reprend la réponse là où elle s’est arrêtée" onclick={() => retry(it.run)}><Icon name="redo" size={13} />{retryLabel(left)}</button>
 									{/if}
 									<span class="spacer"></span>
 									{#if replyText(it.parts)}

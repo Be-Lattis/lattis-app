@@ -5,7 +5,7 @@
 import { DocumentService } from '#bindings/internal/bridge/index.js';
 import type { AIStatus } from '#bindings/internal/bridge/models.js';
 import { Events } from '@wailsio/runtime';
-import { applyEvent, dropRun, endRun, failedBeforeReply, markUndone, maxRun, replay, startRun, type ChatContext, type ChatEvent, type Item, type LogEntry } from './chat';
+import { applyEvent, dropRun, endRun, failedBeforeReply, markUndone, maxRun, reopenRun, replay, startRun, type ChatContext, type ChatEvent, type Item, type LogEntry } from './chat';
 
 export const chat = $state<{
 	items: Item[];
@@ -97,15 +97,39 @@ export async function send(text: string, view: ChatContext) {
 	} finally {
 		chat.busy = false;
 	}
-	// Rien n'a été répondu : le message revient dans la zone de saisie (le
-	// backend l'a retiré de la conversation), l'erreur s'affiche au-dessus.
-	if (error && failedBeforeReply(chat.items, r)) {
+	// Le modèle n'a pas reçu le message (erreur ou arrêt au premier tour) : il
+	// revient dans la zone de saisie (le backend l'a retiré de la conversation),
+	// l'erreur éventuelle s'affiche au-dessus.
+	if (failedBeforeReply(chat.items, r, !!error)) {
 		chat.items = dropRun(chat.items, r);
 		chat.error = error;
 		if (!chat.draft) chat.draft = text;
 	} else {
 		chat.items = endRun(chat.items, r, error || undefined);
 	}
+	await refreshStatus();
+}
+
+/**
+ * Reprend la réponse r là où elle s'est arrêtée (« Réessayer » après une
+ * erreur en cours de réponse, « Continuer ») : pas de nouveau message, la
+ * suite s'ajoute à la même réponse, qui reste annulable d'un coup.
+ */
+export async function resume(r: number) {
+	if (chat.busy) return;
+	listen();
+	chat.items = reopenRun(chat.items, r);
+	chat.error = '';
+	chat.busy = true;
+	let error = '';
+	try {
+		await DocumentService.AIResume(r);
+	} catch (e) {
+		error = String(e instanceof Error ? e.message : e);
+	} finally {
+		chat.busy = false;
+	}
+	chat.items = endRun(chat.items, r, error || undefined);
 	await refreshStatus();
 }
 

@@ -244,27 +244,68 @@ func (s *DocumentService) AIForgetKey(provider string) (AIStatus, error) {
 // est finie ; le déroulé arrive par l'évènement ai:event, marqué de run
 // (numéro choisi par l'interface), et se termine par un évènement done.
 // view (feuille, tableau, sélection) part avec le message, devant le texte
-// tapé ; l'affichage ne garde que le texte tapé.
+// tapé ; l'affichage ne garde que le texte tapé. Un message que le modèle
+// n'a pas reçu (échec ou arrêt au premier tour) est retiré de la
+// conversation et de l'affichage : un évènement unsent remplace done, et
+// l'interface le rend à la saisie.
 func (s *DocumentService) AISend(ctx context.Context, run int, text string, view AIContext) error {
+	return s.aiAnswer(ctx, run, &text, view)
+}
+
+// AIResume reprend la réponse run là où elle s'est arrêtée (erreur en cours
+// de réponse, arrêt, nombre maximal d'étapes), sans nouveau message : ses
+// modifications restent une seule réponse à annuler.
+func (s *DocumentService) AIResume(ctx context.Context, run int) error {
+	return s.aiAnswer(ctx, run, nil, AIContext{})
+}
+
+// aiTurn prépare un tour avec les réglages en cours ; rend aussi le partage
+// des données.
+func (s *DocumentService) aiTurn() (ai.Turn, string, error) {
 	c := config.Current()
 	if !c.Bool("ai.enabled", false) {
-		return errors.New("l'assistant est désactivé (Fichier › Paramètres › Fonctionnalités)")
+		return ai.Turn{}, "", errors.New("l'assistant est désactivé (Fichier › Paramètres › Fonctionnalités)")
 	}
 	id := c.String("ai.provider", "anthropic")
 	p := ai.Lookup(id)
 	if p == nil {
-		return errors.New("fournisseur pas encore disponible : " + id)
+		return ai.Turn{}, "", errors.New("fournisseur pas encore disponible : " + id)
 	}
 	info := p.Info()
 	key, ok := ai.DefaultKeys.Get(id)
 	if !ok && info.NeedsKey && !gatewayNoKey(c) {
-		return ai.ErrNoKey
+		return ai.Turn{}, "", ai.ErrNoKey
 	}
 	model := c.String("ai.model", "")
 	if model == "" {
 		model = info.DefaultModel
 	}
 	sharing := c.String("ai.dataSharing", ai.SchemaOnly)
+	h := host{s}
+	return ai.Turn{
+		Provider: p,
+		Cred:     ai.Credentials{Key: key, Endpoint: c.String("ai.endpoint", "")},
+		Model:    model,
+		System:   ai.System(sharing),
+		Tools:    ai.Tools(sharing),
+		Exec:     ai.Exec(h, sharing),
+		Label:    ai.Label,
+		Write:    ai.IsWrite,
+		Target:   ai.Target,
+		// Tarifs publics d'Anthropic : ni pour une passerelle, ni pour un
+		// revendeur qui expose les mêmes modèles (Mammouth AI).
+		NoPrice: id != "anthropic" || c.String("ai.endpoint", "") != "",
+	}, sharing, nil
+}
+
+// aiAnswer fait répondre l'assistant : à un nouveau message (text), ou en
+// reprenant la réponse run (text nil).
+func (s *DocumentService) aiAnswer(ctx context.Context, run int, text *string, view AIContext) error {
+	turn, sharing, err := s.aiTurn()
+	if err != nil {
+		return err
+	}
+	resume := text == nil
 
 	ctx, cancel := context.WithCancel(context.WithoutCancel(ctx))
 	s.ai.mu.Lock()
@@ -286,35 +327,34 @@ func (s *DocumentService) AISend(ctx context.Context, run int, text string, view
 	}()
 
 	// Annulations faites par l'utilisateur (Ctrl+Z) depuis le dernier
-	// message, et remarques en attente (« Annuler cette réponse »).
-	notes := s.aiUndoneNotes(ctx)
+	// message, et remarques en attente (« Annuler cette réponse ») : elles
+	// partent avec le prochain message (pas avec une reprise).
+	var notes []string
+	if !resume {
+		notes = s.aiUndoneNotes(ctx)
+	}
 	s.ai.mu.Lock()
-	notes = append(s.ai.notes, notes...)
-	s.ai.notes = nil
+	if !resume {
+		notes = append(s.ai.notes, notes...)
+		s.ai.notes = nil
+	}
 	if s.ai.runs == nil {
 		s.ai.runs = map[int]*aiRun{}
 	}
-	r := &aiRun{}
-	s.ai.runs[run] = r
-	s.ai.order = append(s.ai.order, run)
-	s.ai.log = append(s.ai.log, AILogEntry{Run: run, User: text})
+	r := s.ai.runs[run]
+	if r == nil || !resume {
+		r = &aiRun{}
+		s.ai.runs[run] = r
+		s.ai.order = append(s.ai.order, run)
+	}
+	if resume {
+		s.aiTrimRun(run)
+	} else {
+		s.ai.log = append(s.ai.log, AILogEntry{Run: run, User: *text})
+	}
 	s.ai.mu.Unlock()
 
 	h := host{s}
-	turn := ai.Turn{
-		Provider: p,
-		Cred:     ai.Credentials{Key: key, Endpoint: c.String("ai.endpoint", "")},
-		Model:    model,
-		System:   ai.System(sharing),
-		Tools:    ai.Tools(sharing),
-		Exec:     ai.Exec(h, sharing),
-		Label:    ai.Label,
-		Write:    ai.IsWrite,
-		Target:   ai.Target,
-		// Tarifs publics d'Anthropic : ni pour une passerelle, ni pour un
-		// revendeur qui expose les mêmes modèles (Mammouth AI).
-		NoPrice: id != "anthropic" || c.String("ai.endpoint", "") != "",
-	}
 	emit := func(e ai.Event) {
 		if e.Kind == ai.EventToolDone && e.Write && !e.Error {
 			s.ai.mu.Lock()
@@ -327,22 +367,40 @@ func (s *DocumentService) AISend(ctx context.Context, run int, text string, view
 	// Résultats des requêtes de l'assistant (query_show) : montrés à
 	// l'utilisateur dans la conversation.
 	gctx = ai.WithShow(gctx, func(res ai.Result) { emit(ai.Event{Kind: ai.EventResult, Result: &res}) })
-	msg := ai.Compose(text, ai.View{Sheet: view.Sheet, Table: view.Table, Selection: view.Selection}, notes)
-	// Premier message : la structure du classeur, pour répondre sans explorer.
-	if s.ai.session.Len() == 0 {
-		msg = ai.Structure(ctx, h, sharing) + msg
+	if resume {
+		err = s.ai.session.Resume(gctx, turn, emit)
+	} else {
+		msg := ai.Compose(*text, ai.View{Sheet: view.Sheet, Table: view.Table, Selection: view.Selection}, notes)
+		// Premier message : la structure du classeur, pour répondre sans explorer.
+		if s.ai.session.Len() == 0 {
+			msg = ai.Structure(ctx, h, sharing) + msg
+		}
+		err = s.ai.session.Send(gctx, turn, msg, emit)
 	}
-	err := s.ai.session.Send(gctx, turn, msg, emit)
 
 	s.ai.mu.Lock()
-	r.seqs = command.GroupSeqs(gctx)
+	r.seqs = append(r.seqs, command.GroupSeqs(gctx)...)
+	// Bilan : les écritures sans effet (volets déjà figés, même valeur)
+	// ne créent aucune étape du journal ; sans étape, pas de bilan.
 	changes := r.changes
-	if ai.Unsent(err) && s.ai.gen == gen {
-		// Message retiré de la conversation : les remarques repartiront
-		// avec le suivant.
+	if len(r.seqs) == 0 {
+		changes = 0
+	}
+	unsent := ai.Unsent(err) && s.ai.gen == gen
+	if unsent {
+		// Message retiré de la conversation : retiré aussi de l'affichage,
+		// et les remarques repartiront avec le suivant.
 		s.ai.notes = append(notes, s.ai.notes...)
+		s.aiForgetRun(run)
 	}
 	s.ai.mu.Unlock()
+	if unsent {
+		s.sys().Emit(AIEvent, AIEventData{Run: run, Event: ai.Event{Kind: ai.EventUnsent}})
+		if errors.Is(err, context.Canceled) {
+			return nil
+		}
+		return err
+	}
 	if err != nil && !errors.Is(err, context.Canceled) {
 		// Pour le réaffichage seulement : l'interface reçoit l'erreur en
 		// retour de l'appel.
@@ -353,6 +411,26 @@ func (s *DocumentService) AISend(ctx context.Context, run int, text string, view
 		return nil
 	}
 	return err
+}
+
+// aiTrimRun retire de la fin du journal d'affichage la fin de la réponse run
+// (done, erreur, arrêt au nombre d'étapes), qu'une reprise remplace ; mu
+// tenu.
+func (s *DocumentService) aiTrimRun(run int) {
+	for n := len(s.ai.log); n > 0; n = len(s.ai.log) {
+		e := s.ai.log[n-1].Event
+		if s.ai.log[n-1].Run != run || e == nil || !(e.Kind == ai.EventDone || (e.Kind == ai.EventNotice && (e.Error || e.Limit))) {
+			return
+		}
+		s.ai.log = s.ai.log[:n-1]
+	}
+}
+
+// aiForgetRun oublie une réponse que le modèle n'a pas reçue ; mu tenu.
+func (s *DocumentService) aiForgetRun(run int) {
+	s.ai.log = slices.DeleteFunc(s.ai.log, func(e AILogEntry) bool { return e.Run == run })
+	delete(s.ai.runs, run)
+	s.ai.order = slices.DeleteFunc(s.ai.order, func(r int) bool { return r == run })
 }
 
 // aiEmit envoie un évènement à l'interface et le garde dans le journal

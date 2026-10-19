@@ -10,6 +10,7 @@ import {
 	failedBeforeReply,
 	markUndone,
 	maxRun,
+	reopenRun,
 	replyError,
 	retryDelay,
 	retryLabel,
@@ -198,5 +199,43 @@ describe('Continuer', () => {
 		expect(stoppedAtLimit((items[1] as Reply).parts)).toBe(true);
 		items = applyEvent(items, { run: 1, kind: 'notice', text: 'Réponse tronquée.' });
 		expect(stoppedAtLimit((items[1] as Reply).parts)).toBe(false);
+	});
+
+	it('reprend la même réponse, sans message « Continue. »', () => {
+		let items = startRun([], 1, 'Range tout');
+		items = applyEvent(items, { run: 1, kind: 'text', text: 'Je range.' });
+		items = applyEvent(items, { run: 1, kind: 'notice', text: 'Réponse arrêtée après 100 étapes.', limit: true });
+		items = applyEvent(items, { run: 1, kind: 'done', changes: 3, undo: true });
+		items = reopenRun(items, 1);
+		const r = items[1] as Reply;
+		expect(items).toHaveLength(2);
+		expect(r.done).toBe(false);
+		expect(r.parts).toEqual([{ kind: 'text', text: 'Je range.' }]);
+		items = applyEvent(items, { run: 1, kind: 'text', text: ' Fini.' });
+		items = applyEvent(items, { run: 1, kind: 'done', changes: 5, undo: true });
+		expect(replyText((items[1] as Reply).parts)).toBe('Je range. Fini.');
+		expect((items[1] as Reply).changes).toBe(5);
+	});
+
+	it('retire l’erreur qui terminait la réponse avant de la reprendre', () => {
+		let items = startRun([], 1, 'Ajoute TTC');
+		items = applyEvent(items, { run: 1, kind: 'tool', id: 'a', label: 'Insérer une colonne', write: true });
+		items = applyEvent(items, { run: 1, kind: 'tool-done', id: 'a' });
+		items = endRun(items, 1, 'Claude est surchargé');
+		expect(replyError((items[1] as Reply).parts)).toBe('Claude est surchargé');
+		items = reopenRun(items, 1);
+		expect(replyError((items[1] as Reply).parts)).toBe('');
+		expect((items[1] as Reply).parts).toHaveLength(1);
+	});
+});
+
+describe('Message non reçu', () => {
+	it('rend le message à la saisie après un arrêt au premier tour, même avec du texte affiché', () => {
+		let items = startRun([], 1, 'Bonjour');
+		items = applyEvent(items, { run: 1, kind: 'text', text: 'Bonj' });
+		expect(failedBeforeReply(items, 1, false)).toBe(false);
+		items = applyEvent(items, { run: 1, kind: 'unsent' });
+		expect(failedBeforeReply(items, 1, false)).toBe(true);
+		expect(dropRun(items, 1)).toEqual([]);
 	});
 });
