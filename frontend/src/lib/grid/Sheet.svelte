@@ -1444,7 +1444,10 @@
 		if (keptOut(row, col)) return { last, lastCol, firstCol: e.t.col };
 		// Juste à gauche, sur ses lignes : la saisie y fera sa nouvelle
 		// première colonne (le tableau s'ancre une colonne plus à gauche).
-		const firstCol = col === e.t.col - 1 && row >= e.t.row && row <= e.last && !tableAt(row, col) ? e.t.col - 1 : e.t.col;
+		// Pas si la case est aussi juste à droite d'un autre tableau : c'est lui
+		// qui prendra la saisie.
+		const takenByLeft = entries.some((o) => o !== e && o.lastCol === col - 1 && row >= o.t.row && row <= o.last);
+		const firstCol = col === e.t.col - 1 && row >= e.t.row && row <= e.last && !tableAt(row, col) && !takenByLeft ? e.t.col - 1 : e.t.col;
 		if (row === e.last + 1 && col >= e.t.col && col <= e.lastCol && !e.t.hidden) last++;
 		if (col === e.lastCol + 1 && row >= e.t.row && row <= e.last) {
 			lastCol++;

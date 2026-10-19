@@ -851,3 +851,14 @@ func (t *tx) headerOver(sheet int64, tables []Table, cells []cell, fixed map[int
 	}
 	return false, nil
 }
+
+// rightOfAny : la cellule (row, col) est juste à droite d'un autre tableau
+// que tb, sur ses lignes ; une saisie là l'agrandit, lui, pas tb.
+func rightOfAny(tables []Table, tb Table, row, col int) bool {
+	for _, o := range tables {
+		if o.ID != tb.ID && o.Right()+1 == col && row >= o.Row && row <= o.Bottom() {
+			return true
+		}
+	}
+	return false
+}

@@ -156,8 +156,9 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 				// « ← à vérifier » à côté d'une ligne : une remarque, pas une
 				// colonne.
 				return t.keepOut(tb, row, col, raw, outNote, "remarque à côté du tableau")
-			case inRows && col == tb.Col-1 && !empty && !inAny(tables, row, col):
-				// Juste à gauche : nouvelle première colonne.
+			case inRows && col == tb.Col-1 && !empty && !inAny(tables, row, col) && !rightOfAny(tables, tb, row, col):
+				// Juste à gauche : nouvelle première colonne. Juste à droite d'un autre
+				// tableau, c'est lui qui la prend (et les deux fusionnent).
 				if err := t.growSide(tb, row, col, raw, ev, true); err != nil || row != tb.Bottom() {
 					return err
 				}
