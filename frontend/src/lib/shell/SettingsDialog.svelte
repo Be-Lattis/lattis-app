@@ -38,9 +38,16 @@
 			busy = '';
 		}
 	}
+
+	// Fermeture (Échap compris) : le champ texte en cours de saisie s'écrit d'abord (évènement change).
+	function close() {
+		const a = document.activeElement;
+		if (a instanceof HTMLInputElement && a.type === 'text') a.blur();
+		onclose();
+	}
 </script>
 
-<div class="back" role="presentation" onclick={(e) => e.target === e.currentTarget && onclose()}>
+<div class="back" role="presentation" onclick={(e) => e.target === e.currentTarget && close()}>
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div
 		class="dialog"
@@ -51,7 +58,7 @@
 		use:modal
 		onkeydown={(e) => {
 			e.stopPropagation();
-			if (e.key === 'Escape') onclose();
+			if (e.key === 'Escape') close();
 		}}
 	>
 		<header>Paramètres</header>
@@ -114,7 +121,7 @@
 		</div>
 		<footer>
 			{#if onmcp && mcpAvailable()}<button class="mcp" title="Laisser un assistant compatible MCP (Claude Desktop, Claude Code…) lire et modifier le classeur ouvert" onclick={onmcp}>Serveur MCP (assistants)…</button>{/if}
-			<button class="primary" onclick={onclose}>Fermer</button>
+			<button class="primary" onclick={close}>Fermer</button>
 		</footer>
 	</div>
 </div>
