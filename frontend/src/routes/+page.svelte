@@ -809,9 +809,14 @@
 					await loadRecent();
 					break;
 				case 'import': {
-					if (mode !== 'doc') await startDoc();
+					// Depuis l'accueil : un classeur neuf, refermé si l'import est annulé.
+					const started = mode !== 'doc';
+					if (started) await startDoc();
 					const r = await DocumentService.Import('');
-					if (r.cancelled) break;
+					if (r.cancelled) {
+						if (started) await closeDoc();
+						break;
+					}
 					if (r.sheet) sheetId = r.sheet;
 					await reload();
 					const tables = r.tables ?? [];
@@ -1513,6 +1518,8 @@
 				<div class="actions">
 					<button class="primary ico" onclick={() => file('new')}><Icon name="new-file" size={14} />Nouveau classeur</button>
 					<button class="ico" onclick={() => file('open')}><Icon name="open" size={14} />Ouvrir…</button>
+					<button class="ico" onclick={() => file('import')} title="Crée un classeur avec les feuilles importées"><Icon name="database" size={14} />Importer (CSV, Excel)…</button>
+					{#if sharedWorkbooksEnabled()}<button class="ico" onclick={() => file('openRemote')}><Icon name="web" size={14} />Ouvrir depuis un serveur…</button>{/if}
 				</div>
 				{#if recent.length}
 					<div class="recent">
@@ -2176,6 +2183,7 @@
 	}
 	.actions {
 		display: flex;
+		flex-wrap: wrap;
 		gap: 8px;
 		justify-content: center;
 	}

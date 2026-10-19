@@ -115,6 +115,13 @@ func (m *Model) Import(ctx context.Context, action string, sheets []ImportSheet)
 		if err := t.purgeImports(); err != nil {
 			return err
 		}
+		// Classeur jamais servi (feuilles toutes vides, comme à la création) :
+		// ses feuilles vides partent, l'import ne laisse pas de Feuille1 vide
+		// en tête.
+		blank, err := t.untouchedSheets()
+		if err != nil {
+			return err
+		}
 		type made struct {
 			id int64
 			it *ImportTable
@@ -186,9 +193,59 @@ func (m *Model) Import(ctx context.Context, action string, sheets []ImportSheet)
 				}
 			}
 		}
+		if len(res.Sheets) > 0 {
+			for _, id := range blank {
+				if err := t.dropBlankSheet(id); err != nil {
+					return err
+				}
+			}
+		}
 		return nil
 	})
 	return res, err
+}
+
+// untouchedSheets rend les feuilles du classeur quand aucune ne contient
+// rien (ni tableau, cellule, objet, mise en forme ou protection) ; nil
+// sinon.
+func (t *tx) untouchedSheets() ([]int64, error) {
+	var used int
+	q := `SELECT (SELECT count(*) FROM _lattis_tables) + (SELECT count(*) FROM _lattis_cells) + (SELECT count(*) FROM _lattis_pivots)
+		+ (SELECT count(*) FROM _lattis_charts) + (SELECT count(*) FROM _lattis_buttons) + (SELECT count(*) FROM _lattis_protection)`
+	for _, tbl := range sheetPositioned {
+		q += ` + (SELECT count(*) FROM ` + tbl + `)`
+	}
+	if err := t.row(q).Scan(&used); err != nil || used > 0 {
+		return nil, err
+	}
+	rs, err := t.query(`SELECT id FROM _lattis_sheets`)
+	if err != nil {
+		return nil, err
+	}
+	defer rs.Close()
+	var ids []int64
+	for rs.Next() {
+		var id int64
+		if err := rs.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rs.Err()
+}
+
+// dropBlankSheet retire une feuille vide (untouchedSheets), rendue par
+// l'annulation.
+func (t *tx) dropBlankSheet(id int64) error {
+	var name, color string
+	var pos, grid, heads, hidden, frows, fcols, zoom int
+	if err := t.row(`SELECT name, pos, gridlines, headings, color, hidden, freeze_rows, freeze_cols, zoom FROM _lattis_sheets WHERE id = ?`, id).Scan(&name, &pos, &grid, &heads, &color, &hidden, &frows, &fcols, &zoom); err != nil {
+		return err
+	}
+	return t.apply(
+		[]stmt{st(`DELETE FROM _lattis_sheets WHERE id = ?`, id)},
+		[]stmt{st(`INSERT INTO _lattis_sheets (id, name, pos, gridlines, headings, color, hidden, freeze_rows, freeze_cols, zoom) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, id, name, pos, grid, heads, color, hidden, frows, fcols, zoom)},
+	)
 }
 
 // userError distingue une formule refusée (à signaler) d'une panne.
