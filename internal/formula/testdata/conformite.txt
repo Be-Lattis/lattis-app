@@ -727,3 +727,66 @@ locale FR
 @ Ventes 1
 =LOG([Qté];2)	1
 @
+
+# Texte (audit 6, I7)
+@
+=CAR(65)	A
+=CAR(233)	é
+=CAR(128)	€
+=CAR(156)	œ
+=CAR(65,9)	A
+=CAR("66")	B
+=CAR(0)	#VALEUR!
+=CAR(256)	#VALEUR!
+=CAR("x")	#VALEUR!
+=NBCAR(CAR(10))	1
+=CODE("A")	65
+=CODE("élan")	233
+=CODE("€")	128
+=CODE("Œuvre")	140
+=CODE("★")	63
+=CODE("")	#VALEUR!
+=CODE(1)	49
+=CODE(1/0)	#DIV/0!
+=UNICAR(8364)	€
+=UNICAR(0)	#VALEUR!
+=UNICAR(55296)	#VALEUR!
+=UNICODE("★")	9733
+=UNICODE("")	#VALEUR!
+=EPURAGE("a"&CAR(10)&"b"&CAR(9))	ab
+=EPURAGE(12)	12
+=EPURAGE(1/0)	#DIV/0!
+=TEXTE.AVANT("jean.dupont@exemple.fr";"@")	jean.dupont
+=TEXTE.APRES("jean.dupont@exemple.fr";"@")	exemple.fr
+=TEXTE.AVANT("a-b-c";"-";2)	a-b
+=TEXTE.APRES("a-b-c";"-";-1)	c
+=TEXTE.AVANT("a-b-c";"-";-2)	a
+=TEXTE.APRES("a-b-c";"-";3)	#N/A
+=TEXTE.APRES("a-b-c";"-";3;;;"aucun")	aucun
+=TEXTE.AVANT("a-b-c";"-";0)	#VALEUR!
+=TEXTE.AVANT("a-b-c";"-";10)	#VALEUR!
+=TEXTE.AVANT("a-b-c";"-";"x")	#VALEUR!
+=TEXTE.AVANT("aXbxc";"x")	aXb
+=TEXTE.AVANT("aXbxc";"x";;1)	a
+=TEXTE.APRES("Été";"T";;1)	é
+=TEXTE.AVANT("abc";"-";;;1)	abc
+=TEXTE.APRES("abc";"-";-1;;1)	abc
+=NBCAR(TEXTE.AVANT("abc";""))	0
+=TEXTE.APRES("abc";"")	abc
+=TEXTE.AVANT(1/0;"a")	#DIV/0!
+=TEXTE.AVANT(12345;3)	12
+=NA()	#N/A
+=ESTNA(NA())	VRAI
+=SI.NON.DISP(NA();"x")	x
+=NA()+1	#N/A
+locale EN
+=TEXTBEFORE("a-b","-")	a
+=TEXTAFTER("a-b-c","-",-1)	c
+=CHAR(65)	A
+=NA()	#N/A
+locale FR
+
+@ Ventes 1
+=TEXTE.APRES([Produit];"v")	ier
+=CODE([Produit])	67
+@

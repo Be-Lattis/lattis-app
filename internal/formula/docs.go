@@ -71,6 +71,14 @@ var (
 // argMatrix : la colonne lue par CENTILE, QUARTILE…
 var argMatrix = docArg("matrice", "Colonne entière (Tableau[Colonne]), plage ou expression sur les colonnes d'un tableau.")
 
+// Arguments de TEXTE.AVANT et TEXTE.APRES.
+var (
+	argInstance  = docOpt("no_instance", "Rang du délimiteur (1 si omis) ; négatif pour compter depuis la fin.")
+	argMatchMode = docOpt("mode_correspondance", "0 ou omis : sensible à la casse ; 1 : sans tenir compte de la casse.")
+	argMatchEnd  = docOpt("fin_correspondance", "1 : la fin du texte compte comme un délimiteur (0 si omis).")
+	argNotFound  = docOpt("si_non_trouvé", "Résultat si le délimiteur est absent (#N/A si omis).")
+)
+
 var argAngle = docArg("angle", "Angle en radians (RADIANS convertit des degrés).")
 
 // Arguments des fonctions financières.
@@ -241,6 +249,24 @@ var docs = map[string]funcDoc{
 		docArgs(argText, docArg("no_fois", "Nombre de répétitions.")), 0, `=REPT("★"; [Note])`},
 	"EXACT": {catText, "Renvoie VRAI si deux textes sont identiques, casse comprise.",
 		docArgs(docArg("texte1", "Premier texte."), docArg("texte2", "Second texte.")), 0, `=EXACT([Code]; "ABC")`},
+	"CHAR": {catText, "Renvoie le caractère d'un code de 1 à 255 (page de codes Windows-1252, comme Excel).",
+		docArgs(docArg("nombre", "Code du caractère, de 1 à 255 (10 : saut de ligne).")), 0, `=[Nom]&CAR(10)&[Ville]`},
+	"CODE": {catText, "Renvoie le code (Windows-1252) du premier caractère d'un texte.",
+		docArgs(argText), 0, `=CODE([Initiale])`},
+	"UNICHAR": {catText, "Renvoie le caractère Unicode d'un code.",
+		docArgs(docArg("nombre", "Code Unicode du caractère (8364 : €).")), 0, `=UNICAR(9733)`},
+	"UNICODE": {catText, "Renvoie le code Unicode du premier caractère d'un texte.",
+		docArgs(argText), 0, `=UNICODE([Symbole])`},
+	"CLEAN": {catText, "Supprime les caractères de contrôle (sauts de ligne, tabulations…) d'un texte.",
+		docArgs(argText), 0, `=EPURAGE([Libellé importé])`},
+	"TEXTBEFORE": {catText, "Renvoie le texte situé avant un délimiteur.",
+		docArgs(argText, docArg("délimiteur", "Texte qui marque la fin du résultat."), argInstance, argMatchMode, argMatchEnd, argNotFound),
+		0, `=TEXTE.AVANT([Email]; "@")`},
+	"TEXTAFTER": {catText, "Renvoie le texte situé après un délimiteur.",
+		docArgs(argText, docArg("délimiteur", "Texte qui marque le début du résultat."), argInstance, argMatchMode, argMatchEnd, argNotFound),
+		0, `=TEXTE.APRES([Email]; "@")`},
+	"NA": {catLogic, "Renvoie la valeur d'erreur #N/A (valeur non disponible).",
+		nil, 0, `=SI([Qté]=0; NA(); [Montant]/[Qté])`},
 
 	// Dates
 	"TODAY": {catDate, "Renvoie la date du jour, fixée à l'ouverture et renouvelée par F9.",

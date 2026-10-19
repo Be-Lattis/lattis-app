@@ -99,6 +99,11 @@ Un agrégat accepte une **expression sur les colonnes** d'un tableau, calculée 
 | TROUVE, CHERCHE | FIND, SEARCH | ✅ CHERCHE sans casse, avec `*`, `?`, `~` |
 | TEXTE | TEXT | ⚠️ formats courants : `0`, `#`, `0,00`, `# ##0,00`, `#,##0.00`, `0 %`, sections `pos;nég;zéro`, texte entre guillemets ; dates `jj/mm/aaaa`, `jjjj`, `mmm`, `mmmm`, `aa`, `hh:mm:ss` (codes anglais acceptés). Résultat en locale française |
 | CNUM | VALUE | ✅ `1 234,5`, `12%`, dates |
+| CAR, CODE | CHAR, CODE | ✅ page de codes Windows-1252 (1 à 255), comme Excel sous Windows ; un caractère hors de cette page donne 63 (« ? ») |
+| UNICAR, UNICODE | UNICHAR, UNICODE | ✅ |
+| EPURAGE | CLEAN | ✅ retire les caractères de code 0 à 31 |
+| TEXTE.AVANT, TEXTE.APRES | TEXTBEFORE, TEXTAFTER | ⚠️ `no_instance` négatif depuis la fin, `mode_correspondance` 1 sans casse, `fin_correspondance`, `si_non_trouvé` (#N/A sinon) ; délimiteur unique (pas de constante matricielle) ; occurrences comptées de gauche à droite même pour une instance négative (ne diffère d'Excel qu'avec un délimiteur qui se chevauche, comme `"aa"` dans `"aaa"`) |
+| NA | NA | ✅ `NA()` renvoie #N/A |
 | FRACTIONNER.TEXTE | TEXTSPLIT | ⚠️ `FRACTIONNER.TEXTE("a,b;c"; ","; ";")` se déverse (lignes complétées par #N/A ou `remplir_avec`) ; plusieurs délimiteurs en constante matricielle (`{",";" "}`), le plus long l'emportant à une même position ; `respect_casse` 1 : sans casse ; un résultat vide donne #VALEUR! (#CALC! dans Excel). Le moteur SQL fixe la forme du résultat à la compilation : texte et délimiteurs doivent ne pas dépendre de la ligne (littéraux, cellules, valeurs précalculées) pour se déverser ou passer par TRIER, PRENDRE… ; sur la valeur d'une ligne (`NB(FRACTIONNER.TEXTE([Tags]; ","))` dans une colonne calculée), il ne sert qu'aux agrégats. Délimiteurs : un texte ou une constante matricielle, pas une plage |
 
 ## Dates

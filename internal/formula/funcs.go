@@ -163,6 +163,14 @@ var funcs = []funcDef{
 	{"VALUE", "CNUM", 1, 1, scalar, fnValue},
 	{"REPT", "REPT", 2, 2, scalar, fnRept},
 	{"EXACT", "EXACT", 2, 2, scalar, fnExact},
+	{"CHAR", "CAR", 1, 1, scalar, fnChar},
+	{"CODE", "CODE", 1, 1, scalar, fnCode},
+	{"UNICHAR", "UNICAR", 1, 1, scalar, fnUnichar},
+	{"UNICODE", "UNICODE", 1, 1, scalar, fnUnicode},
+	{"CLEAN", "EPURAGE", 1, 1, scalar, fnClean},
+	{"TEXTBEFORE", "TEXTE.AVANT", 2, 6, scalar, textAround(false)},
+	{"TEXTAFTER", "TEXTE.APRES", 2, 6, scalar, textAround(true)},
+	{"NA", "NA", 0, 0, scalar, func([]Value) Value { return Err(ErrNA) }},
 
 	// Dates
 	{"TODAY", "AUJOURDHUI", 0, 0, special, nil},
