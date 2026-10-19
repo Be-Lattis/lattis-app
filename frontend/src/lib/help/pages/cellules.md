@@ -46,7 +46,7 @@ Le réglage appartient à la feuille et s'enregistre avec le classeur.
 
 ## Protéger
 
-Révision › Protéger la feuille refuse toute modification de son contenu ; on peut encore s'y déplacer, sélectionner, copier, rechercher, filtrer et imprimer. Révision › Protéger le classeur refuse d'ajouter, supprimer, renommer ou déplacer des feuilles. Les commandes refusées sont grisées, et leur infobulle dit comment ôter la protection (voir [Prise en main](prise-en-main#proteger-une-feuille-ou-le-classeur)).
+Révision › Protéger la feuille refuse toute modification de son contenu ; on peut encore s'y déplacer, sélectionner, copier, rechercher, filtrer et imprimer. Révision › Protéger la mise en forme est plus légère : la saisie, le collage, l'effacement du contenu, les lignes et colonnes, le tri, les filtres et les notes restent permis, mais la police, les couleurs, les bordures, l'alignement, le format de nombre, les largeurs et hauteurs, la fusion et la mise en forme conditionnelle sont refusés ; un collage copié dans Lattis y colle les valeurs seules. Révision › Protéger le classeur refuse d'ajouter, supprimer, renommer ou déplacer des feuilles. Les commandes refusées sont grisées, et leur infobulle dit comment ôter la protection (voir [Prise en main](prise-en-main#proteger-une-feuille-ou-le-classeur)).
 
 Dans un classeur partagé sur un Serveur Lattis, un tableau publié que vos droits ne permettent pas de modifier (rôle Lecteur, classeur figé, hors ligne) grise de même les commandes qui changeraient ses données ; sa mise en forme, son tri et ses filtres restent permis, car ils ne valent que sur votre poste.
 

@@ -216,7 +216,7 @@ func (m *Model) Import(ctx context.Context, action string, sheets []ImportSheet)
 func (t *tx) untouchedSheets() ([]int64, error) {
 	var used int
 	q := `SELECT (SELECT count(*) FROM _lattis_tables) + (SELECT count(*) FROM _lattis_cells) + (SELECT count(*) FROM _lattis_pivots)
-		+ (SELECT count(*) FROM _lattis_charts) + (SELECT count(*) FROM _lattis_buttons) + (SELECT count(*) FROM _lattis_protection)`
+		+ (SELECT count(*) FROM _lattis_charts) + (SELECT count(*) FROM _lattis_buttons) + (SELECT count(*) FROM _lattis_protection) + (SELECT count(*) FROM _lattis_format_protection)`
 	for _, tbl := range sheetPositioned {
 		q += ` + (SELECT count(*) FROM ` + tbl + `)`
 	}

@@ -252,6 +252,28 @@ func TestMigrateChoiceCells(t *testing.T) {
 	exec(t, db, `UPDATE _lattis_tables SET follow = 0 WHERE id = 1`)
 }
 
+// TestMigrateFormatProtection : le format 35 ajoute la protection de la
+// mise en forme, sans toucher aux protections existantes.
+func TestMigrateFormatProtection(t *testing.T) {
+	ctx := context.Background()
+	db := open(t)
+	if err := MigrateTo(ctx, db, 34); err != nil {
+		t.Fatal(err)
+	}
+	exec(t, db, `INSERT INTO _lattis_protection (sheet, hash) VALUES (1, '')`)
+	if err := Migrate(ctx, db); err != nil {
+		t.Fatal(err)
+	}
+	if version(t, db) < 35 {
+		t.Fatalf("format %d", version(t, db))
+	}
+	var n int
+	if err := db.Read().QueryRow(`SELECT count(*) FROM _lattis_protection`).Scan(&n); err != nil || n != 1 {
+		t.Fatalf("protections : %d, %v", n, err)
+	}
+	exec(t, db, `INSERT INTO _lattis_format_protection (sheet, hash) VALUES (1, '')`)
+}
+
 func tableSQL(t *testing.T, db *store.Store, name string) string {
 	t.Helper()
 	var q string

@@ -484,6 +484,16 @@ CREATE TABLE _lattis_choice_cells (
 	PRIMARY KEY (sheet, row, col, value)
 ) STRICT;
 `,
+	// 34 → 35 : protection de la mise en forme d'une feuille (Révision ›
+	// Protéger la mise en forme, canvas/protect.go) : styles, largeurs,
+	// hauteurs, fusions et règles verrouillés, la saisie reste permise.
+	// hash comme _lattis_protection ; hors du journal.
+	`
+CREATE TABLE _lattis_format_protection (
+	sheet INTEGER NOT NULL PRIMARY KEY,
+	hash  TEXT NOT NULL
+) STRICT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

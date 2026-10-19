@@ -1682,6 +1682,13 @@ export interface SheetInfo {
     "password": boolean;
 
     /**
+     * FormatProtected : mise en forme protégée (Révision › Protéger la mise
+     * en forme) ; FormatPassword : avec un mot de passe.
+     */
+    "formatProtected": boolean;
+    "formatPassword": boolean;
+
+    /**
      * Color : couleur de l'onglet (« #rrggbb », vide : aucune) ; Hidden :
      * feuille masquée (absente de la barre d'onglets).
      */

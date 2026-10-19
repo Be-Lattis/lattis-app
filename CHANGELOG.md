@@ -6,6 +6,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Nouveautés
+
+- Révision › Protéger la mise en forme : sur la feuille, la saisie, le collage (valeurs seules), les lignes, le tri et les filtres restent permis, mais la police, les couleurs, les bordures, le format de nombre, les largeurs et hauteurs, la fusion et la mise en forme conditionnelle sont refusés (boutons grisés) ; mot de passe facultatif ; Ctrl+Z ne la contourne pas (format 35).
+
 ### Changements
 
 - Insertion › Autres graphiques : chaque type a son icône dans le menu.

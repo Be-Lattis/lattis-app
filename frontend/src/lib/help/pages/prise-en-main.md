@@ -162,7 +162,7 @@ Fichier › Importer lit les fichiers CSV et Excel ; Fichier › Exporter écrit
 
 ## Protéger une feuille ou le classeur
 
-Révision › Protéger la feuille refuse toute modification du contenu de la feuille ; Protéger le classeur refuse d'ajouter, supprimer ou renommer des feuilles. Un mot de passe facultatif empêche d'ôter la protection par mégarde. Comme dans Excel, c'est une protection contre les **modifications accidentelles**, pas une sécurité : le fichier n'est pas chiffré, et quelqu'un d'outillé peut lire ses données ou retirer la protection sans le mot de passe. Ne comptez pas dessus pour des données confidentielles.
+Révision › Protéger la feuille refuse toute modification du contenu de la feuille ; Protéger la mise en forme laisse saisir mais refuse de changer la mise en forme (styles, largeurs, fusion, mise en forme conditionnelle) ; Protéger le classeur refuse d'ajouter, supprimer ou renommer des feuilles. Un mot de passe facultatif empêche d'ôter la protection par mégarde. Comme dans Excel, c'est une protection contre les **modifications accidentelles**, pas une sécurité : le fichier n'est pas chiffré, et quelqu'un d'outillé peut lire ses données ou retirer la protection sans le mot de passe. Ne comptez pas dessus pour des données confidentielles.
 
 ## Et ensuite
 

@@ -110,6 +110,11 @@ type Model struct {
 	// Changements de protection (hors journal) depuis l'ouverture.
 	protMu  sync.Mutex
 	protGen int64
+	// fmtSince : dernière commande du journal au moment où la mise en forme
+	// d'une feuille a été protégée (voir historyGuard) ; fmtBase : celle de
+	// l'ouverture, pour une feuille déjà protégée.
+	fmtSince map[int64]int64
+	fmtBase  int64
 
 	// Hôtes HTTP autorisés (true) ou refusés (false) pour la session, sans
 	// être mémorisés dans le classeur (voir httphosts.go).
@@ -142,7 +147,12 @@ func (m *Model) SetSharing(s Sharing) { m.sharing = s }
 // New relie le modèle à la base (déjà migrée) et au bus de commandes (dont
 // il garde les annulations : voir protect.go).
 func New(db *store.Store, bus *command.Bus) *Model {
-	m := &Model{db: db, bus: bus, now: time.Now(), seed: rand.Uint64()}
+	m := &Model{db: db, bus: bus, now: time.Now(), seed: rand.Uint64(), fmtSince: map[int64]int64{}}
+	if db != nil {
+		// Journal gardé (session récupérée) : ses commandes précèdent peut-être
+		// la protection de la mise en forme. Sans journal : 0.
+		_ = db.Read().QueryRow(`SELECT coalesce(max(seq), 0) FROM _lattis_journal`).Scan(&m.fmtBase)
+	}
 	if bus != nil {
 		// Une annulation ne doit pas modifier une feuille protégée.
 		// (et les cellules par valeur reviennent sur la valeur choisie :

@@ -79,7 +79,7 @@ func (m *Model) ClearCells(ctx context.Context, sheet int64, r0, c0, r1, c1 int)
 		return nil
 	}
 	return m.Do(ctx, "Supprimer", func(t *tx) error {
-		if err := t.guard(sheet); err != nil {
+		if err := t.guardFormat(sheet); err != nil {
 			return err
 		}
 		return t.clearFree(sheet, r0, c0, r1, c1)

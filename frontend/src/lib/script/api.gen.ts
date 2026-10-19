@@ -711,9 +711,9 @@ export const apiReference: RefEntry[] = [
 	{
 		name: "sheets.list",
 		category: "sheets",
-		signature: "sheets.list() → { {id, name, protected, kind}, ... }",
+		signature: "sheets.list() → { {id, name, protected, formatProtected, kind}, ... }",
 		summary: "Liste les feuilles du classeur, dans l'ordre des onglets.",
-		details: "protected vaut true pour une feuille protégée (Révision › Protéger la feuille) ; kind vaut \"html\" pour une page web, \"doc\" pour un document (absent pour une feuille).",
+		details: "protected vaut true pour une feuille protégée (Révision › Protéger la feuille), formatProtected pour une feuille dont la mise en forme est protégée ; kind vaut \"html\" pour une page web, \"doc\" pour un document (absent pour une feuille).",
 		example: "for _, f in ipairs(sheets.list()) do\n  print(f.id, f.name)\nend",
 		args: [0, 0]
 	},
@@ -750,6 +750,15 @@ export const apiReference: RefEntry[] = [
 		summary: "Protège une feuille, comme Révision › Protéger la feuille : toute modification de son contenu est ensuite refusée.",
 		details: "Restent permis la lecture, la sélection, la copie, les filtres et les requêtes SQL de lecture. Le mot de passe est facultatif ; il n'est pas stocké (seulement une empreinte salée). Protéger ne s'annule pas. Paramètres — sheet : feuille (nom ou identifiant) ; absente : la feuille affichée ; password : mot de passe pour ôter la protection. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.protect{sheet = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		example: "sheets.protect(\"Feuille1\", \"secret\")\nprint(sheets.list()[1].protected) -- true",
+		args: [0, 2]
+	},
+	{
+		name: "sheets.protect_format",
+		category: "sheets",
+		signature: "sheets.protect_format([sheet], [password])",
+		summary: "Protège la mise en forme d'une feuille, comme Révision › Protéger la mise en forme : la saisie reste permise, changer la mise en forme est refusé.",
+		details: "Sont refusés les styles (police, couleurs, bordures, alignement, format de nombre, décimales), Effacer les formats et Supprimer, la mise en forme conditionnelle, les largeurs et hauteurs, la fusion. Restent permis la saisie, le collage (valeurs seules pour une copie faite dans Lattis), l'effacement du contenu, les lignes et colonnes, le tri, les filtres, les notes et la validation. Le mot de passe est facultatif. Protéger ne s'annule pas. Paramètres — sheet : feuille (nom ou identifiant) ; absente : la feuille affichée ; password : mot de passe pour ôter la protection. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.protect_format{sheet = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "sheets.protect_format(\"Feuille1\")\nprint(sheets.list()[1].formatProtected) -- true",
 		args: [0, 2]
 	},
 	{
@@ -819,6 +828,14 @@ export const apiReference: RefEntry[] = [
 		summary: "Ôte la protection d'une feuille (avec son mot de passe s'il y en a un).",
 		details: "Paramètres — sheet : feuille (nom ou identifiant) ; absente : la feuille affichée ; password : mot de passe donné en protégeant. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.unprotect{sheet = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		example: "sheets.protect(\"Feuille1\", \"secret\")\nsheets.unprotect(\"Feuille1\", \"secret\")",
+		args: [0, 2]
+	},
+	{
+		name: "sheets.unprotect_format",
+		category: "sheets",
+		signature: "sheets.unprotect_format([sheet], [password])",
+		summary: "Ôte la protection de la mise en forme d'une feuille (avec son mot de passe s'il y en a un).",
+		details: "Paramètres — sheet : feuille (nom ou identifiant) ; absente : la feuille affichée ; password : mot de passe donné en protégeant. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.unprotect_format{sheet = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		args: [0, 2]
 	},
 	{

@@ -1331,6 +1331,14 @@ export function PromoteHeader(table: string): $CancellablePromise<$models.DocSta
 }
 
 /**
+ * ProtectFormat protège la mise en forme d'une feuille (la saisie reste
+ * permise) ; hors de l'historique d'annulation.
+ */
+export function ProtectFormat(sheet: number, password: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1133989314, sheet, password);
+}
+
+/**
  * ProtectSheet protège une feuille (password vide : sans mot de passe) ;
  * hors de l'historique d'annulation, comme Excel.
  */
@@ -2331,6 +2339,13 @@ export function Undo(): $CancellablePromise<$models.DocState> {
  */
 export function UnmergeCells(sheet: number, r0: number, c0: number, r1: number, c1: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(2540767840, sheet, r0, c0, r1, c1);
+}
+
+/**
+ * UnprotectFormat ôte la protection de la mise en forme d'une feuille.
+ */
+export function UnprotectFormat(sheet: number, password: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3986192359, sheet, password);
 }
 
 /**

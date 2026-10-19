@@ -112,6 +112,15 @@ func (m *Model) Transfer(ctx context.Context, from int64, src Rect, to int64, ds
 	if move && from == to && dr == 0 && dc == 0 {
 		return ev, nil
 	}
+	// Mise en forme protégée à la destination : une copie colle les valeurs
+	// seules (comme Collage spécial › Valeurs).
+	if !move {
+		if locked, err := m.formatLocked(ctx, to); err != nil {
+			return ev, err
+		} else if locked {
+			return m.Paste(ctx, to, dst.R0, dst.C0, valuesBlock(values, src, dst))
+		}
+	}
 	label := "Coller"
 	if move {
 		label = "Déplacer les cellules"
@@ -125,10 +134,44 @@ func (m *Model) Transfer(ctx context.Context, from int64, src Rect, to int64, ds
 				return err
 			}
 		}
+		// D'une feuille à l'autre, la mise en forme part avec les cellules.
+		if move && from != to {
+			for _, s := range []int64{from, to} {
+				if err := t.guardFormat(s); err != nil {
+					return err
+				}
+			}
+		}
 		t.collect = true
 		return t.transfer(from, src, to, dst, move, values, &ev)
 	})
 	return ev, err
+}
+
+// valuesBlock répète le bloc affiché de la source sur la destination,
+// comme une copie (tiles).
+func valuesBlock(values [][]string, src, dst Rect) [][]string {
+	h, w := src.height(), src.width()
+	nr, nc := tiles(h, w, dst)
+	out := make([][]string, h*nr)
+	for i := range out {
+		out[i] = make([]string, w*nc)
+		for j := range out[i] {
+			if r, c := i%h, j%w; r < len(values) && c < len(values[r]) {
+				out[i][j] = values[r][c]
+			}
+		}
+	}
+	return out
+}
+
+// formatLocked dit si la mise en forme de la feuille est protégée.
+func (m *Model) formatLocked(ctx context.Context, sheet int64) (bool, error) {
+	var n int
+	err := m.read(ctx, func(t *tx) error {
+		return t.row(`SELECT count(*) FROM _lattis_format_protection WHERE sheet = ?`, sheet).Scan(&n)
+	})
+	return n > 0, err
 }
 
 func (t *tx) transfer(from int64, src Rect, to int64, dst Rect, move bool, values [][]string, ev *Event) error {
@@ -890,7 +933,11 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 		label = "Supprimer"
 	}
 	return m.Do(ctx, label, func(t *tx) error {
-		if err := t.guard(sheet); err != nil {
+		guard := t.guard
+		if all {
+			guard = t.guardFormat // Supprimer efface aussi la mise en forme
+		}
+		if err := guard(sheet); err != nil {
 			return err
 		}
 		zone := Rect{r0, c0, r1, c1}

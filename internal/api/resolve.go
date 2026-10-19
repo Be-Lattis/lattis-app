@@ -18,14 +18,16 @@ type sheetRef struct {
 	Name string `json:"name"`
 	// Protected : feuille protégée (ses modifications sont refusées).
 	Protected bool `json:"protected,omitempty"`
+	// FormatProtected : mise en forme protégée (la saisie reste permise).
+	FormatProtected bool `json:"formatProtected,omitempty"`
 	// Kind : "html" pour une page web, "doc" pour un document, vide pour une feuille.
 	Kind string `json:"kind,omitempty"`
 }
 
 func sheetList(ctx context.Context, d *doc.Document) ([]sheetRef, error) {
-	rs, err := d.DB().Read().QueryContext(ctx, `SELECT s.id, s.name, p.sheet IS NOT NULL,
+	rs, err := d.DB().Read().QueryContext(ctx, `SELECT s.id, s.name, p.sheet IS NOT NULL, f.sheet IS NOT NULL,
 		coalesce((SELECT g.kind FROM _lattis_pages g WHERE g.sheet = s.id), '') FROM _lattis_sheets s
-		LEFT JOIN _lattis_protection p ON p.sheet = s.id ORDER BY s.pos, s.id`)
+		LEFT JOIN _lattis_protection p ON p.sheet = s.id LEFT JOIN _lattis_format_protection f ON f.sheet = s.id ORDER BY s.pos, s.id`)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +35,7 @@ func sheetList(ctx context.Context, d *doc.Document) ([]sheetRef, error) {
 	var out []sheetRef
 	for rs.Next() {
 		var s sheetRef
-		if err := rs.Scan(&s.ID, &s.Name, &s.Protected, &s.Kind); err != nil {
+		if err := rs.Scan(&s.ID, &s.Name, &s.Protected, &s.FormatProtected, &s.Kind); err != nil {
 			return nil, err
 		}
 		out = append(out, s)

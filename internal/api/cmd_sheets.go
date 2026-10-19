@@ -65,8 +65,8 @@ func init() {
 		&Command{
 			Name:    "sheets.list",
 			Summary: "Liste les feuilles du classeur, dans l'ordre des onglets.",
-			Details: "protected vaut true pour une feuille protégée (Révision › Protéger la feuille) ; kind vaut \"html\" pour une page web, \"doc\" pour un document (absent pour une feuille).",
-			Returns: "{ {id, name, protected, kind}, ... }",
+			Details: "protected vaut true pour une feuille protégée (Révision › Protéger la feuille), formatProtected pour une feuille dont la mise en forme est protégée ; kind vaut \"html\" pour une page web, \"doc\" pour un document (absent pour une feuille).",
+			Returns: "{ {id, name, protected, formatProtected, kind}, ... }",
 			Example: `for _, f in ipairs(sheets.list()) do
   print(f.id, f.name)
 end`,
@@ -336,6 +336,41 @@ sheets.unprotect("Feuille1", "secret")`,
 				pw, _ := c.Str("password")
 				d, _ := c.Doc()
 				return nil, d.UnprotectSheet(c, s.ID, pw)
+			},
+		},
+		&Command{
+			Name:    "sheets.protect_format",
+			Label:   "Protéger la mise en forme",
+			Summary: "Protège la mise en forme d'une feuille, comme Révision › Protéger la mise en forme : la saisie reste permise, changer la mise en forme est refusé.",
+			Details: "Sont refusés les styles (police, couleurs, bordures, alignement, format de nombre, décimales), Effacer les formats et Supprimer, la mise en forme conditionnelle, les largeurs et hauteurs, la fusion. Restent permis la saisie, le collage (valeurs seules pour une copie faite dans Lattis), l'effacement du contenu, les lignes et colonnes, le tri, les filtres, les notes et la validation. Le mot de passe est facultatif. Protéger ne s'annule pas.",
+			Params:  []Param{pSheet, {Name: "password", Type: String, Desc: "mot de passe pour ôter la protection", Optional: true}},
+			Write:   true,
+			Example: `sheets.protect_format("Feuille1")
+print(sheets.list()[1].formatProtected) -- true`,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				pw, _ := c.Str("password")
+				d, _ := c.Doc()
+				return nil, d.ProtectFormat(c, s.ID, pw)
+			},
+		},
+		&Command{
+			Name:    "sheets.unprotect_format",
+			Label:   "Ôter la protection de la mise en forme",
+			Summary: "Ôte la protection de la mise en forme d'une feuille (avec son mot de passe s'il y en a un).",
+			Params:  []Param{pSheet, {Name: "password", Type: String, Desc: "mot de passe donné en protégeant", Optional: true}},
+			Write:   true,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				pw, _ := c.Str("password")
+				d, _ := c.Doc()
+				return nil, d.UnprotectFormat(c, s.ID, pw)
 			},
 		},
 		&Command{

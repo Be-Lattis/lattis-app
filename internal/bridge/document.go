@@ -1538,6 +1538,17 @@ func (s *DocumentService) UnprotectSheet(ctx context.Context, sheet int64, passw
 	return s.act(ctx, func(d *doc.Document) error { return d.UnprotectSheet(ctx, sheet, password) })
 }
 
+// ProtectFormat protège la mise en forme d'une feuille (la saisie reste
+// permise) ; hors de l'historique d'annulation.
+func (s *DocumentService) ProtectFormat(ctx context.Context, sheet int64, password string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.ProtectFormat(ctx, sheet, password) })
+}
+
+// UnprotectFormat ôte la protection de la mise en forme d'une feuille.
+func (s *DocumentService) UnprotectFormat(ctx context.Context, sheet int64, password string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.UnprotectFormat(ctx, sheet, password) })
+}
+
 // ProtectWorkbook protège la structure du classeur (onglets) ; sheets
 // verrouille aussi le contenu de toutes les feuilles.
 func (s *DocumentService) ProtectWorkbook(ctx context.Context, password string, sheets bool) (DocState, error) {

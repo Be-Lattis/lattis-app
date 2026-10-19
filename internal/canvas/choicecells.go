@@ -212,8 +212,8 @@ func showAllChoiceCellsRaw(ctx context.Context, tx *sql.Tx) error {
 
 // undoGuard : la garde des annulations (protection), puis les cellules par
 // valeur remises sur la valeur choisie.
-func (m *Model) undoGuard(ctx context.Context, sqlTx *sql.Tx) (func() error, error) {
-	check, err := m.historyGuard(ctx, sqlTx)
+func (m *Model) undoGuard(ctx context.Context, sqlTx *sql.Tx, seq int64) (func() error, error) {
+	check, err := m.historyGuard(ctx, sqlTx, seq)
 	if err != nil {
 		return nil, err
 	}

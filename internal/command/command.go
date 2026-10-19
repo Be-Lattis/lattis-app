@@ -190,21 +190,22 @@ type Bus struct {
 	// transaction (classeurs partagés : voir internal/remote/oplog).
 	Recorder Recorder
 	// Guard, s'il est fixé, encadre chaque annulation et rétablissement :
-	// appelé dans la transaction avant de rejouer les instructions, il rend
-	// une vérification appelée après ; une erreur de l'une ou l'autre défait
-	// tout (protection des feuilles : voir canvas.Model).
-	Guard func(ctx context.Context, tx *sql.Tx) (check func() error, err error)
+	// appelé dans la transaction avant de rejouer les instructions de la
+	// commande seq, il rend une vérification appelée après ; une erreur de
+	// l'une ou l'autre défait tout (protection des feuilles : voir
+	// canvas.Model).
+	Guard func(ctx context.Context, tx *sql.Tx, seq int64) (check func() error, err error)
 	// Undone, s'il est fixé, est appelé après chaque annulation réussie avec
 	// le nom de l'étape annulée (message pour la barre d'état).
 	Undone func(name string)
 }
 
 // guarded rejoue fn entre les deux temps de Guard.
-func (b *Bus) guarded(ctx context.Context, tx *sql.Tx, verb, name string, fn func() error) error {
+func (b *Bus) guarded(ctx context.Context, tx *sql.Tx, seq int64, verb, name string, fn func() error) error {
 	if b.Guard == nil {
 		return fn()
 	}
-	check, err := b.Guard(ctx, tx)
+	check, err := b.Guard(ctx, tx, seq)
 	if err != nil {
 		return err
 	}
@@ -582,7 +583,7 @@ func (b *Bus) undo(ctx context.Context) (string, error) {
 				t.ops = append(t.ops, steps[i].Ops[j].Inverse())
 			}
 		}
-		err = b.guarded(ctx, tx, "d'annuler", name, func() error {
+		err = b.guarded(ctx, tx, seq, "d'annuler", name, func() error {
 			for i := len(steps) - 1; i >= 0; i-- {
 				if err := run(ctx, tx, steps[i].Undo, t.cap); err != nil {
 					return err
@@ -630,7 +631,7 @@ func (b *Bus) redo(ctx context.Context) (string, error) {
 		for _, s := range steps {
 			t.ops = append(t.ops, s.Ops...)
 		}
-		err = b.guarded(ctx, tx, "de rétablir", name, func() error {
+		err = b.guarded(ctx, tx, seq, "de rétablir", name, func() error {
 			for _, s := range steps {
 				if err := run(ctx, tx, s.Do, t.cap); err != nil {
 					return err

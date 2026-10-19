@@ -22,6 +22,10 @@ type SheetInfo struct {
 	// Password : il faut un mot de passe pour ôter la protection.
 	Protected bool `json:"protected"`
 	Password  bool `json:"password"`
+	// FormatProtected : mise en forme protégée (Révision › Protéger la mise
+	// en forme) ; FormatPassword : avec un mot de passe.
+	FormatProtected bool `json:"formatProtected"`
+	FormatPassword  bool `json:"formatPassword"`
 	// Color : couleur de l'onglet (« #rrggbb », vide : aucune) ; Hidden :
 	// feuille masquée (absente de la barre d'onglets).
 	Color  string `json:"color"`
@@ -227,6 +231,7 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 		}
 		for i, s := range l.Sheets {
 			l.Sheets[i].Password, l.Sheets[i].Protected = prot.Sheets[s.ID]
+			l.Sheets[i].FormatPassword, l.Sheets[i].FormatProtected = prot.Formats[s.ID]
 		}
 		tables, err := t.tables(sheet)
 		if err != nil {

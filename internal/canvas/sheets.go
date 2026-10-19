@@ -278,13 +278,16 @@ func (t *tx) deleteSheet(sheet int64) error {
 		}
 		// Mise en forme, largeurs et hauteurs de la feuille.
 		do := []stmt{st(`DELETE FROM _lattis_pivots WHERE sheet = ?`, sheet), st(`DELETE FROM _lattis_charts WHERE sheet = ?`, sheet), st(`DELETE FROM _lattis_buttons WHERE sheet = ?`, sheet)}
-		// Protection de la feuille : supprimée avec elle, rendue par l'annulation.
-		prot, err := t.snapshot(`_lattis_protection`, sheet)
-		if err != nil {
-			return err
+		// Protections de la feuille (contenu, mise en forme) : supprimées avec
+		// elle, rendues par l'annulation.
+		for _, tbl := range []string{protTable, formatTable} {
+			prot, err := t.snapshot(tbl, sheet)
+			if err != nil {
+				return err
+			}
+			do = append(do, st(`DELETE FROM `+tbl+` WHERE sheet = ?`, sheet))
+			pivots = append(pivots, prot...)
 		}
-		do = append(do, st(`DELETE FROM _lattis_protection WHERE sheet = ?`, sheet))
-		pivots = append(pivots, prot...)
 		var choiceArg any // catégorie de l'onglet à choix, rendue avec la feuille
 		if choice.Valid {
 			choiceArg = choice.String
@@ -339,7 +342,7 @@ func (m *Model) SetHeadings(ctx context.Context, sheet int64, show bool) error {
 // 0 revient à la largeur par défaut.
 func (m *Model) SetColumnWidth(ctx context.Context, sheet int64, col, width int) error {
 	return m.Do(ctx, "Largeur de colonne", func(t *tx) error {
-		if err := t.guard(sheet); err != nil {
+		if err := t.guardFormat(sheet); err != nil {
 			return err
 		}
 		var old int
@@ -365,7 +368,7 @@ func (m *Model) SetColumnWidth(ctx context.Context, sheet int64, col, width int)
 // revient à la hauteur par défaut.
 func (m *Model) SetRowHeight(ctx context.Context, sheet int64, row, height int) error {
 	return m.Do(ctx, "Hauteur de ligne", func(t *tx) error {
-		if err := t.guard(sheet); err != nil {
+		if err := t.guardFormat(sheet); err != nil {
 			return err
 		}
 		var old int

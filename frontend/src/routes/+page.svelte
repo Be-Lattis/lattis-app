@@ -417,7 +417,7 @@
 	let deleting = $state<{ id: number; name: string; items: string[] } | null>(null);
 	// Plusieurs onglets sélectionnés à supprimer (une seule étape d'annulation).
 	let deletingMany = $state<number[] | null>(null);
-	let protecting = $state<{ what: 'sheet' | 'workbook'; id: number; name: string; off: boolean } | null>(null);
+	let protecting = $state<{ what: 'sheet' | 'format' | 'workbook'; id: number; name: string; off: boolean } | null>(null);
 	let pw1 = $state('');
 	let pw2 = $state('');
 	let pwError = $state('');
@@ -1871,12 +1871,12 @@
 	);
 
 	/** Protège, ou ôte la protection (mot de passe demandé s'il y en a un). */
-	function toggleProtect(what: 'sheet' | 'workbook', id = sheetId) {
+	function toggleProtect(what: 'sheet' | 'format' | 'workbook', id = sheetId) {
 		if (mode !== 'doc' || !layout) return;
 		const s = layout.sheets?.find((x) => x.id === id);
-		const on = what === 'sheet' ? !!s?.protected : !!layout.workbookProtected;
-		const hasPw = what === 'sheet' ? !!s?.password : !!layout.workbookPassword;
-		const name = what === 'sheet' ? (s?.name ?? '') : docState.title;
+		const on = what === 'sheet' ? !!s?.protected : what === 'format' ? !!s?.formatProtected : !!layout.workbookProtected;
+		const hasPw = what === 'sheet' ? !!s?.password : what === 'format' ? !!s?.formatPassword : !!layout.workbookPassword;
+		const name = what === 'workbook' ? docState.title : (s?.name ?? '');
 		if (on && !hasPw) {
 			applyProtect(what, id, name, true, '');
 			return;
@@ -1886,9 +1886,10 @@
 		protecting = { what, id, name, off: on };
 	}
 
-	async function applyProtect(what: 'sheet' | 'workbook', id: number, name: string, off: boolean, pw: string, sheets = false) {
+	async function applyProtect(what: 'sheet' | 'format' | 'workbook', id: number, name: string, off: boolean, pw: string, sheets = false) {
 		try {
 			if (what === 'sheet') await (off ? DocumentService.UnprotectSheet(id, pw) : DocumentService.ProtectSheet(id, pw));
+			else if (what === 'format') await (off ? DocumentService.UnprotectFormat(id, pw) : DocumentService.ProtectFormat(id, pw));
 			else await (off ? DocumentService.UnprotectWorkbook(pw) : DocumentService.ProtectWorkbook(pw, sheets));
 			protecting = null;
 			await reload();
@@ -1897,11 +1898,15 @@
 					? off
 						? `Protection de la feuille « ${name} » ôtée`
 						: `Feuille « ${name} » protégée`
-					: off
-						? 'Protection du classeur ôtée'
-						: sheets
-							? 'Classeur protégé : structure et contenu de toutes les feuilles'
-							: 'Structure du classeur protégée';
+					: what === 'format'
+						? off
+							? `Protection de la mise en forme de « ${name} » ôtée`
+							: `Mise en forme de la feuille « ${name} » protégée : la saisie reste permise`
+						: off
+							? 'Protection du classeur ôtée'
+							: sheets
+								? 'Classeur protégé : structure et contenu de toutes les feuilles'
+								: 'Structure du classeur protégée';
 		} catch (e) {
 			if (protecting) pwError = err(e);
 			else notice = err(e);
@@ -2024,6 +2029,7 @@
 		sheetProtected={sheetLocked}
 		sheetOwnProtected={!!activeInfo?.protected}
 		workbookProtected={mode === 'doc' && !!layout?.workbookProtected}
+		formatProtected={mode === 'doc' && !!activeInfo?.formatProtected}
 		onprotect={mode === 'doc' ? (what) => toggleProtect(what) : undefined}
 		ondata={mode === 'doc' ? (what) => (what === 'refreshAll' ? refreshKey(true) : queryHost?.data(what)) : undefined}
 		onformat={mode === 'doc' ? (tab) => sheet?.openFormat(tab) : undefined}
@@ -2599,6 +2605,8 @@
 				<p>
 					{#if p.what === 'sheet'}
 						{p.off ? `Ôter la protection de la feuille « ${p.name} »` : `Protéger la feuille « ${p.name} »`}
+					{:else if p.what === 'format'}
+						{p.off ? `Ôter la protection de la mise en forme de « ${p.name} »` : `Protéger la mise en forme de la feuille « ${p.name} »`}
 					{:else}
 						{p.off ? 'Ôter la protection du classeur' : 'Protéger la structure du classeur'}
 					{/if}
@@ -2607,9 +2615,11 @@
 					<p class="muted">
 						{p.what === 'sheet'
 							? 'Saisie, collage, mise en forme, lignes et colonnes, tri, objets et requêtes SQL d’écriture seront refusés sur cette feuille. Lecture, copie et filtres restent permis.'
-							: lockSheets
-								? 'Ajouter, supprimer, renommer ou déplacer des feuilles sera refusé, ainsi que toute modification du contenu des feuilles.'
-								: 'Ajouter, supprimer, renommer ou déplacer des feuilles sera refusé. Le contenu des feuilles non protégées reste modifiable.'}
+							: p.what === 'format'
+								? 'Police, couleurs, bordures, alignement, format de nombre, largeurs et hauteurs, fusion et mise en forme conditionnelle seront refusés sur cette feuille. La saisie, le collage (valeurs seules), les lignes et colonnes, le tri, les filtres et les notes restent permis.'
+								: lockSheets
+									? 'Ajouter, supprimer, renommer ou déplacer des feuilles sera refusé, ainsi que toute modification du contenu des feuilles.'
+									: 'Ajouter, supprimer, renommer ou déplacer des feuilles sera refusé. Le contenu des feuilles non protégées reste modifiable.'}
 					</p>
 					<p class="muted">
 						Cette protection évite les modifications accidentelles ; ce n’est pas une sécurité : le fichier n’est pas chiffré, ses données restent lisibles et la

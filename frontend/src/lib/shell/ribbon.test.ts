@@ -56,6 +56,22 @@ describe('grisage du ruban (audit 3, I1 et I2)', () => {
 		expect(blockedBy(cmd('Coller'), {})).toBe('');
 	});
 
+	it('mise en forme protégée : la mise en forme est grisée, la saisie et les notes restent', () => {
+		const fmt: GateState = { formatProtected: true };
+		const g = gate(cmd('Gras', { local: true, format: true }), fmt);
+		expect(g.run).toBeUndefined();
+		expect(g.hint).toBe('Gras : mise en forme protégée (Révision › Ôter la protection de la mise en forme)');
+		expect(gate(cmd('Coller'), fmt).run).toBe(run);
+		expect(gate(cmd('Nouvelle note', { local: true }), fmt).run).toBe(run);
+		// Format ▾ : « Format de cellule… » grisé, masquer les lignes permis.
+		const format: GatedMenu = { label: 'Format', run, local: true, items: [{ label: 'Format de cellule…', format: true, run }, { label: 'Masquer les lignes', run }] };
+		const m = gate(format, fmt);
+		expect(m.run).toBe(run);
+		expect(m.items?.map((it) => !!it.run)).toEqual([false, true]);
+		// La protection de la feuille l'emporte (son motif).
+		expect(gate(cmd('Gras', { format: true }), { ...fmt, sheetProtected: true, sheetOwnProtected: true }).hint).toContain('feuille protégée');
+	});
+
 	it('commande à menu : chaque choix est grisé à part, la commande quand il n’en reste aucun', () => {
 		const effacer: GatedMenu = { label: 'Effacer', run, items: [{ label: 'Effacer les formats', local: true, run }, { label: 'Effacer le contenu', run }] };
 		const ro = gate(effacer, { tableReadOnly: 'lecture seule' });
