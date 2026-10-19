@@ -2,6 +2,7 @@ package workbook_test
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"strings"
 	"testing"
@@ -220,5 +221,57 @@ func TestPostgresFrozenLifecycle(t *testing.T) {
 	}
 	if st := r.Share.State(); st.Version != 2 || st.Title != "Ventes 2026 — Été" {
 		t.Fatalf("état : %+v", st)
+	}
+}
+
+// Formulaires contre le vrai schéma (lot 1, §10 du contrat client) :
+// disponibilité, création avec une définition complète (intertitre, liste
+// verrouillée par le lien, valeurs posée par le serveur),
+// version, ouverture, aperçu, liste vue par un lecteur, suppression.
+func TestPostgresForms(t *testing.T) {
+	env := pgSetup(t)
+	useRoot(t)
+	ctx := context.Background()
+	alice, _ := env.user(t, "alice")
+	bob, bobID := env.user(t, "bob")
+	a := author(t)
+	info, err := workbook.Publish(ctx, env.as(alice), a.DB(), workbook.Request{Server: server, User: alice, Title: "Commandes", Mode: workbook.Collaborative, Tables: []int64{tableID(t, a, "Ventes")}})
+	must(t, err)
+	env.addMember(t, info.WorkbookID, "reader", bobID)
+	srv := env.as(alice)
+	set, err := srv.FormsSettings(ctx)
+	must(t, err)
+	if !set.Forms || set.FormsPublic {
+		t.Fatalf("réglages : %+v", set)
+	}
+	tbl, cols := remoteColumns(t, srv, info, "Ventes")
+	def := formDef(cols)
+	def.ServerValues = append(def.ServerValues, workbook.FormServerValue{Column: cols["Payé"], Value: workbook.FormValue{Fixed: true}})
+	created, err := srv.CreateForm(ctx, info.WorkbookID, tbl, workbook.FormSpec{Definition: def, Access: workbook.FormMembers})
+	must(t, workbook.FormError(err))
+	if created.ID == "" || len(created.Code) != 10 || !strings.HasSuffix(created.URL, "/f/"+created.Code) {
+		t.Fatalf("création : %+v", created)
+	}
+	def.Appearance.Title = "Commandes 2026"
+	v, err := srv.UpdateForm(ctx, created.ID, workbook.FormChange{Definition: &def}, 1)
+	must(t, workbook.FormError(err))
+	if _, err := srv.UpdateForm(ctx, created.ID, workbook.FormChange{Definition: &def}, 1); !errors.Is(workbook.FormError(err), workbook.ErrFormModified) {
+		t.Fatalf("version périmée : %v", err)
+	}
+	must(t, workbook.FormError(srv.SetFormState(ctx, created.ID, workbook.FormOpen)))
+	forms, err := srv.ListForms(ctx, info.WorkbookID)
+	must(t, workbook.FormError(err))
+	if len(forms) != 1 || forms[0].State != workbook.FormOpen || forms[0].Version < v || forms[0].Definition == nil || forms[0].Definition.Appearance.Title != "Commandes 2026" || forms[0].Definition.Fields[1].Param != "produit" {
+		t.Fatalf("liste : %+v", forms)
+	}
+	if u, err := srv.FormPreviewURL(ctx, created.ID); err != nil || !strings.Contains(u, "/f/"+created.Code+"?p=") {
+		t.Fatalf("aperçu : %q %v", u, err)
+	}
+	if l, err := env.as(bob).ListForms(ctx, info.WorkbookID); err != nil || len(l) != 1 || l[0].Manageable || l[0].Definition != nil {
+		t.Fatalf("liste du lecteur : %+v %v", l, err)
+	}
+	must(t, workbook.FormError(srv.DropForm(ctx, created.ID)))
+	if l, err := srv.ListForms(ctx, info.WorkbookID); err != nil || len(l) != 0 {
+		t.Fatalf("après suppression : %+v %v", l, err)
 	}
 }

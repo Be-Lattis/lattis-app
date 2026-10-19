@@ -218,12 +218,17 @@ func (s *DocumentService) FormInfo(ctx context.Context, table string) (FormInfo,
 	if out.ServerName == "" {
 		out.ServerName = name
 	}
-	if disc, err := formsDiscovery(ctx, info.Server); err == nil {
-		if !disc.Forms {
-			out.refuse(FormNoServer)
-			return out, nil
+	// Disponibilité : lattis.forms_settings (la découverte ne la dit pas).
+	set, err := srv.FormsSettings(ctx)
+	if err != nil || !set.Forms {
+		if err = workbook.FormError(err); err != nil && !errors.Is(err, workbook.ErrNoForms) {
+			return out, err
 		}
-		out.Public = disc.FormsPublic
+		out.refuse(FormNoServer)
+		return out, nil
+	}
+	out.Public = set.FormsPublic
+	if disc, err := formsDiscovery(ctx, info.Server); err == nil {
 		if disc.Name != "" {
 			out.ServerName = disc.Name
 		}
@@ -248,6 +253,7 @@ func (s *DocumentService) FormInfo(ctx context.Context, table string) (FormInfo,
 	}
 	for _, f := range forms {
 		if f.TableID == out.TableID {
+			f.URL = formURL(info.Server, f.URL)
 			out.Forms = append(out.Forms, f)
 		}
 	}
@@ -498,7 +504,7 @@ func (s *DocumentService) FormSave(ctx context.Context, req FormSave) (FormSaved
 		if err != nil {
 			return out, formError(err, req.Names)
 		}
-		out.ID, out.Code, out.URL, out.Version = c.ID, c.Code, c.URL, 1
+		out.ID, out.Code, out.URL, out.Version = c.ID, c.Code, formURL(req.Server, c.URL), 1
 	} else {
 		def, access := req.Spec.Definition, req.Spec.Access
 		v, err := srv.UpdateForm(ctx, req.ID, workbook.FormChange{Definition: &def, Access: &access, MaxPerRespondent: req.Spec.MaxPerRespondent}, req.Version)
@@ -528,7 +534,7 @@ func (s *DocumentService) FormSave(ctx context.Context, req FormSave) (FormSaved
 		if forms, err := srv.ListForms(ctx, req.WorkbookID); err == nil {
 			for _, f := range forms {
 				if f.ID == out.ID {
-					out.Code, out.URL = f.Code, f.URL
+					out.Code, out.URL = f.Code, formURL(req.Server, f.URL)
 				}
 			}
 		}
@@ -554,6 +560,15 @@ func (s *DocumentService) FormDrop(ctx context.Context, server, id string) error
 	return workbook.FormError(srv.DropForm(ctx, id))
 }
 
+// formURL rend l'adresse complète d'un lien du serveur, qui peut ne rendre
+// qu'un chemin (/f/<code>, aperçu /f/<code>?p=…).
+func formURL(server, u string) string {
+	if strings.HasPrefix(u, "/") {
+		return strings.TrimRight(server, "/") + u
+	}
+	return u
+}
+
 // FormPreviewURL rend le lien d'aperçu (10 minutes, réponses non
 // enregistrées).
 func (s *DocumentService) FormPreviewURL(ctx context.Context, server, id string) (string, error) {
@@ -562,7 +577,7 @@ func (s *DocumentService) FormPreviewURL(ctx context.Context, server, id string)
 		return "", err
 	}
 	u, err := srv.FormPreviewURL(ctx, id)
-	return u, workbook.FormError(err)
+	return formURL(server, u), workbook.FormError(err)
 }
 
 // FormImage envoie le logo ou la bannière (kind) d'un formulaire, lus

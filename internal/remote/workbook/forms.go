@@ -213,6 +213,9 @@ type Form struct {
 // l'utilisateur. Un serveur sans les formulaires répond 42883 : voir
 // FormError.
 type Forms interface {
+	// FormsSettings dit si le serveur sert les formulaires et permet le lien
+	// public (lattis.forms_settings ; 42883 : serveur sans formulaires).
+	FormsSettings(ctx context.Context) (FormsSettings, error)
 	// CreateForm crée un formulaire en brouillon (propriétaires et
 	// concepteurs) : identité technique et rôle interne du classeur.
 	CreateForm(ctx context.Context, workbookID, tableID string, p FormSpec) (FormCreated, error)
@@ -235,6 +238,12 @@ type Forms interface {
 	FormAudienceAdd(ctx context.Context, formID, principal string) error
 	FormAudienceAddByEmail(ctx context.Context, formID, email string) error
 	FormAudienceRemove(ctx context.Context, formID, principal string) error
+}
+
+// FormsSettings : réglages des formulaires du serveur.
+type FormsSettings struct {
+	Forms       bool `json:"forms"`
+	FormsPublic bool `json:"forms_public"`
 }
 
 // ErrNoForms : le serveur ne propose pas les formulaires (42883, ou forms
@@ -350,6 +359,12 @@ func (s pgServer) SetFormState(ctx context.Context, formID, state string) error 
 
 func (s pgServer) DropForm(ctx context.Context, formID string) error {
 	return s.exec(ctx, `SELECT lattis.drop_form($1::uuid)`, formID)
+}
+
+func (s pgServer) FormsSettings(ctx context.Context) (FormsSettings, error) {
+	var out FormsSettings
+	err := s.jsonCall(ctx, `SELECT lattis.forms_settings()::text`, &out)
+	return out, err
 }
 
 func (s pgServer) ListForms(ctx context.Context, workbookID string) ([]Form, error) {

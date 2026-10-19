@@ -385,6 +385,15 @@ func (s *session) DropForm(ctx context.Context, id string) error {
 	})
 }
 
+func (s *session) FormsSettings(ctx context.Context) (workbook.FormsSettings, error) {
+	s.f.mu.Lock()
+	defer s.f.mu.Unlock()
+	if err := s.formsCall("forms_settings"); err != nil {
+		return workbook.FormsSettings{}, err
+	}
+	return workbook.FormsSettings{Forms: true, FormsPublic: s.f.FormsPublic}, nil
+}
+
 func (s *session) ListForms(ctx context.Context, workbookID string) ([]workbook.Form, error) {
 	s.f.mu.Lock()
 	defer s.f.mu.Unlock()

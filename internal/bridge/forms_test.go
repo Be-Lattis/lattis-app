@@ -168,12 +168,7 @@ func TestFormInfo(t *testing.T) {
 		t.Fatalf("colonne Reçu le : %+v", fi.Columns)
 	}
 
-	// Serveur sans formulaires : découverte, puis 42883.
-	disc.Forms = false
-	if fi, _ = a.FormInfo(ctx, "Nids"); fi.Reason != FormNoServer {
-		t.Fatalf("découverte sans forms : %+v", fi)
-	}
-	disc.Forms = true
+	// Serveur sans formulaires : lattis.forms_settings absente (42883).
 	fake.NoForms = true
 	if fi, _ = a.FormInfo(ctx, "Nids"); fi.Reason != FormNoServer || fi.Message != "Ce serveur ne propose pas encore les formulaires." {
 		t.Fatalf("serveur sans formulaires : %+v", fi)
