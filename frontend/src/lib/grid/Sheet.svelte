@@ -4886,6 +4886,28 @@
 		return { insertRow: source.insertRow, deleteRow: source.deleteRow, insertColumn: source.insertColumn, deleteColumn: source.deleteColumn }[op]!(e.t, n);
 	}
 
+	/** Suppr sur des colonnes entières d'un tableau : « Supprimer la colonne » ; faux sinon. */
+	function deleteWholeColumns(): boolean {
+		const { r0, r1, c0, c1 } = selection();
+		const e = tableAt(r0, c0);
+		// En-tête compris ou données seules (Ctrl+Espace), toutes les lignes, au moins une.
+		if (!e || !source.deleteColumn || e.last <= e.t.row || (r0 !== e.t.row && (r0 !== e.t.row + 1 || r1 === r0)) || r1 < e.last || c1 > e.lastCol || (c0 === e.t.col && c1 === e.lastCol)) return false;
+		if (queryIn(r0, c0, r1, c1, true)) {
+			say(QUERY_READONLY);
+			return true;
+		}
+		// De droite à gauche : les numéros des colonnes restantes ne bougent pas.
+		writing = writing.catch(() => undefined).then(async () => {
+			try {
+				for (let c = c1; c >= c0; c--) await tableLines(e, 'deleteColumn', c - e.t.col);
+				schedule();
+			} catch (err) {
+				say(String((err as Error)?.message ?? err));
+			}
+		});
+		return true;
+	}
+
 	/** Échap ferme le dialogue ouvert, où que soit le focus. */
 	function onGlobalKey(e: KeyboardEvent) {
 		if (e.key !== 'Escape') return;
@@ -6375,6 +6397,8 @@
 				if (source.recalc) source.recalc().then(() => say('Recalculé'), (err) => say(String(err?.message ?? err)));
 				break;
 			case 'Delete':
+				// Colonnes entières d'un tableau (en-tête compris), pas tout le tableau : supprimées.
+				if (deleteWholeColumns()) break;
 				clearSelection();
 				lastRepeat = () => clearSelection();
 				break;
