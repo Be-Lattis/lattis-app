@@ -286,7 +286,7 @@ const instructions = `Lattis est un tableur relationnel : chaque tableau d'une f
 	"\n- Saisir des données : cells_paste (une ligne d'en-têtes puis des lignes fait un tableau ; range = true les garde en cellules libres)." +
 	"\n- Titre pris pour l'en-tête d'un tableau : tables_header_to_title (la 1re ligne devient l'en-tête, l'ancien en titre)." +
 	"\n- Total ou note pris dans la dernière ligne : tables_last_row_out." +
-	"\n- Ligne de groupes au-dessus des en-têtes (BOISEMENT sur Nom, Statut…) : tables_two_level_headers(table, true) ; les colonnes s'appellent alors « Groupe.Sous »." +
+	"\n- Ligne de groupes au-dessus des en-têtes (BOISEMENT sur Nom, Statut…) : tables_two_level_headers(table, true) ; les colonnes s'appellent alors « Groupe.Sous », sauf celles sur un niveau (nom simple : groupe seul au-dessus d'un en-tête automatique ou répété)." +
 	"\n- Clé d'un tableau (valeurs uniques, recherches REFERENCE) : tables_key_check puis tables_set_key, ou tables_keep_row_numbers pour chercher par numéro de ligne." +
 	"\n- Colonne calculée : columns_insert puis une formule par nom de colonne (=[Prix]*[Quantité]) ; formules d'Excel traduites (RECHERCHEV devient REFERENCE)." +
 	"\n- Tableau croisé : pivots_create ; graphique : charts_create ; mise en page et impression : sheets_set_page_setup."

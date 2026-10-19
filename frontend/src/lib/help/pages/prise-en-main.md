@@ -18,6 +18,15 @@ Tout s'annule avec `Ctrl+Z`, y compris la création d'un tableau.
 
 Quand une ligne de groupes est posée au-dessus des en-têtes (BOISEMENT sur Nom, Statut et Parcelle), faites clic droit sur l'en-tête › Tableau › « Intégrer la ligne du dessus comme groupes d'en-têtes » : ces cellules, fusionnées ou non, deviennent les groupes du tableau, affichés au-dessus des en-têtes comme dans Excel. Une colonne s'appelle alors « Groupe.Nom » : `Inventaire[BOISEMENT.Nom]` dans une formule, `"BOISEMENT.Nom"` en SQL. Tapez dans la bande des groupes pour nommer ou renommer un groupe (les formules suivent), videz-la pour le retirer. Décocher l'option garde les noms complets sur une seule ligne.
 
+Une colonne sans groupe reste **sur un niveau** : sa case de la bande et son en-tête ne forment qu'une cellule, fusionnée sur les deux lignes, et son nom n'a pas de point. Lattis s'y adapte seul : un groupe posé sur une seule colonne dont l'en-tête n'a pas de vrai nom (Topographie au-dessus de « Colonne 17 ») devient le nom de la colonne, et un groupe qui répète l'en-tête (DÉCOUVREUR au-dessus de Découvreur) disparaît. Pour ajuster à la main, avec Accueil › Fusionner et centrer :
+
+- **la case de la bande et l'en-tête d'une colonne** › Fusionner : la colonne passe sur un niveau ; elle garde son sous-en-tête, ou prend le nom du groupe si son en-tête était automatique ;
+- **une colonne sur un niveau** › Défusionner (le même bouton) : la case de la bande se sépare de l'en-tête ; tapez-y le groupe (sans rien taper, elle reste sur un niveau). Taper « Groupe.Nom » dans l'en-tête fait la même chose ;
+- **plusieurs cases voisines de la bande** › Fusionner : un seul groupe sur ces colonnes, le premier qu'elles portaient (« Groupe » s'il n'y en avait aucun : tapez son nom dans la bande) ;
+- **un groupe sur plusieurs colonnes** › Défusionner : le groupe reste sur sa première colonne, les autres passent sur un niveau.
+
+Chaque fois, les colonnes sont renommées (formules et SQL suivent), en une seule étape d'annulation, et la barre d'état dit ce qui a changé. Fusionner la bande avec des données, des cellules hors du tableau ou un autre tableau est refusé.
+
 ## Types de colonnes
 
 Chaque colonne a un type, deviné d'après ce que vous tapez :

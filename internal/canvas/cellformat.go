@@ -141,7 +141,10 @@ func intOf(v any) int {
 // et centre leur contenu (« Fusionner et centrer » d'Excel). Comme Excel,
 // seule la valeur en haut à gauche est gardée ; renvoie le nombre de
 // valeurs effacées. Les fusions recouvertes sont remplacées. Refusé dans un
-// tableau ou un tableau croisé : un tableau garde une cellule par valeur.
+// tableau ou un tableau croisé : un tableau garde une cellule par valeur ;
+// seule la bande des groupes d'en-têtes (avec l'en-tête) se fusionne
+// (mergeBand) : la colonne passe sur un niveau, ou les colonnes forment un
+// groupe.
 func (m *Model) MergeCells(ctx context.Context, sheet int64, r0, c0, r1, c1 int) (int, error) {
 	if r0 > r1 {
 		r0, r1 = r1, r0
@@ -165,6 +168,11 @@ func (m *Model) MergeCells(ctx context.Context, sheet int64, r0, c0, r1, c1 int)
 		}
 		tables, err := t.tables(sheet)
 		if err != nil {
+			return err
+		}
+		// Bande des groupes d'en-têtes : colonne sur un niveau, ou groupe
+		// sur plusieurs colonnes (twolevel.go).
+		if ok, err := t.mergeBand(tables, r0, c0, r1, c1); ok || err != nil {
 			return err
 		}
 		for _, tb := range tables {
@@ -227,6 +235,13 @@ func (m *Model) UnmergeCells(ctx context.Context, sheet int64, r0, c0, r1, c1 in
 	}
 	return m.Do(ctx, "Annuler la fusion", func(t *tx) error {
 		if err := t.guard(sheet); err != nil {
+			return err
+		}
+		tables, err := t.tables(sheet)
+		if err != nil {
+			return err
+		}
+		if err := t.unmergeBand(tables, r0, c0, r1, c1); err != nil {
 			return err
 		}
 		old, err := t.merges(sheet)

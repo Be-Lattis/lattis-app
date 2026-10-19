@@ -384,7 +384,9 @@ end`,
 			Name:  "tables.two_level_headers",
 			Label: "Groupes d'en-têtes",
 			Summary: "Affiche (on = true) les en-têtes du tableau sur deux lignes : le nom « Groupe.Sous » d'une colonne montre son groupe dans une bande au-dessus de l'en-tête, fusionnée sur les colonnes voisines du même groupe ; les formules et le SQL gardent le nom complet (T[Groupe.Sous]). " +
-				"À l'activation, les cellules libres de la ligne au-dessus de l'en-tête (fusionnées ou non) deviennent les groupes des colonnes qu'elles couvrent ; on = false garde les noms complets sur une ligne.",
+				"À l'activation, les cellules libres de la ligne au-dessus de l'en-tête (fusionnées ou non) deviennent les groupes des colonnes qu'elles couvrent ; on = false garde les noms complets sur une ligne. " +
+				"Une colonne au nom simple (sans point) est sur un niveau : sa case de la bande et son en-tête ne font qu'une cellule. À l'activation, un groupe seul au-dessus d'un en-tête automatique (« Colonne 17 ») devient le nom de la colonne, un groupe qui répète l'en-tête disparaît. " +
+				"Pour ajuster : columns.rename (« Groupe.Sous » ou nom simple), cells.merge / cells.unmerge sur la bande (voir cells.merge), cells.set sur la bande pour poser ou renommer un groupe.",
 			Params:  []Param{pTable, {Name: "on", Type: Boolean, Desc: "true : deux lignes ; false : une ligne"}},
 			Write:   true,
 			Example: `tables.two_level_headers("Commandes", true)`,

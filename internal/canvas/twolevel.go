@@ -3,6 +3,7 @@ package canvas
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/formula"
@@ -81,7 +82,7 @@ func (t *tx) setTwoLevel(tb Table, on bool) error {
 	if err := flag(); err != nil {
 		return err
 	}
-	n := 0
+	n, single := 0, 0
 	for i, g := range groups {
 		if g == "" {
 			continue
@@ -90,17 +91,94 @@ func (t *tx) setTwoLevel(tb Table, on bool) error {
 		if cur, _ := splitGroup(c.Name); strings.EqualFold(cur, g) {
 			continue
 		}
-		name := freeColumnNameExcept(tb, c.ID, g+"."+c.Name)
+		alone := (i == 0 || groups[i-1] != g) && (i == len(groups)-1 || groups[i+1] != g)
+		name := groupedName(g, c.Name, alone)
+		if name == c.Name {
+			single++
+			continue
+		}
+		name = freeColumnNameExcept(tb, c.ID, name)
 		if err := t.rename(tb, c, name); err != nil {
 			return err
 		}
 		tb.Cols[i].Name = name
-		n++
+		if g2, _ := splitGroup(name); g2 == "" {
+			single++
+		} else {
+			n++
+		}
 	}
-	if n > 0 {
-		t.notes = append(t.notes, fmt.Sprintf("Ligne au-dessus de « %s » reprise en groupes d'en-têtes (%d colonnes renommées « Groupe.Nom »)", tb.Name, n))
+	if n > 0 || single > 0 {
+		msg := fmt.Sprintf("Ligne au-dessus de « %s » reprise en groupes d'en-têtes", tb.Name)
+		var parts []string
+		if n > 0 {
+			parts = append(parts, fmt.Sprintf("%d %s « Groupe.Nom »", n, plural(n, "colonne renommée", "colonnes renommées")))
+		}
+		if single > 0 {
+			parts = append(parts, fmt.Sprintf("%d sur un niveau (groupe et en-tête fusionnés : en-tête automatique ou répété)", single))
+		}
+		t.notes = append(t.notes, msg+" ("+strings.Join(parts, ", ")+")")
 	}
 	return nil
+}
+
+// Colonnes sur un niveau (demande de Louis) : dans un tableau à deux lignes,
+// une colonne au nom simple (sans « Groupe. ») n'a pas de groupe ; sa
+// cellule de la bande et son en-tête ne font qu'une cellule, fusionnée sur
+// les deux lignes. Un groupe seul sur sa colonne dont l'en-tête est
+// automatique (« Topographie » sur « Colonne 17 ») devient le nom de la
+// colonne ; un groupe qui répète l'en-tête (« DECOUVREUR » sur
+// « DECOUVREUR ») aussi : la colonne reste sur un niveau.
+
+// autoSub : en-tête donné par Lattis (« Colonne n ») ou vide.
+func autoSub(s string) bool {
+	s = strings.TrimSpace(s)
+	return s == "" || autoColRe.MatchString(s)
+}
+
+var labelAccents = strings.NewReplacer(
+	"à", "a", "â", "a", "ä", "a", "á", "a", "ã", "a", "å", "a",
+	"ç", "c", "é", "e", "è", "e", "ê", "e", "ë", "e",
+	"î", "i", "ï", "i", "í", "i", "ì", "i", "ñ", "n",
+	"ô", "o", "ö", "o", "ó", "o", "ò", "o", "õ", "o",
+	"ù", "u", "û", "u", "ü", "u", "ú", "u", "ÿ", "y", "œ", "oe", "æ", "ae",
+)
+
+// sameLabel : deux libellés égaux aux majuscules, accents et espaces près.
+func sameLabel(a, b string) bool {
+	f := func(s string) string { return labelAccents.Replace(strings.ToLower(strings.Join(strings.Fields(s), " "))) }
+	return f(a) == f(b)
+}
+
+// groupedName : nom d'une colonne de sous-en-tête sub sous le groupe g ;
+// alone : le groupe ne couvre que cette colonne. Sur un niveau (nom simple)
+// quand le groupe répète l'en-tête, ou qu'il est seul au-dessus d'un
+// en-tête automatique.
+func groupedName(g, sub string, alone bool) string {
+	switch {
+	case g == "", sameLabel(g, sub):
+		return sub
+	case alone && autoSub(sub):
+		return g
+	}
+	return g + "." + sub
+}
+
+// groupAlone : le groupe g posé sur la colonne i n'en couvrirait pas
+// d'autre (ses voisines ont un autre groupe), hors des colonnes lo à hi
+// qui le reçoivent aussi.
+func groupAlone(tb Table, i, lo, hi int, g string) bool {
+	if lo != hi {
+		return false
+	}
+	other := func(k int) bool {
+		if k < 0 || k >= len(tb.Cols) {
+			return true
+		}
+		h, _ := splitGroup(tb.Cols[k].Name)
+		return h != g
+	}
+	return other(i-1) && other(i+1)
 }
 
 // groupsAbove lit les groupes posés au-dessus de l'en-tête (ligne Row-1),
@@ -294,10 +372,7 @@ func (t *tx) setGroups(tb Table, lo, hi int, g string) error {
 	for k := lo; k <= hi; k++ {
 		c := tb.Cols[k]
 		_, sub := splitGroup(c.Name)
-		name := sub
-		if g != "" {
-			name = g + "." + sub
-		}
+		name := groupedName(g, sub, groupAlone(tb, k, lo, hi, g))
 		if name == c.Name {
 			continue
 		}
@@ -358,4 +433,149 @@ func (t *tx) absorbBand(sheet int64, tables []Table) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+// mergeBand : Fusionner dans la bande et l'en-tête d'un tableau à deux
+// lignes. La bande et l'en-tête d'une colonne mettent la colonne sur un
+// niveau ; des cellules voisines de la bande (avec ou sans leurs en-têtes)
+// forment un seul groupe. Faux si la plage ne touche aucune bande.
+func (t *tx) mergeBand(tables []Table, r0, c0, r1, c1 int) (bool, error) {
+	var hit []Table
+	band := false
+	for _, tb := range tables {
+		if tb.Top() <= r1 && tb.Bottom() >= r0 && tb.Col <= c1 && tb.Right() >= c0 {
+			hit = append(hit, tb)
+			band = band || tb.TwoLevel && r0 <= tb.Row-1 && r1 >= tb.Row-1
+		}
+	}
+	if !band {
+		return false, nil
+	}
+	if len(hit) > 1 {
+		return true, fmt.Errorf("%w : la sélection mêle plusieurs tableaux ; fusionnez les groupes d'en-têtes d'un seul tableau à la fois", ErrMerge)
+	}
+	tb := hit[0]
+	if c0 < tb.Col || c1 > tb.Right() || r0 < tb.Row-1 || r1 > tb.Row {
+		return true, fmt.Errorf("%w : dans le tableau « %s », seules la bande des groupes et l'en-tête se fusionnent : la bande et l'en-tête d'une colonne (colonne sur un niveau), ou des cellules voisines de la bande (un groupe sur plusieurs colonnes) ; pas avec les données ni avec des cellules hors du tableau", ErrMerge, tb.Name)
+	}
+	if err := t.lockTable(tb.ID); err != nil {
+		return true, err
+	}
+	if c0 == c1 {
+		return true, t.singleLevel(tb, c0-tb.Col)
+	}
+	return true, t.joinGroup(tb, c0-tb.Col, c1-tb.Col)
+}
+
+// singleLevel met la colonne i sur un niveau : son nom devient le
+// sous-en-tête, ou le groupe si le sous-en-tête était automatique.
+func (t *tx) singleLevel(tb Table, i int) error {
+	c := tb.Cols[i]
+	g, sub := splitGroup(c.Name)
+	if g == "" {
+		t.notes = append(t.notes, fmt.Sprintf("La colonne « %s » est déjà sur un niveau", c.Name))
+		return nil
+	}
+	lo, hi := groupSpan(tb, i)
+	name := sub
+	if autoSub(sub) {
+		name = g
+	}
+	if columnNameTaken(tb, c.ID, name) {
+		name = freeColumnNameExcept(tb, c.ID, name)
+	}
+	if err := t.rename(tb, c, name); err != nil {
+		return err
+	}
+	why := fmt.Sprintf("elle quitte le groupe « %s »", g)
+	switch {
+	case name == g:
+		why = "son groupe devient son nom"
+	case lo == hi:
+		why = fmt.Sprintf("le groupe « %s » est retiré", g)
+	}
+	t.notes = append(t.notes, fmt.Sprintf("Colonne « %s » sur un niveau, renommée « %s » (%s) ; Défusionner la remet sur deux lignes", c.Name, name, why))
+	return nil
+}
+
+// joinGroup réunit les colonnes lo à hi sous un seul groupe : le premier
+// groupe qu'elles portent (de gauche à droite), sinon « Groupe », à
+// renommer en tapant dans la bande.
+func (t *tx) joinGroup(tb Table, lo, hi int) error {
+	g := ""
+	var lost []string
+	for k := lo; k <= hi; k++ {
+		h, _ := splitGroup(tb.Cols[k].Name)
+		switch {
+		case h == "":
+		case g == "":
+			g = h
+		case h != g && !slices.Contains(lost, h):
+			lost = append(lost, h)
+		}
+	}
+	placeholder := g == ""
+	if placeholder {
+		g = "Groupe"
+	}
+	for k := lo; k <= hi; k++ {
+		c := tb.Cols[k]
+		_, sub := splitGroup(c.Name)
+		name := g + "." + sub
+		if name == c.Name {
+			continue
+		}
+		name = freeColumnNameExcept(tb, c.ID, name)
+		if err := t.rename(tb, c, name); err != nil {
+			return err
+		}
+		tb.Cols[k].Name = name
+	}
+	msg := fmt.Sprintf("Groupe d'en-têtes « %s » sur %d colonnes", g, hi-lo+1)
+	if placeholder {
+		msg += " : tapez son nom dans la bande"
+	}
+	if len(lost) > 0 {
+		msg += fmt.Sprintf(" (remplace « %s »)", strings.Join(lost, " », « "))
+	}
+	t.notes = append(t.notes, msg)
+	return nil
+}
+
+// unmergeBand : Défusionner dans la bande des groupes. Un groupe sur
+// plusieurs colonnes reste sur la première, les autres passent sur un
+// niveau (comme Excel garde le texte dans la première cellule). Une
+// colonne sur un niveau ne change pas ici : son groupe se tape dans la
+// bande (l'interface la sépare d'abord), ou elle se renomme « Groupe.Nom ».
+func (t *tx) unmergeBand(tables []Table, r0, c0, r1, c1 int) error {
+	said := len(t.notes)
+	single := 0
+	for _, tb := range tables {
+		if !tb.TwoLevel || r0 > tb.Row || r1 < tb.Row-1 || c1 < tb.Col || c0 > tb.Right() {
+			continue
+		}
+		for i := max(c0, tb.Col) - tb.Col; i <= min(c1, tb.Right())-tb.Col; {
+			lo, hi := groupSpan(tb, i)
+			i = hi + 1
+			g, _ := splitGroup(tb.Cols[lo].Name)
+			if g == "" {
+				single++
+				continue
+			}
+			if lo == hi {
+				continue
+			}
+			if err := t.lockTable(tb.ID); err != nil {
+				return err
+			}
+			if err := t.setGroups(tb, lo+1, hi, ""); err != nil {
+				return err
+			}
+			t.notes = append(t.notes, fmt.Sprintf("Groupe « %s » défusionné : il reste sur « %s », %s sur un niveau", g, tb.Cols[lo].Name, plural(hi-lo, "l'autre colonne passe", fmt.Sprintf("les %d autres colonnes passent", hi-lo))))
+		}
+	}
+	if single > 0 && len(t.notes) == said {
+		t.notes = append(t.notes, "Colonne sur un niveau : pour lui donner un groupe, tapez-le dans la bande au-dessus de son en-tête, ou renommez-la « Groupe.Nom »")
+	}
+	return nil
 }

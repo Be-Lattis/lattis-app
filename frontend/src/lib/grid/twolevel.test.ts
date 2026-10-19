@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bandMerges, groupSpans, headerLabel, spanAt, splitGroup, tableTop } from './twolevel';
+import { bandMerges, groupSpans, headerLabel, isSingle, spanAt, splitGroup, tableTop } from './twolevel';
 
 describe('en-têtes sur deux lignes', () => {
 	it('sépare au premier point', () => {
@@ -42,12 +42,26 @@ describe('en-têtes sur deux lignes', () => {
 		expect(tableTop({ row: 3, twoLevel: true })).toBe(2);
 	});
 
-	it('donne les groupes de plusieurs colonnes comme des fusions', () => {
-		const columns = ['N° DE NID.Nid', 'N° DE NID.Ref', 'Note', 'BOISEMENT.Nom', 'BOISEMENT.Statut'].map((name) => ({ name }));
-		expect(bandMerges([{ row: 3, col: 1, twoLevel: true, columns }])).toEqual([
+	it('donne les groupes de plusieurs colonnes et les colonnes sur un niveau comme des fusions', () => {
+		const columns = ['N° DE NID.Nid', 'N° DE NID.Ref', 'Note', 'BOISEMENT.Nom', 'BOISEMENT.Statut', 'Lierre.Type'].map((name) => ({ name }));
+		const t = { row: 3, col: 1, twoLevel: true, columns };
+		expect(bandMerges([t])).toEqual([
 			{ row: 2, col: 1, rows: 1, cols: 2 },
+			{ row: 2, col: 3, rows: 2, cols: 1 },
 			{ row: 2, col: 4, rows: 1, cols: 2 }
 		]);
 		expect(bandMerges([{ row: 3, col: 1, columns }])).toEqual([]);
+		// Défusionnée à la main : la colonne Note se sépare en attendant son groupe.
+		expect(bandMerges([t], (_, name) => name === 'Note')).toEqual([
+			{ row: 2, col: 1, rows: 1, cols: 2 },
+			{ row: 2, col: 4, rows: 1, cols: 2 }
+		]);
+	});
+
+	it('met sur un niveau une colonne sans groupe', () => {
+		expect(isSingle('Topographie')).toBe(true);
+		expect(isSingle('Topographie', true)).toBe(false);
+		expect(isSingle('BOISEMENT.Nom')).toBe(false);
+		expect(spanAt(['A.x', 'Topographie', 'A.y'], 1)).toEqual({ group: '', i0: 1, i1: 1 });
 	});
 });

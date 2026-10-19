@@ -36,7 +36,7 @@
 	import { explainError } from './errors';
 	import { freeDisplay } from './freecell';
 	import { bandAt, bandLabel, bandRefusal, hiddenBand } from './hidden';
-	import { bandMerges, groupSpans, headerLabel, spanAt, splitGroup, tableTop } from './twolevel';
+	import { bandMerges, groupSpans, headerLabel, isSingle, spanAt, splitGroup, tableTop } from './twolevel';
 	import { grown as growFrame, type Grown } from './grown';
 	import { pivotLayer, pivotValueText } from './pivotformat';
 	import { canFoldAll, foldAll, foldTarget, pivotBoxHit, pivotBoxLeft, pivotLabelOffset, PIVOT_BOX, setFolded, type PivotRowInfo } from './pivottree';
@@ -966,7 +966,7 @@
 		sheetRowStyles = new Map((d.rowStyles ?? []).map((s) => [s.index, parseStyle(s.style) ?? {}]));
 		sheetColStyles = new Map((d.colStyles ?? []).map((s) => [s.index, parseStyle(s.style) ?? {}]));
 		merges = mergeList(freeStyles);
-		boxes = [...merges, ...bandMerges(d.tables)];
+		boxes = [...merges, ...bandMerges(d.tables, isSplit)];
 		hiddenRows = hiddenLines(sheetRowStyles);
 		hiddenCols = hiddenLines(sheetColStyles);
 		sheetRowRules = new Map((d.rowRules ?? []).map((s) => [s.index, parseRules(s.rules) ?? []]));
@@ -1513,6 +1513,18 @@
 	}
 	const groupBandAt = (r: number, c: number) => entries.find((e) => e.t.twoLevel && r === e.t.row - 1 && c >= e.t.col && c <= e.lastCol);
 	const topRow = tableTop;
+	/**
+	 * Colonnes sur un niveau défusionnées à la main (Défusionner) : séparées
+	 * en bande + en-tête le temps de leur taper un groupe (tableau, nom de la
+	 * colonne). Rien n'est écrit tant qu'aucun groupe n'est tapé.
+	 */
+	const splitCols = new Set<string>();
+	const splitKey = (table: string, name: string) => `${table}\u0001${name}`;
+	const isSplit = (t: { name?: string }, name: string) => splitCols.has(splitKey(t.name ?? '', name));
+	/** Colonne i d'un tableau à deux lignes sur un niveau : bande et en-tête ne font qu'une cellule. */
+	const singleCol = (e: Entry, i: number) => !!e.t.twoLevel && !!e.t.columns[i] && isSingle(e.t.columns[i].name, isSplit(e.t, e.t.columns[i].name));
+	/** Fusions de la feuille et cellules de la bande des groupes (curseur, flèches, sélection). */
+	const rebuildBoxes = () => (boxes = [...merges, ...bandMerges(entries.map((e) => e.t), isSplit)]);
 	/** Tableau de la cellule, sa bande des groupes comprise (zone de nom, gouttière, ruban). */
 	const ownerAt = (r: number, c: number) => tableAt(r, c) ?? groupBandAt(r, c);
 	/** Ligne de données d'un autre membre, en lecture seule pour un participant (§8.1). */
@@ -2276,6 +2288,12 @@
 						}
 						if (hs?.nt) noteCorner(x + cw, y, hs);
 						const iconW = headIcons(e, i, x, y, cw, rh(r));
+						// Colonne sur un niveau : son nom s'écrit sur la bande et l'en-tête
+						// réunis (drawGroupBands, qui passe après le quadrillage).
+						if (singleCol(e, i) && rh(r - 1)) {
+							singleIcons.set(`${e.t.id}:${i}`, iconW);
+							continue;
+						}
 						ctx.save();
 						ctx.beginPath();
 						ctx.rect(x, y, cw - iconW - 10, rh(r));
@@ -3077,7 +3095,7 @@
 		const ar = activeRect();
 		for (const e of L.visible) {
 			const r = e.t.row - 1;
-			if (!e.t.twoLevel || r < r0 || r > r1 || !rh(r)) continue;
+			if (!e.t.twoLevel || r > r1 || e.t.row < r0 || !rh(r)) continue;
 			const y = ry(r);
 			for (const s of groupSpans(e.t.columns.map((k) => k.name))) {
 				const a = e.t.col + s.i0;
@@ -3086,6 +3104,11 @@
 				const x = cx(a);
 				const sw = spanW(a, b);
 				if (sw <= 0) continue;
+				if (s.i0 === s.i1 && singleCol(e, s.i0)) {
+					singleCell(e, s.i0, x, y, sw, many, ar, L);
+					continue;
+				}
+				if (r < r0) continue;
 				ctx.fillStyle = e.t.query ? C.linkHead : C.head;
 				ctx.fillRect(x, y, sw, rh(r));
 				// Dans la sélection (sauf la cellule active) : surlignée comme l'en-tête.
@@ -3109,6 +3132,47 @@
 				ctx.restore();
 			}
 		}
+	}
+
+	/** Largeur des boutons de l'en-tête des colonnes sur un niveau (posée par drawCells, lue par singleCell). */
+	const singleIcons = new Map<string, number>();
+
+	/**
+	 * Colonne sur un niveau d'un tableau à deux lignes : une cellule sur la
+	 * bande et l'en-tête, avec le nom de la colonne comme un en-tête (en gras,
+	 * à gauche, centré en hauteur) ; les boutons restent dans l'en-tête.
+	 */
+	function singleCell(e: Entry, i: number, x: number, y: number, w: number, many: boolean, ar: { r0: number; c0: number }, L: Layer) {
+		const c = e.t.col + i;
+		const hr = e.t.row;
+		const h2 = rh(hr - 1) + rh(hr);
+		const hs = styleAt(hr, c, e);
+		ctx.fillStyle = e.t.query ? C.linkHead : C.head;
+		ctx.fillRect(x, y, w, rh(hr - 1));
+		if (hs?.bg) {
+			ctx.fillStyle = hs.bg;
+			ctx.fillRect(x, y, w, rh(hr - 1));
+		}
+		if (many && L.s0 <= hr && L.s1 >= hr - 1 && c >= L.k0 && c <= L.k1 && !(ar.r0 === hr - 1 && ar.c0 === c)) {
+			ctx.fillStyle = C.select;
+			ctx.fillRect(x, y, w, rh(hr - 1));
+		}
+		ctx.strokeStyle = e.t.query ? C.linkBorder : C.border;
+		ctx.lineWidth = 1;
+		ctx.strokeRect(Math.round(x) - 0.5, Math.round(y) - 0.5, w, h2);
+		const iw = singleIcons.get(`${e.t.id}:${i}`) ?? 0;
+		ctx.save();
+		ctx.beginPath();
+		ctx.rect(x, y, Math.max(0, w - iw - 10), h2);
+		ctx.clip();
+		ctx.font = (hs?.i ? 'italic ' : '') + FONT_BOLD;
+		ctx.fillStyle = hs?.fg ?? (e.t.query ? C.linkHeadText : C.headText);
+		ctx.textAlign = 'left';
+		ctx.textBaseline = 'middle';
+		const label = ellipsize(e.t.columns[i].name, w - iw - 16);
+		ctx.fillText(label, x + 6, y + h2 / 2);
+		if (hs?.u) ctx.fillRect(x + 6, y + h2 / 2 + 7, ctx.measureText(label).width, 1);
+		ctx.restore();
 	}
 
 	/** Coin rouge d'une cellule qui a une note (en haut à droite, comme Excel). */
@@ -3593,7 +3657,7 @@
 		const single = sel.r0 === sel.r1 && sel.c0 === sel.c1;
 		const value = info.kind === 'data' && info.row ? info.row.cells[info.i!] : undefined;
 		const text = info.kind === 'free' ? (shown.get(key(active.row, active.col))?.text ?? info.value) : info.kind === 'data' ? (info.row?.text[info.i!] ?? '') : info.value;
-		formatDlg = { tab, style: activeStyle(), sample: { text, value }, canMerge: !single && freeSelection() && !!source.mergeCells, merged: !!mergeOf(active.row, active.col) };
+		formatDlg = { tab, style: activeStyle(), sample: { text, value }, canMerge: !single && (freeSelection() || bandSelection()) && !!source.mergeCells, merged: mergedAt(active.row, active.col) };
 	}
 
 	function applyFormat(patch: Record<string, unknown>, merge: boolean | null) {
@@ -3606,9 +3670,22 @@
 		else if (merge === false) unmergeActive();
 	}
 
-	/** Fusionner et centrer (bascule, comme le bouton d'Excel) : cellules libres seulement. */
+	/** La sélection touche-t-elle la bande des groupes d'un tableau à deux lignes (le moteur y fusionne) ? */
+	function bandSelection(): boolean {
+		const { r0, r1, c0, c1 } = selection();
+		return entries.some((e) => e.t.twoLevel && r0 <= e.t.row - 1 && r1 >= e.t.row - 1 && c0 <= e.lastCol && c1 >= e.t.col);
+	}
+
+	/** Cellule fusionnée : fusion de cellules libres, groupe de la bande ou colonne sur un niveau. */
+	function mergedAt(r: number, c: number): boolean {
+		if (mergeOf(r, c)) return true;
+		const g = boxOf(r, c);
+		return !!g && !!groupBandAt(g.row, g.col);
+	}
+
+	/** Fusionner et centrer (bascule, comme le bouton d'Excel) : cellules libres, ou bande des groupes d'en-têtes. */
 	export function mergeActive(toggle = false) {
-		if (toggle && mergeOf(active.row, active.col)) {
+		if (toggle && mergedAt(active.row, active.col)) {
 			unmergeActive();
 			return;
 		}
@@ -3619,7 +3696,8 @@
 			say('Sélectionnez plusieurs cellules libres pour les fusionner');
 			return;
 		}
-		if (!freeSelection()) {
+		const band = bandSelection();
+		if (!freeSelection() && !band) {
 			say('Fusionner et centrer ne s’applique pas dans un tableau : un tableau garde une cellule par valeur. Fusionnez des cellules libres, hors des tableaux.');
 			return;
 		}
@@ -3627,7 +3705,8 @@
 			try {
 				const n = await mergeCells(r0, c0, r1, c1);
 				moveTo(r0, c0);
-				message = n ? `Cellules fusionnées : seule la valeur en haut à gauche est gardée (${n} effacée${n > 1 ? 's' : ''}, Ctrl+Z pour annuler)` : 'Cellules fusionnées et centrées';
+				// Bande des groupes : le moteur dit ce qui a été renommé.
+				message = band ? '' : n ?`Cellules fusionnées : seule la valeur en haut à gauche est gardée (${n} effacée${n > 1 ? 's' : ''}, Ctrl+Z pour annuler)` : 'Cellules fusionnées et centrées';
 			} catch (err) {
 				linesHint = null; // refusée : rien ne glisse
 				message = String(err instanceof Error ? err.message : err);
@@ -3640,6 +3719,32 @@
 	export function unmergeActive() {
 		const { r0, r1, c0, c1 } = selection();
 		const unmerge = source.unmergeCells;
+		// Colonnes sur un niveau de la sélection : séparées ici en bande +
+		// en-tête, le temps de taper leur groupe dans la bande (rien n'est
+		// écrit avant). Les groupes sur plusieurs colonnes : le moteur.
+		const ones: { e: Entry; c: number }[] = [];
+		let groups = false;
+		for (const e of entries) {
+			if (!e.t.twoLevel || r0 > e.t.row || r1 < e.t.row - 1) continue;
+			for (const s of groupSpans(e.t.columns.map((k) => k.name))) {
+				const a = e.t.col + s.i0;
+				const b = e.t.col + s.i1;
+				if (b < c0 || a > c1) continue;
+				if (s.i1 > s.i0) groups = true;
+				else if (singleCol(e, s.i0)) ones.push({ e, c: a });
+			}
+		}
+		if (ones.length) {
+			for (const o of ones) splitCols.add(splitKey(o.e.t.name, o.e.t.columns[o.c - o.e.t.col].name));
+			rebuildBoxes();
+			const first = ones[0];
+			if (!groups) moveTo(first.e.t.row - 1, first.c);
+			const names = ones.map((o) => `« ${o.e.t.columns[o.c - o.e.t.col].name} »`).join(', ');
+			message = `${names} sur deux lignes : tapez le groupe dans la bande au-dessus (sans groupe, la colonne reste sur un niveau)`;
+			refreshStatus();
+			schedule();
+			if (!groups) return;
+		}
 		menuAction(unmerge && (() => unmerge(r0, c0, r1, c1)));
 	}
 
@@ -4070,6 +4175,8 @@
 		if (!e) {
 			// Bande des groupes : la saisie y renomme le groupe (le moteur s'en charge).
 			const g = groupBandAt(r, c);
+			// Colonne sur un niveau : la bande et l'en-tête sont une cellule, son nom.
+			if (g && singleCol(g, c - g.t.col)) return { e: g, i: c - g.t.col, kind: 'header' as const, value: g.t.columns[c - g.t.col].name };
 			if (g) return { e, kind: 'free' as const, value: spanAt(g.t.columns.map((k) => k.name), c - g.t.col)?.group ?? '' };
 			return { e, kind: 'free' as const, value: cells.get(key(r, c)) ?? '' };
 		}
@@ -4109,15 +4216,16 @@
 		// Cellule libre : lettre et numéro seulement (A1) ; Cell_A1 dans une formule.
 		if (!e) return addrA1(r, c);
 		const k = e.t.columns[c - e.t.col];
-		if (r < e.t.row) {
+		const one = r < e.t.row && singleCol(e, c - e.t.col);
+		if (r < e.t.row && !one) {
 			const s = spanAt(e.t.columns.map((x) => x.name), c - e.t.col);
 			const n = s ? s.i1 - s.i0 + 1 : 1;
 			return s?.group ? `${e.t.name} · groupe d'en-têtes « ${s.group} » (${n} colonne${n > 1 ? 's' : ''})` : `${e.t.name} · groupe d'en-têtes (vide)`;
 		}
 		const col = `${e.t.name}[${k.name}]`;
-		if (r === e.t.row) {
+		if (r === e.t.row || one) {
 			const errs = k.errors ? ` · ${k.errors} erreur${k.errors > 1 ? 's' : ''}` : '';
-			return `${col} · ${typeLabel(k.type)} (${k.fixed ? 'fixé' : 'inféré'})${errs}`;
+			return `${col} · ${typeLabel(k.type)} (${k.fixed ? 'fixé' : 'inféré'})${errs}` + (e.t.twoLevel && singleCol(e, c - e.t.col) ? ' · sur un niveau' : '');
 		}
 		const bad = e.cache.row(r - e.t.row - 1)?.bad?.get(c - e.t.col);
 		return `${col} · ${r - e.t.row}` + (bad !== undefined ? ` · « ${bad} » n'est pas du type ${typeLabel(k.type)}` : '');
@@ -4153,7 +4261,7 @@
 			stats: selectionStats(),
 			sel: selection(),
 			style: activeStyle(),
-			merged: !!mergeOf(active.row, active.col)
+			merged: mergedAt(active.row, active.col)
 		});
 	}
 
@@ -5550,7 +5658,7 @@
 		const label = (r: number, c: number) => {
 			const k = e!.t.columns[c - e!.t.col];
 			// Bande des groupes : le groupe, qu'on renomme ici comme une colonne.
-			if (r < e!.t.row) return splitGroup(k.name).group;
+			if (r < e!.t.row && !singleCol(e!, c - e!.t.col)) return splitGroup(k.name).group;
 			return r === e!.t.row ? k.name : `${k.name}[${r - e!.t.row}]`;
 		};
 		const sel = selection();
@@ -7082,7 +7190,8 @@
 		}
 		typed = { row, col, t: performance.now() };
 		try {
-			const m = await source.setCell(row, col, raw, target, key);
+			// Colonne sur un niveau saisie depuis la bande : c'est son en-tête.
+			const m = await source.setCell(info.kind === 'header' ? info.e!.t.row : row, col, raw, target, key);
 			lastEditMs = performance.now() - t0;
 			if (info.kind === 'data' && isFormula(raw) && info.e) {
 				const name = info.e.t.columns[info.i!]?.name;
@@ -7556,7 +7665,7 @@
 		const c = active.col;
 		const text = el.value.trim();
 		// Bande des groupes : renomme le groupe (toutes ses colonnes).
-		if (active.row < en.t.row) {
+		if (active.row < en.t.row && !singleCol(en, c - en.t.col)) {
 			wrap.focus();
 			if (text !== tableBox?.col) write(active.row, c, text, false, (err) => void refuseName(el, refusedName("Groupe d'en-têtes refusé", err), text));
 			return;

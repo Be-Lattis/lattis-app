@@ -126,9 +126,11 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 					name = fmt.Sprintf("Colonne %d", col-tb.Col+1)
 				}
 				// En-têtes sur deux lignes : l'en-tête montre le nom sans son
-				// groupe, qui reste.
+				// groupe, qui reste ; un en-tête effacé (automatique) ou qui
+				// répète le groupe met la colonne sur un niveau (twolevel.go).
 				if g, _ := splitGroup(c.Name); tb.TwoLevel && g != "" {
-					name = g + "." + name
+					i := col - tb.Col
+					name = groupedName(g, name, groupAlone(tb, i, i, i, g))
 				}
 				if strings.TrimSpace(raw) == "" {
 					name = freeColumnNameExcept(tb, c.ID, name)

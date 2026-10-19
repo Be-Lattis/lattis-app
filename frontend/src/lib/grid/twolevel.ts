@@ -41,6 +41,7 @@ export function spanAt(names: readonly string[], i: number): GroupSpan | undefin
 
 /** Ce qu'il faut d'un tableau pour placer sa bande. */
 export interface BandTable {
+	name?: string;
 	row: number; // ligne d'en-tête
 	col: number;
 	twoLevel?: boolean;
@@ -53,14 +54,32 @@ export function tableTop(t: { row: number; twoLevel?: boolean }): number {
 }
 
 /**
- * Groupes sur plusieurs colonnes, au format des fusions de la feuille : le
- * curseur, les flèches et la sélection les passent comme une cellule fusionnée.
+ * Colonne sur un niveau (nom sans groupe) dans un tableau à deux lignes : sa
+ * cellule de la bande et son en-tête ne font qu'une cellule. split : colonnes
+ * que l'on vient de défusionner pour leur taper un groupe (séparées tant
+ * qu'elles n'en ont pas).
  */
-export function bandMerges(tables: readonly BandTable[]): { row: number; col: number; rows: number; cols: number }[] {
+export function isSingle(name: string, split = false): boolean {
+	return !split && !splitGroup(name).group;
+}
+
+/** Colonnes séparées à la main (Défusionner) : tableau et nom de colonne. */
+export type SplitTest = (table: BandTable, name: string) => boolean;
+
+/**
+ * Groupes sur plusieurs colonnes et colonnes sur un niveau (bande et en-tête
+ * réunis), au format des fusions de la feuille : le curseur, les flèches et
+ * la sélection les passent comme une cellule fusionnée.
+ */
+export function bandMerges(tables: readonly BandTable[], split?: SplitTest): { row: number; col: number; rows: number; cols: number }[] {
 	const out: { row: number; col: number; rows: number; cols: number }[] = [];
 	for (const t of tables) {
 		if (!t.twoLevel || t.row < 1) continue;
-		for (const s of groupSpans(t.columns.map((k) => k.name))) if (s.i1 > s.i0) out.push({ row: t.row - 1, col: t.col + s.i0, rows: 1, cols: s.i1 - s.i0 + 1 });
+		const names = t.columns.map((k) => k.name);
+		for (const s of groupSpans(names)) {
+			if (s.i1 > s.i0) out.push({ row: t.row - 1, col: t.col + s.i0, rows: 1, cols: s.i1 - s.i0 + 1 });
+			else if (isSingle(names[s.i0], split?.(t, names[s.i0]))) out.push({ row: t.row - 1, col: t.col + s.i0, rows: 2, cols: 1 });
+		}
 	}
 	return out;
 }

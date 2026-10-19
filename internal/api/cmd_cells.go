@@ -372,7 +372,8 @@ end`,
 		&Command{
 			Name:    "cells.merge",
 			Label:   "Fusionner et centrer",
-			Summary: "Fusionne des cellules libres en une seule, au contenu centré (refusé dans un tableau ou un tableau croisé). Comme Excel, seule la valeur en haut à gauche est gardée.",
+			Summary: "Fusionne des cellules libres en une seule, au contenu centré (refusé dans un tableau ou un tableau croisé). Comme Excel, seule la valeur en haut à gauche est gardée. " +
+				"Dans un tableau aux groupes d'en-têtes (tables.two_level_headers), seule la bande des groupes se fusionne : sa case et l'en-tête d'une colonne mettent la colonne sur un niveau (nom simple : son sous-en-tête, ou le groupe si l'en-tête était automatique) ; plusieurs cases voisines de la bande forment un seul groupe (le premier qu'elles portent, « Groupe » sinon). Les colonnes sont renommées, les formules suivent.",
 			Returns: "nombre de valeurs effacées",
 			Params:  []Param{pRow, pCol, pRow2, pCol2, pSheet},
 			Write:   true,
@@ -393,7 +394,7 @@ end`,
 		&Command{
 			Name:    "cells.unmerge",
 			Label:   "Annuler la fusion",
-			Summary: "Annule les fusions de cellules qui touchent la plage.",
+			Summary: "Annule les fusions de cellules qui touchent la plage. Dans la bande des groupes d'en-têtes d'un tableau, un groupe sur plusieurs colonnes reste sur la première, les autres passent sur un niveau (renommées) ; une colonne sur un niveau ne change pas : posez-lui un groupe avec cells.set sur la bande ou columns.rename(« Groupe.Sous »).",
 			Params:  []Param{pRow, pCol, pRow2, pCol2, pSheet},
 			Write:   true,
 			Run: func(c *Call) (any, error) {

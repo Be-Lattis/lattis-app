@@ -75,7 +75,7 @@ export const apiReference: RefEntry[] = [
 		name: "cells.merge",
 		category: "cells",
 		signature: "cells.merge(row, col, [row2], [col2], [sheet]) → nombre de valeurs effacées",
-		summary: "Fusionne des cellules libres en une seule, au contenu centré (refusé dans un tableau ou un tableau croisé). Comme Excel, seule la valeur en haut à gauche est gardée.",
+		summary: "Fusionne des cellules libres en une seule, au contenu centré (refusé dans un tableau ou un tableau croisé). Comme Excel, seule la valeur en haut à gauche est gardée. Dans un tableau aux groupes d'en-têtes (tables.two_level_headers), seule la bande des groupes se fusionne : sa case et l'en-tête d'une colonne mettent la colonne sur un niveau (nom simple : son sous-en-tête, ou le groupe si l'en-tête était automatique) ; plusieurs cases voisines de la bande forment un seul groupe (le premier qu'elles portent, « Groupe » sinon). Les colonnes sont renommées, les formules suivent.",
 		details: "Paramètres — row : ligne de la feuille, à partir de 1 ; col : colonne de la feuille, à partir de 1 ; row2 : dernière ligne de la plage (absente : row) ; col2 : dernière colonne de la plage (absente : col) ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : cells.merge{row = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		example: "cells.merge{row = 40, col = 12, col2 = 15}",
 		args: [1, 5]
@@ -155,7 +155,7 @@ export const apiReference: RefEntry[] = [
 		name: "cells.unmerge",
 		category: "cells",
 		signature: "cells.unmerge(row, col, [row2], [col2], [sheet])",
-		summary: "Annule les fusions de cellules qui touchent la plage.",
+		summary: "Annule les fusions de cellules qui touchent la plage. Dans la bande des groupes d'en-têtes d'un tableau, un groupe sur plusieurs colonnes reste sur la première, les autres passent sur un niveau (renommées) ; une colonne sur un niveau ne change pas : posez-lui un groupe avec cells.set sur la bande ou columns.rename(« Groupe.Sous »).",
 		details: "Paramètres — row : ligne de la feuille, à partir de 1 ; col : colonne de la feuille, à partir de 1 ; row2 : dernière ligne de la plage (absente : row) ; col2 : dernière colonne de la plage (absente : col) ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : cells.unmerge{row = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		args: [1, 5]
 	},
@@ -968,7 +968,7 @@ export const apiReference: RefEntry[] = [
 		name: "tables.two_level_headers",
 		category: "tables",
 		signature: "tables.two_level_headers(table, on)",
-		summary: "Affiche (on = true) les en-têtes du tableau sur deux lignes : le nom « Groupe.Sous » d'une colonne montre son groupe dans une bande au-dessus de l'en-tête, fusionnée sur les colonnes voisines du même groupe ; les formules et le SQL gardent le nom complet (T[Groupe.Sous]). À l'activation, les cellules libres de la ligne au-dessus de l'en-tête (fusionnées ou non) deviennent les groupes des colonnes qu'elles couvrent ; on = false garde les noms complets sur une ligne.",
+		summary: "Affiche (on = true) les en-têtes du tableau sur deux lignes : le nom « Groupe.Sous » d'une colonne montre son groupe dans une bande au-dessus de l'en-tête, fusionnée sur les colonnes voisines du même groupe ; les formules et le SQL gardent le nom complet (T[Groupe.Sous]). À l'activation, les cellules libres de la ligne au-dessus de l'en-tête (fusionnées ou non) deviennent les groupes des colonnes qu'elles couvrent ; on = false garde les noms complets sur une ligne. Une colonne au nom simple (sans point) est sur un niveau : sa case de la bande et son en-tête ne font qu'une cellule. À l'activation, un groupe seul au-dessus d'un en-tête automatique (« Colonne 17 ») devient le nom de la colonne, un groupe qui répète l'en-tête disparaît. Pour ajuster : columns.rename (« Groupe.Sous » ou nom simple), cells.merge / cells.unmerge sur la bande (voir cells.merge), cells.set sur la bande pour poser ou renommer un groupe.",
 		details: "Paramètres — table : nom du tableau ; on : true : deux lignes ; false : une ligne. Arguments dans l'ordre, ou une table d'arguments nommés : tables.two_level_headers{table = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		example: "tables.two_level_headers(\"Commandes\", true)",
 		args: [1, 2]

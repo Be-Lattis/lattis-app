@@ -204,9 +204,226 @@ func TestTwoLevelBandProtected(t *testing.T) {
 		t.Fatalf("insertion : %+v", ts[0])
 	}
 	check(t, d, "insertion au-dessus")
-	// Fusionner dans la bande : refusé.
-	if _, err := d.MergeCells(ctx, 1, 4, 0, 4, 1); !errors.Is(err, ErrMerge) {
-		t.Fatalf("fusion dans la bande : %v", err)
+	// Fusionner la bande avec les données : refusé.
+	if _, err := d.MergeCells(ctx, 1, 4, 0, 6, 0); !errors.Is(err, ErrMerge) {
+		t.Fatalf("fusion de la bande et des données : %v", err)
+	}
+}
+
+// singleFixture : tableau Nids sous une ligne de groupes comme celle de
+// Louis : Topographie, Orientation et Lierre au-dessus d'en-têtes
+// automatiques, des groupes qui répètent l'en-tête (casse, espaces et
+// accents près), BOISEMENT au-dessus d'un vrai sous-en-tête.
+func singleFixture(t *testing.T) *fixture {
+	t.Helper()
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 3, 0, [][]string{
+		{"Nom", "a", "b", "c", "ARBRE PORTEUR", "Date decouverte"},
+		{"x", "1", "2", "3", "oui", "2024"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.RenameTable(ctx, tablesOf(t, d)[0].Name, "Nids"); err != nil {
+		t.Fatal(err)
+	}
+	setCells(t, d, 3, 1, "", 3, 2, "", 3, 3, "")
+	if got := colNames(tablesOf(t, d)[0]); got != "Nom|Colonne 2|Colonne 3|Colonne 4|ARBRE PORTEUR|Date decouverte" {
+		t.Fatalf("préparation : %s", got)
+	}
+	setCells(t, d, 2, 0, "BOISEMENT", 2, 1, "Topographie", 2, 2, "Orientation", 2, 3, "Lierre", 2, 4, " arbre  porteur ", 2, 5, "Date découverte",
+		0, 10, "=NBVAL(Nids[Colonne 2])")
+	check(t, d, "préparation")
+	return d
+}
+
+// Activation : un groupe seul au-dessus d'un en-tête automatique devient le
+// nom de la colonne, un groupe qui répète l'en-tête disparaît ; ces colonnes
+// restent sur un niveau (bande et en-tête fusionnés).
+func TestTwoLevelSingleOnActivation(t *testing.T) {
+	ctx := context.Background()
+	d := singleFixture(t)
+	before := dump(t, d)
+	d.TakeNotice()
+	if err := d.SetTwoLevel(ctx, "Nids", true); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "deux lignes")
+	want := "BOISEMENT.Nom|Topographie|Orientation|Lierre|ARBRE PORTEUR|Date decouverte"
+	if got := colNames(tablesOf(t, d)[0]); got != want {
+		t.Fatalf("noms : %s", got)
+	}
+	if raw, _ := freeAt(t, d, 0, 10); !strings.Contains(raw, "Nids[Topographie]") {
+		t.Fatalf("formule : %q", raw)
+	}
+	if n := d.TakeNotice(); !strings.Contains(n, "1 colonne renommée") || !strings.Contains(n, "5 sur un niveau") {
+		t.Fatalf("message : %q", n)
+	}
+	undoOnce(t, d, before, "deux lignes")
+}
+
+func TestGroupedName(t *testing.T) {
+	for _, c := range []struct {
+		g, sub string
+		alone  bool
+		want   string
+	}{
+		{"Topographie", "Colonne 17", true, "Topographie"},
+		{"Topographie", "Colonne 17", false, "Topographie.Colonne 17"},
+		{"Topographie", "Type", true, "Topographie.Type"},
+		{"DECOUVREUR", "Découvreur", false, "Découvreur"},
+		{"Date découverte", " date  decouverte", true, " date  decouverte"},
+		{"", "Note", true, "Note"},
+	} {
+		if got := groupedName(c.g, c.sub, c.alone); got != c.want {
+			t.Errorf("%+v : %q", c, got)
+		}
+	}
+}
+
+func twoLevelOn(t *testing.T) *fixture {
+	t.Helper()
+	d := twoLevelFixture(t)
+	if err := d.SetTwoLevel(context.Background(), "Inv", true); err != nil {
+		t.Fatal(err)
+	}
+	setCells(t, d, 0, 11, "=NBVAL(Inv[BOISEMENT.Statut])", 0, 12, "=NBVAL(Inv[Latitude.L93])")
+	d.TakeNotice()
+	return d
+}
+
+func merged(t *testing.T, d *fixture, r0, c0, r1, c1 int) {
+	t.Helper()
+	if _, err := d.MergeCells(context.Background(), 1, r0, c0, r1, c1); err != nil {
+		t.Fatalf("fusion (%d,%d)-(%d,%d) : %v", r0, c0, r1, c1, err)
+	}
+	check(t, d, "fusion")
+}
+
+func unmerged(t *testing.T, d *fixture, r0, c0, r1, c1 int) {
+	t.Helper()
+	if err := d.UnmergeCells(context.Background(), 1, r0, c0, r1, c1); err != nil {
+		t.Fatalf("défusion (%d,%d)-(%d,%d) : %v", r0, c0, r1, c1, err)
+	}
+	check(t, d, "défusion")
+}
+
+func wantNames(t *testing.T, d *fixture, when, want string) {
+	t.Helper()
+	if got := colNames(tablesOf(t, d)[0]); got != want {
+		t.Fatalf("%s : %s", when, got)
+	}
+}
+
+func wantFormula(t *testing.T, d *fixture, col int, ref string) {
+	t.Helper()
+	if raw, _ := freeAt(t, d, 0, col); !strings.Contains(raw, ref) {
+		t.Fatalf("formule : %q, attendu %s", raw, ref)
+	}
+}
+
+// Fusionner la bande et l'en-tête d'une colonne la met sur un niveau ;
+// Défusionner une colonne sur un niveau ne change rien au moteur (le
+// groupe se tape dans la bande).
+func TestTwoLevelMergeBandAndHeader(t *testing.T) {
+	d := twoLevelOn(t)
+	before := dump(t, d)
+	// Vrai sous-en-tête : il devient le nom, la colonne quitte son groupe.
+	merged(t, d, 2, 1, 3, 1)
+	wantNames(t, d, "sur un niveau", "BOISEMENT.Nom|Statut|BOISEMENT.Parcelle|Latitude.DD|Latitude.L93|Lieu.Commune|Lieu.Dept|Note")
+	wantFormula(t, d, 11, "Inv[Statut]")
+	if n := d.TakeNotice(); !strings.Contains(n, "sur un niveau") || !strings.Contains(n, "quitte le groupe") {
+		t.Fatalf("message : %q", n)
+	}
+	undoOnce(t, d, before, "sur un niveau")
+	// Sous-en-tête automatique : le groupe devient le nom.
+	setCells(t, d, 3, 4, "")
+	wantNames(t, d, "en-tête effacé", "BOISEMENT.Nom|BOISEMENT.Statut|BOISEMENT.Parcelle|Latitude.DD|Latitude.Colonne 5|Lieu.Commune|Lieu.Dept|Note")
+	before = dump(t, d)
+	merged(t, d, 2, 4, 3, 4)
+	wantNames(t, d, "groupe pour nom", "BOISEMENT.Nom|BOISEMENT.Statut|BOISEMENT.Parcelle|Latitude.DD|Latitude|Lieu.Commune|Lieu.Dept|Note")
+	wantFormula(t, d, 12, "Inv[Latitude]")
+	undoOnce(t, d, before, "groupe pour nom")
+	// Déjà sur un niveau : rien ne change, la barre d'état le dit.
+	before = dump(t, d)
+	d.TakeNotice()
+	merged(t, d, 2, 7, 3, 7)
+	if got := dump(t, d); got != before {
+		t.Fatalf("colonne déjà sur un niveau :\n%s", diff(before, got))
+	}
+	if n := d.TakeNotice(); !strings.Contains(n, "déjà sur un niveau") {
+		t.Fatalf("message : %q", n)
+	}
+	unmerged(t, d, 2, 7, 3, 7)
+	if got := dump(t, d); got != before {
+		t.Fatalf("défusion d'une colonne sur un niveau :\n%s", diff(before, got))
+	}
+	if n := d.TakeNotice(); !strings.Contains(n, "Groupe.Nom") {
+		t.Fatalf("message : %q", n)
+	}
+	// Son groupe se tape dans la bande (l'interface la sépare d'abord).
+	setCells(t, d, 2, 7, "Remarques")
+	wantNames(t, d, "groupe tapé", "BOISEMENT.Nom|BOISEMENT.Statut|BOISEMENT.Parcelle|Latitude.DD|Latitude.Colonne 5|Lieu.Commune|Lieu.Dept|Remarques.Note")
+	// En-tête effacé sous un groupe seul : la colonne prend le nom du groupe.
+	setCells(t, d, 3, 7, "")
+	wantNames(t, d, "en-tête effacé", "BOISEMENT.Nom|BOISEMENT.Statut|BOISEMENT.Parcelle|Latitude.DD|Latitude.Colonne 5|Lieu.Commune|Lieu.Dept|Remarques")
+	// En-tête qui répète le groupe : sur un niveau aussi.
+	setCells(t, d, 2, 7, "Mesure", 3, 7, "mesure")
+	wantNames(t, d, "en-tête répété", "BOISEMENT.Nom|BOISEMENT.Statut|BOISEMENT.Parcelle|Latitude.DD|Latitude.Colonne 5|Lieu.Commune|Lieu.Dept|mesure")
+}
+
+// Fusionner des cellules voisines de la bande : un seul groupe, le premier
+// qu'elles portent (« Groupe » sinon) ; Défusionner un groupe le laisse sur
+// sa première colonne.
+func TestTwoLevelMergeGroups(t *testing.T) {
+	d := twoLevelOn(t)
+	before := dump(t, d)
+	merged(t, d, 2, 4, 2, 7)
+	wantNames(t, d, "groupes réunis", "BOISEMENT.Nom|BOISEMENT.Statut|BOISEMENT.Parcelle|Latitude.DD|Latitude.L93|Latitude.Commune|Latitude.Dept|Latitude.Note")
+	if got := spansOf(t, d); got != "[[0 2] [3 7]]" {
+		t.Fatalf("bande : %s", got)
+	}
+	if n := d.TakeNotice(); !strings.Contains(n, "« Latitude » sur 4 colonnes") || !strings.Contains(n, "remplace « Lieu »") {
+		t.Fatalf("message : %q", n)
+	}
+	undoOnce(t, d, before, "groupes réunis")
+	// Défusionner BOISEMENT : il reste sur Nom, les autres sur un niveau.
+	unmerged(t, d, 2, 1, 2, 1)
+	wantNames(t, d, "groupe défusionné", "BOISEMENT.Nom|Statut|Parcelle|Latitude.DD|Latitude.L93|Lieu.Commune|Lieu.Dept|Note")
+	wantFormula(t, d, 11, "Inv[Statut]")
+	wantFormula(t, d, 10, "Inv[BOISEMENT.Nom]")
+	if n := d.TakeNotice(); !strings.Contains(n, "il reste sur « BOISEMENT.Nom »") {
+		t.Fatalf("message : %q", n)
+	}
+	undoOnce(t, d, before, "groupe défusionné")
+	// Colonnes sur un niveau seulement : « Groupe », à renommer dans la bande.
+	unmerged(t, d, 2, 0, 2, 2)
+	merged(t, d, 2, 1, 3, 2)
+	wantNames(t, d, "groupe neuf", "BOISEMENT.Nom|Groupe.Statut|Groupe.Parcelle|Latitude.DD|Latitude.L93|Lieu.Commune|Lieu.Dept|Note")
+	setCells(t, d, 2, 2, "Suivi")
+	wantNames(t, d, "groupe renommé", "BOISEMENT.Nom|Suivi.Statut|Suivi.Parcelle|Latitude.DD|Latitude.L93|Lieu.Commune|Lieu.Dept|Note")
+}
+
+// Fusions refusées : bande et données, au-dessus de la bande, en-têtes
+// entre eux, deux tableaux.
+func TestTwoLevelMergeRefused(t *testing.T) {
+	ctx := context.Background()
+	d := twoLevelOn(t)
+	if _, err := d.Paste(ctx, 1, 3, 9, [][]string{{"X", "Y"}, {"1", "2"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.SetTwoLevel(ctx, tablesOf(t, d)[1].Name, true); err != nil {
+		t.Fatal(err)
+	}
+	before := dump(t, d)
+	for _, r := range [][4]int{{2, 0, 4, 0}, {1, 0, 2, 1}, {3, 0, 3, 1}, {2, 7, 2, 9}, {2, 7, 2, 8}} {
+		_, err := d.MergeCells(ctx, 1, r[0], r[1], r[2], r[3])
+		if !errors.Is(err, ErrMerge) {
+			t.Fatalf("fusion %v : %v", r, err)
+		}
+	}
+	if got := dump(t, d); got != before {
+		t.Fatalf("fusions refusées :\n%s", diff(before, got))
 	}
 }
 
