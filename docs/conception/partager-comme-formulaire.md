@@ -15,7 +15,7 @@
 
 | Cas | Exemple | Ce qui compte |
 |---|---|---|
-| **Relevé de terrain** | Le classeur des nids de Louis : des bénévoles saisissent une observation par ligne depuis leur téléphone (date, commune, espèce dans une liste, nombre d'œufs, remarque), sans voir le classeur | Page pour téléphone, listes déroulantes, date du jour par défaut, réseau faible (§5.4), plus tard la position GPS et une photo |
+| **Relevé de terrain** | Le classeur des nids de Louis : des bénévoles saisissent une observation par ligne depuis leur téléphone (date, commune, espèce dans une liste, nombre d'œufs, remarque), sans voir le classeur | Page pour téléphone, listes déroulantes, date du jour par défaut, réseau faible (§5.4), plus tard la position GPS (pas de photo : hors du périmètre) |
 | **Demandes internes** | Demandes d'achat, de congés, signalements d'incident, tickets informatiques | Répondant identifié (connexion), colonne « Statut » remplie par l'équipe dans le classeur, réponse modifiable tant qu'elle n'est pas traitée |
 | **Inscriptions** | Sortie nature, formation, repas associatif | Lien public, date de fermeture, nombre de places (plafond), une inscription par personne |
 | **Collecte ponctuelle** | Inventaire par plusieurs sites, sondage d'équipe | Formulaire en pause ou fermé à la fin, statistiques |
@@ -103,7 +103,7 @@ Avec une valeur fixe, « + Nouvelle année… » le rappelle : « Le formulaire 
 - **Champs conditionnels** : « afficher si Espèce = Autre ».
 - **Pré-remplissage par l'adresse** (`/f/<code>?site=Nord`), pour un QR code par site.
 - **Position GPS** : remplit deux colonnes Latitude / Longitude à partir du navigateur.
-- **Photo ou fichier** : demande un stockage de fichiers sur le serveur, avec des quotas.
+- **Photo ou fichier** : **hors du périmètre** (décision de Louis, 19/10) : pas de champ photo ni fichier, ni maintenant ni dans un lot ultérieur prévu.
 
 ### 3.5 Aperçu et vérifications
 
@@ -329,7 +329,7 @@ Libellés liés aux champs, ordre du focus, contraste de la palette (§4.1), mes
 | 1 | Point d'entrée et messages du §2.2 ; interface `workbook.Forms` (pgx et faux serveur `workbooktest/forms.go`) ; concepteur : champs, correspondance des types, listes fixes et tirées d'une plage, clé automatique, valeurs posées par le serveur, onglet à choix ; personnalisation du §4 (apparence, sections, palette, images) ; aperçu Svelte et aperçu dans le navigateur ; modes membres et personnes ou équipes choisies ; création, ouverture, copie du lien, QR code | **M** | Moyen : il dépend du serveur (§10) ; l'aperçu approché doit rester proche de la page du serveur (on lui donne une seule source : la définition) |
 | 2 | Gestion : sous-menu, pastille, onglet Formulaires, statistiques, pause, fermeture et suppression, suivi de `*form:<id>`, avertissements avant suppression ou conversion de colonne, barre d'état « nouvelles réponses », affiche à imprimer | **S** | Faible |
 | 3 | Lien public (selon `forms_public`), dates, plafond, une réponse par personne, modification des réponses, mention de protection des données, « Copier l'apparence de… » | **S** | Faible côté client ; le risque est côté serveur (abus) |
-| 4 | Plus tard : champs conditionnels, pré-remplissage par l'adresse, position GPS, photos et fichiers, hors ligne complet sur le téléphone, notifications par e-mail, `forms.*` pour Lua et le MCP, couleur libre avec contrôle de contraste | **M + L** | Moyen : stockage de fichiers et hors ligne |
+| 4 | Plus tard : champs conditionnels, pré-remplissage par l'adresse, position GPS, hors ligne complet sur le téléphone, notifications par e-mail, `forms.*` pour Lua et le MCP, couleur libre avec contrôle de contraste | **M + L** | Moyen : hors ligne |
 
 **Essais** :
 
@@ -346,7 +346,7 @@ Libellés liés aux champs, ordre du focus, contraste de la palette (§4.1), mes
 4. **CAPTCHA** : pas de service tiers ; pot de miel, délai minimal, limites de débit et pause automatique suffisent-ils ? *Recommandé : oui.*
 5. **Modifier sa réponse** : jusqu'à la fermeture en mode connecté, et 7 jours par lien secret en mode public ? *Recommandé : oui, désactivé par défaut pour chaque formulaire.*
 6. **Hors ligne sur le terrain** : au premier lot, brouillon gardé sur le téléphone et Réessayer ; la file de plusieurs réponses hors ligne au lot 4 ? *Recommandé : oui.*
-7. **Position GPS et photo** pour les nids : au lot 4, ou la position GPS dès le lot 1 (petite) ? *Recommandé : la position GPS au lot 2, les photos au lot 4.*
+7. **Position GPS** pour les nids : au lot 4, ou dès le lot 2 (petite) ? *Recommandé : au lot 2.* (Photos et fichiers : hors du périmètre, décision de Louis.)
 8. **Les lecteurs du classeur** peuvent-ils répondre en mode « membres » ? *Recommandé : oui, c'est le choix du concepteur.*
 9. **Classeur figé** : on refuse simplement ? *Recommandé : oui.*
 10. **Plusieurs formulaires par tableau** (une valeur fixe pour les distinguer) ? *Recommandé : oui.*
