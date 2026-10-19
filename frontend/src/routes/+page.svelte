@@ -2183,7 +2183,6 @@
 					<button class="primary" onclick={() => closeDoc(true).catch((e) => ((quitting = false), (notice = err(e))))}>Enregistrer</button>
 					<button onclick={() => closeDoc(false).catch((e) => ((quitting = false), (notice = err(e))))}>Ne pas enregistrer</button>
 					<button onclick={cancelClose}>Annuler</button>
-
 				</div>
 			</div>
 		</div>

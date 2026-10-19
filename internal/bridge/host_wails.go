@@ -26,7 +26,6 @@ func init() {
 	application.RegisterEvent[string](OpenFileEvent)
 	application.RegisterEvent[string](PrintEvent)
 	application.RegisterEvent[application.Void](CloseRequestEvent)
-
 }
 
 type wailsHost struct{}

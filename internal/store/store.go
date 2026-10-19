@@ -270,7 +270,6 @@ func setup(readOnly bool, extra []func(*sqlite3.Conn) error) func(*sqlite3.Conn)
 			// En WAL, NORMAL suffit contre l'arrêt brutal du processus ; les
 			// commandes de l'utilisateur passent en FULL (WriteDurable).
 			"PRAGMA synchronous=NORMAL",
-
 			"PRAGMA foreign_keys=ON",
 			// Cache de 64 Mo (32 Mo en lecture) : un tri ou un regroupement sur
 			// 1 M de lignes reste en mémoire. Au-delà, les tris et index
