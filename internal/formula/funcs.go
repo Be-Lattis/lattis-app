@@ -49,7 +49,7 @@ var aggLead = map[string]int{"TEXTJOIN": 2, "NPV": 1}
 // d'affichage du tableau).
 var aggOrdered = map[string]bool{"TEXTJOIN": true, "MODE": true, "MODE.SNGL": true, "NPV": true}
 
-// Catalogue des fonctions (voir analyse/catalogue-fonctions.md). Le nom
+// Catalogue des fonctions (voir docs/fonctions.md). Le nom
 // anglais est le nom canonique, stocké dans l'AST.
 var funcs = []funcDef{
 	// Logique

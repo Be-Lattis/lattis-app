@@ -1,6 +1,6 @@
 # Fonctions des formules
 
-*Bibliothèque livrée le 16/10/2026 (phase 4), d'après le catalogue du 15/10/2026 (`analyse/catalogue-fonctions.md`, dossier du projet), complétée le 19/10/2026 (audit 6, I7 : statistiques, finances, mathématiques, texte, dates, position). Code : `internal/formula`.*
+*Bibliothèque livrée le 16/10/2026 (phase 4), d'après un catalogue du 15/10/2026 tenu hors du dépôt, que ce document remplace, complétée le 19/10/2026 (audit 6, I7 : statistiques, finances, mathématiques, texte, dates, position). Code : `internal/formula`.*
 
 174 fonctions (dont RECHERCHEH, reconnue pour être refusée à la saisie), chacune sous son nom français et son nom anglais (le nom anglais est stocké dans l'AST). Toutes sont vérifiées par `testdata/conformite.txt` sur les **deux backends** (évaluateur Go et SQL compilé), sauf `REQUETE` (SQL seulement). `TestCatalogueNames` vérifie qu'aucun nom ne désigne deux fonctions et `TestFonctionsDocumentees` que chaque fonction figure ici.
 

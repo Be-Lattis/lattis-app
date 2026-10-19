@@ -32,7 +32,7 @@ Exemple de stratégie :
 
 ## Alignement sur le contrat de lattisd
 
-Le contrat client de `lattisd` (`be-lattis-server`, branche `claude/socle-lattisd`, `docs/contrat-client.md`) fixe les échanges ; l'implémentation le suit. Ce qui en est repris :
+Le contrat client de `lattisd` (dépôt `be-lattis-server`, `docs/contrat-client.md` sur la branche `main` ; version relue : commit `f5054cd`, 19/10/2026) fixe les échanges ; l'implémentation le suit. Ce qui en est repris :
 
 - **Découverte** : `name`, `logo`, `version`, `min_client_version`, `edition`, `access_mode`, `issuer`, `client_id`, `scope`, `authorization_endpoint`, `token_endpoint`, `revocation_endpoint`, `providers[]` (`id`, `kind`, `label`, `icon`), `postgres` (`database`, `sslmode`, `rw: {host, port}`, `ro: [{host, port}]`). Les points OAuth annoncés sont utilisés tels quels, à condition d'être sur le **même schéma et le même hôte** que le serveur saisi (sinon la découverte est refusée : le navigateur et les jetons ne vont qu'au serveur choisi). Sans eux, les chemins de la spécification (§11) servent de valeurs par défaut (`auth.Path*`).
 - **`icon`** reprend le `kind` (« password ») : ce n'est pas une image, le client prend son icône du genre. Une image (adresse relative au serveur, absolue sur le même hôte, ou URI `data:`, 256 Kio au plus) reste acceptée, et le logo est ramené à une URI `data:`.
@@ -67,7 +67,7 @@ Le contrat client de `lattisd` (`be-lattis-server`, branche `claude/socle-lattis
 ## Ce qui reste
 
 - Côté serveur : trancher les écarts ci-dessus (device code, forme des refus).
-- Pool `rw` / `ro` (`pgpool.Open`, `Acquire`) : utilisé par la publication, l'ouverture et l'écoute des republications (`publication.md`, `internal/bridge/sharing.go`) ; la synchronisation (étape 5, `synchronisation.md`) reprend la connexion `LISTEN` dédiée, avec reprise des deltas à chaque reconnexion. Réplicas (contrat §3.1, branche `claude/jalon-6-replicas`) : une lecture servie par `ro` qui reçoit un `42501` inattendu (réplica qui rejoue la création d'un classeur avec un cache des rôles périmé) est refaite sur une nouvelle connexion, la fautive étant fermée pour que le pool ne la redonne pas, puis sur `rw` (`workbook.pgServer.with`, `TestPostgresReplicaRetry`) ; les deltas restent sur `rw`. `SELECT lattis.login_summary()` (contrat §4) n'est pas encore appelé.
+- Pool `rw` / `ro` (`pgpool.Open`, `Acquire`) : utilisé par la publication, l'ouverture et l'écoute des republications (`publication.md`, `internal/bridge/sharing.go`) ; la synchronisation (étape 5, `synchronisation.md`) reprend la connexion `LISTEN` dédiée, avec reprise des deltas à chaque reconnexion. Réplicas (contrat §3.1) : une lecture servie par `ro` qui reçoit un `42501` inattendu (réplica qui rejoue la création d'un classeur avec un cache des rôles périmé) est refaite sur une nouvelle connexion, la fautive étant fermée pour que le pool ne la redonne pas, puis sur `rw` (`workbook.pgServer.with`, `TestPostgresReplicaRetry`) ; les deltas restent sur `rw`. `SELECT lattis.login_summary()` (contrat §4) n'est pas encore appelé.
 - Réutiliser ce module pour le module OIDC de la configuration d'entreprise (étape 6 de `configuration-entreprise.md`), avec `lattisd` comme émetteur unique.
 - Version web : la connexion passera par le cookie de session de `lattisd` ; le navigateur du système et la boucle locale n'y ont pas cours.
 - Essais d'intégration contre un vrai `lattisd` + PostgreSQL 18 (`LATTIS_PG_TEST=1`).

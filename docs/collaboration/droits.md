@@ -1,6 +1,6 @@
 # Droits dans l'application
 
-*Étape 6 du découpage de la spécification « Lattis collaboratif : modifications de l'application » (§15) : §8.1 (application des droits) et §8.2 (écran « Partager », « Voir en tant que… », écarts). S'appuie sur la publication (`publication.md` : `workbook.Server`, `Link`, `_lattis_capabilities`) et la synchronisation (`synchronisation.md` : suivi du canal, file d'envoi). Contrat suivi : `lattisd`, `docs/contrat-client.md` §5 à §7, `schema/0005_advanced_rights.sql`, `0006_admin.sql`, `0007_publication.sql`, `0008_sync.sql`, `0009_droits.sql`, `0011_drift.sql` et `0012_teams.sql` (be-lattis-server, branches `main`, `claude/sync-ecarts`, `claude/droits-ecarts`, PR n°4, et `claude/equipes`, PR n°5 : équipes Lattis).*
+*Étape 6 du découpage de la spécification « Lattis collaboratif : modifications de l'application » (§15) : §8.1 (application des droits) et §8.2 (écran « Partager », « Voir en tant que… », écarts). S'appuie sur la publication (`publication.md` : `workbook.Server`, `Link`, `_lattis_capabilities`) et la synchronisation (`synchronisation.md` : suivi du canal, file d'envoi). Contrat suivi : `lattisd`, `docs/contrat-client.md` §5 à §7, `schema/0005_advanced_rights.sql`, `0006_admin.sql`, `0007_publication.sql`, `0008_sync.sql`, `0009_droits.sql`, `0011_drift.sql` et `0012_teams.sql` (be-lattis-server, branche `main`, avec les PR n°4 et n°5, équipes Lattis).*
 
 ## 1. Ce qui est fait
 
@@ -48,7 +48,7 @@ Le formulaire écrit une expression que le serveur accepte telle quelle : noms e
 
 ## 4. Écarts avec le serveur
 
-Réponses du serveur dans la PR n°4 de be-lattis-server (branche `claude/droits-ecarts`, migration `0009_droits.sql`, contrat client §7). Le client détecte la migration sans requête de plus quand c'est possible (surcharge de `create_table`, `42883` de `workbook_members`, champs absents de `my_capabilities`) et garde l'ancien comportement sans elle.
+Réponses du serveur dans la PR n°4 de be-lattis-server (migration `0009_droits.sql`, contrat client §7). Le client détecte la migration sans requête de plus quand c'est possible (surcharge de `create_table`, `42883` de `workbook_members`, champs absents de `my_capabilities`) et garde l'ancien comportement sans elle.
 
 | Point | Constat | Proposition |
 |---|---|---|
