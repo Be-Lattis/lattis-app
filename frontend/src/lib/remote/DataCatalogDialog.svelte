@@ -250,6 +250,43 @@
 	}
 	.top input {
 		flex: 1;
+		min-width: 0;
+	}
+	/* Champs et boutons : même allure que les autres boîtes du serveur
+	   (Ouvrir depuis le serveur, Partager, Connexion). */
+	.top input,
+	.top select {
+		font: inherit;
+		border: 1px solid #c9cdd2;
+		border-radius: 3px;
+		padding: 4px 6px;
+		background: #fff;
+		color: inherit;
+	}
+	.top input:focus,
+	.top select:focus {
+		outline: 1px solid #217346;
+		border-color: #217346;
+	}
+	.top button,
+	footer button {
+		font: inherit;
+		padding: 4px 12px;
+		border: 1px solid #c4c8cc;
+		border-radius: 3px;
+		background: #fff;
+		color: inherit;
+		cursor: pointer;
+	}
+	.top button:hover:not(:disabled),
+	footer button:hover:not(:disabled) {
+		border-color: #217346;
+		background: #eef6f0;
+	}
+	.top button:disabled,
+	footer button:disabled {
+		opacity: 0.55;
+		cursor: default;
 	}
 	.panes {
 		display: grid;
@@ -352,9 +389,15 @@
 	.grow {
 		flex: 1;
 	}
-	.primary {
+	footer button.primary {
 		background: #217346;
+		border-color: #217346;
 		color: #fff;
-		border: 1px solid #1a5c38;
+		padding-left: 15px;
+		padding-right: 15px;
+	}
+	footer button.primary:hover:not(:disabled) {
+		background: #1a5c38;
+		border-color: #1a5c38;
 	}
 </style>

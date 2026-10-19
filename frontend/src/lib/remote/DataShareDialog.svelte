@@ -373,12 +373,62 @@
 	.grow {
 		flex: 1;
 	}
-	.primary {
-		background: #217346;
-		color: #fff;
-		border: 1px solid #1a5c38;
+	/* Champs et boutons : même allure que les autres boîtes du serveur
+	   (Ouvrir depuis le serveur, Partager, Connexion). */
+	input:not([type='checkbox']),
+	select {
+		font: inherit;
+		border: 1px solid #c9cdd2;
+		border-radius: 3px;
+		padding: 4px 6px;
+		background: #fff;
+		color: inherit;
 	}
-	.danger {
+	input:not([type='checkbox']):focus,
+	select:focus {
+		outline: 1px solid #217346;
+		border-color: #217346;
+	}
+	input:disabled,
+	select:disabled {
+		background: #f6f7f8;
+	}
+	button:not(.link) {
+		font: inherit;
+		padding: 4px 12px;
+		border: 1px solid #c4c8cc;
+		border-radius: 3px;
+		background: #fff;
+		color: inherit;
+		cursor: pointer;
+	}
+	button:not(.link):hover:not(:disabled) {
+		border-color: #217346;
+		background: #eef6f0;
+	}
+	button:disabled {
+		opacity: 0.55;
+		cursor: default;
+	}
+	.link:hover:not(:disabled) {
+		text-decoration: underline;
+	}
+	button.primary {
+		background: #217346;
+		border-color: #217346;
+		color: #fff;
+		padding-left: 15px;
+		padding-right: 15px;
+	}
+	button.primary:hover:not(:disabled) {
+		background: #1a5c38;
+		border-color: #1a5c38;
+	}
+	button.danger {
 		color: #b91c1c;
+	}
+	button.danger:hover:not(:disabled) {
+		border-color: #b91c1c;
+		background: #fdf0ef;
 	}
 </style>

@@ -103,10 +103,16 @@
 		margin-top: 12px;
 	}
 	.primary {
+		font: inherit;
 		background: #217346;
 		color: #fff;
-		border: 1px solid #1a5c38;
+		border: 1px solid #217346;
 		border-radius: 3px;
-		padding: 4px 14px;
+		padding: 4px 15px;
+		cursor: pointer;
+	}
+	.primary:hover {
+		background: #1a5c38;
+		border-color: #1a5c38;
 	}
 </style>
