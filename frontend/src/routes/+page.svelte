@@ -723,6 +723,8 @@
 		})();
 		const keys = (e: KeyboardEvent) => {
 			if (e.defaultPrevented) return; // déjà traité (éditeur de script : Ctrl+S)
+			// Boîte modale ouverte (éditeur de requête…) : ni Ctrl+W, ni Ctrl+N, ni Ctrl+O sous elle.
+			if (modalOpen()) return;
 			const ctrl = e.ctrlKey || e.metaKey;
 			const action: FileAction | null =
 				e.key === 'F12' ? 'saveAs' : ctrl && e.key.toLowerCase() === 's' ? (e.shiftKey ? 'saveAs' : 'save') : ctrl && e.key.toLowerCase() === 'o' ? 'open' : ctrl && e.key.toLowerCase() === 'n' ? 'new' : ctrl && e.key.toLowerCase() === 'w' ? 'close' : ctrl && e.key.toLowerCase() === 'p' && mode === 'doc' ? 'print' : null;
