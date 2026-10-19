@@ -65,8 +65,30 @@ func (m *Model) QueryToSheet(ctx context.Context, q, name string, headers []stri
 	if err := rs.Err(); err != nil {
 		return ImportResult{}, err
 	}
-	if len(headers) != len(cols) {
-		headers = cols
+	// Colonnes techniques (_pos…) : pas sur la feuille. Les en-têtes donnés
+	// sont ceux de toutes les colonnes, ou des seules colonnes visibles
+	// (aperçu de l'onglet SQL).
+	idx := grid.Visible(cols)
+	if len(idx) == 0 {
+		return ImportResult{}, fmt.Errorf("la requête ne rend que des colonnes techniques")
+	}
+	if len(headers) == len(cols) {
+		var hs []string
+		for _, i := range idx {
+			hs = append(hs, headers[i])
+		}
+		headers = hs
+	}
+	if len(headers) != len(idx) {
+		headers = nil
+		for _, i := range idx {
+			headers = append(headers, cols[i])
+		}
+	}
+	if len(idx) < len(cols) {
+		for j, row := range rows {
+			rows[j] = grid.Pick(row, idx)
+		}
 	}
 	if name, err = m.resultName(ctx, name); err != nil {
 		return ImportResult{}, err

@@ -692,6 +692,7 @@ func (s *DocumentService) Query(ctx context.Context, q string) (grid.QueryResult
 	qctx, done := s.sqlContext(ctx, 0) // délai de grid.Query
 	defer done()
 	res, err := grid.Query(qctx, d.DB().Read(), q, QueryLimit)
+	res = res.WithoutTechnical() // _pos… : jamais dans l'aperçu
 	return res, sqlErr(qctx, err)
 }
 

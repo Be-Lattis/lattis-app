@@ -104,3 +104,46 @@ func queryArgs(ctx context.Context, db *sql.DB, q string, limit int, args ...any
 	res.Micros = time.Since(start).Microseconds()
 	return res, nil
 }
+
+// Technical dit si une colonne de résultat est technique : son nom commence
+// par « _ » (_pos…). Les aperçus de l'onglet SQL et les résultats posés sur
+// une feuille ne la montrent pas (docs/decisions/0007).
+func Technical(name string) bool { return strings.HasPrefix(name, "_") }
+
+// Visible donne les rangs des colonnes non techniques.
+func Visible(cols []string) []int {
+	out := make([]int, 0, len(cols))
+	for i, c := range cols {
+		if !Technical(c) {
+			out = append(out, i)
+		}
+	}
+	return out
+}
+
+// Pick garde de chaque ligne les valeurs aux rangs idx.
+func Pick(row []any, idx []int) []any {
+	out := make([]any, len(idx))
+	for k, i := range idx {
+		out[k] = row[i]
+	}
+	return out
+}
+
+// WithoutTechnical retire du résultat les colonnes techniques.
+func (r QueryResult) WithoutTechnical() QueryResult {
+	idx := Visible(r.Columns)
+	if len(idx) == len(r.Columns) {
+		return r
+	}
+	cols := make([]string, len(idx))
+	for k, i := range idx {
+		cols[k] = r.Columns[i]
+	}
+	rows := make([][]any, len(r.Rows))
+	for j, row := range r.Rows {
+		rows[j] = Pick(row, idx)
+	}
+	r.Columns, r.Rows = cols, rows
+	return r
+}
