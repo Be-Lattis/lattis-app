@@ -100,14 +100,14 @@ Une date est un **numéro de série** comme dans Excel (le 1er janvier 2026 vaut
 
 | Français | Anglais | |
 |---|---|---|
-| REFERENCE | — | 🆕 `REFERENCE(Clients; Nom; [IdClient])` sur la clé du tableau |
-| REFERENCE.APPROCHEE | REFERENCE.APPROX | 🆕 la plus grande clé inférieure ou égale (tranches, barèmes) |
-| EXISTE | EXISTS | 🆕 `EXISTE(Clients; [IdClient])` |
-| RECHERCHEV, RECHERCHEX | VLOOKUP, XLOOKUP | ⚠️ **convertis** en REFERENCE à la saisie (`Convert`), correspondance exacte seulement ; la valeur si absent de RECHERCHEX devient SI.NON.DISP |
-| INDEX, EQUIV | INDEX, MATCH | ⚠️ positions dans l'ordre affiché ; `INDEX(T[Valeur]; EQUIV(clé; T[Clé]; 0))` est converti en REFERENCE |
+| REFERENCE | — | 🆕 `REFERENCE(Clients; Nom; [IdClient])` sur la clé du tableau ; sans clé, la ligne de ce numéro |
+| REFERENCE.APPROCHEE | REFERENCE.APPROX | 🆕 la plus grande clé inférieure ou égale (tranches, barèmes) ; sans clé, la ligne de ce numéro |
+| EXISTE | EXISTS | 🆕 `EXISTE(Clients; [IdClient])` ; sans clé, la ligne de ce numéro existe-t-elle |
+| RECHERCHEV, RECHERCHEX | VLOOKUP, XLOOKUP | ⚠️ **convertis** à la saisie (`Convert`), correspondance exacte seulement : en REFERENCE si la colonne cherchée est (ou devient) la clé, en `INDEX(T[Valeur]; EQUIV(x; T[Cherchée]; 0))` si le tableau garde ses numéros de ligne ; la valeur si absent de RECHERCHEX devient SI.NON.DISP |
+| INDEX, EQUIV | INDEX, MATCH | ⚠️ positions dans l'ordre affiché ; `INDEX(T[Valeur]; EQUIV(clé; T[Clé]; 0))` est converti en REFERENCE quand Clé est la clé du tableau |
 | RECHERCHEH | HLOOKUP | ❌ refusée à la saisie avec un message |
 
-`Suggestion(nom)` donne l'infobulle d'une fonction absente (DECALER, INDIRECT, LAMBDA…). `KeyTargets` liste les tableaux qui doivent avoir une clé (REFERENCE, REFERENCE.APPROCHEE, EXISTE) : le classeur la pose à l'enregistrement de la formule.
+`Suggestion(nom)` donne l'infobulle d'une fonction absente (DECALER, INDIRECT, LAMBDA…). `KeyTargets` liste les tableaux où une formule cherche une ligne (REFERENCE, REFERENCE.APPROCHEE, EXISTE). Une recherche **tapée** dans un tableau sans clé ne pose jamais de clé d'elle-même (choix de Louis, 19/10/2026) : la saisie demande si le tableau désigne ses lignes par leur numéro (retenu pour le tableau : la question ne revient plus, et la clé n'est plus proposée) ou si la colonne cherchée devient la clé ; la réponse et la formule forment une seule étape d'annulation. Les formules collées, importées ou reposées par Lattis gardent les numéros de ligne, sans question. Le numéro de ligne est le rang dans l'ordre du tableau (lignes masquées par un filtre comprises) : il change quand on trie, insère ou supprime des lignes.
 
 ## Géographie
 

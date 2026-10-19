@@ -553,11 +553,14 @@ func TestFormulas(t *testing.T) {
 		t.Fatalf("Montant = %v", got)
 	}
 	// Cellule libre avec formule : total et recherche (la colonne Produit
-	// devient la clé du tableau).
+	// devient la clé du tableau, une fois la question posée).
 	if _, err := d.SetCell(ctx, 1, 6, 0, "=SOMME(Feuille1[Montant])"); err != nil {
 		t.Fatal(err)
 	}
-	if ev, err := d.SetCell(ctx, 1, 6, 2, "=RECHERCHEV(\"souris\";Feuille1;2;FAUX)"); err != nil || ev.Keyed != "Feuille1.Produit" {
+	if _, err := d.SetCell(ctx, 1, 6, 2, "=RECHERCHEV(\"souris\";Feuille1;2;FAUX)"); err != (ErrKeyChoice{Table: "Feuille1", Column: "Produit"}) {
+		t.Fatalf("question attendue : %v", err)
+	}
+	if ev, err := d.SetCell(WithKeyChoice(ctx, KeyColumn), 1, 6, 2, "=RECHERCHEV(\"souris\";Feuille1;2;FAUX)"); err != nil || ev.Keyed != "Feuille1.Produit" {
 		t.Fatalf("SetCell = %+v, %v", ev, err)
 	}
 	l, err := d.Layout(ctx, 1)

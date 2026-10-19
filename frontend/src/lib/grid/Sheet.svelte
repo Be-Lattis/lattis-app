@@ -30,6 +30,7 @@
 	import { blocksReach, boxesReach } from './objextent';
 	import FormatDialog, { type FormatTab } from './FormatDialog.svelte';
 	import TextToColumns from './TextToColumns.svelte';
+	import { keyQuestion, type KeyChoice, type KeyQuestion } from './keychoice';
 	import type { TextColumnsOptions, TextColumnsPreview } from './textcols';
 	import { dismiss, dismissPanel } from './dismiss';
 	import { explainError } from './errors';
@@ -317,9 +318,10 @@
 		rangeStats?(table: SheetTable, first: number, count: number, cols: number[]): Promise<{ count: number; nums: number; sum: number }>;
 		/**
 		 * Enregistre une saisie. Renvoie un message pour la barre d'état, ou la
-		 * valeur stockée quand la source ne relit pas sa mise en page.
+		 * valeur stockée quand la source ne relit pas sa mise en page. key :
+		 * réponse à la question de la clé (refus « clé à choisir »).
 		 */
-		setCell(row: number, col: number, raw: string, target: Target): Promise<string | void | { value: unknown }>;
+		setCell(row: number, col: number, raw: string, target: Target, key?: KeyChoice): Promise<string | void | { value: unknown }>;
 		undo?(): Promise<unknown>;
 		redo?(): Promise<unknown>;
 		/** Colle un bloc (une seule étape d'annulation). */
@@ -4920,8 +4922,30 @@
 		menuAction(() => (hint[op](), lines(op, ...args[op])));
 	}
 
+	// Recherche tapée dans un tableau sans clé : numéro de ligne, ou colonne
+	// qui devient la clé (jamais posée sans le demander). Valider réécrit la
+	// saisie avec la réponse, en une étape d'annulation ; Annuler rouvre la
+	// formule dans l'éditeur.
+	let keyDlg = $state<(KeyQuestion & { row: number; col: number; raw: string; keep: boolean; choice: KeyChoice }) | null>(null);
+
+	function applyKeyDialog() {
+		const d = keyDlg;
+		keyDlg = null;
+		if (!d) return;
+		wrap.focus();
+		void write(d.row, d.col, d.raw, d.keep, undefined, d.choice);
+	}
+
+	function cancelKeyDialog() {
+		const d = keyDlg;
+		keyDlg = null;
+		if (!d) return;
+		if (d.keep) reopenFormula(d.row, d.col, d.raw, 'recherche annulée : la formule n’est pas enregistrée');
+		else wrap.focus();
+	}
+
 	// Insérer… / Supprimer… (comme la boîte d'Excel) : lignes ou colonnes entières.
-	let linesDlg = $state<{ x: number; y: number; insert: boolean; choice: 'rows' | 'cols' } | null>(null);
+	let linesDlg =$state<{ x: number; y: number; insert: boolean; choice: 'rows' | 'cols' } | null>(null);
 
 	function openLinesDialog(insert: boolean, x?: number, y?: number) {
 		const sel = selectionLines();
@@ -6648,12 +6672,13 @@
 	// keep : saisie au clavier ; refusée, son texte revient dans l'éditeur
 	// (sur sa cellule) au lieu d'être perdu.
 	// onrefused : reçoit le refus du moteur (renommage depuis la zone de nom).
-	function write(row: number, col: number, raw: string, keep = false, onrefused?: (e: unknown) => void): Promise<void> {
-		writing = writing.catch(() => undefined).then(() => writeNow(row, col, raw, keep, onrefused));
+	// key : réponse à la question de la clé (keyDlg).
+	function write(row: number, col: number, raw: string, keep = false, onrefused?: (e: unknown) => void, key?: KeyChoice): Promise<void> {
+		writing = writing.catch(() => undefined).then(() => writeNow(row, col, raw, keep, onrefused, key));
 		return writing;
 	}
 
-	async function writeNow(row: number, col: number, raw: string, keep = false, onrefused?: (e: unknown) => void) {
+	async function writeNow(row: number, col: number, raw: string, keep = false, onrefused?: (e: unknown) => void, key?: KeyChoice) {
 		if (pivotAt(row, col)) {
 			message = PIVOT_READONLY;
 			return;
@@ -6679,7 +6704,7 @@
 		}
 		typed = { row, col, t: performance.now() };
 		try {
-			const m = await source.setCell(row, col, raw, target);
+			const m = await source.setCell(row, col, raw, target, key);
 			lastEditMs = performance.now() - t0;
 			if (info.kind === 'data' && isFormula(raw) && info.e) {
 				const name = info.e.t.columns[info.i!]?.name;
@@ -6695,7 +6720,12 @@
 			message = String(e instanceof Error ? e.message : e);
 			// Formule refusée : la saisie n'est pas perdue, l'éditeur se rouvre.
 			const k = message.indexOf('formule : ');
-			if (onrefused) onrefused(e);
+			const q = key ? null : keyQuestion(message);
+			if (q) {
+				// Recherche dans un tableau sans clé : la boîte demande quoi utiliser.
+				message = '';
+				keyDlg = { ...q, row, col, raw, keep, choice: 'index' };
+			} else if (onrefused) onrefused(e);
 			else if (k >= 0) {
 				const msg = message.slice(k);
 				queueMicrotask(() => reopenFormula(row, col, raw, msg));
@@ -8787,6 +8817,39 @@
 				</div>
 			</div>
 		{/if}
+		{#if keyDlg}
+			{@const d = keyDlg}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="rules lines-dlg key-dlg"
+				role="dialog"
+				tabindex="-1"
+				aria-label="Clé de la recherche"
+				use:focusFirst
+				use:dismissPanel={cancelKeyDialog}
+				onkeydown={(ev) => {
+					ev.stopPropagation();
+					if (ev.key === 'Enter') applyKeyDialog();
+					if (ev.key === 'Escape') cancelKeyDialog();
+				}}
+			>
+				<div class="menu-title">La recherche dans « {d.table} » utilise :</div>
+				<label><input type="radio" bind:group={d.choice} value="index" /> le numéro de ligne actuel du tableau (index)</label>
+				<label title={d.why ? `« ${d.column} » ne peut pas servir de clé : ${d.why}` : undefined}>
+					<input type="radio" bind:group={d.choice} value="column" disabled={!!d.why} /> la colonne « {d.column} », qui devient la clé du tableau (les doublons y seront refusés)
+				</label>
+				{#if d.why}
+					<p class="menu-note">« {d.column} » ne peut pas servir de clé : {d.why}.</p>
+				{:else if d.choice === 'index'}
+					<p class="menu-note">Le numéro change si vous triez ou insérez des lignes. Lattis ne proposera plus de clé pour ce tableau.</p>
+				{/if}
+				<div class="foot">
+					<span class="sp"></span>
+					<button class="primary" onclick={applyKeyDialog}>Valider</button>
+					<button onclick={cancelKeyDialog}>Annuler</button>
+				</div>
+			</div>
+		{/if}
 		{#if chartMenu}
 			{@const m = chartMenu}
 			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (chartMenu = null)}>
@@ -10079,6 +10142,15 @@
 	.valid-dlg {
 		width: 420px;
 		min-width: 0;
+	}
+	.key-dlg {
+		max-width: 440px;
+	}
+	.key-dlg label {
+		align-items: flex-start;
+	}
+	.key-dlg .menu-note {
+		max-width: none;
 	}
 	.valid-dlg .menu-note {
 		max-width: none;

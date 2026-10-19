@@ -60,7 +60,7 @@ schéma de chaque outil (`tools/list`).
 | SQL | `db_query` (lecture, noms affichés, 10 000 lignes au plus), `db_execute` (INSERT, UPDATE, DELETE annulables) |
 | Feuilles | `sheets_list`, `sheets_get`, `sheets_add`, `sheets_rename`, `sheets_move`, `sheets_copy`, `sheets_hide`, `sheets_color`, `sheets_delete`, `sheets_set_column_width`, `sheets_set_row_height`, `sheets_hide_lines`, `sheets_freeze`, `sheets_find`, `sheets_replace`, `sheets_protect`, `sheets_unprotect`, `sheets_protect_workbook`, `sheets_unprotect_workbook` |
 | Cellules | `cells_get`, `cells_read`, `cells_set`, `cells_paste` (`range` : en plage), `cells_clear`, `cells_style`, `cells_style_lines`, `cells_merge`, `cells_unmerge`, `cells_note`, `cells_name`, `cells_dependencies`, `cells_text_to_columns` |
-| Tableaux | `tables_list`, `tables_get`, `tables_rows`, `tables_rename`, `tables_move`, `tables_delete`, `tables_to_range` (Convertir en plage), `tables_from_range` (Mettre sous forme de tableau), `tables_sort`, `tables_insert_row`, `tables_delete_row`, `tables_clear_filters`, `tables_duplicates`, `tables_remove_duplicates`, `tables_promote_header`, `tables_key_check`, `tables_set_key`, `tables_clear_key`, `tables_extract_columns`, `tables_text_to_columns` (Convertir : texte en colonnes), `tables_header_to_title` (en-tête en titre), `tables_last_row_out` (dernière ligne hors du tableau), `tables_two_level_headers` (en-têtes sur deux lignes : groupe « Groupe.Sous ») |
+| Tableaux | `tables_list`, `tables_get`, `tables_rows`, `tables_rename`, `tables_move`, `tables_delete`, `tables_to_range` (Convertir en plage), `tables_from_range` (Mettre sous forme de tableau), `tables_sort`, `tables_insert_row`, `tables_delete_row`, `tables_clear_filters`, `tables_duplicates`, `tables_remove_duplicates`, `tables_promote_header`, `tables_key_check`, `tables_set_key`, `tables_clear_key`, `tables_keep_row_numbers` (sans clé : lignes désignées par leur numéro), `tables_extract_columns`, `tables_text_to_columns` (Convertir : texte en colonnes), `tables_header_to_title` (en-tête en titre), `tables_last_row_out` (dernière ligne hors du tableau), `tables_two_level_headers` (en-têtes sur deux lignes : groupe « Groupe.Sous ») |
 | Colonnes | `columns_insert`, `columns_rename`, `columns_delete`, `columns_set_type`, `columns_type_preview`, `columns_type_mix`, `columns_fix_type`, `columns_values`, `columns_set_filter`, `columns_set_rules` |
 | Interface | `ui_selection`, `ui_select`, `ui_select_object`, `ui_select_cells`, `ui_show_sheet`, `ui_show_view`, `ui_notify`, `ui_alert`, `ui_confirm`, `ui_prompt`, `ui_dialog` |
 | Objets | `charts_create`, `charts_set`, `charts_place`, `charts_delete`, `pivots_create`, `pivots_set`, `pivots_delete`, `buttons_create`, `buttons_set`, `buttons_place`, `buttons_delete`, `buttons_list`, `buttons_run` |
@@ -86,6 +86,16 @@ valeurs, formules exportées par leur valeur avec les fonctions en cause comme C
 FILTRE, mise en forme conditionnelle, notes, validations, boutons, tableaux chargés par une
 requête, onglets page ou document, protection), plus les scripts du classeur. L'assistant
 peut ainsi prévenir l'utilisateur de ce qui manquera dans Excel ou LibreOffice.
+Une formule écrite par `cells_set` qui cherche dans un tableau sans clé (`REFERENCE`,
+`REFERENCE.APPROCHEE`, `EXISTE`, `RECHERCHEV` ou `RECHERCHEX` convertie) ne pose jamais de
+clé d'elle-même : elle est refusée par « clé à choisir : « Produits » n'a pas de clé… »,
+qui nomme les deux choix. `tables_set_key(table, column)` fait de la colonne cherchée la
+clé (valeurs uniques et toutes remplies ; les doublons seront ensuite refusés) ;
+`tables_keep_row_numbers(table)` garde les numéros de ligne (`REFERENCE(T[Col]; n)` lit la
+n-ième ligne dans l'ordre du tableau, une `RECHERCHEV` devient `INDEX`/`EQUIV`, première
+ligne trouvée). Après l'un ou l'autre, le même `cells_set` passe. Un tableau qui a déjà une
+clé, ou dont les numéros de ligne ont été gardés, ne demande rien. Les formules collées
+(`cells_paste`), importées ou reposées par Lattis gardent les numéros de ligne sans question.
 
 `ui_dialog`, `ui_confirm` et `ui_prompt` ouvrent une boîte de dialogue dans la fenêtre et
 attendent la réponse de l'utilisateur : l'assistant peut ainsi lui demander une

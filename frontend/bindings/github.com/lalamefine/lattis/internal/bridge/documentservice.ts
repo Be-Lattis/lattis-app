@@ -1431,6 +1431,15 @@ export function SetCell(sheet: number, row: number, col: number, raw: string): $
 }
 
 /**
+ * SetCellKeyed est SetCell avec la réponse à la question de la clé (refus
+ * « clé à choisir ») : "index" (numéros de ligne) ou "column" (la colonne
+ * cherchée devient la clé), dans la même étape d'annulation que la saisie.
+ */
+export function SetCellKeyed(sheet: number, row: number, col: number, raw: string, key: string): $CancellablePromise<canvas$0.Event> {
+    return $Call.ByID(2143571244, sheet, row, col, raw, key);
+}
+
+/**
  * SetChart change la configuration d'un graphique.
  */
 export function SetChart(id: number, cfg: canvas$0.ChartConfig): $CancellablePromise<$models.DocState> {

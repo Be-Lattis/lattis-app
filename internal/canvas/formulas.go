@@ -44,8 +44,8 @@ type noRanges struct{}
 func (noRanges) Resolve(string) (string, int, bool) { return "", 0, false }
 
 // setFormula fait de la colonne i une colonne calculée (src vide : retire la
-// formule). La formule est analysée en français, les RECHERCHEV converties
-// en REFERENCE, et les tableaux cherchés reçoivent une clé unique si besoin.
+// formule). La formule est analysée en français et les RECHERCHEV converties
+// (voir prepareFormula).
 func (t *tx) setFormula(tb Table, i int, src string) error {
 	c := tb.Cols[i]
 	q := `UPDATE _lattis_columns SET formula = ? WHERE tbl = ? AND id = ?`
@@ -64,47 +64,153 @@ func (t *tx) setFormula(tb Table, i int, src string) error {
 	return t.apply([]stmt{st(q, en, tb.ID, c.ID)}, []stmt{st(q, old, tb.ID, c.ID)})
 }
 
-// prepareFormula analyse une saisie de formule (français), convertit les
-// RECHERCHEV en REFERENCE et donne une clé unique aux tableaux cherchés.
+// prepareFormula analyse une saisie de formule (français) et convertit les
+// RECHERCHEV. Une recherche (REFERENCE, REFERENCE.APPROCHEE, EXISTE,
+// RECHERCHEV, RECHERCHEX) dans un tableau sans clé ne pose jamais de clé
+// d'elle-même (choix de Louis, 19/10/2026). Pendant une saisie (keyAsk), sans
+// réponse dans le contexte (WithKeyChoice), elle est refusée par
+// ErrKeyChoice ; KeyColumn fait de la colonne cherchée la clé, KeyIndex garde
+// les numéros de ligne (et ne propose plus de clé pour ce tableau), dans la
+// même étape d'annulation. Hors saisie, les numéros de ligne, sans question.
 //
 // Les adresses A1 tapées à la Excel (=C14*2, SOMME(C14:C16)) sont réécrites
 // selon la feuille sheet : Cell[C14], Tableau[Col][k], Cell[C14:C16]…
 func (t *tx) prepareFormula(sheet int64, src string) (formula.Node, error) {
-	n, err := formula.Parse(src, formula.FR)
-	if err != nil {
-		return nil, ErrFormula{err.Error()}
-	}
 	schema, err := t.schema()
 	if err != nil {
 		return nil, err
 	}
-	loc := t.locator(sheet)
-	n, needs, err := formula.Convert(n, schema, formula.A1Resolver(loc), src)
-	if err == nil {
-		n, err = formula.ConvertA1(n, loc)
-	}
-	if loc.err != nil {
-		return nil, loc.err
-	}
+	byRow, err := t.rowTables()
 	if err != nil {
-		return nil, ErrFormula{err.Error()}
+		return nil, err
 	}
-	for _, target := range referenceTargets(n) {
-		if ft, ok := schema.Table(target); ok && ft.Key == "" && len(ft.Cols) > 0 {
+	convert := func() (formula.Node, []formula.KeyNeed, error) {
+		n, err := formula.Parse(src, formula.FR)
+		if err != nil {
+			return nil, nil, ErrFormula{err.Error()}
+		}
+		loc := t.locator(sheet)
+		n, needs, err := formula.ConvertWith(n, schema, formula.A1Resolver(loc), src, func(table string) bool {
+			return !t.keyAsk || byRow[strings.ToLower(table)]
+		})
+		if err == nil {
+			n, err = formula.ConvertA1(n, loc)
+		}
+		if loc.err != nil {
+			return nil, nil, loc.err
+		}
+		if err != nil {
+			return nil, nil, ErrFormula{err.Error()}
+		}
+		return n, needs, nil
+	}
+	n, needs, err := convert()
+	if err != nil || !t.keyAsk {
+		return n, err
+	}
+	for _, target := range formula.KeyTargets(n) {
+		if ft, ok := schema.Table(target); ok && len(ft.Cols) > 0 {
 			needs = append(needs, formula.KeyNeed{Table: ft.Name, Column: ft.Cols[0].Name})
 		}
 	}
+	// Tableaux sans clé où la formule cherche, sans choix déjà fait.
+	var pending []formula.KeyNeed
+	seen := map[string]bool{}
 	for _, need := range needs {
-		if err := t.ensureKey(need.Table, need.Column); err != nil {
-			return nil, err
+		low := strings.ToLower(need.Table)
+		if ft, ok := schema.Table(need.Table); ok && ft.Key == "" && !byRow[low] && !seen[low] {
+			seen[low] = true
+			pending = append(pending, need)
 		}
 	}
-	return n, nil
+	if len(pending) == 0 {
+		return n, nil
+	}
+	switch KeyChoiceFrom(t.Ctx) {
+	case KeyColumn:
+		for _, need := range pending {
+			if err := t.keyFor(need); err != nil {
+				return nil, err
+			}
+		}
+		return n, nil
+	case KeyIndex:
+		for _, need := range pending {
+			if err := t.keepRowNumbers(need.Table); err != nil {
+				return nil, err
+			}
+			byRow[strings.ToLower(need.Table)] = true
+		}
+		n, _, err = convert() // RECHERCHEV : INDEX/EQUIV au lieu de REFERENCE
+		return n, err
+	}
+	return nil, t.keyQuestion(pending[0])
 }
 
-// referenceTargets donne les tableaux dont une formule lit la colonne clé
-// (REFERENCE.APPROCHEE, EXISTE).
-func referenceTargets(n formula.Node) []string { return formula.KeyTargets(n) }
+// rowTables : tableaux sans clé dont les lignes se désignent par leur numéro
+// (choix fait à une formule, ou « Ne plus proposer » la clé), en minuscules.
+func (t *tx) rowTables() (map[string]bool, error) {
+	rs, err := t.query(`SELECT name FROM _lattis_tables WHERE key_col IS NULL AND no_key_hint = 1`)
+	if err != nil {
+		return nil, err
+	}
+	defer rs.Close()
+	out := map[string]bool{}
+	for rs.Next() {
+		var name string
+		if err := rs.Scan(&name); err != nil {
+			return nil, err
+		}
+		out[strings.ToLower(name)] = true
+	}
+	return out, rs.Err()
+}
+
+// keyFor fait de la colonne cherchée la clé de son tableau (mêmes règles que
+// « Clé du tableau » : valeurs uniques et toutes remplies).
+func (t *tx) keyFor(need formula.KeyNeed) error {
+	tb, err := t.tableByName(need.Table)
+	if err != nil {
+		return err
+	}
+	i := colIndex(tb, need.Column)
+	if i < 0 {
+		return ErrKey{need.Table, need.Column, "colonne introuvable"}
+	}
+	why, err := t.keyCheck(tb, i)
+	if err != nil {
+		return err
+	}
+	if why != "" {
+		return ErrKey{tb.Name, tb.Cols[i].Name, why}
+	}
+	return t.ensureKey(tb.Name, tb.Cols[i].Name)
+}
+
+// keyQuestion : la question à poser pour un tableau sans clé.
+func (t *tx) keyQuestion(need formula.KeyNeed) error {
+	tb, err := t.tableByName(need.Table)
+	if err != nil {
+		return err
+	}
+	e := ErrKeyChoice{Table: tb.Name, Column: need.Column}
+	if i := colIndex(tb, need.Column); i >= 0 {
+		e.Column = tb.Cols[i].Name
+		if e.Why, err = t.keyCheck(tb, i); err != nil {
+			return err
+		}
+	}
+	return e
+}
+
+func colIndex(tb Table, name string) int {
+	for i, c := range tb.Cols {
+		if strings.EqualFold(c.Name, name) {
+			return i
+		}
+	}
+	return -1
+}
 
 // ErrKey signale une colonne qui ne peut pas servir de clé.
 type ErrKey struct{ Table, Column, Why string }

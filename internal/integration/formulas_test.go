@@ -30,6 +30,7 @@ func TestReferenceNomenclature(t *testing.T) {
 	h.set(1, 1, 10)
 	h.set(1, 3, 20)
 	h.set(1, 5, 30)
+	h.do("tables.keep_row_numbers", "table", "Ventes") // REFERENCE sans clé : par numéro de ligne
 	cases := []struct{ formula, want string }{
 		{"=Ventes[Prix][2]", "2,8"},                      // une valeur
 		{"=SOMME(Ventes[Total])", "40"},                  // toute la colonne
@@ -194,10 +195,16 @@ func TestRecalcCascade(t *testing.T) {
 	}
 }
 
-// RECHERCHEV est convertie en REFERENCE et la colonne cherchée devient la clé.
+// RECHERCHEV est convertie en REFERENCE ; la colonne cherchée ne devient la
+// clé que sur demande (tables.set_key, après le refus qui le propose).
 func TestVLookupBecomesReference(t *testing.T) {
 	h := newHost(t)
 	ventes(h)
+	h.fails("clé à choisir", "cells.set", "row", 8, "col", 1, "value", `=RECHERCHEV("Cacao"; Ventes; 2; FAUX)`)
+	if h.table("Ventes").Columns[0].Key {
+		t.Fatal("clé posée sans le demander")
+	}
+	h.do("tables.set_key", "table", "Ventes", "column", "Produit")
 	h.set(8, 1, `=RECHERCHEV("Cacao"; Ventes; 2; FAUX)`)
 	c := h.get(8, 1)
 	if !strings.HasPrefix(c.Raw, "=REFERENCE(") || fmt_(c.Value) != "4" {

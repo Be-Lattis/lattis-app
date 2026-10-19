@@ -523,6 +523,14 @@ func (s *DocumentService) RuleStats(ctx context.Context, sheet, table int64, col
 
 // SetCell traite une saisie validée dans une cellule de la feuille.
 func (s *DocumentService) SetCell(ctx context.Context, sheet int64, row, col int, raw string) (canvas.Event, error) {
+	return s.SetCellKeyed(ctx, sheet, row, col, raw, "")
+}
+
+// SetCellKeyed est SetCell avec la réponse à la question de la clé (refus
+// « clé à choisir ») : "index" (numéros de ligne) ou "column" (la colonne
+// cherchée devient la clé), dans la même étape d'annulation que la saisie.
+func (s *DocumentService) SetCellKeyed(ctx context.Context, sheet int64, row, col int, raw, key string) (canvas.Event, error) {
+	ctx = canvas.WithKeyChoice(ctx, canvas.KeyChoice(key))
 	d, err := s.current()
 	if err != nil {
 		return canvas.Event{}, err

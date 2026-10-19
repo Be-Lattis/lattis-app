@@ -27,6 +27,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/script"
@@ -126,6 +127,13 @@ func Invoke(ctx context.Context, host Host, name string, args map[string]any) (a
 	}
 	c := &Call{Context: ctx, Host: host, cmd: cmd, args: args}
 	res, err := cmd.Run(c)
+	if kc := (canvas.ErrKeyChoice{}); errors.As(err, &kc) {
+		// Formule qui cherche dans un tableau sans clé : l'appelant choisit
+		// par une commande, puis recommence.
+		err = fmt.Errorf("%w. Choisissez, puis recommencez : tables.set_key(%q, %q) fait de la colonne la clé, "+
+			"ou tables.keep_row_numbers(%q) garde les numéros de ligne (outils tables_set_key, tables_keep_row_numbers)",
+			err, kc.Table, kc.Column, kc.Table)
+	}
 	if cmd.Write {
 		host.Changed(ctx)
 	}

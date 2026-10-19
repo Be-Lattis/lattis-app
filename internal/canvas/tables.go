@@ -85,12 +85,13 @@ func (m *Model) DeleteTables(ctx context.Context, names []string) error {
 func (t *tx) deleteTable(tb Table) error {
 	trash := fmt.Sprintf("_lattis_trash_t%d_%d", tb.ID, time.Now().UnixNano())
 	var key, filter sql.NullString
-	if err := t.row(`SELECT key_col, filter FROM _lattis_tables WHERE id = ?`, tb.ID).Scan(&key, &filter); err != nil {
+	var noHint, twoLevel int
+	if err := t.row(`SELECT key_col, filter, no_key_hint, two_level FROM _lattis_tables WHERE id = ?`, tb.ID).Scan(&key, &filter, &noHint, &twoLevel); err != nil {
 		return err
 	}
 	undo := []stmt{
-		st(`INSERT INTO _lattis_tables (id, sheet, name, row, col, key_col, filter) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-			tb.ID, tb.Sheet, tb.Name, tb.Row, tb.Col, nullable(key), nullable(filter)),
+		st(`INSERT INTO _lattis_tables (id, sheet, name, row, col, key_col, filter, no_key_hint, two_level) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			tb.ID, tb.Sheet, tb.Name, tb.Row, tb.Col, nullable(key), nullable(filter), noHint, twoLevel),
 		st(`INSERT INTO _lattis_columns SELECT * FROM ` + trash + `_col`),
 		st(`INSERT INTO _lattis_invalid SELECT * FROM ` + trash + `_inv`),
 		st(`INSERT INTO _lattis_styles SELECT * FROM ` + trash + `_sty`),

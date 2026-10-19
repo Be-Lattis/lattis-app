@@ -494,9 +494,13 @@ func (c *compiler) special(fn string, n Call, sc scope) string {
 		return c.expr(body, sc)
 	case "REFERENCE":
 		return c.reference(n, sc)
-	case "REFERENCE.APPROX":
-		return c.scan(scanOf(n, c.schema, sc.table), sc)
-	case "EXISTS":
+	case "REFERENCE.APPROX", "EXISTS":
+		if ix, ok := rankReference(c.schema, n); ok {
+			return c.expr(ix, sc)
+		}
+		if fn == "REFERENCE.APPROX" {
+			return c.scan(scanOf(n, c.schema, sc.table), sc)
+		}
 		t, k, e := existsTarget(c.schema, n)
 		if e.IsErr() {
 			return errSQL(e.Err)

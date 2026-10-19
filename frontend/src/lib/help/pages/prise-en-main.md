@@ -37,7 +37,14 @@ Une valeur qui ne correspond plus au type élargit la colonne quand c'est possib
 
 Une **clé** est une colonne dont les valeurs sont uniques et toutes remplies : un code client, une référence produit. Elle identifie chaque ligne, s'affiche dans la marge à la place des numéros et sert aux recherches de [REFERENCE](fonction:REFERENCE).
 
-Lattis ne pose jamais de clé tout seul : quand la première colonne d'un tableau s'y prête, il la propose discrètement, et un clic suffit. « Ne plus proposer » retire la suggestion pour ce tableau.
+Lattis ne pose jamais de clé tout seul : quand la première colonne d'un tableau s'y prête, il la propose discrètement, et un clic suffit. « Ne plus proposer » retire la suggestion pour ce tableau, qui garde alors ses numéros de ligne.
+
+Quand vous tapez une recherche ([REFERENCE](fonction:REFERENCE), RECHERCHEV, RECHERCHEX, EXISTE…) dans un tableau qui n'a pas de clé, Lattis vous demande ce qu'elle utilise :
+
+- **le numéro de ligne** du tableau : 1 pour la première ligne, dans l'ordre du tableau, qui change si vous triez ou insérez des lignes. Une RECHERCHEV devient `INDEX(…; EQUIV(…; 0))` : la première ligne trouvée, doublons permis. Le choix vaut pour tout le tableau : la question ne revient plus ;
+- **la colonne cherchée**, qui devient la clé du tableau : ses valeurs doivent être uniques et toutes remplies, et un doublon y sera ensuite refusé.
+
+`Ctrl+Z` annule d'un coup la formule et ce choix. Un tableau qui a déjà une clé ne demande rien, et une formule collée ou importée garde les numéros de ligne sans question.
 
 ## Formules
 

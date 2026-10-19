@@ -436,7 +436,7 @@ Contexte : chaque message de l'utilisateur peut commencer par une ligne « [Cont
 Formules : elles commencent par = et utilisent des fonctions proches d'Excel en français (outil formulas_functions), arguments séparés par ; et décimales avec une virgule. Dans un tableau, [Colonne] désigne la valeur de la ligne courante, [Colonne][-1] la ligne précédente, Tableau[Colonne] toute la colonne d'un autre tableau, Tableau[Colonne][n] la valeur de la n-ième ligne ; Cell[A1] une cellule libre de la feuille. Une formule saisie dans une cellule de données d'un tableau fait de toute la colonne une colonne calculée : pour en ajouter une, columns_insert puis cells_set de la formule dans la première ligne de données (position du tableau : tables_get). Après avoir écrit une formule, vérifiez-la avec formulas_errors.
 Exemples :
 - colonne calculée « Montant TTC » dans Commandes : =ARRONDI([Montant HT]*1,2; 2)
-- ville du client dans Commandes, cherchée dans le tableau Clients par sa clé (Clients doit avoir une clé, tables_set_key sur IdClient) : =REFERENCE(Clients[Ville]; [IdClient])
+- ville du client dans Commandes, cherchée dans le tableau Clients par sa clé (Clients doit avoir une clé : tables_set_key sur IdClient ; sinon la formule est refusée jusqu'au choix, et tables_keep_row_numbers fait lire à REFERENCE la n-ième ligne) : =REFERENCE(Clients[Ville]; [IdClient])
 - total des commandes de chaque client, colonne calculée de Clients : =SOMME.SI(Commandes[IdClient]; [IdClient]; Commandes[Montant HT])
 ` + data + `
 

@@ -3,12 +3,14 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/doc"
 )
 
@@ -223,6 +225,34 @@ func TestDBQuery(t *testing.T) {
 	res := call(t, h, "db.query", map[string]any{"sql": `SELECT Nom, "Âge" FROM "` + name + `" ORDER BY "Âge"`})
 	if got := asJSON(res); !strings.Contains(got, `[["Tom",9],["Léa",31]]`) {
 		t.Fatalf("requête %s", got)
+	}
+}
+
+// Une recherche dans un tableau sans clé ne pose pas de clé : la commande
+// est refusée et dit comment choisir (tables.set_key ou
+// tables.keep_row_numbers) ; après le choix, elle passe.
+func TestLookupAsksForKey(t *testing.T) {
+	for _, choice := range []string{"tables.set_key", "tables.keep_row_numbers"} {
+		h := newHost(t)
+		call(t, h, "cells.paste", map[string]any{"row": int64(1), "col": int64(1), "values": []any{
+			[]any{"Code", "Prix"}, []any{"P1", int64(10)}, []any{"P2", int64(20)},
+		}})
+		name := call(t, h, "sheets.get", nil).(SheetView).Tables[0].Name
+		set := map[string]any{"row": int64(6), "col": int64(1), "value": `=RECHERCHEV("P2"; ` + name + `; 2; FAUX)`}
+		_, err := Invoke(context.Background(), h, "cells.set", set)
+		if kc := (canvas.ErrKeyChoice{}); !errors.As(err, &kc) || kc.Column != "Code" ||
+			!strings.Contains(err.Error(), `tables.keep_row_numbers("`+name+`")`) || !strings.Contains(err.Error(), "tables_set_key") {
+			t.Fatalf("question attendue : %v", err)
+		}
+		args := map[string]any{"table": name}
+		if choice == "tables.set_key" {
+			args["column"] = "Code"
+		}
+		call(t, h, choice, args)
+		call(t, h, "cells.set", set)
+		if v := asJSON(call(t, h, "cells.get", map[string]any{"row": int64(6), "col": int64(1)})); !strings.Contains(v, "20") {
+			t.Fatalf("%s : %s", choice, v)
+		}
 	}
 }
 

@@ -35,6 +35,14 @@ var ident = regexp.MustCompile(`^[\p{L}_][\p{L}\p{N}_]*$`)
 // avec la première colonne de la plage comme clé du tableau. original est la
 // formule saisie, gardée pour l'infobulle « converti depuis RECHERCHEV ».
 func Convert(n Node, s *Schema, r Resolver, original string) (Node, []KeyNeed, error) {
+	return ConvertWith(n, s, r, original, nil)
+}
+
+// ConvertWith est Convert ; byRow(tableau) vrai : le tableau, sans clé,
+// désigne ses lignes par leur numéro. RECHERCHEV et RECHERCHEX y deviennent
+// INDEX(Tableau[Valeur]; EQUIV(clé; Tableau[Cherchée]; 0)) : la première
+// ligne trouvée, doublons permis, sans clé à poser.
+func ConvertWith(n Node, s *Schema, r Resolver, original string, byRow func(table string) bool) (Node, []KeyNeed, error) {
 	var keys []KeyNeed
 	var walk func(Node) (Node, error)
 	walk = func(n Node) (Node, error) {
@@ -66,9 +74,9 @@ func Convert(n Node, s *Schema, r Resolver, original string) (Node, []KeyNeed, e
 			var err error
 			switch m.Fn {
 			case "VLOOKUP":
-				out, need, err = vlookup(m, s, r, original)
+				out, need, err = vlookup(m, s, r, original, byRow)
 			case "XLOOKUP":
-				out, need, err = xlookup(m, s, r, original)
+				out, need, err = xlookup(m, s, r, original, byRow)
 			case "INDEX":
 				var ok bool
 				if out, need, ok = indexMatch(m, s, r, original); !ok {
@@ -79,7 +87,7 @@ func Convert(n Node, s *Schema, r Resolver, original string) (Node, []KeyNeed, e
 			default:
 				return m, nil
 			}
-			if err == nil {
+			if err == nil && need.Table != "" {
 				keys = append(keys, need)
 			}
 			return out, err
@@ -90,7 +98,7 @@ func Convert(n Node, s *Schema, r Resolver, original string) (Node, []KeyNeed, e
 	return out, keys, err
 }
 
-func vlookup(c Call, s *Schema, r Resolver, original string) (Node, KeyNeed, error) {
+func vlookup(c Call, s *Schema, r Resolver, original string, byRow func(string) bool) (Node, KeyNeed, error) {
 	exact := len(c.Args) == 4 && c.Args[3] != nil && (c.Args[3] == BoolLit{false} || c.Args[3] == NumLit{0})
 	if !exact {
 		return nil, KeyNeed{}, &ErrConvert{"RECHERCHEV en correspondance approchée (4e argument omis ou VRAI) : utilisez REFERENCE.APPROCHEE, ou ajoutez FAUX pour une correspondance exacte"}
@@ -118,6 +126,9 @@ func vlookup(c Call, s *Schema, r Resolver, original string) (Node, KeyNeed, err
 		return nil, KeyNeed{}, &ErrConvert{"numéro de colonne hors de la plage"}
 	}
 	keyCol := t.Cols[first].Name
+	if t.Key == "" && byRow != nil && byRow(t.Name) {
+		return rowLookup(t, keyCol, t.Cols[col].Name, c.Args[0], original), KeyNeed{}, nil
+	}
 	if t.Key != "" && !strings.EqualFold(t.Key, keyCol) {
 		return nil, KeyNeed{}, &ErrConvert{fmt.Sprintf("le tableau %s a déjà la clé %s ; la plage commence par %s", t.Name, t.Key, keyCol)}
 	}
@@ -127,6 +138,13 @@ func vlookup(c Call, s *Schema, r Resolver, original string) (Node, KeyNeed, err
 	}
 	return Call{Fn: "REFERENCE", Args: []Node{Name{t.Name}, colArg, c.Args[0]}, Origin: original},
 		KeyNeed{t.Name, keyCol}, nil
+}
+
+// rowLookup : INDEX(Tableau[ret]; EQUIV(k; Tableau[key]; 0)), la recherche
+// d'Excel par numéro de ligne, pour un tableau sans clé.
+func rowLookup(t *Table, key, ret string, k Node, origin string) Node {
+	match := Call{Fn: "MATCH", Args: []Node{k, Ref{Table: t.Name, Col: key}, NumLit{0}}}
+	return Call{Fn: "INDEX", Args: []Node{Ref{Table: t.Name, Col: ret}, match}, Origin: origin}
 }
 
 // columnOf situe une colonne de tableau désignée par Tableau[Col] ou par une
@@ -179,7 +197,7 @@ func lookupCall(t *Table, key, ret string, k Node, origin, fn string) (Node, Key
 // xlookup : RECHERCHEX(clé; Tableau[Clé]; Tableau[Valeur]; [si_absent])
 // devient REFERENCE(Tableau; Valeur; clé), dans SI.NON.DISP si une valeur
 // par défaut est donnée.
-func xlookup(c Call, s *Schema, r Resolver, original string) (Node, KeyNeed, error) {
+func xlookup(c Call, s *Schema, r Resolver, original string, byRow func(string) bool) (Node, KeyNeed, error) {
 	if len(c.Args) > 4 && c.Args[4] != nil && c.Args[4] != (NumLit{0}) {
 		return nil, KeyNeed{}, &ErrConvert{"RECHERCHEX : seule la correspondance exacte est prise en charge ; pour des tranches, utilisez REFERENCE.APPROCHEE"}
 	}
@@ -191,8 +209,12 @@ func xlookup(c Call, s *Schema, r Resolver, original string) (Node, KeyNeed, err
 	if kt != rt {
 		return nil, KeyNeed{}, &ErrConvert{"RECHERCHEX : les colonnes cherchée et renvoyée doivent appartenir au même tableau"}
 	}
-	out, need, err := lookupCall(kt, key, ret, c.Args[0], original, "RECHERCHEX")
-	if err != nil {
+	var out Node
+	var need KeyNeed
+	var err error
+	if kt.Key == "" && byRow != nil && byRow(kt.Name) {
+		out = rowLookup(kt, key, ret, c.Args[0], original)
+	} else if out, need, err = lookupCall(kt, key, ret, c.Args[0], original, "RECHERCHEX"); err != nil {
 		return nil, KeyNeed{}, err
 	}
 	if len(c.Args) > 3 && c.Args[3] != nil {
@@ -202,7 +224,9 @@ func xlookup(c Call, s *Schema, r Resolver, original string) (Node, KeyNeed, err
 }
 
 // indexMatch reconnaît INDEX(Tableau[Valeur]; EQUIV(clé; Tableau[Clé]; 0))
-// et le réécrit en REFERENCE. Les autres INDEX restent tels quels.
+// et le réécrit en REFERENCE quand Clé est la clé du tableau. Les autres
+// INDEX restent tels quels : sans clé, la recherche par numéro de ligne
+// fonctionne déjà (première ligne trouvée).
 func indexMatch(c Call, s *Schema, r Resolver, original string) (Node, KeyNeed, bool) {
 	if len(c.Args) != 2 {
 		return nil, KeyNeed{}, false
@@ -213,7 +237,7 @@ func indexMatch(c Call, s *Schema, r Resolver, original string) (Node, KeyNeed, 
 	}
 	rt, ret, ok1 := columnOf(c.Args[0], s, r)
 	kt, key, ok2 := columnOf(m.Args[1], s, r)
-	if !ok1 || !ok2 || rt != kt {
+	if !ok1 || !ok2 || rt != kt || kt.Key == "" {
 		return nil, KeyNeed{}, false
 	}
 	out, need, err := lookupCall(kt, key, ret, m.Args[0], original, "INDEX/EQUIV")

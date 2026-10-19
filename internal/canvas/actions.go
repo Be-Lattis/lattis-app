@@ -64,7 +64,9 @@ func (m *Model) SetCell(ctx context.Context, sheet int64, row, col int, raw stri
 		if err := t.guard(sheet); err != nil {
 			return err
 		}
+		t.keyAsk = true
 		err := t.input(sheet, row, col, raw, &ev)
+		t.keyAsk = false // rattachement de fin d'action : sans question
 		ev.Keyed = t.keyed
 		return err
 	})

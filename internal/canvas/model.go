@@ -63,6 +63,11 @@ type tx struct {
 	// inComputedFilter : calcul d'un filtre de colonne calculée en cours
 	// (computedCond), qui relit les tableaux : pas de récursion.
 	inComputedFilter bool
+	// keyAsk : saisie d'une formule (SetCell) ; une recherche dans un tableau
+	// sans clé pose la question de la clé (voir prepareFormula). Ailleurs
+	// (collage, import, actualisation, conversion, règles), les tableaux sans
+	// clé gardent leurs numéros de ligne, sans question.
+	keyAsk bool
 }
 
 func (t *tx) apply(do, undo []stmt) error { return t.Apply(do, undo) }

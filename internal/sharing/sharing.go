@@ -59,7 +59,7 @@ var Structure = []string{
 	// Construction de l'analyse.
 	"sheets.add", "sheets.rename", "sheets.color", "tables.rename", "tables.sort",
 	"columns.insert", "columns.rename", "columns.set_type", "columns.fix_type", "columns.set_rules",
-	"tables.set_key", "cells.set", "cells.style", "cells.name",
+	"tables.set_key", "tables.keep_row_numbers", "cells.set", "cells.style", "cells.name",
 	// Mise en forme : styles de lignes et colonnes entières, fusion, largeurs
 	// et hauteurs, volets figés, filtres, mise en forme conditionnelle (ci-dessus).
 	"cells.style_lines", "cells.merge", "cells.unmerge", "sheets.set_column_width", "sheets.set_row_height", "sheets.freeze", "columns.set_filter",

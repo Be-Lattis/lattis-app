@@ -138,7 +138,9 @@ func TestXLSXImport(t *testing.T) {
 		}
 		cols = append(cols, s)
 	}
-	want := `Code:integer Produit:text Qté:integer Prix:decimal=REFERENCE(Produits[Prix unitaire]; [Produit]) ` +
+	// RECHERCHEV importée : Produits n'a pas de clé et l'import n'en pose pas,
+	// la recherche passe par le numéro de ligne (INDEX/EQUIV).
+	want := `Code:integer Produit:text Qté:integer Prix:decimal=INDEX(Produits[Prix unitaire]; EQUIV([Produit]; Produits[Produit]; 0)) ` +
 		`Total:decimal=[Qté]*[Prix] Date:text Payé:boolean Note:text`
 	if got := strings.Join(cols, " "); got != want {
 		t.Errorf("colonnes :\n%s\nattendu :\n%s", got, want)

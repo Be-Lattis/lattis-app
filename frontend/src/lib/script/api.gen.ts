@@ -830,6 +830,14 @@ export const apiReference: RefEntry[] = [
 		args: [1, 2]
 	},
 	{
+		name: "tables.keep_row_numbers",
+		category: "tables",
+		signature: "tables.keep_row_numbers(table)",
+		summary: "Le tableau, sans clé, désigne ses lignes par leur numéro (1 = première, dans l'ordre du tableau ; il change si l'on trie ou insère des lignes) : REFERENCE(T[Col]; n) lit la n-ième ligne, EXISTE(T; n) dit si elle existe, une RECHERCHEV devient INDEX/EQUIV (première ligne trouvée, doublons permis). Lattis ne propose plus de clé pour ce tableau. L'autre choix est tables.set_key.",
+		details: "Paramètres — table : nom du tableau. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		args: [1, 1]
+	},
+	{
 		name: "tables.key_check",
 		category: "tables",
 		signature: "tables.key_check(table, column)",

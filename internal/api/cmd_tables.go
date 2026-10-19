@@ -416,6 +416,14 @@ end`,
 				d, _ := c.Doc()
 				return nil, d.ClearKey(c, t.Name)
 			}),
+		tableCmd("tables.keep_row_numbers", "Garder les numéros de ligne",
+			"Le tableau, sans clé, désigne ses lignes par leur numéro (1 = première, dans l'ordre du tableau ; il change si l'on trie ou insère des lignes) : "+
+				"REFERENCE(T[Col]; n) lit la n-ième ligne, EXISTE(T; n) dit si elle existe, une RECHERCHEV devient INDEX/EQUIV (première ligne trouvée, doublons permis). "+
+				"Lattis ne propose plus de clé pour ce tableau. L'autre choix est tables.set_key.", true,
+			func(c *Call, t tableRef) (any, error) {
+				d, _ := c.Doc()
+				return nil, d.DismissKeyHint(c, t.Name)
+			}),
 		&Command{
 			Name:    "tables.extract_columns",
 			Label:   "Extraire des colonnes",

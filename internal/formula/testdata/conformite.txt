@@ -306,7 +306,10 @@
 =EXISTE(Clients;2)	VRAI
 =EXISTE(Clients;7)	FAUX
 =EXISTE(Clients;1/0)	#DIV/0!
-=EXISTE(Etapes;1)	#REF!
+=EXISTE(Etapes;1)	VRAI
+=EXISTE(Etapes;4)	FAUX
+=EXISTE(Etapes;"A")	FAUX
+=REFERENCE.APPROCHEE(Etapes;Valeur;2)	20
 =EQUIV("Martin";Clients[Nom];0)	2
 =EQUIV("dur*";Clients[Nom];0)	3
 =EQUIV("B";Etapes[Nom];0)	2

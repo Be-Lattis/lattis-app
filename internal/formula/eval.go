@@ -468,9 +468,13 @@ func (env *Env) special(fn string, n Call) Value {
 		return Eval(body, env)
 	case "REFERENCE":
 		return env.reference(n)
-	case "REFERENCE.APPROX":
-		return env.scan(scanOf(n, env.Schema, env.Table))
-	case "EXISTS":
+	case "REFERENCE.APPROX", "EXISTS":
+		if ix, ok := rankReference(env.Schema, n); ok {
+			return Eval(ix, env)
+		}
+		if fn == "REFERENCE.APPROX" {
+			return env.scan(scanOf(n, env.Schema, env.Table))
+		}
 		t, k, err := existsTarget(env.Schema, n)
 		if err.IsErr() {
 			return err
@@ -565,19 +569,30 @@ func (env *Env) reference(n Call) Value {
 	return Err(ErrNA)
 }
 
-// rankReference : REFERENCE sur un tableau sans clé, relue en
-// INDEX(Tableau[Col]; rang) (choix de Louis, 18/10/2026).
+// rankReference : REFERENCE, REFERENCE.APPROCHEE et EXISTE sur un tableau
+// sans clé désignent la ligne par son numéro (1 = première, dans l'ordre du
+// tableau, lignes masquées par un filtre comprises) : relues en
+// INDEX(Tableau[Col]; n), et EXISTE en NON(ESTERREUR(INDEX(…; n))) (choix
+// de Louis, 18 et 19/10/2026).
 func rankReference(s *Schema, n Call) (Node, bool) {
-	if len(n.Args) != 3 {
+	exists := n.Fn == "EXISTS"
+	if exists && len(n.Args) != 2 || !exists && len(n.Args) != 3 {
 		return nil, false
 	}
-	tn, ok1 := nameOf(n.Args[0])
-	cn, ok2 := nameOf(n.Args[1])
-	if !ok1 || !ok2 {
+	tn, ok := nameOf(n.Args[0])
+	if !ok {
 		return nil, false
 	}
 	t, ok := s.Table(tn)
-	if !ok || t.Key != "" {
+	if !ok || t.Key != "" || len(t.Cols) == 0 {
+		return nil, false
+	}
+	if exists {
+		ix := Call{Fn: "INDEX", Args: []Node{Ref{Table: t.Name, Col: t.Cols[0].Name}, n.Args[1]}}
+		return Call{Fn: "NOT", Args: []Node{Call{Fn: "ISERROR", Args: []Node{ix}}}}, true
+	}
+	cn, ok := nameOf(n.Args[1])
+	if !ok {
 		return nil, false
 	}
 	col, ok := t.col(cn)

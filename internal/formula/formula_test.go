@@ -160,9 +160,43 @@ func TestConvertXLOOKUPAndIndexMatch(t *testing.T) {
 	}
 }
 
+// TestConvertByRow : dans un tableau sans clé désigné par ses numéros de
+// ligne, RECHERCHEV et RECHERCHEX deviennent INDEX/EQUIV (première ligne
+// trouvée), sans clé demandée ; INDEX/EQUIV y reste tel quel.
+func TestConvertByRow(t *testing.T) {
+	f := fixture(t)
+	res := fakeResolver{"Etapes!A2:B9": {"Etapes", 0}}
+	byRow := func(table string) bool { return strings.EqualFold(table, "Etapes") }
+	for src, want := range map[string]string{
+		`=RECHERCHEV("B";Etapes!A2:B9;2;FAUX)`:            `=INDEX(Etapes[Valeur]; EQUIV("B"; Etapes[Nom]; 0))`,
+		`=RECHERCHEX("B";Etapes[Nom];Etapes[Valeur];0)`:   `=SI.NON.DISP(INDEX(Etapes[Valeur]; EQUIV("B"; Etapes[Nom]; 0)); 0)`,
+		`=INDEX(Etapes[Valeur];EQUIV("B";Etapes[Nom];0))`: `=INDEX(Etapes[Valeur]; EQUIV("B"; Etapes[Nom]; 0))`,
+	} {
+		out, keys, err := ConvertWith(mustParse(t, src, FR), f.schema, res, src, byRow)
+		if err != nil || len(keys) != 0 {
+			t.Errorf("%s : %v, clés %v", src, err, keys)
+			continue
+		}
+		if got := Format(out, FR); got != want {
+			t.Errorf("%s : %s, attendu %s", src, got, want)
+		}
+		if got := f.evalGo(out, 1).String(); got != "20" {
+			t.Errorf("%s : Go donne %s", src, got)
+		}
+		if got := f.evalSQL(t, out, 1).String(); got != "20" {
+			t.Errorf("%s : SQL donne %s", src, got)
+		}
+	}
+	// Sans ce choix, la conversion demande une clé (la colonne cherchée).
+	src := `=RECHERCHEV("B";Etapes!A2:B9;2;FAUX)`
+	if _, keys, err := Convert(mustParse(t, src, FR), f.schema, res, src); err != nil || !reflect.DeepEqual(keys, []KeyNeed{{"Etapes", "Nom"}}) {
+		t.Fatalf("clés : %v, %v", keys, err)
+	}
+}
+
 func TestKeyTargetsAndSuggestion(t *testing.T) {
 	n := mustParse(t, `=SI(EXISTE(Clients;1);REFERENCE.APPROCHEE(Baremes;Taux;[@Prix]);REFERENCE(Produits;Nom;1))`, FR)
-	if got := KeyTargets(n); !slices.Equal(got, []string{"Clients", "Baremes"}) {
+	if got := KeyTargets(n); !slices.Equal(got, []string{"Clients", "Baremes", "Produits"}) {
 		t.Fatalf("KeyTargets = %v", got)
 	}
 	if Suggestion("decaler") == "" || Suggestion("SOMME") != "" {

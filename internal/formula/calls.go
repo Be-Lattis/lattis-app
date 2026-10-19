@@ -147,9 +147,9 @@ func subtotalOf(n Call) (string, Value) {
 	return fn, Value{}
 }
 
-// KeyTargets donne les tableaux dont une formule lit la colonne clé
-// (REFERENCE.APPROCHEE, EXISTE) : ils doivent avoir une clé. REFERENCE
-// sur un tableau sans clé lit la ligne par son rang.
+// KeyTargets donne les tableaux où une formule cherche une ligne
+// (REFERENCE, REFERENCE.APPROCHEE, EXISTE) : par leur clé, ou sans clé par
+// le numéro de ligne (voir rankReference).
 func KeyTargets(n Node) []string {
 	var out []string
 	var walk func(Node)
@@ -162,7 +162,7 @@ func KeyTargets(n Node) []string {
 			walk(n.R)
 		case Call:
 			switch strings.ToUpper(n.Fn) {
-			case "REFERENCE.APPROX", "EXISTS":
+			case "REFERENCE", "REFERENCE.APPROX", "EXISTS":
 				if len(n.Args) > 0 {
 					if name, ok := nameOf(n.Args[0]); ok {
 						out = append(out, name)

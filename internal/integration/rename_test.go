@@ -15,6 +15,7 @@ func TestRenamesFollowReferences(t *testing.T) {
 	ventes(h)
 	h.set(8, 1, "=SOMME(Ventes[Total])")
 	h.set(10, 1, "=Ventes[Produit][1]")
+	h.do("tables.set_key", "table", "Ventes", "column", "Produit")
 	h.set(12, 1, `=REFERENCE(Ventes; "Prix"; "Thé")`)
 	h.set(14, 1, 7)
 	h.do("cells.name", "row", 14, "col", 1, "name", "Taux")

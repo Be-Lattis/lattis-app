@@ -124,7 +124,7 @@ func TestConvertToRangeValues(t *testing.T) {
 	if _, err := d.SetCell(ctx, 1, 1, 2, "=CUMUL([@Ventes])"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := d.SetCell(ctx, 1, 5, 0, `=REFERENCE(Feuille1[Ventes]; "jan")`); err != nil {
+	if _, err := d.SetCell(WithKeyChoice(ctx, KeyIndex), 1, 5, 0, `=REFERENCE(Feuille1[Ventes]; "jan")`); err != nil {
 		t.Fatal(err)
 	}
 	before := dump(t, d)
