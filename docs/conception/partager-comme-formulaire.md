@@ -1,4 +1,4 @@
-# Partager un tableau comme formulaire
+ (Insertion › Formulaire)# Partager un tableau comme formulaire
 
 *Étude de conception, 19/10/2026, demandée par Louis : « Sur n'importe quel tableau partagé, on pourra faire un clic droit et "Partager comme formulaire". S'il n'est pas partagé, il faudra mettre une erreur pour dire qu'il faut partager le tableau. Je te laisse le spécifier tout seul. » Ajout de Louis : « pense que les utilisateurs aient un petit peu de personnalisation » (§4). Pas de code. Lue sur `main` de lattis-app (`22ea40d`) : `docs/collaboration/` (publication, synchronisation, droits, pipeline-table-source), décisions 0010, 0011 et 0014, `internal/canvas/validation.go` (listes tirées d'une plage), `internal/canvas/choice.go` (onglet à choix). Côté be-lattis-server, en lecture seule : `docs/contrat-client.md`, `schema/0004`, `0005`, `0020_pipelines.sql` (identité technique), `internal/httpserver` (`/api/preview`, `/api/push`, limiteur), `internal/admin/links.go` (`/w/<id>`).*
 
@@ -26,14 +26,14 @@ Ce qu'on ne fait pas : un outil de sondage complet (logique de branchement compl
 
 ### 2.1 Où le trouver
 
-- **Clic droit sur un tableau › « Partager comme formulaire… »**, à côté de « Ajouter au classeur partagé… » et de « Partager au Data Lake Lattis… » (`Sheet.svelte`).
+- **Insertion › groupe Tableaux › Formulaire** (décision de Louis, 20/10 : pas dans le menu contextuel, déjà chargé), à côté de « Tableau croisé dynamique », « Tableau » et « Data Lake Lattis » (`Ribbon.svelte`). Le bouton agit sur le tableau de la cellule active ; hors d'un tableau, il dit « Placez-vous dans un tableau pour en faire un formulaire. ».
 - Clic droit › Tableau › **Formulaires (2) ›** : les formulaires du tableau (§7). Ce sous-menu n'apparaît que s'il en existe.
 - Fichier › Gérer l'accès… › nouvel onglet **Formulaires**, qui liste tous les formulaires du classeur.
 - La palette de commandes. Plus tard, l'API (`forms.*` pour Lua, le MCP et l'Assistant ✦).
 
 ### 2.2 Conditions et messages
 
-L'élément de menu est **toujours visible**. Quand une condition manque, il ouvre un message qui propose l'action à faire, au lieu d'être grisé sans explication.
+Le bouton est **toujours visible**. Quand une condition manque, il ouvre un message qui propose l'action à faire, au lieu d'être grisé sans explication.
 
 | Situation | Message | Action proposée |
 |---|---|---|
@@ -362,7 +362,7 @@ Libellés liés aux champs, ordre du focus, contraste de la palette (§4.1), mes
 
 En phase 9 :
 
-> **Partager un tableau comme formulaire** (demande de Louis, 19/10/2026) : clic droit sur un tableau d'un classeur collaboratif › « Partager comme formulaire… » (sinon, message et action pour publier d'abord). Le concepteur fait un champ par colonne (types, listes de validation, clé numérotée par le serveur, valeurs posées par le serveur) et règle une personnalisation limitée (titre, introduction, logo, bannière, palette, sections, bouton, remerciement, langue). Quatre modes d'accès : membres, personnes ou équipes, tout compte du serveur, public avec protections. Nombre de réponses par personne : une, N ou sans limite. Position GPS du répondant possible (pas de photo). Hors ligne complet sur le téléphone : lot à part, à inscrire à la feuille de route. La page `/f/<code>` est servie par lattisd ; les réponses deviennent des lignes écrites sous une identité technique et arrivent en direct par la synchronisation. Étude : `conception/partager-comme-formulaire.md`. Client M + S + S ; serveur M à L.
+> **Partager un tableau comme formulaire** (demande de Louis, 19/10/2026) : Insertion › Formulaire, sur le tableau actif d'un classeur collaboratif (sinon, message et action pour publier d'abord). Le concepteur fait un champ par colonne (types, listes de validation, clé numérotée par le serveur, valeurs posées par le serveur) et règle une personnalisation limitée (titre, introduction, logo, bannière, palette, sections, bouton, remerciement, langue). Quatre modes d'accès : membres, personnes ou équipes, tout compte du serveur, public avec protections. Nombre de réponses par personne : une, N ou sans limite. Position GPS du répondant possible (pas de photo). Hors ligne complet sur le téléphone : lot à part, à inscrire à la feuille de route. La page `/f/<code>` est servie par lattisd ; les réponses deviennent des lignes écrites sous une identité technique et arrivent en direct par la synchronisation. Étude : `conception/partager-comme-formulaire.md`. Client M + S + S ; serveur M à L.
 
 ## 14. Relecture du fil serveur (19/10) et choix retenus
 

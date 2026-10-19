@@ -3,7 +3,7 @@
 Lattis (licence [MPL-2.0](LICENSE)) s'appuie sur des bibliothèques sous licences permissives et compatibles, chacune avec son propre texte de licence :
 
 - Go : Wails v3 (MIT), pgx (MIT), go-sqlite3 de ncruces (MIT), gopher-lua (MIT), coder/websocket (ISC), go-keyring (MIT), go-sql-driver/mysql (MPL-2.0), go-yaml (Apache-2.0 / MIT), et leurs dépendances (BSD, MIT, Apache-2.0) ;
-- interface : Svelte et SvelteKit (MIT), CodeMirror et Lezer (MIT), Quill (BSD-3-Clause), runtime Wails (MIT).
+- interface : Svelte et SvelteKit (MIT), CodeMirror et Lezer (MIT), Quill (BSD-3-Clause), qrcode-generator de Kazuhiko Arase (MIT), runtime Wails (MIT).
 
 Aucune dépendance n'est sous licence GPL, LGPL ou AGPL.
 

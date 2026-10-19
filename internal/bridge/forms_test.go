@@ -192,6 +192,8 @@ func TestFormInfo(t *testing.T) {
 
 	// Bob, lecteur : réservé, mais il voit le formulaire ouvert à lui.
 	user = "bob"
+	bobCache := t.TempDir()
+	shareCacheDir = func() (string, error) { return bobCache, nil }
 	b, hb := shareService(t)
 	_, err = b.ShareOpen(ctx, "https://lattis.example.test", info.WorkbookID, "")
 	mustShare(t, err)

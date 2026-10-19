@@ -56,6 +56,7 @@
 	import OpenRemoteDialog from '#lib/remote/OpenRemoteDialog.svelte';
 	import DataCatalogDialog from '#lib/remote/DataCatalogDialog.svelte';
 	import DataShareDialog from '#lib/remote/DataShareDialog.svelte';
+	import FormDialog from '#lib/remote/FormDialog.svelte';
 	import AboutDialog from '#lib/shell/AboutDialog.svelte';
 	import ExportReportDialog from '#lib/shell/ExportReportDialog.svelte';
 	import { exportNotice, printNotice, type ExportReport } from '#lib/shell/exportReport.js';
@@ -226,26 +227,28 @@
 	}
 
 	/** Classeur partagé en direct : ajoute un tableau qui n'est que sur ce poste au classeur du serveur (après confirmation). */
-	async function addToShared(table: string) {
+	async function addToShared(table: string): Promise<boolean> {
 		try {
 			const why = await DocumentService.ShareCanAddTable(table);
 			if (why) {
 				notice = why;
-				return;
+				return false;
 			}
 			const ok = confirm(
 				`Ajouter le tableau « ${table} » au classeur partagé « ${share?.title ?? ''} » ?\n\n` +
 					'Il est créé sur le serveur avec ses lignes ; tous les membres le reçoivent et le modifient selon leurs droits.\n\n' +
 					'Cet ajout ne s’annule pas par Ctrl+Z : pour retirer le tableau, « Supprimer le tableau » le supprime pour tous.'
 			);
-			if (!ok) return;
+			if (!ok) return false;
 			notice = `Ajout de « ${table} » au classeur partagé…`;
 			docState = await syncCall(DocumentService.ShareAddTable(table));
 			notice = docState.notice || `Tableau « ${table} » ajouté au classeur partagé`;
 			share = await DocumentService.ShareState().catch(() => share);
 			await reload();
+			return true;
 		} catch (e) {
 			notice = err(e);
+			return false;
 		}
 	}
 
@@ -385,6 +388,10 @@
 	let dataShare = $state<string | null>(null);
 	// Publier le classeur depuis cette boîte : elle revient une fois publié.
 	let dataShareAfter = $state<string | null>(null);
+	// Partager un tableau comme formulaire (Insertion › Formulaire) ; formAfter : la boîte
+	// revient une fois le classeur publié ou le tableau ajouté au classeur partagé.
+	let formShare = $state<string | null>(null);
+	let formAfter = $state<string | null>(null);
 	// Tableaux publiés seuls comme source du Data Lake (sans le classeur) :
 	// clic droit › « Mettre à jour la source du Data Lake ».
 	let sourceTables = $state<string[]>([]);
@@ -2015,6 +2022,11 @@
 			const c = sheet?.activeCell() ?? { row: 0, col: 0 };
 			dataInsert = { sheet: sheetId, ...c };
 		} : undefined}
+		onform={mode === 'doc' ? () => {
+			const t = sheet?.activeTable();
+			if (t) formShare = t;
+			else notice = 'Placez-vous dans un tableau pour en faire un formulaire.';
+		} : undefined}
 		ondedup={mode === 'doc' ? () => sheet?.dedupActive() : undefined}
 		ontextcols={mode === 'doc' ? () => sheet?.textToColumnsActive() : undefined}
 		onbutton={mode === 'doc' ? (kind) => sheet?.insertButton(kind) : undefined}
@@ -2496,7 +2508,7 @@
 		<SettingsDialog onclose={() => (settingsOpen = false)} onmcp={() => { settingsOpen = false; mcpOpen = true; }} />
 	{/if}
 	{#if rightsOpen && canRights && share}
-		<RightsDialog title={share.title} server={share.server} link={share.link} onclose={() => (rightsOpen = false)} onaddshared={share.mode === 'collaborative' ? addToShared : undefined} />
+		<RightsDialog title={share.title} server={share.server} link={share.link} onclose={() => (rightsOpen = false)} onaddshared={share.mode === 'collaborative' ? async (t) => void (await addToShared(t)) : undefined} />
 	{/if}
 	{#if shareDlg && mode === 'doc'}
 		<ShareDialog
@@ -2509,8 +2521,11 @@
 				// Ouvert depuis Partager au Data Lake : la boîte revient, le tableau publié.
 				const back = dataShareAfter;
 				dataShareAfter = null;
+				const fback = formAfter;
+				formAfter = null;
 				if (!st) return;
 				if (back) dataShare = back;
+				if (fback) formShare = fback;
 				share = st;
 				notice = again ? `Version ${st.version} publiée` : `Classeur publié sur ${st.serverName || st.server} (${st.mode === 'frozen' ? 'figé' : 'collaboratif'})`;
 				reload().catch((e) => (notice = err(e)));
@@ -2542,6 +2557,22 @@
 				shareDlg = { republish };
 			}}
 			onaddshared={() => void addToShared(t)}
+			onnotice={(msg) => {
+				notice = msg;
+				reload().catch((e) => (notice = err(e)));
+			}}
+		/>
+	{/if}
+	{#if formShare}
+		{@const t = formShare}
+		<FormDialog
+			table={t}
+			ondone={() => (formShare = null)}
+			onpublish={() => {
+				formAfter = t;
+				shareDlg = { republish: false };
+			}}
+			onaddshared={() => void addToShared(t).then((ok) => ok && (formShare = t))}
 			onnotice={(msg) => {
 				notice = msg;
 				reload().catch((e) => (notice = err(e)));

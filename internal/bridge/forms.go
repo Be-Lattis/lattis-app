@@ -21,7 +21,8 @@ import (
 	"github.com/lalamefine/lattis/protocol"
 )
 
-// Partager un tableau comme formulaire (clic droit sur un tableau ;
+// Partager un tableau comme formulaire (Insertion › Formulaire, sur le
+// tableau de la cellule active ;
 // docs/conception/partager-comme-formulaire.md, lot 1). Le pont dit si le
 // tableau peut avoir un formulaire (conditions du §2.2, avec l'action à
 // proposer), donne au concepteur les colonnes publiées avec leur column_id

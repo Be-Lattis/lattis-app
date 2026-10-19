@@ -66,6 +66,20 @@ Une source se met à jour quand vous le demandez : clic droit sur le tableau ›
 
 Il faut le rôle « publieur de données » sur le serveur, et un serveur qui accepte les sources envoyées par un classeur ; sinon la boîte le dit.
 
+## Partager un tableau comme formulaire
+
+Placez la cellule active dans un tableau, puis **Insertion › Formulaire** : une page web permet de remplir ce tableau sans ouvrir le classeur, depuis un téléphone ou un ordinateur. Chaque envoi ajoute une ligne, que les membres voient arriver en direct ; la ligne est écrite au nom du formulaire (« Formulaire : <titre> »), le répondant n'a aucun droit sur le classeur.
+
+Le formulaire est servi par le Serveur Lattis : le tableau doit être publié dans un classeur collaboratif, par un propriétaire ou un concepteur du classeur, en ligne. Sinon, la boîte dit ce qui manque et propose l'action à faire d'abord : **Publier sur un serveur…** (classeur local) ou **Ajouter au classeur partagé…** (tableau qui n'est que sur votre poste), puis le concepteur s'ouvre. Un classeur figé, un tableau chargé par une requête, une donnée liée du Data Lake ou une source poussée ne reçoivent pas de formulaire. Un membre qui n'est ni propriétaire ni concepteur peut copier le lien des formulaires qui lui sont ouverts.
+
+Le concepteur a trois onglets, avec à droite l'aperçu de la page (largeur de téléphone ou d'ordinateur) ; **Ouvrir l'aperçu dans le navigateur** montre la vraie page du serveur, sans enregistrer les réponses.
+
+- **Champs** : un champ par colonne (case « dans le formulaire », poignée pour déplacer, libellé, aide, texte indicatif, obligatoire, valeur par défaut fixe ou aujourd'hui, maintenant, année en cours, adresse du répondant). Le type de champ suit la colonne : texte ou texte long, nombre (avec bornes et unité), date, date et heure, case à cocher ou Oui / Non, boutons radio ou liste avec recherche pour une colonne avec liste de validation. Une liste tirée d'une colonne d'un tableau publié est relue par le serveur ; une autre liste est copiée (« Liste copiée le… », **Mettre à jour**). La clé numérotée est posée par le serveur ; une clé saisie est obligatoire. Un champ **Position** remplit Latitude et Longitude (ou une colonne « lat, lon ») quand le répondant touche « Ma position ». Les **valeurs posées par le serveur** remplissent une colonne sans champ visible : Reçu le, Répondant, Formulaire (son titre), numéro suivant ou valeur fixe ; **Ajouter une colonne Reçu le** crée la colonne dans le tableau. Avec un onglet à choix, la catégorie est une valeur fixe, l'année en cours ou un champ. Des intertitres découpent le formulaire en sections.
+- **Apparence** : titre, introduction (gras, italique, liens, listes), logo et bannière, couleur dans une palette lisible, une section par page, libellé du bouton, remerciement, message de fermeture, mention de protection des données (avec un modèle), langue de la page (français ou anglais). Pas de photo ni de fichier à envoyer.
+- **Accès** : membres du classeur (lecteurs compris), personnes et équipes choisies, ou toute personne qui a un compte sur le serveur ; tous se connectent avec leur compte Lattis.
+
+En bas, les vérifications s'affichent en orange (liste vide, valeur par défaut hors de la liste, valeurs d'une liste visibles par les répondants…). **Enregistrer le brouillon** garde le formulaire sans l'ouvrir ; **Ouvrir le formulaire** le met en ligne et donne son lien, son QR code (à enregistrer en PNG ou en SVG) et **Lien pré-rempli…** : un lien par valeur (un QR code par site, par exemple), qui remplit des champs à l'ouverture, avec l'option « verrouillé par le lien » pour qu'ils ne se modifient pas. Si le tableau a déjà des formulaires, la boîte les liste d'abord (Copier le lien, Modifier…) avec **Nouveau formulaire…**.
+
 ## Importer
 
 Fichier › Importer lit un fichier CSV (ou texte délimité) et les classeurs Excel `.xlsx` et `.xlsm` : chaque feuille devient un onglet, chaque bloc de données un tableau. Ce qui n'est pas repris tel quel (macros, graphiques, tableaux croisés, mise en forme conditionnelle, commentaires, validations) est signalé à la fin de l'import.

@@ -146,6 +146,8 @@
 		onpivot?: () => void;
 		/** Insertion › Data Lake Lattis (catalogue du serveur). */
 		oninsertdata?: () => void;
+		/** Insertion › Formulaire : partager le tableau actif comme formulaire. */
+		onform?: () => void;
 		onformula?: (what: 'insert' | 'sum' | 'reference') => void;
 		onclip?: (what: 'cut' | 'copy' | 'paste') => void;
 		onpainter?: () => void;
@@ -218,7 +220,7 @@
 		onpagebreaks?: (on: boolean) => void;
 	}
 
-	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ondedup, ontextcols, onpivot, oninsertdata, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, formatProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, reconnect = false, detach = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks }: Props = $props();
+	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ondedup, ontextcols, onpivot, oninsertdata, onform, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, formatProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, reconnect = false, detach = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks }: Props = $props();
 	const fmt = (tab: FormatTab) => (onformat ? () => onformat(tab) : undefined);
 	const lines = (rows: boolean, hide: boolean) => (onlines ? () => onlines(rows, hide) : undefined);
 	const frz = (what: FreezeAction) => (onfreeze ? () => onfreeze(what) : undefined);
@@ -521,7 +523,7 @@
 				commands: [
 					{ label: 'Tableau croisé dynamique', icon: 'pivot-table', ro: true, run: onpivot, hint: 'Tableau croisé dynamique du tableau actif : cliquez ensuite sur la cellule où le poser, sur n’importe quelle feuille (Échap : annuler ; « Nouvelle feuille » dans la barre d’état). Double-clic sur un TCD pour le modifier' },
 					{ label: 'Tableau', icon: 'table', run: ed('formatAsTable'), hint: 'Faire un tableau de la plage ou du bloc de cellules de la cellule active (Ctrl+L)' },
-					...(sharedWorkbooksEnabled() ? [{ label: 'Data Lake Lattis', icon: 'database' as const, run: oninsertdata, hint: 'Insérer à la cellule active une donnée du catalogue du Data Lake Lattis : tableau lié, en lecture seule, à jour en direct' }] : [])
+					...(sharedWorkbooksEnabled() ? [{ label: 'Data Lake Lattis', icon: 'database' as const, run: oninsertdata, hint: 'Insérer à la cellule active une donnée du catalogue du Data Lake Lattis : tableau lié, en lecture seule, à jour en direct' }, { label: 'Formulaire', icon: 'form' as const, run: onform, hint: 'Partager le tableau actif comme formulaire (Serveur Lattis)' }] : [])
 				]
 			},
 			{
