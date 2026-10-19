@@ -19,7 +19,9 @@ import (
 // gopher-lua n'a pas de crochet « toutes les N instructions » ; il vérifie en
 // revanche le contexte qu'on lui donne (SetContext) : un délai ou le bouton
 // Arrêter annulent ce contexte, qui est aussi transmis aux requêtes SQL en
-// cours. gopher-lua ne bornant pas la mémoire, un chien de garde surveille
+// cours. Les fonctions de motifs de string tournent en Go, hors de la VM :
+// elles sont remplacées par des versions qui vérifient aussi ce contexte
+// (strpat.go). gopher-lua ne bornant pas la mémoire, un chien de garde surveille
 // le tas du processus (voir watchHeap).
 
 // baseAllowed sont les fonctions de base gardées.
@@ -56,6 +58,7 @@ func newState(ctx context.Context) *lua.LState {
 	}
 	if s, ok := L.GetGlobal("string").(*lua.LTable); ok {
 		s.RawSetString("dump", lua.LNil) // renverrait du bytecode chargeable
+		installPatterns(s, L)
 		rep := s.RawGetString("rep").(*lua.LFunction)
 		s.RawSetString("rep", L.NewFunction(func(L *lua.LState) int {
 			if int64(len(L.CheckString(1)))*int64(L.CheckInt(2)) > maxString {
