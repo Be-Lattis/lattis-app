@@ -43,6 +43,27 @@ func TestClearSplitKeepsName(t *testing.T) {
 	undoOnce(t, d, before, "coupe")
 }
 
+// Audit 2 I4 : Suppr sur un total gardé à part retire la marque « hors
+// tableau » (et le gras qu'elle avait donné).
+func TestClearRemovesOutMark(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	typeIn(t, d, 0, 0, ventesRows)
+	mustSet(t, d, 1, 4, 0, "Total")
+	if s := styleAt(t, d, 4, 0); s[outKey] != true {
+		t.Fatalf("total non marqué : %v", s)
+	}
+	must(t, d.ClearRange(ctx, 1, 4, 0, 4, 1, false))
+	if s := styleAt(t, d, 4, 0); len(s) != 0 {
+		t.Fatalf("marque restée : %v", s)
+	}
+	// Retaper là : une nouvelle ligne du tableau, plus un total.
+	mustSet(t, d, 1, 4, 0, "Kiwis")
+	if got, want := layoutOf(t, d), "Feuille1@A1:Produit|Région|Montant×4"; got != want {
+		t.Fatalf("\n got %s\nwant %s", got, want)
+	}
+}
+
 // Audit 2 I5 : une ligne d'en-têtes posée sur un tableau sans en-têtes lui
 // laisse son nom.
 func TestHeaderOverKeepsName(t *testing.T) {

@@ -868,6 +868,9 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 		if all {
 			return t.clearFree(sheet, r0, c0, r1, c1)
 		}
+		if err := t.clearOutIn(sheet, r0, c0, r1, c1); err != nil {
+			return err
+		}
 		return t.deleteWhere(`_lattis_cells`, `sheet = ? AND row BETWEEN ? AND ? AND col BETWEEN ? AND ?`, sheet, r0, r1, c0, c1)
 	})
 }

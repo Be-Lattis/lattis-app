@@ -85,8 +85,8 @@ func (t *tx) markOut(sheet int64, row, col int, kind string) error {
 	return t.styleFree(sheet, row, col, outStyle(kind), nil)
 }
 
-// clearOut retire la marque « hors tableau » (et l'allure de note qu'elle
-// avait donnée).
+// clearOut retire la marque « hors tableau » (et l'allure de note ou de
+// total qu'elle avait donnée).
 func (t *tx) clearOut(sheet int64, row, col int) error {
 	return t.setStyle(`_lattis_cell_styles`, `sheet = ? AND row = ? AND col = ?`, `sheet, row, col`, []any{sheet, row, col},
 		func(old string) (string, error) {
@@ -95,12 +95,40 @@ func (t *tx) clearOut(sheet int64, row, col int) error {
 				return old, nil
 			}
 			delete(s, outKey)
-			if s["fg"] == "#6b7280" && s["i"] == true {
+			switch {
+			case s["fg"] == "#6b7280" && s["i"] == true:
 				delete(s, "fg")
 				delete(s, "i")
+			case s["b"] == true:
+				delete(s, "b")
 			}
 			return encodeStyle(s)
 		})
+}
+
+// clearOutIn retire la marque « hors tableau » des cellules libres d'une
+// zone (Suppr : effacer la cellule retire la marque, audit 2 I4).
+func (t *tx) clearOutIn(sheet int64, r0, c0, r1, c1 int) error {
+	rs, err := t.query(`SELECT row, col FROM _lattis_cell_styles WHERE sheet = ? AND row BETWEEN ? AND ? AND col BETWEEN ? AND ? AND style LIKE '%"out":true%'`, sheet, r0, r1, c0, c1)
+	if err != nil {
+		return err
+	}
+	var ps [][2]int
+	for rs.Next() {
+		var p [2]int
+		if err := rs.Scan(&p[0], &p[1]); err != nil {
+			rs.Close()
+			return err
+		}
+		ps = append(ps, p)
+	}
+	rs.Close()
+	for _, p := range ps {
+		if err := t.clearOut(sheet, p[0], p[1]); err != nil {
+			return err
+		}
+	}
+	return rs.Err()
 }
 
 // noteAbove : la cellule libre au-dessus de (row, col) est une note gardée
