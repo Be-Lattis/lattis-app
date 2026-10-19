@@ -5,7 +5,7 @@
 	// ligne. Remplace « Traitement… » (BusyBar) pour ce qui part au serveur.
 	import { onDestroy } from 'svelte';
 	import { syncCalls } from './busy';
-	import { DONE_FOR, syncActive, syncLabel, type SyncStatus } from './sync';
+	import { BUSY_MIN, DONE_FOR, syncActive, syncLabel, type SyncStatus } from './sync';
 
 	interface Props {
 		status: SyncStatus | null;
@@ -13,22 +13,36 @@
 	let { status }: Props = $props();
 
 	let done = $state(false);
+	// « Synchronisation… » reste au moins BUSY_MIN ms : pas de clignotement
+	// quand l'envoi est très rapide.
+	let holding = $state(false);
 	let wasActive = false;
+	let since = 0;
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	$effect(() => {
 		const active = syncActive(status, $syncCalls);
 		if (active) {
+			if (!wasActive && !holding) since = Date.now();
 			done = false;
+			holding = false;
 			clearTimeout(timer);
 		} else if (wasActive && status?.online) {
-			done = true;
 			clearTimeout(timer);
-			timer = setTimeout(() => (done = false), DONE_FOR);
+			const left = BUSY_MIN - (Date.now() - since);
+			const finish = () => {
+				holding = false;
+				done = true;
+				timer = setTimeout(() => (done = false), DONE_FOR);
+			};
+			if (left > 0) {
+				holding = true;
+				timer = setTimeout(finish, left);
+			} else finish();
 		}
 		wasActive = active;
 	});
 	onDestroy(() => clearTimeout(timer));
-	const label = $derived(syncLabel(status, $syncCalls, done));
+	const label = $derived(syncLabel(status, $syncCalls + (holding ? 1 : 0), done));
 </script>
 
 {#if label}

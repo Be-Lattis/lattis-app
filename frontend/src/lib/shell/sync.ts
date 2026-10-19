@@ -26,6 +26,9 @@ export interface SyncLabel {
 	warn: boolean;
 }
 
+/** Durée minimale de « Synchronisation… » (ms) : pas de clignotement. */
+export const BUSY_MIN = 500;
+
 /** Durée de « Synchronisé » après la fin d'un envoi (ms). */
 export const DONE_FOR = 1500;
 
