@@ -225,6 +225,10 @@ var funcs = []funcDef{
 	{"TEXTSPLIT", "FRACTIONNER.TEXTE", 2, 6, spill, nil},
 }
 
+// refused : fonctions d'Excel reconnues pour être refusées à la saisie avec
+// un message (voir Convert), et donc absentes de l'aide à la saisie.
+var refused = map[string]bool{"HLOOKUP": true}
+
 var funcIndex = func() map[string]funcDef {
 	m := map[string]funcDef{}
 	for _, f := range funcs {

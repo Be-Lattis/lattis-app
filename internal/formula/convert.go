@@ -249,8 +249,6 @@ var suggestions = map[string]string{
 	"OFFSET":     "DECALER n'existe pas dans Lattis : essayez FILTRE ou PRENDRE",
 	"DECALER":    "DECALER n'existe pas dans Lattis : essayez FILTRE ou PRENDRE",
 	"INDIRECT":   "INDIRECT n'existe pas dans Lattis : essayez REFERENCE ou FILTRE",
-	"HLOOKUP":    "RECHERCHEH n'existe pas dans Lattis : transposez les données, puis utilisez REFERENCE",
-	"RECHERCHEH": "RECHERCHEH n'existe pas dans Lattis : transposez les données, puis utilisez REFERENCE",
 	"LOOKUP":     "RECHERCHE n'existe pas dans Lattis : utilisez REFERENCE ou REFERENCE.APPROCHEE",
 	"RECHERCHE":  "RECHERCHE n'existe pas dans Lattis : utilisez REFERENCE ou REFERENCE.APPROCHEE",
 	"LAMBDA":     "LAMBDA n'existe pas dans Lattis : utilisez un script Lua",

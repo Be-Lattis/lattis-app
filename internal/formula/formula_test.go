@@ -440,4 +440,9 @@ func TestFunctionsCatalog(t *testing.T) {
 	if !found {
 		t.Fatal("SI absent ou mal décrit")
 	}
+	for _, f := range fr {
+		if refused[funcIndex[f.Name].EN] {
+			t.Errorf("%s : refusée à la saisie, mais proposée par l'aide", f.Name)
+		}
+	}
 }

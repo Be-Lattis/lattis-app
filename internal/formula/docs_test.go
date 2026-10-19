@@ -15,6 +15,12 @@ var legacyForm = map[string]bool{"REFERENCE": true, "REFERENCE.APPROX": true}
 func TestFunctionDocs(t *testing.T) {
 	for _, f := range funcs {
 		d, ok := docs[f.EN]
+		if refused[f.EN] {
+			if ok {
+				t.Errorf("%s : refusée à la saisie, mais documentée pour l'aide", f.EN)
+			}
+			continue
+		}
 		if !ok {
 			t.Errorf("%s : pas de documentation", f.EN)
 			continue
@@ -58,7 +64,7 @@ func TestFunctionDocs(t *testing.T) {
 		if strings.Contains(d.example, "[@") {
 			t.Errorf("%s : exemple %q avec @ (nomenclature sans @)", f.EN, d.example)
 		}
-		if f.EN != "HLOOKUP" && !strings.Contains(strings.ToUpper(d.example), f.FR+"(") {
+		if !strings.Contains(strings.ToUpper(d.example), f.FR+"(") {
 			t.Errorf("%s : l'exemple %q n'utilise pas %s", f.EN, d.example, f.FR)
 		}
 	}

@@ -22,7 +22,7 @@ func Functions(loc Locale) []FunctionInfo {
 	seen := map[string]bool{}
 	var out []FunctionInfo
 	for _, f := range funcIndex {
-		if seen[f.EN] {
+		if seen[f.EN] || refused[f.EN] {
 			continue
 		}
 		seen[f.EN] = true

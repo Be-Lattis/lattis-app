@@ -360,12 +360,6 @@ var docs = map[string]funcDoc{
 			docOpt("mode_correspondance", "0 : exacte, seule prise en charge."),
 			docOpt("mode_recherche", "Sens de la recherche ; ignoré (la clé est unique).")),
 		0, `=RECHERCHEX([IdClient]; Clients[Id]; Clients[Nom]; "inconnu")`},
-	"HLOOKUP": {catLookup, "Recherche horizontale d'Excel : refusée, les tableaux de Lattis sont orientés lignes (utilisez REFERENCE).",
-		docArgs(docArg("valeur_cherchée", "Valeur à trouver dans la première ligne."),
-			docArg("table_matrice", "Plage où chercher."),
-			docArg("no_index_lig", "Numéro de la ligne à renvoyer."),
-			docOpt("valeur_proche", "FAUX pour une correspondance exacte.")),
-		0, `=REFERENCE(Clients[Nom]; [IdClient])`},
 
 	// Géographie
 	"MUNICIPALITY": {catGeo, "Renvoie la commune française (métropole et outre-mer) qui contient un point GPS : nom, code INSEE, code postal, département ou région ; " +
