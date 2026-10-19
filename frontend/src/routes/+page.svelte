@@ -242,7 +242,7 @@
 			.then((v) => (rightsObjs = rightsObjects(v)))
 			.catch(() => (rightsObjs = []));
 	});
-	// Onglet SQL : vues donnees.* des données d'entreprise lisibles sur les
+	// Onglet SQL : vues donnees.* des données du Data Lake lisibles sur les
 	// serveurs connectés (un groupe par serveur), interrogées sur le serveur.
 	let dataGroups = $state<DataGroup[]>([]);
 	$effect(() => {
@@ -268,7 +268,7 @@
 		};
 	});
 	let openRemote = $state(false);
-	// Données d'entreprise : insertion (cellule visée) et partage d'un tableau.
+	// Données du Data Lake : insertion (cellule visée) et partage d'un tableau.
 	let dataInsert = $state<{ sheet: number; row: number; col: number } | null>(null);
 	let dataShare = $state<string | null>(null);
 	let shareReloading = $state(false);

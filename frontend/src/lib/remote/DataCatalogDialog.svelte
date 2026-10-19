@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Insertion › Donnée d'entreprise : le catalogue du serveur en arbre
+	// Insertion › Data Lake Lattis : le catalogue du serveur en arbre
 	// (dossiers, données lisibles et disponibles), avec recherche et aperçu
 	// des colonnes ; Insérer charge la donnée en tableau lié (lecture seule,
 	// à jour en direct) à la cellule active. Un publieur range données et
@@ -150,7 +150,7 @@
 		class="dialog"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Insérer une donnée d'entreprise"
+		aria-label="Insérer depuis le Data Lake Lattis"
 		tabindex="-1"
 		use:modal
 		onkeydown={(e) => {
@@ -158,7 +158,7 @@
 			if (e.key === 'Escape' && !busy) ondone(false);
 		}}
 	>
-		<header><Icon name="database" size={18} /><span>Donnée d'entreprise</span></header>
+		<header><Icon name="database" size={18} /><span>Data Lake Lattis</span></header>
 		<div class="body">
 			<div class="top">
 				{#if servers.length}

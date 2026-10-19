@@ -16,7 +16,7 @@ import (
 	"github.com/lalamefine/lattis/protocol"
 )
 
-// Données d'entreprise (contrat de lattisd, §9) côté application.
+// Données du Data Lake (contrat de lattisd, §9) côté application.
 //
 // Une donnée insérée dans un classeur est une requête Power Query sur une
 // connexion « Serveur Lattis » (SELECT … FROM donnees."<sql_name>"), dont le
@@ -31,7 +31,7 @@ import (
 // les données qu'il utilise (« Utilisée par ») et retire l'annonce quand le
 // tableau lié ou sa requête est supprimé (dataChanged).
 
-// DataCatalog lit le catalogue des données d'entreprise d'un serveur.
+// DataCatalog lit le catalogue du Data Lake Lattis d'un serveur.
 func (s *DocumentService) DataCatalog(ctx context.Context, server string) (protocol.DataCatalog, error) {
 	srv, _, _, err := remoteServer(ctx, server)
 	if err != nil {
@@ -56,8 +56,8 @@ type DataInsert struct {
 	Col     int    `json:"col"`
 }
 
-// InsertDataset insère une donnée d'entreprise comme tableau lié (Insérer ›
-// Donnée d'entreprise) : connexion au serveur (créée au besoin), requête,
+// InsertDataset insère une donnée du Data Lake comme tableau lié (Insérer ›
+// Donnée du Data Lake) : connexion au serveur (créée au besoin), requête,
 // premier chargement à la cellule donnée ; dans un classeur du même serveur,
 // le lien est annoncé (« Utilisée par », voir dataChanged).
 func (s *DocumentService) InsertDataset(ctx context.Context, in DataInsert) (QueryRefresh, error) {
@@ -84,7 +84,7 @@ func (s *DocumentService) InsertDataset(ctx context.Context, in DataInsert) (Que
 		}
 	}
 	if ds == nil || !ds.Readable || !ds.Available {
-		return QueryRefresh{}, errors.New("donnée d'entreprise introuvable ou indisponible")
+		return QueryRefresh{}, errors.New("donnée du Data Lake introuvable ou indisponible")
 	}
 	conn, err := s.lattisConnection(ctx, d, server, name)
 	if err != nil {
@@ -170,7 +170,7 @@ type dataWatch struct {
 // dataUse : une donnée d'un serveur utilisée par le classeur.
 type dataUse struct{ server, dataset string }
 
-// linkedData : requêtes du classeur qui lisent une donnée d'entreprise, par
+// linkedData : requêtes du classeur qui lisent une donnée du Data Lake, par
 // serveur.
 type linkedData struct {
 	query   int64
@@ -318,7 +318,7 @@ func (s *DocumentService) announceData(server, workbookID string, link, unlink [
 // dataRetry : nouvel essai après une coupure du suivi.
 var dataRetry = 30 * time.Second
 
-// watchData (re)lance le suivi des données d'entreprise du classeur d.
+// watchData (re)lance le suivi des données du Data Lake du classeur d.
 func (s *DocumentService) watchData(d *doc.Document) {
 	var used map[dataUse]bool
 	if d != nil {
@@ -427,7 +427,7 @@ func (s *DocumentService) followDataOnce(ctx context.Context, d *doc.Document, s
 				id := strings.TrimPrefix(payload, protocol.DataWithdrawn)
 				for _, l := range list {
 					if l.dataset == id {
-						d.Notify(fmt.Sprintf("Donnée d'entreprise « %s » : partage retiré par son propriétaire, la dernière copie reste", l.name))
+						d.Notify(fmt.Sprintf("Data Lake Lattis · « %s » : partage retiré par son propriétaire, la dernière copie reste", l.name))
 					}
 				}
 			case payload == protocol.DataCatalogChanged:

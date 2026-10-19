@@ -112,7 +112,7 @@ func (m *Model) ApplyRemote(ctx context.Context, tables []RemoteTable, keep func
 
 // rowIDs désigne la table des identifiants partagés des lignes : celle des
 // tableaux publiés (_lattis_row_ids, avec l'auteur), ou celle des tableaux
-// liés à une donnée d'entreprise (_lattis_data_rows, voir dataset.go).
+// liés à une donnée du Data Lake (_lattis_data_rows, voir dataset.go).
 type rowIDs struct {
 	table  string
 	author bool

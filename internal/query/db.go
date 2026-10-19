@@ -396,7 +396,7 @@ func SQLType(name string) grid.Type { return sqlType(name) }
 
 // StorageValue ramène une valeur lue par database/sql au stockage d'une
 // colonne de type t, comme le chargement d'une requête (relevés des
-// tableaux liés aux données d'entreprise).
+// tableaux liés aux données du Data Lake).
 func StorageValue(v any, t grid.Type) any { return dbValue(v, t) }
 
 // dbValue ramène une valeur lue par un pilote au stockage de son type

@@ -64,9 +64,9 @@
 		rights?: RightsObject[];
 		/** Propriétaire : ouvre l'écran Partager (modifier les droits). */
 		onrights?: () => void;
-		/** Données d'entreprise lisibles des serveurs connectés (vues donnees.*), un groupe par serveur. */
+		/** Données du Data Lake lisibles des serveurs connectés (vues donnees.*), un groupe par serveur. */
 		data?: DataGroup[];
-		/** Exécute une requête sur un serveur (vues donnees.*, SQL de PostgreSQL) ; absent : pas de données d'entreprise. */
+		/** Exécute une requête sur un serveur (vues donnees.*, SQL de PostgreSQL) ; absent : pas de données du Data Lake. */
 		rundata?: (server: string, sql: string) => Promise<Result>;
 	}
 
@@ -423,7 +423,7 @@
 				{#if rundata}
 					{#each data as g (g.server)}
 						{#if g.views.length}
-							<div class="rights-head"><span title={g.server}>Données d'entreprise · {g.label}</span></div>
+							<div class="rights-head"><span title={g.server}>Data Lake Lattis · {g.label}</span></div>
 							{#each g.views as v (v.name)}
 								{@const key = g.server + ' ' + v.name}
 								<div class="obj">

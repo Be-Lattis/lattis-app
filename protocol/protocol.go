@@ -158,7 +158,7 @@ type LoginSummary struct {
 	// ou publication ouverte à tous). Nil : serveur d'avant ce droit.
 	CanCreateWorkbooks *bool `json:"can_create_workbooks,omitempty"`
 	// DataPublisher : rôle « publieur de données » ; CanPublishData : peut
-	// partager des tableaux comme données d'entreprise (§9).
+	// partager des tableaux comme données du Data Lake (§9).
 	DataPublisher  bool  `json:"data_publisher"`
 	CanPublishData *bool `json:"can_publish_data,omitempty"`
 	// Workbooks : lattis.my_workbooks(), tel quel.
@@ -230,7 +230,7 @@ func ParseDesktopLink(raw string) (issuer, id string, err error) {
 	return strings.TrimRight(s.String(), "/"), strings.ToLower(id), nil
 }
 
-// --- Données d'entreprise (§9) -------------------------------------------------
+// --- Données du Data Lake (§9) -------------------------------------------------
 
 // DataCatalog est le résultat de lattis.data_catalog().
 type DataCatalog struct {
@@ -252,7 +252,7 @@ type DataFolder struct {
 	Audience []DataAudience `json:"audience,omitempty"`
 }
 
-// Dataset est une donnée d'entreprise : un tableau d'un classeur publié,
+// Dataset est une donnée du Data Lake : un tableau d'un classeur publié,
 // lisible par son audience dans la vue donnees."<SQLName>".
 type Dataset struct {
 	ID          string `json:"id"`
@@ -325,5 +325,5 @@ const (
 	DataVersion        = "*version:"
 )
 
-// DataSchema est le schéma PostgreSQL des vues des données d'entreprise.
+// DataSchema est le schéma PostgreSQL des vues des données du Data Lake.
 const DataSchema = "donnees"

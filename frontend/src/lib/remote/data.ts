@@ -1,5 +1,5 @@
-// Données d'entreprise (catalogue du serveur, protocol.DataCatalog) : types
-// et arbre des dossiers, pour Insertion › Donnée d'entreprise et le partage
+// Données du Data Lake (catalogue du serveur, protocol.DataCatalog) : types
+// et arbre des dossiers, pour Insertion › Data Lake Lattis et le partage
 // d'un tableau ; vues donnees.* pour l'onglet SQL.
 
 import type { ColumnType } from '#lib/grid/format.js';
@@ -118,14 +118,14 @@ export interface DataView {
 	columns: { name: string; type: ColumnType }[];
 }
 
-/** Données d'entreprise lisibles d'un serveur connecté (un groupe de l'onglet SQL). */
+/** Données du Data Lake lisibles d'un serveur connecté (un groupe de l'onglet SQL). */
 export interface DataGroup {
 	server: string;
 	label: string;
 	views: DataView[];
 }
 
-/** Schéma PostgreSQL des vues des données d'entreprise (protocol.DataSchema). */
+/** Schéma PostgreSQL des vues des données du Data Lake (protocol.DataSchema). */
 export const DATA_SCHEMA = 'donnees';
 
 /** Type Lattis d'une colonne d'une vue (type PostgreSQL du catalogue). */

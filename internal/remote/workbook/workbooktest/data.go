@@ -12,7 +12,7 @@ import (
 	"github.com/lalamefine/lattis/protocol"
 )
 
-// Données d'entreprise du serveur en mémoire : catalogue, dossiers et vues
+// Données du Data Lake du serveur en mémoire : catalogue, dossiers et vues
 // donnees.<sql_name> lues dans le tableau source. L'audience n'est pas
 // contrôlée (tout le monde lit) ; DataNotify envoie une notification.
 

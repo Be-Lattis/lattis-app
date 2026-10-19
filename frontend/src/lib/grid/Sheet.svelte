@@ -516,7 +516,7 @@
 		onsheet?: (sheet: number) => void;
 		/** Point de carte cliqué : aller à la ligne id du tableau (éventuellement sur une autre feuille). */
 		onrowlink?: (table: string, id: number) => void;
-		/** Partager le tableau comme donnée d'entreprise (clic droit sur un tableau). */
+		/** Partager le tableau au Data Lake Lattis (clic droit sur un tableau). */
 		onsharedata?: (table: string) => void;
 		/** Clic droit › « Demander à l'assistant… » (absent : entrée masquée). */
 		onask?: () => void;
@@ -8525,7 +8525,7 @@
 								<button title="Relance la requête « {t.query?.name} » (F5 dans le tableau)" onclick={() => menuAction(() => source.refreshTable!(t))}>Actualiser la requête</button>
 							{/if}
 							{#if share}
-								<button title="Rendre ce tableau lisible depuis d'autres classeurs du serveur (catalogue des données d'entreprise)" onclick={() => { const n = m.e.t.name; menu = null; onsharedata?.(n); }}>Partager comme donnée d'entreprise…</button>
+								<button title="Rendre ce tableau lisible depuis d'autres classeurs du serveur (catalogue du Data Lake Lattis)" onclick={() => { const n = m.e.t.name; menu = null; onsharedata?.(n); }}>Partager au Data Lake Lattis…</button>
 							{/if}
 							{#if source.convertToRange}
 								<button title="Le tableau devient des cellules libres, au même endroit" onclick={() => menuAction(() => source.convertToRange!(m.e.t))}>Convertir en plage</button>

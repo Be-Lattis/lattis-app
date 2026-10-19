@@ -103,7 +103,7 @@
 		/** Données › Convertir : assistant « Convertir le texte en colonnes ». */
 		ontextcols?: () => void;
 		onpivot?: () => void;
-		/** Insertion › Donnée d'entreprise (catalogue du serveur). */
+		/** Insertion › Data Lake Lattis (catalogue du serveur). */
 		oninsertdata?: () => void;
 		onformula?: (what: 'insert' | 'sum' | 'reference') => void;
 		onclip?: (what: 'cut' | 'copy' | 'paste') => void;
@@ -372,7 +372,7 @@
 				title: 'Tableaux',
 				commands: [
 					{ label: 'Tableau croisé', icon: 'pivot-table', run: onpivot, hint: 'Tableau croisé dynamique du tableau actif (double-clic sur un TCD pour le modifier)' },
-					...(sharedWorkbooksEnabled() ? [{ label: 'Donnée d’entreprise', icon: 'database' as const, run: oninsertdata, hint: 'Insérer à la cellule active une donnée du catalogue d’un Serveur Lattis : tableau lié, en lecture seule, à jour en direct' }] : [])
+					...(sharedWorkbooksEnabled() ? [{ label: 'Data Lake Lattis', icon: 'database' as const, run: oninsertdata, hint: 'Insérer à la cellule active une donnée du catalogue d’un Serveur Lattis : tableau lié, en lecture seule, à jour en direct' }] : [])
 				]
 			},
 			{

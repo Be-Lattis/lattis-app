@@ -18,7 +18,7 @@ import (
 type ImportTable struct {
 	Name     string // identifiant libre (voir TableNames)
 	Row, Col int    // ancre : cellule d'en-tête en haut à gauche
-	// At : premier chargement d'une requête à cet endroit (donnée d'entreprise
+	// At : premier chargement d'une requête à cet endroit (donnée du Data Lake
 	// insérée à la cellule active) ; nil : nouvelle feuille, en A1.
 	At      *QueryAnchor
 	Headers []string

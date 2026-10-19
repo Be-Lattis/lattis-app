@@ -76,7 +76,7 @@ type DocumentService struct {
 	ev    eventLoop  // évènements du classeur (events.go)
 	ai    aiState    // conversation de l'onglet IA (ai.go)
 	share shareState // classeur partagé : suivi du serveur (sharing.go)
-	data  dataWatch  // données d'entreprise liées : suivi en direct (data.go)
+	data  dataWatch  // données du Data Lake liées : suivi en direct (data.go)
 
 	// Classeur à ouvrir au lancement (association de fichiers, launch.go).
 	launch launchState
@@ -332,7 +332,7 @@ func (s *DocumentService) changed(ctx context.Context) (DocState, error) {
 	s.mu.Unlock()
 	// Classeur collaboratif : ce qui vient d'être fait part au serveur.
 	s.kickShare()
-	// Données d'entreprise insérées ou supprimées : suivi et « Utilisée par ».
+	// Données du Data Lake insérées ou supprimées : suivi et « Utilisée par ».
 	if d, err := s.current(); err == nil {
 		s.dataChanged(d)
 	}

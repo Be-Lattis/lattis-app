@@ -15,7 +15,7 @@ import (
 	"github.com/lalamefine/lattis/protocol"
 )
 
-// Relevé d'un tableau lié à une donnée d'entreprise (contrat de lattisd,
+// Relevé d'un tableau lié à une donnée du Data Lake (contrat de lattisd,
 // §9 : « comme un tableau collaboratif »). Au lieu de relire toute la
 // donnée à chaque notification, seules les lignes changées depuis le
 // dernier point de reprise (lattis_xid ≥ since) et les suppressions
@@ -151,7 +151,7 @@ func followable(q query.Query, ds protocol.Dataset) bool {
 }
 
 // QueryData exécute une requête de lecture de l'onglet SQL sur un Serveur
-// Lattis : vues donnees.* des données d'entreprise que l'utilisateur peut
+// Lattis : vues donnees.* des données du Data Lake que l'utilisateur peut
 // lire (filtrées par leur audience), dans une transaction en lecture seule
 // sous son identité. Le SQL est celui de PostgreSQL, sans les tableaux du
 // classeur.

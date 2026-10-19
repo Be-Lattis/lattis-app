@@ -23,7 +23,7 @@ Les [tableaux croisés](tcd) s'interrogent comme des tables. `Cell_A1` désigne 
 
 Trois listes : les **objets** du classeur (tableaux, TCD et leurs colonnes ; un clic va au tableau sur sa feuille), les **favoris** (requêtes enregistrées dans le classeur) et l'**historique**.
 
-Connecté à un Serveur Lattis, les objets montrent aussi ses **données d'entreprise** que vous pouvez lire, dans leur propre groupe : des vues `donnees.nom` (double-clic : exemple de requête). Une requête qui les cite s'exécute sur le serveur, en lecture seule et limitée aux lignes de votre audience ; elle s'écrit en SQL de PostgreSQL et ne peut pas citer les tableaux du classeur (pour les croiser, insérez la donnée dans le classeur : Insertion › Donnée d'entreprise).
+Connecté à un Serveur Lattis, les objets montrent aussi ses **données du Data Lake Lattis** que vous pouvez lire, dans leur propre groupe : des vues `donnees.nom` (double-clic : exemple de requête). Une requête qui les cite s'exécute sur le serveur, en lecture seule et limitée aux lignes de votre audience ; elle s'écrit en SQL de PostgreSQL et ne peut pas citer les tableaux du classeur (pour les croiser, insérez la donnée dans le classeur : Insertion › Data Lake Lattis).
 
 ## Envoyer le résultat sur une feuille
 

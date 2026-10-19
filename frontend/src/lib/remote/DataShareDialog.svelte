@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Clic droit sur un tableau › Partager comme donnée d'entreprise… : le
+	// Clic droit sur un tableau › Partager au Data Lake Lattis… : le
 	// tableau publié devient une donnée du catalogue du serveur, lisible
 	// depuis d'autres classeurs par son audience. La même boîte modifie une
 	// donnée existante (nom, dossier, colonnes, audience) et retire son
@@ -139,7 +139,7 @@
 		class="dialog"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Partager comme donnée d'entreprise"
+		aria-label="Partager au Data Lake Lattis"
 		tabindex="-1"
 		use:modal
 		onkeydown={(e) => {
@@ -147,7 +147,7 @@
 			if (e.key === 'Escape' && !busy) ondone();
 		}}
 	>
-		<header><Icon name="database" size={18} /><span>{ds ? `Donnée d'entreprise « ${ds.name} »` : `Partager « ${table} » comme donnée d'entreprise`}</span></header>
+		<header><Icon name="database" size={18} /><span>{ds ? `Data Lake Lattis · « ${ds.name} »` : `Partager « ${table} » au Data Lake Lattis`}</span></header>
 		<div class="body">
 			{#if !info}
 				<p class="muted">{error ? '' : 'Lecture du catalogue…'}</p>

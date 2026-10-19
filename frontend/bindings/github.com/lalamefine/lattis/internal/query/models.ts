@@ -239,13 +239,13 @@ export interface Source {
     "sql"?: string;
 
     /**
-     * Place : premier chargement à cet endroit (donnée d'entreprise insérée
+     * Place : premier chargement à cet endroit (donnée du Data Lake insérée
      * à la cellule active) ; absent : une nouvelle feuille.
      */
     "place"?: canvas$0.QueryAnchor | null;
 
     /**
-     * Dataset : donnée d'entreprise (identifiant au catalogue du serveur) que
+     * Dataset : donnée du Data Lake (identifiant au catalogue du serveur) que
      * la requête lit, suivie en direct.
      */
     "dataset"?: string;

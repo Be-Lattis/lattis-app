@@ -9,7 +9,7 @@ import (
 	"github.com/lalamefine/lattis/protocol"
 )
 
-// Partager un tableau comme donnée d'entreprise (clic droit sur un tableau),
+// Partager un tableau au Data Lake Lattis (clic droit sur un tableau),
 // et gérer les données qu'on gère (contrat de lattisd, §9).
 
 // DataShareInfo décrit ce qu'il faut pour partager un tableau : possible
@@ -48,7 +48,7 @@ func (s *DocumentService) DataShareInfo(ctx context.Context, table string) (Data
 	}
 	info := d.Share.Info()
 	if info == nil {
-		out.Reason = "Seul un tableau d'un classeur publié sur un Serveur Lattis se partage comme donnée d'entreprise : publiez d'abord le classeur (Fichier › Partager sur un serveur…)."
+		out.Reason = "Seul un tableau d'un classeur publié sur un Serveur Lattis se partage au Data Lake Lattis : publiez d'abord le classeur (Fichier › Partager sur un serveur…)."
 		return out, nil
 	}
 	if !info.CanDesign() {
@@ -88,7 +88,7 @@ func (s *DocumentService) DataShareInfo(ctx context.Context, table string) (Data
 		return out, err
 	}
 	if !out.Catalog.CanPublish {
-		out.Reason = "Votre compte ne partage pas de données d'entreprise sur ce serveur : demandez à son propriétaire le rôle « publieur de données »."
+		out.Reason = "Votre compte ne partage pas au Data Lake Lattis sur ce serveur : demandez à son propriétaire le rôle « publieur de données »."
 		return out, nil
 	}
 	for i := range out.Catalog.Datasets {
@@ -131,7 +131,7 @@ type DataShare struct {
 	Remove []string            `json:"remove"`
 }
 
-// ShareDataset partage un tableau comme donnée d'entreprise, ou modifie la
+// ShareDataset partage un tableau au Data Lake Lattis, ou modifie la
 // donnée qui le partage ; rend son identifiant. Une entrée d'audience
 // refusée (adresse sans compte) est signalée après coup : le reste est
 // enregistré.

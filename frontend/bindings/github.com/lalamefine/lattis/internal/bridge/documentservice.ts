@@ -354,7 +354,7 @@ export function CreatePivot(cfg: canvas$0.PivotConfig): $CancellablePromise<numb
 }
 
 /**
- * DataCatalog lit le catalogue des données d'entreprise d'un serveur.
+ * DataCatalog lit le catalogue du Data Lake Lattis d'un serveur.
  */
 export function DataCatalog(server: string): $CancellablePromise<protocol$0.DataCatalog> {
     return $Call.ByID(3706784597, server);
@@ -703,8 +703,8 @@ export function InsertColumn(table: string, i: number, name: string): $Cancellab
 }
 
 /**
- * InsertDataset insère une donnée d'entreprise comme tableau lié (Insérer ›
- * Donnée d'entreprise) : connexion au serveur (créée au besoin), requête,
+ * InsertDataset insère une donnée du Data Lake comme tableau lié (Insérer ›
+ * Donnée du Data Lake) : connexion au serveur (créée au besoin), requête,
  * premier chargement à la cellule donnée ; dans un classeur du même serveur,
  * le lien est annoncé (« Utilisée par », voir dataChanged).
  */
@@ -1151,7 +1151,7 @@ export function Query(q: string): $CancellablePromise<grid$0.QueryResult> {
 
 /**
  * QueryData exécute une requête de lecture de l'onglet SQL sur un Serveur
- * Lattis : vues donnees.* des données d'entreprise que l'utilisateur peut
+ * Lattis : vues donnees.* des données du Data Lake que l'utilisateur peut
  * lire (filtrées par leur audience), dans une transaction en lecture seule
  * sous son identité. Le SQL est celui de PostgreSQL, sans les tableaux du
  * classeur.
@@ -1659,7 +1659,7 @@ export function ShareCreateRole(name: string): $CancellablePromise<$models.Right
 }
 
 /**
- * ShareDataset partage un tableau comme donnée d'entreprise, ou modifie la
+ * ShareDataset partage un tableau au Data Lake Lattis, ou modifie la
  * donnée qui le partage ; rend son identifiant. Une entrée d'audience
  * refusée (adresse sans compte) est signalée après coup : le reste est
  * enregistré.

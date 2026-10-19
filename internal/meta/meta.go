@@ -384,7 +384,7 @@ CREATE TABLE _lattis_capabilities (
 	restrictions TEXT
 ) STRICT;
 `,
-	// 28 → 29 : tableaux liés à une donnée d'entreprise (requête sur une vue
+	// 28 → 29 : tableaux liés à une donnée du Data Lake (requête sur une vue
 	// donnees.* d'un Serveur Lattis, internal/bridge/data_sync.go), tenus à
 	// jour par relevés incrémentaux hors du journal d'annulation.
 	//

@@ -13,7 +13,7 @@ import (
 	"github.com/lalamefine/lattis/protocol"
 )
 
-// Relevé incrémental des données d'entreprise (DatasetDelta), requêtes de
+// Relevé incrémental des données du Data Lake (DatasetDelta), requêtes de
 // l'onglet SQL (DataQuery), et de quoi les essayer sans publier de classeur :
 // SeedDataset crée un classeur, son tableau et la donnée qui le partage ;
 // DataPut, DataDelete et DataHide écrivent dans le tableau source comme une

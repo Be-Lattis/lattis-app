@@ -12,7 +12,7 @@ import (
 	"github.com/lalamefine/lattis/protocol"
 )
 
-// Données d'entreprise (contrat client de lattisd, §9 ; migration 0018) :
+// Données du Data Lake (contrat client de lattisd, §9 ; migration 0018) :
 // catalogue, partage d'un tableau, audience, et lecture des vues
 // donnees."<sql_name>".
 
@@ -85,7 +85,7 @@ type DataResult struct {
 	Truncated bool
 }
 
-// Data est l'API des données d'entreprise.
+// Data est l'API des données du Data Lake.
 type Data interface {
 	DataCatalog(ctx context.Context) (protocol.DataCatalog, error)
 	CreateDataFolder(ctx context.Context, name, parentID string) (string, error)

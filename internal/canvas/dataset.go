@@ -9,7 +9,7 @@ import (
 	"github.com/lalamefine/lattis/internal/command"
 )
 
-// Tableaux liés à une donnée d'entreprise (requête sur une vue donnees.*
+// Tableaux liés à une donnée du Data Lake (requête sur une vue donnees.*
 // d'un Serveur Lattis) : après le premier chargement, les relevés du
 // serveur (lignes changées, supprimées) s'appliquent ici, comme les
 // changements reçus d'un classeur collaboratif (remote.go) : hors du journal
@@ -22,7 +22,7 @@ var datasetIDs = rowIDs{table: "_lattis_data_rows"}
 // ErrDataGap : après un relevé, la copie locale n'a pas autant de lignes
 // que la vue du serveur (ligne sortie de l'audience, relevé manqué, ligne
 // refusée) ; rien n'est appliqué, il faut tout relire.
-var ErrDataGap = errors.New("copie locale de la donnée d'entreprise incomplète : relecture complète")
+var ErrDataGap = errors.New("copie locale de la donnée du Data Lake incomplète : relecture complète")
 
 // DatasetTable décrit le tableau chargé par une requête liée à une donnée.
 type DatasetTable struct {

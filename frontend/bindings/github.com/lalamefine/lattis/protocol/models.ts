@@ -91,7 +91,7 @@ export interface DataUse {
 }
 
 /**
- * Dataset est une donnée d'entreprise : un tableau d'un classeur publié,
+ * Dataset est une donnée du Data Lake : un tableau d'un classeur publié,
  * lisible par son audience dans la vue donnees."<SQLName>".
  */
 export interface Dataset {
