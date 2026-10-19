@@ -37,6 +37,7 @@
 	import { freeDisplay } from './freecell';
 	import { bandAt, bandLabel, bandOpen, bandRefusal, hiddenBand } from './hidden';
 	import { choiceHiddenCols, type TabChoice } from '#lib/shell/choice.js';
+	import { editMode, viewKey } from './readonlyedit';
 	import { bandMerges, groupSpans, headerLabel, isSingle, spanAt, splitGroup, tableTop } from './twolevel';
 	import { grown as growFrame, type Grown } from './grown';
 	import { pivotLayer, pivotValueText } from './pivotformat';
@@ -1795,6 +1796,12 @@
 	let editing = $state(false);
 	let editByTyping = false;
 	let editValueText = $state('');
+	// Éditeur ouvert en lecture seule (readonlyedit.ts) : pourquoi la cellule
+	// ne se modifie pas ; '' pour une saisie normale.
+	let editRO = $state('');
+	// Barre de formule sur une cellule en lecture seule : son texte se
+	// sélectionne et se copie, sans se modifier (même motif).
+	let fxRO = $state('');
 	let fxText = $state('');
 	let fxInput = $state<HTMLInputElement>();
 	// Zone de nom d'une cellule libre (nom refusé : la saisie y reprend).
@@ -1885,6 +1892,8 @@
 	// gardée), un clic y insère la référence au curseur, Entrée la valide dans
 	// sa cellule et Échap l'abandonne, en revenant à sa feuille.
 	let hold = $state.raw<FormulaHold | null>(null);
+	/** Motif de lecture seule de la barre de formule ('' : modifiable, comme pendant une formule pointée sur une autre feuille). */
+	const fxLock = $derived(hold ? '' : locked || fxRO);
 	// Appui en cours sur un onglet de feuille : le départ du focus de l'éditeur ne valide pas la formule.
 	let tabPress = false;
 	$effect(() => {
@@ -1908,6 +1917,11 @@
 			return;
 		}
 		if (!editing && !fxEditing) return;
+		// Éditeur en lecture seule : rien à garder, il se referme.
+		if (editing && editRO) {
+			editing = false;
+			return;
+		}
 		const el = editing ? input : fxInput;
 		const text = editing ? editValueText : fxText;
 		const h = holdFormula({ sheet: from, row: active.row, col: active.col, where: editing ? 'cell' : 'fx' }, text, el?.selectionStart ?? null, el?.selectionEnd ?? null);
@@ -2036,13 +2050,13 @@
 
 	// Barre de formule : une formule y est colorée comme dans l'éditeur.
 	const fxHl = $derived(isFormula(fxText));
-	const formulaMode = $derived((editing && editValueText.trimStart().startsWith('=')) || (fxEditing && fxText.trimStart().startsWith('=')));
+	const formulaMode = $derived((editing && !editRO && editValueText.trimStart().startsWith('=')) || (fxEditing && fxText.trimStart().startsWith('=')));
 	const a1 = $derived(headings || formulaMode);
 	// Formule d'une colonne de tableau en cours d'édition : elle s'appliquera
 	// à toute la colonne, teintée dès le focus (avec ƒx dans l'en-tête et un
 	// bandeau dans la barre de formule).
 	const calcEdit = $derived.by(() => {
-		if (!editing && !fxEditing) return null;
+		if ((!editing && !fxEditing) || (editing && editRO)) return null;
 		const e = tableAt(active.row, active.col);
 		if (!e || active.row <= e.t.row) return null;
 		const i = active.col - e.t.col;
@@ -5891,7 +5905,8 @@
 		if (multi && (dragging || headerDrag)) nameBox = `${sel.r1 - sel.r0 + 1}L × ${sel.c1 - sel.c0 + 1}C`;
 		refreshSpeech(e, sel, multi);
 		if (fxEditing) return;
-		fxText = cellInfo(active.row, active.col).value;
+		fxRO = readOnlyReason(active.row, active.col);
+		fxText = editText(active.row, active.col);
 	}
 
 	/** Ce que le lecteur d'écran dit de la cellule active (a11y.ts). */
@@ -7276,28 +7291,39 @@
 
 	// --- Édition ------------------------------------------------------------
 
-	function startEdit(byTyping: boolean, initial?: string) {
-		if (locked) {
-			say(locked);
-			return;
-		}
+	/**
+	 * Pourquoi la cellule ne se modifie pas ('' si elle se modifie) : feuille
+	 * protégée, tableau publié figé, ligne d'un autre membre, tableau croisé,
+	 * tableau chargé par une requête (hors colonnes saisies). Elle s'ouvre
+	 * alors en lecture seule (double clic, F2, barre de formule), pour copier.
+	 */
+	function readOnlyReason(r: number, c: number): string {
+		if (locked) return locked;
 		// Tableau publié en lecture seule (classeur partagé figé, hors ligne).
-		const ro = ownerAt(active.row, active.col)?.t.readOnly;
-		if (ro) {
-			say(ro);
-			return;
-		}
+		const ro = ownerAt(r, c)?.t.readOnly;
+		if (ro) return ro;
 		// Participant (classeur collaboratif) : les lignes des autres membres.
-		if (lockedRowAt(active.row, active.col)) {
-			say(NOT_YOURS);
+		if (lockedRowAt(r, c)) return NOT_YOURS;
+		if (pivotAt(r, c)) return PIVOT_READONLY;
+		if (queryAt(r, c)) return QUERY_READONLY;
+		return '';
+	}
+
+	/** Texte de la cellule dans l'éditeur et la barre de formule (un tableau croisé : sa valeur affichée). */
+	function editText(r: number, c: number): string {
+		const v = cellInfo(r, c).value;
+		return v === '' && pivotAt(r, c) ? shownValue(r, c) : v;
+	}
+
+	function startEdit(byTyping: boolean, initial?: string) {
+		const reason = readOnlyReason(active.row, active.col);
+		const mode = editMode(reason, byTyping);
+		if (mode === 'refuse') {
+			say(reason);
 			return;
 		}
-		if (pivotAt(active.row, active.col)) {
-			say(PIVOT_READONLY);
-			return;
-		}
-		if (queryAt(active.row, active.col)) {
-			say(QUERY_READONLY);
+		if (mode === 'view') {
+			openReadOnly(reason);
 			return;
 		}
 		const band = bandAt(
@@ -7328,13 +7354,53 @@
 		}
 		// L'éditeur doit avoir le focus avant la frappe suivante : sinon une
 		// saisie rapide perdrait des caractères.
-		flushSync(() => (editing = true));
+		flushSync(() => {
+			editRO = '';
+			editing = true;
+		});
 		ensureVisible(active.row, active.col);
 		if (!input) return;
 		placeEditor();
 		input.focus();
 		const n = input.value.length;
 		input.setSelectionRange(n, n);
+	}
+
+	/**
+	 * Double clic ou F2 sur une cellule en lecture seule (readonlyedit.ts) :
+	 * l'éditeur s'ouvre sur son texte, à sélectionner et copier ; rien ne s'y
+	 * saisit, la barre d'état dit pourquoi.
+	 */
+	function openReadOnly(reason: string) {
+		const info = cellInfo(active.row, active.col);
+		if (info.kind === 'data' && !info.row) return; // ligne pas encore chargée
+		editRange = null;
+		anchor = { ...active };
+		editByTyping = false;
+		editValueText = editText(active.row, active.col);
+		flushSync(() => {
+			editRO = reason;
+			editing = true;
+		});
+		say(reason);
+		ensureVisible(active.row, active.col);
+		if (!input) return;
+		placeEditor();
+		input.focus();
+		const n = input.value.length;
+		input.setSelectionRange(n, n);
+	}
+
+	/** Referme l'éditeur en lecture seule, sans rien écrire ni message de refus. */
+	function closeReadOnly(focusGrid = true) {
+		if (message === editRO) say('');
+		editing = false;
+		editRO = '';
+		editErr = null;
+		completion = sig = null;
+		refreshFx();
+		if (focusGrid) wrap.focus();
+		schedule();
 	}
 
 	function placeEditor() {
@@ -7377,7 +7443,8 @@
 	// source, et libérée une fois la saisie écrite (ou abandonnée).
 	let editingAt: { row: number; col: number } | null = null;
 	$effect(() => {
-		const on = editing;
+		// Éditeur en lecture seule : rien ne se saisit, rien à signaler.
+		const on = editing && !editRO;
 		if (!source.editing) return;
 		if (on && !editingAt) {
 			editingAt = { row: active.row, col: active.col };
@@ -7490,6 +7557,11 @@
 
 	function commit(): boolean {
 		if (!editing) return true;
+		// Lecture seule : rien à valider, l'éditeur se referme.
+		if (editRO) {
+			closeReadOnly();
+			return true;
+		}
 		if (nameAlertOpen()) return false;
 		if (isFormula(editValueText)) {
 			const text = closeParens(editValueText);
@@ -7610,6 +7682,10 @@
 	}
 
 	function cancel() {
+		if (editRO) {
+			closeReadOnly();
+			return;
+		}
 		editing = false;
 		editErr = null;
 		refreshFx(); // la barre de formule reprend le contenu de la cellule
@@ -7715,6 +7791,22 @@
 	}
 
 	function onEditorKey(e: KeyboardEvent) {
+		if (editRO) {
+			// Lecture seule : copier, sélectionner, déplacer le curseur ; rien d'autre.
+			e.stopPropagation();
+			const k = viewKey(e);
+			if (k === 'native') return;
+			e.preventDefault();
+			if (k === 'close') closeReadOnly();
+			else if (k === 'enter') {
+				closeReadOnly();
+				enterMove(e.shiftKey);
+			} else if (k === 'tab') {
+				closeReadOnly();
+				tabMove(e.shiftKey);
+			}
+			return;
+		}
 		if (input && completionKey(e, input, (v) => (editValueText = v))) return;
 		e.stopPropagation();
 		const { row, col } = active;
@@ -7782,6 +7874,14 @@
 			// abandonnée (Échap) en revenant à sa feuille, comme Excel.
 			e.preventDefault();
 			finishHold(e.key === 'Enter' ? 'commit' : 'cancel');
+			return;
+		}
+		if (fxLock && !fxEditing) {
+			// Lecture seule : Entrée ou Échap rendent la main à la grille, sans rien changer.
+			if (e.key === 'Enter' || e.key === 'Escape') {
+				e.preventDefault();
+				wrap.focus();
+			}
 			return;
 		}
 		if (e.key === 'Escape') {
@@ -9138,14 +9238,20 @@
 				fxScroll = e.currentTarget.scrollLeft;
 			}}
 			onkeyup={(e) => {
-				moveSig(e, 'fx');
+				if (!fxLock) moveSig(e, 'fx');
 				fxScroll = e.currentTarget.scrollLeft;
 			}}
-			onclick={(e) => moveSig(e, 'fx')}
+			onclick={(e) => !fxLock && moveSig(e, 'fx')}
 			onscroll={(e) => (fxScroll = e.currentTarget.scrollLeft)}
-			readonly={!!locked && !hold}
+			class:ro={!!fxLock}
+			readonly={!!fxLock}
+			aria-readonly={!!fxLock}
+			title={fxLock || undefined}
+			onpaste={(e) => fxLock && e.preventDefault()}
+			oncut={(e) => fxLock && e.preventDefault()}
 			onfocus={() => {
-				if (locked && !hold) say(locked);
+				// Cellule en lecture seule : le texte se sélectionne et se copie, sans se modifier.
+				if (fxLock) say(fxLock);
 				else fxEditing = true;
 			}}
 			onkeydown={onFxKey}
@@ -9247,8 +9353,12 @@
 				/>
 			</div>
 			{#if editing}
-				{@const hl = isFormula(editValueText)}
-				<div class="editor-box">
+				{@const hl = !editRO && isFormula(editValueText)}
+				<div class="editor-box" class:ro={!!editRO}>
+					{#if editRO}
+						<!-- Lecture seule : le texte se sélectionne et se copie, sans se modifier. -->
+						<span class="editor-ro" aria-hidden="true">lecture seule</span>
+					{/if}
 					{#if hl}
 						<!-- Formule : texte coloré sous la zone de saisie (transparente). -->
 						<div class="editor-hl" aria-hidden="true">{@render coloured(editValueText)}</div>
@@ -9259,13 +9369,24 @@
 						rows="1"
 						spellcheck="false"
 						bind:this={input}
+						class:ro={!!editRO}
+						readonly={!!editRO}
+						aria-readonly={!!editRO}
 						bind:value={editValueText}
 						oninput={(e) => onFormulaInput(e.currentTarget, 'cell')}
-						onkeyup={(e) => moveSig(e, 'cell')}
-						onclick={(e) => moveSig(e, 'cell')}
+						onkeyup={(e) => !editRO && moveSig(e, 'cell')}
+						onclick={(e) => !editRO && moveSig(e, 'cell')}
+						onpaste={(e) => editRO && e.preventDefault()}
+						oncut={(e) => editRO && e.preventDefault()}
+						ondrop={(e) => editRO && e.preventDefault()}
 						onkeydown={onEditorKey}
 						onblur={() => {
 							completion = sig = null;
+							// Lecture seule : le focus parti ailleurs referme l'éditeur, sans rien écrire.
+							if (editRO) {
+								closeReadOnly(false);
+								return;
+							}
 							// Boîte « nom invalide » ouverte : la saisie reprend à sa fermeture.
 							if (nameAlertOpen()) return;
 							// Clic sur un onglet de feuille : la formule est gardée pour pointer sur l'autre feuille.
@@ -9286,7 +9407,8 @@
 								schedule();
 							}
 						}}
-						title={(() => {
+						title={editRO ||
+							(() => {
 							const e = tableAt(active.row, active.col);
 							return e ? typeLabel(e.t.columns[active.col - e.t.col].type) : 'Cellule libre';
 						})()}
@@ -10261,7 +10383,7 @@
 				</div>
 			</div>
 		{/if}
-		{#if editing && (completion?.where === 'cell' || sig?.where === 'cell' || isFormula(editValueText))}
+		{#if editing && !editRO && (completion?.where === 'cell' || sig?.where === 'cell' || isFormula(editValueText))}
 			<div
 				class="suggest"
 				style:left="{suggestPos.x}px"
@@ -11146,6 +11268,31 @@
 		outline: none;
 		background: transparent;
 		color: #1f2328;
+	}
+	/* Éditeur en lecture seule (readonlyedit.ts) : fond grisé, bordure neutre,
+	   mention « lecture seule » au-dessus ; le texte se sélectionne et se copie. */
+	.editor-box.ro {
+		border-color: #8c959f;
+		background: #f3f4f6;
+	}
+	.editor.ro {
+		color: #57606a;
+		cursor: text;
+	}
+	.editor-ro {
+		position: absolute;
+		right: -2px;
+		bottom: 100%;
+		padding: 0 5px;
+		background: #8c959f;
+		color: #fff;
+		font: 10px/14px 'Segoe UI', system-ui, -apple-system, sans-serif;
+		white-space: nowrap;
+		pointer-events: none;
+	}
+	.fx-input.ro {
+		background: #f3f4f6;
+		color: #57606a;
 	}
 	.editor.hl,
 	.fx-input.hl {
