@@ -1,3 +1,9 @@
+<script lang="ts" module>
+	// Sous-menu ouvert de chaque menu : en ouvrir un autre le ferme aussitôt
+	// (jamais deux sous-menus l'un sur l'autre).
+	const openIn = new WeakMap<Element, () => void>();
+</script>
+
 <script lang="ts">
 	// Sous-menu d'un menu contextuel (comme Excel) : s'ouvre au survol, au clic,
 	// par Entrée ou → ; ← le referme et rend le focus à son entrée. Posé à
@@ -37,6 +43,12 @@
 	function show(focus: boolean) {
 		clearTimeout(timer);
 		if (disabled) return;
+		const menu = item?.parentElement?.closest('[role="menu"]');
+		if (menu) {
+			const other = openIn.get(menu);
+			if (other && other !== close) other();
+			openIn.set(menu, close);
+		}
 		open = true;
 		if (focus)
 			tick().then(() => {
@@ -44,6 +56,8 @@
 				if (panel) own(panel)[0]?.focus({ preventScroll: true });
 			});
 	}
+
+	const close = () => hide();
 
 	function hide(refocus = false) {
 		clearTimeout(timer);
@@ -79,8 +93,8 @@
 	role="none"
 	data-shed={shed}
 	onmouseenter={() => {
-		clearTimeout(timer);
-		timer = setTimeout(() => show(false), 80);
+		// Tout de suite (Louis) : un délai laissait deux sous-menus se chevaucher.
+		show(false);
 	}}
 	onmouseleave={() => {
 		clearTimeout(timer);
