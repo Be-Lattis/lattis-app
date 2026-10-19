@@ -31,6 +31,7 @@
 	import { pageAction, type PageAction, type PageSetup, type PageSetupTab } from '#lib/shell/pagesetup.js';
 	import type { PageBreaks } from '#bindings/internal/transfer/models.js';
 	import SqlView, { type Favorite } from '#lib/shell/SqlView.svelte';
+	import { keepMounted, keptFor } from '#lib/shell/keep.js';
 	import AiPanel from '#lib/ai/AiPanel.svelte';
 	import { chat as aiChat, openAssistant } from '#lib/ai/state.svelte.js';
 	import McpConfirm from '#lib/shell/McpConfirm.svelte';
@@ -89,6 +90,16 @@
 	let mode = $state<Mode>('starting');
 	let bench = $state(false);
 	let view = $state<View>('grid');
+	// Classeur affiché : sa génération avance à chaque classeur ouvert, créé ou
+	// fermé ; l'onglet SQL, gardé monté (caché) d'une vue à l'autre, repart à
+	// zéro sur un autre classeur (lib/shell/keep.ts).
+	let workbook = $state(0);
+	let sqlKept = $state<number | null>(null);
+	$effect.pre(() => {
+		const shown = view === 'sql';
+		const gen = workbook;
+		untrack(() => (sqlKept = keptFor(sqlKept, shown, gen)));
+	});
 	let failure = $state('');
 	let notice = $state('');
 	// Message de la barre d'état : effacé seul au bout d'un moment (noticeTtl),
@@ -281,8 +292,14 @@
 	let rightsObjs = $state<RightsObject[]>([]);
 	$effect(() => {
 		const sh = share;
-		if (view !== 'sql' || mode !== 'doc' || !sh?.shared) {
+		if (mode !== 'doc' || !sh?.shared) {
 			rightsObjs = [];
+			return;
+		}
+		// Hors de l'onglet SQL (gardé monté, caché) : la liste reste, relue au
+		// retour ; celle d'un autre classeur est oubliée.
+		if (view !== 'sql') {
+			if (sqlKept !== workbook) rightsObjs = [];
 			return;
 		}
 		DocumentService.ShareRights(!!sh.canManage && sh.online)
@@ -293,8 +310,12 @@
 	// serveurs connectés (un groupe par serveur), interrogées sur le serveur.
 	let dataGroups = $state<DataGroup[]>([]);
 	$effect(() => {
-		if (view !== 'sql' || mode !== 'doc') {
+		if (mode !== 'doc') {
 			dataGroups = [];
+			return;
+		}
+		if (view !== 'sql') {
+			if (sqlKept !== workbook) dataGroups = [];
 			return;
 		}
 		let stale = false;
@@ -535,6 +556,7 @@
 		view = 'grid';
 		sheetId = 1;
 		mode = 'doc';
+		workbook++;
 		queryHost?.closePanel();
 		await reload();
 		await keepSheet();
@@ -586,6 +608,7 @@
 			view = 'grid';
 			sheetId = 1;
 			mode = 'doc';
+			workbook++;
 			queryHost?.closePanel(); // volet du classeur quitté
 			mergePlan = mergeOffer = null;
 			await reload();
@@ -645,6 +668,7 @@
 		view = 'grid';
 		sheetId = 1;
 		mode = 'doc';
+		workbook++;
 		await reload();
 		notice = r.report;
 	}
@@ -683,6 +707,7 @@
 		sheetStatus = null;
 		view = 'grid';
 		mode = 'closed';
+		workbook++;
 		if (quitting) {
 			quitting = false;
 			await DocumentService.QuitApp();
@@ -714,6 +739,7 @@
 		mode = 'doc';
 		view = 'grid';
 		sheetId = 1;
+		workbook++;
 		queryHost?.closePanel();
 		await DocumentService.New();
 		await reload();
@@ -734,6 +760,7 @@
 			view = 'grid';
 			sheetId = r.sheet;
 			mode = 'doc';
+			workbook++;
 			await reload();
 		} finally {
 			waiting = false;
@@ -761,6 +788,7 @@
 
 	async function startDemo() {
 		mode = 'demo';
+		workbook++;
 		const poll = async () => {
 			const s = await GridService.Status();
 			if (s.state === 'ready') {
@@ -1216,6 +1244,7 @@
 		try {
 			if (keep) {
 				mode = 'doc';
+				workbook++;
 				await reload();
 				// Fichier verrouillé ou modifié par un autre poste depuis la session : dit aussi.
 				notice = ['Modifications récupérées : pensez à enregistrer.', st?.notice].filter(Boolean).join(' ');
@@ -2038,8 +2067,10 @@
 					</div>
 				{/key}
 			{/if}
-			{#if view === 'sql'}
-				<div class="pane" data-region="grid"><SqlView {objects} data={dataGroups} rundata={mode === 'doc' ? (server, q) => DocumentService.QueryData(server, q) : undefined} rights={rightsObjs} onrights={canRights && share?.canManage ? () => (rightsOpen = true) : undefined} run={query} exec={mode === 'doc' ? (q) => DocumentService.Execute(q) : undefined} stop={mode === 'doc' ? () => void DocumentService.StopSQL() : undefined} ongoto={gotoObject}
+			{#if keepMounted(sqlKept, view === 'sql', workbook)}
+				<!-- Onglet SQL gardé monté, caché hors de la vue SQL : on le retrouve tel qu'on l'a quitté. -->
+				{#key workbook}
+				<div class="pane" data-region="grid" class:hidden={view !== 'sql'}><SqlView active={view === 'sql'} {objects} data={dataGroups} rundata={mode === 'doc' ? (server, q) => DocumentService.QueryData(server, q) : undefined} rights={rightsObjs} onrights={canRights && share?.canManage ? () => (rightsOpen = true) : undefined} run={query} exec={mode === 'doc' ? (q) => DocumentService.Execute(q) : undefined} stop={mode === 'doc' ? () => void DocumentService.StopSQL() : undefined} ongoto={gotoObject}
 						onrename={mode === 'doc'
 							? async (from, to) => {
 									docState = await DocumentService.RenameTable(from, to);
@@ -2077,7 +2108,9 @@
 								}
 							: undefined}
 					/></div>
-			{:else if view === 'script'}
+				{/key}
+			{/if}
+			{#if view === 'script'}
 				<div class="pane" data-region="grid">
 					{#if mode === 'doc'}
 						<ScriptView

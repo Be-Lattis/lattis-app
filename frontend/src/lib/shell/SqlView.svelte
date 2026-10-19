@@ -70,9 +70,36 @@
 		data?: DataGroup[];
 		/** Exécute une requête sur un serveur (vues donnees.*, SQL de PostgreSQL) ; absent : pas de données du Data Lake. */
 		rundata?: (server: string, sql: string) => Promise<Result>;
+		/**
+		 * Vue affichée. L'onglet reste monté (caché) quand on passe à une autre
+		 * vue : texte, curseur et annulation de l'éditeur, résultat, défilements
+		 * et liste des objets se retrouvent tels quels au retour (lib/shell/keep.ts).
+		 */
+		active?: boolean;
 	}
 
-	let { objects, run, exec, stop, ongoto, favorites, tosheet, onrename, rights = [], onrights, data = [], rundata }: Props = $props();
+	let { objects, run, exec, stop, ongoto, favorites, tosheet, onrename, rights = [], onrights, data = [], rundata, active = true }: Props = $props();
+
+	// Vue cachée : menu fermé, focus rendu (les raccourcis de l'éditeur ne
+	// s'appliquent plus) ; de retour, le focus revient où il était (éditeur,
+	// recherche de l'historique…), curseur et sélection compris.
+	let root = $state<HTMLDivElement>();
+	let lastFocus: HTMLElement | null = null;
+	let wasActive: boolean | undefined;
+	$effect(() => {
+		const on = active;
+		const was = wasActive;
+		wasActive = on;
+		if (was === undefined || on === was) return;
+		if (!on) {
+			objMenu = null;
+			const a = document.activeElement;
+			if (a instanceof HTMLElement && root?.contains(a)) a.blur();
+			return;
+		}
+		const el = lastFocus;
+		if (el?.isConnected && root?.contains(el)) requestAnimationFrame(() => el.focus({ preventScroll: true }));
+	});
 	let rightsOpen = $state<string | null>(null);
 	// Vue donnees.* dépliée (serveur et nom).
 	let dataOpen = $state<string | null>(null);
@@ -389,7 +416,7 @@
 	const cell = (v: unknown) => (v === null || v === undefined ? '' : typeof v === 'number' ? formatValue('decimal', v).replace(/,00$/, '') : String(v));
 </script>
 
-<div class="sql">
+<div class="sql" bind:this={root} onfocusin={(e) => (lastFocus = e.target instanceof HTMLElement ? e.target : null)}>
 	<aside class="side">
 		<div class="tabs" role="tablist">
 			<button role="tab" aria-selected={panel === 'objects'} class:on={panel === 'objects'} onclick={() => (panel = 'objects')}>Objets</button>
