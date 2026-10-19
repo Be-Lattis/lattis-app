@@ -58,6 +58,9 @@ type ChartConfig struct {
 	// ColorBy : carte de points, colonne dont chaque valeur distincte prend
 	// sa couleur (ChartInfo.Categories et Groups) ; vide : une seule couleur.
 	ColorBy string `json:"colorBy,omitempty"`
+	// MapScale : carte de points, facteur de taille des points (0 ou absent :
+	// 1 ; la valeur règle déjà la taille relative).
+	MapScale float64 `json:"mapScale,omitempty"`
 	// Bins : histogramme de fréquences, nombre de classes (0 : automatique).
 	Bins int `json:"bins,omitempty"`
 	// Hidden : lit aussi les lignes masquées par le filtre du tableau (option

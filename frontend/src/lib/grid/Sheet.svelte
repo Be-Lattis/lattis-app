@@ -235,6 +235,8 @@
 		mapView?: { lat: number; lon: number; zoom: number };
 		/** Carte de points : colonne dont chaque valeur distincte prend sa couleur. */
 		colorBy?: string;
+		/** Carte de points : facteur de taille des points (absent : 1). */
+		mapScale?: number;
 		/** Fréquences : nombre de classes (absent : automatique). */
 		bins?: number;
 		/** Lit aussi les lignes masquées par le filtre du tableau. */

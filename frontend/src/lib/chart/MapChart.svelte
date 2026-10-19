@@ -40,7 +40,7 @@
 		series: { name: string; values: (number | null)[] }[];
 		width: number;
 		height: number;
-		style?: { title?: string; mapMode?: string; colors?: string[]; labels?: boolean; mapDraft?: boolean; mapView?: MapCam | null; colorBy?: string; legend?: string };
+		style?: { title?: string; mapMode?: string; colors?: string[]; labels?: boolean; mapDraft?: boolean; mapView?: MapCam | null; colorBy?: string; legend?: string; mapScale?: number };
 		/** Carte tirée d'un tableau : ligne (id) de chaque point. */
 		rows?: number[];
 		/** Carte colorée (style.colorBy) : valeurs distinctes triées. */
@@ -108,7 +108,9 @@
 	const wantedTiles = $derived(draft ? [] : viewTiles(settled, w, h));
 
 	const vmax = $derived(Math.max(0, ...pts.map((p) => Math.abs(p.v ?? 0))));
-	const radius = (v: number | null) => (series[2] && vmax > 0 && v !== null ? 3 + 13 * Math.sqrt(Math.abs(v) / vmax) : 5);
+	// Facteur de taille (volet : « Taille des points »), borné comme le volet.
+	const ptScale = $derived(Math.min(4, Math.max(0.25, style.mapScale || 1)));
+	const radius = (v: number | null) => ptScale * (series[2] && vmax > 0 && v !== null ? 3 + 13 * Math.sqrt(Math.abs(v) / vmax) : 5);
 	const placed = $derived(
 		pts.map((p) => {
 			const q = project(p.lat, p.lon, view.z);

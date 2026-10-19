@@ -227,6 +227,12 @@
 			{#if config.colorBy}
 				<label class="opt"><input type="checkbox" checked={config.legend !== 'none'} onchange={(e) => set({ legend: (e.currentTarget as HTMLInputElement).checked ? undefined : 'none' })} /> Légende des couleurs</label>
 			{/if}
+			<label class="line" title="Multiplie la taille des points ; la colonne Valeur règle déjà leur taille relative">Taille des points
+				<span class="ptscale">
+					<input type="range" min="0.25" max="4" step="0.25" value={config.mapScale ?? 1} onchange={(e) => { const v = Number((e.currentTarget as HTMLInputElement).value); set({ mapScale: v === 1 ? undefined : v }); }} />
+					<span>×{(config.mapScale ?? 1).toLocaleString('fr-FR')}</span>
+				</span>
+			</label>
 		{/if}
 		<label class="opt" title="Par défaut, comme Excel, la carte ne montre que les lignes affichées par le filtre du tableau"><input type="checkbox" checked={!!config.hidden} onchange={(e) => set({ hidden: (e.currentTarget as HTMLInputElement).checked || undefined })} /> Lignes masquées par le filtre</label>
 		<div class="line mapview">
@@ -445,6 +451,15 @@
 		border-color: #217346;
 		background: #e3efe7;
 		font-weight: 600;
+	}
+	.ptscale {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+	}
+	.ptscale input {
+		flex: 1;
+		min-width: 0;
 	}
 	.line {
 		display: grid;

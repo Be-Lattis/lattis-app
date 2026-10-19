@@ -62,6 +62,8 @@
 		mapView?: MapCam | null;
 		/** Carte de points : colonne dont chaque valeur prend sa couleur. */
 		colorBy?: string;
+		/** Carte de points : facteur de taille des points (absent : 1). */
+		mapScale?: number;
 		/** Fréquences : nombre de classes (0 ou absent : automatique). */
 		bins?: number;
 		/** Courbes : cellule vide en intervalle (gap, défaut), à zéro (zero) ou reliée (span). */
