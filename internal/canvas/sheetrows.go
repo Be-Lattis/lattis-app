@@ -153,6 +153,13 @@ func (t *tx) deleteLines(sheet int64, a axis, lo, hi int) error {
 			if err := t.deleteTableRows(tb, lo-tb.Row-1, min(hi, last)-tb.Row-1); err != nil {
 				return err
 			}
+			// Les dernières lignes parties, les lignes vides restées au bas
+			// partent aussi (décision 0009, règle du bas).
+			if hi >= last {
+				if _, err := t.trimBottom(tb.ID); err != nil {
+					return err
+				}
+			}
 		default:
 			if err := t.deleteTableCols(tb, max(lo, first)-tb.Col, min(hi, last)-tb.Col); err != nil {
 				return err

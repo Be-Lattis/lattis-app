@@ -2,6 +2,8 @@ package canvas
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"regexp"
 	"slices"
@@ -407,6 +409,9 @@ func (t *tx) lift(sheet int64, src Rect, p payload) error {
 		}
 	}
 	cur := map[int64]Table{}
+	// last : dernière ligne affichée de chaque tableau avant la coupe ;
+	// reach : la coupe l'a vidée (les lignes vides du bas partent).
+	last, reach := map[int64]int64{}, map[int64]bool{}
 	for _, pc := range p.partial {
 		tb, ok := cur[pc.tb.ID]
 		if !ok || pc.header {
@@ -415,6 +420,16 @@ func (t *tx) lift(sheet int64, src Rect, p payload) error {
 				return err
 			}
 			cur[tb.ID] = tb
+		}
+		if _, ok := last[tb.ID]; !ok {
+			id, err := t.lastShown(tb)
+			if err != nil {
+				return err
+			}
+			last[tb.ID] = id
+		}
+		if !pc.header && pc.rid == last[tb.ID] {
+			reach[tb.ID] = true
 		}
 		c := tb.Cols[pc.i]
 		if pc.header {
@@ -431,7 +446,7 @@ func (t *tx) lift(sheet int64, src Rect, p payload) error {
 		}
 	}
 	for id := range cur {
-		if err := t.tidyBottom(id, true); err != nil {
+		if err := t.tidyBottom(id, true, reach[id]); err != nil {
 			return err
 		}
 	}
@@ -442,59 +457,160 @@ func (t *tx) lift(sheet int64, src Rect, p payload) error {
 var defaultColumnName = regexp.MustCompile(`^Colonne \d+$`)
 
 // tidyBottom range un tableau dont des cellules viennent d'être emportées
-// ou effacées (choix de Louis) : ses dernières lignes devenues vides sont
-// supprimées (il en garde une). Avec drop (cellules emportées), vidé et
+// ou effacées (choix de Louis). Avec drop (cellules emportées), vidé et
 // jamais personnalisé (colonnes « Colonne n », sans formule), il disparaît,
-// ce qui libère la place autour.
-func (t *tx) tidyBottom(id int64, drop bool) error {
+// ce qui libère la place autour. Sinon, avec reach (l'opération a touché sa
+// dernière ligne affichée), ses dernières lignes vides partent (trimBottom).
+func (t *tx) tidyBottom(id int64, drop, reach bool) error {
 	tb, err := t.table(id)
-	if err != nil || tb.Filtered() {
-		return err
-	}
-	conds := []string{"NOT EXISTS (SELECT 1 FROM _lattis_invalid WHERE tbl = ? AND rid = d.id)"}
-	plain := true
-	for _, c := range tb.Cols {
-		if c.Formula != "" {
-			plain = false
-			continue
-		}
-		if !defaultColumnName.MatchString(c.Name) {
-			plain = false
-		}
-		conds = append(conds, fmt.Sprintf("coalesce(CAST(d.%s AS TEXT), '') = ''", colSQL(c.ID)))
-	}
-	rows, err := t.query(fmt.Sprintf(`SELECT %s FROM %s AS d ORDER BY _pos DESC`, strings.Join(conds, " AND "), tb.sql()), tb.ID)
 	if err != nil {
 		return err
 	}
-	empty := 0
-	for rows.Next() {
-		var e bool
-		if err := rows.Scan(&e); err != nil {
-			rows.Close()
-			return err
+	if drop && !tb.Filtered() && tb.Rows > 0 {
+		plain := true
+		var conds []string
+		for _, c := range tb.Cols {
+			if c.Formula != "" || !defaultColumnName.MatchString(c.Name) {
+				plain = false
+				break
+			}
+			conds = append(conds, filledSQL(tb, c))
 		}
-		if !e {
+		if plain && len(conds) > 0 {
+			var filled int
+			if err := t.row(fmt.Sprintf(`SELECT count(*) FROM %s AS d WHERE %s`, tb.sql(), strings.Join(conds, " OR "))).Scan(&filled); err != nil {
+				return err
+			}
+			if filled == 0 {
+				return t.deleteTable(tb)
+			}
+		}
+	}
+	if !reach {
+		return nil
+	}
+	_, err = t.trimBottom(tb.ID)
+	return err
+}
+
+// contentCols : colonnes dont une valeur retient une ligne (décision 0009).
+// Les colonnes calculées, la colonne de catégorie masquée par l'onglet à
+// choix (sa valeur est imposée) et la colonne numérotée d'office (clé
+// d'entiers ou suite régulière, décision 0010 : son numéro est donné à toute
+// ligne ajoutée) n'en sont pas ; une autre clé, si. Un tableau qui n'a
+// d'autre colonne saisie que la colonne numérotée la garde : une ligne y est
+// vide quand son numéro l'est.
+func (t *tx) contentCols(tb Table) ([]Column, error) {
+	auto, numbered, err := t.autoNumber(tb)
+	if err != nil {
+		return nil, err
+	}
+	var content []Column
+	for _, c := range tb.Cols {
+		if c.Formula != "" || numbered && c.ID == auto.col.ID {
+			continue
+		}
+		if ch := tb.choice; ch != nil && !ch.All && c.ID == ch.Col.ID {
+			continue
+		}
+		content = append(content, c)
+	}
+	if len(content) == 0 && numbered {
+		content = []Column{auto.col}
+	}
+	return content, nil
+}
+
+// rowsLocked : les lignes du tableau ne se suppriment pas d'office (tableau
+// publié en lecture seule, ou chargé par une requête).
+func (t *tx) rowsLocked(tb Table) (bool, error) {
+	if t.lockTable(tb.ID) != nil {
+		return true, nil
+	}
+	var queries int
+	if err := t.row(`SELECT count(*) FROM _lattis_queries WHERE target = ?`, tb.ID).Scan(&queries); err != nil {
+		return true, err
+	}
+	return queries > 0, nil
+}
+
+// lastShown donne la clé technique de la dernière ligne affichée du tableau
+// (sous l'onglet à choix : la dernière de la valeur choisie), 0 s'il n'en a
+// pas.
+func (t *tx) lastShown(tb Table) (int64, error) {
+	var id int64
+	err := t.row(`SELECT id FROM ` + tb.view() + ` ORDER BY _pos DESC LIMIT 1`).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, nil
+	}
+	return id, err
+}
+
+// trimBottom supprime les lignes vides au bas d'un tableau (décision 0009,
+// règle du bas), après une suppression ou un effacement qui a atteint sa
+// dernière ligne : vide au sens de dropEmptiedRows (contentCols, saisies hors
+// type comprises, mise en forme ignorée). Sous l'onglet à choix, le bas est
+// celui des lignes de la valeur choisie (les lignes affichées), pas la fin
+// physique du tableau. Un tableau filtré par l'utilisateur, publié en lecture
+// seule ou chargé par une requête ne bouge pas ; il garde au moins une ligne
+// affichée. Même étape d'annulation que l'opération ; rend le nombre de
+// lignes retirées (dit dans la barre d'état).
+func (t *tx) trimBottom(id int64) (int, error) {
+	tb, err := t.table(id)
+	if err != nil || tb.userFiltered() || tb.Shown < 2 {
+		return 0, err
+	}
+	if locked, err := t.rowsLocked(tb); err != nil || locked {
+		return 0, err
+	}
+	content, err := t.contentCols(tb)
+	if err != nil || len(content) == 0 {
+		return 0, err // rien qui dise une ligne vide : rien ne part
+	}
+	conds := make([]string, len(content))
+	for i, c := range content {
+		conds[i] = filledSQL(tb, c)
+	}
+	from := tb.sql() + " AS d"
+	if tb.where != "" {
+		from = "(SELECT * FROM " + tb.sql() + " WHERE " + tb.where + ") AS d"
+	}
+	rs, err := t.query(fmt.Sprintf(`SELECT d.id, %s FROM %s ORDER BY d._pos DESC`, strings.Join(conds, " OR "), from))
+	if err != nil {
+		return 0, err
+	}
+	var empty []int64
+	for rs.Next() {
+		var rid int64
+		var filled bool
+		if err := rs.Scan(&rid, &filled); err != nil {
+			rs.Close()
+			return 0, err
+		}
+		if filled {
 			break
 		}
-		empty++
+		empty = append(empty, rid)
 	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return err
+	rs.Close()
+	if err := rs.Err(); err != nil {
+		return 0, err
 	}
-	switch {
-	case empty == 0:
-		return nil
-	case empty == tb.Rows && plain && drop:
-		return t.deleteTable(tb)
-	case empty == tb.Rows:
-		empty-- // un tableau nommé garde une ligne
+	if len(empty) >= tb.Shown {
+		empty = empty[:tb.Shown-1] // la première ligne affichée reste
 	}
-	if empty == 0 {
-		return nil
+	if len(empty) == 0 {
+		return 0, nil
 	}
-	return t.deleteTableRows(tb, tb.Rows-empty, tb.Rows-1)
+	if err := t.trashRows(tb, idList(empty)); err != nil {
+		return 0, err
+	}
+	if len(empty) == 1 {
+		t.notes = append(t.notes, "1 ligne vide retirée en bas du tableau (Ctrl+Z pour annuler)")
+	} else {
+		t.notes = append(t.notes, fmt.Sprintf("%d lignes vides retirées en bas du tableau (Ctrl+Z pour annuler)", len(empty)))
+	}
+	return len(empty), nil
 }
 
 // placeTables recopie ou déplace les tableaux et colonnes entières de la
@@ -721,10 +837,16 @@ func (t *tx) putPieces(pieces []piece, sheet int64, row, col int, move bool, ev 
 // tidyAfterClear range un tableau dont la cellule de la colonne col vient
 // d'être vidée par une saisie vide : sa dernière colonne « Colonne n » restée
 // vide part (une valeur tapée par erreur à droite), puis ses dernières lignes
-// vides (tidyBottom).
-func (t *tx) tidyAfterClear(tb Table, col int) error {
+// vides si la cellule était sur sa dernière ligne affichée (tidyBottom ; sous
+// l'onglet à choix, la dernière de la valeur choisie).
+func (t *tx) tidyAfterClear(tb Table, row, col int) error {
+	reach := row == tb.Row+tb.Shown
 	if tb.Filtered() {
-		return nil
+		if !reach || tb.userFiltered() {
+			return nil
+		}
+		_, err := t.trimBottom(tb.ID)
+		return err
 	}
 	if c := tb.Cols[col-tb.Col]; col == tb.Right() && len(tb.Cols) > 1 && c.Formula == "" && autoColRe.MatchString(c.Name) {
 		empty, err := t.columnEmpty(tb, c)
@@ -737,7 +859,7 @@ func (t *tx) tidyAfterClear(tb Table, col int) error {
 			}
 		}
 	}
-	return t.tidyBottom(tb.ID, false)
+	return t.tidyBottom(tb.ID, false, reach)
 }
 
 // putFreeStyle remplace la mise en forme d'une cellule libre (vide : aucune).
@@ -850,6 +972,9 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 				if err != nil {
 					return err
 				}
+				// L'effacement atteint la dernière ligne affichée : les lignes
+				// vides du bas partent ensuite (décision 0009, règle du bas).
+				reach := last == tb.Row+tb.Shown
 				// Lignes dont l'effacement vide quelque chose : candidates à
 				// la suppression si plus rien n'y reste (emptiedRows).
 				var cleared []Column
@@ -904,8 +1029,9 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 					}
 					continue
 				}
-				// Les dernières lignes devenues vides partent (choix de Louis).
-				if err := t.tidyBottom(tb.ID, false); err != nil {
+				// Les dernières lignes devenues vides partent (choix de Louis),
+				// sous l'onglet à choix celles de la valeur choisie.
+				if err := t.tidyBottom(tb.ID, false, reach); err != nil {
 					return err
 				}
 			}
@@ -992,26 +1118,12 @@ func (t *tx) dropEmptiedRows(tb Table, touched []int64) (int, error) {
 	if len(touched) == 0 {
 		return 0, nil
 	}
-	if t.lockTable(tb.ID) != nil {
-		return 0, nil
-	}
-	var queries int
-	if err := t.row(`SELECT count(*) FROM _lattis_queries WHERE target = ?`, tb.ID).Scan(&queries); err != nil || queries > 0 {
+	if locked, err := t.rowsLocked(tb); err != nil || locked {
 		return 0, err
 	}
-	auto, numbered, err := t.autoNumber(tb)
+	content, err := t.contentCols(tb)
 	if err != nil {
 		return 0, err
-	}
-	var content []Column
-	for _, c := range tb.Cols {
-		if c.Formula != "" || numbered && c.ID == auto.col.ID {
-			continue
-		}
-		if ch := tb.choice; ch != nil && !ch.All && c.ID == ch.Col.ID {
-			continue
-		}
-		content = append(content, c)
 	}
 	filled, err := t.filledRows(tb, touched, content)
 	if err != nil {

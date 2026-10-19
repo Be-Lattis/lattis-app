@@ -159,7 +159,7 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 				}
 				// Valeur effacée (Retour arrière puis Entrée) : comme Suppr, le
 				// tableau se resserre (audit 2 M3).
-				return t.tidyAfterClear(tb, col)
+				return t.tidyAfterClear(tb, row, col)
 			case plain && !(inCols && inRows) && !(inCols && row == tb.Row):
 				continue
 			case inCols && row == tb.Bottom()+1 && !empty:
@@ -754,7 +754,17 @@ func (m *Model) DeleteRow(ctx context.Context, table string, n int) error {
 		if err != nil {
 			return err
 		}
-		return t.deleteRow(tb, rid)
+		last, err := t.lastShown(tb)
+		if err != nil {
+			return err
+		}
+		if err := t.deleteRow(tb, rid); err != nil || rid != last {
+			return err
+		}
+		// La dernière ligne partie, les lignes vides restées au bas partent
+		// avec elle (décision 0009, règle du bas).
+		_, err = t.trimBottom(tb.ID)
+		return err
 	})
 }
 
