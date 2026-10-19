@@ -115,7 +115,7 @@ func TestToolsBySharing(t *testing.T) {
 
 func TestExecSchemaOnly(t *testing.T) {
 	h := newHost(t)
-	exec := Exec(h, SchemaOnly)
+	exec := execRaw(h, SchemaOnly)
 	ctx := context.Background()
 	if res, isErr := exec(ctx, "db_query", json.RawMessage(`{"sql":"SELECT * FROM Ventes"}`)); !isErr {
 		t.Fatalf("db_query permis : %s", res)
@@ -152,7 +152,7 @@ func TestExecSchemaOnly(t *testing.T) {
 
 func TestExecSampleLimits(t *testing.T) {
 	h := newHost(t)
-	exec := Exec(h, Sample)
+	exec := execRaw(h, Sample)
 	ctx := context.Background()
 	res, isErr := exec(ctx, "tables_rows", json.RawMessage(`{"table":"Ventes","count":1000}`))
 	if isErr {

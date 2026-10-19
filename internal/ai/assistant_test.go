@@ -299,7 +299,7 @@ func TestFormulaErrors(t *testing.T) {
 	addFormula(t, h, "Clients", "Total", "=SOMME.SI(Ventes[Client]; [Client]; Ventes[Montant])")
 	addFormula(t, h, "Ventes", "Gros", "=[Montant]>100")
 
-	exec := Exec(h, SchemaOnly)
+	exec := execRaw(h, SchemaOnly)
 	out, isErr := exec(ctx, errorsTool, json.RawMessage(`{"table":"Ventes"}`))
 	if isErr {
 		t.Fatal(out)

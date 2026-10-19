@@ -156,12 +156,13 @@ func Structure(ctx context.Context, host api.Host, mode string) string {
 				cols = append(cols, "…")
 				break
 			}
+			c = oneLine(c)
 			if j < len(t.Types) && t.Types[j] != "" {
 				c += " (" + t.Types[j] + ")"
 			}
 			cols = append(cols, c)
 		}
-		fmt.Fprintf(&s, "- %s « %s », feuille « %s », %d ligne(s) : %s\n", kind, t.Name, t.Sheet, t.Rows, strings.Join(cols, ", "))
+		fmt.Fprintf(&s, "- %s « %s », feuille « %s », %d ligne(s) : %s\n", kind, oneLine(t.Name), oneLine(t.Sheet), t.Rows, strings.Join(cols, ", "))
 	}
 	s.WriteString("]\n")
 	return s.String()

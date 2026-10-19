@@ -9,8 +9,10 @@ import {
 	endRun,
 	failedBeforeReply,
 	markUndone,
+	linkHost,
 	maxRun,
 	reopenRun,
+	revealLinks,
 	replyError,
 	retryDelay,
 	retryLabel,
@@ -226,6 +228,16 @@ describe('Continuer', () => {
 		items = reopenRun(items, 1);
 		expect(replyError((items[1] as Reply).parts)).toBe('');
 		expect((items[1] as Reply).parts).toHaveLength(1);
+	});
+});
+
+describe('Liens des réponses', () => {
+	it('montre le domaine d’un lien externe à côté de son texte', () => {
+		const blocks = revealLinks(parse('[Voir le rapport](https://x.example/?d=Dupont) et [https://a.fr](https://a.fr)', true));
+		const p = blocks[0] as { t: 'p'; text: { t: string; text: string }[] };
+		const links = p.text.filter((x) => x.t === 'link').map((x) => x.text);
+		expect(links).toEqual(['Voir le rapport (x.example)', 'https://a.fr']);
+		expect(linkHost('javascript:alert(1)')).toBe('');
 	});
 });
 

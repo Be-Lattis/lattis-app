@@ -111,7 +111,7 @@ func TestSchemaOnlyLeaksNoValue(t *testing.T) {
 		t.Errorf("TCD : %s", outs["structure"])
 	}
 	// En partage complet, les mêmes outils voient les valeurs.
-	full := Exec(h, Full)
+	full := execRaw(h, Full)
 	for name, want := range map[string]string{"tables_list": "Zorglub", "queries_list": "Jeton42", "sheets_get": "Secretissime"} {
 		if res, _ := full(ctx, name, json.RawMessage(`{}`)); !strings.Contains(res, want) {
 			t.Errorf("partage complet, %s : %s", name, res)
@@ -124,7 +124,7 @@ func TestSchemaOnlyLeaksNoValue(t *testing.T) {
 func TestSampleBoundEveryRead(t *testing.T) {
 	h := newHost(t)
 	ctx := WithShow(context.Background(), func(Result) {})
-	exec := Exec(h, Sample)
+	exec := execRaw(h, Sample)
 	long := strings.Repeat("x", 1000)
 	if _, err := api.Invoke(ctx, h, "cells.set", map[string]any{"row": 40, "col": 1, "value": long}); err != nil {
 		t.Fatal(err)
@@ -155,7 +155,7 @@ func TestSampleBoundEveryRead(t *testing.T) {
 		t.Errorf("query_show : %d lignes", len(q.Rows))
 	}
 	// Partage complet : sans borne.
-	res, _ = Exec(h, Full)(ctx, "tables_rows", json.RawMessage(`{"table":"Ventes","count":100}`))
+	res, _ = execRaw(h, Full)(ctx, "tables_rows", json.RawMessage(`{"table":"Ventes","count":100}`))
 	json.Unmarshal([]byte(res), &r)
 	if len(r.Rows) != 30 {
 		t.Errorf("partage complet : %d lignes", len(r.Rows))

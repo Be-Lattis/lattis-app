@@ -4,6 +4,7 @@
 // gardée côté Go (internal/ai) ; celle-ci ne sert qu'à l'affichage, et se
 // reconstruit à partir de DocumentService.AITranscript (replay) quand
 // l'interface est rechargée ou qu'un autre classeur s'ouvre.
+import type { Block, Inline } from '#lib/help/markdown.js';
 
 /** Usage d'un tour ou d'une conversation (ai.Usage). */
 export interface ChatUsage {
@@ -329,6 +330,46 @@ export function suggestionsFor(tables: readonly TableInfo[], context?: ChatConte
 	out.push(`Trouver les doublons dans ${big.name}`);
 	if (out.length < 4) out.push('Crée un tableau croisé pertinent avec un graphique');
 	return out.slice(0, 4);
+}
+
+// --- Liens des réponses -----------------------------------------------------
+
+/** Domaine d'une adresse http(s) (« x.example »), '' sinon. */
+export function linkHost(u: string): string {
+	if (!/^https?:\/\//i.test(u)) return '';
+	try {
+		return new URL(u).host;
+	} catch {
+		return '';
+	}
+}
+
+/**
+ * Liens d'une réponse de l'assistant : leur domaine s'affiche à côté du
+ * texte (« Voir le rapport (x.example) »), pour qu'un lien ne cache pas son
+ * adresse ; le clic demande confirmation en montrant l'adresse entière.
+ */
+export function revealLinks(blocks: Block[]): Block[] {
+	const line = (parts: Inline[]): Inline[] =>
+		parts.map((x) => {
+			if (x.t !== 'link') return x;
+			const host = linkHost(x.href);
+			return host && !x.text.includes(host) ? { ...x, text: `${x.text} (${host})` } : x;
+		});
+	return blocks.map((b) => {
+		switch (b.t) {
+			case 'h':
+			case 'p':
+			case 'note':
+				return { ...b, text: line(b.text) };
+			case 'ul':
+			case 'ol':
+				return { ...b, items: b.items.map(line) };
+			case 'table':
+				return { ...b, head: b.head.map(line), rows: b.rows.map((r) => r.map(line)) };
+		}
+		return b;
+	});
 }
 
 /** Libellé court d'un modèle pour la liste. */

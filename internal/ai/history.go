@@ -95,13 +95,13 @@ func Compose(text string, v View, notes []string) string {
 	}
 	var ctx []string
 	if v.Sheet != "" {
-		ctx = append(ctx, "feuille active « "+v.Sheet+" »")
+		ctx = append(ctx, "feuille active « "+oneLine(v.Sheet)+" »")
 	}
 	if v.Table != "" {
-		ctx = append(ctx, "tableau « "+v.Table+" »")
+		ctx = append(ctx, "tableau « "+oneLine(v.Table)+" »")
 	}
 	if v.Selection != "" {
-		ctx = append(ctx, "sélection "+v.Selection)
+		ctx = append(ctx, "sélection "+oneLine(v.Selection))
 	}
 	if len(ctx) > 0 {
 		b.WriteString("[Contexte : " + strings.Join(ctx, ", ") + "]\n")

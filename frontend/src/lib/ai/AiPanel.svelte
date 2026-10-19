@@ -4,7 +4,8 @@
 	// sur une autre) et pendant qu'on travaille dans la grille. Chaque message
 	// part avec ce que l'utilisateur regarde (feuille, tableau, sélection),
 	// affiché au-dessus de la saisie. Les réponses sont rendues en Markdown
-	// (lecteur de l'aide, sans HTML injecté) ; les appels d'outils se
+	// (lecteur de l'aide, sans HTML injecté), chaque lien avec son domaine et
+	// son adresse entière montrée avant de l'ouvrir ; les appels d'outils se
 	// regroupent en « N étapes » repliables ; une réponse qui a modifié le
 	// classeur se termine par son bilan et « Annuler cette réponse ».
 	// Désactivé (ai.enabled) : une carte pour l'activer. Claude Desktop ou
@@ -22,7 +23,7 @@
 	import Markdown from '#lib/help/Markdown.svelte';
 	import AiConnect from './AiConnect.svelte';
 	import ExternalActivity from './ExternalActivity.svelte';
-	import { changesLabel, contextLabel, costLabel, replyError, replyText, retryDelay, retryLabel, segments, stepsLabel, stoppedAtLimit, suggestionsFor, type ChatContext, type Reply, type TableInfo } from './chat';
+	import { changesLabel, contextLabel, costLabel, linkHost, replyError, replyText, retryDelay, revealLinks, retryLabel, segments, stepsLabel, stoppedAtLimit, suggestionsFor, type ChatContext, type Reply, type TableInfo } from './chat';
 	import { openOutside } from './links';
 	import { sharingLabel } from './sharing';
 	import { chat, conversations, deleteConversation, load, newConversation, openConversation, refreshStatus, resume, send, stop, undoRun, type Conversation } from './state.svelte.js';
@@ -148,6 +149,13 @@
 		await deleteConversation(id).catch((e) => (chat.error = String(e?.message ?? e)));
 		convList = await conversations().catch(() => []);
 	}
+
+	// Lien d'une réponse : son adresse entière est montrée avant de l'ouvrir
+	// (elle peut avoir été dictée par une donnée du classeur).
+	let pendingLink = $state('');
+	const askOpen = (href: string) => {
+		if (linkHost(href)) pendingLink = href;
+	};
 
 	const ask = (text: string) => send(text, context ?? { sheet: '', table: '', selection: '' });
 
@@ -329,7 +337,7 @@
 						<div class="msg assistant" class:undone={it.undone}>
 							{#each segments(it.parts) as seg (seg.at)}
 								{#if seg.kind === 'text'}
-									<div class="md"><Markdown blocks={parse(seg.text, true)} go={openOutside} anchors={false} /></div>
+									<div class="md"><Markdown blocks={revealLinks(parse(seg.text, true))} go={askOpen} anchors={false} /></div>
 								{:else if seg.kind === 'result'}
 									{@const r = seg.result}
 									<figure class="result">
@@ -405,6 +413,17 @@
 					{/if}
 				{/each}
 			</div>
+
+			{#if pendingLink}
+				<div class="link-confirm" role="alertdialog" aria-label="Ouvrir un lien">
+					<p>Ouvrir ce lien proposé par l’assistant ? Tout ce que contient son adresse part chez <strong>{linkHost(pendingLink)}</strong>.</p>
+					<code>{pendingLink}</code>
+					<div class="foot">
+						<button class="small" onclick={() => (openOutside(pendingLink), (pendingLink = ''))}><Icon name="web" size={13} />Ouvrir</button>
+						<button class="small" onclick={() => (pendingLink = '')}>Annuler</button>
+					</div>
+				</div>
+			{/if}
 
 			{#if chat.error}
 				{@const left = retryLeft(-1, chat.error)}
@@ -929,6 +948,22 @@
 		margin: 0;
 		padding: 4px 12px;
 		white-space: pre-wrap;
+	}
+	.link-confirm {
+		margin: 0;
+		padding: 6px 12px;
+		border-top: 1px solid #e5e7eb;
+		background: #fffbeb;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+	.link-confirm p {
+		margin: 0;
+	}
+	.link-confirm code {
+		font-size: 12px;
+		word-break: break-all;
 	}
 	.wait,
 	.muted {
