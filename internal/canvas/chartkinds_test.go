@@ -40,7 +40,8 @@ func TestChartNewKinds(t *testing.T) {
 	if c := l.Charts[0]; fmt.Sprint(c.Labels) != "[FR IT]" || *c.Series[0].Values[0] != 17 {
 		t.Fatalf("combiné : %+v", c)
 	}
-	if c := l.Charts[1]; fmt.Sprint(c.Labels) != "[FR IT FR]" || *c.Series[0].Values[2] != 7 {
+	// Boîtes calculées par le classeur : une par pays (FR se répète).
+	if c := l.Charts[1]; fmt.Sprint(c.Labels) != "[FR IT]" || c.Boxes[0][0].Median != 8.5 || c.Boxes[1][0].N != 1 {
 		t.Fatalf("boîte à moustaches : %+v", c)
 	}
 }

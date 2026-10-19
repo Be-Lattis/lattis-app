@@ -102,6 +102,43 @@ type ChartInfo struct {
 	// la valeur de chaque point dans Categories, -1 pour une cellule vide.
 	Categories []string `json:"categories,omitempty"`
 	Groups     []int    `json:"groups,omitempty"`
+	// Total : points de la source (lignes lues une à une, ou catégories une
+	// fois regroupées) ; Truncated : seuls les MaxChartPoints premiers sont
+	// tracés ; Sampled : courbe réduite à MaxChartPoints points, en gardant
+	// le premier, le dernier, le minimum et le maximum de chaque intervalle.
+	Total     int  `json:"total,omitempty"`
+	Truncated bool `json:"truncated,omitempty"`
+	Sampled   bool `json:"sampled,omitempty"`
+	// XValues : X lu une ligne à une ligne, valeur numérique de chaque point
+	// (nombre, ou numéro de série d'une date ; nil sinon) ; XDate : X est
+	// une colonne de dates (axe de temps).
+	XValues []*float64 `json:"xValues,omitempty"`
+	XDate   bool       `json:"xDate,omitempty"`
+	// Edges : fréquences, bornes des classes calculées sur toutes les lignes
+	// (Series : effectif de chaque classe).
+	Edges []float64 `json:"edges,omitempty"`
+	// Boxes : boîtes à moustaches calculées sur toutes les lignes, une ligne
+	// par libellé (Labels) et une colonne par série (nil : aucune valeur).
+	Boxes [][]*BoxStats `json:"boxes,omitempty"`
+	// Formats : format de nombre de chaque série (style JSON nf, dp, df,
+	// ng, celui de la colonne source) ; XFormat : celui de X.
+	Formats []string `json:"formats,omitempty"`
+	XFormat string   `json:"xFormat,omitempty"`
+}
+
+// BoxStats : statistiques d'une boîte à moustaches (quartiles interpolés
+// comme QUARTILE.INCLURE ; moustaches au plus à 1,5 écart interquartile).
+// Outliers liste au plus 100 valeurs extrêmes de chaque côté ; Out les compte toutes.
+type BoxStats struct {
+	Min      float64   `json:"min"`
+	Q1       float64   `json:"q1"`
+	Median   float64   `json:"median"`
+	Q3       float64   `json:"q3"`
+	Max      float64   `json:"max"`
+	Mean     float64   `json:"mean"`
+	Outliers []float64 `json:"outliers"`
+	N        int       `json:"n"`
+	Out      int       `json:"out"`
 }
 
 // ErrChart signale un graphique impossible.
@@ -268,16 +305,14 @@ func (t *tx) chartDataRaw(cfg ChartConfig) (chartResult, error) {
 			if cfg.Kind == "map" && cfg.MapCoords == "single" {
 				return chartResult{}, fmt.Errorf("%w : coordonnées en une colonne : choisissez un tableau", ErrChart)
 			}
-			l, s, err := t.chartFromPivot(cfg, pc)
-			return chartResult{labels: l, series: s}, err
+			return t.chartFromPivot(cfg, pc)
 		}
 		return chartResult{}, fmt.Errorf("%w : tableau « %s » introuvable", ErrChart, cfg.Source)
 	}
 	if cfg.Kind == "map" {
 		return t.mapData(cfg, tb)
 	}
-	l, s, err := t.chartTable(cfg, tb)
-	return chartResult{labels: l, series: s}, err
+	return t.chartTable(cfg, tb)
 }
 
 // chartSource : lignes lues par un graphique, celles qu'affiche le filtre du
@@ -289,11 +324,27 @@ func chartSource(cfg ChartConfig, tb Table) string {
 	return tb.view()
 }
 
-// chartTable lit les données d'un graphique dans un tableau.
-func (t *tx) chartTable(cfg ChartConfig, tb Table) ([]string, []ChartSeries, error) {
+// numericSQL : la valeur v si c'est un nombre, NULL sinon (un texte dans
+// une colonne de nombres ne compte ni pour 0 ni pour une valeur).
+func numericSQL(v string) string {
+	return "CASE WHEN typeof(" + v + ") IN ('integer', 'real') THEN " + v + " END"
+}
+
+// chartPoint : valeur d'une série (nil : absente ou pas un nombre).
+func chartPoint(r any) *float64 {
+	if v := formula.FromResult(r); v.Kind == formula.Number {
+		f := v.Num
+		return &f
+	}
+	return nil
+}
+
+// chartTable lit les données d'un graphique dans un tableau, sur les
+// lignes affichées par son filtre (chartSource).
+func (t *tx) chartTable(cfg ChartConfig, tb Table) (chartResult, error) {
 	exprs, args, _, err := t.columnSQL(tb)
 	if err != nil {
-		return nil, nil, err
+		return chartResult{}, err
 	}
 	find := func(name string) (int, error) {
 		for i, c := range tb.Cols {
@@ -305,65 +356,197 @@ func (t *tx) chartTable(cfg ChartConfig, tb Table) ([]string, []ChartSeries, err
 	}
 	xi, err := find(cfg.X)
 	if err != nil {
-		return nil, nil, err
+		return chartResult{}, err
 	}
+	out := chartResult{labels: []string{}, series: make([]ChartSeries, len(cfg.Series))}
 	var vals []string
-	series := make([]ChartSeries, len(cfg.Series))
 	for k, s := range cfg.Series {
 		i, err := find(s)
 		if err != nil {
-			return nil, nil, err
+			return chartResult{}, err
 		}
-		series[k].Name = tb.Cols[i].Name
+		out.series[k] = ChartSeries{Name: tb.Cols[i].Name, Values: []*float64{}}
 		vals = append(vals, exprs[i])
 	}
 	xc := tb.Cols[xi]
+	// Type de X : celui de la colonne, ou du résultat d'une colonne calculée.
+	src := chartSource(cfg, tb)
 	x := exprs[xi]
-	var q string
-	if xc.Formula == "" && (xc.Type == grid.Text || xc.Type == grid.Boolean) && !chartRawRows[cfg.Kind] {
-		sums := make([]string, len(vals))
-		for k, v := range vals {
-			sums[k] = "sum(" + v + ")"
+	xType := xc.Type
+	if xc.Formula != "" {
+		if xType = t.computedResult(tb, xc); xType == "" {
+			// Résultat non numérique deviné sur la formule : texte si les
+			// valeurs le sont (regroupées comme une colonne de texte).
+			var kind sql.NullString
+			if err := t.rowAll(`SELECT typeof(`+x+`) FROM `+src+` WHERE `+x+` IS NOT NULL`, args).Scan(&kind); err == nil && kind.String == "text" {
+				xType = grid.Text
+			}
 		}
-		key := fmt.Sprintf("coalesce(slt_text(%s, %s), '')", x, sqlLiteral(string(xc.Type)))
-		if xc.Type == grid.Text {
+	}
+	// Paramètres : ceux des colonnes calculées (?1…?n), puis les nôtres.
+	next := func() string { args = append(args, nil); return "?" + fmt.Sprint(len(args)) }
+	switch cfg.Kind {
+	case "histogram":
+		return t.chartHistogram(cfg, out, src, vals, args)
+	case "boxplot":
+		return t.chartBoxes(out, src, x, xType, vals, args)
+	}
+	cols := make([]string, len(vals))
+	for k, v := range vals {
+		cols[k] = fmt.Sprintf("%s AS v%d", v, k)
+	}
+	// Un nuage de points prend les lignes une à une, même avec un X de texte (comme Excel).
+	grouped := (xType == grid.Text || xType == grid.Boolean) && !chartRawRows[cfg.Kind] && cfg.Kind != "scatter"
+	var q string
+	if grouped {
+		// Une catégorie par valeur de X, séries additionnées.
+		key := fmt.Sprintf("coalesce(slt_text(%s, %s), '')", x, sqlLiteral(string(xType)))
+		if xType == grid.Text {
 			key = "coalesce(" + x + ", '')"
 		}
-		q = `SELECT ` + key + ` AS k, ` + strings.Join(sums, ", ") + ` FROM ` + chartSource(cfg, tb) + ` GROUP BY k ORDER BY min(_pos) LIMIT ?` + fmt.Sprint(len(args)+1)
+		inner := `SELECT ` + key + ` AS k, ` + strings.Join(cols, ", ") + `, _pos FROM ` + src
+		sums := make([]string, len(vals))
+		for k := range vals {
+			sums[k] = "sum(" + numericSQL(fmt.Sprintf("v%d", k)) + ")"
+		}
+		lim := next()
+		q = `SELECT k, ` + strings.Join(sums, ", ") + ` FROM (` + inner + `) GROUP BY k ORDER BY min(_pos) LIMIT ` + lim
+		args[len(args)-1] = MaxChartPoints + 1
+		if err := t.rowAll(`SELECT count(DISTINCT k) FROM (`+inner+`)`, args[:len(args)-1]).Scan(&out.total); err != nil {
+			return chartResult{}, err
+		}
 	} else {
-		q = `SELECT ` + x + `, ` + strings.Join(vals, ", ") + ` FROM ` + chartSource(cfg, tb) + ` ORDER BY _pos LIMIT ?` + fmt.Sprint(len(args)+1)
+		out.total = tb.Shown
+		if cfg.Hidden {
+			out.total = tb.Rows
+		}
+		inner := `SELECT ` + x + ` AS x0, ` + strings.Join(cols, ", ") + `, _pos FROM ` + src
+		vs := make([]string, len(vals))
+		for k := range vals {
+			vs[k] = fmt.Sprintf("v%d", k)
+		}
+		sel := `x0, ` + strings.Join(vs, ", ")
+		if (cfg.Kind == "line" || cfg.Kind == "area") && out.total > MaxChartPoints {
+			// Courbe trop longue : réduite par intervalles, en gardant le
+			// premier et le dernier point de chacun et les extrêmes de
+			// chaque série (les pics restent visibles).
+			buckets := max(1, MaxChartPoints/(2+2*len(vals)))
+			keep := []string{`SELECT min(i) FROM b GROUP BY g`, `SELECT max(i) FROM b GROUP BY g`}
+			for _, v := range vs {
+				for _, f := range []string{"min", "max"} {
+					keep = append(keep, fmt.Sprintf(`SELECT i FROM (SELECT i, %s(%s) FROM b WHERE typeof(%s) IN ('integer', 'real') GROUP BY g)`, f, v, v))
+				}
+			}
+			q = `WITH r AS (SELECT row_number() OVER (ORDER BY _pos) - 1 AS i, ` + sel + ` FROM (` + inner + `)), ` +
+				fmt.Sprintf(`b AS (SELECT i, i * %d / %d AS g, `, buckets, out.total) + strings.Join(vs, ", ") + ` FROM r) ` +
+				`SELECT ` + sel + ` FROM r WHERE i IN (` + strings.Join(keep, " UNION ") + `) ORDER BY i LIMIT ` + next()
+			out.sampled = true
+		} else {
+			q = `SELECT ` + sel + ` FROM (` + inner + `) ORDER BY _pos LIMIT ` + next()
+		}
+		args[len(args)-1] = MaxChartPoints + 1
+		out.xDate = xType == grid.Date
+		if xType == grid.Integer || xType == grid.Decimal || xType == grid.Date {
+			out.xValues = []*float64{}
+		}
 	}
-	rs, err := t.query(q, append(args, MaxChartPoints)...)
+	rs, err := t.query(q, args...)
 	if err != nil {
-		return nil, nil, err
+		return chartResult{}, err
 	}
 	defer rs.Close()
-	var labels []string
 	for rs.Next() {
+		if len(out.labels) == MaxChartPoints {
+			out.truncated = true
+			break
+		}
 		row := make([]any, len(vals)+1)
 		ptrs := make([]any, len(row))
 		for i := range row {
 			ptrs[i] = &row[i]
 		}
 		if err := rs.Scan(ptrs...); err != nil {
-			return nil, nil, err
+			return chartResult{}, err
 		}
 		lv := formula.FromResult(row[0])
-		if xc.Formula == "" && xc.Type == grid.Date && lv.Kind == formula.Number {
+		if xType == grid.Date && lv.Kind == formula.Number {
 			lv = formula.DateSerial(lv.Num)
 		}
-		labels = append(labels, lv.String())
+		out.labels = append(out.labels, lv.String())
+		if out.xValues != nil {
+			xv := chartPoint(row[0])
+			// Une colonne de dates range ses valeurs en texte ISO : numéro de série.
+			if f, ok := formula.ParseDate(lv.Str); xv == nil && xType == grid.Date && lv.Kind == formula.Text && ok {
+				xv = &f
+			}
+			out.xValues = append(out.xValues, xv)
+		}
 		for k := range vals {
-			v := formula.FromResult(row[k+1])
-			if v.Kind == formula.Number {
-				f := v.Num
-				series[k].Values = append(series[k].Values, &f)
-			} else {
-				series[k].Values = append(series[k].Values, nil)
+			out.series[k].Values = append(out.series[k].Values, chartPoint(row[k+1]))
+		}
+	}
+	return out, rs.Err()
+}
+
+// chartFormats reporte le format des colonnes d'un tableau source (séries
+// et X) ; lu hors du cache des données : changer le format d'une colonne
+// ne touche pas au tableau.
+func (t *tx) chartFormats(cfg ChartConfig, r *chartResult) error {
+	if cfg.Kind == "map" {
+		return nil
+	}
+	tb, err := t.tableByName(cfg.Source)
+	if err != nil {
+		return nil // TCD : formats déjà lus avec les données
+	}
+	col := func(name string) (Column, bool) {
+		for _, c := range tb.Cols {
+			if strings.EqualFold(c.Name, name) {
+				return c, true
+			}
+		}
+		return Column{}, false
+	}
+	r.formats = make([]string, len(cfg.Series))
+	for k, s := range cfg.Series {
+		if c, ok := col(s); ok {
+			if r.formats[k], err = t.columnFormat(tb, c); err != nil {
+				return err
 			}
 		}
 	}
-	return labels, series, rs.Err()
+	r.xFormat = ""
+	if c, ok := col(cfg.X); ok {
+		r.xFormat, err = t.columnFormat(tb, c)
+	}
+	return err
+}
+
+// columnFormat : format de nombre d'une colonne (nf, dp, df, ng de son
+// style), en JSON ; une colonne de dates sans format s'affiche en date.
+func (t *tx) columnFormat(tb Table, c Column) (string, error) {
+	var raw string
+	err := t.row(`SELECT style FROM _lattis_styles WHERE tbl = ? AND rid = 0 AND col = ?`, tb.ID, c.ID).Scan(&raw)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return "", err
+	}
+	f := map[string]any{}
+	var st map[string]any
+	if raw != "" && json.Unmarshal([]byte(raw), &st) == nil {
+		for _, k := range []string{"nf", "dp", "df", "ng"} {
+			if x, ok := st[k]; ok && x != nil {
+				f[k] = x
+			}
+		}
+	}
+	if len(f) == 0 && c.Formula == "" && c.Type == grid.Date {
+		f["nf"] = "date"
+	}
+	if len(f) == 0 {
+		return "", nil
+	}
+	b, err := json.Marshal(f)
+	return string(b), err
 }
 
 // charts donne les graphiques d'une feuille, avec leurs données.
@@ -422,10 +605,10 @@ func (t *tx) chartRows(sheet int64) ([]stmt, error) {
 
 // chartFromPivot lit les données d'un graphique dans un tableau croisé : X
 // est une colonne de lignes, les séries des colonnes de mesures (en-têtes).
-func (t *tx) chartFromPivot(cfg ChartConfig, pc PivotConfig) ([]string, []ChartSeries, error) {
+func (t *tx) chartFromPivot(cfg ChartConfig, pc PivotConfig) (chartResult, error) {
 	cells, err := t.pivotBody(pc)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%w : %s", ErrChart, strings.TrimPrefix(err.Error(), ErrPivot.Error()+" : "))
+		return chartResult{}, fmt.Errorf("%w : %s", ErrChart, strings.TrimPrefix(err.Error(), ErrPivot.Error()+" : "))
 	}
 	header := cells[0]
 	find := func(name string) (int, error) {
@@ -438,15 +621,25 @@ func (t *tx) chartFromPivot(cfg ChartConfig, pc PivotConfig) ([]string, []ChartS
 	}
 	xi, err := find(cfg.X)
 	if err != nil {
-		return nil, nil, err
+		return chartResult{}, err
 	}
 	series := make([]ChartSeries, len(cfg.Series))
 	idx := make([]int, len(cfg.Series))
 	for k, s := range cfg.Series {
 		if idx[k], err = find(s); err != nil {
-			return nil, nil, err
+			return chartResult{}, err
 		}
 		series[k].Name = header[idx[k]]
+	}
+	out := chartResult{total: len(cells) - 1, truncated: len(cells)-1 > MaxChartPoints}
+	// Format de chaque mesure : celui du TCD (colonne source, ou deux décimales).
+	if fs, err := t.pivotFormats(pc.normalized().flat(), cells); err == nil && fs != nil {
+		out.formats = make([]string, len(idx))
+		for k, i := range idx {
+			if i < len(fs) {
+				out.formats[k] = fs[i]
+			}
+		}
 	}
 	var labels []string
 	for _, r := range cells[1:] {
@@ -467,7 +660,8 @@ func (t *tx) chartFromPivot(cfg ChartConfig, pc PivotConfig) ([]string, []ChartS
 			}
 		}
 	}
-	return labels, series, nil
+	out.labels, out.series = labels, series
+	return out, nil
 }
 
 // PlaceChart pose un graphique au pixel près : cellule d'ancrage, décalage

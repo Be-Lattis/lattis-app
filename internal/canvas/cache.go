@@ -88,12 +88,24 @@ type chartResult struct {
 	rows    []int64   // carte : ligne (id) de chaque point
 	cats    []string  // carte colorée : valeurs distinctes triées
 	groups  []int     // carte colorée : rang de la valeur de chaque point
+	// Voir ChartInfo.
+	total              int
+	truncated, sampled bool
+	xValues            []*float64
+	xDate              bool
+	edges              []float64
+	boxes              [][]*BoxStats
+	formats            []string
+	xFormat            string
 }
 
 // fill reporte les données dans un graphique.
 func (r chartResult) fill(c *ChartInfo) {
 	c.Labels, c.Series, c.Invalid, c.Guess = r.labels, r.series, r.invalid, r.guess
 	c.Rows, c.Categories, c.Groups = r.rows, r.cats, r.groups
+	c.Total, c.Truncated, c.Sampled = r.total, r.truncated, r.sampled
+	c.XValues, c.XDate, c.Edges, c.Boxes = r.xValues, r.xDate, r.edges, r.boxes
+	c.Formats, c.XFormat = r.formats, r.xFormat
 }
 
 func (t *tx) chartData(cfg ChartConfig) (chartResult, error) {
@@ -111,6 +123,9 @@ func (t *tx) chartData(cfg ChartConfig) (chartResult, error) {
 		r, err = cachedOn(t, key, deps, calc)
 	} else {
 		r, err = cached(t, key, calc)
+	}
+	if err == nil {
+		err = t.chartFormats(cfg, &r)
 	}
 	return r, err
 }

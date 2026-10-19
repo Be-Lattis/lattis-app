@@ -93,7 +93,7 @@ func (t *tx) mapData(cfg ChartConfig, tb Table) (chartResult, error) {
 		sel = append(sel, exprs[ci])
 	}
 	q := `SELECT ` + strings.Join(sel, ", ") + ` FROM ` + chartSource(cfg, tb) + ` ORDER BY _pos LIMIT ?` + fmt.Sprint(len(args)+1)
-	rs, err := t.query(q, append(args, MaxChartPoints)...)
+	rs, err := t.query(q, append(args, MaxChartPoints+1)...)
 	if err != nil {
 		return chartResult{}, err
 	}
@@ -109,7 +109,17 @@ func (t *tx) mapData(cfg ChartConfig, tb Table) (chartResult, error) {
 	if hasVal {
 		out.series = append(out.series, ChartSeries{Name: tb.Cols[cols[nc]].Name, Values: []*float64{}})
 	}
+	// Lignes lues (Total : lignes du tableau) ; au-delà de MaxChartPoints, coupé.
+	out.total = tb.Shown
+	if cfg.Hidden {
+		out.total = tb.Rows
+	}
+	read := 0
 	for rs.Next() {
+		if read++; read > MaxChartPoints {
+			out.truncated = true
+			break
+		}
 		row := make([]any, len(sel))
 		ptrs := make([]any, len(row))
 		for i := range row {

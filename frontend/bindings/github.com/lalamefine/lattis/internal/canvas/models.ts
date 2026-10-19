@@ -6,6 +6,23 @@
 import * as grid$0 from "../grid/models.js";
 
 /**
+ * BoxStats : statistiques d'une boîte à moustaches (quartiles interpolés
+ * comme QUARTILE.INCLURE ; moustaches au plus à 1,5 écart interquartile).
+ * Outliers liste au plus 100 valeurs extrêmes de chaque côté ; Out les compte toutes.
+ */
+export interface BoxStats {
+    "min": number;
+    "q1": number;
+    "median": number;
+    "q3": number;
+    "max": number;
+    "mean": number;
+    "outliers": number[] | null;
+    "n": number;
+    "out": number;
+}
+
+/**
  * ButtonConfig est un contrôle posé sur une feuille, comme les contrôles de
  * formulaire d'Excel : un bouton (un clic exécute un script de la
  * bibliothèque, ou l'une de ses fonctions, ou rien), une case à cocher, une
@@ -253,6 +270,13 @@ export interface ChartConfig {
      * Bins : histogramme de fréquences, nombre de classes (0 : automatique).
      */
     "bins"?: number;
+
+    /**
+     * Hidden : lit aussi les lignes masquées par le filtre du tableau (option
+     * d'Excel « Afficher les données des lignes masquées ») ; par défaut, un
+     * graphique ne montre que les lignes affichées.
+     */
+    "hidden"?: boolean;
 }
 
 /**
@@ -291,6 +315,43 @@ export interface ChartInfo {
      */
     "categories"?: string[] | null;
     "groups"?: number[] | null;
+
+    /**
+     * Total : points de la source (lignes lues une à une, ou catégories une
+     * fois regroupées) ; Truncated : seuls les MaxChartPoints premiers sont
+     * tracés ; Sampled : courbe réduite à MaxChartPoints points, en gardant
+     * le premier, le dernier, le minimum et le maximum de chaque intervalle.
+     */
+    "total"?: number;
+    "truncated"?: boolean;
+    "sampled"?: boolean;
+
+    /**
+     * XValues : X lu une ligne à une ligne, valeur numérique de chaque point
+     * (nombre, ou numéro de série d'une date ; nil sinon) ; XDate : X est
+     * une colonne de dates (axe de temps).
+     */
+    "xValues"?: (number | null)[] | null;
+    "xDate"?: boolean;
+
+    /**
+     * Edges : fréquences, bornes des classes calculées sur toutes les lignes
+     * (Series : effectif de chaque classe).
+     */
+    "edges"?: number[] | null;
+
+    /**
+     * Boxes : boîtes à moustaches calculées sur toutes les lignes, une ligne
+     * par libellé (Labels) et une colonne par série (nil : aucune valeur).
+     */
+    "boxes"?: ((BoxStats | null)[] | null)[] | null;
+
+    /**
+     * Formats : format de nombre de chaque série (style JSON nf, dp, df,
+     * ng, celui de la colonne source) ; XFormat : celui de X.
+     */
+    "formats"?: string[] | null;
+    "xFormat"?: string;
 }
 
 /**
