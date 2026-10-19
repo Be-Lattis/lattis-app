@@ -315,6 +315,8 @@ export interface TableInfo {
 // Cas d'usage courant (choix de Louis) : une feuille dont les tableaux sont
 // mal reconnus (en-tête, titre ou total pris dedans, limites, types).
 export const REPAIR_SUGGESTION = 'Réparer les tableaux de cette feuille';
+// Nommer les tableaux (demande de Louis), toujours proposé.
+export const NAME_SUGGESTION = 'Nomme automatiquement tous les tableaux du classeur.';
 
 const DEFAULT_SUGGESTIONS = [
 	REPAIR_SUGGESTION,
@@ -340,6 +342,7 @@ export function suggestionsFor(tables: readonly TableInfo[], context?: ChatConte
 	if (context?.table && context.selection && !blind) out.push(`Explique la sélection ${contextLabel(context).replace(/^.*, sélection /, '')} de ${context.table}`);
 	else if (context?.table && blind) out.push(`Propose des tableaux croisés pour ${context.table}`);
 	out.push(REPAIR_SUGGESTION);
+	out.push(NAME_SUGGESTION);
 	const [big, second] = list;
 	out.push(`Analyser ${big.name} (${fmt(big.rows)})`);
 	out.push(`Vérifier les types de ${(second ?? big).name}`);
