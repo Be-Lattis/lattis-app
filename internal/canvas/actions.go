@@ -655,3 +655,31 @@ func (m *Model) FixType(ctx context.Context, table string, i int) error {
 		return t.apply([]stmt{st(q, 1, tb.ID, tb.Cols[i].ID)}, []stmt{st(q, tb.Cols[i].Fixed, tb.ID, tb.Cols[i].ID)})
 	})
 }
+
+// SuppressColumn : Suppr sur une colonne entière du tableau. Vide et au
+// milieu, elle coupe le tableau en deux (une colonne vide sépare deux
+// tableaux) ; sinon elle est supprimée (DeleteColumn).
+func (m *Model) SuppressColumn(ctx context.Context, table string, i int) error {
+	return m.Do(ctx, "Supprimer une colonne", func(t *tx) error {
+		tb, err := t.editTable(table)
+		if err != nil {
+			return err
+		}
+		if i < 0 || i >= len(tb.Cols) || len(tb.Cols) == 1 {
+			return errors.New("canvas: colonne impossible à supprimer")
+		}
+		if c := tb.Cols[i]; i > 0 && i < len(tb.Cols)-1 && c.Formula == "" && !tb.Filtered() {
+			empty, err := t.columnEmpty(tb, c)
+			if err != nil {
+				return err
+			}
+			if empty {
+				return t.splitAt(tb, i)
+			}
+		}
+		if err := t.dropColumn(tb, tb.Cols[i], i); err != nil {
+			return err
+		}
+		return t.trimAfterDrop(tb.ID)
+	})
+}

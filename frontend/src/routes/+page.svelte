@@ -969,6 +969,7 @@
 		deleteRow: (t, n) => DocumentService.DeleteRow(t.name, n).then(reload),
 		insertColumn: (t, i) => DocumentService.InsertColumn(t.name, i, `Colonne ${t.columns.length + 1}`).then(reload),
 		deleteColumn: (t, i) => DocumentService.DeleteColumn(t.name, i).then(reload),
+		suppressColumn: (t, i) => DocumentService.SuppressColumn(t.name, i).then(reload),
 		convertPreview: (t, i, to) => DocumentService.ConvertPreview(t.name, i, to as Type),
 		typeMix: (t, i) => DocumentService.TypeMix(t.name, i) as Promise<TypeMix>,
 		setType: (t, i, to) => DocumentService.SetType(t.name, i, to as Type).then(reload),

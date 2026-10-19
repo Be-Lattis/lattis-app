@@ -773,6 +773,10 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 					return err
 				}
 				switch {
+				case empty && col.Formula == "" && header && i > 0 && i < len(tb.Cols)-1:
+					// Colonne vide au milieu, en-tête effacé : le tableau se
+					// coupe en deux de part et d'autre (choix de Louis).
+					return t.splitAt(tb, i)
 				case empty && col.Formula == "":
 					idx = append(idx, i)
 				case header && col.Formula != "":

@@ -1833,6 +1833,14 @@ export function StopScript(): $CancellablePromise<void> {
 }
 
 /**
+ * SuppressColumn : Suppr sur une colonne entière d'un tableau (vide au
+ * milieu : le tableau se coupe en deux).
+ */
+export function SuppressColumn(table: string, i: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2882515755, table, i);
+}
+
+/**
  * TableSQL écrit la requête qui lit une table entière (kind : genre de la
  * connexion ou du fichier de base, pour les guillemets des identifiants).
  */

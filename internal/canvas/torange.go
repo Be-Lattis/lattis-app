@@ -1107,3 +1107,45 @@ func (m *Model) PasteRange(ctx context.Context, sheet int64, row, col int, block
 	}
 	return m.Paste(ctx, sheet, row, col, block)
 }
+
+// splitAt coupe le tableau tb en deux autour de sa colonne i, vide : à
+// gauche et à droite deux tableaux, la colonne redevient une colonne vide de
+// la feuille. Les formules qui citaient tb citent le tableau de leur colonne
+// (passage par une plage). Un côté dont l'en-tête n'est fait que de
+// « Colonne n » (un tableau absorbé) prend sa 1re ligne pour en-tête.
+func (t *tx) splitAt(tb Table, i int) error {
+	if err := t.toRange(tb); err != nil {
+		return err
+	}
+	gap := tb.Col + i
+	in := `sheet = ? AND col = ? AND row BETWEEN ? AND ?`
+	for _, tbl := range []string{"_lattis_cells", rangeTable} {
+		if err := t.deleteWhere(tbl, in, tb.Sheet, gap, tb.Row, tb.Bottom()); err != nil {
+			return err
+		}
+	}
+	for _, side := range [][2]int{{0, i - 1}, {i + 1, len(tb.Cols) - 1}} {
+		auto := true
+		for k := side[0]; k <= side[1]; k++ {
+			auto = auto && autoColRe.MatchString(tb.Cols[k].Name)
+		}
+		if auto && tb.Rows > 0 {
+			if err := t.deleteWhere(`_lattis_cells`, `sheet = ? AND row = ? AND col BETWEEN ? AND ?`, tb.Sheet, tb.Row, tb.Col+side[0], tb.Col+side[1]); err != nil {
+				return err
+			}
+		}
+	}
+	var names []string
+	for _, c := range []int{tb.Col, gap + 1} {
+		name, err := t.formatAsTable(tb.Sheet, tb.Row, c)
+		if err != nil {
+			return err
+		}
+		if n := len(t.notes); n > 0 && strings.HasPrefix(t.notes[n-1], "Plage mise sous forme") {
+			t.notes = t.notes[:n-1]
+		}
+		names = append(names, "« "+name+" »")
+	}
+	t.notes = append(t.notes, fmt.Sprintf("Tableau « %s » coupé en deux à la colonne vide : %s (Ctrl+Z pour annuler)", tb.Name, strings.Join(names, " et ")))
+	return nil
+}

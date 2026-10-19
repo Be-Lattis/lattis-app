@@ -1272,3 +1272,9 @@ func (s *DocumentService) OrderSheets(ctx context.Context, order []int64) (DocSt
 		return nil
 	})
 }
+
+// SuppressColumn : Suppr sur une colonne entière d'un tableau (vide au
+// milieu : le tableau se coupe en deux).
+func (s *DocumentService) SuppressColumn(ctx context.Context, table string, i int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SuppressColumn(ctx, table, i) })
+}

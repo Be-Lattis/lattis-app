@@ -357,6 +357,8 @@
 		deleteRow?(table: SheetTable, n: number): Promise<unknown>;
 		insertColumn?(table: SheetTable, i: number): Promise<unknown>;
 		deleteColumn?(table: SheetTable, i: number): Promise<unknown>;
+		/** Suppr sur une colonne entière : vide au milieu, le tableau se coupe en deux. */
+		suppressColumn?(table: SheetTable, i: number): Promise<unknown>;
 		/** Nombre de valeurs qui ne se convertiraient pas au type to. */
 		convertPreview?(table: SheetTable, i: number, to: ColumnType): Promise<number>;
 		setType?(table: SheetTable, i: number, to: ColumnType): Promise<unknown>;
@@ -4922,7 +4924,7 @@
 		// De droite à gauche : les numéros des colonnes restantes ne bougent pas.
 		writing = writing.catch(() => undefined).then(async () => {
 			try {
-				for (let c = c1; c >= c0; c--) await tableLines(e, 'deleteColumn', c - e.t.col);
+				for (let c = c1; c >= c0; c--) await (c0 === c1 && source.suppressColumn ? source.suppressColumn(e.t, c - e.t.col) : tableLines(e, 'deleteColumn', c - e.t.col));
 				schedule();
 			} catch (err) {
 				say(String((err as Error)?.message ?? err));

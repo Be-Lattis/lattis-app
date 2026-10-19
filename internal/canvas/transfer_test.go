@@ -415,17 +415,18 @@ func TestClearBottomRows(t *testing.T) {
 	}
 }
 
-// Suppr sur l'en-tête d'une colonne vide : la colonne quitte le tableau ; sur
+// Suppr sur l'en-tête d'une colonne vide (à droite ; au milieu, le tableau se
+// coupe : TestSuppressEmptyColumnSplits) : la colonne quitte le tableau ; sur
 // l'en-tête d'une colonne remplie, rien ne bouge et la barre d'état dit
 // pourquoi. La dernière colonne à droite devenue vide part aussi.
 func TestClearHeaderDropsEmptyColumn(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
 	must(t, d.Do(ctx, "Saisie", func(x *tx) error {
-		_, err := x.createTable(1, "T", 0, 0, []string{"Nom", "Vide", "Âge", "Notes"}, [][]string{{"Léa", "", "31", "a"}, {"Tom", "", "8", "b"}})
+		_, err := x.createTable(1, "T", 0, 0, []string{"Nom", "Âge", "Notes", "Vide"}, [][]string{{"Léa", "31", "a", ""}, {"Tom", "8", "b", ""}})
 		return err
 	}))
-	must(t, d.ClearRange(ctx, 1, 0, 1, 0, 1, false))
+	must(t, d.ClearRange(ctx, 1, 0, 3, 0, 3, false))
 	if got, want := layoutOf(t, d), "T@A1:Nom|Âge|Notes×2"; got != want {
 		t.Fatalf("en-tête d'une colonne vide :\n got %s\nwant %s", got, want)
 	}
@@ -439,4 +440,25 @@ func TestClearHeaderDropsEmptyColumn(t *testing.T) {
 	if got, want := layoutOf(t, d), "T@A1:Nom|Âge×2"; got != want {
 		t.Fatalf("dernière colonne vidée :\n got %s\nwant %s", got, want)
 	}
+}
+
+// Suppr sur une colonne vide au milieu d'un tableau (deux tableaux fusionnés
+// par une saisie dans l'écart) : il se recoupe en deux, le côté absorbé
+// (en-têtes « Colonne n ») retrouve son en-tête ; une seule étape.
+func TestSuppressEmptyColumnSplits(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	must(t, d.Do(ctx, "Saisie", func(x *tx) error {
+		_, err := x.createTable(1, "T", 0, 0, []string{"Nom", "Remarques", "Colonne 3", "Colonne 4", "Colonne 5"},
+			[][]string{{"a", "r", "", "Espèce", "Indice"}, {"b", "s", "", "Buse", "2"}})
+		return err
+	}))
+	before := dump(t, d)
+	must(t, d.SuppressColumn(ctx, "T", 2))
+	check(t, d, "coupé")
+	ts := tablesOf(t, d)
+	if len(ts) != 2 || colNames(ts[0]) != "Nom|Remarques" || ts[0].Rows != 2 || colNames(ts[1]) != "Espèce|Indice" || ts[1].Col != 3 || ts[1].Rows != 1 {
+		t.Fatalf("coupé : %+v", ts)
+	}
+	undoOnce(t, d, before, "coupé")
 }
