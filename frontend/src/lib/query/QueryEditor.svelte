@@ -18,7 +18,7 @@
 	import StepForm from './StepForm.svelte';
 	import SourceForm from './SourceForm.svelte';
 	import type { ConnKind } from './sources';
-	import { OPS, TYPES, clickColumns, clone, defaultStep, insertStep, moveStep, newQuery, otherSource, quickSteps, typeName, withColumns, type Op, type QuickAction } from './steps';
+	import { OPS, TYPES, clickColumns, clone, defaultStep, insertStep, moveStep, newQuery, otherSource, quickSteps, sourceCancel, typeName, withColumns, type Op, type QuickAction } from './steps';
 
 	interface Props {
 		query: Query;
@@ -51,6 +51,9 @@
 	let form = $state<{ step: Step; cols: Column[]; edit: number | null } | null>(null);
 	const initialSource = () => editSource;
 	let sourceOpen = $state(initialSource());
+	// Nouvelle requête dont la source n'est pas encore validée : « Annuler »
+	// dans la boîte de la source annule toute la création (rien n'est enregistré).
+	let creating = $state(initialSource());
 	let error = $state('');
 	let busy = $state(false);
 	let showSQL = $state(false);
@@ -245,6 +248,7 @@
 
 	function setSource(s: Source) {
 		sourceOpen = false;
+		creating = false;
 		q.source = s;
 		refresh(true);
 	}
@@ -517,7 +521,9 @@
 		onok={setSource}
 		oncancel={() => {
 			sourceOpen = false;
-			if (!preview) refresh();
+			const r = sourceCancel(creating, q, !!preview);
+			if (r === 'close') onclose();
+			else if (r === 'refresh') refresh();
 		}}
 	/>
 {/if}

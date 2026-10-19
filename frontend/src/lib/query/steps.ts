@@ -145,6 +145,18 @@ export function newQuery(name: string, source: Source): Query {
 	return { id: 0, name, source, steps: [], table: '', sheet: 0, refreshed: '' };
 }
 
+/**
+ * « Annuler » (ou Échap) dans la boîte de la source. À la création (boîte
+ * ouverte d'emblée sur une requête jamais enregistrée, source pas encore
+ * validée), tout est annulé : l'éditeur se ferme sans rien enregistrer
+ * ('close'). Sinon la boîte se ferme seule, la requête inchangée ; l'aperçu
+ * se lit s'il n'a pas encore été lu ('refresh').
+ */
+export function sourceCancel(creating: boolean, query: Pick<Query, 'id'>, hasPreview: boolean): 'close' | 'refresh' | 'keep' {
+	if (creating && !query.id) return 'close';
+	return hasPreview ? 'keep' : 'refresh';
+}
+
 /** Désigne une autre requête ou un tableau (fusion, ajout) : « query:Nom » ou « table:Nom ». */
 export function otherKey(s?: Source | null): string {
 	if (!s) return '';

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Column } from '#bindings/internal/query/models.js';
-import { OPS, clickColumns, defaultStep, insertStep, moveStep, otherKey, otherSource, quickSteps, typeName, withColumns } from './steps';
+import { OPS, clickColumns, defaultStep, insertStep, moveStep, newQuery, otherKey, otherSource, quickSteps, sourceCancel, typeName, withColumns } from './steps';
 
 const cols = [
 	{ name: 'Ville', type: 'text' },
@@ -61,5 +61,19 @@ describe("menu des colonnes de l'aperçu", () => {
 	it('pré-remplit les boîtes avec les colonnes choisies', () => {
 		expect(withColumns(defaultStep('group', cols), ['Ville', 'Montant']).columns).toEqual(['Ville', 'Montant']);
 		expect(withColumns(defaultStep('rename', cols, 'Ville'), ['Ville', 'Montant']).column).toBe('Ville');
+	});
+});
+
+describe('Annuler dans la boîte de la source', () => {
+	const fresh = newQuery('Ventes', { kind: 'lattis', connection: 'Serveur', sql: '' });
+	it('à la création, annule toute la création', () => {
+		expect(sourceCancel(true, fresh, false)).toBe('close');
+		expect(sourceCancel(true, fresh, true)).toBe('close');
+	});
+	it('source déjà validée ou requête enregistrée : ferme seulement la boîte', () => {
+		expect(sourceCancel(false, fresh, true)).toBe('keep');
+		expect(sourceCancel(false, fresh, false)).toBe('refresh');
+		expect(sourceCancel(true, { ...fresh, id: 4 }, true)).toBe('keep');
+		expect(sourceCancel(false, { ...fresh, id: 4 }, false)).toBe('refresh');
 	});
 });
