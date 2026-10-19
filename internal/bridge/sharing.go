@@ -163,18 +163,25 @@ func (s *DocumentService) watchShare(d *doc.Document) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	s.share.cancel = cancel
-	go recordOpens(ctx, info)
+	go func() {
+		defer recoverPanic("classeur partagé")
+		recordOpens(ctx, info)
+	}()
 	if info.Mode == workbook.Collaborative {
 		// Classeur collaboratif : envoi de la file, réception des changements
 		// des autres, conflits (docs/collaboration/synchronisation.md).
 		eng := collab.New(d.DB(), d.Model, d.Share)
 		s.share.sync, s.share.doc = eng, d
 		s.share.mu.Unlock()
-		go s.followCollab(ctx, d, eng, info)
+		go func() {
+			defer recoverPanic("classeur partagé")
+			s.followCollab(ctx, d, eng, info)
+		}()
 		return
 	}
 	s.share.mu.Unlock()
 	go func() {
+		defer recoverPanic("classeur partagé")
 		for ctx.Err() == nil {
 			srv, _, _, err := remoteServer(ctx, info.Server)
 			if err != nil {

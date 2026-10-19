@@ -43,6 +43,12 @@ func (s *DocumentService) ReportError(ctx context.Context, where, message, stack
 	}
 	entry := b.String()
 	fmt.Fprint(os.Stderr, "[ERREUR interface] "+entry)
+	return writeErrorLog(entry)
+}
+
+// writeErrorLog ajoute une entrée à erreurs.log ; rend son chemin ("" en
+// cas d'échec).
+func writeErrorLog(entry string) string {
 	p, err := errorLogFile()
 	if err != nil {
 		return ""

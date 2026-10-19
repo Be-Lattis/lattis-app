@@ -63,7 +63,10 @@ func (s *GridService) startup(ctx context.Context) error {
 	s.db, s.cancel = db, cancel
 	s.status = GridStatus{State: "loading", Total: DemoRows, Path: path}
 	s.mu.Unlock()
-	go s.prepare(bg, db)
+	go func() {
+		defer recoverPanic("démonstration")
+		s.prepare(bg, db)
+	}()
 	return nil
 }
 

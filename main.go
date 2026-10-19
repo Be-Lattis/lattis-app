@@ -56,6 +56,7 @@ func main() {
 	config.Init(context.Background(), sets)
 
 	documents := &bridge.DocumentService{}
+	bridge.WatchPanics(documents)
 	// -h, --help : l'aide dans le terminal, sans ouvrir la fenêtre ; une
 	// option inconnue l'affiche aussi, avec l'erreur.
 	// -v, -vv, -vvv, --log, --log-file : journal de débogage (internal/trace) ;
@@ -116,6 +117,9 @@ func main() {
 		// Journal de Wails : avertissements et erreurs seulement (pas une ligne
 		// par fichier servi, « [AssetFileServerFS] Handling request ») ; tout à -vvv.
 		LogLevel: debug.wailsLevel(),
+		// Une panique est journalisée dans erreurs.log et signalée dans la
+		// barre d'état, sans arrêter l'application.
+		PanicHandler: bridge.PanicHandler,
 		// Fenêtre sans cadre : le runtime JavaScript de Wails repère les bords
 		// à saisir pour redimensionner. Il lit ces clés telles quelles (avec
 		// le point) et prend 5 px sinon, une bande trop fine à attraper ;

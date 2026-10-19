@@ -296,7 +296,10 @@ func (s *DocumentService) dataChanged(d *doc.Document) {
 	if len(link)+len(unlink) == 0 {
 		return
 	}
-	go s.announceData(info.Server, info.WorkbookID, link, unlink)
+	go func() {
+		defer recoverPanic("annonce des données liées")
+		s.announceData(info.Server, info.WorkbookID, link, unlink)
+	}()
 }
 
 // announceData annonce au serveur les données que le classeur workbookID
@@ -342,12 +345,16 @@ func (s *DocumentService) watchData(d *doc.Document) {
 	s.data.cancel = cancel
 	s.data.mu.Unlock()
 	go func() {
+		defer recoverPanic("données liées")
 		links, err := s.linkedDatasets(ctx, d)
 		if err != nil || len(links) == 0 {
 			return
 		}
 		for server, list := range links {
-			go s.followData(ctx, d, server, list)
+			go func() {
+				defer recoverPanic("suivi des données liées")
+				s.followData(ctx, d, server, list)
+			}()
 		}
 	}()
 }

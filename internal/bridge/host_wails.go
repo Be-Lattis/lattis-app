@@ -29,6 +29,17 @@ func init() {
 
 type wailsHost struct{}
 
+// PanicHandler est le PanicHandler de l'application Wails (main.go) : une
+// panique d'une méthode liée ou d'un évènement est journalisée et
+// signalée (ReportPanic) au lieu d'arrêter l'application.
+func PanicHandler(p *application.PanicDetails) {
+	var err any = p.Error
+	if p.Error == nil {
+		err = "panique"
+	}
+	ReportPanic("application", err, p.StackTrace)
+}
+
 func addFilters[T interface{ AddFilter(string, string) T }](d T, fs []FileFilter) T {
 	for _, f := range fs {
 		d = d.AddFilter(f.Name, f.Pattern)
@@ -160,6 +171,7 @@ func GuardClose(s *DocumentService, w *application.WebviewWindow) {
 			return // les écouteurs tournent déjà
 		}
 		go func() {
+			defer recoverPanic("fermeture de la fenêtre")
 			defer s.ev.closing.Store(false)
 			if s.BeforeClose(context.Background()) {
 				s.ev.closeOK.Store(true)

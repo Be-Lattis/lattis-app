@@ -45,7 +45,10 @@ func (s *DocumentService) evQueue() chan func() {
 		s.ev.queue = make(chan func(), 256)
 		go func() {
 			for f := range s.ev.queue {
-				f()
+				func() {
+					defer recoverPanic("évènement du classeur")
+					f()
+				}()
 			}
 		}()
 	})

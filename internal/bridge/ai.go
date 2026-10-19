@@ -185,6 +185,7 @@ func (s *DocumentService) refreshModels(id, endpoint string) {
 	s.ai.listing[id] = true
 	s.ai.mu.Unlock()
 	go func() {
+		defer recoverPanic("liste des modèles")
 		key, _ := ai.DefaultKeys.Get(id)
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
