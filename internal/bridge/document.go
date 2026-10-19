@@ -53,8 +53,12 @@ type OpenResult struct {
 	Damaged *DamagedFile `json:"damaged,omitempty"`
 	// Locked : classeur ouvert sur un autre poste (verrou ~$) ; l'interface
 	// propose de l'ouvrir en lecture seule ou quand même (OpenLocked).
-	Locked    *FileQuestion `json:"locked,omitempty"`
-	Cancelled bool          `json:"cancelled"`
+	Locked *FileQuestion `json:"locked,omitempty"`
+	// CoEdit : avec Locked, « Travailler à plusieurs » (OpenTogether)
+	// remplace « Ouvrir quand même » (travail à plusieurs sur un dossier
+	// partagé, features.coEditing).
+	CoEdit    bool `json:"coEdit,omitempty"`
+	Cancelled bool `json:"cancelled"`
 }
 
 // DamagedFile décrit un classeur endommagé.
@@ -96,6 +100,7 @@ type DocumentService struct {
 	closeReq closeRequest            // fermeture de la fenêtre demandée (closewin.go)
 	ai       aiState                 // conversation de l'onglet IA (ai.go)
 	share    shareState              // classeur partagé : suivi du serveur (sharing.go)
+	coedit   coeditState             // travail à plusieurs sur un dossier partagé (coedit.go)
 	data     dataWatch               // données du Data Lake liées : suivi en direct (data.go)
 	sql      sqlRuns                 // requêtes en cours de l'onglet SQL (execute.go)
 
@@ -123,6 +128,7 @@ func (s *DocumentService) current() (*doc.Document, error) {
 func (s *DocumentService) ServiceShutdown() error {
 	s.stopMCP()
 	s.stopShare()
+	s.stopCoEdit()
 	s.closeQuerySession()
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -154,6 +160,10 @@ func (s *DocumentService) replace(d *doc.Document) {
 		s.stopShare()
 	}
 	s.watchData(d)
+	// Travail à plusieurs : la session du classeur quitté s'arrête avant
+	// qu'il se ferme ; celle du nouveau commence.
+	s.stopCoEdit()
+	s.startCoEdit(d)
 	if old != nil {
 		old.Close()
 	}
@@ -186,11 +196,11 @@ func (s *DocumentService) Open(ctx context.Context, path string) (OpenResult, er
 		}
 		path = p
 	}
-	// Ouvert sur un autre poste (verrou ~$ à côté du fichier) : l'interface
-	// propose la lecture seule ou de l'ouvrir quand même.
-	if h := archive.LockedBy(path); h != nil {
-		e := archive.LockedError{Path: path, Holder: *h}
-		return OpenResult{Locked: &FileQuestion{Path: path, Message: e.Error()}}, nil
+	// Ouvert sur un autre poste (verrou ~$ à côté du fichier, ou sessions
+	// du travail à plusieurs) : l'interface propose la lecture seule, et de
+	// travailler à plusieurs (ou, sans, de l'ouvrir quand même).
+	if q, together := openQuestion(path); q != nil {
+		return OpenResult{Locked: q, CoEdit: together}, nil
 	}
 	return s.open(ctx, path, doc.OpenNormal)
 }
@@ -455,8 +465,10 @@ func (s *DocumentService) changed(ctx context.Context) (DocState, error) {
 		}
 	}
 	s.mu.Unlock()
-	// Classeur collaboratif : ce qui vient d'être fait part au serveur.
+	// Classeur collaboratif : ce qui vient d'être fait part au serveur ;
+	// travail à plusieurs : dans le journal.
 	s.kickShare()
+	s.kickCoEdit()
 	// Données du Data Lake insérées ou supprimées : suivi et « Utilisée par ».
 	if d, err := s.current(); err == nil {
 		s.dataChanged(d)

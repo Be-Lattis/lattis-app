@@ -32,6 +32,12 @@ func SharedWorkbooks(c *Config) bool {
 	return c.Bool("features.sharedWorkbooks", true)
 }
 
+// CoEditing dit si le travail à plusieurs sur un classeur d'un dossier
+// partagé est activé (features.coEditing, activé par défaut).
+func CoEditing(c *Config) bool {
+	return c.Bool("features.coEditing", true)
+}
+
 // AllowUserLattisServers dit si l'utilisateur peut ajouter des serveurs.
 func AllowUserLattisServers(c *Config) bool {
 	return c.Bool("features.allowUserLattisServers", true)

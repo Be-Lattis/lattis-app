@@ -166,6 +166,10 @@ type Features struct {
 	// en plus de ceux de l'organisation (connections.* de genre lattis) ;
 	// faux dans une stratégie : verrouillage.
 	AllowUserLattisServers *bool `json:"allowUserLattisServers,omitempty"`
+	// CoEditing : travail à plusieurs sur un classeur d'un dossier
+	// partagé (NAS) ; désactivé, un classeur ouvert ailleurs s'ouvre en
+	// lecture seule ou « quand même », comme avant (décision 0009).
+	CoEditing *bool `json:"coEditing,omitempty"`
 }
 
 // Toggle est un interrupteur.
@@ -192,6 +196,8 @@ func Defaults() Tree {
 			"sharedWorkbooks":      true, // activé par défaut (choix de Louis, 18/10/2026)
 			// Ajout de Serveurs Lattis par l'utilisateur.
 			"allowUserLattisServers": true,
+			// Travail à plusieurs sur un dossier partagé (décision 0009).
+			"coEditing": true,
 		},
 		"ai": Tree{"enabled": false, "provider": "anthropic", "dataSharing": "schema-only",
 			"localUrl": "http://localhost:11434/v1"}, // Ollama
@@ -299,7 +305,7 @@ func coerce(path string, v any) (any, bool) {
 }
 
 var boolPaths = []string{"allowPolicyOverride", "features.mcp.enabled", "features.allowUserConnections",
-	"features.htmlTabs", "features.sharedWorkbooks", "features.allowUserLattisServers", "features.luaHttp.restrict", "ai.enabled",
+	"features.htmlTabs", "features.sharedWorkbooks", "features.allowUserLattisServers", "features.coEditing", "features.luaHttp.restrict", "ai.enabled",
 	"ai.keepConversation", "mcp.confirmWrites"}
 
 func boolPath(path string) bool {
@@ -324,6 +330,7 @@ var validators = []struct {
 	{"features.allowUserConnections", isBool},
 	{"features.htmlTabs", isBool},
 	{"features.sharedWorkbooks", isBool},
+	{"features.coEditing", isBool},
 	{"features.allowUserLattisServers", isBool},
 	{"features.luaHttp.restrict", isBool},
 	{"features.luaHttp.allowedDomains", isStringList},

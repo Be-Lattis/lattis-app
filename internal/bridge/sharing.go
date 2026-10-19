@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/lalamefine/lattis/internal/archive"
+	"github.com/lalamefine/lattis/internal/coedit"
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/remote/auth"
@@ -301,6 +302,9 @@ func (s *DocumentService) syncMarks(ctx context.Context, t *grid.Table, table in
 func (s *DocumentService) ShareConflicts(ctx context.Context) ([]collab.Conflict, error) {
 	eng := s.collab()
 	if eng == nil {
+		if cs, ok, err := s.coeditConflicts(ctx); ok {
+			return cs, err
+		}
 		return []collab.Conflict{}, nil
 	}
 	return eng.Conflicts(ctx)
@@ -311,7 +315,17 @@ func (s *DocumentService) ShareConflicts(ctx context.Context) ([]collab.Conflict
 func (s *DocumentService) ShareResolve(ctx context.Context, id int64, mine bool) (DocState, error) {
 	eng := s.collab()
 	if eng == nil {
-		return DocState{}, collab.ErrNotCollaborative
+		ce := s.coeditEngine()
+		if ce == nil {
+			return DocState{}, collab.ErrNotCollaborative
+		}
+		if err := ce.Resolve(ctx, id, mine); err != nil {
+			return DocState{}, err
+		}
+		if d, err := s.current(); err == nil {
+			s.coeditEvent(d, coedit.Event{State: true})
+		}
+		return s.changed(ctx)
 	}
 	if err := eng.Resolve(ctx, id, mine); err != nil {
 		return DocState{}, err

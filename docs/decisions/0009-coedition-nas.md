@@ -48,8 +48,8 @@ Le relevé est celui du partage PostgreSQL, étendu **à tous les tableaux** pen
 ## Rejoindre
 
 1. Bob ouvre `Ventes.lattis` ; le verrou `~$` (ou une présence vivante) dit qu'Alice l'a ouvert. La question devient : **« Travailler à plusieurs »**, « Ouvrir en lecture seule », « Annuler ». Le réglage *Travailler à plusieurs sur un dossier partagé* (`features.coEditing`, activé par défaut, imposable par la DSI) désactivé, on retrouve « Ouvrir quand même ».
-2. Bob écrit sa présence `joining` et attend (20 s au plus) que **chaque session vivante** soit `ready`, dont celle qui tient le verrou `~$`.
-3. La session d'Alice regarde le dossier toutes les 2 s (un `stat`, rien d'autre tant qu'il n'existe pas). Elle voit Bob : si elle a des modifications qui ne sont pas dans un journal (tout ce qui a été fait depuis le dernier enregistrement tant qu'elle était seule), **elle enregistre** (« Bob rejoint le classeur : vos modifications ont été enregistrées pour qu'il les voie ») ; puis elle donne les identifiants partagés, commence à relever ses transactions et écrit sa présence `ready`.
+2. Bob écrit sa présence `joining` et attend (20 s au plus) que **chaque session vivante** soit `ready` et l'ait **accueilli** (son identifiant dans la liste `welcome` de sa présence), dont celle qui tient le verrou `~$`. L'accueil compte : une session déjà `ready` peut avoir des changements hors journal faits pendant qu'elle était seule, à enregistrer d'abord.
+3. La session d'Alice regarde le dossier toutes les 2 s (une lecture du dossier, qui n'existe pas tant que personne ne demande). Elle voit Bob : si elle a des modifications qui ne sont pas dans un journal (tout ce qui a été fait depuis le dernier enregistrement tant qu'elle était seule), **elle enregistre** (« Bob rejoint le classeur : vos modifications ont été enregistrées pour qu'il les voie ») ; puis, la première fois, elle retire les journaux d'une séance passée (sessions plantées : rien de vivant ne les a appliqués), donne les identifiants partagés, vide la file locale (le fichier la contient), commence à relever ses transactions et écrit sa présence `ready` avec Bob dans `welcome`.
 4. Bob ouvre alors le fichier (tel qu'Alice vient de l'enregistrer), donne les mêmes identifiants, rejoue les lignes des journaux au-delà des positions du manifeste, puis passe `ready`.
 5. Pas de réponse (version de Lattis sans travail à plusieurs, réglage désactivé, poste injoignable) : Bob revient à la question d'aujourd'hui (« Ouvrir en lecture seule » / « Ouvrir quand même »), avec la raison.
 
@@ -120,9 +120,11 @@ Comme dans un classeur collaboratif : Ctrl+Z n'annule que ses propres actions ; 
 
 ## Mise en œuvre
 
-- `internal/coedit` : présence, journal (écriture, lecture par position), livraison causale, dernier écrivain gagnant, conflits, compactage ; essais à deux et trois postes sur un même dossier temporaire.
+- `internal/coedit` : présence et accueil (`Join`, `Start`, `New` + `Run`), journal (écriture avec `fsync` ; une écriture interrompue est retirée et refaite avec les mêmes numéros ; lecture par position, journal relu depuis le début après une ligne illisible ou un trou qui dure), livraison causale, dernier écrivain gagnant, conflits (« Garder la mienne » remet la valeur ici, hors du journal d'annulation, et la fait partir), compactage, barrières ; essais à deux et trois postes sur un même dossier temporaire, chaque poste avec son propre dossier de travail, sous le détecteur de courses.
+- Positions appliquées : clé `coedit_applied` de `_lattis_info`, écrite dans la même transaction que les lignes appliquées ou envoyées ; c'est elle que l'enregistrement copie dans le manifeste, et qu'une session qui rejoint relit dans le fichier qu'elle vient d'ouvrir (exactement l'état de son instantané).
 - `internal/remote/oplog` : `SetAll` (tous les tableaux), `SetWatch` (instructions de chaque étape).
 - `internal/canvas` : `RemoteRow.NoCreate` (une modification reçue ne recrée pas une ligne supprimée ici).
 - `internal/archive` : section `journal` du manifeste ; positions prises avec l'instantané ; « modifié par ailleurs » ignoré quand les positions du fichier sont déjà appliquées.
-- `internal/doc`, `internal/bridge` : ouverture « Travailler à plusieurs », démarrage du suivi, enregistrement automatique quand un autre poste rejoint, volet Conflits et indicateur de présence.
+- `internal/doc` : `OpenCoEdit`, `TryLock` (reprise du verrou `~$`), crochets d'enregistrement (`SetCoEdit`).
+- `internal/bridge` : `OpenResult.CoEdit` et `OpenTogether` (« Travailler à plusieurs »), session démarrée à chaque ouverture depuis un fichier, arrêtée à la fermeture, évènement `coedit:changed` et `CoEditState` (indicateur de la barre d'état), volet Conflits partagé avec le classeur collaboratif ; réglage `features.coEditing`.
 - Pas de nouveau format de fichier : la section du manifeste et la clé de `_lattis_info` sont ignorées par les versions précédentes.
