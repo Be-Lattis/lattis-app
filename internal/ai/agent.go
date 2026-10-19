@@ -64,6 +64,10 @@ type Turn struct {
 	// ou le tableau qu'il vise (facultatifs).
 	Write  func(name string) bool
 	Target func(name string, input json.RawMessage) string
+	// NoPrice : le tarif public des modèles ne s'applique pas (passerelle,
+	// revendeur qui expose les mêmes modèles à son prix) ; seuls les jetons
+	// sont comptés.
+	NoPrice bool
 }
 
 // Session est une conversation, dans le format neutre. Elle n'est gardée
@@ -197,8 +201,11 @@ func (s *Session) Send(ctx context.Context, t Turn, text string, emit func(Event
 			}
 			return err
 		}
+		if reply.Stop == StopMaxTokens {
+			reply.Message = dropTruncated(reply.Message)
+		}
 		u := reply.Usage
-		if u.Cost == 0 {
+		if u.Cost == 0 && !t.NoPrice {
 			u.Cost = Cost(t.Model, u)
 		}
 		if !update(func() {
@@ -279,6 +286,27 @@ func (s *Session) appendUser(blocks ...Block) {
 		return
 	}
 	s.history = append(s.history, Message{Role: User, Content: blocks})
+}
+
+// dropTruncated retire d'une réponse coupée à la longueur maximale les
+// appels d'outils dont l'entrée n'est pas un JSON complet : ils ne sont pas
+// exécutés, et le message gardé, dans la forme neutre, reste valide pour le
+// fournisseur.
+func dropTruncated(m Message) Message {
+	var keep []Block
+	for _, b := range m.Content {
+		if b.Type == ToolUseBlock && len(b.Input) > 0 && !json.Valid(b.Input) {
+			continue
+		}
+		keep = append(keep, b)
+	}
+	if len(keep) == len(m.Content) {
+		return m
+	}
+	if len(keep) == 0 {
+		keep = []Block{{Type: TextBlock, Text: "(réponse tronquée)"}}
+	}
+	return Message{Role: m.Role, Content: keep}
 }
 
 // summary : l'erreur d'un outil, pour l'interface (le résultat complet ne

@@ -311,6 +311,9 @@ func (s *DocumentService) AISend(ctx context.Context, run int, text string, view
 		Label:    ai.Label,
 		Write:    ai.IsWrite,
 		Target:   ai.Target,
+		// Tarifs publics d'Anthropic : ni pour une passerelle, ni pour un
+		// revendeur qui expose les mêmes modèles (Mammouth AI).
+		NoPrice: id != "anthropic" || c.String("ai.endpoint", "") != "",
 	}
 	emit := func(e ai.Event) {
 		if e.Kind == ai.EventToolDone && e.Write && !e.Error {
@@ -393,12 +396,17 @@ func (s *DocumentService) AIStop() {
 
 // AIReset commence une nouvelle conversation.
 func (s *DocumentService) AIReset() error {
+	// Une réponse qui démarre (AISend) pose cancel avant de lire le journal
+	// et la structure : refusée dès ce moment, comme AINewConversation.
+	s.ai.mu.Lock()
+	defer s.ai.mu.Unlock()
+	if s.ai.cancel != nil {
+		return ai.ErrBusy
+	}
 	if err := s.ai.session.Reset(); err != nil {
 		return err
 	}
-	s.ai.mu.Lock()
 	s.ai.log, s.ai.runs, s.ai.order, s.ai.notes = nil, nil, nil, nil
-	s.ai.mu.Unlock()
 	return nil
 }
 

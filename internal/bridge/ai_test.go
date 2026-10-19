@@ -136,7 +136,9 @@ func TestAIConversation(t *testing.T) {
 		t.Fatalf("done : %+v", d)
 	}
 	st := s.AIState()
-	if st.Usage.InputTokens != 2100 || st.Usage.Cost <= 0 || !st.KeepConversation || st.Messages != 4 {
+	// Tarif public d'Anthropic : pas pour un autre fournisseur, même avec
+	// un modèle de même nom (M11).
+	if st.Usage.InputTokens != 2100 || st.Usage.Cost != 0 || !st.KeepConversation || st.Messages != 4 {
 		t.Fatalf("état : %+v", st)
 	}
 	tr := s.AITranscript()
@@ -220,9 +222,7 @@ func TestAIConversation(t *testing.T) {
 	if len(s.AITranscript()) != 0 || s.AIState().Messages != 0 || h.resets != 2 {
 		t.Fatalf("fermeture : %d ai:reset, %d entrées", h.resets, len(s.AITranscript()))
 	}
-	if _, err := s.Open(ctx, path); err != nil {
-		t.Fatal(err)
-	}
+	reopen(t, s, path)
 	tr = s.AITranscript()
 	if len(tr) == 0 || tr[0].User != "Crée une feuille" || s.AIState().Messages == 0 || s.AIState().Usage != usage {
 		t.Fatalf("restauration : %d entrées, %+v", len(tr), s.AIState())
@@ -237,17 +237,7 @@ func TestAIConversation(t *testing.T) {
 	// conversation du fichier.
 	aiConfig(false)
 	s.CloseDocument(ctx)
-	// Fermé sans enregistrer : la session peut rester à récupérer (selon
-	// l'horloge du fichier) ; on la jette, comme l'utilisateur qui rouvre le fichier.
-	res, err := s.Open(ctx, path)
-	if err == nil && res.Recoverable != nil {
-		if err = s.Discard(res.Recoverable.Dir); err == nil {
-			res, err = s.Open(ctx, path)
-		}
-	}
-	if err != nil || res.Recoverable != nil || res.Damaged != nil {
-		t.Fatalf("réouverture : %v %+v %+v", err, res.Recoverable, res.Damaged)
-	}
+	reopen(t, s, path)
 	if len(s.AITranscript()) != 0 || s.AIState().Messages != 0 {
 		t.Fatal("conversation restaurée sans le réglage")
 	}
@@ -259,15 +249,47 @@ func TestAIConversation(t *testing.T) {
 	}
 	s.CloseDocument(ctx)
 	aiConfig(true)
-	if _, err := s.Open(ctx, path); err != nil {
-		t.Fatal(err)
-	}
+	reopen(t, s, path)
 	if len(s.AITranscript()) != 0 {
 		t.Fatal("conversation gardée dans le fichier sans le réglage")
 	}
 	if _, err := s.New(ctx); err != nil {
 		t.Fatal(err)
 	}
+	if err := s.AIReset(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// reopen rouvre path. Fermé juste avant, le classeur peut laisser une
+// session vue comme à récupérer (selon l'horloge du fichier) : on la jette,
+// comme l'utilisateur qui rouvre le fichier, au lieu de continuer sans
+// classeur ouvert (M9).
+func reopen(t *testing.T, s *DocumentService, path string) {
+	t.Helper()
+	ctx := context.Background()
+	res, err := s.Open(ctx, path)
+	if err == nil && res.Recoverable != nil {
+		if err = s.Discard(res.Recoverable.Dir); err == nil {
+			res, err = s.Open(ctx, path)
+		}
+	}
+	if err != nil || res.Recoverable != nil || res.Damaged != nil {
+		t.Fatalf("réouverture : %v %+v %+v", err, res.Recoverable, res.Damaged)
+	}
+}
+
+// Une réponse qui démarre empêche de vider la conversation (M13).
+func TestAIResetBusy(t *testing.T) {
+	s := &DocumentService{}
+	s.ai.cancel = func() {}
+	if err := s.AIReset(); !errors.Is(err, ai.ErrBusy) {
+		t.Fatalf("err %v", err)
+	}
+	if err := s.AIDeleteConversation(0); !errors.Is(err, ai.ErrBusy) {
+		t.Fatalf("err %v", err)
+	}
+	s.ai.cancel = nil
 	if err := s.AIReset(); err != nil {
 		t.Fatal(err)
 	}
