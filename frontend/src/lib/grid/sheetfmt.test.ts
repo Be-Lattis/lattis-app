@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hiddenLines, mergeAt, mergeList, parseList, skipHidden, validate } from './sheetfmt';
+import { cleanSource, dvDialog, dvPatch, dvPreview, dvSource, hiddenLines, mergeAt, mergeList, parseList, skipHidden, validate, validateSource } from './sheetfmt';
 
 describe('fusions', () => {
 	const list = mergeList(
@@ -46,5 +46,43 @@ describe('validation par liste', () => {
 	});
 	it('lit la liste saisie', () => {
 		expect(parseList('Lyon; Paris ;\nNice;lyon;;')).toEqual(['Lyon', 'Paris', 'Nice']);
+	});
+});
+
+describe('validation tirée d’une plage', () => {
+	it('reconnaît la source et garde les listes d’avant', () => {
+		expect(dvSource({ src: 'Clients[Ville]' })).toBe('Clients[Ville]');
+		expect(dvSource(['Oui', 'Non'])).toBeUndefined();
+		expect(dvSource({ src: ' ' })).toBeUndefined();
+		expect(dvSource(undefined)).toBeUndefined();
+	});
+	it('ouvre le dialogue sur la forme de la cellule', () => {
+		expect(dvDialog(['Oui', 'Non'])).toEqual({ mode: 'list', text: 'Oui\nNon', src: '' });
+		expect(dvDialog({ src: 'Cell[A1:A3]' })).toEqual({ mode: 'range', text: '', src: 'Cell[A1:A3]' });
+		expect(dvDialog(undefined)).toEqual({ mode: 'list', text: '', src: '' });
+	});
+	it('pose une liste ou une plage', () => {
+		expect(cleanSource(' = Feuille2!Cell[A1:A3] ')).toBe('Feuille2!Cell[A1:A3]');
+		expect(dvPatch('range', '', '=Clients[Ville]')).toEqual({ dv: { src: 'Clients[Ville]' } });
+		expect(dvPatch('list', 'a;b', 'ignoré')).toEqual({ dv: ['a', 'b'] });
+		expect('error' in dvPatch('range', 'a', ' ')).toBe(true);
+		expect('error' in dvPatch('list', ' ; ', 'Clients[Ville]')).toBe(true);
+	});
+	it('montre un aperçu', () => {
+		expect(dvPreview({ values: ['FR', 'IT'] })).toBe('2 valeurs : FR, IT');
+		expect(dvPreview({ values: [], error: 'le tableau « X » n’existe plus' })).toContain('Source introuvable');
+		expect(dvPreview({ values: [] })).toContain('aucune valeur');
+		expect(dvPreview(null)).toBe('');
+	});
+	it('vérifie la saisie avec la liste relue', () => {
+		expect(validateSource('T[C]', { values: ['FR', 'IT'] }, 'fr')).toEqual({ ok: true, value: 'FR' });
+		expect(validateSource('T[C]', { values: ['FR', 'IT'] }, 'DE').ok).toBe(false);
+		// Pas encore relue : la saisie passe ; vide : toujours permise.
+		expect(validateSource('T[C]', undefined, 'DE')).toEqual({ ok: true, value: 'DE' });
+		expect(validateSource('T[C]', { values: [], error: 'x' }, '')).toEqual({ ok: true, value: '' });
+		const r = validateSource('T[C]', { values: [], error: 'le tableau « T » n’existe plus' }, 'DE');
+		expect(r.ok).toBe(false);
+		if (!r.ok) expect(r.message).toContain('T[C]');
+		expect(validateSource('T[C]', { values: [] }, 'DE').ok).toBe(false);
 	});
 });

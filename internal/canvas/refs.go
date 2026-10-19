@@ -15,8 +15,8 @@ import (
 // d'annulation : formules des cellules libres, colonnes calculées de tous
 // les tableaux, règles de mise en forme conditionnelle par formule
 // (colonnes, lignes et colonnes de la feuille, cellules), tableaux croisés,
-// graphiques, contrôles (liste tirée d'une colonne, cellule liée) et
-// requêtes d'import. rewriteRefs s'appelle avant de changer les noms : les
+// graphiques, contrôles (liste tirée d'une colonne, cellule liée),
+// requêtes d'import et sources des validations (listes tirées d'une plage). rewriteRefs s'appelle avant de changer les noms : les
 // formules sont lues avec les noms d'avant.
 //
 // Restent hors de portée : le texte SQL (onglet SQL, favoris, requêtes SQL
@@ -67,7 +67,7 @@ func (t *tx) rewriteRefs(rc refChange) error {
 		return nil
 	}
 	steps := []func(refChange) error{t.rewriteCellFormulas, t.rewriteColumnFormulas, t.rewriteLineRules,
-		t.rewriteCellRules, t.rewritePivots, t.rewriteCharts, t.rewriteButtons, t.rewriteQueries, t.rewriteDocObjects, t.rewriteSortOrders}
+		t.rewriteCellRules, t.rewritePivots, t.rewriteCharts, t.rewriteButtons, t.rewriteQueries, t.rewriteDocObjects, t.rewriteSortOrders, t.rewriteValidations}
 	for _, f := range steps {
 		if err := f(rc); err != nil {
 			return err

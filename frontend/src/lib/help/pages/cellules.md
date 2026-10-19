@@ -18,6 +18,18 @@ Accueil › Mise en forme conditionnelle colore les cellules selon leur valeur :
 
 Données › Validation des données donne la liste des valeurs permises dans la sélection, ou dans toute une colonne de tableau : la cellule affiche une flèche de liste déroulante (`Alt+Bas` l'ouvre), et une autre saisie est refusée.
 
+La liste se saisit (**Valeurs saisies**, une par ligne) ou se tire d'une **Plage**, comme dans Excel :
+
+- une colonne de tableau, par exemple une table de référence : `Clients[Ville]` (ou certaines de ses lignes, `Clients[Ville][1:5]`) ;
+- des cellules : `Cell[A1:A10]`, ou `Feuille2!Cell[A1:A10]` sur une autre feuille (`A1:A10` tapé à la Excel est accepté) ;
+- une cellule nommée.
+
+**Sélectionner** retire le dialogue le temps de désigner la plage dans la feuille (clic, glissé ou `Maj+flèches`), `Entrée` la reprend, `Échap` revient sans la changer. Le dialogue montre un aperçu des valeurs.
+
+La liste d'une plage est relue à chaque ouverture de la liste déroulante et à chaque saisie : valeurs distinctes, dans l'ordre de la plage, sans les cellules vides. La référence suit le renommage du tableau, de la colonne ou de la feuille, et l'insertion ou la suppression de lignes et de colonnes. Si la source disparaît (tableau supprimé, lignes de la plage supprimées), la liste déroulante et le dialogue le signalent, et les saisies sont refusées jusqu'à ce que la validation soit corrigée.
+
+Les validations ne sont pas exportées vers Excel (.xlsx), ni lues à l'import.
+
 ## Notes
 
 Révision › Nouvelle note (`Maj+F2`) attache une note à la cellule active : un coin rouge la signale, et elle s'affiche au survol. Sur une cellule qui en a une, la commande devient **Modifier la note**. L'épingle de la note la garde affichée. Révision › Supprimer la note la retire.

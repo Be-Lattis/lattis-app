@@ -1988,3 +1988,12 @@ export interface TextColumnsPreview {
      */
     "dest": string;
 }
+
+/**
+ * ValidationList est la liste d'une validation tirée d'une plage : les
+ * valeurs, ou pourquoi la source ne se lit pas.
+ */
+export interface ValidationList {
+    "values": string[] | null;
+    "error"?: string;
+}

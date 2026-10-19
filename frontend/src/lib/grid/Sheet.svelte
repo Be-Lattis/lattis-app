@@ -22,7 +22,7 @@
 	import { AutoRows } from './rowfit';
 	import { stepZoom } from './zoom';
 	import { panes, reveal, revealWhole, toGrid, type Pane } from './panes';
-	import { hiddenLines, mergeAt, mergeList, parseList, skipHidden, validate, type MergeRange } from './sheetfmt';
+	import { cleanSource, dvDialog, dvPatch, dvPreview, dvSource, hiddenLines, mergeAt, mergeList, skipHidden, validate, validateSource, type DvList, type MergeRange } from './sheetfmt';
 	import { expandRange, extendCorner, intersect, isSingleCell, mergeRect, rangeOf, stepCell, wholeLines, type CellRange } from './mergesel';
 	import { jumpLine, lineSpans, type Area, type Span } from './jump';
 	import { findKey, finderAction, findZone, foundCell, hitCount, inZone, nextHit, replacedLabel, zoneLabel, type Zone } from './findzone';
@@ -473,6 +473,12 @@
 		/** Actualise la requête d'import qui charge le tableau. */
 		refreshTable?(table: SheetTable): Promise<unknown>;
 		setRules?(table: SheetTable, i: number, rules: Rule[]): Promise<unknown>;
+		/**
+		 * Liste d'une validation tirée d'une plage (Tableau[Colonne],
+		 * Cell[A1:A10], Feuille2!Cell[A1:A10], cellule nommée) pour la feuille
+		 * affichée : valeurs distinctes dans l'ordre de la source, ou l'erreur.
+		 */
+		validationList?(src: string): Promise<DvList>;
 		/** Valeurs distinctes d'une colonne (filtre). */
 		filterValues?(table: SheetTable, i: number): Promise<{ text: string; count: number }[]>;
 		/** Filtre d'une colonne (null : retire le filtre de la colonne). */
@@ -958,6 +964,15 @@
 		// des références sur l'autre feuille (crossref.ts).
 		const switching = placedSheet !== undefined && placedSheet !== (d.sheet ?? 0);
 		if (switching) keepFormula(placedSheet!);
+		// Listes tirées d'une plage : relues (la source a pu changer).
+		dvGen++;
+		dvLists.clear();
+		// Plage source pointée : sur la feuille de la cellule seulement.
+		if (switching && dvPick) {
+			dvPick = null;
+			validDlg = null;
+			say('Validation des données : la plage source se pointe sur la feuille de la cellule ; tapez « Feuille2!Cell[A1:A10] » pour une autre feuille');
+		}
 		// Changement de feuille : garder la position de la feuille quittée,
 		// retrouver celle de la nouvelle (A1 si elle n'a pas été visitée).
 		const back = sheetViews.switchTo(d.sheet ?? 1, { active: { ...active }, anchor: { ...anchor }, top: vs.top, left: scroller?.scrollLeft ?? 0 });
@@ -2108,7 +2123,7 @@
 			const { e, i } = filterDlg;
 			return [{ r0: e.t.row + 1, r1: e.last, c0: e.t.col + i, c1: e.t.col + i }];
 		}
-		if (cfView || validDlg) {
+		if (cfView || (validDlg && !dvPick)) {
 			const sel = selection();
 			// Dans un tableau, une règle vaut pour ses colonnes entières.
 			const e = tableAt(active.row, active.col);
@@ -4199,13 +4214,58 @@
 
 	// --- Validation des données : liste déroulante ------------------------------
 
-	/** Valeurs permises de la cellule (validation par liste), ou undefined. */
-	function listOf(r: number, c: number): string[] | undefined {
+	/** Propriété dv de la cellule (liste saisie ou plage source), hors en-tête. */
+	function dvAt(r: number, c: number): unknown {
 		const e = tableAt(r, c);
 		if (e && r === e.t.row) return undefined;
-		const dv = styleAt(r, c, e)?.dv;
+		return styleAt(r, c, e)?.dv;
+	}
+
+	/** Plage source de la validation de la cellule (liste relue), ou undefined. */
+	function dvSrcAt(r: number, c: number): string | undefined {
+		return dvSource(dvAt(r, c));
+	}
+
+	/**
+	 * Valeurs permises de la cellule (validation par liste), ou undefined.
+	 * Liste tirée d'une plage : les valeurs relues (vide tant qu'elles ne le
+	 * sont pas : la cellule a quand même sa liste déroulante).
+	 */
+	function listOf(r: number, c: number): string[] | undefined {
+		const dv = dvAt(r, c);
+		const src = dvSource(dv);
+		if (src) return dvLists.get(src)?.values ?? [];
 		return Array.isArray(dv) && dv.length ? dv : undefined;
 	}
+
+	// Listes tirées d'une plage, relues sur le serveur (par source) : vidées à
+	// chaque relecture de la feuille, relues à l'ouverture de la liste et
+	// quand la cellule active en a une (la saisie est vérifiée avec elles).
+	const dvLists = new Map<string, DvList>();
+	let dvGen = 0;
+
+	/** Relit la liste d'une plage source ; une erreur de lecture est une liste en erreur. */
+	async function loadDv(src: string): Promise<DvList> {
+		const gen = dvGen;
+		let l: DvList;
+		try {
+			l = source.validationList ? await source.validationList(src) : { values: [], error: 'lecture impossible ici' };
+		} catch (err) {
+			l = { values: [], error: String((err as Error)?.message ?? err) };
+		}
+		if (gen === dvGen) dvLists.set(src, l);
+		return l;
+	}
+
+	/** La cellule active a une liste tirée d'une plage : la relire (vérification de la saisie). */
+	function prefetchDv() {
+		const src = dvSrcAt(active.row, active.col);
+		const k = `${dvGen}|${src}`;
+		if (!src || dvLists.has(src) || dvLoading.has(k)) return;
+		dvLoading.add(k);
+		void loadDv(src).finally(() => dvLoading.delete(k));
+	}
+	const dvLoading = new Set<string>();
 
 	/** Bouton ▾ de la liste, juste à droite de la cellule active (comme Excel). */
 	function dropButton() {
@@ -4248,14 +4308,23 @@
 		return x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
 	}
 
-	let listMenu = $state<{ x: number; y: number; values: string[]; row: number; col: number } | null>(null);
+	let listMenu = $state<{ x: number; y: number; values: string[]; row: number; col: number; error?: string; loading?: boolean } | null>(null);
 
+	/** Ouvre la liste déroulante ; une liste tirée d'une plage est relue à chaque ouverture. */
 	function openList() {
 		const values = listOf(active.row, active.col);
 		if (!values) return;
+		const src = dvSrcAt(active.row, active.col);
 		const b = dropButton();
 		closeMenus();
-		listMenu = { x: toView(screenX(active.col)), y: toView(b.y + b.h) + 2, values, row: active.row, col: active.col };
+		const at = { row: active.row, col: active.col };
+		const cached = src ? dvLists.get(src) : undefined;
+		listMenu = { x: toView(screenX(active.col)), y: toView(b.y + b.h) + 2, values, ...at, error: cached?.error, loading: !!src && !cached };
+		if (!src) return;
+		void loadDv(src).then((l) => {
+			const m = listMenu;
+			if (m && m.row === at.row && m.col === at.col) listMenu = { ...m, values: l.values, error: l.error, loading: false };
+		});
 	}
 
 	function pickFromList(v: string) {
@@ -4269,7 +4338,10 @@
 		if (v !== cellInfo(m.row, m.col).value) write(m.row, m.col, v);
 	}
 
-	let validDlg = $state<{ text: string; error: string } | null>(null);
+	// Dialogue : valeurs saisies (text) ou plage source (src), aperçu des
+	// valeurs de la plage (relu à chaque changement de la référence).
+	let validDlg = $state<{ mode: 'list' | 'range'; text: string; src: string; error: string; preview: DvList | null; loading: boolean } | null>(null);
+	let previewTimer: ReturnType<typeof setTimeout> | undefined;
 
 	/** Données › Validation des données : liste des valeurs permises de la sélection. */
 	export function openValidation() {
@@ -4279,27 +4351,100 @@
 			return;
 		}
 		closeMenus();
-		validDlg = { text: (listOf(active.row, active.col) ?? []).join('\n'), error: '' };
+		validDlg = { ...dvDialog(dvAt(active.row, active.col)), error: '', preview: null, loading: false };
+		if (validDlg.mode === 'range') refreshPreview(0);
+	}
+
+	/** Relit l'aperçu de la plage source du dialogue (après delay ms). */
+	function refreshPreview(delay = 250) {
+		clearTimeout(previewTimer);
+		const d = validDlg;
+		if (!d) return;
+		const src = cleanSource(d.src);
+		if (d.mode !== 'range' || !src || !source.validationList) {
+			d.preview = null;
+			d.loading = false;
+			return;
+		}
+		d.loading = true;
+		previewTimer = setTimeout(async () => {
+			const l = await loadDv(src);
+			const cur = validDlg;
+			if (!cur || cleanSource(cur.src) !== src) return;
+			cur.preview = l;
+			cur.loading = false;
+		}, delay);
 	}
 
 	function applyValidation(clear = false) {
 		const d = validDlg;
 		if (!d) return;
-		const list = clear ? [] : parseList(d.text);
-		if (!clear && !list.length) {
-			d.error = 'Indiquez au moins une valeur (une par ligne, ou séparées par « ; »)';
-			return;
+		let dv: string[] | { src: string } | null = null;
+		if (!clear) {
+			const p = dvPatch(d.mode, d.text, d.src);
+			if ('error' in p) {
+				d.error = p.error;
+				return;
+			}
+			dv = p.dv;
 		}
+		clearTimeout(previewTimer);
 		validDlg = null;
 		wrap.focus();
-		applyStyle({ dv: list.length ? list : null });
-		say(list.length ? `Liste déroulante : ${list.length} valeur${list.length > 1 ? 's' : ''} permise${list.length > 1 ? 's' : ''} (Alt+↓ pour l’ouvrir)` : 'Validation retirée');
+		applyStyle({ dv });
+		if (!dv) say('Validation retirée');
+		else if (Array.isArray(dv)) say(`Liste déroulante : ${dv.length} valeur${dv.length > 1 ? 's' : ''} permise${dv.length > 1 ? 's' : ''} (Alt+↓ pour l’ouvrir)`);
+		else say(`Liste déroulante tirée de ${dv.src}, relue à chaque ouverture (Alt+↓ pour l’ouvrir)`);
+	}
+
+	// « Sélectionner » : le dialogue se retire, la plage source se désigne
+	// dans la grille (clic, glissé, Maj+flèches), Entrée la reprend dans le
+	// dialogue, Échap revient sans la changer. La sélection d'avant (la cible
+	// de la validation) est rétablie.
+	let dvPick = $state<{ active: { row: number; col: number }; anchor: { row: number; col: number }; whole: typeof wholeSel; sheet: number } | null>(null);
+	let dvPickRef = $state('');
+
+	function startPick() {
+		if (!validDlg) return;
+		dvPick = { active: { ...active }, anchor: { ...anchor }, whole: wholeSel, sheet: sheetId() };
+		dvPickRef = pickedRef() ?? '';
+		wrap.focus();
+		say('Sélectionnez la plage source dans la feuille, puis Entrée (Échap : annuler)');
+	}
+
+	/** Référence de la sélection pointée : Tableau[Colonne], Tableau[Colonne][a:b] ou Cell[A1:A10]. */
+	function pickedRef(): string | null {
+		return rangeRef(selection(), refTables());
+	}
+
+	function endPick(keep: boolean) {
+		const p = dvPick;
+		if (!p) return;
+		const ref = keep ? pickedRef() : null;
+		if (keep && ref === null) {
+			say('Une plage source couvre une seule colonne d’un tableau, ou des cellules libres');
+			return;
+		}
+		dvPick = null;
+		active = p.active;
+		anchor = p.anchor;
+		wholeSel = p.whole;
+		schedule();
+		refreshStatus();
+		const d = validDlg;
+		if (d && ref) {
+			d.src = ref;
+			d.mode = 'range';
+			d.error = '';
+			refreshPreview(0);
+		}
 	}
 
 	/** Saisie refusée par la validation de la cellule : le message, sinon null (value : la valeur de la liste). */
 	function refusal(row: number, col: number, text: string): { message: string } | { value: string } {
 		if (text.trimStart().startsWith('=')) return { value: text }; // une formule n'est pas vérifiée
-		const r = validate(listOf(row, col), text);
+		const src = dvSrcAt(row, col);
+		const r = src ? validateSource(src, dvLists.get(src), text) : validate(listOf(row, col), text);
 		return r.ok ? { value: r.value } : { message: r.message };
 	}
 
@@ -4503,6 +4648,8 @@
 
 	function refreshStatus() {
 		syncFinderZone();
+		if (dvPick) dvPickRef = pickedRef() ?? '';
+		else prefetchDv();
 		if (message !== shownMessage) {
 			shownMessage = message;
 			clearTimeout(messageTimer);
@@ -7284,6 +7431,20 @@
 		// Touche maintenue : le cadre suit sans animation.
 		if (e.repeat) noAnimUntil = performance.now() + 150;
 		if (editing) return;
+		// Plage source d'une validation pointée : Entrée la reprend, Échap
+		// annule ; on ne saisit rien dans la grille, on s'y déplace seulement.
+		if (dvPick) {
+			if (e.key === 'Enter' || e.key === 'Escape') {
+				e.preventDefault();
+				endPick(e.key === 'Enter');
+				return;
+			}
+			const mod = e.ctrlKey || e.metaKey;
+			if ((e.key.length === 1 && (!mod || /^[vxzyd]$/i.test(e.key))) || e.key === 'F2' || e.key === 'Delete' || e.key === 'Backspace') {
+				e.preventDefault();
+				return;
+			}
+		}
 		// Feuille protégée : déplacement et lecture seulement (Rechercher,
 		// copier, annuler, recalculer, comme le ruban), pas de saisie, sans
 		// message ; les raccourcis de la page (Ctrl+S, onglets…) passent.
@@ -10638,7 +10799,15 @@
 				}}
 			/>
 		{/if}
-		{#if validDlg}
+		{#if validDlg && dvPick}
+			<!-- Plage source pointée dans la grille : le dialogue est retiré, comme le bouton « réduire » d'Excel. -->
+			<div class="pick-bar" role="status">
+				<span>Plage source : <b>{dvPickRef || '…'}</b></span>
+				<span class="sp"></span>
+				<button class="primary" onclick={() => endPick(true)}>OK <span class="keys">Entrée</span></button>
+				<button onclick={() => endPick(false)}>Annuler <span class="keys">Échap</span></button>
+			</div>
+		{:else if validDlg}
 			{@const d = validDlg}
 			<!-- Boîte modale, comme celle d'Excel : un clic à côté ou un redimensionnement ne la ferme plus. -->
 			<div class="dlg-back" role="presentation">
@@ -10654,17 +10823,48 @@
 				onkeydown={(ev) => {
 					ev.stopPropagation();
 					if (ev.key === 'Escape') {
+						clearTimeout(previewTimer);
 						validDlg = null;
 						wrap.focus();
 					}
 				}}
 			>
 				<div class="menu-title">Validation des données : liste déroulante</div>
-				<p class="menu-note">
-					Valeurs permises dans la sélection, une par ligne (ou séparées par « ; »). Une flèche ▾ propose la liste dans la cellule (Alt+↓) ; toute autre saisie est
-					refusée. Sur toute une colonne de tableau, la liste vaut aussi pour les lignes ajoutées ensuite.
-				</p>
-				<div class="add"><textarea bind:value={d.text} rows="7" placeholder={'Oui\nNon'}></textarea></div>
+				<div class="dv-mode" role="radiogroup" aria-label="Source de la liste">
+					<label><input type="radio" name="dv-mode" value="list" bind:group={d.mode} onchange={() => (d.error = '')} /> Valeurs saisies</label>
+					<label><input type="radio" name="dv-mode" value="range" bind:group={d.mode} onchange={() => ((d.error = ''), refreshPreview(0))} /> Plage</label>
+				</div>
+				{#if d.mode === 'list'}
+					<p class="menu-note">
+						Valeurs permises dans la sélection, une par ligne (ou séparées par « ; »). Une flèche ▾ propose la liste dans la cellule (Alt+↓) ; toute autre saisie est
+						refusée. Sur toute une colonne de tableau, la liste vaut aussi pour les lignes ajoutées ensuite.
+					</p>
+					<div class="add"><textarea bind:value={d.text} rows="7" placeholder={'Oui\nNon'}></textarea></div>
+				{:else}
+					<p class="menu-note">
+						Les valeurs de la plage (distinctes, sans les vides, dans l’ordre) sont relues à chaque ouverture de la liste et à chaque saisie : une colonne de tableau
+						(Clients[Ville]), des cellules (Cell[A1:A10], Feuille2!Cell[A1:A10]) ou une cellule nommée. La référence suit les renommages et déplacements.
+					</p>
+					<div class="add dv-src">
+						<input
+							type="text"
+							aria-label="Plage source"
+							placeholder="Clients[Ville]"
+							spellcheck="false"
+							bind:value={d.src}
+							oninput={() => ((d.error = ''), refreshPreview())}
+							onkeydown={(ev) => {
+								if (ev.key === 'Enter') applyValidation();
+							}}
+						/>
+						<button title="Désigner la plage dans la feuille (Entrée pour la reprendre)" onclick={startPick}>Sélectionner</button>
+					</div>
+					{#if d.loading}
+						<p class="menu-note">Lecture de la plage…</p>
+					{:else if d.preview}
+						<p class="menu-note" class:error={!!d.preview.error || !d.preview.values.length}>{dvPreview(d.preview)}</p>
+					{/if}
+				{/if}
 				{#if d.error}<p class="menu-note error">{d.error}</p>{/if}
 				<div class="foot">
 					{#if listOf(active.row, active.col)}<button onclick={() => applyValidation(true)}>Effacer la validation</button>{/if}
@@ -10672,6 +10872,7 @@
 					<button class="primary" onclick={() => applyValidation()}>OK</button>
 					<button
 						onclick={() => {
+							clearTimeout(previewTimer);
 							validDlg = null;
 							wrap.focus();
 						}}>Annuler</button
@@ -10712,6 +10913,7 @@
 				{#each m.values as v (v)}
 					<button class:on={cellInfo(m.row, m.col).value === v} onclick={() => pickFromList(v)}>{v}</button>
 				{/each}
+				{#if m.error}<p class="menu-note error">Liste introuvable : {m.error}</p>{:else if m.loading && !m.values.length}<p class="menu-note">Lecture de la liste…</p>{:else if !m.values.length}<p class="menu-note">La plage de la liste est vide</p>{/if}
 			</div>
 		{/if}
 		{#if sizeDlg}
@@ -11681,6 +11883,68 @@
 	}
 	.valid-dlg .menu-note {
 		max-width: none;
+	}
+	.dv-mode {
+		display: flex;
+		gap: 16px;
+		margin: 4px 14px;
+	}
+	.valid-dlg .dv-mode input {
+		width: auto;
+	}
+	.dv-mode label {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+	}
+	.valid-dlg .dv-src input {
+		flex: 1;
+		font: inherit;
+		padding: 3px 6px;
+		border: 1px solid #c9cdd2;
+		border-radius: 3px;
+	}
+	/* Plage source d'une validation pointée dans la grille : le dialogue retiré laisse cette barre. */
+	.pick-bar {
+		position: fixed;
+		left: 50%;
+		top: 12px;
+		transform: translateX(-50%);
+		z-index: var(--z-dialog);
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		max-width: calc(100vw - 32px);
+		padding: 6px 10px;
+		background: #fff;
+		border: 1px solid #c9cdd2;
+		border-radius: 4px;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+		font-size: 13px;
+	}
+	.pick-bar .sp {
+		flex: 1;
+	}
+	.pick-bar button {
+		font: inherit;
+		padding: 2px 8px;
+		border: 1px solid #c9cdd2;
+		background: #fff;
+		border-radius: 3px;
+		cursor: pointer;
+	}
+	.pick-bar button.primary {
+		background: #217346;
+		border-color: #217346;
+		color: #fff;
+	}
+	.pick-bar button.primary .keys {
+		color: #d9eadf;
+	}
+	.pick-bar .keys {
+		color: #6b7280;
+		font-size: 11px;
+		margin-left: 4px;
 	}
 	.valid-dlg textarea {
 		flex: 1;

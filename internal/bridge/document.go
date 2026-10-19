@@ -1291,6 +1291,18 @@ func (s *DocumentService) FieldValues(ctx context.Context, table, field string) 
 	return d.FieldValues(ctx, table, field)
 }
 
+// ValidationList lit la liste d'une validation tirée d'une plage (src :
+// Tableau[Colonne], Cell[A1:A10], Feuille2!Cell[A1:A10] ou une cellule
+// nommée), pour une cellule de la feuille sheet : valeurs distinctes dans
+// l'ordre de la source, ou l'erreur qui dit pourquoi elle ne se lit pas.
+func (s *DocumentService) ValidationList(ctx context.Context, sheet int64, src string) (canvas.ValidationList, error) {
+	d, err := s.current()
+	if err != nil {
+		return canvas.ValidationList{}, err
+	}
+	return d.ValidationList(ctx, sheet, src)
+}
+
 // PromoteHeader prend la première ligne d'un tableau comme en-têtes.
 func (s *DocumentService) PromoteHeader(ctx context.Context, table string) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.PromoteHeader(ctx, table) })

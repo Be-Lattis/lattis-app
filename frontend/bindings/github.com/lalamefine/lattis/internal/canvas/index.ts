@@ -74,5 +74,6 @@ export type {
     TableNames,
     TextColumnFormat,
     TextColumnsOptions,
-    TextColumnsPreview
+    TextColumnsPreview,
+    ValidationList
 } from "./models.js";

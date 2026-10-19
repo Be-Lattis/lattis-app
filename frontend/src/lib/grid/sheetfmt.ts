@@ -78,3 +78,66 @@ export function parseList(text: string): string[] {
 	}
 	return out;
 }
+
+// --- Validation tirée d'une plage --------------------------------------------
+
+/** Liste d'une validation tirée d'une plage, relue sur le serveur. */
+export interface DvList {
+	values: string[];
+	error?: string;
+}
+
+/** Source d'une validation tirée d'une plage ({ src: "Clients[Ville]" }), sinon undefined. */
+export function dvSource(dv: unknown): string | undefined {
+	if (!dv || typeof dv !== 'object' || Array.isArray(dv)) return undefined;
+	const s = (dv as { src?: unknown }).src;
+	return typeof s === 'string' && s.trim() ? s : undefined;
+}
+
+/** Source tapée dans le dialogue : sans le « = » de tête ni les espaces. */
+export function cleanSource(text: string): string {
+	return text.trim().replace(/^=\s*/, '').trim();
+}
+
+/** État initial du dialogue Validation des données d'après la propriété dv de la cellule active. */
+export function dvDialog(dv: unknown): { mode: 'list' | 'range'; text: string; src: string } {
+	const src = dvSource(dv);
+	if (src) return { mode: 'range', text: '', src };
+	return { mode: 'list', text: Array.isArray(dv) ? dv.join('\n') : '', src: '' };
+}
+
+/**
+ * Propriété dv à poser d'après le dialogue (liste saisie ou plage), ou le
+ * message qui dit ce qui manque.
+ */
+export function dvPatch(mode: 'list' | 'range', text: string, src: string): { dv: string[] | { src: string } } | { error: string } {
+	if (mode === 'range') {
+		const s = cleanSource(src);
+		if (!s) return { error: 'Indiquez la plage source : Tableau[Colonne], Cell[A1:A10] ou Feuille2!Cell[A1:A10] (« Sélectionner » pour la désigner)' };
+		return { dv: { src: s } };
+	}
+	const list = parseList(text);
+	if (!list.length) return { error: 'Indiquez au moins une valeur (une par ligne, ou séparées par « ; »)' };
+	return { dv: list };
+}
+
+/** Aperçu des valeurs d'une plage source, dans le dialogue. */
+export function dvPreview(l: DvList | null | undefined): string {
+	if (!l) return '';
+	if (l.error) return `Source introuvable : ${l.error}`;
+	if (!l.values.length) return 'La plage ne contient aucune valeur';
+	const shown = l.values.length > 12 ? l.values.slice(0, 12).join(', ') + '…' : l.values.join(', ');
+	return `${l.values.length} valeur${l.values.length > 1 ? 's' : ''} : ${shown}`;
+}
+
+/**
+ * Saisie vérifiée par une validation tirée d'une plage : la liste relue
+ * (undefined : pas encore lue, la saisie passe), une source en erreur ou
+ * vide refuse tout, sinon comme validate.
+ */
+export function validateSource(src: string, l: DvList | undefined, text: string): { ok: true; value: string } | { ok: false; message: string } {
+	if (!l || text.trim() === '') return { ok: true, value: text };
+	if (l.error) return { ok: false, message: `« ${text.trim()} » ne peut pas être vérifié : la source de la liste (${src}) ne se lit pas (${l.error})` };
+	if (!l.values.length) return { ok: false, message: `« ${text.trim()} » n'est pas permis ici : la plage de la liste (${src}) est vide` };
+	return validate(l.values, text);
+}

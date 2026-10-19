@@ -491,7 +491,7 @@ end`,
 	)
 }
 
-const styleHelp = `style : bold, italic, underline, strike (booléens), font (police) et size (taille en points), color et fill (couleurs "#rrggbb"), align ("left", "center" ou "right"), valign ("top", "middle" ou "bottom"), wrap (renvoyer à la ligne), format ("0", "0,00", "%", "€", "date", "time" ou "text"), decimals (nombre de décimales), no_grouping (sans séparateur de milliers), date_format (motif d'une date ou d'une heure : "jj/mm/aaaa", "jj mmm aaaa", "aaaa-mm-jj", "hh:mm"…), borders (les quatre bordures) ou border_top, border_bottom, border_left, border_right, border_color, et validation (liste des valeurs permises, liste déroulante). false ou "" retire la propriété.`
+const styleHelp = `style : bold, italic, underline, strike (booléens), font (police) et size (taille en points), color et fill (couleurs "#rrggbb"), align ("left", "center" ou "right"), valign ("top", "middle" ou "bottom"), wrap (renvoyer à la ligne), format ("0", "0,00", "%", "€", "date", "time" ou "text"), decimals (nombre de décimales), no_grouping (sans séparateur de milliers), date_format (motif d'une date ou d'une heure : "jj/mm/aaaa", "jj mmm aaaa", "aaaa-mm-jj", "hh:mm"…), borders (les quatre bordures) ou border_top, border_bottom, border_left, border_right, border_color, et validation (liste déroulante : liste des valeurs permises {"Oui", "Non"}, ou plage source "=Clients[Ville]", "=Cell[A1:A10]", "=Feuille2!Cell[A1:A10]" ou "=NomDeCellule", dont les valeurs distinctes non vides sont relues à chaque ouverture de la liste et à chaque saisie). false ou "" retire la propriété.`
 
 // styleKeys traduit les noms lisibles des propriétés de mise en forme vers
 // les clés du classeur (internal/canvas/styles.go).

@@ -534,10 +534,16 @@ func (t *tx) rewriteCellRefs(sheet int64, move func(r, c int) (int, int, bool)) 
 			undo = append(undo, st(qf, c.f, c.tbl, c.id))
 		}
 	}
-	if len(do) == 0 {
-		return nil
+	if len(do) > 0 {
+		if err := t.apply(do, undo); err != nil {
+			return err
+		}
 	}
-	return t.apply(do, undo)
+	// Sources des validations tirées d'une plage (feuille de leur couche de style).
+	return t.rewriteDVSources(func(src string, home int64) (string, bool) {
+		neu := rewrite(src, home)
+		return neu, neu != src
+	})
 }
 
 // trimAfterDrop : après la suppression de colonnes, le tableau se resserre

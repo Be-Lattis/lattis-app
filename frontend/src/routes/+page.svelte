@@ -1366,6 +1366,10 @@
 		setPivot: (id, cfg) => DocumentService.SetPivot(id, cfg).then(reload),
 		placePivot: (row, col, cfg) => DocumentService.PlacePivot(sheetId, row, col, cfg).then(reload),
 		pivotFieldValues: async (table, field) => (await DocumentService.FieldValues(table, field)) ?? [],
+		validationList: async (src) => {
+			const l = await DocumentService.ValidationList(sheetId, src);
+			return { values: l.values ?? [], error: l.error || undefined };
+		},
 		createChart: (row, col, cfg) => DocumentService.CreateChart(sheetId, row, col, cfg).then(reload),
 		setChart: (id, cfg) => DocumentService.SetChart(id, cfg).then(reload),
 		moveChart: (id, row, col) => DocumentService.MoveChart(id, row, col).then(reload),

@@ -2272,6 +2272,16 @@ export function UpdateTableSource(req: $models.TableSourceRequest): $Cancellable
 }
 
 /**
+ * ValidationList lit la liste d'une validation tirée d'une plage (src :
+ * Tableau[Colonne], Cell[A1:A10], Feuille2!Cell[A1:A10] ou une cellule
+ * nommée), pour une cellule de la feuille sheet : valeurs distinctes dans
+ * l'ordre de la source, ou l'erreur qui dit pourquoi elle ne se lit pas.
+ */
+export function ValidationList(sheet: number, src: string): $CancellablePromise<canvas$0.ValidationList> {
+    return $Call.ByID(3218052505, sheet, src);
+}
+
+/**
  * Window lit des lignes d'un tableau (lecture par fenêtres).
  */
 export function Window(sheet: number, table: number, first: number, count: number): $CancellablePromise<grid$0.Window> {

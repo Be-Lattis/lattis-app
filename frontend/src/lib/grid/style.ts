@@ -32,7 +32,7 @@ export interface CellStyle {
 	// Hors mise en forme (ni effacées ni reproduites, voir internal/canvas/cellformat.go).
 	nt?: string; // note
 	np?: boolean; // note épinglée (toujours affichée)
-	dv?: string[]; // validation : valeurs permises (liste déroulante)
+	dv?: string[] | { src: string }; // validation : valeurs permises (liste déroulante), ou plage source (relue)
 	mr?: number; // fusion : lignes et colonnes couvertes (cellule en haut à gauche)
 	mc?: number;
 	hd?: boolean; // ligne ou colonne masquée (styles de lignes et de colonnes)
