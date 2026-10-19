@@ -3515,7 +3515,7 @@
 	// et remplies, une petite clé grisée dans son en-tête propose d'en faire
 	// la clé, en un clic ; clic droit : « Ne plus proposer » pour ce tableau.
 	// La clé n'est posée d'office qu'à la création, sur une première colonne
-	// ID ou 1, 2, 3… (canvas/autokey.go, décision 0009).
+	// ID ou 1, 2, 3… (canvas/autokey.go, décision 0010).
 
 	/** Infobulle d'une colonne numérotée d'office. */
 	const AUTO_NUMBER_TIP = 'numérotée automatiquement : une ligne ajoutée reçoit le numéro suivant';

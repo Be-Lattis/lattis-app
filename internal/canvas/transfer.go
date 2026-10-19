@@ -982,8 +982,10 @@ func (t *tx) filledRows(tb Table, ids []int64, cols []Column) ([]int64, error) {
 // dropEmptiedRows supprime, parmi les lignes touched qu'un effacement vient
 // de vider, celles où plus rien n'est saisi (décision 0009) : les colonnes
 // calculées, la colonne de catégorie masquée par l'onglet à choix (sa valeur
-// est imposée) et la mise en forme ne comptent pas ; la clé, si, comme
-// toute colonne saisie. Un tableau garde au moins une ligne. Rien ne part
+// est imposée), la colonne numérotée d'office (clé d'entiers ou suite
+// régulière, décision 0010 : son numéro est donné à toute ligne ajoutée) et
+// la mise en forme ne comptent pas ; une autre clé, si, comme toute colonne
+// saisie. Un tableau garde au moins une ligne. Rien ne part
 // d'un tableau chargé par une requête ou publié en lecture seule : les
 // cellules restent seulement vidées. Rend le nombre de lignes supprimées.
 func (t *tx) dropEmptiedRows(tb Table, touched []int64) (int, error) {
@@ -997,9 +999,13 @@ func (t *tx) dropEmptiedRows(tb Table, touched []int64) (int, error) {
 	if err := t.row(`SELECT count(*) FROM _lattis_queries WHERE target = ?`, tb.ID).Scan(&queries); err != nil || queries > 0 {
 		return 0, err
 	}
+	auto, numbered, err := t.autoNumber(tb)
+	if err != nil {
+		return 0, err
+	}
 	var content []Column
 	for _, c := range tb.Cols {
-		if c.Formula != "" {
+		if c.Formula != "" || numbered && c.ID == auto.col.ID {
 			continue
 		}
 		if ch := tb.choice; ch != nil && !ch.All && c.ID == ch.Col.ID {

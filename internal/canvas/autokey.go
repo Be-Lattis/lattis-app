@@ -9,7 +9,7 @@ import (
 )
 
 // Clé posée d'office et numérotation automatique (demande de Louis,
-// 19/10/2026, docs/decisions/0009-cle-automatique.md ; remplace en partie
+// 19/10/2026, docs/decisions/0010-cle-automatique.md ; remplace en partie
 // « jamais de clé automatique », keyhint.go).
 //
 // À la création d'un tableau par l'utilisateur (saisie, collage, Mettre sous

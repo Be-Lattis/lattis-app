@@ -7,7 +7,7 @@
 Quand **Suppr** ou **Effacer le contenu** (`ClearRange`) vide des cellules d'un tableau et qu'une ligne de données n'a plus aucune valeur saisie, cette ligne est supprimée, dans la même étape d'annulation, comme si elle n'avait jamais été tapée. La barre d'état le dit : « N lignes vides supprimées (Ctrl+Z pour annuler) ».
 
 - **Ce qui ne compte pas** pour dire qu'une ligne est vide : les colonnes calculées, la colonne de catégorie d'un onglet à choix quand une valeur est choisie (masquée, sa valeur est imposée à la saisie), la mise en forme. Sous « (Toutes) », la colonne est visible et compte.
-- **Ce qui compte** : toute autre colonne saisie, une saisie hors type, et la **clé** du tableau. On ne sait pas dire si une clé a été tapée ou numérotée d'office : elle retient la ligne (à revoir avec la numérotation automatique des clés).
+- **Ce qui compte** : toute autre colonne saisie, une saisie hors type, et la **clé** du tableau, sauf une colonne numérotée d'office (clé d'entiers, ou première colonne en suite régulière : décision 0010). On ne sait pas dire si un numéro a été tapé ou donné d'office ; comme toute ligne ajoutée en reçoit un, il ne retient pas la ligne (une ligne dont il ne reste que son numéro part). Une clé de texte ou de dates la retient.
 - **Lignes candidates** : seulement celles où l'effacement a vidé au moins une cellule. Une ligne déjà vide prise dans la sélection, ou toute autre ligne vide du tableau, reste (les dernières lignes vides partent toujours, règle plus ancienne).
 - Un tableau garde au moins une ligne.
 - **Garde-fous** : feuille protégée, rien ne s'efface ; tableau chargé par une requête ou publié en lecture seule (classeur partagé), les cellules sont vidées si l'effacement le permet mais aucune ligne ne part.

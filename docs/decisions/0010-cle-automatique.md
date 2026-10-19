@@ -22,6 +22,8 @@ Pas d'autre nom (`N°`, `Num`, `Identifiant`…) pour la première règle : ces 
 - **clé d'entiers** (posée d'office ou à la main) : `max + 1`, où que la ligne soit ajoutée (saisie sous le tableau, insertion au milieu, collage de lignes, rattachement, `tables.insert_row`, `db.insert`). Une insertion au milieu ne renumérote rien : la nouvelle ligne prend le plus grand numéro suivant ;
 - **première colonne d'entiers en suite régulière** sans être la clé (10, 20, 30… : au moins deux lignes, même écart partout, dans l'ordre des lignes) : dernier + écart, **seulement pour une ligne ajoutée à la fin** ; une ligne insérée au milieu reste vide (elle romprait la suite).
 
+**Suppr** (décision 0009) : la colonne numérotée ne retient pas une ligne vidée ; une ligne dont il ne reste que le numéro est supprimée, sans renuméroter les autres.
+
 Une valeur tapée ou collée dans la colonne remplace le numéro (une valeur déjà prise dans une clé est refusée, comme avant). Une ligne ajoutée par une requête SQL (`db.execute`, onglet SQL) garde ce que la requête donne : c'est du SQL.
 
 **Classeur collaboratif.** Le numéro est calculé sur le poste et part au serveur comme une valeur saisie. Deux personnes qui ajoutent une ligne en même temps peuvent calculer le même numéro ; le serveur traite ce conflit comme pour toute saisie.

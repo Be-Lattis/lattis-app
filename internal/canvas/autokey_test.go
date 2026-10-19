@@ -259,3 +259,27 @@ func TestAutoNumberSequence(t *testing.T) {
 		t.Fatalf("suite rompue, colonne numérotée %d", a)
 	}
 }
+
+// Suppr qui vide une ligne (décision 0009) : le numéro donné d'office par
+// une clé d'entiers ne la retient pas.
+func TestClearEmptiedRowsAutoNumber(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"ID", "Nom", "Indice"}, {"1", "a", "5"}, {"2", "b", "6"}, {"3", "c", "7"}}); err != nil {
+		t.Fatal(err)
+	}
+	// Ligne ajoutée dessous, numérotée 4, puis effacée : elle part.
+	mustSet(t, d, 1, 4, 1, "d")
+	before := dump(t, d)
+	must(t, d.ClearRange(ctx, 1, 4, 1, 4, 2, false))
+	if got := firstCol(t, d); got != "1,2,3" {
+		t.Fatalf("ligne ajoutée puis effacée : %s", got)
+	}
+	undoOnce(t, d, before, "effacement")
+	// Au milieu aussi : Nom et Indice de la ligne 2 effacés.
+	must(t, d.ClearRange(ctx, 1, 2, 1, 2, 2, false))
+	if got := firstCol(t, d); got != "1,3,4" {
+		t.Fatalf("ligne du milieu : %s", got)
+	}
+	check(t, d, "ligne du milieu")
+}

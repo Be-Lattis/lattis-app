@@ -7,7 +7,7 @@ import (
 // Suggestion de clé (choix de Louis du 18/10 : pas de clé primaire
 // automatique ; en partie remplacé le 19/10 : une première colonne ID ou
 // 1, 2, 3… devient la clé à la création, autokey.go et
-// docs/decisions/0009-cle-automatique.md) : dès que les valeurs de la
+// docs/decisions/0010-cle-automatique.md) : dès que les valeurs de la
 // première colonne d'un tableau sans clé sont uniques et toutes remplies,
 // quel que soit leur type (nombre, texte, date…), l'interface propose
 // discrètement d'en faire la clé, en un clic. L'index UNIQUE n'est créé

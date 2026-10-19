@@ -103,7 +103,7 @@ naît avec cette colonne pour clé (`tables_get` le montre) ; pas un tableau imp
 ajoutée (`tables_insert_row`, saisie ou collage sous le tableau, `db.insert`) reçoit alors le
 numéro suivant de la clé d'entiers (le plus grand plus 1, sans renuméroter), ou, pour une
 première colonne en suite régulière (10, 20, 30…), le numéro suivant si elle est ajoutée à la
-fin ; une valeur donnée pour la colonne l'emporte (voir `docs/decisions/0009-cle-automatique.md`).
+fin ; une valeur donnée pour la colonne l'emporte (voir `docs/decisions/0010-cle-automatique.md`).
 
 `ui_dialog`, `ui_confirm` et `ui_prompt` ouvrent une boîte de dialogue dans la fenêtre et
 attendent la réponse de l'utilisateur : l'assistant peut ainsi lui demander une
