@@ -72,7 +72,7 @@
 	}
 	const FONTS_W = 134; // largeur des listes Police et Taille (fit.ts)
 
-	export type FileAction = 'new' | 'open' | 'openRemote' | 'share' | 'rights' | 'republish' | 'save' | 'saveAs' | 'import' | 'export' | 'exportSheet' | 'exportXlsx' | 'exportOds' | 'print' | 'about' | 'close' | 'demo' | 'settings' | 'help';
+	export type FileAction = 'new' | 'open' | 'openRemote' | 'share' | 'rights' | 'republish' | 'save' | 'saveAs' | 'import' | 'export' | 'exportSheet' | 'exportXlsx' | 'exportOds' | 'print' | 'about' | 'close' | 'demo' | 'settings' | 'help' | 'report';
 	/** Accueil › Édition (Remplissage, Effacer, Trier et filtrer), Mettre sous forme de tableau. */
 	export type EditAction = 'fillDown' | 'fillRight' | 'clearContents' | 'clearFilters' | 'formatAsTable';
 
@@ -823,11 +823,36 @@
 		measureCtx.font = `${px}px 'Segoe UI', system-ui, -apple-system, sans-serif`;
 		return measureCtx.measureText(s).width;
 	};
+	// Groupes masqués (clic droit sur le nom d'un groupe), par onglet :
+	// « onglet|groupe », gardés sur ce poste. Clic droit dans le vide à droite :
+	// les réafficher.
+	const HIDE_KEY = 'lattis.ribbon.hidden';
+	let hiddenGroups = $state<string[]>(readHidden());
+	let hideMenu = $state<{ x: number; y: number; title?: string } | null>(null);
+	function readHidden(): string[] {
+		try {
+			const v = JSON.parse(localStorage.getItem(HIDE_KEY) ?? '[]');
+			return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : [];
+		} catch {
+			return [];
+		}
+	}
+	function setHidden(list: string[]) {
+		hiddenGroups = list;
+		try {
+			localStorage.setItem(HIDE_KEY, JSON.stringify(list));
+		} catch {
+			// stockage indisponible : le choix vaut pour la session
+		}
+	}
+	const visibleGroups = $derived(isView(tab) ? [] : (ribbons[tab] ?? []).filter((g) => !hiddenGroups.includes(`${tab}|${g.title}`)));
+	const hiddenHere = $derived((ribbons[tab] ?? []).filter((g) => hiddenGroups.includes(`${tab}|${g.title}`)).map((g) => g.title));
+
 	type ShapesArr = GroupShape[];
 	const shapes = $derived(
 		isView(tab)
 			? []
-			: (ribbons[tab] ?? []).map((g) => ({ title: g.title, iconOk: g.iconOk, labels: [...(g.fonts ? [FONTS_W] : []), ...g.commands.map((c) => (c.color ? null : c.items || c.menu ? c.label + ' ▾' : c.label))] }))
+			: visibleGroups.map((g) => ({ title: g.title, iconOk: g.iconOk, labels: [...(g.fonts ? [FONTS_W] : []), ...g.commands.map((c) => (c.color ? null : c.items || c.menu ? c.label + ' ▾' : c.label))] }))
 	);
 	// Les formes ne changent qu'avec les libellés : un clic dans la grille
 	// (annulation, quadrillage…) recrée les commandes sans recompacter le
@@ -1202,7 +1227,7 @@
 					</Submenu>
 					<button role="menuitem" {disabled} onclick={() => { fileOpen = false; onfile('print'); }}><span>Imprimer / PDF…</span><span class="keys">{keyLabel('Ctrl+P')}</span></button>
 					<hr />
-					{#each [['settings', 'Paramètres…', ''], ['help', 'Aide', 'F1'], ['about', 'À propos de Lattis…', ''], ...(import.meta.env.DEV ? [['demo', 'Démo : 1 M de lignes', '']] : [])] as [a, label, keys] (a)}
+					{#each [['settings', 'Paramètres…', ''], ['help', 'Aide', 'F1'], ['report', 'Signaler un problème…', ''], ['about', 'À propos de Lattis…', ''], ...(import.meta.env.DEV ? [['demo', 'Démo : 1 M de lignes', '']] : [])] as [a, label, keys] (a)}
 						<button role="menuitem" onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 				</div>
@@ -1230,8 +1255,8 @@
 	{#if !isView(tab) && (!folded || peek)}
 		<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 		<div class="fold-wrap" class:peek={folded} use:peekWatch onclick={peekClick} transition:slide={{ duration: foldAnim && !reducedMotion() ? 200 : 0 }}>
-		<div class="groups" class:off={disabled} id="ribbon-panel" role="tabpanel" aria-labelledby="ribbon-tab-{shownTabs.indexOf(tab as (typeof tabs)[number])}" use:observe>
-			{#each ribbons[tab] ?? [] as g, gi (g.title)}
+		<div class="groups" class:off={disabled} id="ribbon-panel" tabindex="-1" oncontextmenu={(e) => { if (e.target !== e.currentTarget) return; e.preventDefault(); hideMenu = { x: e.clientX, y: e.clientY }; }} role="tabpanel" aria-labelledby="ribbon-tab-{shownTabs.indexOf(tab as (typeof tabs)[number])}" use:observe>
+			{#each visibleGroups as g, gi (g.title)}
 				{@const mode = modes[gi] ?? 'large'}
 				<section class="group" aria-labelledby="ribbon-group-{gi}">
 					{#if mode === 'collapsed'}
@@ -1327,7 +1352,7 @@
 							{/each}
 						</div>
 					{/if}
-					<div class="title">
+					<div class="title" oncontextmenu={(e) => { e.preventDefault(); hideMenu = { x: e.clientX, y: e.clientY, title: g.title }; }}>
 						<span id="ribbon-group-{gi}">{g.title}</span>
 						{#if g.launch}
 							<button class="launch" onclick={g.launch} title={g.launchHint ?? g.title} aria-label={g.launchHint ?? g.title} data-kt="{g.title} …">
@@ -1343,6 +1368,24 @@
 				{#if folded}<path d="M3 1.5h6M6 1.5v5M3.5 6.5h5L7 4.5H5zM6 6.5v4" fill="none" stroke="currentColor" stroke-width="1.2" />{:else}<path d="M2.5 7.5 6 4l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.4" />{/if}
 			</svg>
 		</button>
+		</div>
+	{/if}
+	{#if hideMenu}
+		{@const m = hideMenu}
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div class="drop-menu" role="menu" aria-label="Groupes du ruban" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (hideMenu = null)}>
+			{#if m.title}
+				<button role="menuitem" onclick={() => { const key = `${tab}|${m.title}`; hideMenu = null; setHidden([...hiddenGroups, key]); }}><span class="item">Masquer le groupe « {m.title} »</span></button>
+			{/if}
+			{#each hiddenHere as t (t)}
+				<button role="menuitem" onclick={() => { hideMenu = null; setHidden(hiddenGroups.filter((x) => x !== `${tab}|${t}`)); }}><span class="item">Réafficher « {t} »</span></button>
+			{/each}
+			{#if hiddenHere.length > 1}
+				<button role="menuitem" onclick={() => { hideMenu = null; setHidden(hiddenGroups.filter((x) => !x.startsWith(`${tab}|`))); }}><span class="item">Tout réafficher</span></button>
+			{/if}
+			{#if !m.title && !hiddenHere.length}
+				<button role="menuitem" disabled><span class="item">Aucun groupe masqué dans cet onglet</span></button>
+			{/if}
 		</div>
 	{/if}
 	{#if dropMenu}
