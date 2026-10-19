@@ -9878,13 +9878,11 @@
 							{/if}
 							{#if twoLevel}
 								{@const on = !!m.e.t.twoLevel}
-								<button
-									role="menuitemcheckbox"
-									aria-checked={on}
-									title={on
-										? 'Les noms complets « Groupe.Nom » reviennent sur une seule ligne'
-										: 'Les noms « Groupe.Nom » montrent leur groupe dans une bande au-dessus de l’en-tête ; la ligne au-dessus du tableau (cellules fusionnées ou non) donne les groupes'}
-									onclick={() => menuAction(() => source.setTwoLevel!(m.e.t, !on))}><span class="check">{on ? '✓' : ''}</span>{on ? "Retirer les groupes d'en-têtes" : "Intégrer la ligne du dessus comme groupes d'en-têtes"}</button
+									<button
+										title={on
+											? 'Les colonnes reprennent leur nom complet « Groupe.Nom » sur une seule ligne ; la bande des groupes disparaît'
+											: 'La ligne juste au-dessus du tableau devient une bande de groupes : « BOISEMENT » posé au-dessus de Nom et Statut donne les colonnes « BOISEMENT.Nom » et « BOISEMENT.Statut ». Cellules fusionnées ou non.'}
+										onclick={() => menuAction(() => source.setTwoLevel!(m.e.t, !on))}>{on ? "Retirer les groupes d'en-têtes" : 'En-têtes sur 2 lignes (groupes au-dessus)'}</button
 								>
 							{/if}
 							{#if follow}
