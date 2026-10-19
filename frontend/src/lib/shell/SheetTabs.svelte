@@ -284,7 +284,7 @@
 	function tabWidth(s: Sheet, on: boolean): number {
 		if (!measurer) return 100;
 		measurer.font = `${on ? '600 ' : ''}13px 'Segoe UI', system-ui, -apple-system, sans-serif`;
-		return Math.ceil(measurer.measureText(label(s)).width) + 37 + (s.protected || locked ? 16 : 0) + (s.choice ? 18 : 0);
+		return Math.ceil(measurer.measureText(label(s)).width) + 37 + (s.protected || locked ? 16 : 0) + (s.choice ? 30 : 0);
 	}
 	const range = $derived.by(() => {
 		if (!width) return { from: 0, to: shown.length - 1 };
@@ -457,7 +457,7 @@
 						onclick={(e) => {
 							e.stopPropagation();
 							openChoice(s, tabEls[si]);
-						}}>{label(s).slice(s.name.length + 1)} ▾</span
+						}}>{label(s).slice(s.name.length + 3)} ▾</span
 					>{/if}</button
 			>
 		{/if}
@@ -1221,17 +1221,21 @@
 		border-color: #217346;
 		color: #fff;
 	}
-	/* Onglet à choix : toute la partie « · 2025 ▾ » ouvre la liste des valeurs. */
+	/* Onglet à choix : « Ventes │ 2025 ▾ », la partie droite occupe toute la
+	   hauteur jusqu'au bord de l'onglet, séparée du nom par un trait vertical,
+	   et ouvre la liste des valeurs. */
 	.choice-arrow {
-		display: inline-block;
-		margin: 0 -10px 0 2px;
-		padding: 0 4px;
-		border-radius: 3px;
+		display: inline-flex;
+		align-items: center;
+		height: 100%;
+		vertical-align: top;
+		margin: 0 -18px 0 10px;
+		padding: 0 10px;
+		border-left: 1px solid rgba(0, 0, 0, 0.18);
 		cursor: pointer;
 	}
 	.choice-arrow:hover:not(.off) {
 		background: rgba(0, 0, 0, 0.08);
-		color: #111827;
 	}
 	.sheet.choice.on .choice-arrow {
 		color: #217346;
