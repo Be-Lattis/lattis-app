@@ -216,7 +216,7 @@ func (b *Bus) do(ctx context.Context, name string, fn func(*Tx) error) (int64, e
 		return g.append(ctx, b, fn)
 	}
 	var seq int64
-	err := b.db.Write(ctx, func(sqlTx *sql.Tx) error {
+	err := b.db.WriteDurable(ctx, func(sqlTx *sql.Tx) error {
 		t, err := b.begin(ctx, sqlTx)
 		if err != nil {
 			return err
@@ -387,7 +387,7 @@ func GroupSeqs(ctx context.Context) []int64 {
 
 func (b *Bus) appendTo(ctx context.Context, seq int64, name string, fn func(*Tx) error) (int64, error) {
 	out := seq
-	err := b.db.Write(ctx, func(sqlTx *sql.Tx) error {
+	err := b.db.WriteDurable(ctx, func(sqlTx *sql.Tx) error {
 		t, err := b.begin(ctx, sqlTx)
 		if err != nil {
 			return err
@@ -527,7 +527,7 @@ func (b *Bus) Undo(ctx context.Context) (name string, err error) {
 
 func (b *Bus) undo(ctx context.Context) (string, error) {
 	var name string
-	err := b.db.Write(ctx, func(tx *sql.Tx) error {
+	err := b.db.WriteDurable(ctx, func(tx *sql.Tx) error {
 		var seq int64
 		var data string
 		err := tx.QueryRowContext(ctx, `SELECT seq, name, steps FROM _lattis_journal WHERE undone = 0 ORDER BY seq DESC LIMIT 1`).Scan(&seq, &name, &data)
@@ -577,7 +577,7 @@ func (b *Bus) Redo(ctx context.Context) (name string, err error) {
 
 func (b *Bus) redo(ctx context.Context) (string, error) {
 	var name string
-	err := b.db.Write(ctx, func(tx *sql.Tx) error {
+	err := b.db.WriteDurable(ctx, func(tx *sql.Tx) error {
 		var seq int64
 		var data string
 		err := tx.QueryRowContext(ctx, `SELECT seq, name, steps FROM _lattis_journal WHERE undone = 1 ORDER BY seq LIMIT 1`).Scan(&seq, &name, &data)

@@ -1135,8 +1135,11 @@ func workbookID(dir string) string {
 }
 
 // Recover rouvre un répertoire orphelin tel quel : la base SQLite rejoue son
-// WAL, et toutes les écritures validées avant l'interruption sont là. En cas
-// d'échec, le répertoire reste en place : rien n'est perdu.
+// WAL, et toutes les écritures validées avant l'arrêt du processus sont là.
+// Après une coupure de courant, les commandes de l'utilisateur aussi (mises
+// sur disque à leur validation, store.WriteDurable) ; les autres écritures
+// des dernières secondes peuvent manquer. En cas d'échec, le répertoire
+// reste en place : rien n'est perdu.
 func Recover(o Orphan, extra ...func(*sqliteConn) error) (*Doc, error) {
 	d, err := openDir(o.Dir, o.Source, nil, extra)
 	if err != nil {

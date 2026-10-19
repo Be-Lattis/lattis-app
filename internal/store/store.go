@@ -200,6 +200,8 @@ type job struct {
 	fn  func(*sql.Tx) error
 	raw func(*sql.DB) error // hors transaction (VACUUM, checkpoint)
 	res chan error
+	// durable : validée avec synchronous=FULL (voir WriteDurable).
+	durable bool
 }
 
 // Open ouvre (ou crée) la base au chemin donné, en mode WAL. extra est
@@ -265,7 +267,10 @@ func setup(readOnly bool, extra []func(*sqlite3.Conn) error) func(*sqlite3.Conn)
 		}
 		pragmas := []string{
 			"PRAGMA busy_timeout=5000",
+			// En WAL, NORMAL suffit contre l'arrêt brutal du processus ; les
+			// commandes de l'utilisateur passent en FULL (WriteDurable).
 			"PRAGMA synchronous=NORMAL",
+
 			"PRAGMA foreign_keys=ON",
 			// Cache de 64 Mo (32 Mo en lecture) : un tri ou un regroupement sur
 			// 1 M de lignes reste en mémoire. Au-delà, les tris et index
@@ -318,6 +323,17 @@ func (s *Store) Read() *sql.DB { return s.read }
 // d'erreur, annulée sinon.
 func (s *Store) Write(ctx context.Context, fn func(*sql.Tx) error) error {
 	return s.submit(job{ctx: ctx, fn: fn, res: make(chan error, 1)})
+}
+
+// WriteDurable est Write pour une commande de l'utilisateur (audit 6, M3) :
+// la validation est mise sur disque (synchronous=FULL), elle survit à une
+// coupure de courant. Les autres écritures (import en plusieurs
+// transactions, démonstration, relevés d'un serveur) restent en
+// synchronous=NORMAL : elles survivent à l'arrêt brutal du processus, mais
+// une coupure de courant peut faire perdre les dernières, jusqu'à la
+// précédente écriture durable ou au dernier point de contrôle du WAL.
+func (s *Store) WriteDurable(ctx context.Context, fn func(*sql.Tx) error) error {
+	return s.submit(job{ctx: ctx, fn: fn, res: make(chan error, 1), durable: true})
 }
 
 // Exec exécute fn sur la connexion d'écriture, hors transaction, à son tour
@@ -402,6 +418,14 @@ func (s *Store) run(j job) (err error) {
 	}()
 	if j.raw != nil {
 		return j.raw(s.write)
+	}
+	if j.durable {
+		// Hors transaction : SQLite refuse de changer synchronous dans une
+		// transaction. Une seule connexion d'écriture : le réglage la suit.
+		if _, err := s.write.ExecContext(j.ctx, "PRAGMA synchronous=FULL"); err != nil {
+			return err
+		}
+		defer s.write.ExecContext(context.Background(), "PRAGMA synchronous=NORMAL")
 	}
 	tx, err = s.write.BeginTx(j.ctx, nil)
 	if err != nil {

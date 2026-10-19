@@ -187,3 +187,30 @@ func TestHardened(t *testing.T) {
 		}
 	}
 }
+
+// Commandes de l'utilisateur validées en synchronous=FULL, les autres
+// écritures en NORMAL (audit 6, M3).
+func TestWriteDurable(t *testing.T) {
+	ctx := context.Background()
+	s, err := Open(filepath.Join(t.TempDir(), "x.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	level := func(write func(context.Context, func(*sql.Tx) error) error) int {
+		var n int
+		if err := write(ctx, func(tx *sql.Tx) error { return tx.QueryRow(`PRAGMA synchronous`).Scan(&n) }); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	if n := level(s.Write); n != 1 {
+		t.Fatalf("écriture ordinaire : synchronous=%d", n)
+	}
+	if n := level(s.WriteDurable); n != 2 {
+		t.Fatalf("commande de l'utilisateur : synchronous=%d", n)
+	}
+	if n := level(s.Write); n != 1 {
+		t.Fatalf("après une commande : synchronous=%d", n)
+	}
+}
