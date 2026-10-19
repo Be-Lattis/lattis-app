@@ -75,6 +75,8 @@
 	import { ICON_SETS, drawCfIcon } from './cficons';
 	import CondFormat, { type CondHost, type CondView } from './CondFormat.svelte';
 	import Icon from '#lib/icons/Icon.svelte';
+	import GridA11y from './GridA11y.svelte';
+	import { selectionLabel, type CellSpeech } from './a11y';
 	import { drawIcon } from '#lib/icons/canvas.js';
 	import { apply as applySuggestion, argKindAt, needsNextArg, signature, toNextArg, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
 	import { checkFormula, closeParens, editorWidth, formulaRefs, highlightParts, isFormula, movedRef, rangeRef, refRect, serverErrorPos, type FormulaError, type Rect, type RefTable } from './formulaEdit';
@@ -1733,6 +1735,10 @@
 	// Cellule d'un tableau : nom du tableau (modifiable) et colonne[ligne].
 	let tableBox = $state<{ name: string; col: string } | null>(null);
 	let fxEditing = $state(false);
+	// Cellule active pour le lecteur d'écran (GridA11y.svelte).
+	const a11yId = $props.id();
+	let speech = $state.raw<CellSpeech>({ addr: 'A1', value: '' });
+	let speechSel = $state('');
 
 	// Pointage sur une autre feuille (comme Excel, crossref.ts) : un clic sur un
 	// onglet pendant la saisie d'une formule ne la valide pas ; sur l'autre
@@ -5353,8 +5359,22 @@
 		// Taille de la plage pendant le glissé seulement, comme Excel ; ensuite
 		// l'adresse de la cellule active revient.
 		if (multi && (dragging || headerDrag)) nameBox = `${sel.r1 - sel.r0 + 1}L × ${sel.c1 - sel.c0 + 1}C`;
+		refreshSpeech(e, sel, multi);
 		if (fxEditing) return;
 		fxText = cellInfo(active.row, active.col).value;
+	}
+
+	/** Ce que le lecteur d'écran dit de la cellule active (a11y.ts). */
+	function refreshSpeech(e: ReturnType<typeof tableAt>, sel: ReturnType<typeof selection>, multi: boolean) {
+		const { row: r, col: c } = active;
+		const s: CellSpeech = { addr: addrA1(r, c), value: shownText(r, c), name: names.get(key(r, c)) };
+		if (e) {
+			const k = e.t.columns[c - e.t.col];
+			Object.assign(s, { table: e.t.name, column: k.name, header: r === e.t.row, computed: !!k.formula });
+		}
+		s.error = !!errorAt(r, c);
+		speech = s;
+		speechSel = multi ? selectionLabel(`${addrA1(sel.r0, sel.c0)}:${addrA1(sel.r1, sel.c1)}`, sel.r1 - sel.r0 + 1, sel.c1 - sel.c0 + 1) : '';
 	}
 
 	function say(m: string) {
@@ -8497,7 +8517,8 @@
 
 	<div class="body">
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-	<div class="wrap" bind:this={wrap} tabindex="0" role="grid" aria-label="Feuille {sheetName}" aria-keyshortcuts="Shift+F10" data-region-focus onkeydown={onKeyDown}>
+	<div class="wrap" bind:this={wrap} tabindex="0" role="grid" aria-label="Feuille {sheetName}" aria-rowcount={-1} aria-colcount={-1} aria-activedescendant={a11yId} aria-keyshortcuts="Shift+F10" data-region-focus onkeydown={onKeyDown}>
+		<GridA11y cellId={a11yId} {speech} row={active.row + 1} col={active.col + 1} editing={editing || fxEditing} selection={speechSel} />
 		<!-- Calque zoomé (zoom.ts) : grille, graphiques, boutons, éditeur et notes ; menus et dialogues hors du calque. -->
 		<div class="zoom" style:zoom={zoom === 1 ? undefined : zoom}>
 			<canvas bind:this={canvas}></canvas>
