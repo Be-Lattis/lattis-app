@@ -22,7 +22,8 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import Select from '#lib/ui/Select.svelte';
-	import { dismiss, dismissPanel } from './dismiss';
+	import { dismiss } from './dismiss';
+	import { modal } from '#lib/ui/focus.js';
 	import { buildManaged, clearWhere, diffRules, emptyChanges, formatLocs, locIn, locKey, parseLocs, prependRule, type Managed } from './cfmodel';
 	import {
 		BAR_COLORS,
@@ -666,9 +667,9 @@
 		tick().then(() => node.querySelector<HTMLElement>('input:not([type=checkbox]):not([type=color]), .select')?.focus());
 	}
 
-	function keys(ev: KeyboardEvent, ok: () => void) {
+	function keys(ev: KeyboardEvent, ok: () => void, cancel = onclose) {
 		ev.stopPropagation();
-		if (ev.key === 'Escape') onclose();
+		if (ev.key === 'Escape') cancel();
 		else if (ev.key === 'Enter' && (ev.target as HTMLElement).tagName === 'INPUT') ok();
 	}
 </script>
@@ -812,8 +813,9 @@
 	</div>
 {:else if screen.kind === 'quick'}
 	{@const q = screen.q}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="cf-dlg" use:dismissPanel={onclose} use:autofocus onkeydown={(e) => keys(e, quickOk)}>
+	<div class="cf-back" role="presentation">
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<div class="cf-dlg" role="dialog" aria-modal="true" aria-label={QUICK_TITLES[q.op]} tabindex="-1" use:modal use:autofocus onkeydown={(e) => keys(e, quickOk)}>
 		<div class="title">{QUICK_TITLES[q.op]}</div>
 		<p class="lead">
 			{#if q.op === 'gt'}Appliquer une mise en forme aux cellules qui sont SUPÉRIEURES À :
@@ -864,10 +866,20 @@
 			<button onclick={onclose}>Annuler</button>
 		</div>
 	</div>
+	</div>
 {:else if screen.kind === 'edit'}
 	{@const d = screen.d}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="cf-dlg wide" use:dismissPanel={screen.back ? () => {} : onclose} onkeydown={(e) => keys(e, editOk)}>
+	<div class="cf-back" role="presentation">
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<div
+		class="cf-dlg wide"
+		role="dialog"
+		aria-modal="true"
+		aria-label={screen.editing ? 'Modifier la règle de mise en forme' : 'Nouvelle règle de mise en forme'}
+		tabindex="-1"
+		use:modal
+		onkeydown={(e) => keys(e, editOk, editCancel)}
+	>
 		<div class="title">{screen.editing ? 'Modifier la règle de mise en forme' : 'Nouvelle règle de mise en forme'}</div>
 		<div class="label">Sélectionnez un type de règle :</div>
 		<div class="kinds">
@@ -1084,9 +1096,19 @@
 			<button onclick={editCancel}>Annuler</button>
 		</div>
 	</div>
+	</div>
 {:else}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="cf-dlg manager" use:dismissPanel={onclose} onkeydown={(e) => (e.stopPropagation(), e.key === 'Escape' && onclose())}>
+	<div class="cf-back" role="presentation">
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<div
+		class="cf-dlg manager"
+		role="dialog"
+		aria-modal="true"
+		aria-label="Gestionnaire des règles de mise en forme conditionnelle"
+		tabindex="-1"
+		use:modal
+		onkeydown={(e) => (e.stopPropagation(), e.key === 'Escape' && onclose())}
+	>
 		<div class="title">Gestionnaire des règles de mise en forme conditionnelle</div>
 		<div class="row">
 			<span>Afficher les règles de mise en forme pour :</span>
@@ -1107,7 +1129,7 @@
 					<p class="note">Aucune règle {scope === 'selection' ? 'sur la sélection' : 'sur cette feuille'}.</p>
 				{/if}
 				{#each shown as m (m.key)}
-					<!-- svelte-ignore a11y_click_events_have_key_events -->
+					<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 					<div class="trow" class:sel={picked === m.key} onclick={() => (picked = m.key)} ondblclick={editPicked}>
 						<span class="what" title={describeRule(m.rule)}>{describeRule(m.rule)}</span>
 						<span>
@@ -1143,6 +1165,7 @@
 			<button disabled={busy} onclick={() => managerApply(false)}>Appliquer</button>
 		</div>
 	</div>
+	</div>
 {/if}
 
 <style>
@@ -1158,7 +1181,7 @@
 	}
 	.cf-menu {
 		position: fixed;
-		z-index: 40;
+		z-index: var(--z-popover);
 		padding: 4px 0;
 		min-width: 300px;
 	}
@@ -1247,9 +1270,15 @@
 	.thumb.wide {
 		padding: 3px 4px;
 	}
+	/* Boîtes de règles : modales, comme celles d'Excel (un clic à côté ne les ferme pas). */
+	.cf-back {
+		position: fixed;
+		inset: 0;
+		z-index: var(--z-dialog);
+		background: var(--backdrop);
+	}
 	.cf-dlg {
 		position: fixed;
-		z-index: 40;
 		left: 50%;
 		top: 90px;
 		transform: translateX(-50%);

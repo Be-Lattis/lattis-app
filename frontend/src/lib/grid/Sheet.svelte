@@ -58,6 +58,7 @@
 	import { besideGutter, gutterOwner } from './gutter';
 	import Select from '#lib/ui/Select.svelte';
 	import Submenu from '#lib/ui/Submenu.svelte';
+	import { modal } from '#lib/ui/focus.js';
 	import { clip, clipped } from '#lib/ui/menu.js';
 	import Chart from '#lib/chart/Chart.svelte';
 	import { encodeObj, objFromText, rememberObj } from '#lib/clip/objects.js';
@@ -9315,11 +9316,17 @@
 		{/if}
 		{#if validDlg}
 			{@const d = validDlg}
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<!-- Boîte modale, comme celle d'Excel : un clic à côté ou un redimensionnement ne la ferme plus. -->
+			<div class="dlg-back" role="presentation">
+			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<div
 				class="rules valid-dlg"
+				role="dialog"
+				aria-modal="true"
+				aria-label="Validation des données"
+				tabindex="-1"
 				use:focusFirst
-				use:dismissPanel={() => (validDlg = null)}
+				use:modal
 				onkeydown={(ev) => {
 					ev.stopPropagation();
 					if (ev.key === 'Escape') {
@@ -9346,6 +9353,7 @@
 						}}>Annuler</button
 					>
 				</div>
+			</div>
 			</div>
 		{/if}
 		{#if noteDlg}
@@ -10157,6 +10165,13 @@
 	}
 	.list-menu button.on {
 		background: #d3e7dc;
+	}
+	/* Fond des boîtes modales de la grille (validation des données). */
+	.dlg-back {
+		position: fixed;
+		inset: 0;
+		z-index: var(--z-dialog);
+		background: var(--backdrop);
 	}
 	.valid-dlg {
 		width: 420px;
