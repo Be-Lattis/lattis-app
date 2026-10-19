@@ -718,13 +718,13 @@
 						{#each candidates as c (c.table + '\u0000' + c.column)}
 							<button
 								role="menuitem"
-								title="{c.values} valeur{c.values > 1 ? 's' : ''} différente{c.values > 1 ? 's' : ''}"
+								title="« {c.column} » du tableau {c.table} — {c.values} valeur{c.values > 1 ? 's' : ''} différente{c.values > 1 ? 's' : ''}"
 								onclick={() => {
 									const id = m.id;
 									closeMenu();
 									onchoice?.by(id, c.table, c.column);
 								}}
-								><span class="ic">{#if ms?.choice && ms.choice.name.toLowerCase() === c.column.toLowerCase()}●{/if}</span>{c.column}<span class="menu-hint">{c.table}</span></button
+								><span class="ic">{#if ms?.choice && ms.choice.name.toLowerCase() === c.column.toLowerCase()}●{/if}</span><span class="cname">{c.column}</span><span class="menu-hint">{c.table}</span></button
 							>
 						{/each}
 					{/if}
@@ -1276,6 +1276,20 @@
 		padding-left: 12px;
 		color: #9aa0a6;
 		font-size: 11px;
+		/* Un long nom de tableau ne déborde pas du menu (320 px au plus) : « … », nom complet en info-bulle. */
+		min-width: 0;
+		max-width: 50%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		flex-shrink: 1;
+	}
+	.cname {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		flex-shrink: 1;
 	}
 	.dialog input {
 		font: inherit;
