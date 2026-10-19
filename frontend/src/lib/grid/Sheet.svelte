@@ -8491,10 +8491,10 @@
 						<hr />
 						<Submenu label="Tableau">
 							{#if promote}
-								<button onclick={() => menuAction(() => source.promoteHeader!(m.e.t))}>Utiliser la 1re ligne comme en-têtes</button>
+								<button title="La 1re ligne de données donne les noms des colonnes ; les noms actuels sont perdus" onclick={() => menuAction(() => source.promoteHeader!(m.e.t))}>Utiliser la 1re ligne comme en-têtes</button>
 							{/if}
 							{#if toTitle}
-								<button title="L'en-tête devient un titre au-dessus du tableau ; la 1re ligne devient l'en-tête" onclick={() => menuAction(() => source.headerToTitle!(m.e.t))}>Sortir l'en-tête (c'est un titre)</button>
+								<button title="Comme « Utiliser la 1re ligne comme en-têtes », mais l'en-tête actuel reste au-dessus du tableau, en titre" onclick={() => menuAction(() => source.headerToTitle!(m.e.t))}>1re ligne en en-têtes, l'actuel en titre</button>
 							{/if}
 							{#if toNote}
 								<button title="La ligne reste sous le tableau, comme note ou total, sans en faire partie" onclick={() => menuAction(() => source.rowToNote!(m.e.t, m.n))}>Sortir la dernière ligne (note)</button>
