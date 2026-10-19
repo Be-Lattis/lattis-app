@@ -2078,10 +2078,7 @@ func TestPivotMoveCopy(t *testing.T) {
 		t.Fatalf("tcd : %v %+v", err, l.Pivots)
 	}
 	id := l.Pivots[0].ID
-	// Sur le tableau source : refusé.
-	if err := d.MovePivot(ctx, id, 1, 1, 0); err == nil {
-		t.Fatal("tableau croisé posé sur un tableau")
-	}
+	// Posé sur un tableau, il l'écarte (pivotmove_test.go).
 	if err := d.MovePivot(ctx, id, 1, 10, 4); err != nil {
 		t.Fatal(err)
 	}
@@ -2100,9 +2097,6 @@ func TestPivotMoveCopy(t *testing.T) {
 		t.Fatalf("copie sans les mêmes cellules : %+v", l.Pivots)
 	}
 	// Collé depuis un document : par sa configuration.
-	if _, err := d.PlacePivot(ctx, 1, 0, 0, l.Pivots[0].Config); err == nil {
-		t.Fatal("tableau croisé collé sur un tableau")
-	}
 	if _, err := d.PlacePivot(ctx, 1, 30, 4, l.Pivots[0].Config); err != nil {
 		t.Fatal(err)
 	}

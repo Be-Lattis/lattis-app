@@ -132,6 +132,8 @@
 		});
 	});
 	let sheetStatus = $state<SheetStatus | null>(null);
+	// Pose d'un tableau croisé en cours (Insertion › Tableau croisé, clic droit › Déplacer) : indication de la barre d'état.
+	let placing = $state<{ hint: string; create: boolean } | null>(null);
 	let sheet = $state<ReturnType<typeof Sheet>>();
 
 	// Classeur.
@@ -1508,6 +1510,7 @@
 		},
 		setPivot: (id, cfg) => DocumentService.SetPivot(id, cfg).then(reload),
 		placePivot: (row, col, cfg) => DocumentService.PlacePivot(sheetId, row, col, cfg).then(reload),
+		createPivotAt: (row, col, cfg) => DocumentService.CreatePivotAt(sheetId, row, col, cfg).then(reload),
 		pivotFieldValues: async (table, field) => (await DocumentService.FieldValues(table, field)) ?? [],
 		validationList: async (src) => {
 			const l = await DocumentService.ValidationList(sheetId, src);
@@ -2157,6 +2160,7 @@
 							? { functions: help.functions ?? [], tables: (help.tables ?? []).filter((t) => t.kind !== 'pivot'), names: (layout?.names ?? []).map((n) => n.name) }
 							: undefined}
 						onstatus={(s) => (sheetStatus = s)}
+						onplacing={(p) => (placing = p)}
 						onhscroll={(s) => (hscroll = s)}
 						gridlines={!layout?.sheets?.find((s) => s.id === sheetId)?.noGrid}
 						headings={!!layout?.sheets?.find((s) => s.id === sheetId)?.headings}
@@ -2744,6 +2748,14 @@
 		</div>
 	{/if}
 	<footer class="statusbar" data-region="status" aria-label="Barre d'état">
+		{#if placing}
+			<!-- Pose d'un tableau croisé : le clic sur une cellule le pose ; « Nouvelle feuille » garde l'ancienne façon. -->
+			<span class="placing" role="status">{placing.hint}</span>
+			{#if placing.create}
+				<button class="offer-act" title="Créer le tableau croisé sur une nouvelle feuille, en A1" onclick={() => sheet?.placeOnNewSheet()}>Nouvelle feuille</button>
+			{/if}
+			<button class="offer-act" onclick={() => sheet?.cancelPlacement()}>Annuler</button>
+		{/if}
 		{#if notice || sheetStatus?.message}
 			{@const msg = sheetStatus?.message || notice}
 			<!-- Deux niveaux : compte rendu de l'action (vert clair), avertissement (bulle orange). -->
@@ -2901,6 +2913,16 @@
 	.offer {
 		background: #dbeafe;
 		color: #0b3b75;
+		padding: 1px 8px;
+		border-radius: 3px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	/* Pose d'un tableau croisé : l'indication reste visible tant que le mode dure. */
+	.placing {
+		background: #fff;
+		color: #14532d;
+		font-weight: 600;
 		padding: 1px 8px;
 		border-radius: 3px;
 		overflow: hidden;

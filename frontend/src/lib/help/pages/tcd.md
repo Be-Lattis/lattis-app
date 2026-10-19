@@ -5,8 +5,21 @@ Un tableau croisé dynamique (TCD) résume un tableau : des totaux par client, p
 ## Créer un tableau croisé
 
 1. Cliquez dans le tableau source.
-2. Insertion › Tableau croisé dynamique.
-3. Le TCD se pose sur la feuille et le volet **Champs de tableau croisé dynamique** s'ouvre à droite.
+2. Insertion › Tableau croisé dynamique. La barre d'état indique « Cliquez sur la cellule où placer le tableau croisé (Échap : annuler) ».
+3. Cliquez sur la cellule où poser le coin haut gauche du TCD. Rien n'est bloqué en attendant : vous pouvez faire défiler la feuille, vous déplacer au clavier, changer d'onglet (le TCD se pose alors sur l'autre feuille) ou utiliser le ruban. `Échap` (ou **Annuler** dans la barre d'état) abandonne.
+4. Le TCD se pose et le volet **Champs de tableau croisé dynamique** s'ouvre à droite.
+
+Pour le poser seul sur une nouvelle feuille, comme Excel par défaut, cliquez sur **Nouvelle feuille** dans la barre d'état au lieu de choisir une cellule.
+
+## Déplacer un tableau croisé
+
+- **Clic droit › Déplacer** sur le TCD, puis un clic sur la cellule où poser son coin haut gauche (filtres de rapport compris), sur la même feuille ou sur une autre ; `Échap` annule.
+- Ou glissez la bordure de la sélection, comme pour un tableau : une sélection prise dans le TCD (une seule cellule suffit) emporte le TCD entier ; avec `Ctrl`, il est copié.
+- Ou coupez le TCD entier (`Ctrl+X`) et collez-le (`Ctrl+V`) ailleurs.
+
+Le TCD se pose exactement à la cellule choisie. Les tableaux et les autres TCD qu'il recouvre ou qu'il touche s'écartent vers la droite, en gardant une colonne vide entre eux, et poussent à leur tour ceux qu'ils rencontrent ; cliquer dans un autre tableau le pousse donc à droite du TCD. Les graphiques et les boutons, qui flottent au-dessus de la grille, ne bougent pas. Chaque pose ou déplacement s'annule en une fois (`Ctrl+Z`).
+
+Les cellules d'un TCD ne se saisissent pas une à une : double-cliquez dessus pour changer ses champs.
 
 ## Le volet des champs
 

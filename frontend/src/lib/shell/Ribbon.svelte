@@ -514,7 +514,7 @@
 			{
 				title: 'Tableaux',
 				commands: [
-					{ label: 'Tableau croisé dynamique', icon: 'pivot-table', ro: true, createsSheet: true, run: onpivot, hint: 'Tableau croisé dynamique du tableau actif, sur une nouvelle feuille (double-clic sur un TCD pour le modifier)' },
+					{ label: 'Tableau croisé dynamique', icon: 'pivot-table', ro: true, run: onpivot, hint: 'Tableau croisé dynamique du tableau actif : cliquez ensuite sur la cellule où le poser, sur n’importe quelle feuille (Échap : annuler ; « Nouvelle feuille » dans la barre d’état). Double-clic sur un TCD pour le modifier' },
 					{ label: 'Tableau', icon: 'table', run: ed('formatAsTable'), hint: 'Faire un tableau de la plage ou du bloc de cellules de la cellule active (Ctrl+L)' },
 					...(sharedWorkbooksEnabled() ? [{ label: 'Data Lake Lattis', icon: 'database' as const, run: oninsertdata, hint: 'Insérer à la cellule active une donnée du catalogue du Data Lake Lattis : tableau lié, en lecture seule, à jour en direct' }] : [])
 				]

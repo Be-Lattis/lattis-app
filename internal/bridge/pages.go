@@ -196,6 +196,15 @@ func (s *DocumentService) PlacePivot(ctx context.Context, sheet int64, row, col 
 	})
 }
 
+// CreatePivotAt crée un tableau croisé, son coin haut gauche en (row, col)
+// de la feuille (Insertion › Tableau croisé, puis un clic sur la cellule).
+func (s *DocumentService) CreatePivotAt(ctx context.Context, sheet int64, row, col int, cfg canvas.PivotConfig) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error {
+		_, err := d.CreatePivotAt(ctx, sheet, row, col, cfg)
+		return err
+	})
+}
+
 // CopyPivot colle une copie d'un tableau croisé entier.
 func (s *DocumentService) CopyPivot(ctx context.Context, id, sheet int64, row, col int) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error {

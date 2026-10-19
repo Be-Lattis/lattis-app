@@ -418,6 +418,14 @@ export function CreatePivot(cfg: canvas$0.PivotConfig): $CancellablePromise<numb
 }
 
 /**
+ * CreatePivotAt crée un tableau croisé, son coin haut gauche en (row, col)
+ * de la feuille (Insertion › Tableau croisé, puis un clic sur la cellule).
+ */
+export function CreatePivotAt(sheet: number, row: number, col: number, cfg: canvas$0.PivotConfig): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3467973527, sheet, row, col, cfg);
+}
+
+/**
  * CreateTableSource publie le tableau seul comme source poussée : classeur
  * technique, pipeline et donnée créés sur le serveur, lien gardé dans le
  * classeur, puis premier envoi. Le classeur n'est pas publié. Un premier

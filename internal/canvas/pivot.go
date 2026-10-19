@@ -241,8 +241,11 @@ func (m *Model) PivotData(ctx context.Context, cfg PivotConfig) PivotInfo {
 	return out
 }
 
-// MovePivot déplace un tableau croisé (couper-coller du tableau entier) :
-// son coin haut gauche va en (row, col) de la feuille sheet.
+// MovePivot déplace un tableau croisé (couper-coller du tableau entier,
+// glisser de sa bordure, clic droit › Déplacer) : son coin haut gauche
+// (filtres de rapport compris) va en (row, col) de la feuille sheet, la même
+// ou une autre. Les tableaux et tableaux croisés qu'il recouvre ou touche
+// s'écartent vers la droite (makeRoom) ; une seule étape d'annulation.
 func (m *Model) MovePivot(ctx context.Context, id, sheet int64, row, col int) error {
 	if row < 0 || col < 0 {
 		return fmt.Errorf("%w : hors de la feuille", ErrPivot)
@@ -254,22 +257,35 @@ func (m *Model) MovePivot(ctx context.Context, id, sheet int64, row, col int) er
 		if err := t.guard(sheet); err != nil {
 			return err
 		}
+		if err := t.sheetExists(sheet); err != nil {
+			return err
+		}
 		var s0 int64
 		var r0, c0 int
-		var raw string
-		if err := t.row(`SELECT sheet, row, col, config FROM _lattis_pivots WHERE id = ?`, id).Scan(&s0, &r0, &c0, &raw); err != nil {
+		if err := t.row(`SELECT sheet, row, col FROM _lattis_pivots WHERE id = ?`, id).Scan(&s0, &r0, &c0); err != nil {
 			return fmt.Errorf("%w : tableau croisé introuvable", ErrPivot)
 		}
-		var cfg PivotConfig
-		if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
-			return err
-		}
-		if err := t.pivotFree(sheet, row, col, cfg.normalized(), id); err != nil {
-			return err
+		if s0 == sheet && r0 == row && c0 == col {
+			return nil
 		}
 		q := `UPDATE _lattis_pivots SET sheet = ?, row = ?, col = ? WHERE id = ?`
-		return t.apply([]stmt{st(q, sheet, row, col, id)}, []stmt{st(q, s0, r0, c0, id)})
+		if err := t.apply([]stmt{st(q, sheet, row, col, id)}, []stmt{st(q, s0, r0, c0, id)}); err != nil {
+			return err
+		}
+		return t.makeRoom(sheet, id)
 	})
+}
+
+// sheetExists refuse une feuille inconnue (supprimée entre-temps).
+func (t *tx) sheetExists(sheet int64) error {
+	var n int
+	if err := t.row(`SELECT count(*) FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&n); err != nil {
+		return err
+	}
+	if n == 0 {
+		return fmt.Errorf("%w : feuille introuvable", ErrPivot)
+	}
+	return nil
 }
 
 // CopyPivot pose une copie d'un tableau croisé (copier-coller du tableau
@@ -321,12 +337,36 @@ func (m *Model) PlacePivot(ctx context.Context, sheet int64, row, col int, cfg P
 	return nid, err
 }
 
-// placePivot insère un tableau croisé à une place libre, sous un nouveau nom.
-func (t *tx) placePivot(sheet int64, row, col int, cfg PivotConfig) (int64, error) {
-	cfg = cfg.stored()
-	if err := t.pivotFree(sheet, row, col, cfg.normalized(), 0); err != nil {
-		return 0, err
+/// CreatePivotAt crée un tableau croisé de configuration cfg, son coin haut
+// gauche en (row, col) de la feuille sheet (Insertion › Tableau croisé, puis
+// un clic sur la cellule) ; ce qu'il recouvre ou touche s'écarte (makeRoom).
+// Renvoie son identifiant.
+func (m *Model) CreatePivotAt(ctx context.Context, sheet int64, row, col int, cfg PivotConfig) (int64, error) {
+	if row < 0 || col < 0 {
+		return 0, fmt.Errorf("%w : hors de la feuille", ErrPivot)
 	}
+	var nid int64
+	err := m.Do(ctx, "Tableau croisé dynamique", func(t *tx) error {
+		if err := t.guard(sheet); err != nil {
+			return err
+		}
+		if err := t.sheetExists(sheet); err != nil {
+			return err
+		}
+		if _, err := t.pivotPlan(cfg.normalized()); err != nil {
+			return err
+		}
+		var err error
+		nid, err = t.placePivot(sheet, row, col, cfg)
+		return err
+	})
+	return nid, err
+}
+
+// placePivot insère un tableau croisé en (row, col), sous un nouveau nom ;
+// ce qu'il recouvre ou touche s'écarte (makeRoom).
+func (t *tx) placePivot(sheet int64, row, col int, cfg PivotConfig) (int64, error) {
+	cfg = cfg.normalized().stored()
 	name, err := t.pivotName()
 	if err != nil {
 		return 0, err
@@ -340,53 +380,131 @@ func (t *tx) placePivot(sheet int64, row, col int, cfg PivotConfig) (int64, erro
 	if err != nil {
 		return 0, err
 	}
-	return nid, t.apply(
+	if err := t.apply(
 		[]stmt{st(`INSERT INTO _lattis_pivots (id, sheet, row, col, config) VALUES (?, ?, ?, ?, ?)`, nid, sheet, row, col, string(b))},
 		[]stmt{st(`DELETE FROM _lattis_pivots WHERE id = ?`, nid)},
-	)
+	); err != nil {
+		return 0, err
+	}
+	return nid, t.makeRoom(sheet, nid)
 }
 
-// pivotFree vérifie qu'un tableau croisé posé en (row, col) de la feuille
-// (filtres de rapport compris) ne recouvre ni un tableau ni un autre
-// tableau croisé (skip : celui qu'on déplace).
-func (t *tx) pivotFree(sheet int64, row, col int, cfg PivotConfig, skip int64) error {
-	cells, _, err := t.pivotCells(cfg)
+// placed est un objet de la feuille qui occupe des cellules : un tableau
+// (bande des groupes comprise) ou un tableau croisé (filtres de rapport
+// compris). Les graphiques et les boutons flottent au-dessus de la grille :
+// ils ne sont pas poussés.
+type placed struct {
+	pivot  bool
+	id     int64
+	tb     Table
+	r0, c0 int
+	r1, c1 int
+	col0   int // colonne de départ
+}
+
+// near : les deux objets se recouvrent ou se touchent ; une ligne et une
+// colonne vides doivent les séparer (la marge des tableaux, voir touches).
+func (a placed) near(b placed) bool {
+	return a.r0 <= b.r1+1 && b.r0 <= a.r1+1 && a.c0 <= b.c1+1 && b.c0 <= a.c1+1
+}
+
+// makeRoom fait de la place au tableau croisé keep, qui vient d'être posé
+// sur la feuille, à la cellule choisie : les tableaux et tableaux croisés
+// qu'il recouvre ou touche partent vers la droite jusqu'à garder une colonne
+// vide avec lui et avec les cellules remplies, et poussent à leur tour ceux
+// qu'ils rencontrent, comme settle pour les tableaux. keep ne bouge jamais ;
+// les objets que rien n'a poussés restent où ils sont.
+func (t *tx) makeRoom(sheet, keep int64) error {
+	pivots, err := t.pivots(sheet)
 	if err != nil {
 		return err
-	}
-	h, w := len(cells), 1
-	if h > 0 {
-		w = len(cells[0])
-	}
-	if len(cfg.Filters) > 0 {
-		h += len(cfg.Filters) + 1
-	}
-	over := func(r0, c0, r1, c1 int) bool {
-		return r0 <= row+h-1 && r1 >= row && c0 <= col+w-1 && c1 >= col
 	}
 	tables, err := t.tables(sheet)
 	if err != nil {
 		return err
 	}
-	for _, tb := range tables {
-		if over(tb.Row, tb.Col, tb.Row+tb.Rows, tb.Col+len(tb.Cols)-1) {
-			return fmt.Errorf("%w : la place est prise par le tableau « %s » ; choisissez une zone libre", ErrPivot, tb.Name)
-		}
-	}
-	others, err := t.pivots(sheet)
+	cells, err := t.cells(sheet)
 	if err != nil {
 		return err
 	}
-	for _, o := range others {
-		if o.ID == skip || len(o.Cells) == 0 {
-			continue
+	var objs []placed
+	k := -1
+	for _, p := range pivots {
+		r := pivotRect(p)
+		if p.ID == keep {
+			k = len(objs)
 		}
-		oh := len(o.Cells)
-		if len(o.Config.Filters) > 0 {
-			oh += len(o.Config.Filters) + 1
+		objs = append(objs, placed{pivot: true, id: p.ID, r0: r.R0, c0: r.C0, r1: r.R1, c1: r.C1, col0: r.C0})
+	}
+	if k < 0 || len(objs)+len(tables) < 2 {
+		return nil
+	}
+	for _, tb := range tables {
+		objs = append(objs, placed{id: tb.ID, tb: tb, r0: tb.Top(), c0: tb.Col, r1: tb.Bottom(), c1: tb.Right(), col0: tb.Col})
+	}
+	// cède : objs[j] s'écarte de objs[i].
+	yields := func(i, j int) bool {
+		a, b := objs[i], objs[j]
+		switch {
+		case j == k:
+			return false
+		case i == k:
+			return true
+		case a.c0 != b.c0:
+			return a.c0 < b.c0
+		case a.r0 != b.r0:
+			return a.r0 < b.r0
+		case a.pivot != b.pivot:
+			return !a.pivot
 		}
-		if over(o.Row, o.Col, o.Row+oh-1, o.Col+len(o.Cells[0])-1) {
-			return fmt.Errorf("%w : la place est prise par le tableau croisé « %s » ; choisissez une zone libre", ErrPivot, o.Config.Name)
+		return a.id < b.id
+	}
+	blocked := func(b placed) bool {
+		for _, c := range cells {
+			if c.Row >= b.r0-1 && c.Row <= b.r1+1 && c.Col >= b.c0-1 && c.Col <= b.c1+1 {
+				return true
+			}
+		}
+		return false
+	}
+	// Seuls keep et les objets déjà poussés en poussent d'autres : deux
+	// objets qui se touchaient avant restent comme ils étaient.
+	pushed := map[int]bool{k: true}
+	for changed, n := true, 0; changed; n++ {
+		if n > 10*len(objs) {
+			return fmt.Errorf("%w : impossible de faire de la place au tableau croisé", ErrPivot)
+		}
+		changed = false
+		for i := range objs {
+			for j := range objs {
+				if i == j || !(pushed[i] || pushed[j]) || !objs[i].near(objs[j]) || !yields(i, j) {
+					continue
+				}
+				b := objs[j]
+				w := b.c1 - b.c0
+				b.c0 = objs[i].c1 + 2
+				b.c1 = b.c0 + w
+				for blocked(b) {
+					b.c0++
+					b.c1++
+				}
+				objs[j], pushed[j], changed = b, true, true
+			}
+		}
+	}
+	for _, o := range objs {
+		d := o.c0 - o.col0
+		switch {
+		case d == 0:
+		case o.pivot:
+			q := `UPDATE _lattis_pivots SET col = col + ? WHERE id = ?`
+			if err := t.apply([]stmt{st(q, d, o.id)}, []stmt{st(q, -d, o.id)}); err != nil {
+				return err
+			}
+		default:
+			if err := t.moveTable(o.tb, 0, d); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
