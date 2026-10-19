@@ -39,6 +39,7 @@
 	import { freeDisplay } from './freecell';
 	import { bandAt, bandLabel, bandOpen, bandRefusal, hiddenBand } from './hidden';
 	import { choiceHiddenCols, type TabChoice } from '#lib/shell/choice.js';
+	import { tabChoiceItem, type ChoiceCandidate, type TabChoiceItem } from './tabchoice';
 	import { followLabel } from '#lib/shell/mergesheets.js';
 	import { editMode, viewKey } from './readonlyedit';
 	import { bandMerges, groupSpans, headerLabel, isSingle, spanAt, splitGroup, tableTop } from './twolevel';
@@ -545,6 +546,15 @@
 		convertToRange?(table: SheetTable): Promise<unknown>;
 		/** « Suivre l'année » (onglet à choix, §6.5) : le tableau suit le choix de l'onglet, ou plus. */
 		setFollow?(table: SheetTable, follow: boolean): Promise<unknown>;
+		/**
+		 * « Filtrer l'onglet par cette colonne » (tableau) ou « par ce champ »
+		 * (tableau croisé : table est son tableau source) : la feuille affichée
+		 * devient un onglet à choix par cette colonne ; clearTabChoice le retire.
+		 */
+		setTabChoice?(table: string, column: string): Promise<unknown>;
+		clearTabChoice?(column: string): Promise<unknown>;
+		/** Colonnes que « Choisir par… » propose pour la feuille affichée (tabchoice.ts). */
+		choiceCandidates?(): Promise<ChoiceCandidate[]>;
 		/** Mettre sous forme de tableau la plage (tableau converti) qui contient la cellule. */
 		formatAsTable?(row: number, col: number): Promise<unknown>;
 		/** Déplace un tableau, en-tête en (row, col) ; côte à côte d'un autre : fusion. */
@@ -6028,6 +6038,22 @@
 	 * fois (ouvrir le ▾ d'une colonne ferme celui d'une autre). Chaque ouverture
 	 * passe par ici ; un clic en dehors les ferme aussi (dismiss.ts).
 	 */
+	// --- « Filtrer l'onglet par cette colonne / ce champ » (tabchoice.ts) ---
+
+	/** L'entrée de menu pour la colonne column du tableau table (field : champ d'un TCD dont table est la source). */
+	function tabChoiceFor(table: string, column: string, o: { formula?: boolean; field?: boolean } = {}): TabChoiceItem {
+		return tabChoiceItem({ table, column, ...o, choice: data?.choice, candidates: choiceCands });
+	}
+
+	/** Pose ou retire l'onglet à choix (une étape d'annulation). */
+	function runTabChoice(table: string, column: string, it: TabChoiceItem) {
+		if (it.disabled) return;
+		closeMenus();
+		const set = source.setTabChoice;
+		const clear = source.clearTabChoice;
+		menuAction(it.clear ? clear && (() => clear(column)) : set && (() => set(table, column)));
+	}
+
 	function closeMenus() {
 		menu = freeMenu = chartMenu = listMenu = followMenu = null;
 		filterDlg = cfView = dedupDlg = fnDlg = linesDlg = pivotDlg = null;
@@ -9144,6 +9170,20 @@
 	// confirmDelete : suppression d'un grand tableau en attente de confirmation.
 	let menu = $state<{ x: number; y: number; e: Entry; n: number; i: number; header: boolean; rowOnly?: boolean; confirmDelete?: boolean } | null>(null);
 
+	/** Colonnes que « Choisir par… » propose (null : pas encore connues), relues à l'ouverture d'un menu. */
+	let choiceCands = $state.raw<ChoiceCandidate[] | null>(null);
+	const wantsCands = $derived(!!source.setTabChoice && (!!menu || !!filterDlg || !!pivotDlg || panel?.kind === 'pivot'));
+	$effect(() => {
+		if (!wantsCands) return;
+		untrack(() => {
+			choiceCands = null;
+			source.choiceCandidates?.().then(
+				(c) => (choiceCands = c ?? []),
+				() => undefined
+			);
+		});
+	});
+
 	/** Au-delà de ce nombre de lignes, « Supprimer le tableau » demande confirmation. */
 	const CONFIRM_DELETE_ROWS = 500;
 
@@ -10037,6 +10077,10 @@
 								startEdit(false);
 							}}>Renommer la colonne</button
 						>
+						{#if source.setTabChoice && col}
+							{@const tc = tabChoiceFor(m.e.t.name, col.name, { formula: !!col.formula })}
+							<button data-shed="1" title={tc.title} disabled={tc.disabled} onclick={() => runTabChoice(m.e.t.name, col.name, tc)}>{tc.label}</button>
+						{/if}
 					{/if}
 					{#if tableItems}
 						<hr />
@@ -10546,6 +10590,11 @@
 				{#if d.kind === 'filter' ? d.p.config.filters?.some((f) => f.field === d.field && f.values.length) : pivotFiltered(d.p, d.field)}
 					<button class="sort" onclick={() => applyPivotFilter(true)}>Effacer le filtre de « {d.field} »</button>
 				{/if}
+				{#if source.setTabChoice}
+					{@const tc = tabChoiceFor(d.p.config.source, d.field, { field: true })}
+					<button class="sort" title={tc.title} disabled={tc.disabled} onclick={() => runTabChoice(d.p.config.source, d.field, tc)}>{tc.label}</button>
+					<hr />
+				{/if}
 				<div class="add">
 					<input class="search" bind:value={d.search} placeholder="Rechercher" />
 				</div>
@@ -10626,6 +10675,11 @@
 				{/if}
 				{#if fcol?.filter}
 					<button class="sort" onclick={() => applyFilter(true)}>Effacer le filtre de « {fcol.name} »</button>
+				{/if}
+				{#if source.setTabChoice && fcol}
+					{@const tc = tabChoiceFor(d.e.t.name, fcol.name, { formula: !!fcol.formula })}
+					<button class="sort" title={tc.title} disabled={tc.disabled} onclick={() => runTabChoice(d.e.t.name, fcol.name, tc)}>{tc.label}</button>
+					<hr />
 				{/if}
 				{#if fcol?.formula}
 					<p class="menu-note">Colonne calculée : triée et filtrée sur ses valeurs ; son type suit sa formule.</p>
@@ -10965,6 +11019,8 @@
 				fields={sourceColumns(pv.config.source)}
 				error={pv.error}
 				filterValues={source.pivotFieldValues ? (f) => source.pivotFieldValues!(pv.config.source, f) : undefined}
+				tabChoice={source.setTabChoice ? (f) => tabChoiceFor(pv.config.source, f, { field: true }) : undefined}
+				ontabchoice={(f, it) => runTabChoice(pv.config.source, f, it)}
 				customLists={source.customLists}
 				setCustomLists={source.setCustomLists}
 				onchange={(cfg) => menuAction(source.setPivot && (() => source.setPivot!(pv.id, cfg)), true)}

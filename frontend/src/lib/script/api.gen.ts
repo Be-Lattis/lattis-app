@@ -624,11 +624,11 @@ export const apiReference: RefEntry[] = [
 	{
 		name: "sheets.choose_by",
 		category: "sheets",
-		signature: "sheets.choose_by(table, column, [value])",
-		summary: "Fait d'une feuille un onglet à choix par une colonne d'un de ses tableaux (« Choisir par… ») : la flèche de l'onglet choisit la valeur affichée.",
-		details: "Tous les tableaux de la feuille qui ont une colonne de ce nom suivent le choix. Sans valeur, l'onglet montre toutes les valeurs. Paramètres — table : tableau de la colonne ; column : colonne de catégorie (Année, Mois, Ville…) ; value : valeur affichée d'abord ; absente : toutes. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.choose_by{table = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
-		example: "sheets.choose_by(\"Commandes\", \"Client\", \"Durand\")",
-		args: [1, 3]
+		signature: "sheets.choose_by(table, column, [value], [sheet])",
+		summary: "Fait d'une feuille un onglet à choix par une colonne d'un de ses tableaux (« Choisir par… », « Filtrer l'onglet par cette colonne ») : la flèche de l'onglet choisit la valeur affichée.",
+		details: "Tous les tableaux de la feuille qui ont une colonne de ce nom suivent le choix, ainsi que ses tableaux croisés dont le tableau source a cette colonne. Avec sheet, l'onglet à choix est posé sur cette feuille-là : c'est « Filtrer l'onglet par ce champ » d'un tableau croisé posé ailleurs que son tableau source ; le TCD suit le choix, le tableau source (sur sa feuille) n'est pas filtré. Sans valeur, l'onglet montre toutes les valeurs. Paramètres — table : tableau de la colonne (pour un tableau croisé : son tableau source) ; column : colonne de catégorie (Année, Mois, Ville…) ; value : valeur affichée d'abord ; absente : toutes ; sheet : feuille de l'onglet à choix (celle d'un tableau croisé) ; absente : celle du tableau. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.choose_by{table = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "sheets.choose_by(\"Commandes\", \"Client\", \"Durand\")\nsheets.add(\"Synthèse\")\nsheets.choose_by{table = \"Commandes\", column = \"Client\", sheet = \"Synthèse\"}",
+		args: [1, 4]
 	},
 	{
 		name: "sheets.clear_choice",

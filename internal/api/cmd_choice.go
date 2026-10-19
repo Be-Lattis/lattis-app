@@ -71,15 +71,18 @@ sheets.set_choice("Feuille1", "Durand")`,
 		&Command{
 			Name:    "sheets.choose_by",
 			Label:   "Choisir par",
-			Summary: "Fait d'une feuille un onglet à choix par une colonne d'un de ses tableaux (« Choisir par… ») : la flèche de l'onglet choisit la valeur affichée.",
-			Details: "Tous les tableaux de la feuille qui ont une colonne de ce nom suivent le choix. Sans valeur, l'onglet montre toutes les valeurs.",
+			Summary: "Fait d'une feuille un onglet à choix par une colonne d'un de ses tableaux (« Choisir par… », « Filtrer l'onglet par cette colonne ») : la flèche de l'onglet choisit la valeur affichée.",
+			Details: "Tous les tableaux de la feuille qui ont une colonne de ce nom suivent le choix, ainsi que ses tableaux croisés dont le tableau source a cette colonne. Avec sheet, l'onglet à choix est posé sur cette feuille-là : c'est « Filtrer l'onglet par ce champ » d'un tableau croisé posé ailleurs que son tableau source ; le TCD suit le choix, le tableau source (sur sa feuille) n'est pas filtré. Sans valeur, l'onglet montre toutes les valeurs.",
 			Params: []Param{
-				{Name: "table", Type: Ref, Desc: "tableau de la colonne"},
+				{Name: "table", Type: Ref, Desc: "tableau de la colonne (pour un tableau croisé : son tableau source)"},
 				{Name: "column", Type: String, Desc: "colonne de catégorie (Année, Mois, Ville…)"},
 				{Name: "value", Type: Value, Desc: "valeur affichée d'abord ; absente : toutes", Optional: true},
+				{Name: "sheet", Type: Ref, Desc: "feuille de l'onglet à choix (celle d'un tableau croisé) ; absente : celle du tableau", Optional: true},
 			},
-			Write:   true,
-			Example: `sheets.choose_by("Commandes", "Client", "Durand")`,
+			Write: true,
+			Example: `sheets.choose_by("Commandes", "Client", "Durand")
+sheets.add("Synthèse")
+sheets.choose_by{table = "Commandes", column = "Client", sheet = "Synthèse"}`,
 			Run: func(c *Call) (any, error) {
 				tb, err := c.table("table")
 				if err != nil {
@@ -89,8 +92,16 @@ sheets.set_choice("Feuille1", "Durand")`,
 				if err != nil {
 					return nil, err
 				}
+				sheet := tb.Sheet.ID
+				if c.Has("sheet") {
+					s, err := c.sheet("sheet")
+					if err != nil {
+						return nil, err
+					}
+					sheet = s.ID
+				}
 				d, _ := c.Doc()
-				return nil, d.SetSheetChoice(c, tb.Sheet.ID, tb.Name, col, raw(c.Raw("value")))
+				return nil, d.SetSheetChoice(c, sheet, tb.Name, col, raw(c.Raw("value")))
 			},
 		},
 		&Command{

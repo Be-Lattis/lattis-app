@@ -21,6 +21,7 @@
 	import { searchValues, valuesFilter, type PanelValue } from './filtercond.js';
 	import CustomSort from './CustomSort.svelte';
 	import { withoutField, type CustomList, type CustomOrder } from './customsort';
+	import type { TabChoiceItem } from './tabchoice';
 	import {
 		AGGS,
 		FORMATS,
@@ -75,9 +76,15 @@
 		/** Listes personnalisées (Tri personnalisé…) : lecture et enregistrement. */
 		customLists?: () => Promise<CustomList[]>;
 		setCustomLists?: (lists: CustomList[]) => Promise<unknown>;
+		/**
+		 * « Filtrer l'onglet par ce champ » (menu d'une puce des lignes, des
+		 * colonnes ou des filtres) : l'entrée pour un champ, et son action.
+		 */
+		tabChoice?: (field: string) => TabChoiceItem;
+		ontabchoice?: (field: string, item: TabChoiceItem) => unknown;
 	}
 
-	let { config, fields, error = '', filterValues, onchange, ondelete, sources = [], onsource, pickSource = false, onclose, resizable = true, locked = '', customLists, setCustomLists }: Props = $props();
+	let { config, fields, error = '', filterValues, onchange, ondelete, sources = [], onsource, pickSource = false, onclose, resizable = true, locked = '', customLists, setCustomLists, tabChoice, ontabchoice }: Props = $props();
 
 	let sourceEl = $state<HTMLElement>();
 	$effect(() => {
@@ -258,6 +265,8 @@
 
 	interface Item {
 		label: string;
+		/** Infobulle de l'entrée. */
+		title?: string;
 		run?: () => void;
 		disabled?: boolean;
 		checked?: boolean;
@@ -361,6 +370,11 @@
 			items.push({ label: 'Trier de Z à A', checked: !custom && draft.sort?.[field] === 'desc', run: () => sortField(field, 'desc') });
 			items.push({ label: 'Tri personnalisé…', checked: custom, disabled: !filterValues, run: () => (customField = field) });
 			items.push({ label: 'Ordre de la source', checked: !custom && !draft.sort?.[field], run: () => sortField(field, null) });
+			items.push({ label: '', sep: true });
+		}
+		if (zone !== 'values' && field !== ROW_COUNT && tabChoice) {
+			const tc = tabChoice(field);
+			items.push({ label: tc.label, title: tc.title, disabled: tc.disabled || !!locked, run: () => ontabchoice?.(field, tc) });
 			items.push({ label: '', sep: true });
 		}
 		for (const m of moveCommands(draft, zone, i)) {
@@ -570,6 +584,10 @@
 								aria-haspopup="menu"
 								title={v ? `${valueLabel(v)}${v.show ? ' · ' + SHOWS.find(([s]) => s === v.show)?.[1] : ''}` : name}
 								onclick={(e) => chipMenu(z.zone, i, e.currentTarget, e.detail === 0)}
+								oncontextmenu={(e) => {
+									e.preventDefault();
+									chipMenu(z.zone, i, e.currentTarget, false);
+								}}
 								onkeydown={(e) => chipKey(e, z.zone, i)}
 							>
 								<span class="ticon"><Icon name={v && !v.field ? 'autosum' : fieldIcon(fieldType(name))} size={14} /></span>
@@ -656,9 +674,9 @@
 			{:else if it.head}
 				<div class="menu-sub">{it.label}</div>
 			{:else if it.checked !== undefined}
-				<button role="menuitemradio" aria-checked={it.checked} disabled={it.disabled} onclick={() => run(it)}><span class="check">{it.checked ? '✓' : ''}</span>{it.label}</button>
+				<button role="menuitemradio" aria-checked={it.checked} disabled={it.disabled} title={it.title} onclick={() => run(it)}><span class="check">{it.checked ? '✓' : ''}</span>{it.label}</button>
 			{:else}
-				<button role="menuitem" class:danger={it.danger} disabled={it.disabled} onclick={() => run(it)}><span class="check"></span>{it.label}</button>
+				<button role="menuitem" class:danger={it.danger} disabled={it.disabled} title={it.title} onclick={() => run(it)}><span class="check"></span>{it.label}</button>
 			{/if}
 		{/each}
 	</div>

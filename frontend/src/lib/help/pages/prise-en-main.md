@@ -138,13 +138,17 @@ Au lieu d'un onglet par année, gardez un seul tableau avec une colonne Année e
 - **(Toutes les années)** : plus rien n'est masqué, la colonne réapparaît ;
 - **Nouvelle année…** propose la suivante (2026 après 2025, Décembre après Novembre, Lot 4 après Lot 3), l'ajoute à la liste déroulante de la colonne et l'affiche : la feuille paraît vide, prête à être remplie, comme un onglet neuf. `Ctrl+Z` l'annule.
 
+**Depuis la colonne** : sur un tableau déjà rempli, clic droit sur l'en-tête de la colonne Année (ou son menu ▾) › **Filtrer l'onglet par cette colonne** fait la même chose, sans passer par l'onglet ni fusionner d'onglets. L'onglet commence sur toutes les valeurs : choisissez l'année avec sa flèche ▾. L'entrée est grisée, infobulle à l'appui, pour une colonne calculée, vide ou de plus de 100 valeurs différentes ; sur la colonne qui sert déjà de choix, elle devient **Ne plus filtrer l'onglet**. `Ctrl+Z` annule.
+
+**Depuis un tableau croisé** : clic droit sur un champ des lignes, des colonnes ou des filtres dans le volet du tableau croisé (ou son ▾ dans la grille) › **Filtrer l'onglet par ce champ**. L'onglet à choix est posé sur la feuille du tableau croisé, par la colonne de son tableau source : le tableau croisé ne compte que la valeur choisie, comme les autres tableaux croisés de la feuille construits sur un tableau qui a cette colonne, et les tableaux de la feuille qui l'ont. Le tableau source, s'il est sur une autre feuille, n'est pas filtré ; ses valeurs remplissent la liste de l'onglet. Cela vaut aussi pour un tableau croisé construit sur un tableau chargé par une requête.
+
 Une ligne tapée sous le tableau, ou dans la bande grisée des lignes des autres années, reçoit d'office l'année affichée ; de même pour une ligne collée ou insérée. Le choix n'est pas un filtre : « Effacer le filtre » le laisse, et vos filtres ▾ s'y ajoutent. `Ctrl+Alt+Pg.Suiv` et `Ctrl+Alt+Pg.Préc` passent à l'année suivante ou précédente ; la barre d'état rappelle « Année : 2025 (choix de l'onglet) ».
 
 Les formules libres **de la feuille** voient ses tableaux filtrés : `=SOMME(Ventes[Montant])` posé sous le tableau donne le total de l'année affichée, comme dans l'ancien onglet « 2025 ». Celles des autres feuilles, l'onglet SQL et les scripts voient toutes les lignes. `=ONGLET.CHOIX()` rend la valeur choisie, pour une synthèse qui suit l'onglet : `=SOMME.SI.ENS(Ventes[Montant]; Ventes[Année]; ONGLET.CHOIX())`.
 
 Changer d'année est de la navigation, comme changer d'onglet : ce n'est pas une étape d'annulation, mais la dernière valeur choisie est gardée dans le fichier et revient à l'ouverture (si elle n'a plus aucune ligne, l'onglet montre la dernière valeur, sauf juste après « Nouvelle année… »). Renommer la colonne renomme la catégorie : l'onglet suit. Clic droit › Choisir par › « Ne plus choisir par… » retire le choix (annulable). Dans un classeur partagé, le choix reste sur votre poste : il n'est pas envoyé aux autres.
 
-Scripts : `sheets.choice()`, `sheets.set_choice("Ventes", 2025)`, `sheets.choose_by("Ventes", "Année")`, `sheets.new_choice("Ventes", 2026)` (voir [Lua](lua)).
+Scripts : `sheets.choice()`, `sheets.set_choice("Ventes", 2025)`, `sheets.choose_by("Ventes", "Année")` (pour la feuille d'un tableau croisé posé ailleurs : `sheets.choose_by{table = "Ventes", column = "Année", sheet = "Synthèse"}`), `sheets.new_choice("Ventes", 2026)` (voir [Lua](lua)).
 
 ## Enregistrer
 

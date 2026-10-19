@@ -20,7 +20,9 @@ import (
 //   - Le choix filtre tous les tableaux de la feuille qui ont une colonne de
 //     ce nom (loadFilter), et donc ce qui suit leur filtre : la grille,
 //     SOUS.TOTAL, les graphiques, la recherche, le collage. Les TCD de la
-//     feuille reçoivent un filtre imposé (pivotChoice). Les formules libres
+//     feuille reçoivent un filtre imposé (pivotChoice), même quand leur
+//     tableau source est sur une autre feuille (qui n'en est pas filtrée :
+//     « Filtrer l'onglet par ce champ » sur un TCD). Les formules libres
 //     de la feuille voient les tableaux filtrés (schemaFor) ; celles des
 //     autres feuilles, le SQL et les scripts voient toutes les lignes.
 //   - Ce n'est pas un filtre de l'utilisateur : « Effacer le filtre » le
@@ -219,8 +221,10 @@ func (t *tx) setSheetChoice(sheet int64, table string, column string, value stri
 }
 
 // SetSheetChoice fait de la feuille un onglet à choix par une colonne d'un
-// de ses tableaux (« Choisir par… »), réglé sur value ("" : toutes les
-// valeurs) ; une étape d'annulation.
+// de ses tableaux (« Choisir par… », « Filtrer l'onglet par cette
+// colonne »), ou du tableau source d'un de ses TCD posé ailleurs (« Filtrer
+// l'onglet par ce champ »), réglé sur value ("" : toutes les valeurs) ; une
+// étape d'annulation.
 func (m *Model) SetSheetChoice(ctx context.Context, sheet int64, table, column, value string) error {
 	return m.Do(ctx, fmt.Sprintf("Choisir par « %s »", column), func(t *tx) error {
 		if err := t.guard(sheet); err != nil {
@@ -311,6 +315,78 @@ func (t *tx) choiceTables(sheet int64) ([]Table, error) {
 	return out, nil
 }
 
+// pivotSources : tableaux sources des TCD de la feuille posés sur une autre
+// feuille (« Filtrer l'onglet par ce champ » sur un TCD dont la source est
+// ailleurs), sans doublon ; une source introuvable est passée.
+func (t *tx) pivotSources(sheet int64) ([]Table, error) {
+	rs, err := t.query(`SELECT config FROM _lattis_pivots WHERE sheet = ? ORDER BY id`, sheet)
+	if err != nil {
+		return nil, err
+	}
+	var names []string
+	for rs.Next() {
+		var raw string
+		if err := rs.Scan(&raw); err != nil {
+			rs.Close()
+			return nil, err
+		}
+		var cfg PivotConfig
+		if json.Unmarshal([]byte(raw), &cfg) == nil && cfg.Source != "" && !slices.Contains(names, cfg.Source) {
+			names = append(names, cfg.Source)
+		}
+	}
+	rs.Close()
+	if err := rs.Err(); err != nil {
+		return nil, err
+	}
+	var out []Table
+	for _, n := range names {
+		tb, err := t.tableByName(n)
+		if err != nil || tb.Sheet == sheet {
+			continue
+		}
+		out = append(out, tb)
+	}
+	return out, nil
+}
+
+// choiceSources : les tableaux qui donnent les valeurs de l'onglet à choix,
+// ceux de la feuille qui suivent le choix (choiceTables), puis ceux d'autres
+// feuilles qui ont la colonne de catégorie : la colonne source du choix et
+// les sources des TCD de la feuille. Ces derniers ne sont pas filtrés (leur
+// choice n'est réglé ici que pour lire la colonne de catégorie).
+func (t *tx) choiceSources(sheet int64, ch *SheetChoice, r *choiceRaw) ([]Table, error) {
+	tables, err := t.choiceTables(sheet)
+	if err != nil {
+		return nil, err
+	}
+	seen := map[int64]bool{}
+	for _, tb := range tables {
+		seen[tb.ID] = true
+	}
+	var other []Table
+	if r != nil && r.Tbl != 0 {
+		if tb, err := t.table(r.Tbl); err == nil && tb.Sheet != sheet {
+			other = append(other, tb)
+		}
+	}
+	srcs, err := t.pivotSources(sheet)
+	if err != nil {
+		return nil, err
+	}
+	for _, tb := range append(other, srcs...) {
+		if seen[tb.ID] {
+			continue
+		}
+		seen[tb.ID] = true
+		if c, ok := choiceColumn(tb, ch.Name); ok {
+			tb.choice = &tableChoice{Col: c, Value: ch.Value, All: ch.All}
+			tables = append(tables, tb)
+		}
+	}
+	return tables, nil
+}
+
 // choiceList : valeurs de la liste de validation (dv) d'une colonne.
 func (t *tx) choiceList(tbl, col int64) ([]string, error) {
 	s, err := t.tableStyle(tbl, 0, col)
@@ -350,7 +426,11 @@ func (t *tx) choiceValues(sheet int64) ([]FilterValue, error) {
 	if err != nil || ch == nil {
 		return out, err
 	}
-	tables, err := t.choiceTables(sheet)
+	r, err := t.readChoice(sheet)
+	if err != nil {
+		return out, err
+	}
+	tables, err := t.choiceSources(sheet, ch, r)
 	if err != nil {
 		return out, err
 	}
@@ -394,9 +474,7 @@ func (t *tx) choiceValues(sheet int64) ([]FilterValue, error) {
 			return out, err
 		}
 	}
-	if r, err := t.readChoice(sheet); err != nil {
-		return out, err
-	} else if r != nil && r.Tbl != 0 {
+	if r != nil && r.Tbl != 0 {
 		list, err := t.choiceList(r.Tbl, r.Col)
 		if err != nil {
 			return out, err
@@ -442,7 +520,13 @@ func (m *Model) NewSheetChoiceValue(ctx context.Context, sheet int64, value stri
 		if err != nil {
 			return err
 		}
-		tables, err := t.choiceTables(sheet)
+		ch, err := t.sheetChoice(sheet)
+		if err != nil || ch == nil {
+			return err
+		}
+		// Les tableaux d'autres feuilles (source d'un TCD de la feuille)
+		// valident le type de la valeur, mais leur liste n'est pas touchée.
+		tables, err := t.choiceSources(sheet, ch, r)
 		if err != nil {
 			return err
 		}
@@ -463,6 +547,9 @@ func (m *Model) NewSheetChoiceValue(ctx context.Context, sheet int64, value stri
 			list = append(list, value)
 		}
 		for _, tb := range tables {
+			if tb.Sheet != sheet {
+				continue
+			}
 			c := tb.choice.Col
 			old, err := t.choiceList(tb.ID, c.ID)
 			if err != nil {
@@ -483,9 +570,10 @@ func (m *Model) NewSheetChoiceValue(ctx context.Context, sheet int64, value stri
 	})
 }
 
-// SheetChoiceCandidates donne les colonnes des tableaux de la feuille qui
-// peuvent servir de choix d'onglet : saisies (pas calculées), avec au moins
-// une valeur et au plus MaxChoiceValues valeurs distinctes.
+// SheetChoiceCandidates donne les colonnes des tableaux de la feuille, puis
+// des tableaux sources de ses TCD posés sur d'autres feuilles, qui peuvent
+// servir de choix d'onglet : saisies (pas calculées), avec au moins une
+// valeur et au plus MaxChoiceValues valeurs distinctes.
 func (m *Model) SheetChoiceCandidates(ctx context.Context, sheet int64) ([]ChoiceCandidate, error) {
 	out := []ChoiceCandidate{}
 	err := m.read(ctx, func(t *tx) error {
@@ -493,7 +581,11 @@ func (m *Model) SheetChoiceCandidates(ctx context.Context, sheet int64) ([]Choic
 		if err != nil {
 			return err
 		}
-		for _, tb := range tables {
+		srcs, err := t.pivotSources(sheet)
+		if err != nil {
+			return err
+		}
+		for _, tb := range append(tables, srcs...) {
 			for _, c := range tb.Cols {
 				if c.Formula != "" {
 					continue
@@ -627,7 +719,9 @@ func choiceValue(ch *SheetChoice) formula.Value {
 
 // pivotChoice impose le choix de l'onglet de la feuille sheet à un tableau
 // croisé posé dessus, comme un filtre de rapport, quand son tableau source
-// a la colonne de catégorie.
+// a la colonne de catégorie, où que soit ce tableau (sur une autre feuille,
+// il n'est pas filtré pour autant : seul le TCD suit). « Suivre l'année »
+// décoché sur la source ne compte que si elle est sur la feuille du TCD.
 func (t *tx) pivotChoice(sheet int64, cfg *PivotConfig) error {
 	cfg.Choice = nil
 	ch, err := t.sheetChoice(sheet)
@@ -638,7 +732,7 @@ func (t *tx) pivotChoice(sheet int64, cfg *PivotConfig) error {
 	if err != nil {
 		return nil // source introuvable : l'erreur du TCD le dira
 	}
-	if c, ok := choiceColumn(tb, ch.Name); ok && !tb.NoFollow {
+	if c, ok := choiceColumn(tb, ch.Name); ok && (tb.Sheet != sheet || !tb.NoFollow) {
 		cfg.Choice = &PivotFilter{Field: c.Name, Values: []string{ch.Value}}
 	}
 	return nil

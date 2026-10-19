@@ -23,6 +23,7 @@
 	import type { MergePlan, SheetGroup } from '#bindings/internal/canvas/models.js';
 	import { visibleSheet } from '#lib/shell/sheets.js';
 	import { choiceStatus, choiceStep, type ChoiceActions } from '#lib/shell/choice.js';
+	import { tabChoiceNotice } from '#lib/grid/tabchoice.js';
 	import { count } from '#lib/sql/result.js';
 	import { printSheet } from '#lib/shell/print.js';
 	import { withSaveProgress } from '#lib/shell/saveprogress.js';
@@ -1416,6 +1417,18 @@
 			await reload();
 			if (st.notice) notice = st.notice;
 		},
+		// « Filtrer l'onglet par cette colonne / ce champ » : comme « Choisir par… » de l'onglet, sur (Toutes).
+		setTabChoice: async (table, column) => {
+			await DocumentService.ChooseSheetBy(sheetId, table, column, '');
+			await reload();
+			notice = tabChoiceNotice(column, false);
+		},
+		clearTabChoice: async (column) => {
+			await DocumentService.ClearSheetChoice(sheetId);
+			await reload();
+			notice = tabChoiceNotice(column, true);
+		},
+		choiceCandidates: async () => (await DocumentService.SheetChoiceCandidates(sheetId)) ?? [],
 		formatAsTable: (row, col) => DocumentService.FormatAsTable(sheetId, row, col).then(reload),
 		moveTable: (t, row, col) => DocumentService.MoveTable(t.name, row, col).then(reload),
 		extractColumns: (t, i0, i1, row, col) => DocumentService.ExtractColumns(t.name, i0, i1, row, col).then(reload),
