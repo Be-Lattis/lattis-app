@@ -831,6 +831,14 @@
 					if (p) notice = `Tableau « ${table} » exporté : ${p}`;
 					break;
 				}
+				case 'exportSheet': {
+					// Toute la feuille active, de A1 à la dernière cellule utilisée.
+					if (mode !== 'doc') return;
+					const name = layout?.sheets?.find((s) => s.id === sheetId)?.name ?? 'Feuille';
+					const p = await DocumentService.ExportSheetCSV(sheetId, name);
+					if (p) notice = `Feuille « ${name} » exportée : ${p}`;
+					break;
+				}
 				case 'exportXlsx':
 				case 'exportOds': {
 					// Formules traduites quand le format a un équivalent, sinon leur valeur.

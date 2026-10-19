@@ -558,6 +558,15 @@ export function ExportODS(): $CancellablePromise<$models.XLSXExport> {
 }
 
 /**
+ * ExportSheetCSV écrit toute une feuille en CSV (de A1 à la dernière cellule
+ * utilisée, tableaux et cellules libres à leur place). Renvoie le fichier
+ * écrit, vide si l'utilisateur a annulé.
+ */
+export function ExportSheetCSV(sheet: number, name: string): $CancellablePromise<string> {
+    return $Call.ByID(1525161201, sheet, name);
+}
+
+/**
  * ExportXLSX écrit tout le classeur au format Excel .xlsx : tableaux Excel,
  * formules traduites quand Excel a un équivalent (sinon leur résultat),
  * mise en forme.

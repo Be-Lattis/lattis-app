@@ -68,7 +68,7 @@
 	}
 	const FONTS_W = 134; // largeur des listes Police et Taille (fit.ts)
 
-	export type FileAction = 'new' | 'open' | 'openRemote' | 'share' | 'rights' | 'republish' | 'save' | 'saveAs' | 'import' | 'export' | 'exportXlsx' | 'exportOds' | 'print' | 'pdf' | 'about' | 'close' | 'demo' | 'mcp' | 'settings' | 'help';
+	export type FileAction = 'new' | 'open' | 'openRemote' | 'share' | 'rights' | 'republish' | 'save' | 'saveAs' | 'import' | 'export' | 'exportSheet' | 'exportXlsx' | 'exportOds' | 'print' | 'pdf' | 'about' | 'close' | 'demo' | 'mcp' | 'settings' | 'help';
 
 	export type DataAction = 'csv' | 'xlsx' | 'json' | 'parquet' | 'sqlite' | 'postgres' | 'mysql' | 'sqlserver' | 'lattis' | 'web' | 'table' | 'queries' | 'refreshAll';
 
@@ -989,12 +989,12 @@
 						<button disabled={disabled && a !== 'import'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 					<hr />
-					<!-- Exporter : sous-menu (CSV du tableau, classeur .xlsx ou .ods) ; l'impression reste à part. -->
+					<!-- Exporter : sous-menu (CSV du tableau ou de la feuille, classeur .xlsx ou .ods) ; l'impression reste à part. -->
 					<div class="recent-wrap" role="presentation" onmouseenter={() => (exportOpen = true)} onmouseleave={() => (exportOpen = false)}>
 						<button {disabled} onclick={() => (exportOpen = !exportOpen)}><span>Exporter</span><span class="keys">▸</span></button>
 						{#if exportOpen && !disabled}
 							<div class="file-menu sub">
-								{#each [['export', 'Le tableau en CSV…'], ['exportXlsx', 'Le classeur Excel (.xlsx)…'], ['exportOds', 'Le classeur OpenDocument (.ods)…']] as [a, label] (a)}
+								{#each [['export', 'Le tableau en CSV…'], ['exportSheet', 'La feuille entière en CSV…'], ['exportXlsx', 'Le classeur Excel (.xlsx)…'], ['exportOds', 'Le classeur OpenDocument (.ods)…']] as [a, label] (a)}
 									<button onclick={() => { fileOpen = exportOpen = false; onfile(a as FileAction); }}><span>{label}</span></button>
 								{/each}
 							</div>

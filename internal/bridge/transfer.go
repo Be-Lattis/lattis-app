@@ -74,6 +74,25 @@ func (s *DocumentService) ExportCSV(ctx context.Context, table string) (string, 
 	})
 }
 
+// ExportSheetCSV écrit toute une feuille en CSV (de A1 à la dernière cellule
+// utilisée, tableaux et cellules libres à leur place). Renvoie le fichier
+// écrit, vide si l'utilisateur a annulé.
+func (s *DocumentService) ExportSheetCSV(ctx context.Context, sheet int64, name string) (string, error) {
+	d, err := s.current()
+	if err != nil {
+		return "", err
+	}
+	return s.sys().SaveFile(FileDialog{
+		Title:     "Exporter la feuille " + name,
+		Filename:  name + ".csv",
+		Directory: docDir(d.Path()),
+		Filters:   []FileFilter{{"CSV", "*.csv"}},
+		Ext:       ".csv",
+	}, func(p string) error {
+		return transfer.ExportSheetCSVFile(ctx, d.Model, sheet, p)
+	})
+}
+
 // PrintHTML rend la plage utilisée d'une feuille en HTML imprimable
 // (Fichier › Imprimer / Exporter en PDF).
 func (s *DocumentService) PrintHTML(ctx context.Context, sheet int64) (string, error) {
