@@ -156,6 +156,7 @@ func (s *DocumentService) watchShare(d *doc.Document) {
 		s.share.cancel()
 		s.share.cancel = nil
 	}
+	unbindCollab(s.share.doc)
 	s.share.sync, s.share.doc = nil, nil
 	info := d.Share.Info()
 	if info == nil {
@@ -173,6 +174,10 @@ func (s *DocumentService) watchShare(d *doc.Document) {
 		// des autres, conflits (docs/collaboration/synchronisation.md).
 		eng := collab.New(d.DB(), d.Model, d.Share)
 		s.share.sync, s.share.doc = eng, d
+		// Structure des tableaux partagés (§6.4) : faite sur le serveur avant
+		// la validation locale ; index du serveur (API).
+		d.Oplog.SetStructure(eng.Structure)
+		d.SetIndexer(eng)
 		s.share.mu.Unlock()
 		go func() {
 			defer recoverPanic("classeur partagé")
@@ -241,7 +246,17 @@ func (s *DocumentService) stopShare() {
 		s.share.cancel()
 		s.share.cancel = nil
 	}
+	unbindCollab(s.share.doc)
 	s.share.sync, s.share.doc = nil, nil
+}
+
+// unbindCollab débranche la synchronisation d'un classeur qui n'est plus
+// suivi : sa structure partagée redevient refusée en local.
+func unbindCollab(d *doc.Document) {
+	if d != nil {
+		d.Oplog.SetStructure(nil)
+		d.SetIndexer(nil)
+	}
 }
 
 // kickShare demande l'envoi de la file du classeur collaboratif ouvert

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -87,6 +88,7 @@ func (e *Engine) send(ctx context.Context) (Report, error) {
 	if err != nil {
 		return rep, err
 	}
+	retried := false
 	for ctx.Err() == nil {
 		entries, err := e.nextBatch(ctx)
 		if err != nil {
@@ -96,6 +98,16 @@ func (e *Engine) send(ctx context.Context) (Report, error) {
 			break
 		}
 		o, err := e.sendBatch(ctx, srv, info, tables, entries)
+		if errors.Is(err, errStale) && !retried {
+			// Structure changée pendant l'envoi (colonne ou tableau renommé
+			// par ce poste) : correspondance relue, l'étape repart une fois.
+			retried = true
+			if tables, err = remoteTables(ctx, e.db.Read()); err != nil {
+				return rep, err
+			}
+			continue
+		}
+		retried = false
 		if err != nil {
 			return rep, err
 		}
@@ -192,7 +204,10 @@ func (e *Engine) sendBatch(ctx context.Context, srv workbook.Server, info *workb
 		for _, op := range en.ops {
 			t := tables[op.Table]
 			if t == nil || op.Kind == command.OpMeta {
-				continue // structure, mise en page : étape 7 (§6.4)
+				// Mise en page : étape 7. La structure ne passe pas par la file :
+				// elle est faite sur le serveur avant la validation locale
+				// (Engine.Structure).
+				continue
 			}
 			it := item{entry: ei, op: op, t: t}
 			switch op.Kind {
@@ -263,6 +278,12 @@ func (e *Engine) sendBatch(ctx context.Context, srv workbook.Server, info *workb
 				wr, err = w.Move(ctx, schema, it.t.remote.Name, op.Row, old, op.Pos)
 			}
 			if err != nil {
+				if staleStructure(err) {
+					// Colonne ou tableau inconnu du serveur : la correspondance
+					// est périmée (structure changée), pas un refus de la
+					// valeur ; l'étape reste en attente.
+					return fmt.Errorf("%w : %s", errStale, errText(err))
+				}
 				if _, rejected := workbook.Rejected(err); !rejected {
 					return err
 				}
@@ -482,6 +503,16 @@ func sortedKeys[V any](m map[int64]V) []int64 {
 	}
 	slices.Sort(out)
 	return out
+}
+
+// errStale : une écriture vise une colonne ou un tableau que le serveur ne
+// connaît plus sous ce nom (structure changée pendant l'envoi).
+var errStale = errors.New("structure du tableau changée sur le serveur")
+
+// staleStructure : colonne ou table inconnue (42703, 42P01).
+func staleStructure(err error) bool {
+	code, ok := workbook.Rejected(err)
+	return ok && (code == "42703" || code == "42P01")
 }
 
 // errText résume une erreur pour la barre d'état.

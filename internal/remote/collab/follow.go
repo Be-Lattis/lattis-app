@@ -26,6 +26,12 @@ type worker struct {
 	acl       bool
 	listening bool
 	timer     *time.Timer
+
+	// structure : tableaux dont la structure a changé sur le serveur
+	// (*structure:<id>), relus en entier ; meta : structure de tous les
+	// tableaux à comparer (*meta : clé, mise en page).
+	structure map[int64]bool
+	meta      bool
 }
 
 func (w *worker) poke() {
@@ -66,14 +72,32 @@ func (w *worker) notified(ctx context.Context, payload string) {
 		w.poke()
 		return
 	}
-	if strings.HasPrefix(payload, "*") {
-		return // *meta (mise en page, étape 7), *version (classeur figé)
+	structure := false
+	switch {
+	case strings.HasPrefix(payload, workbook.NoticeStructure):
+		// Structure d'un tableau changée par un concepteur : relu en entier.
+		payload, structure = strings.TrimPrefix(payload, workbook.NoticeStructure), true
+	case payload == workbook.NoticeMeta:
+		// Mise en page ou structure (clé) : la structure de tous les tableaux
+		// est comparée à celle du serveur.
+		w.mu.Lock()
+		w.meta = true
+		if w.timer == nil {
+			w.timer = time.AfterFunc(Debounce, w.poke)
+		}
+		w.mu.Unlock()
+		return
+	case strings.HasPrefix(payload, "*"):
+		return // *version (classeur figé)
 	}
 	tbl, err := w.e.TableOf(ctx, payload)
 	if err != nil || tbl == 0 {
 		return
 	}
 	w.mu.Lock()
+	if structure {
+		w.structure[tbl] = true
+	}
 	w.due[tbl] = true
 	if w.timer == nil {
 		w.timer = time.AfterFunc(Debounce, w.poke)
@@ -96,7 +120,9 @@ func (w *worker) loop(ctx context.Context) {
 func (w *worker) cycle(ctx context.Context) {
 	w.mu.Lock()
 	full, due, listening, acl := w.full, w.due, w.listening, w.acl
+	structure, meta := w.structure, w.meta
 	w.full, w.due, w.acl = false, map[int64]bool{}, false
+	w.structure, w.meta = map[int64]bool{}, false
 	if w.timer != nil {
 		w.timer.Stop()
 		w.timer = nil
@@ -122,8 +148,11 @@ func (w *worker) cycle(ctx context.Context) {
 	if err == nil {
 		var r Report
 		switch {
-		case full:
-			r, err = w.e.Receive(ctx, nil)
+		case full || meta:
+			// Connexion : la structure a pu changer pendant la coupure.
+			r, err = w.e.ReceiveStructure(ctx, nil, structure)
+		case len(structure) > 0:
+			r, err = w.e.ReceiveStructure(ctx, due, structure)
 		case len(due) > 0:
 			r, err = w.e.Receive(ctx, due)
 		}

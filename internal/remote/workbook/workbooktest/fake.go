@@ -88,6 +88,8 @@ type Fake struct {
 	// Creators : créateurs de classeurs (rôle de serveur) ; nil : tout le
 	// monde publie. Les autres reçoivent 42501 de create_workbook.
 	Creators map[string]bool
+	// pipelines : pipelines qui alimentent un tableau (AddPipeline).
+	pipelines []*fpipeline
 }
 
 // check refuse (42501) l'écriture de value dans la colonne col d'un
@@ -127,6 +129,10 @@ type table struct {
 	cols    []workbook.RemoteColumn
 	rows    []row
 	tombs   []tomb
+	// key : colonne clé (lattis.set_key) ; indexes : index posés par
+	// create_index (structure.go).
+	key     string
+	indexes []findex
 }
 
 type row struct {
@@ -294,6 +300,7 @@ func (s *schema) clone() *schema {
 		tc.cols = slices.Clone(t.cols)
 		tc.rows = slices.Clone(t.rows)
 		tc.tombs = slices.Clone(t.tombs)
+		tc.indexes = slices.Clone(t.indexes)
 		for i := range tc.rows {
 			tc.rows[i].vals = slices.Clone(t.rows[i].vals)
 		}
@@ -858,7 +865,7 @@ func (r *reader) Tables(ctx context.Context, name string) ([]workbook.RemoteTabl
 	}
 	var out []workbook.RemoteTable
 	for i, t := range s.tables {
-		out = append(out, workbook.RemoteTable{ID: t.id, Name: t.name, LocalID: t.localID, Position: i + 1, Columns: slices.Clone(t.cols)})
+		out = append(out, workbook.RemoteTable{ID: t.id, Name: t.name, LocalID: t.localID, Position: i + 1, Columns: slices.Clone(t.cols), Key: t.key})
 	}
 	return out, nil
 }

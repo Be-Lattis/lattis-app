@@ -46,6 +46,10 @@ type client struct {
 func newClient(t *testing.T, name string, d *doc.Document, srv workbook.Server) *client {
 	e := collab.New(d.DB(), d.Model, d.Share)
 	e.SetServer(srv)
+	// Comme le pont (bridge.watchShare) : la structure partagée passe par
+	// le serveur.
+	d.Oplog.SetStructure(e.Structure)
+	d.SetIndexer(e)
 	return &client{t: t, name: name, d: d, e: e}
 }
 
@@ -438,7 +442,9 @@ func TestFrozenTypesInSharedWorkbook(t *testing.T) {
 	if n != 0 {
 		t.Fatalf("%d saisies invalides gardées", n)
 	}
-	// Structure d'un tableau partagé : refusée pour l'instant (§6.4).
+	// Structure d'un tableau partagé : sans la synchronisation, refusée en
+	// local (§6.4) ; avec elle, voir structure_test.go.
+	alice.d.Oplog.SetStructure(nil)
 	if err := alice.d.InsertColumn(ctx, "Ventes", 1, "Remise"); !errors.Is(err, workbook.ErrStructure) {
 		t.Fatalf("colonne ajoutée : %v", err)
 	}

@@ -300,7 +300,7 @@ func (r pgReader) SyncPoint(ctx context.Context) (string, error) {
 }
 
 func (r pgReader) Tables(ctx context.Context, schema string) ([]RemoteTable, error) {
-	rs, err := r.tx.Query(ctx, `SELECT table_id::text, name, coalesce(local_id, ''), position FROM `+pgx.Identifier{schema, "lattis_meta_tables"}.Sanitize()+` ORDER BY position`)
+	rs, err := r.tx.Query(ctx, `SELECT table_id::text, name, coalesce(local_id, ''), position, coalesce(key_column::text, '') FROM `+pgx.Identifier{schema, "lattis_meta_tables"}.Sanitize()+` ORDER BY position`)
 	if err != nil {
 		return nil, err
 	}
@@ -308,7 +308,7 @@ func (r pgReader) Tables(ctx context.Context, schema string) ([]RemoteTable, err
 	for rs.Next() {
 		var t RemoteTable
 		var local string
-		if err := rs.Scan(&t.ID, &t.Name, &local, &t.Position); err != nil {
+		if err := rs.Scan(&t.ID, &t.Name, &local, &t.Position, &t.Key); err != nil {
 			rs.Close()
 			return nil, err
 		}

@@ -108,10 +108,16 @@ func (s *session) Write(ctx context.Context, fn func(workbook.Writer) error) err
 	if w.wrote {
 		s.f.xid = w.xid
 	}
-	touched := w.touched
+	for _, fn := range w.after {
+		fn()
+	}
+	touched, notes := w.touched, w.notes
 	s.f.mu.Unlock()
 	for id, channel := range touched {
 		s.f.notify(channel, id)
+	}
+	for _, n := range notes {
+		s.f.notify(n[0], n[1])
 	}
 	return nil
 }
@@ -128,7 +134,7 @@ func (s *session) find(schemaName, name string) (*book, *table, error) {
 				return b, t, nil
 			}
 		}
-		return nil, nil, fmt.Errorf("la relation « %s.%s » n'existe pas", schemaName, name)
+		return nil, nil, ErrServer{"42P01", fmt.Sprintf("la relation « %s.%s » n'existe pas", schemaName, name)}
 	}
 	return nil, nil, fmt.Errorf("le schéma « %s » n'existe pas", schemaName)
 }
@@ -139,6 +145,10 @@ type writer struct {
 	at      time.Time
 	touched map[string]string // tableau → canal
 	wrote   bool              // un xid est attribué (pg_current_xact_id_if_assigned)
+	// notes : notifications de structure (canal, charge) ; after : effets
+	// hors des classeurs (pipelines, données), faits à la validation.
+	notes [][2]string
+	after []func()
 }
 
 // target vérifie le droit d'écrire dans un tableau et rend son niveau.
@@ -215,7 +225,7 @@ func (w *writer) Update(ctx context.Context, schemaName, name, id string, col wo
 	}
 	j := t.col(col.Name)
 	if j < 0 {
-		return workbook.Wrote{}, fmt.Errorf("la colonne « %s » n'existe pas", col.Name)
+		return workbook.Wrote{}, ErrServer{"42703", fmt.Sprintf("la colonne « %s » n'existe pas", col.Name)}
 	}
 	i := t.row(id)
 	if i < 0 || (lv == "participant" && t.rows[i].author != w.s.user) || !workbook.SameRemote(t.rows[i].vals[j], o) {
@@ -243,7 +253,7 @@ func (w *writer) Insert(ctx context.Context, schemaName, name, id, pos string, c
 	for k, c := range cols {
 		j := t.col(c.Name)
 		if j < 0 {
-			return workbook.Wrote{}, fmt.Errorf("la colonne « %s » n'existe pas", c.Name)
+			return workbook.Wrote{}, ErrServer{"42703", fmt.Sprintf("la colonne « %s » n'existe pas", c.Name)}
 		}
 		if r.vals[j], err = workbook.ToRemote(c.Type, vals[k]); err != nil {
 			return workbook.Wrote{}, err

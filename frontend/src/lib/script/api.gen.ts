@@ -778,6 +778,14 @@ export const apiReference: RefEntry[] = [
 		args: [0, 1]
 	},
 	{
+		name: "tables.add_index",
+		category: "tables",
+		signature: "tables.add_index(table, columns, [unique])",
+		summary: "Pose sur le serveur un index sur des colonnes d'un tableau partagé d'un classeur collaboratif (propriétaire ou concepteur), pour accélérer les filtres et les recherches des autres outils ; unique : les valeurs ne se répètent pas. Ne s'annule pas par Ctrl+Z : tables.drop_index le retire. Renvoie son nom.",
+		details: "Paramètres — table : nom du tableau ; columns : colonnes de l'index (1 à 8) ; unique : index unique. Arguments dans l'ordre, ou une table d'arguments nommés : tables.add_index{table = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		args: [1, 3]
+	},
+	{
 		name: "tables.clear_filters",
 		category: "tables",
 		signature: "tables.clear_filters(table)",
@@ -807,6 +815,14 @@ export const apiReference: RefEntry[] = [
 		signature: "tables.delete_row(table, row)",
 		summary: "Supprime la ligne de données row ; le tableau rétrécit.",
 		details: "Pour supprimer une ligne par sa clé, utilisez db.delete. Paramètres — table : nom du tableau ; row : ligne de données, à partir de 1. Arguments dans l'ordre, ou une table d'arguments nommés : tables.delete_row{table = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		args: [1, 2]
+	},
+	{
+		name: "tables.drop_index",
+		category: "tables",
+		signature: "tables.drop_index(table, name)",
+		summary: "Retire un index posé sur le serveur (nom rendu par tables.add_index ou tables.indexes).",
+		details: "Paramètres — table : nom du tableau ; name : nom de l'index (lattis_ix_…). Arguments dans l'ordre, ou une table d'arguments nommés : tables.drop_index{table = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		args: [1, 2]
 	},
 	{
@@ -847,6 +863,14 @@ export const apiReference: RefEntry[] = [
 		signature: "tables.header_to_title(table)",
 		summary: "L'en-tête du tableau était un titre : il devient une cellule libre au-dessus, et la première ligne de données devient l'en-tête.",
 		details: "Paramètres — table : nom du tableau. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		args: [1, 1]
+	},
+	{
+		name: "tables.indexes",
+		category: "tables",
+		signature: "tables.indexes(table)",
+		summary: "Liste les index posés sur le serveur pour un tableau partagé d'un classeur collaboratif (propriétaire ou concepteur).",
+		details: "Paramètres — table : nom du tableau.",
 		args: [1, 1]
 	},
 	{

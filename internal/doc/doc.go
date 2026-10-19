@@ -55,6 +55,37 @@ type Document struct {
 	// notes : autres messages de l'ouverture (verrou, fichier modifié par
 	// ailleurs), signalés une fois.
 	notes []string
+	// indexer : index des tableaux partagés sur le serveur (SetIndexer).
+	indexer atomic.Pointer[Indexer]
+}
+
+// Indexer pose et retire sur le serveur les index d'un tableau partagé
+// d'un classeur collaboratif (collab.Engine) : ils n'existent que sur le
+// serveur, hors du journal d'annulation.
+type Indexer interface {
+	Indexes(ctx context.Context, tbl int64) ([]workbook.Index, error)
+	CreateIndex(ctx context.Context, tbl int64, cols []int64, unique bool) (string, error)
+	DropIndex(ctx context.Context, tbl int64, name string) error
+}
+
+// ErrNoIndexer : pas de classeur collaboratif suivi.
+var ErrNoIndexer = errors.New("Les index se posent sur les tableaux partagés d'un classeur collaboratif ouvert depuis son serveur")
+
+// SetIndexer branche les index du serveur (nil : aucun).
+func (d *Document) SetIndexer(x Indexer) {
+	if x == nil {
+		d.indexer.Store(nil)
+		return
+	}
+	d.indexer.Store(&x)
+}
+
+// Indexer rend les index du serveur, ou ErrNoIndexer.
+func (d *Document) Indexer() (Indexer, error) {
+	if p := d.indexer.Load(); p != nil {
+		return *p, nil
+	}
+	return nil, ErrNoIndexer
 }
 
 // wrap migre la base et assemble le document. En cas d'échec, keep garde le

@@ -611,6 +611,9 @@ func (l *loader) loadTables() error {
 			return fmt.Errorf("tableau « %s » : %w", t.Name, err)
 		}
 		l.rids[t.LocalID] = rids
+		for i := range t.Columns {
+			t.Columns[i].Key = t.Key != "" && t.Columns[i].ID == t.Key
+		}
 		rc, err := json.Marshal(t.Columns)
 		if err != nil {
 			return err

@@ -51,6 +51,9 @@ type Recorder struct {
 	// skipped : cellules laissées à la valeur d'un collègue par une
 	// annulation (TakeSkipped).
 	skipped atomic.Int64
+	// st : changements de structure confiés à la synchronisation
+	// (SetStructure, structure.go).
+	st structure
 }
 
 // New crée le Recorder d'un document ; le brancher sur son bus
@@ -247,14 +250,32 @@ func (s *session) Finish(c command.Commit) error {
 			}
 		}
 	}
+	fn := s.r.structureFn()
+	if fn != nil && c.Kind == command.KindUndo {
+		if err := s.restored(); err != nil {
+			return err
+		}
+	}
 	if len(s.pub) == 0 {
 		return nil
 	}
-	w := &writer{s: s, c: c}
+	w := &writer{s: s, c: c, sync: fn != nil}
 	if err := s.diff(w); err != nil {
 		return err
 	}
+	// Structure des tableaux publiés : faite sur le serveur avant la
+	// validation locale (refus : toute la transaction est défaite).
+	if fn != nil {
+		if err := s.structure(fn, c.Kind, c.Ops); err != nil {
+			return err
+		}
+	}
 	for _, op := range c.Ops {
+		if structural(op) {
+			// Marque d'une suppression voulue (canvas.Model.DeleteTables) : la
+			// comparaison des données relève déjà le tableau disparu.
+			continue
+		}
 		if op.Table == 0 || s.pub[op.Table] {
 			if err := w.add(op); err != nil {
 				return err
@@ -711,9 +732,15 @@ type writer struct {
 	buf   []command.Op
 	batch int64
 	fwd   *forward
+	// sync : la structure passe par la synchronisation (SetStructure) ; les
+	// opérations « meta » de structure ne vont ni à Gate ni dans la file.
+	sync bool
 }
 
 func (w *writer) add(op command.Op) error {
+	if w.sync && structural(op) {
+		return nil
+	}
 	if g := w.s.r.Gate; g != nil {
 		send, err := g(op)
 		if err != nil {

@@ -147,6 +147,19 @@ func (t *Tx) ApplyStep(s Step) error {
 	return nil
 }
 
+// Discard exécute les instructions Purge des étapes enregistrées et les
+// oublie : transaction faite hors du journal (changements reçus d'un
+// Serveur Lattis), que rien n'annulera ; les corbeilles ne servent plus.
+func (t *Tx) Discard() error {
+	for _, s := range t.steps {
+		if err := run(t.Ctx, t.Tx, s.Purge, nil); err != nil {
+			return err
+		}
+	}
+	t.steps = nil
+	return nil
+}
+
 // Query et Row lisent dans la transaction (elles voient ses écritures).
 func (t *Tx) Query(q string, args ...any) (*sql.Rows, error) {
 	return t.QueryContext(t.Ctx, q, args...)

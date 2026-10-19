@@ -13,8 +13,10 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // Modes d'un classeur partagé (lattis.workbooks.mode).
@@ -98,6 +100,10 @@ type RemoteColumn struct {
 	LocalID  int64  `json:"local"`
 	Type     string `json:"type"`
 	Position int    `json:"-"`
+	// Key : clé du tableau sur le serveur (key_column), telle que le poste
+	// l'a vue en dernier (gardée dans _lattis_remote_tables.columns : un
+	// changement de clé fait ailleurs se reconnaît par différence).
+	Key bool `json:"key,omitempty"`
 }
 
 // RemoteTable est un tableau du serveur (<schéma>.lattis_meta_tables).
@@ -107,6 +113,16 @@ type RemoteTable struct {
 	LocalID  int64
 	Position int
 	Columns  []RemoteColumn
+	// Key : identifiant de la colonne clé sur le serveur (key_column, posée
+	// par lattis.set_key), vide sans clé.
+	Key string
+}
+
+// Index est un index posé par lattis.create_index (lattis.table_indexes).
+type Index struct {
+	Name    string   `json:"name"`
+	Unique  bool     `json:"unique"`
+	Columns []string `json:"columns"` // noms des colonnes sur le serveur
 }
 
 // Script est la dernière version d'un script publié
@@ -224,6 +240,29 @@ type Writer interface {
 	// WhyNot explique une écriture sans effet (lattis.why_not) ; t donne
 	// les colonnes pour relire la ligne actuelle.
 	WhyNot(ctx context.Context, workbookID string, t RemoteTable, id string) (WhyNot, error)
+	// Structure d'un tableau (concepteurs et propriétaires ; spécification
+	// du serveur §9.3, schema/0025_structure.sql) : sans point de
+	// sauvegarde, un refus défait toute la transaction (une opération de
+	// structure se fait en entier ou pas du tout). Le serveur refuse de
+	// renommer, supprimer ou convertir une colonne citée par un filtre
+	// (rôle, restriction, audience) et de supprimer un tableau qui alimente
+	// le Data Lake ou un pipeline ; il notifie « *structure:<table_id> ».
+	RenameTable(ctx context.Context, workbookID, tableID, name string) error
+	DropTable(ctx context.Context, workbookID, tableID string) error
+	// AddColumn ajoute une colonne après la colonne after (vide : à la fin)
+	// et rend son identifiant ; localID est noté par le serveur.
+	AddColumn(ctx context.Context, workbookID, tableID, name, typ, after string, localID int64) (string, error)
+	RenameColumn(ctx context.Context, workbookID, tableID, columnID, name string) error
+	DropColumn(ctx context.Context, workbookID, tableID, columnID string) error
+	AlterColumnType(ctx context.Context, workbookID, tableID, columnID, typ string) error
+	// SetKey fait de la colonne la clé du tableau (index unique) ; vide :
+	// plus de clé.
+	SetKey(ctx context.Context, workbookID, tableID, columnID string) error
+	// CreateIndex pose un index sur des colonnes et rend son nom, DropIndex
+	// le retire, Indexes liste ceux du tableau.
+	CreateIndex(ctx context.Context, workbookID, tableID string, columnIDs []string, unique bool) (string, error)
+	DropIndex(ctx context.Context, workbookID, tableID, name string) error
+	Indexes(ctx context.Context, workbookID, tableID string) ([]Index, error)
 	// Xact rend l'identifiant (xid8, en texte) de la transaction, "" si
 	// elle n'a rien écrit (pg_current_xact_id_if_assigned) : le poste le
 	// garde pour écarter ses propres écritures des changements reçus
@@ -254,6 +293,21 @@ func XidAfter(a, since string) bool {
 	}
 	s, err := strconv.ParseUint(since, 10, 64)
 	return err != nil || x >= s
+}
+
+// ServerMessage rend le texte d'un refus du serveur, sans « ERROR: » ni
+// le code SQLSTATE (en français pour les fonctions du schéma lattis) ;
+// err.Error() pour une autre erreur.
+func ServerMessage(err error) string {
+	var pg *pgconn.PgError
+	if errors.As(err, &pg) && pg.Message != "" {
+		return pg.Message
+	}
+	s := strings.TrimPrefix(err.Error(), "ERROR: ")
+	if i := strings.LastIndex(s, " (SQLSTATE "); i > 0 && strings.HasSuffix(s, ")") {
+		s = s[:i]
+	}
+	return s
 }
 
 // Privilege dit si err est un refus de droits (42501).

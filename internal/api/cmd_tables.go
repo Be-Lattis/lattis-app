@@ -418,6 +418,73 @@ end`,
 				d, _ := c.Doc()
 				return nil, d.ClearKey(c, t.Name)
 			}),
+		tableCmd("tables.indexes", "", "Liste les index posés sur le serveur pour un tableau partagé d'un classeur collaboratif (propriétaire ou concepteur).", false,
+			func(c *Call, t tableRef) (any, error) {
+				d, _ := c.Doc()
+				x, err := d.Indexer()
+				if err != nil {
+					return nil, err
+				}
+				return x.Indexes(c, t.ID)
+			}),
+		&Command{
+			Name:  "tables.add_index",
+			Label: "Ajouter un index",
+			Summary: "Pose sur le serveur un index sur des colonnes d'un tableau partagé d'un classeur collaboratif (propriétaire ou concepteur), " +
+				"pour accélérer les filtres et les recherches des autres outils ; unique : les valeurs ne se répètent pas. Ne s'annule pas par Ctrl+Z : tables.drop_index le retire. Renvoie son nom.",
+			Write:  true,
+			Params: []Param{pTable, {Name: "columns", Type: Array, Items: String, Desc: "colonnes de l'index (1 à 8)"}, {Name: "unique", Type: Boolean, Desc: "index unique", Optional: true}},
+			Run: func(c *Call) (any, error) {
+				t, err := c.table("table")
+				if err != nil {
+					return nil, err
+				}
+				if !c.Has("columns") {
+					return nil, fmt.Errorf("columns : au moins une colonne")
+				}
+				idx, err := c.columns(t, "columns")
+				if err != nil {
+					return nil, err
+				}
+				unique, err := c.Bool("unique")
+				if err != nil {
+					return nil, err
+				}
+				cols := make([]int64, len(idx))
+				for k, i := range idx {
+					cols[k] = t.Columns[i].ID
+				}
+				d, _ := c.Doc()
+				x, err := d.Indexer()
+				if err != nil {
+					return nil, err
+				}
+				return x.CreateIndex(c, t.ID, cols, unique)
+			},
+		},
+		&Command{
+			Name:    "tables.drop_index",
+			Label:   "Retirer un index",
+			Summary: "Retire un index posé sur le serveur (nom rendu par tables.add_index ou tables.indexes).",
+			Write:   true,
+			Params:  []Param{pTable, {Name: "name", Type: String, Desc: "nom de l'index (lattis_ix_…)"}},
+			Run: func(c *Call) (any, error) {
+				t, err := c.table("table")
+				if err != nil {
+					return nil, err
+				}
+				name, err := c.Str("name")
+				if err != nil {
+					return nil, err
+				}
+				d, _ := c.Doc()
+				x, err := d.Indexer()
+				if err != nil {
+					return nil, err
+				}
+				return nil, x.DropIndex(c, t.ID, name)
+			},
+		},
 		tableCmd("tables.keep_row_numbers", "Garder les numéros de ligne",
 			"Le tableau, sans clé, désigne ses lignes par leur numéro (1 = première, dans l'ordre du tableau ; il change si l'on trie ou insère des lignes) : "+
 				"REFERENCE(T[Col]; n) lit la n-ième ligne, EXISTE(T; n) dit si elle existe, une RECHERCHEV devient INDEX/EQUIV (première ligne trouvée, doublons permis). "+

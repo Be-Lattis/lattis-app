@@ -26,10 +26,11 @@ import (
 func (e *Engine) Receive(ctx context.Context, only map[int64]bool) (Report, error) {
 	e.run.Lock()
 	defer e.run.Unlock()
-	return e.receive(ctx, only)
+	return e.receive(ctx, only, nil)
 }
 
-func (e *Engine) receive(ctx context.Context, only map[int64]bool) (Report, error) {
+// receive : full, tableaux à relire en entier (structure changée).
+func (e *Engine) receive(ctx context.Context, only, full map[int64]bool) (Report, error) {
 	var rep Report
 	info, srv := e.active()
 	if info == nil {
@@ -78,6 +79,9 @@ func (e *Engine) receive(ctx context.Context, only map[int64]bool) (Report, erro
 			}
 			if err != nil {
 				return fmt.Errorf("tableau « %s » : %w", t.remote.Name, err)
+			}
+			if full[tbl] {
+				covered = false // structure changée : tout est relu
 			}
 			if covered {
 				err = r.Changes(ctx, info.WorkbookID, t.remote, t.since, skipSince(sent, t.since), func(c workbook.Change) error {
@@ -290,8 +294,8 @@ func skipSince(xs []string, since string) []string {
 	return out
 }
 
-// Sync envoie la file puis lit les changements de tous les tableaux
-// publiés (ouverture, reconnexion).
+// Sync envoie la file puis lit la structure et les changements de tous
+// les tableaux publiés (ouverture, reconnexion).
 func (e *Engine) Sync(ctx context.Context) (Report, error) {
 	e.run.Lock()
 	defer e.run.Unlock()
@@ -299,7 +303,7 @@ func (e *Engine) Sync(ctx context.Context) (Report, error) {
 	if err != nil {
 		return rep, err
 	}
-	r, err := e.receive(ctx, nil)
+	r, err := e.receiveStructure(ctx, nil, nil)
 	rep.add(r)
 	return rep, err
 }
@@ -502,7 +506,7 @@ func (e *Engine) Follow(ctx context.Context, srv workbook.Server, retry time.Dur
 	if changed == nil {
 		changed = func(Event) {}
 	}
-	w := &worker{e: e, kick: make(chan struct{}, 1), due: map[int64]bool{}, changed: changed, retry: retry}
+	w := &worker{e: e, kick: make(chan struct{}, 1), due: map[int64]bool{}, structure: map[int64]bool{}, changed: changed, retry: retry}
 	e.mu.Lock()
 	e.kicker = w.kick
 	e.mu.Unlock()

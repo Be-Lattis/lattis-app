@@ -7,6 +7,16 @@ import (
 	"time"
 )
 
+// Notifications d'un classeur collaboratif (contrat client de lattisd,
+// §6) : NoticeStructure suivi de l'identifiant du tableau (colonnes
+// ajoutées, renommées, supprimées ou converties, tableau renommé ou
+// supprimé : à recharger en entier) ; NoticeMeta, mise en page ou
+// structure (clé).
+const (
+	NoticeStructure = "*structure:"
+	NoticeMeta      = "*meta"
+)
+
 // VersionNotice lit une notification de republication (« *version:<n> »,
 // lattis.finish_publish). Le canal porte aussi « *meta » et les
 // identifiants des tableaux modifiés (classeur collaboratif : voir

@@ -420,12 +420,19 @@ func lattisIDs(ctx context.Context, db *sql.DB, tbl int64, rids []int64) (map[in
 
 // UndoNotice rend le message de la barre d'état après une annulation (ou
 // un rétablissement, redo) dont des cellules, modifiées par un collègue
-// depuis, n'ont pas été touchées (§7) ; "" sinon.
+// depuis, n'ont pas été touchées (§7), ou qui a rétabli sur ce poste
+// seulement un tableau supprimé du serveur ; "" sinon.
 func UndoNotice(rec *oplog.Recorder, redo bool) string {
 	if rec == nil {
 		return ""
 	}
-	return skippedNotice(rec.TakeSkipped(), redo)
+	var out []string
+	for _, s := range []string{skippedNotice(rec.TakeSkipped(), redo), rec.TakeNotice()} {
+		if s != "" {
+			out = append(out, s)
+		}
+	}
+	return strings.Join(out, " ; ")
 }
 
 func skippedNotice(n int, redo bool) string {

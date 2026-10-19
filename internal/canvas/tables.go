@@ -51,13 +51,18 @@ func (m *Model) RenameTable(ctx context.Context, old, name string) error {
 		if k > 0 {
 			return fmt.Errorf("%w : « %s » existe déjà", ErrTable, name)
 		}
-		// Ce qui cite le tableau suit (formules, TCD, graphiques, requêtes).
-		if err := t.rewriteRefs(tableChange(tb.Name, name)); err != nil {
-			return err
-		}
-		q := `UPDATE _lattis_tables SET name = ? WHERE id = ?`
-		return t.apply([]stmt{st(q, name, tb.ID)}, []stmt{st(q, tb.Name, tb.ID)})
+		return t.renameTable(tb, name)
 	})
+}
+
+// renameTable renomme un tableau ; ce qui le cite suit (formules, TCD,
+// graphiques, requêtes).
+func (t *tx) renameTable(tb Table, name string) error {
+	if err := t.rewriteRefs(tableChange(tb.Name, name)); err != nil {
+		return err
+	}
+	q := `UPDATE _lattis_tables SET name = ? WHERE id = ?`
+	return t.apply([]stmt{st(q, name, tb.ID)}, []stmt{st(q, tb.Name, tb.ID)})
 }
 
 // DeleteTables supprime des tableaux entiers (une seule étape d'annulation).
@@ -75,6 +80,10 @@ func (m *Model) DeleteTables(ctx context.Context, names []string) error {
 			if err := t.deleteTable(tb); err != nil {
 				return err
 			}
+			// Suppression voulue : un tableau partagé est aussi supprimé du
+			// serveur (un tableau qui disparaît autrement, actualisé,
+			// déplacé, fusionné, est refusé : oplog.Change).
+			t.Record(command.Op{Kind: command.OpMeta, Table: tb.ID, Meta: &command.MetaChange{Object: "table", Action: "drop"}})
 		}
 		return nil
 	})

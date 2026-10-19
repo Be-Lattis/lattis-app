@@ -17,8 +17,13 @@ var (
 	ErrReadOnly = errors.New("Classeur publié en lecture seule")
 	ErrOffline  = errors.New("Hors ligne, lecture seule")
 	// ErrStructure refuse un changement de structure d'un tableau publié
-	// d'un classeur collaboratif (§6.4 : par le serveur, à venir).
-	ErrStructure = errors.New("La structure d'un tableau partagé (colonnes, types, suppression) ne se modifie pas encore depuis l'application")
+	// d'un classeur collaboratif quand la synchronisation avec le serveur
+	// n'est pas en place (§6.4 : la structure passe par le serveur,
+	// internal/remote/collab, Engine.Structure).
+	ErrStructure = errors.New("La structure d'un tableau partagé (colonnes, types, suppression) se modifie sur le serveur : attendez que le classeur soit connecté")
+	// ErrDesign : seuls les propriétaires et les concepteurs changent la
+	// structure d'un tableau partagé (§6.4, §8.4 du serveur).
+	ErrDesign = errors.New("Seuls le propriétaire et les concepteurs du classeur modifient la structure d'un tableau partagé (colonnes, types, clé, nom, suppression)")
 	// Droits d'un classeur collaboratif (§8.1).
 	ErrReader   = errors.New("Tableau en lecture seule : vos droits ne permettent pas de le modifier")
 	ErrNoAccess = errors.New("Tableau inaccessible avec vos droits")
@@ -170,6 +175,15 @@ func (l *Link) SetNewVersion(v int) bool {
 	return true
 }
 
+// Unpublish retire un tableau des tableaux publiés (supprimé sur le
+// serveur), sans attendre Reload.
+func (l *Link) Unpublish(tbl int64) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	delete(l.published, tbl)
+	delete(l.levels, tbl)
+}
+
 // TableShare dit si un tableau est publié (canvas.Sharing).
 func (l *Link) TableShare(tbl int64) string {
 	l.mu.RLock()
@@ -308,8 +322,11 @@ func (l *Link) Gate(op command.Op) (bool, error) {
 			return false, err
 		}
 		// Collaboratif : la structure d'un tableau publié (colonnes, type,
-		// suppression) passe par les fonctions du serveur (§6.4, pas encore
-		// faites) ; la changer en local désaccorderait les deux copies.
+		// suppression) passe par les fonctions du serveur (§6.4), appelées
+		// avant la validation locale par la synchronisation
+		// (oplog.Recorder.SetStructure, collab.Engine.Structure : la porte ne
+		// voit plus ces opérations). Sans elle, la changer en local
+		// désaccorderait les deux copies.
 		if !frozen && op.Kind == command.OpMeta && l.published[op.Table] {
 			return false, ErrStructure
 		}
