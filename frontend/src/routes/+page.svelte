@@ -192,6 +192,26 @@
 		}
 	}
 
+	/** Volet Conflits : garde toutes mes valeurs (mine) ou toutes celles des collègues. */
+	async function resolveAllConflicts(mine: boolean) {
+		conflictBusy = true;
+		let n = 0;
+		try {
+			for (const c of conflicts) {
+				docState = await DocumentService.ShareResolve(c.id, mine);
+				n++;
+			}
+			notice = mine ? `${n} valeur(s) renvoyée(s) au serveur` : `${n} valeur(s) des collègues reprise(s)`;
+		} catch (e) {
+			notice = err(e);
+		} finally {
+			await reload().catch(() => {});
+			await loadConflicts();
+			if (!conflicts.length) conflictsOpen = false;
+			conflictBusy = false;
+		}
+	}
+
 	/** Volet Conflits : va sur la cellule en conflit. */
 	async function gotoConflict(c: Conflict) {
 		if (!c.found) return;
@@ -1790,7 +1810,7 @@
 				/>
 			{/if}
 			{#if mode === 'doc' && conflictsOpen && share?.mode === 'collaborative'}
-				<ConflictPanel {conflicts} busy={conflictBusy} onresolve={resolveConflict} ongoto={gotoConflict} onclose={() => (conflictsOpen = false)} />
+				<ConflictPanel {conflicts} busy={conflictBusy} onresolve={resolveConflict} onresolveall={resolveAllConflicts} ongoto={gotoConflict} onclose={() => (conflictsOpen = false)} />
 			{/if}
 			{#if aiChat.open && (mode === 'doc' || mode === 'closed')}
 				<AiPanel

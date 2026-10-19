@@ -13,10 +13,12 @@
 		conflicts: Conflict[];
 		busy?: boolean;
 		onresolve: (c: Conflict, mine: boolean) => void;
+		/** Tous les conflits d'un coup : mes valeurs (mine) ou celles des collègues. */
+		onresolveall?: (mine: boolean) => void;
 		ongoto: (c: Conflict) => void;
 		onclose: () => void;
 	}
-	let { conflicts, busy = false, onresolve, ongoto, onclose }: Props = $props();
+	let { conflicts, busy = false, onresolve, onresolveall, ongoto, onclose }: Props = $props();
 </script>
 
 <aside class="panel" use:resizePanel={{ key: 'conflicts' }} use:panelKeys={onclose} aria-label="Conflits">
@@ -25,6 +27,12 @@
 		<p class="muted">Aucun conflit en attente.</p>
 	{:else}
 		<p class="muted">Ces cellules ont été modifiées par un collègue pendant que vous les changiez. Votre valeur reste affichée jusqu'à votre choix.</p>
+		{#if onresolveall && conflicts.length > 1}
+			<div class="acts all">
+				<button disabled={busy} onclick={() => onresolveall(true)}>Garder toutes les miennes</button>
+				<button disabled={busy} onclick={() => onresolveall(false)}>Garder toutes les siennes</button>
+			</div>
+		{/if}
 	{/if}
 	{#each conflicts as c (c.id)}
 		<div class="item">
