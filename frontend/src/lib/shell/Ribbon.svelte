@@ -972,11 +972,12 @@
 			{#if fileOpen}
 				<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 				<div class="file-menu" use:dismiss={() => (fileOpen = false)}>
-					{#each [['new', 'Nouveau', 'Ctrl+N'], ['open', 'Ouvrir…', 'Ctrl+O'], ...(sharedWorkbooksEnabled() ? [['openRemote', 'Ouvrir depuis un serveur…', '']] : []), ['close', 'Fermer', 'Ctrl+W']] as [a, label, keys] (a)}
-						<button disabled={disabled && a === 'close'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
+					{#each [['new', 'Nouveau', 'Ctrl+N'], ['open', 'Ouvrir…', 'Ctrl+O']] as [a, label, keys] (a)}
+						<button onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
+					<!-- Comme Excel : les fichiers récents juste sous Ouvrir. -->
 					<div class="recent-wrap" role="presentation" onmouseenter={() => (recentOpen = true)} onmouseleave={() => (recentOpen = false)}>
-						<button disabled={!recent.length} onclick={() => (recentOpen = !recentOpen)}><span>Récents</span><span class="keys">▸</span></button>
+						<button disabled={!recent.length} title={recent.length ? undefined : 'Aucun fichier récent'} onclick={() => (recentOpen = !recentOpen)}><span>Ouvrir un fichier récent</span><span class="keys">▸</span></button>
 						{#if recentOpen && recent.length}
 							<div class="file-menu sub">
 								{#each recent as p (p)}
@@ -985,6 +986,9 @@
 							</div>
 						{/if}
 					</div>
+					{#each [...(sharedWorkbooksEnabled() ? [['openRemote', 'Ouvrir depuis un serveur…', '']] : []), ['close', 'Fermer', 'Ctrl+W']] as [a, label, keys] (a)}
+						<button disabled={disabled && a === 'close'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
+					{/each}
 					<hr />
 					{#each [['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ...(sharedWorkbooksEnabled() && !shared ? [['share', 'Partager sur un serveur…', '']] : []), ...(sharedWorkbooksEnabled() && rights ? [['rights', 'Partager…', '']] : []), ...(sharedWorkbooksEnabled() && republish ? [['republish', 'Republier', '']] : []), ['import', 'Importer (CSV, Excel)…', '']] as [a, label, keys] (a)}
 						<button disabled={disabled && a !== 'import'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
