@@ -1248,6 +1248,15 @@ export function PushTableSource(table: string): $CancellablePromise<$models.Tabl
 }
 
 /**
+ * PushedSources liste les sources poussées de l'utilisateur sur un serveur
+ * (lattis.my_pushed_sources), quel que soit le classeur d'où elles
+ * viennent : vide pour un serveur sans sources poussées.
+ */
+export function PushedSources(server: string): $CancellablePromise<workbook$0.PushedSource[] | null> {
+    return $Call.ByID(3015158083, server);
+}
+
+/**
  * Queries liste les requêtes du classeur.
  */
 export function Queries(): $CancellablePromise<query$0.Query[] | null> {
@@ -2137,9 +2146,9 @@ export function UnprotectWorkbook(password: string): $CancellablePromise<$models
 /**
  * UpdateTableSource modifie la source d'un tableau (nom, description,
  * dossier, audience ; colonnes envoyées, ajoutées ou retirées sur le
- * serveur ; envoi à l'enregistrement), puis envoie les lignes. Le mode et
- * la clé ne changent pas (le serveur ne le permet pas encore à son
- * créateur).
+ * serveur ; mode, clé, suspension ; envoi à l'enregistrement), puis
+ * envoie les lignes (sauf suspendue). Un serveur sans la migration 0028
+ * refuse le changement de mode, de clé ou la suspension.
  */
 export function UpdateTableSource(req: $models.TableSourceRequest): $CancellablePromise<$models.TableSourceLink> {
     return $Call.ByID(466382212, req);

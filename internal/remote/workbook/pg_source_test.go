@@ -31,6 +31,10 @@ func TestPushClient(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(map[string]string{"error": "not_found", "error_description": "source poussée inconnue"})
 			return
 		}
+		if run := r.URL.Query().Get("run"); r.Method == http.MethodGet && run != "" {
+			_, _ = io.WriteString(w, `{"id":"`+run+`","status":"ok","rows_read":1,"inserted":1}`)
+			return
+		}
 		if r.Method == http.MethodGet {
 			_, _ = io.WriteString(w, `{"pipeline_id":"p1","pending":false,"last_run":{"status":"ok","rows_read":2,"inserted":2,"finished_at":"2026-10-19T10:00:00Z"}}`)
 			return
@@ -42,7 +46,7 @@ func TestPushClient(t *testing.T) {
 			_, _ = io.WriteString(w, `{"status":"warning","rows_read":2,"inserted":1,"rejected":1,"rejects":[{"row":3,"column":"Prix","value":"x","error":"nombre attendu"}],"trigger":"push"}`)
 		case http.StatusAccepted:
 			w.WriteHeader(http.StatusAccepted)
-			_, _ = io.WriteString(w, `{"status":"running"}`)
+			_, _ = io.WriteString(w, `{"status":"running","id":"r9","run_id":"r9"}`)
 		default:
 			w.WriteHeader(status)
 			_ = json.NewEncoder(w).Encode(map[string]string{"error": "conflict", "error_description": "un envoi attend déjà d'être traité"})
@@ -65,8 +69,11 @@ func TestPushClient(t *testing.T) {
 	}
 
 	status = http.StatusAccepted
-	if run, err = c.Push(ctx, "p1", []byte("a\n")); err != nil || run.Status != "running" {
+	if run, err = c.Push(ctx, "p1", []byte("a\n")); err != nil || run.Status != "running" || run.RunID != "r9" {
 		t.Fatalf("202 : %+v %v", run, err)
+	}
+	if r, err := c.PushRun(ctx, "p1", "r9"); err != nil || r.ID != "r9" || r.Status != "ok" || r.Inserted != 1 {
+		t.Fatalf("exécution : %+v %v", r, err)
 	}
 	st, err := c.PushStatus(ctx, "p1")
 	if err != nil || st.LastRun == nil || st.LastRun.Inserted != 2 || st.Pending {

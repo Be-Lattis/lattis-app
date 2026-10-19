@@ -50,6 +50,7 @@
 	let key = $state('');
 	let mode = $state<PushMode>('replace');
 	let onSave = $state(true);
+	let suspended = $state(false);
 	let inherit = $state(true);
 	let current = $state<DataAudience[]>([]);
 	let removed = $state<Set<string>>(new Set());
@@ -90,6 +91,7 @@
 				key = l.keys?.[0] ?? '';
 				mode = (l.mode || 'replace') as PushMode;
 				onSave = l.onSave;
+				suspended = !!l.suspended;
 				inherit = i.dataset?.source?.inherit_audience ?? true;
 				current = i.dataset?.audience ?? [];
 			} else if (first) {
@@ -141,6 +143,7 @@
 			keys: mode === 'upsert' && key ? [key] : [],
 			onSave,
 			inherit,
+			suspended,
 			add: adds.filter((a) => a.email.trim() || a.team).map(({ email, team, predicate }) => ({ email, team, predicate })),
 			remove: [...removed]
 		};
@@ -148,7 +151,8 @@
 
 	/** Le compte rendu d'un envoi, ou son échec, pour la barre d'état. */
 	function said(l: SourceLink): string {
-		return l.lastError ? `Source « ${table} » créée, mais non mise à jour : ${l.lastError}` : pushSummary(table, l.lastResult, l.blanked ?? 0);
+		if (l.suspended) return `Source « ${table} » suspendue : plus aucun envoi`;
+		return l.lastError ? `Source « ${table} » enregistrée, mais non mise à jour : ${l.lastError}` : pushSummary(table, l.lastResult, l.blanked ?? 0);
 	}
 
 	async function save() {
@@ -261,7 +265,7 @@
 			<div class="modes" role="radiogroup" aria-label="Mode d'écriture">
 				{#each PUSH_MODES as m (m.mode)}
 					<label class="check"
-						><input type="radio" name="src-mode" value={m.mode} bind:group={mode} disabled={busy || !!link} />
+						><input type="radio" name="src-mode" value={m.mode} bind:group={mode} disabled={busy} />
 						<span><strong>{m.label}</strong> <span class="muted">: {m.detail}</span></span></label
 					>
 				{/each}
@@ -269,15 +273,20 @@
 			{#if mode === 'upsert'}
 				<div class="grid">
 					<label for="src-key">Clé</label>
-					<select id="src-key" bind:value={key} disabled={busy || !!link}>
+					<select id="src-key" bind:value={key} disabled={busy}>
 						<option value="">(choisissez la colonne qui identifie une ligne)</option>
 						{#each keyChoices as c (c.name)}<option value={c.name}>{c.name}</option>{/each}
 					</select>
 				</div>
 			{/if}
-			{#if link}<p class="muted">Le mode et la clé sont fixés à la création : pour les changer, retirez la source puis publiez-la de nouveau.</p>{/if}
+			{#if link}<p class="muted">Changer le mode ou la clé vaut pour les mises à jour suivantes (un serveur ancien le refuse : retirez alors la source puis publiez-la de nouveau).</p>{/if}
 			<p class="muted">Les valeurs refusées par le serveur (type inattendu) sont comptées et la première est dite dans la barre d'état ; le reste de l'envoi est écrit.</p>
 			<label class="check"><input type="checkbox" bind:checked={onSave} disabled={busy} /> Mettre à jour la source à chaque enregistrement du classeur</label>
+			{#if link}
+				<label class="check"
+					><input type="checkbox" bind:checked={suspended} disabled={busy} /> Suspendre la source : plus aucun envoi ; la donnée reste au catalogue avec ses dernières lignes</label
+				>
+			{/if}
 
 			<h3>Audience</h3>
 			<label class="check"><input type="checkbox" bind:checked={inherit} disabled={busy} /> Hériter de l'audience du dossier</label>
@@ -339,7 +348,7 @@
 <footer>
 	{#if link}
 		<button class="danger" onclick={withdraw} disabled={busy} title="La donnée quitte le catalogue ; les classeurs qui l'utilisent gardent leur dernière copie">Retirer la source</button>
-		<button onclick={push} disabled={busy || !!info?.reason} title="Envoie maintenant les lignes du tableau">Mettre à jour maintenant</button>
+		<button onclick={push} disabled={busy || !!info?.reason || !!link.suspended} title={link.suspended ? 'Source suspendue' : 'Envoie maintenant les lignes du tableau'}>Mettre à jour maintenant</button>
 	{:else if onback}
 		<button onclick={onback} disabled={busy}>‹ Retour</button>
 	{/if}
@@ -347,7 +356,7 @@
 	<button onclick={() => ondone()} disabled={busy}>{info?.reason ? 'Fermer' : 'Annuler'}</button>
 	{#if info && !info.reason}
 		<button class="primary" onclick={save} disabled={busy || !server || !name.trim() || sent.size === 0 || badFilter || (mode === 'upsert' && !key)} title={badFilter ? "Un filtre d'audience est à corriger" : mode === 'upsert' && !key ? 'Choisissez la colonne clé' : ''}
-			>{busy ? 'Envoi…' : link ? 'Enregistrer et mettre à jour' : 'Publier la source'}</button
+			>{busy ? 'Envoi…' : link ? (suspended ? 'Enregistrer' : 'Enregistrer et mettre à jour') : 'Publier la source'}</button
 		>
 	{/if}
 </footer>

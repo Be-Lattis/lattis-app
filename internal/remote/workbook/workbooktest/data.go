@@ -74,6 +74,16 @@ func (s *session) DataCatalog(ctx context.Context) (protocol.DataCatalog, error)
 		if b := s.f.books[ds.workbook]; b != nil {
 			item.Source.Title = b.title
 		}
+		if !s.f.Before28 {
+			item.Source.Kind = "workbook"
+			for _, x := range s.f.sources {
+				if x.book == ds.workbook {
+					o := x.origin
+					item.Source.Kind, item.Source.PipelineID = "source", x.id
+					item.Source.Origin = &protocol.DataOrigin{Workbook: o.Workbook, WorkbookLocalID: o.WorkbookLocalID, Table: o.Table, TableLocalID: o.TableLocalID}
+				}
+			}
+		}
 		if t != nil {
 			item.TableID = t.id
 			item.Channel = "wb_" + s.f.books[ds.workbook].slug

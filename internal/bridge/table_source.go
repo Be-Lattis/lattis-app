@@ -84,6 +84,8 @@ type TableSourceLink struct {
 	Keys    []string `json:"keys"`
 	// OnSave : envoyer à chaque enregistrement du classeur.
 	OnSave bool `json:"onSave"`
+	// Suspended : source suspendue (enabled = false) : rien n'est envoyé.
+	Suspended bool `json:"suspended,omitempty"`
 	// LastPush : date du dernier envoi écrit (RFC 3339) ; LastResult son
 	// bilan ; LastError : échec du dernier essai ("" : réussi).
 	LastPush   string            `json:"lastPush,omitempty"`
@@ -279,6 +281,24 @@ func (s *DocumentService) TableSources(ctx context.Context) ([]TableSourceLink, 
 	return readSources(ctx, d)
 }
 
+// PushedSources liste les sources poussées de l'utilisateur sur un serveur
+// (lattis.my_pushed_sources), quel que soit le classeur d'où elles
+// viennent : vide pour un serveur sans sources poussées.
+func (s *DocumentService) PushedSources(ctx context.Context, server string) ([]workbook.PushedSource, error) {
+	srv, _, _, err := remoteServer(ctx, server)
+	if err != nil {
+		return []workbook.PushedSource{}, err
+	}
+	out, err := srv.PushedSources(ctx)
+	if workbook.Unsupported(err) {
+		return []workbook.PushedSource{}, nil
+	}
+	if out == nil {
+		out = []workbook.PushedSource{}
+	}
+	return out, sourceError(err)
+}
+
 // TableSourceInfo décrit de quoi publier un tableau seul (ou gérer sa
 // source) sur un serveur.
 type TableSourceInfo struct {
@@ -399,6 +419,8 @@ type TableSourceRequest struct {
 	Keys    []string `json:"keys"`
 	OnSave  bool     `json:"onSave"`
 	Inherit bool     `json:"inherit"`
+	// Suspended : suspendre la source (modification seulement).
+	Suspended bool `json:"suspended"`
 	// Add : entrées d'audience à ajouter ; Remove : identifiants à retirer.
 	Add    []DataAudienceEntry `json:"add"`
 	Remove []string            `json:"remove"`
@@ -556,9 +578,9 @@ func sourceAudience(ctx context.Context, srv workbook.Server, dataset string, re
 
 // UpdateTableSource modifie la source d'un tableau (nom, description,
 // dossier, audience ; colonnes envoyées, ajoutées ou retirées sur le
-// serveur ; envoi à l'enregistrement), puis envoie les lignes. Le mode et
-// la clé ne changent pas (le serveur ne le permet pas encore à son
-// créateur).
+// serveur ; mode, clé, suspension ; envoi à l'enregistrement), puis
+// envoie les lignes (sauf suspendue). Un serveur sans la migration 0028
+// refuse le changement de mode, de clé ou la suspension.
 func (s *DocumentService) UpdateTableSource(ctx context.Context, req TableSourceRequest) (TableSourceLink, error) {
 	d, err := s.current()
 	if err != nil {
@@ -587,12 +609,40 @@ func (s *DocumentService) UpdateTableSource(ctx context.Context, req TableSource
 	if err != nil {
 		return *link, err
 	}
-	if mode != cmp.Or(link.Mode, workbook.PushReplace) || !slices.Equal(keys, link.Keys) {
-		return *link, errors.New("le mode d'écriture et la clé d'une source ne changent pas après sa création : retirez la source puis publiez-la de nouveau")
-	}
 	srv, _, _, err := remoteServer(ctx, link.Server)
 	if err != nil {
 		return *link, err
+	}
+	want := make([]int64, len(cols))
+	for i, c := range cols {
+		want[i] = c.ID
+	}
+	// Mode, clé, suspension (update_pushed_source, migration 0028) : les
+	// colonnes sont alignées d'abord, la clé doit exister sur le serveur.
+	modeChanged := mode != cmp.Or(link.Mode, workbook.PushReplace) || !slices.Equal(keys, link.Keys)
+	if modeChanged || req.Suspended != link.Suspended {
+		if modeChanged {
+			if _, err := alignSource(ctx, d, *link, want); err != nil {
+				return *link, err
+			}
+		}
+		change := workbook.PushedSourceChange{}
+		if modeChanged {
+			change.Mode, change.KeyColumns = &mode, &keys
+		}
+		if req.Suspended != link.Suspended {
+			on := !req.Suspended
+			change.Enabled = &on
+		}
+		if err := srv.UpdatePushedSource(ctx, link.Pipeline, change); err != nil {
+			if workbook.Unsupported(err) {
+				return *link, errors.New("ce serveur ne permet pas encore de changer le mode, la clé ni de suspendre une source : retirez la source puis publiez-la de nouveau, ou faites mettre à jour le serveur")
+			}
+			return *link, sourceError(err)
+		}
+		if _, err := updateSource(ctx, d, link.Tbl, true, func(l *TableSourceLink) { l.Mode, l.Keys, l.Suspended = mode, keys, req.Suspended }); err != nil {
+			return *link, err
+		}
 	}
 	name := strings.TrimSpace(req.Name)
 	desc := strings.TrimSpace(req.Description)
@@ -607,9 +657,12 @@ func (s *DocumentService) UpdateTableSource(ctx context.Context, req TableSource
 	if err := sourceAudience(ctx, srv, link.Dataset, req, false); err != nil {
 		return *link, err
 	}
-	want := make([]int64, len(cols))
-	for i, c := range cols {
-		want[i] = c.ID
+	if req.Suspended {
+		l, err := sourceOf(ctx, d, link.Tbl)
+		if err != nil || l == nil {
+			return *link, err
+		}
+		return *l, nil
 	}
 	return s.pushSource(ctx, d, link.Tbl, want)
 }
@@ -915,15 +968,32 @@ func sourceValue(typ string, v any) (any, bool) {
 	return r, true
 }
 
-// waitRun suit un envoi encore en cours (202) jusqu'à son bilan.
-func waitRun(ctx context.Context, p workbook.Pusher, id string) (workbook.PushRun, error) {
+// waitRun suit un envoi encore en cours (202) jusqu'à son bilan : par son
+// exécution (run, migration 0028 : GET ?run=), sinon par l'état de la
+// source (dernier envoi terminé, plus rien en attente).
+func waitRun(ctx context.Context, p workbook.Pusher, id, run string) (workbook.PushRun, error) {
 	for {
-		st, err := p.PushStatus(ctx, id)
-		if err != nil {
-			return workbook.PushRun{}, err
-		}
-		if r := st.LastRun; !st.Pending && r != nil && r.FinishedAt != "" && r.Status != "running" {
-			return *r, nil
+		if run != "" {
+			r, err := p.PushRun(ctx, id, run)
+			if err != nil {
+				return workbook.PushRun{}, err
+			}
+			switch r.Status {
+			case "pending", "running":
+			case "":
+				run = "" // serveur d'avant 0028 : ?run= ignoré
+				continue
+			default:
+				return r, nil
+			}
+		} else {
+			st, err := p.PushStatus(ctx, id)
+			if err != nil {
+				return workbook.PushRun{}, err
+			}
+			if r := st.LastRun; !st.Pending && r != nil && r.FinishedAt != "" && r.Status != "running" {
+				return *r, nil
+			}
 		}
 		select {
 		case <-ctx.Done():
@@ -931,6 +1001,42 @@ func waitRun(ctx context.Context, p workbook.Pusher, id string) (workbook.PushRu
 		case <-time.After(sourcePoll):
 		}
 	}
+}
+
+// alignSource aligne les colonnes de la source sur le classeur
+// (syncColumns) et note les colonnes et les clés à jour dans le lien.
+func alignSource(ctx context.Context, d *doc.Document, link TableSourceLink, want []int64) ([]SourceColumn, error) {
+	local, err := localColumns(ctx, d, link.Tbl)
+	if err != nil {
+		return nil, err
+	}
+	srv, _, _, err := remoteServer(ctx, link.Server)
+	if err != nil {
+		return nil, err
+	}
+	cols, err := syncColumns(ctx, srv, link, local, want)
+	if err != nil {
+		return nil, err
+	}
+	if !slices.Equal(cols, link.Cols) {
+		// Les clés suivent le renommage de leur colonne.
+		keys := slices.Clone(link.Keys)
+		for i, k := range keys {
+			for _, c := range link.Cols {
+				if c.Name == k {
+					for _, n := range cols {
+						if n.ID == c.ID {
+							keys[i] = n.Name
+						}
+					}
+				}
+			}
+		}
+		if _, err := updateSource(ctx, d, link.Tbl, true, func(l *TableSourceLink) { l.Cols, l.Keys = cols, keys }); err != nil {
+			return nil, err
+		}
+	}
+	return cols, nil
 }
 
 // pushSource aligne les colonnes, envoie les lignes du tableau tbl à sa
@@ -960,35 +1066,12 @@ func (s *DocumentService) pushSource(ctx context.Context, d *doc.Document, tbl i
 	if link.TableName == "" {
 		return fail(errors.New("le tableau de cette source a été supprimé du classeur"), nil)
 	}
-	local, err := localColumns(ctx, d, tbl)
+	if link.Suspended {
+		return fail(errors.New("source suspendue : reprenez-la dans Partager au Data Lake Lattis… pour la mettre à jour"), nil)
+	}
+	cols, err := alignSource(ctx, d, *link, want)
 	if err != nil {
 		return fail(err, nil)
-	}
-	srv, _, _, err := remoteServer(ctx, link.Server)
-	if err != nil {
-		return fail(err, nil)
-	}
-	cols, err := syncColumns(ctx, srv, *link, local, want)
-	if err != nil {
-		return fail(err, nil)
-	}
-	if !slices.Equal(cols, link.Cols) {
-		// Les clés suivent le renommage de leur colonne.
-		keys := slices.Clone(link.Keys)
-		for i, k := range keys {
-			for _, c := range link.Cols {
-				if c.Name == k {
-					for _, n := range cols {
-						if n.ID == c.ID {
-							keys[i] = n.Name
-						}
-					}
-				}
-			}
-		}
-		if _, err := updateSource(ctx, d, tbl, true, func(l *TableSourceLink) { l.Cols, l.Keys = cols, keys }); err != nil {
-			return fail(err, nil)
-		}
 	}
 	body, _, blanked, err := sourceCSV(ctx, d.Model, link.TableName, cols)
 	if err != nil {
@@ -1001,7 +1084,7 @@ func (s *DocumentService) pushSource(ctx context.Context, d *doc.Document, tbl i
 	run, err := p.Push(ctx, link.Pipeline, body)
 	if err == nil && run.Status == "running" {
 		wctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
-		run, err = waitRun(wctx, p, link.Pipeline)
+		run, err = waitRun(wctx, p, link.Pipeline, cmp.Or(run.RunID, run.ID))
 		cancel()
 	}
 	if err != nil {
@@ -1066,7 +1149,7 @@ func (s *DocumentService) pushOnSave(d *doc.Document) {
 	}
 	var due []TableSourceLink
 	for _, l := range links {
-		if l.OnSave {
+		if l.OnSave && !l.Suspended {
 			due = append(due, l)
 		}
 	}

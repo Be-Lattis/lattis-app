@@ -33,6 +33,56 @@ type fsource struct {
 	keys                     []string
 	origin                   workbook.PushedOrigin
 	runs                     []workbook.PushRun
+	// suspended : enabled = false (update_pushed_source).
+	suspended bool
+}
+
+func (s *session) UpdatePushedSource(ctx context.Context, id string, c workbook.PushedSourceChange) error {
+	s.f.mu.Lock()
+	defer s.f.mu.Unlock()
+	if err := s.begin("update_pushed_source"); err != nil {
+		return err
+	}
+	if s.f.NoPushedSources || s.f.Before28 {
+		return ErrServer{"42883", "function lattis.update_pushed_source(uuid, jsonb) does not exist"}
+	}
+	src, err := s.f.pushed(s.user, id)
+	if err != nil {
+		return err
+	}
+	mode, keys := src.mode, src.keys
+	if c.Mode != nil {
+		mode = *c.Mode
+	}
+	if c.KeyColumns != nil {
+		keys = *c.KeyColumns
+	}
+	if !slices.Contains([]string{workbook.PushReplace, workbook.PushAppend, workbook.PushUpsert}, mode) {
+		return ErrServer{"22023", "mode : replace, append ou upsert"}
+	}
+	if mode == workbook.PushUpsert && len(keys) == 0 {
+		return ErrServer{"22023", "mise à jour par clé : choisissez au moins une colonne clé"}
+	}
+	b := s.f.books[src.book]
+	t := b.schemas[b.schema].tables[0]
+	for _, k := range keys {
+		if !slices.ContainsFunc(t.cols, func(c workbook.RemoteColumn) bool { return c.Name == k }) {
+			return ErrServer{"22023", "colonne clé inconnue : " + k}
+		}
+	}
+	src.mode, src.keys = mode, slices.Clone(keys)
+	if c.Enabled != nil {
+		src.suspended = !*c.Enabled
+	}
+	s.f.pipelines = slices.DeleteFunc(s.f.pipelines, func(p *fpipeline) bool { return p.workbook == src.book })
+	if len(keys) > 0 {
+		name := src.id
+		if _, _, ds := s.f.dataSource(src.dataset); ds != nil {
+			name = ds.name
+		}
+		s.f.pipelines = append(s.f.pipelines, &fpipeline{b.id, t.id, name, slices.Clone(keys)})
+	}
+	return nil
 }
 
 func (s *session) noPush(name string) error {
@@ -130,7 +180,7 @@ func (f *Fake) pushed(user, id string) (*fsource, error) {
 
 func (f *Fake) sourceItem(x *fsource) workbook.PushedSource {
 	b := f.books[x.book]
-	item := workbook.PushedSource{PipelineID: x.id, Mode: x.mode, KeyColumns: slices.Clone(x.keys), Origin: x.origin, WorkbookID: x.book, Enabled: true}
+	item := workbook.PushedSource{PipelineID: x.id, Mode: x.mode, KeyColumns: slices.Clone(x.keys), Origin: x.origin, WorkbookID: x.book, Enabled: !x.suspended}
 	if b != nil {
 		item.TableID = b.schemas[b.schema].tables[0].id
 	}
@@ -257,8 +307,11 @@ func (p *fpusher) Push(ctx context.Context, id string, body []byte) (workbook.Pu
 		}
 		return workbook.PushRun{}, &workbook.PushError{Status: http.StatusForbidden, Code: "forbidden", Message: "propriétaire de la source seulement"}
 	}
-	if f.PushBusy {
+	if f.PushBusy || src.suspended {
 		f.mu.Unlock()
+		if src.suspended {
+			return workbook.PushRun{}, &workbook.PushError{Status: http.StatusConflict, Code: "conflict", Message: "source poussée suspendue"}
+		}
 		return workbook.PushRun{}, &workbook.PushError{Status: http.StatusConflict, Code: "conflict", Message: "un envoi attend déjà d'être traité : patientez la fin de son exécution"}
 	}
 	if f.MaxPush > 0 && len(body) > f.MaxPush {
@@ -270,13 +323,16 @@ func (p *fpusher) Push(ctx context.Context, id string, body []byte) (workbook.Pu
 	src.runs = append(src.runs, run)
 	b := f.books[src.book]
 	channel, payload := "wb_"+b.slug, b.schemas[b.schema].tables[0].id
-	slow := f.PushSlow
+	slow, before := f.PushSlow, f.Before28
 	f.mu.Unlock()
 	if run.Status != "error" {
 		f.notify(channel, payload)
 	}
 	if slow {
-		return workbook.PushRun{Status: "running"}, nil
+		if before {
+			return workbook.PushRun{Status: "running"}, nil
+		}
+		return workbook.PushRun{Status: "running", ID: run.ID, RunID: run.ID}, nil
 	}
 	return run, nil
 }
@@ -415,6 +471,31 @@ func (p *fpusher) PushStatus(ctx context.Context, id string) (workbook.PushedSou
 		return workbook.PushedSource{}, &workbook.PushError{Status: http.StatusNotFound, Code: "not_found", Message: "source poussée inconnue"}
 	}
 	return f.sourceItem(src), nil
+}
+
+// PushRun lit une exécution (GET ?run=) ; le premier appel répond
+// « pending », comme un envoi pas encore pris par lattisd.
+func (p *fpusher) PushRun(ctx context.Context, id, runID string) (workbook.PushRun, error) {
+	f := p.f
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.Calls["pushed_run"]++
+	src, err := f.pushed(p.user, id)
+	if err != nil {
+		return workbook.PushRun{}, &workbook.PushError{Status: http.StatusNotFound, Code: "not_found", Message: "envoi inconnu"}
+	}
+	if f.Before28 {
+		return workbook.PushRun{}, nil // état de la source, sans « status »
+	}
+	if f.Calls["pushed_run"] == 1 {
+		return workbook.PushRun{ID: runID, Status: "pending"}, nil
+	}
+	for _, r := range src.runs {
+		if r.ID == runID {
+			return r, nil
+		}
+	}
+	return workbook.PushRun{}, &workbook.PushError{Status: http.StatusNotFound, Code: "not_found", Message: "envoi inconnu"}
 }
 
 // SourceRows rend les colonnes et lignes du tableau d'une source poussée,

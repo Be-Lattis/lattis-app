@@ -154,11 +154,18 @@ export interface PushReject {
 
 /**
  * PushRun est une exécution du pipeline (lattis.pipeline_runs) : le bilan
- * d'un envoi. Status : ok, warning (valeurs refusées), error, ou running
- * (réponse 202 : l'écriture dure encore, voir Pusher.PushStatus).
+ * d'un envoi. Status : ok, warning (valeurs refusées), error, running
+ * (réponse 202 ou exécution commencée : à suivre par Pusher.PushRun avec
+ * RunID), ou pending (envoi pas encore pris par lattisd).
  */
 export interface PushRun {
     "id"?: string;
+
+    /**
+     * RunID : exécution à suivre (réponse 202 d'un serveur avec la
+     * migration 0028 ; vide avant : suivi par PushStatus).
+     */
+    "run_id"?: string;
     "status": string;
     "trigger"?: string;
     "rows_read": number;
@@ -170,6 +177,38 @@ export interface PushRun {
     "error"?: string;
     "started_at"?: string;
     "finished_at"?: string;
+}
+
+/**
+ * PushedOrigin dit d'où vient une source (affichage seulement).
+ */
+export interface PushedOrigin {
+    "workbook": string;
+    "workbook_local_id"?: string;
+    "table": string;
+    "table_local_id"?: string;
+}
+
+/**
+ * PushedSource est une source poussée de l'utilisateur
+ * (lattis.my_pushed_sources, GET /api/push/<id>).
+ */
+export interface PushedSource {
+    "pipeline_id": string;
+    "name": string;
+    "mode": string;
+    "key_columns": string[] | null;
+    "origin": PushedOrigin;
+    "workbook_id": string;
+    "table_id": string;
+    "enabled": boolean;
+
+    /**
+     * Pending : un envoi attend d'être écrit.
+     */
+    "pending": boolean;
+    "datasets": {"id": string, "name": string, "sql_name": string}[] | null;
+    "last_run": PushRun | null;
 }
 
 /**

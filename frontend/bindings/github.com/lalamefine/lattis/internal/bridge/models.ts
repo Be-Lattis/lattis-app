@@ -920,6 +920,11 @@ export interface TableSourceLink {
     "onSave": boolean;
 
     /**
+     * Suspended : source suspendue (enabled = false) : rien n'est envoyé.
+     */
+    "suspended"?: boolean;
+
+    /**
      * LastPush : date du dernier envoi écrit (RFC 3339) ; LastResult son
      * bilan ; LastError : échec du dernier essai ("" : réussi).
      */
@@ -954,6 +959,11 @@ export interface TableSourceRequest {
     "keys": string[] | null;
     "onSave": boolean;
     "inherit": boolean;
+
+    /**
+     * Suspended : suspendre la source (modification seulement).
+     */
+    "suspended": boolean;
 
     /**
      * Add : entrées d'audience à ajouter ; Remove : identifiants à retirer.

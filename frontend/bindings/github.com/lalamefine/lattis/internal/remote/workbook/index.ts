@@ -15,6 +15,8 @@ export type {
     Member,
     PushReject,
     PushRun,
+    PushedOrigin,
+    PushedSource,
     Restriction,
     RestrictionRule,
     Role,

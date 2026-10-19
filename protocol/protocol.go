@@ -290,6 +290,20 @@ type DataSource struct {
 	Table           string   `json:"table"`
 	HiddenColumns   []string `json:"hidden_columns"`
 	InheritAudience bool     `json:"inherit_audience"`
+	// Kind : « source » pour un tableau publié seul depuis un classeur
+	// local (source poussée : PipelineID, Origin), « workbook » sinon (vide
+	// avant la migration 0028 du serveur).
+	Kind       string      `json:"kind,omitempty"`
+	PipelineID string      `json:"pipeline_id,omitempty"`
+	Origin     *DataOrigin `json:"origin,omitempty"`
+}
+
+// DataOrigin est le classeur local d'où vient une source poussée.
+type DataOrigin struct {
+	Workbook        string `json:"workbook"`
+	WorkbookLocalID string `json:"workbook_local_id,omitempty"`
+	Table           string `json:"table"`
+	TableLocalID    string `json:"table_local_id,omitempty"`
 }
 
 // DataAudience est une entrée de l'audience d'une donnée ou d'un dossier.

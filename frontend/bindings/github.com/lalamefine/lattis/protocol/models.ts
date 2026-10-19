@@ -61,6 +61,16 @@ export interface DataFolder {
 }
 
 /**
+ * DataOrigin est le classeur local d'où vient une source poussée.
+ */
+export interface DataOrigin {
+    "workbook": string;
+    "workbook_local_id"?: string;
+    "table": string;
+    "table_local_id"?: string;
+}
+
+/**
  * DataRead est la dernière lecture d'un classeur.
  */
 export interface DataRead {
@@ -77,6 +87,15 @@ export interface DataSource {
     "table": string;
     "hidden_columns": string[] | null;
     "inherit_audience": boolean;
+
+    /**
+     * Kind : « source » pour un tableau publié seul depuis un classeur
+     * local (source poussée : PipelineID, Origin), « workbook » sinon (vide
+     * avant la migration 0028 du serveur).
+     */
+    "kind"?: string;
+    "pipeline_id"?: string;
+    "origin"?: DataOrigin | null;
 }
 
 /**

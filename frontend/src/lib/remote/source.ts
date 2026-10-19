@@ -47,6 +47,7 @@ export interface SourceLink {
 	columns: string[] | null;
 	keys: string[] | null;
 	onSave: boolean;
+	suspended?: boolean;
 	lastPush?: string;
 	lastResult?: PushResult | null;
 	lastError?: string;
@@ -113,8 +114,9 @@ export function pushSummary(table: string, r: PushResult | null | undefined, bla
 }
 
 /** État d'une source en une ligne : dernier envoi, ou son échec. */
-export function sourceStatus(l: Pick<SourceLink, 'lastPush' | 'lastResult' | 'lastError' | 'tableName'>, now = new Date()): string {
+export function sourceStatus(l: Pick<SourceLink, 'lastPush' | 'lastResult' | 'lastError' | 'tableName' | 'suspended'>, now = new Date()): string {
 	if (!l.tableName) return 'Tableau supprimé du classeur : la source ne reçoit plus rien';
+	if (l.suspended) return 'Source suspendue : plus aucun envoi';
 	if (l.lastError) return `Dernière mise à jour en échec : ${l.lastError}`;
 	if (!l.lastPush) return 'Jamais mise à jour';
 	const at = new Date(l.lastPush);
@@ -137,6 +139,42 @@ export function sqlNameFor(name: string): string {
 		.replace(/^_+|_+$/g, '');
 	if (s && !/^[a-z]/.test(s)) s = 'd_' + s;
 	return s.slice(0, 63);
+}
+
+/** Origine d'une donnée du catalogue publiée seule depuis un classeur local (null : tableau d'un classeur publié). */
+export function pushedOrigin(d: { source?: { kind?: string; title?: string; origin?: { workbook: string; table: string } | null } | null }): string | null {
+	const s = d.source;
+	if (s?.kind !== 'source') return null;
+	const o = s.origin;
+	if (!o?.workbook) return s.title || 'classeur local';
+	return o.table ? `${o.workbook} › ${o.table}` : o.workbook;
+}
+
+/** Une source poussée de l'utilisateur (workbook.PushedSource, my_pushed_sources). */
+export interface PushedSource {
+	pipeline_id: string;
+	name: string;
+	mode: string;
+	key_columns: string[] | null;
+	origin: { workbook: string; table: string } | null;
+	enabled: boolean;
+	pending: boolean;
+	datasets: { id: string; name: string; sql_name: string }[] | null;
+	last_run?: (PushResult & { finished_at?: string }) | null;
+}
+
+/** Ligne d'état d'une source poussée de la liste « Vos sources poussées ». */
+export function pushedLine(p: PushedSource): string {
+	const mode = PUSH_MODES.find((m) => m.mode === p.mode)?.label ?? p.mode;
+	const parts = [`${p.origin?.workbook || '?'} › ${p.origin?.table || '?'}`, mode + (p.mode === 'upsert' && p.key_columns?.length ? ` (${p.key_columns.join(', ')})` : '')];
+	if (!p.enabled) parts.push('suspendue');
+	else if (p.pending) parts.push('envoi en attente');
+	const r = p.last_run;
+	if (r?.finished_at) {
+		const when = new Date(r.finished_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+		parts.push(r.status === 'error' ? `échec le ${when}` : `mise à jour le ${when}`);
+	} else if (!r) parts.push('jamais mise à jour');
+	return parts.join(' · ');
 }
 
 /** Clés gardées : celles qui restent parmi les colonnes envoyées. */

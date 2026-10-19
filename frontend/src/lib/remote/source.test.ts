@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { keptKeys, pushSummary, shareWays, sourceStatus, sqlNameFor } from './source';
+import { keptKeys, pushSummary, pushedLine, pushedOrigin, shareWays, sourceStatus, sqlNameFor } from './source';
 
 describe('shareWays', () => {
 	it('classeur non publié : publier le classeur ou le tableau seul', () => {
@@ -39,6 +39,7 @@ describe('sourceStatus', () => {
 		expect(sourceStatus({ tableName: 'T', lastError: 'refusé' }, now)).toBe('Dernière mise à jour en échec : refusé');
 		expect(sourceStatus({ tableName: 'T' }, now)).toBe('Jamais mise à jour');
 		expect(sourceStatus({ tableName: '' }, now)).toContain('supprimé');
+		expect(sourceStatus({ tableName: 'T', suspended: true, lastError: 'x' }, now)).toBe('Source suspendue : plus aucun envoi');
 	});
 	it('dernier envoi du jour', () => {
 		const s = sourceStatus({ tableName: 'T', lastPush: new Date('2026-10-19T14:05:00').toISOString(), lastResult: { status: 'warning', rows_read: 12, inserted: 0, updated: 0, deleted: 0, rejected: 2 } }, now);
@@ -51,6 +52,19 @@ describe('sqlNameFor', () => {
 		expect(sqlNameFor('Prix du café')).toBe('prix_du_cafe');
 		expect(sqlNameFor('2026 Ventes')).toBe('d_2026_ventes');
 		expect(sqlNameFor('  ')).toBe('');
+	});
+});
+
+describe('pushedOrigin et pushedLine', () => {
+	it('origine d’une source poussée au catalogue', () => {
+		expect(pushedOrigin({ source: { kind: 'source', title: 'Source : Prix', origin: { workbook: 'Ventes', table: 'Prix' } } })).toBe('Ventes › Prix');
+		expect(pushedOrigin({ source: { kind: 'source', title: 'Source : Prix', origin: null } })).toBe('Source : Prix');
+		expect(pushedOrigin({ source: { kind: 'workbook', title: 'Ventes' } })).toBeNull();
+		expect(pushedOrigin({ source: null })).toBeNull();
+	});
+	it('ligne d’état', () => {
+		const p = { pipeline_id: 'p', name: 'Prix', mode: 'upsert', key_columns: ['Code'], origin: { workbook: 'Ventes', table: 'Prix' }, enabled: false, pending: false, datasets: [], last_run: null };
+		expect(pushedLine(p)).toBe('Ventes › Prix · Mettre à jour par clé (Code) · suspendue · jamais mise à jour');
 	});
 });
 

@@ -12,6 +12,7 @@
 	import ServerPicker from './ServerPicker.svelte';
 	import { lattis, loadLattis, requestLogin } from './lattis.svelte.js';
 	import { catalogTree, type CatalogNode, type DataCatalog, type Dataset } from './data';
+	import { pushedLine, pushedOrigin, type PushedSource } from './source';
 
 	interface Props {
 		/** Feuille et cellule où insérer. */
@@ -27,6 +28,7 @@
 	let catalog = $state<DataCatalog | null>(null);
 	let query = $state('');
 	let picked = $state<Dataset | null>(null);
+	let pushed = $state<PushedSource[]>([]);
 	let open = $state<Set<string>>(new Set());
 	let busy = $state(false);
 	let error = $state('');
@@ -45,10 +47,20 @@
 		picked = null;
 		catalog = null;
 		if (!server) return;
+		pushed = [];
 		try {
 			catalog = (await DocumentService.DataCatalog(server)) as DataCatalog;
 		} catch (e) {
 			error = err(e);
+		}
+		// Sources poussées de l'utilisateur (tous ses classeurs) : vide pour un serveur sans elles.
+		if (catalog?.can_publish) {
+			const at = server;
+			DocumentService.PushedSources(at)
+				.then((l) => {
+					if (server === at) pushed = (l ?? []) as unknown as PushedSource[];
+				})
+				.catch(() => {});
 		}
 	}
 
@@ -141,6 +153,7 @@
 				}}
 			>
 				<Icon name="table" size={14} /><span class="name">{d.name}</span>
+				{#if pushedOrigin(d)}<span class="pipe" title="Tableau publié seul depuis le classeur local « {pushedOrigin(d)} » (source poussée)">pipeline</span>{/if}
 				{#if d.description}<span class="muted desc">{d.description}</span>{/if}
 			</button>
 		{/if}
@@ -187,6 +200,7 @@
 					{#if picked}
 						<h3>{picked.name}</h3>
 						{#if picked.description}<p>{picked.description}</p>{/if}
+						{#if pushedOrigin(picked)}<p class="muted">Source poussée depuis le classeur local <strong>{pushedOrigin(picked)}</strong> : mise à jour par son auteur, sans que le classeur soit publié.</p>{/if}
 						<p class="muted">Vue <code>donnees.{picked.sql_name}</code>{picked.updated_at ? ` · modifiée le ${new Date(picked.updated_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}` : ''}</p>
 						<h4>Colonnes</h4>
 						<ul class="cols">
@@ -195,6 +209,15 @@
 						<p class="muted">Le tableau inséré est en lecture seule et se met à jour quand la donnée change.</p>
 					{:else}
 						<p class="muted">Choisissez une donnée pour voir ses colonnes.</p>
+						{#if pushed.length}
+							<h4>Vos sources poussées</h4>
+							<ul class="pushed">
+								{#each pushed as p (p.pipeline_id)}
+									<li><strong>{p.name}</strong> <span class="pipe">pipeline</span><br /><span class="muted">{pushedLine(p)}</span></li>
+								{/each}
+							</ul>
+							<p class="muted">Tableaux publiés seuls depuis vos classeurs locaux, sur ce serveur ; chacun se gère depuis son classeur (clic droit sur le tableau › Partager au Data Lake Lattis…).</p>
+						{/if}
 					{/if}
 				</div>
 			</div>
@@ -356,6 +379,23 @@
 		border-radius: 4px;
 		font-size: 12px;
 		color: #6b7280;
+	}
+	.pipe {
+		background: #ede9fe;
+		color: #5b21b6;
+		border-radius: 3px;
+		font-size: 11px;
+		padding: 0 5px;
+		margin-left: 6px;
+	}
+	.pushed {
+		list-style: none;
+		padding: 0;
+		margin: 4px 0 8px;
+	}
+	.pushed li {
+		padding: 4px 0;
+		border-bottom: 1px solid #f0f1f3;
 	}
 	.cols {
 		margin: 4px 0;

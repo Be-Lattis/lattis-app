@@ -107,6 +107,10 @@ type Fake struct {
 	PushSlow        bool
 	MaxPush         int
 	LastPush        string
+	// Before28 imite un serveur sans la migration 0028 : pas
+	// d'update_pushed_source (42883), 202 sans run_id, GET ?run= ignoré,
+	// catalogue sans source.kind.
+	Before28 bool
 }
 
 // check refuse (42501) l'écriture de value dans la colonne col d'un

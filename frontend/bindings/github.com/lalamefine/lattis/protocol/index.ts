@@ -6,6 +6,7 @@ export type {
     DataCatalog,
     DataColumn,
     DataFolder,
+    DataOrigin,
     DataRead,
     DataSource,
     DataUse,

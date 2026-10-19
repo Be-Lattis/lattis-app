@@ -43,7 +43,17 @@ export interface Dataset {
 	channel?: string;
 	columns: { name: string; type: string }[] | null;
 	updated_at?: string;
-	source?: { workbook_id: string; title: string; table: string; hidden_columns: string[] | null; inherit_audience: boolean } | null;
+	source?: {
+		workbook_id: string;
+		title: string;
+		table: string;
+		hidden_columns: string[] | null;
+		inherit_audience: boolean;
+		/** source : tableau publié seul depuis un classeur local (source poussée, serveur 0028). */
+		kind?: string;
+		pipeline_id?: string;
+		origin?: { workbook: string; workbook_local_id?: string; table: string; table_local_id?: string } | null;
+	} | null;
 	audience?: DataAudience[] | null;
 	used_by?: DataUse[] | null;
 }

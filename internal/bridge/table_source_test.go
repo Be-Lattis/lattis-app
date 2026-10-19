@@ -150,14 +150,39 @@ func TestTableSourceWithoutPublishing(t *testing.T) {
 		t.Fatalf("après l'enregistrement : %v", rows)
 	}
 
-	// Modifier : Note ajoutée, plus d'envoi à l'enregistrement ; le mode ne change pas.
-	link, err = s.UpdateTableSource(ctx, TableSourceRequest{Table: table, Name: "Produits", Columns: []string{"Produit", "Prix", "Note"}, Inherit: true})
+	// Modifier : Note ajoutée, plus d'envoi à l'enregistrement.
+	link, err = s.UpdateTableSource(ctx, TableSourceRequest{Table: table, Name: "Produits", Columns: []string{"Produit", "Prix", "Note"}, Mode: workbook.PushUpsert, Keys: []string{"Produit"}, Inherit: true})
 	mustShare(t, err)
 	if cols, _ := fake.SourceRows(link.Pipeline); !slices.Equal(cols, []string{"Produit:text", "Prix:decimal", "Note:text"}) || link.OnSave {
 		t.Fatalf("colonne ajoutée : %v %+v", cols, link)
 	}
-	if _, err := s.UpdateTableSource(ctx, TableSourceRequest{Table: table, Name: "Produits", Columns: []string{"Produit"}, Mode: workbook.PushReplace, Inherit: true}); err == nil {
-		t.Fatal("changement de mode accepté")
+	// Catalogue : source poussée, avec son classeur d'origine.
+	if cat, _ := s.DataCatalog(ctx, dataServer); cat.Datasets[0].Source.Kind != "source" || cat.Datasets[0].Source.PipelineID != link.Pipeline ||
+		cat.Datasets[0].Source.Origin == nil || cat.Datasets[0].Source.Origin.Table != table {
+		t.Fatalf("origine au catalogue : %+v", cat.Datasets[0].Source)
+	}
+	// Mode changé (migration 0028) : remplacement, la clé tombe.
+	link, err = s.UpdateTableSource(ctx, TableSourceRequest{Table: table, Name: "Produits", Columns: []string{"Produit", "Prix"}, Mode: workbook.PushReplace, Inherit: true})
+	mustShare(t, err)
+	if link.Mode != workbook.PushReplace || len(link.Keys) != 0 || link.LastError != "" || link.LastResult.Deleted != 3 {
+		t.Fatalf("mode changé : %+v %+v", link, link.LastResult)
+	}
+	if list, _ := s.PushedSources(ctx, dataServer); len(list) != 1 || list[0].Mode != workbook.PushReplace || list[0].Origin.Table != table {
+		t.Fatalf("mes sources poussées : %+v", list)
+	}
+	// Suspendue : rien n'est envoyé, ni à la demande ni à l'enregistrement ; reprise.
+	link, err = s.UpdateTableSource(ctx, TableSourceRequest{Table: table, Name: "Produits", Columns: []string{"Produit", "Prix"}, Mode: workbook.PushReplace, Suspended: true, Inherit: true})
+	mustShare(t, err)
+	if !link.Suspended {
+		t.Fatalf("suspension : %+v", link)
+	}
+	if _, err := s.PushTableSource(ctx, table); err == nil || !strings.Contains(err.Error(), "suspendue") {
+		t.Fatalf("envoi d'une source suspendue : %v", err)
+	}
+	link, err = s.UpdateTableSource(ctx, TableSourceRequest{Table: table, Name: "Produits", Columns: []string{"Produit", "Prix"}, Mode: workbook.PushReplace, Inherit: true})
+	mustShare(t, err)
+	if link.Suspended || link.LastError != "" {
+		t.Fatalf("reprise : %+v", link)
 	}
 
 	// Retirer : la donnée quitte le catalogue, le lien est oublié.
@@ -256,16 +281,27 @@ func TestTableSourceRefusals(t *testing.T) {
 	}
 	fake.MaxPush = 0
 
-	// 202 : l'écriture dure, le bilan est relu par l'état de la source.
+	// 202 : l'écriture dure, le bilan est relu par son exécution (?run=), « pending » d'abord.
 	fake.PushSlow = true
 	link, err = s.PushTableSource(ctx, table)
 	mustShare(t, err)
-	if link.LastError != "" || link.LastResult == nil || link.LastResult.Inserted != 2 || fake.Calls["push_status"] == 0 {
+	if link.LastError != "" || link.LastResult == nil || link.LastResult.Inserted != 2 || fake.Calls["pushed_run"] < 2 || fake.Calls["push_status"] != 0 {
 		t.Fatalf("202 : %+v %v", link, fake.Calls)
 	}
-	fake.PushSlow = false
-	// Ajout à la suite : premier envoi et envoi en 202 (les refusés n'ont rien écrit).
-	if _, rows := fake.SourceRows(link.Pipeline); len(rows) != 4 {
+	// Serveur d'avant 0028 : pas d'identifiant d'exécution, suivi par l'état
+	// de la source ; mode non modifiable.
+	fake.Before28 = true
+	link, err = s.PushTableSource(ctx, table)
+	mustShare(t, err)
+	if link.LastError != "" || link.LastResult.Inserted != 2 || fake.Calls["push_status"] == 0 {
+		t.Fatalf("202 sans 0028 : %+v %v", link, fake.Calls)
+	}
+	if _, err := s.UpdateTableSource(ctx, TableSourceRequest{Table: table, Name: "Ajouts", Columns: []string{"Produit", "Prix"}, Mode: workbook.PushReplace}); err == nil || !strings.Contains(err.Error(), "ne permet pas encore") {
+		t.Fatalf("mode sans 0028 : %v", err)
+	}
+	fake.Before28, fake.PushSlow = false, false
+	// Ajout à la suite : premier envoi et deux envois en 202 (les refusés n'ont rien écrit).
+	if _, rows := fake.SourceRows(link.Pipeline); len(rows) != 6 {
 		t.Fatalf("ajouts : %d lignes", len(rows))
 	}
 }

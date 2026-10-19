@@ -76,10 +76,14 @@ type PushReject struct {
 }
 
 // PushRun est une exécution du pipeline (lattis.pipeline_runs) : le bilan
-// d'un envoi. Status : ok, warning (valeurs refusées), error, ou running
-// (réponse 202 : l'écriture dure encore, voir Pusher.PushStatus).
+// d'un envoi. Status : ok, warning (valeurs refusées), error, running
+// (réponse 202 ou exécution commencée : à suivre par Pusher.PushRun avec
+// RunID), ou pending (envoi pas encore pris par lattisd).
 type PushRun struct {
-	ID         string       `json:"id,omitempty"`
+	ID string `json:"id,omitempty"`
+	// RunID : exécution à suivre (réponse 202 d'un serveur avec la
+	// migration 0028 ; vide avant : suivi par PushStatus).
+	RunID      string       `json:"run_id,omitempty"`
 	Status     string       `json:"status"`
 	Trigger    string       `json:"trigger,omitempty"`
 	RowsRead   int          `json:"rows_read"`
@@ -126,6 +130,21 @@ type PushedSources interface {
 	// DropPushedSource retire la source : donnée (*withdrawn:<id>),
 	// pipeline et classeur technique.
 	DropPushedSource(ctx context.Context, pipelineID string) error
+	// UpdatePushedSource change le mode, la clé ou suspend la source
+	// (migration 0028 ; avant : 42883, voir Unsupported).
+	UpdatePushedSource(ctx context.Context, pipelineID string, c PushedSourceChange) error
+}
+
+// PushedSourceChange modifie une source poussée (lattis.update_pushed_source) ;
+// nil : inchangé.
+type PushedSourceChange struct {
+	Mode       *string   `json:"mode,omitempty"`
+	KeyColumns *[]string `json:"key_columns,omitempty"`
+	Enabled    *bool     `json:"enabled,omitempty"`
+}
+
+func (s pgServer) UpdatePushedSource(ctx context.Context, pipelineID string, c PushedSourceChange) error {
+	return s.exec(ctx, `SELECT lattis.update_pushed_source($1::uuid, $2::jsonb)`, pipelineID, c)
 }
 
 func (s pgServer) PushedSourcesSupported(ctx context.Context) (bool, error) {
@@ -170,6 +189,10 @@ type Pusher interface {
 	Push(ctx context.Context, pipelineID string, csv []byte) (PushRun, error)
 	// PushStatus lit l'état de la source (dernier envoi, envoi en attente).
 	PushStatus(ctx context.Context, pipelineID string) (PushedSource, error)
+	// PushRun lit une exécution (GET ?run=, migration 0028) : bilan, ou
+	// Status pending / running ; inconnue : *PushError 404. Un serveur
+	// d'avant 0028 ignore run et rend l'état de la source : Status vide.
+	PushRun(ctx context.Context, pipelineID, runID string) (PushRun, error)
 }
 
 // PushError est un refus de POST/GET /api/push (401, 403, 404, 409, 413…).
@@ -286,6 +309,22 @@ func (c PushClient) Push(ctx context.Context, id string, csv []byte) (PushRun, e
 	}
 	if res.StatusCode == http.StatusAccepted {
 		out.Status = "running"
+	}
+	return out, nil
+}
+
+func (c PushClient) PushRun(ctx context.Context, id, run string) (PushRun, error) {
+	var out PushRun
+	res, err := c.do(ctx, http.MethodGet, c.url(id)+"?run="+run, nil)
+	if err != nil {
+		return out, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return out, pushError(res)
+	}
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		return out, fmt.Errorf("bilan de l'envoi illisible : %w", err)
 	}
 	return out, nil
 }
