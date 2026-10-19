@@ -2869,17 +2869,6 @@
 				ctx.restore();
 			}
 		}
-		// Marge de gauche : petits traits aux séparations de lignes (redimensionnables).
-		ctx.beginPath();
-		ctx.strokeStyle = C.stripLine;
-		ctx.lineWidth = 1;
-		for (let r = r0; r <= r1; r++) {
-			const y = Math.round(ry(r + 1)) - 0.5;
-			if (y <= TOP_H) continue;
-			ctx.moveTo(MARGIN * 0.55, y);
-			ctx.lineTo(MARGIN, y);
-		}
-		ctx.stroke();
 		// Petits traits aux séparations de colonnes : on voit où redimensionner.
 		ctx.beginPath();
 		ctx.strokeStyle = C.stripLine;
@@ -2948,6 +2937,18 @@
 				ctx.restore();
 			}
 		}
+		// Petits traits aux séparations de lignes, comme ceux des colonnes dans
+		// le bandeau du haut : on voit où redimensionner.
+		ctx.beginPath();
+		ctx.strokeStyle = C.stripLine;
+		ctx.lineWidth = 1;
+		for (let r = r0; r <= r1; r++) {
+			const y = Math.round(ry(r + 1)) - 0.5;
+			if (y <= TOP_H || !rh(r)) continue;
+			ctx.moveTo(MARGIN * 0.35, y);
+			ctx.lineTo(MARGIN, y);
+		}
+		ctx.stroke();
 		// Lignes masquées : un double trait à leur place, comme Excel.
 		ctx.fillStyle = C.frozen;
 		for (const r of hiddenRows) if (r >= r0 - 1 && r <= r1 + 1) ctx.fillRect(0, Math.round(ry(r)) - 1.5, MARGIN, 1);
