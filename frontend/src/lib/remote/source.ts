@@ -27,9 +27,9 @@ export type PushMode = 'replace' | 'append' | 'upsert';
 
 /** Modes proposés, avec leur explication. */
 export const PUSH_MODES: { mode: PushMode; label: string; detail: string }[] = [
-	{ mode: 'replace', label: 'Remplacer tout', detail: 'à chaque mise à jour, la donnée devient le tableau envoyé' },
-	{ mode: 'append', label: 'Ajouter à la suite', detail: 'les lignes envoyées s’ajoutent à celles déjà reçues (journal, relevés)' },
-	{ mode: 'upsert', label: 'Mettre à jour par clé', detail: 'une ligne de même clé est modifiée, une nouvelle est ajoutée ; rien n’est supprimé' }
+	{ mode: 'replace', label: 'Remplacer tout', detail: 'La donnée devient le tableau envoyé.' },
+	{ mode: 'append', label: 'Ajouter à la suite', detail: 'Les lignes s’ajoutent à celles déjà reçues (journal, relevés).' },
+	{ mode: 'upsert', label: 'Mettre à jour par clé', detail: 'Même clé : ligne modifiée ; sinon ajoutée. Rien n’est supprimé.' }
 ];
 
 /** Lien d'un tableau avec sa source (bridge.TableSourceLink). */
@@ -77,21 +77,50 @@ export function shareWays(choice: string, reason: string): WayChoice[] {
 			way: 'workbook',
 			title: republish ? 'Republier le classeur avec ce tableau' : 'Publier le classeur avec gestion des droits',
 			detail: republish
-				? 'Le classeur est republié sur son serveur avec ce tableau coché ; ses droits (rôles, filtres) s’appliquent. Le tableau se partage ensuite au Data Lake depuis ce même menu.'
-				: 'Le classeur entier est publié sur un Serveur Lattis : vous choisissez qui l’ouvre et ce que chacun voit ou modifie (rôles, filtres). Le tableau se partage ensuite au Data Lake depuis ce même menu.',
+				? 'Le classeur est republié avec ce tableau ; ses rôles et filtres s’appliquent.'
+				: 'Tout le classeur va sur le serveur, avec rôles et filtres ; le tableau se partage ensuite.',
 			disabled: reason
 		},
 		{
 			way: 'table',
-			title: 'Publier uniquement ce tableau comme source de données',
-			detail:
-				'Une nouvelle donnée du Data Lake, liée à ce classeur et alimentée par un pipeline : seules les colonnes choisies de ce tableau sont envoyées, quand vous le demandez ou à chaque enregistrement. Le classeur reste sur votre poste, sans être mis à disposition.',
+			title: 'Publier uniquement ce tableau',
+			detail: 'Seules les colonnes choisies sont envoyées ; le classeur reste sur votre poste, sans être mis à disposition.',
 			disabled: ''
 		}
 	];
 }
 
-const plural = (n: number) => (n > 1 ? 's' : '');
+/** Écran du choix de la voie : titre, phrase d'explication, voies ouvertes seulement, et « pourquoi pas tout le classeur ». */
+export interface Chooser {
+	title: string;
+	lead: string;
+	ways: WayChoice[];
+	/** Pourquoi la voie du classeur n'est pas proposée ('' : elle l'est). */
+	why: string;
+}
+
+/**
+ * Le choix en clair. Classeur collaboratif où ce tableau n'a pas été publié
+ * (reason) : le classeur ne se republie pas et rien ne permet d'y ajouter
+ * un tableau en direct ; seule reste la publication du tableau seul,
+ * présentée sans voie grisée ni refus en rouge.
+ */
+export function chooser(choice: string, reason: string): Chooser {
+	const ways = shareWays(choice, reason);
+	if (!reason) return { title: 'Comment partager ce tableau ?', lead: 'Ce tableau n’est pas dans un classeur publié.', ways, why: '' };
+	const table = ways.find((w) => w.way === 'table') as WayChoice;
+	return {
+		title: 'Ce tableau n’est que sur votre poste',
+		lead: choice === 'table' ? 'Le classeur est partagé en direct, mais ce tableau n’en fait pas partie.' : reason,
+		ways: [{ ...table, title: 'Publier ce tableau seul au Data Lake' }],
+		why:
+			choice === 'table'
+				? 'Un classeur partagé en direct ne se republie pas : la liste de ses tableaux est fixée à sa publication, et un tableau créé ensuite reste sur votre poste.'
+				: reason
+	};
+}
+
+const plural = (n: number) =>(n > 1 ? 's' : '');
 
 /** Message de la barre d'état après un envoi (comme bridge.PushSummary). */
 export function pushSummary(table: string, r: PushResult | null | undefined, blanked = 0): string {
@@ -180,4 +209,56 @@ export function pushedLine(p: PushedSource): string {
 /** Clés gardées : celles qui restent parmi les colonnes envoyées. */
 export function keptKeys(keys: readonly string[], sent: ReadonlySet<string>): string[] {
 	return keys.filter((k) => sent.has(k));
+}
+
+/** Nom SQL d'une donnée : contrôle local ('' : accepté, ou vide pour laisser le serveur le proposer). */
+export function sqlNameProblem(s: string): string {
+	const v = s.trim();
+	if (!v) return '';
+	if (v.length > 63) return '63 caractères au plus';
+	if (!/^[a-z]/.test(v)) return 'Commence par une lettre minuscule';
+	if (!/^[a-z0-9_]+$/.test(v)) return 'Minuscules sans accent, chiffres et _ seulement';
+	return '';
+}
+
+/** Champs d'un formulaire de partage, pour son contrôle avant l'envoi. */
+export interface ShareForm {
+	server: string;
+	name: string;
+	/** Nom SQL saisi ('' : proposé par le serveur ; null : déjà fixé). */
+	sqlName: string | null;
+	columns: number;
+	mode?: PushMode;
+	key?: string;
+	/** Un filtre d'audience en cours de saisie est invalide. */
+	badFilter: boolean;
+}
+
+/** Problème d'un champ du formulaire, par champ ; vide : prêt à envoyer. */
+export type ShareProblems = Partial<Record<'server' | 'name' | 'sql' | 'columns' | 'key' | 'audience', string>>;
+
+/** Ce qui empêche d'envoyer le formulaire, champ par champ (messages affichés sous le champ). */
+export function shareProblems(f: ShareForm): ShareProblems {
+	const p: ShareProblems = {};
+	if (!f.server) p.server = 'Connectez-vous à un Serveur Lattis';
+	if (!f.name.trim()) p.name = 'Donnez un nom à la donnée';
+	const sql = f.sqlName === null ? '' : sqlNameProblem(f.sqlName);
+	if (sql) p.sql = sql;
+	if (f.columns === 0) p.columns = 'Cochez au moins une colonne';
+	if (f.mode === 'upsert' && !f.key) p.key = 'Choisissez la colonne qui identifie une ligne';
+	if (f.badFilter) p.audience = 'Un filtre de lignes est à corriger';
+	return p;
+}
+
+/** Résumé d'une ligne des options avancées repliées (« donnees.ventes · Remplacer tout · à chaque enregistrement »). */
+export function advancedSummary(o: { sqlName: string; mode?: PushMode; key?: string; onSave?: boolean; suspended?: boolean }): string {
+	const parts: string[] = [];
+	if (o.sqlName.trim()) parts.push(`donnees.${o.sqlName.trim()}`);
+	if (o.mode) {
+		const m = PUSH_MODES.find((x) => x.mode === o.mode)?.label ?? o.mode;
+		parts.push(o.mode === 'upsert' && o.key ? `${m} (${o.key})` : m);
+	}
+	if (o.suspended) parts.push('suspendue');
+	else if (o.onSave !== undefined) parts.push(o.onSave ? 'à chaque enregistrement' : 'à la demande');
+	return parts.join(' · ');
 }

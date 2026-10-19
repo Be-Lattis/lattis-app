@@ -1,5 +1,48 @@
 import { describe, expect, it } from 'vitest';
-import { keptKeys, pushSummary, pushedLine, pushedOrigin, shareWays, sourceStatus, sqlNameFor } from './source';
+import { advancedSummary, chooser, keptKeys, pushSummary, pushedLine, pushedOrigin, shareProblems, shareWays, sourceStatus, sqlNameFor, sqlNameProblem } from './source';
+
+describe('chooser', () => {
+	it('classeur non publié : les deux voies', () => {
+		const c = chooser('workbook', '');
+		expect(c.ways).toHaveLength(2);
+		expect(c.why).toBe('');
+	});
+	it('classeur collaboratif sans ce tableau : seule la voie qui marche, sans refus affiché', () => {
+		const c = chooser('table', "Un classeur collaboratif ne se republie pas : ce tableau n'y entre plus avec le classeur.");
+		expect(c.title).toBe('Ce tableau n’est que sur votre poste');
+		expect(c.lead).toContain('partagé en direct');
+		expect(c.ways.map((w) => [w.way, w.title, w.disabled])).toEqual([['table', 'Publier ce tableau seul au Data Lake', '']]);
+		expect(c.why).toContain('ne se republie pas');
+	});
+});
+
+describe('contrôle du formulaire', () => {
+	const ok = { server: 's', name: 'Ventes', sqlName: 'ventes', columns: 3, badFilter: false };
+	it('nom SQL', () => {
+		expect(sqlNameProblem('')).toBe('');
+		expect(sqlNameProblem('ventes_2026')).toBe('');
+		expect(sqlNameProblem('2026')).toContain('lettre');
+		expect(sqlNameProblem('Ventes')).toContain('lettre minuscule');
+		expect(sqlNameProblem('ventes-2026')).toContain('Minuscules');
+		expect(sqlNameProblem('a'.repeat(64))).toContain('63');
+	});
+	it('un message par champ à corriger', () => {
+		expect(shareProblems(ok)).toEqual({});
+		expect(shareProblems({ ...ok, server: '', name: ' ', columns: 0, mode: 'upsert', key: '', badFilter: true })).toEqual({
+			server: 'Connectez-vous à un Serveur Lattis',
+			name: 'Donnez un nom à la donnée',
+			columns: 'Cochez au moins une colonne',
+			key: 'Choisissez la colonne qui identifie une ligne',
+			audience: 'Un filtre de lignes est à corriger'
+		});
+		expect(shareProblems({ ...ok, sqlName: 'X' }).sql).toBeTruthy();
+		expect(shareProblems({ ...ok, sqlName: null })).toEqual({});
+	});
+	it('résumé des options avancées', () => {
+		expect(advancedSummary({ sqlName: 'ventes', mode: 'upsert', key: 'Code', onSave: true })).toBe('donnees.ventes · Mettre à jour par clé (Code) · à chaque enregistrement');
+		expect(advancedSummary({ sqlName: '', mode: 'replace', onSave: false, suspended: true })).toBe('Remplacer tout · suspendue');
+	});
+});
 
 describe('shareWays', () => {
 	it('classeur non publié : publier le classeur ou le tableau seul', () => {

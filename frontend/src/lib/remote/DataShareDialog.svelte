@@ -10,15 +10,22 @@
 	// revenir ici), ou publier uniquement ce tableau comme source de données
 	// liée au classeur (TableSourceForm : pipeline alimenté par le poste,
 	// sans mettre le classeur à disposition).
+	//
+	// Mise en page commune aux deux formulaires : shareForm.css (voir
+	// docs/audits/audit-ux-partage-data-lake.md).
 	import { modal } from '#lib/ui/focus.js';
 	import Icon from '#lib/icons/Icon.svelte';
-	import { onMount, untrack } from 'svelte';
+	import HelpLink from '#lib/help/HelpLink.svelte';
+	import { onMount, tick, untrack } from 'svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
-	import { folderChoices, type DataAudience, type DataCatalog, type Dataset } from './data';
-	import FilterEditor from './FilterEditor.svelte';
+	import { folderPath, type AudienceEntry, type DataAudience, type DataCatalog, type Dataset } from './data';
+	import AudienceEditor from './AudienceEditor.svelte';
+	import ColumnPicker from './ColumnPicker.svelte';
+	import FolderPicker from './FolderPicker.svelte';
 	import TableSourceForm from './TableSourceForm.svelte';
-	import { shareWays, type ShareWay, type SourceLink } from './source';
+	import { chooser, shareProblems, type ShareWay, type SourceLink } from './source';
 	import type { RightsColumn } from '#bindings/internal/bridge/models.js';
+	import './shareForm.css';
 
 	interface Props {
 		table: string;
@@ -45,11 +52,13 @@
 		choice: string;
 		source: SourceLink | null;
 	};
+	/** Page d'aide du partage au Data Lake. */
+	const HELP = 'fichiers#partager-un-tableau-au-data-lake-lattis';
 	/** Étape : choix de la voie, partage d'un tableau publié, source sans le classeur. */
 	let step = $state<'choose' | 'dataset' | 'source'>('dataset');
 	let way = $state<ShareWay>('workbook');
-	/** Entrée d'audience à ajouter ; error : filtre en cours de saisie invalide. */
-	type Entry = { email: string; team: string; predicate: string; error: string };
+	/** « Pourquoi pas tout le classeur ? » déplié. */
+	let whyOpen = $state(false);
 
 	let info = $state<Info | null>(null);
 	let name = $state(untrack(() => table));
@@ -60,14 +69,23 @@
 	let inherit = $state(true);
 	let current = $state<DataAudience[]>([]);
 	let removed = $state<Set<string>>(new Set());
-	let adds = $state<Entry[]>([]);
-	let newFolder = $state('');
+	let adds = $state<AudienceEntry[]>([]);
 	let busy = $state(false);
 	let error = $state('');
+	/** Options avancées dépliées. */
+	let adv = $state(false);
+	/** Envoi tenté avec des champs à corriger : le pied le dit. */
+	let tried = $state(false);
+	let body = $state<HTMLDivElement>();
 	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
 	const ds = $derived(info?.dataset ?? null);
-	const ways = $derived(info ? shareWays(info.choice, info.reason) : []);
+	const choose = $derived(info ? chooser(info.choice, info.reason) : null);
+	const ways = $derived(choose?.ways ?? []);
 	const badFilter = $derived(adds.some((a) => !!a.error));
+	const problems = $derived(info ? shareProblems({ server: info.server, name, sqlName: ds ? null : sqlName, columns: shown.size, badFilter }) : {});
+	const firstProblem = $derived(Object.values(problems)[0] ?? '');
+	const colTypes = $derived((info?.columns ?? []).map((c) => ({ name: c, type: info?.fields?.find((f) => f.name === c)?.type })));
+	const wayOk = $derived(!ways.find((w) => w.way === way)?.disabled && !(way === 'workbook' && !onpublish));
 
 	onMount(load);
 
@@ -97,22 +115,48 @@
 		}
 	}
 
-	function toggleCol(c: string, on: boolean) {
-		const s = new Set(shown);
-		if (on) s.add(c);
-		else s.delete(c);
-		shown = s;
+	async function createFolder(n: string, parent: string): Promise<string> {
+		if (!info) return '';
+		const id = await DocumentService.CreateDataFolder(info.server, n, parent);
+		info.catalog = (await DocumentService.DataCatalog(info.server)) as unknown as DataCatalog;
+		return id;
 	}
 
-	async function addFolder() {
-		if (!info || !newFolder.trim()) return;
-		try {
-			folder = await DocumentService.CreateDataFolder(info.server, newFolder.trim(), folder);
-			newFolder = '';
-			info.catalog = (await DocumentService.DataCatalog(info.server)) as unknown as DataCatalog;
-		} catch (e) {
-			error = err(e);
+	async function values(column: string): Promise<string[]> {
+		return ((await DocumentService.FieldValues(table, column)) ?? []).map((v) => v.text);
+	}
+
+	/** Choix de la voie validé (Continuer, Entrée, double-clic). */
+	function proceed() {
+		if (!wayOk) return;
+		if (way === 'table') step = 'source';
+		else {
+			ondone();
+			onpublish?.(info?.choice === 'table');
 		}
+	}
+
+	/** Partager : d'abord les champs à corriger (focus sur le premier). */
+	async function attempt() {
+		if (!info || info.reason || busy) return;
+		if (firstProblem) {
+			tried = true;
+			if (problems.sql) adv = true;
+			await tick();
+			const sel = problems.name ? '#ds-name' : problems.columns ? '.sf-cols input' : problems.sql ? '#ds-sql' : '';
+			if (sel) body?.querySelector<HTMLElement>(sel)?.focus();
+			return;
+		}
+		await save();
+	}
+
+	/** Entrée dans un champ texte : partager. */
+	function onKey(e: KeyboardEvent) {
+		const t = e.target as HTMLElement;
+		if (e.key !== 'Enter' || e.defaultPrevented || e.shiftKey || e.ctrlKey || e.altKey) return;
+		if (!(t instanceof HTMLInputElement) || ['checkbox', 'radio', 'button'].includes(t.type)) return;
+		e.preventDefault();
+		attempt();
 	}
 
 	async function save() {
@@ -163,18 +207,20 @@
 		class="dialog"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Partager au Data Lake Lattis"
+		aria-labelledby="dls-title"
 		tabindex="-1"
 		use:modal
 		onkeydown={(e) => {
 			e.stopPropagation();
-			if (e.key === 'Escape' && !busy) ondone();
+			if (e.key === 'Escape' && !busy && !e.defaultPrevented) ondone();
 		}}
 	>
 		<header>
-			<Icon name="database" size={18} /><span
+			<Icon name="database" size={18} /><span id="dls-title" class="title"
 				>{step === 'source' && info?.source ? `Source du Data Lake · « ${table} »` : ds ? `Data Lake Lattis · « ${ds.name} »` : `Partager « ${table} » au Data Lake Lattis`}</span
 			>
+			<HelpLink target={HELP} label="Aide : partager au Data Lake" />
+			<button type="button" class="close" aria-label="Fermer" title="Fermer (Échap)" disabled={busy} onclick={ondone}>✕</button>
 		</header>
 		{#if step === 'source'}
 			<TableSourceForm
@@ -186,143 +232,125 @@
 				}}
 			/>
 		{:else if step === 'choose' && info}
-			<div class="body">
-				<p>Ce tableau n’est pas dans un classeur publié. Comment le partager ?</p>
-				<div class="ways" role="radiogroup" aria-label="Façon de partager">
+			<div class="sf-body">
+				<h2 class="ctitle">{choose?.title}</h2>
+				<p class="lead">
+					{choose?.lead}
+					{#if choose?.why}<button type="button" class="why" title={choose.why} aria-expanded={whyOpen} onclick={() => (whyOpen = !whyOpen)}>Pourquoi pas tout le classeur ?</button>{/if}
+				</p>
+				{#if whyOpen && choose?.why}<p class="sf-hint whytext">{choose.why}</p>{/if}
+				<!-- svelte-ignore a11y_interactive_supports_focus -->
+				<div
+					class="ways"
+					role="radiogroup"
+					aria-label="Façon de partager"
+					onkeydown={(e) => {
+						if (e.key === 'Enter') {
+							e.preventDefault();
+							proceed();
+						}
+					}}
+				>
 					{#each ways as w (w.way)}
-						<label class="way" class:on={way === w.way} class:off={!!w.disabled}>
+						<label class="way" class:on={way === w.way} class:off={!!w.disabled} ondblclick={() => !w.disabled && proceed()}>
 							<input type="radio" name="way" value={w.way} bind:group={way} disabled={!!w.disabled} />
 							<span class="way-icon"><Icon name={w.way === 'workbook' ? 'lock-book' : 'table'} size={22} /></span>
 							<span class="way-text">
 								<strong>{w.title}</strong>
-								<span class="muted">{w.detail}</span>
-								{#if w.disabled}<span class="error">{w.disabled}</span>{/if}
+								<span class="sf-hint">{w.detail}</span>
+								{#if w.disabled}<span class="sf-error">{w.disabled}</span>{/if}
 							</span>
 						</label>
 					{/each}
 				</div>
-				{#if error}<p class="error" role="alert">{error}</p>{/if}
+				{#if error}<p class="sf-error" role="alert">{error}</p>{/if}
 			</div>
-			<footer>
-				<span class="grow"></span>
-				<button onclick={ondone}>Annuler</button>
-				<button
-					class="primary"
-					disabled={!!ways.find((w) => w.way === way)?.disabled || (way === 'workbook' && !onpublish)}
-					onclick={() => {
-						if (way === 'table') step = 'source';
-						else {
-							ondone();
-							onpublish?.(info?.choice === 'table');
-						}
-					}}>Continuer…</button
-				>
+			<footer class="sf-foot">
+				<span class="sf-grow"></span>
+				<button type="button" class="sf-btn" onclick={ondone}>Annuler</button>
+				<button type="button" class="sf-btn primary" disabled={!wayOk} onclick={proceed}>{way === 'workbook' ? (info.choice === 'table' ? 'Republier le classeur…' : 'Publier le classeur…') : 'Continuer'}</button>
 			</footer>
 		{:else}
-		<div class="body">
-			{#if !info}
-				<p class="muted">{error ? '' : 'Lecture du catalogue…'}</p>
-			{:else if info.reason}
-				<p>{info.reason}</p>
-			{:else}
-				<div class="grid">
-					<label for="ds-name">Nom</label>
-					<input id="ds-name" bind:value={name} disabled={busy} />
-					<label for="ds-desc">Description</label>
-					<input id="ds-desc" bind:value={description} disabled={busy} placeholder="Ce que contient la donnée, pour qui la cherche" />
-					<label for="ds-sql">Nom SQL</label>
-					{#if ds}
-						<code>donnees.{ds.sql_name}</code>
-					{:else}
-						<input id="ds-sql" bind:value={sqlName} disabled={busy} placeholder="proposé par le serveur (minuscules, chiffres, _)" spellcheck="false" />
-					{/if}
-					<label for="ds-folder">Dossier</label>
-					<div class="row">
-						<select id="ds-folder" bind:value={folder} disabled={busy}>
-							{#each folderChoices(info.catalog) as f (f.id)}<option value={f.id}>{f.label}</option>{/each}
-						</select>
-						<input bind:value={newFolder} placeholder="Nouveau dossier" disabled={busy} aria-label="Nom du nouveau dossier" />
-						<button onclick={addFolder} disabled={busy || !newFolder.trim()}>Créer</button>
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div class="sf-body" bind:this={body} onkeydown={onKey}>
+				{#if !info}
+					<p class="sf-hint">{error ? '' : 'Lecture du catalogue…'}</p>
+				{:else if info.reason}
+					<p>{info.reason}</p>
+				{:else}
+					<div class="sf-fields">
+						<label class="sf-label" for="ds-name">Nom</label>
+						<div class="sf-field">
+							<input id="ds-name" class="sf-input" bind:value={name} disabled={busy} aria-invalid={!!problems.name} autocomplete="off" />
+							{#if problems.name}<p class="sf-error">{problems.name}</p>{/if}
+						</div>
+
+						<span class="sf-label">Dossier</span>
+						<div class="sf-field">
+							<FolderPicker id="ds-folder" catalog={info.catalog} bind:value={folder} disabled={busy} oncreate={createFolder} />
+						</div>
+
+						<span class="sf-label">Colonnes</span>
+						<div class="sf-field sf-cols">
+							<ColumnPicker label="Colonnes exposées" columns={colTypes} selected={shown} onchange={(s) => (shown = s)} disabled={busy} error={problems.columns ?? ''} />
+						</div>
+
+						<span class="sf-label">Audience</span>
+						<div class="sf-field">
+							<AudienceEditor {current} bind:removed bind:adds bind:inherit teams={info.teams ?? []} columns={info.fields ?? []} folder={folderPath(info.catalog, folder)} {table} {values} disabled={busy} />
+						</div>
+
+						{#if ds?.used_by?.length}
+							<span class="sf-label">Utilisée par</span>
+							<ul class="sf-used">
+								{#each ds.used_by as u (u.workbook_id)}
+									<li>
+										{u.title}
+										{#if u.last_read}<span class="sf-hint"> · lu par {u.last_read.email} le {new Date(u.last_read.at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span>{/if}
+									</li>
+								{/each}
+							</ul>
+						{/if}
 					</div>
-				</div>
 
-				<h3>Colonnes exposées</h3>
-				<div class="cols">
-					{#each info.columns ?? [] as c (c)}
-						<label><input type="checkbox" checked={shown.has(c)} disabled={busy} onchange={(e) => toggleCol(c, e.currentTarget.checked)} /> {c}</label>
-					{/each}
-				</div>
-
-				<h3>Audience</h3>
-				<label class="check"><input type="checkbox" bind:checked={inherit} disabled={busy} /> Hériter de l'audience du dossier</label>
-				<ul class="aud">
-					{#each current as a (a.id)}
-						<li class:gone={removed.has(a.id)}>
-							<Icon name={a.kind === 'team' ? 'user' : 'user'} size={13} />
-							{a.label}{#if a.predicate}<span class="muted"> · lignes où {a.predicate}</span>{/if}
-							<button
-								class="link"
-								disabled={busy}
-								onclick={() => {
-									const s = new Set(removed);
-									if (s.has(a.id)) s.delete(a.id);
-									else s.add(a.id);
-									removed = s;
-								}}>{removed.has(a.id) ? 'Garder' : 'Retirer'}</button
-							>
-						</li>
-					{/each}
-					{#each adds as a, i (a)}
-						<li class="add">
-							<div class="who">
-								<input placeholder="adresse@exemple.fr" bind:value={a.email} disabled={busy || !!a.team} aria-label="Adresse" />
-								<span class="muted">ou</span>
-								<select bind:value={a.team} disabled={busy || !!a.email.trim()} aria-label="Équipe">
-									<option value="">(équipe)</option>
-									{#each info.teams ?? [] as t (t.id)}<option value={t.id}>{t.name}</option>{/each}
-								</select>
-								<button class="link" onclick={() => (adds = adds.filter((_, k) => k !== i))} aria-label="Retirer cette ligne">×</button>
+					<details class="sf-adv" bind:open={adv}>
+						<summary
+							>Options avancées <span class="sf-sum"
+								>{ds ? `donnees.${ds.sql_name}` : sqlName.trim() ? `donnees.${sqlName.trim()}` : 'nom SQL proposé par le serveur'}{description.trim() ? ' · avec description' : ''}</span
+							></summary
+						>
+						<div class="sf-fields">
+							<label class="sf-label" for="ds-desc">Description <span class="sf-opt">(facultatif)</span></label>
+							<input id="ds-desc" class="sf-input" bind:value={description} disabled={busy} placeholder="Ce que contient la donnée, pour qui la cherche" />
+							<label class="sf-label" for="ds-sql">Nom SQL</label>
+							<div class="sf-field">
+								{#if ds}
+									<div class="sf-static"><code class="sf-code">donnees.{ds.sql_name}</code><span class="sf-hint">fixé à la création</span></div>
+								{:else}
+									<div class="sf-prefixed">
+										<span>donnees.</span>
+										<input id="ds-sql" class="sf-input" bind:value={sqlName} disabled={busy} placeholder="proposé par le serveur" spellcheck="false" aria-invalid={!!problems.sql} />
+									</div>
+									<p class={problems.sql ? 'sf-error' : 'sf-hint'}>{problems.sql ?? 'Le nom de la vue pour les requêtes SQL : minuscules, chiffres, _.'}</p>
+								{/if}
 							</div>
-							<FilterEditor
-								label="Lignes visibles si…"
-								columns={info.fields ?? []}
-								value={a.predicate}
-								disabled={busy}
-								teams
-								onchange={(sql, e) => {
-									a.predicate = sql ?? a.predicate;
-									a.error = e;
-								}}
-							/>
-							{#if a.error}<p class="error">{a.error}</p>{/if}
-						</li>
-					{/each}
-				</ul>
-				<button class="link" onclick={() => (adds = [...adds, { email: '', team: '', predicate: '', error: '' }])} disabled={busy}>+ Ajouter une personne ou une équipe</button>
-				<p class="muted">Le filtre limite les lignes que voit cette entrée (même écriture qu'un filtre de rôle, vérifiée par le serveur) ; aucun : toutes les lignes.</p>
-
-				{#if ds?.used_by?.length}
-					<h3>Utilisée par</h3>
-					<ul class="used">
-						{#each ds.used_by as u (u.workbook_id)}
-							<li>
-								{u.title}
-								{#if u.last_read}<span class="muted"> · lu par {u.last_read.email} le {new Date(u.last_read.at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span>{/if}
-							</li>
-						{/each}
-					</ul>
+						</div>
+					</details>
 				{/if}
-			{/if}
-			{#if error}<p class="error" role="alert">{error}</p>{/if}
-		</div>
-		<footer>
-			{#if ds}<button class="danger" onclick={withdraw} disabled={busy} title="La vue disparaît ; les classeurs qui l'utilisent gardent leur dernière copie">Retirer le partage</button>{/if}
-			<span class="grow"></span>
-			<button onclick={ondone} disabled={busy}>{info?.reason ? 'Fermer' : 'Annuler'}</button>
-			{#if info && !info.reason}
-				<button class="primary" onclick={save} disabled={busy || !name.trim() || shown.size === 0 || badFilter} title={badFilter ? "Un filtre d'audience est à corriger" : ''}>{busy ? 'Enregistrement…' : ds ? 'Enregistrer' : 'Partager'}</button>
-			{/if}
-		</footer>
+				{#if error}<p class="sf-error" role="alert" style="margin-top: 10px">{error}</p>{/if}
+			</div>
+			<footer class="sf-foot">
+				{#if ds}<button type="button" class="sf-btn danger" onclick={withdraw} disabled={busy} title="La vue disparaît ; les classeurs qui l'utilisent gardent leur dernière copie">Retirer le partage</button>{/if}
+				{#if tried && firstProblem && info && !info.reason}
+					<p class="sf-error" role="alert">{firstProblem}</p>
+				{:else}
+					<span class="sf-grow"></span>
+				{/if}
+				<button type="button" class="sf-btn" onclick={ondone} disabled={busy}>{info?.reason ? 'Fermer' : 'Annuler'}</button>
+				{#if info && !info.reason}
+					<button type="button" class="sf-btn primary" onclick={attempt} disabled={busy}>{busy ? 'Enregistrement…' : ds ? 'Enregistrer' : 'Partager'}</button>
+				{/if}
+			</footer>
 		{/if}
 	</div>
 </div>
@@ -341,8 +369,9 @@
 		background: #fff;
 		border-radius: 6px;
 		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-		width: min(680px, 94vw);
-		max-height: 88vh;
+		width: min(680px, calc(100vw - 32px));
+		max-height: min(88vh, calc(100vh - 32px));
+		min-height: 0;
 		display: flex;
 		flex-direction: column;
 	}
@@ -350,191 +379,107 @@
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		padding: 12px 16px;
+		padding: 10px 10px 10px 18px;
 		font-weight: 600;
 		border-bottom: 1px solid #e5e7eb;
+		flex: none;
+		--icon-accent: #217346;
 	}
-	.body {
-		padding: 12px 16px;
-		overflow: auto;
+	.title {
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	header :global(.help-link) {
+		margin: 0;
+	}
+	.close {
+		border: none;
+		background: none;
+		width: 26px;
+		height: 26px;
+		border-radius: 4px;
+		color: #6b7280;
+		cursor: pointer;
+		font: inherit;
+	}
+	.close:hover:not(:disabled) {
+		background: #f0f1f3;
+		color: #1f2328;
+	}
+	.ctitle {
+		margin: 0 0 4px;
+		font-size: 15px;
+		font-weight: 600;
+	}
+	.lead {
+		margin: 0 0 12px;
+		color: #4b5563;
+	}
+	.whytext {
+		margin: -6px 0 12px;
+	}
+	.why {
+		margin-left: 6px;
+		padding: 0;
+		border: none;
+		border-bottom: 1px dotted #217346;
+		background: none;
+		font: inherit;
+		font-size: 12px;
+		color: #217346;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+	.why:focus-visible {
+		outline: 2px solid rgba(33, 115, 70, 0.45);
+		outline-offset: 1px;
 	}
 	.ways {
 		display: flex;
 		flex-direction: column;
 		gap: 8px;
-		margin-top: 8px;
 	}
 	.way {
+		position: relative;
 		display: flex;
 		align-items: flex-start;
-		gap: 10px;
-		padding: 10px 12px;
+		gap: 12px;
+		padding: 12px 14px;
 		border: 1px solid #d6d9dd;
-		border-radius: 4px;
+		border-radius: 6px;
 		cursor: pointer;
+	}
+	.way:hover:not(.off) {
+		border-color: #8fb79d;
 	}
 	.way.on {
 		border-color: #217346;
 		background: #f3f8f5;
+		box-shadow: inset 0 0 0 1px #217346;
+	}
+	.way:has(input:focus-visible) {
+		outline: 2px solid rgba(33, 115, 70, 0.45);
+		outline-offset: 2px;
 	}
 	.way.off {
 		cursor: default;
 		opacity: 0.7;
 	}
 	.way input {
-		margin-top: 3px;
+		position: absolute;
+		opacity: 0;
+		pointer-events: none;
 	}
 	.way-icon {
 		color: #217346;
+		--icon-accent: #217346;
 	}
 	.way-text {
 		display: flex;
 		flex-direction: column;
 		gap: 2px;
-	}
-	.grid {
-		display: grid;
-		grid-template-columns: max-content 1fr;
-		gap: 8px 12px;
-		align-items: center;
-	}
-	.row {
-		display: flex;
-		gap: 6px;
-	}
-	.row input {
-		flex: 1;
-		min-width: 0;
-	}
-	h3 {
-		font-size: 12px;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-		color: #6b7280;
-		margin: 14px 0 6px;
-	}
-	.cols {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 4px 14px;
-	}
-	.check {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-	}
-	.aud,
-	.used {
-		list-style: none;
-		padding: 0;
-		margin: 6px 0;
-	}
-	.aud li {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		padding: 3px 0;
-	}
-	.aud li.gone {
-		text-decoration: line-through;
-		color: #9ca3af;
-	}
-	.aud li.add {
-		flex-direction: column;
-		align-items: stretch;
-		border-top: 1px solid #f0f1f3;
-	}
-	.aud .who {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-	}
-	.aud .who input {
-		flex: 1;
-		min-width: 0;
-	}
-	.aud .error {
-		margin: 0;
-	}
-	.link {
-		border: none;
-		background: none;
-		color: #217346;
-		cursor: pointer;
-		padding: 2px 4px;
-		font: inherit;
-	}
-	.muted {
-		color: #6b7280;
-	}
-	.error {
-		color: #b91c1c;
-	}
-	footer {
-		display: flex;
-		gap: 8px;
-		padding: 10px 16px;
-		border-top: 1px solid #e5e7eb;
-	}
-	.grow {
-		flex: 1;
-	}
-	/* Champs et boutons : même allure que les autres boîtes du serveur
-	   (Ouvrir depuis le serveur, Partager, Connexion). */
-	input:not([type='checkbox']),
-	select {
-		font: inherit;
-		border: 1px solid #c9cdd2;
-		border-radius: 3px;
-		padding: 4px 6px;
-		background: #fff;
-		color: inherit;
-	}
-	input:not([type='checkbox']):focus,
-	select:focus {
-		outline: 1px solid #217346;
-		border-color: #217346;
-	}
-	input:disabled,
-	select:disabled {
-		background: #f6f7f8;
-	}
-	button:not(.link) {
-		font: inherit;
-		padding: 4px 12px;
-		border: 1px solid #c4c8cc;
-		border-radius: 3px;
-		background: #fff;
-		color: inherit;
-		cursor: pointer;
-	}
-	button:not(.link):hover:not(:disabled) {
-		border-color: #217346;
-		background: #eef6f0;
-	}
-	button:disabled {
-		opacity: 0.55;
-		cursor: default;
-	}
-	.link:hover:not(:disabled) {
-		text-decoration: underline;
-	}
-	button.primary {
-		background: #217346;
-		border-color: #217346;
-		color: #fff;
-		padding-left: 15px;
-		padding-right: 15px;
-	}
-	button.primary:hover:not(:disabled) {
-		background: #1a5c38;
-		border-color: #1a5c38;
-	}
-	button.danger {
-		color: #b91c1c;
-	}
-	button.danger:hover:not(:disabled) {
-		border-color: #b91c1c;
-		background: #fdf0ef;
 	}
 </style>

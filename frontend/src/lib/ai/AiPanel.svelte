@@ -44,8 +44,10 @@
 		onclose: () => void;
 		/** Largeur du volet (la page y loge la grille à sa gauche). */
 		width?: number;
+		/** Posé au-dessus d'une boîte modale (ouvert depuis elle), hors de la zone des volets. */
+		over?: boolean;
 	}
-	let { hasDoc, context, tables, onsettings, ongoto, onchanged, onclose, width = $bindable(0) }: Props = $props();
+	let { hasDoc, context, tables, onsettings, ongoto, onchanged, onclose, width = $bindable(0), over = false }: Props = $props();
 
 	const st = $derived(chat.status);
 	const provider = $derived(st?.providers?.find((p) => p.id === st.provider));
@@ -245,7 +247,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<aside class="ai-panel" use:resizePanel={{ key: 'assistant', min: 320 }} aria-label="Assistant IA" bind:offsetWidth={width} onkeydown={panelKey}>
+<aside class="ai-panel" class:over data-modal-exempt={over ? '' : undefined} use:resizePanel={{ key: 'assistant', min: 320 }} aria-label="Assistant IA" bind:offsetWidth={width} onkeydown={panelKey}>
 	<header>
 		<Icon name="sparkle" size={16} />
 		<strong>Assistant IA</strong>
@@ -560,6 +562,17 @@
 		box-shadow: -4px 0 12px rgba(0, 0, 0, 0.06);
 		font-size: 13px;
 		--icon-accent: #d97706;
+	}
+	/* Ouvert depuis une boîte modale : au-dessus d'elle, contre le bord droit (comme l'aide). */
+	.ai-panel.over {
+		position: fixed;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		z-index: var(--z-help);
+		font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+		color: #1f2328;
+		box-shadow: -6px 0 18px rgba(0, 0, 0, 0.18);
 	}
 	header {
 		display: flex;

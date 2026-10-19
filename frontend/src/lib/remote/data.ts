@@ -13,6 +13,14 @@ export interface DataAudience {
 	predicate?: string;
 }
 
+/** Personne (email) ou équipe à ajouter à l'audience ; error : filtre en cours de saisie invalide. */
+export interface AudienceEntry {
+	email: string;
+	team: string;
+	predicate: string;
+	error: string;
+}
+
 export interface DataFolder {
 	id: string;
 	parent_id?: string;
@@ -114,6 +122,104 @@ export function catalogTree(c: DataCatalog, query = '', keep: (d: Dataset) => bo
 /** Dossiers à plat, chacun avec son chemin, pour une liste de choix. */
 export function folderChoices(c: DataCatalog): { id: string; label: string }[] {
 	return [{ id: '', label: '(racine)' }, ...(c.folders ?? []).map((f) => ({ id: f.id, label: f.path || f.name }))];
+}
+
+// --- Choix d'un dossier (arbre déroulant des boîtes de partage) -------------
+
+/** Dossier de l'arbre de choix, avec ses sous-dossiers. */
+export interface FolderNode {
+	id: string;
+	name: string;
+	children: FolderNode[];
+}
+
+/**
+ * Arbre des dossiers seuls, par ordre alphabétique ; un dossier dont le
+ * parent est inconnu est rangé à la racine.
+ */
+export function folderTree(c: DataCatalog | null | undefined): FolderNode[] {
+	const folders = c?.folders ?? [];
+	const known = new Set(folders.map((f) => f.id));
+	const build = (parent: string, seen: Set<string>): FolderNode[] =>
+		folders
+			.filter((f) => !seen.has(f.id) && (f.parent_id && known.has(f.parent_id) && f.parent_id !== f.id ? f.parent_id : '') === parent)
+			.sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+			.map((f) => ({ id: f.id, name: f.name, children: build(f.id, new Set([...seen, f.id])) }));
+	return build('', new Set());
+}
+
+/** Ligne affichée de l'arbre : un dossier à sa profondeur (0 : sous la racine). */
+export interface FolderRow {
+	id: string;
+	name: string;
+	depth: number;
+	/** Dossier parent ('' : la racine). */
+	parent: string;
+	hasChildren: boolean;
+	open: boolean;
+}
+
+/**
+ * Lignes visibles de l'arbre : les dossiers ouverts montrent leurs enfants.
+ * Avec une recherche, les dossiers dont le nom correspond et ceux qui y
+ * mènent, tout déplié.
+ */
+export function folderRows(tree: readonly FolderNode[], open: ReadonlySet<string>, query = ''): FolderRow[] {
+	const q = norm(query.trim());
+	const hit = (n: FolderNode): boolean => !q || norm(n.name).includes(q) || n.children.some(hit);
+	const out: FolderRow[] = [];
+	const walk = (ns: readonly FolderNode[], depth: number, parent: string) => {
+		for (const n of ns) {
+			if (!hit(n)) continue;
+			const shown = q ? n.children.some(hit) : n.children.length > 0;
+			const isOpen = shown && (!!q || open.has(n.id));
+			out.push({ id: n.id, name: n.name, depth, parent, hasChildren: shown, open: isOpen });
+			if (isOpen) walk(n.children, depth + 1, n.id);
+		}
+	};
+	walk(tree, 0, '');
+	return out;
+}
+
+/** Dossiers qui mènent à id, de la racine à son parent (pour le déplier). */
+export function folderAncestors(c: DataCatalog | null | undefined, id: string): string[] {
+	const byId = new Map((c?.folders ?? []).map((f) => [f.id, f]));
+	const out: string[] = [];
+	let p = byId.get(id)?.parent_id ?? '';
+	while (p && byId.has(p) && !out.includes(p)) {
+		out.unshift(p);
+		p = byId.get(p)?.parent_id ?? '';
+	}
+	return out;
+}
+
+/** Chemin lisible d'un dossier (« Ventes › Europe ») ; '' : la racine. */
+export function folderPath(c: DataCatalog | null | undefined, id: string): string {
+	if (!id) return 'Racine du Data Lake';
+	const f = (c?.folders ?? []).find((x) => x.id === id);
+	if (!f) return 'Dossier inconnu';
+	return [...folderAncestors(c, id).map((a) => c?.folders?.find((x) => x.id === a)?.name ?? ''), f.name].join(' › ');
+}
+
+/** Type d'une colonne en clair (types du serveur). */
+export function typeLabel(type: string | undefined): string {
+	switch (type) {
+		case 'text':
+			return 'Texte';
+		case 'integer':
+			return 'Nombre entier';
+		case 'decimal':
+		case 'number':
+			return 'Nombre';
+		case 'date':
+			return 'Date';
+		case 'timestamp':
+			return 'Date et heure';
+		case 'boolean':
+			return 'Vrai / faux';
+		default:
+			return type ? type : 'Type inconnu';
+	}
 }
 
 // --- Onglet SQL : vues donnees.* d'un serveur -------------------------------

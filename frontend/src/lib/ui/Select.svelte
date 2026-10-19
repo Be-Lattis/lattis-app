@@ -19,9 +19,12 @@
 		disabled?: boolean;
 		/** Largeur CSS du bouton (par défaut : selon le contenu). */
 		width?: string;
+		/** Nom du champ pour les lecteurs d'écran (« Colonne »), lu avec la valeur choisie. */
+		label?: string;
+		id?: string;
 	}
 
-	let { value = $bindable(), options, onchange, title, disabled = false, width }: Props = $props();
+	let { value = $bindable(), options, onchange, title, disabled = false, width, label, id }: Props = $props();
 
 	let open = $state(false);
 	let pos = $state({ x: 0, y: 0, w: 0 });
@@ -108,7 +111,9 @@
 	class="select"
 	class:open
 	style:width
+	{id}
 	{title}
+	aria-label={label ? `${label} : ${current?.label ?? ''}` : undefined}
 	{disabled}
 	aria-haspopup="listbox"
 	aria-expanded={open}

@@ -1,9 +1,36 @@
 import { describe, expect, it } from 'vitest';
 import type { ACL, Role } from '#bindings/internal/remote/workbook/models.js';
 import type { RightsTable, RightsView } from '#bindings/internal/bridge/models.js';
-import { checkFreeFilter, isPipeline, conditionSQL, filterSQL, memberCount, members, ownerCount, teamRows, parentLevel, parseFilter, rightsObjects, serverSheet, sheetLevel, tableLevel, tree, type Condition } from './rights';
+import { checkFreeFilter, isPipeline, conditionSQL, filterPrompt, filterSentence, filterSQL, memberCount, members, opsFor, ownerCount, teamRows, parentLevel, parseFilter, rightsObjects, serverSheet, sheetLevel, tableLevel, tree, type Condition } from './rights';
 
 const types = { Produit: 'text', Quantité: 'integer', Prix: 'decimal', Livré: 'date', Payé: 'boolean', Commercial: 'text' };
+
+describe('filtres en clair', () => {
+	it('opérateurs selon le type', () => {
+		expect(opsFor('text')).toEqual(['=', '<>', 'contains', 'starts', 'empty', 'filled']);
+		expect(opsFor('integer')).toEqual(['=', '<>', '<', '<=', '>', '>=', 'empty', 'filled']);
+		expect(opsFor('boolean')).toEqual(['=', '<>', 'empty', 'filled']);
+	});
+	it('relit la règle en une phrase', () => {
+		expect(filterSentence([])).toBe('Toutes les lignes sont visibles');
+		expect(
+			filterSentence([
+				{ column: 'Région', op: '=', value: { kind: 'value', value: 'Nord' } },
+				{ column: 'Commercial', op: '=', value: { kind: 'me' } },
+				{ column: 'Équipe', op: '=', value: { kind: 'team' } },
+				{ column: 'Prix', op: '>=', value: { kind: 'value', value: '' } },
+				{ column: 'Livré', op: 'empty', value: { kind: 'value', value: '' } }
+			])
+		).toBe('Visible si Région = « Nord » et Commercial = la personne connectée et Équipe est une de ses équipes et Prix ≥ … et Livré est vide');
+	});
+	it('demande à l’assistant : colonnes et types, aucune valeur', () => {
+		const p = filterPrompt('les lignes du tableau « Ventes » que voit alice@exemple.fr', [{ name: 'Région', type: 'text' }, { name: 'Prix', type: 'decimal' }], true);
+		expect(p).toContain('"Région" (text), "Prix" (decimal)');
+		expect(p).toContain('current_user');
+		expect(p).toContain('lattis.my_teams()');
+		expect(filterPrompt('x', [], false)).not.toContain('my_teams');
+	});
+});
 
 const table = (o: Partial<RightsTable>): RightsTable => ({
 	table: 1,

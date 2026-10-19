@@ -2234,7 +2234,7 @@
 			{#if mode === 'doc' && conflictsOpen && (share?.mode === 'collaborative' || coedit?.active)}
 				<ConflictPanel {conflicts} local={!!coedit?.active} busy={conflictBusy} onresolve={resolveConflict} onresolveall={resolveAllConflicts} ongoto={gotoConflict} onclose={() => (conflictsOpen = false)} />
 			{/if}
-			{#if aiChat.open && (mode === 'doc' || mode === 'closed')}
+			{#if aiChat.open && !aiChat.over && (mode === 'doc' || mode === 'closed')}
 				<AiPanel
 					hasDoc={mode === 'doc'}
 					context={aiContext}
@@ -2250,6 +2250,19 @@
 	<!-- Aide ouverte depuis une boîte modale (F1) : au-dessus d'elle, et utilisable. -->
 	{#if helpState.open && helpState.over}
 		<HelpPanel over />
+	{/if}
+	<!-- Assistant ouvert depuis une boîte modale (« Rédiger avec l'assistant ») : au-dessus d'elle. -->
+	{#if aiChat.open && aiChat.over && (mode === 'doc' || mode === 'closed')}
+		<AiPanel
+			over
+			hasDoc={mode === 'doc'}
+			context={aiContext}
+			tables={aiTables}
+			onsettings={() => (settingsOpen = true)}
+			ongoto={(t) => gotoTarget(t).catch((e) => (notice = err(e)))}
+			onchanged={reload}
+			onclose={() => ((aiChat.open = false), (aiChat.over = false))}
+		/>
 	{/if}
 		{#snippet failed(error, reset)}
 			<main>

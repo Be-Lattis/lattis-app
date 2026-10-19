@@ -1,0 +1,345 @@
+/*
+ * Formulaires de partage au Data Lake Lattis (DataShareDialog,
+ * TableSourceForm) : même mise en page, préfixée .sf pour ne rien toucher
+ * ailleurs. L'essentiel d'abord (nom, dossier, colonnes, audience), une
+ * colonne de libellés alignés, les options avancées repliées, l'aide en
+ * une ligne, les erreurs sous leur champ et le pied de boîte toujours
+ * visible.
+ */
+.sf-body {
+	padding: 12px 18px 14px;
+	overflow: auto;
+	min-height: 0;
+	flex: 1;
+}
+.sf-banner {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0 0 12px;
+	padding: 6px 10px;
+	border-radius: 4px;
+	background: #f3f8f5;
+	border: 1px solid #d5e8dc;
+	color: #1f4d33;
+	font-size: 12px;
+	--icon-accent: #217346;
+}
+.sf-banner > span {
+	flex: 1;
+	min-width: 0;
+}
+.sf-more {
+	flex: none;
+	border: none;
+	background: none;
+	padding: 0;
+	font: inherit;
+	color: #217346;
+	text-decoration: underline;
+	cursor: pointer;
+	white-space: nowrap;
+}
+.sf-fields {
+	display: grid;
+	grid-template-columns: 96px minmax(0, 1fr);
+	gap: 10px 12px;
+	align-items: start;
+}
+.sf-label {
+	padding-top: 5px;
+	color: #374151;
+	font-weight: 600;
+	font-size: 12px;
+}
+.sf-label .sf-opt {
+	font-weight: 400;
+	color: #9ca3af;
+}
+.sf-field {
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+.sf-static {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-height: 28px;
+	min-width: 0;
+	flex-wrap: wrap;
+}
+.sf-hint {
+	margin: 0;
+	font-size: 12px;
+	color: #6b7280;
+}
+.sf-error {
+	margin: 0;
+	font-size: 12px;
+	color: #b91c1c;
+}
+.sf-input {
+	font: inherit;
+	height: 28px;
+	box-sizing: border-box;
+	width: 100%;
+	border: 1px solid #c9cdd2;
+	border-radius: 4px;
+	padding: 3px 8px;
+	background: #fff;
+	color: inherit;
+}
+.sf-input:focus {
+	outline: none;
+	border-color: #217346;
+	box-shadow: 0 0 0 2px rgba(33, 115, 70, 0.18);
+}
+.sf-input[aria-invalid='true'] {
+	border-color: #b91c1c;
+}
+.sf-input:disabled {
+	background: #f6f7f8;
+}
+.sf-prefixed {
+	display: flex;
+	align-items: stretch;
+	min-width: 0;
+}
+.sf-prefixed > span {
+	display: flex;
+	align-items: center;
+	padding: 0 6px;
+	border: 1px solid #c9cdd2;
+	border-right: none;
+	border-radius: 4px 0 0 4px;
+	background: #f6f7f8;
+	color: #6b7280;
+	font-family: var(--mono, Consolas, monospace);
+	font-size: 12px;
+}
+.sf-prefixed > .sf-input {
+	border-radius: 0 4px 4px 0;
+	font-family: var(--mono, Consolas, monospace);
+	font-size: 12px;
+}
+.sf-code {
+	font-family: var(--mono, Consolas, monospace);
+	font-size: 12px;
+	background: #f6f7f8;
+	border-radius: 3px;
+	padding: 1px 5px;
+}
+.sf-tag {
+	background: #ede9fe;
+	color: #5b21b6;
+	border-radius: 3px;
+	font-size: 11px;
+	padding: 0 5px;
+}
+.sf-status {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin: 0 0 12px;
+	font-size: 12px;
+	color: #217346;
+}
+.sf-status.failed {
+	color: #b91c1c;
+}
+.sf-check {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-height: 24px;
+	cursor: pointer;
+}
+.sf-check input {
+	margin: 0;
+	accent-color: #217346;
+}
+.sf-check .sf-hint {
+	margin-left: 2px;
+}
+
+/* Options avancées : repliées, leur résumé à côté du titre. */
+.sf-adv {
+	margin-top: 14px;
+	border-top: 1px solid #eceef0;
+	padding-top: 8px;
+}
+.sf-adv > summary {
+	display: flex;
+	align-items: baseline;
+	gap: 10px;
+	cursor: pointer;
+	list-style: none;
+	padding: 2px 0;
+	color: #374151;
+	font-weight: 600;
+	font-size: 12px;
+	border-radius: 3px;
+}
+.sf-adv > summary::-webkit-details-marker {
+	display: none;
+}
+.sf-adv > summary::before {
+	content: '';
+	align-self: center;
+	width: 0;
+	height: 0;
+	border-left: 5px solid #6b7280;
+	border-top: 4px solid transparent;
+	border-bottom: 4px solid transparent;
+	transition: transform 0.12s;
+}
+.sf-adv[open] > summary::before {
+	transform: rotate(90deg);
+}
+.sf-adv > summary:focus-visible {
+	outline: 2px solid rgba(33, 115, 70, 0.4);
+	outline-offset: 2px;
+}
+.sf-adv > summary .sf-sum {
+	font-weight: 400;
+	color: #6b7280;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.sf-adv > .sf-fields {
+	margin-top: 10px;
+}
+
+/* Choix exclusif en segments (mode de mise à jour). */
+.sf-seg {
+	display: inline-flex;
+	border: 1px solid #c9cdd2;
+	border-radius: 4px;
+	overflow: hidden;
+	align-self: flex-start;
+}
+.sf-seg label {
+	position: relative;
+	padding: 4px 10px;
+	cursor: pointer;
+	font-size: 12px;
+	white-space: nowrap;
+	border-left: 1px solid #c9cdd2;
+	background: #fff;
+}
+.sf-seg label:first-child {
+	border-left: none;
+}
+.sf-seg input {
+	position: absolute;
+	opacity: 0;
+	inset: 0;
+	margin: 0;
+	cursor: pointer;
+}
+.sf-seg label.on {
+	background: #217346;
+	color: #fff;
+}
+.sf-seg label:has(input:focus-visible) {
+	box-shadow: inset 0 0 0 2px rgba(33, 115, 70, 0.5);
+}
+.sf-seg label.on:has(input:focus-visible) {
+	box-shadow: inset 0 0 0 2px #a7d3b5;
+}
+.sf-inline {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+/* Classeurs qui utilisent la donnée. */
+.sf-used {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding-top: 5px;
+}
+
+/* Pied : toujours visible, l'action principale à droite. */
+.sf-foot {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 10px 18px;
+	border-top: 1px solid #e5e7eb;
+	background: #fafbfb;
+	border-radius: 0 0 6px 6px;
+	flex: none;
+}
+.sf-foot .sf-grow {
+	flex: 1;
+	min-width: 0;
+}
+.sf-foot .sf-error {
+	flex: 1;
+	min-width: 0;
+}
+.sf-btn {
+	font: inherit;
+	height: 28px;
+	padding: 0 12px;
+	border: 1px solid #c4c8cc;
+	border-radius: 4px;
+	background: #fff;
+	color: inherit;
+	cursor: pointer;
+	white-space: nowrap;
+}
+.sf-btn:hover:not(:disabled) {
+	border-color: #217346;
+	background: #eef6f0;
+}
+.sf-btn:focus-visible {
+	outline: 2px solid rgba(33, 115, 70, 0.45);
+	outline-offset: 1px;
+}
+.sf-btn:disabled {
+	opacity: 0.55;
+	cursor: default;
+}
+.sf-btn.primary {
+	background: #217346;
+	border-color: #217346;
+	color: #fff;
+	padding: 0 16px;
+	font-weight: 600;
+}
+.sf-btn.primary:hover:not(:disabled) {
+	background: #1a5c38;
+	border-color: #1a5c38;
+}
+.sf-btn.danger {
+	color: #b91c1c;
+}
+.sf-btn.danger:hover:not(:disabled) {
+	border-color: #b91c1c;
+	background: #fdf0ef;
+}
+.sf-btn.ghost {
+	border-color: transparent;
+	background: none;
+}
+
+@media (max-height: 720px) {
+	.sf-body {
+		padding-top: 10px;
+		padding-bottom: 10px;
+	}
+	.sf-fields {
+		gap: 8px 12px;
+	}
+}

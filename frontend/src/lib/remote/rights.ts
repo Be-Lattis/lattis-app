@@ -242,6 +242,59 @@ export const FILTER_OPS: { op: FilterOp; label: string }[] = [
 	{ op: 'filled', label: "n'est pas vide" }
 ];
 
+/** Opérateurs utiles pour une colonne de ce type (contient, commence par : texte ; comparaisons : nombres et dates). */
+export function opsFor(type: string | undefined): FilterOp[] {
+	const all = FILTER_OPS.map((o) => o.op);
+	if (type === 'text') return all.filter((o) => !['<', '<=', '>', '>='].includes(o));
+	if (type === 'boolean') return ['=', '<>', 'empty', 'filled'];
+	return all.filter((o) => o !== 'contains' && o !== 'starts');
+}
+
+/** Valeurs spéciales en clair (en SQL : current_user, lattis.my_teams()). */
+export const ME_LABEL = 'la personne connectée';
+export const TEAM_LABEL = 'une de ses équipes';
+
+const SHORT_OPS: Record<FilterOp, string> = {
+	'=': '=',
+	'<>': '≠',
+	'<': '<',
+	'<=': '≤',
+	'>': '>',
+	'>=': '≥',
+	contains: 'contient',
+	starts: 'commence par',
+	empty: 'est vide',
+	filled: "n'est pas vide"
+};
+
+/** Règle d'un filtre en clair : « Visible si Région = « Nord » et Commercial = la personne connectée ». */
+export function filterSentence(cs: readonly Condition[]): string {
+	if (!cs.length) return 'Toutes les lignes sont visibles';
+	const one = (c: Condition) => {
+		if (c.op === 'empty' || c.op === 'filled') return `${c.column} ${SHORT_OPS[c.op]}`;
+		if (c.value.kind === 'team') return `${c.column} ${c.op === '<>' ? "n'est pas" : 'est'} ${TEAM_LABEL}`;
+		const v = c.value.kind === 'me' ? ME_LABEL : c.value.value.trim() ? `« ${c.value.value.trim()} »` : '…';
+		return `${c.column} ${SHORT_OPS[c.op]} ${v}`;
+	};
+	return 'Visible si ' + cs.map(one).join(' et ');
+}
+
+/**
+ * Demande à l'assistant d'écrire un filtre de lignes : la cible (« les
+ * lignes du tableau « Ventes » que voit alice@exemple.fr ») et les colonnes
+ * avec leur type, sans aucune valeur du tableau.
+ */
+export function filterPrompt(subject: string, columns: readonly { name: string; type: string }[], teams = false): string {
+	const cols = columns.map((c) => `${quoteIdent(c.name)} (${c.type})`).join(', ');
+	return [
+		`Écris un filtre de lignes Lattis pour ${subject}.`,
+		`C'est une expression SQL booléenne (PostgreSQL) sur ces colonnes : ${cols || '(aucune colonne)'}.`,
+		`La personne qui lit s'écrit current_user (son adresse)${teams ? ` ; ses équipes : ${MY_TEAMS}` : ''}.`,
+		"Pas de point-virgule ni de commentaire. Réponds par l'expression seule, à coller dans « SQL libre », puis une phrase qui dit ce qu'elle fait.",
+		'Ma règle : '
+	].join('\n');
+}
+
 /** Valeur d'une condition : saisie, « moi » (l'utilisateur), « mon équipe ». */
 export type FilterValue = { kind: 'value'; value: string } | { kind: 'me' } | { kind: 'team' };
 

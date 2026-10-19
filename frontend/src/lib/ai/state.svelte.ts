@@ -5,6 +5,7 @@
 import { DocumentService } from '#bindings/internal/bridge/index.js';
 import type { AIStatus } from '#bindings/internal/bridge/models.js';
 import { Events } from '@wailsio/runtime';
+import { modalOpen } from '#lib/ui/focus.js';
 import { applyEvent, dropRun, endRun, failedBeforeReply, markUndone, maxRun, reopenRun, replay, startRun, type ChatContext, type ChatEvent, type Item, type LogEntry } from './chat';
 
 export const chat = $state<{
@@ -19,6 +20,8 @@ export const chat = $state<{
 	focus: number;
 	/** Messages envoyés, pour la flèche haut. */
 	sent: string[];
+	/** Ouvert depuis une boîte modale : posé au-dessus d'elle (comme l'aide), et utilisable. */
+	over: boolean;
 }>({
 	items: [],
 	busy: false,
@@ -27,7 +30,8 @@ export const chat = $state<{
 	status: null,
 	open: false,
 	focus: 0,
-	sent: []
+	sent: [],
+	over: false
 });
 
 let run = 0;
@@ -156,6 +160,19 @@ export async function reset() {
 
 /** Ouvre le volet et met le curseur dans la zone de saisie. */
 export function openAssistant() {
+	chat.over = false;
+	chat.open = true;
+	chat.focus++;
+}
+
+/**
+ * Ouvre le volet avec une demande à compléter (bouton « Rédiger avec
+ * l'assistant » d'une boîte) : rien n'est envoyé, la personne relit et
+ * envoie. Depuis une boîte modale, le volet passe au-dessus d'elle.
+ */
+export function askAssistant(prompt: string) {
+	chat.draft = prompt;
+	chat.over = modalOpen();
 	chat.open = true;
 	chat.focus++;
 }

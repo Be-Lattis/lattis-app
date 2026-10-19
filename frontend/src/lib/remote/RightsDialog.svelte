@@ -528,7 +528,6 @@
 															teams={teamsOn}
 															onchange={(sql, e) => ((ed.read = sql), (ed.readErr = e))}
 														/>
-														{#if ed.readErr}<p class="problem">{ed.readErr}</p>{/if}
 														{#if tl.effective !== 'reader'}
 															<FilterEditor
 																label="Écriture : lignes ajoutées ou modifiées seulement si…"
@@ -538,7 +537,6 @@
 																teams={teamsOn}
 																onchange={(sql, e) => ((ed.write = sql), (ed.writeErr = e))}
 															/>
-															{#if ed.writeErr}<p class="problem">{ed.writeErr}</p>{/if}
 														{/if}
 														<div class="actions">
 															<button disabled={busy} onclick={() => (editing = null)}>Annuler</button>
@@ -612,7 +610,6 @@
 					{#key `${rKey}:${rTarget?.table}`}
 						<FilterEditor label="Condition à respecter" columns={rTarget?.columns ?? []} value="" disabled={busy} teams={teamsOn} onchange={(sql, e) => ((rPred = sql), (rPredErr = e))} />
 					{/key}
-					{#if rPredErr}<p class="problem">{rPredErr}</p>{/if}
 					<div class="actions">
 						<button class="primary" disabled={busy || !rTarget || !rPred || (!rAll && !rRoles.length) || !!checkFreeFilter(rPred ?? '')} onclick={addRestriction}>Ajouter la restriction</button>
 					</div>
@@ -926,10 +923,6 @@
 	}
 	p.teams {
 		margin-top: 8px;
-	}
-	.problem {
-		color: #b45309;
-		font-size: 12px;
 	}
 	.notice {
 		color: #1b5e3a;

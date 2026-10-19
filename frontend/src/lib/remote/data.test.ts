@@ -1,5 +1,52 @@
 import { describe, expect, it } from 'vitest';
-import { catalogTree, dataExample, dataGroup, dataTarget, folderChoices, type DataCatalog, type DataGroup } from './data';
+import { catalogTree, dataExample, dataGroup, dataTarget, folderAncestors, folderChoices, folderPath, folderRows, folderTree, typeLabel, type DataCatalog, type DataGroup } from './data';
+
+describe('choix du dossier', () => {
+	const c: DataCatalog = {
+		can_publish: true,
+		folders: [
+			{ id: 'b', name: 'main2', path: 'main2', depth: 0 },
+			{ id: 'a', name: 'Main', path: 'Main', depth: 0 },
+			{ id: 's', parent_id: 'a', name: 'submaub', path: 'Main › submaub', depth: 1 },
+			{ id: 'x', parent_id: 's', name: 'Archives', path: 'Main › submaub › Archives', depth: 2 },
+			{ id: 'o', parent_id: 'perdu', name: 'Orphelin', path: 'Orphelin', depth: 1 }
+		],
+		datasets: []
+	};
+	it('arbre trié, orphelins à la racine', () => {
+		const t = folderTree(c);
+		expect(t.map((n) => n.name)).toEqual(['Main', 'main2', 'Orphelin']);
+		expect(t[0].children[0].children[0].name).toBe('Archives');
+	});
+	it('lignes affichées : dossiers dépliés seulement', () => {
+		const t = folderTree(c);
+		expect(folderRows(t, new Set()).map((r) => r.id)).toEqual(['a', 'b', 'o']);
+		const open = folderRows(t, new Set(['a']));
+		expect(open.map((r) => [r.id, r.depth, r.parent])).toEqual([
+			['a', 0, ''],
+			['s', 1, 'a'],
+			['b', 0, ''],
+			['o', 0, '']
+		]);
+		expect(open[0]).toMatchObject({ hasChildren: true, open: true });
+		expect(open[1]).toMatchObject({ hasChildren: true, open: false });
+	});
+	it('recherche : le dossier trouvé et ceux qui y mènent, dépliés', () => {
+		const r = folderRows(folderTree(c), new Set(), 'archi');
+		expect(r.map((x) => x.id)).toEqual(['a', 's', 'x']);
+		expect(r[2]).toMatchObject({ depth: 2, hasChildren: false });
+	});
+	it('chemin et ancêtres', () => {
+		expect(folderAncestors(c, 'x')).toEqual(['a', 's']);
+		expect(folderPath(c, 'x')).toBe('Main › submaub › Archives');
+		expect(folderPath(c, '')).toBe('Racine du Data Lake');
+		expect(folderPath(c, 'zz')).toBe('Dossier inconnu');
+	});
+	it('type en clair', () => {
+		expect(typeLabel('integer')).toBe('Nombre entier');
+		expect(typeLabel(undefined)).toBe('Type inconnu');
+	});
+});
 
 const cat: DataCatalog = {
 	can_publish: true,
