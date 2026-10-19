@@ -68,6 +68,11 @@ type tx struct {
 	// (collage, import, actualisation, conversion, règles), les tableaux sans
 	// clé gardent leurs numéros de ligne, sans question.
 	keyAsk bool
+	// born : tableaux créés d'office par l'action ; undoBirth : une saisie
+	// ou un collage, dont le premier Ctrl+Z ne défait que ces créations
+	// (voir unbirth.go).
+	born      []bornTable
+	undoBirth bool
 }
 
 func (t *tx) apply(do, undo []stmt) error { return t.Apply(do, undo) }
@@ -135,6 +140,7 @@ func New(db *store.Store, bus *command.Bus) *Model {
 	if bus != nil {
 		// Une annulation ne doit pas modifier une feuille protégée.
 		bus.Guard = m.historyGuard
+		bus.Undone = m.undone
 	}
 	return m
 }
@@ -228,6 +234,9 @@ func (m *Model) Do(ctx context.Context, name string, fn func(*tx) error) error {
 	var notes []string
 	_, err := m.bus.Do(ctx, name, func(c *command.Tx) error {
 		t, err := m.run(c, fn)
+		if err == nil {
+			err = t.detachBirth()
+		}
 		notes = t.notes
 		return err
 	})

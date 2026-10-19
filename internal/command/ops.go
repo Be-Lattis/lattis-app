@@ -191,6 +191,9 @@ type Commit struct {
 	Kind string // KindDo, KindUndo, KindRedo
 	New  bool   // Seq vient d'être créée (un numéro peut resservir après des annulations)
 	Ops  []Op   // opérations enregistrées par Tx.Record
+	// Prev : commande coupée en deux (Tx.Detach), la première des deux
+	// étapes, nouvelle aussi.
+	Prev int64
 }
 
 // Recorder relève les opérations logiques des écritures du bus (voir

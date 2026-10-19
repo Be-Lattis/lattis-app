@@ -123,7 +123,7 @@ func Invoke(ctx context.Context, host Host, name string, args map[string]any) (a
 		}
 	}
 	if cmd.Write && !command.InGroup(ctx) {
-		ctx = command.WithGroup(ctx, cmd.Label)
+		ctx = command.WithLoneGroup(ctx, cmd.Label)
 	}
 	c := &Call{Context: ctx, Host: host, cmd: cmd, args: args}
 	res, err := cmd.Run(c)

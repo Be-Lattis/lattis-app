@@ -53,6 +53,9 @@ type Event struct {
 	// RefusedCount : leur nombre (§9).
 	Refused      []string `json:"refused,omitempty"`
 	RefusedCount int      `json:"refusedCount,omitempty"`
+	// Split : le premier Ctrl+Z ne défera que la création du tableau, les
+	// cellules restant libres (unbirth.go).
+	Split bool `json:"split,omitempty"`
 }
 
 // SetCell traite une saisie validée dans la cellule (row, col) d'une feuille,
@@ -65,11 +68,13 @@ func (m *Model) SetCell(ctx context.Context, sheet int64, row, col int, raw stri
 			return err
 		}
 		t.keyAsk = true
+		t.undoBirth = true
 		err := t.input(sheet, row, col, raw, &ev)
 		t.keyAsk = false // rattachement de fin d'action : sans question
 		ev.Keyed = t.keyed
 		return err
 	})
+	ev.Split = m.splitBirth(ctx, ev, err)
 	return ev, err
 }
 
@@ -502,7 +507,10 @@ func (t *tx) birthOf(sheet int64, row, col int, typed bool) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	_, err = t.createTable(sheet, name, top, c0, headers, data)
+	tb, err := t.createTable(sheet, name, top, c0, headers, data)
+	if err == nil {
+		t.noteBorn(tb)
+	}
 	return name, err
 }
 

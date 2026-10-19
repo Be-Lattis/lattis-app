@@ -109,6 +109,10 @@ type session struct {
 	ddl, replaced map[int64]bool
 }
 
+// Quiet : aucun tableau publié, rien à relever (une commande peut alors se
+// couper en deux étapes : command.Tx.Detach).
+func (s *session) Quiet() bool { return len(s.pub) == 0 }
+
 func tableName(id int64) string { return "t_" + strconv.FormatInt(id, 10) }
 
 func triggerName(id int64, k string) string { return fmt.Sprintf("_lattis_cap_%d_%s", id, k) }
@@ -236,9 +240,11 @@ func (s *session) Finish(c command.Commit) error {
 	// Un numéro de commande peut resservir (les commandes annulées sont
 	// effacées par une nouvelle action) : la file ne rattache plus à ce
 	// numéro les étapes de l'ancienne commande.
-	if c.New && c.Seq != 0 {
-		if _, err := s.tx.ExecContext(s.ctx, `UPDATE _lattis_outbox SET seq = NULL WHERE seq = ?`, c.Seq); err != nil {
-			return err
+	for _, seq := range []int64{c.Prev, c.Seq} {
+		if c.New && seq != 0 {
+			if _, err := s.tx.ExecContext(s.ctx, `UPDATE _lattis_outbox SET seq = NULL WHERE seq = ?`, seq); err != nil {
+				return err
+			}
 		}
 	}
 	if len(s.pub) == 0 {

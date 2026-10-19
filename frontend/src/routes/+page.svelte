@@ -1057,7 +1057,7 @@
 			// d'ailleurs, et n'existe pas en mode serveur).
 			await reload();
 			if (ev.keyed) return `Clé posée sur « ${ev.keyed.slice(ev.keyed.indexOf('.') + 1)} » pour REFERENCE`;
-			if (ev.created) return `Tableau « ${ev.created} » créé`;
+			if (ev.created) return `Tableau « ${ev.created} » créé${ev.split ? ' (Ctrl+Z : le défaire, les cellules restent libres)' : ''}`;
 			if (ev.widened) return `Colonne ${ev.widened} passée de ${typeLabel(ev.from as ColumnType)} à ${typeLabel(ev.to as ColumnType)} (Ctrl+Z pour annuler)`;
 			if (ev.invalid) return 'Valeur hors type : cellule marquée en erreur';
 		},
@@ -1069,7 +1069,7 @@
 			await reload();
 			if (ev.refusedCount) return refusedNotice(ev);
 			if (ev.created && ev.headless) return `Tableau « ${ev.created} » créé sans en-têtes : clic droit › Tableau › « Sortir l'en-tête » si besoin`;
-			if (ev.created) return `Tableau « ${ev.created} » créé (${count(block.length - 1)})`;
+			if (ev.created) return `Tableau « ${ev.created} » créé (${count(block.length - 1)}${ev.split ? ' ; Ctrl+Z : le défaire, les cellules restent libres' : ''})`;
 		},
 		rangeStats: (t, first, count, cols) => DocumentService.RangeStats(sheetId, t.id, first, count, cols),
 		moveCells: (r0, c0, r1, c1, dr, dc) => DocumentService.MoveCells(sheetId, r0, c0, r1, c1, dr, dc).then(reload),

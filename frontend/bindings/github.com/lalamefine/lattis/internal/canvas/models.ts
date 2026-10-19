@@ -511,6 +511,12 @@ export interface Event {
      */
     "refused"?: string[] | null;
     "refusedCount"?: number;
+
+    /**
+     * Split : le premier Ctrl+Z ne défera que la création du tableau, les
+     * cellules restant libres (unbirth.go).
+     */
+    "split"?: boolean;
 }
 
 /**

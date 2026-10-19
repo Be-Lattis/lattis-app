@@ -222,9 +222,15 @@ func TestScenario(t *testing.T) {
 	}
 
 	states := []string{dump(t, d)}
-	for _, s := range steps {
+	// Une saisie qui crée un tableau s'annule en deux temps : la création,
+	// puis la saisie (unbirth.go).
+	born := make([]bool, len(steps))
+	for i, s := range steps {
 		if err := s.do(ctx, d); err != nil {
 			t.Fatalf("%s : %v", s.name, err)
+		}
+		if st, _ := d.bus.State(ctx); strings.HasPrefix(st.Undo, birthStep) {
+			born[i] = true
 		}
 		check(t, d, s.name)
 		if s.want != "" {
@@ -236,6 +242,12 @@ func TestScenario(t *testing.T) {
 	}
 
 	for i := len(steps) - 1; i >= 0; i-- {
+		if born[i] {
+			if _, err := d.bus.Undo(ctx); err != nil {
+				t.Fatalf("défaire la création %q : %v", steps[i].name, err)
+			}
+			check(t, d, "après la création défaite de "+steps[i].name)
+		}
 		if _, err := d.bus.Undo(ctx); err != nil {
 			t.Fatalf("annuler %q : %v", steps[i].name, err)
 		}
@@ -250,6 +262,11 @@ func TestScenario(t *testing.T) {
 	for i := range steps {
 		if _, err := d.bus.Redo(ctx); err != nil {
 			t.Fatalf("rétablir %q : %v", steps[i].name, err)
+		}
+		if born[i] {
+			if _, err := d.bus.Redo(ctx); err != nil {
+				t.Fatalf("rétablir la création %q : %v", steps[i].name, err)
+			}
 		}
 		if got := dump(t, d); got != states[i+1] {
 			t.Fatalf("rétablir %q ne redonne pas le même état :\n%s", steps[i].name, diff(states[i+1], got))
@@ -395,7 +412,9 @@ func TestPaste(t *testing.T) {
 	if got := view(t, d); !strings.Contains(got, "|Lille|inconnu\n") || !strings.Contains(got, "|Nice||0") || !strings.Contains(got, "|Brest|140 000") {
 		t.Fatalf("feuille\n%s", got)
 	}
-	// Deux annulations défont les deux collages.
+	// Trois annulations défont les deux collages (le premier a créé un
+	// tableau : sa création se défait d'abord).
+	d.bus.Undo(ctx)
 	d.bus.Undo(ctx)
 	d.bus.Undo(ctx)
 	if got := dump(t, d); got != before {
@@ -1084,7 +1103,8 @@ func TestTablesMoveMergeSplit(t *testing.T) {
 		t.Fatal(err)
 	}
 	check(t, d, "nouveau tableau")
-	for range 5 {
+	// Six étapes : la création du tableau collé se défait à part.
+	for range 6 {
 		if _, err := d.bus.Undo(ctx); err != nil {
 			t.Fatal(err)
 		}
@@ -1093,7 +1113,7 @@ func TestTablesMoveMergeSplit(t *testing.T) {
 	if got := dump(t, d); got != start {
 		t.Fatalf("annulation incomplète :\n%s", diff(start, got))
 	}
-	for range 5 {
+	for range 6 {
 		if _, err := d.bus.Redo(ctx); err != nil {
 			t.Fatal(err)
 		}

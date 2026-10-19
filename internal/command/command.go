@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -72,6 +73,62 @@ type Tx struct {
 	steps []Step
 	ops   []Op    // opérations logiques enregistrées (Record)
 	cap   Capture // suivi des opérations logiques (nil sans Recorder)
+	// split : la commande s'enregistre en deux étapes d'annulation, coupées
+	// à l'étape at ; la seconde s'appelle name (voir Detach).
+	split *split
+	prev  int64 // première des deux étapes écrites (voir insertEntries)
+}
+
+// entry est une étape d'annulation à écrire au journal.
+type entry struct {
+	name  string
+	steps []Step
+}
+
+type split struct {
+	at   int
+	name string
+}
+
+// Mark repère l'étape courante, pour Detach.
+func (t *Tx) Mark() int { return len(t.steps) }
+
+// CanDetach dit si la commande peut se couper en deux étapes d'annulation :
+// hors d'un groupe d'actions (un script s'annule d'un coup), sauf celui
+// d'une seule commande (WithLoneGroup), et sans opérations logiques à
+// relever (tableaux publiés d'un classeur partagé).
+func (t *Tx) CanDetach() bool {
+	g := groupOf(t.Ctx)
+	q, _ := t.cap.(quiet)
+	return (t.cap == nil || q != nil && q.Quiet()) && (g == nil || g.lone) && t.split == nil
+}
+
+// quiet : suivi des opérations logiques qui n'a rien à relever dans cette
+// transaction (aucun tableau publié).
+type quiet interface{ Quiet() bool }
+
+// Detach défait aussitôt les étapes enregistrées depuis mark (une
+// transformation T de l'état atteint) et coupe la commande en deux étapes
+// d'annulation : la première fait l'action puis T, la seconde, nommée name,
+// défait T. L'état final ne change pas ; le premier Ctrl+Z rend l'état de
+// l'action suivi de T, le second annule l'action. Exemple : un tableau créé
+// par une saisie (T le convertit en plage) ; le premier Ctrl+Z laisse ses
+// cellules libres.
+func (t *Tx) Detach(mark int, name string) error {
+	if mark < 0 || mark >= len(t.steps) || !t.CanDetach() {
+		return nil
+	}
+	done := slices.Clone(t.steps[mark:])
+	for i := len(done) - 1; i >= 0; i-- {
+		if err := run(t.Ctx, t.Tx, done[i].Undo, t.cap); err != nil {
+			return err
+		}
+		// Les corbeilles de T restent à la première étape (Purge) : elles
+		// n'existent plus quand la seconde est appliquée (IF EXISTS).
+		t.steps = append(t.steps, Step{Do: done[i].Undo, Undo: done[i].Do})
+	}
+	t.split = &split{at: mark + len(done), name: name}
+	return nil
 }
 
 // Apply exécute do et enregistre l'opération avec son inverse.
@@ -118,6 +175,9 @@ type Bus struct {
 	// une vérification appelée après ; une erreur de l'une ou l'autre défait
 	// tout (protection des feuilles : voir canvas.Model).
 	Guard func(ctx context.Context, tx *sql.Tx) (check func() error, err error)
+	// Undone, s'il est fixé, est appelé après chaque annulation réussie avec
+	// le nom de l'étape annulée (message pour la barre d'état).
+	Undone func(name string)
 }
 
 // guarded rejoue fn entre les deux temps de Guard.
@@ -168,25 +228,50 @@ func (b *Bus) do(ctx context.Context, name string, fn func(*Tx) error) (int64, e
 			return t.finish(Commit{Kind: KindDo})
 		}
 		t.keepOps()
-		// Une nouvelle action efface ce qui pouvait être rétabli.
-		if _, err := sqlTx.ExecContext(ctx, `DELETE FROM _lattis_journal WHERE undone = 1`); err != nil {
+		if seq, err = t.insertEntries(ctx, sqlTx, t.entries(name)); err != nil {
 			return err
 		}
-		data, err := encodeSteps(t.steps)
-		if err != nil {
-			return err
-		}
-		r, err := sqlTx.ExecContext(ctx, `INSERT INTO _lattis_journal (name, steps) VALUES (?, ?)`, name, data)
-		if err != nil {
-			return err
-		}
-		seq, _ = r.LastInsertId()
 		if err := b.trim(ctx, sqlTx); err != nil {
 			return err
 		}
 		return t.finish(Commit{Seq: seq, Kind: KindDo, New: true})
 	})
 	return seq, err
+}
+
+// entries rend les étapes d'annulation de la commande : une seule, ou deux
+// si elle a été coupée (Detach).
+func (t *Tx) entries(name string) []entry {
+	if s := t.split; s != nil && s.at > 0 && s.at < len(t.steps) {
+		return []entry{{name, t.steps[:s.at]}, {s.name, t.steps[s.at:]}}
+	}
+	return []entry{{name, t.steps}}
+}
+
+// insertEntries écrit des étapes au journal, après avoir effacé ce qui
+// pouvait être rétabli (une nouvelle action le remplace) ; rend le numéro de
+// la dernière (celui de la première, si elles sont deux, est gardé pour
+// Commit.Prev).
+func (t *Tx) insertEntries(ctx context.Context, sqlTx *sql.Tx, parts []entry) (int64, error) {
+	if _, err := sqlTx.ExecContext(ctx, `DELETE FROM _lattis_journal WHERE undone = 1`); err != nil {
+		return 0, err
+	}
+	var seq int64
+	for i, p := range parts {
+		if i == 1 {
+			t.prev = seq
+		}
+		data, err := encodeSteps(p.steps)
+		if err != nil {
+			return 0, err
+		}
+		r, err := sqlTx.ExecContext(ctx, `INSERT INTO _lattis_journal (name, steps) VALUES (?, ?)`, p.name, data)
+		if err != nil {
+			return 0, err
+		}
+		seq, _ = r.LastInsertId()
+	}
+	return seq, nil
 }
 
 // begin ouvre la transaction d'une commande, suivie par le Recorder.
@@ -217,6 +302,9 @@ func (t *Tx) finish(c Commit) error {
 		return nil
 	}
 	c.Ops = t.ops
+	if c.New {
+		c.Prev = t.prev
+	}
 	return t.cap.Finish(c)
 }
 
@@ -244,6 +332,9 @@ type Group struct {
 	// seqs : numéros des étapes du journal créées par le groupe, dans
 	// l'ordre (plusieurs si une action de l'utilisateur s'est intercalée).
 	seqs []int64
+	// lone : groupe d'une seule commande de l'API, qui se coupe comme une
+	// action de la grille (voir Tx.Detach).
+	lone bool
 }
 
 type groupKey struct{}
@@ -251,6 +342,13 @@ type groupKey struct{}
 // WithGroup ouvre un groupe d'actions nommé name.
 func WithGroup(ctx context.Context, name string) context.Context {
 	return context.WithValue(ctx, groupKey{}, &Group{Name: name})
+}
+
+// WithLoneGroup ouvre le groupe d'une seule commande (appel de l'API hors
+// script) : comme une action de la grille, une création de tableau d'office
+// s'y annule en deux temps (Tx.Detach).
+func WithLoneGroup(ctx context.Context, name string) context.Context {
+	return context.WithValue(ctx, groupKey{}, &Group{Name: name, lone: true})
 }
 
 // HasGroup dit si ctx est déjà dans un groupe d'actions.
@@ -307,19 +405,11 @@ func (b *Bus) appendTo(ctx context.Context, seq int64, name string, fn func(*Tx)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return err
 		}
+		parts := t.entries(name)
 		if seq == 0 || last != seq {
-			if _, err := sqlTx.ExecContext(ctx, `DELETE FROM _lattis_journal WHERE undone = 1`); err != nil {
+			if out, err = t.insertEntries(ctx, sqlTx, parts); err != nil {
 				return err
 			}
-			enc, err := encodeSteps(t.steps)
-			if err != nil {
-				return err
-			}
-			r, err := sqlTx.ExecContext(ctx, `INSERT INTO _lattis_journal (name, steps) VALUES (?, ?)`, name, enc)
-			if err != nil {
-				return err
-			}
-			out, _ = r.LastInsertId()
 			if err := b.trim(ctx, sqlTx); err != nil {
 				return err
 			}
@@ -329,12 +419,22 @@ func (b *Bus) appendTo(ctx context.Context, seq int64, name string, fn func(*Tx)
 		if err != nil {
 			return err
 		}
-		enc, err := encodeSteps(append(steps, t.steps...))
+		enc, err := encodeSteps(append(steps, parts[0].steps...))
 		if err != nil {
 			return err
 		}
 		if _, err = sqlTx.ExecContext(ctx, `UPDATE _lattis_journal SET steps = ? WHERE seq = ?`, enc, seq); err != nil {
 			return err
+		}
+		if len(parts) > 1 {
+			// Action coupée (Detach) : sa seconde étape suit celle du groupe.
+			if out, err = t.insertEntries(ctx, sqlTx, parts[1:]); err != nil {
+				return err
+			}
+			if err := b.trim(ctx, sqlTx); err != nil {
+				return err
+			}
+			return t.finish(Commit{Seq: out, Kind: KindDo, New: true})
 		}
 		return t.finish(Commit{Seq: seq, Kind: KindDo})
 	})
@@ -418,7 +518,11 @@ func (b *Bus) trim(ctx context.Context, tx *sql.Tx) error {
 // Undo annule la dernière action et renvoie son nom.
 func (b *Bus) Undo(ctx context.Context) (name string, err error) {
 	defer func(start time.Time) { trace.Since(1, trace.Edit, start, &err, "annuler « %s »", name) }(time.Now())
-	return b.undo(ctx)
+	name, err = b.undo(ctx)
+	if err == nil && b.Undone != nil {
+		b.Undone(name)
+	}
+	return name, err
 }
 
 func (b *Bus) undo(ctx context.Context) (string, error) {

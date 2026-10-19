@@ -162,9 +162,11 @@ func (t *tx) pasteIslands(sheet int64, row, col int, block [][]string, w int, ev
 		if err != nil {
 			return err
 		}
-		if _, err := t.createTable(sheet, name, r, col+p.c0, p.headers, p.data); err != nil {
+		tb, err := t.createTable(sheet, name, r, col+p.c0, p.headers, p.data)
+		if err != nil {
 			return err
 		}
+		t.noteBorn(tb)
 		if ev.Created == "" {
 			ev.Created = name
 		}

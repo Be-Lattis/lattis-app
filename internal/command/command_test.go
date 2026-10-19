@@ -190,3 +190,74 @@ func TestGroup(t *testing.T) {
 		t.Fatalf("%d lignes après une seule annulation", n)
 	}
 }
+
+// Detach coupe une action en deux étapes : l'action suivie de T, puis T
+// défaite ; l'état final ne change pas. Le premier Ctrl+Z laisse T appliqué,
+// le second annule l'action ; rétablir refait l'un puis l'autre.
+func TestDetach(t *testing.T) {
+	ctx := context.Background()
+	db, bus := open(t, filepath.Join(t.TempDir(), "d.sqlite"))
+	defer db.Close()
+	var undone []string
+	bus.Undone = func(name string) { undone = append(undone, name) }
+	if _, err := bus.Do(ctx, "Saisie", func(tx *Tx) error {
+		if err := insert(1, "tableau")(tx); err != nil {
+			return err
+		}
+		mark := tx.Mark()
+		// T : la valeur devient « libre ».
+		q := `UPDATE t SET v = ? WHERE id = 1`
+		if err := tx.Apply([]Stmt{S(q, "libre")}, []Stmt{S(q, "tableau")}); err != nil {
+			return err
+		}
+		return tx.Detach(mark, "Création")
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if v := value(t, db, 1); v != "tableau" {
+		t.Fatalf("après l'action : %v", v)
+	}
+	if st, _ := bus.State(ctx); st.Undo != "Création" {
+		t.Fatalf("état %+v", st)
+	}
+	steps := []struct {
+		redo bool
+		want any
+	}{{false, "libre"}, {false, "absent"}, {true, "libre"}, {true, "tableau"}, {false, "libre"}}
+	for i, s := range steps {
+		var err error
+		if s.redo {
+			_, err = bus.Redo(ctx)
+		} else {
+			_, err = bus.Undo(ctx)
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if v := value(t, db, 1); v != s.want {
+			t.Fatalf("étape %d : %v, attendu %v", i, v, s.want)
+		}
+	}
+	if len(undone) != 3 || undone[0] != "Création" || undone[1] != "Saisie" {
+		t.Fatalf("annulations signalées : %v", undone)
+	}
+	// Dans un groupe (script), pas de coupe.
+	gctx := WithGroup(ctx, "Script")
+	if _, err := bus.Do(gctx, "Saisie", func(tx *Tx) error {
+		if err := insert(2, "tableau")(tx); err != nil {
+			return err
+		}
+		if tx.CanDetach() {
+			t.Error("coupe permise dans un groupe")
+		}
+		return tx.Detach(0, "Création")
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := bus.Undo(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if v := value(t, db, 2); v != "absent" {
+		t.Fatalf("groupe : %v", v)
+	}
+}

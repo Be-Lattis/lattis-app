@@ -64,6 +64,7 @@ func (m *Model) Paste(ctx context.Context, sheet int64, row, col int, block [][]
 		if err := t.guard(sheet); err != nil {
 			return err
 		}
+		t.undoBirth = true
 		free, err := t.areaFree(sheet, row-1, col-1, row+h, col+w)
 		if err != nil {
 			return err
@@ -102,6 +103,7 @@ func (m *Model) Paste(ctx context.Context, sheet int64, row, col int, block [][]
 		}
 		return nil
 	})
+	ev.Split = m.splitBirth(ctx, ev, err)
 	return ev, err
 }
 

@@ -106,6 +106,31 @@ print(#sheets.list(), db.value("SELECT sum(\"Prix TTC\") FROM Produits"))
 	}
 }
 
+// Un appel de l'API (hors script) qui crée un tableau s'annule comme à la
+// grille : la création d'abord (les cellules restent libres), puis le collage.
+func TestUndoBirthByAPI(t *testing.T) {
+	h := newHost(t)
+	call(t, h, "cells.paste", map[string]any{"row": int64(1), "col": int64(1), "values": []any{[]any{"Nom", "Âge"}, []any{"Léa", int64(31)}}})
+	if st := call(t, h, "doc.state", nil).(DocState); !strings.HasPrefix(st.Undo, "Création du tableau") {
+		t.Fatalf("étape %q", st.Undo)
+	}
+	call(t, h, "doc.undo", nil)
+	v := call(t, h, "sheets.get", nil).(SheetView)
+	if len(v.Tables) != 0 {
+		t.Fatalf("tableau encore là : %+v", v.Tables)
+	}
+	if c := call(t, h, "cells.get", map[string]any{"row": int64(2), "col": int64(2)}).(CellValue); fmt.Sprint(c.Value) != "31" {
+		t.Fatalf("cellule libre %+v", c)
+	}
+	if st := call(t, h, "doc.state", nil).(DocState); st.Undo == "" {
+		t.Fatal("le collage devrait rester à annuler")
+	}
+	call(t, h, "doc.undo", nil)
+	if c := call(t, h, "cells.get", map[string]any{"row": int64(2), "col": int64(2)}).(CellValue); c.Value != nil {
+		t.Fatalf("collage non annulé : %+v", c)
+	}
+}
+
 func TestSheetsCRUD(t *testing.T) {
 	h := newHost(t)
 	call(t, h, "sheets.add", map[string]any{"name": "B"})
