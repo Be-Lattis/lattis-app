@@ -23,6 +23,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ### Corrections
 
+- Fichier › Ouvrir un fichier récent : un classeur partagé en direct n'apparaît plus deux fois (son fichier local et sa version partagée) ; seule la version partagée reste. Un classeur figé garde son fichier, où l'auteur republie.
 - Dates : les formes courtes sont reconnues à la saisie, à la conversion d'une colonne en date et dans les formules : 19/10/26 (année sur deux chiffres, 00 à 29 : 2000 à 2029), 19-10-2026, 19.10.2026, 2026/10/19, 19 oct. 2026, 1er janvier 26, Oct 19, 2026 ; jour et mois seuls (19/10) : année en cours.
 - Classeur partagé sur un Serveur Lattis : l'onglet à choix (« Suivi des nids · 2026 ▾ ») manquait chez les membres qui l'ouvraient depuis son lien. Il est maintenant publié avec le classeur et s'ouvre sur la dernière année ; chacun garde l'année qu'il regarde. Le propriétaire ou un concepteur qui pose, change ou retire « Choisir par… » après la publication le fait pour tous ; un classeur déjà publié se répare à la prochaine connexion de son propriétaire.
 

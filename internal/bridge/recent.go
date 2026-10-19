@@ -6,9 +6,11 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/lalamefine/lattis/internal/archive"
 	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/remote/workbook"
 	"github.com/lalamefine/lattis/protocol"
 )
 
@@ -156,6 +158,11 @@ func (s *DocumentService) Recent(ctx context.Context) []RecentFile {
 					continue
 				}
 				r.Server, r.WorkbookID = m.Remote.Server, m.Remote.WorkbookID
+			} else if m, err := archive.ReadManifest(r.Path); err == nil && m.Remote != nil && m.Remote.Mode == workbook.Collaborative {
+				// Fichier de l'auteur d'un classeur partagé en direct : une seule
+				// entrée, le classeur du serveur (son titre : le nom du fichier).
+				r.Title = strings.TrimSuffix(filepath.Base(r.Path), filepath.Ext(r.Path))
+				r.Server, r.WorkbookID, r.Path = m.Remote.Server, m.Remote.WorkbookID, ""
 			}
 		}
 		if r.remote() {

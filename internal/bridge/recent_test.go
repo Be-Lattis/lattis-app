@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
+
+	"github.com/lalamefine/lattis/internal/archive"
 )
 
 func recentPaths(list []RecentFile) []string {
@@ -84,5 +86,47 @@ func TestFileTitle(t *testing.T) {
 		if got := fileTitle(in); got != want {
 			t.Errorf("fileTitle(%q) = %q, attendu %q", in, got, want)
 		}
+	}
+}
+
+// Fichier de l'auteur d'un classeur partagé en direct : une seule entrée,
+// le classeur du serveur (demande de Louis, 20/10) ; un classeur figé garde
+// son fichier (l'auteur y republie).
+func TestRecentAuthorFile(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	old, oldCache := recentFile, shareCacheDir
+	recentFile = func() (string, error) { return filepath.Join(dir, "recent.json"), nil }
+	shareCacheDir = func() (string, error) { return filepath.Join(dir, "partages"), nil }
+	t.Cleanup(func() { recentFile, shareCacheDir = old, oldCache })
+	save := func(name, mode string) string {
+		a, err := archive.New()
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer a.Close()
+		a.Remote = func(context.Context) (*archive.Remote, error) {
+			return &archive.Remote{Server: "https://srv.test", WorkbookID: "id-" + mode, Mode: mode}, nil
+		}
+		p := filepath.Join(dir, name+".lattis")
+		if err := a.Save(ctx, p); err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	collab := save("Fichier nids", "collaborative")
+	frozen := save("Bilan", "frozen")
+	pushRecent(RecentFile{Path: filepath.Join(dir, "partages", "x.lattis"), Title: "Fichier nids", Server: "https://srv.test", WorkbookID: "id-collaborative"})
+	addRecent(frozen)
+	addRecent(collab)
+	got := (&DocumentService{}).Recent(ctx)
+	if len(got) != 2 {
+		t.Fatalf("Recent = %+v", got)
+	}
+	if g := got[0]; g.WorkbookID != "id-collaborative" || g.Path != "" || g.Title != "Fichier nids" {
+		t.Fatalf("classeur partagé : %+v", g)
+	}
+	if g := got[1]; g.WorkbookID != "" || filepath.Clean(g.Path) != filepath.Clean(frozen) {
+		t.Fatalf("classeur figé : %+v", g)
 	}
 }
