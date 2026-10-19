@@ -98,10 +98,13 @@ Si le tableau a la colonne de catégorie d'un onglet à choix (Année, Mois…, 
 
 Avec une valeur fixe, « + Nouvelle année… » le rappelle : « Le formulaire « Nids » pose toujours Année = 2026 : passer à 2027 ? ». Le jeton « année en cours » évite cette question pour une catégorie d'années.
 
+### 3.3 bis Pré-remplissage par l'adresse (dès le lot 1, décision de Louis)
+
+Un champ peut être pré-rempli par un paramètre de l'adresse : `/f/<code>?site=Nord` (nom du paramètre = nom court du champ, choisi dans le concepteur). Usage : un QR code par site, chacun avec sa valeur. Le concepteur génère ces liens et leurs QR codes (« Lien pré-rempli… » : choisir les champs et leurs valeurs). Côté serveur, `GET /f/{code}` lit les paramètres connus, ignore les autres, et la valeur reste modifiable par le répondant sauf si le champ est marqué « verrouillé par le lien » (alors affichée en lecture seule et revérifiée par `submit_form`). Les valeurs passent par les mêmes contrôles que la saisie (type, liste, bornes).
+
 ### 3.4 Plus tard
 
 - **Champs conditionnels** : « afficher si Espèce = Autre ».
-- **Pré-remplissage par l'adresse** (`/f/<code>?site=Nord`), pour un QR code par site.
 - **Position GPS** : remplit deux colonnes Latitude / Longitude à partir du navigateur.
 - **Photo ou fichier** : **hors du périmètre** (décision de Louis, 19/10) : pas de champ photo ni fichier, ni maintenant ni dans un lot ultérieur prévu.
 
@@ -326,10 +329,10 @@ Libellés liés aux champs, ordre du focus, contraste de la palette (§4.1), mes
 
 | Lot | Contenu | Taille | Risque |
 |---|---|---|---|
-| 1 | Point d'entrée et messages du §2.2 ; interface `workbook.Forms` (pgx et faux serveur `workbooktest/forms.go`) ; concepteur : champs, correspondance des types, listes fixes et tirées d'une plage, clé automatique, valeurs posées par le serveur, onglet à choix ; personnalisation du §4 (apparence, sections, palette, images) ; aperçu Svelte et aperçu dans le navigateur ; modes membres et personnes ou équipes choisies ; création, ouverture, copie du lien, QR code | **M** | Moyen : il dépend du serveur (§10) ; l'aperçu approché doit rester proche de la page du serveur (on lui donne une seule source : la définition) |
+| 1 | Point d'entrée et messages du §2.2 ; liens pré-remplis par l'adresse et leurs QR codes (§3.3 bis) ; interface `workbook.Forms` (pgx et faux serveur `workbooktest/forms.go`) ; concepteur : champs, correspondance des types, listes fixes et tirées d'une plage, clé automatique, valeurs posées par le serveur, onglet à choix ; personnalisation du §4 (apparence, sections, palette, images) ; aperçu Svelte et aperçu dans le navigateur ; modes membres et personnes ou équipes choisies ; création, ouverture, copie du lien, QR code | **M** | Moyen : il dépend du serveur (§10) ; l'aperçu approché doit rester proche de la page du serveur (on lui donne une seule source : la définition) |
 | 2 | Gestion : sous-menu, pastille, onglet Formulaires, statistiques, pause, fermeture et suppression, suivi de `*form:<id>`, avertissements avant suppression ou conversion de colonne, barre d'état « nouvelles réponses », affiche à imprimer | **S** | Faible |
 | 3 | Lien public (selon `forms_public`), dates, plafond, une réponse par personne, modification des réponses, mention de protection des données, « Copier l'apparence de… » | **S** | Faible côté client ; le risque est côté serveur (abus) |
-| 4 | Plus tard : champs conditionnels, pré-remplissage par l'adresse, position GPS, hors ligne complet sur le téléphone, notifications par e-mail, `forms.*` pour Lua et le MCP, couleur libre avec contrôle de contraste | **M + L** | Moyen : hors ligne |
+| 4 | Plus tard : champs conditionnels, position GPS, hors ligne complet sur le téléphone, notifications par e-mail, `forms.*` pour Lua et le MCP, couleur libre avec contrôle de contraste | **M + L** | Moyen : hors ligne |
 
 **Essais** :
 
