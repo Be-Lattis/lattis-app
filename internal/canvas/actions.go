@@ -56,6 +56,9 @@ type Event struct {
 	// Split : le premier Ctrl+Z ne défera que la création du tableau, les
 	// cellules restant libres (unbirth.go).
 	Split bool `json:"split,omitempty"`
+	// AutoKey : colonne du tableau créé devenue clé d'office (en-tête ID,
+	// ou 1, 2, 3… : autokey.go).
+	AutoKey string `json:"autoKey,omitempty"`
 }
 
 // SetCell traite une saisie validée dans la cellule (row, col) d'une feuille,
@@ -72,6 +75,9 @@ func (m *Model) SetCell(ctx context.Context, sheet int64, row, col int, raw stri
 		err := t.input(sheet, row, col, raw, &ev)
 		t.keyAsk = false // rattachement de fin d'action : sans question
 		ev.Keyed = t.keyed
+		if ev.Created != "" {
+			ev.AutoKey = t.autoKeyed
+		}
 		return err
 	})
 	ev.Split = m.splitBirth(ctx, ev, err)
@@ -444,6 +450,11 @@ func (t *tx) appendRowIDs(tb Table, n int) ([]int64, error) {
 	if err := t.row(`SELECT coalesce(max(_pos), ''), coalesce(max(id), 0) FROM `+tb.sql()).Scan(&last, &maxID); err != nil {
 		return nil, err
 	}
+	// Colonne numérotée (autokey.go) : le numéro est lu une fois, puis suit.
+	auto, numbered, err := t.autoNumber(tb)
+	if err != nil {
+		return nil, err
+	}
 	ids := make([]int64, 0, n)
 	for k := range n {
 		pos, err := t.rowKey(tb, last, "")
@@ -451,7 +462,13 @@ func (t *tx) appendRowIDs(tb Table, n int) ([]int64, error) {
 			return nil, err
 		}
 		id := maxID + int64(k) + 1
-		if err := t.insertRow(tb, id, pos); err != nil {
+		var num *autoNum
+		if numbered {
+			a := auto
+			a.next += int64(k) * a.step
+			num = &a
+		}
+		if err := t.insertRowNumbered(tb, id, pos, num); err != nil {
 			return nil, err
 		}
 		ids = append(ids, id)
@@ -581,11 +598,13 @@ func (t *tx) birthOf(sheet int64, row, col int, typed bool) (string, error) {
 		return "", err
 	}
 	tb, err := t.createTable(sheet, name, top, c0, headers, data)
-	if err == nil {
-		t.noteBorn(tb)
-		t.born[len(t.born)-1].headless = top < r0
+	if err != nil {
+		return name, err
 	}
-	return name, err
+	t.noteBorn(tb)
+	t.born[len(t.born)-1].headless = top < r0
+	// Première colonne ID, ou 1, 2, 3… : la clé (autokey.go).
+	return name, t.autoKey(tb.ID)
 }
 
 // typedHeader : la première ligne d'un îlot saisi donne les en-têtes si

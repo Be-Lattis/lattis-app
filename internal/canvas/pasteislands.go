@@ -172,6 +172,12 @@ func (t *tx) pasteIslands(sheet int64, row, col int, block [][]string, w int, ev
 			return err
 		}
 		t.noteBorn(tb)
+		if err := t.autoKey(tb.ID); err != nil {
+			return err
+		}
+		if t.autoKeyed != "" && ev.AutoKey == "" {
+			ev.AutoKey = t.autoKeyed
+		}
 		if ev.Created == "" {
 			ev.Created = name
 		}

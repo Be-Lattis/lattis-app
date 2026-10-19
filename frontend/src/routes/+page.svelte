@@ -1266,6 +1266,9 @@
 
 	// --- Sources de la feuille ----------------------------------------------
 
+	/** Clé posée d'office à la création (première colonne ID, ou 1, 2, 3…). */
+	const autoKeyNote = (ev: { autoKey?: string }) => (ev.autoKey ? `, clé posée sur ${ev.autoKey}` : '');
+
 	const docSource: SheetSource = {
 		window: (t, first, count) => DocumentService.Window(sheetId, t.id, first, count) as Promise<Fetched>,
 		async setCell(row, col, raw, _target, key) {
@@ -1275,8 +1278,8 @@
 			await reload();
 			if (ev.keyed) return `Clé posée sur « ${ev.keyed.slice(ev.keyed.indexOf('.') + 1)} » pour REFERENCE`;
 			const undoBirth = ev.split ? ' (Ctrl+Z : le défaire, les cellules restent libres)' : '';
-			if (ev.created && ev.headless) return `Tableau « ${ev.created} » créé sans en-têtes (« Colonne n ») : tapez les noms dans sa ligne d'en-tête${undoBirth}`;
-			if (ev.created) return `Tableau « ${ev.created} » créé${undoBirth}`;
+			if (ev.created && ev.headless) return `Tableau « ${ev.created} » créé sans en-têtes (« Colonne n ») : tapez les noms dans sa ligne d'en-tête${autoKeyNote(ev)}${undoBirth}`;
+			if (ev.created) return `Tableau « ${ev.created} » créé${autoKeyNote(ev)}${undoBirth || (ev.autoKey ? ' (Ctrl+Z pour annuler)' : '')}`;
 			if (ev.widened) return `Colonne ${ev.widened} passée de ${typeLabel(ev.from as ColumnType)} à ${typeLabel(ev.to as ColumnType)} (Ctrl+Z pour annuler)`;
 			if (ev.invalid) return 'Valeur hors type : cellule marquée en erreur';
 		},
@@ -1287,8 +1290,8 @@
 			const ev = await DocumentService.Paste(sheetId, row, col, block);
 			await reload();
 			if (ev.refusedCount) return refusedNotice(ev);
-			if (ev.created && ev.headless) return `Tableau « ${ev.created} » créé sans en-têtes : clic droit › Tableau › « Sortir l'en-tête » si besoin`;
-			if (ev.created) return `Tableau « ${ev.created} » créé (${count(block.length - 1)}${ev.split ? ' ; Ctrl+Z : le défaire, les cellules restent libres' : ''})`;
+			if (ev.created && ev.headless) return `Tableau « ${ev.created} » créé sans en-têtes${autoKeyNote(ev)} : clic droit › Tableau › « Sortir l'en-tête » si besoin`;
+			if (ev.created) return `Tableau « ${ev.created} » créé${autoKeyNote(ev)} (${count(block.length - 1)}${ev.split ? ' ; Ctrl+Z : le défaire, les cellules restent libres' : ''})`;
 		},
 		rangeStats: (t, first, count, cols) => DocumentService.RangeStats(sheetId, t.id, first, count, cols),
 		moveCells: (r0, c0, r1, c1, dr, dc) => DocumentService.MoveCells(sheetId, r0, c0, r1, c1, dr, dc).then(reload),
@@ -1455,6 +1458,7 @@
 						hidden: t.total - t.rows,
 						key: t.key >= 0 ? t.key : undefined,
 						keyHint: t.keyHint || undefined,
+						autoNumber: t.autoNumber >= 0 ? t.autoNumber : undefined,
 						twoLevel: t.twoLevel || undefined,
 						query: t.queryId ? { id: t.queryId, name: t.queryName } : undefined,
 						handKey: t.handKey || undefined,

@@ -97,6 +97,13 @@ n-ième ligne dans l'ordre du tableau, une `RECHERCHEV` devient `INDEX`/`EQUIV`,
 ligne trouvée). Après l'un ou l'autre, le même `cells_set` passe. Un tableau qui a déjà une
 clé, ou dont les numéros de ligne ont été gardés, ne demande rien. Les formules collées
 (`cells_paste`), importées ou reposées par Lattis gardent les numéros de ligne sans question.
+Un tableau créé par `cells_set`, `cells_paste` ou `tables_from_range` dont la première
+colonne s'appelle `ID` (entiers uniques et remplis), ou vaut 1, 2, 3… dans l'ordre des lignes,
+naît avec cette colonne pour clé (`tables_get` le montre) ; pas un tableau importé. Une ligne
+ajoutée (`tables_insert_row`, saisie ou collage sous le tableau, `db.insert`) reçoit alors le
+numéro suivant de la clé d'entiers (le plus grand plus 1, sans renuméroter), ou, pour une
+première colonne en suite régulière (10, 20, 30…), le numéro suivant si elle est ajoutée à la
+fin ; une valeur donnée pour la colonne l'emporte (voir `docs/decisions/0009-cle-automatique.md`).
 
 `ui_dialog`, `ui_confirm` et `ui_prompt` ouvrent une boîte de dialogue dans la fenêtre et
 attendent la réponse de l'utilisateur : l'assistant peut ainsi lui demander une

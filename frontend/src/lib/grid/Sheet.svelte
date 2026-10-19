@@ -298,6 +298,8 @@
 		key?: number;
 		/** Sans clé : la première colonne semble identifier chaque ligne (proposée comme clé). */
 		keyHint?: boolean;
+		/** Rang de la colonne numérotée d'office (une ligne ajoutée reçoit le numéro suivant), absent sinon. */
+		autoNumber?: number;
 		/** En-têtes sur deux lignes : le groupe de chaque nom « Groupe.Sous » dans une bande, ligne row - 1. */
 		twoLevel?: boolean;
 		/** Requête d'import qui charge le tableau (source externe ou autre tableau). */
@@ -3509,10 +3511,14 @@
 	}
 
 	// --- Clé proposée -------------------------------------------------------
-	// Jamais de clé automatique (choix de Louis) : quand la première colonne
-	// d'un tableau sans clé est un entier unique et croissant, une petite clé
-	// grisée dans son en-tête propose d'en faire la clé, en un clic ; clic
-	// droit : « Ne plus proposer » pour ce tableau.
+	// Quand la première colonne d'un tableau sans clé a des valeurs uniques
+	// et remplies, une petite clé grisée dans son en-tête propose d'en faire
+	// la clé, en un clic ; clic droit : « Ne plus proposer » pour ce tableau.
+	// La clé n'est posée d'office qu'à la création, sur une première colonne
+	// ID ou 1, 2, 3… (canvas/autokey.go, décision 0009).
+
+	/** Infobulle d'une colonne numérotée d'office. */
+	const AUTO_NUMBER_TIP = 'numérotée automatiquement : une ligne ajoutée reçoit le numéro suivant';
 
 	const KEY_HINT_TIP = 'Cette colonne semble identifier chaque ligne : cliquer pour en faire la clé du tableau';
 	/** Zones (écran) des clés proposées dessinées à cette image. */
@@ -8902,9 +8908,10 @@
 		if (id === tipCell) return;
 		tipCell = id;
 		const k = e.t.columns[i];
-		scroller.title = `${k.name} — ${typeLabel(k.type)}`;
+		const auto = e.t.autoNumber === i ? ` · ${e.t.key === i ? 'clé, ' : ''}${AUTO_NUMBER_TIP}` : e.t.key === i ? ' · clé du tableau' : '';
+		scroller.title = `${k.name} — ${typeLabel(k.type)}${auto}`;
 		mixOf(e, i).then((m) => {
-			if (m && tipCell === id) scroller.title = `${k.name} — ${typeLabel(k.type)} · ${mixText(m)}`;
+			if (m && tipCell === id) scroller.title = `${k.name} — ${typeLabel(k.type)}${auto} · ${mixText(m)}`;
 		});
 	}
 
@@ -10596,7 +10603,7 @@
 				{#if source.setKey && !fcol?.formula}
 					<hr />
 					{#if d.e.t.key === d.i}
-						<p class="menu-note">🔑 Clé du tableau : ses valeurs identifient les lignes.</p>
+						<p class="menu-note">🔑 Clé du tableau : ses valeurs identifient les lignes.{d.e.t.autoNumber === d.i ? ' Une ligne ajoutée reçoit le numéro suivant.' : ''}</p>
 						<button class="sort" onclick={() => chooseKey(false)}>Retirer la clé</button>
 					{:else if d.keyWhy === undefined}
 						<p class="menu-note loading"><span class="spinner" aria-hidden="true"></span> Vérification de la clé…</p>
@@ -10604,6 +10611,9 @@
 						<button class="sort" onclick={() => chooseKey(true)}>🔑 Utiliser comme clé{d.e.t.key !== undefined ? ' (à la place de l’actuelle)' : ''}</button>
 					{:else if d.keyWhy}
 						<p class="menu-note">Clé impossible : {d.keyWhy}</p>
+					{/if}
+					{#if d.e.t.autoNumber === d.i && d.e.t.key !== d.i}
+						<p class="menu-note">Suite de numéros : une ligne ajoutée à la fin reçoit le numéro suivant.</p>
 					{/if}
 				{/if}
 			</div>

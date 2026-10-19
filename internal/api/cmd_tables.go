@@ -343,6 +343,7 @@ tables.sort_custom("Commandes", "Client", nil, "Jours", true) -- liste nommée, 
 			Name:    "tables.insert_row",
 			Label:   "Insérer une ligne",
 			Summary: "Insère une ligne vide avant la ligne de données row (absente : à la fin du tableau).",
+			Details: "Une clé d'entiers y reçoit le numéro suivant (le plus grand plus 1, sans renuméroter) ; une première colonne d'entiers en suite régulière (10, 20, 30…), le numéro suivant si la ligne est ajoutée à la fin.",
 			Params:  []Param{pTable, {Name: "row", Type: Integer, Desc: "ligne de données, à partir de 1", Optional: true}},
 			Write:   true,
 			Run: func(c *Call) (any, error) {

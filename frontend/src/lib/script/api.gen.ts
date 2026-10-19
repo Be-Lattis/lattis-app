@@ -939,7 +939,7 @@ export const apiReference: RefEntry[] = [
 		category: "tables",
 		signature: "tables.insert_row(table, [row])",
 		summary: "Insère une ligne vide avant la ligne de données row (absente : à la fin du tableau).",
-		details: "Paramètres — table : nom du tableau ; row : ligne de données, à partir de 1. Arguments dans l'ordre, ou une table d'arguments nommés : tables.insert_row{table = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		details: "Une clé d'entiers y reçoit le numéro suivant (le plus grand plus 1, sans renuméroter) ; une première colonne d'entiers en suite régulière (10, 20, 30…), le numéro suivant si la ligne est ajoutée à la fin. Paramètres — table : nom du tableau ; row : ligne de données, à partir de 1. Arguments dans l'ordre, ou une table d'arguments nommés : tables.insert_row{table = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		args: [1, 2]
 	},
 	{

@@ -84,6 +84,10 @@ type TableInfo struct {
 	// Sans clé : la première colonne semble identifier chaque ligne (entier
 	// unique et croissant) ; l'interface propose d'en faire la clé.
 	KeyHint bool `json:"keyHint"`
+	// Rang de la colonne numérotée d'office (clé d'entiers, ou première
+	// colonne en suite régulière : une ligne ajoutée reçoit le numéro
+	// suivant, autokey.go), -1 sinon.
+	AutoNumber int `json:"autoNumber"`
 	// Requête d'import qui charge le tableau (source externe ou autre
 	// tableau) : identifiant et nom, 0 et vide sinon.
 	QueryID   int64  `json:"queryId"`
@@ -251,6 +255,9 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 				}
 			}
 			if ti.KeyHint, err = t.keyHint(tb); err != nil {
+				return err
+			}
+			if ti.AutoNumber, err = t.autoNumbered(tb); err != nil {
 				return err
 			}
 			if len(tb.Filter) > 0 {

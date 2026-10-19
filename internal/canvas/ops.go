@@ -74,13 +74,33 @@ func (t *tx) setValue(tb Table, rid int64, c Column, v any, invalid string) erro
 }
 
 // insertRow ajoute une ligne vide de clé id à la position pos. Sous un
-// onglet à choix, elle reçoit la valeur choisie (choice.go).
+// onglet à choix, elle reçoit la valeur choisie (choice.go) ; dans une
+// colonne numérotée, son numéro (autokey.go). Une valeur saisie ensuite
+// dans la même action remplace ce numéro.
 func (t *tx) insertRow(tb Table, id int64, pos string) error {
+	auto, numbered, err := t.autoNumber(tb)
+	if err != nil {
+		return err
+	}
+	if !numbered {
+		return t.insertRowNumbered(tb, id, pos, nil)
+	}
+	return t.insertRowNumbered(tb, id, pos, &auto)
+}
+
+// insertRowNumbered est insertRow avec le numéro déjà calculé (auto : nil
+// hors colonne numérotée), pour plusieurs lignes ajoutées d'un coup.
+func (t *tx) insertRowNumbered(tb Table, id int64, pos string, auto *autoNum) error {
 	if err := t.apply(
 		[]stmt{st(`INSERT INTO `+tb.sql()+` (id, _pos) VALUES (?, ?)`, id, pos)},
 		[]stmt{st(`DELETE FROM `+tb.sql()+` WHERE id = ?`, id)},
 	); err != nil {
 		return err
+	}
+	if auto != nil {
+		if err := t.numberRow(tb, *auto, id, pos); err != nil {
+			return err
+		}
 	}
 	return t.imposeChoice(tb, id)
 }

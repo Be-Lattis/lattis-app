@@ -73,6 +73,9 @@ type tx struct {
 	// (voir unbirth.go).
 	born      []bornTable
 	undoBirth bool
+	// autoKeyed : colonne devenue clé d'office à la création d'un tableau
+	// (autokey.go), pour le message de la saisie ou du collage.
+	autoKeyed string
 }
 
 func (t *tx) apply(do, undo []stmt) error { return t.Apply(do, undo) }

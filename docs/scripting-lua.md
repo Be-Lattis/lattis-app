@@ -394,7 +394,9 @@ requête avec `db.execute`.
 
 ### `db.insert(tableau, valeurs)`
 
-Ajoute une ligne **en fin de tableau** et renvoie sa clé `_id`.
+Ajoute une ligne **en fin de tableau** et renvoie sa clé `_id`. Une colonne clé d'entiers
+absente des valeurs reçoit le numéro suivant (le plus grand plus 1), comme une première
+colonne en suite régulière (10, 20, 30…).
 
 ```lua
 local id = db.insert("Commandes", {Client = "Petit", Montant = 15, ["Payé"] = false})

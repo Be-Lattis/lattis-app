@@ -735,8 +735,15 @@ func (m *Model) FormatAsTable(ctx context.Context, sheet int64, row, col int) (s
 				return err
 			}
 		}
-		name, err = t.formatAsTable(sheet, row, col)
-		return err
+		if name, err = t.formatAsTable(sheet, row, col); err != nil {
+			return err
+		}
+		// Première colonne ID, ou 1, 2, 3… : la clé (autokey.go).
+		tb, err := t.tableByName(name)
+		if err != nil {
+			return err
+		}
+		return t.autoKey(tb.ID)
 	})
 	return name, err
 }

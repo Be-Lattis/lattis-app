@@ -593,6 +593,12 @@ export interface Event {
      * cellules restant libres (unbirth.go).
      */
     "split"?: boolean;
+
+    /**
+     * AutoKey : colonne du tableau créé devenue clé d'office (en-tête ID,
+     * ou 1, 2, 3… : autokey.go).
+     */
+    "autoKey"?: string;
 }
 
 /**
@@ -1781,6 +1787,13 @@ export interface TableInfo {
      * unique et croissant) ; l'interface propose d'en faire la clé.
      */
     "keyHint": boolean;
+
+    /**
+     * Rang de la colonne numérotée d'office (clé d'entiers, ou première
+     * colonne en suite régulière : une ligne ajoutée reçoit le numéro
+     * suivant, autokey.go), -1 sinon.
+     */
+    "autoNumber": number;
 
     /**
      * Requête d'import qui charge le tableau (source externe ou autre

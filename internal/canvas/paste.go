@@ -103,6 +103,9 @@ func (m *Model) Paste(ctx context.Context, sheet int64, row, col int, block [][]
 				}
 			}
 		}
+		if ev.Created != "" {
+			ev.AutoKey = t.autoKeyed
+		}
 		return nil
 	})
 	ev.Split = m.splitBirth(ctx, ev, err)

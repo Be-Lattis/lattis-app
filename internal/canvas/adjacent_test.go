@@ -254,7 +254,8 @@ func TestDeleteColumnJoinsFreeCell(t *testing.T) {
 	if ts := tablesOf(t, d); len(ts) != 1 || ts[0].Rows != 3 {
 		t.Fatalf("ligne supprimée : %+v\n%s", ts, view(t, d))
 	}
-	if got := view(t, d); !strings.Contains(got, "\n|zz") {
+	// La ligne rattachée reçoit le numéro suivant de la clé ID (autokey.go).
+	if got := view(t, d); !strings.Contains(got, "\n3|zz") {
 		t.Fatalf("ligne supprimée :\n%s", got)
 	}
 	undoOnce(t, d, before, "ligne supprimée")

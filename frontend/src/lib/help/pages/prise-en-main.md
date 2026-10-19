@@ -60,7 +60,11 @@ Le ▾ de l'en-tête d'une colonne (ou le clic droit, ou Données › Trier et f
 
 Une **clé** est une colonne dont les valeurs sont uniques et toutes remplies : un code client, une référence produit. Elle identifie chaque ligne, s'affiche dans la marge à la place des numéros et sert aux recherches de [REFERENCE](fonction:REFERENCE).
 
-Lattis ne pose jamais de clé tout seul : quand la première colonne d'un tableau s'y prête, il la propose discrètement, et un clic suffit. « Ne plus proposer » retire la suggestion pour ce tableau, qui garde alors ses numéros de ligne.
+Quand vous créez un tableau (saisie, collage, Mettre sous forme de tableau), sa première colonne devient la clé d'office si elle ne contient que des nombres entiers, uniques et tous remplis, et que son en-tête est **ID**, ou que ses valeurs sont **1, 2, 3…** dans l'ordre. La barre d'état le dit (« clé posée sur ID ») et la 🔑 apparaît dans l'en-tête ; `Ctrl+Z` l'annule avec la création, clic droit › Retirer la clé l'enlève seule. Un fichier importé garde ses tableaux tels quels.
+
+Dans les autres cas, quand la première colonne d'un tableau s'y prête, Lattis la propose discrètement, et un clic suffit. « Ne plus proposer » retire la suggestion pour ce tableau, qui garde alors ses numéros de ligne.
+
+**Numérotation automatique.** Une ligne ajoutée à un tableau dont la clé est un nombre entier reçoit le numéro suivant (le plus grand plus 1), qu'elle soit tapée sous le tableau, collée, insérée au milieu ou ajoutée par un script ; les autres lignes ne sont pas renumérotées. Une première colonne qui suit une suite régulière sans être la clé (10, 20, 30…) se complète aussi pour une ligne ajoutée à la fin. Une valeur que vous tapez dans la colonne remplace le numéro proposé. L'infobulle de l'en-tête indique une colonne numérotée.
 
 Quand vous tapez une recherche ([REFERENCE](fonction:REFERENCE), RECHERCHEV, RECHERCHEX, EXISTE…) dans un tableau qui n'a pas de clé, Lattis vous demande ce qu'elle utilise :
 
