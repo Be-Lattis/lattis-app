@@ -7,7 +7,9 @@
 	// clé gardée en mémoire seulement faute de trousseau, par exemple). Modèle
 	// local : son adresse au lieu d'une clé. « Application de bureau » : l'appli
 	// d'un fournisseur, choisie dans une liste (Claude pour l'instant : Claude
-	// Desktop ou Claude Code), pilote Lattis par le serveur MCP (ClaudeSetup).
+	// Desktop ou Claude Code), pilote Lattis par le serveur MCP : dans l'appli de
+	// bureau, le bouton ouvre la fenêtre du serveur MCP (ondesktop) ; ailleurs,
+	// l'onglet dit qu'il faut l'appli de bureau.
 	// Passerelle de l'entreprise (ai.endpoint) : rien à choisir, sinon la clé
 	// personnelle qu'elle demande (sauf ai.auth.mode = none).
 	import Icon from '#lib/icons/Icon.svelte';
@@ -22,8 +24,11 @@
 	interface Props {
 		/** Ferme le panneau (absent : il reste ouvert, rien n'est connecté). */
 		onclose?: () => void;
+		/** « Application de bureau » : ouvre la fenêtre du serveur MCP (Fichier ›
+		 * Paramètres › Serveur MCP), au lieu de la montrer ici. */
+		ondesktop?: () => void;
 	}
-	let { onclose }: Props = $props();
+	let { onclose, ondesktop }: Props = $props();
 
 	const ANTHROPIC_KEYS = 'https://platform.claude.com/settings/keys';
 	const ANTHROPIC_BILLING = 'https://platform.claude.com/settings/billing';
@@ -161,9 +166,15 @@
 			<button role="tab" aria-selected={way === 'key'} class:on={way === 'key'} onclick={() => (way = 'key')}>
 				<Icon name="key" size={14} />Clé d’API <span class="tag">recommandé</span>
 			</button>
-			<button role="tab" aria-selected={way === 'desktop'} class:on={way === 'desktop'} onclick={() => (way = 'desktop')}>
-				<Icon name="user" size={14} />Application de bureau
-			</button>
+			{#if ondesktop && mcpAvailable()}
+				<button title="Piloter Lattis depuis Claude Desktop ou Claude Code (serveur MCP)" aria-haspopup="dialog" onclick={ondesktop}>
+					<Icon name="user" size={14} />Application de bureau…
+				</button>
+			{:else}
+				<button role="tab" aria-selected={way === 'desktop'} class:on={way === 'desktop'} onclick={() => (way = 'desktop')}>
+					<Icon name="user" size={14} />Application de bureau
+				</button>
+			{/if}
 		</div>
 
 		{#if way === 'key'}

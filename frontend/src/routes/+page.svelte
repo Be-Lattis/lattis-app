@@ -2392,6 +2392,7 @@
 					context={aiContext}
 					tables={aiTables}
 					onsettings={() => (settingsOpen = true)}
+					onmcp={() => (mcpOpen = true)}
 					ongoto={(t) => gotoTarget(t).catch((e) => (notice = err(e)))}
 					onchanged={reload}
 					onclose={() => (aiChat.open = false)}
@@ -2411,6 +2412,7 @@
 			context={aiContext}
 			tables={aiTables}
 			onsettings={() => (settingsOpen = true)}
+			onmcp={() => (mcpOpen = true)}
 			ongoto={(t) => gotoTarget(t).catch((e) => (notice = err(e)))}
 			onchanged={reload}
 			onclose={() => ((aiChat.open = false), (aiChat.over = false))}

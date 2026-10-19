@@ -37,6 +37,8 @@
 		tables: TableInfo[];
 		/** Ouvre Fichier › Paramètres. */
 		onsettings: () => void;
+		/** Ouvre la fenêtre du serveur MCP (Application de bureau). */
+		onmcp?: () => void;
 		/** Aller à une feuille ou un tableau (cible d'une étape). */
 		ongoto: (target: string) => void;
 		/** Le classeur a changé hors de la grille (réponse annulée) : recharger. */
@@ -47,7 +49,7 @@
 		/** Posé au-dessus d'une boîte modale (ouvert depuis elle), hors de la zone des volets. */
 		over?: boolean;
 	}
-	let { hasDoc, context, tables, onsettings, ongoto, onchanged, onclose, width = $bindable(0), over = false }: Props = $props();
+	let { hasDoc, context, tables, onsettings, onmcp, ongoto, onchanged, onclose, width = $bindable(0), over = false }: Props = $props();
 
 	const st = $derived(chat.status);
 	const provider = $derived(st?.providers?.find((p) => p.id === st.provider));
@@ -321,7 +323,7 @@
 			</div>
 		{/if}
 		{#if showConnect}
-			<AiConnect onclose={connected ? () => (connectOpen = false) : undefined} />
+			<AiConnect onclose={connected ? () => (connectOpen = false) : undefined} ondesktop={onmcp} />
 		{/if}
 
 		{#if source === 'claude' && mcpClient}
