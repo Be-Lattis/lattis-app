@@ -151,6 +151,8 @@ type Layout struct {
 	WorkbookPassword  bool `json:"workbookPassword"`
 	// … avec le contenu de toutes les feuilles verrouillé.
 	WorkbookSheets bool `json:"workbookSheets"`
+	// Mise en page de la feuille (onglet Mise en page).
+	PageSetup PageSetup `json:"pageSetup"`
 }
 
 // CellStyle est la mise en forme d'une cellule hors tableau.
@@ -196,6 +198,9 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 			return err
 		}
 		l.WorkbookProtected, l.WorkbookPassword, l.WorkbookSheets = prot.Workbook, prot.WorkbookPassword, prot.WorkbookSheets
+		if l.PageSetup, err = t.pageSetup(sheet); err != nil {
+			return err
+		}
 		for i, s := range l.Sheets {
 			l.Sheets[i].Password, l.Sheets[i].Protected = prot.Sheets[s.ID]
 		}

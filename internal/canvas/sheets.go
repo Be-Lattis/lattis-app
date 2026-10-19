@@ -373,8 +373,9 @@ func (m *Model) SetRowHeight(ctx context.Context, sheet int64, row, height int) 
 // sheetPositioned sont les tables de métadonnées repérées par feuille et
 // position (sans identifiant propre), supprimées et copiées avec la feuille ;
 // le contenu d'un onglet page HTML (_lattis_pages) et les zones « plage »
-// (_lattis_range_cells) en font partie.
-var sheetPositioned = []string{`_lattis_pages`, `_lattis_range_cells`, `_lattis_cell_styles`, `_lattis_row_styles`, `_lattis_col_styles`, `_lattis_row_rules`, `_lattis_col_rules`, `_lattis_col_widths`, `_lattis_row_heights`}
+// (_lattis_range_cells) en font partie, comme la mise en page
+// (_lattis_page_setup).
+var sheetPositioned = []string{`_lattis_pages`, `_lattis_range_cells`, `_lattis_cell_styles`, `_lattis_row_styles`, `_lattis_col_styles`, `_lattis_row_rules`, `_lattis_col_rules`, `_lattis_col_widths`, `_lattis_row_heights`, `_lattis_page_setup`}
 
 // snapshot renvoie les insertions qui recréent les lignes d'une feuille dans
 // une table de métadonnées (pour l'annulation).

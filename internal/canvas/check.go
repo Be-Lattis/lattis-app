@@ -66,6 +66,7 @@ func (m *Model) Dump(ctx context.Context) (string, error) {
 		{"noms", `SELECT * FROM _lattis_names ORDER BY name`},
 		{"largeurs", `SELECT * FROM _lattis_col_widths ORDER BY sheet, col`},
 		{"hauteurs", `SELECT * FROM _lattis_row_heights ORDER BY sheet, row`},
+		{"mise en page", `SELECT * FROM _lattis_page_setup ORDER BY sheet`},
 		{"scripts", `SELECT * FROM _lattis_scripts ORDER BY id`},
 		{"tableaux croisés", `SELECT * FROM _lattis_pivots ORDER BY id`},
 		{"graphiques", `SELECT * FROM _lattis_charts ORDER BY id`},

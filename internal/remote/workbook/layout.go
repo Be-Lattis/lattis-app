@@ -24,7 +24,7 @@ var layoutTables = []string{
 	"_lattis_col_widths", "_lattis_row_heights", "_lattis_names",
 	"_lattis_styles", "_lattis_cell_styles", "_lattis_row_styles", "_lattis_col_styles",
 	"_lattis_row_rules", "_lattis_col_rules", "_lattis_pivots", "_lattis_charts",
-	"_lattis_buttons", "_lattis_pages", "_lattis_range_cells",
+	"_lattis_buttons", "_lattis_pages", "_lattis_range_cells", "_lattis_page_setup",
 }
 
 // Hors de la liste, volontairement : les données des tableaux (tables du

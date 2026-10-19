@@ -415,6 +415,16 @@ CREATE TABLE _lattis_data_sync (
 	`
 ALTER TABLE _lattis_tables ADD COLUMN two_level INTEGER NOT NULL DEFAULT 0;
 `,
+	// 30 → 31 : mise en page de chaque feuille (onglet Mise en page : papier,
+	// orientation, marges, échelle, zone d'impression, titres, sauts de page,
+	// en-tête et pied de page), en JSON (canvas.PageSetup) ; pas de ligne :
+	// réglages par défaut.
+	`
+CREATE TABLE _lattis_page_setup (
+	sheet INTEGER NOT NULL PRIMARY KEY REFERENCES _lattis_sheets(id),
+	setup TEXT NOT NULL
+) STRICT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

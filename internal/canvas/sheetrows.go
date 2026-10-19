@@ -110,12 +110,16 @@ func (t *tx) insertLines(sheet int64, a axis, at, n int) error {
 			return err
 		}
 	}
-	return t.rewriteCellRefs(sheet, along(a, func(i int) (int, bool) {
+	move := func(i int) (int, bool) {
 		if i >= at {
 			return i + n, true
 		}
 		return i, true
-	}))
+	}
+	if err := t.shiftPageSetup(sheet, a, move); err != nil {
+		return err
+	}
+	return t.rewriteCellRefs(sheet, along(a, move))
 }
 
 func (t *tx) deleteLines(sheet int64, a axis, lo, hi int) error {
@@ -177,7 +181,7 @@ func (t *tx) deleteLines(sheet int64, a axis, lo, hi int) error {
 			return err
 		}
 	}
-	return t.rewriteCellRefs(sheet, along(a, func(i int) (int, bool) {
+	move := func(i int) (int, bool) {
 		switch {
 		case i > hi:
 			return i - n, true
@@ -185,7 +189,11 @@ func (t *tx) deleteLines(sheet int64, a axis, lo, hi int) error {
 			return 0, false
 		}
 		return i, true
-	}))
+	}
+	if err := t.shiftPageSetup(sheet, a, move); err != nil {
+		return err
+	}
+	return t.rewriteCellRefs(sheet, along(a, move))
 }
 
 // shiftPos décale de d la coordonnée a des enregistrements de la feuille
