@@ -10,6 +10,7 @@ import {
 	insertAt,
 	isEmpty,
 	matchField,
+	panelAtCell,
 	moveCommands,
 	moveItem,
 	removeAt,
@@ -163,5 +164,28 @@ describe('réglages', () => {
 		expect(dropIndex([10, 30, 50], 31)).toBe(2);
 		expect(dropIndex([10, 30, 50], 60)).toBe(3);
 		expect(dropIndex([], 0)).toBe(0);
+	});
+});
+
+describe('panelAtCell', () => {
+	const chart = { kind: 'chart' as const, id: 7 };
+	const pivot = { kind: 'pivot' as const, id: 3 };
+	it('graphique sélectionné : son volet reste, même cellule active dans un TCD', () => {
+		expect(panelAtCell(chart, 3, true, false)).toBe(chart);
+		expect(panelAtCell(chart, 3, true, true)).toBe(chart);
+		expect(panelAtCell(null, 3, true, false)).toBeNull();
+		expect(panelAtCell(chart, undefined, true, true)).toBe(chart);
+	});
+	it('cellule active dans un TCD sans graphique sélectionné : volet du TCD', () => {
+		expect(panelAtCell(null, 3, false, true)).toEqual(pivot);
+		expect(panelAtCell(chart, 3, false, true)).toEqual(pivot);
+		expect(panelAtCell(pivot, 3, false, false)).toBe(pivot);
+		expect(panelAtCell(pivot, 4, false, true)).toEqual({ kind: 'pivot', id: 4 });
+	});
+	it('hors du TCD : son volet se ferme quand la cellule bouge, pas à une relecture', () => {
+		expect(panelAtCell(pivot, undefined, false, true)).toBeNull();
+		expect(panelAtCell(pivot, undefined, false, false)).toBe(pivot);
+		expect(panelAtCell(pivot, undefined, false, true, true)).toBe(pivot);
+		expect(panelAtCell(chart, undefined, false, true)).toBe(chart);
 	});
 });

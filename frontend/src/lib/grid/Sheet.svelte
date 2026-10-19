@@ -69,6 +69,7 @@
 	import type { BoxStatsIn } from '#lib/chart/shapes.js';
 	import { svgToPng } from '#lib/chart/image.js';
 	import PivotPanel from './PivotPanel.svelte';
+	import { panelAtCell } from './pivotfields';
 	import SheetButtons from './SheetButtons.svelte';
 	import { BUTTON_H, BUTTON_W, type ButtonConfig, type ControlKind, type SheetButton } from './buttons';
 	import { applyRules, computeStats, mergeStats, parseRules, prepareStats, reqKey, statsReq, todaySerial, type CfOut, type Rule, type RuleEnv, type RuleStats, type Stats, type StatsReq } from './rules';
@@ -5843,9 +5844,11 @@
 		const pv = pivotAt(active.row, active.col);
 		// Le volet du TCD reste ouvert quand le TCD rétrécit sous la cellule
 		// active (filtre, champ retiré) : il se ferme quand on la déplace.
+		// Graphique sélectionné (même posé sur le TCD, ou relu après son
+		// déplacement) : son volet reste ouvert, la cellule active n'y change rien.
 		const at = `${active.row}:${active.col}`;
-		if (pv) panel = { kind: 'pivot', id: pv.id };
-		else if (panel?.kind === 'pivot' && !openPivotOnLoad && at !== pivotPanelAt) panel = null;
+		const next = panelAtCell(panel, pv?.id, selChart !== null, at !== pivotPanelAt, openPivotOnLoad);
+		if (next !== panel) panel = next;
 		pivotPanelAt = at;
 		const e = ownerAt(active.row, active.col);
 		const label = (r: number, c: number) => {

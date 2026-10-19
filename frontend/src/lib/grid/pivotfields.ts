@@ -264,3 +264,21 @@ export function dropIndex(mids: number[], y: number): number {
 	const k = mids.findIndex((m) => y < m);
 	return k < 0 ? mids.length : k;
 }
+
+/** Volet latéral de la feuille : champs d'un TCD ou mise en forme d'un graphique. */
+export type SidePanel = { kind: 'pivot' | 'chart'; id: number } | null;
+
+/**
+ * Volet après un rafraîchissement de la cellule active (déplacement, données
+ * relues) : la cellule active dans un TCD ouvre son volet, sauf quand un
+ * graphique est sélectionné (un clic sur un graphique posé sur un TCD ou à
+ * côté, son déplacement et la relecture qui suit gardent son volet). Hors d'un
+ * TCD, le volet du TCD se ferme quand la cellule active bouge (keep :
+ * ouverture demandée au chargement).
+ */
+export function panelAtCell(panel: SidePanel, pivot: number | undefined, chartSelected: boolean, moved: boolean, keep = false): SidePanel {
+	if (chartSelected) return panel;
+	if (pivot !== undefined) return panel?.kind === 'pivot' && panel.id === pivot ? panel : { kind: 'pivot', id: pivot };
+	if (panel?.kind === 'pivot' && !keep && moved) return null;
+	return panel;
+}
