@@ -192,6 +192,11 @@ var funcs = []funcDef{
 	{"DATEDIF", "DATEDIF", 3, 3, scalar, fnDatedif},
 	{"NETWORKDAYS", "NB.JOURS.OUVRES", 2, 3, scan, nil},
 	{"WORKDAY", "SERIE.JOUR.OUVRE", 2, 3, scan, nil},
+	{"NETWORKDAYS.INTL", "NB.JOURS.OUVRES.INTL", 2, 4, scan, nil},
+	{"WORKDAY.INTL", "SERIE.JOUR.OUVRE.INTL", 2, 4, scan, nil},
+	{"DATEVALUE", "DATEVAL", 1, 1, scalar, fnDateValue},
+	{"TIMEVALUE", "TEMPSVAL", 1, 1, scalar, fnTimeValue},
+	{"YEARFRAC", "FRACTION.ANNEE", 2, 3, scalar, fnYearFrac},
 
 	// Agrégats
 	{"SUM", "SOMME", 1, -1, aggregate, nil},

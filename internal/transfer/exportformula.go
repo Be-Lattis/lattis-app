@@ -178,7 +178,7 @@ func init() {
 		VAR STDEVP MODE PERCENTILE QUARTILE CORREL SLOPE INTERCEPT
 		PMT PV FV NPER RATE IPMT PPMT NPV IRR
 		LOG SIN COS TAN ASIN ACOS ATAN RADIANS DEGREES MROUND QUOTIENT ISEVEN ISODD
-		CHAR CODE CLEAN NA`) {
+		CHAR CODE CLEAN NA DATEVALUE TIMEVALUE YEARFRAC`) {
 		exportFuncs[f] = [2]string{f, f}
 	}
 	// Fonctions récentes d'Excel : préfixe _xlfn. dans le fichier ; LibreOffice
@@ -194,7 +194,7 @@ func init() {
 	}
 	// Fonctions d'Excel 2010 (_xlfn.) que LibreOffice nomme COM.MICROSOFT.*.
 	for _, f := range strings.Fields(`STDEV.S STDEV.P VAR.S VAR.P MODE.SNGL
-		PERCENTILE.INC PERCENTILE.EXC QUARTILE.INC QUARTILE.EXC`) {
+		PERCENTILE.INC PERCENTILE.EXC QUARTILE.INC QUARTILE.EXC NETWORKDAYS.INTL WORKDAY.INTL`) {
 		exportFuncs[f] = [2]string{"_xlfn." + f, "COM.MICROSOFT." + f}
 	}
 }

@@ -289,8 +289,55 @@ func fnHourPart(div, mod float64) func([]Value) Value {
 
 // --- Jours ouvrés -------------------------------------------------------------
 
-// workdays regroupe les jours fériés de NB.JOURS.OUVRES et SERIE.JOUR.OUVRE.
-type workdays map[int]bool
+// workdays regroupe les jours fériés et les jours de week-end (indice 0 :
+// lundi) de NB.JOURS.OUVRES et SERIE.JOUR.OUVRE.
+type workdays struct {
+	holidays map[int]bool
+	off      [7]bool
+}
+
+func newWorkdaySet() workdays {
+	return workdays{holidays: map[int]bool{}, off: [7]bool{5: true, 6: true}}
+}
+
+// weekendCodes : jours de week-end des codes numériques des formes .INTL.
+var weekendCodes = map[int][]int{
+	1: {5, 6}, 2: {6, 0}, 3: {0, 1}, 4: {1, 2}, 5: {2, 3}, 6: {3, 4}, 7: {4, 5},
+	11: {6}, 12: {0}, 13: {1}, 14: {2}, 15: {3}, 16: {4}, 17: {5},
+}
+
+// weekend lit le week-end des formes .INTL : un code (1 samedi et dimanche,
+// 11 dimanche seul…) ou sept chiffres 0/1 du lundi au dimanche ("0000011").
+func (w *workdays) weekend(v Value) Value {
+	var off [7]bool
+	switch {
+	case v.IsEmpty():
+		return Value{}
+	case v.IsErr():
+		return v
+	case v.Kind == Text && len(v.Str) == 7 && strings.Trim(v.Str, "01") == "":
+		if v.Str == "1111111" {
+			return Err(ErrValue) // aucun jour ouvré
+		}
+		for i, c := range v.Str {
+			off[i] = c == '1'
+		}
+	default:
+		f, e := ToNumber(v)
+		if e.IsErr() {
+			return e
+		}
+		days, ok := weekendCodes[int(f)]
+		if !ok || f != math.Trunc(f) {
+			return Err(ErrNum)
+		}
+		for _, d := range days {
+			off[d] = true
+		}
+	}
+	w.off = off
+	return Value{}
+}
 
 func (w workdays) add(v Value) Value {
 	if v.IsEmpty() {
@@ -300,13 +347,13 @@ func (w workdays) add(v Value) Value {
 	if e.IsErr() {
 		return e
 	}
-	w[int(f)] = true
+	w.holidays[int(f)] = true
 	return Value{}
 }
 
 func (w workdays) open(day int) bool {
 	wd := (day + 5) % 7 // le jour 0 (30/12/1899) est un samedi ; 0 = lundi
-	return wd < 5 && !w[day]
+	return !w.off[wd] && !w.holidays[day]
 }
 
 // networkdays compte les jours ouvrés entre deux dates incluses.

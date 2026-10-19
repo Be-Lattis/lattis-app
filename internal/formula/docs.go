@@ -79,6 +79,8 @@ var (
 	argNotFound  = docOpt("si_non_trouvé", "Résultat si le délimiteur est absent (#N/A si omis).")
 )
 
+var argWeekend = docOpt("week-end", "1 ou omis : samedi et dimanche ; 2 à 7 : autre paire (2 dimanche et lundi…) ; 11 à 17 : un seul jour (11 dimanche…) ; ou sept chiffres du lundi au dimanche, 1 pour chômé (\"0000011\").")
+
 var argAngle = docArg("angle", "Angle en radians (RADIANS convertit des degrés).")
 
 // Arguments des fonctions financières.
@@ -309,6 +311,22 @@ var docs = map[string]funcDoc{
 		docArgs(docArg("date_départ", "Date de départ."), docArg("nb_jours", "Nombre de jours ouvrés à ajouter (négatif = avant)."),
 			docOpt("jours_fériés", "Colonne de dates à exclure (Fériés[Jour]).")),
 		0, `=SERIE.JOUR.OUVRE([Commande]; 5; Fériés[Jour])`},
+	"NETWORKDAYS.INTL": {catDate, "Compte les jours ouvrés entre deux dates incluses, avec des jours de week-end au choix.",
+		docArgs(docArg("date_début", "Première date."), docArg("date_fin", "Dernière date."), argWeekend,
+			docOpt("jours_fériés", "Colonne de dates à exclure (Fériés[Jour]).")),
+		0, `=NB.JOURS.OUVRES.INTL([Début]; [Fin]; 11; Fériés[Jour])`},
+	"WORKDAY.INTL": {catDate, "Renvoie la date située un nombre de jours ouvrés avant ou après une date, avec des jours de week-end au choix.",
+		docArgs(docArg("date_départ", "Date de départ."), docArg("nb_jours", "Nombre de jours ouvrés à ajouter (négatif = avant)."), argWeekend,
+			docOpt("jours_fériés", "Colonne de dates à exclure (Fériés[Jour]).")),
+		0, `=SERIE.JOUR.OUVRE.INTL([Commande]; 5; "0000001")`},
+	"DATEVALUE": {catDate, "Convertit une date écrite en texte (15/01/2026, 2026-01-15, 15 janvier 2026) en date.",
+		docArgs(docArg("texte_date", "Date écrite en texte, ou colonne de la ligne ([Date texte]).")), 0, `=DATEVAL("15/01/2026")`},
+	"TIMEVALUE": {catDate, "Convertit une heure écrite en texte (18:30, 09:41:30) en fraction de journée.",
+		docArgs(docArg("texte_heure", "Heure écrite en texte, ou date et heure (l'heure seule est gardée).")), 0, `=TEMPSVAL("18:30")*24`},
+	"YEARFRAC": {catDate, "Renvoie la part d'année comprise entre deux dates (âge, prorata d'intérêts).",
+		docArgs(docArg("date_début", "Première date."), docArg("date_fin", "Seconde date (l'ordre est indifférent)."),
+			docOpt("base", "0 ou omis : 30/360 américain ; 1 : réel/réel ; 2 : réel/360 ; 3 : réel/365 ; 4 : 30/360 européen.")),
+		0, `=ENT(FRACTION.ANNEE([Naissance]; AUJOURDHUI(); 1))`},
 
 	// Agrégats
 	"SUM": {catAgg, "Additionne des nombres, des colonnes entières ou une expression sur les colonnes d'un tableau.",

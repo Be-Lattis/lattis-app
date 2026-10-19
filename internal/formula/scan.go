@@ -116,9 +116,13 @@ var scans = map[string]scanDef{
 		make: func(p []Value) scanner { return &irr{guess: optParam(p, 0)} }, ordered: true},
 
 	"NETWORKDAYS": {roles: func(n int) ([]role, bool) { return roles(param, param, column)[:n], true },
-		make: func(p []Value) scanner { return newWorkdays(p, false) }},
+		make: func(p []Value) scanner { return newWorkdays(p, false, false) }},
 	"WORKDAY": {roles: func(n int) ([]role, bool) { return roles(param, param, column)[:n], true },
-		make: func(p []Value) scanner { return newWorkdays(p, true) }},
+		make: func(p []Value) scanner { return newWorkdays(p, true, false) }},
+	"NETWORKDAYS.INTL": {roles: func(n int) ([]role, bool) { return roles(param, param, param, column)[:n], true },
+		make: func(p []Value) scanner { return newWorkdays(p, false, true) }},
+	"WORKDAY.INTL": {roles: func(n int) ([]role, bool) { return roles(param, param, param, column)[:n], true },
+		make: func(p []Value) scanner { return newWorkdays(p, true, true) }},
 }
 
 // --- Familles .SI et .SI.ENS --------------------------------------------------
@@ -415,8 +419,14 @@ type workdayScan struct {
 	err     Value
 }
 
-func newWorkdays(p []Value, forward bool) scanner {
-	return &workdayScan{from: p[0], n: p[1], forward: forward, days: workdays{}}
+// newWorkdays : NB.JOURS.OUVRES et SERIE.JOUR.OUVRE ; intl : leurs formes
+// .INTL, dont le 3e paramètre donne les jours de week-end.
+func newWorkdays(p []Value, forward, intl bool) scanner {
+	w := &workdayScan{from: p[0], n: p[1], forward: forward, days: newWorkdaySet()}
+	if intl {
+		w.err = w.days.weekend(optParam(p, 2))
+	}
+	return w
 }
 
 func (w *workdayScan) add(cols []Value) {

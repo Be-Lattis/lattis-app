@@ -121,6 +121,10 @@ Une date est un **numéro de série** comme dans Excel (le 1er janvier 2026 vaut
 | FIN.MOIS, MOIS.DECALER | EOMONTH, EDATE | ✅ |
 | DATEDIF | DATEDIF | ✅ unités `j`/`d`, `m`, `a`/`y`, `mj`, `am`, `aj` |
 | NB.JOURS.OUVRES, SERIE.JOUR.OUVRE | NETWORKDAYS, WORKDAY | ✅ jours fériés depuis une colonne |
+| NB.JOURS.OUVRES.INTL, SERIE.JOUR.OUVRE.INTL | NETWORKDAYS.INTL, WORKDAY.INTL | ✅ week-end par code (1 à 7, 11 à 17) ou par sept chiffres du lundi au dimanche (`"0000011"`) ; `"1111111"` : #VALEUR!, code inconnu : #NOMBRE! |
+| DATEVAL | DATEVALUE | ⚠️ rend une **date** (affichée comme telle ; `*1` donne le numéro de série) ; lit `15/01/2026`, `2026-01-15`, `15 janvier 2026`, `1er mars 2026`, `15-févr-2026` (l'heure est ignorée) ; accepte aussi une valeur déjà date ; un nombre donne #VALEUR! |
+| TEMPSVAL | TIMEVALUE | ✅ `"18:30"`, `"09:41:30"` ou une date et heure ; 25:00 revient à 01:00 ; pas de AM/PM |
+| FRACTION.ANNEE | YEARFRAC | ✅ bases 0 (30/360 américain, règles NASD d'Excel), 1 (réel/réel), 2, 3 et 4 ; dates dans un ordre quelconque |
 
 ⚠️ Une date concaténée à du texte s'affiche en date (`"Le "&[Date]` donne « Le 15/01/2026 »), là où Excel écrirait le numéro.
 
