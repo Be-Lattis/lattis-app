@@ -85,13 +85,13 @@ func toolNames(ts []Tool) map[string]bool {
 func TestToolsBySharing(t *testing.T) {
 	schema := toolNames(Tools(SchemaOnly))
 	sample := toolNames(Tools(Sample))
-	for _, n := range []string{"tables_list", "columns_insert", "cells_set", "pivots_create", profileTool} {
+	for _, n := range []string{"tables_list", "columns_insert", "cells_set", "pivots_create", "sheets_get", profileTool} {
 		if !schema[n] || !sample[n] {
 			t.Errorf("%s absent", n)
 		}
 	}
 	// Valeurs des cellules : seulement en mode sample.
-	for _, n := range []string{"tables_rows", "db_query", "columns_values", "sheets_get", "cells_get"} {
+	for _, n := range []string{"tables_rows", "db_query", "columns_values", "cells_get", "cells_read"} {
 		if schema[n] {
 			t.Errorf("%s proposé sans partage des données", n)
 		}

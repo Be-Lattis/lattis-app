@@ -47,6 +47,9 @@ var structureCommands = []string{
 	// Lecture de la structure.
 	"sheets.list", "tables.list", "tables.get", "formulas.functions", "queries.list", "connections.list",
 	"columns.type_preview", "columns.type_mix", "tables.key_check", "buttons.list",
+	// Disposition des feuilles (où sont tableaux, TCD, graphiques, cellules
+	// libres) ; sans partage des données, sans les valeurs (layoutOnly).
+	"sheets.get",
 	// Construction de l'analyse.
 	"sheets.add", "sheets.rename", "sheets.color", "tables.rename", "tables.sort",
 	"columns.insert", "columns.rename", "columns.set_type", "columns.fix_type", "columns.set_rules",
@@ -62,7 +65,7 @@ var structureCommands = []string{
 	"pivots.create", "pivots.set", "charts.create", "charts.set", "charts.place",
 }
 
-var sampleCommands = []string{"tables.rows", "columns.values", "db.query", "sheets.get", "cells.get", "cells.read"}
+var sampleCommands = []string{"tables.rows", "columns.values", "db.query", "cells.get", "cells.read"}
 
 // Outils propres à l'assistant, permis même sans partage des données :
 // profil d'un tableau (cardinalités, type du résultat des colonnes
@@ -175,6 +178,9 @@ func Exec(host api.Host, sharing string) Executor {
 		res, err := api.Invoke(api.WithoutPrompt(ctx), host, cmd.Name, args)
 		if err != nil {
 			return err.Error(), true
+		}
+		if sharing == SchemaOnly {
+			res = layoutOnly(res)
 		}
 		return encode(res, sharing == Sample && isSample(cmd.Name)), false
 	}
@@ -471,7 +477,7 @@ func System(sharing string) string {
 	return `Vous êtes l'assistant d'analyse de données de Lattis, un tableur relationnel de bureau : chaque tableau d'une feuille est une table SQLite, avec des colonnes typées (texte, entier, décimal, date, booléen). ` +
 		`Vous aidez l'utilisateur à construire une analyse pertinente : choisir les bons types, les clés, les colonnes calculées, les tableaux croisés dynamiques et les graphiques, et à comprendre ses données.
 
-Conventions : les feuilles, tableaux et colonnes se désignent par leur nom ; les lignes et colonnes de la feuille se comptent à partir de 1. La structure du classeur (tableaux, colonnes et leurs types) est jointe au premier message dans une ligne « [Structure du classeur : …] » : servez-vous-en au lieu de tables_list et sheets_list, et ne relisez la structure (tables_get, tables_profile) qu'au besoin.
+Conventions : les feuilles, tableaux et colonnes se désignent par leur nom ; les lignes et colonnes de la feuille se comptent à partir de 1. La structure du classeur (tableaux, colonnes et leurs types) est jointe au premier message dans une ligne « [Structure du classeur : …] » : servez-vous-en au lieu de tables_list et sheets_list, et ne relisez la structure (tables_get, tables_profile) qu'au besoin. La disposition d'une feuille (où sont ses tableaux, tableaux croisés, graphiques, boutons et cellules libres) se lit avec sheets_get.
 Mise en forme : cells_style (format de nombre et de date, police, couleurs, alignement, bordures) sur une plage, cells_style_lines sur des lignes ou colonnes entières, columns_set_rules pour la mise en forme conditionnelle, sheets_set_column_width et sheets_set_row_height pour les tailles, cells_merge, sheets_freeze.
 Réparer une feuille dont les tableaux sont mal créés : lisez d'abord tables_list, tables_get et tables_rows (ou query_show) pour voir ce qui cloche, dites-le en une phrase, puis corrigez. Un tableau trop grand ou trop petit : tables_to_range puis tables_from_range sur la bonne plage. Un titre pris pour l'en-tête : tables_header_to_title ; un en-tête resté dans les données : tables_promote_header. Une ligne de groupes fusionnés au-dessus des en-têtes (BOISEMENT sur Nom | Statut) : tables_two_level_headers. Une note ou un total pris comme dernière ligne : tables_last_row_out. Une colonne de mauvais type : columns_set_type. Des valeurs collées dans une colonne : tables_text_to_columns. Des cellules libres qui devraient être un tableau : tables_from_range. Ne supprimez pas de données sans le demander.
 Questions : pour répondre à une question sur les données (« quelle ville a le meilleur chiffre d'affaires ? », « combien de commandes en mars ? »), ne modifiez pas le classeur : écrivez une requête SQL de lecture et appelez query_show, en une étape si possible ; Lattis montre le résultat à l'utilisateur sous votre réponse. Ne créez de colonne, de tableau croisé, de graphique ou de cellule que si l'utilisateur le demande.
@@ -487,4 +493,31 @@ Exemples :
 
 Chaque outil qui modifie le classeur s'applique tout de suite ; tout ce que vous modifiez pendant une réponse s'annule d'un coup (Ctrl+Z, ou « Annuler cette réponse »). Ne supprimez rien que l'utilisateur n'a pas demandé. Quand une demande est ambiguë ou touche beaucoup de données, proposez d'abord ce que vous comptez faire.
 Répondez en français, brièvement. Markdown simple permis (gras, listes, titres courts) ; pas de tableaux larges.`
+}
+
+// layoutOnly : sans partage des données, la disposition d'une feuille
+// (sheets.get) garde les positions et la nature des cellules libres, pas leur
+// contenu ; tableaux croisés et graphiques sans leur configuration (filtres :
+// des valeurs).
+func layoutOnly(res any) any {
+	v, ok := res.(api.SheetView)
+	if !ok {
+		return res
+	}
+	for i, c := range v.Cells {
+		kind := "texte"
+		switch {
+		case strings.HasPrefix(c.Raw, "="):
+			kind = "formule"
+		case c.Raw != "" && strings.Trim(c.Raw, "0123456789,.- ") == "":
+			kind = "nombre"
+		}
+		v.Cells[i] = api.CellView{Row: c.Row, Col: c.Col, Raw: "(" + kind + ")", Error: c.Error}
+	}
+	for _, objs := range [][]api.ObjectView{v.Pivots, v.Charts} {
+		for i := range objs {
+			objs[i].Config = nil
+		}
+	}
+	return v
 }
