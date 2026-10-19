@@ -1,29 +1,45 @@
 name: CI
 
-# Pas de CI sur les PR pour l'instant (choix de Louis : trop long sur chaque
-# plateforme). Les tests tournent sur la branche de développement ; les builds
-# multi-OS et la mesure se lancent à la demande (Actions → Run workflow).
+# Tests à chaque push sur main (là où le travail est commité) et sur chaque
+# PR, sous Linux et sous Windows : le code propre à Windows (verrou du
+# fichier, registre, trousseau, renommage réessayé contre l'antivirus) n'est
+# testé que là. Les builds multi-OS et la mesure se lancent à la demande
+# (Actions › Run workflow).
 on:
   push:
-    branches: [claude/project-thread-0nnffb]
+    branches: [main]
+  pull_request:
   workflow_dispatch:
+
+# Un nouveau push annule la CI en cours de la même branche.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   WAILS_VERSION: v3.0.0-beta.30
 
 jobs:
   go:
-    name: Go (vet + tests)
-    runs-on: ubuntu-24.04
+    name: Go (vet + tests, ${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      # internal/bridge importe Wails, qui compile contre GTK 4 / WebKitGTK sous Linux.
-      - run: sudo apt-get update && sudo apt-get install -y build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev
-      - run: go vet ./internal/... ./spikes/script/...
-      - run: go test ./internal/... ./spikes/script/...
+      # internal/bridge importe Wails, qui compile contre GTK 4 / WebKitGTK sous Linux
+      # (sous Windows, WebView2 ne demande rien à la compilation).
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev
+      # engine et protocol : le moteur web et le contrat de lattisd, testés
+      # jusqu'ici par scripts/release.sh seulement.
+      - run: go vet ./internal/... ./engine/... ./protocol/... ./spikes/script/...
+      - run: go test ./internal/... ./engine/... ./protocol/... ./spikes/script/...
 
   frontend:
     name: Frontend (svelte-check + vitest)
