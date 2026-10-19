@@ -123,6 +123,8 @@ go run . --sql                                  # journal des requêtes SQL dans
 go run . --dev                                  # rebâtit l'interface (npm run build) avant de démarrer
 ```
 
+Liens « Ouvrir dans Lattis » de la page web de Lattis Server en développement (Windows) : `go run .` déclare le schéma `lattis://` vers son propre exécutable temporaire (HKCU\Software\Classes\lattis, message dans la console) ; le lien marche tant que cette instance tourne, et une version installée reprend la clé au lancement suivant. `--no-register-protocol` désactive la déclaration.
+
 ### Données de démonstration
 
 `--demo [preset]` ouvre un classeur neuf rempli de fausses données plausibles. Le générateur est déterministe : la même `--seed` donne le même classeur. Sans preset, c'est `med` qui s'ouvre ; un preset inconnu affiche la liste. `--demo plan.yaml` fabrique le classeur décrit par un fichier YAML (onglets, tableaux et générateurs de colonnes, formules, TCD, graphiques, contrôles, requêtes, documents, pages, scripts) : format dans [docs/demo.md](docs/demo.md), exemple dans [docs/demo/exemple.yaml](docs/demo/exemple.yaml) ; `--seed` l'emporte sur la graine du fichier.

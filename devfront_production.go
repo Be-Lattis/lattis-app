@@ -4,5 +4,9 @@ package main
 
 import "io/fs"
 
+// devBuild : version de développement (sans l'étiquette production) ;
+// elle reprend le schéma lattis:// pour elle (urlscheme).
+const devBuild = false
+
 // devFrontend : l'option --dev n'existe pas dans la version livrée.
 func devFrontend(args []string) ([]string, fs.FS) { return args, nil }

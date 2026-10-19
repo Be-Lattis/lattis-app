@@ -10,6 +10,10 @@ import (
 	"slices"
 )
 
+// devBuild : version de développement (sans l'étiquette production) ;
+// elle reprend le schéma lattis:// pour elle (urlscheme).
+const devBuild = true
+
 // devFrontend : « go run . --dev » rebâtit l'interface (npm run build dans
 // frontend) avant de démarrer et la sert depuis frontend/dist sur le disque :
 // go run embarque le dist de la compilation, qui serait périmé. Option de

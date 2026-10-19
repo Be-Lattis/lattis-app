@@ -88,6 +88,9 @@ Options :
   --seed n          graine du générateur de la démonstration (1 par défaut ; l'emporte
                     sur le seed d'un fichier YAML)
   -h, --help        affiche cette aide, sans ouvrir la fenêtre
+  --no-register-protocol
+                    Windows : ne déclare pas le schéma lattis:// au lancement (sinon
+                    déclaré pour l'utilisateur s'il manque ou vise un exécutable disparu)
 
 Débogage (journal dans la console, lignes « 21:42:07.315 [DOC] … ») :
   -v                ce que fait l'application : classeurs (ouverture, enregistrement,
@@ -138,6 +141,7 @@ Variables d'environnement :
   LATTIS_BENCH=fichier    mesure le défilement de la grille et écrit le rapport dans fichier
   LATTIS_SQL=1 ou 0       force le journal SQL (comme --sql / --no-sql)
   LATTIS_VERBOSE=n        niveau du journal de débogage (comme --verbose=n)
+  LATTIS_NO_REGISTER_PROTOCOL=1  comme --no-register-protocol
   LATTIS_WORK_DIR=dossier sessions de travail (récupération) dans ce dossier
 `)
 	return b.String()

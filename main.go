@@ -20,6 +20,8 @@ import (
 	"github.com/lalamefine/lattis/internal/demo"
 	"github.com/lalamefine/lattis/internal/instance"
 	"github.com/lalamefine/lattis/internal/mcp"
+	"github.com/lalamefine/lattis/internal/trace"
+	"github.com/lalamefine/lattis/internal/urlscheme"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 )
@@ -75,6 +77,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "lattis : %v\n", err)
 		os.Exit(2)
 	}
+	// --no-register-protocol : ne pas déclarer le schéma lattis:// au lancement.
+	cliArgs, noProtocol := urlscheme.StripFlag(cliArgs)
 	var args []string
 	for i, a := range cliArgs {
 		// « lattis lattis://open?… » : lien vers un classeur partagé (navigateur,
@@ -118,6 +122,11 @@ func main() {
 	if preset != "" {
 		documents.SetDemo(preset, seed)
 	}
+
+	// Windows : schéma lattis:// déclaré pour l'utilisateur s'il manque ou
+	// vise un exécutable disparu (lancement depuis les sources, copie à la
+	// main) ; l'installeur et le paquet MSIX le déclarent eux-mêmes.
+	registerProtocol(noProtocol || os.Getenv("LATTIS_NO_REGISTER_PROTOCOL") == "1")
 
 	app := application.New(application.Options{
 		Name:        "Lattis",
@@ -201,5 +210,20 @@ func main() {
 
 	if err := app.Run(); err != nil {
 		log.Fatal(err)
+	}
+}
+
+// registerProtocol déclare le schéma lattis:// si besoin (urlscheme) et le
+// journalise : sur la sortie d'erreur quand la clé est écrite ou en erreur,
+// à -v sinon.
+func registerProtocol(disabled bool) {
+	d, err := urlscheme.Ensure(devBuild, disabled)
+	switch {
+	case err != nil:
+		fmt.Fprintf(os.Stderr, "lattis : %v\n", err)
+	case d.Action == urlscheme.Register:
+		fmt.Fprintf(os.Stderr, "lattis : liens lattis:// ouverts par %s (%s)\n", d.Target, d.Reason)
+	default:
+		trace.Logf(1, trace.Doc, "schéma lattis:// %s : %s", d.Action, d.Reason)
 	}
 }
