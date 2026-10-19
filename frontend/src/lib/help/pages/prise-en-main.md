@@ -64,7 +64,7 @@ L'historique d'annulation n'est jamais enregistré dans le fichier : `Ctrl+Z` ma
 
 Un classeur ouvert depuis un dossier partagé (réseau, OneDrive…) est signalé aux autres postes par un petit fichier caché `~$nom.lattis` posé à côté : un autre poste qui l'ouvre est prévenu et peut l'ouvrir en lecture seule. Si le fichier a été modifié ailleurs depuis son ouverture, `Ctrl+S` propose d'enregistrer une copie, d'écraser ou d'annuler.
 
-Fichier › Importer lit les fichiers CSV et Excel ; Fichier › Exporter écrit du CSV ou du `.xlsx` (dans un CSV pour Excel, un texte qui commence par `=`, `+`, `-` ou `@` est précédé d'une apostrophe, pour qu'Excel ne l'exécute pas comme une formule) ; Fichier › Imprimer / PDF imprime ou enregistre en PDF, selon l'onglet Mise en page (voir [Mise en page et impression](impression)).
+Fichier › Importer lit les fichiers CSV et Excel ; Fichier › Exporter écrit du CSV, du `.xlsx` ou de l'OpenDocument (`.ods`) (dans un CSV pour Excel, un texte qui commence par `=`, `+`, `-` ou `@` est précédé d'une apostrophe, pour qu'Excel ne l'exécute pas comme une formule) ; Fichier › Imprimer / PDF imprime ou enregistre en PDF, selon l'onglet Mise en page (voir [Mise en page et impression](impression)).
 
 ## Protéger une feuille ou le classeur
 

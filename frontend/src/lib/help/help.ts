@@ -10,6 +10,7 @@ import { settingSections } from '#lib/shell/settings.js';
 import { shortcutGroups } from '#lib/shell/shortcuts.js';
 import { blockText, fold, parse, plain, slug, type Block } from './markdown';
 import priseEnMain from './pages/prise-en-main.md?raw';
+import cellules from './pages/cellules.md?raw';
 import formules from './pages/formules.md?raw';
 import tcd from './pages/tcd.md?raw';
 import graphiques from './pages/graphiques.md?raw';
@@ -38,6 +39,7 @@ function page(id: string, md: string): HelpPage {
 /** Pages, dans l'ordre de la table des matières. */
 export const pages: HelpPage[] = [
 	page('prise-en-main', priseEnMain),
+	page('cellules', cellules),
 	page('formules', formules),
 	page('tcd', tcd),
 	page('graphiques', graphiques),
