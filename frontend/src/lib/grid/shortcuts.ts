@@ -16,7 +16,14 @@ export type Shortcut =
 	| 'insertSheet' // Maj+F11
 	| 'endMode' // Fin (puis flèche)
 	| 'refresh' // F5 : actualise la requête du tableau, sinon recalcule
-	| 'refreshAll'; // Ctrl+F5 ou Maj+F5 : actualise tout (requêtes et recalcul)
+	| 'refreshAll' // Ctrl+F5, Ctrl+Alt+F5 ou Maj+F5 : actualise tout (requêtes et recalcul)
+	| 'formatTable' // Ctrl+L ou Ctrl+T : mettre sous forme de tableau
+	| 'strike' // Ctrl+5 : barré
+	| 'hideRows' // Ctrl+9 : masquer les lignes
+	| 'hideCols' // Ctrl+0 : masquer les colonnes
+	| 'note' // Maj+F2 : nouvelle note (ou la modifier)
+	| 'insertFunction' // Maj+F3 : insérer une fonction
+	| 'chart'; // Alt+F1 ou F11 : graphique du tableau actif
 
 type Keys = Pick<KeyboardEvent, 'key' | 'code' | 'ctrlKey' | 'metaKey' | 'shiftKey' | 'altKey'>;
 
@@ -25,7 +32,7 @@ export function shortcutOf(e: Keys): Shortcut | null {
 	const ctrl = e.ctrlKey || e.metaKey;
 	const k = e.key;
 	const lower = k.length === 1 ? k.toLowerCase() : k;
-	if (k === 'F5' && !e.altKey) return ctrl || e.shiftKey ? 'refreshAll' : 'refresh';
+	if (k === 'F5' && (!e.altKey || ctrl)) return ctrl || e.shiftKey ? 'refreshAll' : 'refresh';
 	if (ctrl && !e.altKey) {
 		if (k === 'PageDown') return 'nextSheet';
 		if (k === 'PageUp') return 'prevSheet';
@@ -37,9 +44,15 @@ export function shortcutOf(e: Keys): Shortcut | null {
 		if (k === ':' || (e.shiftKey && (e.code === 'Period' || e.code === 'Semicolon'))) return 'now';
 		if (!e.shiftKey && k === ';') return 'today';
 		if (!e.shiftKey && (k === '1' || k === '&' || e.code === 'Digit1' || e.code === 'Numpad1')) return 'formatCells';
+		if (!e.shiftKey && (lower === 'l' || lower === 't')) return 'formatTable';
+		// Rangée des chiffres (AZERTY : « ( », « ç », « à » sans Maj).
+		if (!e.shiftKey && (k === '5' || e.code === 'Digit5')) return 'strike';
+		if (!e.shiftKey && (k === '9' || e.code === 'Digit9')) return 'hideRows';
+		if (!e.shiftKey && (k === '0' || e.code === 'Digit0')) return 'hideCols';
 		return null;
 	}
 	if (e.altKey && !ctrl && (k === '=' || e.code === 'Equal')) return 'autoSum';
+	if (e.altKey && !ctrl && !e.shiftKey && k === 'F1') return 'chart';
 	// Équivalent de Ctrl+Pg.Suiv / Pg.Préc, que le navigateur garde pour
 	// changer d'onglet (version web).
 	if (e.altKey && !ctrl && !e.shiftKey && k === 'PageDown') return 'nextSheet';
@@ -47,9 +60,28 @@ export function shortcutOf(e: Keys): Shortcut | null {
 	if (ctrl || e.altKey) return null;
 	if (e.shiftKey && (k === ' ' || e.code === 'Space')) return 'selectRow';
 	if (e.shiftKey && k === 'F11') return 'insertSheet';
+	if (!e.shiftKey && k === 'F11') return 'chart';
+	if (e.shiftKey && k === 'F2') return 'note';
+	if (e.shiftKey && k === 'F3') return 'insertFunction';
 	if (!e.shiftKey && k === 'F4') return 'repeat';
 	if (!e.shiftKey && k === 'End') return 'endMode';
 	return null;
+}
+
+const MOVES = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End', 'Tab', 'Enter', 'Escape']);
+
+/**
+ * Touche permise sur une feuille protégée (elle ne modifie rien) : se
+ * déplacer et sélectionner, Rechercher (Ctrl+F), copier, annuler et rétablir
+ * (Ctrl+Z, Ctrl+Y, comme le ruban), recalculer (F9). Remplacer, la saisie et
+ * le reste sont ignorés.
+ */
+export function readKey(e: Keys): boolean {
+	const ctrl = e.ctrlKey || e.metaKey;
+	const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+	if (e.altKey) return false;
+	if (ctrl) return MOVES.has(k) || ['f', 'z', 'y', 'c', 'a', ' '].includes(k);
+	return MOVES.has(k) || k === 'F9' || (e.shiftKey && k === ' ');
 }
 
 /**

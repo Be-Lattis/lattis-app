@@ -5,7 +5,7 @@
 // de ui/keytips.ts.
 
 import { TAB_TIPS } from '#lib/ui/keytips.js';
-import { isWeb, keyLabel } from '#lib/web/platform.js';
+import { isMac, isWeb, keyLabel } from '#lib/web/platform.js';
 
 export interface ShortcutInfo {
 	/** Touches, écrites comme sur le clavier français : « Ctrl+Maj+L ». */
@@ -115,7 +115,12 @@ const groups: ShortcutGroup[] = [
 			{ keys: 'Ctrl+B / Ctrl+I / Ctrl+U', label: 'Gras, italique, souligné' },
 			{ keys: 'Ctrl+1', label: 'Format de cellule' },
 			{ keys: 'Ctrl++ / Ctrl+-', label: 'Insérer, supprimer des lignes ou colonnes' },
-			{ keys: 'Ctrl+Maj+L', label: "Filtre de la colonne (efface les filtres s'il y en a)" }
+			{ keys: 'Ctrl+5', label: 'Barré' },
+			{ keys: 'Ctrl+9 / Ctrl+0', label: 'Masquer les lignes, les colonnes de la sélection' },
+			{ keys: 'Ctrl+L / Ctrl+T', label: 'Mettre sous forme de tableau' },
+			{ keys: 'Ctrl+Maj+L', label: "Filtre de la colonne (efface les filtres s'il y en a)" },
+			{ keys: 'Maj+F2', label: 'Nouvelle note (ou modifier la note)' },
+			{ keys: 'Alt+F1 / F11', label: 'Graphique (histogramme) du tableau actif' }
 		]
 	},
 	{
@@ -123,7 +128,8 @@ const groups: ShortcutGroup[] = [
 		title: 'Calcul et données',
 		items: [
 			{ keys: 'F5', label: 'Actualiser la requête du tableau, sinon recalculer' },
-			{ keys: 'Ctrl+F5 / Maj+F5', label: 'Tout actualiser : requêtes et formules' },
+			{ keys: 'Ctrl+Alt+F5 / Ctrl+F5 / Maj+F5', label: 'Tout actualiser : requêtes et formules' },
+			{ keys: 'Maj+F3', label: 'Insérer une fonction' },
 			{ keys: 'F9', label: 'Recalculer' }
 		]
 	},
@@ -144,10 +150,10 @@ const groups: ShortcutGroup[] = [
 /**
  * Les raccourcis affichés. En web, ceux que le navigateur garde pour lui
  * (Ctrl+N, Ctrl+W, F12, Ctrl+Pg.Suiv…) sont remplacés par leur équivalent
- * (web/platform.ts), reconnu aussi sur le bureau.
+ * (web/platform.ts), reconnu aussi sur le bureau ; sur macOS, Ctrl s'écrit Cmd.
  */
-export const shortcutGroups: ShortcutGroup[] = isWeb ? webGroups(groups) : groups;
+export const shortcutGroups: ShortcutGroup[] = isWeb || isMac ? webGroups(groups, isWeb) : groups;
 
-export function webGroups(list: ShortcutGroup[]): ShortcutGroup[] {
-	return list.map((g) => ({ ...g, items: g.items.map((s) => ({ ...s, keys: keyLabel(s.keys, true) })) }));
+export function webGroups(list: ShortcutGroup[], web = true): ShortcutGroup[] {
+	return list.map((g) => ({ ...g, items: g.items.map((s) => ({ ...s, keys: keyLabel(s.keys, web) })) }));
 }

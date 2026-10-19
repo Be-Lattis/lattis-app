@@ -54,7 +54,7 @@
 		type CondOp,
 		type PanelValue
 	} from './filtercond';
-	import { cellLines, copyFillBlock, copyFillPlan, fillBlock, insertAt, shortcutOf, timeText, todayText } from './shortcuts';
+	import { cellLines, copyFillBlock, copyFillPlan, fillBlock, insertAt, readKey, shortcutOf, timeText, todayText } from './shortcuts';
 	import { SheetViews } from './sheetview';
 	import { besideGutter, gutterOwner } from './gutter';
 	import Select from '#lib/ui/Select.svelte';
@@ -519,6 +519,13 @@
 		style?: CellStyle;
 		/** La cellule active est une fusion. */
 		merged?: boolean;
+		/** La cellule active a une note (Révision › Modifier la note). */
+		note?: boolean;
+		/** Tableau de la cellule active : filtré, et sa colonne n'affiche que les erreurs. */
+		filters?: boolean;
+		errorsOnly?: boolean;
+		/** Tableau publié en lecture seule sous la cellule active (classeur partagé) : le motif. */
+		readOnly?: string;
 	}
 
 	interface Props {
@@ -1876,6 +1883,8 @@
 		untrack(() => {
 			statsEpoch++;
 			applyData(d);
+			// Le ruban suit le tableau relu (filtres, note, lecture seule).
+			refreshStatus();
 		});
 	});
 
@@ -2183,7 +2192,7 @@
 
 		// Plage sélectionnée.
 		// Comme Excel, la cellule active (ou sa fusion) reste blanche.
-		if (!locked && !singleSelection()) {
+		if (!singleSelection()) {
 			const a = activeRect();
 			ctx.fillStyle = C.select;
 			ctx.beginPath();
@@ -2703,8 +2712,8 @@
 		// Cadre extérieur (animé) : la plage, ou la cellule active seule.
 		ctx.strokeStyle = C.active;
 		ctx.lineWidth = 2;
-		// Feuille protégée : pas de cellule active affichée (elle ne prend pas le focus).
-		if (!locked) ctx.strokeRect(cx(0) + selBox.x + 0.5, ry(0) + selBox.y + 0.5, selBox.w - 1, selBox.h - 1);
+		// Feuille protégée aussi : on y sélectionne pour lire, copier ou figer les volets.
+		ctx.strokeRect(cx(0) + selBox.x + 0.5, ry(0) + selBox.y + 0.5, selBox.w - 1, selBox.h - 1);
 		// Rechercher dans la sélection : la cellule trouvée, encadrée (la sélection ne bouge pas).
 		if (finder?.zone && finder.at && inZone(finder.at, finder.zone)) {
 			const f = finder.at;
@@ -3400,7 +3409,7 @@
 		if (!source.applyStyle) return;
 		lastRepeat = () => applyStyle(patch); // F4
 		const p = { ...patch };
-		for (const k of ['b', 'i', 'u'] as const) if (p[k] === 'toggle') p[k] = !activeStyle()[k];
+		for (const k of ['b', 'i', 'u', 'x'] as const) if (p[k] === 'toggle') p[k] = !activeStyle()[k];
 		if (p.dp === 'more' || p.dp === 'less') {
 			// Comme Excel : part des décimales affichées dans la cellule active
 			// (pas de la valeur stockée ni, pour une colonne calculée, de la formule).
@@ -3855,6 +3864,42 @@
 		});
 	}
 
+	/**
+	 * Accueil › Édition (Remplissage, Effacer, Trier et filtrer) et Mettre
+	 * sous forme de tableau (Ctrl+L) : sur la sélection ou la cellule active.
+	 */
+	export function editActive(what: 'fillDown' | 'fillRight' | 'clearContents' | 'clearFilters' | 'formatAsTable') {
+		if (locked) {
+			say(locked);
+			return;
+		}
+		const { row, col } = active;
+		switch (what) {
+			case 'fillDown':
+			case 'fillRight':
+				copyFill(what === 'fillDown');
+				return;
+			case 'clearContents':
+				clearSelection();
+				lastRepeat = () => clearSelection();
+				return;
+			case 'clearFilters': {
+				const e = tableAt(row, col);
+				const clear = source.clearFilters;
+				if (!e || !clear || !e.t.columns.some((c) => c.filter)) say('Le tableau de la cellule active n’est pas filtré');
+				else menuAction(() => clear(e.t));
+				return;
+			}
+			case 'formatAsTable': {
+				const fmt = source.formatAsTable;
+				if (!fmt) return;
+				if (tableAt(row, col)) say('La cellule active est déjà dans un tableau');
+				else menuAction(() => fmt(row, col));
+				return;
+			}
+		}
+	}
+
 	/** Révision › Supprimer la note de la cellule active. */
 	export function deleteNote() {
 		const set = source.setNote;
@@ -3940,7 +3985,12 @@
 			}
 		}
 		const stats = entries[0]?.cache.stats ?? { roundTrip: [], server: [] };
+		const here = tableAt(active.row, active.col);
 		onstatus?.({
+			note: !!noteOf(active.row, active.col),
+			filters: !!here?.t.columns.some((c) => c.filter),
+			errorsOnly: !!here?.t.columns[active.col - here.t.col]?.filter?.errors,
+			readOnly: here?.t.readOnly,
 			// Une cellule libre : son adresse est déjà dans la zone de nom.
 			cell: tableAt(active.row, active.col) || names.has(key(active.row, active.col)) ? cellName(active.row, active.col) : '',
 			message,
@@ -5852,12 +5902,15 @@
 			pointAway(e);
 			return;
 		}
-		// Feuille protégée : les cellules ne prennent pas le focus (ni
-		// sélection, ni menus de tableau, ni redimensionnement), sans message.
+		// Feuille protégée : comme Excel, un clic place la cellule active (pour
+		// lire, copier, figer les volets), sans glisser ni menus de tableau ni
+		// redimensionnement.
 		if (locked) {
 			e.preventDefault();
 			wrap.focus();
 			if (selChart !== null) selChart = null;
+			const cell = e.button === 0 ? cellAt(e) : null;
+			if (cell) moveTo(cell.row, cell.col, e.shiftKey);
 			return;
 		}
 		if (e.button === 0 && onFillHandle(e)) {
@@ -6472,6 +6525,25 @@
 			case 'toggleFilter':
 				toggleFilters();
 				return true;
+			case 'formatTable':
+				editActive('formatAsTable');
+				return true;
+			case 'strike':
+				if (source.applyStyle) applyStyle({ x: 'toggle' });
+				return true;
+			case 'hideRows':
+			case 'hideCols':
+				hideLines(sc === 'hideRows', true);
+				return true;
+			case 'note':
+				editNote();
+				return true;
+			case 'insertFunction':
+				openFunctions();
+				return true;
+			case 'chart':
+				chartActive('bar');
+				return true;
 			case 'repeat':
 				if (lastRepeat) lastRepeat();
 				else say('Rien à répéter');
@@ -6510,9 +6582,10 @@
 		// Touche maintenue : le cadre suit sans animation.
 		if (e.repeat) noAnimUntil = performance.now() + 150;
 		if (editing) return;
-		// Feuille protégée : ni déplacement ni saisie, sans message ; les
-		// raccourcis de la page (Ctrl+S, onglets…) passent.
-		if (locked && !hold) return;
+		// Feuille protégée : déplacement et lecture seulement (Rechercher,
+		// copier, annuler, recalculer, comme le ruban), pas de saisie, sans
+		// message ; les raccourcis de la page (Ctrl+S, onglets…) passent.
+		if (locked && !hold && !readKey(e)) return;
 		// Maj+F10 ou touche Menu : menu contextuel de la cellule active (ou du graphique sélectionné).
 		if ((e.shiftKey && e.key === 'F10' && !e.ctrlKey && !e.altKey) || e.key === 'ContextMenu') {
 			e.preventDefault();

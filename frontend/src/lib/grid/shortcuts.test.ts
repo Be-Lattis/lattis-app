@@ -30,6 +30,20 @@ describe('raccourcis', () => {
 		expect(shortcutOf(key('F5', { ctrl: true }))).toBe('refreshAll');
 		expect(shortcutOf(key('F5', { shift: true }))).toBe('refreshAll');
 		expect(shortcutOf(key('F5', { alt: true }))).toBeNull();
+		expect(shortcutOf(key('F5', { ctrl: true, alt: true }))).toBe('refreshAll');
+	});
+	it('raccourcis d’Excel ajoutés avec le ruban (audit 3, D7)', () => {
+		expect(shortcutOf(key('l', { ctrl: true }))).toBe('formatTable');
+		expect(shortcutOf(key('t', { ctrl: true }))).toBe('formatTable');
+		expect(shortcutOf(key('(', { ctrl: true, code: 'Digit5' }))).toBe('strike'); // AZERTY
+		expect(shortcutOf(key('5', { ctrl: true, code: 'Digit5' }))).toBe('strike');
+		expect(shortcutOf(key('ç', { ctrl: true, code: 'Digit9' }))).toBe('hideRows');
+		expect(shortcutOf(key('à', { ctrl: true, code: 'Digit0' }))).toBe('hideCols');
+		expect(shortcutOf(key('F2', { shift: true }))).toBe('note');
+		expect(shortcutOf(key('F3', { shift: true }))).toBe('insertFunction');
+		expect(shortcutOf(key('F1', { alt: true }))).toBe('chart');
+		expect(shortcutOf(key('F11'))).toBe('chart');
+		expect(shortcutOf(key('F2'))).toBeNull();
 	});
 	it('touches qui rechargeraient la page', () => {
 		expect(isReloadKey(key('F5'))).toBe(true);
@@ -44,7 +58,7 @@ describe('raccourcis', () => {
 		expect(shortcutOf(key(' '))).toBeNull();
 		expect(shortcutOf(key('End', { ctrl: true }))).toBeNull();
 		expect(shortcutOf(key('PageDown'))).toBeNull();
-		expect(shortcutOf(key('l', { ctrl: true }))).toBeNull();
+		expect(shortcutOf(key('l', { ctrl: true, alt: true }))).toBeNull();
 	});
 });
 
