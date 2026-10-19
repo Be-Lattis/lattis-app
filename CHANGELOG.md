@@ -6,11 +6,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
-### Changements
-
-- Volet « Requêtes et connexions » plus compact : une ligne par requête ou connexion avec l'icône de sa source, la date d'actualisation relative (« il y a 5 min »), Actualiser et un menu ⋯ au survol ; un clic sur la ligne la modifie.
-
-## 0.1.0 (19/10/2026)
+## 0.1.0-beta.1 (19/10/2026)
 
 Première version publique de Lattis. Voici, regroupé par jour, ce qu'elle contient.
 
@@ -38,6 +34,7 @@ Première version publique de Lattis. Voici, regroupé par jour, ce qu'elle cont
 
 **Changements**
 
+- Volet « Requêtes et connexions » plus compact : une ligne par requête ou connexion avec l'icône de sa source, la date d'actualisation relative (« il y a 5 min »), Actualiser et un menu ⋯ au survol ; un clic sur la ligne la modifie.
 - Insertion › Tableau croisé ne crée plus de feuille : le clic suivant sur une cellule, de n'importe quelle feuille, y pose le TCD (la navigation, les onglets et le ruban restent utilisables ; Échap annule ; « Nouvelle feuille » dans la barre d'état garde l'ancienne façon). Clic droit › Déplacer sur un TCD fait de même pour le déplacer, d'une feuille à l'autre aussi. Les tableaux et TCD recouverts ou touchés s'écartent vers la droite avec une colonne vide ; une seule annulation.
 - Le fichier `.lattis` est compressé (Zstandard) : un classeur pèse de 2,5 à 9 fois moins (un classeur de 100 000 lignes passe de 10 à 3,8 Mo), et l'enregistrement comme l'ouverture restent aussi rapides. Les classeurs enregistrés avant s'ouvrent toujours. Pour lire la base hors de Lattis, dézipper avec 7-Zip ou WinRAR : l'Explorateur de Windows ne lit pas cette compression.
 - Un tableau créé (saisie, collage, Mettre sous forme de tableau) dont la première colonne s'appelle ID, ou vaut 1, 2, 3…, a d'office cette colonne pour clé (entiers uniques et remplis ; Ctrl+Z l'annule avec la création) ; une ligne ajoutée reçoit ensuite le numéro suivant de la clé, où qu'elle soit insérée, ou celui d'une première colonne en suite régulière (10, 20, 30…) pour une ligne ajoutée à la fin.
