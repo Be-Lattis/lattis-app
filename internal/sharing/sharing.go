@@ -71,6 +71,11 @@ var Structure = []string{
 	"tables.from_range", "tables.to_range", "tables.promote_header", "tables.header_to_title", "tables.last_row_out", "tables.two_level_headers",
 	"tables.insert_row", "tables.delete_row", "tables.move", "tables.text_to_columns", "cells.text_to_columns", "cells.paste", "cells.clear",
 	"pivots.create", "pivots.set", "charts.create", "charts.set", "charts.place",
+	// Tableaux de bord sur mesure : une page web (HTML, CSS, JavaScript) qui
+	// lit le classeur quand l'utilisateur l'affiche ; permise à l'assistant même
+	// quand les pages web sont coupées dans les réglages (choix de Louis,
+	// 19/10/2026). Ce que la page affiche n'est pas renvoyé à l'assistant.
+	"pages.add", "pages.set",
 	// Demandes courantes : supprimer une colonne, un graphique, un tableau
 	// croisé, les doublons ; filtres, notes, lignes masquées, colonnes
 	// sorties vers un nouveau tableau, remplacement d'un texte (sans le

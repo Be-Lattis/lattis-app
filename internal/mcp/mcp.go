@@ -289,7 +289,8 @@ const instructions = `Lattis est un tableur relationnel : chaque tableau d'une f
 	"\n- Ligne de groupes au-dessus des en-têtes (BOISEMENT sur Nom, Statut…) : tables_two_level_headers(table, true) ; les colonnes s'appellent alors « Groupe.Sous », sauf celles sur un niveau (nom simple : groupe seul au-dessus d'un en-tête automatique ou répété)." +
 	"\n- Clé d'un tableau (valeurs uniques, recherches REFERENCE) : tables_key_check puis tables_set_key, ou tables_keep_row_numbers pour chercher par numéro de ligne." +
 	"\n- Colonne calculée : columns_insert puis une formule par nom de colonne (=[Prix]*[Quantité]) ; formules d'Excel traduites (RECHERCHEV devient REFERENCE)." +
-	"\n- Tableau croisé : pivots_create ; graphique : charts_create ; mise en page et impression : sheets_set_page_setup."
+	"\n- Tableau croisé : pivots_create ; graphique : charts_create ; mise en page et impression : sheets_set_page_setup." +
+	"\n- Tableau de bord sur mesure, quand graphiques et tableaux croisés ne suffisent pas : pages_add crée une page web (HTML, CSS, JavaScript) qui lit le classeur par lattis.call(\"db.query\", {sql}) et se met à jour par lattis.on(\"change\", f) ; pages_set la corrige. Permis même si les pages web sont coupées dans les paramètres de l'utilisateur."
 
 func toolResult(v any, isErr bool) map[string]any {
 	var text string
