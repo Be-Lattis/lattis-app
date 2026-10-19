@@ -94,7 +94,7 @@ func (t *tx) loadFilter(tb *Table) error {
 	if err != nil {
 		return err
 	}
-	if ch != nil {
+	if ch != nil && !tb.NoFollow {
 		if c, ok := choiceColumn(*tb, ch.Name); ok {
 			tb.choice = &tableChoice{Col: c, Value: ch.Value, All: ch.All}
 			if !ch.All {

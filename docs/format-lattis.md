@@ -1,6 +1,6 @@
 # Le format `.lattis`
 
-*Format d'archive 1 (`archive.FormatVersion`), format de base 33 (`meta.Version`), au 19 octobre 2026. Ce document suit le code : une migration qui change le schéma le met à jour.*
+*Format d'archive 1 (`archive.FormatVersion`), format de base 34 (`meta.Version`), au 19 octobre 2026. Ce document suit le code : une migration qui change le schéma le met à jour.*
 
 Un classeur Lattis est un fichier ZIP qui contient une base SQLite. Tout ce que le classeur contient (tableaux, cellules, mise en forme, objets, scripts, requêtes) est dans la base ; l'archive n'ajoute qu'un court manifeste. Le fichier se lit donc sans Lattis : on le dézippe, puis on ouvre `database.sqlite` avec n'importe quel outil SQLite.
 
@@ -18,7 +18,7 @@ Un classeur Lattis est un fichier ZIP qui contient une base SQLite. Tout ce que 
 
 ## La base
 
-La version du schéma est le `user_version` de SQLite (33 à ce jour). Toutes les tables de Lattis sont `STRICT`. Les noms affichés (feuilles, tableaux, colonnes) ne sont jamais des noms SQL : un tableau est une table `t_<id>`, une colonne `c_<id>`, ce qui permet de renommer, d'utiliser des accents, des espaces ou des mots réservés sans toucher au schéma.
+La version du schéma est le `user_version` de SQLite (34 à ce jour). Toutes les tables de Lattis sont `STRICT`. Les noms affichés (feuilles, tableaux, colonnes) ne sont jamais des noms SQL : un tableau est une table `t_<id>`, une colonne `c_<id>`, ce qui permet de renommer, d'utiliser des accents, des espaces ou des mots réservés sans toucher au schéma.
 
 ### Tableaux : `t_<id>`
 
@@ -40,8 +40,8 @@ Une saisie qui ne correspond pas au type de sa colonne laisse la cellule à `NUL
 | --- | --- |
 | Classeur | `_lattis_info` (clé, valeur : `id` identifiant aléatoire du classeur ; `events` écouteurs des scripts ; `ai.conversation` si l'utilisateur garde la conversation de l'assistant ; `remote` et clés de synchronisation d'un classeur partagé) |
 | Feuilles | `_lattis_sheets` (nom, rang, quadrillage, en-têtes, couleur, masquage, volets figés, zoom ; `choice` : onglet à choix, JSON `{tbl, col, name, value, all, fresh}`, colonne de catégorie et dernière valeur choisie, NULL sans choix, gardé sur le poste dans un classeur partagé), `_lattis_page_setup` (mise en page, JSON), `_lattis_protection` (empreinte PBKDF2 d'un mot de passe ; `sheet = 0` : la structure du classeur) |
-| Tableaux | `_lattis_tables` (feuille, nom, ancre, colonne clé, filtre, en-têtes sur deux lignes), `_lattis_columns` (nom, type, type fixé, rang, formule, règles de mise en forme conditionnelle), `_lattis_invalid` (saisies hors type) |
-| Cellules libres | `_lattis_cells` (texte tapé, formules comprises), `_lattis_names` (cellules nommées), `_lattis_range_cells` (zones « plage » : un tableau converti en plage) |
+| Tableaux | `_lattis_tables` (feuille, nom, ancre, colonne clé, filtre, en-têtes sur deux lignes ; `follow` : 0 si le tableau ne suit pas l'onglet à choix malgré sa colonne de catégorie, NULL sinon), `_lattis_columns` (nom, type, type fixé, rang, formule, règles de mise en forme conditionnelle), `_lattis_invalid` (saisies hors type) |
+| Cellules libres | `_lattis_cells` (texte tapé, formules comprises), `_lattis_choice_cells` (cellules par valeur d'un onglet à choix : feuille, ligne, colonne, valeur de la catégorie telle qu'affichée ou `*` pour « (Toutes) », texte ; `_lattis_cells` montre celle de la valeur choisie), `_lattis_names` (cellules nommées), `_lattis_range_cells` (zones « plage » : un tableau converti en plage) |
 | Mise en forme | `_lattis_styles` (cellules et colonnes de tableau), `_lattis_cell_styles`, `_lattis_row_styles`, `_lattis_col_styles`, `_lattis_row_rules`, `_lattis_col_rules`, `_lattis_col_widths`, `_lattis_row_heights` (styles et règles en JSON) |
 | Objets | `_lattis_pivots` (tableaux croisés), `_lattis_charts` (graphiques), `_lattis_buttons` (boutons et contrôles), `_lattis_pages` (onglets Document et pages web) : position et configuration JSON |
 | Scripts et SQL | `_lattis_scripts` (bibliothèque Lua), `_lattis_favorites` (requêtes favorites de l'onglet SQL), `_lattis_http_hosts` (ancienne liste des hôtes autorisés : ni lue ni écrite depuis que les accords vivent sur le poste, décision 0004) |

@@ -28,7 +28,7 @@ const (
 )
 
 // Tables des métadonnées positionnées sur une feuille (colonnes sheet, row, col).
-var positioned = []string{"_lattis_cells", "_lattis_cell_styles", "_lattis_range_cells", "_lattis_names", "_lattis_tables", "_lattis_pivots", "_lattis_charts", "_lattis_buttons"}
+var positioned = []string{"_lattis_cells", "_lattis_choice_cells", "_lattis_cell_styles", "_lattis_range_cells", "_lattis_names", "_lattis_tables", "_lattis_pivots", "_lattis_charts", "_lattis_buttons"}
 
 // Objets ancrés (pas de contenu par cellule) : leur ancre recule au début
 // d'une plage supprimée au lieu de disparaître.
@@ -166,7 +166,7 @@ func (t *tx) deleteLines(sheet int64, a axis, lo, hi int) error {
 			}
 		}
 	}
-	for _, tbl := range []string{"_lattis_cells", "_lattis_cell_styles", "_lattis_range_cells", "_lattis_names", a.sizes(), a.lineStyles(), a.lineRules()} {
+	for _, tbl := range []string{"_lattis_cells", "_lattis_choice_cells", "_lattis_cell_styles", "_lattis_range_cells", "_lattis_names", a.sizes(), a.lineStyles(), a.lineRules()} {
 		if err := t.deleteIn(tbl, a, sheet, lo, hi); err != nil {
 			return err
 		}

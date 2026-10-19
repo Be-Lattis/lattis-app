@@ -144,6 +144,22 @@ export interface ButtonInfo {
 }
 
 /**
+ * CategorySource est une source possible de la catégorie.
+ */
+export interface CategorySource {
+    /**
+     * sheet, title ou cell:A1
+     */
+    "source": string;
+
+    /**
+     * « nom de l'onglet », « cellule A1 »
+     */
+    "label": string;
+    "category": series$0.Series;
+}
+
+/**
  * CellInfo est une cellule libre.
  */
 export interface CellInfo {
@@ -580,6 +596,21 @@ export interface Event {
 }
 
 /**
+ * FamilyOutcome dit ce que devient une famille (aperçu et résultat).
+ */
+export interface FamilyOutcome {
+    /**
+     * Name : le tableau commun ("" : les tableaux restent sur leur onglet).
+     */
+    "name": string;
+    "mode": string;
+    "tables": SimilarTable[] | null;
+    "rows": number;
+    "follows": boolean;
+    "keyNote"?: string;
+}
+
+/**
  * Favorite est une requête favorite de l'onglet SQL, enregistrée dans le
  * classeur : son nom et son texte tel que saisi (noms affichés).
  */
@@ -712,6 +743,28 @@ export interface Layout {
 }
 
 /**
+ * LayoutItem est un élément de la feuille commune (aperçu de la
+ * disposition) : un tableau commun ou une cellule libre reprise.
+ */
+export interface LayoutItem {
+    /**
+     * table, cell
+     */
+    "kind": string;
+
+    /**
+     * nom du tableau, ou texte montré de la cellule
+     */
+    "name": string;
+    "row": number;
+    "col": number;
+    "rows": number;
+    "cols": number;
+    "follows": boolean;
+    "perValue": boolean;
+}
+
+/**
  * LineRuleSet : règles de lignes (Rows) ou de colonnes entières I0 à I1.
  */
 export interface LineRuleSet {
@@ -841,6 +894,23 @@ export interface MergeColumn {
 }
 
 /**
+ * MergeFamily est une autre famille de tableaux des onglets regroupés.
+ */
+export interface MergeFamily {
+    /**
+     * Tables : un tableau par onglet (au plus), dans l'ordre des onglets.
+     */
+    "tables": string[] | null;
+    "columns"?: MergeColumn[] | null;
+    "name"?: string;
+
+    /**
+     * Mode : merge (défaut), once ou leave.
+     */
+    "mode": string;
+}
+
+/**
  * MergePlan décrit un regroupement. Ce qui manque se déduit des tableaux,
  * comme la détection (SimilarSheets) le propose.
  */
@@ -881,6 +951,25 @@ export interface MergePlan {
      * Slicer : poser l'onglet à choix sur la nouvelle feuille (lot 3).
      */
     "slicer"?: boolean;
+
+    /**
+     * Lot 4 (§6.5, mergefamilies.go). CategoryFrom : d'où vient la
+     * catégorie : "sheet" ou vide (noms d'onglets), "title" (titre au-dessus
+     * de chaque tableau, cas E), "cell:A1" (cellule libre de chaque onglet).
+     */
+    "categoryFrom"?: string;
+
+    /**
+     * Families : les autres tableaux des onglets et ce qu'on en fait
+     * (merge, once, leave).
+     */
+    "families"?: MergeFamily[] | null;
+
+    /**
+     * NoCells : ne pas reprendre les cellules libres des onglets (titres,
+     * totaux, objectifs) sur la feuille commune.
+     */
+    "noCells"?: boolean;
 }
 
 /**
@@ -932,6 +1021,18 @@ export interface MergePreview {
      * Refused : le regroupement est refusé (garde-fou), et pourquoi.
      */
     "refused": string;
+
+    /**
+     * Lot 4 : ce que devient chaque famille de tableaux (la principale
+     * d'abord), la disposition de la feuille commune, les cellules libres
+     * reprises (dont par valeur de la catégorie) et celles qui tombaient sur
+     * un tableau commun.
+     */
+    "families": FamilyOutcome[] | null;
+    "layout": LayoutItem[] | null;
+    "cells": number;
+    "perValue": number;
+    "lost": number;
 }
 
 /**
@@ -949,6 +1050,14 @@ export interface MergeResult {
     "pending": PendingRef[] | null;
     "notes": string[] | null;
     "notice": string;
+
+    /**
+     * Lot 4 : les tableaux communs (famille principale d'abord) et les
+     * cellules libres reprises.
+     */
+    "families": FamilyOutcome[] | null;
+    "cells": number;
+    "perValue": number;
 }
 
 /**
@@ -1446,6 +1555,37 @@ export interface SheetGroup {
      */
     "summary": string[] | null;
     "notes": string[] | null;
+
+    /**
+     * Lot 4 (§6.5, similarfamilies.go) : on regroupe des feuilles entières.
+     * Sheets : les onglets du groupe ; Families : leurs autres tableaux,
+     * appariés famille par famille, avec ce qu'on propose d'en faire.
+     */
+    "sheets": SimilarSheet[] | null;
+    "families": TableFamily[] | null;
+
+    /**
+     * Sources : d'où peut venir la catégorie (noms d'onglets, titres des
+     * tableaux empilés, cellule libre) ; CategoryFrom : celle proposée, que
+     * décrit Category.
+     */
+    "sources": CategorySource[] | null;
+    "categoryFrom": string;
+
+    /**
+     * Stacked : cas E, tableaux empilés sous des titres sur une feuille.
+     */
+    "stacked": boolean;
+
+    /**
+     * DataColumn : cas F, la colonne (date) qui porte déjà la catégorie.
+     */
+    "dataColumn": string;
+
+    /**
+     * Copies : onglets du groupe copiés les uns des autres.
+     */
+    "copies": number;
 }
 
 /**
@@ -1505,6 +1645,20 @@ export interface SheetInfo {
 }
 
 /**
+ * SimilarSheet est un onglet d'un groupe.
+ */
+export interface SimilarSheet {
+    "sheet": number;
+    "name": string;
+    "hidden": boolean;
+
+    /**
+     * Copied : copié d'un autre onglet du groupe (« Copier la feuille »).
+     */
+    "copied": boolean;
+}
+
+/**
  * SimilarTable est un tableau d'un groupe d'onglets semblables.
  */
 export interface SimilarTable {
@@ -1554,6 +1708,27 @@ export interface Span {
  * grasse dans une ligne en gras).
  */
 export type Style = { [_ in string]?: any } | null;
+
+/**
+ * TableFamily est une famille de tableaux appariés d'un onglet à l'autre.
+ */
+export interface TableFamily {
+    "tables": SimilarTable[] | null;
+    "columns": MergeColumn[] | null;
+    "key": string;
+    "name": string;
+
+    /**
+     * Same : mêmes colonnes et mêmes données dans tous les onglets.
+     */
+    "same": boolean;
+
+    /**
+     * merge, once ou leave (proposé)
+     */
+    "mode": string;
+    "note"?: string;
+}
 
 /**
  * TableInfo décrit un tableau posé sur une feuille.

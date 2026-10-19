@@ -1850,6 +1850,15 @@ export function SetSheetsHidden(sheets: number[] | null, hidden: boolean): $Canc
 }
 
 /**
+ * SetTableFollow coche ou décoche « Suivre l'année » sur un tableau d'une
+ * feuille à onglet à choix (lot 4, canvas/choicecells.go) ; annulable. Le
+ * message de la barre d'état est dans DocState.Notice.
+ */
+export function SetTableFollow(table: string, follow: boolean): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(170913095, table, follow);
+}
+
+/**
  * SetTableSourceOnSave règle l'envoi à chaque enregistrement.
  */
 export function SetTableSourceOnSave(table: string, on: boolean): $CancellablePromise<$models.TableSourceLink> {

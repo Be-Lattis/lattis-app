@@ -1,6 +1,9 @@
 package archive
 
 import (
+	"bytes"
+	"io"
+	"os"
 	"strings"
 
 	"github.com/ncruces/go-sqlite3"
@@ -86,5 +89,51 @@ func scrub(snap string, extra []func(*sqliteConn) error) error {
 	if free > 0 && free*4 >= pages {
 		return c.Exec(`VACUUM`)
 	}
+	// Des pages encore en place peuvent garder, dans leur espace libre, la
+	// trace de corbeilles créées puis retirées pendant la session (avant
+	// secure_delete) : le schéma qui les nommait. Dans ce cas seulement, la
+	// base est compactée, ce qui réécrit chaque page.
+	if len(trash) > 0 {
+		left, err := mentions(snap, trashPrefixes)
+		if err != nil {
+			return err
+		}
+		if left {
+			return c.Exec(`VACUUM`)
+		}
+	}
 	return nil
+}
+
+// mentions dit si le fichier contient encore l'un des textes (lecture par
+// blocs, avec un recouvrement pour un texte à cheval sur deux blocs).
+func mentions(path string, texts []string) (bool, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return false, err
+	}
+	defer f.Close()
+	long := 0
+	for _, t := range texts {
+		long = max(long, len(t))
+	}
+	buf := make([]byte, 1<<20+long)
+	keep := 0
+	for {
+		n, err := io.ReadFull(f, buf[keep:])
+		chunk := buf[:keep+n]
+		for _, t := range texts {
+			if bytes.Contains(chunk, []byte(t)) {
+				return true, nil
+			}
+		}
+		if err == io.EOF || err == io.ErrUnexpectedEOF {
+			return false, nil
+		}
+		if err != nil {
+			return false, err
+		}
+		keep = min(long, len(chunk))
+		copy(buf, chunk[len(chunk)-keep:])
+	}
 }

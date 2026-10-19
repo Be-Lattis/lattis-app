@@ -54,3 +54,13 @@ func (s *DocumentService) MergeSheets(ctx context.Context, plan canvas.MergePlan
 func (s *DocumentService) DismissSimilar(ctx context.Context, id string) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.DismissSimilar(ctx, id) })
 }
+
+// SetTableFollow coche ou décoche « Suivre l'année » sur un tableau d'une
+// feuille à onglet à choix (lot 4, canvas/choicecells.go) ; annulable. Le
+// message de la barre d'état est dans DocState.Notice.
+func (s *DocumentService) SetTableFollow(ctx context.Context, table string, follow bool) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error {
+		_, err := d.SetTableFollow(ctx, table, follow)
+		return err
+	})
+}

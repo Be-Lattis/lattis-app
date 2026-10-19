@@ -1,7 +1,6 @@
 package canvas
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -11,7 +10,6 @@ import (
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
-	"github.com/lalamefine/lattis/internal/order"
 	"github.com/lalamefine/lattis/internal/series"
 )
 
@@ -69,6 +67,24 @@ type MergePlan struct {
 	Old string `json:"old,omitempty"`
 	// Slicer : poser l'onglet à choix sur la nouvelle feuille (lot 3).
 	Slicer bool `json:"slicer,omitempty"`
+
+	// Lot 4 (§6.5, mergefamilies.go). CategoryFrom : d'où vient la
+	// catégorie : "sheet" ou vide (noms d'onglets), "title" (titre au-dessus
+	// de chaque tableau, cas E), "cell:A1" (cellule libre de chaque onglet).
+	CategoryFrom string `json:"categoryFrom,omitempty"`
+	// Families : les autres tableaux des onglets et ce qu'on en fait
+	// (merge, once, leave).
+	Families []MergeFamily `json:"families,omitempty"`
+	// NoCells : ne pas reprendre les cellules libres des onglets (titres,
+	// totaux, objectifs) sur la feuille commune.
+	NoCells bool `json:"noCells,omitempty"`
+
+	// Pour les familles : un seul tableau permis ; tableaux dont le nom se
+	// libère (sources de tout le regroupement) ; noms déjà pris par les
+	// autres tableaux communs.
+	single  bool
+	exclude map[int64]bool
+	taken   map[string]bool
 }
 
 // PendingRef est ce qui citait un ancien tableau (formule, colonne
@@ -112,6 +128,15 @@ type MergePreview struct {
 	Kept []string `json:"kept"`
 	// Refused : le regroupement est refusé (garde-fou), et pourquoi.
 	Refused string `json:"refused"`
+	// Lot 4 : ce que devient chaque famille de tableaux (la principale
+	// d'abord), la disposition de la feuille commune, les cellules libres
+	// reprises (dont par valeur de la catégorie) et celles qui tombaient sur
+	// un tableau commun.
+	Families []FamilyOutcome `json:"families"`
+	Layout   []LayoutItem    `json:"layout"`
+	Cells    int             `json:"cells"`
+	PerValue int             `json:"perValue"`
+	Lost     int             `json:"lost"`
 }
 
 // MergeResult décrit ce que MergeSheets a fait.
@@ -127,6 +152,11 @@ type MergeResult struct {
 	Pending   []PendingRef `json:"pending"`
 	Notes     []string     `json:"notes"`
 	Notice    string       `json:"notice"`
+	// Lot 4 : les tableaux communs (famille principale d'abord) et les
+	// cellules libres reprises.
+	Families []FamilyOutcome `json:"families"`
+	Cells    int             `json:"cells"`
+	PerValue int             `json:"perValue"`
 }
 
 // mergeSource est un tableau source préparé.
@@ -161,7 +191,7 @@ func (j *mergeJob) hasCat() bool { return j.plan.Category != nil }
 // rendu dans refused (l'aperçu le montre, MergeSheets le renvoie).
 func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 	j := &mergeJob{plan: plan, key: -1}
-	if len(plan.Tables) < 2 {
+	if len(plan.Tables) < 2 && !(plan.single && len(plan.Tables) == 1) {
 		return nil, fmt.Errorf("%w : choisissez au moins deux tableaux", ErrMergeSheets)
 	}
 	switch plan.Old {
@@ -280,14 +310,9 @@ func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 	}
 	// Catégorie (§3).
 	if !plan.NoCategory {
-		labels := make([]string, len(j.srcs))
-		for i, s := range j.srcs {
-			labels[i] = s.sheet
-		}
-		if len(dedupe(labels)) < len(labels) {
-			for i, s := range j.srcs {
-				labels[i] = s.tb.Name // deux tableaux d'une même feuille
-			}
+		labels, err := t.categoryLabels(plan.CategoryFrom, j.srcs)
+		if err != nil {
+			return nil, err
 		}
 		rec := series.Recognize(labels)
 		cat := plan.Category
@@ -363,7 +388,11 @@ func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 	if A1Like(name) {
 		name += "_"
 	}
-	free, err := t.mergeTableName(name, seen)
+	exclude := seen
+	if plan.exclude != nil {
+		exclude = plan.exclude
+	}
+	free, err := t.mergeTableName(name, exclude, plan.taken)
 	if err != nil {
 		return nil, err
 	}
@@ -529,12 +558,15 @@ func dateLabel(v any, t grid.Type, raw string) string {
 
 // mergeTableName rend le nom libre le plus proche (Ventes, Ventes_2…) parmi
 // les tableaux, sauf les sources (supprimées ou renommées), et les TCD.
-func (t *tx) mergeTableName(name string, sources map[int64]bool) (string, error) {
+func (t *tx) mergeTableName(name string, sources map[int64]bool, also map[string]bool) (string, error) {
 	ps, err := t.allPivots()
 	if err != nil {
 		return "", err
 	}
 	taken := map[string]bool{}
+	for n := range also {
+		taken[strings.ToLower(n)] = true
+	}
 	for _, p := range ps {
 		taken[strings.ToLower(p.Cfg.Name)] = true
 	}
@@ -658,18 +690,18 @@ func (t *tx) mergeKeyCheck(j *mergeJob) (string, error) {
 // leurs tableaux regroupés (ni autre tableau, ni TCD, graphique, bouton ou
 // page) : elles partent avec eux. Leurs cellules libres (titres, totaux :
 // des légendes, décision 0005) partent aussi.
-func (t *tx) deletableSheets(j *mergeJob) (map[int64]bool, error) {
+func (t *tx) deletableSheets(tables []Table) (map[int64]bool, error) {
 	src := map[int64]bool{}
-	for _, s := range j.srcs {
-		src[s.tb.ID] = true
+	for _, tb := range tables {
+		src[tb.ID] = true
 	}
 	out := map[int64]bool{}
-	for _, s := range j.srcs {
-		if _, done := out[s.tb.Sheet]; done {
+	for _, tb := range tables {
+		if _, done := out[tb.Sheet]; done {
 			continue
 		}
 		ok := true
-		rs, err := t.query(`SELECT id FROM _lattis_tables WHERE sheet = ?`, s.tb.Sheet)
+		rs, err := t.query(`SELECT id FROM _lattis_tables WHERE sheet = ?`, tb.Sheet)
 		if err != nil {
 			return nil, err
 		}
@@ -684,457 +716,12 @@ func (t *tx) deletableSheets(j *mergeJob) (map[int64]bool, error) {
 		rs.Close()
 		var objs int
 		if err := t.row(`SELECT (SELECT count(*) FROM _lattis_pivots WHERE sheet = ?1) + (SELECT count(*) FROM _lattis_charts WHERE sheet = ?1)
-			+ (SELECT count(*) FROM _lattis_buttons WHERE sheet = ?1) + (SELECT count(*) FROM _lattis_pages WHERE sheet = ?1)`, s.tb.Sheet).Scan(&objs); err != nil {
+			+ (SELECT count(*) FROM _lattis_buttons WHERE sheet = ?1) + (SELECT count(*) FROM _lattis_pages WHERE sheet = ?1)`, tb.Sheet).Scan(&objs); err != nil {
 			return nil, err
 		}
-		out[s.tb.Sheet] = ok && objs == 0
+		out[tb.Sheet] = ok && objs == 0
 	}
 	return out, nil
-}
-
-// MergePreview prépare l'aperçu d'un regroupement (lecture pure) : plan
-// complété, 20 premières lignes, clé, formules à reprendre.
-func (m *Model) MergePreview(ctx context.Context, plan MergePlan) (MergePreview, error) {
-	var p MergePreview
-	err := m.read(ctx, func(t *tx) error {
-		j, err := t.prepareMerge(plan)
-		if err != nil {
-			return err
-		}
-		p = MergePreview{Plan: j.plan, Rows: [][]any{}, Total: j.total, Notes: append([]string{}, j.notes...), Refused: j.refused}
-		for _, s := range j.srcs {
-			st := SimilarTable{Table: s.tb.Name, Sheet: s.tb.Sheet, SheetName: s.sheet, Rows: s.tb.Rows}
-			for _, c := range s.tb.Cols {
-				if c.ID == s.tb.Key {
-					st.Key = c.Name
-				}
-			}
-			p.Tables = append(p.Tables, st)
-		}
-		if j.hasCat() {
-			p.Header = append(p.Header, j.plan.Category.Name)
-		}
-		for _, c := range j.cols {
-			p.Header = append(p.Header, c.Name)
-		}
-		if j.key >= 0 {
-			p.Key = j.cols[j.key].Name
-			if p.KeyNote, err = t.mergeKeyCheck(j); err != nil {
-				return err
-			}
-			p.KeyKept = p.KeyNote == ""
-		}
-		gone, err := t.deletableSheets(j)
-		if err != nil {
-			return err
-		}
-		refs, err := t.planMergeRefs(j, gone)
-		if err != nil {
-			return err
-		}
-		p.Rewritten, p.Pending = refs.rewritten, refs.pending
-		p.Old = j.plan.Old
-		if p.Old == "" {
-			p.Old = MergeOldDelete
-			if len(p.Pending) > 0 {
-				p.Old = MergeOldHide
-			}
-		}
-		p.Kept = []string{}
-		if p.Old == MergeOldDelete {
-			if p.Kept, err = t.keptSheets(j, gone); err != nil {
-				return err
-			}
-		}
-		// Les premières lignes, source après source.
-		for _, s := range j.srcs {
-			left := 20 - len(p.Rows)
-			if left <= 0 {
-				break
-			}
-			sel, args, err := t.sourceSelect(s, false)
-			if err != nil {
-				return err
-			}
-			var outs []string
-			for i := range j.cols {
-				outs = append(outs, j.valueExpr(s, i))
-			}
-			q := `SELECT ` + strings.Join(outs, ", ") + ` FROM (` + sel + `) AS q ORDER BY q.p LIMIT ` + fmt.Sprint(left)
-			rs, err := t.query(q, args...)
-			if err != nil {
-				return err
-			}
-			for rs.Next() {
-				vals := make([]any, len(outs))
-				ptrs := make([]any, len(outs))
-				for k := range vals {
-					ptrs[k] = &vals[k]
-				}
-				if err := rs.Scan(ptrs...); err != nil {
-					rs.Close()
-					return err
-				}
-				row := normalize(vals)
-				if j.hasCat() {
-					row = append([]any{s.cat}, row...)
-				}
-				p.Rows = append(p.Rows, row)
-			}
-			rs.Close()
-			if err := rs.Err(); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	return p, err
-}
-
-// MergeSheets regroupe les tableaux du plan en un seul, sur une nouvelle
-// feuille, en une seule étape d'annulation (§7).
-func (m *Model) MergeSheets(ctx context.Context, plan MergePlan) (MergeResult, error) {
-	var res MergeResult
-	err := m.Do(ctx, "Regrouper des onglets", func(t *tx) error {
-		var err error
-		res, err = t.mergeSheets(plan)
-		return err
-	})
-	return res, err
-}
-
-func (t *tx) mergeSheets(plan MergePlan) (MergeResult, error) {
-	res := MergeResult{Rewritten: []PendingRef{}, Pending: []PendingRef{}, Notes: []string{}}
-	// 1. Garde-fous.
-	j, err := t.prepareMerge(plan)
-	if err != nil {
-		return res, err
-	}
-	if j.refused != "" {
-		return res, fmt.Errorf("%w : %s", ErrMergeSheets, j.refused)
-	}
-	keyNote, err := t.mergeKeyCheck(j)
-	if err != nil {
-		return res, err
-	}
-	gone, err := t.deletableSheets(j)
-	if err != nil {
-		return res, err
-	}
-	refs, err := t.planMergeRefs(j, gone)
-	if err != nil {
-		return res, err
-	}
-	pending := refs.pending
-	res.Rewritten, res.Pending = refs.rewritten, pending
-	res.Old = j.plan.Old
-	if res.Old == "" {
-		res.Old = MergeOldDelete
-		if len(pending) > 0 {
-			res.Old = MergeOldHide
-		}
-	}
-	tabs, err := t.sheetOrder()
-	if err != nil {
-		return res, err
-	}
-	at := len(tabs)
-	for i, id := range tabs {
-		for _, s := range j.srcs {
-			if s.tb.Sheet == id && i < at {
-				at = i
-			}
-		}
-	}
-	if err := t.purgeImports(); err != nil {
-		return res, err
-	}
-	var id int64
-	if err := t.row(nextTableID).Scan(&id); err != nil {
-		return res, err
-	}
-	tb := Table{ID: id, Name: j.plan.Name}
-	// Colonnes du résultat : la catégorie (1) puis les colonnes (2…).
-	colID := func(i int) int64 { return int64(i + 2) }
-	defs := []string{"id INTEGER PRIMARY KEY", "_pos TEXT NOT NULL"}
-	names := []string{"id", "_pos"}
-	if j.hasCat() {
-		defs = append(defs, colSQL(1)+" "+sqlType(j.plan.Category.Type))
-		names = append(names, colSQL(1))
-	}
-	for i, c := range j.cols {
-		defs = append(defs, colSQL(colID(i))+" "+sqlType(c.Type))
-		names = append(names, colSQL(colID(i)))
-	}
-	// 2. Table de chargement, hors journal (comme Import) : une INSERT …
-	// SELECT par source, dans l'ordre des onglets puis des lignes.
-	staging := fmt.Sprintf("%smerge%d_%d", importPrefix, id, time.Now().UnixNano())
-	if _, err := t.ExecContext(t.Ctx, `CREATE TABLE `+staging+` (`+strings.Join(defs, ", ")+`) STRICT`); err != nil {
-		return res, err
-	}
-	for _, s := range j.srcs {
-		if err := t.Ctx.Err(); err != nil {
-			return res, err
-		}
-		sel, selArgs, err := t.sourceSelect(s, true)
-		if err != nil {
-			return res, err
-		}
-		outs := []string{fmt.Sprintf("q.id + %d", s.off), order.SpreadSQL(j.total, fmt.Sprintf("(q.rn + %d)", s.base))}
-		// La catégorie en littéral : les colonnes calculées numérotent leurs
-		// paramètres (?1, ?2…).
-		if j.hasCat() {
-			outs = append(outs, catLiteral(s.cat))
-		}
-		args := selArgs
-		for i := range j.cols {
-			outs = append(outs, j.valueExpr(s, i))
-		}
-		q := `INSERT INTO ` + staging + ` (` + strings.Join(names, ", ") + `) SELECT ` + strings.Join(outs, ", ") + ` FROM (` + sel + `) AS q`
-		if _, err := t.ExecContext(t.Ctx, q, args...); err != nil {
-			return res, fmt.Errorf("regroupement de « %s » : %w", s.tb.Name, err)
-		}
-	}
-	// Saisies invalides d'une colonne passée en texte : la saisie devient la
-	// valeur (le texte l'accepte).
-	var do []stmt
-	for i, c := range j.cols {
-		for _, s := range j.srcs {
-			k := s.from[i]
-			if k < 0 || s.tb.Cols[k].Formula != "" {
-				continue
-			}
-			sc := s.tb.Cols[k]
-			if c.Type == grid.Text && sc.Type != grid.Text {
-				if _, err := t.ExecContext(t.Ctx, `UPDATE `+staging+` SET `+colSQL(colID(i))+` = i.raw FROM _lattis_invalid AS i
-					WHERE i.tbl = ? AND i.col = ? AND `+staging+`.id = i.rid + ?`, s.tb.ID, sc.ID, s.off); err != nil {
-					return res, err
-				}
-				continue
-			}
-			do = append(do, st(`INSERT INTO _lattis_invalid (tbl, rid, col, raw) SELECT ?, rid + ?, ?, raw FROM _lattis_invalid WHERE tbl = ? AND col = ?`, id, s.off, colID(i), s.tb.ID, sc.ID))
-		}
-	}
-	// 3. Mise en forme : celle des cellules suit ses lignes (rid décalé) ;
-	// celle des colonnes et des en-têtes vient du premier tableau qui a la
-	// colonne, comme ses règles de mise en forme conditionnelle.
-	type colMeta struct {
-		fixed bool
-		rules sql.NullString
-		width sql.NullInt64
-	}
-	metas := make([]colMeta, len(j.cols))
-	for i := range j.cols {
-		first := true
-		for _, s := range j.srcs {
-			k := s.from[i]
-			if k < 0 {
-				continue
-			}
-			sc := s.tb.Cols[k]
-			do = append(do, st(`INSERT INTO _lattis_styles (tbl, rid, col, style) SELECT ?, rid + ?, ?, style FROM _lattis_styles WHERE tbl = ? AND col = ? AND rid > 0`, id, s.off, colID(i), s.tb.ID, sc.ID))
-			if !first {
-				continue
-			}
-			first = false
-			do = append(do, st(`INSERT INTO _lattis_styles (tbl, rid, col, style) SELECT ?, rid, ?, style FROM _lattis_styles WHERE tbl = ? AND col = ? AND rid <= 0`, id, colID(i), s.tb.ID, sc.ID))
-			if err := t.row(`SELECT fixed <> 0, rules FROM _lattis_columns WHERE tbl = ? AND id = ?`, s.tb.ID, sc.ID).Scan(&metas[i].fixed, &metas[i].rules); err != nil {
-				return res, err
-			}
-			err := t.row(`SELECT width FROM _lattis_col_widths WHERE sheet = ? AND col = ?`, s.tb.Sheet, s.tb.Col+k).Scan(&metas[i].width)
-			if err != nil && !errors.Is(err, sql.ErrNoRows) {
-				return res, err
-			}
-		}
-	}
-	// 8 (début). Liste de validation de la catégorie (style dv de la
-	// colonne), et son format de date.
-	if j.hasCat() {
-		style := Style{"dv": dedupe(j.catLabel)}
-		if f := j.plan.Category.Format; f != "" {
-			style["df"] = f
-		}
-		enc, err := encodeStyle(style)
-		if err != nil {
-			return res, err
-		}
-		do = append(do, st(`INSERT INTO _lattis_styles (tbl, rid, col, style) VALUES (?, 0, 1, ?)`, id, enc))
-	}
-	if len(do) > 0 {
-		if err := t.apply(do, []stmt{st(`DELETE FROM _lattis_styles WHERE tbl = ?`, id), st(`DELETE FROM _lattis_invalid WHERE tbl = ?`, id)}); err != nil {
-			return res, err
-		}
-	}
-	// 7. Anciens onglets : supprimés (corbeille de l'annulation), ou masqués
-	// avec leurs tableaux renommés Janvier_ancien (ce qui les cite suit).
-	var kept []string // anciens onglets gardés malgré « Supprimer » (keptSheets)
-	switch res.Old {
-	case MergeOldHide:
-		hidden := map[int64]bool{}
-		for _, s := range j.srcs {
-			old, err := t.mergeTableName(s.tb.Name+"_ancien", nil)
-			if err != nil {
-				return res, err
-			}
-			cur, err := t.table(s.tb.ID)
-			if err != nil {
-				return res, err
-			}
-			if err := t.renameTable(cur, old); err != nil {
-				return res, err
-			}
-			if hidden[s.tb.Sheet] {
-				continue
-			}
-			hidden[s.tb.Sheet] = true
-			var was bool
-			if err := t.row(`SELECT hidden <> 0 FROM _lattis_sheets WHERE id = ?`, s.tb.Sheet).Scan(&was); err != nil {
-				return res, err
-			}
-			if !was {
-				q := `UPDATE _lattis_sheets SET hidden = ? WHERE id = ?`
-				if err := t.apply([]stmt{st(q, 1, s.tb.Sheet)}, []stmt{st(q, 0, s.tb.Sheet)}); err != nil {
-					return res, err
-				}
-			}
-		}
-	default:
-		if kept, err = t.keptSheets(j, gone); err != nil {
-			return res, err
-		}
-		for _, s := range j.srcs {
-			if err := t.deleteTable(s.tb); err != nil {
-				return res, err
-			}
-		}
-		done := map[int64]bool{}
-		for _, s := range j.srcs {
-			if done[s.tb.Sheet] {
-				continue
-			}
-			done[s.tb.Sheet] = true
-			if gone[s.tb.Sheet] {
-				if err := t.deleteSheet(s.tb.Sheet); err != nil {
-					return res, err
-				}
-			}
-		}
-		res.Notes = append(res.Notes, kept...)
-		if len(pending) > 0 {
-			res.Notes = append(res.Notes, fmt.Sprintf("%s citai%s les anciens tableaux : à reprendre", plural(len(pending), "Une formule ou un objet", fmt.Sprintf("%d formules ou objets", len(pending))), plural(len(pending), "t", "ent")))
-		}
-	}
-	// 6. Références (§8) : reprises sur le tableau commun filtré, une fois
-	// les anciens tableaux supprimés ou renommés (un ancien tableau peut
-	// porter le nom du tableau commun).
-	if err := t.applyMergeRefs(refs.ups); err != nil {
-		return res, err
-	}
-	// Nouvelle feuille, placée où était le premier onglet regroupé.
-	sheet, err := t.newSheet(j.plan.Sheet)
-	if err != nil {
-		return res, err
-	}
-	tb.Sheet = sheet
-	var wdo []stmt
-	shift := 0
-	if j.hasCat() {
-		shift = 1
-	}
-	for i, mt := range metas {
-		if mt.width.Valid {
-			wdo = append(wdo, st(`INSERT INTO _lattis_col_widths (sheet, col, width) VALUES (?, ?, ?)`, sheet, i+shift, mt.width.Int64))
-		}
-	}
-	if len(wdo) > 0 {
-		if err := t.apply(wdo, []stmt{st(`DELETE FROM _lattis_col_widths WHERE sheet = ?`, sheet)}); err != nil {
-			return res, err
-		}
-	}
-	// 3 (fin). Le tableau : la table chargée prend son nom, ses colonnes et
-	// sa place en A1.
-	do = []stmt{
-		st(`ALTER TABLE ` + staging + ` RENAME TO ` + tb.sql()),
-		st(`CREATE INDEX ` + tb.sql() + `_pos ON ` + tb.sql() + `(_pos)`),
-		st(`INSERT INTO _lattis_tables (id, sheet, name, row, col) VALUES (?, ?, ?, 0, 0)`, id, sheet, tb.Name),
-	}
-	pos := 0
-	if j.hasCat() {
-		do = append(do, st(`INSERT INTO _lattis_columns (tbl, id, name, type, fixed, pos) VALUES (?, 1, ?, ?, 1, 0)`, id, j.plan.Category.Name, string(j.plan.Category.Type)))
-		pos++
-	}
-	for i, c := range j.cols {
-		f := any(nil)
-		if j.formulas[i] != "" {
-			f = j.formulas[i]
-		}
-		do = append(do, st(`INSERT INTO _lattis_columns (tbl, id, name, type, fixed, pos, formula, rules) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-			id, colID(i), c.Name, string(c.Type), metas[i].fixed, pos, f, nullable(metas[i].rules)))
-		pos++
-	}
-	if err := t.apply(do, []stmt{
-		st(`DELETE FROM _lattis_columns WHERE tbl = ?`, id),
-		st(`DELETE FROM _lattis_tables WHERE id = ?`, id),
-		st(`DROP INDEX ` + tb.sql() + `_pos`),
-		st(`ALTER TABLE ` + tb.sql() + ` RENAME TO ` + staging),
-	}); err != nil {
-		return res, err
-	}
-	// 5. Clé : gardée sans collision (index unique recréé) ; sinon seule la
-	// notion de clé part, sans rien demander (règle de Louis).
-	if j.key >= 0 {
-		if keyNote == "" {
-			if err := t.ensureKey(tb.Name, j.cols[j.key].Name); err != nil {
-				var ke ErrKey
-				if !errors.As(err, &ke) {
-					return res, err
-				}
-				keyNote = "Pas de clé : " + ke.Why
-			}
-		}
-		res.KeyKept, res.KeyNote = keyNote == "", keyNote
-		if keyNote != "" {
-			res.Notes = append(res.Notes, keyNote)
-		}
-	}
-	if err := t.moveSheet(sheet, at); err != nil {
-		return res, err
-	}
-	// 8. Onglet à choix réglé sur la valeur la plus récente (lot 3).
-	if j.hasCat() {
-		vals := make([]string, len(j.srcs))
-		for i, s := range j.srcs {
-			vals[i] = fmt.Sprint(s.cat)
-		}
-		latest := series.Latest(series.Series{Type: j.plan.Category.Type, Values: vals})
-		if err := t.setSheetChoice(sheet, tb.Name, j.plan.Category.Name, fmt.Sprint(j.srcs[latest].cat)); err != nil {
-			return res, err
-		}
-	}
-	if err := t.row(`SELECT name FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&res.SheetName); err != nil {
-		return res, err
-	}
-	res.Sheet, res.Table, res.Rows = sheet, tb.Name, j.total
-	res.Notes = append(j.notes, res.Notes...)
-	what := "supprimés"
-	if res.Old == MergeOldHide {
-		what = "masqués"
-	}
-	res.Notice = fmt.Sprintf("%d onglets regroupés dans « %s » (%s), anciens onglets %s", len(j.srcs), tb.Name, plural(j.total, fmt.Sprintf("%d ligne", j.total), fmt.Sprintf("%d lignes", j.total)), what)
-	if keyNote != "" {
-		res.Notice += " ; " + keyNote
-	}
-	if n := len(res.Rewritten); n > 0 || len(pending) > 0 {
-		res.Notice += " ; " + refCounts(n, len(pending))
-	}
-	if h := summaryHint(j, res.Rewritten); h != "" {
-		res.Notes = append(res.Notes, h)
-	}
-	for _, k := range kept {
-		res.Notice += " ; " + k
-	}
-	t.notes = append(t.notes, res.Notice)
-	return res, nil
 }
 
 // catLiteral écrit une valeur de catégorie (entier ou texte) en SQL.

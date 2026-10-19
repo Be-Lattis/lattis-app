@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MergePreview, SheetGroup } from '#bindings/internal/canvas/models.js';
-import { cellText, chipLabel, futureTab, initialPlan, offerText, oldHint, pickOffer, planForSheets, previewWarnings, proposedName, refCounts, refLine, sheetRange, tabMarks, withTables } from './mergesheets';
+import { cellText, chipLabel, familyLine, familyPlan, followLabel, futureTab, groupSheets, initialPlan, layoutLines, leftTables, modeLabel, offerText, oldHint, pickOffer, planForSheets, previewWarnings, proposedName, refCounts, refLine, sheetRange, sourceLabel, tabMarks, withTables } from './mergesheets';
 
 const months = ['Janvier', 'Février', 'Mars'];
 
@@ -135,5 +135,108 @@ describe('plan du volet Regrouper', () => {
 		expect(cellText(null)).toBe('');
 		expect(cellText(12.5)).toBe('12,5');
 		expect(cellText('Janvier')).toBe('Janvier');
+	});
+});
+
+// Lot 4 : feuilles à plusieurs tableaux (§6.5).
+function families(): SheetGroup['families'] {
+	const t = (name: string, i: number) => ({ table: `${name}${i + 1}`, sheet: i + 1, sheetName: months[i], rows: 2, key: '', hidden: false });
+	return [
+		{ tables: months.map((_, i) => t('Tarifs', i)), columns: [], key: '', name: 'Tarifs', same: true, mode: 'once' },
+		{ tables: months.map((_, i) => t('Notes', i)), columns: [{ name: 'Note', type: 'text', from: ['Note', 'Note', 'Note'], paired: [false, false, false], text: false }], key: '', name: 'Notes', same: false, mode: 'merge' },
+		{ tables: [t('Remises', 0)], columns: [], key: '', name: 'Remises', same: false, mode: 'leave' }
+	] as SheetGroup['families'];
+}
+
+describe('feuilles à plusieurs tableaux (lot 4)', () => {
+	it('compte les onglets, ou les tableaux empilés', () => {
+		const g = group({ sheets: months.map((n, i) => ({ sheet: i + 1, name: n, hidden: false, copied: false })), families: families() });
+		expect(groupSheets(g).map((s) => s.sheet)).toEqual([1, 2, 3]);
+		expect(chipLabel(g)).toBe('3 onglets semblables');
+		expect(offerText(g)).toBe('3 onglets (Janvier à Mars) ont les mêmes tableaux. Les regrouper en un seul onglet « Ventes · Mois ▾ » ?');
+		const e = group({
+			stacked: true,
+			tables: ['T1', 'T2', 'T3'].map((t) => ({ table: t, sheet: 1, sheetName: 'Villes', rows: 2, key: '', hidden: false })),
+			category: { kind: 'city', score: 20, common: '', column: 'Ville', type: 'text', values: ['Paris', 'Lyon', 'Nice'], labels: ['Paris', 'Lyon', 'Nice'] }
+		} as Partial<SheetGroup>);
+		expect(chipLabel(e)).toBe('3 tableaux semblables');
+		expect(groupSheets(e)).toEqual([{ sheet: 1, name: 'Villes' }]);
+		expect(offerText(e)).toBe('3 tableaux de « Villes » (Paris à Nice) ont les mêmes colonnes. Les regrouper en un seul tableau « Ventes · Ville ▾ » ?');
+	});
+
+	it('à la troisième copie, propose même un groupe peu sûr d’onglets copiés', () => {
+		const sheets = ['Janvier', 'Janvier (2)', 'Janvier (3)'].map((n, i) => ({ sheet: i + 1, name: n, hidden: false, copied: true }));
+		const g = group({ propose: false, copies: 3, sheets });
+		expect(pickOffer([g], new Set(), 'copy', 3)).toBe(g);
+		expect(pickOffer([g], new Set(), 'open')).toBeNull();
+		expect(pickOffer([group({ propose: false, copies: 0 })], new Set(), 'copy', 3)).toBeNull();
+	});
+
+	it('part des familles proposées, de la source de la catégorie et du cas F', () => {
+		const p = initialPlan(group({ families: families(), categoryFrom: 'cell:A1' }));
+		expect(p.categoryFrom).toBe('cell:A1');
+		expect(p.families?.map((f) => [f.tables?.[0], f.mode])).toEqual([
+			['Tarifs1', 'once'],
+			['Notes1', 'merge'],
+			['Remises1', 'leave']
+		]);
+		expect(p.families?.[1].columns?.length).toBe(1);
+		expect(initialPlan(group({ dataColumn: 'Date' })).noCategory).toBe(true);
+		expect(initialPlan(group({ dataColumn: 'Date', families: families() })).noCategory).toBeUndefined();
+		expect(initialPlan(group()).categoryFrom).toBeUndefined();
+	});
+
+	it('restreint les familles aux onglets cochés, avec le mode choisi', () => {
+		const f = familyPlan(families() ?? [], ['merge', 'leave', 'merge'], new Set([1, 3]));
+		expect(f.map((x) => [x.tables, x.mode])).toEqual([
+			[['Tarifs1', 'Tarifs3'], 'merge'],
+			[['Notes1', 'Notes3'], 'leave'],
+			[['Remises1'], 'merge']
+		]);
+		// Restreinte, la correspondance des colonnes se déduit de nouveau.
+		expect(f[1].columns).toBeUndefined();
+		expect(familyPlan(families() ?? [], [], new Set([2])).map((x) => x.tables)).toEqual([['Tarifs2'], ['Notes2']]);
+		const g = group({ families: families() });
+		expect(planForSheets([g], [1, 2], () => [])?.families?.map((x) => x.tables)).toEqual([
+			['Tarifs1', 'Tarifs2'],
+			['Notes1', 'Notes2'],
+			['Remises1']
+		]);
+	});
+
+	it('écrit les familles, les modes et la source', () => {
+		const [tarifs, , remises] = families() ?? [];
+		expect(familyLine(tarifs)).toBe('Tarifs · 3 onglets · mêmes données partout');
+		expect(familyLine(remises)).toBe('Remises · seulement dans Janvier');
+		expect(modeLabel('merge', 'Mois')).toBe('Les regrouper : suit le mois');
+		expect(modeLabel('merge', 'Lot', true)).toBe('Le regrouper : suit « Lot »');
+		expect(modeLabel('once', 'Mois')).toBe('En garder un seul exemplaire (le dernier)');
+		expect(modeLabel('leave', 'Mois', true)).toBe('Le laisser sur son onglet');
+		expect(followLabel('Année')).toBe("l'année");
+		expect(sourceLabel('cell:A1')).toBe('cellule A1');
+		expect(sourceLabel('sheet')).toBe("nom de l'onglet");
+		expect(sourceLabel('title', [{ source: 'title', label: 'titre au-dessus de chaque tableau' } as never])).toBe('titre au-dessus de chaque tableau');
+	});
+
+	it('montre la disposition de la feuille commune', () => {
+		const p = {
+			plan: { category: { name: 'Mois' } },
+			layout: [
+				{ kind: 'table', name: 'Ventes', row: 2, col: 0, rows: 6, cols: 3, follows: true, perValue: false },
+				{ kind: 'cell', name: 'Mars 2025', row: 0, col: 1, rows: 0, cols: 1, follows: false, perValue: true },
+				{ kind: 'table', name: 'Tarifs', row: 2, col: 27, rows: 1, cols: 2, follows: false, perValue: false }
+			],
+			cells: 5,
+			perValue: 2,
+			lost: 1,
+			families: [{ name: '', mode: 'leave', tables: [{ table: 'Remises1', sheetName: 'Janvier' }] }]
+		} as unknown as MergePreview;
+		expect(layoutLines(p)).toEqual([
+			'Ventes en A3 · 6 lignes · suit le choix',
+			'Tarifs en AB3 · 1 ligne',
+			'5 cellules libres reprises, dont 2 par mois',
+			'Une cellule libre tombe sur un tableau commun : non reprise'
+		]);
+		expect(leftTables(p.families ?? [])).toEqual(['Remises1 (Janvier)']);
 	});
 });

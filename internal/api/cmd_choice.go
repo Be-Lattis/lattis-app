@@ -114,6 +114,33 @@ sheets.new_choice("Feuille1", "Petit")`,
 			},
 		},
 		&Command{
+			Name:    "tables.follow_choice",
+			Label:   "Suivre l'onglet à choix",
+			Summary: "Coche ou décoche « Suivre l'année » (le mois, la ville…) sur un tableau d'une feuille à onglet à choix : un tableau qui suit ne montre que les lignes de la valeur choisie, et une ligne ajoutée reçoit cette valeur.",
+			Details: "follow = true (par défaut) : ajoute la colonne de catégorie en dernier (masquée tant qu'une valeur est choisie), remplie avec la valeur affichée. follow = false : retire la colonne si elle n'a qu'une valeur (rien ne se perd) ; sinon la garde, et le tableau ne suit plus le choix (réglage gardé avec le tableau). La colonne source de l'onglet à choix ne se décoche pas. Une étape d'annulation. Rend le message de la barre d'état.",
+			Returns: "message",
+			Params:  []Param{{Name: "table", Type: Ref, Desc: "tableau de la feuille à choix"}, {Name: "follow", Type: Boolean, Desc: "true : suivre ; false : ne plus suivre", Optional: true}},
+			Write:   true,
+			Example: `sheets.choose_by("Commandes", "Client", "Durand")
+cells.paste(10, 1, {{"Produit", "Prix"}, {"Pomme", 2}, {"Poire", 3}})
+local t = sheets.get().tables
+print(tables.follow_choice(t[#t].name))`,
+			Run: func(c *Call) (any, error) {
+				tb, err := c.table("table")
+				if err != nil {
+					return nil, err
+				}
+				follow := true
+				if c.Has("follow") {
+					if follow, err = c.Bool("follow"); err != nil {
+						return nil, err
+					}
+				}
+				d, _ := c.Doc()
+				return d.SetTableFollow(c, tb.Name, follow)
+			},
+		},
+		&Command{
 			Name:    "sheets.clear_choice",
 			Label:   "Ne plus choisir",
 			Summary: "Retire l'onglet à choix d'une feuille : ses tableaux montrent de nouveau toutes leurs lignes.",

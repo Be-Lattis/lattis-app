@@ -82,25 +82,59 @@ func (t *tx) mergeTargets(j *mergeJob) (map[string]mergeTarget, string, error) {
 // refPlanner prépare la reprise d'une formule ou d'un objet.
 type refPlanner struct {
 	targets map[string]mergeTarget
-	why     string // rien n'est réécrit (voir mergeTargets)
-	tables  map[string]formula.Filtered
-	detect  map[string]formula.Filtered
-	rc      refChange // renommages des TCD et graphiques (tableau, colonnes)
+	// whys : anciens tableaux dont rien n'est réécrit, et pourquoi (voir
+	// mergeTargets) ; whyDetect les repère dans une formule.
+	whys      map[string]string
+	whyDetect map[string]formula.Filtered
+	tables    map[string]formula.Filtered
+	detect    map[string]formula.Filtered
+	// plain : anciens tableaux gardés une seule fois (lot 4, famille
+	// « once ») : un simple renommage vers le tableau commun.
+	plain map[string]string
+	rc    refChange // renommages des TCD et graphiques (tableau, colonnes)
 }
 
-func newRefPlanner(j *mergeJob, targets map[string]mergeTarget, why string) *refPlanner {
-	p := &refPlanner{targets: targets, why: why, tables: map[string]formula.Filtered{}, detect: map[string]formula.Filtered{}}
+func newRefPlanner(jobs []*mergeJob, targets map[string]mergeTarget, whys map[string]string, plain map[string]string) *refPlanner {
+	p := &refPlanner{targets: targets, whys: whys, whyDetect: map[string]formula.Filtered{}, tables: map[string]formula.Filtered{}, detect: map[string]formula.Filtered{}, plain: plain}
 	p.rc = refChange{Renames: formula.Renames{Tables: map[string]string{}, Columns: map[string]map[string]string{}}}
-	for _, s := range j.srcs {
-		low := strings.ToLower(s.tb.Name)
-		p.detect[low] = formula.Filtered{Table: j.plan.Name}
-		if tg, ok := targets[low]; ok {
-			p.tables[low] = tg.filtered
-			p.rc.Tables[low] = j.plan.Name
-			p.rc.Columns[low] = tg.filtered.Columns
+	for _, j := range jobs {
+		for _, s := range j.srcs {
+			low := strings.ToLower(s.tb.Name)
+			if _, ok := plain[low]; ok {
+				continue
+			}
+			p.detect[low] = formula.Filtered{Table: j.plan.Name}
+			if tg, ok := targets[low]; ok {
+				p.tables[low] = tg.filtered
+				p.rc.Tables[low] = j.plan.Name
+				p.rc.Columns[low] = tg.filtered.Columns
+			}
+			if _, ok := whys[low]; ok {
+				p.whyDetect[low] = formula.Filtered{Table: j.plan.Name}
+			}
 		}
 	}
+	for low, to := range plain {
+		p.detect[low] = formula.Filtered{Table: to}
+		p.rc.Tables[low] = to
+	}
 	return p
+}
+
+// whyOf : la raison du premier ancien tableau sans réécriture cité par n.
+func (p *refPlanner) whyOf(n formula.Node) (string, bool) {
+	if len(p.whyDetect) == 0 {
+		return "", false
+	}
+	if _, cites, _ := formula.FilterTables(n, p.whyDetect); !cites {
+		return "", false
+	}
+	for low := range p.whyDetect {
+		if _, c, _ := formula.FilterTables(n, map[string]formula.Filtered{low: p.whyDetect[low]}); c {
+			return p.whys[low], true
+		}
+	}
+	return "", true
 }
 
 // formula reprend une formule (avec ou sans « = ») écrite dans la langue
@@ -111,15 +145,21 @@ func (p *refPlanner) formula(src string, loc formula.Locale, self string) (neu s
 	if err != nil {
 		return "", false, ""
 	}
-	if p.why != "" {
-		if _, cites, _ := formula.FilterTables(n, p.detect); cites {
-			return "", true, p.why
+	if w, ok := p.whyOf(n); ok {
+		return "", true, w
+	}
+	renamed := false
+	if len(p.plain) > 0 {
+		if x, ok := formula.RetargetTables(n, p.plain); ok {
+			n, renamed = x, true
 		}
-		return "", false, ""
 	}
 	out, cites, why := formula.FilterTables(n, p.tables)
-	if !cites || why != "" {
-		return "", cites, why
+	if why != "" {
+		return "", true, why
+	}
+	if !cites && !renamed {
+		return "", false, ""
 	}
 	neu = formula.Format(out, loc)
 	if !strings.HasPrefix(strings.TrimSpace(src), "=") {
@@ -200,9 +240,13 @@ func (p *refPlanner) pivot(m map[string]any) (source, after, why string) {
 	if !p.isOld(source) {
 		return "", "", ""
 	}
+	if to, ok := p.plain[strings.ToLower(source)]; ok {
+		renamePivotConfig(m, p.rc)
+		return source, fmt.Sprintf("sur « %s »", to), ""
+	}
 	tg, ok := p.targets[strings.ToLower(source)]
 	if !ok {
-		return source, "", p.why
+		return source, "", p.whys[strings.ToLower(source)]
 	}
 	raw, _ := json.Marshal(m)
 	var pc PivotConfig
@@ -233,9 +277,13 @@ func (p *refPlanner) chart(m map[string]any) (source, after, why string) {
 	if !p.isOld(source) {
 		return "", "", ""
 	}
+	if to, ok := p.plain[strings.ToLower(source)]; ok {
+		renameChartConfig(m, p.rc, nil)
+		return source, fmt.Sprintf("sur « %s »", to), ""
+	}
 	tg, ok := p.targets[strings.ToLower(source)]
 	if !ok {
-		return source, "", p.why
+		return source, "", p.whys[strings.ToLower(source)]
 	}
 	var fields []string
 	for _, k := range []string{"x", "colorBy"} {
@@ -285,15 +333,44 @@ func (p *refPlanner) isOld(name string) bool {
 // planMergeRefs prépare la reprise de tout ce qui cite un tableau source,
 // hors des feuilles qui partent avec eux (gone) et des sources elles-mêmes.
 func (t *tx) planMergeRefs(j *mergeJob, gone map[int64]bool) (*mergeRefs, error) {
-	targets, why, err := t.mergeTargets(j)
-	if err != nil {
-		return nil, err
+	return t.planMergeRefsAll([]*mergeJob{j}, nil, nil, gone)
+}
+
+// planMergeRefsAll : la reprise pour plusieurs tableaux communs à la fois
+// (lot 4 : une famille de tableaux, un tableau commun) ; plain : anciens
+// tableaux gardés une seule fois (minuscules → tableau commun), dropped :
+// leurs exemplaires non gardés.
+func (t *tx) planMergeRefsAll(jobs []*mergeJob, plain map[string]string, dropped []Table, gone map[int64]bool) (*mergeRefs, error) {
+	j := jobs[0]
+	targets := map[string]mergeTarget{}
+	whys := map[string]string{}
+	for _, job := range jobs {
+		tg, why, err := t.mergeTargets(job)
+		if err != nil {
+			return nil, err
+		}
+		for _, s := range job.srcs {
+			low := strings.ToLower(s.tb.Name)
+			if _, ok := plain[low]; ok {
+				continue
+			}
+			if x, ok := tg[low]; ok {
+				targets[low] = x
+			} else if why != "" {
+				whys[low] = why
+			}
+		}
 	}
-	p := newRefPlanner(j, targets, why)
+	p := newRefPlanner(jobs, targets, whys, plain)
 	out := &mergeRefs{rewritten: []PendingRef{}, pending: []PendingRef{}}
 	srcID := map[int64]bool{}
-	for _, s := range j.srcs {
-		srcID[s.tb.ID] = true
+	for _, job := range jobs {
+		for _, s := range job.srcs {
+			srcID[s.tb.ID] = true
+		}
+	}
+	for _, tb := range dropped {
+		srcID[tb.ID] = true
 	}
 	sheetNames := map[int64]string{}
 	rs, err := t.query(`SELECT id, name FROM _lattis_sheets`)

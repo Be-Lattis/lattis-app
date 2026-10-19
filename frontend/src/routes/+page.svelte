@@ -19,7 +19,7 @@
 	import Ribbon, { type DocCommand, type FileAction, type View } from '#lib/shell/Ribbon.svelte';
 	import SheetTabs from '#lib/shell/SheetTabs.svelte';
 	import MergeSheetsPanel from '#lib/shell/MergeSheetsPanel.svelte';
-	import { GROUP_COLORS, chipLabel, initialPlan, offerText, pickOffer, planForSheets, shownGroups, type OfferMoment } from '#lib/shell/mergesheets.js';
+	import { GROUP_COLORS, chipLabel, groupSheets, initialPlan, offerText, pickOffer, planForSheets, shownGroups, type OfferMoment } from '#lib/shell/mergesheets.js';
 	import type { MergePlan, SheetGroup } from '#bindings/internal/canvas/models.js';
 	import { visibleSheet } from '#lib/shell/sheets.js';
 	import { choiceStatus, choiceStep, type ChoiceActions } from '#lib/shell/choice.js';
@@ -396,6 +396,8 @@
 	let mergeOffer = $state<SheetGroup | null>(null);
 	// Plan du volet Regrouper ouvert (null : fermé), et tableaux qu'on peut y ajouter.
 	let mergePlan = $state<MergePlan | null>(null);
+	// Groupe d'où vient le plan (familles, sources de la catégorie), s'il y en a un.
+	let mergeGroup = $state<SheetGroup | null>(null);
 	let mergeOthers = $state<{ table: string; sheet: string }[]>([]);
 	// Groupes déjà proposés dans la bulle pendant la session.
 	const offered = new Set<string>();
@@ -413,8 +415,9 @@
 		return list.filter((t) => t.kind === 'table').map((t) => ({ table: t.name, sheet: t.sheet }));
 	}
 
-	async function openMerge(plan: MergePlan | null) {
+	async function openMerge(plan: MergePlan | null, group: SheetGroup | null = null) {
 		mergeOffer = null;
+		mergeGroup = group;
 		if (!plan) {
 			notice = 'Aucun onglet semblable trouvé : sélectionnez les onglets (Ctrl+clic), puis clic droit › Regrouper des onglets…';
 			return;
@@ -425,7 +428,7 @@
 
 	/** Données › Regrouper des onglets… : le plus grand groupe trouvé, même peu sûr. */
 	function openMergeMenu() {
-		openMerge(similar[0] ? initialPlan(similar[0], docState.path || docState.title) : null).catch((e) => (notice = err(e)));
+		openMerge(similar[0] ? initialPlan(similar[0], docState.path || docState.title) : null, similar[0] ?? null).catch((e) => (notice = err(e)));
 	}
 
 	/** Clic droit sur des onglets › Regrouper des onglets… */
@@ -437,7 +440,7 @@
 			notice = 'Ces onglets n’ont pas de tableaux à regrouper (il en faut au moins deux, aux mêmes colonnes)';
 			return;
 		}
-		await openMerge(plan);
+		await openMerge(plan, similar.find((g) => g.tables?.some((t) => plan.tables?.includes(t.table))) ?? null);
 	}
 
 	async function dismissGroup(g: SheetGroup | null | undefined) {
@@ -1400,6 +1403,12 @@
 		}),
 		deleteTables: (ts) => DocumentService.DeleteTables(ts.map((t) => t.name)).then(reload),
 		convertToRange: (t) => DocumentService.ConvertToRange(t.name).then(reload),
+		// « Suivre l'année » (lot 4) : le message dit ce qui a été fait (colonne ajoutée, retirée ou gardée).
+		setFollow: async (t, on) => {
+			const st = await DocumentService.SetTableFollow(t.name, on);
+			await reload();
+			if (st.notice) notice = st.notice;
+		},
 		formatAsTable: (row, col) => DocumentService.FormatAsTable(sheetId, row, col).then(reload),
 		moveTable: (t, row, col) => DocumentService.MoveTable(t.name, row, col).then(reload),
 		extractColumns: (t, i0, i1, row, col) => DocumentService.ExtractColumns(t.name, i0, i1, row, col).then(reload),
@@ -2169,7 +2178,7 @@
 			{/if}
 			{#if mode === 'doc' && mergePlan}
 				{#key mergePlan}
-					<MergeSheetsPanel plan={mergePlan} others={mergeOthers} preview={(p) => DocumentService.MergePreview(p)} onmerge={doMerge} onclose={() => (mergePlan = null)} />
+					<MergeSheetsPanel plan={mergePlan} others={mergeOthers} group={mergeGroup} preview={(p) => DocumentService.MergePreview(p)} onmerge={doMerge} onclose={() => (mergePlan = null)} />
 				{/key}
 			{/if}
 			{#if mode === 'doc' && conflictsOpen && share?.mode === 'collaborative'}
@@ -2243,8 +2252,8 @@
 		locked={mode === 'doc' && !!layout?.workbookProtected}
 		onrefused={(m) => (notice = m)}
 		onchoice={mode === 'doc' ? choiceActions : undefined}
-		similar={mode === 'doc' ? tabGroups.map((g, i) => ({ sheets: (g.tables ?? []).map((t) => t.sheet), color: GROUP_COLORS[i % GROUP_COLORS.length], label: chipLabel(g) })) : []}
-		onmergegroup={(i) => openMerge(initialPlan(tabGroups[i], docState.path || docState.title)).catch((e) => (notice = err(e)))}
+		similar={mode === 'doc' ? tabGroups.map((g, i) => ({ sheets: groupSheets(g).map((x) => x.sheet), color: GROUP_COLORS[i % GROUP_COLORS.length], label: chipLabel(g) })) : []}
+		onmergegroup={(i) => openMerge(initialPlan(tabGroups[i], docState.path || docState.title), tabGroups[i]).catch((e) => (notice = err(e)))}
 		ondismissgroup={(i) => dismissGroup(tabGroups[i])}
 		onmergesheets={mode === 'doc' && !layout?.workbookProtected ? (ids) => openMergeFor(ids).catch((e) => (notice = err(e))) : undefined}
 	/>
@@ -2530,7 +2539,7 @@
 			{@const g = mergeOffer}
 			<!-- Bulle d'information, une seule fois (§4.1) : « Plus tard » la ferme, la puce reste sous les onglets. -->
 			<span class="offer" role="status">{offerText(g, docState.path || docState.title)}</span>
-			<button class="offer-act" onclick={() => openMerge(initialPlan(g, docState.path || docState.title)).catch((e) => (notice = err(e)))}>Regrouper…</button>
+			<button class="offer-act" onclick={() => openMerge(initialPlan(g, docState.path || docState.title), g).catch((e) => (notice = err(e)))}>Regrouper…</button>
 			<button class="offer-act" onclick={() => (mergeOffer = null)}>Plus tard</button>
 			<button class="offer-act" onclick={() => dismissGroup(g)}>Ne plus proposer</button>
 		{/if}

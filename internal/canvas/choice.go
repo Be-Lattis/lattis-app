@@ -168,8 +168,28 @@ func (t *tx) writeChoice(sheet int64, r *choiceRaw) error {
 	if neu == prev {
 		return nil
 	}
+	// Cellules par valeur (choicecells.go) : celles de l'ancienne valeur
+	// rangées, celles de la nouvelle montrées, dans la même étape.
+	var before *choiceRaw
+	if old.Valid && old.String != "" {
+		var o choiceRaw
+		if json.Unmarshal([]byte(old.String), &o) == nil {
+			before = &o
+		}
+	}
+	if before != nil {
+		if err := t.storeChoiceCells(sheet, choiceKey(before)); err != nil {
+			return err
+		}
+	}
 	q := `UPDATE _lattis_sheets SET choice = ? WHERE id = ?`
-	return t.apply([]stmt{st(q, neu, sheet)}, []stmt{st(q, prev, sheet)})
+	if err := t.apply([]stmt{st(q, neu, sheet)}, []stmt{st(q, prev, sheet)}); err != nil {
+		return err
+	}
+	if r != nil && (before == nil || choiceKey(before) != choiceKey(r)) {
+		return t.showChoiceCells(sheet, choiceKey(r))
+	}
+	return nil
 }
 
 // setSheetChoice fait de la feuille un onglet à choix par la colonne column
@@ -262,8 +282,11 @@ func (m *Model) ChooseSheetValue(ctx context.Context, sheet int64, value string,
 			return err
 		}
 		changed = true
-		_, err = sqlTx.ExecContext(ctx, `UPDATE _lattis_sheets SET choice = ? WHERE id = ?`, string(b), sheet)
-		return err
+		if _, err = sqlTx.ExecContext(ctx, `UPDATE _lattis_sheets SET choice = ? WHERE id = ?`, string(b), sheet); err != nil {
+			return err
+		}
+		// Les cellules par valeur montrent celles de la nouvelle valeur.
+		return showChoiceCellsRaw(ctx, sqlTx, sheet, choiceKey(&r))
 	})
 	if err == nil && changed {
 		m.protMu.Lock()
@@ -567,6 +590,9 @@ func (m *Model) SettleChoices(ctx context.Context) error {
 			if _, err := sqlTx.ExecContext(ctx, `UPDATE _lattis_sheets SET choice = ? WHERE id = ?`, string(b), f.sheet); err != nil {
 				return err
 			}
+			if err := showChoiceCellsRaw(ctx, sqlTx, f.sheet, choiceKey(&f.r)); err != nil {
+				return err
+			}
 		}
 		return nil
 	})
@@ -612,7 +638,7 @@ func (t *tx) pivotChoice(sheet int64, cfg *PivotConfig) error {
 	if err != nil {
 		return nil // source introuvable : l'erreur du TCD le dira
 	}
-	if c, ok := choiceColumn(tb, ch.Name); ok {
+	if c, ok := choiceColumn(tb, ch.Name); ok && !tb.NoFollow {
 		cfg.Choice = &PivotFilter{Field: c.Name, Values: []string{ch.Value}}
 	}
 	return nil

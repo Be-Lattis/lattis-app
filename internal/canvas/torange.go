@@ -905,7 +905,8 @@ func (t *tx) formatAsTable(sheet int64, row, col int) (string, error) {
 		}
 	}
 	t.notes = append(t.notes, fmt.Sprintf("Plage mise sous forme de tableau « %s » (Ctrl+Z pour annuler)", name))
-	return name, nil
+	// Sous un onglet à choix réglé sur une valeur, le tableau la suit (§6.5).
+	return name, t.followNewTable(tb.ID)
 }
 
 // moveMarks déplace les positions « plage » retenues par match, avec les

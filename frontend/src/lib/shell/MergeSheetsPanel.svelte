@@ -9,25 +9,34 @@
 	// de valider, le volet dit ce que deviennent les formules qui citaient
 	// les anciens onglets : reprises sur le tableau commun filtré (avant →
 	// après) ou à reprendre à la main (§8).
+	//
+	// Lot 4 (§6.5) : on regroupe des feuilles entières. Les autres tableaux
+	// des onglets, appariés famille par famille, se règlent un par un
+	// (regrouper : il suit le mois ; en garder un exemplaire ; les laisser) ;
+	// la catégorie peut venir d'une cellule libre ou des titres de tableaux
+	// empilés ; les cellules libres sont reprises (par mois quand elles
+	// changent) ; l'aperçu montre la disposition de la feuille commune.
 	import { untrack } from 'svelte';
-	import type { MergePlan, MergePreview } from '#bindings/internal/canvas/models.js';
+	import type { MergePlan, MergePreview, SheetGroup } from '#bindings/internal/canvas/models.js';
 	import { resizePanel } from '#lib/ui/resize.js';
 	import { panelKeys } from '#lib/ui/focus.js';
 	import PanelHeader from '#lib/ui/PanelHeader.svelte';
-	import { cellText, oldHint, oldLabel, previewWarnings, refCounts, withTables } from './mergesheets';
+	import { cellText, familyLine, familyPlan, layoutLines, leftTables, modeLabel, oldHint, oldLabel, previewWarnings, refCounts, sourceLabel, withTables } from './mergesheets';
 
 	interface Props {
 		/** Plan de départ (groupe détecté, ou sélection d'onglets). */
 		plan: MergePlan;
 		/** Autres tableaux du classeur, qu'on peut ajouter (nom et feuille). */
 		others?: { table: string; sheet: string }[];
+		/** Le groupe détecté (familles, sources de la catégorie, cas E et F), s'il y en a un. */
+		group?: SheetGroup | null;
 		/** Aperçu d'un plan (le moteur complète ce qui manque). */
 		preview: (p: MergePlan) => Promise<MergePreview>;
 		/** Regroupe ; rend faux si c'est refusé (le volet reste ouvert). */
 		onmerge: (p: MergePlan) => Promise<boolean>;
 		onclose: () => void;
 	}
-	let { plan, others = [], preview, onmerge, onclose }: Props = $props();
+	let { plan, others = [], group = null, preview, onmerge, onclose }: Props = $props();
 
 	// Plan de départ : les décochages s'y rapportent (withTables).
 	const base = untrack(() => structuredClone($state.snapshot(plan)) as MergePlan);
@@ -49,6 +58,14 @@
 	let name = $state(base.name ?? '');
 	let sheet = $state(base.sheet ?? '');
 	let old = $state<'' | 'delete' | 'hide'>('');
+	// Lot 4 : familles (mode de chacune), source de la catégorie, cellules libres.
+	const families = untrack(() => group?.families ?? []);
+	const sources = untrack(() => group?.sources ?? []);
+	let modes = $state<string[]>(untrack(() => families.map((f, i) => base.families?.find((x) => x.tables?.[0] === f.tables?.[0]?.table)?.mode ?? f.mode ?? 'merge')));
+	let catFrom = $state(base.categoryFrom || 'sheet');
+	let noCells = $state(!!base.noCells);
+	// Onglet de chaque tableau principal (pour restreindre les familles aux onglets cochés).
+	const sheetOfTable = untrack(() => new Map((group?.tables ?? []).map((t) => [t.table, t.sheet])));
 
 	let view = $state<MergePreview | null>(null);
 	let error = $state('');
@@ -69,7 +86,20 @@
 		p.name = name.trim();
 		p.sheet = sheet.trim();
 		p.old = old;
+		p.categoryFrom = catFrom === 'sheet' ? '' : catFrom;
+		p.noCells = noCells;
+		if (families.length) {
+			const sheets = new Set(tables.map((t) => sheetOfTable.get(t)).filter((x): x is number => x !== undefined));
+			p.families = familyPlan(families, modes, sheets);
+		}
 		return p;
+	}
+
+	/** Autre source de la catégorie : les valeurs se déduisent de nouveau. */
+	function changeSource(src: string) {
+		catFrom = src;
+		catAuto = true;
+		values = {};
 	}
 
 	// L'aperçu suit les réglages, après un court délai.
@@ -143,6 +173,8 @@
 		return '✓';
 	}
 	const sheetOf = (t: string) => view?.tables?.find((x) => x.table === t)?.sheetName ?? others.find((o) => o.table === t)?.sheet ?? '';
+	const layout = $derived(view ? layoutLines(view) : []);
+	const left = $derived(view ? leftTables(view.families ?? []) : []);
 	const rowsOf = (t: string) => view?.tables?.find((x) => x.table === t)?.rows;
 </script>
 
@@ -179,7 +211,10 @@
 
 	<section>
 		<h3>2. Colonne de catégorie</h3>
-		<label class="check"><input type="checkbox" bind:checked={noCat} /> Ne pas ajouter de colonne (la catégorie est déjà dans les données)</label>
+		<label class="check"
+			><input type="checkbox" bind:checked={noCat} />
+			{group?.dataColumn ? `Ne pas ajouter de colonne : la colonne « ${group.dataColumn} » suffit (ses dates tombent dans le mois de chaque onglet)` : 'Ne pas ajouter de colonne (la catégorie est déjà dans les données)'}</label
+		>
 		{#if !noCat}
 			<div class="row">
 				<label>Nom <input class="name" bind:value={catName} oninput={() => (catAuto = false)} aria-label="Nom de la colonne de catégorie" /></label>
@@ -192,7 +227,15 @@
 					</select></label
 				>
 			</div>
-			<p class="muted">Valeur tirée du nom de chaque onglet, à corriger au besoin :</p>
+			{#if sources.length > 1}
+				<label
+					>Tirée du
+					<select value={catFrom} onchange={(e) => changeSource((e.currentTarget as HTMLSelectElement).value)} aria-label="Source de la catégorie">
+						{#each sources as s (s.source)}<option value={s.source}>{s.label}</option>{/each}
+					</select></label
+				>
+			{/if}
+			<p class="muted">Valeur tirée {catFrom === 'sheet' ? "du nom de chaque onglet" : `de : ${sourceLabel(catFrom, sources)}`}, à corriger au besoin :</p>
 			<table class="values">
 				<tbody>
 					{#each chosen as t (t)}
@@ -234,6 +277,25 @@
 		</section>
 	{/if}
 
+	{#if families.length}
+		<section>
+			<h3>Autres tableaux des onglets</h3>
+			<ul class="families">
+				{#each families as f, i (i)}
+					<li>
+						<span class="fam" title={(f.tables ?? []).map((t) => `${t.sheetName} · ${t.table}`).join('\n')}>{familyLine(f)}</span>
+						<select bind:value={modes[i]} aria-label="Ce que devient {f.name}">
+							{#each ['merge', 'once', 'leave'] as m (m)}
+								<option value={m}>{modeLabel(m, noCat ? '' : catName, (f.tables?.length ?? 0) === 1)}</option>
+							{/each}
+						</select>
+						{#if f.note}<p class="hint">{f.note}</p>{/if}
+					</li>
+				{/each}
+			</ul>
+		</section>
+	{/if}
+
 	<section>
 		<h3>4. Après</h3>
 		<div class="row">
@@ -247,6 +309,18 @@
 			{/each}
 			{#if hint}<p class="hint">{hint}</p>{/if}
 		</fieldset>
+		{#if !group?.stacked}
+			<label class="check"><input type="checkbox" checked={!noCells} onchange={(e) => (noCells = !(e.currentTarget as HTMLInputElement).checked)} /> Reprendre les cellules libres des onglets (titres, totaux, objectifs ; une par {(catName || 'valeur').toLowerCase()} quand elles changent)</label>
+		{/if}
+		{#if layout.length}
+			<p class="muted">Sur la feuille commune (disposition du dernier onglet) :</p>
+			<ul class="layout">
+				{#each layout as l, i (i)}<li>{l}</li>{/each}
+			</ul>
+		{/if}
+		{#if left.length}
+			<p class="muted">Restent sur leur onglet : {left.join(', ')}</p>
+		{/if}
 	</section>
 
 	{#if warnings.length || error}
@@ -345,6 +419,28 @@
 	}
 	.tables .sheet {
 		font-weight: 600;
+	}
+	.families {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+	.families li {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+		align-items: center;
+	}
+	.families .fam {
+		flex: 1 1 180px;
+	}
+	.layout {
+		margin: 0;
+		padding-left: 18px;
+		color: #374151;
 	}
 	.row {
 		display: flex;

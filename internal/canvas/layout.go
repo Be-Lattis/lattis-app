@@ -34,6 +34,9 @@ type Table struct {
 	// En-têtes sur deux lignes (twolevel.go) : la bande des groupes occupe
 	// la ligne Row-1 et fait partie du tableau.
 	TwoLevel bool
+	// NoFollow : le tableau ne suit pas l'onglet à choix malgré sa colonne
+	// de catégorie (« Suivre l'année » décoché, choicecells.go).
+	NoFollow bool
 
 	// Filtre : les lignes masquées gardent leur place sur la feuille (Bottom
 	// ne change pas), les Shown premières lignes affichent les lignes gardées.
@@ -68,14 +71,14 @@ func (t Table) spansCols(lo, hi int) bool { return t.Col <= hi && t.Right() >= l
 func (t Table) spansRows(lo, hi int) bool { return t.Top() <= hi && t.Bottom() >= lo }
 
 func (t *tx) tables(sheet int64) ([]Table, error) {
-	rs, err := t.query(`SELECT id, name, row, col, coalesce(key_col, 0), two_level FROM _lattis_tables WHERE sheet = ? ORDER BY id`, sheet)
+	rs, err := t.query(`SELECT id, name, row, col, coalesce(key_col, 0), two_level, coalesce(follow, 1) = 0 FROM _lattis_tables WHERE sheet = ? ORDER BY id`, sheet)
 	if err != nil {
 		return nil, err
 	}
 	var out []Table
 	for rs.Next() {
 		tb := Table{Sheet: sheet}
-		if err := rs.Scan(&tb.ID, &tb.Name, &tb.Row, &tb.Col, &tb.Key, &tb.TwoLevel); err != nil {
+		if err := rs.Scan(&tb.ID, &tb.Name, &tb.Row, &tb.Col, &tb.Key, &tb.TwoLevel, &tb.NoFollow); err != nil {
 			rs.Close()
 			return nil, err
 		}
@@ -92,8 +95,8 @@ func (t *tx) tables(sheet int64) ([]Table, error) {
 
 func (t *tx) table(id int64) (Table, error) {
 	tb := Table{ID: id}
-	err := t.row(`SELECT sheet, name, row, col, coalesce(key_col, 0), two_level FROM _lattis_tables WHERE id = ?`, id).
-		Scan(&tb.Sheet, &tb.Name, &tb.Row, &tb.Col, &tb.Key, &tb.TwoLevel)
+	err := t.row(`SELECT sheet, name, row, col, coalesce(key_col, 0), two_level, coalesce(follow, 1) = 0 FROM _lattis_tables WHERE id = ?`, id).
+		Scan(&tb.Sheet, &tb.Name, &tb.Row, &tb.Col, &tb.Key, &tb.TwoLevel, &tb.NoFollow)
 	if err != nil {
 		return tb, err
 	}

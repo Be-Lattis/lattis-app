@@ -69,6 +69,23 @@ type SheetGroup struct {
 	// Summary : feuilles qui citent tous les tableaux du groupe (synthèse).
 	Summary []string `json:"summary"`
 	Notes   []string `json:"notes"`
+
+	// Lot 4 (§6.5, similarfamilies.go) : on regroupe des feuilles entières.
+	// Sheets : les onglets du groupe ; Families : leurs autres tableaux,
+	// appariés famille par famille, avec ce qu'on propose d'en faire.
+	Sheets   []SimilarSheet `json:"sheets"`
+	Families []TableFamily  `json:"families"`
+	// Sources : d'où peut venir la catégorie (noms d'onglets, titres des
+	// tableaux empilés, cellule libre) ; CategoryFrom : celle proposée, que
+	// décrit Category.
+	Sources      []CategorySource `json:"sources"`
+	CategoryFrom string           `json:"categoryFrom"`
+	// Stacked : cas E, tableaux empilés sous des titres sur une feuille.
+	Stacked bool `json:"stacked"`
+	// DataColumn : cas F, la colonne (date) qui porte déjà la catégorie.
+	DataColumn string `json:"dataColumn"`
+	// Copies : onglets du groupe copiés les uns des autres.
+	Copies int `json:"copies"`
 }
 
 // ProposeScore : indice à partir duquel le groupe est proposé de soi-même.
@@ -384,14 +401,66 @@ func (t *tx) similarSheets() ([]SheetGroup, error) {
 	if err != nil {
 		return nil, err
 	}
+	copies, err := t.copiedSheets()
+	if err != nil {
+		return nil, err
+	}
+	// Familles (lot 4) : les groupes vérifiés, puis les groupes de feuilles.
+	var fams []*famCand
 	for _, r := range roots {
 		members := checkGroup(byRoot[r])
 		if len(members) < 2 {
 			continue
 		}
-		g := buildGroup(members)
-		if len(g.Tables) < 3 && g.Category.Score < series.Weak {
-			continue // deux tableaux seulement : il faut des noms en série
+		f := &famCand{members: members}
+		if f.same, err = t.sameData(candTables(members)); err != nil {
+			return nil, err
+		}
+		fams = append(fams, f)
+	}
+	groups, mains, err := t.sheetFamilies(fams, cands)
+	if err != nil {
+		return nil, err
+	}
+	taken := map[int64]bool{}
+	for _, g := range groups {
+		for _, tb := range g.Tables {
+			for _, c := range cands {
+				if c.tb.Name == tb.Table {
+					taken[c.tb.ID] = true
+				}
+			}
+		}
+		for _, f := range g.Families {
+			for _, tb := range f.Tables {
+				for _, c := range cands {
+					if c.tb.Name == tb.Table {
+						taken[c.tb.ID] = true
+					}
+				}
+			}
+		}
+	}
+	stacked, err := t.stackedGroups(cands, taken)
+	if err != nil {
+		return nil, err
+	}
+	byName := map[string]*candidate{}
+	for _, c := range cands {
+		byName[c.tb.Name] = c
+	}
+	for _, g := range stacked {
+		var ms []*candidate
+		for _, tb := range g.Tables {
+			ms = append(ms, byName[tb.Table])
+		}
+		groups, mains = append(groups, g), append(mains, ms)
+	}
+	for gi := range groups {
+		g := groups[gi]
+		members := mains[gi]
+		if err := t.completeGroup(&g, members, copies); err != nil {
+			return nil, err
 		}
 		g.Dismissed = dismissed[g.ID]
 		// Une feuille qui cite tous les tableaux du groupe : une synthèse.
@@ -426,6 +495,9 @@ func (t *tx) similarSheets() ([]SheetGroup, error) {
 		}
 		if len(g.Summary) > 0 {
 			g.Score += 20
+		}
+		if g.Copies > 0 {
+			g.Score += series.Medium // onglets copiés les uns des autres (§2.3)
 		}
 		g.Propose = g.Score >= ProposeScore && !g.Dismissed
 		out = append(out, g)

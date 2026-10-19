@@ -184,7 +184,11 @@ func (m *Model) run(c *command.Tx, fn func(*tx) error) (*tx, error) {
 	if err := fn(t); err != nil {
 		return t, err
 	}
-	return t, t.joinAdjacent()
+	if err := t.joinAdjacent(); err != nil {
+		return t, err
+	}
+	// Cellules par valeur d'un onglet à choix (choicecells.go).
+	return t, t.syncChoiceCells()
 }
 
 // note retient un message pour la barre d'état (voir TakeNotice).

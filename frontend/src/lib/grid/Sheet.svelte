@@ -39,6 +39,7 @@
 	import { freeDisplay } from './freecell';
 	import { bandAt, bandLabel, bandOpen, bandRefusal, hiddenBand } from './hidden';
 	import { choiceHiddenCols, type TabChoice } from '#lib/shell/choice.js';
+	import { followLabel } from '#lib/shell/mergesheets.js';
 	import { editMode, viewKey } from './readonlyedit';
 	import { bandMerges, groupSpans, headerLabel, isSingle, spanAt, splitGroup, tableTop } from './twolevel';
 	import { grown as growFrame, type Grown } from './grown';
@@ -534,6 +535,8 @@
 		deleteTables?(tables: SheetTable[]): Promise<unknown>;
 		/** Convertir en plage : le tableau devient des cellules libres, au même endroit. */
 		convertToRange?(table: SheetTable): Promise<unknown>;
+		/** « Suivre l'année » (onglet à choix, §6.5) : le tableau suit le choix de l'onglet, ou plus. */
+		setFollow?(table: SheetTable, follow: boolean): Promise<unknown>;
 		/** Mettre sous forme de tableau la plage (tableau converti) qui contient la cellule. */
 		formatAsTable?(row: number, col: number): Promise<unknown>;
 		/** Déplace un tableau, en-tête en (row, col) ; côte à côte d'un autre : fusion. */
@@ -667,6 +670,8 @@
 		linkHead: '#e3ecf7',
 		linkHeadText: '#14325a',
 		linkBorder: '#8fa9cc',
+		// Pastille d'un tableau qui suit l'onglet à choix (couleur d'accent).
+		followBadge: '#217346',
 		headText: '#14532d',
 		icon: '#6b8f78',
 		border: '#8fbc9f',
@@ -2228,6 +2233,7 @@
 		findCross = foundRect();
 		pinnedFrame = [];
 		keyHintBoxes = [];
+		followBadges = [];
 		hiddenMarks = [];
 		// Texte centré verticalement partout (les volets dessinent entre save et
 		// restore : la ligne de base doit être posée avant, pour la marge et le bandeau).
@@ -2763,6 +2769,24 @@
 			ctx.moveTo(x, under);
 			ctx.lineTo(x + fw, under);
 			ctx.stroke();
+			// Pastille du tableau qui suit l'onglet à choix : la valeur choisie.
+			if (e.t.follows && data?.choice && !data.choice.all) {
+				const label = data.choice.value || '(vide)';
+				ctx.font = FONT_SMALL;
+				const bw = Math.ceil(ctx.measureText(label).width) + 10;
+				const bh = 13;
+				const bx = x + fw - bw;
+				const by = y - bh;
+				ctx.fillStyle = C.followBadge;
+				ctx.beginPath();
+				ctx.roundRect(bx, by, bw, bh, [4, 4, 0, 0]);
+				ctx.fill();
+				ctx.fillStyle = '#fff';
+				ctx.textAlign = 'center';
+				ctx.textBaseline = 'middle';
+				ctx.fillText(label, bx + bw / 2, by + bh / 2 + 0.5);
+				followBadges.push({ e, x0: bx, x1: bx + bw, y0: by, y1: by + bh });
+			}
 			// Classeur collaboratif : lecture filtrée par les droits (§8.1).
 			if (e.t.filtered) {
 				ctx.font = 'italic ' + FONT_SMALL;
@@ -3494,6 +3518,34 @@
 	/** Zones (écran) des clés proposées dessinées à cette image. */
 	let keyHintBoxes: { e: Entry; x0: number; x1: number; y0: number; y1: number }[] = [];
 	let hintMenu = $state<{ x: number; y: number; e: Entry } | null>(null);
+
+	// --- Pastille « suit l'année » (§6.5) ------------------------------------
+	// Un tableau qui suit l'onglet à choix porte, au coin de son cadre, une
+	// pastille avec la valeur choisie (« 2025 ») ; un tableau sans pastille est
+	// le même pour toutes les valeurs. Un clic sur la pastille ouvre son menu
+	// (« Suivre l'année », à décocher).
+	let followBadges: { e: Entry; x0: number; x1: number; y0: number; y1: number }[] = [];
+	let followMenu = $state<{ x: number; y: number; e: Entry } | null>(null);
+
+	function followBadgeAt(ev: MouseEvent): Entry | null {
+		const { x, y } = toLocal(ev);
+		return followBadges.find((b) => x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1)?.e ?? null;
+	}
+
+	/** Coche ou décoche « Suivre l'année » d'un tableau. */
+	function toggleFollow(t: SheetTable, on: boolean) {
+		const set = source.setFollow;
+		if (!set) return;
+		followMenu = menu = null;
+		wrap.focus();
+		writing = writing.catch(() => undefined).then(async () => {
+			try {
+				await set(t, on);
+			} catch (err) {
+				say(String(err instanceof Error ? err.message : err));
+			}
+		});
+	}
 
 	const hasKeyHint = (e: Entry, i: number) => i === 0 && !!e.t.keyHint && e.t.key === undefined && !!source.setKey;
 
@@ -5824,7 +5876,7 @@
 	 * passe par ici ; un clic en dehors les ferme aussi (dismiss.ts).
 	 */
 	function closeMenus() {
-		menu = freeMenu = chartMenu = listMenu = null;
+		menu = freeMenu = chartMenu = listMenu = followMenu = null;
 		filterDlg = cfView = dedupDlg = fnDlg = linesDlg = pivotDlg = null;
 		formatDlg = validDlg = noteDlg = sizeDlg = null;
 		noteTip = null;
@@ -6578,6 +6630,15 @@
 					(err) => say(String(err?.message ?? err))
 				)
 			);
+			return;
+		}
+		if (e.button === 0 && !formulaMode && followBadgeAt(e)) {
+			e.preventDefault();
+			if (!commitEditor()) return;
+			const fe = followBadgeAt(e)!;
+			closeMenus();
+			const r = wrap.getBoundingClientRect();
+			followMenu = { x: e.clientX - r.left, y: e.clientY - r.top, e: fe };
 			return;
 		}
 		if (e.button !== 1 && !formulaMode && keyHintAt(e)) {
@@ -8819,6 +8880,12 @@
 	/** Infobulle d'un en-tête de colonne : nom complet et type. */
 	let tipCell = '';
 	function updateHeaderTip(ev: MouseEvent) {
+		if (followBadgeAt(ev)) {
+			const name = data?.choice?.name ?? '';
+			if (tipCell !== 'follow') scroller.title = `Ce tableau suit l'onglet à choix (${name} : ${data?.choice?.value ?? ''}) : il ne montre que ses lignes ; cliquer pour ne plus le suivre`;
+			tipCell = 'follow';
+			return;
+		}
 		if (keyHintAt(ev)) {
 			if (tipCell !== 'keyhint') scroller.title = KEY_HINT_TIP;
 			tipCell = 'keyhint';
@@ -9687,7 +9754,8 @@
 			{@const share = cols && !!onsharedata && !m.e.t.query}
 			{@const pushSource = cols && !!onpushsource && sourceTables.includes(m.e.t.name)}
 			{@const twoLevel = cols && !!source.setTwoLevel && !m.e.t.query}
-			{@const tableItems = toTitle || twoLevel || refresh || share || pushSource || !!source.convertToRange || !!source.deleteTables}
+			{@const follow = cols && !!source.setFollow && !!data?.choice && !m.e.t.query}
+			{@const tableItems = toTitle || twoLevel || refresh || share || pushSource || follow || !!source.convertToRange || !!source.deleteTables}
 			{#snippet sortItems()}
 				{#if cols && source.sortTable}
 					{@const lab = sortLabels(col?.type ?? 'text', col?.result)}
@@ -9819,6 +9887,18 @@
 									onclick={() => menuAction(() => source.setTwoLevel!(m.e.t, !on))}><span class="check">{on ? '✓' : ''}</span>{on ? "Retirer les groupes d'en-têtes" : "Intégrer la ligne du dessus comme groupes d'en-têtes"}</button
 								>
 							{/if}
+							{#if follow}
+								{@const on = !!m.e.t.follows}
+								{@const what = followLabel(data?.choice?.name ?? '')}
+								<button
+									role="menuitemcheckbox"
+									aria-checked={on}
+									title={on
+										? `Le tableau montre toutes ses lignes, quelle que soit la valeur de l'onglet (sa colonne « ${data?.choice?.name} » est retirée si elle n'a qu'une valeur)`
+										: `Le tableau reçoit la colonne « ${data?.choice?.name} », remplie avec la valeur affichée, et ne montre plus que ses lignes`}
+									onclick={() => toggleFollow(m.e.t, !on)}><span class="check">{on ? '✓' : ''}</span>Suivre {what}</button
+								>
+							{/if}
 							{#if refresh}
 								{@const t = m.e.t}
 								<button title="Relance la requête « {t.query?.name} » (F5 dans le tableau)" onclick={() => menuAction(() => source.refreshTable!(t))}>Actualiser la requête</button>
@@ -9859,6 +9939,14 @@
 						>
 					{/if}
 				{/if}
+			</div>
+		{/if}
+		{#if followMenu}
+			{@const m = followMenu}
+			{@const what = followLabel(data?.choice?.name ?? '')}
+			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (followMenu = null)}>
+				<div class="menu-title" title={clipped(m.e.t.name) ? m.e.t.name : undefined}>Tableau « {clip(m.e.t.name)} »</div>
+				<button role="menuitemcheckbox" aria-checked="true" disabled={!source.setFollow} onclick={() => toggleFollow(m.e.t, false)}><span class="check">✓</span>Suivre {what}</button>
 			</div>
 		{/if}
 		{#if hintMenu}

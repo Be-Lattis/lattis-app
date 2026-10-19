@@ -228,6 +228,30 @@ func TestMigrateSheetChoice(t *testing.T) {
 	exec(t, db, `UPDATE _lattis_sheets SET choice = '{"name":"Année","value":"2025"}' WHERE id = 2`)
 }
 
+// TestMigrateChoiceCells : le format 34 ajoute le réglage « Suivre » des
+// tableaux (_lattis_tables.follow, NULL : selon la colonne) et les cellules
+// par valeur d'un onglet à choix, sans toucher aux tableaux.
+func TestMigrateChoiceCells(t *testing.T) {
+	ctx := context.Background()
+	db := open(t)
+	if err := MigrateTo(ctx, db, 33); err != nil {
+		t.Fatal(err)
+	}
+	exec(t, db, `INSERT INTO _lattis_tables (id, sheet, name, row, col) VALUES (1, 1, 'Ventes', 0, 0)`)
+	if err := Migrate(ctx, db); err != nil {
+		t.Fatal(err)
+	}
+	if version(t, db) < 34 {
+		t.Fatalf("format %d", version(t, db))
+	}
+	var n int
+	if err := db.Read().QueryRow(`SELECT count(*) FROM _lattis_tables WHERE follow IS NULL`).Scan(&n); err != nil || n != 1 {
+		t.Fatalf("tableaux : %d, %v", n, err)
+	}
+	exec(t, db, `INSERT INTO _lattis_choice_cells (sheet, row, col, value, raw) VALUES (1, 0, 7, '2025', '6000')`)
+	exec(t, db, `UPDATE _lattis_tables SET follow = 0 WHERE id = 1`)
+}
+
 func tableSQL(t *testing.T, db *store.Store, name string) string {
 	t.Helper()
 	var q string

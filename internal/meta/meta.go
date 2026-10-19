@@ -467,6 +467,23 @@ CREATE TABLE _lattis_hand_kept (
 	`
 ALTER TABLE _lattis_sheets ADD COLUMN choice TEXT;
 `,
+	// 33 → 34 : feuilles à plusieurs tableaux regroupées (canvas/choicecells.go,
+	// conception regrouper-onglets-semblables §6.5, lot 4) : un tableau peut ne
+	// pas suivre l'onglet à choix malgré sa colonne de catégorie (follow = 0 ;
+	// NULL : il suit s'il a la colonne) ; cellules par valeur de la catégorie
+	// (« Objectif : 5 000 en 2024, 6 000 en 2025 »), la cellule libre montrant
+	// celle de la valeur choisie (value « * » : « (Toutes) »).
+	`
+ALTER TABLE _lattis_tables ADD COLUMN follow INTEGER;
+CREATE TABLE _lattis_choice_cells (
+	sheet INTEGER NOT NULL REFERENCES _lattis_sheets(id),
+	row   INTEGER NOT NULL,
+	col   INTEGER NOT NULL,
+	value TEXT NOT NULL,
+	raw   TEXT NOT NULL,
+	PRIMARY KEY (sheet, row, col, value)
+) STRICT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

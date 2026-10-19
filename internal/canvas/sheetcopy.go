@@ -22,8 +22,11 @@ import (
 func (m *Model) CopySheet(ctx context.Context, sheet int64, to int) (int64, error) {
 	var id int64
 	err := m.Do(ctx, "Copier la feuille", func(t *tx) (err error) {
-		id, err = t.copySheet(sheet, to)
-		return err
+		if id, err = t.copySheet(sheet, to); err != nil {
+			return err
+		}
+		// Noté pour la détection des onglets semblables (§2.3, §4).
+		return t.noteCopy(id, sheet)
 	})
 	return id, err
 }

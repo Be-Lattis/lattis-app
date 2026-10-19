@@ -139,7 +139,9 @@ func New(db *store.Store, bus *command.Bus) *Model {
 	m := &Model{db: db, bus: bus, now: time.Now(), seed: rand.Uint64()}
 	if bus != nil {
 		// Une annulation ne doit pas modifier une feuille protégée.
-		bus.Guard = m.historyGuard
+		// (et les cellules par valeur reviennent sur la valeur choisie :
+		// choicecells.go).
+		bus.Guard = m.undoGuard
 		bus.Undone = m.undone
 	}
 	return m

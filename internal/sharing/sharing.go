@@ -21,6 +21,7 @@ import (
 	"github.com/lalamefine/lattis/internal/api"
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/query"
+	"github.com/lalamefine/lattis/internal/series"
 )
 
 // Partage des données.
@@ -84,6 +85,8 @@ var Structure = []string{
 	// feuilles, de tableaux et de colonnes) et fusion (sans valeurs hors
 	// partage : Filter).
 	"tables.similar", "tables.merge_sheets",
+	// « Suivre l'année » d'un tableau d'une feuille à onglet à choix.
+	"tables.follow_choice",
 }
 
 // Reads : lectures de valeurs, permises à partir du mode sample (bornées
@@ -186,6 +189,10 @@ func Filter(cmd string, res any, mode string) any {
 		if mode == SchemaOnly {
 			return maskMerge(v)
 		}
+	case []canvas.SheetGroup:
+		if mode == SchemaOnly {
+			return maskSimilar(v)
+		}
 	case api.ControlView:
 		if mode == SchemaOnly {
 			return maskControl(v)
@@ -227,10 +234,20 @@ func maskMerge(v canvas.MergeResult) canvas.MergeResult {
 	for _, n := range v.Notes {
 		if strings.HasPrefix(n, "Pas de clé") {
 			n = v.KeyNote
+		} else if k := strings.Index(n, "Pas de clé"); k >= 0 {
+			n = n[:k] + "Pas de clé : une même valeur de clé est dans plusieurs onglets"
 		}
 		notes = append(notes, n)
 	}
 	v.Notes = notes
+	fams := make([]canvas.FamilyOutcome, len(v.Families))
+	for i, f := range v.Families {
+		if f.KeyNote != "" {
+			f.KeyNote = "Pas de clé : une même valeur de clé est dans plusieurs onglets"
+		}
+		fams[i] = f
+	}
+	v.Families = fams
 	if k := strings.Index(v.Notice, " ; Pas de clé"); k >= 0 {
 		rest := v.Notice[k+3:]
 		end := strings.Index(rest, " ; ")
@@ -241,6 +258,41 @@ func maskMerge(v canvas.MergeResult) canvas.MergeResult {
 		v.Notice = v.Notice[:k] + " ; " + v.KeyNote + tail
 	}
 	return v
+}
+
+// maskSimilar : les groupes d'onglets semblables sans le contenu des
+// cellules libres proposées comme source de la catégorie (un titre
+// « Janvier 2025 » est une donnée ; les noms d'onglets, de tableaux et de
+// colonnes restent).
+func maskSimilar(v []canvas.SheetGroup) []canvas.SheetGroup {
+	out := make([]canvas.SheetGroup, len(v))
+	hide := func(s series.Series) series.Series {
+		s.Values, s.Labels = maskList(s.Values), maskList(s.Labels)
+		return s
+	}
+	for i, g := range v {
+		srcs := make([]canvas.CategorySource, len(g.Sources))
+		for k, src := range g.Sources {
+			if strings.HasPrefix(src.Source, "cell:") || src.Source == canvas.FromTitle {
+				src.Category = hide(src.Category)
+			}
+			srcs[k] = src
+		}
+		g.Sources = srcs
+		if g.CategoryFrom != canvas.FromSheet && g.CategoryFrom != "" {
+			g.Category = hide(g.Category)
+		}
+		out[i] = g
+	}
+	return out
+}
+
+func maskList(list []string) []string {
+	out := make([]string, len(list))
+	for i := range list {
+		out[i] = masked
+	}
+	return out
 }
 
 // layoutOnly : la disposition d'une feuille (sheets.get) garde les
