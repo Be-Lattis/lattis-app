@@ -34,8 +34,10 @@
 		onpublish?: (republish: boolean) => void;
 		/** Message de la barre d'état (source créée, mise à jour, retirée). */
 		onnotice?: (msg: string) => void;
+		/** Ajouter le tableau au classeur partagé en direct (la boîte se ferme ; confirmation et envoi par la page). */
+		onaddshared?: () => void;
 	}
-	let { table, ondone, onpublish, onnotice }: Props = $props();
+	let { table, ondone, onpublish, onnotice, onaddshared }: Props = $props();
 
 	type Info = {
 		reason: string;
@@ -85,7 +87,7 @@
 	const problems = $derived(info ? shareProblems({ server: info.server, name, sqlName: ds ? null : sqlName, columns: shown.size, badFilter }) : {});
 	const firstProblem = $derived(Object.values(problems)[0] ?? '');
 	const colTypes = $derived((info?.columns ?? []).map((c) => ({ name: c, type: info?.fields?.find((f) => f.name === c)?.type })));
-	const wayOk = $derived(!ways.find((w) => w.way === way)?.disabled && !(way === 'workbook' && !onpublish));
+	const wayOk = $derived(!ways.find((w) => w.way === way)?.disabled && !(way === 'workbook' && !onpublish) && !(way === 'shared' && !onaddshared));
 
 	onMount(load);
 
@@ -96,7 +98,7 @@
 			if (i.source) step = 'source';
 			else if (i.choice) {
 				step = 'choose';
-				way = i.reason ? 'table' : 'workbook';
+				way = i.choice === 'collab' ? (i.reason ? 'table' : 'shared') : i.reason ? 'table' : 'workbook';
 			}
 			const d = i.dataset;
 			shown = new Set(i.columns ?? []);
@@ -130,7 +132,10 @@
 	function proceed() {
 		if (!wayOk) return;
 		if (way === 'table') step = 'source';
-		else {
+		else if (way === 'shared') {
+			ondone();
+			onaddshared?.();
+		} else {
 			ondone();
 			onpublish?.(info?.choice === 'table');
 		}
@@ -254,7 +259,7 @@
 					{#each ways as w (w.way)}
 						<label class="way" class:on={way === w.way} class:off={!!w.disabled} ondblclick={() => !w.disabled && proceed()}>
 							<input type="radio" name="way" value={w.way} bind:group={way} disabled={!!w.disabled} />
-							<span class="way-icon"><Icon name={w.way === 'workbook' ? 'lock-book' : 'table'} size={22} /></span>
+							<span class="way-icon"><Icon name={w.way === 'workbook' ? 'lock-book' : w.way === 'shared' ? 'book' : 'table'} size={22} /></span>
 							<span class="way-text">
 								<strong>{w.title}</strong>
 								<span class="sf-hint">{w.detail}</span>
@@ -268,7 +273,7 @@
 			<footer class="sf-foot">
 				<span class="sf-grow"></span>
 				<button type="button" class="sf-btn" onclick={ondone}>Annuler</button>
-				<button type="button" class="sf-btn primary" disabled={!wayOk} onclick={proceed}>{way === 'workbook' ? (info.choice === 'table' ? 'Republier le classeur…' : 'Publier le classeur…') : 'Continuer'}</button>
+				<button type="button" class="sf-btn primary" disabled={!wayOk} onclick={proceed}>{way === 'workbook' ? (info.choice === 'table' ? 'Republier le classeur…' : 'Publier le classeur…') : way === 'shared' ? 'Ajouter au classeur…' : 'Continuer'}</button>
 			</footer>
 		{:else}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->

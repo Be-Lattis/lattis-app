@@ -1937,6 +1937,25 @@ export function ShareAddRestriction(r: workbook$0.RestrictionRule): $Cancellable
 }
 
 /**
+ * ShareAddTable ajoute le tableau local table au classeur collaboratif
+ * ouvert (« Ajouter au classeur partagé ») : créé sur le serveur avec ses
+ * lignes, reçu par les autres membres, synchronisé ensuite comme les
+ * autres. Propriétaires et concepteurs, en ligne. Ne s'annule pas par
+ * Ctrl+Z (« Supprimer le tableau » le retire du serveur).
+ */
+export function ShareAddTable(table: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(874991528, table);
+}
+
+/**
+ * ShareCanAddTable dit pourquoi le tableau table ne peut pas être ajouté au
+ * classeur collaboratif ouvert ("" : il peut l'être ; voir ShareAddTable).
+ */
+export function ShareCanAddTable(table: string): $CancellablePromise<string> {
+    return $Call.ByID(4077688616, table);
+}
+
+/**
  * ShareCanPublish dit si le compte connecté à server peut y créer un
  * classeur (rôle « créateur de classeurs », propriétaire du serveur, ou
  * publication ouverte à tous) : sinon, Publier sur un serveur ne propose

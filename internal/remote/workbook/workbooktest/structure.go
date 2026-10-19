@@ -577,3 +577,50 @@ func (w *writer) Indexes(ctx context.Context, workbookID, tableID string) ([]wor
 	}
 	return out, nil
 }
+
+// CreateTable : lattis.create_table sur la version publiée d'un classeur
+// collaboratif (mêmes règles qu'à la publication), notification « *meta ».
+func (w *writer) CreateTable(ctx context.Context, workbookID, schemaName, name string, localID int64, sheet string, cols []workbook.ColumnSpec) (string, []workbook.RemoteColumn, error) {
+	id, rc, err := (&publisher{s: w.s}).CreateTable(ctx, workbookID, schemaName, name, localID, sheet, cols)
+	if err != nil {
+		if _, ok := err.(ErrPrivilege); ok {
+			return "", nil, err
+		}
+		return "", nil, ErrServer{"22023", err.Error()}
+	}
+	w.wrote = true
+	if b := w.s.f.books[workbookID]; b != nil && b.state == "published" {
+		w.notes = append(w.notes, [2]string{"wb_" + b.slug, "*meta"})
+	}
+	return id, rc, nil
+}
+
+// Fill écrit les lignes d'un tableau créé dans la transaction.
+func (w *writer) Fill(ctx context.Context, schemaName, name string, cols []workbook.RemoteColumn, rows []workbook.NewRow) error {
+	w.s.f.Calls["fill"]++
+	for _, r := range rows {
+		n, err := w.Insert(ctx, schemaName, name, r.ID, r.Pos, cols, r.Vals)
+		if err != nil {
+			return err
+		}
+		if n.Rows == 0 {
+			return ErrServer{"23505", "lattis_id en double : " + r.ID}
+		}
+	}
+	return nil
+}
+
+func (w *writer) Meta(ctx context.Context, schemaName, kind, key string) ([]byte, error) {
+	return (&reader{s: w.s}).Meta(ctx, schemaName, kind, key)
+}
+
+func (w *writer) SaveMeta(ctx context.Context, workbookID, kind string, payload []byte) error {
+	if err := (&publisher{s: w.s}).SaveMeta(ctx, workbookID, kind, payload); err != nil {
+		return err
+	}
+	w.wrote = true
+	if b := w.s.f.books[workbookID]; b != nil && b.state == "published" {
+		w.notes = append(w.notes, [2]string{"wb_" + b.slug, "*meta"})
+	}
+	return nil
+}

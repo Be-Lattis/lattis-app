@@ -345,7 +345,9 @@ export interface DataShareInfo {
      * Choice : le tableau n'est pas dans un classeur publié, deux voies
      * s'offrent : « workbook » (classeur non publié : le publier avec ses
      * droits) ou « table » (classeur publié sans ce tableau), ou publier
-     * le tableau seul comme source (TableSourceInfo). Reason dit alors
+     * le tableau seul comme source (TableSourceInfo) ; « collab » : classeur
+     * partagé en direct sans ce tableau, à y ajouter (ShareAddTable) ou à
+     * publier seul. Reason dit alors
      * pourquoi la première voie est fermée ("" : ouverte).
      */
     "choice": string;
@@ -777,6 +779,13 @@ export interface RightsView {
     "roles": string[] | null;
     "customRoles": string[] | null;
     "tables": RightsTable[] | null;
+
+    /**
+     * LocalTables : tableaux qui ne sont que sur ce poste (classeur
+     * collaboratif, propriétaire ou concepteur), à ajouter au classeur
+     * partagé (ShareAddTable).
+     */
+    "localTables"?: string[] | null;
 
     /**
      * ACL : rôles, membres, restrictions, invitations (propriétaire, en

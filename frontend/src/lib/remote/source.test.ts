@@ -14,6 +14,17 @@ describe('chooser', () => {
 		expect(c.ways.map((w) => [w.way, w.title, w.disabled])).toEqual([['table', 'Publier ce tableau seul au Data Lake', '']]);
 		expect(c.why).toContain('ne se republie pas');
 	});
+	it('classeur partagé en direct : ajouter au classeur partagé d’abord, puis le tableau seul', () => {
+		const c = chooser('collab', '');
+		expect(c.ways.map((w) => [w.way, w.title, w.disabled])).toEqual([
+			['shared', 'Ajouter ce tableau au classeur partagé', ''],
+			['table', 'Publier ce tableau seul au Data Lake', '']
+		]);
+		expect(c.why).toBe('');
+		const off = chooser('collab', 'Hors ligne : un tableau s’ajoute au classeur partagé quand le serveur répond');
+		expect(off.ways[0].disabled).toContain('Hors ligne');
+		expect(off.ways[1].disabled).toBe('');
+	});
 });
 
 describe('contrôle du formulaire', () => {

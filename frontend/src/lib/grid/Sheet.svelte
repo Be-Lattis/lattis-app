@@ -628,6 +628,8 @@
 		onrowlink?: (table: string, id: number) => void;
 		/** Partager le tableau au Data Lake Lattis (clic droit sur un tableau). */
 		onsharedata?: (table: string) => void;
+		/** Classeur partagé en direct : clic droit sur un tableau qui n'est que sur ce poste › « Ajouter au classeur partagé ». */
+		onaddshared?: (table: string) => void;
 		/** Tableaux publiés seuls comme source du Data Lake (sans le classeur). */
 		sourceTables?: readonly string[];
 		/** Clic droit › « Mettre à jour la source du Data Lake » d'un de ces tableaux. */
@@ -638,7 +640,7 @@
 		pageBreaks?: PageBreaksView;
 	}
 
-	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', freeze, zoom = 1, onzoom, animate = true, sheetName = '', onsheet, onrowlink, onask, onsharedata, sourceTables = [], onpushsource, pageBreaks }: Props = $props();
+	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', freeze, zoom = 1, onzoom, animate = true, sheetName = '', onsheet, onrowlink, onask, onsharedata, onaddshared, sourceTables = [], onpushsource, pageBreaks }: Props = $props();
 
 	// Feuille sans fin pratique (choix de Louis) : au-delà des limites d'Excel,
 	// bornée par la nomenclature Cell[ZZZZ999999999] (4 lettres, 9 chiffres).
@@ -9972,6 +9974,7 @@
 			{@const toNote = rowItems && !!source.rowToNote && m.n === m.e.t.rows - 1}
 			{@const refresh = !!m.e.t.query && !!source.refreshTable}
 			{@const share = cols && !!onsharedata && !m.e.t.query}
+			{@const addShared = cols && !!onaddshared && m.e.t.shared === 'private' && !m.e.t.query}
 			{@const pushSource = cols && !!onpushsource && sourceTables.includes(m.e.t.name)}
 			{@const twoLevel = cols && !!source.setTwoLevel && !m.e.t.query}
 			{@const follow = cols && !!source.setFollow && !!data?.choice && !m.e.t.query}
@@ -10130,6 +10133,9 @@
 									{#if source.forgetHandKept && t.handKept}
 										<button title="Valeurs saisies sur des lignes disparues du résultat, gardées au cas où elles reviendraient (Ctrl+Z pour annuler)" onclick={() => menuAction(() => source.forgetHandKept!(t))}>Oublier les valeurs mises de côté ({t.handKept} {t.handKept > 1 ? 'lignes' : 'ligne'})</button>
 									{/if}
+							{/if}
+							{#if addShared}
+								<button title="Ce tableau n'est que sur votre poste : le créer dans le classeur partagé, avec ses lignes, pour tous les membres" onclick={() => { const n = m.e.t.name; menu = null; onaddshared?.(n); }}>Ajouter au classeur partagé…</button>
 							{/if}
 							{#if share}
 								<button title="Rendre ce tableau lisible depuis d'autres classeurs du serveur (catalogue du Data Lake Lattis)" onclick={() => { const n = m.e.t.name; menu = null; onsharedata?.(n); }}>Partager au Data Lake Lattis…</button>

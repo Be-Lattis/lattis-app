@@ -337,6 +337,60 @@ func (s *DocumentService) ShareResolve(ctx context.Context, id int64, mine bool)
 	return s.changed(ctx)
 }
 
+// ShareCanAddTable dit pourquoi le tableau table ne peut pas être ajouté au
+// classeur collaboratif ouvert ("" : il peut l'être ; voir ShareAddTable).
+func (s *DocumentService) ShareCanAddTable(ctx context.Context, table string) (string, error) {
+	eng := s.collab()
+	if eng == nil {
+		return collab.ErrNotCollaborative.Error(), nil
+	}
+	d, err := s.current()
+	if err != nil {
+		return "", err
+	}
+	tbl, err := tableIDByName(ctx, d, table)
+	if err != nil {
+		return "", err
+	}
+	return eng.CanAdd(tbl), nil
+}
+
+// ShareAddTable ajoute le tableau local table au classeur collaboratif
+// ouvert (« Ajouter au classeur partagé ») : créé sur le serveur avec ses
+// lignes, reçu par les autres membres, synchronisé ensuite comme les
+// autres. Propriétaires et concepteurs, en ligne. Ne s'annule pas par
+// Ctrl+Z (« Supprimer le tableau » le retire du serveur).
+func (s *DocumentService) ShareAddTable(ctx context.Context, table string) (DocState, error) {
+	eng := s.collab()
+	if eng == nil {
+		return DocState{}, collab.ErrNotCollaborative
+	}
+	d, err := s.current()
+	if err != nil {
+		return DocState{}, err
+	}
+	tbl, err := tableIDByName(ctx, d, table)
+	if err != nil {
+		return DocState{}, err
+	}
+	name, err := eng.AddTable(ctx, tbl)
+	if err != nil {
+		return DocState{}, err
+	}
+	d.Notify(collab.AddedNotice(name))
+	s.emitShare(d)
+	return s.changed(ctx)
+}
+
+// tableIDByName donne l'identifiant local d'un tableau.
+func tableIDByName(ctx context.Context, d *doc.Document, table string) (int64, error) {
+	var tbl int64
+	if err := d.DB().Read().QueryRowContext(ctx, `SELECT id FROM _lattis_tables WHERE name = ?`, table).Scan(&tbl); err != nil {
+		return 0, fmt.Errorf("tableau « %s » introuvable", table)
+	}
+	return tbl, nil
+}
+
 // ShareEditing note la cellule de feuille en cours de saisie (on faux :
 // saisie terminée ou abandonnée) : une modification reçue du serveur pour
 // elle attend la validation, qui peut produire un conflit (§6.3).

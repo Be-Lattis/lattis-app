@@ -272,11 +272,34 @@ type Writer interface {
 	CreateIndex(ctx context.Context, workbookID, tableID string, columnIDs []string, unique bool) (string, error)
 	DropIndex(ctx context.Context, workbookID, tableID, name string) error
 	Indexes(ctx context.Context, workbookID, tableID string) ([]Index, error)
+	// CreateTable crée un tableau dans le classeur collaboratif publié
+	// workbookID (schéma schema : sa version publiée) et rend son
+	// identifiant et ses colonnes (lattis.create_table, avec la feuille
+	// depuis la migration 0009 ; concepteurs et propriétaires). Le serveur
+	// pose ses déclencheurs et recompile les droits dans la même
+	// transaction ; il notifie « *meta ». Sans point de sauvegarde.
+	CreateTable(ctx context.Context, workbookID, schema, name string, localID int64, sheet string, cols []ColumnSpec) (string, []RemoteColumn, error)
+	// Fill écrit les lignes d'un tableau créé dans la même transaction
+	// (INSERT par lots, sans point de sauvegarde : une erreur défait tout ;
+	// COPY ne passe pas la RLS des tableaux collaboratifs). Les valeurs
+	// sont locales, dans l'ordre de cols.
+	Fill(ctx context.Context, schema, table string, cols []RemoteColumn, rows []NewRow) error
+	// Meta lit un objet de mise en page (nil s'il n'existe pas) ; SaveMeta
+	// l'écrit (lattis.save_meta, concepteurs et propriétaires).
+	Meta(ctx context.Context, schema, kind, key string) ([]byte, error)
+	SaveMeta(ctx context.Context, workbookID, kind string, payload []byte) error
 	// Xact rend l'identifiant (xid8, en texte) de la transaction, "" si
 	// elle n'a rien écrit (pg_current_xact_id_if_assigned) : le poste le
 	// garde pour écarter ses propres écritures des changements reçus
 	// (Reader.Changes, skip).
 	Xact(ctx context.Context) (string, error)
+}
+
+// NewRow est une ligne à écrire dans un tableau qui vient d'être créé
+// (Writer.Fill) : identifiant partagé, clé d'ordre, valeurs locales.
+type NewRow struct {
+	ID, Pos string
+	Vals    []any
 }
 
 // Rejected dit si err est un refus du serveur (erreur SQL : droits,

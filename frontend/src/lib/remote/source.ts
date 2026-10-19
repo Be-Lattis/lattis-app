@@ -54,8 +54,8 @@ export interface SourceLink {
 	blanked?: number;
 }
 
-/** Voie choisie : publier le classeur, ou le tableau seul. */
-export type ShareWay = 'workbook' | 'table';
+/** Voie choisie : publier le classeur, le tableau seul, ou (classeur partagé en direct) ajouter le tableau au classeur partagé. */
+export type ShareWay = 'workbook' | 'table' | 'shared';
 
 /** Une des deux voies de la boîte : ouverte ou fermée (avec la raison). */
 export interface WayChoice {
@@ -100,13 +100,35 @@ export interface Chooser {
 }
 
 /**
- * Le choix en clair. Classeur collaboratif où ce tableau n'a pas été publié
- * (reason) : le classeur ne se republie pas et rien ne permet d'y ajouter
- * un tableau en direct ; seule reste la publication du tableau seul,
- * présentée sans voie grisée ni refus en rouge.
+ * Le choix en clair. Classeur partagé en direct sans ce tableau (choice
+ * « collab ») : l'ajouter au classeur partagé (recommandé ; reason dit
+ * pourquoi c'est fermé : droits, hors ligne), ou le publier seul au Data
+ * Lake. Classeur collaboratif où ce tableau n'a pas été publié avec une
+ * raison (choice « table », reason) : seule reste la publication du
+ * tableau seul, présentée sans voie grisée ni refus en rouge.
  */
 export function chooser(choice: string, reason: string): Chooser {
 	const ways = shareWays(choice, reason);
+	if (choice === 'collab') {
+		// Classeur partagé en direct sans ce tableau : l'ajouter au classeur
+		// (recommandé, en premier ; reason : pourquoi c'est fermé), ou le
+		// publier seul au Data Lake.
+		const table = ways.find((w) => w.way === 'table') as WayChoice;
+		return {
+			title: 'Ce tableau n’est que sur votre poste',
+			lead: 'Le classeur est partagé en direct, mais ce tableau n’en fait pas partie.',
+			ways: [
+				{
+					way: 'shared',
+					title: 'Ajouter ce tableau au classeur partagé',
+					detail: 'Recommandé. Il est créé sur le serveur avec ses lignes ; les membres le reçoivent et le modifient selon leurs droits. Il se partage ensuite au Data Lake depuis ce même menu.',
+					disabled: reason
+				},
+				{ ...table, title: 'Publier ce tableau seul au Data Lake' }
+			],
+			why: ''
+		};
+	}
 	if (!reason) return { title: 'Comment partager ce tableau ?', lead: 'Ce tableau n’est pas dans un classeur publié.', ways, why: '' };
 	const table = ways.find((w) => w.way === 'table') as WayChoice;
 	return {

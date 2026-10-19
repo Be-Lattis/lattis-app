@@ -33,7 +33,9 @@ type DataShareInfo struct {
 	// Choice : le tableau n'est pas dans un classeur publié, deux voies
 	// s'offrent : « workbook » (classeur non publié : le publier avec ses
 	// droits) ou « table » (classeur publié sans ce tableau), ou publier
-	// le tableau seul comme source (TableSourceInfo). Reason dit alors
+	// le tableau seul comme source (TableSourceInfo) ; « collab » : classeur
+	// partagé en direct sans ce tableau, à y ajouter (ShareAddTable) ou à
+	// publier seul. Reason dit alors
 	// pourquoi la première voie est fermée ("" : ouverte).
 	Choice string `json:"choice"`
 	// Source : le tableau est déjà une source du Data Lake (sans le classeur).
@@ -77,6 +79,11 @@ func (s *DocumentService) DataShareInfo(ctx context.Context, table string) (Data
 		out.Choice = "table"
 		if info.Mode == workbook.Frozen {
 			out.Reason = ""
+		} else if eng := s.collab(); eng != nil {
+			// Classeur partagé en direct : le tableau s'y ajoute
+			// (ShareAddTable) ; Reason dit pourquoi pas maintenant.
+			out.Choice = "collab"
+			out.Reason = eng.CanAdd(tbl)
 		} else {
 			out.Reason = "Un classeur collaboratif ne se republie pas : ce tableau n'y entre plus avec le classeur."
 		}

@@ -45,8 +45,10 @@
 		/** Adresse à partager du classeur (<serveur>/w/<id>) ; vide : non affichée. */
 		link?: string;
 		onclose: () => void;
+		/** Classeur partagé en direct : ajouter un tableau qui n'est que sur ce poste (confirmation et envoi par la page). */
+		onaddshared?: (table: string) => Promise<void>;
 	}
-	let { title, server, link = '', onclose }: Props = $props();
+	let { title, server, link = '', onclose, onaddshared }: Props = $props();
 	let linkCopied = $state(false);
 	async function copyLink() {
 		try {
@@ -555,6 +557,27 @@
 									: ''}
 								Participant : tout lire, ajouter des lignes, modifier et supprimer les siennes.
 							</p>
+							{#if onaddshared && view.localTables?.length}
+								<p class="muted">
+									Sur votre poste seulement :
+									{#each view.localTables as lt (lt)}
+										<button
+											class="link"
+											disabled={busy || !view.online}
+											title={view.online ? `Créer « ${lt} » dans le classeur partagé, avec ses lignes, pour tous les membres` : 'Hors ligne'}
+											onclick={async () => {
+												busy = true;
+												try {
+													await onaddshared(lt);
+												} finally {
+													busy = false;
+												}
+												await load();
+											}}>Ajouter « {lt} » au classeur partagé</button
+										>
+									{/each}
+								</p>
+							{/if}
 						{/if}
 						{#if role && teamsOn}
 							<p class="muted teams">

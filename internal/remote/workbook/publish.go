@@ -249,7 +249,11 @@ func publish(ctx context.Context, srv Server, db *store.Store, info *Info, ids [
 // clés courtes et régulières, dans l'ordre actuel (§5.2 : après des
 // insertions répétées au même endroit, order.Between allonge les clés).
 func spread(ctx context.Context, db *store.Store, ids []int64) error {
-	return db.Write(ctx, func(tx *sql.Tx) error {
+	return db.Write(ctx, func(tx *sql.Tx) error { return spreadTx(ctx, tx, ids) })
+}
+
+func spreadTx(ctx context.Context, tx *sql.Tx, ids []int64) error {
+	{
 		for _, id := range ids {
 			name := "t_" + strconv.FormatInt(id, 10)
 			var n int
@@ -265,8 +269,8 @@ func spread(ctx context.Context, db *store.Store, ids []int64) error {
 				return err
 			}
 		}
-		return nil
-	})
+	}
+	return nil
 }
 
 // SheetKey est l'identifiant d'une feuille pour le serveur

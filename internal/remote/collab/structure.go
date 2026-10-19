@@ -306,7 +306,17 @@ func (e *Engine) ReceiveStructure(ctx context.Context, only, reload map[int64]bo
 }
 
 func (e *Engine) receiveStructure(ctx context.Context, only, reload map[int64]bool) (Report, error) {
-	rep, changed, err := e.syncStructure(ctx, only)
+	var rep Report
+	if only == nil {
+		// Tableaux ajoutés au classeur par un collègue (« *meta », connexion).
+		r, err := e.receiveArrivals(ctx)
+		rep.add(r)
+		if err != nil {
+			return rep, err
+		}
+	}
+	r, changed, err := e.syncStructure(ctx, only)
+	rep.add(r)
 	if err != nil {
 		return rep, err
 	}
@@ -317,7 +327,7 @@ func (e *Engine) receiveStructure(ctx context.Context, only, reload map[int64]bo
 	for _, tbl := range changed {
 		full[tbl] = true
 	}
-	r, err := e.receive(ctx, only, full)
+	r, err = e.receive(ctx, only, full)
 	rep.add(r)
 	return rep, err
 }

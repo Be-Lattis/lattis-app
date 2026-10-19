@@ -23,6 +23,15 @@ Vos saisies et commandes sont mises sur disque dès qu'elles sont faites : elles
 
 Un classeur ouvert depuis un dossier partagé est signalé aux autres postes par un petit fichier caché `~$nom.lattis`. Un autre poste qui l'ouvre est prévenu et peut l'ouvrir en lecture seule. Si le fichier a été modifié ailleurs depuis son ouverture, `Ctrl+S` propose d'enregistrer une copie, d'écraser ou d'annuler.
 
+## Ajouter un tableau à un classeur partagé en direct
+
+Dans un classeur collaboratif (partagé en direct sur un Serveur Lattis), un tableau créé après la publication n'est d'abord que sur votre poste. Clic droit sur le tableau › **Ajouter au classeur partagé…** le crée dans le classeur du serveur, avec ses lignes : les autres membres le reçoivent aussitôt (à la même place sur la feuille, ou dessous si la place est prise chez eux), avec un message dans la barre d'état, et il se synchronise ensuite comme les autres tableaux partagés (saisies, conflits, droits). La même action est proposée par **Partager au Data Lake Lattis…** (« Ajouter ce tableau au classeur partagé », en premier) et dans **Gérer l'accès** › Rôles, sous la liste des tableaux.
+
+- Réservé aux propriétaires et concepteurs du classeur, et seulement en ligne : la boîte le dit sinon.
+- Les types des colonnes sont figés comme pour les autres tableaux partagés ; les colonnes calculées restent calculées sur chaque poste. Les saisies invalides sont à corriger d'abord.
+- Un refus du serveur (nom déjà pris par un autre tableau du classeur, par exemple) s'affiche dans la barre d'état et ne change rien.
+- L'ajout ne s'annule pas par `Ctrl+Z` (la boîte de confirmation le rappelle) : pour retirer le tableau du classeur partagé, **Supprimer le tableau** le supprime pour tous.
+
 ## Partager un tableau au Data Lake Lattis
 
 Clic droit sur un tableau › **Partager au Data Lake Lattis…** rend le tableau lisible depuis d'autres classeurs du Serveur Lattis (Insertion › Data Lake Lattis, onglet SQL), selon une audience : personnes, équipes, avec un filtre des lignes pour chacune. Si le classeur n'est pas publié, la boîte propose deux façons de faire :

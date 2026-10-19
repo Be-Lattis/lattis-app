@@ -4,6 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // Structure d'un tableau d'un classeur collaboratif publié (spécification
@@ -96,4 +100,60 @@ func (w pgWriter) Indexes(ctx context.Context, workbookID, tableID string) ([]In
 		return nil, fmt.Errorf("lattis.table_indexes : %w", err)
 	}
 	return out, nil
+}
+
+// CreateTable : lattis.create_table sur la version publiée d'un classeur
+// collaboratif, comme à la publication (Publisher.CreateTable).
+func (w pgWriter) CreateTable(ctx context.Context, workbookID, schema, name string, localID int64, sheet string, cols []ColumnSpec) (string, []RemoteColumn, error) {
+	return pgPublisher{tx: w.tx, v9: new(int8)}.CreateTable(ctx, workbookID, schema, name, localID, sheet, cols)
+}
+
+// Fill écrit les lignes par INSERT de plusieurs lignes (au plus 60 000
+// paramètres par ordre, limite de PostgreSQL : 65 535), envoyés en un lot.
+func (w pgWriter) Fill(ctx context.Context, schema, table string, cols []RemoteColumn, rows []NewRow) error {
+	if len(rows) == 0 {
+		return nil
+	}
+	names := []string{"lattis_id", "lattis_pos"}
+	for _, c := range cols {
+		names = append(names, pgx.Identifier{c.Name}.Sanitize())
+	}
+	head := `INSERT INTO ` + pgx.Identifier{schema, table}.Sanitize() + ` (` + strings.Join(names, ", ") + `) VALUES `
+	per := max(1, min(1000, 60000/len(names)))
+	b := &pgx.Batch{}
+	for start := 0; start < len(rows); start += per {
+		part := rows[start:min(len(rows), start+per)]
+		var q strings.Builder
+		q.WriteString(head)
+		args := make([]any, 0, len(part)*len(names))
+		for i, r := range part {
+			if i > 0 {
+				q.WriteString(", ")
+			}
+			args = append(args, r.ID, r.Pos)
+			q.WriteString("($" + strconv.Itoa(len(args)-1) + "::uuid, $" + strconv.Itoa(len(args)))
+			for k, c := range cols {
+				var v any
+				if k < len(r.Vals) {
+					var err error
+					if v, err = ToRemote(c.Type, r.Vals[k]); err != nil {
+						return fmt.Errorf("colonne « %s » : %w", c.Name, err)
+					}
+				}
+				args = append(args, v)
+				q.WriteString(", $" + strconv.Itoa(len(args)) + "::" + pgType(c.Type))
+			}
+			q.WriteString(")")
+		}
+		b.Queue(q.String(), args...)
+	}
+	return w.tx.SendBatch(ctx, b).Close()
+}
+
+func (w pgWriter) Meta(ctx context.Context, schema, kind, key string) ([]byte, error) {
+	return pgReader{tx: w.tx}.Meta(ctx, schema, kind, key)
+}
+
+func (w pgWriter) SaveMeta(ctx context.Context, workbookID, kind string, payload []byte) error {
+	return pgPublisher{tx: w.tx}.SaveMeta(ctx, workbookID, kind, payload)
 }

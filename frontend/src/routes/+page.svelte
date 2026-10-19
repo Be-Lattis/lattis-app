@@ -214,6 +214,30 @@
 		}
 	}
 
+	/** Classeur partagé en direct : ajoute un tableau qui n'est que sur ce poste au classeur du serveur (après confirmation). */
+	async function addToShared(table: string) {
+		try {
+			const why = await DocumentService.ShareCanAddTable(table);
+			if (why) {
+				notice = why;
+				return;
+			}
+			const ok = confirm(
+				`Ajouter le tableau « ${table} » au classeur partagé « ${share?.title ?? ''} » ?\n\n` +
+					'Il est créé sur le serveur avec ses lignes ; tous les membres le reçoivent et le modifient selon leurs droits.\n\n' +
+					'Cet ajout ne s’annule pas par Ctrl+Z : pour retirer le tableau, « Supprimer le tableau » le supprime pour tous.'
+			);
+			if (!ok) return;
+			notice = `Ajout de « ${table} » au classeur partagé…`;
+			docState = await DocumentService.ShareAddTable(table);
+			notice = docState.notice || `Tableau « ${table} » ajouté au classeur partagé`;
+			share = await DocumentService.ShareState().catch(() => share);
+			await reload();
+		} catch (e) {
+			notice = err(e);
+		}
+	}
+
 	async function resolveConflict(c: Conflict, mine: boolean) {
 		conflictBusy = true;
 		try {
@@ -2068,6 +2092,7 @@
 						onsheet={(id) => selectSheet(id).catch((e) => (notice = err(e)))}
 						onrowlink={mode === 'doc' ? gotoRow : undefined}
 						onsharedata={mode === 'doc' && sharedWorkbooksEnabled() ? (t) => (dataShare = t) : undefined}
+						onaddshared={mode === 'doc' && share?.mode === 'collaborative' ? (t) => void addToShared(t) : undefined}
 						{sourceTables}
 						onpushsource={mode === 'doc' && sharedWorkbooksEnabled() ? (t) => void pushSource(t) : undefined}
 						onask={mode === 'doc' ? openAssistant : undefined}
@@ -2382,7 +2407,7 @@
 		<SettingsDialog onclose={() => (settingsOpen = false)} onmcp={() => { settingsOpen = false; mcpOpen = true; }} />
 	{/if}
 	{#if rightsOpen && canRights && share}
-		<RightsDialog title={share.title} server={share.server} link={share.link} onclose={() => (rightsOpen = false)} />
+		<RightsDialog title={share.title} server={share.server} link={share.link} onclose={() => (rightsOpen = false)} onaddshared={share.mode === 'collaborative' ? addToShared : undefined} />
 	{/if}
 	{#if shareDlg && mode === 'doc'}
 		<ShareDialog
@@ -2427,6 +2452,7 @@
 				dataShareAfter = t;
 				shareDlg = { republish };
 			}}
+			onaddshared={() => void addToShared(t)}
 			onnotice={(msg) => {
 				notice = msg;
 				reload().catch((e) => (notice = err(e)));

@@ -69,6 +69,10 @@ type RightsView struct {
 	Roles         []string      `json:"roles"`
 	CustomRoles   []string      `json:"customRoles"`
 	Tables        []RightsTable `json:"tables"`
+	// LocalTables : tableaux qui ne sont que sur ce poste (classeur
+	// collaboratif, propriétaire ou concepteur), à ajouter au classeur
+	// partagé (ShareAddTable).
+	LocalTables []string `json:"localTables,omitempty"`
 	// ACL : rôles, membres, restrictions, invitations (propriétaire, en
 	// ligne ; nil sinon).
 	ACL *workbook.ACL `json:"acl"`
@@ -141,7 +145,30 @@ func localRights(ctx context.Context, d *doc.Document) (RightsView, error) {
 		}
 		v.Tables = append(v.Tables, t)
 	}
-	return v, rs.Err()
+	if err := rs.Err(); err != nil {
+		return v, err
+	}
+	rs.Close()
+	if v.Collaborative && v.CanDesign {
+		// Tableaux créés sur ce poste après la publication : à ajouter au
+		// classeur partagé (ShareAddTable).
+		lr, err := db.QueryContext(ctx, `SELECT t.name FROM _lattis_tables t JOIN _lattis_sheets s ON s.id = t.sheet
+			WHERE t.id NOT IN (SELECT tbl FROM _lattis_remote_tables WHERE published = 1)
+			AND t.id NOT IN (SELECT target FROM _lattis_queries WHERE target IS NOT NULL) ORDER BY s.pos, t.name`)
+		if err != nil {
+			return v, err
+		}
+		defer lr.Close()
+		for lr.Next() {
+			var n string
+			if err := lr.Scan(&n); err != nil {
+				return v, err
+			}
+			v.LocalTables = append(v.LocalTables, n)
+		}
+		return v, lr.Err()
+	}
+	return v, nil
 }
 
 // ShareRights décrit les droits du classeur partagé ouvert ; remote :
