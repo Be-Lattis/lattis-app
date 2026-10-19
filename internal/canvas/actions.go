@@ -201,7 +201,9 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 				// Juste à droite : nouvelle dernière colonne. Un tableau juste
 				// après (lignes qui se recoupent) : la saisie comble l'écart
 				// et les deux tableaux fusionnent.
-				if err := t.refuseQuery(tb); err != nil {
+				// Tableau d'une requête : seulement un nom sur la ligne d'en-tête,
+				// pour une colonne calculée (gardée à l'actualisation).
+				if err := t.refuseQuery(tb); err != nil && row != tb.Row {
 					return err
 				}
 				var next *Table

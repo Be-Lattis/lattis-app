@@ -311,7 +311,6 @@ func TestQueryTableLegend(t *testing.T) {
 		row, col int
 		raw      string
 	}{
-		{0, 2, "Prix"}, // en-tête à droite : nouvelle colonne
 		{2, 2, "12"},   // à droite d'une ligne : nouvelle colonne
 	} {
 		_, err := d.SetCell(ctx, 1, c.row, c.col, c.raw)
