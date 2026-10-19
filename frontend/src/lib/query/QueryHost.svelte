@@ -17,6 +17,7 @@
 	import ConnectionDialog from './ConnectionDialog.svelte';
 	import PasswordDialog from './PasswordDialog.svelte';
 	import { newQuery } from './steps';
+	import { kindIcon, refreshedLabel } from './listview';
 	import { CONN_LABELS, describe, isDbKind, type ConnKind } from './sources';
 	import { requestLogin } from '#lib/remote/lattis.svelte.js';
 	import { sharedWorkbooksEnabled } from '#lib/shell/settings.svelte.js';
@@ -107,6 +108,8 @@
 		}
 	]);
 	let picking = $state(false);
+	// Menu ⋯ ouvert : « q<id> » (requête) ou « c<id> » (connexion).
+	let menuFor = $state<string | null>(null);
 
 	async function newSource(what: DataAction) {
 		picking = false;
@@ -277,6 +280,10 @@
 		}
 	}
 
+	function editConn(c: Connection) {
+		newConnection(c).then((n) => (n ? load() : undefined));
+	}
+
 	async function forget(c: Connection) {
 		try {
 			await DocumentService.ForgetConnectionPassword(c.name);
@@ -291,32 +298,59 @@
 {#if panel}
 	<aside class="panel" use:resizePanel={{ key: 'queries' }} use:panelKeys={() => (panel = false)} aria-label="Requêtes et connexions">
 		<PanelHeader title="Requêtes et connexions" help="connexions" helpLabel="Aide sur les requêtes et connexions" onclose={() => (panel = false)} />
-		{#if busy}<p class="muted">{busy}</p>{/if}
-		<h3>Requêtes ({queries.length})</h3>
+		{#if busy}<p class="busy">{busy}</p>{/if}
+		<div class="sec">
+			<h3>Requêtes</h3>
+			<span class="count">{queries.length}</span>
+		</div>
 		{#each queries as q (q.id)}
-			<div class="item">
-				<button class="name" title="Modifier la requête" onclick={() => (editing = { query: q, editSource: false })}>{q.name}</button>
-				<span class="muted">{q.table ? `→ ${q.table}` : 'connexion seulement'}{q.refreshed ? ` · ${q.refreshed}` : ''}</span>
+			<div class="row" class:open={menuFor === `q${q.id}`}>
+				<button class="main" title="Modifier la requête « {q.name} »" onclick={() => (editing = { query: q, editSource: false })}>
+					<Icon name={kindIcon(q.source?.kind ?? '')} size={16} />
+					<span class="txt">
+						<span class="name">{q.name}</span>
+						<span class="sub" title={q.refreshed ? `Actualisée le ${q.refreshed}` : ''}>{q.table ? `→ ${q.table}` : 'Connexion seulement'}{q.refreshed ? ` · ${refreshedLabel(q.refreshed)}` : ''}</span>
+					</span>
+				</button>
 				<div class="acts">
-					<button onclick={() => (editing = { query: q, editSource: false })}><Icon name="edit" size={14} />Modifier</button>
-					<button onclick={() => refresh(q.id)} disabled={!!busy}><Icon name="refresh" size={14} />{q.table ? 'Actualiser' : 'Charger'}</button>
-					<button class="delete" onclick={() => remove(q)}><Icon name="trash" size={14} />Supprimer</button>
+					<button class="ic" title={q.table ? 'Actualiser' : 'Charger'} aria-label={q.table ? 'Actualiser' : 'Charger'} onclick={() => refresh(q.id)} disabled={!!busy}><Icon name="refresh" size={14} /></button>
+					<button class="ic more" title="Plus d'actions" aria-label="Plus d'actions" aria-haspopup="menu" aria-expanded={menuFor === `q${q.id}`} onclick={() => (menuFor = menuFor === `q${q.id}` ? null : `q${q.id}`)}>⋯</button>
+					{#if menuFor === `q${q.id}`}
+						<div class="row-menu" role="menu" use:dismiss={() => (menuFor = null)}>
+							<button role="menuitem" onclick={() => ((menuFor = null), (editing = { query: q, editSource: false }))}><Icon name="edit" size={14} />Modifier</button>
+							<button role="menuitem" onclick={() => ((menuFor = null), refresh(q.id))} disabled={!!busy}><Icon name="refresh" size={14} />{q.table ? 'Actualiser' : 'Charger'}</button>
+							<button role="menuitem" class="delete" onclick={() => ((menuFor = null), remove(q))}><Icon name="trash" size={14} />Supprimer</button>
+						</div>
+					{/if}
 				</div>
 			</div>
 		{:else}
-			<p class="muted">Aucune requête : Données › Obtenir des données.</p>
+			<p class="empty">Aucune requête : Données › Obtenir des données.</p>
 		{/each}
-		<h3>Connexions ({conns.length})</h3>
+		<div class="sec">
+			<h3>Connexions</h3>
+			<span class="count">{conns.length}</span>
+		</div>
 		{#each conns as c (c.id)}
-			<div class="item">
-				<span class="name">{c.name}</span>
-				<span class="muted">{describe(c)}{c.remembered ? (c.kind === 'web' ? ' · jeton mémorisé' : ' · mot de passe mémorisé') : ''}</span>
+			<div class="row" class:open={menuFor === `c${c.id}`}>
+				<button class="main" title="Modifier la connexion « {c.name} »" onclick={() => editConn(c)}>
+					<Icon name={kindIcon(c.kind)} size={16} />
+					<span class="txt">
+						<span class="name">{c.name}</span>
+						<span class="sub">{describe(c)}{c.remembered ? (c.kind === 'web' ? ' · jeton mémorisé' : ' · mot de passe mémorisé') : ''}</span>
+					</span>
+				</button>
 				<div class="acts">
-					<button onclick={() => newConnection(c).then((n) => (n ? load() : undefined))}><Icon name="edit" size={14} />Modifier</button>
-					{#if c.kind !== 'lattis'}
-						<button onclick={() => forget(c)}><Icon name="key" size={14} />{c.kind === 'web' ? 'Oublier le jeton' : 'Oublier le mot de passe'}</button>
+					<button class="ic more" title="Plus d'actions" aria-label="Plus d'actions" aria-haspopup="menu" aria-expanded={menuFor === `c${c.id}`} onclick={() => (menuFor = menuFor === `c${c.id}` ? null : `c${c.id}`)}>⋯</button>
+					{#if menuFor === `c${c.id}`}
+						<div class="row-menu" role="menu" use:dismiss={() => (menuFor = null)}>
+							<button role="menuitem" onclick={() => ((menuFor = null), editConn(c))}><Icon name="edit" size={14} />Modifier</button>
+							{#if c.kind !== 'lattis'}
+								<button role="menuitem" onclick={() => ((menuFor = null), forget(c))}><Icon name="key" size={14} />{c.kind === 'web' ? 'Oublier le jeton' : 'Oublier le mot de passe'}</button>
+							{/if}
+							<button role="menuitem" class="delete" onclick={() => ((menuFor = null), removeConn(c))}><Icon name="trash" size={14} />Supprimer</button>
+						</div>
 					{/if}
-					<button class="delete" onclick={() => removeConn(c)}><Icon name="trash" size={14} />Supprimer</button>
 				</div>
 			</div>
 		{/each}
@@ -360,52 +394,124 @@
 		position: relative;
 		display: flex;
 		flex-direction: column;
-		gap: 6px;
-		padding: 8px 10px;
+		padding: 8px 0;
 		border-left: 1px solid #d4d7db;
-		background: #fafbfb;
+		background: #fff;
 		box-shadow: -4px 0 12px rgba(0, 0, 0, 0.08);
 		overflow: auto;
 		font-size: 12px;
 	}
-	h3 {
-		margin: 6px 0 0;
-		font-size: 12px;
-		font-weight: 600;
+	.busy {
+		margin: 0 12px 4px;
+		color: #217346;
 	}
-	.item {
+	/* En-tête de section : libellé discret et compteur, à la manière d'Excel. */
+	.sec {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 10px 12px 4px;
+		border-bottom: 1px solid #e5e7eb;
+		margin-bottom: 2px;
+	}
+	h3 {
+		margin: 0;
+		font-size: 11px;
+		font-weight: 600;
+		color: #4b5563;
+		text-transform: uppercase;
+		letter-spacing: 0.03em;
+	}
+	.count {
+		min-width: 16px;
+		padding: 0 5px;
+		border-radius: 8px;
+		background: #eef0f2;
+		color: #4b5563;
+		font-size: 11px;
+		text-align: center;
+	}
+	.empty {
+		margin: 4px 12px;
+		color: #6b7280;
+	}
+	/* Une ligne par requête ou connexion : clic = Modifier ; actions à droite, visibles au survol. */
+	.row {
+		position: relative;
+		display: flex;
+		align-items: center;
+		padding: 0 6px 0 4px;
+		--icon-accent: #217346;
+	}
+	.row:hover,
+	.row:focus-within,
+	.row.open {
+		background: #eef5f0;
+	}
+	.main {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 5px 8px;
+		border: none;
+		background: none;
+		text-align: left;
+		color: #1f2937;
+	}
+	.txt {
 		display: flex;
 		flex-direction: column;
-		gap: 2px;
-		padding: 6px;
-		background: #fff;
-		border: 1px solid #e5e7eb;
+		min-width: 0;
+	}
+	.name,
+	.sub {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 	.name {
 		font-weight: 600;
-		text-align: left;
-		border: none;
-		background: none;
-		padding: 0;
-		cursor: pointer;
+	}
+	.sub {
+		color: #6b7280;
+		font-size: 11px;
 	}
 	.acts {
-		display: flex;
-		gap: 4px;
-		flex-wrap: wrap;
-	}
-	/* Boutons d'action : icône devant le libellé, accent vert (rouge pour supprimer). */
-	.acts button,
-	.new-wrap {
 		position: relative;
-		align-self: flex-start;
+		display: flex;
+		gap: 2px;
+		opacity: 0;
 	}
+	.row:hover .acts,
+	.row:focus-within .acts,
+	.row.open .acts {
+		opacity: 1;
+	}
+	.ic {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 24px;
+		height: 24px;
+		padding: 0;
+		border: 1px solid transparent;
+		background: none;
+		color: #374151;
+	}
+	.ic:hover:not(:disabled) {
+		background: #fff;
+		border-color: #c9cdd2;
+	}
+	.more {
+		font-size: 15px;
+		line-height: 1;
+	}
+	.row-menu,
 	.src-menu {
 		position: absolute;
-		left: 0;
-		top: calc(100% + 4px);
 		z-index: 20;
-		min-width: 220px;
 		background: #fff;
 		border: 1px solid #d4d7db;
 		border-radius: var(--float-radius);
@@ -413,6 +519,16 @@
 		padding: 4px 0;
 		display: flex;
 		flex-direction: column;
+	}
+	.row-menu {
+		right: 0;
+		top: calc(100% + 2px);
+		min-width: 200px;
+	}
+	.src-menu {
+		left: 0;
+		top: calc(100% + 4px);
+		min-width: 220px;
 	}
 	.src-group {
 		padding: 6px 12px 2px;
@@ -422,33 +538,44 @@
 		text-transform: uppercase;
 		letter-spacing: 0.03em;
 	}
+	.row-menu button,
 	.src-menu button {
 		display: flex;
 		align-items: center;
 		gap: 8px;
 		padding: 5px 12px;
 		border: none;
+		border-radius: 0;
 		background: none;
-		font: inherit;
 		text-align: left;
-		cursor: pointer;
+		white-space: nowrap;
 		--icon-accent: #217346;
 	}
+	.row-menu button:hover:not(:disabled),
 	.src-menu button:hover {
 		background: #eef5f0;
+	}
+	.row-menu .delete {
+		color: #c0392b;
+		--icon-accent: #c0392b;
+	}
+	.new-wrap {
+		position: relative;
+		align-self: flex-start;
+		margin: 6px 8px 0;
 	}
 	.add {
 		display: inline-flex;
 		align-items: center;
 		gap: 4px;
+		border: none;
+		background: none;
+		color: #217346;
+		padding: 4px 6px;
 		--icon-accent: #217346;
 	}
-	.acts .delete {
-		--icon-accent: #c0392b;
-	}
-	.muted {
-		color: #6b7280;
-		margin: 0;
+	.add:hover {
+		background: #eef5f0;
 	}
 	button {
 		font: inherit;
@@ -458,13 +585,7 @@
 		padding: 1px 8px;
 		cursor: pointer;
 	}
-	button:hover:not(:disabled) {
-		border-color: #217346;
-	}
 	button:disabled {
 		opacity: 0.5;
-	}
-	.add {
-		align-self: flex-start;
 	}
 </style>
