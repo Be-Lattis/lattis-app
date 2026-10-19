@@ -20,6 +20,7 @@
 	import { formatCell } from './numfmt';
 	import { autoHeight, BASE_PX, cellFont, fontPx, headerHeight, headerTextWidth, lineHeight, wrapLines } from './textwrap';
 	import { AutoRows } from './rowfit';
+	import { arrowNotes, arrowSpan, spanBox, spanPoint, type ArrowGeometry } from './auditarrows';
 	import { stepZoom } from './zoom';
 	import { panes, reveal, revealWhole, toGrid, type Pane } from './panes';
 	import { cleanSource, dvDialog, dvPatch, dvTarget, dvPreview, dvSource, hiddenLines, mergeAt, mergeList, skipHidden, validate, validateSource, type DvList, type MergeRange } from './sheetfmt';
@@ -265,13 +266,15 @@
 	}
 
 	export interface DepTarget {
-		kind: string; // column, table, cell
+		kind: string; // column, table, row (lignes précises d'une colonne), cell
 		table?: string;
 		column?: string;
 		name?: string;
 		sheet: number;
 		row: number;
 		col: number;
+		rows?: number; // kind row : lignes encadrées à partir de row
+		note?: string; // pourquoi la flèche vise la colonne (ligne masquée…)
 	}
 
 	/** Filtre d'une colonne : valeurs, erreurs, conditions (voir filtercond.ts). */
@@ -3046,9 +3049,9 @@
 		// Une même flèche (antécédent de l'une, dépendant de l'autre, toutes deux
 		// sélectionnées) n'est dessinée qu'une fois.
 		const drawn = new Set<string>();
+		const geo: ArrowGeometry = { x: cx, w: (c) => cax().size(c), y: ry, h: rspan };
 		for (const arrows of links) {
-			const center = (r: number, c: number) => ({ x: cx(c) + cax().size(c) / 2, y: ry(r) + rh(r) / 2 });
-			const me = center(arrows.row, arrows.col);
+			const me = spanPoint({ row: arrows.row, rows: 1, col: arrows.col }, geo);
 			const draw = (from: { x: number; y: number }, to: { x: number; y: number }, color: string) => {
 				ctx.save();
 				ctx.strokeStyle = color;
@@ -3071,12 +3074,35 @@
 				ctx.restore();
 			};
 			// Colonne du même tableau, depuis une ligne de données : la flèche part de
-			// la cellule de cette ligne ([Quantité]*[Prix unitaire]), pas de l'en-tête.
+			// la cellule de cette ligne ([Quantité]*[Prix unitaire]), pas de l'en-tête ;
+			// une ligne précise (Tableau[Col][1], [Col][-1], REFERENCE) part de sa
+			// cellule, une plage (Tableau[Col][2:4]) de son cadre (auditarrows.ts).
 			const own = tableAt(arrows.row, arrows.col);
-			const rowOf = (d: DepTarget) => (d.kind === 'column' && own && d.table === own.t.name && arrows.row > own.t.row ? arrows.row : d.row);
+			const ownT = own ? { name: own.t.name, row: own.t.row } : null;
 			const once = (k: string) => !drawn.has(k) && !!drawn.add(k);
-			for (const p of arrows.pre) if (p.sheet === sheetIdOf() && once(`${rowOf(p)},${p.col}>${arrows.row},${arrows.col}`)) draw(center(rowOf(p), p.col), me, '#2b6cb0');
-			for (const d of arrows.dep) if (d.sheet === sheetIdOf() && once(`${arrows.row},${arrows.col}>${rowOf(d)},${d.col}`)) draw(me, center(rowOf(d), d.col), '#c0392b');
+			const frame = (s: ReturnType<typeof arrowSpan>, color: string) => {
+				if (s.rows <= 1) return;
+				const b = spanBox(s, geo);
+				ctx.save();
+				ctx.strokeStyle = color;
+				ctx.lineWidth = 1.5;
+				ctx.strokeRect(b.x + 1.5, b.y + 1.5, b.w - 3, b.h - 3);
+				ctx.restore();
+			};
+			for (const p of arrows.pre) {
+				const s = arrowSpan(p, arrows, ownT);
+				if (p.sheet === sheetIdOf() && once(`${s.row}+${s.rows},${s.col}>${arrows.row},${arrows.col}`)) {
+					frame(s, '#2b6cb0');
+					draw(spanPoint(s, geo), me, '#2b6cb0');
+				}
+			}
+			for (const d of arrows.dep) {
+				const s = arrowSpan(d, arrows, ownT);
+				if (d.sheet === sheetIdOf() && once(`${arrows.row},${arrows.col}>${s.row}+${s.rows},${s.col}`)) {
+					frame(s, '#c0392b');
+					draw(me, spanPoint(s, geo), '#c0392b');
+				}
+			}
 		}
 		// Saisie dans la barre de formule : la cellule active l'affiche en direct
 		// (pas une formule d'une autre feuille, en cours de pointage ici).
@@ -6240,13 +6266,16 @@
 			}
 			links = found;
 			linksOf = selKey();
+			// Ligne précise sans place (masquée, clé introuvable…) : la flèche vise la colonne, la note dit pourquoi.
+			const notes = arrowNotes(found.flatMap((l) => [...l.pre, ...l.dep]));
 			say(
 				found.length === 0
 					? 'Aucun lien : la sélection ne contient ni formule ni cellule lue par une formule'
 					: `Liens de ${found.length} cellule(s) : ${pre} antécédent(s), ${dep} dépendant(s)` +
 							(away ? ` (${away} sur d'autres feuilles)` : '') +
 							(cut ? ` · ${MAX_LINK_CELLS} premières cellules seulement` : '') +
-							' · ils partent avec la sélection (ou Échap)'
+							(notes.length ? ` · ${notes.slice(0, 2).join(' ; ')}${notes.length > 2 ? ` (+${notes.length - 2})` : ''}` : '') +
+							' · un clic dans la grille (ou Échap) les efface'
 			);
 			schedule();
 		} catch (err) {
@@ -6816,6 +6845,12 @@
 		if (hold) {
 			pointAway(e);
 			return;
+		}
+		// Flèches d'audit : un clic dans la grille les efface, même sur la cellule
+		// active (le ruban n'a plus de « Supprimer les flèches »).
+		if (links.length) {
+			links = [];
+			schedule();
 		}
 		// Feuille protégée : comme Excel, un clic place la cellule active (pour
 		// lire, copier, figer les volets), sans glisser ni menus de tableau ni

@@ -515,11 +515,13 @@ export interface CustomOrder {
 
 /**
  * DepTarget est un antécédent ou un dépendant d'une cellule : une colonne de
- * tableau (Column vide : le tableau entier) ou une cellule (nommée ou non).
+ * tableau (Column vide : le tableau entier), des lignes précises d'une
+ * colonne (Tableau[Col][1], [Col][-1], Tableau[Col][2:4], la ligne trouvée
+ * par REFERENCE) ou une cellule (nommée ou non).
  */
 export interface DepTarget {
     /**
-     * column, table, cell
+     * column, table, row, cell
      */
     "kind": string;
     "table"?: string;
@@ -528,10 +530,23 @@ export interface DepTarget {
     "sheet": number;
 
     /**
-     * en-tête de la colonne, ou la cellule
+     * en-tête de la colonne, première ligne visée (row), ou la cellule
      */
     "row": number;
     "col": number;
+
+    /**
+     * Rows : nombre de lignes encadrées à partir de Row (kind row, plage
+     * Tableau[Col][a:b]) ; 0 ou 1 : une seule cellule.
+     */
+    "rows"?: number;
+
+    /**
+     * Note : pourquoi la flèche vise la colonne entière alors que la formule
+     * lit une ligne précise (ligne masquée par le filtre ou l'onglet, clé
+     * introuvable…), ou que la plage n'est encadrée qu'en partie.
+     */
+    "note"?: string;
 }
 
 /**

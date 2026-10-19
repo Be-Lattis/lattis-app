@@ -71,6 +71,10 @@ Les fonctions financières suivent les conventions d'Excel : une somme versée e
 
 *Contient des données IGN et INSEE (contours des communes ADMIN EXPRESS, millésime 2026, diffusés par Etalab) et des codes postaux de La Poste via geo.api.gouv.fr, sous Licence Ouverte / Etalab 2.0.*
 
+## Liens entre formules
+
+**Formules › Afficher les liens** trace les liens des cellules sélectionnées : flèches bleues depuis ce que lit leur formule, rouges vers les formules qui les lisent. Une colonne entière (`Clients[Ville]`) est désignée par son en-tête ; une ligne précise (`Clients[Ville][1]`, `[Solde][-1]`, la ligne trouvée par `REFERENCE`) par sa cellule, et une plage de lignes (`Ventes[Montant][2:5]`) est encadrée. Si cette ligne est masquée (filtre, onglet à choix, ligne masquée) ou introuvable, la flèche vise la colonne et la barre d'état dit pourquoi. Les liens vers une autre feuille y sont comptés. Un clic dans la grille (ou `Échap`) efface les flèches.
+
 ## Recalcul
 
 Les formules se recalculent seules quand leurs données changent. `F9` recalcule tout ; `AUJOURDHUI`, `MAINTENANT` et `ALEA` ne changent qu'à l'ouverture et avec `F9`.
