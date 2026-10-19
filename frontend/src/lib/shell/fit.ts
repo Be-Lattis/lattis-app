@@ -26,6 +26,13 @@ export interface GroupShape {
 	labels: (string | null | number)[];
 	/** Icônes assez parlantes pour se passer de libellé en premier. */
 	iconOk?: boolean;
+	/**
+	 * Forme la plus large permise : 'icon' pour un groupe de petites icônes
+	 * parlantes (Alignement, comme Excel), qui ne prend jamais de grands
+	 * boutons à libellé, même quand la place abonde. Il se replie encore
+	 * en menu quand la place manque.
+	 */
+	widest?: Mode;
 }
 
 /** Largeur d'un texte en px à la taille de police size (Segoe UI). */
@@ -70,7 +77,7 @@ export function groupWidth(g: GroupShape, mode: Mode, measure: Measure = estimat
 
 /** Modes des groupes pour tenir dans width (le plus large possible). */
 export function fit(groups: GroupShape[], width: number, measure: Measure = estimate): Mode[] {
-	const modes: Mode[] = groups.map(() => 'large');
+	const modes: Mode[] = groups.map((g) => g.widest ?? 'large');
 	const gw = (i: number, m: Mode) => groupWidth(groups[i], m, measure);
 	const total = () => groups.reduce((s, _, i) => s + gw(i, modes[i]), 0);
 	for (let level = 1; level < MODES.length && total() > width; level++) {

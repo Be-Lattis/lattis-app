@@ -69,6 +69,8 @@
 		fonts?: boolean;
 		/** Icônes assez parlantes pour perdre leur libellé en premier quand la place manque. */
 		iconOk?: boolean;
+		/** Forme la plus large permise (fit.ts) : 'icon' = jamais de grands boutons à libellé. */
+		widest?: Mode;
 	}
 	const FONTS_W = 134; // largeur des listes Police et Taille (fit.ts)
 
@@ -292,6 +294,8 @@
 				title: 'Police',
 				fonts: true,
 				iconOk: true,
+				// Gras, Italique, Souligné : petites icônes, comme Excel.
+				widest: 'icon',
 				launch: fmt('font'),
 				launchHint: 'Format de cellule : police (Ctrl+1)',
 				commands: local([
@@ -316,6 +320,9 @@
 			{
 				title: 'Alignement',
 				iconOk: true,
+				// Comme Excel : toujours de petites icônes en grille, le libellé
+				// dans l'info-bulle ; jamais de grands boutons à libellé.
+				widest: 'icon',
 				launch: fmt('align'),
 				launchHint: 'Format de cellule : alignement (Ctrl+1)',
 				commands: [
@@ -863,7 +870,7 @@
 	const shapes = $derived(
 		isView(tab)
 			? []
-			: visibleGroups.map((g) => ({ title: g.title, iconOk: g.iconOk, labels: [...(g.fonts ? [FONTS_W] : []), ...g.commands.map((c) => (c.color ? null : c.items || c.menu ? c.label + ' ▾' : c.label))] }))
+			: visibleGroups.map((g) => ({ title: g.title, iconOk: g.iconOk, widest: g.widest, labels: [...(g.fonts ? [FONTS_W] : []), ...g.commands.map((c) => (c.color ? null : c.items || c.menu ? c.label + ' ▾' : c.label))] }))
 	);
 	// Les formes ne changent qu'avec les libellés : un clic dans la grille
 	// (annulation, quadrillage…) recrée les commandes sans recompacter le

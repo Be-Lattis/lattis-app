@@ -52,6 +52,17 @@ describe('ruban adaptatif', () => {
 		expect(groupWidth({ title: 'Requêtes et connexions', labels: ['A'] }, 'icon', m)).toBe(22 * 6 + 24 + 17);
 	});
 
+	it('Alignement reste en petites icônes, même avec toute la place (widest)', () => {
+		const align: GroupShape = { title: 'Alignement', labels: ['Haut', 'Milieu', 'Bas', 'Gauche', 'Centrer', 'Droite', 'Renvoyer à la ligne', 'Fusionner et centrer'], iconOk: true, widest: 'icon' };
+		const gs = [...groups.slice(0, 2), align, groups[3]];
+		expect(fit(gs, 10000)).toEqual(['large', 'large', 'icon', 'large']);
+		// Place juste suffisante pour les autres en grand : Alignement ne les gêne pas.
+		const w = gs.reduce((s, g) => s + groupWidth(g, g.widest ?? 'large'), 0);
+		expect(fit(gs, w)).toEqual(['large', 'large', 'icon', 'large']);
+		// Fenêtre étroite : il se replie encore en menu.
+		expect(fit(gs, 100)).toEqual(['collapsed', 'collapsed', 'collapsed', 'collapsed']);
+	});
+
 	it('une liste de largeur fixe compte pour sa largeur', () => {
 		const g: GroupShape = { title: 'Police', labels: [134, 'Gras'] };
 		expect(groupWidth(g, 'icon')).toBe(134 + 2 + 28 + 2 + 17);
