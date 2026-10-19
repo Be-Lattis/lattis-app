@@ -141,3 +141,48 @@ export function validateSource(src: string, l: DvList | undefined, text: string)
 	if (!l.values.length) return { ok: false, message: `« ${text.trim()} » n'est pas permis ici : la plage de la liste (${src}) est vide` };
 	return validate(l.values, text);
 }
+
+/** Lettres d'une colonne de la feuille (0 : A). */
+function colLetters(col: number): string {
+	let s = '';
+	for (let n = col + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s;
+	return s;
+}
+
+/** Ce que vise une validation, pour le titre du dialogue. */
+export interface DvTarget {
+	/** Sélection (à partir de 0). */
+	sel: { r0: number; c0: number; r1: number; c1: number };
+	/** Lignes ou colonnes entières de la feuille. */
+	whole?: 'rows' | 'cols' | null;
+	/** Tableau de la cellule active : en-tête (row), dernière ligne, première colonne, noms des colonnes. */
+	table?: { name: string; row: number; last: number; col: number; columns: string[] } | null;
+	sheet: string;
+}
+
+/**
+ * Cible d'une validation, dite dans le titre du dialogue : « colonne
+ * « Ville » du tableau Clients », « cellules B2:B10 (Feuille1) », « cellule
+ * C3 (Feuille1) », « colonnes B:C (Feuille1) »…
+ */
+export function dvTarget(t: DvTarget): string {
+	const { r0, c0, r1, c1 } = t.sel;
+	const on = t.sheet ? ` (${t.sheet})` : '';
+	if (t.whole === 'cols') return c0 === c1 ? `colonne ${colLetters(c0)}${on}` : `colonnes ${colLetters(c0)}:${colLetters(c1)}${on}`;
+	if (t.whole === 'rows') return r0 === r1 ? `ligne ${r0 + 1}${on}` : `lignes ${r0 + 1}:${r1 + 1}${on}`;
+	const tb = t.table;
+	if (tb) {
+		// Une règle posée dans un tableau vaut pour ses colonnes entières si la
+		// sélection en couvre toutes les lignes.
+		const a = Math.max(c0, tb.col) - tb.col;
+		const b = Math.min(c1, tb.col + tb.columns.length - 1) - tb.col;
+		const all = r0 <= tb.row + 1 && r1 >= tb.last;
+		if (all && a >= 0 && b >= a) {
+			return a === b ? `colonne « ${tb.columns[a]} » du tableau ${tb.name}` : `colonnes « ${tb.columns[a]} » à « ${tb.columns[b]} » du tableau ${tb.name}`;
+		}
+	}
+	const addr = (r: number, c: number) => colLetters(c) + (r + 1);
+	if (r0 === r1 && c0 === c1) return `cellule ${addr(r0, c0)}${on}`;
+	const what = `cellules ${addr(r0, c0)}:${addr(r1, c1)}`;
+	return tb ? `${what} du tableau ${tb.name}` : what + on;
+}

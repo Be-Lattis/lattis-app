@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cleanSource, dvDialog, dvPatch, dvPreview, dvSource, hiddenLines, mergeAt, mergeList, parseList, skipHidden, validate, validateSource } from './sheetfmt';
+import { cleanSource, dvDialog, dvTarget, dvPatch, dvPreview, dvSource, hiddenLines, mergeAt, mergeList, parseList, skipHidden, validate, validateSource } from './sheetfmt';
 
 describe('fusions', () => {
 	const list = mergeList(
@@ -84,5 +84,22 @@ describe('validation tirée d’une plage', () => {
 		expect(r.ok).toBe(false);
 		if (!r.ok) expect(r.message).toContain('T[C]');
 		expect(validateSource('T[C]', { values: [] }, 'DE').ok).toBe(false);
+	});
+});
+
+describe('cible d’une validation (titre du dialogue)', () => {
+	const table = { name: 'Clients', row: 0, last: 9, col: 1, columns: ['Nom', 'Ville', 'CP'] };
+	it('colonne entière d’un tableau', () => {
+		expect(dvTarget({ sel: { r0: 1, c0: 2, r1: 9, c1: 2 }, table, sheet: 'Feuille1' })).toBe('colonne « Ville » du tableau Clients');
+		expect(dvTarget({ sel: { r0: 0, c0: 2, r1: 9, c1: 3 }, table, sheet: 'Feuille1' })).toBe('colonnes « Ville » à « CP » du tableau Clients');
+	});
+	it('cellules d’un tableau ou libres', () => {
+		expect(dvTarget({ sel: { r0: 1, c0: 2, r1: 3, c1: 2 }, table, sheet: 'Feuille1' })).toBe('cellules C2:C4 du tableau Clients');
+		expect(dvTarget({ sel: { r0: 1, c0: 1, r1: 9, c1: 1 }, sheet: 'Feuille1' })).toBe('cellules B2:B10 (Feuille1)');
+		expect(dvTarget({ sel: { r0: 2, c0: 2, r1: 2, c1: 2 }, sheet: 'Feuille1' })).toBe('cellule C3 (Feuille1)');
+	});
+	it('lignes ou colonnes de la feuille', () => {
+		expect(dvTarget({ sel: { r0: 0, c0: 1, r1: 99, c1: 2 }, whole: 'cols', sheet: 'Feuille1' })).toBe('colonnes B:C (Feuille1)');
+		expect(dvTarget({ sel: { r0: 4, c0: 0, r1: 4, c1: 99 }, whole: 'rows', sheet: 'Feuille1' })).toBe('ligne 5 (Feuille1)');
 	});
 });

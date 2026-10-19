@@ -24,7 +24,7 @@ La liste se saisit (**Valeurs saisies**, une par ligne) ou se tire d'une **Plage
 - des cellules : `Cell[A1:A10]`, ou `Feuille2!Cell[A1:A10]` sur une autre feuille (`A1:A10` tapé à la Excel est accepté) ;
 - une cellule nommée.
 
-**Sélectionner** retire le dialogue le temps de désigner la plage dans la feuille (clic, glissé ou `Maj+flèches`), `Entrée` la reprend, `Échap` revient sans la changer. Le dialogue montre un aperçu des valeurs.
+**Sélectionner** retire le dialogue le temps de désigner la plage (clic, glissé ou `Maj+flèches` ; un clic sur l'en-tête d'une colonne de tableau la prend entière), au besoin sur une autre feuille : cliquez son onglet, la référence devient `Feuille2!Cell[A1:A10]`. `Entrée` la reprend, `Échap` revient sans la changer ; dans les deux cas, on retrouve la feuille et la sélection de départ. Le titre du dialogue dit ce que vise la validation (colonne d'un tableau, cellules), et le dialogue montre un aperçu des valeurs.
 
 La liste d'une plage est relue à chaque ouverture de la liste déroulante et à chaque saisie : valeurs distinctes, dans l'ordre de la plage, sans les cellules vides. La référence suit le renommage du tableau, de la colonne ou de la feuille, et l'insertion ou la suppression de lignes et de colonnes. Si la source disparaît (tableau supprimé, lignes de la plage supprimées), la liste déroulante et le dialogue le signalent, et les saisies sont refusées jusqu'à ce que la validation soit corrigée.
 

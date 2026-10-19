@@ -22,7 +22,7 @@
 	import { AutoRows } from './rowfit';
 	import { stepZoom } from './zoom';
 	import { panes, reveal, revealWhole, toGrid, type Pane } from './panes';
-	import { cleanSource, dvDialog, dvPatch, dvPreview, dvSource, hiddenLines, mergeAt, mergeList, skipHidden, validate, validateSource, type DvList, type MergeRange } from './sheetfmt';
+	import { cleanSource, dvDialog, dvPatch, dvTarget, dvPreview, dvSource, hiddenLines, mergeAt, mergeList, skipHidden, validate, validateSource, type DvList, type MergeRange } from './sheetfmt';
 	import { expandRange, extendCorner, intersect, isSingleCell, mergeRect, rangeOf, stepCell, wholeLines, type CellRange } from './mergesel';
 	import { jumpLine, lineSpans, type Area, type Span } from './jump';
 	import { findKey, finderAction, findZone, foundCell, hitCount, inZone, nextHit, replacedLabel, zoneLabel, type Zone } from './findzone';
@@ -1003,12 +1003,6 @@
 		// Listes tirées d'une plage : relues (la source a pu changer).
 		dvGen++;
 		dvLists.clear();
-		// Plage source pointée : sur la feuille de la cellule seulement.
-		if (switching && dvPick) {
-			dvPick = null;
-			validDlg = null;
-			say('Validation des données : la plage source se pointe sur la feuille de la cellule ; tapez « Feuille2!Cell[A1:A10] » pour une autre feuille');
-		}
 		// Changement de feuille : garder la position de la feuille quittée,
 		// retrouver celle de la nouvelle (A1 si elle n'a pas été visitée).
 		const back = sheetViews.switchTo(d.sheet ?? 1, { active: { ...active }, anchor: { ...anchor }, top: vs.top, left: scroller?.scrollLeft ?? 0 });
@@ -1105,6 +1099,10 @@
 			anchor = back.anchor;
 			wholeSel = null;
 		}
+		// Plage source d'une validation pointée sur une autre feuille : de
+		// retour sur la feuille de la cellule, la sélection d'avant revient.
+		const pick = dvPick;
+		if (pick?.back && (d.sheet ?? 0) === pick.sheet) finishPick(pick, pick.ref);
 		updateExtent();
 		if (back && scroller) {
 			vs.to(back.top);
@@ -4377,7 +4375,7 @@
 
 	// Dialogue : valeurs saisies (text) ou plage source (src), aperçu des
 	// valeurs de la plage (relu à chaque changement de la référence).
-	let validDlg = $state<{ mode: 'list' | 'range'; text: string; src: string; error: string; preview: DvList | null; loading: boolean } | null>(null);
+	let validDlg = $state<{ target: string; mode: 'list' | 'range'; text: string; src: string; error: string; preview: DvList | null; loading: boolean } | null>(null);
 	let previewTimer: ReturnType<typeof setTimeout> | undefined;
 
 	/** Données › Validation des données : liste des valeurs permises de la sélection. */
@@ -4388,8 +4386,15 @@
 			return;
 		}
 		closeMenus();
-		validDlg = { ...dvDialog(dvAt(active.row, active.col)), error: '', preview: null, loading: false };
+		validDlg = { target: validationTarget(), ...dvDialog(dvAt(active.row, active.col)), error: '', preview: null, loading: false };
 		if (validDlg.mode === 'range') refreshPreview(0);
+	}
+
+	/** Ce que vise la validation (la sélection), pour le titre du dialogue. */
+	function validationTarget(): string {
+		const e = tableAt(active.row, active.col);
+		const table = e ? { name: e.t.name, row: e.t.row, last: e.last, col: e.t.col, columns: e.t.columns.map((c) => c.name) } : null;
+		return dvTarget({ sel: selection(), whole: wholeKind(), table, sheet: sheetName });
 	}
 
 	/** Relit l'aperçu de la plage source du dialogue (après delay ms). */
@@ -4435,10 +4440,20 @@
 	}
 
 	// « Sélectionner » : le dialogue se retire, la plage source se désigne
-	// dans la grille (clic, glissé, Maj+flèches), Entrée la reprend dans le
-	// dialogue, Échap revient sans la changer. La sélection d'avant (la cible
-	// de la validation) est rétablie.
-	let dvPick = $state<{ active: { row: number; col: number }; anchor: { row: number; col: number }; whole: typeof wholeSel; sheet: number } | null>(null);
+	// dans la grille (clic, glissé, Maj+flèches, clic sur l'en-tête d'une
+	// colonne de tableau), au besoin sur une autre feuille (clic sur son
+	// onglet). Entrée la reprend dans le dialogue, Échap revient sans la
+	// changer ; dans les deux cas la feuille de la cellule et la sélection
+	// d'avant (la cible de la validation) sont rétablies. back : retour en
+	// cours vers la feuille d'origine, ref : la référence à reprendre.
+	let dvPick = $state<{
+		active: { row: number; col: number };
+		anchor: { row: number; col: number };
+		whole: typeof wholeSel;
+		sheet: number;
+		back?: boolean;
+		ref?: string | null;
+	} | null>(null);
 	let dvPickRef = $state('');
 
 	function startPick() {
@@ -4446,26 +4461,43 @@
 		dvPick = { active: { ...active }, anchor: { ...anchor }, whole: wholeSel, sheet: sheetId() };
 		dvPickRef = pickedRef() ?? '';
 		wrap.focus();
-		say('Sélectionnez la plage source dans la feuille, puis Entrée (Échap : annuler)');
+		say('Sélectionnez la plage source (sur cette feuille ou une autre), puis Entrée (Échap : annuler)');
 	}
 
-	/** Référence de la sélection pointée : Tableau[Colonne], Tableau[Colonne][a:b] ou Cell[A1:A10]. */
+	/**
+	 * Référence de la sélection pointée : Tableau[Colonne] (cellules de la
+	 * colonne ou son en-tête), Tableau[Colonne][a:b] ou Cell[A1:A10] ; sur une
+	 * autre feuille que celle de la cellule, Feuille2!Cell[A1:A10].
+	 */
 	function pickedRef(): string | null {
-		return rangeRef(selection(), refTables());
+		const ref = rangeRef(selection(), refTables());
+		return ref !== null && dvPick && dvPick.sheet !== sheetId() ? qualifyRef(ref, sheetName) : ref;
 	}
 
 	function endPick(keep: boolean) {
 		const p = dvPick;
-		if (!p) return;
+		if (!p || p.back) return;
 		const ref = keep ? pickedRef() : null;
 		if (keep && ref === null) {
 			say('Une plage source couvre une seule colonne d’un tableau, ou des cellules libres');
 			return;
 		}
+		if (p.sheet !== sheetId() && onsheet) {
+			// Retour à la feuille de la cellule : fini quand elle est relue (applyData).
+			dvPick = { ...p, back: true, ref };
+			onsheet(p.sheet);
+			return;
+		}
+		finishPick(p, ref);
+	}
+
+	/** Sélection d'avant rétablie, référence reprise dans le dialogue. */
+	function finishPick(p: NonNullable<typeof dvPick>, ref: string | null | undefined) {
 		dvPick = null;
 		active = p.active;
 		anchor = p.anchor;
 		wholeSel = p.whole;
+		ensureVisible(p.active.row, p.active.col);
 		schedule();
 		refreshStatus();
 		const d = validDlg;
@@ -6084,7 +6116,10 @@
 	function closeMenus() {
 		menu = freeMenu = chartMenu = listMenu = followMenu = null;
 		filterDlg = cfView = dedupDlg = fnDlg = linesDlg = pivotDlg = null;
-		formatDlg = validDlg = noteDlg = sizeDlg = null;
+		formatDlg = noteDlg = sizeDlg = null;
+		// Plage source d'une validation en cours de pointage (peut-être sur
+		// une autre feuille) : le dialogue reste, retiré, jusqu'à Entrée ou Échap.
+		if (!dvPick) validDlg = null;
 		noteTip = null;
 	}
 
@@ -10888,7 +10923,7 @@
 				class="rules valid-dlg"
 				role="dialog"
 				aria-modal="true"
-				aria-label="Validation des données"
+				aria-label="Validation des données — {d.target}"
 				tabindex="-1"
 				use:focusFirst
 				use:modal
@@ -10901,7 +10936,7 @@
 					}
 				}}
 			>
-				<div class="menu-title">Validation des données : liste déroulante</div>
+				<div class="menu-title" title={`Validation des données — ${d.target}`}>Validation des données — {d.target}</div>
 				<div class="dv-mode" role="radiogroup" aria-label="Source de la liste">
 					<label><input type="radio" name="dv-mode" value="list" bind:group={d.mode} onchange={() => (d.error = '')} /> Valeurs saisies</label>
 					<label><input type="radio" name="dv-mode" value="range" bind:group={d.mode} onchange={() => ((d.error = ''), refreshPreview(0))} /> Plage</label>
