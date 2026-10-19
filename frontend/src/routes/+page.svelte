@@ -2052,6 +2052,10 @@
 								? 'Ajouter, supprimer, renommer ou déplacer des feuilles sera refusé, ainsi que toute modification du contenu des feuilles.'
 								: 'Ajouter, supprimer, renommer ou déplacer des feuilles sera refusé. Le contenu des feuilles non protégées reste modifiable.'}
 					</p>
+					<p class="muted">
+						Cette protection évite les modifications accidentelles ; ce n’est pas une sécurité : le fichier n’est pas chiffré, ses données restent lisibles et la
+						protection peut être retirée par quelqu’un d’outillé.
+					</p>
 					{#if p.what === 'workbook'}
 						<label class="check">
 							<input type="checkbox" bind:checked={lockSheets} />
