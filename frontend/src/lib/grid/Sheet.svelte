@@ -7909,21 +7909,30 @@
 	// Menu du clic droit hors tableau : presse-papiers et effacement.
 	let freeMenu = $state<{ x: number; y: number; kind?: 'rows' | 'cols' } | null>(null);
 
-	async function menuAction(fn: (() => Promise<unknown>) | undefined) {
+	/**
+	 * Écriture d'un menu ou d'un volet, à la suite des précédentes ; rend
+	 * faux si elle est refusée. keepFocus : réglage d'un volet (graphique,
+	 * TCD), le focus y reste au lieu de revenir à la grille.
+	 */
+	async function menuAction(fn: (() => Promise<unknown>) | undefined, keepFocus = false): Promise<boolean> {
 		menu = null;
 		freeMenu = null;
-		wrap.focus();
-		if (!fn) return;
+		if (!keepFocus) wrap.focus();
+		if (!fn) return false;
+		let ok = true;
 		writing = writing.catch(() => undefined).then(async () => {
 			try {
 				await fn();
 				message = '';
 			} catch (err) {
+				ok = false;
 				linesHint = null; // refusée : rien ne glisse
 				message = String(err instanceof Error ? err.message : err);
 			}
 			refreshStatus();
 		});
+		await writing;
+		return ok;
 	}
 
 	// --- Mesures ------------------------------------------------------------
@@ -9420,7 +9429,7 @@
 				fields={sourceColumns(pv.config.source)}
 				error={pv.error}
 				filterValues={source.pivotFieldValues ? (f) => source.pivotFieldValues!(pv.config.source, f) : undefined}
-				onchange={(cfg) => menuAction(source.setPivot && (() => source.setPivot!(pv.id, cfg)))}
+				onchange={(cfg) => menuAction(source.setPivot && (() => source.setPivot!(pv.id, cfg)), true)}
 				ondelete={() => {
 					panel = null;
 					menuAction(source.deletePivot && (() => source.deletePivot!(pv.id)));
@@ -9437,7 +9446,7 @@
 				guess={ch.guess}
 				invalid={ch.invalid}
 				columns={sourceColumns(ch.config.source).map((c) => c.name)}
-				onchange={(cfg) => menuAction(source.setChart && (() => source.setChart!(ch.id, cfg)))}
+				onchange={(cfg) => menuAction(source.setChart && (() => source.setChart!(ch.id, cfg)), true)}
 				onclose={() => {
 					panel = null;
 					selChart = null;
