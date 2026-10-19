@@ -13,6 +13,7 @@ import priseEnMain from './pages/prise-en-main.md?raw';
 import formules from './pages/formules.md?raw';
 import tcd from './pages/tcd.md?raw';
 import graphiques from './pages/graphiques.md?raw';
+import impression from './pages/impression.md?raw';
 import onglets from './pages/onglets.md?raw';
 import controles from './pages/controles.md?raw';
 import sql from './pages/sql.md?raw';
@@ -40,6 +41,7 @@ export const pages: HelpPage[] = [
 	page('formules', formules),
 	page('tcd', tcd),
 	page('graphiques', graphiques),
+	page('impression', impression),
 	page('onglets', onglets),
 	page('controles', controles),
 	page('sql', sql),
