@@ -18,6 +18,7 @@ import {
 	segments,
 	startRun,
 	stepsLabel,
+	stoppedAtLimit,
 	suggestionsFor,
 	type Item,
 	type Reply
@@ -187,5 +188,15 @@ describe('Résultat montré', () => {
 		const segs = segments((items[1] as Reply).parts);
 		expect(segs).toHaveLength(1);
 		expect(segs[0].kind).toBe('result');
+	});
+});
+
+describe('Continuer', () => {
+	it('repère une réponse arrêtée au nombre maximal d’étapes', () => {
+		let items = startRun([], 1, 'Range tout');
+		items = applyEvent(items, { run: 1, kind: 'notice', text: 'Réponse arrêtée après 100 étapes.', limit: true });
+		expect(stoppedAtLimit((items[1] as Reply).parts)).toBe(true);
+		items = applyEvent(items, { run: 1, kind: 'notice', text: 'Réponse tronquée.' });
+		expect(stoppedAtLimit((items[1] as Reply).parts)).toBe(false);
 	});
 });

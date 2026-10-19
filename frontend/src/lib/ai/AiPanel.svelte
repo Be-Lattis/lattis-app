@@ -22,7 +22,7 @@
 	import Markdown from '#lib/help/Markdown.svelte';
 	import AiConnect from './AiConnect.svelte';
 	import ExternalActivity from './ExternalActivity.svelte';
-	import { changesLabel, contextLabel, costLabel, replyError, replyText, retryDelay, retryLabel, segments, stepsLabel, suggestionsFor, type ChatContext, type Reply, type TableInfo } from './chat';
+	import { changesLabel, contextLabel, costLabel, replyError, replyText, retryDelay, retryLabel, segments, stepsLabel, stoppedAtLimit, suggestionsFor, type ChatContext, type Reply, type TableInfo } from './chat';
 	import { openOutside } from './links';
 	import { chat, conversations, deleteConversation, load, newConversation, openConversation, refreshStatus, send, stop, undoRun, type Conversation } from './state.svelte.js';
 
@@ -381,6 +381,9 @@
 											title={it.undo && it.run === lastRun ? 'Annule tout ce que cette réponse a modifié' : 'D’autres modifications ont suivi : utilisez Ctrl+Z'}
 											onclick={() => undo(it.run)}><Icon name="undo" size={13} />Annuler cette réponse</button
 										>
+									{/if}
+									{#if it.run === lastRun && !it.undone && stoppedAtLimit(it.parts)}
+										<button class="small" disabled={chat.busy} title="Reprend la réponse là où elle s’est arrêtée" onclick={() => ask('Continue.')}><Icon name="play" size={13} />Continuer</button>
 									{/if}
 									{#if it.run === lastRun && !it.undone && replyError(it.parts)}
 										{@const left = retryLeft(it.run, replyError(it.parts))}

@@ -8,8 +8,9 @@ import (
 	"sync"
 )
 
-// MaxSteps borne le nombre de tours d'une réponse (appels d'outils compris).
-const MaxSteps = 40
+// MaxSteps borne le nombre de tours d'une réponse (appels d'outils compris) ;
+// « Continuer » la reprend.
+const MaxSteps = 100
 
 // Types d'évènements envoyés à l'interface pendant une réponse.
 const (
@@ -41,6 +42,8 @@ type Event struct {
 	Undo    bool `json:"undo,omitempty"`
 	// Result : résultat d'une requête montré à l'utilisateur (result).
 	Result *Result `json:"result,omitempty"`
+	// Limit : réponse arrêtée à MaxSteps (notice) ; « Continuer » la reprend.
+	Limit bool `json:"limit,omitempty"`
 }
 
 // Executor exécute un appel d'outil et rend son résultat (texte, souvent du
@@ -167,7 +170,7 @@ func (s *Session) Send(ctx context.Context, t Turn, text string, emit func(Event
 
 	for step := 0; ; step++ {
 		if step >= MaxSteps {
-			emit(Event{Kind: EventNotice, Text: fmt.Sprintf("Réponse arrêtée après %d étapes.", MaxSteps)})
+			emit(Event{Kind: EventNotice, Text: fmt.Sprintf("Réponse arrêtée après %d étapes.", MaxSteps), Limit: true})
 			return nil
 		}
 		var msgs []Message

@@ -32,6 +32,8 @@ export interface ChatEvent {
 	undo?: boolean;
 	/** result : résultat d'une requête montré à l'utilisateur (query_show). */
 	result?: ChatResult | null;
+	/** notice : réponse arrêtée au nombre maximal d'étapes (« Continuer »). */
+	limit?: boolean;
 }
 
 /** Résultat d'une requête de l'assistant (ai.Result), montré sous sa réponse. */
@@ -45,7 +47,7 @@ export interface ChatResult {
 
 export type ToolPart = { kind: 'tool'; id: string; label: string; state: 'run' | 'ok' | 'error'; detail?: string; write?: boolean; target?: string };
 
-export type Part = { kind: 'text'; text: string } | ToolPart | { kind: 'notice'; text: string; error?: boolean } | { kind: 'result'; result: ChatResult };
+export type Part = { kind: 'text'; text: string } | ToolPart | { kind: 'notice'; text: string; error?: boolean; limit?: boolean } | { kind: 'result'; result: ChatResult };
 
 export type Reply = {
 	role: 'assistant';
@@ -104,7 +106,7 @@ export function applyEvent(items: Item[], ev: ChatEvent): Item[] {
 			break;
 		}
 		case 'notice':
-			parts.push({ kind: 'notice', text: ev.text ?? '' });
+			parts.push({ kind: 'notice', text: ev.text ?? '', ...(ev.limit ? { limit: true } : {}) });
 			break;
 		case 'result':
 			if (!ev.result) return items;
@@ -328,3 +330,9 @@ export function retryDelay(text: string): number {
 
 /** Libellé du bouton « Réessayer », avec le temps qui reste (secondes). */
 export const retryLabel = (left: number) => (left > 0 ? `Réessayer dans ${left} s` : 'Réessayer');
+
+/** La réponse s'est arrêtée au nombre maximal d'étapes : « Continuer » la reprend. */
+export function stoppedAtLimit(parts: Part[]): boolean {
+	const last = parts[parts.length - 1];
+	return last?.kind === 'notice' && !!last.limit;
+}

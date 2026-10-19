@@ -122,6 +122,11 @@ export interface AIEventData {
      * Result : résultat d'une requête montré à l'utilisateur (result).
      */
     "result"?: ai$0.Result | null;
+
+    /**
+     * Limit : réponse arrêtée à MaxSteps (notice) ; « Continuer » la reprend.
+     */
+    "limit"?: boolean;
 }
 
 /**
