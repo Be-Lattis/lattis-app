@@ -525,6 +525,29 @@ func (m *Manager) SignOut(ctx context.Context, raw string) error {
 	return m.opts.Store.Forget(sess.account)
 }
 
+// Forget retire un serveur de la liste de l'utilisateur (Gérer les
+// serveurs) : connexion en cours abandonnée, session fermée comme par
+// SignOut, entrée ôtée de l'index. Rien n'est supprimé sur le serveur. Un
+// serveur déclaré par l'organisation ne se retire pas.
+func (m *Manager) Forget(ctx context.Context, raw string) error {
+	u, err := NormalizeURL(raw)
+	if err != nil {
+		return err
+	}
+	if _, ok := m.managed(m.policy(), u); ok {
+		return fmt.Errorf("%s est déclaré par votre organisation : il ne peut pas être retiré de la liste", Host(u))
+	}
+	m.Cancel(u)
+	if err := m.SignOut(ctx, u); err != nil {
+		return err
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.servers, u)
+	m.save()
+	return nil
+}
+
 // Session donne l'utilisateur connecté et la découverte d'un serveur
 // (relue si besoin) ; *ErrLoginRequired sans session.
 func (m *Manager) Session(ctx context.Context, raw string) (User, *Discovery, error) {

@@ -183,6 +183,23 @@ func (s *DocumentService) LattisSignOut(ctx context.Context, url string) (Lattis
 	return s.LattisState(), nil
 }
 
+// LattisForget retire un serveur de la liste (Gérer les serveurs) : session
+// fermée, connexions du serveur fermées, entrée oubliée. Rien n'est supprimé
+// sur le serveur ; un serveur de l'organisation reste.
+func (s *DocumentService) LattisForget(ctx context.Context, url string) (LattisState, error) {
+	m, err := lattisOn()
+	if err != nil {
+		return s.LattisState(), err
+	}
+	if n, err := auth.NormalizeURL(url); err == nil {
+		closeSharePools(n)
+	}
+	if err := m.Forget(ctx, url); err != nil {
+		return s.LattisState(), err
+	}
+	return s.LattisState(), nil
+}
+
 // checkLattisConnection vérifie qu'une connexion de genre lattis vise un
 // serveur permis (fonction active, stratégie de l'organisation).
 func checkLattisConnection(c query.Connection) error {

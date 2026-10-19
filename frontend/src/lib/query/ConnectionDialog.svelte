@@ -14,7 +14,8 @@
 	import { CONN_LABELS, DEFAULT_PORT, connectionReady, newConnection, suggestName, type ConnKind } from './sources';
 	import type { ServerState } from '#bindings/internal/remote/auth/models.js';
 	import { lattis, loadLattis, requestLogin } from '#lib/remote/lattis.svelte.js';
-	import { userName } from '#lib/remote/lattis.js';
+	import { connected, hostOf, userName } from '#lib/remote/lattis.js';
+	import ServerPicker from '#lib/remote/ServerPicker.svelte';
 	import { onMount } from 'svelte';
 
 	interface Props {
@@ -40,12 +41,24 @@
 	const k = $derived(c.kind as ConnKind);
 	const server = $derived(k === 'postgres' || k === 'mysql' || k === 'sqlserver');
 
-	// Serveur Lattis : une adresse ; la découverte donne le nom affiché (qui
-	// remplace « PostgreSQL » dans les listes), le logo et la version minimale.
-	// Avec une stratégie qui verrouille l'ajout, seuls les serveurs de
-	// l'organisation sont proposés.
+	// Serveur Lattis : choisi parmi les serveurs connus (« Gérer les
+	// serveurs… » en ajoute ou en retire) ; la découverte donne le nom
+	// affiché (qui remplace « PostgreSQL » dans les listes), le logo et la
+	// version minimale. Avec une stratégie qui verrouille l'ajout, seuls les
+	// serveurs de l'organisation sont proposés. Le serveur d'une connexion
+	// existante reste proposé même s'il n'est plus dans la liste.
 	let info = $state<ServerState | null>(null);
-	const managed = $derived((lattis.state.servers ?? []).filter((s) => s.managed));
+	const lattisServers = $derived.by((): ServerState[] => {
+		const list = lattis.state.servers ?? [];
+		const url = (c.config.url ?? '').replace(/^https:\/\/$/, '');
+		if (!url || list.some((s) => s.url === url)) return list;
+		return [...list, { url, name: c.config.label || hostOf(url), providers: [], discovered: false, managed: false, user: null }];
+	});
+	function pickLattis(url: string) {
+		c.config.url = url;
+		info = null;
+		if (url) discover();
+	}
 	async function discover(): Promise<boolean> {
 		error = tested = '';
 		busy = true;
@@ -89,7 +102,8 @@
 	onMount(() => {
 		if (k !== 'lattis') return;
 		loadLattis().then(() => {
-			if (!lattis.state.allowUserServers && !c.config.url?.replace(/^https:\/\/$/, '') && managed.length) c.config.url = managed[0].url;
+			const list = lattis.state.servers ?? [];
+			if (!c.config.url?.replace(/^https:\/\/$/, '') && list.length) c.config.url = (connected(list)[0] ?? list[0]).url;
 			if (connectionReady(c)) discover();
 		});
 	});
@@ -157,21 +171,17 @@
 					<label>En-tête du jeton <input bind:value={c.config.header} placeholder="Authorization" /></label>
 					<label>Utilisateur (Basic) <input bind:value={c.config.user} placeholder="vide : jeton seul" /></label>
 				{:else if k === 'lattis'}
-					{#if lattis.state.allowUserServers}
-						<div class="wide row">
-							<label class="grow">Adresse du serveur <input bind:value={c.config.url} placeholder="https://lattis.acme.fr" onchange={() => (info = null)} /></label>
-							<button class="ico verify" onclick={discover} disabled={busy || !connectionReady(c)}><Icon name="plug" size={14} />Vérifier</button>
-						</div>
-					{:else}
-						<label class="wide"
-							>Serveur de votre organisation <Select
-								value={c.config.url ?? ''}
-								options={managed.map((s) => ({ value: s.url, label: s.name }))}
-								width="100%"
-								onchange={(v) => ((c.config.url = v), discover())}
-							/></label
-						>
-					{/if}
+					<div class="wide field">
+						<label for="conn-lattis">{lattis.state.allowUserServers ? 'Serveur' : 'Serveur de votre organisation'}</label>
+						<ServerPicker
+							id="conn-lattis"
+							value={c.config.url ?? ''}
+							servers={lattisServers}
+							disabled={busy}
+							empty="Aucun serveur : ajoutez-en un avec « Gérer les serveurs… »"
+							onchange={pickLattis}
+						/>
+					</div>
 					{#if info}
 						<div class="wide server">
 							{#if info.logo}<img src={info.logo} alt="" />{:else}<Icon name="database" size={20} />{/if}
@@ -259,10 +269,10 @@
 	div.wide {
 		grid-column: 1 / -1;
 	}
-	.row {
+	.field {
 		display: flex;
-		align-items: flex-end;
-		gap: 6px;
+		flex-direction: column;
+		gap: 2px;
 	}
 	.server {
 		display: flex;

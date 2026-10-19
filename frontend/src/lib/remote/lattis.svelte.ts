@@ -56,3 +56,22 @@ export const shareRights = $state<{ current: { title: string; open: () => void }
 export async function signOut(url: string) {
 	lattis.state = await DocumentService.LattisSignOut(url);
 }
+
+/**
+ * Retire un serveur de la liste (Gérer les serveurs) : session fermée,
+ * entrée oubliée sur ce poste ; rien n'est supprimé sur le serveur.
+ */
+export async function forgetServer(url: string) {
+	lattis.state = await DocumentService.LattisForget(url);
+}
+
+/**
+ * Ajoute un serveur à la liste : adresse vérifiée (découverte), puis page
+ * de connexion. Rend l'adresse normalisée du serveur.
+ */
+export async function addServer(address: string): Promise<string> {
+	const s = await DocumentService.LattisDiscover(address.trim());
+	await loadLattis();
+	await requestLogin(s.url);
+	return s.url;
+}

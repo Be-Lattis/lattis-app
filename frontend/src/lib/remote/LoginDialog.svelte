@@ -191,7 +191,7 @@
 	.back {
 		position: fixed;
 		inset: 0;
-		z-index: calc(var(--z-dialog) + 30);
+		z-index: calc(var(--z-dialog) + 50); /* au-dessus de Gérer les serveurs */
 		background: var(--backdrop);
 		display: flex;
 		align-items: flex-start;

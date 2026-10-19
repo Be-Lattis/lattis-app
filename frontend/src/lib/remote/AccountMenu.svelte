@@ -6,8 +6,10 @@
 	import { dismiss } from '#lib/grid/dismiss.js';
 	import { accountTitle, connected, hostOf, initials, userDetail, userName } from './lattis';
 	import { lattis, requestLogin, shareRights, signOut } from './lattis.svelte.js';
+	import ServerManageDialog from './ServerManageDialog.svelte';
 
 	let open = $state(false);
+	let managing = $state(false);
 	let error = $state('');
 	const servers = $derived(lattis.state.servers ?? []);
 	const first = $derived(connected(servers)[0]);
@@ -71,10 +73,19 @@
 				{#if lattis.state.allowUserServers}
 					<button class="add" role="menuitem" onclick={() => login('')}><Icon name="plus" size={14} />Se connecter à un serveur…</button>
 				{/if}
+				<button
+					class="add"
+					role="menuitem"
+					onclick={() => {
+						open = false;
+						managing = true;
+					}}><Icon name="database" size={14} />Gérer les serveurs…</button
+				>
 				{#if error}<p class="error">{error}</p>{/if}
 			</div>
 		{/if}
 	</div>
+	{#if managing}<ServerManageDialog onclose={() => (managing = false)} />{/if}
 {/if}
 
 <style>

@@ -816,6 +816,15 @@ export function LattisDiscover(url: string): $CancellablePromise<auth$0.ServerSt
 }
 
 /**
+ * LattisForget retire un serveur de la liste (Gérer les serveurs) : session
+ * fermée, connexions du serveur fermées, entrée oubliée. Rien n'est supprimé
+ * sur le serveur ; un serveur de l'organisation reste.
+ */
+export function LattisForget(url: string): $CancellablePromise<$models.LattisState> {
+    return $Call.ByID(982751260, url);
+}
+
+/**
  * LattisLogin connecte l'utilisateur par le navigateur du système avec le
  * fournisseur provider ; attend son retour (LattisCancelLogin l'abandonne).
  */

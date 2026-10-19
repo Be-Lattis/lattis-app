@@ -9,7 +9,8 @@
 	import { onMount, untrack } from 'svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import type { Check, State } from '#bindings/internal/remote/workbook/models.js';
-	import { connected, hostOf, userName } from './lattis';
+	import { connected, hostOf } from './lattis';
+	import ServerPicker from './ServerPicker.svelte';
 	import { lattis, loadLattis, requestLogin } from './lattis.svelte.js';
 	import { COLLABORATIVE, FROZEN, blocking, defaultSelection, inferredColumns, modeLabel, remoteTypeLabel } from './share';
 
@@ -35,6 +36,21 @@
 	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
 	const servers = $derived(connected(lattis.state.servers));
 	const blocked = $derived(check ? blocking(check, selected) : []);
+	const noTables = $derived(!!check && !(check.tables ?? []).length);
+	// Raison pour laquelle Publier est grisé, dite à côté du bouton (et en
+	// bulle) avec ce qu'il faut faire ; '' quand il est permis.
+	const why = $derived.by(() => {
+		if (busy) return '';
+		if (!check) return 'Vérification du classeur…';
+		if (noTables) return 'Rien à publier : créez d’abord un tableau (Insertion › Tableau, ou Ctrl+L sur vos données), puis rouvrez cette boîte.';
+		if (!selected.length) return 'Cochez au moins un tableau à publier.';
+		if (blocked.length) return `${blocked.length} point(s) à régler avant de publier (ci-dessus).`;
+		if (republish) return '';
+		if (!server) return 'Choisissez un serveur, ou connectez-vous à un serveur (Gérer les serveurs…).';
+		if (!name.trim()) return 'Donnez un titre au classeur publié.';
+		if (canCreate === false) return 'Votre compte ne peut pas créer de classeur sur ce serveur.';
+		return '';
+	});
 	// Droit de créer un classeur sur le serveur choisi (lattis.login_summary) :
 	// sans lui, Publier reste grisé et la boîte dit pourquoi. null : pas encore lu.
 	let canCreate = $state<boolean | null>(null);
@@ -126,14 +142,10 @@
 				</p>
 			{:else}
 				<div class="grid">
-					<span>Serveur</span>
-					{#if servers.length}
-						<select bind:value={server} disabled={busy}>
-							{#each servers as s (s.url)}<option value={s.url}>{s.name || hostOf(s.url)} — {userName(s.user)}</option>{/each}
-						</select>
-					{:else}
-						<span><button onclick={login} disabled={busy}>Se connecter à un serveur…</button></span>
-					{/if}
+					<label for="share-server">Serveur</label>
+					<ServerPicker id="share-server" bind:value={server} {servers} disabled={busy}>
+						{#snippet none()}<span class="grow"><button onclick={login} disabled={busy}>Se connecter à un serveur…</button></span>{/snippet}
+					</ServerPicker>
 					{#if canCreate === false}<p class="error span" role="alert">Votre compte ne peut pas créer de classeur sur ce serveur : demandez à son propriétaire le rôle « créateur de classeurs ».</p>{/if}
 					<label for="share-title">Titre</label>
 					<input id="share-title" bind:value={name} disabled={busy} />
@@ -148,8 +160,13 @@
 			<h3>Tableaux</h3>
 			{#if !check}
 				<p class="muted">Vérification du classeur…</p>
-			{:else if !(check.tables ?? []).length}
-				<p class="muted">Ce classeur n’a aucun tableau à publier.</p>
+			{:else if noTables}
+				<p class="notice">
+					<Icon name="table" size={16} /><span
+						>Ce classeur n’a aucun tableau à publier. Seuls les tableaux se publient : fermez cette boîte, sélectionnez vos données puis <strong>Insertion › Tableau</strong>
+						(ou <kbd>Ctrl+L</kbd>), et revenez publier.</span
+					>
+				</p>
 			{:else}
 				<ul class="tables">
 					{#each check.tables ?? [] as t (t.id)}
@@ -183,9 +200,9 @@
 			{#if error}<p class="error" role="alert">{error}</p>{/if}
 		</div>
 		<footer>
-			{#if check && blocked.length && selected.length}<span class="muted grow">{blocked.length} point(s) à régler avant de publier</span>{:else}<span class="grow"></span>{/if}
+			<span class="grow why" class:warn={noTables} id="share-why">{why}</span>
 			<button onclick={() => ondone(null)} disabled={busy}>Annuler</button>
-			<button class="primary" onclick={publish} disabled={busy || !check || blocked.length > 0 || (!republish && (!server || !name.trim() || canCreate === false))}>
+			<button class="primary" onclick={publish} disabled={busy || !!why} title={why || undefined} aria-describedby={why ? 'share-why' : undefined}>
 				{busy ? 'Publication…' : republish ? 'Republier' : 'Publier'}
 			</button>
 		</footer>
@@ -284,13 +301,20 @@
 		font-size: 12px;
 		margin-left: auto;
 	}
-	button {
+	/* Champs et boutons : même allure que les autres boîtes du serveur
+	   (Data Lake, Ouvrir depuis le serveur, Connexion). */
+	button:not(.link) {
 		font: inherit;
-		padding: 3px 12px;
+		padding: 4px 12px;
 		border: 1px solid #c4c8cc;
 		border-radius: 3px;
 		background: #fff;
+		color: inherit;
 		cursor: pointer;
+	}
+	button:not(.link):hover:not(:disabled) {
+		border-color: #217346;
+		background: #eef6f0;
 	}
 	button:disabled {
 		opacity: 0.55;
@@ -300,20 +324,67 @@
 		background: #217346;
 		border-color: #217346;
 		color: #fff;
+		padding-left: 15px;
+		padding-right: 15px;
+	}
+	button.primary:hover:not(:disabled) {
+		background: #1a5c38;
+		border-color: #1a5c38;
 	}
 	button.link {
+		font: inherit;
 		border: none;
 		padding: 0;
 		background: none;
 		color: #1d4ed8;
 		text-decoration: underline;
+		cursor: pointer;
 	}
-	input:not([type='checkbox']):not([type='radio']),
-	select {
+	input:not([type='checkbox']):not([type='radio']) {
 		font: inherit;
+		height: 26px;
+		box-sizing: border-box;
 		border: 1px solid #c9cdd2;
 		border-radius: 3px;
 		padding: 4px 6px;
+		background: #fff;
+		color: inherit;
+	}
+	input:not([type='checkbox']):not([type='radio']):focus {
+		outline: 1px solid #217346;
+		border-color: #217346;
+	}
+	input:disabled {
+		background: #f6f7f8;
+	}
+	input[type='checkbox'],
+	input[type='radio'] {
+		accent-color: #217346;
+	}
+	.notice {
+		display: flex;
+		gap: 8px;
+		align-items: flex-start;
+		padding: 8px 10px;
+		border: 1px solid #f3d9a4;
+		border-radius: 3px;
+		background: #fffaf0;
+		color: #7c4a03;
+	}
+	kbd {
+		font: inherit;
+		font-size: 11px;
+		padding: 0 4px;
+		border: 1px solid #c4c8cc;
+		border-radius: 3px;
+		background: #f6f7f8;
+	}
+	.why {
+		color: #6b7280;
+		font-size: 12px;
+	}
+	.why.warn {
+		color: #b45309;
 	}
 	.muted {
 		color: #6b7280;

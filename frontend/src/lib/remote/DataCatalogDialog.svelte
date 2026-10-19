@@ -8,7 +8,8 @@
 	import Icon from '#lib/icons/Icon.svelte';
 	import { onMount } from 'svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
-	import { connected, hostOf, userName } from './lattis';
+	import { connected } from './lattis';
+	import ServerPicker from './ServerPicker.svelte';
 	import { lattis, loadLattis, requestLogin } from './lattis.svelte.js';
 	import { catalogTree, type CatalogNode, type DataCatalog, type Dataset } from './data';
 
@@ -42,6 +43,8 @@
 	async function load() {
 		error = '';
 		picked = null;
+		catalog = null;
+		if (!server) return;
 		try {
 			catalog = (await DocumentService.DataCatalog(server)) as DataCatalog;
 		} catch (e) {
@@ -161,13 +164,9 @@
 		<header><Icon name="database" size={18} /><span>Data Lake Lattis</span></header>
 		<div class="body">
 			<div class="top">
-				{#if servers.length}
-					<select bind:value={server} disabled={busy} onchange={load} aria-label="Serveur">
-						{#each servers as s (s.url)}<option value={s.url}>{s.name || hostOf(s.url)} — {userName(s.user)}</option>{/each}
-					</select>
-				{:else}
-					<button onclick={login}>Se connecter à un serveur…</button>
-				{/if}
+				<ServerPicker bind:value={server} {servers} disabled={busy} onchange={load}>
+					{#snippet none()}<button onclick={login}>Se connecter à un serveur…</button>{/snippet}
+				</ServerPicker>
 				<input type="search" placeholder="Rechercher une donnée…" bind:value={query} aria-label="Rechercher" spellcheck="false" />
 			</div>
 			<div class="panes">
@@ -254,8 +253,7 @@
 	}
 	/* Champs et boutons : même allure que les autres boîtes du serveur
 	   (Ouvrir depuis le serveur, Partager, Connexion). */
-	.top input,
-	.top select {
+	.top input {
 		font: inherit;
 		border: 1px solid #c9cdd2;
 		border-radius: 3px;
@@ -263,8 +261,7 @@
 		background: #fff;
 		color: inherit;
 	}
-	.top input:focus,
-	.top select:focus {
+	.top input:focus {
 		outline: 1px solid #217346;
 		border-color: #217346;
 	}

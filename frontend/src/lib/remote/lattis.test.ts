@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Provider, ServerState } from '#bindings/internal/remote/auth/models.js';
-import { accountTitle, connected, initials, loginRows, providerButton, providerGlyph, remaining, serverUrlOk, userDetail, userName } from './lattis';
+import { accountTitle, connected, initials, loginRows, pickServer, providerButton, providerGlyph, remaining, serverOption, serverUrlOk, userDetail, userName } from './lattis';
 
 const providers: Provider[] = [
 	{ id: 'google', kind: 'google', label: 'Google' },
@@ -67,5 +67,21 @@ describe('menu Compte', () => {
 		expect(connected(list).map((s) => s.name)).toEqual(['Serveur Acme']);
 		expect(accountTitle(list)).toBe('Compte : Alice Martin sur Serveur Acme');
 		expect(accountTitle([server('X')])).toContain('non connecté');
+	});
+});
+
+describe('choix du serveur', () => {
+	it('libellé de la liste', () => {
+		expect(serverOption(server('Serveur Acme', { email: 'alice@acme.fr' }))).toBe('Serveur Acme — alice@acme.fr');
+		expect(serverOption({ ...server(''), url: 'https://lattis.acme.fr' })).toBe('lattis.acme.fr — non connecté');
+	});
+
+	it('choix gardé, remplacé par le serveur ajouté, ou le premier', () => {
+		const urls = ['https://a', 'https://b'];
+		expect(pickServer(urls, 'https://b')).toBe('https://b');
+		expect(pickServer(urls, 'https://b', 'https://a')).toBe('https://a');
+		expect(pickServer(urls, 'https://retiré')).toBe('https://a');
+		expect(pickServer(urls, 'https://b', 'https://pas-connecté')).toBe('https://b');
+		expect(pickServer([], 'https://a')).toBe('');
 	});
 });

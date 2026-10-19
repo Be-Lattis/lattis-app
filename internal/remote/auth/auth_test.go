@@ -367,3 +367,38 @@ func TestInvalidate(t *testing.T) {
 		t.Fatalf("jeton non renouvelé après refus : %v", err)
 	}
 }
+
+func TestForget(t *testing.T) {
+	f := newFakeLattisd(t)
+	managed := newFakeLattisd(t)
+	store := memStore{}
+	index := filepath.Join(t.TempDir(), "serveurs.json")
+	m := newManager(t, f, store, index, nil)
+	m.opts.Policy = func() Policy {
+		return Policy{AllowUserServers: true, Managed: []Managed{{URL: managed.url(), Name: "Géré"}}}
+	}
+	ctx := context.Background()
+	if _, err := m.Login(ctx, f.url(), "google"); err != nil {
+		t.Fatal(err)
+	}
+	if len(m.Servers()) != 2 {
+		t.Fatalf("serveurs = %+v", m.Servers())
+	}
+	// Serveur de l'organisation : reste.
+	if err := m.Forget(ctx, managed.url()); err == nil || !strings.Contains(err.Error(), "organisation") {
+		t.Fatalf("serveur géré retiré : %v", err)
+	}
+	// Serveur de l'utilisateur : session fermée, entrée oubliée (index compris).
+	if err := m.Forget(ctx, f.url()); err != nil {
+		t.Fatal(err)
+	}
+	if len(store) != 0 || len(f.revoked) != 1 {
+		t.Fatalf("session non fermée : trousseau %v, révoqués %v", store, f.revoked)
+	}
+	if s := m.Servers(); len(s) != 1 || !s[0].Managed {
+		t.Fatalf("après retrait : %+v", s)
+	}
+	if s := newManager(t, f, store, index, nil).Servers(); len(s) != 0 {
+		t.Fatalf("index après retrait : %+v", s)
+	}
+}

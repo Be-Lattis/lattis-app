@@ -8,7 +8,8 @@
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import type { OpenResult } from '#bindings/internal/bridge/models.js';
 	import type { Listing } from '#bindings/internal/remote/workbook/models.js';
-	import { connected, hostOf, userName } from './lattis';
+	import { connected } from './lattis';
+	import ServerPicker from './ServerPicker.svelte';
 	import { lattis, loadLattis, requestLogin } from './lattis.svelte.js';
 	import { modeLabel, rolesLabel } from './share';
 
@@ -82,16 +83,15 @@
 	>
 		<header><Icon name="open" size={18} /><span>Ouvrir depuis un serveur</span></header>
 		<div class="body">
+			<div class="row">
+				<label for="open-remote-server">Serveur</label>
+				<ServerPicker id="open-remote-server" bind:value={server} {servers} disabled={busy} onchange={load}>
+					{#snippet none()}<span class="grow"><button class="primary" onclick={login}>Se connecter à un serveur…</button></span>{/snippet}
+				</ServerPicker>
+			</div>
 			{#if !servers.length}
-				<p>Connectez-vous à un Serveur Lattis pour voir ses classeurs.</p>
-				<button class="primary" onclick={login}>Se connecter à un serveur…</button>
+				<p class="muted">Connectez-vous à un Serveur Lattis pour voir ses classeurs.</p>
 			{:else}
-				<label class="row">
-					Serveur
-					<select bind:value={server} onchange={load} disabled={busy}>
-						{#each servers as s (s.url)}<option value={s.url}>{s.name || hostOf(s.url)} — {userName(s.user)}</option>{/each}
-					</select>
-				</label>
 				{#if list === null}
 					<p class="muted">{busy ? 'Lecture des classeurs…' : ''}</p>
 				{:else if !list.length}
@@ -162,12 +162,8 @@
 		align-items: center;
 		gap: 8px;
 	}
-	select {
+	.row :global(.picker) {
 		flex: 1;
-		font: inherit;
-		border: 1px solid #c9cdd2;
-		border-radius: 3px;
-		padding: 4px 6px;
 	}
 	ul {
 		list-style: none;
@@ -183,6 +179,7 @@
 		border: 1px solid #c4c8cc;
 		border-radius: 3px;
 		background: #fff;
+		color: inherit;
 		cursor: pointer;
 	}
 	button:disabled {

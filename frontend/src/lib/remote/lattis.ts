@@ -73,6 +73,22 @@ export function connected(servers: readonly ServerState[] | null | undefined): S
 	return (servers ?? []).filter((s) => !!s.user);
 }
 
+/** Libellé d'un serveur dans une liste de choix : « Acme — Alice » (ou « non connecté »). */
+export function serverOption(s: ServerState): string {
+	return `${s.name || hostOf(s.url)} — ${s.user ? userName(s.user) : 'non connecté'}`;
+}
+
+/**
+ * Serveur choisi après « Gérer les serveurs » : celui qui vient d'être
+ * ajouté s'il est proposé, sinon le choix courant s'il l'est encore, sinon
+ * le premier ('' : aucun).
+ */
+export function pickServer(urls: readonly string[], current: string, added = ''): string {
+	if (added && urls.includes(added)) return added;
+	if (current && urls.includes(current)) return current;
+	return urls[0] ?? '';
+}
+
 /** Titre du bouton Compte de la barre de titre. */
 export function accountTitle(servers: readonly ServerState[] | null | undefined): string {
 	const c = connected(servers);
