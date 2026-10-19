@@ -675,11 +675,11 @@
 			},
 			{
 				title: 'Requêtes et connexions',
-				// Comme Excel : Actualiser tout en grand, le volet en petit à côté.
+				// Les deux en grand (choix de Louis, 19/10) : un petit bouton seul à côté faisait vide.
 				compact: true,
 				commands: readOnly([
 					{ label: 'Actualiser tout', icon: 'refresh', size: 'big', run: data('refreshAll'), hint: 'Relire les sources de toutes les requêtes chargées, remplacer leurs tableaux et recalculer (Ctrl+Alt+F5)' },
-					{ label: 'Requêtes et connexions', icon: 'query', size: 'small', run: data('queries'), hint: 'Volet des requêtes d’import et des connexions du classeur' }
+					{ label: 'Requêtes et connexions', icon: 'query', size: 'big', run: data('queries'), hint: 'Volet des requêtes d’import et des connexions du classeur' }
 				])
 			},
 			{
