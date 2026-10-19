@@ -58,6 +58,8 @@
 		items?: { label: string; run?: () => void; on?: boolean; keys?: string; ro?: boolean; local?: boolean }[];
 		/** Commande qui ouvre son propre menu (▾ affiché, voir anchor). */
 		menu?: boolean;
+		/** Grand bouton à libellé dans un groupe compact (Renvoyer à la ligne, Fusionner et centrer). */
+		big?: boolean;
 	}
 	interface Group {
 		title: string;
@@ -71,8 +73,13 @@
 		iconOk?: boolean;
 		/** Forme la plus large permise (fit.ts) : 'icon' = jamais de grands boutons à libellé. */
 		widest?: Mode;
+		/** Petites icônes seules pour les commandes ordinaires, grands boutons pour les commandes big (Alignement, comme Excel) ; tout en icônes quand la place manque vraiment. */
+		compact?: boolean;
 	}
 	const FONTS_W = 134; // largeur des listes Police et Taille (fit.ts)
+	/** Commande montrée sans libellé : mode icônes, ou commande ordinaire d'un groupe compact. */
+	const iconOnly = (g: Group, c: Command, mode: Mode) => mode === 'icon' || (!!g.compact && !c.big);
+	const bigAt = (g: Group, c: Command, mode: Mode) => !!g.compact && !!c.big && mode !== 'icon';
 
 	export type FileAction = 'new' | 'open' | 'openRemote' | 'share' | 'rights' | 'republish' | 'save' | 'saveAs' | 'import' | 'export' | 'exportSheet' | 'exportXlsx' | 'exportOds' | 'print' | 'about' | 'close' | 'demo' | 'settings' | 'help' | 'report';
 	/** Accueil › Édition (Remplissage, Effacer, Trier et filtrer), Mettre sous forme de tableau. */
@@ -320,9 +327,9 @@
 			{
 				title: 'Alignement',
 				iconOk: true,
-				// Comme Excel : toujours de petites icônes en grille, le libellé
-				// dans l'info-bulle ; jamais de grands boutons à libellé.
-				widest: 'icon',
+				// Comme Excel : les alignements en petites icônes (libellé dans
+				// l'info-bulle), Renvoyer à la ligne et Fusionner en grands boutons.
+				compact: true,
 				launch: fmt('align'),
 				launchHint: 'Format de cellule : alignement (Ctrl+1)',
 				commands: [
@@ -334,9 +341,9 @@
 						{ label: 'Gauche', icon: 'align-left', run: st(alignPatch(cellStyle?.al, 'left')), hint: cellStyle?.al === 'left' ? 'Aligner à gauche (cliquer : revenir à l’alignement standard)' : 'Aligner à gauche', on: cellStyle?.al === 'left' },
 						{ label: 'Centrer', icon: 'align-center', run: st(alignPatch(cellStyle?.al, 'center')), hint: cellStyle?.al === 'center' ? 'Centrer (cliquer : revenir à l’alignement standard)' : 'Centrer', on: cellStyle?.al === 'center' },
 						{ label: 'Droite', icon: 'align-right', run: st(alignPatch(cellStyle?.al, 'right')), hint: cellStyle?.al === 'right' ? 'Aligner à droite (cliquer : revenir à l’alignement standard)' : 'Aligner à droite', on: cellStyle?.al === 'right' },
-						{ label: 'Renvoyer à la ligne', icon: 'wrap-text', run: onwrap, hint: 'Afficher le texte sur plusieurs lignes dans la cellule', on: !!cellStyle?.wr }
+						{ label: 'Renvoyer à la ligne', icon: 'wrap-text', run: onwrap, big: true, hint: 'Afficher le texte sur plusieurs lignes dans la cellule', on: !!cellStyle?.wr }
 					]),
-					{ label: 'Fusionner et centrer', icon: 'merge-cells', run: onmerge, hint: merged ? 'Annuler la fusion des cellules' : 'Fusionner les cellules libres sélectionnées en une seule, contenu centré', on: merged }
+					{ label: 'Fusionner et centrer', icon: 'merge-cells', run: onmerge, big: true, hint: merged ? 'Annuler la fusion des cellules' : 'Fusionner les cellules libres sélectionnées en une seule, contenu centré', on: merged }
 				]
 			},
 			{
@@ -870,7 +877,7 @@
 	const shapes = $derived(
 		isView(tab)
 			? []
-			: visibleGroups.map((g) => ({ title: g.title, iconOk: g.iconOk, widest: g.widest, labels: [...(g.fonts ? [FONTS_W] : []), ...g.commands.map((c) => (c.color ? null : c.items || c.menu ? c.label + ' ▾' : c.label))] }))
+			: visibleGroups.map((g) => ({ title: g.title, iconOk: g.iconOk, widest: g.widest, icons: g.compact ? g.commands.filter((c) => !c.big).length : undefined, labels: [...(g.fonts ? [FONTS_W] : []), ...g.commands.filter((c) => !g.compact || c.big).map((c) => (c.color ? null : c.items || c.menu ? c.label + ' ▾' : c.label))] }))
 	);
 	// Les formes ne changent qu'avec les libellés : un clic dans la grille
 	// (annulation, quadrillage…) recrée les commandes sans recompacter le
@@ -1339,7 +1346,7 @@
 							</div>
 						{/if}
 					{:else}
-						<div class="commands" class:stack={mode !== 'large'}>
+						<div class="commands" class:stack={mode !== 'large' || g.compact}>
 							{#if g.fonts}{@render fontCombos()}{/if}
 							{#each g.commands as c (c.label)}
 								{#if c.color}
@@ -1347,12 +1354,13 @@
 								{:else}
 									<button
 										class="cmd"
-										class:row-cmd={mode !== 'large'}
+										class:row-cmd={mode !== 'large' || (!!g.compact && !c.big)}
+										class:big-cmd={bigAt(g, c, mode) && mode === 'large'}
 										class:pressed={c.on}
 										aria-pressed={c.on === undefined ? undefined : c.on}
 										aria-haspopup={c.items || c.menu ? 'menu' : undefined}
 										aria-expanded={c.items ? dropMenu?.label === c.label : undefined}
-										aria-label={mode === 'icon' ? c.label : undefined}
+										aria-label={iconOnly(g, c, mode) ? c.label : undefined}
 										data-kt={c.label}
 										disabled={!c.run}
 										onclick={c.items
@@ -1363,8 +1371,8 @@
 												}}
 										title={tipOf(c, disabled)}
 									>
-										<Icon name={c.icon} size={mode === 'large' ? 24 : 16} />
-										{#if mode !== 'icon'}<span class="label">{c.label}{c.items || c.menu ? ' ▾' : ''}</span>{/if}
+										<Icon name={c.icon} size={mode === 'large' && (!g.compact || c.big) ? 24 : 16} />
+										{#if !iconOnly(g, c, mode)}<span class="label">{c.label}{c.items || c.menu ? ' ▾' : ''}</span>{/if}
 									</button>
 								{/if}
 							{/each}
@@ -1739,6 +1747,9 @@
 		font-size: 12px;
 	}
 	.commands.stack .color-cmd {
+		grid-row: span 3;
+	}
+	.commands.stack .big-cmd {
 		grid-row: span 3;
 	}
 	.group-menu {

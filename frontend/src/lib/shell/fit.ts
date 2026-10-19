@@ -33,6 +33,12 @@ export interface GroupShape {
 	 * en menu quand la place manque.
 	 */
 	widest?: Mode;
+	/**
+	 * Groupe compact : icons commandes en petites icônes seules (en colonnes
+	 * de trois) avant les commandes de labels, qui gardent leur forme du mode
+	 * (grand bouton, petite icône à libellé) ; en mode icônes, tout est icône.
+	 */
+	icons?: number;
 }
 
 /** Largeur d'un texte en px à la taille de police size (Segoe UI). */
@@ -56,6 +62,11 @@ export function groupWidth(g: GroupShape, mode: Mode, measure: Measure = estimat
 	const title = text(g.title, 11) + TITLE_PAD;
 	if (mode === 'collapsed') return Math.max(LARGE_MIN, text(g.title + ' ▾', 11) + CMD_PAD) + GROUP_PAD;
 	let w = 0;
+	const iconCol = SMALL_ICON - 6 + CMD_PAD;
+	if (g.icons) {
+		if (mode === 'icon') return groupWidth({ ...g, icons: 0, labels: [...g.labels, ...Array<string>(g.icons).fill('')] }, mode, measure);
+		w += Math.ceil(g.icons / 3) * (iconCol + GAP);
+	}
 	const fixed = g.labels.filter((l): l is number => typeof l === 'number');
 	const labels = g.labels.filter((l): l is string | null => typeof l !== 'number');
 	for (const f of fixed) w += f + GAP;
@@ -66,7 +77,7 @@ export function groupWidth(g: GroupShape, mode: Mode, measure: Measure = estimat
 		for (let i = 0; i < labels.length; i += 3) {
 			let col = 0;
 			for (const l of labels.slice(i, i + 3)) {
-				const cw = l === null ? FIXED : mode === 'icon' ? SMALL_ICON - 6 + CMD_PAD : SMALL_ICON + text(l, 12) + CMD_PAD;
+				const cw = l === null ? FIXED : mode === 'icon' ? iconCol : SMALL_ICON + text(l, 12) + CMD_PAD;
 				col = Math.max(col, cw);
 			}
 			w += col + GAP;

@@ -52,13 +52,13 @@ describe('ruban adaptatif', () => {
 		expect(groupWidth({ title: 'Requêtes et connexions', labels: ['A'] }, 'icon', m)).toBe(22 * 6 + 24 + 17);
 	});
 
-	it('Alignement reste en petites icônes, même avec toute la place (widest)', () => {
-		const align: GroupShape = { title: 'Alignement', labels: ['Haut', 'Milieu', 'Bas', 'Gauche', 'Centrer', 'Droite', 'Renvoyer à la ligne', 'Fusionner et centrer'], iconOk: true, widest: 'icon' };
+	it('Alignement : petites icônes et deux grands boutons, tout en icônes quand la place manque (icons)', () => {
+		const align: GroupShape = { title: 'Alignement', labels: ['Renvoyer à la ligne', 'Fusionner et centrer'], icons: 6, iconOk: true };
 		const gs = [...groups.slice(0, 2), align, groups[3]];
-		expect(fit(gs, 10000)).toEqual(['large', 'large', 'icon', 'large']);
-		// Place juste suffisante pour les autres en grand : Alignement ne les gêne pas.
-		const w = gs.reduce((s, g) => s + groupWidth(g, g.widest ?? 'large'), 0);
-		expect(fit(gs, w)).toEqual(['large', 'large', 'icon', 'large']);
+		expect(fit(gs, 10000)).toEqual(['large', 'large', 'large', 'large']);
+		const large = groupWidth(align, 'large');
+		expect(groupWidth(align, 'icon')).toBeLessThan(groupWidth(align, 'small'));
+		expect(groupWidth(align, 'small')).toBeLessThan(large);
 		// Fenêtre étroite : il se replie encore en menu.
 		expect(fit(gs, 100)).toEqual(['collapsed', 'collapsed', 'collapsed', 'collapsed']);
 	});
