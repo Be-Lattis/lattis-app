@@ -642,6 +642,13 @@ export interface OpenResult {
      * propose de l'ouvrir en lecture seule ou quand même (OpenLocked).
      */
     "locked"?: FileQuestion | null;
+
+    /**
+     * CoEdit : avec Locked, « Travailler à plusieurs » (OpenTogether)
+     * remplace « Ouvrir quand même » (travail à plusieurs sur un dossier
+     * partagé, features.coEditing).
+     */
+    "coEdit"?: boolean;
     "cancelled": boolean;
 }
 

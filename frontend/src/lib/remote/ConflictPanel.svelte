@@ -17,8 +17,10 @@
 		onresolveall?: (mine: boolean) => void;
 		ongoto: (c: Conflict) => void;
 		onclose: () => void;
+		/** Travail à plusieurs sur un dossier partagé : la valeur du collègue est déjà dans la cellule. */
+		local?: boolean;
 	}
-	let { conflicts, busy = false, onresolve, onresolveall, ongoto, onclose }: Props = $props();
+	let { conflicts, busy = false, onresolve, onresolveall, ongoto, onclose, local = false }: Props = $props();
 </script>
 
 <aside class="panel" use:resizePanel={{ key: 'conflicts' }} use:panelKeys={onclose} aria-label="Conflits">
@@ -26,7 +28,11 @@
 	{#if !conflicts.length}
 		<p class="muted">Aucun conflit en attente.</p>
 	{:else}
-		<p class="muted">Ces cellules ont été modifiées par un collègue pendant que vous les changiez. Votre valeur reste affichée jusqu'à votre choix.</p>
+		{#if local}
+			<p class="muted">Ces cellules ont été modifiées par un collègue en même temps que vous : sa valeur, la plus récente, est affichée partout. « Garder la mienne » remet la vôtre pour tous les postes.</p>
+		{:else}
+			<p class="muted">Ces cellules ont été modifiées par un collègue pendant que vous les changiez. Votre valeur reste affichée jusqu'à votre choix.</p>
+		{/if}
 		{#if onresolveall && conflicts.length > 1}
 			<div class="acts all">
 				<button disabled={busy} onclick={() => onresolveall(true)}>Garder toutes les miennes</button>

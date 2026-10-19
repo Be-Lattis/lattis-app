@@ -60,6 +60,8 @@
 	import { exportNotice, printNotice, type ExportReport } from '#lib/shell/exportReport.js';
 	import ShareBanner from '#lib/remote/ShareBanner.svelte';
 	import ConflictPanel from '#lib/remote/ConflictPanel.svelte';
+	import CoEditPresence from '#lib/remote/CoEditPresence.svelte';
+	import type { State as CoEditState } from '#bindings/internal/coedit/models.js';
 	import RightsDialog from '#lib/remote/RightsDialog.svelte';
 	import { rightsObjects, type RightsObject } from '#lib/remote/rights.js';
 	import { refusedNotice } from '#lib/remote/share.js';
@@ -165,6 +167,11 @@
 	let damaged = $state<DamagedFile | null>(null);
 	// Classeur ouvert sur un autre poste (verrou ~$) : lecture seule, ou l'ouvrir quand même.
 	let locked = $state<FileQuestion | null>(null);
+	// … ou travailler à plusieurs (dossier partagé, décision 0009) : proposé à la place de « quand même ».
+	let lockedCoEdit = $state(false);
+	let joining = $state(false);
+	// Travail à plusieurs sur le classeur ouvert : présences, conflits.
+	let coedit = $state<CoEditState | null>(null);
 	// Fichier modifié par un autre poste depuis l'ouverture : copie, écraser ou annuler (close : puis fermer).
 	let conflict = $state<(FileQuestion & { close: boolean }) | null>(null);
 	// Échec d'une récupération de session : l'écran de récupération reste.
@@ -192,7 +199,7 @@
 	let conflictBusy = $state(false);
 	let lastConflicts = 0;
 	$effect(() => {
-		const n = share?.conflicts ?? 0;
+		const n = (share?.conflicts ?? 0) + (coedit?.conflicts ?? 0);
 		if (n > lastConflicts) conflictsOpen = true;
 		lastConflicts = n;
 		if (conflictsOpen || n) loadConflicts();
@@ -212,7 +219,7 @@
 			docState = await DocumentService.ShareResolve(c.id, mine);
 			await reload();
 			await loadConflicts();
-			notice = mine ? 'Votre valeur est renvoyée au serveur' : 'Valeur du collègue reprise';
+			notice = mine ? (coedit?.active ? 'Votre valeur est remise pour tous les postes' : 'Votre valeur est renvoyée au serveur') : 'Valeur du collègue reprise';
 			if (!conflicts.length) conflictsOpen = false;
 		} catch (e) {
 			notice = err(e);
@@ -230,7 +237,7 @@
 				docState = await DocumentService.ShareResolve(c.id, mine);
 				n++;
 			}
-			notice = mine ? `${n} valeur(s) renvoyée(s) au serveur` : `${n} valeur(s) des collègues reprise(s)`;
+			notice = mine ? (coedit?.active ? `${n} valeur(s) remise(s) pour tous les postes` : `${n} valeur(s) renvoyée(s) au serveur`) : `${n} valeur(s) des collègues reprise(s)`;
 		} catch (e) {
 			notice = err(e);
 		} finally {
@@ -488,6 +495,7 @@
 		scripts = (await DocumentService.Scripts()) ?? [];
 		favorites = (await DocumentService.Favorites()) ?? [];
 		share = await DocumentService.ShareState().catch(() => null);
+		coedit = await DocumentService.CoEditState().catch(() => null);
 		// Onglets semblables : métadonnées seulement, relues à chaque action.
 		similar = (await DocumentService.SimilarSheets().catch(() => null)) ?? [];
 		if (mergeOffer && !similar.some((g) => g.id === mergeOffer?.id && g.propose)) mergeOffer = null;
@@ -599,9 +607,24 @@
 		if (path) await opened(await DocumentService.OpenLocked(path, readOnly));
 	}
 
+	/** Classeur ouvert sur d'autres postes : demande à travailler à plusieurs (les autres l'accueillent). */
+	async function openTogether(path: string) {
+		locked = null;
+		joining = true;
+		notice = 'Demande envoyée aux autres postes…';
+		try {
+			const r = await DocumentService.OpenTogether(path);
+			if (r.state?.open) notice = '';
+			await opened(r);
+		} finally {
+			joining = false;
+		}
+	}
+
 	async function opened(r: OpenResult) {
 		if (r.locked) {
 			locked = r.locked;
+			lockedCoEdit = !!r.coEdit;
 		} else if (r.recoverable) {
 			orphans = [r.recoverable];
 			recoverError = '';
@@ -708,6 +731,7 @@
 		docState = { open: false, path: '', title: '', dirty: false, undo: '', redo: '' };
 		layout = null;
 		share = null;
+		coedit = null;
 		sheetStatus = null;
 		view = 'grid';
 		mode = 'closed';
@@ -950,6 +974,10 @@
 			if (e?.data) share = e.data;
 			if (mode === 'doc') reload().catch(() => {});
 		});
+		// Travail à plusieurs : arrivées, départs, conflits, dossier injoignable.
+		const offCoEdit = Events.On('coedit:changed', (e: { data?: CoEditState }) => {
+			if (e?.data) coedit = e.data;
+		});
 		// Source du Data Lake mise à jour à l'enregistrement (en arrière-plan).
 		const offSource = Events.On('data:source', (e: { data?: { message?: string } }) => {
 			if (e?.data?.message) notice = e.data.message;
@@ -1099,6 +1127,7 @@
 			offQuit();
 			offLink();
 			offShare();
+			offCoEdit();
 			offSource();
 			window.removeEventListener('keydown', keys);
 			window.removeEventListener('beforeunload', leave);
@@ -2202,8 +2231,8 @@
 					<MergeSheetsPanel plan={mergePlan} others={mergeOthers} group={mergeGroup} preview={(p) => DocumentService.MergePreview(p)} onmerge={doMerge} onclose={() => (mergePlan = null)} />
 				{/key}
 			{/if}
-			{#if mode === 'doc' && conflictsOpen && share?.mode === 'collaborative'}
-				<ConflictPanel {conflicts} busy={conflictBusy} onresolve={resolveConflict} onresolveall={resolveAllConflicts} ongoto={gotoConflict} onclose={() => (conflictsOpen = false)} />
+			{#if mode === 'doc' && conflictsOpen && (share?.mode === 'collaborative' || coedit?.active)}
+				<ConflictPanel {conflicts} local={!!coedit?.active} busy={conflictBusy} onresolve={resolveConflict} onresolveall={resolveAllConflicts} ongoto={gotoConflict} onclose={() => (conflictsOpen = false)} />
 			{/if}
 			{#if aiChat.open && (mode === 'doc' || mode === 'closed')}
 				<AiPanel
@@ -2525,12 +2554,21 @@
 		<div class="modal-back">
 			<div class="modal" role="dialog" aria-modal="true" aria-label="Classeur déjà ouvert" use:modal={() => (locked = null)}>
 				<p>{file.message}.</p>
-				<p class="hint">En lecture seule, vos modifications s'enregistrent sous un autre nom. L'ouvrir quand même risque d'écraser les modifications de l'autre poste (Lattis vérifie le fichier avant d'enregistrer).</p>
-				<div class="actions">
-					<button class="primary" onclick={() => openLocked(file.path, true).catch((e) => (notice = err(e)))}>Ouvrir en lecture seule</button>
-					<button onclick={() => openLocked(file.path, false).catch((e) => (notice = err(e)))}>Ouvrir quand même</button>
-					<button onclick={() => (locked = null)}>Annuler</button>
-				</div>
+				{#if lockedCoEdit}
+					<p class="hint">À plusieurs, chacun modifie les données des tableaux et voit celles des autres en direct ; la mise en forme, les colonnes et les feuilles attendent que vous soyez seul. En lecture seule, vos modifications s'enregistrent sous un autre nom.</p>
+					<div class="actions">
+						<button class="primary" disabled={joining} onclick={() => openTogether(file.path).catch((e) => (notice = err(e)))}>Travailler à plusieurs</button>
+						<button onclick={() => openLocked(file.path, true).catch((e) => (notice = err(e)))}>Ouvrir en lecture seule</button>
+						<button onclick={() => (locked = null)}>Annuler</button>
+					</div>
+				{:else}
+					<p class="hint">En lecture seule, vos modifications s'enregistrent sous un autre nom. L'ouvrir quand même risque d'écraser les modifications de l'autre poste (Lattis vérifie le fichier avant d'enregistrer).</p>
+					<div class="actions">
+						<button class="primary" onclick={() => openLocked(file.path, true).catch((e) => (notice = err(e)))}>Ouvrir en lecture seule</button>
+						<button onclick={() => openLocked(file.path, false).catch((e) => (notice = err(e)))}>Ouvrir quand même</button>
+						<button onclick={() => (locked = null)}>Annuler</button>
+					</div>
+				{/if}
 			</div>
 		</div>
 	{/if}
@@ -2565,6 +2603,7 @@
 			<button class="offer-act" onclick={() => dismissGroup(g)}>Ne plus proposer</button>
 		{/if}
 		<span class="spacer"></span>
+		{#if mode === 'doc'}<CoEditPresence state={coedit} onconflicts={() => (conflictsOpen = true)} />{/if}
 		{#if sheetStatus}
 			{#if sheetStatus.stats}<span class="stats">{sheetStatus.stats}</span>{/if}
 			{#if import.meta.env.DEV}

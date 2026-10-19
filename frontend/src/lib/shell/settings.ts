@@ -55,6 +55,12 @@ export const settingSections: SettingSection[] = [
 				help: "Permet de se connecter à un Serveur Lattis de votre organisation (menu Compte de la barre de titre) et de l'ajouter comme source de données. Les classeurs partagés y vivent ; la connexion se fait par votre compte (Google, Microsoft, Keycloak…) ou un mot de passe Lattis."
 			},
 			{
+				path: 'features.coEditing',
+				kind: 'bool',
+				label: 'Travailler à plusieurs sur un dossier partagé',
+				help: "Un classeur posé sur un NAS ou un partage réseau et déjà ouvert sur un autre poste propose « Travailler à plusieurs » : chacun modifie les données des tableaux et voit celles des autres en direct (un journal par poste à côté du fichier). Désactivé, il s'ouvre en lecture seule ou « quand même », comme avant."
+			},
+			{
 				path: 'ai.enabled',
 				kind: 'bool',
 				label: 'Assistant IA',

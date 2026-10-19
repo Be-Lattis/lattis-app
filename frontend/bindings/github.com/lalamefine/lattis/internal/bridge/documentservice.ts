@@ -21,6 +21,9 @@ import * as archive$0 from "../archive/models.js";
 import * as canvas$0 from "../canvas/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as coedit$0 from "../coedit/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as grid$0 from "../grid/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -325,6 +328,14 @@ export function CloseDocument(): $CancellablePromise<void> {
  */
 export function CloseRequestSeen(): $CancellablePromise<void> {
     return $Call.ByID(2763517820);
+}
+
+/**
+ * CoEditState décrit le travail à plusieurs du classeur ouvert (Active
+ * faux : seul, ou classeur qui ne s'y prête pas).
+ */
+export function CoEditState(): $CancellablePromise<coedit$0.State> {
+    return $Call.ByID(1094326097);
 }
 
 /**
@@ -1140,6 +1151,16 @@ export function OpenLocked(path: string, readOnly: boolean): $CancellablePromise
  */
 export function OpenSample(): $CancellablePromise<$models.DemoResult> {
     return $Call.ByID(4262399116);
+}
+
+/**
+ * OpenTogether ouvre un classeur déjà ouvert sur d'autres postes pour y
+ * travailler à plusieurs : la demande attend que chaque session l'accueille
+ * (20 s au plus). Sans réponse, la question d'avant revient
+ * (OpenResult.Locked, sans « Travailler à plusieurs »).
+ */
+export function OpenTogether(path: string): $CancellablePromise<$models.OpenResult> {
+    return $Call.ByID(1557153876, path);
 }
 
 /**

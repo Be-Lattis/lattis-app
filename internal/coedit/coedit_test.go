@@ -19,7 +19,7 @@ import (
 )
 
 // Délais raccourcis : les essais font les tours à la main (Sync).
-var fast = coedit.Timing{Poll: 10 * time.Millisecond, Watch: 10 * time.Millisecond, Beat: 10 * time.Millisecond, Stale: 300 * time.Millisecond, JoinWait: 5 * time.Second, Compact: time.Millisecond}
+var fast = coedit.Timing{Poll: 10 * time.Millisecond, Watch: 10 * time.Millisecond, Beat: 10 * time.Millisecond, Stale: time.Second, JoinWait: 5 * time.Second, Compact: time.Millisecond}
 
 func must(t *testing.T, err error) {
 	t.Helper()
