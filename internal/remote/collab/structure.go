@@ -30,8 +30,8 @@ import (
 //     du serveur s'affiche. L'annulation est une transaction comme une
 //     autre : elle envoie l'opération inverse (refusée de même, elle reste
 //     à annuler) ;
-//   - réception : sur « *structure:<table_id> » (et « *meta », à la
-//     connexion), la structure du serveur est comparée à celle que le
+//   - réception : sur « *structure:<table_id> » (clé comprise depuis la
+//     migration 0026 ; « *meta » et la connexion : tous), la structure du serveur est comparée à celle que le
 //     poste connaît (_lattis_remote_tables.columns) ; le tableau local
 //     prend la forme du serveur hors du journal, puis il est relu en
 //     entier. L'historique d'annulation qui le touche est effacé : ses
@@ -192,7 +192,9 @@ func (e *Engine) structureOne(ctx context.Context, w workbook.Writer, wb string,
 		if _, ok := t.column(ch.Column); ok {
 			return nil
 		}
-		after, at := "", len(*cols)
+		// Place parmi les colonnes publiées : après la plus proche colonne
+		// publiée qui la précède en local, en premier sans elle.
+		after, at := "", 0
 		for _, p := range ch.Prev {
 			if i, ok := t.column(p); ok {
 				after, at = (*cols)[i].ID, i+1
@@ -200,7 +202,15 @@ func (e *Engine) structureOne(ctx context.Context, w workbook.Writer, wb string,
 			}
 		}
 		typ := workbook.RemoteType(grid.Type(ch.Type))
-		id, err := w.AddColumn(ctx, wb, tid, ch.Name, typ, after, ch.Column)
+		id, err := w.InsertColumn(ctx, wb, tid, ch.Name, typ, at+1, ch.Column)
+		if errors.Is(err, workbook.ErrUnsupported) {
+			// Serveur sans insert_column (migration 0026) : add_column ne
+			// sait pas mettre en premier, la colonne va à la fin.
+			if after == "" {
+				at = len(*cols)
+			}
+			id, err = w.AddColumn(ctx, wb, tid, ch.Name, typ, after, ch.Column)
+		}
 		if err != nil {
 			return err
 		}

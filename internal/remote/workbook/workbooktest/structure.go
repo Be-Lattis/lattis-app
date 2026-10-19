@@ -25,7 +25,9 @@ import (
 // renommée, ni supprimée, ni convertie ; un tableau qui alimente le Data
 // Lake ou un pipeline ne se supprime pas. Notification
 // « *structure:<table_id> » (et « *meta ») sur un classeur publié ; la clé
-// ne notifie que « *meta » (déclencheur de lattis_meta_tables).
+// aussi depuis 0026_structure_suite.sql (Before26 : « *meta » seulement,
+// déclencheur de lattis_meta_tables). insert_column (0026) place une
+// colonne à une position donnée.
 
 // ErrServer imite une erreur levée par une fonction du serveur (RAISE
 // EXCEPTION … USING ERRCODE) : code SQLSTATE et message.
@@ -232,18 +234,10 @@ func (w *writer) DropTable(ctx context.Context, workbookID, tableID string) erro
 }
 
 func (w *writer) AddColumn(ctx context.Context, workbookID, tableID, name, typ, after string, localID int64) (string, error) {
+	w.s.f.Calls["add_column"]++
 	b, _, t, err := w.structure(workbookID, tableID)
 	if err != nil {
 		return "", err
-	}
-	if name, err = w.checkName(name, "colonne"); err != nil {
-		return "", err
-	}
-	if !types[typ] {
-		return "", ErrServer{"22023", fmt.Sprintf("colonne « %s » : type inconnu « %s » (text, integer, decimal, date, datetime, boolean)", name, typ)}
-	}
-	if slices.ContainsFunc(t.cols, func(c workbook.RemoteColumn) bool { return strings.EqualFold(c.Name, name) }) {
-		return "", ErrServer{"42701", fmt.Sprintf("le tableau « %s » a déjà une colonne « %s »", t.name, name)}
 	}
 	at := len(t.cols)
 	if after != "" {
@@ -252,6 +246,37 @@ func (w *writer) AddColumn(ctx context.Context, workbookID, tableID, name, typ, 
 			return "", err
 		}
 		at = j + 1
+	}
+	return w.insertColumn(b, t, name, typ, at, localID)
+}
+
+// InsertColumn imite lattis.insert_column (migration 0026) : position 1 en
+// premier, au-delà du nombre de colonnes à la fin. Before26 : fonction
+// absente (42883), rendue comme par pgWriter (ErrUnsupported).
+func (w *writer) InsertColumn(ctx context.Context, workbookID, tableID, name, typ string, position int, localID int64) (string, error) {
+	if w.s.f.Before26 {
+		return "", workbook.ErrUnsupported
+	}
+	w.s.f.Calls["insert_column"]++
+	b, _, t, err := w.structure(workbookID, tableID)
+	if err != nil {
+		return "", err
+	}
+	at := min(max(position, 1), len(t.cols)+1) - 1
+	return w.insertColumn(b, t, name, typ, at, localID)
+}
+
+// insertColumn ajoute une colonne au rang at (0 : en premier).
+func (w *writer) insertColumn(b *book, t *table, name, typ string, at int, localID int64) (string, error) {
+	name, err := w.checkName(name, "colonne")
+	if err != nil {
+		return "", err
+	}
+	if !types[typ] {
+		return "", ErrServer{"22023", fmt.Sprintf("colonne « %s » : type inconnu « %s » (text, integer, decimal, date, datetime, boolean)", name, typ)}
+	}
+	if slices.ContainsFunc(t.cols, func(c workbook.RemoteColumn) bool { return strings.EqualFold(c.Name, name) }) {
+		return "", ErrServer{"42701", fmt.Sprintf("le tableau « %s » a déjà une colonne « %s »", t.name, name)}
 	}
 	c := workbook.RemoteColumn{ID: uuid.NewString(), Name: name, LocalID: localID, Type: typ}
 	t.cols = slices.Insert(t.cols, at, c)
@@ -487,7 +512,8 @@ func (w *writer) SetKey(ctx context.Context, workbookID, tableID, columnID strin
 		}
 	}
 	t.key = columnID
-	w.structured(b, t, false)
+	// Depuis la migration 0026, set_key notifie aussi *structure:<id>.
+	w.structured(b, t, !w.s.f.Before26)
 	return nil
 }
 

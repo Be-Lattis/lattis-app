@@ -10,8 +10,8 @@ import (
 // Notifications d'un classeur collaboratif (contrat client de lattisd,
 // §6) : NoticeStructure suivi de l'identifiant du tableau (colonnes
 // ajoutées, renommées, supprimées ou converties, tableau renommé ou
-// supprimé : à recharger en entier) ; NoticeMeta, mise en page ou
-// structure (clé).
+// supprimé, clé depuis la migration 0026 : à recharger en entier) ;
+// NoticeMeta, mise en page ou structure (dont la clé).
 const (
 	NoticeStructure = "*structure:"
 	NoticeMeta      = "*meta"

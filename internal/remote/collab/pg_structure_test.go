@@ -113,4 +113,28 @@ func TestPostgresStructure(t *testing.T) {
 	if err := bob.d.InsertColumn(ctx, "Ventes", 1, "X"); !errors.Is(err, workbook.ErrDesign) {
 		t.Fatalf("éditeur : %v", err)
 	}
+
+	// Colonne insérée en premier : à la même place pour Bob avec
+	// insert_column (migration 0026), à la fin sans elle (add_column).
+	want := []string{"Code:text", "Produit:text", "Remise:text", "Quantité:integer", "Prix:decimal"}
+	if !pgHasFunc(t, p, "lattis.insert_column(uuid,uuid,text,text,integer,text)") {
+		want = []string{"Produit:text", "Remise:text", "Quantité:integer", "Prix:decimal", "Code:text"}
+	}
+	must(t, alice.d.InsertColumn(ctx, "Ventes", 0, "Code"))
+	eq(t, "serveur après insertion", pgColumns(t, p, "Ventes"), want)
+	_, err = bob.e.ReceiveStructure(ctx, nil, tbl(bob))
+	must(t, err)
+	eq(t, "Bob après insertion", colsOf(bob, "Ventes"), want)
+}
+
+// pgHasFunc dit si le serveur a la fonction sig (to_regprocedure).
+func pgHasFunc(t *testing.T, p *pgClients, sig string) bool {
+	t.Helper()
+	ctx := context.Background()
+	c, err := pgx.Connect(ctx, p.env.Super)
+	must(t, err)
+	defer c.Close(ctx)
+	var ok bool
+	must(t, c.QueryRow(ctx, `SELECT to_regprocedure($1) IS NOT NULL`, sig).Scan(&ok))
+	return ok
 }

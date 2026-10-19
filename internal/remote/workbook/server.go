@@ -246,12 +246,18 @@ type Writer interface {
 	// structure se fait en entier ou pas du tout). Le serveur refuse de
 	// renommer, supprimer ou convertir une colonne citée par un filtre
 	// (rôle, restriction, audience) et de supprimer un tableau qui alimente
-	// le Data Lake ou un pipeline ; il notifie « *structure:<table_id> ».
+	// le Data Lake ou un pipeline ; il notifie « *structure:<table_id> »
+	// (la clé aussi depuis la migration 0026).
 	RenameTable(ctx context.Context, workbookID, tableID, name string) error
 	DropTable(ctx context.Context, workbookID, tableID string) error
 	// AddColumn ajoute une colonne après la colonne after (vide : à la fin)
 	// et rend son identifiant ; localID est noté par le serveur.
 	AddColumn(ctx context.Context, workbookID, tableID, name, typ, after string, localID int64) (string, error)
+	// InsertColumn ajoute une colonne à la place position (1 : en premier ;
+	// au-delà du nombre de colonnes : à la fin) et rend son identifiant
+	// (lattis.insert_column, migration 0026) ; ErrUnsupported sur un
+	// serveur sans elle (la transaction reste utilisable).
+	InsertColumn(ctx context.Context, workbookID, tableID, name, typ string, position int, localID int64) (string, error)
 	RenameColumn(ctx context.Context, workbookID, tableID, columnID, name string) error
 	DropColumn(ctx context.Context, workbookID, tableID, columnID string) error
 	AlterColumnType(ctx context.Context, workbookID, tableID, columnID, typ string) error

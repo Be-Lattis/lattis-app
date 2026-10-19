@@ -78,8 +78,9 @@ func (w *worker) notified(ctx context.Context, payload string) {
 		// Structure d'un tableau changée par un concepteur : relu en entier.
 		payload, structure = strings.TrimPrefix(payload, workbook.NoticeStructure), true
 	case payload == workbook.NoticeMeta:
-		// Mise en page ou structure (clé) : la structure de tous les tableaux
-		// est comparée à celle du serveur.
+		// Mise en page ou structure (clé, sur un serveur d'avant la
+		// migration 0026 qui ne notifie pas *structure pour elle) : la
+		// structure de tous les tableaux est comparée à celle du serveur.
 		w.mu.Lock()
 		w.meta = true
 		if w.timer == nil {

@@ -79,6 +79,12 @@ type Fake struct {
 	// Before12 imite un serveur sans la migration 0012 : pas d'équipes
 	// (list_teams absent, grant_role pour une personne seulement).
 	Before12 bool
+	// Before26 imite un serveur sans la migration 0026 : pas
+	// d'insert_column (ErrUnsupported, comme pgWriter sur 42883), set_key
+	// ne notifie que « *meta ».
+	Before26 bool
+	// quiet : notifications écartées (Quiet).
+	quiet func(channel, payload string) bool
 	// teams : équipes Lattis (CreateTeam) ; serverOwners : propriétaires du
 	// serveur (ServerOwner), qui voient les membres des équipes.
 	teams        []*fteam
@@ -448,10 +454,22 @@ func (s *session) Publish(ctx context.Context, fn func(workbook.Publisher) error
 	return nil
 }
 
+// Quiet écarte les notifications pour lesquelles fn rend vrai (essais :
+// ne garder que « *structure:<id> », par exemple) ; nil : toutes passent.
+func (f *Fake) Quiet(fn func(channel, payload string) bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.quiet = fn
+}
+
 func (f *Fake) notify(channel, payload string) {
 	f.mu.Lock()
 	cs := slices.Clone(f.listeners[channel])
+	quiet := f.quiet
 	f.mu.Unlock()
+	if quiet != nil && quiet(channel, payload) {
+		return
+	}
 	for _, c := range cs {
 		select {
 		case c <- payload:

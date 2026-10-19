@@ -147,7 +147,7 @@ func TestStructureFollowedByColleague(t *testing.T) {
 	waitFor(t, "Quantité décimale chez Bob", func() bool { return strings.Contains(strings.Join(colsOf(bob, "Ventes"), "|"), "Quantité:decimal") })
 	eq(t, "Bob Quantité", bob.col("Quantité"), []string{"3.0", "10.0", "1.0"})
 
-	// Clé : posée sur le serveur, suivie par Bob (*meta).
+	// Clé : posée sur le serveur, suivie par Bob (*structure et *meta).
 	must(t, alice.d.SetKey(ctx, "Ventes", 0))
 	if _, key := serverCols(f, id, "Ventes"); key != "Produit" {
 		t.Fatalf("clé du serveur : %q", key)
