@@ -405,3 +405,31 @@ func TestRangeRoundTrip(t *testing.T) {
 		t.Fatalf("formule : %v", got)
 	}
 }
+
+// Mettre sous forme de tableau une liste d'une colonne restée en cellules
+// libres (icône de la cellule) : sa première ligne donne l'en-tête.
+func TestFormatFreeListAsTable(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	for r, v := range []string{"Fruits", "Pomme", "Poire"} {
+		if _, err := d.SetCell(ctx, 1, 2+r, 1, v); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if n := len(tablesOf(t, d)); n != 0 {
+		t.Fatalf("liste : %d tableaux avant", n)
+	}
+	before := dump(t, d)
+	name, err := d.FormatAsTable(ctx, 1, 3, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts := tablesOf(t, d)
+	if len(ts) != 1 || ts[0].Name != name || colNames(ts[0]) != "Fruits" || ts[0].Rows != 2 || ts[0].Row != 2 {
+		t.Fatalf("liste : %+v", ts)
+	}
+	undoOnce(t, d, before, "liste en tableau")
+	if _, err := d.FormatAsTable(ctx, 1, 9, 9); err == nil {
+		t.Fatal("cellule vide acceptée")
+	}
+}

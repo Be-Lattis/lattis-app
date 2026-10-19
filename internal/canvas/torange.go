@@ -714,6 +714,27 @@ func (m *Model) FormatAsTable(ctx context.Context, sheet int64, row, col int) (s
 		if err := t.guard(sheet); err != nil {
 			return err
 		}
+		// Hors d'une plage : l'îlot de cellules libres qui contient la cellule
+		// (une liste d'une colonne, un bloc resté libre) devient d'abord une plage.
+		if in, err := t.inRange(sheet, row, col); err != nil {
+			return err
+		} else if !in {
+			cells, err := t.cells(sheet)
+			if err != nil {
+				return err
+			}
+			isl := island(cells, row, col)
+			if len(isl) < 2 {
+				return fmt.Errorf("%w : il faut au moins deux cellules remplies, l'une sous l'autre ou côte à côte", ErrTable)
+			}
+			r0, c0, r1, c1 := isl[0].Row, isl[0].Col, isl[0].Row, isl[0].Col
+			for _, c := range isl {
+				r0, c0, r1, c1 = min(r0, c.Row), min(c0, c.Col), max(r1, c.Row), max(c1, c.Col)
+			}
+			if err := t.markRange(sheet, r0, c0, r1, c1); err != nil {
+				return err
+			}
+		}
 		name, err = t.formatAsTable(sheet, row, col)
 		return err
 	})

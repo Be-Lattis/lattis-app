@@ -2669,6 +2669,20 @@
 				ctx.closePath();
 				ctx.fill();
 			}
+			tableHintBox = null;
+			if (!editing && !many && asTableHint()) {
+				// Liste ou bloc resté en cellules libres : petite icône à côté de la
+				// cellule, un clic en fait un tableau (comme la plage convertie).
+				const b = dropButton();
+				ctx.fillStyle = C.strip;
+				ctx.fillRect(b.x, b.y, b.w + 2, b.h);
+				ctx.strokeStyle = C.stripLine;
+				ctx.lineWidth = 1;
+				ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w + 1, b.h - 1);
+				const s = Math.min(14, b.h - 2);
+				drawIcon(ctx, 'table', b.x + (b.w + 2 - s) / 2, b.y + (b.h - s) / 2, s, C.icon, C.active, 1.2);
+				tableHintBox = { x: b.x, y: b.y, w: b.w + 2, h: b.h };
+			}
 		}
 		// Flèches d'audit : bleues vers la cellule (antécédents), rouges depuis
 		// elle (dépendants), comme Excel.
@@ -3626,6 +3640,21 @@
 		const bottom = screenY(active.row) + (g ? rowTop(g.row + g.rows) - rowTop(g.row) : rh(active.row));
 		const h = Math.min(18, rh(active.row) - 2);
 		return { x: right + 1, y: bottom - h - 1, w: 16, h };
+	}
+
+	// Icône « Mettre sous forme de tableau » d'un îlot de cellules libres.
+	let tableHintBox: { x: number; y: number; w: number; h: number } | null = null;
+	/** La cellule active est dans un bloc d'au moins deux cellules libres, hors tableau : l'icône s'affiche. */
+	function asTableHint(): boolean {
+		const { row, col } = active;
+		if (!source.formatAsTable || locked || !cells.has(key(row, col)) || tableAt(row, col) || keptOut(row, col) || listOf(row, col)) return false;
+		return [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dr, dc]) => cells.has(key(row + dr, col + dc)) && !tableAt(row + dr, col + dc) && !keptOut(row + dr, col + dc));
+	}
+	function tableHintAt(ev: MouseEvent): boolean {
+		const b = tableHintBox;
+		if (!b) return false;
+		const { x, y } = toLocal(ev);
+		return x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
 	}
 
 	let listMenu = $state<{ x: number; y: number; values: string[]; row: number; col: number } | null>(null);
@@ -5701,6 +5730,18 @@
 		if (selChart !== null) {
 			selChart = null;
 			if (panel?.kind === 'chart') panel = null;
+		}
+		if (e.button === 0 && !formulaMode && tableHintAt(e) && source.formatAsTable) {
+			e.preventDefault();
+			if (editing && !commit()) return;
+			const { row, col } = active;
+			const fmt = source.formatAsTable;
+			writing = writing.catch(() => undefined).then(() => fmt(row, col).then(
+					() => undefined,
+					(err) => say(String(err?.message ?? err))
+				)
+			);
+			return;
 		}
 		if (e.button !== 1 && !formulaMode && keyHintAt(e)) {
 			e.preventDefault();
