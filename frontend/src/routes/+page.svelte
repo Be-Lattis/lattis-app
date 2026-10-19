@@ -21,6 +21,7 @@
 	import { count } from '#lib/sql/result.js';
 	import { printSheet } from '#lib/shell/print.js';
 	import { withSaveProgress } from '#lib/shell/saveprogress.js';
+	import { demoProgressText, firstSteps, hideSteps, stepsShown } from '#lib/shell/welcome.js';
 	import PageSetupDialog from '#lib/shell/PageSetupDialog.svelte';
 	import { pageAction, type PageAction, type PageSetup, type PageSetupTab } from '#lib/shell/pagesetup.js';
 	import type { PageBreaks } from '#bindings/internal/transfer/models.js';
@@ -330,6 +331,8 @@
 	// Démo.
 	let demo = $state<{ name: string; rows: number; columns: { name: string; type: ColumnType }[]; sqlName: string; sqlColumns: string[] } | null>(null);
 	let demoProgress = $state('');
+	// Accueil : premiers pas, jusqu'à « Ne plus afficher ».
+	let showSteps = $state(stepsShown());
 
 	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
 
@@ -602,21 +605,18 @@
 		await reload();
 	}
 
-	/** Ouvre le classeur de démonstration demandé au lancement (--demo preset). */
-	async function startPresetDemo(preset: string) {
+	/** Fabrique une démonstration (open) en affichant son avancement, puis l'affiche. */
+	async function buildDemo(label: string, open: () => Promise<{ sheet: number }>) {
 		let waiting = true;
 		const poll = async () => {
 			if (!waiting) return;
 			const p = await DocumentService.DemoProgress().catch(() => null);
-			if (p && waiting)
-				demoProgress =
-					`Démo « ${preset} » : ${p.done.toLocaleString('fr-FR')} / ${p.total.toLocaleString('fr-FR')} lignes` +
-					(p.totalCells ? ` · ${p.cells.toLocaleString('fr-FR')} / ${p.totalCells.toLocaleString('fr-FR')} cellules` : '');
+			if (p && waiting) demoProgress = demoProgressText(label, p);
 			setTimeout(poll, 250);
 		};
 		poll();
 		try {
-			const r = await DocumentService.OpenDemo();
+			const r = await open();
 			view = 'grid';
 			sheetId = r.sheet;
 			mode = 'doc';
@@ -624,6 +624,24 @@
 		} finally {
 			waiting = false;
 			demoProgress = '';
+		}
+	}
+
+	/** Ouvre le classeur de démonstration demandé au lancement (--demo preset). */
+	async function startPresetDemo(preset: string) {
+		await buildDemo(`Démo « ${preset} »`, () => DocumentService.OpenDemo());
+	}
+
+	/** Classeur d'exemple de l'accueil : la vitrine, jamais enregistrée d'elle-même. */
+	async function openSample() {
+		mode = 'starting';
+		queryHost?.closePanel();
+		try {
+			await buildDemo('Classeur d’exemple', () => DocumentService.OpenSample());
+			workbookReady();
+		} catch (e) {
+			mode = 'closed';
+			throw e;
 		}
 	}
 
@@ -1701,6 +1719,28 @@
 					<button class="ico" onclick={() => file('import')} title="Crée un classeur avec les feuilles importées"><Icon name="database" size={14} />Importer (CSV, Excel)…</button>
 					{#if sharedWorkbooksEnabled()}<button class="ico" onclick={() => file('openRemote')}><Icon name="web" size={14} />Ouvrir depuis un serveur…</button>{/if}
 				</div>
+				{#if showSteps}
+					<div class="steps">
+						<p class="muted">Premiers pas</p>
+						<ol>
+							{#each firstSteps as s (s.help)}
+								<li><button class="link" title="Ouvrir l’aide" onclick={() => openHelp(s.help)}>{s.title}</button> : {s.text}</li>
+							{/each}
+						</ol>
+						<div class="steps-actions">
+							<button class="ico" onclick={() => openSample().catch((e) => (notice = err(e)))}><Icon name="book" size={14} />Ouvrir le classeur d’exemple</button>
+							<button
+								class="link"
+								onclick={() => {
+									hideSteps();
+									showSteps = false;
+								}}>Ne plus afficher</button
+							>
+						</div>
+					</div>
+				{:else}
+					<button class="link" onclick={() => openSample().catch((e) => (notice = err(e)))}>Ouvrir le classeur d’exemple</button>
+				{/if}
 				{#if recent.length}
 					<div class="recent">
 						<p class="muted">Récents</p>
@@ -2481,6 +2521,32 @@
 	}
 	.recent .muted {
 		margin: 0 0 4px;
+	}
+	/* Accueil : premiers pas et classeur d'exemple. */
+	.steps {
+		max-width: 520px;
+		margin-top: 12px;
+		padding: 12px 16px;
+		border: 1px solid #d6e4dc;
+		border-radius: 6px;
+		background: #f6faf7;
+	}
+	.steps .muted {
+		margin: 0 0 6px;
+	}
+	.steps ol {
+		margin: 0 0 10px;
+		padding-left: 20px;
+		line-height: 1.5;
+	}
+	.steps ol .link {
+		padding: 0;
+		font-weight: 600;
+	}
+	.steps-actions {
+		display: flex;
+		align-items: center;
+		gap: 12px;
 	}
 	button.link {
 		border: none;

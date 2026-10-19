@@ -489,7 +489,7 @@ export function DeleteTables(names: string[] | null): $CancellablePromise<$model
 }
 
 /**
- * DemoProgress donne l'avancement de OpenDemo.
+ * DemoProgress donne l'avancement de OpenDemo ou de OpenSample.
  */
 export function DemoProgress(): $CancellablePromise<$models.DemoProgress> {
     return $Call.ByID(1297731146);
@@ -1016,6 +1016,16 @@ export function OpenDemo(): $CancellablePromise<$models.DemoResult> {
  */
 export function OpenLocked(path: string, readOnly: boolean): $CancellablePromise<$models.OpenResult> {
     return $Call.ByID(3237317744, path, readOnly);
+}
+
+/**
+ * OpenSample ouvre le classeur d'exemple depuis l'accueil (audit 6, I8), à
+ * la place du classeur ouvert (l'interface l'a fermé avant). Comme une
+ * démonstration, il n'est jamais enregistré de lui-même et ne laisse rien
+ * à récupérer : le fermer sans l'avoir modifié ne demande rien.
+ */
+export function OpenSample(): $CancellablePromise<$models.DemoResult> {
+    return $Call.ByID(4262399116);
 }
 
 /**

@@ -23,7 +23,8 @@ type DemoResult struct {
 	Sheet int64    `json:"sheet"` // premier onglet
 }
 
-// demoRun est l'état de la démonstration demandée au lancement (--demo).
+// demoRun est l'état d'une démonstration : demandée au lancement (--demo),
+// ou classeur d'exemple ouvert depuis l'accueil.
 type demoRun struct {
 	preset      string
 	seed        uint64
@@ -50,12 +51,16 @@ func (s *DocumentService) DemoRequested() string {
 	return s.demo.preset
 }
 
-// DemoProgress donne l'avancement de OpenDemo.
+// DemoProgress donne l'avancement de OpenDemo ou de OpenSample.
 func (s *DocumentService) DemoProgress() DemoProgress {
-	if s.demo == nil {
+	r := s.building.Load()
+	if r == nil {
+		r = s.demo
+	}
+	if r == nil {
 		return DemoProgress{}
 	}
-	p := DemoProgress{Preset: s.demo.preset, Done: int(s.demo.done.Load()), Total: int(s.demo.total.Load()), TotalCells: s.demo.cells}
+	p := DemoProgress{Preset: r.preset, Done: int(r.done.Load()), Total: int(r.total.Load()), TotalCells: r.cells}
 	if p.Total > 0 {
 		p.Cells = int(int64(p.Done) * int64(p.TotalCells) / int64(p.Total))
 	}
@@ -66,10 +71,34 @@ func (s *DocumentService) DemoProgress() DemoProgress {
 // lancement. Il n'est jamais enregistré : Fichier › Enregistrer sous pour
 // le garder.
 func (s *DocumentService) OpenDemo(ctx context.Context) (DemoResult, error) {
-	r := s.demo
-	if r == nil {
+	if s.demo == nil {
 		return DemoResult{}, errNoDemo
 	}
+	return s.openPreset(ctx, s.demo)
+}
+
+// SamplePreset est le classeur d'exemple de l'accueil : la vitrine (onglet
+// « À découvrir », ventes, TCD, SQL, scripts).
+const SamplePreset = demo.DefaultPreset
+
+// OpenSample ouvre le classeur d'exemple depuis l'accueil (audit 6, I8), à
+// la place du classeur ouvert (l'interface l'a fermé avant). Comme une
+// démonstration, il n'est jamais enregistré de lui-même et ne laisse rien
+// à récupérer : le fermer sans l'avoir modifié ne demande rien.
+func (s *DocumentService) OpenSample(ctx context.Context) (DemoResult, error) {
+	r := &demoRun{preset: SamplePreset}
+	if p, err := demo.Resolve(SamplePreset); err == nil {
+		if plan, err := p.Load(); err == nil {
+			r.cells = plan.Cells()
+		}
+	}
+	return s.openPreset(ctx, r)
+}
+
+// openPreset fabrique le classeur de démonstration r et l'ouvre.
+func (s *DocumentService) openPreset(ctx context.Context, r *demoRun) (DemoResult, error) {
+	s.building.Store(r)
+	defer s.building.CompareAndSwap(r, nil)
 	d, res, err := demo.New(ctx, r.preset, demo.Options{Seed: r.seed, Progress: func(done, total int) {
 		r.done.Store(int64(done))
 		r.total.Store(int64(total))

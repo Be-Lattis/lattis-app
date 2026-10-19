@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/lalamefine/lattis/internal/api"
 	"github.com/lalamefine/lattis/internal/archive"
@@ -88,14 +89,15 @@ type DocumentService struct {
 	sheet    int64 // feuille affichée : Cell_A1 de l'onglet SQL s'y lit
 	ui       uiState
 	mcp      mcpState
-	demo     *demoRun     // classeur de démonstration demandé au lancement
-	pq       pqState      // base de travail des requêtes d'import (query.go)
-	ev       eventLoop    // évènements du classeur (events.go)
-	closeReq closeRequest // fermeture de la fenêtre demandée (closewin.go)
-	ai       aiState      // conversation de l'onglet IA (ai.go)
-	share    shareState   // classeur partagé : suivi du serveur (sharing.go)
-	data     dataWatch    // données du Data Lake liées : suivi en direct (data.go)
-	sql      sqlRuns      // requêtes en cours de l'onglet SQL (execute.go)
+	demo     *demoRun                // classeur de démonstration demandé au lancement
+	building atomic.Pointer[demoRun] // démonstration en cours de fabrication (DemoProgress)
+	pq       pqState                 // base de travail des requêtes d'import (query.go)
+	ev       eventLoop               // évènements du classeur (events.go)
+	closeReq closeRequest            // fermeture de la fenêtre demandée (closewin.go)
+	ai       aiState                 // conversation de l'onglet IA (ai.go)
+	share    shareState              // classeur partagé : suivi du serveur (sharing.go)
+	data     dataWatch               // données du Data Lake liées : suivi en direct (data.go)
+	sql      sqlRuns                 // requêtes en cours de l'onglet SQL (execute.go)
 
 	// Classeur à ouvrir au lancement (association de fichiers, launch.go).
 	launch launchState
