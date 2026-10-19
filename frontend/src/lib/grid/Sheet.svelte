@@ -2055,6 +2055,7 @@
 		selBox = frameNow(t0);
 		pinnedFrame = [];
 		keyHintBoxes = [];
+		hiddenMarks = [];
 		// Texte centré verticalement partout (les volets dessinent entre save et
 		// restore : la ligne de base doit être posée avant, pour la marge et le bandeau).
 		ctx.textBaseline = 'middle';
@@ -2897,6 +2898,13 @@
 			ctx.fillStyle = C.active;
 			ctx.fillRect(cx(c), TOP_H - 2, cax().size(c), 2);
 		}
+		// Colonnes masquées : même repère, un clic les réaffiche.
+		for (const [i0, i1] of hiddenRuns(hiddenCols)) {
+			if (i1 < c0 - 1 || i0 > c1 + 1) continue;
+			const x = Math.round(cx(i0));
+			if (x <= MARGIN) continue;
+			hiddenMark({ rows: false, i0, i1, x: x - 4, y: 3, w: 8, h: TOP_H - 6 });
+		}
 	}
 
 	/** Marge de gauche d'un volet de lignes. */
@@ -2962,9 +2970,15 @@
 			ctx.lineTo(MARGIN, y);
 		}
 		ctx.stroke();
-		// Lignes masquées : un double trait à leur place, comme Excel.
-		ctx.fillStyle = C.frozen;
-		for (const r of hiddenRows) if (r >= r0 - 1 && r <= r1 + 1) ctx.fillRect(0, Math.round(ry(r)) - 1.5, MARGIN, 1);
+		// Lignes masquées : un repère à leur place (on s'en souvient), un clic
+		// les réaffiche.
+		for (const [i0, i1] of hiddenRuns(hiddenRows)) {
+			if (i1 < r0 - 1 || i0 > r1 + 1) continue;
+			const y = Math.round(ry(i0));
+			if (y <= TOP_H) continue;
+			const m = { rows: true, i0, i1, x: 2, y: y - 4, w: MARGIN - 4, h: 8 };
+			hiddenMark(m);
+		}
 	}
 
 	/**
@@ -3594,6 +3608,53 @@
 				else moveTo(r0, i1 + 1);
 			}
 		});
+	}
+
+	// Repères des lignes et colonnes masquées (gouttière, bandeau), cliquables.
+	type HiddenMark = { rows: boolean; i0: number; i1: number; x: number; y: number; w: number; h: number };
+	let hiddenMarks: HiddenMark[] = [];
+	/** Suites de lignes (ou colonnes) masquées consécutives. */
+	function hiddenRuns(set: Set<number>): [number, number][] {
+		const s = [...set].sort((a, b) => a - b);
+		const out: [number, number][] = [];
+		for (const i of s) {
+			const last = out[out.length - 1];
+			if (last && i === last[1] + 1) last[1] = i;
+			else out.push([i, i]);
+		}
+		return out;
+	}
+	function hiddenMark(m: HiddenMark) {
+		ctx.save();
+		ctx.fillStyle = C.active;
+		ctx.beginPath();
+		ctx.roundRect(m.x, m.y, m.w, m.h, 3);
+		ctx.fill();
+		// Deux traits blancs : des lignes repliées.
+		ctx.strokeStyle = '#fff';
+		ctx.lineWidth = 1;
+		ctx.beginPath();
+		if (m.rows) {
+			const cx0 = m.x + m.w / 2;
+			ctx.moveTo(cx0 - 4, m.y + 2.5);
+			ctx.lineTo(cx0 + 4, m.y + 2.5);
+			ctx.moveTo(cx0 - 4, m.y + m.h - 2.5);
+			ctx.lineTo(cx0 + 4, m.y + m.h - 2.5);
+		} else {
+			const cy0 = m.y + m.h / 2;
+			ctx.moveTo(m.x + 2.5, cy0 - 4);
+			ctx.lineTo(m.x + 2.5, cy0 + 4);
+			ctx.moveTo(m.x + m.w - 2.5, cy0 - 4);
+			ctx.lineTo(m.x + m.w - 2.5, cy0 + 4);
+		}
+		ctx.stroke();
+		ctx.restore();
+		hiddenMarks.push(m);
+	}
+	/** Repère sous la souris (coordonnées du canevas). */
+	function hiddenMarkAt(e: MouseEvent): HiddenMark | undefined {
+		const { x, y } = toLocal(e);
+		return hiddenMarks.find((m) => x >= m.x - 2 && x <= m.x + m.w + 2 && y >= m.y - 2 && y <= m.y + m.h + 2);
 	}
 
 	/** Lignes ou colonnes masquées dans la sélection (pour proposer Afficher). */
@@ -5943,6 +6004,15 @@
 			const cell = e.button === 0 ? cellAt(e) : null;
 			if (cell) moveTo(cell.row, cell.col, e.shiftKey);
 			return;
+		}
+		{
+			const hm = e.button === 0 ? hiddenMarkAt(e) : undefined;
+			if (hm && source.setLinesHidden) {
+				e.preventDefault();
+				const set = source.setLinesHidden;
+				menuAction(() => set(hm.rows, hm.i0, hm.i1, false));
+				return;
+			}
 		}
 		if (e.button === 0 && onFillHandle(e)) {
 			e.preventDefault();
