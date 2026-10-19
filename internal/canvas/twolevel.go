@@ -104,50 +104,74 @@ func (t *tx) setTwoLevel(tb Table, on bool) error {
 }
 
 // groupsAbove lit les groupes posés au-dessus de l'en-tête (ligne Row-1),
-// comme Excel : une cellule fusionnée couvre exactement sa fusion ; une
-// valeur non fusionnée couvre les cellules vides qui la suivent, jusqu'à la
-// valeur ou la fusion suivante. Les cellules et leurs fusions sont retirées
-// de la feuille (elles deviennent la bande).
+// comme Excel : une cellule fusionnée (même sur plusieurs lignes) donne son
+// texte à toutes les colonnes qu'elle couvre ; une valeur non fusionnée
+// couvre les cellules vides qui la suivent, jusqu'à la valeur ou la fusion
+// suivante. Les cellules et leurs fusions sont retirées de la feuille (elles
+// deviennent la bande).
 func (t *tx) groupsAbove(tb Table) ([]string, error) {
 	r := tb.Row - 1
 	cells, err := t.cells(tb.Sheet)
 	if err != nil {
 		return nil, err
 	}
-	text := map[int]string{}
-	for _, c := range cells {
-		if c.Row == r {
-			s, err := t.freeText(tb.Sheet, c)
-			if err != nil {
-				return nil, err
-			}
-			text[c.Col] = cleanGroup(s)
-		}
-	}
 	merges, err := t.merges(tb.Sheet)
 	if err != nil {
 		return nil, err
 	}
-	merged := map[int]string{}
-	isMerged := map[int]bool{}
-	var anchors [][2]int
+	var over []Merge
 	for _, g := range merges {
-		if !g.overlaps(r, tb.Col, r, tb.Right()) {
+		if g.overlaps(r, tb.Col, r, tb.Right()) {
+			over = append(over, g)
+		}
+	}
+	inMerge := func(c cell) (Merge, bool) {
+		for _, g := range over {
+			if g.overlaps(c.Row, c.Col, c.Row, c.Col) {
+				return g, true
+			}
+		}
+		return Merge{}, false
+	}
+	// Textes de la ligne, et de celles des fusions qui la traversent (une
+	// fusion sur deux lignes, un texte resté sous la fusion).
+	text := map[[2]int]string{}
+	var spill []cell
+	for _, c := range cells {
+		g, ok := inMerge(c)
+		if c.Row != r && !ok {
 			continue
 		}
-		v := ""
-		if g.Row == r {
-			v = text[g.Col]
+		s, err := t.freeText(tb.Sheet, c)
+		if err != nil {
+			return nil, err
+		}
+		if s = cleanGroup(s); s != "" {
+			text[[2]int{c.Row, c.Col}] = s
+		}
+		if ok && (c.Row != r || c.Col < tb.Col || c.Col > tb.Right()) && !(c.Row == g.Row && c.Col == g.Col) {
+			spill = append(spill, c)
+		}
+	}
+	merged := map[int]string{}
+	isMerged := map[int]bool{}
+	for _, g := range over {
+		// Le texte de la fusion est celui de sa première cellule, sinon le
+		// premier qu'elle couvre.
+		v := text[[2]int{g.Row, g.Col}]
+		for rr := g.Row; v == "" && rr <= g.bottom(); rr++ {
+			for c := g.Col; v == "" && c <= g.right(); c++ {
+				v = text[[2]int{rr, c}]
+			}
 		}
 		for c := max(g.Col, tb.Col); c <= min(g.right(), tb.Right()); c++ {
 			isMerged[c], merged[c] = true, v
 		}
-		anchors = append(anchors, [2]int{g.Row, g.Col})
 	}
 	groups := make([]string, len(tb.Cols))
 	cur := ""
 	for c := tb.Col; c <= tb.Right(); c++ {
-		switch v, ok := text[c]; {
+		switch v, ok := text[[2]int{r, c}]; {
 		case isMerged[c]:
 			groups[c-tb.Col], cur = merged[c], ""
 		case ok:
@@ -157,17 +181,23 @@ func (t *tx) groupsAbove(tb Table) ([]string, error) {
 		}
 	}
 	// La ligne devient la bande : fusions, cellules et mise en forme partent.
-	for _, a := range anchors {
-		if err := t.styleFree(tb.Sheet, a[0], a[1], Style{"mr": nil, "mc": nil}, nil); err != nil {
+	// Une fusion qui déborde de la bande y part entière : son texte aussi.
+	for _, g := range over {
+		if err := t.styleFree(tb.Sheet, g.Row, g.Col, Style{"mr": nil, "mc": nil}, nil); err != nil {
 			return nil, err
 		}
-		if a[0] == r && (a[1] < tb.Col || a[1] > tb.Right()) {
-			if err := t.setFreeCell(tb.Sheet, a[0], a[1], ""); err != nil {
+		if g.Row != r || g.Col < tb.Col || g.Col > tb.Right() {
+			if err := t.setFreeCell(tb.Sheet, g.Row, g.Col, ""); err != nil {
 				return nil, err
 			}
-			if err := t.deleteWhere(`_lattis_cell_styles`, `sheet = ? AND row = ? AND col = ?`, tb.Sheet, a[0], a[1]); err != nil {
+			if err := t.deleteWhere(`_lattis_cell_styles`, `sheet = ? AND row = ? AND col = ?`, tb.Sheet, g.Row, g.Col); err != nil {
 				return nil, err
 			}
+		}
+	}
+	for _, c := range spill {
+		if err := t.setFreeCell(tb.Sheet, c.Row, c.Col, ""); err != nil {
+			return nil, err
 		}
 	}
 	if err := t.clearBand(tb); err != nil {

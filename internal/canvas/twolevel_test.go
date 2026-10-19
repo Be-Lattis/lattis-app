@@ -3,6 +3,7 @@ package canvas
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -269,5 +270,117 @@ func TestSplitGroup(t *testing.T) {
 		if g, s := splitGroup(c.in); g != c.g || s != c.s {
 			t.Errorf("%q : %q %q", c.in, g, s)
 		}
+	}
+}
+
+// mergedGroupsFixture : tableau Nids (en-tête ligne 3, six colonnes) sous une
+// ligne de groupes préparée par prep, puis groupes d'en-têtes activés.
+func mergedGroupsFixture(t *testing.T, prep func(d *fixture)) *fixture {
+	t.Helper()
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 3, 0, [][]string{
+		{"Nid", "Ref", "Nom", "Statut", "Parcelle", "Note"},
+		{"1", "2", "a", "b", "c", "z"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.RenameTable(ctx, tablesOf(t, d)[0].Name, "Nids"); err != nil {
+		t.Fatal(err)
+	}
+	prep(d)
+	if err := d.SetTwoLevel(ctx, "Nids", true); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "deux lignes")
+	return d
+}
+
+func mergeFree(t *testing.T, d *fixture, r0, c0, r1, c1 int) {
+	t.Helper()
+	if _, err := d.MergeCells(context.Background(), 1, r0, c0, r1, c1); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// spansOf : les cellules de la bande (groupSpan), de gauche à droite.
+func spansOf(t *testing.T, d *fixture) string {
+	t.Helper()
+	var out [][2]int
+	if err := d.read(context.Background(), func(tx *tx) error {
+		ts, err := tx.tables(1)
+		if err != nil {
+			return err
+		}
+		for i := 0; i < len(ts[0].Cols); {
+			lo, hi := groupSpan(ts[0], i)
+			out = append(out, [2]int{lo, hi})
+			i = hi + 1
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return fmt.Sprint(out)
+}
+
+// Une cellule fusionnée donne son texte à toutes les colonnes qu'elle
+// couvre : la bande la garde fusionnée.
+func TestTwoLevelKeepsMerges(t *testing.T) {
+	d := mergedGroupsFixture(t, func(d *fixture) {
+		setCells(t, d, 2, 0, "N° DE NID", 2, 2, "BOISEMENT")
+		mergeFree(t, d, 2, 0, 2, 1)
+		mergeFree(t, d, 2, 2, 2, 4)
+	})
+	want := "N° DE NID.Nid|N° DE NID.Ref|BOISEMENT.Nom|BOISEMENT.Statut|BOISEMENT.Parcelle|Note"
+	if got := colNames(tablesOf(t, d)[0]); got != want {
+		t.Fatalf("groupes : %s", got)
+	}
+	if got := spansOf(t, d); got != "[[0 1] [2 4] [5 5]]" {
+		t.Fatalf("bande : %s", got)
+	}
+}
+
+// Fusion dont la première cellule est vide mais qui couvre un texte : le
+// texte devient le groupe de toute la fusion. Une fusion vide ne prend pas
+// le groupe d'à côté, et une cellule blanche n'interrompt pas un groupe non
+// fusionné.
+func TestTwoLevelMergeEmptyFirstCell(t *testing.T) {
+	d := mergedGroupsFixture(t, func(d *fixture) {
+		mergeFree(t, d, 2, 0, 2, 1)
+		if err := d.Do(context.Background(), "texte caché", func(tx *tx) error {
+			return tx.setFreeCell(1, 2, 1, "N° DE NID")
+		}); err != nil {
+			t.Fatal(err)
+		}
+		mergeFree(t, d, 2, 2, 2, 3)
+		setCells(t, d, 2, 4, "Lieu", 2, 5, " ")
+	})
+	want := "N° DE NID.Nid|N° DE NID.Ref|Nom|Statut|Lieu.Parcelle|Lieu.Note"
+	if got := colNames(tablesOf(t, d)[0]); got != want {
+		t.Fatalf("groupes : %s", got)
+	}
+	if got := spansOf(t, d); got != "[[0 1] [2 2] [3 3] [4 5]]" {
+		t.Fatalf("bande : %s", got)
+	}
+}
+
+// Fusion sur deux lignes (le titre descend jusqu'à la bande) : son texte
+// devient le groupe et quitte la ligne du dessus.
+func TestTwoLevelTallMerge(t *testing.T) {
+	d := mergedGroupsFixture(t, func(d *fixture) {
+		setCells(t, d, 1, 0, "N° DE NID", 2, 2, "BOISEMENT")
+		mergeFree(t, d, 1, 0, 2, 1)
+		mergeFree(t, d, 2, 2, 2, 4)
+	})
+	want := "N° DE NID.Nid|N° DE NID.Ref|BOISEMENT.Nom|BOISEMENT.Statut|BOISEMENT.Parcelle|Note"
+	if got := colNames(tablesOf(t, d)[0]); got != want {
+		t.Fatalf("groupes : %s", got)
+	}
+	if raw, ok := freeAt(t, d, 1, 0); ok {
+		t.Fatalf("texte resté au-dessus : %q", raw)
+	}
+	if got := spansOf(t, d); got != "[[0 1] [2 4] [5 5]]" {
+		t.Fatalf("bande : %s", got)
 	}
 }
