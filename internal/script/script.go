@@ -72,6 +72,22 @@ type Limits struct {
 // DefaultLimits sont les bornes par défaut.
 var DefaultLimits = Limits{Timeout: 30 * time.Second, MaxRows: 100_000, MaxHeap: 512 << 20, MaxPrint: 1000}
 
+// TimeoutSetting, s'il est fixé, donne la durée maximale d'un script réglée
+// par l'utilisateur ou la DSI (limits.scriptSeconds).
+var TimeoutSetting func() time.Duration
+
+// Defaults donne les bornes d'un script : DefaultLimits, avec la durée
+// maximale réglée.
+func Defaults() Limits {
+	l := DefaultLimits
+	if TimeoutSetting != nil {
+		if d := TimeoutSetting(); d > 0 {
+			l.Timeout = d
+		}
+	}
+	return l
+}
+
 // Result est l'issue d'un script.
 type Result struct {
 	Output   []string      `json:"output"`

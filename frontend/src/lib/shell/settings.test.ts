@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boolSetting, findSetting, settingNote, settingSections, visibleSections } from './settings';
+import { boolSetting, findSetting, parseNumberSetting, settingNote, settingSections, visibleSections } from './settings';
 
 describe('paramètres', () => {
 	it('Pages web coupés sans réglage', () => {
@@ -29,5 +29,21 @@ describe('réglages des fonctionnalités à activer', () => {
 	it("cache la section IA tant que l'onglet IA est décoché", () => {
 		expect(visibleSections([]).map((s) => s.id)).not.toContain('ai');
 		expect(visibleSections([{ path: 'ai.enabled', value: true }]).map((s) => s.id)).toContain('ai');
+	});
+});
+
+describe('limites (audit 6, M14)', () => {
+	const limits = settingSections.find((s) => s.id === 'limits');
+	it('expose les quatre limites, toujours visibles', () => {
+		expect(limits?.settings.map((s) => s.path)).toEqual(['limits.undoDepth', 'limits.scriptSeconds', 'limits.sqlReadSeconds', 'limits.sqlWriteSeconds']);
+		expect(visibleSections([]).map((s) => s.id)).toContain('limits');
+	});
+	it('refuse un nombre hors bornes ou non entier', () => {
+		const d = limits!.settings[0];
+		expect(parseNumberSetting(d, ' 500 ')).toBe(500);
+		expect(parseNumberSetting(d, '1 000')).toBe(1000);
+		expect(parseNumberSetting(d, '5')).toContain('de 10 à 10000');
+		expect(parseNumberSetting(d, '12,5')).toContain('entier');
+		expect(parseNumberSetting(d, '')).toContain('entier');
 	});
 });

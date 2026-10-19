@@ -105,7 +105,7 @@ func RunScriptFrom(parent context.Context, host Host, name, src, entry string) (
 // runOne exécute un script dans ctx (qui porte déjà son groupe
 // d'annulation) ; event, s'il est donné, est passé à la fonction entry.
 func runOne(ctx context.Context, host Host, name, src, entry string, event any) (ScriptResult, error) {
-	res, _, err := runLimited(ctx, host, name, src, entry, event, script.DefaultLimits)
+	res, _, err := runLimited(ctx, host, name, src, entry, event, script.Defaults())
 	return res, err
 }
 

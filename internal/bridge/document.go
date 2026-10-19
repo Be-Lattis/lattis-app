@@ -716,7 +716,7 @@ func (s *DocumentService) QueryToSheet(ctx context.Context, q, name string, head
 	if q, err = d.ReadCTE(ctx, q); err != nil {
 		return QuerySheet{}, err
 	}
-	qctx, done := s.sqlContext(ctx, SQLWriteTimeout)
+	qctx, done := s.sqlContext(ctx, sqlWriteTimeout())
 	res, err := d.QueryToSheet(qctx, q, name, headers)
 	err = sqlErr(qctx, err)
 	done()

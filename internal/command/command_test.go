@@ -259,5 +259,38 @@ func TestDetach(t *testing.T) {
 	}
 	if v := value(t, db, 2); v != "absent" {
 		t.Fatalf("groupe : %v", v)
+
+// Profondeur réglée (limits.undoDepth, audit 6, M14) : lue à chaque
+// commande quand le bus n'a pas la sienne.
+func TestDepthSetting(t *testing.T) {
+	ctx := context.Background()
+	db, bus := open(t, filepath.Join(t.TempDir(), "d.sqlite"))
+	defer db.Close()
+	old := DepthSetting
+	defer func() { DepthSetting = old }()
+	if bus.depth() != DefaultDepth {
+		t.Fatalf("profondeur par défaut : %d", bus.depth())
+	}
+	DepthSetting = func() int { return 2 }
+	for i := 1; i <= 4; i++ {
+		if _, err := bus.Do(ctx, "Action", func(tx *Tx) error {
+			return tx.Apply([]Stmt{S(`INSERT INTO t (v) VALUES (?)`, i)}, []Stmt{S(`DELETE FROM t WHERE v = ?`, i)})
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	n := 0
+	for {
+		if _, err := bus.Undo(ctx); err != nil {
+			break
+		}
+		n++
+	}
+	if n != 2 {
+		t.Fatalf("%d annulations possibles, attendu 2", n)
+	}
+	bus.Depth = 7
+	if bus.depth() != 7 {
+		t.Fatal("profondeur propre au bus ignorée")
 	}
 }

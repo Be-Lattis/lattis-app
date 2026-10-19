@@ -204,7 +204,7 @@ func FireEvent(host Host, event string, data map[string]any) (EventResult, error
 		arg[k] = v
 	}
 	arg["event"] = event
-	lim := script.DefaultLimits
+	lim := script.Defaults()
 	if event == EventBeforeSave || event == EventBeforeClose {
 		lim.Timeout = BeforeTimeout
 	}

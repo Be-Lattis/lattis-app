@@ -5,7 +5,7 @@
 	// redémarrer ; un réglage imposé par une stratégie est grisé.
 	import { modal } from '#lib/ui/focus.js';
 	import { onMount } from 'svelte';
-	import { findSetting, settingNote, settingSections, visibleSections } from './settings';
+	import { findSetting, parseNumberSetting, settingNote, settingSections, visibleSections } from './settings';
 	import { loadSettings, mcpAvailable, setSetting, userSettings } from './settings.svelte.js';
 
 	interface Props {
@@ -42,7 +42,7 @@
 	// Fermeture (Échap compris) : le champ texte en cours de saisie s'écrit d'abord (évènement change).
 	function close() {
 		const a = document.activeElement;
-		if (a instanceof HTMLInputElement && a.type === 'text') a.blur();
+		if (a instanceof HTMLInputElement && (a.type === 'text' || a.type === 'number')) a.blur();
 		onclose();
 	}
 </script>
@@ -110,6 +110,27 @@
 									disabled={!st || st.locked || busy === d.path}
 									onchange={(e) => change(d.path, e.currentTarget.value.trim())}
 								/>
+							</label>
+						{:else if d.kind === 'number'}
+							<label class="text number" class:off={st?.locked}>
+								<span>{d.label}</span>
+								<input
+									type="number"
+									min={d.min}
+									max={d.max}
+									step="1"
+									value={typeof st?.value === 'number' ? st.value : ''}
+									disabled={!st || st.locked || busy === d.path}
+									onchange={(e) => {
+										const v = parseNumberSetting(d, e.currentTarget.value);
+										if (typeof v === 'number') change(d.path, v);
+										else {
+											error = v;
+											loadSettings();
+										}
+									}}
+								/>
+								{#if d.unit}<span class="unit">{d.unit}</span>{/if}
 							</label>
 						{/if}
 						{#if d.help}<p class="muted">{d.help}</p>{/if}
@@ -231,6 +252,19 @@
 	label.text input:focus {
 		outline: none;
 		border-color: #217346;
+	}
+	/* Nombre : libellé, champ court et unité sur une ligne. */
+	label.text.number {
+		flex-direction: row;
+		align-items: center;
+		gap: 8px;
+	}
+	label.text.number span:first-child {
+		flex: 1;
+	}
+	label.text.number input {
+		width: 90px;
+		text-align: right;
 	}
 	p {
 		margin: 4px 0 0 24px;

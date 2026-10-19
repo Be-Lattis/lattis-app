@@ -44,6 +44,10 @@ CREATE TABLE IF NOT EXISTS _lattis_journal (
 // DefaultDepth est le nombre de commandes gardées dans l'historique.
 const DefaultDepth = 200
 
+// DepthSetting, s'il est fixé, donne la profondeur de l'historique réglée
+// par l'utilisateur ou la DSI (limits.undoDepth), lue à chaque commande.
+var DepthSetting func() int
+
 // ErrNothing signale qu'il n'y a rien à annuler ou à rétablir.
 var ErrNothing = errors.New("rien à annuler ou à rétablir")
 
@@ -165,7 +169,9 @@ func run(ctx context.Context, tx *sql.Tx, stmts []Stmt, c Capture) error {
 
 // Bus applique, annule et rétablit les commandes d'un document.
 type Bus struct {
-	db    *store.Store
+	db *store.Store
+	// Depth : commandes gardées dans l'historique ; 0 : DepthSetting, ou
+	// DefaultDepth.
 	Depth int
 	// Recorder, s'il est fixé, relève les opérations logiques de chaque
 	// transaction (classeurs partagés : voir internal/remote/oplog).
@@ -199,7 +205,20 @@ func (b *Bus) guarded(ctx context.Context, tx *sql.Tx, verb, name string, fn fun
 }
 
 // New crée le bus. Le schéma du journal doit exister (voir Schema).
-func New(db *store.Store) *Bus { return &Bus{db: db, Depth: DefaultDepth} }
+func New(db *store.Store) *Bus { return &Bus{db: db} }
+
+// depth donne la profondeur de l'historique en vigueur.
+func (b *Bus) depth() int {
+	if b.Depth > 0 {
+		return b.Depth
+	}
+	if DepthSetting != nil {
+		if n := DepthSetting(); n > 0 {
+			return n
+		}
+	}
+	return DefaultDepth
+}
 
 // Do exécute une action. Si fn échoue, rien n'est appliqué. Une action qui
 // ne change rien n'entre pas dans l'historique. Renvoie le numéro de la
@@ -480,7 +499,7 @@ func Forget(ctx context.Context, tx *sql.Tx) error {
 
 // trim fait sortir de l'historique les commandes au-delà de Depth.
 func (b *Bus) trim(ctx context.Context, tx *sql.Tx) error {
-	rs, err := tx.QueryContext(ctx, `SELECT seq, steps FROM _lattis_journal WHERE undone = 0 ORDER BY seq DESC LIMIT -1 OFFSET ?`, b.Depth)
+	rs, err := tx.QueryContext(ctx, `SELECT seq, steps FROM _lattis_journal WHERE undone = 0 ORDER BY seq DESC LIMIT -1 OFFSET ?`, b.depth())
 	if err != nil {
 		return err
 	}

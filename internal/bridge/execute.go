@@ -18,8 +18,16 @@ type ExecResult struct {
 // SQLWriteTimeout borne une requête d'écriture de l'onglet SQL : elle tient
 // la file d'écriture du classeur et bloque, le temps qu'elle dure, toutes
 // les saisies. Au-delà, elle est annulée (rien n'est écrit). Les lectures
-// ont leur propre délai (grid.Query).
-var SQLWriteTimeout = 2 * time.Minute
+// ont leur propre délai (grid.Query). 0 : le réglage limits.sqlWriteSeconds
+// (2 minutes par défaut, voir limits.go).
+var SQLWriteTimeout time.Duration
+
+func sqlWriteTimeout() time.Duration {
+	if SQLWriteTimeout > 0 {
+		return SQLWriteTimeout
+	}
+	return limitSeconds("limits.sqlWriteSeconds")
+}
 
 var errSQLStopped = errors.New("requête arrêtée par l'utilisateur")
 
@@ -83,7 +91,7 @@ func (s *DocumentService) StopSQL() {
 // Execute exécute une requête d'écriture (INSERT, UPDATE, DELETE) sur le
 // classeur, avec les noms affichés des tableaux. Elle forme une étape
 // d'annulation ; les changements de structure sont refusés. Elle s'arrête
-// avec StopSQL ou au bout de SQLWriteTimeout.
+// avec StopSQL ou au bout du délai des écritures (limits.sqlWriteSeconds).
 func (s *DocumentService) Execute(ctx context.Context, q string) (ExecResult, error) {
 	d, err := s.current()
 	if err != nil {
@@ -93,7 +101,7 @@ func (s *DocumentService) Execute(ctx context.Context, q string) (ExecResult, er
 		return ExecResult{}, err
 	}
 	start := time.Now()
-	qctx, done := s.sqlContext(ctx, SQLWriteTimeout)
+	qctx, done := s.sqlContext(ctx, sqlWriteTimeout())
 	n, err := d.ExecSQL(qctx, q)
 	err = sqlErr(qctx, err)
 	done()

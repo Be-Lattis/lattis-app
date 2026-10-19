@@ -22,6 +22,22 @@ type QueryResult struct {
 // ErrEmptyQuery signale une requête vide.
 var ErrEmptyQuery = errors.New("requête vide")
 
+// ReadTimeout borne une requête de lecture (onglet SQL, db.query des
+// scripts) ; ReadTimeoutSetting, s'il est fixé, donne la durée réglée par
+// l'utilisateur ou la DSI (limits.sqlReadSeconds).
+const ReadTimeout = 30 * time.Second
+
+var ReadTimeoutSetting func() time.Duration
+
+func readTimeout() time.Duration {
+	if ReadTimeoutSetting != nil {
+		if d := ReadTimeoutSetting(); d > 0 {
+			return d
+		}
+	}
+	return ReadTimeout
+}
+
 // Query exécute une requête en lecture seule (le pool de lecture est en
 // query_only : une écriture échoue) et renvoie au plus limit lignes.
 func Query(ctx context.Context, db *sql.DB, q string, limit int) (QueryResult, error) {
@@ -44,7 +60,7 @@ func queryArgs(ctx context.Context, db *sql.DB, q string, limit int, args ...any
 		return QueryResult{}, err
 	}
 	start := time.Now()
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, readTimeout())
 	defer cancel()
 	// Requête de l'utilisateur : sous l'autorisateur (ni ATTACH, ni tables
 	// internes _lattis_*, voir store.UserConn).

@@ -565,7 +565,7 @@ export function ExcelTables(path: string): $CancellablePromise<query$0.XLSXTable
  * Execute exécute une requête d'écriture (INSERT, UPDATE, DELETE) sur le
  * classeur, avec les noms affichés des tableaux. Elle forme une étape
  * d'annulation ; les changements de structure sont refusés. Elle s'arrête
- * avec StopSQL ou au bout de SQLWriteTimeout.
+ * avec StopSQL ou au bout du délai des écritures (limits.sqlWriteSeconds).
  */
 export function Execute(q: string): $CancellablePromise<$models.ExecResult> {
     return $Call.ByID(1682621773, q);

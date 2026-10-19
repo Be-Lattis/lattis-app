@@ -317,3 +317,17 @@ function deux() return {n = 2}, "ignoré" end`
 		t.Fatalf("sans Entry : %#v", res.Return)
 	}
 }
+
+// Durée maximale réglée (limits.scriptSeconds, audit 6, M14).
+func TestDefaultsTimeout(t *testing.T) {
+	old := TimeoutSetting
+	defer func() { TimeoutSetting = old }()
+	TimeoutSetting = nil
+	if Defaults() != DefaultLimits {
+		t.Fatal("sans réglage : DefaultLimits")
+	}
+	TimeoutSetting = func() time.Duration { return 5 * time.Second }
+	if l := Defaults(); l.Timeout != 5*time.Second || l.MaxRows != DefaultLimits.MaxRows {
+		t.Fatalf("réglage : %+v", l)
+	}
+}

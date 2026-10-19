@@ -43,9 +43,19 @@ Les objets sont fusionnés clé par clé : une couche peut ne changer que `conne
   },
   "ai": { "enabled": false, "endpoint": "https://ia-gateway.acme.com/v1", "dataSharing": "schema-only" },
   "features": { "mcp": { "enabled": false }, "allowUserConnections": true,
-                "luaHttp": { "allowedDomains": ["api.acme.com"] } }
+                "luaHttp": { "allowedDomains": ["api.acme.com"] } },
+  "limits": { "undoDepth": 200, "scriptSeconds": 30, "sqlReadSeconds": 30, "sqlWriteSeconds": 120 }
 }
 ```
+
+`limits` borne ce qui peut tenir l'application ou la mémoire ; chaque clé est un entier, une valeur hors bornes est ignorée. L'utilisateur les règle aussi dans Fichier › Paramètres › Limites, sauf si une stratégie les impose. Un changement vaut tout de suite.
+
+| Clé | Rôle | Défaut | Bornes |
+|---|---|---:|---|
+| `limits.undoDepth` | commandes que `Ctrl+Z` peut annuler | 200 | 10 à 10 000 |
+| `limits.scriptSeconds` | durée maximale d'un script Lua, en secondes | 30 | 1 à 3 600 |
+| `limits.sqlReadSeconds` | durée maximale d'une lecture de l'onglet SQL ou d'un script | 30 | 1 à 3 600 |
+| `limits.sqlWriteSeconds` | durée maximale d'une écriture de l'onglet SQL (annulée au-delà) | 120 | 1 à 3 600 |
 
 `ai.dataSharing` vaut `schema-only` (structure seulement, par défaut), `sample` (quelques lignes d'exemple par lecture) ou `full` (tout le classeur). Il s'applique à l'assistant intégré comme à Claude Desktop ou Claude Code par le serveur MCP.
 

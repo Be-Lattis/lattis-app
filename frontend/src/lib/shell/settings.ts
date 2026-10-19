@@ -14,7 +14,7 @@ export interface SettingState {
 
 export interface SettingDef {
 	path: string;
-	kind: 'bool' | 'choice' | 'text';
+	kind: 'bool' | 'choice' | 'text' | 'number';
 	label: string;
 	help?: string;
 	/** Exemple affiché dans un réglage 'text' vide. */
@@ -23,6 +23,10 @@ export interface SettingDef {
 	choices?: { value: string; label: string }[];
 	/** Réglage d'une fonctionnalité à activer : masqué tant qu'elle ne l'est pas. */
 	requires?: string;
+	/** Bornes et unité d'un réglage 'number' (entier). */
+	min?: number;
+	max?: number;
+	unit?: string;
 }
 
 export interface SettingSection {
@@ -88,8 +92,60 @@ export const settingSections: SettingSection[] = [
 				help: "Fournisseur « Modèle local » : l'adresse d'Ollama, LM Studio ou d'un autre serveur compatible OpenAI sur ce poste. Aucune donnée ne quitte l'ordinateur."
 			}
 		]
+	},
+	{
+		id: 'limits',
+		title: 'Limites',
+		settings: [
+			{
+				path: 'limits.undoDepth',
+				kind: 'number',
+				label: 'Profondeur d’annulation',
+				unit: 'commandes',
+				min: 10,
+				max: 10000,
+				help: 'Nombre de commandes que Ctrl+Z peut annuler (200 par défaut). L’historique n’est jamais enregistré dans le fichier.'
+			},
+			{
+				path: 'limits.scriptSeconds',
+				kind: 'number',
+				label: 'Durée maximale d’un script',
+				unit: 's',
+				min: 1,
+				max: 3600,
+				help: 'Au-delà, le script est arrêté et ce qu’il a modifié est annulé (30 s par défaut).'
+			},
+			{
+				path: 'limits.sqlReadSeconds',
+				kind: 'number',
+				label: 'Durée maximale d’une lecture SQL',
+				unit: 's',
+				min: 1,
+				max: 3600,
+				help: 'Requêtes de l’onglet SQL et lectures des scripts (30 s par défaut).'
+			},
+			{
+				path: 'limits.sqlWriteSeconds',
+				kind: 'number',
+				label: 'Durée maximale d’une écriture SQL',
+				unit: 's',
+				min: 1,
+				max: 3600,
+				help: 'Une écriture de l’onglet SQL bloque les saisies tant qu’elle dure ; au-delà, elle est annulée sans rien modifier (120 s par défaut).'
+			}
+		]
 	}
 ];
+
+/** Valeur d'un réglage 'number' saisie (texte) : un entier dans ses bornes, ou un message d'erreur. */
+export function parseNumberSetting(d: SettingDef, raw: string): number | string {
+	const s = raw.trim().replace(/[\s ]/g, '');
+	const n = /^\d+$/.test(s) ? Number(s) : NaN;
+	const lo = d.min ?? 0;
+	const hi = d.max ?? Number.MAX_SAFE_INTEGER;
+	if (!Number.isInteger(n) || n < lo || n > hi) return `${d.label} : un nombre entier de ${lo} à ${hi}`;
+	return n;
+}
 
 /**
  * Sections et réglages à montrer (choix de Louis) : ceux d'une fonctionnalité

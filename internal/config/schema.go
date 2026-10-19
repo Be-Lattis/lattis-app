@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -23,6 +24,55 @@ type Settings struct {
 	AI                  AI                           `json:"ai,omitempty"`
 	MCP                 MCP                          `json:"mcp,omitempty"`
 	Features            Features                     `json:"features,omitempty"`
+	Limits              Limits                       `json:"limits,omitempty"`
+}
+
+// Limits borne ce qui peut tenir l'application ou la mémoire (audit 6,
+// M14) : réglables par l'utilisateur (Fichier › Paramètres) comme par la
+// DSI.
+type Limits struct {
+	// UndoDepth : commandes gardées dans l'historique d'annulation (200).
+	UndoDepth int `json:"undoDepth,omitempty"`
+	// ScriptSeconds : durée maximale d'un script Lua (30).
+	ScriptSeconds int `json:"scriptSeconds,omitempty"`
+	// SQLReadSeconds, SQLWriteSeconds : durée maximale d'une lecture (30) et
+	// d'une écriture (120) de l'onglet SQL.
+	SQLReadSeconds  int `json:"sqlReadSeconds,omitempty"`
+	SQLWriteSeconds int `json:"sqlWriteSeconds,omitempty"`
+}
+
+// LimitRange est la valeur par défaut et les bornes d'un réglage de Limits.
+type LimitRange struct{ Default, Min, Max int }
+
+// LimitRanges donne les réglages de Limits par chemin.
+var LimitRanges = map[string]LimitRange{
+	"limits.undoDepth":       {200, 10, 10000},
+	"limits.scriptSeconds":   {30, 1, 3600},
+	"limits.sqlReadSeconds":  {30, 1, 3600},
+	"limits.sqlWriteSeconds": {120, 1, 3600},
+}
+
+// limitRange trouve le réglage de Limits d'un chemin (sans tenir compte de
+// la casse).
+func limitRange(path string) (LimitRange, bool) {
+	for k, r := range LimitRanges {
+		if strings.EqualFold(k, path) {
+			return r, true
+		}
+	}
+	return LimitRange{}, false
+}
+
+// Limit donne un réglage de Limits de c, ramené dans ses bornes.
+func Limit(c *Config, path string) int {
+	r, _ := limitRange(path)
+	n := r.Default
+	if v, ok := c.Lookup(path); ok {
+		if f, ok := v.(float64); ok {
+			n = int(f)
+		}
+	}
+	return min(max(n, r.Min), r.Max)
 }
 
 // Remote règle la configuration distante.
@@ -146,11 +196,17 @@ func Defaults() Tree {
 		"ai": Tree{"enabled": false, "provider": "anthropic", "dataSharing": "schema-only",
 			"localUrl": "http://localhost:11434/v1"}, // Ollama
 		"mcp": Tree{"confirmWrites": false},
+		"limits": Tree{
+			"undoDepth":       float64(LimitRanges["limits.undoDepth"].Default),
+			"scriptSeconds":   float64(LimitRanges["limits.scriptSeconds"].Default),
+			"sqlReadSeconds":  float64(LimitRanges["limits.sqlReadSeconds"].Default),
+			"sqlWriteSeconds": float64(LimitRanges["limits.sqlWriteSeconds"].Default),
+		},
 	}
 }
 
 var topLevel = []string{"version", "organization", "configUrl", "remote", "allowPolicyOverride",
-	"identity", "connections", "ai", "mcp", "features"}
+	"identity", "connections", "ai", "mcp", "features", "limits"}
 
 func knownTopLevel(k string) bool {
 	for _, t := range topLevel {
@@ -214,6 +270,15 @@ type validator func(any) error
 // coerce convertit une valeur venue d'un texte ou d'un DWORD (environnement,
 // Registre) vers le type attendu ; ok si elle a changé.
 func coerce(path string, v any) (any, bool) {
+	if _, ok := limitRange(path); ok {
+		// Nombre venu d'un texte (variable LATTIS_*, --set).
+		if s, ok := v.(string); ok {
+			if f, err := strconv.ParseFloat(strings.TrimSpace(s), 64); err == nil {
+				return f, true
+			}
+		}
+		return v, false
+	}
 	if !boolPath(path) {
 		return v, false
 	}
@@ -270,6 +335,7 @@ var validators = []struct {
 	{"ai.dataSharing", oneOf("schema-only", "sample", "full")},
 	{"ai.keepConversation", isBool},
 	{"mcp.confirmWrites", isBool},
+	{"limits.*", inLimitRange},
 	{"connections.*.kind", oneOf("postgres", "mysql", "sqlserver", "web", "lattis")},
 	{"connections.*.auth.mode", oneOf("none", "password", "token", "integrated", "oidc")},
 	{"ai.auth.mode", oneOf("none", "token", "oidc")},
@@ -279,12 +345,30 @@ var validators = []struct {
 }
 
 func validatorFor(path string) validator {
+	if r, ok := limitRange(path); ok {
+		return between(r.Min, r.Max)
+	}
 	for _, v := range validators {
 		if matchPath(v.pattern, path) {
 			return v.check
 		}
 	}
 	return nil
+}
+
+// inLimitRange : réglage inconnu de limits (les connus ont leurs bornes,
+// voir validatorFor).
+func inLimitRange(any) error { return errors.New("réglage inconnu") }
+
+// between : un entier de lo à hi.
+func between(lo, hi int) validator {
+	return func(v any) error {
+		f, ok := v.(float64)
+		if !ok || f != float64(int(f)) || int(f) < lo || int(f) > hi {
+			return fmt.Errorf("nombre entier de %d à %d attendu", lo, hi)
+		}
+		return nil
+	}
 }
 
 func isBool(v any) error {
