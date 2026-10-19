@@ -638,6 +638,10 @@
 		 * affichée), sans message ; graphiques et contrôles ne se sélectionnent
 		 * plus, les boutons s'exécutent toujours. */
 		locked?: string;
+		/** Structure protégée (Révision › Protéger la structure, ou le classeur) : seule
+		 * la saisie dans les tableaux ; ni colonne de plus, ni graphique ou contrôle à
+		 * sélectionner, déplacer ou redimensionner. */
+		structure?: boolean;
 		/** Volets figés : lignes et colonnes qui restent affichées pendant le défilement. */
 		freeze?: { rows: number; cols: number };
 		/** Zoom de la feuille (1 : 100 %), voir zoom.ts. */
@@ -676,7 +680,7 @@
 		onplacing?: (p: { hint: string; create: boolean } | null) => void;
 	}
 
-	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', freeze, zoom = 1, onzoom, animate = true, sheetName = '', onsheet, onrowlink, onreflink, onrefback, onask, onsharedata, onaddshared, sourceTables = [], onpushsource, pageBreaks, onplacing }: Props = $props();
+	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', structure = false, freeze, zoom = 1, onzoom, animate = true, sheetName = '', onsheet, onrowlink, onreflink, onrefback, onask, onsharedata, onaddshared, sourceTables = [], onpushsource, pageBreaks, onplacing }: Props = $props();
 
 	// Feuille sans fin pratique (choix de Louis) : au-delà des limites d'Excel,
 	// bornée par la nomenclature Cell[ZZZZ999999999] (4 lettres, 9 chiffres).
@@ -1728,7 +1732,7 @@
 	 * cellule active est juste dessous ou juste à droite (la saisie l'étendra),
 	 * jusqu'au tableau voisin qu'elle rejoindrait (fusion). */
 	function grown(e: Entry): Grown {
-		return growFrame(e, { row: active.row, col: active.col, entries, locked: !!locked, keptOut, inRange: inRangeZone });
+		return growFrame(e, { row: active.row, col: active.col, entries, locked: !!locked, structure, keptOut, inRange: inRangeZone });
 	}
 
 	const inTable = (e: Entry, r: number, c: number) => r >= e.t.row && r <= e.last && c >= e.t.col && c <= e.lastCol;
@@ -5745,7 +5749,7 @@
 
 	/** Déplace (dir vide) ou redimensionne (n, s, e, w et coins) un graphique. */
 	function startChartGesture(ev: MouseEvent, ch: SheetChart, dir = '') {
-		if (locked) {
+		if (locked || structure) {
 			ev.preventDefault(); // feuille protégée : le graphique ne se sélectionne pas
 			return;
 		}
@@ -6006,7 +6010,7 @@
 	}
 
 	function editChart(ch: SheetChart) {
-		if (locked && !hold) return;
+		if ((locked || structure) && !hold) return;
 		selectChart(ch);
 	}
 	async function removeChart(id: number) {
@@ -7096,6 +7100,7 @@
 
 	/** Ligne dont le bord bas est sous la souris (marge de gauche), ou null. */
 	function rowBoundaryAt(e: MouseEvent): number | null {
+		if (structure) return null; // structure protégée : pas de hauteur à tirer
 		const { x, y } = toLocal(e);
 		if (x >= MARGIN || y <= TOP_H) return null;
 		const py = toGrid(y, TOP_H, rowTop(fRows()), vs.top);
@@ -7107,6 +7112,7 @@
 
 	/** Colonne dont le bord droit est sous la souris (bandeau du haut), ou null. */
 	function boundaryAt(e: MouseEvent): number | null {
+		if (structure) return null; // structure protégée : pas de largeur à tirer
 		const { x, y } = toLocal(e);
 		if (y >= TOP_H || x <= MARGIN) return null;
 		const px = toGrid(x, MARGIN, cax().offset(fCols()), scroller.scrollLeft);
@@ -10594,7 +10600,7 @@
 				{/each}
 				<SheetButtons
 					bind:this={buttonsLayer}
-					locked={!!locked}
+					locked={!!locked || structure}
 					{buttons}
 					geo={{ colOffset: (c) => cax().offset(c), rowTop, colAt: (x) => cax().indexAt(x), rowAt: (y) => rax().indexAt(y) }}
 					{zoom}

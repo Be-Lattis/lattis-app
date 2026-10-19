@@ -1933,6 +1933,8 @@
 	const bookLocked = $derived(mode === 'doc' && !!layout?.workbookProtected && !!layout?.workbookSheets);
 	// Structure de toutes les feuilles verrouillée avec le classeur (saisie dans les tableaux seulement).
 	const bookStructure = $derived(mode === 'doc' && !!layout?.workbookProtected && !!layout?.workbookStructure);
+	// Structure de la feuille affichée protégée (la sienne, ou celle du classeur).
+	const structureLocked = $derived(mode === 'doc' && (!!activeInfo?.structureProtected || bookStructure));
 	const sheetLocked = $derived(mode === 'doc' && (!!activeInfo?.protected || bookLocked));
 	const lockedMsg = $derived(
 		activeInfo?.protected
@@ -2252,6 +2254,7 @@
 						gridlines={!layout?.sheets?.find((s) => s.id === sheetId)?.noGrid}
 						headings={!!layout?.sheets?.find((s) => s.id === sheetId)?.headings}
 						locked={lockedMsg}
+						structure={structureLocked}
 						freeze={activeInfo ? { rows: activeInfo.freezeRows, cols: activeInfo.freezeCols } : undefined}
 						{zoom}
 						{animate}

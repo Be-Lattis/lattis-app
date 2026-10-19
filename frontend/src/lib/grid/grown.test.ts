@@ -35,6 +35,11 @@ describe('aperçu du cadre pendant la saisie', () => {
 		const q = entry(0, 2, 3, 2, { query: { id: 1 } });
 		expect(grown(q, { ...ctx, entries: [q] }).last).toBe(2);
 	});
+	it('structure protégée : une ligne dessous, jamais de colonne', () => {
+		expect(grown(a, { row: 3, col: 2, entries: [a], structure: true }).last).toBe(3);
+		expect(grown(a, { row: 1, col: 4, entries: [a], structure: true }).lastCol).toBe(3);
+		expect(grown(a, { row: 1, col: 1, entries: [a], structure: true }).firstCol).toBe(2);
+	});
 	it('colonne qui comble l’écart avec un tableau voisin : jusqu’à lui', () => {
 		const n = entry(0, 5, 6, 4); // F1:G5
 		expect(grown(a, { row: 1, col: 4, entries: [a, n] })).toEqual({ last: 4, lastCol: 6, firstCol: 2 });

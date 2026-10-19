@@ -24,6 +24,8 @@ export interface GrowContext<E extends GrowEntry> {
 	entries: readonly E[];
 	/** Feuille protégée : rien à saisir. */
 	locked?: boolean;
+	/** Structure protégée : seule une ligne de plus (saisie dessous), jamais une colonne. */
+	structure?: boolean;
 	/** Cellule gardée hors des tableaux (note, total). */
 	keptOut?: (row: number, col: number) => boolean;
 	/** Cellule d'une plage (tableau converti) : la saisie y reste libre. */
@@ -50,6 +52,7 @@ export function grown<E extends GrowEntry>(e: E, g: GrowContext<E>): Grown {
 	const same = { last: e.last, lastCol: e.lastCol, firstCol: e.t.col };
 	if (g.locked || e.t.query || g.keptOut?.(row, col) || g.inRange?.(row, col)) return same;
 	if (below(e, row, col)) return { ...same, last: e.last + 1 };
+	if (g.structure) return same;
 	// Case au coin de deux tableaux : la ligne dessous l'emporte (comme le
 	// moteur), même sous un tableau de requête, qui la refuse.
 	if (entries.some((o) => o !== e && row === o.last + 1 && col >= o.t.col && col <= o.lastCol && !filtered(o.t))) return same;

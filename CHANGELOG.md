@@ -16,6 +16,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ### Changements
 
+- Structure protégée : plus d'invitation à modifier la structure. Le cadre d'un tableau ne s'élargit plus d'une colonne (il gagne toujours une ligne dessous), les graphiques, cartes et contrôles ne se sélectionnent plus et n'ont plus de poignées, les bords des en-têtes ne se tirent plus.
 - Validation des données › Plage › Sélectionner : la colonne pointée (ou la plage) est teintée en entier, comme une colonne calculée en cours de saisie.
 - Assistant › Connexion : « Application de bureau… » ouvre la fenêtre du serveur MCP (celle de Fichier › Paramètres), au lieu d'un panneau dans le volet.
 - Insertion › Autres graphiques : chaque type a son icône dans le menu.
