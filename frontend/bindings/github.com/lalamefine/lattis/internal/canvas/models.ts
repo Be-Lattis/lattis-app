@@ -484,6 +484,17 @@ export interface FilterValue {
 }
 
 /**
+ * HeaderFooter est un en-tête ou un pied de page en trois parties. Codes :
+ * &[Page], &[Pages], &[Date], &[Heure], &[Fichier], &[Chemin], &[Onglet]
+ * (ou &[Feuille]).
+ */
+export interface HeaderFooter {
+    "left"?: string;
+    "center"?: string;
+    "right"?: string;
+}
+
+/**
  * Layout est la mise en page d'une feuille : ses tableaux et ses cellules
  * libres. Les valeurs des tableaux se lisent ensuite par fenêtres.
  */
@@ -560,6 +571,11 @@ export interface Layout {
      * … avec le contenu de toutes les feuilles verrouillé.
      */
     "workbookSheets": boolean;
+
+    /**
+     * Mise en page de la feuille (onglet Mise en page).
+     */
+    "pageSetup": PageSetup;
 }
 
 /**
@@ -623,6 +639,19 @@ export interface MapView {
 }
 
 /**
+ * Margins sont les marges d'une page, en centimètres ; Header et Footer :
+ * distance de l'en-tête au haut de la page, du pied de page au bas.
+ */
+export interface Margins {
+    "top": number;
+    "bottom": number;
+    "left": number;
+    "right": number;
+    "header": number;
+    "footer": number;
+}
+
+/**
  * Match est une cellule trouvée (coordonnées de la feuille).
  */
 export interface Match {
@@ -658,6 +687,80 @@ export interface NameInfo {
     "name": string;
     "row": number;
     "col": number;
+}
+
+/**
+ * PageSetup est la mise en page d'une feuille. Lignes et colonnes à partir
+ * de 0 ; marges en centimètres.
+ */
+export interface PageSetup {
+    /**
+     * Paper : A4 (défaut), A3, A5, B5, Letter, Legal, Tabloid, Executive.
+     */
+    "paper"?: string;
+    "landscape"?: boolean;
+
+    /**
+     * nil : Normales
+     */
+    "margins"?: Margins | null;
+
+    /**
+     * Scale : échelle en pour cent (10 à 400, 0 : 100) ; ignorée quand
+     * FitWide ou FitTall ajuste la feuille à un nombre de pages.
+     */
+    "scale"?: number;
+
+    /**
+     * pages en largeur (0 : automatique)
+     */
+    "fitWide"?: number;
+
+    /**
+     * pages en hauteur (0 : automatique)
+     */
+    "fitTall"?: number;
+
+    /**
+     * Area : zone d'impression (nil : la plage utilisée).
+     */
+    "area"?: Rect | null;
+
+    /**
+     * TitleRows, TitleCols : lignes à répéter en haut, colonnes à répéter à
+     * gauche de chaque page (premier et dernier indice).
+     */
+    "titleRows"?: Span | null;
+    "titleCols"?: Span | null;
+
+    /**
+     * RowBreaks, ColBreaks : sauts de page manuels, avant ces lignes ou colonnes.
+     */
+    "rowBreaks"?: number[] | null;
+    "colBreaks"?: number[] | null;
+
+    /**
+     * Gridlines, Headings : imprimer le quadrillage, les en-têtes de lignes
+     * et de colonnes.
+     */
+    "gridlines"?: boolean;
+    "headings"?: boolean;
+    "centerH"?: boolean;
+    "centerV"?: boolean;
+
+    /**
+     * AcrossFirst : ordre des pages « à droite, puis vers le bas » (défaut :
+     * vers le bas, puis à droite).
+     */
+    "acrossFirst"?: boolean;
+    "blackWhite"?: boolean;
+
+    /**
+     * FirstPage : numéro de la première page (0 : automatique, 1).
+     */
+    "firstPage"?: number;
+    "header": HeaderFooter;
+    "footer": HeaderFooter;
 }
 
 /**
@@ -1008,6 +1111,14 @@ export interface SheetInfo {
      * feuille.
      */
     "kind": string;
+}
+
+/**
+ * Span est une suite de lignes ou de colonnes (bornes comprises).
+ */
+export interface Span {
+    "from": number;
+    "to": number;
 }
 
 /**

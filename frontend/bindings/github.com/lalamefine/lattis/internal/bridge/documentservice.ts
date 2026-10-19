@@ -36,6 +36,9 @@ import * as collab$0 from "../remote/collab/models.js";
 import * as workbook$0 from "../remote/workbook/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as transfer$0 from "../transfer/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as protocol$0 from "../../protocol/models.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -1020,6 +1023,14 @@ export function PageAllowed(source: string): $CancellablePromise<boolean> {
 }
 
 /**
+ * PageBreaks donne les sauts de page d'une feuille (traits pointillés de la
+ * grille, onglet Mise en page).
+ */
+export function PageBreaks(sheet: number): $CancellablePromise<transfer$0.PageBreaks> {
+    return $Call.ByID(3390027633, sheet);
+}
+
+/**
  * PageCall exécute une commande demandée par une page HTML (pont
  * postMessage du cadre isolé) : les commandes de la liste autorisée aux
  * pages (api.PageCall).
@@ -1114,8 +1125,8 @@ export function PreviewQuery(q: query$0.Query, upto: number, fresh: boolean): $C
 }
 
 /**
- * PrintHTML rend la plage utilisée d'une feuille en HTML imprimable
- * (Fichier › Imprimer / Exporter en PDF).
+ * PrintHTML rend une feuille en pages HTML imprimables, selon sa mise en
+ * page (Fichier › Imprimer / Exporter en PDF).
  */
 export function PrintHTML(sheet: number): $CancellablePromise<string> {
     return $Call.ByID(1446055356, sheet);
@@ -1548,6 +1559,14 @@ export function SetName(sheet: number, row: number, col: number, name: string): 
  */
 export function SetNote(sheet: number, row: number, col: number, text: string): $CancellablePromise<$models.DocState> {
     return $Call.ByID(2247277922, sheet, row, col, text);
+}
+
+/**
+ * SetPageSetup remplace la mise en page d'une feuille (onglet Mise en
+ * page) ; label nomme l'étape d'annulation (vide : « Mise en page »).
+ */
+export function SetPageSetup(sheet: number, p: canvas$0.PageSetup, label: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(576971278, sheet, p, label);
 }
 
 /**
