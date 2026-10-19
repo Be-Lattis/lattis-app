@@ -773,7 +773,15 @@ func (t *tx) growSide(tb Table, row, col int, raw string, ev *Event, left bool) 
 	if row == tb.Row {
 		return nil
 	}
-	return t.setCell(tb, row-tb.Row-1, i, raw, ev)
+	if err := t.setCell(tb, row-tb.Row-1, i, raw, ev); err != nil {
+		return err
+	}
+	// Une formule fait une colonne calculée de tout le tableau : on le dit
+	// (audit 2 M8).
+	if isFormula(raw) {
+		t.notes = append(t.notes, fmt.Sprintf("Colonne calculée « %s » ajoutée à toutes les lignes du tableau « %s » (Ctrl+Z pour annuler)", name, tb.Name))
+	}
+	return nil
 }
 
 // takeFree retire de la feuille les cellules libres retenues par keep et

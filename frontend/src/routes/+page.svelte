@@ -1057,7 +1057,9 @@
 			// d'ailleurs, et n'existe pas en mode serveur).
 			await reload();
 			if (ev.keyed) return `Clé posée sur « ${ev.keyed.slice(ev.keyed.indexOf('.') + 1)} » pour REFERENCE`;
-			if (ev.created) return `Tableau « ${ev.created} » créé${ev.split ? ' (Ctrl+Z : le défaire, les cellules restent libres)' : ''}`;
+			const undoBirth = ev.split ? ' (Ctrl+Z : le défaire, les cellules restent libres)' : '';
+			if (ev.created && ev.headless) return `Tableau « ${ev.created} » créé sans en-têtes (« Colonne n ») : tapez les noms dans sa ligne d'en-tête${undoBirth}`;
+			if (ev.created) return `Tableau « ${ev.created} » créé${undoBirth}`;
 			if (ev.widened) return `Colonne ${ev.widened} passée de ${typeLabel(ev.from as ColumnType)} à ${typeLabel(ev.to as ColumnType)} (Ctrl+Z pour annuler)`;
 			if (ev.invalid) return 'Valeur hors type : cellule marquée en erreur';
 		},

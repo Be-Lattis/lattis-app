@@ -305,6 +305,8 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 		name, err := t.birthOf(sheet, row, col, !t.pasting)
 		if name != "" {
 			ev.Created = name
+			// Sans en-têtes (« Colonne n ») : dit comme au collage (audit 2 M7).
+			ev.Headless = ev.Headless || t.born[len(t.born)-1].headless
 		}
 		return err
 	}
@@ -541,6 +543,7 @@ func (t *tx) birthOf(sheet int64, row, col int, typed bool) (string, error) {
 	tb, err := t.createTable(sheet, name, top, c0, headers, data)
 	if err == nil {
 		t.noteBorn(tb)
+		t.born[len(t.born)-1].headless = top < r0
 	}
 	return name, err
 }

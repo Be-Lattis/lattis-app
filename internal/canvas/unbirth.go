@@ -24,11 +24,12 @@ const birthStep = "Création "
 type bornTable struct {
 	id                      int64
 	row, col, bottom, right int
+	headless                bool // sans en-têtes reconnus (« Colonne n »)
 }
 
 // noteBorn retient un tableau créé d'office.
 func (t *tx) noteBorn(tb Table) {
-	t.born = append(t.born, bornTable{tb.ID, tb.Row, tb.Col, tb.Bottom(), tb.Right()})
+	t.born = append(t.born, bornTable{id: tb.ID, row: tb.Row, col: tb.Col, bottom: tb.Bottom(), right: tb.Right()})
 }
 
 // detachBirth prépare le Ctrl+Z en deux temps à la fin d'une saisie ou d'un

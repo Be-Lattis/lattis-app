@@ -173,6 +173,32 @@ func TestEmptyInputShrinks(t *testing.T) {
 	}
 }
 
+// Audit 2 M7 : des nombres tapés qui font un tableau sans en-têtes le
+// disent (Event.Headless), comme au collage.
+func TestTypedHeadless(t *testing.T) {
+	d := open(t)
+	typeIn(t, d, 2, 0, [][]string{{"10", "20"}})
+	ev, err := d.SetCell(context.Background(), 1, 3, 0, "30")
+	if err != nil || ev.Created == "" || !ev.Headless {
+		t.Fatalf("%+v %v (%s)", ev, err, layoutOf(t, d))
+	}
+	if got, want := layoutOf(t, d), "Feuille1@A2:Colonne 1|Colonne 2×2"; got != want {
+		t.Fatalf("\n got %s\nwant %s", got, want)
+	}
+}
+
+// Audit 2 M8 : une formule tapée à droite d'une ligne fait une colonne
+// calculée, et le message le dit.
+func TestFormulaRightNotice(t *testing.T) {
+	d := open(t)
+	typeIn(t, d, 0, 0, ventesRows)
+	d.TakeNotice()
+	mustSet(t, d, 1, 1, 3, "=[Montant]*2")
+	if n := d.TakeNotice(); !strings.Contains(n, "Colonne calculée « Colonne 4 »") {
+		t.Fatalf("message : %q", n)
+	}
+}
+
 // Audit 2 I4 : Suppr sur un total gardé à part retire la marque « hors
 // tableau » (et le gras qu'elle avait donné).
 func TestClearRemovesOutMark(t *testing.T) {
