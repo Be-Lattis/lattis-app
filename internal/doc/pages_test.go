@@ -46,12 +46,9 @@ func TestPageAndHostsSaved(t *testing.T) {
 	if ok, _, _ := d.HTTPHostAllowed(ctx, "autre.example.com"); ok {
 		t.Fatal("autorisation de session enregistrée dans le fichier")
 	}
-	// L'annulation (historique gardé dans le fichier) rend la page d'origine.
-	if _, err := d.Bus.Undo(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if src, _ := d.Page(ctx, id); src == "<h1>Synthèse</h1>" {
-		t.Fatal("annulation sans effet sur la page")
+	// L'historique ne part pas dans le fichier : rien à annuler.
+	if st, _ := d.Bus.State(ctx); st.Undo != "" {
+		t.Fatalf("historique rouvert avec le fichier : %+v", st)
 	}
 }
 

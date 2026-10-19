@@ -134,6 +134,12 @@ func TestMCPSession(t *testing.T) {
 
 	p := path(t, "mcp.lattis")
 	c.ok("doc_save", map[string]any{"path": p})
+	// L'historique reste dans la session après l'enregistrement.
+	c.ok("doc_undo", map[string]any{})
+	if got := c.ok("db_query", map[string]any{"sql": "SELECT count(*) AS n FROM Commandes"}); !strings.Contains(got, "2") {
+		t.Fatalf("après doc_undo : %s", got)
+	}
+	c.ok("doc_redo", map[string]any{})
 	c.ok("doc_new", map[string]any{})
 	if got := c.ok("sheets_get", map[string]any{}); strings.Contains(got, "Commandes") {
 		t.Fatalf("doc_new garde le classeur : %s", got)
@@ -142,11 +148,6 @@ func TestMCPSession(t *testing.T) {
 	if got := c.ok("doc_state", map[string]any{}); !strings.Contains(got, `"dirty": false`) || !strings.Contains(got, "mcp.lattis") {
 		t.Fatalf("doc_state : %s", got)
 	}
-	c.ok("doc_undo", map[string]any{})
-	if got := c.ok("db_query", map[string]any{"sql": "SELECT count(*) AS n FROM Commandes"}); !strings.Contains(got, "2") {
-		t.Fatalf("après doc_undo : %s", got)
-	}
-	c.ok("doc_redo", map[string]any{})
 	h.wantColumn("Commandes", "Client", "Durand", "Martin", "Petit")
 
 	// Un script lancé par MCP est une seule étape d'annulation.

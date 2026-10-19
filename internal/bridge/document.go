@@ -33,6 +33,13 @@ type DocState struct {
 	// Notice : message de la dernière action pour la barre d'état (tableaux
 	// fusionnés, cellules rattachées à un tableau), vide sinon.
 	Notice string `json:"notice,omitempty"`
+	// ReadOnly : classeur verrouillé par un autre poste, ouvert en lecture
+	// seule (Enregistrer devient Enregistrer sous).
+	ReadOnly bool `json:"readOnly,omitempty"`
+	// Conflict : rien n'a été enregistré, le fichier a été modifié par
+	// ailleurs depuis son ouverture ; l'interface demande quoi faire
+	// (ResolveSave).
+	Conflict *FileQuestion `json:"conflict,omitempty"`
 }
 
 // OpenResult est le résultat d'une ouverture : soit le classeur est ouvert,
@@ -42,12 +49,22 @@ type OpenResult struct {
 	Recoverable *archive.Orphan `json:"recoverable,omitempty"`
 	// Damaged : fichier endommagé dont on peut tenter de récupérer les
 	// données (Salvage) ; les autres fichiers illisibles sont une erreur.
-	Damaged   *DamagedFile `json:"damaged,omitempty"`
-	Cancelled bool         `json:"cancelled"`
+	Damaged *DamagedFile `json:"damaged,omitempty"`
+	// Locked : classeur ouvert sur un autre poste (verrou ~$) ; l'interface
+	// propose de l'ouvrir en lecture seule ou quand même (OpenLocked).
+	Locked    *FileQuestion `json:"locked,omitempty"`
+	Cancelled bool          `json:"cancelled"`
 }
 
 // DamagedFile décrit un classeur endommagé.
 type DamagedFile struct {
+	Path    string `json:"path"`
+	Message string `json:"message"`
+}
+
+// FileQuestion : question à poser sur un fichier (verrouillé par un autre
+// poste, modifié par ailleurs).
+type FileQuestion struct {
 	Path    string `json:"path"`
 	Message string `json:"message"`
 }
@@ -109,7 +126,10 @@ func (s *DocumentService) ServiceShutdown() error {
 		return nil
 	}
 	if dirty, _ := s.doc.Dirty(context.Background()); dirty {
-		return nil // garder le répertoire de travail : récupération au prochain lancement
+		// Garder le répertoire de travail (récupération au prochain
+		// lancement), mais libérer le fichier pour les autres postes.
+		s.doc.Unlock()
+		return nil
 	}
 	return s.doc.Close()
 }
@@ -162,7 +182,28 @@ func (s *DocumentService) Open(ctx context.Context, path string) (OpenResult, er
 		}
 		path = p
 	}
-	d, err := doc.Open(ctx, path)
+	// Ouvert sur un autre poste (verrou ~$ à côté du fichier) : l'interface
+	// propose la lecture seule ou de l'ouvrir quand même.
+	if h := archive.LockedBy(path); h != nil {
+		e := archive.LockedError{Path: path, Holder: *h}
+		return OpenResult{Locked: &FileQuestion{Path: path, Message: e.Error()}}, nil
+	}
+	return s.open(ctx, path, doc.OpenNormal)
+}
+
+// OpenLocked ouvre un classeur verrouillé par un autre poste : en lecture
+// seule (Enregistrer sous seulement), ou quand même (sans prendre son
+// verrou ; l'enregistrement vérifie encore que le fichier n'a pas changé).
+func (s *DocumentService) OpenLocked(ctx context.Context, path string, readOnly bool) (OpenResult, error) {
+	mode := doc.OpenAnyway
+	if readOnly {
+		mode = doc.OpenReadOnly
+	}
+	return s.open(ctx, path, mode)
+}
+
+func (s *DocumentService) open(ctx context.Context, path string, mode doc.OpenMode) (OpenResult, error) {
+	d, err := doc.OpenAs(ctx, path, mode)
 	var rec *archive.RecoverableError
 	if errors.As(err, &rec) {
 		return OpenResult{Recoverable: &rec.Orphan}, nil
@@ -252,35 +293,90 @@ func (s *DocumentService) Save(ctx context.Context, as bool) (DocState, error) {
 			return st, err
 		}
 	}
-	if as || d.Path() == "" {
+	switch {
+	case d.ReadOnly():
+		// Ouvert en lecture seule : une copie, sous un autre nom.
+		return s.saveAs(ctx, d, copyName(d.Path()))
+	case as || d.Path() == "":
 		name := "Classeur.lattis"
 		if d.Path() != "" {
 			name = filepath.Base(d.Path())
 		}
-		var werr error
-		p, err := s.sys().SaveFile(FileDialog{
-			Title:    "Enregistrer le classeur",
-			Filename: name,
-			Filters:  []FileFilter{{"Classeur Lattis", "*.lattis"}},
-			Ext:      ".lattis",
-		}, func(p string) error {
-			werr = saveDoc(ctx, d, p)
-			return werr
-		})
-		if werr != nil {
-			return DocState{}, werr
-		}
-		if err != nil || p == "" {
-			return s.State(ctx)
-		}
-	} else if err := saveDoc(ctx, d, ""); err != nil {
+		return s.saveAs(ctx, d, name)
+	}
+	if err := saveDoc(ctx, d, ""); err != nil {
+		return s.saveFailed(ctx, d, err)
+	}
+	return s.saved(ctx, d)
+}
+
+// ResolveSave répond à DocState.Conflict (fichier modifié par ailleurs
+// depuis son ouverture) : overwrite l'écrase, sinon le classeur est
+// enregistré sous un autre nom (« Enregistrer une copie »).
+func (s *DocumentService) ResolveSave(ctx context.Context, overwrite bool) (DocState, error) {
+	d, err := s.current()
+	if err != nil {
 		return DocState{}, err
 	}
+	if !overwrite {
+		return s.saveAs(ctx, d, copyName(d.Path()))
+	}
+	if err := d.Overwrite(ctx); err != nil {
+		return DocState{}, err
+	}
+	return s.saved(ctx, d)
+}
+
+// saveAs demande où enregistrer (name : nom proposé) et enregistre.
+func (s *DocumentService) saveAs(ctx context.Context, d *doc.Document, name string) (DocState, error) {
+	var werr error
+	p, err := s.sys().SaveFile(FileDialog{
+		Title:    "Enregistrer le classeur",
+		Filename: name,
+		Filters:  []FileFilter{{"Classeur Lattis", "*.lattis"}},
+		Ext:      ".lattis",
+	}, func(p string) error {
+		werr = saveDoc(ctx, d, p)
+		return werr
+	})
+	if werr != nil {
+		return s.saveFailed(ctx, d, werr)
+	}
+	if err != nil || p == "" {
+		return s.State(ctx)
+	}
+	return s.saved(ctx, d)
+}
+
+// saveFailed : un fichier modifié par ailleurs devient une question
+// (DocState.Conflict), les autres échecs restent des erreurs.
+func (s *DocumentService) saveFailed(ctx context.Context, d *doc.Document, err error) (DocState, error) {
+	var changed *archive.ChangedError
+	if !errors.As(err, &changed) {
+		return DocState{}, err
+	}
+	st, serr := s.State(ctx)
+	st.Conflict = &FileQuestion{Path: d.Path(), Message: changed.Error()}
+	return st, serr
+}
+
+func (s *DocumentService) saved(ctx context.Context, d *doc.Document) (DocState, error) {
 	addRecent(d.Path())
 	if s.listening(api.EventSave) {
 		s.fireAsync(api.EventSave, map[string]any{"path": d.Path()})
 	}
 	return s.changed(ctx)
+}
+
+// copyName propose le nom d'une copie : « Ventes.lattis » → « Ventes
+// (copie).lattis ».
+func copyName(path string) string {
+	if path == "" {
+		return "Classeur.lattis"
+	}
+	base := filepath.Base(path)
+	ext := filepath.Ext(base)
+	return strings.TrimSuffix(base, ext) + " (copie)" + ext
 }
 
 // HidePaths : le moteur tourne sur un serveur (lattisd) ; DocState.Path ne
@@ -300,6 +396,9 @@ func (s *DocumentService) State(ctx context.Context) (DocState, error) {
 	// Moteur d'une session web : les chemins du serveur ne sont pas montrés.
 	if HidePaths && st.Path != "" {
 		st.Path = filepath.Base(st.Path)
+	}
+	if st.ReadOnly = d.ReadOnly(); st.ReadOnly {
+		st.Title += " (lecture seule)"
 	}
 	if st.Dirty, err = d.Dirty(ctx); err != nil {
 		return st, err

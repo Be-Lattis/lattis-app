@@ -5,8 +5,13 @@
 // manifeste YAML minimal. À l'ouverture, elle est extraite dans un
 // répertoire de travail local, sous le dossier cache de l'utilisateur
 // (os.UserCacheDir, conservé entre deux redémarrages), où la base vit en WAL.
-// Enregistrer produit un instantané cohérent par VACUUM INTO, le zippe sans
+// Enregistrer produit un instantané cohérent par VACUUM INTO, en retire
+// l'historique d'annulation et les corbeilles (scrub.go), le zippe sans
 // compression et remplace l'archive de façon atomique.
+//
+// Un verrou à côté du fichier (~$nom.lattis, peer.go) prévient un autre
+// poste qui ouvre le même classeur ; l'enregistrement refuse d'écraser un
+// fichier modifié par ailleurs depuis son ouverture (ChangedError).
 //
 // Le répertoire de travail porte un verrou de système (LockFileEx / flock)
 // tenu tant que le document est ouvert : il empêche d'ouvrir deux fois la
@@ -152,7 +157,15 @@ type Doc struct {
 	// Remote, s'il est fixé, est écrit dans le manifeste au prochain
 	// enregistrement (classeur partagé).
 	Remote func(ctx context.Context) (*Remote, error)
-	lock   *os.File
+	// ReadOnly : ouvert en lecture seule (classeur verrouillé par un autre
+	// poste) ; l'enregistrer dans son fichier est refusé (ErrReadOnly).
+	ReadOnly bool
+	lock     *os.File
+	extra    []func(*sqliteConn) error
+	peer     *peerLock // verrou ~$ posé à côté du fichier (nil : aucun)
+	// base : fichier sur disque à l'ouverture ou au dernier enregistrement
+	// (nil : inconnu, aucun contrôle).
+	base *Stamp
 }
 
 // Root est le dossier des répertoires de travail. Il est surchargeable pour
@@ -317,6 +330,8 @@ func Open(path string, extra ...func(*sqliteConn) error) (*Doc, error) {
 	if err := sniff(path); err != nil {
 		return nil, err
 	}
+	// Fichier tel qu'ouvert : l'enregistrement vérifie qu'il n'a pas changé.
+	stamp, serr := stampOf(path)
 	// Verrou pris avant l'extraction : un répertoire en cours d'extraction
 	// n'est jamais pris pour un orphelin.
 	lock, err := lockDir(dir)
@@ -333,7 +348,44 @@ func Open(path string, extra ...func(*sqliteConn) error) (*Doc, error) {
 		os.RemoveAll(dir)
 		return nil, Damaged(path, err)
 	}
+	if serr == nil {
+		d.base = &stamp
+		writeStamp(dir, stamp)
+	}
 	return d, nil
+}
+
+// Lock pose le verrou ~$ à côté du fichier (sans effet sans fichier ou s'il
+// est déjà posé). Un verrou vivant d'un autre donne un *LockedError ; un
+// dossier où l'on ne peut pas écrire, une autre erreur (sans gravité :
+// l'enregistrement contrôle encore le fichier).
+func (d *Doc) Lock() error {
+	if d.Path == "" || d.peer != nil {
+		return nil
+	}
+	l, err := takePeer(d.Path)
+	if err != nil {
+		return err
+	}
+	d.peer = l
+	return nil
+}
+
+// Unlock retire le verrou ~$ (fermeture, ou arrêt en gardant la session
+// pour la récupération).
+func (d *Doc) Unlock() {
+	d.peer.release()
+	d.peer = nil
+}
+
+// Changed dit si le fichier a été modifié sur disque depuis son ouverture
+// ou son dernier enregistrement (faux si on ne le sait pas).
+func (d *Doc) Changed() (bool, error) {
+	if d.Path == "" || d.base == nil {
+		return false, nil
+	}
+	same, err := d.base.same(d.Path)
+	return !same, err
 }
 
 // openDir ouvre la base du répertoire de travail ; lock : verrou déjà pris
@@ -355,7 +407,7 @@ func openDir(dir, path string, lock *os.File, extra []func(*sqliteConn) error) (
 		lock.Close()
 		return nil, err
 	}
-	return &Doc{Path: path, Dir: dir, DB: db, lock: lock}, nil
+	return &Doc{Path: path, Dir: dir, DB: db, lock: lock, extra: extra}, nil
 }
 
 // sniff reconnaît, avant toute extraction, les fichiers qui ne sont pas une
@@ -513,12 +565,39 @@ func checkDB(path string) error {
 // dans un fichier temporaire à côté de la cible, mis sur disque (fsync) et
 // relu, puis renommage atomique : jusque-là, l'ancien fichier reste intact,
 // même si le processus est tué.
+//
+// Le fichier ouvert n'est pas écrasé s'il a été modifié par ailleurs depuis
+// son ouverture (*ChangedError : voir SaveOver) ou si le document est en
+// lecture seule (ErrReadOnly) ; un autre fichier ouvert par quelqu'un
+// d'autre non plus (*LockedError).
 func (d *Doc) Save(ctx context.Context, path string) error {
+	return d.saveTo(ctx, path, false)
+}
+
+// SaveOver enregistre comme Save, en écrasant un fichier modifié par
+// ailleurs (choix de l'utilisateur).
+func (d *Doc) SaveOver(ctx context.Context, path string) error {
+	return d.saveTo(ctx, path, true)
+}
+
+func (d *Doc) saveTo(ctx context.Context, path string, force bool) error {
 	if path == "" {
 		path = d.Path
 	}
 	if path == "" {
 		return errors.New("aucun chemin d'enregistrement")
+	}
+	if d.Path != "" && samePath(path, d.Path) {
+		if d.ReadOnly {
+			return ErrReadOnly
+		}
+		if changed, err := d.Changed(); err != nil {
+			return err
+		} else if changed && !force {
+			return &ChangedError{Path: d.Path}
+		}
+	} else if h := LockedBy(path); h != nil {
+		return &LockedError{Path: path, Holder: *h}
 	}
 	if err := d.save(ctx, path); err != nil {
 		if _, serr := os.Stat(path); serr == nil {
@@ -527,10 +606,28 @@ func (d *Doc) Save(ctx context.Context, path string) error {
 		return fmt.Errorf("enregistrement impossible : %w", err)
 	}
 	if path != d.Path {
+		moved := d.Path == "" || !samePath(path, d.Path)
 		d.Path = path
 		os.WriteFile(filepath.Join(d.Dir, sourceName), []byte(path), 0o644)
+		if moved {
+			// Enregistré sous un autre nom : le verrou suit le fichier.
+			d.Unlock()
+			d.ReadOnly = false
+			d.Lock()
+		}
+	}
+	if s, err := stampOf(path); err == nil {
+		d.base = &s
+		writeStamp(d.Dir, s)
 	}
 	return nil
+}
+
+// samePath : même fichier, à la casse près (comme workDir).
+func samePath(a, b string) bool {
+	a, _ = filepath.Abs(a)
+	b, _ = filepath.Abs(b)
+	return strings.EqualFold(a, b)
 }
 
 // beforeRename est appelé juste avant le renommage (tests : enregistrement
@@ -556,6 +653,10 @@ func (d *Doc) save(ctx context.Context, path string) error {
 	})
 	if err != nil {
 		return err
+	}
+	// Ni historique d'annulation ni corbeilles dans le fichier.
+	if err := scrub(snap, d.extra); err != nil {
+		return fmt.Errorf("historique non retiré de l'instantané : %w", err)
 	}
 	st, err := os.Stat(snap)
 	if err != nil {
@@ -842,6 +943,7 @@ func readManifest(f *zip.File) (Manifest, error) {
 // proposer d'enregistrer avant.
 func (d *Doc) Close() error {
 	err := d.DB.Close()
+	d.Unlock()
 	d.lock.Close()
 	return errors.Join(err, os.RemoveAll(d.Dir))
 }
@@ -850,6 +952,7 @@ func (d *Doc) Close() error {
 // d'une récupération : les modifications restent récupérables).
 func (d *Doc) Release() error {
 	err := d.DB.Close()
+	d.Unlock()
 	d.lock.Close()
 	return err
 }
@@ -957,6 +1060,9 @@ func Recover(o Orphan, extra ...func(*sqliteConn) error) (*Doc, error) {
 	if err != nil {
 		return nil, fmt.Errorf("récupération impossible : %w", err)
 	}
+	// Fichier tel qu'au début de la session (session d'une version
+	// précédente : inconnu, pas de contrôle).
+	d.base = readStamp(o.Dir)
 	return d, nil
 }
 

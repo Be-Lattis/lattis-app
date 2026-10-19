@@ -52,6 +52,9 @@ type Document struct {
 	// dropped : déclencheurs inconnus supprimés à l'ouverture (sécurité),
 	// signalés une fois (TakeOpenNotice).
 	dropped []string
+	// notes : autres messages de l'ouverture (verrou, fichier modifié par
+	// ailleurs), signalés une fois.
+	notes []string
 }
 
 // wrap migre la base et assemble le document. En cas d'échec, keep garde le
@@ -144,7 +147,26 @@ func New(ctx context.Context) (_ *Document, err error) {
 // interrompue, l'erreur est un *archive.RecoverableError : proposer Recover
 // ou archive.Discard. Un fichier illisible donne un *archive.OpenError (s'il
 // est endommagé : proposer Salvage). Le fichier n'est jamais modifié.
-func Open(ctx context.Context, path string) (_ *Document, err error) {
+func Open(ctx context.Context, path string) (*Document, error) {
+	return OpenAs(ctx, path, OpenNormal)
+}
+
+// OpenMode dit comment ouvrir un classeur verrouillé par un autre poste.
+type OpenMode int
+
+const (
+	// OpenNormal pose le verrou ~$ ; déjà pris, le classeur s'ouvre en
+	// lecture seule.
+	OpenNormal OpenMode = iota
+	// OpenReadOnly : lecture seule, sans verrou (Enregistrer sous seulement).
+	OpenReadOnly
+	// OpenAnyway : modifiable sans prendre le verrou d'un autre ;
+	// l'enregistrement contrôle encore que le fichier n'a pas changé.
+	OpenAnyway
+)
+
+// OpenAs ouvre un classeur comme Open, selon mode.
+func OpenAs(ctx context.Context, path string, mode OpenMode) (_ *Document, err error) {
 	defer trace.Since(1, trace.Doc, time.Now(), &err, "ouverture de %s", path)
 	a, err := archive.Open(path, canvas.Register)
 	if err != nil {
@@ -168,8 +190,38 @@ func Open(ctx context.Context, path string) (_ *Document, err error) {
 		d.Close()
 		return nil, err
 	}
+	switch mode {
+	case OpenNormal:
+		d.lockFile()
+	case OpenReadOnly:
+		a.ReadOnly = true
+	}
 	return d, nil
 }
+
+// lockFile pose le verrou ~$ du fichier : pris par un autre (entre la
+// question et l'ouverture), le classeur passe en lecture seule ; impossible
+// à poser (dossier en lecture seule), on le signale une fois.
+func (d *Document) lockFile() {
+	err := d.arc.Lock()
+	var held *archive.LockedError
+	switch {
+	case errors.As(err, &held):
+		d.arc.ReadOnly = true
+		d.notes = append(d.notes, held.Error()+" : ouvert en lecture seule (Enregistrer sous pour garder vos modifications).")
+	case err != nil:
+		trace.Logf(1, trace.Doc, "verrou de %s : %v", d.arc.Path, err)
+		d.notes = append(d.notes, fmt.Sprintf("Impossible de poser le verrou à côté de « %s » (dossier en lecture seule ?) : un autre poste qui l'ouvre ne sera pas prévenu.", filepath.Base(d.arc.Path)))
+	}
+}
+
+// ReadOnly dit si le classeur est ouvert en lecture seule (verrouillé par
+// un autre poste) : il ne s'enregistre que sous un autre nom.
+func (d *Document) ReadOnly() bool { return d.arc.ReadOnly }
+
+// Unlock retire le verrou ~$ sans fermer le classeur (arrêt de
+// l'application en gardant la session pour la récupération).
+func (d *Document) Unlock() { d.arc.Unlock() }
 
 // Recover rouvre le répertoire de travail d'une session interrompue, avec
 // toutes ses modifications validées et son historique d'annulation. En cas
@@ -185,6 +237,14 @@ func Recover(ctx context.Context, o archive.Orphan) (_ *Document, err error) {
 		return nil, fmt.Errorf("récupération impossible : %w", err)
 	}
 	d.saved = -1 // les modifications récupérées ne sont pas enregistrées
+	// Même contrôle qu'à l'ouverture : verrou d'un autre poste, fichier
+	// modifié par ailleurs depuis le début de la session.
+	if _, err := os.Stat(o.Source); o.Source != "" && err == nil {
+		d.lockFile()
+		if changed, _ := a.Changed(); changed {
+			d.notes = append(d.notes, fmt.Sprintf("« %s » a été modifié par ailleurs depuis cette session : à l'enregistrement, Lattis proposera d'en faire une copie.", filepath.Base(o.Source)))
+		}
+	}
 	return d, nil
 }
 
@@ -241,7 +301,19 @@ func (d *Document) Dirty(ctx context.Context) (bool, error) {
 }
 
 // Save enregistre dans path (vide : le fichier courant).
-func (d *Document) Save(ctx context.Context, path string) (err error) {
+// Un fichier modifié par ailleurs depuis son ouverture n'est pas écrasé
+// (*archive.ChangedError : proposer une copie ou Overwrite).
+func (d *Document) Save(ctx context.Context, path string) error {
+	return d.save(ctx, path, false)
+}
+
+// Overwrite enregistre dans le fichier courant même s'il a été modifié par
+// ailleurs (choix de l'utilisateur).
+func (d *Document) Overwrite(ctx context.Context) error {
+	return d.save(ctx, "", true)
+}
+
+func (d *Document) save(ctx context.Context, path string, force bool) (err error) {
 	defer trace.Since(1, trace.Doc, time.Now(), &err, "enregistrement dans %s", cmp.Or(path, d.arc.Path))
 	if path == "" && d.arc.Path == "" {
 		return errors.New("choisir un fichier pour enregistrer")
@@ -267,7 +339,11 @@ func (d *Document) Save(ctx context.Context, path string) (err error) {
 		}
 		d.backup = ""
 	}
-	if err := d.arc.Save(ctx, path); err != nil {
+	save := d.arc.Save
+	if force {
+		save = d.arc.SaveOver
+	}
+	if err := save(ctx, path); err != nil {
 		return err
 	}
 	d.saved, d.savedProt = top, prot
@@ -326,18 +402,20 @@ func (d *Document) ShareChanged(ctx context.Context) error {
 
 // TakeOpenNotice rend (une fois) le message à afficher à l'ouverture :
 // déclencheurs inconnus supprimés du classeur (meta.MigrateOpen), vide
-// sinon.
+// sinon ; puis verrou d'un autre poste, fichier modifié par ailleurs.
 func (d *Document) TakeOpenNotice() string {
-	n := len(d.dropped)
-	if n == 0 {
-		return ""
+	out := d.notes
+	d.notes = nil
+	if n := len(d.dropped); n > 0 {
+		names := strings.Join(d.dropped, ", ")
+		d.dropped = nil
+		msg := fmt.Sprintf("%d déclencheurs inconnus supprimés du classeur (sécurité) : %s. Enregistrez le classeur pour les retirer aussi du fichier.", n, names)
+		if n == 1 {
+			msg = fmt.Sprintf("1 déclencheur inconnu supprimé du classeur (sécurité) : %s. Enregistrez le classeur pour le retirer aussi du fichier.", names)
+		}
+		out = append([]string{msg}, out...)
 	}
-	names := strings.Join(d.dropped, ", ")
-	d.dropped = nil
-	if n == 1 {
-		return fmt.Sprintf("1 déclencheur inconnu supprimé du classeur (sécurité) : %s. Enregistrez le classeur pour le retirer aussi du fichier.", names)
-	}
-	return fmt.Sprintf("%d déclencheurs inconnus supprimés du classeur (sécurité) : %s. Enregistrez le classeur pour les retirer aussi du fichier.", n, names)
+	return strings.Join(out, " ")
 }
 
 // Backup donne la copie de sauvegarde que le prochain enregistrement fera

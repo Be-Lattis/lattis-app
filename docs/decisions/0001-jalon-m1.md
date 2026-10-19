@@ -57,7 +57,7 @@ Chaque opération élémentaire (`setValue`, `insertRow`, `deleteRow`, `addColum
 
 - Couvre le DDL (création, reconstruction, ajout et suppression de colonnes), ce que des triggers de journal ne font pas, et l'extension *session* n'est exposée par aucun driver Go.
 - Une suppression de colonne range les valeurs dans une table de corbeille : l'inverse tient en quelques instructions, quelle que soit la taille du tableau. Ces corbeilles devront être purgées quand la commande sort de la pile (phase 2).
-- Les commandes sont des listes d'instructions SQL paramétrées : elles peuvent être **persistées** dans une table `_lattis_journal`, ce qui donnerait l'annulation après réouverture et un journal pour la récupération après crash.
+- Les commandes sont des listes d'instructions SQL paramétrées : elles peuvent être **persistées** dans une table `_lattis_journal`, ce qui donnerait l'annulation après réouverture et un journal pour la récupération après crash. *(Octobre 2026 : le journal reste dans la copie de travail, pour la récupération après crash, mais n'est plus écrit dans le fichier enregistré, ni les corbeilles ; voir l'audit du 19/10/2026, C1.)*
 - Un script Lua pourra être une seule commande, ses écritures passant par les mêmes primitives.
 
 ### Limites connues du prototype

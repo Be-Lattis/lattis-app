@@ -3,6 +3,7 @@
 package archive
 
 import (
+	"errors"
 	"os"
 
 	"golang.org/x/sys/unix"
@@ -20,4 +21,14 @@ func syncDir(dir string) {
 		f.Sync()
 		f.Close()
 	}
+}
+
+// hide : rien hors de Windows (seul un nom commençant par un point y est
+// caché).
+func hide(string) {}
+
+// processAlive dit si le processus pid existe encore sur ce poste.
+func processAlive(pid int) bool {
+	err := unix.Kill(pid, 0)
+	return err == nil || errors.Is(err, unix.EPERM)
 }

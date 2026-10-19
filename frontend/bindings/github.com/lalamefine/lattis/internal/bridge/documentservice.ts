@@ -978,6 +978,15 @@ export function OpenDemo(): $CancellablePromise<$models.DemoResult> {
 }
 
 /**
+ * OpenLocked ouvre un classeur verrouillé par un autre poste : en lecture
+ * seule (Enregistrer sous seulement), ou quand même (sans prendre son
+ * verrou ; l'enregistrement vérifie encore que le fichier n'a pas changé).
+ */
+export function OpenLocked(path: string, readOnly: boolean): $CancellablePromise<$models.OpenResult> {
+    return $Call.ByID(3237317744, path, readOnly);
+}
+
+/**
  * OrderSheets range les onglets dans l'ordre order (toutes les feuilles,
  * masquées comprises), en une seule étape d'annulation : glisser plusieurs
  * onglets sélectionnés.
@@ -1294,6 +1303,15 @@ export function RequestLink(link: string): $CancellablePromise<void> {
  */
 export function RequestOpen(path: string): $CancellablePromise<void> {
     return $Call.ByID(2080541887, path);
+}
+
+/**
+ * ResolveSave répond à DocState.Conflict (fichier modifié par ailleurs
+ * depuis son ouverture) : overwrite l'écrase, sinon le classeur est
+ * enregistré sous un autre nom (« Enregistrer une copie »).
+ */
+export function ResolveSave(overwrite: boolean): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(255487323, overwrite);
 }
 
 /**

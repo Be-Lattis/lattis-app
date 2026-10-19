@@ -28,6 +28,7 @@ export type {
     DialogRequest,
     DocState,
     ExecResult,
+    FileQuestion,
     FormulaHelp,
     GridStatus,
     ImportResult,

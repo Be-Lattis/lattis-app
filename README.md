@@ -64,7 +64,7 @@ Chaque transformation devient une étape rejouable : filtrer, trier, choisir des
 
 - **Import / export** `.xlsx` et `.csv`, export `.ods` (formules traduites, mise en forme, tableaux), impression.
 - **Serveur MCP** intégré : laissez un assistant comme Claude lire et modifier le classeur ouvert, en local et avec un jeton. → [docs/mcp.md](docs/mcp.md)
-- **Fichier `.lattis`** : une seule archive (base SQLite + manifeste), facile à envoyer par e-mail ou à archiver, avec enregistrement atomique et récupération après incident.
+- **Fichier `.lattis`** : une seule archive (base SQLite + manifeste), facile à envoyer par e-mail ou à archiver, avec enregistrement atomique et récupération après incident. L'historique d'annulation et les données supprimées n'y sont jamais enregistrés. Ouvert depuis un dossier partagé, il est signalé aux autres postes (`~$nom.lattis`, comme Excel), et un fichier modifié ailleurs n'est pas écrasé sans question.
 - **Commune d'un point GPS**, hors ligne : `=COMMUNE([Latitude]; [Longitude])` donne la commune française (ou son code INSEE, son code postal, son département, sa région) à partir des contours officiels embarqués, même sur 100 000 lignes. Contient des données IGN et INSEE, Licence Ouverte / Etalab 2.0. → [docs/fonctions.md](docs/fonctions.md#géographie)
 - Protection de feuilles et de classeur, notes façon post-it, cellules fusionnées, volets figés, zoom, animations de sélection.
 
@@ -98,7 +98,7 @@ go run . --help          # toutes les options
 
 ### Stack
 
-- **Backend Go** : SQLite en WAL (`ncruces/go-sqlite3`), une file d'écriture unique et un pool de lecture, un bus de commandes réversibles avec journal d'annulation persisté, et `gopher-lua` pour les scripts.
+- **Backend Go** : SQLite en WAL (`ncruces/go-sqlite3`), une file d'écriture unique et un pool de lecture, un bus de commandes réversibles avec journal d'annulation persisté dans la copie de travail (jamais dans le fichier enregistré), et `gopher-lua` pour les scripts.
 - **Frontend SvelteKit / Svelte 5** : grille dessinée en `<canvas>`, CodeMirror pour les éditeurs SQL et Lua.
 - **Wails v3** : un binaire natif, sans Electron.
 
@@ -141,9 +141,9 @@ En Go : `demo.New(ctx, "med", demo.Options{Seed: 42})` (internal/demo), ou `demo
 main.go               point d'entrée Wails (à la racine : les tâches Wails l'attendent ici)
 internal/bridge/      API exposée au frontend, seule couche qui dépend de Wails
 internal/doc/         un classeur ouvert : archive + base + journal + modèle
-internal/archive/     fichier .lattis : extraction, verrou, enregistrement atomique, récupération
+internal/archive/     fichier .lattis : extraction, verrous, enregistrement atomique sans historique, récupération
 internal/meta/        schéma des tables _lattis_* et migrations
-internal/command/     bus de commandes réversibles, journal d'annulation persisté
+internal/command/     bus de commandes réversibles, journal d'annulation de la session
 internal/canvas/      modèle canevas ↔ tables : îlots, lignes, colonnes, types, TCD, graphiques
 internal/formula/     analyse et calcul des formules (traduites en SQL quand c'est possible)
 internal/geo/         contours des communes embarqués (go generate) : commune d'un point GPS, hors ligne

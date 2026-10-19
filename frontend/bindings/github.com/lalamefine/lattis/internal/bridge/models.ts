@@ -419,6 +419,19 @@ export interface DocState {
      * fusionnés, cellules rattachées à un tableau), vide sinon.
      */
     "notice"?: string;
+
+    /**
+     * ReadOnly : classeur verrouillé par un autre poste, ouvert en lecture
+     * seule (Enregistrer devient Enregistrer sous).
+     */
+    "readOnly"?: boolean;
+
+    /**
+     * Conflict : rien n'a été enregistré, le fichier a été modifié par
+     * ailleurs depuis son ouverture ; l'interface demande quoi faire
+     * (ResolveSave).
+     */
+    "conflict"?: FileQuestion | null;
 }
 
 /**
@@ -431,6 +444,15 @@ export interface ExecResult {
     "changed": number;
     "micros": number;
     "state": DocState;
+}
+
+/**
+ * FileQuestion : question à poser sur un fichier (verrouillé par un autre
+ * poste, modifié par ailleurs).
+ */
+export interface FileQuestion {
+    "path": string;
+    "message": string;
 }
 
 /**
@@ -585,6 +607,12 @@ export interface OpenResult {
      * données (Salvage) ; les autres fichiers illisibles sont une erreur.
      */
     "damaged"?: DamagedFile | null;
+
+    /**
+     * Locked : classeur ouvert sur un autre poste (verrou ~$) ; l'interface
+     * propose de l'ouvrir en lecture seule ou quand même (OpenLocked).
+     */
+    "locked"?: FileQuestion | null;
     "cancelled": boolean;
 }
 

@@ -115,13 +115,21 @@ func randomSessionOn(t *testing.T, seed int64, n int, published bool) {
 	}
 
 	want := h.snapshot()
-	h.reopen(path(t, "hasard.lattis"))
-	sameSnapshot(t, "après réouverture", want, h.snapshot())
+	p := path(t, "hasard.lattis")
+	h.do("doc.save", "path", p)
+	// L'historique reste dans la session après l'enregistrement.
 	for h.state().Undo != "" {
 		h.undo()
 		synced("tout annuler")
 	}
 	sameSnapshot(t, "tout annulé", start, h.snapshot())
+	// Le fichier rouvert : le contenu enregistré, sans historique.
+	h.do("doc.new")
+	h.do("doc.open", "path", p)
+	sameSnapshot(t, "après réouverture", want, h.snapshot())
+	if st := h.state(); st.Undo != "" || st.Redo != "" {
+		t.Fatalf("historique enregistré dans le fichier : %+v", st)
+	}
 }
 
 // checkGridMatchesSQL compare les lignes affichées de Ventes à la table SQL

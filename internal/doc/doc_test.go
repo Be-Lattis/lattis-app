@@ -51,7 +51,8 @@ func checkOK(t *testing.T, d *Document) {
 }
 
 // TestM2 est le jalon M2 : ouvrir, modifier, annuler, enregistrer, rouvrir
-// (avec l'historique d'annulation), simuler un crash et récupérer.
+// (sans l'historique d'annulation, qui ne part pas dans le fichier),
+// simuler un crash et récupérer (avec l'historique de la session).
 func TestM2(t *testing.T) {
 	if os.Getenv("LATTIS_M2_CHILD") != "" {
 		m2Child()
@@ -82,28 +83,35 @@ func TestM2(t *testing.T) {
 	}
 	saved := view(t, d)
 	checkOK(t, d)
-	must(t, d.Close())
-
-	// 2. Réouverture : même contenu, et l'historique d'annulation est là.
-	d, err = Open(ctx, path)
-	must(t, err)
-	if got := view(t, d); got != saved {
-		t.Fatalf("contenu rouvert :\n%s\nattendu\n%s", got, saved)
-	}
+	// L'historique reste dans la session après l'enregistrement.
 	if st, _ := d.Bus.State(ctx); st.Undo != "Saisie" || st.Redo != "Saisie" {
-		t.Fatalf("historique après réouverture : %+v", st)
+		t.Fatalf("historique après l'enregistrement : %+v", st)
 	}
 	if _, err := d.Bus.Undo(ctx); err != nil {
 		t.Fatal(err)
 	}
 	if dirty, _ := d.Dirty(ctx); !dirty {
-		t.Fatal("annuler après réouverture ne marque pas le classeur modifié")
+		t.Fatal("annuler après l'enregistrement ne marque pas le classeur modifié")
 	}
 	if _, err := d.Bus.Redo(ctx); err != nil {
 		t.Fatal(err)
 	}
 	if dirty, _ := d.Dirty(ctx); dirty {
 		t.Fatal("revenu à l'état enregistré mais toujours modifié")
+	}
+	must(t, d.Close())
+
+	// 2. Réouverture : même contenu, sans historique (jamais dans le fichier).
+	d, err = Open(ctx, path)
+	must(t, err)
+	if got := view(t, d); got != saved {
+		t.Fatalf("contenu rouvert :\n%s\nattendu\n%s", got, saved)
+	}
+	if st, _ := d.Bus.State(ctx); st.Undo != "" || st.Redo != "" {
+		t.Fatalf("historique après réouverture : %+v", st)
+	}
+	if dirty, _ := d.Dirty(ctx); dirty {
+		t.Fatal("rouvert et déjà modifié")
 	}
 	must(t, d.Close())
 

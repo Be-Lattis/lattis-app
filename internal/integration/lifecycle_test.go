@@ -13,8 +13,9 @@ import (
 	"github.com/lalamefine/lattis/internal/doc"
 )
 
-// Un classeur riche enregistré puis rouvert est identique, et son historique
-// d'annulation le suit.
+// Un classeur riche enregistré puis rouvert est identique. Son historique
+// d'annulation reste dans la session après l'enregistrement, mais ne part
+// pas dans le fichier.
 func TestSaveReopenKeepsEverything(t *testing.T) {
 	h := newHost(t)
 	steps := richSteps(h)
@@ -27,24 +28,29 @@ func TestSaveReopenKeepsEverything(t *testing.T) {
 	}
 	want := h.snapshot()
 	p := path(t, "riche.lattis")
-	h.reopen(p)
-	sameSnapshot(t, "après réouverture", want, h.snapshot())
-
-	st := h.state()
-	if st.Path != p || st.Title != "riche" || st.Dirty {
-		t.Fatalf("état après réouverture %+v", st)
-	}
-	if st.Undo == "" {
-		t.Fatal("l'historique d'annulation est perdu à la réouverture")
+	h.do("doc.save", "path", p)
+	if st := h.state(); st.Dirty || st.Undo == "" {
+		t.Fatalf("état après l'enregistrement %+v (historique perdu ?)", st)
 	}
 	h.undo()
-	sameSnapshot(t, "annuler après réouverture", beforeLast, h.snapshot())
+	sameSnapshot(t, "annuler après l'enregistrement", beforeLast, h.snapshot())
 	if !h.state().Dirty {
-		t.Fatal("une annulation après réouverture ne marque pas le classeur modifié")
+		t.Fatal("une annulation après l'enregistrement ne marque pas le classeur modifié")
 	}
 	h.redo()
 	if h.state().Dirty {
 		t.Fatal("revenir à l'état enregistré devrait rendre le classeur propre")
+	}
+
+	h.do("doc.new")
+	h.do("doc.open", "path", p)
+	sameSnapshot(t, "après réouverture", want, h.snapshot())
+	st := h.state()
+	if st.Path != p || st.Title != "riche" || st.Dirty {
+		t.Fatalf("état après réouverture %+v", st)
+	}
+	if st.Undo != "" || st.Redo != "" {
+		t.Fatalf("historique d'annulation enregistré dans le fichier : %+v", st)
 	}
 
 	// Enregistrer sous un autre nom puis rouvrir l'original : les deux

@@ -136,6 +136,9 @@ func (h host) OpenDoc(ctx context.Context, path string) error {
 	if res.Damaged != nil {
 		return errors.New(res.Damaged.Message + " ; ouvrez-le dans Lattis pour en récupérer les données")
 	}
+	if res.Locked != nil {
+		return errors.New(res.Locked.Message + " : ouvrez-le dans Lattis pour choisir")
+	}
 	h.s.changed(ctx)
 	return nil
 }

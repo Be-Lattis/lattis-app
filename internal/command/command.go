@@ -7,8 +7,10 @@
 //
 // Les commandes sont persistées dans _lattis_journal, dans la même
 // transaction que les données : l'historique d'annulation survit à un
-// enregistrement, à une réouverture et à un crash, et il est toujours
-// cohérent avec la base. Le rétablissement rejoue les instructions
+// enregistrement et à un crash (récupération de la session), et il est
+// toujours cohérent avec la base. Il n'est jamais écrit dans le fichier
+// .lattis (internal/archive retire le journal et les corbeilles de
+// l'instantané) : un fichier rouvert n'a pas d'historique. Le rétablissement rejoue les instructions
 // d'origine ; les identifiants qu'elles utilisent sont fixés à la
 // construction, ce qui rend le rejeu déterministe.
 package command

@@ -10,7 +10,7 @@
 	import { isProblem, noticeTtl } from '#lib/shell/notice.js';
 	import { Events } from '@wailsio/runtime';
 	import { DocumentService, GridService } from '#bindings/internal/bridge/index.js';
-	import type { DamagedFile, DocState, FormulaHelp } from '#bindings/internal/bridge/models.js';
+	import type { DamagedFile, DocState, FileQuestion, FormulaHelp, OpenResult } from '#bindings/internal/bridge/models.js';
 	import type { Layout, RuleChanges } from '#bindings/internal/canvas/models.js';
 	import type { Type } from '#bindings/internal/grid/models.js';
 	import type { Orphan } from '#bindings/internal/archive/models.js';
@@ -138,6 +138,10 @@
 	let closing = $state(false);
 	// Fichier endommagé à l'ouverture : proposer d'en récupérer les données.
 	let damaged = $state<DamagedFile | null>(null);
+	// Classeur ouvert sur un autre poste (verrou ~$) : lecture seule, ou l'ouvrir quand même.
+	let locked = $state<FileQuestion | null>(null);
+	// Fichier modifié par un autre poste depuis l'ouverture : copie, écraser ou annuler (close : puis fermer).
+	let conflict = $state<(FileQuestion & { close: boolean }) | null>(null);
 	// Échec d'une récupération de session : l'écran de récupération reste.
 	let recoverError = $state('');
 	// Boîtes de dialogue ouvertes par un script ou un assistant (ui.dialog…), la plus ancienne d'abord.
@@ -369,8 +373,19 @@
 	const loadRecent = async () => (recent = (await DocumentService.Recent().catch(() => null)) ?? []);
 
 	async function openPath(path: string) {
-		const r = await DocumentService.Open(path);
-		if (r.recoverable) {
+		await opened(await DocumentService.Open(path));
+	}
+
+	/** Classeur ouvert sur un autre poste : en lecture seule, ou quand même (readOnly faux). */
+	async function openLocked(path: string | null, readOnly: boolean) {
+		locked = null;
+		if (path) await opened(await DocumentService.OpenLocked(path, readOnly));
+	}
+
+	async function opened(r: OpenResult) {
+		if (r.locked) {
+			locked = r.locked;
+		} else if (r.recoverable) {
 			orphans = [r.recoverable];
 			recoverError = '';
 			mode = 'recover';
@@ -381,11 +396,27 @@
 			sheetId = 1;
 			mode = 'doc';
 			await reload();
-			// Déclencheurs inconnus supprimés à l'ouverture (sécurité).
+			// Déclencheurs inconnus supprimés (sécurité), lecture seule, verrou impossible.
 			if (r.state.notice) notice = r.state.notice;
 			workbookReady();
 		}
 		await loadRecent();
+	}
+
+	/** Réponse à « modifié par un autre poste » : écraser, enregistrer une copie (overwrite faux) ou rien (null). */
+	async function resolveSave(overwrite: boolean | null) {
+		const c = conflict;
+		conflict = null;
+		if (!c || overwrite === null) return;
+		docState = await DocumentService.ResolveSave(overwrite);
+		if (docState.conflict) {
+			conflict = { ...docState.conflict, close: c.close };
+			return;
+		}
+		if (docState.dirty) return; // copie annulée
+		notice = `Enregistré : ${docState.path}`;
+		await loadRecent();
+		if (c.close) await closeDoc(false);
 	}
 
 	/** Classeur ouvert et affiché : ses écouteurs « open » (scripts Lua) s'exécutent, sans être attendus. */
@@ -424,6 +455,11 @@
 		}
 		if (save) {
 			docState = await DocumentService.Save(false);
+			if (docState.conflict) {
+				// Fichier modifié par un autre poste : la question d'abord, puis la fermeture.
+				conflict = { ...docState.conflict, close: true };
+				return;
+			}
 			if (docState.dirty) {
 				// Enregistrement abandonné (ou refusé par un script : before_save).
 				if (docState.notice) notice = docState.notice;
@@ -810,7 +846,8 @@
 				case 'saveAs':
 					if (mode !== 'doc') return;
 					docState = await DocumentService.Save(a === 'saveAs');
-					if (docState.notice) notice = docState.notice;
+					if (docState.conflict) conflict = { ...docState.conflict, close: false };
+					else if (docState.notice) notice = docState.notice;
 					else if (!docState.dirty) notice = `Enregistré : ${docState.path}`;
 					await loadRecent();
 					break;
@@ -898,8 +935,9 @@
 	async function recover(o: Orphan, keep: boolean, also: Orphan[] = []) {
 		recoverError = '';
 		const gone = new Set<string>();
+		let st: DocState | null = null;
 		try {
-			if (keep) await DocumentService.Recover(o.dir);
+			if (keep) st = await DocumentService.Recover(o.dir);
 			else
 				for (const x of [o, ...also]) {
 					await DocumentService.Discard(x.dir);
@@ -915,7 +953,8 @@
 			if (keep) {
 				mode = 'doc';
 				await reload();
-				notice = 'Modifications récupérées : pensez à enregistrer.';
+				// Fichier verrouillé ou modifié par un autre poste depuis la session : dit aussi.
+				notice = ['Modifications récupérées : pensez à enregistrer.', st?.notice].filter(Boolean).join(' ');
 				workbookReady();
 			} else {
 				orphans = orphans.filter((x) => !gone.has(x.dir));
@@ -1998,6 +2037,33 @@
 				<div class="actions">
 					<button class="primary" onclick={() => salvage(file.path).catch((e) => (notice = err(e)))}>Récupérer les données</button>
 					<button onclick={() => salvage(null).catch((e) => (failure = err(e)))}>Annuler</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+	{#if locked}
+		{@const file = locked}
+		<div class="modal-back">
+			<div class="modal" role="dialog" aria-modal="true" aria-label="Classeur déjà ouvert" use:modal={() => (locked = null)}>
+				<p>{file.message}.</p>
+				<p class="hint">En lecture seule, vos modifications s'enregistrent sous un autre nom. L'ouvrir quand même risque d'écraser les modifications de l'autre poste (Lattis vérifie le fichier avant d'enregistrer).</p>
+				<div class="actions">
+					<button class="primary" onclick={() => openLocked(file.path, true).catch((e) => (notice = err(e)))}>Ouvrir en lecture seule</button>
+					<button onclick={() => openLocked(file.path, false).catch((e) => (notice = err(e)))}>Ouvrir quand même</button>
+					<button onclick={() => (locked = null)}>Annuler</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+	{#if conflict}
+		<div class="modal-back">
+			<div class="modal" role="dialog" aria-modal="true" aria-label="Classeur modifié par ailleurs" use:modal={() => (conflict = null)}>
+				<p>{conflict.message}.</p>
+				<p class="hint">« Enregistrer une copie » garde les deux versions ; « Écraser » remplace le fichier par la vôtre.</p>
+				<div class="actions">
+					<button class="primary" onclick={() => resolveSave(false).catch((e) => (notice = err(e)))}>Enregistrer une copie</button>
+					<button onclick={() => resolveSave(true).catch((e) => (notice = err(e)))}>Écraser</button>
+					<button onclick={() => resolveSave(null)}>Annuler</button>
 				</div>
 			</div>
 		</div>

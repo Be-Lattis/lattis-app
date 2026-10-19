@@ -47,14 +47,18 @@ func TestRangeSurvivesReopen(t *testing.T) {
 		t.Fatalf("saisie sous la plage rouverte : tableau créé %+v", l.Tables)
 	}
 	checkOK(t, d)
-	// L'historique aussi : annuler les saisies puis la conversion.
-	for range 3 {
+	// Les saisies de cette session s'annulent ; la conversion, faite avant
+	// l'enregistrement, n'est plus dans l'historique (jamais dans le fichier).
+	for range 2 {
 		_, err := d.Bus.Undo(ctx)
 		must(t, err)
 	}
+	if st, _ := d.Bus.State(ctx); st.Undo != "" {
+		t.Fatalf("historique d'avant la réouverture : %+v", st)
+	}
 	l, err = d.Layout(ctx, 1)
 	must(t, err)
-	if len(l.Tables) != 1 || len(l.Ranges) != 0 {
-		t.Fatalf("conversion annulée après réouverture : %+v, %+v", l.Tables, l.Ranges)
+	if len(l.Tables) != 0 || len(l.Ranges) != 1 {
+		t.Fatalf("saisies annulées après réouverture : %+v, %+v", l.Tables, l.Ranges)
 	}
 }
