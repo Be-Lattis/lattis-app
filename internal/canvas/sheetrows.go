@@ -585,3 +585,12 @@ func (t *tx) trimAfterDrop(id int64) error {
 	}
 	return t.trashRows(tb, `SELECT id FROM `+tb.sql()+after)
 }
+
+// columnEmpty : aucune ligne du tableau n'a de valeur (ni saisie invalide)
+// dans la colonne c.
+func (t *tx) columnEmpty(tb Table, c Column) (bool, error) {
+	var n int
+	q := fmt.Sprintf(`SELECT count(*) FROM %s WHERE coalesce(%s, '') <> '' OR EXISTS (SELECT 1 FROM _lattis_invalid i WHERE i.tbl = %d AND i.rid = %s.id AND i.col = %d)`, tb.sql(), colSQL(c.ID), tb.ID, tb.sql(), c.ID)
+	err := t.row(q).Scan(&n)
+	return n == 0, err
+}

@@ -341,7 +341,8 @@ func TestClearRange(t *testing.T) {
 		t.Fatal(err)
 	}
 	check(t, d, "effacer")
-	if got := view(t, d); got != lines("||||[C]|[D]", "|||||4", "|||||6") {
+	// La colonne C, en-tête compris, est vidée : elle quitte le tableau.
+	if got := view(t, d); got != lines("||||[D]", "||||4", "||||6") {
 		t.Fatalf("feuille\n%s", got)
 	}
 	if st := freeStyles(t, d); st["6,0"] == "" {
@@ -411,5 +412,31 @@ func TestClearBottomRows(t *testing.T) {
 	// Lignes 3 et 4 vidées, et la 2 l'était déjà : il reste la 1.
 	if ts := tablesOf(t, d); len(ts) != 1 || ts[0].Rows != 1 {
 		t.Fatalf("lignes du bas : %+v", ts)
+	}
+}
+
+// Suppr sur l'en-tête d'une colonne vide : la colonne quitte le tableau ; sur
+// l'en-tête d'une colonne remplie, rien ne bouge et la barre d'état dit
+// pourquoi. La dernière colonne à droite devenue vide part aussi.
+func TestClearHeaderDropsEmptyColumn(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	must(t, d.Do(ctx, "Saisie", func(x *tx) error {
+		_, err := x.createTable(1, "T", 0, 0, []string{"Nom", "Vide", "Âge", "Notes"}, [][]string{{"Léa", "", "31", "a"}, {"Tom", "", "8", "b"}})
+		return err
+	}))
+	must(t, d.ClearRange(ctx, 1, 0, 1, 0, 1, false))
+	if got, want := layoutOf(t, d), "T@A1:Nom|Âge|Notes×2"; got != want {
+		t.Fatalf("en-tête d'une colonne vide :\n got %s\nwant %s", got, want)
+	}
+	d.TakeNotice()
+	must(t, d.ClearRange(ctx, 1, 0, 0, 0, 0, false))
+	if n := d.TakeNotice(); !strings.Contains(n, "« Nom » ne s'efface pas") {
+		t.Fatalf("message : %q", n)
+	}
+	// Données de la dernière colonne vidées : elle part, l'en-tête avec.
+	must(t, d.ClearRange(ctx, 1, 1, 2, 2, 2, false))
+	if got, want := layoutOf(t, d), "T@A1:Nom|Âge×2"; got != want {
+		t.Fatalf("dernière colonne vidée :\n got %s\nwant %s", got, want)
 	}
 }

@@ -753,6 +753,43 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 		if err != nil {
 			return err
 		}
+		// Colonnes vidées (choix de Louis) : une colonne sans donnée dont
+		// l'en-tête est dans la zone, ou la dernière à droite devenue vide,
+		// quitte le tableau. Un en-tête qui ne peut pas partir dit pourquoi.
+		dropCleared := func(tb Table) error {
+			if tb.Filtered() || len(tb.Cols) < 2 {
+				return nil
+			}
+			var idx []int
+			for c := max(c0, tb.Col); c <= min(c1, tb.Right()); c++ {
+				i := c - tb.Col
+				col := tb.Cols[i]
+				header := r0 <= tb.Row
+				if !header && c != tb.Right() {
+					continue
+				}
+				empty, err := t.columnEmpty(tb, col)
+				if err != nil {
+					return err
+				}
+				switch {
+				case empty && col.Formula == "":
+					idx = append(idx, i)
+				case header && col.Formula != "":
+					t.notes = append(t.notes, fmt.Sprintf("« %s » est une colonne calculée : son en-tête ne s'efface pas (clic droit › Supprimer la colonne pour la retirer)", clip(col.Name)))
+				case header:
+					t.notes = append(t.notes, fmt.Sprintf("L'en-tête « %s » ne s'efface pas : la colonne contient des données (sélectionnez toute la colonne puis Suppr pour la retirer)", clip(col.Name)))
+				}
+			}
+			if len(idx) == 0 {
+				return nil
+			}
+			if len(idx) == len(tb.Cols) {
+				t.notes = append(t.notes, fmt.Sprintf("Le tableau « %s » garde au moins une colonne", tb.Name))
+				idx = idx[1:]
+			}
+			return t.dropColumns(tb, idx)
+		}
 		cells := 0
 		for _, tb := range tables {
 			switch {
@@ -767,6 +804,9 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 					last = min(last, tb.Row+tb.Shown)
 				}
 				if first > last {
+					if err := dropCleared(tb); err != nil {
+						return err
+					}
 					continue
 				}
 				ids, err := t.ridsAt(&tb, first, last)
@@ -797,6 +837,9 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 							}
 						}
 					}
+				}
+				if err := dropCleared(tb); err != nil {
+					return err
 				}
 				// Les dernières lignes devenues vides partent (choix de Louis).
 				if err := t.tidyBottom(tb.ID, false); err != nil {
