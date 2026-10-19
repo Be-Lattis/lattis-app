@@ -290,6 +290,11 @@ func infoSchemaTables(q string) func(ctx context.Context, db *sql.DB) ([]DBTable
 // connectDB ouvre et teste la connexion c, avec le mot de passe connu
 // (session, trousseau) ou sans ; *ErrPassword si le serveur le refuse.
 func connectDB(ctx context.Context, sec *Secrets, c Connection) (*sql.DB, *dialect, error) {
+	if g := GuardOf(ctx); g != nil {
+		if err := g.Check(ctx, Access{Host: ConnectionHost(c)}); err != nil {
+			return nil, nil, fmt.Errorf("connexion « %s » : %w", c.Name, err)
+		}
+	}
 	if c.Kind == KindLattis {
 		return connectLattis(ctx, c)
 	}
@@ -632,6 +637,11 @@ func listTables(ctx context.Context, db *sql.DB, d *dialect) ([]DBTable, error) 
 
 // FileTables liste les tables et vues d'un fichier de base (SQLite).
 func FileTables(ctx context.Context, kind, path string) ([]DBTable, error) {
+	if g := GuardOf(ctx); g != nil {
+		if err := g.CheckPath(path); err != nil {
+			return nil, err
+		}
+	}
 	db, d, err := openFileDB(kind, path)
 	if err != nil {
 		return nil, err

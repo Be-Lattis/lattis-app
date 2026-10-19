@@ -578,6 +578,9 @@ func fetchWeb(ctx context.Context, sec *Secrets, conn *Connection, raw string, h
 			return nil
 		},
 	}
+	if g := GuardOf(ctx); g != nil {
+		client.Transport = g.Transport()
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("%s : %w", u.Host, err)

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/query"
 	"github.com/lalamefine/lattis/internal/script"
 )
 
@@ -180,6 +181,10 @@ func (c *Call) doHTTP(r httpRequest) (HTTPResponse, error) {
 			}
 			return c.allowHost(next.URL.Host)
 		},
+	}
+	// Version web : pas d'adresse interne du serveur (Guard.DialContext).
+	if g, ok := c.Host.(query.Guarded); ok && g.QueryGuard() != nil {
+		client.Transport = g.QueryGuard().Transport()
 	}
 	method := strings.ToUpper(strings.TrimSpace(r.method))
 	if method == "" {

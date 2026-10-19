@@ -155,6 +155,11 @@ type XLSXTable struct {
 
 // XLSXTables liste les tableaux d'un classeur .xlsx.
 func XLSXTables(ctx context.Context, path string) ([]XLSXTable, error) {
+	if g := GuardOf(ctx); g != nil {
+		if err := g.CheckPath(path); err != nil {
+			return nil, err
+		}
+	}
 	sheets, closeFn, err := transfer.ReadXLSX(ctx, path)
 	if err != nil {
 		return nil, err

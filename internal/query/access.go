@@ -75,8 +75,14 @@ func ConnectionHost(c Connection) string {
 	return net.JoinHostPort(h, strconv.Itoa(c.Config.port(c.Kind)))
 }
 
-// allow vérifie un accès (Env.Allow).
+// allow vérifie un accès : borne du serveur (Guard), puis accord
+// (Env.Allow).
 func (r *run) allow(a Access) error {
+	if g := GuardOf(r.ctx); g != nil {
+		if err := g.Check(r.ctx, a); err != nil {
+			return err
+		}
+	}
 	if r.env.Allow != nil {
 		return r.env.Allow(r.ctx, a)
 	}

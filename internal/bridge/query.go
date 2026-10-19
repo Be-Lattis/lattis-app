@@ -173,6 +173,7 @@ func (s *DocumentService) NewQueryName(ctx context.Context, base string) (string
 // PreviewQuery calcule l'aperçu d'une requête (pas forcément enregistrée)
 // après ses upto premières étapes (-1 : toutes). fresh relit les sources.
 func (s *DocumentService) PreviewQuery(ctx context.Context, q query.Query, upto int, fresh bool) (query.Preview, error) {
+	ctx = query.GuardFrom(ctx, s.sys())
 	d, sess, err := s.querySession()
 	if err != nil {
 		return query.Preview{}, err
@@ -213,6 +214,7 @@ func (s *DocumentService) refreshed(ctx context.Context, out QueryRefresh, err e
 // RefreshQuery actualise une requête : source relue, étapes rejouées,
 // tableau remplacé (une étape d'annulation).
 func (s *DocumentService) RefreshQuery(ctx context.Context, id int64) (QueryRefresh, error) {
+	ctx = query.GuardFrom(ctx, s.sys())
 	d, sess, err := s.querySession()
 	if err != nil {
 		return QueryRefresh{}, err
@@ -228,6 +230,7 @@ func (s *DocumentService) RefreshQuery(ctx context.Context, id int64) (QueryRefr
 // RefreshAllQueries actualise toutes les requêtes chargées (Actualiser
 // tout), en une étape d'annulation.
 func (s *DocumentService) RefreshAllQueries(ctx context.Context) (QueryRefresh, error) {
+	ctx = query.GuardFrom(ctx, s.sys())
 	d, sess, err := s.querySession()
 	if err != nil {
 		return QueryRefresh{}, err
@@ -317,6 +320,7 @@ func (s *DocumentService) DeleteConnection(ctx context.Context, id int64) (DocSt
 // TestConnection essaie une connexion (password vide : celui qui est
 // connu). Renvoie "" si elle répond, sinon le message d'erreur.
 func (s *DocumentService) TestConnection(ctx context.Context, c query.Connection, password string, remember bool) (string, error) {
+	ctx = query.GuardFrom(ctx, s.sys())
 	if c.Kind == "" {
 		c.Kind = query.KindPostgres
 	}
@@ -379,6 +383,7 @@ type TableList struct {
 // ConnectionTables liste les tables d'une connexion du classeur
 // (PostgreSQL, MySQL, SQL Server ; vide pour une connexion Web).
 func (s *DocumentService) ConnectionTables(ctx context.Context, name string) (TableList, error) {
+	ctx = query.GuardFrom(ctx, s.sys())
 	c, err := s.connection(ctx, name)
 	if err != nil {
 		return TableList{}, err
@@ -397,6 +402,7 @@ func (s *DocumentService) ConnectionTables(ctx context.Context, name string) (Ta
 
 // FileTables liste les tables et vues d'un fichier de base (kind : "sqlite").
 func (s *DocumentService) FileTables(ctx context.Context, kind, path string) ([]query.DBTable, error) {
+	ctx = query.GuardFrom(ctx, s.sys())
 	return query.FileTables(ctx, kind, path)
 }
 
@@ -435,6 +441,7 @@ func (s *DocumentService) PickDataFile(kind string) (string, error) {
 
 // ExcelTables liste les tableaux d'un classeur .xlsx (navigateur).
 func (s *DocumentService) ExcelTables(ctx context.Context, path string) ([]query.XLSXTable, error) {
+	ctx = query.GuardFrom(ctx, s.sys())
 	return query.XLSXTables(ctx, path)
 }
 
@@ -471,6 +478,7 @@ func (s *DocumentService) FileBase(path string) string {
 // sur la feuille affichée. headers : en-têtes affichés des colonnes
 // (columns : noms rendus par la requête), repris par des étapes Renommer.
 func (s *DocumentService) ReferenceQuery(ctx context.Context, q, name string, columns, headers []string) (QueryRefresh, error) {
+	ctx = query.GuardFrom(ctx, s.sys())
 	d, err := s.current()
 	if err != nil {
 		return QueryRefresh{}, err

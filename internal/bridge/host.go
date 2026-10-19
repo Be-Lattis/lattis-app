@@ -7,6 +7,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/api"
 	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/query"
 )
 
 // UIEvent porte une commande de l'interface venue d'un script ou du serveur
@@ -106,6 +107,15 @@ func (h host) Dialog(ctx context.Context, d api.Dialog) (map[string]any, bool, e
 		h.s.emitUI(UICommand{Kind: "dialog-close", ID: id})
 		return nil, false, context.Cause(ctx)
 	}
+}
+
+// QueryGuard donne la borne des sources de l'hôte de l'application
+// (moteur web) ; nil sur le bureau.
+func (h host) QueryGuard() *query.Guard {
+	if g, ok := h.s.sys().(query.Guarded); ok {
+		return g.QueryGuard()
+	}
+	return nil
 }
 
 func (h host) Notify(msg string) { h.s.emitUI(UICommand{Kind: "notify", Message: msg}) }

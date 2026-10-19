@@ -118,7 +118,7 @@ func init() {
 					return nil, err
 				}
 				defer s.Close()
-				pv := s.Preview(c, c.queryEnv(d), q, upto, true)
+				pv := s.Preview(query.GuardFrom(c, c.Host), c.queryEnv(d), q, upto, true)
 				pv.SQL = ""
 				return pv, nil
 			},
@@ -136,7 +136,7 @@ func init() {
 					return nil, err
 				}
 				d, _ := c.Doc()
-				l, err := query.Refresh(c, c.queryEnv(d), q.ID)
+				l, err := query.Refresh(query.GuardFrom(c, c.Host), c.queryEnv(d), q.ID)
 				return l, refreshErr(err)
 			},
 		},
@@ -156,7 +156,7 @@ func init() {
 					return nil, err
 				}
 				defer s.Close()
-				ls, err := s.RefreshAll(c, c.queryEnv(d))
+				ls, err := s.RefreshAll(query.GuardFrom(c, c.Host), c.queryEnv(d))
 				return ls, refreshErr(err)
 			},
 		},

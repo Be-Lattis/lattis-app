@@ -21,6 +21,7 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/lalamefine/lattis/internal/bridge"
+	"github.com/lalamefine/lattis/internal/query"
 	"github.com/lalamefine/lattis/internal/transport"
 )
 
@@ -35,6 +36,12 @@ type Options struct {
 	// Scripting permet Lua, boutons et pages web (server_config.web_scripting,
 	// lu par lattisd à l'ouverture de la session). Faux par défaut.
 	Scripting bool
+	// InternalHosts : hôtes que les requêtes (et les scripts) peuvent
+	// joindre bien qu'ils désignent une adresse interne du serveur
+	// (bouclage, réseau privé, lien local), « hôte » ou « hôte:port ». Les
+	// autres adresses internes sont refusées, et les sources fichier ne
+	// lisent que les fichiers de Dir (query.Guard).
+	InternalHosts []string
 	// Demo et Seed : classeur de démonstration à ouvrir (comme --demo).
 	Demo string
 	Seed uint64
@@ -82,6 +89,7 @@ func New(ctx context.Context, o Options) (*Engine, error) {
 	e.host = &WebHost{
 		hub: e.hub, dir: o.Dir, base: base, scripting: o.Scripting, secrets: secrets,
 		picks: map[string]chan pickResult{}, downloads: map[string]string{},
+		guard: &query.Guard{Dir: o.Dir, Hosts: o.InternalHosts},
 	}
 	e.hub.OnIdle = e.host.cancelPicks
 	bridge.UseHost(e.host, e.grid, e.docs)

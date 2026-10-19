@@ -61,6 +61,7 @@ type DataInsert struct {
 // premier chargement à la cellule donnée ; dans un classeur du même serveur,
 // le lien est annoncé (« Utilisée par », voir dataChanged).
 func (s *DocumentService) InsertDataset(ctx context.Context, in DataInsert) (QueryRefresh, error) {
+	ctx = query.GuardFrom(ctx, s.sys())
 	d, err := s.current()
 	if err != nil {
 		return QueryRefresh{}, err

@@ -26,6 +26,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -49,6 +50,9 @@ const usage = `lattis-engine : moteur Lattis pour le navigateur
                      copies des classeurs du serveur)
   --base-path /app   préfixe des URL (/app/ws, /app/upload/…, /app/download/…)
   --scripting        permet Lua, boutons et pages web (désactivés par défaut)
+  --internal-hosts h1,h2
+                     hôtes internes (bouclage, réseau privé) que les requêtes et
+                     les scripts peuvent joindre ; les autres sont refusés
   --demo [preset]    ouvre un classeur de démonstration (med par défaut)
   --seed n           graine du générateur de la démonstration
 
@@ -66,6 +70,7 @@ l'écoute, et le moteur s'arrête quand l'entrée standard se ferme.
 func main() {
 	addr, static, dir, base, scripting := "", "", "", "", false
 	server, tokenURL, workbook := "", "", ""
+	var internal []string
 	idle := 30 * time.Minute
 	var rest []string
 	args := os.Args[1:]
@@ -96,6 +101,12 @@ func main() {
 			}
 		case "--scripting", "-scripting":
 			scripting = true
+		case "--internal-hosts", "-internal-hosts":
+			for _, h := range strings.Split(val(), ",") {
+				if h = strings.TrimSpace(h); h != "" {
+					internal = append(internal, h)
+				}
+			}
 		case "--server", "-server":
 			server = val()
 		case "--token-url", "-token-url":
@@ -151,6 +162,10 @@ func main() {
 		if server, err = auth.NormalizeURL(server); err != nil {
 			fail(err)
 		}
+		// Le Serveur Lattis de la session est joignable même s'il est interne.
+		if u, err := url.Parse(server); err == nil && u.Host != "" {
+			internal = append(internal, u.Host)
+		}
 		bridge.UseFixedSession(&bridge.FixedSession{
 			Server: server,
 			Fetch:  bridge.TokenURL(tokenURL, os.Getenv("LATTIS_ENGINE_SECRET"), nil),
@@ -163,7 +178,7 @@ func main() {
 	}
 	config.Init(ctx, nil)
 
-	opts := engine.Options{Dir: dir, BasePath: base, Scripting: scripting, Demo: preset, Seed: seed}
+	opts := engine.Options{Dir: dir, BasePath: base, Scripting: scripting, Demo: preset, Seed: seed, InternalHosts: internal}
 	if !serverMode {
 		opts.OriginPatterns = []string{"localhost:*", "127.0.0.1:*"}
 	}

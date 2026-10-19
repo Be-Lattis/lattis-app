@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/lalamefine/lattis/internal/bridge"
+	"github.com/lalamefine/lattis/internal/query"
 	"github.com/lalamefine/lattis/internal/transport"
 )
 
@@ -61,6 +62,7 @@ type WebHost struct {
 	scripting bool
 	secrets   bridge.SecretStore
 	clip      bridge.MemClipboard
+	guard     *query.Guard // sources des requêtes : fichiers de dir, pas d'adresse interne
 
 	mu        sync.Mutex
 	picks     map[string]chan pickResult
@@ -251,6 +253,10 @@ func (h *WebHost) Secrets() bridge.SecretStore { return h.secrets }
 
 // Window : pas de fenêtre en web.
 func (h *WebHost) Window() bridge.WindowControl { return bridge.NoWindow() }
+
+// QueryGuard : les requêtes s'exécutent sur le serveur ; elles ne lisent
+// que les fichiers envoyés et ne joignent pas son réseau interne.
+func (h *WebHost) QueryGuard() *query.Guard { return h.guard }
 
 // Platform : version web, scripting selon le serveur.
 func (h *WebHost) Platform() bridge.Platform {

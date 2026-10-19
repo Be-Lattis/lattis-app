@@ -96,6 +96,8 @@ Codes : `-32700` illisible, `-32601` méthode inconnue (`ReferenceError`), `-326
 
 Les jetons d'envoi et de téléchargement sont aléatoires (128 bits) et propres à la session ; `lattisd` doit de toute façon mettre ces chemins derrière l'authentification de la session.
 
+**Sources des requêtes** : elles s'exécutent sur le serveur. `WebHost.QueryGuard` (`query.Guard`) limite les sources fichier aux fichiers de `Dir` (ceux envoyés) et refuse les adresses internes (bouclage, réseaux privés, lien local dont `169.254.169.254`, CGNAT) pour les API web, les bases de données, le Serveur Lattis et le module `http` des scripts. Les connexions HTTP sont vérifiées au moment de la connexion (redirections, résolution DNS changeante) ; celles des pilotes de bases de données à la résolution, juste avant. `engine.Options.InternalHosts` (`--internal-hosts`) liste les hôtes internes permis ; en mode serveur, le Serveur Lattis de la session y est ajouté.
+
 ### 3.4 Scripting opt-in (§ 12.4)
 
 `engine.Options.Scripting` (lu par `lattisd` dans `server_config.web_scripting` à l'ouverture de la session, faux par défaut) se retrouve dans `Platform().Scripting`. Faux :
