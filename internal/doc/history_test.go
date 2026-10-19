@@ -1,13 +1,14 @@
 package doc
 
 import (
-	"archive/zip"
 	"bytes"
 	"context"
 	"io"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/lalamefine/lattis/internal/archive"
 )
 
 // L'historique d'annulation et les corbeilles ne partent jamais dans le
@@ -96,7 +97,7 @@ func TestHistoryNotSaved(t *testing.T) {
 // dbBytes rend la base telle qu'enregistrée dans l'archive.
 func dbBytes(t *testing.T, path string) []byte {
 	t.Helper()
-	zr, err := zip.OpenReader(path)
+	zr, err := archive.OpenZip(path)
 	must(t, err)
 	defer zr.Close()
 	for _, f := range zr.File {

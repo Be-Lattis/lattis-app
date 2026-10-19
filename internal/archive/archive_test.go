@@ -58,7 +58,7 @@ func TestSaveOpenRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// L'archive : un manifeste et la base, stockée sans compression.
+	// L'archive : un manifeste et la base, compressée en Zstandard.
 	zr, err := zip.OpenReader(path)
 	if err != nil {
 		t.Fatal(err)
@@ -68,7 +68,7 @@ func TestSaveOpenRoundTrip(t *testing.T) {
 		names[f.Name] = f.Method
 	}
 	zr.Close()
-	if _, ok := names[manifestName]; !ok || names[dbName] != zip.Store {
+	if _, ok := names[manifestName]; !ok || names[dbName] != Zstd {
 		t.Fatalf("contenu de l'archive : %v", names)
 	}
 

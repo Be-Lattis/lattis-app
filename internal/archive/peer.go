@@ -1,7 +1,6 @@
 package archive
 
 import (
-	"archive/zip"
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
@@ -270,7 +269,7 @@ func stampOf(path string) (Stamp, error) {
 
 // zipSum : empreinte du manifeste et des entrées du ZIP (vide si illisible).
 func zipSum(path string) string {
-	zr, err := zip.OpenReader(path)
+	zr, err := OpenZip(path)
 	if err != nil {
 		return ""
 	}

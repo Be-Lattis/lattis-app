@@ -6,9 +6,12 @@
 // répertoire de travail local, sous le dossier cache de l'utilisateur
 // (os.UserCacheDir, conservé entre deux redémarrages), où la base vit en WAL.
 // Enregistrer produit un instantané cohérent par VACUUM INTO, en retire
-// l'historique d'annulation et les corbeilles (scrub.go), le zippe sans
-// compression et remplace l'archive de façon atomique. L'extraction vérifie
-// l'espace libre et refuse une base démesurée (bombe ZIP, copyZipFile).
+// l'historique d'annulation et les corbeilles (scrub.go), le zippe en
+// Zstandard rapide (méthode ZIP 93, par blocs compressés sur plusieurs
+// cœurs, compress.go) et remplace l'archive de façon atomique. Les archives
+// plus anciennes, base sans compression (Store), et celles en Deflate se
+// lisent toujours. L'extraction vérifie l'espace libre et refuse une base
+// démesurée (bombe ZIP, copyZipFile).
 //
 // Un verrou à côté du fichier (~$nom.lattis, peer.go) prévient un autre
 // poste qui ouvre le même classeur ; l'enregistrement refuse d'écraser un
@@ -176,9 +179,9 @@ type Doc struct {
 	// plusieurs : un collègue l'a enregistré) : l'enregistrer par-dessus ne
 	// perd rien, ChangedError n'est pas rendu.
 	Known func(m Manifest) bool
-	lock     *os.File
-	extra    []func(*sqliteConn) error
-	peer     *peerLock // verrou ~$ posé à côté du fichier (nil : aucun)
+	lock  *os.File
+	extra []func(*sqliteConn) error
+	peer  *peerLock // verrou ~$ posé à côté du fichier (nil : aucun)
 	// base : fichier sur disque à l'ouverture ou au dernier enregistrement
 	// (nil : inconnu, aucun contrôle).
 	base *Stamp
@@ -472,7 +475,7 @@ func sniff(path string) error {
 // base est écrite sous un nom provisoire puis renommée : un arrêt pendant
 // l'extraction ne laisse pas de base tronquée à « récupérer ».
 func extract(path, dir string) error {
-	zr, err := zip.OpenReader(path)
+	zr, err := OpenZip(path)
 	if err != nil {
 		return corruptErr(path, "l'archive est incomplète ou altérée (fichier tronqué ?)", true)
 	}
@@ -530,12 +533,19 @@ func (t tagReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
-// Bombe ZIP (audit 6, M1) : Lattis écrit la base sans compression ; une
-// base compressée plus de maxRatio fois, au-delà de ratioFloor, n'est pas
-// un classeur de Lattis.
+// Bombe ZIP (audit 6, M1) : une base compressée plus de maxRatio fois
+// (maxDeflateRatio en Deflate), au-delà de ratioFloor, n'est pas un classeur
+// de Lattis. Mesures (décision 0015) : 2,5 à 9 fois pour de vrais classeurs,
+// 48 fois (Zstandard) et 30 fois (Deflate) pour un même texte sur 500 000
+// lignes, 814 et 181 fois pour une base faite de blobs nuls (zeroblob), le
+// pire cas : chaque page SQLite garde son en-tête. Une bombe faite de zéros
+// dépasse 30 000 fois en Zstandard et approche 1 000 fois en Deflate (son
+// maximum). L'espace libre et les pages annoncées par l'en-tête de la base
+// restent vérifiés.
 const (
-	maxRatio   = 100
-	ratioFloor = 64 << 20
+	maxRatio        = 2000
+	maxDeflateRatio = 500
+	ratioFloor      = 64 << 20
 	// headerSlack : octets tolérés après la dernière page annoncée par
 	// l'en-tête de la base.
 	headerSlack = 64 << 10
@@ -553,10 +563,17 @@ func bomb(f *zip.File) string {
 	if size >= 1<<48 { // au-delà de ce que SQLite sait écrire
 		return fmt.Sprintf("l'archive annonce une base de %s : fichier refusé", Size(size))
 	}
-	if f.Method != zip.Store && size > ratioFloor && size/maxRatio > f.CompressedSize64 {
+	if f.Method != zip.Store && size > ratioFloor && size/ratioLimit(f.Method) > f.CompressedSize64 {
 		return fmt.Sprintf("la base de données de l'archive est compressée de façon anormale (%s pour %s dans le fichier) : fichier refusé", Size(size), Size(f.CompressedSize64))
 	}
 	return ""
+}
+
+func ratioLimit(method uint16) uint64 {
+	if method == zip.Deflate {
+		return maxDeflateRatio
+	}
+	return maxRatio
 }
 
 // copyZipFile décompresse f dans dst, sans dépasser la taille annoncée par
@@ -904,7 +921,7 @@ func cleanTemps(dir string) {
 // verifyZip relit l'archive écrite avant qu'elle remplace l'ancienne :
 // manifeste et base présents, base de la taille de l'instantané.
 func verifyZip(path string, size int64) error {
-	zr, err := zip.OpenReader(path)
+	zr, err := OpenZip(path)
 	if err != nil {
 		return fmt.Errorf("archive écrite illisible : %w", err)
 	}
@@ -938,7 +955,7 @@ func rename(src, dst string) error {
 }
 
 func writeZip(w io.Writer, snap string, remote *Remote, journal map[string]int64, done *atomic.Int64) error {
-	zw := zip.NewWriter(w)
+	zw := newZipWriter(w)
 	mw, err := zw.Create(manifestName)
 	if err != nil {
 		return err
@@ -950,7 +967,7 @@ func writeZip(w io.Writer, snap string, remote *Remote, journal map[string]int64
 	if journal != nil {
 		io.WriteString(mw, journalYAML(journal))
 	}
-	dw, err := zw.CreateHeader(&zip.FileHeader{Name: dbName, Method: zip.Store, Modified: time.Now()})
+	dw, err := zw.CreateHeader(&zip.FileHeader{Name: dbName, Method: Method, Modified: time.Now()})
 	if err != nil {
 		return err
 	}
@@ -1010,7 +1027,7 @@ func journalYAML(j map[string]int64) string {
 
 // ReadManifest lit le manifeste d'une archive .lattis sans l'ouvrir.
 func ReadManifest(path string) (Manifest, error) {
-	zr, err := zip.OpenReader(path)
+	zr, err := OpenZip(path)
 	if err != nil {
 		return Manifest{}, corruptErr(path, "l'archive est incomplète ou altérée (fichier tronqué ?)", true)
 	}

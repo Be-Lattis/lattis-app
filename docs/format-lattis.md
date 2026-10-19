@@ -2,18 +2,21 @@
 
 *Format d'archive 1 (`archive.FormatVersion`), format de base 34 (`meta.Version`), au 19 octobre 2026. Ce document suit le code : une migration qui change le schéma le met à jour.*
 
-Un classeur Lattis est un fichier ZIP qui contient une base SQLite. Tout ce que le classeur contient (tableaux, cellules, mise en forme, objets, scripts, requêtes) est dans la base ; l'archive n'ajoute qu'un court manifeste. Le fichier se lit donc sans Lattis : on le dézippe, puis on ouvre `database.sqlite` avec n'importe quel outil SQLite.
+Un classeur Lattis est un fichier ZIP qui contient une base SQLite. Tout ce que le classeur contient (tableaux, cellules, mise en forme, objets, scripts, requêtes) est dans la base ; l'archive n'ajoute qu'un court manifeste. Le fichier se lit donc sans Lattis : on le dézippe (avec un outil qui lit Zstandard, voir ci-dessous), puis on ouvre `database.sqlite` avec n'importe quel outil SQLite.
 
 ## L'archive
 
 | Entrée | Contenu |
 | --- | --- |
 | `manifest.yaml` | `format_version` (format d'archive, 1), `application` (`Lattis`), `saved` (date d'enregistrement, UTC, RFC 3339) ; pour un classeur partagé sur un Serveur Lattis, une section `remote` (serveur, identifiant, schéma, mode, version, points de reprise). |
-| `database.sqlite` | la base, **sans compression** (méthode `Store`) : l'enregistrement et l'ouverture d'un gros classeur restent rapides. |
+| `database.sqlite` | la base, compressée en **Zstandard** (méthode ZIP 93), niveau le plus rapide (décision 0015). |
 
 - La base est un instantané complet et cohérent (`VACUUM INTO`), d'un seul fichier : pas de WAL à côté.
 - Le manifeste est indicatif ; la base fait foi. Un manifeste absent ou illisible est toléré ; un `format_version` plus récent que celui que Lattis connaît fait refuser le fichier, avec un message qui demande de mettre Lattis à jour.
-- À l'ouverture, Lattis refuse une base démesurée (bombe ZIP) : taille annoncée au-delà des pages déclarées par l'en-tête SQLite, ou base compressée plus de 100 fois. Il vérifie aussi l'espace disque avant d'extraire.
+- **Compression.** La base est coupée en blocs de 2 Mio compressés en parallèle, chacun une trame Zstandard ; les trames se suivent, ce qui forme un flux Zstandard ordinaire (RFC 8878). Une base SQLite s'y réduit de 2,5 à 9 fois, et l'enregistrement prend à peu près le temps d'une copie sans compression (mesures dans la décision 0015). Le manifeste est en Deflate.
+- **Lire la base hors de Lattis.** 7-Zip et WinRAR lisent la méthode 93 ; l'Explorateur de Windows et l'Utilitaire d'archive de macOS non. En Python 3.14, `zipfile` ne décode que la première trame (somme de contrôle fausse au-delà de 2 Mio) : lire les octets compressés de l'entrée et les passer à `compression.zstd.decompress`, qui lit toutes les trames.
+- **Anciennes archives.** Lattis lit aussi une base sans compression (méthode `Store`, celle des classeurs enregistrés avant le 19 octobre 2026) ou en Deflate (méthode 8, celle d'un outil ZIP courant) ; il la réenregistre en Zstandard.
+- À l'ouverture, Lattis refuse une base démesurée (bombe ZIP) : taille annoncée au-delà des pages déclarées par l'en-tête SQLite, ou base de plus de 64 Mio compressée plus de 2 000 fois (500 fois en Deflate) ; une vraie base va de 2,5 à 9 fois, et au pire, faite de blobs nuls, à 814 fois. Il vérifie aussi l'espace disque avant d'extraire.
 - L'enregistrement écrit l'archive à côté du fichier, la relit, puis la renomme : le fichier n'est jamais à moitié écrit. Un verrou caché `~$nom.lattis` signale aux autres postes un classeur ouvert (voir `internal/archive/peer.go`).
 
 ## La base
@@ -93,6 +96,6 @@ SELECT * FROM t_3 ORDER BY _pos;
 - modifier des valeurs dans les colonnes `c_<id>` d'un tableau, en respectant leur type (STRICT le refuse sinon) : sans risque, sauf pour une colonne calculée ;
 - ajouter des lignes : donner à `_pos` une clé qui se trie après la dernière (par exemple la dernière clé suivie de `V`), et laisser `id` à SQLite ;
 - ne pas créer de déclencheur (il serait supprimé), ne pas toucher aux tables `_lattis_*` ni au `user_version` ;
-- rezipper avec la base **sans compression** sous le nom `database.sqlite`, et le manifeste.
+- rezipper la base sous le nom `database.sqlite`, avec le manifeste : sans compression, en Deflate ou en Zstandard (méthode 93), au choix.
 
 Pour échanger des données avec un autre logiciel, préférez les voies prévues : l'onglet SQL, les exports (CSV, Excel, OpenDocument), les scripts Lua ou le serveur MCP.

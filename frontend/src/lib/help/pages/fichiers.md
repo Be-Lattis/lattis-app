@@ -1,6 +1,6 @@
 # Fichiers et récupération
 
-Un classeur Lattis est un seul fichier `.lattis` : une archive ZIP qui contient une base SQLite et un court manifeste. Il s'envoie par e-mail et s'archive comme un classeur Excel ; une fois dézippé, n'importe quel outil SQLite lit ses tableaux.
+Un classeur Lattis est un seul fichier `.lattis` : une archive ZIP qui contient une base SQLite, compressée, et un court manifeste. Il s'envoie par e-mail et s'archive comme un classeur Excel ; une fois dézippé avec 7-Zip ou WinRAR (l'Explorateur de Windows ne lit pas sa compression, Zstandard), n'importe quel outil SQLite lit ses tableaux.
 
 ## Enregistrer
 

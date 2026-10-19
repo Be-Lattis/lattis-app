@@ -33,7 +33,7 @@ func TestMesureSauvegarde(t *testing.T) {
 		t.Fatal(err)
 	}
 	st, _ := os.Stat(path)
-	t.Logf("enregistrement (VACUUM INTO + ZIP sans compression) : %v, archive %d Mo", time.Since(start).Round(time.Millisecond), st.Size()/1e6)
+	t.Logf("enregistrement (VACUUM INTO + ZIP en Zstandard) : %v, archive %d Mo", time.Since(start).Round(time.Millisecond), st.Size()/1e6)
 	d.Close()
 	start = time.Now()
 	d, err = Open(path)

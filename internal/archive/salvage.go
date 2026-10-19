@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/klauspost/compress/flate"
+	"github.com/klauspost/compress/zstd"
 	"github.com/ncruces/go-sqlite3"
 )
 
@@ -23,7 +25,7 @@ type Report struct {
 
 // Salvage tire d'un classeur endommagé ses données lisibles. La base est
 // extraite comme elle peut (une archive tronquée comprise : la base y est
-// stockée sans compression), puis recopiée ligne à ligne, table par table,
+// décompressée jusqu'à la coupure), puis recopiée ligne à ligne, table par table,
 // dans une base neuve au schéma courant (schema la crée), en sautant ce qui
 // est illisible. L'historique d'annulation n'est pas repris. Le résultat est
 // un nouveau document, jamais enregistré : le fichier d'origine n'est pas
@@ -105,9 +107,11 @@ func rawDB(path, dst string) error {
 
 // copyRawDB écrit dans w les octets de la base : par l'archive si elle se
 // lit (en gardant ce qui précède une erreur de lecture), sinon en cherchant
-// l'en-tête local de la base dans le fichier et en prenant ce qui suit.
+// l'en-tête local de la base dans le fichier et en prenant ce qui suit,
+// décompressé jusqu'à la première erreur (Zstandard, Deflate) ou tel quel
+// (Store).
 func copyRawDB(path string, w io.Writer) (int64, error) {
-	if zr, err := zip.OpenReader(path); err == nil {
+	if zr, err := OpenZip(path); err == nil {
 		defer zr.Close()
 		for _, f := range zr.File {
 			if f.Name != dbName || bomb(f) != "" {
@@ -144,15 +148,47 @@ func copyRawDB(path string, w io.Writer) (int64, error) {
 		method := binary.LittleEndian.Uint16(h[8:])
 		nameLen := int(binary.LittleEndian.Uint16(h[26:]))
 		extraLen := int(binary.LittleEndian.Uint16(h[28:]))
-		if off+30+nameLen > len(head) || string(h[30:30+nameLen]) != dbName || method != zip.Store {
+		known := method == zip.Store || method == zip.Deflate || method == Zstd
+		if off+30+nameLen > len(head) || string(h[30:30+nameLen]) != dbName || !known {
 			off += 4
 			continue
 		}
-		if _, err := f.Seek(int64(off+30+nameLen+extraLen), io.SeekStart); err != nil {
+		start := int64(off + 30 + nameLen + extraLen)
+		if _, err := f.Seek(start, io.SeekStart); err != nil {
 			return 0, err
 		}
-		return io.Copy(w, f)
+		return copyRawData(w, f, method, start)
 	}
+}
+
+// copyRawData décompresse les données d'une entrée sans en connaître la
+// fin : ce qui suit le flux (descripteur, répertoire central) ou une
+// coupure l'arrête, et ce qui a été lu est gardé. Comme à l'extraction, la
+// sortie est bornée à maxRatio fois les octets compressés.
+func copyRawData(w io.Writer, f *os.File, method uint16, start int64) (int64, error) {
+	var r io.Reader
+	switch method {
+	case zip.Store:
+		return io.Copy(w, f)
+	case zip.Deflate:
+		fr := flate.NewReader(f)
+		defer fr.Close()
+		r = fr
+	default:
+		// Un seul fil : tout bloc lu avant l'erreur est rendu.
+		d, err := zstd.NewReader(f, zstd.WithDecoderConcurrency(1))
+		if err != nil {
+			return 0, err
+		}
+		defer d.Close()
+		r = d
+	}
+	limit := int64(ratioFloor)
+	if st, err := f.Stat(); err == nil {
+		limit = max(limit, (st.Size()-start)*int64(ratioLimit(method)))
+	}
+	n, _ := io.Copy(w, io.LimitReader(r, limit)) // erreur : garder ce qui est lu
+	return n, nil
 }
 
 // salvageDB recopie dans dst (base au schéma courant) ce qui se lit de src :

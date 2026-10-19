@@ -42,7 +42,7 @@ func savedRows(t *testing.T, n int) string {
 // entries lit les entrées d'une archive.
 func entries(t *testing.T, path string) map[string][]byte {
 	t.Helper()
-	zr, err := zip.OpenReader(path)
+	zr, err := OpenZip(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,8 +134,14 @@ func TestOpenBadFiles(t *testing.T) {
 		{"sans base", func(p string) { writeEntries(t, p, manifestName, man, "autre.txt", []byte("x")) }, ErrFormat, "pas de base", false},
 		{"base illisible", func(p string) { writeEntries(t, p, manifestName, man, dbName, []byte("pas une base")) }, ErrCorrupt, "en-tête invalide", false},
 		{"base tronquée", func(p string) { writeEntries(t, p, manifestName, man, dbName, db[:len(db)/2]) }, ErrCorrupt, "tronquée", true},
-		{"somme de contrôle fausse", func(p string) {
+		{"base compressée altérée", func(p string) {
 			b, _ := os.ReadFile(good)
+			b[len(b)/2] ^= 0xff
+			os.WriteFile(p, b, 0o644)
+		}, ErrCorrupt, "altérée", true},
+		{"somme de contrôle fausse (sans compression)", func(p string) {
+			writeEntries(t, p, manifestName, man, dbName, db)
+			b, _ := os.ReadFile(p)
 			i := bytes.Index(b, []byte("ligne 1500 "))
 			b[i] ^= 0xff
 			os.WriteFile(p, b, 0o644)
@@ -257,8 +263,20 @@ func countRows(t *testing.T, d *Doc) int {
 func noSchema(string) error { return nil }
 
 // TestSalvageTruncated : une archive tronquée rend les lignes de la partie
-// conservée, dans un nouveau document jamais enregistré.
+// conservée, dans un nouveau document jamais enregistré, quelle que soit la
+// compression de la base.
 func TestSalvageTruncated(t *testing.T) {
+	for _, m := range []uint16{Zstd, zip.Deflate, zip.Store} {
+		t.Run(fmt.Sprint(m), func(t *testing.T) {
+			old := Method
+			Method = m
+			defer func() { Method = old }()
+			salvageTruncated(t)
+		})
+	}
+}
+
+func salvageTruncated(t *testing.T) {
 	useRoot(t)
 	good := savedRows(t, 3000)
 	b, _ := os.ReadFile(good)

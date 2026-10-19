@@ -30,6 +30,7 @@ Aucune version n'est encore publiée. Voici, regroupé par jour, ce que contient
 
 **Changements**
 
+- Le fichier `.lattis` est compressé (Zstandard) : un classeur pèse de 2,5 à 9 fois moins (un classeur de 100 000 lignes passe de 10 à 3,8 Mo), et l'enregistrement comme l'ouverture restent aussi rapides. Les classeurs enregistrés avant s'ouvrent toujours. Pour lire la base hors de Lattis, dézipper avec 7-Zip ou WinRAR : l'Explorateur de Windows ne lit pas cette compression.
 - Un tableau créé (saisie, collage, Mettre sous forme de tableau) dont la première colonne s'appelle ID, ou vaut 1, 2, 3…, a d'office cette colonne pour clé (entiers uniques et remplis ; Ctrl+Z l'annule avec la création) ; une ligne ajoutée reçoit ensuite le numéro suivant de la clé, où qu'elle soit insérée, ou celui d'une première colonne en suite régulière (10, 20, 30…) pour une ligne ajoutée à la fin.
 - Menu Fichier réorganisé comme Excel : « Imprimer / PDF… », « Ouvrir un fichier récent », sous-menu Exporter ; le serveur MCP se règle dans Paramètres.
 - Ctrl+flèche et Ctrl+Maj+flèche vont au bord du bloc rempli puis au bloc suivant, comme Excel.

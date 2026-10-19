@@ -200,7 +200,7 @@ func TestOpenRefused(t *testing.T) {
 // rewriteDB modifie la base d'une archive.
 func rewriteDB(t *testing.T, path string, fn func(db []byte)) {
 	t.Helper()
-	zr, err := zip.OpenReader(path)
+	zr, err := archive.OpenZip(path)
 	must(t, err)
 	files := map[string][]byte{}
 	var names []string
