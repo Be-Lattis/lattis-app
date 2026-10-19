@@ -957,6 +957,15 @@ export const apiReference: RefEntry[] = [
 		args: [0, 0]
 	},
 	{
+		name: "tables.merge_sheets",
+		category: "tables",
+		signature: "tables.merge_sheets([tables], [options]) → {sheet, sheetName, table, rows, old, keyKept, keyNote, pending = { {kind, sheetName, where, formula}, ... }, notes, notice}",
+		summary: "Regroupe des tableaux aux mêmes colonnes, chacun sur son onglet (un par mois, par année, par ville…), en un seul tableau sur une nouvelle feuille, avec en tête une colonne de catégorie tirée des noms d'onglets (Mois, Année, Ville…) et sa liste déroulante. Une seule étape d'annulation.",
+		details: "tables : les tableaux, dans l'ordre (absent : le plus grand groupe trouvé par tables.similar). options : {name (nom du tableau, proposé sinon), sheet (nom de la feuille), category = {name, type = \"date\" | \"integer\" | \"text\", values = {une valeur par tableau}} (déduite des noms d'onglets sinon), noCategory = true (pas de colonne de catégorie), columns (correspondance, comme celle de tables.similar), old = \"delete\" | \"hide\"}. Colonnes réunies (cases vides là où une colonne manquait), types élargis, mise en forme et saisies invalides gardées. La clé est gardée si aucune valeur ne se répète d'un onglet à l'autre, sinon le tableau commun n'a pas de clé (keyNote donne un exemple). Les formules, tableaux croisés et graphiques qui citaient les anciens tableaux ne sont pas réécrits : ils sont listés dans pending, et les anciens onglets sont alors gardés masqués (tableaux renommés Janvier_ancien) plutôt que supprimés. Refusé pour un classeur partagé sur un serveur, une feuille protégée, un tableau filtré ou chargé par une requête. Paramètres — tables : tableaux à regrouper, dans l'ordre (absent : le plus grand groupe d'onglets semblables) ; options : {name, sheet, category = {name, type, values}, noCategory, columns, old}. Arguments dans l'ordre, ou une table d'arguments nommés : tables.merge_sheets{tables = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "local noms = {}\nfor i, mois in ipairs({\"Janvier\", \"Février\", \"Mars\"}) do\n  local f = sheets.add(mois)\n  cells.paste(1, 1, {{\"Client\", \"Montant\"}, {\"Durand\", i * 10}}, nil, f.name)\n  table.insert(noms, sheets.get(f.name).tables[1].name)\nend\nlocal r = tables.merge_sheets(noms, {name = \"Ventes\", category = {name = \"Mois\"}})\nprint(r.notice)",
+		args: [0, 2]
+	},
+	{
 		name: "tables.move",
 		category: "tables",
 		signature: "tables.move(table, row, col)",
@@ -1005,6 +1014,15 @@ export const apiReference: RefEntry[] = [
 		summary: "Fait d'une colonne aux valeurs uniques la clé du tableau (index UNIQUE).",
 		details: "Paramètres — table : nom du tableau ; column : colonne (nom ou rang à partir de 1). Arguments dans l'ordre, ou une table d'arguments nommés : tables.set_key{table = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		args: [1, 2]
+	},
+	{
+		name: "tables.similar",
+		category: "tables",
+		signature: "tables.similar() → { {id, tables = { {table, sheet, sheetName, rows, key, hidden}, ... }, columns = { {name, type, from, paired, text}, ... }, category = {kind, column, type, values, labels, common}, key, name, score, propose, identical, dismissed, summary, notes}, ... }",
+		summary: "Cherche les onglets semblables : des tableaux de feuilles différentes aux mêmes colonnes (un onglet par mois, par année, par ville…), à regrouper en un seul tableau avec tables.merge_sheets. Ne lit que la structure (noms de feuilles, de tableaux et de colonnes).",
+		details: "Chaque groupe donne ses tableaux (dans l'ordre des onglets), la correspondance des colonnes (from : la colonne de chaque tableau, \"\" si absente ; paired : appariée par un nom proche), la catégorie tirée des noms d'onglets (kind : month, month_year, year, quarter, week, date, number, letter, default, city, shape ou other ; column : nom proposé, Mois, Année, Lot… ; type ; values), la clé commune, le nom proposé, l'indice de confiance (score, propose : assez haut pour le proposer de soi-même) et dismissed (« Ne plus proposer » choisi). Le plus grand groupe d'abord.",
+		example: "for _, g in ipairs(tables.similar()) do\n  print(#g.tables .. \" onglets semblables, catégorie \" .. g.category.column)\nend",
+		args: [0, 0]
 	},
 	{
 		name: "tables.sort",

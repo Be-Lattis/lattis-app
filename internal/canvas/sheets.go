@@ -212,9 +212,6 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 			return err
 		}
 		var n int
-		var name, color string
-		var pos, grid, heads, hidden, frows, fcols, zoom int
-		var choice sql.NullString
 		if err := t.row(`SELECT count(*) FROM _lattis_sheets`).Scan(&n); err != nil {
 			return err
 		}
@@ -228,6 +225,17 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 		if others == 0 {
 			return fmt.Errorf("%w : un classeur garde au moins une feuille visible", ErrSheet)
 		}
+		return t.deleteSheet(sheet)
+	})
+}
+
+// deleteSheet retire une feuille et tout ce qu'elle contient (sans les
+// vérifications de DeleteSheet), annulable avec le reste de l'action.
+func (t *tx) deleteSheet(sheet int64) error {
+	var name, color string
+	var pos, grid, heads, hidden, frows, fcols, zoom int
+	var choice sql.NullString
+	{
 		// Tout ce que contient la feuille part avec elle, tableaux compris
 		// (dans la même étape : une annulation rend tout).
 		tables, err := t.tables(sheet)
@@ -289,7 +297,7 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 			append(do, st(`DELETE FROM _lattis_sheets WHERE id = ?`, sheet)),
 			append([]stmt{st(`INSERT INTO _lattis_sheets (id, name, pos, gridlines, headings, color, hidden, freeze_rows, freeze_cols, zoom, choice) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, sheet, name, pos, grid, heads, color, hidden, frows, fcols, zoom, choiceArg)}, pivots...),
 		)
-	})
+	}
 }
 
 // SetGridlines affiche ou masque le quadrillage de la feuille.

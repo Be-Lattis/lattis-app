@@ -4,6 +4,9 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as grid$0 from "../grid/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as series$0 from "../series/models.js";
 
 /**
  * BoxStats : statistiques d'une boîte à moustaches (quartiles interpolés
@@ -762,6 +765,152 @@ export interface Match {
 }
 
 /**
+ * MergeCategory est la colonne de catégorie du tableau commun.
+ */
+export interface MergeCategory {
+    "name": string;
+
+    /**
+     * date, integer ou text
+     */
+    "type": grid$0.Type;
+
+    /**
+     * Values : une valeur par tableau source, dans l'ordre (date jj/mm/aaaa
+     * ou aaaa-mm-jj, entier, texte).
+     */
+    "values": string[] | null;
+
+    /**
+     * Format : motif d'affichage d'une date (« mmmm aaaa »).
+     */
+    "format"?: string;
+}
+
+/**
+ * MergeColumn est une colonne du tableau commun.
+ */
+export interface MergeColumn {
+    "name": string;
+    "type": grid$0.Type;
+
+    /**
+     * From : la colonne de chaque tableau source (dans l'ordre des
+     * tableaux) qui la remplit ; "" : absente (cases vides).
+     */
+    "from": string[] | null;
+
+    /**
+     * Paired : appariée par un nom proche (« Montant € » → « Montant »),
+     * montré dans le dialogue, jamais fait en silence.
+     */
+    "paired": boolean[] | null;
+
+    /**
+     * Text : passe en texte parce que les types des onglets diffèrent.
+     */
+    "text": boolean;
+}
+
+/**
+ * MergePlan décrit un regroupement. Ce qui manque se déduit des tableaux,
+ * comme la détection (SimilarSheets) le propose.
+ */
+export interface MergePlan {
+    /**
+     * Tables : tableaux sources, dans l'ordre des lignes du résultat.
+     */
+    "tables": string[] | null;
+
+    /**
+     * Category : colonne de catégorie (nil : déduite des noms d'onglets) ;
+     * NoCategory : pas de colonne de catégorie (cas F, la catégorie est déjà
+     * dans les données).
+     */
+    "category"?: MergeCategory | null;
+    "noCategory"?: boolean;
+
+    /**
+     * Columns : correspondance validée des colonnes (From : une colonne par
+     * tableau source, "" si absente) ; vide : déduite.
+     */
+    "columns"?: MergeColumn[] | null;
+
+    /**
+     * Sheet : nom de la nouvelle feuille (vide : celui du tableau) ; Name :
+     * nom du tableau commun (vide : proposé).
+     */
+    "sheet"?: string;
+    "name"?: string;
+
+    /**
+     * Old : delete ou hide ; vide : supprimés, sauf s'il reste des formules
+     * à reprendre (gardés masqués).
+     */
+    "old"?: string;
+
+    /**
+     * Slicer : poser l'onglet à choix sur la nouvelle feuille (lot 3).
+     */
+    "slicer"?: boolean;
+}
+
+/**
+ * MergePreview est l'aperçu d'un regroupement, pour le dialogue.
+ */
+export interface MergePreview {
+    /**
+     * complété
+     */
+    "plan": MergePlan;
+    "tables": SimilarTable[] | null;
+    "header": string[] | null;
+
+    /**
+     * 20 premières lignes
+     */
+    "rows": (any[] | null)[] | null;
+    "total": number;
+
+    /**
+     * Key : colonne clé ; KeyKept : gardée sur le tableau commun ; KeyNote :
+     * pourquoi elle ne l'est pas (« Pas de clé : F-001 est dans Janvier et
+     * dans Février »).
+     */
+    "key": string;
+    "keyKept": boolean;
+    "keyNote": string;
+    "pending": PendingRef[] | null;
+
+    /**
+     * Old : ce que deviennent les anciens onglets si rien n'est choisi.
+     */
+    "old": string;
+    "notes": string[] | null;
+
+    /**
+     * Refused : le regroupement est refusé (garde-fou), et pourquoi.
+     */
+    "refused": string;
+}
+
+/**
+ * MergeResult décrit ce que MergeSheets a fait.
+ */
+export interface MergeResult {
+    "sheet": number;
+    "sheetName": string;
+    "table": string;
+    "rows": number;
+    "old": string;
+    "keyKept": boolean;
+    "keyNote": string;
+    "pending": PendingRef[] | null;
+    "notes": string[] | null;
+    "notice": string;
+}
+
+/**
  * Mix décrit une colonne passée en texte par élargissement alors que la
  * plupart de ses valeurs sont d'un autre type (Type vide : pas de tel type).
  */
@@ -863,6 +1012,23 @@ export interface PageSetup {
     "firstPage"?: number;
     "header": HeaderFooter;
     "footer": HeaderFooter;
+}
+
+/**
+ * PendingRef est ce qui citait un ancien tableau et reste à reprendre à la
+ * main (formule, colonne calculée, TCD, graphique, requête).
+ */
+export interface PendingRef {
+    /**
+     * cell, column, pivot, chart, query
+     */
+    "kind": string;
+    "sheet": number;
+    "sheetName": string;
+    "row": number;
+    "col": number;
+    "where": string;
+    "formula": string;
 }
 
 /**
@@ -1192,6 +1358,45 @@ export interface SheetChoice {
 }
 
 /**
+ * SheetGroup est un groupe de tableaux semblables (§2.2).
+ */
+export interface SheetGroup {
+    /**
+     * ID : signature du groupe (colonnes majoritaires), gardée par « Ne plus
+     * proposer ».
+     */
+    "id": string;
+    "tables": SimilarTable[] | null;
+    "columns": MergeColumn[] | null;
+
+    /**
+     * Category : la catégorie tirée des noms d'onglets (§3).
+     */
+    "category": series$0.Series;
+    "key": string;
+
+    /**
+     * Name : nom proposé pour le tableau commun ("" : aucun d'évident).
+     */
+    "name": string;
+
+    /**
+     * Score : indice de confiance (§2.3) ; Propose : assez haut pour le
+     * proposer de soi-même.
+     */
+    "score": number;
+    "propose": boolean;
+    "identical": boolean;
+    "dismissed": boolean;
+
+    /**
+     * Summary : feuilles qui citent tous les tableaux du groupe (synthèse).
+     */
+    "summary": string[] | null;
+    "notes": string[] | null;
+}
+
+/**
  * SheetInfo décrit un onglet.
  */
 export interface SheetInfo {
@@ -1245,6 +1450,22 @@ export interface SheetInfo {
      * Choice : onglet à choix (« Ventes · 2025 ▾ », choice.go), absent sinon.
      */
     "choice"?: SheetChoice | null;
+}
+
+/**
+ * SimilarTable est un tableau d'un groupe d'onglets semblables.
+ */
+export interface SimilarTable {
+    "table": string;
+    "sheet": number;
+    "sheetName": string;
+    "rows": number;
+
+    /**
+     * colonne clé ("" : aucune)
+     */
+    "key": string;
+    "hidden": boolean;
 }
 
 /**

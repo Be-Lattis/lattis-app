@@ -19,6 +19,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/lalamefine/lattis/internal/api"
+	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/query"
 )
 
@@ -79,6 +80,10 @@ var Structure = []string{
 	"cells.dependencies",
 	// Onglet à choix (« Choisir par… », « Nouvelle année… », valeur affichée).
 	"sheets.choose_by", "sheets.set_choice", "sheets.new_choice", "sheets.clear_choice",
+	// Regrouper les onglets aux mêmes colonnes : détection (noms de
+	// feuilles, de tableaux et de colonnes) et fusion (sans valeurs hors
+	// partage : Filter).
+	"tables.similar", "tables.merge_sheets",
 }
 
 // Reads : lectures de valeurs, permises à partir du mode sample (bornées
@@ -175,6 +180,10 @@ func Filter(cmd string, res any, mode string) any {
 		}
 	case []query.Query:
 		return maskQueries(v, mode)
+	case canvas.MergeResult:
+		if mode == SchemaOnly {
+			return maskMerge(v)
+		}
 	case api.ControlView:
 		if mode == SchemaOnly {
 			return maskControl(v)
@@ -189,6 +198,38 @@ func Filter(cmd string, res any, mode string) any {
 		}
 	}
 	return res
+}
+
+// maskMerge : le compte rendu d'un regroupement d'onglets sans valeurs (la
+// clé en double donnée en exemple, le texte des formules à reprendre).
+func maskMerge(v canvas.MergeResult) canvas.MergeResult {
+	if v.KeyNote != "" {
+		v.KeyNote = "Pas de clé : une même valeur de clé est dans plusieurs onglets"
+	}
+	pending := make([]canvas.PendingRef, len(v.Pending))
+	for i, p := range v.Pending {
+		p.Formula = masked
+		pending[i] = p
+	}
+	v.Pending = pending
+	notes := make([]string, 0, len(v.Notes))
+	for _, n := range v.Notes {
+		if strings.HasPrefix(n, "Pas de clé") {
+			n = v.KeyNote
+		}
+		notes = append(notes, n)
+	}
+	v.Notes = notes
+	if k := strings.Index(v.Notice, " ; Pas de clé"); k >= 0 {
+		rest := v.Notice[k+3:]
+		end := strings.Index(rest, " ; ")
+		tail := ""
+		if end >= 0 {
+			tail = rest[end:]
+		}
+		v.Notice = v.Notice[:k] + " ; " + v.KeyNote + tail
+	}
+	return v
 }
 
 // layoutOnly : la disposition d'une feuille (sheets.get) garde les

@@ -565,6 +565,14 @@ export function DismissKeyHint(table: string): $CancellablePromise<$models.DocSt
 }
 
 /**
+ * DismissSimilar : « Ne plus proposer » ce groupe d'onglets semblables
+ * (gardé dans le classeur, hors annulation).
+ */
+export function DismissSimilar(id: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3266628079, id);
+}
+
+/**
  * DocControl lit un contrôle d'un document et la valeur de sa
  * cellule liée.
  */
@@ -1001,6 +1009,22 @@ export function MCPUndoSeries(series: number): $CancellablePromise<$models.DocSt
  */
 export function MergeCells(sheet: number, r0: number, c0: number, r1: number, c1: number): $CancellablePromise<number> {
     return $Call.ByID(1098984687, sheet, r0, c0, r1, c1);
+}
+
+/**
+ * MergePreview complète un plan de regroupement et en donne l'aperçu (20
+ * premières lignes, clé, formules à reprendre, garde-fous).
+ */
+export function MergePreview(plan: canvas$0.MergePlan): $CancellablePromise<canvas$0.MergePreview> {
+    return $Call.ByID(1483518274, plan);
+}
+
+/**
+ * MergeSheets regroupe les tableaux du plan en un seul, sur une nouvelle
+ * feuille (une étape d'annulation).
+ */
+export function MergeSheets(plan: canvas$0.MergePlan): $CancellablePromise<canvas$0.MergeResult> {
+    return $Call.ByID(2723937150, plan);
 }
 
 /**
@@ -2059,6 +2083,14 @@ export function SheetChoiceCandidates(sheet: number): $CancellablePromise<canvas
  */
 export function SheetChoiceValues(sheet: number): $CancellablePromise<canvas$0.FilterValue[] | null> {
     return $Call.ByID(2689810288, sheet);
+}
+
+/**
+ * SimilarSheets donne les groupes d'onglets semblables du classeur (lecture
+ * des métadonnées seulement).
+ */
+export function SimilarSheets(): $CancellablePromise<canvas$0.SheetGroup[] | null> {
+    return $Call.ByID(3134167991);
 }
 
 /**

@@ -55,6 +55,24 @@ Quand vous tapez une recherche ([REFERENCE](fonction:REFERENCE), RECHERCHEV, REC
 
 `Ctrl+Z` annule d'un coup la formule et ce choix. Un tableau qui a déjà une clé ne demande rien, et une formule collée ou importée garde les numéros de ligne sans question.
 
+## Regrouper des onglets
+
+Beaucoup de classeurs ont **un onglet par mois, par année ou par ville**, avec les mêmes colonnes. Lattis les repère : leurs onglets sont soulignés d'un même trait de couleur, et une puce « ⧉ 12 onglets semblables » suit la série (la survoler fait ressortir les onglets concernés). Après l'import d'un classeur Excel, à l'ouverture, ou quand vous copiez un onglet de la série pour la troisième fois, la barre d'état le propose une fois : **Regrouper…**, **Plus tard** (la puce reste) ou **Ne plus proposer** (gardé dans le fichier : un collègue qui le reçoit n'est pas relancé ; aussi au clic droit sur la puce).
+
+Les onglets vont ensemble quand au moins les deux tiers de leurs colonnes se retrouvent d'un onglet à l'autre : une colonne ajoutée en cours d'année reste vide là où elle manquait, et une colonne renommée (« Montant € ») s'apparie à sa voisine (« Montant »), ce que le volet montre toujours. Les noms d'onglets en série sont reconnus : mois, années, trimestres, semaines, dates, suites de chiffres ou de lettres (« Lot 1 », « Lot 2 » ; « Annexe A », « Annexe B »), communes.
+
+**Données › Regrouper des onglets…** (ou clic droit sur une sélection d'onglets) ouvre le volet :
+
+1. **Onglets** : les tableaux à réunir, à cocher, dans l'ordre des onglets ;
+2. **Colonne de catégorie** : son nom, pré-rempli selon les noms d'onglets (Mois, Année, Trimestre, Ville, la partie commune comme « Lot », sinon Catégorie) et toujours modifiable, son type, et la valeur tirée de chaque onglet, à corriger au besoin. Elle se place en tête du tableau, avec une liste déroulante de ses valeurs ;
+3. **Colonnes** : la correspondance (✓ présente, ∅ absente, « Montant € → Montant » appariée) et le type final ; une colonne qui passe en texte est signalée ;
+4. **Après** : le nom du tableau et de la nouvelle feuille, et ce que deviennent les anciens onglets : **supprimés** (par défaut) ou **gardés masqués**, leurs tableaux renommés `Janvier_ancien` ;
+5. **Aperçu** : les premières lignes et le nombre total de lignes.
+
+**Regrouper** fait tout en une seule étape : `Ctrl+Z` rend les onglets d'origine. La mise en forme et les saisies en erreur suivent leurs lignes. La **clé** est gardée si aucune valeur ne se répète d'un onglet à l'autre ; sinon le tableau commun n'a pas de clé (les valeurs restent), et Lattis le dit avec un exemple : « Pas de clé : F-001 est dans Janvier et dans Février ».
+
+Les formules, tableaux croisés et graphiques qui citaient les anciens tableaux (une feuille « Synthèse » avec `SOMME(Janvier[Montant])`) ne sont pas encore réécrits : le volet les liste « à reprendre », et les anciens onglets sont alors gardés masqués pour que ces formules continuent de marcher. Le regroupement est refusé sur une feuille protégée, sur un tableau filtré (retirez d'abord le filtre), chargé par une requête ou partagé sur un serveur.
+
 ## Formules
 
 Une formule commence par `=` et désigne les colonnes par leur nom. Tapée dans une colonne de tableau, elle s'applique à toute la colonne :

@@ -180,6 +180,8 @@
 		onlines?: (rows: boolean, hide: boolean) => void;
 		/** Données › Validation des données (liste déroulante). */
 		onvalidation?: () => void;
+		/** Données › Regrouper des onglets… (onglets aux mêmes colonnes réunis en un seul tableau). */
+		onmergesheets?: () => void;
 		/** Révision › Notes. */
 		onnote?: (what: 'edit' | 'delete') => void;
 		/** Volets figés de la feuille active, et Affichage › Figer les volets. */
@@ -207,7 +209,7 @@
 		onpagebreaks?: (on: boolean) => void;
 	}
 
-	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ondedup, ontextcols, onpivot, oninsertdata, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks }: Props = $props();
+	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ondedup, ontextcols, onpivot, oninsertdata, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks }: Props = $props();
 	const fmt = (tab: FormatTab) => (onformat ? () => onformat(tab) : undefined);
 	const lines = (rows: boolean, hide: boolean) => (onlines ? () => onlines(rows, hide) : undefined);
 	const frz = (what: FreezeAction) => (onfreeze ? () => onfreeze(what) : undefined);
@@ -693,7 +695,8 @@
 				commands: [
 					{ label: 'Convertir', icon: 'text-columns', size: 'big', run: ontextcols, hint: 'Convertir le texte en colonnes : couper le contenu de la colonne sélectionnée (séparateurs ou largeur fixe) en plusieurs colonnes' },
 					{ label: 'Supprimer les doublons', icon: 'remove-duplicates', size: 'small', run: ondedup, hint: 'Supprimer les lignes en double du tableau actif' },
-					{ label: 'Validation des données', icon: 'validation', size: 'small', local: true, run: onvalidation, hint: 'Liste déroulante : valeurs permises dans la sélection (ou toute une colonne de tableau), les autres saisies sont refusées' }
+					{ label: 'Validation des données', icon: 'validation', size: 'small', local: true, run: onvalidation, hint: 'Liste déroulante : valeurs permises dans la sélection (ou toute une colonne de tableau), les autres saisies sont refusées' },
+					{ label: 'Regrouper des onglets…', icon: 'append-queries', size: 'small', createsSheet: true, run: onmergesheets, hint: 'Réunir les tableaux de plusieurs onglets aux mêmes colonnes (un par mois, par année, par ville…) en un seul tableau, avec une colonne de catégorie' }
 				]
 			}
 		],

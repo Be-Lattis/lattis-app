@@ -13,7 +13,7 @@
 	import { cycle, modal } from '#lib/ui/focus.js';
 	import { sheetNameProblem, refusedName } from '#lib/ui/names.js';
 	import { nameAlertOpen, refuseName } from '#lib/ui/nameAlert.js';
-	import { TAB_COLORS, moveTarget, tabWindow, textOn, visibleSheets, type TabSheet } from './sheets.js';
+	import { TAB_COLORS, moveTarget, tabWindow, textOn, visibleSheets, type SimilarMark, type TabSheet } from './sheets.js';
 	import { allLabel, choiceLabel, choiceStatus, newLabel, nextChoice, type ChoiceActions } from './choice.js';
 
 	type Sheet = TabSheet;
@@ -62,9 +62,27 @@
 		onrefused?: (msg: string) => void;
 		/** Onglet à choix (« Ventes · 2025 ▾ ») : liste des valeurs, « Choisir par… » (absent : pas de flèche). */
 		onchoice?: ChoiceActions;
+		/**
+		 * Onglets semblables (regrouper-onglets-semblables.md §4.1) : chaque
+		 * groupe souligne ses onglets d'un trait de sa couleur, et une puce
+		 * « ⧉ 12 onglets semblables » suit la série (clic : volet Regrouper ;
+		 * clic droit : Ne plus proposer).
+		 */
+		similar?: SimilarMark[];
+		onmergegroup?: (i: number) => void;
+		ondismissgroup?: (i: number) => void;
+		/** Clic droit › Regrouper des onglets… sur un onglet ou une sélection d'onglets. */
+		onmergesheets?: (ids: number[]) => void;
 	}
 
-	let { sheets, active, onselect, onadd: add, oninsert: insert, onpage: page, ondocpage: docPage, onmove: move, onrename: rename, ondelete: del, ondeletemany: delMany, onorder: order, oncopy: copy, oncolor: color, oncolormany: colorMany, onhide: hide, onhidemany: hideMany, hscroll, onhscroll, onhhold, onprotect, locked = false, onrefused, onchoice }: Props = $props();
+	let { sheets, active, onselect, onadd: add, oninsert: insert, onpage: page, ondocpage: docPage, onmove: move, onrename: rename, ondelete: del, ondeletemany: delMany, onorder: order, oncopy: copy, oncolor: color, oncolormany: colorMany, onhide: hide, onhidemany: hideMany, hscroll, onhscroll, onhhold, onprotect, locked = false, onrefused, similar = [], onmergegroup, ondismissgroup, onmergesheets, onchoice }: Props = $props();
+	// Onglets semblables : trait de couleur sous chaque onglet d'un groupe ;
+	// la puce survolée fait ressortir les siens.
+	const marks = $derived(new Map(similar.flatMap((g, i) => g.sheets.map((id) => [id, { color: g.color, group: i }] as const))));
+	let hot = $state<number | null>(null);
+	let chipMenu = $state<{ group: number; x: number } | null>(null);
+	const CHIP_W = 150;
+
 
 	// --- Onglet à choix (choice.ts) ---------------------------------------------
 	/** Libellé de l'onglet : « Ventes · 2025 » pour un onglet à choix. */
@@ -270,7 +288,7 @@
 	}
 	const range = $derived.by(() => {
 		if (!width) return { from: 0, to: shown.length - 1 };
-		const room = width - navW - ADD_W - (hscroll ? Math.max(width / 4, 150) : 0);
+		const room = width - navW - ADD_W - (hscroll ? Math.max(width / 4, 150) : 0) - CHIP_W * similar.length;
 		return tabWindow(
 			shown.map((s) => tabWidth(s, s.id === active)),
 			index,
@@ -407,6 +425,9 @@
 				onpointerup={dragEnd}
 				onpointercancel={() => (drag = null)}
 				class:picked={!!group?.has(s.id)}
+				class:grouped={marks.has(s.id)}
+				class:hot={hot !== null && marks.get(s.id)?.group === hot}
+				style:--group-color={marks.get(s.id)?.color ?? null}
 				onclick={(e) => pick(e, s)}
 				ondblclick={() => startRename(s)}
 				oncontextmenu={(e) => {
@@ -441,6 +462,44 @@
 			>
 		{/if}
 	{/each}
+	{#each similar as g, gi (gi)}
+		{@const out = g.sheets.filter((id) => shown.some((s) => s.id === id) && !vis.some((s) => s.id === id)).length}
+		<!-- Puce au bout de la série : survol, les onglets du groupe ressortent ; clic, le volet Regrouper. -->
+		<button
+			class="chip"
+			style:--group-color={g.color}
+			onmouseenter={() => (hot = gi)}
+			onmouseleave={() => (hot = null)}
+			onfocus={() => (hot = gi)}
+			onblur={() => (hot = null)}
+			onclick={() => onmergegroup?.(gi)}
+			oncontextmenu={(e) => {
+				e.preventDefault();
+				chipMenu = { group: gi, x: (e.currentTarget as HTMLElement).offsetLeft };
+			}}
+			title="{g.label} : les regrouper en un seul tableau (clic droit : Ne plus proposer){out ? ` — ${out} hors de vue` : ''}">⧉ {g.label}{out ? ` (+${out})` : ''}</button
+		>
+	{/each}
+	{#if chipMenu}
+		{@const cm = chipMenu}
+		<div class="menu" role="menu" style:left="{cm.x}px" use:dismiss={() => (chipMenu = null)}>
+			<button
+				role="menuitem"
+				onclick={() => {
+					chipMenu = null;
+					onmergegroup?.(cm.group);
+				}}><span class="ic"><Icon name="append-queries" size={16} /></span>Regrouper…</button
+			>
+			<button
+				role="menuitem"
+				onclick={() => {
+					chipMenu = null;
+					hot = null;
+					ondismissgroup?.(cm.group);
+				}}><span class="ic"><Icon name="no-color" size={16} /></span>Ne plus proposer</button
+			>
+		</div>
+	{/if}
 	{#if hiddenTabs > 0}
 		<!-- Toujours à droite des onglets affichés (choix de Louis). -->
 		<button class="more" onclick={() => (listing = true)} title="{hiddenTabs} feuille{hiddenTabs > 1 ? 's' : ''} non affichée{hiddenTabs > 1 ? 's' : ''} : toutes les feuilles">…</button>
@@ -591,6 +650,18 @@
 					moving = { id, before: sheets[i + 1]?.id ?? null, copy: !onmove };
 				}}><span class="ic"><Icon name="move-sheet" size={16} /></span>Déplacer ou copier…</button
 			>
+			{#if onmergesheets}
+				<button
+					role="menuitem"
+					title="Réunir les tableaux de ces onglets (mêmes colonnes) en un seul, avec une colonne de catégorie"
+					onclick={() => {
+						const ids = many ? [...(group ?? [])] : [m.id];
+						closeMenu();
+						if (many) picked = new Set();
+						onmergesheets?.(ids);
+					}}><span class="ic"><Icon name="append-queries" size={16} /></span>Regrouper des onglets…</button
+				>
+			{/if}
 			<hr />
 			<button
 				role="menuitem"
@@ -814,6 +885,33 @@
 	.sheet.picked:not(.on) {
 		background: #e3efe7;
 		box-shadow: inset 0 -2px 0 #217346;
+	}
+	/* Onglets semblables : un même trait de couleur sous chacun ; la puce survolée les fait ressortir. */
+	.sheet.grouped,
+	.sheet.grouped:hover:not(.on):not(.dragging) {
+		box-shadow: inset 0 -3px 0 var(--group-color);
+	}
+	.sheet.grouped.hot {
+		background: color-mix(in srgb, var(--group-color) 16%, transparent);
+		box-shadow: inset 0 -4px 0 var(--group-color);
+	}
+	.chip {
+		flex: none;
+		align-self: center;
+		margin: 0 4px;
+		padding: 1px 8px;
+		border: 1px dashed var(--group-color);
+		border-radius: 10px;
+		background: #fff;
+		color: var(--group-color);
+		font: inherit;
+		font-size: 12px;
+		white-space: nowrap;
+		cursor: pointer;
+	}
+	.chip:hover,
+	.chip:focus-visible {
+		background: color-mix(in srgb, var(--group-color) 10%, #fff);
 	}
 	.hbar {
 		margin-left: auto;
