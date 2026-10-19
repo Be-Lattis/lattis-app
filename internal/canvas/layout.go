@@ -284,7 +284,23 @@ func (t *tx) ensureGapRight(sheet int64, self int64, oldEdge, newEdge, lo, hi in
 		}
 		moved = append(moved, tb)
 	}
-	if err := t.moveCells(sheet, func(c cell) bool { return c.Row >= lo && c.Row <= hi && c.Col > oldEdge }, 0, delta); err != nil {
+	band := func(c cell) bool { return c.Row >= lo && c.Row <= hi && c.Col > oldEdge }
+	// Une liste libre qui dépasse la bande bouge entière (audit 2 I8).
+	whole := wholeIslands(cells, band, func(c cell) bool { return c.Col > oldEdge }, delta, func(r, c int) bool {
+		for _, tb := range tables {
+			dc := 0
+			for _, m := range moved {
+				if m.ID == tb.ID {
+					dc = delta
+				}
+			}
+			if r >= tb.Top() && r <= tb.Bottom()+1 && c >= tb.Col+dc-1 && c <= tb.Right()+dc+1 {
+				return true
+			}
+		}
+		return false
+	})
+	if err := t.moveCells(sheet, func(c cell) bool { return band(c) || whole[[2]int{c.Row, c.Col}] }, 0, delta); err != nil {
 		return err
 	}
 	for _, tb := range moved {
@@ -293,6 +309,49 @@ func (t *tx) ensureGapRight(sheet int64, self int64, oldEdge, newEdge, lo, hi in
 		}
 	}
 	return nil
+}
+
+// wholeIslands étend les cellules libres de la bande qui s'écarte de delta
+// colonnes aux îlots dont elles font partie (du côté qui bouge : side), et
+// aux cellules qu'ils rencontreraient : une liste n'est jamais coupée. Rend
+// les cellules en plus ; aucune si l'une arriverait contre un tableau
+// (blocked), la bande seule bouge alors, comme avant.
+func wholeIslands(cells []cell, band, side func(cell) bool, delta int, blocked func(r, c int) bool) map[[2]int]bool {
+	at := make(map[[2]int]cell, len(cells))
+	for _, c := range cells {
+		at[[2]int{c.Row, c.Col}] = c
+	}
+	moved := map[[2]int]bool{}
+	var stack [][2]int
+	for _, c := range cells {
+		if band(c) {
+			p := [2]int{c.Row, c.Col}
+			moved[p] = true
+			stack = append(stack, p)
+		}
+	}
+	extra := map[[2]int]bool{}
+	add := func(p [2]int) {
+		c, ok := at[p]
+		if !ok || moved[p] || !side(c) {
+			return
+		}
+		moved[p], extra[p] = true, true
+		stack = append(stack, p)
+	}
+	for len(stack) > 0 {
+		p := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		for _, d := range [][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {0, delta}} {
+			add([2]int{p[0] + d[0], p[1] + d[1]})
+		}
+	}
+	for p := range extra {
+		if blocked(p[0], p[1]+delta) {
+			return nil
+		}
+	}
+	return extra
 }
 
 func (t *tx) moveTable(tb Table, dRow, dCol int) error {

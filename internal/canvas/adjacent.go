@@ -368,6 +368,14 @@ func (t *tx) joinStep(sheet int64, absorbed func(tb Table, first string, n int))
 		if !ok {
 			continue
 		}
+		// Sur le côté, une liste libre qui dépasse les lignes du tableau
+		// n'est jamais coupée : le tableau s'en écarte (décision de Louis,
+		// audit 2 I8).
+		if side := c.Row <= tb.Bottom(); side {
+			if isl := island(cells, c.Row, c.Col); beyondRows(isl, tb) {
+				return false, t.moveAside(tb, c, isl)
+			}
+		}
 		n, err := t.absorbCell(sheet, tb, c, len(cells))
 		if err != nil {
 			return false, err
@@ -389,6 +397,46 @@ func (t *tx) joinStep(sheet int64, absorbed func(tb Table, first string, n int))
 		}
 	}
 	return true, nil
+}
+
+// beyondRows : un îlot de cellules libres dépasse, au-dessus ou dessous, les
+// lignes du tableau.
+func beyondRows(isl []cell, tb Table) bool {
+	for _, c := range isl {
+		if c.Row < tb.Top() || c.Row > tb.Bottom() {
+			return true
+		}
+	}
+	return false
+}
+
+// moveAside écarte d'une colonne le tableau tb et l'îlot isl, qui le touche
+// sur le côté par la cellule c sans tenir dans ses lignes : à gauche, le
+// tableau part vers la droite ; à droite, l'îlot part vers la droite.
+func (t *tx) moveAside(tb Table, c cell, isl []cell) error {
+	what := "la liste"
+	if len(isl) > 0 {
+		what = "la liste « " + clip(isl[0].Raw) + " »"
+	}
+	if c.Col == tb.Col-1 {
+		if err := t.ensureGapRight(tb.Sheet, tb.ID, tb.Right(), tb.Right()+1, tb.Top(), tb.Bottom()); err != nil {
+			return err
+		}
+		if err := t.moveTable(tb, 0, 1); err != nil {
+			return err
+		}
+		t.notes = append(t.notes, fmt.Sprintf("Tableau « %s » décalé d'une colonne vers la droite : %s, à sa gauche et plus longue, reste entière en cellules libres (Ctrl+Z pour annuler)", tb.Name, what))
+		return nil
+	}
+	in := map[[2]int]bool{}
+	for _, x := range isl {
+		in[[2]int{x.Row, x.Col}] = true
+	}
+	if err := t.moveCells(tb.Sheet, func(x cell) bool { return in[[2]int{x.Row, x.Col}] }, 0, 1); err != nil {
+		return err
+	}
+	t.notes = append(t.notes, fmt.Sprintf("%s, à droite du tableau « %s » et plus longue, décalée d'une colonne : elle reste entière en cellules libres (Ctrl+Z pour annuler)", strings.ToUpper(what[:1])+what[1:], tb.Name))
+	return nil
 }
 
 func fixedWhy(a, b Table, fixed map[int64]string) string {

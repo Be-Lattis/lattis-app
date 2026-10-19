@@ -71,6 +71,66 @@ func TestPasteHeaderLikeTyping(t *testing.T) {
 	}
 }
 
+// Audit 2 I8 : une liste libre plus longue que le tableau qu'elle touche sur
+// le côté n'est pas coupée : le tableau (liste à gauche) ou la liste (à
+// droite) s'écarte d'une colonne, en une étape.
+func TestLongListBesideTable(t *testing.T) {
+	ctx := context.Background()
+	for _, tc := range []struct {
+		name      string
+		list, tbl int // colonnes de la liste et du tableau
+		typeAt    int // colonne de la saisie (ligne 1)
+		want      string
+	}{
+		{"liste à gauche", 0, 2, 1, "T@C1:Code|H1|H2×2 A1=Liste A2=x A3=y A4=z A5=w A6=v"},
+		{"liste à droite", 3, 0, 2, "T@A1:H1|H2|Code×2 E1=Liste E2=x E3=y E4=z E5=w E6=v"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d := open(t)
+			must(t, d.Do(ctx, "Saisie", func(x *tx) error {
+				for i, v := range []string{"Liste", "x", "y", "z", "w", "v"} {
+					if err := x.setFreeCell(1, i, tc.list, v); err != nil {
+						return err
+					}
+				}
+				_, err := x.createTable(1, "T", 0, tc.tbl, []string{"H1", "H2"}, [][]string{{"1", "2"}, {"3", "4"}})
+				return err
+			}))
+			before := dump(t, d)
+			mustSet(t, d, 1, 0, tc.typeAt, "Code")
+			check(t, d, tc.name)
+			if got := layoutOf(t, d); got != tc.want {
+				t.Fatalf("\n got %s\nwant %s", got, tc.want)
+			}
+			undoOnce(t, d, before, tc.name)
+		})
+	}
+}
+
+// Audit 2 I8 : une liste plus longue déplacée contre le côté droit d'un
+// tableau s'en écarte d'une colonne, entière, et le message le dit.
+func TestLongListMovedBesideTable(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	must(t, d.Do(ctx, "Saisie", func(x *tx) error {
+		for i, v := range []string{"Liste", "x", "y", "z"} {
+			if err := x.setFreeCell(1, i, 4, v); err != nil {
+				return err
+			}
+		}
+		_, err := x.createTable(1, "T", 0, 0, []string{"H1", "H2"}, [][]string{{"1", "2"}})
+		return err
+	}))
+	d.TakeNotice()
+	must(t, d.MoveCells(ctx, 1, 0, 4, 3, 4, 0, -2))
+	if got, want := layoutOf(t, d), "T@A1:H1|H2×1 D1=Liste D2=x D3=y D4=z"; got != want {
+		t.Fatalf("\n got %s\nwant %s", got, want)
+	}
+	if n := d.TakeNotice(); !strings.Contains(n, "reste entière") {
+		t.Fatalf("message : %q", n)
+	}
+}
+
 // Audit 2 I4 : Suppr sur un total gardé à part retire la marque « hors
 // tableau » (et le gras qu'elle avait donné).
 func TestClearRemovesOutMark(t *testing.T) {
