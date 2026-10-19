@@ -714,6 +714,14 @@ export function ForgetHTTPHost(h: string): $CancellablePromise<string[] | null> 
 }
 
 /**
+ * ForgetHandKept oublie les valeurs saisies mises de côté (lignes disparues
+ * du résultat) d'un tableau chargé.
+ */
+export function ForgetHandKept(table: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1258520090, table);
+}
+
+/**
  * ForgetQueryCache vide le cache des sources de l'aperçu.
  */
 export function ForgetQueryCache(): $CancellablePromise<void> {
@@ -1608,6 +1616,15 @@ export function SetFreeze(sheet: number, rows: number, cols: number): $Cancellab
  */
 export function SetGridlines(sheet: number, show: boolean): $CancellablePromise<$models.DocState> {
     return $Call.ByID(697489253, sheet, show);
+}
+
+/**
+ * SetHandKey change la clé de jointure des colonnes saisies à côté d'un
+ * tableau chargé (column : colonne chargée ; "#" : rang des lignes). Les
+ * valeurs mises de côté sont oubliées (annulable).
+ */
+export function SetHandKey(table: string, column: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3085158258, table, column);
 }
 
 /**

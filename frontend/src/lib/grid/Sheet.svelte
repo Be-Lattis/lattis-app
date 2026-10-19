@@ -30,7 +30,7 @@
 	import { blocksReach, boxesReach } from './objextent';
 	import FormatDialog, { type FormatTab } from './FormatDialog.svelte';
 	import TextToColumns from './TextToColumns.svelte';
-	import { keyQuestion, type KeyChoice, type KeyQuestion } from './keychoice';
+	import { handQuestion, keyQuestion, type KeyChoice, type KeyQuestion } from './keychoice';
 	import type { TextColumnsOptions, TextColumnsPreview } from './textcols';
 	import { dismiss, dismissPanel } from './dismiss';
 	import { explainError } from './errors';
@@ -105,6 +105,7 @@
 		errors?: number; // saisies hors type
 		formula?: string; // colonne calculée : formule affichée
 		result?: string; // colonne calculée : type deviné du résultat (« decimal »…)
+		hand?: boolean; // tableau chargé par une requête : colonne saisie à côté du résultat (modifiable, en-tête vert)
 		style?: string; // mise en forme de toute la colonne (JSON)
 		headerStyle?: string;
 		rules?: string; // mise en forme conditionnelle (JSON)
@@ -290,6 +291,13 @@
 		twoLevel?: boolean;
 		/** Requête d'import qui charge le tableau (source externe ou autre tableau). */
 		query?: { id: number; name: string };
+		/**
+		 * Colonnes saisies à côté du résultat (docs/decisions/0008) : clé de
+		 * jointure (colonne chargée, « # » : rang des lignes ; absente : pas
+		 * encore choisie) et lignes disparues dont des valeurs sont mises de côté.
+		 */
+		handKey?: string;
+		handKept?: number;
 		/** Classeur partagé : tableau publié sur le serveur, ou resté privé (sur ce poste). */
 		shared?: 'published' | 'private';
 		/** Tableau publié en lecture seule : le message à afficher (« Classeur publié en lecture seule »). */
@@ -389,6 +397,10 @@
 		 * attend la validation.
 		 */
 		editing?(row: number, col: number, on: boolean): Promise<unknown>;
+		/** Clé de jointure des colonnes saisies d'un tableau chargé (column : colonne chargée, « # » : rang des lignes). */
+		setHandKey?(table: SheetTable, column: string): Promise<unknown>;
+		/** Oublie les valeurs saisies mises de côté (lignes disparues du résultat). */
+		forgetHandKept?(table: SheetTable): Promise<unknown>;
 		insertRow?(table: SheetTable, n: number): Promise<unknown>;
 		deleteRow?(table: SheetTable, n: number): Promise<unknown>;
 		insertColumn?(table: SheetTable, i: number): Promise<unknown>;
@@ -2288,6 +2300,13 @@
 			ctx.fillStyle = e.t.query ? C.linkHead : C.head;
 			// En mouvement : l'en-tête suit le cadre animé (il se rétracte avec lui).
 			ctx.fillRect(cx(g.firstCol) + (moved ? tableAnim(e)!.ox : 0), ry(e.t.row), moved ? tableAnim(e)!.w : spanW(g.firstCol, g.lastCol), rh(e.t.row));
+			// Colonnes saisies à côté du résultat chargé : en-tête d'un tableau ordinaire (vert).
+			if (e.t.query && !moved) {
+				ctx.fillStyle = C.head;
+				e.t.columns.forEach((k, i) => {
+					if (k.hand) ctx.fillRect(cx(e.t.col + i), ry(e.t.row), cax().size(e.t.col + i), rh(e.t.row));
+				});
+			}
 			if (moved) ctx.restore();
 		}
 
@@ -2372,7 +2391,7 @@
 							singleIcons.set(`${e.t.id}:${i}`, iconW);
 							continue;
 						}
-						headLabel(headerLabel(col.name, e.t.twoLevel), x, y, cw, rh(r), iconW + 10, hs, e.t.query ? C.linkHeadText : C.headText, 'left');
+						headLabel(headerLabel(col.name, e.t.twoLevel), x, y, cw, rh(r), iconW + 10, hs, e.t.query && !col.hand ? C.linkHeadText : C.headText, 'left');
 						continue;
 					}
 					const row = e.cache.row(r - e.t.row - 1);
@@ -2978,7 +2997,8 @@
 				ctx.beginPath();
 				ctx.rect(Math.max(x, MARGIN), 0, cax().size(c), TOP_H);
 				ctx.clip();
-				ctx.fillStyle = c >= k0 && c <= k1 ? C.activeStrip : e.t.query ? C.linkHead : C.head;
+				const linked = !!e.t.query && !e.t.columns[c - e.t.col]?.hand;
+				ctx.fillStyle = c >= k0 && c <= k1 ? C.activeStrip : linked ? C.linkHead : C.head;
 				ctx.fillRect(x, 0, cax().size(c), TOP_H);
 				// Boutons ▾, type et entonnoir, cliquables comme dans l'en-tête.
 				const iw = headIcons(e, c - e.t.col, x, gh, cax().size(c), TOP_H - gh);
@@ -2986,7 +3006,7 @@
 				ctx.rect(Math.max(x, MARGIN), 0, Math.max(0, cax().size(c) - iw - 10), TOP_H);
 				ctx.clip();
 				ctx.font = gh ? '600 11px "Segoe UI", system-ui, -apple-system, sans-serif' : FONT_BOLD;
-				ctx.fillStyle = e.t.query ? C.linkHeadText : C.headText;
+				ctx.fillStyle = linked ? C.linkHeadText : C.headText;
 				ctx.textAlign = 'left';
 				ctx.fillText(headerLabel(e.t.columns[c - e.t.col].name, e.t.twoLevel), x + 6, (gh + TOP_H) / 2);
 				ctx.restore();
@@ -5237,11 +5257,27 @@
 	// remarque restent à part ; une nouvelle ligne ou colonne est refusée, avec
 	// le même message, ErrQueryTable).
 	const QUERY_READONLY = 'Tableau chargé par une requête : ses cellules ne se modifient pas ; changez la requête (Données › Requêtes) puis actualisez (F5)';
-	/** Tableau de requête qui contient la cellule. */
-	const queryAt = (r: number, c: number) => entries.find((e) => e.t.query && r >= e.t.row && r <= e.last && c >= e.t.col && c <= e.lastCol);
-	/** Un tableau de requête touché par la plage (sans la couvrir en entier : le supprimer reste permis). */
+	// Ses colonnes saisies (tapées à droite de l'en-tête, docs/decisions/0008)
+	// se modifient : leurs valeurs suivent les lignes du résultat.
+	/** Colonnes chargées (pas saisies) du tableau de requête e touchées par les colonnes c0…c1 de la feuille. */
+	const loadedIn = (e: Entry, c0: number, c1: number) => {
+		for (let c = Math.max(c0, e.t.col); c <= Math.min(c1, e.lastCol); c++) if (!e.t.columns[c - e.t.col]?.hand) return true;
+		return false;
+	};
+	/** Tableau de requête qui contient la cellule (hors colonnes saisies). */
+	const queryAt = (r: number, c: number) => entries.find((e) => e.t.query && r >= e.t.row && r <= e.last && c >= e.t.col && c <= e.lastCol && loadedIn(e, c, c));
+	/** Un tableau de requête touché par la plage dans ses colonnes chargées (sans la couvrir en entier : le supprimer reste permis). */
 	const queryIn = (r0: number, c0: number, r1: number, c1: number, whole = false) =>
-		entries.find((e) => e.t.query && e.t.row <= r1 && e.last >= r0 && e.t.col <= c1 && e.lastCol >= c0 && !(whole && e.t.row >= r0 && e.last <= r1 && e.t.col >= c0 && e.lastCol <= c1));
+		entries.find(
+			(e) =>
+				e.t.query &&
+				e.t.row <= r1 &&
+				e.last >= r0 &&
+				e.t.col <= c1 &&
+				e.lastCol >= c0 &&
+				loadedIn(e, c0, c1) &&
+				!(whole && e.t.row >= r0 && e.last <= r1 && e.t.col >= c0 && e.lastCol <= c1)
+		);
 
 	// Volet latéral : champs du TCD ou mise en forme du graphique.
 	let panel = $state<{ kind: 'pivot' | 'chart'; id: number } | null>(null);
@@ -5455,6 +5491,35 @@
 		if (!d) return;
 		if (d.keep) reopenFormula(d.row, d.col, d.raw, 'recherche annulée : la formule n’est pas enregistrée');
 		else wrap.focus();
+	}
+
+	// Colonnes saisies à côté d'un tableau chargé (docs/decisions/0008) : la
+	// colonne du résultat qui relie leurs valeurs aux lignes d'une
+	// actualisation à l'autre, demandée à la première valeur saisie (refus
+	// « jointure à choisir ») ou changée depuis le menu du tableau. « # » : le
+	// rang des lignes.
+	let handDlg = $state<{ table: string; columns: string[]; choice: string; write?: { row: number; col: number; raw: string; keep: boolean }; t?: SheetTable } | null>(null);
+
+	function applyHandDialog() {
+		const d = handDlg;
+		handDlg = null;
+		if (!d) return;
+		wrap.focus();
+		if (d.write) void write(d.write.row, d.write.col, d.write.raw, d.write.keep, undefined, `hand:${d.choice}`);
+		else if (d.t && source.setHandKey) void menuAction(() => source.setHandKey!(d.t!, d.choice));
+	}
+
+	function cancelHandDialog() {
+		handDlg = null;
+		wrap.focus();
+	}
+
+	function openHandKey(t: SheetTable) {
+		menu = null;
+		const columns = t.columns.filter((k) => !k.hand && !k.formula).map((k) => k.name);
+		// Clé de plusieurs colonnes (« id + Année ») : proposée telle quelle.
+		if (t.handKey && t.handKey !== '#' && !columns.includes(t.handKey)) columns.unshift(t.handKey);
+		handDlg = { table: t.name, columns, choice: t.handKey ?? columns[0] ?? '#', t };
 	}
 
 	// Insérer… / Supprimer… (comme la boîte d'Excel) : lignes ou colonnes entières.
@@ -7311,10 +7376,15 @@
 			// Formule refusée : la saisie n'est pas perdue, l'éditeur se rouvre.
 			const k = message.indexOf('formule : ');
 			const q = key ? null : keyQuestion(message);
+			const hq = key ? null : handQuestion(message);
 			if (q) {
 				// Recherche dans un tableau sans clé : la boîte demande quoi utiliser.
 				message = '';
 				keyDlg = { ...q, row, col, raw, keep, choice: 'index' };
+			} else if (hq) {
+				// Première valeur d'une colonne saisie : la boîte demande la jointure.
+				message = '';
+				handDlg = { ...hq, choice: hq.columns[0] ?? '#', write: { row, col, raw, keep } };
 			} else if (onrefused) onrefused(e);
 			else if (k >= 0) {
 				const msg = message.slice(k);
@@ -9321,6 +9391,12 @@
 							{#if refresh}
 								{@const t = m.e.t}
 								<button title="Relance la requête « {t.query?.name} » (F5 dans le tableau)" onclick={() => menuAction(() => source.refreshTable!(t))}>Actualiser la requête</button>
+									{#if source.setHandKey && t.columns.some((k) => k.hand && !k.formula)}
+										<button title="Colonne du résultat qui relie les valeurs saisies à leurs lignes d'une actualisation à l'autre" onclick={() => openHandKey(t)}>Clé des colonnes saisies…</button>
+									{/if}
+									{#if source.forgetHandKept && t.handKept}
+										<button title="Valeurs saisies sur des lignes disparues du résultat, gardées au cas où elles reviendraient (Ctrl+Z pour annuler)" onclick={() => menuAction(() => source.forgetHandKept!(t))}>Oublier les valeurs mises de côté ({t.handKept} {t.handKept > 1 ? 'lignes' : 'ligne'})</button>
+									{/if}
 							{/if}
 							{#if share}
 								<button title="Rendre ce tableau lisible depuis d'autres classeurs du serveur (catalogue du Data Lake Lattis)" onclick={() => { const n = m.e.t.name; menu = null; onsharedata?.(n); }}>Partager au Data Lake Lattis…</button>
@@ -9512,6 +9588,44 @@
 					<span class="sp"></span>
 					<button class="primary" onclick={applyKeyDialog}>Valider</button>
 					<button onclick={cancelKeyDialog}>Annuler</button>
+				</div>
+			</div>
+		{/if}
+		{#if handDlg}
+			{@const d = handDlg}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="rules lines-dlg key-dlg"
+				role="dialog"
+				tabindex="-1"
+				aria-label="Clé des colonnes saisies"
+				use:focusFirst
+				use:dismissPanel={cancelHandDialog}
+				onkeydown={(ev) => {
+					ev.stopPropagation();
+					if (ev.key === 'Enter') applyHandDialog();
+					if (ev.key === 'Escape') cancelHandDialog();
+				}}
+			>
+				<div class="menu-title">Les valeurs saisies à côté de « {d.table} » suivent ses lignes par :</div>
+				{#each d.columns as c (c)}
+					<label><input type="radio" bind:group={d.choice} value={c} /> {c.includes(' + ') ? 'les colonnes' : 'la colonne'} « {c} »</label>
+				{/each}
+				<label><input type="radio" bind:group={d.choice} value="#" /> le rang des lignes (déconseillé)</label>
+				{#if d.choice === '#'}
+					<p class="menu-note">Si la requête rend ses lignes dans un autre ordre, ou en ajoute ou en retire, les valeurs saisies se retrouveront en face d’autres lignes.</p>
+				{:else if d.t}
+					<p class="menu-note">Les valeurs déjà saisies restent sur leurs lignes ; celles mises de côté (lignes disparues) sont oubliées. Les doublons et cases vides de la colonne sont refusés.</p>
+				{:else}
+					<p class="menu-note">À chaque actualisation, une valeur revient sur la ligne qui a la même « {d.choice} » ; si cette ligne disparaît, la valeur est mise de côté et revient avec elle.</p>
+				{/if}
+				{#if !d.columns.length && !d.t}
+					<p class="menu-note">Aucune colonne du résultat n’identifie ses lignes (valeurs en double ou cases vides) : ajoutez-en une à la requête (un identifiant) pour une jointure fiable.</p>
+				{/if}
+				<div class="foot">
+					<span class="sp"></span>
+					<button class="primary" onclick={applyHandDialog}>Valider</button>
+					<button onclick={cancelHandDialog}>Annuler</button>
 				</div>
 			</div>
 		{/if}

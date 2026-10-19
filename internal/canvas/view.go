@@ -55,6 +55,9 @@ type ColumnInfo struct {
 	HeaderStyle string `json:"headerStyle"`
 	// Mise en forme conditionnelle (JSON : liste de Rule).
 	Rules string `json:"rules"`
+	// Colonne saisie à côté d'un résultat chargé (hand.go) : modifiable,
+	// gardée à l'actualisation ; en-tête vert, les colonnes chargées en bleu.
+	Hand bool `json:"hand,omitempty"`
 }
 
 // TableInfo décrit un tableau posé sur une feuille.
@@ -83,6 +86,11 @@ type TableInfo struct {
 	// tableau) : identifiant et nom, 0 et vide sinon.
 	QueryID   int64  `json:"queryId"`
 	QueryName string `json:"queryName"`
+	// Colonnes saisies (hand.go) : clé de jointure (nom d'une colonne
+	// chargée, « # » : rang des lignes, vide : pas encore choisie) et nombre
+	// de lignes disparues dont des valeurs saisies sont mises de côté.
+	HandKey  string `json:"handKey,omitempty"`
+	HandKept int    `json:"handKept,omitempty"`
 	// Classeur partagé : "published" (tableau publié sur le serveur) ou
 	// "private" (resté local) ; vide pour un classeur local.
 	Shared string `json:"shared,omitempty"`
@@ -278,6 +286,11 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 					ci.Result = t.computedResult(tb, c)
 				}
 				ti.Columns = append(ti.Columns, ci)
+			}
+			if ti.QueryID != 0 {
+				if err := t.handLayout(tb, ti.QueryID, &ti); err != nil {
+					return err
+				}
 			}
 			l.Tables = append(l.Tables, ti)
 		}

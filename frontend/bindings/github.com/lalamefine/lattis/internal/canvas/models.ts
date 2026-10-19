@@ -426,6 +426,12 @@ export interface ColumnInfo {
      * Mise en forme conditionnelle (JSON : liste de Rule).
      */
     "rules": string;
+
+    /**
+     * Colonne saisie à côté d'un résultat chargé (hand.go) : modifiable,
+     * gardée à l'actualisation ; en-tête vert, les colonnes chargées en bleu.
+     */
+    "hand"?: boolean;
 }
 
 /**
@@ -1289,6 +1295,14 @@ export interface TableInfo {
      */
     "queryId": number;
     "queryName": string;
+
+    /**
+     * Colonnes saisies (hand.go) : clé de jointure (nom d'une colonne
+     * chargée, « # » : rang des lignes, vide : pas encore choisie) et nombre
+     * de lignes disparues dont des valeurs saisies sont mises de côté.
+     */
+    "handKey"?: string;
+    "handKept"?: number;
 
     /**
      * Classeur partagé : "published" (tableau publié sur le serveur) ou

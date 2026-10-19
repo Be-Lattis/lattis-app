@@ -458,6 +458,51 @@ func TestSQLSourceHeaders(t *testing.T) {
 	}
 }
 
+// Colonne saisie à côté d'un résultat référencé depuis l'onglet SQL (UNION
+// de deux tableaux annuels, mêmes id) : jointe par « id + Année », elle
+// suit ses lignes quand la source change (décision 0008).
+func TestSQLSourceHandColumn(t *testing.T) {
+	d := newDoc(t)
+	addTable(t, d, "Nids2021", []string{"Espèce", "Nids"}, []grid.Type{grid.Text, grid.Integer}, []any{"Mésange", int64(4)}, []any{"Merle", int64(1)})
+	addTable(t, d, "Nids2022", []string{"Espèce", "Nids"}, []grid.Type{grid.Text, grid.Integer}, []any{"Mésange", int64(5)})
+	id := save(t, d, Query{Name: "Suivi", Source: Source{Kind: SourceSQL, SQL: `SELECT id, c_1 AS "Espèce", c_2 AS "Nids", 2021 AS Année FROM t_1 UNION SELECT id, c_1 AS "Espèce", c_2 AS "Nids", 2022 FROM t_2 ORDER BY 4, 1`}})
+	l, err := Refresh(ctx, env(d), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.SetCell(ctx, l.Sheet, 0, 4, "Remarque"); err != nil {
+		t.Fatal(err)
+	}
+	// Ligne 3 : Mésange 2022 (id 1, comme Mésange 2021).
+	if _, err := d.SetCell(canvas.WithKeyChoice(ctx, "hand:id + Année"), l.Sheet, 3, 4, "à surveiller"); err != nil {
+		t.Fatal(err)
+	}
+	// Une ligne de 2021 de plus : les lignes de 2022 descendent, la remarque suit.
+	lay, err := d.Layout(ctx, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var src int64
+	for _, s := range lay.Sheets {
+		if s.Name == "Nids2021" {
+			src = s.ID
+		}
+	}
+	if _, err := d.SetCell(ctx, src, 3, 0, "Pic"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.SetCell(ctx, src, 3, 1, "2"); err != nil {
+		t.Fatal(err)
+	}
+	if l, err = Refresh(ctx, env(d), id); err != nil {
+		t.Fatal(err)
+	}
+	want := "[[id:integer Espèce:text Nids:integer Année:integer Remarque:text] [1 Mésange 4 2021 ] [2 Merle 1 2021 ] [3 Pic 2 2021 ] [1 Mésange 5 2022 à surveiller]]"
+	if got := fmt.Sprint(dump(t, d, l.Table)); got != want {
+		t.Fatalf("après actualisation :\n got %s\nwant %s", got, want)
+	}
+}
+
 // Un tableau supprimé avec sa feuille laisse sa requête sans tableau : un
 // résultat copié ensuite ne prend pas son identifiant, et donc pas sa
 // requête (F5 l'aurait remplacé par elle).

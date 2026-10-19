@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -171,6 +170,11 @@ func (m *Model) DeleteQuery(ctx context.Context, id int64) error {
 		if target.Valid {
 			tgt = target.Int64
 		}
+		// Ses colonnes saisies restent dans le tableau, en colonnes
+		// ordinaires ; les valeurs mises de côté sont oubliées.
+		if err := t.clearHand(queryOwner(id)); err != nil {
+			return err
+		}
 		return t.apply(
 			[]stmt{st(`DELETE FROM _lattis_queries WHERE id = ?`, id)},
 			[]stmt{st(`INSERT INTO _lattis_queries (id, name, source, steps, target, refreshed) VALUES (?, ?, ?, ?, ?, ?)`, id, name, source, steps, tgt, nullable(refreshed))},
@@ -231,15 +235,15 @@ func (m *Model) LoadQuery(ctx context.Context, id int64, it ImportTable) (QueryL
 			}
 		}
 		var sheet int64
-		var computed []Column
+		var carry *handCarry
 		if old != nil {
 			if err := t.guard(old.Sheet); err != nil {
 				return err
 			}
-			for _, c := range old.Cols {
-				if c.Formula != "" && !slices.ContainsFunc(it.Headers, func(h string) bool { return strings.EqualFold(strings.TrimSpace(h), c.Name) }) {
-					computed = append(computed, c)
-				}
+			// Colonnes saisies et calculées ajoutées à la main (hand.go).
+			var err error
+			if carry, err = t.handBefore(id, *old, it.Headers, &res.Warnings); err != nil {
+				return err
 			}
 			if err := t.deleteTable(*old); err != nil {
 				return err
@@ -247,6 +251,11 @@ func (m *Model) LoadQuery(ctx context.Context, id int64, it ImportTable) (QueryL
 			sheet, it.Name, it.Row, it.Col = old.Sheet, old.Name, old.Row, old.Col
 		} else {
 			if err := t.guardWorkbook(); err != nil {
+				return err
+			}
+			// Plus de tableau chargé : ses colonnes saisies sont parties
+			// avec lui.
+			if err := t.clearHand(queryOwner(id)); err != nil {
 				return err
 			}
 			var err error
@@ -273,22 +282,43 @@ func (m *Model) LoadQuery(ctx context.Context, id int64, it ImportTable) (QueryL
 		if err != nil {
 			return err
 		}
-		for _, c := range computed {
-			next := int64(1)
-			for _, k := range tb.Cols {
-				next = max(next, k.ID+1)
-			}
-			if err := t.addColumn(tb, next, c.Name, c.Type, len(tb.Cols)); err != nil {
-				return err
+		if carry != nil {
+			loaded := len(tb.Cols)
+			ids := map[int64]int64{}
+			for _, hc := range carry.cols {
+				c := hc.c
+				next := int64(1)
+				for _, k := range tb.Cols {
+					next = max(next, k.ID+1)
+				}
+				// Un nom que le résultat prend désormais : la colonne saisie
+				// est renommée (« Note 2 »).
+				name := freeColumnName(tb, c.Name)
+				if name != c.Name {
+					res.Warnings = append(res.Warnings, fmt.Sprintf("%s : la requête rend maintenant une colonne « %s », la colonne saisie devient « %s »", tb.Name, c.Name, name))
+				}
+				if err := t.addColumn(tb, next, name, c.Type, len(tb.Cols)); err != nil {
+					return err
+				}
+				ids[hc.h] = next
+				if tb, err = t.table(tb.ID); err != nil {
+					return err
+				}
+				if c.Formula == "" {
+					continue
+				}
+				if err := t.setFormula(tb, len(tb.Cols)-1, displayFormula(c.Formula)); err != nil {
+					if !userError(err) {
+						return err
+					}
+					res.Warnings = append(res.Warnings, fmt.Sprintf("%s[%s] : %s", tb.Name, c.Name, err))
+				}
 			}
 			if tb, err = t.table(tb.ID); err != nil {
 				return err
 			}
-			if err := t.setFormula(tb, len(tb.Cols)-1, displayFormula(c.Formula)); err != nil {
-				if !userError(err) {
-					return err
-				}
-				res.Warnings = append(res.Warnings, fmt.Sprintf("%s[%s] : %s", tb.Name, c.Name, err))
+			if err := t.handAfter(carry, tb, loaded, ids, &res.Warnings); err != nil {
+				return err
 			}
 		}
 		if old != nil {

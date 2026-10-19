@@ -143,6 +143,11 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 				}
 				return t.rename(tb, c, name)
 			case inCols && inRows:
+				// Tableau chargé par une requête : seulement ses colonnes
+				// saisies (hand.go).
+				if err := t.handInput(tb, col-tb.Col, raw); err != nil {
+					return err
+				}
 				if err := t.setCell(tb, row-tb.Row-1, col-tb.Col, raw, ev); err != nil || !empty || t.pasting {
 					return err
 				}
@@ -237,6 +242,10 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 					}
 				}
 				if err := t.growSide(tb, row, col, raw, ev, false); err != nil {
+					return err
+				}
+				// Tableau chargé : la nouvelle colonne est une colonne saisie.
+				if err := t.handGrown(tb); err != nil {
 					return err
 				}
 				if next == nil {

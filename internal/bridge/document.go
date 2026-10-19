@@ -1164,6 +1164,25 @@ func (s *DocumentService) ClearKey(ctx context.Context, table string) (DocState,
 	return s.act(ctx, func(d *doc.Document) error { return d.ClearKey(ctx, table) })
 }
 
+// SetHandKey change la clé de jointure des colonnes saisies à côté d'un
+// tableau chargé (column : colonne chargée ; "#" : rang des lignes). Les
+// valeurs mises de côté sont oubliées (annulable).
+func (s *DocumentService) SetHandKey(ctx context.Context, table, column string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error {
+		_, err := d.SetHandKey(ctx, table, column)
+		return err
+	})
+}
+
+// ForgetHandKept oublie les valeurs saisies mises de côté (lignes disparues
+// du résultat) d'un tableau chargé.
+func (s *DocumentService) ForgetHandKept(ctx context.Context, table string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error {
+		_, err := d.ForgetHandKept(ctx, table)
+		return err
+	})
+}
+
 // DismissKeyHint ne propose plus la première colonne du tableau comme clé.
 func (s *DocumentService) DismissKeyHint(ctx context.Context, table string) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.DismissKeyHint(ctx, table) })

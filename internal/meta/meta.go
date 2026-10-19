@@ -428,6 +428,38 @@ CREATE TABLE _lattis_page_setup (
 	setup TEXT NOT NULL
 ) STRICT;
 `,
+	// 31 → 32 : colonnes saisies à côté d'un résultat chargé (tableau d'une
+	// requête d'import ou de l'onglet SQL, canvas/hand.go, décision 0008).
+	// owner désigne le résultat : « query:<id> » (« pivot:<id> » réservé
+	// aux tableaux croisés).
+	//
+	// _lattis_hand : clé de jointure, nom d'une colonne chargée (« # » : rang
+	// de la ligne ; pas de ligne : pas encore choisie).
+	// _lattis_hand_cols : colonnes saisies (h, numéro stable) et leur
+	// identifiant dans le tableau chargé actuel.
+	// _lattis_hand_kept : valeurs saisies sur des lignes disparues à
+	// l'actualisation, par valeur de clé, rattachées si la clé revient
+	// (invalid : texte hors type, comme _lattis_invalid).
+	`
+CREATE TABLE _lattis_hand (
+	owner TEXT NOT NULL PRIMARY KEY,
+	key   TEXT NOT NULL
+) STRICT;
+CREATE TABLE _lattis_hand_cols (
+	owner TEXT NOT NULL,
+	h     INTEGER NOT NULL,
+	col   INTEGER NOT NULL,
+	PRIMARY KEY (owner, h)
+) STRICT;
+CREATE TABLE _lattis_hand_kept (
+	owner   TEXT NOT NULL,
+	k       TEXT NOT NULL,
+	h       INTEGER NOT NULL,
+	v       ANY,
+	invalid INTEGER NOT NULL DEFAULT 0,
+	PRIMARY KEY (owner, k, h)
+) STRICT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

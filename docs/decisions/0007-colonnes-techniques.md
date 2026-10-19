@@ -13,5 +13,5 @@ Une colonne de résultat dont le nom commence par « _ » est technique : l'aper
 
 ## Portée
 
-- Concerné : l'aperçu de l'onglet SQL (`grid.QueryResult.WithoutTechnical`) et le résultat posé sur une feuille (`canvas.QueryToSheet`).
+- Concerné : l'aperçu de l'onglet SQL (`grid.QueryResult.WithoutTechnical`), le résultat posé sur une feuille (`canvas.QueryToSheet`) et le tableau référencé, à chacune de ses actualisations (source SQL des requêtes, `query.loadSQL`).
 - Non concerné : `db.query` des scripts, le serveur MCP et l'assistant, qui reçoivent tout ; les aperçus des requêtes Power Query, dont les colonnes viennent de sources externes (un CSV peut avoir une vraie colonne `_code`).

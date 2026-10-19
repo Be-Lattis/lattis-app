@@ -74,6 +74,9 @@ func (m *Model) Dump(ctx context.Context) (string, error) {
 		{"favoris", `SELECT * FROM _lattis_favorites ORDER BY id`},
 		{"connexions", `SELECT * FROM _lattis_connections ORDER BY id`},
 		{"requêtes", `SELECT id, name, source, steps, target FROM _lattis_queries ORDER BY id`},
+		{"colonnes saisies", `SELECT h.owner, h.key, c.h, c.col FROM _lattis_hand h LEFT JOIN _lattis_hand_cols c ON c.owner = h.owner ORDER BY h.owner, c.h`},
+		{"colonnes saisies sans clé", `SELECT owner, h, col FROM _lattis_hand_cols WHERE owner NOT IN (SELECT owner FROM _lattis_hand) ORDER BY owner, h`},
+		{"valeurs mises de côté", `SELECT owner, k, h, v, invalid FROM _lattis_hand_kept ORDER BY owner, k, h`},
 	}
 	for _, s := range steps {
 		if err := dumpQuery(s.title, s.q); err != nil {

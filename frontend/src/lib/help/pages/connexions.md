@@ -27,7 +27,7 @@ Un clic sur une colonne de l'aperçu la sélectionne ; `Ctrl+Z` retire la derni�
 
 ## Requêtes et connexions
 
-Le volet **Requêtes et connexions** (Données › Requêtes et connexions) liste les requêtes du classeur : modifier, actualiser, supprimer. `F5` dans un tableau chargé par une requête la relance ; `Ctrl+F5` ou Données › Actualiser tout relance toutes les requêtes puis recalcule les formules.
+Le volet **Requêtes et connexions** (Données › Requêtes et connexions) liste les requêtes du classeur : modifier, actualiser, supprimer. `F5` dans un tableau chargé par une requête la relance ; `Ctrl+F5` ou Données › Actualiser tout relance toutes les requêtes puis recalcule les formules. Un nom tapé à droite de son en-tête ajoute une colonne saisie, gardée à l'actualisation (voir [Écrire à côté d'un résultat lié](sql)).
 
 ## Classeur reçu : accord des sources
 

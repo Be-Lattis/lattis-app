@@ -27,7 +27,20 @@ Connecté à un Serveur Lattis, les objets montrent aussi ses **données du Data
 
 ## Envoyer le résultat sur une feuille
 
-Le résultat d'une requête se copie dans un nouveau tableau, ou s'y **référence** : le tableau reste alors lié à la requête et se relit par clic droit › Tableau › Actualiser la requête (ou `F5`).
+Le résultat d'une requête se copie dans un nouveau tableau, ou s'y **référence** : le tableau reste alors lié à la requête et se relit par clic droit › Tableau › Actualiser la requête (ou `F5`). Il garde les en-têtes du résultat ; les colonnes techniques (`_pos`) n'y viennent jamais.
+
+### Écrire à côté d'un résultat lié
+
+Les colonnes chargées par la requête (en-tête bleu) ne se modifient pas. Pour ajouter vos propres informations, tapez un nom juste à droite de l'en-tête : la nouvelle **colonne saisie** (en-tête vert) se remplit à la main, ou par une formule, et les formules du classeur la voient comme les autres (`Requête1[Commentaire]`).
+
+À chaque actualisation, ses valeurs suivent leurs lignes par une **clé** : la colonne `id` du résultat quand il y en a une (c'est le cas avec `SELECT *`), sinon une colonne sans doublon ni case vide que Lattis demande à la première valeur saisie. Quand aucune colonne seule ne convient, Lattis propose des paires : avec `SELECT *, 2021 AS Année FROM Suivi2021 UNION SELECT *, 2022 FROM Suivi2022`, les mêmes `id` reviennent d'une année à l'autre, et c'est « id + Année » qui identifie les lignes. Le rang des lignes est possible mais déconseillé : si la requête change l'ordre de ses lignes, les valeurs ne suivent plus.
+
+- Une ligne qui disparaît du résultat : ses valeurs sont **mises de côté**, et reviennent si sa clé revient. Clic droit › Tableau › Oublier les valeurs mises de côté les efface.
+- Une clé en double dans le résultat : les valeurs de cette clé sont mises de côté, avec un avertissement.
+- Renommer ou supprimer une colonne saisie se fait comme dans un tableau ordinaire ; la clé se change par clic droit › Tableau › Clé des colonnes saisies…
+- Tout s'annule avec `Ctrl+Z`, actualisation comprise.
+
+Il en va de même pour un tableau chargé par une requête de l'éditeur ([Importer des données](connexions)).
 
 ## Modifier les données
 

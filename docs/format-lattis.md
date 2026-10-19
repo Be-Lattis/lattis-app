@@ -1,6 +1,6 @@
 # Le format `.lattis`
 
-*Format d'archive 1 (`archive.FormatVersion`), format de base 31 (`meta.Version`), au 19 octobre 2026. Ce document suit le code : une migration qui change le schéma le met à jour.*
+*Format d'archive 1 (`archive.FormatVersion`), format de base 32 (`meta.Version`), au 19 octobre 2026. Ce document suit le code : une migration qui change le schéma le met à jour.*
 
 Un classeur Lattis est un fichier ZIP qui contient une base SQLite. Tout ce que le classeur contient (tableaux, cellules, mise en forme, objets, scripts, requêtes) est dans la base ; l'archive n'ajoute qu'un court manifeste. Le fichier se lit donc sans Lattis : on le dézippe, puis on ouvre `database.sqlite` avec n'importe quel outil SQLite.
 
@@ -18,7 +18,7 @@ Un classeur Lattis est un fichier ZIP qui contient une base SQLite. Tout ce que 
 
 ## La base
 
-La version du schéma est le `user_version` de SQLite (31 à ce jour). Toutes les tables de Lattis sont `STRICT`. Les noms affichés (feuilles, tableaux, colonnes) ne sont jamais des noms SQL : un tableau est une table `t_<id>`, une colonne `c_<id>`, ce qui permet de renommer, d'utiliser des accents, des espaces ou des mots réservés sans toucher au schéma.
+La version du schéma est le `user_version` de SQLite (32 à ce jour). Toutes les tables de Lattis sont `STRICT`. Les noms affichés (feuilles, tableaux, colonnes) ne sont jamais des noms SQL : un tableau est une table `t_<id>`, une colonne `c_<id>`, ce qui permet de renommer, d'utiliser des accents, des espaces ou des mots réservés sans toucher au schéma.
 
 ### Tableaux : `t_<id>`
 
@@ -45,7 +45,7 @@ Une saisie qui ne correspond pas au type de sa colonne laisse la cellule à `NUL
 | Mise en forme | `_lattis_styles` (cellules et colonnes de tableau), `_lattis_cell_styles`, `_lattis_row_styles`, `_lattis_col_styles`, `_lattis_row_rules`, `_lattis_col_rules`, `_lattis_col_widths`, `_lattis_row_heights` (styles et règles en JSON) |
 | Objets | `_lattis_pivots` (tableaux croisés), `_lattis_charts` (graphiques), `_lattis_buttons` (boutons et contrôles), `_lattis_pages` (onglets Document et pages web) : position et configuration JSON |
 | Scripts et SQL | `_lattis_scripts` (bibliothèque Lua), `_lattis_favorites` (requêtes favorites de l'onglet SQL), `_lattis_http_hosts` (ancienne liste des hôtes autorisés : ni lue ni écrite depuis que les accords vivent sur le poste, décision 0004) |
-| Sources externes | `_lattis_connections` (connexions, sans mot de passe : il reste dans le trousseau du système), `_lattis_queries` (requêtes d'import : source, étapes, tableau cible) |
+| Sources externes | `_lattis_connections` (connexions, sans mot de passe : il reste dans le trousseau du système), `_lattis_queries` (requêtes d'import : source, étapes, tableau cible), `_lattis_hand`, `_lattis_hand_cols`, `_lattis_hand_kept` (colonnes saisies à côté d'un tableau chargé : clé de jointure, colonnes, valeurs des lignes disparues ; décision 0008) |
 | Classeur partagé | `_lattis_remote_tables`, `_lattis_row_ids`, `_lattis_outbox`, `_lattis_conflicts`, `_lattis_capabilities`, `_lattis_data_rows`, `_lattis_data_sync` (vides pour un classeur non partagé ; voir `docs/collaboration`) |
 | Annulation | `_lattis_journal` : présente, mais **vide dans le fichier** |
 
