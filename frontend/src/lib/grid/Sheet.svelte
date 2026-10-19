@@ -23,6 +23,7 @@
 	import { arrowNotes, arrowSpan, spanBox, spanPoint, type ArrowGeometry } from './auditarrows';
 	import { stepZoom } from './zoom';
 	import { panes, reveal, revealWhole, toGrid, type Pane } from './panes';
+	import { keepInView, seenIn, type Span as XSpan } from './keepinview';
 	import { cleanSource, dvDialog, dvPatch, dvTarget, dvPreview, dvSource, hiddenLines, mergeAt, mergeList, skipHidden, validate, validateSource, type DvList, type MergeRange } from './sheetfmt';
 	import { expandRange, extendCorner, intersect, isSingleCell, mergeRect, rangeOf, stepCell, wholeLines, type CellRange } from './mergesel';
 	import { jumpLine, lineSpans, type Area, type Span } from './jump';
@@ -6645,6 +6646,7 @@
 			return;
 		}
 		holdWhileScrolling();
+		stopGlide();
 		noteTip = null;
 		const unit = e.deltaMode === 1 ? ROW_H : e.deltaMode === 2 ? vs.view : 1;
 		let dy = e.deltaY * unit;
@@ -6690,7 +6692,94 @@
 		schedule();
 	}
 
+	// --- Volet ouvert à droite : l'objet cliqué reste à l'écran -------------
+	// Un volet (champs du TCD, graphique, assistant, conflits…) prend sa
+	// place à droite : la grille rétrécit (resize) et ce qui était au bord
+	// passerait dessous. Si l'objet (graphique sélectionné, TCD du volet,
+	// sinon la sélection) se voyait avant, on fait défiler vers la droite
+	// (le contenu glisse à gauche) pour le montrer en entier s'il tient,
+	// sinon son début ou la cellule active (keepinview.ts). Glissé court,
+	// abandonné dès que l'utilisateur défile lui-même ; rien à la fermeture.
+	let glide: { from: number; to: number; t0: number; last: number; frame: number } | null = null;
+	const GLIDE_MS = 220;
+	let sizedZoom = 0;
+
+	function stopGlide() {
+		if (glide) cancelAnimationFrame(glide.frame);
+		glide = null;
+	}
+
+	/** Défilement horizontal posé à x, la feuille agrandie d'autant s'il le faut. */
+	function setScrollX(x: number) {
+		if (spacer) {
+			const want = cax().indexAt(x + viewW) + 2;
+			spacer.style.width = `${MARGIN + cax().offset(Math.min(SHEET_COLS, Math.max(extentCols, want)))}px`;
+		}
+		scroller.scrollLeft = x;
+		updateExtent();
+		schedule();
+	}
+
+	function slideX(to: number) {
+		stopGlide();
+		if (!motion()) {
+			setScrollX(to);
+			return;
+		}
+		const g = { from: scroller.scrollLeft, to, t0: performance.now(), last: scroller.scrollLeft, frame: 0 };
+		const step = (now: number) => {
+			if (glide !== g) return;
+			// Défilé entre-temps (molette, barre, clavier) : on le laisse faire.
+			if (Math.abs(scroller.scrollLeft - g.last) > 1.5) {
+				glide = null;
+				return;
+			}
+			const k = ease(progress(now, g.t0, GLIDE_MS));
+			setScrollX(Math.round(g.from + (g.to - g.from) * k));
+			g.last = scroller.scrollLeft;
+			if (k < 1) g.frame = requestAnimationFrame(step);
+			else glide = null;
+		};
+		glide = g;
+		g.frame = requestAnimationFrame(step);
+	}
+
+	/** Objet à garder à l'écran, et la cellule active à montrer s'il est trop large. */
+	function focusSpan(): { o: XSpan; must: XSpan } {
+		const ax = cax();
+		const g = boxOf(active.row, active.col);
+		const c0 = g?.col ?? active.col;
+		const must = { x0: ax.offset(c0), x1: ax.offset(g ? g.col + g.cols : active.col + 1) };
+		if (selChart !== null) {
+			const ch = charts.find((c) => c.id === selChart);
+			if (ch) {
+				const b = chartBox(ch);
+				return { o: { x0: b.x, x1: b.x + b.w }, must: { x0: b.x, x1: b.x + Math.min(b.w, 100) } };
+			}
+		}
+		if (panel?.kind === 'pivot') {
+			const id = panel.id;
+			const p = pivots.find((p) => p.id === id);
+			if (p && !p.error) return { o: { x0: ax.offset(p.col), x1: ax.offset(p.col + Math.max(1, p.cells[0]?.length ?? 1)) }, must };
+		}
+		const s0 = Math.min(anchor.col, c0);
+		const s1 = Math.max(anchor.col + 1, c0 + (g?.cols ?? 1));
+		return { o: { x0: ax.offset(s0), x1: ax.offset(s1) }, must };
+	}
+
+	/** La grille vient de rétrécir (de oldW à viewW) : l'objet qui se voyait y reste. */
+	function keepFocusAfterShrink(oldW: number) {
+		if (!scroller || viewW - MARGIN < 80) return;
+		const f = focusSpan();
+		const fr = cax().offset(fCols());
+		const x = scroller.scrollLeft;
+		if (!seenIn(f.o, x, oldW - MARGIN, fr) && !seenIn(f.must, x, oldW - MARGIN, fr)) return;
+		const to = keepInView(f.o, x, viewW - MARGIN, fr, cax(), f.must);
+		if (Math.abs(to - x) >= 1) slideX(to);
+	}
+
 	function ensureVisible(row: number, col: number) {
+		stopGlide();
 		updateExtent();
 		// Sous les volets figés : la case ne doit pas rester cachée dessous.
 		// Comme Excel, la case est montrée entière, et la première ligne ou
@@ -9781,6 +9870,9 @@
 			const pw = Math.round(cw * dpr);
 			const ph = Math.round(ch * dpr);
 			if (cw === viewW && ch === viewH && canvas.width === pw && canvas.height === ph) return;
+			// Largeur d'avant, si seul l'écran a changé (pas le zoom).
+			const oldW = zoom === sizedZoom ? viewW : 0;
+			sizedZoom = zoom;
 			viewW = cw;
 			viewH = ch;
 			// Changer la taille du canevas l'efface (en noir, sans transparence) :
@@ -9794,6 +9886,8 @@
 			syncNative();
 			if (frame) cancelAnimationFrame(frame);
 			draw();
+			// Volet ouvert à droite : l'objet cliqué ne passe pas dessous.
+			if (oldW > 0 && cw < oldW) keepFocusAfterShrink(oldW);
 		});
 		const ro = new ResizeObserver(resize);
 		ro.observe(wrap);
@@ -9862,6 +9956,7 @@
 			window.removeEventListener('keydown', onPlaceKey, true);
 			if (placing) onplacing?.(null);
 			cancelAnimationFrame(frame);
+			stopGlide();
 		};
 	});
 
