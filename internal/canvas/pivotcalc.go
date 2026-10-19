@@ -205,6 +205,9 @@ func (p pivotPlan) pivotOrder(c *Column) string {
 	return ""
 }
 
+// sorted : un champ au moins a un tri choisi.
+func (p pivotPlan) sorted() bool { return len(p.cfg.Sort) > 0 }
+
 func pivotLabel(v PivotValue) string {
 	if l := strings.TrimSpace(v.Label); l != "" {
 		return l
@@ -243,9 +246,10 @@ func (t *tx) pivotCellsRaw(raw PivotConfig) ([][]string, error) {
 	// Valeurs distinctes du champ des colonnes.
 	var keys []string
 	if p.cols != nil {
-		order := "min(_pos)"
+		// Les vides en dernier, quel que soit le tri (comme Excel).
+		order := "k = '', min(_pos)"
 		if o := p.pivotOrder(p.cols); o != "" {
-			order = o + ", min(_pos)"
+			order = "k = '', " + o + ", min(_pos)"
 		}
 		rs, err := t.query(`SELECT `+pivotText(p.cols)+` AS k FROM `+p.tb.sql()+where+` GROUP BY k ORDER BY `+order+` LIMIT ?`, append(append([]any{}, p.args...), MaxPivotCols+1)...)
 		if err != nil {
@@ -442,11 +446,14 @@ func (t *tx) pivotCellsRaw(raw PivotConfig) ([][]string, error) {
 		// champ (▾ de son étiquette).
 		cols := append(append(sel, "min(_pos) AS o"), exprs...)
 		// Champ par champ, dans la hiérarchie : un champ non trié garde
-		// l'ordre de première apparition de son groupe.
-		order := []string{"o"}
-		if len(cfg.Sort) > 0 {
+		// l'ordre de première apparition de son groupe ; les vides de
+		// chaque champ viennent en dernier dans leur groupe, quel que soit
+		// le tri (comme Excel).
+		order := []string{"k0 = ''", "o"}
+		if nk > 1 || p.sorted() {
 			order = order[:0]
 			for i, c := range p.rows {
+				order = append(order, group[i]+" = ''")
 				if o := p.pivotOrder(c); o != "" {
 					order = append(order, o)
 				} else {

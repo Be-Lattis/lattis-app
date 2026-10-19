@@ -148,11 +148,11 @@ func TestPivotTree(t *testing.T) {
 		}
 		return nil
 	})
-	if got := strings.Join(rows, ", "); got != "Service|Poste|Somme de Salaire|Moyenne de Salaire, RH Chargé 30, IT Dev 90, RH Chef 60, IT Admin 35" {
+	if got := strings.Join(rows, ", "); got != "Service|Poste|Somme de Salaire|Moyenne de Salaire, RH Chargé 30, RH Chef 60, IT Dev 90, IT Admin 35" {
 		t.Fatalf("vue SQL : %s", got)
 	}
 	c := d.ChartData(ctx, ChartConfig{Source: "TCD1", Kind: "bar", X: "Service", Series: []string{"Somme de Salaire"}})
-	if c.Error != "" || fmt.Sprint(c.Labels) != "[RH · Chargé IT · Dev RH · Chef IT · Admin]" || len(c.Series[0].Values) != 4 || *c.Series[0].Values[1] != 90 {
+	if c.Error != "" || fmt.Sprint(c.Labels) != "[RH · Chargé RH · Chef IT · Dev IT · Admin]" || len(c.Series[0].Values) != 4 || *c.Series[0].Values[2] != 90 {
 		t.Fatalf("graphique : %+v", c)
 	}
 	// Document : même arborescence sans feuille.

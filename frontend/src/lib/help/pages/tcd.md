@@ -27,6 +27,10 @@ Une colonne calculée ne sert pas encore de champ.
 
 Synthèses : Somme, Nombre, Nombre distinct, Moyenne, Min, Max. Une colonne de nombres est sommée par défaut, les autres comptées. L'affichage peut aussi être un pourcentage : du total général, du total de la colonne ou du total de la ligne. Un format de nombre (monétaire, pourcentage, décimales) se choisit par valeur.
 
+## Trier et filtrer les étiquettes
+
+Le ▾ d'une étiquette de lignes ou de colonnes trie le champ (de A à Z, de Z à A) et filtre ses valeurs en les cochant. Sans tri choisi, les étiquettes suivent l'ordre du tableau source. Comme dans Excel, les cellules vides du champ forment toujours le dernier élément, quel que soit le tri : la dernière ligne (ou colonne) avant le total, et « (Vides) » en fin de liste dans le menu ▾.
+
 ## Mise à jour
 
 Le TCD suit les changements du volet après un court délai, en une seule étape d'annulation. Il suit aussi les données du tableau source. Le volet se rouvre d'un clic dans le TCD.

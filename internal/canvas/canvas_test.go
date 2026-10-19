@@ -906,7 +906,7 @@ func TestFilter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fmt.Sprint(vals) != "[{ 1} {FR 2} {IT 1}]" {
+	if fmt.Sprint(vals) != "[{FR 2} {IT 1} { 1}]" {
 		t.Fatalf("valeurs : %v", vals)
 	}
 	if err := d.SetFilter(ctx, "Feuille1", 1, &ColumnFilter{Values: []string{"FR"}}); err != nil {

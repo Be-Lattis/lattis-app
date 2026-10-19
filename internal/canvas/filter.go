@@ -319,13 +319,14 @@ func (m *Model) FilterValues(ctx context.Context, table string, i int) ([]Filter
 		}
 		return rs.Err()
 	})
-	// Les vides (texte "") viennent d'abord, une seule fois.
+	// Les vides (texte "") viennent en dernier, une seule fois, comme
+	// « (Vides) » dans Excel.
 	slices.SortStableFunc(out, func(a, b FilterValue) int {
 		switch {
 		case a.Text == "" && b.Text != "":
-			return -1
-		case b.Text == "" && a.Text != "":
 			return 1
+		case b.Text == "" && a.Text != "":
+			return -1
 		}
 		return 0
 	})
