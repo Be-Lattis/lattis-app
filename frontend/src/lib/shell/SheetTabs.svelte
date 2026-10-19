@@ -1237,15 +1237,18 @@
 		border-left: 1px solid rgba(0, 0, 0, 0.18);
 		cursor: pointer;
 	}
+	/* Point dessiné (pas un caractère) : centré au pixel près sur le trait,
+	   qui occupe la colonne -1px..0 de la boîte (bordure gauche). */
 	.choice-arrow::before {
-		content: '·';
+		content: '';
 		position: absolute;
-		left: 0;
+		left: -0.5px;
 		top: 50%;
+		width: 5px;
+		height: 5px;
+		border-radius: 50%;
+		background: currentColor;
 		transform: translate(-50%, -50%);
-		font-weight: 700;
-		font-size: 15px;
-		line-height: 1;
 		pointer-events: none;
 	}
 	.choice-arrow:hover:not(.off) {
