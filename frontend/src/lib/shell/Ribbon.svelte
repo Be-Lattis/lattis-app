@@ -7,6 +7,8 @@
 	// (ribbon.ts, selon les drapeaux posés à sa définition).
 
 	import { onMount, tick, untrack } from 'svelte';
+	import { slide } from 'svelte/transition';
+	import { reducedMotion } from '#lib/grid/anim.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { dismiss } from '#lib/grid/dismiss.js';
 	import { clearPatch, type CellStyle } from '#lib/grid/style.js';
@@ -867,8 +869,14 @@
 		}
 	}
 
+	// Réduire ou épingler : le ruban se replie vers le haut (ou se déplie),
+	// pour qu'on voie où il va ; pas d'animation au changement d'onglet.
+	let foldAnim = $state(false);
+
 	/** Réduit ou épingle le ruban (Ctrl+F1). */
 	export function toggleFold() {
+		foldAnim = true;
+		setTimeout(() => (foldAnim = false), 400);
 		folded = !folded;
 		peek = false;
 		try {
@@ -1221,7 +1229,7 @@
 	</nav>
 	{#if !isView(tab) && (!folded || peek)}
 		<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-		<div class="fold-wrap" class:peek={folded} use:peekWatch onclick={peekClick}>
+		<div class="fold-wrap" class:peek={folded} use:peekWatch onclick={peekClick} transition:slide={{ duration: foldAnim && !reducedMotion() ? 200 : 0 }}>
 		<div class="groups" class:off={disabled} id="ribbon-panel" role="tabpanel" aria-labelledby="ribbon-tab-{shownTabs.indexOf(tab as (typeof tabs)[number])}" use:observe>
 			{#each ribbons[tab] ?? [] as g, gi (g.title)}
 				{@const mode = modes[gi] ?? 'large'}
