@@ -137,7 +137,7 @@ func nullable(s sql.NullString) any {
 // touches indique si deux rectangles (avec la ligne et la colonne vides qui
 // séparent chaque tableau du reste) se touchent.
 func touches(r0, r1, c0, c1 int, b Table) bool {
-	return r0 <= b.Bottom()+1 && b.Row <= r1+1 && c0 <= b.Right()+1 && b.Col <= c1+1
+	return r0 <= b.Bottom()+1 && b.Top() <= r1+1 && c0 <= b.Right()+1 && b.Col <= c1+1
 }
 
 // place fusionne un tableau posé en (row, col) avec un tableau voisin dont
@@ -152,12 +152,12 @@ func (t *tx) place(tb Table) (Table, error) {
 	var left, right *Table
 	for i := range tables {
 		o := tables[i]
-		if o.ID == tb.ID || !touches(tb.Row, tb.Bottom(), tb.Col, tb.Right(), o) {
+		if o.ID == tb.ID || !touches(tb.Top(), tb.Bottom(), tb.Col, tb.Right(), o) {
 			continue
 		}
 		// Côte à côte, en-têtes sur la même ligne : fusion (voir aussi
 		// joinAdjacent, qui écarte les autres cas).
-		overlap := o.Row == tb.Row && !o.Filtered() && !tb.Filtered()
+		overlap := o.Row == tb.Row && o.TwoLevel == tb.TwoLevel && !o.Filtered() && !tb.Filtered()
 		switch {
 		case overlap && o.Right()+1 == tb.Col && left == nil:
 			left = &tables[i]
@@ -170,7 +170,7 @@ func (t *tx) place(tb Table) (Table, error) {
 		return tb, err
 	}
 	for _, c := range cells {
-		if c.Row >= tb.Row && c.Row <= tb.Bottom()+1 && c.Col >= tb.Col && c.Col <= tb.Right()+1 {
+		if c.Row >= tb.Top() && c.Row <= tb.Bottom()+1 && c.Col >= tb.Col && c.Col <= tb.Right()+1 {
 			return tb, fmt.Errorf("%w : la place recouvre des cellules remplies", ErrTable)
 		}
 	}
@@ -210,6 +210,10 @@ func (m *Model) MoveTable(ctx context.Context, name string, row, col int) error 
 		if err != nil {
 			return err
 		}
+		if tb.TwoLevel && row < 1 {
+			// La bande des groupes reste sur la feuille.
+			row = 1
+		}
 		if tb.Row == row && tb.Col == col {
 			return nil
 		}
@@ -235,6 +239,9 @@ func (t *tx) mergeRight(a, b Table) (Table, error) {
 	}
 	if a.Row != b.Row {
 		return a, fmt.Errorf("%w : les en-têtes de « %s » et « %s » ne sont pas sur la même ligne", ErrTable, a.Name, b.Name)
+	}
+	if a.TwoLevel != b.TwoLevel {
+		return a, fmt.Errorf("%w : « %s » et « %s » n'ont pas tous deux leurs en-têtes sur deux lignes", ErrTable, a.Name, b.Name)
 	}
 	// Noms des colonnes de b dans a.
 	names := map[string]bool{}

@@ -409,6 +409,12 @@ CREATE TABLE _lattis_data_sync (
 	since   TEXT NOT NULL
 ) STRICT;
 `,
+	// 29 → 30 : en-têtes sur deux lignes (canvas/twolevel.go) : le nom
+	// « Groupe.Sous » d'une colonne s'affiche en deux parties, le groupe dans
+	// une bande au-dessus de l'en-tête.
+	`
+ALTER TABLE _lattis_tables ADD COLUMN two_level INTEGER NOT NULL DEFAULT 0;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

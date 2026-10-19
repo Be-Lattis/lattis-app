@@ -71,6 +71,9 @@ type TableInfo struct {
 	// Source SQL des lignes affichées (la table, ou une requête filtrée).
 	Source  string       `json:"source"`
 	Columns []ColumnInfo `json:"columns"`
+	// En-têtes sur deux lignes : le groupe de chaque nom « Groupe.Sous »
+	// s'affiche dans une bande, ligne Row-1 (canvas/twolevel.go).
+	TwoLevel bool `json:"twoLevel"`
 	// Rang de la colonne clé (identifiant des lignes), -1 sans clé.
 	Key int `json:"key"`
 	// Sans clé : la première colonne semble identifier chaque ligne (entier
@@ -201,7 +204,7 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 			return err
 		}
 		for _, tb := range tables {
-			ti := TableInfo{ID: tb.ID, Name: tb.Name, SQL: tb.sql(), Row: tb.Row, Col: tb.Col, Rows: tb.Shown, Total: tb.Rows, Source: tb.view(), Key: -1}
+			ti := TableInfo{ID: tb.ID, Name: tb.Name, SQL: tb.sql(), Row: tb.Row, Col: tb.Col, Rows: tb.Shown, Total: tb.Rows, Source: tb.view(), Key: -1, TwoLevel: tb.TwoLevel}
 			if s := t.m.sharing; s != nil {
 				ti.Shared = s.TableShare(tb.ID)
 				if err := s.TableLock(tb.ID); err != nil {

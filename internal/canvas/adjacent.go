@@ -302,7 +302,7 @@ func (t *tx) joinStep(sheet int64, absorbed func(tb Table, first string, n int))
 	// Deux tableaux côte à côte.
 	for _, a := range tables {
 		for _, b := range tables {
-			if a.ID == b.ID || a.Right()+1 != b.Col || a.Row > b.Bottom() || b.Row > a.Bottom() {
+			if a.ID == b.ID || a.Right()+1 != b.Col || a.Top() > b.Bottom() || b.Top() > a.Bottom() {
 				continue
 			}
 			switch {
@@ -310,6 +310,8 @@ func (t *tx) joinStep(sheet int64, absorbed func(tb Table, first string, n int))
 				return false, t.separate(a, b, false, fixedWhy(a, b, fixed))
 			case a.Row != b.Row:
 				return false, t.separate(a, b, false, "en-têtes sur des lignes différentes")
+			case a.TwoLevel != b.TwoLevel:
+				return false, t.separate(a, b, false, "en-têtes sur deux lignes d'un seul côté")
 			}
 			return false, t.joinTables(a, b)
 		}
@@ -318,7 +320,7 @@ func (t *tx) joinStep(sheet int64, absorbed func(tb Table, first string, n int))
 	// une ligne du premier.
 	for _, a := range tables {
 		for _, b := range tables {
-			if a.ID == b.ID || b.Row != a.Bottom()+1 || a.Col > b.Right() || b.Col > a.Right() {
+			if a.ID == b.ID || b.Top() != a.Bottom()+1 || a.Col > b.Right() || b.Col > a.Right() {
 				continue
 			}
 			why := "deux tableaux empilés ne fusionnent pas"
@@ -347,6 +349,11 @@ func (t *tx) joinStep(sheet int64, absorbed func(tb Table, first string, n int))
 	}
 	if len(outs) > 0 {
 		cells = slices.DeleteFunc(cells, func(c cell) bool { return outs[[2]int{c.Row, c.Col}] })
+	}
+	// Rien de libre dans la bande des groupes d'un tableau : une cellule qui
+	// y arrive (collage, déplacement) devient le groupe de sa colonne.
+	if ok, err := t.absorbBand(sheet, tables); ok || err != nil {
+		return false, err
 	}
 	// Une ligne d'en-têtes posée sur des tableaux : un seul tableau.
 	if ok, err := t.headerOver(sheet, tables, cells, fixed); ok || err != nil {
@@ -404,7 +411,7 @@ func (t *tx) separate(a, b Table, below bool, why string) error {
 		t.notes = append(t.notes, fmt.Sprintf("Tableau « %s » descendu d'une ligne, sous « %s » sans le rejoindre : %s", b.Name, a.Name, why))
 		return nil
 	}
-	if err := t.ensureGapRight(b.Sheet, b.ID, b.Right(), b.Right()+1, b.Row, b.Bottom()); err != nil {
+	if err := t.ensureGapRight(b.Sheet, b.ID, b.Right(), b.Right()+1, b.Top(), b.Bottom()); err != nil {
 		return err
 	}
 	if err := t.moveTable(b, 0, 1); err != nil {
@@ -806,7 +813,7 @@ func (t *tx) headerOver(sheet int64, tables []Table, cells []cell, fixed map[int
 			if tb.Row != r+1 || tb.Right() < c0 || tb.Col > c1 {
 				continue
 			}
-			if tb.Col < c0 || tb.Right() > c1 || fixed[tb.ID] != "" {
+			if tb.Col < c0 || tb.Right() > c1 || fixed[tb.ID] != "" || tb.TwoLevel {
 				ok = false
 				break
 			}

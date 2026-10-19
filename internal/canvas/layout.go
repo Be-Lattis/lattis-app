@@ -31,12 +31,23 @@ type Table struct {
 	Cols     []Column
 	Rows     int   // lignes de données
 	Key      int64 // colonne clé (identifiant) pour REFERENCE, 0 si aucune
+	// En-têtes sur deux lignes (twolevel.go) : la bande des groupes occupe
+	// la ligne Row-1 et fait partie du tableau.
+	TwoLevel bool
 
 	// Filtre : les lignes masquées gardent leur place sur la feuille (Bottom
 	// ne change pas), les Shown premières lignes affichent les lignes gardées.
 	Filter map[string]ColumnFilter
 	Shown  int
 	where  string
+}
+
+// Top est la première ligne occupée : la bande des groupes, sinon l'en-tête.
+func (t Table) Top() int {
+	if t.TwoLevel {
+		return t.Row - 1
+	}
+	return t.Row
 }
 
 // Bottom est la dernière ligne occupée (l'en-tête si le tableau est vide).
@@ -49,17 +60,17 @@ func (t Table) sql() string { return tableSQL(t.ID) }
 
 // spans indique si les colonnes [lo, hi] recoupent celles du tableau.
 func (t Table) spansCols(lo, hi int) bool { return t.Col <= hi && t.Right() >= lo }
-func (t Table) spansRows(lo, hi int) bool { return t.Row <= hi && t.Bottom() >= lo }
+func (t Table) spansRows(lo, hi int) bool { return t.Top() <= hi && t.Bottom() >= lo }
 
 func (t *tx) tables(sheet int64) ([]Table, error) {
-	rs, err := t.query(`SELECT id, name, row, col, coalesce(key_col, 0) FROM _lattis_tables WHERE sheet = ? ORDER BY id`, sheet)
+	rs, err := t.query(`SELECT id, name, row, col, coalesce(key_col, 0), two_level FROM _lattis_tables WHERE sheet = ? ORDER BY id`, sheet)
 	if err != nil {
 		return nil, err
 	}
 	var out []Table
 	for rs.Next() {
 		tb := Table{Sheet: sheet}
-		if err := rs.Scan(&tb.ID, &tb.Name, &tb.Row, &tb.Col, &tb.Key); err != nil {
+		if err := rs.Scan(&tb.ID, &tb.Name, &tb.Row, &tb.Col, &tb.Key, &tb.TwoLevel); err != nil {
 			rs.Close()
 			return nil, err
 		}
@@ -76,8 +87,8 @@ func (t *tx) tables(sheet int64) ([]Table, error) {
 
 func (t *tx) table(id int64) (Table, error) {
 	tb := Table{ID: id}
-	err := t.row(`SELECT sheet, name, row, col, coalesce(key_col, 0) FROM _lattis_tables WHERE id = ?`, id).
-		Scan(&tb.Sheet, &tb.Name, &tb.Row, &tb.Col, &tb.Key)
+	err := t.row(`SELECT sheet, name, row, col, coalesce(key_col, 0), two_level FROM _lattis_tables WHERE id = ?`, id).
+		Scan(&tb.Sheet, &tb.Name, &tb.Row, &tb.Col, &tb.Key, &tb.TwoLevel)
 	if err != nil {
 		return tb, err
 	}
@@ -176,8 +187,8 @@ func (t *tx) ensureGapBelow(sheet int64, self int64, oldEdge, newEdge, lo, hi in
 	}
 	first := -1
 	for _, tb := range tables {
-		if tb.ID != self && tb.spansCols(lo, hi) && tb.Row > oldEdge && (first < 0 || tb.Row < first) {
-			first = tb.Row
+		if tb.ID != self && tb.spansCols(lo, hi) && tb.Top() > oldEdge && (first < 0 || tb.Top() < first) {
+			first = tb.Top()
 		}
 	}
 	outs, err := t.outCells(sheet)
@@ -206,7 +217,7 @@ func (t *tx) ensureGapBelow(sheet int64, self int64, oldEdge, newEdge, lo, hi in
 	// propre bande : un objet n'est jamais déplacé deux fois.
 	var moved []Table
 	for _, tb := range tables {
-		if tb.ID == self || !tb.spansCols(lo, hi) || tb.Row <= oldEdge {
+		if tb.ID == self || !tb.spansCols(lo, hi) || tb.Top() <= oldEdge {
 			continue
 		}
 		if err := t.moveTable(tb, delta, 0); err != nil {
@@ -277,7 +288,7 @@ func (t *tx) ensureGapRight(sheet int64, self int64, oldEdge, newEdge, lo, hi in
 		return err
 	}
 	for _, tb := range moved {
-		if err := t.ensureGapRight(sheet, tb.ID, tb.Right(), tb.Right()+delta, tb.Row, tb.Bottom()); err != nil {
+		if err := t.ensureGapRight(sheet, tb.ID, tb.Right(), tb.Right()+delta, tb.Top(), tb.Bottom()); err != nil {
 			return err
 		}
 	}
@@ -460,7 +471,7 @@ func (t *tx) settle(sheet, keep int64) error {
 	}
 	blocked := func(b Table) bool {
 		for _, c := range cells {
-			if c.Row >= b.Row-1 && c.Row <= b.Bottom()+1 && c.Col >= b.Col-1 && c.Col <= b.Right()+1 {
+			if c.Row >= b.Top()-1 && c.Row <= b.Bottom()+1 && c.Col >= b.Col-1 && c.Col <= b.Right()+1 {
 				return true
 			}
 		}
@@ -474,7 +485,7 @@ func (t *tx) settle(sheet, keep int64) error {
 		for i := range tables {
 			for j := range tables {
 				a, b := tables[i], tables[j]
-				if i == j || !touches(a.Row, a.Bottom(), a.Col, a.Right(), b) || !yields(a, b) {
+				if i == j || !touches(a.Top(), a.Bottom(), a.Col, a.Right(), b) || !yields(a, b) {
 					continue
 				}
 				b.Col = a.Right() + 2

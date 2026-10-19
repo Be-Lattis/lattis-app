@@ -168,7 +168,7 @@ func (m *Model) MergeCells(ctx context.Context, sheet int64, r0, c0, r1, c1 int)
 			return err
 		}
 		for _, tb := range tables {
-			if tb.Row <= r1 && tb.Bottom() >= r0 && tb.Col <= c1 && tb.Right() >= c0 {
+			if tb.Top() <= r1 && tb.Bottom() >= r0 && tb.Col <= c1 && tb.Right() >= c0 {
 				return fmt.Errorf("%w : impossible dans le tableau « %s » (un tableau garde une cellule par valeur) ; fusionnez des cellules libres, hors des tableaux", ErrMerge, tb.Name)
 			}
 		}

@@ -1026,6 +1026,12 @@ func (s *DocumentService) HeaderToTitle(ctx context.Context, table string) (DocS
 	return s.act(ctx, func(d *doc.Document) error { return d.HeaderToTitle(ctx, table) })
 }
 
+// SetTwoLevel affiche (ou non) les en-têtes d'un tableau sur deux lignes
+// (groupe « Groupe.Sous » dans une bande au-dessus de l'en-tête).
+func (s *DocumentService) SetTwoLevel(ctx context.Context, table string, on bool) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetTwoLevel(ctx, table, on) })
+}
+
 // RowToNote sort la dernière ligne d'un tableau : elle reste dessous, hors
 // du tableau (note ou total).
 func (s *DocumentService) RowToNote(ctx context.Context, table string, n int) (DocState, error) {

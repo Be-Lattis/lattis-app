@@ -128,7 +128,7 @@ func (t *tx) deleteLines(sheet int64, a axis, lo, hi int) error {
 		return err
 	}
 	for _, tb := range tables {
-		first, last := tb.Row, tb.Bottom()
+		first, last := tb.Top(), tb.Bottom()
 		if a == colsAxis {
 			first, last = tb.Col, tb.Right()
 		}
@@ -139,8 +139,12 @@ func (t *tx) deleteLines(sheet int64, a axis, lo, hi int) error {
 			if err := t.deleteTable(tb); err != nil {
 				return err
 			}
-		case a == rowsAxis && lo <= first:
-			return fmt.Errorf("%w : la ligne d'en-tête du tableau « %s » ne se supprime pas seule ; sélectionnez tout le tableau ou seulement des lignes de données", ErrTable, tb.Name)
+		case a == rowsAxis && lo <= tb.Row:
+			what := "la ligne d'en-tête du tableau « %s » ne se supprime pas seule"
+			if tb.TwoLevel {
+				what = "les deux lignes d'en-tête du tableau « %s » ne se suppriment pas seules"
+			}
+			return fmt.Errorf("%w : "+what+" ; sélectionnez tout le tableau ou seulement des lignes de données", ErrTable, tb.Name)
 		case a == rowsAxis:
 			if err := t.deleteTableRows(tb, lo-tb.Row-1, min(hi, last)-tb.Row-1); err != nil {
 				return err

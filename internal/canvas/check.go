@@ -179,13 +179,16 @@ func (m *Model) Check(ctx context.Context) ([]string, error) {
 				// Pas de chevauchement : un tableau et sa ligne/colonne grisée
 				// ne touchent aucun autre objet.
 				for _, b := range tables[i+1:] {
-					if a.Row <= b.Bottom()+1 && b.Row <= a.Bottom()+1 && a.Col <= b.Right()+1 && b.Col <= a.Right()+1 {
+					if a.Top() <= b.Bottom()+1 && b.Top() <= a.Bottom()+1 && a.Col <= b.Right()+1 && b.Col <= a.Right()+1 {
 						bad("%s et %s se touchent", a.Name, b.Name)
 					}
 				}
 				for _, c := range cells {
 					if c.Row >= a.Row && c.Row <= a.Bottom()+1 && c.Col >= a.Col && c.Col <= a.Right()+1 {
 						bad("cellule libre (%d,%d) dans %s ou sa zone grisée", c.Row, c.Col, a.Name)
+					}
+					if a.TwoLevel && c.Row == a.Row-1 && c.Col >= a.Col && c.Col <= a.Right() {
+						bad("cellule libre (%d,%d) dans la bande des groupes de %s", c.Row, c.Col, a.Name)
 					}
 				}
 			}
@@ -336,6 +339,9 @@ func (m *Model) View(ctx context.Context, sheet int64) (string, error) {
 			names := []string{}
 			for i, c := range tb.Cols {
 				put(tb.Row, tb.Col+i, "["+c.Name+"]")
+				if g, _ := splitGroup(c.Name); tb.TwoLevel {
+					put(tb.Row-1, tb.Col+i, "{"+g+"}")
+				}
 				names = append(names, colSQL(c.ID))
 			}
 			rs, err := t.query(`SELECT ` + strings.Join(names, ", ") + ` FROM ` + tb.sql() + ` ORDER BY _pos`)

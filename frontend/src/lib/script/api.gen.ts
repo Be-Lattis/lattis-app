@@ -929,6 +929,15 @@ export const apiReference: RefEntry[] = [
 		args: [1, 1]
 	},
 	{
+		name: "tables.two_level_headers",
+		category: "tables",
+		signature: "tables.two_level_headers(table, on)",
+		summary: "Affiche (on = true) les en-têtes du tableau sur deux lignes : le nom « Groupe.Sous » d'une colonne montre son groupe dans une bande au-dessus de l'en-tête, fusionnée sur les colonnes voisines du même groupe ; les formules et le SQL gardent le nom complet (T[Groupe.Sous]). À l'activation, les cellules libres de la ligne au-dessus de l'en-tête (fusionnées ou non) deviennent les groupes des colonnes qu'elles couvrent ; on = false garde les noms complets sur une ligne.",
+		details: "Paramètres — table : nom du tableau ; on : true : deux lignes ; false : une ligne. Arguments dans l'ordre, ou une table d'arguments nommés : tables.two_level_headers{table = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "tables.two_level_headers(\"Commandes\", true)",
+		args: [1, 2]
+	},
+	{
 		name: "ui.alert",
 		category: "ui",
 		signature: "ui.alert(message, [title])",

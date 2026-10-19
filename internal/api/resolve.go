@@ -219,17 +219,19 @@ type Column struct {
 
 // Table décrit un tableau.
 type Table struct {
-	Name    string   `json:"name"`
-	Sheet   string   `json:"sheet"`
-	Row     int      `json:"row"` // ligne d'en-tête sur la feuille
-	Col     int      `json:"col"`
-	Rows    int      `json:"rows"`
-	Hidden  int      `json:"hidden,omitempty"` // lignes masquées par un filtre
-	Columns []Column `json:"columns"`
+	Name   string `json:"name"`
+	Sheet  string `json:"sheet"`
+	Row    int    `json:"row"` // ligne d'en-tête sur la feuille
+	Col    int    `json:"col"`
+	Rows   int    `json:"rows"`
+	Hidden int    `json:"hidden,omitempty"` // lignes masquées par un filtre
+	// En-têtes sur deux lignes (tables.two_level_headers).
+	TwoLevel bool     `json:"twoLevel,omitempty"`
+	Columns  []Column `json:"columns"`
 }
 
 func describeTable(t canvas.TableInfo, sheet string) Table {
-	out := Table{Name: t.Name, Sheet: sheet, Row: t.Row + 1, Col: t.Col + 1, Rows: t.Rows, Hidden: t.Total - t.Rows, Columns: []Column{}}
+	out := Table{Name: t.Name, Sheet: sheet, Row: t.Row + 1, Col: t.Col + 1, Rows: t.Rows, Hidden: t.Total - t.Rows, TwoLevel: t.TwoLevel, Columns: []Column{}}
 	for i, c := range t.Columns {
 		out.Columns = append(out.Columns, Column{Name: c.Name, Type: string(c.Type), Fixed: c.Fixed, Formula: c.Formula, Errors: c.Errors, Key: i == t.Key})
 	}

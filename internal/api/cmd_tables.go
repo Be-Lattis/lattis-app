@@ -374,6 +374,27 @@ end`,
 				d, _ := c.Doc()
 				return nil, d.PromoteHeader(c, t.Name)
 			}),
+		&Command{
+			Name:  "tables.two_level_headers",
+			Label: "En-têtes sur deux lignes",
+			Summary: "Affiche (on = true) les en-têtes du tableau sur deux lignes : le nom « Groupe.Sous » d'une colonne montre son groupe dans une bande au-dessus de l'en-tête, fusionnée sur les colonnes voisines du même groupe ; les formules et le SQL gardent le nom complet (T[Groupe.Sous]). " +
+				"À l'activation, les cellules libres de la ligne au-dessus de l'en-tête (fusionnées ou non) deviennent les groupes des colonnes qu'elles couvrent ; on = false garde les noms complets sur une ligne.",
+			Params:  []Param{pTable, {Name: "on", Type: Boolean, Desc: "true : deux lignes ; false : une ligne"}},
+			Write:   true,
+			Example: `tables.two_level_headers("Commandes", true)`,
+			Run: func(c *Call) (any, error) {
+				t, err := c.table("table")
+				if err != nil {
+					return nil, err
+				}
+				on, err := c.Bool("on")
+				if err != nil {
+					return nil, err
+				}
+				d, _ := c.Doc()
+				return nil, d.SetTwoLevel(c, t.Name, on)
+			},
+		},
 		columnCmd(&Command{Name: "tables.key_check", Summary: "Dit si une colonne peut devenir la clé du tableau : renvoie \"\" si oui, sinon la raison."},
 			func(c *Call, t tableRef, i int) (any, error) {
 				d, _ := c.Doc()

@@ -79,6 +79,10 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 			return err
 		}
 		empty := strings.TrimSpace(raw) == ""
+		// Bande des groupes d'un tableau aux en-têtes sur deux lignes.
+		if tb, i, ok := bandAt(tables, row, col); ok {
+			return t.inputBand(tb, i, raw)
+		}
 		// Dans une plage (tableau converti), la saisie reste libre : elle
 		// n'agrandit pas un tableau voisin.
 		plain, err := t.inRange(sheet, row, col)
@@ -101,7 +105,15 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 				c := tb.Cols[col-tb.Col]
 				name := strings.TrimSpace(raw)
 				if name == "" {
-					name = freeColumnNameExcept(tb, c.ID, fmt.Sprintf("Colonne %d", col-tb.Col+1))
+					name = fmt.Sprintf("Colonne %d", col-tb.Col+1)
+				}
+				// En-têtes sur deux lignes : l'en-tête montre le nom sans son
+				// groupe, qui reste.
+				if g, _ := splitGroup(c.Name); tb.TwoLevel && g != "" {
+					name = g + "." + name
+				}
+				if strings.TrimSpace(raw) == "" {
+					name = freeColumnNameExcept(tb, c.ID, name)
 				}
 				if columnNameTaken(tb, c.ID, name) {
 					if !t.pasting {
@@ -193,7 +205,7 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 				// par une requête : pas de fusion, le rattachement de fin
 				// d'action les écarte et le dit.
 				fixed, err := t.fixedTables([]Table{tb, o})
-				if err != nil || tb.Row != o.Row || fixed[tb.ID] != "" || fixed[o.ID] != "" {
+				if err != nil || tb.Row != o.Row || tb.TwoLevel != o.TwoLevel || fixed[tb.ID] != "" || fixed[o.ID] != "" {
 					return err
 				}
 				return t.joinTables(tb, o)
