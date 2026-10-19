@@ -44,7 +44,7 @@ Une saisie qui ne correspond pas au type de sa colonne laisse la cellule à `NUL
 | Cellules libres | `_lattis_cells` (texte tapé, formules comprises), `_lattis_names` (cellules nommées), `_lattis_range_cells` (zones « plage » : un tableau converti en plage) |
 | Mise en forme | `_lattis_styles` (cellules et colonnes de tableau), `_lattis_cell_styles`, `_lattis_row_styles`, `_lattis_col_styles`, `_lattis_row_rules`, `_lattis_col_rules`, `_lattis_col_widths`, `_lattis_row_heights` (styles et règles en JSON) |
 | Objets | `_lattis_pivots` (tableaux croisés), `_lattis_charts` (graphiques), `_lattis_buttons` (boutons et contrôles), `_lattis_pages` (onglets Document et pages web) : position et configuration JSON |
-| Scripts et SQL | `_lattis_scripts` (bibliothèque Lua), `_lattis_favorites` (requêtes favorites de l'onglet SQL), `_lattis_http_hosts` (hôtes autorisés pour les scripts de ce classeur) |
+| Scripts et SQL | `_lattis_scripts` (bibliothèque Lua), `_lattis_favorites` (requêtes favorites de l'onglet SQL), `_lattis_http_hosts` (ancienne liste des hôtes autorisés : ni lue ni écrite depuis que les accords vivent sur le poste, décision 0004) |
 | Sources externes | `_lattis_connections` (connexions, sans mot de passe : il reste dans le trousseau du système), `_lattis_queries` (requêtes d'import : source, étapes, tableau cible) |
 | Classeur partagé | `_lattis_remote_tables`, `_lattis_row_ids`, `_lattis_outbox`, `_lattis_conflicts`, `_lattis_capabilities`, `_lattis_data_rows`, `_lattis_data_sync` (vides pour un classeur non partagé ; voir `docs/collaboration`) |
 | Annulation | `_lattis_journal` : présente, mais **vide dans le fichier** |
