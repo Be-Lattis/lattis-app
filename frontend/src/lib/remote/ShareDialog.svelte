@@ -153,7 +153,7 @@
 					<span>Mode</span>
 					<div class="modes">
 						<label><input type="radio" bind:group={mode} value={FROZEN} disabled={busy} /> <strong>Figé</strong> : lecture seule pour tous ; vous republiez les nouvelles versions</label>
-						<label><input type="radio" bind:group={mode} value={COLLABORATIVE} disabled={busy} /> <strong>Collaboratif</strong> : chacun modifie selon ses droits (synchronisation à venir)</label>
+						<label><input type="radio" bind:group={mode} value={COLLABORATIVE} disabled={busy} /> <strong>Collaboratif</strong> : chacun modifie selon ses droits, les changements des autres arrivent en direct</label>
 					</div>
 				</div>
 			{/if}
