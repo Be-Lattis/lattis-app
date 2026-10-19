@@ -11,6 +11,7 @@
 	import { settingSections } from '#lib/shell/settings.js';
 	import { shortcutGroups } from '#lib/shell/shortcuts.js';
 	import { resizePanel } from '#lib/ui/resize.js';
+	import { focusRegion } from '#lib/ui/focus.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { HOME, buildIndex, findFunction, functionCategories, pageById, pages, parseTarget, searchHelp, targetPage } from './help';
 	import { slug } from './markdown';
@@ -64,23 +65,41 @@
 		go(prev, true);
 	}
 
+	// Élément qui avait le focus à l'ouverture : il le retrouve à la fermeture.
+	let returnTo: HTMLElement | null = null;
+
 	// Ouverture (F1, menus, « ? » des volets) : la cible demandée.
 	$effect(() => {
 		void helpState.seq;
 		const t = helpState.target;
 		const focus = helpState.focus;
 		untrack(() => {
+			const a = document.activeElement;
+			if (a instanceof HTMLElement && a !== document.body && !a.closest('.help')) returnTo = a;
 			go(t);
 			if (focus) tick().then(() => searchEl?.focus());
 		});
 	});
 
+	function close() {
+		const to = returnTo;
+		const had = !!document.activeElement?.closest('.help');
+		closeHelp();
+		if (!had) return;
+		requestAnimationFrame(() => {
+			if (to?.isConnected) to.focus({ preventScroll: true });
+			else focusRegion('grid');
+		});
+	}
+
+	// Seuls Échap et F1 s'arrêtent à l'aide : Ctrl+S, Ctrl+Z… gardent leur effet.
 	function onKey(e: KeyboardEvent) {
-		e.stopPropagation();
 		if (e.key === 'Escape') {
+			e.stopPropagation();
 			if (query) query = '';
-			else closeHelp();
+			else close();
 		} else if (e.key === 'F1') {
+			e.stopPropagation();
 			e.preventDefault();
 		}
 	}
@@ -96,7 +115,7 @@
 		<button class="icon" title="Page précédente" aria-label="Page précédente" disabled={!history.length} onclick={back}>←</button>
 		<Icon name="book" size={16} />
 		<strong>Aide</strong>
-		<button class="icon close" title="Fermer l’aide (Échap)" aria-label="Fermer l’aide" onclick={closeHelp}>✕</button>
+		<button class="icon close" title="Fermer l’aide (Échap)" aria-label="Fermer l’aide" onclick={close}>✕</button>
 	</header>
 	<div class="search">
 		<Icon name="search" size={14} />

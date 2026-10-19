@@ -114,6 +114,9 @@ export const modalOpen = () => modals.length > 0 || !!document.querySelector('[a
 
 type ModalOpts = { onclose?: () => void } | (() => void) | undefined;
 
+/** Élément posé au-dessus des boîtes modales (attribut data-modal-exempt) : le focus peut y aller. */
+export const exempt = (el: Element | null) => !!(el instanceof HTMLElement && el.closest('[data-modal-exempt]'));
+
 /**
  * Action `use:modal={close}` : focus initial (autofocus, sinon le premier
  * champ, sinon le premier bouton), Tab et Maj+Tab tournent dans la boîte,
@@ -150,11 +153,12 @@ export function modal(node: HTMLElement, opts: ModalOpts = undefined) {
 			all[e.shiftKey ? all.length - 1 : 0].focus();
 		}
 	};
-	// Le focus ne repart pas vers la fenêtre derrière (clic, F6, programme).
+	// Le focus ne repart pas vers la fenêtre derrière (clic, F6, programme),
+	// sauf vers ce qui est posé au-dessus de la boîte (aide ouverte par F1).
 	const guard = (e: FocusEvent) => {
 		if (modals[modals.length - 1] !== node) return;
 		const tgt = e.target as HTMLElement;
-		if (node.contains(tgt) || !regionOf(tgt)) return;
+		if (node.contains(tgt) || !regionOf(tgt) || exempt(tgt)) return;
 		(tabbables(node)[0] ?? node).focus({ preventScroll: true });
 	};
 	node.addEventListener('keydown', key);

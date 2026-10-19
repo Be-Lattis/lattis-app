@@ -3,6 +3,7 @@
 // passer par la page : HelpPanel suit cet état.
 
 import { HOME } from './help';
+import { modalOpen } from '#lib/ui/focus.js';
 
 // last : dernière page affichée, où l'aide rouvre sans cible. over : posée
 // au-dessus d'une boîte modale (ouverte depuis elle), au lieu d'être logée.
@@ -16,6 +17,8 @@ export const helpState = $state({ open: false, target: HOME, seq: 0, focus: true
 export function openHelp(target?: string, focus = true) {
 	helpState.target = target || helpState.last;
 	helpState.focus = focus;
+	// Depuis une boîte modale (F1, « ? ») : l'aide passe au-dessus d'elle.
+	helpState.over = typeof document !== 'undefined' && modalOpen();
 	helpState.open = true;
 	helpState.seq++;
 }
