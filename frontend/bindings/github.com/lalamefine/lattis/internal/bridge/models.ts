@@ -130,6 +130,12 @@ export interface AIEventData {
      * Limit : réponse arrêtée à MaxSteps (notice) ; « Continuer » la reprend.
      */
     "limit"?: boolean;
+
+    /**
+     * Compact : la conversation a été résumée à cet endroit (notice
+     * « Session compactée »).
+     */
+    "compact"?: boolean;
 }
 
 /**

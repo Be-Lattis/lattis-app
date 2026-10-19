@@ -378,11 +378,14 @@ func (s *DocumentService) aiAnswer(ctx context.Context, run int, text *string, v
 		// Premier message : la structure du classeur, pour répondre sans
 		// explorer ; ensuite, de nouveau si elle a changé hors des réponses
 		// (import, Ctrl+Z, conversation reprise).
+		// Conversation longue : résumée d'abord (« Session compactée »), la
+		// structure repart alors entière.
+		compacted := s.ai.session.NeedsCompact() && s.ai.session.Compact(gctx, turn, emit) == nil
 		st := ai.Structure(ctx, h, sharing)
 		s.ai.mu.Lock()
 		known := s.ai.structure
 		s.ai.mu.Unlock()
-		if s.ai.session.Len() == 0 {
+		if s.ai.session.Len() == 0 || compacted {
 			msg = st + msg
 		} else if st != known {
 			msg = ai.StructureUpdate(st) + msg

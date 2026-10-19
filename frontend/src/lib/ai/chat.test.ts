@@ -231,6 +231,21 @@ describe('Continuer', () => {
 	});
 });
 
+describe('Session compactée', () => {
+	it('garde le repère du résumé, et l’erreur rejouée depuis la transcription', () => {
+		const items = replay([
+			{ run: 1, user: 'Et maintenant ?' },
+			{ run: 1, event: { run: 1, kind: 'notice', text: 'Session compactée', compact: true } },
+			{ run: 1, event: { run: 1, kind: 'text', text: 'Voici.' } },
+			{ run: 1, event: { run: 1, kind: 'notice', text: 'Claude est surchargé', error: true } },
+			{ run: 1, event: { run: 1, kind: 'done' } }
+		]);
+		const parts = (items[1] as Reply).parts;
+		expect(segments(parts)[0]).toMatchObject({ kind: 'notice', text: 'Session compactée', compact: true });
+		expect(replyError(parts)).toBe('Claude est surchargé');
+	});
+});
+
 describe('Liens des réponses', () => {
 	it('montre le domaine d’un lien externe à côté de son texte', () => {
 		const blocks = revealLinks(parse('[Voir le rapport](https://x.example/?d=Dupont) et [https://a.fr](https://a.fr)', true));

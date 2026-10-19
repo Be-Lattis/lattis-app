@@ -16,7 +16,7 @@ export interface ChatUsage {
 /** Évènement d'une réponse (bridge.AIEventData). */
 export interface ChatEvent {
 	run: number;
-	kind: string; // text, tool, tool-done, notice, usage, done
+	kind: string; // text, tool, tool-done, notice, usage, result, done, unsent
 	text?: string;
 	tool?: string;
 	label?: string;
@@ -35,6 +35,8 @@ export interface ChatEvent {
 	result?: ChatResult | null;
 	/** notice : réponse arrêtée au nombre maximal d'étapes (« Continuer »). */
 	limit?: boolean;
+	/** notice : la conversation a été résumée ici (« Session compactée »). */
+	compact?: boolean;
 }
 
 /** Résultat d'une requête de l'assistant (ai.Result), montré sous sa réponse. */
@@ -48,7 +50,7 @@ export interface ChatResult {
 
 export type ToolPart = { kind: 'tool'; id: string; label: string; state: 'run' | 'ok' | 'error'; detail?: string; write?: boolean; target?: string };
 
-export type Part = { kind: 'text'; text: string } | ToolPart | { kind: 'notice'; text: string; error?: boolean; limit?: boolean } | { kind: 'result'; result: ChatResult };
+export type Part = { kind: 'text'; text: string } | ToolPart | { kind: 'notice'; text: string; error?: boolean; limit?: boolean; compact?: boolean } | { kind: 'result'; result: ChatResult };
 
 export type Reply = {
 	role: 'assistant';
@@ -109,7 +111,7 @@ export function applyEvent(items: Item[], ev: ChatEvent): Item[] {
 			break;
 		}
 		case 'notice':
-			parts.push({ kind: 'notice', text: ev.text ?? '', ...(ev.limit ? { limit: true } : {}) });
+			parts.push({ kind: 'notice', text: ev.text ?? '', ...(ev.error ? { error: true } : {}), ...(ev.limit ? { limit: true } : {}), ...(ev.compact ? { compact: true } : {}) });
 			break;
 		case 'result':
 			if (!ev.result) return items;
@@ -227,7 +229,7 @@ export function maxRun(items: readonly Item[]): number {
 // --- Affichage d'une réponse ------------------------------------------------
 
 /** Morceaux d'une réponse : textes, notes, et suites d'appels d'outils regroupées (« 6 étapes »). */
-export type Segment = { kind: 'text'; text: string; at: number } | { kind: 'result'; result: ChatResult; at: number } | { kind: 'notice'; text: string; error?: boolean; at: number } | { kind: 'steps'; tools: (ToolPart & { recovered: boolean })[]; at: number };
+export type Segment = { kind: 'text'; text: string; at: number } | { kind: 'result'; result: ChatResult; at: number } | { kind: 'notice'; text: string; error?: boolean; compact?: boolean; at: number } | { kind: 'steps'; tools: (ToolPart & { recovered: boolean })[]; at: number };
 
 /**
  * Regroupe les appels d'outils qui se suivent. Une erreur d'outil suivie

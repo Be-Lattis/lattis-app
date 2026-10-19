@@ -48,6 +48,9 @@ type Event struct {
 	Result *Result `json:"result,omitempty"`
 	// Limit : réponse arrêtée à MaxSteps (notice) ; « Continuer » la reprend.
 	Limit bool `json:"limit,omitempty"`
+	// Compact : la conversation a été résumée à cet endroit (notice
+	// « Session compactée »).
+	Compact bool `json:"compact,omitempty"`
 }
 
 // Executor exécute un appel d'outil et rend son résultat (texte, souvent du

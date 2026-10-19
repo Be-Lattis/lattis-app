@@ -353,7 +353,7 @@
 										{#if r.truncated}<p class="muted">{r.rows?.length ?? 0} premières lignes sur {r.total}</p>{:else if !r.total}<p class="muted">Aucune ligne</p>{/if}
 									</figure>
 								{:else if seg.kind === 'notice'}
-									<div class="notice" class:error={seg.error}>{seg.text}</div>
+									<div class="notice" class:error={seg.error} class:compact={seg.compact} title={seg.compact ? 'Les échanges précédents ont été résumés pour l’assistant ; ils restent affichés ici' : undefined}>{seg.text}</div>
 								{:else}
 									{@const open = stepsOpen(it, seg.at)}
 									{@const running = seg.tools.find((t) => t.state === 'run')}
@@ -943,6 +943,19 @@
 	.notice.error,
 	.error {
 		color: #b91c1c;
+	}
+	.notice.compact {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		color: #6b7280;
+		margin: 2px 0 6px;
+	}
+	.notice.compact::before,
+	.notice.compact::after {
+		content: '';
+		flex: 1;
+		border-top: 1px solid #e5e7eb;
 	}
 	.error.bar {
 		margin: 0;

@@ -220,12 +220,26 @@ func TestShorten(t *testing.T) {
 		t.Fatal("copie déjà rendue modifiée")
 	}
 	// Les derniers messages restent entiers ; la forme native disparaît à
-	// partir du premier message modifié.
+	// partir du premier message modifié, sauf pour le dernier message de
+	// l'assistant (M7).
 	if s.history[9].Content[0].Text != big {
 		t.Fatal("dernier résultat retiré")
 	}
-	if s.history[0].Native == nil || s.history[2].Native != nil || s.history[8].Native != nil {
+	if s.history[0].Native == nil || s.history[2].Native != nil || s.history[6].Native != nil || s.history[8].Native == nil {
 		t.Fatal("forme native")
+	}
+
+	// Entrées volumineuses des anciens appels raccourcies aussi (M7).
+	var p Session
+	huge := json.RawMessage(`{"values":"` + strings.Repeat("y", 60_000) + `"}`)
+	for i := range 4 {
+		id := string(rune('a' + i))
+		p.history = append(p.history,
+			Message{Role: Assistant, Content: []Block{{Type: ToolUseBlock, ID: id, Name: "cells_paste", Input: huge}}},
+			Message{Role: User, Content: []Block{{Type: ToolResultBlock, ToolUseID: id, Text: "ok"}}})
+	}
+	if !p.shorten(MaxHistoryChars) || string(p.history[0].Content[0].Input) != oldInput || string(p.history[6].Content[0].Input) != string(huge) {
+		t.Fatalf("entrées : %.40s… / %.40s…", p.history[0].Content[0].Input, p.history[6].Content[0].Input)
 	}
 }
 

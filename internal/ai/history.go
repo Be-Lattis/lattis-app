@@ -1,6 +1,9 @@
 package ai
 
-import "strings"
+import (
+	"encoding/json"
+	"strings"
+)
 
 // Longueur de la conversation : tout l'historique, résultats d'outils
 // compris, repart au modèle à chaque tour. Au-delà de MaxHistoryChars, les
@@ -18,6 +21,13 @@ const OldResult = "[résultat ancien retiré]"
 
 // keepRecent : messages de la fin jamais raccourcis (la réponse en cours).
 const keepRecent = 2
+
+// Entrée d'un ancien appel d'outil plus longue que oldInputMax : remplacée
+// par oldInput.
+const (
+	oldInputMax = 2000
+	oldInput    = `{"_":"entrée ancienne retirée"}`
+)
 
 // size estime la longueur d'un message (forme neutre).
 func size(m Message) int {
@@ -46,6 +56,24 @@ func (s *Session) shorten(max int) bool {
 	for i := 0; i < len(s.history)-keepRecent && total > target; i++ {
 		m := &s.history[i]
 		if m.Role != User {
+			// Entrées volumineuses des anciens appels (cells_paste…).
+			changed := false
+			for j := range m.Content {
+				b := &m.Content[j]
+				if b.Type != ToolUseBlock || len(b.Input) <= oldInputMax {
+					continue
+				}
+				if !changed {
+					m.Content = append([]Block(nil), m.Content...)
+					b = &m.Content[j]
+					changed = true
+				}
+				total -= len(b.Input) - len(oldInput)
+				b.Input = json.RawMessage(oldInput)
+			}
+			if changed && first < 0 {
+				first = i
+			}
 			continue
 		}
 		changed := false
@@ -71,8 +99,19 @@ func (s *Session) shorten(max int) bool {
 	if first < 0 {
 		return false
 	}
+	// Le dernier message de l'assistant garde sa forme native : au milieu
+	// d'une boucle d'outils, Claude exige ses blocs de réflexion.
+	last := -1
+	for i := len(s.history) - 1; i >= 0; i-- {
+		if s.history[i].Role == Assistant {
+			last = i
+			break
+		}
+	}
 	for i := first; i < len(s.history); i++ {
-		s.history[i].Provider, s.history[i].Native = "", nil
+		if i != last {
+			s.history[i].Provider, s.history[i].Native = "", nil
+		}
 	}
 	return true
 }
