@@ -383,15 +383,21 @@ func (m *Model) HeaderToTitle(ctx context.Context, table string) error {
 			return nil
 		}
 		var titles []string
+		named := false
 		for _, c := range tb.Cols {
 			name := c.Name
 			if autoColRe.MatchString(name) {
 				name = ""
 			}
+			named = named || name != ""
 			titles = append(titles, name)
 		}
 		if err := t.promote(tb); err != nil {
 			return err
+		}
+		// Rien que des « Colonne n » : pas de titre, le tableau reste en place.
+		if !named {
+			return nil
 		}
 		if tb, err = t.table(tb.ID); err != nil {
 			return err

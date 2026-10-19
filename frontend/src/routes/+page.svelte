@@ -942,7 +942,7 @@
 			const ev = await DocumentService.Paste(sheetId, row, col, block);
 			await reload();
 			if (ev.refusedCount) return refusedNotice(ev);
-			if (ev.created && ev.headless) return `Tableau « ${ev.created} » créé sans en-têtes : clic droit › « Utiliser la 1re ligne comme en-têtes » si besoin`;
+			if (ev.created && ev.headless) return `Tableau « ${ev.created} » créé sans en-têtes : clic droit › Tableau › « Sortir l'en-tête » si besoin`;
 			if (ev.created) return `Tableau « ${ev.created} » créé (${count(block.length - 1)})`;
 		},
 		rangeStats: (t, first, count, cols) => DocumentService.RangeStats(sheetId, t.id, first, count, cols),

@@ -236,3 +236,18 @@ func TestLegendCommands(t *testing.T) {
 		t.Fatalf("ajoutée au tableau :\n got %s\nwant %s", got, want)
 	}
 }
+
+// Sortir l'en-tête d'un tableau sans en-têtes (« Colonne n ») : la 1re ligne
+// devient l'en-tête, sans titre ni ligne vide au-dessus.
+func TestHeaderToTitleAutoNames(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	must(t, d.Do(ctx, "Saisie", func(x *tx) error {
+		_, err := x.createTable(1, "T", 0, 0, []string{"Colonne 1", "Colonne 2"}, [][]string{{"Nom", "Âge"}, {"Léa", "31"}})
+		return err
+	}))
+	must(t, d.HeaderToTitle(ctx, "T"))
+	if got, want := layoutOf(t, d), "T@A1:Nom|Âge×1"; got != want {
+		t.Fatalf("\n got %s\nwant %s", got, want)
+	}
+}

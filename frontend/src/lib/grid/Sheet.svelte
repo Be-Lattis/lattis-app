@@ -8374,12 +8374,11 @@
 			{@const rowItems = !m.header && !m.rowOnly}
 			{@const filtered = cols && !!source.clearFilters && m.e.t.columns.some((c) => c.filter)}
 			{@const sortCount = (cols && source.sortTable ? 2 : 0) + (cols && source.setFilter ? 1 : 0) + (filtered ? 1 : 0)}
-			{@const promote = cols && !!source.promoteHeader && m.e.t.rows > 0}
-			{@const toTitle = cols && m.header && !!source.headerToTitle && m.e.t.rows > 0}
+			{@const toTitle = cols && !!source.headerToTitle && m.e.t.rows > 0}
 			{@const toNote = rowItems && !!source.rowToNote && m.n === m.e.t.rows - 1}
 			{@const refresh = !!m.e.t.query && !!source.refreshTable}
 			{@const share = cols && !!onsharedata && !m.e.t.query}
-			{@const tableItems = promote || toTitle || toNote || refresh || share || !!source.convertToRange || !!source.deleteTables}
+			{@const tableItems = toTitle || toNote || refresh || share || !!source.convertToRange || !!source.deleteTables}
 			{#snippet sortItems()}
 				{#if cols && source.sortTable}
 					{@const lab = sortLabels(col?.type ?? 'text', col?.result)}
@@ -8490,11 +8489,8 @@
 					{#if tableItems}
 						<hr />
 						<Submenu label="Tableau">
-							{#if promote}
-								<button title="La 1re ligne de données donne les noms des colonnes ; les noms actuels sont perdus" onclick={() => menuAction(() => source.promoteHeader!(m.e.t))}>Utiliser la 1re ligne comme en-têtes</button>
-							{/if}
 							{#if toTitle}
-								<button title="Comme « Utiliser la 1re ligne comme en-têtes », mais l'en-tête actuel reste au-dessus du tableau, en titre" onclick={() => menuAction(() => source.headerToTitle!(m.e.t))}>1re ligne en en-têtes, l'actuel en titre</button>
+								<button title="La 1re ligne de données devient l'en-tête ; l'en-tête actuel reste au-dessus du tableau, en titre (sauf les noms « Colonne n »)" onclick={() => menuAction(() => source.headerToTitle!(m.e.t))}>Sortir l'en-tête</button>
 							{/if}
 							{#if toNote}
 								<button title="La ligne reste sous le tableau, comme note ou total, sans en faire partie" onclick={() => menuAction(() => source.rowToNote!(m.e.t, m.n))}>Sortir la dernière ligne (note)</button>
