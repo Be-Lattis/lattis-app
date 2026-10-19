@@ -34,18 +34,22 @@ type Call struct {
 // devient un résultat d'outil en erreur.
 type Watcher func(ctx context.Context, c Call, run func(context.Context) (any, error)) (any, error)
 
-// Writes dit si une commande peut modifier le classeur : commandes
-// d'écriture, mais aussi scripts et boutons (qui écrivent par leurs propres
-// commandes), annuler, rétablir, nouveau classeur et ouverture. C'est le
-// contraire de l'annotation readOnlyHint, hors requêtes HTTP et
-// enregistrement.
-func Writes(c *api.Command) bool {
+// Writes dit si un appel peut modifier le classeur ou écrire un fichier :
+// commandes d'écriture, mais aussi scripts et boutons (qui écrivent par
+// leurs propres commandes), annuler, rétablir, nouveau classeur, ouverture,
+// enregistrement sous un autre nom et exports. C'est le contraire de
+// l'annotation readOnlyHint, hors requêtes HTTP et enregistrement simple.
+func Writes(c *api.Command, args map[string]any) bool {
 	if c.Write {
 		return true
 	}
 	switch c.Name {
-	case "scripts.run", "buttons.run", "doc.undo", "doc.redo", "doc.new", "doc.open":
+	case "scripts.run", "buttons.run", "doc.undo", "doc.redo", "doc.new", "doc.open",
+		"doc.export_csv", "doc.export_xlsx", "doc.export_ods":
 		return true
+	case "doc.save":
+		p, _ := args["path"].(string)
+		return p != ""
 	}
 	return false
 }

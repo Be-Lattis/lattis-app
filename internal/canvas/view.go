@@ -394,6 +394,10 @@ type TableNames struct {
 	Sheet int64 `json:"sheet"`
 	// Key : rang de la colonne clé d'un tableau, -1 si aucune.
 	Key int `json:"key"`
+	// ColsField : champ en colonnes d'un TCD ; ses colonnes, à partir de la
+	// ColsFrom-ième (comptée depuis 1), en portent les valeurs.
+	ColsField string `json:"colsField,omitempty"`
+	ColsFrom  int    `json:"colsFrom,omitempty"`
 }
 
 // AllTables liste les tableaux de toutes les feuilles et leurs colonnes.
@@ -444,6 +448,9 @@ func (m *Model) AllTables(ctx context.Context) ([]TableNames, error) {
 				continue
 			}
 			tn := TableNames{Name: p.Cfg.Name, Kind: "pivot", Sheet: p.Sheet, Key: -1, SQL: `"` + p.Cfg.Name + `"`, Rows: nrows}
+			if cfg := p.Cfg.normalized(); cfg.Cols != "" {
+				tn.ColsField, tn.ColsFrom = cfg.Cols, min(len(cfg.RowFields), len(cols))+1
+			}
 			for i, c := range cols {
 				tn.Columns = append(tn.Columns, c)
 				tn.ColumnSQL = append(tn.ColumnSQL, `"`+strings.ReplaceAll(c, `"`, `""`)+`"`)

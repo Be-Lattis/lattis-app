@@ -24,6 +24,7 @@
 	import ExternalActivity from './ExternalActivity.svelte';
 	import { changesLabel, contextLabel, costLabel, replyError, replyText, retryDelay, retryLabel, segments, stepsLabel, stoppedAtLimit, suggestionsFor, type ChatContext, type Reply, type TableInfo } from './chat';
 	import { openOutside } from './links';
+	import { sharingLabel } from './sharing';
 	import { chat, conversations, deleteConversation, load, newConversation, openConversation, refreshStatus, send, stop, undoRun, type Conversation } from './state.svelte.js';
 
 	interface Props {
@@ -77,7 +78,7 @@
 	const suggestions = $derived(suggestionsFor(tables, context));
 	const ctxText = $derived(contextLabel(context));
 	const cost = $derived(costLabel(st?.usage?.cost));
-	const sharingLabel = $derived(st?.dataSharing === 'sample' ? 'Structure et lignes d’exemple' : 'Structure seulement');
+	const shared = $derived(sharingLabel(st?.dataSharing));
 	const modelName = $derived(provider?.models?.find((m) => m.id === st?.model)?.name ?? st?.model ?? '');
 
 	onMount(() => {
@@ -430,7 +431,7 @@
 				</div>
 				<div class="meta">
 					<button class="link" title="Données transmises à l’assistant (Fichier › Paramètres › Assistant IA)" onclick={onsettings}>
-						<Icon name="lock" size={12} />{sharingLabel}
+						<Icon name="lock" size={12} />{shared}
 					</button>
 					<span class="spacer"></span>
 					{#if cost}<span title="Coût approché d’après les jetons consommés, facturé par le fournisseur">{cost}</span>{/if}

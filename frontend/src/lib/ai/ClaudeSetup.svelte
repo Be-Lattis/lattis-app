@@ -3,7 +3,8 @@
 	// Lattis par son serveur MCP. Deux cartes : état (installé, configuré),
 	// configuration en un clic (Lattis active son serveur et écrit lui-même
 	// la configuration du client), lien de téléchargement, et la commande ou
-	// le JSON à copier si l'on préfère faire soi-même. Aucune prop
+	// le JSON à copier si l'on préfère faire soi-même. Rappelle que le
+	// partage des données de l'assistant vaut aussi pour Claude. Aucune prop
 	// obligatoire ; onchange prévient l'hôte quand le
 	// serveur vient d'être activé.
 	import { onMount } from 'svelte';
@@ -12,6 +13,9 @@
 	import type { MCPClients, MCPStatus } from '#bindings/internal/bridge/models.js';
 	import { mcpConfigs } from '#lib/shell/mcp.js';
 	import { external } from './external.svelte.js';
+	import { findSetting } from '#lib/shell/settings.js';
+	import { userSettings } from '#lib/shell/settings.svelte.js';
+	import { sharingLabel, sharingSummary } from './sharing';
 
 	interface Props {
 		/** Un client vient d'être configuré (le serveur MCP est alors activé). */
@@ -77,12 +81,18 @@
 
 	const desktopJson = $derived(mcpState ? mcpConfigs(mcpState)[0].text : '');
 	const connected = $derived(external.connected || c?.connected || '');
+	// Partage des données (ai.dataSharing) : le serveur MCP l'applique aussi.
+	const sharing = $derived(findSetting(userSettings.list, 'ai.dataSharing')?.value ?? 'schema-only');
 </script>
 
 <div class="setup">
 	<p class="intro">
 		Avec un abonnement Claude (Pro, Max, Team), pas besoin de clé d’API : vous discutez dans Claude Desktop ou Claude Code, qui agit sur le classeur
 		ouvert, et Lattis montre ce qui est fait.
+	</p>
+	<p class="hint sharing">
+		<Icon name="lock" size={12} />Le réglage « Données transmises à l’assistant » (Fichier › Paramètres › Assistant IA) vaut aussi pour Claude :
+		<strong>{sharingLabel(sharing)}</strong>, {sharingSummary(sharing)} Après un changement, redémarrez Claude pour qu’il voie la nouvelle liste d’outils.
 	</p>
 	{#if c}
 		<div class="cards">
@@ -193,6 +203,13 @@
 	.hint {
 		font-size: 12px;
 		color: #6b7280;
+	}
+	.sharing {
+		margin: 0 0 10px;
+	}
+	.sharing :global(svg) {
+		vertical-align: -2px;
+		margin-right: 4px;
 	}
 	.done {
 		color: #185c37;

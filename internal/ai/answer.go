@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/api"
+	"github.com/lalamefine/lattis/internal/sharing"
 )
 
 // Répondre à une question sans toucher au classeur : l'assistant écrit une
@@ -55,7 +56,7 @@ var showToolDef = Tool{
 
 // show exécute la requête, la montre à l'utilisateur et rend au modèle ce
 // que le partage permet.
-func show(ctx context.Context, host api.Host, args map[string]any, sharing string) (string, bool) {
+func show(ctx context.Context, host api.Host, args map[string]any, mode string) (string, bool) {
 	q, _ := args["sql"].(string)
 	title, _ := args["title"].(string)
 	head := strings.ToUpper(strings.TrimSpace(q))
@@ -94,23 +95,39 @@ func show(ctx context.Context, host api.Host, args map[string]any, sharing strin
 	if f, ok := ctx.Value(showKey{}).(func(Result)); ok {
 		f(r)
 	}
-	if sharing != Sample {
-		return fmt.Sprintf("Résultat montré à l'utilisateur : %d ligne(s), colonnes %s. Vous n'en voyez pas les valeurs : dites en une phrase ce que montre le résultat, sans inventer de valeur.", r.Total, strings.Join(r.Columns, ", ")), false
+	switch mode {
+	case Sample:
+		return sharing.Encode(map[string]any{"shown": "à l'utilisateur, sous votre réponse", "columns": r.Columns, "rows": r.Rows, "total": r.Total}), false
+	case Full:
+		return encode(map[string]any{"shown": "à l'utilisateur, sous votre réponse", "columns": r.Columns, "rows": r.Rows, "total": r.Total, "truncated": r.Truncated}), false
 	}
-	n := min(len(r.Rows), SampleRows)
-	out, _ := json.Marshal(map[string]any{"shown": "à l'utilisateur, sous votre réponse", "columns": r.Columns, "rows": r.Rows[:n], "total": r.Total})
-	return string(out), false
+	// Les colonnes d'un TCD tirées des valeurs de son champ en colonnes
+	// (SELECT * FROM "TCD1") sont des valeurs.
+	cols := r.Columns
+	if list, err := api.Invoke(api.WithoutPrompt(ctx), host, "tables.list", nil); err == nil {
+		if l, ok := list.([]api.TableEntry); ok {
+			hide := sharing.ValueColumns(l)
+			cols = make([]string, len(r.Columns))
+			for i, c := range r.Columns {
+				cols[i] = c
+				if hide[strings.ToLower(c)] {
+					cols[i] = "(colonne de valeurs d'un tableau croisé)"
+				}
+			}
+		}
+	}
+	return fmt.Sprintf("Résultat montré à l'utilisateur : %d ligne(s), colonnes %s. Vous n'en voyez pas les valeurs : dites en une phrase ce que montre le résultat, sans inventer de valeur.", r.Total, strings.Join(cols, ", ")), false
 }
 
 // Structure décrit le classeur (tableaux, feuilles, colonnes et leurs
 // types, nombre de lignes) pour le premier message d'une conversation ;
 // vide s'il n'y a pas de tableau ou si la lecture échoue.
-func Structure(ctx context.Context, host api.Host) string {
+func Structure(ctx context.Context, host api.Host, mode string) string {
 	res, err := api.Invoke(api.WithoutPrompt(ctx), host, "tables.list", map[string]any{})
 	if err != nil {
 		return ""
 	}
-	b, _ := json.Marshal(res)
+	b, _ := json.Marshal(sharing.Filter("tables.list", res, sharing.Mode(mode)))
 	var list []struct {
 		Name    string   `json:"name"`
 		Kind    string   `json:"kind"`

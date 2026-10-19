@@ -26,7 +26,7 @@ La clé est gardée dans le trousseau du système, jamais dans le classeur. **Ou
 
 Un abonnement Claude ne s'utilise pas directement dans une autre application, mais **Claude Desktop** et **Claude Code** savent piloter Lattis par son serveur MCP. L'onglet « Application de bureau » du panneau de connexion (application : Claude) les configure en un clic ; redémarrez ensuite Claude Desktop.
 
-Vous parlez alors à Claude dans son application. Le volet de l'assistant affiche **Depuis Claude** : ce que Claude fait dans le classeur, au fil de l'eau, avec **Annuler ces modifications** pour chaque série d'actions. L'option **Demander avant de modifier** fait valider chaque écriture dans Lattis.
+Vous parlez alors à Claude dans son application. Le volet de l'assistant affiche **Depuis Claude** : ce que Claude fait dans le classeur, au fil de l'eau, avec **Annuler ces modifications** pour chaque série d'actions. L'option **Demander avant de modifier** fait valider chaque écriture dans Lattis, y compris l'enregistrement sous un autre nom, les exports et les imports. Le réglage **Données transmises à l'assistant** s'applique aussi à Claude (voir plus bas).
 
 ### Passerelle de l'organisation
 
@@ -53,14 +53,17 @@ Tout ce que l'assistant modifie pendant une réponse forme une seule étape : la
 
 ## Données transmises
 
-L'assistant ne reçoit jamais tout le classeur. Le réglage **Données transmises à l'assistant** (Fichier › Paramètres › Assistant IA, rappelé en bas du volet) choisit :
+Le réglage **Données transmises à l'assistant** (Fichier › Paramètres › Assistant IA, rappelé en bas du volet) choisit ce que l'assistant peut lire :
 
 | Réglage | Ce que reçoit le fournisseur |
 | --- | --- |
-| Structure seulement | Noms des feuilles, tableaux et colonnes, types, nombre de lignes et de valeurs distinctes, formules ; étapes des requêtes et paramètres des connexions (sans mot de passe) |
-| Structure et lignes d'exemple | La même chose, plus quelques lignes de chaque tableau consulté |
+| Structure seulement (par défaut) | Noms des feuilles, tableaux et colonnes, types, nombre de lignes et de valeurs distinctes, formules, place des tableaux et des cellules sur la feuille (sans leur contenu) ; étapes des requêtes et paramètres des connexions, sans mot de passe ni valeurs des en-têtes HTTP et des filtres. Les colonnes d'un tableau croisé qui portent les valeurs d'un champ sont résumées (« 3 colonne(s) de valeurs du champ « Client » ») |
+| Structure et lignes d'exemple | La même chose, plus quelques lignes à chaque lecture : 20 lignes au plus, 200 caractères par valeur |
+| Tout le classeur | Tout ce que l'assistant choisit de lire, sans limite |
 
 Le fournisseur reçoit aussi vos messages et le contexte (feuille, tableau, sélection). Avec un modèle local, rien ne quitte le poste.
+
+Le réglage vaut aussi pour **Claude Desktop** et **Claude Code** par le serveur MCP : sans « Tout le classeur », les outils qui lisent les valeurs (lignes des tableaux, SQL, cellules, scripts, exports) ne leur sont pas proposés ou sont bornés de la même façon. Après un changement, redémarrez Claude pour qu'il voie la nouvelle liste d'outils. Claude Code lit aussi les fichiers de votre disque : un classeur enregistré lui reste lisible directement.
 
 ## Coût
 
@@ -69,6 +72,6 @@ Avec une clé d'API, chaque réponse est facturée par le fournisseur selon le n
 ## Limites
 
 - L'assistant peut se tromper : relisez ce qu'il propose, et annulez une réponse qui ne convient pas.
-- En mode « Structure seulement », il ne voit pas les valeurs : il ne peut pas juger du contenu des cellules.
+- En mode « Structure seulement », il ne voit pas les valeurs : il ne peut pas juger du contenu des cellules. En mode « Structure et lignes d'exemple », il n'en voit qu'une partie.
 - Une très longue conversation finit par dépasser ce que le modèle accepte : commencez alors une nouvelle conversation.
 - Avec Claude Desktop ou Claude Code, la conversation reste dans Claude ; Lattis ne voit que les actions.

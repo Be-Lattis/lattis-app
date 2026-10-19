@@ -47,6 +47,8 @@ Les objets sont fusionnés clé par clé : une couche peut ne changer que `conne
 }
 ```
 
+`ai.dataSharing` vaut `schema-only` (structure seulement, par défaut), `sample` (quelques lignes d'exemple par lecture) ou `full` (tout le classeur). Il s'applique à l'assistant intégré comme à Claude Desktop ou Claude Code par le serveur MCP.
+
 **Aucun secret** : `password`, `secret`, `clientSecret`, `token`, `apiKey` sont refusés partout. Les mots de passe et jetons de chaque utilisateur restent dans le trousseau du système. Seule exception : `identity.providers.*.desktopClientSecret`, que Google exige pour une application de bureau sans le tenir pour confidentiel.
 
 `configUrl` et `remote.*` sont réservés aux couches posées par un administrateur (stratégie, `HKLM`, fichier machine protégé) dès que l'une d'elles les définit. Sur un poste sans configuration d'entreprise, l'environnement peut les poser (tests).

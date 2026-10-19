@@ -57,12 +57,26 @@ func columnCmd(cmd *Command, run func(c *Call, t tableRef, i int) (any, error)) 
 	return cmd
 }
 
+// TableEntry est un tableau ou un tableau croisé de tables.list.
+type TableEntry struct {
+	Name    string   `json:"name"`
+	Kind    string   `json:"kind"` // table ou pivot
+	Sheet   string   `json:"sheet"`
+	Rows    int      `json:"rows"`
+	Columns []string `json:"columns"`
+	Types   []string `json:"types"`
+	// ColsField : champ en colonnes d'un tableau croisé ; ses colonnes, à
+	// partir de la ColsFrom-ième (comptée depuis 1), portent ses valeurs.
+	ColsField string `json:"colsField,omitempty"`
+	ColsFrom  int    `json:"colsFrom,omitempty"`
+}
+
 func init() {
 	register(
 		&Command{
 			Name:    "tables.list",
 			Summary: "Liste les tableaux et les tableaux croisés de toutes les feuilles, avec leurs colonnes.",
-			Returns: "{ {name, kind, sheet, rows, columns, types}, ... }",
+			Returns: "{ {name, kind, sheet, rows, columns, types, colsField, colsFrom}, ... } (colsField : champ en colonnes d'un tableau croisé, dont les colonnes à partir de la colsFrom-ième portent les valeurs)",
 			Run: func(c *Call) (any, error) {
 				d, err := c.Doc()
 				if err != nil {
@@ -80,17 +94,9 @@ func init() {
 				for _, s := range sheets {
 					names[s.ID] = s.Name
 				}
-				type entry struct {
-					Name    string   `json:"name"`
-					Kind    string   `json:"kind"` // table ou pivot
-					Sheet   string   `json:"sheet"`
-					Rows    int      `json:"rows"`
-					Columns []string `json:"columns"`
-					Types   []string `json:"types"`
-				}
-				out := []entry{}
+				out := []TableEntry{}
 				for _, t := range all {
-					out = append(out, entry{t.Name, t.Kind, names[t.Sheet], t.Rows, t.Columns, t.Types})
+					out = append(out, TableEntry{t.Name, t.Kind, names[t.Sheet], t.Rows, t.Columns, t.Types, t.ColsField, t.ColsFrom})
 				}
 				return out, nil
 			},

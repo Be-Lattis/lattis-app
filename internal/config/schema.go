@@ -82,7 +82,8 @@ type AI struct {
 	Endpoint string `json:"endpoint,omitempty"`
 	Model    string `json:"model,omitempty"`
 	Auth     Auth   `json:"auth,omitempty"`
-	// DataSharing : schema-only ou sample.
+	// DataSharing : schema-only, sample ou full (internal/sharing) ; vaut
+	// aussi pour Claude par le serveur MCP.
 	DataSharing string `json:"dataSharing,omitempty"`
 	// LocalURL : adresse du modèle local (Ollama, LM Studio…), compatible
 	// OpenAI ; http:// permis seulement vers ce poste (localhost,
@@ -266,7 +267,7 @@ var validators = []struct {
 	{"ai.localUrl", isLocalOrHTTPSURL},
 	{"ai.provider", isIdent},
 	{"ai.model", isIdent},
-	{"ai.dataSharing", oneOf("schema-only", "sample")},
+	{"ai.dataSharing", oneOf("schema-only", "sample", "full")},
 	{"ai.keepConversation", isBool},
 	{"mcp.confirmWrites", isBool},
 	{"connections.*.kind", oneOf("postgres", "mysql", "sqlserver", "web", "lattis")},

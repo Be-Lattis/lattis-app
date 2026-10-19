@@ -14,6 +14,7 @@ import (
 	"github.com/lalamefine/lattis/internal/api"
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/sharing"
 )
 
 type host struct {
@@ -105,7 +106,7 @@ func TestToolsBySharing(t *testing.T) {
 			t.Errorf("%s proposé", n)
 		}
 	}
-	for _, c := range structureCommands {
+	for _, c := range sharing.Structure {
 		if api.Lookup(c) == nil {
 			t.Errorf("commande inconnue : %s", c)
 		}

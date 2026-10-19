@@ -69,9 +69,10 @@ export const settingSections: SettingSection[] = [
 				label: 'Données transmises à l’assistant',
 				choices: [
 					{ value: 'schema-only', label: 'Structure seulement (noms, types, nombre de lignes et de valeurs distinctes)' },
-					{ value: 'sample', label: 'Structure et quelques lignes d’exemple' }
+					{ value: 'sample', label: 'Structure et quelques lignes d’exemple (20 au plus par lecture)' },
+					{ value: 'full', label: 'Tout le classeur (l’assistant peut lire toutes les valeurs)' }
 				],
-				help: 'L’assistant ne reçoit jamais tout le contenu du classeur. Le fournisseur reçoit aussi vos messages, la feuille active et la sélection.'
+				help: 'Vaut aussi pour Claude Desktop et Claude Code par le serveur MCP. Le fournisseur reçoit en plus vos messages, la feuille active et la sélection ; avec un modèle local, rien ne quitte le poste.'
 			},
 			{
 				path: 'ai.keepConversation',

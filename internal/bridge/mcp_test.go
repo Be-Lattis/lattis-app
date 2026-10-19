@@ -393,3 +393,18 @@ func TestMCPStopsWithAI(t *testing.T) {
 		t.Fatal("serveur non relancé")
 	}
 }
+
+// Le partage des données de l'assistant (ai.dataSharing) vaut aussi pour
+// le serveur MCP : structure seulement par défaut, tout le classeur sur
+// demande.
+func TestMCPDataSharing(t *testing.T) {
+	_, _, srv := mcpService(t)
+	if text, isErr := tool(t, srv, "claude-code", "db_query", map[string]any{"sql": "SELECT 1"}); !isErr || !strings.Contains(text, "Données transmises") {
+		t.Fatalf("db_query permis par défaut : %s", text)
+	}
+	config.SetCurrent(config.Resolve(context.Background(), config.Options{}, &config.TreeSource{N: "essai", R: config.RankUser,
+		T: config.Tree{"ai": config.Tree{"enabled": true, "dataSharing": "full"}}}))
+	if text, isErr := tool(t, srv, "claude-code", "db_query", map[string]any{"sql": "SELECT 1"}); isErr {
+		t.Fatalf("db_query refusé en partage complet : %s", text)
+	}
+}

@@ -18,6 +18,7 @@ import (
 	"sync"
 
 	"github.com/lalamefine/lattis/internal/api"
+	"github.com/lalamefine/lattis/internal/sharing"
 )
 
 // Versions du protocole acceptées, la plus récente d'abord.
@@ -33,6 +34,10 @@ type Server struct {
 	Watch Watcher
 	// Connect, s'il est donné, apprend le nom du client à chaque initialize.
 	Connect func(client string)
+	// Sharing, s'il est donné, lit le partage des données (ai.dataSharing)
+	// à chaque message : outils proposés et résultats filtrés comme pour
+	// l'assistant intégré (internal/sharing). Absent : partage complet.
+	Sharing func() string
 
 	mu       sync.Mutex
 	sessions map[string]string // Mcp-Session-Id → nom du client
@@ -182,12 +187,12 @@ func (s *Server) dispatch(ctx context.Context, req request) (any, *rpcError) {
 			"protocolVersion": v,
 			"capabilities":    map[string]any{"tools": map[string]any{"listChanged": false}},
 			"serverInfo":      map[string]any{"name": s.name(), "version": s.Version},
-			"instructions":    instructions,
+			"instructions":    instructions + sharingNote(s.mode()),
 		}, nil
 	case "ping":
 		return struct{}{}, nil
 	case "tools/list":
-		return map[string]any{"tools": Tools()}, nil
+		return map[string]any{"tools": ToolsFor(s.mode())}, nil
 	case "tools/call":
 		var p struct {
 			Name      string         `json:"name"`
@@ -200,6 +205,12 @@ func (s *Server) dispatch(ctx context.Context, req request) (any, *rpcError) {
 		if cmd == nil {
 			return nil, &rpcError{codeParams, "outil inconnu : " + p.Name}
 		}
+		// Le réglage a pu changer depuis tools/list : l'outil est refusé.
+		mode := s.mode()
+		if !sharing.Exposed(cmd.Name, mode) {
+			return toolResult(sharing.Refused(p.Name), true), nil
+		}
+		p.Arguments = sharing.Args(cmd.Name, p.Arguments, mode)
 		// Un assistant ne fait pas répondre l'utilisateur à sa place : une
 		// requête HTTP vers un hôte non autorisé est refusée (cmd_http.go).
 		run := func(ctx context.Context) (any, error) {
@@ -213,7 +224,7 @@ func (s *Server) dispatch(ctx context.Context, req request) (any, *rpcError) {
 				Tool:    p.Name,
 				Command: cmd.Name,
 				Label:   Label(cmd, p.Arguments),
-				Write:   Writes(cmd),
+				Write:   Writes(cmd, p.Arguments),
 				Target:  Target(p.Arguments),
 				Args:    p.Arguments,
 			}, run)
@@ -222,6 +233,10 @@ func (s *Server) dispatch(ctx context.Context, req request) (any, *rpcError) {
 		}
 		if err != nil {
 			return toolResult(err.Error(), true), nil
+		}
+		res = sharing.Filter(cmd.Name, res, mode)
+		if mode == sharing.Sample && sharing.IsRead(cmd.Name) {
+			res = sharing.Encode(res)
 		}
 		return toolResult(res, false), nil
 	case "resources/list":
@@ -233,6 +248,25 @@ func (s *Server) dispatch(ctx context.Context, req request) (any, *rpcError) {
 		return nil, nil
 	}
 	return nil, &rpcError{codeMethod, "méthode inconnue : " + req.Method}
+}
+
+// mode est le partage des données en vigueur.
+func (s *Server) mode() string {
+	if s.Sharing == nil {
+		return sharing.Full
+	}
+	return sharing.Mode(s.Sharing())
+}
+
+// sharingNote prévient l'assistant d'un partage limité.
+func sharingNote(mode string) string {
+	switch mode {
+	case sharing.SchemaOnly:
+		return "\n\nPartage des données limité par l'utilisateur (« Structure seulement ») : vous voyez la structure du classeur (feuilles, tableaux, colonnes, types, nombre de lignes) mais aucune valeur des cellules ; les outils qui en lisent ne sont pas proposés. Ne demandez pas à l'utilisateur de coller ses données."
+	case sharing.Sample:
+		return fmt.Sprintf("\n\nPartage des données limité par l'utilisateur (« Structure et lignes d'exemple ») : chaque lecture rend au plus %d lignes ; vous ne voyez jamais tout le contenu.", sharing.SampleRows)
+	}
+	return ""
 }
 
 func (s *Server) name() string {
@@ -284,6 +318,20 @@ type Tool struct {
 	Description string         `json:"description"`
 	InputSchema map[string]any `json:"inputSchema"`
 	Annotations map[string]any `json:"annotations,omitempty"`
+}
+
+// ToolsFor décrit les outils proposés pour ce partage des données.
+func ToolsFor(mode string) []Tool {
+	var out []Tool
+	for _, t := range Tools() {
+		c := commandOf(t.Name)
+		if c == nil || !sharing.Exposed(c.Name, mode) {
+			continue
+		}
+		t.Description += sharing.Note(c.Name, mode)
+		out = append(out, t)
+	}
+	return out
 }
 
 // Tools décrit les commandes exposées en MCP.

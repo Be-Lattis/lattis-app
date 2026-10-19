@@ -848,7 +848,7 @@ export const apiReference: RefEntry[] = [
 	{
 		name: "tables.list",
 		category: "tables",
-		signature: "tables.list() → { {name, kind, sheet, rows, columns, types}, ... }",
+		signature: "tables.list() → { {name, kind, sheet, rows, columns, types, colsField, colsFrom}, ... } (colsField : champ en colonnes d'un tableau croisé, dont les colonnes à partir de la colsFrom-ième portent les valeurs)",
 		summary: "Liste les tableaux et les tableaux croisés de toutes les feuilles, avec leurs colonnes.",
 		args: [0, 0]
 	},

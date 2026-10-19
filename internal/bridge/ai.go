@@ -326,7 +326,7 @@ func (s *DocumentService) AISend(ctx context.Context, run int, text string, view
 	msg := ai.Compose(text, ai.View{Sheet: view.Sheet, Table: view.Table, Selection: view.Selection}, notes)
 	// Premier message : la structure du classeur, pour répondre sans explorer.
 	if s.ai.session.Len() == 0 {
-		msg = ai.Structure(ctx, h) + msg
+		msg = ai.Structure(ctx, h, sharing) + msg
 	}
 	err := s.ai.session.Send(gctx, turn, msg, emit)
 

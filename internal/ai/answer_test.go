@@ -36,7 +36,7 @@ func TestShowResult(t *testing.T) {
 	if res, isErr := Exec(h, SchemaOnly)(ctx, showTool, json.RawMessage(`{"sql":"DELETE FROM \"Ventes\""}`)); !isErr {
 		t.Fatalf("écriture acceptée : %s", res)
 	}
-	if s := Structure(context.Background(), h); !strings.Contains(s, "« Ventes »") || !strings.Contains(s, "Montant") || strings.Contains(s, "C1") {
+	if s := Structure(context.Background(), h, SchemaOnly); !strings.Contains(s, "« Ventes »") || !strings.Contains(s, "Montant") || strings.Contains(s, "C1") {
 		t.Fatalf("structure : %s", s)
 	}
 }

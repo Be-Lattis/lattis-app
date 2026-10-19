@@ -11,6 +11,7 @@ import (
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/mcp"
 	"github.com/lalamefine/lattis/internal/remote/collab"
+	"github.com/lalamefine/lattis/internal/sharing"
 )
 
 // Retour visible des clients MCP (Claude Desktop, Claude Code…) : chaque
@@ -78,6 +79,10 @@ const mcpConnectedFor = 30 * time.Minute
 // les tests.
 var mcpConfirmWrites = func() bool { return config.Current().Bool("mcp.confirmWrites", false) }
 
+// mcpSharing lit le partage des données de l'assistant (ai.dataSharing),
+// qui s'applique aussi à Claude par MCP ; surchargeable pour les tests.
+var mcpSharing = func() string { return config.Current().String("ai.dataSharing", sharing.SchemaOnly) }
+
 // Erreurs rendues au client MCP (résultat d'outil en erreur).
 var (
 	errMCPRefused = errors.New("refusé par l'utilisateur dans Lattis")
@@ -128,7 +133,7 @@ func (c valuesCtx) Value(k any) any {
 }
 
 func (s *DocumentService) mcpServer() *mcp.Server {
-	return &mcp.Server{Host: host{s}, Name: "lattis", Version: Version, Watch: s.mcpWatchCall, Connect: s.mcpConnect}
+	return &mcp.Server{Host: host{s}, Name: "lattis", Version: Version, Watch: s.mcpWatchCall, Connect: s.mcpConnect, Sharing: mcpSharing}
 }
 
 // mcpConnect note le client qui vient de se présenter.

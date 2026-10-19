@@ -107,6 +107,28 @@ n'est pas soumis à cet accord. Les requêtes `db_query` et `db_execute` ne lise
 n'écrivent les tables internes `_lattis_*` et refusent `ATTACH`, les changements de
 structure et les `PRAGMA`.
 
+## Données transmises et accord avant modification
+
+Le réglage de l'assistant **Données transmises à l'assistant** (`ai.dataSharing`, Fichier ›
+Paramètres › Assistant IA, imposable par stratégie) s'applique aussi au serveur MCP, avec
+les mêmes règles que l'assistant intégré (`internal/sharing`) :
+
+| Réglage | Outils et résultats |
+|---|---|
+| `schema-only` (par défaut) | Les outils qui lisent des valeurs ne sont pas proposés : `tables_rows`, `db_query`, `cells_get`, `cells_read`, `columns_values`, `queries_preview`, `sheets_find`, `pages_get`, `scripts_run`, `buttons_run`, `controls_fire`, `doc_export_csv`, `doc_export_xlsx`, `doc_export_ods`. `sheets_get` ne rend que la place et la nature des cellules libres (texte, nombre, formule), sans la configuration des tableaux croisés et des graphiques ; `tables_list` résume les colonnes d'un tableau croisé tirées des valeurs de son champ en colonnes ; `queries_list` masque les valeurs des en-têtes HTTP, des paramètres d'adresse et des filtres ; `controls_list` et `controls_get` sans la valeur des contrôles. |
+| `sample` | En plus, `tables_rows`, `db_query`, `cells_get`, `cells_read` et `columns_values`, bornés à chaque appel : 20 lignes, 30 éléments d'une liste, 200 caractères par valeur, 8 000 caractères en tout. `sheets_get` reste sans le contenu des cellules. |
+| `full` | Tous les outils, sans borne. |
+
+Les instructions rendues par `initialize` le rappellent au client. Le réglage est relu à chaque
+message : un outil caché appelé quand même (liste gardée d'avant un changement) est refusé.
+Claude Code lit aussi les fichiers du disque : un classeur enregistré lui reste lisible
+directement, quel que soit le réglage.
+
+Avec **Demander avant de modifier** (`mcp.confirmWrites`), Lattis demande l'accord de
+l'utilisateur avant chaque appel qui modifie le classeur ou écrit un fichier : commandes
+d'écriture, `scripts_run`, `buttons_run`, `doc_undo`, `doc_redo`, `doc_new`, `doc_open`,
+`doc_import`, `doc_save` avec `path` et les `doc_export_*`.
+
 ## Pour les développeurs
 
 Les commandes sont définies une seule fois, dans `internal/api` (nom, paramètres, aide,

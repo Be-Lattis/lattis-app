@@ -497,6 +497,11 @@ func TestSetUser(t *testing.T) {
 	if _, err := l.SetUser(ctx, "ai.dataSharing", "tout"); err == nil {
 		t.Fatal("ai.dataSharing invalide accepté")
 	}
+	for _, v := range []string{"sample", "full", "schema-only"} {
+		if c, err = l.SetUser(ctx, "ai.dataSharing", v); err != nil || c.String("ai.dataSharing", "") != v {
+			t.Fatalf("ai.dataSharing %s : %v", v, err)
+		}
+	}
 	// Modèle local : http:// vers ce poste seulement, https:// partout.
 	if v := l.Load(ctx).String("ai.localUrl", ""); v != "http://localhost:11434/v1" {
 		t.Fatalf("ai.localUrl par défaut = %q", v)

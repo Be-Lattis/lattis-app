@@ -1147,6 +1147,13 @@ export interface TableNames {
      * Key : rang de la colonne clé d'un tableau, -1 si aucune.
      */
     "key": number;
+
+    /**
+     * ColsField : champ en colonnes d'un TCD ; ses colonnes, à partir de la
+     * ColsFrom-ième (comptée depuis 1), en portent les valeurs.
+     */
+    "colsField"?: string;
+    "colsFrom"?: number;
 }
 
 /**

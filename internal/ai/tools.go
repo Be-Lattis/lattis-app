@@ -11,18 +11,21 @@ import (
 	"github.com/lalamefine/lattis/internal/api"
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/mcp"
+	"github.com/lalamefine/lattis/internal/sharing"
 )
 
 // Outils de l'assistant : une sélection des commandes de internal/api (les
 // mêmes que les scripts Lua et le serveur MCP), selon le partage des données
-// réglé par ai.dataSharing :
+// réglé par ai.dataSharing (règles communes avec le serveur MCP :
+// internal/sharing) :
 //
 //   - schema-only (par défaut) : l'assistant voit la structure (feuilles,
 //     tableaux, noms et types des colonnes, nombre de lignes, cardinalités)
 //     mais aucune valeur des cellules ; il peut construire l'analyse
 //     (colonnes, types, clés, formules, tableaux croisés, graphiques) ;
-//   - sample : il lit en plus quelques lignes d'exemple (au plus SampleRows)
-//     et les valeurs distinctes d'une colonne.
+//   - sample : il lit en plus quelques lignes d'exemple (au plus SampleRows
+//     par lecture) et les valeurs distinctes d'une colonne ;
+//   - full : il lit tout le classeur, sans borne.
 //
 // Les commandes qui suppriment un tableau ou une feuille, touchent aux
 // fichiers, au réseau, aux scripts ou à la protection ne sont pas proposées,
@@ -33,39 +36,13 @@ import (
 
 // Partage des données.
 const (
-	SchemaOnly = "schema-only"
-	Sample     = "sample"
+	SchemaOnly = sharing.SchemaOnly
+	Sample     = sharing.Sample
+	Full       = sharing.Full
 )
 
 // SampleRows borne les lignes lues en mode sample.
-const SampleRows = 20
-
-// sampleValues borne les listes (valeurs distinctes…) en mode sample.
-const sampleValues = 30
-
-var structureCommands = []string{
-	// Lecture de la structure.
-	"sheets.list", "tables.list", "tables.get", "formulas.functions", "queries.list", "connections.list",
-	"columns.type_preview", "columns.type_mix", "tables.key_check", "buttons.list",
-	// Disposition des feuilles (où sont tableaux, TCD, graphiques, cellules
-	// libres) ; sans partage des données, sans les valeurs (layoutOnly).
-	"sheets.get",
-	// Construction de l'analyse.
-	"sheets.add", "sheets.rename", "sheets.color", "tables.rename", "tables.sort",
-	"columns.insert", "columns.rename", "columns.set_type", "columns.fix_type", "columns.set_rules",
-	"tables.set_key", "cells.set", "cells.style", "cells.name",
-	// Mise en forme : styles de lignes et colonnes entières, fusion, largeurs
-	// et hauteurs, volets figés, filtres, mise en forme conditionnelle (ci-dessus).
-	"cells.style_lines", "cells.merge", "cells.unmerge", "sheets.set_column_width", "sheets.set_row_height", "sheets.freeze", "columns.set_filter",
-	// Réparer des tableaux mal créés : limites (tables.to_range puis
-	// tables.from_range), en-tête, titre ou note pris dans le tableau, lignes,
-	// colonnes à scinder, déplacement.
-	"tables.from_range", "tables.to_range", "tables.promote_header", "tables.header_to_title", "tables.last_row_out", "tables.two_level_headers",
-	"tables.insert_row", "tables.delete_row", "tables.move", "tables.text_to_columns", "cells.text_to_columns", "cells.paste", "cells.clear",
-	"pivots.create", "pivots.set", "charts.create", "charts.set", "charts.place",
-}
-
-var sampleCommands = []string{"tables.rows", "columns.values", "db.query", "cells.get", "cells.read"}
+const SampleRows = sharing.SampleRows
 
 // Outils propres à l'assistant, permis même sans partage des données :
 // profil d'un tableau (cardinalités, type du résultat des colonnes
@@ -76,7 +53,7 @@ const (
 )
 
 // commands donne les commandes permises pour ce partage.
-func commands(sharing string) map[string]*api.Command {
+func commands(mode string) map[string]*api.Command {
 	out := map[string]*api.Command{}
 	add := func(names []string) {
 		for _, n := range names {
@@ -85,26 +62,28 @@ func commands(sharing string) map[string]*api.Command {
 			}
 		}
 	}
-	add(structureCommands)
-	if sharing == Sample {
-		add(sampleCommands)
+	add(sharing.Structure)
+	switch sharing.Mode(mode) {
+	case Sample:
+		add(sharing.Reads)
+	case Full:
+		add(sharing.Reads)
+		add(sharing.FullReads)
 	}
 	return out
 }
 
 // Tools décrit les outils de l'assistant pour ce partage.
-func Tools(sharing string) []Tool {
-	allowed := commands(sharing)
+func Tools(mode string) []Tool {
+	mode = sharing.Mode(mode)
+	allowed := commands(mode)
 	var out []Tool
 	for _, t := range mcp.Tools() {
-		if allowed[t.Name] == nil {
+		c := allowed[t.Name]
+		if c == nil {
 			continue
 		}
-		desc := t.Description
-		if sharing == Sample && (t.Name == "tables_rows" || t.Name == "db_query") {
-			desc += fmt.Sprintf("\n\nPartage limité : au plus %d lignes sont rendues.", SampleRows)
-		}
-		out = append(out, Tool{Name: t.Name, Description: desc, Schema: t.InputSchema})
+		out = append(out, Tool{Name: t.Name, Description: t.Description + sharing.Note(c.Name, mode), Schema: t.InputSchema})
 	}
 	out = append(out, Tool{
 		Name:        profileTool,
@@ -147,8 +126,9 @@ func Target(name string, input json.RawMessage) string {
 }
 
 // Exec rend l'exécuteur des outils pour host, avec ce partage.
-func Exec(host api.Host, sharing string) Executor {
-	allowed := commands(sharing)
+func Exec(host api.Host, mode string) Executor {
+	mode = sharing.Mode(mode)
+	allowed := commands(mode)
 	return func(ctx context.Context, name string, input json.RawMessage) (string, bool) {
 		args := map[string]any{}
 		if len(input) > 0 {
@@ -162,41 +142,29 @@ func Exec(host api.Host, sharing string) Executor {
 		case errorsTool:
 			return formulaErrors(ctx, host, args)
 		case showTool:
-			return show(ctx, host, args, sharing)
+			return show(ctx, host, args, mode)
 		}
 		cmd := allowed[name]
 		if cmd == nil {
 			return "outil inconnu ou non permis : " + name, true
 		}
-		if cmd.Name == "tables.rows" {
-			if n, ok := args["count"].(float64); !ok || n > SampleRows {
-				args["count"] = float64(SampleRows)
-			}
-		}
+		args = sharing.Args(cmd.Name, args, mode)
 		// L'assistant ne fait pas répondre l'utilisateur à sa place (boîtes
 		// de dialogue, accès réseau).
 		res, err := api.Invoke(api.WithoutPrompt(ctx), host, cmd.Name, args)
 		if err != nil {
 			return err.Error(), true
 		}
-		if sharing == SchemaOnly {
-			res = layoutOnly(res)
+		res = sharing.Filter(cmd.Name, res, mode)
+		if mode == Sample && sharing.IsRead(cmd.Name) {
+			return sharing.Encode(res), false
 		}
-		return encode(res, sharing == Sample && isSample(cmd.Name)), false
+		return encode(res), false
 	}
 }
 
-func isSample(name string) bool {
-	for _, n := range sampleCommands {
-		if n == name {
-			return true
-		}
-	}
-	return false
-}
-
-// encode rend un résultat en JSON ; limit : borne les lignes et les listes.
-func encode(v any, limit bool) string {
+// encode rend un résultat en JSON.
+func encode(v any) string {
 	switch x := v.(type) {
 	case nil:
 		return "ok"
@@ -210,28 +178,6 @@ func encode(v any, limit bool) string {
 	if err != nil {
 		return fmt.Sprint(v)
 	}
-	if !limit {
-		return string(b)
-	}
-	var g any
-	if json.Unmarshal(b, &g) != nil {
-		return string(b)
-	}
-	switch x := g.(type) {
-	case []any:
-		if len(x) > sampleValues {
-			g = map[string]any{"items": x[:sampleValues], "truncated": true, "total": len(x)}
-		}
-	case map[string]any:
-		if rows, ok := x["rows"].([]any); ok && len(rows) > SampleRows {
-			x["rows"] = rows[:SampleRows]
-			x["truncated"] = true
-			if ids, ok := x["ids"].([]any); ok && len(ids) > SampleRows {
-				x["ids"] = ids[:SampleRows]
-			}
-		}
-	}
-	b, _ = json.Marshal(g)
 	return string(b)
 }
 
@@ -289,7 +235,7 @@ func profile(ctx context.Context, host api.Host, args map[string]any) (string, b
 		}
 		out.Columns = append(out.Columns, cl)
 	}
-	return encode(out, false), false
+	return encode(out), false
 }
 
 type columnInfo struct {
@@ -420,7 +366,7 @@ func formulaErrors(ctx context.Context, host api.Host, args map[string]any) (str
 	if len(out.Columns) == 0 {
 		out.Note = "aucune colonne calculée dans ce tableau"
 	}
-	return encode(out, false), false
+	return encode(out), false
 }
 
 // Label donne le libellé lisible d'un appel d'outil, pour l'interface.
@@ -469,10 +415,13 @@ func commandOf(tool string) *api.Command {
 // System est la consigne de l'assistant. Elle ne change pas d'un tour à
 // l'autre (le fournisseur la garde en cache) : le contexte de l'interface
 // voyage dans les messages (Compose).
-func System(sharing string) string {
+func System(mode string) string {
 	data := "Vous ne voyez pas les valeurs des cellules : seulement la structure (feuilles, tableaux, noms et types des colonnes, nombre de lignes), les cardinalités (outil tables_profile) et le nombre d'erreurs des colonnes calculées (outil formulas_errors). Ne demandez pas à l'utilisateur de vous coller ses données ; raisonnez sur la structure."
-	if sharing == Sample {
+	switch sharing.Mode(mode) {
+	case Sample:
 		data = fmt.Sprintf("Vous voyez la structure du classeur et pouvez lire quelques lignes d'exemple (au plus %d par lecture) et les valeurs distinctes d'une colonne ; vous ne voyez jamais tout le contenu.", SampleRows)
+	case Full:
+		data = "L'utilisateur vous laisse lire tout le classeur : lignes des tableaux (tables_rows, db_query), cellules (cells_read, sheets_get), valeurs distinctes d'une colonne. Lisez ce qui sert à la demande, sans parcourir tout le classeur sans raison."
 	}
 	return `Vous êtes l'assistant d'analyse de données de Lattis, un tableur relationnel de bureau : chaque tableau d'une feuille est une table SQLite, avec des colonnes typées (texte, entier, décimal, date, booléen). ` +
 		`Vous aidez l'utilisateur à construire une analyse pertinente : choisir les bons types, les clés, les colonnes calculées, les tableaux croisés dynamiques et les graphiques, et à comprendre ses données.
@@ -493,31 +442,4 @@ Exemples :
 
 Chaque outil qui modifie le classeur s'applique tout de suite ; tout ce que vous modifiez pendant une réponse s'annule d'un coup (Ctrl+Z, ou « Annuler cette réponse »). Ne supprimez rien que l'utilisateur n'a pas demandé. Quand une demande est ambiguë ou touche beaucoup de données, proposez d'abord ce que vous comptez faire.
 Répondez en français, brièvement. Markdown simple permis (gras, listes, titres courts) ; pas de tableaux larges.`
-}
-
-// layoutOnly : sans partage des données, la disposition d'une feuille
-// (sheets.get) garde les positions et la nature des cellules libres, pas leur
-// contenu ; tableaux croisés et graphiques sans leur configuration (filtres :
-// des valeurs).
-func layoutOnly(res any) any {
-	v, ok := res.(api.SheetView)
-	if !ok {
-		return res
-	}
-	for i, c := range v.Cells {
-		kind := "texte"
-		switch {
-		case strings.HasPrefix(c.Raw, "="):
-			kind = "formule"
-		case c.Raw != "" && strings.Trim(c.Raw, "0123456789,.- ") == "":
-			kind = "nombre"
-		}
-		v.Cells[i] = api.CellView{Row: c.Row, Col: c.Col, Raw: "(" + kind + ")", Error: c.Error}
-	}
-	for _, objs := range [][]api.ObjectView{v.Pivots, v.Charts} {
-		for i := range objs {
-			objs[i].Config = nil
-		}
-	}
-	return v
 }
