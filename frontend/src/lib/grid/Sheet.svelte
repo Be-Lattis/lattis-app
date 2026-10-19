@@ -2627,11 +2627,15 @@
 			}
 			ctx.restore();
 		}
-		// Zone copiée ou coupée : cadre pointillé, comme Excel.
+		// Zone copiée ou coupée : cadre pointillé qui défile (« fourmis »), comme Excel.
 		if (clipRange && clipRange.sheet === sheetId()) {
 			const k = clipRange;
 			ctx.save();
 			ctx.setLineDash([4, 3]);
+			if (motion()) {
+				ctx.lineDashOffset = -((animNow / 60) % 7);
+				animBusy = true;
+			}
 			ctx.strokeStyle = C.active;
 			ctx.lineWidth = 1.5;
 			ctx.strokeRect(cx(k.c0) + 1, ry(k.r0) + 1, spanW(k.c0, k.c1) - 2, rspan(k.r0, k.r1) - 2);
