@@ -640,14 +640,16 @@
 			{
 				title: 'Obtenir des données',
 				// Une requête s'ajoute même sur une feuille protégée (le moteur vérifie où elle écrit).
-				// Comme Excel : les sources en petit avec leur libellé, en colonnes de
-				// trois (les fichiers, puis les bases et le web, puis le classeur).
-				widest: 'small',
+				// « À partir du tableau » en grand et en tête (choix de Louis, 19/10 :
+				// la fonction phare, plus puissante qu'Excel ici) ; les autres sources
+				// en petit avec leur libellé, en colonnes de trois.
+				compact: true,
 				commands: readOnly([
-					{ label: 'Texte/CSV', icon: 'file-csv', run: data('csv'), hint: 'Nouvelle requête à partir d’un fichier CSV (étapes de transformation, actualisable)' },
-					{ label: 'Classeur Excel', icon: 'table', run: data('xlsx'), hint: 'Nouvelle requête à partir d’un tableau d’un classeur .xlsx' },
+					{ label: 'À partir du tableau', icon: 'sheet', size: 'big', run: data('table'), hint: 'Nouvelle requête à partir d’un tableau du classeur' },
+					{ label: 'Texte/CSV', icon: 'file-csv', size: 'small' as const, run: data('csv'), hint: 'Nouvelle requête à partir d’un fichier CSV (étapes de transformation, actualisable)' },
+					{ label: 'Classeur Excel', icon: 'table', size: 'small' as const, run: data('xlsx'), hint: 'Nouvelle requête à partir d’un tableau d’un classeur .xlsx' },
 					{
-						label: 'Autres fichiers',
+						label: 'Autres fichiers', size: 'small' as const,
 						icon: 'open',
 						run: ondata ? openItems : undefined,
 						hint: 'Nouvelle requête à partir d’un fichier JSON, Parquet, ou d’une base SQLite',
@@ -658,7 +660,7 @@
 						]
 					},
 					{
-						label: 'Base de données',
+						label: 'Base de données', size: 'small' as const,
 						icon: 'database',
 						run: ondata ? openItems : undefined,
 						hint: 'Nouvelle requête sur une base de données (lecture seule)',
@@ -669,9 +671,8 @@
 						]
 					},
 					// Serveur Lattis : bouton à lui, à côté des bases de données (comme les sources propres d'Excel).
-					...(sharedWorkbooksEnabled() ? [{ label: 'Serveur Lattis', icon: 'link' as const, run: data('lattis'), hint: 'Nouvelle requête sur un tableau d’un Serveur Lattis ou une donnée de son Data Lake (lecture seule)' }] : []),
-					{ label: 'Web', icon: 'web', run: data('web'), hint: 'Nouvelle requête à partir d’une API web qui répond en JSON (lecture seule)' },
-					{ label: 'À partir du tableau', icon: 'sheet', run: data('table'), hint: 'Nouvelle requête à partir d’un tableau du classeur' }
+					...(sharedWorkbooksEnabled() ? [{ label: 'Serveur Lattis', icon: 'link' as const, size: 'small' as const, run: data('lattis'), hint: 'Nouvelle requête sur un tableau d’un Serveur Lattis ou une donnée de son Data Lake (lecture seule)' }] : []),
+					{ label: 'Web', icon: 'web', size: 'small' as const, run: data('web'), hint: 'Nouvelle requête à partir d’une API web qui répond en JSON (lecture seule)' },
 				])
 			},
 			{
