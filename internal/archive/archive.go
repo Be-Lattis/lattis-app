@@ -43,6 +43,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -167,6 +168,7 @@ type Doc struct {
 	// base : fichier sur disque à l'ouverture ou au dernier enregistrement
 	// (nil : inconnu, aucun contrôle).
 	base *Stamp
+	prog saveProgress
 }
 
 // Root est le dossier des répertoires de travail. Il est surchargeable pour
@@ -706,9 +708,16 @@ const (
 )
 
 func (d *Doc) save(ctx context.Context, path string) error {
+	d.prog.start()
+	defer d.prog.stop()
 	snap := filepath.Join(d.Dir, "snapshot.sqlite")
 	os.Remove(snap)
 	defer os.Remove(snap)
+	// Place pour l'instantané (au plus la base et son WAL), puis pour
+	// l'archive à côté de la cible : refusé avant d'écrire quoi que ce soit.
+	if err := needSpace(d.Dir, d.dbSize(), true); err != nil {
+		return err
+	}
 	// VACUUM INTO passe par la file d'écriture : l'instantané voit toutes les
 	// écritures validées avant lui, et aucune à moitié.
 	var gen int64
@@ -721,6 +730,7 @@ func (d *Doc) save(ctx context.Context, path string) error {
 		return err
 	}
 	// Ni historique d'annulation ni corbeilles dans le fichier.
+	d.prog.phase.Store(phaseScrub)
 	if err := scrub(snap, d.extra); err != nil {
 		return fmt.Errorf("historique non retiré de l'instantané : %w", err)
 	}
@@ -730,6 +740,11 @@ func (d *Doc) save(ctx context.Context, path string) error {
 	}
 	dir := filepath.Dir(path)
 	cleanTemps(dir)
+	if err := needSpace(dir, uint64(st.Size()), true); err != nil {
+		return err
+	}
+	d.prog.total.Store(st.Size())
+	d.prog.phase.Store(phaseWrite)
 	tmp, err := os.CreateTemp(dir, tempPrefix+"*"+tempSuffix)
 	if err != nil {
 		return err
@@ -743,10 +758,11 @@ func (d *Doc) save(ctx context.Context, path string) error {
 			return err
 		}
 	}
-	if err := writeZip(tmp, snap, remote); err != nil {
+	if err := writeZip(tmp, snap, remote, &d.prog.done); err != nil {
 		tmp.Close()
 		return err
 	}
+	d.prog.phase.Store(phaseVerify)
 	if err := tmp.Sync(); err != nil {
 		tmp.Close()
 		return err
@@ -875,7 +891,7 @@ func rename(src, dst string) error {
 	return err
 }
 
-func writeZip(w io.Writer, snap string, remote *Remote) error {
+func writeZip(w io.Writer, snap string, remote *Remote, done *atomic.Int64) error {
 	zw := zip.NewWriter(w)
 	mw, err := zw.Create(manifestName)
 	if err != nil {
@@ -894,7 +910,7 @@ func writeZip(w io.Writer, snap string, remote *Remote) error {
 		return err
 	}
 	defer f.Close()
-	if _, err := io.Copy(dw, f); err != nil {
+	if _, err := io.Copy(dw, countReader{f, done}); err != nil {
 		return err
 	}
 	return zw.Close()

@@ -1419,6 +1419,14 @@ export function SavePage(sheet: number, source: string): $CancellablePromise<$mo
 }
 
 /**
+ * SaveProgress donne l'avancement de l'enregistrement en cours ; l'interface
+ * l'interroge pendant Save pour un gros classeur.
+ */
+export function SaveProgress(): $CancellablePromise<$models.SaveProgress> {
+    return $Call.ByID(494685092);
+}
+
+/**
  * SaveQuery crée ou modifie une requête (sans l'actualiser) et renvoie son
  * identifiant.
  */

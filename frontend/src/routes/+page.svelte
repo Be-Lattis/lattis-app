@@ -20,6 +20,7 @@
 	import { visibleSheet } from '#lib/shell/sheets.js';
 	import { count } from '#lib/sql/result.js';
 	import { printSheet } from '#lib/shell/print.js';
+	import { withSaveProgress } from '#lib/shell/saveprogress.js';
 	import PageSetupDialog from '#lib/shell/PageSetupDialog.svelte';
 	import { pageAction, type PageAction, type PageSetup, type PageSetupTab } from '#lib/shell/pagesetup.js';
 	import type { PageBreaks } from '#bindings/internal/transfer/models.js';
@@ -477,12 +478,17 @@
 		await loadRecent();
 	}
 
+	/** Enregistre en montrant, pour un gros classeur, l'avancement dans la barre d'état. */
+	function saving(run: () => Promise<DocState>): Promise<DocState> {
+		return withSaveProgress(run, () => DocumentService.SaveProgress(), (t) => (notice = t));
+	}
+
 	/** Réponse à « modifié par un autre poste » : écraser, enregistrer une copie (overwrite faux) ou rien (null). */
 	async function resolveSave(overwrite: boolean | null) {
 		const c = conflict;
 		conflict = null;
 		if (!c || overwrite === null) return;
-		docState = await DocumentService.ResolveSave(overwrite);
+		docState = await saving(() => DocumentService.ResolveSave(overwrite));
 		if (docState.conflict) {
 			conflict = { ...docState.conflict, close: c.close };
 			return;
@@ -528,7 +534,7 @@
 			return;
 		}
 		if (save) {
-			docState = await DocumentService.Save(false);
+			docState = await saving(() => DocumentService.Save(false));
 			if (docState.conflict) {
 				// Fichier modifié par un autre poste : la question d'abord, puis la fermeture.
 				conflict = { ...docState.conflict, close: true };
@@ -922,7 +928,7 @@
 				case 'save':
 				case 'saveAs':
 					if (mode !== 'doc') return;
-					docState = await DocumentService.Save(a === 'saveAs');
+					docState = await saving(() => DocumentService.Save(a === 'saveAs'));
 					if (docState.conflict) conflict = { ...docState.conflict, close: false };
 					else if (docState.notice) notice = docState.notice;
 					else if (!docState.dirty) notice = `Enregistré : ${docState.path}`;

@@ -3,6 +3,7 @@ package archive
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -107,5 +108,63 @@ func TestFreeBytes(t *testing.T) {
 	n, err := freeBytes(t.TempDir())
 	if err != nil || n == 0 {
 		t.Fatalf("espace libre : %d, %v", n, err)
+	}
+}
+
+// Disque plein à l'enregistrement : refusé avant tout, fichier intact, sans
+// temporaire laissé.
+func TestSaveNoSpace(t *testing.T) {
+	useRoot(t)
+	path := savedRows(t, 50)
+	before := digest(t, path)
+	d, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Close()
+	exec1(t, d, `INSERT INTO t (v) VALUES ('encore')`)
+	fakeFree(t, 1<<20)
+	err = d.Save(context.Background(), path)
+	var se *SpaceError
+	if !errors.As(err, &se) || !se.Saving || !strings.Contains(err.Error(), "espace disque insuffisant pour l'enregistrer") {
+		t.Fatalf("disque plein : %v", err)
+	}
+	if digest(t, path) != before {
+		t.Fatal("fichier modifié malgré le refus")
+	}
+	left, _ := os.ReadDir(filepath.Dir(path))
+	for _, e := range left {
+		if strings.HasPrefix(e.Name(), tempPrefix) {
+			t.Fatalf("temporaire laissé : %s", e.Name())
+		}
+	}
+	if d.Progress().Phase != "" {
+		t.Fatalf("avancement après l'échec : %+v", d.Progress())
+	}
+}
+
+// Avancement : écriture comptée en octets jusqu'à la taille de l'instantané,
+// puis plus rien une fois l'enregistrement fini.
+func TestSaveProgress(t *testing.T) {
+	useRoot(t)
+	d, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Close()
+	exec1(t, d, `CREATE TABLE t (v TEXT)`)
+	exec1(t, d, `INSERT INTO t SELECT hex(randomblob(100)) FROM (WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i+1 FROM n WHERE i < 2000) SELECT i FROM n)`)
+	var seen SaveProgress
+	old := beforeRename
+	beforeRename = func(string) error { seen = d.Progress(); return nil }
+	t.Cleanup(func() { beforeRename = old })
+	if err := d.Save(context.Background(), filepath.Join(t.TempDir(), "p.lattis")); err != nil {
+		t.Fatal(err)
+	}
+	if seen.Phase != "verify" || seen.Total == 0 || seen.Done != seen.Total {
+		t.Fatalf("avancement avant le renommage : %+v", seen)
+	}
+	if p := d.Progress(); p.Phase != "" {
+		t.Fatalf("avancement après l'enregistrement : %+v", p)
 	}
 }

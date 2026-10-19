@@ -6,8 +6,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/lalamefine/lattis/internal/archive"
 )
@@ -233,4 +235,35 @@ func TestProtectionSaved(t *testing.T) {
 		t.Fatal("mauvais mot de passe accepté après réouverture")
 	}
 	must(t, d.UnprotectSheet(ctx, 1, "secret"))
+}
+
+// Enregistrer un classeur inchangé dans son fichier ne le réécrit pas
+// (audit 6, I2), même nommé avec une autre casse sous Windows.
+func TestSaveUnchangedSkipped(t *testing.T) {
+	useRoot(t)
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "Intact.lattis")
+	d, err := New(ctx)
+	must(t, err)
+	set(t, d, 0, 0, "x")
+	must(t, d.Save(ctx, path))
+	must(t, d.Close())
+	d, err = Open(ctx, path)
+	must(t, err)
+	defer d.Close()
+	old := time.Now().Add(-time.Hour).Truncate(time.Second)
+	must(t, os.Chtimes(path, old, old))
+	again := path
+	if runtime.GOOS == "windows" {
+		again = filepath.Join(filepath.Dir(path), "INTACT.lattis")
+	}
+	must(t, d.Save(ctx, again))
+	if st, _ := os.Stat(path); !st.ModTime().Equal(old) {
+		t.Fatalf("classeur inchangé réécrit (%v)", st.ModTime())
+	}
+	set(t, d, 0, 1, "y")
+	must(t, d.Save(ctx, ""))
+	if st, _ := os.Stat(path); st.ModTime().Equal(old) {
+		t.Fatal("classeur modifié non enregistré")
+	}
 }

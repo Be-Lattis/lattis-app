@@ -311,6 +311,26 @@ func (s *DocumentService) Save(ctx context.Context, as bool) (DocState, error) {
 	return s.saved(ctx, d)
 }
 
+// SaveProgress est l'avancement d'un enregistrement : phase vide s'il n'y
+// en a pas, sinon snapshot, scrub, write (done octets écrits sur total) ou
+// verify.
+type SaveProgress struct {
+	Phase string `json:"phase"`
+	Done  int64  `json:"done"`
+	Total int64  `json:"total"`
+}
+
+// SaveProgress donne l'avancement de l'enregistrement en cours ; l'interface
+// l'interroge pendant Save pour un gros classeur.
+func (s *DocumentService) SaveProgress() SaveProgress {
+	d, err := s.current()
+	if err != nil {
+		return SaveProgress{}
+	}
+	p := d.SaveProgress()
+	return SaveProgress{Phase: p.Phase, Done: p.Done, Total: p.Total}
+}
+
 // ResolveSave répond à DocState.Conflict (fichier modifié par ailleurs
 // depuis son ouverture) : overwrite l'écrase, sinon le classeur est
 // enregistré sous un autre nom (« Enregistrer une copie »).

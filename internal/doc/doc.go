@@ -327,7 +327,7 @@ func (d *Document) save(ctx context.Context, path string, force bool) (err error
 	// critère que la question à la fermeture) : le réécrire prendrait des
 	// secondes sur un gros classeur et bloquerait les saisies.
 	share := d.shareGen.Load()
-	if (path == "" || path == d.arc.Path) && d.arc.Path != "" && top == d.saved && prot == d.savedProt && share == d.savedShare.Load() {
+	if (path == "" || samePath(path, d.arc.Path)) && d.arc.Path != "" && top == d.saved && prot == d.savedProt && share == d.savedShare.Load() {
 		return nil
 	}
 	// Premier enregistrement d'un classeur migré par-dessus son fichier : la
@@ -434,6 +434,10 @@ func (d *Document) MarkSaved(ctx context.Context) error {
 	}
 	return err
 }
+
+// SaveProgress donne l'avancement de l'enregistrement en cours (gros
+// classeur : barre d'état).
+func (d *Document) SaveProgress() archive.SaveProgress { return d.arc.Progress() }
 
 // Pristine dit si le répertoire de travail est marqué « rien à récupérer »
 // (aucune écriture depuis la création, l'ouverture ou l'enregistrement).

@@ -771,6 +771,17 @@ export interface SalvageResult {
 }
 
 /**
+ * SaveProgress est l'avancement d'un enregistrement : phase vide s'il n'y
+ * en a pas, sinon snapshot, scrub, write (done octets écrits sur total) ou
+ * verify.
+ */
+export interface SaveProgress {
+    "phase": string;
+    "done": number;
+    "total": number;
+}
+
+/**
  * ScriptResult est l'issue d'un script pour l'interface.
  */
 export type ScriptResult = api$0.ScriptResult;

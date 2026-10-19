@@ -46,6 +46,7 @@ export type {
     RightsTable,
     RightsView,
     SalvageResult,
+    SaveProgress,
     ScriptResult,
     Setting,
     ShareRequest,
