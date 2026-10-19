@@ -55,6 +55,10 @@ func main() {
 	}
 	config.Init(context.Background(), sets)
 
+	// --dev (développement) : interface servie par Vite, sans rebâtir Svelte.
+	cliArgs, stopDev := devFrontend(cliArgs)
+	defer stopDev()
+
 	documents := &bridge.DocumentService{}
 	bridge.WatchPanics(documents)
 	// -h, --help : l'aide dans le terminal, sans ouvrir la fenêtre ; une
@@ -191,7 +195,9 @@ func main() {
 		})
 	}
 
-	if err := app.Run(); err != nil {
+	err = app.Run()
+	stopDev()
+	if err != nil {
 		log.Fatal(err)
 	}
 }
