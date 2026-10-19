@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clearPatch, formatNumber, formatStat, isNumericText, mergeStyles, painterPatch, parseStyle, resolveStyle, styledNumber, STYLE_KEYS } from './style';
+import { boxStyle, clearPatch, formatNumber, formatStat, isNumericText, mergeStyles, painterPatch, parseStyle, resolveStyle, styledNumber, STYLE_KEYS } from './style';
 
 describe('mise en forme', () => {
 	it('lit et fusionne les styles', () => {
@@ -57,5 +57,34 @@ describe('barre d’état', () => {
 		expect(formatStat(30.238333, { dp: 2 })).toBe('30,24');
 		expect(nb(formatStat(1234.5, { nf: '€' }))).toBe('1 234,50 €');
 		expect(formatStat(0.256, { nf: '%' })).toMatch(/^25,6\s?%$/);
+	});
+});
+
+describe('cellule faite de plusieurs cellules (bande des groupes)', () => {
+	it('sans mise en forme : rien', () => {
+		expect(boxStyle([[undefined, undefined, undefined]])).toBeUndefined();
+	});
+
+	it('Contour sur la bande et ses sous-en-têtes : le tour de la cellule de la bande', () => {
+		// Contour posé sur la bande (une ligne, trois colonnes) au-dessus des en-têtes :
+		// haut sur toute la ligne, gauche sur la première colonne, droite sur la dernière.
+		const band = [{ bt: true, bl: true }, { bt: true }, { bt: true, br: true }];
+		expect(boxStyle([band])).toEqual({ bt: true, bl: true, br: true });
+	});
+
+	it('colonne sur un niveau : haut de la bande, bas de l’en-tête', () => {
+		expect(boxStyle([[{ bt: true, bl: true, br: true }], [{ bb: true, bl: true, br: true }]])).toEqual({ bt: true, bb: true, bl: true, br: true });
+		// Bords intérieurs ignorés : le bas de la bande est à l'intérieur de la cellule.
+		expect(boxStyle([[{ bb: true }], [undefined]])).toBeUndefined();
+	});
+
+	it('la première cellule qui définit une propriété l’emporte', () => {
+		expect(boxStyle([[{ bg: '#ff0000' }, { bg: '#00ff00', i: true }]])).toEqual({ bg: '#ff0000', i: true });
+		// Ancienne mise en forme posée sur l'en-tête seul : reprise par la cellule entière.
+		expect(boxStyle([[undefined], [{ bg: '#00ff00', wr: true }]])).toEqual({ bg: '#00ff00', wr: true });
+	});
+
+	it('couleur des bordures', () => {
+		expect(boxStyle([[{ fg: '#111111' }, { br: true, bc: '#ff0000' }]])).toEqual({ fg: '#111111', br: true, bc: '#ff0000' });
 	});
 });

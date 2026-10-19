@@ -16,9 +16,9 @@
 	import { DEFAULT_NAME_HINT, isDefaultTableName } from './defaultname';
 	import { ease, flashAlpha, lerpBar, motionAt, progress, reducedMotion, sameBar, shiftAxis, tableMotions, zeroBar, type AxisLike, type BarSpan, type Geo, type LinesShift, type Motion } from './anim';
 	import { followClip, overlaps, parseTSV, pasteArea, richClip, sameClipText, tileBlock, toTSV, type Clip, type Rect as ClipRect } from './clipboard';
-	import { formatStat, isNumericText, painterPatch, parseStyle, resolveStyle, type CellStyle, type StyleLayer } from './style';
+	import { boxStyle, formatStat, isNumericText, painterPatch, parseStyle, resolveStyle, type CellStyle, type StyleLayer } from './style';
 	import { formatCell } from './numfmt';
-	import { autoHeight, cellFont, fontPx, lineHeight, wrapLines } from './textwrap';
+	import { autoHeight, BASE_PX, cellFont, fontPx, headerHeight, headerTextWidth, lineHeight, wrapLines } from './textwrap';
 	import { AutoRows } from './rowfit';
 	import { stepZoom } from './zoom';
 	import { panes, reveal, revealWhole, toGrid, type Pane } from './panes';
@@ -978,7 +978,7 @@
 		// Données ou mise en forme changées : les lignes de tableau affichées se
 		// remesurent (elles gardent leur hauteur d'ici là, sans clignoter).
 		if (back) autoRows.clear();
-		else autoRows.forgetAll((r) => entries.some((e) => r > e.t.row && r <= e.t.row + e.t.rows));
+		else autoRows.forgetAll((r) => entries.some((e) => r >= topRow(e.t) && r <= e.t.row + e.t.rows));
 		autoRows.free = measureHeights();
 		rebuildRows();
 		if (back) {
@@ -1105,7 +1105,15 @@
 		const rowSt = sheetRowStyles.get(r);
 		const rowFit = !!rowSt && ('wr' in rowSt || 'fs' in rowSt);
 		for (const e of entries) {
-			if (r <= e.t.row || r > e.t.row + e.t.rows) continue;
+			if (r === e.t.row) {
+				h = Math.max(h, measureHeader(e));
+				continue;
+			}
+			if (e.t.twoLevel && r === e.t.row - 1) {
+				h = Math.max(h, measureBand(e));
+				continue;
+			}
+			if (r < e.t.row || r > e.t.row + e.t.rows) continue;
 			const row = e.cache.row(r - e.t.row - 1);
 			if (!row) return undefined;
 			const cs = colStyles.get(e.t.id);
@@ -1118,6 +1126,68 @@
 		}
 		return h;
 	}
+
+	/**
+	 * Hauteur nécessaire à l'en-tête d'un tableau dont des noms renvoient à la
+	 * ligne (0 : la hauteur par défaut suffit). Une colonne sur un niveau
+	 * (bande et en-tête réunis) profite déjà de la hauteur de la bande.
+	 */
+	function measureHeader(e: Entry): number {
+		let h = 0;
+		for (let i = 0; i < e.t.columns.length; i++) {
+			const c = e.t.col + i;
+			const cw = cax().size(c);
+			const single = singleCol(e, i) && !!rh(e.t.row - 1);
+			const hs = single ? bandStyle(e, i, i) : styleAt(e.t.row, c, e);
+			if (!cw || !hs?.wr) continue;
+			const label = single ? e.t.columns[i].name : headerLabel(e.t.columns[i].name, e.t.twoLevel);
+			let need = headNeed(label, headerTextWidth(cw, headIconW.get(`${e.t.id}:${i}`) ?? HEAD_ICON_W), hs);
+			if (single) need -= rh(e.t.row - 1);
+			h = Math.max(h, need);
+		}
+		return Math.min(MAX_AUTO_H, h > ROW_H ? h : 0);
+	}
+
+	/** Hauteur nécessaire à la bande des groupes d'un tableau dont des groupes renvoient à la ligne (0 : la hauteur par défaut suffit). */
+	function measureBand(e: Entry): number {
+		let h = 0;
+		for (const s of groupSpans(e.t.columns.map((k) => k.name))) {
+			if (!s.group) continue;
+			const st = bandStyle(e, s.i0, s.i1);
+			const sw = cax().offset(e.t.col + s.i1 + 1) - cax().offset(e.t.col + s.i0);
+			if (sw > 0 && st?.wr) h = Math.max(h, headNeed(s.group, sw - 12, st));
+		}
+		return Math.min(MAX_AUTO_H, h > ROW_H ? h : 0);
+	}
+
+	/** Hauteur d'un nom d'en-tête renvoyé à la ligne dans width (police de l'en-tête). */
+	function headNeed(label: string, width: number, st: CellStyle): number {
+		measurer ??= document.createElement('canvas').getContext('2d');
+		if (!measurer) return 0;
+		const m = measurer;
+		m.font = (st.i ? 'italic ' : '') + FONT_BOLD;
+		return headerHeight(label, width, st, (t) => m.measureText(t).width);
+	}
+
+	/**
+	 * Style d'une cellule de la bande des groupes (colonnes i0 à i1 du
+	 * tableau), ou d'une colonne sur un niveau (i0 = i1, bande et en-tête
+	 * réunis) : la mise en forme posée par le ruban sur ses cellules (voir
+	 * boxStyle), par-dessus l'aspect par défaut d'un en-tête.
+	 */
+	function bandStyle(e: Entry, i0: number, i1: number): CellStyle | undefined {
+		const r = e.t.row - 1;
+		const band: (CellStyle | undefined)[] = [];
+		for (let i = i0; i <= i1; i++) band.push(styleAt(r, e.t.col + i, undefined));
+		if (i0 === i1 && singleCol(e, i0)) return boxStyle([band, [styleAt(e.t.row, e.t.col + i0, e)]]);
+		return boxStyle([band]);
+	}
+
+	// Largeur des boutons de l'en-tête de chaque colonne (posée au dessin,
+	// lue à la mesure de la hauteur des en-têtes renvoyés à la ligne) ; avant
+	// le premier dessin, une largeur habituelle.
+	const headIconW = new Map<string, number>();
+	const HEAD_ICON_W = 34;
 
 	/** Mesure les lignes de tableau affichées pas encore mesurées et ajuste l'axe des lignes (seulement les lignes changées). */
 	function fitVisibleRows() {
@@ -2280,31 +2350,25 @@
 					const y = ry(r) + (mv ? mv.rowOff(r) : 0);
 					if (!rh(r)) continue; // ligne masquée
 					if (r === e.t.row) {
-						const hs = styleAt(r, c, e);
-						if (hs) borders(hs, x, y, cw, rh(r));
+						// Colonne sur un niveau : une cellule sur la bande et l'en-tête ;
+						// ses bordures et sa note sont celles de la cellule entière (singleCell).
+						const single = singleCol(e, i) && !!rh(r - 1);
+						const hs = single ? bandStyle(e, i, i) : styleAt(r, c, e);
+						if (hs && !single) borders(hs, x, y, cw, rh(r));
 						if (hs?.bg) {
 							ctx.fillStyle = hs.bg;
 							ctx.fillRect(x, y, cw, rh(r));
 						}
-						if (hs?.nt) noteCorner(x + cw, y, hs);
+						if (hs?.nt && !single) noteCorner(x + cw, y, hs);
 						const iconW = headIcons(e, i, x, y, cw, rh(r));
+						noteHeadIcons(e, i, iconW, hs);
 						// Colonne sur un niveau : son nom s'écrit sur la bande et l'en-tête
 						// réunis (drawGroupBands, qui passe après le quadrillage).
-						if (singleCol(e, i) && rh(r - 1)) {
+						if (single) {
 							singleIcons.set(`${e.t.id}:${i}`, iconW);
 							continue;
 						}
-						ctx.save();
-						ctx.beginPath();
-						ctx.rect(x, y, cw - iconW - 10, rh(r));
-						ctx.clip();
-						ctx.font = (hs?.i ? 'italic ' : '') + FONT_BOLD;
-						ctx.fillStyle = hs?.fg ?? (e.t.query ? C.linkHeadText : C.headText);
-						ctx.textAlign = 'left';
-						const label = ellipsize(headerLabel(col.name, e.t.twoLevel), cw - iconW - 16);
-						ctx.fillText(label, x + 6, y + rh(r) / 2);
-						if (hs?.u) ctx.fillRect(x + 6, y + rh(r) / 2 + 7, ctx.measureText(label).width, 1);
-						ctx.restore();
+						headLabel(headerLabel(col.name, e.t.twoLevel), x, y, cw, rh(r), iconW + 10, hs, e.t.query ? C.linkHeadText : C.headText, 'left');
 						continue;
 					}
 					const row = e.cache.row(r - e.t.row - 1);
@@ -2579,7 +2643,6 @@
 		ctx.restore();
 		drawMerges(L);
 		drawGroupBands(L);
-		strokeBorders();
 
 		ctx.save();
 		ctx.beginPath();
@@ -2616,6 +2679,9 @@
 			}
 			ctx.restore();
 		}
+		// Bordures posées par le ruban : par-dessus le cadre discret des
+		// tableaux (un Contour sur un en-tête ou sa bande reste visible).
+		strokeBorders();
 		// Sauts de page (Affichage › Sauts de page) : pointillés fins, plus
 		// marqués pour un saut manuel, et la zone imprimée encadrée.
 		if (pageBreaks) {
@@ -3109,27 +3175,22 @@
 					continue;
 				}
 				if (r < r0) continue;
-				ctx.fillStyle = e.t.query ? C.linkHead : C.head;
+				// Aspect d'un en-tête (fond, quadrillage, gras), sous la mise en
+				// forme posée par le ruban sur ses cellules (fond, bordures, police…).
+				const st = bandStyle(e, s.i0, s.i1);
+				ctx.fillStyle = st?.bg ?? (e.t.query ? C.linkHead : C.head);
 				ctx.fillRect(x, y, sw, rh(r));
 				// Dans la sélection (sauf la cellule active) : surlignée comme l'en-tête.
 				if (many && r >= s0 && r <= s1 && b >= k0 && a <= k1 && !(ar.r0 === r && ar.c0 === a)) {
 					ctx.fillStyle = C.select;
 					ctx.fillRect(cx(Math.max(a, k0)), y, spanW(Math.max(a, k0), Math.min(b, k1)), rh(r));
 				}
-				ctx.strokeStyle = e.t.query ? C.linkBorder : C.border;
+				ctx.strokeStyle = C.grid;
 				ctx.lineWidth = 1;
 				ctx.strokeRect(Math.round(x) - 0.5, Math.round(y) - 0.5, sw, rh(r));
-				if (!s.group) continue;
-				ctx.save();
-				ctx.beginPath();
-				ctx.rect(x, y, sw, rh(r));
-				ctx.clip();
-				ctx.font = FONT_BOLD;
-				ctx.fillStyle = e.t.query ? C.linkHeadText : C.headText;
-				ctx.textAlign = 'center';
-				ctx.textBaseline = 'middle';
-				ctx.fillText(ellipsize(s.group, sw - 12), x + sw / 2, y + rh(r) / 2);
-				ctx.restore();
+				if (st) borders(st, x, y, sw, rh(r));
+				if (st?.nt) noteCorner(x + sw, y, st);
+				if (s.group) headLabel(s.group, x, y, sw, rh(r), 6, st, e.t.query ? C.linkHeadText : C.headText, 'center');
 			}
 		}
 	}
@@ -3146,7 +3207,7 @@
 		const c = e.t.col + i;
 		const hr = e.t.row;
 		const h2 = rh(hr - 1) + rh(hr);
-		const hs = styleAt(hr, c, e);
+		const hs = bandStyle(e, i, i);
 		ctx.fillStyle = e.t.query ? C.linkHead : C.head;
 		ctx.fillRect(x, y, w, rh(hr - 1));
 		if (hs?.bg) {
@@ -3157,22 +3218,60 @@
 			ctx.fillStyle = C.select;
 			ctx.fillRect(x, y, w, rh(hr - 1));
 		}
-		ctx.strokeStyle = e.t.query ? C.linkBorder : C.border;
+		ctx.strokeStyle = C.grid;
 		ctx.lineWidth = 1;
 		ctx.strokeRect(Math.round(x) - 0.5, Math.round(y) - 0.5, w, h2);
+		if (hs) borders(hs, x, y, w, h2);
+		if (hs?.nt) noteCorner(x + w, y, hs);
 		const iw = singleIcons.get(`${e.t.id}:${i}`) ?? 0;
+		headLabel(e.t.columns[i].name, x, y, w, h2, iw + 10, hs, e.t.query ? C.linkHeadText : C.headText, 'left');
+	}
+
+	/**
+	 * Nom d'un en-tête de tableau ou d'un groupe de la bande, en gras, entre
+	 * 6 px à gauche et right px à droite (ses boutons) : raccourci avec « … »,
+	 * ou renvoyé à la ligne (wr) sur la hauteur de l'en-tête (grandie par
+	 * measureHeader, measureBand). Couleur, italique, souligné, barré et
+	 * alignements de la mise en forme l'emportent sur l'aspect par défaut.
+	 */
+	function headLabel(text: string, x: number, y: number, w: number, h: number, right: number, hs: CellStyle | undefined, color: string, align: 'left' | 'center') {
+		const avail = Math.max(8, w - 6 - right);
 		ctx.save();
 		ctx.beginPath();
-		ctx.rect(x, y, Math.max(0, w - iw - 10), h2);
+		ctx.rect(x, y, Math.max(0, w - right), h);
 		ctx.clip();
 		ctx.font = (hs?.i ? 'italic ' : '') + FONT_BOLD;
-		ctx.fillStyle = hs?.fg ?? (e.t.query ? C.linkHeadText : C.headText);
-		ctx.textAlign = 'left';
+		ctx.fillStyle = hs?.fg ?? color;
+		const al = hs?.al ?? align;
+		ctx.textAlign = al;
 		ctx.textBaseline = 'middle';
-		const label = ellipsize(e.t.columns[i].name, w - iw - 16);
-		ctx.fillText(label, x + 6, y + h2 / 2);
-		if (hs?.u) ctx.fillRect(x + 6, y + h2 / 2 + 7, ctx.measureText(label).width, 1);
+		const lines = hs?.wr ? wrapLines(text, avail, (t) => ctx.measureText(t).width) : [ellipsize(text, w - 6 - right)];
+		const lh = lineHeight(BASE_PX);
+		const total = lines.length * lh;
+		const top = hs?.va === 'top' ? y + 2 : hs?.va === 'bottom' ? y + h - 2 - total : y + (h - total) / 2;
+		const tx = al === 'left' ? x + 6 : al === 'right' ? x + 6 + avail : x + 6 + avail / 2;
+		lines.forEach((line, k) => {
+			const cy = top + lh * k + lh / 2;
+			ctx.fillText(line, tx, cy);
+			if (hs?.u || hs?.x) {
+				const lw = ctx.measureText(line).width;
+				const lx = al === 'left' ? tx : al === 'right' ? tx - lw : tx - lw / 2;
+				if (hs.u) ctx.fillRect(lx, cy + 7, lw, 1);
+				if (hs.x) ctx.fillRect(lx, cy, lw, 1);
+			}
+		});
 		ctx.restore();
+	}
+
+	/** Boutons d'un en-tête renvoyé à la ligne plus larges ou plus étroits qu'à sa mesure : l'en-tête se remesure. */
+	function noteHeadIcons(e: Entry, i: number, iconW: number, hs: CellStyle | undefined) {
+		const k = `${e.t.id}:${i}`;
+		const before = headIconW.get(k);
+		headIconW.set(k, iconW);
+		if (hs?.wr && Math.abs((before ?? HEAD_ICON_W) - iconW) > 0.5) {
+			autoRows.forget(e.t.row, 1);
+			schedule();
+		}
 	}
 
 	/** Coin rouge d'une cellule qui a une note (en haut à droite, comme Excel). */

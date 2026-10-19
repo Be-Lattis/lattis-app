@@ -72,3 +72,23 @@ export function autoHeight(text: string, width: number, st: { wr?: boolean; fs?:
 	const h = n * lh + 4;
 	return h > def ? h : 0;
 }
+
+/**
+ * Largeur laissée au nom d'un en-tête de tableau (cw : largeur de la
+ * colonne, iconW : ses boutons à droite) : 6 px à gauche, 10 px avant les
+ * boutons.
+ */
+export function headerTextWidth(cw: number, iconW: number): number {
+	return Math.max(8, cw - iconW - 16);
+}
+
+/**
+ * Hauteur nécessaire au nom d'un en-tête de tableau (ou d'un groupe de la
+ * bande) qui renvoie à la ligne dans la largeur width (police de l'en-tête,
+ * en gras à la taille de la grille) ; 0 s'il ne renvoie pas à la ligne.
+ */
+export function headerHeight(label: string, width: number, st: { wr?: boolean } | undefined, measure: (s: string) => number): number {
+	if (!st?.wr) return 0;
+	const n = wrapLines(label, Math.max(8, width), measure).length;
+	return n * lineHeight(BASE_PX) + 4;
+}

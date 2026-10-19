@@ -601,3 +601,49 @@ func TestTwoLevelTallMerge(t *testing.T) {
 		t.Fatalf("bande : %s", got)
 	}
 }
+
+// TestTwoLevelBandStyles : la mise en forme du ruban sur la bande des
+// groupes et les en-têtes (Contour, renvoyer à la ligne) est enregistrée
+// cellule par cellule : la bande en cellules libres, les en-têtes en style
+// d'en-tête ; l'écran en fait le tour de la cellule fusionnée (boxStyle).
+func TestTwoLevelBandStyles(t *testing.T) {
+	ctx := context.Background()
+	d := twoLevelFixture(t)
+	if err := d.SetTwoLevel(ctx, "Inv", true); err != nil {
+		t.Fatal(err)
+	}
+	// Contour sur BOISEMENT (bande, ligne 2) et ses trois sous-en-têtes (ligne 3).
+	for _, s := range []struct {
+		r0, c0, r1, c1 int
+		st             Style
+	}{{2, 0, 2, 2, Style{"bt": true}}, {3, 0, 3, 2, Style{"bb": true}}, {2, 0, 3, 0, Style{"bl": true}}, {2, 2, 3, 2, Style{"br": true}}} {
+		if err := d.ApplyStyle(ctx, 1, s.r0, s.c0, s.r1, s.c1, s.st); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Renvoyer à la ligne sur un en-tête.
+	if err := d.ApplyStyle(ctx, 1, 3, 1, 3, 1, Style{"wr": true}); err != nil {
+		t.Fatal(err)
+	}
+	l, err := d.Layout(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	band := map[int]string{}
+	for _, s := range l.Styles {
+		if s.Row == 2 {
+			band[s.Col] = s.Style
+		}
+	}
+	if band[0] != `{"bl":true,"bt":true}` || band[1] != `{"bt":true}` || band[2] != `{"br":true,"bt":true}` {
+		t.Fatalf("bande : %v", band)
+	}
+	head := []string{}
+	for _, c := range l.Tables[0].Columns[:3] {
+		head = append(head, c.HeaderStyle)
+	}
+	if got := strings.Join(head, " "); got != `{"bb":true,"bl":true} {"bb":true,"wr":true} {"bb":true,"br":true}` {
+		t.Fatalf("en-têtes : %s", got)
+	}
+	check(t, d, "mise en forme de la bande")
+}

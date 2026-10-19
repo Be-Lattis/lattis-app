@@ -66,6 +66,41 @@ export function resolveStyle(...layers: (StyleLayer | undefined | null)[]): Cell
 	return Object.keys(acc).length ? (acc as CellStyle) : undefined;
 }
 
+const EDGES = ['bt', 'bb', 'bl', 'br', 'bc'] as const;
+
+/**
+ * Style d'une cellule faite de plusieurs cellules (grid[ligne][colonne]) :
+ * cellule de la bande des groupes d'un tableau sur plusieurs colonnes, ou
+ * colonne sur un niveau (bande et en-tête réunis). La mise en forme posée sur
+ * la sélection va à chaque cellule ; à l'écran, la première cellule qui
+ * définit une propriété l'emporte (en haut à gauche d'abord), et chaque bord
+ * vient des cellules de ce côté : le haut de la première ligne, la droite de
+ * la dernière colonne… (un Contour posé sur la sélection fait le tour de la
+ * cellule entière).
+ */
+export function boxStyle(grid: readonly (readonly (CellStyle | undefined)[])[]): CellStyle | undefined {
+	const rows = grid.length;
+	const cols = grid[0]?.length ?? 0;
+	if (!rows || !cols) return undefined;
+	const out: Record<string, unknown> = {};
+	const all = grid.flat();
+	for (let k = all.length - 1; k >= 0; k--) {
+		const s = all[k];
+		if (!s) continue;
+		for (const [key, v] of Object.entries(s)) if (!(EDGES as readonly string[]).includes(key)) out[key] = v;
+	}
+	const edge = {
+		bt: grid[0].filter((s) => s?.bt),
+		bb: grid[rows - 1].filter((s) => s?.bb),
+		bl: grid.map((row) => row[0]).filter((s) => s?.bl),
+		br: grid.map((row) => row[cols - 1]).filter((s) => s?.br)
+	};
+	for (const [k, from] of Object.entries(edge)) if (from.length) out[k] = true;
+	const bc = [...edge.bt, ...edge.bl, ...edge.br, ...edge.bb].find((s) => s?.bc)?.bc;
+	if (bc) out.bc = bc;
+	return resolveStyle(out as StyleLayer);
+}
+
 /** Correctif qui retire toute la mise en forme (Effacer). */
 export function clearPatch(): Record<string, null> {
 	return Object.fromEntries(STYLE_KEYS.map((k) => [k, null]));
