@@ -19,6 +19,7 @@
 	import { isWeb } from '#lib/web/platform.js';
 	import type { IconName } from '#lib/icons/icons.js';
 	import AccountMenu from '#lib/remote/AccountMenu.svelte';
+	import { windowTitle } from './doctitle.js';
 
 	interface QuickAction {
 		label: string;
@@ -30,9 +31,22 @@
 		title: string;
 		dirty?: boolean;
 		actions?: QuickAction[];
+		/** Classeur ouvert depuis un serveur : « en ligne sur LPO » (vide : fichier local). */
+		badge?: string;
+		/** Infobulle du badge (adresse du classeur sur le serveur). */
+		badgeTitle?: string;
+		offline?: boolean;
 	}
 
-	let { title, dirty = false, actions = [] }: Props = $props();
+	let { title, dirty = false, actions = [], badge = '', badgeTitle = '', offline = false }: Props = $props();
+
+	// Titre de la fenêtre du système (barre des tâches, Alt+Tab) ; onglet du
+	// navigateur pour la version web.
+	$effect(() => {
+		const t = windowTitle(title, badge);
+		if (isWeb) document.title = t;
+		else Window.SetTitle(t).catch(() => {});
+	});
 
 	let mac = $state(false);
 	let linux = $state(false);
@@ -77,6 +91,7 @@
 	</div>
 	<div class="caption title" role="presentation" ondblclick={dblclick}>
 		<span class="name">{title}</span>{#if dirty}<span class="muted" title="Modifications non enregistrées">&nbsp;•</span>{/if}
+		{#if badge}<span class="badge" class:offline title={badgeTitle || undefined}><Icon name={offline ? 'cloud-off' : 'cloud'} size={14} />{badge}</span>{/if}
 		<span class="muted">{title ? '\u00a0– Lattis' : 'Lattis'}</span>
 	</div>
 	<AccountMenu />
@@ -185,6 +200,22 @@
 	}
 	.muted {
 		opacity: 0.75;
+	}
+	.badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		flex-shrink: 0;
+		margin-left: 8px;
+		padding: 1px 7px 1px 5px;
+		border-radius: 9px;
+		background: rgba(255, 255, 255, 0.16);
+		font-size: 11px;
+		--icon-accent: #fff;
+	}
+	.badge.offline {
+		background: rgba(0, 0, 0, 0.22);
+		opacity: 0.85;
 	}
 	.controls {
 		display: flex;

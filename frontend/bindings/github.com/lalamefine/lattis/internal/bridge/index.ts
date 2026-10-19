@@ -43,6 +43,7 @@ export type {
     PreviewView,
     QueryRefresh,
     QuerySheet,
+    RecentFile,
     RightsColumn,
     RightsTable,
     RightsView,

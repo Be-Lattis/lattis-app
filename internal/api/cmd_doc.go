@@ -35,6 +35,13 @@ func (c *Call) state() (DocState, error) {
 	if st.Path != "" {
 		st.Title = strings.TrimSuffix(filepath.Base(st.Path), filepath.Ext(st.Path))
 	}
+	// Classeur ouvert depuis un serveur : son cache s'appelle
+	// <identifiant>.lattis ; le titre est celui du serveur.
+	if d.Share != nil {
+		if info := d.Share.Info(); info != nil && info.Title != "" && strings.EqualFold(st.Title, info.WorkbookID) {
+			st.Title = info.Title
+		}
+	}
 	if st.Dirty, err = d.Dirty(c); err != nil {
 		return st, err
 	}

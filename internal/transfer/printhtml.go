@@ -31,7 +31,10 @@ const (
 // &[Chemin], &[Date], &[Heure]).
 type PrintInfo struct {
 	Path string
-	Now  time.Time
+	// File, Dir remplacent le nom et le dossier tirés de Path (classeur
+	// ouvert depuis un serveur : son titre et l'adresse du serveur).
+	File, Dir string
+	Now       time.Time
 }
 
 // PrintHTML rend une feuille en pages HTML, pour l'impression et l'export
@@ -539,6 +542,9 @@ func expandHF(s string, v hfVars) string {
 	if v.info.Path != "" {
 		file = filepath.Base(v.info.Path)
 		dir = filepath.Dir(v.info.Path) + string(filepath.Separator)
+	}
+	if v.info.File != "" {
+		file, dir = v.info.File, v.info.Dir
 	}
 	return strings.NewReplacer(
 		"&&", "&",

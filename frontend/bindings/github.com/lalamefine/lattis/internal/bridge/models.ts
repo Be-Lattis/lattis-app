@@ -461,6 +461,13 @@ export interface DocState {
      * (ResolveSave).
      */
     "conflict"?: FileQuestion | null;
+
+    /**
+     * Remote : classeur ouvert depuis un Serveur Lattis (son fichier n'est
+     * qu'un cache local, jamais montré) : titre sur le serveur, serveur,
+     * adresse <serveur>/w/<id>, en ligne ou non ; nil pour un fichier local.
+     */
+    "remote"?: workbook$0.State | null;
 }
 
 /**
@@ -698,6 +705,27 @@ export interface QuerySheet {
     "sheet": number;
     "table": string;
     "state": DocState;
+}
+
+/**
+ * RecentFile est un classeur récent.
+ */
+export interface RecentFile {
+    /**
+     * Path : fichier local ; pour un classeur du serveur, son cache (jamais
+     * affiché).
+     */
+    "path": string;
+
+    /**
+     * Classeur du serveur (WorkbookID non vide) : titre, serveur, adresse
+     * <serveur>/w/<id>.
+     */
+    "title"?: string;
+    "server"?: string;
+    "serverName"?: string;
+    "workbookId"?: string;
+    "link"?: string;
 }
 
 /**

@@ -251,6 +251,16 @@ func (f *Fake) Grant(workbookID, user, role string) error {
 	return nil
 }
 
+// SetTitle renomme un classeur (titre relu par my_capabilities ; pas de
+// notification).
+func (f *Fake) SetTitle(workbookID, title string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if b := f.books[workbookID]; b != nil {
+		b.title = title
+	}
+}
+
 // Rows donne les lignes d'un tableau de la version publiée (essais) :
 // lattis_id, lattis_pos, puis les valeurs.
 func (f *Fake) Rows(workbookID, name string) [][]any {

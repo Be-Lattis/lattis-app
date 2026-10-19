@@ -140,9 +140,14 @@ func (w *worker) cycle(ctx context.Context) {
 	if full || acl {
 		// Droits relus avant l'envoi : une écriture devenue interdite est
 		// refusée en local (grille grisée, message) plutôt qu'au serveur.
+		// Le titre du classeur aussi (renommé sur le serveur).
+		title := w.e.link.State().Title
 		if changed, err := w.e.RefreshRights(ctx); err == nil && changed {
 			ev.State = true
 			ev.Notices = append(ev.Notices, RightsNotice)
+		}
+		if w.e.link.State().Title != title {
+			ev.State = true
 		}
 	}
 	rep, err := w.e.Send(ctx)

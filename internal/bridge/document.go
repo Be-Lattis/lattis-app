@@ -17,6 +17,7 @@ import (
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/remote/collab"
+	"github.com/lalamefine/lattis/internal/remote/workbook"
 )
 
 // ChangedEvent est émis après chaque modification du document : l'interface
@@ -41,6 +42,10 @@ type DocState struct {
 	// ailleurs depuis son ouverture ; l'interface demande quoi faire
 	// (ResolveSave).
 	Conflict *FileQuestion `json:"conflict,omitempty"`
+	// Remote : classeur ouvert depuis un Serveur Lattis (son fichier n'est
+	// qu'un cache local, jamais montré) : titre sur le serveur, serveur,
+	// adresse <serveur>/w/<id>, en ligne ou non ; nil pour un fichier local.
+	Remote *workbook.State `json:"remote,omitempty"`
 }
 
 // OpenResult est le résultat d'une ouverture : soit le classeur est ouvert,
@@ -230,7 +235,7 @@ func (s *DocumentService) open(ctx context.Context, path string, mode doc.OpenMo
 		return OpenResult{}, err
 	}
 	s.replace(d)
-	addRecent(path)
+	addRecentDoc(d)
 	st, err := s.State(ctx)
 	st.Notice = d.TakeOpenNotice()
 	return OpenResult{State: st}, err
@@ -310,13 +315,10 @@ func (s *DocumentService) Save(ctx context.Context, as bool) (DocState, error) {
 	switch {
 	case d.ReadOnly():
 		// Ouvert en lecture seule : une copie, sous un autre nom.
-		return s.saveAs(ctx, d, copyName(d.Path()))
+		return s.saveAs(ctx, d, docCopyName(d))
 	case as || d.Path() == "":
-		name := "Classeur.lattis"
-		if d.Path() != "" {
-			name = filepath.Base(d.Path())
-		}
-		return s.saveAs(ctx, d, name)
+		// Classeur du serveur : son titre, pas le nom de son cache.
+		return s.saveAs(ctx, d, docBaseName(d)+".lattis")
 	}
 	if err := saveDoc(ctx, d, ""); err != nil {
 		return s.saveFailed(ctx, d, err)
@@ -353,7 +355,7 @@ func (s *DocumentService) ResolveSave(ctx context.Context, overwrite bool) (DocS
 		return DocState{}, err
 	}
 	if !overwrite {
-		return s.saveAs(ctx, d, copyName(d.Path()))
+		return s.saveAs(ctx, d, docCopyName(d))
 	}
 	if err := d.Overwrite(ctx); err != nil {
 		return DocState{}, err
@@ -365,10 +367,11 @@ func (s *DocumentService) ResolveSave(ctx context.Context, overwrite bool) (DocS
 func (s *DocumentService) saveAs(ctx context.Context, d *doc.Document, name string) (DocState, error) {
 	var werr error
 	p, err := s.sys().SaveFile(FileDialog{
-		Title:    "Enregistrer le classeur",
-		Filename: name,
-		Filters:  []FileFilter{{"Classeur Lattis", "*.lattis"}},
-		Ext:      ".lattis",
+		Title:     "Enregistrer le classeur",
+		Filename:  name,
+		Directory: docFolder(d),
+		Filters:   []FileFilter{{"Classeur Lattis", "*.lattis"}},
+		Ext:       ".lattis",
 	}, func(p string) error {
 		werr = saveDoc(ctx, d, p)
 		return werr
@@ -395,13 +398,27 @@ func (s *DocumentService) saveFailed(ctx context.Context, d *doc.Document, err e
 }
 
 func (s *DocumentService) saved(ctx context.Context, d *doc.Document) (DocState, error) {
-	addRecent(d.Path())
+	addRecentDoc(d)
 	// Sources du Data Lake envoyées à chaque enregistrement (en arrière-plan).
 	s.pushOnSave(d)
 	if s.listening(api.EventSave) {
 		s.fireAsync(api.EventSave, map[string]any{"path": d.Path()})
 	}
-	return s.changed(ctx)
+	st, err := s.changed(ctx)
+	// Classeur du serveur : ce qui est arrivé au serveur, pas le chemin du
+	// cache (l'interface montre sinon « Enregistré : <chemin> »).
+	if st.Remote != nil && st.Notice == "" && !st.Dirty {
+		st.Notice = remoteSavedNotice(st.Remote)
+	}
+	return st, err
+}
+
+// docCopyName propose le nom d'une copie du classeur d.
+func docCopyName(d *doc.Document) string {
+	if remoteDoc(d) != nil {
+		return docBaseName(d) + " (copie).lattis"
+	}
+	return copyName(d.Path())
 }
 
 // copyName propose le nom d'une copie : « Ventes.lattis » → « Ventes
@@ -428,6 +445,10 @@ func (s *DocumentService) State(ctx context.Context) (DocState, error) {
 	st := DocState{Open: true, Path: d.Path(), Title: "Classeur sans titre"}
 	if st.Path != "" {
 		st.Title = strings.TrimSuffix(filepath.Base(st.Path), filepath.Ext(st.Path))
+	}
+	// Classeur du serveur : son titre sur le serveur, pas le nom du cache.
+	if st.Remote = remoteDoc(d); st.Remote != nil {
+		st.Title = st.Remote.Title
 	}
 	// Moteur d'une session web : les chemins du serveur ne sont pas montrés.
 	if HidePaths && st.Path != "" {

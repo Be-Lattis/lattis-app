@@ -11,7 +11,8 @@
 	import { reportIssue } from '#lib/shell/report.js';
 	import { Events } from '@wailsio/runtime';
 	import { DocumentService, GridService } from '#bindings/internal/bridge/index.js';
-	import type { DamagedFile, DocState, FileQuestion, FormulaHelp, OpenResult } from '#bindings/internal/bridge/models.js';
+	import type { DamagedFile, DocState, FileQuestion, FormulaHelp, OpenResult, RecentFile } from '#bindings/internal/bridge/models.js';
+	import { docFile, docFileName, recentDetail, recentKey, recentLabel, recentRemote, remoteBadge, savedNotice } from '#lib/shell/doctitle.js';
 	import type { Layout, RuleChanges } from '#bindings/internal/canvas/models.js';
 	import type { Type } from '#bindings/internal/grid/models.js';
 	import type { Orphan } from '#bindings/internal/archive/models.js';
@@ -158,7 +159,7 @@
 	let docFmt = $state<DocFormat | null>(null);
 	// Requêtes favorites de l'onglet SQL, enregistrées dans le classeur.
 	let favorites = $state<Favorite[]>([]);
-	let recent = $state<string[]>([]);
+	let recent = $state<RecentFile[]>([]);
 	// Fermer un classeur modifié : enregistrer d'abord ?
 	let closing = $state(false);
 	// Fermeture de la fenêtre en cours : une fois le classeur fermé, on quitte.
@@ -436,14 +437,14 @@
 
 	/** Données › Regrouper des onglets… : le plus grand groupe trouvé, même peu sûr. */
 	function openMergeMenu() {
-		openMerge(similar[0] ? initialPlan(similar[0], docState.path || docState.title) : null, similar[0] ?? null).catch((e) => (notice = err(e)));
+		openMerge(similar[0] ? initialPlan(similar[0], docFile(docState)) : null, similar[0] ?? null).catch((e) => (notice = err(e)));
 	}
 
 	/** Clic droit sur des onglets › Regrouper des onglets… */
 	async function openMergeFor(ids: number[]) {
 		const all = await workbookTables();
 		const names = new Map((layout?.sheets ?? []).map((s) => [s.id, s.name]));
-		const plan = planForSheets(similar, ids, (id) => all.filter((t) => t.sheet === names.get(id)).map((t) => t.table), docState.path || docState.title);
+		const plan = planForSheets(similar, ids, (id) => all.filter((t) => t.sheet === names.get(id)).map((t) => t.table), docFile(docState));
 		if (!plan) {
 			notice = 'Ces onglets n’ont pas de tableaux à regrouper (il en faut au moins deux, aux mêmes colonnes)';
 			return;
@@ -601,6 +602,28 @@
 		await opened(await DocumentService.Open(path));
 	}
 
+	/**
+	 * Ouvre un récent : un classeur du serveur se rouvre depuis le serveur
+	 * (connexion d'abord si besoin) ; serveur injoignable, sa copie locale
+	 * s'ouvre (hors ligne, lecture seule).
+	 */
+	async function openRecent(r: RecentFile) {
+		if (!recentRemote(r)) return openPath(r.path);
+		const server = r.server ?? '';
+		await loadLattis();
+		if (!(lattis.state.servers ?? []).find((s) => s.url === server)?.user && !(await requestLogin(server))) return;
+		let res;
+		try {
+			res = await DocumentService.ShareOpen(server, r.workbookId ?? '', r.title ?? '');
+		} catch (e) {
+			if (!r.path) throw e;
+			await openPath(r.path);
+			notice = `Copie locale ouverte : ${err(e)}`;
+			return;
+		}
+		await openedRemote(res);
+	}
+
 	/** Classeur ouvert sur un autre poste : en lecture seule, ou quand même (readOnly faux). */
 	async function openLocked(path: string | null, readOnly: boolean) {
 		locked = null;
@@ -669,7 +692,7 @@
 			quitting = false; // copie annulée
 			return;
 		}
-		notice = `Enregistré : ${docState.path}`;
+		notice = savedNotice(docState);
 		await loadRecent();
 		if (c.close) await closeDoc(false);
 	}
@@ -1174,8 +1197,7 @@
 					if (mode !== 'doc') return;
 					docState = await saving(() => DocumentService.Save(a === 'saveAs'));
 					if (docState.conflict) conflict = { ...docState.conflict, close: false };
-					else if (docState.notice) notice = docState.notice;
-					else if (!docState.dirty) notice = `Enregistré : ${docState.path}`;
+					else if (docState.notice || !docState.dirty) notice = savedNotice(docState);
 					await loadRecent();
 					break;
 				case 'import': {
@@ -1844,6 +1866,9 @@
 <div class="app">
 	<TitleBar
 		{title}
+		badge={mode === 'doc' ? remoteBadge(docState) : ''}
+		badgeTitle={mode === 'doc' && docState.remote ? docState.remote.link : ''}
+		offline={mode === 'doc' && !!docState.remote && !docState.remote.online}
 		dirty={mode === 'doc' && docState.dirty}
 		actions={[
 			{ label: 'Enregistrer (Ctrl+S)', icon: 'save', run: mode === 'doc' ? () => file('save') : undefined },
@@ -1855,7 +1880,7 @@
 		{view}
 		disabled={mode !== 'doc' && mode !== 'demo'}
 		{recent}
-		onrecent={(p) => openPath(p).catch((e) => (notice = err(e)))}
+		onrecent={(r) => openRecent(r).catch((e) => (notice = err(e)))}
 		undo={mode === 'doc' ? docState.undo : ''}
 		redo={mode === 'doc' ? docState.redo : ''}
 		ai={aiChat.open}
@@ -2011,8 +2036,8 @@
 				{#if recent.length}
 					<div class="recent">
 						<p class="muted">Récents</p>
-						{#each recent as p (p)}
-							<button class="link" title={p} onclick={() => openPath(p).catch((e) => (notice = err(e)))}>{p.split(/[\\/]/).pop()}</button>
+						{#each recent as r (recentKey(r))}
+							<button class="link" title={recentDetail(r)} onclick={() => openRecent(r).catch((e) => (notice = err(e)))}>{recentLabel(r)}</button>
 						{/each}
 					</div>
 				{/if}
@@ -2316,7 +2341,7 @@
 		onrefused={(m) => (notice = m)}
 		onchoice={mode === 'doc' ? choiceActions : undefined}
 		similar={mode === 'doc' ? tabGroups.map((g, i) => ({ sheets: groupSheets(g).map((x) => x.sheet), color: GROUP_COLORS[i % GROUP_COLORS.length], label: chipLabel(g) })) : []}
-		onmergegroup={(i) => openMerge(initialPlan(tabGroups[i], docState.path || docState.title), tabGroups[i]).catch((e) => (notice = err(e)))}
+		onmergegroup={(i) => openMerge(initialPlan(tabGroups[i], docFile(docState)), tabGroups[i]).catch((e) => (notice = err(e)))}
 		ondismissgroup={(i) => dismissGroup(tabGroups[i])}
 		onmergesheets={mode === 'doc' && !layout?.workbookProtected ? (ids) => openMergeFor(ids).catch((e) => (notice = err(e))) : undefined}
 	/>
@@ -2338,7 +2363,7 @@
 		<PageSetupDialog
 			setup={layout.pageSetup}
 			sheet={activeInfo?.name ?? ''}
-			file={docState.path ? (docState.path.split(/[\\/]/).pop() ?? '') : docState.title}
+			file={docFileName(docState)}
 			selection={sheet?.selectedRange()}
 			tab={pageDlg}
 			onapply={(p) => {
@@ -2610,8 +2635,8 @@
 		{#if mergeOffer && mode === 'doc'}
 			{@const g = mergeOffer}
 			<!-- Bulle d'information, une seule fois (§4.1) : « Plus tard » la ferme, la puce reste sous les onglets. -->
-			<span class="offer" role="status">{offerText(g, docState.path || docState.title)}</span>
-			<button class="offer-act" onclick={() => openMerge(initialPlan(g, docState.path || docState.title), g).catch((e) => (notice = err(e)))}>Regrouper…</button>
+			<span class="offer" role="status">{offerText(g, docFile(docState))}</span>
+			<button class="offer-act" onclick={() => openMerge(initialPlan(g, docFile(docState)), g).catch((e) => (notice = err(e)))}>Regrouper…</button>
 			<button class="offer-act" onclick={() => (mergeOffer = null)}>Plus tard</button>
 			<button class="offer-act" onclick={() => dismissGroup(g)}>Ne plus proposer</button>
 		{/if}

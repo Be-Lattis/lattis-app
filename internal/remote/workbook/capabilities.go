@@ -113,7 +113,9 @@ func capabilitiesSnapshot(ctx context.Context, q interface {
 // _lattis_capabilities, avec ses rôles (Info.Roles), puis met link à jour.
 // Appelé à la (re)connexion et sur la notification NoticeACL. Un
 // utilisateur qui n'a plus accès au classeur (42501) voit tous ses
-// tableaux publiés passer au niveau « aucun ». Rend vrai si les droits ont
+// tableaux publiés passer au niveau « aucun ». Le titre du classeur
+// (renommé sur le serveur) est relu au passage : link est mis à jour, sans
+// compter comme un changement de droits. Rend vrai si les droits ont
 // changé.
 func RefreshCapabilities(ctx context.Context, srv Server, link *Link) (bool, error) {
 	db := link.db
@@ -150,7 +152,7 @@ func RefreshCapabilities(ctx context.Context, srv Server, link *Link) (bool, err
 			caps.Tables[rid] = TableAccess{Level: LevelNone}
 		}
 	}
-	changed := false
+	changed, titled := false, false
 	err = db.Write(ctx, func(tx *sql.Tx) error {
 		before, err := capabilitiesSnapshot(ctx, tx)
 		if err != nil {
@@ -166,10 +168,18 @@ func RefreshCapabilities(ctx context.Context, srv Server, link *Link) (bool, err
 		}
 		if !slices.Equal(cur.Roles, roles) {
 			cur.Roles = roles
+			changed = true
+		}
+		// Titre changé sur le serveur (vide : serveur d'avant la migration
+		// 0007, ou accès retiré).
+		if caps.Title != "" && caps.Title != cur.Title {
+			cur.Title = caps.Title
+			titled = true
+		}
+		if changed || titled {
 			if err := writeInfo(ctx, tx, cur); err != nil {
 				return err
 			}
-			changed = true
 		}
 		if err := writeCapabilities(ctx, tx, cur, &caps, local); err != nil {
 			return err
@@ -179,7 +189,7 @@ func RefreshCapabilities(ctx context.Context, srv Server, link *Link) (bool, err
 			return err
 		}
 		changed = changed || before != after
-		if !changed {
+		if !changed && !titled {
 			return errUnchanged // rien de changé : transaction défaite
 		}
 		return nil
@@ -190,8 +200,8 @@ func RefreshCapabilities(ctx context.Context, srv Server, link *Link) (bool, err
 	if err != nil {
 		return false, err
 	}
-	if changed {
-		return true, link.Reload(ctx)
+	if changed || titled {
+		return changed, link.Reload(ctx)
 	}
 	return false, nil
 }

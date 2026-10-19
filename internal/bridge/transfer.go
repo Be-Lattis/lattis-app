@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/transfer"
 )
 
@@ -66,7 +67,7 @@ func (s *DocumentService) ExportCSV(ctx context.Context, table string) (string, 
 	return s.sys().SaveFile(FileDialog{
 		Title:     "Exporter le tableau " + table,
 		Filename:  table + ".csv",
-		Directory: docDir(d.Path()),
+		Directory: docFolder(d),
 		Filters:   []FileFilter{{"CSV", "*.csv"}},
 		Ext:       ".csv",
 	}, func(p string) error {
@@ -85,7 +86,7 @@ func (s *DocumentService) ExportSheetCSV(ctx context.Context, sheet int64, name 
 	return s.sys().SaveFile(FileDialog{
 		Title:     "Exporter la feuille " + name,
 		Filename:  name + ".csv",
-		Directory: docDir(d.Path()),
+		Directory: docFolder(d),
 		Filters:   []FileFilter{{"CSV", "*.csv"}},
 		Ext:       ".csv",
 	}, func(p string) error {
@@ -100,7 +101,7 @@ func (s *DocumentService) PrintHTML(ctx context.Context, sheet int64) (string, e
 	if err != nil {
 		return "", err
 	}
-	return transfer.PrintHTML(ctx, d.Model, sheet, transfer.PrintInfo{Path: d.Path()})
+	return transfer.PrintHTML(ctx, d.Model, sheet, printInfo(d))
 }
 
 // PageBreaks donne les sauts de page d'une feuille (traits pointillés de la
@@ -142,16 +143,13 @@ func (s *DocumentService) exportBook(ctx context.Context, ext, title string, fil
 	if err != nil {
 		return XLSXExport{}, err
 	}
-	name := "Classeur" + ext
-	if d.Path() != "" {
-		base := filepath.Base(d.Path())
-		name = strings.TrimSuffix(base, filepath.Ext(base)) + ext
-	}
+	// Classeur du serveur : son titre, pas le nom de son cache.
+	name := docBaseName(d) + ext
 	var rep transfer.ExportReport
 	p, err := s.sys().SaveFile(FileDialog{
 		Title:     title,
 		Filename:  name,
-		Directory: docDir(d.Path()),
+		Directory: docFolder(d),
 		Filters:   []FileFilter{filter},
 		Ext:       ext,
 	}, func(p string) (err error) {
@@ -159,6 +157,16 @@ func (s *DocumentService) exportBook(ctx context.Context, ext, title string, fil
 		return err
 	})
 	return XLSXExport{Path: p, Clipped: rep.Clipped, Report: rep}, err
+}
+
+// printInfo : fichier cité par l'en-tête et le pied de page (&[Fichier],
+// &[Chemin]) ; pour un classeur du serveur, son titre et l'adresse du
+// serveur, pas le cache local.
+func printInfo(d *doc.Document) transfer.PrintInfo {
+	if r := remoteDoc(d); r != nil {
+		return transfer.PrintInfo{File: r.Title, Dir: strings.TrimRight(r.Server, "/") + "/"}
+	}
+	return transfer.PrintInfo{Path: d.Path()}
 }
 
 // docDir est le dossier du classeur enregistré, "" sinon.

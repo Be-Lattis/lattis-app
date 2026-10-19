@@ -162,6 +162,8 @@ export const icons = {
 	// (resté sur ce poste). En tracés seulement : dessinées sur le canvas
 	// de la grille (en-têtes).
 	readonly: '<path d="M6.5 10.5h11a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19v-7a1.5 1.5 0 0 1 1.5-1.5z"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><path class="a" d="M12 14.5v2.5"/>',
+	cloud: '<path d="M7 18.5h10.5a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.6 9.1 4.75 4.75 0 0 0 7 18.5z"/>',
+	'cloud-off': '<path d="M7 18.5h10.5a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.6 9.1 4.75 4.75 0 0 0 7 18.5z"/><path class="a" d="M4 4l16 16"/>',
 	local: '<path d="M5.5 5h13A1.5 1.5 0 0 1 20 6.5V16H4V6.5A1.5 1.5 0 0 1 5.5 5z"/><path class="a" d="M2.5 19h19"/>',
 	'lock-sheet': '<rect x="3.5" y="3.5" width="13" height="15" rx="1.5"/><path d="M3.5 8h13M8 3.5v15"/><rect class="af" x="12.5" y="14" width="9" height="7" rx="1"/><path class="a" d="M14.5 14v-1.5a2.5 2.5 0 0 1 5 0V14"/>',
 	'lock-book': '<path d="M5 3.5h10A1.5 1.5 0 0 1 16.5 5v8M5 3.5A1.5 1.5 0 0 0 3.5 5v14A1.5 1.5 0 0 0 5 20.5h6M7 3.5v17"/><rect class="af" x="12.5" y="14" width="9" height="7" rx="1"/><path class="a" d="M14.5 14v-1.5a2.5 2.5 0 0 1 5 0V14"/>',

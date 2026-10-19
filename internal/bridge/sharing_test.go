@@ -65,11 +65,13 @@ func TestShareFrozenWorkbook(t *testing.T) {
 	ctx := context.Background()
 	fake := workbooktest.New()
 	users := map[string]string{}
-	oldServer, oldDir, oldRetry := shareServer, shareCacheDir, shareRetry
+	oldServer, oldDir, oldRetry, oldRecent := shareServer, shareCacheDir, shareRetry, recentFile
 	cache := t.TempDir()
 	shareCacheDir = func() (string, error) { return cache, nil }
 	shareRetry = 20 * time.Millisecond
-	t.Cleanup(func() { shareServer, shareCacheDir, shareRetry = oldServer, oldDir, oldRetry })
+	recent := filepath.Join(t.TempDir(), "recent.json")
+	recentFile = func() (string, error) { return recent, nil }
+	t.Cleanup(func() { shareServer, shareCacheDir, shareRetry, recentFile = oldServer, oldDir, oldRetry, oldRecent })
 	// Le service « courant » de l'appel dit l'utilisateur.
 	var current atomic.Value
 	shareServer = func(ctx context.Context, server string) (workbook.Server, auth.User, string, error) {
@@ -124,6 +126,20 @@ func TestShareFrozenWorkbook(t *testing.T) {
 	if _, err := os.Stat(path); err != nil {
 		t.Fatal(err)
 	}
+	// Le cache n'est jamais montré : titre du serveur, serveur, adresse.
+	link := "https://lattis.example.test/w/" + got[0].ID
+	if rm := r.State.Remote; r.State.Title != "Prix" || rm == nil || rm.Title != "Prix" || rm.Link != link || rm.ServerName != "Serveur de test" || rm.Mode != workbook.Frozen {
+		t.Fatalf("classeur du serveur : %+v / %+v", r.State, r.State.Remote)
+	}
+	if rf := b.Recent(ctx); len(rf) != 1 || rf[0].Title != "Prix" || rf[0].WorkbookID != got[0].ID || rf[0].Link != link || rf[0].Server != "https://lattis.example.test" {
+		t.Fatalf("récents : %+v", rf)
+	}
+	if ds, err := b.Save(ctx, false); err != nil || ds.Notice != "Copie locale de « Prix » enregistrée (classeur publié sur Serveur de test, en lecture seule)" {
+		t.Fatalf("enregistrement : %+v, %v", ds, err)
+	}
+	if rf := b.Recent(ctx); len(rf) != 1 || rf[0].Title != "Prix" {
+		t.Fatalf("récents après enregistrement : %+v", rf)
+	}
 	if st := b.ShareState(); st.ReadOnly != "Classeur publié en lecture seule" || st.Title != "Prix" {
 		t.Fatalf("état du lecteur : %+v", st)
 	}
@@ -160,13 +176,22 @@ func TestShareFrozenWorkbook(t *testing.T) {
 	b2, hb2 := shareService(t)
 	or, err := b2.Open(ctx, path)
 	mustShare(t, err)
-	if or.State.Path != path {
+	if or.State.Path != path || or.State.Title != "Prix" || or.State.Remote == nil {
 		t.Fatalf("réouverture : %+v", or)
 	}
 	waitShare(t, hb2, "hors ligne", func(s workbook.State) bool { return !s.Online && s.ReadOnly == "Hors ligne, lecture seule" })
 	if _, err := b2.SetCell(ctx, 1, 1, 1, "9"); err == nil || !strings.Contains(err.Error(), "Hors ligne") {
 		t.Fatalf("saisie hors ligne : %v", err)
 	}
+	// Renommé sur le serveur pendant la coupure : le titre suit à la
+	// reconnexion.
+	fake.SetTitle(got[0].ID, "Prix 2026")
 	fake.SetDown(false)
 	waitShare(t, hb2, "de retour", func(s workbook.State) bool { return s.Online })
+	if ds, _ := b2.State(ctx); ds.Title != "Prix 2026" || ds.Remote.Title != "Prix 2026" {
+		t.Fatalf("titre renommé : %+v", ds)
+	}
+	if rf := b2.Recent(ctx); len(rf) != 1 || rf[0].WorkbookID != got[0].ID {
+		t.Fatalf("récents : %+v", rf)
+	}
 }

@@ -21,6 +21,8 @@
 	import type { IconName } from '#lib/icons/icons.js';
 	import { kindInfo, MORE_KINDS, type ChartKind } from '#lib/chart/kinds.js';
 	import Submenu from '#lib/ui/Submenu.svelte';
+	import type { RecentFile } from '#bindings/internal/bridge/models.js';
+	import { recentDetail, recentKey, recentLabel, recentRemote } from './doctitle';
 	import { alignPatch, COLOR_NAMES, COLORS, gate, protectedThing, tipOf, type Gated } from './ribbon';
 	import { COMMAND_TIPS, TAB_TIPS, assignKeyTips, keyChars, keyOf, matchTip } from '#lib/ui/keytips.js';
 	import { cycle, focusRegion, isTextField, modalOpen, regionOf, tabbables } from '#lib/ui/focus.js';
@@ -109,8 +111,8 @@
 		/** Aucun classeur ouvert (récupération, classeur fermé) : ruban grisé. */
 		disabled?: boolean;
 		/** Classeurs récents (chemins), pour Fichier › Récents. */
-		recent?: string[];
-		onrecent?: (path: string) => void;
+		recent?: RecentFile[];
+		onrecent?: (r: RecentFile) => void;
 		onview: (v: View) => void;
 		/** Volet de l'Assistant IA ouvert, et sa bascule (bouton « Assistant ✦ », Alt+I). */
 		ai?: boolean;
@@ -235,7 +237,6 @@
 	let bg = $state('#fff2cc');
 	const st = (patch: Record<string, unknown>) => (onstyle ? () => onstyle(patch) : undefined);
 	let fileOpen = $state(false);
-	const fileName = (p: string) => p.split(/[\\/]/).pop() ?? p;
 	const data = (what: DataAction) => (ondata ? () => ondata(what) : undefined);
 	const cells = (op: 'insertRow' | 'deleteRow' | 'insertColumn' | 'deleteColumn') => (oncells ? () => oncells(op) : undefined);
 	// Palette ouverte sous le bouton Couleur ou Remplissage, comme dans Excel.
@@ -1318,8 +1319,8 @@
 					{/each}
 					<!-- Comme Excel : les fichiers récents juste sous Ouvrir ; sous-menus au survol, par Entrée ou →, ← les referme. -->
 					<Submenu label="Ouvrir un fichier récent" disabled={!recent.length} title={recent.length ? undefined : 'Aucun fichier récent'}>
-						{#each recent as p (p)}
-							<button role="menuitem" title={p} onclick={() => { fileOpen = false; onrecent?.(p); }}><span class="name">{fileName(p)}</span></button>
+						{#each recent as r (recentKey(r))}
+							<button role="menuitem" title={recentDetail(r)} onclick={() => { fileOpen = false; onrecent?.(r); }}>{#if recentRemote(r)}<Icon name="cloud" size={14} />{/if}<span class="name">{recentLabel(r)}</span></button>
 						{/each}
 					</Submenu>
 					{#each [...(sharedWorkbooksEnabled() ? [['openRemote', 'Ouvrir depuis un serveur…', '']] : []), ['close', 'Fermer', 'Ctrl+W']] as [a, label, keys] (a)}

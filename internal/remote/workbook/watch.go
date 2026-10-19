@@ -61,7 +61,8 @@ func Watch(ctx context.Context, srv Server, link *Link, retry time.Duration, cha
 				changed()
 			}
 			if p == NoticeACL {
-				if ch, err := RefreshCapabilities(ctx, srv, link); err == nil && ch {
+				title := link.State().Title
+				if ch, err := RefreshCapabilities(ctx, srv, link); err == nil && (ch || link.State().Title != title) {
 					changed()
 				}
 			}

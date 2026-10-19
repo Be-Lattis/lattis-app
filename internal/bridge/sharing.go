@@ -611,7 +611,7 @@ func (s *DocumentService) ShareOpen(ctx context.Context, server, id, title strin
 		return OpenResult{}, err
 	}
 	s.replace(d)
-	addRecent(path)
+	addRecentDoc(d)
 	if _, err := s.shareReady(ctx, d); err != nil {
 		return OpenResult{}, err
 	}

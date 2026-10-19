@@ -1404,10 +1404,13 @@ export function Recalc(): $CancellablePromise<$models.DocState> {
 }
 
 /**
- * Recent liste les classeurs ouverts ou enregistrés récemment qui existent
- * encore, du plus récent au plus ancien.
+ * Recent liste les classeurs ouverts ou enregistrés récemment, du plus
+ * récent au plus ancien : les fichiers locaux qui existent encore, les
+ * classeurs du serveur (rouverts depuis le serveur, ShareOpen). Un cache
+ * noté par son chemin (versions précédentes) devient son classeur du
+ * serveur.
  */
-export function Recent(): $CancellablePromise<string[] | null> {
+export function Recent(): $CancellablePromise<$models.RecentFile[] | null> {
     return $Call.ByID(4286126885);
 }
 
