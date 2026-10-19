@@ -13,6 +13,8 @@ export type {
     Level,
     Listing,
     Member,
+    PushReject,
+    PushResult,
     Restriction,
     RestrictionRule,
     Role,

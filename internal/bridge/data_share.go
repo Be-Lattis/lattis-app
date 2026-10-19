@@ -30,6 +30,14 @@ type DataShareInfo struct {
 	Teams   []DataTeam           `json:"teams"`
 	// Dataset : la donnée qui partage déjà ce tableau (nil : aucune).
 	Dataset *protocol.Dataset `json:"dataset"`
+	// Choice : le tableau n'est pas dans un classeur publié, deux voies
+	// s'offrent : « workbook » (classeur non publié : le publier avec ses
+	// droits) ou « table » (classeur publié sans ce tableau), ou publier
+	// le tableau seul comme source (TableSourceInfo). Reason dit alors
+	// pourquoi la première voie est fermée ("" : ouverte).
+	Choice string `json:"choice"`
+	// Source : le tableau est déjà une source du Data Lake (sans le classeur).
+	Source *TableSourceLink `json:"source"`
 }
 
 // DataTeam est une équipe proposée pour l'audience.
@@ -46,23 +54,32 @@ func (s *DocumentService) DataShareInfo(ctx context.Context, table string) (Data
 	if err != nil {
 		return out, err
 	}
-	info := d.Share.Info()
-	if info == nil {
-		out.Reason = "Seul un tableau d'un classeur publié sur un Serveur Lattis se partage au Data Lake Lattis : publiez d'abord le classeur (Fichier › Publier sur un serveur…)."
-		return out, nil
-	}
-	if !info.CanDesign() {
-		out.Reason = "Seuls les propriétaires et concepteurs du classeur partagent ses tableaux."
-		return out, nil
-	}
 	var tbl int64
 	err = d.DB().Read().QueryRowContext(ctx, `SELECT t.id, coalesce(r.remote_id, '') FROM _lattis_tables t
 		LEFT JOIN _lattis_remote_tables r ON r.tbl = t.id AND r.published = 1 WHERE t.name = ?`, table).Scan(&tbl, &out.TableID)
 	if err != nil {
 		return out, fmt.Errorf("tableau « %s » introuvable : %w", table, err)
 	}
+	// Déjà une source du Data Lake sans le classeur : on la gère.
+	if out.Source, err = sourceOf(ctx, d, tbl); err != nil || out.Source != nil {
+		return out, err
+	}
+	info := d.Share.Info()
+	if info == nil {
+		out.Choice = "workbook"
+		return out, nil
+	}
+	if !info.CanDesign() {
+		out.Reason = "Seuls les propriétaires et concepteurs du classeur partagent ses tableaux."
+		return out, nil
+	}
 	if out.TableID == "" {
-		out.Reason = "Ce tableau n'est pas publié avec le classeur : republiez le classeur en le cochant."
+		out.Choice = "table"
+		if info.Mode == workbook.Frozen {
+			out.Reason = ""
+		} else {
+			out.Reason = "Un classeur collaboratif ne se republie pas : ce tableau n'y entre plus avec le classeur."
+		}
 		return out, nil
 	}
 	l, err := d.Model.TableColumns(ctx, tbl)

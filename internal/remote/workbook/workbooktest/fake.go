@@ -96,6 +96,11 @@ type Fake struct {
 	Creators map[string]bool
 	// pipelines : pipelines qui alimentent un tableau (AddPipeline).
 	pipelines []*fpipeline
+	// sources : sources du Data Lake tirées d'un classeur local
+	// (source.go) ; NoTableSources imite un serveur sans ce contrat
+	// (fonctions inconnues, 42883).
+	sources        []*fsource
+	NoTableSources bool
 }
 
 // check refuse (42501) l'écriture de value dans la colonne col d'un

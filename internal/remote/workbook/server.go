@@ -173,6 +173,9 @@ type Server interface {
 	Rights
 	// Data : données du Data Lake (catalogue, partage, lecture ; pg_data.go).
 	Data
+	// TableSources : sources du Data Lake tirées d'un classeur local, par
+	// un pipeline (pg_source.go).
+	TableSources
 }
 
 // Change est une ligne modifiée ou supprimée depuis un point de reprise

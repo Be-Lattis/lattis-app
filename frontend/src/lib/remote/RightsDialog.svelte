@@ -14,6 +14,7 @@
 	import type { PreviewView, RightsTable, RightsView } from '#bindings/internal/bridge/models.js';
 	import type { Level as LevelChange, Role } from '#bindings/internal/remote/workbook/models.js';
 	import FilterEditor from './FilterEditor.svelte';
+	import TableSourcesList from './TableSourcesList.svelte';
 	import { hostOf } from './lattis';
 	import {
 		BUILTIN_LABELS,
@@ -422,6 +423,7 @@
 				{:else}
 					<p class="muted">Équipes et groupes d’annuaire : pas encore proposés par ce serveur.</p>
 				{/if}
+				<TableSourcesList />
 			{:else if tab === 'roles'}
 				<div class="roles">
 					<aside>

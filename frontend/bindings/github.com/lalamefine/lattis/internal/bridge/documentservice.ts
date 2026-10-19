@@ -377,6 +377,17 @@ export function CreatePivot(cfg: canvas$0.PivotConfig): $CancellablePromise<numb
 }
 
 /**
+ * CreateTableSource publie le tableau seul comme source du Data Lake : la
+ * copie, le pipeline et la donnée sont créés sur le serveur, le lien est
+ * gardé dans le classeur, puis les lignes sont envoyées une première fois.
+ * Le classeur n'est pas publié. Un premier envoi refusé laisse la source
+ * créée (LastError dit pourquoi).
+ */
+export function CreateTableSource(req: $models.TableSourceRequest): $CancellablePromise<$models.TableSourceLink> {
+    return $Call.ByID(1115385315, req);
+}
+
+/**
  * DataCatalog lit le catalogue du Data Lake Lattis d'un serveur.
  */
 export function DataCatalog(server: string): $CancellablePromise<protocol$0.DataCatalog> {
@@ -545,6 +556,24 @@ export function DocControl(id: number): $CancellablePromise<api$0.ControlState> 
  */
 export function DropDataset(server: string, id: string): $CancellablePromise<void> {
     return $Call.ByID(2664052985, server, id);
+}
+
+/**
+ * DropTableSource retire la source du tableau sur le serveur (la donnée
+ * disparaît du catalogue ; les classeurs qui l'utilisent gardent leur
+ * dernière copie) et oublie le lien. Une source déjà retirée du serveur
+ * est seulement oubliée.
+ */
+export function DropTableSource(table: string): $CancellablePromise<void> {
+    return $Call.ByID(786225336, table);
+}
+
+/**
+ * DropTableSourceByID retire une source par son tableau local (liste des
+ * sources : aussi celle d'un tableau supprimé).
+ */
+export function DropTableSourceByID(tbl: number): $CancellablePromise<void> {
+    return $Call.ByID(1931122032, tbl);
 }
 
 /**
@@ -1204,6 +1233,14 @@ export function ProtectWorkbook(password: string, sheets: boolean): $Cancellable
 }
 
 /**
+ * PushTableSource envoie maintenant les lignes du tableau à sa source
+ * (« Mettre à jour la source du Data Lake »).
+ */
+export function PushTableSource(table: string): $CancellablePromise<$models.TableSourceLink> {
+    return $Call.ByID(3163087383, table);
+}
+
+/**
  * Queries liste les requêtes du classeur.
  */
 export function Queries(): $CancellablePromise<query$0.Query[] | null> {
@@ -1712,6 +1749,13 @@ export function SetSheetsHidden(sheets: number[] | null, hidden: boolean): $Canc
 }
 
 /**
+ * SetTableSourceOnSave règle l'envoi à chaque enregistrement.
+ */
+export function SetTableSourceOnSave(table: string, on: boolean): $CancellablePromise<$models.TableSourceLink> {
+    return $Call.ByID(2097396943, table, on);
+}
+
+/**
  * SetTwoLevel affiche (ou non) les en-têtes d'un tableau sur deux lignes
  * (groupe « Groupe.Sous » dans une bande au-dessus de l'en-tête).
  */
@@ -1991,6 +2035,21 @@ export function TableSQL(kind: string, schema: string, table: string): $Cancella
 }
 
 /**
+ * TableSourceInfo lit de quoi publier le tableau table seul sur server
+ * (ignoré si le tableau a déjà une source : son serveur).
+ */
+export function TableSourceInfo(table: string, server: string): $CancellablePromise<$models.TableSourceInfo> {
+    return $Call.ByID(990508955, table, server);
+}
+
+/**
+ * TableSources liste les sources du Data Lake liées au classeur ouvert.
+ */
+export function TableSources(): $CancellablePromise<$models.TableSourceLink[] | null> {
+    return $Call.ByID(2742116276);
+}
+
+/**
  * TestConnection essaie une connexion (password vide : celui qui est
  * connu). Renvoie "" si elle répond, sinon le message d'erreur.
  */
@@ -2057,6 +2116,15 @@ export function UnprotectSheet(sheet: number, password: string): $CancellablePro
  */
 export function UnprotectWorkbook(password: string): $CancellablePromise<$models.DocState> {
     return $Call.ByID(1932212916, password);
+}
+
+/**
+ * UpdateTableSource modifie la source d'un tableau (nom, dossier,
+ * audience au serveur ; colonnes, clé, envoi à l'enregistrement dans le
+ * classeur), puis envoie les lignes.
+ */
+export function UpdateTableSource(req: $models.TableSourceRequest): $CancellablePromise<$models.TableSourceLink> {
+    return $Call.ByID(466382212, req);
 }
 
 /**

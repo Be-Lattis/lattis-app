@@ -4,19 +4,31 @@
 	// depuis d'autres classeurs par son audience. La même boîte modifie une
 	// donnée existante (nom, dossier, colonnes, audience) et retire son
 	// partage ; elle montre les classeurs qui l'utilisent.
+	//
+	// Un tableau hors d'un classeur publié offre deux voies : publier le
+	// classeur entier avec gestion des droits (Publier sur un serveur, puis
+	// revenir ici), ou publier uniquement ce tableau comme source de données
+	// liée au classeur (TableSourceForm : pipeline alimenté par le poste,
+	// sans mettre le classeur à disposition).
 	import { modal } from '#lib/ui/focus.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { onMount, untrack } from 'svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import { folderChoices, type DataAudience, type DataCatalog, type Dataset } from './data';
 	import FilterEditor from './FilterEditor.svelte';
+	import TableSourceForm from './TableSourceForm.svelte';
+	import { shareWays, type ShareWay, type SourceLink } from './source';
 	import type { RightsColumn } from '#bindings/internal/bridge/models.js';
 
 	interface Props {
 		table: string;
 		ondone: () => void;
+		/** Publier (ou republier) le classeur : la boîte se ferme pour Fichier › Publier. */
+		onpublish?: (republish: boolean) => void;
+		/** Message de la barre d'état (source créée, mise à jour, retirée). */
+		onnotice?: (msg: string) => void;
 	}
-	let { table, ondone }: Props = $props();
+	let { table, ondone, onpublish, onnotice }: Props = $props();
 
 	type Info = {
 		reason: string;
@@ -29,7 +41,13 @@
 		catalog: DataCatalog;
 		teams: { id: string; name: string }[] | null;
 		dataset: Dataset | null;
+		/** workbook, table : deux voies à proposer ; "" : partage direct. */
+		choice: string;
+		source: SourceLink | null;
 	};
+	/** Étape : choix de la voie, partage d'un tableau publié, source sans le classeur. */
+	let step = $state<'choose' | 'dataset' | 'source'>('dataset');
+	let way = $state<ShareWay>('workbook');
 	/** Entrée d'audience à ajouter ; error : filtre en cours de saisie invalide. */
 	type Entry = { email: string; team: string; predicate: string; error: string };
 
@@ -48,6 +66,7 @@
 	let error = $state('');
 	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
 	const ds = $derived(info?.dataset ?? null);
+	const ways = $derived(info ? shareWays(info.choice, info.reason) : []);
 	const badFilter = $derived(adds.some((a) => !!a.error));
 
 	onMount(load);
@@ -56,6 +75,11 @@
 		try {
 			const i = (await DocumentService.DataShareInfo(table)) as unknown as Info;
 			info = i;
+			if (i.source) step = 'source';
+			else if (i.choice) {
+				step = 'choose';
+				way = i.reason ? 'table' : 'workbook';
+			}
 			const d = i.dataset;
 			shown = new Set(i.columns ?? []);
 			if (d) {
@@ -147,7 +171,54 @@
 			if (e.key === 'Escape' && !busy) ondone();
 		}}
 	>
-		<header><Icon name="database" size={18} /><span>{ds ? `Data Lake Lattis · « ${ds.name} »` : `Partager « ${table} » au Data Lake Lattis`}</span></header>
+		<header>
+			<Icon name="database" size={18} /><span
+				>{step === 'source' && info?.source ? `Source du Data Lake · « ${table} »` : ds ? `Data Lake Lattis · « ${ds.name} »` : `Partager « ${table} » au Data Lake Lattis`}</span
+			>
+		</header>
+		{#if step === 'source'}
+			<TableSourceForm
+				{table}
+				onback={info?.choice && !info.source ? () => (step = 'choose') : undefined}
+				ondone={(msg) => {
+					if (msg) onnotice?.(msg);
+					ondone();
+				}}
+			/>
+		{:else if step === 'choose' && info}
+			<div class="body">
+				<p>Ce tableau n’est pas dans un classeur publié. Comment le partager ?</p>
+				<div class="ways" role="radiogroup" aria-label="Façon de partager">
+					{#each ways as w (w.way)}
+						<label class="way" class:on={way === w.way} class:off={!!w.disabled}>
+							<input type="radio" name="way" value={w.way} bind:group={way} disabled={!!w.disabled} />
+							<span class="way-icon"><Icon name={w.way === 'workbook' ? 'lock-book' : 'table'} size={22} /></span>
+							<span class="way-text">
+								<strong>{w.title}</strong>
+								<span class="muted">{w.detail}</span>
+								{#if w.disabled}<span class="error">{w.disabled}</span>{/if}
+							</span>
+						</label>
+					{/each}
+				</div>
+				{#if error}<p class="error" role="alert">{error}</p>{/if}
+			</div>
+			<footer>
+				<span class="grow"></span>
+				<button onclick={ondone}>Annuler</button>
+				<button
+					class="primary"
+					disabled={!!ways.find((w) => w.way === way)?.disabled || (way === 'workbook' && !onpublish)}
+					onclick={() => {
+						if (way === 'table') step = 'source';
+						else {
+							ondone();
+							onpublish?.(info?.choice === 'table');
+						}
+					}}>Continuer…</button
+				>
+			</footer>
+		{:else}
 		<div class="body">
 			{#if !info}
 				<p class="muted">{error ? '' : 'Lecture du catalogue…'}</p>
@@ -252,6 +323,7 @@
 				<button class="primary" onclick={save} disabled={busy || !name.trim() || shown.size === 0 || badFilter} title={badFilter ? "Un filtre d'audience est à corriger" : ''}>{busy ? 'Enregistrement…' : ds ? 'Enregistrer' : 'Partager'}</button>
 			{/if}
 		</footer>
+		{/if}
 	</div>
 </div>
 
@@ -285,6 +357,40 @@
 	.body {
 		padding: 12px 16px;
 		overflow: auto;
+	}
+	.ways {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		margin-top: 8px;
+	}
+	.way {
+		display: flex;
+		align-items: flex-start;
+		gap: 10px;
+		padding: 10px 12px;
+		border: 1px solid #d6d9dd;
+		border-radius: 4px;
+		cursor: pointer;
+	}
+	.way.on {
+		border-color: #217346;
+		background: #f3f8f5;
+	}
+	.way.off {
+		cursor: default;
+		opacity: 0.7;
+	}
+	.way input {
+		margin-top: 3px;
+	}
+	.way-icon {
+		color: #217346;
+	}
+	.way-text {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
 	}
 	.grid {
 		display: grid;

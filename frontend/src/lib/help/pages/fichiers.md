@@ -23,6 +23,17 @@ Vos saisies et commandes sont mises sur disque dès qu'elles sont faites : elles
 
 Un classeur ouvert depuis un dossier partagé est signalé aux autres postes par un petit fichier caché `~$nom.lattis`. Un autre poste qui l'ouvre est prévenu et peut l'ouvrir en lecture seule. Si le fichier a été modifié ailleurs depuis son ouverture, `Ctrl+S` propose d'enregistrer une copie, d'écraser ou d'annuler.
 
+## Partager un tableau au Data Lake Lattis
+
+Clic droit sur un tableau › **Partager au Data Lake Lattis…** rend le tableau lisible depuis d'autres classeurs du Serveur Lattis (Insertion › Data Lake Lattis, onglet SQL), selon une audience : personnes, équipes, avec un filtre des lignes pour chacune. Si le classeur n'est pas publié, la boîte propose deux façons de faire :
+
+- **Publier le classeur avec gestion des droits** : le classeur entier est publié sur le serveur (Fichier › Publier sur un serveur…), avec ses rôles et ses filtres ; la boîte revient ensuite pour partager le tableau.
+- **Publier uniquement ce tableau comme source de données** : le classeur reste sur votre poste et n'est pas mis à disposition. Le serveur garde une copie du tableau, alimentée par un pipeline dont votre classeur est la source. Seules les **colonnes cochées** sont envoyées, avec leurs valeurs (une colonne calculée envoie ses résultats, pas sa formule) ; les autres tableaux, les feuilles, les formules, les scripts et les colonnes non cochées ne quittent pas le poste.
+
+Une source se met à jour quand vous le demandez : clic droit sur le tableau › **Mettre à jour la source du Data Lake**, ou depuis la même boîte ; cochez « Mettre à jour la source à chaque enregistrement du classeur » pour l'envoyer à chaque `Ctrl+S`. Chaque mise à jour envoie tout le tableau : avec une **clé** (une colonne qui identifie chaque ligne), le serveur ne change que les lignes ajoutées, modifiées ou supprimées, et deux lignes de même clé font refuser la mise à jour ; sans clé, toutes les lignes sont remplacées. Le résultat s'affiche dans la barre d'état. Le lien avec la source est gardé dans le classeur (enregistrez-le) ; la boîte permet aussi de changer les colonnes, la clé et l'audience, et de **retirer la source** (les classeurs qui l'utilisent gardent leur dernière copie). Les boîtes Publier sur un serveur et Gérer l'accès listent les sources du classeur, marquées « pipeline ».
+
+Il faut le rôle « publieur de données » sur le serveur, et un serveur qui accepte les sources envoyées par un classeur ; sinon la boîte le dit.
+
 ## Importer
 
 Fichier › Importer lit un fichier CSV (ou texte délimité) et les classeurs Excel `.xlsx` et `.xlsm` : chaque feuille devient un onglet, chaque bloc de données un tableau. Ce qui n'est pas repris tel quel (macros, graphiques, tableaux croisés, mise en forme conditionnelle, commentaires, validations) est signalé à la fin de l'import.

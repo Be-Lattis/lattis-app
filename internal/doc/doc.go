@@ -429,6 +429,13 @@ func (d *Document) ShareChanged(ctx context.Context) error {
 	return d.Share.Reload(ctx)
 }
 
+// MarkChanged note un changement des informations du classeur fait hors
+// du journal (_lattis_info : source du Data Lake liée à un tableau) : le
+// classeur est à enregistrer, sans relire l'état de partage.
+func (d *Document) MarkChanged() {
+	d.shareGen.Add(1)
+}
+
 // TakeOpenNotice rend (une fois) le message à afficher à l'ouverture :
 // déclencheurs inconnus supprimés du classeur (meta.MigrateOpen), vide
 // sinon ; puis verrou d'un autre poste, fichier modifié par ailleurs.

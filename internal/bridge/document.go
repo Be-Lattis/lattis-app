@@ -386,6 +386,8 @@ func (s *DocumentService) saveFailed(ctx context.Context, d *doc.Document, err e
 
 func (s *DocumentService) saved(ctx context.Context, d *doc.Document) (DocState, error) {
 	addRecent(d.Path())
+	// Sources du Data Lake envoyées à chaque enregistrement (en arrière-plan).
+	s.pushOnSave(d)
 	if s.listening(api.EventSave) {
 		s.fireAsync(api.EventSave, map[string]any{"path": d.Path()})
 	}

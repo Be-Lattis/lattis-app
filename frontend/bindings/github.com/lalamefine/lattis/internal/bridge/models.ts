@@ -331,6 +331,20 @@ export interface DataShareInfo {
      * Dataset : la donnée qui partage déjà ce tableau (nil : aucune).
      */
     "dataset": protocol$0.Dataset | null;
+
+    /**
+     * Choice : le tableau n'est pas dans un classeur publié, deux voies
+     * s'offrent : « workbook » (classeur non publié : le publier avec ses
+     * droits) ou « table » (classeur publié sans ce tableau), ou publier
+     * le tableau seul comme source (TableSourceInfo). Reason dit alors
+     * pourquoi la première voie est fermée ("" : ouverte).
+     */
+    "choice": string;
+
+    /**
+     * Source : le tableau est déjà une source du Data Lake (sans le classeur).
+     */
+    "source": TableSourceLink | null;
 }
 
 /**
@@ -816,6 +830,112 @@ export interface ShareRequest {
 export interface TableList {
     "tables": query$0.DBTable[] | null;
     "needPassword": query$0.PasswordNeed | null;
+}
+
+/**
+ * TableSourceInfo décrit de quoi publier un tableau seul (ou gérer sa
+ * source) sur un serveur.
+ */
+export interface TableSourceInfo {
+    /**
+     * Reason : pourquoi c'est impossible sur ce serveur ("" : possible).
+     */
+    "reason": string;
+    "server": string;
+    "table": string;
+
+    /**
+     * Fields : colonnes du tableau et leur type local.
+     */
+    "fields": RightsColumn[] | null;
+
+    /**
+     * Keys : clé proposée (colonne clé du tableau, s'il en a une).
+     */
+    "keys": string[] | null;
+    "catalog": protocol$0.DataCatalog;
+    "teams": DataTeam[] | null;
+
+    /**
+     * Link : la source existante (nil : à créer) ; Dataset : sa donnée au
+     * catalogue (nil : retirée ou illisible).
+     */
+    "link": TableSourceLink | null;
+    "dataset": protocol$0.Dataset | null;
+}
+
+/**
+ * TableSourceLink est le lien d'un tableau du classeur avec sa source du
+ * Data Lake.
+ */
+export interface TableSourceLink {
+    /**
+     * Tbl : tableau local (_lattis_tables.id, stable au renommage).
+     */
+    "tbl": number;
+
+    /**
+     * TableName : nom actuel du tableau ("" : tableau supprimé), relu à
+     * chaque lecture.
+     */
+    "tableName": string;
+    "server": string;
+    "pipeline": string;
+    "dataset": string;
+    "sqlName": string;
+    "name": string;
+
+    /**
+     * Columns : colonnes envoyées (les autres ne quittent pas le poste) ;
+     * Keys : colonnes qui identifient une ligne d'un envoi à l'autre.
+     */
+    "columns": string[] | null;
+    "keys": string[] | null;
+
+    /**
+     * OnSave : envoyer à chaque enregistrement du classeur.
+     */
+    "onSave": boolean;
+
+    /**
+     * LastPush : date du dernier envoi réussi (RFC 3339) ; LastResult son
+     * compte rendu ; LastError : échec du dernier essai ("" : réussi).
+     */
+    "lastPush"?: string;
+    "lastResult"?: workbook$0.PushResult | null;
+    "lastError"?: string;
+
+    /**
+     * Blanked : valeurs envoyées vides au dernier envoi (saisie hors type,
+     * erreur d'une formule).
+     */
+    "blanked"?: number;
+}
+
+/**
+ * TableSourceRequest crée ou modifie la source d'un tableau.
+ */
+export interface TableSourceRequest {
+    "server": string;
+    "table": string;
+    "folderId": string;
+    "name": string;
+    "description": string;
+    "sqlName": string;
+
+    /**
+     * Columns : colonnes envoyées ; Keys : colonnes qui identifient une ligne.
+     */
+    "columns": string[] | null;
+    "keys": string[] | null;
+    "onSave": boolean;
+    "inherit": boolean;
+
+    /**
+     * Add : entrées d'audience à ajouter ; Remove : identifiants à retirer.
+     */
+    "add": DataAudienceEntry[] | null;
+    "remove": string[] | null;
 }
 
 /**

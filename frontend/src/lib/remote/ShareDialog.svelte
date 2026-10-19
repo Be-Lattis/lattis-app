@@ -12,6 +12,7 @@
 	import { connected, hostOf } from './lattis';
 	import ServerPicker from './ServerPicker.svelte';
 	import { lattis, loadLattis, requestLogin } from './lattis.svelte.js';
+	import TableSourcesList from './TableSourcesList.svelte';
 	import { COLLABORATIVE, FROZEN, blocking, defaultSelection, inferredColumns, modeLabel, remoteTypeLabel } from './share';
 
 	interface Props {
@@ -197,6 +198,7 @@
 				</ul>
 				<p class="muted">Les tableaux non cochés restent privés : sur ce poste seulement.</p>
 			{/if}
+			<TableSourcesList />
 			{#if error}<p class="error" role="alert">{error}</p>{/if}
 		</div>
 		<footer>

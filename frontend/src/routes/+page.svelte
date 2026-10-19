@@ -57,6 +57,7 @@
 	import RightsDialog from '#lib/remote/RightsDialog.svelte';
 	import { rightsObjects, type RightsObject } from '#lib/remote/rights.js';
 	import { refusedNotice } from '#lib/remote/share.js';
+	import { pushSummary, type SourceLink } from '#lib/remote/source.js';
 	import type { Conflict } from '#bindings/internal/remote/collab/models.js';
 	import { canRepublish, rolesLabel } from '#lib/remote/share.js';
 	import { lattis, loadLattis, requestLogin, shareRights } from '#lib/remote/lattis.svelte.js';
@@ -313,6 +314,28 @@
 	// Données du Data Lake : insertion (cellule visée) et partage d'un tableau.
 	let dataInsert = $state<{ sheet: number; row: number; col: number } | null>(null);
 	let dataShare = $state<string | null>(null);
+	// Publier le classeur depuis cette boîte : elle revient une fois publié.
+	let dataShareAfter = $state<string | null>(null);
+	// Tableaux publiés seuls comme source du Data Lake (sans le classeur) :
+	// clic droit › « Mettre à jour la source du Data Lake ».
+	let sourceTables = $state<string[]>([]);
+	async function loadSources() {
+		if (mode !== 'doc' || !sharedWorkbooksEnabled()) {
+			sourceTables = [];
+			return;
+		}
+		const links = ((await DocumentService.TableSources().catch(() => null)) ?? []) as unknown as SourceLink[];
+		sourceTables = links.map((l) => l.tableName).filter((n) => !!n);
+	}
+	async function pushSource(table: string) {
+		notice = `Mise à jour de la source « ${table} »…`;
+		try {
+			const l = (await DocumentService.PushTableSource(table)) as unknown as SourceLink;
+			notice = pushSummary(table, l.lastResult, l.blanked ?? 0);
+		} catch (e) {
+			notice = `Source « ${table} » non mise à jour : ${err(e)}`;
+		}
+	}
 	let shareReloading = $state(false);
 	// Données › Obtenir des données : requêtes d'import (lib/query).
 	let queryHost = $state<ReturnType<typeof QueryHost>>();
@@ -356,6 +379,7 @@
 		scripts = (await DocumentService.Scripts()) ?? [];
 		favorites = (await DocumentService.Favorites()) ?? [];
 		share = await DocumentService.ShareState().catch(() => null);
+		await loadSources();
 		// Volet Requêtes ouvert : ses listes suivent (Ctrl+Z, assistant, MCP, autre classeur).
 		queryHost?.reloadLists();
 	}
@@ -805,6 +829,11 @@
 			if (e?.data) share = e.data;
 			if (mode === 'doc') reload().catch(() => {});
 		});
+		// Source du Data Lake mise à jour à l'enregistrement (en arrière-plan).
+		const offSource = Events.On('data:source', (e: { data?: { message?: string } }) => {
+			if (e?.data?.message) notice = e.data.message;
+			loadSources();
+		});
 		const offUI = Events.On('ui:command', (e: { data: UICommand }) => {
 			uiCommand(e.data).catch((x) => (notice = err(x)));
 		});
@@ -946,6 +975,7 @@
 			offQuit();
 			offLink();
 			offShare();
+			offSource();
 			window.removeEventListener('keydown', keys);
 			window.removeEventListener('beforeunload', leave);
 			window.removeEventListener('keydown', noReload, true);
@@ -1777,6 +1807,8 @@
 						onsheet={(id) => selectSheet(id).catch((e) => (notice = err(e)))}
 						onrowlink={mode === 'doc' ? gotoRow : undefined}
 						onsharedata={mode === 'doc' && sharedWorkbooksEnabled() ? (t) => (dataShare = t) : undefined}
+						{sourceTables}
+						onpushsource={mode === 'doc' && sharedWorkbooksEnabled() ? (t) => void pushSource(t) : undefined}
 						onask={mode === 'doc' ? openAssistant : undefined}
 						pageBreaks={breaks && !breaks.empty ? { rows: breaks.rows ?? [], cols: breaks.cols ?? [], manualRows: breaks.manualRows ?? [], manualCols: breaks.manualCols ?? [], area: breaks.area, framed: !!layout?.pageSetup?.area } : undefined}
 					/>
@@ -2067,7 +2099,11 @@
 			ondone={(st) => {
 				const again = shareDlg?.republish;
 				shareDlg = null;
+				// Ouvert depuis Partager au Data Lake : la boîte revient, le tableau publié.
+				const back = dataShareAfter;
+				dataShareAfter = null;
 				if (!st) return;
+				if (back) dataShare = back;
 				share = st;
 				notice = again ? `Version ${st.version} publiée` : `Classeur publié sur ${st.serverName || st.server} (${st.mode === 'frozen' ? 'figé' : 'collaboratif'})`;
 				reload().catch((e) => (notice = err(e)));
@@ -2087,7 +2123,22 @@
 		/>
 	{/if}
 	{#if dataShare}
-		<DataShareDialog table={dataShare} ondone={() => (dataShare = null)} />
+		{@const t = dataShare}
+		<DataShareDialog
+			table={t}
+			ondone={() => {
+				dataShare = null;
+				loadSources();
+			}}
+			onpublish={(republish) => {
+				dataShareAfter = t;
+				shareDlg = { republish };
+			}}
+			onnotice={(msg) => {
+				notice = msg;
+				reload().catch((e) => (notice = err(e)));
+			}}
+		/>
 	{/if}
 	{#if openRemote}
 		<OpenRemoteDialog

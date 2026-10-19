@@ -143,6 +143,33 @@ export interface Member {
 }
 
 /**
+ * PushReject est une ligne refusée par le serveur (numéro à partir de 1).
+ */
+export interface PushReject {
+    "row": number;
+    "error": string;
+}
+
+/**
+ * PushResult est le compte rendu d'un envoi (lattis.finish_table_push,
+ * une ligne de lattis.pipeline_runs).
+ */
+export interface PushResult {
+    "run_id": string;
+
+    /**
+     * Status : ok ou warning (lignes refusées).
+     */
+    "status": string;
+    "rows": number;
+    "inserted": number;
+    "updated": number;
+    "deleted": number;
+    "rejected": number;
+    "rejects"?: PushReject[] | null;
+}
+
+/**
  * Restriction est une restriction qui vise l'utilisateur
  * (my_capabilities.restrictions) : commande (select, insert, update,
  * delete, all) et libellé ; le prédicat n'est connu que du propriétaire.

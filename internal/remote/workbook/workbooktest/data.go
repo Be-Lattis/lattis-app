@@ -24,6 +24,8 @@ type fdataset struct {
 	links                                            []string
 	// gone : lignes sorties de l'audience (DataHide).
 	gone map[string]bool
+	// pipeline : source tirée d'un classeur local (source.go).
+	pipeline string
 }
 
 type fdata struct {
@@ -71,6 +73,12 @@ func (s *session) DataCatalog(ctx context.Context) (protocol.DataCatalog, error)
 		item := protocol.Dataset{ID: ds.id, FolderID: ds.folder, Name: ds.name, Description: ds.desc, SQLName: ds.sqlName,
 			Readable: true, Manageable: true, Available: t != nil, Columns: []protocol.DataColumn{}, Audience: ds.audience,
 			Source: &protocol.DataSource{WorkbookID: ds.workbook, Table: ds.table, HiddenColumns: ds.hidden, InheritAudience: ds.inherit}}
+		if ds.pipeline != "" {
+			item.Source.Kind, item.Source.PipelineID = "pipeline", ds.pipeline
+			if b := s.f.books[ds.workbook]; b != nil {
+				item.Source.Title = b.title
+			}
+		}
 		if t != nil {
 			item.TableID = t.id
 			item.Channel = "wb_" + s.f.books[ds.workbook].slug

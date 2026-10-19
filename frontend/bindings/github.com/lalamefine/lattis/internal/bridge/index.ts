@@ -51,6 +51,9 @@ export type {
     Setting,
     ShareRequest,
     TableList,
+    TableSourceInfo,
+    TableSourceLink,
+    TableSourceRequest,
     UICommand,
     XLSXExport
 } from "./models.js";

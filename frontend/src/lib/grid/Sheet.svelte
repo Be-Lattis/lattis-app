@@ -565,13 +565,17 @@
 		onrowlink?: (table: string, id: number) => void;
 		/** Partager le tableau au Data Lake Lattis (clic droit sur un tableau). */
 		onsharedata?: (table: string) => void;
+		/** Tableaux publiés seuls comme source du Data Lake (sans le classeur). */
+		sourceTables?: readonly string[];
+		/** Clic droit › « Mettre à jour la source du Data Lake » d'un de ces tableaux. */
+		onpushsource?: (table: string) => void;
 		/** Clic droit › « Demander à l'assistant… » (absent : entrée masquée). */
 		onask?: () => void;
 		/** Sauts de page de l'impression (traits pointillés) et zone imprimée ; absent : rien. */
 		pageBreaks?: PageBreaksView;
 	}
 
-	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', freeze, zoom = 1, onzoom, animate = true, sheetName = '', onsheet, onrowlink, onask, onsharedata, pageBreaks }: Props = $props();
+	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', freeze, zoom = 1, onzoom, animate = true, sheetName = '', onsheet, onrowlink, onask, onsharedata, sourceTables = [], onpushsource, pageBreaks }: Props = $props();
 
 	// Feuille sans fin pratique (choix de Louis) : au-delà des limites d'Excel,
 	// bornée par la nomenclature Cell[ZZZZ999999999] (4 lettres, 9 chiffres).
@@ -9183,8 +9187,9 @@
 			{@const toNote = rowItems && !!source.rowToNote && m.n === m.e.t.rows - 1}
 			{@const refresh = !!m.e.t.query && !!source.refreshTable}
 			{@const share = cols && !!onsharedata && !m.e.t.query}
+			{@const pushSource = cols && !!onpushsource && sourceTables.includes(m.e.t.name)}
 			{@const twoLevel = cols && !!source.setTwoLevel && !m.e.t.query}
-			{@const tableItems = toTitle || twoLevel || refresh || share || !!source.convertToRange || !!source.deleteTables}
+			{@const tableItems = toTitle || twoLevel || refresh || share || pushSource || !!source.convertToRange || !!source.deleteTables}
 			{#snippet sortItems()}
 				{#if cols && source.sortTable}
 					{@const lab = sortLabels(col?.type ?? 'text', col?.result)}
@@ -9319,6 +9324,9 @@
 							{/if}
 							{#if share}
 								<button title="Rendre ce tableau lisible depuis d'autres classeurs du serveur (catalogue du Data Lake Lattis)" onclick={() => { const n = m.e.t.name; menu = null; onsharedata?.(n); }}>Partager au Data Lake Lattis…</button>
+							{/if}
+							{#if pushSource}
+								<button title="Envoie maintenant les lignes de ce tableau à sa source du Data Lake (colonnes choisies seulement ; le classeur n'est pas publié)" onclick={() => { const n = m.e.t.name; menu = null; onpushsource?.(n); }}>Mettre à jour la source du Data Lake</button>
 							{/if}
 							{#if source.convertToRange}
 								<button title="Le tableau devient des cellules libres, au même endroit" onclick={() => menuAction(() => source.convertToRange!(m.e.t))}>Convertir en plage</button>
