@@ -77,5 +77,5 @@ Réponses du serveur dans la PR n°4 de be-lattis-server (migration `0009_droits
 ## 6. Reste à faire
 
 - Groupes d'annuaire : quand le serveur les fera alimenter les équipes (§4).
-- Structure d'un tableau publié par le concepteur (§6.4) et déplacement d'un tableau de feuille : étape 7.
+- ~~Structure d'un tableau publié par le concepteur (§6.4)~~ : faite (`synchronisation.md` §2.9) ; propriétaire et concepteurs seulement (`workbook.ErrDesign` en local, le serveur vérifie aussi), une colonne citée par un filtre de rôle, une restriction ou une audience est refusée par le serveur. Reste le déplacement d'un tableau de feuille : étape 7.
 - L'onglet SQL ne montre pas les règles générées pour un tableau privé (il n'y en a pas) ; la liste des objets se relit à l'ouverture de l'onglet et à chaque changement d'état de partage.
