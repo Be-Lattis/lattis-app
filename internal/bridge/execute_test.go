@@ -2,6 +2,7 @@ package bridge
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -30,7 +31,10 @@ func TestSQLStopAndTimeout(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		return fmt.Sprint(r)
+		var out struct{ Rows any }
+		b, _ := json.Marshal(r)
+		json.Unmarshal(b, &out)
+		return fmt.Sprint(out.Rows)
 	}
 	before := sum()
 
