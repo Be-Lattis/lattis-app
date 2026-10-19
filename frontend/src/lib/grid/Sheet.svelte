@@ -2937,15 +2937,15 @@
 				ctx.restore();
 			}
 		}
-		// Petits traits aux séparations de lignes, comme ceux des colonnes dans
-		// le bandeau du haut : on voit où redimensionner.
+		// Petits traits aux séparations de lignes (un quart de la marge, à droite) :
+		// on voit où redimensionner, comme pour les colonnes.
 		ctx.beginPath();
 		ctx.strokeStyle = C.stripLine;
 		ctx.lineWidth = 1;
 		for (let r = r0; r <= r1; r++) {
 			const y = Math.round(ry(r + 1)) - 0.5;
 			if (y <= TOP_H || !rh(r)) continue;
-			ctx.moveTo(MARGIN * 0.35, y);
+			ctx.moveTo(MARGIN * 0.75, y);
 			ctx.lineTo(MARGIN, y);
 		}
 		ctx.stroke();
