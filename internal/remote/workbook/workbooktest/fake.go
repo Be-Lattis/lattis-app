@@ -111,6 +111,13 @@ type Fake struct {
 	// d'update_pushed_source (42883), 202 sans run_id, GET ?run= ignoré,
 	// catalogue sans source.kind.
 	Before28 bool
+	// forms : formulaires (forms.go) ; NoForms imite un serveur sans eux
+	// (42883), FormsPublic un serveur qui permet le lien public ;
+	// LastFormImage : dernière image reçue (« genre:type »).
+	forms         []*fform
+	NoForms       bool
+	FormsPublic   bool
+	LastFormImage string
 }
 
 // check refuse (42501) l'écriture de value dans la colonne col d'un

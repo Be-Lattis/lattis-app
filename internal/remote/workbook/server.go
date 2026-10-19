@@ -176,6 +176,9 @@ type Server interface {
 	// PushedSources : sources poussées du Data Lake, tableau d'un classeur
 	// local publié seul (pg_source.go ; l'envoi passe par Pusher).
 	PushedSources
+	// Forms : formulaires d'un tableau publié (forms.go ; images par
+	// FormImages).
+	Forms
 }
 
 // Change est une ligne modifiée ou supprimée depuis un point de reprise
