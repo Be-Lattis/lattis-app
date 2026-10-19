@@ -2,8 +2,9 @@
 	// Ruban façon Excel : onglets en haut, groupes de commandes en dessous.
 	// IA, SQL et SCRIPT sont des onglets à part entière : ils prennent la place
 	// de la grille (précédence sur GRID). IA n'apparaît que s'il est activé
-	// (Fichier › Paramètres › Fonctionnalités). Les commandes pas encore réalisées sont
-	// affichées désactivées, pour montrer l'organisation cible.
+	// (Fichier › Paramètres › Fonctionnalités). Une commande est grisée faute de
+	// classeur, ou par la protection et les droits d'un classeur partagé
+	// (ribbon.ts, selon les drapeaux posés à sa définition).
 
 	import { onMount, tick, untrack } from 'svelte';
 	import Icon from '#lib/icons/Icon.svelte';
@@ -14,9 +15,11 @@
 	import Select from '#lib/ui/Select.svelte';
 	import { estimate, fit, groupWidth, type GroupShape, type Measure, type Mode } from './fit';
 	import { scriptingEnabled, sharedWorkbooksEnabled } from './settings.svelte.js';
-	import { keyLabel } from '#lib/web/platform.js';
+	import { keyLabel, pdfPrinterHint } from '#lib/web/platform.js';
 	import type { IconName } from '#lib/icons/icons.js';
-	import { MORE_KINDS, type ChartKind } from '#lib/chart/kinds.js';
+	import { kindInfo, MORE_KINDS, type ChartKind } from '#lib/chart/kinds.js';
+	import Submenu from '#lib/ui/Submenu.svelte';
+	import { alignPatch, COLOR_NAMES, COLORS, gate, protectedThing, tipOf, type Gated } from './ribbon';
 	import { COMMAND_TIPS, TAB_TIPS, assignKeyTips, keyChars, keyOf, matchTip } from '#lib/ui/keytips.js';
 	import { cycle, focusRegion, isTextField, modalOpen, regionOf, tabbables } from '#lib/ui/focus.js';
 	import { cm, FIT_CHOICES, fitLabel, fitted, hasBreaks, MARGIN_LABELS, MARGINS, marginPreset, PAPERS, paperOf, SCALE_CHOICES, scaleLabel, type PageAction, type PageSetup } from './pagesetup';
@@ -44,15 +47,13 @@
 		| `align:${'left' | 'center' | 'right' | 'justify'}`
 		| `chart:${ChartKind}`;
 
-	interface Command {
-		label: string;
+	/** Commande du ruban ; ro, local et createsSheet disent ce qui la grise (ribbon.ts). */
+	interface Command extends Gated {
 		icon: IconName;
-		run?: () => void;
-		hint?: string;
 		color?: 'fg' | 'bg'; // commande avec un choix de couleur
 		on?: boolean; // commande à bascule, enfoncée
-		/** Commande à menu (▾) : ses choix. */
-		items?: { label: string; run?: () => void; on?: boolean }[];
+		/** Commande à menu (▾) : ses choix (raccourci affiché à droite ; drapeaux hérités de la commande, sinon les leurs). */
+		items?: { label: string; run?: () => void; on?: boolean; keys?: string; ro?: boolean; local?: boolean }[];
 		/** Commande qui ouvre son propre menu (▾ affiché, voir anchor). */
 		menu?: boolean;
 	}
@@ -69,14 +70,14 @@
 	}
 	const FONTS_W = 134; // largeur des listes Police et Taille (fit.ts)
 
-	export type FileAction = 'new' | 'open' | 'openRemote' | 'share' | 'rights' | 'republish' | 'save' | 'saveAs' | 'import' | 'export' | 'exportSheet' | 'exportXlsx' | 'exportOds' | 'print' | 'pdf' | 'about' | 'close' | 'demo' | 'mcp' | 'settings' | 'help';
+	export type FileAction = 'new' | 'open' | 'openRemote' | 'share' | 'rights' | 'republish' | 'save' | 'saveAs' | 'import' | 'export' | 'exportSheet' | 'exportXlsx' | 'exportOds' | 'print' | 'about' | 'close' | 'demo' | 'settings' | 'help';
+	/** Accueil › Édition (Remplissage, Effacer, Trier et filtrer), Mettre sous forme de tableau. */
+	export type EditAction = 'fillDown' | 'fillRight' | 'clearContents' | 'clearFilters' | 'formatAsTable';
 
 	export type DataAction = 'csv' | 'xlsx' | 'json' | 'parquet' | 'sqlite' | 'postgres' | 'mysql' | 'sqlserver' | 'lattis' | 'web' | 'table' | 'queries' | 'refreshAll';
 
 	interface Props {
 		view: View;
-		title: string;
-		dirty: boolean;
 		undo: string; // libellé de l'action à annuler (vide : rien)
 		redo: string;
 		/** Aucun classeur ouvert (récupération, classeur fermé) : ruban grisé. */
@@ -98,7 +99,16 @@
 		onfind?: (replace: boolean) => void;
 		/** Mise en forme conditionnelle : menu à ouvrir sous le bouton (coordonnées de la fenêtre). */
 		onrules?: (x: number, y: number) => void;
-		onfilter?: (errorsOnly: boolean) => void;
+		/** Filtrer la colonne active, n'en montrer que les erreurs (bascule), effacer les filtres du tableau. */
+		onfilter?: (what: 'filter' | 'errors' | 'clear') => void;
+		/** Tableau de la cellule active filtré, et sa colonne réduite aux erreurs (Erreurs seulement enfoncé). */
+		filters?: boolean;
+		errorsOnly?: boolean;
+		/** La cellule active a une note (Révision › Modifier la note). */
+		note?: boolean;
+		onedit?: (what: EditAction) => void;
+		/** Classeur partagé : la cellule active est dans un tableau publié en lecture seule (le motif). */
+		tableReadOnly?: string;
 		onrecalc?: () => void;
 		ondedup?: () => void;
 		/** Données › Convertir : assistant « Convertir le texte en colonnes ». */
@@ -122,7 +132,7 @@
 		context?: RibbonContext;
 		/** Document : commandes, et état de la sélection (bloc, alignement, barré, lien). */
 		ondoc?: (cmd: DocCommand) => void;
-		docState?: { block: string; align: string; strike: boolean; link: boolean };
+		docState?: { block: string; align: string; strike: boolean; link: boolean; undo?: boolean; redo?: boolean };
 		/** Insertion › Bouton : bouton d'action lié à un script. */
 		onbutton?: (kind?: '' | 'checkbox' | 'select' | 'input' | 'textarea' | 'file') => void;
 		/** Feuille active protégée : les commandes qui la modifient sont grisées. */
@@ -171,7 +181,7 @@
 		onpagebreaks?: (on: boolean) => void;
 	}
 
-	let { view, title, dirty, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, onrecalc, ondedup, ontextcols, onpivot, oninsertdata, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks }: Props = $props();
+	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ondedup, ontextcols, onpivot, oninsertdata, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks }: Props = $props();
 	const fmt = (tab: FormatTab) => (onformat ? () => onformat(tab) : undefined);
 	const lines = (rows: boolean, hide: boolean) => (onlines ? () => onlines(rows, hide) : undefined);
 	const frz = (what: FreezeAction) => (onfreeze ? () => onfreeze(what) : undefined);
@@ -195,8 +205,6 @@
 	let bg = $state('#fff2cc');
 	const st = (patch: Record<string, unknown>) => (onstyle ? () => onstyle(patch) : undefined);
 	let fileOpen = $state(false);
-	let recentOpen = $state(false);
-	let exportOpen = $state(false);
 	const fileName = (p: string) => p.split(/[\\/]/).pop() ?? p;
 	const data = (what: DataAction) => (ondata ? () => ondata(what) : undefined);
 	const cells = (op: 'insertRow' | 'deleteRow' | 'insertColumn' | 'deleteColumn') => (oncells ? () => oncells(op) : undefined);
@@ -208,12 +216,10 @@
 		palettePos = { x: r.left, y: r.bottom + 2 };
 		palette = palette === kind ? null : kind;
 	}
-	const COLORS = [
-		'#000000', '#404040', '#7f7f7f', '#bfbfbf', '#ffffff',
-		'#c00000', '#ff0000', '#ffc000', '#ffff00', '#92d050',
-		'#00b050', '#00b0f0', '#0070c0', '#002060', '#7030a0',
-		'#ffc7ce', '#fff2cc', '#c6efce', '#ddebf7', '#e4dfec'
-	];
+	const ed = (w: EditAction) => (onedit ? () => onedit(w) : undefined);
+	const flt = (w: 'filter' | 'errors' | 'clear') => (onfilter ? () => onfilter(w) : undefined);
+	/** Mise en forme seulement : permise sur un tableau partagé en lecture seule (ribbon.ts). */
+	const local = (cs: Command[]): Command[] => cs.map((c) => ({ local: true, ...c }));
 	function pick(kind: 'fg' | 'bg', c: string | null) {
 		palette = null;
 		if (c) {
@@ -254,42 +260,56 @@
 	};
 	const paperLabel = $derived(PAPERS.find((x) => x.id === paperOf(ps))?.label ?? 'A4');
 	const blockOn = (b: string) => docState?.block === b;
+	/** Commandes qui ne modifient rien (affichage, mise en page, lecture) : jamais grisées. */
+	const readOnly = (cs: Command[]): Command[] => cs.map((c) => ({ ro: true, ...c }));
+	const readOnlyGroups = (gs: Group[]): Group[] => gs.map((g) => ({ ...g, commands: readOnly(g.commands) }));
+	const prot = $derived(protectedThing(context));
+	const moreHint = `Autres graphiques : ${MORE_KINDS.map((k) => k.label).join(', ')}`;
+	const animateCmd: Command = $derived({ label: 'Animations', icon: 'play', ro: true, on: animate, run: onanimate ? () => onanimate(!animate) : undefined, hint: animate ? 'Désactiver l’animation du cadre de sélection' : 'Animer le cadre de sélection (il glisse vers la nouvelle cellule)' });
 	const sheetRibbons: Record<string, Group[]> = $derived({
 		Accueil: [
 			{
 				title: 'Annuler',
 				iconOk: true,
 				commands: [
-					{ label: 'Annuler', icon: 'undo', run: undo ? onundo : undefined, hint: undo ? 'Annuler : ' + undo + ' (Ctrl+Z)' : 'Rien à annuler' },
-					{ label: 'Rétablir', icon: 'redo', run: redo ? onredo : undefined, hint: redo ? 'Rétablir : ' + redo + ' (Ctrl+Y)' : 'Rien à rétablir' }
+					{ label: 'Annuler', icon: 'undo', ro: true, run: undo ? onundo : undefined, hint: undo ? 'Annuler : ' + undo + ' (Ctrl+Z)' : 'Rien à annuler' },
+					{ label: 'Rétablir', icon: 'redo', ro: true, run: redo ? onredo : undefined, hint: redo ? 'Rétablir : ' + redo + ' (Ctrl+Y)' : 'Rien à rétablir' }
 				]
 			},
-			{ title: 'Presse-papiers', iconOk: true, commands: [{ label: 'Coller', icon: 'paste', run: onclip ? () => onclip('paste') : undefined, hint: 'Coller (Ctrl+V)' }, { label: 'Couper', icon: 'cut', run: onclip ? () => onclip('cut') : undefined, hint: 'Couper (Ctrl+X)' }, { label: 'Copier', icon: 'copy', run: onclip ? () => onclip('copy') : undefined, hint: 'Copier (Ctrl+C)' }, { label: 'Reproduire', icon: 'format-painter', run: onpainter, hint: 'Reproduire la mise en forme de la cellule active' }] },
+			{
+				title: 'Presse-papiers',
+				iconOk: true,
+				commands: [
+					{ label: 'Coller', icon: 'paste', run: onclip ? () => onclip('paste') : undefined, hint: 'Coller (Ctrl+V)' },
+					{ label: 'Couper', icon: 'cut', run: onclip ? () => onclip('cut') : undefined, hint: 'Couper (Ctrl+X)' },
+					{ label: 'Copier', icon: 'copy', ro: true, run: onclip ? () => onclip('copy') : undefined, hint: 'Copier (Ctrl+C)' },
+					{ label: 'Reproduire', icon: 'format-painter', local: true, run: onpainter, hint: 'Reproduire la mise en forme de la cellule active' }
+				]
+			},
 			{
 				title: 'Police',
 				fonts: true,
 				iconOk: true,
 				launch: fmt('font'),
 				launchHint: 'Format de cellule : police (Ctrl+1)',
-				commands: [
+				commands: local([
 					{ label: 'Gras', icon: 'bold', run: st({ b: 'toggle' }), hint: 'Gras (Ctrl+B)', on: !!cellStyle?.b },
 					{ label: 'Italique', icon: 'italic', run: st({ i: 'toggle' }), hint: 'Italique (Ctrl+I)', on: !!cellStyle?.i },
 					{ label: 'Souligné', icon: 'underline', run: st({ u: 'toggle' }), hint: 'Souligné (Ctrl+U)', on: !!cellStyle?.u },
-					{ label: 'Couleur', icon: 'font-color', run: st({ fg }), hint: 'Couleur du texte (▾ : choisir la teinte)', color: 'fg' },
-					{ label: 'Remplissage', icon: 'font-color', run: st({ bg }), hint: 'Couleur de remplissage (▾ : choisir la teinte)', color: 'bg' },
-					{ label: 'Effacer', icon: 'remove-duplicates', run: st(clearPatch()), hint: 'Effacer la mise en forme' }
-				]
+					{ label: 'Couleur de police', icon: 'font-color', run: st({ fg }), hint: 'Couleur de police (▾ : choisir la teinte)', color: 'fg' },
+					{ label: 'Couleur de remplissage', icon: 'font-color', run: st({ bg }), hint: 'Couleur de remplissage (▾ : choisir la teinte)', color: 'bg' }
+				])
 			},
 			{
 				title: 'Bordures',
 				iconOk: true,
 				launch: fmt('border'),
 				launchHint: 'Format de cellule : bordure (Ctrl+1)',
-				commands: [
+				commands: local([
 					{ label: 'Toutes', icon: 'border-all', run: st({ border: 'all' }), hint: 'Toutes les bordures' },
 					{ label: 'Contour', icon: 'border-outline', run: st({ border: 'outline' }), hint: 'Bordure extérieure de la sélection' },
 					{ label: 'Aucune', icon: 'border-none', run: st({ border: 'none' }), hint: 'Retirer les bordures' }
-				]
+				])
 			},
 			{
 				title: 'Alignement',
@@ -297,13 +317,16 @@
 				launch: fmt('align'),
 				launchHint: 'Format de cellule : alignement (Ctrl+1)',
 				commands: [
-					{ label: 'Haut', icon: 'align-top', run: st({ va: 'top' }), hint: 'Aligner en haut', on: cellStyle?.va === 'top' },
-					{ label: 'Milieu', icon: 'align-middle', run: st({ va: null }), hint: 'Aligner au milieu', on: !!cellStyle && !cellStyle.va },
-					{ label: 'Bas', icon: 'align-bottom', run: st({ va: 'bottom' }), hint: 'Aligner en bas', on: cellStyle?.va === 'bottom' },
-					{ label: 'Gauche', icon: 'align-left', run: st({ al: 'left' }), on: cellStyle?.al === 'left' },
-					{ label: 'Centrer', icon: 'align-center', run: st({ al: 'center' }), on: cellStyle?.al === 'center' },
-					{ label: 'Droite', icon: 'align-right', run: st({ al: 'right' }), on: cellStyle?.al === 'right' },
-					{ label: 'Renvoyer à la ligne', icon: 'wrap-text', run: onwrap, hint: 'Afficher le texte sur plusieurs lignes dans la cellule', on: !!cellStyle?.wr },
+					...local([
+						{ label: 'Haut', icon: 'align-top', run: st({ va: 'top' }), hint: 'Aligner en haut', on: cellStyle?.va === 'top' },
+						{ label: 'Milieu', icon: 'align-middle', run: st({ va: null }), hint: 'Aligner au milieu', on: !!cellStyle && !cellStyle.va },
+						{ label: 'Bas', icon: 'align-bottom', run: st({ va: 'bottom' }), hint: 'Aligner en bas', on: cellStyle?.va === 'bottom' },
+						// Comme Excel : cliquer sur l'alignement en cours revient au standard.
+						{ label: 'Gauche', icon: 'align-left', run: st(alignPatch(cellStyle?.al, 'left')), hint: cellStyle?.al === 'left' ? 'Aligner à gauche (cliquer : revenir à l’alignement standard)' : 'Aligner à gauche', on: cellStyle?.al === 'left' },
+						{ label: 'Centrer', icon: 'align-center', run: st(alignPatch(cellStyle?.al, 'center')), hint: cellStyle?.al === 'center' ? 'Centrer (cliquer : revenir à l’alignement standard)' : 'Centrer', on: cellStyle?.al === 'center' },
+						{ label: 'Droite', icon: 'align-right', run: st(alignPatch(cellStyle?.al, 'right')), hint: cellStyle?.al === 'right' ? 'Aligner à droite (cliquer : revenir à l’alignement standard)' : 'Aligner à droite', on: cellStyle?.al === 'right' },
+						{ label: 'Renvoyer à la ligne', icon: 'wrap-text', run: onwrap, hint: 'Afficher le texte sur plusieurs lignes dans la cellule', on: !!cellStyle?.wr }
+					]),
 					{ label: 'Fusionner et centrer', icon: 'merge-cells', run: onmerge, hint: merged ? 'Annuler la fusion des cellules' : 'Fusionner les cellules libres sélectionnées en une seule, contenu centré', on: merged }
 				]
 			},
@@ -312,17 +335,17 @@
 				iconOk: true,
 				launch: fmt('number'),
 				launchHint: 'Format de cellule : nombre, date, heure… (Ctrl+1)',
-				commands: [
-					{ label: '0,00', icon: 'decimal-fixed', run: st({ nf: '0,00', dp: null, ng: null, df: null }), hint: 'Deux décimales' },
-					{ label: 'Monétaire', icon: 'currency', run: st({ nf: '€', ng: null, df: null }) },
-					{ label: 'Pourcentage', icon: 'percent', run: st({ nf: '%', ng: null, df: null }) },
+				commands: local([
+					{ label: '0,00', icon: 'decimal-fixed', run: st({ nf: '0,00', dp: null, ng: null, df: null }), hint: 'Nombre à deux décimales' },
+					{ label: 'Monétaire', icon: 'currency', run: st({ nf: '€', ng: null, df: null }), hint: 'Format monétaire (€)' },
+					{ label: 'Pourcentage', icon: 'percent', run: st({ nf: '%', ng: null, df: null }), hint: 'Style de pourcentage (0,25 s’affiche 25 %)' },
 					// Les deux boutons de décimales restent côte à côte, dans le ruban
 					// large comme empilés (même colonne de trois).
 					{ label: 'Ajouter une décimale', icon: 'decimal-more', run: st({ dp: 'more' }), hint: 'Ajouter une décimale à l’affichage' },
 					{ label: 'Réduire les décimales', icon: 'decimal-less', run: st({ dp: 'less' }), hint: 'Afficher une décimale de moins' },
 					{ label: 'Date', icon: 'type-date', run: st({ nf: 'date', df: 'jj/mm/aaaa', dp: null, ng: null }), hint: 'Date courte (jj/mm/aaaa) ; Ctrl+1 pour les autres formats de date et d’heure' },
 					{ label: 'Standard', icon: 'number-format', run: st({ nf: null, dp: null, ng: null, df: null }), hint: 'Format Standard' }
-				]
+				])
 			},
 			{
 				title: 'Styles',
@@ -331,9 +354,11 @@
 						label: 'Mise en forme conditionnelle',
 						icon: 'conditional-format',
 						menu: true,
+						local: true,
 						run: onrules ? () => onrules(anchor.x, anchor.y) : undefined,
 						hint: 'Mise en évidence des cellules, barres de données, nuances de couleurs, jeux d’icônes, gestionnaire des règles'
-					}
+					},
+					{ label: 'Mettre sous forme de tableau', icon: 'table', run: ed('formatAsTable'), hint: 'Faire un tableau de la plage ou du bloc de cellules de la cellule active, sa première ligne pour en-têtes (Ctrl+L)' }
 				]
 			},
 			{
@@ -363,12 +388,13 @@
 					{
 						label: 'Format',
 						icon: 'cell-format',
+						local: true,
 						run: onformat ? openItems : undefined, // ouvre ses choix
 						hint: 'Format de cellule, masquer et afficher',
 						items: [
-							{ label: 'Format de cellule… (Ctrl+1)', run: fmt('number') },
-							{ label: 'Masquer les lignes', run: lines(true, true) },
-							{ label: 'Masquer les colonnes', run: lines(false, true) },
+							{ label: 'Format de cellule…', keys: 'Ctrl+1', run: fmt('number') },
+							{ label: 'Masquer les lignes', keys: 'Ctrl+9', run: lines(true, true) },
+							{ label: 'Masquer les colonnes', keys: 'Ctrl+0', run: lines(false, true) },
 							{ label: 'Afficher les lignes', run: lines(true, false) },
 							{ label: 'Afficher les colonnes', run: lines(false, false) }
 						]
@@ -377,10 +403,44 @@
 			},
 			{
 				title: 'Édition',
+				// Comme Excel : Somme automatique, Remplissage, Effacer, Trier et filtrer, Rechercher.
 				commands: [
-					{ label: 'Trier A → Z', icon: 'sort', run: onsort ? () => onsort(false) : undefined },
-					{ label: 'Rechercher', icon: 'search', run: onfind ? () => onfind(false) : undefined, hint: 'Rechercher (Ctrl+F)' },
-					{ label: 'Remplacer', icon: 'search', run: onfind ? () => onfind(true) : undefined, hint: 'Remplacer (Ctrl+H)' }
+					{ label: 'Somme automatique', icon: 'autosum', run: onformula ? () => onformula('sum') : undefined, hint: 'SOMME de la colonne du tableau au-dessus (Alt+=)' },
+					{
+						label: 'Remplissage',
+						icon: 'fill-down',
+						run: onedit ? openItems : undefined,
+						hint: 'Recopier la première ligne ou colonne de la sélection',
+						items: [
+							{ label: 'Vers le bas', keys: 'Ctrl+D', run: ed('fillDown') },
+							{ label: 'Vers la droite', keys: 'Ctrl+R', run: ed('fillRight') }
+						]
+					},
+					{
+						label: 'Effacer',
+						icon: 'clear-format',
+						run: onstyle ? openItems : undefined,
+						hint: 'Effacer les formats, le contenu ou la note de la sélection',
+						items: [
+							{ label: 'Effacer les formats', local: true, run: st(clearPatch()) },
+							{ label: 'Effacer le contenu', keys: 'Suppr', run: ed('clearContents') },
+							{ label: 'Effacer la note', local: true, run: note && onnote ? () => onnote('delete') : undefined }
+						]
+					},
+					{
+						label: 'Trier et filtrer',
+						icon: 'filter',
+						run: onsort || onfilter ? openItems : undefined,
+						hint: 'Trier le tableau par la colonne active, le filtrer',
+						items: [
+							{ label: 'Trier de A à Z', local: true, run: onsort ? () => onsort(false) : undefined },
+							{ label: 'Trier de Z à A', local: true, run: onsort ? () => onsort(true) : undefined },
+							{ label: 'Filtrer', ro: true, keys: 'Ctrl+Maj+L', run: flt('filter') },
+							{ label: 'Effacer les filtres', ro: true, run: filters ? flt('clear') : undefined }
+						]
+					},
+					{ label: 'Rechercher', icon: 'search', ro: true, run: onfind ? () => onfind(false) : undefined, hint: 'Rechercher (Ctrl+F)' },
+					{ label: 'Remplacer', icon: 'replace', run: onfind ? () => onfind(true) : undefined, hint: 'Remplacer (Ctrl+H)' }
 				]
 			}
 		],
@@ -388,34 +448,37 @@
 			{
 				title: 'Tableaux',
 				commands: [
-					{ label: 'Tableau croisé', icon: 'pivot-table', run: onpivot, hint: 'Tableau croisé dynamique du tableau actif (double-clic sur un TCD pour le modifier)' },
-					...(sharedWorkbooksEnabled() ? [{ label: 'Data Lake Lattis', icon: 'database' as const, run: oninsertdata, hint: 'Insérer à la cellule active une donnée du catalogue d’un Serveur Lattis : tableau lié, en lecture seule, à jour en direct' }] : [])
+					{ label: 'Tableau croisé dynamique', icon: 'pivot-table', ro: true, createsSheet: true, run: onpivot, hint: 'Tableau croisé dynamique du tableau actif, sur une nouvelle feuille (double-clic sur un TCD pour le modifier)' },
+					{ label: 'Tableau', icon: 'table', run: ed('formatAsTable'), hint: 'Faire un tableau de la plage ou du bloc de cellules de la cellule active (Ctrl+L)' },
+					...(sharedWorkbooksEnabled() ? [{ label: 'Data Lake Lattis', icon: 'database' as const, run: oninsertdata, hint: 'Insérer à la cellule active une donnée du catalogue du Data Lake Lattis : tableau lié, en lecture seule, à jour en direct' }] : [])
 				]
 			},
 			{
 				title: 'Graphiques',
-				commands: [
-					{ label: 'Histogramme', icon: 'chart-bar', run: onchart ? () => onchart('bar') : undefined, hint: 'Histogramme (barres verticales) du tableau actif' },
-					{ label: 'Courbes', icon: 'chart-line', run: onchart ? () => onchart('line') : undefined, hint: 'Graphique en courbes du tableau actif' },
-					{ label: 'Secteurs', icon: 'chart-pie', run: onchart ? () => onchart('pie') : undefined, hint: 'Graphique en secteurs du tableau actif' },
-					{ label: 'Nuage de points', icon: 'chart-scatter', run: onchart ? () => onchart('scatter') : undefined, hint: 'Nuage de points du tableau actif' },
-					{ label: 'Autres graphiques', icon: 'chart-more', run: onchart ? openItems : undefined, hint: MORE_KINDS.map((k) => k.label).join(', '), items: MORE_KINDS.map((k) => ({ label: k.label, run: onchart ? () => onchart(k.kind) : undefined })) }
-				]
+				commands: local([
+					...(['bar', 'line', 'pie', 'scatter'] as const).map((k) => ({
+						label: kindInfo(k)!.label,
+						icon: kindInfo(k)!.icon,
+						run: onchart ? () => onchart(k) : undefined,
+						hint: `${kindInfo(k)!.label} du tableau actif${k === 'bar' ? ' : barres verticales (Alt+F1)' : ''}`
+					})),
+					{ label: 'Autres graphiques', icon: 'chart-more', run: onchart ? openItems : undefined, hint: moreHint, items: MORE_KINDS.map((k) => ({ label: k.label, run: onchart ? () => onchart(k.kind) : undefined })) }
+				])
 			},
 			{
 				title: 'Contrôles',
-				commands: [
+				commands: local([
 					...(scriptingEnabled() ? [{ label: 'Bouton', icon: 'button' as const, run: onbutton ? () => onbutton('') : undefined, hint: 'Bouton d’action à la cellule active : un clic exécute un script de l’onglet Script (ou rien)' }] : []),
 					{
 						label: 'Champ',
 						icon: 'text-input',
 						run: onbutton ? () => onbutton('input') : undefined,
-						hint: 'Contrôle lié à une cellule, qui peut aussi lancer une action : champ texte, zone de texte, case à cocher, liste déroulante ou fichier (choix du type dans la fenêtre)'
+						hint: `Contrôle lié à une cellule : champ texte, zone de texte, case à cocher, liste déroulante ou fichier (choix du type dans la fenêtre)${scriptingEnabled() ? ' ; il peut aussi lancer un script' : ''}`
 					}
-				]
+				])
 			}
 		],
-		'Mise en page': [
+		'Mise en page': readOnlyGroups([
 			{
 				title: 'Mise en page',
 				launch: pg({ kind: 'dialog', tab: 'page' }),
@@ -501,16 +564,17 @@
 					{ label: 'Imprimer les en-têtes', icon: 'printer', on: !!ps.headings, run: pg({ kind: 'print', what: 'headings', on: !ps.headings }), hint: 'Imprimer les lettres de colonnes et les numéros de lignes' }
 				]
 			}
-		],
+		]),
 		Données: [
 			{
 				title: 'Obtenir des données',
-				commands: [
-					{ label: 'Texte/CSV', icon: 'file', run: data('csv'), hint: 'Nouvelle requête à partir d’un fichier CSV (étapes de transformation, actualisable)' },
+				// Une requête s'ajoute même sur une feuille protégée (le moteur vérifie où elle écrit).
+				commands: readOnly([
+					{ label: 'Texte/CSV', icon: 'file-csv', run: data('csv'), hint: 'Nouvelle requête à partir d’un fichier CSV (étapes de transformation, actualisable)' },
 					{ label: 'Classeur Excel', icon: 'table', run: data('xlsx'), hint: 'Nouvelle requête à partir d’un tableau d’un classeur .xlsx' },
 					{
 						label: 'Autres fichiers',
-						icon: 'file',
+						icon: 'open',
 						run: ondata ? openItems : undefined,
 						hint: 'Nouvelle requête à partir d’un fichier JSON, Parquet, ou d’une base SQLite',
 						items: [
@@ -531,51 +595,79 @@
 						]
 					},
 					// Serveur Lattis : bouton à lui, à côté des bases de données (comme les sources propres d'Excel).
-					...(sharedWorkbooksEnabled() ? [{ label: 'Serveur Lattis', icon: 'link' as const, run: data('lattis'), hint: 'Nouvelle requête sur un tableau ou une donnée d’entreprise d’un Serveur Lattis (lecture seule)' }] : []),
+					...(sharedWorkbooksEnabled() ? [{ label: 'Serveur Lattis', icon: 'link' as const, run: data('lattis'), hint: 'Nouvelle requête sur un tableau d’un Serveur Lattis ou une donnée de son Data Lake (lecture seule)' }] : []),
 					{ label: 'Web', icon: 'web', run: data('web'), hint: 'Nouvelle requête à partir d’une API web qui répond en JSON (lecture seule)' },
 					{ label: 'À partir du tableau', icon: 'sheet', run: data('table'), hint: 'Nouvelle requête à partir d’un tableau du classeur' }
-				]
+				])
 			},
 			{
 				title: 'Requêtes et connexions',
-				commands: [
+				commands: readOnly([
 					{ label: 'Requêtes et connexions', icon: 'query', run: data('queries'), hint: 'Volet des requêtes d’import et des connexions du classeur' },
-					{ label: 'Actualiser tout', icon: 'refresh', run: data('refreshAll'), hint: 'Relire les sources de toutes les requêtes chargées, remplacer leurs tableaux et recalculer (Ctrl+F5)' }
-				]
+					{ label: 'Actualiser tout', icon: 'refresh', run: data('refreshAll'), hint: 'Relire les sources de toutes les requêtes chargées, remplacer leurs tableaux et recalculer (Ctrl+Alt+F5)' }
+				])
 			},
 			{
 				title: 'Trier et filtrer',
 				commands: [
-					{ label: 'Trier A → Z', icon: 'sort', run: onsort ? () => onsort(false) : undefined, hint: 'Trier le tableau par la colonne active, croissant' },
-					{ label: 'Trier Z → A', icon: 'sort', run: onsort ? () => onsort(true) : undefined, hint: 'Trier le tableau par la colonne active, décroissant' },
-					{ label: 'Filtrer', icon: 'filter', run: onfilter ? () => onfilter(false) : undefined, hint: 'Filtrer le tableau par la colonne active' }
+					{ label: 'Trier A → Z', icon: 'sort-asc', local: true, run: onsort ? () => onsort(false) : undefined, hint: 'Trier le tableau par la colonne active, croissant' },
+					{ label: 'Trier Z → A', icon: 'sort-desc', local: true, run: onsort ? () => onsort(true) : undefined, hint: 'Trier le tableau par la colonne active, décroissant' },
+					{ label: 'Filtrer', icon: 'filter', ro: true, run: flt('filter'), hint: 'Filtrer le tableau par la colonne active (Ctrl+Maj+L)' },
+					{ label: 'Effacer', icon: 'clear-format', ro: true, run: filters ? flt('clear') : undefined, hint: filters ? 'Effacer les filtres du tableau actif' : 'Effacer : le tableau de la cellule active n’est pas filtré' },
+					{ label: 'Erreurs seulement', icon: 'warning', ro: true, on: errorsOnly, run: flt('errors'), hint: errorsOnly ? 'Afficher de nouveau toutes les lignes de la colonne active' : 'Afficher seulement les saisies hors type de la colonne active' }
 				]
 			},
-			{ title: 'Outils de données', commands: [{ label: 'Supprimer les doublons', icon: 'remove-duplicates', run: ondedup, hint: 'Supprimer les lignes en double du tableau actif' }, { label: 'Convertir', icon: 'text-columns', run: ontextcols, hint: 'Convertir le texte en colonnes : couper le contenu de la colonne sélectionnée (séparateurs ou largeur fixe) en plusieurs colonnes' }, { label: 'Erreurs seulement', icon: 'warning', run: onfilter ? () => onfilter(true) : undefined, hint: 'Afficher seulement les saisies hors type de la colonne active (bascule)' }, { label: 'Validation des données', icon: 'validation', run: onvalidation, hint: 'Liste déroulante : valeurs permises dans la sélection (ou toute une colonne de tableau), les autres saisies sont refusées' }] }
+			{
+				title: 'Outils de données',
+				commands: [
+					{ label: 'Supprimer les doublons', icon: 'remove-duplicates', run: ondedup, hint: 'Supprimer les lignes en double du tableau actif' },
+					{ label: 'Convertir', icon: 'text-columns', run: ontextcols, hint: 'Convertir le texte en colonnes : couper le contenu de la colonne sélectionnée (séparateurs ou largeur fixe) en plusieurs colonnes' },
+					{ label: 'Validation des données', icon: 'validation', local: true, run: onvalidation, hint: 'Liste déroulante : valeurs permises dans la sélection (ou toute une colonne de tableau), les autres saisies sont refusées' }
+				]
+			}
 		],
 		Formules: [
-			{ title: 'Bibliothèque', commands: [{ label: 'Insérer une fonction', icon: 'function', run: onformula ? () => onformula('insert') : undefined, hint: 'Choisir une fonction et commencer la formule dans la cellule active' }, { label: 'Somme automatique', icon: 'autosum', run: onformula ? () => onformula('sum') : undefined, hint: 'SOMME de la colonne du tableau au-dessus' }, { label: 'REFERENCE', icon: 'reference', run: onformula ? () => onformula('reference') : undefined, hint: 'REFERENCE(Tableau[Colonne]; clé) : la RECHERCHEV de Lattis' }] },
-			{ title: 'Audit', commands: [{ label: 'Afficher les liens', icon: 'dependency-graph', run: onaudit ? () => onaudit('show') : undefined, hint: 'Flèches des liens de toutes les cellules sélectionnées : bleues depuis ce que lisent leurs formules, rouges vers les formules qui les lisent ; elles partent dès que la sélection change' }] },
-			{ title: 'Calcul', commands: [{ label: 'Calculer', icon: 'calculate', run: onrecalc, hint: 'Recalculer les formules et renouveler AUJOURDHUI, MAINTENANT et ALEA (F9, ou F5 hors d’un tableau importé)' }] }
+			{
+				title: 'Bibliothèque',
+				commands: [
+					{ label: 'Insérer une fonction', icon: 'function', run: onformula ? () => onformula('insert') : undefined, hint: 'Choisir une fonction et commencer la formule dans la cellule active (Maj+F3)' },
+					{ label: 'Somme automatique', icon: 'autosum', run: onformula ? () => onformula('sum') : undefined, hint: 'SOMME de la colonne du tableau au-dessus (Alt+=)' },
+					{ label: 'REFERENCE', icon: 'reference', run: onformula ? () => onformula('reference') : undefined, hint: 'REFERENCE(Tableau[Colonne]; clé) : la RECHERCHEV de Lattis' }
+				]
+			},
+			{
+				title: 'Audit',
+				commands: readOnly([
+					{ label: 'Afficher les liens', icon: 'dependency-graph', run: onaudit ? () => onaudit('show') : undefined, hint: 'Flèches des liens de toutes les cellules sélectionnées : bleues depuis ce que lisent leurs formules, rouges vers les formules qui les lisent ; elles partent dès que la sélection change' },
+					{ label: 'Supprimer les flèches', icon: 'trash', run: onaudit ? () => onaudit('clear') : undefined, hint: 'Retirer les flèches des liens (Échap)' }
+				])
+			},
+			{ title: 'Calcul', commands: [{ label: 'Calculer', icon: 'calculate', ro: true, run: onrecalc, hint: 'Recalculer les formules et renouveler AUJOURDHUI, MAINTENANT et ALEA (F9, ou F5 hors d’un tableau importé)' }] }
 		],
 		Révision: [
 			{
 				title: 'Notes',
-				commands: [
-					{ label: 'Nouvelle note', icon: 'note', run: onnote ? () => onnote('edit') : undefined, hint: 'Note sur la cellule active (ou la modifier) : coin rouge, affichée au survol' },
-					{ label: 'Supprimer la note', icon: 'remove-duplicates', run: onnote ? () => onnote('delete') : undefined, hint: 'Supprimer la note de la cellule active' }
-				]
+				commands: local([
+					{ label: note ? 'Modifier la note' : 'Nouvelle note', icon: 'note', run: onnote ? () => onnote('edit') : undefined, hint: note ? 'Modifier la note de la cellule active (Maj+F2)' : 'Note sur la cellule active : coin rouge, affichée au survol (Maj+F2)' },
+					{ label: 'Supprimer la note', icon: 'trash', run: onnote && note ? () => onnote('delete') : undefined, hint: note ? 'Supprimer la note de la cellule active' : 'Supprimer la note : la cellule active n’en a pas' }
+				])
 			},
 			{
 				title: 'Protéger',
-				commands: [
-					{ label: sheetOwnProtected ? 'Ôter la protection' : 'Protéger la feuille', icon: 'lock-sheet', on: sheetOwnProtected, run: onprotect ? () => onprotect('sheet') : undefined, hint: sheetOwnProtected ? 'Ôter la protection de la feuille active' : 'Protéger la feuille active : plus aucune modification de son contenu (mot de passe facultatif)' },
+				commands: readOnly([
+					{ label: sheetOwnProtected ? prot.unprotect : prot.protect, icon: 'lock-sheet', on: sheetOwnProtected, run: onprotect ? () => onprotect('sheet') : undefined, hint: sheetOwnProtected ? prot.unprotect : `${prot.protect} : plus aucune modification de son contenu (mot de passe facultatif)` },
 					{ label: workbookProtected ? 'Ôter la protection du classeur' : 'Protéger le classeur', icon: 'lock-book', on: workbookProtected, run: onprotect ? () => onprotect('workbook') : undefined, hint: workbookProtected ? 'Ôter la protection de la structure du classeur' : 'Protéger la structure du classeur : ajouter, supprimer, renommer ou déplacer des feuilles est refusé' }
-				]
+				])
 			}
 		],
 		Affichage: [
-			{ title: 'Afficher', commands: [{ label: 'Quadrillage', icon: 'border-all', on: gridlines, run: ongridlines ? () => ongridlines(!gridlines) : undefined, hint: gridlines ? 'Masquer le quadrillage de la feuille' : 'Afficher le quadrillage de la feuille' }, { label: 'En-têtes A1', icon: 'headings', on: headings, run: onheadings ? () => onheadings(!headings) : undefined, hint: headings ? 'Lettres et numéros seulement pendant la saisie d’une formule' : 'Toujours afficher les lettres de colonnes et numéros de lignes' }, { label: 'Animations', icon: 'play', on: animate, run: onanimate ? () => onanimate(!animate) : undefined, hint: animate ? 'Désactiver l’animation du cadre de sélection' : 'Animer le cadre de sélection (il glisse vers la nouvelle cellule)' }, {
+			{
+				title: 'Afficher',
+				commands: readOnly([
+					{ label: 'Quadrillage', icon: 'gridlines', on: gridlines, run: ongridlines ? () => ongridlines(!gridlines) : undefined, hint: gridlines ? 'Masquer le quadrillage de la feuille' : 'Afficher le quadrillage de la feuille' },
+					{ label: 'En-têtes A1', icon: 'headings', on: headings, run: onheadings ? () => onheadings(!headings) : undefined, hint: headings ? 'Lettres et numéros seulement pendant la saisie d’une formule' : 'Toujours afficher les lettres de colonnes et numéros de lignes' },
+					animateCmd,
+					{
 						label: 'Figer les volets',
 						icon: 'freeze-panes',
 						run: onfreeze ? openItems : undefined,
@@ -587,15 +679,20 @@
 							{ label: 'Figer la ligne supérieure', run: frz('row'), on: freeze?.rows === 1 && freeze.cols === 0 },
 							{ label: 'Figer la première colonne', run: frz('col'), on: freeze?.rows === 0 && freeze.cols === 1 }
 						]
-					}, {
+					},
+					{
 						label: 'Zoom',
 						icon: 'zoom',
 						run: onzoom ? openItems : undefined,
 						on: Math.abs(zoom - 1) > 0.001,
 						hint: `Zoom de la feuille : ${zoomLabel(zoom)} (Ctrl+molette, ou le curseur de la barre d’état)`,
 						items: ZOOM_LEVELS.map((z) => ({ label: zoomLabel(z), run: onzoom ? () => onzoom(z) : undefined, on: Math.abs(zoom - z) < 0.001 }))
-					}, { label: '100 %', icon: 'zoom-100', run: onzoom ? () => onzoom(1) : undefined, hint: 'Revenir au zoom 100 %' }, { label: 'Sauts de page', icon: 'page-break', on: pageBreaks, run: onpagebreaks ? () => onpagebreaks(!pageBreaks) : undefined, hint: pageBreaks ? 'Masquer les sauts de page (traits pointillés) et la zone d’impression' : 'Afficher les sauts de page de l’impression (traits pointillés) et la zone d’impression' }] },
-			...(onbench ? [{ title: 'Mesures (prototype)', commands: [{ label: 'Mesurer la grille', icon: 'stopwatch' as IconName, run: () => onbench() }] }] : [])
+					},
+					{ label: '100 %', icon: 'zoom-100', run: onzoom ? () => onzoom(1) : undefined, hint: 'Revenir au zoom 100 %' },
+					{ label: 'Sauts de page', icon: 'page-break', on: pageBreaks, run: onpagebreaks ? () => onpagebreaks(!pageBreaks) : undefined, hint: pageBreaks ? 'Masquer les sauts de page (traits pointillés) et la zone d’impression' : 'Afficher les sauts de page de l’impression (traits pointillés) et la zone d’impression' }
+				])
+			},
+			...(onbench ? [{ title: 'Mesures (prototype)', commands: readOnly([{ label: 'Mesurer la grille', icon: 'stopwatch', run: () => onbench() }]) }] : [])
 		]
 	});
 
@@ -607,11 +704,19 @@
 				title: 'Annuler',
 				iconOk: true,
 				commands: [
-					{ label: 'Annuler', icon: 'undo', run: dc('undo'), hint: 'Annuler la dernière modification du texte (Ctrl+Z)' },
-					{ label: 'Rétablir', icon: 'redo', run: dc('redo'), hint: 'Rétablir (Ctrl+Y)' }
+					{ label: 'Annuler', icon: 'undo', run: docState?.undo === false ? undefined : dc('undo'), hint: docState?.undo === false ? 'Rien à annuler' : 'Annuler la dernière modification du texte (Ctrl+Z)' },
+					{ label: 'Rétablir', icon: 'redo', run: docState?.redo === false ? undefined : dc('redo'), hint: docState?.redo === false ? 'Rien à rétablir' : 'Rétablir (Ctrl+Y)' }
 				]
 			},
-			{ title: 'Presse-papiers', iconOk: true, commands: [{ label: 'Coller', icon: 'paste', run: dc('paste'), hint: 'Coller le texte (Ctrl+V)' }, { label: 'Couper', icon: 'cut', run: dc('cut'), hint: 'Couper (Ctrl+X)' }, { label: 'Copier', icon: 'copy', run: dc('copy'), hint: 'Copier (Ctrl+C)' }] },
+			{
+				title: 'Presse-papiers',
+				iconOk: true,
+				commands: [
+					{ label: 'Coller', icon: 'paste', run: dc('paste'), hint: 'Coller le texte (Ctrl+V)' },
+					{ label: 'Couper', icon: 'cut', run: dc('cut'), hint: 'Couper (Ctrl+X)' },
+					{ label: 'Copier', icon: 'copy', ro: true, run: dc('copy'), hint: 'Copier (Ctrl+C)' }
+				]
+			},
 			{
 				title: 'Police',
 				fonts: true,
@@ -621,9 +726,9 @@
 					{ label: 'Italique', icon: 'italic', run: st({ i: 'toggle' }), hint: 'Italique (Ctrl+I)', on: !!cellStyle?.i },
 					{ label: 'Souligné', icon: 'underline', run: st({ u: 'toggle' }), hint: 'Souligné (Ctrl+U)', on: !!cellStyle?.u },
 					{ label: 'Barré', icon: 'strike', run: dc('strike'), hint: 'Barré', on: !!docState?.strike },
-					{ label: 'Couleur', icon: 'font-color', run: st({ fg }), hint: 'Couleur du texte (▾ : choisir la teinte)', color: 'fg' },
+					{ label: 'Couleur de police', icon: 'font-color', run: st({ fg }), hint: 'Couleur de police (▾ : choisir la teinte)', color: 'fg' },
 					{ label: 'Surlignage', icon: 'font-color', run: st({ bg }), hint: 'Couleur de surlignage (▾ : choisir la teinte)', color: 'bg' },
-					{ label: 'Effacer', icon: 'remove-duplicates', run: st(clearPatch()), hint: 'Effacer la mise en forme des caractères' }
+					{ label: 'Effacer', icon: 'clear-format', run: st(clearPatch()), hint: 'Effacer la mise en forme des caractères' }
 				]
 			},
 			{
@@ -657,25 +762,24 @@
 					}
 				]
 			},
-			{ title: 'Imprimer', commands: [{ label: 'Imprimer / PDF', icon: 'file', run: dc('pdf'), hint: 'Imprimer le document, ou l’enregistrer en PDF (imprimante « Microsoft Print to PDF »), graphiques et tableaux croisés compris' }] }
+			// Imprimer ne modifie rien : permis sur un document protégé.
+			{ title: 'Imprimer', commands: [{ label: 'Imprimer / PDF', icon: 'printer', ro: true, run: dc('pdf'), hint: `Imprimer le document, ou l’enregistrer en PDF (${pdfPrinterHint()}), graphiques et tableaux croisés compris` }] }
 		],
 		Insertion: [
-			{ title: 'Tableaux', commands: [{ label: 'Tableau croisé', icon: 'pivot-table', run: dc('pivot'), hint: 'Tableau croisé dynamique d’un tableau du classeur, inséré dans le texte et recalculé avec lui' }] },
+			// Le tableau croisé d'un Document est inséré dans le texte (il ne crée pas de feuille).
+			{ title: 'Tableaux', commands: [{ label: 'Tableau croisé dynamique', icon: 'pivot-table', run: dc('pivot'), hint: 'Tableau croisé dynamique d’un tableau du classeur, inséré dans le texte et recalculé avec lui' }] },
 			{
 				title: 'Graphiques',
 				commands: [
-					{ label: 'Histogramme', icon: 'chart-bar', run: dc('chart:bar'), hint: 'Histogramme (barres verticales) d’un tableau du classeur, inséré dans le texte' },
-					{ label: 'Courbes', icon: 'chart-line', run: dc('chart:line'), hint: 'Graphique en courbes d’un tableau du classeur' },
-					{ label: 'Secteurs', icon: 'chart-pie', run: dc('chart:pie'), hint: 'Graphique en secteurs d’un tableau du classeur' },
-					{ label: 'Nuage de points', icon: 'chart-scatter', run: dc('chart:scatter'), hint: 'Nuage de points d’un tableau du classeur' },
-					{ label: 'Autres graphiques', icon: 'chart-more', run: openItems, hint: MORE_KINDS.map((k) => k.label).join(', '), items: MORE_KINDS.map((k) => ({ label: k.label, run: dc(`chart:${k.kind}`) })) }
+					...(['bar', 'line', 'pie', 'scatter'] as const).map((k) => ({ label: kindInfo(k)!.label, icon: kindInfo(k)!.icon, run: dc(`chart:${k}`), hint: `${kindInfo(k)!.label} d’un tableau du classeur, inséré dans le texte` })),
+					{ label: 'Autres graphiques', icon: 'chart-more', run: ondoc ? openItems : undefined, hint: moreHint, items: MORE_KINDS.map((k) => ({ label: k.label, run: dc(`chart:${k.kind}`) })) }
 				]
 			},
 			{
 				title: 'Contrôles',
 				commands: [
 					...(scriptingEnabled() ? [{ label: 'Bouton', icon: 'button' as const, run: dc('button'), hint: 'Bouton dans le texte : un clic exécute un script de l’onglet Script (ou l’une de ses fonctions)' }] : []),
-					{ label: 'Champ', icon: 'text-input', run: dc('input'), hint: 'Contrôle lié à une cellule d’une feuille : champ texte, zone de texte, case à cocher, liste déroulante ou fichier, pilotable par les scripts (controls.*)' }
+					{ label: 'Champ', icon: 'text-input', run: dc('input'), hint: `Contrôle lié à une cellule d’une feuille : champ texte, zone de texte, case à cocher, liste déroulante ou fichier${scriptingEnabled() ? ', pilotable par les scripts (controls.*)' : ''}` }
 				]
 			},
 			{
@@ -687,10 +791,9 @@
 			}
 		],
 		Révision: sheetRibbons.Révision.filter((g) => g.title === 'Protéger'),
-		Affichage: [{ title: 'Afficher', commands: sheetRibbons.Affichage[0].commands.filter((c) => c.label === 'Animations') }]
+		Affichage: [{ title: 'Afficher', commands: [animateCmd] }]
 	});
-	// Page web : elle a ses propres commandes (Modifier, et Site
-	// web… si Fichier › Paramètres › Fonctionnalités le permet).
+	// Page web : Annuler, Protéger et Animations (l'éditeur de la page a ses propres commandes).
 	const htmlRibbons: Record<string, Group[]> = $derived({
 		Accueil: sheetRibbons.Accueil.filter((g) => g.title === 'Annuler'),
 		Révision: sheetRibbons.Révision.filter((g) => g.title === 'Protéger'),
@@ -703,27 +806,12 @@
 		if (!isView(tab) && !shownTabs.includes(tab as (typeof tabs)[number])) tab = 'Accueil';
 	});
 
-	// Sur une feuille protégée, seules les commandes qui ne la modifient pas
-	// restent actives (lecture, copie, filtres, affichage) ; un tableau croisé
-	// crée une feuille : refusé quand la structure du classeur est protégée.
-	const READ_ONLY = new Set(['Annuler', 'Rétablir', 'Copier', 'Rechercher', 'Filtrer', 'Erreurs seulement', 'Afficher les liens', 'Calculer', 'Quadrillage', 'En-têtes A1', 'Animations', 'Figer les volets', 'Zoom', '100 %', 'Mesurer la grille', 'Tableau croisé', 'Protéger la feuille', 'Protéger le classeur', 'Ôter la protection', 'Ôter la protection du classeur', 'Texte/CSV', 'Classeur Excel', 'Autres fichiers', 'Base de données', 'Serveur Lattis', 'Web', 'À partir du tableau', 'Requêtes et connexions', 'Actualiser tout', 'Sauts de page', 'Marges', 'Orientation', 'Taille', 'Zone d’impression', 'Imprimer les titres', 'Largeur', 'Hauteur', 'Échelle', 'Afficher le quadrillage', 'Imprimer le quadrillage', 'Afficher les en-têtes', 'Imprimer les en-têtes']);
-	const ribbons: Record<string, Group[]> = $derived(
-		Object.fromEntries(
-			Object.entries(allRibbons).map(([k, gs]) => [
-				k,
-				gs.map((g) => ({
-					...g,
-					commands: g.commands.map((c) =>
-						c.run && sheetProtected && !READ_ONLY.has(c.label)
-							? { ...c, run: undefined, hint: sheetOwnProtected ? `${c.label} : feuille protégée (Révision › Ôter la protection)` : `${c.label} : classeur protégé (Révision › Ôter la protection du classeur)` }
-							: c.run && workbookProtected && c.label === 'Tableau croisé'
-								? { ...c, run: undefined, hint: 'Tableau croisé : le classeur est protégé (il crée une feuille)' }
-								: c
-					)
-				}))
-			])
-		)
-	);
+	// Grisage (ribbon.ts) : protection de la feuille ou du Document, du
+	// classeur, tableau partagé en lecture seule sous la cellule active.
+	const ribbons: Record<string, Group[]> = $derived.by(() => {
+		const s = { sheetProtected, sheetOwnProtected, workbookProtected, tableReadOnly: context === 'sheet' ? tableReadOnly : undefined, context };
+		return Object.fromEntries(Object.entries(allRibbons).map(([k, gs]) => [k, gs.map((g) => ({ ...g, commands: g.commands.map((c) => gate(c, s)) }))]));
+	});
 
 	// Largeur réelle des libellés (police du ruban), pour l'estimation de fit.
 	let measureCtx: CanvasRenderingContext2D | null = null;
@@ -1021,7 +1109,7 @@
 	$effect(() => {
 		// Revenir à la grille depuis la page (onglet de feuille) remet un onglet de ruban.
 		if (view === 'grid' && isView(tab)) tab = 'Accueil';
-		// Vue changée sans le ruban (retour de la pipette de l'onglet SCRIPT).
+		// Vue changée sans le ruban (retour de la pipette de l'onglet Script).
 		else if (view === 'script' && tab !== 'SCRIPT') tab = 'SCRIPT';
 		else if (view === 'sql' && tab !== 'SQL') tab = 'SQL';
 	});
@@ -1029,27 +1117,28 @@
 
 {#snippet colorCmd(c: Command)}
 	{@const kind = c.color!}
+	{@const cur = kind === 'fg' ? fg : bg}
 		<div class="color-cmd">
-			<button class="cmd" disabled={!c.run} onclick={c.run} title={c.hint} data-kt={c.label}>
+			<button class="cmd" disabled={!c.run} onclick={c.run} title={tipOf(c, disabled)} aria-label="{c.label} : {COLOR_NAMES[cur] ?? cur}" data-kt={c.label}>
 				<!-- La lettre montre l'effet : couleur du texte, ou fond rempli. -->
 				<span
 					class="swatch-icon"
 					style:color={kind === 'fg' ? fg : '#1f2328'}
 					style:background={kind === 'bg' ? bg : 'transparent'}
-					aria-label={c.label}>A</span
+					aria-hidden="true">A</span
 				>
 			</button>
-			<button class="drop" disabled={!c.run} onclick={(ev) => openPalette(kind, ev)} title="Choisir la couleur" aria-label="{c.label} : choisir la couleur" aria-haspopup="menu" data-kt="{c.label} ▾">▾</button>
+			<button class="drop" disabled={!c.run} onclick={(ev) => openPalette(kind, ev)} title="Choisir la couleur" aria-label="{c.label} : choisir la couleur" aria-haspopup="menu" aria-expanded={palette === kind} data-kt="{c.label} ▾">▾</button>
 			{#if palette === kind}
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
-				<div class="palette" style:left="{palettePos.x}px" style:top="{palettePos.y}px" use:dismiss={() => (palette = null)}>
-					<div class="grid">
+				<div class="palette" role="menu" aria-label={c.label} style:left="{palettePos.x}px" style:top="{palettePos.y}px" use:dismiss={() => (palette = null)}>
+					<div class="grid" role="none">
 						{#each COLORS as col (col)}
-							<button class="chip" style:background={col} title={col} aria-label={col} onclick={() => pick(kind, col)}></button>
+							<button class="chip" role="menuitem" style:background={col} title={COLOR_NAMES[col]} aria-label={COLOR_NAMES[col]} onclick={() => pick(kind, col)}></button>
 						{/each}
 					</div>
-					{#if kind === 'bg'}<button class="row" onclick={() => pick('bg', null)}>Aucun remplissage</button>{/if}
-					{#if kind === 'fg'}<button class="row" onclick={() => pick('fg', null)}>Automatique</button>{/if}
+					{#if kind === 'bg'}<button class="row" role="menuitem" onclick={() => pick('bg', null)}>Aucun remplissage</button>{/if}
+					{#if kind === 'fg'}<button class="row" role="menuitem" onclick={() => pick('fg', null)}>Automatique</button>{/if}
 					<label class="row">
 						Autres couleurs…
 						<input type="color" value={kind === 'fg' ? fg : bg} onchange={(e) => pick(kind, (e.currentTarget as HTMLInputElement).value)} />
@@ -1075,51 +1164,43 @@
 			<button class="tab file" data-label="Fichier" aria-haspopup="menu" aria-expanded={fileOpen} aria-keyshortcuts="Alt+F" onclick={() => (fileOpen = !fileOpen)}>Fichier</button>
 			{#if fileOpen}
 				<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
-				<div class="file-menu" use:dismiss={() => (fileOpen = false)}>
+				<div class="file-menu" role="menu" aria-label="Fichier" use:dismiss={() => (fileOpen = false)}>
 					{#each [['new', 'Nouveau', 'Ctrl+N'], ['open', 'Ouvrir…', 'Ctrl+O']] as [a, label, keys] (a)}
-						<button onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
+						<button role="menuitem" onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
-					<!-- Comme Excel : les fichiers récents juste sous Ouvrir. -->
-					<div class="recent-wrap" role="presentation" onmouseenter={() => (recentOpen = true)} onmouseleave={() => (recentOpen = false)}>
-						<button disabled={!recent.length} title={recent.length ? undefined : 'Aucun fichier récent'} onclick={() => (recentOpen = !recentOpen)}><span>Ouvrir un fichier récent</span><span class="keys">▸</span></button>
-						{#if recentOpen && recent.length}
-							<div class="file-menu sub">
-								{#each recent as p (p)}
-									<button title={p} onclick={() => { fileOpen = recentOpen = false; onrecent?.(p); }}><span>{fileName(p)}</span></button>
-								{/each}
-							</div>
-						{/if}
-					</div>
+					<!-- Comme Excel : les fichiers récents juste sous Ouvrir ; sous-menus au survol, par Entrée ou →, ← les referme. -->
+					<Submenu label="Ouvrir un fichier récent" disabled={!recent.length} title={recent.length ? undefined : 'Aucun fichier récent'}>
+						{#each recent as p (p)}
+							<button role="menuitem" title={p} onclick={() => { fileOpen = false; onrecent?.(p); }}><span class="name">{fileName(p)}</span></button>
+						{/each}
+					</Submenu>
 					{#each [...(sharedWorkbooksEnabled() ? [['openRemote', 'Ouvrir depuis un serveur…', '']] : []), ['close', 'Fermer', 'Ctrl+W']] as [a, label, keys] (a)}
-						<button disabled={disabled && a === 'close'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
+						<button role="menuitem" disabled={disabled && a === 'close'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 					<hr />
-					{#each [['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ...(sharedWorkbooksEnabled() && !shared ? [['share', 'Publier sur un serveur…', '']] : []), ...(sharedWorkbooksEnabled() && rights ? [['rights', 'Gérer l’accès…', '']] : []), ...(sharedWorkbooksEnabled() && republish ? [['republish', 'Republier', '']] : []), ['import', 'Importer (CSV, Excel)…', '']] as [a, label, keys] (a)}
-						<button disabled={disabled && a !== 'import'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
+					{#each [['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ...(sharedWorkbooksEnabled() && !shared ? [['share', 'Publier sur un serveur…', '']] : []), ...(sharedWorkbooksEnabled() && rights ? [['rights', 'Gérer l’accès…', '']] : []), ...(sharedWorkbooksEnabled() && republish ? [['republish', 'Republier…', '']] : []), ['import', 'Importer (CSV, Excel)…', '']] as [a, label, keys] (a)}
+						<button role="menuitem" disabled={disabled && a !== 'import'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 					<hr />
-					<!-- Exporter : sous-menu (CSV du tableau ou de la feuille, classeur .xlsx ou .ods) ; l'impression reste à part. -->
-					<div class="recent-wrap" role="presentation" onmouseenter={() => (exportOpen = true)} onmouseleave={() => (exportOpen = false)}>
-						<button {disabled} onclick={() => (exportOpen = !exportOpen)}><span>Exporter</span><span class="keys">▸</span></button>
-						{#if exportOpen && !disabled}
-							<div class="file-menu sub">
-								{#each [['export', 'Le tableau en CSV…'], ['exportSheet', 'La feuille entière en CSV…'], ['exportXlsx', 'Le classeur Excel (.xlsx)…'], ['exportOds', 'Le classeur OpenDocument (.ods)…']] as [a, label] (a)}
-									<button onclick={() => { fileOpen = exportOpen = false; onfile(a as FileAction); }}><span>{label}</span></button>
-								{/each}
-							</div>
-						{/if}
-					</div>
-					<button {disabled} onclick={() => { fileOpen = false; onfile('print'); }}><span>Imprimer / PDF…</span><span class="keys">{keyLabel('Ctrl+P')}</span></button>
+					<!-- Exporter : CSV du tableau ou de la feuille, classeur .xlsx ou .ods ; l'impression reste à part. -->
+					<Submenu label="Exporter" {disabled}>
+						{#each [['export', 'Le tableau en CSV…'], ['exportSheet', 'La feuille entière en CSV…'], ['exportXlsx', 'Le classeur Excel (.xlsx)…'], ['exportOds', 'Le classeur OpenDocument (.ods)…']] as [a, label] (a)}
+							<button role="menuitem" onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span></button>
+						{/each}
+					</Submenu>
+					<button role="menuitem" {disabled} onclick={() => { fileOpen = false; onfile('print'); }}><span>Imprimer / PDF…</span><span class="keys">{keyLabel('Ctrl+P')}</span></button>
 					<hr />
 					{#each [['settings', 'Paramètres…', ''], ['help', 'Aide', 'F1'], ['about', 'À propos de Lattis…', ''], ...(import.meta.env.DEV ? [['demo', 'Démo : 1 M de lignes', '']] : [])] as [a, label, keys] (a)}
-						<button onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
+						<button role="menuitem" onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 				</div>
 			{/if}
 		</div>
-		{#each shownTabs as t (t)}
-			<button class="tab" data-label={t} class:on={tab === t} aria-pressed={tab === t} aria-keyshortcuts="Alt+{TAB_TIPS[t]}" data-region-focus={tab === t ? '' : undefined} {disabled} onclick={() => select(t)} ondblclick={toggleFold}>{t}</button>
-		{/each}
+		<div class="tablist" role="tablist" aria-label="Onglets du ruban">
+			{#each shownTabs as t, i (t)}
+				<button class="tab" id="ribbon-tab-{i}" role="tab" data-label={t} class:on={tab === t} aria-selected={tab === t} aria-controls={tab === t ? 'ribbon-panel' : undefined} tabindex={tab === t ? 0 : -1} aria-keyshortcuts="Alt+{TAB_TIPS[t]}" data-region-focus={tab === t ? '' : undefined} {disabled} onclick={() => select(t)} ondblclick={toggleFold}>{t}</button>
+			{/each}
+		</div>
 		<span class="sep"></span>
 		<!-- Bascule du volet de l'Assistant IA (pas un onglet : la grille reste) ;
 		     visible même désactivé, le volet propose alors de l'activer. -->
@@ -1137,10 +1218,10 @@
 	{#if !isView(tab) && (!folded || peek)}
 		<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 		<div class="fold-wrap" class:peek={folded} use:peekWatch onclick={peekClick}>
-		<div class="groups" class:off={disabled} use:observe>
+		<div class="groups" class:off={disabled} id="ribbon-panel" role="tabpanel" aria-labelledby="ribbon-tab-{shownTabs.indexOf(tab as (typeof tabs)[number])}" use:observe>
 			{#each ribbons[tab] ?? [] as g, gi (g.title)}
 				{@const mode = modes[gi] ?? 'large'}
-				<section class="group">
+				<section class="group" aria-labelledby="ribbon-group-{gi}">
 					{#if mode === 'collapsed'}
 						<div class="commands">
 							<button
@@ -1169,8 +1250,10 @@
 										{#each c.items as it (it.label)}
 											<button
 												class="cmd row-cmd"
+												role="menuitem"
 												class:pressed={it.on}
 												disabled={!c.run || !it.run}
+												title={it.keys ? `${it.label} (${keyLabel(it.keys)})` : undefined}
 												onclick={() => {
 													openGroup = null;
 													it.run?.();
@@ -1183,6 +1266,7 @@
 									{:else}
 										<button
 											class="cmd row-cmd"
+											role="menuitem"
 											class:pressed={c.on}
 											disabled={!c.run}
 											onclick={(ev) => {
@@ -1190,7 +1274,7 @@
 												openGroup = null;
 												c.run?.();
 											}}
-											title={c.hint ?? (c.run ? c.label : `${c.label} : à venir`)}
+											title={tipOf(c, disabled)}
 										>
 											<Icon name={c.icon} size={18} />
 											<span class="label">{c.label}</span>
@@ -1212,6 +1296,7 @@
 										class:pressed={c.on}
 										aria-pressed={c.on === undefined ? undefined : c.on}
 										aria-haspopup={c.items || c.menu ? 'menu' : undefined}
+										aria-expanded={c.items ? dropMenu?.label === c.label : undefined}
 										aria-label={mode === 'icon' ? c.label : undefined}
 										data-kt={c.label}
 										disabled={!c.run}
@@ -1221,7 +1306,7 @@
 													anchorAt(ev);
 													c.run?.();
 												}}
-										title={c.hint ?? (c.run ? c.label : `${c.label} : à venir`)}
+										title={tipOf(c, disabled)}
 									>
 										<Icon name={c.icon} size={mode === 'large' ? 24 : 16} />
 										{#if mode !== 'icon'}<span class="label">{c.label}{c.items || c.menu ? ' ▾' : ''}</span>{/if}
@@ -1231,7 +1316,7 @@
 						</div>
 					{/if}
 					<div class="title">
-						{g.title}
+						<span id="ribbon-group-{gi}">{g.title}</span>
 						{#if g.launch}
 							<button class="launch" onclick={g.launch} title={g.launchHint ?? g.title} aria-label={g.launchHint ?? g.title} data-kt="{g.title} …">
 								<svg viewBox="0 0 10 10" width="9" height="9" aria-hidden="true"><path d="M1.5 1.5h4M1.5 1.5v4M3.5 3.5l5 5M8.5 4.5v4h-4" fill="none" stroke="currentColor" stroke-width="1.1" /></svg>
@@ -1252,15 +1337,17 @@
 		{@const c = ribbons[tab]?.flatMap((g) => g.commands).find((x) => x.label === dropMenu!.label)}
 		{#if c?.items}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="drop-menu" style:left="{dropMenu.x}px" style:top="{dropMenu.y}px" use:dismiss={() => (dropMenu = null)}>
+			<div class="drop-menu" role="menu" aria-label={c.label} style:left="{dropMenu.x}px" style:top="{dropMenu.y}px" use:dismiss={() => (dropMenu = null)}>
 				{#each c.items as it (it.label)}
 					<button
+						role={it.on === undefined ? 'menuitem' : 'menuitemcheckbox'}
+						aria-checked={it.on === undefined ? undefined : it.on}
 						disabled={!it.run}
 						class:on={it.on}
 						onclick={() => {
 							dropMenu = null;
 							it.run?.();
-						}}><span class="check">{it.on ? '✓' : ''}</span>{it.label}</button
+						}}><span class="check" aria-hidden="true">{it.on ? '✓' : ''}</span><span class="item">{it.label}</span>{#if it.keys}<span class="keys">{keyLabel(it.keys)}</span>{/if}</button
 					>
 				{/each}
 			</div>
@@ -1453,18 +1540,14 @@
 		border-top: 1px solid #e5e7eb;
 		margin: 4px 0;
 	}
-	.recent-wrap {
-		position: relative;
-	}
-	.file-menu.sub {
-		top: -5px;
-		left: 100%;
-		max-width: 420px;
-	}
-	.file-menu.sub span {
+	.file-menu .name {
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+	/* Liste des onglets : ses boutons restent dans la barre (flex de .tabs). */
+	.tablist {
+		display: contents;
 	}
 	.groups.off {
 		/* Aucun classeur ouvert : rien à mettre en forme. */
@@ -1753,5 +1836,11 @@
 	.drop-menu .check {
 		width: 18px;
 		color: #217346;
+	}
+	.drop-menu .item {
+		flex: 1;
+	}
+	.drop-menu .keys {
+		margin-left: 18px;
 	}
 </style>

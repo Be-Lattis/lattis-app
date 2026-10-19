@@ -55,7 +55,7 @@
 	import { rightsObjects, type RightsObject } from '#lib/remote/rights.js';
 	import { refusedNotice } from '#lib/remote/share.js';
 	import type { Conflict } from '#bindings/internal/remote/collab/models.js';
-	import { canRepublish } from '#lib/remote/share.js';
+	import { canRepublish, rolesLabel } from '#lib/remote/share.js';
 	import { lattis, loadLattis, requestLogin, shareRights } from '#lib/remote/lattis.svelte.js';
 	import { connected, hostOf } from '#lib/remote/lattis.js';
 	import { dataGroup, type DataCatalog, type DataGroup } from '#lib/remote/data.js';
@@ -975,20 +975,17 @@
 					}
 					break;
 				}
-				case 'print':
-				case 'pdf': {
-					// Feuille active, plage utilisée ; le PDF passe par la fenêtre
-					// d'impression (imprimante « Microsoft Print to PDF »).
+				case 'print': {
+					// Feuille active selon sa mise en page ; le PDF passe par la
+					// fenêtre d'impression (imprimante PDF du système).
 					if (mode !== 'doc') return;
 					if (activeDoc && docPage) {
-						if (a === 'pdf') exportDocPdf();
-						else docPage.print(`${docState.title} – ${activeInfo?.name ?? ''}`);
+						exportDocPdf();
 						break;
 					}
 					const name = layout?.sheets?.find((s) => s.id === sheetId)?.name ?? '';
-					if (a === 'pdf') notice = 'Exporter en PDF : choisissez l’imprimante « Microsoft Print to PDF » (ou « Enregistrer au format PDF »)';
 					const charts = printNotice(layout?.charts?.length ?? 0);
-					if (charts) notice = notice && a === 'pdf' ? `${notice} ; ${charts}` : charts;
+					if (charts) notice = charts;
 					printSheet(await DocumentService.PrintHTML(sheetId), `${docState.title} – ${name}`);
 					// Comme Excel : après une impression, la grille montre les sauts de page.
 					showBreaks = true;
@@ -996,9 +993,6 @@
 				}
 				case 'demo':
 					await startDemo();
-					break;
-				case 'mcp':
-					mcpOpen = true;
 					break;
 				case 'settings':
 					settingsOpen = true;
@@ -1356,7 +1350,7 @@
 	const addPage = (before = 0) => sheetAction(async () => selectSheet(await DocumentService.AddPage(before)));
 	const addDoc = (before = 0) => sheetAction(async () => selectSheet(await DocumentService.AddDoc(before)));
 
-	// Document en PDF : la fenêtre d'impression, imprimante « Microsoft Print to PDF ».
+	// Document en PDF : la fenêtre d'impression (imprimante PDF du système).
 	function exportDocPdf() {
 		docPage?.print(`${docState.title} – ${activeInfo?.name ?? ''}`);
 	}
@@ -1423,7 +1417,7 @@
 	const sheetLocked = $derived(mode === 'doc' && (!!activeInfo?.protected || bookLocked));
 	const lockedMsg = $derived(
 		activeInfo?.protected
-			? `La feuille « ${activeInfo?.name ?? ''} » est protégée : ôtez la protection (Révision › Ôter la protection) pour la modifier`
+			? `La feuille « ${activeInfo?.name ?? ''} » est protégée : ôtez la protection (Révision › Ôter la protection de la feuille) pour la modifier`
 			: bookLocked
 				? 'Le classeur est protégé : ôtez la protection (Révision › Ôter la protection du classeur) pour le modifier'
 				: ''
@@ -1529,8 +1523,6 @@
 	/>
 	<Ribbon
 		{view}
-		{title}
-		dirty={mode === 'doc' && docState.dirty}
 		disabled={mode !== 'doc' && mode !== 'demo'}
 		{recent}
 		onrecent={(p) => openPath(p).catch((e) => (notice = err(e)))}
@@ -1551,7 +1543,12 @@
 		onstyle={mode === 'doc' ? (patch) => (activeDoc ? docPage?.applyStyle(patch) : sheet?.applyStyle(patch)) : undefined}
 		onfind={mode === 'doc' ? (replace) => sheet?.openFinder(replace) : undefined}
 		onrules={mode === 'doc' ? (x, y) => sheet?.rulesMenu(x, y) : undefined}
-		onfilter={mode === 'doc' ? (errorsOnly) => sheet?.filterActive(errorsOnly) : undefined}
+		onfilter={mode === 'doc' ? (w) => (w === 'clear' ? sheet?.editActive('clearFilters') : sheet?.filterActive(w === 'errors')) : undefined}
+		filters={!!sheetStatus?.filters}
+		errorsOnly={!!sheetStatus?.errorsOnly}
+		note={!!sheetStatus?.note}
+		onedit={mode === 'doc' ? (w) => sheet?.editActive(w) : undefined}
+		tableReadOnly={sheetStatus?.readOnly ? `${sheetStatus.readOnly}${share?.shared && !share.canDesign && share.roles?.length ? ` (rôle : ${rolesLabel(share.roles)})` : ''}` : undefined}
 		onaudit={mode === 'doc' ? (k) => sheet?.auditActive(k) : undefined}
 		onpainter={mode === 'doc' ? () => sheet?.formatPainter() : undefined}
 		onclip={mode === 'doc' ? (what) => (what === 'paste' ? sheet?.pasteClipboard() : sheet?.copySelection(what === 'cut')) : undefined}

@@ -21,6 +21,9 @@ export interface DocFormat {
 	align: 'left' | 'center' | 'right' | 'justify';
 	strike: boolean;
 	link: boolean;
+	/** Historique du texte : quelque chose à annuler, à rétablir. */
+	undo?: boolean;
+	redo?: boolean;
 }
 
 /** Taille Quill (« 14pt ») en points ; undefined : taille par défaut. */

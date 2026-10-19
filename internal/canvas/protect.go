@@ -57,7 +57,7 @@ func (e ErrProtected) Error() string {
 	if e.Sheet == "" {
 		return "Le classeur est protégé : ôtez la protection (Révision › Ôter la protection du classeur) pour le modifier"
 	}
-	return fmt.Sprintf("La feuille « %s » est protégée : ôtez la protection (Révision › Ôter la protection) pour la modifier", e.Sheet)
+	return fmt.Sprintf("La feuille « %s » est protégée : ôtez la protection (Révision › Ôter la protection de la feuille) pour la modifier", e.Sheet)
 }
 
 // ErrPassword signale un mot de passe de protection incorrect.

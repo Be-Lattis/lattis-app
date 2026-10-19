@@ -27,7 +27,7 @@ describe('KeyTips du ruban', () => {
 		expect(two).toEqual(['TA', 'TZ', 'F']);
 	});
 	it("codes préférés (ceux d'Excel) quand ils sont libres", () => {
-		const labels = ['Coller', 'Couper', 'Copier', 'Reproduire', 'Gras', 'Italique', 'Souligné', 'Centrer', 'Couleur'];
+		const labels = ['Coller', 'Couper', 'Copier', 'Reproduire', 'Gras', 'Italique', 'Souligné', 'Centrer', 'Couleur de police'];
 		const tips = assignKeyTips(labels, COMMAND_TIPS);
 		expect(tips.slice(0, 7)).toEqual(['V', 'X', 'C', 'FP', '1', '2', '3']);
 		expect(tips[7]).toBe('AC');
@@ -42,14 +42,24 @@ describe('KeyTips du ruban', () => {
 	});
 	it('toujours sans préfixe commun, même pour un onglet chargé', () => {
 		const labels = [
-			'Annuler', 'Rétablir', 'Coller', 'Couper', 'Copier', 'Reproduire', 'Police', 'Taille de police (points)', 'Gras', 'Italique', 'Souligné', 'Couleur', 'Couleur ▾',
-			'Remplissage', 'Remplissage ▾', 'Effacer', 'Police …', 'Toutes', 'Contour', 'Aucune', 'Bordures …', 'Haut', 'Milieu', 'Bas', 'Gauche', 'Centrer', 'Droite',
+			'Annuler', 'Rétablir', 'Coller', 'Couper', 'Copier', 'Reproduire', 'Police', 'Taille de police (points)', 'Gras', 'Italique', 'Souligné', 'Couleur de police', 'Couleur de police ▾',
+			'Couleur de remplissage', 'Couleur de remplissage ▾', 'Police …', 'Toutes', 'Contour', 'Aucune', 'Bordures …', 'Haut', 'Milieu', 'Bas', 'Gauche', 'Centrer', 'Droite',
 			'Renvoyer à la ligne', 'Fusionner et centrer', 'Alignement …', '0,00', 'Monétaire', 'Pourcentage', 'Ajouter une décimale', 'Réduire les décimales', 'Date',
-			'Standard', 'Nombre …', 'Mise en forme conditionnelle', 'Insérer', 'Supprimer', 'Format', 'Trier A → Z', 'Rechercher', 'Remplacer'
+			'Standard', 'Nombre …', 'Mise en forme conditionnelle', 'Mettre sous forme de tableau', 'Insérer', 'Supprimer', 'Format', 'Somme automatique', 'Remplissage', 'Effacer', 'Trier et filtrer', 'Rechercher', 'Remplacer'
 		];
 		const tips = assignKeyTips(labels, COMMAND_TIPS);
 		expect(tips.every((t) => /^[A-Z0-9]{1,2}$/.test(t))).toBe(true);
 		prefixFree(tips);
+	});
+	it('codes d’Excel des onglets Insertion, Données et Formules, sans préfixe commun', () => {
+		const insertion = assignKeyTips(['Tableau croisé dynamique', 'Tableau', 'Data Lake Lattis', 'Histogramme', 'Courbes', 'Secteurs', 'Nuage de points', 'Autres graphiques ▾', 'Bouton', 'Champ'], COMMAND_TIPS);
+		expect(insertion.slice(0, 2)).toEqual(['V', 'T']);
+		prefixFree(insertion);
+		const donnees = assignKeyTips(['Texte/CSV', 'Classeur Excel', 'Autres fichiers ▾', 'Base de données ▾', 'Web', 'À partir du tableau', 'Requêtes et connexions', 'Actualiser tout', 'Trier A → Z', 'Trier Z → A', 'Filtrer', 'Effacer', 'Erreurs seulement', 'Supprimer les doublons', 'Convertir', 'Validation des données'], COMMAND_TIPS);
+		prefixFree(donnees);
+		const formules = assignKeyTips(['Insérer une fonction', 'Somme automatique', 'REFERENCE', 'Afficher les liens', 'Supprimer les flèches', 'Calculer'], COMMAND_TIPS);
+		expect(formules[4]).toBe('AA');
+		prefixFree(formules);
 	});
 	it('touches tapées : code atteint, ou début de code', () => {
 		const tips = ['FP', 'FF', 'V', '1'];

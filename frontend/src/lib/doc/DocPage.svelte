@@ -749,6 +749,9 @@
 		if (!quill) return;
 		const sel = quill.getSelection() ?? lastRange;
 		current = docFormat(sel ? quill.getFormat(sel.index, sel.length) : {});
+		// Annuler et Rétablir du ruban : grisés quand l'historique est vide, comme sur une feuille.
+		current.undo = quill.history.stack.undo.length > 0;
+		current.redo = quill.history.stack.redo.length > 0;
 		onformat?.(current);
 	}
 
