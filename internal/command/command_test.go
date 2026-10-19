@@ -259,6 +259,8 @@ func TestDetach(t *testing.T) {
 	}
 	if v := value(t, db, 2); v != "absent" {
 		t.Fatalf("groupe : %v", v)
+	}
+}
 
 // Profondeur réglée (limits.undoDepth, audit 6, M14) : lue à chaque
 // commande quand le bus n'a pas la sienne.
