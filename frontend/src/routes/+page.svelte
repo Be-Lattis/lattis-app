@@ -1459,8 +1459,14 @@
 					await loadRecent();
 					break;
 				case 'import': {
+					// L'import crée une feuille : refusé d'emblée là où le moteur le refuserait.
+					if (layoutShared) {
+						notice = `Importer crée une feuille : ${LAYOUT_LOCKED.charAt(0).toLowerCase()}${LAYOUT_LOCKED.slice(1)}`;
+						break;
+					}
 					// Depuis l'accueil : un classeur neuf, refermé si l'import est annulé.
 					const started = mode !== 'doc';
+
 					if (started) await startDoc();
 					const r = await DocumentService.Import('');
 					if (r.cancelled) {
@@ -2491,7 +2497,7 @@
 								docState = await DocumentService.SavePage(pageId, src);
 								await reload();
 							}}
-							locked={lockedMsg}
+							locked={lockedMsg || (layoutShared ? LAYOUT_LOCKED : '')}
 							stamp={layout}
 							{animate}
 							tables={(help?.tables ?? []).map((t) => ({ name: t.name, columns: t.columns ?? [], types: t.types ?? [], kind: t.kind }))}
@@ -2547,7 +2553,7 @@
 							call={(name, args) => DocumentService.PageCall(name, args)}
 							trusted={(src) => DocumentService.PageAllowed(src)}
 							allow={(src) => DocumentService.AllowPage(pageId, src)}
-							locked={lockedMsg}
+							locked={lockedMsg || (layoutShared ? LAYOUT_LOCKED : '')}
 							stamp={layout}
 							onnotice={(m) => (notice = m)}
 						/>

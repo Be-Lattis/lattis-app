@@ -8672,6 +8672,18 @@
 		return '';
 	}
 
+	/**
+	 * Pourquoi la structure du tableau t ne se change pas ('' si elle se
+	 * change) : feuille protégée, structure protégée ou classeur partagé sans
+	 * droit de conception (layoutLocked), tableau publié en lecture seule. Le
+	 * moteur refuserait ; les menus grisent ou retirent ces actions.
+	 */
+	function designWhy(t: { readOnly?: string }): string {
+		if (locked) return locked;
+		if (structure) return layoutLocked || 'Structure de la feuille protégée (Révision › Ôter la protection de la structure)';
+		return t.readOnly ?? '';
+	}
+
 	/** Texte de la cellule dans l'éditeur et la barre de formule (un tableau croisé : sa valeur affichée). */
 	function editText(r: number, c: number): string {
 		const v = cellInfo(r, c).value;
@@ -11082,19 +11094,21 @@
 			{@const col = m.e.t.columns[m.i]}
 			{@const cols = !m.rowOnly}
 			{@const rowItems = !m.header && !m.rowOnly}
+			<!-- Structure du tableau (colonnes, en-têtes, conversion, suppression) : grisée ou retirée avec son motif, comme au ruban (feuille protégée, classeur partagé sans droit de conception, tableau en lecture seule). -->
+			{@const why = designWhy(m.e.t)}
 			{@const filtered = cols && !!source.clearFilters && m.e.t.columns.some((c) => c.filter)}
 			{@const sortCount = (cols && source.sortTable ? 2 : 0) + (cols && source.sortTableCustom ? 1 : 0) + (cols && source.setFilter ? 1 : 0) + (filtered ? 1 : 0)}
-			{@const toTitle = cols && !!source.headerToTitle && m.e.t.rows > 0}
-			{@const toHeader = cols && titleAbove(m.e.t)}
-			{@const toNote = rowItems && !!source.rowToNote && m.n === m.e.t.rows - 1}
-			{@const promote = cols && !!source.promoteHeader && m.e.t.rows > 0 && !m.e.t.query && !m.e.t.twoLevel}
+			{@const toTitle = !why && cols && !!source.headerToTitle && m.e.t.rows > 0}
+			{@const toHeader = !why && cols && titleAbove(m.e.t)}
+			{@const toNote = !why && rowItems && !!source.rowToNote && m.n === m.e.t.rows - 1}
+			{@const promote = !why && cols && !!source.promoteHeader && m.e.t.rows > 0 && !m.e.t.query && !m.e.t.twoLevel}
 			{@const promoteHere = promote && rowItems && m.n === 0 && allGenerated(m.e.t.columns.map((c) => c.name))}
-			{@const toValues = cols && source.columnsToValues ? valueColumns(m.e, m.i) : []}
+			{@const toValues = !why && cols && source.columnsToValues ? valueColumns(m.e, m.i) : []}
 			{@const refresh = !!m.e.t.query && !!source.refreshTable}
 			{@const share = cols && !!onsharedata && !m.e.t.query}
 			{@const addShared = cols && !!onaddshared && m.e.t.shared === 'private' && !m.e.t.query}
 			{@const pushSource = cols && !!onpushsource && sourceTables.includes(m.e.t.name)}
-			{@const twoLevel = cols && !!source.setTwoLevel && !m.e.t.query}
+			{@const twoLevel = !why && cols && !!source.setTwoLevel && !m.e.t.query}
 			{@const follow = cols && !!source.setFollow && !!data?.choice && !m.e.t.query}
 			{@const tableItems = toTitle || toHeader || promote || twoLevel || refresh || share || pushSource || follow || !!source.convertToRange || !!source.deleteTables}
 			{#snippet sortItems()}
@@ -11176,16 +11190,16 @@
 								<button onclick={() => menuAction(source.insertRow && (() => tableLines(m.e, 'insertRow', m.n)))}>Ligne au-dessus</button>
 								<button onclick={() => menuAction(source.insertRow && (() => tableLines(m.e, 'insertRow', m.n + 1)))}>Ligne en dessous</button>
 							{/if}
-							<button onclick={() => menuAction(source.insertColumn && (() => tableLines(m.e, 'insertColumn', m.i)))}>Colonne à gauche</button>
-							<button onclick={() => menuAction(source.insertColumn && (() => tableLines(m.e, 'insertColumn', m.i + 1)))}>Colonne à droite</button>
+							<button disabled={!!why} title={why || undefined} onclick={() => menuAction(source.insertColumn && (() => tableLines(m.e, 'insertColumn', m.i)))}>Colonne à gauche</button>
+							<button disabled={!!why} title={why || undefined} onclick={() => menuAction(source.insertColumn && (() => tableLines(m.e, 'insertColumn', m.i + 1)))}>Colonne à droite</button>
 						</Submenu>
 						{#if rowItems}
 							<Submenu label="Supprimer">
 								<button onclick={() => menuAction(source.deleteRow && (() => tableLines(m.e, 'deleteRow', m.n)))}>Ligne du tableau</button>
-								<button onclick={() => menuAction(source.deleteColumn && (() => tableLines(m.e, 'deleteColumn', m.i)))}>Colonne du tableau</button>
+								<button disabled={!!why} title={why || undefined} onclick={() => menuAction(source.deleteColumn && (() => tableLines(m.e, 'deleteColumn', m.i)))}>Colonne du tableau</button>
 							</Submenu>
 						{:else}
-							<button onclick={() => menuAction(source.deleteColumn && (() => tableLines(m.e, 'deleteColumn', m.i)))}>Supprimer la colonne</button>
+							<button disabled={!!why} title={why || undefined} onclick={() => menuAction(source.deleteColumn && (() => tableLines(m.e, 'deleteColumn', m.i)))}>Supprimer la colonne</button>
 						{/if}
 						<button
 							onclick={() => {
@@ -11215,7 +11229,8 @@
 					{#if cols}
 						<hr />
 						<div class="menu-title" data-shed="1" title={clipped(col?.name) ? col?.name : undefined}>Colonne « {clip(col?.name)} »</div>
-						{#if source.setType && !col?.formula}
+						{#if source.setType && !col?.formula && !why}
+
 							<!-- Le menu ▾ de la colonne (tri, filtre, type, clé), sous son en-tête. -->
 							<button data-shed="1" onclick={() => openFilter(m.e, m.i)}>Type de données et clé…</button>
 						{/if}
@@ -11302,11 +11317,13 @@
 								<button title="Envoie maintenant les lignes de ce tableau à sa source du Data Lake (colonnes choisies seulement ; le classeur n'est pas publié)" onclick={() => { const n = m.e.t.name; menu = null; onpushsource?.(n); }}>Mettre à jour la source du Data Lake</button>
 							{/if}
 							{#if source.convertToRange}
-								<button title="Le tableau devient des cellules libres, au même endroit" onclick={() => menuAction(() => source.convertToRange!(m.e.t))}>Convertir en plage</button>
+								<button disabled={!!why} title={why || 'Le tableau devient des cellules libres, au même endroit'} onclick={() => menuAction(() => source.convertToRange!(m.e.t))}>Convertir en plage</button>
 							{/if}
 							{#if source.deleteTables}
 								<hr />
 								<button
+									disabled={!!why}
+									title={why || undefined}
 									onclick={() => {
 										if (m.e.t.rows + (m.e.t.hidden ?? 0) > CONFIRM_DELETE_ROWS) menu = { ...m, confirmDelete: true };
 										else deleteTable(m.e.t);
@@ -11364,12 +11381,15 @@
 				{#if !m.kind}{@render refMenuItems()}{/if}
 				<!-- Actions propres à la cellule (en-têtes, tableau voisin, plage, résultat déversé) : en tête. -->
 				{#if !m.kind}
-					{@const join = !!source.joinTable && keptOut(active.row, active.col)}
-					{@const asTable = !!source.formatAsTable && inRangeZone(active.row, active.col)}
-					{@const under = titleTableAt(active.row, active.col)}
+					<!-- Cellules libres verrouillées (protection, classeur partagé sans droit de conception) : pas d'actions qui les changent. -->
+					{@const free = !locked && !structure}
+					{@const join = free && !!source.joinTable && keptOut(active.row, active.col)}
+					{@const asTable = free && !!source.formatAsTable && inRangeZone(active.row, active.col)}
+					{@const under = free ? titleTableAt(active.row, active.col) : null}
 					{@const asHeader = !!under}
-					{@const spilled = source.convertSpill ? spillUnder(active.row, active.col) : null}
-					{@const toValues = !!source.rangeToValues && !spilled && formulasInSelection()}
+					{@const spilled = free && source.convertSpill ? spillUnder(active.row, active.col) : null}
+					{@const toValues = free && !!source.rangeToValues && !spilled && formulasInSelection()}
+
 					{#if join || asTable || asHeader}
 						{@const at = { row: active.row, col: active.col }}
 						{#if asHeader && under}
