@@ -35,7 +35,7 @@ A query is written in the workbook. So that a received workbook can't, on refres
 
 ## Database connections {#connexions-aux-bases}
 
-A **connection** describes a server (PostgreSQL, MySQL / MariaDB, SQL Server, or a web API): host, port, database, user. It is stored in the workbook and serves several queries.
+A **connection** describes a server (PostgreSQL, MySQL / MariaDB, SQL Server, or a web API): host, port, database, user. It is stored in the workbook and serves several queries. Its **⋯** menu in the pane renames it: the queries that use it follow its new name (`Ctrl+Z` undoes it all).
 
 Passwords are never saved in the workbook: they stay in the system keychain, and Lattis asks for them on the first refresh. The pane also lets you forget them.
 

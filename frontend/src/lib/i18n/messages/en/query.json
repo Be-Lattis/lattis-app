@@ -233,6 +233,12 @@
 		"deleted": "Query “{name}” deleted (Ctrl+Z to undo)",
 		"deletedTable": "Query “{name}” deleted; table {table} stays on its sheet (Ctrl+Z to undo)",
 		"connDeleted": "Connection “{name}” deleted (Ctrl+Z to undo)",
+		"connRenamed": "Connection “{old}” renamed to “{name}” (Ctrl+Z to undo)",
+		"rename": {
+			"label": "Rename",
+			"aria": "New name for connection “{name}”",
+			"empty": "Enter a name for the connection."
+		},
 		"forgotten": "Password for “{name}” forgotten",
 		"panel": {
 			"title": "Queries & Connections",
