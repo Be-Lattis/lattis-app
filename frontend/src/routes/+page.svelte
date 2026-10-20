@@ -29,7 +29,6 @@
 	import { tabChoiceNotice } from '#lib/grid/tabchoice.js';
 	import { headerOfferText } from '#lib/grid/titlehead.js';
 	import { popBack, pushBack, type RefSpot } from '#lib/grid/reflink.js';
-	import { count } from '#lib/sql/result.js';
 	import { printSheet } from '#lib/shell/print.js';
 	import { withSaveProgress } from '#lib/shell/saveprogress.js';
 	import { demoProgressText, firstSteps, hideSteps, stepsShown } from '#lib/shell/welcome.js';
@@ -101,7 +100,7 @@
 	import HelpPanel from '#lib/help/HelpPanel.svelte';
 	import { functionAt, viewTarget } from '#lib/help/help.js';
 	import { helpState, openHelp } from '#lib/help/state.svelte.js';
-	import { errorText, fmtDateTime, fmtNumber, t } from '#lib/i18n/index.js';
+	import { errorText, fmtDateTime, t } from '#lib/i18n/index.js';
 
 	type Mode = 'starting' | 'recover' | 'doc' | 'demo' | 'closed';
 
@@ -254,14 +253,12 @@
 				return false;
 			}
 			const ok = confirm(
-				`Ajouter le tableau « ${table} » au classeur partagé « ${share?.title ?? ''} » ?\n\n` +
-					'Il est créé sur le serveur avec ses lignes ; tous les membres le reçoivent et le modifient selon leurs droits.\n\n' +
-					'Cet ajout ne s’annule pas par Ctrl+Z : pour retirer le tableau, « Supprimer le tableau » le supprime pour tous.'
+				t('shell.share.addTableConfirm', { table, workbook: share?.title ?? '' })
 			);
 			if (!ok) return false;
-			notice = `Ajout de « ${table} » au classeur partagé…`;
+			notice = t('shell.share.addingTable', { table });
 			docState = await syncCall(DocumentService.ShareAddTable(table));
-			notice = docState.notice || `Tableau « ${table} » ajouté au classeur partagé`;
+			notice = docState.notice || t('shell.share.tableAdded', { table });
 			share = await DocumentService.ShareState().catch(() => share);
 			await reload();
 			return true;
@@ -277,7 +274,7 @@
 			docState = await DocumentService.ShareResolve(c.id, mine);
 			await reload();
 			await loadConflicts();
-			notice = mine ? (coedit?.active ? 'Votre valeur est remise pour tous les postes' : 'Votre valeur est renvoyée au serveur') : 'Valeur du collègue reprise';
+			notice = mine ? (coedit?.active ? t('shell.conflicts.mineAll') : t('shell.conflicts.mineServer')) : t('shell.conflicts.theirs');
 			if (!conflicts.length) conflictsOpen = false;
 		} catch (e) {
 			notice = err(e);
@@ -294,7 +291,7 @@
 			share = await DocumentService.ShareState().catch(() => share);
 			await reload();
 			await loadConflicts();
-			notice = docState.notice || (retry ? `Modifications de « ${h.name} » renvoyées au serveur` : `Modifications de « ${h.name} » abandonnées : le tableau reprend la version du serveur`);
+			notice = docState.notice || (retry ? t('shell.conflicts.heldRetried', { table: h.name }) : t('shell.conflicts.heldDropped', { table: h.name }));
 			if (!conflicts.length && !held.length) conflictsOpen = false;
 		} catch (e) {
 			notice = err(e);
@@ -312,7 +309,7 @@
 				docState = await DocumentService.ShareResolve(c.id, mine);
 				n++;
 			}
-			notice = mine ? (coedit?.active ? `${n} valeur(s) remise(s) pour tous les postes` : `${n} valeur(s) renvoyée(s) au serveur`) : `${n} valeur(s) des collègues reprise(s)`;
+			notice = mine ? (coedit?.active ? t('shell.conflicts.mineAllCount', { n }) : t('shell.conflicts.mineServerCount', { n })) : t('shell.conflicts.theirsCount', { n });
 		} catch (e) {
 			notice = err(e);
 		} finally {
@@ -357,7 +354,7 @@
 			const last = spot.col + Math.max(1, spot.cols) - 1;
 			// Ligne masquée par le filtre : l'en-tête du tableau est sélectionné.
 			sheet?.selectRange(spot.row, spot.col, spot.row, last);
-			if (spot.hidden) notice = `Ligne masquée par le filtre de ${spot.table}`;
+			if (spot.hidden) notice = t('shell.ref.hiddenRow', { table: spot.table });
 			sheet?.focus();
 		} catch (e) {
 			notice = err(e);
@@ -377,9 +374,9 @@
 	async function followReference(to: { table: string; id: number; key?: string; filter?: { column: string; value: string } }, from: { row: number; col: number; label: string }) {
 		if (mode !== 'doc') return;
 		try {
-			const t = help?.tables?.find((x) => x.name === to.table);
-			if (to.filter && t) {
-				const i = (t.columns ?? []).indexOf(to.filter.column);
+			const tb = help?.tables?.find((x) => x.name === to.table);
+			if (to.filter && tb) {
+				const i = (tb.columns ?? []).indexOf(to.filter.column);
 				if (i >= 0) await DocumentService.SetFilter(to.table, i, { values: [to.filter.value] });
 			}
 			const spot = await DocumentService.LocateRow(to.table, to.id);
@@ -392,11 +389,11 @@
 			}
 			await tick();
 			await new Promise((r) => requestAnimationFrame(r));
-			const k = to.key && t ? Math.max(0, (t.columns ?? []).indexOf(to.key)) : 0;
+			const k = to.key && tb ? Math.max(0, (tb.columns ?? []).indexOf(to.key)) : 0;
 			sheet?.selectRange(spot.row, spot.col + k, spot.row, spot.col + k);
 			sheet?.flashRow(spot.row, spot.col, spot.col + Math.max(1, spot.cols) - 1);
 			sheet?.focus();
-			notice = spot.hidden ? `Ligne masquée par le filtre de ${spot.table}` : to.filter ? `${to.table} filtré sur ${to.filter.column} = ${to.filter.value} (Alt+← pour revenir)` : `Alt+← pour revenir à ${from.label}`;
+			notice = spot.hidden ? t('shell.ref.hiddenRow', { table: spot.table }) : to.filter ? t('shell.ref.filtered', { table: to.table, column: to.filter.column, value: to.filter.value }) : t('shell.ref.back', { label: from.label });
 		} catch (e) {
 			notice = err(e);
 		}
@@ -500,12 +497,12 @@
 		sourceTables = links.map((l) => l.tableName).filter((n) => !!n);
 	}
 	async function pushSource(table: string) {
-		notice = `Mise à jour de la source « ${table} »…`;
+		notice = t('shell.share.sourceUpdating', { table });
 		try {
 			const l = (await DocumentService.PushTableSource(table)) as unknown as SourceLink;
 			notice = pushSummary(table, l.lastResult, l.blanked ?? 0);
 		} catch (e) {
-			notice = `Source « ${table} » non mise à jour : ${err(e)}`;
+			notice = t('shell.share.sourceFailed', { table, error: err(e) });
 		}
 	}
 	let shareReloading = $state(false);
@@ -533,7 +530,7 @@
 	// Accueil : premiers pas, jusqu'à « Ne plus afficher ».
 	let showSteps = $state(stepsShown());
 
-	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
+	const err = (e: unknown) => errorText(e);
 
 	// --- Regrouper les onglets aux mêmes colonnes --------------------------------
 	// (docs/conception/regrouper-onglets-semblables.md §4) : trait sous les
@@ -573,7 +570,7 @@
 		mergeOffer = null;
 		mergeGroup = group;
 		if (!plan) {
-			notice = 'Aucun onglet semblable trouvé : sélectionnez les onglets (Ctrl+clic), puis clic droit › Regrouper des onglets…';
+			notice = t('shell.merge.notice.none');
 			return;
 		}
 		mergeOthers = await workbookTables();
@@ -591,7 +588,7 @@
 		const names = new Map((layout?.sheets ?? []).map((s) => [s.id, s.name]));
 		const plan = planForSheets(similar, ids, (id) => all.filter((t) => t.sheet === names.get(id)).map((t) => t.table), docFile(docState));
 		if (!plan) {
-			notice = 'Ces onglets n’ont pas de tableaux à regrouper (il en faut au moins deux, aux mêmes colonnes)';
+			notice = t('shell.merge.notice.noTables');
 			return;
 		}
 		await openMerge(plan, similar.find((g) => g.tables?.some((t) => plan.tables?.includes(t.table))) ?? null);
@@ -603,7 +600,7 @@
 		try {
 			docState = await DocumentService.DismissSimilar(g.id);
 			await reload();
-			notice = 'Ces onglets ne seront plus proposés au regroupement (choix gardé dans le classeur)';
+			notice = t('shell.merge.notice.dismissed');
 		} catch (e) {
 			notice = err(e);
 		}
@@ -702,8 +699,8 @@
 			await DocumentService.ShareRetry();
 			// La réponse arrive par share:changed ; sans elle, le serveur ne répond toujours pas.
 			for (let i = 0; i < 20 && share && !share.online; i++) await new Promise((r) => setTimeout(r, 200));
-			if (share?.online) notice = `Connecté à ${serverLabel(share)}`;
-			else if (share) notice = `${serverLabel(share)} ne répond toujours pas : Lattis réessaiera de lui-même`;
+			if (share?.online) notice = t('shell.share.connected', { server: serverLabel(share) });
+			else if (share) notice = t('shell.share.stillDown', { server: serverLabel(share) });
 		} catch (e) {
 			notice = err(e);
 		} finally {
@@ -723,7 +720,7 @@
 	/** Classeur disparu du serveur : « Retirer des récents » le ferme et efface son cache (après confirmation s'il reste des modifications non envoyées). */
 	async function shareForget() {
 		const n = share?.pending ?? 0;
-		if (n && !confirm(`${n} modification${n > 1 ? 's' : ''} non envoyée${n > 1 ? 's seront perdues' : ' sera perdue'}.\n\n« Enregistrer une copie locale… » les garde. Retirer quand même ce classeur des récents ?`)) return;
+		if (n && !confirm(t('shell.share.forgetConfirm', { n }))) return;
 		try {
 			await DocumentService.ShareForget();
 			await closeDoc(false);
@@ -753,7 +750,7 @@
 			docState = await DocumentService.ShareReload();
 			await reload();
 			await keepSheet();
-			notice = `Version ${share?.version ?? ''} chargée`;
+			notice = t('shell.share.versionLoaded', { version: share?.version ?? '' });
 		} catch (e) {
 			notice = err(e);
 		} finally {
@@ -817,7 +814,7 @@
 			// Supprimé du serveur, ou plus d'accès (sans cache à ouvrir) : pas une coupure.
 			if (goneError(err(e))) {
 				notice = err(e);
-				if (confirm(`${err(e)}\n\nLe retirer des classeurs récents ?`)) {
+				if (confirm(t('shell.share.removeRecent', { error: err(e) }))) {
 					await DocumentService.RemoveRecent(r);
 					await loadRecent();
 				}
@@ -827,7 +824,7 @@
 			await opened(await DocumentService.OpenLocalCopy(r.path));
 			// Détail technique dans le bandeau (« Détails ») et dans la console.
 			console.warn('serveur injoignable', err(e));
-			notice = `${serverDown(serverLabel({ server, serverName: r.serverName ?? '' }))} : copie locale ouverte`;
+			notice = t('shell.share.localCopyOpened', { reason: serverDown(serverLabel({ server, serverName: r.serverName ?? '' })) });
 			return;
 		}
 		await openedRemote(res);
@@ -843,7 +840,7 @@
 	async function openTogether(path: string) {
 		locked = null;
 		joining = true;
-		notice = 'Demande envoyée aux autres postes…';
+		notice = t('shell.coedit.requestSent');
 		try {
 			const r = await DocumentService.OpenTogether(path);
 			if (r.state?.open) notice = '';
@@ -858,7 +855,7 @@
 		// serveur (en ligne, synchronisé), pas le fichier qui ne l'est pas.
 		if (r.shared) {
 			await openRecent(r.shared);
-			if (mode === 'doc' && !notice) notice = `« ${r.shared.title} » est partagé sur ${serverLabel({ server: r.shared.server ?? '', serverName: r.shared.serverName ?? '' })} : ouvert en ligne`;
+			if (mode === 'doc' && !notice) notice = t('shell.share.openedOnline', { title: r.shared.title ?? '', server: serverLabel({ server: r.shared.server ?? '', serverName: r.shared.serverName ?? '' }) });
 			return;
 		}
 		if (r.locked) {
@@ -1052,7 +1049,7 @@
 
 	/** Ouvre le classeur de démonstration demandé au lancement (--demo preset). */
 	async function startPresetDemo(preset: string) {
-		await buildDemo(`Démo « ${preset} »`, () => DocumentService.OpenDemo());
+		await buildDemo(t('shell.demo.preset', { name: preset }), () => DocumentService.OpenDemo());
 	}
 
 	/** Classeur d'exemple de l'accueil : la vitrine, jamais enregistrée d'elle-même. */
@@ -1060,7 +1057,7 @@
 		mode = 'starting';
 		queryHost?.closePanel();
 		try {
-			await buildDemo('Classeur d’exemple', () => DocumentService.OpenSample());
+			await buildDemo(t('shell.demo.sample'), () => DocumentService.OpenSample());
 			workbookReady();
 		} catch (e) {
 			mode = 'closed';
@@ -1082,9 +1079,9 @@
 					sqlColumns: s.info.sqlColumns ?? []
 				};
 			} else if (s.state === 'error') {
-				failure = s.error ?? 'erreur';
+				failure = s.error ?? t('shell.demo.error');
 			} else {
-				demoProgress = s.state === 'generating' ? `Création de la démo : ${fmtNumber(s.done)} / ${fmtNumber(s.total)} lignes` : 'Ouverture de la démo…';
+				demoProgress = s.state === 'generating' ? t('shell.demo.generating', { done: s.done, total: s.total }) : t('shell.demo.opening');
 				setTimeout(poll, 250);
 			}
 		};
@@ -1184,17 +1181,17 @@
 				if (!r.ok) return; // erreur ou abandon : QueryHost l'a dit
 				await DocumentService.Recalc();
 				await reload();
-				notice = r.count ? `Tout actualisé : ${r.count} requête${r.count > 1 ? 's' : ''}, formules recalculées` : 'Formules recalculées (aucune requête chargée à actualiser)';
+				notice = r.count ? t('shell.notice.refreshedAll', { n: r.count }) : t('shell.notice.recalcNoQuery');
 				return;
 			}
-			const t = view === 'grid' ? sheet?.tableHere() : undefined;
-			if (t?.query && queryHost) {
-				await queryHost.refreshOne(t.query.id); // message : QueryHost
+			const tb = view === 'grid' ? sheet?.tableHere() : undefined;
+			if (tb?.query && queryHost) {
+				await queryHost.refreshOne(tb.query.id); // message : QueryHost
 				return;
 			}
 			await DocumentService.Recalc();
 			await reload();
-			notice = t ? `Tableau « ${t.name} » recalculé, avec ce qui en dépend` : 'Formules recalculées';
+			notice = tb ? t('shell.notice.tableRecalculated', { table: tb.name }) : t('shell.notice.recalculated');
 		} catch (e) {
 			notice = err(e);
 		} finally {
@@ -1263,7 +1260,7 @@
 		const offDown = Events.On('host:disconnected', () => (webLink = 'lost'));
 		const offExpired = Events.On('host:expired', () => (webLink = 'expired'));
 		const offBack = Events.On('host:reconnected', () => {
-			if (webLink) notice = 'Connexion au serveur rétablie';
+			if (webLink) notice = t('shell.web.reconnected');
 			webLink = '';
 		});
 		// Lien lattis:// reçu pendant que l'application tourne.
@@ -1333,7 +1330,7 @@
 				stepChoice(sc === 'nextChoice' ? 1 : -1);
 			} else if (sc === 'insertSheet' && mode === 'doc') {
 				e.preventDefault();
-				if (layout?.workbookProtected) notice = 'La structure du classeur est protégée : ôtez la protection pour insérer une feuille';
+				if (layout?.workbookProtected) notice = t('shell.notice.insertSheetLocked');
 				else sheetAction(async () => selectSheet(await DocumentService.InsertSheet(sheetId)));
 			}
 		};
@@ -1482,9 +1479,9 @@
 					if (r.sheet) sheetId = r.sheet;
 					await reload();
 					const tables = r.tables ?? [];
-					const what = tables.length === 1 ? `Tableau « ${tables[0]} » importé` : count(tables.length, 'tableau importé', 'tableaux importés');
+					const what = tables.length === 1 ? t('shell.notice.importedOne', { table: tables[0] }) : t('shell.notice.importedMany', { n: tables.length });
 					const warnings = r.warnings ?? [];
-					notice = warnings.length ? `${what} ; ${warnings.length} point(s) à vérifier : ${warnings.join(' · ')}` : what;
+					notice = warnings.length ? t('shell.notice.importWarnings', { what, n: warnings.length, list: warnings.join(' · ') }) : what;
 					// L'import garde les onglets tels quels ; la détection tourne ensuite.
 					offerMerge('import');
 					break;
@@ -1493,19 +1490,19 @@
 					if (mode !== 'doc') return;
 					const table = sheet?.activeTable() ?? layout?.tables?.[0]?.name;
 					if (!table) {
-						notice = 'Aucun tableau à exporter sur cette feuille';
+						notice = t('shell.notice.noTableToExport');
 						break;
 					}
 					const p = await DocumentService.ExportCSV(table);
-					if (p) notice = `Tableau « ${table} » exporté : ${p}`;
+					if (p) notice = t('shell.notice.tableExported', { table, path: p });
 					break;
 				}
 				case 'exportSheet': {
 					// Toute la feuille active, de A1 à la dernière cellule utilisée.
 					if (mode !== 'doc') return;
-					const name = layout?.sheets?.find((s) => s.id === sheetId)?.name ?? 'Feuille';
+					const name = layout?.sheets?.find((s) => s.id === sheetId)?.name ?? t('shell.tabs.menu.sheet');
 					const p = await DocumentService.ExportSheetCSV(sheetId, name);
-					if (p) notice = `Feuille « ${name} » exportée : ${p}`;
+					if (p) notice = t('shell.notice.sheetExported', { name, path: p });
 					break;
 				}
 				case 'exportXlsx':
@@ -1572,7 +1569,7 @@
 				workbook++;
 				await reload();
 				// Fichier verrouillé ou modifié par un autre poste depuis la session : dit aussi.
-				notice = ['Modifications récupérées : pensez à enregistrer.', st?.notice].filter(Boolean).join(' ');
+				notice = [t('shell.recovery.recovered'), st?.notice].filter(Boolean).join(' ');
 				workbookReady();
 			} else {
 				orphans = orphans.filter((x) => !gone.has(x.dir));
@@ -1589,7 +1586,7 @@
 	// --- Sources de la feuille ----------------------------------------------
 
 	/** Clé posée d'office à la création (première colonne ID, ou 1, 2, 3…). */
-	const autoKeyNote = (ev: { autoKey?: string }) => (ev.autoKey ? `, clé posée sur ${ev.autoKey}` : '');
+	const autoKeyNote = (ev: { autoKey?: string }) => (ev.autoKey ? t('shell.notice.autoKey', { column: ev.autoKey }) : '');
 
 	/** « Utiliser comme en-têtes » : la ligne juste au-dessus du tableau devient son en-tête. */
 	async function titleToHeader(table: string) {
@@ -1609,13 +1606,13 @@
 			// d'ailleurs, et n'existe pas en mode serveur).
 			await reload();
 			if (ev.headerOffer) headerOffer = { sheet: sheetId, table: ev.headerOffer };
-			if (ev.keyed) return `Clé posée sur « ${ev.keyed.slice(ev.keyed.indexOf('.') + 1)} » pour REFERENCE`;
-			const undoBirth = ev.split ? ' (Ctrl+Z : le défaire, les cellules restent libres)' : '';
-			if (ev.created && ev.unnamed) return `Tableau « ${ev.created} » créé sans en-têtes (la 1re ligne ressemble aux suivantes) : clic droit › Utiliser la première ligne comme en-têtes${autoKeyNote(ev)}${undoBirth}`;
-			if (ev.created && ev.headless) return `Tableau « ${ev.created} » créé sans en-têtes (« Colonne n ») : tapez les noms dans sa ligne d'en-tête${autoKeyNote(ev)}${undoBirth}`;
-			if (ev.created) return `Tableau « ${ev.created} » créé${autoKeyNote(ev)}${undoBirth || (ev.autoKey ? ' (Ctrl+Z pour annuler)' : '')}`;
-			if (ev.widened) return `Colonne ${ev.widened} passée de ${typeLabel(ev.from as ColumnType)} à ${typeLabel(ev.to as ColumnType)} (Ctrl+Z pour annuler)`;
-			if (ev.invalid) return 'Valeur hors type : cellule marquée en erreur';
+			if (ev.keyed) return t('shell.notice.keyed', { column: ev.keyed.slice(ev.keyed.indexOf('.') + 1) });
+			const undoBirth = ev.split ? t('shell.notice.undoBirth') : '';
+			if (ev.created && ev.unnamed) return t('shell.notice.createdUnnamed', { table: ev.created, more: autoKeyNote(ev) + undoBirth });
+			if (ev.created && ev.headless) return t('shell.notice.createdHeadless', { table: ev.created, more: autoKeyNote(ev) + undoBirth });
+			if (ev.created) return t('shell.notice.created', { table: ev.created, more: autoKeyNote(ev) + (undoBirth || (ev.autoKey ? t('shell.notice.undoHint') : '')) });
+			if (ev.widened) return t('shell.notice.widened', { column: ev.widened, from: typeLabel(ev.from as ColumnType), to: typeLabel(ev.to as ColumnType) });
+			if (ev.invalid) return t('shell.notice.invalidValue');
 		},
 		editing: (row, col, on) => DocumentService.ShareEditing(sheetId, row, col, on),
 		undo: () => ((headerOffer = null), DocumentService.Undo().then(reload)),
@@ -1624,8 +1621,8 @@
 			const ev = await DocumentService.Paste(sheetId, row, col, block);
 			await reload();
 			if (ev.refusedCount) return refusedNotice(ev);
-			if (ev.created && ev.headless) return `Tableau « ${ev.created} » créé sans en-têtes${autoKeyNote(ev)} : clic droit › Tableau › « Sortir l'en-tête » si besoin`;
-			if (ev.created) return `Tableau « ${ev.created} » créé${autoKeyNote(ev)} (${count(block.length - 1)}${ev.split ? ' ; Ctrl+Z : le défaire, les cellules restent libres' : ''})`;
+			if (ev.created && ev.headless) return t('shell.notice.pastedHeadless', { table: ev.created, more: autoKeyNote(ev) });
+			if (ev.created) return t(ev.split ? 'shell.notice.pastedSplit' : 'shell.notice.pasted', { table: ev.created, more: autoKeyNote(ev), n: block.length - 1 });
 		},
 		rangeStats: (t, first, count, cols) => DocumentService.RangeStats(sheetId, t.id, first, count, cols),
 		moveCells: (r0, c0, r1, c1, dr, dc) => DocumentService.MoveCells(sheetId, r0, c0, r1, c1, dr, dc).then(reload),
@@ -1635,8 +1632,8 @@
 			const ev = await DocumentService.Transfer(from, src, sheetId, dst, move, values);
 			await reload();
 			if (ev.refusedCount) return refusedNotice(ev);
-			if (ev.created) return `Tableau « ${ev.created} » créé`;
-			if (ev.widened) return `Colonne ${ev.widened} passée de ${typeLabel(ev.from as ColumnType)} à ${typeLabel(ev.to as ColumnType)} (Ctrl+Z pour annuler)`;
+			if (ev.created) return t('shell.notice.created', { table: ev.created, more: '' });
+			if (ev.widened) return t('shell.notice.widened', { column: ev.widened, from: typeLabel(ev.from as ColumnType), to: typeLabel(ev.to as ColumnType) });
 		},
 		sheetLines: (op, a, b) =>
 			(op === 'insertRows'
@@ -1649,7 +1646,7 @@
 			).then(reload),
 		insertRow: (t, n) => DocumentService.InsertRow(t.name, n).then(reload),
 		deleteRow: (t, n) => DocumentService.DeleteRow(t.name, n).then(reload),
-		insertColumn: (t, i) => DocumentService.InsertColumn(t.name, i, `Colonne ${t.columns.length + 1}`).then(reload),
+		insertColumn: (tb, i) => DocumentService.InsertColumn(tb.name, i, t('shell.notice.defaultColumn', { n: tb.columns.length + 1 })).then(reload),
 		deleteColumn: (t, i) => DocumentService.DeleteColumn(t.name, i).then(reload),
 		suppressColumns: (t, i, j) => DocumentService.SuppressColumns(t.name, i, j).then(reload),
 		deleteColumnSpans: (spans) => DocumentService.DeleteColumnSpans(spans).then(reload),
@@ -1722,13 +1719,13 @@
 		scripts: async () => (await DocumentService.Scripts()) ?? [],
 		runButton: async (id) => {
 			const r = await DocumentService.RunButton(id);
-			if (r.error) return `Erreur du script : ${r.error}`;
+			if (r.error) return t('shell.notice.scriptError', { error: r.error });
 			const out = r.output ?? [];
 			return out.length ? out[out.length - 1] : '';
 		},
 		fireControl: async (id, event, value, old) => {
 			const r = await DocumentService.FireControl(id, event, value, old);
-			if (r.error) return `Erreur du script : ${r.error}`;
+			if (r.error) return t('shell.notice.scriptError', { error: r.error });
 			const out = r.output ?? [];
 			return out.length ? out[out.length - 1] : '';
 		},
@@ -1801,7 +1798,7 @@
 	const demoSource: SheetSource = {
 		window: (_t, first, count) => GridService.Window(first, count) as Promise<Fetched>,
 		async setCell(_row, _col, raw, target) {
-			if (target.rowId === undefined || target.column === undefined) return 'Démo : seules les cellules du tableau sont modifiables';
+			if (target.rowId === undefined || target.column === undefined) return t('shell.demo.readOnly');
 			// La démo ne relit pas sa mise en page : la feuille met la cellule à jour.
 			return { value: await GridService.SetCell(target.rowId, target.column, raw) };
 		}
@@ -1890,7 +1887,7 @@
 
 	const query = (sql: string) => (mode === 'demo' ? GridService.Query(sql) : DocumentService.Query(sql));
 	const data = $derived(mode === 'demo' ? demoData : docData);
-	const title = $derived(mode === 'demo' ? 'Démo : 1 M de lignes' : mode === 'recover' ? 'Récupération' : docState.title);
+	const title = $derived(mode === 'demo' ? t('ribbon.file.demo') : mode === 'recover' ? t('shell.recovery.title') : docState.title);
 	const tabs = $derived(mode === 'demo' ? (demo ? [{ id: 1, name: demo.name }] : []) : (layout?.sheets ?? []).map((s) => ({ id: s.id, name: s.name, protected: s.protected, color: s.color, hidden: s.hidden, kind: s.kind, choice: s.choice ?? null })));
 
 	// --- Onglet à choix (« Ventes · 2025 ▾ », lib/shell/choice.ts) ----------
@@ -1913,7 +1910,7 @@
 			sheetAction(async () => {
 				await DocumentService.ChooseSheetBy(id, table, column, '');
 				if (id !== sheetId) await selectSheet(id);
-				notice = `Onglet à choix par « ${column} » : la flèche ▾ de l’onglet choisit la valeur affichée (Alt+↓)`;
+				notice = t('shell.choice.byColumn', { column });
 			}),
 		preview: async (id, formula) => previewOf(await DocumentService.PreviewChoiceFormula(id, formula)),
 		// Une erreur (formule refusée) reste dans la boîte : pas de sheetAction.
@@ -1923,7 +1920,7 @@
 			});
 			if (id !== sheetId) await selectSheet(id);
 			else await reload();
-			notice = `Onglet à choix par « ${name} » (${formula}) : la flèche ▾ de l’onglet choisit la valeur affichée (Alt+↓)`;
+			notice = t('shell.choice.byFormula', { name, formula });
 		},
 		formulaHelp: () => ({
 			functions: help?.functions ?? [],
@@ -1935,7 +1932,7 @@
 	async function stepChoice(d: 1 | -1) {
 		const c = layout?.sheets?.find((s) => s.id === sheetId)?.choice;
 		if (!c) {
-			notice = 'Cette feuille n’a pas d’onglet à choix (clic droit sur l’onglet › Choisir par)';
+			notice = t('shell.choice.none');
 			return;
 		}
 		const values = (await choiceActions.values(sheetId)).map((v) => v.text);
@@ -1965,7 +1962,7 @@
 		if ((help?.tables ?? []).some((t) => t.name.toLowerCase() === name.toLowerCase())) return gotoObject(name);
 		const s = (layout?.sheets ?? []).find((x) => x.name.toLowerCase() === name.toLowerCase());
 		if (s) await selectSheet(s.id);
-		else notice = `« ${name} » est introuvable dans le classeur`;
+		else notice = t('shell.notice.notFound', { name });
 	}
 
 	/** « Afficher sur la feuille » : va sur la feuille de l'objet et le sélectionne. */
@@ -2063,11 +2060,11 @@
 		applyTheme(themePreview ?? (mode === 'doc' ? docState.theme : null), userSettings.list);
 	});
 
-	async function setBookTheme(t: WorkbookTheme) {
+	async function setBookTheme(th: WorkbookTheme) {
 		try {
-			docState = await DocumentService.SetTheme(t);
+			docState = await DocumentService.SetTheme(th);
 			await reload();
-			notice = `Thème « ${t.name} » (Ctrl+Z pour annuler)`;
+			notice = t('shell.notice.theme', { name: th.name });
 		} catch (e) {
 			notice = err(e);
 		}
@@ -2143,9 +2140,9 @@
 	const sheetLocked = $derived(mode === 'doc' && (!!activeInfo?.protected || bookLocked));
 	const lockedMsg = $derived(
 		activeInfo?.protected
-			? `La feuille « ${activeInfo?.name ?? ''} » est protégée : ôtez la protection (Révision › Ôter la protection de la feuille) pour la modifier`
+			? t('shell.protect.sheetLocked', { name: activeInfo?.name ?? '' })
 			: bookLocked
-				? 'Le classeur est protégé : ôtez la protection (Révision › Ôter la protection du classeur) pour le modifier'
+				? t('shell.protect.bookLocked')
 				: ''
 	);
 
@@ -2175,19 +2172,19 @@
 			notice =
 				what === 'sheet'
 					? off
-						? `Protection de la feuille « ${name} » ôtée`
-						: `Feuille « ${name} » protégée`
+						? t('shell.protect.notice.sheetOff', { name })
+						: t('shell.protect.notice.sheetOn', { name })
 					: what === 'structure'
 						? off
-							? `Protection de la structure de « ${name} » ôtée`
-							: `Structure de la feuille « ${name} » protégée : seule la saisie dans les tableaux reste permise`
+							? t('shell.protect.notice.structureOff', { name })
+							: t('shell.protect.notice.structureOn', { name })
 						: off
-							? 'Protection du classeur ôtée'
+							? t('shell.protect.notice.bookOff')
 							: lock === 'sheets'
-								? 'Classeur protégé : onglets et contenu de toutes les feuilles'
+								? t('shell.protect.notice.bookSheets')
 								: lock === 'structure'
-									? 'Classeur protégé : onglets et structure de toutes les feuilles (saisie dans les tableaux seulement)'
-									: 'Structure du classeur protégée';
+									? t('shell.protect.notice.bookStructure')
+									: t('shell.protect.notice.bookTabs');
 		} catch (e) {
 			if (protecting) pwError = err(e);
 			else notice = err(e);
@@ -2198,7 +2195,7 @@
 		const p = protecting;
 		if (!p) return;
 		if (!p.off && pw1 !== pw2) {
-			pwError = 'Les deux mots de passe ne correspondent pas';
+			pwError = t('shell.protect.mismatch');
 			return;
 		}
 		applyProtect(p.what, p.id, p.name, p.off, pw1, p.what === 'workbook' ? bookLock : 'tabs');
@@ -2210,17 +2207,17 @@
 			const l = await DocumentService.Layout(id);
 			const name = l.sheets?.find((x) => x.id === id)?.name ?? '';
 			const items: string[] = [];
-			const count = (n: number, one: string, many: string, names?: string[]) => {
+			const add = (n: number, key: 'tables' | 'pivots' | 'charts' | 'buttons' | 'cells', names?: string[]) => {
 				if (!n) return;
-				const list = names?.length ? ` (${names.slice(0, 5).join(', ')}${names.length > 5 ? '…' : ''})` : '';
-				items.push((n > 1 ? `${fmtNumber(n)} ${many}` : `1 ${one}`) + list);
+				const what = t(`shell.deleteSheet.items.${key}`, { n });
+				items.push(names?.length ? t('shell.deleteSheet.withNames', { what, names: names.slice(0, 5).join(', ') + (names.length > 5 ? '…' : '') }) : what);
 			};
 			const tables = l.tables ?? [];
-			count(tables.length, 'tableau', 'tableaux', tables.map((t) => `${t.name} : ${fmtNumber(t.total)} ligne${t.total > 1 ? 's' : ''}`));
-			count(l.pivots?.length ?? 0, 'tableau croisé', 'tableaux croisés', l.pivots?.map((x) => x.config.name ?? ''));
-			count(l.charts?.length ?? 0, 'graphique', 'graphiques');
-			count(l.buttons?.length ?? 0, 'bouton', 'boutons');
-			count(l.cells?.length ?? 0, 'cellule remplie', 'cellules remplies');
+			add(tables.length, 'tables', tables.map((tb) => t('shell.deleteSheet.tableRows', { name: tb.name, n: tb.total })));
+			add(l.pivots?.length ?? 0, 'pivots', l.pivots?.map((x) => x.config.name ?? ''));
+			add(l.charts?.length ?? 0, 'charts');
+			add(l.buttons?.length ?? 0, 'buttons');
+			add(l.cells?.length ?? 0, 'cells');
 			if (!items.length) return sheetAction(() => DocumentService.DeleteSheet(id));
 			deleting = { id, name, items };
 		} catch (e) {
@@ -2258,9 +2255,9 @@
 		}}
 		dirty={mode === 'doc' && docState.dirty}
 		actions={[
-			{ label: 'Enregistrer (Ctrl+S)', icon: 'save', run: mode === 'doc' ? () => file('save') : undefined },
-			{ label: docState.undo ? `Annuler : ${docState.undo} (Ctrl+Z)` : 'Annuler (Ctrl+Z)', icon: 'undo', run: mode === 'doc' && docState.undo ? () => DocumentService.Undo().then(reload).catch((e) => (notice = err(e))) : undefined },
-			{ label: docState.redo ? `Rétablir : ${docState.redo} (Ctrl+Y)` : 'Rétablir (Ctrl+Y)', icon: 'redo', run: mode === 'doc' && docState.redo ? () => DocumentService.Redo().then(reload).catch((e) => (notice = err(e))) : undefined }
+			{ label: t('shell.titleBar.save'), icon: 'save', run: mode === 'doc' ? () => file('save') : undefined },
+			{ label: docState.undo ? t('ribbon.cmd.undo.tooltip', { action: docState.undo }) : t('shell.titleBar.undo'), icon: 'undo', run: mode === 'doc' && docState.undo ? () => DocumentService.Undo().then(reload).catch((e) => (notice = err(e))) : undefined },
+			{ label: docState.redo ? t('ribbon.cmd.redo.tooltip', { action: docState.redo }) : t('shell.titleBar.redo'), icon: 'redo', run: mode === 'doc' && docState.redo ? () => DocumentService.Redo().then(reload).catch((e) => (notice = err(e))) : undefined }
 		]}
 	/>
 	<Ribbon
@@ -2291,7 +2288,7 @@
 		errorsOnly={!!sheetStatus?.errorsOnly}
 		note={!!sheetStatus?.note}
 		onedit={mode === 'doc' ? (w) => sheet?.editActive(w) : undefined}
-		tableReadOnly={sheetStatus?.readOnly ? `${sheetStatus.readOnly}${share?.shared && !share.canDesign && share.roles?.length ? ` (rôle : ${rolesLabel(share.roles)})` : ''}` : undefined}
+		tableReadOnly={sheetStatus?.readOnly ? (share?.shared && !share.canDesign && share.roles?.length ? t('shell.share.readOnlyRole', { reason: sheetStatus.readOnly, roles: rolesLabel(share.roles) }) : sheetStatus.readOnly) : undefined}
 		onaudit={mode === 'doc' ? (k) => sheet?.auditActive(k) : undefined}
 		onpainter={mode === 'doc' ? () => sheet?.formatPainter() : undefined}
 		onclip={mode === 'doc' ? (what) => (what === 'paste' ? sheet?.pasteClipboard() : sheet?.copySelection(what === 'cut')) : undefined}
@@ -2303,9 +2300,9 @@
 			dataInsert = { sheet: sheetId, ...c };
 		} : undefined}
 		onform={mode === 'doc' ? () => {
-			const t = sheet?.activeTable();
-			if (t) formShare = t;
-			else notice = 'Placez-vous dans un tableau pour en faire un formulaire.';
+			const tb = sheet?.activeTable();
+			if (tb) formShare = tb;
+			else notice = t('shell.share.formNeedsTable');
 		} : undefined}
 		ondedup={mode === 'doc' ? () => sheet?.dedupActive() : undefined}
 		ontextcols={mode === 'doc' ? () => sheet?.textToColumnsActive() : undefined}
@@ -2359,10 +2356,10 @@
 		<!-- Édition web : le moteur ne répond plus ; les actions attendent la reconnexion. -->
 		<div class="weblink" class:expired={webLink === 'expired'} role="alert">
 			{#if webLink === 'expired'}
-				<span>Votre session a expiré : reconnectez-vous pour continuer (vos modifications déjà faites sont gardées sur le serveur).</span>
-				<button onclick={() => location.reload()}>Se reconnecter</button>
+				<span>{t('shell.web.expired')}</span>
+				<button onclick={() => location.reload()}>{t('shell.web.reconnect')}</button>
 			{:else}
-				<span>Connexion au serveur perdue : nouvelle tentative… Ce que vous faites maintenant attend la reconnexion.</span>
+				<span>{t('shell.web.lost')}</span>
 			{/if}
 		</div>
 	{/if}
@@ -2388,76 +2385,76 @@
 			<div class="splash"><h1>Lattis</h1><p class="error">{failure}</p></div>
 		{:else if mode === 'recover'}
 			<div class="splash">
-				<h1>Récupération</h1>
-				<p>Lattis s'est fermé sans enregistrer. Ces classeurs ont des modifications récupérables :</p>
+				<h1>{t('shell.recovery.title')}</h1>
+				<p>{t('shell.recovery.intro')}</p>
 				<div class="orphans">
 				{#each allOrphans ? orphanGroups : orphanGroups.slice(0, ORPHANS_SHOWN) as g (g.key)}
 					{@const o = g.latest}
 					<div class="orphan">
 						<div>
 							<strong>{sessionName(o)}</strong>
-							<span class="muted">modifié le {fmtDateTime(new Date(o.modified))}</span>
+							<span class="muted">{t('shell.recovery.modified', { date: fmtDateTime(new Date(o.modified)) })}</span>
 							{#if g.older.length}
 								<button class="link older-toggle" aria-expanded={!!olderShown[g.key]} onclick={() => (olderShown[g.key] = !olderShown[g.key])}>{olderLabel(g.older.length)}</button>
 							{/if}
 						</div>
-						<button class="primary ico" onclick={() => recover(o, true)}><Icon name="undo" size={14} />Récupérer</button>
-						<button class="ico discard" title={g.older.length ? 'Abandonner cette session et ses versions plus anciennes' : undefined} onclick={() => recover(o, false, g.older)}><Icon name="trash" size={14} />{g.older.length ? 'Tout abandonner' : 'Abandonner'}</button>
+						<button class="primary ico" onclick={() => recover(o, true)}><Icon name="undo" size={14} />{t('shell.recovery.recover')}</button>
+						<button class="ico discard" title={g.older.length ? t('shell.recovery.discardAllTooltip') : undefined} onclick={() => recover(o, false, g.older)}><Icon name="trash" size={14} />{g.older.length ? t('shell.recovery.discardAll') : t('shell.recovery.discard')}</button>
 					</div>
 					{#if olderShown[g.key]}
 						{#each g.older as v (v.dir)}
 							<div class="orphan older">
 								<div>
 									<span>{sessionName(v)}</span>
-									<span class="muted">modifié le {fmtDateTime(new Date(v.modified))}</span>
+									<span class="muted">{t('shell.recovery.modified', { date: fmtDateTime(new Date(v.modified)) })}</span>
 								</div>
-								<button class="ico" onclick={() => recover(v, true)}><Icon name="undo" size={14} />Récupérer</button>
-								<button class="ico discard" onclick={() => recover(v, false)}><Icon name="trash" size={14} />Abandonner</button>
+								<button class="ico" onclick={() => recover(v, true)}><Icon name="undo" size={14} />{t('shell.recovery.recover')}</button>
+								<button class="ico discard" onclick={() => recover(v, false)}><Icon name="trash" size={14} />{t('shell.recovery.discard')}</button>
 							</div>
 						{/each}
 					{/if}
 				{/each}
 				</div>
 				{#if !allOrphans && orphanGroups.length > ORPHANS_SHOWN}
-					<button class="link" onclick={() => (allOrphans = true)}>Voir les {orphanGroups.length - ORPHANS_SHOWN} plus anciens</button>
+					<button class="link" onclick={() => (allOrphans = true)}>{t('shell.recovery.showOlder', { n: orphanGroups.length - ORPHANS_SHOWN })}</button>
 				{/if}
 				{#if recoverError}<p class="error">{recoverError}</p>{/if}
 			</div>
 		{:else if mode === 'closed'}
 			<div class="splash">
 				<h1>Lattis</h1>
-				<p>Aucun classeur ouvert.</p>
+				<p>{t('shell.welcome.noWorkbook')}</p>
 				<div class="actions">
-					<button class="primary ico" onclick={() => file('new')}><Icon name="new-file" size={14} />Nouveau classeur</button>
-					<button class="ico" onclick={() => file('open')}><Icon name="open" size={14} />Ouvrir…</button>
-					<button class="ico" onclick={() => file('import')} title="Crée un classeur avec les feuilles importées"><Icon name="database" size={14} />Importer (CSV, Excel)…</button>
-					{#if sharedWorkbooksEnabled()}<button class="ico" onclick={() => file('openRemote')}><Icon name="web" size={14} />Ouvrir depuis un serveur…</button>{/if}
+					<button class="primary ico" onclick={() => file('new')}><Icon name="new-file" size={14} />{t('shell.welcome.new')}</button>
+					<button class="ico" onclick={() => file('open')}><Icon name="open" size={14} />{t('ribbon.file.open')}</button>
+					<button class="ico" onclick={() => file('import')} title={t('shell.welcome.importTooltip')}><Icon name="database" size={14} />{t('ribbon.file.import')}</button>
+					{#if sharedWorkbooksEnabled()}<button class="ico" onclick={() => file('openRemote')}><Icon name="web" size={14} />{t('ribbon.file.openRemote')}</button>{/if}
 				</div>
 				{#if showSteps}
 					<div class="steps">
-						<p class="muted">Premiers pas</p>
+						<p class="muted">{t('shell.welcome.firstSteps')}</p>
 						<ol>
 							{#each firstSteps as s (s.help)}
-								<li><button class="link" title="Ouvrir l’aide" onclick={() => openHelp(s.help)}>{s.title}</button> : {s.text}</li>
+								<li><button class="link" title={t('shell.welcome.openHelp')} onclick={() => openHelp(s.help)}>{s.title}</button> : {s.text}</li>
 							{/each}
 						</ol>
 						<div class="steps-actions">
-							<button class="ico" onclick={() => openSample().catch((e) => (notice = err(e)))}><Icon name="book" size={14} />Ouvrir le classeur d’exemple</button>
+							<button class="ico" onclick={() => openSample().catch((e) => (notice = err(e)))}><Icon name="book" size={14} />{t('shell.welcome.openSample')}</button>
 							<button
 								class="link"
 								onclick={() => {
 									hideSteps();
 									showSteps = false;
-								}}>Ne plus afficher</button
+								}}>{t('shell.welcome.hide')}</button
 							>
 						</div>
 					</div>
 				{:else}
-					<button class="link" onclick={() => openSample().catch((e) => (notice = err(e)))}>Ouvrir le classeur d’exemple</button>
+					<button class="link" onclick={() => openSample().catch((e) => (notice = err(e)))}>{t('shell.welcome.openSample')}</button>
 				{/if}
 				{#if recent.length}
 					<div class="recent">
-						<p class="muted">Récents</p>
+						<p class="muted">{t('shell.welcome.recent')}</p>
 						{#each recent as r (recentKey(r))}
 							<button class="link" title={recentDetail(r)} onclick={() => openRecent(r).catch((e) => (notice = err(e)))}>{recentLabel(r)}</button>
 						{/each}
@@ -2538,13 +2535,13 @@
 								setValue: async (id, raw) => {
 									const r = await DocumentService.SetControlValue(id, raw);
 									await reload();
-									if (r.error) notice = `Erreur du script : ${r.error}`;
+									if (r.error) notice = t('shell.notice.scriptError', { error: r.error });
 									else if (r.output?.length) notice = r.output[r.output.length - 1];
 								},
 								click: async (id) => {
 									const r = await DocumentService.RunButton(id);
 									await reload();
-									if (r.error) notice = `Erreur du script : ${r.error}`;
+									if (r.error) notice = t('shell.notice.scriptError', { error: r.error });
 									else if (r.output?.length) notice = r.output[r.output.length - 1];
 								},
 								pickFile: (title) => DocumentService.PickControlFile(title)
@@ -2552,7 +2549,7 @@
 							run={async (script, fn) => {
 								const r = await DocumentService.RunFunction(script, fn);
 								await reload();
-								if (r.error) return `Erreur du script : ${r.error}`;
+								if (r.error) return t('shell.notice.scriptError', { error: r.error });
 								const out = r.output ?? [];
 								return out.length ? out[out.length - 1] : '';
 							}}
@@ -2587,14 +2584,14 @@
 							? async (from, to) => {
 									docState = await DocumentService.RenameTable(from, to);
 									await reload();
-									notice = `Tableau « ${from} » renommé en « ${to} » (Ctrl+Z pour annuler)`;
+									notice = t('shell.notice.tableRenamed', { from, to });
 								}
 							: undefined}
 						tosheet={mode === 'doc'
 							? async (q, name, headers, link, columns) => {
 									if (!link) {
 										const r = await DocumentService.QueryToSheet(q, name, headers);
-										notice = `Résultat copié dans le tableau « ${r.table} » (Ctrl+Z pour annuler)`;
+										notice = t('shell.notice.resultCopied', { table: r.table });
 										await selectSheet(r.sheet);
 										return;
 									}
@@ -2602,7 +2599,7 @@
 									if (r.errors?.length) throw new Error(r.errors.join('\n'));
 									const l = r.loads?.[0];
 									if (!l) return;
-									notice = `Tableau « ${l.table} » lié à la requête : clic droit › Actualiser pour le relire`;
+									notice = t('shell.notice.tableLinked', { table: l.table });
 									await reload();
 									await selectSheet(l.sheet);
 								}
@@ -2627,7 +2624,7 @@
 					{#if mode === 'doc'}
 						<ScriptView
 							{scripts}
-							locked={layoutShared ? 'Seuls les propriétaires et concepteurs modifient les scripts de ce classeur partagé' : ''}
+							locked={layoutShared ? t('shell.share.scriptsLocked') : ''}
 							save={async (id, name, source) => {
 								const nid = await DocumentService.SaveScript(id, name, source);
 								await reload();
@@ -2658,14 +2655,14 @@
 							}}
 						/>
 					{:else}
-						<p class="placeholder">Les scripts s'exécutent sur un classeur : Fichier › Nouveau.</p>
+						<p class="placeholder">{t('shell.notice.scriptsNeedWorkbook')}</p>
 					{/if}
 				</div>
 			{/if}
 		{:else}
 			<div class="splash">
 				<h1>Lattis</h1>
-				<p>{demoProgress || 'Ouverture…'}</p>
+				<p>{demoProgress || t('shell.demo.openingShort')}</p>
 				<div class="boot-bar" aria-hidden="true"></div>
 			</div>
 		{/if}
@@ -2724,12 +2721,12 @@
 		{#snippet failed(error, reset)}
 			<main>
 				<div class="splash">
-					<h1>Erreur de l’interface</h1>
+					<h1>{t('shell.crash.uiTitle')}</h1>
 					<p class="error">{describe(error).message}</p>
-					<p class="muted">Le détail (pile, dernières actions) est dans le journal des erreurs. Le classeur n’est pas perdu.</p>
+					<p class="muted">{t('shell.crash.uiDetail')}</p>
 					<div class="actions">
-						<button class="primary" onclick={reset}>Réessayer</button>
-						<button onclick={() => location.reload()}>Recharger l’interface</button>
+						<button class="primary" onclick={reset}>{t('shell.crash.retry')}</button>
+						<button onclick={() => location.reload()}>{t('shell.crash.reloadUi')}</button>
 					</div>
 				</div>
 			</main>
@@ -2800,11 +2797,11 @@
 			tab={pageDlg}
 			onapply={(p) => {
 				pageDlg = null;
-				void savePage(p, 'Mise en page');
+				void savePage(p, t('shell.pageSetup.dialog.title'));
 			}}
 			onprint={(p) => {
 				pageDlg = null;
-				void savePage(p, 'Mise en page').then(() => file('print'));
+				void savePage(p, t('shell.pageSetup.dialog.title')).then(() => file('print'));
 			}}
 			onclose={() => (pageDlg = null)}
 		/>
@@ -2847,7 +2844,7 @@
 				// Tableaux de requête choisis en source du Data Lake : la boîte de la source suit.
 				if (!back && lake?.length) dataShare = lake[0];
 				share = st;
-				notice = again ? `Version ${st.version} publiée` : `Classeur publié sur ${st.serverName || st.server} (${st.mode === 'frozen' ? 'figé' : 'collaboratif'})`;
+				notice = again ? t('shell.share.versionPublished', { version: st.version }) : t(st.mode === 'frozen' ? 'shell.share.publishedFrozen' : 'shell.share.publishedLive', { server: st.serverName || st.server });
 				reload().catch((e) => (notice = err(e)));
 			}}
 		/>
@@ -2911,13 +2908,13 @@
 	{#if detachAsk}
 		{@const q = detachAsk}
 		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true" aria-label="Détacher du serveur" use:modal={() => (detachAsk = null)}>
-				<p>Détacher ce classeur du serveur ?</p>
+			<div class="modal" role="dialog" aria-modal="true" aria-label={t('shell.share.detach.title')} use:modal={() => (detachAsk = null)}>
+				<p>{t('shell.share.detach.question')}</p>
 				{#each q as line, i (i)}
 					<p class="muted">{line}</p>
 				{/each}
 				<div class="actions">
-					<button class="primary" onclick={shareDetach}>Détacher</button>
+					<button class="primary" onclick={shareDetach}>{t('shell.share.detach.ok')}</button>
 					<button onclick={() => (detachAsk = null)}>Annuler</button>
 				</div>
 			</div>
@@ -2926,11 +2923,11 @@
 	{#if linkAsk}
 		{@const a = linkAsk}
 		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true" aria-label="Ouvrir un lien Lattis" use:modal={() => a.ok(false)}>
-				<p>Ouvrir un classeur de « {a.name} » ?</p>
-				<p class="muted">Lattis ne s’est jamais connecté à {a.host}. N’acceptez que si vous connaissez ce serveur et attendiez ce lien.</p>
+			<div class="modal" role="dialog" aria-modal="true" aria-label={t('shell.share.link.title')} use:modal={() => a.ok(false)}>
+				<p>{t('shell.share.link.question', { name: a.name })}</p>
+				<p class="muted">{t('shell.share.link.warning', { host: a.host })}</p>
 				<div class="actions">
-					<button class="primary" onclick={() => a.ok(true)}>Se connecter et ouvrir</button>
+					<button class="primary" onclick={() => a.ok(true)}>{t('shell.share.link.ok')}</button>
 					<button onclick={() => a.ok(false)}>Annuler</button>
 				</div>
 			</div>
@@ -2943,7 +2940,7 @@
 			<form
 				class="modal protect"
 				use:modal
-				aria-label="Protection"
+				aria-label={t('shell.protect.aria')}
 				onkeydown={(e) => {
 					e.stopPropagation();
 					if (e.key === 'Escape') protecting = null;
@@ -2955,54 +2952,53 @@
 			>
 				<p>
 					{#if p.what === 'sheet'}
-						{p.off ? `Ôter la protection de la feuille « ${p.name} »` : `Protéger la feuille « ${p.name} »`}
+						{p.off ? t('shell.protect.title.sheetOff', { name: p.name }) : t('shell.protect.title.sheetOn', { name: p.name })}
 					{:else if p.what === 'structure'}
-						{p.off ? `Ôter la protection de la structure de « ${p.name} »` : `Protéger la structure de la feuille « ${p.name} »`}
+						{p.off ? t('shell.protect.title.structureOff', { name: p.name }) : t('shell.protect.title.structureOn', { name: p.name })}
 					{:else}
-						{p.off ? 'Ôter la protection du classeur' : 'Protéger la structure du classeur'}
+						{p.off ? t('shell.protect.title.bookOff') : t('shell.protect.title.bookOn')}
 					{/if}
 				</p>
 				{#if !p.off}
 					<p class="muted">
 						{p.what === 'sheet'
-							? 'Saisie, collage, mise en forme, lignes et colonnes, tri, objets et requêtes SQL d’écriture seront refusés sur cette feuille. Lecture, copie et filtres restent permis.'
+							? t('shell.protect.explain.sheet')
 							: p.what === 'structure'
-								? 'Tout sera verrouillé sauf la saisie dans les tableaux : cellules libres, mise en forme, colonnes et en-têtes, tableaux, objets, lignes et colonnes de la feuille, mise en page et onglet. On pourra encore taper, coller (valeurs seules) et effacer des valeurs dans les tableaux, y ajouter ou supprimer des lignes, trier et filtrer.'
+								? t('shell.protect.explain.structure')
 								: bookLock === 'sheets'
-									? 'Ajouter, supprimer, renommer, déplacer ou masquer des feuilles sera refusé, ainsi que toute modification du contenu des feuilles.'
+									? t('shell.protect.explain.bookSheets')
 									: bookLock === 'structure'
-										? 'Ajouter, supprimer, renommer, déplacer ou masquer des feuilles sera refusé ; sur chaque feuille, seule la saisie dans les tableaux restera permise.'
-										: 'Ajouter, supprimer, renommer, déplacer ou masquer des feuilles sera refusé. Le contenu des feuilles non protégées reste modifiable.'}
+										? t('shell.protect.explain.bookStructure')
+										: t('shell.protect.explain.bookTabs')}
 					</p>
 					<p class="muted">
-						Cette protection évite les modifications accidentelles ; ce n’est pas une sécurité : le fichier n’est pas chiffré, ses données restent lisibles et la
-						protection peut être retirée par quelqu’un d’outillé.
+						{t('shell.protect.notSecurity')}
 					</p>
 					{#if p.what === 'workbook'}
 						<fieldset class="lock">
-							<legend>Verrouiller</legend>
-							<label class="check"><input type="radio" bind:group={bookLock} value="tabs" /> Onglets seulement</label>
-							<label class="check"><input type="radio" bind:group={bookLock} value="structure" /> Onglets et structure de toutes les feuilles (saisie dans les tableaux seulement)</label>
-							<label class="check"><input type="radio" bind:group={bookLock} value="sheets" /> Onglets et contenu de toutes les feuilles</label>
+							<legend>{t('shell.protect.lock')}</legend>
+							<label class="check"><input type="radio" bind:group={bookLock} value="tabs" /> {t('shell.protect.lockTabs')}</label>
+							<label class="check"><input type="radio" bind:group={bookLock} value="structure" /> {t('shell.protect.lockStructure')}</label>
+							<label class="check"><input type="radio" bind:group={bookLock} value="sheets" /> {t('shell.protect.lockSheets')}</label>
 						</fieldset>
 					{/if}
 				{/if}
 				<label>
-					Mot de passe{p.off ? '' : ' (facultatif)'}
+					{p.off ? t('shell.protect.password') : t('shell.protect.passwordOptional')}
 					<!-- svelte-ignore a11y_autofocus -->
 					<input type="password" bind:value={pw1} autofocus autocomplete="off" />
 				</label>
 				{#if !p.off}
 					<label>
-						Confirmer le mot de passe
+						{t('shell.protect.confirm')}
 						<input type="password" bind:value={pw2} autocomplete="off" />
 					</label>
-					<p class="muted">Sans le mot de passe, la protection ne pourra plus être ôtée : notez-le.</p>
+					<p class="muted">{t('shell.protect.noteIt')}</p>
 				{/if}
 				{#if pwError}<p class="error">{pwError}</p>{/if}
 				<div class="actions">
-					<button type="submit" class="primary">OK</button>
-					<button type="button" onclick={() => (protecting = null)}>Annuler</button>
+					<button type="submit" class="primary">{t('common.ok')}</button>
+					<button type="button" onclick={() => (protecting = null)}>{t('common.cancel')}</button>
 				</div>
 			</form>
 		</div>
@@ -3010,21 +3006,21 @@
 	{#if deletingMany}
 		{@const ids = deletingMany}
 		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true" aria-label="Supprimer les feuilles" use:modal={() => (deletingMany = null)}>
-				<p>Supprimer ces {ids.length} feuilles et tout ce qu'elles contiennent ?</p>
+			<div class="modal" role="dialog" aria-modal="true" aria-label={t('shell.deleteSheet.manyTitle')} use:modal={() => (deletingMany = null)}>
+				<p>{t('shell.deleteSheet.manyQuestion', { n: ids.length })}</p>
 				<ul class="delete-list">
 					{#each ids as id (id)}<li>{layout?.sheets?.find((s) => s.id === id)?.name ?? id}</li>{/each}
 				</ul>
-				<p class="hint">Ctrl+Z les rend toutes, avec leur contenu.</p>
+				<p class="hint">{t('shell.deleteSheet.manyHint')}</p>
 				<div class="actions">
 					<button
 						class="primary danger"
 						onclick={() => {
 							deletingMany = null;
 							sheetAction(() => DocumentService.DeleteSheets(ids));
-						}}>Supprimer</button
+						}}>{t('shell.deleteSheet.ok')}</button
 					>
-					<button onclick={() => (deletingMany = null)}>Annuler</button>
+					<button onclick={() => (deletingMany = null)}>{t('common.cancel')}</button>
 				</div>
 			</div>
 		</div>
@@ -3032,12 +3028,12 @@
 	{#if deleting}
 		{@const d = deleting}
 		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true" aria-label="Supprimer la feuille" use:modal={() => (deleting = null)}>
-				<p>Supprimer la feuille « {d.name} » et tout ce qu'elle contient ?</p>
+			<div class="modal" role="dialog" aria-modal="true" aria-label={t('shell.deleteSheet.title')} use:modal={() => (deleting = null)}>
+				<p>{t('shell.deleteSheet.question', { name: d.name })}</p>
 				<ul class="delete-list">
 					{#each d.items as it (it)}<li>{it}</li>{/each}
 				</ul>
-				<p class="hint">Ctrl+Z rend la feuille et tout son contenu.</p>
+				<p class="hint">{t('shell.deleteSheet.hint')}</p>
 				<div class="actions">
 					<button
 						class="primary danger"
@@ -3045,9 +3041,9 @@
 							const id = d.id;
 							deleting = null;
 							sheetAction(() => DocumentService.DeleteSheet(id));
-						}}>Supprimer</button
+						}}>{t('shell.deleteSheet.ok')}</button
 					>
-					<button onclick={() => (deleting = null)}>Annuler</button>
+					<button onclick={() => (deleting = null)}>{t('common.cancel')}</button>
 				</div>
 			</div>
 		</div>
@@ -3055,24 +3051,24 @@
 	{#if unsentClose}
 		{@const n = unsentClose}
 		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true" aria-label="Modifications pas encore envoyées" use:modal={cancelClose}>
-				<p>{n > 1 ? `${n} modifications` : 'Une modification'} de « {docState.title} » {n > 1 ? 'ne sont pas encore parties' : 'n’est pas encore partie'} vers {docState.remote ? serverLabel(docState.remote) : 'le serveur'}.</p>
-				<p class="hint">{n > 1 ? 'Elles sont gardées' : 'Elle est gardée'} sur ce poste et {n > 1 ? 'partiront' : 'partira'} à la prochaine ouverture du classeur, une fois le serveur joignable.</p>
+			<div class="modal" role="dialog" aria-modal="true" aria-label={t('shell.unsent.title')} use:modal={cancelClose}>
+				<p>{t('shell.unsent.question', { n, title: docState.title, server: docState.remote ? serverLabel(docState.remote) : t('shell.unsent.theServer') })}</p>
+				<p class="hint">{t('shell.unsent.hint', { n })}</p>
 				<div class="actions">
-					<button class="primary" onclick={() => closeDoc(false).catch((e) => ((quitting = false), (notice = err(e))))}>{quitting ? 'Quitter' : 'Fermer'}</button>
-					<button onclick={cancelClose}>Annuler</button>
+					<button class="primary" onclick={() => closeDoc(false).catch((e) => ((quitting = false), (notice = err(e))))}>{quitting ? t('shell.close.quit') : t('common.close')}</button>
+					<button onclick={cancelClose}>{t('common.cancel')}</button>
 				</div>
 			</div>
 		</div>
 	{/if}
 	{#if closing}
 		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true" aria-label="Enregistrer les modifications" use:modal={cancelClose}>
-				<p>Enregistrer les modifications de « {docState.title} » avant {quitting ? 'de quitter Lattis' : 'de le fermer'} ?</p>
+			<div class="modal" role="dialog" aria-modal="true" aria-label={t('shell.close.title')} use:modal={cancelClose}>
+				<p>{quitting ? t('shell.close.questionQuit', { title: docState.title }) : t('shell.close.question', { title: docState.title })}</p>
 				<div class="actions">
-					<button class="primary" onclick={() => closeDoc(true).catch((e) => ((quitting = false), (notice = err(e))))}>Enregistrer</button>
-					<button onclick={() => closeDoc(false).catch((e) => ((quitting = false), (notice = err(e))))}>Ne pas enregistrer</button>
-					<button onclick={cancelClose}>Annuler</button>
+					<button class="primary" onclick={() => closeDoc(true).catch((e) => ((quitting = false), (notice = err(e))))}>{t('shell.close.save')}</button>
+					<button onclick={() => closeDoc(false).catch((e) => ((quitting = false), (notice = err(e))))}>{t('shell.close.dontSave')}</button>
+					<button onclick={cancelClose}>{t('common.cancel')}</button>
 				</div>
 			</div>
 		</div>
@@ -3080,12 +3076,12 @@
 	{#if damaged}
 		{@const file = damaged}
 		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true" aria-label="Classeur endommagé" use:modal={() => salvage(null).catch((e) => (failure = err(e)))}>
+			<div class="modal" role="dialog" aria-modal="true" aria-label={t('shell.damaged.title')} use:modal={() => salvage(null).catch((e) => (failure = err(e)))}>
 				<p>{file.message}.</p>
-				<p>Lattis peut en récupérer les données lisibles dans un nouveau classeur sans titre. Le fichier endommagé n'est pas modifié.</p>
+				<p>{t('shell.damaged.explain')}</p>
 				<div class="actions">
-					<button class="primary" onclick={() => salvage(file.path).catch((e) => (notice = err(e)))}>Récupérer les données</button>
-					<button onclick={() => salvage(null).catch((e) => (failure = err(e)))}>Annuler</button>
+					<button class="primary" onclick={() => salvage(file.path).catch((e) => (notice = err(e)))}>{t('shell.damaged.recover')}</button>
+					<button onclick={() => salvage(null).catch((e) => (failure = err(e)))}>{t('common.cancel')}</button>
 				</div>
 			</div>
 		</div>
@@ -3093,21 +3089,21 @@
 	{#if locked}
 		{@const file = locked}
 		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true" aria-label="Classeur déjà ouvert" use:modal={() => (locked = null)}>
+			<div class="modal" role="dialog" aria-modal="true" aria-label={t('shell.locked.title')} use:modal={() => (locked = null)}>
 				<p>{file.message}.</p>
 				{#if lockedCoEdit}
-					<p class="hint">À plusieurs, chacun modifie les données des tableaux et voit celles des autres en direct ; la mise en forme, les colonnes et les feuilles attendent que vous soyez seul. En lecture seule, vos modifications s'enregistrent sous un autre nom.</p>
+					<p class="hint">{t('shell.locked.coEditHint')}</p>
 					<div class="actions">
-						<button class="primary" disabled={joining} onclick={() => openTogether(file.path).catch((e) => (notice = err(e)))}>Travailler à plusieurs</button>
-						<button onclick={() => openLocked(file.path, true).catch((e) => (notice = err(e)))}>Ouvrir en lecture seule</button>
-						<button onclick={() => (locked = null)}>Annuler</button>
+						<button class="primary" disabled={joining} onclick={() => openTogether(file.path).catch((e) => (notice = err(e)))}>{t('shell.locked.together')}</button>
+						<button onclick={() => openLocked(file.path, true).catch((e) => (notice = err(e)))}>{t('shell.locked.readOnly')}</button>
+						<button onclick={() => (locked = null)}>{t('common.cancel')}</button>
 					</div>
 				{:else}
-					<p class="hint">En lecture seule, vos modifications s'enregistrent sous un autre nom. L'ouvrir quand même risque d'écraser les modifications de l'autre poste (Lattis vérifie le fichier avant d'enregistrer).</p>
+					<p class="hint">{t('shell.locked.hint')}</p>
 					<div class="actions">
-						<button class="primary" onclick={() => openLocked(file.path, true).catch((e) => (notice = err(e)))}>Ouvrir en lecture seule</button>
-						<button onclick={() => openLocked(file.path, false).catch((e) => (notice = err(e)))}>Ouvrir quand même</button>
-						<button onclick={() => (locked = null)}>Annuler</button>
+						<button class="primary" onclick={() => openLocked(file.path, true).catch((e) => (notice = err(e)))}>{t('shell.locked.readOnly')}</button>
+						<button onclick={() => openLocked(file.path, false).catch((e) => (notice = err(e)))}>{t('shell.locked.anyway')}</button>
+						<button onclick={() => (locked = null)}>{t('common.cancel')}</button>
 					</div>
 				{/if}
 			</div>
@@ -3115,60 +3111,60 @@
 	{/if}
 	{#if conflict}
 		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true" aria-label="Classeur modifié par ailleurs" use:modal={() => resolveSave(null)}>
+			<div class="modal" role="dialog" aria-modal="true" aria-label={t('shell.conflictFile.title')} use:modal={() => resolveSave(null)}>
 				<p>{conflict.message}.</p>
-				<p class="hint">« Enregistrer une copie » garde les deux versions ; « Écraser » remplace le fichier par la vôtre.</p>
+				<p class="hint">{t('shell.conflictFile.hint')}</p>
 				<div class="actions">
-					<button class="primary" onclick={() => resolveSave(false).catch((e) => ((quitting = false), (notice = err(e))))}>Enregistrer une copie</button>
-					<button onclick={() => resolveSave(true).catch((e) => ((quitting = false), (notice = err(e))))}>Écraser</button>
-					<button onclick={() => resolveSave(null)}>Annuler</button>
+					<button class="primary" onclick={() => resolveSave(false).catch((e) => ((quitting = false), (notice = err(e))))}>{t('shell.conflictFile.copy')}</button>
+					<button onclick={() => resolveSave(true).catch((e) => ((quitting = false), (notice = err(e))))}>{t('shell.conflictFile.overwrite')}</button>
+					<button onclick={() => resolveSave(null)}>{t('common.cancel')}</button>
 				</div>
 			</div>
 		</div>
 	{/if}
-	<footer class="statusbar" data-region="status" aria-label="Barre d'état">
+	<footer class="statusbar" data-region="status" aria-label={t('shell.status.aria')}>
 		{#if placing}
 			<!-- Pose d'un tableau croisé : le clic sur une cellule le pose ; « Nouvelle feuille » garde l'ancienne façon. -->
 			<span class="placing" role="status">{placing.hint}</span>
 			{#if placing.create}
-				<button class="offer-act" title="Créer le tableau croisé sur une nouvelle feuille, en A1" onclick={() => sheet?.placeOnNewSheet()}>Nouvelle feuille</button>
+				<button class="offer-act" title={t('shell.status.newSheetTooltip')} onclick={() => sheet?.placeOnNewSheet()}>{t('shell.tabs.add.sheet')}</button>
 			{/if}
-			<button class="offer-act" onclick={() => sheet?.cancelPlacement()}>Annuler</button>
+			<button class="offer-act" onclick={() => sheet?.cancelPlacement()}>{t('common.cancel')}</button>
 		{/if}
 		{#if notice || sheetStatus?.message}
 			{@const msg = sheetStatus?.message || notice}
 			<!-- Deux niveaux : compte rendu de l'action (vert clair), avertissement (bulle orange). -->
 			<span class="message" class:warn={isProblem(msg)} role={isProblem(msg) ? 'alert' : 'status'}>{msg}</span>
 			{#if exported && msg === exported.notice}
-				<button class="details" onclick={() => (exportOpen = true)}>Détails</button>
+				<button class="details" onclick={() => (exportOpen = true)}>{t('shell.status.details')}</button>
 			{/if}
 		{/if}
 		{#if refBack.length && mode === 'doc' && view === 'grid'}
 			{@const b = refBack[refBack.length - 1]}
 			<!-- Après « Basculer sur » (colonne de référence) : retour à la cellule de départ. -->
-			<button class="offer-act back" title="Revenir à la cellule d'où vous avez basculé (Alt+←)" onclick={() => void refGoBack()}>← Revenir à {b.label}</button>
+			<button class="offer-act back" title={t('shell.status.backTooltip')} onclick={() => void refGoBack()}>{t('shell.status.back', { label: b.label })}</button>
 		{/if}
 		{#if headerOffer && headerOffer.sheet === sheetId && mode === 'doc' && view === 'grid'}
 			{@const o = headerOffer}
 			<!-- En-têtes tapés après les données : proposés jusqu'à la saisie suivante. -->
 			<span class="offer" role="status">{headerOfferText(o.table)}</span>
-			<button class="offer-act" title="Les cellules tapées au-dessus du tableau deviennent ses en-têtes ; l'en-tête actuel devient la 1re ligne de données (Ctrl+Z pour annuler)" onclick={() => titleToHeader(o.table).catch((e) => (notice = err(e)))}>Utiliser comme en-têtes</button>
-			<button class="offer-act" title="Garder la ligne en cellules libres (un titre)" onclick={() => (headerOffer = null)}>Non</button>
+			<button class="offer-act" title={t('shell.status.useHeaderTooltip')} onclick={() => titleToHeader(o.table).catch((e) => (notice = err(e)))}>{t('shell.status.useHeader')}</button>
+			<button class="offer-act" title={t('shell.status.keepTitleTooltip')} onclick={() => (headerOffer = null)}>{t('shell.status.no')}</button>
 		{/if}
 		{#if mergeOffer && mode === 'doc'}
 			{@const g = mergeOffer}
 			<!-- Bulle d'information, une seule fois (§4.1) : « Plus tard » la ferme, la puce reste sous les onglets. -->
 			<span class="offer" role="status">{offerText(g, docFile(docState))}</span>
-			<button class="offer-act" onclick={() => openMerge(initialPlan(g, docFile(docState)), g).catch((e) => (notice = err(e)))}>Regrouper…</button>
-			<button class="offer-act" onclick={() => (mergeOffer = null)}>Plus tard</button>
-			<button class="offer-act" onclick={() => dismissGroup(g)}>Ne plus proposer</button>
+			<button class="offer-act" onclick={() => openMerge(initialPlan(g, docFile(docState)), g).catch((e) => (notice = err(e)))}>{t('shell.tabs.mergeShort')}</button>
+			<button class="offer-act" onclick={() => (mergeOffer = null)}>{t('shell.status.later')}</button>
+			<button class="offer-act" onclick={() => dismissGroup(g)}>{t('shell.tabs.dismiss')}</button>
 		{/if}
 		<span class="spacer"></span>
 		{#if mode === 'doc'}<CoEditPresence state={coedit} onconflicts={() => (conflictsOpen = true)} />{/if}
 		{#if mode === 'doc' && share?.present?.length}
 			{@const names = share.present}
 			<!-- Classeur du serveur : membres qui l'ont ouvert en ce moment (relais de lattisd). -->
-			<span class="present" title={`Ont aussi ce classeur ouvert : ${names.join(', ')}`}><Icon name="user" size={12} />{names.length > 3 ? `${names.slice(0, 3).join(', ')} +${names.length - 3}` : names.join(', ')}</span>
+			<span class="present" title={t('shell.status.present', { names: names.join(', ') })}><Icon name="user" size={12} />{names.length > 3 ? `${names.slice(0, 3).join(', ')} +${names.length - 3}` : names.join(', ')}</span>
 		{/if}
 		{#if sheetStatus}
 			{#if sheetStatus.stats}<span class="stats">{sheetStatus.stats}</span>{/if}
@@ -3180,7 +3176,7 @@
 				<span>{sheetStatus.edit}</span>
 			{/if}
 		{:else}
-			<span>Prêt</span>
+			<span>{t('shell.status.ready')}</span>
 		{/if}
 		{#if mode === 'doc'}<SyncStatusBar status={syncNow} />{/if}
 		<BusyBar />

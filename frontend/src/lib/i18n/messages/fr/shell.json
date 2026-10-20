@@ -317,7 +317,11 @@
 		"title": "Lattis a rencontré une erreur",
 		"status": "Erreur {status}",
 		"logged": "Détail enregistré dans {path}",
-		"reload": "Recharger"
+		"reload": "Recharger",
+		"uiTitle": "Erreur de l’interface",
+		"uiDetail": "Le détail (pile, dernières actions) est dans le journal des erreurs. Le classeur n’est pas perdu.",
+		"retry": "Réessayer",
+		"reloadUi": "Recharger l’interface"
 	},
 	"titleBar": {
 		"comingSoon": "{action} : à venir",
@@ -325,7 +329,10 @@
 		"minimize": "Réduire",
 		"restore": "Niveau inférieur",
 		"maximize": "Agrandir",
-		"close": "Fermer"
+		"close": "Fermer",
+		"save": "Enregistrer (Ctrl+S)",
+		"undo": "Annuler (Ctrl+Z)",
+		"redo": "Rétablir (Ctrl+Y)"
 	},
 	"untitled": "Classeur sans titre",
 	"about": {
@@ -344,7 +351,16 @@
 		"level": "Niveau de zoom"
 	},
 	"recovery": {
-		"older": "{n, plural, one {+ # version plus ancienne} other {+ # versions plus anciennes}}"
+		"older": "{n, plural, one {+ # version plus ancienne} other {+ # versions plus anciennes}}",
+		"recovered": "Modifications récupérées : pensez à enregistrer.",
+		"title": "Récupération",
+		"intro": "Lattis s'est fermé sans enregistrer. Ces classeurs ont des modifications récupérables :",
+		"modified": "modifié le {date}",
+		"recover": "Récupérer",
+		"discardAllTooltip": "Abandonner cette session et ses versions plus anciennes",
+		"discardAll": "Tout abandonner",
+		"discard": "Abandonner",
+		"showOlder": "Voir les {n} plus anciens"
 	},
 	"saveProgress": {
 		"snapshot": "Enregistrement : copie de la base…",
@@ -437,7 +453,38 @@
 		}
 	},
 	"notice": {
-		"importCreatesSheet": "Importer crée une feuille : {reason}"
+		"importCreatesSheet": "Importer crée une feuille : {reason}",
+		"refreshedAll": "Tout actualisé : {n, plural, one {# requête} other {# requêtes}}, formules recalculées",
+		"recalcNoQuery": "Formules recalculées (aucune requête chargée à actualiser)",
+		"tableRecalculated": "Tableau « {table} » recalculé, avec ce qui en dépend",
+		"recalculated": "Formules recalculées",
+		"insertSheetLocked": "La structure du classeur est protégée : ôtez la protection pour insérer une feuille",
+		"importedOne": "Tableau « {table} » importé",
+		"importedMany": "{n, plural, one {# tableau importé} other {# tableaux importés}}",
+		"importWarnings": "{what} ; {n, plural, one {# point à vérifier} other {# points à vérifier}} : {list}",
+		"noTableToExport": "Aucun tableau à exporter sur cette feuille",
+		"tableExported": "Tableau « {table} » exporté : {path}",
+		"sheetExported": "Feuille « {name} » exportée : {path}",
+		"autoKey": ", clé posée sur {column}",
+		"keyed": "Clé posée sur « {column} » pour REFERENCE",
+		"undoBirth": " (Ctrl+Z : le défaire, les cellules restent libres)",
+		"undoHint": " (Ctrl+Z pour annuler)",
+		"createdUnnamed": "Tableau « {table} » créé sans en-têtes (la 1re ligne ressemble aux suivantes) : clic droit › Utiliser la première ligne comme en-têtes{more}",
+		"createdHeadless": "Tableau « {table} » créé sans en-têtes (« Colonne n ») : tapez les noms dans sa ligne d'en-tête{more}",
+		"created": "Tableau « {table} » créé{more}",
+		"widened": "Colonne {column} passée de {from} à {to} (Ctrl+Z pour annuler)",
+		"invalidValue": "Valeur hors type : cellule marquée en erreur",
+		"pastedHeadless": "Tableau « {table} » créé sans en-têtes{more} : clic droit › Tableau › « Sortir l'en-tête » si besoin",
+		"pasted": "Tableau « {table} » créé{more} ({n, plural, one {# ligne} other {# lignes}})",
+		"pastedSplit": "Tableau « {table} » créé{more} ({n, plural, one {# ligne} other {# lignes}} ; Ctrl+Z : le défaire, les cellules restent libres)",
+		"defaultColumn": "Colonne {n}",
+		"scriptError": "Erreur du script : {error}",
+		"notFound": "« {name} » est introuvable dans le classeur",
+		"theme": "Thème « {name} » (Ctrl+Z pour annuler)",
+		"tableRenamed": "Tableau « {from} » renommé en « {to} » (Ctrl+Z pour annuler)",
+		"resultCopied": "Résultat copié dans le tableau « {table} » (Ctrl+Z pour annuler)",
+		"tableLinked": "Tableau « {table} » lié à la requête : clic droit › Actualiser pour le relire",
+		"scriptsNeedWorkbook": "Les scripts s'exécutent sur un classeur : Fichier › Nouveau."
 	},
 	"welcome": {
 		"progressStart": "{label}…",
@@ -456,7 +503,15 @@
 				"title": "Interrogez en SQL",
 				"text": "l’onglet SQL lit vos tableaux comme une base de données."
 			}
-		}
+		},
+		"noWorkbook": "Aucun classeur ouvert.",
+		"new": "Nouveau classeur",
+		"importTooltip": "Crée un classeur avec les feuilles importées",
+		"firstSteps": "Premiers pas",
+		"openHelp": "Ouvrir l’aide",
+		"openSample": "Ouvrir le classeur d’exemple",
+		"hide": "Ne plus afficher",
+		"recent": "Récents"
 	},
 	"doc": {
 		"online": "en ligne sur {server}",
@@ -473,7 +528,10 @@
 		"allValues": "Toutes les valeurs de « {name} »",
 		"newValue": "Nouvelle valeur…",
 		"status": "{name} : {value} (choix de l'onglet)",
-		"statusHidden": "{status} · {n, plural, one {# ligne d'autres valeurs masquée} other {# lignes d'autres valeurs masquées}}"
+		"statusHidden": "{status} · {n, plural, one {# ligne d'autres valeurs masquée} other {# lignes d'autres valeurs masquées}}",
+		"byColumn": "Onglet à choix par « {column} » : la flèche ▾ de l’onglet choisit la valeur affichée (Alt+↓)",
+		"byFormula": "Onglet à choix par « {name} » ({formula}) : la flèche ▾ de l’onglet choisit la valeur affichée (Alt+↓)",
+		"none": "Cette feuille n’a pas d’onglet à choix (clic droit sur l’onglet › Choisir par)"
 	},
 	"rowFormula": {
 		"names": {
@@ -672,6 +730,11 @@
 			"totalKey": "{n, plural, =0 {# lignes} one {# ligne} other {# lignes}} au total · clé : {key}",
 			"merge": "Regrouper",
 			"checkTwo": "Cochez au moins deux onglets"
+		},
+		"notice": {
+			"none": "Aucun onglet semblable trouvé : sélectionnez les onglets (Ctrl+clic), puis clic droit › Regrouper des onglets…",
+			"noTables": "Ces onglets n’ont pas de tableaux à regrouper (il en faut au moins deux, aux mêmes colonnes)",
+			"dismissed": "Ces onglets ne seront plus proposés au regroupement (choix gardé dans le classeur)"
 		}
 	},
 	"tabs": {
@@ -770,5 +833,174 @@
 			"title": "Afficher",
 			"label": "Afficher la feuille :"
 		}
+	},
+	"share": {
+		"addTableConfirm": "Ajouter le tableau « {table} » au classeur partagé « {workbook} » ?\n\nIl est créé sur le serveur avec ses lignes ; tous les membres le reçoivent et le modifient selon leurs droits.\n\nCet ajout ne s’annule pas par Ctrl+Z : pour retirer le tableau, « Supprimer le tableau » le supprime pour tous.",
+		"addingTable": "Ajout de « {table} » au classeur partagé…",
+		"tableAdded": "Tableau « {table} » ajouté au classeur partagé",
+		"sourceUpdating": "Mise à jour de la source « {table} »…",
+		"sourceFailed": "Source « {table} » non mise à jour : {error}",
+		"connected": "Connecté à {server}",
+		"stillDown": "{server} ne répond toujours pas : Lattis réessaiera de lui-même",
+		"forgetConfirm": "{n, plural, one {# modification non envoyée sera perdue.} other {# modifications non envoyées seront perdues.}}\n\n« Enregistrer une copie locale… » les garde. Retirer quand même ce classeur des récents ?",
+		"versionLoaded": "Version {version} chargée",
+		"removeRecent": "{error}\n\nLe retirer des classeurs récents ?",
+		"localCopyOpened": "{reason} : copie locale ouverte",
+		"openedOnline": "« {title} » est partagé sur {server} : ouvert en ligne",
+		"readOnlyRole": "{reason} (rôle : {roles})",
+		"formNeedsTable": "Placez-vous dans un tableau pour en faire un formulaire.",
+		"scriptsLocked": "Seuls les propriétaires et concepteurs modifient les scripts de ce classeur partagé",
+		"versionPublished": "Version {version} publiée",
+		"publishedFrozen": "Classeur publié sur {server} (figé)",
+		"publishedLive": "Classeur publié sur {server} (collaboratif)",
+		"detach": {
+			"title": "Détacher du serveur",
+			"question": "Détacher ce classeur du serveur ?",
+			"ok": "Détacher"
+		},
+		"link": {
+			"title": "Ouvrir un lien Lattis",
+			"question": "Ouvrir un classeur de « {name} » ?",
+			"warning": "Lattis ne s’est jamais connecté à {host}. N’acceptez que si vous connaissez ce serveur et attendiez ce lien.",
+			"ok": "Se connecter et ouvrir"
+		}
+	},
+	"conflicts": {
+		"mineAll": "Votre valeur est remise pour tous les postes",
+		"mineServer": "Votre valeur est renvoyée au serveur",
+		"theirs": "Valeur du collègue reprise",
+		"heldRetried": "Modifications de « {table} » renvoyées au serveur",
+		"heldDropped": "Modifications de « {table} » abandonnées : le tableau reprend la version du serveur",
+		"mineAllCount": "{n, plural, one {# valeur remise} other {# valeurs remises}} pour tous les postes",
+		"mineServerCount": "{n, plural, one {# valeur renvoyée} other {# valeurs renvoyées}} au serveur",
+		"theirsCount": "{n, plural, one {# valeur des collègues reprise} other {# valeurs des collègues reprises}}"
+	},
+	"ref": {
+		"hiddenRow": "Ligne masquée par le filtre de {table}",
+		"filtered": "{table} filtré sur {column} = {value} (Alt+← pour revenir)",
+		"back": "Alt+← pour revenir à {label}"
+	},
+	"coedit": {
+		"requestSent": "Demande envoyée aux autres postes…"
+	},
+	"demo": {
+		"preset": "Démo « {name} »",
+		"sample": "Classeur d’exemple",
+		"error": "erreur",
+		"generating": "Création de la démo : {done} / {total} lignes",
+		"opening": "Ouverture de la démo…",
+		"openingShort": "Ouverture…",
+		"readOnly": "Démo : seules les cellules du tableau sont modifiables"
+	},
+	"web": {
+		"reconnected": "Connexion au serveur rétablie",
+		"expired": "Votre session a expiré : reconnectez-vous pour continuer (vos modifications déjà faites sont gardées sur le serveur).",
+		"reconnect": "Se reconnecter",
+		"lost": "Connexion au serveur perdue : nouvelle tentative… Ce que vous faites maintenant attend la reconnexion."
+	},
+	"protect": {
+		"sheetLocked": "La feuille « {name} » est protégée : ôtez la protection (Révision › Ôter la protection de la feuille) pour la modifier",
+		"bookLocked": "Le classeur est protégé : ôtez la protection (Révision › Ôter la protection du classeur) pour le modifier",
+		"notice": {
+			"sheetOff": "Protection de la feuille « {name} » ôtée",
+			"sheetOn": "Feuille « {name} » protégée",
+			"structureOff": "Protection de la structure de « {name} » ôtée",
+			"structureOn": "Structure de la feuille « {name} » protégée : seule la saisie dans les tableaux reste permise",
+			"bookOff": "Protection du classeur ôtée",
+			"bookSheets": "Classeur protégé : onglets et contenu de toutes les feuilles",
+			"bookStructure": "Classeur protégé : onglets et structure de toutes les feuilles (saisie dans les tableaux seulement)",
+			"bookTabs": "Structure du classeur protégée"
+		},
+		"mismatch": "Les deux mots de passe ne correspondent pas",
+		"aria": "Protection",
+		"title": {
+			"sheetOff": "Ôter la protection de la feuille « {name} »",
+			"sheetOn": "Protéger la feuille « {name} »",
+			"structureOff": "Ôter la protection de la structure de « {name} »",
+			"structureOn": "Protéger la structure de la feuille « {name} »",
+			"bookOff": "Ôter la protection du classeur",
+			"bookOn": "Protéger la structure du classeur"
+		},
+		"explain": {
+			"sheet": "Saisie, collage, mise en forme, lignes et colonnes, tri, objets et requêtes SQL d’écriture seront refusés sur cette feuille. Lecture, copie et filtres restent permis.",
+			"structure": "Tout sera verrouillé sauf la saisie dans les tableaux : cellules libres, mise en forme, colonnes et en-têtes, tableaux, objets, lignes et colonnes de la feuille, mise en page et onglet. On pourra encore taper, coller (valeurs seules) et effacer des valeurs dans les tableaux, y ajouter ou supprimer des lignes, trier et filtrer.",
+			"bookSheets": "Ajouter, supprimer, renommer, déplacer ou masquer des feuilles sera refusé, ainsi que toute modification du contenu des feuilles.",
+			"bookStructure": "Ajouter, supprimer, renommer, déplacer ou masquer des feuilles sera refusé ; sur chaque feuille, seule la saisie dans les tableaux restera permise.",
+			"bookTabs": "Ajouter, supprimer, renommer, déplacer ou masquer des feuilles sera refusé. Le contenu des feuilles non protégées reste modifiable."
+		},
+		"notSecurity": "Cette protection évite les modifications accidentelles ; ce n’est pas une sécurité : le fichier n’est pas chiffré, ses données restent lisibles et la protection peut être retirée par quelqu’un d’outillé.",
+		"lock": "Verrouiller",
+		"lockTabs": "Onglets seulement",
+		"lockStructure": "Onglets et structure de toutes les feuilles (saisie dans les tableaux seulement)",
+		"lockSheets": "Onglets et contenu de toutes les feuilles",
+		"password": "Mot de passe",
+		"passwordOptional": "Mot de passe (facultatif)",
+		"confirm": "Confirmer le mot de passe",
+		"noteIt": "Sans le mot de passe, la protection ne pourra plus être ôtée : notez-le."
+	},
+	"deleteSheet": {
+		"items": {
+			"tables": "{n, plural, one {# tableau} other {# tableaux}}",
+			"pivots": "{n, plural, one {# tableau croisé} other {# tableaux croisés}}",
+			"charts": "{n, plural, one {# graphique} other {# graphiques}}",
+			"buttons": "{n, plural, one {# bouton} other {# boutons}}",
+			"cells": "{n, plural, one {# cellule remplie} other {# cellules remplies}}"
+		},
+		"withNames": "{what} ({names})",
+		"tableRows": "{name} : {n, plural, one {# ligne} other {# lignes}}",
+		"manyTitle": "Supprimer les feuilles",
+		"manyQuestion": "Supprimer ces {n} feuilles et tout ce qu'elles contiennent ?",
+		"manyHint": "Ctrl+Z les rend toutes, avec leur contenu.",
+		"ok": "Supprimer",
+		"title": "Supprimer la feuille",
+		"question": "Supprimer la feuille « {name} » et tout ce qu'elle contient ?",
+		"hint": "Ctrl+Z rend la feuille et tout son contenu."
+	},
+	"unsent": {
+		"title": "Modifications pas encore envoyées",
+		"question": "{n, plural, one {Une modification de « {title} » n’est pas encore partie} other {# modifications de « {title} » ne sont pas encore parties}} vers {server}.",
+		"theServer": "le serveur",
+		"hint": "{n, plural, one {Elle est gardée sur ce poste et partira} other {Elles sont gardées sur ce poste et partiront}} à la prochaine ouverture du classeur, une fois le serveur joignable."
+	},
+	"close": {
+		"quit": "Quitter",
+		"title": "Enregistrer les modifications",
+		"question": "Enregistrer les modifications de « {title} » avant de le fermer ?",
+		"questionQuit": "Enregistrer les modifications de « {title} » avant de quitter Lattis ?",
+		"save": "Enregistrer",
+		"dontSave": "Ne pas enregistrer"
+	},
+	"damaged": {
+		"title": "Classeur endommagé",
+		"explain": "Lattis peut en récupérer les données lisibles dans un nouveau classeur sans titre. Le fichier endommagé n'est pas modifié.",
+		"recover": "Récupérer les données"
+	},
+	"locked": {
+		"title": "Classeur déjà ouvert",
+		"coEditHint": "À plusieurs, chacun modifie les données des tableaux et voit celles des autres en direct ; la mise en forme, les colonnes et les feuilles attendent que vous soyez seul. En lecture seule, vos modifications s'enregistrent sous un autre nom.",
+		"together": "Travailler à plusieurs",
+		"readOnly": "Ouvrir en lecture seule",
+		"hint": "En lecture seule, vos modifications s'enregistrent sous un autre nom. L'ouvrir quand même risque d'écraser les modifications de l'autre poste (Lattis vérifie le fichier avant d'enregistrer).",
+		"anyway": "Ouvrir quand même"
+	},
+	"conflictFile": {
+		"title": "Classeur modifié par ailleurs",
+		"hint": "« Enregistrer une copie » garde les deux versions ; « Écraser » remplace le fichier par la vôtre.",
+		"copy": "Enregistrer une copie",
+		"overwrite": "Écraser"
+	},
+	"status": {
+		"aria": "Barre d'état",
+		"newSheetTooltip": "Créer le tableau croisé sur une nouvelle feuille, en A1",
+		"details": "Détails",
+		"backTooltip": "Revenir à la cellule d'où vous avez basculé (Alt+←)",
+		"back": "← Revenir à {label}",
+		"useHeaderTooltip": "Les cellules tapées au-dessus du tableau deviennent ses en-têtes ; l'en-tête actuel devient la 1re ligne de données (Ctrl+Z pour annuler)",
+		"useHeader": "Utiliser comme en-têtes",
+		"keepTitleTooltip": "Garder la ligne en cellules libres (un titre)",
+		"no": "Non",
+		"later": "Plus tard",
+		"present": "Ont aussi ce classeur ouvert : {names}",
+		"ready": "Prêt"
 	}
 }
