@@ -6,6 +6,7 @@
 	import { onMount } from 'svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import { openOutside } from '#lib/ai/links.js';
+	import { t } from '#lib/i18n/index.js';
 
 	interface Props {
 		onclose: () => void;
@@ -27,21 +28,21 @@
 </script>
 
 <div class="back" role="presentation" use:backdrop={() => onclose()}>
-	<div class="dialog" role="dialog" aria-modal="true" aria-label="À propos de Lattis" tabindex="-1" use:modal={onclose}>
+	<div class="dialog" role="dialog" aria-modal="true" aria-label={t('shell.about.title')} tabindex="-1" use:modal={onclose}>
 		<h2>Lattis</h2>
-		<p class="muted">Tableur relationnel local-first · version {about?.version ?? '…'}</p>
+		<p class="muted">{t('shell.about.tagline', { version: about?.version ?? '…' })}</p>
 		<p>
-			Logiciel libre sous licence <a href="https://www.mozilla.org/MPL/2.0/" onclick={(e) => link(e, 'https://www.mozilla.org/MPL/2.0/')}>Mozilla Public License 2.0</a>.
-			{#if about}<a href={about.source} onclick={(e) => link(e, about!.source)}>Code source</a>{/if}
+			{t('shell.about.licensePrefix')} <a href="https://www.mozilla.org/MPL/2.0/" onclick={(e) => link(e, 'https://www.mozilla.org/MPL/2.0/')}>Mozilla Public License 2.0</a>.
+			{#if about}<a href={about.source} onclick={(e) => link(e, about!.source)}>{t('shell.about.source')}</a>{/if}
 		</p>
 		{#if about?.serverSource}
 			<p>
-				Cette session est servie par un Serveur Lattis ({about.server}), sous licence AGPL-3.0 :
-				<a href={about.serverSource} onclick={(e) => link(e, about!.serverSource!)}>code source du serveur</a>.
+				{t('shell.about.server', { server: about.server ?? '' })}
+				<a href={about.serverSource} onclick={(e) => link(e, about!.serverSource!)}>{t('shell.about.serverSource')}</a>.
 			</p>
 		{/if}
-		<p class="muted">« Lattis », « Be-Lattis » et le logo sont des marques réservées, hors de la licence du code. Cartes : Licence Ouverte / Etalab 2.0.</p>
-		<div class="actions"><button class="primary" onclick={onclose}>Fermer</button></div>
+		<p class="muted">{t('shell.about.trademarks')}</p>
+		<div class="actions"><button class="primary" onclick={onclose}>{t('common.close')}</button></div>
 	</div>
 </div>
 

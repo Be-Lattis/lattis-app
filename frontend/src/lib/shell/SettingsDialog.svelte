@@ -8,6 +8,7 @@
 	import { onMount } from 'svelte';
 	import { findSetting, parseNumberSetting, settingNote, settingSections, visibleSections } from './settings';
 	import { loadSettings, mcpAvailable, setSetting, userSettings } from './settings.svelte.js';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		onclose: () => void;
@@ -33,7 +34,7 @@
 		try {
 			await setSetting(path, value);
 		} catch (e) {
-			error = String(e instanceof Error ? e.message : e);
+			error = errorText(e);
 			await loadSettings();
 		} finally {
 			busy = '';
@@ -54,7 +55,7 @@
 		class="dialog"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Paramètres"
+		aria-label={t('shell.settings.dialog.title')}
 		tabindex="-1"
 		use:modal
 		onkeydown={(e) => {
@@ -62,9 +63,9 @@
 			if (e.key === 'Escape') close();
 		}}
 	>
-		<header>Paramètres</header>
+		<header>{t('shell.settings.dialog.title')}</header>
 		<div class="main">
-			<nav aria-label="Sections">
+			<nav aria-label={t('shell.settings.dialog.sections')}>
 				{#each sections as s (s.id)}
 					<button class:on={s.id === section.id} aria-current={s.id === section.id ? 'page' : undefined} onclick={() => (sectionId = s.id)}>{s.title}</button>
 				{/each}
@@ -143,8 +144,8 @@
 			</section>
 		</div>
 		<footer>
-			{#if onmcp && mcpAvailable()}<button class="mcp" title="Laisser un assistant compatible MCP (Claude Desktop, Claude Code…) lire et modifier le classeur ouvert" onclick={onmcp}>Serveur MCP (assistants)…</button>{/if}
-			<button class="primary" onclick={close}>Fermer</button>
+			{#if onmcp && mcpAvailable()}<button class="mcp" title={t('shell.settings.dialog.mcpTooltip')} onclick={onmcp}>{t('shell.settings.dialog.mcp')}</button>{/if}
+			<button class="primary" onclick={close}>{t('common.close')}</button>
 		</footer>
 	</div>
 </div>

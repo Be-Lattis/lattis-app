@@ -3,6 +3,7 @@
 	// (un clic dessus propose les niveaux usuels). 100 % au milieu du curseur.
 	import { dismiss } from '#lib/grid/dismiss.js';
 	import { ZOOM_LEVELS, sliderOf, stepZoom, zoomLabel, zoomOfSlider } from '#lib/grid/zoom.js';
+	import { t } from '#lib/i18n/index.js';
 
 	interface Props {
 		zoom: number;
@@ -29,13 +30,13 @@
 </script>
 
 <div class="zoombar">
-	<button class="step" title="Zoom arrière" aria-label="Zoom arrière" onclick={() => onzoom(stepZoom(zoom, -1))}>−</button>
+	<button class="step" title={t('shell.zoom.out')} aria-label={t('shell.zoom.out')} onclick={() => onzoom(stepZoom(zoom, -1))}>−</button>
 	<div
 		class="track"
 		bind:this={track}
 		role="slider"
 		tabindex="-1"
-		aria-label="Zoom"
+		aria-label={t('shell.zoom.slider')}
 		aria-valuemin={10}
 		aria-valuemax={400}
 		aria-valuenow={Math.round(zoom * 100)}
@@ -45,10 +46,10 @@
 		<span class="mid"></span>
 		<span class="thumb" style:left="{sliderOf(zoom) * 100}%"></span>
 	</div>
-	<button class="step" title="Zoom avant" aria-label="Zoom avant" onclick={() => onzoom(stepZoom(zoom, 1))}>+</button>
+	<button class="step" title={t('shell.zoom.in')} aria-label={t('shell.zoom.in')} onclick={() => onzoom(stepZoom(zoom, 1))}>+</button>
 	<button
 		class="pct"
-		title="Niveau de zoom"
+		title={t('shell.zoom.level')}
 		onclick={(e) => {
 			const r = e.currentTarget.getBoundingClientRect();
 			open = open ? null : { right: window.innerWidth - r.right, bottom: window.innerHeight - r.top + 2 };

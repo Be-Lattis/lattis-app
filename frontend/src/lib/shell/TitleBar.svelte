@@ -20,6 +20,7 @@
 	import type { IconName } from '#lib/icons/icons.js';
 	import AccountMenu from '#lib/remote/AccountMenu.svelte';
 	import { windowTitle } from './doctitle.js';
+	import { t } from '#lib/i18n/index.js';
 
 	interface QuickAction {
 		label: string;
@@ -88,13 +89,13 @@
 	<div class="caption logo" role="presentation" ondblclick={dblclick}><Icon name="logo" size={18} /></div>
 	<div class="quick">
 		{#each actions as a (a.label)}
-			<button class="quick-btn" disabled={!a.run} onclick={a.run} title={a.run ? a.label : `${a.label} : à venir`}>
+			<button class="quick-btn" disabled={!a.run} onclick={a.run} title={a.run ? a.label : t('shell.titleBar.comingSoon', { action: a.label })}>
 				<Icon name={a.icon} size={16} />
 			</button>
 		{/each}
 	</div>
 	<div class="caption title" role="presentation" ondblclick={dblclick}>
-		<span class="name">{title}</span>{#if dirty}<span class="muted" title="Modifications non enregistrées">&nbsp;•</span>{/if}
+		<span class="name">{title}</span>{#if dirty}<span class="muted" title={t('shell.titleBar.unsaved')}>&nbsp;•</span>{/if}
 		{#if badge}<span class="badge" class:offline title={badgeTitle || undefined}><Icon name={offline ? 'cloud-off' : 'cloud'} size={14} />{badge}</span>{/if}
 		{#if role}<button class="badge role" title={role.detail} onclick={onrole}>{role.label}</button>{/if}
 		<span class="muted">{title ? '\u00a0– Lattis' : 'Lattis'}</span>
@@ -102,11 +103,11 @@
 	<AccountMenu />
 	{#if !mac && !isWeb}
 		<div class="controls">
-			<button class="ctl min" title="Réduire" onclick={minimise}><Icon name="win-minimize" size={16} /></button>
-			<button class="ctl max" title={maximised ? 'Niveau inférieur' : 'Agrandir'} onclick={toggle}>
+			<button class="ctl min" title={t('shell.titleBar.minimize')} onclick={minimise}><Icon name="win-minimize" size={16} /></button>
+			<button class="ctl max" title={maximised ? t('shell.titleBar.restore') : t('shell.titleBar.maximize')} onclick={toggle}>
 				<Icon name={maximised ? 'win-restore' : 'win-maximize'} size={16} />
 			</button>
-			<button class="ctl close" title="Fermer" onclick={close}><Icon name="win-close" size={16} /></button>
+			<button class="ctl close" title={t('shell.titleBar.close')} onclick={close}><Icon name="win-close" size={16} /></button>
 		</div>
 	{/if}
 </div>

@@ -3,7 +3,13 @@
 // (testé par vitest). Le grisage dépend de drapeaux posés à la définition de
 // chaque commande, jamais de son libellé.
 
+import { t, tAny } from '#lib/i18n/index.js';
 import { hintKeys } from '#lib/web/platform.js';
+
+/** Libellé d'un onglet du ruban (identifiants : file, home, insert, pageLayout, data, formulas, review, view, ai, sql, script, help). */
+export function tabLabel(id: string): string {
+	return tAny(`ribbon.tabs.${id}`);
+}
 
 /** Drapeaux d'une commande, posés à sa définition (Ribbon.svelte). */
 export interface Gated {
@@ -41,28 +47,30 @@ export interface GateState {
 
 /** Ce que protège Révision › Protéger, selon l'onglet affiché. */
 export function protectedThing(context: GateState['context'] = 'sheet'): { locked: string; protect: string; unprotect: string } {
-	if (context === 'doc') return { locked: 'document protégé', protect: 'Protéger le document', unprotect: 'Ôter la protection du document' };
-	if (context === 'html') return { locked: 'page protégée', protect: 'Protéger la page', unprotect: 'Ôter la protection de la page' };
-	return { locked: 'feuille protégée', protect: 'Protéger la feuille', unprotect: 'Ôter la protection de la feuille' };
+	const k = context === 'doc' || context === 'html' ? context : 'sheet';
+	return { locked: tAny(`ribbon.protect.${k}.locked`), protect: tAny(`ribbon.protect.${k}.protect`), unprotect: tAny(`ribbon.protect.${k}.unprotect`) };
+}
+
+/** Motif des commandes grisées pour un éditeur ou un lecteur d'un classeur collaboratif. */
+export function layoutShared(): string {
+	return t('ribbon.gate.layoutShared');
+}
+/** Message d'une saisie refusée hors des tableaux (le même que le moteur, workbook.ErrLayout). */
+export function layoutLocked(): string {
+	return t('ribbon.gate.layoutLocked');
 }
 
 /** Pourquoi la commande est grisée ('' : elle ne l'est pas). */
-/** Motif des commandes grisées pour un éditeur ou un lecteur d'un classeur collaboratif. */
-export const LAYOUT_SHARED = 'seuls les propriétaires et concepteurs modifient les cellules libres et la mise en page de ce classeur partagé';
-/** Message d'une saisie refusée hors des tableaux (le même que le moteur, workbook.ErrLayout). */
-export const LAYOUT_LOCKED = 'Seuls les propriétaires et concepteurs modifient les cellules libres et la mise en page de ce classeur partagé';
-
 export function blockedBy(c: Gated, s: GateState): string {
-	if (c.createsSheet && s.workbookProtected) return 'la structure du classeur est protégée (cette commande crée une feuille)';
-	if (c.createsSheet && s.layoutShared) return LAYOUT_SHARED;
+	if (c.createsSheet && s.workbookProtected) return t('ribbon.gate.workbookStructure');
+	if (c.createsSheet && s.layoutShared) return layoutShared();
 	if (c.ro) return '';
-	if (s.layoutShared && !c.data && !s.sheetProtected) return LAYOUT_SHARED;
+	if (s.layoutShared && !c.data && !s.sheetProtected) return layoutShared();
 	if (s.sheetProtected) {
 		const p = protectedThing(s.context);
-		return s.sheetOwnProtected ? `${p.locked} (Révision › ${p.unprotect})` : 'classeur protégé (Révision › Ôter la protection du classeur)';
+		return s.sheetOwnProtected ? t('ribbon.gate.ownProtected', { locked: p.locked, unprotect: p.unprotect }) : t('ribbon.gate.bookProtected');
 	}
-	if (s.structureProtected && !c.data)
-		return s.structureByBook ? 'structure des feuilles protégée (Révision › Ôter la protection du classeur)' : 'structure protégée (Révision › Ôter la protection de la structure)';
+	if (s.structureProtected && !c.data) return s.structureByBook ? t('ribbon.gate.structureByBook') : t('ribbon.gate.structure');
 	if (c.local) return '';
 	return s.tableReadOnly ?? '';
 }
@@ -84,12 +92,12 @@ export function gate<C extends GatedMenu>(c: C, s: GateState): C {
 		const lost = c.items.findIndex((it, i) => it.run && !items[i].run);
 		if (lost >= 0 && !items.some((it) => it.run)) {
 			const why = blockedBy({ ro: c.ro, local: c.local, data: c.data, createsSheet: c.createsSheet, ...c.items[lost] }, s);
-			return { ...c, items, run: undefined, hint: `${c.label} : ${why}` } as C;
+			return { ...c, items, run: undefined, hint: t('ribbon.gate.hint', { command: c.label, reason: why }) } as C;
 		}
 		return { ...c, items } as C;
 	}
 	const why = blockedBy(c, s);
-	return why ? { ...c, run: undefined, hint: `${c.label} : ${why}` } : c;
+	return why ? { ...c, run: undefined, hint: t('ribbon.gate.hint', { command: c.label, reason: why }) } : c;
 }
 
 /**
@@ -99,7 +107,7 @@ export function gate<C extends GatedMenu>(c: C, s: GateState): C {
  */
 export function tipOf(c: { label: string; hint?: string; run?: unknown }, disabled = false, mac?: boolean): string {
 	if (c.hint) return hintKeys(c.hint, mac);
-	return c.run || !disabled ? c.label : `${c.label} : ouvrez ou créez un classeur`;
+	return c.run || !disabled ? c.label : t('ribbon.gate.noWorkbook', { command: c.label });
 }
 
 /** Alignement horizontal : un bouton enfoncé ramène au standard, comme Excel. */

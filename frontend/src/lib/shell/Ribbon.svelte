@@ -27,10 +27,12 @@
 	import Submenu from '#lib/ui/Submenu.svelte';
 	import type { RecentFile } from '#bindings/internal/bridge/models.js';
 	import { recentDetail, recentKey, recentLabel, recentRemote } from './doctitle';
-	import { alignPatch, gate, protectedThing, tipOf, type Gated } from './ribbon';
-	import { COMMAND_TIPS, TAB_TIPS, assignKeyTips, keyChars, keyOf, matchTip } from '#lib/ui/keytips.js';
+	import { alignPatch, gate, protectedThing, tabLabel, tipOf, type Gated } from './ribbon';
+	import { commandTips, TAB_TIPS, assignKeyTips, keyChars, keyOf, matchTip } from '#lib/ui/keytips.js';
 	import { cycle, focusRegion, isTextField, modalOpen, regionOf, tabbables } from '#lib/ui/focus.js';
-	import { cm, FIT_CHOICES, fitLabel, fitted, hasBreaks, MARGIN_LABELS, MARGINS, marginPreset, PAPERS, paperOf, SCALE_CHOICES, scaleLabel, type PageAction, type PageSetup } from './pagesetup';
+	import { cm, FIT_CHOICES, fitLabel, fitted, hasBreaks, marginLabel, MARGINS, marginPreset, PAPERS, paperOf, SCALE_CHOICES, scaleLabel, type PageAction, type PageSetup } from './pagesetup';
+	import { t, tAny } from '#lib/i18n/index.js';
+	import frRibbon from '#lib/i18n/messages/fr/ribbon.json';
 
 	export type View = 'grid' | 'sql' | 'script';
 	export type FormatTab = 'number' | 'align' | 'font' | 'border' | 'fill';
@@ -70,6 +72,8 @@
 		combo?: string;
 	}
 	interface Group {
+		/** Identifiant stable (groupes masqués, menus) ; title est le libellé affiché. */
+		id: string;
 		title: string;
 		commands: Command[];
 		/** Lanceur de boîte de dialogue (coin du titre), comme Excel. */
@@ -100,7 +104,8 @@
 		return Math.ceil((g.commands.length - (combo ? 1 : 0)) / Math.max(1, (g.rows ?? 1) - (combo ? 1 : 0)));
 	};
 	/** Nom du format de nombre de la cellule active (liste Format de nombre). */
-	const NF_NAMES: Record<string, string> = { '0': 'Nombre', '0,00': 'Nombre', '%': 'Pourcentage', '€': 'Monétaire', date: 'Date', time: 'Heure', text: 'Texte' };
+	const NF_NAMES: Record<string, string> = { '0': 'number', '0,00': 'number', '%': 'percent', '€': 'currency', date: 'date', time: 'time', text: 'text' };
+	const nfName = (nf: string) => tAny(`ribbon.numberFormat.${NF_NAMES[nf] ?? 'general'}`);
 
 	export type FileAction = 'new' | 'open' | 'openRemote' | 'share' | 'rights' | 'republish' | 'reconnect' | 'detach' | 'save' | 'saveAs' | 'download' | 'import' | 'export' | 'exportSheet' | 'exportXlsx' | 'exportOds' | 'print' | 'about' | 'close' | 'demo' | 'settings' | 'help' | 'report';
 	/** Accueil › Édition (Remplissage, Effacer, Trier et filtrer), Mettre sous forme de tableau. */
@@ -289,14 +294,15 @@
 		onstyle?.({ [kind]: c });
 	}
 
-	// Ordre d'Excel.
-	const tabs = ['Accueil', 'Insertion', 'Formules', 'Données', 'Révision', 'Affichage'] as const;
-	let tab = $state<(typeof tabs)[number] | 'SQL' | 'SCRIPT'>('Accueil');
+	// Ordre d'Excel. Identifiants des onglets (libellés : ribbon.tabs.*).
+	const tabs = ['home', 'insert', 'formulas', 'data', 'review', 'view'] as const;
+	type Tab = (typeof tabs)[number] | 'sql' | 'script';
+	let tab = $state<Tab>('home');
 	/** Onglets qui remplacent la grille (pas de groupes de commandes). */
-	const isView = (t: string) => t === 'SQL' || t === 'SCRIPT';
+	const isView = (t: string) => t === 'sql' || t === 'script';
 	// Largeur disponible pour les groupes : ils se compactent pour y tenir.
 	let groupsW = $state(2000);
-	let openGroup = $state<{ title: string; x: number; y: number } | null>(null);
+	let openGroup = $state<{ id: string; x: number; y: number } | null>(null);
 	// Rapport entre largeur réelle et largeur estimée (polices, icônes) :
 	// mesuré après chaque rendu, il corrige l'estimation de fit.
 	let ratio = $state(1);
@@ -316,7 +322,7 @@
 	const mPreset = $derived(marginPreset(ps));
 	const marginHint = (k: keyof typeof MARGINS) => {
 		const m = MARGINS[k];
-		return `${MARGIN_LABELS[k]} — haut et bas : ${cm(m.top)}, gauche et droite : ${cm(m.left)}`;
+		return t('ribbon.cmd.margins.preset', { name: marginLabel(k), topBottom: cm(m.top), leftRight: cm(m.left) });
 	};
 	const paperLabel = $derived(PAPERS.find((x) => x.id === paperOf(ps))?.label ?? 'A4');
 	const blockOn = (b: string) => docState?.block === b;
@@ -324,373 +330,389 @@
 	const readOnly = (cs: Command[]): Command[] => cs.map((c) => ({ ro: true, ...c }));
 	const readOnlyGroups = (gs: Group[]): Group[] => gs.map((g) => ({ ...g, commands: readOnly(g.commands) }));
 	const prot = $derived(protectedThing(context));
-	const moreHint = `Autres graphiques : ${MORE_KINDS.map((k) => k.label).join(', ')}`;
-	const animateCmd: Command = $derived({ label: 'Animations', icon: 'play', size: 'small', ro: true, on: animate, run: onanimate ? () => onanimate(!animate) : undefined, hint: animate ? 'Désactiver l’animation du cadre de sélection' : 'Animer le cadre de sélection (il glisse vers la nouvelle cellule)' });
+	const moreHint = $derived(t('ribbon.cmd.moreCharts.tooltip', { list: MORE_KINDS.map((k) => k.label).join(', ') }));
+	const animateCmd: Command = $derived({ label: t('ribbon.cmd.animate.label'), icon: 'play', size: 'small', ro: true, on: animate, run: onanimate ? () => onanimate(!animate) : undefined, hint: animate ? t('ribbon.cmd.animate.tooltipOn') : t('ribbon.cmd.animate.tooltipOff') });
 	const sheetRibbons: Record<string, Group[]> = $derived({
-		Accueil: [
+		home: [
 			{
-				title: 'Annuler',
+				id: 'undo',
+				title: t('ribbon.group.undo'),
 				iconOk: true,
 				// Annuler et Rétablir l'un sous l'autre, en petites icônes.
 				compact: true,
 				commands: [
-					{ label: 'Annuler', icon: 'undo', ro: true, run: undo ? onundo : undefined, hint: undo ? 'Annuler : ' + undo + ' (Ctrl+Z)' : 'Rien à annuler' },
-					{ label: 'Rétablir', icon: 'redo', ro: true, run: redo ? onredo : undefined, hint: redo ? 'Rétablir : ' + redo + ' (Ctrl+Y)' : 'Rien à rétablir' }
+					{ label: t('ribbon.cmd.undo.label'), icon: 'undo', ro: true, run: undo ? onundo : undefined, hint: undo ? t('ribbon.cmd.undo.tooltip', { action: undo }) : t('ribbon.cmd.undo.none') },
+					{ label: t('ribbon.cmd.redo.label'), icon: 'redo', ro: true, run: redo ? onredo : undefined, hint: redo ? t('ribbon.cmd.redo.tooltip', { action: redo }) : t('ribbon.cmd.redo.none') }
 				]
 			},
 			{
-				title: 'Presse-papiers',
+				id: 'clipboard',
+				title: t('ribbon.group.clipboard'),
 				iconOk: true,
 				// Comme Excel : Coller en grand, les autres en petit avec leur libellé.
 				compact: true,
 				commands: [
-					{ label: 'Coller', icon: 'paste', size: 'big', data: true, run: onclip ? () => onclip('paste') : undefined, hint: 'Coller (Ctrl+V)' },
-					{ label: 'Couper', icon: 'cut', size: 'small', run: onclip ? () => onclip('cut') : undefined, hint: 'Couper (Ctrl+X)' },
-					{ label: 'Copier', icon: 'copy', size: 'small', ro: true, run: onclip ? () => onclip('copy') : undefined, hint: 'Copier (Ctrl+C)' },
-					{ label: 'Reproduire', icon: 'format-painter', size: 'small', local: true, run: onpainter, hint: 'Reproduire la mise en forme de la cellule active' }
+					{ label: t('ribbon.cmd.paste.label'), icon: 'paste', size: 'big', data: true, run: onclip ? () => onclip('paste') : undefined, hint: t('ribbon.cmd.paste.tooltip') },
+					{ label: t('ribbon.cmd.cut.label'), icon: 'cut', size: 'small', run: onclip ? () => onclip('cut') : undefined, hint: t('ribbon.cmd.cut.tooltip') },
+					{ label: t('ribbon.cmd.copy.label'), icon: 'copy', size: 'small', ro: true, run: onclip ? () => onclip('copy') : undefined, hint: t('ribbon.cmd.copy.tooltip') },
+					{ label: t('ribbon.cmd.painter.label'), icon: 'format-painter', size: 'small', local: true, run: onpainter, hint: t('ribbon.cmd.painter.tooltip') }
 				]
 			},
 			{
-				title: 'Police',
+				id: 'font',
+				title: t('ribbon.group.font'),
 				fonts: true,
 				iconOk: true,
 				// Gras, Italique, Souligné : petites icônes, comme Excel.
 				widest: 'icon',
 				launch: fmt('font'),
-				launchHint: 'Format de cellule : police (Ctrl+1)',
+				launchHint: t('ribbon.launch.font'),
 				commands: local([
-					{ label: 'Gras', icon: 'bold', run: st({ b: 'toggle' }), hint: 'Gras (Ctrl+B)', on: !!cellStyle?.b },
-					{ label: 'Italique', icon: 'italic', run: st({ i: 'toggle' }), hint: 'Italique (Ctrl+I)', on: !!cellStyle?.i },
-					{ label: 'Souligné', icon: 'underline', run: st({ u: 'toggle' }), hint: 'Souligné (Ctrl+U)', on: !!cellStyle?.u },
-					{ label: 'Couleur de police', icon: 'font-color', run: st({ fg }), hint: 'Couleur de police (▾ : choisir la teinte)', color: 'fg' },
-					{ label: 'Couleur de remplissage', icon: 'font-color', run: st({ bg }), hint: 'Couleur de remplissage (▾ : choisir la teinte)', color: 'bg' }
+					{ label: t('ribbon.cmd.bold.label'), icon: 'bold', run: st({ b: 'toggle' }), hint: t('ribbon.cmd.bold.tooltip'), on: !!cellStyle?.b },
+					{ label: t('ribbon.cmd.italic.label'), icon: 'italic', run: st({ i: 'toggle' }), hint: t('ribbon.cmd.italic.tooltip'), on: !!cellStyle?.i },
+					{ label: t('ribbon.cmd.underline.label'), icon: 'underline', run: st({ u: 'toggle' }), hint: t('ribbon.cmd.underline.tooltip'), on: !!cellStyle?.u },
+					{ label: t('ribbon.cmd.fontColor.label'), icon: 'font-color', run: st({ fg }), hint: t('ribbon.cmd.fontColor.tooltip'), color: 'fg' },
+					{ label: t('ribbon.cmd.fillColor.label'), icon: 'font-color', run: st({ bg }), hint: t('ribbon.cmd.fillColor.tooltip'), color: 'bg' }
 				])
 			},
 			{
-				title: 'Bordures',
+				id: 'borders',
+				title: t('ribbon.group.borders'),
 				iconOk: true,
 				// Trois petites icônes l'une sous l'autre.
 				compact: true,
 				launch: fmt('border'),
-				launchHint: 'Format de cellule : bordure (Ctrl+1)',
+				launchHint: t('ribbon.launch.borders'),
 				commands: local([
-					{ label: 'Toutes', icon: 'border-all', run: st({ border: 'all' }), hint: 'Toutes les bordures' },
-					{ label: 'Contour', icon: 'border-outline', run: st({ border: 'outline' }), hint: 'Bordure extérieure de la sélection' },
-					{ label: 'Aucune', icon: 'border-none', run: st({ border: 'none' }), hint: 'Retirer les bordures' }
+					{ label: t('ribbon.cmd.bordersAll.label'), icon: 'border-all', run: st({ border: 'all' }), hint: t('ribbon.cmd.bordersAll.tooltip') },
+					{ label: t('ribbon.cmd.bordersOutline.label'), icon: 'border-outline', run: st({ border: 'outline' }), hint: t('ribbon.cmd.bordersOutline.tooltip') },
+					{ label: t('ribbon.cmd.bordersNone.label'), icon: 'border-none', run: st({ border: 'none' }), hint: t('ribbon.cmd.bordersNone.tooltip') }
 				])
 			},
 			{
-				title: 'Alignement',
+				id: 'alignment',
+				title: t('ribbon.group.alignment'),
 				iconOk: true,
 				// Comme Excel : les alignements en petites icônes (libellé dans
 				// l'info-bulle), Renvoyer à la ligne et Fusionner en grands boutons.
 				compact: true,
 				launch: fmt('align'),
-				launchHint: 'Format de cellule : alignement (Ctrl+1)',
+				launchHint: t('ribbon.launch.alignment'),
 				commands: [
 					...local([
-						{ label: 'Haut', icon: 'align-top', run: st({ va: 'top' }), hint: 'Aligner en haut', on: cellStyle?.va === 'top' },
-						{ label: 'Milieu', icon: 'align-middle', run: st({ va: null }), hint: 'Aligner au milieu', on: !!cellStyle && !cellStyle.va },
-						{ label: 'Bas', icon: 'align-bottom', run: st({ va: 'bottom' }), hint: 'Aligner en bas', on: cellStyle?.va === 'bottom' },
+						{ label: t('ribbon.cmd.alignTop.label'), icon: 'align-top', run: st({ va: 'top' }), hint: t('ribbon.cmd.alignTop.tooltip'), on: cellStyle?.va === 'top' },
+						{ label: t('ribbon.cmd.alignMiddle.label'), icon: 'align-middle', run: st({ va: null }), hint: t('ribbon.cmd.alignMiddle.tooltip'), on: !!cellStyle && !cellStyle.va },
+						{ label: t('ribbon.cmd.alignBottom.label'), icon: 'align-bottom', run: st({ va: 'bottom' }), hint: t('ribbon.cmd.alignBottom.tooltip'), on: cellStyle?.va === 'bottom' },
 						// Comme Excel : cliquer sur l'alignement en cours revient au standard.
-						{ label: 'Gauche', icon: 'align-left', run: st(alignPatch(cellStyle?.al, 'left')), hint: cellStyle?.al === 'left' ? 'Aligner à gauche (cliquer : revenir à l’alignement standard)' : 'Aligner à gauche', on: cellStyle?.al === 'left' },
-						{ label: 'Centrer', icon: 'align-center', run: st(alignPatch(cellStyle?.al, 'center')), hint: cellStyle?.al === 'center' ? 'Centrer (cliquer : revenir à l’alignement standard)' : 'Centrer', on: cellStyle?.al === 'center' },
-						{ label: 'Droite', icon: 'align-right', run: st(alignPatch(cellStyle?.al, 'right')), hint: cellStyle?.al === 'right' ? 'Aligner à droite (cliquer : revenir à l’alignement standard)' : 'Aligner à droite', on: cellStyle?.al === 'right' },
-						{ label: 'Renvoyer à la ligne', icon: 'wrap-text', run: onwrap, size: 'big', hint: 'Afficher le texte sur plusieurs lignes dans la cellule', on: !!cellStyle?.wr }
+						{ label: t('ribbon.cmd.alignLeft.label'), icon: 'align-left', run: st(alignPatch(cellStyle?.al, 'left')), hint: cellStyle?.al === 'left' ? t('ribbon.cmd.alignLeft.tooltipOn') : t('ribbon.cmd.alignLeft.tooltip'), on: cellStyle?.al === 'left' },
+						{ label: t('ribbon.cmd.alignCenter.label'), icon: 'align-center', run: st(alignPatch(cellStyle?.al, 'center')), hint: cellStyle?.al === 'center' ? t('ribbon.cmd.alignCenter.tooltipOn') : t('ribbon.cmd.alignCenter.tooltip'), on: cellStyle?.al === 'center' },
+						{ label: t('ribbon.cmd.alignRight.label'), icon: 'align-right', run: st(alignPatch(cellStyle?.al, 'right')), hint: cellStyle?.al === 'right' ? t('ribbon.cmd.alignRight.tooltipOn') : t('ribbon.cmd.alignRight.tooltip'), on: cellStyle?.al === 'right' },
+						{ label: t('ribbon.cmd.wrap.label'), icon: 'wrap-text', run: onwrap, size: 'big', hint: t('ribbon.cmd.wrap.tooltip'), on: !!cellStyle?.wr }
 					]),
-					{ label: 'Fusionner et centrer', icon: 'merge-cells', run: onmerge, size: 'big', hint: merged ? 'Annuler la fusion des cellules' : 'Fusionner les cellules libres sélectionnées en une seule, contenu centré', on: merged }
+					{ label: t('ribbon.cmd.merge.label'), icon: 'merge-cells', run: onmerge, size: 'big', hint: merged ? t('ribbon.cmd.merge.tooltipOn') : t('ribbon.cmd.merge.tooltip'), on: merged }
 				]
 			},
 			{
-				title: 'Nombre',
+				id: 'number',
+				title: t('ribbon.group.number'),
 				iconOk: true,
 				launch: fmt('number'),
-				launchHint: 'Format de cellule : nombre, date, heure… (Ctrl+1)',
+				launchHint: t('ribbon.launch.number'),
 				// Comme Excel : la liste des formats (Standard ▾) en haut, puis les
 				// formats en petites icônes et, en dessous, les décimales côte à côte.
 				rows: 3,
 				commands: local([
 					{
-						label: 'Format de nombre',
+						label: t('ribbon.cmd.numberFormat.label'),
 						icon: 'number-format',
-						combo: NF_NAMES[cellStyle?.nf ?? ''] ?? 'Standard',
+						combo: nfName(cellStyle?.nf ?? ''),
 						run: onstyle ? openItems : undefined,
-						hint: 'Format de nombre de la sélection',
+						hint: t('ribbon.cmd.numberFormat.tooltip'),
 						items: [
-							{ label: 'Standard', run: st({ nf: null, dp: null, ng: null, df: null }), on: !cellStyle?.nf },
-							{ label: 'Nombre (0,00)', run: st({ nf: '0,00', dp: null, ng: null, df: null }), on: cellStyle?.nf === '0' || cellStyle?.nf === '0,00' },
-							{ label: 'Monétaire', run: st({ nf: '€', ng: null, df: null }), on: cellStyle?.nf === '€' },
-							{ label: 'Pourcentage', run: st({ nf: '%', ng: null, df: null }), on: cellStyle?.nf === '%' },
-							{ label: 'Date courte (jj/mm/aaaa)', run: st({ nf: 'date', df: 'jj/mm/aaaa', dp: null, ng: null }), on: cellStyle?.nf === 'date' },
-							{ label: 'Autres formats…', keys: 'Ctrl+1', run: fmt('number') }
+							{ label: t('ribbon.numberFormat.general'), run: st({ nf: null, dp: null, ng: null, df: null }), on: !cellStyle?.nf },
+							{ label: t('ribbon.cmd.numberFormat.number'), run: st({ nf: '0,00', dp: null, ng: null, df: null }), on: cellStyle?.nf === '0' || cellStyle?.nf === '0,00' },
+							{ label: t('ribbon.cmd.currency.label'), run: st({ nf: '€', ng: null, df: null }), on: cellStyle?.nf === '€' },
+							{ label: t('ribbon.cmd.percent.label'), run: st({ nf: '%', ng: null, df: null }), on: cellStyle?.nf === '%' },
+							{ label: t('ribbon.cmd.numberFormat.date'), run: st({ nf: 'date', df: 'jj/mm/aaaa', dp: null, ng: null }), on: cellStyle?.nf === 'date' },
+							{ label: t('ribbon.cmd.numberFormat.more'), keys: 'Ctrl+1', run: fmt('number') }
 						]
 					},
-					{ label: 'Monétaire', icon: 'currency', run: st({ nf: '€', ng: null, df: null }), hint: 'Format monétaire (€)' },
-					{ label: 'Pourcentage', icon: 'percent', run: st({ nf: '%', ng: null, df: null }), hint: 'Style de pourcentage (0,25 s’affiche 25 %)' },
-					{ label: 'Date', icon: 'type-date', run: st({ nf: 'date', df: 'jj/mm/aaaa', dp: null, ng: null }), hint: 'Date courte (jj/mm/aaaa) ; Ctrl+1 pour les autres formats de date et d’heure' },
-					{ label: '0,00', icon: 'decimal-fixed', run: st({ nf: '0,00', dp: null, ng: null, df: null }), hint: 'Nombre à deux décimales' },
-					{ label: 'Ajouter une décimale', icon: 'decimal-more', run: st({ dp: 'more' }), hint: 'Ajouter une décimale à l’affichage' },
-					{ label: 'Réduire les décimales', icon: 'decimal-less', run: st({ dp: 'less' }), hint: 'Afficher une décimale de moins' }
+					{ label: t('ribbon.cmd.currency.label'), icon: 'currency', run: st({ nf: '€', ng: null, df: null }), hint: t('ribbon.cmd.currency.tooltip') },
+					{ label: t('ribbon.cmd.percent.label'), icon: 'percent', run: st({ nf: '%', ng: null, df: null }), hint: t('ribbon.cmd.percent.tooltip') },
+					{ label: t('ribbon.cmd.date.label'), icon: 'type-date', run: st({ nf: 'date', df: 'jj/mm/aaaa', dp: null, ng: null }), hint: t('ribbon.cmd.date.tooltip') },
+					{ label: t('ribbon.cmd.fixed2.label'), icon: 'decimal-fixed', run: st({ nf: '0,00', dp: null, ng: null, df: null }), hint: t('ribbon.cmd.fixed2.tooltip') },
+					{ label: t('ribbon.cmd.decimalMore.label'), icon: 'decimal-more', run: st({ dp: 'more' }), hint: t('ribbon.cmd.decimalMore.tooltip') },
+					{ label: t('ribbon.cmd.decimalLess.label'), icon: 'decimal-less', run: st({ dp: 'less' }), hint: t('ribbon.cmd.decimalLess.tooltip') }
 				])
 			},
 			{
-				title: 'Styles',
+				id: 'styles',
+				title: t('ribbon.group.styles'),
 				commands: [
 					{
-						label: 'Mise en forme conditionnelle',
+						label: t('ribbon.cmd.conditional.label'),
 						icon: 'conditional-format',
 						menu: true,
 						local: true,
 						run: onrules ? () => onrules(anchor.x, anchor.y) : undefined,
-						hint: 'Mise en évidence des cellules, barres de données, nuances de couleurs, jeux d’icônes, gestionnaire des règles'
+						hint: t('ribbon.cmd.conditional.tooltip')
 					},
-					{ label: 'Mettre sous forme de tableau', icon: 'table', run: ed('formatAsTable'), hint: 'Faire un tableau de la plage ou du bloc de cellules de la cellule active, sa première ligne pour en-têtes (Ctrl+L)' }
+					{ label: t('ribbon.cmd.formatAsTable.label'), icon: 'table', run: ed('formatAsTable'), hint: t('ribbon.cmd.formatAsTable.tooltip') }
 				]
 			},
 			{
-				title: 'Cellules',
+				id: 'cells',
+				title: t('ribbon.group.cells'),
 				// Comme Excel : Insérer, Supprimer et Format, chacun avec ses choix.
 				commands: [
 					{
-						label: 'Insérer',
+						label: t('ribbon.cmd.insert.label'),
 						icon: 'insert-row',
 						run: oncells ? openItems : undefined,
-						hint: 'Insérer une ligne ou une colonne',
+						hint: t('ribbon.cmd.insert.tooltip'),
 						items: [
-							{ label: 'Insérer une ligne (au-dessus)', data: true, run: cells('insertRow') },
-							{ label: 'Insérer une colonne (à gauche)', run: cells('insertColumn') }
+							{ label: t('ribbon.cmd.insert.row'), data: true, run: cells('insertRow') },
+							{ label: t('ribbon.cmd.insert.column'), run: cells('insertColumn') }
 						]
 					},
 					{
-						label: 'Supprimer',
+						label: t('ribbon.cmd.delete.label'),
 						icon: 'delete-row',
 						run: oncells ? openItems : undefined,
-						hint: 'Supprimer la ligne ou la colonne de la cellule active',
+						hint: t('ribbon.cmd.delete.tooltip'),
 						items: [
-							{ label: 'Supprimer la ligne', data: true, run: cells('deleteRow') },
-							{ label: 'Supprimer la colonne', run: cells('deleteColumn') }
+							{ label: t('ribbon.cmd.delete.row'), data: true, run: cells('deleteRow') },
+							{ label: t('ribbon.cmd.delete.column'), run: cells('deleteColumn') }
 						]
 					},
 					{
-						label: 'Format',
+						label: t('ribbon.cmd.format.label'),
 						icon: 'cell-format',
 						local: true,
 						run: onformat ? openItems : undefined, // ouvre ses choix
-						hint: 'Format de cellule, masquer et afficher',
+						hint: t('ribbon.cmd.format.tooltip'),
 						items: [
-							{ label: 'Format de cellule…', keys: 'Ctrl+1', run: fmt('number') },
-							{ label: 'Masquer les lignes', keys: 'Ctrl+9', run: lines(true, true) },
-							{ label: 'Masquer les colonnes', keys: 'Ctrl+0', run: lines(false, true) },
-							{ label: 'Afficher les lignes', run: lines(true, false) },
-							{ label: 'Afficher les colonnes', run: lines(false, false) }
+							{ label: t('ribbon.cmd.format.cells'), keys: 'Ctrl+1', run: fmt('number') },
+							{ label: t('ribbon.cmd.format.hideRows'), keys: 'Ctrl+9', run: lines(true, true) },
+							{ label: t('ribbon.cmd.format.hideColumns'), keys: 'Ctrl+0', run: lines(false, true) },
+							{ label: t('ribbon.cmd.format.showRows'), run: lines(true, false) },
+							{ label: t('ribbon.cmd.format.showColumns'), run: lines(false, false) }
 						]
 					}
 				]
 			},
 			{
-				title: 'Édition',
+				id: 'editing',
+				title: t('ribbon.group.editing'),
 				// Comme Excel : Somme automatique, Remplissage et Effacer en petit avec
 				// leur libellé, Trier et filtrer en grand, puis Rechercher et Remplacer.
 				compact: true,
 				commands: [
-					{ label: 'Somme automatique', icon: 'autosum', size: 'small', run: onformula ? () => onformula('sum') : undefined, hint: 'SOMME de la colonne du tableau au-dessus (Alt+=)' },
+					{ label: t('ribbon.cmd.autoSum.label'), icon: 'autosum', size: 'small', run: onformula ? () => onformula('sum') : undefined, hint: t('ribbon.cmd.autoSum.tooltip') },
 					{
-						label: 'Remplissage',
+						label: t('ribbon.cmd.fill.label'),
 						data: true,
 						icon: 'fill-down',
 						size: 'small',
 						run: onedit ? openItems : undefined,
-						hint: 'Recopier la première ligne ou colonne de la sélection',
+						hint: t('ribbon.cmd.fill.tooltip'),
 						items: [
-							{ label: 'Vers le bas', keys: 'Ctrl+D', run: ed('fillDown') },
-							{ label: 'Vers la droite', keys: 'Ctrl+R', run: ed('fillRight') }
+							{ label: t('ribbon.cmd.fill.down'), keys: 'Ctrl+D', run: ed('fillDown') },
+							{ label: t('ribbon.cmd.fill.right'), keys: 'Ctrl+R', run: ed('fillRight') }
 						]
 					},
 					{
-						label: 'Effacer',
+						label: t('ribbon.cmd.clear.label'),
 						icon: 'clear-format',
 						size: 'small',
 						run: onstyle ? openItems : undefined,
-						hint: 'Effacer les formats, le contenu ou la note de la sélection',
+						hint: t('ribbon.cmd.clear.tooltip'),
 						items: [
-							{ label: 'Effacer les formats', local: true, run: st(clearPatch()) },
-							{ label: 'Effacer le contenu', keys: 'Suppr', data: true, run: ed('clearContents') },
-							{ label: 'Effacer la note', local: true, run: note && onnote ? () => onnote('delete') : undefined }
+							{ label: t('ribbon.cmd.clear.formats'), local: true, run: st(clearPatch()) },
+							{ label: t('ribbon.cmd.clear.contents'), keys: 'Suppr', data: true, run: ed('clearContents') },
+							{ label: t('ribbon.cmd.clear.note'), local: true, run: note && onnote ? () => onnote('delete') : undefined }
 						]
 					},
 					{
-						label: 'Trier et filtrer',
+						label: t('ribbon.cmd.sortFilter.label'),
 						icon: 'filter',
 						size: 'big',
 						run: onsort || onfilter ? openItems : undefined,
-						hint: 'Trier le tableau par la colonne active, le filtrer',
+						hint: t('ribbon.cmd.sortFilter.tooltip'),
 						items: [
-							{ label: 'Trier de A à Z', local: true, data: true, run: onsort ? () => onsort(false) : undefined },
-							{ label: 'Trier de Z à A', local: true, data: true, run: onsort ? () => onsort(true) : undefined },
-							{ label: 'Tri personnalisé…', local: true, data: true, run: onsortcustom },
-							{ label: 'Filtrer', ro: true, keys: 'Ctrl+Maj+L', run: flt('filter') },
-							{ label: 'Effacer les filtres', ro: true, run: filters ? flt('clear') : undefined }
+							{ label: t('ribbon.cmd.sortFilter.az'), local: true, data: true, run: onsort ? () => onsort(false) : undefined },
+							{ label: t('ribbon.cmd.sortFilter.za'), local: true, data: true, run: onsort ? () => onsort(true) : undefined },
+							{ label: t('ribbon.cmd.sortCustom.label'), local: true, data: true, run: onsortcustom },
+							{ label: t('ribbon.cmd.filter.label'), ro: true, keys: 'Ctrl+Maj+L', run: flt('filter') },
+							{ label: t('ribbon.cmd.sortFilter.clearFilters'), ro: true, run: filters ? flt('clear') : undefined }
 						]
 					},
-					{ label: 'Rechercher', icon: 'search', size: 'small', ro: true, run: onfind ? () => onfind(false) : undefined, hint: 'Rechercher (Ctrl+F)' },
-					{ label: 'Remplacer', icon: 'replace', size: 'small', run: onfind ? () => onfind(true) : undefined, hint: 'Remplacer (Ctrl+H)' }
+					{ label: t('ribbon.cmd.find.label'), icon: 'search', size: 'small', ro: true, run: onfind ? () => onfind(false) : undefined, hint: t('ribbon.cmd.find.tooltip') },
+					{ label: t('ribbon.cmd.replace.label'), icon: 'replace', size: 'small', run: onfind ? () => onfind(true) : undefined, hint: t('ribbon.cmd.replace.tooltip') }
 				]
 			}
 		],
-		Insertion: [
+		insert: [
 			{
-				title: 'Tableaux',
+				id: 'tables',
+				title: t('ribbon.group.tables'),
 				commands: [
-					{ label: 'Tableau croisé dynamique', icon: 'pivot-table', ro: true, run: onpivot, hint: 'Tableau croisé dynamique du tableau actif : cliquez ensuite sur la cellule où le poser, sur n’importe quelle feuille (Échap : annuler ; « Nouvelle feuille » dans la barre d’état). Double-clic sur un TCD pour le modifier' },
-					{ label: 'Tableau', icon: 'table', run: ed('formatAsTable'), hint: 'Faire un tableau de la plage ou du bloc de cellules de la cellule active (Ctrl+L)' },
-					...(sharedWorkbooksEnabled() ? [{ label: 'Data Lake Lattis', icon: 'database' as const, run: oninsertdata, hint: 'Insérer à la cellule active une donnée du catalogue du Data Lake Lattis : tableau lié, en lecture seule, à jour en direct' }, { label: 'Formulaire', icon: 'form' as const, run: onform, hint: 'Partager le tableau actif comme formulaire (Serveur Lattis)' }] : [])
+					{ label: t('ribbon.cmd.pivot.label'), icon: 'pivot-table', ro: true, run: onpivot, hint: t('ribbon.cmd.pivot.tooltip') },
+					{ label: t('ribbon.cmd.table.label'), icon: 'table', run: ed('formatAsTable'), hint: t('ribbon.cmd.table.tooltip') },
+					...(sharedWorkbooksEnabled() ? [{ label: t('ribbon.cmd.dataLake.label'), icon: 'database' as const, run: oninsertdata, hint: t('ribbon.cmd.dataLake.tooltip') }, { label: t('ribbon.cmd.form.label'), icon: 'form' as const, run: onform, hint: t('ribbon.cmd.form.tooltip') }] : [])
 				]
 			},
 			{
-				title: 'Graphiques',
+				id: 'charts',
+				title: t('ribbon.group.charts'),
 				commands: local([
 					...(['bar', 'line', 'pie', 'scatter'] as const).map((k) => ({
 						label: kindInfo(k)!.label,
 						icon: kindInfo(k)!.icon,
 						run: onchart ? () => onchart(k) : undefined,
-						hint: `${kindInfo(k)!.label} du tableau actif${k === 'bar' ? ' : barres verticales (Alt+F1)' : ''}`
+						hint: k === 'bar' ? t('ribbon.cmd.chart.tooltipBar', { chart: kindInfo(k)!.label }) : t('ribbon.cmd.chart.tooltip', { chart: kindInfo(k)!.label })
 					})),
-					{ label: 'Autres graphiques', icon: 'chart-more', run: onchart ? openItems : undefined, hint: moreHint, items: MORE_KINDS.map((k) => ({ label: k.label, icon: k.icon, run: onchart ? () => onchart(k.kind) : undefined })) }
+					{ label: t('ribbon.cmd.moreCharts.label'), icon: 'chart-more', run: onchart ? openItems : undefined, hint: moreHint, items: MORE_KINDS.map((k) => ({ label: k.label, icon: k.icon, run: onchart ? () => onchart(k.kind) : undefined })) }
 				])
 			},
 			{
-				title: 'Contrôles',
+				id: 'controls',
+				title: t('ribbon.group.controls'),
 				commands: local([
-					...(scriptingEnabled() ? [{ label: 'Bouton', icon: 'button' as const, run: onbutton ? () => onbutton('') : undefined, hint: 'Bouton d’action à la cellule active : un clic exécute un script de l’onglet Script (ou rien)' }] : []),
+					...(scriptingEnabled() ? [{ label: t('ribbon.cmd.button.label'), icon: 'button' as const, run: onbutton ? () => onbutton('') : undefined, hint: t('ribbon.cmd.button.tooltip') }] : []),
 					{
-						label: 'Champ',
+						label: t('ribbon.cmd.field.label'),
 						icon: 'text-input',
 						run: onbutton ? () => onbutton('input') : undefined,
-						hint: `Contrôle lié à une cellule : champ texte, zone de texte, case à cocher, liste déroulante ou fichier (choix du type dans la fenêtre)${scriptingEnabled() ? ' ; il peut aussi lancer un script' : ''}`
+						hint: scriptingEnabled() ? t('ribbon.cmd.field.tooltipScript') : t('ribbon.cmd.field.tooltip')
 					}
 				])
 			}
 		],
-		'Mise en page': readOnlyGroups([
+		pageLayout: readOnlyGroups([
 			{
-				title: 'Mise en page',
+				id: 'pageSetup',
+				title: t('ribbon.group.pageSetup'),
 				launch: pg({ kind: 'dialog', tab: 'page' }),
-				launchHint: 'Mise en page… : page, marges, en-tête et pied de page, feuille',
+				launchHint: t('ribbon.launch.pageSetup'),
 				commands: [
 					{
-						label: 'Marges',
+						label: t('ribbon.cmd.margins.label'),
 						icon: 'page-margins',
 						run: onpage ? openItems : undefined,
-						hint: `Marges : ${mPreset === 'custom' ? 'personnalisées' : MARGIN_LABELS[mPreset]}`,
+						hint: t('ribbon.cmd.margins.tooltip', { preset: mPreset === 'custom' ? t('ribbon.cmd.margins.customName') : marginLabel(mPreset) }),
 						items: [
 							...(Object.keys(MARGINS) as (keyof typeof MARGINS)[]).map((k) => ({ label: marginHint(k), run: pg({ kind: 'margins', preset: k }), on: mPreset === k })),
-							{ label: 'Marges personnalisées…', run: pg({ kind: 'dialog', tab: 'margins' }), on: mPreset === 'custom' }
+							{ label: t('ribbon.cmd.margins.custom'), run: pg({ kind: 'dialog', tab: 'margins' }), on: mPreset === 'custom' }
 						]
 					},
 					{
-						label: 'Orientation',
+						label: t('ribbon.cmd.orientation.label'),
 						icon: 'page-orientation',
 						run: onpage ? openItems : undefined,
-						hint: `Orientation : ${ps.landscape ? 'paysage' : 'portrait'}`,
+						hint: ps.landscape ? t('ribbon.cmd.orientation.tooltipLandscape') : t('ribbon.cmd.orientation.tooltipPortrait'),
 						items: [
-							{ label: 'Portrait', run: pg({ kind: 'orientation', landscape: false }), on: !ps.landscape },
-							{ label: 'Paysage', run: pg({ kind: 'orientation', landscape: true }), on: !!ps.landscape }
+							{ label: t('ribbon.cmd.orientation.portrait'), run: pg({ kind: 'orientation', landscape: false }), on: !ps.landscape },
+							{ label: t('ribbon.cmd.orientation.landscape'), run: pg({ kind: 'orientation', landscape: true }), on: !!ps.landscape }
 						]
 					},
 					{
-						label: 'Taille',
+						label: t('ribbon.cmd.size.label'),
 						icon: 'page-size',
 						run: onpage ? openItems : undefined,
-						hint: `Format du papier : ${paperLabel}`,
-						items: [...PAPERS.map((x) => ({ label: `${x.label} (${x.size})`, run: pg({ kind: 'paper', paper: x.id }), on: paperOf(ps) === x.id })), { label: 'Autres tailles de papier…', run: pg({ kind: 'dialog', tab: 'page' }) }]
+						hint: t('ribbon.cmd.size.tooltip', { paper: paperLabel }),
+						items: [...PAPERS.map((x) => ({ label: t('ribbon.cmd.size.item', { name: x.label, size: x.size }), run: pg({ kind: 'paper', paper: x.id }), on: paperOf(ps) === x.id })), { label: t('ribbon.cmd.size.more'), run: pg({ kind: 'dialog', tab: 'page' }) }]
 					},
 					{
-						label: 'Zone d’impression',
+						label: t('ribbon.cmd.printArea.label'),
 						icon: 'print-area',
 						run: onpage ? openItems : undefined,
 						on: !!ps.area,
-						hint: ps.area ? 'Une zone d’impression est définie : seule elle s’imprime' : 'Imprimer seulement une partie de la feuille',
+						hint: ps.area ? t('ribbon.cmd.printArea.tooltipOn') : t('ribbon.cmd.printArea.tooltip'),
 						items: [
-							{ label: 'Définir la zone d’impression', run: pg({ kind: 'area', clear: false }) },
-							{ label: 'Annuler la zone d’impression', run: ps.area ? pg({ kind: 'area', clear: true }) : undefined }
+							{ label: t('ribbon.cmd.printArea.set'), run: pg({ kind: 'area', clear: false }) },
+							{ label: t('ribbon.cmd.printArea.clear'), run: ps.area ? pg({ kind: 'area', clear: true }) : undefined }
 						]
 					},
 					{
-						label: 'Sauts de page',
+						label: t('ribbon.cmd.breaks.label'),
 						icon: 'page-break',
 						run: onpage ? openItems : undefined,
-						hint: 'Saut de page manuel au-dessus et à gauche de la cellule active (la nouvelle page commence là)',
+						hint: t('ribbon.cmd.breaks.tooltip'),
 						items: [
-							{ label: 'Insérer un saut de page', run: pg({ kind: 'break', op: 'insert' }) },
-							{ label: 'Supprimer le saut de page', run: hasBreaks(ps) ? pg({ kind: 'break', op: 'remove' }) : undefined },
-							{ label: 'Rétablir tous les sauts de page', run: hasBreaks(ps) ? pg({ kind: 'break', op: 'reset' }) : undefined }
+							{ label: t('ribbon.cmd.breaks.insert'), run: pg({ kind: 'break', op: 'insert' }) },
+							{ label: t('ribbon.cmd.breaks.remove'), run: hasBreaks(ps) ? pg({ kind: 'break', op: 'remove' }) : undefined },
+							{ label: t('ribbon.cmd.breaks.reset'), run: hasBreaks(ps) ? pg({ kind: 'break', op: 'reset' }) : undefined }
 						]
 					},
-					{ label: 'Imprimer les titres', icon: 'print-titles', run: pg({ kind: 'dialog', tab: 'sheet' }), on: !!(ps.titleRows || ps.titleCols), hint: 'Lignes à répéter en haut et colonnes à répéter à gauche de chaque page imprimée' }
+					{ label: t('ribbon.cmd.printTitles.label'), icon: 'print-titles', run: pg({ kind: 'dialog', tab: 'sheet' }), on: !!(ps.titleRows || ps.titleCols), hint: t('ribbon.cmd.printTitles.tooltip') }
 				]
 			},
 			{
-				title: 'Mise à l’échelle',
+				id: 'scale',
+				title: t('ribbon.group.scale'),
 				// Comme Excel : Largeur, Hauteur et Échelle l'une sous l'autre, en petit.
 				widest: 'small',
 				launch: pg({ kind: 'dialog', tab: 'page' }),
-				launchHint: 'Mise en page… : échelle',
+				launchHint: t('ribbon.launch.scale'),
 				commands: [
-					{ label: 'Largeur', icon: 'fit-width', run: onpage ? openItems : undefined, hint: `Largeur : ${fitLabel(ps.fitWide ?? 0)} (réduit la feuille pour qu’elle tienne en ce nombre de pages)`, items: FIT_CHOICES.map((n) => ({ label: fitLabel(n), run: pg({ kind: 'fit', wide: true, n }), on: (ps.fitWide ?? 0) === n })) },
-					{ label: 'Hauteur', icon: 'fit-height', run: onpage ? openItems : undefined, hint: `Hauteur : ${fitLabel(ps.fitTall ?? 0)}`, items: FIT_CHOICES.map((n) => ({ label: fitLabel(n), run: pg({ kind: 'fit', wide: false, n }), on: (ps.fitTall ?? 0) === n })) },
+					{ label: t('ribbon.cmd.width.label'), icon: 'fit-width', run: onpage ? openItems : undefined, hint: t('ribbon.cmd.width.tooltip', { fit: fitLabel(ps.fitWide ?? 0) }), items: FIT_CHOICES.map((n) => ({ label: fitLabel(n), run: pg({ kind: 'fit', wide: true, n }), on: (ps.fitWide ?? 0) === n })) },
+					{ label: t('ribbon.cmd.height.label'), icon: 'fit-height', run: onpage ? openItems : undefined, hint: t('ribbon.cmd.height.tooltip', { fit: fitLabel(ps.fitTall ?? 0) }), items: FIT_CHOICES.map((n) => ({ label: fitLabel(n), run: pg({ kind: 'fit', wide: false, n }), on: (ps.fitTall ?? 0) === n })) },
 					{
-						label: 'Échelle',
+						label: t('ribbon.cmd.scale.label'),
 						icon: 'zoom',
 						run: onpage ? openItems : undefined,
-						hint: fitted(ps) ? `${scaleLabel(ps)} : choisir une échelle arrête l’ajustement` : `Échelle d’impression : ${scaleLabel(ps)}`,
-						items: [...SCALE_CHOICES.map((n) => ({ label: `${n} %`, run: pg({ kind: 'scale', pct: n }), on: !fitted(ps) && (ps.scale || 100) === n })), { label: 'Personnalisée…', run: pg({ kind: 'dialog', tab: 'page' }) }]
+						hint: fitted(ps) ? t('ribbon.cmd.scale.tooltipFitted', { scale: scaleLabel(ps) }) : t('ribbon.cmd.scale.tooltip', { scale: scaleLabel(ps) }),
+						items: [...SCALE_CHOICES.map((n) => ({ label: t('ribbon.cmd.scale.percent', { n }), run: pg({ kind: 'scale', pct: n }), on: !fitted(ps) && (ps.scale || 100) === n })), { label: t('ribbon.cmd.scale.custom'), run: pg({ kind: 'dialog', tab: 'page' }) }]
 					}
 				]
 			},
 			{
-				title: 'Options de la feuille',
+				id: 'sheetOptions',
+				title: t('ribbon.group.sheetOptions'),
 				launch: pg({ kind: 'dialog', tab: 'sheet' }),
-				launchHint: 'Mise en page… : feuille',
+				launchHint: t('ribbon.launch.sheetOptions'),
 				// Cases en petit avec leur libellé, gardé le plus longtemps possible
 				// (deux icônes d'imprimante : l'icône seule ne dit pas laquelle).
 				widest: 'small',
 				commands: [
-					{ label: 'Imprimer / PDF…', icon: 'printer', run: () => onfile('print'), hint: 'Imprimer la feuille ou l’enregistrer en PDF (Ctrl+P)' },
-					{ label: 'Afficher le quadrillage', icon: 'border-all', on: gridlines, run: ongridlines ? () => ongridlines(!gridlines) : undefined, hint: gridlines ? 'Masquer le quadrillage de la feuille à l’écran' : 'Afficher le quadrillage de la feuille à l’écran' },
-					{ label: 'Imprimer le quadrillage', icon: 'printer', on: !!ps.gridlines, run: pg({ kind: 'print', what: 'gridlines', on: !ps.gridlines }), hint: 'Imprimer le quadrillage de toutes les cellules' },
-					{ label: 'Afficher les en-têtes', icon: 'headings', on: headings, run: onheadings ? () => onheadings(!headings) : undefined, hint: headings ? 'Lettres et numéros seulement pendant la saisie d’une formule' : 'Toujours afficher les lettres de colonnes et numéros de lignes' },
-					{ label: 'Imprimer les en-têtes', icon: 'printer', on: !!ps.headings, run: pg({ kind: 'print', what: 'headings', on: !ps.headings }), hint: 'Imprimer les lettres de colonnes et les numéros de lignes' }
+					{ label: t('ribbon.cmd.printPdf.label'), icon: 'printer', run: () => onfile('print'), hint: t('ribbon.cmd.printPdf.tooltip') },
+					{ label: t('ribbon.cmd.showGridlines.label'), icon: 'border-all', on: gridlines, run: ongridlines ? () => ongridlines(!gridlines) : undefined, hint: gridlines ? t('ribbon.cmd.showGridlines.tooltipOn') : t('ribbon.cmd.showGridlines.tooltipOff') },
+					{ label: t('ribbon.cmd.printGridlines.label'), icon: 'printer', on: !!ps.gridlines, run: pg({ kind: 'print', what: 'gridlines', on: !ps.gridlines }), hint: t('ribbon.cmd.printGridlines.tooltip') },
+					{ label: t('ribbon.cmd.showHeadings.label'), icon: 'headings', on: headings, run: onheadings ? () => onheadings(!headings) : undefined, hint: headings ? t('ribbon.cmd.showHeadings.tooltipOn') : t('ribbon.cmd.showHeadings.tooltipOff') },
+					{ label: t('ribbon.cmd.printHeadings.label'), icon: 'printer', on: !!ps.headings, run: pg({ kind: 'print', what: 'headings', on: !ps.headings }), hint: t('ribbon.cmd.printHeadings.tooltip') }
 				]
 			}
 		]),
-		Données: [
+		data: [
 			{
-				title: 'Obtenir des données',
+				id: 'getData',
+				title: t('ribbon.group.getData'),
 				// Une requête s'ajoute même sur une feuille protégée (le moteur vérifie où elle écrit).
 				// « À partir du tableau » en grand et en tête (choix de Louis, 19/10 :
 				// la fonction phare, plus puissante qu'Excel ici) ; les autres sources
 				// en petit avec leur libellé, en colonnes de trois.
 				compact: true,
 				commands: readOnly([
-					{ label: 'À partir du tableau', icon: 'sheet', size: 'big', run: data('table'), hint: 'Nouvelle requête à partir d’un tableau du classeur' },
-					{ label: 'Texte/CSV', icon: 'file-csv', size: 'small' as const, run: data('csv'), hint: 'Nouvelle requête à partir d’un fichier CSV (étapes de transformation, actualisable)' },
-					{ label: 'Classeur Excel', icon: 'table', size: 'small' as const, run: data('xlsx'), hint: 'Nouvelle requête à partir d’un tableau d’un classeur .xlsx' },
+					{ label: t('ribbon.cmd.fromTable.label'), icon: 'sheet', size: 'big', run: data('table'), hint: t('ribbon.cmd.fromTable.tooltip') },
+					{ label: t('ribbon.cmd.csv.label'), icon: 'file-csv', size: 'small' as const, run: data('csv'), hint: t('ribbon.cmd.csv.tooltip') },
+					{ label: t('ribbon.cmd.xlsx.label'), icon: 'table', size: 'small' as const, run: data('xlsx'), hint: t('ribbon.cmd.xlsx.tooltip') },
 					{
-						label: 'Autres fichiers', size: 'small' as const,
+						label: t('ribbon.cmd.otherFiles.label'), size: 'small' as const,
 						icon: 'open',
 						run: ondata ? openItems : undefined,
-						hint: 'Nouvelle requête à partir d’un fichier JSON, Parquet, ou d’une base SQLite',
+						hint: t('ribbon.cmd.otherFiles.tooltip'),
 						items: [
 							{ label: 'JSON', run: data('json') },
 							{ label: 'Parquet', run: data('parquet') },
-							{ label: 'Base SQLite', run: data('sqlite') }
+							{ label: t('ribbon.cmd.otherFiles.sqlite'), run: data('sqlite') }
 						]
 					},
 					{
-						label: 'Base de données', size: 'small' as const,
+						label: t('ribbon.cmd.database.label'), size: 'small' as const,
 						icon: 'database',
 						run: ondata ? openItems : undefined,
-						hint: 'Nouvelle requête sur une base de données (lecture seule)',
+						hint: t('ribbon.cmd.database.tooltip'),
 						items: [
 							{ label: 'PostgreSQL', run: data('postgres') },
 							{ label: 'MySQL / MariaDB', run: data('mysql') },
@@ -698,280 +720,298 @@
 						]
 					},
 					// Serveur Lattis : bouton à lui, à côté des bases de données (comme les sources propres d'Excel).
-					...(sharedWorkbooksEnabled() ? [{ label: 'Serveur Lattis', icon: 'link' as const, size: 'small' as const, run: data('lattis'), hint: 'Nouvelle requête sur un tableau d’un Serveur Lattis ou une donnée de son Data Lake (lecture seule)' }] : []),
-					{ label: 'Web', icon: 'web', size: 'small' as const, run: data('web'), hint: 'Nouvelle requête à partir d’une API web qui répond en JSON (lecture seule)' },
+					...(sharedWorkbooksEnabled() ? [{ label: t('ribbon.cmd.lattisServer.label'), icon: 'link' as const, size: 'small' as const, run: data('lattis'), hint: t('ribbon.cmd.lattisServer.tooltip') }] : []),
+					{ label: t('ribbon.cmd.web.label'), icon: 'web', size: 'small' as const, run: data('web'), hint: t('ribbon.cmd.web.tooltip') },
 				])
 			},
 			{
-				title: 'Requêtes et connexions',
+				id: 'queries',
+				title: t('ribbon.group.queries'),
 				// Les deux en grand (choix de Louis, 19/10) : un petit bouton seul à côté faisait vide.
 				compact: true,
 				commands: readOnly([
-					{ label: 'Actualiser tout', icon: 'refresh', size: 'big', run: data('refreshAll'), hint: 'Relire les sources de toutes les requêtes chargées, remplacer leurs tableaux et recalculer (Ctrl+Alt+F5)' },
-					{ label: 'Requêtes et connexions', icon: 'query', size: 'big', run: data('queries'), hint: 'Volet des requêtes d’import et des connexions du classeur' }
+					{ label: t('ribbon.cmd.refreshAll.label'), icon: 'refresh', size: 'big', run: data('refreshAll'), hint: t('ribbon.cmd.refreshAll.tooltip') },
+					{ label: t('ribbon.cmd.queries.label'), icon: 'query', size: 'big', run: data('queries'), hint: t('ribbon.cmd.queries.tooltip') }
 				])
 			},
 			{
-				title: 'Trier et filtrer',
+				id: 'sortFilter',
+				title: t('ribbon.group.sortFilter'),
 				// Comme Excel : les deux tris en petites icônes l'une sous l'autre,
 				// Filtrer en grand, Effacer et Erreurs seulement en petit à côté.
 				compact: true,
 				commands: [
-					{ label: 'Trier A → Z', icon: 'sort-asc', local: true, data: true, run: onsort ? () => onsort(false) : undefined, hint: 'Trier le tableau par la colonne active, croissant' },
-					{ label: 'Trier Z → A', icon: 'sort-desc', local: true, data: true, run: onsort ? () => onsort(true) : undefined, hint: 'Trier le tableau par la colonne active, décroissant' },
-					{ label: 'Tri personnalisé…', icon: 'sort', local: true, data: true, run: onsortcustom, hint: 'Trier le tableau par la colonne active dans un ordre choisi (Jours, Mois, ordre libre)' },
-					{ label: 'Filtrer', icon: 'filter', size: 'big', ro: true, run: flt('filter'), hint: 'Filtrer le tableau par la colonne active (Ctrl+Maj+L)' },
-					{ label: 'Effacer', icon: 'clear-format', size: 'small', ro: true, run: filters ? flt('clear') : undefined, hint: filters ? 'Effacer les filtres du tableau actif' : 'Effacer : le tableau de la cellule active n’est pas filtré' },
-					{ label: 'Erreurs seulement', icon: 'warning', size: 'small', ro: true, on: errorsOnly, run: flt('errors'), hint: errorsOnly ? 'Afficher de nouveau toutes les lignes de la colonne active' : 'Afficher seulement les saisies hors type de la colonne active' }
+					{ label: t('ribbon.cmd.sortAsc.label'), icon: 'sort-asc', local: true, data: true, run: onsort ? () => onsort(false) : undefined, hint: t('ribbon.cmd.sortAsc.tooltip') },
+					{ label: t('ribbon.cmd.sortDesc.label'), icon: 'sort-desc', local: true, data: true, run: onsort ? () => onsort(true) : undefined, hint: t('ribbon.cmd.sortDesc.tooltip') },
+					{ label: t('ribbon.cmd.sortCustom.label'), icon: 'sort', local: true, data: true, run: onsortcustom, hint: t('ribbon.cmd.sortCustom.tooltip') },
+					{ label: t('ribbon.cmd.filter.label'), icon: 'filter', size: 'big', ro: true, run: flt('filter'), hint: t('ribbon.cmd.filter.tooltip') },
+					{ label: t('ribbon.cmd.clearFilter.label'), icon: 'clear-format', size: 'small', ro: true, run: filters ? flt('clear') : undefined, hint: filters ? t('ribbon.cmd.clearFilter.tooltipOn') : t('ribbon.cmd.clearFilter.tooltipOff') },
+					{ label: t('ribbon.cmd.errorsOnly.label'), icon: 'warning', size: 'small', ro: true, on: errorsOnly, run: flt('errors'), hint: errorsOnly ? t('ribbon.cmd.errorsOnly.tooltipOn') : t('ribbon.cmd.errorsOnly.tooltipOff') }
 				]
 			},
 			{
-				title: 'Outils de données',
+				id: 'dataTools',
+				title: t('ribbon.group.dataTools'),
 				// Comme Excel : Convertir en grand, les autres outils en petit à côté.
 				compact: true,
 				commands: [
-					{ label: 'Convertir', icon: 'text-columns', size: 'big', run: ontextcols, hint: 'Convertir le texte en colonnes : couper le contenu de la colonne sélectionnée (séparateurs ou largeur fixe) en plusieurs colonnes' },
-					{ label: 'Supprimer les doublons', icon: 'remove-duplicates', size: 'small', data: true, run: ondedup, hint: 'Supprimer les lignes en double du tableau actif' },
-					{ label: 'Validation des données', icon: 'validation', size: 'small', local: true, run: onvalidation, hint: 'Liste déroulante : valeurs permises dans la sélection (ou toute une colonne de tableau), les autres saisies sont refusées' },
-					{ label: 'Regrouper des onglets…', icon: 'append-queries', size: 'small', createsSheet: true, run: onmergesheets, hint: 'Réunir les tableaux de plusieurs onglets aux mêmes colonnes (un par mois, par année, par ville…) en un seul tableau, avec une colonne de catégorie' }
+					{ label: t('ribbon.cmd.textToColumns.label'), icon: 'text-columns', size: 'big', run: ontextcols, hint: t('ribbon.cmd.textToColumns.tooltip') },
+					{ label: t('ribbon.cmd.dedup.label'), icon: 'remove-duplicates', size: 'small', data: true, run: ondedup, hint: t('ribbon.cmd.dedup.tooltip') },
+					{ label: t('ribbon.cmd.validation.label'), icon: 'validation', size: 'small', local: true, run: onvalidation, hint: t('ribbon.cmd.validation.tooltip') },
+					{ label: t('ribbon.cmd.mergeSheets.label'), icon: 'append-queries', size: 'small', createsSheet: true, run: onmergesheets, hint: t('ribbon.cmd.mergeSheets.tooltip') }
 				]
 			}
 		],
-		Formules: [
+		formulas: [
 			{
-				title: 'Bibliothèque',
+				id: 'library',
+				title: t('ribbon.group.library'),
 				commands: [
-					{ label: 'Insérer une fonction', icon: 'function', run: onformula ? () => onformula('insert') : undefined, hint: 'Choisir une fonction et commencer la formule dans la cellule active (Maj+F3)' },
-					{ label: 'Somme automatique', icon: 'autosum', run: onformula ? () => onformula('sum') : undefined, hint: 'SOMME de la colonne du tableau au-dessus (Alt+=)' },
-					{ label: 'REFERENCE', icon: 'reference', run: onformula ? () => onformula('reference') : undefined, hint: 'REFERENCE(Tableau[Colonne]; clé) : la RECHERCHEV de Lattis' }
+					{ label: t('ribbon.cmd.insertFunction.label'), icon: 'function', run: onformula ? () => onformula('insert') : undefined, hint: t('ribbon.cmd.insertFunction.tooltip') },
+					{ label: t('ribbon.cmd.autoSum.label'), icon: 'autosum', run: onformula ? () => onformula('sum') : undefined, hint: t('ribbon.cmd.autoSum.tooltip') },
+					{ label: 'REFERENCE', icon: 'reference', run: onformula ? () => onformula('reference') : undefined, hint: t('ribbon.cmd.reference.tooltip') }
 				]
 			},
 			{
-				title: 'Audit',
+				id: 'audit',
+				title: t('ribbon.group.audit'),
 				// Pas de « Supprimer les flèches » : un clic dans la grille (ou Échap) les efface.
 				commands: readOnly([
-					{ label: 'Afficher les liens', icon: 'dependency-graph', run: onaudit ? () => onaudit('show') : undefined, hint: 'Flèches des liens de toutes les cellules sélectionnées : bleues depuis ce que lisent leurs formules, rouges vers les formules qui les lisent ; un clic dans la grille (ou Échap) les efface' }
+					{ label: t('ribbon.cmd.showLinks.label'), icon: 'dependency-graph', run: onaudit ? () => onaudit('show') : undefined, hint: t('ribbon.cmd.showLinks.tooltip') }
 				])
 			},
 			{
-				title: 'Calcul',
+				id: 'calculation',
+				title: t('ribbon.group.calculation'),
 				commands: [
-					{ label: 'Calculer', icon: 'calculate', ro: true, run: onrecalc, hint: 'Recalculer les formules et renouveler AUJOURDHUI, MAINTENANT et ALEA (F9, ou F5 hors d’un tableau importé)' },
-					{ label: 'Convertir en valeurs', icon: 'type-number', run: ontovalues, hint: 'Remplacer les formules de la sélection par leurs valeurs actuelles : colonnes calculées (devenues colonnes saisies, au type de leurs valeurs) et cellules libres (Ctrl+Z pour annuler)' }
+					{ label: t('ribbon.cmd.calculate.label'), icon: 'calculate', ro: true, run: onrecalc, hint: t('ribbon.cmd.calculate.tooltip') },
+					{ label: t('ribbon.cmd.toValues.label'), icon: 'type-number', run: ontovalues, hint: t('ribbon.cmd.toValues.tooltip') }
 				]
 			}
 		],
-		Révision: [
+		review: [
 			{
-				title: 'Notes',
+				id: 'notes',
+				title: t('ribbon.group.notes'),
 				// Comme les commentaires d'Excel : la note en grand, Supprimer en petit à côté.
 				compact: true,
 				commands: local([
-					{ label: note ? 'Modifier la note' : 'Nouvelle note', icon: 'note', size: 'big', run: onnote ? () => onnote('edit') : undefined, hint: note ? 'Modifier la note de la cellule active (Maj+F2)' : 'Note sur la cellule active : coin rouge, affichée au survol (Maj+F2)' },
-					{ label: 'Supprimer la note', icon: 'trash', size: 'small', run: onnote && note ? () => onnote('delete') : undefined, hint: note ? 'Supprimer la note de la cellule active' : 'Supprimer la note : la cellule active n’en a pas' }
+					{ label: note ? t('ribbon.cmd.note.edit') : t('ribbon.cmd.note.new'), icon: 'note', size: 'big', run: onnote ? () => onnote('edit') : undefined, hint: note ? t('ribbon.cmd.note.tooltipEdit') : t('ribbon.cmd.note.tooltipNew') },
+					{ label: t('ribbon.cmd.deleteNote.label'), icon: 'trash', size: 'small', run: onnote && note ? () => onnote('delete') : undefined, hint: note ? t('ribbon.cmd.deleteNote.tooltip') : t('ribbon.cmd.deleteNote.tooltipNone') }
 				])
 			},
 			{
-				title: 'Protéger',
+				id: 'protect',
+				title: t('ribbon.group.protect'),
 				commands: readOnly([
-					{ label: sheetOwnProtected ? prot.unprotect : prot.protect, icon: 'lock-sheet', on: sheetOwnProtected, run: onprotect ? () => onprotect('sheet') : undefined, hint: sheetOwnProtected ? prot.unprotect : `${prot.protect} : plus aucune modification de son contenu (mot de passe facultatif)` },
+					{ label: sheetOwnProtected ? prot.unprotect : prot.protect, icon: 'lock-sheet', on: sheetOwnProtected, run: onprotect ? () => onprotect('sheet') : undefined, hint: sheetOwnProtected ? prot.unprotect : t('ribbon.cmd.protectSheet.tooltip', { action: prot.protect }) },
 					...(context === 'sheet'
 						? [
 								{
-									label: structureProtected && !structureByBook ? 'Ôter la protection de la structure' : 'Protéger la structure',
+									label: structureProtected && !structureByBook ? t('ribbon.cmd.protectStructure.unprotect') : t('ribbon.cmd.protectStructure.protect'),
 									icon: 'lock-structure' as const,
 									on: structureProtected && !structureByBook,
 									// Feuille déjà protégée en entier, ou structure verrouillée par le classeur : rien à poser ici.
 									run: onprotect && (structureProtected ? !structureByBook : !sheetProtected) ? () => onprotect('structure') : undefined,
 									hint:
 										structureProtected && !structureByBook
-											? 'Ôter la protection de la structure de la feuille'
+											? t('ribbon.cmd.protectStructure.tooltipUnprotect')
 											: structureByBook
-												? 'Structure de toutes les feuilles protégée avec le classeur (Révision › Ôter la protection du classeur)'
+												? t('ribbon.cmd.protectStructure.tooltipByBook')
 												: sheetProtected
-													? 'Protéger la structure : inutile, la feuille est déjà protégée en entier'
-													: 'Protéger la structure : tout est verrouillé sauf la saisie dans les tableaux (cellules libres, mise en forme, colonnes, tableaux, objets et onglet) ; mot de passe facultatif'
+													? t('ribbon.cmd.protectStructure.tooltipSheet')
+													: t('ribbon.cmd.protectStructure.tooltip')
 								}
 							]
 						: []),
-					{ label: workbookProtected ? 'Ôter la protection du classeur' : 'Protéger le classeur', icon: 'lock-book', on: workbookProtected, run: onprotect ? () => onprotect('workbook') : undefined, hint: workbookProtected ? 'Ôter la protection de la structure du classeur' : 'Protéger la structure du classeur : ajouter, supprimer, renommer ou déplacer des feuilles est refusé' }
+					{ label: workbookProtected ? t('ribbon.cmd.protectWorkbook.unprotect') : t('ribbon.cmd.protectWorkbook.protect'), icon: 'lock-book', on: workbookProtected, run: onprotect ? () => onprotect('workbook') : undefined, hint: workbookProtected ? t('ribbon.cmd.protectWorkbook.tooltipUnprotect') : t('ribbon.cmd.protectWorkbook.tooltip') }
 				])
 			}
 		],
-		Affichage: [
+		view: [
 			{
-				title: 'Afficher',
+				id: 'show',
+				title: t('ribbon.group.show'),
 				// Comme Excel : Sauts de page (mode d'affichage) en grand, les cases
 				// à cocher en petit avec leur libellé, puis Zoom, 100 % et Figer les volets.
 				compact: true,
 				commands: readOnly([
-					{ label: 'Sauts de page', icon: 'page-break', size: 'big', on: pageBreaks, run: onpagebreaks ? () => onpagebreaks(!pageBreaks) : undefined, hint: pageBreaks ? 'Masquer les sauts de page (traits pointillés) et la zone d’impression' : 'Afficher les sauts de page de l’impression (traits pointillés) et la zone d’impression' },
-					{ label: 'Quadrillage', icon: 'gridlines', size: 'small', on: gridlines, run: ongridlines ? () => ongridlines(!gridlines) : undefined, hint: gridlines ? 'Masquer le quadrillage de la feuille' : 'Afficher le quadrillage de la feuille' },
-					{ label: 'En-têtes A1', icon: 'headings', size: 'small', on: headings, run: onheadings ? () => onheadings(!headings) : undefined, hint: headings ? 'Lettres et numéros seulement pendant la saisie d’une formule' : 'Toujours afficher les lettres de colonnes et numéros de lignes' },
+					{ label: t('ribbon.cmd.breaks.label'), icon: 'page-break', size: 'big', on: pageBreaks, run: onpagebreaks ? () => onpagebreaks(!pageBreaks) : undefined, hint: pageBreaks ? t('ribbon.cmd.pageBreaks.tooltipOn') : t('ribbon.cmd.pageBreaks.tooltipOff') },
+					{ label: t('ribbon.cmd.gridlines.label'), icon: 'gridlines', size: 'small', on: gridlines, run: ongridlines ? () => ongridlines(!gridlines) : undefined, hint: gridlines ? t('ribbon.cmd.gridlines.tooltipOn') : t('ribbon.cmd.gridlines.tooltipOff') },
+					{ label: t('ribbon.cmd.headings.label'), icon: 'headings', size: 'small', on: headings, run: onheadings ? () => onheadings(!headings) : undefined, hint: headings ? t('ribbon.cmd.showHeadings.tooltipOn') : t('ribbon.cmd.showHeadings.tooltipOff') },
 					animateCmd,
 					{
-						label: 'Zoom',
+						label: t('ribbon.cmd.zoom.label'),
 						icon: 'zoom',
 						size: 'big',
 						run: onzoom ? openItems : undefined,
 						on: Math.abs(zoom - 1) > 0.001,
-						hint: `Zoom de la feuille : ${zoomLabel(zoom)} (Ctrl+molette, ou le curseur de la barre d’état)`,
+						hint: t('ribbon.cmd.zoom.tooltip', { zoom: zoomLabel(zoom) }),
 						items: ZOOM_LEVELS.map((z) => ({ label: zoomLabel(z), run: onzoom ? () => onzoom(z) : undefined, on: Math.abs(zoom - z) < 0.001 }))
 					},
-					{ label: '100 %', icon: 'zoom-100', size: 'big', run: onzoom ? () => onzoom(1) : undefined, hint: 'Revenir au zoom 100 %' },
+					{ label: t('ribbon.cmd.zoom100.label'), icon: 'zoom-100', size: 'big', run: onzoom ? () => onzoom(1) : undefined, hint: t('ribbon.cmd.zoom100.tooltip') },
 					{
-						label: 'Figer les volets',
+						label: t('ribbon.cmd.freeze.label'),
 						icon: 'freeze-panes',
 						size: 'big',
 						run: onfreeze ? openItems : undefined,
 						on: frozen,
-						hint: frozen ? `Volets figés : ${freeze!.rows} ligne(s), ${freeze!.cols} colonne(s)` : 'Garder des lignes et des colonnes affichées pendant le défilement',
+						hint: frozen ? t('ribbon.cmd.freeze.tooltipOn', { rows: freeze!.rows, cols: freeze!.cols }) : t('ribbon.cmd.freeze.tooltipOff'),
 						items: [
-							...(frozen ? [{ label: 'Libérer les volets', run: frz('none') }] : []),
-							{ label: 'Figer les volets (à la cellule active)', run: frz('cell'), on: frozen && !(freeze!.rows === 1 && freeze!.cols === 0) && !(freeze!.rows === 0 && freeze!.cols === 1) },
-							{ label: 'Figer la ligne supérieure', run: frz('row'), on: freeze?.rows === 1 && freeze.cols === 0 },
-							{ label: 'Figer la première colonne', run: frz('col'), on: freeze?.rows === 0 && freeze.cols === 1 }
+							...(frozen ? [{ label: t('ribbon.cmd.freeze.unfreeze'), run: frz('none') }] : []),
+							{ label: t('ribbon.cmd.freeze.cell'), run: frz('cell'), on: frozen && !(freeze!.rows === 1 && freeze!.cols === 0) && !(freeze!.rows === 0 && freeze!.cols === 1) },
+							{ label: t('ribbon.cmd.freeze.row'), run: frz('row'), on: freeze?.rows === 1 && freeze.cols === 0 },
+							{ label: t('ribbon.cmd.freeze.col'), run: frz('col'), on: freeze?.rows === 0 && freeze.cols === 1 }
 						]
 					}
 				])
 			},
 			{
-				title: 'Thème',
+				id: 'theme',
+				title: t('ribbon.group.theme'),
 				commands: [
 					{
-						label: 'Thème',
+						label: t('ribbon.cmd.theme.label'),
 						icon: 'theme',
 						size: 'big',
 						run: ontheme ? openItems : undefined,
-						hint: `Couleurs des tableaux du classeur : tableaux ordinaires et tableaux d’une source externe (thème : ${themes.find((t) => t.on)?.name ?? 'personnalisé'})`,
+						hint: t('ribbon.cmd.theme.tooltip', { theme: themes.find((t) => t.on)?.name ?? t('ribbon.cmd.theme.customName') }),
 						items: [
 							...themes.map((t) => ({ label: t.name, swatch: [t.table, t.source] as [string, string], on: t.on, run: ontheme ? () => ontheme(t.id) : undefined })),
-							{ label: 'Personnaliser…', sep: true, on: !themes.some((t) => t.on), run: ontheme ? () => ontheme('custom') : undefined }
+							{ label: t('ribbon.cmd.theme.customize'), sep: true, on: !themes.some((t) => t.on), run: ontheme ? () => ontheme('custom') : undefined }
 						]
 					}
 				]
 			},
-			...(onbench ? [{ title: 'Mesures (prototype)', commands: readOnly([{ label: 'Mesurer la grille', icon: 'stopwatch', run: () => onbench() }]) }] : [])
+			...(onbench ? [{ id: 'bench', title: t('ribbon.group.bench'), commands: readOnly([{ label: t('ribbon.cmd.bench.label'), icon: 'stopwatch', run: () => onbench() }]) }] : [])
 		]
 	});
 
 	// Document : un traitement de texte (police, paragraphes,
 	// graphiques et boutons insérés dans le texte).
 	const docRibbons: Record<string, Group[]> = $derived({
-		Accueil: [
+		home: [
 			{
-				title: 'Annuler',
+				id: 'undo',
+				title: t('ribbon.group.undo'),
 				iconOk: true,
 				compact: true,
 				commands: [
-					{ label: 'Annuler', icon: 'undo', run: docState?.undo === false ? undefined : dc('undo'), hint: docState?.undo === false ? 'Rien à annuler' : 'Annuler la dernière modification du texte (Ctrl+Z)' },
-					{ label: 'Rétablir', icon: 'redo', run: docState?.redo === false ? undefined : dc('redo'), hint: docState?.redo === false ? 'Rien à rétablir' : 'Rétablir (Ctrl+Y)' }
+					{ label: t('ribbon.cmd.undo.label'), icon: 'undo', run: docState?.undo === false ? undefined : dc('undo'), hint: docState?.undo === false ? t('ribbon.cmd.undo.none') : t('ribbon.cmd.undo.docTooltip') },
+					{ label: t('ribbon.cmd.redo.label'), icon: 'redo', run: docState?.redo === false ? undefined : dc('redo'), hint: docState?.redo === false ? t('ribbon.cmd.redo.none') : t('ribbon.cmd.redo.docTooltip') }
 				]
 			},
 			{
-				title: 'Presse-papiers',
+				id: 'clipboard',
+				title: t('ribbon.group.clipboard'),
 				iconOk: true,
 				compact: true,
 				commands: [
-					{ label: 'Coller', icon: 'paste', size: 'big', run: dc('paste'), hint: 'Coller le texte (Ctrl+V)' },
-					{ label: 'Couper', icon: 'cut', size: 'small', run: dc('cut'), hint: 'Couper (Ctrl+X)' },
-					{ label: 'Copier', icon: 'copy', size: 'small', ro: true, run: dc('copy'), hint: 'Copier (Ctrl+C)' }
+					{ label: t('ribbon.cmd.paste.label'), icon: 'paste', size: 'big', run: dc('paste'), hint: t('ribbon.cmd.paste.docTooltip') },
+					{ label: t('ribbon.cmd.cut.label'), icon: 'cut', size: 'small', run: dc('cut'), hint: t('ribbon.cmd.cut.tooltip') },
+					{ label: t('ribbon.cmd.copy.label'), icon: 'copy', size: 'small', ro: true, run: dc('copy'), hint: t('ribbon.cmd.copy.tooltip') }
 				]
 			},
 			{
-				title: 'Police',
+				id: 'font',
+				title: t('ribbon.group.font'),
 				fonts: true,
 				iconOk: true,
 				// Comme Word : gras, italique, souligné, barré en petites icônes.
 				widest: 'icon',
 				commands: [
-					{ label: 'Gras', icon: 'bold', run: st({ b: 'toggle' }), hint: 'Gras (Ctrl+B)', on: !!cellStyle?.b },
-					{ label: 'Italique', icon: 'italic', run: st({ i: 'toggle' }), hint: 'Italique (Ctrl+I)', on: !!cellStyle?.i },
-					{ label: 'Souligné', icon: 'underline', run: st({ u: 'toggle' }), hint: 'Souligné (Ctrl+U)', on: !!cellStyle?.u },
-					{ label: 'Barré', icon: 'strike', run: dc('strike'), hint: 'Barré', on: !!docState?.strike },
-					{ label: 'Couleur de police', icon: 'font-color', run: st({ fg }), hint: 'Couleur de police (▾ : choisir la teinte)', color: 'fg' },
-					{ label: 'Surlignage', icon: 'font-color', run: st({ bg }), hint: 'Couleur de surlignage (▾ : choisir la teinte)', color: 'bg' },
-					{ label: 'Effacer', icon: 'clear-format', run: st(clearPatch()), hint: 'Effacer la mise en forme des caractères' }
+					{ label: t('ribbon.cmd.bold.label'), icon: 'bold', run: st({ b: 'toggle' }), hint: t('ribbon.cmd.bold.tooltip'), on: !!cellStyle?.b },
+					{ label: t('ribbon.cmd.italic.label'), icon: 'italic', run: st({ i: 'toggle' }), hint: t('ribbon.cmd.italic.tooltip'), on: !!cellStyle?.i },
+					{ label: t('ribbon.cmd.underline.label'), icon: 'underline', run: st({ u: 'toggle' }), hint: t('ribbon.cmd.underline.tooltip'), on: !!cellStyle?.u },
+					{ label: t('ribbon.cmd.strike.label'), icon: 'strike', run: dc('strike'), hint: t('ribbon.cmd.strike.tooltip'), on: !!docState?.strike },
+					{ label: t('ribbon.cmd.fontColor.label'), icon: 'font-color', run: st({ fg }), hint: t('ribbon.cmd.fontColor.tooltip'), color: 'fg' },
+					{ label: t('ribbon.cmd.highlight.label'), icon: 'font-color', run: st({ bg }), hint: t('ribbon.cmd.highlight.tooltip'), color: 'bg' },
+					{ label: t('ribbon.cmd.clearChars.label'), icon: 'clear-format', run: st(clearPatch()), hint: t('ribbon.cmd.clearChars.tooltip') }
 				]
 			},
 			{
-				title: 'Paragraphe',
+				id: 'paragraph',
+				title: t('ribbon.group.paragraph'),
 				iconOk: true,
 				// Comme Word : listes et blocs sur la première ligne, alignements sur la seconde.
 				rows: 2,
 				commands: [
-					{ label: 'Puces', icon: 'list-bullet', run: dc('block:bullet'), on: blockOn('bullet'), hint: 'Liste à puces' },
-					{ label: 'Numéros', icon: 'list-number', run: dc('block:ordered'), on: blockOn('ordered'), hint: 'Liste numérotée' },
-					{ label: 'Citation', icon: 'quote', run: dc('block:quote'), on: blockOn('quote'), hint: 'Citation (retrait et trait à gauche)' },
-					{ label: 'Code', icon: 'code-block', run: dc('block:code'), on: blockOn('code'), hint: 'Bloc de code (police à chasse fixe)' },
-					{ label: 'Gauche', icon: 'align-left', run: dc('align:left'), on: docState?.align === 'left', hint: 'Aligner à gauche' },
-					{ label: 'Centrer', icon: 'align-center', run: dc('align:center'), on: docState?.align === 'center', hint: 'Centrer' },
-					{ label: 'Droite', icon: 'align-right', run: dc('align:right'), on: docState?.align === 'right', hint: 'Aligner à droite' },
-					{ label: 'Justifier', icon: 'align-justify', run: dc('align:justify'), on: docState?.align === 'justify', hint: 'Justifier' }
+					{ label: t('ribbon.cmd.bullets.label'), icon: 'list-bullet', run: dc('block:bullet'), on: blockOn('bullet'), hint: t('ribbon.cmd.bullets.tooltip') },
+					{ label: t('ribbon.cmd.numbered.label'), icon: 'list-number', run: dc('block:ordered'), on: blockOn('ordered'), hint: t('ribbon.cmd.numbered.tooltip') },
+					{ label: t('ribbon.cmd.quote.label'), icon: 'quote', run: dc('block:quote'), on: blockOn('quote'), hint: t('ribbon.cmd.quote.tooltip') },
+					{ label: t('ribbon.cmd.code.label'), icon: 'code-block', run: dc('block:code'), on: blockOn('code'), hint: t('ribbon.cmd.code.tooltip') },
+					{ label: t('ribbon.cmd.alignLeft.label'), icon: 'align-left', run: dc('align:left'), on: docState?.align === 'left', hint: t('ribbon.cmd.alignLeft.tooltip') },
+					{ label: t('ribbon.cmd.alignCenter.label'), icon: 'align-center', run: dc('align:center'), on: docState?.align === 'center', hint: t('ribbon.cmd.alignCenter.tooltip') },
+					{ label: t('ribbon.cmd.alignRight.label'), icon: 'align-right', run: dc('align:right'), on: docState?.align === 'right', hint: t('ribbon.cmd.alignRight.tooltip') },
+					{ label: t('ribbon.cmd.justify.label'), icon: 'align-justify', run: dc('align:justify'), on: docState?.align === 'justify', hint: t('ribbon.cmd.justify.tooltip') }
 				]
 			},
 			{
-				title: 'Styles',
+				id: 'styles',
+				title: t('ribbon.group.styles'),
 				commands: [
 					{
-						label: 'Style',
+						label: t('ribbon.cmd.style.label'),
 						icon: 'heading',
 						run: ondoc ? openItems : undefined,
-						hint: 'Style du paragraphe : normal ou titre',
+						hint: t('ribbon.cmd.style.tooltip'),
 						items: [
-							{ label: 'Normal', run: dc('block:normal'), on: blockOn('normal') },
-							{ label: 'Titre 1', run: dc('block:h1'), on: blockOn('h1') },
-							{ label: 'Titre 2', run: dc('block:h2'), on: blockOn('h2') },
-							{ label: 'Titre 3', run: dc('block:h3'), on: blockOn('h3') }
+							{ label: t('ribbon.cmd.style.normal'), run: dc('block:normal'), on: blockOn('normal') },
+							{ label: t('ribbon.cmd.style.h1'), run: dc('block:h1'), on: blockOn('h1') },
+							{ label: t('ribbon.cmd.style.h2'), run: dc('block:h2'), on: blockOn('h2') },
+							{ label: t('ribbon.cmd.style.h3'), run: dc('block:h3'), on: blockOn('h3') }
 						]
 					}
 				]
 			},
 			// Imprimer ne modifie rien : permis sur un document protégé.
-			{ title: 'Imprimer', commands: [{ label: 'Imprimer / PDF', icon: 'printer', ro: true, run: dc('pdf'), hint: `Imprimer le document, ou l’enregistrer en PDF (${pdfPrinterHint()}), graphiques et tableaux croisés compris` }] }
+			{ id: 'print', title: t('ribbon.group.print'), commands: [{ label: t('ribbon.cmd.docPrint.label'), icon: 'printer', ro: true, run: dc('pdf'), hint: t('ribbon.cmd.docPrint.tooltip', { printer: pdfPrinterHint() }) }] }
 		],
-		Insertion: [
+		insert: [
 			// Le tableau croisé d'un Document est inséré dans le texte (il ne crée pas de feuille).
-			{ title: 'Tableaux', commands: [{ label: 'Tableau croisé dynamique', icon: 'pivot-table', run: dc('pivot'), hint: 'Tableau croisé dynamique d’un tableau du classeur, inséré dans le texte et recalculé avec lui' }] },
+			{ id: 'tables', title: t('ribbon.group.tables'), commands: [{ label: t('ribbon.cmd.pivot.label'), icon: 'pivot-table', run: dc('pivot'), hint: t('ribbon.cmd.pivot.docTooltip') }] },
 			{
-				title: 'Graphiques',
+				id: 'charts',
+				title: t('ribbon.group.charts'),
 				commands: [
-					...(['bar', 'line', 'pie', 'scatter'] as const).map((k) => ({ label: kindInfo(k)!.label, icon: kindInfo(k)!.icon, run: dc(`chart:${k}`), hint: `${kindInfo(k)!.label} d’un tableau du classeur, inséré dans le texte` })),
-					{ label: 'Autres graphiques', icon: 'chart-more', run: ondoc ? openItems : undefined, hint: moreHint, items: MORE_KINDS.map((k) => ({ label: k.label, icon: k.icon, run: dc(`chart:${k.kind}`) })) }
+					...(['bar', 'line', 'pie', 'scatter'] as const).map((k) => ({ label: kindInfo(k)!.label, icon: kindInfo(k)!.icon, run: dc(`chart:${k}`), hint: t('ribbon.cmd.chart.docTooltip', { chart: kindInfo(k)!.label }) })),
+					{ label: t('ribbon.cmd.moreCharts.label'), icon: 'chart-more', run: ondoc ? openItems : undefined, hint: moreHint, items: MORE_KINDS.map((k) => ({ label: k.label, icon: k.icon, run: dc(`chart:${k.kind}`) })) }
 				]
 			},
 			{
-				title: 'Contrôles',
+				id: 'controls',
+				title: t('ribbon.group.controls'),
 				commands: [
-					...(scriptingEnabled() ? [{ label: 'Bouton', icon: 'button' as const, run: dc('button'), hint: 'Bouton dans le texte : un clic exécute un script de l’onglet Script (ou l’une de ses fonctions)' }] : []),
-					{ label: 'Champ', icon: 'text-input', run: dc('input'), hint: `Contrôle lié à une cellule d’une feuille : champ texte, zone de texte, case à cocher, liste déroulante ou fichier${scriptingEnabled() ? ', pilotable par les scripts (controls.*)' : ''}` }
+					...(scriptingEnabled() ? [{ label: t('ribbon.cmd.button.label'), icon: 'button' as const, run: dc('button'), hint: t('ribbon.cmd.button.docTooltip') }] : []),
+					{ label: t('ribbon.cmd.field.label'), icon: 'text-input', run: dc('input'), hint: scriptingEnabled() ? t('ribbon.cmd.field.docTooltipScript') : t('ribbon.cmd.field.docTooltip') }
 				]
 			},
 			{
-				title: 'Liens',
+				id: 'links',
+				title: t('ribbon.group.links'),
 				commands: [
-					{ label: 'Lien', icon: 'link', run: dc('link'), on: !!docState?.link, hint: 'Lien vers une page web (Ctrl+clic pour l’ouvrir)' },
-					{ label: 'Image', icon: 'image', run: dc('image'), hint: 'Insérer une image (enregistrée dans le classeur)' }
+					{ label: t('ribbon.cmd.link.label'), icon: 'link', run: dc('link'), on: !!docState?.link, hint: t('ribbon.cmd.link.tooltip') },
+					{ label: t('ribbon.cmd.image.label'), icon: 'image', run: dc('image'), hint: t('ribbon.cmd.image.tooltip') }
 				]
 			}
 		],
-		Révision: sheetRibbons.Révision.filter((g) => g.title === 'Protéger'),
-		Affichage: [{ title: 'Afficher', commands: [animateCmd] }]
+		review: sheetRibbons.review.filter((g) => g.id === 'protect'),
+		view: [{ id: 'show', title: t('ribbon.group.show'), commands: [animateCmd] }]
 	});
 	// Page web : Annuler, Protéger et Animations (l'éditeur de la page a ses propres commandes).
 	const htmlRibbons: Record<string, Group[]> = $derived({
-		Accueil: sheetRibbons.Accueil.filter((g) => g.title === 'Annuler'),
-		Révision: sheetRibbons.Révision.filter((g) => g.title === 'Protéger'),
-		Affichage: docRibbons.Affichage
+		home: sheetRibbons.home.filter((g) => g.id === 'undo'),
+		review: sheetRibbons.review.filter((g) => g.id === 'protect'),
+		view: docRibbons.view
 	});
 	// Mise en page : des groupes de l'onglet Affichage (demande de Louis), sans
 	// refaire ses cases « Afficher » (quadrillage, en-têtes) : seulement l'impression.
 	const sheetWithPage: Record<string, Group[]> = $derived({
 		...sheetRibbons,
-		Affichage: [
-			...sheetRibbons.Affichage,
-			...(sheetRibbons['Mise en page'] ?? []).map((g) =>
-				g.title === 'Options de la feuille' ? { ...g, title: 'Impression', commands: g.commands.filter((c) => c.label.startsWith('Imprimer')) } : g
+		view: [
+			...sheetRibbons.view,
+			...(sheetRibbons.pageLayout ?? []).map((g) =>
+				g.id === 'sheetOptions' ? { ...g, id: 'printing', title: t('ribbon.group.printing'), commands: g.commands.filter((c) => c.icon === 'printer') } : g
 			)
 		]
 	});
@@ -979,7 +1019,7 @@
 	// Onglets du ruban qui ont des commandes pour l'onglet affiché.
 	const shownTabs = $derived(tabs.filter((t) => (allRibbons[t]?.length ?? 0) > 0));
 	$effect(() => {
-		if (!isView(tab) && !shownTabs.includes(tab as (typeof tabs)[number])) tab = 'Accueil';
+		if (!isView(tab) && !shownTabs.includes(tab as (typeof tabs)[number])) tab = 'home';
 	});
 
 	// Grisage (ribbon.ts) : protection de la feuille ou du Document, du
@@ -998,15 +1038,22 @@
 		return measureCtx.measureText(s).width;
 	};
 	// Groupes masqués (clic droit sur le nom d'un groupe), par onglet :
-	// « onglet|groupe », gardés sur ce poste. Clic droit dans le vide à droite :
-	// les réafficher.
+	// « onglet|groupe » (identifiants), gardés sur ce poste. Clic droit dans le
+	// vide à droite : les réafficher.
 	const HIDE_KEY = 'lattis.ribbon.hidden';
 	let hiddenGroups = $state<string[]>(readHidden());
-	let hideMenu = $state<{ x: number; y: number; title?: string } | null>(null);
+	let hideMenu = $state<{ x: number; y: number; group?: { id: string; title: string } } | null>(null);
+	/** Entrée d'avant les identifiants (« Accueil|Presse-papiers ») : convertie par les libellés français. */
+	function legacyHidden(x: string): string {
+		const [tb, gr] = x.split('|');
+		const tabId = Object.entries(frRibbon.tabs).find(([, v]) => v === tb)?.[0];
+		const groupId = Object.entries(frRibbon.group).find(([, v]) => v === gr)?.[0];
+		return tabId && groupId ? `${tabId}|${groupId}` : x;
+	}
 	function readHidden(): string[] {
 		try {
 			const v = JSON.parse(localStorage.getItem(HIDE_KEY) ?? '[]');
-			return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : [];
+			return Array.isArray(v) ? v.filter((x) => typeof x === 'string').map(legacyHidden) : [];
 		} catch {
 			return [];
 		}
@@ -1019,8 +1066,8 @@
 			// stockage indisponible : le choix vaut pour la session
 		}
 	}
-	const visibleGroups = $derived(isView(tab) ? [] : (ribbons[tab] ?? []).filter((g) => !hiddenGroups.includes(`${tab}|${g.title}`)));
-	const hiddenHere = $derived((ribbons[tab] ?? []).filter((g) => hiddenGroups.includes(`${tab}|${g.title}`)).map((g) => g.title));
+	const visibleGroups = $derived(isView(tab) ? [] : (ribbons[tab] ?? []).filter((g) => !hiddenGroups.includes(`${tab}|${g.id}`)));
+	const hiddenHere = $derived((ribbons[tab] ?? []).filter((g) => hiddenGroups.includes(`${tab}|${g.id}`)).map((g) => ({ id: g.id, title: g.title })));
 
 	type ShapesArr = GroupShape[];
 	const shapes = $derived(
@@ -1144,7 +1191,7 @@
 	function select(t: typeof tab, keep = false) {
 		peek = folded && !isView(t) && (keep || !(peek && tab === t));
 		tab = t;
-		onview(t === 'SQL' ? 'sql' : t === 'SCRIPT' ? 'script' : 'grid');
+		onview(t === 'sql' ? 'sql' : t === 'script' ? 'script' : 'grid');
 	}
 
 	// --- Clavier : KeyTips (Alt ou F10) et flèches, comme Excel -------------
@@ -1161,12 +1208,12 @@
 	const tabEls = () => [...headerEl.querySelectorAll<HTMLElement>('.tabs .tab')].filter(usable);
 	const cmdEls = () => (groupsEl?.isConnected ? tabbables(groupsEl) : []);
 	const tipLabel = (el: HTMLElement) => el.dataset.kt || el.getAttribute('aria-label') || el.title || el.textContent?.trim() || '';
-	const activeTabEl = () => tabEls().find((el) => el.dataset.label === tab) ?? tabEls()[0];
+	const activeTabEl = () => tabEls().find((el) => el.dataset.tab === tab) ?? tabEls()[0];
 
 	function tipsAt(level: 'tabs' | 'cmds'): Tip[] {
 		const els = level === 'tabs' ? tabEls() : cmdEls();
-		const tabName = (el: HTMLElement) => el.dataset.label ?? el.getAttribute('aria-label') ?? '';
-		const codes = level === 'tabs' ? els.map((el) => TAB_TIPS[tabName(el)] ?? keyChars(tabName(el))[0] ?? '') : assignKeyTips(els.map(tipLabel), COMMAND_TIPS);
+		const tabId = (el: HTMLElement) => el.dataset.tab ?? '';
+		const codes = level === 'tabs' ? els.map((el) => TAB_TIPS[tabId(el)] ?? keyChars(el.dataset.label ?? el.getAttribute('aria-label') ?? '')[0] ?? '') : assignKeyTips(els.map(tipLabel), commandTips());
 		return els.map((el, i) => {
 			const r = el.getBoundingClientRect();
 			return { el, tip: codes[i], x: r.left + r.width / 2, y: r.bottom - (level === 'tabs' ? 10 : 8) };
@@ -1181,13 +1228,13 @@
 	}
 
 	async function openTab(el: HTMLElement) {
-		const t = el.dataset.label ?? '';
-		if (!t || t === 'Fichier' || t === 'SQL' || t === 'SCRIPT' || t === 'Assistant ✦') {
+		const id = el.dataset.tab ?? '';
+		if (!tabs.includes(id as (typeof tabs)[number])) {
 			kt = null;
 			el.click(); // Fichier : son menu prend le focus (ouvert au clavier) ; ? : l'aide
 			return;
 		}
-		select(t as typeof tab, true);
+		select(id as typeof tab, true);
 		await tick();
 		// Le ruban se compacte (fit) puis se remesure : deux images plus tard, il est en place.
 		for (let i = 0; i < 2; i++) await new Promise((r) => requestAnimationFrame(r));
@@ -1333,7 +1380,7 @@
 			if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
 				to = ts[cycle(ts.length, ti, e.key === 'ArrowRight' ? 1 : -1)];
 				// Comme Excel, l'onglet du ruban suit (pas Fichier, ni SQL et SCRIPT qui changent de vue).
-				const l = to.dataset.label as (typeof tabs)[number];
+				const l = to.dataset.tab as (typeof tabs)[number];
 				if (tabs.includes(l)) select(l);
 			} else if (e.key === 'ArrowDown') to = cs[0];
 		} else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') to = cs[cycle(cs.length, ci, 1)];
@@ -1346,10 +1393,10 @@
 
 	$effect(() => {
 		// Revenir à la grille depuis la page (onglet de feuille) remet un onglet de ruban.
-		if (view === 'grid' && isView(tab)) tab = 'Accueil';
+		if (view === 'grid' && isView(tab)) tab = 'home';
 		// Vue changée sans le ruban (retour de la pipette de l'onglet Script).
-		else if (view === 'script' && tab !== 'SCRIPT') tab = 'SCRIPT';
-		else if (view === 'sql' && tab !== 'SQL') tab = 'SQL';
+		else if (view === 'script' && tab !== 'script') tab = 'script';
+		else if (view === 'sql' && tab !== 'sql') tab = 'sql';
 	});
 </script>
 
@@ -1357,7 +1404,7 @@
 	{@const kind = c.color!}
 	{@const cur = kind === 'fg' ? fg : bg}
 		<div class="color-cmd">
-			<button class="cmd" disabled={!c.run} onclick={c.run} title="{tipOf(c, disabled)} ({colorName(cur, tableTheme.current.colors)})" aria-label="{c.label} : {colorName(cur, tableTheme.current.colors)}" data-kt={c.label}>
+			<button class="cmd" disabled={!c.run} onclick={c.run} title={t('ribbon.color.tooltip', { tip: tipOf(c, disabled), color: colorName(cur, tableTheme.current.colors) })} aria-label={t('ribbon.color.aria', { command: c.label, color: colorName(cur, tableTheme.current.colors) })} data-kt={c.label}>
 				<!-- La lettre montre l'effet : couleur du texte, ou fond rempli. -->
 				<span
 					class="swatch-icon"
@@ -1366,11 +1413,11 @@
 					aria-hidden="true">A</span
 				>
 			</button>
-			<button class="drop" disabled={!c.run} onclick={(ev) => openPalette(kind, ev)} title="Choisir la couleur" aria-label="{c.label} : choisir la couleur" aria-haspopup="menu" aria-expanded={palette === kind} data-kt="{c.label} ▾">▾</button>
+			<button class="drop" disabled={!c.run} onclick={(ev) => openPalette(kind, ev)} title={t('ribbon.color.choose')} aria-label={t('ribbon.color.chooseAria', { command: c.label })} aria-haspopup="menu" aria-expanded={palette === kind} data-kt="{c.label} ▾">▾</button>
 			{#if palette === kind}
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div class="palette" role="dialog" data-own-keys aria-label={c.label} style:left="{palettePos.x}px" style:top="{palettePos.y}px" use:dismiss={() => (palette = null)}>
-					<ColorPalette value={cur} none={kind === 'bg' ? 'Aucun remplissage' : 'Automatique'} autofocus onpick={(col) => pick(kind, col)} />
+					<ColorPalette value={cur} none={kind === 'bg' ? t('ribbon.color.noFill') : t('ribbon.color.auto')} autofocus onpick={(col) => pick(kind, col)} />
 				</div>
 			{/if}
 		</div>
@@ -1387,67 +1434,67 @@
 		if (from && !headerEl.contains(from)) returnTo = from;
 	}}
 >
-	<nav class="tabs" aria-label="Onglets du ruban" bind:this={tabsEl}>
+	<nav class="tabs" aria-label={t('ribbon.tabsAria')} bind:this={tabsEl}>
 		<div class="file-wrap">
-			<button class="tab file" data-label="Fichier" aria-haspopup="menu" aria-expanded={fileOpen} aria-keyshortcuts="Alt+F" onclick={(ev) => openFile(ev)}>Fichier</button>
+			<button class="tab file" data-tab="file" data-label={tabLabel('file')} aria-haspopup="menu" aria-expanded={fileOpen} aria-keyshortcuts="Alt+F" onclick={(ev) => openFile(ev)}>{tabLabel('file')}</button>
 			{#if fileOpen}
 				<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
-				<div class="file-menu" role="menu" aria-label="Fichier" style:left="{filePos.x}px" style:top="{filePos.y}px" use:dismiss={() => (fileOpen = false)}>
-					{#each [['new', 'Nouveau', 'Ctrl+N'], ['open', 'Ouvrir…', 'Ctrl+O']] as [a, label, keys] (a)}
+				<div class="file-menu" role="menu" aria-label={tabLabel('file')} style:left="{filePos.x}px" style:top="{filePos.y}px" use:dismiss={() => (fileOpen = false)}>
+					{#each [['new', t('ribbon.file.new'), 'Ctrl+N'], ['open', t('ribbon.file.open'), 'Ctrl+O']] as [a, label, keys] (a)}
 						<button role="menuitem" onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 					<!-- Comme Excel : les fichiers récents juste sous Ouvrir ; sous-menus au survol, par Entrée ou →, ← les referme. -->
-					<Submenu label="Ouvrir un fichier récent" disabled={!recent.length} title={recent.length ? undefined : 'Aucun fichier récent'}>
+					<Submenu label={t('ribbon.file.recent')} disabled={!recent.length} title={recent.length ? undefined : t('ribbon.file.recentNone')}>
 						{#each recent as r (recentKey(r))}
 							<button role="menuitem" title={recentDetail(r)} onclick={() => { fileOpen = false; onrecent?.(r); }}>{#if recentRemote(r)}<Icon name="cloud" size={14} />{/if}<span class="name">{recentLabel(r)}</span></button>
 						{/each}
 					</Submenu>
-					{#each [...(sharedWorkbooksEnabled() ? [['openRemote', 'Ouvrir depuis un serveur…', '']] : []), ['close', 'Fermer', 'Ctrl+W']] as [a, label, keys] (a)}
+					{#each [...(sharedWorkbooksEnabled() ? [['openRemote', t('ribbon.file.openRemote'), '']] : []), ['close', t('ribbon.file.close'), 'Ctrl+W']] as [a, label, keys] (a)}
 						<button role="menuitem" disabled={disabled && a === 'close'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 					<hr />
-					{#each [['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ...(platform.web && !shared ? [['download', 'Télécharger une copie', '']] : []), ...(sharedWorkbooksEnabled() && !shared ? [['share', 'Publier sur un serveur…', '']] : []), ...(sharedWorkbooksEnabled() && rights ? [['rights', 'Gérer l’accès…', '']] : []), ...(sharedWorkbooksEnabled() && republish ? [['republish', 'Republier…', '']] : []), ...(sharedWorkbooksEnabled() && reconnect ? [['reconnect', 'Réessayer la connexion', '']] : []), ...(sharedWorkbooksEnabled() && detach ? [['detach', 'Détacher du serveur…', '']] : []), ['import', 'Importer (CSV, Excel)…', '']] as [a, label, keys] (a)}
+					{#each [['save', t('ribbon.file.save'), 'Ctrl+S'], ['saveAs', t('ribbon.file.saveAs'), 'F12'], ...(platform.web && !shared ? [['download', t('ribbon.file.download'), '']] : []), ...(sharedWorkbooksEnabled() && !shared ? [['share', t('ribbon.file.share'), '']] : []), ...(sharedWorkbooksEnabled() && rights ? [['rights', t('ribbon.file.rights'), '']] : []), ...(sharedWorkbooksEnabled() && republish ? [['republish', t('ribbon.file.republish'), '']] : []), ...(sharedWorkbooksEnabled() && reconnect ? [['reconnect', t('ribbon.file.reconnect'), '']] : []), ...(sharedWorkbooksEnabled() && detach ? [['detach', t('ribbon.file.detach'), '']] : []), ['import', t('ribbon.file.import'), '']] as [a, label, keys] (a)}
 						<button role="menuitem" disabled={disabled && a !== 'import'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 					<hr />
 					<!-- Exporter : CSV du tableau ou de la feuille, classeur .xlsx ou .ods ; l'impression reste à part. -->
-					<Submenu label="Exporter" {disabled}>
-						{#each [['export', 'Le tableau en CSV…'], ['exportSheet', 'La feuille entière en CSV…'], ['exportXlsx', 'Le classeur Excel (.xlsx)…'], ['exportOds', 'Le classeur OpenDocument (.ods)…']] as [a, label] (a)}
+					<Submenu label={t('ribbon.file.export')} {disabled}>
+						{#each [['export', t('ribbon.file.exportTable')], ['exportSheet', t('ribbon.file.exportSheet')], ['exportXlsx', t('ribbon.file.exportXlsx')], ['exportOds', t('ribbon.file.exportOds')]] as [a, label] (a)}
 							<button role="menuitem" onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span></button>
 						{/each}
 					</Submenu>
-					<button role="menuitem" {disabled} onclick={() => { fileOpen = false; onfile('print'); }}><span>Imprimer / PDF…</span><span class="keys">{keyLabel('Ctrl+P')}</span></button>
+					<button role="menuitem" {disabled} onclick={() => { fileOpen = false; onfile('print'); }}><span>{t('ribbon.file.print')}</span><span class="keys">{keyLabel('Ctrl+P')}</span></button>
 					<hr />
-					{#each [['settings', 'Paramètres…', ''], ['help', 'Aide', 'F1'], ['report', 'Signaler un problème…', ''], ['about', 'À propos de Lattis…', ''], ...(import.meta.env.DEV ? [['demo', 'Démo : 1 M de lignes', '']] : [])] as [a, label, keys] (a)}
+					{#each [['settings', t('ribbon.file.settings'), ''], ['help', t('ribbon.file.help'), 'F1'], ['report', t('ribbon.file.report'), ''], ['about', t('ribbon.file.about'), ''], ...(import.meta.env.DEV ? [['demo', t('ribbon.file.demo'), '']] : [])] as [a, label, keys] (a)}
 						<button role="menuitem" onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 				</div>
 			{/if}
 		</div>
-		<div class="tablist" role="tablist" aria-label="Onglets du ruban">
-			{#each shownTabs as t, i (t)}
-				<button class="tab" id="ribbon-tab-{i}" role="tab" data-label={t} class:on={tab === t} aria-selected={tab === t} aria-controls={tab === t ? 'ribbon-panel' : undefined} tabindex={tab === t ? 0 : -1} aria-keyshortcuts="Alt+{TAB_TIPS[t]}" data-region-focus={tab === t ? '' : undefined} {disabled} onclick={() => select(t)} ondblclick={toggleFold}>{t}</button>
+		<div class="tablist" role="tablist" aria-label={t('ribbon.tabsAria')}>
+			{#each shownTabs as id, i (id)}
+				<button class="tab" id="ribbon-tab-{i}" role="tab" data-tab={id} data-label={tabLabel(id)} class:on={tab === id} aria-selected={tab === id} aria-controls={tab === id ? 'ribbon-panel' : undefined} tabindex={tab === id ? 0 : -1} aria-keyshortcuts="Alt+{TAB_TIPS[id]}" data-region-focus={tab === id ? '' : undefined} {disabled} onclick={() => select(id)} ondblclick={toggleFold}>{tabLabel(id)}</button>
 			{/each}
 		</div>
 		<span class="sep"></span>
 		<!-- Bascule du volet de l'Assistant IA (pas un onglet : la grille reste) ;
 		     visible même désactivé, le volet propose alors de l'activer. -->
 		{#if onai}
-			<button class="tab ai" data-label="Assistant ✦" class:on={ai} aria-pressed={ai} aria-keyshortcuts="Alt+{TAB_TIPS['Assistant ✦']}" {disabled} onclick={onai} title={ai ? 'Fermer l’Assistant IA (Alt+I)' : 'Ouvrir l’Assistant IA (Alt+I)'}
-				>Assistant <Icon name="sparkle" size={13} /></button
+			<button class="tab ai" data-tab="ai" data-label={tabLabel('ai')} class:on={ai} aria-pressed={ai} aria-keyshortcuts="Alt+{TAB_TIPS.ai}" {disabled} onclick={onai} title={ai ? t('ribbon.aiButton.close') : t('ribbon.aiButton.open')}
+				>{t('ribbon.aiButton.label')} <Icon name="sparkle" size={13} /></button
 			>
 		{/if}
-		<button class="tab special" data-label="SQL" class:on={tab === 'SQL'} aria-pressed={tab === 'SQL'} aria-keyshortcuts="Alt+{TAB_TIPS.SQL}" data-region-focus={tab === 'SQL' ? '' : undefined} {disabled} onclick={() => select('SQL')}>SQL</button>
+		<button class="tab special" data-tab="sql" data-label={tabLabel('sql')} class:on={tab === 'sql'} aria-pressed={tab === 'sql'} aria-keyshortcuts="Alt+{TAB_TIPS.sql}" data-region-focus={tab === 'sql' ? '' : undefined} {disabled} onclick={() => select('sql')}>{tabLabel('sql')}</button>
 		{#if scriptingEnabled() || view === 'script'}
-		<button class="tab special" data-label="Script" class:on={tab === 'SCRIPT'} aria-pressed={tab === 'SCRIPT'} aria-keyshortcuts="Alt+{TAB_TIPS.SCRIPT}" data-region-focus={tab === 'SCRIPT' ? '' : undefined} {disabled} onclick={() => select('SCRIPT')}>Script</button>
+		<button class="tab special" data-tab="script" data-label={tabLabel('script')} class:on={tab === 'script'} aria-pressed={tab === 'script'} aria-keyshortcuts="Alt+{TAB_TIPS.script}" data-region-focus={tab === 'script' ? '' : undefined} {disabled} onclick={() => select('script')}>{tabLabel('script')}</button>
 		{/if}
-		<button class="tab help" title="Aide (F1)" aria-label="Aide" onclick={() => onfile('help')}>?</button>
+		<button class="tab help" data-tab="help" title={t('ribbon.helpButton.tooltip')} aria-label={t('ribbon.helpButton.aria')} onclick={() => onfile('help')}>?</button>
 	</nav>
 	{#if !isView(tab) && (!folded || peek)}
 		<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 		<div class="fold-wrap" class:peek={folded} use:peekWatch onclick={peekClick} transition:slide={{ duration: foldAnim && !reducedMotion() ? 200 : 0 }}>
 		<div class="groups" class:off={disabled} id="ribbon-panel" tabindex="-1" oncontextmenu={(e) => { if (e.target !== e.currentTarget) return; e.preventDefault(); hideMenu = { x: e.clientX, y: e.clientY }; }} role="tabpanel" aria-labelledby="ribbon-tab-{shownTabs.indexOf(tab as (typeof tabs)[number])}" use:observe>
-			{#each visibleGroups as g, gi (g.title)}
+			{#each visibleGroups as g, gi (g.id)}
 				{@const mode = modes[gi] ?? 'large'}
 				<section class="group" aria-labelledby="ribbon-group-{gi}">
 					{#if mode === 'collapsed'}
@@ -1456,10 +1503,10 @@
 								class="cmd"
 								data-kt={g.title}
 								aria-haspopup="menu"
-								aria-expanded={openGroup?.title === g.title}
+								aria-expanded={openGroup?.id === g.id}
 								onclick={(ev) => {
 									const r = (ev.currentTarget as HTMLElement).getBoundingClientRect();
-									openGroup = openGroup?.title === g.title ? null : { title: g.title, x: r.left, y: r.bottom + 2 };
+									openGroup = openGroup?.id === g.id ? null : { id: g.id, x: r.left, y: r.bottom + 2 };
 								}}
 								title={g.title}
 							>
@@ -1467,7 +1514,7 @@
 								<span class="label">{g.title} ▾</span>
 							</button>
 						</div>
-						{#if openGroup?.title === g.title}
+						{#if openGroup?.id === g.id}
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<div class="group-menu" style:left="{openGroup.x}px" style:top="{openGroup.y}px" use:dismiss={() => (openGroup = null)}>
 								{#if g.fonts}{@render fontCombos()}{/if}
@@ -1482,7 +1529,7 @@
 												role="menuitem"
 												class:pressed={it.on}
 												disabled={!c.run || !it.run}
-												title={it.keys ? `${it.label} (${keyLabel(it.keys)})` : undefined}
+												title={it.keys ? t('ribbon.withKeys', { label: it.label, keys: keyLabel(it.keys) }) : undefined}
 												onclick={() => {
 													openGroup = null;
 													it.run?.();
@@ -1532,7 +1579,7 @@
 										style:min-width="{COMBO_W}px"
 										aria-haspopup="menu"
 										aria-expanded={dropMenu?.label === c.label}
-										aria-label="{c.label} : {c.combo}"
+										aria-label={t('ribbon.comboAria', { command: c.label, value: c.combo })}
 										data-kt={c.label}
 										disabled={!c.run}
 										onclick={(ev) => toggleDrop(c, ev)}
@@ -1565,7 +1612,7 @@
 							{/each}
 						</div>
 					{/if}
-					<div class="title" oncontextmenu={(e) => { e.preventDefault(); hideMenu = { x: e.clientX, y: e.clientY, title: g.title }; }}>
+					<div class="title" oncontextmenu={(e) => { e.preventDefault(); hideMenu = { x: e.clientX, y: e.clientY, group: { id: g.id, title: g.title } }; }}>
 						<span id="ribbon-group-{gi}">{g.title}</span>
 						{#if g.launch}
 							<button class="launch" onclick={g.launch} title={g.launchHint ?? g.title} aria-label={g.launchHint ?? g.title} data-kt="{g.title} …">
@@ -1576,7 +1623,7 @@
 				</section>
 			{/each}
 		</div>
-		<button class="fold" title={folded ? 'Épingler le ruban (Ctrl+F1)' : 'Réduire le ruban : seuls les onglets restent (Ctrl+F1)'} aria-label={folded ? 'Épingler le ruban' : 'Réduire le ruban'} onclick={toggleFold}>
+		<button class="fold" title={folded ? t('ribbon.fold.pinTooltip') : t('ribbon.fold.foldTooltip')} aria-label={folded ? t('ribbon.fold.pinAria') : t('ribbon.fold.foldAria')} onclick={toggleFold}>
 			<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
 				{#if folded}<path d="M3 1.5h6M6 1.5v5M3.5 6.5h5L7 4.5H5zM6 6.5v4" fill="none" stroke="currentColor" stroke-width="1.2" />{:else}<path d="M2.5 7.5 6 4l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.4" />{/if}
 			</svg>
@@ -1586,18 +1633,19 @@
 	{#if hideMenu}
 		{@const m = hideMenu}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div class="drop-menu" role="menu" aria-label="Groupes du ruban" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (hideMenu = null)}>
-			{#if m.title}
-				<button role="menuitem" onclick={() => { const key = `${tab}|${m.title}`; hideMenu = null; setHidden([...hiddenGroups, key]); }}><span class="item">Masquer le groupe « {m.title} »</span></button>
+		<div class="drop-menu" role="menu" aria-label={t('ribbon.hideMenu.aria')} style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (hideMenu = null)}>
+			{#if m.group}
+				{@const grp = m.group}
+				<button role="menuitem" onclick={() => { const key = `${tab}|${grp.id}`; hideMenu = null; setHidden([...hiddenGroups, key]); }}><span class="item">{t('ribbon.hideMenu.hide', { group: grp.title })}</span></button>
 			{/if}
-			{#each hiddenHere as t (t)}
-				<button role="menuitem" onclick={() => { hideMenu = null; setHidden(hiddenGroups.filter((x) => x !== `${tab}|${t}`)); }}><span class="item">Réafficher « {t} »</span></button>
+			{#each hiddenHere as h (h.id)}
+				<button role="menuitem" onclick={() => { hideMenu = null; setHidden(hiddenGroups.filter((x) => x !== `${tab}|${h.id}`)); }}><span class="item">{t('ribbon.hideMenu.show', { group: h.title })}</span></button>
 			{/each}
 			{#if hiddenHere.length > 1}
-				<button role="menuitem" onclick={() => { hideMenu = null; setHidden(hiddenGroups.filter((x) => !x.startsWith(`${tab}|`))); }}><span class="item">Tout réafficher</span></button>
+				<button role="menuitem" onclick={() => { hideMenu = null; setHidden(hiddenGroups.filter((x) => !x.startsWith(`${tab}|`))); }}><span class="item">{t('ribbon.hideMenu.showAll')}</span></button>
 			{/if}
-			{#if !m.title && !hiddenHere.length}
-				<button role="menuitem" disabled><span class="item">Aucun groupe masqué dans cet onglet</span></button>
+			{#if !m.group && !hiddenHere.length}
+				<button role="menuitem" disabled><span class="item">{t('ribbon.hideMenu.none')}</span></button>
 			{/if}
 		</div>
 	{/if}
@@ -1638,7 +1686,7 @@
 		<Select
 			value={cellStyle?.ff ?? FONTS[0]}
 			width="{FONTS_W - 4}px"
-			title="Police"
+			title={t('ribbon.group.font')}
 			disabled={!onstyle || sheetProtected || structureProtected || layoutShared}
 			options={FONTS.map((f) => ({ value: f, label: f }))}
 			onchange={(v) => onstyle?.({ ff: v === FONTS[0] ? null : v })}
@@ -1646,7 +1694,7 @@
 		<Select
 			value={cellStyle?.fs ?? DEFAULT_PT}
 			width="64px"
-			title="Taille de police (points)"
+			title={t('ribbon.fontSize')}
 			disabled={!onstyle || sheetProtected || structureProtected || layoutShared}
 			options={SIZES.map((s) => ({ value: s, label: String(s) }))}
 			onchange={(v) => onstyle?.({ fs: v === DEFAULT_PT ? null : v })}

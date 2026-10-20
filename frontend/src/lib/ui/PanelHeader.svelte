@@ -3,6 +3,7 @@
 	// lien « ? » vers la page d'aide du volet, croix de fermeture (Échap).
 	import type { Snippet } from 'svelte';
 	import HelpLink from '#lib/help/HelpLink.svelte';
+	import { t } from '#lib/i18n/index.js';
 
 	interface Props {
 		title: string;
@@ -14,7 +15,7 @@
 		children?: Snippet;
 	}
 
-	let { title, help, helpLabel = 'Aide', onclose, children }: Props = $props();
+	let { title, help, helpLabel = t('shell.panel.help'), onclose, children }: Props = $props();
 </script>
 
 <header class="panel-header">
@@ -23,7 +24,7 @@
 		{@render children?.()}
 	</div>
 	{#if help}<HelpLink target={help} label={helpLabel} />{/if}
-	<button class="x" title="Fermer le volet (Échap)" aria-label="Fermer le volet" onclick={onclose}>✕</button>
+	<button class="x" title={t('shell.panel.closeTooltip')} aria-label={t('shell.panel.closeAria')} onclick={onclose}>✕</button>
 </header>
 
 <style>

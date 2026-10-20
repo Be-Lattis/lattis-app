@@ -4,6 +4,7 @@
 	import { modal } from '#lib/ui/focus.js';
 	import { backdrop } from '#lib/ui/backdrop.js';
 	import { exportDetails, type ExportReport } from './exportReport.js';
+	import { t } from '#lib/i18n/index.js';
 
 	interface Props {
 		report: ExportReport;
@@ -15,34 +16,34 @@
 </script>
 
 <div class="back" role="presentation" use:backdrop={() => onclose()}>
-	<div class="dialog" role="dialog" aria-modal="true" aria-label="Détails de l'export" tabindex="-1" use:modal={onclose}>
-		<h2>Export {format} : détails</h2>
+	<div class="dialog" role="dialog" aria-modal="true" aria-label={t('shell.exportReport.dialog.aria')} tabindex="-1" use:modal={onclose}>
+		<h2>{t('shell.exportReport.dialog.title', { format })}</h2>
 		<div class="list">
 			{#each sheets as s, i (i)}
 				<section>
 					<h3>{s.name}</h3>
-					{#if s.kept.length}<p class="kept">Exporté : {s.kept.join(', ')}.</p>{/if}
+					{#if s.kept.length}<p class="kept">{t('shell.exportReport.dialog.kept', { list: s.kept.join(', ') })}</p>{/if}
 					{#if s.lost.length}
-						<p class="lost-title">Non exporté tel quel :</p>
+						<p class="lost-title">{t('shell.exportReport.dialog.lost')}</p>
 						<ul>
 							{#each s.lost as l, j (j)}<li>{l}</li>{/each}
 						</ul>
 					{:else}
-						<p class="kept">Tout a été exporté.</p>
+						<p class="kept">{t('shell.exportReport.dialog.all')}</p>
 					{/if}
 				</section>
 			{/each}
 			{#if report.scripts}
 				<section>
-					<h3>Classeur</h3>
+					<h3>{t('shell.exportReport.dialog.workbook')}</h3>
 					<ul>
-						<li>{report.scripts === 1 ? '1 script non exporté' : `${report.scripts} scripts non exportés`} (Excel et LibreOffice ne lisent pas les scripts de Lattis)</li>
+						<li>{t('shell.exportReport.dialog.scripts', { n: report.scripts })}</li>
 					</ul>
 				</section>
 			{/if}
 		</div>
-		<p class="muted">Les valeurs, la mise en forme des cellules, les tableaux et les formules qui ont un équivalent sont exportés.</p>
-		<div class="actions"><button class="primary" onclick={onclose}>Fermer</button></div>
+		<p class="muted">{t('shell.exportReport.dialog.note')}</p>
+		<div class="actions"><button class="primary" onclick={onclose}>{t('common.close')}</button></div>
 	</div>
 </div>
 

@@ -4,6 +4,8 @@
 // (« Synchronisation… »), à la place de « Traitement… », réservé au travail
 // local long. Logique sans composant, testée par vitest.
 
+import { t } from '#lib/i18n/index.js';
+
 /** File d'envoi d'un classeur collaboratif (workbook.SyncStatus, évènement share:sync). */
 export interface SyncStatus {
 	shared: boolean;
@@ -40,12 +42,12 @@ export const DONE_FOR = 1500;
 export function syncLabel(s: SyncStatus | null, calls = 0, done = false): SyncLabel | null {
 	const n = s?.pending ?? 0;
 	if (s?.shared && !s.online) {
-		return n > 0 ? { text: `Hors ligne — ${n} en attente`, busy: false, warn: true } : null;
+		return n > 0 ? { text: t('shell.sync.offline', { n }), busy: false, warn: true } : null;
 	}
 	if (calls > 0 || (s?.shared && (s.sending || n > 0))) {
-		return { text: n > 1 ? `Synchronisation… (${n})` : 'Synchronisation…', busy: true, warn: false };
+		return { text: n > 1 ? t('shell.sync.sendingCount', { n }) : t('shell.sync.sending'), busy: true, warn: false };
 	}
-	if (done) return { text: 'Synchronisé', busy: false, warn: false };
+	if (done) return { text: t('shell.sync.done'), busy: false, warn: false };
 	return null;
 }
 

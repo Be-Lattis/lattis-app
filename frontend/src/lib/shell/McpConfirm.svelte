@@ -9,6 +9,7 @@
 	import { Events } from '@wailsio/runtime';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import { dropConfirm, pushConfirm, type McpConfirmRequest } from './mcp';
+	import { t } from '#lib/i18n/index.js';
 
 	let queue = $state<McpConfirmRequest[]>([]);
 	const cur = $derived(queue[0]);
@@ -50,17 +51,17 @@
 				use:modal={() => answer(false)}
 				onkeydown={(e) => e.stopPropagation()}
 			>
-				<header id="mcp-confirm-title">{cur.client || 'Claude'} veut modifier le classeur</header>
+				<header id="mcp-confirm-title">{t('shell.mcp.confirm.title', { client: cur.client || 'Claude' })}</header>
 				<div class="body">
 					<p id="mcp-confirm-label" class="what">{cur.label}</p>
 					<p class="muted">
-						Outil <code>{cur.tool}</code>. Sans réponse dans deux minutes, la demande est refusée.
-						{#if queue.length > 1}<br />{queue.length - 1}&nbsp;autre{queue.length > 2 ? 's' : ''} demande{queue.length > 2 ? 's' : ''} en attente.{/if}
+						{t('shell.mcp.confirm.toolBefore')} <code>{cur.tool}</code>{t('shell.mcp.confirm.toolAfter')}
+						{#if queue.length > 1}<br />{t('shell.mcp.confirm.others', { n: queue.length - 1 })}{/if}
 					</p>
 				</div>
 				<footer>
-					<button class="primary" onclick={() => answer(true)}>Autoriser</button>
-					<button onclick={() => answer(false)}>Refuser</button>
+					<button class="primary" onclick={() => answer(true)}>{t('shell.mcp.confirm.allow')}</button>
+					<button onclick={() => answer(false)}>{t('shell.mcp.confirm.deny')}</button>
 				</footer>
 			</div>
 		</div>

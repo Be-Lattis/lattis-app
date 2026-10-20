@@ -1,5 +1,7 @@
 // Écran de récupération : les sessions interrompues regroupées par classeur.
 
+import { t } from '#lib/i18n/index.js';
+
 /** Session interrompue (archive.Orphan). */
 export interface Session {
 	dir: string;
@@ -42,10 +44,10 @@ export function groupSessions<T extends Session>(sessions: readonly T[]): Sessio
 
 /** Nom affiché d'une session : le fichier, ou « Classeur sans titre ». */
 export function sessionName(s: Session): string {
-	return s.source ? (s.source.split(/[\\/]/).pop() ?? s.source) : 'Classeur sans titre';
+	return s.source ? (s.source.split(/[\\/]/).pop() ?? s.source) : t('shell.untitled');
 }
 
 /** « + 1 version plus ancienne », « + 2 versions plus anciennes ». */
 export function olderLabel(n: number): string {
-	return n === 1 ? '+ 1 version plus ancienne' : `+ ${n} versions plus anciennes`;
+	return t('shell.recovery.older', { n });
 }

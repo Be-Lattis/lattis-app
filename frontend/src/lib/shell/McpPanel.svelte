@@ -9,6 +9,7 @@
 	import { mcpConfigs } from './mcp';
 	import Icon from '#lib/icons/Icon.svelte';
 	import ClaudeSetup from '#lib/ai/ClaudeSetup.svelte';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		onclose: () => void;
@@ -20,7 +21,7 @@
 	let copied = $state('');
 	let showToken = $state(false);
 
-	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
+	const err = (e: unknown) => errorText(e);
 	function reload() {
 		DocumentService.MCPState().then((s) => (st = s), (e) => (error = err(e)));
 	}
@@ -54,7 +55,7 @@
 		class="dialog"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Serveur MCP"
+		aria-label={t('shell.mcp.title')}
 		tabindex="-1"
 		use:modal
 		onkeydown={(e) => {
@@ -62,10 +63,9 @@
 			if (e.key === 'Escape') onclose();
 		}}
 	>
-		<header>Serveur MCP</header>
+		<header>{t('shell.mcp.title')}</header>
 		<p>
-			Un assistant compatible MCP (Claude Desktop, Claude Code…) peut lire et modifier le classeur ouvert : feuilles, tableaux, cellules, sélection, SQL, scripts, boutons. Ce qu’il
-			modifie au cours d’une série d’actions s’annule d’un coup (Ctrl+Z). Le serveur n’écoute que sur cet ordinateur et exige un jeton.
+			{t('shell.mcp.intro')}
 		</p>
 		<div class="setup">
 			<ClaudeSetup onchange={reload} />
@@ -73,23 +73,23 @@
 		{#if st}
 			<label class="switch">
 				<input type="checkbox" checked={st.enabled} onchange={toggle} />
-				<span>Activer le serveur MCP {st.enabled ? (st.running ? '(en marche)' : '(arrêté)') : ''}</span>
+				<span>{st.enabled ? (st.running ? t('shell.mcp.enableRunning') : t('shell.mcp.enableStopped')) : t('shell.mcp.enable')}</span>
 			</label>
 			{#if st.enabled}
 				<dl>
-					<dt>Adresse</dt>
+					<dt>{t('shell.mcp.address')}</dt>
 					<dd><code>{st.url}</code></dd>
-					<dt>Jeton</dt>
+					<dt>{t('shell.mcp.token')}</dt>
 					<dd>
 						<code>{showToken ? st.token : '•'.repeat(16)}</code>
-						<button class="link" onclick={() => (showToken = !showToken)}>{showToken ? 'Masquer' : 'Afficher'}</button>
+						<button class="link" onclick={() => (showToken = !showToken)}>{showToken ? t('shell.mcp.hide') : t('shell.mcp.show')}</button>
 					</dd>
 				</dl>
 				{#each configs as c (c.label)}
 					<div class="config">
 						<div class="config-head">
 							<strong>{c.label}</strong>
-							<button class="ico" onclick={() => copy(c.label, c.text)}><Icon name="copy" size={14} />{copied === c.label ? 'Copié' : 'Copier'}</button>
+							<button class="ico" onclick={() => copy(c.label, c.text)}><Icon name="copy" size={14} />{copied === c.label ? t('shell.mcp.copied') : t('shell.mcp.copy')}</button>
 						</div>
 						<p class="hint">{c.hint}</p>
 						<pre>{c.text}</pre>
@@ -98,7 +98,7 @@
 			{/if}
 		{/if}
 		{#if error}<p class="error">{error}</p>{/if}
-		<div class="actions"><button class="primary" onclick={onclose}>Fermer</button></div>
+		<div class="actions"><button class="primary" onclick={onclose}>{t('common.close')}</button></div>
 	</div>
 </div>
 

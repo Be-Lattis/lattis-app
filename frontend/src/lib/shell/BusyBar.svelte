@@ -5,14 +5,15 @@
 	// barre défile. Un appel qui attend le serveur d'un classeur partagé
 	// (syncCall) est montré par SyncStatus (« Synchronisation… »).
 	import { onMount } from 'svelte';
+	import { t } from '#lib/i18n/index.js';
 	import { busy, syncCalls, trackCalls } from './busy';
 
 	onMount(trackCalls);
 </script>
 
 {#if $busy && !$syncCalls}
-	<span class="busy" role="progressbar" aria-label="Traitement en cours" aria-busy="true">
-		<span class="label">Traitement…</span>
+	<span class="busy" role="progressbar" aria-label={t('shell.busy.aria')} aria-busy="true">
+		<span class="label">{t('shell.busy.label')}</span>
 		<span class="track"><span class="bar"></span></span>
 	</span>
 {/if}

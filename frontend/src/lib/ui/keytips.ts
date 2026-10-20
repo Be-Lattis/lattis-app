@@ -3,85 +3,101 @@
 // l'onglet choisi. Les codes ne sont jamais préfixes l'un de l'autre : une
 // touche tapée désigne une commande, ou annonce un code à deux touches.
 
-/** Lettres des onglets du ruban (celles d'Excel quand elles existent). */
+import { t, type MessageKey } from '#lib/i18n/index.js';
+
+/** Lettres des onglets du ruban (celles d'Excel quand elles existent), par identifiant d'onglet. */
 export const TAB_TIPS: Record<string, string> = {
-	Fichier: 'F',
-	Accueil: 'H',
-	Insertion: 'N',
-	'Mise en page': 'P',
-	Données: 'A',
-	Formules: 'M',
-	Révision: 'R',
-	Affichage: 'W',
-	'Assistant ✦': 'I',
-	SQL: 'Q',
-	SCRIPT: 'L',
-	Aide: 'Y'
+	file: 'F',
+	home: 'H',
+	insert: 'N',
+	pageLayout: 'P',
+	data: 'A',
+	formulas: 'M',
+	review: 'R',
+	view: 'W',
+	ai: 'I',
+	sql: 'Q',
+	script: 'L',
+	help: 'Y'
 };
 
-/** Codes d'Excel repris pour les commandes qui ont un équivalent (onglet Accueil surtout). */
-export const COMMAND_TIPS: Record<string, string> = {
-	Annuler: 'Z',
-	Rétablir: 'Y',
-	Coller: 'V',
-	Couper: 'X',
-	Copier: 'C',
-	Reproduire: 'FP',
-	Police: 'FF',
-	'Taille de police (points)': 'FS',
-	Gras: '1',
-	Italique: '2',
-	Souligné: '3',
-	'Couleur de police': 'FC',
-	'Couleur de remplissage': 'H',
-	'Police …': 'FN',
-	Haut: 'AT',
-	Milieu: 'AM',
-	Bas: 'AB',
-	Gauche: 'AL',
-	Centrer: 'AC',
-	Droite: 'AR',
-	'Renvoyer à la ligne': 'W',
-	'Fusionner et centrer': 'M',
-	'Alignement …': 'FA',
-	'Format de nombre': 'N',
-	Monétaire: 'AN',
-	Pourcentage: 'P',
-	'Ajouter une décimale': '0',
-	'Réduire les décimales': '9',
-	'Nombre …': 'FM',
-	'Mise en forme conditionnelle': 'L',
-	'Mettre sous forme de tableau': 'T',
-	Insérer: 'I',
-	Supprimer: 'D',
-	Format: 'O',
-	Remplissage: 'FI',
-	Effacer: 'E',
-	'Trier et filtrer': 'S',
-	Rechercher: 'FD',
-	'Tableau croisé dynamique': 'V',
-	Tableau: 'T',
-	'Somme automatique': 'U',
-	'Insérer une fonction': 'F',
-	Quadrillage: 'VG',
-	'Figer les volets': 'F',
-	Zoom: 'Q',
-	Thème: 'TH',
+/**
+ * Codes d'Excel repris pour les commandes qui ont un équivalent (onglet
+ * Accueil surtout), par clé du libellé de la commande (ribbon.json) ; un
+ * libellé suivi de « … » est le lanceur de son groupe.
+ */
+const COMMAND_CODES: [label: MessageKey, code: string, launcher?: boolean][] = [
+	['ribbon.cmd.undo.label', 'Z'],
+	['ribbon.cmd.redo.label', 'Y'],
+	['ribbon.cmd.paste.label', 'V'],
+	['ribbon.cmd.cut.label', 'X'],
+	['ribbon.cmd.copy.label', 'C'],
+	['ribbon.cmd.painter.label', 'FP'],
+	['ribbon.group.font', 'FF'],
+	['ribbon.fontSize', 'FS'],
+	['ribbon.cmd.bold.label', '1'],
+	['ribbon.cmd.italic.label', '2'],
+	['ribbon.cmd.underline.label', '3'],
+	['ribbon.cmd.fontColor.label', 'FC'],
+	['ribbon.cmd.fillColor.label', 'H'],
+	['ribbon.group.font', 'FN', true],
+	['ribbon.cmd.alignTop.label', 'AT'],
+	['ribbon.cmd.alignMiddle.label', 'AM'],
+	['ribbon.cmd.alignBottom.label', 'AB'],
+	['ribbon.cmd.alignLeft.label', 'AL'],
+	['ribbon.cmd.alignCenter.label', 'AC'],
+	['ribbon.cmd.alignRight.label', 'AR'],
+	['ribbon.cmd.wrap.label', 'W'],
+	['ribbon.cmd.merge.label', 'M'],
+	['ribbon.group.alignment', 'FA', true],
+	['ribbon.cmd.numberFormat.label', 'N'],
+	['ribbon.cmd.currency.label', 'AN'],
+	['ribbon.cmd.percent.label', 'P'],
+	['ribbon.cmd.decimalMore.label', '0'],
+	['ribbon.cmd.decimalLess.label', '9'],
+	['ribbon.group.number', 'FM', true],
+	['ribbon.cmd.conditional.label', 'L'],
+	['ribbon.cmd.formatAsTable.label', 'T'],
+	['ribbon.cmd.insert.label', 'I'],
+	['ribbon.cmd.delete.label', 'D'],
+	['ribbon.cmd.format.label', 'O'],
+	['ribbon.cmd.fill.label', 'FI'],
+	['ribbon.cmd.clear.label', 'E'],
+	['ribbon.cmd.sortFilter.label', 'S'],
+	['ribbon.cmd.find.label', 'FD'],
+	['ribbon.cmd.pivot.label', 'V'],
+	['ribbon.cmd.table.label', 'T'],
+	['ribbon.cmd.autoSum.label', 'U'],
+	['ribbon.cmd.insertFunction.label', 'F'],
+	['ribbon.cmd.gridlines.label', 'VG'],
+	['ribbon.cmd.freeze.label', 'F'],
+	['ribbon.cmd.zoom.label', 'Q'],
+	['ribbon.cmd.theme.label', 'TH'],
 	// Mise en page
-	Marges: 'M',
-	Orientation: 'O',
-	Taille: 'SZ',
-	"Zone d'impression": 'R',
-	'Sauts de page': 'B',
-	'Imprimer les titres': 'I',
-	Largeur: 'W',
-	Hauteur: 'H',
-	Échelle: 'SC',
-	'Afficher le quadrillage': 'VG',
-	'Imprimer le quadrillage': 'PG',
-	'Afficher les en-têtes': 'VH',
-	'Imprimer les en-têtes': 'PH'
-};
+	['ribbon.cmd.margins.label', 'M'],
+	['ribbon.cmd.orientation.label', 'O'],
+	['ribbon.cmd.size.label', 'SZ'],
+	['ribbon.cmd.printArea.label', 'R'],
+	['ribbon.cmd.breaks.label', 'B'],
+	['ribbon.cmd.printTitles.label', 'I'],
+	['ribbon.cmd.width.label', 'W'],
+	['ribbon.cmd.height.label', 'H'],
+	['ribbon.cmd.scale.label', 'SC'],
+	['ribbon.cmd.showGridlines.label', 'VG'],
+	['ribbon.cmd.printGridlines.label', 'PG'],
+	['ribbon.cmd.showHeadings.label', 'VH'],
+	['ribbon.cmd.printHeadings.label', 'PH']
+];
+
+/** Codes préférés des commandes, par libellé dans la langue courante (le premier l'emporte). */
+export function commandTips(): Record<string, string> {
+	const out: Record<string, string> = {};
+	for (const [key, code, launcher] of COMMAND_CODES) {
+		const label = launcher ? `${t(key)} …` : t(key);
+		out[label] ??= code;
+	}
+	return out;
+}
 
 /** Lettres et chiffres d'un libellé, sans accents, en majuscules. */
 export function keyChars(label: string): string {

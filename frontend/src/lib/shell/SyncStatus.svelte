@@ -4,6 +4,7 @@
 	// (« Synchronisation… », puis « Synchronisé »), ou leur attente hors
 	// ligne. Remplace « Traitement… » (BusyBar) pour ce qui part au serveur.
 	import { onDestroy } from 'svelte';
+	import { t } from '#lib/i18n/index.js';
 	import { syncCalls } from './busy';
 	import { BUSY_MIN, DONE_FOR, syncActive, syncLabel, type SyncStatus } from './sync';
 
@@ -46,7 +47,7 @@
 </script>
 
 {#if label}
-	<span class="sync" class:warn={label.warn} role="status" aria-live="polite" aria-busy={label.busy} title={label.busy ? 'Vos modifications sont faites ; elles partent au serveur' : ''}>
+	<span class="sync" class:warn={label.warn} role="status" aria-live="polite" aria-busy={label.busy} title={label.busy ? t('shell.sync.busyTooltip') : ''}>
 		{#if label.busy}<span class="spin" aria-hidden="true"></span>{/if}{label.text}
 	</span>
 {/if}

@@ -2,12 +2,13 @@
 // avec la version préremplie (menu Fichier et volet d'aide).
 import { DocumentService } from '#bindings/internal/bridge/index.js';
 import { openOutside } from '#lib/ai/links.js';
+import { t } from '#lib/i18n/index.js';
 
 export const ISSUES_URL = 'https://github.com/Be-Lattis/lattis-app/issues/new';
 
 /** Corps proposé pour une nouvelle issue. */
 export function issueBody(version: string): string {
-	return `Version de Lattis : ${version}\n\nCe qui s'est passé :\n\nCe qui était attendu :\n\nÉtapes pour reproduire :\n1. `;
+	return t('shell.report.issueBody', { version });
 }
 
 /** Ouvre la page de création d'une issue dans le navigateur. */

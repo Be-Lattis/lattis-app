@@ -1,20 +1,22 @@
 // Avancement d'un enregistrement long (gros classeur) dans la barre d'état.
 
+import { t } from '#lib/i18n/index.js';
+
 export type SaveProgress = { phase: string; done: number; total: number };
 
 /** Texte de la barre d'état pendant l'enregistrement ('' : rien à dire). */
 export function saveProgressText(p: SaveProgress | null): string {
 	switch (p?.phase) {
 		case 'snapshot':
-			return 'Enregistrement : copie de la base…';
+			return t('shell.saveProgress.snapshot');
 		case 'scrub':
-			return 'Enregistrement : retrait de l’historique d’annulation…';
+			return t('shell.saveProgress.scrub');
 		case 'write': {
 			const pct = p.total > 0 ? Math.min(100, Math.floor((p.done * 100) / p.total)) : 0;
-			return `Enregistrement : écriture du fichier ${pct} %`;
+			return t('shell.saveProgress.write', { pct });
 		}
 		case 'verify':
-			return 'Enregistrement : vérification du fichier…';
+			return t('shell.saveProgress.verify');
 		default:
 			return '';
 	}

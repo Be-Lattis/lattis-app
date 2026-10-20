@@ -19,7 +19,7 @@
 	import Sheet, { type SheetData, type SheetSource, type SheetStatus, type ColumnFilter, type PivotConfig, type ChartConfig, type TypeMix } from '#lib/grid/Sheet.svelte';
 	import Ribbon, { type DocCommand, type FileAction, type View } from '#lib/shell/Ribbon.svelte';
 	import SheetTabs from '#lib/shell/SheetTabs.svelte';
-	import { LAYOUT_LOCKED } from '#lib/shell/ribbon.js';
+	import { layoutLocked, layoutShared as layoutSharedReason } from '#lib/shell/ribbon.js';
 	import MergeSheetsPanel from '#lib/shell/MergeSheetsPanel.svelte';
 	import { GROUP_COLORS, chipLabel, groupSheets, initialPlan, offerText, pickOffer, planForSheets, shownGroups, type OfferMoment } from '#lib/shell/mergesheets.js';
 	import type { MergePlan, SheetGroup } from '#bindings/internal/canvas/models.js';
@@ -101,7 +101,7 @@
 	import HelpPanel from '#lib/help/HelpPanel.svelte';
 	import { functionAt, viewTarget } from '#lib/help/help.js';
 	import { helpState, openHelp } from '#lib/help/state.svelte.js';
-	import { fmtDateTime, fmtNumber } from '#lib/i18n/index.js';
+	import { errorText, fmtDateTime, fmtNumber, t } from '#lib/i18n/index.js';
 
 	type Mode = 'starting' | 'recover' | 'doc' | 'demo' | 'closed';
 
@@ -1468,7 +1468,7 @@
 				case 'import': {
 					// L'import crée une feuille : refusé d'emblée là où le moteur le refuserait.
 					if (layoutShared) {
-						notice = `Importer crée une feuille : ${LAYOUT_LOCKED.charAt(0).toLowerCase()}${LAYOUT_LOCKED.slice(1)}`;
+						notice = t('shell.notice.importCreatesSheet', { reason: layoutSharedReason() });
 						break;
 					}
 					// Depuis l'accueil : un classeur neuf, refermé si l'import est annulé.
@@ -2482,7 +2482,7 @@
 						headings={!!layout?.sheets?.find((s) => s.id === sheetId)?.headings}
 						locked={lockedMsg}
 						structure={structureLocked}
-						layoutLocked={layoutShared ? LAYOUT_LOCKED : ''}
+						layoutLocked={layoutShared ? layoutLocked() : ''}
 						freeze={activeInfo ? { rows: activeInfo.freezeRows, cols: activeInfo.freezeCols } : undefined}
 						{zoom}
 						{animate}
@@ -2515,7 +2515,7 @@
 								docState = await DocumentService.SavePage(pageId, src);
 								await reload();
 							}}
-							locked={lockedMsg || (layoutShared ? LAYOUT_LOCKED : '')}
+							locked={lockedMsg || (layoutShared ? layoutLocked() : '')}
 							stamp={layout}
 							{animate}
 							tables={(help?.tables ?? []).map((t) => ({ name: t.name, columns: t.columns ?? [], types: t.types ?? [], kind: t.kind }))}
@@ -2571,7 +2571,7 @@
 							call={(name, args) => DocumentService.PageCall(name, args)}
 							trusted={(src) => DocumentService.PageAllowed(src)}
 							allow={(src) => DocumentService.AllowPage(pageId, src)}
-							locked={lockedMsg || (layoutShared ? LAYOUT_LOCKED : '')}
+							locked={lockedMsg || (layoutShared ? layoutLocked() : '')}
 							stamp={layout}
 							onnotice={(m) => (notice = m)}
 						/>

@@ -1,1 +1,682 @@
-{}
+{
+	"tabs": {
+		"file": "Fichier",
+		"home": "Accueil",
+		"insert": "Insertion",
+		"pageLayout": "Mise en page",
+		"data": "Données",
+		"formulas": "Formules",
+		"review": "Révision",
+		"view": "Affichage",
+		"ai": "Assistant ✦",
+		"sql": "SQL",
+		"script": "Script",
+		"help": "Aide"
+	},
+	"tabsAria": "Onglets du ruban",
+	"aiButton": {
+		"label": "Assistant",
+		"open": "Ouvrir l’Assistant IA (Alt+I)",
+		"close": "Fermer l’Assistant IA (Alt+I)"
+	},
+	"helpButton": {
+		"tooltip": "Aide (F1)",
+		"aria": "Aide"
+	},
+	"fold": {
+		"pinTooltip": "Épingler le ruban (Ctrl+F1)",
+		"foldTooltip": "Réduire le ruban : seuls les onglets restent (Ctrl+F1)",
+		"pinAria": "Épingler le ruban",
+		"foldAria": "Réduire le ruban"
+	},
+	"hideMenu": {
+		"aria": "Groupes du ruban",
+		"hide": "Masquer le groupe « {group} »",
+		"show": "Réafficher « {group} »",
+		"showAll": "Tout réafficher",
+		"none": "Aucun groupe masqué dans cet onglet"
+	},
+	"color": {
+		"choose": "Choisir la couleur",
+		"chooseAria": "{command} : choisir la couleur",
+		"aria": "{command} : {color}",
+		"tooltip": "{tip} ({color})",
+		"noFill": "Aucun remplissage",
+		"auto": "Automatique"
+	},
+	"comboAria": "{command} : {value}",
+	"withKeys": "{label} ({keys})",
+	"fontSize": "Taille de police (points)",
+	"file": {
+		"new": "Nouveau",
+		"open": "Ouvrir…",
+		"recent": "Ouvrir un fichier récent",
+		"recentNone": "Aucun fichier récent",
+		"openRemote": "Ouvrir depuis un serveur…",
+		"close": "Fermer",
+		"save": "Enregistrer",
+		"saveAs": "Enregistrer sous…",
+		"download": "Télécharger une copie",
+		"share": "Publier sur un serveur…",
+		"rights": "Gérer l’accès…",
+		"republish": "Republier…",
+		"reconnect": "Réessayer la connexion",
+		"detach": "Détacher du serveur…",
+		"import": "Importer (CSV, Excel)…",
+		"export": "Exporter",
+		"exportTable": "Le tableau en CSV…",
+		"exportSheet": "La feuille entière en CSV…",
+		"exportXlsx": "Le classeur Excel (.xlsx)…",
+		"exportOds": "Le classeur OpenDocument (.ods)…",
+		"print": "Imprimer / PDF…",
+		"settings": "Paramètres…",
+		"help": "Aide",
+		"report": "Signaler un problème…",
+		"about": "À propos de Lattis…",
+		"demo": "Démo : 1 M de lignes"
+	},
+	"numberFormat": {
+		"number": "Nombre",
+		"percent": "Pourcentage",
+		"currency": "Monétaire",
+		"date": "Date",
+		"time": "Heure",
+		"text": "Texte",
+		"general": "Standard"
+	},
+	"group": {
+		"undo": "Annuler",
+		"clipboard": "Presse-papiers",
+		"font": "Police",
+		"borders": "Bordures",
+		"alignment": "Alignement",
+		"number": "Nombre",
+		"styles": "Styles",
+		"cells": "Cellules",
+		"editing": "Édition",
+		"tables": "Tableaux",
+		"charts": "Graphiques",
+		"controls": "Contrôles",
+		"pageSetup": "Mise en page",
+		"scale": "Mise à l’échelle",
+		"sheetOptions": "Options de la feuille",
+		"getData": "Obtenir des données",
+		"queries": "Requêtes et connexions",
+		"sortFilter": "Trier et filtrer",
+		"dataTools": "Outils de données",
+		"library": "Bibliothèque",
+		"audit": "Audit",
+		"calculation": "Calcul",
+		"notes": "Notes",
+		"protect": "Protéger",
+		"show": "Afficher",
+		"theme": "Thème",
+		"bench": "Mesures (prototype)",
+		"paragraph": "Paragraphe",
+		"print": "Imprimer",
+		"links": "Liens",
+		"printing": "Impression"
+	},
+	"launch": {
+		"font": "Format de cellule : police (Ctrl+1)",
+		"borders": "Format de cellule : bordure (Ctrl+1)",
+		"alignment": "Format de cellule : alignement (Ctrl+1)",
+		"number": "Format de cellule : nombre, date, heure… (Ctrl+1)",
+		"pageSetup": "Mise en page… : page, marges, en-tête et pied de page, feuille",
+		"scale": "Mise en page… : échelle",
+		"sheetOptions": "Mise en page… : feuille"
+	},
+	"cmd": {
+		"undo": {
+			"label": "Annuler",
+			"tooltip": "Annuler : {action} (Ctrl+Z)",
+			"none": "Rien à annuler",
+			"docTooltip": "Annuler la dernière modification du texte (Ctrl+Z)"
+		},
+		"redo": {
+			"label": "Rétablir",
+			"tooltip": "Rétablir : {action} (Ctrl+Y)",
+			"none": "Rien à rétablir",
+			"docTooltip": "Rétablir (Ctrl+Y)"
+		},
+		"paste": {
+			"label": "Coller",
+			"tooltip": "Coller (Ctrl+V)",
+			"docTooltip": "Coller le texte (Ctrl+V)"
+		},
+		"cut": {
+			"label": "Couper",
+			"tooltip": "Couper (Ctrl+X)"
+		},
+		"copy": {
+			"label": "Copier",
+			"tooltip": "Copier (Ctrl+C)"
+		},
+		"painter": {
+			"label": "Reproduire",
+			"tooltip": "Reproduire la mise en forme de la cellule active"
+		},
+		"bold": {
+			"label": "Gras",
+			"tooltip": "Gras (Ctrl+B)"
+		},
+		"italic": {
+			"label": "Italique",
+			"tooltip": "Italique (Ctrl+I)"
+		},
+		"underline": {
+			"label": "Souligné",
+			"tooltip": "Souligné (Ctrl+U)"
+		},
+		"strike": {
+			"label": "Barré",
+			"tooltip": "Barré"
+		},
+		"fontColor": {
+			"label": "Couleur de police",
+			"tooltip": "Couleur de police (▾ : choisir la teinte)"
+		},
+		"fillColor": {
+			"label": "Couleur de remplissage",
+			"tooltip": "Couleur de remplissage (▾ : choisir la teinte)"
+		},
+		"highlight": {
+			"label": "Surlignage",
+			"tooltip": "Couleur de surlignage (▾ : choisir la teinte)"
+		},
+		"clearChars": {
+			"label": "Effacer",
+			"tooltip": "Effacer la mise en forme des caractères"
+		},
+		"bordersAll": {
+			"label": "Toutes",
+			"tooltip": "Toutes les bordures"
+		},
+		"bordersOutline": {
+			"label": "Contour",
+			"tooltip": "Bordure extérieure de la sélection"
+		},
+		"bordersNone": {
+			"label": "Aucune",
+			"tooltip": "Retirer les bordures"
+		},
+		"alignTop": {
+			"label": "Haut",
+			"tooltip": "Aligner en haut"
+		},
+		"alignMiddle": {
+			"label": "Milieu",
+			"tooltip": "Aligner au milieu"
+		},
+		"alignBottom": {
+			"label": "Bas",
+			"tooltip": "Aligner en bas"
+		},
+		"alignLeft": {
+			"label": "Gauche",
+			"tooltip": "Aligner à gauche",
+			"tooltipOn": "Aligner à gauche (cliquer : revenir à l’alignement standard)"
+		},
+		"alignCenter": {
+			"label": "Centrer",
+			"tooltip": "Centrer",
+			"tooltipOn": "Centrer (cliquer : revenir à l’alignement standard)"
+		},
+		"alignRight": {
+			"label": "Droite",
+			"tooltip": "Aligner à droite",
+			"tooltipOn": "Aligner à droite (cliquer : revenir à l’alignement standard)"
+		},
+		"justify": {
+			"label": "Justifier",
+			"tooltip": "Justifier"
+		},
+		"wrap": {
+			"label": "Renvoyer à la ligne",
+			"tooltip": "Afficher le texte sur plusieurs lignes dans la cellule"
+		},
+		"merge": {
+			"label": "Fusionner et centrer",
+			"tooltip": "Fusionner les cellules libres sélectionnées en une seule, contenu centré",
+			"tooltipOn": "Annuler la fusion des cellules"
+		},
+		"numberFormat": {
+			"label": "Format de nombre",
+			"tooltip": "Format de nombre de la sélection",
+			"number": "Nombre (0,00)",
+			"date": "Date courte (jj/mm/aaaa)",
+			"more": "Autres formats…"
+		},
+		"currency": {
+			"label": "Monétaire",
+			"tooltip": "Format monétaire (€)"
+		},
+		"percent": {
+			"label": "Pourcentage",
+			"tooltip": "Style de pourcentage (0,25 s’affiche 25 %)"
+		},
+		"date": {
+			"label": "Date",
+			"tooltip": "Date courte (jj/mm/aaaa) ; Ctrl+1 pour les autres formats de date et d’heure"
+		},
+		"fixed2": {
+			"label": "0,00",
+			"tooltip": "Nombre à deux décimales"
+		},
+		"decimalMore": {
+			"label": "Ajouter une décimale",
+			"tooltip": "Ajouter une décimale à l’affichage"
+		},
+		"decimalLess": {
+			"label": "Réduire les décimales",
+			"tooltip": "Afficher une décimale de moins"
+		},
+		"conditional": {
+			"label": "Mise en forme conditionnelle",
+			"tooltip": "Mise en évidence des cellules, barres de données, nuances de couleurs, jeux d’icônes, gestionnaire des règles"
+		},
+		"formatAsTable": {
+			"label": "Mettre sous forme de tableau",
+			"tooltip": "Faire un tableau de la plage ou du bloc de cellules de la cellule active, sa première ligne pour en-têtes (Ctrl+L)"
+		},
+		"insert": {
+			"label": "Insérer",
+			"tooltip": "Insérer une ligne ou une colonne",
+			"row": "Insérer une ligne (au-dessus)",
+			"column": "Insérer une colonne (à gauche)"
+		},
+		"delete": {
+			"label": "Supprimer",
+			"tooltip": "Supprimer la ligne ou la colonne de la cellule active",
+			"row": "Supprimer la ligne",
+			"column": "Supprimer la colonne"
+		},
+		"format": {
+			"label": "Format",
+			"tooltip": "Format de cellule, masquer et afficher",
+			"cells": "Format de cellule…",
+			"hideRows": "Masquer les lignes",
+			"hideColumns": "Masquer les colonnes",
+			"showRows": "Afficher les lignes",
+			"showColumns": "Afficher les colonnes"
+		},
+		"autoSum": {
+			"label": "Somme automatique",
+			"tooltip": "SOMME de la colonne du tableau au-dessus (Alt+=)"
+		},
+		"fill": {
+			"label": "Remplissage",
+			"tooltip": "Recopier la première ligne ou colonne de la sélection",
+			"down": "Vers le bas",
+			"right": "Vers la droite"
+		},
+		"clear": {
+			"label": "Effacer",
+			"tooltip": "Effacer les formats, le contenu ou la note de la sélection",
+			"formats": "Effacer les formats",
+			"contents": "Effacer le contenu",
+			"note": "Effacer la note"
+		},
+		"sortFilter": {
+			"label": "Trier et filtrer",
+			"tooltip": "Trier le tableau par la colonne active, le filtrer",
+			"az": "Trier de A à Z",
+			"za": "Trier de Z à A",
+			"clearFilters": "Effacer les filtres"
+		},
+		"sortCustom": {
+			"label": "Tri personnalisé…",
+			"tooltip": "Trier le tableau par la colonne active dans un ordre choisi (Jours, Mois, ordre libre)"
+		},
+		"filter": {
+			"label": "Filtrer",
+			"tooltip": "Filtrer le tableau par la colonne active (Ctrl+Maj+L)"
+		},
+		"find": {
+			"label": "Rechercher",
+			"tooltip": "Rechercher (Ctrl+F)"
+		},
+		"replace": {
+			"label": "Remplacer",
+			"tooltip": "Remplacer (Ctrl+H)"
+		},
+		"pivot": {
+			"label": "Tableau croisé dynamique",
+			"tooltip": "Tableau croisé dynamique du tableau actif : cliquez ensuite sur la cellule où le poser, sur n’importe quelle feuille (Échap : annuler ; « Nouvelle feuille » dans la barre d’état). Double-clic sur un TCD pour le modifier",
+			"docTooltip": "Tableau croisé dynamique d’un tableau du classeur, inséré dans le texte et recalculé avec lui"
+		},
+		"table": {
+			"label": "Tableau",
+			"tooltip": "Faire un tableau de la plage ou du bloc de cellules de la cellule active (Ctrl+L)"
+		},
+		"dataLake": {
+			"label": "Data Lake Lattis",
+			"tooltip": "Insérer à la cellule active une donnée du catalogue du Data Lake Lattis : tableau lié, en lecture seule, à jour en direct"
+		},
+		"form": {
+			"label": "Formulaire",
+			"tooltip": "Partager le tableau actif comme formulaire (Serveur Lattis)"
+		},
+		"chart": {
+			"tooltip": "{chart} du tableau actif",
+			"tooltipBar": "{chart} du tableau actif : barres verticales (Alt+F1)",
+			"docTooltip": "{chart} d’un tableau du classeur, inséré dans le texte"
+		},
+		"moreCharts": {
+			"label": "Autres graphiques",
+			"tooltip": "Autres graphiques : {list}"
+		},
+		"button": {
+			"label": "Bouton",
+			"tooltip": "Bouton d’action à la cellule active : un clic exécute un script de l’onglet Script (ou rien)",
+			"docTooltip": "Bouton dans le texte : un clic exécute un script de l’onglet Script (ou l’une de ses fonctions)"
+		},
+		"field": {
+			"label": "Champ",
+			"tooltip": "Contrôle lié à une cellule : champ texte, zone de texte, case à cocher, liste déroulante ou fichier (choix du type dans la fenêtre)",
+			"tooltipScript": "Contrôle lié à une cellule : champ texte, zone de texte, case à cocher, liste déroulante ou fichier (choix du type dans la fenêtre) ; il peut aussi lancer un script",
+			"docTooltip": "Contrôle lié à une cellule d’une feuille : champ texte, zone de texte, case à cocher, liste déroulante ou fichier",
+			"docTooltipScript": "Contrôle lié à une cellule d’une feuille : champ texte, zone de texte, case à cocher, liste déroulante ou fichier, pilotable par les scripts (controls.*)"
+		},
+		"margins": {
+			"label": "Marges",
+			"tooltip": "Marges : {preset}",
+			"customName": "personnalisées",
+			"custom": "Marges personnalisées…",
+			"preset": "{name} — haut et bas : {topBottom}, gauche et droite : {leftRight}"
+		},
+		"orientation": {
+			"label": "Orientation",
+			"tooltipPortrait": "Orientation : portrait",
+			"tooltipLandscape": "Orientation : paysage",
+			"portrait": "Portrait",
+			"landscape": "Paysage"
+		},
+		"size": {
+			"label": "Taille",
+			"tooltip": "Format du papier : {paper}",
+			"item": "{name} ({size})",
+			"more": "Autres tailles de papier…"
+		},
+		"printArea": {
+			"label": "Zone d’impression",
+			"tooltip": "Imprimer seulement une partie de la feuille",
+			"tooltipOn": "Une zone d’impression est définie : seule elle s’imprime",
+			"set": "Définir la zone d’impression",
+			"clear": "Annuler la zone d’impression"
+		},
+		"breaks": {
+			"label": "Sauts de page",
+			"tooltip": "Saut de page manuel au-dessus et à gauche de la cellule active (la nouvelle page commence là)",
+			"insert": "Insérer un saut de page",
+			"remove": "Supprimer le saut de page",
+			"reset": "Rétablir tous les sauts de page"
+		},
+		"printTitles": {
+			"label": "Imprimer les titres",
+			"tooltip": "Lignes à répéter en haut et colonnes à répéter à gauche de chaque page imprimée"
+		},
+		"width": {
+			"label": "Largeur",
+			"tooltip": "Largeur : {fit} (réduit la feuille pour qu’elle tienne en ce nombre de pages)"
+		},
+		"height": {
+			"label": "Hauteur",
+			"tooltip": "Hauteur : {fit}"
+		},
+		"scale": {
+			"label": "Échelle",
+			"tooltip": "Échelle d’impression : {scale}",
+			"tooltipFitted": "{scale} : choisir une échelle arrête l’ajustement",
+			"percent": "{n} %",
+			"custom": "Personnalisée…"
+		},
+		"printPdf": {
+			"label": "Imprimer / PDF…",
+			"tooltip": "Imprimer la feuille ou l’enregistrer en PDF (Ctrl+P)"
+		},
+		"showGridlines": {
+			"label": "Afficher le quadrillage",
+			"tooltipOn": "Masquer le quadrillage de la feuille à l’écran",
+			"tooltipOff": "Afficher le quadrillage de la feuille à l’écran"
+		},
+		"printGridlines": {
+			"label": "Imprimer le quadrillage",
+			"tooltip": "Imprimer le quadrillage de toutes les cellules"
+		},
+		"showHeadings": {
+			"label": "Afficher les en-têtes",
+			"tooltipOn": "Lettres et numéros seulement pendant la saisie d’une formule",
+			"tooltipOff": "Toujours afficher les lettres de colonnes et numéros de lignes"
+		},
+		"printHeadings": {
+			"label": "Imprimer les en-têtes",
+			"tooltip": "Imprimer les lettres de colonnes et les numéros de lignes"
+		},
+		"fromTable": {
+			"label": "À partir du tableau",
+			"tooltip": "Nouvelle requête à partir d’un tableau du classeur"
+		},
+		"csv": {
+			"label": "Texte/CSV",
+			"tooltip": "Nouvelle requête à partir d’un fichier CSV (étapes de transformation, actualisable)"
+		},
+		"xlsx": {
+			"label": "Classeur Excel",
+			"tooltip": "Nouvelle requête à partir d’un tableau d’un classeur .xlsx"
+		},
+		"otherFiles": {
+			"label": "Autres fichiers",
+			"tooltip": "Nouvelle requête à partir d’un fichier JSON, Parquet, ou d’une base SQLite",
+			"sqlite": "Base SQLite"
+		},
+		"database": {
+			"label": "Base de données",
+			"tooltip": "Nouvelle requête sur une base de données (lecture seule)"
+		},
+		"lattisServer": {
+			"label": "Serveur Lattis",
+			"tooltip": "Nouvelle requête sur un tableau d’un Serveur Lattis ou une donnée de son Data Lake (lecture seule)"
+		},
+		"web": {
+			"label": "Web",
+			"tooltip": "Nouvelle requête à partir d’une API web qui répond en JSON (lecture seule)"
+		},
+		"refreshAll": {
+			"label": "Actualiser tout",
+			"tooltip": "Relire les sources de toutes les requêtes chargées, remplacer leurs tableaux et recalculer (Ctrl+Alt+F5)"
+		},
+		"queries": {
+			"label": "Requêtes et connexions",
+			"tooltip": "Volet des requêtes d’import et des connexions du classeur"
+		},
+		"sortAsc": {
+			"label": "Trier A → Z",
+			"tooltip": "Trier le tableau par la colonne active, croissant"
+		},
+		"sortDesc": {
+			"label": "Trier Z → A",
+			"tooltip": "Trier le tableau par la colonne active, décroissant"
+		},
+		"clearFilter": {
+			"label": "Effacer",
+			"tooltipOn": "Effacer les filtres du tableau actif",
+			"tooltipOff": "Effacer : le tableau de la cellule active n’est pas filtré"
+		},
+		"errorsOnly": {
+			"label": "Erreurs seulement",
+			"tooltipOn": "Afficher de nouveau toutes les lignes de la colonne active",
+			"tooltipOff": "Afficher seulement les saisies hors type de la colonne active"
+		},
+		"textToColumns": {
+			"label": "Convertir",
+			"tooltip": "Convertir le texte en colonnes : couper le contenu de la colonne sélectionnée (séparateurs ou largeur fixe) en plusieurs colonnes"
+		},
+		"dedup": {
+			"label": "Supprimer les doublons",
+			"tooltip": "Supprimer les lignes en double du tableau actif"
+		},
+		"validation": {
+			"label": "Validation des données",
+			"tooltip": "Liste déroulante : valeurs permises dans la sélection (ou toute une colonne de tableau), les autres saisies sont refusées"
+		},
+		"mergeSheets": {
+			"label": "Regrouper des onglets…",
+			"tooltip": "Réunir les tableaux de plusieurs onglets aux mêmes colonnes (un par mois, par année, par ville…) en un seul tableau, avec une colonne de catégorie"
+		},
+		"insertFunction": {
+			"label": "Insérer une fonction",
+			"tooltip": "Choisir une fonction et commencer la formule dans la cellule active (Maj+F3)"
+		},
+		"reference": {
+			"tooltip": "REFERENCE(Tableau[Colonne]; clé) : la RECHERCHEV de Lattis"
+		},
+		"showLinks": {
+			"label": "Afficher les liens",
+			"tooltip": "Flèches des liens de toutes les cellules sélectionnées : bleues depuis ce que lisent leurs formules, rouges vers les formules qui les lisent ; un clic dans la grille (ou Échap) les efface"
+		},
+		"calculate": {
+			"label": "Calculer",
+			"tooltip": "Recalculer les formules et renouveler AUJOURDHUI, MAINTENANT et ALEA (F9, ou F5 hors d’un tableau importé)"
+		},
+		"toValues": {
+			"label": "Convertir en valeurs",
+			"tooltip": "Remplacer les formules de la sélection par leurs valeurs actuelles : colonnes calculées (devenues colonnes saisies, au type de leurs valeurs) et cellules libres (Ctrl+Z pour annuler)"
+		},
+		"note": {
+			"new": "Nouvelle note",
+			"edit": "Modifier la note",
+			"tooltipNew": "Note sur la cellule active : coin rouge, affichée au survol (Maj+F2)",
+			"tooltipEdit": "Modifier la note de la cellule active (Maj+F2)"
+		},
+		"deleteNote": {
+			"label": "Supprimer la note",
+			"tooltip": "Supprimer la note de la cellule active",
+			"tooltipNone": "Supprimer la note : la cellule active n’en a pas"
+		},
+		"protectSheet": {
+			"tooltip": "{action} : plus aucune modification de son contenu (mot de passe facultatif)"
+		},
+		"protectStructure": {
+			"protect": "Protéger la structure",
+			"unprotect": "Ôter la protection de la structure",
+			"tooltipUnprotect": "Ôter la protection de la structure de la feuille",
+			"tooltipByBook": "Structure de toutes les feuilles protégée avec le classeur (Révision › Ôter la protection du classeur)",
+			"tooltipSheet": "Protéger la structure : inutile, la feuille est déjà protégée en entier",
+			"tooltip": "Protéger la structure : tout est verrouillé sauf la saisie dans les tableaux (cellules libres, mise en forme, colonnes, tableaux, objets et onglet) ; mot de passe facultatif"
+		},
+		"protectWorkbook": {
+			"protect": "Protéger le classeur",
+			"unprotect": "Ôter la protection du classeur",
+			"tooltipUnprotect": "Ôter la protection de la structure du classeur",
+			"tooltip": "Protéger la structure du classeur : ajouter, supprimer, renommer ou déplacer des feuilles est refusé"
+		},
+		"pageBreaks": {
+			"tooltipOn": "Masquer les sauts de page (traits pointillés) et la zone d’impression",
+			"tooltipOff": "Afficher les sauts de page de l’impression (traits pointillés) et la zone d’impression"
+		},
+		"gridlines": {
+			"label": "Quadrillage",
+			"tooltipOn": "Masquer le quadrillage de la feuille",
+			"tooltipOff": "Afficher le quadrillage de la feuille"
+		},
+		"headings": {
+			"label": "En-têtes A1"
+		},
+		"animate": {
+			"label": "Animations",
+			"tooltipOn": "Désactiver l’animation du cadre de sélection",
+			"tooltipOff": "Animer le cadre de sélection (il glisse vers la nouvelle cellule)"
+		},
+		"zoom": {
+			"label": "Zoom",
+			"tooltip": "Zoom de la feuille : {zoom} (Ctrl+molette, ou le curseur de la barre d’état)"
+		},
+		"zoom100": {
+			"label": "100 %",
+			"tooltip": "Revenir au zoom 100 %"
+		},
+		"freeze": {
+			"label": "Figer les volets",
+			"tooltipOn": "Volets figés : {rows, plural, one {# ligne} other {# lignes}}, {cols, plural, one {# colonne} other {# colonnes}}",
+			"tooltipOff": "Garder des lignes et des colonnes affichées pendant le défilement",
+			"unfreeze": "Libérer les volets",
+			"cell": "Figer les volets (à la cellule active)",
+			"row": "Figer la ligne supérieure",
+			"col": "Figer la première colonne"
+		},
+		"theme": {
+			"label": "Thème",
+			"tooltip": "Couleurs des tableaux du classeur : tableaux ordinaires et tableaux d’une source externe (thème : {theme})",
+			"customName": "personnalisé",
+			"customize": "Personnaliser…"
+		},
+		"bench": {
+			"label": "Mesurer la grille"
+		},
+		"bullets": {
+			"label": "Puces",
+			"tooltip": "Liste à puces"
+		},
+		"numbered": {
+			"label": "Numéros",
+			"tooltip": "Liste numérotée"
+		},
+		"quote": {
+			"label": "Citation",
+			"tooltip": "Citation (retrait et trait à gauche)"
+		},
+		"code": {
+			"label": "Code",
+			"tooltip": "Bloc de code (police à chasse fixe)"
+		},
+		"style": {
+			"label": "Style",
+			"tooltip": "Style du paragraphe : normal ou titre",
+			"normal": "Normal",
+			"h1": "Titre 1",
+			"h2": "Titre 2",
+			"h3": "Titre 3"
+		},
+		"docPrint": {
+			"label": "Imprimer / PDF",
+			"tooltip": "Imprimer le document, ou l’enregistrer en PDF ({printer}), graphiques et tableaux croisés compris"
+		},
+		"link": {
+			"label": "Lien",
+			"tooltip": "Lien vers une page web (Ctrl+clic pour l’ouvrir)"
+		},
+		"image": {
+			"label": "Image",
+			"tooltip": "Insérer une image (enregistrée dans le classeur)"
+		}
+	},
+	"protect": {
+		"sheet": {
+			"locked": "feuille protégée",
+			"protect": "Protéger la feuille",
+			"unprotect": "Ôter la protection de la feuille"
+		},
+		"doc": {
+			"locked": "document protégé",
+			"protect": "Protéger le document",
+			"unprotect": "Ôter la protection du document"
+		},
+		"html": {
+			"locked": "page protégée",
+			"protect": "Protéger la page",
+			"unprotect": "Ôter la protection de la page"
+		}
+	},
+	"gate": {
+		"hint": "{command} : {reason}",
+		"noWorkbook": "{command} : ouvrez ou créez un classeur",
+		"workbookStructure": "la structure du classeur est protégée (cette commande crée une feuille)",
+		"layoutShared": "seuls les propriétaires et concepteurs modifient les cellules libres et la mise en page de ce classeur partagé",
+		"layoutLocked": "Seuls les propriétaires et concepteurs modifient les cellules libres et la mise en page de ce classeur partagé",
+		"ownProtected": "{locked} (Révision › {unprotect})",
+		"bookProtected": "classeur protégé (Révision › Ôter la protection du classeur)",
+		"structureByBook": "structure des feuilles protégée (Révision › Ôter la protection du classeur)",
+		"structure": "structure protégée (Révision › Ôter la protection de la structure)"
+	}
+}

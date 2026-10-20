@@ -3,7 +3,7 @@
 // classeur ; le ruban et la boîte « Mise en page » s'en servent.
 
 import type { HeaderFooter, Margins, PageSetup, Rect, Span } from '#bindings/internal/canvas/models.js';
-import { fmtNumber } from '#lib/i18n/index.js';
+import { fmtNumber, t, tAny } from '#lib/i18n/index.js';
 
 export type { HeaderFooter, Margins, PageSetup };
 
@@ -25,7 +25,8 @@ export const MARGINS: Record<'normal' | 'wide' | 'narrow', Margins> = {
 	wide: { top: IN, bottom: IN, left: IN, right: IN, header: 0.5 * IN, footer: 0.5 * IN },
 	narrow: { top: 0.75 * IN, bottom: 0.75 * IN, left: 0.25 * IN, right: 0.25 * IN, header: 0.3 * IN, footer: 0.3 * IN }
 };
-export const MARGIN_LABELS: Record<keyof typeof MARGINS, string> = { normal: 'Normales', wide: 'Larges', narrow: 'Étroites' };
+/** Nom d'un préréglage des marges (Normales, Larges, Étroites). */
+export const marginLabel = (k: keyof typeof MARGINS) => tAny(`shell.pageSetup.margins.${k}`);
 
 export const marginsOf = (p: PageSetup): Margins => p.margins ?? MARGINS.normal;
 
@@ -45,15 +46,26 @@ export const presetMargins = (k: keyof typeof MARGINS): Margins | null => (k ===
 export const cm = (v: number) => `${fmtNumber(Math.round(v * 100) / 100)} cm`;
 
 /** Formats de papier : identifiant (classeur), libellé, dimensions. */
+// Libellé (shell.pageSetup.papers.*, sinon l'identifiant) et dimensions
+// lus dans la langue courante à chaque affichage.
+const paper = (id: string, w: number, h: number, named = false) => ({
+	id,
+	get label() {
+		return named ? tAny(`shell.pageSetup.papers.${id}`) : id;
+	},
+	get size() {
+		return t('shell.pageSetup.paperSize', { w: fmtNumber(w), h: fmtNumber(h) });
+	}
+});
 export const PAPERS: { id: string; label: string; size: string }[] = [
-	{ id: 'A4', label: 'A4', size: '21 cm × 29,7 cm' },
-	{ id: 'A3', label: 'A3', size: '29,7 cm × 42 cm' },
-	{ id: 'A5', label: 'A5', size: '14,8 cm × 21 cm' },
-	{ id: 'B5', label: 'B5 (ISO)', size: '17,6 cm × 25 cm' },
-	{ id: 'Letter', label: 'Lettre US', size: '21,59 cm × 27,94 cm' },
-	{ id: 'Legal', label: 'Légal US', size: '21,59 cm × 35,56 cm' },
-	{ id: 'Tabloid', label: 'Tabloïd', size: '27,94 cm × 43,18 cm' },
-	{ id: 'Executive', label: 'Exécutive', size: '18,42 cm × 26,67 cm' }
+	paper('A4', 21, 29.7),
+	paper('A3', 29.7, 42),
+	paper('A5', 14.8, 21),
+	paper('B5', 17.6, 25, true),
+	paper('Letter', 21.59, 27.94, true),
+	paper('Legal', 21.59, 35.56, true),
+	paper('Tabloid', 27.94, 43.18, true),
+	paper('Executive', 18.42, 26.67, true)
 ];
 export const paperOf = (p: PageSetup) => p.paper || 'A4';
 
@@ -62,18 +74,18 @@ export const fitted = (p: PageSetup) => !!(p.fitWide || p.fitTall);
 
 /** Choix Largeur / Hauteur du ruban : Automatique, puis 1 à 9 pages. */
 export const FIT_CHOICES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-export const fitLabel = (n: number) => (n ? `${n} page${n > 1 ? 's' : ''}` : 'Automatique');
+export const fitLabel = (n: number) => (n ? t('shell.pageSetup.fit.pages', { n }) : t('shell.pageSetup.fit.auto'));
 
 /** Choix Échelle du ruban. */
 export const SCALE_CHOICES = [200, 150, 125, 100, 90, 85, 80, 75, 70, 60, 50, 25];
 
 export function scaleLabel(p: PageSetup): string {
 	if (fitted(p)) {
-		const w = p.fitWide ? fitLabel(p.fitWide) : 'auto';
-		const h = p.fitTall ? fitLabel(p.fitTall) : 'auto';
-		return `Ajusté : ${w} en largeur, ${h} en hauteur`;
+		const w = p.fitWide ? fitLabel(p.fitWide) : t('shell.pageSetup.scale.auto');
+		const h = p.fitTall ? fitLabel(p.fitTall) : t('shell.pageSetup.scale.auto');
+		return t('shell.pageSetup.scale.fitted', { wide: w, tall: h });
 	}
-	return `${p.scale || 100} %`;
+	return t('shell.pageSetup.scale.percent', { n: p.scale || 100 });
 }
 
 /** Largeur ou hauteur en pages ; l'échelle revient à 100 % (comme Excel). */
@@ -176,14 +188,20 @@ export function parseSpan(s: string, rows: boolean): Span | null | undefined {
 // --- En-tête et pied de page ---------------------------------------------
 
 /** Codes insérés par les boutons de la boîte (comme Excel). */
+const hfCode = (code: string, key: string) => ({
+	code,
+	get label() {
+		return tAny(`shell.pageSetup.hf.codes.${key}`);
+	}
+});
 export const HF_CODES: { code: string; label: string }[] = [
-	{ code: '&[Page]', label: 'Numéro de page' },
-	{ code: '&[Pages]', label: 'Nombre de pages' },
-	{ code: '&[Date]', label: 'Date' },
-	{ code: '&[Heure]', label: 'Heure' },
-	{ code: '&[Chemin]&[Fichier]', label: "Chemin d'accès" },
-	{ code: '&[Fichier]', label: 'Nom du fichier' },
-	{ code: '&[Onglet]', label: 'Nom de la feuille' }
+	hfCode('&[Page]', 'page'),
+	hfCode('&[Pages]', 'pages'),
+	hfCode('&[Date]', 'date'),
+	hfCode('&[Heure]', 'time'),
+	hfCode('&[Chemin]&[Fichier]', 'path'),
+	hfCode('&[Fichier]', 'file'),
+	hfCode('&[Onglet]', 'sheet')
 ];
 
 export interface HFContext {
@@ -212,25 +230,34 @@ export function renderHF(s: string, ctx: HFContext): string {
 	return (s ?? '').replace(/&&|&\[(?:Page|Pages|Date|Heure|Fichier|Chemin|Onglet|Feuille)\]/g, (m) => map[m] ?? m);
 }
 
-/** En-têtes et pieds de page prédéfinis (liste de la boîte, comme Excel). */
-export const HF_PRESETS: HeaderFooter[] = [
-	{},
-	{ center: 'Page &[Page]' },
-	{ center: 'Page &[Page] sur &[Pages]' },
-	{ center: '&[Onglet]' },
-	{ left: 'Confidentiel', center: '&[Date]', right: 'Page &[Page]' },
-	{ center: '&[Fichier]' },
-	{ center: '&[Chemin]&[Fichier]' },
-	{ center: '&[Onglet]', right: 'Page &[Page]' },
-	{ center: '&[Fichier]', right: 'Page &[Page]' },
-	{ left: '&[Onglet]', right: '&[Fichier]' },
-	{ center: 'Page &[Page]', right: '&[Date]' }
-];
+/**
+ * En-têtes et pieds de page prédéfinis (liste de la boîte, comme Excel) :
+ * leurs mots (« Page », « Confidentiel ») dans la langue de la session, les
+ * codes &[…] ne changent pas.
+ */
+export function hfPresets(): HeaderFooter[] {
+	const page = t('shell.pageSetup.hf.presets.page');
+	const pageOf = t('shell.pageSetup.hf.presets.pageOf');
+	return [
+		{},
+		{ center: page },
+		{ center: pageOf },
+		{ center: '&[Onglet]' },
+		{ left: t('shell.pageSetup.hf.presets.confidential'), center: '&[Date]', right: page },
+		{ center: '&[Fichier]' },
+		{ center: '&[Chemin]&[Fichier]' },
+		{ center: '&[Onglet]', right: page },
+		{ center: '&[Fichier]', right: page },
+		{ left: '&[Onglet]', right: '&[Fichier]' },
+		{ center: page, right: '&[Date]' }
+	];
+}
 
-/** Libellé d'un en-tête prédéfini (ses trois parties, séparées par « ; »). */
+/** Libellé d'un en-tête prédéfini (ses trois parties, séparées par « ; ») ; « 1 sur 1 » s'écrit « 1 sur ? ». */
 export function hfLabel(h: HeaderFooter, ctx: HFContext): string {
-	const parts = [h.left, h.center, h.right].filter((x) => x).map((x) => renderHF(x!, ctx).replace(/ 1 sur 1$/, ' 1 sur ?'));
-	return parts.length ? parts.join(' ; ') : '(aucun)';
+	const unknown = ctx.page === 1 && ctx.pages === 1;
+	const parts = [h.left, h.center, h.right].filter((x) => x).map((x) => renderHF(unknown ? x!.replace(/&\[Pages\]$/, '?') : x!, ctx));
+	return parts.length ? parts.join(t('shell.pageSetup.hf.separator')) : t('shell.pageSetup.hf.none');
 }
 
 export const sameHF = (a: HeaderFooter, b: HeaderFooter) => (a.left ?? '') === (b.left ?? '') && (a.center ?? '') === (b.center ?? '') && (a.right ?? '') === (b.right ?? '');
@@ -261,30 +288,30 @@ export function pageAction(p: PageSetup, a: PageAction, here: { row: number; col
 	switch (a.kind) {
 		case 'margins':
 			c.margins = presetMargins(a.preset);
-			return { setup: c, label: 'Marges' };
+			return { setup: c, label: t('shell.pageSetup.undo.margins') };
 		case 'orientation':
 			c.landscape = a.landscape;
-			return { setup: c, label: 'Orientation' };
+			return { setup: c, label: t('shell.pageSetup.undo.orientation') };
 		case 'paper':
 			c.paper = a.paper === 'A4' ? '' : a.paper;
-			return { setup: c, label: 'Taille' };
+			return { setup: c, label: t('shell.pageSetup.undo.paper') };
 		case 'area':
 			c.area = a.clear ? null : { ...here.sel };
-			return { setup: c, label: "Zone d'impression" };
+			return { setup: c, label: t('shell.pageSetup.undo.printArea') };
 		case 'break': {
 			const n = a.op === 'insert' ? withBreak(p, here.row, here.col) : a.op === 'remove' ? withoutBreak(p, here.row, here.col) : hasBreaks(p) ? withoutBreaks(p) : null;
-			if (n) return { setup: n, label: a.op === 'reset' ? 'Rétablir les sauts de page' : 'Saut de page' };
-			if (a.op === 'insert') return { notice: 'En A1, rien à couper : placez la cellule active sous la ligne ou à droite de la colonne où la nouvelle page commence' };
-			if (a.op === 'remove') return { notice: 'Pas de saut de page manuel au-dessus ni à gauche de la cellule active' };
-			return { notice: 'Aucun saut de page manuel' };
+			if (n) return { setup: n, label: a.op === 'reset' ? t('shell.pageSetup.undo.resetBreaks') : t('shell.pageSetup.undo.break') };
+			if (a.op === 'insert') return { notice: t('shell.pageSetup.notice.breakA1') };
+			if (a.op === 'remove') return { notice: t('shell.pageSetup.notice.noBreakHere') };
+			return { notice: t('shell.pageSetup.notice.noBreaks') };
 		}
 		case 'fit':
-			return { setup: withFit(p, a.wide, a.n), label: "Mise à l'échelle" };
+			return { setup: withFit(p, a.wide, a.n), label: t('shell.pageSetup.undo.scale') };
 		case 'scale':
-			return { setup: withScale(p, a.pct), label: "Mise à l'échelle" };
+			return { setup: withScale(p, a.pct), label: t('shell.pageSetup.undo.scale') };
 		case 'print':
 			c[a.what] = a.on;
-			return { setup: c, label: a.what === 'gridlines' ? 'Imprimer le quadrillage' : 'Imprimer les en-têtes' };
+			return { setup: c, label: a.what === 'gridlines' ? t('shell.pageSetup.undo.printGridlines') : t('shell.pageSetup.undo.printHeadings') };
 		case 'dialog':
 			return null;
 	}

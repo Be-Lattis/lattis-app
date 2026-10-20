@@ -5,7 +5,8 @@
 	import { modal } from '#lib/ui/focus.js';
 	import { backdrop } from '#lib/ui/backdrop.js';
 	import type { HeaderFooter, Rect } from '#bindings/internal/canvas/models.js';
-	import { copySetup, fitted, HF_CODES, HF_PRESETS, hfLabel, marginPreset, marginsOf, PAPERS, paperOf, parseRange, parseSpan, rangeA1, renderHF, sameHF, spanA1, type PageSetup, type PageSetupTab } from './pagesetup';
+	import { t } from '#lib/i18n/index.js';
+	import { copySetup, fitted, HF_CODES, hfLabel, hfPresets, marginPreset, marginsOf, PAPERS, paperOf, parseRange, parseSpan, rangeA1, renderHF, sameHF, spanA1, type PageSetup, type PageSetupTab } from './pagesetup';
 
 	interface Props {
 		setup: PageSetup;
@@ -23,12 +24,12 @@
 
 	let { setup, sheet, file, selection, tab = 'page', onapply, onprint, onclose }: Props = $props();
 
-	const TABS: { id: PageSetupTab; label: string }[] = [
-		{ id: 'page', label: 'Page' },
-		{ id: 'margins', label: 'Marges' },
-		{ id: 'hf', label: 'En-tête/Pied de page' },
-		{ id: 'sheet', label: 'Feuille' }
-	];
+	const TABS: { id: PageSetupTab; label: string }[] = $derived([
+		{ id: 'page', label: t('shell.pageSetup.dialog.tabs.page') },
+		{ id: 'margins', label: t('shell.pageSetup.dialog.tabs.margins') },
+		{ id: 'hf', label: t('shell.pageSetup.dialog.tabs.hf') },
+		{ id: 'sheet', label: t('shell.pageSetup.dialog.tabs.sheet') }
+	]);
 
 	// Copie éditée (prise une fois à l'ouverture).
 	const init = (() => copySetup(setup))();
@@ -62,7 +63,8 @@
 	let error = $state('');
 
 	const ctx = $derived({ page: 1, pages: 1, sheet, file });
-	const presetIndex = (h: HeaderFooter) => HF_PRESETS.findIndex((p) => sameHF(p, h));
+	const presets = $derived(hfPresets());
+	const presetIndex = (h: HeaderFooter) => presets.findIndex((p) => sameHF(p, h));
 
 	// Champ d'en-tête où vont les codes (le dernier qui a eu le focus).
 	let lastField: { el: HTMLInputElement; hf: 'header' | 'footer'; part: keyof HeaderFooter } | null = null;
@@ -89,23 +91,23 @@
 		if (fit) {
 			const w = Number(fitWide) || 0;
 			const h = Number(fitTall) || 0;
-			if (w < 0 || h < 0 || w > 999 || h > 999) return 'Ajuster : entre 1 et 999 pages';
+			if (w < 0 || h < 0 || w > 999 || h > 999) return t('shell.pageSetup.error.fit');
 			p.fitWide = w;
 			p.fitTall = h;
 			if (!w && !h) p.fitWide = 1;
 			p.scale = 0;
 		} else {
 			const s = Math.round(Number(scale));
-			if (!(s >= 10 && s <= 400)) return 'Échelle : entre 10 et 400 %';
+			if (!(s >= 10 && s <= 400)) return t('shell.pageSetup.error.scale');
 			p.scale = s === 100 ? 0 : s;
 			p.fitWide = p.fitTall = 0;
 		}
 		const fp = firstPage.trim();
 		if (!fp || /^auto$/i.test(fp)) p.firstPage = 0;
 		else if (/^\d+$/.test(fp) && Number(fp) >= 1) p.firstPage = Number(fp);
-		else return 'Numéro de la première page : un nombre ou « Auto »';
+		else return t('shell.pageSetup.error.firstPage');
 		const ms = [mTop, mBottom, mLeft, mRight, mHeader, mFooter].map(Number);
-		if (ms.some((v) => !(v >= 0 && v <= 50))) return 'Marges : entre 0 et 50 cm';
+		if (ms.some((v) => !(v >= 0 && v <= 50))) return t('shell.pageSetup.error.margins');
 		const [top, bottom, left, right, hd, ft] = ms;
 		p.margins = { top, bottom, left, right, header: hd, footer: ft };
 		if (marginPreset(p) === 'normal') p.margins = null;
@@ -114,13 +116,13 @@
 		p.header = { ...header };
 		p.footer = { ...footer };
 		const a = parseRange(area);
-		if (a === undefined) return 'Zone d’impression : une plage comme $A$1:$F$40';
+		if (a === undefined) return t('shell.pageSetup.error.area');
 		p.area = a;
 		const tr = parseSpan(titleRows, true);
-		if (tr === undefined) return 'Lignes à répéter en haut : comme $1:$2';
+		if (tr === undefined) return t('shell.pageSetup.error.titleRows');
 		p.titleRows = tr;
 		const tc = parseSpan(titleCols, false);
-		if (tc === undefined) return 'Colonnes à répéter à gauche : comme $A:$B';
+		if (tc === undefined) return t('shell.pageSetup.error.titleCols');
 		p.titleCols = tc;
 		p.gridlines = gridlines;
 		p.headings = headings;
@@ -173,24 +175,24 @@
 {#snippet hfEditor(kind: 'header' | 'footer')}
 	{@const h = kind === 'header' ? header : footer}
 	<label class="col">
-		<span class="lbl">{kind === 'header' ? 'En-tête' : 'Pied de page'}</span>
+		<span class="lbl">{kind === 'header' ? t('shell.pageSetup.dialog.header') : t('shell.pageSetup.dialog.footer')}</span>
 		<select
 			value={String(presetIndex(h))}
 			onchange={(e) => {
 				const i = Number((e.currentTarget as HTMLSelectElement).value);
 				if (i < 0) return;
-				if (kind === 'header') header = { ...HF_PRESETS[i] };
-				else footer = { ...HF_PRESETS[i] };
+				if (kind === 'header') header = { ...presets[i] };
+				else footer = { ...presets[i] };
 			}}
 		>
-			{#if presetIndex(h) < 0}<option value="-1">(personnalisé)</option>{/if}
-			{#each HF_PRESETS as p, i (i)}
+			{#if presetIndex(h) < 0}<option value="-1">{t('shell.pageSetup.dialog.customHF')}</option>{/if}
+			{#each presets as p, i (i)}
 				<option value={String(i)}>{hfLabel(p, ctx)}</option>
 			{/each}
 		</select>
 	</label>
 	<div class="hf">
-		{#each [['left', 'Gauche'], ['center', 'Centre'], ['right', 'Droite']] as [part, label] (part)}
+		{#each [['left', t('shell.pageSetup.dialog.left')], ['center', t('shell.pageSetup.dialog.center')], ['right', t('shell.pageSetup.dialog.right')]] as [part, label] (part)}
 			<label class="col"
 				><span class="lbl">{label}</span>
 				<input
@@ -206,62 +208,62 @@
 			>
 		{/each}
 	</div>
-	<div class="hf preview" aria-label="Aperçu">
+	<div class="hf preview" aria-label={t('shell.pageSetup.dialog.preview')}>
 		<span>{renderHF(h.left ?? '', ctx)}</span><span class="c">{renderHF(h.center ?? '', ctx)}</span><span class="r">{renderHF(h.right ?? '', ctx)}</span>
 	</div>
 {/snippet}
 
 {#snippet pick(what: 'area' | 'rows' | 'cols')}
-	{#if selection}<button class="plain small" title="Reprendre la sélection de la feuille" onclick={() => fromSelection(what)}>Sélection</button>{/if}
+	{#if selection}<button class="plain small" title={t('shell.pageSetup.dialog.fromSelectionTooltip')} onclick={() => fromSelection(what)}>{t('shell.pageSetup.dialog.fromSelection')}</button>{/if}
 {/snippet}
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="back" use:backdrop={() => onclose()}>
-	<div class="dlg" role="dialog" aria-label="Mise en page" tabindex="-1" aria-modal="true" use:grab use:modal onkeydown={onKey}>
-		<div class="head">Mise en page</div>
+	<div class="dlg" role="dialog" aria-label={t('shell.pageSetup.dialog.title')} tabindex="-1" aria-modal="true" use:grab use:modal onkeydown={onKey}>
+		<div class="head">{t('shell.pageSetup.dialog.title')}</div>
 		<div class="tabs" role="tablist">
-			{#each TABS as t (t.id)}
-				<button class="tab" role="tab" aria-selected={current === t.id} class:on={current === t.id} onclick={() => (current = t.id)}>{t.label}</button>
+			{#each TABS as tb (tb.id)}
+				<button class="tab" role="tab" aria-selected={current === tb.id} class:on={current === tb.id} onclick={() => (current = tb.id)}>{tb.label}</button>
 			{/each}
 		</div>
 		<div class="body">
 			{#if current === 'page'}
 				<fieldset>
-					<legend>Orientation</legend>
+					<legend>{t('shell.pageSetup.dialog.orientation')}</legend>
 					<div class="row">
-						<label class="row"><input type="radio" name="orient" checked={!landscape} onchange={() => (landscape = false)} /> Portrait</label>
-						<label class="row"><input type="radio" name="orient" checked={landscape} onchange={() => (landscape = true)} /> Paysage</label>
+						<label class="row"><input type="radio" name="orient" checked={!landscape} onchange={() => (landscape = false)} /> {t('shell.pageSetup.dialog.portrait')}</label>
+						<label class="row"><input type="radio" name="orient" checked={landscape} onchange={() => (landscape = true)} /> {t('shell.pageSetup.dialog.landscape')}</label>
 					</div>
 				</fieldset>
 				<fieldset>
-					<legend>Échelle</legend>
+					<legend>{t('shell.pageSetup.dialog.scale')}</legend>
 					<label class="row"
-						><input type="radio" name="fit" checked={!fit} onchange={() => (fit = false)} /> Réduire/agrandir à :
-						<input type="number" min="10" max="400" bind:value={scale} disabled={fit} /> % de la taille normale</label
+						><input type="radio" name="fit" checked={!fit} onchange={() => (fit = false)} /> {t('shell.pageSetup.dialog.scaleBefore')}
+						<input type="number" min="10" max="400" bind:value={scale} disabled={fit} /> {t('shell.pageSetup.dialog.scaleAfter')}</label
 					>
 					<label class="row"
-						><input type="radio" name="fit" checked={fit} onchange={() => (fit = true)} /> Ajuster :
-						<input type="number" min="1" max="999" bind:value={fitWide} disabled={!fit} placeholder="auto" /> page(s) en largeur sur
-						<input type="number" min="1" max="999" bind:value={fitTall} disabled={!fit} placeholder="auto" /> en hauteur</label
+						><input type="radio" name="fit" checked={fit} onchange={() => (fit = true)} /> {t('shell.pageSetup.dialog.fitBefore')}
+						<input type="number" min="1" max="999" bind:value={fitWide} disabled={!fit} placeholder={t('shell.pageSetup.scale.auto')} /> {t('shell.pageSetup.dialog.fitWide')}
+						<input type="number" min="1" max="999" bind:value={fitTall} disabled={!fit} placeholder={t('shell.pageSetup.scale.auto')} /> {t('shell.pageSetup.dialog.fitTall')}</label
 					>
-					<p class="note">Une case vide : autant de pages qu’il faut dans ce sens.</p>
+					<p class="note">{t('shell.pageSetup.dialog.fitNote')}</p>
 				</fieldset>
 				<label class="row"
-					>Format du papier :
+					>{t('shell.pageSetup.dialog.paper')}
 					<select bind:value={paper}>
-						{#each PAPERS as p (p.id)}<option value={p.id}>{p.label} ({p.size})</option>{/each}
+						{#each PAPERS as p (p.id)}<option value={p.id}>{t('ribbon.cmd.size.item', { name: p.label, size: p.size })}</option>{/each}
 					</select></label
 				>
-				<label class="row">Commencer la numérotation à : <input type="text" class="short" bind:value={firstPage} /></label>
+				<label class="row">{t('shell.pageSetup.dialog.firstPage')} <input type="text" class="short" bind:value={firstPage} /></label>
 			{:else if current === 'margins'}
 				<div class="margins">
 					<div class="grid3">
-						<label class="col"><span class="lbl">Haut</span><input type="number" step="0.1" min="0" bind:value={mTop} /></label>
-						<label class="col"><span class="lbl">En-tête</span><input type="number" step="0.1" min="0" bind:value={mHeader} /></label>
-						<label class="col"><span class="lbl">Gauche</span><input type="number" step="0.1" min="0" bind:value={mLeft} /></label>
-						<label class="col"><span class="lbl">Droite</span><input type="number" step="0.1" min="0" bind:value={mRight} /></label>
-						<label class="col"><span class="lbl">Bas</span><input type="number" step="0.1" min="0" bind:value={mBottom} /></label>
-						<label class="col"><span class="lbl">Pied de page</span><input type="number" step="0.1" min="0" bind:value={mFooter} /></label>
+						<label class="col"><span class="lbl">{t('shell.pageSetup.dialog.top')}</span><input type="number" step="0.1" min="0" bind:value={mTop} /></label>
+						<label class="col"><span class="lbl">{t('shell.pageSetup.dialog.header')}</span><input type="number" step="0.1" min="0" bind:value={mHeader} /></label>
+						<label class="col"><span class="lbl">{t('shell.pageSetup.dialog.left')}</span><input type="number" step="0.1" min="0" bind:value={mLeft} /></label>
+						<label class="col"><span class="lbl">{t('shell.pageSetup.dialog.right')}</span><input type="number" step="0.1" min="0" bind:value={mRight} /></label>
+						<label class="col"><span class="lbl">{t('shell.pageSetup.dialog.bottom')}</span><input type="number" step="0.1" min="0" bind:value={mBottom} /></label>
+						<label class="col"><span class="lbl">{t('shell.pageSetup.dialog.footer')}</span><input type="number" step="0.1" min="0" bind:value={mFooter} /></label>
 					</div>
 					<svg class="paper" width={pageW + 2} height={pageH + 2} aria-hidden="true">
 						<rect x="1" y="1" width={pageW} height={pageH} fill="#fff" stroke="#9aa0a6" />
@@ -270,18 +272,18 @@
 						<line x1="1" x2={pageW + 1} y1={1 + pageH - mFooter * k} y2={1 + pageH - mFooter * k} stroke="#c9cdd2" stroke-dasharray="1 2" />
 					</svg>
 				</div>
-				<p class="note">En centimètres. L’en-tête et le pied de page s’impriment à leur distance du bord, dans les marges du haut et du bas.</p>
+				<p class="note">{t('shell.pageSetup.dialog.marginsNote')}</p>
 				<fieldset>
-					<legend>Centrer sur la page</legend>
+					<legend>{t('shell.pageSetup.dialog.centerOnPage')}</legend>
 					<div class="row">
-						<label class="row"><input type="checkbox" bind:checked={centerH} /> Horizontalement</label>
-						<label class="row"><input type="checkbox" bind:checked={centerV} /> Verticalement</label>
+						<label class="row"><input type="checkbox" bind:checked={centerH} /> {t('shell.pageSetup.dialog.horizontally')}</label>
+						<label class="row"><input type="checkbox" bind:checked={centerV} /> {t('shell.pageSetup.dialog.vertically')}</label>
 					</div>
 				</fieldset>
 			{:else if current === 'hf'}
 				{@render hfEditor('header')}
 				<div class="codes">
-					<span class="lbl">Insérer dans le champ choisi :</span>
+					<span class="lbl">{t('shell.pageSetup.dialog.insertCode')}</span>
 					{#each HF_CODES as c (c.code)}
 						<button class="plain small" title={c.code} onmousedown={(e) => e.preventDefault()} onclick={() => insertCode(c.code)}>{c.label}</button>
 					{/each}
@@ -289,32 +291,32 @@
 				{@render hfEditor('footer')}
 			{:else}
 				<label class="row wide"
-					>Zone d’impression : <input type="text" bind:value={area} placeholder="toute la plage utilisée" />{@render pick('area')}</label
+					>{t('shell.pageSetup.dialog.printArea')} <input type="text" bind:value={area} placeholder={t('shell.pageSetup.dialog.printAreaPlaceholder')} />{@render pick('area')}</label
 				>
 				<fieldset>
-					<legend>Titres à imprimer</legend>
-					<label class="row wide">Lignes à répéter en haut : <input type="text" bind:value={titleRows} placeholder="$1:$1" />{@render pick('rows')}</label>
-					<label class="row wide">Colonnes à répéter à gauche : <input type="text" bind:value={titleCols} placeholder="$A:$A" />{@render pick('cols')}</label>
+					<legend>{t('shell.pageSetup.dialog.printTitles')}</legend>
+					<label class="row wide">{t('shell.pageSetup.dialog.titleRows')} <input type="text" bind:value={titleRows} placeholder="$1:$1" />{@render pick('rows')}</label>
+					<label class="row wide">{t('shell.pageSetup.dialog.titleCols')} <input type="text" bind:value={titleCols} placeholder="$A:$A" />{@render pick('cols')}</label>
 				</fieldset>
 				<fieldset>
-					<legend>Impression</legend>
-					<label class="row"><input type="checkbox" bind:checked={gridlines} /> Quadrillage</label>
-					<label class="row"><input type="checkbox" bind:checked={headings} /> En-têtes de ligne et de colonne</label>
-					<label class="row"><input type="checkbox" bind:checked={blackWhite} /> Noir et blanc</label>
+					<legend>{t('shell.pageSetup.dialog.print')}</legend>
+					<label class="row"><input type="checkbox" bind:checked={gridlines} /> {t('shell.pageSetup.dialog.gridlines')}</label>
+					<label class="row"><input type="checkbox" bind:checked={headings} /> {t('shell.pageSetup.dialog.headings')}</label>
+					<label class="row"><input type="checkbox" bind:checked={blackWhite} /> {t('shell.pageSetup.dialog.blackWhite')}</label>
 				</fieldset>
 				<fieldset>
-					<legend>Ordre des pages</legend>
-					<label class="row"><input type="radio" name="order" checked={!acrossFirst} onchange={() => (acrossFirst = false)} /> Vers le bas, puis à droite</label>
-					<label class="row"><input type="radio" name="order" checked={acrossFirst} onchange={() => (acrossFirst = true)} /> À droite, puis vers le bas</label>
+					<legend>{t('shell.pageSetup.dialog.pageOrder')}</legend>
+					<label class="row"><input type="radio" name="order" checked={!acrossFirst} onchange={() => (acrossFirst = false)} /> {t('shell.pageSetup.dialog.downThenOver')}</label>
+					<label class="row"><input type="radio" name="order" checked={acrossFirst} onchange={() => (acrossFirst = true)} /> {t('shell.pageSetup.dialog.overThenDown')}</label>
 				</fieldset>
 			{/if}
 		</div>
 		<div class="foot">
 			{#if error}<span class="error" role="alert">{error}</span>{/if}
 			<span class="sp"></span>
-			{#if onprint}<button onclick={() => apply(true)}>Imprimer…</button>{/if}
-			<button class="primary" onclick={() => apply()}>OK</button>
-			<button onclick={onclose}>Annuler</button>
+			{#if onprint}<button onclick={() => apply(true)}>{t('shell.pageSetup.dialog.printButton')}</button>{/if}
+			<button class="primary" onclick={() => apply()}>{t('common.ok')}</button>
+			<button onclick={onclose}>{t('common.cancel')}</button>
 		</div>
 	</div>
 </div>

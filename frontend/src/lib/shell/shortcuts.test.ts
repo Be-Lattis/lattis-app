@@ -15,7 +15,7 @@ describe('liste des raccourcis clavier', () => {
 	});
 	it('clavier : KeyTips, lettres des onglets du ruban, F6, Maj+F10', () => {
 		const keys = shortcutGroups.flatMap((g) => g.items.map((s) => s.keys));
-		for (const [t, k] of Object.entries(TAB_TIPS)) if (t !== 'Fichier' && t !== 'Aide') expect(keys).toContain(`Alt puis ${k}`);
+		for (const [t, k] of Object.entries(TAB_TIPS)) if (t !== 'file' && t !== 'help') expect(keys).toContain(`Alt puis ${k}`);
 		expect(keys).toContain('F6 / Maj+F6');
 		expect(keys).toContain('Maj+F10 / Menu');
 		expect(keys).toContain('Ctrl+Pg.Suiv');

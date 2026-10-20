@@ -4,6 +4,7 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { reportError } from '#lib/shell/errors.js';
+	import { t } from '#lib/i18n/index.js';
 
 	let logged = $state('');
 	onMount(() => {
@@ -12,10 +13,10 @@
 </script>
 
 <div class="crash">
-	<h1>Lattis a rencontré une erreur</h1>
-	<p>{page.error?.message ?? `Erreur ${page.status}`}</p>
-	{#if logged}<p class="muted">Détail enregistré dans {logged}</p>{/if}
-	<button onclick={() => location.reload()}>Recharger</button>
+	<h1>{t('shell.crash.title')}</h1>
+	<p>{page.error?.message ?? t('shell.crash.status', { status: String(page.status) })}</p>
+	{#if logged}<p class="muted">{t('shell.crash.logged', { path: logged })}</p>{/if}
+	<button onclick={() => location.reload()}>{t('shell.crash.reload')}</button>
 </div>
 
 <style>

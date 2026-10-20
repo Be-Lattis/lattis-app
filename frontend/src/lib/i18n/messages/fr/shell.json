@@ -4,6 +4,439 @@
 			"label": "Langue de l'interface",
 			"auto": "Langue du système ({name})",
 			"help": "S'applique tout de suite. Les traductions sont en cours : les textes pas encore traduits restent en français. La langue règle aussi l'affichage des nombres et des dates ; le classeur enregistré n'en dépend pas."
+		},
+		"sections": {
+			"features": "Fonctionnalités",
+			"ai": "Assistant IA",
+			"view": "Affichage",
+			"limits": "Limites"
+		},
+		"htmlTabs": {
+			"label": "Pages web",
+			"help": "Permet d'ajouter des pages web : une page HTML, CSS et JavaScript qui lit et modifie le classeur, ou une page d'un site. Les classeurs qui en contiennent déjà s'ouvrent et s'utilisent normalement."
+		},
+		"sharedWorkbooks": {
+			"label": "Classeurs partagés (Serveur Lattis)",
+			"help": "Permet de se connecter à un Serveur Lattis de votre organisation (menu Compte de la barre de titre) et de l'ajouter comme source de données. Les classeurs partagés y vivent ; la connexion se fait par votre compte (Google, Microsoft, Keycloak…) ou un mot de passe Lattis."
+		},
+		"coEditing": {
+			"label": "Travailler à plusieurs sur un dossier partagé",
+			"help": "Un classeur posé sur un NAS ou un partage réseau et déjà ouvert sur un autre poste propose « Travailler à plusieurs » : chacun modifie les données des tableaux et voit celles des autres en direct (un journal par poste à côté du fichier). Désactivé, il s'ouvre en lecture seule ou « quand même », comme avant."
+		},
+		"aiEnabled": {
+			"label": "Assistant IA",
+			"help": "Le bouton « Assistant ✦ », en haut à droite du ruban (Alt+I), ouvre un volet à droite de la grille : un assistant qui aide à construire une analyse et agit sur le classeur, chaque réponse s'annulant d'un coup. Il faut une clé d'API d'un fournisseur (Anthropic, Mistral, OpenAI…), gardée dans le trousseau du système, un modèle installé sur ce poste, ou Claude Desktop avec un abonnement Claude."
+		},
+		"aiDataSharing": {
+			"label": "Données transmises à l'assistant",
+			"schemaOnly": "Structure seulement (noms, types, nombre de lignes et de valeurs distinctes)",
+			"sample": "Structure et quelques lignes d'exemple (20 au plus par lecture)",
+			"full": "Tout le classeur (l'assistant peut lire toutes les valeurs)",
+			"help": "Vaut aussi pour Claude Desktop et Claude Code par le serveur MCP. Le fournisseur reçoit en plus vos messages, la feuille active et la sélection ; avec un modèle local, rien ne quitte le poste."
+		},
+		"aiKeepConversation": {
+			"label": "Garder la conversation dans le classeur",
+			"help": "La conversation est enregistrée avec le classeur et réapparaît à sa prochaine ouverture : elle voyage avec le fichier, y compris les résultats de requêtes montrés et les lignes lues par l'assistant. Elle n'est enregistrée que si le classeur a aussi été modifié. Sinon, elle s'efface quand on ferme le classeur ou qu'on en ouvre un autre."
+		},
+		"aiLocalUrl": {
+			"label": "Adresse du modèle local",
+			"help": "Fournisseur « Modèle local » : l'adresse d'Ollama, LM Studio ou d'un autre serveur compatible OpenAI sur ce poste. Aucune donnée ne quitte l'ordinateur."
+		},
+		"theme": {
+			"label": "Thème de couleur par défaut",
+			"help": "Couleurs des tableaux ordinaires et des tableaux d'une source externe dans un classeur qui n'a pas choisi son thème : les classeurs neufs et ceux d'avant les thèmes. Le thème choisi dans un classeur (Affichage › Thème) est enregistré avec lui et s'affiche pareil sur les autres postes."
+		},
+		"undoDepth": {
+			"label": "Profondeur d'annulation",
+			"unit": "commandes",
+			"help": "Nombre de commandes que Ctrl+Z peut annuler (200 par défaut). L'historique n'est jamais enregistré dans le fichier."
+		},
+		"scriptSeconds": {
+			"label": "Durée maximale d'un script",
+			"help": "Au-delà, le script est arrêté et ce qu'il a modifié est annulé (30 s par défaut)."
+		},
+		"sqlReadSeconds": {
+			"label": "Durée maximale d'une lecture SQL",
+			"help": "Requêtes de l'onglet SQL et lectures des scripts (30 s par défaut)."
+		},
+		"sqlWriteSeconds": {
+			"label": "Durée maximale d'une écriture SQL",
+			"help": "Une écriture de l'onglet SQL bloque les saisies tant qu'elle dure ; au-delà, elle est annulée sans rien modifier (120 s par défaut)."
+		},
+		"numberRange": "{label} : un nombre entier de {min} à {max}",
+		"locked": "🔒 Imposé par la stratégie de votre organisation.",
+		"fixed": "Fixé par {source} : le changer ici est sans effet.",
+		"fixedOther": "une autre configuration",
+		"dialog": {
+			"title": "Paramètres",
+			"sections": "Sections",
+			"mcpTooltip": "Laisser un assistant compatible MCP (Claude Desktop, Claude Code…) lire et modifier le classeur ouvert",
+			"mcp": "Serveur MCP (assistants)…"
 		}
+	},
+	"shortcuts": {
+		"fichier": {
+			"title": "Classeur",
+			"new": "Nouveau classeur",
+			"open": "Ouvrir un classeur",
+			"save": "Enregistrer",
+			"saveAs": "Enregistrer sous",
+			"print": "Imprimer la feuille",
+			"close": "Fermer le classeur",
+			"undo": "Annuler",
+			"redo": "Rétablir",
+			"help": "Aide (dans une formule : la page de la fonction sous le curseur)"
+		},
+		"clavier": {
+			"title": "Ruban, menus et fenêtres",
+			"keyTips": "Lettres d'accès (KeyTips) du ruban ; Échap revient en arrière",
+			"fold": "Réduire ou épingler le ruban (aussi : double-clic sur un onglet du ruban)",
+			"fileMenu": "Menu Fichier",
+			"tab": "Onglet {tab} du ruban (ou Alt+{key})",
+			"arrows": "Dans le ruban : onglet ou commande voisine ; Bas descend aux commandes, Haut remonte à l'onglet",
+			"regions": "Région suivante, précédente : ruban, barre de formule, grille, volet, onglets, barre d'état",
+			"contextMenu": "Menu contextuel de la cellule active (ou du graphique sélectionné)",
+			"menuUpDown": "Dans un menu : entrée précédente, suivante (Origine, Fin : la première, la dernière)",
+			"menuLetter": "Dans un menu : entrée suivante qui commence par cette lettre",
+			"menuChoose": "Dans un menu : choisir l'entrée",
+			"dialogFields": "Dans une boîte de dialogue : champ suivant, précédent",
+			"escape": "Fermer le menu, la boîte de dialogue ou le volet ; le focus revient où il était"
+		},
+		"feuilles": {
+			"title": "Feuilles",
+			"next": "Feuille suivante",
+			"previous": "Feuille précédente",
+			"insert": "Insérer une feuille",
+			"tabArrows": "Sur un onglet de feuille (F6) : onglet voisin ; Entrée l'affiche",
+			"choiceList": "Sur un onglet à choix (« Ventes · 2025 ▾ ») : ouvrir la liste des valeurs",
+			"choiceNext": "Onglet à choix : valeur suivante (l'année d'après)",
+			"choicePrevious": "Onglet à choix : valeur précédente"
+		},
+		"deplacement": {
+			"title": "Déplacement et sélection",
+			"arrows": "Cellule voisine",
+			"edge": "Bord de la zone de données",
+			"endArrow": "Comme Ctrl+Flèche",
+			"extend": "Étendre la sélection",
+			"page": "Page suivante, précédente",
+			"home": "Début de la ligne",
+			"a1": "Cellule A1",
+			"lastCell": "Dernière cellule utilisée",
+			"tab": "Cellule suivante, précédente",
+			"selectTable": "Sélectionner le tableau",
+			"selectColumn": "Sélectionner la colonne du tableau",
+			"selectRow": "Sélectionner la ligne"
+		},
+		"saisie": {
+			"title": "Saisie",
+			"edit": "Modifier la cellule",
+			"enter": "Valider et descendre",
+			"enterAll": "Valider dans toute la sélection",
+			"lineBreak": "Saut de ligne dans la cellule",
+			"cancel": "Abandonner la saisie",
+			"delete": "Effacer la sélection",
+			"today": "Date du jour",
+			"now": "Heure actuelle",
+			"autoSum": "Somme automatique",
+			"dropDown": "Ouvrir la liste déroulante de la cellule",
+			"fillDown": "Recopier vers le bas",
+			"fillRight": "Recopier vers la droite",
+			"repeat": "Répéter la dernière action"
+		},
+		"edition": {
+			"title": "Édition et mise en forme",
+			"copy": "Copier",
+			"cut": "Couper",
+			"paste": "Coller",
+			"find": "Rechercher",
+			"replace": "Remplacer",
+			"bold": "Gras, italique, souligné",
+			"format": "Format de cellule",
+			"insertDelete": "Insérer, supprimer des lignes ou colonnes",
+			"strike": "Barré",
+			"hide": "Masquer les lignes, les colonnes de la sélection",
+			"table": "Mettre sous forme de tableau",
+			"filter": "Filtre de la colonne (efface les filtres s'il y en a)",
+			"note": "Nouvelle note (ou modifier la note)",
+			"chart": "Graphique (histogramme) du tableau actif"
+		},
+		"calcul": {
+			"title": "Calcul et données",
+			"refresh": "Actualiser la requête du tableau, sinon recalculer",
+			"refreshAll": "Tout actualiser : requêtes et formules",
+			"insertFunction": "Insérer une fonction",
+			"recalc": "Recalculer"
+		},
+		"editeurs": {
+			"title": "Onglets SQL, Script et HTML",
+			"sqlRun": "SQL : exécuter la sélection, sinon l'instruction sous le curseur",
+			"sqlNames": "SQL : noms des tableaux et colonnes",
+			"sqlHistory": "SQL : historique des requêtes",
+			"scriptRun": "Script : exécuter le script",
+			"save": "Script, HTML : enregistrer",
+			"htmlPreview": "HTML : mettre l'aperçu à jour"
+		}
+	},
+	"pageSetup": {
+		"margins": {
+			"normal": "Normales",
+			"wide": "Larges",
+			"narrow": "Étroites"
+		},
+		"papers": {
+			"B5": "B5 (ISO)",
+			"Letter": "Lettre US",
+			"Legal": "Légal US",
+			"Tabloid": "Tabloïd",
+			"Executive": "Exécutive"
+		},
+		"paperSize": "{w} cm × {h} cm",
+		"fit": {
+			"pages": "{n, plural, one {# page} other {# pages}}",
+			"auto": "Automatique"
+		},
+		"scale": {
+			"auto": "auto",
+			"fitted": "Ajusté : {wide} en largeur, {tall} en hauteur",
+			"percent": "{n} %"
+		},
+		"hf": {
+			"codes": {
+				"page": "Numéro de page",
+				"pages": "Nombre de pages",
+				"date": "Date",
+				"time": "Heure",
+				"path": "Chemin d'accès",
+				"file": "Nom du fichier",
+				"sheet": "Nom de la feuille"
+			},
+			"presets": {
+				"page": "Page &[Page]",
+				"pageOf": "Page &[Page] sur &[Pages]",
+				"confidential": "Confidentiel"
+			},
+			"separator": " ; ",
+			"none": "(aucun)"
+		},
+		"undo": {
+			"margins": "Marges",
+			"orientation": "Orientation",
+			"paper": "Taille",
+			"printArea": "Zone d'impression",
+			"resetBreaks": "Rétablir les sauts de page",
+			"break": "Saut de page",
+			"scale": "Mise à l'échelle",
+			"printGridlines": "Imprimer le quadrillage",
+			"printHeadings": "Imprimer les en-têtes"
+		},
+		"notice": {
+			"breakA1": "En A1, rien à couper : placez la cellule active sous la ligne ou à droite de la colonne où la nouvelle page commence",
+			"noBreakHere": "Pas de saut de page manuel au-dessus ni à gauche de la cellule active",
+			"noBreaks": "Aucun saut de page manuel"
+		},
+		"error": {
+			"fit": "Ajuster : entre 1 et 999 pages",
+			"scale": "Échelle : entre 10 et 400 %",
+			"firstPage": "Numéro de la première page : un nombre ou « Auto »",
+			"margins": "Marges : entre 0 et 50 cm",
+			"area": "Zone d’impression : une plage comme $A$1:$F$40",
+			"titleRows": "Lignes à répéter en haut : comme $1:$2",
+			"titleCols": "Colonnes à répéter à gauche : comme $A:$B"
+		},
+		"dialog": {
+			"title": "Mise en page",
+			"tabs": {
+				"page": "Page",
+				"margins": "Marges",
+				"hf": "En-tête/Pied de page",
+				"sheet": "Feuille"
+			},
+			"header": "En-tête",
+			"footer": "Pied de page",
+			"customHF": "(personnalisé)",
+			"left": "Gauche",
+			"center": "Centre",
+			"right": "Droite",
+			"top": "Haut",
+			"bottom": "Bas",
+			"preview": "Aperçu",
+			"fromSelection": "Sélection",
+			"fromSelectionTooltip": "Reprendre la sélection de la feuille",
+			"orientation": "Orientation",
+			"portrait": "Portrait",
+			"landscape": "Paysage",
+			"scale": "Échelle",
+			"scaleBefore": "Réduire/agrandir à :",
+			"scaleAfter": "% de la taille normale",
+			"fitBefore": "Ajuster :",
+			"fitWide": "page(s) en largeur sur",
+			"fitTall": "en hauteur",
+			"fitNote": "Une case vide : autant de pages qu’il faut dans ce sens.",
+			"paper": "Format du papier :",
+			"firstPage": "Commencer la numérotation à :",
+			"marginsNote": "En centimètres. L’en-tête et le pied de page s’impriment à leur distance du bord, dans les marges du haut et du bas.",
+			"centerOnPage": "Centrer sur la page",
+			"horizontally": "Horizontalement",
+			"vertically": "Verticalement",
+			"insertCode": "Insérer dans le champ choisi :",
+			"printArea": "Zone d’impression :",
+			"printAreaPlaceholder": "toute la plage utilisée",
+			"printTitles": "Titres à imprimer",
+			"titleRows": "Lignes à répéter en haut :",
+			"titleCols": "Colonnes à répéter à gauche :",
+			"print": "Impression",
+			"gridlines": "Quadrillage",
+			"headings": "En-têtes de ligne et de colonne",
+			"blackWhite": "Noir et blanc",
+			"pageOrder": "Ordre des pages",
+			"downThenOver": "Vers le bas, puis à droite",
+			"overThenDown": "À droite, puis vers le bas",
+			"printButton": "Imprimer…"
+		}
+	},
+	"busy": {
+		"aria": "Traitement en cours",
+		"label": "Traitement…"
+	},
+	"sync": {
+		"busyTooltip": "Vos modifications sont faites ; elles partent au serveur",
+		"offline": "Hors ligne — {n} en attente",
+		"sendingCount": "Synchronisation… ({n})",
+		"sending": "Synchronisation…",
+		"done": "Synchronisé"
+	},
+	"report": {
+		"issueBody": "Version de Lattis : {version}\n\nCe qui s'est passé :\n\nCe qui était attendu :\n\nÉtapes pour reproduire :\n1. "
+	},
+	"panel": {
+		"help": "Aide",
+		"closeTooltip": "Fermer le volet (Échap)",
+		"closeAria": "Fermer le volet"
+	},
+	"crash": {
+		"title": "Lattis a rencontré une erreur",
+		"status": "Erreur {status}",
+		"logged": "Détail enregistré dans {path}",
+		"reload": "Recharger"
+	},
+	"titleBar": {
+		"comingSoon": "{action} : à venir",
+		"unsaved": "Modifications non enregistrées",
+		"minimize": "Réduire",
+		"restore": "Niveau inférieur",
+		"maximize": "Agrandir",
+		"close": "Fermer"
+	},
+	"untitled": "Classeur sans titre",
+	"about": {
+		"title": "À propos de Lattis",
+		"tagline": "Tableur relationnel local-first · version {version}",
+		"licensePrefix": "Logiciel libre sous licence",
+		"source": "Code source",
+		"server": "Cette session est servie par un Serveur Lattis ({server}), sous licence AGPL-3.0 :",
+		"serverSource": "code source du serveur",
+		"trademarks": "« Lattis », « Be-Lattis » et le logo sont des marques réservées, hors de la licence du code. Cartes : Licence Ouverte / Etalab 2.0."
+	},
+	"zoom": {
+		"out": "Zoom arrière",
+		"in": "Zoom avant",
+		"slider": "Zoom",
+		"level": "Niveau de zoom"
+	},
+	"recovery": {
+		"older": "{n, plural, one {+ # version plus ancienne} other {+ # versions plus anciennes}}"
+	},
+	"saveProgress": {
+		"snapshot": "Enregistrement : copie de la base…",
+		"scrub": "Enregistrement : retrait de l’historique d’annulation…",
+		"write": "Enregistrement : écriture du fichier {pct} %",
+		"verify": "Enregistrement : vérification du fichier…"
+	},
+	"mcp": {
+		"title": "Serveur MCP",
+		"intro": "Un assistant compatible MCP (Claude Desktop, Claude Code…) peut lire et modifier le classeur ouvert : feuilles, tableaux, cellules, sélection, SQL, scripts, boutons. Ce qu’il modifie au cours d’une série d’actions s’annule d’un coup (Ctrl+Z). Le serveur n’écoute que sur cet ordinateur et exige un jeton.",
+		"enable": "Activer le serveur MCP",
+		"enableRunning": "Activer le serveur MCP (en marche)",
+		"enableStopped": "Activer le serveur MCP (arrêté)",
+		"address": "Adresse",
+		"token": "Jeton",
+		"hide": "Masquer",
+		"show": "Afficher",
+		"copied": "Copié",
+		"copy": "Copier",
+		"configs": {
+			"desktop": {
+				"label": "Claude Desktop (et clients stdio)",
+				"hint": "À ajouter dans claude_desktop_config.json : le client lance Lattis en relais vers l'application ouverte."
+			},
+			"code": {
+				"hint": "Commande à lancer dans un terminal (portée user : Lattis est proposé dans tous vos projets)."
+			},
+			"http": {
+				"label": "Clients HTTP (Streamable HTTP)",
+				"hint": "Pour les clients qui se connectent à une adresse."
+			}
+		},
+		"confirm": {
+			"title": "{client} veut modifier le classeur",
+			"toolBefore": "Outil",
+			"toolAfter": ". Sans réponse dans deux minutes, la demande est refusée.",
+			"others": "{n, plural, one {# autre demande en attente.} other {# autres demandes en attente.}}",
+			"allow": "Autoriser",
+			"deny": "Refuser"
+		}
+	},
+	"exportReport": {
+		"lost": {
+			"charts": "{n, plural, one {# graphique} other {# graphiques}}",
+			"pivots": "{n, plural, one {# TCD en valeurs} other {# TCD en valeurs}}",
+			"formulas": "{n, plural, one {# formule en valeur} other {# formules en valeurs}}",
+			"rules": "{n, plural, one {# règle de mise en forme conditionnelle} other {# règles de mise en forme conditionnelle}}",
+			"notes": "{n, plural, one {# note} other {# notes}}",
+			"lists": "{n, plural, one {# liste de validation} other {# listes de validation}}",
+			"buttons": "{n, plural, one {# bouton} other {# boutons}}",
+			"queries": "{n, plural, one {# requête (tableau en valeurs)} other {# requêtes (tableaux en valeurs)}}",
+			"pages": "{n, plural, one {# onglet page ou document} other {# onglets page ou document}}",
+			"scripts": "{n, plural, one {# script} other {# scripts}}",
+			"protections": "{n, plural, one {# protection de feuille} other {# protections de feuille}}",
+			"twoLevel": "{n, plural, one {# groupe d'en-têtes (dans les noms)} other {# groupes d'en-têtes (dans les noms)}}",
+			"clipped": "{n, plural, one {# cellule hors des limites} other {# cellules hors des limites}}"
+		},
+		"withFunctions": "{text} ({functions})",
+		"noticeAll": "Classeur exporté : {path} ; tout a été exporté",
+		"noticeLost": "Classeur exporté : {path} ; non exporté : {lost}",
+		"detail": {
+			"docTab": "Onglet document : exporté comme une feuille vide",
+			"htmlTab": "Page HTML : exportée comme une feuille vide",
+			"tables": "{n, plural, one {# tableau} other {# tableaux}}",
+			"translated": "{n, plural, one {# formule exportée comme formule} other {# formules exportées comme formules}}",
+			"charts": "{n, plural, one {# graphique non exporté} other {# graphiques non exportés}}",
+			"pivots": "{n, plural, one {# tableau croisé exporté en valeurs, sans lien avec sa source} other {# tableaux croisés exportés en valeurs, sans lien avec leur source}}",
+			"noEquivalent": "{text} (sans équivalent : {functions})",
+			"formulas": "{n, plural, one {# formule exportée par sa valeur} other {# formules exportées par leur valeur}}",
+			"columns": "{n, plural, one {# colonne calculée exportée par ses valeurs} other {# colonnes calculées exportées par leurs valeurs}}",
+			"rules": "{n, plural, one {# règle de mise en forme conditionnelle non exportée} other {# règles de mise en forme conditionnelle non exportées}}",
+			"notes": "{n, plural, one {# note non exportée} other {# notes non exportées}}",
+			"lists": "{n, plural, one {# liste de validation non exportée} other {# listes de validation non exportées}}",
+			"buttons": "{n, plural, one {# bouton non exporté} other {# boutons non exportés}}",
+			"queries": "{n, plural, one {# tableau chargé par une requête : valeurs exportées, sans la requête} other {# tableaux chargés par une requête : valeurs exportées, sans la requête}}",
+			"twoLevel": "{n, plural, one {# tableau à groupes d'en-têtes : groupes exportés dans les noms (« Groupe.Sous »)} other {# tableaux à groupes d'en-têtes : groupes exportés dans les noms (« Groupe.Sous »)}}",
+			"protected": "Protection de la feuille non exportée",
+			"clipped": "{n, plural, one {# cellule au-delà de 1 048 576 lignes × 16 384 colonnes non exportée} other {# cellules au-delà de 1 048 576 lignes × 16 384 colonnes non exportées}}"
+		},
+		"printCharts": "{n, plural, one {# graphique non imprimé} other {# graphiques non imprimés}} : l'impression d'une feuille ne reprend que ses cellules",
+		"dialog": {
+			"aria": "Détails de l'export",
+			"title": "Export {format} : détails",
+			"kept": "Exporté : {list}.",
+			"lost": "Non exporté tel quel :",
+			"all": "Tout a été exporté.",
+			"workbook": "Classeur",
+			"scripts": "{n, plural, one {# script non exporté} other {# scripts non exportés}} (Excel et LibreOffice ne lisent pas les scripts de Lattis)",
+			"note": "Les valeurs, la mise en forme des cellules, les tableaux et les formules qui ont un équivalent sont exportés."
+		}
+	},
+	"notice": {
+		"importCreatesSheet": "Importer crée une feuille : {reason}"
 	}
 }

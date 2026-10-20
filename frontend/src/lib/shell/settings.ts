@@ -45,76 +45,113 @@ export interface SettingSection {
 	requires?: string;
 }
 
+// Textes lus dans la langue courante à chaque affichage (getters) : la liste
+// est une constante de module, ses libellés suivent la langue.
 export const settingSections: SettingSection[] = [
 	{
 		id: 'features',
-		title: 'Fonctionnalités',
+		get title() {
+			return t('shell.settings.sections.features');
+		},
 		settings: [
 			{
 				path: 'features.htmlTabs',
 				kind: 'bool',
-				label: 'Pages web',
-				help: "Permet d'ajouter des pages web : une page HTML, CSS et JavaScript qui lit et modifie le classeur, ou une page d'un site. Les classeurs qui en contiennent déjà s'ouvrent et s'utilisent normalement."
+				get label() {
+					return t('shell.settings.htmlTabs.label');
+				},
+				get help() {
+					return t('shell.settings.htmlTabs.help');
+				}
 			},
 			{
 				path: 'features.sharedWorkbooks',
 				kind: 'bool',
-				label: 'Classeurs partagés (Serveur Lattis)',
-				help: "Permet de se connecter à un Serveur Lattis de votre organisation (menu Compte de la barre de titre) et de l'ajouter comme source de données. Les classeurs partagés y vivent ; la connexion se fait par votre compte (Google, Microsoft, Keycloak…) ou un mot de passe Lattis."
+				get label() {
+					return t('shell.settings.sharedWorkbooks.label');
+				},
+				get help() {
+					return t('shell.settings.sharedWorkbooks.help');
+				}
 			},
 			{
 				path: 'features.coEditing',
 				kind: 'bool',
-				label: 'Travailler à plusieurs sur un dossier partagé',
-				help: "Un classeur posé sur un NAS ou un partage réseau et déjà ouvert sur un autre poste propose « Travailler à plusieurs » : chacun modifie les données des tableaux et voit celles des autres en direct (un journal par poste à côté du fichier). Désactivé, il s'ouvre en lecture seule ou « quand même », comme avant."
+				get label() {
+					return t('shell.settings.coEditing.label');
+				},
+				get help() {
+					return t('shell.settings.coEditing.help');
+				}
 			},
 			{
 				path: 'ai.enabled',
 				kind: 'bool',
-				label: 'Assistant IA',
-				help: "Le bouton « Assistant ✦ », en haut à droite du ruban (Alt+I), ouvre un volet à droite de la grille : un assistant qui aide à construire une analyse et agit sur le classeur, chaque réponse s'annulant d'un coup. Il faut une clé d'API d'un fournisseur (Anthropic, Mistral, OpenAI…), gardée dans le trousseau du système, un modèle installé sur ce poste, ou Claude Desktop avec un abonnement Claude."
+				get label() {
+					return t('shell.settings.aiEnabled.label');
+				},
+				get help() {
+					return t('shell.settings.aiEnabled.help');
+				}
 			}
 		]
 	},
 	{
 		id: 'ai',
-		title: 'Assistant IA',
+		get title() {
+			return t('shell.settings.sections.ai');
+		},
 		requires: 'ai.enabled',
 		settings: [
 			{
 				path: 'ai.dataSharing',
 				kind: 'choice',
-				label: "Données transmises à l'assistant",
-				choices: [
-					{ value: 'schema-only', label: 'Structure seulement (noms, types, nombre de lignes et de valeurs distinctes)' },
-					{ value: 'sample', label: "Structure et quelques lignes d'exemple (20 au plus par lecture)" },
-					{ value: 'full', label: "Tout le classeur (l'assistant peut lire toutes les valeurs)" }
-				],
-				help: 'Vaut aussi pour Claude Desktop et Claude Code par le serveur MCP. Le fournisseur reçoit en plus vos messages, la feuille active et la sélection ; avec un modèle local, rien ne quitte le poste.'
+				get label() {
+					return t('shell.settings.aiDataSharing.label');
+				},
+				get choices() {
+					return [
+						{ value: 'schema-only', label: t('shell.settings.aiDataSharing.schemaOnly') },
+						{ value: 'sample', label: t('shell.settings.aiDataSharing.sample') },
+						{ value: 'full', label: t('shell.settings.aiDataSharing.full') }
+					];
+				},
+				get help() {
+					return t('shell.settings.aiDataSharing.help');
+				}
 			},
 			{
 				path: 'ai.keepConversation',
 				kind: 'bool',
-				label: 'Garder la conversation dans le classeur',
-				help: "La conversation est enregistrée avec le classeur et réapparaît à sa prochaine ouverture : elle voyage avec le fichier, y compris les résultats de requêtes montrés et les lignes lues par l'assistant. Elle n'est enregistrée que si le classeur a aussi été modifié. Sinon, elle s'efface quand on ferme le classeur ou qu'on en ouvre un autre."
+				get label() {
+					return t('shell.settings.aiKeepConversation.label');
+				},
+				get help() {
+					return t('shell.settings.aiKeepConversation.help');
+				}
 			},
 			{
 				path: 'ai.localUrl',
 				kind: 'text',
-				label: 'Adresse du modèle local',
+				get label() {
+					return t('shell.settings.aiLocalUrl.label');
+				},
 				placeholder: 'http://localhost:11434/v1',
-				help: "Fournisseur « Modèle local » : l'adresse d'Ollama, LM Studio ou d'un autre serveur compatible OpenAI sur ce poste. Aucune donnée ne quitte l'ordinateur."
+				get help() {
+					return t('shell.settings.aiLocalUrl.help');
+				}
 			}
 		]
 	},
 	{
 		id: 'view',
-		title: 'Affichage',
+		get title() {
+			return t('shell.settings.sections.view');
+		},
 		settings: [
 			{
 				path: 'ui.language',
 				kind: 'choice',
-				// Getters : textes lus dans la langue courante à chaque affichage.
 				get label() {
 					return t('shell.settings.language.label');
 				},
@@ -130,51 +167,75 @@ export const settingSections: SettingSection[] = [
 			{
 				path: 'ui.theme',
 				kind: 'choice',
-				label: 'Thème de couleur par défaut',
+				get label() {
+					return t('shell.settings.theme.label');
+				},
 				choicesOf: (list) => themeCatalog(list).map((t) => ({ value: t.id, label: t.name, swatch: [t.table, t.source] })),
-				help: "Couleurs des tableaux ordinaires et des tableaux d'une source externe dans un classeur qui n'a pas choisi son thème : les classeurs neufs et ceux d'avant les thèmes. Le thème choisi dans un classeur (Affichage › Thème) est enregistré avec lui et s'affiche pareil sur les autres postes."
+				get help() {
+					return t('shell.settings.theme.help');
+				}
 			}
 		]
 	},
 	{
 		id: 'limits',
-		title: 'Limites',
+		get title() {
+			return t('shell.settings.sections.limits');
+		},
 		settings: [
 			{
 				path: 'limits.undoDepth',
 				kind: 'number',
-				label: "Profondeur d'annulation",
-				unit: 'commandes',
+				get label() {
+					return t('shell.settings.undoDepth.label');
+				},
+				get unit() {
+					return t('shell.settings.undoDepth.unit');
+				},
 				min: 10,
 				max: 10000,
-				help: "Nombre de commandes que Ctrl+Z peut annuler (200 par défaut). L'historique n'est jamais enregistré dans le fichier."
+				get help() {
+					return t('shell.settings.undoDepth.help');
+				}
 			},
 			{
 				path: 'limits.scriptSeconds',
 				kind: 'number',
-				label: "Durée maximale d'un script",
+				get label() {
+					return t('shell.settings.scriptSeconds.label');
+				},
 				unit: 's',
 				min: 1,
 				max: 3600,
-				help: "Au-delà, le script est arrêté et ce qu'il a modifié est annulé (30 s par défaut)."
+				get help() {
+					return t('shell.settings.scriptSeconds.help');
+				}
 			},
 			{
 				path: 'limits.sqlReadSeconds',
 				kind: 'number',
-				label: "Durée maximale d'une lecture SQL",
+				get label() {
+					return t('shell.settings.sqlReadSeconds.label');
+				},
 				unit: 's',
 				min: 1,
 				max: 3600,
-				help: "Requêtes de l'onglet SQL et lectures des scripts (30 s par défaut)."
+				get help() {
+					return t('shell.settings.sqlReadSeconds.help');
+				}
 			},
 			{
 				path: 'limits.sqlWriteSeconds',
 				kind: 'number',
-				label: "Durée maximale d'une écriture SQL",
+				get label() {
+					return t('shell.settings.sqlWriteSeconds.label');
+				},
 				unit: 's',
 				min: 1,
 				max: 3600,
-				help: "Une écriture de l'onglet SQL bloque les saisies tant qu'elle dure ; au-delà, elle est annulée sans rien modifier (120 s par défaut)."
+				get help() {
+					return t('shell.settings.sqlWriteSeconds.help');
+				}
 			}
 		]
 	}
@@ -186,7 +247,7 @@ export function parseNumberSetting(d: SettingDef, raw: string): number | string 
 	const n = /^\d+$/.test(s) ? Number(s) : NaN;
 	const lo = d.min ?? 0;
 	const hi = d.max ?? Number.MAX_SAFE_INTEGER;
-	if (!Number.isInteger(n) || n < lo || n > hi) return `${d.label} : un nombre entier de ${lo} à ${hi}`;
+	if (!Number.isInteger(n) || n < lo || n > hi) return t('shell.settings.numberRange', { label: d.label, min: String(lo), max: String(hi) });
 	return n;
 }
 
@@ -216,7 +277,7 @@ export function boolSetting(list: readonly SettingState[], path: string, def = f
 
 /** Note d'un réglage qu'on ne peut pas changer ici ('' sinon). */
 export function settingNote(s: SettingState | undefined): string {
-	if (s?.locked) return '🔒 Imposé par la stratégie de votre organisation.';
-	if (s?.fixed) return `Fixé par ${s.source ?? 'une autre configuration'} : le changer ici est sans effet.`;
+	if (s?.locked) return t('shell.settings.locked');
+	if (s?.fixed) return t('shell.settings.fixed', { source: s.source ?? t('shell.settings.fixedOther') });
 	return '';
 }

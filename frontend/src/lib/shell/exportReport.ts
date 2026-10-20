@@ -2,7 +2,7 @@
 // pour la barre d'état, le détail par feuille pour la boîte « Détails ».
 // Choix de Louis : à l'export, dire ce qui est exporté ou non.
 
-import { count } from '#lib/sql/result.js';
+import { t, tAny } from '#lib/i18n/index.js';
 
 export interface SheetReport {
 	name: string;
@@ -41,34 +41,35 @@ function fnList(names: string[], max = 4): string {
 /** Ce qui n'est pas exporté tel quel, en éléments courts (barre d'état). */
 export function lostItems(r: ExportReport): string[] {
 	const out: string[] = [];
-	const add = (n: number, one: string, many: string) => {
-		if (n > 0) out.push(count(n, one, many));
+	const add = (n: number, key: string) => {
+		if (n > 0) out.push(tAny(`shell.exportReport.lost.${key}`, { n }));
 	};
 	const sheets = r.sheets ?? [];
-	add(sum(r, (s) => s.charts), 'graphique', 'graphiques');
-	add(sum(r, (s) => s.pivots), 'TCD en valeurs', 'TCD en valeurs');
+	add(sum(r, (s) => s.charts), 'charts');
+	add(sum(r, (s) => s.pivots), 'pivots');
 	const f = sum(r, (s) => s.formulas + s.columns);
 	if (f > 0) {
 		const fns = fnList(sheets.flatMap((s) => s.functions ?? []));
-		out.push(count(f, 'formule en valeur', 'formules en valeurs') + (fns ? ` (${fns})` : ''));
+		const text = t('shell.exportReport.lost.formulas', { n: f });
+		out.push(fns ? t('shell.exportReport.withFunctions', { text, functions: fns }) : text);
 	}
-	add(sum(r, (s) => s.rules), 'règle de mise en forme conditionnelle', 'règles de mise en forme conditionnelle');
-	add(sum(r, (s) => s.notes), 'note', 'notes');
-	add(sum(r, (s) => s.lists), 'liste de validation', 'listes de validation');
-	add(sum(r, (s) => s.buttons), 'bouton', 'boutons');
-	add(sum(r, (s) => s.queries), 'requête (tableau en valeurs)', 'requêtes (tableaux en valeurs)');
-	add(sheets.filter((s) => s.kind).length, 'onglet page ou document', 'onglets page ou document');
-	add(r.scripts, 'script', 'scripts');
-	add(sheets.filter((s) => s.protected).length, 'protection de feuille', 'protections de feuille');
-	add(sum(r, (s) => s.twoLevel), "groupe d'en-têtes (dans les noms)", "groupes d'en-têtes (dans les noms)");
-	add(r.clipped, 'cellule hors des limites', 'cellules hors des limites');
+	add(sum(r, (s) => s.rules), 'rules');
+	add(sum(r, (s) => s.notes), 'notes');
+	add(sum(r, (s) => s.lists), 'lists');
+	add(sum(r, (s) => s.buttons), 'buttons');
+	add(sum(r, (s) => s.queries), 'queries');
+	add(sheets.filter((s) => s.kind).length, 'pages');
+	add(r.scripts, 'scripts');
+	add(sheets.filter((s) => s.protected).length, 'protections');
+	add(sum(r, (s) => s.twoLevel), 'twoLevel');
+	add(r.clipped, 'clipped');
 	return out;
 }
 
 /** Message de la barre d'état après l'export. */
 export function exportNotice(path: string, r: ExportReport): string {
 	const lost = lostItems(r);
-	return `Classeur exporté : ${path} ; ` + (lost.length ? `non exporté : ${lost.join(', ')}` : 'tout a été exporté');
+	return lost.length ? t('shell.exportReport.noticeLost', { path, lost: lost.join(', ') }) : t('shell.exportReport.noticeAll', { path });
 }
 
 export interface SheetDetail {
@@ -82,33 +83,37 @@ export function exportDetails(r: ExportReport): SheetDetail[] {
 	return (r.sheets ?? []).map((s) => {
 		const kept: string[] = [];
 		const lost: string[] = [];
-		const put = (list: string[], n: number, one: string, many: string) => {
-			if (n > 0) list.push(count(n, one, many));
+		const put = (list: string[], n: number, key: string) => {
+			if (n > 0) list.push(tAny(`shell.exportReport.detail.${key}`, { n }));
 		};
 		if (s.kind) {
-			lost.push(s.kind === 'doc' ? 'Onglet document : exporté comme une feuille vide' : 'Page HTML : exportée comme une feuille vide');
+			lost.push(s.kind === 'doc' ? t('shell.exportReport.detail.docTab') : t('shell.exportReport.detail.htmlTab'));
 			return { name: s.name, kept, lost };
 		}
-		put(kept, s.tables, 'tableau', 'tableaux');
-		put(kept, s.translated, 'formule exportée comme formule', 'formules exportées comme formules');
-		put(lost, s.charts, 'graphique non exporté', 'graphiques non exportés');
-		put(lost, s.pivots, 'tableau croisé exporté en valeurs, sans lien avec sa source', 'tableaux croisés exportés en valeurs, sans lien avec leur source');
-		const fns = s.functions?.length ? ` (sans équivalent : ${fnList(s.functions, 8)})` : '';
-		if (s.formulas > 0) lost.push(count(s.formulas, 'formule exportée par sa valeur', 'formules exportées par leur valeur') + (s.columns ? '' : fns));
-		if (s.columns > 0) lost.push(count(s.columns, 'colonne calculée exportée par ses valeurs', 'colonnes calculées exportées par leurs valeurs') + fns);
-		put(lost, s.rules, 'règle de mise en forme conditionnelle non exportée', 'règles de mise en forme conditionnelle non exportées');
-		put(lost, s.notes, 'note non exportée', 'notes non exportées');
-		put(lost, s.lists, 'liste de validation non exportée', 'listes de validation non exportées');
-		put(lost, s.buttons, 'bouton non exporté', 'boutons non exportés');
-		put(lost, s.queries, 'tableau chargé par une requête : valeurs exportées, sans la requête', 'tableaux chargés par une requête : valeurs exportées, sans la requête');
-		put(lost, s.twoLevel, "tableau à groupes d'en-têtes : groupes exportés dans les noms (« Groupe.Sous »)", "tableaux à groupes d'en-têtes : groupes exportés dans les noms (« Groupe.Sous »)");
-		if (s.protected) lost.push('Protection de la feuille non exportée');
-		put(lost, s.clipped, 'cellule au-delà de 1 048 576 lignes × 16 384 colonnes non exportée', 'cellules au-delà de 1 048 576 lignes × 16 384 colonnes non exportées');
+		put(kept, s.tables, 'tables');
+		put(kept, s.translated, 'translated');
+		put(lost, s.charts, 'charts');
+		put(lost, s.pivots, 'pivots');
+		const fns = s.functions?.length ? fnList(s.functions, 8) : '';
+		const withFns = (text: string) => (fns ? t('shell.exportReport.detail.noEquivalent', { text, functions: fns }) : text);
+		if (s.formulas > 0) {
+			const text = t('shell.exportReport.detail.formulas', { n: s.formulas });
+			lost.push(s.columns ? text : withFns(text));
+		}
+		if (s.columns > 0) lost.push(withFns(t('shell.exportReport.detail.columns', { n: s.columns })));
+		put(lost, s.rules, 'rules');
+		put(lost, s.notes, 'notes');
+		put(lost, s.lists, 'lists');
+		put(lost, s.buttons, 'buttons');
+		put(lost, s.queries, 'queries');
+		put(lost, s.twoLevel, 'twoLevel');
+		if (s.protected) lost.push(t('shell.exportReport.detail.protected'));
+		put(lost, s.clipped, 'clipped');
 		return { name: s.name, kept, lost };
 	});
 }
 
 /** Message après l'impression d'une feuille qui a des graphiques. */
 export function printNotice(charts: number): string {
-	return charts > 0 ? `${count(charts, 'graphique non imprimé', 'graphiques non imprimés')} : l'impression d'une feuille ne reprend que ses cellules` : '';
+	return charts > 0 ? t('shell.exportReport.printCharts', { n: charts }) : '';
 }
