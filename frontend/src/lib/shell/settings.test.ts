@@ -32,6 +32,18 @@ describe('réglages des fonctionnalités à activer', () => {
 	});
 });
 
+describe('thème par défaut (décision 0017)', () => {
+	it('choix tirés des thèmes proposés', () => {
+		const choices = (list: Parameters<typeof visibleSections>[0]) => visibleSections(list).find((s) => s.id === 'view')?.settings.find((d) => d.path === 'ui.theme')?.choices ?? [];
+		expect(choices([]).map((c) => c.value)).toContain('vert-bleu');
+		const org = [
+			{ path: 'ui.builtinThemes', value: false, readOnly: true },
+			{ path: 'ui.themes', value: { acme: { name: 'ACME', table: '#0b5394', source: '#e69138' } }, managed: ['acme'] }
+		];
+		expect(choices(org)).toEqual([{ value: 'acme', label: 'ACME' }]);
+	});
+});
+
 describe('limites (audit 6, M14)', () => {
 	const limits = settingSections.find((s) => s.id === 'limits');
 	it('expose les quatre limites, toujours visibles', () => {

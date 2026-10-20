@@ -66,6 +66,7 @@ export const COMMAND_TIPS: Record<string, string> = {
 	Quadrillage: 'VG',
 	'Figer les volets': 'F',
 	Zoom: 'Q',
+	Thème: 'TH',
 	// Mise en page
 	Marges: 'M',
 	Orientation: 'O',

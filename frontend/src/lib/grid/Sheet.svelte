@@ -53,6 +53,8 @@
 	import { canFoldAll, foldAll, foldTarget, pivotBoxHit, pivotBoxLeft, pivotLabelOffset, PIVOT_BOX, setFolded, type PivotRowInfo } from './pivottree';
 	import { fillSeries, shiftTableColumns } from './fill';
 	import { citeLabel, refMessage, refTarget, type Citation, type KeyRow } from './reflink';
+	import { gridPalette } from './theme';
+	import { tableTheme } from './theme.svelte.js';
 	import {
 		condArgs,
 		condLabel,
@@ -731,14 +733,17 @@
 		// Sauts de page (Affichage › Sauts de page).
 		pageBreak: '#5f6368',
 		stripText: '#5f6368',
+		// Couleurs des tableaux : celles du thème (Affichage › Thème, theme.ts),
+		// remplacées par gridPalette ; ici « Vert et bleu ».
 		head: '#e3efe7',
 		// Tableaux chargés par une requête (source externe) : bleu clair, même contraste que le vert.
 		linkHead: '#e3ecf7',
 		linkHeadText: '#14325a',
 		linkBorder: '#8fa9cc',
-		// Pastille d'un tableau qui suit l'onglet à choix (couleur d'accent).
+		linkIcon: '#6b7f99',
+		// Pastille d'un tableau qui suit l'onglet à choix (nuance foncée du thème).
 		followBadge: '#217346',
-		// Pastille du nom d'un tableau : nommé (même vert, plus clair), ou nom par défaut (gris, à renommer).
+		// Pastille du nom d'un tableau : nommé (couleur du thème, plus claire), ou nom par défaut (gris, à renommer).
 		nameBadge: '#2f7d55',
 		unnamedBadge: '#8a9099',
 		headText: '#14532d',
@@ -2225,6 +2230,12 @@
 		void gridlines;
 		void a1;
 		void pageBreaks;
+		untrack(() => schedule());
+	});
+
+	// Thème de couleur (Affichage › Thème) : couleurs des tableaux, redessinées tout de suite.
+	$effect(() => {
+		Object.assign(C, gridPalette(tableTheme.current));
 		untrack(() => schedule());
 	});
 
@@ -3927,8 +3938,10 @@
 	 */
 	function headIcons(e: Entry, i: number, x: number, y: number, cw: number, h: number): number {
 		const col = e.t.columns[i];
+		// Icônes dans la couleur du tableau : celle des sources externes pour une requête.
+		const ic = e.t.query && !col.hand ? C.linkIcon : C.icon;
 		ctx.font = FONT_SMALL;
-		ctx.fillStyle = C.icon;
+		ctx.fillStyle = ic;
 		ctx.textAlign = 'right';
 		ctx.textBaseline = 'middle';
 		// Icône du type : SVG pour date et booléen, texte pour les autres.
@@ -3941,9 +3954,9 @@
 		const fx = !svg && typeIcon(col.type) === 'fx';
 		if (calc && fx) ctx.fillStyle = C.active;
 		ctx.fillText(icon, x + cw - 6, y + h / 2);
-		ctx.fillStyle = C.icon;
+		ctx.fillStyle = ic;
 		if (svg) {
-			drawIcon(ctx, svg, x + cw - 6 - iconW - ICON, y + (h - ICON) / 2, ICON, C.icon, C.active, 1.3);
+			drawIcon(ctx, svg, x + cw - 6 - iconW - ICON, y + (h - ICON) / 2, ICON, ic, C.active, 1.3);
 			iconW += ICON;
 			if (col.filter) {
 				ctx.fillText('⧩ ', x + cw - 6 - iconW, y + h / 2);
@@ -3958,7 +3971,7 @@
 		// poste) ou publié en lecture seule.
 		const share = i === 0 ? (e.t.shared === 'private' ? 'local' : e.t.readOnly ? 'readonly' : null) : null;
 		if (share) {
-			drawIcon(ctx, share, x + cw - 6 - iconW - ICON - 2, y + (h - ICON) / 2, ICON, C.icon, C.active, 1.3);
+			drawIcon(ctx, share, x + cw - 6 - iconW - ICON - 2, y + (h - ICON) / 2, ICON, ic, C.active, 1.3);
 			iconW += ICON + 4;
 		}
 		if (hasKeyHint(e, i)) {
@@ -3984,7 +3997,7 @@
 		if (col.errors) {
 			ctx.fillStyle = C.error;
 			ctx.fillText('⚠ ' + col.errors, x + cw - 6 - iconW - ctx.measureText(' ').width, y + h / 2);
-			ctx.fillStyle = C.icon;
+			ctx.fillStyle = ic;
 		}
 		return iconW;
 	}

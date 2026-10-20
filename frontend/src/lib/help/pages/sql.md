@@ -31,7 +31,7 @@ Le résultat d'une requête se copie dans un nouveau tableau, ou s'y **référen
 
 ### Écrire à côté d'un résultat lié
 
-Les colonnes chargées par la requête (en-tête bleu) ne se modifient pas. Pour ajouter vos propres informations, tapez un nom juste à droite de l'en-tête : la nouvelle **colonne saisie** (en-tête vert) se remplit à la main, ou par une formule, et les formules du classeur la voient comme les autres (`Requête1[Commentaire]`).
+Les colonnes chargées par la requête (en-tête bleu, ou la couleur des sources externes du thème choisi dans Affichage › Thème) ne se modifient pas. Pour ajouter vos propres informations, tapez un nom juste à droite de l'en-tête : la nouvelle **colonne saisie** (en-tête vert) se remplit à la main, ou par une formule, et les formules du classeur la voient comme les autres (`Requête1[Commentaire]`).
 
 À chaque actualisation, ses valeurs suivent leurs lignes par une **clé** : la colonne `id` du résultat quand il y en a une (c'est le cas avec `SELECT *`), sinon une colonne sans doublon ni case vide que Lattis demande à la première valeur saisie. Quand aucune colonne seule ne convient, Lattis propose des paires : avec `SELECT *, 2021 AS Année FROM Suivi2021 UNION SELECT *, 2022 FROM Suivi2022`, les mêmes `id` reviennent d'une année à l'autre, et c'est « id + Année » qui identifie les lignes. Le rang des lignes est possible mais déconseillé : si la requête change l'ordre de ses lignes, les valeurs ne suivent plus.
 

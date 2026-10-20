@@ -45,7 +45,10 @@
 	import type { ControlInfo } from '#lib/script/controls.js';
 	import McpPanel from '#lib/shell/McpPanel.svelte';
 	import SettingsDialog from '#lib/shell/SettingsDialog.svelte';
-	import { htmlTabsEnabled, loadSettings, mcpAvailable, sharedWorkbooksEnabled } from '#lib/shell/settings.svelte.js';
+	import { htmlTabsEnabled, loadSettings, mcpAvailable, setSetting, sharedWorkbooksEnabled, userSettings } from '#lib/shell/settings.svelte.js';
+	import ThemeDialog from '#lib/shell/ThemeDialog.svelte';
+	import { resolveTheme, themeCatalog, themeId, workbookTheme, type WorkbookTheme } from '#lib/grid/theme.js';
+	import { applyTheme } from '#lib/grid/theme.svelte.js';
 	import { listenExternal } from '#lib/ai/external.svelte.js';
 	import { isWeb } from '#lib/web/platform.js';
 	import HtmlPage from '#lib/page/HtmlPage.svelte';
@@ -1929,6 +1932,51 @@
 		}
 	}
 
+	// --- Thème de couleur des tableaux (Affichage › Thème, décision 0017) ----
+	// Celui du classeur (docState.theme), sinon le défaut des réglages ;
+	// pendant Personnaliser…, l'aperçu.
+	let themePreview = $state<WorkbookTheme | null>(null);
+	let themeOpen = $state(false);
+	const themeCat = $derived(themeCatalog(userSettings.list));
+	const bookTheme = $derived(resolveTheme(mode === 'doc' ? docState.theme : null, userSettings.list));
+	$effect(() => {
+		applyTheme(themePreview ?? (mode === 'doc' ? docState.theme : null), userSettings.list);
+	});
+
+	async function setBookTheme(t: WorkbookTheme) {
+		try {
+			docState = await DocumentService.SetTheme(t);
+			await reload();
+			notice = `Thème « ${t.name} » (Ctrl+Z pour annuler)`;
+		} catch (e) {
+			notice = err(e);
+		}
+	}
+
+	function chooseTheme(id: string) {
+		if (id === 'custom') {
+			themeOpen = true;
+			return;
+		}
+		const t = themeCat.find((x) => x.id === id);
+		if (t) setBookTheme(workbookTheme(t));
+	}
+
+	async function applyCustomTheme(t: WorkbookTheme, save: boolean) {
+		themeOpen = false;
+		themePreview = null;
+		if (save) {
+			const id = themeId(t.name, themeCat.map((x) => x.id));
+			try {
+				await setSetting(`ui.themes.${id}`, { name: t.name, table: t.table, source: t.source });
+				t = { ...t, id };
+			} catch (e) {
+				notice = err(e);
+			}
+		}
+		await setBookTheme(t);
+	}
+
 	let zoomSet = $state<Record<string, number>>({});
 	const docKey = $derived(`${mode}|${docState.open}|${docState.path}|${docState.title}`);
 	const zoomKey = $derived(`${docKey}|${sheetId}`);
@@ -2159,6 +2207,8 @@
 		onpage={mode === 'doc' ? pageCmd : undefined}
 		pageBreaks={showBreaks}
 		onpagebreaks={mode === 'doc' ? (on) => (showBreaks = on) : undefined}
+		themes={themeCat.map((t) => ({ id: t.id, name: t.name, table: t.table, source: t.source, on: bookTheme.id === t.id }))}
+		ontheme={mode === 'doc' && !docState.readOnly ? chooseTheme : undefined}
 	/>
 
 	{#if mode === 'doc'}
@@ -2603,6 +2653,19 @@
 	{/if}
 	{#if settingsOpen}
 		<SettingsDialog onclose={() => (settingsOpen = false)} onmcp={() => { settingsOpen = false; mcpOpen = true; }} />
+	{/if}
+	{#if themeOpen}
+		<ThemeDialog
+			initial={{ id: bookTheme.id ?? undefined, name: bookTheme.name, table: bookTheme.table.base, source: bookTheme.source.base }}
+			mine={themeCat.filter((t) => t.origin === 'user')}
+			onpreview={(t) => (themePreview = t)}
+			onapply={applyCustomTheme}
+			ondelete={(id) => setSetting(`ui.themes.${id}`, null).catch((e) => (notice = err(e)))}
+			onclose={() => {
+				themeOpen = false;
+				themePreview = null;
+			}}
+		/>
 	{/if}
 	{#if rightsOpen && canRights && share}
 		<RightsDialog title={share.title} server={share.server} link={share.link} onclose={() => (rightsOpen = false)} onaddshared={share.mode === 'collaborative' ? async (t) => void (await addToShared(t)) : undefined} />

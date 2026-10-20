@@ -219,6 +219,8 @@ export const icons = {
 	// Onglets de feuille (menu contextuel)
 	'move-sheet': '<rect x="3.5" y="3.5" width="11" height="13" rx="1.5"/><path d="M3.5 8h11M8 3.5v13"/><path class="a" d="M12 20.5h8.5M18 18l2.5 2.5L18 23"/>',
 	'tab-color': '<path d="M3.5 4.5h17l-2 10h-13z"/><rect class="af" x="3.5" y="17.5" width="17" height="3.5" rx=".75"/>',
+	// Affichage › Thème : un tableau ordinaire (en-tête plein) et un tableau d'une source externe.
+	theme: '<rect x="2.5" y="4" width="9" height="16" rx="1.2"/><rect class="af" x="2.5" y="4" width="9" height="4.5" rx="1.2"/><rect x="12.5" y="4" width="9" height="16" rx="1.2"/><path class="a" d="M12.5 8.5h9M12.5 13h9"/>',
 	'no-color': '<rect x="4" y="4" width="16" height="16" rx="1.5"/><path class="a" d="M5.5 18.5l13-13"/>',
 	unlock: '<rect x="5" y="10.5" width="14" height="10" rx="1.5"/><path d="M8 10.5V7.5a4 4 0 0 1 7.7-1.5"/><path class="a" d="M12 14.5v2.5"/>',
 	show: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle class="a" cx="12" cy="12" r="3"/>',

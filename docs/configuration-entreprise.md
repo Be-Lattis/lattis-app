@@ -57,6 +57,31 @@ Les objets sont fusionnés clé par clé : une couche peut ne changer que `conne
 | `limits.sqlReadSeconds` | durée maximale d'une lecture de l'onglet SQL ou d'un script | 30 | 1 à 3 600 |
 | `limits.sqlWriteSeconds` | durée maximale d'une écriture de l'onglet SQL (annulée au-delà) | 120 | 1 à 3 600 |
 
+### Thèmes de couleur
+
+Le thème choisi dans Affichage › Thème est enregistré avec le classeur. La configuration donne le thème des classeurs qui n'en ont pas choisi, et la liste proposée (décision 0017) :
+
+| Clé | Rôle | Défaut |
+|---|---|---|
+| `ui.theme` | identifiant du thème par défaut : un prédéfini (`vert-bleu`, `bleu-orange`, `violet-sarcelle`, `sarcelle-violet`, `gris-bleu`, `orange-bleu`, `bordeaux-gris`) ou une clé de `ui.themes` | `vert-bleu` |
+| `ui.themes.<id>` | thème proposé : `name`, et deux couleurs `#rrggbb` : `table` (tableaux ordinaires) et `source` (tableaux d'une source externe) ; les nuances s'en déduisent | aucun |
+| `ui.builtinThemes` | proposer les thèmes prédéfinis ; `false` : seulement ceux de `ui.themes` | `true` |
+
+```json
+{
+  "ui": {
+    "builtinThemes": false,
+    "theme": "acme",
+    "themes": {
+      "acme":       { "name": "ACME",            "table": "#0b5394", "source": "#e69138" },
+      "acme-sobre": { "name": "ACME (sobre)",     "table": "#475569", "source": "#0b5394" }
+    }
+  }
+}
+```
+
+Les thèmes de l'organisation s'ajoutent à ceux que l'utilisateur garde dans son `config.json` (« Ajouter à mes thèmes ») ; il ne peut pas les retirer. Posé dans la stratégie, `ui.theme` est imposé (Fichier › Paramètres › Affichage le montre verrouillé) ; un classeur qui a choisi son thème le garde. Un thème invalide (nom vide, couleur qui n'est pas `#rrggbb`) est ignoré. Les couleurs du thème appliqué sont exposées dans l'interface en variables CSS : `--lattis-table`, `--lattis-table-head`, `--lattis-table-text`, `--lattis-table-border`, `--lattis-table-icon`, `--lattis-table-badge`, `--lattis-table-strong`, et les mêmes en `--lattis-source…`.
+
 `ai.dataSharing` vaut `schema-only` (structure seulement, par défaut), `sample` (quelques lignes d'exemple par lecture) ou `full` (tout le classeur). Il s'applique à l'assistant intégré comme à Claude Desktop ou Claude Code par le serveur MCP.
 
 **Aucun secret** : `password`, `secret`, `clientSecret`, `token`, `apiKey` sont refusés partout. Les mots de passe et jetons de chaque utilisateur restent dans le trousseau du système. Seule exception : `identity.providers.*.desktopClientSecret`, que Google exige pour une application de bureau sans le tenir pour confidentiel.

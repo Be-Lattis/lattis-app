@@ -9,6 +9,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 ### Nouveautés
 
 - Pastille du nom en haut à gauche de chaque tableau, comme celle de l'année à droite : toujours visible, en gris avec ✎ tant que le tableau a un nom par défaut ; un clic ouvre le champ du nom pour le renommer.
+- Affichage › Thème : la couleur des tableaux ordinaires et celle des tableaux d'une source externe se choisissent parmi une liste (Vert et bleu, Bleu et orange, Violet et sarcelle…), ou se personnalisent (deux couleurs, aperçu immédiat, « Ajouter à mes thèmes »). Le thème s'enregistre avec le classeur (Ctrl+Z l'annule) et s'affiche pareil chez les collègues ; un classeur sans thème prend le thème par défaut de Fichier › Paramètres › Affichage. L'organisation peut proposer ses thèmes, ne proposer qu'eux et imposer le défaut (`ui.theme`, `ui.themes`, `ui.builtinThemes`) ; les couleurs sont exposées en variables CSS (`--lattis-table-head`…) et aux scripts (`doc.theme`, `doc.set_theme`).
 
 ## 0.1.0-beta.2 (20/10/2026)
 

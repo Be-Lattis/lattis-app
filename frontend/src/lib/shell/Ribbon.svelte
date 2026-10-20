@@ -57,7 +57,7 @@
 		color?: 'fg' | 'bg'; // commande avec un choix de couleur
 		on?: boolean; // commande à bascule, enfoncée
 		/** Commande à menu (▾) : ses choix (raccourci affiché à droite ; drapeaux hérités de la commande, sinon les leurs). */
-		items?: { label: string; icon?: IconName; run?: () => void; on?: boolean; keys?: string; ro?: boolean; local?: boolean; data?: boolean }[];
+		items?: { label: string; icon?: IconName; run?: () => void; on?: boolean; keys?: string; ro?: boolean; local?: boolean; data?: boolean; swatch?: [string, string]; sep?: boolean }[];
 		/** Commande qui ouvre son propre menu (▾ affiché, voir anchor). */
 		menu?: boolean;
 		/** Forme dans un groupe compact (par défaut petite icône seule) : 'small' petite icône à libellé, 'big' grand bouton (Coller, Fusionner et centrer). */
@@ -220,9 +220,12 @@
 		/** Sauts de page affichés dans la grille (Affichage › Sauts de page), et leur bascule. */
 		pageBreaks?: boolean;
 		onpagebreaks?: (on: boolean) => void;
+		/** Affichage › Thème : thèmes proposés (on : celui du classeur), et le choix (« custom » : Personnaliser…). */
+		themes?: { id: string; name: string; table: string; source: string; on: boolean }[];
+		ontheme?: (id: string) => void;
 	}
 
-	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ondedup, ontextcols, onpivot, oninsertdata, onform, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, structureProtected = false, structureByBook = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, reconnect = false, detach = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks }: Props = $props();
+	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ondedup, ontextcols, onpivot, oninsertdata, onform, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, structureProtected = false, structureByBook = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, reconnect = false, detach = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks, themes = [], ontheme }: Props = $props();
 	const fmt = (tab: FormatTab) => (onformat ? () => onformat(tab) : undefined);
 	const lines = (rows: boolean, hide: boolean) => (onlines ? () => onlines(rows, hide) : undefined);
 	const frz = (what: FreezeAction) => (onfreeze ? () => onfreeze(what) : undefined);
@@ -808,6 +811,22 @@
 						]
 					}
 				])
+			},
+			{
+				title: 'Thème',
+				commands: [
+					{
+						label: 'Thème',
+						icon: 'theme',
+						size: 'big',
+						run: ontheme ? openItems : undefined,
+						hint: `Couleurs des tableaux du classeur : tableaux ordinaires et tableaux d’une source externe (thème : ${themes.find((t) => t.on)?.name ?? 'personnalisé'})`,
+						items: [
+							...themes.map((t) => ({ label: t.name, swatch: [t.table, t.source] as [string, string], on: t.on, run: ontheme ? () => ontheme(t.id) : undefined })),
+							{ label: 'Personnaliser…', sep: true, on: !themes.some((t) => t.on), run: ontheme ? () => ontheme('custom') : undefined }
+						]
+					}
+				]
 			},
 			...(onbench ? [{ title: 'Mesures (prototype)', commands: readOnly([{ label: 'Mesurer la grille', icon: 'stopwatch', run: () => onbench() }]) }] : [])
 		]
@@ -1556,16 +1575,17 @@
 		{#if c?.items}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="drop-menu" role="menu" aria-label={c.label} style:left="{dropMenu.x}px" style:top="{dropMenu.y}px" use:dismiss={() => (dropMenu = null)}>
-				{#each c.items as it (it.label)}
+				{#each c.items as it, i (i)}
 					<button
 						role={it.on === undefined ? 'menuitem' : 'menuitemcheckbox'}
 						aria-checked={it.on === undefined ? undefined : it.on}
 						disabled={!it.run}
 						class:on={it.on}
+						class:sep={it.sep}
 						onclick={() => {
 							dropMenu = null;
 							it.run?.();
-						}}>{#if it.icon}<span class="ico" aria-hidden="true"><Icon name={it.icon} size={16} /></span>{:else}<span class="check" aria-hidden="true">{it.on ? '✓' : ''}</span>{/if}<span class="item">{it.label}</span>{#if it.keys}<span class="keys">{keyLabel(it.keys)}</span>{/if}</button
+						}}>{#if it.swatch}<span class="check" aria-hidden="true">{it.on ? '✓' : ''}</span><span class="swatch2" aria-hidden="true"><i style:background={it.swatch[0]}></i><i style:background={it.swatch[1]}></i></span>{:else if it.icon}<span class="ico" aria-hidden="true"><Icon name={it.icon} size={16} /></span>{:else}<span class="check" aria-hidden="true">{it.on ? '✓' : ''}</span>{/if}<span class="item">{it.label}</span>{#if it.keys}<span class="keys">{keyLabel(it.keys)}</span>{/if}</button
 					>
 				{/each}
 			</div>
@@ -2120,6 +2140,22 @@
 	}
 	.drop-menu .item {
 		flex: 1;
+	}
+	.drop-menu button.sep {
+		border-top: 1px solid #e2e4e7;
+	}
+	/* Thème : couleur des tableaux ordinaires, puis des sources externes. */
+	.drop-menu .swatch2 {
+		display: inline-flex;
+		align-self: center;
+		margin-right: 8px;
+		border: 1px solid rgba(0, 0, 0, 0.2);
+		border-radius: 3px;
+		overflow: hidden;
+	}
+	.drop-menu .swatch2 i {
+		width: 12px;
+		height: 14px;
 	}
 	.drop-menu .keys {
 		margin-left: 18px;

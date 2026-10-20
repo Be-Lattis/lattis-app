@@ -54,6 +54,16 @@ Affichage › Figer les volets garde des lignes et des colonnes à l'écran pend
 
 Le réglage appartient à la feuille et s'enregistre avec le classeur.
 
+## Thème de couleur
+
+Affichage › Thème choisit la couleur des tableaux du classeur : celle des tableaux ordinaires (vert par défaut) et celle des tableaux chargés par une source externe ou une requête (bleu par défaut). Chaque thème du menu montre ses deux couleurs ; l'en-tête, son texte, le cadre, les icônes et la pastille du nom en sont tirés, avec un texte toujours lisible sur l'en-tête.
+
+- **Personnaliser…** : deux couleurs au choix, avec un aperçu immédiat dans la grille ; **Ajouter à mes thèmes** le garde dans la liste pour vos autres classeurs (il se retire depuis la même fenêtre).
+- Le thème s'enregistre avec le classeur (`Ctrl+Z` l'annule) : un collègue l'ouvre avec les mêmes couleurs, même s'il n'a pas ce thème. Un classeur partagé sur un Serveur Lattis le publie avec sa mise en page.
+- Un classeur qui n'a pas choisi de thème (classeur neuf, ou d'avant les thèmes) prend le **thème par défaut** de Fichier › Paramètres › Affichage.
+
+Votre organisation peut proposer ses propres thèmes, ne proposer qu'eux, ou imposer le thème par défaut. Les couleurs du thème sont aussi exposées en variables CSS (`--lattis-table-head`, `--lattis-source-head`…).
+
 ## Protéger
 
 Révision › Protéger la feuille refuse toute modification de son contenu ; on peut encore s'y déplacer, sélectionner, copier, rechercher, filtrer et imprimer. Révision › Protéger la structure verrouille tout sauf la saisie dans les tableaux : on tape, colle (valeurs seules), efface des valeurs dans leurs cellules de données, on ajoute des lignes en tapant dessous, on en insère ou supprime, on trie et filtre ; les cellules libres, la mise en forme, les colonnes et en-têtes, les tableaux eux-mêmes, les objets, les noms, les règles, les lignes et colonnes de la feuille, la mise en page et l'onglet sont refusés. Révision › Protéger le classeur refuse d'ajouter, supprimer, renommer, déplacer ou masquer des feuilles ; on peut choisir d'y verrouiller aussi la structure de toutes les feuilles (saisie dans les tableaux seulement), ou leur contenu. Les commandes refusées sont grisées, et leur infobulle dit comment ôter la protection (voir [Prise en main](prise-en-main#proteger-une-feuille-ou-le-classeur)).

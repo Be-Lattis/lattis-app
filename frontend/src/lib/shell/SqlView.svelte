@@ -698,7 +698,7 @@
 								<button class="res-btn" onclick={() => sendToSheet(false)} disabled={sending} title="Copie les valeurs du résultat dans un nouveau tableau, sur une nouvelle feuille (Ctrl+Z pour annuler)"
 									><Icon name="sheet" size={14} />Copier</button
 								>
-								<button class="res-btn" onclick={() => sendToSheet(true)} disabled={sending} title="Crée un tableau lié à la requête, sur une nouvelle feuille : fond bleu clair, actualisable au clic droit comme une source externe"
+								<button class="res-btn" onclick={() => sendToSheet(true)} disabled={sending} title="Crée un tableau lié à la requête, sur une nouvelle feuille : couleur des sources externes (bleu clair par défaut), actualisable au clic droit comme une source externe"
 									><Icon name="reference" size={14} />Référencer</button
 								>
 							</span>

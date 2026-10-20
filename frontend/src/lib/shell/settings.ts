@@ -2,6 +2,7 @@
 // section. Chaque réglage est une clé de la configuration (config.json de
 // l'utilisateur) que le serveur accepte d'écrire (config.UserEditable).
 // Ajouter un réglage : une entrée ici, et sa clé dans UserEditable.
+import { themeCatalog } from '#lib/grid/theme.js';
 
 /** État d'un réglage rendu par DocumentService.Settings. */
 export interface SettingState {
@@ -10,6 +11,10 @@ export interface SettingState {
 	locked?: boolean;
 	fixed?: boolean;
 	source?: string;
+	/** ui.themes : identifiants venus de l'organisation (pas du fichier de l'utilisateur). */
+	managed?: string[] | null;
+	/** Réglage lu, jamais écrit par l'interface (ui.builtinThemes). */
+	readOnly?: boolean;
 }
 
 export interface SettingDef {
@@ -21,6 +26,8 @@ export interface SettingDef {
 	placeholder?: string;
 	/** Choix d'un réglage 'choice' (valeur, libellé). */
 	choices?: { value: string; label: string }[];
+	/** Choix tirés des réglages (thèmes proposés), à la place de choices. */
+	choicesOf?: (list: readonly SettingState[]) => { value: string; label: string }[];
 	/** Réglage d'une fonctionnalité à activer : masqué tant qu'elle ne l'est pas. */
 	requires?: string;
 	/** Bornes et unité d'un réglage 'number' (entier). */
@@ -100,6 +107,19 @@ export const settingSections: SettingSection[] = [
 		]
 	},
 	{
+		id: 'view',
+		title: 'Affichage',
+		settings: [
+			{
+				path: 'ui.theme',
+				kind: 'choice',
+				label: 'Thème de couleur par défaut',
+				choicesOf: (list) => themeCatalog(list).map((t) => ({ value: t.id, label: t.name })),
+				help: "Couleurs des tableaux ordinaires et des tableaux d'une source externe dans un classeur qui n'a pas choisi son thème : les classeurs neufs et ceux d'avant les thèmes. Le thème choisi dans un classeur (Affichage › Thème) est enregistré avec lui et s'affiche pareil sur les autres postes."
+			}
+		]
+	},
+	{
 		id: 'limits',
 		title: 'Limites',
 		settings: [
@@ -160,7 +180,9 @@ export function parseNumberSetting(d: SettingDef, raw: string): number | string 
  */
 export function visibleSections(list: readonly SettingState[]): SettingSection[] {
 	const on = (path?: string) => !path || boolSetting(list, path);
-	return settingSections.filter((s) => on(s.requires)).map((s) => ({ ...s, settings: s.settings.filter((d) => on(d.requires)) }));
+	return settingSections
+		.filter((s) => on(s.requires))
+		.map((s) => ({ ...s, settings: s.settings.filter((d) => on(d.requires)).map((d) => (d.choicesOf ? { ...d, choices: d.choicesOf(list) } : d)) }));
 }
 
 /** L'état d'un réglage (sans tenir compte de la casse du chemin). */
