@@ -228,9 +228,11 @@ function snippet(text: string, words: string[], len = 140): string {
 		if (i >= 0 && (at < 0 || i < at)) at = i;
 	}
 	if (at < 0 || text.length <= len) return text.length > len ? text.slice(0, len).trimEnd() + '…' : text;
-	// Début du texte si le mot y figure ; sinon un peu avant le mot, au début d'un mot.
+	// Début du texte si le mot y figure ; sinon un peu avant le mot, au début
+	// d'un mot s'il y a une espace avant lui (le chinois n'en met pas entre les mots).
 	let start = at < len - 40 ? 0 : at - 40;
-	if (start > 0) start = text.indexOf(' ', start) + 1 || start;
+	const space = start > 0 ? text.indexOf(' ', start) : -1;
+	if (space >= 0 && space < at) start = space + 1;
 	const s = text.slice(start, start + len).trim();
 	return (start > 0 ? '…' : '') + s + (start + len < text.length ? '…' : '');
 }
