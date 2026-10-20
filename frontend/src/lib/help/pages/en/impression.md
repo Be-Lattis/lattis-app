@@ -1,6 +1,6 @@
 # Page layout and printing
 
-File › Print / PDF (`Ctrl+P`) prints the active sheet. For a PDF, choose the “Microsoft Print to PDF” printer (or “Save as PDF”) in the print window. What gets printed is set in the ribbon's **Page Layout** tab (`Alt+P`), as in Excel. The settings belong to the sheet: they are saved with the workbook, undone with `Ctrl+Z` and follow a copy of the sheet.
+File › Print / PDF (`Ctrl+P`) prints the active sheet. For a PDF, choose the “Microsoft Print to PDF” printer (or “Save as PDF”) in the print window. What gets printed is set in the Page Setup group of the ribbon's **View** tab (`Alt+W`). The settings belong to the sheet: they are saved with the workbook, undone with `Ctrl+Z` and follow a copy of the sheet.
 
 ## Page Setup group (View tab) {#groupe-mise-en-page-onglet-affichage}
 

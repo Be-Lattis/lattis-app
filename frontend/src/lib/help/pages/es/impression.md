@@ -1,6 +1,6 @@
 # Diseño de página e impresión
 
-Archivo › Imprimir / PDF (`Ctrl+P`) imprime la hoja activa. Para un PDF, elija la impresora «Microsoft Print to PDF» (o «Guardar como PDF») en la ventana de impresión. Lo que se imprime se define en la pestaña **Disposición de página** de la cinta (`Alt+P`), como en Excel. La configuración pertenece a la hoja: se guarda con el libro, se deshace con `Ctrl+Z` y sigue a una copia de la hoja.
+Archivo › Imprimir / PDF (`Ctrl+P`) imprime la hoja activa. Para un PDF, elija la impresora «Microsoft Print to PDF» (o «Guardar como PDF») en la ventana de impresión. Lo que se imprime se define en el grupo Configurar página de la pestaña **Vista** de la cinta (`Alt+W`). La configuración pertenece a la hoja: se guarda con el libro, se deshace con `Ctrl+Z` y sigue a una copia de la hoja.
 
 ## Grupo Configurar página (pestaña Vista) {#groupe-mise-en-page-onglet-affichage}
 

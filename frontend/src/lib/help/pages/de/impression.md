@@ -1,8 +1,8 @@
 # Seitenlayout und Drucken
 
-Datei › Drucken / PDF (`Strg+P`) druckt das aktive Blatt. Für ein PDF wählen Sie im Druckfenster den Drucker „Microsoft Print to PDF“ (oder „Als PDF speichern“). Was gedruckt wird, legen Sie wie in Excel in der Registerkarte **Seitenlayout** des Menübands fest (`Alt+P`). Die Einstellungen gehören zum Blatt: Sie werden mit der Arbeitsmappe gespeichert, mit `Strg+Z` rückgängig gemacht und folgen einer Kopie des Blatts.
+Datei › Drucken / PDF (`Strg+P`) druckt das aktive Blatt. Für ein PDF wählen Sie im Druckfenster den Drucker „Microsoft Print to PDF“ (oder „Als PDF speichern“). Was gedruckt wird, legen Sie in der Gruppe Seite einrichten der Registerkarte **Ansicht** des Menübands fest (`Alt+W`). Die Einstellungen gehören zum Blatt: Sie werden mit der Arbeitsmappe gespeichert, mit `Strg+Z` rückgängig gemacht und folgen einer Kopie des Blatts.
 
-## Gruppe Seite einrichten (Registerkarte Seitenlayout) {#groupe-mise-en-page-onglet-affichage}
+## Gruppe Seite einrichten (Registerkarte Ansicht) {#groupe-mise-en-page-onglet-affichage}
 
 | Befehl | Wirkung |
 | --- | --- |
