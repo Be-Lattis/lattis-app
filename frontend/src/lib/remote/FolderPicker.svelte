@@ -7,6 +7,7 @@
 	import Icon from '#lib/icons/Icon.svelte';
 	import { tick } from 'svelte';
 	import { folderAncestors, folderPath, folderRows, folderTree, type DataCatalog } from './data';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		catalog: DataCatalog;
@@ -146,13 +147,13 @@
 			value = fid;
 			close();
 		} catch (e) {
-			createError = String(e instanceof Error ? e.message : e);
+			createError = errorText(e);
 		} finally {
 			busy = false;
 		}
 	}
 
-	const hiName = $derived(hi ? (rows.find((r) => r.id === hi)?.name ?? folderPath(catalog, hi)) : 'la racine');
+	const hiName = $derived(hi ? (rows.find((r) => r.id === hi)?.name ?? folderPath(catalog, hi)) : t('remote.folder.rootName'));
 
 	function outside(node: HTMLElement) {
 		const down = (e: PointerEvent) => {
@@ -180,7 +181,7 @@
 	{disabled}
 	aria-haspopup="tree"
 	aria-expanded={open}
-	aria-label="Dossier : {label}"
+	aria-label={t('remote.folder.aria', { path: label })}
 	onclick={() => (open ? close() : show())}
 	onkeydown={(e) => {
 		if (!open && (e.key === 'ArrowDown' || e.key === 'F4' || (e.altKey && e.key === 'ArrowDown'))) {
@@ -210,8 +211,8 @@
 				<Icon name="search" size={13} />
 				<input
 					bind:value={query}
-					placeholder="Chercher un dossier"
-					aria-label="Chercher un dossier"
+					placeholder={t('remote.folder.search')}
+					aria-label={t('remote.folder.search')}
 					onkeydown={(e) => {
 						if (e.key === 'ArrowDown' || e.key === 'Escape' || e.key === 'Enter') {
 							e.preventDefault();
@@ -232,7 +233,7 @@
 			class="tree"
 			role="tree"
 			tabindex="0"
-			aria-label="Dossiers du Data Lake"
+			aria-label={t('remote.folder.tree')}
 			aria-activedescendant="fp-{uid}-{hi || '·'}"
 			onkeydown={onTreeKey}
 		>
@@ -240,7 +241,7 @@
 				<div id="fp-{uid}-·" data-key="·" role="treeitem" aria-selected={value === ''} aria-level={1} class="row" class:hi={hi === ''} class:sel={value === ''} onmousemove={() => (hi = '')} onclick={() => choose('')} onkeydown={() => {}} tabindex="-1">
 					<span class="tw"></span>
 					<Icon name="database" size={14} />
-					<span class="name">Racine du Data Lake</span>
+					<span class="name">{t('remote.data.root')}</span>
 					{#if value === ''}<span class="check" aria-hidden="true">✓</span>{/if}
 				</div>
 			{/if}
@@ -266,7 +267,7 @@
 							type="button"
 							class="tw"
 							tabindex="-1"
-							aria-label={r.open ? 'Replier' : 'Déplier'}
+							aria-label={r.open ? t('remote.folder.collapse') : t('remote.folder.expand')}
 							onclick={(e) => {
 								e.stopPropagation();
 								if (!query.trim()) toggle(r.id);
@@ -280,7 +281,7 @@
 					{#if value === r.id}<span class="check" aria-hidden="true">✓</span>{/if}
 				</div>
 			{:else}
-				{#if query.trim()}<p class="none">Aucun dossier ne correspond.</p>{/if}
+				{#if query.trim()}<p class="none">{t('remote.folder.noMatch')}</p>{/if}
 			{/each}
 		</div>
 		{#if oncreate}
@@ -290,8 +291,8 @@
 						<input
 							bind:this={nameInput}
 							bind:value={newName}
-							placeholder="Nom du dossier"
-							aria-label="Nom du nouveau dossier dans {hiName}"
+							placeholder={t('remote.folder.name.placeholder')}
+							aria-label={t('remote.folder.name.aria', { parent: hiName })}
 							disabled={busy}
 							onkeydown={(e) => {
 								if (e.key === 'Enter') {
@@ -306,12 +307,12 @@
 								}
 							}}
 						/>
-						<button type="button" class="primary" disabled={busy || !newName.trim()} onclick={create}>{busy ? '…' : 'Créer'}</button>
+						<button type="button" class="primary" disabled={busy || !newName.trim()} onclick={create}>{busy ? '…' : t('remote.folder.create')}</button>
 					</div>
-					<p class="hint">Dans « {hiName} »</p>
+					<p class="hint">{t('remote.folder.in', { parent: hiName })}</p>
 					{#if createError}<p class="error" role="alert">{createError}</p>{/if}
 				{:else}
-					<button type="button" class="add" onclick={startCreate}><Icon name="plus" size={13} />Nouveau dossier dans « {hiName} »</button>
+					<button type="button" class="add" onclick={startCreate}><Icon name="plus" size={13} />{t('remote.folder.new', { parent: hiName })}</button>
 				{/if}
 			</div>
 		{/if}

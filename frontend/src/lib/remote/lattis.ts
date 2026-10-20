@@ -2,13 +2,14 @@
 // du menu Compte, sans composant (testée par vitest). L'état vient de
 // DocumentService.LattisState (internal/bridge/lattis.go).
 import type { Provider, ServerState, User } from '#bindings/internal/remote/auth/models.js';
+import { t } from '#lib/i18n/index.js';
 
 export const PASSWORD = 'password';
 
 /** Libellé du bouton d'un fournisseur : « Continuer avec Google », « Continuer avec un mot de passe ». */
 export function providerButton(p: Provider): string {
-	if (p.kind === PASSWORD && (!p.label || p.label === p.id)) return 'Continuer avec un mot de passe';
-	return `Continuer avec ${p.label || p.id}`;
+	if (p.kind === PASSWORD && (!p.label || p.label === p.id)) return t('remote.lattis.continuePassword');
+	return t('remote.lattis.continueWith', { provider: p.label || p.id });
 }
 
 /** Une rangée de la page de connexion : le bouton d'un fournisseur. */
@@ -75,7 +76,7 @@ export function connected(servers: readonly ServerState[] | null | undefined): S
 
 /** Libellé d'un serveur dans une liste de choix : « Acme — Alice » (ou « non connecté »). */
 export function serverOption(s: ServerState): string {
-	return `${s.name || hostOf(s.url)} — ${s.user ? userName(s.user) : 'non connecté'}`;
+	return `${s.name || hostOf(s.url)} — ${s.user ? userName(s.user) : t('remote.lattis.notConnected')}`;
 }
 
 /**
@@ -92,8 +93,8 @@ export function pickServer(urls: readonly string[], current: string, added = '')
 /** Titre du bouton Compte de la barre de titre. */
 export function accountTitle(servers: readonly ServerState[] | null | undefined): string {
 	const c = connected(servers);
-	if (!c.length) return 'Compte : non connecté à un Serveur Lattis';
-	return 'Compte : ' + c.map((s) => `${userName(s.user)} sur ${s.name}`).join(', ');
+	if (!c.length) return t('remote.lattis.account.none');
+	return t('remote.lattis.account.title', { servers: c.map((s) => t('remote.lattis.account.on', { user: userName(s.user), server: s.name })).join(', ') });
 }
 
 /** Un Serveur Lattis s'adresse en https:// (http seulement en local, pour les essais). */
@@ -116,5 +117,5 @@ export function remaining(expiresAt: string, now = Date.now()): string {
 	if (!(ms > 0)) return '';
 	const s = Math.ceil(ms / 1000);
 	const m = Math.floor(s / 60);
-	return m ? `${m} min ${String(s % 60).padStart(2, '0')} s` : `${s} s`;
+	return m ? t('remote.lattis.remaining.minutes', { m: String(m), s: String(s % 60).padStart(2, '0') }) : t('remote.lattis.remaining.seconds', { s: String(s) });
 }

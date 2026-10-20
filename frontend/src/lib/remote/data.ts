@@ -4,7 +4,7 @@
 
 import type { ColumnType } from '#lib/grid/format.js';
 import { tokenize } from '#lib/sql/names.js';
-import { compareText } from '#lib/i18n/index.js';
+import { compareText, t } from '#lib/i18n/index.js';
 
 export interface DataAudience {
 	id: string;
@@ -196,9 +196,9 @@ export function folderAncestors(c: DataCatalog | null | undefined, id: string): 
 
 /** Chemin lisible d'un dossier (« Ventes › Europe ») ; '' : la racine. */
 export function folderPath(c: DataCatalog | null | undefined, id: string): string {
-	if (!id) return 'Racine du Data Lake';
+	if (!id) return t('remote.data.root');
 	const f = (c?.folders ?? []).find((x) => x.id === id);
-	if (!f) return 'Dossier inconnu';
+	if (!f) return t('remote.data.unknownFolder');
 	return [...folderAncestors(c, id).map((a) => c?.folders?.find((x) => x.id === a)?.name ?? ''), f.name].join(' › ');
 }
 
@@ -206,20 +206,20 @@ export function folderPath(c: DataCatalog | null | undefined, id: string): strin
 export function typeLabel(type: string | undefined): string {
 	switch (type) {
 		case 'text':
-			return 'Texte';
+			return t('remote.data.type.text');
 		case 'integer':
-			return 'Nombre entier';
+			return t('remote.data.type.integer');
 		case 'decimal':
 		case 'number':
-			return 'Nombre';
+			return t('remote.data.type.number');
 		case 'date':
-			return 'Date';
+			return t('remote.data.type.date');
 		case 'timestamp':
-			return 'Date et heure';
+			return t('remote.data.type.timestamp');
 		case 'boolean':
-			return 'Vrai / faux';
+			return t('remote.data.type.boolean');
 		default:
-			return type ? type : 'Type inconnu';
+			return type ? type : t('remote.data.type.unknown');
 	}
 }
 

@@ -6,6 +6,7 @@
 	import { modal } from '#lib/ui/focus.js';
 	import { backdrop } from '#lib/ui/backdrop.js';
 	import FormQR from './FormQR.svelte';
+	import { t } from '#lib/i18n/index.js';
 	import { listValues, prefillURL, type FormColumn, type FormField } from './forms';
 
 	interface Props {
@@ -41,14 +42,14 @@
 		}}
 	>
 		<header>
-			<span id="fpf-title" class="title">Liens pré-remplis · « {title} »</span>
-			<button type="button" class="close" aria-label="Fermer" title="Fermer (Échap)" onclick={onclose}>✕</button>
+			<span id="fpf-title" class="title">{t('remote.prefill.title', { title })}</span>
+			<button type="button" class="close" aria-label={t('common.close')} title={t('remote.closeEsc')} onclick={onclose}>✕</button>
 		</header>
 		<div class="sf-body">
 			{#if !named.length}
-				<p>Aucun champ n’a de nom court : donnez-en un dans l’onglet Champs (« Nom court dans le lien »).</p>
+				<p>{t('remote.prefill.noParam')}</p>
 			{:else}
-				<p class="sf-hint">Choisissez les champs à remplir par le lien, puis une ligne par lien (un QR code par site, par exemple). Le répondant peut modifier la valeur, sauf pour un champ verrouillé par le lien.</p>
+				<p class="sf-hint">{t('remote.prefill.help')}</p>
 				<div class="pick">
 					{#each named as f (f.param)}
 						<label class="sf-check"
@@ -56,7 +57,7 @@
 								type="checkbox"
 								checked={chosen.includes(f.param ?? '')}
 								onchange={(e) => (chosen = e.currentTarget.checked ? [...chosen, f.param ?? ''] : chosen.filter((p) => p !== f.param))}
-							/>{label(f)} <code>{f.param}</code>{#if f.locked}<span class="sf-hint"> · verrouillé</span>{/if}</label
+							/>{label(f)} <code>{f.param}</code>{#if f.locked}<span class="sf-hint"> · {t('remote.prefill.locked')}</span>{/if}</label
 						>
 					{/each}
 				</div>
@@ -79,19 +80,19 @@
 										{/if}
 									</label>
 								{/each}
-								<button type="button" class="sf-btn" onclick={() => (open = open === i ? null : i)}>{open === i ? 'Masquer' : 'Lien et QR code'}</button>
-								{#if rows.length > 1}<button type="button" class="sf-btn" aria-label="Retirer ce lien" onclick={() => (rows = rows.filter((_, j) => j !== i))}>✕</button>{/if}
+								<button type="button" class="sf-btn" onclick={() => (open = open === i ? null : i)}>{open === i ? t('remote.prefill.hide') : t('remote.prefill.show')}</button>
+								{#if rows.length > 1}<button type="button" class="sf-btn" aria-label={t('remote.prefill.remove')} onclick={() => (rows = rows.filter((_, j) => j !== i))}>✕</button>{/if}
 							</div>
 							{#if open === i}<FormQR url={linkOf(r)} title={`${title} ${chosen.map((p) => r[p] ?? '').join(' ')}`} {onnotice} small />{/if}
 						</div>
 					{/each}
-					<button type="button" class="sf-btn" onclick={() => ((rows = [...rows, {}]), (open = rows.length - 1))}>+ Ajouter un lien</button>
+					<button type="button" class="sf-btn" onclick={() => ((rows = [...rows, {}]), (open = rows.length - 1))}>{t('remote.prefill.add')}</button>
 				{/if}
 			{/if}
 		</div>
 		<footer class="sf-foot">
 			<span class="sf-grow"></span>
-			<button type="button" class="sf-btn primary" onclick={onclose}>Fermer</button>
+			<button type="button" class="sf-btn primary" onclick={onclose}>{t('common.close')}</button>
 		</footer>
 	</div>
 </div>

@@ -10,6 +10,7 @@
 	import { pickServer, serverOption } from './lattis';
 	import { loadLattis } from './lattis.svelte.js';
 	import ServerManageDialog from './ServerManageDialog.svelte';
+	import { t } from '#lib/i18n/index.js';
 
 	interface Props {
 		/** Adresse du serveur choisi ('' : aucun). */
@@ -25,7 +26,7 @@
 		/** Choix changé (par la liste ou au retour de « Gérer les serveurs »). */
 		onchange?: (url: string) => void;
 	}
-	let { value = $bindable(), servers, disabled = false, id, empty = 'Aucun serveur connecté', none, onchange }: Props = $props();
+	let { value = $bindable(), servers, disabled = false, id, empty, none, onchange }: Props = $props();
 
 	let managing = $state(false);
 
@@ -50,15 +51,15 @@
 
 <span class="picker">
 	{#if servers.length}
-		<select {id} {value} {disabled} aria-label={id ? undefined : 'Serveur'} onchange={(e) => set((e.currentTarget as HTMLSelectElement).value)}>
+		<select {id} {value} {disabled} aria-label={id ? undefined : t('remote.serverPicker.aria')} onchange={(e) => set((e.currentTarget as HTMLSelectElement).value)}>
 			{#if !servers.some((s) => s.url === value)}<option value={value} disabled hidden></option>{/if}
 			{#each servers as s (s.url)}<option value={s.url}>{serverOption(s)}</option>{/each}
 		</select>
 	{:else}
-		{#if none}{@render none()}{:else}<span class="none">{empty}</span>{/if}
+		{#if none}{@render none()}{:else}<span class="none">{empty ?? t('remote.serverPicker.empty')}</span>{/if}
 	{/if}
-	<button type="button" class="manage" {disabled} title="Ajouter, se connecter à un serveur ou en retirer un de la liste" onclick={() => (managing = true)}
-		><Icon name="database" size={13} />Gérer les serveurs…</button
+	<button type="button" class="manage" {disabled} title={t('remote.serverPicker.manage.tooltip')} onclick={() => (managing = true)}
+		><Icon name="database" size={13} />{t('remote.serverPicker.manage.label')}</button
 	>
 </span>
 {#if managing}<ServerManageDialog onclose={closed} />{/if}

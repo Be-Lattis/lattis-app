@@ -14,6 +14,7 @@
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import type { DeviceCode, Provider, ServerState } from '#bindings/internal/remote/auth/models.js';
 	import { hostOf, loginRows, providerButton, providerGlyph, remaining, serverUrlOk } from './lattis';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		/** Adresse du serveur ('' : à saisir). */
@@ -31,7 +32,7 @@
 	let waiting = $state<{ provider: Provider; device?: DeviceCode } | null>(null);
 	let otherDevice = $state(false);
 	let now = $state(Date.now());
-	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
+	const err = errorText;
 	const rows = $derived(loginRows(server?.providers));
 
 	const tick = setInterval(() => (now = Date.now()), 1000);
@@ -43,12 +44,12 @@
 
 	async function discover() {
 		error = '';
-		if (!serverUrlOk(address)) return void (error = 'Saisissez l’adresse du serveur, par exemple https://lattis.acme.fr.');
+		if (!serverUrlOk(address)) return void (error = t('remote.login.badUrl'));
 		busy = true;
 		try {
 			server = await DocumentService.LattisDiscover(address.trim());
 			address = server.url;
-			if (!server.providers?.length) error = 'Ce serveur n’annonce aucun moyen de connexion.';
+			if (!server.providers?.length) error = t('remote.login.noProvider');
 		} catch (e) {
 			server = null;
 			error = err(e);
@@ -128,7 +129,7 @@
 		class="dialog"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Connexion à un Serveur Lattis"
+		aria-label={t('remote.login.title')}
 		tabindex="-1"
 		use:modal
 		onkeydown={(e) => {
@@ -138,7 +139,7 @@
 	>
 		<header>
 			{#if server?.logo}<img class="logo" src={server.logo} alt="" />{:else}<Icon name="database" size={18} />{/if}
-			<span>{server ? `Connexion à ${server.name}` : 'Connexion à un Serveur Lattis'}</span>
+			<span>{server ? t('remote.login.titleOn', { server: server.name }) : t('remote.login.title')}</span>
 		</header>
 		<div class="body">
 			{#if !server}
@@ -149,41 +150,41 @@
 						discover();
 					}}
 				>
-					<label>Adresse du serveur <input bind:value={address} placeholder="https://lattis.acme.fr" disabled={busy} /></label>
-					<button class="primary" type="submit" disabled={busy || !address.trim()}>Continuer</button>
+					<label>{t('remote.login.address')} <input bind:value={address} placeholder="https://lattis.acme.fr" disabled={busy} /></label>
+					<button class="primary" type="submit" disabled={busy || !address.trim()}>{t('remote.login.continue')}</button>
 				</form>
 			{:else if waiting?.device}
 				{@const d = waiting.device}
-				<p>Sur un autre appareil (téléphone, autre ordinateur), ouvrez l’adresse ci-dessous et saisissez le code, puis connectez-vous avec {waiting.provider.label}.</p>
+				<p>{t('remote.login.device.help', { provider: waiting.provider.label })}</p>
 				<p class="device-uri">{d.verificationUri}</p>
 				<p class="code">
 					<strong>{d.userCode}</strong>
-					<button type="button" onclick={() => copy(d.userCode)} title="Copier le code"><Icon name="copy" size={14} /></button>
+					<button type="button" onclick={() => copy(d.userCode)} title={t('remote.login.device.copy')}><Icon name="copy" size={14} /></button>
 				</p>
-				<p class="muted">{remaining(d.expiresAt, now) ? `Code valable encore ${remaining(d.expiresAt, now)}.` : 'Code expiré.'} Lattis attend la validation…</p>
+				<p class="muted">{remaining(d.expiresAt, now) ? t('remote.login.device.valid', { time: remaining(d.expiresAt, now) }) : t('remote.login.device.expired')} {t('remote.login.device.waiting')}</p>
 			{:else if waiting}
-				<p>Terminez la connexion avec {waiting.provider.label} dans votre navigateur, puis revenez à Lattis.</p>
-				<p class="muted">La page s’est ouverte dans le navigateur du système. Rien ne s’est ouvert ? Annulez et choisissez « depuis un autre appareil ».</p>
+				<p>{t('remote.login.browser.help', { provider: waiting.provider.label })}</p>
+				<p class="muted">{t('remote.login.browser.note')}</p>
 			{:else}
-				<p class="muted">{hostOf(server.url)}{server.version ? ` · version ${server.version}` : ''}{server.accessMode === 'invitation' ? ' · sur invitation' : ''}</p>
+				<p class="muted">{hostOf(server.url)}{server.version ? ` · ${t('remote.open.version', { version: server.version })}` : ''}{server.accessMode === 'invitation' ? ` · ${t('remote.login.invitation')}` : ''}</p>
 				<div class="rows">
 					{#each rows as r (r.provider.id)}
 						<button class="provider" onclick={() => signIn(r.provider)} disabled={busy}>{@render glyph(r.provider)}<span>{providerButton(r.provider)}</span></button>
 					{/each}
 				</div>
 				{#if rows.some((r) => r.kind === 'button')}
-					<label class="other"><input type="checkbox" bind:checked={otherDevice} /> Se connecter depuis un autre appareil (code à saisir)</label>
+					<label class="other"><input type="checkbox" bind:checked={otherDevice} /> {t('remote.login.otherDevice')}</label>
 				{/if}
-				{#if server.imposedProvider}<p class="note">🔒 Moyen de connexion imposé par votre organisation.</p>{/if}
+				{#if server.imposedProvider}<p class="note">🔒 {t('remote.login.imposed')}</p>{/if}
 			{/if}
 			{#if error}<p class="error" role="alert">{error}</p>{/if}
 		</div>
 		<footer>
 			{#if server && !waiting && !server.managed && !url}
-				<button onclick={() => ((server = null), (error = ''))}>Autre serveur</button>
+				<button onclick={() => ((server = null), (error = ''))}>{t('remote.login.otherServer')}</button>
 			{/if}
 			<span class="grow"></span>
-			<button onclick={cancel}>{waiting ? 'Annuler la connexion' : 'Fermer'}</button>
+			<button onclick={cancel}>{waiting ? t('remote.login.cancel') : t('common.close')}</button>
 		</footer>
 	</div>
 </div>

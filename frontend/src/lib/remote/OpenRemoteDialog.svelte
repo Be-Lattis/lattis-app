@@ -13,6 +13,7 @@
 	import ServerPicker from './ServerPicker.svelte';
 	import { lattis, loadLattis, requestLogin } from './lattis.svelte.js';
 	import { modeLabel, rolesLabel } from './share';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		/** Ouvert (résultat) ou abandon (null). */
@@ -24,7 +25,7 @@
 	let list = $state<Listing[] | null>(null);
 	let busy = $state(false);
 	let error = $state('');
-	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
+	const err = errorText;
 	const servers = $derived(connected(lattis.state.servers));
 
 	onMount(async () => {
@@ -74,7 +75,7 @@
 		class="dialog"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Ouvrir depuis un serveur"
+		aria-label={t('remote.open.title')}
 		tabindex="-1"
 		use:modal
 		onkeydown={(e) => {
@@ -82,28 +83,28 @@
 			if (e.key === 'Escape' && !busy) ondone(null);
 		}}
 	>
-		<header><Icon name="open" size={18} /><span>Ouvrir depuis un serveur</span></header>
+		<header><Icon name="open" size={18} /><span>{t('remote.open.title')}</span></header>
 		<div class="body">
 			<div class="row">
-				<label for="open-remote-server">Serveur</label>
+				<label for="open-remote-server">{t('remote.serverPicker.aria')}</label>
 				<ServerPicker id="open-remote-server" bind:value={server} {servers} disabled={busy} onchange={load}>
-					{#snippet none()}<span class="grow"><button class="primary" onclick={login}>Se connecter à un serveur…</button></span>{/snippet}
+					{#snippet none()}<span class="grow"><button class="primary" onclick={login}>{t('remote.account.connectServer')}</button></span>{/snippet}
 				</ServerPicker>
 			</div>
 			{#if !servers.length}
-				<p class="muted">Connectez-vous à un Serveur Lattis pour voir ses classeurs.</p>
+				<p class="muted">{t('remote.open.signIn')}</p>
 			{:else}
 				{#if list === null}
-					<p class="muted">{busy ? 'Lecture des classeurs…' : ''}</p>
+					<p class="muted">{busy ? t('remote.open.reading') : ''}</p>
 				{:else if !list.length}
-					<p class="muted">Aucun classeur partagé avec vous sur ce serveur.</p>
+					<p class="muted">{t('remote.open.empty')}</p>
 				{:else}
 					<ul>
 						{#each list as w (w.id)}
 							<li>
 								<button class="item" disabled={busy} onclick={() => open(w)} ondblclick={() => open(w)}>
 									<strong>{w.title}</strong>
-									<span class="muted">{modeLabel(w.mode)}{w.mode === 'frozen' ? ` · version ${w.version}` : ''} · {rolesLabel(w.roles)}{w.state === 'republishing' ? ' · nouvelle version en préparation' : ''}</span>
+									<span class="muted">{modeLabel(w.mode)}{w.mode === 'frozen' ? ` · ${t('remote.open.version', { version: String(w.version) })}` : ''} · {rolesLabel(w.roles)}{w.state === 'republishing' ? ` · ${t('remote.open.republishing')}` : ''}</span>
 								</button>
 							</li>
 						{/each}
@@ -113,8 +114,8 @@
 			{#if error}<p class="error" role="alert">{error}</p>{/if}
 		</div>
 		<footer>
-			<span class="muted grow">{busy && list ? 'Chargement du classeur…' : 'Le classeur est gardé sur ce poste : il reste consultable hors ligne.'}</span>
-			<button onclick={() => ondone(null)} disabled={busy}>Fermer</button>
+			<span class="muted grow">{busy && list ? t('remote.open.loading') : t('remote.open.cached')}</span>
+			<button onclick={() => ondone(null)} disabled={busy}>{t('common.close')}</button>
 		</footer>
 	</div>
 </div>

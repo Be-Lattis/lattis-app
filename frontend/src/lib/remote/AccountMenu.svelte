@@ -7,6 +7,7 @@
 	import { accountTitle, connected, hostOf, initials, userDetail, userName } from './lattis';
 	import { lattis, requestLogin, shareRights, signOut } from './lattis.svelte.js';
 	import { platform } from '#lib/shell/settings.svelte.js';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	// Édition web : la session est celle du Serveur Lattis qui sert la page ;
 	// se déconnecter, c'est s'en déconnecter (POST /logout, même origine), pas
@@ -36,7 +37,7 @@
 		try {
 			await signOut(url);
 		} catch (e) {
-			error = String(e instanceof Error ? e.message : e);
+			error = errorText(e);
 		}
 	}
 
@@ -52,43 +53,43 @@
 			{#if first}<span class="badge">{initials(first.user)}</span>{:else}<Icon name="user" size={16} />{/if}
 		</button>
 		{#if open}
-			<div class="menu" role="menu" aria-label="Compte" use:dismiss={() => (open = false)}>
-				<div class="head">Serveurs Lattis</div>
+			<div class="menu" role="menu" aria-label={t('remote.account.aria')} use:dismiss={() => (open = false)}>
+				<div class="head">{t('remote.account.head')}</div>
 				{#each servers as s (s.url)}
 					<div class="server">
 						<div class="sname">
 							{#if s.logo}<img src={s.logo} alt="" />{:else}<Icon name="database" size={16} />{/if}
 							<span title={s.url}>{s.name}</span>
-							{#if s.managed}<span class="tag" title="Déclaré par votre organisation">🔒</span>{/if}
+							{#if s.managed}<span class="tag" title={t('remote.account.managed')}>🔒</span>{/if}
 						</div>
 						{#if s.user}
 							<div class="user">
 								<strong>{userName(s.user)}</strong>
 								{#if userDetail(s.user)}<span class="muted">{userDetail(s.user)}</span>{/if}
 							</div>
-							<button role="menuitem" onclick={() => (platform.web ? webSignOut() : out(s.url))}>Se déconnecter</button>
+							<button role="menuitem" onclick={() => (platform.web ? webSignOut() : out(s.url))}>{t('remote.account.signOut')}</button>
 						{:else}
-							<div class="muted">Non connecté · {hostOf(s.url)}</div>
-							<button role="menuitem" onclick={() => login(s.url)}>Se connecter…</button>
+							<div class="muted">{t('remote.account.notConnected', { host: hostOf(s.url) })}</div>
+							<button role="menuitem" onclick={() => login(s.url)}>{t('remote.account.signIn')}</button>
 						{/if}
 					</div>
 				{:else}
-					<p class="muted empty">Aucun serveur.{lattis.state.allowUserServers ? '' : ' Votre organisation n’en a déclaré aucun.'}</p>
+					<p class="muted empty">{lattis.state.allowUserServers ? t('remote.account.noServer') : t('remote.account.noServerManaged')}</p>
 				{/each}
 				{#if shareRights.current}
 					{@const r = shareRights.current}
 					<button
 						class="add"
 						role="menuitem"
-						title="Membres, rôles, restrictions, « Voir en tant que… »"
+						title={t('remote.account.rights.tooltip')}
 						onclick={() => {
 							open = false;
 							r.open();
-						}}><Icon name="user" size={14} />Gérer l’accès à « {r.title} »…</button
+						}}><Icon name="user" size={14} />{t('remote.account.rights.label', { title: r.title })}</button
 					>
 				{/if}
 				{#if lattis.state.allowUserServers && !platform.web}
-					<button class="add" role="menuitem" onclick={() => login('')}><Icon name="plus" size={14} />Se connecter à un serveur…</button>
+					<button class="add" role="menuitem" onclick={() => login('')}><Icon name="plus" size={14} />{t('remote.account.connectServer')}</button>
 				{/if}
 				{#if !platform.web}
 					<button
@@ -97,7 +98,7 @@
 						onclick={() => {
 							open = false;
 							managing = true;
-						}}><Icon name="database" size={14} />Gérer les serveurs…</button
+						}}><Icon name="database" size={14} />{t('remote.serverPicker.manage.label')}</button
 					>
 				{/if}
 				{#if error}<p class="error">{error}</p>{/if}

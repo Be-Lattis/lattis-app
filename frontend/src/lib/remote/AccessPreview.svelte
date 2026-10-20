@@ -13,6 +13,7 @@
 	import CapMark from './CapMark.svelte';
 	import { BUILTIN_LABELS, members, roleLabel } from './rights';
 	import { CAPS, capsSummary, memberCaps } from './access';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		view: RightsView;
@@ -32,7 +33,7 @@
 	let shownFor = $state('');
 
 	const person = $derived(people.find((p) => p.userId === user));
-	const tbl = $derived(tables.find((t) => t.table === table) ?? tables[0]);
+	const tbl = $derived(tables.find((x) => x.table === table) ?? tables[0]);
 	// Sans la liste complète des droits (concepteur) : pas de verdict, seulement les lignes.
 	const caps = $derived(person && tbl && acl ? memberCaps(person.roles, acl, [tbl], view.collaborative) : null);
 	/** Rôles d'un membre (identifiants avec la liste complète, noms sinon). */
@@ -55,16 +56,16 @@
 	});
 
 	async function show() {
-		const t = tbl;
-		if (!user || !t || busy) return;
+		const tb = tbl;
+		if (!user || !tb || busy) return;
 		busy = true;
 		onerror('');
 		result = null;
 		try {
-			result = await DocumentService.SharePreview(user, t.table);
-			shownFor = `${user}:${t.table}`;
+			result = await DocumentService.SharePreview(user, tb.table);
+			shownFor = `${user}:${tb.table}`;
 		} catch (e) {
-			onerror(String(e instanceof Error ? e.message : e));
+			onerror(errorText(e));
 		} finally {
 			busy = false;
 		}
@@ -73,41 +74,41 @@
 </script>
 
 {#if !view.canManage && !view.members}
-	<p class="sf-hint">Ce serveur réserve la liste des membres aux propriétaires du classeur : demandez-leur « Voir en tant que… ».</p>
+	<p class="sf-hint">{t('remote.preview.membersReserved')}</p>
 {:else if !tables.length}
-	<p class="sf-hint">Aucun tableau publié.</p>
+	<p class="sf-hint">{t('remote.preview.noTable')}</p>
 {:else}
-	<p class="ac-intro">Vérifiez ce qu’un membre voit et peut faire : les lignes s’affichent telles que le serveur les lui donne, filtres et règles avancées compris.</p>
+	<p class="ac-intro">{t('remote.preview.intro')}</p>
 	<div class="ac-preview-bar">
-		<span class="sf-label">Membre</span>
+		<span class="sf-label">{t('remote.preview.member')}</span>
 		<Select
-			label="Membre"
+			label={t('remote.preview.member')}
 			value={user}
-			options={[{ value: '', label: 'Choisir…', disabled: true }, ...people.map((p) => ({ value: p.userId, label: `${p.name || p.email}${p.roles.length ? ` · ${rolesText(p.roles)}` : ''}` }))]}
+			options={[{ value: '', label: t('remote.preview.choose'), disabled: true }, ...people.map((p) => ({ value: p.userId, label: `${p.name || p.email}${p.roles.length ? ` · ${rolesText(p.roles)}` : ''}` }))]}
 			disabled={busy}
 			onchange={(v) => {
 				user = v;
 				show();
 			}}
 		/>
-		<span class="sf-label">Tableau</span>
+		<span class="sf-label">{t('remote.preview.table')}</span>
 		<Select
-			label="Tableau à voir"
+			label={t('remote.preview.tableAria')}
 			value={tbl?.table ?? 0}
-			options={tables.map((t) => ({ value: t.table, label: `${t.name} (${t.sheetName})` }))}
+			options={tables.map((x) => ({ value: x.table, label: `${x.name} (${x.sheetName})` }))}
 			disabled={busy}
 			onchange={(v) => {
 				table = v;
 				show();
 			}}
 		/>
-		<button type="button" class="sf-btn" disabled={busy || !user} onclick={show}><Icon name="refresh" size={13} /> Relire</button>
+		<button type="button" class="sf-btn" disabled={busy || !user} onclick={show}><Icon name="refresh" size={13} /> {t('remote.preview.reload')}</button>
 	</div>
 	{#if person && tbl && caps}
 		<div class="ac-verdict" aria-live="polite">
 			<Icon name="show" size={16} />
 			<div>
-				<span><strong>{person.name || person.email}</strong> dans « {tbl.name} » : <strong>{capsSummary(caps)}</strong></span>
+				<span><strong>{person.name || person.email}</strong>{t('remote.preview.verdict.in', { table: tbl.name })}<strong>{capsSummary(caps)}</strong></span>
 				<span class="ac-caprow">
 					{#each CAPS as c (c.id)}<span><CapMark cell={caps[c.id]} label={c.label} />{c.label}</span>{/each}
 				</span>
@@ -116,7 +117,7 @@
 		</div>
 	{/if}
 	{#if result && shownFor === `${user}:${tbl?.table}`}
-		<p class="sf-hint" style="margin: 0 0 6px">{result.rows?.length ?? 0} ligne{(result.rows?.length ?? 0) > 1 ? 's' : ''} visible{(result.rows?.length ?? 0) > 1 ? 's' : ''}{result.truncated ? ' (les 1 000 premières)' : ''}, en lecture seule.</p>
+		<p class="sf-hint" style="margin: 0 0 6px">{result.truncated ? t('remote.preview.rowsTruncated', { n: result.rows?.length ?? 0 }) : t('remote.preview.rows', { n: result.rows?.length ?? 0 })}</p>
 		<div class="ac-scroll">
 			<table class="ac-grid">
 				<thead><tr>{#each result.columns ?? [] as c (c)}<th>{c}</th>{/each}</tr></thead>
@@ -124,12 +125,12 @@
 					{#each result.rows ?? [] as r, i (i)}
 						<tr>{#each r ?? [] as v, j (j)}<td>{cell(v)}</td>{/each}</tr>
 					{:else}
-						<tr><td colspan={result.columns?.length || 1} class="sf-hint">Aucune ligne visible pour ce membre.</td></tr>
+						<tr><td colspan={result.columns?.length || 1} class="sf-hint">{t('remote.preview.noRow')}</td></tr>
 					{/each}
 				</tbody>
 			</table>
 		</div>
 	{:else if !user}
-		<p class="sf-hint">Choisissez un membre, ou utilisez « Voir en tant que… » sur sa ligne dans Membres ou sur un rôle.</p>
+		<p class="sf-hint">{t('remote.preview.chooseMember')}</p>
 	{/if}
 {/if}

@@ -4,6 +4,7 @@
 	// dessus, conflits ouverts, dossier injoignable.
 	import type { State } from '#bindings/internal/coedit/models.js';
 	import { presenceText, presenceTitle, presenceWarning } from './coedit';
+	import { t } from '#lib/i18n/index.js';
 
 	interface Props {
 		state: State | null;
@@ -19,7 +20,7 @@
 		<span class="dot" class:alone={!(state?.peers ?? []).some((p) => !p.joining)} aria-hidden="true"></span>{text}
 	</span>
 	{#if state?.conflicts}
-		<button class="conflicts" onclick={onconflicts}>{state.conflicts} conflit{state.conflicts > 1 ? 's' : ''}</button>
+		<button class="conflicts" onclick={onconflicts}>{t('remote.coedit.conflicts', { n: state.conflicts })}</button>
 	{/if}
 	{#if warning}
 		<span class="warn" role="alert" title={warning}>{warning}</span>

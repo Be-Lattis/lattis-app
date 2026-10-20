@@ -1,1 +1,329 @@
-{}
+{
+	"share": {
+		"mode": {
+			"frozen": "Figé",
+			"collaborative": "Collaboratif"
+		},
+		"role": {
+			"owner": "propriétaire",
+			"designer": "concepteur",
+			"editor": "éditeur",
+			"participant": "participant",
+			"reader": "lecteur"
+		},
+		"roleDetail": {
+			"owner": "tout, y compris gérer les accès",
+			"designer": "tout sauf les accès : structure, mise en page, cellules libres, scripts",
+			"editor": "lire, ajouter, modifier et supprimer des lignes ; pas la structure ni la mise en page",
+			"participant": "tout lire, ajouter des lignes, modifier et supprimer les vôtres",
+			"reader": "lire seulement"
+		},
+		"roleChip": {
+			"custom": "Accès personnalisé",
+			"customDetail": "Accès personnalisé : vos droits dépendent des tableaux (rôle défini par le propriétaire)",
+			"detail": "Vous êtes {role} de ce classeur : {detail}{frozen}{more}",
+			"frozen": " (classeur figé : lecture seule)",
+			"more": " ; rôles : {roles}"
+		},
+		"type": {
+			"text": "Texte",
+			"integer": "Entier",
+			"decimal": "Décimal",
+			"date": "Date",
+			"datetime": "Date et heure",
+			"boolean": "Booléen"
+		},
+		"blocking": {
+			"none": "Cochez au moins un tableau à publier.",
+			"problem": "« {table} » : {problem}",
+			"invalid": "« {table} » : {n} saisie(s) invalide(s) à corriger, ou colonne à accepter comme texte",
+			"sameName": "« {first} » et « {second} » : même nom sur le serveur (la casse n'y compte pas)"
+		},
+		"offline": {
+			"pending": " ({n, plural, one {# modification} other {# modifications}} en attente)",
+			"loginRequired": "Connexion à {server} requise",
+			"collaborative": "{why}. Hors ligne : vos modifications seront envoyées au retour du serveur{pending}.",
+			"readOnly": "{why} : ce classeur partagé est en lecture seule."
+		},
+		"serverDown": {
+			"named": "{server} ne répond pas",
+			"host": "Le serveur {server} ne répond pas"
+		},
+		"gone": {
+			"revoked": "Vous n'avez plus accès à ce classeur sur {server}.",
+			"deleted": "Ce classeur a été supprimé de {server}.",
+			"pending": "{what} {n, plural, one {# modification non envoyée reste} other {# modifications non envoyées restent}} dans la copie locale."
+		},
+		"banner": {
+			"saveCopy": "Enregistrer une copie locale…",
+			"forget": "Retirer des récents",
+			"login": "Se connecter…",
+			"retry": "Réessayer",
+			"workOnCopy": "Travailler sur une copie locale",
+			"detach": "Détacher du serveur…",
+			"newVersion": "Nouvelle version disponible (version {version})",
+			"reload": "Recharger",
+			"held": "{n, plural, one {Une modification ne part pas vers le serveur} other {# modifications ne partent pas vers le serveur}}",
+			"conflicts": "{n, plural, one {# conflit : cellule modifiée} other {# conflits : cellules modifiées}} par un collègue entre-temps",
+			"view": "Voir",
+			"readOnly": "{reason} — version {version}",
+			"readOnlyOn": "{reason} — version {version} sur {server}"
+		},
+		"detach": {
+			"local": "« {title} » deviendra un classeur local ordinaire : il ne se synchronisera plus avec {server}.",
+			"serverKept": "Le classeur du serveur n’est pas modifié : les autres membres le gardent tel quel, et vous pourrez le rouvrir depuis le serveur.",
+			"pending": "{n, plural, one {# modification pas encore envoyée au serveur restera} other {# modifications pas encore envoyées au serveur resteront}} dans ce classeur local, sans partir.",
+			"cached": "Vous allez choisir où enregistrer le classeur local (sa copie actuelle n’est qu’un cache de Lattis).",
+			"final": "Ce détachement ne s’annule pas."
+		},
+		"retryNotice": "Nouvel essai de connexion…",
+		"when": {
+			"today": "à {time}",
+			"date": "le {date} à {time}"
+		},
+		"conflict": {
+			"empty": "(vide)",
+			"text": "{change} : {theirs} (vous : {mine})",
+			"modified": "Modifié",
+			"modifiedBy": "Modifié par {author}",
+			"modifiedWhen": "Modifié {when}",
+			"modifiedByWhen": "Modifié par {author} {when}"
+		},
+		"refused": "{n, plural, one {# valeur hors du type figé non collée} other {# valeurs hors du type figé non collées}} (tableau partagé) : {list}{more}"
+	},
+	"data": {
+		"root": "Racine du Data Lake",
+		"unknownFolder": "Dossier inconnu",
+		"type": {
+			"text": "Texte",
+			"integer": "Nombre entier",
+			"number": "Nombre",
+			"date": "Date",
+			"timestamp": "Date et heure",
+			"boolean": "Vrai / faux",
+			"unknown": "Type inconnu"
+		}
+	},
+	"coedit": {
+		"otherUser": "un autre utilisateur",
+		"alone": "À plusieurs : vous seul pour le moment",
+		"with": "À plusieurs avec {names}",
+		"withMore": "À plusieurs avec {names} et {n} autres",
+		"title": "Travail à plusieurs sur ce classeur (dossier partagé) : les données des tableaux se modifient ensemble, le reste attend que vous soyez seul.",
+		"since": " depuis {time}",
+		"joining": " (en train de rejoindre)",
+		"conflicts": "{n, plural, one {# conflit} other {# conflits}}"
+	},
+	"lattis": {
+		"continuePassword": "Continuer avec un mot de passe",
+		"continueWith": "Continuer avec {provider}",
+		"notConnected": "non connecté",
+		"account": {
+			"none": "Compte : non connecté à un Serveur Lattis",
+			"title": "Compte : {servers}",
+			"on": "{user} sur {server}"
+		},
+		"remaining": {
+			"minutes": "{m} min {s} s",
+			"seconds": "{s} s"
+		}
+	},
+	"banner": {
+		"reloading": "Rechargement…",
+		"connecting": "Connexion…",
+		"hideDetails": "Masquer les détails",
+		"details": "Détails"
+	},
+	"serverPicker": {
+		"empty": "Aucun serveur connecté",
+		"aria": "Serveur",
+		"manage": {
+			"label": "Gérer les serveurs…",
+			"tooltip": "Ajouter, se connecter à un serveur ou en retirer un de la liste"
+		}
+	},
+	"tableSources": {
+		"title": "Sources du Data Lake (tableaux sans le classeur)",
+		"pipeline": {
+			"label": "pipeline",
+			"tooltip": "Alimentée par un pipeline dont ce classeur est la source"
+		},
+		"onSave": " · à chaque enregistrement",
+		"sending": "Envoi…",
+		"update": "Mettre à jour",
+		"help": "Seules les colonnes choisies de ces tableaux sont envoyées ; le reste du classeur ne quitte pas le poste. Clic droit sur le tableau › Partager au Data Lake Lattis… pour les modifier ou les retirer."
+	},
+	"cap": {
+		"yes": "oui",
+		"some": "en partie",
+		"no": "non",
+		"label": "{label} : {word}"
+	},
+	"formQR": {
+		"copied": "Lien du formulaire copié",
+		"saved": "QR code enregistré : {path}",
+		"aria": "QR code du lien",
+		"copy": "Copier le lien",
+		"png": {
+			"label": "QR code en PNG…",
+			"tooltip": "Image PNG, pour un document ou une affiche"
+		},
+		"svg": {
+			"label": "QR code en SVG…",
+			"tooltip": "Image vectorielle, nette à toute taille"
+		}
+	},
+	"columnPicker": {
+		"count": "{n} sur {total}",
+		"all": "Tout",
+		"none": "Aucune",
+		"search": {
+			"placeholder": "Chercher",
+			"aria": "Chercher une colonne"
+		},
+		"aria": "Colonnes",
+		"key": "clé",
+		"noMatch": "Aucune colonne ne correspond.",
+		"noColumn": "Ce tableau n’a pas de colonne."
+	},
+	"account": {
+		"aria": "Compte",
+		"head": "Serveurs Lattis",
+		"managed": "Déclaré par votre organisation",
+		"signOut": "Se déconnecter",
+		"notConnected": "Non connecté · {host}",
+		"signIn": "Se connecter…",
+		"noServer": "Aucun serveur.",
+		"noServerManaged": "Aucun serveur. Votre organisation n’en a déclaré aucun.",
+		"rights": {
+			"label": "Gérer l’accès à « {title} »…",
+			"tooltip": "Membres, rôles, restrictions, « Voir en tant que… »"
+		},
+		"connectServer": "Se connecter à un serveur…"
+	},
+	"closeEsc": "Fermer (Échap)",
+	"prefill": {
+		"title": "Liens pré-remplis · « {title} »",
+		"noParam": "Aucun champ n’a de nom court : donnez-en un dans l’onglet Champs (« Nom court dans le lien »).",
+		"help": "Choisissez les champs à remplir par le lien, puis une ligne par lien (un QR code par site, par exemple). Le répondant peut modifier la valeur, sauf pour un champ verrouillé par le lien.",
+		"locked": "verrouillé",
+		"hide": "Masquer",
+		"show": "Lien et QR code",
+		"remove": "Retirer ce lien",
+		"add": "+ Ajouter un lien"
+	},
+	"preview": {
+		"membersReserved": "Ce serveur réserve la liste des membres aux propriétaires du classeur : demandez-leur « Voir en tant que… ».",
+		"noTable": "Aucun tableau publié.",
+		"intro": "Vérifiez ce qu’un membre voit et peut faire : les lignes s’affichent telles que le serveur les lui donne, filtres et règles avancées compris.",
+		"member": "Membre",
+		"choose": "Choisir…",
+		"table": "Tableau",
+		"tableAria": "Tableau à voir",
+		"reload": "Relire",
+		"verdict": {
+			"in": " dans « {table} » : "
+		},
+		"rows": "{n, plural, one {# ligne visible} other {# lignes visibles}}, en lecture seule.",
+		"rowsTruncated": "{n, plural, one {# ligne visible} other {# lignes visibles}} (les 1 000 premières), en lecture seule.",
+		"noRow": "Aucune ligne visible pour ce membre.",
+		"chooseMember": "Choisissez un membre, ou utilisez « Voir en tant que… » sur sa ligne dans Membres ou sur un rôle."
+	},
+	"open": {
+		"title": "Ouvrir depuis un serveur",
+		"signIn": "Connectez-vous à un Serveur Lattis pour voir ses classeurs.",
+		"reading": "Lecture des classeurs…",
+		"empty": "Aucun classeur partagé avec vous sur ce serveur.",
+		"version": "version {version}",
+		"republishing": "nouvelle version en préparation",
+		"loading": "Chargement du classeur…",
+		"cached": "Le classeur est gardé sur ce poste : il reste consultable hors ligne."
+	},
+	"audience": {
+		"inherit": "Hériter de l’audience du dossier",
+		"current": "Audience actuelle",
+		"rowsWhere": "Lignes où {predicate}",
+		"allRows": "Toutes les lignes",
+		"filtered": "filtré",
+		"keepName": "Garder {name}",
+		"removeName": "Retirer {name}",
+		"keep": "Garder",
+		"remove": "Retirer",
+		"email": {
+			"placeholder": "adresse@exemple.fr",
+			"aria": "Adresse de la personne"
+		},
+		"or": "ou",
+		"team": "Équipe",
+		"aTeam": "une équipe…",
+		"dontAdd": "Ne pas ajouter",
+		"visibleIf": "Lignes visibles si…",
+		"assist": "les lignes du tableau « {table} » que voit {who}",
+		"someone": "cette personne ou équipe",
+		"add": "Ajouter une personne ou une équipe"
+	},
+	"folder": {
+		"rootName": "la racine",
+		"aria": "Dossier : {path}",
+		"search": "Chercher un dossier",
+		"tree": "Dossiers du Data Lake",
+		"collapse": "Replier",
+		"expand": "Déplier",
+		"noMatch": "Aucun dossier ne correspond.",
+		"name": {
+			"placeholder": "Nom du dossier",
+			"aria": "Nom du nouveau dossier dans {parent}"
+		},
+		"create": "Créer",
+		"in": "Dans « {parent} »",
+		"new": "Nouveau dossier dans « {parent} »"
+	},
+	"conflicts": {
+		"aria": "Conflits",
+		"title": "Conflits ({n})",
+		"held": {
+			"table": "Tableau",
+			"title": "« {table} » : {n, plural, one {une modification ne part pas} other {# modifications ne partent pas}}",
+			"text": "Le serveur la reçoit mais échoue à chaque essai : {error}. Vos valeurs restent affichées sur ce poste ; les autres modifications partent normalement.",
+			"abandon": {
+				"label": "Abandonner",
+				"tooltip": "Le tableau reprend la version du serveur"
+			}
+		},
+		"layout": "Mise en page : {n, plural, one {# élément changé} other {# éléments changés}} des deux côtés depuis l'ouverture (largeur, mise en forme, cellule libre…). La dernière version enregistrée l'emporte ; après plus de 24 h sans connexion, c'est celle des collègues.",
+		"none": "Aucun conflit en attente.",
+		"local": "Ces cellules ont été modifiées par un collègue en même temps que vous : sa valeur, la plus récente, est affichée partout. « Garder la mienne » remet la vôtre pour tous les postes.",
+		"remote": "Ces cellules ont été modifiées par un collègue pendant que vous les changiez. Votre valeur reste affichée jusqu'à votre choix.",
+		"keepAllMine": "Garder toutes les miennes",
+		"keepAllTheirs": "Garder toutes les siennes",
+		"goto": "Aller à la cellule",
+		"rowGone": "Ligne supprimée ou masquée par un filtre",
+		"row": "ligne {row}",
+		"keepMine": "Garder la mienne",
+		"keepTheirs": "Garder la sienne"
+	},
+	"login": {
+		"badUrl": "Saisissez l’adresse du serveur, par exemple https://lattis.acme.fr.",
+		"noProvider": "Ce serveur n’annonce aucun moyen de connexion.",
+		"title": "Connexion à un Serveur Lattis",
+		"titleOn": "Connexion à {server}",
+		"address": "Adresse du serveur",
+		"continue": "Continuer",
+		"device": {
+			"help": "Sur un autre appareil (téléphone, autre ordinateur), ouvrez l’adresse ci-dessous et saisissez le code, puis connectez-vous avec {provider}.",
+			"copy": "Copier le code",
+			"valid": "Code valable encore {time}.",
+			"expired": "Code expiré.",
+			"waiting": "Lattis attend la validation…"
+		},
+		"browser": {
+			"help": "Terminez la connexion avec {provider} dans votre navigateur, puis revenez à Lattis.",
+			"note": "La page s’est ouverte dans le navigateur du système. Rien ne s’est ouvert ? Annulez et choisissez « depuis un autre appareil »."
+		},
+		"invitation": "sur invitation",
+		"otherDevice": "Se connecter depuis un autre appareil (code à saisir)",
+		"imposed": "Moyen de connexion imposé par votre organisation.",
+		"otherServer": "Autre serveur",
+		"cancel": "Annuler la connexion"
+	}
+}

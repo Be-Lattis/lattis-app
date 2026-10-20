@@ -7,11 +7,12 @@
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import { hostOf } from './lattis';
 	import { pushSummary, sourceStatus, type SourceLink } from './source';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	let links = $state<SourceLink[]>([]);
 	let busy = $state('');
 	let said = $state('');
-	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
+	const err = errorText;
 
 	onMount(load);
 
@@ -35,20 +36,20 @@
 </script>
 
 {#if links.length}
-	<h3>Sources du Data Lake (tableaux sans le classeur)</h3>
+	<h3>{t('remote.tableSources.title')}</h3>
 	<ul class="sources">
 		{#each links as l (l.tbl)}
 			<li>
 				<span class="name">
-					<strong>{l.tableName || l.name}</strong><span class="pipe" title="Alimentée par un pipeline dont ce classeur est la source">pipeline</span>
-					<span class="muted">donnees.{l.sqlName} · {hostOf(l.server)}{l.onSave ? ' · à chaque enregistrement' : ''}</span>
+					<strong>{l.tableName || l.name}</strong><span class="pipe" title={t('remote.tableSources.pipeline.tooltip')}>{t('remote.tableSources.pipeline.label')}</span>
+					<span class="muted">donnees.{l.sqlName} · {hostOf(l.server)}{l.onSave ? t('remote.tableSources.onSave') : ''}</span>
 					<span class="muted" class:failed={!!l.lastError}>{sourceStatus(l)}</span>
 				</span>
-				<button disabled={!!busy || !l.tableName} onclick={() => push(l)}>{busy === l.tableName ? 'Envoi…' : 'Mettre à jour'}</button>
+				<button disabled={!!busy || !l.tableName} onclick={() => push(l)}>{busy === l.tableName ? t('remote.tableSources.sending') : t('remote.tableSources.update')}</button>
 			</li>
 		{/each}
 	</ul>
-	<p class="muted">Seules les colonnes choisies de ces tableaux sont envoyées ; le reste du classeur ne quitte pas le poste. Clic droit sur le tableau › Partager au Data Lake Lattis… pour les modifier ou les retirer.</p>
+	<p class="muted">{t('remote.tableSources.help')}</p>
 	{#if said}<p class="said" role="status">{said}</p>{/if}
 {/if}
 

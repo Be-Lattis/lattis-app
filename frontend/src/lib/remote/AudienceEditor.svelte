@@ -8,6 +8,7 @@
 	import Select from '#lib/ui/Select.svelte';
 	import type { AudienceEntry, DataAudience } from './data';
 	import FilterEditor from './FilterEditor.svelte';
+	import { t } from '#lib/i18n/index.js';
 
 	interface Props {
 		current: DataAudience[];
@@ -36,24 +37,31 @@
 		removed = s;
 	}
 
-	const who = (a: AudienceEntry) => a.email.trim() || teams.find((t) => t.id === a.team)?.name || '';
+	const who = (a: AudienceEntry) => a.email.trim() || teams.find((x) => x.id === a.team)?.name || '';
 </script>
 
 <div class="aud">
 	<label class="check">
 		<input type="checkbox" bind:checked={inherit} {disabled} />
-		<span>Hériter de l’audience du dossier <strong>{folder}</strong></span>
+		<span>{t('remote.audience.inherit')} <strong>{folder}</strong></span>
 	</label>
 
 	{#if current.length}
-		<ul class="chips" aria-label="Audience actuelle">
+		<ul class="chips" aria-label={t('remote.audience.current')}>
 			{#each current as a (a.id)}
 				{@const gone = removed.has(a.id)}
-				<li class="chip" class:gone title={a.predicate ? `Lignes où ${a.predicate}` : 'Toutes les lignes'}>
+				<li class="chip" class:gone title={a.predicate ? t('remote.audience.rowsWhere', { predicate: a.predicate }) : t('remote.audience.allRows')}>
 					<Icon name="user" size={13} />
 					<span class="who">{a.label}</span>
-					{#if a.predicate}<span class="filt">filtré</span>{/if}
-					<button type="button" class="x" {disabled} aria-label={gone ? `Garder ${a.label}` : `Retirer ${a.label}`} title={gone ? 'Garder' : 'Retirer'} onclick={() => toggleRemoved(a.id)}>{gone ? '↺' : '✕'}</button>
+					{#if a.predicate}<span class="filt">{t('remote.audience.filtered')}</span>{/if}
+					<button
+						type="button"
+						class="x"
+						{disabled}
+						aria-label={gone ? t('remote.audience.keepName', { name: a.label }) : t('remote.audience.removeName', { name: a.label })}
+						title={gone ? t('remote.audience.keep') : t('remote.audience.remove')}
+						onclick={() => toggleRemoved(a.id)}>{gone ? '↺' : '✕'}</button
+					>
 				</li>
 			{/each}
 		</ul>
@@ -62,21 +70,21 @@
 	{#each adds as a, i (a)}
 		<div class="add">
 			<div class="row">
-				<input class="email" placeholder="adresse@exemple.fr" type="email" bind:value={a.email} disabled={disabled || !!a.team} aria-label="Adresse de la personne" />
+				<input class="email" placeholder={t('remote.audience.email.placeholder')} type="email" bind:value={a.email} disabled={disabled || !!a.team} aria-label={t('remote.audience.email.aria')} />
 				{#if teams.length}
-					<span class="or">ou</span>
-					<Select label="Équipe" value={a.team} options={[{ value: '', label: 'une équipe…' }, ...teams.map((t) => ({ value: t.id, label: t.name }))]} disabled={disabled || !!a.email.trim()} onchange={(v) => (a.team = v)} />
+					<span class="or">{t('remote.audience.or')}</span>
+					<Select label={t('remote.audience.team')} value={a.team} options={[{ value: '', label: t('remote.audience.aTeam') }, ...teams.map((x) => ({ value: x.id, label: x.name }))]} disabled={disabled || !!a.email.trim()} onchange={(v) => (a.team = v)} />
 				{/if}
-				<button type="button" class="x" {disabled} onclick={() => (adds = adds.filter((_, k) => k !== i))} aria-label="Ne pas ajouter" title="Ne pas ajouter">✕</button>
+				<button type="button" class="x" {disabled} onclick={() => (adds = adds.filter((_, k) => k !== i))} aria-label={t('remote.audience.dontAdd')} title={t('remote.audience.dontAdd')}>✕</button>
 			</div>
 			<FilterEditor
-				label="Lignes visibles si…"
+				label={t('remote.audience.visibleIf')}
 				{columns}
 				value={a.predicate}
 				{disabled}
 				teams
 				{values}
-				assist="les lignes du tableau « {table} » que voit {who(a) || 'cette personne ou équipe'}"
+				assist={t('remote.audience.assist', { table, who: who(a) || t('remote.audience.someone') })}
 				onchange={(sql, e) => {
 					a.predicate = sql ?? a.predicate;
 					a.error = e;
@@ -86,7 +94,7 @@
 	{/each}
 
 	<button type="button" class="link" {disabled} onclick={() => (adds = [...adds, { email: '', team: '', predicate: '', error: '' }])}>
-		<Icon name="plus" size={13} />Ajouter une personne ou une équipe
+		<Icon name="plus" size={13} />{t('remote.audience.add')}
 	</button>
 </div>
 

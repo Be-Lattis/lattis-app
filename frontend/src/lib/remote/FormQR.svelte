@@ -4,6 +4,7 @@
 	// site avec un lien pré-rempli).
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import { fileName, qrPNG, qrSVG } from './forms';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		url: string;
@@ -20,9 +21,9 @@
 	async function copy() {
 		try {
 			await navigator.clipboard.writeText(url);
-			onnotice?.('Lien du formulaire copié');
+			onnotice?.(t('remote.formQR.copied'));
 		} catch (e) {
-			error = String(e instanceof Error ? e.message : e);
+			error = errorText(e);
 		}
 	}
 
@@ -31,22 +32,22 @@
 		try {
 			const data = ext === 'svg' ? qrSVG(url, 8) : await qrPNG(url);
 			const path = await DocumentService.FormSaveQR(fileName(`QR ${title}`), ext, data);
-			if (path) onnotice?.(`QR code enregistré : ${path}`);
+			if (path) onnotice?.(t('remote.formQR.saved', { path }));
 		} catch (e) {
-			error = String(e instanceof Error ? e.message : e);
+			error = errorText(e);
 		}
 	}
 </script>
 
 <div class="qr" class:small>
 	<!-- QR code dessiné par qrcode-generator (SVG sans texte saisi). -->
-	<div class="qr-img" role="img" aria-label="QR code du lien">{@html svg}</div>
+	<div class="qr-img" role="img" aria-label={t('remote.formQR.aria')}>{@html svg}</div>
 	<div class="qr-side">
 		<code class="qr-url">{url}</code>
 		<div class="qr-btns">
-			<button type="button" class="sf-btn" onclick={copy}>Copier le lien</button>
-			<button type="button" class="sf-btn" onclick={() => save('png')} title="Image PNG, pour un document ou une affiche">QR code en PNG…</button>
-			<button type="button" class="sf-btn" onclick={() => save('svg')} title="Image vectorielle, nette à toute taille">QR code en SVG…</button>
+			<button type="button" class="sf-btn" onclick={copy}>{t('remote.formQR.copy')}</button>
+			<button type="button" class="sf-btn" onclick={() => save('png')} title={t('remote.formQR.png.tooltip')}>{t('remote.formQR.png.label')}</button>
+			<button type="button" class="sf-btn" onclick={() => save('svg')} title={t('remote.formQR.svg.tooltip')}>{t('remote.formQR.svg.label')}</button>
 		</div>
 		{#if error}<p class="sf-error" role="alert">{error}</p>{/if}
 	</div>

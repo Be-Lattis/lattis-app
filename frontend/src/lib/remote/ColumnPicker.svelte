@@ -6,6 +6,7 @@
 	import Icon from '#lib/icons/Icon.svelte';
 	import type { IconName } from '#lib/icons/icons.js';
 	import { typeLabel } from './data';
+	import { t } from '#lib/i18n/index.js';
 
 	interface Props {
 		columns: { name: string; type?: string }[];
@@ -20,14 +21,14 @@
 		/** Libellé de la liste pour les lecteurs d'écran. */
 		label?: string;
 	}
-	let { columns, selected, onchange, keys = [], disabled = false, error = '', label = 'Colonnes' }: Props = $props();
+	let { columns, selected, onchange, keys = [], disabled = false, error = '', label }: Props = $props();
 
 	let query = $state('');
 	const q = $derived(query.trim().toLowerCase());
 	const shown = $derived(q ? columns.filter((c) => c.name.toLowerCase().includes(q)) : columns);
 	const count = $derived(columns.filter((c) => selected.has(c.name)).length);
 
-	const icon = (t: string | undefined): IconName => (t === 'date' || t === 'timestamp' ? 'type-date' : t === 'boolean' ? 'type-boolean' : t === 'integer' || t === 'decimal' || t === 'number' ? 'type-number' : 'type-text');
+	const icon = (ty: string | undefined): IconName => (ty === 'date' || ty === 'timestamp' ? 'type-date' : ty === 'boolean' ? 'type-boolean' : ty === 'integer' || ty === 'decimal' || ty === 'number' ? 'type-number' : 'type-text');
 
 	function set(name: string, on: boolean) {
 		const s = new Set(selected);
@@ -48,26 +49,26 @@
 
 <div class="cols" class:invalid={!!error}>
 	<div class="bar">
-		<span class="count" aria-live="polite">{count} sur {columns.length}</span>
-		<button type="button" class="link" disabled={disabled || shown.every((c) => selected.has(c.name))} onclick={() => all(true)}>Tout</button>
-		<button type="button" class="link" disabled={disabled || shown.every((c) => !selected.has(c.name))} onclick={() => all(false)}>Aucune</button>
+		<span class="count" aria-live="polite">{t('remote.columnPicker.count', { n: count, total: columns.length })}</span>
+		<button type="button" class="link" disabled={disabled || shown.every((c) => selected.has(c.name))} onclick={() => all(true)}>{t('remote.columnPicker.all')}</button>
+		<button type="button" class="link" disabled={disabled || shown.every((c) => !selected.has(c.name))} onclick={() => all(false)}>{t('remote.columnPicker.none')}</button>
 		{#if columns.length > 10}
 			<span class="search">
 				<Icon name="search" size={13} />
-				<input bind:value={query} placeholder="Chercher" aria-label="Chercher une colonne" {disabled} />
+				<input bind:value={query} placeholder={t('remote.columnPicker.search.placeholder')} aria-label={t('remote.columnPicker.search.aria')} {disabled} />
 			</span>
 		{/if}
 	</div>
-	<div class="list" role="group" aria-label={label}>
+	<div class="list" role="group" aria-label={label ?? t('remote.columnPicker.aria')}>
 		{#each shown as c (c.name)}
-			<label class="col" class:off={!selected.has(c.name)} title="{c.name} · {typeLabel(c.type)}{keys.includes(c.name) ? ' · clé' : ''}">
+			<label class="col" class:off={!selected.has(c.name)} title="{c.name} · {typeLabel(c.type)}{keys.includes(c.name) ? ` · ${t('remote.columnPicker.key')}` : ''}">
 				<input type="checkbox" checked={selected.has(c.name)} {disabled} onchange={(e) => set(c.name, e.currentTarget.checked)} />
 				<span class="ty" aria-hidden="true"><Icon name={icon(c.type)} size={14} /></span>
 				<span class="name">{c.name}</span>
-				{#if keys.includes(c.name)}<span class="key" aria-label="clé"><Icon name="key" size={13} /></span>{/if}
+				{#if keys.includes(c.name)}<span class="key" aria-label={t('remote.columnPicker.key')}><Icon name="key" size={13} /></span>{/if}
 			</label>
 		{:else}
-			<p class="none">{q ? 'Aucune colonne ne correspond.' : 'Ce tableau n’a pas de colonne.'}</p>
+			<p class="none">{q ? t('remote.columnPicker.noMatch') : t('remote.columnPicker.noColumn')}</p>
 		{/each}
 	</div>
 	{#if error}<p class="error" role="alert">{error}</p>{/if}

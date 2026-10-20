@@ -9,6 +9,7 @@
 	import Icon from '#lib/icons/Icon.svelte';
 	import type { State } from '#bindings/internal/remote/workbook/models.js';
 	import { banner, type BannerAction } from './share';
+	import { t } from '#lib/i18n/index.js';
 
 	interface Props {
 		share: State | null;
@@ -39,8 +40,8 @@
 	});
 
 	function label(a: BannerAction, text: string): string {
-		if (a === 'reload' && busy) return 'Rechargement…';
-		if (a === 'retry' && retrying) return 'Connexion…';
+		if (a === 'reload' && busy) return t('remote.banner.reloading');
+		if (a === 'retry' && retrying) return t('remote.banner.connecting');
 		return text;
 	}
 </script>
@@ -51,7 +52,7 @@
 			<Icon name={b.kind === 'new' ? 'refresh' : b.kind === 'conflict' || b.kind === 'gone' ? 'warning' : b.kind === 'offline' ? 'cloud-off' : 'lock'} size={14} />
 			<span class="text" title={b.detail ? `${b.text}\n\n${b.detail}` : b.text}>{b.text}</span>
 			{#if b.detail}
-				<button class="link" aria-expanded={details} onclick={() => (details = !details)}>{details ? 'Masquer les détails' : 'Détails'}</button>
+				<button class="link" aria-expanded={details} onclick={() => (details = !details)}>{details ? t('remote.banner.hideDetails') : t('remote.banner.details')}</button>
 			{/if}
 			{#each b.actions ?? [] as a (a.action)}
 				{#if handlers[a.action]}

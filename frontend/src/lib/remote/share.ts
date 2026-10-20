@@ -5,26 +5,28 @@
 import type { Check, State, TableCheck } from '#bindings/internal/remote/workbook/models.js';
 import type { Conflict } from '#bindings/internal/remote/collab/models.js';
 import { formatValue, type ColumnType } from '#lib/grid/format.js';
-import { fmtDate, fmtTime } from '#lib/i18n/index.js';
+import { fmtDate, fmtTime, t, tAny } from '#lib/i18n/index.js';
 
 export const FROZEN = 'frozen';
 export const COLLABORATIVE = 'collaborative';
 
 /** Libellé d'un mode de partage. */
 export function modeLabel(mode: string): string {
-	return mode === FROZEN ? 'Figé' : mode === COLLABORATIVE ? 'Collaboratif' : mode;
+	return mode === FROZEN ? t('remote.share.mode.frozen') : mode === COLLABORATIVE ? t('remote.share.mode.collaborative') : mode;
 }
 
-const ROLES: Record<string, string> = { owner: 'propriétaire', designer: 'concepteur', editor: 'éditeur', participant: 'participant', reader: 'lecteur' };
+/** Rôles fournis (pastille du rôle, spécification du serveur §8.1). */
+const ROLE_IDS = new Set(['owner', 'designer', 'editor', 'participant', 'reader']);
 
-/** Ce que permet chaque rôle fourni (pastille du rôle, spécification du serveur §8.1). */
-const ROLE_DETAILS: Record<string, string> = {
-	owner: 'tout, y compris gérer les accès',
-	designer: 'tout sauf les accès : structure, mise en page, cellules libres, scripts',
-	editor: 'lire, ajouter, modifier et supprimer des lignes ; pas la structure ni la mise en page',
-	participant: 'tout lire, ajouter des lignes, modifier et supprimer les vôtres',
-	reader: 'lire seulement'
-};
+/** Nom d'un rôle fourni, en minuscules (« propriétaire »). */
+function roleName(r: string): string {
+	return ROLE_IDS.has(r) ? tAny(`remote.share.role.${r}`) : r;
+}
+
+/** Ce que permet chaque rôle fourni. */
+function roleDetail(r: string): string {
+	return tAny(`remote.share.roleDetail.${r}`);
+}
 
 /** Rôles du plus large au plus étroit (la pastille montre le plus large). */
 const ROLE_ORDER = ['owner', 'designer', 'editor', 'participant', 'reader'];
@@ -38,23 +40,24 @@ export function roleChip(s: State | null | undefined): { label: string; detail: 
 	if (!s?.shared || s.gone) return null;
 	const roles = s.roles ?? [];
 	const top = ROLE_ORDER.find((r) => roles.includes(r));
-	if (!top) return { label: 'Accès personnalisé', detail: 'Accès personnalisé : vos droits dépendent des tableaux (rôle défini par le propriétaire)' };
-	const label = ROLES[top].charAt(0).toUpperCase() + ROLES[top].slice(1);
-	const frozen = s.mode === FROZEN && top !== 'owner' && top !== 'designer' ? ' (classeur figé : lecture seule)' : '';
-	const more = roles.length > 1 ? ` ; rôles : ${rolesLabel(roles)}` : '';
-	return { label, detail: `Vous êtes ${ROLES[top]} de ce classeur : ${ROLE_DETAILS[top]}${frozen}${more}` };
+	if (!top) return { label: t('remote.share.roleChip.custom'), detail: t('remote.share.roleChip.customDetail') };
+	const name = roleName(top);
+	const label = name.charAt(0).toUpperCase() + name.slice(1);
+	const frozen = s.mode === FROZEN && top !== 'owner' && top !== 'designer' ? t('remote.share.roleChip.frozen') : '';
+	const more = roles.length > 1 ? t('remote.share.roleChip.more', { roles: rolesLabel(roles) }) : '';
+	return { label, detail: t('remote.share.roleChip.detail', { role: name, detail: roleDetail(top), frozen, more }) };
 }
 
 /** Rôles sur un classeur, en clair (« propriétaire, lecteur »). */
 export function rolesLabel(roles: readonly string[] | null | undefined): string {
-	return (roles ?? []).map((r) => ROLES[r] ?? r).join(', ');
+	return (roles ?? []).map(roleName).join(', ');
 }
 
-const TYPES: Record<string, string> = { text: 'Texte', integer: 'Entier', decimal: 'Décimal', date: 'Date', datetime: 'Date et heure', boolean: 'Booléen' };
+const TYPES = new Set(['text', 'integer', 'decimal', 'date', 'datetime', 'boolean']);
 
 /** Libellé d'un type du serveur. */
-export function remoteTypeLabel(t: string): string {
-	return TYPES[t] ?? t;
+export function remoteTypeLabel(type: string): string {
+	return TYPES.has(type) ? tAny(`remote.share.type.${type}`) : type;
 }
 
 /** Tableaux cochés d'avance : déjà publiés (republication), sinon ceux qui se publient tels quels. */
@@ -70,23 +73,23 @@ export function defaultSelection(check: Check | null, republish: boolean): numbe
  */
 export function blocking(check: Check | null, ids: readonly number[]): string[] {
 	const out: string[] = [];
-	if (!ids.length) return ['Cochez au moins un tableau à publier.'];
+	if (!ids.length) return [t('remote.share.blocking.none')];
 	const seen = new Map<string, string>();
-	for (const t of check?.tables ?? []) {
-		if (!ids.includes(t.id)) continue;
-		for (const p of t.problems ?? []) out.push(`« ${t.name} » : ${p}`);
-		if (t.invalid) out.push(`« ${t.name} » : ${t.invalid} saisie(s) invalide(s) à corriger, ou colonne à accepter comme texte`);
-		const k = t.name.trim().toLowerCase();
+	for (const tb of check?.tables ?? []) {
+		if (!ids.includes(tb.id)) continue;
+		for (const p of tb.problems ?? []) out.push(t('remote.share.blocking.problem', { table: tb.name, problem: p }));
+		if (tb.invalid) out.push(t('remote.share.blocking.invalid', { table: tb.name, n: tb.invalid }));
+		const k = tb.name.trim().toLowerCase();
 		const other = seen.get(k);
-		if (other !== undefined) out.push(`« ${other} » et « ${t.name} » : même nom sur le serveur (la casse n'y compte pas)`);
-		seen.set(k, t.name);
+		if (other !== undefined) out.push(t('remote.share.blocking.sameName', { first: other, second: tb.name }));
+		seen.set(k, tb.name);
 	}
 	return out;
 }
 
 /** Colonnes dont le type « élargissable » sera figé par la publication (§9). */
-export function inferredColumns(t: TableCheck): string[] {
-	return (t.columns ?? []).filter((c) => c.inferred && !c.computed).map((c) => `${c.name} (${remoteTypeLabel(c.remote)})`);
+export function inferredColumns(tb: TableCheck): string[] {
+	return (tb.columns ?? []).filter((c) => c.inferred && !c.computed).map((c) => `${c.name} (${remoteTypeLabel(c.remote)})`);
 }
 
 export type BannerKind = 'new' | 'offline' | 'gone' | 'readonly' | 'conflict';
@@ -130,10 +133,10 @@ function needsLogin(reason: string | undefined): boolean {
 export function offlineText(s: State): string {
 	const where = serverLabel(s);
 	const n = s.pending ?? 0;
-	const waiting = n ? ` (${n} modification${n > 1 ? 's' : ''} en attente)` : '';
-	const why = needsLogin(s.offline) ? `Connexion à ${where} requise` : serverDown(where);
-	if (s.mode === COLLABORATIVE) return `${why}. Hors ligne : vos modifications seront envoyées au retour du serveur${waiting}.`;
-	return `${why} : ce classeur partagé est en lecture seule.`;
+	const pending = n ? t('remote.share.offline.pending', { n }) : '';
+	const why = needsLogin(s.offline) ? t('remote.share.offline.loginRequired', { server: where }) : serverDown(where);
+	if (s.mode === COLLABORATIVE) return t('remote.share.offline.collaborative', { why, pending });
+	return t('remote.share.offline.readOnly', { why });
 }
 
 /**
@@ -141,7 +144,7 @@ export function offlineText(s: State): string {
  * par « Serveur » ne le répète pas : « Serveur Lattis ne répond pas ».
  */
 export function serverDown(where: string): string {
-	return /^serveur\b/i.test(where) ? `${where} ne répond pas` : `Le serveur ${where} ne répond pas`;
+	return /^serveur\b/i.test(where) ? t('remote.share.serverDown.named', { server: where }) : t('remote.share.serverDown.host', { server: where });
 }
 
 /** Classeur supprimé du serveur (State.gone) ; l'utilisateur n'y a plus accès. */
@@ -155,10 +158,10 @@ export const GONE_REVOKED = 'revoked';
  */
 export function goneText(s: State): string {
 	const where = serverLabel(s);
-	const what = s.gone === GONE_REVOKED ? `Vous n'avez plus accès à ce classeur sur ${where}.` : `Ce classeur a été supprimé de ${where}.`;
+	const what = s.gone === GONE_REVOKED ? t('remote.share.gone.revoked', { server: where }) : t('remote.share.gone.deleted', { server: where });
 	const n = s.pending ?? 0;
 	if (!n) return what;
-	return `${what} ${n} modification${n > 1 ? 's' : ''} non envoyée${n > 1 ? 's restent' : ' reste'} dans la copie locale.`;
+	return t('remote.share.gone.pending', { what, n });
 }
 
 /** Erreur d'ouverture d'un classeur disparu du serveur (bridge.goneError) plutôt que d'une coupure. */
@@ -174,29 +177,31 @@ export function banner(s: State | null | undefined): Banner | null {
 			kind: 'gone',
 			text: goneText(s),
 			actions: [
-				{ action: 'copy', label: 'Enregistrer une copie locale…' },
-				{ action: 'forget', label: 'Retirer des récents' }
+				{ action: 'copy', label: t('remote.share.banner.saveCopy') },
+				{ action: 'forget', label: t('remote.share.banner.forget') }
 			]
 		};
 	}
 	if (!s.online) {
 		const actions: NonNullable<Banner['actions']> = [
-			needsLogin(s.offline) ? { action: 'login', label: 'Se connecter…' } : { action: 'retry', label: 'Réessayer' },
-			{ action: 'copy', label: 'Travailler sur une copie locale' }
+			needsLogin(s.offline) ? { action: 'login', label: t('remote.share.banner.login') } : { action: 'retry', label: t('remote.share.banner.retry') },
+			{ action: 'copy', label: t('remote.share.banner.workOnCopy') }
 		];
-		if (s.canManage) actions.push({ action: 'detach', label: 'Détacher du serveur…' });
+		if (s.canManage) actions.push({ action: 'detach', label: t('remote.share.banner.detach') });
 		return { kind: 'offline', text: offlineText(s), ...(s.offline ? { detail: s.offline } : {}), actions };
 	}
-	if (s.newVersion) return { kind: 'new', text: `Nouvelle version disponible (version ${s.newVersion})`, actions: [{ action: 'reload', label: 'Recharger' }] };
+	if (s.newVersion) return { kind: 'new', text: t('remote.share.banner.newVersion', { version: String(s.newVersion) }), actions: [{ action: 'reload', label: t('remote.share.banner.reload') }] };
 	if (s.held) {
-		const n = s.held;
-		return { kind: 'conflict', text: n > 1 ? `${n} modifications ne partent pas vers le serveur` : 'Une modification ne part pas vers le serveur', actions: [{ action: 'conflicts', label: 'Voir' }] };
+		return { kind: 'conflict', text: t('remote.share.banner.held', { n: s.held }), actions: [{ action: 'conflicts', label: t('remote.share.banner.view') }] };
 	}
 	if (s.conflicts) {
-		const n = s.conflicts;
-		return { kind: 'conflict', text: `${n} conflit${n > 1 ? 's' : ''} : cellule${n > 1 ? 's' : ''} modifiée${n > 1 ? 's' : ''} par un collègue entre-temps`, actions: [{ action: 'conflicts', label: 'Voir' }] };
+		return { kind: 'conflict', text: t('remote.share.banner.conflicts', { n: s.conflicts }), actions: [{ action: 'conflicts', label: t('remote.share.banner.view') }] };
 	}
-	if (s.readOnly) return { kind: 'readonly', text: `${s.readOnly} — version ${s.version}${s.serverName ? ` sur ${s.serverName}` : ''}` };
+	if (s.readOnly)
+		return {
+			kind: 'readonly',
+			text: s.serverName ? t('remote.share.banner.readOnlyOn', { reason: s.readOnly, version: String(s.version), server: s.serverName }) : t('remote.share.banner.readOnly', { reason: s.readOnly, version: String(s.version) })
+		};
 	return null;
 }
 
@@ -208,40 +213,55 @@ export function banner(s: State | null | undefined): Banner | null {
 export function detachQuestion(s: State, cached: boolean): string[] {
 	const where = serverLabel(s);
 	const out = [
-		`« ${s.title} » deviendra un classeur local ordinaire : il ne se synchronisera plus avec ${where}.`,
-		'Le classeur du serveur n’est pas modifié : les autres membres le gardent tel quel, et vous pourrez le rouvrir depuis le serveur.'
+		t('remote.share.detach.local', { title: s.title, server: where }),
+		t('remote.share.detach.serverKept')
 	];
 	const n = s.pending ?? 0;
-	if (n) out.push(`${n} modification${n > 1 ? 's' : ''} pas encore envoyée${n > 1 ? 's' : ''} au serveur ${n > 1 ? 'resteront' : 'restera'} dans ce classeur local, sans partir.`);
-	if (cached) out.push('Vous allez choisir où enregistrer le classeur local (sa copie actuelle n’est qu’un cache de Lattis).');
-	out.push('Ce détachement ne s’annule pas.');
+	if (n) out.push(t('remote.share.detach.pending', { n }));
+	if (cached) out.push(t('remote.share.detach.cached'));
+	out.push(t('remote.share.detach.final'));
 	return out;
 }
 
 /** Message de la barre d'état après « Réessayer ». */
+export function retryNotice(): string {
+	return t('remote.share.retryNotice');
+}
+
+/**
+ * Message de la barre d'état après « Réessayer », calculé au chargement
+ * (français) : préférer retryNotice(), qui suit la langue.
+ */
 export const RETRY_NOTICE = 'Nouvel essai de connexion…';
 
-/** Heure (aujourd'hui) ou date et heure d'une modification, en français ; "" si inconnue. */
+/** Heure (aujourd'hui) ou date et heure d'une modification ; "" si inconnue. */
 export function whenLabel(at: string, now = new Date()): string {
 	if (!at) return '';
 	const d = new Date(at);
 	if (Number.isNaN(d.getTime())) return '';
 	const hm = fmtTime(d, { hour: '2-digit', minute: '2-digit' });
-	if (d.toDateString() === now.toDateString()) return `à ${hm}`;
-	return `le ${fmtDate(d)} à ${hm}`;
+	if (d.toDateString() === now.toDateString()) return t('remote.share.when.today', { time: hm });
+	return t('remote.share.when.date', { date: fmtDate(d), time: hm });
 }
 
 /** Valeur d'un conflit telle que la grille l'afficherait (« (vide) » si vide). */
 export function conflictValue(c: Pick<Conflict, 'type'>, v: unknown): string {
-	if (v === null || v === undefined || v === '') return '(vide)';
+	if (v === null || v === undefined || v === '') return t('remote.share.conflict.empty');
 	return formatValue(c.type as ColumnType, v);
 }
 
 /** « Modifié par Alice à 10:42 : 1 100 (vous : 1 200) ». */
 export function conflictText(c: Conflict, now = new Date()): string {
-	const who = c.author ? ` par ${c.author}` : '';
 	const when = whenLabel(c.at, now);
-	return `Modifié${who}${when ? ' ' + when : ''} : ${conflictValue(c, c.theirs)} (vous : ${conflictValue(c, c.mine)})`;
+	const author = c.author;
+	const change = author
+		? when
+			? t('remote.share.conflict.modifiedByWhen', { author, when })
+			: t('remote.share.conflict.modifiedBy', { author })
+		: when
+			? t('remote.share.conflict.modifiedWhen', { when })
+			: t('remote.share.conflict.modified');
+	return t('remote.share.conflict.text', { change, theirs: conflictValue(c, c.theirs), mine: conflictValue(c, c.mine) });
 }
 
 /**
@@ -253,7 +273,7 @@ export function refusedNotice(ev: { refused?: string[] | null; refusedCount?: nu
 	if (!n) return '';
 	const list = (ev.refused ?? []).join(' · ');
 	const more = n > (ev.refused?.length ?? 0) ? ' …' : '';
-	return `${n} valeur${n > 1 ? 's' : ''} hors du type figé non collée${n > 1 ? 's' : ''} (tableau partagé) : ${list}${more}`;
+	return t('remote.share.refused', { n, list, more });
 }
 
 /** « Fichier › Republier » : classeur figé publié, propriétaire ou concepteur. */

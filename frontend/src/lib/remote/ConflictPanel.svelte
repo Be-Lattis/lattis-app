@@ -8,6 +8,7 @@
 	import { panelKeys } from '#lib/ui/focus.js';
 	import PanelHeader from '#lib/ui/PanelHeader.svelte';
 	import { conflictText } from './share';
+	import { t } from '#lib/i18n/index.js';
 
 	interface Props {
 		conflicts: Conflict[];
@@ -29,47 +30,47 @@
 	let { conflicts, busy = false, onresolve, onresolveall, ongoto, onclose, local = false, held = [], onheld, layout = 0 }: Props = $props();
 </script>
 
-<aside class="panel" use:resizePanel={{ key: 'conflicts' }} use:panelKeys={onclose} aria-label="Conflits">
-	<PanelHeader title="Conflits ({conflicts.length + held.length})" {onclose} />
+<aside class="panel" use:resizePanel={{ key: 'conflicts' }} use:panelKeys={onclose} aria-label={t('remote.conflicts.aria')}>
+	<PanelHeader title={t('remote.conflicts.title', { n: conflicts.length + held.length })} {onclose} />
 	{#each held as h (h.table)}
 		<div class="item held">
-			<strong>« {h.name || 'Tableau'} » : {h.steps > 1 ? `${h.steps} modifications ne partent pas` : 'une modification ne part pas'}</strong>
-			<span class="text">Le serveur la reçoit mais échoue à chaque essai : {h.error}. Vos valeurs restent affichées sur ce poste ; les autres modifications partent normalement.</span>
+			<strong>{t('remote.conflicts.held.title', { table: h.name || t('remote.conflicts.held.table'), n: h.steps })}</strong>
+			<span class="text">{t('remote.conflicts.held.text', { error: h.error })}</span>
 			{#if onheld}
 				<div class="acts">
-					<button disabled={busy} onclick={() => onheld(h, true)}>Réessayer</button>
-					<button disabled={busy} title="Le tableau reprend la version du serveur" onclick={() => onheld(h, false)}>Abandonner</button>
+					<button disabled={busy} onclick={() => onheld(h, true)}>{t('remote.share.banner.retry')}</button>
+					<button disabled={busy} title={t('remote.conflicts.held.abandon.tooltip')} onclick={() => onheld(h, false)}>{t('remote.conflicts.held.abandon.label')}</button>
 				</div>
 			{/if}
 		</div>
 	{/each}
 	{#if layout}
-		<p class="muted layout">Mise en page : {layout > 1 ? `${layout} éléments changés` : '1 élément changé'} des deux côtés depuis l'ouverture (largeur, mise en forme, cellule libre…). La dernière version enregistrée l'emporte ; après plus de 24 h sans connexion, c'est celle des collègues.</p>
+		<p class="muted layout">{t('remote.conflicts.layout', { n: layout })}</p>
 	{/if}
 	{#if !conflicts.length && !held.length}
-		<p class="muted">Aucun conflit en attente.</p>
+		<p class="muted">{t('remote.conflicts.none')}</p>
 	{:else if conflicts.length}
 		{#if local}
-			<p class="muted">Ces cellules ont été modifiées par un collègue en même temps que vous : sa valeur, la plus récente, est affichée partout. « Garder la mienne » remet la vôtre pour tous les postes.</p>
+			<p class="muted">{t('remote.conflicts.local')}</p>
 		{:else}
-			<p class="muted">Ces cellules ont été modifiées par un collègue pendant que vous les changiez. Votre valeur reste affichée jusqu'à votre choix.</p>
+			<p class="muted">{t('remote.conflicts.remote')}</p>
 		{/if}
 		{#if onresolveall && conflicts.length > 1}
 			<div class="acts all">
-				<button disabled={busy} onclick={() => onresolveall(true)}>Garder toutes les miennes</button>
-				<button disabled={busy} onclick={() => onresolveall(false)}>Garder toutes les siennes</button>
+				<button disabled={busy} onclick={() => onresolveall(true)}>{t('remote.conflicts.keepAllMine')}</button>
+				<button disabled={busy} onclick={() => onresolveall(false)}>{t('remote.conflicts.keepAllTheirs')}</button>
 			</div>
 		{/if}
 	{/if}
 	{#each conflicts as c (c.id)}
 		<div class="item">
-			<button class="where" disabled={!c.found} title={c.found ? 'Aller à la cellule' : 'Ligne supprimée ou masquée par un filtre'} onclick={() => ongoto(c)}>
-				« {c.table} » · {c.column}{c.found ? ` · ligne ${c.row}` : ''}
+			<button class="where" disabled={!c.found} title={c.found ? t('remote.conflicts.goto') : t('remote.conflicts.rowGone')} onclick={() => ongoto(c)}>
+				« {c.table} » · {c.column}{c.found ? ` · ${t('remote.conflicts.row', { row: String(c.row) })}` : ''}
 			</button>
 			<span class="text">{conflictText(c)}</span>
 			<div class="acts">
-				<button disabled={busy} onclick={() => onresolve(c, true)}>Garder la mienne</button>
-				<button disabled={busy} onclick={() => onresolve(c, false)}>Garder la sienne</button>
+				<button disabled={busy} onclick={() => onresolve(c, true)}>{t('remote.conflicts.keepMine')}</button>
+				<button disabled={busy} onclick={() => onresolve(c, false)}>{t('remote.conflicts.keepTheirs')}</button>
 			</div>
 		</div>
 	{/each}
