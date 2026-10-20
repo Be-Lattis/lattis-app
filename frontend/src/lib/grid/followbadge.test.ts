@@ -9,6 +9,11 @@ describe('pastille « suit l’année »', () => {
 		expect(placeFollowBadge({ ...base, y: 66, aboveFree: true })).toEqual({ x: 360, y: 53, place: 'above', radii: [4, 4, 0, 0] });
 	});
 
+	it('pastille du nom : même place, à gauche', () => {
+		expect(placeFollowBadge({ ...base, y: 66, aboveFree: true, left: true })).toEqual({ x: 100, y: 53, place: 'above', radii: [4, 4, 0, 0] });
+		expect(placeFollowBadge({ ...base, y: 66, aboveFree: false, left: true })).toEqual({ x: 101, y: 60, place: 'corner', radii: [4, 4, 4, 4] });
+	});
+
 	it('tableau en ligne 1 : dans le bandeau du haut, vide au-dessus', () => {
 		const b = placeFollowBadge({ ...base, y: 22, aboveFree: true });
 		expect(b.place).toBe('above');

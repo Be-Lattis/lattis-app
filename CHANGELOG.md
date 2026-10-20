@@ -6,6 +6,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Nouveautés
+
+- Pastille du nom en haut à gauche de chaque tableau, comme celle de l'année à droite : toujours visible, en gris avec ✎ tant que le tableau a un nom par défaut ; un clic ouvre le champ du nom pour le renommer.
+
 ## 0.1.0-beta.2 (20/10/2026)
 
 ### Nouveautés

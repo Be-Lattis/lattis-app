@@ -8,7 +8,7 @@
 	// décide (cellule libre, nouveau tableau, extension, élargissement).
 	// Rendu <canvas> de la zone visible, cache de blocs de lignes par tableau,
 	// éditeur DOM superposé à la cellule active, barre de formule.
-	import { flushSync, onMount, untrack } from 'svelte';
+	import { flushSync, onMount, tick, untrack } from 'svelte';
 	import { noticeTtl } from '#lib/shell/notice.js';
 	import { RowCache, percentile, syncAt, type Fetched, type SyncKind } from './cache';
 	import { VScroll, clamp } from './scroll';
@@ -738,6 +738,9 @@
 		linkBorder: '#8fa9cc',
 		// Pastille d'un tableau qui suit l'onglet à choix (couleur d'accent).
 		followBadge: '#217346',
+		// Pastille du nom d'un tableau : nommé (même vert, plus clair), ou nom par défaut (gris, à renommer).
+		nameBadge: '#2f7d55',
+		unnamedBadge: '#8a9099',
 		headText: '#14532d',
 		icon: '#6b8f78',
 		border: '#8fbc9f',
@@ -2899,14 +2902,13 @@
 				ctx.fillStyle = C.active;
 				crispLines(frame);
 			}
-			// Pastille du tableau qui suit l'onglet à choix : la valeur choisie.
-			// Au-dessus du cadre s'il y a la place (bandeau du haut compris pour
-			// un tableau en ligne 1), sinon dans son coin (followbadge.ts) ;
-			// dessinée après le bandeau, dans la découpe du volet.
-			if (e.t.follows && data?.choice && !data.choice.all && curPane) {
-				const label = data.choice.value || '(vide)';
+			// Pastilles du cadre, au-dessus de lui s'il y a la place (bandeau du
+			// haut compris pour un tableau en ligne 1), sinon dans son coin
+			// (followbadge.ts) ; dessinées après le bandeau, dans la découpe du
+			// volet. À gauche, le nom du tableau (cliquer : le renommer) ; à
+			// droite, la valeur de l'onglet à choix qu'il suit.
+			if (curPane) {
 				ctx.font = FONT_SMALL;
-				const bw = Math.ceil(ctx.measureText(label).width) + 10;
 				const bh = 13;
 				const top = topRow(e.t);
 				let aboveFree = true;
@@ -2921,8 +2923,22 @@
 					}
 				}
 				const p = curPane;
-				const b = placeFollowBadge({ x, y, w: fw, bw, bh, paneTop: p.y0, strip: p.y0 === TOP_H, aboveFree });
-				followBadges.push({ e, label, radii: b.radii, x0: b.x, x1: b.x + bw, y0: b.y, y1: b.y + bh, clip: { x0: p.x0, x1: p.x1, y0: p.y0 === TOP_H ? 0 : p.y0, y1: p.y1 } });
+				const clip = { x0: p.x0, x1: p.x1, y0: p.y0 === TOP_H ? 0 : p.y0, y1: p.y1 };
+				let room = fw;
+				if (e.t.follows && data?.choice && !data.choice.all) {
+					const label = data.choice.value || '(vide)';
+					const bw = Math.ceil(ctx.measureText(label).width) + 10;
+					const b = placeFollowBadge({ x, y, w: fw, bw, bh, paneTop: p.y0, strip: p.y0 === TOP_H, aboveFree });
+					followBadges.push({ kind: 'follow', e, label, radii: b.radii, x0: b.x, x1: b.x + bw, y0: b.y, y1: b.y + bh, clip });
+					room -= bw + 4;
+				}
+				if (e.t.name && room >= 30) {
+					const dflt = isDefaultTableName(e.t.name);
+					const label = fitText(e.t.name + (dflt ? ' ✎' : ''), room - 10);
+					const bw = Math.ceil(ctx.measureText(label).width) + 10;
+					const b = placeFollowBadge({ x, y, w: fw, bw, bh, paneTop: p.y0, strip: p.y0 === TOP_H, aboveFree, left: true });
+					followBadges.push({ kind: dflt ? 'unnamed' : 'name', e, label, radii: b.radii, x0: b.x, x1: b.x + bw, y0: b.y, y1: b.y + bh, clip });
+				}
 			}
 			// Classeur collaboratif : lecture filtrée par les droits (§8.1).
 			if (e.t.filtered) {
@@ -3793,7 +3809,9 @@
 	// pastille avec la valeur choisie (« 2025 ») ; un tableau sans pastille est
 	// le même pour toutes les valeurs. Un clic sur la pastille ouvre son menu
 	// (« Suivre l'année », à décocher).
-	let followBadges: { e: Entry; label: string; radii: number[]; x0: number; x1: number; y0: number; y1: number; clip: { x0: number; x1: number; y0: number; y1: number } }[] = [];
+	let followBadges: { kind: 'follow' | 'name' | 'unnamed'; e: Entry; label: string; radii: number[]; x0: number; x1: number; y0: number; y1: number; clip: { x0: number; x1: number; y0: number; y1: number } }[] = [];
+	// Champ du nom du tableau (barre de formule) : la pastille du nom l'ouvre.
+	let tableNameEl = $state<HTMLInputElement>();
 	/** Volet en cours de dessin (découpe des pastilles). */
 	let curPane: Pane | null = null;
 
@@ -3804,7 +3822,7 @@
 			ctx.beginPath();
 			ctx.rect(Math.max(b.clip.x0, MARGIN), b.clip.y0, b.clip.x1 - Math.max(b.clip.x0, MARGIN), b.clip.y1 - b.clip.y0);
 			ctx.clip();
-			ctx.fillStyle = C.followBadge;
+			ctx.fillStyle = b.kind === 'follow' ? C.followBadge : b.kind === 'name' ? C.nameBadge : C.unnamedBadge;
 			ctx.beginPath();
 			ctx.roundRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0, b.radii);
 			ctx.fill();
@@ -3818,9 +3836,35 @@
 	}
 	let followMenu = $state<{ x: number; y: number; e: Entry } | null>(null);
 
-	function followBadgeAt(ev: MouseEvent): Entry | null {
+	function badgeAt(ev: MouseEvent) {
 		const { x, y } = toLocal(ev);
-		return followBadges.find((b) => x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1)?.e ?? null;
+		return followBadges.find((b) => x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1) ?? null;
+	}
+	function followBadgeAt(ev: MouseEvent): Entry | null {
+		const b = badgeAt(ev);
+		return b?.kind === 'follow' ? b.e : null;
+	}
+	/** Pastille du nom d'un tableau sous la souris : son tableau. */
+	function nameBadgeAt(ev: MouseEvent): Entry | null {
+		const b = badgeAt(ev);
+		return b && b.kind !== 'follow' ? b.e : null;
+	}
+
+	/** Texte coupé (…) pour tenir en w pixels (police courante). */
+	function fitText(t: string, w: number): string {
+		if (ctx.measureText(t).width <= w) return t;
+		let s = t;
+		while (s.length > 1 && ctx.measureText(s + '…').width > w) s = s.slice(0, -1);
+		return s + '…';
+	}
+
+	/** Clic sur la pastille du nom : la cellule passe sur l'en-tête du tableau et le champ du nom s'ouvre. */
+	async function renameFromBadge(en: Entry) {
+		moveTo(en.t.row, en.t.col);
+		ensureVisible(en.t.row, en.t.col);
+		await tick();
+		tableNameEl?.focus();
+		tableNameEl?.select();
 	}
 
 	/** Coche ou décoche « Suivre l'année » d'un tableau. */
@@ -7515,6 +7559,14 @@
 			);
 			return;
 		}
+		if (e.button === 0 && !formulaMode && nameBadgeAt(e)) {
+			e.preventDefault();
+			if (!commitEditor()) return;
+			const ne = nameBadgeAt(e)!;
+			closeMenus();
+			void renameFromBadge(ne);
+			return;
+		}
 		if (e.button === 0 && !formulaMode && followBadgeAt(e)) {
 			e.preventDefault();
 			if (!commitEditor()) return;
@@ -9831,6 +9883,15 @@
 	/** Infobulle d'un en-tête de colonne : nom complet et type. */
 	let tipCell = '';
 	function updateHeaderTip(ev: MouseEvent) {
+		const nb = nameBadgeAt(ev);
+		if (nb) {
+			if (tipCell !== 'name:' + nb.t.name)
+				scroller.title = isDefaultTableName(nb.t.name)
+					? `« ${nb.t.name} » : ${DEFAULT_NAME_HINT.toLowerCase()}. Cliquer pour lui donner un nom parlant (il sert dans les formules, le SQL et les graphiques)`
+					: `Tableau « ${nb.t.name} » : cliquer pour le renommer`;
+			tipCell = 'name:' + nb.t.name;
+			return;
+		}
 		if (followBadgeAt(ev)) {
 			const name = data?.choice?.name ?? '';
 			if (tipCell !== 'follow')
@@ -10460,6 +10521,7 @@
 		{#if tableBox}
 			<div class="name-box split">
 				<input
+					bind:this={tableNameEl}
 					class="table-name"
 					class:default-name={isDefaultTableName(tableBox.name)}
 					title={isDefaultTableName(tableBox.name) ? `${DEFAULT_NAME_HINT} (modifiez puis Entrée)` : 'Nom du tableau : modifiez puis Entrée pour le renommer'}
