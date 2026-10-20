@@ -19,7 +19,7 @@ La información sobre herramientas de cada muestra da su nombre («Verde, Énfas
 
 Inicio › Edición › Borrar quita los formatos, el contenido (`Supr`) o la nota de la selección. Rellenar copia la primera fila hacia abajo (`Ctrl+D`) o la primera columna hacia la derecha (`Ctrl+R`).
 
-Inicio › Dar formato como tabla (`Ctrl+L`) crea una tabla a partir del bloque de celdas libres alrededor de la celda activa; su primera fila da los encabezados.
+Inicio › Dar formato como tabla (`Ctrl+L`) crea una tabla a partir del bloque de celdas libres alrededor de la celda activa; su primera fila da los encabezados. En una celda vacía, Insertar › Tabla (o `Ctrl+L`) coloca una tabla vacía de una columna, «Columna 1», con el encabezado en la celda: escriba debajo para llenarla, en el encabezado para cambiar el nombre de la columna.
 
 ## Formato condicional {#mise-en-forme-conditionnelle}
 

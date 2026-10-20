@@ -622,9 +622,9 @@ export interface Event {
     "headless": boolean;
 
     /**
-     * Unnamed : tableau tapé dont la 1re ligne ressemble aux suivantes :
-     * toutes les lignes sont des données, sous un en-tête « Colonne n »
-     * posé au-dessus (unnamed.go).
+     * Unnamed : tableau tapé dont la 1re ligne a du texte et une valeur
+     * d'un autre type (« Léa | 31 ») : toutes les lignes sont des données,
+     * sous un en-tête « Colonne n » posé au-dessus (unnamed.go).
      */
     "unnamed"?: boolean;
 

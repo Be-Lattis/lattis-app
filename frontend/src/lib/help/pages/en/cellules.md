@@ -19,7 +19,7 @@ Each swatch's tooltip gives its name (“Green, Accent 1, Lighter 40%”). With 
 
 Home › Editing › Clear removes the formats, the contents (`Del`) or the note of the selection. Fill copies the first row down (`Ctrl+D`) or the first column to the right (`Ctrl+R`).
 
-Home › Format as Table (`Ctrl+L`) makes a table from the block of free cells around the active cell, its first row giving the headers.
+Home › Format as Table (`Ctrl+L`) makes a table from the block of free cells around the active cell, its first row giving the headers. On an empty cell, Insert › Table (or `Ctrl+L`) places an empty table with one column, “Column 1”, its header on the cell: type below it to fill it, in the header to rename the column.
 
 ## Conditional formatting {#mise-en-forme-conditionnelle}
 

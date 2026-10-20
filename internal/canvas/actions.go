@@ -46,9 +46,9 @@ type Event struct {
 	Invalid bool      `json:"invalid"` // saisie hors type dans une colonne au type fixé
 	// Headless : tableau collé sans ligne d'en-tête reconnue (« Colonne n »).
 	Headless bool `json:"headless"`
-	// Unnamed : tableau tapé dont la 1re ligne ressemble aux suivantes :
-	// toutes les lignes sont des données, sous un en-tête « Colonne n »
-	// posé au-dessus (unnamed.go).
+	// Unnamed : tableau tapé dont la 1re ligne a du texte et une valeur
+	// d'un autre type (« Léa | 31 ») : toutes les lignes sont des données,
+	// sous un en-tête « Colonne n » posé au-dessus (unnamed.go).
 	Unnamed bool `json:"unnamed,omitempty"`
 	// Keyed : colonne devenue clé pour une formule (« Tableau.Colonne »).
 	Keyed string `json:"keyed"`
@@ -90,11 +90,6 @@ func (m *Model) SetCell(ctx context.Context, sheet int64, row, col int, raw stri
 		t.undoBirth = true
 		err := t.input(sheet, row, col, raw, &ev)
 		t.keyAsk = false // rattachement de fin d'action : sans question
-		// Tableau tapé sans en-têtes dont la 1re ligne se distingue
-		// maintenant des suivantes : elle devient l'en-tête (unnamed.go).
-		if err == nil && ev.Created == "" && strings.TrimSpace(raw) != "" {
-			err = t.reheadYoung(sheet, row, col)
-		}
 		ev.Keyed = t.keyed
 		if ev.Created != "" {
 			ev.AutoKey = t.autoKeyed
@@ -530,18 +525,20 @@ func (t *tx) newColumn(tb Table, pos int, name string) (Table, error) {
 
 // birth crée un tableau si la cellule saisie appartient à une zone de
 // cellules libres d'au moins MinRows lignes. La première ligne de la zone
-// donne les en-têtes (saisie : seulement si elle se distingue des
-// suivantes, voir birthOf).
+// donne les en-têtes (saisie : seulement si elle n'a que des textes, voir
+// birthOf).
 func (t *tx) birth(sheet int64, row, col int) (string, error) {
 	return t.birthOf(sheet, row, col, false)
 }
 
 // birthOf est birth ; typed (saisie) : la zone doit aussi remplir un carré
-// de 2 × 2 (dense), une liste d'une seule colonne reste libre, et une 1re
-// ligne qui ressemble aux suivantes (firstRowDiffers) est une donnée sous
-// un en-tête « Colonne n » posé au-dessus quand la place est libre
-// (headRoom ; sinon elle reste l'en-tête). Un tableau déplacé ou relu
-// (notes, titres) renaît sans ces conditions.
+// de 2 × 2 (dense), une liste d'une seule colonne reste libre, et la 1re
+// ligne n'est l'en-tête que si elle n'a que des textes (textRow, décision de
+// Louis du 20/10/2026) : une valeur d'un autre type (nombre, date, heure,
+// booléen, pourcentage, montant) en fait une donnée, sous un en-tête
+// « Colonne n » posé au-dessus quand la place est libre (headRoom ; sinon
+// les cellules restent libres). Un tableau déplacé ou relu (notes, titres)
+// renaît sans ces conditions.
 func (t *tx) birthOf(sheet int64, row, col int, typed bool) (string, error) {
 	cells, err := t.cells(sheet)
 	if err != nil {
@@ -603,25 +600,28 @@ func (t *tx) birthOf(sheet int64, row, col int, typed bool) (string, error) {
 	}
 	headers, data, top := grid2[0], grid2[1:], r0
 	unnamed := false
-	if typedHeader(grid2) && typed && !firstRowDiffers(grid2) {
-		// Que des textes partout (ou rien qui distingue la 1re ligne) :
-		// toutes les lignes sont des données, l'en-tête « Colonne n » se
-		// place au-dessus ; clic droit › Utiliser la première ligne comme
-		// en-têtes pour revenir. Sans place libre au-dessus (ligne 1, titre,
-		// autre tableau, tableau croisé, fusion), la 1re ligne reste
-		// l'en-tête, comme avant.
+	if typed && !textRow(grid2[0]) {
+		// Décision de Louis (20/10/2026) : la 1re ligne tapée est l'en-tête,
+		// sauf si elle a une valeur qui n'est pas un texte (« Léa | 31 »,
+		// 10 | 20, une date…) : alors toutes les lignes tapées sont des
+		// données et l'en-tête « Colonne n » se place au-dessus ; clic droit
+		// › Utiliser la première ligne comme en-têtes pour revenir. Sans
+		// place libre au-dessus (ligne 1, titre, autre tableau, tableau
+		// croisé, fusion, plage), les cellules restent libres (comme dans
+		// Excel, où une liste n'est pas un tableau ; « Mettre sous forme de
+		// tableau » les reprend).
 		room, err := t.headRoom(sheet, r0, c0, c1)
-		if err != nil {
+		if err != nil || !room {
 			return "", err
 		}
-		if room {
-			headers, data, top, unnamed = autoHeaders(c1-c0+1), grid2, r0-1, true
-		}
-	} else if !typedHeader(grid2) {
-		// Une liste de valeurs (10, 20, 30) : la première ligne reste une
-		// donnée, les colonnes s'appellent « Colonne n » et l'en-tête se
-		// place au-dessus. Sans place libre au-dessus, les cellules restent
-		// libres (comme dans Excel, où une liste n'est pas un tableau).
+		// Un texte dans la ligne (« Léa | 31 ») : la barre d'état propose
+		// d'en faire l'en-tête ; une liste sans texte (10 | 20) : non.
+		headers, data, top, unnamed = autoHeaders(c1-c0+1), grid2, r0-1, typedHeader(grid2)
+	} else if !typed && !typedHeader(grid2) {
+		// Relu ou déplacé, une liste de valeurs (10, 20, 30) : la première
+		// ligne reste une donnée, les colonnes s'appellent « Colonne n » et
+		// l'en-tête se place au-dessus. Sans place libre au-dessus, les
+		// cellules restent libres.
 		if r0 == 0 {
 			return "", nil
 		}
@@ -629,11 +629,7 @@ func (t *tx) birthOf(sheet int64, row, col int, typed bool) (string, error) {
 		if err != nil || !free {
 			return "", err
 		}
-		headers = make([]string, c1-c0+1)
-		for i := range headers {
-			headers[i] = "Colonne " + itoa(i+1)
-		}
-		data, top = grid2, r0-1
+		headers, data, top = autoHeaders(c1-c0+1), grid2, r0-1
 	}
 	for _, c := range cells {
 		if c.Row >= r0 && c.Row <= r1 && c.Col >= c0 && c.Col <= c1 {
@@ -663,11 +659,11 @@ func (t *tx) birthOf(sheet int64, row, col int, typed bool) (string, error) {
 	return name, t.autoKey(tb.ID)
 }
 
-// typedHeader : la première ligne d'un îlot saisi donne les en-têtes si
-// elle a au moins un texte. Une première ligne sans texte (nombre, date,
-// heure, booléen, pourcentage) est une donnée, pas un titre, même au-dessus
-// de valeurs d'autres types : 10 au-dessus de 20 et 30, ou une date en tête
-// d'une liste mixte.
+// typedHeader : la première ligne d'un îlot relu ou déplacé donne les
+// en-têtes si elle a au moins un texte. Une première ligne sans texte
+// (nombre, date, heure, booléen, pourcentage) est une donnée, pas un titre,
+// même au-dessus de valeurs d'autres types : 10 au-dessus de 20 et 30, ou
+// une date en tête d'une liste mixte.
 func typedHeader(rows [][]string) bool {
 	if len(rows) < 2 {
 		return true
@@ -684,6 +680,21 @@ func typedHeader(rows [][]string) bool {
 		seen = true
 	}
 	return !seen
+}
+
+// textRow : la première ligne d'un îlot tapé n'a que des textes (cellules
+// vides ignorées) : c'est l'en-tête. Un nombre, une date, une heure, un
+// booléen, un pourcentage ou un montant en font une ligne de données ; un
+// nombre forcé en texte par l'apostrophe ('2024) reste un nom. Les valeurs
+// sont déjà dans la forme gardée (la saisie dans la langue de la session y
+// est lue avant : session.go), Infer les classe comme une colonne.
+func textRow(row []string) bool {
+	for _, v := range row {
+		if f := Infer(v); f != "" && (f != grid.Text || isTimeOrPercent(v)) {
+			return false
+		}
+	}
+	return true
 }
 
 // isTimeOrPercent : une heure (10:30) ou un pourcentage (15 %), valeurs

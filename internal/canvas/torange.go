@@ -707,7 +707,10 @@ var ErrNotRange = msg.New("range.notInRange", nil)
 // FormatAsTable refait un tableau de la plage qui contient la cellule (row,
 // col) : la zone n'est plus marquée « plage » ; sa première ligne donne les
 // en-têtes, les lignes suivantes les données (une formule donne sa valeur).
-// Renvoie le nom du tableau.
+// Sur une cellule vide hors de tout îlot (demande de Louis : « qu'il se
+// passe au moins quelque chose »), un tableau vide d'une colonne
+// « Colonne 1 » y naît, en-tête sur la cellule (blankTable). Renvoie le nom
+// du tableau.
 func (m *Model) FormatAsTable(ctx context.Context, sheet int64, row, col int) (string, error) {
 	var name string
 	err := m.Do(ctx, "Mettre sous forme de tableau", func(t *tx) (err error) {
@@ -724,6 +727,10 @@ func (m *Model) FormatAsTable(ctx context.Context, sheet int64, row, col int) (s
 				return err
 			}
 			isl := island(cells, row, col)
+			if len(isl) == 0 {
+				name, err = t.blankTable(sheet, row, col)
+				return err
+			}
 			if len(isl) < 2 {
 				return msg.Wrap(ErrTable, "range.needTwoCells", nil)
 			}
@@ -745,6 +752,34 @@ func (m *Model) FormatAsTable(ctx context.Context, sheet int64, row, col int) (s
 		}
 		return t.autoKey(tb.ID)
 	})
+	return name, err
+}
+
+// blankTable : Insertion › Tableau (Ctrl+L) sur une cellule vide : un
+// tableau d'une colonne « Colonne 1 » (nom traduit à l'affichage), sans
+// ligne de données, l'en-tête sur la cellule ; la saisie dessous l'agrandit.
+// Il faut la place : rien sur la cellule ni autour d'elle sur sa ligne (ni
+// cellule, ni tableau ou sa zone grisée, ni tableau croisé, fusion ou
+// plage), ni dessous.
+func (t *tx) blankTable(sheet int64, row, col int) (string, error) {
+	room, err := t.headRoom(sheet, row+1, col, col)
+	if err != nil {
+		return "", err
+	}
+	if room {
+		room, err = t.areaFree(sheet, row+1, col, row+1, col)
+		if err != nil {
+			return "", err
+		}
+	}
+	if !room {
+		return "", msg.Wrap(ErrTable, "range.noRoomForTable", nil)
+	}
+	name, err := t.tableName(sheet, row, col)
+	if err != nil {
+		return "", err
+	}
+	_, err = t.createTable(sheet, name, row, col, autoHeaders(1), nil)
 	return name, err
 }
 

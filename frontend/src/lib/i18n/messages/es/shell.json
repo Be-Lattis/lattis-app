@@ -472,7 +472,7 @@
 		"keyed": "Clave definida en «{column}» para REFERENCIA",
 		"undoBirth": " (Ctrl+Z: la deshace, las celdas quedan libres)",
 		"undoHint": " (Ctrl+Z para deshacer)",
-		"createdUnnamed": "Tabla «{table}» creada sin encabezados (la 1.ª fila se parece a las siguientes): clic derecho › Usar la primera fila como encabezados{more}",
+		"createdUnnamed": "Tabla «{table}» creada sin encabezados (la 1.ª fila contiene un número o una fecha: datos): clic derecho › Usar la primera fila como encabezados{more}",
 		"createdHeadless": "Tabla «{table}» creada sin encabezados («Columna n»): escriba los nombres en su fila de encabezado{more}",
 		"created": "Tabla «{table}» creada{more}",
 		"widened": "Columna {column} cambiada de {from} a {to} (Ctrl+Z para deshacer)",

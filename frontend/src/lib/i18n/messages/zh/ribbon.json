@@ -347,7 +347,7 @@
 		},
 		"table": {
 			"label": "表格",
-			"tooltip": "将活动单元格所在区域创建为表格 (Ctrl+L)"
+			"tooltip": "将活动单元格所在区域创建为表格，或在空单元格上创建空表格 (Ctrl+L)"
 		},
 		"dataLake": {
 			"label": "Lattis Data Lake",

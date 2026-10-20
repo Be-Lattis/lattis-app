@@ -347,7 +347,7 @@
 		},
 		"table": {
 			"label": "Tabla",
-			"tooltip": "Crear una tabla a partir del rango de la celda activa (Ctrl+L)"
+			"tooltip": "Crear una tabla a partir del rango de la celda activa, o una tabla vacía en una celda vacía (Ctrl+L)"
 		},
 		"dataLake": {
 			"label": "Data Lake de Lattis",

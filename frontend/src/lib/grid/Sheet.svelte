@@ -5069,8 +5069,17 @@
 			case 'formatAsTable': {
 				const fmt = source.formatAsTable;
 				if (!fmt) return;
-				if (tableAt(row, col)) say(tr('grid.table.alreadyIn'));
-				else menuAction(() => fmt(row, col));
+				if (tableAt(row, col)) {
+					say(tr('grid.table.alreadyIn'));
+					return;
+				}
+				// Rien de visé (cellule vide hors d'une plage) : le moteur pose un
+				// tableau vide d'une colonne « Colonne 1 », en-tête sur la cellule ;
+				// la 1re cellule de données, dessous, devient active.
+				const blank = !cells.has(key(row, col)) && !inRangeZone(row, col);
+				void menuAction(() => fmt(row, col)).then((ok) => {
+					if (ok && blank) moveTo(row + 1, col);
+				});
 				return;
 			}
 		}

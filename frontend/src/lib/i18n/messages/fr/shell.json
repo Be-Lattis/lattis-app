@@ -472,7 +472,7 @@
 		"keyed": "Clé posée sur « {column} » pour REFERENCE",
 		"undoBirth": " (Ctrl+Z : le défaire, les cellules restent libres)",
 		"undoHint": " (Ctrl+Z pour annuler)",
-		"createdUnnamed": "Tableau « {table} » créé sans en-têtes (la 1re ligne ressemble aux suivantes) : clic droit › Utiliser la première ligne comme en-têtes{more}",
+		"createdUnnamed": "Tableau « {table} » créé sans en-têtes (la 1re ligne contient un nombre ou une date : des données) : clic droit › Utiliser la première ligne comme en-têtes{more}",
 		"createdHeadless": "Tableau « {table} » créé sans en-têtes (« Colonne n ») : tapez les noms dans sa ligne d'en-tête{more}",
 		"created": "Tableau « {table} » créé{more}",
 		"widened": "Colonne {column} passée de {from} à {to} (Ctrl+Z pour annuler)",

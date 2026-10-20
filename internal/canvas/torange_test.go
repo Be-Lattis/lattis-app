@@ -260,8 +260,9 @@ func TestRangeBackToTable(t *testing.T) {
 	}
 	d.bus.Undo(ctx)
 	undoOnce(t, d, before, "mise sous forme de tableau")
+	mustSet(t, d, 1, 9, 9, "seule")
 	if _, err := d.FormatAsTable(ctx, 1, 9, 9); err == nil {
-		t.Fatal("hors plage accepté")
+		t.Fatal("cellule seule acceptée")
 	}
 }
 
@@ -429,7 +430,53 @@ func TestFormatFreeListAsTable(t *testing.T) {
 		t.Fatalf("liste : %+v", ts)
 	}
 	undoOnce(t, d, before, "liste en tableau")
+	mustSet(t, d, 1, 9, 9, "seule")
 	if _, err := d.FormatAsTable(ctx, 1, 9, 9); err == nil {
-		t.Fatal("cellule vide acceptée")
+		t.Fatal("cellule seule acceptée")
+	}
+}
+
+// Insertion › Tableau (Ctrl+L) sur une cellule vide (demande de Louis) : un
+// tableau vide d'une colonne « Colonne 1 », l'en-tête sur la cellule ; une
+// étape ; taper dessous l'agrandit. Sans place (une cellule ou un tableau
+// contre elle) : refus clair.
+func TestBlankTable(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	name, err := d.FormatAsTable(ctx, 1, 4, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "tableau vide")
+	if got, want := layoutOf(t, d), name+"@C5:Colonne 1×0"; got != want {
+		t.Fatalf("\n got %s\nwant %s", got, want)
+	}
+	if name != "Feuille1" {
+		t.Fatalf("nom : %q (premier tableau : le nom de l'onglet)", name)
+	}
+	mustSet(t, d, 1, 5, 2, "Pomme")
+	if got, want := layoutOf(t, d), name+"@C5:Colonne 1×1"; got != want {
+		t.Fatalf("saisie dessous :\n got %s\nwant %s", got, want)
+	}
+	d = open(t)
+	before := dump(t, d)
+	if _, err := d.FormatAsTable(ctx, 1, 4, 2); err != nil {
+		t.Fatal(err)
+	}
+	undoOnce(t, d, before, "tableau vide")
+	// Sur un autre tableau ou contre une cellule : refusé, rien ne change.
+	mustSet(t, d, 1, 4, 3, "voisine")
+	if _, err := d.FormatAsTable(ctx, 1, 4, 2); err == nil || !strings.Contains(err.Error(), "pas de place") {
+		t.Fatalf("contre une cellule : %v", err)
+	}
+	if n := len(tablesOf(t, d)); n != 0 {
+		t.Fatalf("contre une cellule : %d tableaux", n)
+	}
+	mustSet(t, d, 1, 5, 2, "dessous")
+	if _, err := d.FormatAsTable(ctx, 1, 6, 5); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.FormatAsTable(ctx, 1, 7, 5); err == nil {
+		t.Fatalf("dans la zone grisée d'un tableau : accepté")
 	}
 }

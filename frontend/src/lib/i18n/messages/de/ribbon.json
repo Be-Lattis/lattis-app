@@ -347,7 +347,7 @@
 		},
 		"table": {
 			"label": "Tabelle",
-			"tooltip": "Aus dem Bereich der aktiven Zelle eine Tabelle machen (Strg+L)"
+			"tooltip": "Aus dem Bereich der aktiven Zelle eine Tabelle machen, oder eine leere Tabelle auf einer leeren Zelle (Strg+L)"
 		},
 		"dataLake": {
 			"label": "Lattis Data Lake",

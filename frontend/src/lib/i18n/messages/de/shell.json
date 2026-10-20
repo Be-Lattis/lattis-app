@@ -472,7 +472,7 @@
 		"keyed": "Schlüssel auf „{column}“ für REFERENZ gesetzt",
 		"undoBirth": " (Strg+Z: rückgängig machen, die Zellen bleiben frei)",
 		"undoHint": " (Strg+Z zum Rückgängigmachen)",
-		"createdUnnamed": "Tabelle „{table}“ ohne Überschriften erstellt (die 1. Zeile ähnelt den folgenden): Rechtsklick › Erste Zeile als Überschriften verwenden{more}",
+		"createdUnnamed": "Tabelle „{table}“ ohne Überschriften erstellt (die 1. Zeile enthält eine Zahl oder ein Datum: Daten): Rechtsklick › Erste Zeile als Überschriften verwenden{more}",
 		"createdHeadless": "Tabelle „{table}“ ohne Überschriften erstellt („Spalte n“): Geben Sie die Namen in ihrer Überschriftenzeile ein{more}",
 		"created": "Tabelle „{table}“ erstellt{more}",
 		"widened": "Spalte {column} von {from} zu {to} geändert (Strg+Z zum Rückgängigmachen)",

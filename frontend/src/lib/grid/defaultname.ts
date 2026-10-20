@@ -32,8 +32,9 @@ export function isDefaultTableName(name: string | null | undefined): boolean {
 }
 
 // Nom de colonne donné par Lattis (internal/canvas, autoColRe) : « Colonne n »
-// (collage sans en-têtes, tableau tapé dont la 1re ligne ressemble aux
-// suivantes, colonne ajoutée sans nom). La grille l'écrit en gris italique ;
+// (collage sans en-têtes, tableau tapé dont la 1re ligne contient un nombre
+// ou une date, tableau vide d'Insertion › Tableau, colonne ajoutée sans
+// nom). La grille l'écrit en gris italique ;
 // taper dans l'en-tête le remplace.
 const GENERATED_COLUMN = /^Colonne \d+$/;
 

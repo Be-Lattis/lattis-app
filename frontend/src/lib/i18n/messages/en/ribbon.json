@@ -347,7 +347,7 @@
 		},
 		"table": {
 			"label": "Table",
-			"tooltip": "Make a table from the active cell's range (Ctrl+L)"
+			"tooltip": "Make a table from the active cell's range, or an empty table on an empty cell (Ctrl+L)"
 		},
 		"dataLake": {
 			"label": "Lattis Data Lake",

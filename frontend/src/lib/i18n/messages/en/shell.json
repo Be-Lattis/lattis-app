@@ -472,7 +472,7 @@
 		"keyed": "Key set on “{column}” for REFERENCE",
 		"undoBirth": " (Ctrl+Z: undo it, the cells stay free)",
 		"undoHint": " (Ctrl+Z to undo)",
-		"createdUnnamed": "Table “{table}” created without headers (the 1st row looks like the next ones): right-click › Use first row as headers{more}",
+		"createdUnnamed": "Table “{table}” created without headers (the 1st row holds a number or a date: data): right-click › Use first row as headers{more}",
 		"createdHeadless": "Table “{table}” created without headers (“Column n”): type the names in its header row{more}",
 		"created": "Table “{table}” created{more}",
 		"widened": "Column {column} changed from {from} to {to} (Ctrl+Z to undo)",

@@ -347,7 +347,7 @@
 		},
 		"table": {
 			"label": "Tableau",
-			"tooltip": "Faire un tableau de la plage de la cellule active (Ctrl+L)"
+			"tooltip": "Faire un tableau de la plage de la cellule active, ou un tableau vide sur une cellule vide (Ctrl+L)"
 		},
 		"dataLake": {
 			"label": "Data Lake Lattis",

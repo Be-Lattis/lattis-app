@@ -19,7 +19,7 @@ L'infobulle de chaque pastille donne son nom (« Vert, Accent 1, plus clair 40 %
 
 Accueil › Édition › Effacer retire les formats, le contenu (`Suppr`) ou la note de la sélection. Remplissage recopie la première ligne vers le bas (`Ctrl+D`) ou la première colonne vers la droite (`Ctrl+R`).
 
-Accueil › Mettre sous forme de tableau (`Ctrl+L`) fait un tableau du bloc de cellules libres de la cellule active, sa première ligne donnant les en-têtes.
+Accueil › Mettre sous forme de tableau (`Ctrl+L`) fait un tableau du bloc de cellules libres de la cellule active, sa première ligne donnant les en-têtes. Sur une cellule vide, Insertion › Tableau (ou `Ctrl+L`) pose un tableau vide d'une colonne « Colonne 1 », l'en-tête sur la cellule : tapez dessous pour le remplir, dans l'en-tête pour renommer la colonne.
 
 ## Mise en forme conditionnelle
 
