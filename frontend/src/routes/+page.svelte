@@ -19,6 +19,7 @@
 	import Sheet, { type SheetData, type SheetSource, type SheetStatus, type ColumnFilter, type PivotConfig, type ChartConfig, type TypeMix } from '#lib/grid/Sheet.svelte';
 	import Ribbon, { type DocCommand, type FileAction, type View } from '#lib/shell/Ribbon.svelte';
 	import SheetTabs from '#lib/shell/SheetTabs.svelte';
+	import { LAYOUT_LOCKED } from '#lib/shell/ribbon.js';
 	import MergeSheetsPanel from '#lib/shell/MergeSheetsPanel.svelte';
 	import { GROUP_COLORS, chipLabel, groupSheets, initialPlan, offerText, pickOffer, planForSheets, shownGroups, type OfferMoment } from '#lib/shell/mergesheets.js';
 	import type { MergePlan, SheetGroup } from '#bindings/internal/canvas/models.js';
@@ -2010,7 +2011,11 @@
 	// Structure de toutes les feuilles verrouillée avec le classeur (saisie dans les tableaux seulement).
 	const bookStructure = $derived(mode === 'doc' && !!layout?.workbookProtected && !!layout?.workbookStructure);
 	// Structure de la feuille affichée protégée (la sienne, ou celle du classeur).
-	const structureLocked = $derived(mode === 'doc' && (!!activeInfo?.structureProtected || bookStructure));
+	// Classeur collaboratif ouvert par un éditeur ou un lecteur : cellules
+	// libres et mise en page aux propriétaires et concepteurs (décision 0018),
+	// comme une structure protégée (saisie dans les tableaux seulement).
+	const layoutShared = $derived(mode === 'doc' && !!share?.shared && share?.mode === 'collaborative' && !share?.canDesign && share?.gone !== 'deleted');
+	const structureLocked = $derived(mode === 'doc' && (!!activeInfo?.structureProtected || bookStructure || layoutShared));
 	const sheetLocked = $derived(mode === 'doc' && (!!activeInfo?.protected || bookLocked));
 	const lockedMsg = $derived(
 		activeInfo?.protected
@@ -2188,6 +2193,7 @@
 		workbookProtected={mode === 'doc' && !!layout?.workbookProtected}
 		structureProtected={mode === 'doc' && (!!activeInfo?.structureProtected || bookStructure)}
 		structureByBook={mode === 'doc' && !activeInfo?.structureProtected && bookStructure}
+		{layoutShared}
 		onprotect={mode === 'doc' ? (what) => toggleProtect(what) : undefined}
 		ondata={mode === 'doc' ? (what) => (what === 'refreshAll' ? refreshKey(true) : queryHost?.data(what)) : undefined}
 		onformat={mode === 'doc' ? (tab) => sheet?.openFormat(tab) : undefined}
@@ -2334,6 +2340,7 @@
 						headings={!!layout?.sheets?.find((s) => s.id === sheetId)?.headings}
 						locked={lockedMsg}
 						structure={structureLocked}
+						layoutLocked={layoutShared ? LAYOUT_LOCKED : ''}
 						freeze={activeInfo ? { rows: activeInfo.freezeRows, cols: activeInfo.freezeCols } : undefined}
 						{zoom}
 						{animate}

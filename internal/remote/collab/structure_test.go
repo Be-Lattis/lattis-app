@@ -297,7 +297,7 @@ func TestStructureRefusedByServer(t *testing.T) {
 	eq(t, "serveur", cols, []string{"Produit:text", "Quantité:integer", "Prix:decimal", "Commentaire:text"})
 
 	// Éditeur (pas concepteur) : refusé en local, avant le serveur.
-	if err := bob.d.InsertColumn(ctx, "Ventes", 1, "Bob"); !errors.Is(err, workbook.ErrDesign) {
+	if err := bob.d.InsertColumn(ctx, "Ventes", 1, "Bob"); !errors.Is(err, workbook.ErrDesign) && !errors.Is(err, workbook.ErrLayout) {
 		t.Fatalf("éditeur : %v", err)
 	}
 	// Hors ligne : la structure aussi attend dans la file (décision 0014 ;

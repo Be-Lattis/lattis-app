@@ -177,6 +177,8 @@
 		structureProtected?: boolean;
 		/** … par la protection du classeur (structure de toutes les feuilles) : son motif renvoie au classeur. */
 		structureByBook?: boolean;
+		/** Classeur collaboratif ouvert par un éditeur ou un lecteur : cellules libres et mise en page aux concepteurs. */
+		layoutShared?: boolean;
 		/** Révision › Protéger (ou ôter la protection de) la feuille, sa structure ou le classeur. */
 		onprotect?: (what: 'sheet' | 'structure' | 'workbook') => void;
 		/** Données › Obtenir des données : nouvelle requête d'import, volet des requêtes, tout actualiser. */
@@ -225,7 +227,7 @@
 		ontheme?: (id: string) => void;
 	}
 
-	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ondedup, ontextcols, onpivot, oninsertdata, onform, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, structureProtected = false, structureByBook = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, reconnect = false, detach = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks, themes = [], ontheme }: Props = $props();
+	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ondedup, ontextcols, onpivot, oninsertdata, onform, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, structureProtected = false, structureByBook = false, layoutShared = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, reconnect = false, detach = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks, themes = [], ontheme }: Props = $props();
 	const fmt = (tab: FormatTab) => (onformat ? () => onformat(tab) : undefined);
 	const lines = (rows: boolean, hide: boolean) => (onlines ? () => onlines(rows, hide) : undefined);
 	const frz = (what: FreezeAction) => (onfreeze ? () => onfreeze(what) : undefined);
@@ -962,7 +964,7 @@
 	// Grisage (ribbon.ts) : protection de la feuille ou du Document, du
 	// classeur, tableau partagé en lecture seule sous la cellule active.
 	const ribbons: Record<string, Group[]> = $derived.by(() => {
-		const s = { sheetProtected, sheetOwnProtected, workbookProtected, structureProtected: context === 'sheet' && structureProtected, structureByBook, tableReadOnly: context === 'sheet' ? tableReadOnly : undefined, context };
+		const s = { sheetProtected, sheetOwnProtected, workbookProtected, structureProtected: context === 'sheet' && structureProtected, structureByBook, layoutShared, tableReadOnly: context === 'sheet' ? tableReadOnly : undefined, context };
 		return Object.fromEntries(Object.entries(allRibbons).map(([k, gs]) => [k, gs.map((g) => ({ ...g, commands: g.commands.map((c) => gate(c, s)) }))]));
 	});
 
@@ -1608,7 +1610,7 @@
 			value={cellStyle?.ff ?? FONTS[0]}
 			width="{FONTS_W - 4}px"
 			title="Police"
-			disabled={!onstyle || sheetProtected || structureProtected}
+			disabled={!onstyle || sheetProtected || structureProtected || layoutShared}
 			options={FONTS.map((f) => ({ value: f, label: f }))}
 			onchange={(v) => onstyle?.({ ff: v === FONTS[0] ? null : v })}
 		/>
@@ -1616,7 +1618,7 @@
 			value={cellStyle?.fs ?? DEFAULT_PT}
 			width="64px"
 			title="Taille de police (points)"
-			disabled={!onstyle || sheetProtected || structureProtected}
+			disabled={!onstyle || sheetProtected || structureProtected || layoutShared}
 			options={SIZES.map((s) => ({ value: s, label: String(s) }))}
 			onchange={(v) => onstyle?.({ fs: v === DEFAULT_PT ? null : v })}
 		/>

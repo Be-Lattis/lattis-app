@@ -84,9 +84,18 @@ func (e ErrProtected) Error() string {
 type ErrStructureProtected struct {
 	Sheet string
 	Book  bool
+	// Shared : refus du partage (classeur collaboratif ouvert par un
+	// éditeur ou un lecteur : LayoutLocker).
+	Shared error
 }
 
+// Unwrap rend le refus du partage (errors.Is).
+func (e ErrStructureProtected) Unwrap() error { return e.Shared }
+
 func (e ErrStructureProtected) Error() string {
+	if e.Shared != nil {
+		return e.Shared.Error()
+	}
 	if e.Book {
 		return fmt.Sprintf("La structure des feuilles du classeur est protégée : seule la saisie dans les tableaux est permise sur « %s » (Révision › Ôter la protection du classeur)", e.Sheet)
 	}
@@ -174,6 +183,11 @@ func (t *tx) guardStructure(sheet int64) error {
 // structureLock rend le refus d'une feuille dont la structure est protégée,
 // par elle-même ou par le classeur (nil : elle ne l'est pas).
 func (t *tx) structureLock(sheet int64) (*ErrStructureProtected, error) {
+	if err := t.layoutLock(); err != nil {
+		var name string
+		_ = t.row(`SELECT name FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&name)
+		return &ErrStructureProtected{Sheet: name, Book: true, Shared: err}, nil
+	}
 	var name string
 	var own, book bool
 	err := t.row(`SELECT s.name, EXISTS (SELECT 1 FROM `+structTable+` WHERE sheet = s.id),
@@ -184,7 +198,7 @@ func (t *tx) structureLock(sheet int64) (*ErrStructureProtected, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ErrStructureProtected{name, !own}, nil
+	return &ErrStructureProtected{Sheet: name, Book: !own}, nil
 }
 
 // structureLocked dit si la structure de la feuille est protégée.
@@ -250,12 +264,36 @@ func (t *tx) guarded(sheet int64, fn func() error) error {
 
 // guardWorkbook refuse l'action si le classeur est protégé.
 func (t *tx) guardWorkbook() error {
+	if err := t.layoutLock(); err != nil {
+		return err
+	}
 	var k int
 	if err := t.row(`SELECT count(*) FROM _lattis_protection WHERE sheet = ?`, workbookScope).Scan(&k); err != nil {
 		return err
 	}
 	if k > 0 {
 		return ErrProtected{}
+	}
+	return nil
+}
+
+// LayoutLocker est implémenté par le partage (Sharing) d'un classeur
+// collaboratif : seuls ses propriétaires et concepteurs en changent les
+// cellules libres et la mise en page (décision 0018). Pour les autres, tout
+// se passe comme sous la protection de la structure de toutes les feuilles
+// (saisie dans les tableaux seulement, selon leurs droits).
+type LayoutLocker interface {
+	// LayoutLock : nil si la mise en page se modifie, sinon le refus.
+	LayoutLock() error
+}
+
+// layoutLock rend le refus du partage (nil : permis).
+func (t *tx) layoutLock() error {
+	if t.m == nil || t.m.sharing == nil {
+		return nil
+	}
+	if l, ok := t.m.sharing.(LayoutLocker); ok {
+		return l.LayoutLock()
 	}
 	return nil
 }

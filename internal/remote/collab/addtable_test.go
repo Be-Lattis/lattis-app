@@ -2,6 +2,7 @@ package collab_test
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"slices"
@@ -175,11 +176,14 @@ func TestAddTableFollowed(t *testing.T) {
 	go bob.e.Follow(ctx, f.As("bob"), time.Hour, nil)
 	go alice.e.Follow(ctx, f.As("alice"), time.Hour, nil)
 	waitOnline(t, bob, alice)
-	// Une ligne occupe la place chez Bob : le tableau reçu va dessous.
-	_, err := bob.d.SetCell(ctx, 1, 11, 1, "note de Bob")
-	must(t, err)
+	// Une ligne occupe la place chez Bob : le tableau reçu va dessous
+	// (cellule d'avant la décision 0018 : un éditeur n'en saisit plus).
+	must(t, bob.d.DB().Write(ctx, func(tx *sql.Tx) error {
+		_, err := tx.Exec(`INSERT INTO _lattis_cells (sheet, row, col, raw) VALUES (1, 11, 1, 'note de Bob')`)
+		return err
+	}))
 	tbl := newLocalTable(t, alice, "Stock", 10)
-	_, err = alice.e.AddTable(ctx, tbl)
+	_, err := alice.e.AddTable(ctx, tbl)
 	must(t, err)
 	waitFor(t, "Stock chez Bob", func() bool { return hasTable(bob, "Stock") })
 	if _, row := anchorOf(t, bob, "Stock"); row <= 11 {
@@ -195,8 +199,13 @@ func TestAddTableRefused(t *testing.T) {
 	ctx := context.Background()
 	f, alice, bob, id := setup(t)
 
-	// Éditeur, pas concepteur : refusé en local.
-	tb := newLocalTable(t, bob, "Notes", 10)
+	// Éditeur, pas concepteur : il ne crée pas de tableau sur la feuille
+	// (cellules libres et mise en page aux concepteurs, décision 0018), ni
+	// n'en ajoute au classeur partagé.
+	if _, err := bob.d.Paste(ctx, 1, 10, 0, [][]string{{"Article", "Stock"}, {"Vis", "120"}}); !errors.Is(err, workbook.ErrLayout) {
+		t.Fatalf("tableau créé par un éditeur : %v", err)
+	}
+	tb := tableID(t, bob.d)
 	if s := bob.e.CanAdd(tb); s == "" {
 		t.Fatal("CanAdd d'un éditeur")
 	}
@@ -229,7 +238,7 @@ func TestAddTableRefused(t *testing.T) {
 	must(t, f.Grant(id, "bob", "designer"))
 	_, err := workbook.RefreshCapabilities(ctx, f.As("bob"), bob.d.Share)
 	must(t, err)
-	_, err = bob.e.AddTable(ctx, tableOf(t, bob, "Notes"))
+	_, err = bob.e.AddTable(ctx, newLocalTable(t, bob, "Notes", 10))
 	must(t, err)
 	must(t, bob.d.RenameTable(ctx, "Notes", "Stock"))
 	bob.send()

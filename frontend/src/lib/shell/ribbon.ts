@@ -31,6 +31,8 @@ export interface GateState {
 	structureProtected?: boolean;
 	/** … par la protection du classeur (structure de toutes les feuilles). */
 	structureByBook?: boolean;
+	/** Classeur collaboratif ouvert par un éditeur ou un lecteur : cellules libres et mise en page réservées aux propriétaires et concepteurs (comme une structure protégée). */
+	layoutShared?: boolean;
 	/** Classeur partagé : la cellule active est dans un tableau publié en lecture seule (le motif). */
 	tableReadOnly?: string;
 	/** Onglet affiché : une feuille (par défaut), un Document ou une page web. */
@@ -45,9 +47,16 @@ export function protectedThing(context: GateState['context'] = 'sheet'): { locke
 }
 
 /** Pourquoi la commande est grisée ('' : elle ne l'est pas). */
+/** Motif des commandes grisées pour un éditeur ou un lecteur d'un classeur collaboratif. */
+export const LAYOUT_SHARED = 'seuls les propriétaires et concepteurs modifient les cellules libres et la mise en page de ce classeur partagé';
+/** Message d'une saisie refusée hors des tableaux (le même que le moteur, workbook.ErrLayout). */
+export const LAYOUT_LOCKED = 'Seuls les propriétaires et concepteurs modifient les cellules libres et la mise en page de ce classeur partagé';
+
 export function blockedBy(c: Gated, s: GateState): string {
 	if (c.createsSheet && s.workbookProtected) return 'la structure du classeur est protégée (cette commande crée une feuille)';
+	if (c.createsSheet && s.layoutShared) return LAYOUT_SHARED;
 	if (c.ro) return '';
+	if (s.layoutShared && !c.data && !s.sheetProtected) return LAYOUT_SHARED;
 	if (s.sheetProtected) {
 		const p = protectedThing(s.context);
 		return s.sheetOwnProtected ? `${p.locked} (Révision › ${p.unprotect})` : 'classeur protégé (Révision › Ôter la protection du classeur)';

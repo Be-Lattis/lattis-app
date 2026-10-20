@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"slices"
 	"testing"
 	"time"
@@ -204,15 +205,13 @@ func TestChoiceTabShared(t *testing.T) {
 		t.Fatal("catégorie reçue deux fois")
 	}
 
-	// Bob (éditeur) change la sienne : elle reste sur son poste.
-	must(t, bob.d.Model.SetSheetChoice(ctx, 1, "Suivi", "Année", "2025"))
-	must(t, bob.e.PublishChoices(ctx, false))
-	_, err = bob.e.ReceiveStructure(ctx, nil, nil)
-	must(t, err)
-	wantTab(t, "Bob, sa catégorie", bob, "Année", "2025")
-	_, err = alice.e.ReceiveStructure(ctx, nil, nil)
-	must(t, err)
-	wantTab(t, "Alice après Bob", alice, "Site", "Étang")
+	// Bob (éditeur) ne change pas la catégorie : la mise en page est aux
+	// concepteurs (décision 0018) ; il garde le choix de la valeur.
+	if err := bob.d.Model.SetSheetChoice(ctx, 1, "Suivi", "Année", "2025"); !errors.Is(err, workbook.ErrLayout) {
+		t.Fatalf("catégorie posée par un éditeur : %v", err)
+	}
+	must(t, bob.d.Model.ChooseSheetValue(ctx, 1, "Étang", false))
+	wantTab(t, "Bob, sa valeur", bob, "Site", "Étang")
 
 	// Alice retire l'onglet à choix : il disparaît chez Bob.
 	must(t, alice.d.Model.ClearSheetChoice(ctx, 1))
@@ -234,7 +233,12 @@ func TestChoiceTabOldLayout(t *testing.T) {
 	f, alice, bob, id := setupChoice(t, true)
 	// Comme avant : rien chez Bob ; son propre choix lui reste.
 	wantTab(t, "Bob, mise en page d'avant", bob, "", "")
-	must(t, bob.d.Model.SetSheetChoice(ctx, 1, "Suivi", "Année", "2024"))
+	// Catégorie posée par Bob quand les éditeurs le pouvaient encore (avant
+	// la décision 0018) : hors du journal, comme dans son cache.
+	must(t, bob.d.DB().Write(ctx, func(tx *sql.Tx) error {
+		_, err := tx.Exec(`UPDATE _lattis_sheets SET choice = '{"tbl":1,"col":1,"name":"Année","value":"2024"}' WHERE id = 1`)
+		return err
+	}))
 	_, err := bob.e.ReceiveStructure(ctx, nil, nil)
 	must(t, err)
 	_, err = workbook.Load(ctx, f.As("bob"), bob.d.DB(), workbook.Source{Server: server, User: "bob", WorkbookID: id}, false)

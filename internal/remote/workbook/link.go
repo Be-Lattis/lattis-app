@@ -27,6 +27,10 @@ var (
 	// Droits d'un classeur collaboratif (§8.1).
 	ErrReader   = errors.New("Tableau en lecture seule : vos droits ne permettent pas de le modifier")
 	ErrNoAccess = errors.New("Tableau inaccessible avec vos droits")
+	// ErrLayout : cellules libres et mise en page d'un classeur
+	// collaboratif, réservées aux propriétaires et concepteurs (décision
+	// 0018 ; LayoutLock).
+	ErrLayout   = errors.New("Seuls les propriétaires et concepteurs modifient les cellules libres et la mise en page de ce classeur partagé")
 	ErrNotYours = errors.New("Ligne d'un autre membre : en tant que participant, vous ne modifiez que vos propres lignes")
 	// ErrCannotCreate : publication refusée, le compte n'a pas le droit de
 	// créer de classeur sur ce serveur (Server.CanCreateWorkbooks).
@@ -257,6 +261,20 @@ func (l *Link) TableShare(tbl int64) string {
 		return "published"
 	}
 	return "private"
+}
+
+// LayoutLock refuse de changer les cellules libres et la mise en page d'un
+// classeur collaboratif à qui n'en est ni propriétaire ni concepteur
+// (canvas.LayoutLocker ; décision 0018) : seuls ceux-là la partagent
+// (lattis.save_meta). Hors ligne, les derniers droits connus ; supprimé du
+// serveur, le classeur n'est plus que des données locales.
+func (l *Link) LayoutLock() error {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	if l.info == nil || l.info.Mode != Collaborative || l.gone == GoneDeleted || l.info.CanDesign() {
+		return nil
+	}
+	return ErrLayout
 }
 
 // TableLock refuse la modification d'un tableau publié en lecture seule

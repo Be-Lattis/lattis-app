@@ -644,6 +644,10 @@
 		 * la saisie dans les tableaux ; ni colonne de plus, ni graphique ou contrôle à
 		 * sélectionner, déplacer ou redimensionner. */
 		structure?: boolean;
+		/** Classeur collaboratif ouvert par un éditeur ou un lecteur : cellules libres et
+		 * mise en page réservées aux concepteurs (décision 0018) ; la saisie hors d'un
+		 * tableau est refusée dès la première touche avec ce message (vide : permise). */
+		layoutLocked?: string;
 		/** Volets figés : lignes et colonnes qui restent affichées pendant le défilement. */
 		freeze?: { rows: number; cols: number };
 		/** Zoom de la feuille (1 : 100 %), voir zoom.ts. */
@@ -682,7 +686,7 @@
 		onplacing?: (p: { hint: string; create: boolean } | null) => void;
 	}
 
-	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', structure = false, freeze, zoom = 1, onzoom, animate = true, sheetName = '', onsheet, onrowlink, onreflink, onrefback, onask, onsharedata, onaddshared, sourceTables = [], onpushsource, pageBreaks, onplacing }: Props = $props();
+	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', structure = false, layoutLocked = '', freeze, zoom = 1, onzoom, animate = true, sheetName = '', onsheet, onrowlink, onreflink, onrefback, onask, onsharedata, onaddshared, sourceTables = [], onpushsource, pageBreaks, onplacing }: Props = $props();
 
 	// Feuille sans fin pratique (choix de Louis) : au-delà des limites d'Excel,
 	// bornée par la nomenclature Cell[ZZZZ999999999] (4 lettres, 9 chiffres).
@@ -8462,6 +8466,9 @@
 		// Tableau publié en lecture seule (classeur partagé figé, hors ligne).
 		const ro = ownerAt(r, c)?.t.readOnly;
 		if (ro) return ro;
+		// Cellule libre d'un classeur collaboratif sans droit de conception
+		// (la ligne juste sous un tableau l'agrandit : c'est une saisie).
+		if (layoutLocked && !ownerAt(r, c) && !ownerAt(r - 1, c)) return layoutLocked;
 		// Participant (classeur collaboratif) : les lignes des autres membres.
 		if (lockedRowAt(r, c)) return NOT_YOURS;
 		// Tableau croisé : seules ses colonnes saisies à droite se modifient.

@@ -73,6 +73,16 @@ describe('grisage du ruban (audit 3, I1 et I2)', () => {
 		expect(gate(cmd('Coller', { data: true }), { ...st, sheetProtected: true, sheetOwnProtected: true }).hint).toContain('feuille protégée');
 	});
 
+	it('classeur collaboratif ouvert par un éditeur : mise en page aux concepteurs, saisie dans les tableaux permise', () => {
+		const ed: GateState = { layoutShared: true, structureProtected: true };
+		const g = gate(cmd('Gras', { local: true }), ed);
+		expect(g.run).toBeUndefined();
+		expect(g.hint).toBe('Gras : seuls les propriétaires et concepteurs modifient les cellules libres et la mise en page de ce classeur partagé');
+		expect(gate(cmd('Coller', { data: true }), ed).run).toBe(run);
+		expect(gate(cmd('Filtrer', { ro: true }), ed).run).toBe(run);
+		expect(gate(cmd('Tableau croisé dynamique', { ro: true, createsSheet: true }), ed).hint).toContain('concepteurs');
+	});
+
 	it('commande à menu : chaque choix est grisé à part, la commande quand il n’en reste aucun', () => {
 		const effacer: GatedMenu = { label: 'Effacer', run, items: [{ label: 'Effacer les formats', local: true, run }, { label: 'Effacer le contenu', run }] };
 		const ro = gate(effacer, { tableReadOnly: 'lecture seule' });
