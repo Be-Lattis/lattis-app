@@ -5,6 +5,7 @@ package collab_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/lalamefine/lattis/internal/remote/collab"
@@ -200,5 +201,57 @@ func TestDropHeld(t *testing.T) {
 	must(t, err)
 	if got := bob.col("Quantité")[0]; got != "3" {
 		t.Errorf("Quantité après Abandonner : %q, attendu 3", got)
+	}
+}
+
+// ambiguous : la transaction est validée sur le serveur, puis la réponse
+// se perd (coupure pendant le COMMIT).
+type ambiguous struct {
+	workbook.Server
+	left int
+}
+
+func (s *ambiguous) Write(ctx context.Context, fn func(workbook.Writer) error) error {
+	err := s.Server.Write(ctx, fn)
+	if err == nil && s.left > 0 {
+		s.left--
+		return errors.New("read tcp: connection reset by peer")
+	}
+	return err
+}
+
+// Constat 14 : coupure entre la validation du serveur et sa réponse : l'étape
+// repart à la reconnexion ; pas de doublon. Une ligne ajoutée puis
+// supprimée par une collègue entre les deux envois revient-elle ?
+func TestAmbiguousCommit(t *testing.T) {
+	ctx := context.Background()
+	f, alice, bob, _ := setup(t)
+	f.SetDown(true)
+	bob.d.Share.SetOnline(false, "serveur injoignable")
+	must(t, bob.d.InsertRow(ctx, "Ventes", 3))
+	bob.mustSet(3, 0, "Sucre")
+	bob.mustSet(0, 1, "30")
+	f.SetDown(false)
+	bob.e.SetServer(&ambiguous{Server: f.As("bob"), left: 1})
+	bob.d.Share.SetOnline(true, "")
+	if _, err := bob.e.Sync(ctx); err == nil {
+		t.Fatal("coupure attendue")
+	}
+	// Pendant la coupure (vue de Bob), Alice reçoit la ligne Sucre et la supprime.
+	alice.receive()
+	eq(t, "Alice reçoit", alice.col("Produit"), []string{"Café", "Thé", "Chocolat", ""})
+	must(t, alice.d.DeleteRow(ctx, "Ventes", 3))
+	alice.send()
+
+	r, err := bob.e.Sync(ctx)
+	must(t, err)
+	t.Logf("renvoi : %+v", r)
+	alice.receive()
+	t.Logf("Alice : %v / %v ; Bob : %v / %v", alice.col("Produit"), alice.col("Quantité"), bob.col("Produit"), bob.col("Quantité"))
+	if n := len(alice.col("Produit")); n != 3 {
+		t.Errorf("la ligne supprimée par Alice revient (%d lignes)", n)
+	}
+	if r.Conflicts > 0 {
+		t.Errorf("faux conflit sur sa propre écriture : %+v", r)
 	}
 }

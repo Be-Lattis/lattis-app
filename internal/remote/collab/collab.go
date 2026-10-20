@@ -64,6 +64,9 @@ type Engine struct {
 	// stuck : échecs de suite de la première étape de la file, serveur
 	// joignable (held.go) ; sous run.
 	stuck stuckStep
+	// rereads : tableaux à relire en entier, droits de lecture changés
+	// (RefreshRights) ; sous mu.
+	rereads map[int64]bool
 }
 
 // SetBackoff règle les nouveaux essais de connexion du suivi (délais

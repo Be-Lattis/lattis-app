@@ -339,8 +339,18 @@ func (e *Engine) sendBatch(ctx context.Context, srv workbook.Server, info *workb
 					// valeur ; l'étape reste en attente.
 					return fmt.Errorf("%w : %s", errStale, errText(err))
 				}
-				if _, rejected := workbook.Refusal(err); !rejected {
+				code, rejected := workbook.Refusal(err)
+				if !rejected {
 					return err // coupure ou erreur passagère : l'étape reste en attente
+				}
+				if op.Kind == command.OpInsert && code == "23000" {
+					// Renvoi d'un ajout après une coupure, la ligne supprimée
+					// entre-temps par un collègue (le serveur ne la recrée
+					// pas) : comme une modification d'une ligne supprimée.
+					if why, werr := w.WhyNot(ctx, info.WorkbookID, it.t.remote, op.Row); werr == nil && why.Reason == workbook.WhyDeleted {
+						o.refused(it, why)
+						continue
+					}
 				}
 				// Refusée seule (point de sauvegarde) : la ligne reprend
 				// l'état du serveur, le reste de l'étape continue.
@@ -348,7 +358,7 @@ func (e *Engine) sendBatch(ctx context.Context, srv workbook.Server, info *workb
 				if workbook.Privilege(err) {
 					o.rep.notice("Droits insuffisants sur « " + it.t.remote.Name + " » : modification annulée")
 				} else {
-					o.rep.notice("Modification refusée par le serveur, annulée : " + errText(err))
+					o.rep.notice("Modification refusée par le serveur, annulée : " + workbook.ServerMessage(err))
 				}
 				continue
 			}

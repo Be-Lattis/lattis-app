@@ -30,6 +30,9 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 - Classeur partagé : une cellule libre ou un changement de mise en page fait juste avant d'ouvrir un autre classeur part maintenant au serveur (ou attend la reconnexion) au lieu d'être perdu.
 - Classeur partagé, volet Conflits : si un collègue modifie encore la cellule avant votre choix, le conflit montre sa nouvelle valeur et « Garder la sienne » reprend bien celle-ci, au lieu d'une valeur périmée qui ne se corrigeait plus.
 - Classeur partagé : un nombre décimal de plus de 17 chiffres écrit hors de Lattis (formulaire, SQL, pipeline) ne met plus chaque modification de la cellule en conflit sans fin.
+- Classeur partagé, droits de lecture changés en cours de session (restriction posée ou retirée, filtre élargi) : les lignes devenues interdites disparaissent du poste et celles devenues visibles arrivent, sans rouvrir le classeur. Avec un Serveur Lattis à jour, une ligne qui sort de votre filtre parce qu'un collègue a changé sa valeur disparaît aussi.
+- Classeur partagé : deux concepteurs qui modifient la mise en page au même moment ne perdent plus les cellules libres de l'un ou de l'autre (Serveur Lattis à jour).
+- Classeur partagé : une ligne ajoutée juste avant une coupure, puis supprimée par un collègue, ne revient plus au retour de la connexion (Serveur Lattis à jour).
 
 ## 0.1.0-beta.3.2 (20/10/2026)
 

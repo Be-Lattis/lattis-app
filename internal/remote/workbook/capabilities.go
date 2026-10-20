@@ -89,23 +89,52 @@ func (a TableAccess) ReadsFiltered(mine []Restriction) bool {
 // savoir si une relecture a changé quelque chose).
 func capabilitiesSnapshot(ctx context.Context, q interface {
 	QueryContext(ctx context.Context, q string, args ...any) (*sql.Rows, error)
-}) (string, error) {
+}) (string, map[int64]tableCaps, error) {
 	rs, err := q.QueryContext(ctx, `SELECT tbl, level, coalesce(role, ''), coalesce(filters, ''), coalesce(restrictions, '') FROM _lattis_capabilities ORDER BY tbl`)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	defer rs.Close()
 	var b strings.Builder
+	per := map[int64]tableCaps{}
 	for rs.Next() {
 		var tbl int64
 		var a, c, d, e string
 		if err := rs.Scan(&tbl, &a, &c, &d, &e); err != nil {
-			return "", err
+			return "", nil, err
 		}
-		b.WriteString(strings.Join([]string{a, c, d, e}, "\x00"))
+		key := strings.Join([]string{a, c, d, e}, "\x00")
+		b.WriteString(key)
 		b.WriteByte('\n')
+		per[tbl] = tableCaps{level: a, filtered: d != "" || e != "", key: key}
 	}
-	return b.String(), rs.Err()
+	return b.String(), per, rs.Err()
+}
+
+// tableCaps : droits notés d'un tableau (capabilitiesSnapshot).
+type tableCaps struct {
+	level    string
+	filtered bool // filtre de lecture ou restriction : les lignes visibles dépendent de prédicats
+	key      string
+}
+
+// readsChanged : tableaux publiés dont les lignes visibles ont pu changer
+// avec les droits (niveau, filtre, restriction). Le prédicat d'un filtre ou
+// d'une restriction n'est pas connu du client : un tableau filtré avant ou
+// après est relu. Un tableau devenu inaccessible n'est pas relu (le serveur
+// refuserait).
+func readsChanged(before, after map[int64]tableCaps) map[int64]bool {
+	out := map[int64]bool{}
+	for tbl, a := range after {
+		if tbl == 0 || a.level == string(LevelNone) {
+			continue
+		}
+		b, ok := before[tbl]
+		if !ok || b.key != a.key || b.filtered || a.filtered {
+			out[tbl] = true
+		}
+	}
+	return out
 }
 
 // RefreshCapabilities relit les droits de l'utilisateur sur le classeur
@@ -118,10 +147,19 @@ func capabilitiesSnapshot(ctx context.Context, q interface {
 // compter comme un changement de droits. Rend vrai si les droits ont
 // changé.
 func RefreshCapabilities(ctx context.Context, srv Server, link *Link) (bool, error) {
+	changed, _, err := RefreshCapabilitiesReads(ctx, srv, link)
+	return changed, err
+}
+
+// RefreshCapabilitiesReads fait RefreshCapabilities et rend aussi les
+// tableaux à relire en entier (readsChanged) : « *acl » ne dit pas quelles
+// lignes deviennent visibles ou invisibles, et changes_since ne rend que
+// les lignes modifiées depuis le point de reprise.
+func RefreshCapabilitiesReads(ctx context.Context, srv Server, link *Link) (bool, map[int64]bool, error) {
 	db := link.db
 	info := link.Info()
 	if info == nil {
-		return false, nil
+		return false, nil, nil
 	}
 	caps, err := srv.Capabilities(ctx, info.WorkbookID)
 	// Classeur supprimé du serveur (P0002) : noté sur link, le suivi s'arrête ;
@@ -129,30 +167,30 @@ func RefreshCapabilities(ctx context.Context, srv Server, link *Link) (bool, err
 	gone := GoneReason(err)
 	if gone == GoneDeleted {
 		link.SetGone(gone)
-		return false, err
+		return false, nil, err
 	}
 	revoked := gone == GoneRevoked
 	if err != nil && !revoked {
-		return false, err
+		return false, nil, err
 	}
 	linkChanged := link.SetGone(gone)
 	local := map[string]int64{}
 	rs, err := db.Read().QueryContext(ctx, `SELECT tbl, coalesce(remote_id, '') FROM _lattis_remote_tables WHERE published = 1`)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 	for rs.Next() {
 		var tbl int64
 		var rid string
 		if err := rs.Scan(&tbl, &rid); err != nil {
 			rs.Close()
-			return false, err
+			return false, nil, err
 		}
 		local[rid] = tbl
 	}
 	rs.Close()
 	if err := rs.Err(); err != nil {
-		return false, err
+		return false, nil, err
 	}
 	if revoked {
 		caps = Capabilities{Tables: map[string]TableAccess{}}
@@ -161,8 +199,9 @@ func RefreshCapabilities(ctx context.Context, srv Server, link *Link) (bool, err
 		}
 	}
 	changed, titled := false, false
+	var reload map[int64]bool
 	err = db.Write(ctx, func(tx *sql.Tx) error {
-		before, err := capabilitiesSnapshot(ctx, tx)
+		before, beforeT, err := capabilitiesSnapshot(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -192,10 +231,11 @@ func RefreshCapabilities(ctx context.Context, srv Server, link *Link) (bool, err
 		if err := writeCapabilities(ctx, tx, cur, &caps, local); err != nil {
 			return err
 		}
-		after, err := capabilitiesSnapshot(ctx, tx)
+		after, afterT, err := capabilitiesSnapshot(ctx, tx)
 		if err != nil {
 			return err
 		}
+		reload = readsChanged(beforeT, afterT)
 		changed = changed || before != after
 		if !changed && !titled {
 			return errUnchanged // rien de changé : transaction défaite
@@ -203,13 +243,13 @@ func RefreshCapabilities(ctx context.Context, srv Server, link *Link) (bool, err
 		return nil
 	})
 	if errors.Is(err, errUnchanged) {
-		return linkChanged, nil
+		return linkChanged, reload, nil
 	}
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 	if changed || titled {
-		return changed || linkChanged, link.Reload(ctx)
+		return changed || linkChanged, reload, link.Reload(ctx)
 	}
-	return linkChanged, nil
+	return linkChanged, reload, nil
 }

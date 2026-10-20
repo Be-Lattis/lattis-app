@@ -37,6 +37,16 @@ func (e *Engine) syncLayout(ctx context.Context, force bool) (Report, error) {
 		return rep, nil
 	}
 	res, err := workbook.SyncLayout(ctx, srv, e.db, info, force)
+	// Un autre concepteur a enregistré la mise en page entre notre lecture
+	// et notre écriture (40001 de lattis.save_meta) : tout est relu et
+	// refusionné aussitôt, plutôt qu'au tour suivant après un passage hors
+	// ligne.
+	for try := 0; try < 2; try++ {
+		if code, _ := workbook.Rejected(err); code != "40001" {
+			break
+		}
+		res, err = workbook.SyncLayout(ctx, srv, e.db, info, true)
+	}
 	if err != nil {
 		return rep, err
 	}

@@ -3,6 +3,7 @@ package workbook
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -150,10 +151,50 @@ func (w pgWriter) Fill(ctx context.Context, schema, table string, cols []RemoteC
 	return w.tx.SendBatch(ctx, b).Close()
 }
 
+// Meta lit un objet de mise en page pour le réécrire et note sa version
+// (lattis_xid) pour SaveMeta : le serveur refuse ensuite (40001) d'écrire
+// par-dessus une autre version, enregistrée entre-temps par un autre
+// concepteur (sinon le second écrasait le premier avec une fusion faite sur
+// l'ancienne version). Les membres n'ont pas le droit de verrouiller la
+// ligne (FOR UPDATE) : la vérification est faite par lattis.save_meta.
 func (w pgWriter) Meta(ctx context.Context, schema, kind, key string) ([]byte, error) {
-	return pgReader{tx: w.tx}.Meta(ctx, schema, kind, key)
+	var raw []byte
+	var xid string
+	err := w.tx.QueryRow(ctx, `SELECT payload::text, lattis_xid::text FROM `+pgx.Identifier{schema, "lattis_meta_objects"}.Sanitize()+
+		` WHERE kind = $1 AND key = $2`, kind, key).Scan(&raw, &xid)
+	if errors.Is(err, pgx.ErrNoRows) {
+		w.meta[kind+"/"+key] = ""
+		return nil, nil
+	}
+	if err == nil && w.meta != nil {
+		w.meta[kind+"/"+key] = xid
+	}
+	return raw, err
 }
 
+// SaveMeta écrit un objet de mise en page lu par Meta dans la même
+// transaction ; avec la migration du serveur qui le permet
+// (lattis.save_meta(…, xid8)), le serveur vérifie aussi que la version n'a
+// pas changé (sinon 40001 : la fusion est refaite au tour suivant).
 func (w pgWriter) SaveMeta(ctx context.Context, workbookID, kind string, payload []byte) error {
+	var l struct {
+		Key string `json:"key"`
+	}
+	_ = json.Unmarshal(payload, &l)
+	xid, read := w.meta[kind+"/"+l.Key]
+	if read {
+		var ok bool
+		if err := w.tx.QueryRow(ctx, `SELECT to_regprocedure('lattis.save_meta(uuid,text,jsonb,xid8)') IS NOT NULL`).Scan(&ok); err != nil {
+			return err
+		}
+		if ok {
+			var expected any
+			if xid != "" {
+				expected = xid
+			}
+			_, err := w.tx.Exec(ctx, `SELECT lattis.save_meta($1::uuid, $2, $3::jsonb, $4::xid8)`, workbookID, kind, string(payload), expected)
+			return err
+		}
+	}
 	return pgPublisher{tx: w.tx}.SaveMeta(ctx, workbookID, kind, payload)
 }

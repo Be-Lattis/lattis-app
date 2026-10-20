@@ -249,6 +249,11 @@ func (w *writer) Insert(ctx context.Context, schemaName, name, id, pos string, c
 	if t.row(id) >= 0 {
 		return workbook.Wrote{}, nil // ON CONFLICT DO NOTHING
 	}
+	// Ligne supprimée : jamais recréée sous le même identifiant (serveur,
+	// migration 0032 : lattis.trg_stamp).
+	if slices.ContainsFunc(t.tombs, func(tb tomb) bool { return tb.id == id }) {
+		return workbook.Wrote{}, ErrServer{"23000", "ligne supprimée entre-temps par un autre membre : elle n'est pas recréée"}
+	}
 	r := row{id: id, pos: pos, author: w.s.user, vals: make([]any, len(t.cols))}
 	for k, c := range cols {
 		j := t.col(c.Name)

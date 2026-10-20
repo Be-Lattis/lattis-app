@@ -25,7 +25,7 @@ func (s pgServer) Delta(ctx context.Context, fn func(Reader) error) error {
 
 func (s pgServer) Write(ctx context.Context, fn func(Writer) error) error {
 	return s.with(ctx, usageWrite, func(c *pgx.Conn) error {
-		return pgx.BeginFunc(ctx, c, func(tx pgx.Tx) error { return fn(pgWriter{tx}) })
+		return pgx.BeginFunc(ctx, c, func(tx pgx.Tx) error { return fn(pgWriter{tx: tx, meta: map[string]string{}}) })
 	})
 }
 
@@ -47,7 +47,12 @@ func pgType(t string) string {
 	return "text"
 }
 
-type pgWriter struct{ tx pgx.Tx }
+type pgWriter struct {
+	tx pgx.Tx
+	// meta : version (lattis_xid) des objets de mise en page lus dans la
+	// transaction (Meta), attendue par SaveMeta.
+	meta map[string]string
+}
 
 // savepoint : nom du point de sauvegarde de chaque écriture.
 const savepoint = "lattis_op"

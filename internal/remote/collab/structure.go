@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strconv"
 	"time"
@@ -227,7 +228,7 @@ func (e *Engine) sendStructure(ctx context.Context, srv workbook.Server, info *w
 // qui n'est plus sur le serveur est écartée).
 func (e *Engine) refuseStructure(ctx context.Context, srv workbook.Server, info *workbook.Info, en entry, changes []oplog.Change, msg string, rep *Report) error {
 	tbls := map[int64]bool{}
-	added := map[int64]bool{} // colonnes ajoutées en local, à retirer
+	added := map[int64]bool{}  // colonnes ajoutées en local, à retirer
 	calc := map[int64]string{} // colonnes converties en valeurs (ou l'inverse)
 	seen := func(ch oplog.Change) {
 		if ch.Action == oplog.AddColumn {
@@ -708,6 +709,19 @@ func (e *Engine) ReceiveStructure(ctx context.Context, only, reload map[int64]bo
 
 func (e *Engine) receiveStructure(ctx context.Context, only, reload map[int64]bool) (Report, error) {
 	var rep Report
+	if rr := e.takeRereads(); len(rr) > 0 {
+		reload = maps.Clone(reload)
+		if reload == nil {
+			reload = map[int64]bool{}
+		}
+		for tbl := range rr {
+			reload[tbl] = true
+			if only != nil {
+				only = maps.Clone(only)
+				only[tbl] = true
+			}
+		}
+	}
 	if only == nil {
 		// Catégories d'onglets à choix publiées par un concepteur, puis
 		// tableaux ajoutés au classeur par un collègue (« *meta »,
