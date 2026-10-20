@@ -15,6 +15,7 @@ base="https://github.com/$repo/releases/download/$tag"
 
 # clé du manifeste, nom stable du fichier (celui que publie release.yml)
 files="windows-setup Lattis-windows-x64-setup.exe
+windows-portable Lattis-windows-x64-portable.exe
 windows-msix Lattis-windows-x64.msix
 macos-dmg Lattis-macos-universal.dmg
 linux-appimage Lattis-linux-x64.AppImage

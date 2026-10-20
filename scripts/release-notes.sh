@@ -27,7 +27,7 @@ cat <<'TXT'
 
 | Système | Fichier |
 |---|---|
-| Windows 10 et 11 | `Lattis-windows-x64-setup.exe` (installeur) ou `Lattis-windows-x64.msix` (quand il est publié, signé) |
+| Windows 10 et 11 | `Lattis-windows-x64-setup.exe` (installeur), `Lattis-windows-x64-portable.exe` (portable : l'exécutable seul, sans installation) ou `Lattis-windows-x64.msix` (quand il est publié, signé) |
 | macOS (Apple Silicon et Intel) | `Lattis-macos-universal.dmg` |
 | Linux | `Lattis-linux-x64.AppImage`, `Lattis-linux-x64.deb` ou `Lattis-linux-x64.rpm` |
 

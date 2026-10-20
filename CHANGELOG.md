@@ -6,6 +6,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Nouveautés
+
+- Windows : version portable dans chaque version publiée (`Lattis-windows-x64-portable.exe`, l'exécutable seul, sans installation).
+
 ### Changements
 
 - Ouvrir le fichier local d'un classeur partagé en direct (Fichier › Ouvrir, double-clic, récents) l'ouvre depuis le serveur, en ligne et synchronisé, avec un message ; serveur injoignable, le fichier s'ouvre tel quel. Un classeur figé garde son fichier, où l'auteur modifie et republie.

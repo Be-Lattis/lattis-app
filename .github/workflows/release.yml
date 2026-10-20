@@ -152,6 +152,8 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force dist, dist-unsigned | Out-Null
           Copy-Item bin\lattis-amd64-installer.exe dist\Lattis-windows-x64-setup.exe
+          # Version portable : l'exécutable seul (signé comme les autres fichiers).
+          Copy-Item bin\lattis.exe dist\Lattis-windows-x64-portable.exe
           $msix = (Get-ChildItem bin\*.msix | Select-Object -First 1).FullName
           if ($env:SIGN_MODE -ne 'none') {
             Copy-Item $msix dist\Lattis-windows-x64.msix
@@ -330,7 +332,7 @@ jobs:
         working-directory: dist
         run: |
           ls -l
-          for f in Lattis-windows-x64-setup.exe Lattis-macos-universal.dmg Lattis-linux-x64.AppImage Lattis-linux-x64.deb Lattis-linux-x64.rpm; do
+          for f in Lattis-windows-x64-setup.exe Lattis-windows-x64-portable.exe Lattis-macos-universal.dmg Lattis-linux-x64.AppImage Lattis-linux-x64.deb Lattis-linux-x64.rpm; do
             [ -s "$f" ] || { echo "::error::$f manquant"; exit 1; }
           done
       - name: Sommes de contrôle, latest.json et signatures GPG

@@ -24,6 +24,7 @@ Les noms ne contiennent pas la version : le lien `releases/latest/download/<nom>
 | Système | Fichier | Lien direct (dernière version) |
 |---|---|---|
 | Windows 10/11, installeur | `Lattis-windows-x64-setup.exe` | <https://github.com/Be-Lattis/lattis-app/releases/latest/download/Lattis-windows-x64-setup.exe> |
+| Windows 10/11, portable | `Lattis-windows-x64-portable.exe` | <https://github.com/Be-Lattis/lattis-app/releases/latest/download/Lattis-windows-x64-portable.exe> |
 | Windows 10/11, MSIX | `Lattis-windows-x64.msix` | <https://github.com/Be-Lattis/lattis-app/releases/latest/download/Lattis-windows-x64.msix> |
 | macOS (Apple Silicon et Intel) | `Lattis-macos-universal.dmg` | <https://github.com/Be-Lattis/lattis-app/releases/latest/download/Lattis-macos-universal.dmg> |
 | Linux, AppImage | `Lattis-linux-x64.AppImage` | <https://github.com/Be-Lattis/lattis-app/releases/latest/download/Lattis-linux-x64.AppImage> |
@@ -31,6 +32,8 @@ Les noms ne contiennent pas la version : le lien `releases/latest/download/<nom>
 | Linux, Fedora/RHEL | `Lattis-linux-x64.rpm` | <https://github.com/Be-Lattis/lattis-app/releases/latest/download/Lattis-linux-x64.rpm> |
 | Empreintes | `SHA256SUMS.txt` | <https://github.com/Be-Lattis/lattis-app/releases/latest/download/SHA256SUMS.txt> |
 | Manifeste | `latest.json` | <https://github.com/Be-Lattis/lattis-app/releases/latest/download/latest.json> |
+
+**Version portable (Windows).** `Lattis-windows-x64-portable.exe` est l'exécutable seul, lancé sans installation (clé USB, poste sans droits d'administration). Les liens `lattis://` marchent : l'application les déclare pour l'utilisateur au premier lancement, si aucune version installée ne le fait déjà. Ne sont pas faits : l'association des fichiers `.lattis` (double-clic), le raccourci du menu Démarrer et l'entrée dans Ajout/Suppression de programmes. Les réglages, classeurs récents et caches restent dans le profil de l'utilisateur (`%APPDATA%`, `%LOCALAPPDATA%`), communs avec une version installée. Il faut WebView2, présent sur Windows 10 à jour et Windows 11.
 
 Le MSIX n'est publié que **signé** : Windows refuse d'installer un MSIX non signé par un certificat de confiance. Sans certificat Windows, il manque à la release (il reste dans l'artefact `lattis-windows-msix-non-signe` du run, pour essai) et son lien répond 404 ; l'installeur `.exe` est toujours là. Sans certificat Apple, le `.dmg` est signé ad hoc : macOS demande alors une ouverture manuelle (clic droit › Ouvrir, ou Réglages › Confidentialité et sécurité).
 
