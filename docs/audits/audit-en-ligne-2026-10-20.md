@@ -227,16 +227,27 @@ Titre et badge d'un classeur ouvert depuis le serveur, cache jamais montré ; ba
 ## 6. Questions pour Louis
 
 1. **Tableaux de requête publiés (21).** Une fois publié, qui actualise et comment ? (a) le poste qui a la connexion, l'actualisation remplaçant les lignes au lieu du tableau ; (b) le tableau devient une source du Data Lake actualisée par un pipeline du serveur.
+   **Recommandation : (a)**, qui marche avec les connexions d'aujourd'hui ; (b) reste possible plus tard pour les sources partagées par plusieurs classeurs.
 2. **Fichier de l'auteur (4).** Après publication, (a) le fichier d'auteur reste le classeur vivant (badge, messages, réouverture telle quelle s'il a une file) ; ou (b) l'auteur bascule sur la copie du serveur et son fichier devient une archive.
+   **Recommandation : (b)**, dans la ligne de c2f880e : une seule copie vivante, plus de modifications coincées dans un fichier que plus rien n'envoie.
 3. **Mise en page après une longue coupure (23).** Le poste qui revient l'emporte aujourd'hui. (a) garder, en montrant les remplacements ; (b) au-delà d'une durée (par exemple 24 h), le serveur l'emporte sur les champs en conflit.
+   **Recommandation : (b)**, en montrant aussi les remplacements : après une longue absence, le travail récent des collègues compte plus que l'ancien.
 4. **Scripts d'un classeur collaboratif (20).** (a) seuls propriétaires et concepteurs les modifient, ils partent chez tous, et chacun donne son accord avant d'exécuter une nouvelle version ; (b) scripts figés à la publication, modifiables seulement par une republication.
+   **Recommandation : (a)**, c'est ce que prévoit la spécification du serveur (§8.1), et l'accord protège chaque membre d'un script modifié.
 5. **Dossier partagé (NAS), poste coupé (5).** (a) ne compacter qu'une fois que les postes partis depuis moins de 24 h ont tout appliqué ; (b) au retour, si un journal a disparu, demander de rouvrir le classeur.
+   **Recommandation : (a)**, invisible pour l'utilisateur ; (b) reste le filet si un poste revient après plus de 24 h.
 6. **Étape qui échoue toujours (1).** Après quelques échecs identiques, la mettre de côté dans le volet Conflits pour que le reste continue ? (a) oui ; (b) non, la valeur d'une colonne supprimée est simplement écartée avec un message et rien d'autre ne change.
+   **Recommandation : (a)** : la réception ne doit jamais être bloquée par une seule étape, quelle qu'en soit la cause.
 7. **Enregistrer en ligne (10).** Pour un classeur collaboratif : (a) plus de point « modifié » ni de question à la fermeture (Ctrl+S reste, sans effet visible) ; (b) garder le point mais remplacer la question par l'état de la file.
+   **Recommandation : (a)** : c'est le comportement attendu d'un classeur en ligne ; la question ne reste que s'il y a des modifications pas encore parties.
 8. **Mise en page concurrente (7).** Corriger (a) côté serveur, `save_meta` avec la version attendue (le plus sûr, migration à écrire) ; ou (b) côté appli seulement, par un verrou dans la transaction (plus rapide, moins robuste).
+   **Recommandation : (a)** : le serveur est le seul à voir les deux enregistrements ; un verrou côté appli ne protège pas d'un autre client.
 9. **Bascule sur `/api/events` (18).** (a) la planifier maintenant, après 16 et 17 ; (b) la repousser tant que l'on reste sous quelques centaines de postes.
+   **Recommandation : (b)** : rien ne presse à l'échelle actuelle ; corriger d'abord les constats de stabilité, puis basculer avec la présence (29).
 10. **Édition web, classeur local (22).** (a) message juste et commande « Télécharger » explicite ; (b) en plus, inviter à publier sur le serveur comme vraie sauvegarde.
+   **Recommandation : (b)** : le message et le bouton sont petits, et le serveur est la seule sauvegarde durable en web.
 11. **Suppression concurrente (26).** Une suppression qui l'emporte sur la modification d'un collègue : (a) voulu, dernière écriture gagnante, avec un message ; (b) conditionner la suppression et en faire un conflit.
+   **Recommandation : (a)**, comme Excel en ligne : simple et prévisible ; le message suffit à prévenir le collègue.
 
 ## Annexe : essais
 
