@@ -14,7 +14,7 @@
 	import { lattis, loadLattis, requestLogin } from './lattis.svelte.js';
 	import { catalogTree, type CatalogNode, type DataCatalog, type Dataset } from './data';
 	import { pushedLine, pushedOrigin, type PushedSource } from './source';
-	import { fmtDateTime } from '#lib/i18n/index.js';
+	import { errorText, fmtDateTime, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		/** Feuille et cellule où insérer. */
@@ -34,7 +34,7 @@
 	let open = $state<Set<string>>(new Set());
 	let busy = $state(false);
 	let error = $state('');
-	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
+	const err = errorText;
 	const servers = $derived(connected(lattis.state.servers));
 	const tree = $derived(catalog ? catalogTree(catalog, query, (d) => d.readable && d.available) : []);
 
@@ -155,7 +155,7 @@
 				}}
 			>
 				<Icon name="table" size={14} /><span class="name">{d.name}</span>
-				{#if pushedOrigin(d)}<span class="pipe" title="Tableau publié seul depuis le classeur local « {pushedOrigin(d)} » (source poussée)">pipeline</span>{/if}
+				{#if pushedOrigin(d)}<span class="pipe" title={t('remote.catalog.pushedTooltip', { workbook: pushedOrigin(d) ?? '' })}>{t('remote.tableSources.pipeline.label')}</span>{/if}
 				{#if d.description}<span class="muted desc">{d.description}</span>{/if}
 			</button>
 		{/if}
@@ -168,7 +168,7 @@
 		class="dialog"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Insérer depuis le Data Lake Lattis"
+		aria-label={t('remote.catalog.aria')}
 		tabindex="-1"
 		use:modal
 		onkeydown={(e) => {
@@ -176,24 +176,24 @@
 			if (e.key === 'Escape' && !busy) ondone(false);
 		}}
 	>
-		<header><Icon name="database" size={18} /><span>Data Lake Lattis</span></header>
+		<header><Icon name="database" size={18} /><span>{t('remote.catalog.title')}</span></header>
 		<div class="body">
 			<div class="top">
 				<ServerPicker bind:value={server} {servers} disabled={busy} onchange={load}>
-					{#snippet none()}<button onclick={login}>Se connecter à un serveur…</button>{/snippet}
+					{#snippet none()}<button onclick={login}>{t('remote.account.connectServer')}</button>{/snippet}
 				</ServerPicker>
-				<input type="search" placeholder="Rechercher une donnée…" bind:value={query} aria-label="Rechercher" spellcheck="false" />
+				<input type="search" placeholder={t('remote.catalog.search.placeholder')} bind:value={query} aria-label={t('remote.catalog.search.aria')} spellcheck="false" />
 			</div>
 			<div class="panes">
-				<div class="tree" role="tree" aria-label="Catalogue">
+				<div class="tree" role="tree" aria-label={t('remote.catalog.tree')}>
 					{#if !catalog}
-						<p class="muted">{server ? 'Lecture du catalogue…' : 'Connectez-vous à un serveur pour voir ses données.'}</p>
+						<p class="muted">{server ? t('remote.dataShare.reading') : t('remote.catalog.signIn')}</p>
 					{:else if !tree.length}
-						<p class="muted">{query ? 'Aucune donnée ne correspond.' : 'Aucune donnée partagée avec vous sur ce serveur.'}</p>
+						<p class="muted">{query ? t('remote.catalog.noMatch') : t('remote.catalog.empty')}</p>
 					{:else}
 						{#if catalog.can_publish && dragging}
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
-							<div class="root-drop" ondragover={(e) => e.preventDefault()} ondrop={() => drop('')}>Déposer ici : à la racine</div>
+							<div class="root-drop" ondragover={(e) => e.preventDefault()} ondrop={() => drop('')}>{t('remote.catalog.dropRoot')}</div>
 						{/if}
 						{@render nodes(tree, 0)}
 					{/if}
@@ -202,23 +202,23 @@
 					{#if picked}
 						<h3>{picked.name}</h3>
 						{#if picked.description}<p>{picked.description}</p>{/if}
-						{#if pushedOrigin(picked)}<p class="muted">Source poussée depuis le classeur local <strong>{pushedOrigin(picked)}</strong> : mise à jour par son auteur, sans que le classeur soit publié.</p>{/if}
-						<p class="muted">Vue <code>donnees.{picked.sql_name}</code>{picked.updated_at ? ` · modifiée le ${fmtDateTime(new Date(picked.updated_at), { dateStyle: 'short', timeStyle: 'short' })}` : ''}</p>
-						<h4>Colonnes</h4>
+						{#if pushedOrigin(picked)}<p class="muted">{t('remote.catalog.pushed.before')} <strong>{pushedOrigin(picked)}</strong>{t('remote.catalog.pushed.after')}</p>{/if}
+						<p class="muted">{t('remote.catalog.view')} <code>donnees.{picked.sql_name}</code>{picked.updated_at ? ` · ${t('remote.catalog.modified', { date: fmtDateTime(new Date(picked.updated_at), { dateStyle: 'short', timeStyle: 'short' }) })}` : ''}</p>
+						<h4>{t('remote.columnPicker.aria')}</h4>
 						<ul class="cols">
 							{#each (picked.columns ?? []).filter((c) => !c.name.startsWith('lattis_')) as c (c.name)}<li>{c.name} <span class="muted">{c.type}</span></li>{/each}
 						</ul>
-						<p class="muted">Le tableau inséré est en lecture seule et se met à jour quand la donnée change.</p>
+						<p class="muted">{t('remote.catalog.readOnly')}</p>
 					{:else}
-						<p class="muted">Choisissez une donnée pour voir ses colonnes.</p>
+						<p class="muted">{t('remote.catalog.choose')}</p>
 						{#if pushed.length}
-							<h4>Vos sources poussées</h4>
+							<h4>{t('remote.catalog.yourSources')}</h4>
 							<ul class="pushed">
 								{#each pushed as p (p.pipeline_id)}
-									<li><strong>{p.name}</strong> <span class="pipe">pipeline</span><br /><span class="muted">{pushedLine(p)}</span></li>
+									<li><strong>{p.name}</strong> <span class="pipe">{t('remote.tableSources.pipeline.label')}</span><br /><span class="muted">{pushedLine(p)}</span></li>
 								{/each}
 							</ul>
-							<p class="muted">Tableaux publiés seuls depuis vos classeurs locaux, sur ce serveur ; chacun se gère depuis son classeur (clic droit sur le tableau › Partager au Data Lake Lattis…).</p>
+							<p class="muted">{t('remote.catalog.yourSourcesHelp')}</p>
 						{/if}
 					{/if}
 				</div>
@@ -227,8 +227,8 @@
 		</div>
 		<footer>
 			<span class="grow"></span>
-			<button onclick={() => ondone(false)} disabled={busy}>Annuler</button>
-			<button class="primary" onclick={insert} disabled={busy || !picked}>{busy ? 'Insertion…' : 'Insérer'}</button>
+			<button onclick={() => ondone(false)} disabled={busy}>{t('common.cancel')}</button>
+			<button class="primary" onclick={insert} disabled={busy || !picked}>{busy ? t('remote.catalog.inserting') : t('remote.catalog.insert')}</button>
 		</footer>
 	</div>
 </div>

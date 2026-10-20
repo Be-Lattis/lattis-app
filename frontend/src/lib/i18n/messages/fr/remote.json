@@ -911,5 +911,408 @@
 			"empty": "Saisissez l’adresse de la personne.",
 			"invalid": "« {email} » n’est pas une adresse."
 		}
+	},
+	"members": {
+		"invited": "Invitation envoyée à {email}",
+		"roleGiven": "Rôle {role} donné à {who}",
+		"roleRemoved": "Rôle {role} retiré à {who}",
+		"removeAll": {
+			"confirm": "Retirer l’accès de {who} ? {n, plural, one {Son rôle lui est retiré} other {Ses # rôles lui sont retirés}}.",
+			"done": "Accès retiré à {who}",
+			"teamKept": "Retire ses rôles en personne ; ceux de son équipe restent",
+			"tooltip": "Retirer tous ses rôles",
+			"aria": "Retirer l’accès de {who}",
+			"team": "Retirer tous les rôles de l’équipe"
+		},
+		"addRole": "+ Rôle",
+		"theTeam": "l’équipe {name}",
+		"invite": {
+			"title": "Inviter une personne",
+			"email": "Adresse à inviter",
+			"roles": "Rôles à donner",
+			"submit": "Inviter",
+			"gives": "Pourra :",
+			"help": "Une personne déjà connue du serveur reçoit ses rôles tout de suite, sinon à sa première connexion.",
+			"custom": "Les rôles personnalisés se donnent une fois la personne membre."
+		},
+		"people": "Personnes",
+		"search": "Chercher un membre",
+		"tag": {
+			"pipeline": {
+				"tooltip": "Membre technique d’un pipeline d’ingestion : il disparaît avec le pipeline, côté serveur"
+			},
+			"team": {
+				"label": "équipe {names}",
+				"tooltip": "Membre du classeur par son équipe : ses rôles d’équipe se changent dans « Équipes »"
+			},
+			"lastOwner": {
+				"label": "dernier propriétaire",
+				"tooltip": "Un classeur garde toujours au moins un propriétaire : donnez d’abord ce rôle à quelqu’un d’autre"
+			}
+		},
+		"rolesOf": "Rôles de {who}",
+		"removeRole": {
+			"aria": "Retirer le rôle {role} à {who}",
+			"tooltip": "Retirer ce rôle"
+		},
+		"via": "Reçu par l’équipe {names} : se retire dans « Équipes »",
+		"giveRole": "Donner un rôle à {who}",
+		"viewAs": {
+			"label": "Voir en tant que…",
+			"tooltip": "Voir les tableaux comme {who} les voit"
+		},
+		"noMatch": "Aucun membre ne correspond.",
+		"none": "Aucun membre.",
+		"pending": "Invitations en attente",
+		"until": "jusqu’au {date}",
+		"revoked": "Invitation de {email} annulée",
+		"revoke": "Annuler l’invitation",
+		"teams": "Équipes",
+		"teamsUnsupported": "Équipes et groupes d’annuaire : pas encore proposés par ce serveur.",
+		"noMember": "Aucun membre",
+		"noTeamRole": "Aucune équipe n’a de rôle sur ce classeur.",
+		"teamGive": {
+			"label": "Donner un rôle à une équipe :",
+			"role": "Rôle de l’équipe",
+			"submit": "Donner le rôle",
+			"help": "Les membres d’une équipe ont ses rôles tant qu’ils en font partie. Les équipes se créent dans l’administration du serveur ; groupes d’annuaire : plus tard."
+		},
+		"noTeam": "Aucune équipe sur ce serveur : les propriétaires du serveur les créent dans son administration (« Équipes »)."
+	},
+	"roles": {
+		"teamCount": "{n, plural, one {# équipe} other {# équipes}}",
+		"kind": {
+			"owner": "tous les droits",
+			"designer": "structure, pas les droits"
+		},
+		"filtersSaved": "Filtres de « {table} » enregistrés pour {role}",
+		"intro": "Chaque membre a un ou plusieurs rôles ; un rôle donne un accès par tableau, que des filtres peuvent limiter à certaines lignes. Les droits des rôles s’additionnent.",
+		"learnMore": "En savoir plus",
+		"matrix": {
+			"aria": "Ce que chaque rôle permet",
+			"role": "Rôle",
+			"members": "Membres",
+			"select": "Régler les droits de ce rôle, tableau par tableau"
+		},
+		"viewAs": {
+			"tooltip": "Voir les tableaux comme un membre de ce rôle les voit",
+			"nobody": "Aucune personne n’a ce rôle",
+			"aria": "Voir en tant qu’un membre du rôle {role}"
+		},
+		"legend": {
+			"some": "en partie (certaines lignes ou certains tableaux)"
+		},
+		"created": "Rôle « {name} » créé : il ne donne rien tant qu’aucun accès n’est réglé ci-dessous",
+		"new": {
+			"placeholder": "Nouveau rôle",
+			"aria": "Nom du nouveau rôle"
+		},
+		"detail": {
+			"title": "{role} : accès tableau par tableau",
+			"owner": "Propriétaire : voit et modifie toutes les lignes, change la structure (colonnes, tableaux, mise en page, scripts) et gère les membres, les rôles et les règles. Rien à régler ici.",
+			"designer": "Concepteur : voit et modifie toutes les lignes et change la structure (colonnes, tableaux, mise en page, scripts), mais ne gère pas les droits. Rien à régler ici.",
+			"frozen": "Classeur figé : tous les membres voient tout, sans rien modifier. Les accès par tableau et les filtres sont ceux d’un classeur partagé en direct."
+		},
+		"drop": {
+			"confirm": "Supprimer le rôle « {name} » ? Ses membres perdent les droits qu’il donnait.",
+			"done": "Rôle « {name} » supprimé",
+			"label": "Supprimer le rôle"
+		},
+		"tree": {
+			"workbook": "Tout le classeur",
+			"workbookAccess": "Accès au classeur",
+			"level": "Niveau « {word} »",
+			"sheet": "Feuille",
+			"sheetAccess": "Accès à la feuille {name}",
+			"mixed": "différent selon le tableau",
+			"fromWorkbook": "hérité du classeur",
+			"fromSheet": "hérité de la feuille",
+			"tableAccess": "Accès au tableau {name}"
+		},
+		"filter": {
+			"seesAll": "Voit toutes les lignes",
+			"editRead": "Modifier les lignes visibles de {table}",
+			"limitRead": "Limiter les lignes visibles de {table}",
+			"edit": "Modifier",
+			"limit": "Limiter…",
+			"writesOwn": "Ajoute des lignes, modifie et supprime les siennes",
+			"writesAll": "Ajoute, modifie et supprime toutes les lignes",
+			"editWrite": "Modifier les lignes modifiables de {table}",
+			"limitWrite": "Limiter les lignes modifiables de {table}"
+		},
+		"advancedRules": "Règles avancées",
+		"editor": {
+			"aria": "Filtres de {table} pour {role}",
+			"read": {
+				"label": "Voit seulement les lignes où…",
+				"prefix": "Voit les lignes où",
+				"assist": "les lignes du tableau « {table} » que voient les membres du rôle {role}"
+			},
+			"write": {
+				"label": "Ajoute et modifie seulement les lignes où…",
+				"prefix": "Ajoute et modifie les lignes où",
+				"assist": "les lignes du tableau « {table} » que les membres du rôle {role} peuvent ajouter ou modifier"
+			},
+			"fixes": "Enregistrer fixe l’accès de ce tableau sur « {level} ».",
+			"noCondition": "Sans condition : toutes les lignes.",
+			"save": "Enregistrer les filtres"
+		},
+		"oldSheet": "Feuille publiée avant que le serveur connaisse les feuilles : son accès est posé sur chacun de ses tableaux.",
+		"noTable": "Aucun tableau publié : l’accès au classeur vaudra pour les tableaux ajoutés.",
+		"teams": "Équipes de ce rôle :",
+		"noTeams": "Aucune équipe n’a ce rôle (Membres › Équipes).",
+		"local": {
+			"title": "Sur votre poste seulement",
+			"help": "Ces tableaux ne sont pas dans le classeur partagé : personne d’autre ne les voit.",
+			"add": {
+				"label": "Ajouter « {table} » au classeur partagé",
+				"tooltip": "Créer « {table} » dans le classeur partagé, avec ses lignes, pour tous les membres"
+			},
+			"offline": "Hors ligne"
+		}
+	},
+	"rules": {
+		"added": "{n, plural, one {Règle ajoutée} other {# règles ajoutées}}",
+		"removed": "Règle retirée",
+		"collabOnly": "Règles avancées : classeurs partagés en direct seulement (un classeur figé est en lecture seule pour tous).",
+		"intro": "Une règle avancée retire un droit sur un tableau, quel que soit l’accès du rôle : ne plus supprimer, ne plus ajouter, ne modifier que certaines lignes. Les propriétaires et concepteurs n’y sont pas soumis, sauf s’ils sont nommés.",
+		"current": "Règles en place",
+		"remove": {
+			"tooltip": "Retirer cette règle",
+			"aria": "Retirer la règle {label}"
+		},
+		"none": "Aucune règle : seuls les accès et les filtres des rôles s’appliquent.",
+		"new": "Nouvelle règle",
+		"presets": "Préréglages",
+		"for": "Pour",
+		"forWhom": "Pour qui",
+		"allRoles": "Tous les rôles",
+		"someRoles": "Certains rôles",
+		"targetRoles": "Rôles visés",
+		"exceptOwners": "Sauf propriétaires et concepteurs.",
+		"forbid": "Interdire",
+		"actions": "Actions limitées",
+		"exception": "Exception",
+		"exceptWhere": "Sauf les lignes où…",
+		"allowed": {
+			"label": "Permis seulement pour les lignes où…",
+			"prefix": "Permis pour les lignes où",
+			"none": "Ajoutez une condition",
+			"assist": "les lignes du tableau « {table} » sur lesquelles l’action reste permise"
+		},
+		"name": "Nom",
+		"optional": "(facultatif)",
+		"perAction": "Ajoute {n} restrictions sur le serveur, une par action.",
+		"add": "Ajouter la règle"
+	},
+	"rightsDialog": {
+		"tab": {
+			"members": "Membres",
+			"roles": "Rôles et droits",
+			"rules": "Règles avancées",
+			"preview": "Voir en tant que…",
+			"drift": "Écarts"
+		},
+		"title": "Gérer l’accès à « {title} »",
+		"frozen": "classeur figé : lecture seule pour tous",
+		"reload": {
+			"tooltip": "Relire les droits sur le serveur",
+			"aria": "Actualiser"
+		},
+		"help": "Aide : gérer l’accès",
+		"link": {
+			"aria": "Lien du classeur",
+			"tooltip": "Le lien ouvre le classeur dans Lattis (ou le navigateur) pour qui y a accès",
+			"copied": "Copié"
+		},
+		"tabs": "Gérer l’accès",
+		"reading": "Lecture des droits…",
+		"drift": {
+			"count": "{n, plural, one {# écart} other {# écarts}}",
+			"warning": "{n, plural, one {Un tableau a} other {# tableaux ont}} des règles changées hors de Lattis, sur le serveur.",
+			"show": "Voir les écarts",
+			"frozen": "Classeur figé : pas d’écart possible (lecture seule pour tous).",
+			"none": "Aucun écart : les règles et droits du serveur sont ceux que Lattis a générés.",
+			"intro": "Règles ou droits changés hors de Lattis (à la main, dans PostgreSQL) :",
+			"policies": "Règles ajoutées :",
+			"grants": "Droits donnés à :",
+			"changed": "Règles générées retirées ou modifiées",
+			"recompileHelp": "Recompiler remet les règles générées par Lattis. Les règles et droits ajoutés à la main restent signalés ici tant qu’ils ne sont pas retirés dans PostgreSQL.",
+			"recompiled": "Droits recompilés",
+			"recompile": "Recompiler les droits"
+		},
+		"sending": "Envoi au serveur…",
+		"designerOnly": "Concepteur : consultation et vérification seulement"
+	},
+	"shareDialog": {
+		"checking": "Vérification du classeur…",
+		"why": {
+			"noTables": "Rien à publier : créez d’abord un tableau (Insertion › Tableau, ou Ctrl+L sur vos données), puis rouvrez cette boîte.",
+			"blocked": "{n, plural, one {# point à régler} other {# points à régler}} avant de publier (ci-dessus).",
+			"server": "Choisissez un serveur, ou connectez-vous à un serveur (Gérer les serveurs…).",
+			"title": "Donnez un titre au classeur publié.",
+			"cannotCreate": "Votre compte ne peut pas créer de classeur sur ce serveur."
+		},
+		"republishTitle": "Republier le classeur",
+		"publishTitle": "Publier sur un serveur",
+		"republishHelp": "« {title} » sur {server} · {mode} · version {version} : la nouvelle version remplacera la version publiée d’un coup.",
+		"cannotCreate": "Votre compte ne peut pas créer de classeur sur ce serveur : demandez à son propriétaire le rôle « créateur de classeurs ».",
+		"mode": "Mode",
+		"frozenHelp": " : lecture seule pour tous ; vous republiez les nouvelles versions",
+		"collaborativeHelp": " : chacun modifie selon ses droits, les changements des autres arrivent en direct",
+		"tables": "Tableaux",
+		"noTables": {
+			"before": "Ce classeur n’a aucun tableau à publier. Seuls les tableaux se publient : fermez cette boîte, sélectionnez vos données puis",
+			"menu": "Insertion › Tableau",
+			"or": "(ou",
+			"after": "), et revenez publier."
+		},
+		"rows": "{n, plural, one {# ligne} other {# lignes}}",
+		"private": {
+			"label": "privé",
+			"tooltip": "Tableau privé : reste sur ce poste, jamais envoyé au serveur"
+		},
+		"rename": "{problem} — renommez-le dans le classeur",
+		"frozenTypes": "Types figés à la publication : {columns}",
+		"invalid": "Colonne « {name} » ({type}) : {n, plural, one {# saisie invalide} other {# saisies invalides}}",
+		"fixOr": "— corrigez-les, ou",
+		"acceptText": "acceptez la colonne comme texte",
+		"computed": "Les colonnes calculées sont publiées avec leur formule, pas leurs valeurs.",
+		"refresh": {
+			"legend": "Chargé par la requête « {query} » : actualisation",
+			"local": "Depuis ce poste, avec vos connexions : vos actualisations remplacent les lignes pour tous les membres",
+			"lake": "Source du Data Lake : le tableau est aussi envoyé au Data Lake du serveur, que d'autres classeurs peuvent lier (réglée juste après la publication)"
+		},
+		"uncheckedPrivate": "Les tableaux non cochés restent privés : sur ce poste seulement.",
+		"publishing": "Publication…",
+		"republish": "Republier",
+		"publish": "Publier"
+	},
+	"dataShare": {
+		"title": {
+			"source": "Source du Data Lake · « {table} »",
+			"dataset": "Data Lake Lattis · « {name} »",
+			"share": "Partager « {table} » au Data Lake Lattis"
+		},
+		"help": "Aide : partager au Data Lake",
+		"whyNotWorkbook": "Pourquoi pas tout le classeur ?",
+		"ways": "Façon de partager",
+		"go": {
+			"republish": "Republier le classeur…",
+			"publish": "Publier le classeur…",
+			"shared": "Ajouter au classeur…"
+		},
+		"reading": "Lecture du catalogue…",
+		"folder": "Dossier",
+		"columns": "Colonnes exposées",
+		"audience": "Audience",
+		"usedBy": "Utilisée par",
+		"readBy": "lu par {email} le {date}",
+		"advanced": "Options avancées",
+		"sqlProposed": "nom SQL proposé par le serveur",
+		"withDescription": "avec description",
+		"description": {
+			"label": "Description",
+			"placeholder": "Ce que contient la donnée, pour qui la cherche"
+		},
+		"sqlName": {
+			"label": "Nom SQL",
+			"fixed": "fixé à la création",
+			"placeholder": "proposé par le serveur",
+			"help": "Le nom de la vue pour les requêtes SQL : minuscules, chiffres, _."
+		},
+		"withdraw": {
+			"label": "Retirer le partage",
+			"tooltip": "La vue disparaît ; les classeurs qui l'utilisent gardent leur dernière copie"
+		},
+		"share": "Partager"
+	},
+	"catalog": {
+		"pushedTooltip": "Tableau publié seul depuis le classeur local « {workbook} » (source poussée)",
+		"aria": "Insérer depuis le Data Lake Lattis",
+		"title": "Data Lake Lattis",
+		"search": {
+			"placeholder": "Rechercher une donnée…",
+			"aria": "Rechercher"
+		},
+		"tree": "Catalogue",
+		"signIn": "Connectez-vous à un serveur pour voir ses données.",
+		"noMatch": "Aucune donnée ne correspond.",
+		"empty": "Aucune donnée partagée avec vous sur ce serveur.",
+		"dropRoot": "Déposer ici : à la racine",
+		"pushed": {
+			"before": "Source poussée depuis le classeur local",
+			"after": " : mise à jour par son auteur, sans que le classeur soit publié."
+		},
+		"view": "Vue",
+		"modified": "modifiée le {date}",
+		"readOnly": "Le tableau inséré est en lecture seule et se met à jour quand la donnée change.",
+		"choose": "Choisissez une donnée pour voir ses colonnes.",
+		"yourSources": "Vos sources poussées",
+		"yourSourcesHelp": "Tableaux publiés seuls depuis vos classeurs locaux, sur ce serveur ; chacun se gère depuis son classeur (clic droit sur le tableau › Partager au Data Lake Lattis…).",
+		"inserting": "Insertion…",
+		"insert": "Insérer"
+	},
+	"servers": {
+		"badUrl": "Saisissez l’adresse du serveur, par exemple https://lattis.acme.fr (http seulement en local).",
+		"title": "Gérer les serveurs",
+		"disabled": "Les classeurs partagés sont désactivés : Fichier › Paramètres › Fonctionnalités.",
+		"managed": "déclaré par votre organisation",
+		"connected": "Connecté : {user}",
+		"notConnected": "Non connecté",
+		"remove": {
+			"managed": "Serveur déclaré par votre organisation : il reste dans la liste",
+			"tooltip": "Retirer ce serveur de la liste de ce poste",
+			"confirm": "Retirer « {name} » de la liste ?",
+			"signedOut": "Vous serez déconnecté de ce serveur sur ce poste.",
+			"nothingDeleted": "Rien n’est supprimé sur le serveur : ses classeurs, ses données et vos droits y restent, et vous pourrez l’ajouter de nouveau à tout moment.",
+			"inUse": "Le classeur ouvert « {title} » est publié sur ce serveur : il reste ouvert depuis sa copie sur ce poste, mais ne se synchronisera plus tant que vous n’aurez pas ajouté ce serveur de nouveau et ne vous y serez pas reconnecté.",
+			"queries": "Les requêtes et classeurs qui utilisent ce serveur vous demanderont de vous y connecter."
+		},
+		"emptyAdd": "Aucun serveur. Ajoutez-en un ci-dessous.",
+		"add": {
+			"title": "Ajouter un serveur",
+			"submit": "Ajouter et se connecter…",
+			"help": "L’adresse est vérifiée auprès du serveur, puis sa page de connexion s’ouvre.",
+			"locked": "Votre organisation fixe la liste des serveurs : vous ne pouvez pas en ajouter."
+		}
+	},
+	"sourceForm": {
+		"suspended": "Source « {table} » suspendue : plus aucun envoi",
+		"savedNotUpdated": "Source « {table} » enregistrée, mais non mise à jour : {error}",
+		"withdrawn": "Source « {name} » retirée du Data Lake",
+		"reading": "Lecture du serveur…",
+		"banner": "Le classeur reste sur votre poste : seules les colonnes cochées sont envoyées.",
+		"columns": "Colonnes envoyées",
+		"computed": "Une colonne calculée est envoyée avec ses valeurs, pas sa formule.",
+		"sqlPlaceholder": "proposé d'après le nom",
+		"mode": "Mise à jour",
+		"key": {
+			"label": "Clé",
+			"aria": "Colonne clé",
+			"choose": "Choisir la colonne…"
+		},
+		"modeChanged": "Vaut pour les prochaines mises à jour (un serveur ancien le refuse : retirez alors la source, puis publiez-la de nouveau).",
+		"sending": {
+			"label": "Envoi",
+			"onSave": "À chaque enregistrement du classeur (Ctrl+S)",
+			"suspend": {
+				"label": "Suspendre la source (plus aucun envoi)",
+				"tooltip": "La donnée reste au catalogue avec ses dernières lignes"
+			},
+			"refused": "Les valeurs refusées par le serveur sont comptées dans la barre d'état ; le reste est écrit."
+		},
+		"withdraw": {
+			"label": "Retirer la source",
+			"tooltip": "La donnée quitte le catalogue ; les classeurs qui l'utilisent gardent leur dernière copie"
+		},
+		"push": {
+			"label": "Mettre à jour maintenant",
+			"tooltip": "Envoie maintenant les lignes du tableau",
+			"suspended": "Source suspendue"
+		},
+		"back": "Retour",
+		"saveUpdate": "Enregistrer et mettre à jour",
+		"publish": "Publier la source"
 	}
 }

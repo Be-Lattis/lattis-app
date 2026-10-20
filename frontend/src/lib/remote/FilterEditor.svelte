@@ -13,7 +13,7 @@
 	import { tick, untrack } from 'svelte';
 	import { typeLabel } from './data';
 	import { FILTER_OPS, MY_TEAMS, checkFreeFilter, filterPrompt, filterSQL, filterSentence, meLabel, opsFor, parseFilter, quoteIdent, teamLabel, type Condition, type FilterOp } from './rights';
-import { errorText, t } from '#lib/i18n/index.js';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		columns: RightsColumn[];

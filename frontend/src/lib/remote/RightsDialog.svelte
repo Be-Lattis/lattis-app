@@ -24,6 +24,7 @@
 	import { members } from './rights';
 	import './shareForm.css';
 	import './access.css';
+	import { errorText, t, tAny } from '#lib/i18n/index.js';
 
 	interface Props {
 		title: string;
@@ -57,7 +58,7 @@
 			notice = '';
 		});
 	});
-	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
+	const err = errorText;
 	const manage = $derived(!!view?.canManage);
 	const drift = $derived(view?.drift ?? []);
 
@@ -145,16 +146,16 @@
 	}
 
 	// --- Onglets ----------------------------------------------------------------------------
-	const TABS: { id: Tab; label: string; manage: boolean }[] = [
-		{ id: 'members', label: 'Membres', manage: true },
-		{ id: 'roles', label: 'Rôles et droits', manage: true },
-		{ id: 'rules', label: 'Règles avancées', manage: true },
-		{ id: 'preview', label: 'Voir en tant que…', manage: false }
+	const TABS: { id: Tab; manage: boolean }[] = [
+		{ id: 'members', manage: true },
+		{ id: 'roles', manage: true },
+		{ id: 'rules', manage: true },
+		{ id: 'preview', manage: false }
 	];
-	const tabs = $derived([...TABS.filter((t) => manage || !t.manage), { id: 'drift' as Tab, label: 'Écarts', manage: false }]);
+	const tabs = $derived([...TABS.filter((x) => manage || !x.manage), { id: 'drift' as Tab, manage: false }].map((x) => ({ ...x, label: tAny(`remote.rightsDialog.tab.${x.id}`) })));
 
 	async function tabKey(e: KeyboardEvent) {
-		const i = tabs.findIndex((t) => t.id === tab);
+		const i = tabs.findIndex((x) => x.id === tab);
 		let j = -1;
 		if (e.key === 'ArrowRight') j = (i + 1) % tabs.length;
 		else if (e.key === 'ArrowLeft') j = (i - 1 + tabs.length) % tabs.length;
@@ -185,46 +186,46 @@
 	>
 		<header>
 			<Icon name="user" size={18} />
-			<span id="ra-title" class="title">Gérer l’accès à « {title} »</span>
-			<span class="host">{hostOf(server)}{view && !view.collaborative ? ' · classeur figé : lecture seule pour tous' : ''}</span>
-			<button type="button" class="hbtn" disabled={busy} onclick={load} title="Relire les droits sur le serveur" aria-label="Actualiser"><Icon name="refresh" size={14} /></button>
-			<HelpLink target={HELP} label="Aide : gérer l’accès" />
-			<button type="button" class="hbtn" aria-label="Fermer" title="Fermer (Échap)" disabled={busy} onclick={onclose}>✕</button>
+			<span id="ra-title" class="title">{t('remote.rightsDialog.title', { title })}</span>
+			<span class="host">{hostOf(server)}{view && !view.collaborative ? ` · ${t('remote.rightsDialog.frozen')}` : ''}</span>
+			<button type="button" class="hbtn" disabled={busy} onclick={load} title={t('remote.rightsDialog.reload.tooltip')} aria-label={t('remote.rightsDialog.reload.aria')}><Icon name="refresh" size={14} /></button>
+			<HelpLink target={HELP} label={t('remote.rightsDialog.help')} />
+			<button type="button" class="hbtn" aria-label={t('common.close')} title={t('remote.closeEsc')} disabled={busy} onclick={onclose}>✕</button>
 		</header>
 		{#if link}
 			<div class="share-link">
 				<Icon name="link" size={14} />
-				<input class="sf-input" readonly value={link} aria-label="Lien du classeur" onfocus={(e) => e.currentTarget.select()} />
-				<button type="button" class="sf-btn" onclick={copyLink} title="Le lien ouvre le classeur dans Lattis (ou le navigateur) pour qui y a accès">{linkCopied ? 'Copié' : 'Copier le lien'}</button>
+				<input class="sf-input" readonly value={link} aria-label={t('remote.rightsDialog.link.aria')} onfocus={(e) => e.currentTarget.select()} />
+				<button type="button" class="sf-btn" onclick={copyLink} title={t('remote.rightsDialog.link.tooltip')}>{linkCopied ? t('remote.rightsDialog.link.copied') : t('remote.formQR.copy')}</button>
 			</div>
 		{/if}
 		<!-- svelte-ignore a11y_interactive_supports_focus -->
-		<div class="tabs" role="tablist" aria-label="Gérer l’accès" bind:this={tabsEl} onkeydown={tabKey}>
-			{#each tabs as t (t.id)}
+		<div class="tabs" role="tablist" aria-label={t('remote.rightsDialog.tabs')} bind:this={tabsEl} onkeydown={tabKey}>
+			{#each tabs as tb (tb.id)}
 				<button
 					type="button"
 					role="tab"
-					id="ra-tab-{t.id}"
+					id="ra-tab-{tb.id}"
 					aria-controls="ra-panel"
-					aria-selected={tab === t.id}
-					tabindex={tab === t.id ? 0 : -1}
-					class:on={tab === t.id}
-					class:minor={t.id === 'drift'}
-					onclick={() => (tab = t.id)}
+					aria-selected={tab === tb.id}
+					tabindex={tab === tb.id ? 0 : -1}
+					class:on={tab === tb.id}
+					class:minor={tb.id === 'drift'}
+					onclick={() => (tab = tb.id)}
 				>
-					{#if t.id === 'preview'}<Icon name="show" size={13} />{/if}{t.label}{#if t.id === 'drift' && drift.length}<span class="badge" aria-label="{drift.length} écart{drift.length > 1 ? 's' : ''}">{drift.length}</span>{/if}
+					{#if tb.id === 'preview'}<Icon name="show" size={13} />{/if}{tb.label}{#if tb.id === 'drift' && drift.length}<span class="badge" aria-label={t('remote.rightsDialog.drift.count', { n: drift.length })}>{drift.length}</span>{/if}
 				</button>
 			{/each}
 		</div>
 		<div class="sf-body" id="ra-panel" role="tabpanel" bind:this={panel} aria-labelledby="ra-tab-{tab}">
 			{#if !view}
-				<p class="sf-hint">{error ? '' : 'Lecture des droits…'}</p>
+				<p class="sf-hint">{error ? '' : t('remote.rightsDialog.reading')}</p>
 			{:else}
 				{#if drift.length && tab !== 'drift'}
 					<p class="ac-warn">
 						<Icon name="warning" size={14} />
-						<span>{drift.length > 1 ? `${drift.length} tableaux ont` : 'Un tableau a'} des règles changées hors de Lattis, sur le serveur.</span>
-						<button type="button" class="sf-more" onclick={() => (tab = 'drift')}>Voir les écarts</button>
+						<span>{t('remote.rightsDialog.drift.warning', { n: drift.length })}</span>
+						<button type="button" class="sf-more" onclick={() => (tab = 'drift')}>{t('remote.rightsDialog.drift.show')}</button>
 					</p>
 				{/if}
 				{#if tab === 'members'}
@@ -237,27 +238,27 @@
 					<AccessPreview {view} bind:busy {request} onerror={(m) => (error = m)} />
 				{:else if tab === 'drift'}
 					{#if !view.collaborative}
-						<p class="sf-hint">Classeur figé : pas d’écart possible (lecture seule pour tous).</p>
+						<p class="sf-hint">{t('remote.rightsDialog.drift.frozen')}</p>
 					{:else if !drift.length}
-						<p>Aucun écart : les règles et droits du serveur sont ceux que Lattis a générés.</p>
+						<p>{t('remote.rightsDialog.drift.none')}</p>
 					{:else}
-						<p class="ac-intro">Règles ou droits changés hors de Lattis (à la main, dans PostgreSQL) :</p>
+						<p class="ac-intro">{t('remote.rightsDialog.drift.intro')}</p>
 						<ul class="ac-rules">
 							{#each drift as d (d.table_id)}
 								<li class="ac-rule">
 									<div>
 										<strong>{d.name}</strong>
-										{#if d.foreign_policies?.length}<span>Règles ajoutées : <code class="sf-code">{d.foreign_policies.join(', ')}</code></span>{/if}
-										{#if d.foreign_grants?.length}<span>Droits donnés à : <code class="sf-code">{d.foreign_grants.join(', ')}</code></span>{/if}
-										{#if !d.foreign_policies?.length && !d.foreign_grants?.length}<span>Règles générées retirées ou modifiées</span>{/if}
+										{#if d.foreign_policies?.length}<span>{t('remote.rightsDialog.drift.policies')} <code class="sf-code">{d.foreign_policies.join(', ')}</code></span>{/if}
+										{#if d.foreign_grants?.length}<span>{t('remote.rightsDialog.drift.grants')} <code class="sf-code">{d.foreign_grants.join(', ')}</code></span>{/if}
+										{#if !d.foreign_policies?.length && !d.foreign_grants?.length}<span>{t('remote.rightsDialog.drift.changed')}</span>{/if}
 									</div>
 								</li>
 							{/each}
 						</ul>
 						{#if manage || view.canDesign}
 							<div class="ac-editor-actions">
-								<span class="sf-hint">Recompiler remet les règles générées par Lattis. Les règles et droits ajoutés à la main restent signalés ici tant qu’ils ne sont pas retirés dans PostgreSQL.</span>
-								<button type="button" class="sf-btn primary" disabled={busy} onclick={() => run(() => DocumentService.ShareRecompile(), 'Droits recompilés')}>Recompiler les droits</button>
+								<span class="sf-hint">{t('remote.rightsDialog.drift.recompileHelp')}</span>
+								<button type="button" class="sf-btn primary" disabled={busy} onclick={() => run(() => DocumentService.ShareRecompile(), t('remote.rightsDialog.drift.recompiled'))}>{t('remote.rightsDialog.drift.recompile')}</button>
 							</div>
 						{/if}
 					{/if}
@@ -270,9 +271,9 @@
 			{:else if notice}
 				<p class="sf-grow notice" role="status">{notice}</p>
 			{:else}
-				<span class="sf-grow sf-hint">{busy ? 'Envoi au serveur…' : view && !manage ? 'Concepteur : consultation et vérification seulement' : ''}</span>
+				<span class="sf-grow sf-hint">{busy ? t('remote.rightsDialog.sending') : view && !manage ? t('remote.rightsDialog.designerOnly') : ''}</span>
 			{/if}
-			<button type="button" class="sf-btn" onclick={onclose} disabled={busy}>Fermer</button>
+			<button type="button" class="sf-btn" onclick={onclose} disabled={busy}>{t('common.close')}</button>
 		</footer>
 	</div>
 </div>

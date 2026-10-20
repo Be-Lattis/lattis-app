@@ -1,0 +1,199 @@
+<script lang="ts">
+	// Gérer l'accès › Règles avancées (restrictions du serveur, propriétaires
+	// seulement) : chaque règle en une phrase (« Personne ne peut supprimer
+	// de lignes dans « Ventes », sauf les propriétaires et concepteurs. »),
+	// et une nouvelle règle par préréglage ou par formulaire en clair
+	// (tableau, qui, quelles actions, jamais ou seulement certaines lignes),
+	// relue en une phrase avant l'ajout. Une règle retire un droit quel que
+	// soit l'accès du rôle ; logique dans access.ts.
+	import Icon from '#lib/icons/Icon.svelte';
+	import Select from '#lib/ui/Select.svelte';
+	import { DocumentService } from '#bindings/internal/bridge/index.js';
+	import type { RightsView } from '#bindings/internal/bridge/models.js';
+	import FilterEditor from './FilterEditor.svelte';
+	import { columnTypes, fullRights, roleLabel } from './rights';
+	import { PRESETS, RULE_ACTIONS, applyPreset, draftProblems, draftRules, emptyDraft, groupRules, roleNames, ruleSentence, toggleCommand, type RuleDraft, type Run } from './access';
+import { t } from '#lib/i18n/index.js';
+
+	interface Props {
+		view: RightsView;
+		busy: boolean;
+		run: Run;
+	}
+	let { view, busy, run }: Props = $props();
+
+	const acl = $derived(view.acl);
+	const roles = $derived(acl?.roles ?? []);
+	const tables = $derived(view.tables ?? []);
+	const teamsOn = $derived(!!view.teams);
+	const groups = $derived(groupRules(acl?.restrictions));
+	const tableName = (id: string) => tables.find((tb) => tb.remoteId === id)?.name ?? acl?.tables?.find((tb) => tb.table_id === id)?.name ?? id;
+	const typesOf = (id: string) => columnTypes(tables.find((tb) => tb.remoteId === id));
+
+	let d = $state<RuleDraft>(emptyDraft());
+	let preset = $state('');
+	let predErr = $state('');
+	let tried = $state(false);
+	/** Remet l'éditeur de condition à zéro (préréglage, tableau changé, règle ajoutée). */
+	let edKey = $state(0);
+	let form = $state<HTMLElement>();
+	const target = $derived(tables.find((tb) => tb.remoteId === d.table) ?? tables[0]);
+	$effect(() => {
+		if (!d.table && tables[0]) d.table = tables[0].remoteId;
+	});
+	const types = $derived(columnTypes(target));
+	const problems = $derived(draftProblems(d, types, predErr));
+	const first = $derived(Object.values(problems)[0] ?? '');
+	const choosable = $derived(roles.filter((r) => !fullRights(r)));
+	const sentence = $derived(d.commands.length && target ? ruleSentence({ commands: d.commands, roles: d.who === 'all' ? [] : roleNames(d.roles, roles), table: target.name, predicate: d.when === 'never' ? 'false' : d.predicate }, types) : '');
+
+	function usePreset(id: string) {
+		preset = id;
+		d = applyPreset(id, { ...d, table: target?.remoteId ?? '' }, { columns: target?.columns ?? [], participant: roles.find((r) => r.builtin === 'participant')?.id });
+		predErr = '';
+		tried = false;
+		edKey++;
+	}
+
+	async function add() {
+		if (busy) return;
+		if (first) {
+			tried = true;
+			const sels = problems.table ? ['#rr-table'] : problems.who ? ['#rr-who .ac-toggle', '#rr-who input'] : problems.commands ? ['#rr-actions button'] : ['#rr-when input.val', '#rr-when textarea', '#rr-when button'];
+			sels.map((s) => form?.querySelector<HTMLElement>(s)).find((el) => !!el)?.focus();
+			return;
+		}
+		const rules = draftRules(d);
+		for (const r of rules) {
+			if (!(await run(() => DocumentService.ShareAddRestriction(r), t('remote.rules.added', { n: rules.length })))) return;
+		}
+		d = emptyDraft(d.table);
+		preset = '';
+		tried = false;
+		edKey++;
+	}
+
+	async function drop(ids: string[]) {
+		for (const id of ids) if (!(await run(() => DocumentService.ShareDropRestriction(id), t('remote.rules.removed')))) return;
+	}
+</script>
+
+{#if !view.collaborative}
+	<p class="sf-hint">{t('remote.rules.collabOnly')}</p>
+{:else}
+	<p class="ac-intro">{t('remote.rules.intro')}</p>
+	<section class="ac-section" aria-labelledby="rr-list">
+		<div class="ac-section-head"><h3 id="rr-list">{t('remote.rules.current')}</h3><span class="ac-count">{groups.length}</span></div>
+		{#if groups.length}
+			<ul class="ac-rules">
+				{#each groups as g (g.ids.join())}
+					<li class="ac-rule">
+						<div>
+							{#if g.label}<span class="ac-rule-label">{g.label}</span>{/if}
+							<span>{ruleSentence({ commands: g.commands, roles: roleNames(g.appliesTo, roles), table: tableName(g.tableId), predicate: g.predicate }, typesOf(g.tableId))}</span>
+						</div>
+						<button type="button" class="ac-icon danger" disabled={busy} title={t('remote.rules.remove.tooltip')} aria-label={t('remote.rules.remove.aria', { label: g.label || '' })} onclick={() => drop(g.ids)}><Icon name="trash" size={14} /> {t('remote.audience.remove')}</button>
+					</li>
+				{/each}
+			</ul>
+		{:else}
+			<p class="sf-hint">{t('remote.rules.none')}</p>
+		{/if}
+	</section>
+
+	<section class="ac-section ac-card" aria-labelledby="rr-new" bind:this={form}>
+		<div class="ac-section-head"><h3 id="rr-new">{t('remote.rules.new')}</h3></div>
+		{#if !tables.length}
+			<p class="sf-hint">{t('remote.preview.noTable')}</p>
+		{:else}
+			<div class="ac-presets" role="group" aria-label={t('remote.rules.presets')}>
+				{#each PRESETS as p (p.id)}
+					<button type="button" class="ac-preset" class:on={preset === p.id} aria-pressed={preset === p.id} title={p.hint} disabled={busy} onclick={() => usePreset(p.id)}>{p.label}</button>
+				{/each}
+			</div>
+			{#if preset}<p class="sf-hint" style="margin: -4px 0 10px">{PRESETS.find((p) => p.id === preset)?.hint}.</p>{/if}
+			<div class="sf-fields">
+				<span class="sf-label">{t('remote.preview.table')}</span>
+				<div class="sf-field">
+					<Select
+						id="rr-table"
+						label={t('remote.preview.table')}
+						value={d.table}
+						options={tables.map((tb) => ({ value: tb.remoteId, label: `${tb.name} (${tb.sheetName})` }))}
+						disabled={busy}
+						onchange={(v) => {
+							d.table = v;
+							if (d.when === 'if') d.predicate = '';
+							edKey++;
+						}}
+					/>
+				</div>
+
+				<span class="sf-label">{t('remote.rules.for')}</span>
+				<div class="sf-field" id="rr-who">
+					<div class="sf-seg" role="radiogroup" aria-label={t('remote.rules.forWhom')}>
+						<label class:on={d.who === 'all'}><input type="radio" name="rr-who" value="all" bind:group={d.who} disabled={busy} />{t('remote.rules.allRoles')}</label>
+						<label class:on={d.who === 'roles'}><input type="radio" name="rr-who" value="roles" bind:group={d.who} disabled={busy} />{t('remote.rules.someRoles')}</label>
+					</div>
+					{#if d.who === 'roles'}
+						<div class="ac-toggles" class:invalid={tried && !!problems.who} role="group" aria-label={t('remote.rules.targetRoles')}>
+							{#each choosable as r (r.id)}
+								<button type="button" class="ac-toggle" aria-pressed={d.roles.includes(r.id)} disabled={busy} onclick={() => (d.roles = d.roles.includes(r.id) ? d.roles.filter((x) => x !== r.id) : [...d.roles, r.id])}>{roleLabel(r)}</button>
+							{/each}
+						</div>
+					{:else}
+						<p class="sf-hint">{t('remote.rules.exceptOwners')}</p>
+					{/if}
+					{#if tried && problems.who}<p class="sf-error">{problems.who}</p>{/if}
+				</div>
+
+				<span class="sf-label">{t('remote.rules.forbid')}</span>
+				<div class="sf-field" id="rr-actions">
+					<div class="ac-toggles" class:invalid={tried && !!problems.commands} role="group" aria-label={t('remote.rules.actions')}>
+						{#each RULE_ACTIONS as x (x.cmd)}
+							<button type="button" class="ac-toggle" aria-pressed={d.commands.includes(x.cmd)} disabled={busy} onclick={() => (d.commands = toggleCommand(d.commands, x.cmd))}>{x.label}</button>
+						{/each}
+					</div>
+					{#if tried && problems.commands}<p class="sf-error">{problems.commands}</p>{/if}
+				</div>
+
+				<span class="sf-label">{t('remote.rules.exception')}</span>
+				<div class="sf-field" id="rr-when">
+					<div class="sf-seg" role="radiogroup" aria-label={t('remote.rules.exception')}>
+						<label class:on={d.when === 'never'}><input type="radio" name="rr-when" value="never" bind:group={d.when} disabled={busy} />{t('remote.formDialog.field.default.none')}</label>
+						<label class:on={d.when === 'if'}><input type="radio" name="rr-when" value="if" bind:group={d.when} disabled={busy} />{t('remote.rules.exceptWhere')}</label>
+					</div>
+					{#if d.when === 'if'}
+						{#key `${edKey}:${target?.remoteId}`}
+							<FilterEditor
+								label={t('remote.rules.allowed.label')}
+								readback={{ prefix: t('remote.rules.allowed.prefix'), none: t('remote.rules.allowed.none') }}
+								columns={target?.columns ?? []}
+								value={d.predicate}
+								disabled={busy}
+								teams={teamsOn}
+								values={async (c) => ((await DocumentService.FieldValues(target?.name ?? '', c)) ?? []).map((v) => v.text)}
+								assist={t('remote.rules.allowed.assist', { table: target?.name ?? '' })}
+								onchange={(sql, e) => {
+									d.predicate = sql ?? d.predicate;
+									predErr = e;
+								}}
+							/>
+						{/key}
+					{/if}
+					{#if tried && problems.predicate}<p class="sf-error">{problems.predicate}</p>{/if}
+				</div>
+
+				<label class="sf-label" for="rr-label">{t('remote.rules.name')} <span class="sf-opt">{t('remote.rules.optional')}</span></label>
+				<input id="rr-label" class="sf-input" bind:value={d.label} disabled={busy} placeholder={t('remote.access.preset.noDelete.rule')} autocomplete="off" />
+			</div>
+			{#if sentence}
+				<p class="ac-readback" aria-live="polite"><Icon name="warning" size={14} /><span>{sentence}</span></p>
+			{/if}
+			<div class="ac-editor-actions">
+				{#if tried && first}<p class="sf-error" role="alert" style="flex: 1">{first}</p>{:else}<span class="sf-hint">{d.commands.length > 1 ? t('remote.rules.perAction', { n: d.commands.length }) : ''}</span>{/if}
+				<button type="button" class="sf-btn primary" disabled={busy} onclick={add}>{t('remote.rules.add')}</button>
+			</div>
+		{/if}
+	</section>
+{/if}

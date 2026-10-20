@@ -13,6 +13,7 @@
 	import type { ServerState } from '#bindings/internal/remote/auth/models.js';
 	import { hostOf, serverUrlOk, userDetail, userName } from './lattis';
 	import { addServer, forgetServer, lattis, loadLattis, requestLogin, signOut } from './lattis.svelte.js';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		/** Fermée ; added : serveur ajouté pendant la visite ('' sinon). */
@@ -28,7 +29,7 @@
 	let removing = $state<ServerState | null>(null);
 	/** Classeur ouvert publié sur un serveur (retrait : il ne se synchronise plus). */
 	let inUse = $state<{ server: string; title: string } | null>(null);
-	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
+	const err = errorText;
 	const servers = $derived(lattis.state.servers ?? []);
 
 	onMount(async () => {
@@ -54,7 +55,7 @@
 	}
 
 	function add() {
-		if (!serverUrlOk(address)) return void (error = 'Saisissez l’adresse du serveur, par exemple https://lattis.acme.fr (http seulement en local).');
+		if (!serverUrlOk(address)) return void (error = t('remote.servers.badUrl'));
 		return run(async () => {
 			added = await addServer(address);
 			address = '';
@@ -81,7 +82,7 @@
 		class="dialog"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Gérer les serveurs"
+		aria-label={t('remote.servers.title')}
 		tabindex="-1"
 		use:modal
 		onkeydown={(e) => {
@@ -92,10 +93,10 @@
 			}
 		}}
 	>
-		<header><Icon name="database" size={18} /><span>Gérer les serveurs</span></header>
+		<header><Icon name="database" size={18} /><span>{t('remote.servers.title')}</span></header>
 		<div class="body">
 			{#if !lattis.state.enabled}
-				<p class="muted">Les classeurs partagés sont désactivés : Fichier › Paramètres › Fonctionnalités.</p>
+				<p class="muted">{t('remote.servers.disabled')}</p>
 			{:else}
 				<ul class="list">
 					{#each servers as s (s.url)}
@@ -104,74 +105,72 @@
 								{#if s.logo}<img src={s.logo} alt="" />{:else}<Icon name="database" size={18} />{/if}
 								<div class="who">
 									<strong title={s.url}>{s.name || hostOf(s.url)}</strong>
-									<span class="muted">{hostOf(s.url)}{s.managed ? ' · déclaré par votre organisation' : ''}</span>
+									<span class="muted">{hostOf(s.url)}{s.managed ? ` · ${t('remote.servers.managed')}` : ''}</span>
 									{#if s.user}
-										<span class="ok">Connecté : {userName(s.user)}{userDetail(s.user) ? ` (${userDetail(s.user)})` : ''}</span>
+										<span class="ok">{t('remote.servers.connected', { user: userName(s.user) })}{userDetail(s.user) ? ` (${userDetail(s.user)})` : ''}</span>
 									{:else}
-										<span class="muted">Non connecté</span>
+										<span class="muted">{t('remote.servers.notConnected')}</span>
 									{/if}
 								</div>
 								<div class="acts">
 									{#if s.user}
-										<button disabled={busy} onclick={() => logout(s)}>Se déconnecter</button>
+										<button disabled={busy} onclick={() => logout(s)}>{t('remote.account.signOut')}</button>
 									{:else}
-										<button disabled={busy} onclick={() => login(s)}>Se connecter…</button>
+										<button disabled={busy} onclick={() => login(s)}>{t('remote.account.signIn')}</button>
 									{/if}
 									<button
 										class="danger"
 										disabled={busy || s.managed}
-										title={s.managed ? 'Serveur déclaré par votre organisation : il reste dans la liste' : 'Retirer ce serveur de la liste de ce poste'}
-										onclick={() => (removing = s)}><Icon name="trash" size={13} />Retirer</button
+										title={s.managed ? t('remote.servers.remove.managed') : t('remote.servers.remove.tooltip')}
+										onclick={() => (removing = s)}><Icon name="trash" size={13} />{t('remote.audience.remove')}</button
 									>
 								</div>
 							</div>
 							{#if removing?.url === s.url}
 								<div class="confirm" role="alert">
-									<p><strong>Retirer « {s.name || hostOf(s.url)} » de la liste ?</strong></p>
+									<p><strong>{t('remote.servers.remove.confirm', { name: s.name || hostOf(s.url) })}</strong></p>
 									<p>
-										{s.user ? 'Vous serez déconnecté de ce serveur sur ce poste. ' : ''}Rien n’est supprimé sur le serveur : ses classeurs, ses données et vos droits y
-										restent, et vous pourrez l’ajouter de nouveau à tout moment.
-									</p>
+										{s.user ? `${t('remote.servers.remove.signedOut')} ` : ''}{t('remote.servers.remove.nothingDeleted')}
+										</p>
 									{#if inUse?.server === s.url}
 										<p class="warn">
-											Le classeur ouvert « {inUse.title} » est publié sur ce serveur : il reste ouvert depuis sa copie sur ce poste, mais ne se synchronisera plus tant que
-											vous n’aurez pas ajouté ce serveur de nouveau et ne vous y serez pas reconnecté.
+											{t('remote.servers.remove.inUse', { title: inUse.title })}
 										</p>
 									{/if}
-									<p class="muted">Les requêtes et classeurs qui utilisent ce serveur vous demanderont de vous y connecter.</p>
+									<p class="muted">{t('remote.servers.remove.queries')}</p>
 									<div class="row end">
-										<button disabled={busy} onclick={() => (removing = null)}>Annuler</button>
-										<button class="danger strong" disabled={busy} onclick={() => remove(s)}>Retirer</button>
+										<button disabled={busy} onclick={() => (removing = null)}>{t('common.cancel')}</button>
+										<button class="danger strong" disabled={busy} onclick={() => remove(s)}>{t('remote.audience.remove')}</button>
 									</div>
 								</div>
 							{/if}
 						</li>
 					{:else}
-						<li class="muted empty">Aucun serveur.{lattis.state.allowUserServers ? ' Ajoutez-en un ci-dessous.' : ' Votre organisation n’en a déclaré aucun.'}</li>
+						<li class="muted empty">{lattis.state.allowUserServers ? t('remote.servers.emptyAdd') : t('remote.account.noServerManaged')}</li>
 					{/each}
 				</ul>
 				{#if lattis.state.allowUserServers}
-					<h3>Ajouter un serveur</h3>
+					<h3>{t('remote.servers.add.title')}</h3>
 					<div class="row">
 						<input
 							bind:value={address}
 							placeholder="https://lattis.acme.fr"
-							aria-label="Adresse du serveur"
+							aria-label={t('remote.login.address')}
 							disabled={busy}
 							onkeydown={(e) => e.key === 'Enter' && address.trim() && add()}
 						/>
-						<button class="primary" disabled={busy || !address.trim()} onclick={add}><Icon name="plus" size={13} />Ajouter et se connecter…</button>
+						<button class="primary" disabled={busy || !address.trim()} onclick={add}><Icon name="plus" size={13} />{t('remote.servers.add.submit')}</button>
 					</div>
-					<p class="muted">L’adresse est vérifiée auprès du serveur, puis sa page de connexion s’ouvre.</p>
+					<p class="muted">{t('remote.servers.add.help')}</p>
 				{:else}
-					<p class="muted">Votre organisation fixe la liste des serveurs : vous ne pouvez pas en ajouter.</p>
+					<p class="muted">{t('remote.servers.add.locked')}</p>
 				{/if}
 			{/if}
 			{#if error}<p class="error" role="alert">{error}</p>{/if}
 		</div>
 		<footer>
 			<span class="grow"></span>
-			<button onclick={close} disabled={busy}>Fermer</button>
+			<button onclick={close} disabled={busy}>{t('common.close')}</button>
 		</footer>
 	</div>
 </div>

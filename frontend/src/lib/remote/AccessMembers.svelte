@@ -14,7 +14,7 @@
 	import TableSourcesList from './TableSourcesList.svelte';
 	import { BUILTIN_LABELS, INVITE_ROLES, isPipeline, memberCount, members, ownerCount, roleLabel, teamRows, type MemberRow } from './rights';
 	import { capsSummary, emailProblem, initial, memberCaps, NO_ACL, roleCaps, roleTone, type Run } from './access';
-	import { fmtDate } from '#lib/i18n/index.js';
+	import { fmtDate, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		view: RightsView;
@@ -51,7 +51,7 @@
 		...(view.customInvite ? roles.filter((r) => !r.builtin).map((r) => ({ value: r.name, label: r.name, role: r as Role | undefined })) : [])
 	]);
 	const emailErr = $derived(emailProblem(email));
-	const rolesErr = $derived(inviteRoles.length ? '' : 'Choisissez au moins un rôle.');
+	const rolesErr = $derived(inviteRoles.length ? '' : t('remote.access.problem.who'));
 	/** Ce que donneront les rôles choisis. */
 	const inviteGives = $derived(
 		capsSummary(
@@ -77,7 +77,7 @@
 			return;
 		}
 		const to = email.trim();
-		if (await run(() => DocumentService.ShareInvite(to, inviteRoles), `Invitation envoyée à ${to}`)) {
+		if (await run(() => DocumentService.ShareInvite(to, inviteRoles), t('remote.members.invited', { email: to }))) {
 			email = '';
 			tried = false;
 		}
@@ -85,17 +85,17 @@
 
 	// --- Rôles d'une personne ou d'une équipe ---------------------------------------------------
 	const grant = (r: Role, principal: string, on: boolean, who: string) =>
-		run(() => DocumentService.ShareGrantRole(r.id, principal, on), on ? `Rôle ${roleLabel(r)} donné à ${who}` : `Rôle ${roleLabel(r)} retiré à ${who}`);
+		run(() => DocumentService.ShareGrantRole(r.id, principal, on), on ? t('remote.members.roleGiven', { role: roleLabel(r), who }) : t('remote.members.roleRemoved', { role: roleLabel(r), who }));
 
 	/** Retire ses rôles à un membre ou à une équipe (principal : user_id ou team_id), un par un. */
 	async function removeAll(principal: string, ids: string[], who: string) {
-		if (!confirm(`Retirer l’accès de ${who} ? ${ids.length > 1 ? `Ses ${ids.length} rôles lui sont retirés` : 'Son rôle lui est retiré'}.`)) return;
-		for (const id of ids) if (!(await run(() => DocumentService.ShareGrantRole(id, principal, false), `Accès retiré à ${who}`))) return;
+		if (!confirm(t('remote.members.removeAll.confirm', { who, n: ids.length }))) return;
+		for (const id of ids) if (!(await run(() => DocumentService.ShareGrantRole(id, principal, false), t('remote.members.removeAll.done', { who })))) return;
 	}
 
 	/** Dernier propriétaire : son rôle ne se retire pas. */
 	const lastOwner = (p: MemberRow) => owners <= 1 && p.personal.some((id) => roleById(id)?.builtin === 'owner');
-	const addable = (held: string[]) => [{ value: '', label: '+ Rôle', disabled: true }, ...sorted.filter((r) => !held.includes(r.id)).map((r) => ({ value: r.id, label: roleLabel(r) }))];
+	const addable = (held: string[]) => [{ value: '', label: t('remote.members.addRole'), disabled: true }, ...sorted.filter((r) => !held.includes(r.id)).map((r) => ({ value: r.id, label: roleLabel(r) }))];
 
 	// --- Recherche -------------------------------------------------------------------------
 	let query = $state('');
@@ -107,43 +107,43 @@
 	const teamRole = $derived(roles.some((r) => r.id === addTeamRole) ? addTeamRole : (roles.find((r) => r.builtin === 'reader')?.id ?? ''));
 	async function grantTeam(e: SubmitEvent) {
 		e.preventDefault();
-		const t = allTeams.find((x) => x.id === addTeam);
+		const tm = allTeams.find((x) => x.id === addTeam);
 		const r = roleById(teamRole);
-		if (!t || !r || busy) return;
-		if (await run(() => DocumentService.ShareGrantRole(r.id, t.id, true), `Rôle ${roleLabel(r)} donné à l’équipe ${t.name}`)) addTeam = '';
+		if (!tm || !r || busy) return;
+		if (await run(() => DocumentService.ShareGrantRole(r.id, tm.id, true), t('remote.members.roleGiven', { role: roleLabel(r), who: t('remote.members.theTeam', { name: tm.name }) }))) addTeam = '';
 	}
 </script>
 
 <section class="ac-section" aria-labelledby="am-invite">
 	<form class="ac-card" onsubmit={invite} novalidate>
-		<div class="ac-section-head"><h3 id="am-invite">Inviter une personne</h3></div>
+		<div class="ac-section-head"><h3 id="am-invite">{t('remote.members.invite.title')}</h3></div>
 		<div class="ac-card-row">
 			<input
 				bind:this={emailEl}
 				class="sf-input"
 				type="email"
-				placeholder="adresse@exemple.fr"
-				aria-label="Adresse à inviter"
+				placeholder={t('remote.audience.email.placeholder')}
+				aria-label={t('remote.members.invite.email')}
 				aria-invalid={tried && !!emailErr}
 				aria-describedby="am-invite-hint"
 				bind:value={email}
 				disabled={busy}
 				autocomplete="off"
 			/>
-			<div class="ac-toggles" class:invalid={tried && !!rolesErr} role="group" aria-label="Rôles à donner">
+			<div class="ac-toggles" class:invalid={tried && !!rolesErr} role="group" aria-label={t('remote.members.invite.roles')}>
 				{#each invitable as i (i.value)}
 					<button type="button" class="ac-toggle" aria-pressed={inviteRoles.includes(i.value)} disabled={busy} title={i.role ? capsSummary(roleCaps(i.role, a, tables, collab)) : ''} onclick={() => toggleInvite(i.value)}>{i.label}</button>
 				{/each}
 			</div>
-			<button type="submit" class="sf-btn primary" disabled={busy}>Inviter</button>
+			<button type="submit" class="sf-btn primary" disabled={busy}>{t('remote.members.invite.submit')}</button>
 		</div>
 		{#if tried && (emailErr || rolesErr)}
 			<p class="sf-error" id="am-invite-hint" role="alert">{emailErr || rolesErr}</p>
 		{:else}
 			<p class="sf-hint" id="am-invite-hint">
-				Pourra : <strong>{inviteGives}</strong>. Une personne déjà connue du serveur reçoit ses rôles tout de suite, sinon à sa première connexion.{view.customInvite || !roles.some((r) => !r.builtin)
+				{t('remote.members.invite.gives')} <strong>{inviteGives}</strong>. {t('remote.members.invite.help')}{view.customInvite || !roles.some((r) => !r.builtin)
 					? ''
-					: ' Les rôles personnalisés se donnent une fois la personne membre.'}
+					: ` ${t('remote.members.invite.custom')}`}
 			</p>
 		{/if}
 	</form>
@@ -151,11 +151,11 @@
 
 <section class="ac-section" aria-labelledby="am-people">
 	<div class="ac-section-head">
-		<h3 id="am-people">Personnes</h3>
+		<h3 id="am-people">{t('remote.members.people')}</h3>
 		<span class="ac-count">{people.length}</span>
 		<span class="ac-grow"></span>
 		{#if people.length > 8}
-			<input class="sf-input" style="width: 200px; height: 26px" type="search" placeholder="Chercher un membre" aria-label="Chercher un membre" bind:value={query} />
+			<input class="sf-input" style="width: 200px; height: 26px" type="search" placeholder={t('remote.members.search')} aria-label={t('remote.members.search')} bind:value={query} />
 		{/if}
 	</div>
 	<ul class="ac-list">
@@ -171,55 +171,55 @@
 					{#if p.name}<span class="ac-sub">{p.email}</span>{/if}
 					{#if pipe || p.teams.length || last}
 						<span class="ac-chips">
-							{#if pipe}<span class="ac-tag" title="Membre technique d’un pipeline d’ingestion : il disparaît avec le pipeline, côté serveur">pipeline</span>{/if}
-							{#if p.teams.length}<span class="ac-tag team" title="Membre du classeur par son équipe : ses rôles d’équipe se changent dans « Équipes »">équipe {p.teams.join(', ')}</span>{/if}
-							{#if last}<span class="ac-tag lock" title="Un classeur garde toujours au moins un propriétaire : donnez d’abord ce rôle à quelqu’un d’autre">dernier propriétaire</span>{/if}
+							{#if pipe}<span class="ac-tag" title={t('remote.members.tag.pipeline.tooltip')}>{t('remote.tableSources.pipeline.label')}</span>{/if}
+							{#if p.teams.length}<span class="ac-tag team" title={t('remote.members.tag.team.tooltip')}>{t('remote.members.tag.team.label', { names: p.teams.join(', ') })}</span>{/if}
+							{#if last}<span class="ac-tag lock" title={t('remote.members.tag.lastOwner.tooltip')}>{t('remote.members.tag.lastOwner.label')}</span>{/if}
 						</span>
 					{/if}
 				</div>
 				<div class="ac-roles">
-					<div class="ac-chips" role="list" aria-label="Rôles de {who}">
+					<div class="ac-chips" role="list" aria-label={t('remote.members.rolesOf', { who })}>
 						{#each sorted.filter((r) => p.personal.includes(r.id)) as r (r.id)}
 							{@const locked = r.builtin === 'owner' && owners <= 1}
 							<span class="ac-chip {roleTone(r)}" class:has-x={!locked && !pipe} role="listitem">
 								{#if locked}<Icon name="lock" size={11} />{/if}{roleLabel(r)}
 								{#if !locked && !pipe}
-									<button type="button" class="ac-x" disabled={busy} aria-label="Retirer le rôle {roleLabel(r)} à {who}" title="Retirer ce rôle" onclick={() => grant(r, p.userId, false, who)}>✕</button>
+									<button type="button" class="ac-x" disabled={busy} aria-label={t('remote.members.removeRole.aria', { role: roleLabel(r), who })} title={t('remote.members.removeRole.tooltip')} onclick={() => grant(r, p.userId, false, who)}>✕</button>
 								{/if}
 							</span>
 						{/each}
 						{#each sorted.filter((r) => p.via[r.id] && !p.personal.includes(r.id)) as r (r.id)}
-							<span class="ac-chip via {roleTone(r)}" role="listitem" title="Reçu par l’équipe {p.via[r.id].join(', ')} : se retire dans « Équipes »">{roleLabel(r)} · {p.via[r.id].join(', ')}</span>
+							<span class="ac-chip via {roleTone(r)}" role="listitem" title={t('remote.members.via', { names: p.via[r.id].join(', ') })}>{roleLabel(r)} · {p.via[r.id].join(', ')}</span>
 						{/each}
 						{#if !pipe}
 							{#key p.personal.join()}
-								<Select label="Donner un rôle à {who}" value="" options={addable(p.personal)} disabled={busy} onchange={(id) => id && roleById(id) && grant(roleById(id)!, p.userId, true, who)} />
+								<Select label={t('remote.members.giveRole', { who })} value="" options={addable(p.personal)} disabled={busy} onchange={(id) => id && roleById(id) && grant(roleById(id)!, p.userId, true, who)} />
 							{/key}
 						{/if}
 					</div>
 					<span class="ac-can" title={[...caps.read.why, ...caps.editAll.why].join('\n')}>{capsSummary(caps)}</span>
 				</div>
 				<div class="ac-acts">
-					<button type="button" class="ac-icon" disabled={busy || !tables.length} title={tables.length ? `Voir les tableaux comme ${who} les voit` : 'Aucun tableau publié'} onclick={() => onpreview(p.userId)}><Icon name="show" size={14} />Voir en tant que…</button>
+					<button type="button" class="ac-icon" disabled={busy || !tables.length} title={tables.length ? t('remote.members.viewAs.tooltip', { who }) : t('remote.preview.noTable')} onclick={() => onpreview(p.userId)}><Icon name="show" size={14} />{t('remote.members.viewAs.label')}</button>
 					{#if p.personal.length && !pipe && !last}
-						<button type="button" class="ac-icon danger" disabled={busy} title={p.teams.length ? 'Retire ses rôles en personne ; ceux de son équipe restent' : 'Retirer tous ses rôles'} aria-label="Retirer l’accès de {who}" onclick={() => removeAll(p.userId, p.personal, who)}><Icon name="trash" size={14} /></button>
+						<button type="button" class="ac-icon danger" disabled={busy} title={p.teams.length ? t('remote.members.removeAll.teamKept') : t('remote.members.removeAll.tooltip')} aria-label={t('remote.members.removeAll.aria', { who })} onclick={() => removeAll(p.userId, p.personal, who)}><Icon name="trash" size={14} /></button>
 					{/if}
 				</div>
 			</li>
 		{:else}
-			<li class="ac-row"><span></span><span class="sf-hint">{query ? 'Aucun membre ne correspond.' : 'Aucun membre.'}</span></li>
+			<li class="ac-row"><span></span><span class="sf-hint">{query ? t('remote.members.noMatch') : t('remote.members.none')}</span></li>
 		{/each}
 	</ul>
 </section>
 
 {#if acl?.invitations?.length}
 	<section class="ac-section" aria-labelledby="am-pending">
-		<div class="ac-section-head"><h3 id="am-pending">Invitations en attente</h3><span class="ac-count">{acl.invitations.length}</span></div>
+		<div class="ac-section-head"><h3 id="am-pending">{t('remote.members.pending')}</h3><span class="ac-count">{acl.invitations.length}</span></div>
 		<ul class="ac-list">
 			{#each acl.invitations as i (i.id)}
 				<li class="ac-row">
 					<span class="ac-avatar" aria-hidden="true" style="background: #f1f3f5; color: #6b7280">{initial(i.email)}</span>
-					<div class="ac-who"><strong>{i.email}</strong><span class="ac-sub">jusqu’au {fmtDate(new Date(i.expires_at))}</span></div>
+					<div class="ac-who"><strong>{i.email}</strong><span class="ac-sub">{t('remote.members.until', { date: fmtDate(new Date(i.expires_at)) })}</span></div>
 					<div class="ac-chips">
 						{#each i.roles ?? [] as r (r)}
 							{@const role = roles.find((x) => x.builtin === r || (!x.builtin && x.name.toLowerCase() === r.toLowerCase()))}
@@ -227,7 +227,7 @@
 						{/each}
 					</div>
 					<div class="ac-acts">
-						<button type="button" class="ac-icon" disabled={busy} onclick={() => run(() => DocumentService.ShareRevokeInvitation(i.id), `Invitation de ${i.email} annulée`)}>Annuler l’invitation</button>
+						<button type="button" class="ac-icon" disabled={busy} onclick={() => run(() => DocumentService.ShareRevokeInvitation(i.id), t('remote.members.revoked', { email: i.email }))}>{t('remote.members.revoke')}</button>
 					</div>
 				</li>
 			{/each}
@@ -236,53 +236,53 @@
 {/if}
 
 <section class="ac-section" aria-labelledby="am-teams">
-	<div class="ac-section-head"><h3 id="am-teams">Équipes</h3>{#if teamsOn}<span class="ac-count">{teams.length}</span>{/if}</div>
+	<div class="ac-section-head"><h3 id="am-teams">{t('remote.members.teams')}</h3>{#if teamsOn}<span class="ac-count">{teams.length}</span>{/if}</div>
 	{#if !teamsOn}
-		<p class="sf-hint">Équipes et groupes d’annuaire : pas encore proposés par ce serveur.</p>
+		<p class="sf-hint">{t('remote.members.teamsUnsupported')}</p>
 	{:else}
 		{#if teams.length}
 			<ul class="ac-list">
-				{#each teams as t (t.teamId)}
-					{@const who = `l’équipe ${t.name}`}
-					{@const caps = memberCaps(t.roles, a, tables, collab)}
+				{#each teams as tm (tm.teamId)}
+					{@const who = t('remote.members.theTeam', { name: tm.name })}
+					{@const caps = memberCaps(tm.roles, a, tables, collab)}
 					<li class="ac-row">
 						<span class="ac-avatar team" aria-hidden="true"><Icon name="user" size={14} /></span>
 						<div class="ac-who">
-							<strong>{t.name}</strong>
-							{#if t.count !== undefined}<span class="ac-sub" title={t.members ? t.members.map((m) => m.display_name || m.email).join(', ') || 'Aucun membre' : ''}>{memberCount(t.count)}{t.members?.length ? ` : ${t.members.map((m) => m.display_name || m.email).join(', ')}` : ''}</span>{/if}
+							<strong>{tm.name}</strong>
+							{#if tm.count !== undefined}<span class="ac-sub" title={tm.members ? tm.members.map((m) => m.display_name || m.email).join(', ') || t('remote.members.noMember') : ''}>{memberCount(tm.count)}{tm.members?.length ? ` : ${tm.members.map((m) => m.display_name || m.email).join(', ')}` : ''}</span>{/if}
 						</div>
 						<div class="ac-roles">
-							<div class="ac-chips" role="list" aria-label="Rôles de {who}">
-								{#each sorted.filter((r) => t.roles.includes(r.id)) as r (r.id)}
+							<div class="ac-chips" role="list" aria-label={t('remote.members.rolesOf', { who })}>
+								{#each sorted.filter((r) => tm.roles.includes(r.id)) as r (r.id)}
 									<span class="ac-chip has-x {roleTone(r)}" role="listitem"
-										>{roleLabel(r)}<button type="button" class="ac-x" disabled={busy} aria-label="Retirer le rôle {roleLabel(r)} à {who}" title="Retirer ce rôle" onclick={() => grant(r, t.teamId, false, who)}>✕</button></span
+										>{roleLabel(r)}<button type="button" class="ac-x" disabled={busy} aria-label={t('remote.members.removeRole.aria', { role: roleLabel(r), who })} title={t('remote.members.removeRole.tooltip')} onclick={() => grant(r, tm.teamId, false, who)}>✕</button></span
 									>
 								{/each}
-								{#key t.roles.join()}
-									<Select label="Donner un rôle à {who}" value="" options={addable(t.roles)} disabled={busy} onchange={(id) => id && roleById(id) && grant(roleById(id)!, t.teamId, true, who)} />
+								{#key tm.roles.join()}
+									<Select label={t('remote.members.giveRole', { who })} value="" options={addable(tm.roles)} disabled={busy} onchange={(id) => id && roleById(id) && grant(roleById(id)!, tm.teamId, true, who)} />
 								{/key}
 							</div>
 							<span class="ac-can">{capsSummary(caps)}</span>
 						</div>
 						<div class="ac-acts">
-							<button type="button" class="ac-icon danger" disabled={busy} aria-label="Retirer l’accès de {who}" title="Retirer tous les rôles de l’équipe" onclick={() => removeAll(t.teamId, t.roles, who)}><Icon name="trash" size={14} /></button>
+							<button type="button" class="ac-icon danger" disabled={busy} aria-label={t('remote.members.removeAll.aria', { who })} title={t('remote.members.removeAll.team')} onclick={() => removeAll(tm.teamId, tm.roles, who)}><Icon name="trash" size={14} /></button>
 						</div>
 					</li>
 				{/each}
 			</ul>
 		{:else}
-			<p class="sf-hint">Aucune équipe n’a de rôle sur ce classeur.</p>
+			<p class="sf-hint">{t('remote.members.noTeamRole')}</p>
 		{/if}
 		{#if allTeams.length}
 			<form class="ac-card-row" style="margin-top: 8px" onsubmit={grantTeam}>
-				<span class="sf-hint">Donner un rôle à une équipe :</span>
-				<Select label="Équipe" value={addTeam} options={[{ value: '', label: 'Équipe…', disabled: true }, ...allTeams.map((t) => ({ value: t.id, label: `${t.name} (${memberCount(t.member_count)})` }))]} disabled={busy} onchange={(v) => (addTeam = v)} />
-				<Select label="Rôle de l’équipe" value={teamRole} options={sorted.map((r) => ({ value: r.id, label: roleLabel(r) }))} disabled={busy} onchange={(v) => (addTeamRole = v)} />
-				<button type="submit" class="sf-btn" disabled={busy || !addTeam}>Donner le rôle</button>
+				<span class="sf-hint">{t('remote.members.teamGive.label')}</span>
+				<Select label={t('remote.audience.team')} value={addTeam} options={[{ value: '', label: t('remote.formDialog.audience.teamChoose'), disabled: true }, ...allTeams.map((tm) => ({ value: tm.id, label: `${tm.name} (${memberCount(tm.member_count)})` }))]} disabled={busy} onchange={(v) => (addTeam = v)} />
+				<Select label={t('remote.members.teamGive.role')} value={teamRole} options={sorted.map((r) => ({ value: r.id, label: roleLabel(r) }))} disabled={busy} onchange={(v) => (addTeamRole = v)} />
+				<button type="submit" class="sf-btn" disabled={busy || !addTeam}>{t('remote.members.teamGive.submit')}</button>
 			</form>
-			<p class="sf-hint" style="margin-top: 4px">Les membres d’une équipe ont ses rôles tant qu’ils en font partie. Les équipes se créent dans l’administration du serveur ; groupes d’annuaire : plus tard.</p>
+			<p class="sf-hint" style="margin-top: 4px">{t('remote.members.teamGive.help')}</p>
 		{:else}
-			<p class="sf-hint">Aucune équipe sur ce serveur : les propriétaires du serveur les créent dans son administration (« Équipes »).</p>
+			<p class="sf-hint">{t('remote.members.noTeam')}</p>
 		{/if}
 	{/if}
 </section>

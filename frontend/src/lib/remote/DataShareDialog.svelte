@@ -27,7 +27,7 @@
 	import { chooser, shareProblems, type ShareWay, type SourceLink } from './source';
 	import type { RightsColumn } from '#bindings/internal/bridge/models.js';
 	import './shareForm.css';
-	import { fmtDateTime } from '#lib/i18n/index.js';
+	import { errorText, fmtDateTime, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		table: string;
@@ -81,7 +81,7 @@
 	/** Envoi tenté avec des champs à corriger : le pied le dit. */
 	let tried = $state(false);
 	let body = $state<HTMLDivElement>();
-	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
+	const err = errorText;
 	const ds = $derived(info?.dataset ?? null);
 	const choose = $derived(info ? chooser(info.choice, info.reason) : null);
 	const ways = $derived(choose?.ways ?? []);
@@ -159,9 +159,9 @@
 
 	/** Entrée dans un champ texte : partager. */
 	function onKey(e: KeyboardEvent) {
-		const t = e.target as HTMLElement;
+		const el = e.target as HTMLElement;
 		if (e.key !== 'Enter' || e.defaultPrevented || e.shiftKey || e.ctrlKey || e.altKey) return;
-		if (!(t instanceof HTMLInputElement) || ['checkbox', 'radio', 'button'].includes(t.type)) return;
+		if (!(el instanceof HTMLInputElement) || ['checkbox', 'radio', 'button'].includes(el.type)) return;
 		e.preventDefault();
 		attempt();
 	}
@@ -224,10 +224,10 @@
 	>
 		<header>
 			<Icon name="database" size={18} /><span id="dls-title" class="title"
-				>{step === 'source' && info?.source ? `Source du Data Lake · « ${table} »` : ds ? `Data Lake Lattis · « ${ds.name} »` : `Partager « ${table} » au Data Lake Lattis`}</span
+				>{step === 'source' && info?.source ? t('remote.dataShare.title.source', { table }) : ds ? t('remote.dataShare.title.dataset', { name: ds.name }) : t('remote.dataShare.title.share', { table })}</span
 			>
-			<HelpLink target={HELP} label="Aide : partager au Data Lake" />
-			<button type="button" class="close" aria-label="Fermer" title="Fermer (Échap)" disabled={busy} onclick={ondone}>✕</button>
+			<HelpLink target={HELP} label={t('remote.dataShare.help')} />
+			<button type="button" class="close" aria-label={t('common.close')} title={t('remote.closeEsc')} disabled={busy} onclick={ondone}>✕</button>
 		</header>
 		{#if step === 'source'}
 			<TableSourceForm
@@ -243,14 +243,14 @@
 				<h2 class="ctitle">{choose?.title}</h2>
 				<p class="lead">
 					{choose?.lead}
-					{#if choose?.why}<button type="button" class="why" title={choose.why} aria-expanded={whyOpen} onclick={() => (whyOpen = !whyOpen)}>Pourquoi pas tout le classeur ?</button>{/if}
+					{#if choose?.why}<button type="button" class="why" title={choose.why} aria-expanded={whyOpen} onclick={() => (whyOpen = !whyOpen)}>{t('remote.dataShare.whyNotWorkbook')}</button>{/if}
 				</p>
 				{#if whyOpen && choose?.why}<p class="sf-hint whytext">{choose.why}</p>{/if}
 				<!-- svelte-ignore a11y_interactive_supports_focus -->
 				<div
 					class="ways"
 					role="radiogroup"
-					aria-label="Façon de partager"
+					aria-label={t('remote.dataShare.ways')}
 					onkeydown={(e) => {
 						if (e.key === 'Enter') {
 							e.preventDefault();
@@ -274,46 +274,48 @@
 			</div>
 			<footer class="sf-foot">
 				<span class="sf-grow"></span>
-				<button type="button" class="sf-btn" onclick={ondone}>Annuler</button>
-				<button type="button" class="sf-btn primary" disabled={!wayOk} onclick={proceed}>{way === 'workbook' ? (info.choice === 'table' ? 'Republier le classeur…' : 'Publier le classeur…') : way === 'shared' ? 'Ajouter au classeur…' : 'Continuer'}</button>
+				<button type="button" class="sf-btn" onclick={ondone}>{t('common.cancel')}</button>
+				<button type="button" class="sf-btn primary" disabled={!wayOk} onclick={proceed}
+				>{way === 'workbook' ? (info.choice === 'table' ? t('remote.dataShare.go.republish') : t('remote.dataShare.go.publish')) : way === 'shared' ? t('remote.dataShare.go.shared') : t('remote.login.continue')}</button
+				>
 			</footer>
 		{:else}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="sf-body" bind:this={body} onkeydown={onKey}>
 				{#if !info}
-					<p class="sf-hint">{error ? '' : 'Lecture du catalogue…'}</p>
+					<p class="sf-hint">{error ? '' : t('remote.dataShare.reading')}</p>
 				{:else if info.reason}
 					<p>{info.reason}</p>
 				{:else}
 					<div class="sf-fields">
-						<label class="sf-label" for="ds-name">Nom</label>
+						<label class="sf-label" for="ds-name">{t('remote.rules.name')}</label>
 						<div class="sf-field">
 							<input id="ds-name" class="sf-input" bind:value={name} disabled={busy} aria-invalid={!!problems.name} autocomplete="off" />
 							{#if problems.name}<p class="sf-error">{problems.name}</p>{/if}
 						</div>
 
-						<span class="sf-label">Dossier</span>
+						<span class="sf-label">{t('remote.dataShare.folder')}</span>
 						<div class="sf-field">
 							<FolderPicker id="ds-folder" catalog={info.catalog} bind:value={folder} disabled={busy} oncreate={createFolder} />
 						</div>
 
-						<span class="sf-label">Colonnes</span>
+						<span class="sf-label">{t('remote.columnPicker.aria')}</span>
 						<div class="sf-field sf-cols">
-							<ColumnPicker label="Colonnes exposées" columns={colTypes} selected={shown} onchange={(s) => (shown = s)} disabled={busy} error={problems.columns ?? ''} />
+							<ColumnPicker label={t('remote.dataShare.columns')} columns={colTypes} selected={shown} onchange={(s) => (shown = s)} disabled={busy} error={problems.columns ?? ''} />
 						</div>
 
-						<span class="sf-label">Audience</span>
+						<span class="sf-label">{t('remote.dataShare.audience')}</span>
 						<div class="sf-field">
 							<AudienceEditor {current} bind:removed bind:adds bind:inherit teams={info.teams ?? []} columns={info.fields ?? []} folder={folderPath(info.catalog, folder)} {table} {values} disabled={busy} />
 						</div>
 
 						{#if ds?.used_by?.length}
-							<span class="sf-label">Utilisée par</span>
+							<span class="sf-label">{t('remote.dataShare.usedBy')}</span>
 							<ul class="sf-used">
 								{#each ds.used_by as u (u.workbook_id)}
 									<li>
 										{u.title}
-										{#if u.last_read}<span class="sf-hint"> · lu par {u.last_read.email} le {fmtDateTime(new Date(u.last_read.at), { dateStyle: 'short', timeStyle: 'short' })}</span>{/if}
+										{#if u.last_read}<span class="sf-hint"> · {t('remote.dataShare.readBy', { email: u.last_read.email, date: fmtDateTime(new Date(u.last_read.at), { dateStyle: 'short', timeStyle: 'short' }) })}</span>{/if}
 									</li>
 								{/each}
 							</ul>
@@ -322,23 +324,23 @@
 
 					<details class="sf-adv" bind:open={adv}>
 						<summary
-							>Options avancées <span class="sf-sum"
-								>{ds ? `donnees.${ds.sql_name}` : sqlName.trim() ? `donnees.${sqlName.trim()}` : 'nom SQL proposé par le serveur'}{description.trim() ? ' · avec description' : ''}</span
+							>{t('remote.dataShare.advanced')} <span class="sf-sum"
+								>{ds ? `donnees.${ds.sql_name}` : sqlName.trim() ? `donnees.${sqlName.trim()}` : t('remote.dataShare.sqlProposed')}{description.trim() ? ` · ${t('remote.dataShare.withDescription')}` : ''}</span
 							></summary
 						>
 						<div class="sf-fields">
-							<label class="sf-label" for="ds-desc">Description <span class="sf-opt">(facultatif)</span></label>
-							<input id="ds-desc" class="sf-input" bind:value={description} disabled={busy} placeholder="Ce que contient la donnée, pour qui la cherche" />
-							<label class="sf-label" for="ds-sql">Nom SQL</label>
+							<label class="sf-label" for="ds-desc">{t('remote.dataShare.description.label')} <span class="sf-opt">{t('remote.rules.optional')}</span></label>
+							<input id="ds-desc" class="sf-input" bind:value={description} disabled={busy} placeholder={t('remote.dataShare.description.placeholder')} />
+							<label class="sf-label" for="ds-sql">{t('remote.dataShare.sqlName.label')}</label>
 							<div class="sf-field">
 								{#if ds}
-									<div class="sf-static"><code class="sf-code">donnees.{ds.sql_name}</code><span class="sf-hint">fixé à la création</span></div>
+									<div class="sf-static"><code class="sf-code">donnees.{ds.sql_name}</code><span class="sf-hint">{t('remote.dataShare.sqlName.fixed')}</span></div>
 								{:else}
 									<div class="sf-prefixed">
 										<span>donnees.</span>
-										<input id="ds-sql" class="sf-input" bind:value={sqlName} disabled={busy} placeholder="proposé par le serveur" spellcheck="false" aria-invalid={!!problems.sql} />
+										<input id="ds-sql" class="sf-input" bind:value={sqlName} disabled={busy} placeholder={t('remote.dataShare.sqlName.placeholder')} spellcheck="false" aria-invalid={!!problems.sql} />
 									</div>
-									<p class={problems.sql ? 'sf-error' : 'sf-hint'}>{problems.sql ?? 'Le nom de la vue pour les requêtes SQL : minuscules, chiffres, _.'}</p>
+									<p class={problems.sql ? 'sf-error' : 'sf-hint'}>{problems.sql ?? t('remote.dataShare.sqlName.help')}</p>
 								{/if}
 							</div>
 						</div>
@@ -347,15 +349,15 @@
 				{#if error}<p class="sf-error" role="alert" style="margin-top: 10px">{error}</p>{/if}
 			</div>
 			<footer class="sf-foot">
-				{#if ds}<button type="button" class="sf-btn danger" onclick={withdraw} disabled={busy} title="La vue disparaît ; les classeurs qui l'utilisent gardent leur dernière copie">Retirer le partage</button>{/if}
+				{#if ds}<button type="button" class="sf-btn danger" onclick={withdraw} disabled={busy} title={t('remote.dataShare.withdraw.tooltip')}>{t('remote.dataShare.withdraw.label')}</button>{/if}
 				{#if tried && firstProblem && info && !info.reason}
 					<p class="sf-error" role="alert">{firstProblem}</p>
 				{:else}
 					<span class="sf-grow"></span>
 				{/if}
-				<button type="button" class="sf-btn" onclick={ondone} disabled={busy}>{info?.reason ? 'Fermer' : 'Annuler'}</button>
+				<button type="button" class="sf-btn" onclick={ondone} disabled={busy}>{info?.reason ? t('common.close') : t('common.cancel')}</button>
 				{#if info && !info.reason}
-					<button type="button" class="sf-btn primary" onclick={attempt} disabled={busy}>{busy ? 'Enregistrement…' : ds ? 'Enregistrer' : 'Partager'}</button>
+					<button type="button" class="sf-btn primary" onclick={attempt} disabled={busy}>{busy ? t('remote.formDialog.saving') : ds ? t('remote.formDialog.save') : t('remote.dataShare.share')}</button>
 				{/if}
 			</footer>
 		{/if}

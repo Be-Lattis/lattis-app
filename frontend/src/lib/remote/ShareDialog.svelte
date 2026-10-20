@@ -15,7 +15,7 @@
 	import { lattis, loadLattis, requestLogin } from './lattis.svelte.js';
 	import TableSourcesList from './TableSourcesList.svelte';
 	import { COLLABORATIVE, FROZEN, blocking, defaultSelection, inferredColumns, modeLabel, remoteTypeLabel } from './share';
-	import { fmtNumber } from '#lib/i18n/index.js';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		/** Republier (classeur figé déjà publié) plutôt que publier. */
@@ -43,7 +43,7 @@
 	let mode = $state(untrack(() => (republish && share ? share.mode : FROZEN)));
 	let busy = $state(false);
 	let error = $state('');
-	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
+	const err = errorText;
 	const servers = $derived(connected(lattis.state.servers));
 	const blocked = $derived(check ? blocking(check, selected) : []);
 	const noTables = $derived(!!check && !(check.tables ?? []).length);
@@ -51,14 +51,14 @@
 	// bulle) avec ce qu'il faut faire ; '' quand il est permis.
 	const why = $derived.by(() => {
 		if (busy) return '';
-		if (!check) return 'Vérification du classeur…';
-		if (noTables) return 'Rien à publier : créez d’abord un tableau (Insertion › Tableau, ou Ctrl+L sur vos données), puis rouvrez cette boîte.';
-		if (!selected.length) return 'Cochez au moins un tableau à publier.';
-		if (blocked.length) return `${blocked.length} point(s) à régler avant de publier (ci-dessus).`;
+		if (!check) return t('remote.shareDialog.checking');
+		if (noTables) return t('remote.shareDialog.why.noTables');
+		if (!selected.length) return t('remote.share.blocking.none');
+		if (blocked.length) return t('remote.shareDialog.why.blocked', { n: blocked.length });
 		if (republish) return '';
-		if (!server) return 'Choisissez un serveur, ou connectez-vous à un serveur (Gérer les serveurs…).';
-		if (!name.trim()) return 'Donnez un titre au classeur publié.';
-		if (canCreate === false) return 'Votre compte ne peut pas créer de classeur sur ce serveur.';
+		if (!server) return t('remote.shareDialog.why.server');
+		if (!name.trim()) return t('remote.shareDialog.why.title');
+		if (canCreate === false) return t('remote.shareDialog.why.cannotCreate');
 		return '';
 	});
 	// Droit de créer un classeur sur le serveur choisi (lattis.login_summary) :
@@ -137,7 +137,7 @@
 		class="dialog"
 		role="dialog"
 		aria-modal="true"
-		aria-label={republish ? 'Republier le classeur' : 'Publier sur un serveur'}
+		aria-label={republish ? t('remote.shareDialog.republishTitle') : t('remote.shareDialog.publishTitle')}
 		tabindex="-1"
 		use:modal
 		onkeydown={(e) => {
@@ -145,85 +145,85 @@
 			if (e.key === 'Escape' && !busy) ondone(null);
 		}}
 	>
-		<header><Icon name="database" size={18} /><span>{republish ? 'Republier le classeur' : 'Publier sur un serveur'}</span></header>
+		<header><Icon name="database" size={18} /><span>{republish ? t('remote.shareDialog.republishTitle') : t('remote.shareDialog.publishTitle')}</span></header>
 		<div class="body">
 			{#if republish && share}
 				<p class="muted">
-					« {share.title} » sur {share.serverName || hostOf(share.server)} · {modeLabel(share.mode)} · version {share.version} : la nouvelle version remplacera la version publiée d’un coup.
+					{t('remote.shareDialog.republishHelp', { title: share.title, server: share.serverName || hostOf(share.server), mode: modeLabel(share.mode), version: String(share.version) })}
 				</p>
 			{:else}
 				<div class="grid">
-					<label for="share-server">Serveur</label>
+					<label for="share-server">{t('remote.serverPicker.aria')}</label>
 					<ServerPicker id="share-server" bind:value={server} {servers} disabled={busy}>
-						{#snippet none()}<span class="grow"><button onclick={login} disabled={busy}>Se connecter à un serveur…</button></span>{/snippet}
+						{#snippet none()}<span class="grow"><button onclick={login} disabled={busy}>{t('remote.account.connectServer')}</button></span>{/snippet}
 					</ServerPicker>
-					{#if canCreate === false}<p class="error span" role="alert">Votre compte ne peut pas créer de classeur sur ce serveur : demandez à son propriétaire le rôle « créateur de classeurs ».</p>{/if}
-					<label for="share-title">Titre</label>
+					{#if canCreate === false}<p class="error span" role="alert">{t('remote.shareDialog.cannotCreate')}</p>{/if}
+					<label for="share-title">{t('remote.formDialog.look.title')}</label>
 					<input id="share-title" bind:value={name} disabled={busy} />
-					<span>Mode</span>
+					<span>{t('remote.shareDialog.mode')}</span>
 					<div class="modes">
-						<label><input type="radio" bind:group={mode} value={FROZEN} disabled={busy} /> <strong>Figé</strong> : lecture seule pour tous ; vous republiez les nouvelles versions</label>
-						<label><input type="radio" bind:group={mode} value={COLLABORATIVE} disabled={busy} /> <strong>Collaboratif</strong> : chacun modifie selon ses droits, les changements des autres arrivent en direct</label>
+						<label><input type="radio" bind:group={mode} value={FROZEN} disabled={busy} /> <strong>{modeLabel(FROZEN)}</strong>{t('remote.shareDialog.frozenHelp')}</label>
+						<label><input type="radio" bind:group={mode} value={COLLABORATIVE} disabled={busy} /> <strong>{modeLabel(COLLABORATIVE)}</strong>{t('remote.shareDialog.collaborativeHelp')}</label>
 					</div>
 				</div>
 			{/if}
 
-			<h3>Tableaux</h3>
+			<h3>{t('remote.shareDialog.tables')}</h3>
 			{#if !check}
-				<p class="muted">Vérification du classeur…</p>
+				<p class="muted">{t('remote.shareDialog.checking')}</p>
 			{:else if noTables}
 				<p class="notice">
 					<Icon name="table" size={16} /><span
-						>Ce classeur n’a aucun tableau à publier. Seuls les tableaux se publient : fermez cette boîte, sélectionnez vos données puis <strong>Insertion › Tableau</strong>
-						(ou <kbd>Ctrl+L</kbd>), et revenez publier.</span
+						>{t('remote.shareDialog.noTables.before')} <strong>{t('remote.shareDialog.noTables.menu')}</strong>
+						{t('remote.shareDialog.noTables.or')} <kbd>Ctrl+L</kbd>{t('remote.shareDialog.noTables.after')}</span
 					>
 				</p>
 			{:else}
 				<ul class="tables">
-					{#each check.tables ?? [] as t (t.id)}
-						{@const on = selected.includes(t.id)}
-						{@const frozen = inferredColumns(t)}
+					{#each check.tables ?? [] as tb (tb.id)}
+						{@const on = selected.includes(tb.id)}
+						{@const frozen = inferredColumns(tb)}
 						<li class:off={!on}>
 							<label class="tname">
-								<input type="checkbox" checked={on} disabled={busy} onchange={(e) => toggle(t.id, (e.currentTarget as HTMLInputElement).checked)} />
-								<strong>{t.name}</strong>
-								<span class="muted">{t.sheet} · {fmtNumber(t.rows)} ligne(s)</span>
-								{#if !on}<span class="private" title="Tableau privé : reste sur ce poste, jamais envoyé au serveur"><Icon name="local" size={12} /> privé</span>{/if}
+								<input type="checkbox" checked={on} disabled={busy} onchange={(e) => toggle(tb.id, (e.currentTarget as HTMLInputElement).checked)} />
+								<strong>{tb.name}</strong>
+								<span class="muted">{tb.sheet} · {t('remote.shareDialog.rows', { n: tb.rows })}</span>
+								{#if !on}<span class="private" title={t('remote.shareDialog.private.tooltip')}><Icon name="local" size={12} /> {t('remote.shareDialog.private.label')}</span>{/if}
 							</label>
 							{#if on}
-								{#each t.problems ?? [] as p (p)}<p class="problem">{p} — renommez-le dans le classeur</p>{/each}
-								{#if frozen.length}<p class="muted">Types figés à la publication : {frozen.join(', ')}</p>{/if}
-								{#each (t.columns ?? []).filter((c) => c.invalid) as c (c.index)}
+								{#each tb.problems ?? [] as p (p)}<p class="problem">{t('remote.shareDialog.rename', { problem: p })}</p>{/each}
+								{#if frozen.length}<p class="muted">{t('remote.shareDialog.frozenTypes', { columns: frozen.join(', ') })}</p>{/if}
+								{#each (tb.columns ?? []).filter((c) => c.invalid) as c (c.index)}
 									<p class="problem">
-										Colonne « {c.name} » ({remoteTypeLabel(c.remote)}) : {c.invalid} saisie(s) invalide(s)
+										{t('remote.shareDialog.invalid', { name: c.name, type: remoteTypeLabel(c.remote), n: c.invalid })}
 										{#if c.samples?.length}(« {c.samples.join(' », « ')} »){/if}
-										— corrigez-les, ou
-										<button class="link" disabled={busy} onclick={() => acceptText(t.name, c.index)}>acceptez la colonne comme texte</button>
+										{t('remote.shareDialog.fixOr')}
+										<button class="link" disabled={busy} onclick={() => acceptText(tb.name, c.index)}>{t('remote.shareDialog.acceptText')}</button>
 									</p>
 								{/each}
-								{#if (t.columns ?? []).some((c) => c.computed)}<p class="muted">Les colonnes calculées sont publiées avec leur formule, pas leurs valeurs.</p>{/if}
-								{#if t.query && mode === COLLABORATIVE}
-									{@const toLake = lake.includes(t.name)}
+								{#if (tb.columns ?? []).some((c) => c.computed)}<p class="muted">{t('remote.shareDialog.computed')}</p>{/if}
+								{#if tb.query && mode === COLLABORATIVE}
+									{@const toLake = lake.includes(tb.name)}
 									<fieldset class="refresh">
-										<legend>Chargé par la requête « {t.query} » : actualisation</legend>
-										<label><input type="radio" name="refresh-{t.id}" checked={!toLake} disabled={busy} onchange={() => (lake = lake.filter((x) => x !== t.name))} /> Depuis ce poste, avec vos connexions : vos actualisations remplacent les lignes pour tous les membres</label>
-										<label><input type="radio" name="refresh-{t.id}" checked={toLake} disabled={busy} onchange={() => (lake = [...lake, t.name])} /> Source du Data Lake : le tableau est aussi envoyé au Data Lake du serveur, que d'autres classeurs peuvent lier (réglée juste après la publication)</label>
+										<legend>{t('remote.shareDialog.refresh.legend', { query: tb.query })}</legend>
+										<label><input type="radio" name="refresh-{tb.id}" checked={!toLake} disabled={busy} onchange={() => (lake = lake.filter((x) => x !== tb.name))} /> {t('remote.shareDialog.refresh.local')}</label>
+										<label><input type="radio" name="refresh-{tb.id}" checked={toLake} disabled={busy} onchange={() => (lake = [...lake, tb.name])} /> {t('remote.shareDialog.refresh.lake')}</label>
 									</fieldset>
 								{/if}
 							{/if}
 						</li>
 					{/each}
 				</ul>
-				<p class="muted">Les tableaux non cochés restent privés : sur ce poste seulement.</p>
+				<p class="muted">{t('remote.shareDialog.uncheckedPrivate')}</p>
 			{/if}
 			<TableSourcesList />
 			{#if error}<p class="error" role="alert">{error}</p>{/if}
 		</div>
 		<footer>
 			<span class="grow why" class:warn={noTables} id="share-why">{why}</span>
-			<button onclick={() => ondone(null)} disabled={busy}>Annuler</button>
+			<button onclick={() => ondone(null)} disabled={busy}>{t('common.cancel')}</button>
 			<button class="primary" onclick={publish} disabled={busy || !!why} title={why || undefined} aria-describedby={why ? 'share-why' : undefined}>
-				{busy ? 'Publication…' : republish ? 'Republier' : 'Publier'}
+				{busy ? t('remote.shareDialog.publishing') : republish ? t('remote.shareDialog.republish') : t('remote.shareDialog.publish')}
 			</button>
 		</footer>
 	</div>
