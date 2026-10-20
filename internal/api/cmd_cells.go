@@ -306,6 +306,25 @@ end`,
 			},
 		},
 		&Command{
+			Name:    "cells.to_values",
+			Label:   "Convertir en valeurs",
+			Summary: "Remplace les formules d'une plage par leurs valeurs : cellules libres avec formule, et colonnes calculées (en entier) des tableaux que la plage touche (comme columns.to_values). Les formules qui déversent un tableau dynamique sont gardées.",
+			Params:  []Param{pRow, pCol, pRow2, pCol2, pSheet},
+			Write:   true,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				r0, c0, r1, c1, err := c.rect()
+				if err != nil {
+					return nil, err
+				}
+				d, _ := c.Doc()
+				return nil, d.RangeToValues(c, s.ID, r0, c0, r1, c1)
+			},
+		},
+		&Command{
 			Name:    "cells.style",
 			Label:   "Mise en forme",
 			Summary: "Met en forme une plage de cellules.",

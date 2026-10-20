@@ -9,6 +9,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 ### Nouveautés
 
 - Édition web sur téléphone : la feuille défile au doigt dans les deux sens, avec élan ; un appui choisit la cellule, un second appui ouvre la saisie, un appui long le menu contextuel, deux doigts zooment. Le ruban est réduit et s'ouvre par-dessus la feuille quand on touche un onglet ; ses onglets, ses commandes et les onglets des feuilles défilent au doigt. Onglets des feuilles et barre d'état restent en bas de l'écran (barres du navigateur, clavier à l'écran) et les menus tiennent dans l'écran.
+- Convertir en valeurs : une colonne calculée devient une colonne ordinaire qui garde ses valeurs actuelles, au type de ces valeurs (clic droit sur la colonne, ou Formules › Convertir en valeurs, aussi pour plusieurs colonnes ou des cellules libres avec formule). Elle garde son nom : les formules qui la citent continuent de la lire. Une seule annulation (Ctrl+Z) ; pas encore possible dans un tableau partagé d'un classeur collaboratif.
 
 ### Changements
 

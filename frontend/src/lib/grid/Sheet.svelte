@@ -577,6 +577,10 @@
 		deleteTables?(tables: SheetTable[]): Promise<unknown>;
 		/** Convertir en plage : le tableau devient des cellules libres, au même endroit. */
 		convertToRange?(table: SheetTable): Promise<unknown>;
+		/** Convertir en valeurs : les colonnes calculées cols deviennent des colonnes saisies (valeurs actuelles). */
+		columnsToValues?(table: SheetTable, cols: number[]): Promise<unknown>;
+		/** Convertir en valeurs : formules de la plage (cellules libres, colonnes calculées touchées). */
+		rangeToValues?(r0: number, c0: number, r1: number, c1: number): Promise<unknown>;
 		/** « Suivre l'année » (onglet à choix, §6.5) : le tableau suit le choix de l'onglet, ou plus. */
 		setFollow?(table: SheetTable, follow: boolean): Promise<unknown>;
 		/**
@@ -6352,6 +6356,46 @@
 		ttcDlg = { r0, r1, col: c0 };
 	}
 
+	/** Formules › Convertir en valeurs : les formules de la sélection (colonnes calculées touchées, cellules libres). */
+	export function toValuesActive() {
+		if (!source.rangeToValues) return;
+		if (locked) {
+			say(locked);
+			return;
+		}
+		const { r0, r1, c0, c1 } = selection();
+		const run = source.rangeToValues;
+		closeMenus();
+		void menuAction(() => run(r0, c0, r1, c1));
+	}
+
+	/**
+	 * Colonnes calculées du tableau que « Convertir en valeurs » prend au clic
+	 * droit sur la colonne i : celles de la sélection quand elle la contient,
+	 * sinon la seule colonne i.
+	 */
+	function valueColumns(e: Entry, i: number): number[] {
+		const s = selection();
+		const c = e.t.col + i;
+		const inSel = c >= s.c0 && c <= s.c1 && s.r0 <= e.last && s.r1 >= e.t.row;
+		const lo = inSel ? Math.max(s.c0, e.t.col) - e.t.col : i;
+		const hi = inSel ? Math.min(s.c1, e.lastCol) - e.t.col : i;
+		const out: number[] = [];
+		for (let k = lo; k <= hi; k++) if (e.t.columns[k]?.formula) out.push(k);
+		return out;
+	}
+
+	/** La sélection contient-elle une formule à convertir en valeurs (cellule libre, colonne calculée) ? */
+	function formulasInSelection(): boolean {
+		const s = selection();
+		for (const [k, raw] of cells) {
+			if (!raw.startsWith('=')) continue;
+			const [r, c] = k.split(',').map(Number);
+			if (r >= s.r0 && r <= s.r1 && c >= s.c0 && c <= s.c1) return true;
+		}
+		return entries.some((e) => s.r0 <= e.last && s.r1 >= e.t.row && e.t.columns.some((col, i) => !!col.formula && e.t.col + i >= s.c0 && e.t.col + i <= s.c1));
+	}
+
 	/** Supprime les doublons du tableau de la cellule active (ruban Données). */
 	let dedupDlg = $state<{ e: Entry; on: boolean[]; count: number | null; error: string } | null>(null);
 
@@ -11034,6 +11078,7 @@
 			{@const toNote = rowItems && !!source.rowToNote && m.n === m.e.t.rows - 1}
 			{@const promote = cols && !!source.promoteHeader && m.e.t.rows > 0 && !m.e.t.query && !m.e.t.twoLevel}
 			{@const promoteHere = promote && rowItems && m.n === 0 && allGenerated(m.e.t.columns.map((c) => c.name))}
+			{@const toValues = cols && source.columnsToValues ? valueColumns(m.e, m.i) : []}
 			{@const refresh = !!m.e.t.query && !!source.refreshTable}
 			{@const share = cols && !!onsharedata && !m.e.t.query}
 			{@const addShared = cols && !!onaddshared && m.e.t.shared === 'private' && !m.e.t.query}
@@ -11072,8 +11117,17 @@
 					     suppression ; tri et filtre ; mise en forme ; puis ce qui est propre à
 					     Lattis : la colonne (type, clé, nom), le tableau (sous-menu), l'assistant. -->
 					{#if !m.rowOnly && !m.header}{@render refMenuItems()}{/if}
-					<!-- Actions propres à la ligne : en tête, avant les génériques (demande de Louis). -->
-					{#if !m.rowOnly && (promoteHere || toNote)}
+					<!-- Actions propres à la ligne ou à la colonne : en tête, avant les génériques (demande de Louis). -->
+					{#if !m.rowOnly && (promoteHere || toNote || toValues.length)}
+						{#if toValues.length}
+							<!-- Colonne calculée (ou colonnes calculées de la sélection) : ses valeurs, sans la formule. -->
+							<button
+								title={toValues.length > 1
+									? `Les ${toValues.length} colonnes calculées de la sélection deviennent des colonnes saisies : elles gardent leurs valeurs actuelles, sans formule (Ctrl+Z pour annuler)`
+									: 'La colonne calculée devient une colonne saisie : elle garde ses valeurs actuelles, sans formule (Ctrl+Z pour annuler)'}
+								onclick={() => menuAction(() => source.columnsToValues!(m.e.t, toValues))}>Convertir en valeurs</button
+							>
+						{/if}
 						{#if promoteHere}
 							<!-- Tableau sans en-têtes (que des « Colonne n ») : sur sa 1re ligne. -->
 							<button title="La 1re ligne de données donne les noms des colonnes et devient l'en-tête, à sa place ; l'en-tête actuel disparaît (Ctrl+Z pour annuler)" onclick={() => menuAction(() => source.promoteHeader!(m.e.t))}>Utiliser la première ligne comme en-têtes</button>
@@ -11300,6 +11354,7 @@
 					{@const under = titleTableAt(active.row, active.col)}
 					{@const asHeader = !!under}
 					{@const spilled = source.convertSpill ? spillUnder(active.row, active.col) : null}
+					{@const toValues = !!source.rangeToValues && !spilled && formulasInSelection()}
 					{#if join || asTable || asHeader}
 						{@const at = { row: active.row, col: active.col }}
 						{#if asHeader && under}
@@ -11321,7 +11376,10 @@
 							<button data-shed="1" title="Un tableau ordinaire garde les valeurs actuelles du résultat déversé, sans lien avec la formule" onclick={() => menuAction(() => source.convertSpill!(at.row, at.col, false))}>Convertir en tableau (valeurs)</button>
 						{/if}
 					{/if}
-					{#if join || asTable || asHeader || spilled}<hr />{/if}
+					{#if toValues}
+						<button data-shed="1" title="Les formules de la sélection sont remplacées par leurs valeurs actuelles (Ctrl+Z pour annuler)" onclick={() => toValuesActive()}>Convertir en valeurs</button>
+					{/if}
+					{#if join || asTable || asHeader || spilled || toValues}<hr />{/if}
 				{/if}
 				{#if below}
 					<!-- Ligne juste au-dessus de l'en-tête d'un tableau : ses cases peuvent devenir les groupes d'en-têtes. -->
@@ -11943,6 +12001,18 @@
 						{/if}
 						{#if fcol.errors}<p class="menu-note error">{fcol.errors} valeur{fcol.errors > 1 ? 's' : ''} hors type dans la colonne</p>{/if}
 					{/if}
+				{:else if fcol?.formula && source.columnsToValues}
+					<!-- Colonne calculée : pas de type à choisir ; elle peut devenir une colonne de valeurs. -->
+					<hr />
+					<div class="menu-title">Colonne calculée</div>
+					<button
+						class="sort"
+						title="La formule est retirée : la colonne garde ses valeurs actuelles, au type de ces valeurs (Ctrl+Z pour annuler)"
+						onclick={() => {
+							filterDlg = null;
+							menuAction(() => source.columnsToValues!(d.e.t, [d.i]));
+						}}>Convertir en valeurs</button
+					>
 				{/if}
 				{#if source.setKey && !fcol?.formula}
 					<hr />

@@ -354,6 +354,13 @@ export function ColumnOrder(table: string, i: number): $CancellablePromise<$mode
 }
 
 /**
+ * ColumnsToValues convertit des colonnes calculées en colonnes de valeurs.
+ */
+export function ColumnsToValues(table: string, cols: number[] | null): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1285481290, table, cols);
+}
+
+/**
  * ConnectionTables liste les tables d'une connexion du classeur
  * (PostgreSQL, MySQL, SQL Server ; vide pour une connexion Web).
  */
@@ -1501,6 +1508,14 @@ export function QuitApp(): $CancellablePromise<void> {
  */
 export function RangeStats(sheet: number, table: number, first: number, count: number, cols: number[] | null): $CancellablePromise<grid$0.Stats> {
     return $Call.ByID(179064470, sheet, table, first, count, cols);
+}
+
+/**
+ * RangeToValues convertit en valeurs les colonnes calculées et les cellules
+ * libres avec formule de la plage.
+ */
+export function RangeToValues(sheet: number, r0: number, c0: number, r1: number, c1: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3762112476, sheet, r0, c0, r1, c1);
 }
 
 /**

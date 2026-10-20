@@ -668,6 +668,14 @@ tables.sort_custom("Commandes", "Client", nil, "Jours", true) -- liste nommée, 
 				d, _ := c.Doc()
 				return nil, d.SetType(c, t.Name, i, typ)
 			}),
+		columnCmd(&Command{Name: "columns.to_values", Label: "Convertir en valeurs", Summary: "Fait d'une colonne calculée une colonne saisie qui garde ses valeurs actuelles, au type deviné sur ces valeurs. Elle garde son nom (les formules qui la citent la lisent toujours) mais ne suit plus les sources de sa formule. Refusé dans un tableau partagé d'un classeur collaboratif.", Write: true,
+			Example: `columns.insert("Commandes", "TTC")
+cells.set(2, 5, "=[@Montant]*1,2") -- colonne calculée
+columns.to_values("Commandes", "TTC")`},
+			func(c *Call, t tableRef, i int) (any, error) {
+				d, _ := c.Doc()
+				return nil, d.ColumnsToValues(c, t.Name, []int{i})
+			}),
 		columnCmd(&Command{Name: "columns.type_preview", Summary: "Compte les valeurs d'une colonne qui ne se convertiraient pas au type donné.",
 			Params: []Param{{Name: "type", Type: String, Desc: "integer, decimal, text, boolean ou date"}}},
 			func(c *Call, t tableRef, i int) (any, error) {

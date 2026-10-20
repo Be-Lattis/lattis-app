@@ -29,6 +29,10 @@ Une adresse tapée par habitude (`=C14*2`, `=SOMME(C14:C16)`, `$C$14`, `Feuille2
 
 Une formule tapée dans une colonne de tableau s'applique à toutes ses lignes : la colonne devient **calculée**. `[Colonne]` y désigne la valeur de la même ligne. Les agrégats acceptent une expression sur les colonnes d'un tableau, calculée ligne à ligne : `=SOMME(Ventes[Prix]*Ventes[Qté])`.
 
+### Convertir en valeurs
+
+Clic droit sur une colonne calculée › **Convertir en valeurs** (ou Formules › Convertir en valeurs) : la formule est retirée et la colonne devient une colonne ordinaire qui garde ses valeurs actuelles, au type de ces valeurs (entier, décimal, date, booléen, sinon texte ; une erreur comme `#DIV/0!` reste signalée). Elle garde son nom : les formules qui la citent continuent de la lire, mais elle ne suit plus les colonnes que lisait sa formule. Plusieurs colonnes calculées sélectionnées se convertissent ensemble ; sur des cellules libres, la commande remplace leurs formules par leurs valeurs (un résultat déversé garde sa formule). Ctrl+Z rend les formules. Refusé sous une structure protégée, et pour l'instant dans un tableau partagé d'un classeur collaboratif.
+
 ## Résultats qui se déversent
 
 Certaines fonctions renvoient plusieurs valeurs ([FILTRE](fonction:FILTRE), [TRIER](fonction:TRIER), [UNIQUE](fonction:UNIQUE), [SEQUENCE](fonction:SEQUENCE), [FRACTIONNER.TEXTE](fonction:FRACTIONNER.TEXTE), [REQUETE](fonction:REQUETE)…) : le résultat se déverse sur les cellules voisines, comme les tableaux dynamiques d'Excel. Une colonne entière seule dans une cellule libre (`=Ventes[Prix]`) se déverse de même, dans l'ordre des lignes du tableau. Si la place est prise, la formule affiche `#DEVERSEMENT!`. Dans un agrégat, elles fournissent leurs valeurs : `=NBVAL(FRACTIONNER.TEXTE(Cell[A1]; ","))` compte les morceaux d'un texte ; les fonctions qui parcourent une colonne (NB.SI, GRANDE.VALEUR, EQUIV…) ne les lisent pas (`#VALEUR!`). UNIQUE, TRIER, PRENDRE et EXCLURE lisent une colonne (`=UNIQUE(Suividesnids[NID suivi])`), un tableau entier, une plage de cellules (`Cell[A1:A20]`) ou un autre tableau dynamique ; FILTRE et TRIERPAR, un tableau ou une colonne.

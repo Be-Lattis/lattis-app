@@ -108,6 +108,7 @@ Toutes passent par `Model.Do` ou `Editor` (`Bus.Append`), donc par le relevé. C
 | Rechercher / remplacer | `find.go` `Replace` | set | remplacement |
 | Conversion de type | `convert.go` `SetType` (`rebuildStmts`, corbeille de conversion) | meta column.retype | changement de type |
 | Texte en colonnes | `textcols.go` `TextToColumns` | set, meta column.add, retype | texte en colonnes |
+| Convertir en valeurs (colonne calculée, cellules libres) | `tovalues.go` `ColumnsToValues`, `RangeToValues` | — : refusé sur un tableau publié (`ErrSharedValues`) ; ailleurs, formule retirée, retype, set | (tableau publié : refus, `TestColumnsToValuesShared`) |
 | Ligne d'en-tête promue | `unnamed.go` `PromoteHeader` (et `reheadYoung` à la saisie) | delete + renommages + déplacement du tableau d'une ligne, types repris (mise en page) | |
 | Supprimer un tableau, une feuille | `tables.go` `DeleteTables`, `sheets.go` `DeleteSheet` | meta table.drop ; annulation : table.create + insert | suppression du tableau |
 | Convertir en plage | `torange.go` `ConvertToRange` | meta table.drop | conversion en plage |

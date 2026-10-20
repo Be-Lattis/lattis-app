@@ -1683,6 +1683,8 @@
 		}),
 		deleteTables: (ts) => DocumentService.DeleteTables(ts.map((t) => t.name)).then(reload),
 		convertToRange: (t) => DocumentService.ConvertToRange(t.name).then(reload),
+		columnsToValues: (t, cols) => DocumentService.ColumnsToValues(t.name, cols).then(reload),
+		rangeToValues: (r0, c0, r1, c1) => DocumentService.RangeToValues(sheetId, r0, c0, r1, c1).then(reload),
 		// « Suivre l'année » (lot 4) : le message dit ce qui a été fait (colonne ajoutée, retirée ou gardée).
 		setFollow: async (t, on) => {
 			const st = await DocumentService.SetTableFollow(t.name, on);
@@ -2209,6 +2211,7 @@
 		ondoc={docCommand}
 		docState={activeDoc && docFmt ? docFmt : undefined}
 		onrecalc={mode === 'doc' ? () => DocumentService.Recalc().then(reload).catch((e) => (notice = err(e))) : undefined}
+		ontovalues={mode === 'doc' ? () => sheet?.toValuesActive() : undefined}
 		gridlines={!layout?.sheets?.find((s) => s.id === sheetId)?.noGrid}
 		ongridlines={mode === 'doc' ? (show) => DocumentService.SetGridlines(sheetId, show).then(reload).catch((e) => (notice = err(e))) : undefined}
 		headings={!!layout?.sheets?.find((s) => s.id === sheetId)?.headings}

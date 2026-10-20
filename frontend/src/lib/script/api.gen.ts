@@ -152,6 +152,14 @@ export const apiReference: RefEntry[] = [
 		args: [1, 5]
 	},
 	{
+		name: "cells.to_values",
+		category: "cells",
+		signature: "cells.to_values(row, col, [row2], [col2], [sheet])",
+		summary: "Remplace les formules d'une plage par leurs valeurs : cellules libres avec formule, et colonnes calculées (en entier) des tableaux que la plage touche (comme columns.to_values). Les formules qui déversent un tableau dynamique sont gardées.",
+		details: "Paramètres — row : ligne de la feuille, à partir de 1 ; col : colonne de la feuille, à partir de 1 ; row2 : dernière ligne de la plage (absente : row) ; col2 : dernière colonne de la plage (absente : col) ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : cells.to_values{row = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		args: [1, 5]
+	},
+	{
 		name: "cells.unmerge",
 		category: "cells",
 		signature: "cells.unmerge(row, col, [row2], [col2], [sheet])",
@@ -260,6 +268,15 @@ export const apiReference: RefEntry[] = [
 		signature: "columns.sort_order(table, column) → {list, values = {...}, desc, applied} : applied si c'est le dernier tri du tableau",
 		summary: "Rend l'ordre personnalisé enregistré d'une colonne (nil : aucun).",
 		details: "Paramètres — table : nom du tableau ; column : colonne (nom ou rang à partir de 1). Arguments dans l'ordre, ou une table d'arguments nommés : columns.sort_order{table = …}.",
+		args: [1, 2]
+	},
+	{
+		name: "columns.to_values",
+		category: "columns",
+		signature: "columns.to_values(table, column)",
+		summary: "Fait d'une colonne calculée une colonne saisie qui garde ses valeurs actuelles, au type deviné sur ces valeurs. Elle garde son nom (les formules qui la citent la lisent toujours) mais ne suit plus les sources de sa formule. Refusé dans un tableau partagé d'un classeur collaboratif.",
+		details: "Paramètres — table : nom du tableau ; column : colonne (nom ou rang à partir de 1). Arguments dans l'ordre, ou une table d'arguments nommés : columns.to_values{table = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "columns.insert(\"Commandes\", \"TTC\")\ncells.set(2, 5, \"=[@Montant]*1,2\") -- colonne calculée\ncolumns.to_values(\"Commandes\", \"TTC\")",
 		args: [1, 2]
 	},
 	{

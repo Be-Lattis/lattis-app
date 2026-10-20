@@ -1262,6 +1262,17 @@ func (s *DocumentService) ConvertToRange(ctx context.Context, name string) (DocS
 	return s.act(ctx, func(d *doc.Document) error { return d.ConvertToRange(ctx, name) })
 }
 
+// ColumnsToValues convertit des colonnes calculées en colonnes de valeurs.
+func (s *DocumentService) ColumnsToValues(ctx context.Context, table string, cols []int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.ColumnsToValues(ctx, table, cols) })
+}
+
+// RangeToValues convertit en valeurs les colonnes calculées et les cellules
+// libres avec formule de la plage.
+func (s *DocumentService) RangeToValues(ctx context.Context, sheet int64, r0, c0, r1, c1 int) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.RangeToValues(ctx, sheet, r0, c0, r1, c1) })
+}
+
 // FormatAsTable refait un tableau de la plage qui contient la cellule.
 func (s *DocumentService) FormatAsTable(ctx context.Context, sheet int64, row, col int) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error {
