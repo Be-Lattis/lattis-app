@@ -72,7 +72,7 @@ Vista › Tema elige el color de las tablas del libro: el de las tablas normales
 - **Personalizar…**: dos colores a su elección, con una vista previa inmediata en la cuadrícula, y luego los demás colores de la paleta (Énfasis 3 a 6, Texto 2, Fondo 2), derivados de los dos primeros si no los toca; **Agregar a mis temas** lo conserva en la lista para sus otros libros (se puede quitar desde la misma ventana).
 - Cada tema tiene sus **colores de paleta** (consulte Colores de fuente y de relleno): las celdas coloreadas con un color del tema cambian con él. Un libro sin tema propio conserva el tema predeterminado en cuanto se usa en él un color del tema, para que el color siga siendo el mismo para un compañero.
 - El tema se guarda con el libro (`Ctrl+Z` lo deshace): un compañero lo abre con los mismos colores, incluso sin ese tema. Un libro compartido en un Servidor Lattis lo publica con su diseño.
-- Un libro que no ha elegido tema (libro nuevo, o anterior a los temas) toma el **tema predeterminado** de Archivo › Configuración › Presentación.
+- Un libro que no ha elegido tema (libro nuevo, o anterior a los temas) toma el **tema predeterminado** de Archivo › Configuración › Vista.
 
 Su organización puede ofrecer sus propios temas, ofrecer solo esos o imponer el tema predeterminado. Los colores del tema también se exponen como variables CSS (`--lattis-table-head`, `--lattis-source-head`…).
 

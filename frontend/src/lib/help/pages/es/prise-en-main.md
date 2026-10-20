@@ -88,7 +88,7 @@ Las pestañas van juntas cuando al menos dos tercios de sus columnas se encuentr
 1. **Pestañas**: las tablas que combinar, que hay que activar, en el orden de las pestañas;
 2. **Columna de categoría**: su nombre, rellenado a partir de los nombres de las pestañas (Mes, Año, Trimestre, Ciudad, la parte común como «Lote», si no Categoría) y siempre editable, su tipo, y el valor tomado de cada pestaña, que se puede corregir si hace falta. Va en primer lugar en la tabla, con una lista desplegable de sus valores;
 3. **Columnas**: la correspondencia (✓ presente, ∅ ausente, «Importe € → Importe» emparejada) y el tipo final; se señala una columna que pasa a texto;
-4. **Después**: el nombre de la tabla y de la hoja nueva, y lo que pasa con las pestañas antiguas: **eliminadas** (de forma predeterminada) o **conservadas ocultas**, con sus tablas renombradas `Enero_antiguo`;
+4. **Después**: el nombre de la tabla y de la hoja nueva, y lo que pasa con las pestañas antiguas: **eliminadas** (de forma predeterminada) o **conservadas ocultas**, con sus tablas renombradas `Enero_ancien`;
 5. **Vista previa**: las primeras filas y el número total de filas, y luego el resumen de las fórmulas que citaban las pestañas antiguas: «14 fórmulas trasladadas, 2 que corregir a mano», con la lista (hoja, celda, fórmula antes → después).
 
 **Combinar** lo hace todo en un único paso: `Ctrl+Z` devuelve las pestañas de origen. El formato y las entradas con error siguen a sus filas. La **clave** se conserva si ningún valor se repite de una pestaña a otra; si no, la tabla combinada no tiene clave (los valores se quedan), y Lattis lo indica con un ejemplo: «Sin clave: F-001 está en enero y en febrero».
