@@ -56,6 +56,9 @@ func (s *UpdateService) ServiceStartup(ctx context.Context, _ application.Servic
 	return nil
 }
 
+// Loaded : l'interface a fini de charger, la recherche part tout de suite.
+func (s *UpdateService) Loaded() { s.u.Loaded() }
+
 // Status : état de la mise à jour, textes dans la langue de la session.
 func (s *UpdateService) Status() update.Status {
 	return s.u.Status(msg.Current())

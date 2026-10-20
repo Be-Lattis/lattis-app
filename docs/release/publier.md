@@ -97,7 +97,7 @@ Produit par `scripts/release-manifest.sh` (utilisable en local : `scripts/releas
 
 ## Mise à jour automatique
 
-L'application de bureau (`internal/update`) lit la liste des versions par l'API GitHub (`https://api.github.com/repos/Be-Lattis/lattis-app/releases`), 30 s après son démarrage puis au plus toutes les 12 heures, et propose la plus récente qui soit **strictement plus récente** que la sienne : une version bêta (`vX.Y.Z-beta`, `vX.Y.Z-beta.N`, tout tag avec un tiret) reçoit aussi les pré-versions, une version publiée seulement les versions publiées. Brouillons et compilations `dev` : rien. Au clic de l'utilisateur dans la barre d'état, elle télécharge le fichier qui correspond à son installation :
+L'application de bureau (`internal/update`) lit la liste des versions par l'API GitHub (`https://api.github.com/repos/Be-Lattis/lattis-app/releases`), dès que son interface est chargée (au plus tard 30 s après le démarrage) puis au plus toutes les 12 heures, et propose la plus récente qui soit **strictement plus récente** que la sienne : une version bêta (`vX.Y.Z-beta`, `vX.Y.Z-beta.N`, tout tag avec un tiret) reçoit aussi les pré-versions, une version publiée seulement les versions publiées. Brouillons et compilations `dev` : rien. Au clic de l'utilisateur dans la barre d'état, elle télécharge le fichier qui correspond à son installation :
 
 | Installation détectée | Fichier téléchargé | Application, à la fermeture de Lattis |
 |---|---|---|

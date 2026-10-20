@@ -12,6 +12,8 @@
 	const view = $derived(updateView(status));
 
 	onMount(() => {
+		// Interface chargée : la recherche d'une nouvelle version part tout de suite.
+		UpdateService.Loaded().catch(() => {});
 		UpdateService.Status()
 			.then((s) => (status = s))
 			.catch(() => {});

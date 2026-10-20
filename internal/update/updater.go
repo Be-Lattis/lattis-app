@@ -77,6 +77,8 @@ type Updater struct {
 	restartAt time.Time
 	updated   string
 	init      bool
+	loaded    chan struct{} // Loaded : l'interface est chargée
+	loadOnce  sync.Once
 }
 
 // New prépare la mise à jour de l'exécutable en cours : genre
@@ -222,10 +224,26 @@ func (u *Updater) save() {
 	}
 }
 
+// Loaded signale que l'interface a fini de charger : la première
+// recherche part tout de suite (demande de Louis), sans attendre
+// FirstCheckDelay ni les CheckEvery écoulés depuis la précédente.
+func (u *Updater) Loaded() {
+	u.loadOnce.Do(func() { close(u.loadedCh()) })
+}
+
+func (u *Updater) loadedCh() chan struct{} {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	if u.loaded == nil {
+		u.loaded = make(chan struct{})
+	}
+	return u.loaded
+}
+
 // Run cherche les nouvelles versions en arrière-plan jusqu'à la fin de ctx :
-// la première fois après FirstCheckDelay, puis toutes les heures si la
-// dernière recherche date de plus de CheckEvery. Rien pour une version
-// « dev » ni sous MSIX.
+// la première fois dès que l'interface est chargée (Loaded), au plus tard
+// après first, puis toutes les heures si la dernière recherche date de plus
+// de CheckEvery. Rien pour une version « dev » ni sous MSIX.
 func (u *Updater) Run(ctx context.Context, first time.Duration) {
 	u.Init()
 	u.changed()
@@ -233,14 +251,17 @@ func (u *Updater) Run(ctx context.Context, first time.Duration) {
 		return
 	}
 	wait := first
-	for {
+	loaded := u.loadedCh()
+	for start := true; ; start = false {
 		select {
 		case <-ctx.Done():
 			return
 		case <-time.After(wait):
+		case <-loaded:
 		}
+		loaded = nil // une seule fois
 		wait = time.Hour
-		if u.enabled() && u.due() {
+		if u.enabled() && (start || u.due()) {
 			c, cancel := context.WithTimeout(ctx, checkTimeout)
 			_ = u.Check(c) // hors ligne, proxy : silencieux, on réessaiera
 			cancel()

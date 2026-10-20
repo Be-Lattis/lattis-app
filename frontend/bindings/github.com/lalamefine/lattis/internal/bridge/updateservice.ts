@@ -22,6 +22,13 @@ export function DismissUpdated(): $CancellablePromise<void> {
 }
 
 /**
+ * Loaded : l'interface a fini de charger, la recherche part tout de suite.
+ */
+export function Loaded(): $CancellablePromise<void> {
+    return $Call.ByID(667614527);
+}
+
+/**
  * Prepare télécharge et vérifie la nouvelle version, en arrière-plan ;
  * l'évènement update:status suit l'avancement.
  */
