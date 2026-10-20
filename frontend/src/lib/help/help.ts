@@ -1,4 +1,5 @@
-// Aide intégrée : pages (Markdown embarqué, lib/help/pages), catalogue des
+// Aide intégrée : pages (Markdown, lib/help/pages : le français embarqué,
+// les autres langues dans pages/<langue>/, chargées à la demande), catalogue des
 // fonctions (internal/formula/docs.go, servi par DocumentService.FormulaHelp),
 // référence Lua (script/reference.ts), raccourcis (shell/shortcuts.ts) et
 // réglages (shell/settings.ts). Une cible d'aide est une chaîne : « sql »,
@@ -24,7 +25,7 @@ import connexions from './pages/connexions.md?raw';
 import assistant from './pages/assistant.md?raw';
 import raccourcis from './pages/raccourcis.md?raw';
 import parametres from './pages/parametres.md?raw';
-import { compareText, t } from '#lib/i18n/index.js';
+import { compareText, lang, t, type Lang } from '#lib/i18n/index.js';
 
 export interface HelpPage {
 	id: string;
@@ -38,28 +39,65 @@ function page(id: string, md: string): HelpPage {
 	return { id, title: h && h.t === 'h' ? plain(h.text) : id, blocks };
 }
 
-/** Pages, dans l'ordre de la table des matières. */
-export const pages: HelpPage[] = [
-	page('prise-en-main', priseEnMain),
-	page('cellules', cellules),
-	page('fichiers', fichiers),
-	page('formules', formules),
-	page('tcd', tcd),
-	page('graphiques', graphiques),
-	page('impression', impression),
-	page('onglets', onglets),
-	page('controles', controles),
-	page('sql', sql),
-	page('lua', lua),
-	page('connexions', connexions),
-	page('assistant', assistant),
-	page('raccourcis', raccourcis),
-	page('parametres', parametres)
+/** Pages françaises (embarquées), dans l'ordre de la table des matières. */
+const sources: [string, string][] = [
+	['prise-en-main', priseEnMain],
+	['cellules', cellules],
+	['fichiers', fichiers],
+	['formules', formules],
+	['tcd', tcd],
+	['graphiques', graphiques],
+	['impression', impression],
+	['onglets', onglets],
+	['controles', controles],
+	['sql', sql],
+	['lua', lua],
+	['connexions', connexions],
+	['assistant', assistant],
+	['raccourcis', raccourcis],
+	['parametres', parametres]
 ];
+
+/** Pages de référence, en français. */
+export const pages: HelpPage[] = sources.map(([id, md]) => page(id, md));
+
+// Pages des autres langues (pages/<langue>/<id>.md), chargées à la demande
+// comme les catalogues de textes. Elles gardent les identifiants et les
+// ancres des pages françaises (titres « ## Keys {#cles} ») : les cibles
+// d'aide (« prise-en-main#cles ») sont les mêmes dans toutes les langues.
+const translated = import.meta.glob<string>('./pages/*/*.md', { query: '?raw', import: 'default' });
+const byLang = new Map<Lang, HelpPage[]>([['fr', pages]]);
+const loadingPages = new Map<Lang, Promise<HelpPage[]>>();
+
+/** Pages d'une langue déjà chargées (le français sinon), dans l'ordre de la table des matières. */
+export function helpPages(l: Lang = lang()): HelpPage[] {
+	return byLang.get(l) ?? pages;
+}
+
+/** Charge les pages d'une langue (une fois) ; une page sans traduction reste en français. */
+export function loadHelpPages(l: Lang = lang()): Promise<HelpPage[]> {
+	const done = byLang.get(l);
+	if (done) return Promise.resolve(done);
+	let p = loadingPages.get(l);
+	if (!p) {
+		p = Promise.all(
+			sources.map(async ([id], i) => {
+				const imp = translated[`./pages/${l}/${id}.md`];
+				return imp ? page(id, await imp()) : pages[i];
+			})
+		).then((list) => {
+			byLang.set(l, list);
+			return list;
+		});
+		loadingPages.set(l, p);
+	}
+	return p;
+}
 
 export const HOME = 'prise-en-main';
 
-export const pageById = (id: string) => pages.find((p) => p.id === id);
+/** Page par son identifiant, dans une liste de pages (le français par défaut). */
+export const pageById = (id: string, list: readonly HelpPage[] = pages) => list.find((p) => p.id === id);
 
 /** Cible décodée : page et ancre, ou fonction, ou entrée de la référence Lua. */
 export type Target = { page: string; anchor?: string } | { fn: string } | { lua: string };
@@ -153,9 +191,9 @@ export function sections(p: HelpPage): { anchor: string; title: string; text: st
 }
 
 /** Index de recherche de toute l'aide. */
-export function buildIndex(functions: readonly FunctionDoc[]): HelpEntry[] {
+export function buildIndex(functions: readonly FunctionDoc[], list: readonly HelpPage[] = helpPages()): HelpEntry[] {
 	const out: HelpEntry[] = [];
-	for (const p of pages)
+	for (const p of list)
 		for (const s of sections(p))
 			out.push({ target: s.anchor ? `${p.id}#${s.anchor}` : p.id, title: s.title, where: s.anchor ? p.title : 'Page', keys: s.anchor ? '' : p.title, text: s.text.trim() });
 	for (const f of functions)

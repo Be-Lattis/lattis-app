@@ -1,7 +1,7 @@
 // Petit lecteur Markdown des pages d'aide (lib/help/pages/*.md) : il rend
 // des blocs et des morceaux de texte que Markdown.svelte affiche avec des
 // éléments Svelte, sans jamais injecter de HTML. Syntaxe reconnue : titres
-// (#, ##, ###), paragraphes, listes (- et 1.), blocs de code (```), notes
+// (#, ##, ###, ancre explicite « {#id} » en fin de titre), paragraphes, listes (- et 1.), blocs de code (```), notes
 // (>), tableaux (| a | b |), filets (---) ; dans le texte : **gras**,
 // *italique*, `code` et liens [texte](cible) vers une page de l'aide
 // (« sql », « sql#ancre », « fonction:SOMME »). Un lien externe s'affiche
@@ -99,10 +99,12 @@ export function parse(md: string, external = false): Block[] {
 			out.push({ t: 'code', text: code.join('\n') });
 			continue;
 		}
-		const h = /^(#{1,6})\s+(.*)$/.exec(trimmed);
+		// Ancre explicite en fin de titre (« ## Keys {#cles} ») : les pages
+		// traduites gardent les ancres des pages françaises (liens, HelpLink).
+		const h = /^(#{1,6})\s+(.*?)(?:\s+\{#([a-z0-9-]+)\})?$/.exec(trimmed);
 		if (h) {
 			flush();
-			out.push({ t: 'h', level: Math.min(3, h[1].length) as 1 | 2 | 3, id: slug(h[2]), text: inline(h[2]) });
+			out.push({ t: 'h', level: Math.min(3, h[1].length) as 1 | 2 | 3, id: h[3] ?? slug(h[2]), text: inline(h[2]) });
 			continue;
 		}
 		if (/^(-{3,}|\*{3,})$/.test(trimmed)) {

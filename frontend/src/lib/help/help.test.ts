@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FunctionDoc } from '#lib/grid/autocomplete.js';
-import { buildIndex, findFunction, functionAt, functionCategories, pageById, pages, parseTarget, searchHelp, sections, targetPage, viewTarget } from './help';
-import { inline, parse } from './markdown';
+import { buildIndex, findFunction, functionAt, functionCategories, helpPages, loadHelpPages, pageById, pages, parseTarget, searchHelp, sections, targetPage, viewTarget, type HelpPage } from './help';
+import { blockText, inline, parse, type Block } from './markdown';
 
 const fns: FunctionDoc[] = [
 	{ name: 'SOMME', other: 'SUM', arity: '', category: 'Agrégats', description: 'Additionne les valeurs.', example: '=SOMME(Ventes[Montant])' },
@@ -23,6 +23,10 @@ describe('markdown', () => {
 		expect(inline('<b>x</b>')).toEqual([{ t: 'text', text: '<b>x</b>' }]);
 		expect(inline('[site](https://exemple.fr)')).toEqual([{ t: 'text', text: 'site' }]);
 		expect(inline('voir [SQL](sql#ecrire)')).toEqual([{ t: 'text', text: 'voir ' }, { t: 'link', text: 'SQL', href: 'sql#ecrire' }]);
+	});
+	it('prend l’ancre explicite d’un titre', () => {
+		expect(parse('## Keys and types {#cles-et-types}')[0]).toEqual({ t: 'h', level: 2, id: 'cles-et-types', text: [{ t: 'text', text: 'Keys and types' }] });
+		expect(parse('## Clés et types')[0]).toMatchObject({ id: 'cles-et-types' });
 	});
 });
 
@@ -103,5 +107,67 @@ describe('aide contextuelle', () => {
 		expect(viewTarget('grid', 'doc')).toBe('onglets');
 		expect(viewTarget('grid')).toBe('prise-en-main');
 		expect(findFunction(fns, 'if')?.name).toBe('SI');
+	});
+});
+
+// Pages traduites (pages/<langue>/*.md) : mêmes identifiants et mêmes ancres
+// que les pages françaises, pour que les cibles d'aide (HelpLink, liens des
+// pages, raccourcis) marchent dans toutes les langues.
+describe('pages par langue', () => {
+	const headings = (p: HelpPage) => p.blocks.flatMap((b) => (b.t === 'h' && b.level > 1 ? [`${b.level}:${b.id}`] : []));
+	const links = (p: HelpPage) => [...JSON.stringify(p.blocks).matchAll(/"href":"([^"]+)"/g)].map((m) => m[1]);
+	const code = (blocks: Block[]) =>
+		blocks.flatMap((b) => {
+			if (b.t === 'code') return [b.text];
+			const parts = b.t === 'h' || b.t === 'p' || b.t === 'note' ? [b.text] : b.t === 'ul' || b.t === 'ol' ? b.items : b.t === 'table' ? [...b.head, ...b.rows.flat()] : [];
+			return parts.flat().flatMap((x) => (x.t === 'code' ? [x.text] : []));
+		});
+
+	it('le français est embarqué ; une langue se charge à la demande', async () => {
+		expect(helpPages('fr')).toBe(pages);
+		const en = await loadHelpPages('en');
+		expect(helpPages('en')).toBe(en);
+		expect(await loadHelpPages('en')).toBe(en);
+		expect(en.map((p) => p.id)).toEqual(pages.map((p) => p.id));
+	});
+	it('anglais : chaque page traduite, avec les titres et ancres du français', async () => {
+		const en = await loadHelpPages('en');
+		for (const [i, p] of en.entries()) {
+			expect(p.title, p.id).not.toBe(pages[i].title);
+			expect(headings(p), p.id).toEqual(headings(pages[i]));
+		}
+	});
+	it('anglais : liens internes valides', async () => {
+		const en = await loadHelpPages('en');
+		for (const p of en)
+			for (const href of links(p)) {
+				const t = parseTarget(href);
+				if (!('page' in t)) continue;
+				expect(pageById(href.split('#')[0], en), `${p.id} → ${href}`).toBeDefined();
+				if (t.anchor) expect(sections(pageById(t.page, en)!).some((x) => x.anchor === t.anchor), `${p.id} → ${href}`).toBe(true);
+			}
+	});
+	it('anglais : typographie, touches et formules à l’anglaise', async () => {
+		const en = await loadHelpPages('en');
+		for (const p of en) {
+			const text = p.blocks.map(blockText).join('\n');
+			expect(text.match(/[’«»]|\b(Maj|Échap|Entrée|Suppr|Pg\.Suiv|Pg\.Préc)\b|(Fichier|Accueil|Données|Insertion|Affichage|Révision) ›/g), p.id).toBeNull();
+			for (const c of code(p.blocks).filter((x) => /^=/.test(x))) {
+				const bare = c.replace(/"[^"]*"/g, '""').replace(/\{[^}]*\}/g, '{}');
+				expect(bare, `${p.id} : ${c}`).not.toContain(';');
+				expect(bare, `${p.id} : ${c}`).not.toMatch(/\b(SOMME|MOYENNE|SI|NBVAL|RECHERCHEV|ANNEE|TEXTE|GAUCHE|FILTRE|REQUETE)\(/);
+			}
+		}
+	});
+	it('une langue sans pages traduites garde le français', async () => {
+		const de = await loadHelpPages('de');
+		expect(de.map((p) => p.title)).toEqual(pages.map((p) => p.title));
+	});
+	it('index et recherche dans la langue des pages', async () => {
+		const en = await loadHelpPages('en');
+		const index = buildIndex(fns, en);
+		expect(searchHelp(index, 'keys').some((h) => h.target === 'prise-en-main#cles')).toBe(true);
+		expect(searchHelp(index, 'freeze panes').some((h) => h.target === 'cellules#figer-les-volets')).toBe(true);
+		expect(searchHelp(index, 'SUMIF')[0].target).toBe('fonction:SOMME.SI');
 	});
 });

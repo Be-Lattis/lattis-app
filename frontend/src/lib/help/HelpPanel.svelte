@@ -13,12 +13,12 @@
 	import { resizePanel } from '#lib/ui/resize.js';
 	import { focusRegion } from '#lib/ui/focus.js';
 	import Icon from '#lib/icons/Icon.svelte';
-	import { HOME, buildIndex, findFunction, functionCategories, pageById, pages, parseTarget, searchHelp, targetPage } from './help';
+	import { HOME, buildIndex, findFunction, functionCategories, helpPages, loadHelpPages, pageById, parseTarget, searchHelp, targetPage } from './help';
 	import { slug } from './markdown';
 	import Markdown from './Markdown.svelte';
 	import { closeHelp, helpState } from './state.svelte';
 	import { reportIssue } from '#lib/shell/report.js';
-	import { t } from '#lib/i18n/index.js';
+	import { lang, t } from '#lib/i18n/index.js';
 
 	// over : posée au-dessus d'une boîte modale, hors de la zone des volets.
 	let { over = false }: { over?: boolean } = $props();
@@ -37,11 +37,24 @@
 	let contentEl = $state<HTMLElement>();
 	let searchEl = $state<HTMLInputElement>();
 
-	const index = $derived(buildIndex(functions));
+	// Pages dans la langue de l'interface (chargées à la demande ; le français en attendant).
+	let pages = $state(helpPages());
+	$effect(() => {
+		const l = lang();
+		let live = true;
+		loadHelpPages(l).then((p) => {
+			if (live) pages = p;
+		});
+		return () => {
+			live = false;
+		};
+	});
+
+	const index = $derived(buildIndex(functions, pages));
 	const hits = $derived(query.trim() ? searchHelp(index, query) : []);
 	const target = $derived(parseTarget(current));
 	const fn = $derived('fn' in target ? findFunction(functions, target.fn) : undefined);
-	const shownPage = $derived(pageById('page' in target ? target.page : 'fn' in target && !fn && loaded ? 'formules' : targetPage(current)));
+	const shownPage = $derived(pageById('page' in target ? target.page : 'fn' in target && !fn && loaded ? 'formules' : targetPage(current), pages));
 	const tocPage = $derived(targetPage(current));
 	const groups = $derived(functionCategories(functions));
 
