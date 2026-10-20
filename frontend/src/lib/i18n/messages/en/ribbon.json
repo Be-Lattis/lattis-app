@@ -273,11 +273,11 @@
 		},
 		"conditional": {
 			"label": "Conditional formatting",
-			"tooltip": "Highlight cells, data bars, color scales, icon sets, rules manager"
+			"tooltip": "Highlight cells based on their values"
 		},
 		"formatAsTable": {
 			"label": "Format as table",
-			"tooltip": "Make a table from the range or block of cells of the active cell, its first row as headers (Ctrl+L)"
+			"tooltip": "Make a table from the active cell's range, with headers (Ctrl+L)"
 		},
 		"insert": {
 			"label": "Insert",
@@ -326,7 +326,7 @@
 		},
 		"sortCustom": {
 			"label": "Custom sort…",
-			"tooltip": "Sort the table by the active column in a chosen order (Days, Months, free order)"
+			"tooltip": "Sort the table by the active column in a chosen order"
 		},
 		"filter": {
 			"label": "Filter",
@@ -342,16 +342,16 @@
 		},
 		"pivot": {
 			"label": "PivotTable",
-			"tooltip": "PivotTable from the active table: then click the cell where to place it, on any sheet (Esc: cancel; “New sheet” in the status bar). Double-click a PivotTable to edit it",
-			"docTooltip": "PivotTable from a table of the workbook, inserted in the text and recalculated with it"
+			"tooltip": "PivotTable from the active table: then click where to place it",
+			"docTooltip": "PivotTable from a workbook table, in the text"
 		},
 		"table": {
 			"label": "Table",
-			"tooltip": "Make a table from the range or block of cells of the active cell (Ctrl+L)"
+			"tooltip": "Make a table from the active cell's range (Ctrl+L)"
 		},
 		"dataLake": {
 			"label": "Lattis Data Lake",
-			"tooltip": "Insert at the active cell a dataset from the Lattis Data Lake catalog: linked table, read-only, updated live"
+			"tooltip": "Insert a dataset from the Lattis Data Lake: linked table, read-only"
 		},
 		"form": {
 			"label": "Form",
@@ -368,15 +368,15 @@
 		},
 		"button": {
 			"label": "Button",
-			"tooltip": "Action button at the active cell: a click runs a script from the Script tab (or nothing)",
-			"docTooltip": "Button in the text: a click runs a script from the Script tab (or one of its functions)"
+			"tooltip": "Button that runs a script from the Script tab",
+			"docTooltip": "Button in the text that runs a script from the Script tab"
 		},
 		"field": {
 			"label": "Field",
-			"tooltip": "Control linked to a cell: text field, text area, check box, drop-down list or file (type chosen in the dialog)",
-			"tooltipScript": "Control linked to a cell: text field, text area, check box, drop-down list or file (type chosen in the dialog); it can also run a script",
-			"docTooltip": "Control linked to a cell of a sheet: text field, text area, check box, drop-down list or file",
-			"docTooltipScript": "Control linked to a cell of a sheet: text field, text area, check box, drop-down list or file, which scripts can drive (controls.*)"
+			"tooltip": "Control (field, check box, list…) linked to a cell",
+			"tooltipScript": "Control (field, check box, list…) linked to a cell, which can run a script",
+			"docTooltip": "Control (field, check box, list…) linked to a cell of a sheet",
+			"docTooltipScript": "Control (field, check box, list…) linked to a cell of a sheet, which scripts can drive"
 		},
 		"margins": {
 			"label": "Margins",
@@ -407,7 +407,7 @@
 		},
 		"breaks": {
 			"label": "Breaks",
-			"tooltip": "Manual page break above and to the left of the active cell (the new page starts there)",
+			"tooltip": "Manual page break above and to the left of the active cell",
 			"insert": "Insert page break",
 			"remove": "Remove page break",
 			"reset": "Reset all page breaks"
@@ -459,7 +459,7 @@
 		},
 		"csv": {
 			"label": "Text/CSV",
-			"tooltip": "New query from a CSV file (transformation steps, refreshable)"
+			"tooltip": "New query from a CSV file"
 		},
 		"xlsx": {
 			"label": "Excel workbook",
@@ -476,7 +476,7 @@
 		},
 		"lattisServer": {
 			"label": "Lattis Server",
-			"tooltip": "New query on a table of a Lattis Server or a dataset of its Data Lake (read-only)"
+			"tooltip": "New query on a Lattis Server or its Data Lake (read-only)"
 		},
 		"web": {
 			"label": "Web",
@@ -484,7 +484,7 @@
 		},
 		"refreshAll": {
 			"label": "Refresh all",
-			"tooltip": "Reread the sources of all loaded queries, replace their tables and recalculate (Ctrl+Alt+F5)"
+			"tooltip": "Refresh all queries and recalculate (Ctrl+Alt+F5)"
 		},
 		"queries": {
 			"label": "Queries & connections",
@@ -510,7 +510,7 @@
 		},
 		"textToColumns": {
 			"label": "Text to columns",
-			"tooltip": "Convert text to columns: split the contents of the selected column (delimiters or fixed width) into several columns"
+			"tooltip": "Split the content of the selected column into several columns"
 		},
 		"dedup": {
 			"label": "Remove duplicates",
@@ -518,11 +518,11 @@
 		},
 		"validation": {
 			"label": "Data validation",
-			"tooltip": "Drop-down list: values allowed in the selection (or a whole table column), other entries are rejected"
+			"tooltip": "Drop-down list: only its values are allowed in the selection"
 		},
 		"mergeSheets": {
 			"label": "Combine tabs…",
-			"tooltip": "Combine the tables of several tabs with the same columns (one per month, per year, per city…) into a single table, with a category column"
+			"tooltip": "Combine the tables with the same columns from several tabs into one"
 		},
 		"insertFunction": {
 			"label": "Insert function",
@@ -533,15 +533,15 @@
 		},
 		"showLinks": {
 			"label": "Show links",
-			"tooltip": "Link arrows of all selected cells: blue from what their formulas read, red to the formulas that read them; a click in the grid (or Esc) clears them"
+			"tooltip": "Link arrows of the selected cells (Esc to clear them)"
 		},
 		"calculate": {
 			"label": "Calculate",
-			"tooltip": "Recalculate formulas and refresh TODAY, NOW and RAND (F9, or F5 outside an imported table)"
+			"tooltip": "Recalculate formulas (F9)"
 		},
 		"toValues": {
 			"label": "Convert to values",
-			"tooltip": "Replace the formulas of the selection with their current values: calculated columns (which become entered columns, with the type of their values) and free cells (Ctrl+Z to undo)"
+			"tooltip": "Replace the selection's formulas with their values (Ctrl+Z to undo)"
 		},
 		"note": {
 			"new": "New note",
@@ -563,17 +563,17 @@
 			"tooltipUnprotect": "Unprotect the sheet structure",
 			"tooltipByBook": "Structure of all sheets protected with the workbook (Review › Unprotect workbook)",
 			"tooltipSheet": "Protect structure: not needed, the whole sheet is already protected",
-			"tooltip": "Protect structure: everything is locked except entry in tables (free cells, formatting, columns, tables, objects and tab); optional password"
+			"tooltip": "Protect structure: only data entry in tables remains allowed"
 		},
 		"protectWorkbook": {
 			"protect": "Protect workbook",
 			"unprotect": "Unprotect workbook",
 			"tooltipUnprotect": "Unprotect the workbook structure",
-			"tooltip": "Protect the workbook structure: adding, deleting, renaming or moving sheets is refused"
+			"tooltip": "Protect the workbook structure: sheets can no longer change"
 		},
 		"pageBreaks": {
-			"tooltipOn": "Hide the page breaks (dotted lines) and the print area",
-			"tooltipOff": "Show the print page breaks (dotted lines) and the print area"
+			"tooltipOn": "Hide page breaks and the print area",
+			"tooltipOff": "Show page breaks and the print area"
 		},
 		"gridlines": {
 			"label": "Gridlines",
@@ -607,7 +607,7 @@
 		},
 		"theme": {
 			"label": "Theme",
-			"tooltip": "Colors of the workbook's tables: ordinary tables and tables from an external source (theme: {theme})",
+			"tooltip": "Colors of the workbook's tables (theme: {theme})",
 			"customName": "custom",
 			"customize": "Customize…"
 		},
@@ -640,7 +640,7 @@
 		},
 		"docPrint": {
 			"label": "Print / PDF",
-			"tooltip": "Print the document, or save it as PDF ({printer}), charts and PivotTables included"
+			"tooltip": "Print the document, or save it as PDF ({printer})"
 		},
 		"link": {
 			"label": "Link",

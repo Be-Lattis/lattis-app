@@ -94,12 +94,12 @@
 			"resize.hint": "Glissez une poignée pour redimensionner le bouton"
 		},
 		"note": {
-			"noScript": "Aucun script dans la bibliothèque (onglet Script) : le contrôle est créé sans action, à lier plus tard.",
-			"input": "Le texte est écrit dans la cellule liée en quittant la zone ou avec Entrée, puis l’action s’exécute.",
-			"textarea": "Le texte est écrit dans la cellule liée en quittant la zone ou avec Ctrl+Entrée, puis l’action s’exécute.",
-			"file": "Le chemin du fichier choisi est écrit dans la cellule liée, puis l’action s’exécute.",
-			"value": "La valeur est écrite dans la cellule liée, puis l’action s’exécute ; tout s’annule d’un coup (Ctrl+Z).",
-			"button": "Un clic sur le bouton exécute l’action ; tout ce qu’elle modifie s’annule d’un coup (Ctrl+Z)."
+			"noScript": "Aucun script (onglet Script) : le contrôle est créé sans action.",
+			"input": "Le texte va dans la cellule liée (Entrée ou sortie de la zone), puis l’action s’exécute.",
+			"textarea": "Le texte va dans la cellule liée (Ctrl+Entrée ou sortie de la zone), puis l’action s’exécute.",
+			"file": "Le chemin du fichier va dans la cellule liée, puis l’action s’exécute.",
+			"value": "La valeur va dans la cellule liée, puis l’action s’exécute (Ctrl+Z annule le tout).",
+			"button": "Un clic exécute l’action (Ctrl+Z annule le tout)."
 		},
 		"running": "« {name} » : exécution…",
 		"paste": "Coller le bouton"
@@ -379,7 +379,7 @@
 			"avg": "Appliquer une mise en forme aux valeurs qui sont :",
 			"dup": "Mettre en forme tout :",
 			"formula": "Appliquer une mise en forme aux valeurs pour lesquelles cette formule est vraie :",
-			"formula.help": "Dans un tableau, [@Colonne] désigne la cellule de la même ligne (une adresse de la première ligne de données, comme $C2, vaut aussi pour chaque ligne). Hors tableau, la formule est écrite pour la cellule en haut à gauche de la plage : ses adresses relatives suivent chaque cellule."
+			"formula.help": "Dans un tableau, [@Colonne] désigne la cellule de la même ligne ; hors tableau, écrivez la formule de la 1re cellule."
 		},
 		"vstyle": {
 			"scale2": "Échelle à deux couleurs",
@@ -517,12 +517,12 @@
 		"orderFrom.values": "les valeurs de la colonne (ordre libre)",
 		"orderFrom.list": "Liste « {name} » : {values}…",
 		"orderFrom.workbookList": "Liste « {name} » (classeur) : {values}…",
-		"hint": "Glissez les valeurs pour les ranger, ou sélectionnez-en une et utilisez les boutons (au clavier : Alt+↑ / Alt+↓, Alt+Début / Alt+Fin). Les valeurs absentes de l'ordre suivent dans l'ordre croissant, les cellules vides restent à la fin.",
+		"hint": "Glissez les valeurs pour les ranger (au clavier : Alt+↑ / Alt+↓, Alt+Début / Alt+Fin).",
 		"items": {
 			"aria": "Ordre des valeurs"
 		},
 		"absent": "absente",
-		"absent.tooltip": "Valeur de l'ordre absente des données : gardée pour quand elle apparaîtra",
+		"absent.tooltip": "Absente des données, gardée pour quand elle apparaîtra",
 		"empty": "Aucune valeur (la colonne est vide).",
 		"move": {
 			"first": "En premier",
@@ -537,7 +537,7 @@
 		"direction": "Sens",
 		"direction.forward": "Dans cet ordre (du premier au dernier)",
 		"direction.reverse": "À rebours (du dernier au premier)",
-		"save": "Enregistrer cet ordre comme liste personnalisée du classeur, pour d'autres colonnes",
+		"save": "Enregistrer comme liste personnalisée du classeur",
 		"save.name": "Nom :",
 		"save.name.placeholder": "Tailles, Priorités…",
 		"applied": "Tri personnalisé appliqué (Ctrl+Z pour annuler)"
@@ -618,7 +618,6 @@
 		"chooseOne": "Choisissez au moins une valeur",
 		"placeActive": "Placez la cellule active dans la colonne d’un tableau pour filtrer",
 		"clearOf": "Effacer le filtre de « {field} »",
-		"computed": "Colonne calculée : triée et filtrée sur ses valeurs ; son type suit sa formule.",
 		"custom": "Filtre personnalisé…",
 		"active": "Filtre actif : {conds}",
 		"custom.heading": "Afficher les lignes dont « {column} » :",
@@ -659,9 +658,9 @@
 		"close.tooltip": "Fermer (Échap)",
 		"replaceBy": "Remplacer par",
 		"zone": "Dans : {zone}",
-		"zone.selection.tooltip": "La sélection borne la recherche ; sélectionnez une seule cellule pour chercher dans toute la feuille",
+		"zone.selection.tooltip": "Une seule cellule sélectionnée : recherche dans toute la feuille",
 		"zone.selection.aria": "Dans la sélection {range}",
-		"zone.sheet.tooltip": "Toute la feuille ; sélectionnez plusieurs cellules pour borner la recherche",
+		"zone.sheet.tooltip": "Sélectionnez plusieurs cellules pour borner la recherche",
 		"zone.sheet.aria": "Dans toute la feuille",
 		"zone.sheet": "feuille",
 		"replaceOne": "Remplacer",
@@ -711,7 +710,7 @@
 		"errors": "{n, plural, one {# valeur} other {# valeurs}} hors type dans la colonne",
 		"computed": "Colonne calculée",
 		"toValues": {
-			"tooltip": "La formule est retirée : la colonne garde ses valeurs actuelles, au type de ces valeurs (Ctrl+Z pour annuler)"
+			"tooltip": "La formule est retirée, la colonne garde ses valeurs (Ctrl+Z pour annuler)"
 		}
 	},
 	"syntax": {
@@ -819,22 +818,22 @@
 			"source": "Changer la source…",
 			"source.tooltip": "Rattacher le tableau croisé à un autre tableau : les champs qui y existent sont gardés",
 			"move": "Déplacer",
-			"move.tooltip": "Le prochain clic sur une cellule (de cette feuille ou d'une autre) y pose le coin haut gauche du tableau croisé ; Échap annule"
+			"move.tooltip": "Cliquez ensuite sur la cellule où poser le tableau croisé (Échap : annuler)"
 		},
 		"calc": {
 			"title": "Champ calculé",
 			"title.edit": "Champ calculé « {name} »",
-			"intro": "Une formule sur les colonnes de chaque ligne de « {source} » : les lignes sont regroupées par son résultat, en Lignes, en Colonnes ou en Filtres (ou synthétisées en Valeurs).",
+			"intro": "Formule calculée sur chaque ligne de « {source} ».",
 			"name": "Nom du champ :",
 			"add": "Ajouter",
 			"add.label": "Champ calculé…",
-			"add.tooltip": "Un champ dont la valeur est calculée pour chaque ligne de la source : =ANNEE([Date]), =GAUCHE([Code];2)… Il regroupe les lignes en Lignes ou en Colonnes, filtre ou se synthétise comme une colonne."
+			"add.tooltip": "Champ calculé sur chaque ligne de la source, par exemple =ANNEE([Date])"
 		},
 		"panel": {
 			"title": "Champs de tableau croisé dynamique",
 			"help": "Aide sur les tableaux croisés",
 			"name": {
-				"tooltip": "Le tableau croisé dynamique s'interroge dans l'onglet SQL sous ce nom et sert de source aux graphiques"
+				"tooltip": "Nom du tableau croisé dans l’onglet SQL et les graphiques"
 			},
 			"source": "{name} · source :"
 		},
@@ -859,8 +858,8 @@
 			"choose": "Choisir un tableau…",
 			"tooltip": "Tableau source du tableau croisé"
 		},
-		"empty": "Le rapport est vide : cochez des champs ci-dessus, ou glissez-les dans les zones. Les nombres vont en Valeurs, le reste en Lignes.",
-		"noValues": "Ajoutez un champ en Valeurs pour calculer des totaux (somme, nombre, moyenne…).",
+		"empty": "Cochez des champs ci-dessus, ou glissez-les dans les zones.",
+		"noValues": "Ajoutez un champ en Valeurs pour calculer des totaux.",
 		"handForget": "Oublier les valeurs mises de côté",
 		"handForget.tooltip": "Effacer ces valeurs (Ctrl+Z pour annuler)",
 		"grandTotals": "Totaux généraux",
@@ -871,7 +870,7 @@
 		"defer": "Différer la mise à jour",
 		"update": "Mettre à jour",
 		"update.tooltip": "Appliquer les changements au tableau croisé",
-		"pending": "Modifications en attente : le tableau croisé n'est pas encore à jour (elles s'appliquent aussi à la fermeture du volet).",
+		"pending": "Modifications en attente : le tableau croisé n'est pas encore à jour.",
 		"delete": "Supprimer le tableau croisé",
 		"valueSettings": "Paramètres des champs de valeurs",
 		"valueSettings.menu": "Paramètres des champs de valeurs…",
@@ -935,14 +934,14 @@
 		"removed": "Validation retirée",
 		"list": {
 			"set": "Liste déroulante : {n, plural, one {# valeur permise} other {# valeurs permises}} (Alt+↓ pour l’ouvrir)",
-			"source": "Liste déroulante tirée de {src}, relue à chaque ouverture (Alt+↓ pour l’ouvrir)",
-			"help": "Valeurs permises dans la sélection, une par ligne (ou séparées par « ; »). Une flèche ▾ propose la liste dans la cellule (Alt+↓) ; toute autre saisie est refusée. Sur toute une colonne de tableau, la liste vaut aussi pour les lignes ajoutées ensuite.",
+			"source": "Liste déroulante tirée de {src} (Alt+↓ pour l’ouvrir)",
+			"help": "Une valeur par ligne (ou séparées par « ; ») ; toute autre saisie est refusée.",
 			"placeholder": "Oui\nNon"
 		},
 		"pick": "Sélectionnez la plage source (sur cette feuille ou une autre), puis Entrée (Échap : annuler)",
 		"pick.oneColumn": "Une plage source couvre une seule colonne d’un tableau, ou des cellules libres",
 		"range": {
-			"help": "Les valeurs de la plage (distinctes, sans les vides, dans l’ordre) sont relues à chaque ouverture de la liste et à chaque saisie : une colonne de tableau (Clients[Ville]), des cellules (Cell[A1:A10], Feuille2!Cell[A1:A10]) ou une cellule nommée. La référence suit les renommages et déplacements.",
+			"help": "Une colonne de tableau (Clients[Ville]), des cellules (Cell[A1:A10]) ou une cellule nommée.",
 			"aria": "Plage source",
 			"placeholder": "Clients[Ville]"
 		},
@@ -968,13 +967,13 @@
 	},
 	"tabChoice": {
 		"clear": "Ne plus filtrer l'onglet",
-		"clear.tooltip": "L'onglet perd son ▾ « {name} » : les tableaux et tableaux croisés de la feuille montrent de nouveau toutes leurs lignes (Ctrl+Z pour annuler)",
+		"clear.tooltip": "L'onglet perd son ▾ « {name} » : toutes les lignes réapparaissent (Ctrl+Z pour annuler)",
 		"byField": "Filtrer l'onglet par ce champ",
 		"byColumn": "Filtrer l'onglet par cette colonne",
 		"computed": "Une colonne calculée ne peut pas servir de choix d'onglet : prenez une colonne saisie (Année, Mois, Ville…)",
 		"tooMany": "« {column} » est vide, ou a plus de {max} valeurs différentes : trop pour la liste de l'onglet ; prenez une colonne comme Année, Mois ou Ville",
-		"byField.tooltip": "L'onglet de la feuille reçoit un ▾ pour choisir une valeur de « {column} » : ce tableau croisé, les autres tableaux croisés de la feuille construits sur un tableau qui a « {column} » et les tableaux de la feuille qui l'ont ne montrent que les lignes de cette valeur (le tableau source, s'il est sur une autre feuille, n'est pas filtré). Il commence sur toutes les valeurs. Ctrl+Z pour annuler.",
-		"byColumn.tooltip": "L'onglet de la feuille reçoit un ▾ pour choisir une valeur de « {column} » : chaque tableau de la feuille qui a la colonne « {column} », et les tableaux croisés construits sur eux, ne montrent que les lignes de cette valeur. Il commence sur toutes les valeurs. Ctrl+Z pour annuler.",
+		"byField.tooltip": "L'onglet reçoit un ▾ pour n'afficher que les lignes d'une valeur de « {column} », hors tableau source (Ctrl+Z pour annuler)",
+		"byColumn.tooltip": "L'onglet reçoit un ▾ pour n'afficher que les lignes d'une valeur de « {column} » (Ctrl+Z pour annuler)",
 		"replaces": "{text} Remplace le choix par « {name} ».",
 		"notice": {
 			"cleared": "L'onglet ne filtre plus par « {column} » : toutes les lignes sont de nouveau affichées (Ctrl+Z pour annuler)",
@@ -997,7 +996,7 @@
 			"date": "Date",
 			"notImported": "Colonne non distribuée",
 			"legend": "Format des données en colonne {n}",
-			"hint": "« Standard » convertit les nombres et les dates, le reste devient du texte. Cliquez sur une colonne de l'aperçu pour choisir son format."
+			"hint": "Cliquez sur une colonne de l'aperçu pour choisir son format."
 		},
 		"sep": {
 			"comma": ", (virgule)",
@@ -1014,8 +1013,8 @@
 		"title": "Convertir le texte en colonnes",
 		"heading": "Assistant Conversion – Étape {step} sur 3 : {name}",
 		"note": {
-			"table": "Tableau {table}, colonne {column} : la première partie reste dans la colonne, les suivantes deviennent de nouvelles colonnes insérées à droite.",
-			"tableWithHeader": "Tableau {table}, colonne {column} (en-tête compris) : la première partie reste dans la colonne, les suivantes deviennent de nouvelles colonnes insérées à droite.",
+			"table": "Tableau {table}, colonne {column} : les parties en plus s’insèrent en colonnes à droite.",
+			"tableWithHeader": "Tableau {table}, colonne {column} (en-tête compris) : les parties en plus s’insèrent en colonnes à droite.",
 			"cells": "{n, plural, one {# cellule} other {# cellules}} de texte à convertir."
 		},
 		"kind": {
@@ -1039,13 +1038,13 @@
 		"quote": "Identificateur de texte :",
 		"quote.none": "aucun",
 		"fixed": {
-			"hint": "Les lignes avec flèche signalent un saut de colonne. Pour créer un saut de colonne, cliquez à la position désirée. Pour effacer un saut de colonne, double-cliquez sur la ligne. Pour déplacer un saut de colonne, faites-le glisser."
+			"hint": "Cliquez pour créer un saut de colonne, double-cliquez pour l'effacer, glissez pour le déplacer."
 		},
 		"break": {
 			"tooltip": "Glisser pour déplacer, double-clic pour supprimer"
 		},
 		"dest": "Destination :",
-		"dest.table.tooltip": "Dans un tableau, la première partie reste dans la colonne et les suivantes sont insérées à droite",
+		"dest.table.tooltip": "Dans un tableau, les parties en plus s’insèrent en colonnes à droite",
 		"dest.tooltip": "Première cellule où écrire les colonnes, par exemple $B$2",
 		"advanced": "Avancé…",
 		"advanced.open": "Avancé ▴",
@@ -1087,7 +1086,7 @@
 		"title": "Format de cellule",
 		"category": "Catégorie",
 		"category.standard": "Standard",
-		"category.standard.help": "Pas de format particulier : la valeur telle qu’elle est saisie ou calculée.",
+		"category.standard.help": "Pas de format particulier.",
 		"category.number": "Nombre",
 		"category.number.help": "Nombre de décimales et séparateur de milliers.",
 		"category.currency": "Monétaire",
@@ -1095,9 +1094,9 @@
 		"category.percent": "Pourcentage",
 		"category.percent.help": "La valeur multipliée par 100, suivie de %.",
 		"category.date": "Date",
-		"category.date.help": "Une date (ou un numéro de série d’Excel) affichée selon le modèle choisi.",
+		"category.date.help": "Une date affichée selon le modèle choisi.",
 		"category.time": "Heure",
-		"category.time.help": "Une heure (ou une date et une heure) affichée selon le modèle choisi.",
+		"category.time.help": "Une heure affichée selon le modèle choisi.",
 		"category.text": "Texte",
 		"category.text.help": "Le contenu est affiché tel qu’il est saisi.",
 		"sample": "Exemple",
@@ -1172,7 +1171,7 @@
 		"accept": "En faire la clé du tableau",
 		"dismiss": "Ne plus proposer",
 		"note": "Clé du tableau : ses valeurs identifient les lignes.",
-		"note.auto": "Clé du tableau : ses valeurs identifient les lignes. Une ligne ajoutée reçoit le numéro suivant.",
+		"note.auto": "Clé du tableau : une ligne ajoutée reçoit le numéro suivant.",
 		"remove": "Retirer la clé",
 		"checking": "Vérification de la clé…",
 		"use": "Utiliser comme clé",
@@ -1268,7 +1267,7 @@
 		"removed": "{n, plural, one {# ligne en double supprimée} other {# lignes en double supprimées}} (Ctrl+Z pour annuler)",
 		"none": "Aucun doublon",
 		"title": "Supprimer les doublons de « {table} »",
-		"help": "Deux lignes sont en double quand les colonnes cochées ont les mêmes valeurs. La première est gardée.",
+		"help": "En double : mêmes valeurs dans les colonnes cochées. La première ligne est gardée.",
 		"allColumns": "(Toutes les colonnes)",
 		"computing": "Calcul…",
 		"noneWith": "Aucune ligne en double avec ces colonnes.",
@@ -1347,12 +1346,12 @@
 	},
 	"nameBadge": {
 		"default": {
-			"tooltip": "« {name} » : nom par défaut : renommez le tableau. Cliquer pour lui donner un nom parlant (il sert dans les formules, le SQL et les graphiques)"
+			"tooltip": "« {name} » : nom par défaut ; cliquer pour donner un nom parlant"
 		},
 		"tooltip": "Tableau « {name} » : cliquer pour le renommer"
 	},
 	"follow": {
-		"tooltip": "Ce tableau suit l'onglet à choix : il ne montre que ses lignes où {name} = {value} (les autres sont masquées, pas effacées ; une ligne saisie reçoit cette valeur). La flèche ▾ de l'onglet change la valeur. Cliquer sur la pastille : menu « Suivre {follow} », à décocher pour que ce tableau montre toutes ses lignes",
+		"tooltip": "Ce tableau ne montre que ses lignes où {name} = {value} (clic : « Suivre {follow} »)",
 		"empty": "(vide)"
 	},
 	"bench": {
@@ -1395,12 +1394,12 @@
 		"deleteTable": "Supprimer le tableau",
 		"deleteTable.confirm": "Supprimer ce tableau et ses {n} lignes ? Ctrl+Z permettra de l’annuler.",
 		"toValues": "Convertir en valeurs",
-		"toValues.many.tooltip": "Les {n} colonnes calculées de la sélection deviennent des colonnes saisies : elles gardent leurs valeurs actuelles, sans formule (Ctrl+Z pour annuler)",
-		"toValues.tooltip": "La colonne calculée devient une colonne saisie : elle garde ses valeurs actuelles, sans formule (Ctrl+Z pour annuler)",
+		"toValues.many.tooltip": "Les {n} colonnes calculées gardent leurs valeurs, sans formule (Ctrl+Z pour annuler)",
+		"toValues.tooltip": "La colonne garde ses valeurs actuelles, sans formule (Ctrl+Z pour annuler)",
 		"promote": "Utiliser la première ligne comme en-têtes",
-		"promote.tooltip": "La 1re ligne de données donne les noms des colonnes et devient l'en-tête, à sa place ; l'en-tête actuel disparaît (Ctrl+Z pour annuler)",
+		"promote.tooltip": "La 1re ligne de données devient l'en-tête ; l'en-tête actuel disparaît (Ctrl+Z pour annuler)",
 		"rowToNote": "Sortir cette ligne du tableau (total ou note)",
-		"rowToNote.tooltip": "La ligne reste juste sous le tableau, gardée à part comme total ou note (Ctrl+Z pour annuler)",
+		"rowToNote.tooltip": "La ligne reste sous le tableau, à part, comme total ou note (Ctrl+Z pour annuler)",
 		"sortFilter": "Trier et filtrer",
 		"insert": "Insérer",
 		"rowAbove": "Ligne au-dessus",
@@ -1413,45 +1412,45 @@
 		"left": "À gauche",
 		"right": "À droite",
 		"headerToTitle": "Sortir l'en-tête",
-		"headerToTitle.tooltip": "La 1re ligne de données devient l'en-tête ; l'en-tête actuel reste au-dessus du tableau, en titre (sauf les noms « Colonne n »)",
+		"headerToTitle.tooltip": "La 1re ligne de données devient l'en-tête ; l'en-tête actuel passe au-dessus, en titre",
 		"titleToHeader": "Utiliser la ligne du dessus comme en-têtes",
-		"titleToHeader.tooltip": "Les cellules tapées juste au-dessus du tableau deviennent les noms de ses colonnes ; l'en-tête actuel devient la 1re ligne de données (sauf les noms « Colonne n »)",
+		"titleToHeader.tooltip": "Les cellules juste au-dessus du tableau deviennent ses en-têtes ; l'en-tête actuel, la 1re ligne",
 		"twoLevel": {
 			"off": "Retirer les groupes d'en-têtes",
-			"off.tooltip": "Les colonnes reprennent leur nom complet « Groupe.Nom » sur une seule ligne ; la bande des groupes disparaît",
+			"off.tooltip": "Les colonnes reprennent leur nom complet « Groupe.Nom » sur une ligne",
 			"on": "En-têtes sur 2 lignes (groupes au-dessus)",
-			"on.tooltip": "La ligne juste au-dessus du tableau devient une bande de groupes : « BOISEMENT » posé au-dessus de Nom et Statut donne les colonnes « BOISEMENT.Nom » et « BOISEMENT.Statut ». Cellules fusionnées ou non."
+			"on.tooltip": "La ligne au-dessus du tableau devient une bande de groupes d'en-têtes (« Groupe.Nom »)"
 		},
 		"follow": "Suivre {what}",
 		"follow.off.tooltip": "Le tableau montre toutes ses lignes, quelle que soit la valeur de l'onglet",
 		"follow.off.column.tooltip": "Le tableau montre toutes ses lignes, quelle que soit la valeur de l'onglet (sa colonne « {name} » est retirée si elle n'a qu'une valeur)",
-		"follow.on.formula.tooltip": "Le tableau ne montre plus que les lignes dont la formule {formula} donne la valeur affichée (il doit en avoir les colonnes)",
+		"follow.on.formula.tooltip": "Le tableau ne montre plus que les lignes où {formula} donne la valeur affichée",
 		"follow.on.tooltip": "Le tableau reçoit la colonne « {name} », remplie avec la valeur affichée, et ne montre plus que ses lignes",
 		"refresh": "Actualiser la requête",
 		"refresh.tooltip": "Relance la requête « {name} » (F5 dans le tableau)",
 		"handKey": "Clé des colonnes saisies…",
-		"handKey.tooltip": "Colonne du résultat qui relie les valeurs saisies à leurs lignes d'une actualisation à l'autre",
+		"handKey.tooltip": "Colonne qui relie les valeurs saisies à leurs lignes à chaque actualisation",
 		"handForget": "Oublier les valeurs mises de côté ({n, plural, one {# ligne} other {# lignes}})",
-		"handForget.tooltip": "Valeurs saisies sur des lignes disparues du résultat, gardées au cas où elles reviendraient (Ctrl+Z pour annuler)",
+		"handForget.tooltip": "Valeurs saisies sur des lignes disparues du résultat (Ctrl+Z pour annuler)",
 		"addShared": "Ajouter au classeur partagé…",
-		"addShared.tooltip": "Ce tableau n'est que sur votre poste : le créer dans le classeur partagé, avec ses lignes, pour tous les membres",
+		"addShared.tooltip": "Créer ce tableau, avec ses lignes, dans le classeur partagé, pour tous les membres",
 		"shareData": "Partager au Data Lake Lattis…",
-		"shareData.tooltip": "Rendre ce tableau lisible depuis d'autres classeurs du serveur (catalogue du Data Lake Lattis)",
+		"shareData.tooltip": "Rendre ce tableau lisible depuis d'autres classeurs du serveur",
 		"pushSource": "Mettre à jour la source du Data Lake",
-		"pushSource.tooltip": "Envoie maintenant les lignes de ce tableau à sa source du Data Lake (colonnes choisies seulement ; le classeur n'est pas publié)",
+		"pushSource.tooltip": "Envoie maintenant les lignes de ce tableau à sa source du Data Lake (colonnes choisies)",
 		"toRange": "Convertir en plage",
 		"toRange.tooltip": "Le tableau devient des cellules libres, au même endroit",
 		"ask": "Demander à l’assistant…",
 		"asHeader": "Utiliser comme en-têtes de « {table} »",
-		"asHeader.tooltip": "Les cellules de cette ligne, au-dessus des colonnes du tableau, deviennent ses en-têtes ; l'en-tête actuel devient la 1re ligne de données (sauf les noms « Colonne n »)",
+		"asHeader.tooltip": "Les cellules de cette ligne deviennent les en-têtes ; l'en-tête actuel, la 1re ligne",
 		"join": "Ajouter au tableau",
 		"join.tooltip": "Cette cellule est gardée hors du tableau voisin (note, total) ; elle le rejoint",
 		"asTable": "Mettre sous forme de tableau",
 		"asTable.tooltip": "La plage redevient un tableau (sa première ligne donne les en-têtes)",
 		"spillLinked": "Convertir en tableau lié",
-		"spillLinked.tooltip": "Un tableau chargé par la formule remplace le résultat déversé : il se recalcule quand ses sources changent (colonnes en lecture seule, colonnes saisies possibles à droite)",
+		"spillLinked.tooltip": "Un tableau lié à la formule remplace le résultat déversé et se recalcule avec ses sources",
 		"spillValues": "Convertir en tableau (valeurs)",
-		"spillValues.tooltip": "Un tableau ordinaire garde les valeurs actuelles du résultat déversé, sans lien avec la formule",
+		"spillValues.tooltip": "Un tableau ordinaire garde les valeurs actuelles, sans lien avec la formule",
 		"rangeToValues": {
 			"tooltip": "Les formules de la sélection sont remplacées par leurs valeurs actuelles (Ctrl+Z pour annuler)"
 		},
@@ -1472,7 +1471,7 @@
 	"formulaBar": {
 		"aria": "Barre de formule",
 		"computed": "Colonne calculée : s'applique {n, plural, one {à la ligne} other {aux # lignes}}",
-		"computed.tooltip": "La formule est celle de toute la colonne : elle s'applique à chacune de ses lignes."
+		"computed.tooltip": "Formule de toute la colonne"
 	},
 	"sheet": {
 		"aria": "Feuille {name}"
@@ -1496,15 +1495,15 @@
 		"columns": "les colonnes « {name} »",
 		"column": "la colonne « {name} »",
 		"rank": "le rang des lignes (déconseillé)",
-		"rank.note": "Si la requête rend ses lignes dans un autre ordre, ou en ajoute ou en retire, les valeurs saisies se retrouveront en face d’autres lignes.",
+		"rank.note": "Si la requête change l’ordre ou le nombre de lignes, les valeurs saisies se décaleront.",
 		"change": {
-			"note": "Les valeurs déjà saisies restent sur leurs lignes ; celles mises de côté (lignes disparues) sont oubliées. Les doublons et cases vides de la colonne sont refusés."
+			"note": "Les valeurs mises de côté (lignes disparues) seront oubliées."
 		},
 		"key": {
-			"note": "À chaque actualisation, une valeur revient sur la ligne qui a la même « {key} » ; si cette ligne disparaît, la valeur est mise de côté et revient avec elle."
+			"note": "Chaque valeur saisie suit la ligne de même « {key} » à chaque actualisation."
 		},
 		"none": {
-			"note": "Aucune colonne du résultat n’identifie ses lignes (valeurs en double ou cases vides) : ajoutez-en une à la requête (un identifiant) pour une jointure fiable."
+			"note": "Aucune colonne n’identifie les lignes : ajoutez un identifiant à la requête."
 		}
 	},
 	"functions": {

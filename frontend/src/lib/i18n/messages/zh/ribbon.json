@@ -273,11 +273,11 @@
 		},
 		"conditional": {
 			"label": "条件格式",
-			"tooltip": "突出显示单元格、数据条、色阶、图标集、规则管理器"
+			"tooltip": "根据值突出显示单元格"
 		},
 		"formatAsTable": {
 			"label": "套用表格格式",
-			"tooltip": "以活动单元格所在的区域或单元格块创建表格，首行作为标题 (Ctrl+L)"
+			"tooltip": "将活动单元格所在区域创建为带标题的表格 (Ctrl+L)"
 		},
 		"insert": {
 			"label": "插入",
@@ -326,7 +326,7 @@
 		},
 		"sortCustom": {
 			"label": "自定义排序…",
-			"tooltip": "按所选顺序（星期、月份、自由顺序）对活动列排序表格"
+			"tooltip": "按活动列以所选顺序对表格排序"
 		},
 		"filter": {
 			"label": "筛选",
@@ -342,16 +342,16 @@
 		},
 		"pivot": {
 			"label": "数据透视表",
-			"tooltip": "根据活动表格创建数据透视表：然后单击要放置它的单元格，可在任意工作表上（Esc：取消；状态栏中的“新工作表”）。双击数据透视表可编辑它",
-			"docTooltip": "根据工作簿中的表格创建数据透视表，插入到文本中并随之重新计算"
+			"tooltip": "根据活动表格创建数据透视表：然后单击放置位置",
+			"docTooltip": "基于工作簿表格的数据透视表，插入正文"
 		},
 		"table": {
 			"label": "表格",
-			"tooltip": "以活动单元格所在的区域或单元格块创建表格 (Ctrl+L)"
+			"tooltip": "将活动单元格所在区域创建为表格 (Ctrl+L)"
 		},
 		"dataLake": {
 			"label": "Lattis Data Lake",
-			"tooltip": "在活动单元格处插入 Lattis Data Lake 目录中的数据集：链接表格，只读，实时更新"
+			"tooltip": "插入 Lattis Data Lake 中的数据集：链接表格，只读"
 		},
 		"form": {
 			"label": "表单",
@@ -368,15 +368,15 @@
 		},
 		"button": {
 			"label": "按钮",
-			"tooltip": "位于活动单元格的操作按钮：单击时运行“脚本”选项卡中的脚本（或不执行任何操作）",
-			"docTooltip": "文本中的按钮：单击时运行“脚本”选项卡中的脚本（或其中的某个函数）"
+			"tooltip": "运行“脚本”选项卡中某个脚本的按钮",
+			"docTooltip": "正文中运行“脚本”选项卡中某个脚本的按钮"
 		},
 		"field": {
 			"label": "字段",
-			"tooltip": "链接到单元格的控件：文本框、文本区域、复选框、下拉列表或文件（在对话框中选择类型）",
-			"tooltipScript": "链接到单元格的控件：文本框、文本区域、复选框、下拉列表或文件（在对话框中选择类型）；它还可以运行脚本",
-			"docTooltip": "链接到工作表单元格的控件：文本框、文本区域、复选框、下拉列表或文件",
-			"docTooltipScript": "链接到工作表单元格的控件：文本框、文本区域、复选框、下拉列表或文件，可由脚本控制 (controls.*)"
+			"tooltip": "链接到单元格的控件（字段、复选框、列表…）",
+			"tooltipScript": "链接到单元格的控件（字段、复选框、列表…），可运行脚本",
+			"docTooltip": "链接到工作表单元格的控件（字段、复选框、列表…）",
+			"docTooltipScript": "链接到工作表单元格的控件（字段、复选框、列表…），可由脚本控制"
 		},
 		"margins": {
 			"label": "页边距",
@@ -407,7 +407,7 @@
 		},
 		"breaks": {
 			"label": "分隔符",
-			"tooltip": "在活动单元格的上方和左侧插入手动分页符（新页从此处开始）",
+			"tooltip": "在活动单元格上方和左侧插入手动分页符",
 			"insert": "插入分页符",
 			"remove": "删除分页符",
 			"reset": "重设所有分页符"
@@ -459,7 +459,7 @@
 		},
 		"csv": {
 			"label": "从文本/CSV",
-			"tooltip": "根据 CSV 文件新建查询（转换步骤，可刷新）"
+			"tooltip": "从 CSV 文件新建查询"
 		},
 		"xlsx": {
 			"label": "Excel 工作簿",
@@ -476,7 +476,7 @@
 		},
 		"lattisServer": {
 			"label": "Lattis 服务器",
-			"tooltip": "对 Lattis 服务器上的表或其 Data Lake 中的数据集新建查询（只读）"
+			"tooltip": "对 Lattis 服务器或其 Data Lake 新建查询（只读）"
 		},
 		"web": {
 			"label": "Web",
@@ -484,7 +484,7 @@
 		},
 		"refreshAll": {
 			"label": "全部刷新",
-			"tooltip": "重新读取所有已加载查询的源，替换其表格并重新计算 (Ctrl+Alt+F5)"
+			"tooltip": "刷新所有查询并重新计算 (Ctrl+Alt+F5)"
 		},
 		"queries": {
 			"label": "查询和连接",
@@ -510,7 +510,7 @@
 		},
 		"textToColumns": {
 			"label": "分列",
-			"tooltip": "文本分列：将所选列的内容（按分隔符或固定宽度）拆分为多列"
+			"tooltip": "将所选列的内容拆分为多列"
 		},
 		"dedup": {
 			"label": "删除重复值",
@@ -518,11 +518,11 @@
 		},
 		"validation": {
 			"label": "数据验证",
-			"tooltip": "下拉列表：所选内容（或整个表格列）中允许的值，其他输入将被拒绝"
+			"tooltip": "下拉列表：所选内容中只允许其中的值"
 		},
 		"mergeSheets": {
 			"label": "合并选项卡…",
-			"tooltip": "将多个具有相同列的选项卡中的表格（每月、每年、每个城市…一个）合并为一个表格，并添加类别列"
+			"tooltip": "将多个标签中列相同的表格合并为一个"
 		},
 		"insertFunction": {
 			"label": "插入函数",
@@ -533,15 +533,15 @@
 		},
 		"showLinks": {
 			"label": "显示链接",
-			"tooltip": "所有选定单元格的链接箭头：蓝色来自其公式读取的内容，红色指向读取它们的公式；在网格中单击（或按 Esc）可清除"
+			"tooltip": "所选单元格的链接箭头（按 Esc 清除）"
 		},
 		"calculate": {
 			"label": "计算",
-			"tooltip": "重新计算公式并刷新 TODAY、NOW 和 RAND（F9，或在导入表格之外按 F5）"
+			"tooltip": "重新计算公式 (F9)"
 		},
 		"toValues": {
 			"label": "转换为值",
-			"tooltip": "将所选内容的公式替换为其当前值：计算列（变为输入列，类型取自其值）和自由单元格（按 Ctrl+Z 撤消）"
+			"tooltip": "将所选内容中的公式替换为其值（按 Ctrl+Z 撤消）"
 		},
 		"note": {
 			"new": "新建注释",
@@ -563,17 +563,17 @@
 			"tooltipUnprotect": "撤消工作表结构保护",
 			"tooltipByBook": "所有工作表的结构已随工作簿受保护（审阅 › 撤消工作簿保护）",
 			"tooltipSheet": "保护结构：无需执行，整个工作表已受保护",
-			"tooltip": "保护结构：除在表格中输入外，全部锁定（自由单元格、格式、列、表格、对象和选项卡）；密码可选"
+			"tooltip": "保护结构：只允许在表格中输入数据"
 		},
 		"protectWorkbook": {
 			"protect": "保护工作簿",
 			"unprotect": "撤消工作簿保护",
 			"tooltipUnprotect": "撤消工作簿结构保护",
-			"tooltip": "保护工作簿结构：拒绝添加、删除、重命名或移动工作表"
+			"tooltip": "保护工作簿结构：工作表不再可更改"
 		},
 		"pageBreaks": {
-			"tooltipOn": "隐藏分页符（虚线）和打印区域",
-			"tooltipOff": "显示打印分页符（虚线）和打印区域"
+			"tooltipOn": "隐藏分页符和打印区域",
+			"tooltipOff": "显示分页符和打印区域"
 		},
 		"gridlines": {
 			"label": "网格线",
@@ -607,7 +607,7 @@
 		},
 		"theme": {
 			"label": "主题",
-			"tooltip": "工作簿中表格的颜色：普通表格和来自外部源的表格（主题：{theme}）",
+			"tooltip": "工作簿表格的颜色（主题：{theme}）",
 			"customName": "自定义",
 			"customize": "自定义…"
 		},
@@ -640,7 +640,7 @@
 		},
 		"docPrint": {
 			"label": "打印 / PDF",
-			"tooltip": "打印文档或另存为 PDF（{printer}），包括图表和数据透视表"
+			"tooltip": "打印文档或另存为 PDF ({printer})"
 		},
 		"link": {
 			"label": "链接",

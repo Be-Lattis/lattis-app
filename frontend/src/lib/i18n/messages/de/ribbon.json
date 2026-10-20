@@ -273,11 +273,11 @@
 		},
 		"conditional": {
 			"label": "Bedingte Formatierung",
-			"tooltip": "Zellen hervorheben, Datenbalken, Farbskalen, Symbolsätze, Regel-Manager"
+			"tooltip": "Zellen anhand ihrer Werte hervorheben"
 		},
 		"formatAsTable": {
 			"label": "Als Tabelle formatieren",
-			"tooltip": "Aus dem Bereich oder Zellblock der aktiven Zelle eine Tabelle machen, ihre erste Zeile als Überschriften (Strg+L)"
+			"tooltip": "Aus dem Bereich der aktiven Zelle eine Tabelle mit Überschriften machen (Strg+L)"
 		},
 		"insert": {
 			"label": "Einfügen",
@@ -326,7 +326,7 @@
 		},
 		"sortCustom": {
 			"label": "Benutzerdefiniertes Sortieren…",
-			"tooltip": "Tabelle nach der aktiven Spalte in einer gewählten Reihenfolge sortieren (Tage, Monate, freie Reihenfolge)"
+			"tooltip": "Die Tabelle nach der aktiven Spalte in einer gewählten Reihenfolge sortieren"
 		},
 		"filter": {
 			"label": "Filtern",
@@ -342,16 +342,16 @@
 		},
 		"pivot": {
 			"label": "PivotTable",
-			"tooltip": "PivotTable aus der aktiven Tabelle: Klicken Sie dann auf die Zelle, in der sie platziert werden soll, auf einem beliebigen Blatt (Esc: abbrechen; „Neues Blatt“ in der Statusleiste). Doppelklick auf eine PivotTable, um sie zu bearbeiten",
-			"docTooltip": "PivotTable aus einer Tabelle der Arbeitsmappe, in den Text eingefügt und mit ihm neu berechnet"
+			"tooltip": "PivotTable aus der aktiven Tabelle: Klicken Sie dann auf die Zielzelle",
+			"docTooltip": "PivotTable aus einer Tabelle der Arbeitsmappe, im Text"
 		},
 		"table": {
 			"label": "Tabelle",
-			"tooltip": "Aus dem Bereich oder Zellblock der aktiven Zelle eine Tabelle machen (Strg+L)"
+			"tooltip": "Aus dem Bereich der aktiven Zelle eine Tabelle machen (Strg+L)"
 		},
 		"dataLake": {
 			"label": "Lattis Data Lake",
-			"tooltip": "In die aktive Zelle einen Datensatz aus dem Katalog des Lattis Data Lake einfügen: verknüpfte Tabelle, schreibgeschützt, live aktualisiert"
+			"tooltip": "Einen Datensatz aus dem Lattis Data Lake einfügen: verknüpfte Tabelle, schreibgeschützt"
 		},
 		"form": {
 			"label": "Formular",
@@ -368,15 +368,15 @@
 		},
 		"button": {
 			"label": "Schaltfläche",
-			"tooltip": "Aktionsschaltfläche in der aktiven Zelle: Ein Klick führt ein Skript der Registerkarte Skript aus (oder nichts)",
-			"docTooltip": "Schaltfläche im Text: Ein Klick führt ein Skript der Registerkarte Skript aus (oder eine seiner Funktionen)"
+			"tooltip": "Schaltfläche, die ein Skript aus dem Register Skript ausführt",
+			"docTooltip": "Schaltfläche im Text, die ein Skript aus dem Register Skript ausführt"
 		},
 		"field": {
 			"label": "Feld",
-			"tooltip": "Mit einer Zelle verknüpftes Steuerelement: Textfeld, Textbereich, Kontrollkästchen, Dropdownliste oder Datei (Typ im Dialogfeld wählen)",
-			"tooltipScript": "Mit einer Zelle verknüpftes Steuerelement: Textfeld, Textbereich, Kontrollkästchen, Dropdownliste oder Datei (Typ im Dialogfeld wählen); es kann auch ein Skript ausführen",
-			"docTooltip": "Mit einer Zelle eines Blatts verknüpftes Steuerelement: Textfeld, Textbereich, Kontrollkästchen, Dropdownliste oder Datei",
-			"docTooltipScript": "Mit einer Zelle eines Blatts verknüpftes Steuerelement: Textfeld, Textbereich, Kontrollkästchen, Dropdownliste oder Datei, von Skripts steuerbar (controls.*)"
+			"tooltip": "Steuerelement (Feld, Kontrollkästchen, Liste…), mit einer Zelle verknüpft",
+			"tooltipScript": "Steuerelement (Feld, Kontrollkästchen, Liste…), mit einer Zelle verknüpft, kann ein Skript starten",
+			"docTooltip": "Steuerelement (Feld, Kontrollkästchen, Liste…), mit einer Zelle eines Blatts verknüpft",
+			"docTooltipScript": "Steuerelement (Feld, Kontrollkästchen, Liste…), mit einer Zelle eines Blatts verknüpft, von Skripts steuerbar"
 		},
 		"margins": {
 			"label": "Seitenränder",
@@ -407,7 +407,7 @@
 		},
 		"breaks": {
 			"label": "Umbrüche",
-			"tooltip": "Manueller Seitenumbruch oberhalb und links der aktiven Zelle (dort beginnt die neue Seite)",
+			"tooltip": "Manueller Seitenumbruch über und links von der aktiven Zelle",
 			"insert": "Seitenumbruch einfügen",
 			"remove": "Seitenumbruch entfernen",
 			"reset": "Alle Seitenumbrüche zurücksetzen"
@@ -459,7 +459,7 @@
 		},
 		"csv": {
 			"label": "Text/CSV",
-			"tooltip": "Neue Abfrage aus einer CSV-Datei (Transformationsschritte, aktualisierbar)"
+			"tooltip": "Neue Abfrage aus einer CSV-Datei"
 		},
 		"xlsx": {
 			"label": "Excel-Arbeitsmappe",
@@ -476,7 +476,7 @@
 		},
 		"lattisServer": {
 			"label": "Lattis-Server",
-			"tooltip": "Neue Abfrage auf eine Tabelle eines Lattis-Servers oder einen Datensatz seines Data Lake (schreibgeschützt)"
+			"tooltip": "Neue Abfrage auf einen Lattis-Server oder seinen Data Lake (schreibgeschützt)"
 		},
 		"web": {
 			"label": "Web",
@@ -484,7 +484,7 @@
 		},
 		"refreshAll": {
 			"label": "Alle aktualisieren",
-			"tooltip": "Quellen aller geladenen Abfragen neu lesen, ihre Tabellen ersetzen und neu berechnen (Strg+Alt+F5)"
+			"tooltip": "Alle Abfragen aktualisieren und neu berechnen (Strg+Alt+F5)"
 		},
 		"queries": {
 			"label": "Abfragen und Verbindungen",
@@ -510,7 +510,7 @@
 		},
 		"textToColumns": {
 			"label": "Text in Spalten",
-			"tooltip": "Text in Spalten: den Inhalt der ausgewählten Spalte (Trennzeichen oder feste Breite) auf mehrere Spalten aufteilen"
+			"tooltip": "Den Inhalt der ausgewählten Spalte auf mehrere Spalten aufteilen"
 		},
 		"dedup": {
 			"label": "Duplikate entfernen",
@@ -518,11 +518,11 @@
 		},
 		"validation": {
 			"label": "Datenüberprüfung",
-			"tooltip": "Dropdownliste: zulässige Werte in der Auswahl (oder einer ganzen Tabellenspalte), andere Eingaben werden abgelehnt"
+			"tooltip": "Dropdownliste: Nur ihre Werte sind in der Auswahl zulässig"
 		},
 		"mergeSheets": {
 			"label": "Blätter zusammenführen…",
-			"tooltip": "Die Tabellen mehrerer Blätter mit denselben Spalten (eines pro Monat, Jahr, Ort…) zu einer einzigen Tabelle mit einer Kategoriespalte zusammenführen"
+			"tooltip": "Tabellen mit gleichen Spalten aus mehreren Registern zu einer zusammenführen"
 		},
 		"insertFunction": {
 			"label": "Funktion einfügen",
@@ -533,15 +533,15 @@
 		},
 		"showLinks": {
 			"label": "Verknüpfungen anzeigen",
-			"tooltip": "Verknüpfungspfeile aller ausgewählten Zellen: blau von dem, was ihre Formeln lesen, rot zu den Formeln, die sie lesen; ein Klick in das Raster (oder Esc) entfernt sie"
+			"tooltip": "Verknüpfungspfeile der ausgewählten Zellen (Esc zum Entfernen)"
 		},
 		"calculate": {
 			"label": "Neu berechnen",
-			"tooltip": "Formeln neu berechnen und HEUTE, JETZT und ZUFALLSZAHL erneuern (F9, oder F5 außerhalb einer importierten Tabelle)"
+			"tooltip": "Formeln neu berechnen (F9)"
 		},
 		"toValues": {
 			"label": "In Werte konvertieren",
-			"tooltip": "Die Formeln der Auswahl durch ihre aktuellen Werte ersetzen: berechnete Spalten (die zu Eingabespalten mit dem Typ ihrer Werte werden) und freie Zellen (Strg+Z zum Rückgängigmachen)"
+			"tooltip": "Die Formeln der Auswahl durch ihre Werte ersetzen (Strg+Z zum Rückgängigmachen)"
 		},
 		"note": {
 			"new": "Neue Notiz",
@@ -563,17 +563,17 @@
 			"tooltipUnprotect": "Schutz der Blattstruktur aufheben",
 			"tooltipByBook": "Struktur aller Blätter mit der Arbeitsmappe geschützt (Überprüfen › Arbeitsmappenschutz aufheben)",
 			"tooltipSheet": "Struktur schützen: nicht nötig, das ganze Blatt ist bereits geschützt",
-			"tooltip": "Struktur schützen: Alles ist gesperrt außer der Eingabe in Tabellen (freie Zellen, Formatierung, Spalten, Tabellen, Objekte und Register); Kennwort optional"
+			"tooltip": "Struktur schützen: Nur die Eingabe in Tabellen bleibt erlaubt"
 		},
 		"protectWorkbook": {
 			"protect": "Arbeitsmappe schützen",
 			"unprotect": "Arbeitsmappenschutz aufheben",
 			"tooltipUnprotect": "Schutz der Arbeitsmappenstruktur aufheben",
-			"tooltip": "Struktur der Arbeitsmappe schützen: Hinzufügen, Löschen, Umbenennen oder Verschieben von Blättern wird abgelehnt"
+			"tooltip": "Struktur der Arbeitsmappe schützen: Blätter lassen sich nicht mehr ändern"
 		},
 		"pageBreaks": {
-			"tooltipOn": "Seitenumbrüche (gepunktete Linien) und Druckbereich ausblenden",
-			"tooltipOff": "Seitenumbrüche beim Drucken (gepunktete Linien) und Druckbereich anzeigen"
+			"tooltipOn": "Seitenumbrüche und Druckbereich ausblenden",
+			"tooltipOff": "Seitenumbrüche und Druckbereich anzeigen"
 		},
 		"gridlines": {
 			"label": "Gitternetzlinien",
@@ -607,7 +607,7 @@
 		},
 		"theme": {
 			"label": "Design",
-			"tooltip": "Farben der Tabellen der Arbeitsmappe: gewöhnliche Tabellen und Tabellen aus einer externen Quelle (Design: {theme})",
+			"tooltip": "Farben der Tabellen der Arbeitsmappe (Design: {theme})",
 			"customName": "benutzerdefiniert",
 			"customize": "Anpassen…"
 		},
@@ -640,7 +640,7 @@
 		},
 		"docPrint": {
 			"label": "Drucken / PDF",
-			"tooltip": "Dokument drucken oder als PDF speichern ({printer}), einschließlich Diagrammen und PivotTables"
+			"tooltip": "Das Dokument drucken oder als PDF speichern ({printer})"
 		},
 		"link": {
 			"label": "Link",

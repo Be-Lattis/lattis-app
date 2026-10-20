@@ -273,11 +273,11 @@
 		},
 		"conditional": {
 			"label": "Formato condicional",
-			"tooltip": "Resaltar celdas, barras de datos, escalas de color, conjuntos de iconos, administrador de reglas"
+			"tooltip": "Resaltar celdas según sus valores"
 		},
 		"formatAsTable": {
 			"label": "Dar formato como tabla",
-			"tooltip": "Crear una tabla a partir del rango o bloque de celdas de la celda activa, con su primera fila como encabezados (Ctrl+L)"
+			"tooltip": "Crear una tabla a partir del rango de la celda activa, con encabezados (Ctrl+L)"
 		},
 		"insert": {
 			"label": "Insertar",
@@ -326,7 +326,7 @@
 		},
 		"sortCustom": {
 			"label": "Orden personalizado…",
-			"tooltip": "Ordenar la tabla por la columna activa en un orden elegido (días, meses, orden libre)"
+			"tooltip": "Ordenar la tabla por la columna activa en un orden elegido"
 		},
 		"filter": {
 			"label": "Filtro",
@@ -342,16 +342,16 @@
 		},
 		"pivot": {
 			"label": "Tabla dinámica",
-			"tooltip": "Tabla dinámica a partir de la tabla activa: luego haga clic en la celda donde colocarla, en cualquier hoja (Esc: cancelar; «Hoja nueva» en la barra de estado). Haga doble clic en una tabla dinámica para modificarla",
-			"docTooltip": "Tabla dinámica a partir de una tabla del libro, insertada en el texto y recalculada con él"
+			"tooltip": "Tabla dinámica a partir de la tabla activa: luego haga clic donde colocarla",
+			"docTooltip": "Tabla dinámica de una tabla del libro, en el texto"
 		},
 		"table": {
 			"label": "Tabla",
-			"tooltip": "Crear una tabla a partir del rango o bloque de celdas de la celda activa (Ctrl+L)"
+			"tooltip": "Crear una tabla a partir del rango de la celda activa (Ctrl+L)"
 		},
 		"dataLake": {
 			"label": "Data Lake de Lattis",
-			"tooltip": "Insertar en la celda activa un conjunto de datos del catálogo del Data Lake de Lattis: tabla vinculada, de solo lectura, actualizada en directo"
+			"tooltip": "Insertar un conjunto de datos del Data Lake de Lattis: tabla vinculada, de solo lectura"
 		},
 		"form": {
 			"label": "Formulario",
@@ -368,15 +368,15 @@
 		},
 		"button": {
 			"label": "Botón",
-			"tooltip": "Botón de acción en la celda activa: un clic ejecuta un script de la pestaña Script (o nada)",
-			"docTooltip": "Botón en el texto: un clic ejecuta un script de la pestaña Script (o una de sus funciones)"
+			"tooltip": "Botón que ejecuta un script de la pestaña Script",
+			"docTooltip": "Botón en el texto que ejecuta un script de la pestaña Script"
 		},
 		"field": {
 			"label": "Campo",
-			"tooltip": "Control vinculado a una celda: campo de texto, área de texto, casilla, lista desplegable o archivo (tipo elegido en el cuadro de diálogo)",
-			"tooltipScript": "Control vinculado a una celda: campo de texto, área de texto, casilla, lista desplegable o archivo (tipo elegido en el cuadro de diálogo); también puede ejecutar un script",
-			"docTooltip": "Control vinculado a una celda de una hoja: campo de texto, área de texto, casilla, lista desplegable o archivo",
-			"docTooltipScript": "Control vinculado a una celda de una hoja: campo de texto, área de texto, casilla, lista desplegable o archivo, que los scripts pueden manejar (controls.*)"
+			"tooltip": "Control (campo, casilla, lista…) vinculado a una celda",
+			"tooltipScript": "Control (campo, casilla, lista…) vinculado a una celda, que puede ejecutar un script",
+			"docTooltip": "Control (campo, casilla, lista…) vinculado a una celda de una hoja",
+			"docTooltipScript": "Control (campo, casilla, lista…) vinculado a una celda de una hoja, que los scripts pueden manejar"
 		},
 		"margins": {
 			"label": "Márgenes",
@@ -407,7 +407,7 @@
 		},
 		"breaks": {
 			"label": "Saltos",
-			"tooltip": "Salto de página manual encima y a la izquierda de la celda activa (la nueva página empieza ahí)",
+			"tooltip": "Salto de página manual encima y a la izquierda de la celda activa",
 			"insert": "Insertar salto de página",
 			"remove": "Quitar salto de página",
 			"reset": "Restablecer todos los saltos de página"
@@ -459,7 +459,7 @@
 		},
 		"csv": {
 			"label": "Texto/CSV",
-			"tooltip": "Nueva consulta a partir de un archivo CSV (pasos de transformación, actualizable)"
+			"tooltip": "Nueva consulta a partir de un archivo CSV"
 		},
 		"xlsx": {
 			"label": "Libro de Excel",
@@ -476,7 +476,7 @@
 		},
 		"lattisServer": {
 			"label": "Servidor Lattis",
-			"tooltip": "Nueva consulta sobre una tabla de un Servidor Lattis o un conjunto de datos de su Data Lake (solo lectura)"
+			"tooltip": "Nueva consulta sobre un Servidor Lattis o su Data Lake (solo lectura)"
 		},
 		"web": {
 			"label": "Web",
@@ -484,7 +484,7 @@
 		},
 		"refreshAll": {
 			"label": "Actualizar todo",
-			"tooltip": "Volver a leer los orígenes de todas las consultas cargadas, reemplazar sus tablas y recalcular (Ctrl+Alt+F5)"
+			"tooltip": "Actualizar todas las consultas y recalcular (Ctrl+Alt+F5)"
 		},
 		"queries": {
 			"label": "Consultas y conexiones",
@@ -510,7 +510,7 @@
 		},
 		"textToColumns": {
 			"label": "Texto en columnas",
-			"tooltip": "Convertir texto en columnas: dividir el contenido de la columna seleccionada (delimitadores o ancho fijo) en varias columnas"
+			"tooltip": "Dividir el contenido de la columna seleccionada en varias columnas"
 		},
 		"dedup": {
 			"label": "Quitar duplicados",
@@ -518,11 +518,11 @@
 		},
 		"validation": {
 			"label": "Validación de datos",
-			"tooltip": "Lista desplegable: valores permitidos en la selección (o en toda una columna de tabla); las demás entradas se rechazan"
+			"tooltip": "Lista desplegable: solo sus valores se permiten en la selección"
 		},
 		"mergeSheets": {
 			"label": "Combinar pestañas…",
-			"tooltip": "Combinar las tablas de varias pestañas con las mismas columnas (una por mes, por año, por ciudad…) en una sola tabla, con una columna de categoría"
+			"tooltip": "Combinar en una sola las tablas con las mismas columnas de varias pestañas"
 		},
 		"insertFunction": {
 			"label": "Insertar función",
@@ -533,15 +533,15 @@
 		},
 		"showLinks": {
 			"label": "Mostrar vínculos",
-			"tooltip": "Flechas de vínculo de todas las celdas seleccionadas: azules desde lo que leen sus fórmulas, rojas hacia las fórmulas que las leen; un clic en la cuadrícula (o Esc) las borra"
+			"tooltip": "Flechas de vínculo de las celdas seleccionadas (Esc para borrarlas)"
 		},
 		"calculate": {
 			"label": "Calcular",
-			"tooltip": "Recalcular las fórmulas y actualizar HOY, AHORA y ALEATORIO (F9, o F5 fuera de una tabla importada)"
+			"tooltip": "Recalcular las fórmulas (F9)"
 		},
 		"toValues": {
 			"label": "Convertir en valores",
-			"tooltip": "Reemplazar las fórmulas de la selección por sus valores actuales: columnas calculadas (que pasan a ser columnas de entrada, con el tipo de sus valores) y celdas libres (Ctrl+Z para deshacer)"
+			"tooltip": "Reemplazar las fórmulas de la selección por sus valores (Ctrl+Z para deshacer)"
 		},
 		"note": {
 			"new": "Nueva nota",
@@ -563,17 +563,17 @@
 			"tooltipUnprotect": "Desproteger la estructura de la hoja",
 			"tooltipByBook": "Estructura de todas las hojas protegida con el libro (Revisar › Desproteger libro)",
 			"tooltipSheet": "Proteger estructura: no hace falta, toda la hoja ya está protegida",
-			"tooltip": "Proteger estructura: todo queda bloqueado salvo la entrada de datos en las tablas (celdas libres, formato, columnas, tablas, objetos y pestaña); contraseña opcional"
+			"tooltip": "Proteger estructura: solo se permite la entrada de datos en las tablas"
 		},
 		"protectWorkbook": {
 			"protect": "Proteger libro",
 			"unprotect": "Desproteger libro",
 			"tooltipUnprotect": "Desproteger la estructura del libro",
-			"tooltip": "Proteger la estructura del libro: se rechaza agregar, eliminar, cambiar de nombre o mover hojas"
+			"tooltip": "Proteger la estructura del libro: las hojas ya no cambian"
 		},
 		"pageBreaks": {
-			"tooltipOn": "Ocultar los saltos de página (líneas de puntos) y el área de impresión",
-			"tooltipOff": "Mostrar los saltos de página de impresión (líneas de puntos) y el área de impresión"
+			"tooltipOn": "Ocultar los saltos de página y el área de impresión",
+			"tooltipOff": "Mostrar los saltos de página y el área de impresión"
 		},
 		"gridlines": {
 			"label": "Líneas de cuadrícula",
@@ -607,7 +607,7 @@
 		},
 		"theme": {
 			"label": "Tema",
-			"tooltip": "Colores de las tablas del libro: tablas normales y tablas de un origen externo (tema: {theme})",
+			"tooltip": "Colores de las tablas del libro (tema: {theme})",
 			"customName": "personalizado",
 			"customize": "Personalizar…"
 		},
@@ -640,7 +640,7 @@
 		},
 		"docPrint": {
 			"label": "Imprimir / PDF",
-			"tooltip": "Imprimir el documento o guardarlo como PDF ({printer}), con gráficos y tablas dinámicas"
+			"tooltip": "Imprimir el documento o guardarlo en PDF ({printer})"
 		},
 		"link": {
 			"label": "Vínculo",

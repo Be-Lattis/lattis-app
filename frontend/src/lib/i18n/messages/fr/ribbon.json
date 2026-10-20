@@ -273,11 +273,11 @@
 		},
 		"conditional": {
 			"label": "Mise en forme conditionnelle",
-			"tooltip": "Mise en évidence des cellules, barres de données, nuances de couleurs, jeux d’icônes, gestionnaire des règles"
+			"tooltip": "Mettre en évidence des cellules selon leurs valeurs"
 		},
 		"formatAsTable": {
 			"label": "Mettre sous forme de tableau",
-			"tooltip": "Faire un tableau de la plage ou du bloc de cellules de la cellule active, sa première ligne pour en-têtes (Ctrl+L)"
+			"tooltip": "Faire un tableau de la plage de la cellule active, avec en-têtes (Ctrl+L)"
 		},
 		"insert": {
 			"label": "Insérer",
@@ -326,7 +326,7 @@
 		},
 		"sortCustom": {
 			"label": "Tri personnalisé…",
-			"tooltip": "Trier le tableau par la colonne active dans un ordre choisi (Jours, Mois, ordre libre)"
+			"tooltip": "Trier le tableau par la colonne active dans un ordre choisi"
 		},
 		"filter": {
 			"label": "Filtrer",
@@ -342,16 +342,16 @@
 		},
 		"pivot": {
 			"label": "Tableau croisé dynamique",
-			"tooltip": "Tableau croisé dynamique du tableau actif : cliquez ensuite sur la cellule où le poser, sur n’importe quelle feuille (Échap : annuler ; « Nouvelle feuille » dans la barre d’état). Double-clic sur un TCD pour le modifier",
-			"docTooltip": "Tableau croisé dynamique d’un tableau du classeur, inséré dans le texte et recalculé avec lui"
+			"tooltip": "Tableau croisé dynamique du tableau actif : cliquez ensuite où le poser",
+			"docTooltip": "Tableau croisé dynamique d’un tableau du classeur, dans le texte"
 		},
 		"table": {
 			"label": "Tableau",
-			"tooltip": "Faire un tableau de la plage ou du bloc de cellules de la cellule active (Ctrl+L)"
+			"tooltip": "Faire un tableau de la plage de la cellule active (Ctrl+L)"
 		},
 		"dataLake": {
 			"label": "Data Lake Lattis",
-			"tooltip": "Insérer à la cellule active une donnée du catalogue du Data Lake Lattis : tableau lié, en lecture seule, à jour en direct"
+			"tooltip": "Insérer une donnée du Data Lake Lattis : tableau lié, en lecture seule"
 		},
 		"form": {
 			"label": "Formulaire",
@@ -368,15 +368,15 @@
 		},
 		"button": {
 			"label": "Bouton",
-			"tooltip": "Bouton d’action à la cellule active : un clic exécute un script de l’onglet Script (ou rien)",
-			"docTooltip": "Bouton dans le texte : un clic exécute un script de l’onglet Script (ou l’une de ses fonctions)"
+			"tooltip": "Bouton qui exécute un script de l’onglet Script",
+			"docTooltip": "Bouton dans le texte, qui exécute un script de l’onglet Script"
 		},
 		"field": {
 			"label": "Champ",
-			"tooltip": "Contrôle lié à une cellule : champ texte, zone de texte, case à cocher, liste déroulante ou fichier (choix du type dans la fenêtre)",
-			"tooltipScript": "Contrôle lié à une cellule : champ texte, zone de texte, case à cocher, liste déroulante ou fichier (choix du type dans la fenêtre) ; il peut aussi lancer un script",
-			"docTooltip": "Contrôle lié à une cellule d’une feuille : champ texte, zone de texte, case à cocher, liste déroulante ou fichier",
-			"docTooltipScript": "Contrôle lié à une cellule d’une feuille : champ texte, zone de texte, case à cocher, liste déroulante ou fichier, pilotable par les scripts (controls.*)"
+			"tooltip": "Contrôle (champ, case à cocher, liste…) lié à une cellule",
+			"tooltipScript": "Contrôle (champ, case à cocher, liste…) lié à une cellule, qui peut lancer un script",
+			"docTooltip": "Contrôle (champ, case à cocher, liste…) lié à une cellule d’une feuille",
+			"docTooltipScript": "Contrôle (champ, case à cocher, liste…) lié à une cellule d’une feuille, pilotable par les scripts"
 		},
 		"margins": {
 			"label": "Marges",
@@ -407,7 +407,7 @@
 		},
 		"breaks": {
 			"label": "Sauts de page",
-			"tooltip": "Saut de page manuel au-dessus et à gauche de la cellule active (la nouvelle page commence là)",
+			"tooltip": "Saut de page manuel au-dessus et à gauche de la cellule active",
 			"insert": "Insérer un saut de page",
 			"remove": "Supprimer le saut de page",
 			"reset": "Rétablir tous les sauts de page"
@@ -459,7 +459,7 @@
 		},
 		"csv": {
 			"label": "Texte/CSV",
-			"tooltip": "Nouvelle requête à partir d’un fichier CSV (étapes de transformation, actualisable)"
+			"tooltip": "Nouvelle requête à partir d’un fichier CSV"
 		},
 		"xlsx": {
 			"label": "Classeur Excel",
@@ -476,7 +476,7 @@
 		},
 		"lattisServer": {
 			"label": "Serveur Lattis",
-			"tooltip": "Nouvelle requête sur un tableau d’un Serveur Lattis ou une donnée de son Data Lake (lecture seule)"
+			"tooltip": "Nouvelle requête sur un Serveur Lattis ou son Data Lake (lecture seule)"
 		},
 		"web": {
 			"label": "Web",
@@ -484,7 +484,7 @@
 		},
 		"refreshAll": {
 			"label": "Actualiser tout",
-			"tooltip": "Relire les sources de toutes les requêtes chargées, remplacer leurs tableaux et recalculer (Ctrl+Alt+F5)"
+			"tooltip": "Actualiser toutes les requêtes et recalculer (Ctrl+Alt+F5)"
 		},
 		"queries": {
 			"label": "Requêtes et connexions",
@@ -510,7 +510,7 @@
 		},
 		"textToColumns": {
 			"label": "Convertir",
-			"tooltip": "Convertir le texte en colonnes : couper le contenu de la colonne sélectionnée (séparateurs ou largeur fixe) en plusieurs colonnes"
+			"tooltip": "Couper le contenu de la colonne sélectionnée en plusieurs colonnes"
 		},
 		"dedup": {
 			"label": "Supprimer les doublons",
@@ -518,11 +518,11 @@
 		},
 		"validation": {
 			"label": "Validation des données",
-			"tooltip": "Liste déroulante : valeurs permises dans la sélection (ou toute une colonne de tableau), les autres saisies sont refusées"
+			"tooltip": "Liste déroulante : seules ses valeurs sont permises dans la sélection"
 		},
 		"mergeSheets": {
 			"label": "Regrouper des onglets…",
-			"tooltip": "Réunir les tableaux de plusieurs onglets aux mêmes colonnes (un par mois, par année, par ville…) en un seul tableau, avec une colonne de catégorie"
+			"tooltip": "Réunir en un seul les tableaux aux mêmes colonnes de plusieurs onglets"
 		},
 		"insertFunction": {
 			"label": "Insérer une fonction",
@@ -533,15 +533,15 @@
 		},
 		"showLinks": {
 			"label": "Afficher les liens",
-			"tooltip": "Flèches des liens de toutes les cellules sélectionnées : bleues depuis ce que lisent leurs formules, rouges vers les formules qui les lisent ; un clic dans la grille (ou Échap) les efface"
+			"tooltip": "Flèches des liens des cellules sélectionnées (Échap pour les effacer)"
 		},
 		"calculate": {
 			"label": "Calculer",
-			"tooltip": "Recalculer les formules et renouveler AUJOURDHUI, MAINTENANT et ALEA (F9, ou F5 hors d’un tableau importé)"
+			"tooltip": "Recalculer les formules (F9)"
 		},
 		"toValues": {
 			"label": "Convertir en valeurs",
-			"tooltip": "Remplacer les formules de la sélection par leurs valeurs actuelles : colonnes calculées (devenues colonnes saisies, au type de leurs valeurs) et cellules libres (Ctrl+Z pour annuler)"
+			"tooltip": "Remplacer les formules de la sélection par leurs valeurs (Ctrl+Z pour annuler)"
 		},
 		"note": {
 			"new": "Nouvelle note",
@@ -563,17 +563,17 @@
 			"tooltipUnprotect": "Ôter la protection de la structure de la feuille",
 			"tooltipByBook": "Structure de toutes les feuilles protégée avec le classeur (Révision › Ôter la protection du classeur)",
 			"tooltipSheet": "Protéger la structure : inutile, la feuille est déjà protégée en entier",
-			"tooltip": "Protéger la structure : tout est verrouillé sauf la saisie dans les tableaux (cellules libres, mise en forme, colonnes, tableaux, objets et onglet) ; mot de passe facultatif"
+			"tooltip": "Protéger la structure : seule la saisie dans les tableaux reste permise"
 		},
 		"protectWorkbook": {
 			"protect": "Protéger le classeur",
 			"unprotect": "Ôter la protection du classeur",
 			"tooltipUnprotect": "Ôter la protection de la structure du classeur",
-			"tooltip": "Protéger la structure du classeur : ajouter, supprimer, renommer ou déplacer des feuilles est refusé"
+			"tooltip": "Protéger la structure du classeur : les feuilles ne changent plus"
 		},
 		"pageBreaks": {
-			"tooltipOn": "Masquer les sauts de page (traits pointillés) et la zone d’impression",
-			"tooltipOff": "Afficher les sauts de page de l’impression (traits pointillés) et la zone d’impression"
+			"tooltipOn": "Masquer les sauts de page et la zone d’impression",
+			"tooltipOff": "Afficher les sauts de page et la zone d’impression"
 		},
 		"gridlines": {
 			"label": "Quadrillage",
@@ -607,7 +607,7 @@
 		},
 		"theme": {
 			"label": "Thème",
-			"tooltip": "Couleurs des tableaux du classeur : tableaux ordinaires et tableaux d’une source externe (thème : {theme})",
+			"tooltip": "Couleurs des tableaux du classeur (thème : {theme})",
 			"customName": "personnalisé",
 			"customize": "Personnaliser…"
 		},
@@ -640,7 +640,7 @@
 		},
 		"docPrint": {
 			"label": "Imprimer / PDF",
-			"tooltip": "Imprimer le document, ou l’enregistrer en PDF ({printer}), graphiques et tableaux croisés compris"
+			"tooltip": "Imprimer le document, ou l’enregistrer en PDF ({printer})"
 		},
 		"link": {
 			"label": "Lien",

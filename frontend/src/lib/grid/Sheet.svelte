@@ -11911,9 +11911,6 @@
 					<button class="sort" title={tc.title} disabled={tc.disabled} onclick={() => runTabChoice(d.e.t.name, fcol.name, tc)}>{tc.label}</button>
 					<hr />
 				{/if}
-				{#if fcol?.formula}
-					<p class="menu-note">{tr('grid.filter.computed')}</p>
-				{/if}
 				{#if filterable}
 					<!-- Filtres par condition, comme le sous-menu d'Excel. -->
 					<button class="sort cond-menu" class:on={d.sub} aria-expanded={d.sub} onclick={() => (d.sub = !d.sub)}>

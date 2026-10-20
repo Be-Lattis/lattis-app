@@ -14,7 +14,7 @@ describe('tabChoiceItem', () => {
 		expect(it.disabled).toBe(false);
 		expect(it.clear).toBe(false);
 		expect(it.title).toContain('▾');
-		expect(it.title).toContain('toutes les valeurs');
+		expect(it.title).toContain('« Année »');
 	});
 
 	it('reste permise tant que les colonnes proposées ne sont pas connues', () => {

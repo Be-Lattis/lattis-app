@@ -94,12 +94,12 @@
 			"resize.hint": "Ziehen Sie an einem Ziehpunkt, um die Größe der Schaltfläche zu ändern"
 		},
 		"note": {
-			"noScript": "Kein Skript in der Bibliothek (Registerkarte Skript): Das Steuerelement wird ohne Aktion erstellt und kann später verknüpft werden.",
-			"input": "Der Text wird beim Verlassen des Felds oder mit der Eingabetaste in die verknüpfte Zelle geschrieben, dann wird die Aktion ausgeführt.",
-			"textarea": "Der Text wird beim Verlassen des Bereichs oder mit Strg+Eingabe in die verknüpfte Zelle geschrieben, dann wird die Aktion ausgeführt.",
-			"file": "Der Pfad der gewählten Datei wird in die verknüpfte Zelle geschrieben, dann wird die Aktion ausgeführt.",
-			"value": "Der Wert wird in die verknüpfte Zelle geschrieben, dann wird die Aktion ausgeführt; alles lässt sich in einem Schritt rückgängig machen (Strg+Z).",
-			"button": "Ein Klick auf die Schaltfläche führt die Aktion aus; alles, was sie ändert, lässt sich in einem Schritt rückgängig machen (Strg+Z)."
+			"noScript": "Keine Skripts (Register Skript): Das Steuerelement wird ohne Aktion erstellt.",
+			"input": "Der Text kommt in die verknüpfte Zelle (Eingabetaste oder Verlassen des Felds), dann läuft die Aktion.",
+			"textarea": "Der Text kommt in die verknüpfte Zelle (Strg+Eingabe oder Verlassen des Felds), dann läuft die Aktion.",
+			"file": "Der Dateipfad kommt in die verknüpfte Zelle, dann läuft die Aktion.",
+			"value": "Der Wert kommt in die verknüpfte Zelle, dann läuft die Aktion (Strg+Z macht alles rückgängig).",
+			"button": "Ein Klick führt die Aktion aus (Strg+Z macht alles rückgängig)."
 		},
 		"running": "„{name}“: wird ausgeführt…",
 		"paste": "Schaltfläche einfügen"
@@ -379,7 +379,7 @@
 			"avg": "Werte formatieren, die folgende Bedingung erfüllen:",
 			"dup": "Alle formatieren:",
 			"formula": "Werte formatieren, für die diese Formel wahr ist:",
-			"formula.help": "In einer Tabelle bezeichnet [@Spalte] die Zelle derselben Zeile (eine Adresse der ersten Datenzeile, z. B. $C2, gilt ebenfalls für jede Zeile). Außerhalb einer Tabelle wird die Formel für die linke obere Zelle des Bereichs geschrieben: Ihre relativen Adressen passen sich jeder Zelle an."
+			"formula.help": "In einer Tabelle bezeichnet [@Spalte] die Zelle derselben Zeile; außerhalb einer Tabelle die Formel für die erste Zelle schreiben."
 		},
 		"vstyle": {
 			"scale2": "2-Farben-Skala",
@@ -517,12 +517,12 @@
 		"orderFrom.values": "den Werten der Spalte (freie Reihenfolge)",
 		"orderFrom.list": "Liste „{name}“: {values}…",
 		"orderFrom.workbookList": "Liste „{name}“ (Arbeitsmappe): {values}…",
-		"hint": "Ziehen Sie die Werte, um sie zu ordnen, oder wählen Sie einen aus und verwenden Sie die Schaltflächen (Tastatur: Alt+↑ / Alt+↓, Alt+Pos1 / Alt+Ende). Werte, die in der Reihenfolge fehlen, folgen aufsteigend; leere Zellen bleiben am Ende.",
+		"hint": "Ziehen Sie die Werte, um sie zu ordnen (Tastatur: Alt+↑ / Alt+↓, Alt+Pos1 / Alt+Ende).",
 		"items": {
 			"aria": "Reihenfolge der Werte"
 		},
 		"absent": "fehlt",
-		"absent.tooltip": "Wert der Reihenfolge, der in den Daten fehlt: wird beibehalten, falls er auftaucht",
+		"absent.tooltip": "Fehlt in den Daten, aufbewahrt für später",
 		"empty": "Keine Werte (die Spalte ist leer).",
 		"move": {
 			"first": "An den Anfang",
@@ -537,7 +537,7 @@
 		"direction": "Richtung",
 		"direction.forward": "In dieser Reihenfolge (vom ersten zum letzten)",
 		"direction.reverse": "Umgekehrt (vom letzten zum ersten)",
-		"save": "Diese Reihenfolge als benutzerdefinierte Liste der Arbeitsmappe speichern, für andere Spalten",
+		"save": "Als benutzerdefinierte Liste der Arbeitsmappe speichern",
 		"save.name": "Name:",
 		"save.name.placeholder": "Größen, Prioritäten…",
 		"applied": "Benutzerdefiniertes Sortieren angewendet (Strg+Z zum Rückgängigmachen)"
@@ -618,7 +618,6 @@
 		"chooseOne": "Wählen Sie mindestens einen Wert",
 		"placeActive": "Setzen Sie die aktive Zelle in eine Tabellenspalte, um zu filtern",
 		"clearOf": "Filter löschen aus „{field}“",
-		"computed": "Berechnete Spalte: nach ihren Werten sortiert und gefiltert; ihr Typ folgt ihrer Formel.",
 		"custom": "Benutzerdefinierter Filter…",
 		"active": "Aktiver Filter: {conds}",
 		"custom.heading": "Zeilen anzeigen, in denen „{column}“:",
@@ -659,9 +658,9 @@
 		"close.tooltip": "Schließen (Esc)",
 		"replaceBy": "Ersetzen durch",
 		"zone": "Suchen in: {zone}",
-		"zone.selection.tooltip": "Die Auswahl begrenzt die Suche; wählen Sie eine einzelne Zelle aus, um im ganzen Blatt zu suchen",
+		"zone.selection.tooltip": "Eine einzelne ausgewählte Zelle: im ganzen Blatt suchen",
 		"zone.selection.aria": "In der Auswahl {range}",
-		"zone.sheet.tooltip": "Das ganze Blatt; wählen Sie mehrere Zellen aus, um die Suche zu begrenzen",
+		"zone.sheet.tooltip": "Mehrere Zellen auswählen, um die Suche einzugrenzen",
 		"zone.sheet.aria": "Im ganzen Blatt",
 		"zone.sheet": "Blatt",
 		"replaceOne": "Ersetzen",
@@ -711,7 +710,7 @@
 		"errors": "{n, plural, one {# Wert entspricht} other {# Werte entsprechen}} nicht dem Spaltentyp",
 		"computed": "Berechnete Spalte",
 		"toValues": {
-			"tooltip": "Die Formel wird entfernt: Die Spalte behält ihre aktuellen Werte mit deren Typ (Strg+Z zum Rückgängigmachen)"
+			"tooltip": "Die Formel wird entfernt, die Spalte behält ihre Werte (Strg+Z zum Rückgängigmachen)"
 		}
 	},
 	"syntax": {
@@ -819,22 +818,22 @@
 			"source": "Datenquelle ändern…",
 			"source.tooltip": "Die PivotTable an eine andere Tabelle binden: Die dort vorhandenen Felder bleiben erhalten",
 			"move": "Verschieben",
-			"move.tooltip": "Der nächste Klick auf eine Zelle (auf diesem oder einem anderen Blatt) platziert dort die linke obere Ecke der PivotTable; Esc bricht ab"
+			"move.tooltip": "Dann auf die Zelle klicken, an die die PivotTable kommt (Esc: abbrechen)"
 		},
 		"calc": {
 			"title": "Berechnetes Feld",
 			"title.edit": "Berechnetes Feld „{name}“",
-			"intro": "Eine Formel auf den Spalten jeder Zeile von „{source}“: Die Zeilen werden nach ihrem Ergebnis gruppiert, in Zeilen, Spalten oder Filtern (oder in Werten zusammengefasst).",
+			"intro": "Formel, die für jede Zeile von „{source}“ berechnet wird.",
 			"name": "Feldname:",
 			"add": "Hinzufügen",
 			"add.label": "Berechnetes Feld…",
-			"add.tooltip": "Ein Feld, dessen Wert für jede Zeile der Quelle berechnet wird: =JAHR([Datum]), =LINKS([Code];2)… Es gruppiert die Zeilen in Zeilen oder Spalten, filtert oder wird wie eine Spalte zusammengefasst."
+			"add.tooltip": "Für jede Zeile der Quelle berechnetes Feld, zum Beispiel =JAHR([Datum])"
 		},
 		"panel": {
 			"title": "PivotTable-Felder",
 			"help": "Hilfe zu PivotTables",
 			"name": {
-				"tooltip": "Die PivotTable wird auf der Registerkarte SQL unter diesem Namen abgefragt und dient als Quelle für Diagramme"
+				"tooltip": "Name der PivotTable im SQL-Register und in Diagrammen"
 			},
 			"source": "{name} · Quelle:"
 		},
@@ -859,8 +858,8 @@
 			"choose": "Tabelle auswählen…",
 			"tooltip": "Quelltabelle der PivotTable"
 		},
-		"empty": "Der Bericht ist leer: Aktivieren Sie oben Felder oder ziehen Sie sie in die Bereiche. Zahlen kommen in Werte, alles andere in Zeilen.",
-		"noValues": "Fügen Sie ein Feld zu Werte hinzu, um Summen zu berechnen (Summe, Anzahl, Mittelwert…).",
+		"empty": "Aktivieren Sie oben Felder oder ziehen Sie sie in die Bereiche.",
+		"noValues": "Fügen Sie ein Feld zu Werte hinzu, um Summen zu berechnen.",
 		"handForget": "Zurückgelegte Werte verwerfen",
 		"handForget.tooltip": "Diese Werte löschen (Strg+Z zum Rückgängigmachen)",
 		"grandTotals": "Gesamtergebnisse",
@@ -871,7 +870,7 @@
 		"defer": "Layoutaktualisierung zurückstellen",
 		"update": "Aktualisieren",
 		"update.tooltip": "Die Änderungen auf die PivotTable anwenden",
-		"pending": "Ausstehende Änderungen: Die PivotTable ist noch nicht aktuell (sie werden auch beim Schließen des Aufgabenbereichs angewendet).",
+		"pending": "Ausstehende Änderungen: Die PivotTable ist noch nicht aktuell.",
 		"delete": "PivotTable löschen",
 		"valueSettings": "Wertfeldeinstellungen",
 		"valueSettings.menu": "Wertfeldeinstellungen…",
@@ -935,14 +934,14 @@
 		"removed": "Überprüfung entfernt",
 		"list": {
 			"set": "Dropdownliste: {n, plural, one {# zulässiger Wert} other {# zulässige Werte}} (Alt+↓ zum Öffnen)",
-			"source": "Dropdownliste aus {src}, bei jedem Öffnen neu gelesen (Alt+↓ zum Öffnen)",
-			"help": "Zulässige Werte in der Auswahl, einer pro Zeile (oder durch „;“ getrennt). Ein Pfeil ▾ bietet die Liste in der Zelle an (Alt+↓); jede andere Eingabe wird abgelehnt. Für eine ganze Tabellenspalte gilt die Liste auch für später hinzugefügte Zeilen.",
+			"source": "Dropdownliste aus {src} (Alt+↓ zum Öffnen)",
+			"help": "Ein Wert pro Zeile (oder durch „;“ getrennt); jede andere Eingabe wird abgelehnt.",
 			"placeholder": "Ja\nNein"
 		},
 		"pick": "Wählen Sie den Quellbereich aus (auf diesem oder einem anderen Blatt), dann Eingabe (Esc: abbrechen)",
 		"pick.oneColumn": "Ein Quellbereich umfasst eine einzelne Tabellenspalte oder freie Zellen",
 		"range": {
-			"help": "Die Werte des Bereichs (eindeutig, ohne Leerzellen, in Reihenfolge) werden bei jedem Öffnen der Liste und bei jeder Eingabe neu gelesen: eine Tabellenspalte (Kunden[Ort]), Zellen (Cell[A1:A10], Blatt2!Cell[A1:A10]) oder eine benannte Zelle. Der Bezug folgt Umbenennungen und Verschiebungen.",
+			"help": "Eine Tabellenspalte (Kunden[Ort]), Zellen (Cell[A1:A10]) oder eine benannte Zelle.",
 			"aria": "Quellbereich",
 			"placeholder": "Kunden[Ort]"
 		},
@@ -968,13 +967,13 @@
 	},
 	"tabChoice": {
 		"clear": "Register nicht mehr filtern",
-		"clear.tooltip": "Das Register verliert sein ▾ „{name}“: Die Tabellen und PivotTables des Blatts zeigen wieder alle ihre Zeilen (Strg+Z zum Rückgängigmachen)",
+		"clear.tooltip": "Das Register verliert sein ▾ „{name}“: Alle Zeilen werden wieder angezeigt (Strg+Z zum Rückgängigmachen)",
 		"byField": "Register nach diesem Feld filtern",
 		"byColumn": "Register nach dieser Spalte filtern",
 		"computed": "Eine berechnete Spalte kann nicht als Registerauswahl dienen: Nehmen Sie eine Eingabespalte (Jahr, Monat, Ort…)",
 		"tooMany": "„{column}“ ist leer oder hat mehr als {max} verschiedene Werte: zu viele für die Liste des Registers; nehmen Sie eine Spalte wie Jahr, Monat oder Ort",
-		"byField.tooltip": "Das Blattregister erhält ein ▾, um einen Wert von „{column}“ auszuwählen: Diese PivotTable, die anderen PivotTables des Blatts, die auf einer Tabelle mit „{column}“ beruhen, und die Tabellen des Blatts mit dieser Spalte zeigen nur die Zeilen mit diesem Wert (die Quelltabelle wird nicht gefiltert, wenn sie auf einem anderen Blatt liegt). Anfangs sind alle Werte ausgewählt. Strg+Z zum Rückgängigmachen.",
-		"byColumn.tooltip": "Das Blattregister erhält ein ▾, um einen Wert von „{column}“ auszuwählen: Jede Tabelle des Blatts mit der Spalte „{column}“ und die darauf beruhenden PivotTables zeigen nur die Zeilen mit diesem Wert. Anfangs sind alle Werte ausgewählt. Strg+Z zum Rückgängigmachen.",
+		"byField.tooltip": "Das Register erhält ein ▾, um nur die Zeilen mit einem Wert von „{column}“ anzuzeigen, außer in der Quelltabelle (Strg+Z zum Rückgängigmachen)",
+		"byColumn.tooltip": "Das Register erhält ein ▾, um nur die Zeilen mit einem Wert von „{column}“ anzuzeigen (Strg+Z zum Rückgängigmachen)",
 		"replaces": "{text} Ersetzt die Auswahl nach „{name}“.",
 		"notice": {
 			"cleared": "Das Register filtert nicht mehr nach „{column}“: Alle Zeilen werden wieder angezeigt (Strg+Z zum Rückgängigmachen)",
@@ -997,7 +996,7 @@
 			"date": "Datum",
 			"notImported": "Spalte überspringen",
 			"legend": "Datenformat der Spalte {n}",
-			"hint": "„Standard“ wandelt Zahlen und Datumswerte um, alles andere wird zu Text. Klicken Sie auf eine Spalte der Vorschau, um ihr Format auszuwählen."
+			"hint": "Klicken Sie in der Vorschau auf eine Spalte, um ihr Format zu wählen."
 		},
 		"sep": {
 			"comma": ", (Komma)",
@@ -1014,8 +1013,8 @@
 		"title": "Text in Spalten",
 		"heading": "Textkonvertierungs-Assistent – Schritt {step} von 3: {name}",
 		"note": {
-			"table": "Tabelle {table}, Spalte {column}: Der erste Teil bleibt in der Spalte, die folgenden werden zu neuen Spalten, die rechts eingefügt werden.",
-			"tableWithHeader": "Tabelle {table}, Spalte {column} (einschließlich Überschrift): Der erste Teil bleibt in der Spalte, die folgenden werden zu neuen Spalten, die rechts eingefügt werden.",
+			"table": "Tabelle {table}, Spalte {column}: Die weiteren Teile werden als Spalten rechts eingefügt.",
+			"tableWithHeader": "Tabelle {table}, Spalte {column} (mit Überschrift): Die weiteren Teile werden als Spalten rechts eingefügt.",
 			"cells": "{n, plural, one {# Textzelle} other {# Textzellen}} zu konvertieren."
 		},
 		"kind": {
@@ -1039,13 +1038,13 @@
 		"quote": "Textqualifizierer:",
 		"quote.none": "keiner",
 		"fixed": {
-			"hint": "Linien mit Pfeilen kennzeichnen einen Spaltenwechsel. Klicken Sie an die gewünschte Position, um einen Spaltenwechsel zu erstellen. Doppelklicken Sie auf die Linie, um einen Spaltenwechsel zu löschen. Ziehen Sie die Linie, um einen Spaltenwechsel zu verschieben."
+			"hint": "Klicken, um einen Spaltenwechsel zu erstellen; Doppelklick zum Löschen; Ziehen zum Verschieben."
 		},
 		"break": {
 			"tooltip": "Ziehen zum Verschieben, Doppelklick zum Löschen"
 		},
 		"dest": "Ziel:",
-		"dest.table.tooltip": "In einer Tabelle bleibt der erste Teil in der Spalte, die folgenden werden rechts eingefügt",
+		"dest.table.tooltip": "In einer Tabelle werden die weiteren Teile als Spalten rechts eingefügt",
 		"dest.tooltip": "Erste Zelle, in die die Spalten geschrieben werden, z. B. $B$2",
 		"advanced": "Erweitert…",
 		"advanced.open": "Erweitert ▴",
@@ -1087,7 +1086,7 @@
 		"title": "Zellen formatieren",
 		"category": "Kategorie",
 		"category.standard": "Standard",
-		"category.standard.help": "Kein bestimmtes Format: der Wert so, wie er eingegeben oder berechnet wurde.",
+		"category.standard.help": "Kein bestimmtes Format.",
 		"category.number": "Zahl",
 		"category.number.help": "Anzahl der Dezimalstellen und Tausendertrennzeichen.",
 		"category.currency": "Währung",
@@ -1095,9 +1094,9 @@
 		"category.percent": "Prozent",
 		"category.percent.help": "Der Wert mit 100 multipliziert, gefolgt von %.",
 		"category.date": "Datum",
-		"category.date.help": "Ein Datum (oder eine fortlaufende Excel-Zahl), nach dem gewählten Muster angezeigt.",
+		"category.date.help": "Ein Datum im gewählten Muster.",
 		"category.time": "Uhrzeit",
-		"category.time.help": "Eine Uhrzeit (oder ein Datum mit Uhrzeit), nach dem gewählten Muster angezeigt.",
+		"category.time.help": "Eine Uhrzeit im gewählten Muster.",
 		"category.text": "Text",
 		"category.text.help": "Der Inhalt wird so angezeigt, wie er eingegeben wurde.",
 		"sample": "Beispiel",
@@ -1172,7 +1171,7 @@
 		"accept": "Zum Schlüssel der Tabelle machen",
 		"dismiss": "Nicht mehr vorschlagen",
 		"note": "Tabellenschlüssel: Seine Werte identifizieren die Zeilen.",
-		"note.auto": "Tabellenschlüssel: Seine Werte identifizieren die Zeilen. Eine hinzugefügte Zeile erhält die nächste Nummer.",
+		"note.auto": "Tabellenschlüssel: Eine hinzugefügte Zeile erhält die nächste Nummer.",
 		"remove": "Schlüssel entfernen",
 		"checking": "Schlüssel wird geprüft…",
 		"use": "Als Schlüssel verwenden",
@@ -1268,7 +1267,7 @@
 		"removed": "{n, plural, one {# doppelte Zeile gelöscht} other {# doppelte Zeilen gelöscht}} (Strg+Z zum Rückgängigmachen)",
 		"none": "Keine Duplikate",
 		"title": "Duplikate entfernen aus „{table}“",
-		"help": "Zwei Zeilen sind Duplikate, wenn die aktivierten Spalten dieselben Werte haben. Die erste bleibt erhalten.",
+		"help": "Duplikate: gleiche Werte in den aktivierten Spalten. Die erste Zeile bleibt.",
 		"allColumns": "(Alle Spalten)",
 		"computing": "Wird berechnet…",
 		"noneWith": "Keine doppelten Zeilen mit diesen Spalten.",
@@ -1347,12 +1346,12 @@
 	},
 	"nameBadge": {
 		"default": {
-			"tooltip": "„{name}“: Standardname: Benennen Sie die Tabelle um. Klicken, um ihr einen aussagekräftigen Namen zu geben (er wird in Formeln, SQL und Diagrammen verwendet)"
+			"tooltip": "„{name}“: Standardname; klicken, um einen aussagekräftigen Namen zu vergeben"
 		},
 		"tooltip": "Tabelle „{name}“: Klicken, um sie umzubenennen"
 	},
 	"follow": {
-		"tooltip": "Diese Tabelle folgt dem Auswahlregister: Sie zeigt nur ihre Zeilen mit {name} = {value} (die anderen sind ausgeblendet, nicht gelöscht; eine eingegebene Zeile erhält diesen Wert). Der Pfeil ▾ des Registers ändert den Wert. Klick auf die Markierung: Menü „{follow} folgen“; deaktivieren, damit diese Tabelle alle ihre Zeilen zeigt",
+		"tooltip": "Diese Tabelle zeigt nur ihre Zeilen mit {name} = {value} (Klick: „{follow} folgen“)",
 		"empty": "(leer)"
 	},
 	"bench": {
@@ -1395,12 +1394,12 @@
 		"deleteTable": "Tabelle löschen",
 		"deleteTable.confirm": "Diese Tabelle und ihre {n} Zeilen löschen? Mit Strg+Z lässt sich das rückgängig machen.",
 		"toValues": "In Werte konvertieren",
-		"toValues.many.tooltip": "Die {n} berechneten Spalten der Auswahl werden zu Eingabespalten: Sie behalten ihre aktuellen Werte, ohne Formel (Strg+Z zum Rückgängigmachen)",
-		"toValues.tooltip": "Die berechnete Spalte wird zu einer Eingabespalte: Sie behält ihre aktuellen Werte, ohne Formel (Strg+Z zum Rückgängigmachen)",
+		"toValues.many.tooltip": "Die {n} berechneten Spalten behalten ihre Werte, ohne Formel (Strg+Z zum Rückgängigmachen)",
+		"toValues.tooltip": "Die Spalte behält ihre aktuellen Werte, ohne Formel (Strg+Z zum Rückgängigmachen)",
 		"promote": "Erste Zeile als Überschriften verwenden",
-		"promote.tooltip": "Die 1. Datenzeile liefert die Spaltennamen und wird an ihrer Stelle zur Überschrift; die aktuelle Überschrift verschwindet (Strg+Z zum Rückgängigmachen)",
+		"promote.tooltip": "Die 1. Datenzeile wird zur Überschrift; die aktuelle Überschrift verschwindet (Strg+Z zum Rückgängigmachen)",
 		"rowToNote": "Diese Zeile aus der Tabelle nehmen (Summe oder Notiz)",
-		"rowToNote.tooltip": "Die Zeile bleibt direkt unter der Tabelle, getrennt als Summe oder Notiz (Strg+Z zum Rückgängigmachen)",
+		"rowToNote.tooltip": "Die Zeile bleibt separat unter der Tabelle, als Summe oder Notiz (Strg+Z zum Rückgängigmachen)",
 		"sortFilter": "Sortieren und Filtern",
 		"insert": "Einfügen",
 		"rowAbove": "Zeile oberhalb",
@@ -1413,45 +1412,45 @@
 		"left": "Links",
 		"right": "Rechts",
 		"headerToTitle": "Überschrift herausnehmen",
-		"headerToTitle.tooltip": "Die 1. Datenzeile wird zur Überschrift; die aktuelle Überschrift bleibt als Titel über der Tabelle (außer Namen „Spalte n“)",
+		"headerToTitle.tooltip": "Die 1. Datenzeile wird zur Überschrift; die aktuelle Überschrift wandert als Titel darüber",
 		"titleToHeader": "Zeile darüber als Überschriften verwenden",
-		"titleToHeader.tooltip": "Die direkt über der Tabelle eingegebenen Zellen werden zu den Namen ihrer Spalten; die aktuelle Überschrift wird zur 1. Datenzeile (außer Namen „Spalte n“)",
+		"titleToHeader.tooltip": "Die Zellen direkt über der Tabelle werden zu ihren Überschriften; die aktuelle Überschrift zur 1. Zeile",
 		"twoLevel": {
 			"off": "Überschriftengruppen entfernen",
-			"off.tooltip": "Die Spalten erhalten wieder ihren vollständigen Namen „Gruppe.Name“ auf einer einzigen Zeile; das Gruppenband verschwindet",
+			"off.tooltip": "Die Spalten erhalten wieder ihren vollen Namen „Gruppe.Name“ in einer Zeile",
 			"on": "Überschriften auf 2 Zeilen (Gruppen darüber)",
-			"on.tooltip": "Die Zeile direkt über der Tabelle wird zu einem Gruppenband: „FORST“ über Name und Status ergibt die Spalten „FORST.Name“ und „FORST.Status“. Verbundene Zellen oder nicht."
+			"on.tooltip": "Die Zeile über der Tabelle wird zu einem Band von Überschriftengruppen („Gruppe.Name“)"
 		},
 		"follow": "{what} folgen",
 		"follow.off.tooltip": "Die Tabelle zeigt alle ihre Zeilen, unabhängig vom Wert des Registers",
 		"follow.off.column.tooltip": "Die Tabelle zeigt alle ihre Zeilen, unabhängig vom Wert des Registers (ihre Spalte „{name}“ wird entfernt, wenn sie nur einen Wert hat)",
-		"follow.on.formula.tooltip": "Die Tabelle zeigt nur noch die Zeilen, deren Formel {formula} den angezeigten Wert ergibt (sie muss die Spalten dazu haben)",
+		"follow.on.formula.tooltip": "Die Tabelle zeigt nur noch die Zeilen, in denen {formula} den angezeigten Wert ergibt",
 		"follow.on.tooltip": "Die Tabelle erhält die Spalte „{name}“, gefüllt mit dem angezeigten Wert, und zeigt nur noch ihre Zeilen",
 		"refresh": "Abfrage aktualisieren",
 		"refresh.tooltip": "Führt die Abfrage „{name}“ erneut aus (F5 in der Tabelle)",
 		"handKey": "Schlüssel der Eingabespalten…",
-		"handKey.tooltip": "Spalte des Ergebnisses, die die eingegebenen Werte von einer Aktualisierung zur nächsten mit ihren Zeilen verbindet",
+		"handKey.tooltip": "Spalte, die eingegebene Werte bei jeder Aktualisierung ihren Zeilen zuordnet",
 		"handForget": "Zurückgelegte Werte verwerfen ({n, plural, one {# Zeile} other {# Zeilen}})",
-		"handForget.tooltip": "Auf Zeilen eingegebene Werte, die aus dem Ergebnis verschwunden sind, für den Fall aufbewahrt, dass sie zurückkehren (Strg+Z zum Rückgängigmachen)",
+		"handForget.tooltip": "Werte auf Zeilen, die aus dem Ergebnis verschwunden sind (Strg+Z zum Rückgängigmachen)",
 		"addShared": "Zur freigegebenen Arbeitsmappe hinzufügen…",
-		"addShared.tooltip": "Diese Tabelle ist nur auf Ihrem Computer: Sie mit ihren Zeilen in der freigegebenen Arbeitsmappe für alle Mitglieder erstellen",
+		"addShared.tooltip": "Diese Tabelle mit ihren Zeilen in der freigegebenen Arbeitsmappe für alle Mitglieder erstellen",
 		"shareData": "Im Lattis Data Lake freigeben…",
-		"shareData.tooltip": "Diese Tabelle aus anderen Arbeitsmappen des Servers lesbar machen (Katalog des Lattis Data Lake)",
+		"shareData.tooltip": "Diese Tabelle für andere Arbeitsmappen des Servers lesbar machen",
 		"pushSource": "Data-Lake-Quelle aktualisieren",
-		"pushSource.tooltip": "Sendet die Zeilen dieser Tabelle jetzt an ihre Data-Lake-Quelle (nur ausgewählte Spalten; die Arbeitsmappe wird nicht veröffentlicht)",
+		"pushSource.tooltip": "Sendet die Zeilen dieser Tabelle jetzt an ihre Data-Lake-Quelle (ausgewählte Spalten)",
 		"toRange": "In Bereich konvertieren",
 		"toRange.tooltip": "Die Tabelle wird an derselben Stelle zu freien Zellen",
 		"ask": "Assistent fragen…",
 		"asHeader": "Als Überschriften von „{table}“ verwenden",
-		"asHeader.tooltip": "Die Zellen dieser Zeile über den Spalten der Tabelle werden zu ihren Überschriften; die aktuelle Überschrift wird zur 1. Datenzeile (außer Namen „Spalte n“)",
+		"asHeader.tooltip": "Die Zellen dieser Zeile werden zu den Überschriften; die aktuelle Überschrift zur 1. Zeile",
 		"join": "Zur Tabelle hinzufügen",
 		"join.tooltip": "Diese Zelle wird außerhalb der benachbarten Tabelle gehalten (Notiz, Summe); sie wird ihr angefügt",
 		"asTable": "Als Tabelle formatieren",
 		"asTable.tooltip": "Der Bereich wird wieder zu einer Tabelle (seine erste Zeile liefert die Überschriften)",
 		"spillLinked": "In verknüpfte Tabelle konvertieren",
-		"spillLinked.tooltip": "Eine von der Formel geladene Tabelle ersetzt das übergelaufene Ergebnis: Sie wird neu berechnet, wenn sich ihre Quellen ändern (schreibgeschützte Spalten, Eingabespalten rechts möglich)",
+		"spillLinked.tooltip": "Eine mit der Formel verknüpfte Tabelle ersetzt das übergelaufene Ergebnis und wird mit ihren Quellen neu berechnet",
 		"spillValues": "In Tabelle konvertieren (Werte)",
-		"spillValues.tooltip": "Eine gewöhnliche Tabelle behält die aktuellen Werte des übergelaufenen Ergebnisses, ohne Verknüpfung zur Formel",
+		"spillValues.tooltip": "Eine normale Tabelle behält die aktuellen Werte, ohne Verknüpfung mit der Formel",
 		"rangeToValues": {
 			"tooltip": "Die Formeln der Auswahl werden durch ihre aktuellen Werte ersetzt (Strg+Z zum Rückgängigmachen)"
 		},
@@ -1472,7 +1471,7 @@
 	"formulaBar": {
 		"aria": "Bearbeitungsleiste",
 		"computed": "Berechnete Spalte: gilt für {n, plural, one {die Zeile} other {die # Zeilen}}",
-		"computed.tooltip": "Die Formel gilt für die ganze Spalte: Sie wird auf jede ihrer Zeilen angewendet."
+		"computed.tooltip": "Formel der ganzen Spalte"
 	},
 	"sheet": {
 		"aria": "Blatt {name}"
@@ -1496,15 +1495,15 @@
 		"columns": "die Spalten „{name}“",
 		"column": "die Spalte „{name}“",
 		"rank": "die Position der Zeilen (nicht empfohlen)",
-		"rank.note": "Wenn die Abfrage ihre Zeilen in einer anderen Reihenfolge liefert oder Zeilen hinzufügt oder entfernt, landen die eingegebenen Werte neben anderen Zeilen.",
+		"rank.note": "Ändert die Abfrage Reihenfolge oder Anzahl der Zeilen, verschieben sich die eingegebenen Werte.",
 		"change": {
-			"note": "Bereits eingegebene Werte bleiben in ihren Zeilen; zurückgelegte Werte (verschwundene Zeilen) werden verworfen. Duplikate und leere Zellen in der Spalte werden abgelehnt."
+			"note": "Zurückgelegte Werte (verschwundene Zeilen) werden verworfen."
 		},
 		"key": {
-			"note": "Bei jeder Aktualisierung kehrt ein Wert zu der Zeile mit demselben „{key}“ zurück; verschwindet diese Zeile, wird der Wert zurückgelegt und kehrt mit ihr zurück."
+			"note": "Jeder eingegebene Wert folgt bei jeder Aktualisierung der Zeile mit demselben „{key}“."
 		},
 		"none": {
-			"note": "Keine Spalte des Ergebnisses identifiziert seine Zeilen (doppelte Werte oder leere Zellen): Fügen Sie der Abfrage eine hinzu (eine ID), um eine zuverlässige Verknüpfung zu erhalten."
+			"note": "Keine Spalte identifiziert die Zeilen: Fügen Sie der Abfrage einen Bezeichner hinzu."
 		}
 	},
 	"functions": {

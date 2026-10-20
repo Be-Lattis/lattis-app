@@ -94,12 +94,12 @@
 			"resize.hint": "Arrastre un controlador para cambiar el tamaño del botón"
 		},
 		"note": {
-			"noScript": "No hay ningún script en la biblioteca (pestaña Script): el control se crea sin acción, para vincularla más adelante.",
-			"input": "El texto se escribe en la celda vinculada al salir del campo o con Entrar, y luego se ejecuta la acción.",
-			"textarea": "El texto se escribe en la celda vinculada al salir del área o con Ctrl+Entrar, y luego se ejecuta la acción.",
-			"file": "La ruta del archivo elegido se escribe en la celda vinculada, y luego se ejecuta la acción.",
-			"value": "El valor se escribe en la celda vinculada y luego se ejecuta la acción; todo se deshace de una vez (Ctrl+Z).",
-			"button": "Un clic en el botón ejecuta la acción; todo lo que cambia se deshace de una vez (Ctrl+Z)."
+			"noScript": "No hay scripts (pestaña Script): el control se crea sin acción.",
+			"input": "El texto va a la celda vinculada (Entrar o al salir del campo) y luego se ejecuta la acción.",
+			"textarea": "El texto va a la celda vinculada (Ctrl+Entrar o al salir del campo) y luego se ejecuta la acción.",
+			"file": "La ruta del archivo va a la celda vinculada y luego se ejecuta la acción.",
+			"value": "El valor va a la celda vinculada y luego se ejecuta la acción (Ctrl+Z lo deshace todo).",
+			"button": "Un clic ejecuta la acción (Ctrl+Z lo deshace todo)."
 		},
 		"running": "«{name}»: en ejecución…",
 		"paste": "Pegar botón"
@@ -379,7 +379,7 @@
 			"avg": "Aplicar formato a los valores que estén:",
 			"dup": "Dar formato a todo:",
 			"formula": "Dar formato a los valores donde esta fórmula sea verdadera:",
-			"formula.help": "En una tabla, [@Columna] designa la celda de la misma fila (una dirección de la primera fila de datos, como $C2, también se aplica a cada fila). Fuera de una tabla, la fórmula se escribe para la celda superior izquierda del rango: sus direcciones relativas siguen a cada celda."
+			"formula.help": "En una tabla, [@Columna] designa la celda de la misma fila; fuera de una tabla, escriba la fórmula de la primera celda."
 		},
 		"vstyle": {
 			"scale2": "Escala de 2 colores",
@@ -517,12 +517,12 @@
 		"orderFrom.values": "los valores de la columna (orden libre)",
 		"orderFrom.list": "Lista «{name}»: {values}…",
 		"orderFrom.workbookList": "Lista «{name}» (libro): {values}…",
-		"hint": "Arrastre los valores para ordenarlos, o seleccione uno y use los botones (teclado: Alt+↑ / Alt+↓, Alt+Inicio / Alt+Fin). Los valores que faltan en el orden siguen en orden ascendente; las celdas en blanco quedan al final.",
+		"hint": "Arrastre los valores para ordenarlos (teclado: Alt+↑ / Alt+↓, Alt+Inicio / Alt+Fin).",
 		"items": {
 			"aria": "Orden de los valores"
 		},
 		"absent": "ausente",
-		"absent.tooltip": "Valor del orden ausente de los datos: se conserva para cuando aparezca",
+		"absent.tooltip": "Ausente de los datos, se conserva para cuando aparezca",
 		"empty": "No hay valores (la columna está vacía).",
 		"move": {
 			"first": "Primero",
@@ -537,7 +537,7 @@
 		"direction": "Sentido",
 		"direction.forward": "En este orden (del primero al último)",
 		"direction.reverse": "Invertido (del último al primero)",
-		"save": "Guardar este orden como lista personalizada del libro, para otras columnas",
+		"save": "Guardar como lista personalizada del libro",
 		"save.name": "Nombre:",
 		"save.name.placeholder": "Tallas, Prioridades…",
 		"applied": "Orden personalizado aplicado (Ctrl+Z para deshacer)"
@@ -618,7 +618,6 @@
 		"chooseOne": "Elija al menos un valor",
 		"placeActive": "Coloque la celda activa en una columna de tabla para filtrar",
 		"clearOf": "Borrar filtro de «{field}»",
-		"computed": "Columna calculada: se ordena y filtra por sus valores; su tipo sigue a su fórmula.",
 		"custom": "Filtro personalizado…",
 		"active": "Filtro activo: {conds}",
 		"custom.heading": "Mostrar las filas en las que «{column}»:",
@@ -659,9 +658,9 @@
 		"close.tooltip": "Cerrar (Esc)",
 		"replaceBy": "Reemplazar por",
 		"zone": "Dentro de: {zone}",
-		"zone.selection.tooltip": "La selección limita la búsqueda; seleccione una sola celda para buscar en toda la hoja",
+		"zone.selection.tooltip": "Una sola celda seleccionada: buscar en toda la hoja",
 		"zone.selection.aria": "Dentro de la selección {range}",
-		"zone.sheet.tooltip": "Toda la hoja; seleccione varias celdas para limitar la búsqueda",
+		"zone.sheet.tooltip": "Seleccione varias celdas para limitar la búsqueda",
 		"zone.sheet.aria": "Dentro de toda la hoja",
 		"zone.sheet": "hoja",
 		"replaceOne": "Reemplazar",
@@ -711,7 +710,7 @@
 		"errors": "{n, plural, one {# valor} other {# valores}} que no corresponden al tipo de la columna",
 		"computed": "Columna calculada",
 		"toValues": {
-			"tooltip": "Se quita la fórmula: la columna conserva sus valores actuales, con el tipo de esos valores (Ctrl+Z para deshacer)"
+			"tooltip": "Se quita la fórmula, la columna conserva sus valores (Ctrl+Z para deshacer)"
 		}
 	},
 	"syntax": {
@@ -819,22 +818,22 @@
 			"source": "Cambiar origen…",
 			"source.tooltip": "Asociar la tabla dinámica a otra tabla: se conservan los campos que existen en ella",
 			"move": "Mover",
-			"move.tooltip": "El próximo clic en una celda (de esta hoja o de otra) coloca ahí la esquina superior izquierda de la tabla dinámica; Esc cancela"
+			"move.tooltip": "Luego haga clic en la celda donde colocar la tabla dinámica (Esc: cancelar)"
 		},
 		"calc": {
 			"title": "Campo calculado",
 			"title.edit": "Campo calculado «{name}»",
-			"intro": "Una fórmula sobre las columnas de cada fila de «{source}»: las filas se agrupan por su resultado, en Filas, Columnas o Filtros (o se resumen en Valores).",
+			"intro": "Fórmula calculada en cada fila de «{source}».",
 			"name": "Nombre del campo:",
 			"add": "Agregar",
 			"add.label": "Campo calculado…",
-			"add.tooltip": "Un campo cuyo valor se calcula para cada fila del origen: =AÑO([Fecha]), =IZQUIERDA([Código];2)… Agrupa las filas en Filas o Columnas, filtra o se resume como una columna."
+			"add.tooltip": "Campo calculado en cada fila del origen, por ejemplo =AÑO([Fecha])"
 		},
 		"panel": {
 			"title": "Campos de tabla dinámica",
 			"help": "Ayuda sobre las tablas dinámicas",
 			"name": {
-				"tooltip": "La tabla dinámica se consulta en la pestaña SQL con este nombre y sirve de origen a los gráficos"
+				"tooltip": "Nombre de la tabla dinámica en la pestaña SQL y en los gráficos"
 			},
 			"source": "{name} · origen:"
 		},
@@ -859,8 +858,8 @@
 			"choose": "Elegir una tabla…",
 			"tooltip": "Tabla de origen de la tabla dinámica"
 		},
-		"empty": "El informe está vacío: active campos arriba, o arrástrelos a las áreas. Los números van a Valores; todo lo demás, a Filas.",
-		"noValues": "Agregue un campo a Valores para calcular totales (suma, recuento, promedio…).",
+		"empty": "Active campos arriba, o arrástrelos a las áreas.",
+		"noValues": "Añada un campo a Valores para calcular totales.",
 		"handForget": "Olvidar los valores apartados",
 		"handForget.tooltip": "Borrar estos valores (Ctrl+Z para deshacer)",
 		"grandTotals": "Totales generales",
@@ -871,7 +870,7 @@
 		"defer": "Aplazar actualización del diseño",
 		"update": "Actualizar",
 		"update.tooltip": "Aplicar los cambios a la tabla dinámica",
-		"pending": "Cambios pendientes: la tabla dinámica todavía no está al día (también se aplican al cerrar el panel).",
+		"pending": "Cambios pendientes: la tabla dinámica aún no está actualizada.",
 		"delete": "Eliminar tabla dinámica",
 		"valueSettings": "Configuración de campo de valor",
 		"valueSettings.menu": "Configuración de campo de valor…",
@@ -935,14 +934,14 @@
 		"removed": "Validación quitada",
 		"list": {
 			"set": "Lista desplegable: {n, plural, one {# valor permitido} other {# valores permitidos}} (Alt+↓ para abrirla)",
-			"source": "Lista desplegable tomada de {src}, que se vuelve a leer cada vez que se abre (Alt+↓ para abrirla)",
-			"help": "Valores permitidos en la selección, uno por línea (o separados por «;»). Una flecha ▾ ofrece la lista en la celda (Alt+↓); cualquier otra entrada se rechaza. En una columna de tabla entera, la lista también se aplica a las filas que se agreguen después.",
+			"source": "Lista desplegable de {src} (Alt+↓ para abrirla)",
+			"help": "Un valor por línea (o separados por «;»); cualquier otra entrada se rechaza.",
 			"placeholder": "Sí\nNo"
 		},
 		"pick": "Seleccione el rango de origen (en esta hoja o en otra) y luego Entrar (Esc: cancelar)",
 		"pick.oneColumn": "Un rango de origen abarca una sola columna de tabla, o celdas libres",
 		"range": {
-			"help": "Los valores del rango (distintos, sin celdas vacías, en orden) se vuelven a leer cada vez que se abre la lista y en cada entrada: una columna de tabla (Clientes[Ciudad]), celdas (Cell[A1:A10], Hoja2!Cell[A1:A10]) o una celda con nombre. La referencia sigue los cambios de nombre y los movimientos.",
+			"help": "Una columna de tabla (Clientes[Ciudad]), celdas (Cell[A1:A10]) o una celda con nombre.",
 			"aria": "Rango de origen",
 			"placeholder": "Clientes[Ciudad]"
 		},
@@ -968,13 +967,13 @@
 	},
 	"tabChoice": {
 		"clear": "Dejar de filtrar la pestaña",
-		"clear.tooltip": "La pestaña pierde su ▾ «{name}»: las tablas y tablas dinámicas de la hoja vuelven a mostrar todas sus filas (Ctrl+Z para deshacer)",
+		"clear.tooltip": "La pestaña pierde su ▾ «{name}»: todas las filas vuelven a mostrarse (Ctrl+Z para deshacer)",
 		"byField": "Filtrar la pestaña por este campo",
 		"byColumn": "Filtrar la pestaña por esta columna",
 		"computed": "Una columna calculada no se puede usar como selección de la pestaña: tome una columna de entrada (Año, Mes, Ciudad…)",
 		"tooMany": "«{column}» está vacía o tiene más de {max} valores distintos: demasiados para la lista de la pestaña; tome una columna como Año, Mes o Ciudad",
-		"byField.tooltip": "La pestaña de la hoja obtiene un ▾ para elegir un valor de «{column}»: esta tabla dinámica, las demás tablas dinámicas de la hoja creadas sobre una tabla que tiene «{column}» y las tablas de la hoja que la tienen solo muestran las filas con ese valor (la tabla de origen, si está en otra hoja, no se filtra). Empieza con todos los valores. Ctrl+Z para deshacer.",
-		"byColumn.tooltip": "La pestaña de la hoja obtiene un ▾ para elegir un valor de «{column}»: cada tabla de la hoja que tiene la columna «{column}», y las tablas dinámicas creadas sobre ellas, solo muestran las filas con ese valor. Empieza con todos los valores. Ctrl+Z para deshacer.",
+		"byField.tooltip": "La pestaña obtiene un ▾ para mostrar solo las filas con un valor de «{column}», salvo en la tabla de origen (Ctrl+Z para deshacer)",
+		"byColumn.tooltip": "La pestaña obtiene un ▾ para mostrar solo las filas con un valor de «{column}» (Ctrl+Z para deshacer)",
 		"replaces": "{text} Reemplaza la selección por «{name}».",
 		"notice": {
 			"cleared": "La pestaña ya no filtra por «{column}»: se vuelven a mostrar todas las filas (Ctrl+Z para deshacer)",
@@ -997,7 +996,7 @@
 			"date": "Fecha",
 			"notImported": "Saltar columna",
 			"legend": "Formato de los datos de la columna {n}",
-			"hint": "«General» convierte los números y las fechas; todo lo demás pasa a ser texto. Haga clic en una columna de la vista previa para elegir su formato."
+			"hint": "Haga clic en una columna de la vista previa para elegir su formato."
 		},
 		"sep": {
 			"comma": ", (coma)",
@@ -1014,8 +1013,8 @@
 		"title": "Convertir texto en columnas",
 		"heading": "Asistente para convertir texto en columnas – paso {step} de 3: {name}",
 		"note": {
-			"table": "Tabla {table}, columna {column}: la primera parte se queda en la columna, las siguientes pasan a ser columnas nuevas insertadas a la derecha.",
-			"tableWithHeader": "Tabla {table}, columna {column} (encabezado incluido): la primera parte se queda en la columna, las siguientes pasan a ser columnas nuevas insertadas a la derecha.",
+			"table": "Tabla {table}, columna {column}: las partes adicionales se insertan como columnas a la derecha.",
+			"tableWithHeader": "Tabla {table}, columna {column} (encabezado incluido): las partes adicionales se insertan como columnas a la derecha.",
 			"cells": "{n, plural, one {# celda de texto} other {# celdas de texto}} que convertir."
 		},
 		"kind": {
@@ -1039,13 +1038,13 @@
 		"quote": "Calificador de texto:",
 		"quote.none": "ninguno",
 		"fixed": {
-			"hint": "Las líneas con flechas indican un salto de columna. Para crear una línea de salto, haga clic en la posición deseada. Para eliminarla, haga doble clic en ella. Para moverla, arrástrela."
+			"hint": "Haga clic para crear un salto de columna, doble clic para eliminarlo, arrastre para moverlo."
 		},
 		"break": {
 			"tooltip": "Arrastrar para mover, doble clic para eliminar"
 		},
 		"dest": "Destino:",
-		"dest.table.tooltip": "En una tabla, la primera parte se queda en la columna y las siguientes se insertan a la derecha",
+		"dest.table.tooltip": "En una tabla, las partes adicionales se insertan como columnas a la derecha",
 		"dest.tooltip": "Primera celda donde escribir las columnas, por ejemplo $B$2",
 		"advanced": "Avanzadas…",
 		"advanced.open": "Avanzadas ▴",
@@ -1087,7 +1086,7 @@
 		"title": "Formato de celdas",
 		"category": "Categoría",
 		"category.standard": "General",
-		"category.standard.help": "Sin formato específico: el valor tal como se introdujo o calculó.",
+		"category.standard.help": "Sin formato específico.",
 		"category.number": "Número",
 		"category.number.help": "Número de decimales y separador de miles.",
 		"category.currency": "Moneda",
@@ -1095,9 +1094,9 @@
 		"category.percent": "Porcentaje",
 		"category.percent.help": "El valor multiplicado por 100, seguido de %.",
 		"category.date": "Fecha",
-		"category.date.help": "Una fecha (o un número de serie de Excel) mostrada según el modelo elegido.",
+		"category.date.help": "Una fecha mostrada según el modelo elegido.",
 		"category.time": "Hora",
-		"category.time.help": "Una hora (o una fecha y hora) mostrada según el modelo elegido.",
+		"category.time.help": "Una hora mostrada según el modelo elegido.",
 		"category.text": "Texto",
 		"category.text.help": "El contenido se muestra tal como se introdujo.",
 		"sample": "Muestra",
@@ -1172,7 +1171,7 @@
 		"accept": "Convertirla en la clave de la tabla",
 		"dismiss": "No volver a sugerirlo",
 		"note": "Clave de la tabla: sus valores identifican las filas.",
-		"note.auto": "Clave de la tabla: sus valores identifican las filas. Una fila agregada recibe el número siguiente.",
+		"note.auto": "Clave de la tabla: una fila añadida recibe el número siguiente.",
 		"remove": "Quitar la clave",
 		"checking": "Comprobando la clave…",
 		"use": "Usar como clave",
@@ -1268,7 +1267,7 @@
 		"removed": "{n, plural, one {# fila duplicada eliminada} other {# filas duplicadas eliminadas}} (Ctrl+Z para deshacer)",
 		"none": "No hay duplicados",
 		"title": "Quitar duplicados de «{table}»",
-		"help": "Dos filas son duplicados cuando las columnas activadas tienen los mismos valores. Se conserva la primera.",
+		"help": "Duplicados: mismos valores en las columnas marcadas. Se conserva la primera fila.",
 		"allColumns": "(Todas las columnas)",
 		"computing": "Calculando…",
 		"noneWith": "No hay filas duplicadas con estas columnas.",
@@ -1347,12 +1346,12 @@
 	},
 	"nameBadge": {
 		"default": {
-			"tooltip": "«{name}»: nombre predeterminado: cambie el nombre de la tabla. Haga clic para darle un nombre significativo (se usa en las fórmulas, el SQL y los gráficos)"
+			"tooltip": "«{name}»: nombre predeterminado; haga clic para darle un nombre significativo"
 		},
 		"tooltip": "Tabla «{name}»: haga clic para cambiarle el nombre"
 	},
 	"follow": {
-		"tooltip": "Esta tabla sigue la pestaña de selección: solo muestra sus filas en las que {name} = {value} (las demás están ocultas, no eliminadas; una fila que introduzca recibe este valor). La flecha ▾ de la pestaña cambia el valor. Haga clic en la insignia: menú «Seguir {follow}», desactívelo para que esta tabla muestre todas sus filas",
+		"tooltip": "Esta tabla solo muestra sus filas en las que {name} = {value} (clic: «Seguir {follow}»)",
 		"empty": "(vacío)"
 	},
 	"bench": {
@@ -1395,12 +1394,12 @@
 		"deleteTable": "Eliminar tabla",
 		"deleteTable.confirm": "¿Eliminar esta tabla y sus {n} filas? Ctrl+Z lo deshará.",
 		"toValues": "Convertir en valores",
-		"toValues.many.tooltip": "Las {n} columnas calculadas de la selección pasan a ser columnas de entrada: conservan sus valores actuales, sin fórmula (Ctrl+Z para deshacer)",
-		"toValues.tooltip": "La columna calculada pasa a ser una columna de entrada: conserva sus valores actuales, sin fórmula (Ctrl+Z para deshacer)",
+		"toValues.many.tooltip": "Las {n} columnas calculadas conservan sus valores, sin fórmula (Ctrl+Z para deshacer)",
+		"toValues.tooltip": "La columna conserva sus valores actuales, sin fórmula (Ctrl+Z para deshacer)",
 		"promote": "Usar la primera fila como encabezados",
-		"promote.tooltip": "La 1.ª fila de datos da los nombres de las columnas y pasa a ser el encabezado, en su lugar; el encabezado actual desaparece (Ctrl+Z para deshacer)",
+		"promote.tooltip": "La 1.ª fila de datos pasa a ser el encabezado; el encabezado actual desaparece (Ctrl+Z para deshacer)",
 		"rowToNote": "Sacar esta fila de la tabla (total o nota)",
-		"rowToNote.tooltip": "La fila se queda justo debajo de la tabla, apartada como total o nota (Ctrl+Z para deshacer)",
+		"rowToNote.tooltip": "La fila queda aparte bajo la tabla, como total o nota (Ctrl+Z para deshacer)",
 		"sortFilter": "Ordenar y filtrar",
 		"insert": "Insertar",
 		"rowAbove": "Fila encima",
@@ -1413,45 +1412,45 @@
 		"left": "A la izquierda",
 		"right": "A la derecha",
 		"headerToTitle": "Sacar el encabezado",
-		"headerToTitle.tooltip": "La 1.ª fila de datos pasa a ser el encabezado; el encabezado actual se queda encima de la tabla, como título (salvo los nombres «Columna n»)",
+		"headerToTitle.tooltip": "La 1.ª fila de datos pasa a ser el encabezado; el encabezado actual pasa arriba, como título",
 		"titleToHeader": "Usar la fila superior como encabezados",
-		"titleToHeader.tooltip": "Las celdas escritas justo encima de la tabla pasan a ser los nombres de sus columnas; el encabezado actual pasa a ser la 1.ª fila de datos (salvo los nombres «Columna n»)",
+		"titleToHeader.tooltip": "Las celdas justo encima de la tabla pasan a ser sus encabezados; el encabezado actual, la 1.ª fila",
 		"twoLevel": {
 			"off": "Quitar los grupos de encabezados",
-			"off.tooltip": "Las columnas recuperan su nombre completo «Grupo.Nombre» en una sola fila; la banda de grupos desaparece",
+			"off.tooltip": "Las columnas recuperan su nombre completo «Grupo.Nombre» en una fila",
 			"on": "Encabezados en 2 filas (grupos encima)",
-			"on.tooltip": "La fila justo encima de la tabla pasa a ser una banda de grupos: «FORESTAL» colocado encima de Nombre y Estado da las columnas «FORESTAL.Nombre» y «FORESTAL.Estado». Celdas combinadas o no."
+			"on.tooltip": "La fila encima de la tabla pasa a ser una banda de grupos de encabezados («Grupo.Nombre»)"
 		},
 		"follow": "Seguir {what}",
 		"follow.off.tooltip": "La tabla muestra todas sus filas, sea cual sea el valor de la pestaña",
 		"follow.off.column.tooltip": "La tabla muestra todas sus filas, sea cual sea el valor de la pestaña (su columna «{name}» se quita si solo tiene un valor)",
-		"follow.on.formula.tooltip": "La tabla solo muestra las filas cuya fórmula {formula} da el valor mostrado (debe tener las columnas)",
+		"follow.on.formula.tooltip": "La tabla solo muestra las filas en las que {formula} da el valor mostrado",
 		"follow.on.tooltip": "La tabla recibe la columna «{name}», rellenada con el valor mostrado, y solo muestra sus filas",
 		"refresh": "Actualizar la consulta",
 		"refresh.tooltip": "Vuelve a ejecutar la consulta «{name}» (F5 en la tabla)",
 		"handKey": "Clave de las columnas de entrada…",
-		"handKey.tooltip": "Columna del resultado que vincula los valores introducidos con sus filas de una actualización a la siguiente",
+		"handKey.tooltip": "Columna que vincula los valores introducidos con sus filas en cada actualización",
 		"handForget": "Olvidar los valores apartados ({n, plural, one {# fila} other {# filas}})",
-		"handForget.tooltip": "Valores introducidos en filas que desaparecieron del resultado, conservados por si vuelven (Ctrl+Z para deshacer)",
+		"handForget.tooltip": "Valores introducidos en filas que desaparecieron del resultado (Ctrl+Z para deshacer)",
 		"addShared": "Agregar al libro compartido…",
-		"addShared.tooltip": "Esta tabla solo está en su equipo: créela en el libro compartido, con sus filas, para todos los miembros",
+		"addShared.tooltip": "Crear esta tabla, con sus filas, en el libro compartido, para todos los miembros",
 		"shareData": "Compartir en el Data Lake de Lattis…",
-		"shareData.tooltip": "Hacer que esta tabla se pueda leer desde otros libros del servidor (catálogo del Data Lake de Lattis)",
+		"shareData.tooltip": "Hacer que esta tabla se pueda leer desde otros libros del servidor",
 		"pushSource": "Actualizar el origen del Data Lake",
-		"pushSource.tooltip": "Envía ahora las filas de esta tabla a su origen del Data Lake (solo las columnas elegidas; el libro no se publica)",
+		"pushSource.tooltip": "Envía ahora las filas de esta tabla a su origen del Data Lake (columnas elegidas)",
 		"toRange": "Convertir en rango",
 		"toRange.tooltip": "La tabla pasa a ser celdas libres, en el mismo lugar",
 		"ask": "Preguntar al asistente…",
 		"asHeader": "Usar como encabezados de «{table}»",
-		"asHeader.tooltip": "Las celdas de esta fila, encima de las columnas de la tabla, pasan a ser sus encabezados; el encabezado actual pasa a ser la 1.ª fila de datos (salvo los nombres «Columna n»)",
+		"asHeader.tooltip": "Las celdas de esta fila pasan a ser los encabezados; el encabezado actual, la 1.ª fila",
 		"join": "Agregar a la tabla",
 		"join.tooltip": "Esta celda se mantiene fuera de la tabla vecina (nota, total); se une a ella",
 		"asTable": "Dar formato como tabla",
 		"asTable.tooltip": "El rango vuelve a ser una tabla (su primera fila da los encabezados)",
 		"spillLinked": "Convertir en tabla vinculada",
-		"spillLinked.tooltip": "Una tabla cargada por la fórmula reemplaza el resultado desbordado: se recalcula cuando cambian sus orígenes (columnas de solo lectura, columnas de entrada posibles a la derecha)",
+		"spillLinked.tooltip": "Una tabla vinculada a la fórmula reemplaza el resultado desbordado y se recalcula con sus orígenes",
 		"spillValues": "Convertir en tabla (valores)",
-		"spillValues.tooltip": "Una tabla normal conserva los valores actuales del resultado desbordado, sin vínculo con la fórmula",
+		"spillValues.tooltip": "Una tabla normal conserva los valores actuales, sin vínculo con la fórmula",
 		"rangeToValues": {
 			"tooltip": "Las fórmulas de la selección se reemplazan por sus valores actuales (Ctrl+Z para deshacer)"
 		},
@@ -1472,7 +1471,7 @@
 	"formulaBar": {
 		"aria": "Barra de fórmulas",
 		"computed": "Columna calculada: se aplica a {n, plural, one {la fila} other {las # filas}}",
-		"computed.tooltip": "La fórmula es la de toda la columna: se aplica a cada una de sus filas."
+		"computed.tooltip": "Fórmula de toda la columna"
 	},
 	"sheet": {
 		"aria": "Hoja {name}"
@@ -1496,15 +1495,15 @@
 		"columns": "las columnas «{name}»",
 		"column": "la columna «{name}»",
 		"rank": "la posición de las filas (no recomendado)",
-		"rank.note": "Si la consulta devuelve sus filas en otro orden, o agrega o quita algunas, los valores introducidos acabarán junto a otras filas.",
+		"rank.note": "Si la consulta cambia el orden o el número de filas, los valores introducidos se desplazarán.",
 		"change": {
-			"note": "Los valores ya introducidos se quedan en sus filas; los apartados (filas desaparecidas) se olvidan. Se rechazan los duplicados y las celdas vacías de la columna."
+			"note": "Los valores apartados (filas desaparecidas) se olvidarán."
 		},
 		"key": {
-			"note": "En cada actualización, un valor vuelve a la fila con el mismo «{key}»; si esa fila desaparece, el valor se aparta y vuelve con ella."
+			"note": "Cada valor introducido sigue a la fila con el mismo «{key}» en cada actualización."
 		},
 		"none": {
-			"note": "Ninguna columna del resultado identifica sus filas (valores duplicados o vacíos): agregue una a la consulta (un identificador) para una unión fiable."
+			"note": "Ninguna columna identifica las filas: añada un identificador a la consulta."
 		}
 	},
 	"functions": {

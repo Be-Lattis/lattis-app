@@ -94,12 +94,12 @@
 			"resize.hint": "Drag a handle to resize the button"
 		},
 		"note": {
-			"noScript": "No script in the library (Script tab): the control is created without an action, to link later.",
-			"input": "The text is written to the linked cell when leaving the field or with Enter, then the action runs.",
-			"textarea": "The text is written to the linked cell when leaving the area or with Ctrl+Enter, then the action runs.",
-			"file": "The path of the chosen file is written to the linked cell, then the action runs.",
-			"value": "The value is written to the linked cell, then the action runs; everything is undone at once (Ctrl+Z).",
-			"button": "A click on the button runs the action; everything it changes is undone at once (Ctrl+Z)."
+			"noScript": "No scripts (Script tab): the control is created without an action.",
+			"input": "The text goes to the linked cell (Enter or leaving the field), then the action runs.",
+			"textarea": "The text goes to the linked cell (Ctrl+Enter or leaving the field), then the action runs.",
+			"file": "The file path goes to the linked cell, then the action runs.",
+			"value": "The value goes to the linked cell, then the action runs (Ctrl+Z undoes it all).",
+			"button": "A click runs the action (Ctrl+Z undoes it all)."
 		},
 		"running": "“{name}”: running…",
 		"paste": "Paste button"
@@ -379,7 +379,7 @@
 			"avg": "Format values that are:",
 			"dup": "Format all:",
 			"formula": "Format values where this formula is true:",
-			"formula.help": "In a table, [@Column] means the cell in the same row (an address in the first data row, such as $C2, also applies to each row). Outside a table, the formula is written for the top-left cell of the range: its relative addresses follow each cell."
+			"formula.help": "In a table, [@Column] means the cell in the same row; outside a table, write the formula for the first cell."
 		},
 		"vstyle": {
 			"scale2": "2-color scale",
@@ -517,12 +517,12 @@
 		"orderFrom.values": "the values of the column (free order)",
 		"orderFrom.list": "List “{name}”: {values}…",
 		"orderFrom.workbookList": "List “{name}” (workbook): {values}…",
-		"hint": "Drag the values to order them, or select one and use the buttons (keyboard: Alt+↑ / Alt+↓, Alt+Home / Alt+End). Values missing from the order follow in ascending order, blank cells stay at the end.",
+		"hint": "Drag the values to order them (keyboard: Alt+↑ / Alt+↓, Alt+Home / Alt+End).",
 		"items": {
 			"aria": "Order of the values"
 		},
 		"absent": "missing",
-		"absent.tooltip": "Value of the order missing from the data: kept for when it appears",
+		"absent.tooltip": "Missing from the data, kept for when it appears",
 		"empty": "No values (the column is empty).",
 		"move": {
 			"first": "First",
@@ -537,7 +537,7 @@
 		"direction": "Direction",
 		"direction.forward": "In this order (first to last)",
 		"direction.reverse": "Reversed (last to first)",
-		"save": "Save this order as a custom list of the workbook, for other columns",
+		"save": "Save as a custom list of the workbook",
 		"save.name": "Name:",
 		"save.name.placeholder": "Sizes, Priorities…",
 		"applied": "Custom sort applied (Ctrl+Z to undo)"
@@ -618,7 +618,6 @@
 		"chooseOne": "Choose at least one value",
 		"placeActive": "Put the active cell in a table column to filter",
 		"clearOf": "Clear filter from “{field}”",
-		"computed": "Calculated column: sorted and filtered on its values; its type follows its formula.",
 		"custom": "Custom filter…",
 		"active": "Active filter: {conds}",
 		"custom.heading": "Show rows where “{column}”:",
@@ -659,9 +658,9 @@
 		"close.tooltip": "Close (Esc)",
 		"replaceBy": "Replace with",
 		"zone": "Within: {zone}",
-		"zone.selection.tooltip": "The selection limits the search; select a single cell to search the whole sheet",
+		"zone.selection.tooltip": "A single selected cell: search the whole sheet",
 		"zone.selection.aria": "Within the selection {range}",
-		"zone.sheet.tooltip": "The whole sheet; select several cells to limit the search",
+		"zone.sheet.tooltip": "Select several cells to limit the search",
 		"zone.sheet.aria": "Within the whole sheet",
 		"zone.sheet": "sheet",
 		"replaceOne": "Replace",
@@ -711,7 +710,7 @@
 		"errors": "{n, plural, one {# value} other {# values}} not matching the column type",
 		"computed": "Calculated column",
 		"toValues": {
-			"tooltip": "The formula is removed: the column keeps its current values, with the type of those values (Ctrl+Z to undo)"
+			"tooltip": "The formula is removed, the column keeps its values (Ctrl+Z to undo)"
 		}
 	},
 	"syntax": {
@@ -819,22 +818,22 @@
 			"source": "Change source…",
 			"source.tooltip": "Attach the PivotTable to another table: the fields that exist there are kept",
 			"move": "Move",
-			"move.tooltip": "The next click on a cell (on this sheet or another) places the top-left corner of the PivotTable there; Esc cancels"
+			"move.tooltip": "Then click the cell where the PivotTable goes (Esc: cancel)"
 		},
 		"calc": {
 			"title": "Calculated field",
 			"title.edit": "Calculated field “{name}”",
-			"intro": "A formula on the columns of each row of “{source}”: rows are grouped by its result, in Rows, Columns or Filters (or summarized in Values).",
+			"intro": "Formula calculated on each row of “{source}”.",
 			"name": "Field name:",
 			"add": "Add",
 			"add.label": "Calculated field…",
-			"add.tooltip": "A field whose value is calculated for each row of the source: =YEAR([Date]), =LEFT([Code],2)… It groups the rows in Rows or Columns, filters, or is summarized like a column."
+			"add.tooltip": "Field calculated on each row of the source, for example =YEAR([Date])"
 		},
 		"panel": {
 			"title": "PivotTable fields",
 			"help": "Help on PivotTables",
 			"name": {
-				"tooltip": "The PivotTable is queried in the SQL tab under this name and serves as a source for charts"
+				"tooltip": "Name of the PivotTable in the SQL tab and in charts"
 			},
 			"source": "{name} · source:"
 		},
@@ -859,8 +858,8 @@
 			"choose": "Choose a table…",
 			"tooltip": "Source table of the PivotTable"
 		},
-		"empty": "The report is empty: check fields above, or drag them into the areas. Numbers go to Values, everything else to Rows.",
-		"noValues": "Add a field to Values to calculate totals (sum, count, average…).",
+		"empty": "Check fields above, or drag them to the areas.",
+		"noValues": "Add a field to Values to calculate totals.",
 		"handForget": "Forget the values set aside",
 		"handForget.tooltip": "Clear these values (Ctrl+Z to undo)",
 		"grandTotals": "Grand totals",
@@ -871,7 +870,7 @@
 		"defer": "Defer layout update",
 		"update": "Update",
 		"update.tooltip": "Apply the changes to the PivotTable",
-		"pending": "Pending changes: the PivotTable is not up to date yet (they also apply when the pane closes).",
+		"pending": "Pending changes: the PivotTable is not up to date yet.",
 		"delete": "Delete PivotTable",
 		"valueSettings": "Value field settings",
 		"valueSettings.menu": "Value field settings…",
@@ -935,14 +934,14 @@
 		"removed": "Validation removed",
 		"list": {
 			"set": "Drop-down list: {n, plural, one {# allowed value} other {# allowed values}} (Alt+↓ to open it)",
-			"source": "Drop-down list taken from {src}, reread each time it opens (Alt+↓ to open it)",
-			"help": "Values allowed in the selection, one per line (or separated by “;”). A ▾ arrow offers the list in the cell (Alt+↓); any other entry is rejected. On a whole table column, the list also applies to rows added later.",
+			"source": "Drop-down list from {src} (Alt+↓ to open it)",
+			"help": "One value per line (or separated by “;”); any other entry is rejected.",
 			"placeholder": "Yes\nNo"
 		},
 		"pick": "Select the source range (on this sheet or another), then Enter (Esc: cancel)",
 		"pick.oneColumn": "A source range covers a single table column, or free cells",
 		"range": {
-			"help": "The values of the range (distinct, without blanks, in order) are reread each time the list opens and at each entry: a table column (Customers[City]), cells (Cell[A1:A10], Sheet2!Cell[A1:A10]) or a named cell. The reference follows renames and moves.",
+			"help": "A table column (Customers[City]), cells (Cell[A1:A10]) or a named cell.",
 			"aria": "Source range",
 			"placeholder": "Customers[City]"
 		},
@@ -968,13 +967,13 @@
 	},
 	"tabChoice": {
 		"clear": "Stop filtering the tab",
-		"clear.tooltip": "The tab loses its ▾ “{name}”: the tables and PivotTables of the sheet show all their rows again (Ctrl+Z to undo)",
+		"clear.tooltip": "The tab loses its ▾ “{name}”: all rows show again (Ctrl+Z to undo)",
 		"byField": "Filter the tab by this field",
 		"byColumn": "Filter the tab by this column",
 		"computed": "A calculated column can't be used as a tab choice: take an entered column (Year, Month, City…)",
 		"tooMany": "“{column}” is empty, or has more than {max} distinct values: too many for the tab's list; take a column such as Year, Month or City",
-		"byField.tooltip": "The sheet tab gets a ▾ to choose a value of “{column}”: this PivotTable, the other PivotTables of the sheet built on a table that has “{column}”, and the tables of the sheet that have it only show the rows with that value (the source table, if it is on another sheet, is not filtered). It starts on all values. Ctrl+Z to undo.",
-		"byColumn.tooltip": "The sheet tab gets a ▾ to choose a value of “{column}”: each table of the sheet that has the column “{column}”, and the PivotTables built on them, only show the rows with that value. It starts on all values. Ctrl+Z to undo.",
+		"byField.tooltip": "The tab gets a ▾ to show only the rows with one value of “{column}”, except in the source table (Ctrl+Z to undo)",
+		"byColumn.tooltip": "The tab gets a ▾ to show only the rows with one value of “{column}” (Ctrl+Z to undo)",
 		"replaces": "{text} Replaces the choice by “{name}”.",
 		"notice": {
 			"cleared": "The tab no longer filters by “{column}”: all rows are shown again (Ctrl+Z to undo)",
@@ -997,7 +996,7 @@
 			"date": "Date",
 			"notImported": "Skip column",
 			"legend": "Column {n} data format",
-			"hint": "“General” converts numbers and dates, everything else becomes text. Click a column of the preview to choose its format."
+			"hint": "Click a column in the preview to choose its format."
 		},
 		"sep": {
 			"comma": ", (comma)",
@@ -1014,8 +1013,8 @@
 		"title": "Convert text to columns",
 		"heading": "Convert text to columns wizard – step {step} of 3: {name}",
 		"note": {
-			"table": "Table {table}, column {column}: the first part stays in the column, the following ones become new columns inserted to the right.",
-			"tableWithHeader": "Table {table}, column {column} (header included): the first part stays in the column, the following ones become new columns inserted to the right.",
+			"table": "Table {table}, column {column}: the extra parts are inserted as columns to the right.",
+			"tableWithHeader": "Table {table}, column {column} (header included): the extra parts are inserted as columns to the right.",
 			"cells": "{n, plural, one {# text cell} other {# text cells}} to convert."
 		},
 		"kind": {
@@ -1039,13 +1038,13 @@
 		"quote": "Text qualifier:",
 		"quote.none": "none",
 		"fixed": {
-			"hint": "Lines with arrows signify a column break. To create a break line, click at the desired position. To delete a break line, double-click on the line. To move a break line, drag it."
+			"hint": "Click to create a column break, double-click to delete it, drag to move it."
 		},
 		"break": {
 			"tooltip": "Drag to move, double-click to delete"
 		},
 		"dest": "Destination:",
-		"dest.table.tooltip": "In a table, the first part stays in the column and the following ones are inserted to the right",
+		"dest.table.tooltip": "In a table, the extra parts are inserted as columns to the right",
 		"dest.tooltip": "First cell where to write the columns, for example $B$2",
 		"advanced": "Advanced…",
 		"advanced.open": "Advanced ▴",
@@ -1087,7 +1086,7 @@
 		"title": "Format cells",
 		"category": "Category",
 		"category.standard": "General",
-		"category.standard.help": "No specific format: the value as it was entered or calculated.",
+		"category.standard.help": "No specific format.",
 		"category.number": "Number",
 		"category.number.help": "Number of decimal places and thousands separator.",
 		"category.currency": "Currency",
@@ -1095,9 +1094,9 @@
 		"category.percent": "Percentage",
 		"category.percent.help": "The value multiplied by 100, followed by %.",
 		"category.date": "Date",
-		"category.date.help": "A date (or an Excel serial number) displayed according to the chosen pattern.",
+		"category.date.help": "A date shown with the chosen pattern.",
 		"category.time": "Time",
-		"category.time.help": "A time (or a date and time) displayed according to the chosen pattern.",
+		"category.time.help": "A time shown with the chosen pattern.",
 		"category.text": "Text",
 		"category.text.help": "The content is displayed as it was entered.",
 		"sample": "Sample",
@@ -1172,7 +1171,7 @@
 		"accept": "Make it the table's key",
 		"dismiss": "Don't suggest again",
 		"note": "Table key: its values identify the rows.",
-		"note.auto": "Table key: its values identify the rows. An added row gets the next number.",
+		"note.auto": "Table key: an added row gets the next number.",
 		"remove": "Remove the key",
 		"checking": "Checking the key…",
 		"use": "Use as key",
@@ -1268,7 +1267,7 @@
 		"removed": "{n, plural, one {# duplicate row deleted} other {# duplicate rows deleted}} (Ctrl+Z to undo)",
 		"none": "No duplicates",
 		"title": "Remove duplicates from “{table}”",
-		"help": "Two rows are duplicates when the checked columns have the same values. The first one is kept.",
+		"help": "Duplicates: same values in the checked columns. The first row is kept.",
 		"allColumns": "(All columns)",
 		"computing": "Calculating…",
 		"noneWith": "No duplicate rows with these columns.",
@@ -1347,12 +1346,12 @@
 	},
 	"nameBadge": {
 		"default": {
-			"tooltip": "“{name}”: default name: rename the table. Click to give it a meaningful name (it is used in formulas, SQL and charts)"
+			"tooltip": "“{name}”: default name; click to give a meaningful name"
 		},
 		"tooltip": "Table “{name}”: click to rename it"
 	},
 	"follow": {
-		"tooltip": "This table follows the choice tab: it only shows its rows where {name} = {value} (the others are hidden, not deleted; a row you enter gets this value). The tab's ▾ arrow changes the value. Click the badge: menu “Follow {follow}”, uncheck it so this table shows all its rows",
+		"tooltip": "This table only shows its rows where {name} = {value} (click: “Follow {follow}”)",
 		"empty": "(empty)"
 	},
 	"bench": {
@@ -1395,12 +1394,12 @@
 		"deleteTable": "Delete table",
 		"deleteTable.confirm": "Delete this table and its {n} rows? Ctrl+Z will undo it.",
 		"toValues": "Convert to values",
-		"toValues.many.tooltip": "The {n} calculated columns of the selection become entered columns: they keep their current values, without a formula (Ctrl+Z to undo)",
-		"toValues.tooltip": "The calculated column becomes an entered column: it keeps its current values, without a formula (Ctrl+Z to undo)",
+		"toValues.many.tooltip": "The {n} calculated columns keep their values, without formulas (Ctrl+Z to undo)",
+		"toValues.tooltip": "The column keeps its current values, without a formula (Ctrl+Z to undo)",
 		"promote": "Use first row as headers",
-		"promote.tooltip": "The 1st data row gives the column names and becomes the header, in its place; the current header disappears (Ctrl+Z to undo)",
+		"promote.tooltip": "The 1st data row becomes the header; the current header disappears (Ctrl+Z to undo)",
 		"rowToNote": "Take this row out of the table (total or note)",
-		"rowToNote.tooltip": "The row stays just below the table, kept apart as a total or note (Ctrl+Z to undo)",
+		"rowToNote.tooltip": "The row stays below the table, apart, as a total or note (Ctrl+Z to undo)",
 		"sortFilter": "Sort & filter",
 		"insert": "Insert",
 		"rowAbove": "Row above",
@@ -1413,45 +1412,45 @@
 		"left": "To the left",
 		"right": "To the right",
 		"headerToTitle": "Take the header out",
-		"headerToTitle.tooltip": "The 1st data row becomes the header; the current header stays above the table, as a title (except “Column n” names)",
+		"headerToTitle.tooltip": "The 1st data row becomes the header; the current header moves above, as a title",
 		"titleToHeader": "Use the row above as headers",
-		"titleToHeader.tooltip": "The cells typed just above the table become the names of its columns; the current header becomes the 1st data row (except “Column n” names)",
+		"titleToHeader.tooltip": "The cells just above the table become its headers; the current header, the 1st row",
 		"twoLevel": {
 			"off": "Remove header groups",
-			"off.tooltip": "The columns get back their full name “Group.Name” on a single row; the band of groups disappears",
+			"off.tooltip": "The columns get back their full name “Group.Name” on one row",
 			"on": "Headers on 2 rows (groups above)",
-			"on.tooltip": "The row just above the table becomes a band of groups: “FORESTRY” placed above Name and Status gives the columns “FORESTRY.Name” and “FORESTRY.Status”. Merged cells or not."
+			"on.tooltip": "The row above the table becomes a band of header groups (“Group.Name”)"
 		},
 		"follow": "Follow {what}",
 		"follow.off.tooltip": "The table shows all its rows, whatever the value of the tab",
 		"follow.off.column.tooltip": "The table shows all its rows, whatever the value of the tab (its column “{name}” is removed if it has only one value)",
-		"follow.on.formula.tooltip": "The table only shows the rows whose formula {formula} gives the displayed value (it must have the columns)",
+		"follow.on.formula.tooltip": "The table only shows the rows where {formula} gives the value shown",
 		"follow.on.tooltip": "The table gets the column “{name}”, filled with the displayed value, and only shows its rows",
 		"refresh": "Refresh the query",
 		"refresh.tooltip": "Reruns the query “{name}” (F5 in the table)",
 		"handKey": "Key of the entered columns…",
-		"handKey.tooltip": "Column of the result that links the entered values to their rows from one refresh to the next",
+		"handKey.tooltip": "Column that links entered values to their rows at each refresh",
 		"handForget": "Forget the values set aside ({n, plural, one {# row} other {# rows}})",
-		"handForget.tooltip": "Values entered on rows that disappeared from the result, kept in case they come back (Ctrl+Z to undo)",
+		"handForget.tooltip": "Values entered on rows gone from the result (Ctrl+Z to undo)",
 		"addShared": "Add to the shared workbook…",
-		"addShared.tooltip": "This table is only on your computer: create it in the shared workbook, with its rows, for all members",
+		"addShared.tooltip": "Create this table, with its rows, in the shared workbook, for all members",
 		"shareData": "Share to the Lattis Data Lake…",
-		"shareData.tooltip": "Make this table readable from other workbooks on the server (Lattis Data Lake catalog)",
+		"shareData.tooltip": "Make this table readable from other workbooks on the server",
 		"pushSource": "Update the Data Lake source",
-		"pushSource.tooltip": "Sends the rows of this table to its Data Lake source now (chosen columns only; the workbook is not published)",
+		"pushSource.tooltip": "Sends this table's rows to its Data Lake source now (chosen columns)",
 		"toRange": "Convert to range",
 		"toRange.tooltip": "The table becomes free cells, in the same place",
 		"ask": "Ask the Assistant…",
 		"asHeader": "Use as headers of “{table}”",
-		"asHeader.tooltip": "The cells of this row, above the columns of the table, become its headers; the current header becomes the 1st data row (except “Column n” names)",
+		"asHeader.tooltip": "The cells of this row become the headers; the current header, the 1st row",
 		"join": "Add to the table",
 		"join.tooltip": "This cell is kept outside the neighboring table (note, total); it joins it",
 		"asTable": "Format as table",
 		"asTable.tooltip": "The range becomes a table again (its first row gives the headers)",
 		"spillLinked": "Convert to linked table",
-		"spillLinked.tooltip": "A table loaded by the formula replaces the spilled result: it recalculates when its sources change (read-only columns, entered columns possible on the right)",
+		"spillLinked.tooltip": "A table linked to the formula replaces the spilled result and recalculates with its sources",
 		"spillValues": "Convert to table (values)",
-		"spillValues.tooltip": "An ordinary table keeps the current values of the spilled result, with no link to the formula",
+		"spillValues.tooltip": "A regular table keeps the current values, unlinked from the formula",
 		"rangeToValues": {
 			"tooltip": "The formulas of the selection are replaced with their current values (Ctrl+Z to undo)"
 		},
@@ -1472,7 +1471,7 @@
 	"formulaBar": {
 		"aria": "Formula bar",
 		"computed": "Calculated column: applies to {n, plural, one {the row} other {the # rows}}",
-		"computed.tooltip": "The formula is that of the whole column: it applies to each of its rows."
+		"computed.tooltip": "Formula of the whole column"
 	},
 	"sheet": {
 		"aria": "Sheet {name}"
@@ -1496,15 +1495,15 @@
 		"columns": "the columns “{name}”",
 		"column": "the column “{name}”",
 		"rank": "the position of the rows (not recommended)",
-		"rank.note": "If the query returns its rows in another order, or adds or removes some, the entered values will end up next to other rows.",
+		"rank.note": "If the query changes the order or number of rows, entered values will shift.",
 		"change": {
-			"note": "The values already entered stay on their rows; those set aside (rows that disappeared) are forgotten. Duplicates and blanks in the column are rejected."
+			"note": "Values set aside (rows gone) will be forgotten."
 		},
 		"key": {
-			"note": "At each refresh, a value comes back to the row with the same “{key}”; if that row disappears, the value is set aside and comes back with it."
+			"note": "Each entered value follows the row with the same “{key}” at each refresh."
 		},
 		"none": {
-			"note": "No column of the result identifies its rows (duplicate values or blanks): add one to the query (an identifier) for a reliable join."
+			"note": "No column identifies the rows: add an identifier to the query."
 		}
 	},
 	"functions": {
