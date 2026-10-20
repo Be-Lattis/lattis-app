@@ -162,10 +162,7 @@ export const settingSections: SettingSection[] = [
 				choicesOf: () => [
 					{ value: 'auto', label: t('shell.settings.language.auto', { name: LANG_NAMES[systemLang()] }) },
 					...LANGS.map((l) => ({ value: l, label: LANG_NAMES[l] }))
-				],
-				get help() {
-					return t('shell.settings.language.help');
-				}
+				]
 			},
 			{
 				path: 'ui.theme',
@@ -173,10 +170,7 @@ export const settingSections: SettingSection[] = [
 				get label() {
 					return t('shell.settings.theme.label');
 				},
-				choicesOf: (list) => themeCatalog(list).map((th) => ({ value: th.id, label: themeLabel(th), swatch: [th.table, th.source] })),
-				get help() {
-					return t('shell.settings.theme.help');
-				}
+				choicesOf: (list) => themeCatalog(list).map((th) => ({ value: th.id, label: themeLabel(th), swatch: [th.table, th.source] }))
 			}
 		]
 	},

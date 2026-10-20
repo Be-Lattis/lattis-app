@@ -2,8 +2,7 @@
 	"settings": {
 		"language": {
 			"label": "Langue de l'interface",
-			"auto": "Langue du système ({name})",
-			"help": "S'applique tout de suite. Les traductions sont en cours : les textes pas encore traduits restent en français. La langue règle aussi l'affichage des nombres et des dates ; le classeur enregistré n'en dépend pas."
+			"auto": "Langue du système ({name})"
 		},
 		"sections": {
 			"features": "Fonctionnalités",
@@ -44,8 +43,7 @@
 			"help": "Fournisseur « Modèle local » : l'adresse d'Ollama, LM Studio ou d'un autre serveur compatible OpenAI sur ce poste. Aucune donnée ne quitte l'ordinateur."
 		},
 		"theme": {
-			"label": "Thème de couleur par défaut",
-			"help": "Couleurs des tableaux ordinaires et des tableaux d'une source externe dans un classeur qui n'a pas choisi son thème : les classeurs neufs et ceux d'avant les thèmes. Le thème choisi dans un classeur (Affichage › Thème) est enregistré avec lui et s'affiche pareil sur les autres postes."
+			"label": "Thème de couleur par défaut"
 		},
 		"undoDepth": {
 			"label": "Profondeur d'annulation",

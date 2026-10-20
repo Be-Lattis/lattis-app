@@ -2,8 +2,7 @@
 	"settings": {
 		"language": {
 			"label": "Display language",
-			"auto": "System language ({name})",
-			"help": "Applies right away. Translations are in progress: text not yet translated stays in French. The language also sets how numbers and dates are displayed; the saved workbook does not depend on it."
+			"auto": "System language ({name})"
 		},
 		"sections": {
 			"features": "Features",
@@ -44,8 +43,7 @@
 			"help": "“Local model” provider: the address of Ollama, LM Studio or another OpenAI-compatible server on this computer. No data leaves the computer."
 		},
 		"theme": {
-			"label": "Default color theme",
-			"help": "Colors of regular tables and of tables from an external source in a workbook that has not chosen its theme: new workbooks and those from before themes. The theme chosen in a workbook (View › Theme) is saved with it and looks the same on other computers."
+			"label": "Default color theme"
 		},
 		"undoDepth": {
 			"label": "Undo depth",

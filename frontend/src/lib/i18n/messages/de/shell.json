@@ -2,8 +2,7 @@
 	"settings": {
 		"language": {
 			"label": "Anzeigesprache",
-			"auto": "Systemsprache ({name})",
-			"help": "Gilt sofort. Die Übersetzungen sind in Arbeit: noch nicht übersetzte Texte bleiben auf Französisch. Die Sprache bestimmt auch die Anzeige von Zahlen und Datumsangaben; die gespeicherte Arbeitsmappe hängt nicht davon ab."
+			"auto": "Systemsprache ({name})"
 		},
 		"sections": {
 			"features": "Funktionen",
@@ -44,8 +43,7 @@
 			"help": "Anbieter „Lokales Modell“: die Adresse von Ollama, LM Studio oder einem anderen OpenAI-kompatiblen Server auf diesem Computer. Keine Daten verlassen den Computer."
 		},
 		"theme": {
-			"label": "Standardfarbdesign",
-			"help": "Farben der normalen Tabellen und der Tabellen aus einer externen Quelle in einer Arbeitsmappe, die kein eigenes Design gewählt hat: neue Arbeitsmappen und solche aus der Zeit vor den Designs. Das in einer Arbeitsmappe gewählte Design (Ansicht › Design) wird mit ihr gespeichert und sieht auf anderen Computern gleich aus."
+			"label": "Standardfarbdesign"
 		},
 		"undoDepth": {
 			"label": "Rückgängig-Tiefe",

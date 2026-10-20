@@ -2,8 +2,7 @@
 	"settings": {
 		"language": {
 			"label": "Idioma de la interfaz",
-			"auto": "Idioma del sistema ({name})",
-			"help": "Se aplica de inmediato. Las traducciones están en curso: el texto aún no traducido sigue en francés. El idioma también define cómo se muestran los números y las fechas; el libro guardado no depende de él."
+			"auto": "Idioma del sistema ({name})"
 		},
 		"sections": {
 			"features": "Funciones",
@@ -44,8 +43,7 @@
 			"help": "Proveedor «Modelo local»: la dirección de Ollama, LM Studio u otro servidor compatible con OpenAI en este equipo. Ningún dato sale del equipo."
 		},
 		"theme": {
-			"label": "Tema de colores predeterminado",
-			"help": "Colores de las tablas normales y de las tablas de un origen externo en un libro que no ha elegido su tema: los libros nuevos y los anteriores a los temas. El tema elegido en un libro (Vista › Tema) se guarda con él y se ve igual en otros equipos."
+			"label": "Tema de colores predeterminado"
 		},
 		"undoDepth": {
 			"label": "Niveles de deshacer",

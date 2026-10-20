@@ -4027,7 +4027,6 @@ export interface MessageParams {
 	'shell.settings.htmlTabs.help': Record<never, never>;
 	'shell.settings.htmlTabs.label': Record<never, never>;
 	'shell.settings.language.auto': { name: number | string };
-	'shell.settings.language.help': Record<never, never>;
 	'shell.settings.language.label': Record<never, never>;
 	'shell.settings.locked': Record<never, never>;
 	'shell.settings.numberRange': { label: number | string; max: number | string; min: number | string };
@@ -4044,7 +4043,6 @@ export interface MessageParams {
 	'shell.settings.sqlReadSeconds.label': Record<never, never>;
 	'shell.settings.sqlWriteSeconds.help': Record<never, never>;
 	'shell.settings.sqlWriteSeconds.label': Record<never, never>;
-	'shell.settings.theme.help': Record<never, never>;
 	'shell.settings.theme.label': Record<never, never>;
 	'shell.settings.undoDepth.help': Record<never, never>;
 	'shell.settings.undoDepth.label': Record<never, never>;
