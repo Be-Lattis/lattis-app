@@ -681,7 +681,7 @@
 		"old": {
 			"deleted": "Eliminadas de todos modos: {n, plural, =1 {una fórmula u objeto aún hace referencia a ellas y ya no encontrará su tabla} other {# fórmulas u objetos aún hacen referencia a ellas y ya no encontrarán su tabla}}",
 			"hidden": "Conservadas ocultas: {n, plural, =1 {una fórmula u objeto aún hace referencia a ellas} other {# fórmulas u objetos aún hacen referencia a ellas}}",
-			"hide": "Conservar una copia oculta (tablas renombradas …_old)",
+			"hide": "Conservar una copia oculta (tablas renombradas …_ancien)",
 			"delete": "Eliminar las pestañas (Ctrl+Z las recupera)"
 		},
 		"panel": {
