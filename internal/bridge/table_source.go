@@ -225,8 +225,11 @@ func localColumns(ctx context.Context, d *doc.Document, tbl int64) ([]localColum
 	return out, rs.Err()
 }
 
-// unsupportedMessage : serveur sans les sources poussées (migration 0027).
-const unsupportedMessage = "Ce Serveur Lattis ne reçoit pas encore de tableau sans son classeur (sources poussées) : demandez sa mise à jour à son administrateur, ou publiez le classeur."
+// errPushUnsupported : serveur sans les sources poussées (migration 0027).
+var errPushUnsupported = msg.New("lake.pushUnsupported", nil)
+
+// unsupportedMessage : le texte français de errPushUnsupported.
+var unsupportedMessage = errPushUnsupported.Error()
 
 // sourceError rend une erreur du serveur lisible.
 func sourceError(err error) error {
@@ -234,7 +237,7 @@ func sourceError(err error) error {
 		return nil
 	}
 	if workbook.Unsupported(err) {
-		return errors.New(unsupportedMessage)
+		return errPushUnsupported
 	}
 	if _, ok := workbook.Rejected(err); ok {
 		return errors.New(workbook.ServerMessage(err))
@@ -360,15 +363,15 @@ func (s *DocumentService) TableSourceInfo(ctx context.Context, table, server str
 		_ = d.DB().Read().QueryRowContext(ctx, `SELECT count(*) FROM _lattis_remote_tables WHERE tbl = ? AND published = 1`, tbl).Scan(&published)
 		switch {
 		case !info.CanDesign():
-			out.Reason = "Seuls les propriétaires et concepteurs du classeur partagent ses tableaux."
+			out.Reason = s.say("lake.shareOwnersDesigners", nil)
 			return out, nil
 		case published > 0:
-			out.Reason = "Ce tableau est publié avec le classeur : il se partage directement au Data Lake Lattis."
+			out.Reason = s.say("lake.publishedWithWorkbook", nil)
 			return out, nil
 		}
 	}
 	if server == "" {
-		out.Reason = "Connectez-vous d'abord à un Serveur Lattis."
+		out.Reason = s.say("lake.connectFirst", nil)
 		return out, nil
 	}
 	srv, _, _, err := remoteServer(ctx, server)
@@ -380,14 +383,14 @@ func (s *DocumentService) TableSourceInfo(ctx context.Context, table, server str
 		return out, err
 	}
 	if !ok {
-		out.Reason = unsupportedMessage
+		out.Reason = s.say("lake.pushUnsupported", nil)
 		return out, nil
 	}
 	if out.Catalog, err = s.DataCatalog(ctx, server); err != nil {
 		return out, err
 	}
 	if !out.Catalog.CanPublish {
-		out.Reason = "Votre compte ne partage pas au Data Lake Lattis sur ce serveur : demandez à son propriétaire le rôle « publieur de données »."
+		out.Reason = s.say("lake.notPublisher", nil)
 		return out, nil
 	}
 	if out.Link != nil {
@@ -1092,7 +1095,10 @@ func (s *DocumentService) pushSource(ctx context.Context, d *doc.Document, tbl i
 		return fail(err, nil)
 	}
 	if run.Status == "error" {
-		return fail(errors.New(cmp.Or(run.Error, "envoi refusé par le pipeline du serveur")), &run)
+		if run.Error != "" {
+			return fail(errors.New(run.Error), &run)
+		}
+		return fail(msg.New("lake.pipelineRefused", nil), &run)
 	}
 	return updateSource(ctx, d, tbl, false, func(l *TableSourceLink) {
 		r := run
@@ -1100,45 +1106,45 @@ func (s *DocumentService) pushSource(ctx context.Context, d *doc.Document, tbl i
 	})
 }
 
-// PushSummary écrit le bilan d'un envoi pour la barre d'état.
+// PushSummary écrit le bilan d'un envoi pour la barre d'état, en français
+// (PushSummaryIn : dans une langue).
 func PushSummary(table string, r *workbook.PushRun, blanked int) string {
+	return PushSummaryIn(msg.FR, table, r, blanked)
+}
+
+// PushSummaryIn écrit le bilan d'un envoi dans la langue l.
+func PushSummaryIn(l msg.Lang, table string, r *workbook.PushRun, blanked int) string {
+	say := func(id msg.ID, args msg.Args) string { return msg.Format(l, id, args) }
 	if r == nil {
-		return fmt.Sprintf("Source « %s » mise à jour", table)
+		return say("lake.pushDone", msg.Args{"table": table})
 	}
-	msg := fmt.Sprintf("Source « %s » mise à jour : %d ligne%s lue%s", table, r.RowsRead, plural(r.RowsRead), plural(r.RowsRead))
+	text := say("lake.pushRead", msg.Args{"table": table, "n": r.RowsRead})
 	var parts []string
 	if r.Inserted > 0 {
-		parts = append(parts, fmt.Sprintf("%d ajoutée%s", r.Inserted, plural(r.Inserted)))
+		parts = append(parts, say("lake.pushInserted", msg.Args{"n": r.Inserted}))
 	}
 	if r.Updated > 0 {
-		parts = append(parts, fmt.Sprintf("%d modifiée%s", r.Updated, plural(r.Updated)))
+		parts = append(parts, say("lake.pushUpdated", msg.Args{"n": r.Updated}))
 	}
 	if r.Deleted > 0 {
-		parts = append(parts, fmt.Sprintf("%d supprimée%s", r.Deleted, plural(r.Deleted)))
+		parts = append(parts, say("lake.pushDeleted", msg.Args{"n": r.Deleted}))
 	}
 	if r.Rejected > 0 {
-		parts = append(parts, fmt.Sprintf("%d refusée%s", r.Rejected, plural(r.Rejected)))
+		parts = append(parts, say("lake.pushRejected", msg.Args{"n": r.Rejected}))
 	}
 	if len(parts) > 0 {
-		msg += " (" + strings.Join(parts, ", ") + ")"
+		text += " (" + strings.Join(parts, ", ") + ")"
 	} else {
-		msg += ", rien n'a changé"
+		text += say("lake.pushNothing", nil)
 	}
 	if len(r.Rejects) > 0 {
 		x := r.Rejects[0]
-		msg += fmt.Sprintf(" ; ligne %d, %s « %s » : %s", x.Row, x.Column, x.Value, x.Error)
+		text += say("lake.pushReject", msg.Args{"row": x.Row, "column": x.Column, "value": x.Value, "err": x.Error})
 	}
 	if blanked > 0 {
-		msg += fmt.Sprintf(" ; %d valeur%s envoyée%s vide%s (erreur ou saisie hors type)", blanked, plural(blanked), plural(blanked), plural(blanked))
+		text += say("lake.pushBlanked", msg.Args{"n": blanked})
 	}
-	return msg
-}
-
-func plural(n int) string {
-	if n > 1 {
-		return "s"
-	}
-	return ""
+	return text
 }
 
 // pushOnSave envoie, en arrière-plan, les tableaux dont la source le
@@ -1166,9 +1172,9 @@ func (s *DocumentService) pushOnSave(d *doc.Document) {
 			n := TableSourceNotice{Table: name}
 			if err != nil {
 				n.Failed = true
-				n.Message = fmt.Sprintf("Source « %s » non mise à jour : %s", name, err.Error())
+				n.Message = s.say("lake.pushFailed", msg.Args{"table": name, "err": err})
 			} else {
-				n.Message = PushSummary(name, got.LastResult, got.Blanked)
+				n.Message = PushSummaryIn(s.sessionLang(), name, got.LastResult, got.Blanked)
 			}
 			s.sys().Emit(TableSourceEvent, n)
 		}

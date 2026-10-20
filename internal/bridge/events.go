@@ -254,7 +254,7 @@ func (s *DocumentService) BeforeClose(ctx context.Context) bool {
 	dirty, _ := d.Dirty(ctx)
 	r := s.fireSync(api.EventBeforeClose, map[string]any{"path": d.Path(), "dirty": dirty})
 	if r.Cancelled {
-		host{s}.Notify("Fermeture annulée par un script (évènement before_close)")
+		host{s}.Notify(s.say("doc.closeCancelledByScript", nil))
 	}
 	return !r.Cancelled
 }

@@ -921,7 +921,7 @@ func (s *DocumentService) ShareOpen(ctx context.Context, server, id, title strin
 	st, err := s.State(ctx)
 	st.Notice = d.TakeOpenNotice()
 	if aside != "" {
-		st.Notice = fmt.Sprintf("La copie locale de « %s » était abîmée : rechargée depuis le serveur ; l'ancienne est gardée dans %s", st.Title, aside)
+		st.Notice = s.say("share.cacheDamaged", msg.Args{"title": st.Title, "path": aside})
 	}
 	return OpenResult{State: st}, err
 }

@@ -1,7 +1,7 @@
 package archive
 
 import (
-	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -23,13 +23,15 @@ type SpaceError struct {
 	Saving     bool
 }
 
-func (e *SpaceError) Error() string {
-	what := "ouvrir ce classeur"
+func (e *SpaceError) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e *SpaceError) Msg() msg.Message {
+	id := msg.ID("archive.noSpaceOpen")
 	if e.Saving {
-		what = "l'enregistrer"
+		id = "archive.noSpaceSave"
 	}
-	return fmt.Sprintf("espace disque insuffisant pour %s : il faut %s sur %s, il reste %s",
-		what, Size(e.Need), volume(e.Dir), Size(e.Free))
+	return msg.M(id, msg.Args{"need": Size(e.Need), "volume": volume(e.Dir), "free": Size(e.Free)})
 }
 
 // volume nomme le disque d'un dossier pour l'utilisateur (« C: »), ou le

@@ -222,18 +222,17 @@ func (s *DocumentService) AISetKey(ctx context.Context, provider, key string) (A
 			if !errors.Is(err, ai.ErrUnreachable) {
 				return s.AIState(), err
 			}
-			warn = "clé enregistrée sans avoir pu la vérifier : " + p.Info().Name + " est injoignable (réseau ou proxy)"
+			warn = p.Info().Name
 		}
 	}
 	if err := ai.DefaultKeys.Set(provider, key); err != nil {
-		msg := "clé gardée pour cette session seulement : le trousseau du système l'a refusée (" + err.Error() + "). Elle sera à recoller au prochain lancement."
 		if warn != "" {
-			msg = warn + " ; " + msg
+			return s.AIState(), msg.New("ai.keyUncheckedSessionOnly", msg.Args{"provider": warn, "err": err})
 		}
-		return s.AIState(), errors.New(msg)
+		return s.AIState(), msg.New("ai.keySessionOnly", msg.Args{"err": err})
 	}
 	if warn != "" {
-		return s.AIState(), errors.New(warn)
+		return s.AIState(), msg.New("ai.keyUnchecked", msg.Args{"provider": warn})
 	}
 	return s.AIState(), nil
 }
@@ -273,7 +272,7 @@ func (s *DocumentService) aiTurn() (ai.Turn, string, error) {
 	id := c.String("ai.provider", "anthropic")
 	p := ai.Lookup(id)
 	if p == nil {
-		return ai.Turn{}, "", errors.New("fournisseur pas encore disponible : " + id)
+		return ai.Turn{}, "", msg.New("ai.providerUnavailableNamed", msg.Args{"provider": id})
 	}
 	info := p.Info()
 	key, ok := ai.DefaultKeys.Get(id)

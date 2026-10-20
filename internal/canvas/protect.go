@@ -72,11 +72,14 @@ import (
 // structure, et le contenu de toutes ses feuilles si on l'a choisi.
 type ErrProtected struct{ Sheet string }
 
-func (e ErrProtected) Error() string {
+func (e ErrProtected) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e ErrProtected) Msg() msg.Message {
 	if e.Sheet == "" {
-		return "Le classeur est protégé : ôtez la protection (Révision › Ôter la protection du classeur) pour le modifier"
+		return msg.M("protect.workbookProtected", nil)
 	}
-	return fmt.Sprintf("La feuille « %s » est protégée : ôtez la protection (Révision › Ôter la protection de la feuille) pour la modifier", e.Sheet)
+	return msg.M("protect.sheetProtected", msg.Args{"sheet": e.Sheet})
 }
 
 // ErrStructureProtected refuse une modification d'une feuille dont la
@@ -93,14 +96,18 @@ type ErrStructureProtected struct {
 // Unwrap rend le refus du partage (errors.Is).
 func (e ErrStructureProtected) Unwrap() error { return e.Shared }
 
-func (e ErrStructureProtected) Error() string {
-	if e.Shared != nil {
-		return e.Shared.Error()
+func (e ErrStructureProtected) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager) ; le refus du partage tel
+// quel.
+func (e ErrStructureProtected) Msg() msg.Message {
+	switch {
+	case e.Shared != nil:
+		return msg.M("protect.shared", msg.Args{"err": e.Shared})
+	case e.Book:
+		return msg.M("protect.bookStructure", msg.Args{"sheet": e.Sheet})
 	}
-	if e.Book {
-		return fmt.Sprintf("La structure des feuilles du classeur est protégée : seule la saisie dans les tableaux est permise sur « %s » (Révision › Ôter la protection du classeur)", e.Sheet)
-	}
-	return fmt.Sprintf("La structure de la feuille « %s » est protégée : seule la saisie dans les tableaux est permise (Révision › Ôter la protection de la structure)", e.Sheet)
+	return msg.M("protect.sheetStructure", msg.Args{"sheet": e.Sheet})
 }
 
 // ErrPassword signale un mot de passe de protection incorrect.

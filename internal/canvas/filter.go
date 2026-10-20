@@ -56,15 +56,18 @@ type ErrFiltered struct {
 	Choice string
 }
 
-func (e ErrFiltered) Error() string {
-	what := "des lignes"
-	if e.Column {
-		what = "une colonne"
-	}
+func (e ErrFiltered) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e ErrFiltered) Msg() msg.Message {
+	id := msg.ID("table.filteredAddRows")
 	if e.Choice != "" {
-		return fmt.Sprintf("Le tableau « %s » suit le choix de l'onglet (%s) : choisissez « (Toutes) » dans la flèche de l'onglet pour y ajouter %s ici", e.Table, e.Choice, what)
+		id = "table.followsChoiceAddRows"
 	}
-	return fmt.Sprintf("Le tableau « %s » est filtré : effacez le filtre pour y ajouter %s", e.Table, what)
+	if e.Column {
+		id = id[:len(id)-len("Rows")] + "Column"
+	}
+	return msg.M(id, msg.Args{"table": e.Table, "choice": e.Choice})
 }
 
 // errFiltered : ErrFiltered du tableau, qui dit si c'est le choix de

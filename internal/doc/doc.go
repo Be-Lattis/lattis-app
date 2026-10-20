@@ -219,9 +219,9 @@ func OpenAs(ctx context.Context, path string, mode OpenMode) (_ *Document, err e
 		var tooNew meta.ErrTooNew
 		switch {
 		case errors.As(err, &tooNew):
-			return nil, &archive.OpenError{Path: path, Reason: err.Error(), Err: archive.ErrFormat}
+			return nil, &archive.OpenError{Path: path, Reason: err.Error(), Why: tooNew.Msg(), Err: archive.ErrFormat}
 		case errors.Is(err, meta.ErrForeign):
-			return nil, &archive.OpenError{Path: path, Reason: err.Error(), Err: archive.ErrFormat}
+			return nil, &archive.OpenError{Path: path, Reason: err.Error(), Why: meta.ErrForeign.Msg(), Err: archive.ErrFormat}
 		}
 		return nil, archive.Damaged(path, err)
 	}

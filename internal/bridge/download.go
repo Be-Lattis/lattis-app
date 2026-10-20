@@ -48,7 +48,7 @@ func (s *DocumentService) Download(ctx context.Context) (DocState, error) {
 		return DocState{}, err
 	}
 	st, err := s.State(ctx)
-	st.Notice = "Copie téléchargée : " + filepath.Base(src)
+	st.Notice = s.say("doc.downloaded", msg.Args{"file": filepath.Base(src)})
 	return st, err
 }
 

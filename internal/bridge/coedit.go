@@ -11,6 +11,7 @@ import (
 	"github.com/lalamefine/lattis/internal/coedit"
 	"github.com/lalamefine/lattis/internal/config"
 	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/collab"
 )
 
@@ -62,7 +63,7 @@ func (s *DocumentService) startCoEdit(d *doc.Document) {
 		eng, err = coedit.Start(context.Background(), d, tk, opt)
 		if err != nil {
 			tk.Cancel()
-			d.Notify("Travail à plusieurs impossible : " + err.Error())
+			d.Notify(s.say("coedit.startFailed", msg.Args{"err": err}))
 		}
 	} else {
 		eng, err = coedit.New(d, opt)
@@ -144,7 +145,7 @@ func (s *DocumentService) kickCoEdit() {
 // openQuestion : à l'ouverture, le classeur est ouvert ailleurs (verrou
 // ~$, ou sessions du travail à plusieurs) ; nil sinon. coEdit : « Travailler
 // à plusieurs » est proposé.
-func openQuestion(path string) (q *FileQuestion, coEdit bool) {
+func (s *DocumentService) openQuestion(path string) (q *FileQuestion, coEdit bool) {
 	on := config.CoEditing(config.Current())
 	if on {
 		if m, err := archive.ReadManifest(path); err == nil && m.Remote != nil {
@@ -153,7 +154,7 @@ func openQuestion(path string) (q *FileQuestion, coEdit bool) {
 	}
 	if h := archive.LockedBy(path); h != nil {
 		e := archive.LockedError{Path: path, Holder: *h}
-		return &FileQuestion{Path: path, Message: e.Error()}, on
+		return &FileQuestion{Path: path, Message: msg.Text(s.sessionLang(), &e)}, on
 	}
 	if !on {
 		return nil, false
@@ -161,9 +162,9 @@ func openQuestion(path string) (q *FileQuestion, coEdit bool) {
 	if others := coedit.Others(path, coeditTiming); len(others) > 0 {
 		var names []string
 		for _, p := range others {
-			names = append(names, p.Name()+" (poste "+p.Machine+")")
+			names = append(names, s.say("coedit.personOnMachine", msg.Args{"name": p.Name(), "machine": p.Machine}))
 		}
-		return &FileQuestion{Path: path, Message: "« " + filepath.Base(path) + " » est ouvert par " + strings.Join(names, ", ")}, true
+		return &FileQuestion{Path: path, Message: s.say("coedit.openedBy", msg.Args{"file": filepath.Base(path), "names": strings.Join(names, ", ")})}, true
 	}
 	return nil, false
 }
@@ -176,7 +177,7 @@ func (s *DocumentService) OpenTogether(ctx context.Context, path string) (OpenRe
 	tk, err := coedit.Join(ctx, path, coeditTiming)
 	var none *coedit.NoAnswerError
 	if errors.As(err, &none) {
-		return OpenResult{Locked: &FileQuestion{Path: path, Message: err.Error()}}, nil
+		return OpenResult{Locked: &FileQuestion{Path: path, Message: msg.Text(s.sessionLang(), err)}}, nil
 	}
 	if err != nil {
 		return OpenResult{}, err

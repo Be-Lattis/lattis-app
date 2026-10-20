@@ -2,6 +2,7 @@ package bridge
 
 import (
 	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"os"
 	"runtime/debug"
 	"strings"
@@ -33,11 +34,11 @@ func ReportPanic(where string, v any, stack string) string {
 	fmt.Fprint(os.Stderr, "[PANIQUE] "+entry)
 	p := writeErrorLog(entry)
 	if s := panicDocs.Load(); s != nil {
-		msg := fmt.Sprintf("Erreur interne de Lattis (%s) : l'opération a été interrompue.", where)
+		text := s.say("panic.interrupted", msg.Args{"where": where})
 		if p != "" {
-			msg += " Le détail est dans " + p + "."
+			text += s.say("panic.logFile", msg.Args{"path": p})
 		}
-		host{s}.Notify(msg)
+		host{s}.Notify(text)
 	}
 	return p
 }

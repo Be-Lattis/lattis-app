@@ -2,7 +2,6 @@ package bridge
 
 import (
 	"context"
-	"errors"
 	"sort"
 	"time"
 
@@ -289,12 +288,12 @@ func journalAfter(ctx context.Context, d *doc.Document, top int64) []int64 {
 
 // seriesUndo dit combien d'étapes de la série sont encore en place et si
 // elles sont les dernières du journal ("" : annulable).
-func seriesUndo(ctx context.Context, ser *mcpSeries, d *doc.Document) (int, string) {
+func seriesUndo(ctx context.Context, ser *mcpSeries, d *doc.Document) (int, msg.Message) {
 	if ser.closed {
-		return 0, "Ces modifications ont déjà été annulées."
+		return 0, msg.M("mcp.undoAlreadyDone", nil)
 	}
 	if d == nil || ser.doc != d {
-		return 0, "Le classeur a changé depuis ces modifications."
+		return 0, msg.M("mcp.undoWorkbookChanged", nil)
 	}
 	mine := map[int64]bool{}
 	for _, n := range ser.seqs {
@@ -302,7 +301,7 @@ func seriesUndo(ctx context.Context, ser *mcpSeries, d *doc.Document) (int, stri
 	}
 	rows, err := d.DB().Read().QueryContext(ctx, `SELECT seq FROM _lattis_journal WHERE undone = 0 ORDER BY seq DESC`)
 	if err != nil {
-		return 0, err.Error()
+		return 0, msg.M("mcp.undoFailed", msg.Args{"err": err})
 	}
 	defer rows.Close()
 	var active []int64
@@ -320,16 +319,16 @@ func seriesUndo(ctx context.Context, ser *mcpSeries, d *doc.Document) (int, stri
 	}
 	if left == 0 {
 		if len(ser.seqs) == 0 {
-			return 0, "Aucune modification à annuler."
+			return 0, msg.M("mcp.undoNothing", nil)
 		}
-		return 0, "Ces modifications ont déjà été annulées."
+		return 0, msg.M("mcp.undoAlreadyDone", nil)
 	}
 	for i := 0; i < left; i++ {
 		if !mine[active[i]] {
-			return left, "D’autres modifications ont suivi : annulez-les d’abord, ou utilisez Ctrl+Z."
+			return left, msg.M("mcp.undoLater", nil)
 		}
 	}
-	return left, ""
+	return left, msg.Message{}
 }
 
 // MCPSeries dit, pour chaque série connue, si elle peut être annulée d'un
@@ -349,7 +348,11 @@ func (s *DocumentService) MCPSeries(ctx context.Context) []MCPSeriesState {
 		s.mcp.mu.Lock()
 		n, why := seriesUndo(ctx, ser, d)
 		s.mcp.mu.Unlock()
-		out = append(out, MCPSeriesState{ID: ser.id, Client: ser.client, Writes: n, Undo: why == "", Reason: why})
+		reason := ""
+		if why.ID != "" {
+			reason = why.Text(s.sessionLang())
+		}
+		out = append(out, MCPSeriesState{ID: ser.id, Client: ser.client, Writes: n, Undo: why.ID == "", Reason: reason})
 	}
 	return out
 }
@@ -370,8 +373,8 @@ func (s *DocumentService) MCPUndoSeries(ctx context.Context, series int) (DocSta
 	s.mcp.mu.Lock()
 	n, why := seriesUndo(ctx, ser, d)
 	s.mcp.mu.Unlock()
-	if why != "" {
-		return DocState{}, errors.New(why)
+	if why.ID != "" {
+		return DocState{}, msg.New(why.ID, why.Args)
 	}
 	for i := 0; i < n; i++ {
 		if _, err := d.Bus.Undo(ctx); err != nil {

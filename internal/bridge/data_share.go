@@ -72,7 +72,7 @@ func (s *DocumentService) DataShareInfo(ctx context.Context, table string) (Data
 		return out, nil
 	}
 	if !info.CanDesign() {
-		out.Reason = "Seuls les propriétaires et concepteurs du classeur partagent ses tableaux."
+		out.Reason = s.say("lake.shareOwnersDesigners", nil)
 		return out, nil
 	}
 	if out.TableID == "" {
@@ -85,7 +85,7 @@ func (s *DocumentService) DataShareInfo(ctx context.Context, table string) (Data
 			out.Choice = "collab"
 			out.Reason = eng.CanAdd(tbl)
 		} else {
-			out.Reason = "Un classeur collaboratif ne se republie pas : ce tableau n'y entre plus avec le classeur."
+			out.Reason = s.say("lake.collabNoRepublish", nil)
 		}
 		return out, nil
 	}
@@ -112,7 +112,7 @@ func (s *DocumentService) DataShareInfo(ctx context.Context, table string) (Data
 		return out, err
 	}
 	if !out.Catalog.CanPublish {
-		out.Reason = "Votre compte ne partage pas au Data Lake Lattis sur ce serveur : demandez à son propriétaire le rôle « publieur de données »."
+		out.Reason = s.say("lake.notPublisher", nil)
 		return out, nil
 	}
 	for i := range out.Catalog.Datasets {

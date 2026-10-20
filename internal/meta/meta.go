@@ -16,11 +16,11 @@ package meta
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/store"
 )
 
@@ -505,13 +505,16 @@ var Version = len(migrations)
 // ErrTooNew signale une base écrite par une version plus récente.
 type ErrTooNew struct{ Found int }
 
-func (e ErrTooNew) Error() string {
-	return fmt.Sprintf("ce classeur a été enregistré par une version plus récente de Lattis (format %d, cette version lit jusqu'au format %d) : mettre Lattis à jour pour l'ouvrir", e.Found, Version)
+func (e ErrTooNew) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e ErrTooNew) Msg() msg.Message {
+	return msg.M("archive.tooNew", msg.Args{"format": e.Found, "max": Version})
 }
 
 // ErrForeign signale une base SQLite qui n'est pas un classeur Lattis
 // (version 0, mais déjà des tables).
-var ErrForeign = errors.New("cette base de données n'est pas un classeur Lattis")
+var ErrForeign = msg.New("archive.foreignDatabase", nil)
 
 // MigrateTo met une base neuve au format v (classeurs d'un format ancien,
 // pour les tests de migration).

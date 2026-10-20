@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/lalamefine/lattis/internal/msg"
 	"io"
 	"os"
@@ -51,24 +50,32 @@ func (h Holder) self() bool {
 }
 
 // String décrit le détenteur pour l'utilisateur.
-func (h Holder) String() string {
-	who := h.User
-	if who == "" {
-		who = "un autre utilisateur"
+func (h Holder) String() string { return h.Msg().String() }
+
+// Msg : qui tient le verrou, comme message (« Jean sur le poste PC-1,
+// depuis le 02/01/2026 à 15:04 »).
+func (h Holder) Msg() msg.Message {
+	var who any = h.User
+	if h.User == "" {
+		who = msg.M("archive.holder.someone", nil)
 	}
 	if h.self() {
-		who = "vous-même (une autre fenêtre de Lattis)"
+		who = msg.M("archive.holder.selfWindow", nil)
 	} else if strings.EqualFold(h.Login, whoAmI().Login) {
-		who = "vous-même"
+		who = msg.M("archive.holder.self", nil)
 	}
-	s := who
+	args := msg.Args{"who": who}
+	id := "archive.holder"
 	if h.Machine != "" && !h.self() {
-		s += " sur le poste " + h.Machine
+		id += "Machine"
+		args["machine"] = h.Machine
 	}
 	if !h.Since.IsZero() {
-		s += ", depuis le " + h.Since.Local().Format("02/01/2006 à 15:04")
+		id += "Since"
+		args["date"] = h.Since.Local().Format("02/01/2006")
+		args["time"] = h.Since.Local().Format("15:04")
 	}
-	return s
+	return msg.M(msg.ID(id), args)
 }
 
 var whoAmI = sync.OnceValue(func() Holder {
@@ -109,8 +116,11 @@ type LockedError struct {
 	Holder Holder
 }
 
-func (e *LockedError) Error() string {
-	return fmt.Sprintf("« %s » est ouvert par %s", filepath.Base(e.Path), e.Holder)
+func (e *LockedError) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e *LockedError) Msg() msg.Message {
+	return msg.M("archive.locked", msg.Args{"file": filepath.Base(e.Path), "holder": e.Holder.Msg()})
 }
 
 // LockedBy rend le détenteur du verrou vivant de path, nil s'il n'y en a pas
@@ -328,8 +338,11 @@ func readStamp(dir string) *Stamp {
 // programme) depuis son ouverture ou son dernier enregistrement.
 type ChangedError struct{ Path string }
 
-func (e *ChangedError) Error() string {
-	return fmt.Sprintf("« %s » a été modifié par ailleurs (un autre poste ?) depuis son ouverture : l'enregistrer écraserait ces modifications", filepath.Base(e.Path))
+func (e *ChangedError) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e *ChangedError) Msg() msg.Message {
+	return msg.M("archive.changed", msg.Args{"file": filepath.Base(e.Path)})
 }
 
 // ErrReadOnly : classeur ouvert en lecture seule, à enregistrer sous un

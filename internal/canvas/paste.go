@@ -6,6 +6,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // MaxPasteCells borne un collage cellule par cellule (le collage d'un bloc
@@ -16,8 +17,11 @@ const MaxPasteCells = 20_000
 // cellule sur des tableaux existants.
 type ErrPasteTooBig struct{ Cells int }
 
-func (e ErrPasteTooBig) Error() string {
-	return "collage trop grand sur des tableaux existants (" + itoa(e.Cells) + " cellules) : collez dans une zone vide"
+func (e ErrPasteTooBig) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e ErrPasteTooBig) Msg() msg.Message {
+	return msg.M("paste.tooBig", msg.Args{"n": e.Cells})
 }
 
 func itoa(n int) string {

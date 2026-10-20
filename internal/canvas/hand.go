@@ -157,16 +157,18 @@ type ErrHandKey struct {
 	Columns []string
 }
 
-func (e ErrHandKey) Error() string {
-	s := fmt.Sprintf("jointure à choisir : « %s » est chargé par une requête ; les valeurs saisies à côté suivront ses lignes, d'une actualisation à l'autre, par une colonne qui les identifie.", e.Table)
+func (e ErrHandKey) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e ErrHandKey) Msg() msg.Message {
 	if len(e.Columns) == 0 {
-		return s + " Aucune colonne ne convient (valeurs en double ou cases vides) : elles suivront le rang des lignes."
+		return msg.M("hand.chooseJoinNone", msg.Args{"table": e.Table})
 	}
 	q := make([]string, len(e.Columns))
 	for i, c := range e.Columns {
 		q[i] = "« " + c + " »"
 	}
-	return s + " Colonnes possibles : " + strings.Join(q, ", ") + "."
+	return msg.M("hand.chooseJoin", msg.Args{"table": e.Table, "columns": strings.Join(q, ", ")})
 }
 
 // keyWhy dit pourquoi les colonnes idx ne peuvent pas servir de clé de

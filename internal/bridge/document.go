@@ -229,7 +229,7 @@ func (s *DocumentService) Open(ctx context.Context, path string) (OpenResult, er
 	// Ouvert sur un autre poste (verrou ~$ à côté du fichier, ou sessions
 	// du travail à plusieurs) : l'interface propose la lecture seule, et de
 	// travailler à plusieurs (ou, sans, de l'ouvrir quand même).
-	if q, together := openQuestion(path); q != nil {
+	if q, together := s.openQuestion(path); q != nil {
 		return OpenResult{Locked: q, CoEdit: together}, nil
 	}
 	return s.open(ctx, path, doc.OpenNormal)
@@ -259,7 +259,7 @@ func sharedFile(path string) *RecentFile {
 // OpenLocalCopy ouvre le fichier path tel quel, même celui d'un classeur
 // partagé en direct (serveur injoignable, ou choix de l'utilisateur).
 func (s *DocumentService) OpenLocalCopy(ctx context.Context, path string) (OpenResult, error) {
-	if q, together := openQuestion(path); q != nil {
+	if q, together := s.openQuestion(path); q != nil {
 		return OpenResult{Locked: q, CoEdit: together}, nil
 	}
 	return s.open(ctx, path, doc.OpenNormal)
@@ -284,7 +284,7 @@ func (s *DocumentService) open(ctx context.Context, path string, mode doc.OpenMo
 	}
 	var bad *archive.OpenError
 	if errors.As(err, &bad) && bad.Salvage {
-		return OpenResult{Damaged: &DamagedFile{Path: path, Message: err.Error()}}, nil
+		return OpenResult{Damaged: &DamagedFile{Path: path, Message: msg.Text(s.sessionLang(), err)}}, nil
 	}
 	if err != nil {
 		return OpenResult{}, err
@@ -304,14 +304,14 @@ func (s *DocumentService) Salvage(ctx context.Context, path string) (SalvageResu
 		return SalvageResult{}, msg.Wrap(err, "doc.recoverFailed", msg.Args{"err": err})
 	}
 	s.replace(d)
-	msg := fmt.Sprintf("Données récupérées : %d ligne(s) dans %d table(s)", rep.Rows, rep.Tables)
+	id := msg.ID("doc.salvaged")
 	if len(rep.Damaged) > 0 {
-		msg += fmt.Sprintf(", %d table(s) incomplète(s)", len(rep.Damaged))
+		id = "doc.salvagedIncomplete"
 	}
-	msg += ". Enregistrer sous un nouveau nom, puis vérifier le contenu."
+	report := s.say(id, msg.Args{"rows": rep.Rows, "tables": rep.Tables, "damaged": len(rep.Damaged)})
 	st, err := s.State(ctx)
 	st.Notice = d.TakeOpenNotice()
-	return SalvageResult{State: st, Report: msg}, err
+	return SalvageResult{State: st, Report: report}, err
 }
 
 // Recover rouvre une session interrompue (répertoire de travail dir).
@@ -363,7 +363,7 @@ func (s *DocumentService) Save(ctx context.Context, as bool) (DocState, error) {
 		r := s.fireSync(api.EventBeforeSave, map[string]any{"path": d.Path(), "as": as || d.Path() == ""})
 		if r.Cancelled {
 			st, err := s.State(ctx)
-			st.Notice = "Enregistrement annulé par un script (évènement before_save)"
+			st.Notice = s.say("doc.saveCancelledByScript", nil)
 			return st, err
 		}
 	}
@@ -448,7 +448,7 @@ func (s *DocumentService) saveFailed(ctx context.Context, d *doc.Document, err e
 		return DocState{}, err
 	}
 	st, serr := s.State(ctx)
-	st.Conflict = &FileQuestion{Path: d.Path(), Message: changed.Error()}
+	st.Conflict = &FileQuestion{Path: d.Path(), Message: msg.Text(s.sessionLang(), changed)}
 	return st, serr
 }
 
@@ -463,19 +463,18 @@ func (s *DocumentService) saved(ctx context.Context, d *doc.Document) (DocState,
 	// Classeur du serveur : ce qui est arrivé au serveur, pas le chemin du
 	// cache (l'interface montre sinon « Enregistré : <chemin> »).
 	if st.Remote != nil && st.Notice == "" && !st.Dirty {
-		st.Notice = remoteSavedNotice(st.Remote)
+		st.Notice = remoteSavedNoticeIn(s.sessionLang(), st.Remote)
 	}
 	// Fichier de l'auteur d'un classeur partagé en direct : enregistré sur
 	// le poste, et synchronisé avec le serveur comme un classeur ouvert
 	// depuis le serveur ; le message dit les deux.
 	if st.Remote == nil && st.Notice == "" && !st.Dirty && d.Share != nil {
 		if r := d.Share.State(); r.Shared && r.Mode == workbook.Collaborative && r.Gone == "" {
-			where := serverLabel(r.Server, r.ServerName)
-			if r.Online {
-				st.Notice = fmt.Sprintf("Enregistré : %s ; vos modifications partent aussi vers %s", st.Path, where)
-			} else {
-				st.Notice = fmt.Sprintf("Enregistré : %s ; hors ligne, vos modifications partiront vers %s à la reconnexion", st.Path, where)
+			id := msg.ID("share.savedAlsoSent")
+			if !r.Online {
+				id = "share.savedOfflineLater"
 			}
+			st.Notice = s.say(id, msg.Args{"path": st.Path, "server": serverLabel(r.Server, r.ServerName)})
 		}
 	}
 	return st, err

@@ -2,7 +2,6 @@ package bridge
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -111,23 +110,23 @@ func serverLabel(server, name string) string {
 // remoteSavedNotice : message de la barre d'état après Ctrl+S sur un
 // classeur du serveur. Le fichier enregistré n'est que la copie locale :
 // le message dit ce qui est vraiment arrivé au serveur.
-func remoteSavedNotice(r *workbook.State) string {
-	where := serverLabel(r.Server, r.ServerName)
+func remoteSavedNotice(r *workbook.State) string { return remoteSavedNoticeIn(msg.FR, r) }
+
+// remoteSavedNoticeIn : remoteSavedNotice dans la langue l.
+func remoteSavedNoticeIn(l msg.Lang, r *workbook.State) string {
+	args := msg.Args{"title": r.Title, "server": serverLabel(r.Server, r.ServerName), "n": r.Pending}
+	id := msg.ID("share.savedReadOnly")
 	switch {
 	case r.Mode == workbook.Collaborative && !r.Online:
-		return fmt.Sprintf("Hors ligne : « %s » enregistré sur ce poste ; vos modifications partiront vers %s à la reconnexion", r.Title, where)
+		id = "share.savedOffline"
 	case r.Mode == workbook.Collaborative && r.Pending > 0:
-		s := "s"
-		if r.Pending == 1 {
-			s = ""
-		}
-		return fmt.Sprintf("Enregistré sur %s : %s (%d modification%s en cours d'envoi)", where, r.Title, r.Pending, s)
+		id = "share.savedPending"
 	case r.Mode == workbook.Collaborative:
-		return fmt.Sprintf("Enregistré sur %s : %s", where, r.Title)
+		id = "share.saved"
 	case r.CanDesign:
-		return fmt.Sprintf("Copie locale de « %s » enregistrée ; Fichier › Republier pour publier vos changements sur %s", r.Title, where)
+		id = "share.savedLocalCopy"
 	}
-	return fmt.Sprintf("« %s » est publié en lecture seule sur %s : rien à enregistrer. Pour en garder une copie à vous, modifiable : Fichier › Enregistrer sous", r.Title, where)
+	return msg.Format(l, id, args)
 }
 
 // fileTitle : nom de fichier proposé pour un titre (Enregistrer sous,

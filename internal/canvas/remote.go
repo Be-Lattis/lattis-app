@@ -364,22 +364,26 @@ type ErrOutOfType struct {
 	Raw           string
 }
 
-func (e ErrOutOfType) Error() string {
-	return fmt.Sprintf("« %s » n'est pas %s : la colonne « %s » du tableau partagé « %s » a un type figé", e.Raw, typeArticle(e.Type), e.Column, e.Table)
+func (e ErrOutOfType) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e ErrOutOfType) Msg() msg.Message {
+	return msg.M("workbook.outOfType", msg.Args{"value": e.Raw, "type": typeArticle(e.Type), "column": e.Column, "table": e.Table})
 }
 
-func typeArticle(t grid.Type) string {
+// typeArticle : « un nombre entier », « une date »… (message).
+func typeArticle(t grid.Type) msg.Message {
 	switch t {
 	case grid.Integer:
-		return "un nombre entier"
+		return msg.M("type.anInteger", nil)
 	case grid.Decimal:
-		return "un nombre"
+		return msg.M("type.aNumber", nil)
 	case grid.Boolean:
-		return "un booléen (VRAI ou FAUX)"
+		return msg.M("type.aBoolean", nil)
 	case grid.Date:
-		return "une date"
+		return msg.M("type.aDate", nil)
 	}
-	return "un texte"
+	return msg.M("type.aText", nil)
 }
 
 // rowKey donne la clé d'ordre (_pos) d'une nouvelle ligne entre a et b.

@@ -143,7 +143,7 @@ func (t *tx) rowLabelSQL(tb Table, en string) (string, bool, error) {
 func (t *tx) prepareRowFormula(sheet int64, src string) (string, []string, error) {
 	src = strings.TrimSpace(src)
 	if src == "" || src == "=" {
-		return "", nil, ErrFormula{"formule vide"}
+		return "", nil, ErrFormula{t.say("formula.whyEmpty", nil)}
 	}
 	if !strings.HasPrefix(src, "=") {
 		src = "=" + src
@@ -154,7 +154,7 @@ func (t *tx) prepareRowFormula(sheet int64, src string) (string, []string, error
 	}
 	cols := formulaColumns(n)
 	if len(cols) == 0 {
-		return "", nil, ErrFormula{"la formule doit citer au moins une colonne entre crochets, par exemple =ANNEE([Date])"}
+		return "", nil, ErrFormula{t.say("formula.whyNoColumn", nil)}
 	}
 	return formula.Format(n, formula.EN), cols, nil
 }
@@ -181,7 +181,7 @@ func (m *Model) PreviewChoiceFormula(ctx context.Context, sheet int64, src strin
 	err := m.read(ctx, func(t *tx) error {
 		en, cols, err := t.prepareRowFormula(sheet, src)
 		if err != nil {
-			out.Error = formulaError(err)
+			out.Error = msg.Text(m.Language(), formulaError(err))
 			return nil
 		}
 		tables, err := t.formulaTables(sheet)
@@ -255,13 +255,14 @@ func (t *tx) formulaTables(sheet int64) ([]Table, error) {
 	return append(tables, srcs...), nil
 }
 
-// formulaError : message d'une formule refusée.
-func formulaError(err error) string {
+// formulaError : l'erreur d'une formule refusée (ErrFormula) plutôt que ce
+// qui l'enveloppe.
+func formulaError(err error) error {
 	var fe ErrFormula
 	if errors.As(err, &fe) {
-		return fe.Error()
+		return fe
 	}
-	return err.Error()
+	return err
 }
 
 // quoteList : « Date », « Montant ».

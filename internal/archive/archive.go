@@ -88,27 +88,36 @@ var (
 	ErrCorrupt = msg.New("archive.corrupt", nil)
 )
 
-// OpenError est un fichier que Lattis refuse d'ouvrir. Reason est le message
-// pour l'utilisateur ; Salvage dit si Salvage peut en tirer des données.
+// OpenError est un fichier que Lattis refuse d'ouvrir. Why est le message
+// pour l'utilisateur, Reason son texte français ; Salvage dit si Salvage
+// peut en tirer des données.
 type OpenError struct {
 	Path    string
 	Reason  string
+	Why     msg.Message
 	Salvage bool
 	Err     error // ErrFormat ou ErrCorrupt
 }
 
-func (e *OpenError) Error() string {
-	return fmt.Sprintf("impossible d'ouvrir « %s » : %s", filepath.Base(e.Path), e.Reason)
+func (e *OpenError) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e *OpenError) Msg() msg.Message {
+	var reason any = e.Why
+	if e.Why.ID == "" {
+		reason = e.Reason
+	}
+	return msg.M("archive.cannotOpen", msg.Args{"file": filepath.Base(e.Path), "reason": reason})
 }
 
 func (e *OpenError) Unwrap() error { return e.Err }
 
-func formatErr(path, reason string) error {
-	return &OpenError{Path: path, Reason: reason, Err: ErrFormat}
+func formatErr(path string, why msg.Message) error {
+	return &OpenError{Path: path, Reason: why.String(), Why: why, Err: ErrFormat}
 }
 
-func corruptErr(path, reason string, salvage bool) error {
-	return &OpenError{Path: path, Reason: reason, Salvage: salvage, Err: ErrCorrupt}
+func corruptErr(path string, why msg.Message, salvage bool) error {
+	return &OpenError{Path: path, Reason: why.String(), Why: why, Salvage: salvage, Err: ErrCorrupt}
 }
 
 // Damaged traduit une erreur de SQLite qui signale une base altérée
@@ -125,7 +134,7 @@ func Damaged(path string, err error) error {
 		return err
 	}
 	if errors.Is(err, sqlite3.CORRUPT) || errors.Is(err, sqlite3.NOTADB) {
-		return corruptErr(path, "la base de données du classeur est endommagée", true)
+		return corruptErr(path, msg.M("archive.whyDamaged", nil), true)
 	}
 	return err
 }
@@ -460,18 +469,18 @@ func sniff(path string) error {
 	}
 	defer f.Close()
 	if st, err := f.Stat(); err == nil && st.IsDir() {
-		return formatErr(path, "c'est un dossier, pas un classeur")
+		return formatErr(path, msg.M("archive.whyFolder", nil))
 	}
 	head := make([]byte, len(sqliteMagic))
 	n, _ := io.ReadFull(f, head)
 	head = head[:n]
 	switch {
 	case n == 0:
-		return formatErr(path, "le fichier est vide (0 octet)")
+		return formatErr(path, msg.M("archive.whyEmpty", nil))
 	case bytes.HasPrefix(head, []byte(sqliteMagic)):
-		return formatErr(path, "c'est une base SQLite, pas un classeur Lattis (l'importer comme source de données)")
+		return formatErr(path, msg.M("archive.whySqlite", nil))
 	case !bytes.HasPrefix(head, []byte("PK")):
-		return formatErr(path, "ce n'est pas un classeur Lattis (format de fichier inconnu)")
+		return formatErr(path, msg.M("archive.whyUnknownFormat", nil))
 	}
 	return nil
 }
@@ -482,7 +491,7 @@ func sniff(path string) error {
 func extract(path, dir string) error {
 	zr, err := OpenZip(path)
 	if err != nil {
-		return corruptErr(path, "l'archive est incomplète ou altérée (fichier tronqué ?)", true)
+		return corruptErr(path, msg.M("archive.whyTruncated", nil), true)
 	}
 	defer zr.Close()
 	var db *zip.File
@@ -493,25 +502,25 @@ func extract(path, dir string) error {
 			// version est vérifiée à la migration). Seule une archive d'un
 			// format plus récent est refusée.
 			if m, err := readManifest(f); err == nil && m.FormatVersion > FormatVersion {
-				return formatErr(path, fmt.Sprintf("il a été enregistré par une version plus récente de Lattis (archive au format %d, cette version lit jusqu'au format %d) : mettre Lattis à jour pour l'ouvrir", m.FormatVersion, FormatVersion))
+				return formatErr(path, msg.M("archive.whyNewer", msg.Args{"format": m.FormatVersion, "max": FormatVersion}))
 			}
 		case dbName:
 			db = f
 		}
 	}
 	if db == nil {
-		return formatErr(path, "l'archive ne contient pas de base de données ("+dbName+") : ce n'est pas un classeur Lattis")
+		return formatErr(path, msg.M("archive.whyNoDatabase", msg.Args{"name": dbName}))
 	}
 	part := filepath.Join(dir, dbName+".part")
 	if err := copyZipFile(db, part); err != nil {
 		os.Remove(part)
 		var re readErr
 		if errors.As(err, &re) {
-			return corruptErr(path, "la base de données de l'archive est altérée", true)
+			return corruptErr(path, msg.M("archive.whyAltered", nil), true)
 		}
 		var big tooBigErr
 		if errors.As(err, &big) {
-			return formatErr(path, big.reason)
+			return formatErr(path, big.why)
 		}
 		return err
 	}
@@ -558,20 +567,21 @@ const (
 
 // tooBigErr : la base de l'archive annonce une taille démesurée ou
 // incohérente ; rien n'est extrait.
-type tooBigErr struct{ reason string }
+type tooBigErr struct{ why msg.Message }
 
-func (e tooBigErr) Error() string { return e.reason }
+func (e tooBigErr) Error() string { return e.why.String() }
 
-// bomb dit pourquoi l'entrée f ne doit pas être décompressée (vide : rien).
-func bomb(f *zip.File) string {
+// bomb dit pourquoi l'entrée f ne doit pas être décompressée (ID vide :
+// rien).
+func bomb(f *zip.File) msg.Message {
 	size := f.UncompressedSize64
 	if size >= 1<<48 { // au-delà de ce que SQLite sait écrire
-		return fmt.Sprintf("l'archive annonce une base de %s : fichier refusé", Size(size))
+		return msg.M("archive.whyHuge", msg.Args{"size": Size(size)})
 	}
 	if f.Method != zip.Store && size > ratioFloor && size/ratioLimit(f.Method) > f.CompressedSize64 {
-		return fmt.Sprintf("la base de données de l'archive est compressée de façon anormale (%s pour %s dans le fichier) : fichier refusé", Size(size), Size(f.CompressedSize64))
+		return msg.M("archive.whyCompression", msg.Args{"size": Size(size), "compressed": Size(f.CompressedSize64)})
 	}
-	return ""
+	return msg.Message{}
 }
 
 func ratioLimit(method uint16) uint64 {
@@ -585,7 +595,7 @@ func ratioLimit(method uint16) uint64 {
 // l'archive ni celle que l'en-tête de la base déclare, après avoir vérifié
 // l'espace libre.
 func copyZipFile(f *zip.File, dst string) error {
-	if why := bomb(f); why != "" {
+	if why := bomb(f); why.ID != "" {
 		return tooBigErr{why}
 	}
 	size := f.UncompressedSize64
@@ -606,7 +616,7 @@ func copyZipFile(f *zip.File, dst string) error {
 	}
 	h = h[:n]
 	if pageSize, pages, ok := dbHeader(h); ok && pages > 0 && size > uint64(pages*pageSize)+headerSlack {
-		return tooBigErr{fmt.Sprintf("l'archive annonce une base de %s alors que la base en déclare %s : fichier refusé", Size(size), Size(uint64(pages*pageSize)))}
+		return tooBigErr{msg.M("archive.whySizeMismatch", msg.Args{"size": Size(size), "declared": Size(uint64(pages * pageSize))})}
 	}
 	w, err := os.Create(dst)
 	if err != nil {
@@ -664,14 +674,14 @@ func checkDB(path string) error {
 	n, _ := io.ReadFull(f, h)
 	pageSize, pages, ok := dbHeader(h[:n])
 	if !ok {
-		return corruptErr(path, "la base de données du classeur est illisible (en-tête invalide)", false)
+		return corruptErr(path, msg.M("archive.whyBadHeader", nil), false)
 	}
 	st, err := f.Stat()
 	if err != nil {
 		return err
 	}
 	if want := pages * pageSize; st.Size() < want {
-		return corruptErr(path, fmt.Sprintf("la base de données du classeur est tronquée (%d octets sur %d)", st.Size(), want), true)
+		return corruptErr(path, msg.M("archive.whyDbTruncated", msg.Args{"size": st.Size(), "want": want}), true)
 	}
 	return nil
 }
@@ -1037,7 +1047,7 @@ func journalYAML(j map[string]int64) string {
 func ReadManifest(path string) (Manifest, error) {
 	zr, err := OpenZip(path)
 	if err != nil {
-		return Manifest{}, corruptErr(path, "l'archive est incomplète ou altérée (fichier tronqué ?)", true)
+		return Manifest{}, corruptErr(path, msg.M("archive.whyTruncated", nil), true)
 	}
 	defer zr.Close()
 	for _, f := range zr.File {
@@ -1157,8 +1167,11 @@ type Orphan struct {
 // cette archive a été interrompue.
 type RecoverableError struct{ Orphan Orphan }
 
-func (e *RecoverableError) Error() string {
-	return fmt.Sprintf("une session précédente de %s a été interrompue : récupérer ses modifications ?", e.Orphan.Source)
+func (e *RecoverableError) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e *RecoverableError) Msg() msg.Message {
+	return msg.M("archive.recoverable", msg.Args{"source": e.Orphan.Source})
 }
 
 // Orphans liste les répertoires de travail abandonnés (verrou libre), à

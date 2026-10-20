@@ -3,7 +3,6 @@ package bridge
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -79,7 +78,7 @@ func (s *DocumentService) ShareDetach(ctx context.Context) (OpenResult, error) {
 	if err != nil {
 		return OpenResult{}, err
 	}
-	return s.reopenDetached(ctx, d, detachedNotice(false, unsent, filepath.Base(d.Path())))
+	return s.reopenDetached(ctx, d, detachedNotice(s.sessionLang(), false, unsent, filepath.Base(d.Path())))
 }
 
 // detachAs demande où enregistrer le classeur détaché (name : nom proposé),
@@ -111,7 +110,7 @@ func (s *DocumentService) detachAs(ctx context.Context, d *doc.Document, title, 
 	if p == "" {
 		return OpenResult{Cancelled: true}, nil
 	}
-	return s.reopenDetached(ctx, d, detachedNotice(!dropCache, unsent, filepath.Base(p)))
+	return s.reopenDetached(ctx, d, detachedNotice(s.sessionLang(), !dropCache, unsent, filepath.Base(p)))
 }
 
 // detachTo détache le classeur d et l'enregistre dans path (vide : son
@@ -180,16 +179,14 @@ func (s *DocumentService) reopenDetached(ctx context.Context, d *doc.Document, n
 
 // detachedNotice : message de la barre d'état après « Travailler sur une
 // copie locale » (asCopy) ou « Détacher du serveur ».
-func detachedNotice(asCopy bool, unsent int, name string) string {
-	msg := fmt.Sprintf("Classeur détaché du serveur : « %s » est maintenant un classeur local, il ne se synchronise plus.", name)
+func detachedNotice(l msg.Lang, asCopy bool, unsent int, name string) string {
+	id := msg.ID("share.detached")
 	if asCopy {
-		msg = fmt.Sprintf("Copie locale « %s » ouverte : un classeur local, sans lien avec le serveur ; le classeur partagé n'a pas changé.", name)
+		id = "share.localCopyOpened"
 	}
-	switch {
-	case unsent == 1:
-		msg += " 1 modification n'avait pas été envoyée au serveur : elle est dans ce classeur, pas sur le serveur."
-	case unsent > 1:
-		msg += fmt.Sprintf(" %d modifications n'avaient pas été envoyées au serveur : elles sont dans ce classeur, pas sur le serveur.", unsent)
+	text := msg.Format(l, id, msg.Args{"name": name})
+	if unsent > 0 {
+		text += msg.Format(l, "share.unsentKept", msg.Args{"n": unsent})
 	}
-	return msg
+	return text
 }

@@ -435,7 +435,7 @@ func (s *DocumentService) followDataOnce(ctx context.Context, d *doc.Document, s
 				id := strings.TrimPrefix(payload, protocol.DataWithdrawn)
 				for _, l := range list {
 					if l.dataset == id {
-						d.Notify(fmt.Sprintf("Data Lake Lattis · « %s » : partage retiré par son propriétaire, la dernière copie reste", l.name))
+						d.Notify(s.say("data.shareWithdrawn", msg.Args{"name": l.name}))
 					}
 				}
 			case payload == protocol.DataCatalogChanged:

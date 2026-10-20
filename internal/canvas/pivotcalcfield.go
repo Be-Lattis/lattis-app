@@ -83,7 +83,7 @@ func (m *Model) PreviewPivotFormula(ctx context.Context, source, src string) (Ch
 		}
 		en, cols, err := t.prepareRowFormula(tb.Sheet, src)
 		if err != nil {
-			out.Error = formulaError(err)
+			out.Error = msg.Text(m.Language(), formulaError(err))
 			return nil
 		}
 		if miss := missingColumns(tb, cols); len(miss) > 0 {

@@ -130,6 +130,7 @@ type FormInfo struct {
 	// Reason : FormLocal… ("" : possible) ; Message : le texte du §2.2.
 	Reason     string `json:"reason"`
 	Message    string `json:"message"`
+	lang       msg.Lang
 	Table      string `json:"table"`
 	Server     string `json:"server"`
 	ServerName string `json:"serverName"`
@@ -147,26 +148,28 @@ type FormInfo struct {
 	Teams []DataTeam      `json:"teams"`
 }
 
-var formMessages = map[string]string{
-	FormLocal:    "Ce tableau n'est pas partagé. Un formulaire est servi par un Serveur Lattis : publiez d'abord le classeur en mode collaboratif.",
-	FormPrivate:  "Ce tableau n'est que sur votre poste. Ajoutez-le au classeur partagé pour en faire un formulaire.",
-	FormFrozen:   "Un classeur figé ne reçoit pas de lignes. Les formulaires demandent un classeur collaboratif.",
-	FormQuery:    "Ce tableau est rempli par une requête : ses lignes seraient remplacées.",
-	FormLinked:   "Ce tableau est une donnée liée du Data Lake : ses lignes seraient remplacées.",
-	FormSource:   "Ce tableau est rempli par l'envoi de votre classeur (source du Data Lake) : ses lignes seraient remplacées.",
-	FormOffline:  "Créer ou modifier un formulaire demande le serveur.",
-	FormRights:   "Réservé aux propriétaires et concepteurs du classeur.",
-	FormNoServer: workbook.ErrNoForms.Error(),
+var formMessages = map[string]msg.ID{
+	FormLocal:    "forms.whyLocal",
+	FormPrivate:  "forms.whyPrivate",
+	FormFrozen:   "forms.whyFrozen",
+	FormQuery:    "forms.whyQuery",
+	FormLinked:   "forms.whyLinked",
+	FormSource:   "forms.whySource",
+	FormOffline:  "forms.whyOffline",
+	FormRights:   "forms.whyRights",
+	FormNoServer: workbook.ErrNoForms.ID,
 }
 
+// refuse : le formulaire n'est pas possible, Message dit pourquoi dans la
+// langue de la session.
 func (i *FormInfo) refuse(reason string) {
-	i.Reason, i.Message = reason, formMessages[reason]
+	i.Reason, i.Message = reason, msg.Format(i.lang, formMessages[reason], nil)
 }
 
 // FormInfo lit de quoi faire un formulaire du tableau table du classeur
 // ouvert.
 func (s *DocumentService) FormInfo(ctx context.Context, table string) (FormInfo, error) {
-	out := FormInfo{Table: table, Columns: []FormColumn{}, Restricted: []string{}, Forms: []workbook.Form{}, Teams: []DataTeam{}}
+	out := FormInfo{Table: table, Columns: []FormColumn{}, Restricted: []string{}, Forms: []workbook.Form{}, Teams: []DataTeam{}, lang: s.sessionLang()}
 	d, err := s.current()
 	if err != nil {
 		return out, err
@@ -484,7 +487,7 @@ func formError(err error, names map[string]string) error {
 			}
 		}
 		slices.Sort(parts)
-		return errors.New("Formulaire refusé par le serveur : " + strings.Join(parts, " ; "))
+		return msg.New("forms.refusedByServer", msg.Args{"reasons": strings.Join(parts, " ; ")})
 	}
 	return err
 }
@@ -600,9 +603,9 @@ func (s *DocumentService) FormImage(ctx context.Context, server, id, kind, name,
 	default:
 		return "", msg.New("forms.imageType", nil)
 	}
-	limit, what := workbook.MaxFormBanner, "1 Mo pour une bannière"
+	limit, what := workbook.MaxFormBanner, msg.M("forms.bannerLimit", nil)
 	if kind == "logo" {
-		limit, what = workbook.MaxFormLogo, "200 Ko pour un logo"
+		limit, what = workbook.MaxFormLogo, msg.M("forms.logoLimit", nil)
 	}
 	if len(raw) > limit {
 		return "", msg.New("forms.imageTooLarge", msg.Args{"max": what})

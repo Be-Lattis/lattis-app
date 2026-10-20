@@ -2,7 +2,7 @@ package canvas
 
 import (
 	"context"
-	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Question posée quand une formule cherche dans un tableau sans clé
@@ -43,12 +43,15 @@ func KeyChoiceFrom(ctx context.Context) KeyChoice {
 // clé ; Why : pourquoi elle ne le peut pas (vide : elle le peut).
 type ErrKeyChoice struct{ Table, Column, Why string }
 
-func (e ErrKeyChoice) Error() string {
-	s := fmt.Sprintf("clé à choisir : « %s » n'a pas de clé ; la recherche peut désigner ses lignes par leur numéro, ou par la colonne « %s », qui deviendrait la clé du tableau (les doublons y seraient refusés)", e.Table, e.Column)
+func (e ErrKeyChoice) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e ErrKeyChoice) Msg() msg.Message {
+	id := msg.ID("key.choose")
 	if e.Why != "" {
-		s += fmt.Sprintf(" ; « %s » ne peut pas servir de clé : %s", e.Column, e.Why)
+		id = "key.chooseWhy"
 	}
-	return s
+	return msg.M(id, msg.Args{"table": e.Table, "column": e.Column, "why": e.Why})
 }
 
 // keepRowNumbers retient que le tableau garde ses numéros de ligne : les

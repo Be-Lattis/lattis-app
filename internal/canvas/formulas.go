@@ -13,14 +13,21 @@ import (
 // ErrComputed signale une saisie de valeur dans une colonne calculée.
 type ErrComputed struct{ Column string }
 
-func (e ErrComputed) Error() string {
-	return fmt.Sprintf("« %s » est une colonne calculée : modifiez sa formule (saisie commençant par =) ou effacez-la", e.Column)
+func (e ErrComputed) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e ErrComputed) Msg() msg.Message {
+	return msg.M("column.computedInput", msg.Args{"column": e.Column})
 }
 
-// ErrFormula signale une formule qui ne peut pas être enregistrée.
-type ErrFormula struct{ Msg string }
+// ErrFormula signale une formule qui ne peut pas être enregistrée ; Why
+// dit pourquoi (dans la langue de la session).
+type ErrFormula struct{ Why string }
 
-func (e ErrFormula) Error() string { return "formule : " + e.Msg }
+func (e ErrFormula) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e ErrFormula) Msg() msg.Message { return msg.M("formula.refused", msg.Args{"why": e.Why}) }
 
 func isFormula(raw string) bool {
 	s := strings.TrimSpace(raw)
@@ -176,7 +183,7 @@ func (t *tx) keyFor(need formula.KeyNeed) error {
 	}
 	i := colIndex(tb, need.Column)
 	if i < 0 {
-		return ErrKey{need.Table, need.Column, "colonne introuvable"}
+		return ErrKey{need.Table, need.Column, t.say("key.whyNoColumn", nil)}
 	}
 	why, err := t.keyCheck(tb, i)
 	if err != nil {
@@ -216,8 +223,11 @@ func colIndex(tb Table, name string) int {
 // ErrKey signale une colonne qui ne peut pas servir de clé.
 type ErrKey struct{ Table, Column, Why string }
 
-func (e ErrKey) Error() string {
-	return fmt.Sprintf("%s[%s] ne peut pas servir de clé : %s", e.Table, e.Column, e.Why)
+func (e ErrKey) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e ErrKey) Msg() msg.Message {
+	return msg.M("key.refused", msg.Args{"table": e.Table, "column": e.Column, "why": e.Why})
 }
 
 // ensureKey fait d'une colonne la clé de son tableau : unicité vérifiée sans
@@ -235,17 +245,17 @@ func (t *tx) ensureKey(table, column string) error {
 		}
 	}
 	if idx < 0 {
-		return ErrKey{table, column, "colonne introuvable"}
+		return ErrKey{table, column, t.say("key.whyNoColumn", nil)}
 	}
 	c := tb.Cols[idx]
 	if tb.Key == c.ID {
 		return nil
 	}
 	if tb.Key != 0 {
-		return ErrKey{table, column, "le tableau a déjà une autre clé"}
+		return ErrKey{table, column, t.say("key.whyOtherKey", nil)}
 	}
 	if c.Formula != "" {
-		return ErrKey{table, column, "c'est une colonne calculée"}
+		return ErrKey{table, column, t.say("key.whyComputed", nil)}
 	}
 	expr := keyExpr(c.ID, c.Type)
 	var total, distinct int

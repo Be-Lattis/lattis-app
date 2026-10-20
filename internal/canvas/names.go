@@ -4,18 +4,27 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"maps"
 	"regexp"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
-// ErrName signale un nom de cellule refusé.
-type ErrName struct{ Name, Why string }
+// ErrName signale un nom de cellule refusé ; Why : le message qui dit
+// pourquoi.
+type ErrName struct {
+	Name string
+	Why  msg.ID
+}
 
-func (e ErrName) Error() string { return fmt.Sprintf("nom « %s » refusé : %s", e.Name, e.Why) }
+func (e ErrName) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e ErrName) Msg() msg.Message {
+	return msg.M("name.refused", msg.Args{"name": e.Name, "why": msg.M(e.Why, nil)})
+}
 
 var nameRe = regexp.MustCompile(`^[\p{L}_][\p{L}\p{N}_.]*$`)
 
@@ -64,33 +73,33 @@ func (m *Model) SetName(ctx context.Context, sheet int64, row, col int, name str
 // checkName vérifie qu'un nom est utilisable dans une formule et libre.
 func (t *tx) checkName(name string, sheet int64, row, col int) error {
 	if !nameRe.MatchString(name) {
-		return ErrName{name, "il doit commencer par une lettre et ne contenir ni espace ni symbole"}
+		return ErrName{name, "name.whySyntax"}
 	}
 	switch strings.ToUpper(name) {
 	case "VRAI", "FAUX", "TRUE", "FALSE":
-		return ErrName{name, "mot réservé"}
+		return ErrName{name, "name.whyReserved"}
 	}
 	if _, _, ok := formula.CellRef(name); ok {
-		return ErrName{name, "c'est une adresse de cellule"}
+		return ErrName{name, "name.whyCellAddress"}
 	}
 	// Comme dans Excel, un nom peut être celui d'une fonction (Taux, Date) :
 	// la fonction s'écrit avec ses parenthèses. Sauf pour les agrégats, que
 	// GROUPER.PAR prend écrits seuls.
 	if formula.BareFunction(name) {
-		return ErrName{name, "c'est le nom d'une fonction"}
+		return ErrName{name, "name.whyFunction"}
 	}
 	var n int
 	if err := t.row(`SELECT count(*) FROM _lattis_tables WHERE name = ? COLLATE NOCASE`, name).Scan(&n); err != nil {
 		return err
 	}
 	if n > 0 {
-		return ErrName{name, "c'est le nom d'un tableau"}
+		return ErrName{name, "name.whyTable"}
 	}
 	if err := t.row(`SELECT count(*) FROM _lattis_names WHERE name = ? AND NOT (sheet = ? AND row = ? AND col = ?)`, name, sheet, row, col).Scan(&n); err != nil {
 		return err
 	}
 	if n > 0 {
-		return ErrName{name, "déjà utilisé par une autre cellule"}
+		return ErrName{name, "name.whyTaken"}
 	}
 	return nil
 }

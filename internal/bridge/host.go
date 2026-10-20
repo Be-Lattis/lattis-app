@@ -2,7 +2,6 @@ package bridge
 
 import (
 	"context"
-	"errors"
 	"sync"
 
 	"github.com/lalamefine/lattis/internal/api"
@@ -145,10 +144,10 @@ func (h host) OpenDoc(ctx context.Context, path string) error {
 		return msg.New("host.sessionPending", nil)
 	}
 	if res.Damaged != nil {
-		return errors.New(res.Damaged.Message + " ; ouvrez-le dans Lattis pour en récupérer les données")
+		return msg.New("host.damaged", msg.Args{"reason": res.Damaged.Message})
 	}
 	if res.Locked != nil {
-		return errors.New(res.Locked.Message + " : ouvrez-le dans Lattis pour choisir")
+		return msg.New("host.locked", msg.Args{"reason": res.Locked.Message})
 	}
 	h.s.changed(ctx)
 	return nil

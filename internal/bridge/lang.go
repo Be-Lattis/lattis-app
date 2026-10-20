@@ -28,7 +28,7 @@ type langState struct {
 func (s *DocumentService) SetLanguage(ctx context.Context, lang string) error {
 	l, ok := msg.Parse(lang)
 	if !ok {
-		return errors.New("langue inconnue : " + lang)
+		return msg.New("lang.unknown", msg.Args{"lang": lang})
 	}
 	s.lang.mu.Lock()
 	s.lang.lang = l
@@ -56,6 +56,12 @@ func (s *DocumentService) sessionLang() msg.Lang {
 		system = msg.SystemLocale()
 	}
 	return msg.Resolve(config.Current().String("ui.language", msg.Auto), system)
+}
+
+// say : le message id dans la langue de la session (notes de la barre
+// d'état, raisons rendues à l'interface).
+func (s *DocumentService) say(id msg.ID, args msg.Args) string {
+	return msg.Format(s.sessionLang(), id, args)
 }
 
 // applyLocale donne au classeur la locale des formules de la langue l, et
