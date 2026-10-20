@@ -357,10 +357,10 @@
 		<button class="close" title={t('query.editor.close.tooltip')} aria-label={t('query.editor.close.aria')} onclick={onclose}><Icon name="win-close" size={16} /></button>
 	</header>
 	<nav class="ribbon">
-		{#each ribbon[tab] as g (g.title)}
+		{#each ribbon[tab] as g, gIndex (gIndex)}
 			<section class="group">
 				<div class="cmds">
-					{#each g.big as c (c.label)}
+					{#each g.big as c, cIndex (cIndex)}
 						<button class="cmd" class:pressed={c.on} disabled={c.off} title={c.hint ?? c.label} onclick={c.run}>
 							<Icon name={c.icon} />
 							<span class="label">{c.label}</span>
@@ -368,7 +368,7 @@
 					{/each}
 					{#if g.small?.length}
 						<div class="stack">
-							{#each g.small as c (c.label)}
+							{#each g.small as c, cIndex (cIndex)}
 								<button class="cmd row-cmd" class:pressed={c.on} disabled={c.off} title={c.hint ?? c.label} onclick={c.run}>
 									<Icon name={c.icon} size={16} />
 									<span class="label">{c.label}</span>

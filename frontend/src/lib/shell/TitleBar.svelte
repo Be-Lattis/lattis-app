@@ -88,7 +88,7 @@
 	     déclarée est un rectangle pour le système. -->
 	<div class="caption logo" role="presentation" ondblclick={dblclick}><Icon name="logo" size={18} /></div>
 	<div class="quick">
-		{#each actions as a (a.label)}
+		{#each actions as a, aIndex (aIndex)}
 			<button class="quick-btn" disabled={!a.run} onclick={a.run} title={a.run ? a.label : t('shell.titleBar.comingSoon', { action: a.label })}>
 				<Icon name={a.icon} size={16} />
 			</button>

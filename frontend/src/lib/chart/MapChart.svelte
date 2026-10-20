@@ -433,7 +433,7 @@
 {#if showLegend && coloring}
 	<div class="maplegend" style:max-height="{Math.max(48, h * 0.6)}px" aria-label={t('chart.map.legend', { name: style.colorBy ?? '' })}>
 		<div class="lt">{style.colorBy}</div>
-		{#each coloring.legend as e (e.label)}
+		{#each coloring.legend as e, eIndex (eIndex)}
 			<div class="le" title={t('chart.map.legendItem', { label: e.label, n: e.count })}><span class="sw" style:background={e.color}></span><span class="ll">{e.label}</span></div>
 		{/each}
 	</div>

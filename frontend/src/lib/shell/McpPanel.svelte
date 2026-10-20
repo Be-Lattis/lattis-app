@@ -85,7 +85,7 @@
 						<button class="link" onclick={() => (showToken = !showToken)}>{showToken ? t('shell.mcp.hide') : t('shell.mcp.show')}</button>
 					</dd>
 				</dl>
-				{#each configs as c (c.label)}
+				{#each configs as c, cIndex (cIndex)}
 					<div class="config">
 						<div class="config-head">
 							<strong>{c.label}</strong>

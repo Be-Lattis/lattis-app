@@ -1523,12 +1523,12 @@
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<div class="group-menu" style:left="{openGroup.x}px" style:top="{openGroup.y}px" use:dismiss={() => (openGroup = null)}>
 								{#if g.fonts}{@render fontCombos()}{/if}
-								{#each g.commands as c (c.label)}
+								{#each g.commands as c, cIndex (cIndex)}
 									{#if c.color}
 										{@render colorCmd(c)}
 									{:else if c.items}
 										<!-- Liste Format de nombre : sans les choix qui ont leur bouton dans le groupe (Monétaire, Pourcentage). -->
-										{#each c.combo === undefined ? c.items : c.items.filter((it) => !g.commands.some((o) => o.label === it.label)) as it (it.label)}
+										{#each c.combo === undefined ? c.items : c.items.filter((it) => !g.commands.some((o) => o.label === it.label)) as it, itIndex (itIndex)}
 											<button
 												class="cmd row-cmd"
 												role="menuitem"
@@ -1573,7 +1573,7 @@
 							style:grid-template-columns={g.rows ? `repeat(${rowCols(g)}, 1fr)` : undefined}
 						>
 							{#if g.fonts}{@render fontCombos()}{/if}
-							{#each g.commands as c (c.label)}
+							{#each g.commands as c, cIndex (cIndex)}
 								{@const size = sizeOf(g, c, mode)}
 								{#if c.color}
 									{@render colorCmd(c)}

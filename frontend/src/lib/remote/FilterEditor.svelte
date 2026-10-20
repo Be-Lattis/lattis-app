@@ -234,7 +234,7 @@
 			placeholder={`${quoteIdent(textCol)} = current_user`}
 		></textarea>
 		<div class="chips snippets" aria-label={t('remote.filter.insertSnippets')}>
-			{#each snippets as s (s.label)}
+			{#each snippets as s, sIndex (sIndex)}
 				<button type="button" class="chip" {disabled} title={t('remote.filter.inserts', { what: s.title, sql: s.sql.trim() })} onclick={() => insert(s.sql)}>{s.label}</button>
 			{/each}
 		</div>

@@ -769,7 +769,7 @@
 					>
 				{:else if m.sub === 'scale'}
 					<div class="gal four">
-						{#each SCALE_PRESETS as p (p.label)}
+						{#each SCALE_PRESETS as p, pIndex (pIndex)}
 							<button class="thumb" title={t('grid.cf.scale.tooltip', { colors: p.label })} onclick={() => gallery({ op: 'scale', style: {}, scale: scaleRule(p.colors) })}>
 								<canvas use:paint={{ w: 30, h: 30, draw: scaleThumb(p.colors) }}></canvas>
 							</button>
@@ -786,7 +786,7 @@
 						}}>{t('grid.cf.menu.more')}</button
 					>
 				{:else if m.sub === 'icons'}
-					{#each ICON_GROUPS as g (g.label)}
+					{#each ICON_GROUPS as g, gIndex (gIndex)}
 						<div class="gal-title">{g.label}</div>
 						<div class="gal two">
 							{#each g.sets as s (s)}
