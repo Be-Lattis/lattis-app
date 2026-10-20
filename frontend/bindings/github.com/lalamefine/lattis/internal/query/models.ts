@@ -22,6 +22,15 @@ export interface Agg {
 }
 
 /**
+ * AuditNames : noms des colonnes « Mis à jour par » et « Mis à jour le »
+ * d'une source qui lit un tableau du Serveur Lattis.
+ */
+export interface AuditNames {
+    "by": string;
+    "at": string;
+}
+
+/**
  * Column est une colonne d'un résultat. Type vide : à inférer des valeurs
  * (colonne personnalisée, fractionnement).
  */
@@ -244,6 +253,16 @@ export interface Source {
      */
     "connection"?: string;
     "sql"?: string;
+
+    /**
+     * SGBD lisant un tableau du Serveur Lattis (system.go) : ses colonnes
+     * système retirées et « Mis à jour par », « Mis à jour le » ajoutées à
+     * droite, sous les noms Audit (fixés à la première actualisation ;
+     * absents : langue de la session) ; SystemColumns garde les colonnes
+     * système telles quelles.
+     */
+    "systemColumns"?: boolean;
+    "audit"?: AuditNames | null;
 
     /**
      * Place : premier chargement à cet endroit (donnée du Data Lake insérée

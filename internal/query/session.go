@@ -149,6 +149,9 @@ type run struct {
 	// steps : étapes de la requête dont la source SQL se charge (JSON en
 	// minuscules), pour cites.
 	steps string
+	// system : une source a lu un tableau du Serveur Lattis, colonnes
+	// système remplacées (system.go).
+	system bool
 }
 
 // cites dit si les étapes de la requête en cours citent la colonne name
@@ -255,6 +258,9 @@ func (r *run) from(src Source) (string, []Column, error) {
 func (r *run) load(src Source) (loaded, error) {
 	key, _ := json.Marshal(src)
 	k := string(key) + "|" + strconv.Itoa(r.limit)
+	if readsSQL(src.Kind) && src.Audit == nil {
+		k += "|" + string(r.env.lang()) // noms « Mis à jour par/le » (system.go)
+	}
 	if l, ok := r.s.cache[k]; ok && !r.fresh && !workbookSource(src.Kind) {
 		r.truncated = r.truncated || l.truncated
 		return l, nil

@@ -3,6 +3,7 @@
 
 export type {
     Agg,
+    AuditNames,
     Column,
     Cond,
     Connection,

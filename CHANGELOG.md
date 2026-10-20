@@ -11,6 +11,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 - Fichier › Paramètres › Mises à jour : la version installée et la dernière recherche d'une nouvelle version, avec son résultat (« à jour », la version disponible, ou la raison d'un échec : hors ligne, proxy, limite de GitHub), ou ce qui empêche la recherche (compilation de développement, installation MSIX mise à jour par Windows, recherche coupée par l'organisation ou désactivée). « Rechercher maintenant » cherche aussitôt, sans attendre les 12 heures entre deux recherches ; une nouvelle version trouvée est proposée dans la barre d'état.
 - Ruban Données : connecté à un Serveur Lattis, son bouton passe en grand, à côté de « À partir du tableau ».
 
+### Changements
+
+- Requête dont la source est un tableau d'un Serveur Lattis (Requêtes et connexions) : les colonnes techniques du serveur (lattis_id, lattis_pos, lattis_xid, lattis_author, lattis_updated_by, lattis_updated_at…) ne s'affichent plus, ni dans l'aperçu ni dans le tableau chargé ; seules viennent les colonnes du tableau, suivies à droite de « Mis à jour par » (le compte qui a écrit la ligne en dernier) et « Mis à jour le » (date et heure, à la seconde). Les deux noms sont pris dans la langue de l'application à la première actualisation, puis gardés par la requête. Les requêtes existantes changent à leur prochaine actualisation. Une case de la source, « Garder les colonnes techniques… », les rend telles quelles.
+
 ### Corrections
 
 - Source d'une requête : les tables internes de Lattis (lattis_meta_*, _lattis_*, schéma lattis d'un Serveur Lattis) ne sont plus listées.

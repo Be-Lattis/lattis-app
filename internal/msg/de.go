@@ -554,6 +554,8 @@ var de = map[ID]string{
 	"query.accessInternalAddress": "Zugriff verweigert: „{host}“ ist eine interne Adresse des Servers ({ip})",
 	"query.accessUploadsOnly":     "Zugriff verweigert: Auf diesem Server liest eine Abfrage nur Dateien, die aus dem Browser hochgeladen wurden ({file})",
 	"query.averageType":           "Mittelwert von „{column}“: Spalte vom Typ {type}",
+	"query.column.updatedAt":      "Aktualisiert am",
+	"query.column.updatedBy":      "Aktualisiert von",
 	"query.columnNotFound":        "Spalte „{column}“ nicht gefunden",
 	"query.connectionExists":      "Abfrage: Die Verbindung „{connection}“ existiert bereits",
 	"query.connectionInUse":       "Abfrage: Die Verbindung „{connection}“ wird von der Abfrage „{query}“ verwendet",

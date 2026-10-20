@@ -319,7 +319,8 @@
 			"label": "Requête SQL (lecture seule)",
 			"dbHelp": "Filtrez de préférence ici : cette requête est exécutée par le serveur.",
 			"workbook": "Requête SQL sur le classeur (lecture seule)",
-			"sheet": "Les adresses Cell[A1] sans feuille se lisent sur « {sheet} »."
+			"sheet": "Les adresses Cell[A1] sans feuille se lisent sur « {sheet} ».",
+			"keepSystem": "Garder les colonnes techniques d'un tableau du Serveur Lattis (lattis_…), au lieu de « Mis à jour par » et « Mis à jour le »"
 		},
 		"formula": {
 			"label": "Formule (tableau dynamique)",

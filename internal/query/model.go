@@ -78,6 +78,13 @@ type Source struct {
 	// Cell[A1] sans feuille.
 	Connection string `json:"connection,omitempty"`
 	SQL        string `json:"sql,omitempty"`
+	// SGBD lisant un tableau du Serveur Lattis (system.go) : ses colonnes
+	// système retirées et « Mis à jour par », « Mis à jour le » ajoutées à
+	// droite, sous les noms Audit (fixés à la première actualisation ;
+	// absents : langue de la session) ; SystemColumns garde les colonnes
+	// système telles quelles.
+	SystemColumns bool        `json:"systemColumns,omitempty"`
+	Audit         *AuditNames `json:"audit,omitempty"`
 	// Place : premier chargement à cet endroit (donnée du Data Lake insérée
 	// à la cellule active) ; absent : une nouvelle feuille.
 	Place *canvas.QueryAnchor `json:"place,omitempty"`

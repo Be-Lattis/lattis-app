@@ -255,6 +255,9 @@
 				{/if}
 				<label class="field">{t('query.source.sql.label')} <textarea rows="5" bind:value={s.sql} placeholder="SELECT * FROM ventes WHERE annee = 2026"></textarea></label>
 				{#if isDB}<p class="muted">{t('query.source.sql.dbHelp')}</p>{/if}
+				{#if s.kind === 'lattis' || s.kind === 'postgres'}
+					<label class="check"><input type="checkbox" checked={!!s.systemColumns} onchange={(e) => (s.systemColumns = (e.currentTarget as HTMLInputElement).checked || undefined)} /> {t('query.source.sql.keepSystem')}</label>
+				{/if}
 			{:else if s.kind === 'sql'}
 				<label class="field">{t('query.source.sql.workbook')} <textarea rows="6" bind:value={s.sql} placeholder="SELECT * FROM Ventes WHERE annee = 2026"></textarea></label>
 				{#if s.sheet}<p class="muted">{t('query.source.sql.sheet', { sheet: s.sheet })}</p>{/if}
@@ -354,6 +357,11 @@
 	.muted {
 		color: #6b7280;
 		margin: 0;
+	}
+	label.check {
+		display: flex;
+		align-items: center;
+		gap: 6px;
 	}
 	button {
 		font: inherit;

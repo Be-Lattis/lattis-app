@@ -553,6 +553,8 @@ var en = map[ID]string{
 	"query.accessInternalAddress": "access denied: “{host}” is an internal address of the server ({ip})",
 	"query.accessUploadsOnly":     "access denied: on this server, a query only reads files uploaded from the browser ({file})",
 	"query.averageType":           "average of “{column}”: column of type {type}",
+	"query.column.updatedAt":      "Updated on",
+	"query.column.updatedBy":      "Updated by",
 	"query.columnNotFound":        "column “{column}” not found",
 	"query.connectionExists":      "query: connection “{connection}” already exists",
 	"query.connectionInUse":       "query: connection “{connection}” is used by query “{query}”",

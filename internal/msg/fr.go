@@ -555,6 +555,8 @@ var fr = map[ID]string{
 	"query.accessInternalAddress": "accès refusé : « {host} » désigne une adresse interne du serveur ({ip})",
 	"query.accessUploadsOnly":     "accès refusé : sur ce serveur, une requête ne lit que les fichiers envoyés depuis le navigateur ({file})",
 	"query.averageType":           "moyenne de « {column} » : colonne de type {type}",
+	"query.column.updatedAt":      "Mis à jour le",
+	"query.column.updatedBy":      "Mis à jour par",
 	"query.columnNotFound":        "colonne « {column} » introuvable",
 	"query.connectionExists":      "requête : la connexion « {connection} » existe déjà",
 	"query.connectionInUse":       "requête : la connexion « {connection} » sert à la requête « {query} »",

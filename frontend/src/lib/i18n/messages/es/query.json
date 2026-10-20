@@ -319,7 +319,8 @@
 			"label": "Consulta SQL (solo lectura)",
 			"dbHelp": "Filtre aquí si puede: esta consulta la ejecuta el servidor.",
 			"workbook": "Consulta SQL sobre el libro (solo lectura)",
-			"sheet": "Las direcciones Cell[A1] sin hoja se leen en «{sheet}»."
+			"sheet": "Las direcciones Cell[A1] sin hoja se leen en «{sheet}».",
+			"keepSystem": "Conservar las columnas técnicas de una tabla del Servidor Lattis (lattis_…) en lugar de «Actualizado por» y «Actualizado el»"
 		},
 		"formula": {
 			"label": "Fórmula (tabla recalculada)",

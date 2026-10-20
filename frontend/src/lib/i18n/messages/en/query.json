@@ -319,7 +319,8 @@
 			"label": "SQL query (read-only)",
 			"dbHelp": "Filter here if you can: this query runs on the server.",
 			"workbook": "SQL query on the workbook (read-only)",
-			"sheet": "Cell[A1] addresses without a sheet are read from “{sheet}”."
+			"sheet": "Cell[A1] addresses without a sheet are read from “{sheet}”.",
+			"keepSystem": "Keep the technical columns of a Lattis Server table (lattis_…) instead of “Updated by” and “Updated on”"
 		},
 		"formula": {
 			"label": "Formula (dynamic table)",

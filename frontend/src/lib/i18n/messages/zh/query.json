@@ -319,7 +319,8 @@
 			"label": "SQL 查询（只读）",
 			"dbHelp": "尽量在此筛选：此查询由服务器执行。",
 			"workbook": "对工作簿的 SQL 查询（只读）",
-			"sheet": "不带工作表的 Cell[A1] 地址从“{sheet}”读取。"
+			"sheet": "不带工作表的 Cell[A1] 地址从“{sheet}”读取。",
+			"keepSystem": "保留 Lattis 服务器表的技术列（lattis_…），而不是“更新者”和“更新时间”"
 		},
 		"formula": {
 			"label": "公式（动态表格）",

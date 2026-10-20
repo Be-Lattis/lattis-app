@@ -1895,6 +1895,7 @@ export interface MessageParams {
 	'query.source.recordPath.placeholder': Record<never, never>;
 	'query.source.search': Record<never, never>;
 	'query.source.sql.dbHelp': Record<never, never>;
+	'query.source.sql.keepSystem': Record<never, never>;
 	'query.source.sql.label': Record<never, never>;
 	'query.source.sql.sheet': { sheet: number | string };
 	'query.source.sql.workbook': Record<never, never>;

@@ -262,7 +262,7 @@ func (r *run) loadDB(src Source) (loaded, error) {
 		return loaded{}, err
 	}
 	defer db.Close()
-	return r.readInto(db, d, src.SQL, d.label+" « "+conn.Name+" »")
+	return r.readInto(db, d, src, d.label+" « "+conn.Name+" »")
 }
 
 // loadFileDB lit une source fichier de base (SQLite).
@@ -275,18 +275,34 @@ func (r *run) loadFileDB(src Source) (loaded, error) {
 		return loaded{}, err
 	}
 	defer db.Close()
-	return r.readInto(db, d, src.SQL, d.label+" "+baseName(src.Path))
+	return r.readInto(db, d, src, d.label+" "+baseName(src.Path))
 }
 
-// readInto exécute la requête q et en charge le résultat ; la limite de
-// l'aperçu est poussée vers la base quand le dialecte le permet.
-func (r *run) readInto(db *sql.DB, d *dialect, q, label string) (loaded, error) {
+// readInto exécute la requête de src et en charge le résultat ; la limite
+// de l'aperçu est poussée vers la base quand le dialecte le permet. Les
+// colonnes système d'un tableau du Serveur Lattis sont remplacées par
+// « Mis à jour par » et « Mis à jour le » (system.go).
+func (r *run) readInto(db *sql.DB, d *dialect, src Source, label string) (loaded, error) {
 	var s *storer
-	err := readDB(r.ctx, db, d, q, r.limit, func(cols []Column) error {
+	var sm *sysMap
+	var out []any
+	err := readDB(r.ctx, db, d, src.SQL, r.limit, func(cols []Column) error {
+		if !src.SystemColumns {
+			if sm = systemMap(cols); sm != nil {
+				cols = sm.columns(cols, r.auditNames(src))
+				r.system = true
+			}
+		}
 		var err error
 		s, err = r.begin(cols)
 		return err
-	}, func(row []any) error { return s.insert(row) })
+	}, func(row []any) error {
+		if sm != nil {
+			out = sm.row(out, row)
+			row = out
+		}
+		return s.insert(row)
+	})
 	if s == nil {
 		if err == nil {
 			err = msg.New("query.noColumns", nil)

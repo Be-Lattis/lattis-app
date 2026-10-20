@@ -555,6 +555,8 @@ var zh = map[ID]string{
 	"query.accessInternalAddress": "访问被拒绝：“{host}”是服务器的内部地址（{ip}）",
 	"query.accessUploadsOnly":     "访问被拒绝：在此服务器上，查询只能读取从浏览器上传的文件（{file}）",
 	"query.averageType":           "“{column}”的平均值：列的类型为 {type}",
+	"query.column.updatedAt":      "更新时间",
+	"query.column.updatedBy":      "更新者",
 	"query.columnNotFound":        "未找到列“{column}”",
 	"query.connectionExists":      "查询：连接“{connection}”已存在",
 	"query.connectionInUse":       "查询：连接“{connection}”正被查询“{query}”使用",

@@ -183,6 +183,8 @@ func sqlMessage(err error) string {
 type Result struct {
 	Table canvas.ImportTable
 	close func()
+	// system : une source lit un tableau du Serveur Lattis (system.go).
+	system bool
 }
 
 // Close libère le résultat dans la base de travail.
@@ -248,7 +250,7 @@ func (s *Session) result(ctx context.Context, env Env, q Query) (*Result, error)
 			return yield(out)
 		})
 	}
-	return &Result{Table: it, close: drop}, nil
+	return &Result{Table: it, close: drop, system: r.system}, nil
 }
 
 // scan lit une table de la base de travail ligne à ligne.
@@ -288,6 +290,9 @@ func (s *Session) Refresh(ctx context.Context, env Env, id int64) (canvas.QueryL
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	// Noms « Mis à jour par/le » fixés à la première actualisation qui lit
+	// un tableau du Serveur Lattis (system.go), gardés dans la requête.
+	frozen := freezeAudit(&q, env.lang())
 	res, err := s.result(ctx, env, q)
 	if err != nil {
 		var se *StepError
@@ -297,6 +302,18 @@ func (s *Session) Refresh(ctx context.Context, env Env, id int64) (canvas.QueryL
 		return canvas.QueryLoad{}, err
 	}
 	defer res.Close()
+	if frozen && res.system {
+		if !command.InGroup(ctx) {
+			ctx = command.WithGroup(ctx, "Actualiser « "+q.Name+" »")
+		}
+		def, err := Encode(q)
+		if err != nil {
+			return canvas.QueryLoad{}, err
+		}
+		if _, err := env.Model.SaveQuery(ctx, def); err != nil {
+			return canvas.QueryLoad{}, err
+		}
+	}
 	it := res.Table
 	it.At = q.Source.Place
 	return env.Model.LoadQuery(ctx, id, it)

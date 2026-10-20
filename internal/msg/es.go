@@ -553,6 +553,8 @@ var es = map[ID]string{
 	"query.accessInternalAddress": "acceso denegado: «{host}» es una dirección interna del servidor ({ip})",
 	"query.accessUploadsOnly":     "acceso denegado: en este servidor, una consulta solo lee los archivos cargados desde el navegador ({file})",
 	"query.averageType":           "promedio de «{column}»: columna de tipo {type}",
+	"query.column.updatedAt":      "Actualizado el",
+	"query.column.updatedBy":      "Actualizado por",
 	"query.columnNotFound":        "columna «{column}» no encontrada",
 	"query.connectionExists":      "consulta: la conexión «{connection}» ya existe",
 	"query.connectionInUse":       "consulta: la conexión «{connection}» la usa la consulta «{query}»",
