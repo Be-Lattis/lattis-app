@@ -1,1 +1,1327 @@
-{}
+{
+	"share": {
+		"mode": {
+			"frozen": "Fixiert",
+			"collaborative": "Kollaborativ"
+		},
+		"role": {
+			"owner": "Besitzer",
+			"designer": "Designer",
+			"editor": "Bearbeiter",
+			"participant": "Teilnehmer",
+			"reader": "Leser"
+		},
+		"roleDetail": {
+			"owner": "alles, einschließlich der Zugriffsverwaltung",
+			"designer": "alles außer den Zugriffen: Struktur, Seitenlayout, freie Zellen, Skripts",
+			"editor": "Zeilen lesen, hinzufügen, bearbeiten und löschen; nicht die Struktur oder das Seitenlayout",
+			"participant": "alles lesen, Zeilen hinzufügen, die eigenen bearbeiten und löschen",
+			"reader": "nur lesen"
+		},
+		"roleChip": {
+			"custom": "Benutzerdefinierter Zugriff",
+			"customDetail": "Benutzerdefinierter Zugriff: Ihre Rechte hängen von den Tabellen ab (vom Besitzer definierte Rolle)",
+			"detail": "Sie sind {role} dieser Arbeitsmappe: {detail}{frozen}{more}",
+			"frozen": " (fixierte Arbeitsmappe: schreibgeschützt)",
+			"more": "; Rollen: {roles}"
+		},
+		"type": {
+			"text": "Text",
+			"integer": "Ganzzahl",
+			"decimal": "Dezimalzahl",
+			"date": "Datum",
+			"datetime": "Datum und Uhrzeit",
+			"boolean": "Boolesch"
+		},
+		"blocking": {
+			"none": "Aktivieren Sie mindestens eine Tabelle zum Veröffentlichen.",
+			"problem": "„{table}“: {problem}",
+			"invalid": "„{table}“: {n, plural, one {# ungültige Eingabe} other {# ungültige Eingaben}} zu korrigieren, oder eine Spalte als Text zu akzeptieren",
+			"sameName": "„{first}“ und „{second}“: gleicher Name auf dem Server (Groß-/Kleinschreibung spielt dort keine Rolle)"
+		},
+		"offline": {
+			"pending": " ({n, plural, one {# Änderung} other {# Änderungen}} ausstehend)",
+			"loginRequired": "Anmeldung bei {server} erforderlich",
+			"collaborative": "{why}. Offline: Ihre Änderungen werden gesendet, sobald der Server wieder da ist{pending}.",
+			"readOnly": "{why}: Diese freigegebene Arbeitsmappe ist schreibgeschützt."
+		},
+		"serverDown": {
+			"named": "{server} antwortet nicht",
+			"host": "Der Server {server} antwortet nicht"
+		},
+		"gone": {
+			"revoked": "Sie haben keinen Zugriff mehr auf diese Arbeitsmappe auf {server}.",
+			"deleted": "Diese Arbeitsmappe wurde von {server} gelöscht.",
+			"pending": "{what} {n, plural, one {# nicht gesendete Änderung bleibt} other {# nicht gesendete Änderungen bleiben}} in der lokalen Kopie."
+		},
+		"banner": {
+			"saveCopy": "Lokale Kopie speichern…",
+			"forget": "Aus der Liste entfernen",
+			"login": "Anmelden…",
+			"retry": "Erneut versuchen",
+			"workOnCopy": "An einer lokalen Kopie arbeiten",
+			"detach": "Vom Server trennen…",
+			"newVersion": "Neue Version verfügbar (Version {version})",
+			"reload": "Neu laden",
+			"held": "{n, plural, one {Eine Änderung erreicht den Server nicht} other {# Änderungen erreichen den Server nicht}}",
+			"conflicts": "{n, plural, one {# Konflikt: Zelle} other {# Konflikte: Zellen}} zwischenzeitlich von einem Kollegen geändert",
+			"view": "Anzeigen",
+			"readOnly": "{reason} — Version {version}",
+			"readOnlyOn": "{reason} — Version {version} auf {server}"
+		},
+		"detach": {
+			"local": "„{title}“ wird zu einer normalen lokalen Arbeitsmappe: Sie wird nicht mehr mit {server} synchronisiert.",
+			"serverKept": "Die Arbeitsmappe auf dem Server wird nicht geändert: Die anderen Mitglieder behalten sie unverändert, und Sie können sie vom Server erneut öffnen.",
+			"pending": "{n, plural, one {# noch nicht an den Server gesendete Änderung bleibt} other {# noch nicht an den Server gesendete Änderungen bleiben}} in dieser lokalen Arbeitsmappe, ohne gesendet zu werden.",
+			"cached": "Sie wählen aus, wo die lokale Arbeitsmappe gespeichert wird (ihre aktuelle Kopie ist nur ein Lattis-Cache).",
+			"final": "Das Trennen lässt sich nicht rückgängig machen."
+		},
+		"retryNotice": "Neuer Verbindungsversuch…",
+		"when": {
+			"today": "um {time}",
+			"date": "am {date} um {time}"
+		},
+		"conflict": {
+			"empty": "(leer)",
+			"text": "{change}: {theirs} (Sie: {mine})",
+			"modified": "Geändert",
+			"modifiedBy": "Geändert von {author}",
+			"modifiedWhen": "Geändert {when}",
+			"modifiedByWhen": "Geändert von {author} {when}"
+		},
+		"refused": "{n, plural, one {# Wert, der nicht zum festen Typ passt, nicht eingefügt} other {# Werte, die nicht zum festen Typ passen, nicht eingefügt}} (freigegebene Tabelle): {list}{more}"
+	},
+	"data": {
+		"root": "Stamm des Data Lake",
+		"unknownFolder": "Unbekannter Ordner",
+		"type": {
+			"text": "Text",
+			"integer": "Ganze Zahl",
+			"number": "Zahl",
+			"date": "Datum",
+			"timestamp": "Datum und Uhrzeit",
+			"boolean": "Wahr / falsch",
+			"unknown": "Unbekannter Typ"
+		}
+	},
+	"coedit": {
+		"otherUser": "ein anderer Benutzer",
+		"alone": "Gemeinsam bearbeiten: vorerst nur Sie",
+		"with": "Gemeinsam mit {names}",
+		"withMore": "Gemeinsam mit {names} und {n} weiteren",
+		"title": "Gemeinsame Bearbeitung dieser Arbeitsmappe (freigegebener Ordner): Tabellendaten werden gemeinsam bearbeitet, alles andere wartet, bis Sie allein sind.",
+		"since": " seit {time}",
+		"joining": " (tritt bei)",
+		"conflicts": "{n, plural, one {# Konflikt} other {# Konflikte}}"
+	},
+	"lattis": {
+		"continuePassword": "Mit einem Kennwort fortfahren",
+		"continueWith": "Mit {provider} fortfahren",
+		"notConnected": "nicht angemeldet",
+		"account": {
+			"none": "Konto: bei keinem Lattis-Server angemeldet",
+			"title": "Konto: {servers}",
+			"on": "{user} auf {server}"
+		},
+		"remaining": {
+			"minutes": "{m} min {s} s",
+			"seconds": "{s} s"
+		}
+	},
+	"banner": {
+		"reloading": "Wird neu geladen…",
+		"connecting": "Verbindung wird hergestellt…",
+		"hideDetails": "Details ausblenden",
+		"details": "Details"
+	},
+	"serverPicker": {
+		"empty": "Kein Server verbunden",
+		"aria": "Server",
+		"manage": {
+			"label": "Server verwalten…",
+			"tooltip": "Einen Server hinzufügen, sich bei einem anmelden oder einen aus der Liste entfernen"
+		}
+	},
+	"tableSources": {
+		"title": "Data-Lake-Quellen (Tabellen ohne die Arbeitsmappe)",
+		"pipeline": {
+			"label": "Pipeline",
+			"tooltip": "Gespeist von einer Pipeline, deren Quelle diese Arbeitsmappe ist"
+		},
+		"onSave": " · bei jedem Speichern",
+		"sending": "Wird gesendet…",
+		"update": "Aktualisieren",
+		"help": "Nur die gewählten Spalten dieser Tabellen werden gesendet; der Rest der Arbeitsmappe verlässt diesen Computer nicht. Rechtsklick auf die Tabelle › Im Lattis Data Lake freigeben…, um sie zu ändern oder zu entfernen."
+	},
+	"cap": {
+		"yes": "ja",
+		"some": "teilweise",
+		"no": "nein",
+		"label": "{label}: {word}"
+	},
+	"formQR": {
+		"copied": "Link des Formulars kopiert",
+		"saved": "QR-Code gespeichert: {path}",
+		"aria": "QR-Code des Links",
+		"copy": "Link kopieren",
+		"png": {
+			"label": "QR-Code als PNG…",
+			"tooltip": "PNG-Bild, für ein Dokument oder ein Plakat"
+		},
+		"svg": {
+			"label": "QR-Code als SVG…",
+			"tooltip": "Vektorbild, in jeder Größe scharf"
+		}
+	},
+	"columnPicker": {
+		"count": "{n} von {total}",
+		"all": "Alle",
+		"none": "Keine",
+		"search": {
+			"placeholder": "Suchen",
+			"aria": "Spalte suchen"
+		},
+		"aria": "Spalten",
+		"key": "Schlüssel",
+		"noMatch": "Keine Spalte passt.",
+		"noColumn": "Diese Tabelle hat keine Spalten."
+	},
+	"account": {
+		"aria": "Konto",
+		"head": "Lattis-Server",
+		"managed": "Von Ihrer Organisation eingerichtet",
+		"signOut": "Abmelden",
+		"notConnected": "Nicht angemeldet · {host}",
+		"signIn": "Anmelden…",
+		"noServer": "Kein Server.",
+		"noServerManaged": "Kein Server. Ihre Organisation hat keinen eingerichtet.",
+		"rights": {
+			"label": "Zugriff auf „{title}“ verwalten…",
+			"tooltip": "Mitglieder, Rollen, Einschränkungen, „Anzeigen als…“"
+		},
+		"connectServer": "Mit einem Server verbinden…"
+	},
+	"closeEsc": "Schließen (Esc)",
+	"prefill": {
+		"title": "Vorausgefüllte Links · „{title}“",
+		"noParam": "Kein Feld hat einen Kurznamen: Geben Sie einen auf der Registerkarte Felder an („Kurzname im Link“).",
+		"help": "Wählen Sie die Felder, die der Link ausfüllt, dann eine Zeile pro Link (zum Beispiel ein QR-Code pro Standort). Der Antwortende kann den Wert ändern, außer bei einem durch den Link gesperrten Feld.",
+		"locked": "gesperrt",
+		"hide": "Ausblenden",
+		"show": "Link und QR-Code",
+		"remove": "Diesen Link entfernen",
+		"add": "+ Link hinzufügen"
+	},
+	"preview": {
+		"membersReserved": "Dieser Server beschränkt die Mitgliederliste auf die Besitzer der Arbeitsmappe: Bitten Sie sie, „Anzeigen als…“ zu verwenden.",
+		"noTable": "Keine veröffentlichte Tabelle.",
+		"intro": "Prüfen Sie, was ein Mitglied sieht und tun kann: Die Zeilen werden so angezeigt, wie der Server sie diesem Mitglied liefert, einschließlich Filtern und erweiterten Regeln.",
+		"member": "Mitglied",
+		"choose": "Auswählen…",
+		"table": "Tabelle",
+		"tableAria": "Anzuzeigende Tabelle",
+		"reload": "Neu laden",
+		"verdict": {
+			"in": " in „{table}“: "
+		},
+		"rows": "{n, plural, one {# sichtbare Zeile} other {# sichtbare Zeilen}}, schreibgeschützt.",
+		"rowsTruncated": "{n, plural, one {# sichtbare Zeile} other {# sichtbare Zeilen}} (die ersten 1.000), schreibgeschützt.",
+		"noRow": "Keine Zeilen für dieses Mitglied sichtbar.",
+		"chooseMember": "Wählen Sie ein Mitglied aus, oder verwenden Sie „Anzeigen als…“ in seiner Zeile unter Mitglieder oder bei einer Rolle."
+	},
+	"open": {
+		"title": "Von einem Server öffnen",
+		"signIn": "Melden Sie sich bei einem Lattis-Server an, um seine Arbeitsmappen zu sehen.",
+		"reading": "Arbeitsmappen werden gelesen…",
+		"empty": "Keine Arbeitsmappe auf diesem Server für Sie freigegeben.",
+		"version": "Version {version}",
+		"republishing": "neue Version in Vorbereitung",
+		"loading": "Arbeitsmappe wird geladen…",
+		"cached": "Die Arbeitsmappe bleibt auf diesem Computer: Sie ist offline weiterhin verfügbar."
+	},
+	"audience": {
+		"inherit": "Zielgruppe des Ordners übernehmen",
+		"current": "Aktuelle Zielgruppe",
+		"rowsWhere": "Zeilen, in denen {predicate}",
+		"allRows": "Alle Zeilen",
+		"filtered": "gefiltert",
+		"keepName": "{name} behalten",
+		"removeName": "{name} entfernen",
+		"keep": "Behalten",
+		"remove": "Entfernen",
+		"email": {
+			"placeholder": "name@beispiel.de",
+			"aria": "E-Mail-Adresse der Person"
+		},
+		"or": "oder",
+		"team": "Team",
+		"aTeam": "ein Team…",
+		"dontAdd": "Nicht hinzufügen",
+		"visibleIf": "Zeilen sichtbar, wenn…",
+		"assist": "die Zeilen der Tabelle „{table}“, die {who} sieht",
+		"someone": "diese Person oder dieses Team",
+		"add": "Eine Person oder ein Team hinzufügen"
+	},
+	"folder": {
+		"rootName": "der Stamm",
+		"aria": "Ordner: {path}",
+		"search": "Ordner suchen",
+		"tree": "Ordner des Data Lake",
+		"collapse": "Reduzieren",
+		"expand": "Erweitern",
+		"noMatch": "Kein Ordner passt.",
+		"name": {
+			"placeholder": "Ordnername",
+			"aria": "Name des neuen Ordners in {parent}"
+		},
+		"create": "Erstellen",
+		"in": "In „{parent}“",
+		"new": "Neuer Ordner in „{parent}“"
+	},
+	"conflicts": {
+		"aria": "Konflikte",
+		"title": "Konflikte ({n})",
+		"held": {
+			"table": "Tabelle",
+			"title": "„{table}“: {n, plural, one {eine Änderung kommt nicht durch} other {# Änderungen kommen nicht durch}}",
+			"text": "Der Server empfängt sie, scheitert aber bei jedem Versuch: {error}. Ihre Werte bleiben auf diesem Computer angezeigt; andere Änderungen werden normal übertragen.",
+			"abandon": {
+				"label": "Verwerfen",
+				"tooltip": "Die Tabelle kehrt zur Version des Servers zurück"
+			}
+		},
+		"layout": "Seitenlayout: {n, plural, one {# Element} other {# Elemente}} seit dem Öffnen auf beiden Seiten geändert (Breite, Formatierung, freie Zelle…). Die zuletzt gespeicherte Version gewinnt; nach mehr als 24 Stunden offline gewinnt die Version Ihrer Kollegen.",
+		"none": "Keine ausstehenden Konflikte.",
+		"local": "Diese Zellen wurden von einem Kollegen gleichzeitig mit Ihnen geändert: Sein Wert, der neueste, wird überall angezeigt. „Meinen behalten“ stellt Ihren für alle Computer wieder her.",
+		"remote": "Diese Zellen wurden von einem Kollegen geändert, während Sie sie bearbeitet haben. Ihr Wert bleibt angezeigt, bis Sie wählen.",
+		"keepAllMine": "Alle meine behalten",
+		"keepAllTheirs": "Alle anderen behalten",
+		"goto": "Zur Zelle wechseln",
+		"rowGone": "Zeile gelöscht oder durch einen Filter ausgeblendet",
+		"row": "Zeile {row}",
+		"keepMine": "Meinen behalten",
+		"keepTheirs": "Anderen behalten"
+	},
+	"login": {
+		"badUrl": "Geben Sie die Serveradresse ein, zum Beispiel https://lattis.acme.com.",
+		"noProvider": "Dieser Server bietet keine Anmeldemethode an.",
+		"title": "Bei einem Lattis-Server anmelden",
+		"titleOn": "Bei {server} anmelden",
+		"address": "Serveradresse",
+		"continue": "Weiter",
+		"device": {
+			"help": "Öffnen Sie auf einem anderen Gerät (Telefon, anderer Computer) die Adresse unten und geben Sie den Code ein, dann melden Sie sich mit {provider} an.",
+			"copy": "Code kopieren",
+			"valid": "Code noch {time} gültig.",
+			"expired": "Code abgelaufen.",
+			"waiting": "Lattis wartet auf die Bestätigung…"
+		},
+		"browser": {
+			"help": "Schließen Sie die Anmeldung mit {provider} in Ihrem Browser ab und kehren Sie dann zu Lattis zurück.",
+			"note": "Die Seite wurde im Systembrowser geöffnet. Nichts hat sich geöffnet? Brechen Sie ab und wählen Sie „von einem anderen Gerät“."
+		},
+		"invitation": "auf Einladung",
+		"otherDevice": "Von einem anderen Gerät anmelden (Code eingeben)",
+		"imposed": "Anmeldemethode von Ihrer Organisation vorgegeben.",
+		"otherServer": "Anderer Server",
+		"cancel": "Anmeldung abbrechen"
+	},
+	"forms": {
+		"reason": {
+			"publish": "Auf einem Server veröffentlichen…",
+			"addShared": "Zur freigegebenen Arbeitsmappe hinzufügen…"
+		},
+		"widget": {
+			"text": "Einzeiliger Text",
+			"textarea": "Langer Text",
+			"number": "Zahl",
+			"date": "Datum",
+			"datetime": "Datum und Uhrzeit",
+			"checkbox": "Kontrollkästchen",
+			"yesno": "Ja / Nein",
+			"radio": "Optionsfelder",
+			"list": "Durchsuchbare Liste"
+		},
+		"copiedOn": "Liste kopiert am {date}",
+		"copied": "Liste kopiert",
+		"accent": {
+			"green": "Grün",
+			"teal": "Blaugrün",
+			"blue": "Blau",
+			"indigo": "Indigo",
+			"purple": "Violett",
+			"red": "Rot",
+			"orange": "Orange",
+			"slate": "Schiefergrau"
+		},
+		"position": "Standort",
+		"check": {
+			"noTitle": "Das Formular hat keinen Titel.",
+			"titleLength": "Titel: höchstens 120 Zeichen.",
+			"introLength": "Einleitung: höchstens 2.000 Zeichen.",
+			"submitLength": "Schaltfläche: höchstens 40 Zeichen.",
+			"privacyLength": "Datenschutzhinweis: höchstens 1.000 Zeichen.",
+			"closedLength": "Meldung bei geschlossenem Formular: höchstens 500 Zeichen.",
+			"thanksLink": "Dankesmeldung: keine Links oder Weiterleitungen.",
+			"noField": "Keine Felder: Aktivieren Sie mindestens eine Spalte.",
+			"sections": "Höchstens {n} Abschnitte.",
+			"paramShared": "Der Kurzname „{param}“ wird von mehreren Feldern verwendet.",
+			"emptySection": "Eine Abschnittsüberschrift hat keinen Text.",
+			"labelLength": "{label}: Beschriftung mit höchstens 200 Zeichen.",
+			"helpLength": "{label}: Hilfe mit höchstens 500 Zeichen.",
+			"emptyList": "{label}: leere Liste.",
+			"defaultNotInList": "{label}: Standardwert nicht in der Liste.",
+			"defaultOutOfBounds": "{label}: Standardwert außerhalb der Grenzen.",
+			"minMax": "{label}: Das Minimum ist größer als das Maximum.",
+			"listVisible": "{label}: Die Werte der Liste sind für alle Antwortenden sichtbar.",
+			"requiredRestricted": "{label} ist erforderlich, aber eine Einschränkung verbietet das Hinzufügen von Zeilen zu dieser Tabelle: Das Formular wird ebenfalls blockiert.",
+			"lockedNoParam": "{label}: Ein durch den Link gesperrtes Feld benötigt einen Kurznamen.",
+			"publicOpen": "Öffentlicher Link ohne Schlussdatum oder Antwortlimit."
+		},
+		"state": {
+			"draft": "Entwurf",
+			"open": "Geöffnet",
+			"paused": "Pausiert",
+			"closed": "Geschlossen"
+		}
+	},
+	"formDialog": {
+		"receivedColumn": "Eingegangen am",
+		"refused": "Formular gespeichert, aber ein Teil der Zielgruppe wurde abgelehnt: {list}",
+		"draftSaved": "Entwurf des Formulars „{title}“ gespeichert",
+		"opened": "Formular „{title}“ geöffnet",
+		"token": {
+			"receivedAt": "Eingegangen am (Datum und Uhrzeit)",
+			"respondent": "Antwortender (E-Mail-Adresse)",
+			"formTitle": "Formular (sein Titel)",
+			"nextNumber": "Nächste Nummer",
+			"fixed": "Fester Wert"
+		},
+		"receivedAdded": "Spalte „{name}“ zur Tabelle hinzugefügt",
+		"image": {
+			"logoTooBig": "Bild zu groß: höchstens 200 KB für ein Logo.",
+			"bannerTooBig": "Bild zu groß: höchstens 1 MB für ein Banner.",
+			"unreadable": "unlesbares Bild"
+		},
+		"thisServer": "diesem Server",
+		"access": {
+			"aria": "Wer antwortet",
+			"members": {
+				"label": "Mitglieder der Arbeitsmappe",
+				"detail": "Alle, die eine Rolle in der Arbeitsmappe haben, Leser eingeschlossen. Lattis-Anmeldung."
+			},
+			"audience": {
+				"label": "Ausgewählte Personen und Teams",
+				"detail": "Sie antworten, ohne Mitglieder der Arbeitsmappe zu werden. Lattis-Anmeldung."
+			},
+			"serverAccounts": {
+				"label": "Alle mit einem Konto auf {server}",
+				"detail": "Nützlich für ein internes Formular der ganzen Organisation. Lattis-Anmeldung."
+			},
+			"public": {
+				"label": "Öffentlicher Link",
+				"detail": "Alle, die den Link haben, ohne Anmeldung: in Kürze in Lattis.",
+				"disabled": "Auf diesem Server deaktiviert (Einstellung seines Besitzers)."
+			}
+		},
+		"titleForm": "Formular „{title}“",
+		"titleShare": "„{table}“ als Formular freigeben",
+		"help": "Hilfe: als Formular freigeben",
+		"reading": "Tabelle wird gelesen…",
+		"openToYou": "Für Sie geöffnete Formulare dieser Tabelle:",
+		"already": "Diese Tabelle hat bereits {n, plural, one {ein Formular} other {# Formulare}}. Mehrere Formulare können dieselbe Tabelle füllen.",
+		"responses": "{n, plural, one {# Antwort} other {# Antworten}}",
+		"edit": "Bearbeiten…",
+		"newForm": "Neues Formular…",
+		"done": "Das Formular „{title}“ ist geöffnet. Antworten kommen live als neue Zeilen der Tabelle an.",
+		"prefill": {
+			"label": "Vorausgefüllter Link…",
+			"tooltip": "Links, die Felder ausfüllen, und ihre QR-Codes",
+			"saveFirst": "Speichern Sie zuerst den Entwurf"
+		},
+		"tab": {
+			"fields": "Felder",
+			"appearance": "Darstellung",
+			"access": "Zugriff"
+		},
+		"field": {
+			"move": {
+				"aria": "Verschieben (Alt+↑ / Alt+↓)",
+				"tooltip": "Ziehen zum Verschieben (Alt+↑ / Alt+↓)"
+			},
+			"include": "Im Formular",
+			"position": "Standort des Antwortenden",
+			"column": "Spalte „{name}“",
+			"label": "Beschriftung",
+			"widget": "Feldtyp",
+			"required": "Erforderlich",
+			"settings": "Feldeinstellungen",
+			"help": "Hilfe",
+			"positionHelp": "Wird vom Browser des Antwortenden ausgefüllt, wenn er auf „Mein Standort“ tippt (nie automatisch), mit der angezeigten Genauigkeit.",
+			"positionColumn": "Spalte „{name}“: „lat, lon“.",
+			"positionColumns": "Spalten „{lat}“ und „{lon}“.",
+			"placeholder": "Platzhaltertext",
+			"default": {
+				"label": "Standardwert",
+				"none": "Keiner",
+				"today": "Heute",
+				"now": "Jetzt",
+				"year": "Aktuelles Jahr",
+				"respondent": "E-Mail-Adresse des Antwortenden"
+			},
+			"value": "Wert",
+			"hidden": "Ausgeblendet: Der Standardwert wird gesetzt, ohne angezeigt zu werden",
+			"min": "Minimum",
+			"max": "Maximum",
+			"step": "Schrittweite",
+			"unit": "Einheit",
+			"maxLength": "Maximale Länge",
+			"format": {
+				"label": "Format",
+				"free": "Frei",
+				"email": "E-Mail-Adresse",
+				"tel": "Telefon",
+				"url": "Webadresse"
+			},
+			"listFrom": "Liste aus „{source}“, vom Server bei jeder Anzeige neu gelesen (heute {n} Werte).",
+			"listValues": "Werte der Liste (einer pro Zeile)",
+			"copiedFrom": "{copied} aus „{source}“",
+			"param": "Kurzname im Link",
+			"locked": "Durch den Link gesperrt"
+		},
+		"section": {
+			"label": "Abschnittsüberschrift",
+			"remove": "Abschnittsüberschrift entfernen",
+			"description": {
+				"placeholder": "Kurze Beschreibung (optional)",
+				"aria": "Beschreibung des Abschnitts"
+			},
+			"add": "+ Abschnittsüberschrift"
+		},
+		"choice": {
+			"title": "Auswahlregister · „{name}“",
+			"aria": "Wert der Kategorie",
+			"field": "Ein Feld",
+			"fixedAria": "Fester Wert der Kategorie"
+		},
+		"serverValues": {
+			"title": "Vom Server gesetzte Werte",
+			"help": "Ohne sichtbares Feld, jeweils in einer gewählten Spalte.",
+			"auto": "Der nummerierte Schlüssel erhält die nächste Nummer, vom Server vergeben.",
+			"column": "Spalte",
+			"add": "+ Vom Server gesetzter Wert",
+			"addReceived": {
+				"label": "Spalte {name} hinzufügen",
+				"tooltip": "Fügt der Tabelle eine Spalte hinzu, für alle Mitglieder"
+			}
+		},
+		"look": {
+			"title": "Titel",
+			"intro": "Einleitung",
+			"markdown": "**fett**, *kursiv*, [Link](https://…), Listen mit „-“.",
+			"logo": "Logo",
+			"serverLogo": "Das des Servers",
+			"logoHint": "PNG, JPEG oder SVG, höchstens 200 KB",
+			"banner": "Banner",
+			"bannerHint": "Höchstens 1 MB; der Server entfernt den GPS-Standort aus dem Foto",
+			"color": "Farbe",
+			"accent": "Akzentfarbe",
+			"pages": "Seiten",
+			"paged": "Ein Abschnitt pro Seite (Weiter, Zurück, Fortschrittsanzeige)",
+			"button": "Schaltfläche",
+			"thanks": "Dankesmeldung",
+			"another": "Schaltfläche „Weitere Antwort senden“",
+			"thanksHint": "Nur fett und kursiv: keine Links oder Weiterleitungen.",
+			"closed": {
+				"label": "Geschlossen",
+				"placeholder": "Meldung, wenn das Formular geschlossen, voll oder noch nicht geöffnet ist"
+			},
+			"privacy": {
+				"label": "Daten",
+				"placeholder": "Datenschutzhinweis, über der Schaltfläche",
+				"template": "Von der Vorlage ausgehen"
+			},
+			"lang": {
+				"label": "Sprache",
+				"fr": "Französisch",
+				"en": "Englisch"
+			}
+		},
+		"audience": {
+			"title": "Personen und Teams",
+			"team": "Team {name}",
+			"toAdd": "(hinzuzufügen)",
+			"address": "E-Mail-Adresse",
+			"add": "Hinzufügen",
+			"teamChoose": "Team…",
+			"identity": "Die Antworten werden unter der Identität des Formulars „Formular: {title}“ geschrieben: Der Antwortende hat keine Rechte an der Arbeitsmappe."
+		},
+		"preview": {
+			"aria": "Breite der Vorschau",
+			"phone": "Telefon",
+			"desktop": "Computer",
+			"browser": {
+				"label": "Vorschau im Browser öffnen",
+				"tooltip": "Speichert den Entwurf und öffnet die echte Serverseite (Link 10 Minuten gültig, Antworten werden nicht gespeichert)"
+			}
+		},
+		"saving": "Wird gespeichert…",
+		"saveDraft": "Entwurf speichern",
+		"save": "Speichern",
+		"open": "Formular öffnen"
+	},
+	"source": {
+		"mode": {
+			"replace": {
+				"label": "Alles ersetzen",
+				"detail": "Die Daten werden zur gesendeten Tabelle."
+			},
+			"append": {
+				"label": "Anfügen",
+				"detail": "Zeilen werden zu den bereits empfangenen hinzugefügt (Protokoll, Messwerte)."
+			},
+			"upsert": {
+				"label": "Nach Schlüssel aktualisieren",
+				"detail": "Gleicher Schlüssel: Zeile aktualisiert; sonst hinzugefügt. Nichts wird gelöscht."
+			}
+		},
+		"way": {
+			"republish": {
+				"title": "Arbeitsmappe mit dieser Tabelle erneut veröffentlichen",
+				"detail": "Die Arbeitsmappe wird mit dieser Tabelle erneut veröffentlicht; ihre Rollen und Filter gelten."
+			},
+			"publish": {
+				"title": "Arbeitsmappe mit Zugriffsverwaltung veröffentlichen",
+				"detail": "Die ganze Arbeitsmappe geht auf den Server, mit Rollen und Filtern; die Tabelle wird anschließend freigegeben."
+			},
+			"table": {
+				"title": "Nur diese Tabelle veröffentlichen",
+				"detail": "Nur die gewählten Spalten werden gesendet; die Arbeitsmappe bleibt auf Ihrem Computer, ohne bereitgestellt zu werden."
+			},
+			"shared": {
+				"title": "Diese Tabelle zur freigegebenen Arbeitsmappe hinzufügen",
+				"detail": "Empfohlen. Sie wird mit ihren Zeilen auf dem Server erstellt; die Mitglieder erhalten sie und bearbeiten sie gemäß ihren Rechten. Anschließend kann sie über dasselbe Menü im Data Lake freigegeben werden."
+			},
+			"tableAlone": "Diese Tabelle allein im Data Lake veröffentlichen"
+		},
+		"chooser": {
+			"localTitle": "Diese Tabelle ist nur auf Ihrem Computer",
+			"notInCollab": "Die Arbeitsmappe ist live freigegeben, aber diese Tabelle gehört nicht dazu.",
+			"howTitle": "Wie möchten Sie diese Tabelle freigeben?",
+			"notPublished": "Diese Tabelle ist in keiner veröffentlichten Arbeitsmappe.",
+			"whyCollab": "Eine live freigegebene Arbeitsmappe wird nicht erneut veröffentlicht: Ihre Liste der Tabellen wird bei der Veröffentlichung festgelegt, und eine danach erstellte Tabelle bleibt auf Ihrem Computer."
+		},
+		"push": {
+			"done": "Quelle „{table}“ aktualisiert",
+			"read": "Quelle „{table}“ aktualisiert: {n, plural, one {# Zeile gelesen} other {# Zeilen gelesen}}",
+			"inserted": "{n, plural, one {# hinzugefügt} other {# hinzugefügt}}",
+			"updated": "{n, plural, one {# aktualisiert} other {# aktualisiert}}",
+			"deleted": "{n, plural, one {# gelöscht} other {# gelöscht}}",
+			"rejected": "{n, plural, one {# abgelehnt} other {# abgelehnt}}",
+			"unchanged": ", nichts hat sich geändert",
+			"reject": "; Zeile {row}, {column} „{value}“: {error}",
+			"blanked": "; {n, plural, one {# Wert leer gesendet} other {# Werte leer gesendet}} (Fehler oder Eingabe, die nicht zum Typ passt)"
+		},
+		"status": {
+			"tableGone": "Tabelle aus der Arbeitsmappe gelöscht: Die Quelle empfängt nichts mehr",
+			"suspended": "Quelle ausgesetzt: Es wird nichts mehr gesendet",
+			"failed": "Letzte Aktualisierung fehlgeschlagen: {error}",
+			"never": "Nie aktualisiert",
+			"today": "heute um {time}",
+			"on": "am {date}",
+			"updated": "Aktualisiert {when} · {n, plural, one {# Zeile} other {# Zeilen}}"
+		},
+		"localWorkbook": "lokale Arbeitsmappe",
+		"suspended": "ausgesetzt",
+		"pending": "Senden ausstehend",
+		"failedOn": "fehlgeschlagen am {date}",
+		"updatedOn": "aktualisiert am {date}",
+		"never": "nie aktualisiert",
+		"sqlName": {
+			"length": "Höchstens 63 Zeichen",
+			"start": "Beginnt mit einem Kleinbuchstaben",
+			"chars": "Nur Kleinbuchstaben ohne Akzente, Ziffern und _"
+		},
+		"problem": {
+			"server": "Melden Sie sich bei einem Lattis-Server an",
+			"name": "Geben Sie den Daten einen Namen",
+			"columns": "Aktivieren Sie mindestens eine Spalte",
+			"key": "Wählen Sie die Spalte, die eine Zeile identifiziert",
+			"filter": "Ein Zeilenfilter muss korrigiert werden"
+		},
+		"onSave": "bei jedem Speichern",
+		"onDemand": "bei Bedarf"
+	},
+	"rights": {
+		"level": {
+			"none": "Keine",
+			"reader": "Leser",
+			"participant": "Teilnehmer",
+			"editor": "Bearbeiter"
+		},
+		"builtin": {
+			"owner": "Besitzer",
+			"designer": "Designer",
+			"editor": "Bearbeiter",
+			"participant": "Teilnehmer",
+			"reader": "Leser"
+		},
+		"members": "{n, plural, one {# Mitglied} other {# Mitglieder}}",
+		"op": {
+			"eq": "ist gleich",
+			"ne": "ist ungleich",
+			"lt": "ist kleiner als",
+			"le": "ist kleiner oder gleich",
+			"gt": "ist größer als",
+			"ge": "ist größer oder gleich",
+			"contains": "enthält",
+			"starts": "beginnt mit",
+			"empty": "ist leer",
+			"filled": "ist nicht leer"
+		},
+		"me": "die angemeldete Person",
+		"team": "eines ihrer Teams",
+		"sentence": {
+			"none": "Alle Zeilen sind sichtbar",
+			"prefix": "Sichtbar, wenn",
+			"team": "{column} ist {team}",
+			"notTeam": "{column} ist nicht {team}",
+			"and": " und "
+		},
+		"prompt": {
+			"write": "Schreibe einen Lattis-Zeilenfilter für {subject}.",
+			"columns": "Es ist ein boolescher SQL-Ausdruck (PostgreSQL) über diese Spalten: {columns}.",
+			"noColumn": "(keine Spalten)",
+			"reader": "Die lesende Person wird current_user geschrieben (ihre E-Mail-Adresse).",
+			"readerTeams": "Die lesende Person wird current_user geschrieben (ihre E-Mail-Adresse); ihre Teams: {teams}.",
+			"answer": "Kein Semikolon und kein Kommentar. Antworte nur mit dem Ausdruck, zum Einfügen in „Freies SQL“, dann mit einem Satz, der sagt, was er tut.",
+			"rule": "Meine Regel: "
+		},
+		"literal": {
+			"notNumber": "„{value}“ ist keine Zahl",
+			"notInteger": "„{value}“ ist keine ganze Zahl",
+			"notBoolean": "„{value}“ ist nicht true oder false",
+			"notDate": "„{value}“ ist kein Datum (TT/MM/JJJJ)"
+		},
+		"condition": {
+			"unknownColumn": "unbekannte Spalte: {column}",
+			"teamUnsupported": "„mein Team“: Dieser Server kennt keine Teams (Aktualisierung von lattisd erforderlich)",
+			"teamText": "„mein Team“ wird mit einer Textspalte verglichen (Name des Teams)",
+			"teamOp": "„mein Team“: nur ist gleich oder ist ungleich",
+			"meText": "„ich“ wird mit einer Textspalte verglichen (E-Mail-Adresse der Person)",
+			"meOp": "„ich“: nur ist gleich oder ist ungleich"
+		},
+		"free": {
+			"forbidden": "„{char}“ ist außerhalb einer Zeichenfolge nicht zulässig",
+			"parens": "unausgeglichene Klammern",
+			"unclosed": "nicht geschlossene Zeichenfolge oder nicht geschlossener Name"
+		},
+		"command": {
+			"all": "Alle",
+			"select": "Lesen",
+			"insert": "Hinzufügen",
+			"update": "Bearbeiten",
+			"delete": "Löschen"
+		},
+		"sql": {
+			"ownRows": "der eigenen Zeilen",
+			"noRight": "keine Rechte",
+			"filtered": "gefilterte Ansicht",
+			"restriction": "Einschränkung „{label}“",
+			"yours": "Ihre Rechte",
+			"noRole": "keine Rolle",
+			"allRights": "Alle Rechte (Struktur, Seitenlayout, Skripts)",
+			"allRightsOwner": "Alle Rechte (Struktur, Seitenlayout, Skripts, Rechte)",
+			"builtinRole": "integrierte Rolle",
+			"customRole": "benutzerdefinierte Rolle",
+			"teams": "{n, plural, one {Team} other {Teams}} {names}",
+			"allRoles": "alle Rollen",
+			"restrictionName": "Einschränkung",
+			"restrictionKind": "Einschränkung"
+		}
+	},
+	"filter": {
+		"theseRows": "diese Zeilen",
+		"column": "Spalte",
+		"condition": "Bedingung",
+		"value": "Wert",
+		"theValue": "der Wert…",
+		"and": "und",
+		"snippet": {
+			"value": "Wert",
+			"equal": "Gleich einem Wert (Text in einfachen Anführungszeichen)",
+			"me": "current_user: E-Mail-Adresse der lesenden Person",
+			"teamLabel": "ist {team}",
+			"team": "lattis.my_teams(): Teams der lesenden Person",
+			"and": {
+				"label": "und",
+				"tooltip": "Beide Bedingungen"
+			},
+			"or": {
+				"label": "oder",
+				"tooltip": "Eine der beiden Bedingungen"
+			},
+			"empty": {
+				"label": "ist leer",
+				"tooltip": "Leere Zelle"
+			}
+		},
+		"mode": {
+			"aria": "Form des Filters",
+			"form": {
+				"label": "Formular",
+				"tooltip": "Bedingungen in Klartext",
+				"disabled": "Dieser SQL-Filter lässt sich nicht in ein Formular umwandeln"
+			},
+			"sql": "Freies SQL"
+		},
+		"assist": {
+			"label": "Mit dem Assistenten schreiben",
+			"tooltip": "Öffnet den Assistenten mit einer zu vervollständigenden Anfrage; er erhält nur die Namen und Typen der Spalten"
+		},
+		"noTeams": "„eines ihrer Teams“: Dieser Server kennt keine Teams",
+		"placeholder": {
+			"date": "TT/MM/JJJJ",
+			"boolean": "true oder false",
+			"number": "Zahl"
+		},
+		"remove": "Bedingung entfernen",
+		"add": "+ Bedingung",
+		"insertColumns": "Einzufügende Spalten",
+		"inserts": "{what}: fügt {sql} ein",
+		"sqlAria": "SQL-Filter",
+		"insertSnippets": "Einzufügende Bausteine"
+	},
+	"access": {
+		"cap": {
+			"read": {
+				"label": "Anzeigen",
+				"hint": "Die Zeilen der Tabelle lesen"
+			},
+			"add": {
+				"label": "Zeilen hinzufügen",
+				"hint": "Neue Zeilen hinzufügen"
+			},
+			"editOwn": {
+				"label": "Eigene Zeilen bearbeiten",
+				"hint": "Die von der Person hinzugefügten Zeilen bearbeiten oder löschen"
+			},
+			"editAll": {
+				"label": "Alle Zeilen bearbeiten",
+				"hint": "Die Zeilen aller bearbeiten oder löschen"
+			},
+			"manage": {
+				"label": "Struktur und Rechte",
+				"hint": "Spalten, Tabellen, Seitenlayout, Skripts; die Rechte: nur Besitzer"
+			}
+		},
+		"designerManage": "Struktur, nicht die Rechte",
+		"frozen": "Fixierte Arbeitsmappe: Die Daten ändern sich durch erneutes Veröffentlichen",
+		"allows": {
+			"none": "Kein Zugriff",
+			"reader": "Anzeigen",
+			"participant": "Anzeigen, hinzufügen, eigene Zeilen bearbeiten",
+			"editor": "Anzeigen und alles bearbeiten"
+		},
+		"word": {
+			"none": "keine",
+			"reader": "Leser",
+			"participant": "Teilnehmer",
+			"editor": "Bearbeiter"
+		},
+		"mixed": "Je nach Tabelle verschieden",
+		"likeSheet": "Wie das Blatt: {allows}",
+		"likeWorkbook": "Wie die Arbeitsmappe: {allows}",
+		"readFilter": "Sieht nur die Zeilen, in denen {text}",
+		"writeFilter": "Bearbeitet nur die Zeilen, in denen {text}",
+		"rule": {
+			"cannot": "Darf nicht {verb} (erweiterte Regel)",
+			"onlyWhere": "Darf nur die Zeilen {verb}, in denen {text} (erweiterte Regel)"
+		},
+		"onlyIn": "Nur in {tables}",
+		"inTable": "„{table}“: {why}",
+		"summary": {
+			"allWithRights": "Alles, einschließlich der Rechte",
+			"seeStructureRights": "Anzeigen, Struktur und Rechte",
+			"allWithStructure": "Alles bearbeiten, einschließlich der Struktur",
+			"seeStructure": "Anzeigen und die Struktur ändern",
+			"seeEditAll": "Anzeigen und alles bearbeiten",
+			"seeEditAllNoAdd": "Anzeigen und alle Zeilen bearbeiten, ohne hinzuzufügen",
+			"seeAddOwn": "Anzeigen, hinzufügen, eigene Zeilen bearbeiten",
+			"seeOwnNoAdd": "Anzeigen und eigene Zeilen bearbeiten, ohne hinzuzufügen",
+			"seeAdd": "Anzeigen und Zeilen hinzufügen",
+			"seeOnly": "Nur anzeigen",
+			"none": "Kein Zugriff",
+			"partly": "{summary} (teilweise)"
+		},
+		"verb": {
+			"select": "anzeigen",
+			"insert": "hinzufügen",
+			"update": "bearbeiten",
+			"delete": "löschen",
+			"all": "anzeigen oder bearbeiten"
+		},
+		"action": {
+			"select": "Anzeigen",
+			"insert": "Hinzufügen",
+			"update": "Bearbeiten",
+			"delete": "Löschen",
+			"all": "Alle"
+		},
+		"nor": " oder ",
+		"or": " oder ",
+		"ofRole": "der Rolle {role}",
+		"ofRoles": "der Rollen {roles} und {last}",
+		"sentence": {
+			"nobody": "Niemand außer Besitzern und Designern kann Zeilen in „{table}“ {verbs}.",
+			"nobodyExcept": "Niemand kann Zeilen in „{table}“ {verbs}, außer denen, in denen {cond} (Besitzer und Designer ausgenommen).",
+			"membersNever": "Mitglieder {who} können keine Zeilen in „{table}“ {verbs}.",
+			"membersOnly": "Mitglieder {who} können in „{table}“ nur die Zeilen {verbs}, in denen {cond}."
+		},
+		"preset": {
+			"noDelete": {
+				"label": "Löschen verbieten",
+				"hint": "Niemand löscht Zeilen, außer Besitzern und Designern",
+				"rule": "Kein Löschen"
+			},
+			"appendOnly": {
+				"label": "Nur hinzufügen",
+				"hint": "Zeilen können hinzugefügt werden, ohne vorhandene zu bearbeiten oder zu löschen",
+				"rule": "Nur hinzufügen"
+			},
+			"status": {
+				"label": "Nur Zeilen mit dem Status … bearbeiten",
+				"hint": "Zeilen können bearbeitet und gelöscht werden, solange sie diesen Status haben",
+				"rule": "Je nach Status"
+			},
+			"ownNoCreate": {
+				"label": "Eigene Zeilen bearbeiten, ohne neue zu erstellen",
+				"hint": "Für eine Rolle „Anzeigen, hinzufügen, eigene Zeilen bearbeiten“: Sie kann keine Zeilen mehr hinzufügen",
+				"rule": "Kein Hinzufügen"
+			}
+		},
+		"problem": {
+			"table": "Wählen Sie eine Tabelle aus.",
+			"who": "Wählen Sie mindestens eine Rolle aus.",
+			"commands": "Wählen Sie mindestens eine Aktion aus.",
+			"predicate": "Fügen Sie eine Bedingung hinzu, oder wählen Sie „Keine“ als Ausnahme.",
+			"missingValue": "Eine Bedingung hat keinen Wert."
+		},
+		"email": {
+			"empty": "Geben Sie die E-Mail-Adresse der Person ein.",
+			"invalid": "„{email}“ ist keine E-Mail-Adresse."
+		}
+	},
+	"members": {
+		"invited": "Einladung an {email} gesendet",
+		"roleGiven": "Rolle {role} an {who} vergeben",
+		"roleRemoved": "Rolle {role} von {who} entfernt",
+		"removeAll": {
+			"confirm": "Zugriff von {who} entfernen? {n, plural, one {Die Rolle wird entfernt} other {Die # Rollen werden entfernt}}.",
+			"done": "Zugriff von {who} entfernt",
+			"teamKept": "Entfernt die persönlichen Rollen; die des Teams bleiben",
+			"tooltip": "Alle Rollen entfernen",
+			"aria": "Zugriff von {who} entfernen",
+			"team": "Alle Rollen des Teams entfernen"
+		},
+		"addRole": "+ Rolle",
+		"theTeam": "das Team {name}",
+		"invite": {
+			"title": "Person einladen",
+			"email": "Einzuladende E-Mail-Adresse",
+			"roles": "Zu vergebende Rollen",
+			"submit": "Einladen",
+			"gives": "Kann dann:",
+			"help": "Eine dem Server bereits bekannte Person erhält ihre Rollen sofort, sonst bei ihrer ersten Anmeldung.",
+			"custom": "Benutzerdefinierte Rollen können vergeben werden, sobald die Person Mitglied ist."
+		},
+		"people": "Personen",
+		"search": "Mitglied suchen",
+		"tag": {
+			"pipeline": {
+				"tooltip": "Technisches Mitglied einer Ingestion-Pipeline: Es verschwindet serverseitig mit der Pipeline"
+			},
+			"team": {
+				"label": "Team {names}",
+				"tooltip": "Mitglied der Arbeitsmappe über sein Team: Die Teamrollen werden unter „Teams“ geändert"
+			},
+			"lastOwner": {
+				"label": "letzter Besitzer",
+				"tooltip": "Eine Arbeitsmappe behält immer mindestens einen Besitzer: Vergeben Sie diese Rolle zuerst an jemand anderen"
+			}
+		},
+		"rolesOf": "Rollen von {who}",
+		"removeRole": {
+			"aria": "Rolle {role} von {who} entfernen",
+			"tooltip": "Diese Rolle entfernen"
+		},
+		"via": "Über das Team {names} erhalten: wird unter „Teams“ entfernt",
+		"giveRole": "{who} eine Rolle vergeben",
+		"viewAs": {
+			"label": "Anzeigen als…",
+			"tooltip": "Die Tabellen so sehen, wie {who} sie sieht"
+		},
+		"noMatch": "Kein Mitglied passt.",
+		"none": "Keine Mitglieder.",
+		"pending": "Ausstehende Einladungen",
+		"until": "bis {date}",
+		"revoked": "Einladung für {email} widerrufen",
+		"revoke": "Einladung widerrufen",
+		"teams": "Teams",
+		"teamsUnsupported": "Teams und Verzeichnisgruppen: von diesem Server noch nicht angeboten.",
+		"noMember": "Keine Mitglieder",
+		"noTeamRole": "Kein Team hat eine Rolle in dieser Arbeitsmappe.",
+		"teamGive": {
+			"label": "Einem Team eine Rolle vergeben:",
+			"role": "Rolle des Teams",
+			"submit": "Rolle vergeben",
+			"help": "Die Mitglieder eines Teams haben dessen Rollen, solange sie ihm angehören. Teams werden in der Serververwaltung erstellt; Verzeichnisgruppen: später."
+		},
+		"noTeam": "Keine Teams auf diesem Server: Die Besitzer des Servers erstellen sie in seiner Verwaltung („Teams“)."
+	},
+	"roles": {
+		"teamCount": "{n, plural, one {# Team} other {# Teams}}",
+		"kind": {
+			"owner": "alle Rechte",
+			"designer": "Struktur, nicht die Rechte"
+		},
+		"filtersSaved": "Filter von „{table}“ für {role} gespeichert",
+		"intro": "Jedes Mitglied hat eine oder mehrere Rollen; eine Rolle gewährt Zugriff pro Tabelle, den Filter auf bestimmte Zeilen beschränken können. Die Rechte der Rollen addieren sich.",
+		"learnMore": "Weitere Informationen",
+		"matrix": {
+			"aria": "Was jede Rolle erlaubt",
+			"role": "Rolle",
+			"members": "Mitglieder",
+			"select": "Die Rechte dieser Rolle Tabelle für Tabelle festlegen"
+		},
+		"viewAs": {
+			"tooltip": "Die Tabellen so sehen, wie ein Mitglied dieser Rolle sie sieht",
+			"nobody": "Niemand hat diese Rolle",
+			"aria": "Als Mitglied der Rolle {role} anzeigen"
+		},
+		"legend": {
+			"some": "teilweise (bestimmte Zeilen oder bestimmte Tabellen)"
+		},
+		"created": "Rolle „{name}“ erstellt: Sie gewährt nichts, solange unten kein Zugriff festgelegt ist",
+		"new": {
+			"placeholder": "Neue Rolle",
+			"aria": "Name der neuen Rolle"
+		},
+		"detail": {
+			"title": "{role}: Zugriff Tabelle für Tabelle",
+			"owner": "Besitzer: sieht und bearbeitet alle Zeilen, ändert die Struktur (Spalten, Tabellen, Seitenlayout, Skripts) und verwaltet Mitglieder, Rollen und Regeln. Hier gibt es nichts festzulegen.",
+			"designer": "Designer: sieht und bearbeitet alle Zeilen und ändert die Struktur (Spalten, Tabellen, Seitenlayout, Skripts), verwaltet aber keine Rechte. Hier gibt es nichts festzulegen.",
+			"frozen": "Fixierte Arbeitsmappe: Alle Mitglieder sehen alles, ohne etwas zu ändern. Zugriffe pro Tabelle und Filter sind die einer live freigegebenen Arbeitsmappe."
+		},
+		"drop": {
+			"confirm": "Rolle „{name}“ löschen? Ihre Mitglieder verlieren die Rechte, die sie gewährt hat.",
+			"done": "Rolle „{name}“ gelöscht",
+			"label": "Rolle löschen"
+		},
+		"tree": {
+			"workbook": "Ganze Arbeitsmappe",
+			"workbookAccess": "Zugriff auf die Arbeitsmappe",
+			"level": "Stufe „{word}“",
+			"sheet": "Blatt",
+			"sheetAccess": "Zugriff auf das Blatt {name}",
+			"mixed": "je nach Tabelle verschieden",
+			"fromWorkbook": "von der Arbeitsmappe geerbt",
+			"fromSheet": "vom Blatt geerbt",
+			"tableAccess": "Zugriff auf die Tabelle {name}"
+		},
+		"filter": {
+			"seesAll": "Sieht alle Zeilen",
+			"editRead": "Sichtbare Zeilen von {table} bearbeiten",
+			"limitRead": "Sichtbare Zeilen von {table} einschränken",
+			"edit": "Bearbeiten",
+			"limit": "Einschränken…",
+			"writesOwn": "Fügt Zeilen hinzu, bearbeitet und löscht die eigenen",
+			"writesAll": "Fügt alle Zeilen hinzu, bearbeitet und löscht sie",
+			"editWrite": "Bearbeitbare Zeilen von {table} bearbeiten",
+			"limitWrite": "Bearbeitbare Zeilen von {table} einschränken"
+		},
+		"advancedRules": "Erweiterte Regeln",
+		"editor": {
+			"aria": "Filter von {table} für {role}",
+			"read": {
+				"label": "Sieht nur die Zeilen, in denen…",
+				"prefix": "Sieht die Zeilen, in denen",
+				"assist": "die Zeilen der Tabelle „{table}“, die Mitglieder der Rolle {role} sehen"
+			},
+			"write": {
+				"label": "Fügt nur die Zeilen hinzu und bearbeitet nur die, in denen…",
+				"prefix": "Fügt die Zeilen hinzu und bearbeitet die, in denen",
+				"assist": "die Zeilen der Tabelle „{table}“, die Mitglieder der Rolle {role} hinzufügen oder bearbeiten können"
+			},
+			"fixes": "Beim Speichern wird der Zugriff auf diese Tabelle auf „{level}“ gesetzt.",
+			"noCondition": "Keine Bedingung: alle Zeilen.",
+			"save": "Filter speichern"
+		},
+		"oldSheet": "Blatt, das veröffentlicht wurde, bevor der Server Blätter kannte: Sein Zugriff wird für jede seiner Tabellen festgelegt.",
+		"noTable": "Keine veröffentlichte Tabelle: Der Zugriff auf die Arbeitsmappe gilt für hinzugefügte Tabellen.",
+		"teams": "Teams mit dieser Rolle:",
+		"noTeams": "Kein Team hat diese Rolle (Mitglieder › Teams).",
+		"local": {
+			"title": "Nur auf Ihrem Computer",
+			"help": "Diese Tabellen sind nicht in der freigegebenen Arbeitsmappe: Niemand sonst sieht sie.",
+			"add": {
+				"label": "„{table}“ zur freigegebenen Arbeitsmappe hinzufügen",
+				"tooltip": "„{table}“ in der freigegebenen Arbeitsmappe erstellen, mit ihren Zeilen, für alle Mitglieder"
+			},
+			"offline": "Offline"
+		}
+	},
+	"rules": {
+		"added": "{n, plural, one {Regel hinzugefügt} other {# Regeln hinzugefügt}}",
+		"removed": "Regel entfernt",
+		"collabOnly": "Erweiterte Regeln: nur live freigegebene Arbeitsmappen (eine fixierte Arbeitsmappe ist für alle schreibgeschützt).",
+		"intro": "Eine erweiterte Regel entzieht ein Recht für eine Tabelle, unabhängig vom Zugriff der Rolle: nicht mehr löschen, nicht mehr hinzufügen, nur bestimmte Zeilen bearbeiten. Besitzer und Designer unterliegen ihr nicht, es sei denn, sie werden genannt.",
+		"current": "Bestehende Regeln",
+		"remove": {
+			"tooltip": "Diese Regel entfernen",
+			"aria": "Regel {label} entfernen"
+		},
+		"none": "Keine Regeln: Es gelten nur die Zugriffe und Filter der Rollen.",
+		"new": "Neue Regel",
+		"presets": "Voreinstellungen",
+		"for": "Für",
+		"forWhom": "Für wen",
+		"allRoles": "Alle Rollen",
+		"someRoles": "Bestimmte Rollen",
+		"targetRoles": "Betroffene Rollen",
+		"exceptOwners": "Außer Besitzern und Designern.",
+		"forbid": "Verbieten",
+		"actions": "Eingeschränkte Aktionen",
+		"exception": "Ausnahme",
+		"exceptWhere": "Außer den Zeilen, in denen…",
+		"allowed": {
+			"label": "Nur erlaubt für die Zeilen, in denen…",
+			"prefix": "Erlaubt für die Zeilen, in denen",
+			"none": "Fügen Sie eine Bedingung hinzu",
+			"assist": "die Zeilen der Tabelle „{table}“, für die die Aktion erlaubt bleibt"
+		},
+		"name": "Name",
+		"optional": "(optional)",
+		"perAction": "Fügt {n} Einschränkungen auf dem Server hinzu, eine pro Aktion.",
+		"add": "Regel hinzufügen"
+	},
+	"rightsDialog": {
+		"tab": {
+			"members": "Mitglieder",
+			"roles": "Rollen und Rechte",
+			"rules": "Erweiterte Regeln",
+			"preview": "Anzeigen als…",
+			"drift": "Abweichungen"
+		},
+		"title": "Zugriff auf „{title}“ verwalten",
+		"frozen": "fixierte Arbeitsmappe: für alle schreibgeschützt",
+		"reload": {
+			"tooltip": "Rechte erneut vom Server laden",
+			"aria": "Aktualisieren"
+		},
+		"help": "Hilfe: Zugriff verwalten",
+		"link": {
+			"aria": "Link der Arbeitsmappe",
+			"tooltip": "Der Link öffnet die Arbeitsmappe in Lattis (oder im Browser) für alle, die Zugriff haben",
+			"copied": "Kopiert"
+		},
+		"tabs": "Zugriff verwalten",
+		"reading": "Rechte werden gelesen…",
+		"drift": {
+			"count": "{n, plural, one {# Abweichung} other {# Abweichungen}}",
+			"warning": "{n, plural, one {Eine Tabelle hat} other {# Tabellen haben}} außerhalb von Lattis auf dem Server geänderte Regeln.",
+			"show": "Abweichungen anzeigen",
+			"frozen": "Fixierte Arbeitsmappe: keine Abweichung möglich (für alle schreibgeschützt).",
+			"none": "Keine Abweichungen: Die Regeln und Rechte des Servers sind die von Lattis generierten.",
+			"intro": "Außerhalb von Lattis geänderte Regeln oder Rechte (von Hand, in PostgreSQL):",
+			"policies": "Hinzugefügte Regeln:",
+			"grants": "Rechte vergeben an:",
+			"changed": "Generierte Regeln entfernt oder geändert",
+			"recompileHelp": "Das Neukompilieren stellt die von Lattis generierten Regeln wieder her. Von Hand hinzugefügte Regeln und Rechte werden hier weiter gemeldet, bis sie in PostgreSQL entfernt werden.",
+			"recompiled": "Rechte neu kompiliert",
+			"recompile": "Rechte neu kompilieren"
+		},
+		"sending": "Wird an den Server gesendet…",
+		"designerOnly": "Designer: nur anzeigen und prüfen"
+	},
+	"shareDialog": {
+		"checking": "Arbeitsmappe wird geprüft…",
+		"why": {
+			"noTables": "Nichts zu veröffentlichen: Erstellen Sie zuerst eine Tabelle (Einfügen › Tabelle, oder Strg+L auf Ihren Daten), und öffnen Sie dann dieses Dialogfeld erneut.",
+			"blocked": "{n, plural, one {# Problem zu lösen} other {# Probleme zu lösen}}, bevor Sie veröffentlichen (oben).",
+			"server": "Wählen Sie einen Server aus, oder verbinden Sie sich mit einem Server (Server verwalten…).",
+			"title": "Geben Sie der veröffentlichten Arbeitsmappe einen Titel.",
+			"cannotCreate": "Ihr Konto kann auf diesem Server keine Arbeitsmappen erstellen."
+		},
+		"republishTitle": "Arbeitsmappe erneut veröffentlichen",
+		"publishTitle": "Auf einem Server veröffentlichen",
+		"republishHelp": "„{title}“ auf {server} · {mode} · Version {version}: Die neue Version ersetzt die veröffentlichte Version in einem Schritt.",
+		"cannotCreate": "Ihr Konto kann auf diesem Server keine Arbeitsmappen erstellen: Bitten Sie seinen Besitzer um die Rolle „Ersteller von Arbeitsmappen“.",
+		"mode": "Modus",
+		"frozenHelp": ": für alle schreibgeschützt; Sie veröffentlichen neue Versionen",
+		"collaborativeHelp": ": alle bearbeiten gemäß ihren Rechten, die Änderungen der anderen kommen live an",
+		"tables": "Tabellen",
+		"noTables": {
+			"before": "Diese Arbeitsmappe hat keine Tabellen zum Veröffentlichen. Nur Tabellen werden veröffentlicht: Schließen Sie dieses Dialogfeld, wählen Sie Ihre Daten aus, dann",
+			"menu": "Einfügen › Tabelle",
+			"or": "(oder",
+			"after": "), und kommen Sie zum Veröffentlichen zurück."
+		},
+		"rows": "{n, plural, one {# Zeile} other {# Zeilen}}",
+		"private": {
+			"label": "privat",
+			"tooltip": "Private Tabelle: bleibt auf diesem Computer, wird nie an den Server gesendet"
+		},
+		"rename": "{problem} — benennen Sie sie in der Arbeitsmappe um",
+		"frozenTypes": "Bei der Veröffentlichung festgelegte Typen: {columns}",
+		"invalid": "Spalte „{name}“ ({type}): {n, plural, one {# ungültige Eingabe} other {# ungültige Eingaben}}",
+		"fixOr": "— korrigieren Sie sie, oder",
+		"acceptText": "akzeptieren Sie die Spalte als Text",
+		"computed": "Berechnete Spalten werden mit ihrer Formel veröffentlicht, nicht mit ihren Werten.",
+		"refresh": {
+			"legend": "Geladen durch die Abfrage „{query}“: Aktualisierung",
+			"local": "Von diesem Computer, mit Ihren Verbindungen: Ihre Aktualisierungen ersetzen die Zeilen für alle Mitglieder",
+			"lake": "Data-Lake-Quelle: Die Tabelle wird auch an den Data Lake des Servers gesendet, mit dem andere Arbeitsmappen sich verknüpfen können (direkt nach der Veröffentlichung eingerichtet)"
+		},
+		"uncheckedPrivate": "Nicht aktivierte Tabellen bleiben privat: nur auf diesem Computer.",
+		"publishing": "Wird veröffentlicht…",
+		"republish": "Erneut veröffentlichen",
+		"publish": "Veröffentlichen"
+	},
+	"dataShare": {
+		"title": {
+			"source": "Data-Lake-Quelle · „{table}“",
+			"dataset": "Lattis Data Lake · „{name}“",
+			"share": "„{table}“ im Lattis Data Lake freigeben"
+		},
+		"help": "Hilfe: im Data Lake freigeben",
+		"whyNotWorkbook": "Warum nicht die ganze Arbeitsmappe?",
+		"ways": "Art der Freigabe",
+		"go": {
+			"republish": "Arbeitsmappe erneut veröffentlichen…",
+			"publish": "Arbeitsmappe veröffentlichen…",
+			"shared": "Zur Arbeitsmappe hinzufügen…"
+		},
+		"reading": "Katalog wird gelesen…",
+		"folder": "Ordner",
+		"columns": "Bereitgestellte Spalten",
+		"audience": "Zielgruppe",
+		"usedBy": "Verwendet von",
+		"readBy": "gelesen von {email} am {date}",
+		"advanced": "Erweiterte Optionen",
+		"sqlProposed": "Vom Server vorgeschlagener SQL-Name",
+		"withDescription": "mit Beschreibung",
+		"description": {
+			"label": "Beschreibung",
+			"placeholder": "Was die Daten enthalten, für alle, die danach suchen"
+		},
+		"sqlName": {
+			"label": "SQL-Name",
+			"fixed": "bei der Erstellung festgelegt",
+			"placeholder": "vom Server vorgeschlagen",
+			"help": "Der Name der Ansicht für SQL-Abfragen: Kleinbuchstaben, Ziffern, _."
+		},
+		"withdraw": {
+			"label": "Freigabe beenden",
+			"tooltip": "Die Ansicht verschwindet; Arbeitsmappen, die sie verwenden, behalten ihre letzte Kopie"
+		},
+		"share": "Freigeben"
+	},
+	"catalog": {
+		"pushedTooltip": "Tabelle allein aus der lokalen Arbeitsmappe „{workbook}“ veröffentlicht (übertragene Quelle)",
+		"aria": "Aus dem Lattis Data Lake einfügen",
+		"title": "Lattis Data Lake",
+		"search": {
+			"placeholder": "Daten suchen…",
+			"aria": "Suchen"
+		},
+		"tree": "Katalog",
+		"signIn": "Melden Sie sich bei einem Server an, um seine Daten zu sehen.",
+		"noMatch": "Keine Daten passen.",
+		"empty": "Keine Daten auf diesem Server für Sie freigegeben.",
+		"dropRoot": "Hier ablegen: im Stamm",
+		"pushed": {
+			"before": "Aus der lokalen Arbeitsmappe übertragene Quelle",
+			"after": ": von ihrem Autor aktualisiert, ohne dass die Arbeitsmappe veröffentlicht wird."
+		},
+		"view": "Ansicht",
+		"modified": "geändert am {date}",
+		"readOnly": "Die eingefügte Tabelle ist schreibgeschützt und wird aktualisiert, wenn sich die Daten ändern.",
+		"choose": "Wählen Sie Daten aus, um ihre Spalten zu sehen.",
+		"yourSources": "Ihre übertragenen Quellen",
+		"yourSourcesHelp": "Allein aus Ihren lokalen Arbeitsmappen veröffentlichte Tabellen, auf diesem Server; jede wird über ihre Arbeitsmappe verwaltet (Rechtsklick auf die Tabelle › Im Lattis Data Lake freigeben…).",
+		"inserting": "Wird eingefügt…",
+		"insert": "Einfügen"
+	},
+	"servers": {
+		"badUrl": "Geben Sie die Serveradresse ein, zum Beispiel https://lattis.acme.com (http nur lokal).",
+		"title": "Server verwalten",
+		"disabled": "Freigegebene Arbeitsmappen sind deaktiviert: Datei › Einstellungen › Funktionen.",
+		"managed": "von Ihrer Organisation eingerichtet",
+		"connected": "Angemeldet: {user}",
+		"notConnected": "Nicht angemeldet",
+		"remove": {
+			"managed": "Von Ihrer Organisation eingerichteter Server: Er bleibt in der Liste",
+			"tooltip": "Diesen Server aus der Liste dieses Computers entfernen",
+			"confirm": "„{name}“ aus der Liste entfernen?",
+			"signedOut": "Sie werden auf diesem Computer von diesem Server abgemeldet.",
+			"nothingDeleted": "Auf dem Server wird nichts gelöscht: Seine Arbeitsmappen, seine Daten und Ihre Rechte bleiben dort erhalten, und Sie können ihn jederzeit wieder hinzufügen.",
+			"inUse": "Die geöffnete Arbeitsmappe „{title}“ ist auf diesem Server veröffentlicht: Sie bleibt aus ihrer Kopie auf diesem Computer geöffnet, wird aber nicht mehr synchronisiert, bis Sie diesen Server wieder hinzufügen und sich bei ihm anmelden.",
+			"queries": "Abfragen und Arbeitsmappen, die diesen Server verwenden, fordern Sie zur Anmeldung bei ihm auf."
+		},
+		"rename": {
+			"label": "Umbenennen",
+			"tooltip": "Diesem Server auf diesem Computer einen anderen Namen geben (der Server wird nicht geändert)",
+			"aria": "Servername auf diesem Computer",
+			"empty": "Geben Sie einen Namen für diesen Server ein.",
+			"tooLong": "Name zu lang: höchstens {max} Zeichen.",
+			"serverName": "Name auf dem Server: {name}",
+			"reset": "Wiederherstellen"
+		},
+		"emptyAdd": "Kein Server. Fügen Sie unten einen hinzu.",
+		"add": {
+			"title": "Server hinzufügen",
+			"submit": "Hinzufügen und anmelden…",
+			"help": "Die Adresse wird beim Server geprüft, dann öffnet sich seine Anmeldeseite.",
+			"locked": "Ihre Organisation legt die Liste der Server fest: Sie können keine hinzufügen."
+		}
+	},
+	"sourceForm": {
+		"suspended": "Quelle „{table}“ ausgesetzt: Es wird nichts mehr gesendet",
+		"savedNotUpdated": "Quelle „{table}“ gespeichert, aber nicht aktualisiert: {error}",
+		"withdrawn": "Quelle „{name}“ aus dem Data Lake entfernt",
+		"reading": "Wird vom Server gelesen…",
+		"banner": "Die Arbeitsmappe bleibt auf Ihrem Computer: Nur die aktivierten Spalten werden gesendet.",
+		"columns": "Gesendete Spalten",
+		"computed": "Eine berechnete Spalte wird mit ihren Werten gesendet, nicht mit ihrer Formel.",
+		"sqlPlaceholder": "aus dem Namen vorgeschlagen",
+		"mode": "Aktualisierung",
+		"key": {
+			"label": "Schlüssel",
+			"aria": "Schlüsselspalte",
+			"choose": "Spalte auswählen…"
+		},
+		"modeChanged": "Gilt für die nächsten Aktualisierungen (ein älterer Server lehnt es ab: Entfernen Sie dann die Quelle und veröffentlichen Sie sie erneut).",
+		"sending": {
+			"label": "Senden",
+			"onSave": "Bei jedem Speichern der Arbeitsmappe (Strg+S)",
+			"suspend": {
+				"label": "Quelle aussetzen (es wird nichts mehr gesendet)",
+				"tooltip": "Die Daten bleiben mit ihren letzten Zeilen im Katalog"
+			},
+			"refused": "Vom Server abgelehnte Werte werden in der Statusleiste gezählt; der Rest wird geschrieben."
+		},
+		"withdraw": {
+			"label": "Quelle entfernen",
+			"tooltip": "Die Daten verlassen den Katalog; Arbeitsmappen, die sie verwenden, behalten ihre letzte Kopie"
+		},
+		"push": {
+			"label": "Jetzt aktualisieren",
+			"tooltip": "Sendet die Zeilen der Tabelle jetzt",
+			"suspended": "Quelle ausgesetzt"
+		},
+		"back": "Zurück",
+		"saveUpdate": "Speichern und aktualisieren",
+		"publish": "Quelle veröffentlichen"
+	}
+}

@@ -1,1 +1,1078 @@
-{}
+{
+	"settings": {
+		"language": {
+			"label": "Anzeigesprache",
+			"auto": "Systemsprache ({name})",
+			"help": "Gilt sofort. Die Übersetzungen sind in Arbeit: noch nicht übersetzte Texte bleiben auf Französisch. Die Sprache bestimmt auch die Anzeige von Zahlen und Datumsangaben; die gespeicherte Arbeitsmappe hängt nicht davon ab."
+		},
+		"sections": {
+			"features": "Funktionen",
+			"ai": "KI-Assistent",
+			"view": "Ansicht",
+			"limits": "Grenzen"
+		},
+		"htmlTabs": {
+			"label": "Webseiten",
+			"help": "Ermöglicht das Hinzufügen von Webseiten: eine HTML-, CSS- und JavaScript-Seite, die die Arbeitsmappe liest und ändert, oder eine Seite einer Website. Arbeitsmappen, die bereits welche enthalten, lassen sich normal öffnen und verwenden."
+		},
+		"sharedWorkbooks": {
+			"label": "Freigegebene Arbeitsmappen (Lattis-Server)",
+			"help": "Ermöglicht die Anmeldung an einem Lattis-Server Ihrer Organisation (Menü Konto in der Titelleiste) und das Hinzufügen als Datenquelle. Dort liegen die freigegebenen Arbeitsmappen; Sie melden sich mit Ihrem Konto (Google, Microsoft, Keycloak…) oder einem Lattis-Kennwort an."
+		},
+		"coEditing": {
+			"label": "Gemeinsam in einem freigegebenen Ordner arbeiten",
+			"help": "Eine Arbeitsmappe auf einem NAS oder einer Netzwerkfreigabe, die bereits auf einem anderen Computer geöffnet ist, bietet „Gemeinsam bearbeiten“ an: Alle ändern die Tabellendaten und sehen die Änderungen der anderen live (ein Protokoll pro Computer neben der Datei). Ist die Option deaktiviert, wird sie wie bisher schreibgeschützt oder „trotzdem“ geöffnet."
+		},
+		"aiEnabled": {
+			"label": "KI-Assistent",
+			"help": "Die Schaltfläche „Assistent ✦“ oben rechts im Menüband (Alt+I) öffnet einen Bereich rechts neben dem Raster: einen Assistenten, der beim Aufbau einer Analyse hilft und auf die Arbeitsmappe einwirkt, wobei jede Antwort in einem Schritt rückgängig gemacht werden kann. Er benötigt einen API-Schlüssel eines Anbieters (Anthropic, Mistral, OpenAI…), der im Schlüsselbund des Systems aufbewahrt wird, ein auf diesem Computer installiertes Modell oder Claude Desktop mit einem Claude-Abonnement."
+		},
+		"aiDataSharing": {
+			"label": "An den Assistenten gesendete Daten",
+			"schemaOnly": "Nur die Struktur (Namen, Typen, Anzahl der Zeilen und der unterschiedlichen Werte)",
+			"sample": "Struktur und einige Beispielzeilen (höchstens 20 pro Lesevorgang)",
+			"full": "Die ganze Arbeitsmappe (der Assistent kann alle Werte lesen)",
+			"help": "Gilt auch für Claude Desktop und Claude Code über den MCP-Server. Der Anbieter erhält außerdem Ihre Nachrichten, das aktive Tabellenblatt und die Auswahl; mit einem lokalen Modell verlässt nichts diesen Computer."
+		},
+		"aiKeepConversation": {
+			"label": "Unterhaltung in der Arbeitsmappe behalten",
+			"help": "Die Unterhaltung wird mit der Arbeitsmappe gespeichert und erscheint beim nächsten Öffnen wieder: Sie reist mit der Datei, einschließlich der angezeigten Abfrageergebnisse und der vom Assistenten gelesenen Zeilen. Sie wird nur gespeichert, wenn auch die Arbeitsmappe geändert wurde. Andernfalls wird sie gelöscht, wenn Sie die Arbeitsmappe schließen oder eine andere öffnen."
+		},
+		"aiLocalUrl": {
+			"label": "Adresse des lokalen Modells",
+			"help": "Anbieter „Lokales Modell“: die Adresse von Ollama, LM Studio oder einem anderen OpenAI-kompatiblen Server auf diesem Computer. Keine Daten verlassen den Computer."
+		},
+		"theme": {
+			"label": "Standardfarbdesign",
+			"help": "Farben der normalen Tabellen und der Tabellen aus einer externen Quelle in einer Arbeitsmappe, die kein eigenes Design gewählt hat: neue Arbeitsmappen und solche aus der Zeit vor den Designs. Das in einer Arbeitsmappe gewählte Design (Ansicht › Design) wird mit ihr gespeichert und sieht auf anderen Computern gleich aus."
+		},
+		"undoDepth": {
+			"label": "Rückgängig-Tiefe",
+			"unit": "Befehle",
+			"help": "Anzahl der Befehle, die Strg+Z rückgängig machen kann (standardmäßig 200). Der Verlauf wird nie in der Datei gespeichert."
+		},
+		"scriptSeconds": {
+			"label": "Maximale Skriptdauer",
+			"help": "Darüber hinaus wird das Skript angehalten und seine Änderungen werden rückgängig gemacht (standardmäßig 30 s)."
+		},
+		"sqlReadSeconds": {
+			"label": "Maximale Dauer eines SQL-Lesevorgangs",
+			"help": "Abfragen der Registerkarte SQL und Lesevorgänge von Skripts (standardmäßig 30 s)."
+		},
+		"sqlWriteSeconds": {
+			"label": "Maximale Dauer eines SQL-Schreibvorgangs",
+			"help": "Ein Schreibvorgang der Registerkarte SQL blockiert die Eingabe, solange er läuft; darüber hinaus wird er abgebrochen, ohne etwas zu ändern (standardmäßig 120 s)."
+		},
+		"numberRange": "{label}: eine ganze Zahl von {min} bis {max}",
+		"locked": "🔒 Durch die Richtlinie Ihrer Organisation festgelegt.",
+		"fixed": "Festgelegt durch {source}: eine Änderung hier hat keine Wirkung.",
+		"fixedOther": "eine andere Konfiguration",
+		"dialog": {
+			"title": "Einstellungen",
+			"sections": "Abschnitte",
+			"mcpTooltip": "Einem MCP-kompatiblen Assistenten (Claude Desktop, Claude Code…) erlauben, die geöffnete Arbeitsmappe zu lesen und zu ändern",
+			"mcp": "MCP-Server (Assistenten)…"
+		}
+	},
+	"shortcuts": {
+		"fichier": {
+			"title": "Arbeitsmappe",
+			"new": "Neue Arbeitsmappe",
+			"open": "Arbeitsmappe öffnen",
+			"save": "Speichern",
+			"saveAs": "Speichern unter",
+			"print": "Tabellenblatt drucken",
+			"close": "Arbeitsmappe schließen",
+			"undo": "Rückgängig",
+			"redo": "Wiederholen",
+			"help": "Hilfe (in einer Formel: die Seite der Funktion unter dem Cursor)"
+		},
+		"clavier": {
+			"title": "Menüband, Menüs und Fenster",
+			"keyTips": "Zugriffstasten (KeyTips) des Menübands; Esc geht zurück",
+			"fold": "Menüband reduzieren oder anheften (auch: Doppelklick auf eine Registerkarte des Menübands)",
+			"fileMenu": "Menü Datei",
+			"tab": "Registerkarte {tab} des Menübands (oder Alt+{key})",
+			"arrows": "Im Menüband: benachbarte Registerkarte oder benachbarter Befehl; Pfeil nach unten geht zu den Befehlen, Pfeil nach oben zurück zur Registerkarte",
+			"regions": "Nächster, vorheriger Bereich: Menüband, Bearbeitungsleiste, Raster, Seitenbereich, Register, Statusleiste",
+			"contextMenu": "Kontextmenü der aktiven Zelle (oder des ausgewählten Diagramms)",
+			"menuUpDown": "In einem Menü: vorheriger, nächster Eintrag (Pos1, Ende: der erste, der letzte)",
+			"menuLetter": "In einem Menü: nächster Eintrag, der mit diesem Buchstaben beginnt",
+			"menuChoose": "In einem Menü: den Eintrag auswählen",
+			"dialogFields": "In einem Dialogfeld: nächstes, vorheriges Feld",
+			"escape": "Menü, Dialogfeld oder Bereich schließen; der Fokus kehrt dorthin zurück, wo er war"
+		},
+		"feuilles": {
+			"title": "Tabellenblätter",
+			"next": "Nächstes Blatt",
+			"previous": "Vorheriges Blatt",
+			"insert": "Blatt einfügen",
+			"tabArrows": "Auf einem Blattregister (F6): benachbartes Register; Eingabe zeigt es an",
+			"choiceList": "Auf einem Auswahlregister („Umsatz · 2025 ▾“): die Liste der Werte öffnen",
+			"choiceNext": "Auswahlregister: nächster Wert (das folgende Jahr)",
+			"choicePrevious": "Auswahlregister: vorheriger Wert"
+		},
+		"deplacement": {
+			"title": "Navigation und Auswahl",
+			"arrows": "Benachbarte Zelle",
+			"edge": "Rand des Datenbereichs",
+			"endArrow": "Wie Strg+Pfeil",
+			"extend": "Auswahl erweitern",
+			"page": "Nächste, vorherige Seite",
+			"home": "Zeilenanfang",
+			"a1": "Zelle A1",
+			"lastCell": "Letzte verwendete Zelle",
+			"tab": "Nächste, vorherige Zelle",
+			"selectTable": "Tabelle auswählen",
+			"selectColumn": "Tabellenspalte auswählen",
+			"selectRow": "Zeile auswählen"
+		},
+		"saisie": {
+			"title": "Dateneingabe",
+			"edit": "Zelle bearbeiten",
+			"enter": "Bestätigen und nach unten",
+			"enterAll": "In der ganzen Auswahl bestätigen",
+			"lineBreak": "Zeilenumbruch in der Zelle",
+			"cancel": "Eingabe abbrechen",
+			"delete": "Auswahl löschen",
+			"today": "Heutiges Datum",
+			"now": "Aktuelle Uhrzeit",
+			"autoSum": "AutoSumme",
+			"dropDown": "Dropdownliste der Zelle öffnen",
+			"fillDown": "Nach unten ausfüllen",
+			"fillRight": "Nach rechts ausfüllen",
+			"repeat": "Letzte Aktion wiederholen"
+		},
+		"edition": {
+			"title": "Bearbeiten und Formatieren",
+			"copy": "Kopieren",
+			"cut": "Ausschneiden",
+			"paste": "Einfügen",
+			"find": "Suchen",
+			"replace": "Ersetzen",
+			"bold": "Fett, kursiv, unterstrichen",
+			"format": "Zellen formatieren",
+			"insertDelete": "Zeilen oder Spalten einfügen, löschen",
+			"strike": "Durchgestrichen",
+			"hide": "Zeilen, Spalten der Auswahl ausblenden",
+			"table": "Als Tabelle formatieren",
+			"filter": "Spaltenfilter (löscht die Filter, falls vorhanden)",
+			"note": "Neue Notiz (oder Notiz bearbeiten)",
+			"chart": "Diagramm (Säulendiagramm) der aktiven Tabelle"
+		},
+		"calcul": {
+			"title": "Berechnung und Daten",
+			"refresh": "Abfrage der Tabelle aktualisieren, sonst neu berechnen",
+			"refreshAll": "Alle aktualisieren: Abfragen und Formeln",
+			"insertFunction": "Funktion einfügen",
+			"recalc": "Neu berechnen"
+		},
+		"editeurs": {
+			"title": "Registerkarten SQL, Script und HTML",
+			"sqlRun": "SQL: Auswahl ausführen, sonst die Anweisung unter dem Cursor",
+			"sqlNames": "SQL: Tabellen- und Spaltennamen",
+			"sqlHistory": "SQL: Abfrageverlauf",
+			"scriptRun": "Script: Skript ausführen",
+			"save": "Script, HTML: speichern",
+			"htmlPreview": "HTML: Vorschau aktualisieren"
+		}
+	},
+	"pageSetup": {
+		"margins": {
+			"normal": "Normal",
+			"wide": "Breit",
+			"narrow": "Schmal"
+		},
+		"papers": {
+			"B5": "B5 (ISO)",
+			"Letter": "Letter",
+			"Legal": "Legal",
+			"Tabloid": "Tabloid",
+			"Executive": "Executive"
+		},
+		"paperSize": "{w} cm × {h} cm",
+		"fit": {
+			"pages": "{n, plural, one {# Seite} other {# Seiten}}",
+			"auto": "Automatisch"
+		},
+		"scale": {
+			"auto": "auto",
+			"fitted": "Angepasst: {wide} breit, {tall} hoch",
+			"percent": "{n} %"
+		},
+		"hf": {
+			"codes": {
+				"page": "Seitenzahl",
+				"pages": "Anzahl der Seiten",
+				"date": "Datum",
+				"time": "Uhrzeit",
+				"path": "Dateipfad",
+				"file": "Dateiname",
+				"sheet": "Blattname"
+			},
+			"presets": {
+				"page": "Seite &[Page]",
+				"pageOf": "Seite &[Page] von &[Pages]",
+				"confidential": "Vertraulich"
+			},
+			"separator": "; ",
+			"none": "(keine)"
+		},
+		"undo": {
+			"margins": "Seitenränder",
+			"orientation": "Ausrichtung",
+			"paper": "Format",
+			"printArea": "Druckbereich",
+			"resetBreaks": "Alle Seitenumbrüche zurücksetzen",
+			"break": "Seitenumbruch",
+			"scale": "Skalierung",
+			"printGridlines": "Gitternetzlinien drucken",
+			"printHeadings": "Überschriften drucken"
+		},
+		"notice": {
+			"breakA1": "In A1 gibt es nichts zu trennen: Setzen Sie die aktive Zelle unter die Zeile oder rechts neben die Spalte, wo die neue Seite beginnt",
+			"noBreakHere": "Kein manueller Seitenumbruch oberhalb oder links der aktiven Zelle",
+			"noBreaks": "Keine manuellen Seitenumbrüche"
+		},
+		"error": {
+			"fit": "Anpassen: zwischen 1 und 999 Seiten",
+			"scale": "Skalierung: zwischen 10 und 400 %",
+			"firstPage": "Erste Seitenzahl: eine Zahl oder „Auto“",
+			"margins": "Seitenränder: zwischen 0 und 50 cm",
+			"area": "Druckbereich: ein Bereich wie $A$1:$F$40",
+			"titleRows": "Wiederholungszeilen oben: wie $1:$2",
+			"titleCols": "Wiederholungsspalten links: wie $A:$B"
+		},
+		"dialog": {
+			"title": "Seite einrichten",
+			"tabs": {
+				"page": "Seite",
+				"margins": "Seitenränder",
+				"hf": "Kopfzeile/Fußzeile",
+				"sheet": "Blatt"
+			},
+			"header": "Kopfzeile",
+			"footer": "Fußzeile",
+			"customHF": "(benutzerdefiniert)",
+			"left": "Links",
+			"center": "Mitte",
+			"right": "Rechts",
+			"top": "Oben",
+			"bottom": "Unten",
+			"preview": "Vorschau",
+			"fromSelection": "Auswahl",
+			"fromSelectionTooltip": "Auswahl des Tabellenblatts übernehmen",
+			"orientation": "Ausrichtung",
+			"portrait": "Hochformat",
+			"landscape": "Querformat",
+			"scale": "Skalierung",
+			"scaleBefore": "Verkleinern/Vergrößern:",
+			"scaleAfter": "% der Normalgröße",
+			"fitBefore": "Anpassen:",
+			"fitWide": "Seite(n) breit und",
+			"fitTall": "hoch",
+			"fitNote": "Ein leeres Feld: so viele Seiten wie nötig in dieser Richtung.",
+			"paper": "Papierformat:",
+			"firstPage": "Erste Seitenzahl:",
+			"marginsNote": "In Zentimetern. Kopf- und Fußzeile werden in ihrem Abstand vom Rand gedruckt, innerhalb des oberen und unteren Seitenrands.",
+			"centerOnPage": "Auf der Seite zentrieren",
+			"horizontally": "Horizontal",
+			"vertically": "Vertikal",
+			"insertCode": "In das gewählte Feld einfügen:",
+			"printArea": "Druckbereich:",
+			"printAreaPlaceholder": "der ganze verwendete Bereich",
+			"printTitles": "Drucktitel",
+			"titleRows": "Wiederholungszeilen oben:",
+			"titleCols": "Wiederholungsspalten links:",
+			"print": "Drucken",
+			"gridlines": "Gitternetzlinien",
+			"headings": "Zeilen- und Spaltenüberschriften",
+			"blackWhite": "Schwarzweißdruck",
+			"pageOrder": "Seitenreihenfolge",
+			"downThenOver": "Seiten nach unten, dann nach rechts",
+			"overThenDown": "Seiten nach rechts, dann nach unten",
+			"printButton": "Drucken…"
+		}
+	},
+	"busy": {
+		"aria": "Verarbeitung läuft",
+		"label": "Verarbeitung…"
+	},
+	"sync": {
+		"busyTooltip": "Ihre Änderungen sind übernommen; sie werden an den Server gesendet",
+		"offline": "Offline — {n} ausstehend",
+		"sendingCount": "Synchronisierung… ({n})",
+		"sending": "Synchronisierung…",
+		"done": "Synchronisiert"
+	},
+	"report": {
+		"issueBody": "Lattis-Version: {version}\n\nWas passiert ist:\n\nWas erwartet wurde:\n\nSchritte zum Nachstellen:\n1. "
+	},
+	"panel": {
+		"help": "Hilfe",
+		"closeTooltip": "Bereich schließen (Esc)",
+		"closeAria": "Bereich schließen"
+	},
+	"crash": {
+		"title": "In Lattis ist ein Fehler aufgetreten",
+		"status": "Fehler {status}",
+		"logged": "Details gespeichert in {path}",
+		"reload": "Neu laden",
+		"uiTitle": "Fehler der Oberfläche",
+		"uiDetail": "Die Details (Stapel, letzte Aktionen) stehen im Fehlerprotokoll. Die Arbeitsmappe ist nicht verloren.",
+		"retry": "Erneut versuchen",
+		"reloadUi": "Oberfläche neu laden"
+	},
+	"titleBar": {
+		"comingSoon": "{action}: in Kürze verfügbar",
+		"unsaved": "Nicht gespeicherte Änderungen",
+		"minimize": "Minimieren",
+		"restore": "Verkleinern",
+		"maximize": "Maximieren",
+		"close": "Schließen",
+		"save": "Speichern (Strg+S)",
+		"undo": "Rückgängig (Strg+Z)",
+		"redo": "Wiederholen (Strg+Y)"
+	},
+	"untitled": "Unbenannte Arbeitsmappe",
+	"about": {
+		"title": "Über Lattis",
+		"tagline": "Relationale Local-First-Tabellenkalkulation · Version {version}",
+		"licensePrefix": "Freie Software unter der Lizenz",
+		"source": "Quellcode",
+		"server": "Diese Sitzung wird von einem Lattis-Server ({server}) unter der Lizenz AGPL-3.0 bereitgestellt:",
+		"serverSource": "Quellcode des Servers",
+		"trademarks": "„Lattis“, „Be-Lattis“ und das Logo sind geschützte Marken außerhalb der Lizenz des Codes. Karten: Licence Ouverte / Etalab 2.0."
+	},
+	"zoom": {
+		"out": "Verkleinern",
+		"in": "Vergrößern",
+		"slider": "Zoom",
+		"level": "Zoomstufe"
+	},
+	"recovery": {
+		"older": "{n, plural, one {+ # ältere Version} other {+ # ältere Versionen}}",
+		"recovered": "Änderungen wiederhergestellt: Denken Sie ans Speichern.",
+		"title": "Wiederherstellung",
+		"intro": "Lattis wurde ohne Speichern geschlossen. Diese Arbeitsmappen haben wiederherstellbare Änderungen:",
+		"modified": "geändert am {date}",
+		"recover": "Wiederherstellen",
+		"discardAllTooltip": "Diese Sitzung und ihre älteren Versionen verwerfen",
+		"discardAll": "Alle verwerfen",
+		"discard": "Verwerfen",
+		"showOlder": "Die {n} älteren anzeigen"
+	},
+	"saveProgress": {
+		"snapshot": "Speichern: Datenbank wird kopiert…",
+		"scrub": "Speichern: Rückgängig-Verlauf wird entfernt…",
+		"write": "Speichern: Datei wird geschrieben {pct} %",
+		"verify": "Speichern: Datei wird geprüft…"
+	},
+	"mcp": {
+		"title": "MCP-Server",
+		"intro": "Ein MCP-kompatibler Assistent (Claude Desktop, Claude Code…) kann die geöffnete Arbeitsmappe lesen und ändern: Tabellenblätter, Tabellen, Zellen, Auswahl, SQL, Skripts, Schaltflächen. Was er im Lauf einer Reihe von Aktionen ändert, lässt sich in einem Schritt rückgängig machen (Strg+Z). Der Server lauscht nur auf diesem Computer und verlangt ein Token.",
+		"enable": "MCP-Server aktivieren",
+		"enableRunning": "MCP-Server aktivieren (läuft)",
+		"enableStopped": "MCP-Server aktivieren (angehalten)",
+		"address": "Adresse",
+		"token": "Token",
+		"hide": "Ausblenden",
+		"show": "Anzeigen",
+		"copied": "Kopiert",
+		"copy": "Kopieren",
+		"configs": {
+			"desktop": {
+				"label": "Claude Desktop (und stdio-Clients)",
+				"hint": "In claude_desktop_config.json einfügen: Der Client startet Lattis als Relais zur geöffneten Anwendung."
+			},
+			"code": {
+				"hint": "In einem Terminal auszuführender Befehl (Bereich user: Lattis wird in all Ihren Projekten angeboten)."
+			},
+			"http": {
+				"label": "HTTP-Clients (Streamable HTTP)",
+				"hint": "Für Clients, die sich mit einer Adresse verbinden."
+			}
+		},
+		"confirm": {
+			"title": "{client} möchte die Arbeitsmappe ändern",
+			"toolBefore": "Tool",
+			"toolAfter": ". Ohne Antwort innerhalb von zwei Minuten wird die Anfrage abgelehnt.",
+			"others": "{n, plural, one {# weitere Anfrage ausstehend.} other {# weitere Anfragen ausstehend.}}",
+			"allow": "Zulassen",
+			"deny": "Ablehnen"
+		}
+	},
+	"exportReport": {
+		"lost": {
+			"charts": "{n, plural, one {# Diagramm} other {# Diagramme}}",
+			"pivots": "{n, plural, one {# PivotTable als Werte} other {# PivotTables als Werte}}",
+			"formulas": "{n, plural, one {# Formel als Wert} other {# Formeln als Werte}}",
+			"rules": "{n, plural, one {# Regel der bedingten Formatierung} other {# Regeln der bedingten Formatierung}}",
+			"notes": "{n, plural, one {# Notiz} other {# Notizen}}",
+			"lists": "{n, plural, one {# Überprüfungsliste} other {# Überprüfungslisten}}",
+			"buttons": "{n, plural, one {# Schaltfläche} other {# Schaltflächen}}",
+			"queries": "{n, plural, one {# Abfrage (Tabelle als Werte)} other {# Abfragen (Tabellen als Werte)}}",
+			"pages": "{n, plural, one {# Seiten- oder Dokumentregister} other {# Seiten- oder Dokumentregister}}",
+			"scripts": "{n, plural, one {# Skript} other {# Skripts}}",
+			"protections": "{n, plural, one {# Blattschutz} other {# Blattschutze}}",
+			"twoLevel": "{n, plural, one {# Überschriftengruppe (in den Namen)} other {# Überschriftengruppen (in den Namen)}}",
+			"clipped": "{n, plural, one {# Zelle außerhalb der Grenzen} other {# Zellen außerhalb der Grenzen}}"
+		},
+		"withFunctions": "{text} ({functions})",
+		"noticeAll": "Arbeitsmappe exportiert: {path}; alles wurde exportiert",
+		"noticeLost": "Arbeitsmappe exportiert: {path}; nicht exportiert: {lost}",
+		"detail": {
+			"docTab": "Dokumentregister: als leeres Blatt exportiert",
+			"htmlTab": "HTML-Seite: als leeres Blatt exportiert",
+			"tables": "{n, plural, one {# Tabelle} other {# Tabellen}}",
+			"translated": "{n, plural, one {# Formel als Formel exportiert} other {# Formeln als Formeln exportiert}}",
+			"charts": "{n, plural, one {# Diagramm nicht exportiert} other {# Diagramme nicht exportiert}}",
+			"pivots": "{n, plural, one {# PivotTable als Werte exportiert, ohne Verknüpfung mit ihrer Quelle} other {# PivotTables als Werte exportiert, ohne Verknüpfung mit ihrer Quelle}}",
+			"noEquivalent": "{text} (ohne Entsprechung: {functions})",
+			"formulas": "{n, plural, one {# Formel als ihr Wert exportiert} other {# Formeln als ihre Werte exportiert}}",
+			"columns": "{n, plural, one {# berechnete Spalte als ihre Werte exportiert} other {# berechnete Spalten als ihre Werte exportiert}}",
+			"rules": "{n, plural, one {# Regel der bedingten Formatierung nicht exportiert} other {# Regeln der bedingten Formatierung nicht exportiert}}",
+			"notes": "{n, plural, one {# Notiz nicht exportiert} other {# Notizen nicht exportiert}}",
+			"lists": "{n, plural, one {# Überprüfungsliste nicht exportiert} other {# Überprüfungslisten nicht exportiert}}",
+			"buttons": "{n, plural, one {# Schaltfläche nicht exportiert} other {# Schaltflächen nicht exportiert}}",
+			"queries": "{n, plural, one {# durch eine Abfrage geladene Tabelle: Werte exportiert, ohne die Abfrage} other {# durch eine Abfrage geladene Tabellen: Werte exportiert, ohne die Abfrage}}",
+			"twoLevel": "{n, plural, one {# Tabelle mit Überschriftengruppen: Gruppen in den Namen exportiert („Gruppe.Unter“)} other {# Tabellen mit Überschriftengruppen: Gruppen in den Namen exportiert („Gruppe.Unter“)}}",
+			"protected": "Blattschutz nicht exportiert",
+			"clipped": "{n, plural, one {# Zelle jenseits von 1.048.576 Zeilen × 16.384 Spalten nicht exportiert} other {# Zellen jenseits von 1.048.576 Zeilen × 16.384 Spalten nicht exportiert}}"
+		},
+		"printCharts": "{n, plural, one {# Diagramm nicht gedruckt} other {# Diagramme nicht gedruckt}}: Beim Drucken eines Tabellenblatts werden nur seine Zellen berücksichtigt",
+		"dialog": {
+			"aria": "Exportdetails",
+			"title": "{format}-Export: Details",
+			"kept": "Exportiert: {list}.",
+			"lost": "Nicht unverändert exportiert:",
+			"all": "Alles wurde exportiert.",
+			"workbook": "Arbeitsmappe",
+			"scripts": "{n, plural, one {# Skript nicht exportiert} other {# Skripts nicht exportiert}} (Excel und LibreOffice lesen keine Lattis-Skripts)",
+			"note": "Werte, Zellformatierung, Tabellen und Formeln mit einer Entsprechung werden exportiert."
+		}
+	},
+	"notice": {
+		"importCreatesSheet": "Beim Importieren wird ein Blatt erstellt: {reason}",
+		"refreshedAll": "Alle aktualisiert: {n, plural, one {# Abfrage} other {# Abfragen}}, Formeln neu berechnet",
+		"recalcNoQuery": "Formeln neu berechnet (keine geladene Abfrage zu aktualisieren)",
+		"tableRecalculated": "Tabelle „{table}“ neu berechnet, samt allem, was davon abhängt",
+		"recalculated": "Formeln neu berechnet",
+		"insertSheetLocked": "Die Struktur der Arbeitsmappe ist geschützt: Heben Sie den Schutz auf, um ein Blatt einzufügen",
+		"importedOne": "Tabelle „{table}“ importiert",
+		"importedMany": "{n, plural, one {# Tabelle importiert} other {# Tabellen importiert}}",
+		"importWarnings": "{what}; {n, plural, one {# Punkt zu prüfen} other {# Punkte zu prüfen}}: {list}",
+		"noTableToExport": "Keine Tabelle zum Exportieren auf diesem Blatt",
+		"tableExported": "Tabelle „{table}“ exportiert: {path}",
+		"sheetExported": "Blatt „{name}“ exportiert: {path}",
+		"autoKey": ", Schlüssel auf {column} gesetzt",
+		"keyed": "Schlüssel auf „{column}“ für REFERENCE gesetzt",
+		"undoBirth": " (Strg+Z: rückgängig machen, die Zellen bleiben frei)",
+		"undoHint": " (Strg+Z zum Rückgängigmachen)",
+		"createdUnnamed": "Tabelle „{table}“ ohne Überschriften erstellt (die 1. Zeile ähnelt den folgenden): Rechtsklick › Erste Zeile als Überschriften verwenden{more}",
+		"createdHeadless": "Tabelle „{table}“ ohne Überschriften erstellt („Spalte n“): Geben Sie die Namen in ihrer Überschriftenzeile ein{more}",
+		"created": "Tabelle „{table}“ erstellt{more}",
+		"widened": "Spalte {column} von {from} zu {to} geändert (Strg+Z zum Rückgängigmachen)",
+		"invalidValue": "Wert passt nicht zum Typ: Zelle als Fehler markiert",
+		"pastedHeadless": "Tabelle „{table}“ ohne Überschriften erstellt{more}: bei Bedarf Rechtsklick › Tabelle › „Überschrift herauslösen“",
+		"pasted": "Tabelle „{table}“ erstellt{more} ({n, plural, one {# Zeile} other {# Zeilen}})",
+		"pastedSplit": "Tabelle „{table}“ erstellt{more} ({n, plural, one {# Zeile} other {# Zeilen}}; Strg+Z: rückgängig machen, die Zellen bleiben frei)",
+		"defaultColumn": "Spalte {n}",
+		"scriptError": "Skriptfehler: {error}",
+		"notFound": "„{name}“ ist in der Arbeitsmappe nicht zu finden",
+		"theme": "Design „{name}“ (Strg+Z zum Rückgängigmachen)",
+		"tableRenamed": "Tabelle „{from}“ in „{to}“ umbenannt (Strg+Z zum Rückgängigmachen)",
+		"resultCopied": "Ergebnis in die Tabelle „{table}“ kopiert (Strg+Z zum Rückgängigmachen)",
+		"tableLinked": "Tabelle „{table}“ mit der Abfrage verknüpft: Rechtsklick › Aktualisieren, um sie neu zu laden",
+		"scriptsNeedWorkbook": "Skripts laufen in einer Arbeitsmappe: Datei › Neu."
+	},
+	"welcome": {
+		"progressStart": "{label}…",
+		"progress": "{label}: {done} / {total} Zeilen",
+		"progressCells": "{label}: {done} / {total} Zeilen · {cells} / {totalCells} Zellen",
+		"steps": {
+			"table": {
+				"title": "Tabelle eingeben",
+				"text": "einige Zeilen mit Überschriften: Lattis erkennt sie und macht daraus eine echte typisierte Tabelle."
+			},
+			"formula": {
+				"title": "Mit Spaltennamen rechnen",
+				"text": "=[Menge]*[Preis] gilt für die ganze Spalte, ohne die Formel nach unten zu kopieren."
+			},
+			"sql": {
+				"title": "Mit SQL abfragen",
+				"text": "Die Registerkarte SQL liest Ihre Tabellen wie eine Datenbank."
+			}
+		},
+		"noWorkbook": "Keine Arbeitsmappe geöffnet.",
+		"new": "Neue Arbeitsmappe",
+		"importTooltip": "Erstellt eine Arbeitsmappe mit den importierten Blättern",
+		"firstSteps": "Erste Schritte",
+		"openHelp": "Hilfe öffnen",
+		"openSample": "Beispielarbeitsmappe öffnen",
+		"hide": "Nicht mehr anzeigen",
+		"recent": "Zuletzt verwendet"
+	},
+	"doc": {
+		"online": "online auf {server}",
+		"offline": "offline — {server}",
+		"savedRemote": "Gespeichert auf {server}: {title}",
+		"savedWeb": "In Ihrer Online-Sitzung gespeichert: {path}. Datei › Kopie herunterladen, um sie auf Ihrem Gerät zu behalten, oder Auf einem Server veröffentlichen, um sie freizugeben und wiederzufinden",
+		"saved": "Gespeichert: {path}",
+		"sharedUntitled": "Freigegebene Arbeitsmappe",
+		"recentOnline": "Online auf {server}",
+		"recentOnlineLink": "Online auf {server}: {link}"
+	},
+	"choice": {
+		"empty": "(leer)",
+		"allValues": "Alle Werte von „{name}“",
+		"newValue": "Neuer Wert…",
+		"status": "{name}: {value} (Auswahl des Registers)",
+		"statusHidden": "{status} · {n, plural, one {# Zeile anderer Werte ausgeblendet} other {# Zeilen anderer Werte ausgeblendet}}",
+		"byColumn": "Auswahlregister nach „{column}“: Der Pfeil ▾ des Registers wählt den angezeigten Wert (Alt+↓)",
+		"byFormula": "Auswahlregister nach „{name}“ ({formula}): Der Pfeil ▾ des Registers wählt den angezeigten Wert (Alt+↓)",
+		"none": "Dieses Blatt hat kein Auswahlregister (Rechtsklick auf das Register › Auswählen nach)"
+	},
+	"rowFormula": {
+		"names": {
+			"year": "Jahr",
+			"month": "Monat",
+			"day": "Tag",
+			"week": "Woche",
+			"category": "Kategorie"
+		},
+		"noValues": "Keine Werte: Die Formel ergibt nur leere Zellen",
+		"more": "{list}… ({n, plural, one {# Wert} other {# Werte}})",
+		"name": "Name:",
+		"formula": "Formel:",
+		"suggestions": "Vorschläge",
+		"hint": "Spalten werden in eckigen Klammern geschrieben: [Datum], [Betrag]. Die Formel wird für jede Zeile berechnet.",
+		"count": "{n, plural, =0 {Werte} one {# Wert} other {# Werte}}",
+		"follow": "{label}: {list}",
+		"others": " · ohne diese Spalten, folgen nicht: {list}",
+		"previewEmpty": "Hier erscheint die Vorschau der Werte."
+	},
+	"names": {
+		"fault": {
+			"digit": "er beginnt mit einer Ziffer",
+			"start": "er beginnt mit „{char}“",
+			"space": "er enthält ein Leerzeichen",
+			"char": "das Zeichen „{char}“ ist nicht zulässig",
+			"message": "„{name}“: {fault}.\n\n{rule}"
+		},
+		"table": {
+			"invalid": "Ungültiger Tabellenname",
+			"rule": "Ein Tabellenname beginnt mit einem Buchstaben (oder _) und enthält nur Buchstaben, Ziffern und _, ohne Leerzeichen: Er wird in Formeln unverändert geschrieben (Beispiel: Umsatz_2024).",
+			"empty": "Der Tabellenname darf nicht leer sein.\n\n{rule}",
+			"address": "„{name}“ ist eine Zelladresse: Das Namenfeld und die Formeln wüssten nicht, welches von beiden gemeint ist.\n\nVersuchen Sie zum Beispiel „{name}_“ oder „T_{name}“.",
+			"taken": "Tabellenname bereits vergeben",
+			"takenMessage": "Eine andere Tabelle heißt bereits „{name}“ (Groß-/Kleinschreibung spielt keine Rolle).\n\nWählen Sie einen Namen, der in der Arbeitsmappe noch nicht verwendet wird."
+		},
+		"sheet": {
+			"invalid": "Ungültiger Blattname",
+			"empty": "Der Blattname darf nicht leer sein.\n\nGeben Sie einen Namen ein, oder Esc, um den alten zu behalten.",
+			"taken": "Blattname bereits vergeben",
+			"takenMessage": "Ein anderes Blatt heißt bereits „{name}“ (Groß-/Kleinschreibung spielt keine Rolle).\n\nWählen Sie einen Namen, der in der Arbeitsmappe noch nicht verwendet wird."
+		},
+		"cell": {
+			"invalid": "Ungültiger Zellname",
+			"rule": "Ein Zellname beginnt mit einem Buchstaben (oder _) und enthält nur Buchstaben, Ziffern, _ und Punkte, ohne Leerzeichen (Beispiel: MwSt_Satz).",
+			"reserved": "„{name}“ ist ein reserviertes Wort in Formeln.\n\n{rule}",
+			"address": "„{name}“ ist eine Zelladresse.\n\n{rule}"
+		},
+		"column": {
+			"taken": "Spaltenname bereits vergeben",
+			"takenMessage": "Die Tabelle {table} hat bereits eine Spalte „{name}“ (Groß-/Kleinschreibung spielt keine Rolle): {ref} wäre in Formeln mehrdeutig.\n\nWählen Sie einen anderen Namen.",
+			"takenMessageNoTable": "Die Tabelle hat bereits eine Spalte „{name}“ (Groß-/Kleinschreibung spielt keine Rolle): {ref} wäre in Formeln mehrdeutig.\n\nWählen Sie einen anderen Namen.",
+			"tableWord": "Tabelle"
+		},
+		"script": {
+			"invalid": "Ungültiger Skriptname",
+			"empty": "Der Skriptname darf nicht leer sein.\n\nGeben Sie einen Namen ein, oder Esc, um den alten zu behalten.",
+			"taken": "Skriptname bereits vergeben",
+			"takenMessage": "Ein anderes Skript heißt bereits „{name}“.\n\nWählen Sie einen anderen Namen."
+		},
+		"favorite": {
+			"invalid": "Ungültiger Favoritenname",
+			"empty": "Der Name der Favoritenabfrage darf nicht leer sein.\n\nGeben Sie einen Namen ein, oder Esc, um den alten zu behalten."
+		},
+		"refused": "Der Name wurde abgelehnt.",
+		"takenAdvice": ".\n\nWählen Sie einen Namen, der in der Arbeitsmappe noch nicht verwendet wird."
+	},
+	"theme": {
+		"title": "Design anpassen",
+		"custom": "Benutzerdefiniert",
+		"customOf": "{name} (benutzerdefiniert)",
+		"tables": "Tabellen",
+		"sources": "Externe Quellen",
+		"otherColors": "Weitere Farben der Paletten (Schrift, Füllung)",
+		"accent": "Akzent {n}",
+		"text2": "Text 2",
+		"background2": "Hintergrund 2",
+		"derive": "Aus den ersten beiden Farben ableiten",
+		"sample": {
+			"sales": "Umsatz",
+			"product": "Produkt",
+			"quantity": "Menge",
+			"customers": "Kunden (Abfrage)",
+			"customer": "Kunde",
+			"city": "Ort"
+		},
+		"name": "Name",
+		"save": "Zu meinen Designs hinzufügen (in allen Arbeitsmappen angeboten)",
+		"mine": "Meine Designs",
+		"removeTooltip": "„{name}“ aus meinen Designs entfernen (Arbeitsmappen, die es verwenden, behalten ihre Farben)",
+		"remove": "Entfernen",
+		"note": "Das Design wird mit der Arbeitsmappe gespeichert: Es sieht auf anderen Computern gleich aus. Die Abstufungen (Überschrift, Text, Rahmen) werden aus den beiden Farben abgeleitet; Zellen, die mit einer Designfarbe gefärbt sind, ändern sich mit ihm.",
+		"apply": "Übernehmen"
+	},
+	"select": {
+		"aria": "{label}: {value}"
+	},
+	"merge": {
+		"chipTables": "{n, plural, one {# ähnliche Tabelle} other {# ähnliche Tabellen}}",
+		"chipSheets": "{n, plural, one {# ähnliches Register} other {# ähnliche Register}}",
+		"rangeTwo": "{first} und {last}",
+		"range": "{first} bis {last}",
+		"defaultName": "Zusammengeführt",
+		"offerStacked": "{n} Tabellen in „{sheet}“ ({range}) haben dieselben Spalten. In eine einzige Tabelle „{tab}“ zusammenführen?",
+		"offerColumns": "{n} Register ({range}) haben dieselben Spalten. In ein einziges Register „{tab}“ zusammenführen?",
+		"offerTables": "{n} Register ({range}) haben dieselben Tabellen. In ein einziges Register „{tab}“ zusammenführen?",
+		"quoted": "„{name}“",
+		"mode": {
+			"onceOne": "Auf das gemeinsame Blatt setzen",
+			"once": "Nur ein Exemplar behalten (das letzte)",
+			"leaveOne": "Auf seinem Register lassen",
+			"leave": "Auf ihren Registern lassen",
+			"followOne": "Zusammenführen: folgt {category}",
+			"follow": "Zusammenführen: folgen {category}",
+			"merge": "Zusammenführen"
+		},
+		"family": {
+			"only": "nur in {sheet}",
+			"sheets": "{n} Register",
+			"same": " · überall dieselben Daten"
+		},
+		"source": {
+			"sheet": "Registername",
+			"title": "Titel über jeder Tabelle",
+			"cell": "Zelle {cell}"
+		},
+		"layout": {
+			"table": "{name} in {at} · {n, plural, =0 {# Zeilen} one {# Zeile} other {# Zeilen}}",
+			"tableFollows": "{name} in {at} · {n, plural, =0 {# Zeilen} one {# Zeile} other {# Zeilen}} · folgt der Auswahl",
+			"cells": "{n, plural, =1 {Eine freie Zelle übernommen} other {# freie Zellen übernommen}}",
+			"perValue": "{cells}, davon {n} pro {category}",
+			"value": "Wert",
+			"lost": "{n, plural, =1 {Eine freie Zelle fällt auf eine gemeinsame Tabelle: nicht übernommen} other {# freie Zellen fallen auf eine gemeinsame Tabelle: nicht übernommen}}"
+		},
+		"refused": "Zusammenführen nicht möglich: {reason}",
+		"pending": "{n, plural, =1 {Eine Formel oder ein Objekt verweist} other {# Formeln oder Objekte verweisen}} ohne genaue Entsprechung auf die alten Tabellen: von Hand zu korrigieren",
+		"pendingHidden": "{n, plural, =1 {Eine Formel oder ein Objekt verweist} other {# Formeln oder Objekte verweisen}} ohne genaue Entsprechung auf die alten Tabellen: von Hand zu korrigieren (die alten Register bleiben ausgeblendet erhalten)",
+		"refs": {
+			"done": "{n, plural, =1 {eine Formel umgeschrieben} other {# Formeln umgeschrieben}}",
+			"leftAfter": "{n, plural, =1 {eine von Hand zu korrigieren} other {# von Hand zu korrigieren}}",
+			"left": "{n, plural, =1 {eine Formel von Hand zu korrigieren} other {# Formeln von Hand zu korrigieren}}",
+			"separator": ", ",
+			"line": "{where}: {formula} → {after}",
+			"lineWhy": "{where}: {formula} ({why})",
+			"lineLeft": "{where}: {formula}"
+		},
+		"old": {
+			"deleted": "Trotzdem gelöscht: {n, plural, =1 {Eine Formel oder ein Objekt verweist noch darauf und findet seine Tabelle nicht mehr} other {# Formeln oder Objekte verweisen noch darauf und finden ihre Tabelle nicht mehr}}",
+			"hidden": "Ausgeblendet behalten: {n, plural, =1 {Eine Formel oder ein Objekt verweist noch darauf} other {# Formeln oder Objekte verweisen noch darauf}}",
+			"hide": "Eine ausgeblendete Kopie behalten (Tabellen umbenannt in …_ancien)",
+			"delete": "Die Register löschen (Strg+Z stellt sie wieder her)"
+		},
+		"panel": {
+			"title": "Register zusammenführen",
+			"subtitle": "Eine einzige Tabelle, mit einer Kategoriespalte",
+			"sheets": "1. Register",
+			"tableRows": " · {n, plural, =0 {# Zeilen} one {# Zeile} other {# Zeilen}}",
+			"addTableAria": "Tabelle hinzufügen",
+			"addTablePlaceholder": "Tabelle hinzufügen…",
+			"add": "Hinzufügen",
+			"category": "2. Kategoriespalte",
+			"noCategoryData": "Keine Spalte hinzufügen: Die Spalte „{column}“ genügt (ihre Datumsangaben fallen in den Monat jedes Registers)",
+			"noCategory": "Keine Spalte hinzufügen (die Kategorie steht schon in den Daten)",
+			"name": "Name",
+			"categoryNameAria": "Name der Kategoriespalte",
+			"type": "Typ",
+			"categoryTypeAria": "Typ der Kategoriespalte",
+			"types": {
+				"text": "Text",
+				"integer": "Ganze Zahl",
+				"date": "Datum"
+			},
+			"from": "Entnommen aus",
+			"sourceAria": "Quelle der Kategorie",
+			"valueFromSheet": "Wert aus dem Namen jedes Registers entnommen, bei Bedarf korrigieren:",
+			"valueFrom": "Wert entnommen aus: {source}, bei Bedarf korrigieren:",
+			"valueAria": "Wert für {sheet}",
+			"columns": "3. Spalten",
+			"column": "Spalte",
+			"otherTables": "Weitere Tabellen in den Registern",
+			"modeAria": "Was mit {name} geschieht",
+			"after": "4. Danach",
+			"table": "Tabelle",
+			"tableAria": "Name der zusammengeführten Tabelle",
+			"sheet": "Blatt",
+			"sheetAria": "Name des neuen Blatts",
+			"oldSheets": "Alte Register",
+			"keepCells": "Freie Zellen der Register übernehmen (Titel, Summen, Ziele; eine pro {category}, wenn sie sich unterscheiden)",
+			"layout": "Auf dem gemeinsamen Blatt (Layout des letzten Registers):",
+			"left": "Bleiben auf ihrem Register: {list}",
+			"rewritten": "Umgeschriebene Formeln ({n})",
+			"pending": "Von Hand zu korrigieren ({n})",
+			"why": ": {why}",
+			"preview": "5. Vorschau",
+			"total": "{n, plural, =0 {# Zeilen} one {# Zeile} other {# Zeilen}} insgesamt",
+			"totalKey": "{n, plural, =0 {# Zeilen} one {# Zeile} other {# Zeilen}} insgesamt · Schlüssel: {key}",
+			"merge": "Zusammenführen",
+			"checkTwo": "Aktivieren Sie mindestens zwei Register"
+		},
+		"notice": {
+			"none": "Keine ähnlichen Register gefunden: Wählen Sie die Register aus (Strg+Klick), dann Rechtsklick › Register zusammenführen…",
+			"noTables": "Diese Register haben keine Tabellen zum Zusammenführen (mindestens zwei mit denselben Spalten sind nötig)",
+			"dismissed": "Diese Register werden nicht mehr zum Zusammenführen vorgeschlagen (Auswahl in der Arbeitsmappe gespeichert)"
+		}
+	},
+	"tabs": {
+		"locked": "Die Struktur der Arbeitsmappe ist geschützt: Heben Sie den Schutz auf (Überprüfen › Arbeitsmappenschutz aufheben), um Blätter hinzuzufügen, zu löschen, umzubenennen oder zu verschieben",
+		"renameRefused": "Blattname abgelehnt",
+		"one": "Ein Blatt nach dem anderen: Wählen Sie ein einzelnes Register aus",
+		"previous": "Vorheriges Blatt",
+		"previousTooltip": "Vorheriges Blatt (Strg+Bild↑)",
+		"next": "Nächstes Blatt",
+		"nextTooltip": "Nächstes Blatt (Strg+Bild↓)",
+		"renameAria": "Neuer Blattname",
+		"tip": {
+			"choiceKeys": " — Alt+↓: auswählen. ",
+			"end": ". ",
+			"sheetProtected": "Blatt geschützt. ",
+			"bookProtected": "Arbeitsmappe geschützt",
+			"renameMove": "Doppelklick zum Umbenennen, Ziehen zum Verschieben",
+			"rename": "Doppelklick zum Umbenennen"
+		},
+		"sheetProtected": "Blatt geschützt",
+		"bookProtected": "Arbeitsmappe geschützt",
+		"htmlPage": "Webseite",
+		"document": "Dokument",
+		"chipTooltip": "{label}: in eine einzige Tabelle zusammenführen (Rechtsklick: Nicht mehr vorschlagen)",
+		"chipTooltipOut": "{label}: in eine einzige Tabelle zusammenführen (Rechtsklick: Nicht mehr vorschlagen) — {n} außerhalb der Ansicht",
+		"mergeShort": "Zusammenführen…",
+		"dismiss": "Nicht mehr vorschlagen",
+		"moreTooltip": "{n, plural, one {# Blatt nicht angezeigt} other {# Blätter nicht angezeigt}}: alle Blätter",
+		"add": {
+			"locked": "Struktur der Arbeitsmappe geschützt",
+			"tooltipPage": "Neues Blatt (Rechtsklick: Webseite oder Dokument)",
+			"tooltip": "Neues Blatt (Rechtsklick: Dokument)",
+			"sheet": "Neues Blatt",
+			"page": "Neue Webseite",
+			"doc": "Neues Dokument"
+		},
+		"menu": {
+			"selected": "{n} Blätter ausgewählt",
+			"title": "Blatt „{name}“",
+			"mergeTooltip": "Die Tabellen dieser Register (gleiche Spalten) in eine einzige zusammenführen, mit einer Kategoriespalte",
+			"merge": "Register zusammenführen…",
+			"insert": "Einfügen",
+			"sheet": "Blatt",
+			"rename": "Umbenennen",
+			"move": "Verschieben oder kopieren…",
+			"color": "Registerfarbe",
+			"colorAria": "Farbe {color}",
+			"noColor": "Keine Farbe",
+			"chooseBy": "Auswählen nach",
+			"chooseByTooltip": "Ein Pfeil auf dem Register wählt den angezeigten Wert (Jahr, Monat, Ort…)",
+			"readingColumns": "Spalten werden gelesen…",
+			"noColumns": "Keine Tabellenspalte dieses Blatts hat wenige unterschiedliche Werte",
+			"columnTooltip": "„{column}“ der Tabelle {table} — {n, plural, one {# unterschiedlicher Wert} other {# unterschiedliche Werte}}",
+			"formulaTooltip": "Eine Formel auf den Spalten jeder Zeile ergibt den auszuwählenden Wert: =YEAR([Datum]), =TEXT([Datum];\"mmmm\"), =IF([Betrag]>1000;\"Groß\";\"Klein\")",
+			"formula": "Eine Formel…",
+			"stopChoosing": "Nicht mehr nach „{name}“ auswählen",
+			"unprotect": "Blattschutz aufheben…",
+			"protect": "Blatt schützen…",
+			"keepOne": "Die Arbeitsmappe behält mindestens ein sichtbares Blatt",
+			"hideMany": "Die {n} Blätter ausblenden",
+			"hide": "Ausblenden",
+			"unhide": "Einblenden…",
+			"deleteMany": "Die {n} Blätter löschen",
+			"delete": "Löschen"
+		},
+		"choice": {
+			"aria": "Auswahl für das Register „{name}“",
+			"reading": "Werte werden gelesen…",
+			"rows": "{n, plural, one {# Zeile} other {# Zeilen}}",
+			"noRows": "Noch keine Zeilen",
+			"empty": "leer",
+			"computed": "Werte berechnet durch {formula}"
+		},
+		"byFormula": {
+			"title": "Nach einer Formel auswählen",
+			"intro": "Der Pfeil des Registers wählt unter den Werten der Formel; die Tabellen des Blatts, die ihre Spalten haben, zeigen nur die Zeilen des gewählten Werts.",
+			"name": "Name der Kategorie:",
+			"follow": "Folgen dem Register"
+		},
+		"adding": {
+			"intro": "Der Wert wird zur Liste von „{name}“ hinzugefügt und das Register zeigt ihn an: Das Blatt wirkt leer, bereit zum Ausfüllen. Strg+Z macht es rückgängig.",
+			"label": "{name}:"
+		},
+		"move": {
+			"title": "Verschieben oder kopieren",
+			"sheet": "Blatt „{name}“ verschieben",
+			"before": "Vor Blatt:",
+			"hidden": "{name} (ausgeblendet)",
+			"last": "(ans Ende stellen)",
+			"copy": "Kopie erstellen"
+		},
+		"all": {
+			"title": "Alle Blätter"
+		},
+		"unhide": {
+			"title": "Einblenden",
+			"label": "Blatt einblenden:"
+		}
+	},
+	"share": {
+		"addTableConfirm": "Tabelle „{table}“ zur freigegebenen Arbeitsmappe „{workbook}“ hinzufügen?\n\nSie wird mit ihren Zeilen auf dem Server erstellt; alle Mitglieder erhalten sie und bearbeiten sie gemäß ihren Rechten.\n\nDieses Hinzufügen lässt sich nicht mit Strg+Z rückgängig machen: Um die Tabelle zu entfernen, löscht „Tabelle löschen“ sie für alle.",
+		"addingTable": "„{table}“ wird zur freigegebenen Arbeitsmappe hinzugefügt…",
+		"tableAdded": "Tabelle „{table}“ zur freigegebenen Arbeitsmappe hinzugefügt",
+		"sourceUpdating": "Quelle „{table}“ wird aktualisiert…",
+		"sourceFailed": "Quelle „{table}“ nicht aktualisiert: {error}",
+		"connected": "Verbunden mit {server}",
+		"stillDown": "{server} antwortet immer noch nicht: Lattis versucht es selbstständig erneut",
+		"forgetConfirm": "{n, plural, one {# nicht gesendete Änderung geht verloren.} other {# nicht gesendete Änderungen gehen verloren.}}\n\n„Lokale Kopie speichern…“ behält sie. Diese Arbeitsmappe trotzdem aus der Liste der zuletzt verwendeten entfernen?",
+		"versionLoaded": "Version {version} geladen",
+		"removeRecent": "{error}\n\nAus den zuletzt verwendeten Arbeitsmappen entfernen?",
+		"localCopyOpened": "{reason}: lokale Kopie geöffnet",
+		"openedOnline": "„{title}“ ist auf {server} freigegeben: online geöffnet",
+		"readOnlyRole": "{reason} (Rolle: {roles})",
+		"formNeedsTable": "Setzen Sie den Cursor in eine Tabelle, um daraus ein Formular zu machen.",
+		"scriptsLocked": "Nur Besitzer und Designer können die Skripts dieser freigegebenen Arbeitsmappe bearbeiten",
+		"versionPublished": "Version {version} veröffentlicht",
+		"publishedFrozen": "Arbeitsmappe auf {server} veröffentlicht (fixiert)",
+		"publishedLive": "Arbeitsmappe auf {server} veröffentlicht (kollaborativ)",
+		"detach": {
+			"title": "Vom Server trennen",
+			"question": "Diese Arbeitsmappe vom Server trennen?",
+			"ok": "Trennen"
+		},
+		"link": {
+			"title": "Lattis-Link öffnen",
+			"question": "Eine Arbeitsmappe von „{name}“ öffnen?",
+			"warning": "Lattis war noch nie mit {host} verbunden. Akzeptieren Sie nur, wenn Sie diesen Server kennen und diesen Link erwartet haben.",
+			"ok": "Anmelden und öffnen"
+		}
+	},
+	"conflicts": {
+		"mineAll": "Ihr Wert wird für alle Computer wiederhergestellt",
+		"mineServer": "Ihr Wert wird erneut an den Server gesendet",
+		"theirs": "Wert des Kollegen übernommen",
+		"heldRetried": "Änderungen an „{table}“ erneut an den Server gesendet",
+		"heldDropped": "Änderungen an „{table}“ verworfen: Die Tabelle kehrt zur Version des Servers zurück",
+		"mineAllCount": "{n, plural, one {# Wert} other {# Werte}} für alle Computer wiederhergestellt",
+		"mineServerCount": "{n, plural, one {# Wert} other {# Werte}} erneut an den Server gesendet",
+		"theirsCount": "{n, plural, one {# Wert der Kollegen übernommen} other {# Werte der Kollegen übernommen}}"
+	},
+	"ref": {
+		"hiddenRow": "Zeile durch den Filter von {table} ausgeblendet",
+		"filtered": "{table} gefiltert nach {column} = {value} (Alt+← zum Zurückkehren)",
+		"back": "Alt+← zum Zurückkehren zu {label}"
+	},
+	"coedit": {
+		"requestSent": "Anfrage an die anderen Computer gesendet…"
+	},
+	"demo": {
+		"preset": "Demo „{name}“",
+		"sample": "Beispielarbeitsmappe",
+		"error": "Fehler",
+		"generating": "Demo wird erstellt: {done} / {total} Zeilen",
+		"opening": "Demo wird geöffnet…",
+		"openingShort": "Wird geöffnet…",
+		"readOnly": "Demo: nur die Tabellenzellen können bearbeitet werden"
+	},
+	"web": {
+		"reconnected": "Verbindung zum Server wiederhergestellt",
+		"expired": "Ihre Sitzung ist abgelaufen: Melden Sie sich erneut an, um fortzufahren (Ihre bereits vorgenommenen Änderungen bleiben auf dem Server erhalten).",
+		"reconnect": "Erneut anmelden",
+		"lost": "Verbindung zum Server unterbrochen: neuer Versuch… Was Sie jetzt tun, wartet auf die Wiederherstellung der Verbindung."
+	},
+	"protect": {
+		"sheetLocked": "Das Blatt „{name}“ ist geschützt: Heben Sie den Schutz auf (Überprüfen › Blattschutz aufheben), um es zu ändern",
+		"bookLocked": "Die Arbeitsmappe ist geschützt: Heben Sie den Schutz auf (Überprüfen › Arbeitsmappenschutz aufheben), um sie zu ändern",
+		"notice": {
+			"sheetOff": "Schutz des Blatts „{name}“ aufgehoben",
+			"sheetOn": "Blatt „{name}“ geschützt",
+			"structureOff": "Schutz der Struktur von „{name}“ aufgehoben",
+			"structureOn": "Struktur des Blatts „{name}“ geschützt: nur die Eingabe in Tabellen bleibt erlaubt",
+			"bookOff": "Arbeitsmappenschutz aufgehoben",
+			"bookSheets": "Arbeitsmappe geschützt: Register und Inhalt aller Blätter",
+			"bookStructure": "Arbeitsmappe geschützt: Register und Struktur aller Blätter (nur Eingabe in Tabellen)",
+			"bookTabs": "Struktur der Arbeitsmappe geschützt"
+		},
+		"mismatch": "Die beiden Kennwörter stimmen nicht überein",
+		"aria": "Schutz",
+		"title": {
+			"sheetOff": "Schutz des Blatts „{name}“ aufheben",
+			"sheetOn": "Blatt „{name}“ schützen",
+			"structureOff": "Schutz der Struktur von „{name}“ aufheben",
+			"structureOn": "Struktur des Blatts „{name}“ schützen",
+			"bookOff": "Arbeitsmappenschutz aufheben",
+			"bookOn": "Struktur der Arbeitsmappe schützen"
+		},
+		"explain": {
+			"sheet": "Eingabe, Einfügen, Formatierung, Zeilen und Spalten, Sortieren, Objekte und SQL-Schreibabfragen werden auf diesem Blatt abgelehnt. Lesen, Kopieren und Filter bleiben erlaubt.",
+			"structure": "Alles wird gesperrt außer der Eingabe in Tabellen: freie Zellen, Formatierung, Spalten und Überschriften, Tabellen, Objekte, Zeilen und Spalten des Blatts, Seitenlayout und Register. Sie können in Tabellen weiterhin Werte eingeben, einfügen (nur Werte) und löschen, dort Zeilen hinzufügen oder löschen, sortieren und filtern.",
+			"bookSheets": "Das Hinzufügen, Löschen, Umbenennen, Verschieben oder Ausblenden von Blättern wird abgelehnt, ebenso jede Änderung am Inhalt der Blätter.",
+			"bookStructure": "Das Hinzufügen, Löschen, Umbenennen, Verschieben oder Ausblenden von Blättern wird abgelehnt; auf jedem Blatt bleibt nur die Eingabe in Tabellen erlaubt.",
+			"bookTabs": "Das Hinzufügen, Löschen, Umbenennen, Verschieben oder Ausblenden von Blättern wird abgelehnt. Der Inhalt nicht geschützter Blätter kann weiterhin geändert werden."
+		},
+		"notSecurity": "Dieser Schutz verhindert versehentliche Änderungen; er ist keine Sicherheitsmaßnahme: Die Datei ist nicht verschlüsselt, ihre Daten bleiben lesbar und der Schutz kann von jemandem mit den richtigen Werkzeugen entfernt werden.",
+		"lock": "Sperren",
+		"lockTabs": "Nur Register",
+		"lockStructure": "Register und Struktur aller Blätter (nur Eingabe in Tabellen)",
+		"lockSheets": "Register und Inhalt aller Blätter",
+		"password": "Kennwort",
+		"passwordOptional": "Kennwort (optional)",
+		"confirm": "Kennwort bestätigen",
+		"noteIt": "Ohne das Kennwort kann der Schutz nicht mehr aufgehoben werden: Notieren Sie es."
+	},
+	"deleteSheet": {
+		"items": {
+			"tables": "{n, plural, one {# Tabelle} other {# Tabellen}}",
+			"pivots": "{n, plural, one {# PivotTable} other {# PivotTables}}",
+			"charts": "{n, plural, one {# Diagramm} other {# Diagramme}}",
+			"buttons": "{n, plural, one {# Schaltfläche} other {# Schaltflächen}}",
+			"cells": "{n, plural, one {# gefüllte Zelle} other {# gefüllte Zellen}}"
+		},
+		"withNames": "{what} ({names})",
+		"tableRows": "{name}: {n, plural, one {# Zeile} other {# Zeilen}}",
+		"manyTitle": "Blätter löschen",
+		"manyQuestion": "Diese {n} Blätter und alles, was sie enthalten, löschen?",
+		"manyHint": "Strg+Z stellt sie alle mit ihrem Inhalt wieder her.",
+		"ok": "Löschen",
+		"title": "Blatt löschen",
+		"question": "Blatt „{name}“ und alles, was es enthält, löschen?",
+		"hint": "Strg+Z stellt das Blatt mit seinem ganzen Inhalt wieder her."
+	},
+	"unsent": {
+		"title": "Noch nicht gesendete Änderungen",
+		"question": "{n, plural, one {Eine Änderung an „{title}“ wurde noch nicht} other {# Änderungen an „{title}“ wurden noch nicht}} an {server} gesendet.",
+		"theServer": "den Server",
+		"hint": "{n, plural, one {Sie bleibt auf diesem Computer und wird} other {Sie bleiben auf diesem Computer und werden}} beim nächsten Öffnen der Arbeitsmappe gesendet, sobald der Server erreichbar ist."
+	},
+	"close": {
+		"quit": "Beenden",
+		"title": "Änderungen speichern",
+		"question": "Änderungen an „{title}“ vor dem Schließen speichern?",
+		"questionQuit": "Änderungen an „{title}“ vor dem Beenden von Lattis speichern?",
+		"save": "Speichern",
+		"dontSave": "Nicht speichern"
+	},
+	"damaged": {
+		"title": "Beschädigte Arbeitsmappe",
+		"explain": "Lattis kann ihre lesbaren Daten in einer neuen unbenannten Arbeitsmappe wiederherstellen. Die beschädigte Datei wird nicht verändert.",
+		"recover": "Daten wiederherstellen"
+	},
+	"locked": {
+		"title": "Arbeitsmappe bereits geöffnet",
+		"coEditHint": "Beim gemeinsamen Bearbeiten ändern alle die Tabellendaten und sehen die Änderungen der anderen live; Formatierung, Spalten und Blätter warten, bis Sie allein sind. Im schreibgeschützten Modus werden Ihre Änderungen unter einem anderen Namen gespeichert.",
+		"together": "Gemeinsam bearbeiten",
+		"readOnly": "Schreibgeschützt öffnen",
+		"hint": "Im schreibgeschützten Modus werden Ihre Änderungen unter einem anderen Namen gespeichert. Wenn Sie sie trotzdem öffnen, können die Änderungen des anderen Computers überschrieben werden (Lattis prüft die Datei vor dem Speichern).",
+		"anyway": "Trotzdem öffnen"
+	},
+	"conflictFile": {
+		"title": "Arbeitsmappe anderswo geändert",
+		"hint": "„Kopie speichern“ behält beide Versionen; „Überschreiben“ ersetzt die Datei durch Ihre.",
+		"copy": "Kopie speichern",
+		"overwrite": "Überschreiben"
+	},
+	"status": {
+		"aria": "Statusleiste",
+		"newSheetTooltip": "PivotTable auf einem neuen Blatt in A1 erstellen",
+		"details": "Details",
+		"backTooltip": "Zur Zelle zurückkehren, von der Sie gewechselt sind (Alt+←)",
+		"back": "← Zurück zu {label}",
+		"useHeaderTooltip": "Die über der Tabelle eingegebenen Zellen werden zu ihren Überschriften; die aktuelle Überschrift wird zur 1. Datenzeile (Strg+Z zum Rückgängigmachen)",
+		"useHeader": "Als Überschriften verwenden",
+		"keepTitleTooltip": "Die Zeile als freie Zellen behalten (ein Titel)",
+		"no": "Nein",
+		"later": "Später",
+		"present": "Haben diese Arbeitsmappe ebenfalls geöffnet: {names}",
+		"ready": "Bereit"
+	},
+	"sqlView": {
+		"tableRenameRefused": "Tabellenname abgelehnt",
+		"favoriteRenameRefused": "Favoritenname abgelehnt",
+		"renamed": "Tabelle umbenannt",
+		"renamedHeader": "Tabelle umbenannt (Strg+Z zum Rückgängigmachen)",
+		"changed": "Betroffene Zeilen",
+		"changedHeader": "Betroffene Zeilen (Strg+Z zum Rückgängigmachen)",
+		"objects": "Objekte",
+		"favorites": "Favoriten",
+		"favoritesCount": "Favoriten ({n})",
+		"history": "Verlauf",
+		"historyCount": "Verlauf ({n})",
+		"renameAria": "Neuer Tabellenname",
+		"objectTooltipRename": "Doppelklick oder F2: umbenennen; Rechtsklick: Beispiele für SELECT, INSERT, UPDATE, DELETE, auf dem Blatt anzeigen",
+		"objectTooltip": "Rechtsklick: Beispiele für SELECT, INSERT, UPDATE, DELETE, auf dem Blatt anzeigen",
+		"pivot": "PivotTable",
+		"table": "Tabelle",
+		"rows": "{n, plural, one {# Zeile} other {# Zeilen}}",
+		"insertColumn": "In die Abfrage einfügen",
+		"dataLake": "Lattis Data Lake · {label}",
+		"dataViewTooltip": "{view}: schreibgeschützte Serveransicht, beschränkt auf die Zeilen Ihrer Zielgruppe (Doppelklick: SELECT-Beispiel)",
+		"dataView": "Data-Lake-Ansicht (schreibgeschützt)",
+		"rights": "Rechte (Server)",
+		"rightsEditTooltip": "Freigabedialog: Mitglieder, Rollen, Einschränkungen",
+		"rightsEdit": "Bearbeiten…",
+		"rightsTooltip": "Vom Server generiert: schreibgeschützt",
+		"menuPivot": "PivotTable „{name}“",
+		"menuTable": "Tabelle „{name}“",
+		"example": "Beispielabfrage",
+		"exampleSelect": "Ersetzt die Abfrage durch ein Beispiel zum Lesen",
+		"exampleInsert": "Ersetzt die Abfrage durch ein Beispiel zum Hinzufügen einer Zeile",
+		"exampleUpdate": "Ersetzt die Abfrage durch ein Beispiel zum Ändern",
+		"exampleDelete": "Ersetzt die Abfrage durch ein Beispiel zum Löschen",
+		"exampleSelectItem": "SELECT-Beispiel",
+		"goto": "Auf dem Blatt anzeigen",
+		"renameItem": "Umbenennen…",
+		"favoriteNameAria": "Name des Favoriten",
+		"reuse": "In den Editor laden (Doppelklick: ausführen)",
+		"rename": "Umbenennen",
+		"remove": "Entfernen",
+		"run": "Ausführen",
+		"noFavorites": "Keine Favoritenabfragen. Mit ☆ in der Editorleiste oder im Verlauf fügen Sie eine hinzu; sie werden in der Arbeitsmappe gespeichert.",
+		"search": "Suchen",
+		"clear": "Löschen",
+		"error": "Fehler",
+		"alreadyFavorite": "Bereits in den Favoriten",
+		"addFavorite": "Zu Favoriten hinzufügen",
+		"noMatch": "Keine Abfrage passt.",
+		"noHistory": "Ausgeführte Abfragen erscheinen hier.",
+		"runTooltip": "Führt die Auswahl aus, sonst die Anweisung unter dem Cursor (Strg+Eingabe)",
+		"stopTooltip": "Hält die laufende Abfrage an; ein angehaltener Schreibvorgang ändert nichts",
+		"stop": "Anhalten",
+		"starredTooltip": "In den Favoriten: „{name}“ (klicken zum Entfernen)",
+		"starTooltip": "Die Abfrage (oder die Auswahl) zu den Favoriten der Arbeitsmappe hinzufügen",
+		"favorite": "Favorit",
+		"hintTooltip": "Anweisungen werden durch „;“ oder eine Leerzeile getrennt. Höchstens 1.000 Zeilen.",
+		"hint": "Strg+Eingabe: Auswahl ausführen, sonst die Anweisung unter dem Cursor · Strg+Leertaste: Namen · Alt+↑↓: Verlauf",
+		"splitAria": "Höhe des Editors",
+		"splitTooltip": "Ziehen, um den Platz zwischen Abfrage und Ergebnis aufzuteilen (Doppelklick: ursprüngliche Größe)",
+		"result": "{n, plural, one {# Zeile} other {# Zeilen}} · {ms} ms",
+		"resultTruncated": "{n, plural, one {# Zeile} other {# Zeilen}} (abgeschnitten) · {ms} ms",
+		"sent": "· SQL ausgeführt",
+		"copyTruncated": "Kopiert die angezeigten Zeilen (abgeschnitten), zum Einfügen in Excel",
+		"copyTooltip": "Kopiert das Ergebnis (mit Überschriften), zum Einfügen in Excel",
+		"copied": "Kopiert ✓",
+		"clipboard": "Zwischenablage",
+		"toSheet": "In ein Blatt:",
+		"copyToSheetTooltip": "Kopiert die Werte des Ergebnisses in eine neue Tabelle auf einem neuen Blatt (Strg+Z zum Rückgängigmachen)",
+		"copyToSheet": "Kopieren",
+		"linkToSheetTooltip": "Erstellt eine mit der Abfrage verknüpfte Tabelle auf einem neuen Blatt: Farbe der externen Quellen (standardmäßig hellblau), per Rechtsklick aktualisierbar wie eine externe Quelle",
+		"linkToSheet": "Verknüpfen"
+	}
+}
