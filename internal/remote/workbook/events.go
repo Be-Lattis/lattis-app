@@ -8,8 +8,10 @@ import (
 	"github.com/lalamefine/lattis/internal/msg"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync/atomic"
+	"time"
 )
 
 // Relais des changements de lattisd (GET <émetteur>/api/events, contrat
@@ -66,10 +68,51 @@ func (s *EventsServer) Listen(ctx context.Context, channel string, ready func(),
 		return s.Server.Listen(ctx, channel, ready, fn)
 	}
 	err := s.follow(ctx, ready, fn)
-	if errors.Is(err, errNoRelay) {
+	// restart : ce lattisd s'arrête pour une mise à jour (contrat client
+	// §11) ; on se réabonne aussitôt, la demande arrive à un autre lattisd.
+	// Pendant l'arrêt, 503 et Retry-After : on attend ce qu'il dit, sans
+	// passer à l'écoute PostgreSQL ni signaler de déconnexion.
+	for waited := time.Duration(0); errors.Is(err, errRestart); {
+		err = s.follow(ctx, ready, fn)
+		var busy *retryAfter
+		for errors.As(err, &busy) && waited < restartPatience {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(busy.d):
+			}
+			waited += busy.d
+			err = s.follow(ctx, ready, fn)
+		}
+		if errors.As(err, &busy) {
+			err = errNoRelay
+		}
+	}
+	var busy *retryAfter
+	if errors.Is(err, errNoRelay) || errors.As(err, &busy) {
 		return s.Server.Listen(ctx, channel, ready, fn)
 	}
 	return err
+}
+
+// errRestart : le lattisd du flux s'arrête (événement restart).
+var errRestart = errors.New("relais : lattisd redémarre")
+
+// restartPatience borne l'attente d'un autre lattisd après un restart.
+const restartPatience = time.Minute
+
+// retryAfter : 503 du relais, à réessayer après d (Retry-After).
+type retryAfter struct{ d time.Duration }
+
+func (e *retryAfter) Error() string { return "relais : réessayer dans " + e.d.String() }
+
+// retryDelay lit Retry-After (secondes), borné entre 1 et 30 s.
+func retryDelay(h string) time.Duration {
+	n, err := strconv.Atoi(strings.TrimSpace(h))
+	if err != nil || n < 1 {
+		return time.Second
+	}
+	return min(time.Duration(n)*time.Second, 30*time.Second)
 }
 
 func (s *EventsServer) follow(ctx context.Context, ready func(), fn func(string)) error {
@@ -105,7 +148,7 @@ func (s *EventsServer) follow(ctx context.Context, ready func(), fn func(string)
 		s.none.Store(true)
 		return errNoRelay
 	case http.StatusServiceUnavailable:
-		return errNoRelay
+		return &retryAfter{d: retryDelay(resp.Header.Get("Retry-After"))}
 	case http.StatusUnauthorized:
 		if s.Invalidate != nil {
 			s.Invalidate()
@@ -174,6 +217,8 @@ func (s *EventsServer) event(kind, data string, ready func(), fn func(string)) e
 		fn(NoticeACL)
 	case "reset", "expired":
 		return errEventsReset
+	case "restart":
+		return errRestart
 	}
 	return nil
 }

@@ -73,3 +73,42 @@ func TestEventsFallback(t *testing.T) {
 		t.Errorf("le relais absent est redemandé : %d appels", hits.Load())
 	}
 }
+
+// restart : lattisd s'arrête pour une mise à jour ; le poste se réabonne
+// aussitôt, attend le Retry-After d'un 503 pendant l'arrêt, sans repli sur
+// LISTEN, et reçoit la suite par le nouveau lattisd.
+func TestEventsRestart(t *testing.T) {
+	var hits atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch hits.Add(1) {
+		case 1:
+			w.Header().Set("Content-Type", "text/event-stream")
+			fmt.Fprint(w, "event: ready\ndata: {}\n\n")
+			fmt.Fprint(w, "event: change\ndata: {\"workbook\":\"wb1\",\"payload\":\"avant\"}\n\n")
+			fmt.Fprint(w, "event: restart\ndata: {}\n\n")
+		case 2:
+			w.Header().Set("Retry-After", "1")
+			http.Error(w, "arrêt", http.StatusServiceUnavailable)
+		default:
+			w.Header().Set("Content-Type", "text/event-stream")
+			fmt.Fprint(w, "event: ready\ndata: {}\n\n")
+			fmt.Fprint(w, "event: change\ndata: {\"workbook\":\"wb1\",\"payload\":\"après\"}\n\n")
+			fmt.Fprint(w, "event: reset\ndata: {}\n\n")
+		}
+	}))
+	defer srv.Close()
+	base := &listenStub{}
+	es := WithEvents(base, srv.URL, "wb1", func(context.Context) (string, error) { return "jeton", nil }, nil)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	var got []string
+	readies := 0
+	start := time.Now()
+	err := es.Listen(ctx, "wb_x", func() { readies++ }, func(p string) { got = append(got, p) })
+	if !errors.Is(err, errEventsReset) || fmt.Sprint(got) != "[avant après]" || readies != 2 || base.called.Load() || hits.Load() != 3 {
+		t.Fatalf("err=%v got=%v ready=%d repli=%v appels=%d", err, got, readies, base.called.Load(), hits.Load())
+	}
+	if d := time.Since(start); d < time.Second {
+		t.Errorf("Retry-After non respecté : %v", d)
+	}
+}

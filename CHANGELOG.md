@@ -6,6 +6,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Corrections
+
+- Classeurs partagés : quand le Serveur Lattis redémarre pour une mise à jour, l'application se réabonne aussitôt au suivi des changements, sans afficher de déconnexion.
+
 ## 0.3.2-beta (21/10/2026)
 
 ### Nouveautés
