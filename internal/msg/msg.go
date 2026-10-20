@@ -191,6 +191,19 @@ func (a Args) In(l Lang) Args {
 	return out
 }
 
+// Join relie des messages déjà rendus dans la langue l, comme la barre
+// d'état les montre : « a ; b » en français (espace avant le point-virgule),
+// « a; b » en anglais, allemand et espagnol, « a；b » en chinois.
+func Join(l Lang, parts []string) string {
+	switch l {
+	case FR, "":
+		return strings.Join(parts, " ; ")
+	case ZH:
+		return strings.Join(parts, "；")
+	}
+	return strings.Join(parts, "; ")
+}
+
 // Text rend err dans la langue l : traduite si c'est un Messager (*Error,
 // erreur typée), ou si elle en enveloppe un (fmt.Errorf("…: %w", e) : seul
 // le texte de e change) ; err.Error() sinon.

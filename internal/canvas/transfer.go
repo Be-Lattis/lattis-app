@@ -122,6 +122,9 @@ func (m *Model) Transfer(ctx context.Context, from int64, src Rect, to int64, ds
 			return m.Paste(ctx, to, dst.R0, dst.C0, valuesBlock(values, src, dst))
 		}
 	}
+	// Valeurs affichées dans la langue de la session : dans la forme gardée
+	// (Paste, ci-dessus, s'en charge lui-même).
+	values = m.ui(ctx).valuesIn(values)
 	label := "Coller"
 	if move {
 		label = "Déplacer les cellules"

@@ -202,7 +202,7 @@ func (m *Model) note(notes []string) {
 		return
 	}
 	m.noticeMu.Lock()
-	m.notice = strings.Join(notes, " ; ")
+	m.notice = msg.Join(m.Language(), notes)
 	m.noticeMu.Unlock()
 }
 

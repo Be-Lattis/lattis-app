@@ -317,7 +317,7 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 				if err != nil {
 					return err
 				}
-				ci := ColumnInfo{ID: c.ID, Errors: errs[c.ID], Name: c.Name, SQL: colSQL(c.ID), Type: c.Type, Fixed: c.Fixed, Formula: displayFormula(c.Formula),
+				ci := ColumnInfo{ID: c.ID, Errors: errs[c.ID], Name: c.Name, SQL: colSQL(c.ID), Type: c.Type, Fixed: c.Fixed, Formula: t.ui().columnOut(c.Formula),
 					Style: colStyles[[2]int64{0, c.ID}], HeaderStyle: colStyles[[2]int64{-1, c.ID}], Rules: rules}
 				if c.Formula != "" {
 					ci.Result = t.computedResult(tb, c)
@@ -430,6 +430,9 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 		l.Ranges = rangeRects(marks)
 		return err
 	})
+	if err == nil {
+		m.ui(ctx).layoutOut(&l)
+	}
 	return l, err
 }
 

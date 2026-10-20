@@ -58,13 +58,19 @@ func (m *Model) Paste(ctx context.Context, sheet int64, row, col int, block [][]
 	if h == 0 || w == 0 {
 		return ev, nil
 	}
+	// Bloc tapé ou copié dans la langue de la session : formules et valeurs
+	// dans la forme gardée (session.go).
+	block, err := m.ui(ctx).blockIn(block)
+	if err != nil {
+		return ev, err
+	}
 	cell := func(r, c int) string {
 		if c < len(block[r]) {
 			return block[r][c]
 		}
 		return ""
 	}
-	err := m.Do(ctx, "Coller", func(t *tx) error {
+	err = m.Do(ctx, "Coller", func(t *tx) error {
 		if err := t.guardCells(sheet, Rect{row, col, row + h - 1, col + w - 1}, true); err != nil {
 			return err
 		}

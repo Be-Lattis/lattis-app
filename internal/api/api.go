@@ -126,7 +126,10 @@ func Invoke(ctx context.Context, host Host, name string, args map[string]any) (a
 	if cmd.Write && !command.InGroup(ctx) {
 		ctx = command.WithLoneGroup(ctx, cmd.Label)
 	}
-	c := &Call{Context: ctx, Host: host, cmd: cmd, args: args}
+	// Formules et valeurs dans la forme gardée par le classeur (français),
+	// quelle que soit la langue du poste : un script donne partout le même
+	// résultat (docs/i18n.md, § 5).
+	c := &Call{Context: canvas.StorageForm(ctx), Host: host, cmd: cmd, args: args}
 	res, err := cmd.Run(c)
 	if kc := (canvas.ErrKeyChoice{}); errors.As(err, &kc) {
 		// Formule qui cherche dans un tableau sans clé : l'appelant choisit

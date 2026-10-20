@@ -22,7 +22,7 @@ func (e ErrComputed) Msg() msg.Message {
 
 // ErrFormula signale une formule qui ne peut pas être enregistrée ; Why
 // dit pourquoi (dans la langue de la session).
-type ErrFormula struct{ Why string }
+type ErrFormula struct{ Why any }
 
 func (e ErrFormula) Error() string { return e.Msg().String() }
 
@@ -95,7 +95,7 @@ func (t *tx) prepareFormula(sheet int64, src string) (formula.Node, error) {
 	convert := func() (formula.Node, []formula.KeyNeed, error) {
 		n, err := formula.Parse(src, formula.FR)
 		if err != nil {
-			return nil, nil, ErrFormula{err.Error()}
+			return nil, nil, ErrFormula{err}
 		}
 		loc := t.locator(sheet)
 		n, needs, err := formula.ConvertWith(n, schema, formula.A1Resolver(loc), src, func(table string) bool {
@@ -108,7 +108,7 @@ func (t *tx) prepareFormula(sheet int64, src string) (formula.Node, error) {
 			return nil, nil, loc.err
 		}
 		if err != nil {
-			return nil, nil, ErrFormula{err.Error()}
+			return nil, nil, ErrFormula{err}
 		}
 		return n, needs, nil
 	}

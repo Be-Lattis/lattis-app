@@ -1,8 +1,9 @@
 package formula
 
 import (
-	"fmt"
 	"strings"
+
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Adresses A1 tapées à la Excel (=C14*2, =SOMME(C14:C16)) : à la validation,
@@ -152,7 +153,7 @@ func ConvertA1(n Node, l Locator) (Node, error) {
 func sheetOf(l Locator, sheet string) ([]TablePos, error) {
 	ts, ok := l.Tables(sheet)
 	if !ok {
-		return nil, &ErrConvert{fmt.Sprintf("feuille « %s » introuvable", sheet)}
+		return nil, convErr("formula.convert.sheetNotFound", msg.Args{"sheet": sheet})
 	}
 	return ts, nil
 }
@@ -194,7 +195,7 @@ func rangeA1(l Locator, text string) (Node, error) {
 			continue
 		}
 		if c1 != c2 || c1 < t.Col || c1 > t.right() {
-			return nil, &ErrConvert{fmt.Sprintf("la plage %s déborde du tableau %s : désignez une seule colonne (%s[Colonne]) ou des cellules libres", text, t.Name, t.Name)}
+			return nil, convErr("formula.convert.rangeOverflow", msg.Args{"range": text, "table": t.Name})
 		}
 		ref := Ref{Table: t.Name, Col: t.Cols[c1-t.Col]}
 		from, to := max(r1-t.Row, 1), min(r2-t.Row, t.Rows)
@@ -207,7 +208,7 @@ func rangeA1(l Locator, text string) (Node, error) {
 		return cellA1(l, sheet, r1, c1)
 	}
 	if (r2-r1+1)*(c2-c1+1) > MaxRangeCells {
-		return nil, &ErrConvert{fmt.Sprintf("la plage %s est trop grande : %d cellules au plus", text, MaxRangeCells)}
+		return nil, convErr("formula.convert.rangeTooBig", msg.Args{"range": text, "max": MaxRangeCells})
 	}
 	return CellRange{Sheet: sheet, R1: r1, C1: c1, R2: r2, C2: c2}, nil
 }

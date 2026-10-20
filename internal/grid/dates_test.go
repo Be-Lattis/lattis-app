@@ -42,9 +42,7 @@ func TestParseDateShort(t *testing.T) {
 	if _, good := ParseFullDate("19/10/26"); !good {
 		t.Error("ParseFullDate 19/10/26")
 	}
-	MonthFirst = true
-	defer func() { MonthFirst = false }()
-	if d, good := ParseDate("10/19/26"); !good || d.Format("2006-01-02") != "2026-10-19" {
+	if d, good := ParseDateIn("10/19/26", DateStyleFor("en")); !good || d.Format("2006-01-02") != "2026-10-19" {
 		t.Errorf("anglais : %v %v", d, good)
 	}
 }

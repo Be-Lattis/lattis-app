@@ -254,6 +254,7 @@ func (m *Model) ChoiceCells(ctx context.Context, sheet int64) ([]ChoiceCell, err
 			if err := rs.Scan(&c.Row, &c.Col, &c.Value, &c.Raw); err != nil {
 				return err
 			}
+			c.Raw = t.ui().show(c.Raw)
 			out = append(out, c)
 		}
 		return rs.Err()
@@ -261,26 +262,25 @@ func (m *Model) ChoiceCells(ctx context.Context, sheet int64) ([]ChoiceCell, err
 	return out, err
 }
 
+// followWords : les noms de catégorie courants (français et anglais) qui
+// s'écrivent avec leur article (« Suivre l'année », « Follow the year »).
+var followWords = map[string]msg.ID{
+	"année": "follow.label.year", "year": "follow.label.year",
+	"mois": "follow.label.month", "month": "follow.label.month",
+	"trimestre": "follow.label.quarter", "quarter": "follow.label.quarter",
+	"semaine": "follow.label.week", "week": "follow.label.week",
+	"ville": "follow.label.city", "city": "follow.label.city",
+	"date":      "follow.label.date",
+	"catégorie": "follow.label.category", "category": "follow.label.category",
+}
+
 // FollowLabel : « l'année », « le mois », « la ville »… pour « Suivre
-// l'année » ; « « Lot » » sinon.
-func FollowLabel(name string) string {
-	switch strings.ToLower(strings.TrimSpace(name)) {
-	case "année":
-		return "l'année"
-	case "mois":
-		return "le mois"
-	case "trimestre":
-		return "le trimestre"
-	case "semaine":
-		return "la semaine"
-	case "ville":
-		return "la ville"
-	case "date":
-		return "la date"
-	case "catégorie":
-		return "la catégorie"
+// l'année », dans la langue du message qui le cite ; « « Lot » » sinon.
+func FollowLabel(name string) msg.Message {
+	if id, ok := followWords[strings.ToLower(strings.TrimSpace(name))]; ok {
+		return msg.M(id, nil)
 	}
-	return "« " + name + " »"
+	return msg.M("follow.label.quoted", msg.Args{"name": name})
 }
 
 // SetTableFollow coche (follow) ou décoche « Suivre l'année » sur un

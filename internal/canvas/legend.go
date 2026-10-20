@@ -334,7 +334,7 @@ func (t *tx) putFreeIn(sheet int64, row, col int, raw, home string) error {
 	if isFormula(raw) {
 		n, err := formula.Parse(strings.TrimSpace(raw), formula.FR)
 		if err != nil {
-			return ErrFormula{err.Error()}
+			return ErrFormula{err}
 		}
 		if home != "" {
 			n = qualifyRefs(n, home)

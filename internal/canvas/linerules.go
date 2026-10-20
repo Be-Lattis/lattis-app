@@ -27,6 +27,10 @@ func (a axis) lineRules() string {
 // SetLineRules remplace les règles des lignes (ou colonnes) i0 à i1 de la
 // feuille ; aucune règle : les retire.
 func (m *Model) SetLineRules(ctx context.Context, sheet int64, rows bool, i0, i1 int, rules []Rule) error {
+	rules, err := m.ui(ctx).rulesIn(rules)
+	if err != nil {
+		return err
+	}
 	if err := checkRules(rules); err != nil {
 		return err
 	}

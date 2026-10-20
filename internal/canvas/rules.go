@@ -103,7 +103,7 @@ func checkRules(rules []Rule) error {
 				src = "=" + src
 			}
 			if _, err := formula.Parse(src, formula.FR); err != nil {
-				return ErrFormula{err.Error()}
+				return ErrFormula{err}
 			}
 		}
 	}
@@ -132,6 +132,10 @@ func encodeRules(rules []Rule) (any, error) {
 // SetRules remplace les règles de mise en forme conditionnelle de la colonne
 // i (liste vide : aucune). La première règle a la priorité la plus haute.
 func (m *Model) SetRules(ctx context.Context, table string, i int, rules []Rule) error {
+	rules, err := m.ui(ctx).rulesIn(rules)
+	if err != nil {
+		return err
+	}
 	if err := checkRules(rules); err != nil {
 		return err
 	}
@@ -180,6 +184,9 @@ type RuleChanges struct {
 // SetSheetRules applique des changements de règles à une feuille : chaque
 // emplacement cité reçoit exactement la liste donnée (vide : plus aucune).
 func (m *Model) SetSheetRules(ctx context.Context, sheet int64, ch RuleChanges) error {
+	if err := m.ui(ctx).changesIn(&ch); err != nil {
+		return err
+	}
 	for _, c := range ch.Columns {
 		if err := checkRules(c.Rules); err != nil {
 			return err

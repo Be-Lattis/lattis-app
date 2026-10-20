@@ -1,6 +1,7 @@
 package formula
 
 import (
+	"errors"
 	"fmt"
 	"github.com/lalamefine/lattis/internal/msg"
 	"regexp"
@@ -177,13 +178,45 @@ type token struct {
 
 var a1Range = regexp.MustCompile(`^(?:(?:[\p{L}\w]+|'(?:[^']|'')+')!)?\$?[A-Za-z]{1,3}\$?\d+:\$?[A-Za-z]{1,3}\$?\d+`)
 
-// SyntaxError situe une erreur de saisie.
+// SyntaxError situe une erreur de saisie. Msg est son texte français
+// (journaux, tests), Message le message qu'en donne Text dans la langue de
+// la session (docs/i18n.md, § 5).
 type SyntaxError struct {
-	Pos int
-	Msg string
+	Pos     int
+	Msg     string
+	Message msg.Message
+}
+
+// synErr : l'erreur de syntaxe m à la position pos.
+func synErr(pos int, m msg.Message) *SyntaxError {
+	return &SyntaxError{Pos: pos, Msg: m.String(), Message: m}
+}
+
+// whyOf : le message d'une erreur rencontrée en analysant un morceau de
+// formule (crochets, ligne entre crochets).
+func whyOf(err error) msg.Message {
+	var se *SyntaxError
+	var me msg.Messager
+	switch {
+	case errors.As(err, &se) && se.Message.ID != "":
+		return se.Message
+	case errors.As(err, &me):
+		return me.Msg()
+	}
+	return msg.M("formula.syntax.raw", msg.Args{"text": err.Error()})
 }
 
 func (e *SyntaxError) Error() string { return fmt.Sprintf("position %d : %s", e.Pos+1, e.Msg) }
+
+// Text : le texte de l'erreur dans la langue l (paramètre d'un message,
+// ErrFormula).
+func (e *SyntaxError) Text(l msg.Lang) string {
+	why := e.Message
+	if why.ID == "" {
+		why = msg.M("formula.syntax.raw", msg.Args{"text": e.Msg})
+	}
+	return msg.Format(l, "formula.syntax.at", msg.Args{"pos": e.Pos + 1, "why": why})
+}
 
 func lex(src string, loc Locale) ([]token, error) {
 	rs := []rune(src)
@@ -201,7 +234,7 @@ func lex(src string, loc Locale) ([]token, error) {
 			i++
 			for {
 				if i >= len(rs) {
-					return nil, &SyntaxError{start, "guillemet non fermé"}
+					return nil, synErr(start, msg.M("formula.syntax.unclosedQuote", nil))
 				}
 				if rs[i] == '"' {
 					if i+1 < len(rs) && rs[i+1] == '"' {
@@ -233,7 +266,7 @@ func lex(src string, loc Locale) ([]token, error) {
 			text := strings.Replace(string(rs[start:i]), string(loc.decimal()), ".", 1)
 			f, err := strconv.ParseFloat(text, 64)
 			if err != nil {
-				return nil, &SyntaxError{start, "nombre invalide"}
+				return nil, synErr(start, msg.M("formula.syntax.badNumber", nil))
 			}
 			toks = append(toks, token{kind: tNum, num: f, pos: start})
 			continue
@@ -258,11 +291,11 @@ func lex(src string, loc Locale) ([]token, error) {
 			if len(toks) > 0 && toks[len(toks)-1].pos == start {
 				continue
 			}
-			return nil, &SyntaxError{start, "erreur inconnue"}
+			return nil, synErr(start, msg.M("formula.syntax.unknownError", nil))
 		case c == '[':
 			text, n, err := bracket(rs[i:])
 			if err != nil {
-				return nil, &SyntaxError{start, err.Error()}
+				return nil, synErr(start, whyOf(err))
 			}
 			i += n
 			toks = append(toks, token{kind: tRef, text: text, pos: start})
@@ -342,13 +375,13 @@ func lex(src string, loc Locale) ([]token, error) {
 			if strings.Contains(text, "$") {
 				text = strings.ReplaceAll(text, "$", "")
 				if _, _, _, ok := A1Address(text); !ok {
-					return nil, &SyntaxError{start, "caractère inattendu « $ »"}
+					return nil, synErr(start, msg.M("formula.syntax.unexpectedDollar", nil))
 				}
 			}
 			toks = append(toks, token{kind: tIdent, text: text, pos: start})
 			continue
 		}
-		return nil, &SyntaxError{start, fmt.Sprintf("caractère inattendu %q", c)}
+		return nil, synErr(start, msg.M("formula.syntax.unexpectedChar", msg.Args{"char": fmt.Sprintf("%q", c)}))
 	}
 	return append(toks, token{kind: tEOF, pos: len(rs)}), nil
 }
@@ -521,7 +554,7 @@ func (p *parser) primary() (Node, error) {
 			}
 			key, err := parseInner(kt.text, p.loc)
 			if err != nil {
-				return nil, &SyntaxError{kt.pos, err.Error()}
+				return nil, synErr(kt.pos, whyOf(err))
 			}
 			return Call{Fn: "ITEM", Args: []Node{ref, key}}, nil
 		}
@@ -533,9 +566,9 @@ func (p *parser) primary() (Node, error) {
 		}
 		if e := p.next(); e.kind != tRParen {
 			if e.kind != tEOF {
-				return nil, &SyntaxError{e.pos, "il manque un opérateur ou « ) » avant « " + p.word(e) + " »"}
+				return nil, synErr(e.pos, msg.M("formula.syntax.missingOpOrParen", msg.Args{"word": p.word(e)}))
 			}
-			return nil, &SyntaxError{t.pos, "il manque une parenthèse fermante « ) »"}
+			return nil, synErr(t.pos, msg.M("formula.syntax.missingCloseParen", nil))
 		}
 		return n, nil
 	case tIdent:
@@ -561,7 +594,7 @@ func (p *parser) primary() (Node, error) {
 					}
 					return Name{name}, nil
 				}
-				return nil, &SyntaxError{t.pos, "adresse de cellule invalide : Cell[" + inner + "]"}
+				return nil, synErr(t.pos, msg.M("formula.syntax.badCellAddress", msg.Args{"address": inner}))
 			}
 			ref := parseRef(t.text, inner)
 			// Tableau[Colonne][ligne] : une valeur du tableau.
@@ -572,7 +605,7 @@ func (p *parser) primary() (Node, error) {
 				}
 				key, err := parseInner(kt.text, p.loc)
 				if err != nil {
-					return nil, &SyntaxError{kt.pos, err.Error()}
+					return nil, synErr(kt.pos, whyOf(err))
 				}
 				return Call{Fn: "ITEM", Args: []Node{ref, key}}, nil
 			}
@@ -605,7 +638,7 @@ func (p *parser) array(open token) (Node, error) {
 		if t.kind == tOp && (t.text == "-" || t.text == "+") {
 			neg = t.text == "-"
 			if t = p.next(); t.kind != tNum {
-				return nil, &SyntaxError{t.pos, "une constante matricielle ne contient que des nombres, des textes, VRAI, FAUX ou des erreurs"}
+				return nil, synErr(t.pos, msg.M("formula.syntax.arrayLiterals", nil))
 			}
 		}
 		var v Node
@@ -642,10 +675,10 @@ func (p *parser) array(open token) (Node, error) {
 				continue
 			}
 		case tEOF:
-			return nil, &SyntaxError{open.pos, "il manque une accolade fermante « } »"}
+			return nil, synErr(open.pos, msg.M("formula.syntax.missingCloseBrace", msg.Args{"brace": "}"}))
 		}
 		if v == nil {
-			return nil, &SyntaxError{t.pos, "une constante matricielle ne contient que des nombres, des textes, VRAI, FAUX ou des erreurs"}
+			return nil, synErr(t.pos, msg.M("formula.syntax.arrayLiterals", nil))
 		}
 		row = append(row, v)
 		switch s := p.next(); s.kind {
@@ -657,14 +690,14 @@ func (p *parser) array(open token) (Node, error) {
 			rows = append(rows, row)
 			for _, r := range rows {
 				if len(r) != len(rows[0]) {
-					return nil, &SyntaxError{open.pos, "toutes les lignes d'une constante matricielle doivent avoir le même nombre de valeurs"}
+					return nil, synErr(open.pos, msg.M("formula.syntax.arrayRows", nil))
 				}
 			}
 			return ArrayLit{Rows: rows}, nil
 		case tEOF:
-			return nil, &SyntaxError{open.pos, "il manque une accolade fermante « } »"}
+			return nil, synErr(open.pos, msg.M("formula.syntax.missingCloseBrace", msg.Args{"brace": "}"}))
 		default:
-			return nil, &SyntaxError{s.pos, fmt.Sprintf("séparateur attendu dans la constante matricielle : « %s » entre colonnes, « ; » entre lignes", arrayColSep(p.loc))}
+			return nil, synErr(s.pos, msg.M("formula.syntax.arraySep", msg.Args{"sep": arrayColSep(p.loc)}))
 		}
 	}
 }
@@ -708,32 +741,38 @@ func (p *parser) missing(t token) error {
 	}
 	after := ""
 	if prev != nil && (prev.kind == tOp || prev.kind == tLParen || prev.kind == tSep) {
-		after = " après « " + p.word(*prev) + " »"
+		after = p.word(*prev)
+	}
+	missing := func() error {
+		if after == "" {
+			return synErr(t.pos, msg.M("formula.syntax.missingValue", nil))
+		}
+		return synErr(t.pos, msg.M("formula.syntax.missingValueAfter", msg.Args{"word": after}))
 	}
 	switch t.kind {
 	case tEOF:
 		if prev == nil {
-			return &SyntaxError{t.pos, "la formule est vide"}
+			return synErr(t.pos, msg.M("formula.syntax.empty", nil))
 		}
-		return &SyntaxError{t.pos, "il manque une valeur" + after}
+		return missing()
 	case tRParen, tSep, tOp:
 		if after != "" {
-			return &SyntaxError{t.pos, "il manque une valeur" + after}
+			return missing()
 		}
-		return &SyntaxError{t.pos, "il manque une valeur avant « " + p.word(t) + " »"}
+		return synErr(t.pos, msg.M("formula.syntax.missingValueBefore", msg.Args{"word": p.word(t)}))
 	}
-	return &SyntaxError{t.pos, "« " + p.word(t) + " » inattendu"}
+	return synErr(t.pos, msg.M("formula.syntax.unexpected", msg.Args{"word": p.word(t)}))
 }
 
 // extra explique un jeton en trop après une formule complète.
 func (p *parser) extra(t token) error {
 	switch t.kind {
 	case tRParen:
-		return &SyntaxError{t.pos, "parenthèse fermante « ) » en trop"}
+		return synErr(t.pos, msg.M("formula.syntax.extraParen", nil))
 	case tSep:
-		return &SyntaxError{t.pos, fmt.Sprintf("« %c » hors des parenthèses d'une fonction", p.loc.sep())}
+		return synErr(t.pos, msg.M("formula.syntax.sepOutside", msg.Args{"sep": string(p.loc.sep())}))
 	}
-	return &SyntaxError{t.pos, "il manque un opérateur avant « " + p.word(t) + " »"}
+	return synErr(t.pos, msg.M("formula.syntax.missingOperator", msg.Args{"word": p.word(t)}))
 }
 
 // MaxRangeCells borne la taille d'une plage Cell[A1:B3].
@@ -744,7 +783,7 @@ func cellRange(sheet, a, b string, pos int) (Node, error) {
 	r1, c1, ok1 := CellRef("Cell_" + strings.TrimSpace(a))
 	r2, c2, ok2 := CellRef("Cell_" + strings.TrimSpace(b))
 	if !ok1 || !ok2 {
-		return nil, &SyntaxError{pos, "adresse de cellule invalide : Cell[" + a + ":" + b + "]"}
+		return nil, synErr(pos, msg.M("formula.syntax.badCellAddress", msg.Args{"address": a + ":" + b}))
 	}
 	r1, r2 = min(r1, r2), max(r1, r2)
 	c1, c2 = min(c1, c2), max(c1, c2)
@@ -756,7 +795,7 @@ func cellRange(sheet, a, b string, pos int) (Node, error) {
 		return Name{name}, nil
 	}
 	if (r2-r1+1)*(c2-c1+1) > MaxRangeCells {
-		return nil, &SyntaxError{pos, fmt.Sprintf("plage trop grande : %d cellules au plus", MaxRangeCells)}
+		return nil, synErr(pos, msg.M("formula.syntax.rangeTooBig", msg.Args{"max": MaxRangeCells}))
 	}
 	return CellRange{Sheet: sheet, R1: r1, C1: c1, R2: r2, C2: c2}, nil
 }
@@ -773,7 +812,7 @@ func rowRange(ref Ref, kt token) (Node, bool, error) {
 	b, _ := strconv.Atoi(m[2])
 	a, b = min(a, b), max(a, b)
 	if a < 1 {
-		return nil, false, &SyntaxError{kt.pos, "les lignes d'un tableau se comptent à partir de 1"}
+		return nil, false, synErr(kt.pos, msg.M("formula.syntax.rowsFromOne", nil))
 	}
 	ref.Row = false
 	return RowRange{Ref: ref, From: a, To: b}, true, nil
@@ -834,10 +873,10 @@ func (p *parser) call(name token) (Node, error) {
 				break
 			}
 			if t.kind == tEOF {
-				return nil, &SyntaxError{t.pos, "il manque une parenthèse fermante « ) » à " + strings.ToUpper(name.text)}
+				return nil, synErr(t.pos, msg.M("formula.syntax.missingCloseParenFn", msg.Args{"fn": strings.ToUpper(name.text)}))
 			}
 			if t.kind != tSep {
-				return nil, &SyntaxError{t.pos, fmt.Sprintf("il manque « %c » ou « ) » avant « %s »", p.loc.sep(), p.word(t))}
+				return nil, synErr(t.pos, msg.M("formula.syntax.missingSepOrParen", msg.Args{"sep": string(p.loc.sep()), "word": p.word(t)}))
 			}
 		}
 	}
@@ -846,20 +885,20 @@ func (p *parser) call(name token) (Node, error) {
 		return c, nil
 	}
 	if len(c.Args) < fn.Min || fn.Max >= 0 && len(c.Args) > fn.Max {
-		return nil, &SyntaxError{name.pos, fmt.Sprintf("%s attend %s", fn.name(FR), fn.arity())}
+		return nil, synErr(name.pos, msg.M("formula.syntax.arity", msg.Args{"fn": fn.name(p.loc), "arity": fn.arityMsg()}))
 	}
 	if c.Fn == "LET" {
 		// Comme Excel, une forme fautive est refusée à la saisie.
 		if len(c.Args)%2 == 0 {
-			return nil, &SyntaxError{name.pos, "LET attend des paires nom" + string(p.loc.sep()) + " valeur, puis le calcul : le nombre d'arguments doit être impair"}
+			return nil, synErr(name.pos, msg.M("formula.syntax.letPairs", msg.Args{"sep": string(p.loc.sep())}))
 		}
 		for i := 0; i+1 < len(c.Args); i += 2 {
 			if _, ok := letName(c.Args[i]); !ok {
-				what := "manquant"
+				what := msg.M("formula.syntax.letMissing", nil)
 				if c.Args[i] != nil {
-					what = "« " + strings.TrimPrefix(Format(c.Args[i], p.loc), "=") + " » invalide"
+					what = msg.M("formula.syntax.letInvalid", msg.Args{"name": strings.TrimPrefix(Format(c.Args[i], p.loc), "=")})
 				}
-				return nil, &SyntaxError{name.pos, fmt.Sprintf("LET : nom n° %d %s ; un nom est un identifiant, ni une adresse de cellule ni un nom de fonction", i/2+1, what)}
+				return nil, synErr(name.pos, msg.M("formula.syntax.letName", msg.Args{"n": i/2 + 1, "what": what}))
 			}
 		}
 	}
@@ -922,7 +961,7 @@ func format(b *strings.Builder, n Node, loc Locale) {
 			b.WriteString(Boolean(n.V).String())
 		}
 	case ErrLit:
-		b.WriteString(n.V.String())
+		b.WriteString(n.V.In(loc))
 	case Ref:
 		at := ""
 		if n.Row && n.Table != "" {

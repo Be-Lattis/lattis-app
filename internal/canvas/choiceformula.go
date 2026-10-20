@@ -138,8 +138,9 @@ func (t *tx) rowLabelSQL(tb Table, en string) (string, bool, error) {
 	return formula.LabelFunc + "(" + e + ")", true, nil
 }
 
-// prepareRowFormula analyse une formule par ligne saisie en français (le =
-// est facultatif) : anglais canonique et colonnes citées (au moins une).
+// prepareRowFormula analyse une formule par ligne saisie dans la langue de
+// la session (le = est facultatif) : anglais canonique et colonnes citées
+// (au moins une).
 func (t *tx) prepareRowFormula(sheet int64, src string) (string, []string, error) {
 	src = strings.TrimSpace(src)
 	if src == "" || src == "=" {
@@ -147,6 +148,10 @@ func (t *tx) prepareRowFormula(sheet int64, src string) (string, []string, error
 	}
 	if !strings.HasPrefix(src, "=") {
 		src = "=" + src
+	}
+	src, err := t.ui().formulaIn(src)
+	if err != nil {
+		return "", nil, err
 	}
 	n, err := t.prepareFormula(sheet, src)
 	if err != nil {
@@ -324,7 +329,7 @@ func (t *tx) keepChoiceRow(sheet int64, rid int64) error {
 
 // setFormulaFollow : « Suivre » d'un tableau sous une catégorie calculée.
 // Rien à ajouter : le tableau la suit s'il a les colonnes de la formule.
-func (t *tx) setFormulaFollow(tb Table, ch *SheetChoice, follow bool, what string) (string, error) {
+func (t *tx) setFormulaFollow(tb Table, ch *SheetChoice, follow bool, what msg.Message) (string, error) {
 	if follow {
 		n, err := formula.Parse(ch.en, formula.EN)
 		if err != nil {

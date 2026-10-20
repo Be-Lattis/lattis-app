@@ -162,7 +162,7 @@ func (m *Model) ReferenceRow(ctx context.Context, src, value string) (KeyRow, er
 			return err
 		}
 		out = KeyRow{Table: tb.Name, Key: tb.Cols[k].Name}
-		out.ID, out.Found, err = t.rowByKey(tb, tb.Cols[k], value)
+		out.ID, out.Found, err = t.rowByKey(tb, tb.Cols[k], t.ui().valueIn(value))
 		return err
 	})
 	return out, err

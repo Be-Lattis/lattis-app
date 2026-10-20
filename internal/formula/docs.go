@@ -657,10 +657,14 @@ func argCritN(name string) ArgDoc {
 
 // signature écrit la signature d'une fonction : SOMME.SI(plage; critère;
 // [plage_somme]), SOMME(valeur1; [valeur2]; …).
-func (d funcDoc) signature(name string) string {
+func (d funcDoc) signature(name string) string { return d.signatureIn(name, ";") }
+
+// signatureIn : la signature avec le séparateur d'arguments sep (« , » en
+// anglais).
+func (d funcDoc) signatureIn(name, sep string) string {
 	if name == "LET" {
 		// Paires répétées avant le dernier argument : forme propre à LET.
-		return "LET(nom1; valeur1; [nom2; valeur2]; …; calcul)"
+		return strings.ReplaceAll("LET(nom1; valeur1; [nom2; valeur2]; …; calcul)", ";", sep)
 	}
 	var parts []string
 	for _, x := range d.args {
@@ -675,9 +679,9 @@ func (d funcDoc) signature(name string) string {
 		for _, x := range d.args[len(d.args)-d.repeat:] {
 			g = append(g, numbered(x.Name, 2))
 		}
-		parts = append(parts, "["+strings.Join(g, "; ")+"]", "…")
+		parts = append(parts, "["+strings.Join(g, sep+" ")+"]", "…")
 	}
-	return name + "(" + strings.Join(parts, "; ") + ")"
+	return name + "(" + strings.Join(parts, sep+" ") + ")"
 }
 
 // numbered remplace le « 1 » final d'un argument répété par n.

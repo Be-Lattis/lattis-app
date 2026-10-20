@@ -1,10 +1,11 @@
 package formula
 
 import (
-	"fmt"
 	"math"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 type fnKind int
@@ -24,21 +25,29 @@ type funcDef struct {
 	impl     func([]Value) Value
 }
 
+// name : le nom de la fonction dans la langue des noms de l. L'allemand et
+// l'espagnol prennent les noms anglais en attendant les leurs (lot 5 de
+// docs/i18n.md) : il suffira d'une colonne de noms dans funcDef et d'un
+// cas ici (NamesDE, NamesES), lookupFunc les acceptant ensuite à la saisie.
 func (f funcDef) name(l Locale) string {
-	if l.french() {
+	switch l.Names {
+	case NamesFR:
 		return f.FR
+	case NamesDE, NamesES:
+		return f.EN
 	}
 	return f.EN
 }
 
-func (f funcDef) arity() string {
+// arityMsg : le nombre d'arguments attendus (« de 2 à 3 arguments »).
+func (f funcDef) arityMsg() msg.Message {
 	switch {
 	case f.Max < 0:
-		return fmt.Sprintf("au moins %d argument(s)", f.Min)
+		return msg.M("formula.arity.atLeast", msg.Args{"n": f.Min})
 	case f.Min == f.Max:
-		return fmt.Sprintf("%d argument(s)", f.Min)
+		return msg.M("formula.arity.exactly", msg.Args{"n": f.Min})
 	}
-	return fmt.Sprintf("de %d à %d arguments", f.Min, f.Max)
+	return msg.M("formula.arity.between", msg.Args{"min": f.Min, "max": f.Max})
 }
 
 // aggLead donne le nombre d'arguments ordinaires placés avant les valeurs

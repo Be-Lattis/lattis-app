@@ -219,6 +219,10 @@ func (m *Model) ApplyStyle(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 	if (r1-r0+1)*(c1-c0+1) > MaxStyleCells*4 {
 		return msg.New("style.tooManyCells", msg.Args{"max": MaxStyleCells})
 	}
+	patch, err := m.ui(ctx).styleIn(patch)
+	if err != nil {
+		return err
+	}
 	if err := normalizeDV(patch); err != nil {
 		return err
 	}

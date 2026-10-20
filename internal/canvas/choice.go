@@ -188,7 +188,7 @@ func (t *tx) sheetChoice(sheet int64) (*SheetChoice, error) {
 func (t *tx) resolveChoice(r *choiceRaw) (*SheetChoice, error) {
 	ch := &SheetChoice{Name: r.Name, Type: grid.Text, Value: r.Value, All: r.All, Fresh: r.Fresh}
 	if r.Formula != "" {
-		ch.Formula, ch.en, ch.keep = displayFormula(r.Formula), r.Formula, r.Keep
+		ch.Formula, ch.en, ch.keep = t.ui().columnOut(r.Formula), r.Formula, r.Keep
 	} else if r.Tbl != 0 {
 		var name, typ, table string
 		err := t.row(`SELECT c.name, c.type, t.name FROM _lattis_columns c JOIN _lattis_tables t ON t.id = c.tbl WHERE c.tbl = ? AND c.id = ?`, r.Tbl, r.Col).Scan(&name, &typ, &table)

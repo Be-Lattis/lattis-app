@@ -85,6 +85,10 @@ type tx struct {
 	// syncingFormulas : recalcul des tableaux liés à une formule en cours
 	// (spilltable.go).
 	syncingFormulas bool
+	// typed : écriture de la session d'une saisie tapée (SetCell, collage),
+	// lue par input dans la forme gardée (session.go) ; nil : la saisie est
+	// déjà dans la forme gardée.
+	typed *ui
 }
 
 func (t *tx) apply(do, undo []stmt) error { return t.Apply(do, undo) }

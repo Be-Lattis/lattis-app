@@ -74,7 +74,15 @@ type Event struct {
 // grisée (extension), ou dans une cellule libre (avec détection d'îlot).
 func (m *Model) SetCell(ctx context.Context, sheet int64, row, col int, raw string) (Event, error) {
 	var ev Event
+	u := m.ui(ctx)
+	if isFormula(raw) {
+		var err error
+		if raw, err = u.formulaIn(raw); err != nil {
+			return ev, err
+		}
+	}
 	err := m.Do(ctx, "Saisie", func(t *tx) error {
+		t.typed = u.typing()
 		if err := t.guardCells(sheet, Rect{row, col, row, col}, true); err != nil {
 			return err
 		}
@@ -100,8 +108,15 @@ func (m *Model) SetCell(ctx context.Context, sheet int64, row, col int, raw stri
 	return ev, err
 }
 
-// input applique une saisie dans la transaction en cours.
+// input applique une saisie dans la transaction en cours. Une saisie tapée
+// dans la langue de la session (t.typed) y est lue comme une valeur gardée
+// (session.go), sauf pour un nom de colonne ou de groupe et dans une
+// colonne Texte, qui gardent le texte tapé (typed).
 func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
+	typed := raw
+	if t.typed != nil {
+		raw = t.typed.valueIn(raw)
+	}
 	// Colonnes saisies à droite d'un tableau croisé (pivothand.go).
 	if done, err := t.pivotHandInput(sheet, row, col, raw); done || err != nil {
 		return err
@@ -114,7 +129,7 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 		empty := strings.TrimSpace(raw) == ""
 		// Bande des groupes d'un tableau aux en-têtes sur deux lignes.
 		if tb, i, ok := bandAt(tables, row, col); ok {
-			return t.inputBand(tb, i, raw)
+			return t.inputBand(tb, i, typed)
 		}
 		// Case au coin de deux tableaux (juste sous l'un, juste à côté de
 		// l'autre) : la ligne dessous l'emporte, comme l'aperçu (audit 2 M1).
@@ -147,7 +162,7 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 			switch {
 			case inCols && row == tb.Row:
 				c := tb.Cols[col-tb.Col]
-				name := strings.TrimSpace(raw)
+				name := strings.TrimSpace(typed)
 				if name == "" {
 					name = fmt.Sprintf("Colonne %d", col-tb.Col+1)
 				}
@@ -158,7 +173,7 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 					i := col - tb.Col
 					name = groupedName(g, name, groupAlone(tb, i, i, i, g))
 				}
-				if strings.TrimSpace(raw) == "" {
+				if strings.TrimSpace(typed) == "" {
 					name = freeColumnNameExcept(tb, c.ID, name)
 				}
 				if columnNameTaken(tb, c.ID, name) {
@@ -174,7 +189,7 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 				if err := t.handInput(tb, col-tb.Col, raw); err != nil {
 					return err
 				}
-				if err := t.setCell(tb, row-tb.Row-1, col-tb.Col, raw, ev); err != nil || !empty || t.pasting {
+				if err := t.setCell(tb, row-tb.Row-1, col-tb.Col, t.cellText(tb, col-tb.Col, raw, typed), ev); err != nil || !empty || t.pasting {
 					return err
 				}
 				// Valeur effacée (Retour arrière puis Entrée) : comme Suppr, le
@@ -239,7 +254,7 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 						return err
 					}
 				}
-				_, err = t.setCellAt(tb, ids[0], col-tb.Col, raw, ev)
+				_, err = t.setCellAt(tb, ids[0], col-tb.Col, t.cellText(tb, col-tb.Col, raw, typed), ev)
 				return err
 			case (inRows && (col == tb.Col-1 || col == tb.Right()+1)) && row != tb.Row && !empty && !t.noLegend &&
 				noteRe.MatchString(raw) && !inAny(tables, row, col):

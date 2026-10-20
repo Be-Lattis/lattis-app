@@ -405,7 +405,7 @@ func (t *tx) pivotHandAttach(p *PivotInfo, sheet int64, hand []PivotHandCol, nam
 		p.Formats = append(slices.Clip(p.Formats), make([]string, len(hand))...)
 	}
 	for _, h := range hand {
-		p.Hand = append(p.Hand, PivotHandInfo{Name: h.Name, Formula: displayFormula(h.Formula)})
+		p.Hand = append(p.Hand, PivotHandInfo{Name: h.Name, Formula: t.ui().columnOut(h.Formula)})
 	}
 	if p.HandKept, err = t.pivotKeptCount(p.ID, cfg); err != nil {
 		return err

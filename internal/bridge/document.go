@@ -1067,8 +1067,8 @@ func (s *DocumentService) SetColumnWidth(ctx context.Context, sheet int64, col, 
 	return s.act(ctx, func(d *doc.Document) error { return d.SetColumnWidth(ctx, sheet, col, width) })
 }
 
-// FormulaHelp sert l'aide à la saisie des formules : fonctions (en
-// français) et tableaux du classeur avec leurs colonnes.
+// FormulaHelp sert l'aide à la saisie des formules : fonctions (dans la
+// langue de la session) et tableaux du classeur avec leurs colonnes.
 type FormulaHelp struct {
 	Functions []formula.FunctionInfo `json:"functions"`
 	Tables    []canvas.TableNames    `json:"tables"`
@@ -1076,7 +1076,8 @@ type FormulaHelp struct {
 
 // FormulaHelp renvoie le catalogue de l'aide à la saisie.
 func (s *DocumentService) FormulaHelp(ctx context.Context) (FormulaHelp, error) {
-	h := FormulaHelp{Functions: formula.Functions(formula.FR), Tables: []canvas.TableNames{}}
+	lang := s.sessionLang()
+	h := FormulaHelp{Functions: formula.Catalog(formula.ForLanguage(string(lang)), lang), Tables: []canvas.TableNames{}}
 	d, err := s.current()
 	if err != nil {
 		return h, nil

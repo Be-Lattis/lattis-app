@@ -150,6 +150,12 @@ func (m *Model) ValidationList(ctx context.Context, sheet int64, src string) (Va
 		if out.Values == nil {
 			out.Values = []string{}
 		}
+		// Choisies, les valeurs sont saisies comme tapées dans la langue
+		// de la session : elles s'y écrivent (dates, décimale, VRAI).
+		u := t.ui()
+		for i, v := range out.Values {
+			out.Values[i] = u.valueOut(v)
+		}
 		return nil
 	})
 	return out, err

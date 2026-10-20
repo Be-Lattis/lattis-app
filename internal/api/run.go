@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/script"
@@ -201,4 +202,5 @@ func StopScript() {
 	}
 }
 
-var contextBG = context.Background()
+// contextBG : les lectures hors appel (évènements), dans la forme gardée.
+var contextBG = canvas.StorageForm(context.Background())

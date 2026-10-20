@@ -300,7 +300,7 @@ func (s *DocumentService) followCollab(ctx context.Context, d *doc.Document, eng
 				return
 			}
 			if len(ev.Notices) > 0 {
-				d.Notify(strings.Join(ev.Notices, " ; "))
+				d.Notify(msg.Join(s.sessionLang(), ev.Notices))
 			}
 			if ev.Data || len(ev.Notices) > 0 {
 				s.changed(context.Background())

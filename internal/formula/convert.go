@@ -1,11 +1,11 @@
 package formula
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Resolver situe une plage A1 d'une formule Excel collée : quel tableau elle
@@ -21,10 +21,29 @@ type KeyNeed struct {
 	Table, Column string
 }
 
-// ErrConvert explique pourquoi une formule Excel ne peut pas être convertie.
-type ErrConvert struct{ Msg string }
+// ErrConvert explique pourquoi une formule Excel ne peut pas être convertie :
+// Msg est le texte français (journaux, tests), Message le message, rendu
+// dans la langue de la session par Text.
+type ErrConvert struct {
+	Msg     string
+	Message msg.Message
+}
+
+// convErr : l'erreur de conversion m.
+func convErr(id msg.ID, args msg.Args) *ErrConvert {
+	m := msg.M(id, args)
+	return &ErrConvert{Msg: m.String(), Message: m}
+}
 
 func (e *ErrConvert) Error() string { return e.Msg }
+
+// Text : le texte de l'erreur dans la langue l.
+func (e *ErrConvert) Text(l msg.Lang) string {
+	if e.Message.ID == "" {
+		return e.Msg
+	}
+	return e.Message.Text(l)
+}
 
 var ident = regexp.MustCompile(`^[\p{L}_][\p{L}\p{N}_]*$`)
 
@@ -81,7 +100,7 @@ func ConvertWith(n Node, s *Schema, r Resolver, original string, byRow func(tabl
 					return m, nil
 				}
 			case "HLOOKUP":
-				return nil, &ErrConvert{"RECHERCHEH n'existe pas dans Lattis : les tableaux sont orientés lignes. Transposez les données, puis utilisez REFERENCE"}
+				return nil, convErr("formula.convert.hlookup", nil)
 			default:
 				return m, nil
 			}
@@ -99,7 +118,7 @@ func ConvertWith(n Node, s *Schema, r Resolver, original string, byRow func(tabl
 func vlookup(c Call, s *Schema, r Resolver, original string, byRow func(string) bool) (Node, KeyNeed, error) {
 	exact := len(c.Args) == 4 && c.Args[3] != nil && (c.Args[3] == BoolLit{false} || c.Args[3] == NumLit{0})
 	if !exact {
-		return nil, KeyNeed{}, &ErrConvert{"RECHERCHEV en correspondance approchée (4e argument omis ou VRAI) : utilisez REFERENCE.APPROCHEE, ou ajoutez FAUX pour une correspondance exacte"}
+		return nil, KeyNeed{}, convErr("formula.convert.vlookupApprox", nil)
 	}
 	var table string
 	var first int
@@ -107,28 +126,28 @@ func vlookup(c Call, s *Schema, r Resolver, original string, byRow func(string) 
 	case Range:
 		var ok bool
 		if table, first, ok = r.Resolve(rg.Text); !ok {
-			return nil, KeyNeed{}, &ErrConvert{fmt.Sprintf("la plage %s ne correspond à aucun tableau", rg.Text)}
+			return nil, KeyNeed{}, convErr("formula.convert.rangeNoTable", msg.Args{"range": rg.Text})
 		}
 	case Name:
 		table = rg.Name
 	default:
-		return nil, KeyNeed{}, &ErrConvert{"le 2e argument de RECHERCHEV doit être une plage ou un tableau"}
+		return nil, KeyNeed{}, convErr("formula.convert.vlookupRange", nil)
 	}
 	t, ok := s.Table(table)
 	if !ok {
-		return nil, KeyNeed{}, &ErrConvert{fmt.Sprintf("tableau %s introuvable", table)}
+		return nil, KeyNeed{}, convErr("formula.convert.tableNotFound", msg.Args{"table": table})
 	}
 	num, ok := c.Args[2].(NumLit)
 	col := first + int(num.V) - 1
 	if !ok || num.V < 1 || col >= len(t.Cols) {
-		return nil, KeyNeed{}, &ErrConvert{"numéro de colonne hors de la plage"}
+		return nil, KeyNeed{}, convErr("formula.convert.columnOutOfRange", nil)
 	}
 	keyCol := t.Cols[first].Name
 	if t.Key == "" && byRow != nil && byRow(t.Name) {
 		return rowLookup(t, keyCol, t.Cols[col].Name, c.Args[0], original), KeyNeed{}, nil
 	}
 	if t.Key != "" && !strings.EqualFold(t.Key, keyCol) {
-		return nil, KeyNeed{}, &ErrConvert{fmt.Sprintf("le tableau %s a déjà la clé %s ; la plage commence par %s", t.Name, t.Key, keyCol)}
+		return nil, KeyNeed{}, convErr("formula.convert.rangeKey", msg.Args{"table": t.Name, "key": t.Key, "column": keyCol})
 	}
 	var colArg Node = Name{t.Cols[col].Name}
 	if !ident.MatchString(t.Cols[col].Name) {
@@ -181,9 +200,9 @@ func columnOf(n Node, s *Schema, r Resolver) (*Table, string, bool) {
 
 // lookupCall construit REFERENCE(Tableau; Colonne; clé), la colonne clé étant
 // key : elle doit être la clé du tableau, ou le devenir.
-func lookupCall(t *Table, key, ret string, k Node, origin, fn string) (Node, KeyNeed, error) {
+func lookupCall(t *Table, key, ret string, k Node, origin string, fn msg.Message) (Node, KeyNeed, error) {
 	if t.Key != "" && !strings.EqualFold(t.Key, key) {
-		return nil, KeyNeed{}, &ErrConvert{fmt.Sprintf("%s : le tableau %s a déjà la clé %s, la recherche se fait sur %s", fn, t.Name, t.Key, key)}
+		return nil, KeyNeed{}, convErr("formula.convert.lookupKey", msg.Args{"fn": fn, "table": t.Name, "key": t.Key, "column": key})
 	}
 	var colArg Node = Name{ret}
 	if !ident.MatchString(ret) {
@@ -197,22 +216,22 @@ func lookupCall(t *Table, key, ret string, k Node, origin, fn string) (Node, Key
 // par défaut est donnée.
 func xlookup(c Call, s *Schema, r Resolver, original string, byRow func(string) bool) (Node, KeyNeed, error) {
 	if len(c.Args) > 4 && c.Args[4] != nil && c.Args[4] != (NumLit{0}) {
-		return nil, KeyNeed{}, &ErrConvert{"RECHERCHEX : seule la correspondance exacte est prise en charge ; pour des tranches, utilisez REFERENCE.APPROCHEE"}
+		return nil, KeyNeed{}, convErr("formula.convert.xlookupExact", nil)
 	}
 	kt, key, ok1 := columnOf(c.Args[1], s, r)
 	rt, ret, ok2 := columnOf(c.Args[2], s, r)
 	if !ok1 || !ok2 {
-		return nil, KeyNeed{}, &ErrConvert{"RECHERCHEX : les 2e et 3e arguments doivent être des colonnes de tableau (Tableau[Colonne])"}
+		return nil, KeyNeed{}, convErr("formula.convert.xlookupColumns", nil)
 	}
 	if kt != rt {
-		return nil, KeyNeed{}, &ErrConvert{"RECHERCHEX : les colonnes cherchée et renvoyée doivent appartenir au même tableau"}
+		return nil, KeyNeed{}, convErr("formula.convert.xlookupSameTable", nil)
 	}
 	var out Node
 	var need KeyNeed
 	var err error
 	if kt.Key == "" && byRow != nil && byRow(kt.Name) {
 		out = rowLookup(kt, key, ret, c.Args[0], original)
-	} else if out, need, err = lookupCall(kt, key, ret, c.Args[0], original, "RECHERCHEX"); err != nil {
+	} else if out, need, err = lookupCall(kt, key, ret, c.Args[0], original, msg.M("formula.convert.nameXlookup", nil)); err != nil {
 		return nil, KeyNeed{}, err
 	}
 	if len(c.Args) > 3 && c.Args[3] != nil {
@@ -238,7 +257,7 @@ func indexMatch(c Call, s *Schema, r Resolver, original string) (Node, KeyNeed, 
 	if !ok1 || !ok2 || rt != kt || kt.Key == "" {
 		return nil, KeyNeed{}, false
 	}
-	out, need, err := lookupCall(kt, key, ret, m.Args[0], original, "INDEX/EQUIV")
+	out, need, err := lookupCall(kt, key, ret, m.Args[0], original, msg.M("formula.convert.nameIndexMatch", nil))
 	return out, need, err == nil
 }
 

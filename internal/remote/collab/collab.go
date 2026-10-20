@@ -485,7 +485,7 @@ func UndoNoticeIn(l msg.Lang, rec *oplog.Recorder, redo bool) string {
 			out = append(out, s)
 		}
 	}
-	return strings.Join(out, " ; ")
+	return msg.Join(l, out)
 }
 
 func skippedNotice(l msg.Lang, n int, redo bool) string {

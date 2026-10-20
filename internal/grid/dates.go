@@ -13,10 +13,9 @@ import (
 // ISO aaaa-mm-jj ; mois en lettres en français ou en anglais (« 19 oct.
 // 2026 », « 19 octobre », « Oct 19, 2026 »).
 
-// MonthFirst : ordre mois/jour des dates numériques (anglais américain,
-// m/j/aaaa) ; faux par défaut (français et la plupart des langues :
-// j/m/aaaa). À rattacher à ui.language le jour où elle existera (i18n.md).
-var MonthFirst = false
+// Les dates gardées (cellules libres, valeurs des règles) s'écrivent à la
+// française : ParseDate lit jour puis mois. La saisie dans une autre langue
+// (m/j/aaaa en anglais) passe par DateStyle (datestyle.go).
 
 var (
 	dateNumRe  = regexp.MustCompile(`^(\d{1,4})[/.\-](\d{1,2})(?:[/.\-](\d{1,4}))?$`)
@@ -86,8 +85,14 @@ func mkDate(y int, m time.Month, d int) (time.Time, bool) {
 	return t, true
 }
 
-// ParseDate lit une date saisie (voir plus haut).
-func ParseDate(s string) (time.Time, bool) {
+// ParseDate lit une date saisie (voir plus haut), jour puis mois.
+func ParseDate(s string) (time.Time, bool) { return parseDate(s, false) }
+
+// ParseDateIn lit une date tapée dans l'écriture st (mois puis jour en
+// anglais).
+func ParseDateIn(s string, st DateStyle) (time.Time, bool) { return parseDate(s, st.monthFirst()) }
+
+func parseDate(s string, monthFirst bool) (time.Time, bool) {
 	s = strings.TrimSpace(s)
 	year := func(g string) (int, bool) {
 		if g == "" {
@@ -119,7 +124,7 @@ func ParseDate(s string) (time.Time, bool) {
 		if !ok {
 			return time.Time{}, false
 		}
-		if MonthFirst {
+		if monthFirst {
 			a, b = b, a
 		}
 		return mkDate(y, time.Month(b), a)

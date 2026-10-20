@@ -1,6 +1,6 @@
 package formula
 
-import "sort"
+import "github.com/lalamefine/lattis/internal/msg"
 
 // FunctionInfo décrit une fonction pour l'aide à la saisie (infobulle de
 // signature, autocomplétion, dialogue « Insérer une fonction »).
@@ -24,31 +24,6 @@ func BareFunction(name string) bool {
 }
 
 // Functions liste les fonctions connues, triées par nom, pour l'aide à la
-// saisie (autocomplétion, signature).
-func Functions(loc Locale) []FunctionInfo {
-	seen := map[string]bool{}
-	var out []FunctionInfo
-	for _, f := range funcIndex {
-		if seen[f.EN] || refused[f.EN] {
-			continue
-		}
-		seen[f.EN] = true
-		other := EN
-		if !loc.french() {
-			other = FR
-		}
-		d := docs[f.EN]
-		as := make([]ArgDoc, 0, len(d.args))
-		for _, a := range d.args {
-			a.Kind = argKind(a)
-			as = append(as, a)
-		}
-		out = append(out, FunctionInfo{
-			Name: f.name(loc), Other: f.name(other), Arity: f.arity(),
-			Category: d.cat, Description: d.desc, Signature: d.signature(f.name(loc)),
-			Args: as, Repeat: d.repeat, Example: d.example,
-		})
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
-	return out
-}
+// saisie (autocomplétion, signature), nombre d'arguments en français (voir
+// Catalog).
+func Functions(loc Locale) []FunctionInfo { return Catalog(loc, msg.FR) }

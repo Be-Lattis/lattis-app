@@ -220,7 +220,7 @@ func (t *tx) pivots(sheet int64) ([]PivotInfo, error) {
 		if err := t.pivotChoice(sheet, &out[i].Config); err != nil {
 			return nil, err
 		}
-		calcText(&out[i].Config)
+		calcText(&out[i].Config, t.ui())
 	}
 	var names map[string]formula.Value // cellules libres, si une formule de colonne saisie en lit
 	for i := range out {
@@ -282,7 +282,7 @@ func (m *Model) PivotData(ctx context.Context, cfg PivotConfig) PivotInfo {
 		if err := t.prepareCalc(&out.Config); err != nil {
 			return err
 		}
-		calcText(&out.Config)
+		calcText(&out.Config, t.ui())
 		cells, rows, err := t.pivotCells(out.Config)
 		if err != nil {
 			return err

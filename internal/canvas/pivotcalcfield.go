@@ -58,14 +58,14 @@ func (t *tx) prepareCalc(cfg *PivotConfig) error {
 	return nil
 }
 
-// calcText rend la formule de chaque champ calculé en français (Text).
-func calcText(cfg *PivotConfig) {
+// calcText rend la formule de chaque champ calculé dans l'écriture u (Text).
+func calcText(cfg *PivotConfig, u ui) {
 	if len(cfg.Calc) == 0 {
 		return
 	}
 	calc := slices.Clone(cfg.Calc)
 	for i := range calc {
-		calc[i].Text = displayFormula(calc[i].Formula)
+		calc[i].Text = u.columnOut(calc[i].Formula)
 	}
 	cfg.Calc = calc
 }
