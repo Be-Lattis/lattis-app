@@ -33,6 +33,11 @@ type TableCheck struct {
 	// Invalid : saisies invalides du tableau (à corriger, ou colonne à
 	// accepter comme texte).
 	Invalid int `json:"invalid"`
+	// Query : nom de la requête qui charge le tableau ("" : tableau saisi).
+	// Publié dans un classeur collaboratif, il s'actualise depuis le poste
+	// qui a la connexion (lignes remplacées pour tous), ou devient une
+	// source du Data Lake : choix de l'auteur à la publication.
+	Query string `json:"query,omitempty"`
 }
 
 // ColumnCheck décrit une colonne d'un tableau à publier.
@@ -104,14 +109,15 @@ func NameProblem(name string) string {
 func Inspect(ctx context.Context, db *store.Store) (Check, error) {
 	r := db.Read()
 	out := Check{Tables: []TableCheck{}}
-	rs, err := r.QueryContext(ctx, `SELECT t.id, t.name, s.name, coalesce((SELECT published FROM _lattis_remote_tables p WHERE p.tbl = t.id), 0)
+	rs, err := r.QueryContext(ctx, `SELECT t.id, t.name, s.name, coalesce((SELECT published FROM _lattis_remote_tables p WHERE p.tbl = t.id), 0),
+		coalesce((SELECT q.name FROM _lattis_queries q WHERE q.target = t.id), '')
 		FROM _lattis_tables t JOIN _lattis_sheets s ON s.id = t.sheet ORDER BY s.pos, s.id, t.row, t.col`)
 	if err != nil {
 		return out, err
 	}
 	for rs.Next() {
 		var t TableCheck
-		if err := rs.Scan(&t.ID, &t.Name, &t.Sheet, &t.Published); err != nil {
+		if err := rs.Scan(&t.ID, &t.Name, &t.Sheet, &t.Published, &t.Query); err != nil {
 			rs.Close()
 			return out, err
 		}

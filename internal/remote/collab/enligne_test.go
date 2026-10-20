@@ -6,6 +6,10 @@ package collab_test
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/grid"
+	"strings"
 	"testing"
 
 	"github.com/lalamefine/lattis/internal/canvas"
@@ -291,4 +295,88 @@ func TestScriptsShared(t *testing.T) {
 	if _, err := bob.d.Model.SaveScript(ctx, 0, "À moi", `print(1)`); !errors.Is(err, canvas.ErrScriptsShared) {
 		t.Errorf("éditeur : %v", err)
 	}
+}
+
+// queryRows : résultat d'une requête (Produit, Prix) pour LoadQuery.
+func queryRows(rows [][]any) canvas.ImportTable {
+	return canvas.ImportTable{
+		Headers: []string{"Produit", "Prix"},
+		Types:   []grid.Type{grid.Text, grid.Decimal},
+		Count:   len(rows),
+		Rows: func(yield func([]any) error) error {
+			for _, r := range rows {
+				if err := yield(r); err != nil {
+					return err
+				}
+			}
+			return nil
+		},
+	}
+}
+
+// Constat 21 : un tableau chargé par une requête et publié s'actualise
+// (lignes remplacées sur place, le tableau reste publié) et les autres
+// membres reçoivent les nouvelles lignes.
+func TestRefreshSharedQuery(t *testing.T) {
+	useRoot(t)
+	ctx := context.Background()
+	f := workbooktest.New()
+	d, err := doc.New(ctx)
+	must(t, err)
+	t.Cleanup(func() { d.Close() })
+	qid, err := d.Model.SaveQuery(ctx, canvas.QueryDef{Name: "Tarifs", Source: `{"kind":"table","table":"X"}`})
+	must(t, err)
+	it := queryRows([][]any{{"Café", 4.5}, {"Thé", 2.0}})
+	it.At = &canvas.QueryAnchor{Sheet: 1}
+	l, err := d.Model.LoadQuery(ctx, qid, it)
+	must(t, err)
+	var tbl int64
+	must(t, d.DB().Read().QueryRow(`SELECT id FROM _lattis_tables WHERE name = ?`, l.Table).Scan(&tbl))
+	info, err := workbook.Publish(ctx, f.As("alice"), d.DB(), workbook.Request{Server: server, User: "alice", Title: "Tarifs", Mode: workbook.Collaborative, Tables: []int64{tbl}})
+	must(t, err)
+	must(t, d.ShareChanged(ctx))
+	d.Share.SetOnline(true, "")
+	alice := newClient(t, "alice", d, f.As("alice"))
+	must(t, f.Grant(info.WorkbookID, "bob", "editor"))
+	bob := newClient(t, "bob", openAs(t, f, info.WorkbookID, "bob"), f.As("bob"))
+
+	// Actualisation : trois lignes, dont une nouvelle.
+	_, err = d.Model.LoadQuery(ctx, qid, queryRows([][]any{{"Café", 5.0}, {"Thé", 2.0}, {"Chocolat", 3.25}}))
+	must(t, err)
+	var same int64
+	must(t, d.DB().Read().QueryRow(`SELECT id FROM _lattis_tables WHERE name = ?`, l.Table).Scan(&same))
+	if same != tbl {
+		t.Fatalf("le tableau a été remplacé (%d → %d) au lieu de ses lignes", tbl, same)
+	}
+	alice.send()
+	bob.receive()
+	var n int
+	must(t, bob.d.DB().Read().QueryRow(`SELECT count(*) FROM _lattis_tables WHERE name = ?`, l.Table).Scan(&n))
+	rows := tableCol(t, bob, l.Table, "Produit")
+	if strings.Join(rows, ",") != "Café,Thé,Chocolat" {
+		t.Errorf("Bob reçoit %v", rows)
+	}
+	// Ctrl+Z rend les anciennes lignes.
+	_, err = d.Bus.Undo(ctx)
+	must(t, err)
+	if got := tableCol(t, alice, l.Table, "Produit"); strings.Join(got, ",") != "Café,Thé" {
+		t.Errorf("après Ctrl+Z : %v", got)
+	}
+}
+
+// tableCol lit une colonne d'un tableau, dans l'ordre des lignes.
+func tableCol(t *testing.T, c *client, table, col string) []string {
+	t.Helper()
+	var tbl, cid int64
+	must(t, c.d.DB().Read().QueryRow(`SELECT t.id, k.id FROM _lattis_tables t JOIN _lattis_columns k ON k.tbl = t.id WHERE t.name = ? AND k.name = ?`, table, col).Scan(&tbl, &cid))
+	rs, err := c.d.DB().Read().Query(fmt.Sprintf(`SELECT coalesce(c_%d, '') FROM t_%d ORDER BY _pos`, cid, tbl))
+	must(t, err)
+	defer rs.Close()
+	var out []string
+	for rs.Next() {
+		var v string
+		must(t, rs.Scan(&v))
+		out = append(out, v)
+	}
+	return out
 }

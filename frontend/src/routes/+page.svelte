@@ -2814,7 +2814,7 @@
 			republish={shareDlg.republish}
 			{share}
 			title={docState.title}
-			ondone={(st) => {
+			ondone={(st, lake) => {
 				const again = shareDlg?.republish;
 				shareDlg = null;
 				// Ouvert depuis Partager au Data Lake : la boîte revient, le tableau publié.
@@ -2825,6 +2825,8 @@
 				if (!st) return;
 				if (back) dataShare = back;
 				if (fback) formShare = fback;
+				// Tableaux de requête choisis en source du Data Lake : la boîte de la source suit.
+				if (!back && lake?.length) dataShare = lake[0];
 				share = st;
 				notice = again ? `Version ${st.version} publiée` : `Classeur publié sur ${st.serverName || st.server} (${st.mode === 'frozen' ? 'figé' : 'collaboratif'})`;
 				reload().catch((e) => (notice = err(e)));

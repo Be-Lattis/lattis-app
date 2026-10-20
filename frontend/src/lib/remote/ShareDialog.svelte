@@ -23,13 +23,20 @@
 		share: State | null;
 		/** Titre proposé (celui du classeur). */
 		title: string;
-		/** Publié (état à jour) ou abandon (null). */
-		ondone: (s: State | null) => void;
+		/**
+		 * Publié (état à jour) ou abandon (null). lake : tableaux chargés par
+		 * une requête que l'auteur veut en source du Data Lake (actualisée par
+		 * le serveur) plutôt qu'actualisés depuis son poste.
+		 */
+		ondone: (s: State | null, lake?: string[]) => void;
 	}
 	let { republish = false, share, title, ondone }: Props = $props();
 
 	let check = $state<Check | null>(null);
 	let selected = $state<number[]>([]);
+	// Tableaux chargés par une requête, publiés en collaboratif : source du
+	// Data Lake (noms) ; les autres s'actualisent depuis ce poste.
+	let lake = $state<string[]>([]);
 	let server = $state(untrack(() => share?.server ?? ''));
 	let name = $state(untrack(() => (republish && share ? share.title : title)));
 	let mode = $state(untrack(() => (republish && share ? share.mode : FROZEN)));
@@ -113,7 +120,8 @@
 		busy = true;
 		try {
 			const st = republish ? await DocumentService.ShareRepublish(selected) : await DocumentService.SharePublish({ server, title: name.trim(), mode, tables: selected });
-			ondone(st);
+			const chosen = (check?.tables ?? []).filter((t) => selected.includes(t.id) && t.query && lake.includes(t.name)).map((t) => t.name);
+			ondone(st, mode === COLLABORATIVE ? chosen : []);
 		} catch (e) {
 			error = err(e);
 		} finally {
@@ -193,6 +201,14 @@
 									</p>
 								{/each}
 								{#if (t.columns ?? []).some((c) => c.computed)}<p class="muted">Les colonnes calculées sont publiées avec leur formule, pas leurs valeurs.</p>{/if}
+								{#if t.query && mode === COLLABORATIVE}
+									{@const toLake = lake.includes(t.name)}
+									<fieldset class="refresh">
+										<legend>Chargé par la requête « {t.query} » : actualisation</legend>
+										<label><input type="radio" name="refresh-{t.id}" checked={!toLake} disabled={busy} onchange={() => (lake = lake.filter((x) => x !== t.name))} /> Depuis ce poste, avec vos connexions : vos actualisations remplacent les lignes pour tous les membres</label>
+										<label><input type="radio" name="refresh-{t.id}" checked={toLake} disabled={busy} onchange={() => (lake = [...lake, t.name])} /> Source du Data Lake : le tableau est aussi envoyé au Data Lake du serveur, que d'autres classeurs peuvent lier (réglée juste après la publication)</label>
+									</fieldset>
+								{/if}
 							{/if}
 						</li>
 					{/each}
@@ -213,6 +229,17 @@
 </div>
 
 <style>
+	.refresh {
+		margin: 4px 0 0;
+		padding: 4px 8px;
+		border: 1px solid #e3e5e8;
+		border-radius: 3px;
+		font-size: 12px;
+	}
+	.refresh label {
+		display: block;
+		margin: 2px 0;
+	}
 	.back {
 		position: fixed;
 		inset: 0;

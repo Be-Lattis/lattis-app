@@ -242,6 +242,15 @@ func (t *tx) loadQuery(id int64, qname string, it ImportTable, res *QueryLoad) e
 			return err
 		}
 	}
+	// Tableau publié d'un classeur partagé : ses lignes sont remplacées sur
+	// place (queryshared.go), le tableau garde son identité sur le serveur.
+	if old != nil && t.frozenTypes(old.ID) {
+		if err := t.refreshShared(*old, it, res); err != nil {
+			return err
+		}
+		u := `UPDATE _lattis_queries SET refreshed = ? WHERE id = ?`
+		return t.apply([]stmt{st(u, time.Now().Format("2006-01-02 15:04:05"), id)}, []stmt{st(u, nullable(refreshed), id)})
+	}
 	var sheet int64
 	var carry *handCarry
 	if old != nil {

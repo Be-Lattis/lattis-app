@@ -525,6 +525,14 @@ export interface TableCheck {
      * accepter comme texte).
      */
     "invalid": number;
+
+    /**
+     * Query : nom de la requête qui charge le tableau ("" : tableau saisi).
+     * Publié dans un classeur collaboratif, il s'actualise depuis le poste
+     * qui a la connexion (lignes remplacées pour tous), ou devient une
+     * source du Data Lake : choix de l'auteur à la publication.
+     */
+    "query"?: string;
 }
 
 /**

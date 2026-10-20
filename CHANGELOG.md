@@ -15,6 +15,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 - Classeur partagé : une modification que le serveur reçoit mais qui échoue à chaque essai ne bloque plus la synchronisation ; au bout de cinq essais elle est mise de côté, avec les suivantes du même tableau, et le volet Conflits propose de la renvoyer (Réessayer) ou de l'abandonner (le tableau reprend la version du serveur). Vos valeurs restent affichées en attendant.
 - Classeur partagé : votre rôle (Propriétaire, Concepteur, Éditeur, Participant, Lecteur) s'affiche à côté de « en ligne sur … » dans la barre de titre ; son infobulle dit ce qu'il permet, et un clic ouvre Gérer l'accès (propriétaires et concepteurs) ou l'explique en barre d'état, au doigt compris.
 - Classeur collaboratif : un script enregistré ou corrigé par un propriétaire ou un concepteur après la publication part chez tous les membres ; chacun donne son accord avant d'exécuter la nouvelle version. Les autres membres lisent et exécutent les scripts sans pouvoir les modifier.
+- Classeur collaboratif, tableau chargé par une requête : à la publication, l'auteur choisit comment il s'actualise. « Depuis ce poste » : Actualiser remplace les lignes du tableau partagé pour tous les membres (le tableau reste publié ; Ctrl+Z rend les anciennes lignes), au lieu d'être refusé. « Source du Data Lake » : la boîte de la source du Data Lake s'ouvre juste après la publication.
 
 ### Changements
 
