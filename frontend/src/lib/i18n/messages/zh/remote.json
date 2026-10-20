@@ -700,8 +700,8 @@
 		"literal": {
 			"notNumber": "“{value}”不是数字",
 			"notInteger": "“{value}”不是整数",
-			"notBoolean": "“{value}”不是 true 或 false",
-			"notDate": "“{value}”不是日期（dd/mm/yyyy）"
+			"notBoolean": "“{value}”不是布尔值（是、否、true、false）",
+			"notDate": "“{value}”不是日期（yyyy/mm/dd）"
 		},
 		"condition": {
 			"unknownColumn": "未知列：{column}",
@@ -781,8 +781,8 @@
 		},
 		"noTeams": "“其所在的某个团队”：此服务器不支持团队",
 		"placeholder": {
-			"date": "dd/mm/yyyy",
-			"boolean": "true 或 false",
+			"date": "yyyy/mm/dd",
+			"boolean": "是或否",
 			"number": "数字"
 		},
 		"remove": "移除条件",

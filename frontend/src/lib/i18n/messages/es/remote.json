@@ -700,7 +700,7 @@
 		"literal": {
 			"notNumber": "«{value}» no es un número",
 			"notInteger": "«{value}» no es un número entero",
-			"notBoolean": "«{value}» no es true ni false",
+			"notBoolean": "«{value}» no es verdadero ni falso (true, false)",
 			"notDate": "«{value}» no es una fecha (dd/mm/aaaa)"
 		},
 		"condition": {
@@ -782,7 +782,7 @@
 		"noTeams": "«uno de sus equipos»: este servidor no conoce los equipos",
 		"placeholder": {
 			"date": "dd/mm/aaaa",
-			"boolean": "true o false",
+			"boolean": "verdadero o falso",
 			"number": "número"
 		},
 		"remove": "Quitar la condición",

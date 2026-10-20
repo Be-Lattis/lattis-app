@@ -26,17 +26,17 @@ func TestSessionLanguage(t *testing.T) {
 	if s.sessionLang() != msg.DE || msg.Current() != msg.DE {
 		t.Fatalf("langue : %s, bureau %s", s.sessionLang(), msg.Current())
 	}
-	// Pas de texte allemand : le français, mais l'identifiant et les paramètres suivent.
+	// Texte allemand de l'erreur enveloppée ; l'identifiant et les paramètres suivent.
 	err := fmt.Errorf("renommer : %w", msg.New("table.nameTaken", msg.Args{"name": "Ventes"}))
 	var c ErrorCause
-	if b := MarshalError(err); b == nil || json.Unmarshal(b, &c) != nil || c.ID != "table.nameTaken" || c.Args["name"] != "Ventes" || c.Message != err.Error() {
+	if b := MarshalError(err); b == nil || json.Unmarshal(b, &c) != nil || c.ID != "table.nameTaken" || c.Args["name"] != "Ventes" || c.Message != msg.Text(msg.DE, err) || c.Message == err.Error() {
 		t.Fatalf("cause : %s", MarshalError(err))
 	}
 	if MarshalError(errors.New("brut")) != nil {
 		t.Fatal("erreur ordinaire : traitement par défaut de Wails attendu")
 	}
 	text, cause := ErrorTranslator(s)(errNoDoc)
-	if text != "aucun classeur ouvert" || cause.(ErrorCause).ID != "doc.none" {
+	if text != msg.Format(msg.DE, "doc.none", nil) || text == "aucun classeur ouvert" || cause.(ErrorCause).ID != "doc.none" {
 		t.Fatalf("web : %q, %v", text, cause)
 	}
 	if text, cause := ErrorTranslator(s)(errors.New("brut")); text != "brut" || cause != nil {

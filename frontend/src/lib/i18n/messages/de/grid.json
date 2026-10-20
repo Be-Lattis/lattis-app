@@ -627,7 +627,7 @@
 		"custom.cond": "Bedingung {n}",
 		"custom.none": "(keine)",
 		"custom.number": "Zahl",
-		"custom.date": "TT/MM/JJJJ",
+		"custom.date": "TT.MM.JJJJ",
 		"custom.wildcards": "* steht für eine beliebige Zeichenfolge, ? für ein einzelnes Zeichen.",
 		"firstValues": "Nur die ersten 1.000 Werte werden aufgeführt.",
 		"errorsOnly": "Nur Einträge, die nicht dem Typ entsprechen ({n})",

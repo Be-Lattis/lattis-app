@@ -828,7 +828,7 @@
 			"name": "Nombre del campo:",
 			"add": "Agregar",
 			"add.label": "Campo calculado…",
-			"add.tooltip": "Un campo cuyo valor se calcula para cada fila del origen: =YEAR([Fecha]); =LEFT([Código];2)… Agrupa las filas en Filas o Columnas, filtra o se resume como una columna."
+			"add.tooltip": "Un campo cuyo valor se calcula para cada fila del origen: =YEAR([Fecha]), =LEFT([Código];2)… Agrupa las filas en Filas o Columnas, filtra o se resume como una columna."
 		},
 		"panel": {
 			"title": "Campos de tabla dinámica",

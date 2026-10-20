@@ -627,7 +627,7 @@
 		"custom.cond": "条件 {n}",
 		"custom.none": "（无）",
 		"custom.number": "数字",
-		"custom.date": "dd/mm/yyyy",
+		"custom.date": "yyyy/mm/dd",
 		"custom.wildcards": "* 代表任意多个字符，? 代表单个字符。",
 		"firstValues": "仅列出前 1,000 个值。",
 		"errorsOnly": "仅显示与类型不符的输入（{n}）",

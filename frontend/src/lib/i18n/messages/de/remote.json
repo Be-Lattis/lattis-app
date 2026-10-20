@@ -700,8 +700,8 @@
 		"literal": {
 			"notNumber": "„{value}“ ist keine Zahl",
 			"notInteger": "„{value}“ ist keine ganze Zahl",
-			"notBoolean": "„{value}“ ist nicht true oder false",
-			"notDate": "„{value}“ ist kein Datum (TT/MM/JJJJ)"
+			"notBoolean": "„{value}“ ist nicht wahr oder falsch (true, false)",
+			"notDate": "„{value}“ ist kein Datum (TT.MM.JJJJ)"
 		},
 		"condition": {
 			"unknownColumn": "unbekannte Spalte: {column}",
@@ -781,8 +781,8 @@
 		},
 		"noTeams": "„eines ihrer Teams“: Dieser Server kennt keine Teams",
 		"placeholder": {
-			"date": "TT/MM/JJJJ",
-			"boolean": "true oder false",
+			"date": "TT.MM.JJJJ",
+			"boolean": "wahr oder falsch",
 			"number": "Zahl"
 		},
 		"remove": "Bedingung entfernen",
