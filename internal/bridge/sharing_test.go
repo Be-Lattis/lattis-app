@@ -134,7 +134,7 @@ func TestShareFrozenWorkbook(t *testing.T) {
 	if rf := b.Recent(ctx); len(rf) != 1 || rf[0].Title != "Prix" || rf[0].WorkbookID != got[0].ID || rf[0].Link != link || rf[0].Server != "https://lattis.example.test" {
 		t.Fatalf("récents : %+v", rf)
 	}
-	if ds, err := b.Save(ctx, false); err != nil || ds.Notice != "Copie locale de « Prix » enregistrée (classeur publié sur Serveur de test, en lecture seule)" {
+	if ds, err := b.Save(ctx, false); err != nil || ds.Notice != "« Prix » est publié en lecture seule sur Serveur de test : rien à enregistrer. Pour en garder une copie à vous, modifiable : Fichier › Enregistrer sous" {
 		t.Fatalf("enregistrement : %+v, %v", ds, err)
 	}
 	if rf := b.Recent(ctx); len(rf) != 1 || rf[0].Title != "Prix" {

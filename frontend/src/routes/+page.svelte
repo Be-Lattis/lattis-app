@@ -2338,7 +2338,7 @@
 		pageBreaks={showBreaks}
 		onpagebreaks={mode === 'doc' ? (on) => (showBreaks = on) : undefined}
 		themes={themeCat.map((t) => ({ id: t.id, name: t.name, table: t.table, source: t.source, on: bookTheme.id === t.id }))}
-		ontheme={mode === 'doc' && !docState.readOnly ? chooseTheme : undefined}
+		ontheme={mode === 'doc' && !docState.readOnly && !layoutShared ? chooseTheme : undefined}
 	/>
 
 	{#if webLink}

@@ -126,7 +126,7 @@ func remoteSavedNotice(r *workbook.State) string {
 	case r.CanDesign:
 		return fmt.Sprintf("Copie locale de « %s » enregistrée ; Fichier › Republier pour publier vos changements sur %s", r.Title, where)
 	}
-	return fmt.Sprintf("Copie locale de « %s » enregistrée (classeur publié sur %s, en lecture seule)", r.Title, where)
+	return fmt.Sprintf("« %s » est publié en lecture seule sur %s : rien à enregistrer. Pour en garder une copie à vous, modifiable : Fichier › Enregistrer sous", r.Title, where)
 }
 
 // fileTitle : nom de fichier proposé pour un titre (Enregistrer sous,

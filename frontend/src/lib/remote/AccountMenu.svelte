@@ -6,6 +6,23 @@
 	import { dismiss } from '#lib/grid/dismiss.js';
 	import { accountTitle, connected, hostOf, initials, userDetail, userName } from './lattis';
 	import { lattis, requestLogin, shareRights, signOut } from './lattis.svelte.js';
+	import { platform } from '#lib/shell/settings.svelte.js';
+
+	// Édition web : la session est celle du Serveur Lattis qui sert la page ;
+	// se déconnecter, c'est s'en déconnecter (POST /logout, même origine), pas
+	// oublier un jeton du poste ; pas d'autre serveur à gérer.
+	function webSignOut() {
+		const f = document.createElement('form');
+		f.method = 'POST';
+		f.action = '/logout';
+		const next = document.createElement('input');
+		next.type = 'hidden';
+		next.name = 'next';
+		next.value = '/';
+		f.appendChild(next);
+		document.body.appendChild(f);
+		f.submit();
+	}
 	import ServerManageDialog from './ServerManageDialog.svelte';
 
 	let open = $state(false);
@@ -49,7 +66,7 @@
 								<strong>{userName(s.user)}</strong>
 								{#if userDetail(s.user)}<span class="muted">{userDetail(s.user)}</span>{/if}
 							</div>
-							<button role="menuitem" onclick={() => out(s.url)}>Se déconnecter</button>
+							<button role="menuitem" onclick={() => (platform.web ? webSignOut() : out(s.url))}>Se déconnecter</button>
 						{:else}
 							<div class="muted">Non connecté · {hostOf(s.url)}</div>
 							<button role="menuitem" onclick={() => login(s.url)}>Se connecter…</button>
@@ -70,17 +87,19 @@
 						}}><Icon name="user" size={14} />Gérer l’accès à « {r.title} »…</button
 					>
 				{/if}
-				{#if lattis.state.allowUserServers}
+				{#if lattis.state.allowUserServers && !platform.web}
 					<button class="add" role="menuitem" onclick={() => login('')}><Icon name="plus" size={14} />Se connecter à un serveur…</button>
 				{/if}
-				<button
-					class="add"
-					role="menuitem"
-					onclick={() => {
-						open = false;
-						managing = true;
-					}}><Icon name="database" size={14} />Gérer les serveurs…</button
-				>
+				{#if !platform.web}
+					<button
+						class="add"
+						role="menuitem"
+						onclick={() => {
+							open = false;
+							managing = true;
+						}}><Icon name="database" size={14} />Gérer les serveurs…</button
+					>
+				{/if}
 				{#if error}<p class="error">{error}</p>{/if}
 			</div>
 		{/if}

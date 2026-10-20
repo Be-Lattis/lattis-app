@@ -143,6 +143,12 @@ func (e *Engine) receive(ctx context.Context, only, full map[int64]bool) (Report
 			}
 		}
 	}
+	// Lignes que ce poste a modifiées (envoyées, encore dans l'historique)
+	// et qu'un collègue supprime : la suppression l'emporte (question 11 de
+	// l'audit du mode en ligne), mais le poste le dit.
+	if n := mineDeleted(ctx, e.db.Read(), batches); n > 0 {
+		rep.notice(mineDeletedNotice(n))
+	}
 	applied, err := e.model.ApplyRemote(ctx, batches, e.keep, func(tx *sql.Tx) error {
 		// Cellule en conflit modifiée encore par un collègue : la réception
 		// ne la touche pas (keep), mais le conflit prend la nouvelle valeur
@@ -168,6 +174,40 @@ func (e *Engine) receive(ctx context.Context, only, full map[int64]bool) (Report
 		rep.notice(fmt.Sprintf("%d ligne(s) reçue(s) du serveur n'ont pas pu être appliquées : %s", len(applied.Failed), applied.Failed[0]))
 	}
 	return rep, err
+}
+
+// mineDeleted compte les lignes supprimées reçues que ce poste avait
+// modifiées (entrées envoyées de la file, encore là tant que leur commande
+// est dans l'historique). Au plus 200 lignes examinées.
+func mineDeleted(ctx context.Context, q *sql.DB, batches []canvas.RemoteTable) int {
+	n, seen := 0, 0
+	for _, bt := range batches {
+		if bt.Full {
+			continue
+		}
+		for _, r := range bt.Rows {
+			if !r.Deleted {
+				continue
+			}
+			if seen++; seen > 200 {
+				return n
+			}
+			var one int
+			if q.QueryRowContext(ctx, `SELECT 1 FROM _lattis_outbox WHERE state = 'sent' AND instr(ops, ?) > 0 LIMIT 1`, r.ID).Scan(&one) == nil {
+				n++
+			}
+		}
+	}
+	return n
+}
+
+// mineDeletedNotice : message des lignes modifiées ici et supprimées par un
+// collègue.
+func mineDeletedNotice(n int) string {
+	if n == 1 {
+		return "Une ligne que vous aviez modifiée a été supprimée par un collègue (une suppression l'emporte sur une modification faite au même moment)"
+	}
+	return fmt.Sprintf("%d lignes que vous aviez modifiées ont été supprimées par un collègue (une suppression l'emporte sur une modification faite au même moment)", n)
 }
 
 // whoKey : une ligne d'un tableau (dernier modificateur reçu).

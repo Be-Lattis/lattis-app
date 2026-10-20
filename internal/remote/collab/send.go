@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/command"
@@ -308,7 +309,12 @@ func (e *Engine) sendBatch(ctx context.Context, srv workbook.Server, info *workb
 		return o, nil
 	}
 	schema := info.Schema
-	err := srv.Write(ctx, func(w workbook.Writer) error {
+	// Délai de l'étape (proportionné à sa taille) : une connexion à demi
+	// coupée ne tient plus l'envoi (ni la réception, qui l'attend)
+	// indéfiniment ; dépassé, c'est une coupure, l'étape repart plus tard.
+	wctx, cancel := context.WithTimeout(ctx, SendTimeout+time.Duration(len(items))*20*time.Millisecond)
+	defer cancel()
+	err := srv.Write(wctx, func(w workbook.Writer) error {
 		o.reset()
 		for _, it := range items {
 			op := it.op
@@ -569,6 +575,10 @@ func sortedKeys[V any](m map[int64]V) []int64 {
 	slices.Sort(out)
 	return out
 }
+
+// SendTimeout : délai de base de l'envoi d'une étape de données (plus 20 ms
+// par écriture).
+var SendTimeout = 30 * time.Second
 
 // errStale : une écriture vise une colonne ou un tableau que le serveur ne
 // connaît plus sous ce nom (structure changée pendant l'envoi).

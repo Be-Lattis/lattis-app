@@ -435,3 +435,19 @@ func TestLayoutLongAway(t *testing.T) {
 		})
 	}
 }
+
+// Question 11 de l'audit : une suppression l'emporte sur une modification,
+// mais celui dont la ligne modifiée disparaît en est prévenu.
+func TestDeletedAfterMyEdit(t *testing.T) {
+	ctx := context.Background()
+	_, alice, bob, _ := setup(t)
+	alice.mustSet(0, 1, "50")
+	alice.send()
+	must(t, bob.d.DeleteRow(ctx, "Ventes", 0))
+	bob.send()
+	rep, err := alice.e.Receive(ctx, nil)
+	must(t, err)
+	if !strings.Contains(strings.Join(rep.Notices, " "), "que vous aviez modifiée a été supprimée") {
+		t.Errorf("message : %v", rep.Notices)
+	}
+}

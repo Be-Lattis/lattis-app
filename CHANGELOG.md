@@ -27,6 +27,8 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 - Classeur collaboratif ouvert depuis un Serveur Lattis : plus de point « modifié » dans le titre ni de question « Enregistrer les modifications ? » à la fermeture (ni « Quitter le site ? » dans l'édition web) : vos modifications partent d'elles-mêmes, et la copie sur ce poste s'enregistre seule. Hors ligne seulement, Lattis prévient que des modifications attendront la reconnexion. Ctrl+S reste possible.
 - Classeur collaboratif : les modifications des collègues arrivent par le relais du Serveur Lattis (une seule écoute de la base pour tous les postes) au lieu d'une connexion permanente par poste et par classeur ouvert ; un serveur plus ancien reste suivi comme avant. Les membres qui ont le classeur ouvert en même temps s'affichent dans la barre d'état.
 - Classeur collaboratif, mise en page : au retour de plus de 24 h sans connexion, un élément (largeur, mise en forme, cellule libre…) modifié aussi par vos collègues garde leur version, plus récente, et un message l'explique ; avant, la vôtre écrasait la leur. Le volet Conflits rappelle les éléments remplacés depuis l'ouverture.
+- Classeur collaboratif : quand un collègue supprime une ligne que vous veniez de modifier, un message le dit (la suppression l'emporte). Classeur figé ouvert en lecteur : Ctrl+S explique qu'il n'y a rien à enregistrer et comment en garder une copie. Le thème d'un classeur collaboratif n'est plus proposé à qui ne peut pas changer sa mise en page.
+- Édition web : le menu Compte montre la session du Serveur Lattis qui sert la page ; « Se déconnecter » se déconnecte de ce serveur, et la gestion des serveurs n'est plus proposée.
 
 ### Corrections
 
@@ -45,6 +47,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 - Travail à plusieurs sur un dossier partagé : un poste coupé du dossier plus de 30 secondes (Wi-Fi, veille) reçoit à son retour ce que les autres ont saisi et enregistré pendant sa coupure ; ces modifications étaient perdues pour lui, sans message. Un poste coupé est attendu 24 heures.
 - Clic droit et menu ▾ des colonnes : les actions qui changent la structure d'un tableau (insérer ou supprimer une colonne, type, en-têtes, convertir en plage, supprimer le tableau) sont grisées avec leur motif, ou retirées, quand la feuille est protégée, quand le tableau est en lecture seule, ou dans un classeur partagé sans droit de conception ; Documents et pages web aussi, et Importer prévient au lieu d'échouer.
 - Classeur collaboratif : des changements de mise en page faits alors que vous n'étiez plus concepteur ne restaient que sur votre poste, sans message ; Lattis le dit et reprend la mise en page du serveur.
+- Classeur collaboratif : l'envoi d'une modification a désormais un délai ; une connexion à demi coupée (changement de réseau) ne bloque plus la synchronisation, la modification repart au tour suivant.
 
 ## 0.1.0-beta.3.2 (20/10/2026)
 
