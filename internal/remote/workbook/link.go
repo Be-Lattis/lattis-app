@@ -77,6 +77,9 @@ type Link struct {
 	// (SetSending).
 	pending, conflicts int
 	sending            bool
+	// layoutConflicts, layoutUnsent : mise en page (voir State, SetLayoutUnsent).
+	layoutConflicts int
+	layoutUnsent    bool
 }
 
 // Attach lit l'état de partage d'un classeur ouvert (hors ligne tant que la
@@ -469,6 +472,10 @@ type State struct {
 	// Sending : la file part vers le serveur (barre d'état :
 	// « Synchronisation… »).
 	Sending bool `json:"sending,omitempty"`
+	// LayoutConflicts : modifications de la mise en page d'un collègue
+	// remplacées par les siennes depuis l'ouverture (même élément changé
+	// des deux côtés, la dernière écriture l'emporte ; décision 0018).
+	LayoutConflicts int `json:"layoutConflicts,omitempty"`
 }
 
 // SetQueue note les étapes en attente d'envoi et les conflits ouverts
@@ -482,6 +489,29 @@ func (l *Link) SetQueue(pending, conflicts int) (state, sync bool) {
 	state = l.conflicts != conflicts
 	l.pending, l.conflicts = pending, conflicts
 	return state, sync
+}
+
+// AddLayoutConflicts compte des modifications de la mise en page d'un
+// collègue remplacées par celles du poste.
+func (l *Link) AddLayoutConflicts(n int) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.layoutConflicts += n
+}
+
+// SetLayoutUnsent note que la mise en page modifiée sur le poste n'est pas
+// encore partie (hors ligne à la fermeture : le cache est gardé).
+func (l *Link) SetLayoutUnsent(on bool) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.layoutUnsent = on
+}
+
+// LayoutUnsent : voir SetLayoutUnsent.
+func (l *Link) LayoutUnsent() bool {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	return l.layoutUnsent
 }
 
 // SetSending note que la file part vers le serveur (ou plus) ; vrai si
@@ -527,7 +557,7 @@ func (l *Link) State() State {
 		Shared: true, Server: l.info.Server, ServerName: l.info.ServerName, WorkbookID: l.info.WorkbookID,
 		Title: l.info.Title, Mode: l.info.Mode, Version: l.info.Version, Roles: append([]string{}, l.info.Roles...),
 		CanDesign: l.info.CanDesign(), CanManage: l.info.CanManage(), Online: l.online, Offline: l.offline, Gone: l.gone, NewVersion: l.newVersion, Published: len(l.published),
-		Pending: l.pending, Conflicts: l.conflicts, Sending: l.sending,
+		Pending: l.pending, Conflicts: l.conflicts, Sending: l.sending, LayoutConflicts: l.layoutConflicts,
 	}
 	s.Link = protocol.WorkbookLink(s.Server, s.WorkbookID)
 	switch {

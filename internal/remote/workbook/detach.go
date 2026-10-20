@@ -26,7 +26,7 @@ const (
 // _lattis_data_sync) ne relèvent pas du partage du classeur : ils restent
 // liés.
 func Detach(ctx context.Context, tx *sql.Tx) error {
-	if _, err := tx.ExecContext(ctx, `DELETE FROM _lattis_info WHERE key IN (?, ?, ?, ?)`, infoKey, baseKey, syncSkipKey, syncProbeKey); err != nil {
+	if _, err := tx.ExecContext(ctx, `DELETE FROM _lattis_info WHERE key IN (?, ?, ?, ?, ?)`, infoKey, baseKey, syncSkipKey, syncProbeKey, idsKey); err != nil {
 		return err
 	}
 	for _, t := range []string{"_lattis_remote_tables", "_lattis_row_ids", "_lattis_outbox", "_lattis_conflicts", "_lattis_capabilities"} {

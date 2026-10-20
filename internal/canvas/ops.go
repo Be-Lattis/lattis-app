@@ -417,6 +417,10 @@ func TableSchema(id int64, cols []Column, key int64) []string {
 	return out
 }
 
+// ColumnDef donne la définition SQL de la colonne id d'un tableau (ALTER
+// TABLE … ADD COLUMN : colonne calculée reçue d'un classeur collaboratif).
+func ColumnDef(id int64, t grid.Type) string { return colSQL(id) + " " + sqlType(t) }
+
 // nextTableID donne l'identifiant d'un nouveau tableau. Celui d'un tableau
 // publié sur un Serveur Lattis ne resert jamais, même supprimé : son
 // identifiant le désigne dans la file d'envoi et sur le serveur, et

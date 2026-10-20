@@ -34,6 +34,8 @@ type worker struct {
 	// tableaux à comparer (*meta : clé, mise en page).
 	structure map[int64]bool
 	meta      bool
+	// layoutWait : un tour est déjà prévu pour envoyer la mise en page.
+	layoutWait bool
 }
 
 func (w *worker) poke() {
@@ -106,6 +108,22 @@ func (w *worker) notified(ctx context.Context, payload string) {
 		w.timer = time.AfterFunc(Debounce, w.poke)
 	}
 	w.mu.Unlock()
+}
+
+// layoutLater prévoit un tour dans wait (mise en page à envoyer).
+func (w *worker) layoutLater(wait time.Duration) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.layoutWait {
+		return
+	}
+	w.layoutWait = true
+	time.AfterFunc(wait, func() {
+		w.mu.Lock()
+		w.layoutWait = false
+		w.mu.Unlock()
+		w.poke()
+	})
 }
 
 func (w *worker) loop(ctx context.Context) {
@@ -205,6 +223,18 @@ func (w *worker) cycle(ctx context.Context) {
 			r, err = w.e.Receive(ctx, due)
 		}
 		rep.add(r)
+	}
+	if err == nil {
+		// Mise en page : relue à la connexion et sur « *meta » ; envoyée
+		// LayoutDelay après la dernière modification locale.
+		force := full || meta
+		if due, wait := w.e.layoutDue(); force || due {
+			var r Report
+			r, err = w.e.SyncLayout(ctx, force)
+			rep.add(r)
+		} else if wait > 0 {
+			w.layoutLater(wait)
+		}
 	}
 	if err != nil && ctx.Err() == nil {
 		// Coupure pendant l'envoi ou la lecture : hors ligne, tout sera

@@ -124,6 +124,7 @@ func AddTable(ctx context.Context, srv Server, db *store.Store, info *Info, tbl 
 			return err
 		}
 		var tid, xid string
+		var lid int64
 		var rcols []RemoteColumn
 		var base []byte
 		err = srv.Write(ctx, func(w Writer) error {
@@ -131,7 +132,7 @@ func AddTable(ctx context.Context, srv Server, db *store.Store, info *Info, tbl 
 			if err != nil {
 				return err
 			}
-			lid, err := freeLayoutID(raw, tbl)
+			lid, err = freeLayoutID(raw, tbl)
 			if err != nil {
 				return err
 			}
@@ -198,6 +199,9 @@ func AddTable(ctx context.Context, srv Server, db *store.Store, info *Info, tbl 
 			return err
 		}
 		if err := writeBase(ctx, tx, base); err != nil {
+			return err
+		}
+		if err := noteLayoutID(ctx, tx, "table", tbl, lid); err != nil {
 			return err
 		}
 		out = Added{Name: t.name, RemoteID: tid, Rows: len(rows)}
@@ -395,6 +399,9 @@ type ArrivalRow struct {
 type Installed struct {
 	Table int64
 	Name  string
+	// lid, sheet : identifiants du tableau et de sa feuille dans la mise en
+	// page ; row, col : sa place sur le poste (mise en page de base).
+	lid, sheet, row, col int64
 }
 
 // ReadArrivals lit, dans la lecture r (Server.Delta), les tableaux du
@@ -483,11 +490,81 @@ func InstallArrivals(ctx context.Context, tx *sql.Tx, a *Arrivals) ([]Installed,
 		out = append(out, in)
 	}
 	if len(out) > 0 && a.Layout != nil {
-		if err := writeBase(ctx, tx, a.Layout); err != nil {
+		if err := arrivedBase(ctx, tx, l, a.Layout, out); err != nil {
 			return nil, err
 		}
 	}
 	return out, nil
+}
+
+// arrivedBase ajoute à la mise en page de base les lignes des tableaux
+// reçus (tableau à sa place sur le poste, colonnes, mises en forme) et leur
+// feuille si elle est nouvelle, telles que le serveur les décrit ; le reste
+// de la mise en page du serveur (cellules de la feuille reçue…) arrive par
+// la mise en page en direct (SyncLayout), qui le compare à la base. Sans
+// base, la mise en page du serveur.
+func arrivedBase(ctx context.Context, tx *sql.Tx, l *Layout, raw []byte, got []Installed) error {
+	baseRaw, err := readBase(ctx, tx)
+	if err != nil {
+		return err
+	}
+	if baseRaw == nil {
+		return writeBase(ctx, tx, raw)
+	}
+	b, err := decodeLayout(baseRaw)
+	if err != nil {
+		return err
+	}
+	for _, in := range got {
+		for _, name := range []string{"_lattis_tables", "_lattis_columns", "_lattis_styles"} {
+			src, rows := layoutRowsOf(l, name, in.lid)
+			if src == nil {
+				continue
+			}
+			dst := b.Tables[name]
+			if dst == nil {
+				dst = &LayoutRows{Columns: slices.Clone(src.Columns), Rows: [][]any{}}
+				b.Tables[name] = dst
+			}
+			at := layoutTableAt(name, dst)
+			if at < 0 {
+				continue
+			}
+			dst.Rows = slices.DeleteFunc(dst.Rows, func(row []any) bool {
+				id, _ := asInt(row[at])
+				return id == in.lid
+			})
+			for _, row := range rows {
+				p := projectRow(src, row, dst.Columns)
+				if name == "_lattis_tables" {
+					if i := dst.index("row"); i >= 0 {
+						p[i] = in.row
+					}
+					if i := dst.index("col"); i >= 0 {
+						p[i] = in.col
+					}
+				}
+				dst.Rows = append(dst.Rows, p)
+			}
+		}
+		ss := l.Tables["_lattis_sheets"]
+		if ss == nil || idSet(b.Tables["_lattis_sheets"], "id")[in.sheet] {
+			continue
+		}
+		if at := rowOf(ss, in.sheet); at >= 0 {
+			dst := b.Tables["_lattis_sheets"]
+			if dst == nil {
+				dst = &LayoutRows{Columns: slices.Clone(ss.Columns), Rows: [][]any{}}
+				b.Tables["_lattis_sheets"] = dst
+			}
+			dst.Rows = append(dst.Rows, projectRow(ss, ss.Rows[at], dst.Columns))
+		}
+	}
+	out, err := encodeLayout(b)
+	if err != nil {
+		return err
+	}
+	return writeBase(ctx, tx, out)
 }
 
 func count(ctx context.Context, tx *sql.Tx, q string, args ...any) (int, error) {
@@ -554,6 +631,15 @@ func installOne(ctx context.Context, tx *sql.Tx, l *Layout, baseSheets map[int64
 	sheet, err := arrivalSheet(ctx, tx, l, baseSheets, get(tr, trow, "sheet"))
 	if err != nil {
 		return Installed{}, err
+	}
+	lsheet, ok := asInt(get(tr, trow, "sheet"))
+	if !ok || rowOf(l.Tables["_lattis_sheets"], lsheet) < 0 {
+		lsheet = sheet
+	} else if lsheet != sheet {
+		// Feuille créée sous un autre identifiant (pris ici).
+		if err := noteLayoutID(ctx, tx, "sheet", sheet, lsheet); err != nil {
+			return Installed{}, err
+		}
 	}
 	// Nom libre (un tableau local du même nom garde le sien).
 	name := rt.Name
@@ -725,7 +811,12 @@ func installOne(ctx context.Context, tx *sql.Tx, l *Layout, baseSheets map[int64
 		id, rt.Name, rt.ID, string(rc), since); err != nil {
 		return Installed{}, err
 	}
-	return Installed{Table: id, Name: name}, nil
+	if lid != 0 {
+		if err := noteLayoutID(ctx, tx, "table", id, lid); err != nil {
+			return Installed{}, err
+		}
+	}
+	return Installed{Table: id, Name: name, lid: lid, sheet: lsheet, row: r0, col: c0}, nil
 }
 
 // arrivalSheet rend la feuille locale d'un tableau reçu : la feuille du

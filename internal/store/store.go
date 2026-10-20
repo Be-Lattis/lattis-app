@@ -72,6 +72,10 @@ type Store struct {
 	writeConn atomic.Pointer[sqlite3.Conn]
 	// unmark : appelé avant la prochaine tâche de l'écrivain (voir Mark).
 	unmark atomic.Pointer[func() error]
+	// watched : tables dont les écritures sont comptées dans watchGen (voir
+	// Watch : mise en page d'un classeur collaboratif).
+	watched  atomic.Pointer[map[string]bool]
+	watchGen atomic.Int64
 }
 
 var (
@@ -92,12 +96,43 @@ var (
 	schemaMeta = regexp.MustCompile(`_lattis_(columns|tables)\b|(?s)_lattis_sheets\b.*\bchoice\b`)
 )
 
+// Watch fait compter les écritures des tables nommées (WatchGen) : lignes
+// écrites (noteRow) et requêtes qui les nomment (un DELETE sans WHERE ne
+// passe pas par noteRow). Un seul ensemble à la fois (le dernier appel).
+func (s *Store) Watch(tables ...string) {
+	m := map[string]bool{}
+	for _, t := range tables {
+		m[t] = true
+	}
+	s.watched.Store(&m)
+}
+
+// WatchGen compte les écritures des tables de Watch (une écriture annulée
+// compte aussi) : un relevé fait à la génération g reste valable tant
+// qu'elle ne change pas.
+func (s *Store) WatchGen() int64 { return s.watchGen.Load() }
+
+// watchedWrite : la requête nomme une table de Watch.
+func (s *Store) watchedWrite(q string) {
+	w := s.watched.Load()
+	if w == nil || !strings.Contains(q, "_lattis_") {
+		return
+	}
+	for t := range *w {
+		if strings.Contains(q, t) {
+			s.watchGen.Add(1)
+			return
+		}
+	}
+}
+
 // noteWrite relève les tableaux qu'une requête de l'écrivain peut modifier.
 func (s *Store) noteWrite(q string) {
 	head := strings.ToUpper(strings.TrimSpace(q))
 	if strings.HasPrefix(head, "SELECT") || strings.HasPrefix(head, "PRAGMA") {
 		return
 	}
+	s.watchedWrite(q)
 	names := tableName.FindAllString(q, -1)
 	meta := tableMeta.MatchString(q)
 	if len(names) == 0 && !meta {

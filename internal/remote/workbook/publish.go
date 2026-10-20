@@ -488,6 +488,10 @@ func (p *published) record(ctx context.Context, tx *sql.Tx) error {
 	if err := writeInfo(ctx, tx, p.info); err != nil {
 		return err
 	}
+	// Identifiants de la mise en page : ceux du poste (livelayout.go).
+	if _, err := tx.ExecContext(ctx, `DELETE FROM _lattis_info WHERE key = ?`, idsKey); err != nil {
+		return err
+	}
 	return writeBase(ctx, tx, p.base)
 }
 

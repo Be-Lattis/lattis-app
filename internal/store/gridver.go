@@ -57,6 +57,9 @@ func (s *Store) noteRow(op sqlite3.AuthorizerActionCode, schema, table string) {
 	if schema != "main" {
 		return
 	}
+	if w := s.watched.Load(); w != nil && (*w)[table] {
+		s.watchGen.Add(1)
+	}
 	data, meta, cells := isDataTable(table), gridMetaTables[table], cellTables[table]
 	sheets := table == "_lattis_sheets" && op != sqlite3.AUTH_UPDATE
 	if !data && !meta && !cells && !sheets {

@@ -254,6 +254,11 @@ func (l *loader) run(tx *sql.Tx) error {
 	if err != nil {
 		return err
 	}
+	// Identifiants de la mise en page : ceux du poste, relus du serveur à la
+	// première synchronisation (livelayout.go).
+	if err := l.exec(`DELETE FROM _lattis_info WHERE key = ?`, idsKey); err != nil {
+		return err
+	}
 	return writeBase(l.ctx, tx, base)
 }
 

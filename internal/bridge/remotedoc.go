@@ -60,7 +60,7 @@ func keepCollabQueue(d *doc.Document) {
 	}
 	ctx := context.Background()
 	pending, conflicts, err := workbook.Unsent(ctx, d.DB().Read())
-	if err != nil || pending+conflicts == 0 {
+	if err != nil || pending+conflicts == 0 && !d.Share.LayoutUnsent() {
 		return
 	}
 	if err := saveDoc(ctx, d, ""); err != nil {

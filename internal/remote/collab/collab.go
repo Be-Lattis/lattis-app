@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/command"
@@ -55,6 +56,11 @@ type Engine struct {
 	// choices : catégories des onglets à choix déjà examinées
 	// (workbook.ChoiceSignature, PublishChoices) ; sous run.
 	choices string
+	// Mise en page (layout.go, sous mu) : écritures déjà synchronisées
+	// (Store.WatchGen), dernière génération vue et quand.
+	layoutDone, layoutSeen int64
+	layoutAt               time.Time
+	layoutTheme            string
 }
 
 // SetBackoff règle les nouveaux essais de connexion du suivi (délais
@@ -79,7 +85,12 @@ type cell struct {
 // New crée la synchronisation d'un classeur (sans serveur tant que
 // SetServer n'est pas appelé : rien ne part, rien n'arrive).
 func New(db *store.Store, model *canvas.Model, link *workbook.Link) *Engine {
-	return &Engine{db: db, model: model, link: link}
+	// Écritures de la mise en page comptées : une modification locale est
+	// une mise en page à envoyer (layout.go).
+	db.Watch(workbook.LayoutTables()...)
+	e := &Engine{db: db, model: model, link: link, layoutDone: db.WatchGen()}
+	e.layoutTheme = e.theme()
+	return e
 }
 
 // SetServer donne le serveur (sous l'identité de l'utilisateur).

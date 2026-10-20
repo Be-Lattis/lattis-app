@@ -311,6 +311,13 @@ func (s *DocumentService) followCollab(ctx context.Context, d *doc.Document, eng
 func (s *DocumentService) stopShare() {
 	s.share.mu.Lock()
 	defer s.share.mu.Unlock()
+	// Mise en page modifiée pas encore partie (LayoutDelay) : envoyée
+	// avant de fermer ; hors ligne, le cache est gardé (keepCollabQueue).
+	if eng := s.share.sync; eng != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		eng.FlushLayout(ctx)
+		cancel()
+	}
 	if s.share.cancel != nil {
 		s.share.cancel()
 		s.share.cancel = nil
