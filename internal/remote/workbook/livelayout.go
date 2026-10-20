@@ -241,7 +241,7 @@ func rowsEqual(a, b lrow, own map[string]bool) bool {
 
 // merge3 fusionne une ligne : base b, poste m, serveur t (nil : absente).
 // Une ligne supprimée d'un côté et modifiée de l'autre : le poste l'emporte.
-func merge3(b, m, t lrow, own map[string]bool) (lrow, bool) {
+func merge3(b, m, t lrow, own map[string]bool, serverWins bool) (lrow, bool) {
 	switch {
 	case m == nil && t == nil:
 		return nil, false
@@ -252,18 +252,26 @@ func merge3(b, m, t lrow, own map[string]bool) (lrow, bool) {
 	case b == nil && t == nil:
 		return m, false
 	case m == nil:
+		if serverWins && !rowsEqual(t, b, own) {
+			return t, true
+		}
 		return nil, !rowsEqual(t, b, own)
 	case t == nil:
 		if rowsEqual(m, b, own) {
 			return nil, false
 		}
+		if serverWins {
+			return nil, true
+		}
 		return m, true
 	}
-	return fieldMerge(b, m, t, own)
+	return fieldMerge(b, m, t, own, serverWins)
 }
 
-// fieldMerge fusionne champ par champ deux versions d'une même ligne.
-func fieldMerge(b, m, t lrow, own map[string]bool) (lrow, bool) {
+// fieldMerge fusionne champ par champ deux versions d'une même ligne ; un
+// champ changé des deux côtés prend la valeur du poste, ou du serveur si
+// serverWins (retour d'une longue coupure).
+func fieldMerge(b, m, t lrow, own map[string]bool, serverWins bool) (lrow, bool) {
 	out := lrow{}
 	conflict := false
 	cols := map[string]bool{}
@@ -291,6 +299,9 @@ func fieldMerge(b, m, t lrow, own map[string]bool) (lrow, bool) {
 			out[c] = mv
 		default:
 			out[c] = mv
+			if serverWins {
+				out[c] = tv
+			}
 			conflict = true
 		}
 	}
@@ -333,6 +344,12 @@ func derived(vs ...*lview) map[string]bool {
 // mergeViews fusionne trois versions d'une mise en page ; rend le nombre
 // de conflits (champs changés des deux côtés, le poste l'emportant).
 func mergeViews(b, m, t *lview) (*lview, int) {
+	return mergeViewsAs(b, m, t, false)
+}
+
+// mergeViewsAs fusionne comme mergeViews ; serverWins : un champ changé des
+// deux côtés prend la valeur du serveur (retour d'une longue coupure).
+func mergeViewsAs(b, m, t *lview, serverWins bool) (*lview, int) {
 	out := newView(t.format)
 	out.extra = t.extra
 	n := 0
@@ -356,7 +373,7 @@ func mergeViews(b, m, t *lview) (*lview, int) {
 			if name == "_lattis_cells" && skip[k] && br != nil {
 				mr = br // valeur choisie du poste : pas un changement
 			}
-			r, c := merge3(br, mr, tr, ownOf(name, br, mr, tr))
+			r, c := merge3(br, mr, tr, ownOf(name, br, mr, tr), serverWins)
 			if r != nil {
 				ot.rows[k] = r
 			}
@@ -374,6 +391,9 @@ func mergeViews(b, m, t *lview) (*lview, int) {
 		out.theme = m.theme
 	default:
 		out.theme = m.theme
+		if serverWins {
+			out.theme = t.theme
+		}
 		n++
 	}
 	return out, n
@@ -676,6 +696,12 @@ type LayoutSync struct {
 	Forgot bool
 	// Gen : écritures de la mise en page couvertes (Store.WatchGen).
 	Gen int64
+	// ServerWon : synchronisation au retour d'une longue coupure, les
+	// conflits ont gardé la version du serveur (SyncLayoutAs).
+	ServerWon bool
+	// Lost : le serveur a refusé la mise en page du poste (droits de
+	// conception retirés, souvent pendant une coupure).
+	Lost bool
 }
 
 // SyncLayout envoie et reçoit la mise en page d'un classeur collaboratif
@@ -684,7 +710,16 @@ type LayoutSync struct {
 // envoyé tant que la mise en page du poste est celle reçue. Un refus du
 // serveur (droits retirés) n'envoie rien, sans erreur.
 func SyncLayout(ctx context.Context, srv Server, db *store.Store, info *Info, force bool) (LayoutSync, error) {
+	return SyncLayoutAs(ctx, srv, db, info, force, false)
+}
+
+// SyncLayoutAs synchronise comme SyncLayout ; serverWins : retour d'une
+// longue coupure, un élément changé des deux côtés garde la version du
+// serveur (les changements récents des collègues) au lieu de celle du poste
+// (choix de Louis, audit du mode en ligne, question 3).
+func SyncLayoutAs(ctx context.Context, srv Server, db *store.Store, info *Info, force, serverWins bool) (LayoutSync, error) {
 	var res LayoutSync
+	res.ServerWon = serverWins
 	res.Gen = db.WatchGen()
 	if info == nil || info.Mode != Collaborative {
 		return res, nil
@@ -778,7 +813,7 @@ func SyncLayout(ctx context.Context, srv Server, db *store.Store, info *Info, fo
 			if separate(base, mine.view, t, mine, ids) {
 				mine.translate(ids)
 			}
-			m, c := mergeViews(base, mine.view, t)
+			m, c := mergeViewsAs(base, mine.view, t, serverWins)
 			if !differs(m, t) && enc(m.theme) == enc(t.theme) {
 				return nil
 			}
@@ -793,7 +828,10 @@ func SyncLayout(ctx context.Context, srv Server, db *store.Store, info *Info, fo
 			return nil
 		})
 		if _, ok := Refusal(err); ok {
-			err, sent = nil, nil // droits retirés : rien ne part
+			// Droits retirés : rien ne part, et la mise en page du serveur
+			// est reçue par-dessus (le poste le dit, Refused).
+			err, sent = nil, nil
+			res.Lost, design = true, false
 		}
 		if err != nil {
 			return res, err
@@ -819,7 +857,12 @@ func SyncLayout(ctx context.Context, srv Server, db *store.Store, info *Info, fo
 		if !design {
 			m = keepBase(base, m)
 		}
-		target, _ := mergeViews(base, m, theirs)
+		target, nc := mergeViewsAs(base, m, theirs, serverWins)
+		if serverWins && design && res.Conflicts == 0 {
+			// Retour d'une longue coupure : les changements du poste écartés
+			// au profit de ceux des collègues (rien n'est envoyé pour eux).
+			res.Conflicts = nc
+		}
 		a := &applier{ctx: ctx, tx: tx, ids: ids, cols: map[string][]string{}, refused: map[string]map[string]bool{}}
 		if err := a.apply(l2, target); err != nil {
 			return err

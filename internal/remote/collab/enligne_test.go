@@ -5,12 +5,14 @@ package collab_test
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/grid"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/remote/collab"
@@ -379,4 +381,57 @@ func tableCol(t *testing.T, c *client, table, col string) []string {
 		out = append(out, v)
 	}
 	return out
+}
+
+// freeRaw lit une cellule libre de la feuille 1.
+func freeRaw(t *testing.T, c *client, row, col int) string {
+	t.Helper()
+	var raw string
+	if err := c.d.DB().Read().QueryRow(`SELECT raw FROM _lattis_cells WHERE sheet = 1 AND row = ? AND col = ?`, row, col).Scan(&raw); err != nil {
+		return ""
+	}
+	return raw
+}
+
+// Question 3 de l'audit : au retour d'une longue coupure, une cellule libre
+// changée des deux côtés garde la version du collègue (plus récente), avec
+// un message qui l'explique ; après une coupure courte, le poste qui
+// envoie l'emporte, comme avant.
+func TestLayoutLongAway(t *testing.T) {
+	ctx := context.Background()
+	for _, c := range []struct {
+		name string
+		away time.Duration
+		want string
+	}{{"courte", time.Minute, "Alice"}, {"longue", 48 * time.Hour, "Bob"}} {
+		t.Run(c.name, func(t *testing.T) {
+			f, alice, bob, id := setup(t)
+			must(t, f.Grant(id, "bob", "designer"))
+			_, err := bob.e.RefreshRights(ctx)
+			must(t, err)
+			_, err = alice.e.SyncLayout(ctx, true)
+			must(t, err)
+			_, err = bob.e.SyncLayout(ctx, true)
+			must(t, err)
+			// Alice hors ligne depuis c.away : elle change la cellule ; Bob aussi.
+			must(t, alice.d.DB().Write(ctx, func(tx *sql.Tx) error {
+				_, err := tx.ExecContext(ctx, `UPDATE _lattis_info SET value = ? WHERE key = 'layout_synced'`, time.Now().Add(-c.away).UTC().Format(time.RFC3339))
+				return err
+			}))
+			_, err = bob.d.SetCell(ctx, 1, 10, 5, "Bob")
+			must(t, err)
+			_, err = bob.e.SyncLayout(ctx, true)
+			must(t, err)
+			_, err = alice.d.SetCell(ctx, 1, 10, 5, "Alice")
+			must(t, err)
+			rep, err := alice.e.SyncLayout(ctx, true)
+			must(t, err)
+			if got := freeRaw(t, alice, 10, 5); got != c.want {
+				t.Errorf("Alice : %q, attendu %q (%v)", got, c.want, rep.Notices)
+			}
+			if c.want == "Bob" && !strings.Contains(strings.Join(rep.Notices, " "), "24 h") {
+				t.Errorf("message : %v", rep.Notices)
+			}
+		})
+	}
 }

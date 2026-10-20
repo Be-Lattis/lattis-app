@@ -2,6 +2,7 @@ package collab
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -36,7 +37,11 @@ func (e *Engine) syncLayout(ctx context.Context, force bool) (Report, error) {
 	if info == nil || !e.link.Online() || e.link.Gone() != "" {
 		return rep, nil
 	}
-	res, err := workbook.SyncLayout(ctx, srv, e.db, info, force)
+	// Retour d'une longue coupure (pas de synchronisation de la mise en page
+	// depuis LongAway) : un élément changé des deux côtés garde la version
+	// des collègues (question 3 de l'audit du mode en ligne).
+	long := e.layoutAway(ctx) > LongAway
+	res, err := workbook.SyncLayoutAs(ctx, srv, e.db, info, force, long)
 	// Un autre concepteur a enregistré la mise en page entre notre lecture
 	// et notre écriture (40001 de lattis.save_meta) : tout est relu et
 	// refusionné aussitôt, plutôt qu'au tour suivant après un passage hors
@@ -45,11 +50,12 @@ func (e *Engine) syncLayout(ctx context.Context, force bool) (Report, error) {
 		if code, _ := workbook.Rejected(err); code != "40001" {
 			break
 		}
-		res, err = workbook.SyncLayout(ctx, srv, e.db, info, true)
+		res, err = workbook.SyncLayoutAs(ctx, srv, e.db, info, true, long)
 	}
 	if err != nil {
 		return rep, err
 	}
+	e.layoutSynced(ctx)
 	theme := e.theme()
 	e.mu.Lock()
 	e.layoutDone, e.layoutTheme = res.Gen, theme
@@ -59,9 +65,16 @@ func (e *Engine) syncLayout(ctx context.Context, force bool) (Report, error) {
 		rep.Layout = true
 		e.settleChoices(ctx)
 	}
+	if res.Lost {
+		rep.notice("Vos changements de mise en page n'ont pas été envoyés : vous n'êtes plus propriétaire ni concepteur de ce classeur ; la mise en page du serveur est reprise")
+	}
 	if res.Conflicts > 0 {
 		e.link.AddLayoutConflicts(res.Conflicts)
-		rep.notice(LayoutConflictNotice(res.Conflicts))
+		if res.ServerWon {
+			rep.notice(LayoutLongAwayNotice(res.Conflicts))
+		} else {
+			rep.notice(LayoutConflictNotice(res.Conflicts))
+		}
 	}
 	if res.Forgot {
 		rep.notice(LayoutForgotNotice)
@@ -77,9 +90,50 @@ const LayoutForgotNotice = "Mise en page modifiée sur le serveur : historique d
 // siennes (même élément de la mise en page changé des deux côtés).
 func LayoutConflictNotice(n int) string {
 	if n == 1 {
-		return "Mise en page : 1 modification d'un collègue faite au même moment a été remplacée par la vôtre"
+		return "Mise en page : 1 modification d'un collègue faite au même moment a été remplacée par la vôtre (la dernière enregistrée l'emporte)"
 	}
-	return fmt.Sprintf("Mise en page : %d modifications d'un collègue faites au même moment ont été remplacées par les vôtres", n)
+	return fmt.Sprintf("Mise en page : %d modifications d'un collègue faites au même moment ont été remplacées par les vôtres (la dernière enregistrée l'emporte)", n)
+}
+
+// LongAway : au-delà de cette durée sans synchronisation de la mise en
+// page (poste resté hors ligne), les changements des collègues l'emportent
+// sur ceux du poste pour un même élément.
+var LongAway = 24 * time.Hour
+
+// LayoutLongAwayNotice explique pourquoi, au retour d'une longue coupure,
+// des changements de mise en page du poste ont été remplacés.
+func LayoutLongAwayNotice(n int) string {
+	what := "1 élément modifié des deux côtés"
+	if n > 1 {
+		what = fmt.Sprintf("%d éléments modifiés des deux côtés", n)
+	}
+	return "Mise en page : après plus de 24 h sans connexion, la version de vos collègues a été gardée pour " + what + " : elle est plus récente que la vôtre"
+}
+
+// layoutSyncedKey : date (RFC 3339) de la dernière synchronisation réussie
+// de la mise en page (_lattis_info).
+const layoutSyncedKey = "layout_synced"
+
+// layoutAway : temps écoulé depuis la dernière synchronisation de la mise
+// en page (0 si jamais notée : premier tour après cette version).
+func (e *Engine) layoutAway(ctx context.Context) time.Duration {
+	var v string
+	if e.db.Read().QueryRowContext(ctx, `SELECT value FROM _lattis_info WHERE key = ?`, layoutSyncedKey).Scan(&v) != nil {
+		return 0
+	}
+	at, err := time.Parse(time.RFC3339, v)
+	if err != nil {
+		return 0
+	}
+	return time.Since(at)
+}
+
+// layoutSynced note la date de la synchronisation réussie.
+func (e *Engine) layoutSynced(ctx context.Context) {
+	_ = e.db.Write(ctx, func(tx *sql.Tx) error {
+		_, err := tx.ExecContext(ctx, `INSERT INTO _lattis_info (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value`, layoutSyncedKey, time.Now().UTC().Format(time.RFC3339))
+		return err
+	})
 }
 
 // layoutDue dit si la mise en page a changé sur le poste depuis la

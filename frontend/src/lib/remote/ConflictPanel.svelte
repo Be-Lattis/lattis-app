@@ -23,8 +23,10 @@
 		held?: Held[];
 		/** Réessayer (retry) ou abandonner les modifications mises de côté d'un tableau. */
 		onheld?: (h: Held, retry: boolean) => void;
+		/** Mise en page : éléments changés des deux côtés depuis l'ouverture (la dernière version enregistrée l'a emporté). */
+		layout?: number;
 	}
-	let { conflicts, busy = false, onresolve, onresolveall, ongoto, onclose, local = false, held = [], onheld }: Props = $props();
+	let { conflicts, busy = false, onresolve, onresolveall, ongoto, onclose, local = false, held = [], onheld, layout = 0 }: Props = $props();
 </script>
 
 <aside class="panel" use:resizePanel={{ key: 'conflicts' }} use:panelKeys={onclose} aria-label="Conflits">
@@ -41,6 +43,9 @@
 			{/if}
 		</div>
 	{/each}
+	{#if layout}
+		<p class="muted layout">Mise en page : {layout > 1 ? `${layout} éléments changés` : '1 élément changé'} des deux côtés depuis l'ouverture (largeur, mise en forme, cellule libre…). La dernière version enregistrée l'emporte ; après plus de 24 h sans connexion, c'est celle des collègues.</p>
+	{/if}
 	{#if !conflicts.length && !held.length}
 		<p class="muted">Aucun conflit en attente.</p>
 	{:else if conflicts.length}

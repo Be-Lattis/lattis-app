@@ -2673,7 +2673,7 @@
 				{/key}
 			{/if}
 			{#if mode === 'doc' && conflictsOpen && (share?.mode === 'collaborative' || coedit?.active)}
-				<ConflictPanel {conflicts} {held} onheld={resolveHeld} local={!!coedit?.active} busy={conflictBusy} onresolve={resolveConflict} onresolveall={resolveAllConflicts} ongoto={gotoConflict} onclose={() => (conflictsOpen = false)} />
+				<ConflictPanel {conflicts} {held} onheld={resolveHeld} layout={share?.layoutConflicts ?? 0} local={!!coedit?.active} busy={conflictBusy} onresolve={resolveConflict} onresolveall={resolveAllConflicts} ongoto={gotoConflict} onclose={() => (conflictsOpen = false)} />
 			{/if}
 			{#if aiChat.open && !aiChat.over && (mode === 'doc' || mode === 'closed')}
 				<AiPanel
