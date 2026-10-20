@@ -6,6 +6,8 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+## 0.3.2-beta (21/10/2026)
+
 ### Nouveautés
 
 - Fichier › Paramètres : « Réinitialiser les paramètres par défaut… », en bas de la fenêtre, remet tous les réglages de la fenêtre (fonctionnalités, assistant IA, langue, thème, limites, mises à jour) à leur valeur par défaut, après confirmation, sans redémarrer. Les réglages imposés par l'organisation restent tels quels ; thèmes créés, serveurs Lattis et leurs connexions, clés d'API, fichiers récents et choix du fournisseur de l'IA sont gardés.
