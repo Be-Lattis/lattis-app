@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"sort"
 	"strconv"
+	"slices"
 	"strings"
 	"time"
 
@@ -632,10 +633,19 @@ func listTables(ctx context.Context, db *sql.DB, d *dialect) ([]DBTable, error) 
 	if err != nil {
 		return nil, err
 	}
+	ts = slices.DeleteFunc(ts, internalTable)
 	if len(ts) > 2000 {
 		ts = ts[:2000]
 	}
 	return ts, nil
+}
+
+// internalTable : table propre à Lattis, cachée des listes de tables d'une
+// source (un classeur .lattis ouvert comme base, un Serveur Lattis : ses
+// tables lattis_meta_* et son schéma interne lattis).
+func internalTable(t DBTable) bool {
+	n := strings.ToLower(t.Name)
+	return strings.HasPrefix(n, "_lattis_") || strings.HasPrefix(n, "lattis_meta_") || strings.EqualFold(t.Schema, "lattis")
 }
 
 // FileTables liste les tables et vues d'un fichier de base (SQLite).
