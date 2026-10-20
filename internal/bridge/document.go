@@ -511,6 +511,11 @@ func (s *DocumentService) State(ctx context.Context) (DocState, error) {
 	if st.Dirty, err = d.Dirty(ctx); err != nil {
 		return st, err
 	}
+	// Classeur collaboratif ouvert depuis le serveur : déjà « enregistré »
+	// sur le serveur au fil de l'eau (liveCache).
+	if st.Dirty && liveCache(d) {
+		st.Dirty = false
+	}
 	if st.Theme, err = d.Theme(ctx); err != nil {
 		return st, err
 	}

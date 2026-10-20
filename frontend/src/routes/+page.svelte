@@ -176,6 +176,9 @@
 	let recent = $state<RecentFile[]>([]);
 	// Fermer un classeur modifié : enregistrer d'abord ?
 	let closing = $state(false);
+	// Classeur collaboratif du serveur fermé avec des modifications pas
+	// encore parties (hors ligne) : leur nombre, pour la question.
+	let unsentClose = $state(0);
 	// Fermeture de la fenêtre en cours : une fois le classeur fermé, on quitte.
 	let quitting = $state(false);
 	// Fichier endommagé à l'ouverture : proposer d'en récupérer les données.
@@ -944,6 +947,14 @@
 			closing = true;
 			return;
 		}
+		// Classeur collaboratif du serveur : rien à enregistrer (ses
+		// modifications partent d'elles-mêmes, la file part à la fermeture) ;
+		// hors ligne, prévenir de celles qui attendront la reconnexion.
+		if (mode === 'doc' && save === undefined && docState.remote?.mode === 'collaborative' && !share?.online && (share?.pending ?? 0) > 0) {
+			unsentClose = share?.pending ?? 0;
+			return;
+		}
+		unsentClose = 0;
 		if (save) {
 			docState = await saving(() => DocumentService.Save(false));
 			if (docState.conflict) {
@@ -998,6 +1009,7 @@
 	/** Réponse « Annuler » à la question d'enregistrement. */
 	function cancelClose() {
 		closing = false;
+		unsentClose = 0;
 		quitting = false;
 	}
 
@@ -2979,6 +2991,19 @@
 						}}>Supprimer</button
 					>
 					<button onclick={() => (deleting = null)}>Annuler</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+	{#if unsentClose}
+		{@const n = unsentClose}
+		<div class="modal-back">
+			<div class="modal" role="dialog" aria-modal="true" aria-label="Modifications pas encore envoyées" use:modal={cancelClose}>
+				<p>{n > 1 ? `${n} modifications` : 'Une modification'} de « {docState.title} » {n > 1 ? 'ne sont pas encore parties' : 'n’est pas encore partie'} vers {docState.remote ? serverLabel(docState.remote) : 'le serveur'}.</p>
+				<p class="hint">{n > 1 ? 'Elles sont gardées' : 'Elle est gardée'} sur ce poste et {n > 1 ? 'partiront' : 'partira'} à la prochaine ouverture du classeur, une fois le serveur joignable.</p>
+				<div class="actions">
+					<button class="primary" onclick={() => closeDoc(false).catch((e) => ((quitting = false), (notice = err(e))))}>{quitting ? 'Quitter' : 'Fermer'}</button>
+					<button onclick={cancelClose}>Annuler</button>
 				</div>
 			</div>
 		</div>

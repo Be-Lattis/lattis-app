@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/lalamefine/lattis/internal/archive"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
@@ -147,5 +148,40 @@ func TestCloseKeepsQueueWhenCacheFails(t *testing.T) {
 	}
 	if o, _ := archive.Orphans(); len(o) != 1 {
 		t.Errorf("session à récupérer : %+v", o)
+	}
+}
+
+// Question 7 de l'audit : un classeur collaboratif ouvert depuis le serveur
+// n'est jamais « modifié » (ses modifications partent d'elles-mêmes) ; à la
+// fermeture, son cache est enregistré sans question, y compris ce qui ne
+// part pas au serveur (cellule d'un tableau privé, ici une cellule libre
+// hors ligne).
+func TestLiveCacheNeverDirty(t *testing.T) {
+	ctx := context.Background()
+	s, h, fake, _, _, _, cache := offlineSetup(t)
+	_, err := s.SetCell(ctx, 1, 1, 1, "5")
+	mustShare(t, err)
+	if st, _ := s.State(ctx); st.Dirty {
+		t.Fatal("classeur du serveur marqué modifié")
+	}
+	if s.windowClosing(time.Now()) != closeAllow {
+		t.Error("la fermeture de la fenêtre pose une question")
+	}
+	// Hors ligne, une modification en attente : la fenêtre demande.
+	fake.SetDown(true)
+	waitShare(t, h.shareHost, "hors ligne", func(s workbook.State) bool { return !s.Online })
+	_, err = s.SetCell(ctx, 1, 10, 5, "note")
+	mustShare(t, err)
+	_, err = s.SetCell(ctx, 1, 2, 1, "7")
+	mustShare(t, err)
+	if s.windowClosing(time.Now()) == closeAllow {
+		t.Error("fermeture sans prévenir des modifications en attente")
+	}
+	s.CloseRequestSeen()
+	mustShare(t, s.CloseDocument(ctx))
+	_, err = s.Open(ctx, cache)
+	mustShare(t, err)
+	if got := freeCell(t, s, 10, 5); got != "note" {
+		t.Errorf("cache pas enregistré à la fermeture : cellule libre %q", got)
 	}
 }

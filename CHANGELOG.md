@@ -20,6 +20,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 - Boîtes de dialogue : un cliqué-glissé commencé dans la boîte et relâché à côté (sélection d'un texte, curseur) ne la ferme plus ; seul un clic enfoncé et relâché sur le fond la ferme.
 - Clic droit : les actions propres à la situation (Utiliser comme en-têtes, Ajouter au tableau, Utiliser la première ligne comme en-têtes, Sortir cette ligne du tableau, Convertir le résultat déversé, Basculer sur…) sont en tête du menu, avant Couper, Copier, Coller.
 - Édition web : un écran « Lattis » avec une barre de chargement s'affiche pendant le chargement de l'application, puis pendant l'ouverture du classeur, au lieu d'une page blanche.
+- Classeur collaboratif ouvert depuis un Serveur Lattis : plus de point « modifié » dans le titre ni de question « Enregistrer les modifications ? » à la fermeture (ni « Quitter le site ? » dans l'édition web) : vos modifications partent d'elles-mêmes, et la copie sur ce poste s'enregistre seule. Hors ligne seulement, Lattis prévient que des modifications attendront la reconnexion. Ctrl+S reste possible.
 
 ### Corrections
 

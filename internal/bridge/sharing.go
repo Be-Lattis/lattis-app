@@ -323,13 +323,15 @@ func (s *DocumentService) stopShare() {
 	s.share.sync, s.share.doc, s.share.retry = nil, nil, nil
 }
 
-// flushLayoutLocked envoie la mise en page modifiée pas encore partie
-// (LayoutDelay) du classeur suivi, avant d'en arrêter le suivi ; hors
-// ligne, elle est notée en attente et le cache est gardé (keepCollabQueue).
-// s.share.mu tenu.
+// flushLayoutLocked envoie ce qui attend encore du classeur suivi, avant
+// d'en arrêter le suivi : la file (envoi différé de quelques centaines de
+// millisecondes) et la mise en page (LayoutDelay). Hors ligne, rien ne part :
+// la mise en page est notée en attente et le cache est gardé
+// (keepCollabQueue). s.share.mu tenu.
 func (s *DocumentService) flushLayoutLocked() {
 	if eng := s.share.sync; eng != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		eng.Send(ctx)
 		eng.FlushLayout(ctx)
 		cancel()
 	}

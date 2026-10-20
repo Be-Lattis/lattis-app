@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/lalamefine/lattis/internal/api"
+	"github.com/lalamefine/lattis/internal/remote/workbook"
 )
 
 // Fermeture de la fenêtre (bureau, audit 6, I1) : un classeur modifié fait
@@ -43,7 +44,15 @@ func (s *DocumentService) windowClosing(now time.Time) closeAction {
 	if err != nil {
 		return closeAllow
 	}
-	if dirty, _ := d.Dirty(context.Background()); dirty {
+	dirty, _ := d.Dirty(context.Background())
+	if liveCache(d) {
+		// Classeur collaboratif du serveur : la question ne porte que sur
+		// des modifications qui ne peuvent pas partir (hors ligne) ; en
+		// ligne, la file part à la fermeture (stopShare).
+		pending, _, _ := workbook.Unsent(context.Background(), d.DB().Read())
+		dirty = pending > 0 && !d.Share.Online()
+	}
+	if dirty {
 		s.closeReq.mu.Lock()
 		defer s.closeReq.mu.Unlock()
 		if !s.closeReq.asked.IsZero() && now.Sub(s.closeReq.asked) > closeAckTimeout {

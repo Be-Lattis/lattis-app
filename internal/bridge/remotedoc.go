@@ -47,12 +47,22 @@ func remoteDoc(d *doc.Document) *workbook.State {
 	return &st
 }
 
-// keepCollabQueue enregistre, avant sa fermeture, le cache d'un classeur
-// collaboratif du serveur qui a des modifications pas encore envoyées
-// (file d'envoi, conflits) : hors ligne, elles partiront à la prochaine
-// ouverture une fois le serveur revenu, même si l'utilisateur a répondu
-// « Ne pas enregistrer » (en ligne, elles seraient déjà parties ; le
-// cache n'est pas un fichier de l'utilisateur). Décision 0014. Une erreur
+// liveCache dit si d est le cache d'un classeur collaboratif du serveur
+// qu'on modifie (ni en lecture seule, ni supprimé du serveur) : ses
+// modifications partent au serveur d'elles-mêmes, il n'y a rien à
+// « enregistrer ». Ni point « modifié », ni question à la fermeture : le
+// cache est enregistré de lui-même (keepCollabQueue).
+func liveCache(d *doc.Document) bool {
+	r := remoteDoc(d)
+	return r != nil && r.Mode == workbook.Collaborative && !d.ReadOnly() && r.Gone != workbook.GoneDeleted
+}
+
+// keepCollabQueue enregistre, avant sa fermeture, le cache modifié d'un
+// classeur collaboratif du serveur : ses modifications pas encore envoyées
+// (file d'envoi, conflits ; hors ligne, elles partiront à la prochaine
+// ouverture une fois le serveur revenu) et ce qui reste sur ce poste
+// (tableaux privés, valeur choisie des onglets…). Le cache n'est pas un
+// fichier de l'utilisateur : rien ne lui est demandé. Décision 0014. Une erreur
 // rendue : le cache n'a pas pu être enregistré ; l'appelant garde alors le
 // répertoire de travail (récupération au prochain lancement) au lieu de
 // le fermer, et le dit (errQueueKept).
@@ -63,7 +73,8 @@ func keepCollabQueue(d *doc.Document) error {
 	}
 	ctx := context.Background()
 	pending, conflicts, err := workbook.Unsent(ctx, d.DB().Read())
-	if err != nil || pending+conflicts == 0 && !d.Share.LayoutUnsent() {
+	dirty, _ := d.Dirty(ctx)
+	if err != nil || pending+conflicts == 0 && !d.Share.LayoutUnsent() && !dirty {
 		return nil
 	}
 	if err := saveDoc(ctx, d, ""); err != nil {
